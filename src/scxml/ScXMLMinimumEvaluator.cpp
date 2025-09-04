@@ -354,7 +354,7 @@ ScXMLAppendOpExprDataObj::evaluateNow(ScXMLStateMachine * sm, ScXMLDataObj *& po
 #include <cmath>
 #include <cfloat>
 
-#include <boost/scoped_ptr.hpp>
+#include <memory>  // for std::unique_ptr
 
 #include <Inventor/scxml/ScXMLStateMachine.h>
 #include <Inventor/scxml/ScXMLDocument.h>
@@ -367,8 +367,8 @@ BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(MimimumExpressions,1);
 
 BOOST_AUTO_TEST_CASE(MimimumExpressions)
 {
-  boost::scoped_ptr<ScXMLStateMachine> sm(new ScXMLStateMachine);
-  boost::scoped_ptr<ScXMLEvaluator> evaluator(new ScXMLMinimumEvaluator);
+  std::unique_ptr<ScXMLStateMachine> sm(new ScXMLStateMachine);
+  std::unique_ptr<ScXMLEvaluator> evaluator(new ScXMLMinimumEvaluator);
 
   ScXMLDataObj * res = NULL;
   ScXMLBoolDataObj * boolobj = NULL;

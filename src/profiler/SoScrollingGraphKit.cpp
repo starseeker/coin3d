@@ -48,7 +48,7 @@
 #include <cstdlib>
 #include <cstdio>
 
-#include <boost/scoped_ptr.hpp>
+#include <memory>  // for std::unique_ptr
 #include <boost/scoped_array.hpp>
 #include <boost/intrusive_ptr.hpp>
 
@@ -116,7 +116,7 @@ public:
   }
 
   boost::intrusive_ptr<SoSeparator> chart;
-  boost::scoped_ptr<SoFieldSensor> addValuesSensor;
+  std::unique_ptr<SoFieldSensor> addValuesSensor;
 
   void pullStatistics(void);
   Graph * getGraph(const SbName & key);

@@ -46,7 +46,7 @@
 #include <cassert>
 #include <cstring>
 
-#include <boost/scoped_ptr.hpp>
+#include <memory>  // for std::unique_ptr
 
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/C/XML/element.h>
@@ -129,7 +129,7 @@ class ScXMLHistoryElt::PImpl {
 public:
   PImpl(void) : transitionptr(NULL) { }
 
-  boost::scoped_ptr<ScXMLTransitionElt> transitionptr;
+  std::unique_ptr<ScXMLTransitionElt> transitionptr;
 
 };
 

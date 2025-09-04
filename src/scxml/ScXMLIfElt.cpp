@@ -43,7 +43,7 @@
 #include <vector>
 #include <algorithm>
 
-#include <boost/scoped_ptr.hpp>
+#include <memory>  // for std::unique_ptr
 
 #include <Inventor/C/XML/element.h>
 #include <Inventor/errors/SoDebugError.h>
@@ -251,7 +251,7 @@ public:
   ScXMLIfElt * pub;
 
   std::vector<ScXMLElseIfElt *> elseiflist;
-  boost::scoped_ptr<ScXMLElseElt> elseelt;
+  std::unique_ptr<ScXMLElseElt> elseelt;
   std::vector< std::vector<ScXMLExecutableElt *> * > executables;
 };
 

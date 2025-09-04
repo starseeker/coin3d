@@ -700,7 +700,7 @@ ScXMLCoinLengthFuncExprDataObj::evaluateNow(ScXMLStateMachine * sm, ScXMLDataObj
 #include <cmath>
 #include <cfloat>
 
-#include <boost/scoped_ptr.hpp>
+#include <memory>  // for std::unique_ptr
 
 #include <Inventor/scxml/ScXMLStateMachine.h>
 

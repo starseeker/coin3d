@@ -45,7 +45,7 @@
 #include <algorithm>
 #include <vector>
 
-#include <boost/scoped_ptr.hpp>
+#include <memory>  // for std::unique_ptr
 
 #include <Inventor/C/tidbits.h>
 #include <Inventor/errors/SoDebugError.h>
@@ -495,18 +495,18 @@ public:
     SCXML__CLEAR_STD_VECTOR(this->anchorlist, ScXMLAnchorElt *);
   }
 
-  boost::scoped_ptr<ScXMLOnEntryElt> onentryptr;
-  boost::scoped_ptr<ScXMLOnExitElt> onexitptr;
+  std::unique_ptr<ScXMLOnEntryElt> onentryptr;
+  std::unique_ptr<ScXMLOnExitElt> onexitptr;
   std::vector<ScXMLTransitionElt *> transitionlist;
-  boost::scoped_ptr<ScXMLInitialElt> initialptr;
+  std::unique_ptr<ScXMLInitialElt> initialptr;
   std::vector<ScXMLStateElt *> statelist;
   std::vector<ScXMLParallelElt *> parallellist;
   std::vector<ScXMLFinalElt *> finallist;
   std::vector<ScXMLHistoryElt *> historylist;
   std::vector<ScXMLAnchorElt *> anchorlist;
-  boost::scoped_ptr<ScXMLDataModelElt> datamodelptr;
-  boost::scoped_ptr<ScXMLInvokeElt> invokeptr;
-  //boost::scoped_ptr<ScXMLDocument> srcref;
+  std::unique_ptr<ScXMLDataModelElt> datamodelptr;
+  std::unique_ptr<ScXMLInvokeElt> invokeptr;
+  //std::unique_ptr<ScXMLDocument> srcref;
 };
 
 #define PRIVATE(obj) ((obj)->pimpl)

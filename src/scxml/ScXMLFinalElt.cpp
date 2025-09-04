@@ -46,7 +46,7 @@
 #include <cassert>
 #include <cstring>
 
-#include <boost/scoped_ptr.hpp>
+#include <memory>  // for std::unique_ptr
 
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/C/XML/element.h>
@@ -153,8 +153,8 @@ class ScXMLFinalElt::PImpl {
 public:
   PImpl(void) : onentry(NULL), onexit(NULL) { }
 
-  boost::scoped_ptr<ScXMLOnEntryElt> onentry;
-  boost::scoped_ptr<ScXMLOnExitElt> onexit;
+  std::unique_ptr<ScXMLOnEntryElt> onentry;
+  std::unique_ptr<ScXMLOnExitElt> onexit;
 
 };
 
