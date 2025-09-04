@@ -43,7 +43,7 @@ endif()
 # ############################################################################
 # Set minimum C++ standard needed to compile the Coin code
 # ############################################################################
-set( CMAKE_CXX_STANDARD 11 CACHE STRING "C++ standard used for the build" )
+set( CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard used for the build" )
 message( STATUS "Setting C++ standard: '${CMAKE_CXX_STANDARD}', which is the minimum needed to compile Coin.")
 
 # ############################################################################
@@ -51,7 +51,7 @@ message( STATUS "Setting C++ standard: '${CMAKE_CXX_STANDARD}', which is the min
 # ############################################################################
 
 # Add path for Coin specific utility scripts
-set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" "${CMAKE_MODULE_PATH}")
+# set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" "${CMAKE_MODULE_PATH}")
 
 include(CheckCSourceRuns)
 include(CheckCXXSourceCompiles)
@@ -65,7 +65,7 @@ include(CheckTypeSize)
 include(CMakeDependentOption)
 include(GNUInstallDirs)
 include(FeatureSummary)
-include(CoinCMakeUtilities)
+# include(CoinCMakeUtilities)
 
 # ############################################################################
 # Provide options to customise the build
@@ -116,61 +116,61 @@ option(COIN_BUILD_EGL "Build for EGL on Linux when ON. Default is ON." ON)
 check_include_file_cxx(thread HAVE_STD_THREAD)
 cmake_dependent_option(COIN_DEBUG_CHECK_THREAD "Enable thread check in several central Coin functions." OFF "HAVE_STD_THREAD" OFF)
 
-report_prepare(
-  COIN_BUILD_SHARED_LIBS
-  COIN_BUILD_TESTS
-  COIN_BUILD_DOCUMENTATION
-  COIN_BUILD_INTERNAL_DOCUMENTATION
-  COIN_BUILD_DOCUMENTATION_MAN
-  COIN_BUILD_DOCUMENTATION_QTHELP
-  COIN_BUILD_DOCUMENTATION_CHM
-  COIN_BUILD_EGL
-  COIN_BUILD_AWESOME_DOCUMENTATION
-  COIN_THREADSAFE
-  HAVE_VRML97
-  COIN_HAVE_JAVASCRIPT
-  HAVE_NODEKITS
-  HAVE_DRAGGERS
-  HAVE_MANIPULATORS
-  HAVE_SOUND
-  HAVE_3DS_IMPORT_CAPABILITIES
-  USE_EXTERNAL_EXPAT
-  USE_EXCEPTIONS
-  USE_SUPERGLU
-  FONTCONFIG_RUNTIME_LINKING
-  FREETYPE_RUNTIME_LINKING
-  LIBBZIP2_RUNTIME_LINKING
-  OPENAL_RUNTIME_LINKING
-  SIMAGE_RUNTIME_LINKING
-  ZLIB_RUNTIME_LINKING
-  GLU_RUNTIME_LINKING
-  SPIDERMONKEY_RUNTIME_LINKING
-  HAVE_MULTIPLE_VERSION
-  IF_APPLE
-    COIN_BUILD_MAC_FRAMEWORK
-    COIN_BUILD_MAC_X11
-    COIN_BUILD_MAC_AGL
-  IF_MSVC
-    COIN_BUILD_MSVC_STATIC_RUNTIME
-    COIN_BUILD_SINGLE_LIB
-    MSVC_VERSION
-    COIN_BUILD_MSVC_MP
-)
+# report_prepare(
+#   COIN_BUILD_SHARED_LIBS
+#   COIN_BUILD_TESTS
+#   COIN_BUILD_DOCUMENTATION
+#   COIN_BUILD_INTERNAL_DOCUMENTATION
+#   COIN_BUILD_DOCUMENTATION_MAN
+#   COIN_BUILD_DOCUMENTATION_QTHELP
+#   COIN_BUILD_DOCUMENTATION_CHM
+#   COIN_BUILD_EGL
+#   COIN_BUILD_AWESOME_DOCUMENTATION
+#   COIN_THREADSAFE
+#   HAVE_VRML97
+#   COIN_HAVE_JAVASCRIPT
+#   HAVE_NODEKITS
+#   HAVE_DRAGGERS
+#   HAVE_MANIPULATORS
+#   HAVE_SOUND
+#   HAVE_3DS_IMPORT_CAPABILITIES
+#   USE_EXTERNAL_EXPAT
+#   USE_EXCEPTIONS
+#   USE_SUPERGLU
+#   FONTCONFIG_RUNTIME_LINKING
+#   FREETYPE_RUNTIME_LINKING
+#   LIBBZIP2_RUNTIME_LINKING
+#   OPENAL_RUNTIME_LINKING
+#   SIMAGE_RUNTIME_LINKING
+#   ZLIB_RUNTIME_LINKING
+#   GLU_RUNTIME_LINKING
+#   SPIDERMONKEY_RUNTIME_LINKING
+#   HAVE_MULTIPLE_VERSION
+#   IF_APPLE
+#     COIN_BUILD_MAC_FRAMEWORK
+#     COIN_BUILD_MAC_X11
+#     COIN_BUILD_MAC_AGL
+#   IF_MSVC
+#     COIN_BUILD_MSVC_STATIC_RUNTIME
+#     COIN_BUILD_SINGLE_LIB
+#     MSVC_VERSION
+#     COIN_BUILD_MSVC_MP
+# )
 
-if(HAVE_MULTIPLE_VERSION)
-  # Modifies the installation path for distributed includes, docs and datadir
-  versionize(INCLUDEDIR DOCDIR DATADIR)
-  dump_variable(
-    CMAKE_INSTALL_DATADIR
-    CMAKE_INSTALL_FULL_DATADIR
-    CMAKE_INSTALL_INCLUDEDIR
-    CMAKE_INSTALL_FULL_INCLUDEDIR
-    CMAKE_INSTALL_DOCDIR
-    CMAKE_INSTALL_FULL_DOCDIR
-  )
-else()
+# if(HAVE_MULTIPLE_VERSION)
+#   # Modifies the installation path for distributed includes, docs and datadir
+#   versionize(INCLUDEDIR DOCDIR DATADIR)
+#   dump_variable(
+#     CMAKE_INSTALL_DATADIR
+#     CMAKE_INSTALL_FULL_DATADIR
+#     CMAKE_INSTALL_INCLUDEDIR
+#     CMAKE_INSTALL_FULL_INCLUDEDIR
+#     CMAKE_INSTALL_DOCDIR
+#     CMAKE_INSTALL_FULL_DOCDIR
+#   )
+# else()
   set(CMAKE_INSTALL_DATADIR "${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}")
-endif()
+# endif()
 
 # ############################################################################
 # Find all necessary and optional Coin3D dependencies
@@ -180,13 +180,13 @@ endif()
 
 # As not all CMake FindXXX modules and config packages provide target support,
 # we should explicitly check for them on.
-find_package(Boost REQUIRED) # almost any Boost will do
+# find_package(Boost REQUIRED) # almost any Boost will do
 # Boost::boost - Target for header only dependencies (Boost include directory)
-if(NOT TARGET Boost::boost)
-  list(APPEND COIN_TARGET_INCLUDE_DIRECTORIES ${Boost_INCLUDE_DIRS})
-else()
-  list(APPEND COIN_TARGET_LINK_LIBRARIES Boost::boost)
-endif()
+# if(NOT TARGET Boost::boost)
+#   list(APPEND COIN_TARGET_INCLUDE_DIRECTORIES ${Boost_INCLUDE_DIRS})
+# else()
+#   list(APPEND COIN_TARGET_LINK_LIBRARIES Boost::boost)
+# endif()
 
 if(COIN_BUILD_MAC_X11)
   find_package(X11 REQUIRED)
@@ -507,16 +507,17 @@ foreach (_config ${CMAKE_CONFIGURATION_TYPES})
 endforeach()
 
 # Checks for existence of specified types and set variable to the first type found
-coin_find_int_type_with_size(COIN_INT8_T 1 "int8_t" "char")
-coin_find_int_type_with_size(COIN_UINT8_T 1 "uint8_t" "u_int8_t" "unsigned char")
-coin_find_int_type_with_size(COIN_INT16_T 2 "int16_t" "short" "int")
-coin_find_int_type_with_size(COIN_UINT16_T 2 "uint16_t" "u_int16_t" "unsigned short" "unsigned int")
-coin_find_int_type_with_size(COIN_INT32_T 4 "int32_t" "int" "long")
-coin_find_int_type_with_size(COIN_UINT32_T 4 "uint32_t" "u_int32_t" "unsigned int" "unsigned long")
-coin_find_int_type_with_size(COIN_INT64_T 8 "int64_t" "long" "int" "long long" "__int64")
-coin_find_int_type_with_size(COIN_UINT64_T 8 "uint64_t" "u_int64_t" "unsigned long" "unsigned int" "unsigned long long" "unsigned __int64")
-coin_find_int_type_with_size(COIN_INTPTR_T ${CMAKE_SIZEOF_VOID_P} "intptr_t" "int" "long" "long long" "__int64")
-coin_find_int_type_with_size(COIN_UINTPTR_T ${CMAKE_SIZEOF_VOID_P} "uintptr_t" "u_intptr_t" "_W64 unsigned int" "unsigned int" "unsigned long" "u_int64_t" "unsigned long long" "unsigned __int64")
+# Using C++17 standard fixed-width integer types
+set(COIN_INT8_T "int8_t")
+set(COIN_UINT8_T "uint8_t")
+set(COIN_INT16_T "int16_t")
+set(COIN_UINT16_T "uint16_t")
+set(COIN_INT32_T "int32_t")
+set(COIN_UINT32_T "uint32_t")
+set(COIN_INT64_T "int64_t")
+set(COIN_UINT64_T "uint64_t")
+set(COIN_INTPTR_T "intptr_t")
+set(COIN_UINTPTR_T "uintptr_t")
 
 if(MSVC)
   option(COIN_BUILD_MSVC_STATIC_RUNTIME "Build against the static Microsoft Visual C runtime library." OFF)
@@ -837,18 +838,14 @@ endif()
 
 check_type_size("((struct timeval*)0)->tv_sec" TIMEVAL_TV_SEC)
 if(HAVE_TIMEVAL_TV_SEC)
-  coin_find_int_type_with_size(SIM_TIMEVAL_TV_SEC_T ${TIMEVAL_TV_SEC} "time_t" "long")
-  if(NOT SIM_TIMEVAL_TV_SEC_T)
-    message(FATAL_ERROR "TIMEVAL_TV_SEC: Neither of checked types (time_t, long) were of requested size ${TIMEVAL_TV_SEC}")
-  endif()
+  # Use standard types for timeval structure
+  set(SIM_TIMEVAL_TV_SEC_T "time_t")
 endif()
 
 check_type_size("((struct timeval*)0)->tv_usec" TIMEVAL_TV_USEC)
 if(HAVE_TIMEVAL_TV_USEC)
-  coin_find_int_type_with_size(SIM_TIMEVAL_TV_USEC_T ${TIMEVAL_TV_USEC} "suseconds_t" "long" "long long")
-  if(NOT SIM_TIMEVAL_TV_USEC_T)
-    message(FATAL_ERROR "TIMEVAL_TV_USEC: Neither of checked types (suseconds_t, long, long long) were of requested size ${TIMEVAL_TV_USEC}")
-  endif()
+  # Use standard types for timeval structure
+  set(SIM_TIMEVAL_TV_USEC_T "suseconds_t")
 endif()
 set(CMAKE_EXTRA_INCLUDE_FILES)
 
