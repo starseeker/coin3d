@@ -49,8 +49,7 @@
 #include <cstdio>
 
 #include <memory>  // for std::unique_ptr
-#include <boost/scoped_array.hpp>
-#include <boost/intrusive_ptr.hpp>
+
 
 #include <Inventor/SbTime.h>
 #include <Inventor/SbColor.h>
@@ -115,7 +114,14 @@ public:
     }
   }
 
-  boost::intrusive_ptr<SoSeparator> chart;
+  // Custom deleter for SoSeparator: calls unref() instead of delete
+  struct SoSeparatorUnrefDeleter {
+    void operator()(SoSeparator* node) const {
+      if (node) node->unref();
+    }
+  };
+
+  std::unique_ptr<SoSeparator, SoSeparatorUnrefDeleter> chart;
   std::unique_ptr<SoFieldSensor> addValuesSensor;
 
   void pullStatistics(void);
@@ -350,11 +356,11 @@ SoScrollingGraphKitP::generateStackedBarsChart(void)
   const int numgraphs = this->graphs.getNumElements();
   if (numgraphs == 0) return;
 
-  boost::scoped_array<SoBaseColor *> colors(new SoBaseColor * [numgraphs]);
-  boost::scoped_array<SoCoordinate3 *> coords(new SoCoordinate3 * [numgraphs]);
-  boost::scoped_array<SoLineSet *> lines(new SoLineSet * [numgraphs]);
-  boost::scoped_array<SoTranslation *> texttrans(new SoTranslation * [numgraphs]);
-  boost::scoped_array<SoText2 *> textnodes(new SoText2 * [numgraphs]);
+  std::unique_ptr<SoBaseColor *[]> colors(new SoBaseColor*[numgraphs]);
+  std::unique_ptr<SoCoordinate3 *[]> coords(new SoCoordinate3*[numgraphs]);
+  std::unique_ptr<SoLineSet *[]> lines(new SoLineSet*[numgraphs]);
+  std::unique_ptr<SoTranslation *[]> texttrans(new SoTranslation*[numgraphs]);
+  std::unique_ptr<SoText2 *[]> textnodes(new SoText2*[numgraphs]);
 
   if (this->chart->getNumChildren() != (numgraphs * 4 + 3) ||
       !(this->chart->getChild(2+2)->isOfType(SoLineSet::getClassTypeId()))) {

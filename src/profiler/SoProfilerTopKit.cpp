@@ -46,7 +46,7 @@
 #include <Inventor/annex/Profiler/nodekits/SoProfilerTopKit.h>
 #include "coindefs.h"
 
-#include <boost/intrusive_ptr.hpp>
+#include <memory>  // for std::unique_ptr
 
 #include <Inventor/annex/Profiler/engines/SoProfilerTopEngine.h>
 #include <Inventor/annex/Profiler/nodes/SoProfilerStats.h>
@@ -79,8 +79,21 @@ public:
   void detachFromStats();
   void attachToStats();
 
-  boost::intrusive_ptr<SoCalculator> geometryEngine;
-  boost::intrusive_ptr<SoProfilerTopEngine> topListEngine;
+  // Custom deleters for SoNode-derived classes: call unref() instead of delete
+  struct SoCalculatorUnrefDeleter {
+    void operator()(SoCalculator* node) const {
+      if (node) node->unref();
+    }
+  };
+  
+  struct SoProfilerTopEngineUnrefDeleter {
+    void operator()(SoProfilerTopEngine* node) const {
+      if (node) node->unref();
+    }
+  };
+
+  std::unique_ptr<SoCalculator, SoCalculatorUnrefDeleter> geometryEngine;
+  std::unique_ptr<SoProfilerTopEngine, SoProfilerTopEngineUnrefDeleter> topListEngine;
   SoProfilerStats * last_stats;
   SoFieldSensor * stats_sensor;
 };
