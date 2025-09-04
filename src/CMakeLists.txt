@@ -39,12 +39,13 @@ foreach(_tgt ${COIN_TARGET_LINK_LIBRARIES})
 endforeach()
 
 set(COIN_SOURCE tidbits.cpp CACHE INTERNAL "COIN_SOURCE")
-# Minimal core subdirectories - removed GUI/toolkit/file I/O/VRML97/advanced features
+# Minimal core subdirectories - removed GUI/toolkit but keeping minimal dependencies
 set(SUBDIRS
   xml actions base bundles caches details elements
-  engines errors events fields fonts glue misc rendering lists
+  engines errors events fields fonts glue io misc rendering lists
   nodes shapenodes projectors sensors upgraders
   collision shadows geo threads shaders profiler
+  scxml soscxml hardcopy navigation
 )
 
 foreach(_subdir ${SUBDIRS})
@@ -178,16 +179,21 @@ else()
     $<TARGET_OBJECTS:geo>
     $<TARGET_OBJECTS:glelements>
     $<TARGET_OBJECTS:glue>
+    $<TARGET_OBJECTS:hardcopy>
+    $<TARGET_OBJECTS:io>
     $<TARGET_OBJECTS:lists>
     $<TARGET_OBJECTS:misc>
+    $<TARGET_OBJECTS:navigation>
     $<TARGET_OBJECTS:nodes>
     $<TARGET_OBJECTS:profiler>
     $<TARGET_OBJECTS:projectors>
     $<TARGET_OBJECTS:rendering>
+    $<TARGET_OBJECTS:scxml>
     $<TARGET_OBJECTS:sensors>
     $<TARGET_OBJECTS:shaders>
     $<TARGET_OBJECTS:shadows>
     $<TARGET_OBJECTS:shapenodes>
+    $<TARGET_OBJECTS:soscxml>
     $<TARGET_OBJECTS:threads>
     $<TARGET_OBJECTS:upgraders>
     $<TARGET_OBJECTS:xml>
