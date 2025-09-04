@@ -31,7 +31,7 @@
 \**************************************************************************/
 
 #include <Inventor/C/base/heap.h>
-#include <boost/lexical_cast.hpp>
+#include <string>
 
 #include <cassert>
 #include <cstdlib>
@@ -380,7 +380,7 @@ public:
 
   static void heap_print_cb(void * v, SbString& str) {
     wrapped_value* value = reinterpret_cast<wrapped_value*>(v);
-    str += boost::lexical_cast<std::string>(value->x).c_str();
+    str += std::to_string(value->x).c_str();
   }
 
   static double heap_evaluate_cb(void * v)
