@@ -47,6 +47,8 @@ set(SUBDIRS
   collision shadows geo threads shaders profiler
   scxml soscxml hardcopy navigation
 )
+# TODO - see how to make draggers toolkit independent
+# TODO - see what we need from manips
 
 foreach(_subdir ${SUBDIRS})
   add_subdirectory(${_subdir})
