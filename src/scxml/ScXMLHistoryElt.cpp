@@ -127,7 +127,7 @@ ScXMLHistoryEltReader::read(ScXMLElt * container, cc_xml_elt * xmlelt, ScXMLDocu
 
 class ScXMLHistoryElt::PImpl {
 public:
-  PImpl(void) : transitionptr(NULL) { }
+  PImpl(void) { }
 
   std::unique_ptr<ScXMLTransitionElt> transitionptr;
 

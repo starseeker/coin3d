@@ -476,11 +476,6 @@ ScXMLParallelEltReader::read(ScXMLElt * container, cc_xml_elt * xmlelt, ScXMLDoc
 class ScXMLParallelElt::PImpl {
 public:
   PImpl(void)
-  : onentryptr(NULL),
-    onexitptr(NULL),
-    initialptr(NULL),
-    datamodelptr(NULL),
-    invokeptr(NULL)
     //srcref(NULL)
   {
   }

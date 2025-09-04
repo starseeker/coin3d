@@ -183,7 +183,7 @@ ScXMLInvokeEltReader::read(ScXMLElt * container, cc_xml_elt * xmlelt, ScXMLDocum
 
 class ScXMLInvokeElt::PImpl {
 public:
-  PImpl(void) : finalizeptr(NULL), contentptr(NULL) { }
+  PImpl(void) { }
   ~PImpl(void)
   {
     SCXML__CLEAR_STD_VECTOR(this->paramlist, ScXMLParamElt *);

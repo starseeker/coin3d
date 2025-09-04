@@ -235,7 +235,7 @@ ScXMLIfEltReader::read(ScXMLElt * container, cc_xml_elt * xmlelt, ScXMLDocument 
 
 class ScXMLIfElt::PImpl {
 public:
-  PImpl(void) : pub(NULL), elseelt(NULL)
+  PImpl(void) : pub(NULL)
   {
   }
 

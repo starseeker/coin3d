@@ -51,7 +51,7 @@
 #include <cassert>
 #include <cstring>
 
-#include <boost/scoped_array.hpp>
+#include <memory>  // for std::unique_ptr
 
 #include <Inventor/scxml/ScXML.h>
 #include <Inventor/scxml/ScXMLAbstractStateElt.h>
@@ -255,7 +255,7 @@ ScXMLAppendOpExprDataObj::createFor(ScXMLDataObj * lhs, ScXMLDataObj * rhs)
       rhs->isOfType(ScXMLStringDataObj::getClassTypeId())) {
     ScXMLStringDataObj * lhsstring = static_cast<ScXMLStringDataObj *>(lhs);
     ScXMLStringDataObj * rhsstring = static_cast<ScXMLStringDataObj *>(rhs);
-    boost::scoped_array<char> string(new char [strlen(lhsstring->getString()) + strlen(rhsstring->getString()) + 1]);
+    std::unique_ptr<char[]> string(new char[strlen(lhsstring->getString()) + strlen(rhsstring->getString()) + 1]);
     strcpy(string.get(), lhsstring->getString());
     strcat(string.get(), rhsstring->getString());
     delete rhsstring;
@@ -341,7 +341,7 @@ ScXMLAppendOpExprDataObj::evaluateNow(ScXMLStateMachine * sm, ScXMLDataObj *& po
     return FALSE;
   }
 
-  boost::scoped_array<char> string(new char [strlen(lhsevaled->getString()) + strlen(rhsevaled->getString()) + 1]);
+  std::unique_ptr<char[]> string(new char[strlen(lhsevaled->getString()) + strlen(rhsevaled->getString()) + 1]);
   strcpy(string.get(), lhsevaled->getString());
   strcat(string.get(), rhsevaled->getString());
 

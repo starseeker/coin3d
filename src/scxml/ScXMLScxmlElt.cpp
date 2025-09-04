@@ -248,6 +248,10 @@ ScXMLScxmlEltReader::read(ScXMLElt * container, cc_xml_elt * xmlelt, ScXMLDocume
 
 class ScXMLScxmlElt::PImpl {
 public:
+  PImpl(void)
+  {
+  }
+
   ~PImpl(void)
   {
     SCXML__CLEAR_STD_VECTOR(this->statelist, ScXMLStateElt *);
