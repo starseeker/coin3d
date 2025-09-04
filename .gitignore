@@ -1,0 +1,51 @@
+# Build directories (CMake and autotools)
+*_build/
+*_install/
+build*/
+install*/
+build/
+install/
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+CTestTestfile.cmake
+*.cmake
+!CMakeLists.txt
+!cmake/
+
+# Autotools generated files
+config.log
+config.status
+autom4te.cache/
+
+# Compiled binaries and libraries
+*.so
+*.so.*
+*.a
+*.dll
+*.exe
+*.dylib
+
+# Generated source files (from .in templates)
+src/*/SbBasic.cpp
+src/config.h
+src/setup.h
+
+# IDE files
+.vscode/
+.idea/
+*.user
+*.suo
+*.vcxproj.user
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*~
