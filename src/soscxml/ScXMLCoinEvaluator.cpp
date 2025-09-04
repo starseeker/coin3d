@@ -46,9 +46,7 @@
 #include <cassert>
 #include <cstring>
 #include <map>
-
-#include <boost/scoped_array.hpp>
-#include <boost/scoped_ptr.hpp>
+#include <memory>
 
 #include <Inventor/SoDB.h>
 #include <Inventor/SbVec2f.h>
@@ -734,7 +732,7 @@ struct DataObjDemangler<ScXMLBoolDataObj> {
 
 template <class EXPECTED_TYPE>
 bool
-TestReturnValue(const std::string & evaluationString, typename DataObjDemangler< EXPECTED_TYPE >::RET_VAL retVal, boost::scoped_ptr<ScXMLEvaluator> & evaluator)
+TestReturnValue(const std::string & evaluationString, typename DataObjDemangler< EXPECTED_TYPE >::RET_VAL retVal, std::unique_ptr<ScXMLEvaluator> & evaluator)
 {
   ScXMLDataObj * res = NULL;
 
@@ -755,8 +753,8 @@ TestReturnValue(const std::string & evaluationString, typename DataObjDemangler<
 
 BOOST_AUTO_TEST_CASE(BasicExpressions)
 {
-  boost::scoped_ptr<ScXMLStateMachine> sm(new ScXMLStateMachine);
-  boost::scoped_ptr<ScXMLEvaluator> evaluator(new ScXMLCoinEvaluator);
+  std::unique_ptr<ScXMLStateMachine> sm(new ScXMLStateMachine);
+  std::unique_ptr<ScXMLEvaluator> evaluator(new ScXMLCoinEvaluator);
   evaluator->setStateMachine(sm.get());
 
   TestReturnValue<ScXMLRealDataObj>("M_PI",M_PI,evaluator);
