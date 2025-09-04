@@ -39,12 +39,12 @@ foreach(_tgt ${COIN_TARGET_LINK_LIBRARIES})
 endforeach()
 
 set(COIN_SOURCE tidbits.cpp CACHE INTERNAL "COIN_SOURCE")
+# Minimal core subdirectories - removed GUI/toolkit/file I/O/VRML97/advanced features
 set(SUBDIRS
-  extensions xml actions base bundles caches details draggers elements
-  engines errors events fields fonts glue io manips misc rendering lists nodekits
-  navigation nodes shapenodes projectors sensors upgraders
-  3ds collision hardcopy shadows geo threads shaders profiler
-  vrml97 foreignfiles scxml soscxml
+  xml actions base bundles caches details elements
+  engines errors events fields fonts glue misc rendering lists
+  nodes shapenodes projectors sensors upgraders
+  collision shadows geo threads shaders profiler
 )
 
 foreach(_subdir ${SUBDIRS})
@@ -162,14 +162,12 @@ else()
   endif()
 
   add_library(${PROJECT_NAME} ${COIN_LIBRARY_TYPE} ${COIN_SOURCE} ${COMMON_HDRS} ${ADDITIONAL_HDRS} ${COMMON_RESOURCES}
-    $<TARGET_OBJECTS:3ds>
     $<TARGET_OBJECTS:actions>
     $<TARGET_OBJECTS:base>
     $<TARGET_OBJECTS:bundles>
     $<TARGET_OBJECTS:caches>
     $<TARGET_OBJECTS:collision>
     $<TARGET_OBJECTS:details>
-    $<TARGET_OBJECTS:draggers>
     $<TARGET_OBJECTS:elements>
     $<TARGET_OBJECTS:engines>
     $<TARGET_OBJECTS:errors>
@@ -177,30 +175,21 @@ else()
     ${expat_target}
     $<TARGET_OBJECTS:fields>
     $<TARGET_OBJECTS:fonts>
-    $<TARGET_OBJECTS:foreignfiles>
     $<TARGET_OBJECTS:geo>
     $<TARGET_OBJECTS:glelements>
     $<TARGET_OBJECTS:glue>
-    $<TARGET_OBJECTS:hardcopy>
-    $<TARGET_OBJECTS:io>
     $<TARGET_OBJECTS:lists>
-    $<TARGET_OBJECTS:manips>
     $<TARGET_OBJECTS:misc>
-    $<TARGET_OBJECTS:navigation>
-    $<TARGET_OBJECTS:nodekits>
     $<TARGET_OBJECTS:nodes>
     $<TARGET_OBJECTS:profiler>
     $<TARGET_OBJECTS:projectors>
     $<TARGET_OBJECTS:rendering>
-    $<TARGET_OBJECTS:scxml>
     $<TARGET_OBJECTS:sensors>
     $<TARGET_OBJECTS:shaders>
     $<TARGET_OBJECTS:shadows>
     $<TARGET_OBJECTS:shapenodes>
-    $<TARGET_OBJECTS:soscxml>
     $<TARGET_OBJECTS:threads>
     $<TARGET_OBJECTS:upgraders>
-    $<TARGET_OBJECTS:vrml97>
     $<TARGET_OBJECTS:xml>
   )
 endif()
