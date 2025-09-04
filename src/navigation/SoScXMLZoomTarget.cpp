@@ -79,8 +79,7 @@
 #include <string>
 #include <cfloat>
 #include <cmath>
-
-#include <boost/intrusive_ptr.hpp>
+#include <memory>
 
 #include <Inventor/SbVec2f.h>
 #include <Inventor/SbRotation.h>
@@ -104,6 +103,11 @@
 #include "SbBasicP.h"
 
 namespace {
+
+struct SoCameraUnrefDeleter {
+  void operator()(SoCamera* cam) const { if (cam) cam->unref(); }
+};
+
 
 class ZoomData : public SoScXMLNavigationTarget::Data {
 public:
@@ -476,7 +480,7 @@ SoScXMLZoomTarget::reset(SoCamera * camera)
 
   SoType cameratype = camera->getTypeId();
   assert(cameratype.canCreateInstance());
-  boost::intrusive_ptr<SoCamera> defaultcamera = static_cast<SoCamera *>(cameratype.createInstance());
+  std::unique_ptr<SoCamera, SoCameraUnrefDeleter> defaultcamera(static_cast<SoCamera *>(cameratype.createInstance()));
 
   if (camera->isOfType(SoOrthographicCamera::getClassTypeId())) {
     static_cast<SoOrthographicCamera *>(camera)->height =

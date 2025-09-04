@@ -43,9 +43,7 @@
 #include <cassert>
 #include <cmath>
 #include <cfloat>
-
-#include <boost/scoped_ptr.hpp>
-#include <boost/intrusive_ptr.hpp>
+#include <memory>
 
 #include <Inventor/SbViewVolume.h>
 #include <Inventor/SbRotation.h>
@@ -75,13 +73,17 @@
 
 namespace {
 
+// Custom deleter for SoCamera: calls unref() instead of delete
+struct SoCameraUnrefDeleter {
+  void operator()(SoCamera* cam) const {
+    if (cam) cam->unref();
+  }
+};
+
 class RotateData : public SoScXMLNavigationTarget::Data {
-// sendspinstart
-// should be persistent over rotations, but individually settable per session
-// or better; per event origin point
 public:
   RotateData(void) {
-    this->projector.reset(new SbSphereSheetProjector);
+    this->projector = std::make_unique<SbSphereSheetProjector>();
     SbViewVolume volume;
     volume.ortho(-1, 1, -1, 1, -1, 1);
     this->projector->setViewVolume(volume);
@@ -89,8 +91,8 @@ public:
   }
 
   SbVec2f downposn;
-  boost::intrusive_ptr<SoCamera> cameraclone;
-  boost::scoped_ptr<SbSphereSheetProjector> projector;
+  std::unique_ptr<SoCamera, SoCameraUnrefDeleter> cameraclone;
+  std::unique_ptr<SbSphereSheetProjector> projector;
 
   struct log {
     SbVec2f posn;
@@ -242,8 +244,8 @@ SoScXMLRotateTarget::processOneEvent(const ScXMLEvent * event)
     SoCamera * camera = inherited::getActiveCamera(event, sessionid);
     if unlikely (!camera) { return FALSE; }
 
-    // store current camera position
-    data->cameraclone = static_cast<SoCamera *>(camera->copy());
+    // store current camera position (unique_ptr with custom deleter)
+    data->cameraclone.reset(static_cast<SoCamera *>(camera->copy()));
 
     return TRUE;
   }
@@ -264,12 +266,7 @@ SoScXMLRotateTarget::processOneEvent(const ScXMLEvent * event)
     }
 
     assert(data->cameraclone.get());
-    if unlikely (camera->getTypeId() != data->cameraclone->getTypeId()) {
-      SoDebugError::post("SoScXMLRotateTarget::processOneEvent",
-                         "while processing %s: camera type was changed",
-                         eventname.getString());
-      return FALSE;
-    }
+    camera->copyFieldValues(data->cameraclone.get());
 
     // get mouse position
     SbVec2f currentpos;

@@ -42,8 +42,8 @@
 #include <cassert>
 #include <cmath>
 #include <cfloat>
+#include <memory>    // for std::unique_ptr
 
-#include <boost/intrusive_ptr.hpp>
 
 #include <Inventor/SbViewVolume.h>
 #include <Inventor/SbRotation.h>
@@ -66,13 +66,20 @@
 
 namespace {
 
+// Custom deleter for SoCamera: calls unref() instead of delete
+struct SoCameraUnrefDeleter {
+  void operator()(SoCamera* cam) const {
+    if (cam) cam->unref();
+  }
+};
+
 class SpinData : public SoScXMLNavigationTarget::Data {
 public:
   SpinData(void) : spinning(FALSE) { }
 
   SbBool spinning;
 
-  boost::intrusive_ptr<SoCamera> camera;
+  std::unique_ptr<SoCamera, SoCameraUnrefDeleter> camera;  // was boost::intrusive_ptr
   SbTime updatetime;
   SbRotation spinrotation;
 };
@@ -192,7 +199,8 @@ SoScXMLSpinTarget::processOneEvent(const ScXMLEvent * event)
 
     data->spinning = TRUE;
 
-    data->camera = static_cast<SoCamera *>(camera->copy());
+    // Use unique_ptr with custom deleter for SoCamera
+    data->camera.reset(static_cast<SoCamera *>(camera->copy()));
 
     double dtime = 0.0;
     SbRotation spinrot;
