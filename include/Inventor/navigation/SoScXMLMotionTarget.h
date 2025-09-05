@@ -36,8 +36,6 @@
 #include <Inventor/navigation/SoScXMLNavigationTarget.h>
 
 class COIN_DLL_API SoScXMLMotionTarget : public SoScXMLNavigationTarget {
-  typedef SoScXMLNavigationTarget inherited;
-  SCXML_OBJECT_HEADER(SoScXMLMotionTarget)
 
 public:
   static void initClass(void);
@@ -51,7 +49,6 @@ protected:
   SoScXMLMotionTarget(void);
   virtual ~SoScXMLMotionTarget(void);
 
-  virtual SbBool processOneEvent(const ScXMLEvent * event);
 
 private:
   class PImpl;

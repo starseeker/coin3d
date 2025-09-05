@@ -43,8 +43,7 @@
 #include <Inventor/actions/SoSearchAction.h>
 #include <Inventor/misc/SoState.h>
 
-#include <Inventor/scxml/ScXML.h>
-#include <Inventor/scxml/SoScXMLStateMachine.h>
+// SCXML includes removed - using direct C++ APIs instead
 
 #include "SbBasicP.h"
 

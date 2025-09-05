@@ -55,9 +55,6 @@
 #include <Inventor/navigation/SoScXMLMotionTarget.h>
 #include <Inventor/C/threads/mutex.h>
 #include "threads/threadsutilp.h"
-#include "navigation/common-xml.cpp"
-#include "navigation/examiner-xml.cpp"
-#include "navigation/plane-xml.cpp"
 
 class SoScXMLNavigation::PImpl {
 public:
@@ -83,14 +80,7 @@ SoScXMLNavigation::initClasses(void)
   SoScXMLFlightControlTarget::initClass();
   SoScXMLMotionTarget::initClass();
 
-  CoinResources::set("coin:scxml/navigation/common.xml",
-                     SbByteBuffer(sizeof(common_xml)-1,&common_xml[0]));
-
-  CoinResources::set("coin:scxml/navigation/examiner.xml",
-                     SbByteBuffer(sizeof(examiner_xml)-1,&examiner_xml[0]));
-
-  CoinResources::set("coin:scxml/navigation/plane.xml",
-                     SbByteBuffer(sizeof(plane_xml)-1,&plane_xml[0]));
+  // XML navigation resources removed - using direct C++ APIs instead
 
   // launch services
   SoScXMLRotateTarget::constructSingleton();

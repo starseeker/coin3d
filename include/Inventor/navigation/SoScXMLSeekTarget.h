@@ -39,11 +39,8 @@ class SoSearchAction;
 class SoGetMatrixAction;
 class SoRayPickAction;
 
-#define COIN_NAVIGATION_SEEK_EVENT_PREFIX SOSCXML_NAVIGATION_TARGETTYPE ".Seek"
 
 class COIN_DLL_API SoScXMLSeekTarget : public SoScXMLNavigationTarget {
-  typedef SoScXMLNavigationTarget inherited;
-  SCXML_OBJECT_HEADER(SoScXMLSeekTarget)
 
 public:
   static void initClass(void);
@@ -64,7 +61,6 @@ protected:
   static const SbName & MISS(void);
   static const SbName & DONE(void);
 
-  virtual SbBool processOneEvent(const ScXMLEvent * event);
 
 private:
   SoSearchAction * searchaction;
