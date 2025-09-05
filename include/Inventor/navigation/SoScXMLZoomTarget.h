@@ -40,11 +40,8 @@ class SoPerspectiveCamera;
 class SoOrthographicCamera;
 class SoFrustumCamera;
 
-#define COIN_NAVIGATION_ZOOM_TARGET_EVENT_PREFIX SOSCXML_NAVIGATION_TARGETTYPE ".Zoom"
 
 class COIN_DLL_API SoScXMLZoomTarget : public SoScXMLNavigationTarget {
-  typedef SoScXMLNavigationTarget inherited;
-  SCXML_OBJECT_HEADER(SoScXMLZoomTarget)
 
 public:
   static void initClass(void);
@@ -69,7 +66,6 @@ protected:
   SoScXMLZoomTarget(void);
   virtual ~SoScXMLZoomTarget(void);
 
-  virtual SbBool processOneEvent(const ScXMLEvent * event);
 
 private:
   class PImpl;

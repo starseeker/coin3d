@@ -36,11 +36,8 @@
 #include <Inventor/navigation/SoScXMLNavigationTarget.h>
 
 
-#define COIN_NAVIGATION_FLIGHT_CONTROL_TARGET_EVENT_PREFIX SOSCXML_NAVIGATION_TARGETTYPE ".FlightControl"
 
 class COIN_DLL_API SoScXMLFlightControlTarget : public SoScXMLNavigationTarget {
-  typedef SoScXMLNavigationTarget inherited;
-  SCXML_OBJECT_HEADER(SoScXMLFlightControlTarget)
 
 public:
   static void initClass(void);
@@ -65,7 +62,6 @@ protected:
   SoScXMLFlightControlTarget(void);
   virtual ~SoScXMLFlightControlTarget(void);
 
-  virtual SbBool processOneEvent(const ScXMLEvent * event);
 
 private:
   class PImpl;

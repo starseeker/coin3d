@@ -35,11 +35,11 @@
 
 #include <Inventor/navigation/SoScXMLNavigationTarget.h>
 
-#define SOSCXML_NAVIGATION_MISC_TARGET_EVENT_PREFIX SOSCXML_NAVIGATION_TARGETTYPE ".Misc"
+class SoCamera;
+class SoNode;
+class SbViewportRegion;
 
 class COIN_DLL_API SoScXMLMiscTarget : public SoScXMLNavigationTarget {
-  typedef SoScXMLNavigationTarget inherited;
-  SCXML_OBJECT_HEADER(SoScXMLMiscTarget)
 
 public:
   static void initClass(void);
@@ -49,6 +49,15 @@ public:
   static void destructSingleton(void);
   static SoScXMLMiscTarget * singleton(void);
 
+  // Direct C++ API methods replacing SCXML event handling
+  static SbBool viewAll(SoCamera * camera, SoNode * sceneGraph, const SbViewportRegion & viewport);
+  static SbBool redraw(SoNode * sceneGraph);
+  static SbBool pointAt(SoCamera * camera, const SbVec3f & focusPoint);
+  static SbBool pointAt(SoCamera * camera, const SbVec3f & focusPoint, const SbVec3f & upVector);
+  static SbBool setFocalDistance(SoCamera * camera, float distance);
+  static SbBool setCameraPosition(SoCamera * camera, const SbVec3f & position);
+
+  // Legacy event name access (for compatibility)
   static const SbName & VIEW_ALL(void);
   static const SbName & REDRAW(void);
   static const SbName & POINT_AT(void);
@@ -58,8 +67,6 @@ public:
 protected:
   SoScXMLMiscTarget(void);
   virtual ~SoScXMLMiscTarget(void);
-
-  virtual SbBool processOneEvent(const ScXMLEvent * event);
 
 private:
   class PImpl;
