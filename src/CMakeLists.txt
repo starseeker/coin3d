@@ -41,11 +41,11 @@ endforeach()
 set(COIN_SOURCE tidbits.cpp CACHE INTERNAL "COIN_SOURCE")
 # Minimal core subdirectories - removed GUI/toolkit but keeping minimal dependencies
 set(SUBDIRS
-  xml actions base bundles caches details elements
+  actions base bundles caches details elements
   engines errors events fields fonts glue io misc rendering lists
   nodes shapenodes projectors sensors upgraders
   collision shadows geo threads shaders profiler
-  scxml soscxml hardcopy navigation
+  hardcopy navigation
 )
 # TODO - see how to make draggers toolkit independent
 # TODO - see what we need from manips
@@ -140,8 +140,6 @@ source_group("Source Files\\system"                    REGULAR_EXPRESSION ".*/sr
 source_group("Source Files\\threads"                   REGULAR_EXPRESSION ".*/src/threads/.*[.](h|c|cpp)")
 source_group("Source Files\\upgraders"                 REGULAR_EXPRESSION ".*/src/upgraders/.*[.](h|c|cpp)")
 source_group("Source Files\\vrml97"                    REGULAR_EXPRESSION ".*/src/vrml97/.*[.](h|c|cpp)")
-source_group("Source Files\\xml"                       REGULAR_EXPRESSION ".*/src/xml/.*[.](h|c|cpp)")
-source_group("Source Files\\xml\\expat"                REGULAR_EXPRESSION ".*/src/xml/expat/.*[.](h|c|cpp)")
 
 # As CMake does not support deep header hierarchies for framework generation we tweak the
 # installation paths for the install commands.  To make sure the symbolic links for versioned
@@ -160,10 +158,6 @@ set(ADDITIONAL_HDRS ${PROJECT_SOURCE_DIR}/include/SoWinEnterScope.h ${PROJECT_SO
 if(COIN_BUILD_SINGLE_LIB)
   add_library(${PROJECT_NAME} ${COIN_LIBRARY_TYPE} ${COIN_SOURCE} ${COMMON_HDRS} ${ADDITIONAL_HDRS} ${COMMON_RESOURCES})
 else()
-  if(NOT HAVE_EXPAT)
-    set(expat_target $<TARGET_OBJECTS:expat>)
-  endif()
-
   add_library(${PROJECT_NAME} ${COIN_LIBRARY_TYPE} ${COIN_SOURCE} ${COMMON_HDRS} ${ADDITIONAL_HDRS} ${COMMON_RESOURCES}
     $<TARGET_OBJECTS:actions>
     $<TARGET_OBJECTS:base>
@@ -175,7 +169,6 @@ else()
     $<TARGET_OBJECTS:engines>
     $<TARGET_OBJECTS:errors>
     $<TARGET_OBJECTS:events>
-    ${expat_target}
     $<TARGET_OBJECTS:fields>
     $<TARGET_OBJECTS:fonts>
     $<TARGET_OBJECTS:geo>
@@ -190,15 +183,12 @@ else()
     $<TARGET_OBJECTS:profiler>
     $<TARGET_OBJECTS:projectors>
     $<TARGET_OBJECTS:rendering>
-    $<TARGET_OBJECTS:scxml>
     $<TARGET_OBJECTS:sensors>
     $<TARGET_OBJECTS:shaders>
     $<TARGET_OBJECTS:shadows>
     $<TARGET_OBJECTS:shapenodes>
-    $<TARGET_OBJECTS:soscxml>
     $<TARGET_OBJECTS:threads>
     $<TARGET_OBJECTS:upgraders>
-    $<TARGET_OBJECTS:xml>
   )
 endif()
 
@@ -218,9 +208,7 @@ if(WIN32)
     endif()
   endif()
   if(MSVC)
-    # Suppress warning about empty switch statement in Bison-generated files:
-    set_property(SOURCE scxml/eval-minimum-tab.cpp APPEND PROPERTY COMPILE_FLAGS /wd4065)
-    set_property(SOURCE soscxml/eval-coin-tab.cpp APPEND PROPERTY COMPILE_FLAGS /wd4065)
+    # No SCXML-related Bison warnings to suppress after removing SCXML
   endif()
 elseif(APPLE)
   if(COIN_BUILD_MAC_FRAMEWORK)
