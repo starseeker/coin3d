@@ -79,7 +79,7 @@ public:
 
   SbBool spinning;
 
-  std::unique_ptr<SoCamera, SoCameraUnrefDeleter> camera;  // was boost::intrusive_ptr
+  std::unique_ptr<SoCamera, SoCameraUnrefDeleter> camera;
   SbTime updatetime;
   SbRotation spinrotation;
 };
