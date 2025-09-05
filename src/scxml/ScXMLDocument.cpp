@@ -42,9 +42,8 @@
 #include <cstring>
 #include <map>
 
-#include <boost/scoped_ptr.hpp>
-#include <boost/scoped_array.hpp>
-#include <boost/intrusive_ptr.hpp>
+#include <memory>  // for std::unique_ptr
+
 
 #include <Inventor/C/XML/document.h>
 #include <Inventor/C/XML/element.h>
@@ -83,20 +82,16 @@ using std::strlen;
 class ScXMLDocument::PImpl {
 public:
   PImpl(void)
-  : filename(NULL),
-    root(NULL),
-    stateidmap(NULL),
-    dataidmap(NULL)
   { }
   ~PImpl(void) { }
 
-  boost::scoped_array<char> filename;
-  boost::scoped_ptr<ScXMLScxmlElt> root;
+  std::unique_ptr<char[]> filename;
+  std::unique_ptr<ScXMLScxmlElt> root;
 
   typedef std::map<const char *, ScXMLAbstractStateElt *> StateIdMap;
   typedef std::map<const char *, ScXMLDataElt *> DataIdMap;
-  boost::scoped_ptr<StateIdMap> stateidmap;
-  boost::scoped_ptr<DataIdMap> dataidmap;
+  std::unique_ptr<StateIdMap> stateidmap;
+  std::unique_ptr<DataIdMap> dataidmap;
 
   void fillIdentifierMaps(ScXMLElt * object);
 
@@ -260,13 +255,12 @@ ScXMLDocument::~ScXMLDocument(void)
 {
 }
 
-void intrusive_ptr_add_ref(cc_xml_doc * COIN_UNUSED_ARG(doc)) {
-  // nada
-}
-
-void intrusive_ptr_release(cc_xml_doc * doc) {
-  cc_xml_doc_delete_x(doc);
-}
+// Custom deleter for cc_xml_doc: calls cc_xml_doc_delete_x instead of delete
+struct CcXmlDocDeleter {
+  void operator()(cc_xml_doc* doc) const {
+    if (doc) cc_xml_doc_delete_x(doc);
+  }
+};
 
 ScXMLDocument *
 ScXMLDocument::readFile(const char * filename)
@@ -285,7 +279,7 @@ ScXMLDocument::readFile(const char * filename)
     }
   }
 
-  boost::intrusive_ptr<cc_xml_doc> xmldoc(cc_xml_doc_new());
+  std::unique_ptr<cc_xml_doc, CcXmlDocDeleter> xmldoc(cc_xml_doc_new());
   if (unlikely(!cc_xml_doc_read_file_x(xmldoc.get(), filename))) {
     return NULL;
   }
@@ -305,7 +299,7 @@ ScXMLDocument::readBuffer(const SbByteBuffer & buffer)
 {
   if (buffer.size()==0) return NULL;
 
-  boost::intrusive_ptr<cc_xml_doc> xmldoc(cc_xml_doc_new());
+  std::unique_ptr<cc_xml_doc, CcXmlDocDeleter> xmldoc(cc_xml_doc_new());
   if (unlikely(!cc_xml_doc_read_buffer_x(xmldoc.get(), buffer.constData(), buffer.size()))) {
     return NULL;
   }

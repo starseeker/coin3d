@@ -89,10 +89,7 @@
 #include "misc/AudioTools.h"
 #include "coindefs.h"
 
-#if BOOST_WORKAROUND(COIN_MSVC, <= COIN_MSVC_6_0_VERSION)
-// symbol length truncation
-#pragma warning(disable:4786)
-#endif // VC6.0
+/* Legacy MSVC6 workaround removed - not needed for C++17 */
 
 #include "SoRenderManagerP.h"
 

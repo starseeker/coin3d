@@ -47,7 +47,7 @@
 #include <config.h> /* for HAVE_* defines */
 #endif /* HAVE_CONFIG_H */
 
-#include <boost/detail/workaround.hpp> /* For BOOST_WORKAROUND */
+/* Removed BOOST_WORKAROUND dependency - no longer needed for C++17 */
 
 #include <Inventor/C/basic.h> /* For COMPILE_ONLY_BEFORE */
 
@@ -174,18 +174,14 @@ static void inline COIN_CONCAT(compile_only_before_nofunction,__LINE__) () { \
 #define COIN_MSVC _MSC_VER
 #endif /* _MSC_VER */
 
+/* MSVC version defines - kept for reference but workarounds not needed for C++17 */
 #define COIN_MSVC_6_0_VERSION 1200
 #define COIN_MSVC_7_0_VERSION 1300
 #define COIN_MSVC_7_1_VERSION 1310
 #define COIN_MSVC_8_0_VERSION 1400
 #define COIN_MSVC_9_0_VERSION 1500
 
-/* see SbTime.cpp for example usage */
-#define COIN_WORKAROUND(def, test) BOOST_WORKAROUND(def,test)
-
-#if BOOST_WORKAROUND(_MSC_VER, <= COIN_MSVC_6_0_VERSION)
-#define COIN_WORKAROUND_NO_USING_STD_FUNCS
-#endif
+/* Legacy workaround macros removed - no longer needed for C++17 */
 
 #ifdef HAVE___BUILTIN_EXPECT
 /* for branch-prediction hint optimization */

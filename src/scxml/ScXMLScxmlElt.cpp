@@ -62,7 +62,7 @@
 #include <algorithm>
 #include <vector>
 
-#include <boost/scoped_ptr.hpp>
+#include <memory>  // for std::unique_ptr
 
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/C/XML/element.h>
@@ -248,6 +248,10 @@ ScXMLScxmlEltReader::read(ScXMLElt * container, cc_xml_elt * xmlelt, ScXMLDocume
 
 class ScXMLScxmlElt::PImpl {
 public:
+  PImpl(void)
+  {
+  }
+
   ~PImpl(void)
   {
     SCXML__CLEAR_STD_VECTOR(this->statelist, ScXMLStateElt *);
@@ -256,11 +260,11 @@ public:
     SCXML__CLEAR_STD_VECTOR(this->scriptlist, ScXMLScriptElt *);
   }
 
-  boost::scoped_ptr<ScXMLInitialElt> initialelt;
+  std::unique_ptr<ScXMLInitialElt> initialelt;
   std::vector<ScXMLStateElt *> statelist;
   std::vector<ScXMLParallelElt *> parallellist;
   std::vector<ScXMLFinalElt *> finallist;
-  boost::scoped_ptr<ScXMLDataModelElt> datamodelelt;
+  std::unique_ptr<ScXMLDataModelElt> datamodelelt;
   std::vector<ScXMLScriptElt *> scriptlist;
 };
 

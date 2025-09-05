@@ -436,7 +436,7 @@ SbVec3s::print(FILE * fp) const
 
 #ifdef COIN_TEST_SUITE
 #include <Inventor/SbTypeInfo.h>
-#include <boost/lexical_cast.hpp>
+#include <string>
 
 typedef SbVec3s ToTest;
 BOOST_AUTO_TEST_CASE(toString) {

@@ -50,7 +50,7 @@
 #include <map>
 #include <string>
 
-#include <boost/scoped_ptr.hpp>
+#include <memory>  // for std::unique_ptr
 
 #include <Inventor/SoDB.h>
 #include <Inventor/SoInput.h>
