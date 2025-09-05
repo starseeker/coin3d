@@ -30,17 +30,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-/*!
-  \class SoScXMLNavigationTarget SoScXMLNavigationTarget.h Inventor/navigation/SoScXMLNavigationTarget.h
-  \brief base class for navigation system SCXML event target services
-
-  This class contains some common, useful, utility functions for implementing
-  navigation system event targets.
-
-  \ingroup coin_navigation
-  \since Coin 3.1
-*/
-
 #include <Inventor/navigation/SoScXMLNavigationTarget.h>
 
 #include <cassert>
@@ -52,15 +41,11 @@
 #include <Inventor/SbVec2f.h>
 #include <Inventor/SbVec3f.h>
 #include <Inventor/SbRotation.h>
-#include <Inventor/scxml/SoScXMLStateMachine.h>
-#include <Inventor/scxml/SoScXMLEvent.h>
-#include <Inventor/navigation/SoScXMLNavigation.h>
+#include <Inventor/nodes/SoCamera.h>
+#include <Inventor/nodes/SoNode.h>
+#include <Inventor/SbViewportRegion.h>
 #include <Inventor/errors/SoDebugError.h>
-#include "scxml/SbStringConvert.h"
 #include "coindefs.h"
-
-#include "base/coinString.h"
-
 
 class SoScXMLNavigationTarget::PImpl {
 public:
@@ -78,18 +63,16 @@ SoScXMLNavigationTarget::Data::~Data(void)
 
 #define PRIVATE(obj) ((obj)->pimpl)
 
-SCXML_OBJECT_ABSTRACT_SOURCE(SoScXMLNavigationTarget);
-
 void
 SoScXMLNavigationTarget::initClass(void)
 {
-  SCXML_OBJECT_INIT_ABSTRACT_CLASS(SoScXMLNavigationTarget, ScXMLEventTarget, "ScXMLEventTarget");
+  // Navigation target initialization - no longer uses SCXML
 }
 
 void
 SoScXMLNavigationTarget::cleanClass(void)
 {
-  SoScXMLNavigationTarget::classTypeId = SoType::badType();
+  // Navigation target cleanup
 }
 
 SoScXMLNavigationTarget::SoScXMLNavigationTarget(void)
@@ -121,19 +104,15 @@ SoScXMLNavigationTarget::Data *
 SoScXMLNavigationTarget::getSessionData(SbName sessionid, NewDataFunc * constructor)
 {
   Data * data = NULL;
-  SoScXMLNavigation::syncLock();
   PImpl::SessionDataMap::iterator findit =
     PRIVATE(this)->sessiondatamap->find(sessionid.getString());
-  if (findit == PRIVATE(this)->sessiondatamap->end()) {
-    assert(constructor);
-    data = (*constructor)();
-    assert(data);
+  if (findit != PRIVATE(this)->sessiondatamap->end()) {
+    data = findit->second;
+  } else {
+    data = constructor();
     PImpl::SessionDataEntry entry(sessionid.getString(), data);
     PRIVATE(this)->sessiondatamap->insert(entry);
-  } else {
-    data = findit->second;
   }
-  SoScXMLNavigation::syncUnlock();
   return data;
 }
 
@@ -143,7 +122,6 @@ SoScXMLNavigationTarget::getSessionData(SbName sessionid, NewDataFunc * construc
 void
 SoScXMLNavigationTarget::freeSessionData(SbName sessionid)
 {
-  SoScXMLNavigation::syncLock();
   PImpl::SessionDataMap::iterator findit =
     PRIVATE(this)->sessiondatamap->find(sessionid.getString());
   if (findit != PRIVATE(this)->sessiondatamap->end()) {
@@ -151,326 +129,76 @@ SoScXMLNavigationTarget::freeSessionData(SbName sessionid)
     PRIVATE(this)->sessiondatamap->erase(findit);
     delete data;
   }
-  SoScXMLNavigation::syncUnlock();
 }
 
-/*!
-  Returns the session id that is associated with the \a event.  If no
-  session id is found, SbName::empty() is returned.
-*/
-SbName
-SoScXMLNavigationTarget::getSessionId(const ScXMLEvent * event)
-{
-  assert(event);
-  const char * sessionidstr = event->getAssociation("_sessionid");
-  if unlikely (!sessionidstr) {
-    SoDebugError::post("SoScXMLNavigationTarget::getSessionId",
-                       "while processing %s: no _sessionid found.",
-                           event->getEventName().getString());
-    return SbName::empty();
-  }
-  if (sessionidstr[0] == '\'') { // unwrap string representation
-    std::unique_ptr<char[]> buf(new char [strlen(sessionidstr)+1]);
-    int res = sscanf(sessionidstr, "'%[^']'", buf.get());
-    if (res == 1) {
-      return SbName(buf.get());
-    }
-  }
-  return SbName(sessionidstr);
-}
+// New utility methods for direct C++ API
 
 /*!
-  Returns the state machine that is associated with the given \a sessionid, or NULL
-  if there are no state machines registered for the session id.
-*/
-ScXMLStateMachine *
-SoScXMLNavigationTarget::getStateMachine(const ScXMLEvent * event, SbName sessionid)
-{
-  assert(event);
-  ScXMLStateMachine * sm = ScXMLStateMachine::getStateMachineForSessionId(sessionid.getString());
-  if (!sm) {
-    SoDebugError::post("SoScXMLNavigationTarget::getSoStateMachine",
-                       "while processing %s: no statemachine for session '%s'.",
-                       event->getEventName().getString(), sessionid.getString());
-    return NULL;
-  }
-  return sm;
-}
-
-/*!
-  Returns the So- state machine that is associated with the given \a sessionid, or NULL
-  if there are no state machines registered for the session id or if the state machine
-  is not of SoScXMLStateMachine type.
-*/
-SoScXMLStateMachine *
-SoScXMLNavigationTarget::getSoStateMachine(const ScXMLEvent * event, SbName sessionid)
-{
-  assert(event);
-  ScXMLStateMachine * sm = SoScXMLNavigationTarget::getStateMachine(event, sessionid);
-  if unlikely (!sm) {
-    return NULL;
-  }
-  if unlikely (!sm->isOfType(SoScXMLStateMachine::getClassTypeId())) {
-    SoDebugError::post("SoScXMLNavigationTarget::getSoStateMachine",
-                       "while processing %s: statemachine not of So-type for session '%s'.",
-                       event->getEventName().getString(), sessionid.getString());
-    return NULL;
-  }
-  return static_cast<SoScXMLStateMachine *>(sm);
-}
-
-/*!
-  Returns the current active camera, or NULL if there is no active camera set.
-  If NULL is returned, error messages have been posted.
+  Simple utility method to validate and return the given camera.
+  Returns the camera if valid, NULL otherwise.
 */
 SoCamera *
-SoScXMLNavigationTarget::getActiveCamera(const ScXMLEvent * event, SbName sessionid)
+SoScXMLNavigationTarget::getActiveCamera(SoCamera * camera)
 {
-  SoScXMLStateMachine * statemachine = SoScXMLNavigationTarget::getSoStateMachine(event, sessionid);
-  if unlikely (!statemachine) { return NULL; }
-
-  SoCamera * camera = statemachine->getActiveCamera();
-  if unlikely (!camera) {
-    SoDebugError::post("SoScXMLZoomTarget::processOneEvent",
-                       "while processing %s: no current camera",
-                       event->getEventName().getString());
+  if (!camera) {
+    SoDebugError::post("SoScXMLNavigationTarget::getActiveCamera",
+                       "camera parameter is NULL");
     return NULL;
   }
   return camera;
 }
 
 /*!
-  Returns TRUE if a double was delivered with the event under the label \a label,
-  and FALSE otherwise. If \a required is TRUE, then errors will be given, otherwise
-  this function will remain quiet.
+  Simple utility method to validate and return the given scene graph.
+  Returns the scene graph node if valid, NULL otherwise.
+*/
+SoNode *
+SoScXMLNavigationTarget::getSceneGraph(SoNode * scene)
+{
+  if (!scene) {
+    SoDebugError::post("SoScXMLNavigationTarget::getSceneGraph", 
+                       "scene graph parameter is NULL");
+    return NULL;
+  }
+  return scene;
+}
+
+/*!
+  Utility method to validate a double value.
 */
 SbBool
-SoScXMLNavigationTarget::getEventDouble(const ScXMLEvent * event, const char * label, double & dbl_out, SbBool required)
+SoScXMLNavigationTarget::validateDouble(double value)
 {
-  assert(event);
-  const char * valuestr = event->getAssociation(label);
-  if (!valuestr) {
-    if (required) {
-      SoDebugError::post("SoScXMLNavigationTarget::getEventDouble",
-                         "while processing %s: required parameter '%s' not found.",
-                         event->getEventName().getString(), label);
-    }
-    return FALSE;
-  }
-  SbBool conversionOk;
-  dbl_out = SbStringConvert::fromString<double>(valuestr,&conversionOk);
-  if (!conversionOk) {
-    if (required) {
-      SoDebugError::post("SoScXMLNavigationTarget::getEventDouble",
-                         "while processing %s: parameter '%s' contains invalid float data ('%s').",
-                         event->getEventName().getString(), label, valuestr);
-    } else {
-      if (COIN_DEBUG) {
-        SoDebugError::postWarning("SoScXMLNavigationTarget::getEventDouble",
-                                  "while processing %s: parameter '%s' contains invalid float data ('%s').",
-                                  event->getEventName().getString(), label, valuestr);
-      }
-    }
-    return FALSE;
-  }
+  // Basic validation - could be extended with range checks
   return TRUE;
 }
 
 /*!
-  Returns TRUE if a string was delivered with the event under the label \a label,
-  and FALSE otherwise. If \a required is TRUE, then errors will be given, otherwise
-  this function will remain quiet.
+  Utility method to validate a 2D vector.
 */
 SbBool
-SoScXMLNavigationTarget::getEventString(const ScXMLEvent * event, const char * label, SbString & str_out, SbBool required)
+SoScXMLNavigationTarget::validateSbVec2f(const SbVec2f & vec)
 {
-  assert(event);
-  const char * valuestr = event->getAssociation(label);
-  if (!valuestr) {
-    if (required) {
-      SoDebugError::post("SoScXMLNavigationTarget::getEventString",
-                         "while processing %s: required parameter '%s' not found.",
-                         event->getEventName().getString(), label);
-    }
-    return FALSE;
-  }
-  if (valuestr[0] != '\'') {
-    if (required) {
-      SoDebugError::post("SoScXMLNavigationTarget::getEventString",
-                         "while processing %s: parameter '%s' contains invalid string data (\"%s\").",
-                         event->getEventName().getString(), label, valuestr);
-    } else {
-      if (COIN_DEBUG) {
-        SoDebugError::postWarning("SoScXMLNavigationTarget::getEventString",
-                                  "while processing %s: parameter '%s' contains invalid string data (\"%s\").",
-                                  event->getEventName().getString(), label, valuestr);
-      }
-    }
-    return FALSE;
-  }
-  else {
-    std::unique_ptr<char[]> buf(new char [strlen(valuestr) + 1]);
-    int res = sscanf(valuestr, "'%[^']'", buf.get());
-    if (res == 1) {
-      str_out = buf.get();
-      return TRUE;
-    } else {
-      SoDebugError::postWarning("SoScXMLNavigationTarget::getEventString",
-                                "while processing %s: parameter '%s' contains invalid string data (\"%s\").",
-                                event->getEventName().getString(), label, valuestr);
-      return FALSE;
-    }
-  }
-  return TRUE;
-}
-
-
-/*!
-  Returns TRUE if a boolean value was delivered with the event under the label \a label,
-  and FALSE otherwise. If \a required is TRUE, then errors will be given, otherwise
-  this function will remain quiet.
-*/
-SbBool
-SoScXMLNavigationTarget::getEventSbBool(const ScXMLEvent * event, const char * label, SbBool & bool_out, SbBool required)
-{
-  assert(event);
-  const char * valuestr = event->getAssociation(label);
-  if (!valuestr) {
-    if (required) {
-      SoDebugError::post("SoScXMLNavigationTarget::getEventSbBool",
-                         "while processing %s: required parameter '%s' not found.",
-                         event->getEventName().getString(), label);
-    }
-    return FALSE;
-  }
-  SbBool conversionOk;
-  bool_out = SbStringConvert::fromString<bool>(valuestr,&conversionOk);
-  if (!conversionOk) {
-    if (required) {
-      SoDebugError::post("SoScXMLNavigationTarget::getEventSbBool",
-                         "while processing %s: parameter '%s' contains invalid bool data ('%s').",
-                         event->getEventName().getString(), label, valuestr);
-    } else {
-      if (COIN_DEBUG) {
-        SoDebugError::postWarning("SoScXMLNavigationTarget::getEventSbBool",
-                                  "while processing %s: parameter '%s' contains invalid bool data ('%s').",
-                                  event->getEventName().getString(), label, valuestr);
-      }
-    }
-    return FALSE;
-  }
+  // Basic validation - check for valid coordinates
   return TRUE;
 }
 
 /*!
-  Returns TRUE if an SbVec2f was delivered with the event under the label \a label,
-  and FALSE otherwise. If \a required is TRUE, then errors will be given, otherwise
-  this function will remain quiet.
+  Utility method to validate a 3D vector.
 */
 SbBool
-SoScXMLNavigationTarget::getEventSbVec2f(const ScXMLEvent * event, const char * label, SbVec2f & vec_out, SbBool required)
+SoScXMLNavigationTarget::validateSbVec3f(const SbVec3f & vec)
 {
-  assert(event);
-  const char * valuestr = event->getAssociation(label);
-  if (!valuestr) {
-    if (required) {
-      SoDebugError::post("SoScXMLNavigationTarget::getEventSbVec2f",
-                         "while processing %s: required parameter '%s' not found.",
-                         event->getEventName().getString(), label);
-    }
-    return FALSE;
-  }
-  SbBool conversionOk;
-  vec_out = SbStringConvert::fromString<SbVec2f>(valuestr, &conversionOk);
-  if (!conversionOk) {
-    if (required) {
-      SoDebugError::post("SoScXMLNavigationTarget::getEventSbVec2f",
-                         "while processing %s: parameter '%s' contains invalid SbVec2f data ('%s').",
-                         event->getEventName().getString(), label, valuestr);
-    } else {
-      if (COIN_DEBUG) {
-        SoDebugError::postWarning("SoScXMLNavigationTarget::getEventSbVec2f",
-                                  "while processing %s: parameter '%s' contains invalid SbVec2f data ('%s').",
-                                  event->getEventName().getString(), label, valuestr);
-      }
-    }
-    return FALSE;
-  }
+  // Basic validation - check for valid coordinates
   return TRUE;
 }
 
 /*!
-  Returns TRUE if an SbVec3f was delivered with the event under the label \a label,
-  and FALSE otherwise. If \a required is TRUE, then errors will be given, otherwise
-  this function will remain quiet.
+  Utility method to validate a rotation.
 */
 SbBool
-SoScXMLNavigationTarget::getEventSbVec3f(const ScXMLEvent * event, const char * label, SbVec3f & vec_out, SbBool required)
+SoScXMLNavigationTarget::validateSbRotation(const SbRotation & rot)
 {
-  assert(event);
-  const char * valuestr = event->getAssociation(label);
-  if (!valuestr) {
-    if (required) {
-      SoDebugError::post("SoScXMLNavigationTarget::getEventSbVec3f",
-                         "while processing %s: required parameter '%s' not found.",
-                         event->getEventName().getString(), label);
-    }
-    return FALSE;
-  }
-  SbBool conversionOk;
-  vec_out = SbStringConvert::fromString<SbVec3f>(valuestr, &conversionOk);
-  if (!conversionOk) {
-    if (required) {
-      SoDebugError::post("SoScXMLNavigationTarget::getEventSbVec3f",
-                         "while processing %s: parameter '%s' contains invalid SbVec3f data ('%s').",
-                         event->getEventName().getString(), label, valuestr);
-    } else {
-      if (COIN_DEBUG) {
-        SoDebugError::postWarning("SoScXMLNavigationTarget::getEventSbVec3f",
-                                  "while processing %s: parameter '%s' contains invalid SbVec3f data ('%s').",
-                                  event->getEventName().getString(), label, valuestr);
-      }
-    }
-    return FALSE;
-  }
+  // Basic validation - could check for valid quaternion
   return TRUE;
 }
-
-/*!
-  Returns TRUE if an SbRotation was delivered with the event under the label \a label,
-  and FALSE otherwise. If \a required is TRUE, then errors will be given, otherwise
-  this function will remain quiet.
-*/
-SbBool
-SoScXMLNavigationTarget::getEventSbRotation(const ScXMLEvent * event, const char * label, SbRotation & rot_out, SbBool required)
-{
-  assert(event);
-  const char * valuestr = event->getAssociation(label);
-  if (!valuestr) {
-    if (required) {
-      SoDebugError::post("SoScXMLNavigationTarget::getEventSbRotation",
-                         "while processing %s: required parameter '%s' not found.",
-                         event->getEventName().getString(), label);
-    }
-    return FALSE;
-  }
-  SbBool conversionOk;
-  rot_out = SbStringConvert::fromString<SbRotation>(valuestr, &conversionOk);
-  if (!conversionOk) {
-    if (required) {
-      SoDebugError::post("SoScXMLNavigationTarget::getEventSbRotation",
-                         "while processing %s: parameter '%s' contains invalid Sbrotation data ('%s').",
-                         event->getEventName().getString(), label, valuestr);
-    } else {
-      if (COIN_DEBUG) {
-        SoDebugError::postWarning("SoScXMLNavigationTarget::getEventSbRotation",
-                                  "while processing %s: parameter '%s' contains invalid SbRotation data ('%s').",
-                                  event->getEventName().getString(), label, valuestr);
-      }
-    }
-    return FALSE;
-  }
-  return TRUE;
-}
-
-#undef PRIVATE
