@@ -358,6 +358,9 @@ BOOST_AUTO_TEST_CASE(initialized)
                       "missing class initialization");
 }
 
+// DISABLED: This test depends on VRML2 support which has been removed
+// in this stripped version of Coin3D
+/*
 BOOST_AUTO_TEST_CASE(vrml97nullchild)
 {
   // NULL values for children must be allowed, or we break VRML97
@@ -377,5 +380,6 @@ BOOST_AUTO_TEST_CASE(vrml97nullchild)
     g->unref();
   }
 }
+*/
 
 #endif // COIN_TEST_SUITE
