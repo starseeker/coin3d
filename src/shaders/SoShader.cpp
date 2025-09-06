@@ -199,11 +199,11 @@
 
 // *************************************************************************
 
-#include <data/shaders/lights/SpotLight.h>
-#include <data/shaders/lights/PointLight.h>
-#include <data/shaders/lights/DirectionalLight.h>
-#include <data/shaders/lights/DirSpotLight.h>
-#include <data/shaders/vsm/VsmLookup.h>
+#include <src/shadows/lights/SpotLight.h>
+#include <src/shadows/lights/PointLight.h>
+#include <src/shadows/lights/DirectionalLight.h>
+#include <src/shadows/lights/DirSpotLight.h>
+#include <src/shadows/vsm/VsmLookup.h>
 
 // *************************************************************************
 

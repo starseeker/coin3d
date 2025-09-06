@@ -1,3 +1,6 @@
+# shader header generation - moved from data/shaders
+# NOTE: this functionality moved to data/CMakeLists.txt for proper macro availability
+
 # source files
 set(COIN_SHADOWS_FILES
 	SoShadowGroup.cpp

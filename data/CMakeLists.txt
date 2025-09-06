@@ -15,7 +15,15 @@ macro(strfy _input _postfix)
 endmacro()
 
 file(GLOB_RECURSE COIN_SHADER_GLSL RELATIVE ${PROJECT_SOURCE_DIR} *.glsl)
+# exclude shaders now handled by src/shadows
+list(FILTER COIN_SHADER_GLSL EXCLUDE REGEX "^data/shaders/")
 foreach(_input_file ${COIN_SHADER_GLSL})
+  strfy(${_input_file} "_shadersource")
+endforeach()
+
+# also process shader files in src/shadows (moved from data/shaders)
+file(GLOB_RECURSE COIN_SHADOWS_SHADER_GLSL RELATIVE ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/src/shadows/*.glsl)
+foreach(_input_file ${COIN_SHADOWS_SHADER_GLSL})
   strfy(${_input_file} "_shadersource")
 endforeach()
 file(GLOB_RECURSE COIN_SHADER_INVENTOR RELATIVE ${PROJECT_SOURCE_DIR} *.iv)
@@ -25,5 +33,7 @@ endforeach()
 
 file(GLOB_RECURSE COMMON_DRAGGERDEFAULTS ${CMAKE_CURRENT_SOURCE_DIR}/*.iv)
 file(GLOB_RECURSE COMMON_SHADERS ${CMAKE_CURRENT_SOURCE_DIR}/*.glsl)
+# exclude shaders now handled by src/shadows  
+list(FILTER COMMON_SHADERS EXCLUDE REGEX "shaders/")
 
 set(COMMON_RESOURCES ${COMMON_DRAGGERDEFAULTS} ${COMMON_SHADERS} PARENT_SCOPE)
