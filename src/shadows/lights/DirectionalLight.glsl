@@ -1,4 +1,3 @@
-
 void DirectionalLight(in vec3 light_vector,
                       in vec3 light_halfVector,
                       in vec3 normal,
@@ -21,4 +20,3 @@ void DirectionalLight(in vec3 light_vector,
   diffuse *= nDotVP;  
   specular *= pf;
 }
-

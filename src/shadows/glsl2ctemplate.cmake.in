@@ -1,18 +1,3 @@
-#!/bin/sh
-############################################################################
-# glsl2h.sh
-#
-# This script generates a C header file from a GLSL file.  The header
-# just contains the glsl file as a static char buffer.
-#
-# Authors:
-#   Morten Eriksen <mortene@sim.no>
-#   Lars J. Aas <larsa@sim.no>
-#
-
-UPCASEBASE=`basename $1 .glsl | tr '[a-z]' '[A-Z]'`
-
-cat <<HERE_DOC_END
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
  * All rights reserved.
@@ -49,23 +34,10 @@ cat <<HERE_DOC_END
 #error this is a private header file
 #endif /* !COIN_INTERNAL */
 
-#ifndef SO_${UPCASEBASE}_GLSL_H
-#define SO_${UPCASEBASE}_GLSL_H
+#ifndef @COIN_HEADER_DEF@
+#define @COIN_HEADER_DEF@
 
-static const char ${UPCASEBASE}_shadersource[] =
-HERE_DOC_END
+static const char @COIN_TEXTVAR_NAME@[] =
+  "@COIN_STR_SOURCE_CODE@";
 
-cat $1 | sed -e \
-'s/\\/\\\\/g
-s/"/\\"/g
-3,$ s/^[ \t]*#.*//
-s/^/  "/
-s/$/\\n"/
-$ s/$/;/'
-
-# ATTN: the file did not just get corrupted ;-)
-
-cat <<HERE_DOC_END
-
-#endif /* ! SO_${UPCASEBASE}_GLSL_H */
-HERE_DOC_END
+#endif /* ! @COIN_HEADER_DEF@ */

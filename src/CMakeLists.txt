@@ -25,6 +25,7 @@ include_directories(BEFORE
   "${CMAKE_CURRENT_SOURCE_DIR}"
   "${PROJECT_SOURCE_DIR}/include/Inventor/annex"
   "${PROJECT_BINARY_DIR}/data"
+  "${PROJECT_BINARY_DIR}/src/shadows"
 )
 
 # add include dirs for non targets

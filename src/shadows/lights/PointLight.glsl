@@ -1,4 +1,3 @@
-
 void PointLight(in vec3 light_position,
                 in vec3 light_attenuation,
                 in vec3 eye,
@@ -40,4 +39,3 @@ void PointLight(in vec3 light_position,
   diffuse *= nDotVP * att;
   specular *= pf * att;
 }
-
