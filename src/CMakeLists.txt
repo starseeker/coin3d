@@ -24,7 +24,6 @@ include_directories(BEFORE
   "${CMAKE_CURRENT_BINARY_DIR}"
   "${CMAKE_CURRENT_SOURCE_DIR}"
   "${PROJECT_SOURCE_DIR}/include/Inventor/annex"
-  "${PROJECT_BINARY_DIR}/data"
   "${PROJECT_BINARY_DIR}/src/shadows"
 )
 
@@ -46,7 +45,7 @@ set(SUBDIRS
   engines errors events fields fonts glue io misc rendering lists
   nodes shapenodes projectors sensors upgraders
   collision shadows geo threads shaders profiler
-  hardcopy navigation
+  hardcopy navigation draggers
 )
 # TODO - see how to make draggers toolkit independent
 # TODO - see what we need from manips
@@ -272,7 +271,7 @@ if(COIN_BUILD_MAC_FRAMEWORK)
 # ############################################################################
 # Add framework data files
 # ############################################################################
-  coin_set_macosx_properties("${PROJECT_SOURCE_DIR}/data;${CMAKE_BINARY_DIR}/data" "Resources" "${COMMON_RESOURCES}")
+  coin_set_macosx_properties("${CMAKE_CURRENT_SOURCE_DIR}/draggers/defaults;${CMAKE_CURRENT_BINARY_DIR}/draggers/defaults" "Resources" "${COMMON_RESOURCES}")
 
 # ############################################################################
 # Add framework documentation files
@@ -330,10 +329,11 @@ else()
   install(FILES ${PROJECT_SOURCE_DIR}/include/SoWinEnterScope.h ${PROJECT_SOURCE_DIR}/include/SoWinLeaveScope.h ${PROJECT_SOURCE_DIR}/include/SoDebug.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} COMPONENT development)
 
 # ############################################################################
-# Install data files
+# Install dragger .iv files and profiler visualization files
 # ############################################################################
 
-  install(DIRECTORY ${PROJECT_SOURCE_DIR}/data/ DESTINATION ${CMAKE_INSTALL_DATADIR} COMPONENT development FILES_MATCHING PATTERN [cep]*.xml PATTERN *.iv PATTERN *.glsl)
+  install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/draggers/defaults/ DESTINATION ${CMAKE_INSTALL_DATADIR}/coin/draggers COMPONENT development FILES_MATCHING PATTERN *.iv)
+  install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/profiler/visualizations/ DESTINATION ${CMAKE_INSTALL_DATADIR}/coin/profiler COMPONENT development FILES_MATCHING PATTERN *.svg)
   
 # ############################################################################
 # Install target

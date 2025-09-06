@@ -70,7 +70,7 @@
 #include <Inventor/events/SoKeyboardEvent.h>
 #include <Inventor/SbRotation.h>
 
-#include <data/draggerDefaults/translate2Dragger.h>
+#include <defaults/translate2Dragger.h>
 
 #include "nodekits/SoSubKitP.h"
 #include "coindefs.h"
