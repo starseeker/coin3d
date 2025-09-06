@@ -220,7 +220,6 @@ elseif(APPLE)
       FRAMEWORK_VERSION ${COIN_MAC_FRAMEWORK_VERSION}
       #PUBLIC_HEADER "${COIN_PUBLIC_HEADERS}" # does not work recursively
       #PRIVATE_HEADER "${COIN_PRIVATE_HEADERS}" # does not work recursively
-      RESOURCE "${CMAKE_BINARY_DIR}/version.plist" # does not work recursively
       MACOSX_FRAMEWORK_IDENTIFIER org.coin3d.Coin.framework
       MACOSX_FRAMEWORK_SHORT_VERSION_STRING ${PROJECT_VERSION}
       MACOSX_FRAMEWORK_BUNDLE_VERSION ${PROJECT_VERSION}
@@ -380,8 +379,6 @@ else()
     configure_file("${PROJECT_SOURCE_DIR}/${PROJECT_NAME}.pc.cmake.in" "${CMAKE_BINARY_DIR}/${PROJECT_NAME}.pc" @ONLY)
     install(FILES "${CMAKE_BINARY_DIR}/${PROJECT_NAME}.pc" DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
     install(PROGRAMS "${PROJECT_SOURCE_DIR}/bin/coin-config" DESTINATION ${CMAKE_INSTALL_BINDIR})
-    configure_file("${PROJECT_SOURCE_DIR}/coin.cfg.cmake.in" "${CMAKE_BINARY_DIR}/${PROJECT_NAME_LOWER}-default.cfg" @ONLY)
-    install(FILES "${CMAKE_BINARY_DIR}/${PROJECT_NAME_LOWER}-default.cfg" DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/Coin/conf)
   endif()
 endif()
 

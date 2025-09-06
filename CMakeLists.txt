@@ -586,7 +586,6 @@ elseif(APPLE)
   endif()
 
   configure_file(Info.plist.in Info.plist)
-  configure_file(version.plist.in version.plist)
   set(HAVE_GZDOPEN)
 
   list(APPEND COIN_TARGET_LINK_LIBRARIES "-framework CoreFoundation" "-framework CoreGraphics")
