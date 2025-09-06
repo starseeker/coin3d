@@ -5,9 +5,6 @@ set(COIN_SHADERS_FILES
 	SoGLARBShaderParameter.cpp
 	SoGLARBShaderObject.cpp
 	SoGLARBShaderProgram.cpp
-	SoGLCgShaderObject.cpp
-	SoGLCgShaderParameter.cpp
-	SoGLCgShaderProgram.cpp
 	SoGLSLShaderParameter.cpp
 	SoGLSLShaderObject.cpp
 	SoGLSLShaderProgram.cpp
@@ -30,12 +27,6 @@ set(COIN_SHADERS_INTERNAL_FILES
 	SoGLARBShaderObject.cpp
 	SoGLARBShaderProgram.h
 	SoGLARBShaderProgram.cpp
-	SoGLCgShaderObject.h
-	SoGLCgShaderObject.cpp
-	SoGLCgShaderParameter.h
-	SoGLCgShaderParameter.cpp
-	SoGLCgShaderProgram.h
-	SoGLCgShaderProgram.cpp
 	SoGLSLShaderParameter.h
 	SoGLSLShaderParameter.cpp
 	SoGLSLShaderObject.h

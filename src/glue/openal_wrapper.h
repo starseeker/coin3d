@@ -1,5 +1,5 @@
-#ifndef COIN_SOGLCGSHADEROBJECT_H
-#define COIN_SOGLCGSHADEROBJECT_H
+#ifndef COIN_OPENAL_WRAPPER_H
+#define COIN_OPENAL_WRAPPER_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,50 +33,16 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_INTERNAL
-#error this is a private header file
-#endif
+/* Minimal stub wrapper for OpenAL functionality - disabled for minimal build */
 
-// *************************************************************************
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
-#include "shaders/SoGLShaderObject.h"
+/* OpenAL support disabled in minimal build */
 
-#include <Inventor/C/glue/gl.h>
+#ifdef __cplusplus
+} /* extern "C" */
+#endif /* __cplusplus */
 
-#include "glue/cg.h"
-
-// *************************************************************************
-
-class SoGLCgShaderObject : public SoGLShaderObject
-{
-public:
-  SoGLCgShaderObject(const uint32_t cachecontext);
-  virtual ~SoGLCgShaderObject();
-
-  virtual SbBool isLoaded(void) const;
-  virtual void load(const char * sourceString);
-  virtual void unload(void);
-  virtual SoShader::Type shaderType(void) const;
-  virtual SoGLShaderParameter* getNewParameter(void) const;
-  
-  void enable(void);
-  void disable(void);
-
-private:
-  CGprofile getProfile(void) const;
-
-  CGprogram cgProgram;
-  CGprofile cgProfile;
-
-  static CGcontext cgContext;
-  static int instanceCount;
-  static void ensureCgContext(void);
-  static void destroyCgContext(void);
-  static void cgErrorCallback(void);
-  static void printError(CGerror error, CGcontext context);
-
-  friend class SoGLCgShaderParameter;
-  friend class SoGLCgShaderProgram;
-};
-
-#endif /* ! COIN_SOGLCGSHADEROBJECT_H */
+#endif /* !COIN_OPENAL_WRAPPER_H */

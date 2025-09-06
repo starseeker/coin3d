@@ -54,11 +54,93 @@ stub_simage_get_last_error(void)
   return "Image loading disabled in minimal build";
 }
 
+static int
+stub_versionMatchesAtLeast(int major, int minor, int micro)
+{
+  return 0; /* Version always too old */
+}
+
+static unsigned char *
+stub_simage_resize(unsigned char * imagedata, int width, int height, int nc,
+                   int newwidth, int newheight)
+{
+  return NULL; /* Image resizing disabled in minimal build */
+}
+
+static unsigned char *
+stub_simage_resize3d(unsigned char * imagedata, int width, int height, int depth, int nc,
+                     int newwidth, int newheight, int newdepth)
+{
+  return NULL; /* Image resizing disabled in minimal build */
+}
+
+static int
+stub_simage_check_save_supported(const char * filename)
+{
+  return 0; /* Image saving disabled in minimal build */
+}
+
+static int
+stub_simage_get_num_savers(void)
+{
+  return 0; /* Image saving disabled in minimal build */
+}
+
+static void *
+stub_simage_get_saver_handle(int idx)
+{
+  return NULL; /* Image saving disabled in minimal build */
+}
+
+static const char *
+stub_simage_get_saver_extensions(void * handle)
+{
+  return ""; /* Image saving disabled in minimal build */
+}
+
+static const char *
+stub_simage_get_saver_fullname(void * handle)
+{
+  return "None"; /* Image saving disabled in minimal build */
+}
+
+static const char *
+stub_simage_get_saver_description(void * handle)
+{
+  return "Image saving disabled in minimal build";
+}
+
+static void
+stub_simage_version(int * major, int * minor, int * micro)
+{
+  if (major) *major = 0;
+  if (minor) *minor = 0;
+  if (micro) *micro = 0;
+}
+
+static int
+stub_simage_save_image(const char * filename, const unsigned char * imagedata,
+                       int width, int height, int nc, const char * filetypeext)
+{
+  return 0; /* Image saving disabled in minimal build */
+}
+
 static cc_simage_wrapper simage_instance = {
   0, /* available = FALSE */
   stub_simage_read_image,
   stub_simage_free_image,
-  stub_simage_get_last_error
+  stub_simage_get_last_error,
+  stub_versionMatchesAtLeast,
+  stub_simage_resize,
+  stub_simage_resize3d,
+  stub_simage_check_save_supported,
+  stub_simage_get_num_savers,
+  stub_simage_get_saver_handle,
+  stub_simage_get_saver_extensions,
+  stub_simage_get_saver_fullname,
+  stub_simage_get_saver_description,
+  stub_simage_version,
+  stub_simage_save_image
 };
 
 const cc_simage_wrapper *

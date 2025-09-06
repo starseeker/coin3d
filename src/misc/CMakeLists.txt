@@ -2,7 +2,6 @@
 set(COIN_MISC_FILES
 	AudioTools.cpp
 	CoinStaticObjectInDLL.cpp
-	SoAudioDevice.cpp
 	SoBase.cpp
 	SoBaseP.cpp
 	SoChildList.cpp

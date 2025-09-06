@@ -45,6 +45,20 @@ typedef struct cc_simage_wrapper {
   unsigned char * (*simage_read_image)(const char * filename, int * w, int * h, int * nc);
   void (*simage_free_image)(unsigned char * imagedata);
   const char * (*simage_get_last_error)(void);
+  int (*versionMatchesAtLeast)(int major, int minor, int micro);
+  unsigned char * (*simage_resize)(unsigned char * imagedata, int width, int height, int nc,
+                                   int newwidth, int newheight);
+  unsigned char * (*simage_resize3d)(unsigned char * imagedata, int width, int height, int depth, int nc,
+                                      int newwidth, int newheight, int newdepth);
+  int (*simage_check_save_supported)(const char * filename);
+  int (*simage_get_num_savers)(void);
+  void * (*simage_get_saver_handle)(int idx);
+  const char * (*simage_get_saver_extensions)(void * handle);
+  const char * (*simage_get_saver_fullname)(void * handle);
+  const char * (*simage_get_saver_description)(void * handle);
+  void (*simage_version)(int * major, int * minor, int * micro);
+  int (*simage_save_image)(const char * filename, const unsigned char * imagedata,
+                           int width, int height, int nc, const char * filetypeext);
 } cc_simage_wrapper;
 
 const cc_simage_wrapper * simage_wrapper(void);

@@ -41,8 +41,20 @@
 extern "C" {
 #endif /* __cplusplus */
 
-/* Stub function that returns FALSE - compression disabled */
+/* Stub functions that return FALSE - compression disabled */
 SbBool cc_zlibglue_available(void);
+
+void * cc_zlibglue_gzdopen(int fd, const char * mode);
+int cc_zlibglue_gzread(void * file, void * buf, unsigned int len);
+int cc_zlibglue_gzclose(void * file);
+int cc_zlibglue_gzwrite(void * file, const void * buf, unsigned int len);
+long cc_zlibglue_gztell(void * file);
+int cc_zlibglue_gzrewind(void * file);
+unsigned long cc_zlibglue_crc32(unsigned long crc, const char * buf, unsigned int len);
+int cc_zlibglue_inflateInit2(void * strm, int windowBits);
+int cc_zlibglue_inflateEnd(void * strm);
+int cc_zlibglue_inflate(void * strm, int flush);
+int cc_zlibglue_inflateReset(void * strm);
 
 #ifdef __cplusplus
 } /* extern "C" */

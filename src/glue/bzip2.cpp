@@ -31,6 +31,7 @@
 \**************************************************************************/
 
 #include "glue/bzip2.h"
+#include <cstdio>
 
 /* Minimal stub implementation for bzip2 functionality - disabled for minimal build */
 
@@ -38,4 +39,52 @@ SbBool
 cc_bzip2glue_available(void)
 {
   return FALSE; /* No compression support in minimal build */
+}
+
+/* Aliases for backward compatibility with expected function names */
+SbBool 
+cc_bzglue_available(void)
+{
+  return FALSE; /* No compression support in minimal build */
+}
+
+void *
+cc_bzglue_BZ2_bzReadOpen(int * bzerror, FILE * f, int small, int verbosity, void * unused, int nunused)
+{
+  if (bzerror) *bzerror = -1;
+  return NULL;
+}
+
+int
+cc_bzglue_BZ2_bzRead(int * bzerror, void * b, void * buf, int len)
+{
+  if (bzerror) *bzerror = -1;
+  return -1;
+}
+
+void
+cc_bzglue_BZ2_bzReadClose(int * bzerror, void * b)
+{
+  if (bzerror) *bzerror = 0;
+}
+
+void *
+cc_bzglue_BZ2_bzWriteOpen(int * bzerror, FILE * f, int blockSize100k, int verbosity, int workFactor)
+{
+  if (bzerror) *bzerror = -1;
+  return NULL;
+}
+
+void
+cc_bzglue_BZ2_bzWrite(int * bzerror, void * b, void * buf, int len)
+{
+  if (bzerror) *bzerror = -1;
+}
+
+void
+cc_bzglue_BZ2_bzWriteClose(int * bzerror, void * b, int abandon, unsigned int * nbytes_in, unsigned int * nbytes_out)
+{
+  if (bzerror) *bzerror = 0;
+  if (nbytes_in) *nbytes_in = 0;
+  if (nbytes_out) *nbytes_out = 0;
 }

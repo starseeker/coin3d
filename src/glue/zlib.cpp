@@ -31,6 +31,7 @@
 \**************************************************************************/
 
 #include "glue/zlib.h"
+#include <cstdio>
 
 /* Minimal stub implementation for zlib functionality - disabled for minimal build */
 
@@ -38,4 +39,70 @@ SbBool
 cc_zlibglue_available(void)
 {
   return FALSE; /* No compression support in minimal build */
+}
+
+void *
+cc_zlibglue_gzdopen(int fd, const char * mode)
+{
+  return NULL; /* No compression support in minimal build */
+}
+
+int
+cc_zlibglue_gzread(void * file, void * buf, unsigned int len)
+{
+  return -1; /* No compression support in minimal build */
+}
+
+int
+cc_zlibglue_gzclose(void * file)
+{
+  return -1; /* No compression support in minimal build */
+}
+
+int
+cc_zlibglue_gzwrite(void * file, const void * buf, unsigned int len)
+{
+  return -1; /* No compression support in minimal build */
+}
+
+long
+cc_zlibglue_gztell(void * file)
+{
+  return -1; /* No compression support in minimal build */
+}
+
+int
+cc_zlibglue_gzrewind(void * file)
+{
+  return -1; /* No compression support in minimal build */
+}
+
+unsigned long
+cc_zlibglue_crc32(unsigned long crc, const char * buf, unsigned int len)
+{
+  return 0; /* No compression support in minimal build */
+}
+
+int
+cc_zlibglue_inflateInit2(void * strm, int windowBits)
+{
+  return -1; /* No compression support in minimal build */
+}
+
+int
+cc_zlibglue_inflateEnd(void * strm)
+{
+  return -1; /* No compression support in minimal build */
+}
+
+int
+cc_zlibglue_inflate(void * strm, int flush)
+{
+  return -1; /* No compression support in minimal build */
+}
+
+int
+cc_zlibglue_inflateReset(void * strm)
+{
+  return -1; /* No compression support in minimal build */
 }

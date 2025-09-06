@@ -33,37 +33,19 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_INTERNAL
-#error this is a private header file
-#endif /* !COIN_INTERNAL */
+/* Minimal stub wrapper for audio functionality - disabled for minimal build */
 
-// *************************************************************************
+#include <Inventor/C/basic.h>
 
-#include <Inventor/SbBasic.h>
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
-// *************************************************************************
-
-const char * coin_get_openal_error(int errcode);
-int coin_debug_audio(void);
-
-void coin_sound_enable_traverse(void);
+/* Audio support disabled in minimal build */
 SbBool coin_sound_should_traverse(void);
 
-// *************************************************************************
+#ifdef __cplusplus
+} /* extern "C" */
+#endif /* __cplusplus */
 
-#define SOUND_NOT_ENABLED_BY_DEFAULT_STRING \
-        "The main reason for considering sound on this platform " \
-        "experimental is that we have encountered various problems with " \
-        "OpenAL (www.openal.org) on platforms other than Win32. If you " \
-        "still want to use sound in Coin, please consider getting the " \
-        "latest version of OpenAL from cvs only if you have " \
-        "problems. Common problems are stuttering sound and the " \
-        "occasional crash. If you run into problems, please try running " \
-        "the various test-programs that comes with the OpenAL " \
-        "distribution. Specifically, try running the " \
-        "linux/test/teststream.c sample and verify that everything " \
-        "sounds OK. "
-
-// *************************************************************************
-
-#endif // COIN_AUDIOTOOLS_H
+#endif /* !COIN_AUDIOTOOLS_H */

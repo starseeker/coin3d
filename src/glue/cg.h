@@ -1,5 +1,5 @@
-#ifndef COIN_SOGLCGSHADERPROGRAM_H
-#define COIN_SOGLCGSHADERPROGRAM_H
+#ifndef COIN_CG_H
+#define COIN_CG_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,35 +33,22 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_INTERNAL
-#error this is a private header file
-#endif
+/* Minimal stub wrapper for CG functionality - disabled for minimal build */
 
-// *************************************************************************
+#include <Inventor/C/basic.h>
 
-class SoGLCgShaderObject;
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
-// *************************************************************************
+/* CG support disabled in minimal build */
+typedef struct cc_cgglue cc_cgglue;
 
-class SoGLCgShaderProgram
-{
-public:
-  SoGLCgShaderProgram(void);
-  ~SoGLCgShaderProgram();
+const cc_cgglue * cc_cgglue_instance(void);
+SbBool cc_cgglue_available(void);
 
-  void addShaderObject(SoGLCgShaderObject * shaderObject);
-  void removeShaderObjects(void);
+#ifdef __cplusplus
+} /* extern "C" */
+#endif /* __cplusplus */
 
-  void enable(void);
-  void disable(void);
-
-#if defined(SOURCEPROGRAM_HINT)
-  SbString getSourceHint(void) const;
-#endif
-
-private:
-  SoGLCgShaderObject * fragmentShader;
-  SoGLCgShaderObject * vertexShader;
-};
-
-#endif /* ! COIN_SOGLCGSHADERPROGRAM_H */
+#endif /* !COIN_CG_H */
