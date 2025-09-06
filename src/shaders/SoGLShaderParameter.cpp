@@ -35,7 +35,7 @@
 #include <cassert>
 
 #include "SoGLARBShaderParameter.h"
-#include "SoGLCgShaderParameter.h"
+
 #include "SoGLSLShaderParameter.h"
 
 // *************************************************************************
