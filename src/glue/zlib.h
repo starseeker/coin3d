@@ -1,5 +1,5 @@
-#ifndef COIN_GLUE_ZLIB_H
-#define COIN_GLUE_ZLIB_H
+#ifndef COIN_ZLIB_H
+#define COIN_ZLIB_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,9 +33,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_INTERNAL
-#error this is a private header file
-#endif
+/* Minimal stub wrapper for zlib functionality - disabled for minimal build */
 
 #include <Inventor/C/basic.h>
 
@@ -43,42 +41,11 @@
 extern "C" {
 #endif /* __cplusplus */
 
-#if 0 /* to get proper auto-indentation in emacs */
-}
-#endif /* emacs indentation */
-
-int cc_zlibglue_available(void);
-int cc_zlibglue_deflateInit2(void * stream,
-                             int level,
-                             int method,
-                             int windowbits,
-                             int memlevel,
-                             int strategy);
-
-int cc_zlibglue_inflateInit2(void * stream,
-                             int windowbits);
-
-int cc_zlibglue_deflateEnd(void * stream);
-int cc_zlibglue_inflateEnd(void * stream);
-int cc_zlibglue_inflate(void * stream, int flush);
-int cc_zlibglue_inflateReset(void * stream);
-int cc_zlibglue_deflateParams(void * stream, int level, int strategy);
-int cc_zlibglue_deflate(void * stream, int flush);
-
-void * cc_zlibglue_gzopen(const char * path, const char * mode);
-void * cc_zlibglue_gzdopen(int fd, const char * mode);
-int cc_zlibglue_gzsetparams(void * fp, int level, int strategy);
-int cc_zlibglue_gzread(void * fp, void * buf, unsigned int len);
-int cc_zlibglue_gzwrite(void * fp, const void * buf, unsigned int len);
-off_t cc_zlibglue_gzseek(void * fp, off_t offset, int whence);
-int cc_zlibglue_gzrewind(void * fp);
-off_t cc_zlibglue_gztell(void * fp);
-int cc_zlibglue_gzeof(void * fp);
-int cc_zlibglue_gzclose(void * fp);
-int cc_zlibglue_crc32(unsigned long crc, const char * buf, unsigned int len);
+/* Stub function that returns FALSE - compression disabled */
+SbBool cc_zlibglue_available(void);
 
 #ifdef __cplusplus
-}
+} /* extern "C" */
 #endif /* __cplusplus */
 
-#endif /* !COIN_GLUE_ZLIB_H */
+#endif /* !COIN_ZLIB_H */

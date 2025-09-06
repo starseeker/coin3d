@@ -1,5 +1,5 @@
-#ifndef COIN_GLUE_BZIP2_H
-#define COIN_GLUE_BZIP2_H
+#ifndef COIN_BZIP2_H
+#define COIN_BZIP2_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,52 +33,19 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_INTERNAL
-#error this is a private header file
-#endif
+/* Minimal stub wrapper for bzip2 functionality - disabled for minimal build */
 
 #include <Inventor/C/basic.h>
-#include <stdio.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
-#if 0 /* to get proper auto-indentation in emacs */
-}
-#endif /* emacs indentation */
+/* Stub function that returns FALSE - compression disabled */
+SbBool cc_bzip2glue_available(void);
 
-int cc_bzglue_available(void);
-
-const char * cc_bzglue_BZ2_bzlibVersion(void);
-void * cc_bzglue_BZ2_bzReadOpen(int * bzerror,
-                                FILE * f,
-                                int verbosity,
-                                int bzsmall,
-                                void * unused,
-                                int nunused);
-void cc_bzglue_BZ2_bzReadClose(int * bzerror, 
-                               void * bzfile); 
-int cc_bzglue_BZ2_bzRead(int * bzerror, 
-                         void * bzfile, 
-                         void * buf, 
-                         int len);
-void * cc_bzglue_BZ2_bzWriteOpen(int * bzerror,      
-                                 FILE * fp, 
-                                 int blocksize100k, 
-                                 int verbosity, 
-                                 int workfactor); 
-void cc_bzglue_BZ2_bzWriteClose(int * bzerror, 
-                                void * bzfile, 
-                                int abandon, 
-                                unsigned int * nbytesin, 
-                                unsigned int * nbytesout);
-void cc_bzglue_BZ2_bzWrite(int * bzerror, 
-                           void * bzfile, 
-                           void * buf, 
-                           int len);
 #ifdef __cplusplus
-}
+} /* extern "C" */
 #endif /* __cplusplus */
 
-#endif /* !COIN_GLUE_BZIP2_H */
+#endif /* !COIN_BZIP2_H */
