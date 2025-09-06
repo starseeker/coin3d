@@ -103,8 +103,10 @@ option(GLU_RUNTIME_LINKING          "Enable GLU runtime linking when ON (default
 option(SPIDERMONKEY_RUNTIME_LINKING "Enable SpiderMonkey runtime linking when ON (default), disable when OFF." ON)
 
 option(COIN_VERBOSE "Add verbose debugging information during the configure process." OFF)
-option(HAVE_MULTIPLE_VERSION "Forces versioned paths for includes and documentation when ON, usual behaviour otherwise." OFF)
 option(COIN_USE_CPACK "If enabled the cpack subrepo is mandatory" OFF)
+
+# Set project-specific data directory
+set(CMAKE_INSTALL_DATADIR "${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}")
 
 cmake_dependent_option(COIN_BUILD_MAC_FRAMEWORK "Build framework instead of dylib on Mac OS X when ON. Only valid if COIN_BUILD_SHARED_LIBS is ON." OFF "APPLE;NOT IOS;COIN_BUILD_SHARED_LIBS" OFF)
 cmake_dependent_option(COIN_BUILD_MAC_X11 "Build for X11 on Mac OS X when ON. Default is OFF." OFF "APPLE" OFF)
@@ -115,62 +117,6 @@ option(COIN_BUILD_EGL "Build for EGL on Linux when ON. Default is ON." ON)
 
 check_include_file_cxx(thread HAVE_STD_THREAD)
 cmake_dependent_option(COIN_DEBUG_CHECK_THREAD "Enable thread check in several central Coin functions." OFF "HAVE_STD_THREAD" OFF)
-
-# report_prepare(
-#   COIN_BUILD_SHARED_LIBS
-#   COIN_BUILD_TESTS
-#   COIN_BUILD_DOCUMENTATION
-#   COIN_BUILD_INTERNAL_DOCUMENTATION
-#   COIN_BUILD_DOCUMENTATION_MAN
-#   COIN_BUILD_DOCUMENTATION_QTHELP
-#   COIN_BUILD_DOCUMENTATION_CHM
-#   COIN_BUILD_EGL
-#   COIN_BUILD_AWESOME_DOCUMENTATION
-#   COIN_THREADSAFE
-#   HAVE_VRML97
-#   COIN_HAVE_JAVASCRIPT
-#   HAVE_NODEKITS
-#   HAVE_DRAGGERS
-#   HAVE_MANIPULATORS
-#   HAVE_SOUND
-#   HAVE_3DS_IMPORT_CAPABILITIES
-#   USE_EXTERNAL_EXPAT
-#   USE_EXCEPTIONS
-#   USE_SUPERGLU
-#   FONTCONFIG_RUNTIME_LINKING
-#   FREETYPE_RUNTIME_LINKING
-#   LIBBZIP2_RUNTIME_LINKING
-#   OPENAL_RUNTIME_LINKING
-#   SIMAGE_RUNTIME_LINKING
-#   ZLIB_RUNTIME_LINKING
-#   GLU_RUNTIME_LINKING
-#   SPIDERMONKEY_RUNTIME_LINKING
-#   HAVE_MULTIPLE_VERSION
-#   IF_APPLE
-#     COIN_BUILD_MAC_FRAMEWORK
-#     COIN_BUILD_MAC_X11
-#     COIN_BUILD_MAC_AGL
-#   IF_MSVC
-#     COIN_BUILD_MSVC_STATIC_RUNTIME
-#     COIN_BUILD_SINGLE_LIB
-#     MSVC_VERSION
-#     COIN_BUILD_MSVC_MP
-# )
-
-# if(HAVE_MULTIPLE_VERSION)
-#   # Modifies the installation path for distributed includes, docs and datadir
-#   versionize(INCLUDEDIR DOCDIR DATADIR)
-#   dump_variable(
-#     CMAKE_INSTALL_DATADIR
-#     CMAKE_INSTALL_FULL_DATADIR
-#     CMAKE_INSTALL_INCLUDEDIR
-#     CMAKE_INSTALL_FULL_INCLUDEDIR
-#     CMAKE_INSTALL_DOCDIR
-#     CMAKE_INSTALL_FULL_DOCDIR
-#   )
-# else()
-  set(CMAKE_INSTALL_DATADIR "${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}")
-# endif()
 
 # ############################################################################
 # Find all necessary and optional Coin3D dependencies
