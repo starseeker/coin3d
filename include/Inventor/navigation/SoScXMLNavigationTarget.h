@@ -33,7 +33,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#include <Inventor/scxml/ScXMLEventTarget.h>
+#include <Inventor/SbBasic.h>
+#include <Inventor/SbName.h>
+#include <Inventor/SbString.h>
 
 #include <Inventor/tools/SbPimplPtr.h>
 
@@ -41,15 +43,10 @@ class SbVec2f;
 class SbVec3f;
 class SbRotation;
 class SoCamera;
-class ScXMLEvent;
-class ScXMLStateMachine;
-class SoScXMLStateMachine;
+class SoNode;
+class SbViewportRegion;
 
-#define COIN_NAVIGATION_EVENT_PREFIX "x-coin-navigation"
-
-class COIN_DLL_API SoScXMLNavigationTarget : public ScXMLEventTarget {
-  typedef ScXMLEventTarget inherited;
-  SCXML_OBJECT_ABSTRACT_HEADER(SoScXMLNavigationTarget)
+class COIN_DLL_API SoScXMLNavigationTarget {
 
 public:
   static void initClass(void);
@@ -68,17 +65,15 @@ protected:
   Data * getSessionData(SbName sessionid, NewDataFunc * constructor);
   void freeSessionData(SbName sessionid);
 
-  static SbName getSessionId(const ScXMLEvent * event);
-  static ScXMLStateMachine * getStateMachine(const ScXMLEvent * event, SbName sessionid);
-  static SoScXMLStateMachine * getSoStateMachine(const ScXMLEvent * event, SbName sessionid);
-  static SoCamera * getActiveCamera(const ScXMLEvent * event, SbName sessionid);
+  // Direct C++ API methods for navigation operations
+  static SoCamera * getActiveCamera(SoCamera * camera);
+  static SoNode * getSceneGraph(SoNode * scene);
 
-  static SbBool getEventDouble(const ScXMLEvent * event, const char * label, double & dbl_out, SbBool required = TRUE);
-  static SbBool getEventString(const ScXMLEvent * event, const char * label, SbString & str_out, SbBool required = TRUE);
-  static SbBool getEventSbBool(const ScXMLEvent * event, const char * label, SbBool & bool_out, SbBool required = TRUE);
-  static SbBool getEventSbVec2f(const ScXMLEvent * event, const char * label, SbVec2f & vec_out, SbBool required = TRUE);
-  static SbBool getEventSbVec3f(const ScXMLEvent * event, const char * label, SbVec3f & vec_out, SbBool required = TRUE);
-  static SbBool getEventSbRotation(const ScXMLEvent * event, const char * label, SbRotation & rot_out, SbBool required = TRUE);
+  // Utility methods for parameter validation
+  static SbBool validateDouble(double value);
+  static SbBool validateSbVec2f(const SbVec2f & vec);
+  static SbBool validateSbVec3f(const SbVec3f & vec);
+  static SbBool validateSbRotation(const SbRotation & rot);
 
 private:
   class PImpl;

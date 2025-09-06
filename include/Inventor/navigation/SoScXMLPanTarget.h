@@ -39,11 +39,7 @@ class SbVec2f;
 class SbPlane;
 class SoCamera;
 
-#define COIN_NAVIGATION_PAN_TARGET_EVENT_PREFIX COIN_NAVIGATION_EVENT_PREFIX ".Pan"
-
 class COIN_DLL_API SoScXMLPanTarget : public SoScXMLNavigationTarget {
-  typedef SoScXMLNavigationTarget inherited;
-  SCXML_OBJECT_HEADER(SoScXMLPanTarget)
 
 public:
   static void initClass(void);
@@ -73,7 +69,6 @@ protected:
   SoScXMLPanTarget(void);
   virtual ~SoScXMLPanTarget(void);
 
-  virtual SbBool processOneEvent(const ScXMLEvent * event);
 
 private:
   class PImpl;

@@ -98,7 +98,6 @@
 #include <Inventor/annex/HardCopy/SoHardCopy.h>
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/annex/FXViz/nodes/SoShadowGroup.h>
-#include <Inventor/scxml/ScXML.h>
 #include <Inventor/navigation/SoScXMLNavigation.h>
 #include <Inventor/misc/SoGLDriverDatabase.h>
 #include <Inventor/misc/CoinResources.h>
@@ -323,7 +322,7 @@ SoDB::init(void)
   // when checking if its present on the state stack.)
   SoProfilerElement::initClass();
 
-  ScXML::initClasses();
+  // ScXML classes removed - navigation now uses direct C++ APIs
 
   // Actions must be initialized before nodes (because of SO_ENABLE)
   SoAction::initClass();

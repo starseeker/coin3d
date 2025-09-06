@@ -38,11 +38,8 @@
 class SbRotation;
 class SoCamera;
 
-#define COIN_NAVIGATION_SPIN_EVENT_PREFIX SOSCXML_NAVIGATION_TARGETTYPE ".Spin"
 
 class COIN_DLL_API SoScXMLSpinTarget : public SoScXMLNavigationTarget {
-  typedef SoScXMLNavigationTarget inherited;
-  SCXML_OBJECT_HEADER(SoScXMLSpinTarget)
 
 public:
   static void initClass(void);
@@ -64,7 +61,6 @@ protected:
   SoScXMLSpinTarget(void);
   virtual ~SoScXMLSpinTarget(void);
 
-  virtual SbBool processOneEvent(const ScXMLEvent * event);
 
 private:
   class PImpl;

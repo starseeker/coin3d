@@ -40,11 +40,7 @@ class SoPerspectiveCamera;
 class SoOrthographicCamera;
 class SoFrustumCamera;
 
-#define COIN_NAVIGATION_DOLLY_TARGET_EVENT_PREFIX SOSCXML_NAVIGATION_TARGETTYPE ".Dolly"
-
 class COIN_DLL_API SoScXMLDollyTarget : public SoScXMLNavigationTarget {
-  typedef SoScXMLNavigationTarget inherited;
-  SCXML_OBJECT_HEADER(SoScXMLDollyTarget)
 
 public:
   static void initClass(void);
@@ -69,8 +65,6 @@ public:
 protected:
   SoScXMLDollyTarget(void);
   virtual ~SoScXMLDollyTarget(void);
-
-  virtual SbBool processOneEvent(const ScXMLEvent * event);
 
 private:
   class PImpl;

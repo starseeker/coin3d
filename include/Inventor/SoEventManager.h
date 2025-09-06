@@ -42,7 +42,7 @@ class SoEvent;
 class SoNode;
 class SbViewportRegion;
 class SoHandleEventAction;
-class SoScXMLStateMachine;
+// class SoScXMLStateMachine; // DEPRECATED: SCXML support removed
 
 class COIN_DLL_API SoEventManager {
 public:
@@ -66,10 +66,11 @@ public:
   virtual void setNavigationState(NavigationState state);
   virtual NavigationState getNavigationState(void) const;
 
-  int getNumSoScXMLStateMachines(void) const;
-  SoScXMLStateMachine * getSoScXMLStateMachine(int idx) const;
-  void addSoScXMLStateMachine(SoScXMLStateMachine * sm);
-  void removeSoScXMLStateMachine(SoScXMLStateMachine * sm);
+  // DEPRECATED: SCXML state machine support removed in favor of direct C++ APIs
+  // int getNumSoScXMLStateMachines(void) const;
+  // SoScXMLStateMachine * getSoScXMLStateMachine(int idx) const;
+  // void addSoScXMLStateMachine(SoScXMLStateMachine * sm);
+  // void removeSoScXMLStateMachine(SoScXMLStateMachine * sm);
 
   virtual void setSize(const SbVec2s & newsize);
   virtual void setOrigin(const SbVec2s & newOrigin);
