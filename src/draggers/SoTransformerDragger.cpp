@@ -2241,6 +2241,7 @@ ensure_unique_cb(uintptr_t entry, void * value, void * data)
 
 BOOST_AUTO_TEST_CASE(dragger_deep_copy)
 {
+#ifdef HAVE_DRAGGERS
   SbDict origdict, copydict;
 
   SoSeparator * root = new SoSeparator;
@@ -2286,6 +2287,10 @@ BOOST_AUTO_TEST_CASE(dragger_deep_copy)
 
   root->unref();
   copy->unref();
+#else
+  // Test stub when draggers are disabled - just pass
+  BOOST_CHECK(true);
+#endif // HAVE_DRAGGERS
 }
 
 #endif // COIN_TEST_SUITE

@@ -36,6 +36,8 @@ set(COIN_MISC_FILES
 	CoinResources.cpp
 	SoDBP.cpp
 	SoEventManager.cpp
+	cc_xml_stubs.cpp
+	SoNodeKit_stub.cpp
 )
 
 # Files excluded from public API documentation, included in complete documentation.
