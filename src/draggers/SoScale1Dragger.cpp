@@ -65,7 +65,7 @@
 #include <Inventor/projectors/SbLineProjector.h>
 #include <Inventor/sensors/SoFieldSensor.h>
 
-#include <data/draggerDefaults/scale1Dragger.h>
+#include <defaults/scale1Dragger.h>
 
 #include "nodekits/SoSubKitP.h"
 #include "coindefs.h"

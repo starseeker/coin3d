@@ -93,7 +93,7 @@
 #include <Inventor/SoDB.h>
 #include <Inventor/fields/SoSFTime.h>
 
-#include <data/draggerDefaults/trackballDragger.h>
+#include <defaults/trackballDragger.h>
 
 #if COIN_DEBUG
 #include <Inventor/errors/SoDebugError.h>

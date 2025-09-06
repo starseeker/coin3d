@@ -68,7 +68,7 @@
 #include <Inventor/projectors/SbPlaneProjector.h>
 #include <Inventor/sensors/SoFieldSensor.h>
 
-#include <data/draggerDefaults/scale2Dragger.h>
+#include <defaults/scale2Dragger.h>
 
 #include "nodekits/SoSubKitP.h"
 

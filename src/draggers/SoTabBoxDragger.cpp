@@ -71,7 +71,7 @@
 #include <Inventor/nodes/SoTransform.h>
 #include <Inventor/sensors/SoFieldSensor.h>
 
-#include <data/draggerDefaults/tabBoxDragger.h>
+#include <defaults/tabBoxDragger.h>
 
 #include "nodekits/SoSubKitP.h"
 #include "SbBasicP.h"

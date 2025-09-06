@@ -108,7 +108,7 @@
 #include <Inventor/actions/SoGetMatrixAction.h>
 #include <Inventor/lists/SoPathList.h>
 
-#include <data/draggerDefaults/transformerDragger.h>
+#include <defaults/transformerDragger.h>
 
 #include "coindefs.h" // COIN_STUB() & COIN_OBSOLETED()
 #include "nodekits/SoSubKitP.h"

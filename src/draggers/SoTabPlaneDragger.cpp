@@ -82,7 +82,7 @@
 #include <Inventor/elements/SoCacheElement.h>
 #include <Inventor/SbRotation.h>
 
-#include <data/draggerDefaults/tabPlaneDragger.h>
+#include <defaults/tabPlaneDragger.h>
 
 #include "coindefs.h" // COIN_STUB()
 #include "nodekits/SoSubKitP.h"
