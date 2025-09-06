@@ -30,9 +30,7 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#define BOOST_TEST_NO_LIB 1
-#include <boost/test/unit_test.hpp>
-#include <boost/intrusive_ptr.hpp>
+#include "CoinTestFramework.h"
 #include <cassert>
 #include <cstdio>
 #include <iostream>
