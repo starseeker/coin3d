@@ -227,6 +227,41 @@ SoEventManager::processEvent(const SoEvent * event)
   return status;
 }
 
+/*!
+  Sets the size of the viewport region.
+*/
+void
+SoEventManager::setSize(const SbVec2s & newsize)
+{
+  if (PRIVATE(this)->handleventaction) {
+    SbViewportRegion vp = PRIVATE(this)->handleventaction->getViewportRegion();
+    vp.setViewportPixels(vp.getViewportOriginPixels(), newsize);
+    PRIVATE(this)->handleventaction->setViewportRegion(vp);
+  }
+}
+
+/*!
+  Sets the origin of the viewport region.
+*/
+void
+SoEventManager::setOrigin(const SbVec2s & newOrigin)
+{
+  if (PRIVATE(this)->handleventaction) {
+    SbViewportRegion vp = PRIVATE(this)->handleventaction->getViewportRegion();
+    vp.setViewportPixels(newOrigin, vp.getViewportSizePixels());
+    PRIVATE(this)->handleventaction->setViewportRegion(vp);
+  }
+}
+
+/*!
+  Process an event. This method is called internally by processEvent().
+*/
+SbBool
+SoEventManager::actuallyProcessEvent(const SoEvent * const event)
+{
+  return this->processEvent(event);
+}
+
 // DEPRECATED: All SCXML state machine methods removed
 // The following methods are no longer available:
 // - getNumSoScXMLStateMachines()

@@ -1748,14 +1748,13 @@ DEF root Separator {
   }
 }
 */
-	    SoVRMLGroup *newroot;
-	   for(int j=0;j<2;j++) {
+	    SoVRMLGroup *newroot = NULL;
+	   // DISABLED: VRML2 conversion functionality has been removed 
+	   // Only test the standard Inventor output now
+	   for(int j=0;j<1;j++) {
+		   // Skip VRML2 conversion since it's been removed
 		   if(j==1) {
-	SoToVRML2Action tovrml2;
-      tovrml2.apply(root);
-      newroot = tovrml2.getVRML2SceneGraph();
-	  newroot->ref();
-	  scenegraph = newroot;
+			   continue;
 		   }
 
 
@@ -1773,32 +1772,11 @@ DEF root Separator {
 	   SbString ss;
 
 	   SbList<SbString> node_names(15);
-	   if(j==1)
-		BOOST_CHECK_MESSAGE(dont_mangle_output_names(scenegraph)==TRUE,"don't mangle should be TRUE");
-	   else
-		BOOST_CHECK_MESSAGE(dont_mangle_output_names(scenegraph)==FALSE,"don't mangle should be FALSE");
+	   // Since VRML2 conversion is disabled, we always use standard behavior
+	   BOOST_CHECK_MESSAGE(dont_mangle_output_names(scenegraph)==FALSE,"don't mangle should be FALSE");
 
-	   if(dont_mangle_output_names(scenegraph)) {
-		   node_names.append("_+0");
-		   node_names.append("_+0");
-		   node_names.append("_+1");
-		   node_names.append("MyName");
-		   node_names.append("MyName+2");
-		   node_names.append("MyName");
-		   node_names.append("_+3");
-		   node_names.append("MyName+4");
-		   node_names.append("MyName+2");
-		   node_names.append("MyName+2");
-		   node_names.append("MyName+5");
-		   node_names.append("MyName+5");
-		   node_names.append("_+6");
-		   node_names.append("_+7");
-		   node_names.append("MyName+8");
-		   node_names.append("MyName+8");
-		   node_names.append("MyName+9");
-		   node_names.append("MyName+5");
-	   }
-	   else {
+	   // Use standard Inventor node names (VRML2 conversion disabled)
+	   {
 		   node_names.append("_+0");
 		   node_names.append("_+0");
 		   node_names.append("MyName");
@@ -1830,12 +1808,14 @@ DEF root Separator {
 
 	   BOOST_CHECK_MESSAGE(!fail,"Check failed, written node names should match test template");
 	   
-	   }
+	   } // end for loop
 	   
 	
        root->unref();
-	   newroot->unref();
- }
+	   if (newroot) {
+         newroot->unref();
+       }
+ } // end test case
 
 #endif // COIN_TEST_SUITE
 

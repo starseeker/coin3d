@@ -1723,6 +1723,9 @@ readErrorHandler(const SoError * error, void * data)
 {
 }
 
+// DISABLED: These tests depend on VRML2 support which has been removed
+// in this stripped version of Coin3D
+/*
 BOOST_AUTO_TEST_CASE(readChildList)
 {
   static const char scene[] = "#VRML V2.0 utf8\n"
@@ -1800,6 +1803,7 @@ BOOST_AUTO_TEST_CASE(readInvalidChildList)
 
   SoReadError::setHandlerCallback(prevErrorCB, NULL);
 }
+*/
 
 BOOST_AUTO_TEST_CASE(testAlternateRepNull)
 {
