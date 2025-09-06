@@ -75,7 +75,7 @@
 #include <Inventor/events/SoKeyboardEvent.h>
 #include <Inventor/actions/SoGetMatrixAction.h>
 
-#include <data/draggerDefaults/handleBoxDragger.h>
+#include <defaults/handleBoxDragger.h>
 
 #include "nodekits/SoSubKitP.h"
 #include "coindefs.h"

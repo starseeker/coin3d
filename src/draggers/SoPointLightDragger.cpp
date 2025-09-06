@@ -68,7 +68,7 @@
 #include <Inventor/nodes/SoMaterial.h>
 #include <Inventor/sensors/SoFieldSensor.h>
 
-#include <data/draggerDefaults/pointLightDragger.h>
+#include <defaults/pointLightDragger.h>
 
 #include "nodekits/SoSubKitP.h"
 #include "SbBasicP.h"

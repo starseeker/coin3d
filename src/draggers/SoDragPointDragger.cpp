@@ -81,7 +81,7 @@
 #include <Inventor/nodes/SoTranslation.h>
 #include <Inventor/sensors/SoFieldSensor.h>
 
-#include <data/draggerDefaults/dragPointDragger.h>
+#include <defaults/dragPointDragger.h>
 
 #include "nodekits/SoSubKitP.h"
 #include "SbBasicP.h"

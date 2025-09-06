@@ -78,7 +78,7 @@
 #include <Inventor/errors/SoDebugError.h>
 #endif // COIN_DEBUG
 
-#include <data/draggerDefaults/translate1Dragger.h>
+#include <defaults/translate1Dragger.h>
 
 #include "nodekits/SoSubKitP.h"
 

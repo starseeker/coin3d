@@ -1407,7 +1407,7 @@ SoShadowGroupP::setVertexShader(SoState * state)
   int i;
   SoShaderGenerator & gen = this->vertexgenerator;
   gen.reset(FALSE);
-  gen.setVersion("#version 120");
+  gen.setVersion("#version 110");
 
   SbBool storedinvalid = SoCacheElement::setInvalid(FALSE);
 
@@ -1587,7 +1587,7 @@ SoShadowGroupP::setFragmentShader(SoState * state)
 
   SoShaderGenerator & gen = this->fragmentgenerator;
   gen.reset(FALSE);
-  gen.setVersion("#version 120");
+  gen.setVersion("#version 110");
 
   SbBool perpixelspot = FALSE;
   SbBool perpixelother = FALSE;
@@ -2018,7 +2018,7 @@ SoShadowLightCache::createVSMProgram(void)
   SoShaderGenerator & fgen = this->vsm_fragment_generator;
 
   vgen.reset(FALSE);
-  vgen.setVersion("#version 120");
+  vgen.setVersion("#version 110");
 
   SbBool dirlight = this->light->isOfType(SoDirectionalLight::getClassTypeId());
 
@@ -2030,7 +2030,7 @@ SoShadowLightCache::createVSMProgram(void)
   vshader->sourceType = SoShaderObject::GLSL_PROGRAM;
 
   fgen.reset(FALSE);
-  fgen.setVersion("#version 120");
+  fgen.setVersion("#version 110");
 #ifdef DISTRIBUTE_FACTOR
   SbString str;
   str.sprintf("const float DISTRIBUTE_FACTOR = %.1f;\n", DISTRIBUTE_FACTOR);

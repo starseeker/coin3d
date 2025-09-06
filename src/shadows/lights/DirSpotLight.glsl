@@ -1,4 +1,3 @@
-
 float DirSpotLight(in vec3 dir,
                    in vec3 light_position,
                    in vec3 eye,

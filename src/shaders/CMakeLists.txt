@@ -58,6 +58,8 @@ if(COIN_BUILD_SINGLE_LIB)
 	endforeach(SRCFILE)
 else()
 	add_library(shaders OBJECT ${COIN_SHADERS_FILES})
+	# Add dependency on shadows target to ensure shader headers are generated first
+	add_dependencies(shaders shadows)
 endif()
 
 # define documentation

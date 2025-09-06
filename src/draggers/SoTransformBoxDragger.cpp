@@ -81,7 +81,7 @@
 #include <Inventor/sensors/SoFieldSensor.h>
 #include <Inventor/errors/SoDebugError.h>
 
-#include <data/draggerDefaults/transformBoxDragger.h>
+#include <defaults/transformBoxDragger.h>
 
 #include "nodekits/SoSubKitP.h"
 #include "SbBasicP.h"

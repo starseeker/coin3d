@@ -92,7 +92,7 @@
 #include <Inventor/nodes/SoSurroundScale.h>
 #include <Inventor/sensors/SoFieldSensor.h>
 
-#include <data/draggerDefaults/jackDragger.h>
+#include <defaults/jackDragger.h>
 
 #include "nodekits/SoSubKitP.h"
 #include "SbBasicP.h"

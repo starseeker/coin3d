@@ -82,7 +82,7 @@
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/sensors/SoFieldSensor.h>
 
-#include <data/draggerDefaults/directionalLightDragger.h>
+#include <defaults/directionalLightDragger.h>
 
 #include "nodekits/SoSubKitP.h"
 #include "SbBasicP.h"

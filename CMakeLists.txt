@@ -908,7 +908,6 @@ unset(COIN_DOCUMENTATION_FILES CACHE)
 unset(COIN_INTERNAL_DOCUMENTATION_FILES CACHE)
 
 add_subdirectory(include)
-add_subdirectory(data)
 add_subdirectory(src)
 
 if (COIN_BUILD_EXAMPLES)

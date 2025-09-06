@@ -129,7 +129,7 @@
 #include <Inventor/nodes/SoSwitch.h>
 #include <Inventor/sensors/SoFieldSensor.h>
 
-#include <data/draggerDefaults/centerballDragger.h>
+#include <defaults/centerballDragger.h>
 
 #include "nodekits/SoSubKitP.h"
 #include "coindefs.h"

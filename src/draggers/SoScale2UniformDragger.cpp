@@ -74,7 +74,7 @@
 #include <Inventor/projectors/SbLineProjector.h>
 #include <Inventor/sensors/SoFieldSensor.h>
 
-#include <data/draggerDefaults/scale2UniformDragger.h>
+#include <defaults/scale2UniformDragger.h>
 
 #include "nodekits/SoSubKitP.h"
 

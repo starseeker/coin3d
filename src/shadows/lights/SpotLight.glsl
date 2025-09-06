@@ -1,4 +1,3 @@
-
 float SpotLight(in vec3 light_position,
                 in vec3 light_attenuation,
                 in vec3 light_spotDirection,
@@ -59,4 +58,3 @@ float SpotLight(in vec3 light_position,
 
   return d;
 }
-

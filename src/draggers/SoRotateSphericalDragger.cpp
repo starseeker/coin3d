@@ -66,7 +66,7 @@
 #include <Inventor/projectors/SbSpherePlaneProjector.h>
 #include <Inventor/sensors/SoFieldSensor.h>
 
-#include <data/draggerDefaults/rotateSphericalDragger.h>
+#include <defaults/rotateSphericalDragger.h>
 
 #include "nodekits/SoSubKitP.h"
 #include "coindefs.h"

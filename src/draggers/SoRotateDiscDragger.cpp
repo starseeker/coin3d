@@ -73,7 +73,7 @@
 #include <Inventor/projectors/SbPlaneProjector.h>
 #include <Inventor/sensors/SoFieldSensor.h>
 
-#include <data/draggerDefaults/rotateDiscDragger.h>
+#include <defaults/rotateDiscDragger.h>
 
 #include "nodekits/SoSubKitP.h"
 #include "coindefs.h"

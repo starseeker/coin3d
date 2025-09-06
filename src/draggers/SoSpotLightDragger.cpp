@@ -82,7 +82,7 @@
 #include <Inventor/sensors/SoFieldSensor.h>
 #include <Inventor/projectors/SbPlaneProjector.h>
 
-#include <data/draggerDefaults/spotLightDragger.h>
+#include <defaults/spotLightDragger.h>
 
 #include "nodekits/SoSubKitP.h"
 #include "SbBasicP.h"

@@ -65,7 +65,7 @@
 #include <Inventor/projectors/SbCylinderPlaneProjector.h>
 #include <Inventor/sensors/SoFieldSensor.h>
 
-#include <data/draggerDefaults/rotateCylindricalDragger.h>
+#include <defaults/rotateCylindricalDragger.h>
 
 #include "nodekits/SoSubKitP.h"
 #include "coindefs.h"
