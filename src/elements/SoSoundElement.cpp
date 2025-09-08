@@ -30,13 +30,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-/*!
-  \class SoSoundElement Inventor/elements/SoSoundElement.h
-  \brief The SoSoundElement is used for optimizing audio rendering and for turning off inactive SoVRMLSound nodes
-  \ingroup coin_elements
-
-  \since Coin 2.0
-*/
+/* Minimal stub implementation for sound element functionality - disabled for minimal build */
 
 #include <Inventor/elements/SoSoundElement.h>
 
@@ -45,29 +39,7 @@
 
 #include <Inventor/nodes/SoNode.h>
 
-/*!
-  \fn SoSoundElement::sceneGraphHasSoundNode
-
-  The sceneGraphHasSoundNode flag is used to stop the SoAudioRenderAction in SoSeparator and SoVRMLGroup nodes for cases where the subgraph does not contain any SoVRMLSound nodes.
-*/
-
-/*!
-  \fn SoSoundElement::isPartOfActiveSceneGraph
-
-  The isPartOfActiveSceneGraph flag is used to make SoVRMLSound that are below inactive parts of the scene graph (i.e. below a SoSwitch or SoLOD node) stop playing.
-*/
-
-/*!
-  \fn SoSoundElement::soundNodeIsPlaying
-
-  The soundNodeIsPlaying flag is currently unused.
-*/
-
 SO_ELEMENT_SOURCE(SoSoundElement);
-
-/*!
-  \copydetails SoElement::initClass(void)
-*/
 
 void
 SoSoundElement::initClass(void)
@@ -75,29 +47,17 @@ SoSoundElement::initClass(void)
   SO_ELEMENT_INIT_CLASS(SoSoundElement, inherited);
 }
 
-/*!
-  Destructor.
-*/
-
 SoSoundElement::~SoSoundElement(void)
 {
+  // Sound support disabled in minimal build
 }
-
-/*!
-  Initializes the element to its default value.
-*/
 
 void
 SoSoundElement::init(SoState * state)
 {
   inherited::init(state);
-
   this->setDefaultValues();
 }
-
-/*!
-  Sets the flags.
-*/
 
 void
 SoSoundElement::set(SoState * const state,
@@ -115,163 +75,68 @@ SoSoundElement::set(SoState * const state,
   }
 }
 
-/*!
-  Sets the sceneGraphHasSoundNode flag.
- */
-
 SbBool
-SoSoundElement::setSceneGraphHasSoundNode(SoState * const state,
-                                     SoNode * const COIN_UNUSED_ARG(node),
+SoSoundElement::setSceneGraphHasSoundNode(SoState * const state, SoNode * const node,
                                           SbBool flag)
 {
-  SoSoundElement * elem = coin_safe_cast<SoSoundElement *>
-    (
-     SoElement::getElement(state, classStackIndex)
-     );
-  if (elem) {
-    SbBool old = elem->scenegraphhassoundnode;
-    elem->scenegraphhassoundnode = flag;
-    return old;
-  } else
-    return FALSE;
+  return FALSE; /* Sound support disabled in minimal build */
 }
-
-/*!
-  Returns the value of the sceneGraphHasSoundNode flag.
- */
 
 SbBool
 SoSoundElement::sceneGraphHasSoundNode(SoState * const state)
 {
-  const SoSoundElement * elem = coin_assert_cast<const SoSoundElement *>
-    (
-     SoElement::getConstElement(state, classStackIndex)
-     );
-  return elem->scenegraphhassoundnode;
+  return FALSE; /* Sound support disabled in minimal build */
 }
-
-
-/*!
-  Sets the soundNodeIsPlaying flag.
- */
 
 SbBool
-SoSoundElement::setSoundNodeIsPlaying(SoState * const state,
-                                  SoNode * const COIN_UNUSED_ARG(node),
-                                  SbBool flag)
+SoSoundElement::setSoundNodeIsPlaying(SoState * const state, SoNode * const node,
+                                      SbBool flag)
 {
-  SoSoundElement * elem = coin_safe_cast<SoSoundElement *>
-    (
-     SoElement::getElement(state, classStackIndex)
-     );
-  if (elem) {
-    SbBool old = elem->soundnodeisplaying;
-    elem->soundnodeisplaying = flag;
-    return old;
-  } else
-    return FALSE;
+  return FALSE; /* Sound support disabled in minimal build */
 }
-
-/*!
-  Returns the value of the soundNodeIsPlaying flag.
- */
 
 SbBool
 SoSoundElement::soundNodeIsPlaying(SoState * const state)
 {
-  const SoSoundElement * elem = coin_assert_cast<const SoSoundElement *>
-    (
-     SoElement::getConstElement(state, classStackIndex)
-     );
-  return elem->soundnodeisplaying;
+  return FALSE; /* Sound support disabled in minimal build */
 }
-
-/*!
-  Sets the isPartOfActiveSceneGraph flag.
- */
 
 SbBool
-SoSoundElement::setIsPartOfActiveSceneGraph(SoState * const state,
-                                       SoNode * const COIN_UNUSED_ARG(node),
+SoSoundElement::setIsPartOfActiveSceneGraph(SoState * const state, SoNode * const node,
                                             SbBool flag)
 {
-  SoSoundElement *elem = coin_safe_cast<SoSoundElement *>
-    (
-     SoElement::getElement(state, classStackIndex)
-     );
-  if (elem) {
-    SbBool old = elem->ispartofactivescenegraph;
-    elem->ispartofactivescenegraph = flag;
-    return old;
-  } else
-    return FALSE;
+  return FALSE; /* Sound support disabled in minimal build */
 }
-
-/*!
-  Returns the value of the isPartOfActiveSceneGraph flag.
-*/
 
 SbBool
 SoSoundElement::isPartOfActiveSceneGraph(SoState * const state)
 {
-  const SoSoundElement * elem = coin_assert_cast<const SoSoundElement *>
-    (
-     SoElement::getConstElement(state, classStackIndex)
-     );
-  return elem->ispartofactivescenegraph;
+  return FALSE; /* Sound support disabled in minimal build */
 }
-
-/*!
-  Calls the superclass' push method. Initializes the element to the
-  default values. Uses previous element's isPartOfActiveSceneGraph
-  flag.
-*/
 
 void
 SoSoundElement::push(SoState * state)
 {
   inherited::push(state);
-
-  const SoSoundElement * prev = coin_assert_cast<SoSoundElement *>
-    (this->getNextInStack());
-
-  this->scenegraphhassoundnode = FALSE;
-  this->soundnodeisplaying = FALSE;
-  this->ispartofactivescenegraph = prev->ispartofactivescenegraph;
 }
-
-/*!
-  Calls the superclass' pop method.
- */
 
 void
-SoSoundElement::pop(SoState * COIN_UNUSED_ARG(state), const SoElement * prevTopElement)
+SoSoundElement::pop(SoState * state, const SoElement * prevTopElement)
 {
-  const SoSoundElement * prevtop =
-    coin_assert_cast<const SoSoundElement *>(prevTopElement);
-  this->scenegraphhassoundnode = this->scenegraphhassoundnode |
-    prevtop->scenegraphhassoundnode;
-  this->soundnodeisplaying = this->soundnodeisplaying |
-    prevtop->soundnodeisplaying;
+  inherited::pop(state, prevTopElement);
 }
 
-
-/*!
-  Initializes the element to the default values. The default values for the sceneGraphHasSoundNode is FALSE. The default value for the isPartOfActiveSceneGraph flag is TRUE. the default value for the soundNodeIsPlaying flag is FALSE.
- */
+void
+SoSoundElement::print(FILE * file) const
+{
+  inherited::print(file);
+}
 
 void
 SoSoundElement::setDefaultValues()
 {
   this->scenegraphhassoundnode = FALSE;
   this->soundnodeisplaying = FALSE;
-  this->ispartofactivescenegraph = TRUE;
+  this->ispartofactivescenegraph = FALSE;
 }
 
-
-//! Prints contents of element (not implemented)
-
-void
-SoSoundElement::print(FILE * /* file */) const
-{
-}

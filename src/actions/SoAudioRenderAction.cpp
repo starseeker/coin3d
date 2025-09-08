@@ -30,17 +30,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-/*!
-  \class SoAudioRenderAction SoAudioRenderAction.h Inventor/actions/SoAudioRenderAction.h
-  \brief The SoAudioRenderAction class renders the aural parts of the scene graph.
-
-  \ingroup coin_actions
-
-  Applying this method at a root node for a scene graph, path or
-  path list will render all sound-related nodes contained within that instance to
-  the current SoAudioDevice.
- */
-
+/* Minimal stub implementation for audio rendering functionality - disabled for minimal build */
 
 #include <Inventor/actions/SoAudioRenderAction.h>
 
@@ -48,100 +38,68 @@
 #include <config.h>
 #endif // HAVE_CONFIG_H
 
-#include <Inventor/elements/SoModelMatrixElement.h>
-#include <Inventor/elements/SoCoordinateElement.h>
-#include <Inventor/elements/SoSwitchElement.h>
-#include <Inventor/elements/SoUnitsElement.h>
-#include <Inventor/elements/SoFocalDistanceElement.h>
-#include <Inventor/elements/SoProjectionMatrixElement.h>
-#include <Inventor/elements/SoViewVolumeElement.h>
-#include <Inventor/elements/SoViewingMatrixElement.h>
-#include <Inventor/elements/SoSoundElement.h>
-#include <Inventor/nodes/SoCoordinate3.h>
-#include <Inventor/nodes/SoCoordinate4.h>
-#include <Inventor/nodes/SoGroup.h>
-#include <Inventor/nodes/SoTransform.h>
-#include <Inventor/nodes/SoSeparator.h>
-#include <Inventor/nodes/SoListener.h>
+#include <Inventor/nodes/SoNode.h>
+#include <Inventor/SoType.h>
+#include <Inventor/SbName.h>
 
-#ifdef HAVE_VRML97
-#include <Inventor/VRMLnodes/SoVRMLSound.h>
-#include <Inventor/VRMLnodes/SoVRMLAudioClip.h>
-#endif // HAVE_VRML97
-
-#include "SbBasicP.h"
-#include "actions/SoSubActionP.h"
-
-class SoAudioRenderActionP
-{
+// Minimal pimpl class for compatibility
+class SoAudioRenderActionP {
 public:
+  SoAudioRenderActionP() {}
+  ~SoAudioRenderActionP() {}
 };
 
-SO_ACTION_SOURCE(SoAudioRenderAction);
+// Manual type system implementation for stub
+static SoType SoAudioRenderAction_classTypeId;
 
-/*!
-  \copybrief SoAction::initClass(void)
-*/
-void SoAudioRenderAction::initClass()
+void
+SoAudioRenderAction::initClass(void)
 {
-  SO_ACTION_INTERNAL_INIT_CLASS(SoAudioRenderAction, SoAction);
-
-  SO_ENABLE(SoAudioRenderAction, SoModelMatrixElement);
-  SO_ENABLE(SoAudioRenderAction, SoSwitchElement);
-  SO_ENABLE(SoAudioRenderAction, SoUnitsElement);
-
-  SO_ENABLE(SoAudioRenderAction, SoFocalDistanceElement);
-  SO_ENABLE(SoAudioRenderAction, SoProjectionMatrixElement);
-  SO_ENABLE(SoAudioRenderAction, SoViewVolumeElement);
-  SO_ENABLE(SoAudioRenderAction, SoViewingMatrixElement);
-
-  SO_ENABLE(SoAudioRenderAction, SoSoundElement);
+  // Audio rendering disabled in minimal build - register minimal type
+  SoAudioRenderAction_classTypeId = 
+    SoType::createType(SoAction::getClassTypeId(), 
+                       SbName("SoAudioRenderAction"),
+                       NULL, 0);
 }
 
-SoAudioRenderAction::SoAudioRenderAction()
+SoType
+SoAudioRenderAction::getTypeId(void) const
 {
-  SO_ACTION_CONSTRUCTOR(SoAudioRenderAction);
+  return SoAudioRenderAction_classTypeId;
 }
 
-SoAudioRenderAction::~SoAudioRenderAction()
+SoType
+SoAudioRenderAction::getClassTypeId(void)
 {
+  return SoAudioRenderAction_classTypeId;
 }
 
-void SoAudioRenderAction::beginTraversal(SoNode *node)
+SoAudioRenderAction::SoAudioRenderAction(void)
 {
-  traverse(node);
+  // Audio rendering disabled in minimal build
+  this->pimpl.set(new SoAudioRenderActionP);
 }
 
-void SoAudioRenderAction::callDoAction(SoAction *action, SoNode *node)
+SoAudioRenderAction::~SoAudioRenderAction(void)
 {
-  node->doAction(action);
+  // Audio rendering disabled in minimal build
 }
 
-void SoAudioRenderAction::callAudioRender(SoAction *action, SoNode *node)
+void
+SoAudioRenderAction::callDoAction(SoAction *action, SoNode *node)
 {
-  SoAudioRenderAction * audioRenderAction = coin_assert_cast<SoAudioRenderAction *>(action);
-
-  if (node->isOfType(SoListener::getClassTypeId())) {
-    SoListener *listener;
-    listener = coin_assert_cast<SoListener *>(node);
-    listener->audioRender(audioRenderAction);
-  }
-#ifdef HAVE_VRML97
-  else if (node->isOfType(SoVRMLSound::getClassTypeId())) {
-    SoVRMLSound *sound;
-    sound = coin_assert_cast<SoVRMLSound *>(node);
-    sound->audioRender(audioRenderAction);
-  }
-  else if (node->isOfType(SoVRMLAudioClip::getClassTypeId())) {
-    SoVRMLAudioClip *clip;
-    clip = coin_assert_cast<SoVRMLAudioClip *>(node);
-    clip->audioRender(audioRenderAction);
-  }
-#endif // HAVE_VRML97
+  // Audio rendering disabled in minimal build
 }
 
-/*
-FIXME 20021101 thammer: remember to override invalidateState if we
-keep an internal state at all. Called from 
-SoSceneManager.setAudioRenderAction
-*/
+void
+SoAudioRenderAction::callAudioRender(SoAction *action, SoNode *node)
+{
+  // Audio rendering disabled in minimal build
+}
+
+void
+SoAudioRenderAction::beginTraversal(SoNode *node)
+{
+  // Audio rendering disabled in minimal build
+  inherited::beginTraversal(node);
+}
