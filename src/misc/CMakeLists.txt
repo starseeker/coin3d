@@ -1,6 +1,7 @@
 # source files
 set(COIN_MISC_FILES
 	AudioTools.cpp
+	SoAudioDevice.cpp
 	CoinStaticObjectInDLL.cpp
 	SoBase.cpp
 	SoBaseP.cpp

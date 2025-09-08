@@ -10,6 +10,7 @@ set(COIN_IO_FILES
 	SoTranSender.cpp
 	SoTranReceiver.cpp
 	SoWriterefCounter.cpp
+	gzmemio.cpp
 )
 
 # Files excluded from public API documentation, included in complete documentation.
@@ -24,6 +25,8 @@ set(COIN_IO_INTERNAL_FILES
 	SoOutput_Writer.cpp
 	SoWriterefCounter.h
 	SoWriterefCounter.cpp
+	gzmemio.h
+	gzmemio.cpp
 )
 
 # build library

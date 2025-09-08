@@ -30,83 +30,24 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-/* Minimal stub implementation for audio functionality - disabled for minimal build */
+/* Minimal stub implementation for CG functionality - disabled for minimal build */
 
-#include <Inventor/misc/SoAudioDevice.h>
+#include "glue/cg.h"
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif // HAVE_CONFIG_H
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
-#include <Inventor/C/tidbits.h>
-#include <Inventor/errors/SoDebugError.h>
-
-// *************************************************************************
-
-// Simple singleton holder without proper cleanup since destructors are private
-static SoAudioDevice *audiodevice_singleton = NULL;
-
-// *************************************************************************
-
-SoAudioDevice *
-SoAudioDevice::instance()
+const cc_cgglue * cc_cgglue_instance(void)
 {
-  if (audiodevice_singleton == NULL) {
-    audiodevice_singleton = new SoAudioDevice();
-    // Note: cleanup not registered because destructor is private and
-    // audio support is disabled anyway
-  }
-  return audiodevice_singleton;
+  return NULL; /* CG support disabled in minimal build */
 }
 
-SoAudioDevice::SoAudioDevice()
+SbBool cc_cgglue_available(void)
 {
-  // Audio support disabled in minimal build
+  return FALSE; /* CG support disabled in minimal build */
 }
 
-SoAudioDevice::~SoAudioDevice()
-{
-  // Audio support disabled in minimal build
-}
-
-SbBool
-SoAudioDevice::init(const SbString & devicetype, const SbString & devicename)
-{
-  return FALSE; /* Audio support disabled in minimal build */
-}
-
-SbBool
-SoAudioDevice::enable()
-{
-  return FALSE; /* Audio support disabled in minimal build */
-}
-
-void
-SoAudioDevice::disable()
-{
-  /* Audio support disabled in minimal build */
-}
-
-SbBool
-SoAudioDevice::isEnabled()
-{
-  return FALSE; /* Audio support disabled in minimal build */
-}
-
-SbBool
-SoAudioDevice::haveSound()
-{
-  return FALSE; /* Audio support disabled in minimal build */
-}
-
-void
-SoAudioDevice::setGain(float gain)
-{
-  /* Audio support disabled in minimal build */
-}
-
-void
-SoAudioDevice::mute(SbBool mute)
-{
-  /* Audio support disabled in minimal build */
-}
+#ifdef __cplusplus
+} /* extern "C" */
+#endif /* __cplusplus */
