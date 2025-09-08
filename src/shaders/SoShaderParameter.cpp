@@ -379,7 +379,7 @@
 #include "glue/cg.h"
 #include "shaders/SoGLShaderObject.h"
 #include "shaders/SoGLShaderParameter.h"
-#include "shaders/SoGLCgShaderParameter.h"
+
 
 /* **************************************************************************
  * *** SoShaderParameter ***
@@ -700,6 +700,8 @@ SoShaderStateMatrixParameter::updateParameter(SoGLShaderObject *shader)
   this->ensureParameter(shader);
 
   if (shader->shaderType() == SoShader::CG_SHADER) {
+    // CG support disabled in minimal build
+    /*
     CGGLenum type;
     switch (this->matrixType.getValue()) {
     case MODELVIEW: type = CG_GL_MODELVIEW_MATRIX; break;
@@ -721,6 +723,7 @@ SoShaderStateMatrixParameter::updateParameter(SoGLShaderObject *shader)
     SoGLCgShaderParameter * param = (SoGLCgShaderParameter *)
       this->getGLShaderParameter(shader->getCacheContext());
     param->setState(shader, type, tform, this->name.getValue().getString());
+    */
   }
   else {
     // if not CG then set the value retrieved from state before

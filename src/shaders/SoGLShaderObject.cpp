@@ -36,7 +36,7 @@
 #include <cassert>
 
 #include "SoGLARBShaderObject.h"
-#include "SoGLCgShaderObject.h"
+
 #include "SoGLSLShaderObject.h"
 
 

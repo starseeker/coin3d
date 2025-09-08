@@ -2,9 +2,7 @@
 set(COIN_FONTS_FILES
 	fontlib_wrapper.cpp
 	win32.cpp
-	freetype.cpp
 	coretext.cpp
-	fontspec.cpp
 	glyph.cpp
 	glyph2d.cpp
 	glyph3d.cpp
@@ -20,11 +18,9 @@ set(COIN_FONTS_INTERNAL_FILES
 	win32.h
 	win32.cpp
 	freetype.h
-	freetype.cpp
 	coretext.h
 	coretext.cpp
 	fontspec.h
-	fontspec.cpp
 	glyph.h
 	glyph.cpp
 	glyph2d.h

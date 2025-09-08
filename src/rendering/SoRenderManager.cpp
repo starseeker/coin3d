@@ -87,6 +87,7 @@
 #include "coindefs.h"
 #include "tidbitsp.h"
 #include "misc/AudioTools.h"
+
 #include "coindefs.h"
 
 /* Legacy MSVC6 workaround removed - not needed for C++17 */
