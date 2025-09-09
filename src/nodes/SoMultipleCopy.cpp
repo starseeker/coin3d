@@ -174,11 +174,6 @@ SoMultipleCopy::GLRender(SoGLRenderAction * action)
 
 // Doc in superclass
 void
-SoMultipleCopy::audioRender(SoAudioRenderAction * action)
-{
-  SoMultipleCopy::doAction((SoAction*)action);
-}
-
 // Doc in superclass.
 SbBool
 SoMultipleCopy::affectsState(void) const

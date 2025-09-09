@@ -137,10 +137,6 @@
 #include <Inventor/elements/SoGLShapeHintsElement.h>
 #include <Inventor/elements/SoCullElement.h>
 #include <Inventor/elements/SoGLRenderPassElement.h>
-#include <Inventor/elements/SoListenerPositionElement.h>
-#include <Inventor/elements/SoListenerOrientationElement.h>
-#include <Inventor/elements/SoListenerDopplerElement.h>
-#include <Inventor/elements/SoListenerGainElement.h>
 #include <Inventor/elements/SoGLMultiTextureEnabledElement.h>
 #include <Inventor/misc/SoState.h>
 #include <Inventor/SbColor4f.h>
@@ -407,11 +403,6 @@ SoCamera::initClass(void)
   SO_ENABLE(SoGetPrimitiveCountAction, SoProjectionMatrixElement);
   SO_ENABLE(SoGetPrimitiveCountAction, SoViewVolumeElement);
   SO_ENABLE(SoGetPrimitiveCountAction, SoViewingMatrixElement);
-
-  SO_ENABLE(SoAudioRenderAction, SoListenerPositionElement);
-  SO_ENABLE(SoAudioRenderAction, SoListenerOrientationElement);
-  SO_ENABLE(SoAudioRenderAction, SoListenerDopplerElement);
-  SO_ENABLE(SoAudioRenderAction, SoListenerGainElement);
 }
 
 /*!

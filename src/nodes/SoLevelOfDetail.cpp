@@ -157,7 +157,6 @@
 
 #include <cstdlib>
 
-#include <Inventor/actions/SoAudioRenderAction.h>
 #include <Inventor/actions/SoCallbackAction.h>
 #include <Inventor/actions/SoGLRenderAction.h>
 #include <Inventor/actions/SoGetBoundingBoxAction.h>
@@ -440,23 +439,6 @@ SoLevelOfDetail::rayPick(SoRayPickAction *action)
 
 // Documented in superclass.
 void
-SoLevelOfDetail::audioRender(SoAudioRenderAction * action)
-{
-  /* 
-     FIXME: Implement proper support for audio rendering. The
-     implementation will be similar to SoLOD, but will require
-     enabling some more elements for SoAudioRenderAction, as well as
-     rewriting this->doAction().
-
-     The current implementation will render _all_ children instead of
-     just one of them.
-
-     2003-02-05 thammer.
-   */
-  // let SoGroup traverse the children
-  inherited::audioRender(action);
-}
-
 void 
 SoLevelOfDetail::getBoundingBox(SoGetBoundingBoxAction * action)
 {

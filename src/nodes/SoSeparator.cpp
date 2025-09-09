@@ -74,13 +74,11 @@
 #include <Inventor/actions/SoHandleEventAction.h>
 #include <Inventor/actions/SoRayPickAction.h>
 #include <Inventor/actions/SoSearchAction.h>
-#include <Inventor/actions/SoAudioRenderAction.h>
 #include <Inventor/caches/SoBoundingBoxCache.h>
 #include <Inventor/caches/SoGLCacheList.h>
 #include <Inventor/elements/SoCacheElement.h>
 #include <Inventor/elements/SoCullElement.h>
 #include <Inventor/elements/SoLocalBBoxMatrixElement.h>
-#include <Inventor/elements/SoSoundElement.h>
 #include <Inventor/misc/SoChildList.h>
 #include <Inventor/misc/SoState.h>
 #include <Inventor/errors/SoDebugError.h>
@@ -820,30 +818,6 @@ SoSeparator::handleEvent(SoHandleEventAction * action)
 
 // Doc from superclass.
 void
-SoSeparator::audioRender(SoAudioRenderAction * action)
-{
-  // Note: This function is similar to SoVRMLGroup::audioRender().
-  /* FIXME: how should we handle termination of an action? We should
-     probably reset PRIVATE(this)->hassoundchild to MAYBE. Investigate
-     2003-01-31 thammer. */
-
-  int numindices;
-  const int * indices;
-  SoState * state = action->getState();
-  if (PRIVATE(this)->hassoundchild != SoSeparatorP::NO) {
-    if (action->getPathCode(numindices, indices) != SoAction::IN_PATH) {
-      action->getState()->push();
-      SoSoundElement::setSceneGraphHasSoundNode(state, this, FALSE);
-      inherited::doAction(action);
-      PRIVATE(this)->hassoundchild = SoSoundElement::sceneGraphHasSoundNode(state) ?
-        SoSeparatorP::YES : SoSeparatorP::NO;
-      action->getState()->pop();
-    } else {
-      SoSeparator::doAction((SoAction*)action);
-    }
-  }
-}
-
 // compute object space ray and test for intersection
 static SbBool
 ray_intersect(SoRayPickAction * action, const SbBox3f &box)

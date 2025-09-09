@@ -36,7 +36,6 @@
 
 #include <Inventor/annex/Profiler/elements/SoProfilerElement.h>
 #include <Inventor/annex/Profiler/SbProfilingData.h>
-#include <Inventor/actions/SoAudioRenderAction.h>
 #include <Inventor/actions/SoCallbackAction.h>
 #include <Inventor/actions/SoGetBoundingBoxAction.h>
 #include <Inventor/actions/SoGetMatrixAction.h>
@@ -433,11 +432,6 @@ SoProfilerStats::getBoundingBox(SoGetBoundingBoxAction * action)
 
 // Doc from superclass.
 void
-SoProfilerStats::audioRender(SoAudioRenderAction * action)
-{
-  PRIVATE(this)->doAction(action);
-}
-
 // Doc from superclass.
 void
 SoProfilerStats::callback(SoCallbackAction * action)
