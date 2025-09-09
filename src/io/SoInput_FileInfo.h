@@ -104,8 +104,7 @@ public:
     // if reader == NULL, it means that we're reading from stdin
     if (this->reader == NULL) return FALSE;
     return
-      (this->getReader()->getType() == SoInput_Reader::MEMBUFFER) ||
-      (this->getReader()->getType() == SoInput_Reader::GZMEMBUFFER);
+      (this->getReader()->getType() == SoInput_Reader::MEMBUFFER);
   }
 
   void setDeleteBuffer(char * buffer) {

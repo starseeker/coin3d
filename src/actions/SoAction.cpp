@@ -420,7 +420,6 @@ SoAction::initClasses(void)
   SoRayPickAction::initClass();
   SoSearchAction::initClass();
   SoWriteAction::initClass();
-  SoAudioRenderAction::initClass();
   SoIntersectionDetectionAction::initClass();
 
   SoSimplifyAction::initClass();

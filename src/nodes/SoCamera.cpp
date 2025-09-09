@@ -126,7 +126,6 @@
 #include <Inventor/actions/SoGetPrimitiveCountAction.h>
 #include <Inventor/actions/SoHandleEventAction.h>
 #include <Inventor/actions/SoRayPickAction.h>
-#include <Inventor/actions/SoAudioRenderAction.h>
 #include <Inventor/elements/SoFocalDistanceElement.h>
 #include <Inventor/elements/SoGLProjectionMatrixElement.h>
 #include <Inventor/elements/SoGLViewingMatrixElement.h>
@@ -724,61 +723,6 @@ SoCamera::GLRender(SoGLRenderAction * action)
   SoProjectionMatrixElement::set(state, this, proj);
   SoViewingMatrixElement::set(state, this, affine);
   SoFocalDistanceElement::set(state, this, this->focalDistance.getValue());
-}
-
-// Documented in superclass.
-void
-SoCamera::audioRender(SoAudioRenderAction *action)
-{
-  SoState * state = action->getState();
-
-  SbBool setbylistener;
-  setbylistener = SoListenerPositionElement::isSetByListener(state);
-  if ((! setbylistener) &&  (! this->position.isIgnored())) {
-    SbVec3f pos, worldpos;
-    pos = this->position.getValue();
-    SoModelMatrixElement::get(action->getState()).multVecMatrix(pos, worldpos);
-    SoListenerPositionElement::set(state, this, worldpos, FALSE);
-#if COIN_DEBUG && 0
-  float x, y, z;
-  worldpos.getValue(x, y, z);
-  SoDebugError::postInfo("SoCamera::audioRender","listenerpos (%0.2f, %0.2f, %0.2f)\n", x, y, z);
-#endif // debug
-  } else {
-#if COIN_DEBUG && 0
-  SoDebugError::postInfo("SoCamera::audioRender","ignoring listenerpos\n");
-#endif // debug
-  }
-  setbylistener = SoListenerOrientationElement::isSetByListener(state);
-  if ((! setbylistener) && (! this->orientation.isIgnored())) {
-    SbBool mmidentity;
-    SbRotation r;
-    SbMatrix m = SoModelMatrixElement::get(state, mmidentity);
-    if (!mmidentity) {
-      SbVec3f t;
-      SbVec3f s;
-      SbRotation so;
-      m.getTransform(t, r, s, so);
-      r *= this->orientation.getValue();
-    }
-    else {
-      r = this->orientation.getValue();
-    }
-    SoListenerOrientationElement::set(state, this, r, FALSE);
-  }
-
-  // Set view volume. This is needed for LOD nodes to work properly.
-  SbViewportRegion vp;
-  SbViewVolume vv;
-  this->getView(action, vv, vp, FALSE);
-
-  if (! (vv.getDepth() == 0.0f || vv.getWidth() == 0.0f || vv.getHeight() == 0.0f) ) {
-    SbBool identity;
-    const SbMatrix & mm = SoModelMatrixElement::get(state, identity);
-    if (!identity)
-      vv.transform(mm);
-  }
-  SoViewVolumeElement::set(state, this, vv);
 }
 
 // Doc in superclass.
