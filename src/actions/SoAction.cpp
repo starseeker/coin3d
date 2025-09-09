@@ -229,7 +229,7 @@
 #include "misc/SoDBP.h" // for global envvar COIN_PROFILER
 #include "misc/SoCompactPathList.h"
 
-#include "profiler/SoNodeProfiling.h"
+
 
 // define this to debug path traversal
 // #define DEBUG_PATH_TRAVERSAL
@@ -379,12 +379,7 @@ SoAction::initClass(void)
   SoAction::enabledElements->enable(SoOverrideElement::getClassTypeId(),
                                     SoOverrideElement::getClassStackIndex());
 
-  // Profiler element may also be used from within all types of action
-  // traversals.
-  if (SoProfiler::isEnabled()) {
-    SoAction::enabledElements->enable(SoProfilerElement::getClassTypeId(),
-                                      SoProfilerElement::getClassStackIndex());
-  }
+  // Profiler functionality removed - nodekit elimination
 
   SoAction::initClasses();
   coin_atexit(reinterpret_cast<coin_atexit_f *>(SoAction::atexit_cleanup), CC_ATEXIT_NORMAL);
@@ -523,73 +518,13 @@ SoAction::apply(SoNode * root)
     // make sure state is created before traversing
     (void) this->getState();
 
-    // send events to overlay graph first
-    if (SoProfiler::isEnabled() &&
-        SoProfiler::isOverlayActive() &&
-        this->isOfType(SoHandleEventAction::getClassTypeId()))
-    {
-      // FIXME: also check that the scene graph view is actually enabled, or
-      // else this is of no point - sending events to the overlay scene
-      // graph.
+    // Profiler functionality removed - nodekit elimination
 
-      SoNode * profileroverlay = SoActionP::getProfilerOverlay();
-      if (profileroverlay) {
-        SoProfiler::enable(FALSE);
-        this->beginTraversal(profileroverlay);
-        this->endTraversal(profileroverlay);
-        SoProfiler::enable(TRUE);
-      }
-
-      // FIXME: if there was a hit on the overlay scene graph view and
-      // the scene graph view is modified, then we should schedule a
-      // redraw.  However, the isHandled() flag isn't affected by that
-      // change for now, so there's no way to detect it.
-      //if (static_cast<SoHandleEventAction *>(this)->isHandled()) {
-      //  root->touch();
-      //}
-
-    }
-
-    // start profiling
-    if (SoProfiler::isEnabled() &&
-        state->isElementEnabled(SoProfilerElement::getClassStackIndex())) {
-      SoProfilerElement * elt = SoProfilerElement::get(state);
-      assert(elt);
-      SbProfilingData & data = elt->getProfilingData();
-      data.reset();
-      data.setActionType(this->getTypeId());
-      data.setActionStartTime(SbTime::getTimeOfDay());
-    }
-
+    // start main traversal
     this->beginTraversal(root);
     this->endTraversal(root);
 
-    if (SoProfiler::isEnabled() &&
-        state->isElementEnabled(SoProfilerElement::getClassStackIndex())) {
-      SoProfilerElement * elt = SoProfilerElement::get(state);
-      assert(elt);
-      SbProfilingData & data = elt->getProfilingData();
-      data.setActionStopTime(SbTime::getTimeOfDay());
-    }
-
-    if (SoProfiler::isOverlayActive() &&
-        !this->isOfType(SoGLRenderAction::getClassTypeId())) {
-      // update profiler stats node with the profiling data from the traversal
-      SoNode * profilerstats = SoActionP::getProfilerStatsNode();
-      SoProfiler::enable(FALSE);
-      this->traverse(profilerstats);
-      SoProfiler::enable(TRUE);
-    }
-
-    if (SoProfiler::isConsoleActive()) {
-      if (this->isOfType(SoProfilerP::getActionType())) {
-        SoProfilerElement * pelt = SoProfilerElement::get(state);
-        if (pelt != NULL) {
-          const SbProfilingData & pdata = pelt->getProfilingData();
-          SoProfilerP::dumpToConsole(pdata);
-        }
-      }
-    }
+    // Profiler functionality removed - nodekit elimination
 
     PRIVATE(this)->applieddata.node = NULL;
     root->unrefNoDelete();
@@ -943,10 +878,9 @@ SoAction::traverse(SoNode * const node)
   int idx = SoNode::getActionMethodIndex(t);
   SoActionMethod func = (*this->traversalMethods)[idx];
 
-  SoNodeProfiling profiling;
-  profiling.preTraversal(this);
+  // Profiler functionality removed - nodekit elimination
   func(this, node);
-  profiling.postTraversal(this);
+  // Profiler functionality removed - nodekit elimination
 }
 
 /*!

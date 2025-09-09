@@ -6,7 +6,6 @@ set(COIN_DETAILS_FILES
 	SoCylinderDetail.cpp
 	SoFaceDetail.cpp
 	SoLineDetail.cpp
-	SoNodeKitDetail.cpp
 	SoPointDetail.cpp
 	SoTextDetail.cpp
 )

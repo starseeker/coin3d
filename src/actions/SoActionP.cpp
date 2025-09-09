@@ -35,47 +35,7 @@
 
 #include "actions/SoActionP.h"
 
-#include <Inventor/annex/Profiler/SoProfiler.h>
-#ifdef HAVE_NODEKITS
-#include <Inventor/annex/Profiler/nodekits/SoProfilerVisualizeKit.h>
-#include <Inventor/annex/Profiler/nodekits/SoProfilerTopKit.h>
-#endif // HAVE_NODEKITS
-
-// *************************************************************************
-
-SoProfilerStats *
-SoActionP::getProfilerStatsNode(void)
-{
-  static SoProfilerStats * pstats = NULL;
-  if (!pstats) {
-    pstats = new SoProfilerStats;
-    pstats->ref();
-  }
-  return pstats;
-}
-
-SoNode *
-SoActionP::getProfilerOverlay(void)
-{
-  if (!SoProfiler::isEnabled() || !SoProfiler::isOverlayActive())
-    return NULL;
-
-  static SoNode * nodekit = NULL;
-#ifdef HAVE_NODEKITS
-  if (nodekit == NULL) {
-    SoProfilerTopKit * kit = new SoProfilerTopKit;
-    kit->ref();
-    kit->setPart("profilingStats",
-                 SoActionP::getProfilerStatsNode());
-    nodekit = kit;
-
-    SoProfilerVisualizeKit * viskit = new SoProfilerVisualizeKit;
-    viskit->stats.setValue(SoActionP::getProfilerStatsNode());
-    kit->addOverlayGeometry(viskit);
-  }
-#endif // HAVE_NODEKITS
-  return nodekit;
-}
+// Profiler functionality removed - nodekit elimination
 
 // *************************************************************************
 
