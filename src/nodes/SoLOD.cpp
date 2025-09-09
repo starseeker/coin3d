@@ -222,10 +222,6 @@ SoLOD::doAction(SoAction *action)
     int idx = this->whichToTraverse(action);
     if (idx >= 0) {
       this->children->traverse(action, idx);
-      PRIVATE(this)->enableTraversingOfInactiveChildren();
-      PRIVATE(this)->traverseInactiveChildren(this, action, idx, pathcode,
-                                              this->getNumChildren(),
-                                              this->getChildren());
     }
   }
 }
@@ -386,7 +382,6 @@ void
 SoLOD::notify(SoNotList * nl)
 {
   inherited::notify(nl);
-  PRIVATE(this)->notifyCalled();
 }
 
 #undef PRIVATE

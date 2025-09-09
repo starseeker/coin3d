@@ -202,7 +202,6 @@
 #include <Inventor/actions/SoGetMatrixAction.h>
 #include <Inventor/actions/SoGetBoundingBoxAction.h>
 #include <Inventor/actions/SoGetPrimitiveCountAction.h>
-#include <Inventor/actions/SoAudioRenderAction.h>
 #include <Inventor/actions/SoPickAction.h>
 #include <Inventor/actions/SoCallbackAction.h>
 #include <Inventor/elements/SoModelMatrixElement.h>
@@ -286,7 +285,6 @@ SoGeoOrigin::initClass(void)
   SO_ENABLE(SoPickAction, SoGeoElement);
   SO_ENABLE(SoCallbackAction, SoGeoElement);
   SO_ENABLE(SoGetPrimitiveCountAction, SoGeoElement);
-  SO_ENABLE(SoAudioRenderAction, SoGeoElement);
 }
 
 // Doc from superclass.

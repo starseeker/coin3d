@@ -275,7 +275,6 @@ SoProfilerP::setActionType(SoType actiontype)
   else IF_ACTION(SoGetPrimitiveCountAction)
   else IF_ACTION(SoHandleEventAction)
   else IF_ACTION(SoToVRMLAction)
-  else IF_ACTION(SoAudioRenderAction)
   else IF_ACTION(SoSimplifyAction)
   else {
     SoDebugError::postInfo("SoProfilerP::setActionType",

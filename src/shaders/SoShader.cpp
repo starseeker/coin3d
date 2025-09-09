@@ -193,7 +193,6 @@
 #include <Inventor/C/tidbits.h>
 #include <Inventor/errors/SoDebugError.h>
 
-#include "glue/cg.h"
 #include "misc/SbHash.h"
 #include "tidbitsp.h"
 

@@ -58,13 +58,11 @@
 
 #include <Inventor/C/tidbits.h>
 #include <Inventor/SoDB.h>
-#include <Inventor/actions/SoAudioRenderAction.h>
 #include <Inventor/actions/SoGLRenderAction.h>
 #include <Inventor/actions/SoHandleEventAction.h>
 #include <Inventor/actions/SoSearchAction.h>
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/fields/SoSFTime.h>
-#include <Inventor/misc/SoAudioDevice.h>
 #include <Inventor/misc/SoState.h>
 #include <Inventor/nodes/SoNode.h>
 #include <Inventor/nodes/SoCamera.h>
@@ -574,25 +572,6 @@ SoGLRenderAction *
 SoSceneManager::getGLRenderAction(void) const
 {
   return PRIVATE(this)->rendermanager->getGLRenderAction();
-}
-
-/*!
-  Set the \a action to use for rendering audio. Overrides the default action
-  made in the constructor.
- */
-void
-SoSceneManager::setAudioRenderAction(SoAudioRenderAction * const action)
-{
-  PRIVATE(this)->rendermanager->setAudioRenderAction(action);
-}
-
-/*!
-  Returns pointer to audio render action.
- */
-SoAudioRenderAction *
-SoSceneManager::getAudioRenderAction(void) const
-{
-  return PRIVATE(this)->rendermanager->getAudioRenderAction();
 }
 
 /*!

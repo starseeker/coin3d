@@ -144,7 +144,6 @@ public:
   static void rayPickS(SoAction * action, SoNode * node);
   static void searchS(SoAction * action, SoNode * node);
   static void writeS(SoAction * action, SoNode * node);
-  static void audioRenderS(SoAction * action, SoNode * node);
   static void getPrimitiveCountS(SoAction * action, SoNode * node);
 
 protected:

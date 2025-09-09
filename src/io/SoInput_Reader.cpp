@@ -52,7 +52,6 @@
 
 #include <Inventor/errors/SoDebugError.h>
 
-#include "io/gzmemio.h"
 #include "glue/zlib.h"
 #include "glue/bzip2.h"
 

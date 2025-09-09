@@ -501,7 +501,6 @@ soshape_bumprender::renderBumpSpecular(SoState * state,
     glLoadIdentity(); // load identity texture matrix
     glMatrixMode(GL_MODELVIEW);
   }
-  coin_apply_normalization_cube_map(glue);
   glEnable(GL_TEXTURE_CUBE_MAP);
 
   cc_glglue_glActiveTexture(glue, GL_TEXTURE0);
@@ -637,7 +636,6 @@ soshape_bumprender::renderBump(SoState * state,
     glLoadIdentity(); // load identity texture matrix
     glMatrixMode(GL_MODELVIEW);
   }
-  coin_apply_normalization_cube_map(glue);
   glEnable(GL_TEXTURE_CUBE_MAP);
   glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE);
   glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE0_RGB, GL_TEXTURE);
