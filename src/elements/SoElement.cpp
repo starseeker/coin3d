@@ -462,13 +462,6 @@ SoElement::initElements(void)
   SoTextureScalePolicyElement::initClass();
   SoTextureScaleQualityElement::initClass();
 
-  SoListenerPositionElement::initClass();
-  SoListenerOrientationElement::initClass();
-  SoListenerDopplerElement::initClass();
-  SoListenerGainElement::initClass();
-
-  SoSoundElement::initClass();
-
   SoTextureUnitElement::initClass();
 
   SoMultiTextureCoordinateElement::initClass();

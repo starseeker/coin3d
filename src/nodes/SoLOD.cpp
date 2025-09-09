@@ -109,7 +109,6 @@
 #include <Inventor/elements/SoGLCacheContextElement.h>
 
 #include "nodes/SoSubNodeP.h"
-#include "nodes/SoSoundElementHelper.h"
 #include "profiler/SoNodeProfiling.h"
 
 // *************************************************************************
@@ -138,7 +137,7 @@
 
 // *************************************************************************
 
-class SoLODP : public SoSoundElementHelper
+class SoLODP
 {
 public:
   SoLODP(SoLOD * master) : master(master) {};
@@ -223,10 +222,6 @@ SoLOD::doAction(SoAction *action)
     int idx = this->whichToTraverse(action);
     if (idx >= 0) {
       this->children->traverse(action, idx);
-      PRIVATE(this)->enableTraversingOfInactiveChildren();
-      PRIVATE(this)->traverseInactiveChildren(this, action, idx, pathcode,
-                                              this->getNumChildren(),
-                                              this->getChildren());
     }
   }
 }
@@ -236,15 +231,6 @@ void
 SoLOD::callback(SoCallbackAction *action)
 {
   SoLOD::doAction((SoAction*)action);
-}
-
-// Documented in superclass.
-void
-SoLOD::audioRender(SoAudioRenderAction * action)
-{
-  PRIVATE(this)->preAudioRender(this, action);
-  SoLOD::doAction((SoAction*)action);
-  PRIVATE(this)->postAudioRender(this, action);
 }
 
 // Documented in superclass.
@@ -396,7 +382,6 @@ void
 SoLOD::notify(SoNotList * nl)
 {
   inherited::notify(nl);
-  PRIVATE(this)->notifyCalled();
 }
 
 #undef PRIVATE

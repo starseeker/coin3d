@@ -418,13 +418,6 @@ SoFile::getPrimitiveCount(SoGetPrimitiveCountAction * action)
   SoFile::doAction((SoAction *)action);
 }
 
-// Doc from superclass.
-void
-SoFile::audioRender(SoAudioRenderAction * action)
-{
-  SoFile::doAction((SoAction *)action);
-}
-
 void
 SoFile::search(SoSearchAction * action)
 {

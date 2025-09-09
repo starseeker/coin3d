@@ -36,7 +36,7 @@
 
 #include "SoGLShaderObject.h"
 #include "SoGLARBShaderProgram.h"
-#include "SoGLCgShaderProgram.h"
+
 #include "SoGLSLShaderProgram.h"
 #include <Inventor/elements/SoGLCacheContextElement.h>
 
@@ -45,7 +45,9 @@
 SoGLShaderProgram::SoGLShaderProgram(void)
 {
   this->arbShaderProgram = new SoGLARBShaderProgram;
-  this->cgShaderProgram = new SoGLCgShaderProgram;
+  // CG support disabled in minimal build
+  // this->cgShaderProgram = new SoGLCgShaderProgram;
+  this->cgShaderProgram = NULL;
   this->glslShaderProgram = new SoGLSLShaderProgram;
 
   this->isenabled = FALSE;
@@ -56,7 +58,8 @@ SoGLShaderProgram::SoGLShaderProgram(void)
 SoGLShaderProgram::~SoGLShaderProgram()
 {
   delete this->arbShaderProgram;
-  delete this->cgShaderProgram;
+  // CG support disabled in minimal build
+  // delete this->cgShaderProgram;
   delete this->glslShaderProgram;
 }
 
@@ -69,7 +72,8 @@ SoGLShaderProgram::addShaderObject(SoGLShaderObject *shader)
     this->arbShaderProgram->addShaderObject((SoGLARBShaderObject*)shader);
     break;
   case SoShader::CG_SHADER:
-    this->cgShaderProgram->addShaderObject((SoGLCgShaderObject*)shader);
+    // CG support disabled in minimal build
+    // this->cgShaderProgram->addShaderObject((SoGLCgShaderObject*)shader);
     break;
   case SoShader::GLSL_SHADER:
     this->glslShaderProgram->addShaderObject((SoGLSLShaderObject*)shader);
@@ -83,7 +87,8 @@ void
 SoGLShaderProgram::removeShaderObjects(void)
 {
   this->arbShaderProgram->removeShaderObjects();
-  this->cgShaderProgram->removeShaderObjects();
+  // CG support disabled in minimal build
+  // this->cgShaderProgram->removeShaderObjects();
   this->glslShaderProgram->removeShaderObjects();
   this->glslShaderProgram->removeProgramParameters();
   this->objectids.truncate(0);
@@ -96,7 +101,8 @@ SoGLShaderProgram::enable(SoState * state)
   const cc_glglue * glctx = cc_glglue_instance(cachecontext);
 
   this->arbShaderProgram->enable();
-  this->cgShaderProgram->enable();
+  // CG support disabled in minimal build
+  // this->cgShaderProgram->enable();
   this->glslShaderProgram->enable(glctx);
 
   this->isenabled = TRUE;
@@ -112,7 +118,8 @@ SoGLShaderProgram::disable(SoState * state)
   const cc_glglue * glctx = cc_glglue_instance(cachecontext);
 
   this->arbShaderProgram->disable();
-  this->cgShaderProgram->disable();
+  // CG support disabled in minimal build
+  // this->cgShaderProgram->disable();
   this->glslShaderProgram->disable(glctx);
 
   this->isenabled = FALSE;
@@ -185,7 +192,8 @@ SoGLShaderProgram::getSourceHint(void)
   SbString result;
 
   result += this->arbShaderProgram->getSourceHint();
-  result += this->cgShaderProgram->getSourceHint();
+  // CG support disabled in minimal build
+  // result += this->cgShaderProgram->getSourceHint();
   result += this->glslShaderProgram->getSourceHint();
   return result;
 }

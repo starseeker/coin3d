@@ -77,11 +77,6 @@ set(COIN_ELEMENTS_FILES
 	SoViewingMatrixElement.cpp
 	SoViewportRegionElement.cpp
 	SoWindowElement.cpp
-	SoListenerPositionElement.cpp
-	SoListenerOrientationElement.cpp
-	SoListenerGainElement.cpp
-	SoListenerDopplerElement.cpp
-	SoSoundElement.cpp
 	SoVertexAttributeElement.cpp
 )
 

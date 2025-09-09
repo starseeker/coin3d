@@ -56,7 +56,6 @@
 #include <Inventor/actions/SoPickAction.h>
 #include <Inventor/actions/SoSearchAction.h>
 #include <Inventor/actions/SoCallbackAction.h>
-#include <Inventor/actions/SoAudioRenderAction.h>
 
 #include "nodes/SoSubNodeP.h"
 
@@ -188,15 +187,6 @@ SoPathSwitch::pick(SoPickAction * action)
 {
   if (is_matching_paths(action->getCurPath(), this->path.getValue())) {
     inherited::pick(action);
-  }
-}
-
-// doc in parent
-void
-SoPathSwitch::audioRender(SoAudioRenderAction * action)
-{
-  if (is_matching_paths(action->getCurPath(), this->path.getValue())) {
-    inherited::audioRender(action);
   }
 }
 

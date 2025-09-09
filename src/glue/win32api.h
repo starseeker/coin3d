@@ -33,71 +33,18 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-/* This is an internal set of convenience wrappers around Win32 API
-   functions that are unnecessary robust for our purpose.
-
-   To simplify our client code within the library, we therefore catch
-   error conditions, report as exact information about the error as
-   possible, and then assert on them within the wrappers. The client
-   code can therefore ignore possible problems.
-*/
-
-/*************************************************************************/
-
-#ifndef COIN_INTERNAL
-#error this is a private header file
-#endif /* COIN_INTERNAL */
-
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif /* HAVE_CONFIG_H */
-
-#ifndef HAVE_WIN32_API
-/* Just in case we can get in trouble for declaring functions that are
-   not implemented. */
-#error Do not include this file unless the contents will actually be used.
-#endif /* HAVE_WIN32_API */
-
-#ifdef HAVE_WINDOWS_H
-#include <windows.h>
-#endif // HAVE_WINDOWS_H
-
-/*************************************************************************/
+/* Minimal stub wrapper for win32api functionality - disabled for minimal build */
 
 #include <Inventor/C/basic.h>
 
-/*************************************************************************/
-
 #ifdef __cplusplus
 extern "C" {
-#endif
+#endif /* __cplusplus */
 
-  typedef int (WINAPI * GetTextFace_t)(HDC, int, LPTSTR);
-  typedef void (WINAPI * LocalFree_t)(HLOCAL);
-  typedef void (WINAPI * GetVersionEx_t)(LPOSVERSIONINFO);
-  typedef HGDIOBJ (WINAPI * SelectObject_t)(HDC, HGDIOBJ);
-  typedef int (WINAPI * GetObject_t)(HGDIOBJ, int, LPVOID);
- 
-  struct cc_win32_api {
-    GetTextFace_t GetTextFace;
-    LocalFree_t LocalFree;
-    GetVersionEx_t GetVersionEx;
-    SelectObject_t SelectObject;
-    GetObject_t GetObject;
-  };
+/* Win32 API support disabled in minimal build */
 
-  /* Force singleton access. */
-  const struct cc_win32_api * cc_win32(void);
-
-  /* Convenient wrapping of converting and printing out a Win32 API
-     error code as a text string. The "lasterror" argument should be
-     the result from GetLastError(). */
-  void cc_win32_print_error(const char * callerfuncname,
-                            const char * apifuncname,
-                            DWORD lasterror);
-  
 #ifdef __cplusplus
-}
-#endif
+} /* extern "C" */
+#endif /* __cplusplus */
 
 #endif /* !COIN_WIN32API_H */

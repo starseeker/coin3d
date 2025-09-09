@@ -69,14 +69,8 @@
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
-#include <Inventor/actions/SoAudioRenderAction.h>
 #include <Inventor/elements/SoModelMatrixElement.h>
 #include <Inventor/errors/SoDebugError.h>
-#include <Inventor/misc/SoAudioDevice.h>
-#include <Inventor/elements/SoListenerPositionElement.h>
-#include <Inventor/elements/SoListenerOrientationElement.h>
-#include <Inventor/elements/SoListenerDopplerElement.h>
-#include <Inventor/elements/SoListenerGainElement.h>
 
 #include "nodes/SoSubNodeP.h"
 
@@ -140,11 +134,6 @@ SO_NODE_SOURCE(SoListener);
 void SoListener::initClass()
 {
   SO_NODE_INTERNAL_INIT_CLASS(SoListener, SO_FROM_COIN_2_0);
-
-  SO_ENABLE(SoAudioRenderAction, SoListenerPositionElement);
-  SO_ENABLE(SoAudioRenderAction, SoListenerOrientationElement);
-  SO_ENABLE(SoAudioRenderAction, SoListenerDopplerElement);
-  SO_ENABLE(SoAudioRenderAction, SoListenerGainElement);
 }
 
 /*!
@@ -165,41 +154,4 @@ SoListener::SoListener()
 */
 SoListener::~SoListener()
 {
-}
-
-// Doc in superclass
-void
-SoListener::audioRender(SoAudioRenderAction *action)
-{
-  SoState * state = action->getState();
-
-  if (! this->position.isIgnored()) {
-    SbVec3f pos, worldpos;
-    pos = this->position.getValue();
-    SoModelMatrixElement::get(state).multVecMatrix(pos, worldpos); 
-    SoListenerPositionElement::set(state, this, worldpos, TRUE);
-#if COIN_DEBUG && 0
-    float x, y, z;
-    worldpos.getValue(x, y, z);
-    SoDebugError::postInfo("SoListener::audioRender", "listenerpos "
-            "(%0.2f, %0.2f, %0.2f)", x, y, z);
-#endif // debug
-  }
-  if (! this->orientation.isIgnored()) {
-    SbVec3f t;
-    SbRotation r;
-    SbVec3f s;
-    SbRotation so;
-    SoModelMatrixElement::get(state).getTransform(t, r, s, so);
-    r *= this->orientation.getValue();
-    SoListenerOrientationElement::set(state, this, r, TRUE);
-  }
-  if (! this->dopplerVelocity.isIgnored())
-    SoListenerDopplerElement::setDopplerVelocity(state, this, 
-                                   this->dopplerVelocity.getValue());
-  if (! this->dopplerFactor.isIgnored())
-    SoListenerDopplerElement::setDopplerFactor(state, this, 
-                                  this->dopplerFactor.getValue());
-  if (! this->gain.isIgnored())
-    SoListenerGainElement::set(state, this, this->gain.getValue());
 }

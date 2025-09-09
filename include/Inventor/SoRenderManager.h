@@ -40,7 +40,6 @@
 class SbViewportRegion;
 class SoEvent;
 class SoGLRenderAction;
-class SoAudioRenderAction;
 class SoNode;
 class SoCamera;
 class SoNodeSensor;
@@ -178,8 +177,6 @@ public:
   void getAntialiasing(SbBool & smoothing, int & numPasses) const;
   void setGLRenderAction(SoGLRenderAction * const action);
   SoGLRenderAction * getGLRenderAction(void) const;
-  void setAudioRenderAction(SoAudioRenderAction * const action);
-  SoAudioRenderAction * getAudioRenderAction(void) const;
 
   static void enableRealTimeUpdate(const SbBool flag);
   static SbBool isRealTimeUpdateEnabled(void);

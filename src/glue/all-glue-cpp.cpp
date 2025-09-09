@@ -51,5 +51,3 @@
 #include "bzip2.cpp"
 #include "freetype.cpp"
 #include "zlib.cpp"
-
-#include "normalization_cubemap.cpp"

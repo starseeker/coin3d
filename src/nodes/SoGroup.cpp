@@ -202,7 +202,6 @@
 #include <Inventor/actions/SoGLRenderAction.h>
 #include <Inventor/actions/SoSearchAction.h>
 #include <Inventor/actions/SoWriteAction.h>
-#include <Inventor/actions/SoAudioRenderAction.h>
 #include <Inventor/errors/SoReadError.h>
 #include <Inventor/actions/SoCallbackAction.h>
 #include <Inventor/elements/SoCacheElement.h>
@@ -718,13 +717,6 @@ void
 SoGroup::handleEvent(SoHandleEventAction * action)
 {
   SoGroup::doAction((SoAction *)action);
-}
-
-// Doc from superclass
-void
-SoGroup::audioRender(SoAudioRenderAction * action)
-{
-  SoGroup::doAction(action);
 }
 
 // Doc from superclass.

@@ -1331,32 +1331,6 @@ SoNode::write(SoWriteAction * action)
   else assert(0 && "unknown stage");
 }
 
-/*!
-  This is a static "helper" method registered with the action, and
-  used for calling the SoNode::audioRender() virtual method which does the \e
-  real work.
-*/
-void
-SoNode::audioRenderS(SoAction * action, SoNode * node)
-{
-  assert(action && node);
-  assert(action->getTypeId().isDerivedFrom(SoAudioRenderAction::getClassTypeId()));
-  SoAudioRenderAction * const ara = (SoAudioRenderAction *)(action);
-  node->audioRender(ara);
-}
-
-// Note that this documentation will also be used for all subclasses
-// which reimplements the method, so keep the doc "generic enough".
-/*!
-  Action method for SoAudioRenderAction.
-
-  Does common processing for SoAudioRenderAction \a action instances.
-*/
-void
-SoNode::audioRender(SoAudioRenderAction * COIN_UNUSED_ARG(action))
-{
-}
-
 // Note that this documentation will also be used for all subclasses
 // which reimplements the method, so keep the doc "generic enough".
 /*!
@@ -1636,24 +1610,6 @@ init_action_methods(void)
 
   SoSearchAction::addMethod(SoNode::getClassTypeId(), SoNode::searchS);
   SoWriteAction::addMethod(SoNode::getClassTypeId(), SoNode::writeS);
-
-  SoAudioRenderAction::addMethod(SoNode::getClassTypeId(),
-                                 SoAction::nullAction);
-  SoAudioRenderAction::addMethod(SoListener::getClassTypeId(),
-                                 SoNode::audioRenderS);
-  SoAudioRenderAction::addMethod(SoCamera::getClassTypeId(),
-                                 SoNode::audioRenderS);
-  SoAudioRenderAction::addMethod(SoGroup::getClassTypeId(),
-                                 SoNode::audioRenderS);
-  SoAudioRenderAction::addMethod(SoWWWInline::getClassTypeId(),
-                                 SoNode::audioRenderS);
-  SoAudioRenderAction::addMethod(SoFile::getClassTypeId(),
-                                 SoNode::audioRenderS);
-  // just call doAction() for all transformation nodes. This will make
-  // sound nodes work even for extension nodes that implements the
-  // doAction() method
-  SoAudioRenderAction::addMethod(SoTransformation::getClassTypeId(),
-                                 SoAudioRenderAction::callDoAction);
 }
 
 #undef SET_UNIQUE_NODE_ID

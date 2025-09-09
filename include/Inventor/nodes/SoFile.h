@@ -59,7 +59,6 @@ public:
   virtual void handleEvent(SoHandleEventAction * action);
   virtual void pick(SoPickAction * action);
   virtual void getPrimitiveCount(SoGetPrimitiveCountAction * action);
-  virtual void audioRender(SoAudioRenderAction * action);
   virtual void search(SoSearchAction * action);
 
   SoGroup * copyChildren(void) const;

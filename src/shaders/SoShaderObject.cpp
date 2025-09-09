@@ -126,7 +126,7 @@
 #include "nodes/SoSubNodeP.h"
 #include "misc/SbHash.h"
 #include "shaders/SoGLARBShaderObject.h"
-#include "shaders/SoGLCgShaderObject.h"
+
 #include "shaders/SoGLSLShaderObject.h"
 #include "shaders/SoGLShaderProgram.h"
 
@@ -438,7 +438,9 @@ SoShaderObjectP::GLRender(SoGLRenderAction * action)
       shaderobject = new SoGLARBShaderObject(cachecontext);
       break;
     case SoShaderObject::CG_PROGRAM:
-      shaderobject = new SoGLCgShaderObject(cachecontext);
+      // CG support disabled in minimal build
+      // shaderobject = new SoGLCgShaderObject(cachecontext);
+      shaderobject = NULL;
       break;
     case SoShaderObject::GLSL_PROGRAM:
       shaderobject = new SoGLSLShaderObject(cachecontext);

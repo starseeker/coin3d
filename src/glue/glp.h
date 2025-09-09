@@ -920,9 +920,6 @@ int coin_glglue_stencil_bits_hack(void);
 
 /* ********************************************************************** */
 
-/* needed for bumpmap rendering */
-void coin_apply_normalization_cube_map(const cc_glglue * glue);
-
 /* ********************************************************************** */
 
 /* ARB_shader_objects */

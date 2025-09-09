@@ -82,7 +82,6 @@ public:
   virtual void rayPick(SoRayPickAction * action);
   virtual void getBoundingBox(SoGetBoundingBoxAction * action);
   virtual void getPrimitiveCount(SoGetPrimitiveCountAction * action);
-  virtual void audioRender(SoAudioRenderAction * action);
 
   virtual void callback(SoCallbackAction * action);
   virtual void getMatrix(SoGetMatrixAction * action);

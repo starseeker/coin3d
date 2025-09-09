@@ -193,7 +193,6 @@
 #include <Inventor/C/tidbits.h>
 #include <Inventor/errors/SoDebugError.h>
 
-#include "glue/cg.h"
 #include "misc/SbHash.h"
 #include "tidbitsp.h"
 
@@ -232,12 +231,6 @@ soshader_cleanup(void)
 void
 SoShader::init(void)
 {
-  // Trigger loading and init of Cg library glue.
-  //
-  // FIXME: this function should rather be used from the relevant
-  // class(es), so it is loaded only on demand. 20050125 mortene.
-  (void)cc_cgglue_available();
-
   // --- initialization of elements (must be done first) ---------------
   if (SoGLShaderProgramElement::getClassTypeId() == SoType::badType())
     SoGLShaderProgramElement::initClass();

@@ -735,20 +735,7 @@ SoInput::setBuffer(const void * bufpointer, size_t bufsize)
   this->closeFile();
   SoInput_Reader * reader = NULL;
 
-  unsigned char * header = (unsigned char*) bufpointer;
-  if ((bufsize >= 2) && (header[0] == 0x1f) && (header[1] == 0x8b)) {
-    if (cc_zlibglue_available()) {
-      reader = new SoInput_GZMemBufferReader(bufpointer, bufsize);
-    }
-    else {
-      SoDebugError::postWarning("SoInput::setBuffer",
-                                "Buffer seems to be in gzip format, but zlib support is "
-                                "not available.");
-    }
-  }
-  if (reader == NULL) {
-    reader = new SoInput_MemBufferReader(bufpointer, bufsize);
-  }
+  reader = new SoInput_MemBufferReader(bufpointer, bufsize);
   SoInput_FileInfo * newfile =
     new SoInput_FileInfo(reader, PRIVATE(this)->copied_references);
   this->filestack.insert(newfile, 0);

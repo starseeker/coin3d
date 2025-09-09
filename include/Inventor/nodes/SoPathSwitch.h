@@ -59,7 +59,6 @@ public:
   virtual void search(SoSearchAction * action);
   virtual void callback(SoCallbackAction * action);
   virtual void getPrimitiveCount(SoGetPrimitiveCountAction * action);
-  virtual void audioRender(SoAudioRenderAction * action);
 
 protected:
   virtual ~SoPathSwitch();

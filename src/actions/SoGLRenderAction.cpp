@@ -121,7 +121,7 @@
 #include "actions/SoActionP.h"
 #include "actions/SoSubActionP.h"
 #include "glue/glp.h"
-#include "glue/simage_wrapper.h"
+
 #include "rendering/SoGL.h"
 
 #include <Inventor/annex/Profiler/nodes/SoProfilerStats.h>

@@ -741,9 +741,11 @@ SbRotation::print(FILE * fp) const
 #include <Inventor/SbTypeInfo.h>
 #include <Inventor/SbVec3f.h>
 #include <Inventor/SbVec4f.h>
+#include <Inventor/SbMatrix.h>
 #include <string>
 #include <cassert>
 #include <cstdio>
+#include <cmath>
 
 typedef SbRotation ToTest;
 BOOST_AUTO_TEST_CASE(operatorBrackets)
@@ -793,6 +795,57 @@ BOOST_AUTO_TEST_CASE(fromInvalidString) {
   SbBool conversionOk = foo.fromString(test);
   BOOST_CHECK_MESSAGE(conversionOk == FALSE,
                       std::string("Able to convert from ") + test.getString() + " which is not a valid " + SbTypeInfo<ToTest>::getTypeName() + " representation");
+}
+
+BOOST_AUTO_TEST_CASE(multiplicationOperators) {
+  // Test data from test-code/SbRotation/SbRotation_mul_SbRotation regression test
+  SbRotation r = SbRotation::identity();
+  
+  // Test rotation 1
+  float v1[] = {-0.487f, -0.574f, 0.367f, -0.547f};
+  SbRotation n1(v1);
+  r *= n1;
+  r = r * n1; // test this variant as well
+  
+  const float* result1 = r.getValue();
+  // Expected result based on test-code regression test
+  BOOST_CHECK_MESSAGE(fabs(result1[0] - 0.532f) < 0.01f, "Rotation multiplication x component incorrect");
+  BOOST_CHECK_MESSAGE(fabs(result1[1] - 0.628f) < 0.01f, "Rotation multiplication y component incorrect");
+  BOOST_CHECK_MESSAGE(fabs(result1[2] + 0.401f) < 0.01f, "Rotation multiplication z component incorrect");
+  
+  // Test rotation 2
+  float v2[] = {0.358f, -0.026f, 0.919f, 0.164f};
+  SbRotation n2(v2);
+  r *= n2;
+  r = r * n2;
+  
+  const float* result2 = r.getValue();
+  // Expected result based on test-code regression test
+  BOOST_CHECK_MESSAGE(fabs(result2[0] + 0.737f) < 0.01f, "Rotation multiplication cumulative x component incorrect");
+  BOOST_CHECK_MESSAGE(fabs(result2[1] + 0.383f) < 0.01f, "Rotation multiplication cumulative y component incorrect");
+  BOOST_CHECK_MESSAGE(fabs(result2[2] - 0.337f) < 0.01f, "Rotation multiplication cumulative z component incorrect");
+}
+
+BOOST_AUTO_TEST_CASE(setValue_SbMatrix) {
+  // Test conversion from matrix to rotation - use a simpler rotation matrix
+  SbMatrix matrix;
+  matrix.setRotate(SbRotation(SbVec3f(0, 1, 0), M_PI/4)); // 45-degree rotation around Y-axis
+  
+  SbRotation rot;
+  rot.setValue(matrix);
+  
+  // Verify the rotation is valid (normalized quaternion)
+  const float* vals = rot.getValue();
+  float magnitude = sqrt(vals[0]*vals[0] + vals[1]*vals[1] + vals[2]*vals[2] + vals[3]*vals[3]);
+  BOOST_CHECK_MESSAGE(fabs(magnitude - 1.0f) < 0.01f, "Rotation from matrix should be normalized");
+  
+  // Test round-trip: convert back to matrix
+  SbMatrix result_matrix;
+  rot.getValue(result_matrix);
+  
+  // The rotation part should be preserved (upper 3x3 minus scale)
+  // This is a basic sanity check that the conversion makes sense
+  BOOST_CHECK_MESSAGE(result_matrix[3][3] == 1.0f, "Matrix from rotation should have 1.0 in [3][3]");
 }
 
 #endif //COIN_TEST_SUITE

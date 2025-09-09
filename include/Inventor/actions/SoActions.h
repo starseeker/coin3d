@@ -46,7 +46,6 @@
 #include <Inventor/actions/SoSearchAction.h>
 #include <Inventor/actions/SoReorganizeAction.h>
 #include <Inventor/actions/SoWriteAction.h>
-#include <Inventor/actions/SoAudioRenderAction.h>
 #include <Inventor/collision/SoIntersectionDetectionAction.h>
 #include <Inventor/actions/SoSimplifyAction.h>
 #include <Inventor/actions/SoReorganizeAction.h>

@@ -57,7 +57,6 @@ public:
   SoSFFloat dopplerFactor;
 
 protected:
-  virtual void audioRender(class SoAudioRenderAction *action);
   virtual ~SoListener();
 
 private:

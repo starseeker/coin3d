@@ -30,89 +30,58 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
+/*
+  Basic implementations for font specification handling.
+*/
+
+#include "coindefs.h"
 #include "fonts/fontspec.h"
-
+#include <Inventor/C/base/string.h>
 #include <cstring>
+#include <cstdlib>
 
-#include "glue/freetype.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 void
 cc_fontspec_construct(cc_font_specification * spec,
-                      const char * name_style, float size, float complexity)
+                      const char * name_style,
+                      float size, float complexity)
 {
-  const char * tmpstr, * tmpptr;
-
+  if (!spec) return;
+  
+  /* Initialize the font specification with default values */
   spec->size = size;
   spec->complexity = complexity;
-
+  
+  /* Initialize strings */
   cc_string_construct(&spec->name);
-  cc_string_set_text(&spec->name, name_style);
-
   cc_string_construct(&spec->style);
-
-  /* handle the previously allowed ':Bold Italic' case for fontconfig */
-  /* FIXME: this is an ugly non robust workaround. it would be better
-     to agree on an abstract fontname matching schema that is then
-     consistently applied upon all font backend
-     implementations. 20040929 tamer. */
-  if (cc_fcglue_available()) {
-    tmpstr = cc_string_get_text(&spec->name);
-
-    if ((tmpptr = strchr(tmpstr, ':'))) {
-      char * tmpptrspace;
-      if ((tmpptrspace = (char *) strchr(tmpptr, ' '))) {
-        *tmpptrspace = ':';
+  
+  if (name_style) {
+    /* Simple parsing: assume format is "fontname" or "fontname:style" */
+    const char * colon = strchr(name_style, ':');
+    if (colon) {
+      /* Extract font name and style */
+      size_t name_len = colon - name_style;
+      char * name_part = (char*)malloc(name_len + 1);
+      if (name_part) {
+        strncpy(name_part, name_style, name_len);
+        name_part[name_len] = '\0';
+        cc_string_set_text(&spec->name, name_part);
+        free(name_part);
       }
+      cc_string_set_text(&spec->style, colon + 1);
+    } else {
+      /* Just font name, no style */
+      cc_string_set_text(&spec->name, name_style);
+      cc_string_set_text(&spec->style, "");
     }
-
-    return;
-  }
-
-  /* Check if style is included in the fontname using the
-     "family:style" syntax. */
-  tmpstr = cc_string_get_text(&spec->name);
-  if ((tmpptr = strchr(tmpstr, ':'))) {
-    const int pos = (int)(tmpptr - tmpstr);
-    const int namelen = cc_string_length(&spec->name);
-
-    int trimstyleend, trimnamestart;
-    int trimposstyle = pos + 1;
-    int trimposname = pos - 1;
-
-    while (tmpstr[trimposstyle] == ' ') {
-      ++trimposstyle;
-    }
-
-    while (tmpstr[trimposname] == ' ') {
-      --trimposname;
-    }
-
-    cc_string_set_text(&spec->style, cc_string_get_text(&spec->name));
-    cc_string_remove_substring(&spec->style, 0, trimposstyle - 1);
-    cc_string_remove_substring(&spec->name, trimposname + 1, namelen-1);
-
-    trimstyleend = cc_string_length(&spec->style);
-    trimposstyle = trimstyleend;
-    tmpstr = cc_string_get_text(&spec->style);
-
-    while (tmpstr[trimstyleend-1] == ' ') {
-      --trimstyleend;
-    }
-
-    if(trimstyleend !=  trimposstyle) {
-      cc_string_remove_substring(&spec->style, trimstyleend, cc_string_length(&spec->style) - 1);
-    }
-
-    tmpstr = cc_string_get_text(&spec->name);
-    trimnamestart = 0;
-    while (tmpstr[trimnamestart] == ' ') {
-      ++trimnamestart;
-    }
-
-    if (trimnamestart != 0) {
-      cc_string_remove_substring(&spec->name, 0, trimnamestart-1);
-    }
-
+  } else {
+    /* Default font name and style */
+    cc_string_set_text(&spec->name, "defaultFont");
+    cc_string_set_text(&spec->style, "");
   }
 }
 
@@ -120,18 +89,29 @@ void
 cc_fontspec_copy(const cc_font_specification * from,
                  cc_font_specification * to)
 {
+  if (!from || !to) return;
+  
+  /* Copy basic values */
   to->size = from->size;
   to->complexity = from->complexity;
-
+  
+  /* Copy strings */
   cc_string_construct(&to->name);
-  cc_string_set_string(&to->name, &from->name);
   cc_string_construct(&to->style);
+  cc_string_set_string(&to->name, &from->name);
   cc_string_set_string(&to->style, &from->style);
 }
 
 void
 cc_fontspec_clean(cc_font_specification * spec)
 {
+  if (!spec) return;
+  
+  /* Clean up strings */
   cc_string_clean(&spec->name);
   cc_string_clean(&spec->style);
 }
+
+#ifdef __cplusplus
+}
+#endif

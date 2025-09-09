@@ -1,7 +1,5 @@
 # source files
 set(COIN_GLUE_FILES
-	cg.cpp
-	spidermonkey.cpp
 	dl.cpp
 	gl.cpp
 	gl_wgl.cpp
@@ -11,19 +9,12 @@ set(COIN_GLUE_FILES
 	gl_glx.cpp
 	GLUWrapper.cpp
 	simage_wrapper.cpp
-	openal_wrapper.cpp
-	win32api.cpp
 	zlib.cpp
 	bzip2.cpp
-	freetype.cpp
-	normalization_cubemap.cpp
 )
 
 # Files excluded from public API documentation, included in complete documentation.
 set(COIN_GLUE_INTERNAL_FILES
-	cg.h
-	cg.cpp
-	spidermonkey.cpp
 	gl_wgl.h
 	gl_wgl.cpp
 	gl_agl.h
@@ -38,17 +29,10 @@ set(COIN_GLUE_INTERNAL_FILES
 	GLUWrapper.cpp
 	simage_wrapper.h
 	simage_wrapper.cpp
-	openal_wrapper.h
-	openal_wrapper.cpp
-	win32api.h
-	win32api.cpp
 	zlib.h
 	zlib.cpp
 	bzip2.h
 	bzip2.cpp
-	freetype.h
-	freetype.cpp
-	normalization_cubemap.cpp
 )
 
 # build library
