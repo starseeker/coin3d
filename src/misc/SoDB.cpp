@@ -138,7 +138,7 @@
 
 #include <Inventor/annex/Profiler/SoProfiler.h>
 #include <Inventor/annex/Profiler/elements/SoProfilerElement.h>
-#include "profiler/SoProfilerP.h"
+// Profiler functionality removed - nodekit elimination
 
 // *************************************************************************
 

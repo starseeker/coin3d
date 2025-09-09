@@ -27,6 +27,18 @@ SoProfiler::enable(SbBool enabled)
   // Stub - profiler cannot be enabled
 }
 
+SbBool 
+SoProfiler::isOverlayActive(void)
+{
+  return FALSE; // Always disabled
+}
+
+SbBool 
+SoProfiler::isConsoleActive(void)
+{
+  return FALSE; // Always disabled
+}
+
 // SoProfilerP stub implementation
 void 
 SoProfilerP::parseCoinProfilerVariable(void)
@@ -34,15 +46,40 @@ SoProfilerP::parseCoinProfilerVariable(void)
   // Stub - no environment variables to parse
 }
 
-// SoProfilerElement stub implementation
-int SoProfilerElement::classStackIndex = -1;
+SbBool 
+SoProfilerP::shouldContinuousRender(void)
+{
+  return FALSE; // Never need continuous render
+}
 
-SO_ELEMENT_SOURCE(SoProfilerElement);
+float 
+SoProfilerP::getContinuousRenderDelay(void)
+{
+  return 0.0f; // No delay needed
+}
+
+// SoProfilerElement stub implementation 
+SoType SoProfilerElement::classTypeId;
+int SoProfilerElement::classStackIndex = -1;
 
 void 
 SoProfilerElement::initClass(void)
 {
-  SO_ELEMENT_INIT_CLASS(SoProfilerElement, inherited);
+  // Simple stub initialization 
+  classStackIndex = 999; // Arbitrary high number to avoid conflicts
+  classTypeId = SoType::badType(); // Invalid type since this is a stub
+}
+
+SoType 
+SoProfilerElement::getClassTypeId(void) 
+{
+  return classTypeId;
+}
+
+int 
+SoProfilerElement::getClassStackIndex(void) 
+{
+  return classStackIndex;
 }
 
 SoProfilerElement * 

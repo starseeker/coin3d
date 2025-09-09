@@ -12,6 +12,8 @@ public:
   static void init(void);
   static SbBool isEnabled(void);
   static void enable(SbBool enabled);
+  static SbBool isOverlayActive(void);
+  static SbBool isConsoleActive(void);
 
 private:
   SoProfiler(void);
@@ -21,6 +23,8 @@ private:
 // Stub implementation of internal profiler functions
 namespace SoProfilerP {
   void parseCoinProfilerVariable(void);
+  SbBool shouldContinuousRender(void);
+  float getContinuousRenderDelay(void);
 }
 
 #endif // !COIN_SOPROFILER_H

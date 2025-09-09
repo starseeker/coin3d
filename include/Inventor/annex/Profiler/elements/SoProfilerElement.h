@@ -12,6 +12,8 @@ class COIN_DLL_API SoProfilerElement : public SoElement {
 
 public:
   static void initClass(void);
+  static SoType getClassTypeId(void);
+  static int getClassStackIndex(void);
   
   static SoProfilerElement * get(SoState * state);
   
@@ -25,6 +27,7 @@ protected:
   virtual ~SoProfilerElement();
 
 private:
+  static SoType classTypeId;
   static int classStackIndex;
 };
 
