@@ -5428,14 +5428,6 @@ cc_glglue_has_framebuffer_objects(const cc_glglue * glue)
 
 /* ********************************************************************** */
 
-void 
-coin_apply_normalization_cube_map(const cc_glglue * glue)
-{
-  /* Normalization cube map functionality disabled in minimal build */
-}
-
-/* ********************************************************************** */
-
 #ifdef __cplusplus
 } /* extern "C" */
 #endif /* __cplusplus */

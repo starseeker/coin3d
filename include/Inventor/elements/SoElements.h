@@ -117,11 +117,6 @@
 #include <Inventor/elements/SoLazyElement.h>
 #include <Inventor/elements/SoGLCacheContextElement.h>
 #include <Inventor/elements/SoGLColorIndexElement.h>
-#include <Inventor/elements/SoListenerPositionElement.h>
-#include <Inventor/elements/SoListenerOrientationElement.h>
-#include <Inventor/elements/SoListenerDopplerElement.h>
-#include <Inventor/elements/SoListenerGainElement.h>
-#include <Inventor/elements/SoSoundElement.h>
 #include <Inventor/elements/SoGLVBOElement.h>
 #include <Inventor/elements/SoGLDepthBufferElement.h>
 #include <Inventor/elements/SoGLVertexAttributeElement.h>

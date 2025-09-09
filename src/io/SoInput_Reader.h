@@ -54,8 +54,7 @@ public:
     REGULAR_FILE,
     MEMBUFFER,
     GZFILE,
-    BZ2FILE,
-    GZMEMBUFFER
+    BZ2FILE
   };
 
   // must be overloaded to return type
@@ -108,19 +107,6 @@ public:
   char * buf;
   size_t buflen;
   size_t bufpos;
-};
-
-class SoInput_GZMemBufferReader : public SoInput_Reader {
-public:
-  SoInput_GZMemBufferReader(const void * bufPointer, size_t bufSize);
-  virtual ~SoInput_GZMemBufferReader();
-
-  virtual ReaderType getType(void) const;
-  virtual size_t readBuffer(char * buf, const size_t readlen);
-
-public:
-  void * gzmfile;
-  const void * buf;
 };
 
 

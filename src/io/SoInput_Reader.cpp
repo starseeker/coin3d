@@ -273,38 +273,6 @@ SoInput_MemBufferReader::readBuffer(char * buffer, const size_t readlen)
 // gzip readers
 //
 //
-// gzipped membuffer class
-//
-
-SoInput_GZMemBufferReader::SoInput_GZMemBufferReader(const void * bufPointer, size_t bufSize)
-{
-  // FIXME: the bufSize cast (as size_t can be 64 bits wide) is there
-  // to humour the interface of gzmemio -- should really be fixed
-  // in the interface instead. 20050525 mortene.
-  this->gzmfile = cc_gzm_open((uint8_t *)bufPointer, (uint32_t)bufSize);
-  this->buf = bufPointer;
-}
-
-SoInput_GZMemBufferReader::~SoInput_GZMemBufferReader()
-{
-  cc_gzm_close(this->gzmfile);
-}
-
-SoInput_Reader::ReaderType
-SoInput_GZMemBufferReader::getType(void) const
-{
-  return GZMEMBUFFER;
-}
-
-size_t
-SoInput_GZMemBufferReader::readBuffer(char * buffer, const size_t readlen)
-{
-  // FIXME: about the cast; see note about the call to cc_gzm_open()
-  // above. 20050525 mortene.
-  return cc_gzm_read(this->gzmfile, buffer, (uint32_t)readlen);
-}
-
-//
 // gzFile class
 //
 

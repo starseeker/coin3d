@@ -77,16 +77,13 @@
 #include <Inventor/elements/SoLightModelElement.h>
 #include <Inventor/elements/SoLazyElement.h>
 #include <Inventor/actions/SoGLRenderAction.h>
-#include <Inventor/actions/SoAudioRenderAction.h>
 #include <Inventor/actions/SoGLRenderAction.h>
 #include <Inventor/sensors/SoOneShotSensor.h>
 #include <Inventor/fields/SoSFTime.h>
-#include <Inventor/misc/SoAudioDevice.h>
 #include <Inventor/SoDB.h>
 
 #include "coindefs.h"
 #include "tidbitsp.h"
-#include "misc/AudioTools.h"
 
 #include "coindefs.h"
 
@@ -261,7 +258,6 @@ SoRenderManager::SoRenderManager(void)
   PRIVATE(this)->superimpositions = NULL;
 
   PRIVATE(this)->doublebuffer = TRUE;
-  PRIVATE(this)->deleteaudiorenderaction = TRUE;
   PRIVATE(this)->deleteglaction = TRUE;
   PRIVATE(this)->isactive = TRUE;
   PRIVATE(this)->texturesenabled = TRUE;
@@ -284,7 +280,6 @@ SoRenderManager::SoRenderManager(void)
   PRIVATE(this)->redrawshot->setPriority(PRIVATE(this)->redrawpri);
 
   PRIVATE(this)->glaction = new SoGLRenderAction(SbViewportRegion(400, 400));
-  PRIVATE(this)->audiorenderaction = new SoAudioRenderAction;
 
   PRIVATE(this)->clipsensor = NULL;
   //  new SoNodeSensor(SoRenderManagerP::updateClippingPlanesCB, PRIVATE(this));
@@ -300,7 +295,6 @@ SoRenderManager::~SoRenderManager()
   PRIVATE(this)->dummynode->unref();
 
   if (PRIVATE(this)->deleteglaction) delete PRIVATE(this)->glaction;
-  if (PRIVATE(this)->deleteaudiorenderaction) delete PRIVATE(this)->audiorenderaction;
   delete PRIVATE(this)->rootsensor;
   delete PRIVATE(this)->redrawshot;
 
@@ -603,16 +597,6 @@ SoRenderManager::render(const SbBool clearwindow, const SbBool clearzbuffer)
   // welcome.
   //
   // 20050809 mortene.
-
-  if (PRIVATE(this)->scene &&
-      // Order is important below, because we don't want to call
-      // SoAudioDevice::instance() unless we need to -- as it triggers
-      // loading the OpenAL library, which should only be loaded on
-      // demand.
-      coin_sound_should_traverse() &&
-      SoAudioDevice::instance()->haveSound() &&
-      SoAudioDevice::instance()->isEnabled())
-    PRIVATE(this)->audiorenderaction->apply(PRIVATE(this)->scene);
 
   SoGLRenderAction * action = PRIVATE(this)->glaction;
   const int numpasses = action->getNumPasses();
@@ -1693,33 +1677,6 @@ SoRenderManager::getRedrawPriority(void) const
 
 /*!
   Set the \a action to use for rendering audio. Overrides the default action
-  made in the constructor.
- */
-void
-SoRenderManager::setAudioRenderAction(SoAudioRenderAction * const action)
-{
-  if (PRIVATE(this)->deleteaudiorenderaction) {
-    delete PRIVATE(this)->audiorenderaction;
-    PRIVATE(this)->audiorenderaction = NULL;
-  }
-
-  // If action change, we need to invalidate state to enable lazy GL
-  // elements to be evaluated correctly.
-  //
-  if (action && action != PRIVATE(this)->audiorenderaction) action->invalidateState();
-  PRIVATE(this)->audiorenderaction = action;
-  PRIVATE(this)->deleteaudiorenderaction = FALSE;
-}
-
-/*!
-  Returns pointer to audio render action.
- */
-SoAudioRenderAction *
-SoRenderManager::getAudioRenderAction(void) const
-{
-  return PRIVATE(this)->audiorenderaction;
-}
-
 /*!
   Returns the default priority of the redraw sensor.
 

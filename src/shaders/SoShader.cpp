@@ -232,12 +232,6 @@ soshader_cleanup(void)
 void
 SoShader::init(void)
 {
-  // Trigger loading and init of Cg library glue.
-  //
-  // FIXME: this function should rather be used from the relevant
-  // class(es), so it is loaded only on demand. 20050125 mortene.
-  (void)cc_cgglue_available();
-
   // --- initialization of elements (must be done first) ---------------
   if (SoGLShaderProgramElement::getClassTypeId() == SoType::badType())
     SoGLShaderProgramElement::initClass();

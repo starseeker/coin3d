@@ -1,7 +1,5 @@
 # source files
 set(COIN_MISC_FILES
-	AudioTools.cpp
-	SoAudioDevice.cpp
 	CoinStaticObjectInDLL.cpp
 	SoBase.cpp
 	SoBaseP.cpp
@@ -42,8 +40,6 @@ set(COIN_MISC_FILES
 
 # Files excluded from public API documentation, included in complete documentation.
 set(COIN_MISC_INTERNAL_FILES
-	AudioTools.h
-	AudioTools.cpp
 	CoinStaticObjectInDLL.h
 	CoinStaticObjectInDLL.cpp
 	SbHash.h

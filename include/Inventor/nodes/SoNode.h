@@ -107,7 +107,6 @@ public:
   virtual void rayPick(SoRayPickAction * action);
   virtual void search(SoSearchAction * action);
   virtual void write(SoWriteAction * action);
-  virtual void audioRender(SoAudioRenderAction * action);
   virtual void getPrimitiveCount(SoGetPrimitiveCountAction * action);
 
   virtual void grabEventsSetup(void);
