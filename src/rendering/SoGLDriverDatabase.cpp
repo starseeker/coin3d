@@ -36,6 +36,17 @@
 
   This implementation uses runtime feature detection (GLEW-style) with a minimal
   embedded database for critical driver workarounds that cannot be detected at runtime.
+  
+  The embedded database contains known issues from legacy and current OpenGL drivers
+  that require manual workarounds, including:
+  - VBO performance and crash issues on Intel, ATI, and NVIDIA hardware
+  - Multitexture problems on older integrated graphics
+  - Shader compilation failures on legacy drivers  
+  - Framebuffer object limitations on older hardware
+  - Texture format support issues across various vendors
+  
+  These entries represent accumulated knowledge of OpenGL driver quirks that
+  cannot be reliably detected through extension queries alone.
 */
 
 #include <Inventor/misc/SoGLDriverDatabase.h>
@@ -82,6 +93,19 @@ struct FeatureOverride {
 
 // Embedded database of critical driver workarounds
 // This replaces the XML database with minimal hard-coded data for known issues
+// 
+// Each entry contains:
+// - feature_name: Coin3D feature identifier (e.g., "COIN_vertex_buffer_object")
+// - driver: Vendor/renderer/version pattern matching (supports wildcards with '*')
+// - status: BROKEN (crashes/fails), SLOW (performance issues), FAST (optimized), DISABLED (force off)
+// - comment: Human-readable description of the issue
+//
+// Patterns support simple wildcards:
+// - "*" matches any string
+// - "prefix*" matches strings starting with "prefix"
+// - Exact string matches work as expected
+//
+// Based on documented issues in gl.cpp and 2025 OpenGL best practices
 static const FeatureOverride EMBEDDED_OVERRIDES[] = {
   // Intel integrated graphics issues
   {"COIN_vertex_buffer_object", {"Intel", "GMA 950", "*"}, FeatureOverride::SLOW, "VBO performance is poor on GMA 950"},
