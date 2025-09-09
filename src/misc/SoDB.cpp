@@ -1693,7 +1693,7 @@ SoDB::removeRoute(SoNode * fromnode, const char * eventout,
 #include <Inventor/errors/SoReadError.h>
 #include <Inventor/fields/SoMFNode.h>
 #include <Inventor/fields/SoSFTime.h>
-#include <Inventor/nodekits/SoNodeKit.h>
+
 #include <Inventor/nodes/SoGroup.h>
 #include <Inventor/nodes/SoNode.h>
 #include <Inventor/nodes/SoSeparator.h>
@@ -1836,7 +1836,6 @@ BOOST_AUTO_TEST_CASE(testInitCleanup)
   //FIXME: This is not a true unittest, as it touches state for other functions.
   // init for the conntinuing test running
   SoDB::init();
-  SoNodeKit::init();
   SoInteraction::init();
   SIM::Coin3D::Coin::TestSuite::Init();
 
