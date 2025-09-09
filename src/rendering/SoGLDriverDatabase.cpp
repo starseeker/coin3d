@@ -36,6 +36,17 @@
 
   This implementation uses runtime feature detection (GLEW-style) with a minimal
   embedded database for critical driver workarounds that cannot be detected at runtime.
+  
+  The embedded database contains known issues from legacy and current OpenGL drivers
+  that require manual workarounds, including:
+  - VBO performance and crash issues on Intel, ATI, and NVIDIA hardware
+  - Multitexture problems on older integrated graphics
+  - Shader compilation failures on legacy drivers  
+  - Framebuffer object limitations on older hardware
+  - Texture format support issues across various vendors
+  
+  These entries represent accumulated knowledge of OpenGL driver quirks that
+  cannot be reliably detected through extension queries alone.
 */
 
 #include <Inventor/misc/SoGLDriverDatabase.h>
@@ -82,11 +93,65 @@ struct FeatureOverride {
 
 // Embedded database of critical driver workarounds
 // This replaces the XML database with minimal hard-coded data for known issues
+// 
+// Each entry contains:
+// - feature_name: Coin3D feature identifier (e.g., "COIN_vertex_buffer_object")
+// - driver: Vendor/renderer/version pattern matching (supports wildcards with '*')
+// - status: BROKEN (crashes/fails), SLOW (performance issues), FAST (optimized), DISABLED (force off)
+// - comment: Human-readable description of the issue
+//
+// Patterns support simple wildcards:
+// - "*" matches any string
+// - "prefix*" matches strings starting with "prefix"
+// - Exact string matches work as expected
+//
+// Based on documented issues in gl.cpp and 2025 OpenGL best practices
 static const FeatureOverride EMBEDDED_OVERRIDES[] = {
-  // Example entries - these would be populated with actual known issues
-  // {"COIN_vertex_buffer_object", {"ATI", "Radeon 9*", "1.*"}, FeatureOverride::BROKEN, "VBO crashes on old ATI drivers"},
-  // {"COIN_multitexture", {"Intel", "GMA 950", "*"}, FeatureOverride::SLOW, "Multitexture is slow on Intel GMA"},
-  // Add more entries as needed for critical compatibility issues
+  // Intel integrated graphics issues
+  {"COIN_vertex_buffer_object", {"Intel", "GMA 950", "*"}, FeatureOverride::SLOW, "VBO performance is poor on GMA 950"},
+  {"COIN_vertex_buffer_object", {"Intel", "GMA 3150", "*"}, FeatureOverride::SLOW, "VBO performance is poor on GMA 3150"},
+  {"COIN_multitexture", {"Intel", "GMA 950", "*"}, FeatureOverride::SLOW, "Multitexture performance is poor on GMA 950"},
+  {"COIN_multitexture", {"Intel", "Solano", "*"}, FeatureOverride::BROKEN, "Visual artifacts with multitexture on Intel Solano"},
+  {"COIN_2d_proxy_textures", {"Intel", "*", "*"}, FeatureOverride::BROKEN, "Proxy texture implementation incompatible"},
+  {"COIN_non_power_of_two_textures", {"Intel", "GMA*", "*"}, FeatureOverride::SLOW, "NPOT textures slow on older Intel integrated"},
+  
+  // AMD/ATI legacy driver issues  
+  {"COIN_vertex_buffer_object", {"ATI Technologies Inc.", "Radeon 9*", "1.*"}, FeatureOverride::BROKEN, "VBO crashes on old ATI Radeon 9xxx drivers"},
+  {"COIN_vertex_buffer_object", {"ATI Technologies Inc.", "Radeon 7*", "*"}, FeatureOverride::BROKEN, "VBO implementation broken on Radeon 7xxx series"},
+  {"COIN_vbo_in_displaylist", {"ATI Technologies Inc.", "Radeon*", "1.*"}, FeatureOverride::BROKEN, "VBO in display lists crashes on old ATI drivers"},
+  {"COIN_vbo_in_displaylist", {"ATI Technologies Inc.", "Radeon*", "2.0*"}, FeatureOverride::BROKEN, "VBO in display lists crashes on ATI Radeon 2.0 drivers"},
+  {"COIN_3d_textures", {"ATI Technologies Inc.", "Radeon 7500*", "*"}, FeatureOverride::BROKEN, "3D textures crash on Radeon 7500"},
+  {"COIN_arb_vertex_shader", {"ATI Technologies Inc.", "Radeon 9*", "1.*"}, FeatureOverride::BROKEN, "Vertex shader compilation issues on old ATI"},
+  {"COIN_GLSL_clip_vertex_hw", {"ATI Technologies Inc.", "Radeon*", "1.*"}, FeatureOverride::BROKEN, "Hardware clip vertex broken on old ATI drivers"},
+  {"COIN_non_power_of_two_textures", {"ATI Technologies Inc.", "Radeon 9*", "*"}, FeatureOverride::SLOW, "NPOT textures slow on Radeon 9xxx"},
+  
+  // NVIDIA driver issues
+  {"COIN_vertex_buffer_object", {"NVIDIA Corporation", "*", "1.4.0*"}, FeatureOverride::BROKEN, "VBO broken on NVIDIA 44.96 Linux driver"},
+  {"COIN_vertex_buffer_object", {"NVIDIA Corporation", "GeForce4 Go*", "*"}, FeatureOverride::SLOW, "VBO performance poor on GeForce4 Go mobile"},
+  {"COIN_vertex_buffer_object", {"NVIDIA Corporation", "GeForce 7950 GX2*", "2.0.2*"}, FeatureOverride::BROKEN, "VBO crashes in offscreen contexts on GeForce 7950 GX2"},
+  {"COIN_framebuffer_object", {"NVIDIA Corporation", "GeForce2*", "*"}, FeatureOverride::BROKEN, "FBO not properly supported on GeForce2"},
+  {"COIN_framebuffer_object", {"NVIDIA Corporation", "GeForce 256*", "*"}, FeatureOverride::BROKEN, "FBO not supported on GeForce 256"},
+  
+  // 3Dlabs issues
+  {"COIN_vertex_buffer_object", {"3Dlabs", "*", "*"}, FeatureOverride::BROKEN, "VBO implementation fundamentally broken on 3Dlabs hardware"},
+  
+  // Legacy vendor issues
+  {"COIN_texture_edge_clamp", {"Trident*", "*", "*"}, FeatureOverride::BROKEN, "GL_CLAMP_TO_EDGE not supported on Trident cards"},
+  {"COIN_multitexture", {"Matrox", "G400", "1.1.3*"}, FeatureOverride::BROKEN, "Multitexture broken on old Matrox G400 drivers"},
+  {"COIN_polygon_offset", {"ELSA", "TNT2 Vanta*", "1.1.4*"}, FeatureOverride::BROKEN, "Polygon offset broken on old ELSA TNT2 Vanta"},
+  
+  // Sun/Oracle graphics issues
+  {"COIN_multitexture", {"Sun*", "Expert3D*", "1.2*"}, FeatureOverride::BROKEN, "Dual screen artifacts with multitexture on Sun Expert3D"},
+  
+  // Mesa software renderer performance issues
+  {"COIN_vertex_buffer_object", {"*", "*Mesa*", "*"}, FeatureOverride::SLOW, "VBO slower than vertex arrays in Mesa software renderer"},
+  {"COIN_framebuffer_object", {"*", "*Mesa*", "7.*"}, FeatureOverride::SLOW, "FBO performance poor in Mesa 7.x software renderer"},
+  {"COIN_multitexture", {"*", "*Mesa*", "6.*"}, FeatureOverride::SLOW, "Multitexture slow in Mesa 6.x software renderer"},
+  
+  // Generic integrated graphics performance
+  {"COIN_vertex_buffer_object", {"*", "*Mobile*", "*"}, FeatureOverride::SLOW, "VBO generally slower on mobile/integrated graphics"},
+  {"COIN_anisotropic_filtering", {"Intel", "*", "*"}, FeatureOverride::SLOW, "Anisotropic filtering very slow on Intel integrated"},
+  {"COIN_generate_mipmap", {"Intel", "GMA*", "*"}, FeatureOverride::SLOW, "Hardware mipmap generation slow on Intel GMA"}
 };
 
 class SoGLDriverDatabaseP {
