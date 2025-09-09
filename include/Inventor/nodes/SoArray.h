@@ -71,7 +71,6 @@ public:
   virtual void getMatrix(SoGetMatrixAction * action);
   virtual void search(SoSearchAction * action);
   virtual void getPrimitiveCount(SoGetPrimitiveCountAction * action);
-  virtual void audioRender(SoAudioRenderAction * action);
 
 protected:
   virtual ~SoArray();

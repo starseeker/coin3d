@@ -69,7 +69,6 @@ public:
   virtual void search(SoSearchAction * action);
   virtual void write(SoWriteAction * action);
   virtual void getPrimitiveCount(SoGetPrimitiveCountAction * action);
-  virtual void audioRender(SoAudioRenderAction * action);
   virtual SoChildList * getChildren(void) const;
   virtual void addWriteReference(SoOutput * out, SbBool isfromfield = FALSE);
 

@@ -109,7 +109,6 @@
 #include <Inventor/elements/SoGLCacheContextElement.h>
 
 #include "nodes/SoSubNodeP.h"
-#include "nodes/SoSoundElementHelper.h"
 #include "profiler/SoNodeProfiling.h"
 
 // *************************************************************************
@@ -138,7 +137,7 @@
 
 // *************************************************************************
 
-class SoLODP : public SoSoundElementHelper
+class SoLODP
 {
 public:
   SoLODP(SoLOD * master) : master(master) {};
@@ -236,15 +235,6 @@ void
 SoLOD::callback(SoCallbackAction *action)
 {
   SoLOD::doAction((SoAction*)action);
-}
-
-// Documented in superclass.
-void
-SoLOD::audioRender(SoAudioRenderAction * action)
-{
-  PRIVATE(this)->preAudioRender(this, action);
-  SoLOD::doAction((SoAction*)action);
-  PRIVATE(this)->postAudioRender(this, action);
 }
 
 // Documented in superclass.

@@ -64,8 +64,6 @@
 #include <Inventor/actions/SoGLRenderAction.h>
 #include <Inventor/actions/SoPickAction.h>
 #include <Inventor/actions/SoHandleEventAction.h>
-#include <Inventor/actions/SoAudioRenderAction.h>
-#include <Inventor/elements/SoSoundElement.h>
 #include <Inventor/elements/SoSwitchElement.h>
 #include <Inventor/actions/SoCallbackAction.h>
 #include <Inventor/actions/SoGetPrimitiveCountAction.h>
@@ -138,9 +136,7 @@
 // *************************************************************************
 
 
-#include "SoSoundElementHelper.h"
-
-class SoSwitchP : public SoSoundElementHelper
+class SoSwitchP
 {
 public:
   SoSwitchP(SoSwitch * master) : master(master) {};
@@ -357,17 +353,6 @@ void
 SoSwitch::callback(SoCallbackAction *action)
 {
   SoSwitch::doAction(action);
-}
-
-// Documented in superclass.
-void
-SoSwitch::audioRender(SoAudioRenderAction * action)
-{
-  PRIVATE(this)->preAudioRender(this, action);
-
-  SoSwitch::doAction((SoAction*)action);
-
-  PRIVATE(this)->postAudioRender(this, action);
 }
 
 // Documented in superclass.

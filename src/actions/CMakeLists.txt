@@ -18,7 +18,6 @@ set(COIN_ACTIONS_FILES
 	SoToVRMLAction.cpp
 	SoToVRML2Action.cpp
 	SoWriteAction.cpp
-	SoAudioRenderAction.cpp
 )
 
 # Files excluded from public API documentation, included in complete documentation.

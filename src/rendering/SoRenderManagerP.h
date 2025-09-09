@@ -104,11 +104,9 @@ public:
   SoNodeSensor * clipsensor;
 
   SoGetBoundingBoxAction * getbboxaction;
-  SoAudioRenderAction * audiorenderaction;
   SoGetMatrixAction * getmatrixaction;
   SoGLRenderAction * glaction;
   SoSearchAction * searchaction;
-  SbBool deleteaudiorenderaction;
   SbBool deleteglaction;
 
   SoRenderManager::StereoMode stereostenciltype;

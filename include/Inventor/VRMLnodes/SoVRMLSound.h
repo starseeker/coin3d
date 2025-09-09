@@ -80,7 +80,6 @@ public:
   void getBufferingProperties(int &bufferLength, int &numBuffers, 
                               SbTime &sleepTime);
 
-  virtual void audioRender(SoAudioRenderAction *action);
 
 protected:
   virtual ~SoVRMLSound(void);
