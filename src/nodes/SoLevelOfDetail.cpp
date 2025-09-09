@@ -439,7 +439,6 @@ SoLevelOfDetail::rayPick(SoRayPickAction *action)
 
 // Documented in superclass.
 void
-void 
 SoLevelOfDetail::getBoundingBox(SoGetBoundingBoxAction * action)
 {
   SoState * state = action->getState();

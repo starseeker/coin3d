@@ -376,7 +376,6 @@
 
 #include "nodes/SoSubNodeP.h"
 #include "misc/SbHash.h"
-#include "glue/cg.h"
 #include "shaders/SoGLShaderObject.h"
 #include "shaders/SoGLShaderParameter.h"
 

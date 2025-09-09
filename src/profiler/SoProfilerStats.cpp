@@ -432,8 +432,6 @@ SoProfilerStats::getBoundingBox(SoGetBoundingBoxAction * action)
 
 // Doc from superclass.
 void
-// Doc from superclass.
-void
 SoProfilerStats::callback(SoCallbackAction * action)
 {
   PRIVATE(this)->doAction(action);

@@ -185,6 +185,3 @@ SoTransformSeparator::getPrimitiveCount(SoGetPrimitiveCountAction * action)
   // necessary. Ask pederb. 20020107 mortene.
   SoTransformSeparator::doAction((SoAction *)action);
 }
-
-// Documented in superclass.
-void

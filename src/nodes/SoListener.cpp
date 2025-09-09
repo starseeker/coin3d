@@ -71,7 +71,6 @@
 
 #include <Inventor/elements/SoModelMatrixElement.h>
 #include <Inventor/errors/SoDebugError.h>
-#include <Inventor/misc/SoAudioDevice.h>
 
 #include "nodes/SoSubNodeP.h"
 
@@ -156,6 +155,3 @@ SoListener::SoListener()
 SoListener::~SoListener()
 {
 }
-
-// Doc in superclass
-void

@@ -192,8 +192,6 @@ SoPathSwitch::pick(SoPickAction * action)
 
 // doc in parent
 void
-// doc in parent
-void
 SoPathSwitch::handleEvent(SoHandleEventAction * action)
 {
   if (is_matching_paths(action->getCurPath(), this->path.getValue())) {

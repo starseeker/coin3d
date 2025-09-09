@@ -315,9 +315,6 @@ SoSwitch::doAction(SoAction * action)
         }
       }
     }
-    PRIVATE(this)->traverseInactiveChildren(this, action, idx, pathcode,
-                                            this->getNumChildren(), 
-                                            this->getChildren());
   }
 }
 
@@ -463,7 +460,6 @@ SoSwitch::notify(SoNotList * nl)
   
   if (!ignoreit) {
     inherited::notify(nl);
-    PRIVATE(this)->notifyCalled();
   }
 }
 

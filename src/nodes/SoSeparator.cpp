@@ -817,7 +817,6 @@ SoSeparator::handleEvent(SoHandleEventAction * action)
 }
 
 // Doc from superclass.
-void
 // compute object space ray and test for intersection
 static SbBool
 ray_intersect(SoRayPickAction * action, const SbBox3f &box)

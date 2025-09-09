@@ -172,8 +172,6 @@ SoMultipleCopy::GLRender(SoGLRenderAction * action)
   SoMultipleCopy::doAction((SoAction*)action);
 }
 
-// Doc in superclass
-void
 // Doc in superclass.
 SbBool
 SoMultipleCopy::affectsState(void) const
