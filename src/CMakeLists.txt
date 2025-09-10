@@ -189,6 +189,11 @@ else()
   )
 endif()
 
+# Set the output name based on backend selection
+if(DEFINED COIN3D_OUTPUT_NAME)
+  set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME ${COIN3D_OUTPUT_NAME})
+endif()
+
 if(WIN32)
   if(COIN_BUILD_SHARED_LIBS)
     configure_file(${PROJECT_NAME}.rc.cmake.in ${PROJECT_NAME}.rc)

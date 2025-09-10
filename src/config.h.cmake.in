@@ -265,6 +265,9 @@
 /* define if you have OpenGL */
 #cmakedefine HAVE_OPENGL 1
 
+/* define if you have OSMesa for offscreen rendering */
+#cmakedefine HAVE_OSMESA 1
+
 /* Define to 1 if you have the <OpenGL/CGLCurrent.h> header file. */
 #cmakedefine HAVE_OPENGL_CGLCURRENT_H 1
 
