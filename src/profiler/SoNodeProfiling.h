@@ -43,6 +43,9 @@
 #include "misc/SoDBP.h" // for global envvar COIN_PROFILER
 #include "profiler/SoProfilerP.h"
 
+// Forward declaration to avoid needing the header that's missing
+class SbProfilingData;
+
 /*
   The SoNodeProfiling class contains instrumentation code for scene
   graph profiling.

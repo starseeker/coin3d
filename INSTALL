@@ -113,6 +113,17 @@ Linux
         cpack --config debian.cmake
         cpack --config fedora.cmake
 
+For OSMesa backend (offscreen/headless rendering):
+
+    (1) sudo apt-get install libosmesa6-dev    # Install OSMesa development packages
+    (2) git clone --recurse-submodules https://github.com/coin3d/coin coin
+    (3) cmake -Hcoin -Bcoin_build -G "Unix Makefiles" -DCMAKE_INSTALL_PREFIX=/usr/local
+              -DCMAKE_BUILD_TYPE=Release -DCOIN_BUILD_DOCUMENTATION=OFF -DCOIN3D_USE_OSMESA=ON
+    (4) cmake --build coin_build --target all --config Release -- -j4
+    (5) cmake --build coin_build --target install --config Release -- -j4
+
+This will create `libCoin-osmesa.so` instead of `libCoin.so` for offscreen rendering.
+
 1. Get the sources using Git clone command
 
 2. Configure the build
@@ -319,6 +330,24 @@ the wiki.
     COIN_BUILD_DOCUMENTATION_MAN
 
 Build Coin man pages when ON on platforms other than Windows.  Default is OFF.
+
+    COIN3D_USE_OSMESA
+
+Build Coin3D against OSMesa for offscreen/headless rendering when ON.
+When enabled, the library will be built with OSMesa support instead of system
+OpenGL, creating `libCoin-osmesa.so` for Linux/macOS or `Coin-osmesa.dll` for
+Windows. This is useful for server environments, containerized applications,
+or any scenario where traditional windowing systems are not available.
+The OSMesa backend provides full OpenGL compatibility for rendering without
+requiring X11, Wayland, or other display servers. Default is OFF.
+
+To use OSMesa backend:
+    cmake -DCOIN3D_USE_OSMESA=ON ...
+
+Requirements: OSMesa development packages must be installed.
+- Linux: `sudo apt-get install libosmesa6-dev` (Ubuntu/Debian) or equivalent
+- macOS: `brew install mesa` (with Homebrew)
+- Windows: OSMesa libraries from Mesa distribution
 
     COIN_BUILD_DOCUMENTATION_QTHELP
 
