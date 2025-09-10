@@ -228,6 +228,10 @@ else()
       set(HAVE_OSMESA 1)
       if(TARGET OSMesa::OSMesa)
         list(APPEND COIN_TARGET_LINK_LIBRARIES_GL OSMesa::OSMesa)
+      elseif(TARGET osmesa)
+        # starseeker/osmesa submodule target
+        list(APPEND COIN_TARGET_LINK_LIBRARIES_GL osmesa)
+        list(APPEND COIN_TARGET_INCLUDE_DIRECTORIES ${OSMesa_INCLUDE_DIRS})
       else()
         list(APPEND COIN_TARGET_INCLUDE_DIRECTORIES ${OSMesa_INCLUDE_DIRS})
         list(APPEND COIN_TARGET_LINK_LIBRARIES_GL ${OSMesa_LIBRARIES})
@@ -777,11 +781,11 @@ else()
 endif()
 
 if(COIN3D_USE_OSMESA)
-  # OSMesa backend - use OSMesa headers
-  set(SIM_INCLUDE_GL_H "#include <GL/osmesa.h>
-#include <GL/gl.h>")
+  # starseeker/osmesa backend - use starseeker/osmesa headers
+  set(SIM_INCLUDE_GL_H "#include <OSMesa/osmesa.h>
+#include <OSMesa/gl.h>")
   set(SIM_INCLUDE_GLU_H "/* #include <GL/glu.h> - GLU not typically used with OSMesa */")
-  message(STATUS "Using OSMesa headers for GL")
+  message(STATUS "Using starseeker/osmesa headers for GL")
 else()
   # System OpenGL backend
   if(HAVE_GL_GL_H)
