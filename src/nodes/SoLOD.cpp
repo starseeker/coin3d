@@ -109,7 +109,9 @@
 #include <Inventor/elements/SoGLCacheContextElement.h>
 
 #include "nodes/SoSubNodeP.h"
+#ifdef HAVE_NODEKITS
 #include "profiler/SoNodeProfiling.h"
+#endif
 
 // *************************************************************************
 
@@ -263,10 +265,14 @@ SoLOD::GLRenderBelowPath(SoGLRenderAction * action)
     SoNode * child = (SoNode*) this->children->get(idx);
     action->pushCurPath(idx, child);
     if (!action->abortNow()) {
+#ifdef HAVE_NODEKITS
       SoNodeProfiling profiling;
       profiling.preTraversal(action);
+#endif
       child->GLRenderBelowPath(action);
+#ifdef HAVE_NODEKITS
       profiling.postTraversal(action);
+#endif
     }
     action->popCurPath();
   }
@@ -289,10 +295,14 @@ SoLOD::GLRenderInPath(SoGLRenderAction * action)
       SoNode * node = this->getChild(idx);
       action->pushCurPath(idx, node);
       if (!action->abortNow()) {
+#ifdef HAVE_NODEKITS
         SoNodeProfiling profiling;
         profiling.preTraversal(action);
+#endif
         node->GLRenderInPath(action);
+#ifdef HAVE_NODEKITS
         profiling.postTraversal(action);
+#endif
       }
       action->popCurPath(pathcode);
     }
@@ -313,10 +323,14 @@ SoLOD::GLRenderOffPath(SoGLRenderAction * action)
     if (node->affectsState()) {
       action->pushCurPath(idx, node);
       if (!action->abortNow()) {
+#ifdef HAVE_NODEKITS
         SoNodeProfiling profiling;
         profiling.preTraversal(action);
+#endif
         node->GLRenderOffPath(action);
+#ifdef HAVE_NODEKITS
         profiling.postTraversal(action);
+#endif
       }
       action->popCurPath();
     }

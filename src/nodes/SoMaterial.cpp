@@ -174,7 +174,9 @@
 
 #include <Inventor/annex/Profiler/SoProfiler.h>
 #include <Inventor/annex/Profiler/elements/SoProfilerElement.h>
+#ifdef HAVE_NODEKITS
 #include <Inventor/annex/Profiler/SbProfilingData.h>
+#endif
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -406,6 +408,7 @@ SoMaterial::doAction(SoAction * action)
     if (state->isElementEnabled(SoProfilerElement::getClassStackIndex())) {
       const SoColorPacker * packer = PRIVATE(this)->getColorPacker();
       if (packer) {
+#ifdef HAVE_NODEKITS
         SoProfilerElement * profilerelt = SoProfilerElement::get(state);
         assert(profilerelt);
         SbProfilingData & data = profilerelt->getProfilingData();
@@ -414,6 +417,7 @@ SoMaterial::doAction(SoAction * action)
         size_t mem = data.getNodeFootprint(entry, SbProfilingData::MEMORY_SIZE);
         data.setNodeFootprint(entry, SbProfilingData::MEMORY_SIZE,
                               mem + packer->getSize() * sizeof(uint32_t));
+#endif
       }
     }
   }
