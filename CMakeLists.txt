@@ -778,7 +778,8 @@ endif()
 
 if(COIN3D_USE_OSMESA)
   # OSMesa backend - use OSMesa headers
-  set(SIM_INCLUDE_GL_H "#include <GL/osmesa.h>")
+  set(SIM_INCLUDE_GL_H "#include <GL/osmesa.h>
+#include <GL/gl.h>")
   set(SIM_INCLUDE_GLU_H "/* #include <GL/glu.h> - GLU not typically used with OSMesa */")
   message(STATUS "Using OSMesa headers for GL")
 else()
