@@ -10,20 +10,16 @@ set(COIN_THREADS_FILES
 	wpool.cpp
 	recmutex.cpp
 	sched.cpp
-	sync.cpp
-	fifo.cpp
 )
 
 # Files excluded from public API documentation, included in complete documentation.
 set(COIN_THREADS_INTERNAL_FILES
 	condvarp.h
-	fifop.h
 	mutexp.h
 	recmutexp.h
 	rwmutexp.h
 	schedp.h
 	storagep.h
-	syncp.h
 	threadp.h
 	threadsutilp.h
 	workerp.h
