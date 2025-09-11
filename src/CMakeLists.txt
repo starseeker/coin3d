@@ -43,9 +43,9 @@ set(COIN_SOURCE tidbits.cpp CACHE INTERNAL "COIN_SOURCE")
 set(SUBDIRS
   actions base bundles caches details elements
   engines errors events fields fonts glue io misc rendering lists
-  nodes shapenodes projectors sensors upgraders
+  nodes shapenodes projectors sensors
   collision shadows geo threads shaders
-  hardcopy navigation
+  hardcopy
 )
 # TODO - see how to make draggers toolkit independent
 # TODO - see what we need from manips
@@ -89,7 +89,7 @@ source_group("Header Files\\Inventor\\lists"                     REGULAR_EXPRESS
 source_group("Header Files\\Inventor\\lock"                      REGULAR_EXPRESSION ".*/include/Inventor/lock/.*[.]h")
 source_group("Header Files\\Inventor\\manips"                    REGULAR_EXPRESSION ".*/include/Inventor/manips/.*[.]h")
 source_group("Header Files\\Inventor\\misc"                      REGULAR_EXPRESSION ".*/include/Inventor/misc/.*[.]h")
-source_group("Header Files\\Inventor\\navigation"                REGULAR_EXPRESSION ".*/include/Inventor/navigation/.*[.]h")
+
 source_group("Header Files\\Inventor\\nodekits"                  REGULAR_EXPRESSION ".*/include/Inventor/nodekits/.*[.]h")
 source_group("Header Files\\Inventor\\nodes"                     REGULAR_EXPRESSION ".*/include/Inventor/nodes/.*[.]h")
 source_group("Header Files\\Inventor\\projectors"                REGULAR_EXPRESSION ".*/include/Inventor/projectors/.*[.]h")
@@ -136,7 +136,6 @@ source_group("Source Files\\shapenodes"                REGULAR_EXPRESSION ".*/sr
 source_group("Source Files\\soscxml"                   REGULAR_EXPRESSION ".*/src/soscxml/.*[.](h|c|cpp)")
 source_group("Source Files\\system"                    REGULAR_EXPRESSION ".*/src/system/.*[.](h|c|cpp)")
 source_group("Source Files\\threads"                   REGULAR_EXPRESSION ".*/src/threads/.*[.](h|c|cpp)")
-source_group("Source Files\\upgraders"                 REGULAR_EXPRESSION ".*/src/upgraders/.*[.](h|c|cpp)")
 source_group("Source Files\\vrml97"                    REGULAR_EXPRESSION ".*/src/vrml97/.*[.](h|c|cpp)")
 
 # As CMake does not support deep header hierarchies for framework generation we tweak the
@@ -176,7 +175,7 @@ else()
     $<TARGET_OBJECTS:io>
     $<TARGET_OBJECTS:lists>
     $<TARGET_OBJECTS:misc>
-    $<TARGET_OBJECTS:navigation>
+
     $<TARGET_OBJECTS:nodes>
     $<TARGET_OBJECTS:projectors>
     $<TARGET_OBJECTS:rendering>
@@ -185,7 +184,6 @@ else()
     $<TARGET_OBJECTS:shadows>
     $<TARGET_OBJECTS:shapenodes>
     $<TARGET_OBJECTS:threads>
-    $<TARGET_OBJECTS:upgraders>
   )
 endif()
 
