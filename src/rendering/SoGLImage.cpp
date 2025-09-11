@@ -225,6 +225,7 @@
 #include "glue/simage_wrapper.h"
 #include "threads/threadsutilp.h"
 #include "coindefs.h"
+#include "misc/SoEnvironment.h"
 
 /* Legacy MSVC6 workaround removed - not needed for C++17 */
 
@@ -739,21 +740,21 @@ SoGLImage::SoGLImage(void)
 
   // check environment variables
   if (COIN_TEX2_LINEAR_LIMIT < 0.0f) {
-    const char *env = coin_getenv("COIN_TEX2_LINEAR_LIMIT");
+    const char *env = CoinInternal::getEnvironmentVariableRaw("COIN_TEX2_LINEAR_LIMIT");
     if (env) COIN_TEX2_LINEAR_LIMIT = (float) atof(env);
     if (COIN_TEX2_LINEAR_LIMIT < 0.0f || COIN_TEX2_LINEAR_LIMIT > 1.0f) {
       COIN_TEX2_LINEAR_LIMIT = DEFAULT_LINEAR_LIMIT;
     }
   }
   if (COIN_TEX2_MIPMAP_LIMIT < 0.0f) {
-    const char *env = coin_getenv("COIN_TEX2_MIPMAP_LIMIT");
+    const char *env = CoinInternal::getEnvironmentVariableRaw("COIN_TEX2_MIPMAP_LIMIT");
     if (env) COIN_TEX2_MIPMAP_LIMIT = (float) atof(env);
     if (COIN_TEX2_MIPMAP_LIMIT < 0.0f || COIN_TEX2_MIPMAP_LIMIT > 1.0f) {
       COIN_TEX2_MIPMAP_LIMIT = DEFAULT_MIPMAP_LIMIT;
     }
   }
   if (COIN_TEX2_LINEAR_MIPMAP_LIMIT < 0.0f) {
-    const char *env = coin_getenv("COIN_TEX2_LINEAR_MIPMAP_LIMIT");
+    const char *env = CoinInternal::getEnvironmentVariableRaw("COIN_TEX2_LINEAR_MIPMAP_LIMIT");
     if (env) COIN_TEX2_LINEAR_MIPMAP_LIMIT = (float) atof(env);
     if (COIN_TEX2_LINEAR_MIPMAP_LIMIT < 0.0f || COIN_TEX2_LINEAR_MIPMAP_LIMIT > 1.0f) {
       COIN_TEX2_LINEAR_MIPMAP_LIMIT = DEFAULT_LINEAR_MIPMAP_LIMIT;
@@ -761,7 +762,7 @@ SoGLImage::SoGLImage(void)
   }
 
   if (COIN_TEX2_SCALEUP_LIMIT < 0.0f) {
-    const char *env = coin_getenv("COIN_TEX2_SCALEUP_LIMIT");
+    const char *env = CoinInternal::getEnvironmentVariableRaw("COIN_TEX2_SCALEUP_LIMIT");
     if (env) COIN_TEX2_SCALEUP_LIMIT = (float) atof(env);
     if (COIN_TEX2_SCALEUP_LIMIT < 0.0f || COIN_TEX2_SCALEUP_LIMIT > 1.0f) {
       COIN_TEX2_SCALEUP_LIMIT = DEFAULT_SCALEUP_LIMIT;
@@ -769,14 +770,14 @@ SoGLImage::SoGLImage(void)
   }
 
   if (COIN_TEX2_USE_GLTEXSUBIMAGE < 0) {
-    const char *env = coin_getenv("COIN_TEX2_USE_GLTEXSUBIMAGE");
+    const char *env = CoinInternal::getEnvironmentVariableRaw("COIN_TEX2_USE_GLTEXSUBIMAGE");
     if (env && atoi(env) == 1) {
       COIN_TEX2_USE_GLTEXSUBIMAGE = 1;
     }
     else COIN_TEX2_USE_GLTEXSUBIMAGE = 0;
   }
   if (COIN_TEX2_USE_SGIS_GENERATE_MIPMAP < 0) {
-    const char *env = coin_getenv("COIN_TEX2_USE_SGIS_GENERATE_MIPMAP");
+    const char *env = CoinInternal::getEnvironmentVariableRaw("COIN_TEX2_USE_SGIS_GENERATE_MIPMAP");
     if (env && atoi(env) == 1) {
       COIN_TEX2_USE_SGIS_GENERATE_MIPMAP = 1;
     }
@@ -784,14 +785,14 @@ SoGLImage::SoGLImage(void)
   }
 
   if (COIN_ENABLE_CONFORMANT_GL_CLAMP < 0) {
-    const char * env = coin_getenv("COIN_ENABLE_CONFORMANT_GL_CLAMP");
+    const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_ENABLE_CONFORMANT_GL_CLAMP");
     if (env && atoi(env) == 1) {
       COIN_ENABLE_CONFORMANT_GL_CLAMP = 1;
     }
     else COIN_ENABLE_CONFORMANT_GL_CLAMP = 0;
   }
   if (COIN_TEX2_ANISOTROPIC_LIMIT < 0.0f) {
-    const char *env = coin_getenv("COIN_TEX2_ANISOTROPIC_LIMIT");
+    const char *env = CoinInternal::getEnvironmentVariableRaw("COIN_TEX2_ANISOTROPIC_LIMIT");
     if (env) COIN_TEX2_ANISOTROPIC_LIMIT = (float) atof(env);
     else COIN_TEX2_ANISOTROPIC_LIMIT = DEFAULT_ANISOTROPIC_LIMIT;
   }

@@ -343,6 +343,7 @@
 #include "glue/simage_wrapper.h"
 #include "tidbitsp.h"
 #include "coindefs.h" // COIN_STUB()
+#include "misc/SoEnvironment.h"
 
 // boost/current_function.hpp replaced with C++11 __func__
 
@@ -466,7 +467,7 @@ private:
 const char *
 SoOffscreenRendererP::debugTileOutputPrefix(void)
 {
-  return coin_getenv("COIN_DEBUG_SOOFFSCREENRENDERER_TILEPREFIX");
+  return CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_SOOFFSCREENRENDERER_TILEPREFIX");
 }
 
 // *************************************************************************
@@ -811,7 +812,7 @@ SoOffscreenRendererP::renderFromBase(SoBase * base)
   // the reason noted below.)
   static int forcetiled = -1;
   if (forcetiled == -1) {
-    const char * env = coin_getenv("COIN_FORCE_TILED_OFFSCREENRENDERING");
+    const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_FORCE_TILED_OFFSCREENRENDERING");
     forcetiled = (env && (atoi(env) > 0)) ? 1 : 0;
     if (forcetiled) {
       SoDebugError::postInfo("SoOffscreenRendererP::renderFromBase",
