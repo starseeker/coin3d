@@ -152,15 +152,51 @@ TEST_CASE("SoType tests", "[misc][SoType]") {
 
 ## Migration Checklist
 
+### Phase 1: Setup (Complete ✅)
 - [x] Setup Catch2 framework
 - [x] Create test directory structure 
-- [x] Port base module tests (SbBox3s, SbBox3f, SbBSPTree)
-- [x] Port field tests (SoSFVec4b, SoSFBool, SoSFFloat)
-- [x] Port misc tests (SoType)
-- [ ] Port remaining base module tests
-- [ ] Port all field tests
-- [ ] Port node tests
+- [x] Port representative tests from different modules (base, fields, misc)
+- [x] Update CMake to support explicit test files alongside existing system
+- [x] Verify both test systems work (184 + 7 tests passing)
+
+### Phase 2: Port All Tests
+- [ ] Port remaining base module tests (SbBox2*, SbMatrix, SbRotation, etc.)
+- [ ] Port all field tests (SoMF*, SoSF* classes)
+- [ ] Port node tests  
 - [ ] Port engine tests
 - [ ] Port action tests
-- [ ] Remove test generation system
+- [ ] Port element tests
+- [ ] Port sensor tests
+- [ ] Port other module tests
+
+### Phase 3: Remove Generation System
+- [ ] Run `./complete_migration.sh` to prepare removal
+- [ ] Remove embedded test blocks from source files
+- [ ] Remove test generation scripts and templates
+- [ ] Simplify testsuite CMakeLists.txt
 - [ ] Update documentation
+
+### Phase 4: Finalize
+- [ ] Update CI/build scripts for new test approach
+- [ ] Remove old test framework files
+- [ ] Update developer documentation
+- [ ] Create test writing guidelines
+
+## Migration Tools
+
+The following scripts are provided to help with the migration:
+
+### port_tests.sh
+Automates porting of embedded tests to explicit format:
+```bash
+./port_tests.sh src/base/SbBox3s.cpp base
+```
+
+### complete_migration.sh  
+Prepares the final removal of the generation system:
+```bash
+./complete_migration.sh
+```
+
+### test_template.cpp
+Template for creating new test files with proper structure.
