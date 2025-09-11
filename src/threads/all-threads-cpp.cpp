@@ -41,7 +41,6 @@
 #include "thread.cpp"
 #include "mutex.cpp"
 #include "condvar.cpp"
-#include "rwmutex.cpp"
 #include "recmutex.cpp"
 #include "sched.cpp"
 #include "wpool.cpp"

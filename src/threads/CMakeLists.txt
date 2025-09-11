@@ -3,7 +3,6 @@ set(COIN_THREADS_FILES
 	common.cpp
 	thread.cpp
 	mutex.cpp
-	rwmutex.cpp
 	storage.cpp
 	condvar.cpp
 	worker.cpp
@@ -17,7 +16,6 @@ set(COIN_THREADS_INTERNAL_FILES
 	condvarp.h
 	mutexp.h
 	recmutexp.h
-	rwmutexp.h
 	schedp.h
 	storagep.h
 	threadp.h
