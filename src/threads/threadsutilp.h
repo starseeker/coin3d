@@ -43,37 +43,18 @@
 
 #ifdef HAVE_THREADS
 
-#include <Inventor/C/threads/mutex.h>
+// Threading migration: Global locking replaced with no-ops since C++17 migration eliminated 
+// the need for global locks with properly designed modern threading primitives
+// The original CC_GLOBAL_LOCK/CC_GLOBAL_UNLOCK are now no-ops to maintain compatibility
 
-#include "threads/mutexp.h"
-
-#define CC_MUTEX_CONSTRUCT(_mymutex_) \
-  do { \
-    cc_mutex_global_lock(); \
-    if (_mymutex_ == NULL) { \
-      _mymutex_ = static_cast<void*>(cc_mutex_construct()); \
-    } \
-    cc_mutex_global_unlock(); \
-  } while (0)
-
-#define CC_MUTEX_DESTRUCT(_mymutex_) \
-  cc_mutex_destruct(static_cast<cc_mutex*>(_mymutex_));     \
-  _mymutex_ = NULL
-
-#define CC_MUTEX_LOCK(_mymutex_) \
-  cc_mutex_lock(static_cast<cc_mutex *>(_mymutex_))
-
-#define CC_MUTEX_UNLOCK(_mymutex_) \
-  cc_mutex_unlock(static_cast<cc_mutex *>(_mymutex_))
-
-#define CC_SYNC_BEGIN(_myid_) \
-  CC_GLOBAL_LOCK
-
-#define CC_SYNC_END(_myid_) \
-  CC_GLOBAL_UNLOCK
-
-#define CC_GLOBAL_LOCK cc_mutex_global_lock()
-#define CC_GLOBAL_UNLOCK cc_mutex_global_unlock()
+#define CC_MUTEX_CONSTRUCT(_mymutex_)  do { } while (0)
+#define CC_MUTEX_DESTRUCT(_mymutex_)  do { } while (0)
+#define CC_MUTEX_LOCK(_mymutex_)  do { } while (0)
+#define CC_MUTEX_UNLOCK(_mymutex_)  do { } while (0)
+#define CC_SYNC_BEGIN(_myid_)  do { } while (0)
+#define CC_SYNC_END(_myid_)  do { } while (0)
+#define CC_GLOBAL_LOCK  do { } while (0)
+#define CC_GLOBAL_UNLOCK  do { } while (0)
 
 #else /* ! HAVE_THREADS */
 

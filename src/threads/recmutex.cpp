@@ -54,6 +54,7 @@
 
 #include "tidbitsp.h"
 #include "threads/recmutexp.h"
+#include "threads/recmutex_global_cxx17.h"
 
 /* ********************************************************************** */
 
@@ -207,49 +208,40 @@ cc_recmutex_unlock(cc_recmutex * recmutex)
 }
 
 /*
-  internal functions
+  internal functions - migrated to C++17 std::recursive_mutex via SbThreadMutex
 */
-
-static cc_recmutex * recmutex_field_lock;
-static cc_recmutex * recmutex_notify_lock;
-
-static void
-recmutex_cleanup(void)
-{
-  cc_recmutex_destruct(recmutex_field_lock);
-  cc_recmutex_destruct(recmutex_notify_lock);
-}
 
 void 
 cc_recmutex_init(void)
 {
-  recmutex_field_lock = cc_recmutex_construct();
-  recmutex_notify_lock = cc_recmutex_construct();
-  /* atexit priority makes this callback trigger after normal cleanup
-     functions which might still use a recmutex instance */
-  coin_atexit((coin_atexit_f*) recmutex_cleanup, CC_ATEXIT_THREADING_SUBSYSTEM);
+  // Initialize the C++17 global mutexes - no legacy C mutexes needed
+  cc_recmutex_cxx17_init();
 }
 
 int 
 cc_recmutex_internal_field_lock(void)
 {
-  return cc_recmutex_lock(recmutex_field_lock);
+  // Use C++17 std::recursive_mutex implementation via SbThreadMutex
+  return cc_recmutex_cxx17_field_lock();
 }
 
 int 
 cc_recmutex_internal_field_unlock(void)
 {
-  return cc_recmutex_unlock(recmutex_field_lock);
+  // Use C++17 std::recursive_mutex implementation via SbThreadMutex
+  return cc_recmutex_cxx17_field_unlock();
 }
 
 int 
 cc_recmutex_internal_notify_lock(void)
 {
-  return cc_recmutex_lock(recmutex_notify_lock);
+  // Use C++17 std::recursive_mutex implementation via SbThreadMutex
+  return cc_recmutex_cxx17_notify_lock();
 }
 
 int 
 cc_recmutex_internal_notify_unlock(void)
 {
-  return cc_recmutex_unlock(recmutex_notify_lock);
+  // Use C++17 std::recursive_mutex implementation via SbThreadMutex
+  return cc_recmutex_cxx17_notify_unlock();
 }

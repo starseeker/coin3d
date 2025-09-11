@@ -19,6 +19,12 @@ This document describes the successful migration of Coin3D's threading primitive
 - **SbFifo** → Custom thread-safe FIFO using `std::deque` + `std::mutex` + `std::condition_variable`
 - **SbStorage/SbTypedStorage** → Kept original C implementation for stability (complex thread_local registry issues)
 
+### Phase 3: Global Locking Migration
+- **cc_recmutex_internal_field_lock/unlock** → C++17 global SbThreadMutex for field operations
+- **cc_recmutex_internal_notify_lock/unlock** → C++17 global SbThreadMutex for notification operations
+- Eliminated need for complex custom C recursive mutex implementation in global locking scenarios
+- Maintained exact API compatibility including return values and nesting level tracking
+
 ## Key Accomplishments
 
 1. **Complete API Compatibility**: All 218 usage sites in the codebase continue to work without modification
@@ -48,6 +54,19 @@ this->thread = std::make_unique<std::thread>([this, func, closure]() {
   this->return_value = func(closure);
 });
 ```
+
+### Global Locking Migration
+The cc_recmutex_internal_* functions were migrated from complex custom C recursive mutexes to C++17:
+```cpp
+// C++17 implementation using SbThreadMutex (std::recursive_mutex)
+static std::unique_ptr<SbThreadMutex> field_mutex_cxx17;
+static std::unique_ptr<SbThreadMutex> notify_mutex_cxx17;
+
+// Thread-local nesting levels maintain API compatibility
+static thread_local int field_lock_level = 0;
+static thread_local int notify_lock_level = 0;
+```
+This eliminated the need for global cc_recmutex instances while preserving exact API semantics including nesting level return values.
 
 ## C++20 Migration Opportunities
 

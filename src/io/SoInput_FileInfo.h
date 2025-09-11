@@ -52,14 +52,8 @@
 #include <config.h>
 #endif // HAVE_CONFIG_H
 
-// debug, define this to test async reading of files:
-// #define SOINPUT_ASYNC_IO
-
-#if defined(HAVE_THREADS) && defined(SOINPUT_ASYNC_IO)
-#include <Inventor/C/threads/mutex.h>
-#include <Inventor/C/threads/sched.h>
-#include <Inventor/C/threads/condvar.h>
-#endif // HAVE_THREADS && SOINPUT_ASYNC_IO
+// Async I/O has been removed as part of C threading API cleanup.
+// The feature was not enabled by default and used the deprecated C threading API.
 
 #include "tidbitsp.h"
 #include "io/SoInput_Reader.h"
@@ -246,17 +240,7 @@ private:
   char * deletebuffer;
   SbHash<const char *, SoBase *> references;
 
-#if defined(HAVE_THREADS) && defined(SOINPUT_ASYNC_IO)
-  static void sched_cb(void * closure);
-  cc_mutex * mutex;
-  cc_sched * sched;
-  cc_condvar * condvar;
-  char * threadbuf[2];
-  int threadbuflen[2];
-  int threadreadidx;
-  int threadbufidx;
-  SbBool threadeof;
-#endif // HAVE_THREADS && SOINPUT_ASYNC_IO
+  // Async I/O support removed with C threading API cleanup
 };
 
 #endif // COIN_SOINPUT_FILEINFO_H

@@ -112,12 +112,3 @@ SoShadowStyleElement::getDefault(void)
 }
 
 
-#ifdef COIN_TEST_SUITE
-
-BOOST_AUTO_TEST_CASE(initialized)
-{
-  BOOST_CHECK_MESSAGE(SoShadowStyleElement::getClassStackIndex() != -1,
-                      "missing class initialization");
-}
-
-#endif // COIN_TEST_SUITE

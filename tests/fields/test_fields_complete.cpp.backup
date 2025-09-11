@@ -1,0 +1,1806 @@
+/**************************************************************************\
+ * Copyright (c) Kongsberg Oil & Gas Technologies AS
+ * All rights reserved.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ * 
+ * Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ * 
+ * Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the
+ * documentation and/or other materials provided with the distribution.
+ * 
+ * Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from
+ * this software without specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+\**************************************************************************/
+
+#include "utils/test_common.h"
+
+using namespace CoinTestUtils;
+
+// Complete migrated tests for fields module
+
+// Tests for SoSFVec4b (from src/fields/SoSFVec4b.cpp)
+
+
+
+TEST_CASE("SoSFVec4b tests", "[fields][SoSFVec4b]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoSFVec4b field;
+  BOOST_CHECK_MESSAGE(SoSFVec4b::getClassTypeId() != SoType::badType(),
+                      "SoSFVec4b class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+}
+
+// Tests for SoSFTrigger (from src/fields/SoSFTrigger.cpp)
+
+
+
+TEST_CASE("SoSFTrigger tests", "[fields][SoSFTrigger]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoSFTrigger field;
+  BOOST_CHECK_MESSAGE(SoSFTrigger::getClassTypeId() != SoType::badType(),
+                      "SoSFTrigger class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+}
+
+// Tests for SoSFBox3d (from src/fields/SoSFBox3d.cpp)
+
+
+
+TEST_CASE("SoSFBox3d tests", "[fields][SoSFBox3d]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoSFBox3d field;
+  BOOST_CHECK_MESSAGE(SoSFBox3d::getClassTypeId() != SoType::badType(),
+                      "SoSFBox3d class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+}
+
+// Tests for SoSFInt32 (from src/fields/SoSFInt32.cpp)
+
+
+
+TEST_CASE("SoSFInt32 tests", "[fields][SoSFInt32]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoSFInt32 field;
+  BOOST_CHECK_MESSAGE(SoSFInt32::getClassTypeId() != SoType::badType(),
+                      "SoSFInt32 class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+}
+
+// Tests for SoSFBox2d (from src/fields/SoSFBox2d.cpp)
+
+
+
+TEST_CASE("SoSFBox2d tests", "[fields][SoSFBox2d]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoSFBox2d field;
+  BOOST_CHECK_MESSAGE(SoSFBox2d::getClassTypeId() != SoType::badType(),
+                      "SoSFBox2d class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+}
+
+// Tests for SoMFVec2f (from src/fields/SoMFVec2f.cpp)
+
+
+
+TEST_CASE("SoMFVec2f tests", "[fields][SoMFVec2f]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoMFVec2f field;
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+          CHECK(field.getNum(), 0);
+    }
+}
+
+// Tests for SoSFBox2i32 (from src/fields/SoSFBox2i32.cpp)
+
+
+
+TEST_CASE("SoSFBox2i32 tests", "[fields][SoSFBox2i32]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoSFBox2i32 field;
+  BOOST_CHECK_MESSAGE(SoSFBox2i32::getClassTypeId() != SoType::badType(),
+                      "SoSFBox2i32 class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+}
+
+// Tests for SoMFVec3s (from src/fields/SoMFVec3s.cpp)
+
+
+
+TEST_CASE("SoMFVec3s tests", "[fields][SoMFVec3s]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoMFVec3s field;
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+          CHECK(field.getNum(), 0);
+    }
+}
+
+// Tests for SoSFVec4s (from src/fields/SoSFVec4s.cpp)
+
+
+
+TEST_CASE("SoSFVec4s tests", "[fields][SoSFVec4s]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoSFVec4s field;
+  BOOST_CHECK_MESSAGE(SoSFVec4s::getClassTypeId() != SoType::badType(),
+                      "SoSFVec4s class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+}
+
+// Tests for SoSFVec2d (from src/fields/SoSFVec2d.cpp)
+
+
+
+TEST_CASE("SoSFVec2d tests", "[fields][SoSFVec2d]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoSFVec2d field;
+  BOOST_CHECK_MESSAGE(SoSFVec2d::getClassTypeId() != SoType::badType(),
+                      "SoSFVec2d class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+}
+
+// Tests for SoSFImage3 (from src/fields/SoSFImage3.cpp)
+
+
+
+TEST_CASE("SoSFImage3 tests", "[fields][SoSFImage3]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoSFImage3 field;
+  BOOST_CHECK_MESSAGE(SoSFImage3::getClassTypeId() != SoType::badType(),
+                      "SoSFImage3 class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+}
+
+// Tests for SoSFBox2s (from src/fields/SoSFBox2s.cpp)
+
+
+
+TEST_CASE("SoSFBox2s tests", "[fields][SoSFBox2s]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoSFBox2s field;
+  BOOST_CHECK_MESSAGE(SoSFBox2s::getClassTypeId() != SoType::badType(),
+                      "SoSFBox2s class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+}
+
+// Tests for SoSFImage (from src/fields/SoSFImage.cpp)
+
+
+
+TEST_CASE("SoSFImage tests", "[fields][SoSFImage]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoSFImage field;
+  BOOST_CHECK_MESSAGE(SoSFImage::getClassTypeId() != SoType::badType(),
+                      "SoSFImage class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+}
+
+// Tests for SoMFUShort (from src/fields/SoMFUShort.cpp)
+
+
+
+TEST_CASE("SoMFUShort tests", "[fields][SoMFUShort]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoMFUShort field;
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+          CHECK(field.getNum(), 0);
+    }
+}
+
+// Tests for SoSFBool (from src/fields/SoSFBool.cpp)
+
+
+
+TEST_CASE("SoSFBool tests", "[fields][SoSFBool]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoSFBool field;
+  BOOST_CHECK_MESSAGE(SoSFBool::getClassTypeId() != SoType::badType(),
+                      "SoSFBool class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+
+    SECTION("textinput") {
+{
+  SbBool ok;
+  SoSFBool field;
+  ok = field.set("TRUE");
+          CHECK_WITH_MESSAGE(ok == TRUE, "did not accept 'TRUE'");
+          CHECK(field.getValue(), TRUE);
+  ok = field.set("FALSE");
+          CHECK_WITH_MESSAGE(ok == TRUE, "did not accept 'FALSE'");
+          CHECK(field.getValue(), FALSE);
+
+  TestSuite::ResetReadErrorCount();
+  static const char * filters[] = { "Invalid value", NULL };
+  TestSuite::PushMessageSuppressFilters(filters);
+  ok = field.set("MAYBE"); // emits two error messages
+          CHECK_WITH_MESSAGE(ok == FALSE, "did accept 'MAYBE'");
+          CHECK_WITH_MESSAGE(TestSuite::GetReadErrorCount() == 1, "did not emit error");
+  TestSuite::PopMessageSuppressFilters();
+  TestSuite::ResetReadErrorCount();
+
+  ok = field.set("0");
+          CHECK_WITH_MESSAGE(ok == TRUE, "did not accept '0'");
+          CHECK(field.getValue(), FALSE);
+  ok = field.set("1");
+          CHECK_WITH_MESSAGE(ok == TRUE, "did not accept '1'");
+          CHECK(field.getValue(), TRUE);
+
+  static const char * filters2[] = { "Illegal value", NULL };
+  TestSuite::PushMessageSuppressFilters(filters2);
+  ok = field.set("2");
+          CHECK_WITH_MESSAGE(ok == FALSE, "did accept '2'");
+  TestSuite::PopMessageSuppressFilters();
+  TestSuite::ResetReadErrorCount();
+    }
+}
+
+// Tests for SoSFVec2b (from src/fields/SoSFVec2b.cpp)
+
+
+
+TEST_CASE("SoSFVec2b tests", "[fields][SoSFVec2b]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoSFVec2b field;
+  BOOST_CHECK_MESSAGE(SoSFVec2b::getClassTypeId() != SoType::badType(),
+                      "SoSFVec2b class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+}
+
+// Tests for SoSFColor (from src/fields/SoSFColor.cpp)
+
+
+
+TEST_CASE("SoSFColor tests", "[fields][SoSFColor]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoSFColor field;
+  BOOST_CHECK_MESSAGE(SoSFColor::getClassTypeId() != SoType::badType(),
+                      "SoSFColor class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+}
+
+// Tests for SoSFBitMask (from src/fields/SoSFBitMask.cpp)
+
+
+
+TEST_CASE("SoSFBitMask tests", "[fields][SoSFBitMask]") {
+    CoinTestFixture fixture;
+
+
+
+    SECTION("initialized") {
+{
+  SoSFBitMask field;
+  BOOST_CHECK_MESSAGE(SoSFBitMask::getClassTypeId() != SoType::badType(),
+                      "SoSFBitMask class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "SoSFBitMask class not initialized");
+    }
+
+// BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(textinput, 1)
+
+    SECTION("textinput") {
+{
+  enum Values { VALUE1 = 0x01, VALUE2 = 0x02, VALUE3 = 0x04 };
+  enum Other { OTHER1 = 0x01, OTHER2 = 0x02, OTHER3 = 0x04 };
+
+  SbBool ok;
+
+  SbName names1[3] = { SbName("VALUE1"), SbName("VALUE2"), SbName("VALUE3") };
+  int values1[3] = { 0x01, 0x02, 0x04 };
+
+  SbName names2[3] = { SbName("OTHER1"), SbName("OTHER2"), SbName("OTHER3") };
+  int values2[3] = { 0x01, 0x02, 0x04 };
+
+  SoSFBitMask field1, field2, field3;
+
+  field1.setEnums(3, values1, names1);
+  field2.setEnums(3, values1, names1);
+  field3.setEnums(3, values2, names2);
+
+  TestSuite::ResetReadErrorCount();
+  static const char * filters[] = { "Unknown SoSFBitMask bit mask value", NULL };
+  TestSuite::PushMessageSuppressFilters(filters);
+  ok = field1.set("OTHER1"); // should output error
+          CHECK_WITH_MESSAGE(ok == FALSE, "accepted 'OTHER1' erroneously");
+  TestSuite::PopMessageSuppressFilters();
+          CHECK(TestSuite::GetReadErrorCount(), 1);
+  TestSuite::ResetReadErrorCount();
+
+  ok = field1.set("VALUE2");
+          CHECK_WITH_MESSAGE(ok == TRUE, "did not accept 'VALUE2'");
+  ok = field2.set("VALUE2");
+          CHECK_WITH_MESSAGE(ok == TRUE, "did not accept 'VALUE2'");
+          CHECK(field1.getValue(), field2.getValue());
+          CHECK_WITH_MESSAGE(field1.isSame(field2), "SoSFBitmask.isSame() problem");
+
+  ok = field1.set("VALUE2");
+          CHECK_WITH_MESSAGE(ok == TRUE, "did not accept 'VALUE2'");
+  ok = field2.set("(VALUE1|VALUE3)");
+          CHECK_WITH_MESSAGE(ok == TRUE, "did not accept '(VALUE1|VALUE3)'");
+          CHECK(field2.getValue(), VALUE1|VALUE3);
+          CHECK_WITH_MESSAGE(!field2.isSame(field1), "SoSFBitmask.isSame() problem");
+
+  // failing test, but unclear if it is required to work
+  ok = field2.set("VALUE1|VALUE3"); // this ought to work too, right?
+          CHECK_WITH_MESSAGE(ok == TRUE, "did not accept 'VALUE1|VALUE2'");
+  //        CHECK(field2.getValue(), VALUE1|VALUE3);
+
+  // FIXME: try to read the same from a file?
+  // Solving this would go into the math-parsing problem?
+
+  ok = field1.set("VALUE2");
+          CHECK_WITH_MESSAGE(ok == TRUE, "did not accept 'VALUE2'");
+  ok = field3.set("OTHER2");
+          CHECK_WITH_MESSAGE(ok == TRUE, "did not accept 'OTHER2'");
+          CHECK(field1.getValue(), field3.getValue());
+          CHECK_WITH_MESSAGE(!field1.isSame(field3), "SoSFBitmask.isSame() false positive");
+
+  // Numeric values don't work.
+  //ok = field1.set("0");
+  //        CHECK_WITH_MESSAGE(ok == TRUE, "did not accept '0'");
+  //        CHECK_WITH_MESSAGE(field1.getValue() == 0, "did not set value to 0");
+  //ok = field1.set("1");
+  //        CHECK_WITH_MESSAGE(ok == TRUE, "did not accept '1'");
+  //        CHECK_WITH_MESSAGE(field1.getValue() == 1, "did not set value to 1");
+    }
+}
+
+// Tests for SoMFVec4i32 (from src/fields/SoMFVec4i32.cpp)
+
+
+
+TEST_CASE("SoMFVec4i32 tests", "[fields][SoMFVec4i32]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoMFVec4i32 field;
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+          CHECK(field.getNum(), 0);
+    }
+}
+
+// Tests for SoSFPath (from src/fields/SoSFPath.cpp)
+
+
+
+TEST_CASE("SoSFPath tests", "[fields][SoSFPath]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoSFPath field;
+  BOOST_CHECK_MESSAGE(SoSFPath::getClassTypeId() != SoType::badType(),
+                      "SoSFPath class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+}
+
+// Tests for SoSFVec4d (from src/fields/SoSFVec4d.cpp)
+
+
+
+TEST_CASE("SoSFVec4d tests", "[fields][SoSFVec4d]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoSFVec4d field;
+  BOOST_CHECK_MESSAGE(SoSFVec4d::getClassTypeId() != SoType::badType(),
+                      "SoSFVec4d class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+}
+
+// Tests for SoMFVec4f (from src/fields/SoMFVec4f.cpp)
+
+
+
+TEST_CASE("SoMFVec4f tests", "[fields][SoMFVec4f]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoMFVec4f field;
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+          CHECK(field.getNum(), 0);
+    }
+}
+
+// Tests for SoMFEngine (from src/fields/SoMFEngine.cpp)
+
+
+
+TEST_CASE("SoMFEngine tests", "[fields][SoMFEngine]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoMFEngine field;
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+          CHECK(field.getNum(), 0);
+    }
+}
+
+// Tests for SoSFTime (from src/fields/SoSFTime.cpp)
+
+
+
+TEST_CASE("SoSFTime tests", "[fields][SoSFTime]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoSFTime field;
+  BOOST_CHECK_MESSAGE(SoSFTime::getClassTypeId() != SoType::badType(),
+                      "SoSFTime class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+}
+
+// Tests for SoMFVec4d (from src/fields/SoMFVec4d.cpp)
+
+
+
+TEST_CASE("SoMFVec4d tests", "[fields][SoMFVec4d]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoMFVec4d field;
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+          CHECK(field.getNum(), 0);
+    }
+}
+
+// Tests for SoSFBox2f (from src/fields/SoSFBox2f.cpp)
+
+
+
+TEST_CASE("SoSFBox2f tests", "[fields][SoSFBox2f]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoSFBox2f field;
+  BOOST_CHECK_MESSAGE(SoSFBox2f::getClassTypeId() != SoType::badType(),
+                      "SoSFBox2f class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+}
+
+// Tests for SoMFVec4us (from src/fields/SoMFVec4us.cpp)
+
+
+
+TEST_CASE("SoMFVec4us tests", "[fields][SoMFVec4us]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoMFVec4us field;
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+          CHECK(field.getNum(), 0);
+    }
+}
+
+// Tests for SoSFEnum (from src/fields/SoSFEnum.cpp)
+
+
+
+TEST_CASE("SoSFEnum tests", "[fields][SoSFEnum]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoSFEnum field;
+  BOOST_CHECK_MESSAGE(SoSFEnum::getClassTypeId() != SoType::badType(),
+                      "SoSFEnum class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+}
+
+// Tests for SoSFMatrix (from src/fields/SoSFMatrix.cpp)
+
+
+
+TEST_CASE("SoSFMatrix tests", "[fields][SoSFMatrix]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoSFMatrix field;
+  BOOST_CHECK_MESSAGE(SoSFMatrix::getClassTypeId() != SoType::badType(),
+                      "SoSFMatrix class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+}
+
+// Tests for SoMFBool (from src/fields/SoMFBool.cpp)
+
+
+
+TEST_CASE("SoMFBool tests", "[fields][SoMFBool]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoMFBool field;
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+          CHECK(field.getNum(), 0);
+    }
+
+    SECTION("array_ops") {
+{
+  SoMFBool field;
+  field.set1Value(0, TRUE);
+  field.set1Value(1, FALSE);
+  field.set1Value(2, TRUE);
+          CHECK(field.getNum(), 3);
+  field.deleteValues(1,1);
+          CHECK(field.getNum(), 2);
+          CHECK(field[0], TRUE);
+          CHECK(field[1], TRUE);
+    }
+}
+
+// Tests for SoMFName (from src/fields/SoMFName.cpp)
+
+
+
+TEST_CASE("SoMFName tests", "[fields][SoMFName]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoMFName field;
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+          CHECK(field.getNum(), 0);
+    }
+}
+
+// Tests for SoMFInt32 (from src/fields/SoMFInt32.cpp)
+
+
+
+TEST_CASE("SoMFInt32 tests", "[fields][SoMFInt32]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoMFInt32 field;
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+          CHECK(field.getNum(), 0);
+    }
+}
+
+// Tests for SoSFVec3i32 (from src/fields/SoSFVec3i32.cpp)
+
+
+
+TEST_CASE("SoSFVec3i32 tests", "[fields][SoSFVec3i32]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoSFVec3i32 field;
+  BOOST_CHECK_MESSAGE(SoSFVec3i32::getClassTypeId() != SoType::badType(),
+                      "SoSFVec3i32 class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+}
+
+// Tests for SoMFColor (from src/fields/SoMFColor.cpp)
+
+
+
+TEST_CASE("SoMFColor tests", "[fields][SoMFColor]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoMFColor field;
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+          CHECK(field.getNum(), 0);
+    }
+}
+
+// Tests for SoMFPlane (from src/fields/SoMFPlane.cpp)
+
+
+
+TEST_CASE("SoMFPlane tests", "[fields][SoMFPlane]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoMFPlane field;
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+          CHECK(field.getNum(), 0);
+    }
+}
+
+// Tests for SoSFString (from src/fields/SoSFString.cpp)
+
+
+
+TEST_CASE("SoSFString tests", "[fields][SoSFString]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoSFString field;
+  BOOST_CHECK_MESSAGE(SoSFString::getClassTypeId() != SoType::badType(),
+                      "SoSFString class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+}
+
+// Tests for SoSFVec4f (from src/fields/SoSFVec4f.cpp)
+
+
+
+TEST_CASE("SoSFVec4f tests", "[fields][SoSFVec4f]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoSFVec4f field;
+  BOOST_CHECK_MESSAGE(SoSFVec4f::getClassTypeId() != SoType::badType(),
+                      "SoSFVec4f class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+}
+
+// Tests for SoSFColorRGBA (from src/fields/SoSFColorRGBA.cpp)
+
+
+
+TEST_CASE("SoSFColorRGBA tests", "[fields][SoSFColorRGBA]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoSFColorRGBA field;
+  BOOST_CHECK_MESSAGE(SoSFColorRGBA::getClassTypeId() != SoType::badType(),
+                      "SoSFColorRGBA class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+
+    SECTION("textinput") {
+{
+  SbBool ok;
+  SoSFColorRGBA field;
+  ok = field.set("0.0 .5 0 1");
+          CHECK_WITH_MESSAGE(ok == TRUE, "could not set value");
+          CHECK(field.getValue(), SbColorRGBA(0, .5, 0, 1));
+  ok = field.set("0 0.5 1");
+          CHECK_WITH_MESSAGE(ok == FALSE, "accepted invalid (missing component) value");
+  ok = field.set("1 2 3 4");
+  //        CHECK_WITH_MESSAGE(ok == FALSE, "accepted out-of-range value");
+    }
+}
+
+// Tests for SoMFVec2d (from src/fields/SoMFVec2d.cpp)
+
+
+
+TEST_CASE("SoMFVec2d tests", "[fields][SoMFVec2d]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoMFVec2d field;
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+          CHECK(field.getNum(), 0);
+    }
+}
+
+// Tests for SoSFUShort (from src/fields/SoSFUShort.cpp)
+
+
+
+TEST_CASE("SoSFUShort tests", "[fields][SoSFUShort]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoSFUShort field;
+  BOOST_CHECK_MESSAGE(SoSFUShort::getClassTypeId() != SoType::badType(),
+                      "SoSFUShort class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+}
+
+// Tests for SoSFShort (from src/fields/SoSFShort.cpp)
+
+
+
+TEST_CASE("SoSFShort tests", "[fields][SoSFShort]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoSFShort field;
+  BOOST_CHECK_MESSAGE(SoSFShort::getClassTypeId() != SoType::badType(),
+                      "SoSFShort class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+}
+
+// Tests for SoMFTime (from src/fields/SoMFTime.cpp)
+
+
+
+TEST_CASE("SoMFTime tests", "[fields][SoMFTime]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoMFTime field;
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+          CHECK(field.getNum(), 0);
+    }
+}
+
+// Tests for SoSFFloat (from src/fields/SoSFFloat.cpp)
+
+
+
+TEST_CASE("SoSFFloat tests", "[fields][SoSFFloat]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoSFFloat field;
+  BOOST_CHECK_MESSAGE(SoSFFloat::getClassTypeId() != SoType::badType(),
+                      "SoSFFloat class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+}
+
+// Tests for SoMFUInt32 (from src/fields/SoMFUInt32.cpp)
+
+
+
+TEST_CASE("SoMFUInt32 tests", "[fields][SoMFUInt32]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoMFUInt32 field;
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+          CHECK(field.getNum(), 0);
+    }
+}
+
+// Tests for SoMFVec3b (from src/fields/SoMFVec3b.cpp)
+
+
+
+TEST_CASE("SoMFVec3b tests", "[fields][SoMFVec3b]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoMFVec3b field;
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+          CHECK(field.getNum(), 0);
+    }
+}
+
+// Tests for SoMFFloat (from src/fields/SoMFFloat.cpp)
+
+
+
+TEST_CASE("SoMFFloat tests", "[fields][SoMFFloat]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoMFFloat field;
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+          CHECK(field.getNum(), 0);
+    }
+}
+
+// Tests for SoSFName (from src/fields/SoSFName.cpp)
+
+
+
+TEST_CASE("SoSFName tests", "[fields][SoSFName]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoSFName field;
+  BOOST_CHECK_MESSAGE(SoSFName::getClassTypeId() != SoType::badType(),
+                      "SoSFName class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+}
+
+// Tests for SoSFVec4ub (from src/fields/SoSFVec4ub.cpp)
+
+
+
+TEST_CASE("SoSFVec4ub tests", "[fields][SoSFVec4ub]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  BOOST_CHECK_MESSAGE(SoSFVec4ub::getClassTypeId() != SoType::badType(),
+                      "SoSFVec4ub class not initialized");
+  SoSFVec4ub field;
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "SoSFVec4ub object wrongly initialized");
+  // no default value initialization to test
+  field.setValue(1, 2, 3, 4);
+          CHECK(field.getValue(), SbVec4ub(1, 2, 3, 4));
+    }
+
+    SECTION("textinput") {
+{
+  TestSuite::ResetReadErrorCount();
+  SbBool ok;
+  SoSFVec4ub field;
+  ok = field.set("1 2 3 4");
+          CHECK_WITH_MESSAGE(ok == TRUE, "SoSFVec4ub read error");
+          CHECK(field.getValue(), SbVec4ub(1, 2, 3, 4));
+          CHECK(TestSuite::GetReadErrorCount(), 0);
+  TestSuite::ResetReadErrorCount();
+    }
+}
+
+// Tests for SoSFVec3d (from src/fields/SoSFVec3d.cpp)
+
+
+
+TEST_CASE("SoSFVec3d tests", "[fields][SoSFVec3d]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoSFVec3d field;
+  BOOST_CHECK_MESSAGE(SoSFVec3d::getClassTypeId() != SoType::badType(),
+                      "SoSFVec3d class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+}
+
+// Tests for SoSFEngine (from src/fields/SoSFEngine.cpp)
+
+
+
+TEST_CASE("SoSFEngine tests", "[fields][SoSFEngine]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoSFEngine field;
+  BOOST_CHECK_MESSAGE(SoSFEngine::getClassTypeId() != SoType::badType(),
+                      "SoSFEngine class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+}
+
+// Tests for SoMFRotation (from src/fields/SoMFRotation.cpp)
+
+
+
+TEST_CASE("SoMFRotation tests", "[fields][SoMFRotation]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoMFRotation field;
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+          CHECK(field.getNum(), 0);
+    }
+}
+
+// Tests for SoSFPlane (from src/fields/SoSFPlane.cpp)
+
+
+
+TEST_CASE("SoSFPlane tests", "[fields][SoSFPlane]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoSFPlane field;
+  BOOST_CHECK_MESSAGE(SoSFPlane::getClassTypeId() != SoType::badType(),
+                      "SoSFPlane class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+}
+
+// Tests for SoSFVec2i32 (from src/fields/SoSFVec2i32.cpp)
+
+
+
+TEST_CASE("SoSFVec2i32 tests", "[fields][SoSFVec2i32]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoSFVec2i32 field;
+  BOOST_CHECK_MESSAGE(SoSFVec2i32::getClassTypeId() != SoType::badType(),
+                      "SoSFVec2i32 class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+}
+
+// Tests for SoSFVec4ui32 (from src/fields/SoSFVec4ui32.cpp)
+
+
+
+TEST_CASE("SoSFVec4ui32 tests", "[fields][SoSFVec4ui32]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoSFVec4ui32 field;
+  BOOST_CHECK_MESSAGE(SoSFVec4ui32::getClassTypeId() != SoType::badType(),
+                      "SoSFVec4ui32 class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+}
+
+// Tests for SoSFUInt32 (from src/fields/SoSFUInt32.cpp)
+
+
+
+TEST_CASE("SoSFUInt32 tests", "[fields][SoSFUInt32]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoSFUInt32 field;
+  BOOST_CHECK_MESSAGE(SoSFUInt32::getClassTypeId() != SoType::badType(),
+                      "SoSFUInt32 class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+}
+
+// Tests for SoSFVec3b (from src/fields/SoSFVec3b.cpp)
+
+
+
+TEST_CASE("SoSFVec3b tests", "[fields][SoSFVec3b]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoSFVec3b field;
+  BOOST_CHECK_MESSAGE(SoSFVec3b::getClassTypeId() != SoType::badType(),
+                      "SoSFVec3b class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+}
+
+// Tests for SoMFBitMask (from src/fields/SoMFBitMask.cpp)
+
+
+
+TEST_CASE("SoMFBitMask tests", "[fields][SoMFBitMask]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoMFBitMask field;
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+          CHECK(field.getNum(), 0);
+    }
+}
+
+// Tests for SoSFVec3f (from src/fields/SoSFVec3f.cpp)
+
+
+
+TEST_CASE("SoSFVec3f tests", "[fields][SoSFVec3f]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoSFVec3f field;
+  BOOST_CHECK_MESSAGE(SoSFVec3f::getClassTypeId() != SoType::badType(),
+                      "SoSFVec3f class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+}
+
+// Tests for SoMFVec3i32 (from src/fields/SoMFVec3i32.cpp)
+
+
+
+TEST_CASE("SoMFVec3i32 tests", "[fields][SoMFVec3i32]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoMFVec3i32 field;
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+          CHECK(field.getNum(), 0);
+    }
+}
+
+// Tests for SoMFVec4ub (from src/fields/SoMFVec4ub.cpp)
+
+
+
+TEST_CASE("SoMFVec4ub tests", "[fields][SoMFVec4ub]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoMFVec4ub field;
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+          CHECK(field.getNum(), 0);
+    }
+
+    SECTION("textinput") {
+{
+  SbBool ok;
+  SoMFVec4ub field;
+  ok = field.set("[]");
+          CHECK(ok, TRUE);
+          CHECK(field.getNum(), 0);
+  ok = field.set("1 2 3 4");
+          CHECK(ok, TRUE);
+          CHECK(field.getNum(), 1);
+  ok = field.set("[1 2 3 4]");
+          CHECK(ok, TRUE);
+          CHECK(field.getNum(), 1);
+  ok = field.set("[1 2 3 4 1 2 3 4]");
+          CHECK(ok, TRUE);
+          CHECK(field.getNum(), 2);
+          CHECK(field[0], field[1]);
+  ok = field.set("[1 2 3 4, 1 2 3 4,]");
+          CHECK(ok, TRUE);
+          CHECK(field.getNum(), 2);
+          CHECK(field[0], field[1]);
+    }
+}
+
+// Tests for SoSFNode (from src/fields/SoSFNode.cpp)
+
+
+
+TEST_CASE("SoSFNode tests", "[fields][SoSFNode]") {
+    CoinTestFixture fixture;
+
+
+
+    SECTION("initialized") {
+{
+  SoSFNode field;
+  BOOST_CHECK_MESSAGE(SoSFNode::getClassTypeId() != SoType::badType(),
+                      "SoSFNode class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+
+// DISABLED: This test depends on VRML2 support which has been removed
+// in this stripped version of Coin3D
+/*
+    SECTION("vrml97nullchild") {
+{
+  // NULL values for children must be allowed, or we break VRML97
+  // support.  -mortene.
+  char scene[] = "#VRML V2.0 utf8\n\nAppearance { material NULL }";
+
+  SoInput * in = new SoInput;
+  in->setBuffer(reinterpret_cast<const void*>(scene), strlen(scene));
+  SoNode * g = NULL;
+  const SbBool readok = SoDB::read(in, g);
+  delete in;
+
+  BOOST_CHECK_MESSAGE(readok,
+                      "failed to read VRML97 with NULL child in graph");
+  if (g) {
+    g->ref();
+    g->unref();
+  }
+    }
+*/
+}
+
+// Tests for SoMFShort (from src/fields/SoMFShort.cpp)
+
+
+
+TEST_CASE("SoMFShort tests", "[fields][SoMFShort]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoMFShort field;
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+          CHECK(field.getNum(), 0);
+    }
+}
+
+// Tests for SoMFEnum (from src/fields/SoMFEnum.cpp)
+
+
+
+TEST_CASE("SoMFEnum tests", "[fields][SoMFEnum]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoMFEnum field;
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+          CHECK(field.getNum(), 0);
+    }
+}
+
+// Tests for SoMFVec2i32 (from src/fields/SoMFVec2i32.cpp)
+
+
+
+TEST_CASE("SoMFVec2i32 tests", "[fields][SoMFVec2i32]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoMFVec2i32 field;
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+          CHECK(field.getNum(), 0);
+    }
+}
+
+// Tests for SoMFColorRGBA (from src/fields/SoMFColorRGBA.cpp)
+
+
+
+TEST_CASE("SoMFColorRGBA tests", "[fields][SoMFColorRGBA]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoMFColorRGBA field;
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+          CHECK(field.getNum(), 0);
+    }
+}
+
+// Tests for SoMFVec2s (from src/fields/SoMFVec2s.cpp)
+
+
+
+TEST_CASE("SoMFVec2s tests", "[fields][SoMFVec2s]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoMFVec2s field;
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+          CHECK(field.getNum(), 0);
+    }
+}
+
+// Tests for SoSFBox3i32 (from src/fields/SoSFBox3i32.cpp)
+
+
+
+TEST_CASE("SoSFBox3i32 tests", "[fields][SoSFBox3i32]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoSFBox3i32 field;
+  BOOST_CHECK_MESSAGE(SoSFBox3i32::getClassTypeId() != SoType::badType(),
+                      "SoSFBox3i32 class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+}
+
+// Tests for SoMFVec4s (from src/fields/SoMFVec4s.cpp)
+
+
+
+TEST_CASE("SoMFVec4s tests", "[fields][SoMFVec4s]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoMFVec4s field;
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+          CHECK(field.getNum(), 0);
+    }
+}
+
+// Tests for SoMFNode (from src/fields/SoMFNode.cpp)
+
+
+
+TEST_CASE("SoMFNode tests", "[fields][SoMFNode]") {
+    CoinTestFixture fixture;
+
+
+
+// Do-nothing error handler for ignoring read errors while testing.
+static void
+readErrorHandler(const SoError * error, void * data)
+{
+    }
+
+    SECTION("initialized") {
+{
+  SoMFNode field;
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+          CHECK(field.getNum(), 0);
+    }
+
+    SECTION("NULLreading") {
+{
+  // FIXME: We are forced to restore the global state before terminating,
+  // or independent tests could fail. (sveinung 20071108)
+  SoErrorCB * prevErrorCB = SoReadError::getHandlerCallback();
+  SoReadError::setHandlerCallback(readErrorHandler, NULL);
+
+  const char file[] =
+    "[ DEF mycube Cube {} USE mycube ]";
+  SoInput in;
+  in.setBuffer(reinterpret_cast<const void *>(file), sizeof(file));
+  SoMFNode field;
+          CHECK_WITH_MESSAGE(field.read(&in, SbName("test")),
+                      "DEF/USE reading in SoMFNode is broken");
+
+  SoReadError::setHandlerCallback(prevErrorCB, NULL);
+    }
+}
+
+// Tests for SoMFString (from src/fields/SoMFString.cpp)
+
+
+
+TEST_CASE("SoMFString tests", "[fields][SoMFString]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoMFString field;
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+          CHECK(field.getNum(), 0);
+    }
+}
+
+// Tests for SoMFVec2b (from src/fields/SoMFVec2b.cpp)
+
+
+
+TEST_CASE("SoMFVec2b tests", "[fields][SoMFVec2b]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoMFVec2b field;
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+          CHECK(field.getNum(), 0);
+    }
+}
+
+// Tests for SoSFRotation (from src/fields/SoSFRotation.cpp)
+
+
+
+TEST_CASE("SoSFRotation tests", "[fields][SoSFRotation]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoSFRotation field;
+  BOOST_CHECK_MESSAGE(SoSFRotation::getClassTypeId() != SoType::badType(),
+                      "SoSFRotation class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+}
+
+// Tests for SoSFVec4us (from src/fields/SoSFVec4us.cpp)
+
+
+
+TEST_CASE("SoSFVec4us tests", "[fields][SoSFVec4us]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoSFVec4us field;
+  BOOST_CHECK_MESSAGE(SoSFVec4us::getClassTypeId() != SoType::badType(),
+                      "SoSFVec4us class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+
+    SECTION("textinput") {
+{
+  SoSFVec4us field;
+  field.set("1 2 3 4");
+          CHECK(field.getValue(), SbVec4us(1, 2, 3, 4));
+  const char * filters[] = { "read error", NULL }; // all read error messages
+  TestSuite::ResetReadErrorCount();
+  // TestSuite::PushMessageSuppressFilters(filters);
+  SbBool ok;
+  ok = field.set("-3 4 32 3"); // should emit error message on '-3'
+          CHECK(ok, FALSE);
+  //        CHECK(TestSuite::GetReadErrorCount(), 1);
+  ok = field.set("3 525 32 3"); // should emit error message on '525'
+  //        CHECK(ok, FALSE);
+  //        CHECK(TestSuite::GetReadErrorCount(), 2);
+  ok = field.set("3 32 3"); // error on account of too few numbers
+          CHECK(ok, FALSE);
+  //        CHECK(TestSuite::GetReadErrorCount(), 3);
+  // TestSuite::PopMessageSuppressFilters();
+  TestSuite::ResetReadErrorCount();
+    }
+}
+
+// Tests for SoMFVec4b (from src/fields/SoMFVec4b.cpp)
+
+
+
+TEST_CASE("SoMFVec4b tests", "[fields][SoMFVec4b]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoMFVec4b field;
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+          CHECK(field.getNum(), 0);
+    }
+}
+
+// Tests for SoSFDouble (from src/fields/SoSFDouble.cpp)
+
+
+
+TEST_CASE("SoSFDouble tests", "[fields][SoSFDouble]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoSFDouble field;
+  BOOST_CHECK_MESSAGE(SoSFDouble::getClassTypeId() != SoType::badType(),
+                      "SoSFDouble class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+}
+
+// Tests for SoSFVec4i32 (from src/fields/SoSFVec4i32.cpp)
+
+
+
+TEST_CASE("SoSFVec4i32 tests", "[fields][SoSFVec4i32]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoSFVec4i32 field;
+  BOOST_CHECK_MESSAGE(SoSFVec4i32::getClassTypeId() != SoType::badType(),
+                      "SoSFVec4i32 class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+}
+
+// Tests for SoSFBox3f (from src/fields/SoSFBox3f.cpp)
+
+
+
+TEST_CASE("SoSFBox3f tests", "[fields][SoSFBox3f]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoSFBox3f field;
+  BOOST_CHECK_MESSAGE(SoSFBox3f::getClassTypeId() != SoType::badType(),
+                      "SoSFBox3f class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+}
+
+// Tests for SoMFDouble (from src/fields/SoMFDouble.cpp)
+
+
+
+TEST_CASE("SoMFDouble tests", "[fields][SoMFDouble]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoMFDouble field;
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+          CHECK(field.getNum(), 0);
+    }
+}
+
+// Tests for SoMFMatrix (from src/fields/SoMFMatrix.cpp)
+
+
+
+TEST_CASE("SoMFMatrix tests", "[fields][SoMFMatrix]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoMFMatrix field;
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+          CHECK(field.getNum(), 0);
+    }
+}
+
+// Tests for SoMFPath (from src/fields/SoMFPath.cpp)
+
+
+
+TEST_CASE("SoMFPath tests", "[fields][SoMFPath]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoMFPath field;
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+          CHECK(field.getNum(), 0);
+    }
+}
+
+// Tests for SoSFBox3s (from src/fields/SoSFBox3s.cpp)
+
+
+
+TEST_CASE("SoSFBox3s tests", "[fields][SoSFBox3s]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoSFBox3s field;
+  BOOST_CHECK_MESSAGE(SoSFBox3s::getClassTypeId() != SoType::badType(),
+                      "SoSFBox3s class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+}
+
+// Tests for SoSFVec2s (from src/fields/SoSFVec2s.cpp)
+
+
+
+TEST_CASE("SoSFVec2s tests", "[fields][SoSFVec2s]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoSFVec2s field;
+  BOOST_CHECK_MESSAGE(SoSFVec2s::getClassTypeId() != SoType::badType(),
+                      "SoSFVec2s class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+}
+
+// Tests for SoSFVec2f (from src/fields/SoSFVec2f.cpp)
+
+
+
+TEST_CASE("SoSFVec2f tests", "[fields][SoSFVec2f]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoSFVec2f field;
+  BOOST_CHECK_MESSAGE(SoSFVec2f::getClassTypeId() != SoType::badType(),
+                      "SoSFVec2f class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+}
+
+// Tests for SoMFVec4ui32 (from src/fields/SoMFVec4ui32.cpp)
+
+
+
+TEST_CASE("SoMFVec4ui32 tests", "[fields][SoMFVec4ui32]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoMFVec4ui32 field;
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+          CHECK(field.getNum(), 0);
+    }
+}
+
+// Tests for SoMFVec3f (from src/fields/SoMFVec3f.cpp)
+
+
+
+TEST_CASE("SoMFVec3f tests", "[fields][SoMFVec3f]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoMFVec3f field;
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+          CHECK(field.getNum(), 0);
+    }
+}
+
+// Tests for SoSFVec3s (from src/fields/SoSFVec3s.cpp)
+
+
+
+TEST_CASE("SoSFVec3s tests", "[fields][SoSFVec3s]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoSFVec3s field;
+  BOOST_CHECK_MESSAGE(SoSFVec3s::getClassTypeId() != SoType::badType(),
+                      "SoSFVec3s class not initialized");
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+    }
+}
+
+// Tests for SoMFVec3d (from src/fields/SoMFVec3d.cpp)
+
+
+
+TEST_CASE("SoMFVec3d tests", "[fields][SoMFVec3d]") {
+    CoinTestFixture fixture;
+
+
+    SECTION("initialized") {
+{
+  SoMFVec3d field;
+  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
+                      "missing class initialization");
+          CHECK(field.getNum(), 0);
+    }
+}
+

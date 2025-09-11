@@ -1,27 +1,28 @@
-# source files
+# Only storage-related threading components remain after C++17 migration
+# Other threading primitives (mutex, condvar, thread, etc.) have been replaced with C++17 equivalents
+
+# source files - includes C threading components still used by SoDB and storage
 set(COIN_THREADS_FILES
 	common.cpp
-	thread.cpp
-	mutex.cpp
 	storage.cpp
-	condvar.cpp
-	worker.cpp
-	wpool.cpp
+	storage_cxx17.cpp
 	recmutex.cpp
-	sched.cpp
+	recmutex_global_cxx17.cpp
+	mutex.cpp
+	condvar.cpp
+	thread.cpp
 )
 
 # Files excluded from public API documentation, included in complete documentation.
 set(COIN_THREADS_INTERNAL_FILES
-	condvarp.h
-	mutexp.h
-	recmutexp.h
-	schedp.h
 	storagep.h
-	threadp.h
+	storage_cxx17.h
 	threadsutilp.h
-	workerp.h
-	wpoolp.h
+	recmutexp.h
+	recmutex_global_cxx17.h
+	mutexp.h
+	condvarp.h
+	threadp.h
 )
 
 # build library

@@ -94,15 +94,3 @@ SoSFUInt32::writeValue(SoOutput * out) const
 
 // *************************************************************************
 
-#ifdef COIN_TEST_SUITE
-
-BOOST_AUTO_TEST_CASE(initialized)
-{
-  SoSFUInt32 field;
-  BOOST_CHECK_MESSAGE(SoSFUInt32::getClassTypeId() != SoType::badType(),
-                      "SoSFUInt32 class not initialized");
-  BOOST_CHECK_MESSAGE(field.getTypeId() != SoType::badType(),
-                      "missing class initialization");
-}
-
-#endif // COIN_TEST_SUITE
