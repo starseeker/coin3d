@@ -228,6 +228,10 @@ else()
       set(HAVE_OSMESA 1)
       if(TARGET OSMesa::OSMesa)
         list(APPEND COIN_TARGET_LINK_LIBRARIES_GL OSMesa::OSMesa)
+      elseif(TARGET osmesa)
+        # starseeker/osmesa submodule target
+        list(APPEND COIN_TARGET_LINK_LIBRARIES_GL osmesa)
+        list(APPEND COIN_TARGET_INCLUDE_DIRECTORIES ${OSMesa_INCLUDE_DIRS})
       else()
         list(APPEND COIN_TARGET_INCLUDE_DIRECTORIES ${OSMesa_INCLUDE_DIRS})
         list(APPEND COIN_TARGET_LINK_LIBRARIES_GL ${OSMesa_LIBRARIES})
@@ -281,6 +285,7 @@ list(APPEND COIN_TARGET_LINK_LIBRARIES ${COIN_TARGET_LINK_LIBRARIES_GL})
 if(COIN3D_USE_OSMESA)
   set(COIN3D_OUTPUT_NAME "Coin-osmesa")
   add_definitions(-DCOIN3D_OSMESA_BUILD)
+  add_definitions(-DUSE_MGL_NAMESPACE)  # Enable MGL name mangling to match osmesa library
   message(STATUS "Library will be named: lib${COIN3D_OUTPUT_NAME}")
 else()
   set(COIN3D_OUTPUT_NAME "Coin")
@@ -777,11 +782,11 @@ else()
 endif()
 
 if(COIN3D_USE_OSMESA)
-  # OSMesa backend - use OSMesa headers
-  set(SIM_INCLUDE_GL_H "#include <GL/osmesa.h>
-#include <GL/gl.h>")
+  # starseeker/osmesa backend - use starseeker/osmesa headers (MGL mangling is automatic when USE_MGL_NAMESPACE is defined)
+  set(SIM_INCLUDE_GL_H "#include <OSMesa/osmesa.h>
+#include <OSMesa/gl.h>")
   set(SIM_INCLUDE_GLU_H "/* #include <GL/glu.h> - GLU not typically used with OSMesa */")
-  message(STATUS "Using OSMesa headers for GL")
+  message(STATUS "Using starseeker/osmesa headers for GL with automatic MGL name mangling")
 else()
   # System OpenGL backend
   if(HAVE_GL_GL_H)
