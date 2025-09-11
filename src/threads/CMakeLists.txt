@@ -12,12 +12,10 @@ set(COIN_THREADS_FILES
 	sched.cpp
 	sync.cpp
 	fifo.cpp
-	barrier.cpp
 )
 
 # Files excluded from public API documentation, included in complete documentation.
 set(COIN_THREADS_INTERNAL_FILES
-	barrierp.h
 	condvarp.h
 	fifop.h
 	mutexp.h

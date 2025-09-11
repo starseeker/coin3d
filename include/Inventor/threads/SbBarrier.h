@@ -33,17 +33,18 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#include <Inventor/C/threads/barrier.h>
+#include <Inventor/threads/SbBarrierImpl.h>
+#include <memory>
 
 class SbBarrier {
 public:
-  SbBarrier(unsigned int count) { this->barrier = cc_barrier_construct(count); }
-  ~SbBarrier(void) { cc_barrier_destruct(this->barrier); }
+  SbBarrier(unsigned int count) : impl(std::make_unique<SbBarrierImpl>(count)) {}
+  ~SbBarrier(void) = default;
 
-  int enter(void) { return cc_barrier_enter(this->barrier); }
+  int enter(void) { return impl->enter(); }
 
 private:
-  cc_barrier * barrier;
+  std::unique_ptr<SbBarrierImpl> impl;
 };
 
 #endif // !COIN_SBBARRIER_H
