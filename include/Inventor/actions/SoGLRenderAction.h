@@ -37,7 +37,7 @@
 #include <Inventor/actions/SoSubAction.h>
 #include <Inventor/SbBasic.h>
 #include <Inventor/SbViewportRegion.h>
-#include <Inventor/system/inttypes.h>
+#include <cstdint>
 #include <Inventor/lists/SoPathList.h>
 #include <Inventor/lists/SbList.h>
 

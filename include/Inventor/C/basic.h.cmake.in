@@ -83,16 +83,13 @@ static const SbBool TRUE = 1;
 
 /* Include this to 1) be compatible with Open Inventor's SbBasic.h, 2)
  * provide a way for application programmers to get hold of the type
- * definitions without explicitly including inttypes.h.
+ * definitions without explicitly including cstdint.
  *
- * The latter point is important because the inttypes.h file in SGI
- * and TGS Open Inventor is placed _below_ the Inventor/ directory in
- * the header files hierarchy. This is a stupid thing to do because it
- * could easily conflict with the inttypes.h file installed as part of
- * the C library on many systems (like GNU/Linux's glibc, for
- * instance).
+ * Since C++17, the standard integer types are guaranteed to be available
+ * in <cstdint>, making the custom inttypes.h header obsolete.
  */
-#include <Inventor/system/inttypes.h>
+#include <cstdint>
+#include <cstddef>
 
 /* Internal note for Coin developers: in other sourcefiles in Coin, we
  * depend on math.h being included through SbBasic.h. It is done this

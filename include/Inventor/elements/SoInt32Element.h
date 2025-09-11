@@ -34,7 +34,7 @@
 \**************************************************************************/
 
 #include <Inventor/elements/SoSubElement.h>
-#include <Inventor/system/inttypes.h>
+#include <cstdint>
 
 class COIN_DLL_API SoInt32Element : public SoElement {
   typedef SoElement inherited;
