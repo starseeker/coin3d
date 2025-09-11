@@ -108,12 +108,6 @@
 #include <Inventor/threads/SbMutex.h>
 #include <Inventor/threads/SbStorage.h>
 
-#ifdef HAVE_VRML97
-#include <Inventor/VRMLnodes/SoVRMLIndexedFaceSet.h>
-#include <Inventor/VRMLnodes/SoVRMLExtrusion.h>
-#include <Inventor/VRMLnodes/SoVRMLElevationGrid.h>
-#endif // HAVE_VRML97
-
 #include "nodes/SoSubNodeP.h"
 #include "rendering/SoGL.h"
 #include "glue/glp.h"
@@ -205,24 +199,10 @@ public:
 
   // needed since some VRML97 nodes change the GL state inside the node
   void testSetupShapeHints(SoShape * shape) {
-#ifdef HAVE_VRML97
-    if ((this->flags & SoShapeP::NEED_SETUP_SHAPE_HINTS) == 0) {
-      if (shape->isOfType(SoVRMLIndexedFaceSet::getClassTypeId()) ||
-          shape->isOfType(SoVRMLExtrusion::getClassTypeId()) ||
-          shape->isOfType(SoVRMLElevationGrid::getClassTypeId())) {
-        this->flags |= SoShapeP::NEED_SETUP_SHAPE_HINTS;
-      }
-    }
-#endif // HAVE_VRML97
+    // VRML97 support removed - this function is now a no-op
   }
   void setupShapeHints(SoShape * shape, SoState * state) {
-#ifdef HAVE_VRML97
-    if (this->flags & SoShapeP::NEED_SETUP_SHAPE_HINTS) {
-      SbBool ccw = ((SoSFBool*)(shape->getField("ccw")))->getValue();
-      SbBool solid = ((SoSFBool*)(shape->getField("solid")))->getValue();
-      SoGLShapeHintsElement::forceSend(state, ccw, solid, !solid);
-    }
-#endif // HAVE_VRML97
+    // VRML97 support removed - this function is now a no-op
   }
 
   // we can use a per-instance mutex here instead of this class-wide
