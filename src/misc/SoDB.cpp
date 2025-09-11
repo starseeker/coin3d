@@ -78,6 +78,7 @@
 #endif // HAVE_UNISTD_H
 
 #include <Inventor/C/tidbits.h>
+#include "misc/SoEnvironment.h"
 #include <Inventor/SbVec3f.h>
 #include <Inventor/SoInput.h>
 #include <Inventor/actions/SoAction.h>
@@ -414,8 +415,8 @@ SoDB::init(void)
   // Note that this is done late in the init()-process, to make sure
   // all Coin-features used in SoDB::listWin32ProcessModules() have
   // been initialized.
-  const char * env = coin_getenv("COIN_DEBUG_LISTMODULES");
-  if (env && (atoi(env) > 0)) { SoDBP::listWin32ProcessModules(); }
+  auto env = CoinInternal::getEnvironmentVariable("COIN_DEBUG_LISTMODULES");
+  if (env.has_value() && (std::atoi(env->c_str()) > 0)) { SoDBP::listWin32ProcessModules(); }
 
   SoDBP::isinitialized = TRUE;
 

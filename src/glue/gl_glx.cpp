@@ -61,6 +61,7 @@
 
 #include "glue/dlp.h"
 #include "glue/glp.h"
+#include "../misc/SoEnvironment.h"
 
 /* ********************************************************************** */
 
@@ -398,15 +399,14 @@ static void
 glxglue_resolve_symbols(cc_glglue * w)
 {
   SbBool glx13pbuffer;
-  const char * env;
   struct cc_glxglue * g = &(w->glx);
 
   glxglue_glXChooseFBConfig = NULL;
   glxglue_glXCreateNewContext = NULL;
   glxglue_glXGetFBConfigAttrib = NULL;
 
-  env = coin_getenv("COIN_GLXGLUE_NO_GLX13_PBUFFERS");
-  glx13pbuffer = (env == NULL) || (atoi(env) < 1);
+  auto env = CoinInternal::getEnvironmentVariable("COIN_GLXGLUE_NO_GLX13_PBUFFERS");
+  glx13pbuffer = (!env.has_value()) || (std::atoi(env->c_str()) < 1);
 
 #ifdef GLX_EXT_import_context
   if (!g->glXGetCurrentDisplay && glxglue_ext_supported(w, "GLX_EXT_import_context")) {
@@ -453,9 +453,9 @@ glxglue_has_pbuffer_support(void)
 {
   /* Make it possible to turn off pbuffers support completely. Mostly
      relevant for debugging purposes. */
-  const char * env = coin_getenv("COIN_GLXGLUE_NO_PBUFFERS");
+  auto env = CoinInternal::getEnvironmentVariable("COIN_GLXGLUE_NO_PBUFFERS");
   void *uniquememptr;
-  if (env && atoi(env) > 0) { return FALSE; }
+  if (env.has_value() && std::atoi(env->c_str()) > 0) { return FALSE; }
 
   /* Dummy invocation of the glxglue_init() function, which is
      necessary to bind the below functions related to pbuffer
@@ -725,8 +725,8 @@ glxglue_context_create_software(struct glxglue_contextdata * context)
 
   if (check_direct == -1) {
     check_direct = 0;
-    const char * env = coin_getenv("COIN_GLX_PIXMAP_DIRECT_RENDERING");
-    direct_rendering = env && strtol(env, NULL, 10) >= 1 ? True : False;
+    auto env = CoinInternal::getEnvironmentVariable("COIN_GLX_PIXMAP_DIRECT_RENDERING");
+    direct_rendering = env.has_value() && std::strtol(env->c_str(), NULL, 10) >= 1 ? True : False;
   }
 
   Display * display = glxglue_get_display(NULL);

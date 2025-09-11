@@ -85,6 +85,7 @@
 
 #include "tidbitsp.h"
 #include "coindefs.h"
+#include "SoEnvironment.h"
 
 /* Legacy MSVC6 workaround removed - not needed for C++17 */
 
@@ -214,12 +215,12 @@ CoinResources::get(const char * resloc)
       filename.sprintf("%s/%s", buf, resloc + 5);
       CFRelease(url);
 #else // !COIN_MACOSX_FRAMEWORK
-      static const char * coindirenv = coin_getenv("COINDIR");
-      if (coindirenv == NULL) {
+      static auto coindirenv = CoinInternal::getEnvironmentVariable("COINDIR");
+      if (!coindirenv.has_value()) {
         handle->filenotfound = TRUE;
         break;
       }
-      filename.sprintf("%s/%s/%s", coindirenv, COIN_DATADIR, resloc + 5);
+      filename.sprintf("%s/%s/%s", coindirenv->c_str(), COIN_DATADIR, resloc + 5);
 #endif // !COIN_MACOSX_FRAMEWORK
       if (COIN_DEBUG && 0) {
         SoDebugError::postInfo("CoinResources::get", "trying to load '%s'.",

@@ -256,6 +256,7 @@
 #include "glue/gl_glx.h"
 #include "glue/gl_wgl.h"
 #include "threads/threadsutilp.h"
+#include "misc/SoEnvironment.h"
 
 /* ********************************************************************** */
 
@@ -387,8 +388,8 @@ static int COIN_USE_EGL = -1;
 static int
 glglue_resolve_envvar(const char * txt)
 {
-  const char * val = coin_getenv(txt);
-  return val ? atoi(val) : 0;
+  auto val = CoinInternal::getEnvironmentVariable(txt);
+  return val.has_value() ? std::atoi(val->c_str()) : 0;
 }
 
 /* Returns a flag which indicates whether or not to allow the use of
@@ -567,9 +568,9 @@ glglue_prefer_glPolygonOffsetEXT(void)
 int
 coin_glglue_stencil_bits_hack(void)
 {
-  const char * env = coin_getenv("COIN_OFFSCREEN_STENCIL_BITS");
-  if (!env) { return -1; }
-  return atoi(env);
+  auto env = CoinInternal::getEnvironmentVariable("COIN_OFFSCREEN_STENCIL_BITS");
+  if (!env.has_value()) { return -1; }
+  return std::atoi(env->c_str());
 }
 
 cc_libhandle
@@ -1342,8 +1343,8 @@ glglue_resolve_symbols(cc_glglue * w)
      machine. -mortene.)
   */
   if (w->glBindBuffer) {
-    const char * env = coin_getenv("COIN_GL_DISABLE_VBO");
-    if (env && (atoi(env) > 0)) { w->glBindBuffer = NULL; }
+    auto env = CoinInternal::getEnvironmentVariable("COIN_GL_DISABLE_VBO");
+    if (env.has_value() && (std::atoi(env->c_str()) > 0)) { w->glBindBuffer = NULL; }
   }
 
   /*
@@ -1354,8 +1355,8 @@ glglue_resolve_symbols(cc_glglue * w)
   if (w->glBindBuffer && w->vendor_is_3dlabs
       && !cc_glglue_glversion_matches_at_least(w, 2,0,1)) {
     /* Enable users to override this workaround by setting COIN_VBO=1 */
-    const char * env = coin_getenv("COIN_VBO");
-    if (!env || (atoi(env) > 0)) {
+    auto env = CoinInternal::getEnvironmentVariable("COIN_VBO");
+    if (!env.has_value() || (std::atoi(env->c_str()) > 0)) {
       w->glBindBuffer = NULL;
     }
   }
@@ -2178,9 +2179,9 @@ static void check_force_agl()
 {
 #ifdef HAVE_AGL
   if (COIN_USE_AGL == -1) {
-    const char * env = coin_getenv("COIN_FORCE_AGL");
-    if (env) {
-      COIN_USE_AGL = atoi(env);
+    auto env = CoinInternal::getEnvironmentVariable("COIN_FORCE_AGL");
+    if (env.has_value()) {
+      COIN_USE_AGL = std::atoi(env->c_str());
     }
     else
 #ifdef HAVE_CGL
@@ -2198,9 +2199,9 @@ static void check_egl()
   COIN_USE_EGL = 1;
 #else
   if (COIN_USE_EGL == -1) {
-    const char * env = coin_getenv("COIN_EGL");
-    if (env) {
-      COIN_USE_EGL = atoi(env);
+    auto env = CoinInternal::getEnvironmentVariable("COIN_EGL");
+    if (env.has_value()) {
+      COIN_USE_EGL = std::atoi(env->c_str());
     }
   }
 #endif
@@ -2222,13 +2223,13 @@ cc_glglue_instance(int contextid)
 
   /* check environment variables */
   if (COIN_MAXIMUM_TEXTURE2_SIZE == 0) {
-    const char * env = coin_getenv("COIN_MAXIMUM_TEXTURE2_SIZE");
-    if (env) COIN_MAXIMUM_TEXTURE2_SIZE = atoi(env);
+    auto env = CoinInternal::getEnvironmentVariable("COIN_MAXIMUM_TEXTURE2_SIZE");
+    if (env.has_value()) COIN_MAXIMUM_TEXTURE2_SIZE = std::atoi(env->c_str());
     else COIN_MAXIMUM_TEXTURE2_SIZE = -1;
   }
   if (COIN_MAXIMUM_TEXTURE3_SIZE == 0) {
-    const char * env = coin_getenv("COIN_MAXIMUM_TEXTURE3_SIZE");
-    if (env) COIN_MAXIMUM_TEXTURE3_SIZE = atoi(env);
+    auto env = CoinInternal::getEnvironmentVariable("COIN_MAXIMUM_TEXTURE3_SIZE");
+    if (env.has_value()) COIN_MAXIMUM_TEXTURE3_SIZE = std::atoi(env->c_str());
     else COIN_MAXIMUM_TEXTURE3_SIZE = -1;
   }
   check_force_agl();
@@ -2256,7 +2257,7 @@ cc_glglue_instance(int contextid)
     if (chk == -1) {
       /* Note: don't change envvar name without updating the assert
          text below. */
-      chk = coin_getenv("COIN_GL_NO_CURRENT_CONTEXT_CHECK") ? 0 : 1;
+      chk = CoinInternal::getEnvironmentVariable("COIN_GL_NO_CURRENT_CONTEXT_CHECK").has_value() ? 0 : 1;
     }
     if (chk) {
       const void * current_ctx = coin_gl_current_context();
@@ -2337,8 +2338,8 @@ cc_glglue_instance(int contextid)
     /* FIXME: update when nVidia fixes their driver. pederb, 2004-09-01 */
     gi->nvidia_color_per_face_bug = gi->vendor_is_nvidia;
     if (gi->nvidia_color_per_face_bug) {
-      const char * env = coin_getenv("COIN_NO_NVIDIA_COLOR_PER_FACE_BUG_WORKAROUND");
-      if (env) gi->nvidia_color_per_face_bug = 0;
+      auto env = CoinInternal::getEnvironmentVariable("COIN_NO_NVIDIA_COLOR_PER_FACE_BUG_WORKAROUND");
+      if (env.has_value()) gi->nvidia_color_per_face_bug = 0;
     }
 
     gi->rendererstr = (const char *)glGetString(GL_RENDERER);

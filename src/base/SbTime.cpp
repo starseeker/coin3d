@@ -69,6 +69,7 @@
 
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/C/tidbits.h>
+#include "misc/CoinUtilities.h"
 #include <thread>
 #include <chrono>
 #include <chrono>
@@ -643,7 +644,7 @@ SbTime::parsedate(const char * const date)
 
     int i;
     for (i=0; i < 12; i++) {
-      if (! coin_strncasecmp(dateptr, months[i], 3)) {
+      if (! CoinInternal::stringsCompareNoCase(dateptr, months[i], 3)) {
         time.tm_mon = i;
         break;
       }
@@ -692,7 +693,7 @@ SbTime::parsedate(const char * const date)
 
     int i;
     for (i=0; i < 12; i++) {
-      if (! coin_strncasecmp(dateptr, months[i], 3)) {
+      if (! CoinInternal::stringsCompareNoCase(dateptr, months[i], 3)) {
         time.tm_mon = i;
         break;
       }
@@ -739,7 +740,7 @@ SbTime::parsedate(const char * const date)
 
     int i;
     for (i=0; i < 12; i++) {
-      if (! coin_strncasecmp(dateptr, months[i], 3)) {
+      if (! CoinInternal::stringsCompareNoCase(dateptr, months[i], 3)) {
         time.tm_mon = i;
         break;
       }

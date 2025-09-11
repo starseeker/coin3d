@@ -34,6 +34,7 @@
 
 #include <cstdlib>
 #include <Inventor/C/tidbits.h>
+#include "../misc/SoEnvironment.h"
 
 /* ********************************************************************** */
 
@@ -42,8 +43,8 @@ cc_font_debug(void)
 {
   static int dbg = -1;
   if (dbg == -1) {
-    const char * env = coin_getenv("COIN_DEBUG_FONTSUPPORT");
-    dbg = env && (atoi(env) > 0);
+    auto env = CoinInternal::getEnvironmentVariable("COIN_DEBUG_FONTSUPPORT");
+    dbg = env.has_value() && (std::atoi(env->c_str()) > 0);
   }
   return dbg;
 }

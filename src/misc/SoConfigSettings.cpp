@@ -3,6 +3,7 @@
 #include <Inventor/errors/SoDebugError.h>
 #include "SoConfigSettings.h"
 #include "misc/SbHash.h"
+#include "SoEnvironment.h"
 
 #include <cstdio>
 
@@ -70,9 +71,9 @@ void
 SoConfigSettings::reinitialize()
 {
   for (size_t i = 0; i<options_size(); ++i) {
-    const char * envVariable = coin_getenv(VALID_OPTIONS[i]);
-    if (envVariable) {
-      PRIVATE(this)->settings[ VALID_OPTIONS[i] ] = envVariable;
+    auto envVariable = CoinInternal::getEnvironmentVariable(VALID_OPTIONS[i]);
+    if (envVariable.has_value()) {
+      PRIVATE(this)->settings[ VALID_OPTIONS[i] ] = envVariable->c_str();
     }
   }
   //FIXME: environ is not available on non-unix platforms, so

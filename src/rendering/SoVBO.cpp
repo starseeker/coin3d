@@ -57,6 +57,7 @@
 #include "threads/threadsutilp.h"
 #include "glue/glp.h"
 #include "tidbitsp.h"
+#include "../misc/SoEnvironment.h"
 
 static int vbo_vertex_count_min_limit = -1;
 static int vbo_vertex_count_max_limit = -1;
@@ -143,9 +144,9 @@ SoVBO::init(void)
 
   // use COIN_VBO_MAX_LIMIT to set the largest VBO we create
   if (vbo_vertex_count_max_limit < 0) {
-    const char * env = coin_getenv("COIN_VBO_MAX_LIMIT");
-    if (env) {
-      vbo_vertex_count_max_limit = atoi(env);
+    auto env = CoinInternal::getEnvironmentVariable("COIN_VBO_MAX_LIMIT");
+    if (env.has_value()) {
+      vbo_vertex_count_max_limit = std::atoi(env->c_str());
     }
     else {
       vbo_vertex_count_max_limit = DEFAULT_MAX_LIMIT;
@@ -154,9 +155,9 @@ SoVBO::init(void)
 
   // use COIN_VBO_MIN_LIMIT to set the smallest VBO we create
   if (vbo_vertex_count_min_limit < 0) {
-    const char * env = coin_getenv("COIN_VBO_MIN_LIMIT");
-    if (env) {
-      vbo_vertex_count_min_limit = atoi(env);
+    auto env = CoinInternal::getEnvironmentVariable("COIN_VBO_MIN_LIMIT");
+    if (env.has_value()) {
+      vbo_vertex_count_min_limit = std::atoi(env->c_str());
     }
     else {
       vbo_vertex_count_min_limit = DEFAULT_MIN_LIMIT;
@@ -165,9 +166,9 @@ SoVBO::init(void)
 
   // use COIN_VERTEX_ARRAYS to globally disable vertex array rendering
   if (vbo_render_as_vertex_arrays < 0) {
-    const char * env = coin_getenv("COIN_VERTEX_ARRAYS");
-    if (env) {
-      vbo_render_as_vertex_arrays = atoi(env);
+    auto env = CoinInternal::getEnvironmentVariable("COIN_VERTEX_ARRAYS");
+    if (env.has_value()) {
+      vbo_render_as_vertex_arrays = std::atoi(env->c_str());
     }
     else {
       vbo_render_as_vertex_arrays = 1;
@@ -176,18 +177,18 @@ SoVBO::init(void)
 
   // use COIN_VBO to globally disable VBOs when doing vertex array rendering
   if (vbo_enabled < 0) {
-    const char * env = coin_getenv("COIN_VBO");
-    if (env) {
-      vbo_enabled = atoi(env);
+    auto env = CoinInternal::getEnvironmentVariable("COIN_VBO");
+    if (env.has_value()) {
+      vbo_enabled = std::atoi(env->c_str());
     }
     else {
       vbo_enabled = 1;
     }
   }
   if (vbo_debug < 0) {
-    const char * env = coin_getenv("COIN_DEBUG_VBO");
-    if (env) {
-      vbo_debug = atoi(env);
+    auto env = CoinInternal::getEnvironmentVariable("COIN_DEBUG_VBO");
+    if (env.has_value()) {
+      vbo_debug = std::atoi(env->c_str());
     }
     else {
       vbo_debug = 0;
