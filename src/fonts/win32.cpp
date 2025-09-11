@@ -119,6 +119,7 @@ static int flww32_calcfontsize(float complexity);
 #include <Inventor/C/base/string.h>
 
 #include "base/dict.h"
+#include "misc/SoUtilities.h"
 #include "glue/win32api.h"
 #include "fonts/common.h"
 
@@ -513,7 +514,7 @@ cc_flww32_get_font(const char * fontname, int sizey, float angle, float complexi
 
   size_t fontnamelen = strlen(fontname);
   if (cc_string_length(realname) != fontnamelen ||
-      coin_strncasecmp(cc_string_get_text(realname), fontname, (int)fontnamelen)) {
+      CoinInternal::stringCompareIgnoreCase(cc_string_get_text(realname), fontname, fontnamelen)) {
     /*
     The names are different, we probably got a bogus font (Arial plain)
     Let's try stripping the bold/italic part from the font name and set those as flags instead
@@ -558,7 +559,7 @@ cc_flww32_get_font(const char * fontname, int sizey, float angle, float complexi
       if (wfont2) {
         cc_flww32_get_font_name(wfont2, realname);
         if (((int) cc_string_length(realname) == baselen) &&
-            !coin_strncasecmp(cc_string_get_text(realname),
+            !CoinInternal::stringCompareIgnoreCase(cc_string_get_text(realname),
                               cc_string_get_text(basename),
                               baselen)) {
           /* The new font was a perfect match. Replace the old one. */
