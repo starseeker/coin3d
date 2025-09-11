@@ -97,7 +97,9 @@
 #include "misc/SoDBP.h"
 
 #include <Inventor/annex/Profiler/SoProfiler.h>
+#ifdef HAVE_NODEKITS
 #include "profiler/SoNodeProfiling.h"
+#endif
 
 // *************************************************************************
 
@@ -677,10 +679,12 @@ SoSeparator::GLRenderBelowPath(SoGLRenderAction * action)
       state->pop();
 
       if (SoProfiler::isEnabled()) {
+#ifdef HAVE_NODEKITS
         SoProfilerElement * e = SoProfilerElement::get(state);
         if (e) {
           e->getProfilingData().setNodeFlag(action->getCurPath(), SbProfilingData::GL_CACHED_FLAG, TRUE);
         }
+#endif
       }
 
       return;
@@ -715,10 +719,14 @@ SoSeparator::GLRenderBelowPath(SoGLRenderAction * action)
       }
 
       {
+#ifdef HAVE_NODEKITS
         SoNodeProfiling profiling;
         profiling.preTraversal(action);
+#endif
         childarray[i]->GLRenderBelowPath(action); // traversal call
+#ifdef HAVE_NODEKITS
         profiling.postTraversal(action);
+#endif
       }
 
 #if COIN_DEBUG
@@ -770,10 +778,14 @@ SoSeparator::GLRenderInPath(SoGLRenderAction * action)
         if (offpath->affectsState()) {
           action->pushCurPath(childidx, offpath);
           if (!action->abortNow()) {
+#ifdef HAVE_NODEKITS
             SoNodeProfiling profiling;
             profiling.preTraversal(action);
+#endif
             offpath->GLRenderOffPath(action); // traversal call
+#ifdef HAVE_NODEKITS
             profiling.postTraversal(action);
+#endif
           }
           else {
             SoCacheElement::invalidate(state);
@@ -784,10 +796,14 @@ SoSeparator::GLRenderInPath(SoGLRenderAction * action)
       SoNode * inpath = childarray[childidx];
       action->pushCurPath(childidx, inpath);
       if (!action->abortNow()) {
+#ifdef HAVE_NODEKITS
         SoNodeProfiling profiling;
         profiling.preTraversal(action);
+#endif
         inpath->GLRenderInPath(action); // traversal call
+#ifdef HAVE_NODEKITS
         profiling.postTraversal(action);
+#endif
       }
       else {
         SoCacheElement::invalidate(state);
@@ -973,11 +989,13 @@ SoSeparatorP::doCull(SoSeparatorP * thisp, SoState * state,
 // temporarily disabled. setNodeFlag() needs current path, which is
 // unavailable here
   if (outside && SoProfiler::isEnabled()) {
+#ifdef HAVE_NODEKITS
     SoProfilerElement * elt = SoProfilerElement::get(state);
     if (elt) {
       // FIXME: need current path to set this flag. move outside cullTest()?
       // elt->getProfilingData().setNodeFlag(PUBLIC(thisp)->getCurPath(), SbProfilingData::CULLED_FLAG, TRUE);
     }
+#endif
   }
 #endif
 

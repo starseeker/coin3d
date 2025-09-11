@@ -68,7 +68,7 @@
 #include <Inventor/nodes/SoMaterial.h>
 #include <Inventor/misc/SoChildList.h>
 #include <Inventor/sensors/SoFieldSensor.h>
-#include <Inventor/SoNodeKitPath.h>
+
 
 #if COIN_DEBUG
 #include <Inventor/errors/SoDebugError.h>
@@ -198,24 +198,7 @@ SoDirectionalLightManip::replaceNode(SoPath * path)
     return FALSE;
   }
   SoNode * tail = path->getTail();
-  if (tail->isOfType(SoBaseKit::getClassTypeId())) {
-    SoBaseKit * kit = (SoBaseKit *) ((SoNodeKitPath *)path)->getTail();
-    SbString partname = kit->getPartString(path);
-    if (partname != "") {
-      SoDirectionalLight * oldpart = (SoDirectionalLight *) kit->getPart(partname, TRUE);
-      if (oldpart != NULL) {
-        this->attachSensors(FALSE);
-        this->transferFieldValues(oldpart, this);
-        this->attachSensors(TRUE);
-        SoDirectionalLightManip::fieldSensorCB(this, NULL);
-        kit->setPart(partname, this);
-        return TRUE;
-      }
-      else {
-        return FALSE;
-      }
-    }
-  }
+  // NodeKit functionality removed - handle direct node manipulation only
   if (fullpath->getLength() < 2) {
 #if COIN_DEBUG
     SoDebugError::post("SoDirectionalLightManip::replaceNode",

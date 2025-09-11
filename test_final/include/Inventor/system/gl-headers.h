@@ -1,3 +1,7 @@
+/* include/Inventor/system/gl-headers.h. Generated from gl-headers.h.cmake.in by CMake. */
+#ifndef COIN_GLHEADERS_H
+#define COIN_GLHEADERS_H
+
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
  * All rights reserved.
@@ -30,13 +34,19 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
+/*
+ * This header file is supposed to take care of all operating system
+ * dependent anomalies connected to including the gl.h header file.
+ */
 
-// *************************************************************************
+/* This define is at least needed before inclusion of the header files
+   that are part of NVidia's Linux drivers v41.91. Without it, none of
+   the extension and OpenGL 1.1+ function prototypes will be set up. */
+#define GL_GLEXT_PROTOTYPES 1
 
-#include "actions/SoActionP.h"
+/* #include <windows.h> - not needed on system */
+#include <GL/osmesa.h>
+/* #include <GL/glu.h> - GLU not typically used with OSMesa */
+#include <GL/glext.h>
 
-// Profiler functionality removed - nodekit elimination
-
-// *************************************************************************
-
-#undef PRIVATE
+#endif /* ! COIN_GLHEADERS_H */

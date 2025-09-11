@@ -30,13 +30,37 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
+#ifndef COIN_INTERNAL
+#error this is a private header file
+#endif /* !COIN_INTERNAL */
 
-// *************************************************************************
+#ifndef SO_DIRSPOTLIGHT_GLSL_H
+#define SO_DIRSPOTLIGHT_GLSL_H
 
-#include "actions/SoActionP.h"
+static const char DIRSPOTLIGHT_shadersource[] =
+  "float DirSpotLight(in vec3 dir,\n"
+  "                   in vec3 light_position,\n"
+  "                   in vec3 eye,\n"
+  "                   in vec3 ecPosition3,\n"
+  "                   in vec3 normal,\n"
+  "                   inout vec4 diffuse,\n"
+  "                   inout vec4 specular)\n"
+  "{\n"
+  "  float nDotVP;\n"
+  "  float nDotHV;\n"
+  "  float pf;\n"
+  "  vec3 hv = normalize(eye + dir);\n"
+  "  nDotVP = max(0.0, dot(normal, dir));\n"
+  "  nDotHV = max(0.0, dot(normal, hv));\n"
+  "  float shininess = gl_FrontMaterial.shininess;\n"
+  "  if (nDotVP == 0.0)\n"
+  "    pf = 0.0;\n"
+  "  else\n"
+  "    pf = pow(nDotHV, shininess);\n"
+  "\n"
+  "  diffuse *= nDotVP;\n"
+  "  specular *= pf;\n"
+  "  return length(light_position - ecPosition3);\n"
+  "}";
 
-// Profiler functionality removed - nodekit elimination
-
-// *************************************************************************
-
-#undef PRIVATE
+#endif /* ! SO_DIRSPOTLIGHT_GLSL_H */

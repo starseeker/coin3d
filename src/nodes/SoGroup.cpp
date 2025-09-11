@@ -214,7 +214,9 @@
 #include "io/SoWriterefCounter.h"
 
 #include <Inventor/annex/Profiler/SoProfiler.h>
+#ifdef HAVE_NODEKITS
 #include "profiler/SoNodeProfiling.h"
+#endif
 
 // *************************************************************************
 
@@ -233,7 +235,9 @@ public:
   typedef void GLRenderFunc(SoGroup *, SoNode *, SoGLRenderAction *);
   static GLRenderFunc * glrenderfunc;
   static void childGLRender(SoGroup * thisp, SoNode * child, SoGLRenderAction * action);
+#ifdef HAVE_NODEKITS
   static void childGLRenderProfiler(SoGroup * thisp, SoNode * child, SoGLRenderAction * action);
+#endif
 };
 
 SoGroupP::GLRenderFunc * SoGroupP::glrenderfunc = NULL;
@@ -529,9 +533,11 @@ SoGroup::initClass(void)
   // for the built-in Coin profiler. set up the functionptr to use, so
   // we don't have any overhead when profiling is off:
   SoGroupP::glrenderfunc = SoGroupP::childGLRender;
+#ifdef HAVE_NODEKITS
   if (SoProfiler::isEnabled()) {
     SoGroupP::glrenderfunc = SoGroupP::childGLRenderProfiler;
   }
+#endif
 }
 
 // *************************************************************************
@@ -592,21 +598,25 @@ SoGroup::getBoundingBox(SoGetBoundingBoxAction * action)
 // *************************************************************************
 
 void
-SoGroupP::childGLRender(SoGroup * COIN_UNUSED_ARG(thisp), SoNode * child, SoGLRenderAction * action)
+SoGroupP::childGLRender(SoGroup * thisp, SoNode * child, SoGLRenderAction * action)
 {
+  (void)thisp; // unused parameter
   child->GLRender(action);
 }
 
 // This function is called for each child to traverse, and
 // action->getCurPath() is already updated at this point.
+#ifdef HAVE_NODEKITS
 void
-SoGroupP::childGLRenderProfiler(SoGroup * COIN_UNUSED_ARG(thisp), SoNode * child, SoGLRenderAction * action)
+SoGroupP::childGLRenderProfiler(SoGroup * thisp, SoNode * child, SoGLRenderAction * action)
 {
+  (void)thisp; // unused parameter
   SoNodeProfiling profiling;
   profiling.preTraversal(action);
   child->GLRender(action);
   profiling.postTraversal(action);
 }
+#endif
 
 // Doc from superclass.
 void

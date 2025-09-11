@@ -47,6 +47,11 @@ endmacro()
 # to separate test source files.
 file(GLOB_RECURSE COIN_SRC_FILES RELATIVE ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/src/*.cpp)
 foreach(INPUTFILE ${COIN_SRC_FILES})
+	# Skip dragger files if draggers are disabled
+	if(NOT HAVE_DRAGGERS AND "${INPUTFILE}" MATCHES "src/draggers/")
+		# Skip this file
+		continue()
+	endif()
 	create_testsuite(${INPUTFILE})
 endforeach()
 

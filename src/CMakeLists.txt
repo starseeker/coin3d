@@ -44,8 +44,8 @@ set(SUBDIRS
   actions base bundles caches details elements
   engines errors events fields fonts glue io misc rendering lists
   nodes shapenodes projectors sensors upgraders
-  collision shadows geo threads shaders profiler
-  hardcopy navigation draggers
+  collision shadows geo threads shaders
+  hardcopy navigation
 )
 # TODO - see how to make draggers toolkit independent
 # TODO - see what we need from manips
@@ -80,7 +80,6 @@ source_group("Header Files\\Inventor\\C\\XML"                    REGULAR_EXPRESS
 source_group("Header Files\\Inventor\\caches"                    REGULAR_EXPRESSION ".*/include/Inventor/caches/.*[.]h")
 source_group("Header Files\\Inventor\\collision"                 REGULAR_EXPRESSION ".*/include/Inventor/collision/.*[.]h")
 source_group("Header Files\\Inventor\\details"                   REGULAR_EXPRESSION ".*/include/Inventor/details/.*[.]h")
-source_group("Header Files\\Inventor\\draggers"                  REGULAR_EXPRESSION ".*/include/Inventor/draggers/.*[.]h")
 source_group("Header Files\\Inventor\\elements"                  REGULAR_EXPRESSION ".*/include/Inventor/elements/.*[.]h")
 source_group("Header Files\\Inventor\\engines"                   REGULAR_EXPRESSION ".*/include/Inventor/engines/.*[.]h")
 source_group("Header Files\\Inventor\\errors"                    REGULAR_EXPRESSION ".*/include/Inventor/errors/.*[.]h")
@@ -107,7 +106,6 @@ source_group("Source Files\\bundles"                   REGULAR_EXPRESSION ".*/sr
 source_group("Source Files\\caches"                    REGULAR_EXPRESSION ".*/src/caches/.*[.](h|c|cpp)")
 source_group("Source Files\\collision"                 REGULAR_EXPRESSION ".*/src/collision/.*[.](h|c|cpp)")
 source_group("Source Files\\details"                   REGULAR_EXPRESSION ".*/src/details/.*[.](h|c|cpp)")
-source_group("Source Files\\draggers"                  REGULAR_EXPRESSION ".*/src/draggers/.*[.](h|c|cpp)")
 source_group("Source Files\\elements"                  REGULAR_EXPRESSION ".*/src/elements/.*[.](h|c|cpp)")
 source_group("Source Files\\elements\\GL"              REGULAR_EXPRESSION ".*/src/elements/GL/.*[.](h|c|cpp)")
 source_group("Source Files\\engines"                   REGULAR_EXPRESSION ".*/src/engines/.*[.](h|c|cpp)")
@@ -180,7 +178,6 @@ else()
     $<TARGET_OBJECTS:misc>
     $<TARGET_OBJECTS:navigation>
     $<TARGET_OBJECTS:nodes>
-    $<TARGET_OBJECTS:profiler>
     $<TARGET_OBJECTS:projectors>
     $<TARGET_OBJECTS:rendering>
     $<TARGET_OBJECTS:sensors>
@@ -190,6 +187,11 @@ else()
     $<TARGET_OBJECTS:threads>
     $<TARGET_OBJECTS:upgraders>
   )
+endif()
+
+# Set the output name based on backend selection
+if(DEFINED COIN3D_OUTPUT_NAME)
+  set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME ${COIN3D_OUTPUT_NAME})
 endif()
 
 if(WIN32)
@@ -271,7 +273,6 @@ if(COIN_BUILD_MAC_FRAMEWORK)
 # ############################################################################
 # Add framework data files
 # ############################################################################
-  coin_set_macosx_properties("${CMAKE_CURRENT_SOURCE_DIR}/draggers/defaults;${CMAKE_CURRENT_BINARY_DIR}/draggers/defaults" "Resources" "${COMMON_RESOURCES}")
 
 # ############################################################################
 # Add framework documentation files
@@ -314,9 +315,15 @@ if(COIN_BUILD_MAC_FRAMEWORK)
 # Install framework target
 # ############################################################################
 
-  install(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME}
-    FRAMEWORK DESTINATION . COMPONENT development
-  )
+  if(COIN3D_USE_OSMESA AND TARGET osmesa)
+    install(TARGETS ${PROJECT_NAME} osmesa EXPORT ${PROJECT_NAME}
+      FRAMEWORK DESTINATION . COMPONENT development
+    )
+  else()
+    install(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME}
+      FRAMEWORK DESTINATION . COMPONENT development
+    )
+  endif()
 
 else()
 
@@ -329,37 +336,56 @@ else()
   install(FILES ${PROJECT_SOURCE_DIR}/include/SoWinEnterScope.h ${PROJECT_SOURCE_DIR}/include/SoWinLeaveScope.h ${PROJECT_SOURCE_DIR}/include/SoDebug.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} COMPONENT development)
 
 # ############################################################################
-# Install dragger .iv files and profiler visualization files
+# Install dragger .iv files
 # ############################################################################
 
-  install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/draggers/defaults/ DESTINATION ${CMAKE_INSTALL_DATADIR}/coin/draggers COMPONENT development FILES_MATCHING PATTERN *.iv)
-  install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/profiler/visualizations/ DESTINATION ${CMAKE_INSTALL_DATADIR}/coin/profiler COMPONENT development FILES_MATCHING PATTERN *.svg)
-  
 # ############################################################################
 # Install target
 # ############################################################################
 
   if(NOT CMAKE_VERSION VERSION_LESS 3.12)
-    install(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME}
-      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT runtime
-      LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT runtime NAMELINK_COMPONENT development
-      ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT development
-      RESOURCE DESTINATION ${CMAKE_INSTALL_DATADIR} COMPONENT development
-    )
+    if(COIN3D_USE_OSMESA AND TARGET osmesa)
+      install(TARGETS ${PROJECT_NAME} osmesa EXPORT ${PROJECT_NAME}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT runtime
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT runtime NAMELINK_COMPONENT development
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT development
+        RESOURCE DESTINATION ${CMAKE_INSTALL_DATADIR} COMPONENT development
+      )
+    else()
+      install(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT runtime
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT runtime NAMELINK_COMPONENT development
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT development
+        RESOURCE DESTINATION ${CMAKE_INSTALL_DATADIR} COMPONENT development
+      )
+    endif()
     if(COIN_BUILD_SHARED_LIBS)
       if(MSVC)
         install(FILES $<TARGET_PDB_FILE:${PROJECT_NAME}> DESTINATION ${CMAKE_INSTALL_BINDIR} CONFIGURATIONS Debug RelWithDebInfo COMPONENT debug)
       endif()
     endif()
   else()
-    install(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME}
-      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT runtime
-      LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT runtime NAMELINK_SKIP
-      ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT development
-      RESOURCE DESTINATION ${CMAKE_INSTALL_DATADIR} COMPONENT development
-    )
+    if(COIN3D_USE_OSMESA AND TARGET osmesa)
+      install(TARGETS ${PROJECT_NAME} osmesa EXPORT ${PROJECT_NAME}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT runtime
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT runtime NAMELINK_SKIP
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT development
+        RESOURCE DESTINATION ${CMAKE_INSTALL_DATADIR} COMPONENT development
+      )
+    else()
+      install(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT runtime
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT runtime NAMELINK_SKIP
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT development
+        RESOURCE DESTINATION ${CMAKE_INSTALL_DATADIR} COMPONENT development
+      )
+    endif()
     if(COIN_BUILD_SHARED_LIBS)
-      install(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME} LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT development NAMELINK_ONLY)
+      if(COIN3D_USE_OSMESA AND TARGET osmesa)
+        install(TARGETS ${PROJECT_NAME} osmesa EXPORT ${PROJECT_NAME} LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT development NAMELINK_ONLY)
+      else()
+        install(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME} LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT development NAMELINK_ONLY)
+      endif()
       if(MSVC)
         install(FILES $<TARGET_PDB_FILE:${PROJECT_NAME}> DESTINATION ${CMAKE_INSTALL_BINDIR} CONFIGURATIONS Debug RelWithDebInfo COMPONENT debug)
       endif()

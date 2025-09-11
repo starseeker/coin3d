@@ -58,11 +58,6 @@
 #include <Inventor/nodes/SoExtSelection.h>
 #include <Inventor/nodes/SoSurroundScale.h>
 
-#include <Inventor/nodekits/SoNodeKit.h>
-#ifdef HAVE_NODEKITS
-#include <Inventor/nodekits/SoInteractionKit.h>
-#endif // HAVE_NODEKITS
-
 #ifdef HAVE_DRAGGERS
 #include <Inventor/draggers/SoDragger.h>
 #endif // HAVE_DRAGGERS
@@ -92,13 +87,13 @@ static void interaction_cleanup(void)
 
 /*!
   Calls the initClass() method of these classes: SoAntiSquish,
-  SoSelection, SoExtSelection, SoSurroundScale, SoInteractionKit,
+  SoSelection, SoExtSelection, SoSurroundScale,
   SoDragger, SoClipPlaneManip, SoDirectionalLightManip,
   SoPointLightManip, SoSpotLightManip, SoTransformManip,
   SoCenterballManip, SoHandleBoxManip, SoJackManip, SoTabBoxManip,
   SoTrackballManip, SoTransformBoxManip, SoTransformerManip.
 
-  Note that this method calls SoDB::init() and SoNodeKit::init() to
+  Note that this method calls SoDB::init() to
   make sure all classes that the interaction functionality depends on
   have been initialized.
 
@@ -113,7 +108,7 @@ static void interaction_cleanup(void)
   \code
   int main(int argc, char ** argv )
   {
-    // SoQt::init() calls SoDB::init(), SoNodeKit::init() and
+    // SoQt::init() calls SoDB::init() and
     // SoInteraction::init().
     QWidget * window = SoQt::init( argv[0] );
 
@@ -134,11 +129,6 @@ SoInteraction::init(void)
   SoSelection::initClass();
   SoExtSelection::initClass();
   SoSurroundScale::initClass();
-
-  SoNodeKit::init();
-#ifdef HAVE_NODEKITS
-  SoInteractionKit::initClass();
-#endif // HAVE_NODEKITS
 
 #ifdef HAVE_DRAGGERS
   SoDragger::initClass();
