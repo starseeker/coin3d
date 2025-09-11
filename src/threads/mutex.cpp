@@ -59,8 +59,8 @@
 #include <cstddef>
 #include <cerrno>
 #include <cfloat>
+#include <chrono>
 
-#include <Inventor/C/base/time.h>
 #include <Inventor/C/errors/debugerror.h>
 
 #include "threads/mutexp.h"
@@ -148,6 +148,15 @@ static int coin_debug_mutex_count(void)
   return d;
 }
 
+/* Helper function to get current time as double (replacement for cc_time_gettimeofday) */
+static double get_current_time_seconds(void) 
+{
+  auto now = std::chrono::system_clock::now();
+  auto duration = now.time_since_epoch();
+  auto seconds = std::chrono::duration_cast<std::chrono::duration<double>>(duration);
+  return seconds.count();
+}
+
 /*! Constructs a mutex. */
 cc_mutex *
 cc_mutex_construct(void)
@@ -192,12 +201,12 @@ cc_mutex_lock(cc_mutex * mutex)
 {
   int ok;
   SbBool timeit;
-  cc_time start = 0.0;
+  double start = 0.0;
 
   assert(mutex != NULL);
 
   timeit = (maxmutexlocktime != DBL_MAX) || (reportmutexlocktiming != DBL_MAX);
-  if (timeit) { start = cc_time_gettimeofday(); }
+  if (timeit) { start = get_current_time_seconds(); }
 
 #ifdef USE_W32THREAD
   ok = cc_mutex_TryEnterCriticalSection ? win32_cs_lock(mutex) : win32_mutex_lock(mutex);
@@ -211,7 +220,7 @@ cc_mutex_lock(cc_mutex * mutex)
      related to locks that are held too long. (Typically resulting in
      unresponsive user interaction / lags.)  */
   if (timeit) {
-    const cc_time spent = cc_time_gettimeofday() - start;
+    const double spent = get_current_time_seconds() - start;
 
     if (spent >= reportmutexlocktiming) {
       /* Can't use cc_debugerror_postinfo() here, because we get a

@@ -68,9 +68,9 @@
 #endif // HAVE_WINDOWS_H
 
 #include <Inventor/errors/SoDebugError.h>
-#include <Inventor/C/base/time.h>
 #include <Inventor/C/tidbits.h>
 #include <Inventor/C/threads/thread.h>
+#include <chrono>
 
 #include "coindefs.h"
 
@@ -147,7 +147,10 @@ SbTime::SbTime(const struct timeval * const tv)
 SbTime
 SbTime::getTimeOfDay(void)
 {
-  SbTime t(cc_time_gettimeofday());
+  auto now = std::chrono::system_clock::now();
+  auto duration = now.time_since_epoch();
+  auto seconds = std::chrono::duration_cast<std::chrono::duration<double>>(duration);
+  SbTime t(seconds.count());
   return t;
 }
 
