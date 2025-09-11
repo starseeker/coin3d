@@ -50,6 +50,7 @@
 
 #include "tidbitsp.h"
 #include "threads/threadsutilp.h"
+#include "misc/SoEnvironment.h"
 
 /* need this before superglu.h, since that file includes GL/gl.h
    without any windows.h, which may fail on Microsoft Windows dev systems */
@@ -87,7 +88,7 @@ GLUWrapper_debug(void)
 {
   static int dbg = -1;
   if (dbg == -1) {
-    const char * env = coin_getenv("COIN_DEBUG_GLU_INFO");
+    const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_GLU_INFO");
     dbg = (env && (atoi(env) > 0)) ? 1 : 0;
   }
   return dbg;
@@ -383,7 +384,7 @@ GLUWrapper(void)
       "libGLU.so.1", /* Some Debian distributions do not supply a symlink for libGLU.so, only libGLU.so.1 */
       NULL
     };
-    possiblelibnames[0] = coin_getenv("COIN_GLU_LIBNAME");
+    possiblelibnames[0] = CoinInternal::getEnvironmentVariableRaw("COIN_GLU_LIBNAME");
     int idx = possiblelibnames[0] ? 0 : 1;
 
     while (!GLU_libhandle && possiblelibnames[idx]) {
@@ -499,7 +500,7 @@ GLUWrapper(void)
      gluNurbsSurface() function to dump the input arguments as debug
      output. Useful for debugging NURBS problems. */
   {
-    const char * env = coin_getenv("COIN_DEBUG_GLUNURBSSURFACE");
+    const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_GLUNURBSSURFACE");
     if (env && (atoi(env) > 0)) {
       gi->gluNurbsSurface_in_GLU = gi->gluNurbsSurface;
       if (gi->gluNurbsSurface != NULL) { gi->gluNurbsSurface = (gluNurbsSurface_t)GLUWrapper_gluNurbsSurface; }
@@ -513,7 +514,7 @@ GLUWrapper(void)
      when an older GLU DLL is installed on a system.
   */
   {
-    const GLubyte * versionstr = (const GLubyte *)coin_getenv("COIN_DEBUG_GLU_VERSION");
+    const GLubyte * versionstr = (const GLubyte *)CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_GLU_VERSION");
     if (!versionstr) { versionstr = gi->gluGetString(GLU_VERSION); }
     GLUWrapper_set_version(versionstr);
   }
