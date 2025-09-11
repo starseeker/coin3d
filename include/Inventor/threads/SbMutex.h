@@ -34,26 +34,26 @@
 \**************************************************************************/
 
 #include <Inventor/SbBasic.h>
-#include <Inventor/C/threads/mutex.h>
+#include <mutex>
 
 class SbMutex {
 public:
-  SbMutex(void) { this->mutex = cc_mutex_construct(); }
-  ~SbMutex() { cc_mutex_destruct(this->mutex); }
+  SbMutex(void) = default;
+  ~SbMutex() = default;
 
   int lock(void) {
-    cc_mutex_lock(this->mutex);
+    this->mutex.lock();
     /* Useless return, here just for compatibility with TGS'
        SbThreadMutex API: */
     return 0;
   }
 
   SbBool tryLock(void) {
-    return cc_mutex_try_lock(this->mutex) == CC_OK;
+    return this->mutex.try_lock();
   }
 
   int unlock(void) {
-    cc_mutex_unlock(this->mutex);
+    this->mutex.unlock();
     /* Useless return, here just for compatibility with TGS'
        SbThreadMutex API: */
     return 0;
@@ -63,8 +63,11 @@ private:
   // FIXME: we need access to C mutex structure. Should we use friend,
   // or should we add a new public method to get to this structure?
   // pederb, 2002-06-26
+  // NOTE: Migrated to C++17 std::mutex. For SbCondVar compatibility,
+  // we provide access via friend class.
   friend class SbCondVar;
-  cc_mutex * mutex;
+  friend class SbThreadAutoLock;
+  std::mutex mutex;
 };
 
 

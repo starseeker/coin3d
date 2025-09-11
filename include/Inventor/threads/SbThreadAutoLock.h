@@ -35,28 +35,31 @@
 
 #include <Inventor/threads/SbThreadMutex.h>
 #include <Inventor/threads/SbMutex.h>
+#include <mutex>
+#include <memory>
 
 class SbThreadAutoLock
 {
 protected:
   SbMutex * mutex;
   SbThreadMutex * recmutex;
+  std::unique_ptr<std::lock_guard<std::mutex>> mutex_lock;
+  std::unique_ptr<std::lock_guard<std::recursive_mutex>> recmutex_lock;
 
 public:
   SbThreadAutoLock(SbMutex * mutexptr) {
     this->mutex = mutexptr;
-    this->mutex->lock();
-    this->recmutex = NULL;
+    this->mutex_lock = std::make_unique<std::lock_guard<std::mutex>>(mutexptr->mutex);
+    this->recmutex = nullptr;
   }
   SbThreadAutoLock(SbThreadMutex * mutexptr) {
     this->recmutex = mutexptr;
-    this->recmutex->lock();
-    this->mutex = NULL;
+    this->recmutex_lock = std::make_unique<std::lock_guard<std::recursive_mutex>>(mutexptr->mutex);
+    this->mutex = nullptr;
   }
 
   ~SbThreadAutoLock() {
-    if (this->mutex) this->mutex->unlock();
-    if (this->recmutex) this->recmutex->unlock();
+    // std::lock_guard automatically unlocks in destructor
   }
 };
 
