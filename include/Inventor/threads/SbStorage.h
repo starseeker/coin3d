@@ -52,6 +52,10 @@ public:
 
 private:
   cc_storage * storage;
+
+  // NOTE: For now, keeping original C implementation to avoid complex thread_local
+  // registry issues. For a future C++20+ migration, consider implementing with
+  // std::jthread and proper thread_local storage with enumeration support.
 };
 
 #endif // !COIN_SBSTORAGE_H

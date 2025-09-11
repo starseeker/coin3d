@@ -33,35 +33,97 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#include <Inventor/C/threads/fifo.h>
+#include <Inventor/SbBasic.h>
+#include <deque>
+#include <mutex>
+#include <condition_variable>
+#include <algorithm>
 
 class SbFifo {
 public:
-  SbFifo(void) { this->fifo = cc_fifo_new(); }
-  ~SbFifo(void) { cc_fifo_delete(this->fifo); }
+  SbFifo(void) = default;
+  ~SbFifo(void) = default;
 
-  void assign(void * ptr, uint32_t type)
-    { cc_fifo_assign(this->fifo, ptr, type); }
-  void retrieve(void *& ptr, uint32_t &type)
-    { cc_fifo_retrieve(this->fifo, &ptr, &type); }
-  SbBool tryRetrieve(void *& ptr, uint32_t & type)
-    { return cc_fifo_try_retrieve(this->fifo, &ptr, &type); }
+  void assign(void * ptr, uint32_t type) {
+    std::lock_guard<std::mutex> lock(mutex);
+    queue.emplace_back(ptr, type);
+    cv.notify_one();
+  }
+  
+  void retrieve(void *& ptr, uint32_t &type) {
+    std::unique_lock<std::mutex> lock(mutex);
+    cv.wait(lock, [this] { return !queue.empty(); });
+    
+    auto item = queue.front();
+    queue.pop_front();
+    ptr = item.first;
+    type = item.second;
+  }
+  
+  SbBool tryRetrieve(void *& ptr, uint32_t & type) {
+    std::lock_guard<std::mutex> lock(mutex);
+    if (queue.empty()) {
+      return FALSE;
+    }
+    
+    auto item = queue.front();
+    queue.pop_front();
+    ptr = item.first;
+    type = item.second;
+    return TRUE;
+  }
 
-  unsigned int size(void) const { return cc_fifo_size(this->fifo); }
+  unsigned int size(void) const { 
+    std::lock_guard<std::mutex> lock(mutex);
+    return static_cast<unsigned int>(queue.size()); 
+  }
 
-  void lock(void) const { cc_fifo_lock(this->fifo); }
-  void unlock(void) const { cc_fifo_unlock(this->fifo); }
+  void lock(void) const { mutex.lock(); }
+  void unlock(void) const { mutex.unlock(); }
 
   // lock/unlock only needed around the following operations:
-  SbBool peek(void *& item, uint32_t & type) const
-    { return cc_fifo_peek(this->fifo, &item, &type); }
-  SbBool contains(void * item) const
-    { return cc_fifo_contains(this->fifo, item); }
-  SbBool reclaim(void * item)
-    { return cc_fifo_reclaim(this->fifo, item); }
+  SbBool peek(void *& item, uint32_t & type) const {
+    // Note: mutex should already be locked by caller
+    if (queue.empty()) {
+      return FALSE;
+    }
+    auto front_item = queue.front();
+    item = front_item.first;
+    type = front_item.second;
+    return TRUE;
+  }
+  
+  SbBool contains(void * item) const {
+    // Note: mutex should already be locked by caller
+    return std::any_of(queue.begin(), queue.end(),
+                      [item](const std::pair<void*, uint32_t>& entry) {
+                        return entry.first == item;
+                      });
+  }
+  
+  SbBool reclaim(void * item) {
+    // Note: mutex should already be locked by caller
+    auto it = std::find_if(queue.begin(), queue.end(),
+                          [item](const std::pair<void*, uint32_t>& entry) {
+                            return entry.first == item;
+                          });
+    if (it != queue.end()) {
+      queue.erase(it);
+      return TRUE;
+    }
+    return FALSE;
+  }
 
 private:
-  cc_fifo * fifo;
+  mutable std::mutex mutex;
+  std::condition_variable cv;
+  std::deque<std::pair<void*, uint32_t>> queue;
+  
+  // NOTE: Custom C++17 thread-safe FIFO implementation since std::concurrent_queue
+  // is not available in C++17. Uses std::deque + mutex + condition_variable
+  // to provide thread-safe FIFO semantics with blocking/non-blocking operations.
+  // For C++20+ migration: Consider using specialized concurrent data structures
+  // or lockfree queues for better performance.
 };
 
 #endif // !COIN_SBFIFO_H
