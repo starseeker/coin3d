@@ -53,21 +53,19 @@
 #include <Inventor/navigation/SoScXMLMiscTarget.h>
 #include <Inventor/navigation/SoScXMLFlightControlTarget.h>
 #include <Inventor/navigation/SoScXMLMotionTarget.h>
-#include <Inventor/C/threads/mutex.h>
-#include "threads/threadsutilp.h"
+#include <mutex>
 
 class SoScXMLNavigation::PImpl {
 public:
-  static void * syncmutex;
+  static std::mutex syncmutex;
 };
 
-void * SoScXMLNavigation::PImpl::syncmutex = NULL;
+std::mutex SoScXMLNavigation::PImpl::syncmutex;
 
 void
 SoScXMLNavigation::initClasses(void)
 {
-  assert(PImpl::syncmutex == NULL);
-  CC_MUTEX_CONSTRUCT(PImpl::syncmutex);
+  /* std::mutex automatically initialized */
 
   SoScXMLNavigationTarget::initClass();
   SoScXMLRotateTarget::initClass();
@@ -120,18 +118,17 @@ SoScXMLNavigation::cleanClasses(void)
   SoScXMLMotionTarget::cleanClass();
   SoScXMLNavigationTarget::cleanClass();
 
-  CC_MUTEX_DESTRUCT(PImpl::syncmutex);
-  PImpl::syncmutex = NULL;
+  /* std::mutex destructor automatically called */
 }
 
 void
 SoScXMLNavigation::syncLock(void)
 {
-  CC_MUTEX_LOCK(PImpl::syncmutex);
+  PImpl::syncmutex.lock();
 }
 
 void
 SoScXMLNavigation::syncUnlock(void)
 {
-  CC_MUTEX_UNLOCK(PImpl::syncmutex);
+  PImpl::syncmutex.unlock();
 }

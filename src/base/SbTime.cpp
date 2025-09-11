@@ -69,7 +69,8 @@
 
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/C/tidbits.h>
-#include <Inventor/C/threads/thread.h>
+#include <thread>
+#include <chrono>
 #include <chrono>
 
 #include "coindefs.h"
@@ -216,14 +217,12 @@ SbTime::max(void)
 /*!
   Suspends the current thread for \a msec milliseconds.
   
-  \sa cc_sleep().
-
   \since Coin 3.0
 */
 void
 SbTime::sleep(int msec)
 {
-  cc_sleep(msec/1000.0f);
+  std::this_thread::sleep_for(std::chrono::milliseconds(msec));
 }
 
 /*!
