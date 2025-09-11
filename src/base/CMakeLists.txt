@@ -6,7 +6,6 @@ set(COIN_BASE_FILES
 	list.cpp
 	memalloc.cpp
 	rbptree.cpp
-	time.cpp
 	string.cpp
 	dynarray.cpp
 	namemap.cpp

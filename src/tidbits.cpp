@@ -156,9 +156,8 @@ extern "C" {
 /* ********************************************************************** */
 
 #ifdef COIN_THREADSAFE
-#include <Inventor/C/threads/mutex.h>
-#include "threads/mutexp.h"
-static cc_mutex * atexit_list_monitor = NULL;
+#include <mutex>
+static std::mutex atexit_list_monitor;
 #endif /* COIN_THREADSAFE */
 
 
@@ -173,9 +172,7 @@ void
 coin_init_tidbits(void)
 {
   const char * env;
-#ifdef COIN_THREADSAFE
-  atexit_list_monitor = cc_mutex_construct();
-#endif /* COIN_THREADSAFE */
+  /* no need to initialize std::mutex */
 
   env  = coin_getenv("COIN_DEBUG_EXTRA");
   if (env && atoi(env) == 1) {
@@ -1127,11 +1124,7 @@ coin_atexit_cleanup(void)
 
   isexiting = TRUE;
 
-  /* delete mutex here to make sure this is done before the threading subsystem is shut down */
-#ifdef COIN_THREADSAFE
-  cc_mutex_destruct(atexit_list_monitor);
-  atexit_list_monitor = NULL;
-#endif /* COIN_THREADSAFE */
+  /* std::mutex destructor automatically called */
 
   debugstr = coin_getenv("COIN_DEBUG_CLEANUP");
   debug = debugstr && (atoi(debugstr) > 0);
@@ -1196,13 +1189,7 @@ coin_atexit_func(const char * name, coin_atexit_f * f, coin_atexit_priorities pr
      threads. So for that extra bit of undocumented, unofficial,
      under-the-table mt-safety, this should take care of it. */
 
-  /*
-    Need this test, since the thread system calls coin_atexit
-    before tidbits is initialized.
-  */
-  if (atexit_list_monitor) {
-    cc_mutex_lock(atexit_list_monitor);
-  }
+  atexit_list_monitor.lock();
 #endif /* COIN_THREADSAFE */
 
   assert(!isexiting && "tried to attach an atexit function while exiting");
@@ -1243,9 +1230,7 @@ coin_atexit_func(const char * name, coin_atexit_f * f, coin_atexit_priorities pr
   }
 
 #ifdef COIN_THREADSAFE
-  if (atexit_list_monitor) {
-    cc_mutex_unlock(atexit_list_monitor);
-  }
+  atexit_list_monitor.unlock();
 #endif /* COIN_THREADSAFE */
 }
 

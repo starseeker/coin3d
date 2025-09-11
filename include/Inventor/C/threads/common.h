@@ -60,7 +60,6 @@ extern "C" {
   typedef struct cc_condvar cc_condvar;
   typedef struct cc_storage cc_storage;
   typedef struct cc_fifo cc_fifo;
-  typedef struct cc_barrier cc_barrier;
   typedef struct cc_recmutex cc_recmutex;
 
   /* used by rwmutex - read_precedence is default */

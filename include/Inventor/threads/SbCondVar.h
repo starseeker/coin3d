@@ -35,26 +35,38 @@
 
 #include <Inventor/SbBasic.h>
 #include <Inventor/SbTime.h>
-#include <Inventor/C/threads/condvar.h>
 #include <Inventor/threads/SbMutex.h>
+#include <condition_variable>
+#include <chrono>
 
 class SbCondVar {
 public:
-  SbCondVar(void) { this->condvar = cc_condvar_construct(); }
-  ~SbCondVar(void) { cc_condvar_destruct(this->condvar); }
+  SbCondVar(void) = default;
+  ~SbCondVar(void) = default;
 
   SbBool wait(SbMutex & mutex) { 
-    return cc_condvar_wait(this->condvar, mutex.mutex) == CC_OK; 
+    std::unique_lock<std::mutex> lock(mutex.mutex, std::adopt_lock);
+    this->condvar.wait(lock);
+    lock.release(); // Don't unlock on destruction since we adopted the lock
+    return TRUE; 
   }
   SbBool timedWait(SbMutex & mutex, SbTime period) {
-    return cc_condvar_timed_wait(this->condvar, mutex.mutex, period.getValue()) == CC_OK;
+    std::unique_lock<std::mutex> lock(mutex.mutex, std::adopt_lock);
+    
+    // Convert SbTime to std::chrono::duration
+    auto timeout_duration = std::chrono::milliseconds(period.getMsecValue());
+    
+    auto result = this->condvar.wait_for(lock, timeout_duration);
+    lock.release(); // Don't unlock on destruction since we adopted the lock
+    
+    return (result == std::cv_status::no_timeout);
   }
   
-  void wakeOne(void) { cc_condvar_wake_one(this->condvar); }
-  void wakeAll(void) { cc_condvar_wake_all(this->condvar); }
+  void wakeOne(void) { this->condvar.notify_one(); }
+  void wakeAll(void) { this->condvar.notify_all(); }
 
 private:
-  cc_condvar * condvar;
+  std::condition_variable condvar;
 };
 
 #endif // !COIN_SBCONDVAR_H

@@ -98,7 +98,7 @@
 #include <Inventor/annex/HardCopy/SoHardCopy.h>
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/annex/FXViz/nodes/SoShadowGroup.h>
-#include <Inventor/navigation/SoScXMLNavigation.h>
+
 #include <Inventor/misc/SoGLDriverDatabase.h>
 #include <Inventor/misc/CoinResources.h>
 #include <Inventor/misc/SoGeo.h>
@@ -342,7 +342,7 @@ SoDB::init(void)
   SoShadowGroup::init();
   SoGeo::init();
 
-  SoScXMLNavigation::initClasses();
+
 
   // Register all valid file format headers.
   SoDB::registerHeader(SbString("#Inventor V2.1 ascii   "), FALSE, 2.1f,
@@ -376,10 +376,6 @@ SoDB::init(void)
   // files.  Should spit out a warning, and a helpful message on how
   // it is possible to convert old files, and then exit import.
   // 20010925 mortene.
-  //
-  // UPDATE 20040909 mortene: pederb has implemented the "upgraders"
-  // mechanism, and at least a few upgrader nodes for V1.0
-  // stuff. Should investigate the exact status of this.
   SoDB::registerHeader(SbString("#Inventor V1.0 ascii   "), FALSE, 1.0f,
                        NULL, NULL, NULL);
   SoDB::registerHeader(SbString("#Inventor V1.0 binary  "), TRUE, 1.0f,

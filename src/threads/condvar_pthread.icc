@@ -33,8 +33,7 @@
 /* This file should only be included from condvar.c */
 
 #include <stdio.h>
-
-#include <Inventor/C/base/time.h>
+#include <chrono>
 
 #include "threads/mutexp.h"
 
@@ -83,14 +82,18 @@ internal_condvar_wait(cc_condvar * condvar, cc_mutex * mutex)
 }
 
 static int
-internal_condvar_timed_wait(cc_condvar * condvar, cc_mutex * mutex, cc_time period)
+internal_condvar_timed_wait(cc_condvar * condvar, cc_mutex * mutex, double period)
 {
   struct timespec timeout;
-  cc_time when;
+  double when;
   int status, ret;
   double sec;
 
-  when = cc_time_gettimeofday() + period;
+  // Get current time + period using std::chrono
+  auto now = std::chrono::system_clock::now();
+  auto duration = now.time_since_epoch();
+  auto current_seconds = std::chrono::duration_cast<std::chrono::duration<double>>(duration);
+  when = current_seconds.count() + period;
   sec = floor(when);
   timeout.tv_sec = (int) sec;
 #if defined(HAVE_PTHREAD_TIMESPEC_NSEC)

@@ -136,7 +136,7 @@ cc_condvar_wait(cc_condvar * condvar, cc_mutex * mutex)
 int
 cc_condvar_timed_wait(cc_condvar * condvar,
                       cc_mutex * mutex,
-                      cc_time period)
+                      double period)
 {
   int ret;
   assert(condvar != NULL);

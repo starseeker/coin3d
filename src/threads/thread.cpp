@@ -77,7 +77,6 @@
 #include "threads/threadp.h"
 #include "threads/mutexp.h"
 #include "threads/recmutexp.h"
-#include "threads/syncp.h"
 #include "tidbitsp.h"
 
 
@@ -208,7 +207,6 @@ void
 cc_thread_init(void)
 {
   cc_mutex_init();
-  cc_sync_init();
 #ifdef USE_W32THREAD
   /* needed to quickly generate a thread-id for each thread */
   win32_threadid_idx = TlsAlloc();

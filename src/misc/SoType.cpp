@@ -282,7 +282,7 @@ SoType::createType(const SoType parent, const SbName name,
   // code.
   // FIXME: We ought to factor out and expose this functionality - testing
   // if a class type is already loaded and registered - in the public API.
-  // 20040831 larsa  (ref could-have-been-used-to-fix-upgrader-slowness-bug)
+  // 20040831 larsa
   int16_t discard;
   if (type_dict->get(name.getString(), discard)) {
     SoDebugError::post("SoType::createType",

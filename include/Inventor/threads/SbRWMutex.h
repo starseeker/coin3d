@@ -33,7 +33,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#include <Inventor/C/threads/rwmutex.h>
+#include <shared_mutex>
+#include <mutex>
+#include <condition_variable>
 
 class SbRWMutex {
 public:
@@ -42,34 +44,119 @@ public:
     WRITE_PRECEDENCE
   };
 
-  SbRWMutex(Precedence policy) {
-    this->rwmutex = cc_rwmutex_construct_etc(
-      (policy == WRITE_PRECEDENCE)? CC_WRITE_PRECEDENCE : CC_READ_PRECEDENCE);
+  SbRWMutex(Precedence policy) : precedence_policy(policy), 
+                                 active_readers(0), 
+                                 waiting_writers(0),
+                                 active_writer(false) {
   }
-  ~SbRWMutex(void) { cc_rwmutex_destruct(this->rwmutex); }
+  ~SbRWMutex(void) = default;
 
   int writeLock(void) { 
-    return cc_rwmutex_write_lock(this->rwmutex) == CC_OK ? 0 : 1; 
+    std::unique_lock<std::mutex> lock(control_mutex);
+    
+    if (precedence_policy == WRITE_PRECEDENCE) {
+      // Writer precedence: block new readers when writers are waiting
+      waiting_writers++;
+      writer_cv.wait(lock, [this] { 
+        return !active_writer && active_readers == 0; 
+      });
+      waiting_writers--;
+    } else {
+      // Reader precedence: writers wait for all current readers/writers
+      writer_cv.wait(lock, [this] { 
+        return !active_writer && active_readers == 0; 
+      });
+    }
+    
+    active_writer = true;
+    return 0; 
   }
+  
   SbBool tryWriteLock(void) { 
-    return cc_rwmutex_write_try_lock(this->rwmutex) == CC_OK; 
+    std::lock_guard<std::mutex> lock(control_mutex);
+    if (!active_writer && active_readers == 0) {
+      active_writer = true;
+      return TRUE;
+    }
+    return FALSE; 
   }
+  
   int writeUnlock(void) { 
-    return cc_rwmutex_write_unlock(this->rwmutex) == CC_OK ? 0 : 1; 
+    std::lock_guard<std::mutex> lock(control_mutex);
+    active_writer = false;
+    
+    // Notify writers first if we have WRITE_PRECEDENCE and waiting writers
+    if (precedence_policy == WRITE_PRECEDENCE && waiting_writers > 0) {
+      writer_cv.notify_one();
+    } else {
+      // Notify all readers first, then one writer
+      reader_cv.notify_all();
+      writer_cv.notify_one();
+    }
+    return 0; 
   }
   
   int readLock(void) { 
-    return cc_rwmutex_read_lock(this->rwmutex) == CC_OK ? 0 : 1; 
+    std::unique_lock<std::mutex> lock(control_mutex);
+    
+    if (precedence_policy == WRITE_PRECEDENCE) {
+      // With writer precedence, readers wait if writers are waiting or active
+      reader_cv.wait(lock, [this] { 
+        return !active_writer && waiting_writers == 0; 
+      });
+    } else {
+      // With reader precedence, readers only wait for active writers
+      reader_cv.wait(lock, [this] { 
+        return !active_writer; 
+      });
+    }
+    
+    active_readers++;
+    return 0; 
   }
+  
   int tryReadLock(void) { 
-    return cc_rwmutex_read_try_lock(this->rwmutex) == CC_OK; 
+    std::lock_guard<std::mutex> lock(control_mutex);
+    
+    if (precedence_policy == WRITE_PRECEDENCE) {
+      // With writer precedence, fail if writer is active or waiting
+      if (!active_writer && waiting_writers == 0) {
+        active_readers++;
+        return 0;
+      }
+    } else {
+      // With reader precedence, only fail if writer is active
+      if (!active_writer) {
+        active_readers++;
+        return 0;
+      }
+    }
+    return 1;
   }
+  
   int readUnlock(void) { 
-    return cc_rwmutex_read_unlock(this->rwmutex) == CC_OK ? 0 : 1; 
+    std::lock_guard<std::mutex> lock(control_mutex);
+    active_readers--;
+    
+    if (active_readers == 0) {
+      // Last reader leaves, notify waiting writers
+      writer_cv.notify_one();
+    }
+    return 0; 
   }
 
 private:
-  cc_rwmutex * rwmutex;
+  Precedence precedence_policy;
+  std::mutex control_mutex;
+  std::condition_variable reader_cv;
+  std::condition_variable writer_cv;
+  int active_readers;
+  int waiting_writers;
+  bool active_writer;
+  
+  // NOTE: Custom C++17 implementation to preserve precedence policy semantics.
+  // std::shared_mutex doesn't provide explicit precedence control.
+  // For C++20 migration: Consider std::jthread and std::barrier for further modernization.
 };
 
 #endif // !COIN_SBRWMUTEX_H

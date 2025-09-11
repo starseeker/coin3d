@@ -65,7 +65,7 @@
 #endif /* HAVE_UNISTD_H */
 
 #ifdef COIN_THREADSAFE
-#include <Inventor/C/threads/mutex.h>
+#include <mutex>
 #include "threads/mutexp.h"
 #endif /* COIN_THREADSAFE */
 
@@ -79,13 +79,7 @@ extern "C" {
 #endif /* __cplusplus */
 
 #ifdef COIN_THREADSAFE
-static cc_mutex * cc_error_mutex = NULL;
-static void cc_error_mutex_cleanup(void) {
-  if (cc_error_mutex) {
-    cc_mutex_destruct(cc_error_mutex);
-    cc_error_mutex = NULL;
-  }
-}
+static std::mutex error_mutex;
 #endif /* COIN_THREADSAFE */
 
 /* FIXME: should be hidden from public API, and only visible to
@@ -186,25 +180,13 @@ cc_error_handle(cc_error * me)
   assert(function != NULL);
 
 #ifdef COIN_THREADSAFE
-  if (!cc_error_mutex) {
-    /* extra locking to avoid that two threads create the mutex */
-    /* FIXME: this is not smart, as it means that if the first call to
-       e.g. SoDebugError::post*() will hang if it happens within a
-       region where the global lock is already taken. 20050708 mortene.*/
-    cc_mutex_global_lock();
-    if (cc_error_mutex == NULL) {
-      cc_error_mutex = cc_mutex_construct();
-      coin_atexit(cc_error_mutex_cleanup, CC_ATEXIT_MSG_SUBSYSTEM);
-    }
-    cc_mutex_global_unlock();
-  }
-  cc_mutex_lock(cc_error_mutex);
+  error_mutex.lock();
 #endif /* COIN_THREADSAFE */
 
   (*function)(me, arg);
 
 #ifdef COIN_THREADSAFE
-  cc_mutex_unlock(cc_error_mutex);
+  error_mutex.unlock();
 #endif /* COIN_THREADSAFE */
 }
 

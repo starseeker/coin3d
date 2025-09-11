@@ -1,5 +1,5 @@
-#ifndef CC_SYNCP_H
-#define CC_SYNCP_H
+#ifndef COIN_SBBARRIERIMPL_H
+#define COIN_SBBARRIERIMPL_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,23 +33,49 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_INTERNAL
-#error this is a private header file
-#endif /* ! COIN_INTERNAL */
+#include <mutex>
+#include <condition_variable>
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
+// C++17 compatible barrier implementation (std::barrier is C++20)
+class SbBarrierImpl {
+public:
+  explicit SbBarrierImpl(unsigned int count) 
+    : numthreads(count), counter(0), generation(0) {}
+  
+  ~SbBarrierImpl() = default;
 
-/* ********************************************************************** */
+  // Non-copyable, non-movable
+  SbBarrierImpl(const SbBarrierImpl&) = delete;
+  SbBarrierImpl& operator=(const SbBarrierImpl&) = delete;
+  SbBarrierImpl(SbBarrierImpl&&) = delete;
+  SbBarrierImpl& operator=(SbBarrierImpl&&) = delete;
 
-void cc_sync_init(void);
+  // Returns 1 if this thread was the last to arrive (similar to cc_barrier_enter)
+  int enter() {
+    std::unique_lock<std::mutex> lock(mutex);
+    
+    unsigned int gen = generation;
+    ++counter;
+    
+    if (counter == numthreads) {
+      // Last thread to arrive
+      ++generation;
+      counter = 0;
+      condvar.notify_all();
+      return 1;
+    } else {
+      // Wait for all threads to arrive
+      condvar.wait(lock, [this, gen] { return gen != generation; });
+      return 0;
+    }
+  }
 
-/* ********************************************************************** */
+private:
+  unsigned int numthreads;
+  unsigned int counter;
+  unsigned int generation;  // Prevents spurious wakeups
+  std::mutex mutex;
+  std::condition_variable condvar;
+};
 
-
-#ifdef __cplusplus
-} /* extern "C" */
-#endif /* __cplusplus */
-
-#endif /* ! CC_SYNCP_H */
+#endif // !COIN_SBBARRIERIMPL_H

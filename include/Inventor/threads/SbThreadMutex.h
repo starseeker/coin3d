@@ -34,31 +34,36 @@
 \**************************************************************************/
 
 #include <Inventor/SbBasic.h>
-#include <Inventor/C/threads/recmutex.h>
+#include <mutex>
 
 class SbThreadMutex {
 public:
-  SbThreadMutex(void) { this->mutex = cc_recmutex_construct(); }
-  ~SbThreadMutex() { cc_recmutex_destruct(this->mutex); }
+  SbThreadMutex(void) = default;
+  ~SbThreadMutex() = default;
 
   int lock(void) {
-    return cc_recmutex_lock(this->mutex);
+    this->mutex.lock();
+    return 0;
   }
 
   SbBool tryLock(void) {
-    return cc_recmutex_try_lock(this->mutex) == CC_OK;
+    return this->mutex.try_lock();
   }
   
   int unlock(void) {
-    return cc_recmutex_unlock(this->mutex);
+    this->mutex.unlock();
+    return 0;
   }
 
 private:
   // FIXME: we need access to C mutex structure. Should we use friend,
   // or should we add a new public method to get to this structure?
   // pederb, 2002-06-26
+  // NOTE: Migrated to C++17 std::recursive_mutex. For SbCondVar compatibility,
+  // we provide access via friend class.
   friend class SbCondVar;
-  cc_recmutex * mutex;
+  friend class SbThreadAutoLock;
+  std::recursive_mutex mutex;
 };
 
 

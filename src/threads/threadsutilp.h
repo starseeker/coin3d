@@ -44,7 +44,6 @@
 #ifdef HAVE_THREADS
 
 #include <Inventor/C/threads/mutex.h>
-#include <Inventor/C/threads/sync.h>
 
 #include "threads/mutexp.h"
 
@@ -68,10 +67,10 @@
   cc_mutex_unlock(static_cast<cc_mutex *>(_mymutex_))
 
 #define CC_SYNC_BEGIN(_myid_) \
-  void * coin_mydummysyncptr = cc_sync_begin((void*) _myid_)
+  CC_GLOBAL_LOCK
 
 #define CC_SYNC_END(_myid_) \
-  cc_sync_end(coin_mydummysyncptr)
+  CC_GLOBAL_UNLOCK
 
 #define CC_GLOBAL_LOCK cc_mutex_global_lock()
 #define CC_GLOBAL_UNLOCK cc_mutex_global_unlock()
