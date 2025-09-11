@@ -34,7 +34,7 @@
 \**************************************************************************/
 
 #include <Inventor/caches/SoCache.h>
-#include <Inventor/system/inttypes.h>
+#include <cstdint>
 
 class SbVec3f;
 class SoCoordinateElement;

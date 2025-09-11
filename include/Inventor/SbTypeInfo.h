@@ -61,7 +61,7 @@
 
 #ifndef DOXYGEN_SKIP_THIS
 
-#include <Inventor/system/inttypes.h>
+#include <cstdint>
 #include <Inventor/C/basic.h>
 
 // *************************************************************************

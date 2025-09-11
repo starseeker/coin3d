@@ -39,7 +39,7 @@
 
 /* ********************************************************************** */
 
-#include <Inventor/system/inttypes.h>
+#include <cstdint>
 
 #ifdef __cplusplus
 extern "C" {
