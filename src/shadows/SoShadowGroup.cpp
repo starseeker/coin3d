@@ -2348,16 +2348,3 @@ SoShadowLightCache::shadowmap_post_glcallback(void * COIN_UNUSED_ARG(closure), S
 #undef DISTRIBUTE_FACTOR
 #undef USE_NEGATIVE
 
-#ifdef COIN_TEST_SUITE
-
-BOOST_AUTO_TEST_CASE(initialized)
-{
-  SoShadowGroup * node = new SoShadowGroup;
-  assert(node);
-  node->ref();
-  BOOST_CHECK_MESSAGE(node->getTypeId() != SoType::badType(),
-                      "missing class initialization");
-  node->unref();
-}
-
-#endif // COIN_TEST_SUITE

@@ -30,44 +30,61 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-// Template for new test files
-// Copy this file and rename to match your module: test_<module>.cpp
+#include <Inventor/SbVec4ub.h>
+#include <Inventor/SbVec4us.h>
+#include <Inventor/SbVec4ui32.h>
+#include <Inventor/SbColor4f.h>
 
-#include "utils/test_common.h"
-#include <Inventor/SomeClass.h>  // Replace with actual class header
+#include <TestSuiteMisc.h>
 
-using namespace CoinTestUtils;
-
-// Example test case - replace with actual tests
-TEST_CASE("SomeClass functionality", "[module][SomeClass]") {
-    CoinTestFixture fixture;  // Initialize Coin
-
-    SECTION("basic initialization") {
-        // Test basic class functionality
-        // SomeClass obj;
-        // CHECK(obj.isValid());
-    }
-
-    SECTION("specific behavior") {
-        // Test specific functionality
-        // CHECK(someCondition);
-        // CHECK_THROWS(invalidOperation());
-    }
+std::ostream &
+operator << (std::ostream & os, const SbVec4ub & vec)
+{
+  os << (int) vec[0];
+  os << " ";
+  os << (int) vec[1];
+  os << " ";
+  os << (int) vec[2];
+  os << " ";
+  os << (int) vec[3];
+  return os;
 }
 
-// For testing multiple related classes in one file:
-TEST_CASE("AnotherClass functionality", "[module][AnotherClass]") {
-    CoinTestFixture fixture;
-
-    SECTION("test name") {
-        // Test code here
-    }
+std::ostream &
+operator << (std::ostream & os, const SbVec4us & vec)
+{
+  os << vec[0];
+  os << " ";
+  os << vec[1];
+  os << " ";
+  os << vec[2];
+  os << " ";
+  os << vec[3];
+  return os;
 }
 
-// Tips for writing good tests:
-// 1. Use descriptive test names that explain what is being tested
-// 2. Use appropriate tags: [module][class] for organization  
-// 3. Each SECTION should test one specific aspect
-// 4. Use CHECK for non-fatal assertions, REQUIRE for fatal ones
-// 5. Include edge cases and error conditions
-// 6. Keep tests independent - don't rely on order of execution
+std::ostream &
+operator << (std::ostream & os, const SbVec4ui32 & vec)
+{
+  os << vec[0];
+  os << " ";
+  os << vec[1];
+  os << " ";
+  os << vec[2];
+  os << " ";
+  os << vec[3];
+  return os;
+}
+
+std::ostream &
+operator << (std::ostream & os, const SbColor4f & col4)
+{
+  os << col4[0];
+  os << " ";
+  os << col4[1];
+  os << " ";
+  os << col4[2];
+  os << " ";
+  os << col4[3];
+  return os;
+}

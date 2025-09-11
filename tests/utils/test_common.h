@@ -56,7 +56,8 @@ public:
 
 // Helper macros to replace Boost.Test equivalents  
 #define COIN_CHECK(condition) CHECK(condition)
-#define COIN_CHECK_MESSAGE(condition, message) CHECK_THAT(condition, Catch::Predicate<bool>([](bool b) { return b; }, message))
+#define CHECK_WITH_MESSAGE(condition, message) INFO(message); CHECK(condition)
+#define COIN_CHECK_MESSAGE(condition, message) INFO(message); CHECK(condition)
 #define COIN_CHECK_EQUAL(left, right) CHECK((left) == (right))
 #define COIN_REQUIRE(condition) REQUIRE(condition)
 

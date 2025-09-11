@@ -640,10 +640,3 @@ SbDPRotation::print(FILE * fp) const
 #endif // COIN_DEBUG
 }
 
-#ifdef COIN_TEST_SUITE
-#include <Inventor/SbVec3d.h>
-
-BOOST_AUTO_TEST_CASE(tgsCompliance) {
-  SbDPRotation v = SbRotationd(SbVec3d(0,1,2),3);
-}
-#endif //COIN_TEST_SUITE

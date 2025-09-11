@@ -934,8 +934,9 @@ endif()
 
 if(COIN_BUILD_TESTS)
   enable_testing()
-  add_subdirectory(testsuite)
-  # Add explicit Catch2-based tests alongside existing tests
+  add_subdirectory(testsuite)  # Legacy tests only - main tests are in tests/
+  # Add primary explicit Catch2-based test system
+  # Primary test system: explicit Catch2-based tests
   add_subdirectory(tests)
 endif()
 

@@ -399,16 +399,3 @@ SoShaderProgramP::sensorCB(void * COIN_UNUSED_ARG(data), SoSensor *)
 
 // *************************************************************************
 
-#ifdef COIN_TEST_SUITE
-
-BOOST_AUTO_TEST_CASE(initialized)
-{
-  SoShaderProgram * node = new SoShaderProgram;
-  assert(node);
-  node->ref();
-  BOOST_CHECK_MESSAGE(node->getTypeId() != SoType::badType(),
-                      "missing class initialization");
-  node->unref();
-}
-
-#endif // COIN_TEST_SUITE

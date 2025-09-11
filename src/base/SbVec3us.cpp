@@ -88,6 +88,3 @@ SbVec3us::operator *= (double d)
   return *this;
 }
 
-#ifdef COIN_TEST_SUITE
-
-#endif //COIN_TEST_SUITE

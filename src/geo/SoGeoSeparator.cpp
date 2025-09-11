@@ -258,17 +258,3 @@ SoGeoSeparator::getTransform(SoState * state) const
   return SbMatrix::identity();
 }
 
-#ifdef COIN_TEST_SUITE
-
-BOOST_AUTO_TEST_CASE(initialized)
-{
-  BOOST_CHECK_MESSAGE(SoGeoSeparator::getClassTypeId() != SoType::badType(),
-                      "SoGeoSeparator class not initialized");
-  SoGeoSeparator * node = new SoGeoSeparator;
-  node->ref();
-  BOOST_CHECK_MESSAGE(node->getTypeId() != SoType::badType(),
-                      "SoGeoSeparator object wrongly initialized");
-  node->unref();
-}
-
-#endif // COIN_TEST_SUITE
