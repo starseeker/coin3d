@@ -47,6 +47,7 @@
 #include <Inventor/C/tidbits.h>
 #include <Inventor/lists/SbList.h>
 #include "misc/SbHash.h"
+#include "misc/SoUtilities.h"
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
@@ -189,7 +190,7 @@ public:
     // character (was it ü?) with ASCII value > 127 made isspace()
     // return non-nil on a German system. So we're using our own
     // locale-independent isspace() implementation instead.
-    return coin_isspace(c) || (this->vrml2file && c == ',');
+    return CoinInternal::isSpace(c) || (this->vrml2file && c == ',');
   }
 
   void connectRoutes(SoInput * in);

@@ -56,8 +56,6 @@ COIN_DLL_API int coin_vsnprintf(char * dst, unsigned int n, const char * fmtstr,
 COIN_DLL_API const char * coin_getenv(const char * name);
 COIN_DLL_API SbBool coin_setenv(const char * name, const char * value, int overwrite);
 COIN_DLL_API void coin_unsetenv(const char * name);
-
-COIN_DLL_API int coin_strncasecmp(const char * str1, const char * str2, int len);
   
 COIN_DLL_API uint16_t coin_hton_uint16(uint16_t value);
 COIN_DLL_API uint16_t coin_ntoh_uint16(uint16_t value);
@@ -71,9 +69,6 @@ COIN_DLL_API float coin_ntoh_float_bytes(const char * value);   /* expects 4 byt
 
 COIN_DLL_API void coin_hton_double_bytes(double value, char * result); /* expects room for 8 bytes in result */
 COIN_DLL_API double coin_ntoh_double_bytes(const char * value); /* expects 8 bytes input */
-
-COIN_DLL_API SbBool coin_isascii(const int c);
-COIN_DLL_API SbBool coin_isspace(const char c);
 
 COIN_DLL_API SbBool coin_is_power_of_two(uint32_t x);
 COIN_DLL_API uint32_t coin_next_power_of_two(uint32_t x);
