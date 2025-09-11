@@ -118,9 +118,7 @@
 #include "misc/SoConfigSettings.h"
 #include "rendering/SoVBO.h"
 
-#ifdef HAVE_THREADS
-#include "threads/threadp.h"
-#endif // HAVE_THREADS
+// Threading migration: threadp.h removed - functionality replaced with C++17 equivalents
 
 #ifdef COIN_THREADSAFE
 #include <Inventor/threads/SbRWMutex.h>
