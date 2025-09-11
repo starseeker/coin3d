@@ -103,37 +103,7 @@ SoInput_FileInfo::doBufferRead(void)
   assert(this->backbuffer.getLength() == 0);
   assert(this->readbufidx == this->readbuflen);
 
-#if defined(HAVE_THREADS) && defined(SOINPUT_ASYNC_IO)
-  cc_mutex_lock(this->mutex);
-  int idx = this->threadbufidx;
-  while (this->threadbuflen[idx] == -1) {
-    cc_condvar_wait(this->condvar, this->mutex);
-  }
-  if (this->threadbuflen[idx] == 0) {
-    this->readbufidx = 0;
-    this->readbuflen = 0;
-    this->eof = TRUE;
-#if 0 // debug
-    SoDebugError::postInfo("doBufferRead", "met Mr End-of-file");
-#endif // debug
-    cc_mutex_unlock(this->mutex);
-  }
-  else {
-    this->totalread += this->readbufidx;
-    this->readbufidx = 0;
-    this->readbuflen = this->threadbuflen[idx];
-    this->readbuf = this->threadbuf[idx];
-    this->threadbufidx ^= 1;
-    // make previous buffer ready for new data
-    this->threadbuflen[this->threadbufidx] = -1;
-    if (!this->threadeof) {
-      cc_sched_schedule(this->sched, sched_cb, this, 0);
-    }
-    cc_mutex_unlock(this->mutex);
-  }
-
-#else // HAVE_THREADS && SOINPUT_ASYNC_IO
-
+  // Async I/O removed - use synchronous reading only
   size_t len = this->getReader()->readBuffer(this->readbuf, READBUFSIZE);
   if (len == 0) {
     this->readbufidx = 0;
@@ -148,7 +118,6 @@ SoInput_FileInfo::doBufferRead(void)
     this->readbufidx = 0;
     this->readbuflen = len;
   }
-#endif // !(HAVE_THREADS && SOINPUT_ASYNC_IO)
 }
 
 size_t
@@ -435,10 +404,7 @@ SoInput_FileInfo::getReader(void)
 {
   if (this->reader == NULL) {
     this->reader = SoInput_Reader::createReader(coin_get_stdin(), SbString("<stdin>"));
-#if defined(HAVE_THREADS) && defined(SOINPUT_ASYNC_IO)
-    // schedule a buffer read
-    cc_sched_schedule(this->sched, sched_cb, this, 0);
-#endif // HAVE_THREADS && SOINPUT_ASYNC_IO
+    // Async scheduling removed with C threading API cleanup
   }
   return this->reader;
 }
