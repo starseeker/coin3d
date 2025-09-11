@@ -227,8 +227,7 @@ SoDB::init(void)
 
 
 #ifdef HAVE_THREADS
-  // initialize thread system first
-  cc_thread_init();
+  // Modern C++17 threading doesn't require explicit initialization
 #ifdef COIN_THREADSAFE
   SoDBP::globalmutex = new SbRWMutex(SbRWMutex::READ_PRECEDENCE);
 #endif // COIN_THREADSAFE
