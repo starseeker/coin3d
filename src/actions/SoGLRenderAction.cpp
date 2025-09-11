@@ -121,6 +121,7 @@
 #include "glue/glp.h"
 
 #include "rendering/SoGL.h"
+#include "misc/SoEnvironment.h"
 
 // Profiler functionality removed - nodekit elimination
 
@@ -645,7 +646,7 @@ SoGLRenderAction::initClass(void)
   SO_ENABLE(SoGLRenderAction, SoGLViewportRegionElement);
   SO_ENABLE(SoGLRenderAction, SoGLCacheContextElement);
 
-  const char * env = coin_getenv("COIN_GLBBOX");
+  const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_GLBBOX");
   if (env) {
     COIN_GLBBOX = atoi(env);
   }
@@ -1301,7 +1302,7 @@ SoGLRenderAction::abortNow(void)
 #if COIN_DEBUG && 0 // for dumping the scene graph during GLRender traversals
   static int debug = -1;
   if (debug == -1) {
-    const char * env = coin_getenv("COIN_DEBUG_GLRENDER_TRAVERSAL");
+    const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_GLRENDER_TRAVERSAL");
     debug = env && (atoi(env) > 0);
   }
   if (debug) {
@@ -2136,15 +2137,15 @@ SoGLRenderActionP::initSortedLayersBlendRendering(const SoState * state)
 
   // Supporting both the TGS envvar and the COIN envvar. If both are
   // present, the COIN envvar will be used.
-  const char * envtgs = coin_getenv("OIV_NUM_SORTED_LAYERS_PASSES");
+  const char * envtgs = CoinInternal::getEnvironmentVariableRaw("OIV_NUM_SORTED_LAYERS_PASSES");
   if (envtgs && (atoi(envtgs) > 0))
     this->sortedlayersblendpasses = atoi(envtgs);
 
-  const char * envcoin = coin_getenv("COIN_NUM_SORTED_LAYERS_PASSES");
+  const char * envcoin = CoinInternal::getEnvironmentVariableRaw("COIN_NUM_SORTED_LAYERS_PASSES");
   if (envcoin && (atoi(envcoin) > 0))
     this->sortedlayersblendpasses = atoi(envcoin);
 
-  const char * envusenvidiarc = coin_getenv("COIN_SORTED_LAYERS_USE_NVIDIA_RC");
+  const char * envusenvidiarc = CoinInternal::getEnvironmentVariableRaw("COIN_SORTED_LAYERS_USE_NVIDIA_RC");
   if (envusenvidiarc && (atoi(envusenvidiarc) > 0))
     this->usenvidiaregistercombiners = TRUE;
 

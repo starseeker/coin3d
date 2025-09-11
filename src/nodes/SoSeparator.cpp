@@ -83,7 +83,7 @@
 #include <Inventor/misc/SoState.h>
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/system/gl.h>
-#include <Inventor/C/tidbits.h> // coin_getenv()
+#include <Inventor/C/tidbits.h>
 #include <Inventor/threads/SbStorage.h>
 
 #ifdef COIN_THREADSAFE
@@ -93,6 +93,7 @@
 #include "coindefs.h" // COIN_OBSOLETED()
 #include "nodes/SoSubNodeP.h"
 #include "glue/glp.h"
+#include "misc/SoEnvironment.h"
 #include "rendering/SoGL.h"
 #include "misc/SoDBP.h"
 
@@ -424,7 +425,7 @@ SoSeparator::commonConstructor(void)
   static long int maxcaches = -1;
   if (maxcaches == -1) {
     maxcaches = -2; // so we don't request the envvar later if it is not set
-    const char * maxcachesstr = coin_getenv("IV_SEPARATOR_MAX_CACHES");
+    const char * maxcachesstr = CoinInternal::getEnvironmentVariableRaw("IV_SEPARATOR_MAX_CACHES");
     if (maxcachesstr) {
       maxcaches = strtol(maxcachesstr, NULL, 10);
       if ((maxcaches == LONG_MIN) || (maxcaches == LONG_MAX) || (maxcaches < 0)) {
@@ -447,7 +448,7 @@ SoSeparator::commonConstructor(void)
   // renderCaching will be set to "ON" with a probability of 0.5 for
   // every SoSeparator instantiated.
   if (COIN_RANDOMIZE_RENDER_CACHING < 0) {
-    const char * env = coin_getenv("COIN_RANDOMIZE_RENDER_CACHING");
+    const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_RANDOMIZE_RENDER_CACHING");
     if (env) COIN_RANDOMIZE_RENDER_CACHING = atoi(env);
     else COIN_RANDOMIZE_RENDER_CACHING = 0;
   }
