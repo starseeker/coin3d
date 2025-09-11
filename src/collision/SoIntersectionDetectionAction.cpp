@@ -176,6 +176,7 @@
 /* Legacy MSVC6 workaround removed - not needed for C++17 */
 
 #include "SbBasicP.h"
+#include "misc/SoEnvironment.h"
 
 #include <list>
 #include <vector>
@@ -299,7 +300,7 @@ ida_debug(void)
 {
   static int dbg = -1;
   if (dbg == -1) {
-    const char * env = coin_getenv("COIN_DEBUG_INTERSECTIONDETECTIONACTION");
+    const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_INTERSECTIONDETECTIONACTION");
     dbg = env && atoi(env) > 0;
   }
   return dbg == 0 ? FALSE : TRUE;

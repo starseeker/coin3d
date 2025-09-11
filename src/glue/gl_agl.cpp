@@ -55,6 +55,7 @@
 
 #include "glue/glp.h"
 #include "glue/dlp.h"
+#include "misc/SoEnvironment.h"
 
 #ifdef HAVE_OPENGL_CGLCURRENT_H
 #include <OpenGL/CGLCurrent.h>
@@ -165,7 +166,7 @@ aglglue_get_pbuffer_enable(void)
 {
   /* Make it possible to turn off pBuffer support completely.
      Mostly relevant for debugging purposes. */
-  const char * env = coin_getenv("COIN_AGLGLUE_NO_PBUFFERS");
+  const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_AGLGLUE_NO_PBUFFERS");
   if (env && atoi(env) > 0) { 
     return FALSE; 
   } else { 

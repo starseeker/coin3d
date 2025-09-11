@@ -87,7 +87,7 @@
 #endif // HAVE_CONFIG_H
 
 #include <Inventor/C/glue/gl.h>
-#include <Inventor/C/tidbits.h> // coin_getenv()
+#include <Inventor/C/tidbits.h>
 #include <Inventor/SbBox2s.h>
 #include <Inventor/SbBox3f.h>
 #include <Inventor/SbMatrix.h>

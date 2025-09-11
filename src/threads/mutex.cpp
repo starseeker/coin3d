@@ -65,6 +65,7 @@
 
 #include "threads/mutexp.h"
 #include "tidbitsp.h"
+#include "misc/SoEnvironment.h"
 
 #ifdef USE_PTHREAD
 #include "mutex_pthread.icc"
@@ -142,7 +143,7 @@ static int coin_debug_mutex_count(void)
 {
   static int d = -1;
   if (d == -1) {
-    const char* val = coin_getenv("COIN_DEBUG_MUTEX_COUNT");
+    const char* val = CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_MUTEX_COUNT");
     d = val ? atoi(val) : 0;
   }
   return d;
@@ -284,7 +285,7 @@ cc_mutex_cleanup(void)
 void
 cc_mutex_init(void)
 {
-  const char * env = coin_getenv("COIN_DEBUG_MUTEXLOCK_MAXTIME");
+  const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_MUTEXLOCK_MAXTIME");
 
 #ifdef USE_W32THREAD /* TryEnterCriticalSection test. */
 
@@ -314,7 +315,7 @@ cc_mutex_init(void)
 
   if (env) { maxmutexlocktime = atof(env); }
 
-  env = coin_getenv("COIN_DEBUG_MUTEXLOCK_TIMING");
+  env = CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_MUTEXLOCK_TIMING");
   if (env) { reportmutexlocktiming = atof(env); }
 }
 

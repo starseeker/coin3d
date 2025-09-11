@@ -79,6 +79,7 @@
 #include "glue/GLUWrapper.h"
 #include "tidbitsp.h"
 #include "glue/glp.h"
+#include "misc/SoEnvironment.h"
 
 // *************************************************************************
 
@@ -2340,7 +2341,7 @@ sogl_glerror_debugging(void)
 {
   static int COIN_GLERROR_DEBUGGING = -1;
   if (COIN_GLERROR_DEBUGGING == -1) {
-    const char * str = coin_getenv("COIN_GLERROR_DEBUGGING");
+    const char * str = CoinInternal::getEnvironmentVariableRaw("COIN_GLERROR_DEBUGGING");
     COIN_GLERROR_DEBUGGING = str ? atoi(str) : 0;
   }
   return (COIN_GLERROR_DEBUGGING == 0) ? FALSE : TRUE;
@@ -2362,23 +2363,23 @@ sogl_autocache_update(SoState * state, const int numprimitives, SbBool didusevbo
   static SbBool didtestenv = FALSE;
   if (!didtestenv) {
     const char * env;
-    env = coin_getenv("COIN_AUTOCACHE_REMOTE_MIN");
+    env = CoinInternal::getEnvironmentVariableRaw("COIN_AUTOCACHE_REMOTE_MIN");
     if (env) {
       SOGL_AUTOCACHE_REMOTE_MIN = atoi(env);
     }
-    env = coin_getenv("COIN_AUTOCACHE_REMOTE_MAX");
+    env = CoinInternal::getEnvironmentVariableRaw("COIN_AUTOCACHE_REMOTE_MAX");
     if (env) {
       SOGL_AUTOCACHE_REMOTE_MAX = atoi(env);
     }
-    env = coin_getenv("COIN_AUTOCACHE_LOCAL_MIN");
+    env = CoinInternal::getEnvironmentVariableRaw("COIN_AUTOCACHE_LOCAL_MIN");
     if (env) {
       SOGL_AUTOCACHE_LOCAL_MIN = atoi(env);
     }
-    env = coin_getenv("COIN_AUTOCACHE_LOCAL_MAX");
+    env = CoinInternal::getEnvironmentVariableRaw("COIN_AUTOCACHE_LOCAL_MAX");
     if (env) {
       SOGL_AUTOCACHE_LOCAL_MAX = atoi(env);
     }
-    env = coin_getenv("COIN_AUTOCACHE_VBO_LIMIT");
+    env = CoinInternal::getEnvironmentVariableRaw("COIN_AUTOCACHE_VBO_LIMIT");
     if (env) {
       SOGL_AUTOCACHE_VBO_LIMIT = atoi(env);
     }

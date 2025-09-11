@@ -36,6 +36,8 @@
 #include <Inventor/C/tidbits.h>
 #include <Inventor/system/gl.h>
 
+#include "misc/SoEnvironment.h"
+
 // *************************************************************************
 
 SbBool
@@ -145,7 +147,7 @@ SbGLUTessellator::cb_error(GLenum err, void *)
   if (err == GLU_TESS_NEED_COMBINE_CALLBACK) {
     static int v = -1;
     if (v == -1) {
-      const char * env = coin_getenv("COIN_GLU_SILENCE_TESS_COMBINE_WARNING");
+      const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_GLU_SILENCE_TESS_COMBINE_WARNING");
       v = env && (atoi(env) > 0);
     }
     // requested to be silenced
@@ -207,7 +209,7 @@ SbGLUTessellator::preferred(void)
 {
   static int v = -1;
   if (v == -1) {
-    const char * e = coin_getenv("COIN_PREFER_GLU_TESSELLATOR");
+    const char * e = CoinInternal::getEnvironmentVariableRaw("COIN_PREFER_GLU_TESSELLATOR");
     v = (e && (atoi(e) > 0)) ? 1 : 0;
 
     if (v && !SbGLUTessellator::available()) {

@@ -100,6 +100,7 @@
 #include "glue/bzip2.h"
 #include "io/SoOutput_Writer.h"
 #include "io/SoWriterefCounter.h"
+#include "misc/SoEnvironment.h"
 
 // *************************************************************************
 
@@ -1141,7 +1142,7 @@ SoOutput::indent(void)
 
   static int oldstyle = -1;
   if (oldstyle == -1) {
-    oldstyle = coin_getenv("COIN_OLDSTYLE_FORMATTING") ? 1 : 0;
+    oldstyle = CoinInternal::getEnvironmentVariableRaw("COIN_OLDSTYLE_FORMATTING") ? 1 : 0;
   }
 
   // Keep the old ugly-bugly formatting style around, in case someone,

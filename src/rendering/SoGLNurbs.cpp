@@ -56,6 +56,7 @@
 #include <Inventor/threads/SbStorage.h>
 #include "tidbitsp.h"
 #include "glue/glp.h"
+#include "misc/SoEnvironment.h"
 
 #include <cstdlib>
 
@@ -64,7 +65,7 @@ sogl_calculate_nurbs_normals()
 {
   static int calculatenurbsnormals = -1;
   if (calculatenurbsnormals == -1) {
-    const char * env = coin_getenv("COIN_CALCULATE_NURBS_NORMALS");
+    const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_CALCULATE_NURBS_NORMALS");
     calculatenurbsnormals = env ? atoi(env) : 1;
   }
   return calculatenurbsnormals ? TRUE : FALSE;
@@ -144,7 +145,7 @@ namespace {
   {
     static int COIN_DEBUG_NURBS_COMPLEXITY = -1;
     if (COIN_DEBUG_NURBS_COMPLEXITY == -1) {
-      const char * str = coin_getenv("COIN_DEBUG_NURBS_COMPLEXITY");
+      const char * str = CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_NURBS_COMPLEXITY");
       COIN_DEBUG_NURBS_COMPLEXITY = str ? atoi(str) : 0;
     }
     return (COIN_DEBUG_NURBS_COMPLEXITY == 0) ? FALSE : TRUE;
@@ -197,7 +198,7 @@ namespace {
     // bounding box for each patch is used for calculating the
     // complexity, they should really have been using the same complexity).
     if (oldnurbscomplexity == -1){
-      const char * env = coin_getenv("COIN_OLD_NURBS_COMPLEXITY");
+      const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_OLD_NURBS_COMPLEXITY");
       oldnurbscomplexity = env ? atoi(env) : -2;
     }
     if ((oldnurbscomplexity > 0) || 
@@ -333,7 +334,7 @@ namespace {
 
           static int reducelinearnurbssteps = -1;
           if (reducelinearnurbssteps == -1) {
-            const char * env = coin_getenv("COIN_REDUCE_LINEAR_NURBS_STEPS");
+            const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_REDUCE_LINEAR_NURBS_STEPS");
             reducelinearnurbssteps = env ? atoi(env) : 1;
           }
           //
@@ -1067,7 +1068,7 @@ sogl_render_nurbs_surface(SoAction * action, SoShape * shape,
 
   static int calculatenurbsnormals = -1;
   if (calculatenurbsnormals == -1) {
-    const char * env = coin_getenv("COIN_CALCULATE_NURBS_NORMALS");
+    const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_CALCULATE_NURBS_NORMALS");
     	calculatenurbsnormals = env ? atoi(env) : 1;
   }
   // generate normal map

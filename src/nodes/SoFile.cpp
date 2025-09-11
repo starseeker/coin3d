@@ -74,6 +74,7 @@
 #include <Inventor/sensors/SoFieldSensor.h>
 
 #include "nodes/SoSubNodeP.h"
+#include "misc/SoEnvironment.h"
 
 // *************************************************************************
 
@@ -240,7 +241,7 @@ SoFile::readNamedFile(SoInput * in)
 
   static int debugreading = -1;
   if (debugreading == -1) {
-    const char * env = coin_getenv("COIN_DEBUG_SOFILE_READ");
+    const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_SOFILE_READ");
     debugreading = env && (atoi(env) > 0);
   }
 

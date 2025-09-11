@@ -94,7 +94,7 @@
   {
     QWidget * window = SoQt::init(argv[0]);
 
-    (void)coin_setenv("COIN_SEPARATE_DIFFUSE_TRANSPARENCY_OVERRIDE", "1", TRUE);
+    (void)CoinInternal::setEnvironmentVariable("COIN_SEPARATE_DIFFUSE_TRANSPARENCY_OVERRIDE", "1", true);
 
     SoInput * in = new SoInput;
     in->setBuffer(scene, strlen(scene));
@@ -137,6 +137,8 @@
 
 #include <Inventor/C/tidbits.h>
 
+#include "misc/SoEnvironment.h"
+
 // *************************************************************************
 
 #define SO_GET_OVERRIDE(flag) \
@@ -168,7 +170,7 @@ use_separate_transp_diffuse(void)
     COIN_SEPARATE_DIFFUSE_TRANSPARENCY_OVERRIDE = 0;
 
     const char * env =
-      coin_getenv("COIN_SEPARATE_DIFFUSE_TRANSPARENCY_OVERRIDE");
+      CoinInternal::getEnvironmentVariableRaw("COIN_SEPARATE_DIFFUSE_TRANSPARENCY_OVERRIDE");
     if (env) {
       COIN_SEPARATE_DIFFUSE_TRANSPARENCY_OVERRIDE = atoi(env);
     }

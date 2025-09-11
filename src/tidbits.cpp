@@ -79,6 +79,7 @@
 
 #include "tidbitsp.h"
 #include "coindefs.h"
+#include "misc/SoEnvironment.h"
 
 /**************************************************************************/
 
@@ -174,14 +175,14 @@ coin_init_tidbits(void)
   const char * env;
   /* no need to initialize std::mutex */
 
-  env  = coin_getenv("COIN_DEBUG_EXTRA");
+  env  = CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_EXTRA");
   if (env && atoi(env) == 1) {
     COIN_DEBUG_EXTRA = 1;
   }
   else {
     COIN_DEBUG_EXTRA = 0;
   }
-  env = coin_getenv("COIN_DEBUG_NORMALIZE");
+  env = CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_NORMALIZE");
   if (env && atoi(env) == 1) {
     COIN_DEBUG_NORMALIZE = 1;
   }
@@ -208,7 +209,7 @@ coin_common_vsnprintf(func_vsnprintf * func,
   static int debug = -1;
 
   if (debug == -1) {
-    const char * env = coin_getenv("COIN_DEBUG_NPRINTF");
+    const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_NPRINTF");
     debug = (env && (atoi(env) > 0)) ? 1 : 0;
   }
 
@@ -1126,7 +1127,7 @@ coin_atexit_cleanup(void)
 
   /* std::mutex destructor automatically called */
 
-  debugstr = coin_getenv("COIN_DEBUG_CLEANUP");
+  debugstr = CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_CLEANUP");
   debug = debugstr && (atoi(debugstr) > 0);
 
   n = cc_list_get_length(atexit_list);
@@ -1794,7 +1795,7 @@ coin_debug_caching_level(void)
 #if COIN_DEBUG
   static int COIN_DEBUG_CACHING = -1;
   if (COIN_DEBUG_CACHING < 0) {
-    const char * env = coin_getenv("COIN_DEBUG_CACHING");
+    const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_CACHING");
     if (env) COIN_DEBUG_CACHING = atoi(env);
     else COIN_DEBUG_CACHING = 0;
   }
