@@ -88,8 +88,13 @@ static const SbBool TRUE = 1;
  * Since C++17, the standard integer types are guaranteed to be available
  * in <cstdint>, making the custom inttypes.h header obsolete.
  */
+#ifdef __cplusplus
 #include <cstdint>
 #include <cstddef>
+#else
+#include <stdint.h>
+#include <stddef.h>
+#endif
 
 /* Internal note for Coin developers: in other sourcefiles in Coin, we
  * depend on math.h being included through SbBasic.h. It is done this
