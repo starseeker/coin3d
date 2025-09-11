@@ -42,6 +42,7 @@
 #include <Inventor/C/tidbits.h>
 
 #include "coindefs.h"
+#include "misc/SoEnvironment.h"
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
@@ -105,7 +106,7 @@ cc_string_grow_buffer(cc_string * me, size_t newsize)
   static int debug = -1;
 
   if (debug == -1) {
-    const char * env = coin_getenv("COIN_DEBUG_STRING_GROW");
+    const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_STRING_GROW");
     debug = (env && (atoi(env) > 0)) ? 1 : 0;
   }
 
@@ -636,7 +637,7 @@ cc_string_utf8_encode(char * buffer, size_t buflen, uint32_t value)
 uint32_t
 cc_string_utf8_get_char(const char * str)
 {
-  static const int disable_utf8 = (coin_getenv("COIN_DISABLE_UTF8") != NULL);
+  static const int disable_utf8 = (CoinInternal::getEnvironmentVariableRaw("COIN_DISABLE_UTF8") != NULL);
   uint32_t value = 0;
   size_t declen = 0;
 
@@ -658,7 +659,7 @@ cc_string_utf8_get_char(const char * str)
 const char *
 cc_string_utf8_next_char(const char * str)
 {
-  static const int disable_utf8 = (coin_getenv("COIN_DISABLE_UTF8") != NULL);
+  static const int disable_utf8 = (CoinInternal::getEnvironmentVariableRaw("COIN_DISABLE_UTF8") != NULL);
   uint32_t value = 0;
   size_t declen = 0;
 
@@ -680,7 +681,7 @@ cc_string_utf8_next_char(const char * str)
 size_t
 cc_string_utf8_validate_length(const char * str)
 {
-  static const int disable_utf8 = (coin_getenv("COIN_DISABLE_UTF8") != NULL);
+  static const int disable_utf8 = (CoinInternal::getEnvironmentVariableRaw("COIN_DISABLE_UTF8") != NULL);
   const char * s = str;
   size_t declen = 0;
   size_t srclen = strlen(str);
@@ -719,7 +720,7 @@ void cc_string_set_wtext(cc_string * me, const wchar_t * text)
     // empty string
     cc_string_set_text(me, NULL);
   } else {
-    static const int disable_utf8 = (coin_getenv("COIN_DISABLE_UTF8") != NULL);
+    static const int disable_utf8 = (CoinInternal::getEnvironmentVariableRaw("COIN_DISABLE_UTF8") != NULL);
     if (disable_utf8) {
       // convert using current locale instead of UTF-8
       cc_string_sprintf(me, "%ls", text);

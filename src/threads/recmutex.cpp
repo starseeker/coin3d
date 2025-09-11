@@ -55,6 +55,7 @@
 #include "tidbitsp.h"
 #include "threads/recmutexp.h"
 #include "threads/recmutex_global_cxx17.h"
+#include "misc/SoEnvironment.h"
 
 /* ********************************************************************** */
 
@@ -102,7 +103,7 @@ cc_recmutex_construct(void)
   cc_recmutex_struct_init(recmutex);
 
   { /* debugging */
-    const char * env = coin_getenv(COIN_DEBUG_MUTEX_COUNT);
+    const char * env = CoinInternal::getEnvironmentVariableRaw(COIN_DEBUG_MUTEX_COUNT);
     if (env && (atoi(env) > 0)) {
       cc_debug_mtxcount += 1;
       (void)fprintf(stderr, "DEBUG: live mutexes +1 => %u (recmutex++)\n",
@@ -120,7 +121,7 @@ void
 cc_recmutex_destruct(cc_recmutex * recmutex)
 {
   { /* debugging */
-    const char * env = coin_getenv(COIN_DEBUG_MUTEX_COUNT);
+    const char * env = CoinInternal::getEnvironmentVariableRaw(COIN_DEBUG_MUTEX_COUNT);
     if (env && (atoi(env) > 0)) {
       assert((cc_debug_mtxcount > 0) && "skewed mutex construct/destruct pairing");
       cc_debug_mtxcount -= 1;
