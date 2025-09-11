@@ -6,6 +6,7 @@ set(COIN_THREADS_FILES
 	common.cpp
 	storage.cpp
 	recmutex.cpp
+	recmutex_global_cxx17.cpp
 	mutex.cpp
 	condvar.cpp
 	thread.cpp
@@ -16,6 +17,7 @@ set(COIN_THREADS_INTERNAL_FILES
 	storagep.h
 	threadsutilp.h
 	recmutexp.h
+	recmutex_global_cxx17.h
 	mutexp.h
 	condvarp.h
 	threadp.h
