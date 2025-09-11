@@ -94,6 +94,7 @@
 
 #include "tidbitsp.h"
 #include "misc/SoDBP.h"
+#include "misc/SoEnvironment.h"
 
 // *************************************************************************
 
@@ -301,7 +302,7 @@ SoProfilerP::parseCoinProfilerVariable(void)
   // - syncgl - implies on
   // - [nocaching - implies on] // todo
 
-  const char * env = coin_getenv(SoDBP::EnvVars::COIN_PROFILER);
+  const char * env = CoinInternal::getEnvironmentVariableRaw(SoDBP::EnvVars::COIN_PROFILER);
   if (env == NULL) return;
   std::vector<std::string> parameters;
   tokenize(env, ":", parameters);
@@ -335,7 +336,7 @@ SoProfilerP::parseCoinProfilerVariable(void)
 void
 SoProfilerP::parseCoinProfilerOverlayVariable(void)
 {
-  const char * env = coin_getenv(SoDBP::EnvVars::COIN_PROFILER_OVERLAY);
+  const char * env = CoinInternal::getEnvironmentVariableRaw(SoDBP::EnvVars::COIN_PROFILER_OVERLAY);
   if (env == NULL) return;
   std::vector<std::string> parameters;
   tokenize(env, ":", parameters);

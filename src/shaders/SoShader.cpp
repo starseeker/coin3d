@@ -195,6 +195,7 @@
 
 #include "misc/SbHash.h"
 #include "tidbitsp.h"
+#include "misc/SoEnvironment.h"
 
 // *************************************************************************
 
@@ -303,7 +304,7 @@ SoShader::init(void)
     SoShaderParameterArray4i::initClass();
 #endif
 
-  SO_SHADER_DIR = coin_getenv("SO_SHADER_DIR");
+  SO_SHADER_DIR = CoinInternal::getEnvironmentVariableRaw("SO_SHADER_DIR");
   shader_dict = new SbHash<const char *, char *>;
   shader_builtin_dict = new SbHash<const char *, char *>;
   setupBuiltinShaders();
