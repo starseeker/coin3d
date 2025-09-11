@@ -211,29 +211,11 @@ cc_recmutex_unlock(cc_recmutex * recmutex)
   internal functions - migrated to C++17 std::recursive_mutex via SbThreadMutex
 */
 
-// Legacy C implementation state - kept for non-global cc_recmutex instances
-static cc_recmutex * recmutex_field_lock;
-static cc_recmutex * recmutex_notify_lock;
-
-static void
-recmutex_cleanup(void)
-{
-  cc_recmutex_destruct(recmutex_field_lock);
-  cc_recmutex_destruct(recmutex_notify_lock);
-}
-
 void 
 cc_recmutex_init(void)
 {
-  // Initialize the C++17 global mutexes
+  // Initialize the C++17 global mutexes - no legacy C mutexes needed
   cc_recmutex_cxx17_init();
-  
-  // Keep legacy C global mutexes for any remaining compatibility needs
-  recmutex_field_lock = cc_recmutex_construct();
-  recmutex_notify_lock = cc_recmutex_construct();
-  /* atexit priority makes this callback trigger after normal cleanup
-     functions which might still use a recmutex instance */
-  coin_atexit((coin_atexit_f*) recmutex_cleanup, CC_ATEXIT_THREADING_SUBSYSTEM);
 }
 
 int 
