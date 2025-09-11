@@ -44,6 +44,7 @@
 
 #include <cstdlib>
 #include <cassert>
+#include <mutex>
 
 #include <Inventor/SoInput.h>
 #include <Inventor/SoOutput.h>
@@ -56,7 +57,6 @@
 
 #include "tidbitsp.h"
 #include "misc/SbHash.h"
-#include "threads/threadsutilp.h"
 
 // *************************************************************************
 
@@ -85,7 +85,7 @@ PRIVATE_NODE_TYPESYSTEM_SOURCE(SoProtoInstance);
 typedef SbHash<const SoNode *, SoProtoInstance *> SoNode2SoProtoInstanceMap;
 
 static SoNode2SoProtoInstanceMap * protoinstance_dict;
-static void * protoinstance_mutex;
+static std::mutex protoinstance_mutex;
 
 // *************************************************************************
 
@@ -106,7 +106,6 @@ SoProtoInstance::initClass(void)
                        SoNode::nextActionMethodIndex++);
 
   protoinstance_dict = new SoNode2SoProtoInstanceMap;
-  CC_MUTEX_CONSTRUCT(protoinstance_mutex);
   coin_atexit((coin_atexit_f*) SoProtoInstance::cleanupClass, CC_ATEXIT_NORMAL);
 }
 
@@ -117,7 +116,6 @@ void
 SoProtoInstance::cleanupClass(void)
 {
   delete protoinstance_dict;
-  CC_MUTEX_DESTRUCT(protoinstance_mutex);
   SoProtoInstance::classTypeId STATIC_SOTYPE_INIT;
 }
 
@@ -192,7 +190,7 @@ SoProtoInstance::readInstance(SoInput * in, unsigned short flags)
 void
 SoProtoInstance::setRootNode(SoNode * root)
 {
-  CC_MUTEX_LOCK(protoinstance_mutex);
+  std::lock_guard<std::mutex> lock(protoinstance_mutex);
   if (PRIVATE(this)->root) {
     protoinstance_dict->erase(PRIVATE(this)->root);
   }
@@ -200,7 +198,6 @@ SoProtoInstance::setRootNode(SoNode * root)
   if (root) {
     protoinstance_dict->put(root, this);
   }
-  CC_MUTEX_UNLOCK(protoinstance_mutex);
 }
 
 /*!
@@ -244,9 +241,10 @@ SoProtoInstance *
 SoProtoInstance::findProtoInstance(const SoNode * rootnode)
 {
   SoProtoInstance * ret;
-  CC_MUTEX_LOCK(protoinstance_mutex);
-  if (!protoinstance_dict->get(rootnode, ret)) { ret = NULL; }
-  CC_MUTEX_UNLOCK(protoinstance_mutex);
+  {
+    std::lock_guard<std::mutex> lock(protoinstance_mutex);
+    if (!protoinstance_dict->get(rootnode, ret)) { ret = NULL; }
+  }
   return ret;
 }
 
