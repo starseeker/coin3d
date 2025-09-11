@@ -118,11 +118,6 @@
 #include "misc/SoConfigSettings.h"
 #include "rendering/SoVBO.h"
 
-#ifdef HAVE_VRML97
-#include <Inventor/VRMLnodes/SoVRML.h>
-#include <Inventor/VRMLnodes/SoVRMLGroup.h>
-#endif // HAVE_VRML97
-
 #ifdef HAVE_THREADS
 #include "threads/threadp.h"
 #endif // HAVE_THREADS
@@ -347,23 +342,12 @@ SoDB::init(void)
   SoShadowGroup::init();
   SoGeo::init();
 
-#ifdef HAVE_VRML97
-  so_vrml_init();
-#endif // HAVE_VRML97
-
   SoScXMLNavigation::initClasses();
 
   // Register all valid file format headers.
   SoDB::registerHeader(SbString("#Inventor V2.1 ascii   "), FALSE, 2.1f,
                        NULL, NULL, NULL);
   SoDB::registerHeader(SbString("#Inventor V2.1 binary  "), TRUE, 2.1f,
-                       NULL, NULL, NULL);
-
-  // FIXME: this is really only valid if the HAVE_VRML97 define is in
-  // place. If it is not, we should register the header in a way so
-  // that we spit out a /specific/ warning about why VRML97 is not
-  // supported in the configuration of the compiled libCoin. 20020808 mortene.
-  SoDB::registerHeader(SbString("#VRML V2.0 utf8"), FALSE, 2.1f,
                        NULL, NULL, NULL);
 
   // FIXME: there are nodes in TGS' later Inventor versions that we do
@@ -400,20 +384,6 @@ SoDB::init(void)
                        NULL, NULL, NULL);
   SoDB::registerHeader(SbString("#Inventor V1.0 binary  "), TRUE, 1.0f,
                        NULL, NULL, NULL);
-
-  // The VRML 1 standard was made from SGI's Inventor V2.1 (and should
-  // be a pure sub-set), so that's what we pretend the format version
-  // is, internally.
-  SoDB::registerHeader(SbString("#VRML V1.0 ascii   "), FALSE, 2.1f,
-                       NULL, NULL, NULL);
-
-
-  // FIXME: should be more robust and accept a set of headers that
-  // /almost/ match the exact specifications above. I have for
-  // instance seen several VRML models from the web which starts with
-  // "#VRML 2.0 utf8", which will cause SoDB::readAll() to fail with
-  // "Not a valid Inventor file." We should rather spit out a warning
-  // and read it anyway if we detect it's a close match. 20020920 mortene.
 
   SoDB::createGlobalField("realTime", SoSFTime::getClassTypeId());
   SoGlobalField::getGlobalFieldContainer("realTime")->ref();
@@ -682,24 +652,6 @@ SoDB::readAll(SoInput * in)
 {
   return (SoSeparator*)
     SoDB::readAllWrapper(in, SoSeparator::getClassTypeId());
-}
-
-/*!
-  Same as SoDB::readAll(), except it return an SoVRMLGroup instead
-  of an SoSeparator.
-
-  \sa SoDB::readAll()
-  \since Coin 2.0
-*/
-SoVRMLGroup *
-SoDB::readAllVRML(SoInput * in)
-{
-#ifdef HAVE_VRML97
-  return (SoVRMLGroup*)
-    SoDB::readAllWrapper(in, SoVRMLGroup::getClassTypeId());
-#else // HAVE_VRML97
-  return NULL;
-#endif // ! HAVE_VRML97
 }
 
 /*!
