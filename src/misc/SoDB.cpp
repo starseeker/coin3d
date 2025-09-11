@@ -376,10 +376,6 @@ SoDB::init(void)
   // files.  Should spit out a warning, and a helpful message on how
   // it is possible to convert old files, and then exit import.
   // 20010925 mortene.
-  //
-  // UPDATE 20040909 mortene: pederb has implemented the "upgraders"
-  // mechanism, and at least a few upgrader nodes for V1.0
-  // stuff. Should investigate the exact status of this.
   SoDB::registerHeader(SbString("#Inventor V1.0 ascii   "), FALSE, 1.0f,
                        NULL, NULL, NULL);
   SoDB::registerHeader(SbString("#Inventor V1.0 binary  "), TRUE, 1.0f,
