@@ -41,7 +41,7 @@
   attributes related to viewing. The SoListener plays a similar
   role when it comes to rendering audio.
 
-  If no SoListener has been encountered when a SoVRMLSound node
+  If no SoListener has been encountered when a sound node
   renders itself, it will use the position and the orientation of the
   current camera. In this case, a gain of 1, a dopplerVelocity of 0
   and a dopplerFactor of 0 will be assumed.
@@ -60,7 +60,7 @@
     }
   \endcode
 
-  \sa SoVRMLSound
+  \note VRML support has been removed from this version of Coin3D.
 */
 
 #include <Inventor/nodes/SoListener.h>

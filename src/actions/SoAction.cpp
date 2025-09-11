@@ -419,10 +419,6 @@ SoAction::initClasses(void)
 
   SoSimplifyAction::initClass();
   SoReorganizeAction::initClass();
-  SoToVRMLAction::initClass();
-#ifdef HAVE_VRML97
-  SoToVRML2Action::initClass();
-#endif // HAVE_VRML97
 }
 
 /*!

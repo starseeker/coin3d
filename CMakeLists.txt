@@ -83,8 +83,7 @@ cmake_dependent_option(COIN_BUILD_DOCUMENTATION_CHM "Build compressed HTML help 
 
 option(COIN3D_USE_OSMESA "Build Coin3D against OSMesa for offscreen/headless rendering" OFF)
 option(COIN_THREADSAFE "Enable thread safe render traversals." OFF)
-option(HAVE_VRML97 "Enable VRML97 support." OFF)
-cmake_dependent_option(COIN_HAVE_JAVASCRIPT "Enable JavaScript capabilities for VRML97." OFF "HAVE_VRML97" OFF)
+
 option(HAVE_NODEKITS "Enable NodeKit support." OFF)
 cmake_dependent_option(HAVE_DRAGGERS "Enable Dragger support." OFF "HAVE_NODEKITS" OFF)
 cmake_dependent_option(HAVE_MANIPULATORS "Enable Manipulator support." OFF "HAVE_NODEKITS" OFF)
@@ -128,8 +127,6 @@ cmake_dependent_option(COIN_DEBUG_CHECK_THREAD "Enable thread check in several c
 #   COIN_BUILD_EGL
 #   COIN_BUILD_AWESOME_DOCUMENTATION
 #   COIN_THREADSAFE
-#   HAVE_VRML97
-#   COIN_HAVE_JAVASCRIPT
 #   HAVE_NODEKITS
 #   HAVE_DRAGGERS
 #   HAVE_MANIPULATORS
@@ -489,24 +486,6 @@ if(NOT FONTCONFIG_RUNTIME_LINKING)
       )
     endif()
     list(APPEND COIN_TARGET_LINK_LIBRARIES Fontconfig::Fontconfig)
-  endif()
-endif()
-
-if(HAVE_VRML97 AND COIN_HAVE_JAVASCRIPT)
-  if(NOT SPIDERMONKEY_RUNTIME_LINKING)
-    find_package(SpiderMonkey)
-    if(SPIDERMONKEY_FOUND)
-      set(HAVE_SPIDERMONKEY_VIA_LINKTIME_LINKING 1)
-      set(HAVE_SPIDERMONKEY_H 1)
-      if(NOT TARGET SpiderMonkey::SpiderMonkey)
-        add_library(SpiderMonkey::SpiderMonkey UNKNOWN IMPORTED)
-        set_target_properties(SpiderMonkey::SpiderMonkey PROPERTIES
-          IMPORTED_LOCATION "${SPIDERMONKEY_LIBRARIES}"
-          INTERFACE_INCLUDE_DIRECTORIES "${SPIDERMONKEY_INCLUDE_DIRS}"
-        )
-      endif()
-      list(APPEND COIN_TARGET_LINK_LIBRARIES SpiderMonkey::SpiderMonkey)
-    endif()
   endif()
 endif()
 
@@ -913,11 +892,7 @@ if(HAVE_3DS_IMPORT_CAPABILITIES)
 else()
   set(FEAT_HAVE_3DS 0)
 endif()
-if(HAVE_VRML97)
-  set(FEAT_HAVE_VRML97 1)
-else()
-  set(FEAT_HAVE_VRML97 0)
-endif()
+set(FEAT_HAVE_VRML97 0)
 if(HAVE_SOUND)
   set(FEAT_HAVE_SOUND 1)
 else()
@@ -963,8 +938,6 @@ if(COIN_BUILD_TESTS)
 endif()
 
 # add_feature_info(ThreadSafe COIN_THREADSAFE "Thread safe render traversals.")
-# add_feature_info(VRML97 HAVE_VRML97 "VRML97 support.")
-# add_feature_info(JavaScript COIN_HAVE_JAVASCRIPT "JavaScript capabilities.")
 # add_feature_info(NodeKits HAVE_NODEKITS "NodeKit support.")
 # add_feature_info(Draggers HAVE_DRAGGERS "Dragger support.")
 # add_feature_info(Manipulators HAVE_MANIPULATORS "Manipulator support.")

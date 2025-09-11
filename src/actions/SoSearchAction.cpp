@@ -351,7 +351,7 @@ SoSearchAction::isSearchingAll(void) const
  
   \code
     SoFullPath * path = (SoFullPath *) searchaction->getPath();
-    SoVRMLCoordinate * vrmlcord = (SoVRMLCoordinate *) path->getTail();
+    SoCoordinate3 * coord = (SoCoordinate3 *) path->getTail();
   \endcode
 */
 SoPath *
