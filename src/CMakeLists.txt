@@ -45,7 +45,7 @@ set(SUBDIRS
   engines errors events fields fonts glue io misc rendering lists
   nodes shapenodes projectors sensors upgraders
   collision shadows geo threads shaders
-  hardcopy navigation
+  hardcopy
 )
 # TODO - see how to make draggers toolkit independent
 # TODO - see what we need from manips
@@ -89,7 +89,7 @@ source_group("Header Files\\Inventor\\lists"                     REGULAR_EXPRESS
 source_group("Header Files\\Inventor\\lock"                      REGULAR_EXPRESSION ".*/include/Inventor/lock/.*[.]h")
 source_group("Header Files\\Inventor\\manips"                    REGULAR_EXPRESSION ".*/include/Inventor/manips/.*[.]h")
 source_group("Header Files\\Inventor\\misc"                      REGULAR_EXPRESSION ".*/include/Inventor/misc/.*[.]h")
-source_group("Header Files\\Inventor\\navigation"                REGULAR_EXPRESSION ".*/include/Inventor/navigation/.*[.]h")
+
 source_group("Header Files\\Inventor\\nodekits"                  REGULAR_EXPRESSION ".*/include/Inventor/nodekits/.*[.]h")
 source_group("Header Files\\Inventor\\nodes"                     REGULAR_EXPRESSION ".*/include/Inventor/nodes/.*[.]h")
 source_group("Header Files\\Inventor\\projectors"                REGULAR_EXPRESSION ".*/include/Inventor/projectors/.*[.]h")
@@ -176,7 +176,7 @@ else()
     $<TARGET_OBJECTS:io>
     $<TARGET_OBJECTS:lists>
     $<TARGET_OBJECTS:misc>
-    $<TARGET_OBJECTS:navigation>
+
     $<TARGET_OBJECTS:nodes>
     $<TARGET_OBJECTS:projectors>
     $<TARGET_OBJECTS:rendering>

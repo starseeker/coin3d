@@ -98,7 +98,7 @@
 #include <Inventor/annex/HardCopy/SoHardCopy.h>
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/annex/FXViz/nodes/SoShadowGroup.h>
-#include <Inventor/navigation/SoScXMLNavigation.h>
+
 #include <Inventor/misc/SoGLDriverDatabase.h>
 #include <Inventor/misc/CoinResources.h>
 #include <Inventor/misc/SoGeo.h>
@@ -342,7 +342,7 @@ SoDB::init(void)
   SoShadowGroup::init();
   SoGeo::init();
 
-  SoScXMLNavigation::initClasses();
+
 
   // Register all valid file format headers.
   SoDB::registerHeader(SbString("#Inventor V2.1 ascii   "), FALSE, 2.1f,
