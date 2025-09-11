@@ -40,6 +40,7 @@
 #include <Inventor/elements/SoGLCacheContextElement.h>
 
 #include "tidbitsp.h"
+#include "misc/SoEnvironment.h"
 
 #if defined(HAVE_CONFIG_H)
 #include "config.h"
@@ -467,16 +468,16 @@ CoinOffscreenGLCanvas::getMaxTileSize(void)
 
   // Makes it possible to override the default tilesizes. Should prove
   // useful for debugging problems on remote sites.
-  const char * env = coin_getenv("COIN_OFFSCREENRENDERER_TILEWIDTH");
+  const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_OFFSCREENRENDERER_TILEWIDTH");
   const unsigned int forcedtilewidth = env ? atoi(env) : 0;
-  env = coin_getenv("COIN_OFFSCREENRENDERER_TILEHEIGHT");
+  env = CoinInternal::getEnvironmentVariableRaw("COIN_OFFSCREENRENDERER_TILEHEIGHT");
   const unsigned int forcedtileheight = env ? atoi(env) : 0;
 
   if (forcedtilewidth != 0) { width = forcedtilewidth; }
   if (forcedtileheight != 0) { height = forcedtileheight; }
 
   // Also make it possible to force a maximum tilesize.
-  env = coin_getenv("COIN_OFFSCREENRENDERER_MAX_TILESIZE");
+  env = CoinInternal::getEnvironmentVariableRaw("COIN_OFFSCREENRENDERER_MAX_TILESIZE");
   const unsigned int maxtilesize = env ? atoi(env) : 0;
   if (maxtilesize != 0) {
     width = SbMin(width, maxtilesize);
@@ -498,7 +499,7 @@ CoinOffscreenGLCanvas::debug(void)
 {
   static int flag = -1; // -1 means "not initialized" in this context
   if (flag == -1) {
-    const char * env = coin_getenv("COIN_DEBUG_SOOFFSCREENRENDERER");
+    const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_SOOFFSCREENRENDERER");
     flag = env && (atoi(env) > 0);
   }
   return flag;
@@ -509,7 +510,7 @@ CoinOffscreenGLCanvas::allowResourcehog(void)
 {
   static int resourcehog_flag = -1; // -1 means "not initialized" in this context
   if (resourcehog_flag == -1) {
-    const char * env = coin_getenv("COIN_SOOFFSCREENRENDERER_ALLOW_RESOURCEHOG");
+    const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_SOOFFSCREENRENDERER_ALLOW_RESOURCEHOG");
     resourcehog_flag = env && (atoi(env) > 0);
     SoDebugError::postInfo("CoinOffscreenGLCanvas",
                            "Ignoring resource hogging due to set COIN_SOOFFSCREENRENDERER_ALLOW_RESOURCEHOG environment variable.");

@@ -39,6 +39,7 @@
 
 #include "io/SoInputP.h"
 #include "io/SoInput_FileInfo.h"
+#include "misc/SoEnvironment.h"
 
 // *************************************************************************
 
@@ -47,7 +48,7 @@ SoInputP::debug(void)
 {
   static int dbg = -1;
   if (dbg == -1) {
-    const char * env = coin_getenv("COIN_DEBUG_IMPORT");
+    const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_IMPORT");
     dbg = (env && (atoi(env) > 0)) ? 1 : 0;
   }
   return dbg;
@@ -58,7 +59,7 @@ SoInputP::debugBinary(void)
 {
   static int debug = -1;
   if (debug == -1) {
-    const char * env = coin_getenv("COIN_DEBUG_BINARY_INPUT");
+    const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_BINARY_INPUT");
     debug = (env && (atoi(env) > 0)) ? 1 : 0;
   }
   return debug ? TRUE : FALSE;
@@ -238,7 +239,7 @@ SoInputP::isNameStartCharVRML2(unsigned char c, SbBool validIdent)
   // startcharacter.
   static int non_strict = -1;
   if (non_strict == -1) {
-    const char * env = coin_getenv("COIN_NOT_STRICT_VRML97");
+    const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_NOT_STRICT_VRML97");
     non_strict = env && (atoi(env) > 0);
   }
 
