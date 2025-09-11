@@ -118,9 +118,7 @@
 #include "misc/SoConfigSettings.h"
 #include "rendering/SoVBO.h"
 
-#ifdef HAVE_THREADS
-#include "threads/threadp.h"
-#endif // HAVE_THREADS
+// Threading migration: threadp.h removed - functionality replaced with C++17 equivalents
 
 #ifdef COIN_THREADSAFE
 #include <Inventor/threads/SbRWMutex.h>
@@ -227,8 +225,7 @@ SoDB::init(void)
 
 
 #ifdef HAVE_THREADS
-  // initialize thread system first
-  cc_thread_init();
+  // Modern C++17 threading doesn't require explicit initialization
 #ifdef COIN_THREADSAFE
   SoDBP::globalmutex = new SbRWMutex(SbRWMutex::READ_PRECEDENCE);
 #endif // COIN_THREADSAFE
