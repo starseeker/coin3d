@@ -42,7 +42,7 @@
 //
 
 #include <Inventor/SbBasic.h>
-#include <Inventor/system/inttypes.h>
+#include <cstdint>
 
 class SoShape;
 class SoAction;

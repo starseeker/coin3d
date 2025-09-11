@@ -49,7 +49,5 @@
 #include <Inventor/collision/SoIntersectionDetectionAction.h>
 #include <Inventor/actions/SoSimplifyAction.h>
 #include <Inventor/actions/SoReorganizeAction.h>
-#include <Inventor/actions/SoToVRMLAction.h>
-#include <Inventor/actions/SoToVRML2Action.h>
 
 #endif // !COIN_SOACTIONS_H

@@ -46,7 +46,6 @@ class SoInput;
 class SoNode;
 class SoPath;
 class SoSeparator;
-class SoVRMLGroup;
 class SoGroup;
 
 typedef void SoDBHeaderCB(void * data, SoInput * input);
@@ -63,7 +62,6 @@ public:
   static SbBool read(SoInput * input, SoBase *& base);
   static SbBool read(SoInput * input, SoNode *& rootnode);
   static SoSeparator * readAll(SoInput * input);
-  static SoVRMLGroup * readAllVRML(SoInput * input);
   static SbBool isValidHeader(const char * teststring);
   static SbBool registerHeader(const SbString & headerstring,
                                SbBool isbinary,

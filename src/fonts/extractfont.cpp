@@ -16,7 +16,7 @@
 
 #include <simage.h>
 
-#include <Inventor/system/inttypes.h>
+#include <cstdint>
 
 #ifndef FALSE
 #define FALSE (0)

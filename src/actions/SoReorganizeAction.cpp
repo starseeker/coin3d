@@ -36,9 +36,8 @@
   Coin 2.5 added improved support for OpenGL vertex array and VBO
   rendering.  This might lead to major rendering performance
   improvements compared to the old rendering code. The new rendering
-  code has been added for the SoIndexedFaceSet, SoVRMLIndexedFaceSet,
-  SoIndexedLineSet, SoVRMLIndexedLineSet, SoPointSet, SoFaceSet and
-  SoVRMLPointSet nodes. 
+  code has been added for the SoIndexedFaceSet,
+  SoIndexedLineSet, SoPointSet, SoFaceSet nodes. 
 
   To take advantage of the improved performance vertex array and VBO
   rendering yields, you'll need to organize your vertex data in a way
@@ -280,17 +279,6 @@
 #include <Inventor/caches/SoPrimitiveVertexCache.h>
 #include <Inventor/SbColor4f.h>
 
-#ifdef HAVE_VRML97
-#include <Inventor/VRMLnodes/SoVRMLCoordinate.h>
-#include <Inventor/VRMLnodes/SoVRMLTextureCoordinate.h>
-#include <Inventor/VRMLnodes/SoVRMLNormal.h>
-#include <Inventor/VRMLnodes/SoVRMLColor.h>
-#include <Inventor/VRMLnodes/SoVRMLShape.h>
-#include <Inventor/VRMLnodes/SoVRMLVertexShape.h>
-#include <Inventor/VRMLnodes/SoVRMLIndexedFaceSet.h>
-#include <Inventor/VRMLnodes/SoVRMLIndexedLineSet.h>
-#endif // HAVE_VRML97
-
 #include "coindefs.h" // COIN_STUB()
 #include "SbBasicP.h"
 #include "actions/SoSubActionP.h"
@@ -310,28 +298,10 @@ class SoReorganizeActionP {
     cbaction.addTriangleCallback(SoVertexShape::getClassTypeId(), triangle_cb, this);
     cbaction.addLineSegmentCallback(SoVertexShape::getClassTypeId(), line_segment_cb, this);
 
-#ifdef HAVE_VRML97
-    cbaction.addTriangleCallback(SoVRMLIndexedFaceSet::getClassTypeId(), triangle_cb, this);
-    cbaction.addLineSegmentCallback(SoVRMLIndexedLineSet::getClassTypeId(), line_segment_cb, this);
-#endif // HAVE_VRML97
-
     cbaction.addPreCallback(SoVertexShape::getClassTypeId(),
                             pre_shape_cb, this);
     cbaction.addPostCallback(SoVertexShape::getClassTypeId(),
                              post_shape_cb, this);
-
-#ifdef HAVE_VRML97
-    cbaction.addPreCallback(SoVRMLIndexedFaceSet::getClassTypeId(),
-                            pre_shape_cb, this);
-    cbaction.addPostCallback(SoVRMLIndexedFaceSet::getClassTypeId(),
-                             post_shape_cb, this);
-
-
-    cbaction.addPreCallback(SoVRMLIndexedLineSet::getClassTypeId(),
-                            pre_shape_cb, this);
-    cbaction.addPostCallback(SoVRMLIndexedLineSet::getClassTypeId(),
-                             post_shape_cb, this);
-#endif // HAVE_VRML97
 
   }
   SoReorganizeAction * master;

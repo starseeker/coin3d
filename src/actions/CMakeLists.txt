@@ -15,8 +15,6 @@ set(COIN_ACTIONS_FILES
 	SoReorganizeAction.cpp
 	SoSearchAction.cpp
 	SoSimplifyAction.cpp
-	SoToVRMLAction.cpp
-	SoToVRML2Action.cpp
 	SoWriteAction.cpp
 )
 

@@ -36,7 +36,7 @@
 #include <Inventor/SbVec3f.h>
 #include <Inventor/SbBSPTree.h>
 #include <Inventor/lists/SbList.h>
-#include <Inventor/system/inttypes.h>
+#include <cstdint>
 
 class COIN_DLL_API SoNormalGenerator {
 public:

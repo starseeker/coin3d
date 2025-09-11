@@ -35,7 +35,7 @@
 
 #include <Inventor/bundles/SoBundle.h>
 #include <Inventor/SbBasic.h>
-#include <Inventor/system/inttypes.h>
+#include <cstdint>
 #include <Inventor/elements/SoGLMultiTextureCoordinateElement.h>
 
 #include <Inventor/SbVec4f.h>

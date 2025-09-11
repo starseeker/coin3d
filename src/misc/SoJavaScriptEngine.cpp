@@ -50,10 +50,6 @@
 #include <Inventor/C/tidbits.h>
 #include "coindefs.h"
 
-#ifdef HAVE_VRML97
-#include "vrml97/JS_VRMLClasses.h"
-#endif // HAVE_VRML97
-
 // *************************************************************************
 
 #define PRIVATE(p) (p->pimpl)
@@ -257,9 +253,6 @@ SoJavaScriptEngine::SoJavaScriptEngine()
   // Make the engine accessible from within the context
   spidermonkey()->JS_SetContextPrivate(cx, this);
 
-#ifdef HAVE_VRML97
-  JS_addVRMLclasses(this);
-#endif // HAVE_VRML97
 }
 
 /*!

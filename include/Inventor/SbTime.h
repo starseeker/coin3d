@@ -35,7 +35,7 @@
 
 #include <cstdio>
 
-#include <Inventor/system/inttypes.h>
+#include <cstdint>
 #include <Inventor/SbBasic.h>
 #include <Inventor/SbString.h>
 

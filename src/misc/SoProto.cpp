@@ -34,46 +34,12 @@
   \class SoProto SoProto.h Inventor/misc/SoProto.h
   \brief The SoProto class handles PROTO definitions.
 
-  SoProto and SoProtoInstance are mostly internal classes. They're
-  designed to read and handle VRML97 PROTOs. However, it's possible to
-  define your PROTOs in C++. You must define your PROTO in a char
-  array, and read that char array using SoInput::setBuffer() and
-  SoDB::readAllVRML(). Example:
+  \note VRML support has been removed from this version of Coin3D.
+  The SoProto functionality is no longer available.
 
-  \code
-
-  char myproto[] =
-  "#VRML V2.0 utf8\n"
-  "PROTO ColorCube [\n"
-  "  field SFColor color 1 1 1\n"
-  "  field SFVec3f size 1 1 1\n"
-  "]\n"
-  "{\n"
-  "  Shape {\n"
-  "    appearance Appearance {\n"
-  "      material Material {\n"
-  "        diffuseColor IS color\n"
-  "      }\n"
-  "    }\n"
-  "    geometry Box { size IS size }\n"
-  "  }\n"
-  "}\n"
-  "ColorCube { color 1 0 0 size 2 1 1 }\n";
-
-  SoInput in;
-  in.setBuffer(myproto, strlen(myproto));
-  SoVRMLGroup * protoroot = SoDB::readAllVRML(&in);
-
-  \endcode
-
-  Now you can create new instances of the ColorCube PROTO using
-  SoProto::findProto() and SoProto::createProtoInstance(). If you want
-  to insert PROTO instances into your scene graph, you should insert
-  the node returned from SoProtoInstance::getRootNode().
-
-  See
-  http://www.web3d.org/documents/specifications/14772/V2.0/part1/concepts.html#4.8
-  for more information about PROTOs in VRML97.
+  SoProto and SoProtoInstance were designed to read and handle VRML97 PROTOs.
+  This functionality has been removed to simplify the library and focus on
+  core scene graph management rather than file I/O support.
 
 */
 

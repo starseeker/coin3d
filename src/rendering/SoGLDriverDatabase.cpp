@@ -394,6 +394,13 @@ pimpl(void)
   return sogldriverdatabase_instance;
 }
 
+// Class method that provides access to the singleton instance
+SoGLDriverDatabaseP *
+SoGLDriverDatabase::pimpl(void)
+{
+  return ::pimpl();
+}
+
 // Public API implementation
 
 void

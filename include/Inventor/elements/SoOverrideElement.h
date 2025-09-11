@@ -34,7 +34,7 @@
 \**************************************************************************/
 
 #include <Inventor/elements/SoSubElement.h>
-#include <Inventor/system/inttypes.h>
+#include <cstdint>
 
 class SoType; // lame doxygen "fix"
 

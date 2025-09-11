@@ -35,7 +35,7 @@
 
 #include <Inventor/SbVec3f.h>
 #include <Inventor/caches/SoCache.h>
-#include <Inventor/system/inttypes.h>
+#include <cstdint>
 
 class SoNormalGenerator;
 class SoNormalCacheP;

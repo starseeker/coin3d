@@ -1583,8 +1583,6 @@ SoBase::createNotRec(void)
 #include <Inventor/SoOutput.h>
 #include <Inventor/actions/SoWriteAction.h>
 #include <Inventor/nodes/SoSeparator.h>
-#include <Inventor/actions/SoToVRML2Action.h>
-#include <Inventor/VRMLnodes/SoVRMLGroup.h>
 
  static char * buffer;
   static size_t buffer_size = 0;
@@ -1748,7 +1746,6 @@ DEF root Separator {
   }
 }
 */
-	    SoVRMLGroup *newroot = NULL;
 	   // DISABLED: VRML2 conversion functionality has been removed 
 	   // Only test the standard Inventor output now
 	   for(int j=0;j<1;j++) {
@@ -1762,7 +1759,7 @@ DEF root Separator {
        SoOutput out;
        // out.openFile("out.wrl"); 
 	   out.setBuffer(buffer, 1024,buffer_realloc);
-       out.setHeaderString(SbString("#VRML V1.0 ascii"));
+       out.setHeaderString(SbString("#Inventor V2.1 ascii"));
        SoWriteAction wra(&out);
        wra.apply(scenegraph);
 	   SbString s(buffer);
@@ -1812,9 +1809,7 @@ DEF root Separator {
 	   
 	
        root->unref();
-	   if (newroot) {
-         newroot->unref();
-       }
+
  } // end test case
 
 #endif // COIN_TEST_SUITE

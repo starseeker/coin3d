@@ -33,7 +33,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#include <Inventor/system/inttypes.h>
+#include <cstdint>
 #include <Inventor/SbVec3f.h>
 
 class COIN_DLL_API SbColor : public SbVec3f {
