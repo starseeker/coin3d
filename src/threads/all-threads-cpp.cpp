@@ -41,12 +41,8 @@
 #include "thread.cpp"
 #include "mutex.cpp"
 #include "condvar.cpp"
-#include "rwmutex.cpp"
 #include "recmutex.cpp"
 #include "sched.cpp"
-#include "sync.cpp"
 #include "wpool.cpp"
 #include "worker.cpp"
-#include "barrier.cpp"
-#include "fifo.cpp"
 #endif /* HAVE_THREADS */

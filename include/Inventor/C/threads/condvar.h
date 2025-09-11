@@ -34,7 +34,6 @@
 \**************************************************************************/
 
 #include <Inventor/C/basic.h>  /* COIN_DLL_API */
-#include <Inventor/C/base/time.h>  /* cc_time */
 #include <Inventor/C/threads/common.h>  /* cc_condvar */
 
 #ifdef __cplusplus
@@ -48,7 +47,7 @@ extern "C" {
   
   COIN_DLL_API int cc_condvar_wait(cc_condvar * condvar, cc_mutex * mutex);
   COIN_DLL_API int cc_condvar_timed_wait(cc_condvar * condvar, cc_mutex * mutex,
-                                         cc_time period);
+                                         double period);
   
   COIN_DLL_API void cc_condvar_wake_one(cc_condvar * condvar);
   COIN_DLL_API void cc_condvar_wake_all(cc_condvar * condvar);
