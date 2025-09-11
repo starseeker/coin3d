@@ -159,6 +159,7 @@
 
 #include "glue/dlp.h"
 #include "tidbitsp.h"
+#include "misc/SoEnvironment.h"
 
 #ifndef MAXPATHLEN
 #define MAXPATHLEN (4096)
@@ -345,8 +346,8 @@ cc_dl_debugging(void)
 {
   static int d = -1;
   if (d == -1) {
-    const char * val = coin_getenv("COIN_DEBUG_DL");
-    d = val ? atoi(val) : 0;
+    auto val = CoinInternal::getEnvironmentVariable("COIN_DEBUG_DL");
+    d = val.has_value() ? std::atoi(val->c_str()) : 0;
   }
   return (d > 0) ? 1 : 0;
 }

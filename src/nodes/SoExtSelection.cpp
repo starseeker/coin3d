@@ -128,6 +128,7 @@
 
 #include "nodes/SoSubNodeP.h"
 #include "coindefs.h" // COIN_OBSOLETED()
+#include "../misc/SoEnvironment.h"
 
 // *************************************************************************
 
@@ -464,8 +465,8 @@ SoExtSelectionP::debug(void)
 {
   static int dbg = -1;
   if (dbg == -1) {
-    const char * env = coin_getenv("COIN_DEBUG_SOEXTSELECTION");
-    dbg = env && (atoi(env) > 0);
+    auto env = CoinInternal::getEnvironmentVariable("COIN_DEBUG_SOEXTSELECTION");
+    dbg = env.has_value() && (std::atoi(env->c_str()) > 0);
   }
   return dbg ? TRUE : FALSE;
 }
@@ -2707,12 +2708,12 @@ SoExtSelectionP::performSelection(SoHandleEventAction * action)
       // Debugging: if the envvar is set, the contents of the
       // offscreen buffer are stored to disk for investigation.
       static SbBool chkenv = FALSE;
-      static const char * dumpfilename = NULL;
+      static auto dumpfilename = std::optional<std::string>{};
       if (chkenv == FALSE) {
-        dumpfilename = coin_getenv("COIN_EXTSELECTION_SAVE_OFFSCREENBUFFER");
+        dumpfilename = CoinInternal::getEnvironmentVariable("COIN_EXTSELECTION_SAVE_OFFSCREENBUFFER");
         chkenv = TRUE;
       }
-      if (dumpfilename) { this->renderer->writeToRGB(dumpfilename); }
+      if (dumpfilename.has_value()) { this->renderer->writeToRGB(dumpfilename->c_str()); }
 
       // Scan buffer marking visible colors in the
       // 'visibletrianglesbitarray' array.

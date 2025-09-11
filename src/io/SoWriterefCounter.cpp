@@ -43,6 +43,7 @@
 #include "tidbitsp.h"
 #include "threads/threadsutilp.h"
 #include "misc/SbHash.h"
+#include "../misc/SoEnvironment.h"
 
 // *************************************************************************
 
@@ -406,8 +407,8 @@ dont_mangle_output_names(const SoBase *base)
 
   if (COIN_DONT_MANGLE_OUTPUT_NAMES < 0) {
     COIN_DONT_MANGLE_OUTPUT_NAMES = 0;
-    const char * env = coin_getenv("COIN_DONT_MANGLE_OUTPUT_NAMES");
-    if (env) COIN_DONT_MANGLE_OUTPUT_NAMES = atoi(env);
+    auto env = CoinInternal::getEnvironmentVariable("COIN_DONT_MANGLE_OUTPUT_NAMES");
+    if (env.has_value()) COIN_DONT_MANGLE_OUTPUT_NAMES = std::atoi(env->c_str());
   }
   return COIN_DONT_MANGLE_OUTPUT_NAMES ? TRUE : FALSE;
 }
@@ -513,8 +514,8 @@ SoWriterefCounter::debugWriterefs(void)
 {
   static int dbg = -1;
   if (dbg == -1) {
-    const char * env = coin_getenv("COIN_DEBUG_WRITEREFS");
-    dbg = (env && (atoi(env) > 0)) ? 1 : 0;
+    auto env = CoinInternal::getEnvironmentVariable("COIN_DEBUG_WRITEREFS");
+    dbg = (env.has_value() && (std::atoi(env->c_str()) > 0)) ? 1 : 0;
   }
   return dbg;
 }
