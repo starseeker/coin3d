@@ -175,7 +175,8 @@ more verbose description of the more significant updates, and the file
 ChangeLog for the detailed source code update list.
 
 See the file INSTALL for installation instructions, and all the other
-README.* files for platform-specific notes.
+README.* files for platform-specific notes. See TESTING.md for information
+about running and writing tests.
 
 In 2019 a new major version was released, 4.0.0 which included some additional
 API changes to improve conformance to Open Inventor 2.1 API.

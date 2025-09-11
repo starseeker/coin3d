@@ -963,28 +963,3 @@ SoType::isInternal(void) const
   criterion.
 */
 
-#ifdef COIN_TEST_SUITE
-#include <Inventor/SoType.h>
-#include <Inventor/SbName.h>
-#include <Inventor/nodes/SoNode.h>
-
-static void * createInstance(void)
-{
-  return (void *)0x1234;
-}
-
-BOOST_AUTO_TEST_CASE(testRemoveType)
-{
-  BOOST_CHECK_MESSAGE(SoType::fromName(SbName("MyClass")) == SoType::badType(),
-                      "Type didn't init to badType");
-  SoType newtype = SoType::createType(SoNode::getClassTypeId(), SbName("MyClass"), createInstance, 0);
-  BOOST_CHECK_MESSAGE(SoType::fromName(SbName("MyClass")) != SoType::badType(),
-                      "Type didn't init correctly");
-  bool success = SoType::removeType(SbName("MyClass"));
-  BOOST_CHECK_MESSAGE(success,
-                      "removeType() failed");
-  BOOST_CHECK_MESSAGE(SoType::fromName(SbName("MyClass")) == SoType::badType(),
-                      "Type didn't deregister correctly");
-}
-
-#endif // COIN_TEST_SUITE

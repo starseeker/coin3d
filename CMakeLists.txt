@@ -934,7 +934,10 @@ endif()
 
 if(COIN_BUILD_TESTS)
   enable_testing()
-  add_subdirectory(testsuite)
+  add_subdirectory(testsuite)  # Legacy tests only - main tests are in tests/
+  # Add primary explicit Catch2-based test system
+  # Primary test system: explicit Catch2-based tests
+  add_subdirectory(tests)
 endif()
 
 # add_feature_info(ThreadSafe COIN_THREADSAFE "Thread safe render traversals.")

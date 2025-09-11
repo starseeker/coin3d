@@ -213,18 +213,3 @@ SoGeoCoordinate::getTransform(SoGeoOrigin * origin, const int idx) const
 
 // *************************************************************************
 
-#ifdef COIN_TEST_SUITE
-
-BOOST_AUTO_TEST_CASE(initialized)
-{
-  BOOST_CHECK_MESSAGE(SoGeoCoordinate::getClassTypeId() != SoType::badType(),
-                      "SoGeoCoordinate class not initialized");
-  SoGeoCoordinate * node = new SoGeoCoordinate;
-  node->ref();
-  BOOST_CHECK_MESSAGE(node->getTypeId() != SoType::badType(),
-                      "missing class initialization");
-  BOOST_CHECK_EQUAL(node->point.getNum(), 1);
-  node->unref();
-}
-
-#endif // COIN_TEST_SUITE
