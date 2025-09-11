@@ -34,31 +34,50 @@
 \**************************************************************************/
 
 #include <Inventor/SbBasic.h>
-#include <Inventor/C/threads/thread.h>
+#include <thread>
+#include <memory>
 
 class SbThread {
 public:
   static SbThread * create(void *(*func)(void *), void * closure) {
-    return new SbThread(cc_thread_construct(func, closure));
+    return new SbThread(func, closure);
   }
   static void destroy(SbThread * thread) {
-    cc_thread_destruct(thread->thread);
     delete thread;
   }
 
   SbBool join(void ** retval = 0L) {
-    return cc_thread_join(this->thread, retval) == CC_OK;
+    if (this->thread && this->thread->joinable()) {
+      this->thread->join();
+      // Note: We can't return the actual return value from std::thread
+      // as it doesn't support void* return values like POSIX threads.
+      // The return value feature is rarely used, so we set it to nullptr.
+      if (retval) *retval = this->return_value;
+      return TRUE;
+    }
+    return FALSE;
   }
   static SbBool join(SbThread * thread, void ** retval = 0L) {
-    return cc_thread_join(thread->thread, retval) == CC_OK;
+    return thread->join(retval);
   }
 
 protected:
-  SbThread(cc_thread * thrd) { this->thread = thrd; }
-  ~SbThread(void) {}
+  SbThread(void *(*func)(void *), void * closure) 
+    : return_value(nullptr) {
+    // Wrap the POSIX-style function in a lambda for std::thread
+    this->thread = std::make_unique<std::thread>([this, func, closure]() {
+      this->return_value = func(closure);
+    });
+  }
+  ~SbThread(void) {
+    if (this->thread && this->thread->joinable()) {
+      this->thread->join();
+    }
+  }
 
 private:
-  cc_thread * thread;
+  std::unique_ptr<std::thread> thread;
+  void * return_value; // Store return value for compatibility
 };
 
 #endif // !COIN_SBTHREAD_H
