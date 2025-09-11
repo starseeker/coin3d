@@ -74,6 +74,7 @@
 #endif /* HAVE_THREADS */
 
 #include "threads/storagep.h"
+#include "threads/storage_cxx17.h"
 
 /* ********************************************************************** */
 
@@ -95,6 +96,9 @@ cc_storage_init(unsigned int size, void (*constructor)(void *),
 #ifdef HAVE_THREADS
   storage->mutex = cc_mutex_construct();
 #endif /* HAVE_THREADS */
+
+  // Register with enhanced cleanup system
+  cc_storage_register_for_cleanup(storage);
 
   return storage;
 }
@@ -134,6 +138,9 @@ cc_storage_destruct(cc_storage * storage)
 {
   assert(storage != NULL);
 
+  // Unregister from enhanced cleanup system first
+  cc_storage_unregister_for_cleanup(storage);
+
   cc_dict_apply(storage->dict, cc_storage_hash_destruct_cb, storage);
   cc_dict_destruct(storage->dict);
 
@@ -157,6 +164,12 @@ cc_storage_get(cc_storage * storage)
 
 #ifdef HAVE_THREADS
   threadid = cc_thread_id();
+
+  // Ensure cleanup trigger is set up for this thread
+  // This will automatically clean up all storage when the thread exits
+#ifdef __cplusplus
+  CoinInternal::ThreadCleanupTrigger::ensureCleanupTrigger();
+#endif
 
   cc_mutex_lock(storage->mutex);
 #endif /* HAVE_THREADS */
@@ -218,9 +231,10 @@ cc_storage_apply_to_all(cc_storage * storage,
 /* ********************************************************************** */
 
 void 
-cc_storage_thread_cleanup(unsigned long COIN_UNUSED_ARG(threadid))
+cc_storage_thread_cleanup(unsigned long threadid)
 {
-  /* FIXME: remove and destruct all data for this thread for all storages */
+  // Use the enhanced cleanup implementation
+  cc_storage_thread_cleanup_enhanced(threadid);
 }
 
 /* ********************************************************************** */

@@ -5,6 +5,7 @@
 set(COIN_THREADS_FILES
 	common.cpp
 	storage.cpp
+	storage_cxx17.cpp
 	recmutex.cpp
 	recmutex_global_cxx17.cpp
 	mutex.cpp
@@ -15,6 +16,7 @@ set(COIN_THREADS_FILES
 # Files excluded from public API documentation, included in complete documentation.
 set(COIN_THREADS_INTERNAL_FILES
 	storagep.h
+	storage_cxx17.h
 	threadsutilp.h
 	recmutexp.h
 	recmutex_global_cxx17.h
