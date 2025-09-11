@@ -65,11 +65,12 @@ enum class Endian {
  * \brief Get the native endianness of the system
  * 
  * C++17 compatible replacement for coin_host_get_endianness().
+ * Since constexpr union access is complex, we use a runtime approach.
  * 
  * \return Endian enumeration value
  */
-constexpr Endian getEndianness() noexcept {
-    // Compile-time endianness detection using a union
+inline Endian getEndianness() noexcept {
+    // Runtime endianness detection using a union
     union {
         std::uint32_t i;
         char c[4];
@@ -83,7 +84,7 @@ constexpr Endian getEndianness() noexcept {
  * 
  * \return true if big endian, false if little endian
  */
-constexpr bool isBigEndian() noexcept {
+inline bool isBigEndian() noexcept {
     return getEndianness() == Endian::big;
 }
 
@@ -92,7 +93,7 @@ constexpr bool isBigEndian() noexcept {
  * 
  * \return true if little endian, false if big endian
  */
-constexpr bool isLittleEndian() noexcept {
+inline bool isLittleEndian() noexcept {
     return getEndianness() == Endian::little;
 }
 
@@ -180,8 +181,8 @@ namespace ByteOrder {
 /*!
  * \brief Convert 16-bit value to network byte order
  */
-constexpr std::uint16_t hostToNetwork(std::uint16_t value) noexcept {
-    if constexpr (isBigEndian()) {
+inline std::uint16_t hostToNetwork(std::uint16_t value) noexcept {
+    if (isBigEndian()) {
         return value;
     } else {
         return (value << 8) | (value >> 8);
@@ -191,8 +192,8 @@ constexpr std::uint16_t hostToNetwork(std::uint16_t value) noexcept {
 /*!
  * \brief Convert 32-bit value to network byte order
  */
-constexpr std::uint32_t hostToNetwork(std::uint32_t value) noexcept {
-    if constexpr (isBigEndian()) {
+inline std::uint32_t hostToNetwork(std::uint32_t value) noexcept {
+    if (isBigEndian()) {
         return value;
     } else {
         return ((value & 0x000000FF) << 24) |
@@ -205,8 +206,8 @@ constexpr std::uint32_t hostToNetwork(std::uint32_t value) noexcept {
 /*!
  * \brief Convert 64-bit value to network byte order
  */
-constexpr std::uint64_t hostToNetwork(std::uint64_t value) noexcept {
-    if constexpr (isBigEndian()) {
+inline std::uint64_t hostToNetwork(std::uint64_t value) noexcept {
+    if (isBigEndian()) {
         return value;
     } else {
         return ((value & 0x00000000000000FFULL) << 56) |
@@ -221,9 +222,9 @@ constexpr std::uint64_t hostToNetwork(std::uint64_t value) noexcept {
 }
 
 // Network to host conversion is the same as host to network for these functions
-constexpr std::uint16_t networkToHost(std::uint16_t value) noexcept { return hostToNetwork(value); }
-constexpr std::uint32_t networkToHost(std::uint32_t value) noexcept { return hostToNetwork(value); }
-constexpr std::uint64_t networkToHost(std::uint64_t value) noexcept { return hostToNetwork(value); }
+inline std::uint16_t networkToHost(std::uint16_t value) noexcept { return hostToNetwork(value); }
+inline std::uint32_t networkToHost(std::uint32_t value) noexcept { return hostToNetwork(value); }
+inline std::uint64_t networkToHost(std::uint64_t value) noexcept { return hostToNetwork(value); }
 
 } // namespace ByteOrder
 
