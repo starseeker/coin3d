@@ -46,6 +46,7 @@
 #include <Inventor/SbName.h>
 
 #include "tidbitsp.h"
+#include "SoEnvironment.h"
 
 inline unsigned int SbHashFunc(const void * key);
 #include "misc/SbHash.h"
@@ -88,7 +89,7 @@ SbHash<void *, char *> * SoDebug_internal::namedict = NULL;
 const char *
 SoDebug::GetEnv(const char * var)
 {
-  return coin_getenv(var);
+  return CoinInternal::getEnvironmentVariableRaw(var);
 }
 
 /*!

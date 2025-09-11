@@ -93,6 +93,7 @@
 #include "io/SoInputP.h"
 #include "io/SoWriterefCounter.h"
 #include "coindefs.h"
+#include "SoEnvironment.h"
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
@@ -380,8 +381,8 @@ SoBase::initClass(void)
   CC_MUTEX_CONSTRUCT(SoBase::PImpl::global_mutex);
 
   // debug
-  const char * str = coin_getenv("COIN_DEBUG_TRACK_SOBASE_INSTANCES");
-  SoBase::PImpl::trackbaseobjects = str && atoi(str) > 0;
+  auto str = CoinInternal::getEnvironmentVariable("COIN_DEBUG_TRACK_SOBASE_INSTANCES");
+  SoBase::PImpl::trackbaseobjects = str.has_value() && std::atoi(str->c_str()) > 0;
 
   SoWriterefCounter::initClass();
 }
@@ -692,7 +693,8 @@ SoBase::setName(const SbName & newname)
   static SbBool checked = FALSE;
   static const char * tracename = NULL;
   if (!checked) {
-    tracename = coin_getenv("COIN_DEBUG_ASSERT_SOBASE_SETNAME");
+    auto env = CoinInternal::getEnvironmentVariable("COIN_DEBUG_ASSERT_SOBASE_SETNAME");
+    tracename = env.has_value() ? env->c_str() : nullptr;
     checked = TRUE;
   }
   if (tracename) { assert(newname != tracename); }
@@ -1338,7 +1340,7 @@ SoBase::writeFooter(SoOutput * out) const
     // someone, for some obscure reason, needs it.
     static int oldstyle = -1;
     if (oldstyle == -1) {
-      oldstyle = coin_getenv("COIN_OLDSTYLE_FORMATTING") ? 1 : 0;
+      oldstyle = CoinInternal::getEnvironmentVariable("COIN_OLDSTYLE_FORMATTING").has_value() ? 1 : 0;
     }
 
     // FIXME: if we last wrote a field, this EOF is superfluous -- so

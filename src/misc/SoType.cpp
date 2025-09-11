@@ -148,6 +148,7 @@
 
 #include "tidbitsp.h"
 #include "misc/SbHash.h"
+#include "SoEnvironment.h"
 
 #include "coindefs.h"
 
@@ -512,8 +513,8 @@ SoType::fromName(const SbName name)
   static int enable_dynload = -1;
   if (enable_dynload == -1) {
     enable_dynload = TRUE; // the default setting
-    const char * env = coin_getenv("COIN_NO_SOTYPE_DYNLOAD");
-    if (env && atoi(env) > 0) enable_dynload = FALSE;
+    auto env = CoinInternal::getEnvironmentVariable("COIN_NO_SOTYPE_DYNLOAD");
+    if (env.has_value() && std::atoi(env->c_str()) > 0) enable_dynload = FALSE;
   }
 
   assert((type_dict != NULL) && "SoType static class data not yet initialized");
@@ -540,8 +541,8 @@ SoType::fromName(const SbName name)
         // dynamic loading is not yet supported for this compiler suite
         static long first = 1;
         if ( first ) {
-          const char * env = coin_getenv("COIN_DEBUG_DL");
-          if (env && (atoi(env) > 0)) {
+          auto env = CoinInternal::getEnvironmentVariable("COIN_DEBUG_DL");
+          if (env.has_value() && (std::atoi(env->c_str()) > 0)) {
             SoDebugError::post("SoType::fromName",
                                "unable to figure out the C++ name mangling scheme");
           }
