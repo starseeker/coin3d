@@ -81,7 +81,7 @@
 #include <cstring>
 
 #include <Inventor/C/errors/debugerror.h>
-#include <Inventor/C/tidbits.h>
+#include "misc/SoEnvironment.h"
 #include <Inventor/SbName.h>
 #include <Inventor/SoType.h>
 #include <Inventor/lists/SbList.h>
@@ -190,19 +190,19 @@ SoDebugError::initClass(void)
   // out and moved to e.g. SbStringList? 20030820 mortene.
 
 #if COIN_DEBUG
-  const char * env = coin_getenv("COIN_DEBUG_BREAK");
-  if (env) {
+  auto env = CoinInternal::getEnvironmentVariable("COIN_DEBUG_BREAK");
+  if (env.has_value()) {
     num_breakpoints = 1;
-    const char * ptr = env;
+    const char * ptr = env->c_str();
     while (*ptr) {
       if (*ptr == ' ' || *ptr == ',') num_breakpoints++;
       ptr++;
     }
     breakpoints = new char*[num_breakpoints];
     coin_atexit(debug_break_cleanup, CC_ATEXIT_MSG_SUBSYSTEM);
-    const size_t envstrlen = strlen(env);
+    const size_t envstrlen = env->length();
     char * cpy = new char[envstrlen + 1];
-    (void)strcpy(cpy, env);
+    (void)strcpy(cpy, env->c_str());
     ptr = cpy;
     const char * end = strchr(ptr, ' ');
     const char * tst = strchr(ptr, ',');

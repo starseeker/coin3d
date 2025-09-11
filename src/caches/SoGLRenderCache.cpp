@@ -46,7 +46,7 @@
 #include <Inventor/elements/SoGLDisplayList.h>
 #include <Inventor/elements/SoCacheElement.h>
 #include <Inventor/lists/SbList.h>
-#include <Inventor/C/tidbits.h> // coin_getenv()
+#include "misc/SoEnvironment.h"
 
 // *************************************************************************
 
@@ -130,8 +130,8 @@ SoGLRenderCache::call(SoState * state)
 
   static int COIN_NESTED_CACHING = -1;
   if (COIN_NESTED_CACHING < 0) {
-    const char * env = coin_getenv("COIN_NESTED_CACHING");
-    if (env) COIN_NESTED_CACHING = atoi(env);
+    auto env = CoinInternal::getEnvironmentVariable("COIN_NESTED_CACHING");
+    if (env.has_value()) COIN_NESTED_CACHING = std::atoi(env->c_str());
     else COIN_NESTED_CACHING = 0;
   }
   
