@@ -55,6 +55,7 @@
 
 #include "glue/glp.h"
 #include "glue/dlp.h"
+#include "../misc/SoEnvironment.h"
 
 /* ********************************************************************** */
 
@@ -310,8 +311,8 @@ eglglue_context_create_offscreen(unsigned int width, unsigned int height)
     return NULL;
   }
 
-  const char * env = coin_getenv("COIN_EGLGLUE_NO_PBUFFERS");
-  if (env && atoi(env) > 0) {
+  auto env = CoinInternal::getEnvironmentVariable("COIN_EGLGLUE_NO_PBUFFERS");
+  if (env.has_value() && std::atoi(env->c_str()) > 0) {
     attrib[3] = EGL_PIXMAP_BIT;
     if (coin_glglue_debug()) {
       cc_debugerror_postinfo("eglglue_context_create_offscreen",

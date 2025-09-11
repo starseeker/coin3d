@@ -172,6 +172,7 @@
 #include "actions/SoSubActionP.h"
 #include "collision/SbTri3f.h"
 #include "coindefs.h"
+#include "../misc/SoEnvironment.h"
 
 /* Legacy MSVC6 workaround removed - not needed for C++17 */
 
@@ -299,8 +300,8 @@ ida_debug(void)
 {
   static int dbg = -1;
   if (dbg == -1) {
-    const char * env = coin_getenv("COIN_DEBUG_INTERSECTIONDETECTIONACTION");
-    dbg = env && atoi(env) > 0;
+    auto env = CoinInternal::getEnvironmentVariable("COIN_DEBUG_INTERSECTIONDETECTIONACTION");
+    dbg = env.has_value() && std::atoi(env->c_str()) > 0;
   }
   return dbg == 0 ? FALSE : TRUE;
 }
