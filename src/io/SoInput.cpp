@@ -124,6 +124,7 @@
 #include <Inventor/threads/SbStorage.h>
 
 #include "misc/SbHash.h"
+#include "misc/SoUtilities.h"
 #include "tidbitsp.h"
 #include "glue/zlib.h"
 #include "coindefs.h" // COIN_STUB(), COIN_OBSOLETED()
@@ -409,14 +410,14 @@ SoInput::checkISReference(SoFieldContainer * container,
         switch (state) {
         case STATE_WAIT_I:
           if (c == 'I') state = STATE_EXPECT_S;
-          else if (!coin_isspace(c)) state = STATE_NOTFOUND;
+          else if (!CoinInternal::isSpace(c)) state = STATE_NOTFOUND;
           break;
         case STATE_EXPECT_S:
           if (c == 'S') state = STATE_EXPECT_SPACE;
           else state = STATE_NOTFOUND;
           break;
         case STATE_EXPECT_SPACE:
-          if (coin_isspace(c)) state = STATE_FOUND;
+          if (CoinInternal::isSpace(c)) state = STATE_FOUND;
           else state = STATE_NOTFOUND;
           break;
         default:

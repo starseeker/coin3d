@@ -72,6 +72,7 @@
 #include <Inventor/SbString.h>
 
 #include "tidbitsp.h"
+#include "misc/SoUtilities.h"
 #include "base/namemap.h"
 #include "coindefs.h"
 
@@ -228,7 +229,7 @@ SbName::isBaseNameStartChar(const char c)
   // lead to "interesting" artifacts. We very likely need to audit and
   // fix our isalpha() calls in the Coin sourcecode to behave in the
   // exact manner that we expect them to. 20020319 mortene.
-  if (c == '_' || (coin_isascii(c) && isalpha(c))) return TRUE;
+  if (c == '_' || (CoinInternal::isAscii(c) && isalpha(c))) return TRUE;
   return FALSE;
 }
 
