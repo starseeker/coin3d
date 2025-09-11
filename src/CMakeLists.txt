@@ -43,7 +43,7 @@ set(COIN_SOURCE tidbits.cpp CACHE INTERNAL "COIN_SOURCE")
 set(SUBDIRS
   actions base bundles caches details elements
   engines errors events fields fonts glue io misc rendering lists
-  nodes shapenodes projectors sensors upgraders
+  nodes shapenodes projectors sensors
   collision shadows geo threads shaders
   hardcopy
 )
@@ -136,7 +136,6 @@ source_group("Source Files\\shapenodes"                REGULAR_EXPRESSION ".*/sr
 source_group("Source Files\\soscxml"                   REGULAR_EXPRESSION ".*/src/soscxml/.*[.](h|c|cpp)")
 source_group("Source Files\\system"                    REGULAR_EXPRESSION ".*/src/system/.*[.](h|c|cpp)")
 source_group("Source Files\\threads"                   REGULAR_EXPRESSION ".*/src/threads/.*[.](h|c|cpp)")
-source_group("Source Files\\upgraders"                 REGULAR_EXPRESSION ".*/src/upgraders/.*[.](h|c|cpp)")
 source_group("Source Files\\vrml97"                    REGULAR_EXPRESSION ".*/src/vrml97/.*[.](h|c|cpp)")
 
 # As CMake does not support deep header hierarchies for framework generation we tweak the
@@ -185,7 +184,6 @@ else()
     $<TARGET_OBJECTS:shadows>
     $<TARGET_OBJECTS:shapenodes>
     $<TARGET_OBJECTS:threads>
-    $<TARGET_OBJECTS:upgraders>
   )
 endif()
 

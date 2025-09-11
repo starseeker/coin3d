@@ -88,7 +88,6 @@
 #include "nodes/SoUnknownNode.h"
 #include "fields/SoGlobalField.h"
 #include "misc/SbHash.h"
-#include "upgraders/SoUpgrader.h"
 #include "threads/threadsutilp.h"
 #include "tidbitsp.h"
 #include "io/SoInputP.h"

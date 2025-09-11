@@ -46,7 +46,6 @@
 #include <Inventor/fields/SoField.h>
 
 #include "threads/threadsutilp.h"
-#include "upgraders/SoUpgrader.h"
 #include "nodes/SoUnknownNode.h"
 #include "fields/SoGlobalField.h"
 #include "io/SoInputP.h"
@@ -354,19 +353,8 @@ SoBase::PImpl::readBaseInstance(SoInput * in, const SbName & classname,
 {
   assert(classname != "");
 
-  SbBool needupgrade = FALSE;
-
-  // first, try creating an upgradable node, based on the version of
-  // the input file.
-  base = SoUpgrader::tryCreateNode(classname, in->getIVVersion());
-  if (base) {
-    // we need to upgrade the node after reading it
-    needupgrade = TRUE;
-  }
-  else {
-    // create normal Coin node
-    base = SoBase::PImpl::createInstance(in, classname);
-  }
+  // create normal Coin node
+  base = SoBase::PImpl::createInstance(in, classname);
 
   if (!base) { goto failed; }
 
@@ -463,14 +451,6 @@ SoBase::PImpl::readBaseInstance(SoInput * in, const SbName & classname,
       // by this code:
       SoGlobalField::addGlobalFieldContainer(globalfield);
     }
-  }
-
-  if (needupgrade) {
-    SoBase * oldbase = base;
-    oldbase->ref();
-    base = SoUpgrader::createUpgrade(oldbase);
-    assert(base && "should never happen (since needupgrade == TRUE)");
-    oldbase->unref();
   }
 
   if (base->isOfType(SoProtoInstance::getClassTypeId())) {
