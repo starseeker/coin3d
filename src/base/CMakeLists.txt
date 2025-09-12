@@ -1,7 +1,6 @@
 # source files
 set(COIN_BASE_FILES
 	dict.cpp
-	hash.cpp
 	heap.cpp
 	list.cpp
 	memalloc.cpp
@@ -80,7 +79,6 @@ set(COIN_BASE_INTERNAL_FILES
 	dictp.h
 	dynarray.h
 	dynarray.cpp
-	hashp.h
 	heapp.h
 	namemap.h
 	namemap.cpp
