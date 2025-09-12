@@ -91,7 +91,7 @@
 #include <Inventor/lists/SbStringList.h>
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/SbImage.h>
-#include <Inventor/C/glue/gl.h>
+#include "C/glue/gl.h"
 
 #ifdef COIN_THREADSAFE
 #include <Inventor/threads/SbMutex.h>

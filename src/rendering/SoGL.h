@@ -41,7 +41,7 @@
 // mostly rendering code shared between several node types.
 
 #include <Inventor/SbString.h>
-#include <Inventor/C/glue/gl.h>
+#include "C/glue/gl.h"
 
 class SoShape;
 class SoState;

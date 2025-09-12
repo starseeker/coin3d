@@ -42,15 +42,15 @@
   \brief The type definition for the recursive mutex structure.
 */
 
-#include <Inventor/C/threads/recmutex.h>
+#include "C/threads/recmutex.h"
 
 #include <cstdlib>
 #include <cassert>
 
-#include <Inventor/C/errors/debugerror.h>
-#include <Inventor/C/threads/mutex.h>
-#include <Inventor/C/threads/thread.h>
-#include <Inventor/C/threads/condvar.h>
+#include "C/errors/debugerror.h"
+#include "C/threads/mutex.h"
+#include "C/threads/thread.h"
+#include "C/threads/condvar.h"
 
 #include "tidbitsp.h"
 #include "threads/recmutexp.h"

@@ -33,7 +33,7 @@
 #include "SbGLUTessellator.h"
 
 #include <Inventor/errors/SoDebugError.h>
-#include <Inventor/C/tidbits.h>
+#include "C/tidbits.h"
 #include <Inventor/system/gl.h>
 
 #include "misc/SoEnvironment.h"

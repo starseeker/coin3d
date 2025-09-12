@@ -112,7 +112,7 @@
 
 #include <Inventor/SoInput.h>
 
-#include <Inventor/C/tidbits.h>
+#include "C/tidbits.h"
 #include <Inventor/SbName.h>
 #include <Inventor/SoDB.h>
 #include <Inventor/errors/SoDebugError.h>

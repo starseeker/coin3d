@@ -68,7 +68,7 @@
 #include <cctype>
 #include <cstring>
 
-#include <Inventor/C/tidbits.h>
+#include "C/tidbits.h"
 #include <Inventor/SbString.h>
 
 #include "tidbitsp.h"

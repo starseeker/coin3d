@@ -38,7 +38,7 @@
 #endif
 
 #include <Inventor/SbBasic.h> // SbBool
-#include <Inventor/C/glue/gl.h>
+#include "C/glue/gl.h"
 
 #ifdef __cplusplus
 extern "C" {

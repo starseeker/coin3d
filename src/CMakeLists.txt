@@ -1,3 +1,6 @@
+# Configure internal C headers
+configure_file(${PROJECT_SOURCE_DIR}/include/Inventor/C/basic.h.cmake.in ${CMAKE_CURRENT_SOURCE_DIR}/C/basic.h)
+
 # The following two-stage generation of config.h replaces configure_file(config.h.cmake.in config.h)
 # and is necessary for the proper definition of COIN_SYSTEM_LIBRARY_NAME in config.h.
 # Ref. https://public.kitware.com/pipermail/cmake/2015-April/060350.html
@@ -318,8 +321,17 @@ else()
 # Install headers
 # ############################################################################
 
-  install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/Inventor/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Inventor COMPONENT development FILES_MATCHING PATTERN "*.h")
-  install(DIRECTORY ${CMAKE_BINARY_DIR}/include/Inventor/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Inventor COMPONENT development FILES_MATCHING PATTERN "*.h")
+  # Install all headers except the internal C API headers
+  install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/Inventor/ 
+          DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Inventor 
+          COMPONENT development 
+          FILES_MATCHING PATTERN "*.h"
+          PATTERN "C" EXCLUDE)  # Exclude the C directory
+  install(DIRECTORY ${CMAKE_BINARY_DIR}/include/Inventor/ 
+          DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Inventor 
+          COMPONENT development 
+          FILES_MATCHING PATTERN "*.h"
+          PATTERN "C" EXCLUDE)  # Exclude the C directory
   install(FILES ${PROJECT_SOURCE_DIR}/include/SoWinEnterScope.h ${PROJECT_SOURCE_DIR}/include/SoWinLeaveScope.h ${PROJECT_SOURCE_DIR}/include/SoDebug.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} COMPONENT development)
 
 # ############################################################################

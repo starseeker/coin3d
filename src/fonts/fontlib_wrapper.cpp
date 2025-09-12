@@ -45,9 +45,9 @@
 #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include <Inventor/C/tidbits.h>
-#include <Inventor/C/base/string.h>
-#include <Inventor/C/errors/debugerror.h>
+#include "C/tidbits.h"
+#include "C/base/string.h"
+#include "C/errors/debugerror.h"
 
 #include "base/dict.h"
 #include "base/dynarray.h"

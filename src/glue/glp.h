@@ -45,8 +45,8 @@
 
 #include <Inventor/system/gl.h>
 #include "base/dict.h"
-#include <Inventor/C/base/string.h>
-#include <Inventor/C/glue/dl.h>
+#include "C/base/string.h"
+#include "C/glue/dl.h"
 
 /* ********************************************************************** */
 

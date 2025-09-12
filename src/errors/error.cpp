@@ -52,7 +52,7 @@
   The definition for an error callback handler.
 */
 
-#include <Inventor/C/errors/error.h>
+#include "C/errors/error.h"
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"

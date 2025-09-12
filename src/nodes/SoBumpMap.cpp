@@ -104,7 +104,7 @@
 #include <Inventor/SbImage.h>
 #include <Inventor/SbVec3f.h>
 #include <Inventor/misc/SoGLImage.h>
-#include <Inventor/C/glue/gl.h>
+#include "C/glue/gl.h"
 #include <Inventor/misc/SoGLDriverDatabase.h>
 #include <Inventor/engines/SoHeightMapToNormalMap.h>
 

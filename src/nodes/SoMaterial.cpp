@@ -155,7 +155,7 @@
 
 #include <cstdlib>
 
-#include <Inventor/C/tidbits.h>
+#include "C/tidbits.h"
 #include <Inventor/actions/SoCallbackAction.h>
 #include <Inventor/actions/SoGLRenderAction.h>
 #include <Inventor/actions/SoPickAction.h>

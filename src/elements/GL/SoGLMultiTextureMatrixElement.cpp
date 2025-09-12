@@ -44,7 +44,7 @@
 
 #include <Inventor/elements/SoGLMultiTextureMatrixElement.h>
 #include <Inventor/actions/SoGLRenderAction.h>
-#include <Inventor/C/glue/gl.h>
+#include "C/glue/gl.h"
 #include <cassert>
 
 #ifdef HAVE_CONFIG_H

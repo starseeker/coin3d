@@ -77,7 +77,7 @@
 #include <unistd.h> // fd_set (?)
 #endif // HAVE_UNISTD_H
 
-#include <Inventor/C/tidbits.h>
+#include "C/tidbits.h"
 #include "misc/SoEnvironment.h"
 #include <Inventor/SbVec3f.h>
 #include <Inventor/SoInput.h>

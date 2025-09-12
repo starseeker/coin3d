@@ -54,10 +54,10 @@
 #include <cstring>
 #include <string>
 
-#include <Inventor/C/tidbits.h>
+#include "C/tidbits.h"
 #include <Inventor/SbName.h>
 #include <Inventor/SbString.h>
-#include <Inventor/C/glue/gl.h>
+#include "C/glue/gl.h"
 #include <Inventor/errors/SoDebugError.h>
 
 #include "misc/SbHash.h"

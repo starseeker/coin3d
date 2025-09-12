@@ -52,8 +52,8 @@
 #include <cstdlib>
 #include <cstring>
 
-#include <Inventor/C/glue/gl.h>
-#include <Inventor/C/tidbits.h>
+#include "C/glue/gl.h"
+#include "C/tidbits.h"
 #include <Inventor/SbVec3f.h>
 #include <Inventor/SoPrimitiveVertex.h>
 #include <Inventor/details/SoFaceDetail.h>

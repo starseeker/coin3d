@@ -42,7 +42,7 @@
   \brief The type definition for the conditional variable structure.
 */
 
-#include <Inventor/C/threads/condvar.h>
+#include "C/threads/condvar.h"
 
 #include <cstdlib>
 #include <cassert>
@@ -55,8 +55,8 @@
 #include <unistd.h>
 #endif /* HAVE_UNISTD_H */
 
-#include <Inventor/C/threads/mutex.h>
-#include <Inventor/C/errors/debugerror.h>
+#include "C/threads/mutex.h"
+#include "C/errors/debugerror.h"
 
 #include "threads/condvarp.h"
 

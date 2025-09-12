@@ -135,7 +135,7 @@
 #include <cassert>
 #include <cstdlib>
 
-#include <Inventor/C/tidbits.h>
+#include "C/tidbits.h"
 
 #include "misc/SoEnvironment.h"
 

@@ -37,9 +37,9 @@
 #include <cassert>
 #include <cstdio>
 
-#include <Inventor/C/basic.h>
+#include "C/basic.h"
 #include "base/list.h"
-#include <Inventor/C/base/string.h>
+#include "C/base/string.h"
 
 #include "tidbitsp.h"
 #include "base/dict.h"

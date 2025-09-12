@@ -59,7 +59,7 @@
   \brief The type definition for the return value enumerator.
 */
 
-#include <Inventor/C/threads/thread.h>
+#include "C/threads/thread.h"
 
 #include <cstdlib>
 #include <cassert>
@@ -72,7 +72,7 @@
 #include <unistd.h>
 #endif /* HAVE_UNISTD_H */
 
-#include <Inventor/C/errors/debugerror.h>
+#include "C/errors/debugerror.h"
 
 #include "threads/threadp.h"
 #include "threads/mutexp.h"

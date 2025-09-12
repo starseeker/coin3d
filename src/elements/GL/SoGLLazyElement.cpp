@@ -50,7 +50,7 @@
 
 #include <cassert>
 
-#include <Inventor/C/glue/gl.h>
+#include "C/glue/gl.h"
 #include <Inventor/SbImage.h>
 #include <Inventor/SoFullPath.h>
 #include <Inventor/actions/SoGLRenderAction.h>
@@ -66,7 +66,7 @@
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/misc/SoState.h>
 #include <Inventor/nodes/SoNode.h>
-#include <Inventor/C/tidbits.h>
+#include "C/tidbits.h"
 #include "misc/CoinUtilities.h"
 #include "rendering/SoVBO.h"
 #include <coindefs.h> // COIN_OBSOLETED

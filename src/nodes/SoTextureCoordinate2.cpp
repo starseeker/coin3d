@@ -116,7 +116,7 @@ Separator {
 #include <Inventor/elements/SoGLVBOElement.h>
 #include <Inventor/actions/SoCallbackAction.h>
 #include <Inventor/actions/SoPickAction.h>
-#include <Inventor/C/glue/gl.h>
+#include "C/glue/gl.h"
 
 #include "nodes/SoSubNodeP.h"
 #include "rendering/SoVBO.h"

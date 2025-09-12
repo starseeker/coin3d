@@ -36,7 +36,7 @@
   Coin portable.
 */
 
-#include <Inventor/C/tidbits.h>
+#include "C/tidbits.h"
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -73,9 +73,9 @@
 #include <direct.h> /* _getcwd() */
 #endif /* HAVE_DIRECT_H */
 
-#include <Inventor/C/base/string.h>
+#include "C/base/string.h"
 #include "base/list.h"
-#include <Inventor/C/errors/debugerror.h>
+#include "C/errors/debugerror.h"
 
 #include "tidbitsp.h"
 #include "coindefs.h"

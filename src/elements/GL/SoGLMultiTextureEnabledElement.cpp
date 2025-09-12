@@ -48,7 +48,7 @@
 
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/system/gl.h>
-#include <Inventor/C/glue/gl.h>
+#include "C/glue/gl.h"
 #include <cassert>
 #include "rendering/SoGL.h"
 

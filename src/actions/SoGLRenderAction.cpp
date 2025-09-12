@@ -68,8 +68,8 @@
 #include <cstring>
 #include <memory>
 
-#include <Inventor/C/glue/gl.h>
-#include <Inventor/C/tidbits.h>
+#include "C/glue/gl.h"
+#include "C/tidbits.h"
 #include <Inventor/SbColor.h>
 #include <Inventor/SbPlane.h>
 #include <Inventor/SoFullPath.h>
@@ -110,7 +110,7 @@
 #include <Inventor/nodes/SoShapeHints.h>
 #include <Inventor/sensors/SoAlarmSensor.h>
 #include <Inventor/sensors/SoNodeSensor.h>
-#include <Inventor/C/tidbits.h>
+#include "C/tidbits.h"
 #include <Inventor/system/gl.h>
 
 #include "coindefs.h"

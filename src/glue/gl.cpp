@@ -237,11 +237,11 @@
 #include <EGL/eglext.h>
 #endif /* HAVE_EGL */
 
-#include <Inventor/C/glue/gl.h>
+#include "C/glue/gl.h"
 
-#include <Inventor/C/errors/debugerror.h>
-#include <Inventor/C/glue/dl.h>
-#include <Inventor/C/tidbits.h>
+#include "C/errors/debugerror.h"
+#include "C/glue/dl.h"
+#include "C/tidbits.h"
 #include "base/list.h"
 
 #include "coindefs.h"
@@ -4377,7 +4377,7 @@ cc_glglue_glXGetCurrentDisplay(const cc_glglue * w)
   works:
  */
 /*
-  #include <Inventor/C/glue/gl.h>
+  #include "C/glue/gl.h"
   #include <Inventor/elements/SoGLCacheContextElement.h>
   #include <Inventor/SoDB.h>
   #include <cassert>
