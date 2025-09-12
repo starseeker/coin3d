@@ -55,13 +55,6 @@
 #endif
 
 /* ********************************************************************** */
-/* Include these for Open Inventor compatibility reasons (they are not
- * actually used in Coin.)
- */
-#define SoEXTENDER
-#define SoINTERNAL
-
-/* ********************************************************************** */
 
 /* Some useful inline template functions:
  *   SbAbs(Val)              - returns absolute value
