@@ -36,16 +36,31 @@
 #include <cassert>
 #include <cstdlib>
 #include <cstdio>
+#include <vector>
+#include <unordered_map>
+#include <algorithm>
 
 #include "base/dict.h"
 #include "base/heapp.h"
 #include "coindefs.h"
 
-#ifndef COIN_WORKAROUND_NO_USING_STD_FUNCS
-using std::realloc;
-using std::malloc;
-using std::free;
-#endif // !COIN_WORKAROUND_NO_USING_STD_FUNCS
+// Modern STL-based implementation that maintains C interface compatibility
+struct cc_heap {
+  std::vector<void*> array;
+  cc_heap_compare_cb * compare;
+  void * compareclosure;
+  bool support_remove;
+  std::unordered_map<void*, size_t> hash_map; // STL replacement for cc_dict when support_remove is true
+  
+  // Constructor
+  cc_heap(unsigned int initial_size, cc_heap_compare_cb * comparecb, bool support_rem)
+    : compare(comparecb), compareclosure(nullptr), support_remove(support_rem) {
+    array.reserve(initial_size);
+    if (support_remove) {
+      hash_map.reserve(initial_size);
+    }
+  }
+};
 
 /* ********************************************************************** */
 
@@ -72,71 +87,51 @@ using std::free;
 #define HEAP_RIGHT(i) ((i) * 2 + 2)
 
 static void
-heap_resize(cc_heap * h, unsigned int newsize)
+heap_heapify_down(cc_heap * h, size_t i)
 {
-  /* Never shrink the heap */
-  if (h->size >= newsize)
-    return;
+  size_t largest = i;
+  size_t size = h->array.size();
 
-  h->array = static_cast<void **>(realloc(h->array, newsize * sizeof(void *)));
-  assert(h->array);
-  h->size = newsize;
-}
-
-static void
-heap_swap(void ** left, void ** right) {
-  void * tmp = *left;
-  *left = *right;
-  *right = tmp;
-}
-
-static void
-heap_heapify_down(cc_heap * h, uintptr_t i)
-{
-  uintptr_t largest = i;
-
-  while (1) {
+  while (true) {
     i = largest;
-    uintptr_t left = HEAP_LEFT(i);
-    uintptr_t right = HEAP_RIGHT(i);
+    size_t left = HEAP_LEFT(i);
+    size_t right = HEAP_RIGHT(i);
 
-    /* Check which node is larger of i and its two children; if any
-     * of them is larger swap it with i and proceed down on the child
-     */
-    if (left < h->elements && h->compare(h->array[left], h->array[largest]) > 0)
+    if (left < size && h->compare(h->array[left], h->array[largest]) > 0) {
       largest = left;
-
-    if (right < h->elements && h->compare(h->array[right], h->array[largest]) > 0)
+    }
+    
+    if (right < size && h->compare(h->array[right], h->array[largest]) > 0) {
       largest = right;
+    }
 
-    if (largest == i)
-      break;
+    if (largest == i) break;
 
-    heap_swap(&h->array[i], &h->array[largest]);
-
+    std::swap(h->array[i], h->array[largest]);
+    
     if (h->support_remove) {
-      cc_dict_put(h->hash, reinterpret_cast<uintptr_t>(h->array[i]), reinterpret_cast<void *>(i));
-      cc_dict_put(h->hash, reinterpret_cast<uintptr_t>(h->array[largest]), reinterpret_cast<void *>(largest));
+      h->hash_map[h->array[i]] = i;
+      h->hash_map[h->array[largest]] = largest;
     }
   }
 }
 
 static void
-heap_heapify_up(cc_heap * h, uintptr_t i)
+heap_heapify_up(cc_heap * h, size_t i)
 {
-  if (i == 0)
-    return;
-
-  /* If o is greater than its parent, swap them and proceed up on the parent */
-  while (i > 0 && h->compare(h->array[i], h->array[HEAP_PARENT(i)]) > 0) {
-    uintptr_t parent = HEAP_PARENT(i);
-    heap_swap(&h->array[i], &h->array[parent]);
-
-    if (h->support_remove) {
-      cc_dict_put(h->hash, reinterpret_cast<uintptr_t>(h->array[i]), reinterpret_cast<void*>(i));
-      cc_dict_put(h->hash, reinterpret_cast<uintptr_t>(h->array[parent]), reinterpret_cast<void*>(parent));
+  while (i > 0) {
+    size_t parent = HEAP_PARENT(i);
+    if (h->compare(h->array[i], h->array[parent]) <= 0) {
+      break;
     }
-
+    
+    std::swap(h->array[i], h->array[parent]);
+    
+    if (h->support_remove) {
+      h->hash_map[h->array[i]] = i;
+      h->hash_map[h->array[parent]] = parent;
+    }
+    
     i = parent;
   }
 }
@@ -168,20 +163,11 @@ cc_heap_construct(unsigned int size,
                   cc_heap_compare_cb * comparecb,
                   SbBool support_remove)
 {
-  cc_heap * h = static_cast<cc_heap *>(malloc(sizeof(cc_heap)));
-  assert(h);
-
-  h->size = size;
-  h->elements = 0;
-  h->array = static_cast<void **>(malloc(size * sizeof(void *)));
-  assert(h->array);
-  h->compare = comparecb;
-  h->support_remove = support_remove;
-  h->hash = NULL;
-  if (support_remove) {
-    h->hash = cc_dict_construct(size, 0.0f);
+  try {
+    return new cc_heap(size, comparecb, support_remove != FALSE);
+  } catch (const std::bad_alloc&) {
+    return nullptr;
   }
-  return h;
 }
 
 /*!
@@ -190,10 +176,7 @@ cc_heap_construct(unsigned int size,
 void
 cc_heap_destruct(cc_heap * h)
 {
-  cc_heap_clear(h);
-  free(h->array);
-  if (h->hash) cc_dict_destruct(h->hash);
-  free(h);
+  delete h;
 }
 
 /*!
@@ -201,8 +184,11 @@ cc_heap_destruct(cc_heap * h)
 */
 void cc_heap_clear(cc_heap * h)
 {
-  h->elements = 0;
-  if (h->hash) cc_dict_clear(h->hash);
+  if (!h) return;
+  h->array.clear();
+  if (h->support_remove) {
+    h->hash_map.clear();
+  }
 }
 
 /*!
@@ -211,15 +197,13 @@ void cc_heap_clear(cc_heap * h)
 void
 cc_heap_add(cc_heap * h, void * o)
 {
-  /* Resize the heap if it is full or the threshold is exceeded */
-  if (h->elements == h->size) {
-    heap_resize(h, h->size * 2);
-  }
-
-  uintptr_t i = h->elements++;
-  h->array[i] = o;
+  if (!h) return;
+  
+  size_t i = h->array.size();
+  h->array.push_back(o);
+  
   if (h->support_remove) {
-    cc_dict_put(h->hash, reinterpret_cast<uintptr_t>(h->array[i]), reinterpret_cast<void*>(i));
+    h->hash_map[o] = i;
   }
 
   heap_heapify_up(h, i);
@@ -232,7 +216,7 @@ cc_heap_add(cc_heap * h, void * o)
 void *
 cc_heap_get_top(cc_heap * h)
 {
-  if (h->elements == 0) return NULL;
+  if (!h || h->array.empty()) return nullptr;
   return h->array[0];
 }
 
@@ -243,17 +227,22 @@ cc_heap_get_top(cc_heap * h)
 void *
 cc_heap_extract_top(cc_heap * h)
 {
-  if (h->elements == 0) return NULL;
+  if (!h || h->array.empty()) return nullptr;
 
   void * top = h->array[0];
-  h->array[0] = h->array[--h->elements];
+  h->array[0] = h->array.back();
+  h->array.pop_back();
 
   if (h->support_remove) {
-    cc_dict_put(h->hash, reinterpret_cast<uintptr_t>(h->array[0]), reinterpret_cast<void *>(0));
-    cc_dict_remove(h->hash, reinterpret_cast<uintptr_t>(top));
+    if (!h->array.empty()) {
+      h->hash_map[h->array[0]] = 0;
+    }
+    h->hash_map.erase(top);
   }
 
-  heap_heapify_down(h, 0);
+  if (!h->array.empty()) {
+    heap_heapify_down(h, 0);
+  }
 
   return top;
 }
@@ -266,21 +255,28 @@ cc_heap_extract_top(cc_heap * h)
 int
 cc_heap_remove(cc_heap * h, void * o)
 {
-  if (!h->support_remove) return FALSE;
+  if (!h || !h->support_remove) return FALSE;
 
-  void * tmp;
-  if (!cc_dict_get(h->hash, reinterpret_cast<uintptr_t>(o), &tmp))
+  auto it = h->hash_map.find(o);
+  if (it == h->hash_map.end()) {
     return FALSE;
+  }
 
-  uintptr_t i = reinterpret_cast<uintptr_t>(tmp);
-  assert(i < h->elements);
+  size_t i = it->second;
+  assert(i < h->array.size());
   assert(h->array[i] == o);
 
-  h->array[i] = h->array[--h->elements];
-  cc_dict_put(h->hash, reinterpret_cast<uintptr_t>(h->array[i]), reinterpret_cast<void *>(i));
-  heap_heapify_down(h, i);
-
-  cc_dict_remove(h->hash, reinterpret_cast<uintptr_t>(o));
+  // Replace with last element and remove last
+  h->array[i] = h->array.back();
+  h->array.pop_back();
+  
+  // Update hash map
+  h->hash_map.erase(it);
+  if (i < h->array.size()) {
+    h->hash_map[h->array[i]] = i;
+    // Restore heap property
+    heap_heapify_down(h, i);
+  }
 
   return TRUE;
 }
@@ -292,14 +288,18 @@ cc_heap_remove(cc_heap * h, void * o)
 int
 cc_heap_update(cc_heap * h, void * o)
 {
-  void * tmp;
-  if (!cc_dict_get(h->hash, reinterpret_cast<uintptr_t>(o), &tmp))
+  if (!h || !h->support_remove) return FALSE;
+  
+  auto it = h->hash_map.find(o);
+  if (it == h->hash_map.end()) {
     return FALSE;
+  }
 
-  uintptr_t i = reinterpret_cast<uintptr_t>(tmp);
-  assert(i < h->elements);
+  size_t i = it->second;
+  assert(i < h->array.size());
   assert(h->array[i] == o);
 
+  // Try to heapify up first, then down
   if (i > 0 && h->compare(h->array[i], h->array[HEAP_PARENT(i)]) > 0) {
     heap_heapify_up(h, i);
   }
@@ -316,7 +316,8 @@ cc_heap_update(cc_heap * h, void * o)
 unsigned int
 cc_heap_elements(cc_heap * h)
 {
-  return h->elements;
+  if (!h) return 0;
+  return static_cast<unsigned int>(h->array.size());
 }
 
 /*!
@@ -325,7 +326,8 @@ cc_heap_elements(cc_heap * h)
 SbBool
 cc_heap_empty(cc_heap * h)
 {
-  return h->elements == 0 ? TRUE : FALSE;
+  if (!h) return TRUE;
+  return h->array.empty() ? TRUE : FALSE;
 }
 
 /*!
@@ -334,8 +336,11 @@ cc_heap_empty(cc_heap * h)
 void
 cc_heap_print(cc_heap * h, cc_heap_print_cb * printcb, SbString& str, SbBool printLeveled/* = FALSE*/)
 {
+  if (!h) return;
+  
+  size_t elements = h->array.size();
   if (!printLeveled) {
-    for (unsigned int i = 0; i < h->elements; ++i) {
+    for (size_t i = 0; i < elements; ++i) {
       printcb(h->array[i], str);
       str += ' ';
     }
@@ -344,7 +349,7 @@ cc_heap_print(cc_heap * h, cc_heap_print_cb * printcb, SbString& str, SbBool pri
     unsigned int level = 0;
     unsigned int level_items = 1;
     unsigned int printed_items = 0;
-    for (unsigned int i = 0; i < h->elements; ++i)
+    for (size_t i = 0; i < elements; ++i)
     {
       if (printed_items == 0 ) {
         SbString level_str;

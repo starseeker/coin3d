@@ -40,22 +40,8 @@
 #include "base/dict.h"
 #include <Inventor/C/base/heap.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-
-  struct cc_heap {
-    unsigned int size;
-    unsigned int elements;
-    void ** array;
-    cc_heap_compare_cb * compare;
-    void * compareclosure;
-    int support_remove;
-    cc_dict * hash;
-  };
-
-#ifdef __cplusplus
-} /* extern "C" */
-#endif /* __cplusplus */
+// Forward declaration for the modern STL-based implementation
+// The actual definition is in heap.cpp to encapsulate STL headers
+struct cc_heap;
 
 #endif /* ! CC_HEAPP_H */
