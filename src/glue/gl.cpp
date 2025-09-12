@@ -807,7 +807,7 @@ done:
   return found ? 1 : 0;
 }
 
-int
+SbBool
 cc_glglue_glext_supported(const cc_glglue * wrapper, const char * extension)
 {
   const uintptr_t key = (uintptr_t)cc_namemap_get_address(extension);

@@ -292,7 +292,7 @@ SoSFEnum::writeValue(SoOutput * out) const
   Compare this field with \a f and return \c TRUE if they are
   equal.
 */
-int
+SbBool
 SoSFEnum::operator==(const SoSFEnum & f) const
 {
   // Check for value mismatch first.
