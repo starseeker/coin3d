@@ -1,4 +1,4 @@
-#include <Inventor/C/basic.h>
+#include "C/basic.h"
 #include <Inventor/SbString.h>
 #include <Inventor/errors/SoDebugError.h>
 #include "SoConfigSettings.h"

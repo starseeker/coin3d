@@ -172,7 +172,7 @@
 #include <config.h>
 #endif // HAVE_CONFIG_H
 
-#include <Inventor/C/tidbits.h>
+#include "C/tidbits.h"
 #include <Inventor/SbPlane.h>
 #include <Inventor/SoPrimitiveVertex.h>
 #include <Inventor/actions/SoGLRenderAction.h>

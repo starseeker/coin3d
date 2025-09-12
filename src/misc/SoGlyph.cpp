@@ -68,7 +68,7 @@
 #include <cstring>
 
 #include <Inventor/errors/SoDebugError.h>
-#include <Inventor/C/tidbits.h>
+#include "C/tidbits.h"
 #include <Inventor/SbName.h>
 #include <Inventor/SbString.h>
 #include <Inventor/SbVec2f.h>

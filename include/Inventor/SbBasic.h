@@ -38,6 +38,14 @@
 #include <Inventor/C/errors/debugerror.h>
 #endif // !NDEBUG
 
+// Start migrating to C++17 - internal use only
+#ifdef COIN_INTERNAL
+#include "base/CoinBasic.h"
+#ifndef NDEBUG
+#include "errors/CoinDebugError.h"
+#endif // !NDEBUG
+#endif // COIN_INTERNAL
+
 /* ********************************************************************** */
 /* Trap people trying to use Inventor headers while compiling C source code.
  * (we get support mail about this from time to time)

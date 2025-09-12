@@ -38,7 +38,7 @@
 #include <Inventor/SbVec2s.h>
 #include <Inventor/lists/SbList.h>
 #include <Inventor/SoPrimitiveVertex.h>
-#include <Inventor/C/glue/gl.h>
+#include "C/glue/gl.h"
 
 #include "misc/SbHash.h"
 

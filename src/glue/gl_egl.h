@@ -37,7 +37,7 @@
 #error this is a private header file
 #endif
 
-#include <Inventor/C/glue/gl.h>
+#include "C/glue/gl.h"
 
 #ifdef __cplusplus
 extern "C" {

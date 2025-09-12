@@ -30,7 +30,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#include <Inventor/C/base/string.h>
+#include "C/base/string.h"
 
 #include <cassert>
 #include <cstdarg>
@@ -38,8 +38,8 @@
 #include <cstdlib>
 #include <cstring>
 
-#include <Inventor/C/errors/debugerror.h>
-#include <Inventor/C/tidbits.h>
+#include "C/errors/debugerror.h"
+#include "C/tidbits.h"
 
 #include "coindefs.h"
 #include "misc/SoEnvironment.h"

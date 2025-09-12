@@ -1,5 +1,5 @@
-#ifndef CC_RECMUTEX_H
-#define CC_RECMUTEX_H
+#ifndef CC_STORAGE_H
+#define CC_STORAGE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,21 +33,30 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#include <Inventor/C/basic.h>  /* COIN_DLL_API */
-#include <Inventor/C/threads/common.h>  /* cc_rwmutex, cc_precedence */
+#include "C/basic.h"  /* COIN_DLL_API */
+#include "C/threads/common.h"  /* cc_storage */
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
+#if 0 /* for emacs indentation */
+}
+#endif /* for emacs indentation */
+
 /* ********************************************************************** */
+typedef void cc_storage_f(void * closure);
+typedef void cc_storage_apply_func(void * dataptr, void * closure);
+COIN_DLL_API cc_storage * cc_storage_construct(unsigned int size);
+COIN_DLL_API cc_storage * cc_storage_construct_etc(unsigned int size, 
+                                                   cc_storage_f * constructor,
+                                                   cc_storage_f * destructor);
+COIN_DLL_API void cc_storage_destruct(cc_storage * storage);
 
-COIN_DLL_API cc_recmutex * cc_recmutex_construct(void);
-COIN_DLL_API void cc_recmutex_destruct(cc_recmutex * recmutex);
-
-COIN_DLL_API int cc_recmutex_lock(cc_recmutex * recmutex);
-COIN_DLL_API int cc_recmutex_unlock(cc_recmutex * recmutex);
-COIN_DLL_API int cc_recmutex_try_lock(cc_recmutex * recmutex);
+COIN_DLL_API void * cc_storage_get(cc_storage * storage);
+COIN_DLL_API void cc_storage_apply_to_all(cc_storage * storage, 
+                                          cc_storage_apply_func * func, 
+                                          void * closure);
 
 /* ********************************************************************** */
 
@@ -55,4 +64,4 @@ COIN_DLL_API int cc_recmutex_try_lock(cc_recmutex * recmutex);
 } /* extern "C" */
 #endif /* __cplusplus */
 
-#endif /* ! CC_RECMUTEX_H */
+#endif /* ! CC_STORAGE_H */

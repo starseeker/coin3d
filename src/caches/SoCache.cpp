@@ -123,7 +123,7 @@
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/lists/SbList.h>
 #include <Inventor/misc/SoState.h>
-#include <Inventor/C/tidbits.h>
+#include "C/tidbits.h"
 
 #include "tidbitsp.h"
 #include "coindefs.h"

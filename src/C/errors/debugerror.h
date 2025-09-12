@@ -1,5 +1,5 @@
-#ifndef COIN_GLUE_DL_H
-#define COIN_GLUE_DL_H
+#ifndef CC_DEBUGERROR_H
+#define CC_DEBUGERROR_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,36 +33,58 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-/* This is a cross-platform interface abstraction against the various
-   methods on different operating systems for doing dynamic, run-time
-   linking of symbols. */
+#include "C/basic.h"
+#include "C/errors/error.h"
 
-/* ********************************************************************** */
-
-#include <Inventor/C/basic.h>
-
-/* ********************************************************************** */
+#include <stdarg.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
-#if 0 /* to get proper auto-indentation in emacs */
-}
-#endif /* emacs indentation */
+/* ********************************************************************** */
+
+typedef enum CC_DEBUGERROR_SEVERITY {
+  CC_DEBUGERROR_ERROR,
+  CC_DEBUGERROR_WARNING,
+  CC_DEBUGERROR_INFO
+} CC_DEBUGERROR_SEVERITY;
+
+typedef struct cc_debugerror {
+  cc_error super; /* make struct is-A cc_error */
+
+  CC_DEBUGERROR_SEVERITY severity;
+} cc_debugerror;
+
+typedef void cc_debugerror_cb(const cc_debugerror * err, void * data);
 
 /* ********************************************************************** */
 
-typedef struct cc_libhandle_struct * cc_libhandle;
+/* FIXME: missing stuff from SoDebugError: type-system,
+   COIN_DEBUG_BREAK handling, ... 20020524 mortene. */
 
-COIN_DLL_API cc_libhandle cc_dl_open(const char * filename);
-COIN_DLL_API void * cc_dl_sym(cc_libhandle handle, const char * symbolname);
-COIN_DLL_API void cc_dl_close(cc_libhandle handle);
+/* ********************************************************************** */
+
+COIN_DLL_API void cc_debugerror_post(const char * source, const char * format, ...);
+COIN_DLL_API void cc_debugerror_postwarning(const char * source, const char * format, ...);
+COIN_DLL_API void cc_debugerror_postinfo(const char * source, const char * format, ...);
+
+
+COIN_DLL_API void cc_debugerror_init(cc_debugerror * me);
+COIN_DLL_API void cc_debugerror_clean(cc_debugerror * me);
+
+COIN_DLL_API CC_DEBUGERROR_SEVERITY cc_debugerror_get_severity(const cc_debugerror * me);
+
+COIN_DLL_API void cc_debugerror_set_handler_callback(cc_debugerror_cb * function, void * data);
+COIN_DLL_API cc_debugerror_cb * cc_debugerror_get_handler_callback(void);
+COIN_DLL_API void * cc_debugerror_get_handler_data(void);
+
+COIN_DLL_API cc_debugerror_cb * cc_debugerror_get_handler(void ** data);
 
 /* ********************************************************************** */
 
 #ifdef __cplusplus
-}
+} /* extern "C" */
 #endif /* __cplusplus */
 
-#endif /* !COIN_GLUE_DL_H */
+#endif /* ! CC_DEBUGERROR_H */

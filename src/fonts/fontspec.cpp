@@ -36,7 +36,7 @@
 
 #include "coindefs.h"
 #include "fonts/fontspec.h"
-#include <Inventor/C/base/string.h>
+#include "C/base/string.h"
 #include <cstring>
 #include <cstdlib>
 

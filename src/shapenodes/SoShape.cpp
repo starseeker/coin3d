@@ -52,8 +52,8 @@
 #include <config.h>
 #endif // HAVE_CONFIG_H
 
-#include <Inventor/C/glue/gl.h>
-#include <Inventor/C/tidbits.h>
+#include "C/glue/gl.h"
+#include "C/tidbits.h"
 #include <Inventor/SbBox2f.h>
 #include <Inventor/SbClip.h>
 #include <Inventor/SbPlane.h>

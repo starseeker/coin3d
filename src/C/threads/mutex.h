@@ -33,8 +33,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#include <Inventor/C/basic.h>  /* COIN_DLL_API */
-#include <Inventor/C/threads/common.h>  /* cc_mutex */
+#include "C/basic.h"  /* COIN_DLL_API */
+#include "C/threads/common.h"  /* cc_mutex */
 
 #ifdef __cplusplus
 extern "C" {

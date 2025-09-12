@@ -39,7 +39,7 @@
 
 /* ********************************************************************** */
 
-#include <Inventor/C/base/string.h>
+#include "C/base/string.h"
 
 #ifdef __cplusplus
 extern "C" {

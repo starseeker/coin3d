@@ -57,7 +57,7 @@
 #include <Inventor/nodes/SoOrthographicCamera.h>
 #include <Inventor/nodes/SoPerspectiveCamera.h>
 #include <Inventor/SbImage.h>
-#include <Inventor/C/glue/gl.h>
+#include "C/glue/gl.h"
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>

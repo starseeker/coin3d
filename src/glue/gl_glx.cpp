@@ -54,10 +54,10 @@
 #include <cstring>
 #include <cstdio>
 
-#include <Inventor/C/basic.h>
-#include <Inventor/C/glue/dl.h>
-#include <Inventor/C/errors/debugerror.h>
-#include <Inventor/C/tidbits.h>
+#include "C/basic.h"
+#include "C/glue/dl.h"
+#include "C/errors/debugerror.h"
+#include "C/tidbits.h"
 
 #include "glue/dlp.h"
 #include "glue/glp.h"

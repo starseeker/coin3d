@@ -50,7 +50,7 @@
 #endif // HAVE_CONFIG_H
 
 #include <Inventor/system/gl.h>
-#include <Inventor/C/glue/gl.h>
+#include "C/glue/gl.h"
 
 class SoGLMultiTextureCoordinateElementP {
 public:

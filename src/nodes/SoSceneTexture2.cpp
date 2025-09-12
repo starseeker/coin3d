@@ -301,9 +301,9 @@
 #include <Inventor/lists/SbStringList.h>
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/SbImage.h>
-#include <Inventor/C/glue/gl.h>
+#include "C/glue/gl.h"
 #include <Inventor/misc/SoGLImage.h>
-#include <Inventor/C/tidbits.h>
+#include "C/tidbits.h"
 #include <Inventor/system/gl.h>
 #include <Inventor/misc/SoGLDriverDatabase.h>
 

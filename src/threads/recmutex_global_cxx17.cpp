@@ -43,7 +43,7 @@
 #include "threads/recmutex_global_cxx17.h"
 
 #include <Inventor/threads/SbThreadMutex.h>
-#include <Inventor/C/threads/thread.h>
+#include "C/threads/thread.h"
 #include <memory>
 #include <unordered_map>
 #include <mutex>

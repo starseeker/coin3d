@@ -52,7 +52,7 @@
   \brief The type definition for the mutex structure.
 */
 
-#include <Inventor/C/threads/mutex.h>
+#include "C/threads/mutex.h"
 
 #include <cstdlib>
 #include <cassert>
@@ -61,7 +61,7 @@
 #include <cfloat>
 #include <chrono>
 
-#include <Inventor/C/errors/debugerror.h>
+#include "C/errors/debugerror.h"
 
 #include "threads/mutexp.h"
 #include "tidbitsp.h"

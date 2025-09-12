@@ -35,7 +35,7 @@
 
 /* Minimal stub wrapper for audio functionality - disabled for minimal build */
 
-#include <Inventor/C/basic.h>
+#include "C/basic.h"
 
 #ifdef __cplusplus
 extern "C" {

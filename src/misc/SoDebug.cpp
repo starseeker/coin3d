@@ -38,7 +38,7 @@
 #include <cstdio>
 #include <cstdlib>
 
-#include <Inventor/C/tidbits.h>
+#include "C/tidbits.h"
 #include <Inventor/nodes/SoNode.h>
 #include <Inventor/fields/SoField.h>
 #include <Inventor/SoOutput.h>

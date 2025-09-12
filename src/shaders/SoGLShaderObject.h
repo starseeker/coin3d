@@ -39,7 +39,7 @@
 
 // *************************************************************************
 
-#include <Inventor/C/glue/gl.h>
+#include "C/glue/gl.h"
 #include <Inventor/SbString.h>
 #include "SoShader.h"
 

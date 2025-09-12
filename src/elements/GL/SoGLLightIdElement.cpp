@@ -49,7 +49,7 @@
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
-#include <Inventor/C/glue/gl.h>
+#include "C/glue/gl.h"
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/system/gl.h>
 
