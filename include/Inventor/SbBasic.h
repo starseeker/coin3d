@@ -55,13 +55,6 @@
 #endif
 
 /* ********************************************************************** */
-/* Include these for Open Inventor compatibility reasons (they are not
- * actually used in Coin.)
- */
-#define SoEXTENDER
-#define SoINTERNAL
-
-/* ********************************************************************** */
 
 /* Some useful inline template functions:
  *   SbAbs(Val)              - returns absolute value
@@ -73,32 +66,32 @@
  */
 
 template <typename Type>
-inline Type SbAbs( Type Val ) {
+constexpr Type SbAbs( Type Val ) noexcept {
   return (Val < 0) ? 0 - Val : Val;
 }
 
 template <typename Type>
-inline Type SbMax( const Type A, const Type B ) {
+constexpr Type SbMax( const Type A, const Type B ) noexcept {
   return (A < B) ? B : A;
 }
 
 template <typename Type>
-inline Type SbMin( const Type A, const Type B ) {
+constexpr Type SbMin( const Type A, const Type B ) noexcept {
   return (A < B) ? A : B;
 }
 
 template <typename Type>
-inline Type SbClamp( const Type Val, const Type Min, const Type Max ) {
+constexpr Type SbClamp( const Type Val, const Type Min, const Type Max ) noexcept {
   return (Val < Min) ? Min : (Val > Max) ? Max : Val;
 }
 
 template <typename Type>
-inline void SbSwap( Type & A, Type & B ) {
-  Type T; T = A; A = B; B = T;
+constexpr void SbSwap( Type & A, Type & B ) noexcept {
+  Type T = A; A = B; B = T;
 }
 
 template <typename Type>
-inline Type SbSqr(const Type val) {
+constexpr Type SbSqr(const Type val) noexcept {
   return val * val;
 }
 
@@ -110,79 +103,27 @@ inline Type SbSqr(const Type val) {
 
 #ifndef NDEBUG
 template <typename Type>
-inline void SbDividerChk(const char * funcname, Type divider) {
+constexpr void SbDividerChk(const char * funcname, Type divider) noexcept {
   if (!(divider != static_cast<Type>(0)))
     cc_debugerror_post(funcname, "divide by zero error.", divider);
 }
 #else
 template <typename Type>
-inline void SbDividerChk(const char *, Type) {}
+constexpr void SbDividerChk(const char *, Type) noexcept {}
 #endif // !NDEBUG
 
 /* ********************************************************************** */
 
-/* COMPILER BUG WORKAROUND:
+// C++17 modernization: Remove legacy compiler workarounds
+// Since we target modern C++17 development, legacy compiler 
+// compatibility is no longer needed.
 
-   We've had reports that Sun CC v4.0 is (likely) buggy, and doesn't
-   allow a statement like
-
-     SoType SoNode::classTypeId = SoType::badType();
-
-   As a hack we can however get around this by instead writing it as
-
-     SoType SoNode::classTypeId;
-
-   ..as the SoType variable will then be initialized to bitpattern
-   0x0000, which equals SoType::badType(). We can *however* not do
-   this for the Intel C/C++ compiler, as that does *not* init to the
-   0x0000 bitpattern (which may be a separate bug -- I haven't read
-   the C++ spec closely enough to decide whether that relied on
-   unspecified behavior or not).
-
-   The latest version of the Intel compiler has been tested to still
-   have this problem, so I've decided to re-install the old code, but
-   in this form:
-
-     SoType SoNode::classTypeId STATIC_SOTYPE_INIT;
-
-   ..so it is easy to revert if somebody complains that the code
-   reversal breaks their old Sun CC 4.0 compiler -- see the #define of
-   STATIC_SOTYPE_INIT below.
-
-   If that happens, we should work with the reporter, having access to
-   the buggy compiler, to make a configure check which sets the
-   SUN_CC_4_0_SOTYPE_INIT_BUG #define in include/Inventor/C/basic.h.in.
-
-   (Note that the Sun CC compiler has moved on, and a later version
-   we've tested, 5.4, does not have the bug.)
-
-   20050105 mortene.
-*/
-
-#define SUN_CC_4_0_SOTYPE_INIT_BUG 0 /* assume compiler is ok for now */
-
-#if SUN_CC_4_0_SOTYPE_INIT_BUG
-#define STATIC_SOTYPE_INIT
-#else
+// Modern STATIC_SOTYPE_INIT - always use proper initialization  
 #define STATIC_SOTYPE_INIT = SoType::badType()
-#endif
 
 /* ********************************************************************** */
 
-/*
-	Coin wraps many macros in do-while statements to make them usable
-	like a statement. At least the Microsoft compiler complains about
-	this construct with warning C4127: "conditional expression is constant".
-*/
-
-#ifdef _MSC_VER // Microsoft Visual C++
-#define WHILE_0 \
-	__pragma(warning(push)) \
-	__pragma(warning(disable:4127)) \
-		while (0) \
-	__pragma(warning(pop))
-#else
+// Modern do-while wrapper - C++17 compilers handle this correctly
 #define WHILE_0 while (0)
-#endif
 
 #endif /* !COIN_SBBASIC_H */

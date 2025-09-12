@@ -58,7 +58,7 @@ public:
   virtual SbBool matches(const SoElement * element) const;
   virtual SoElement * copyMatchInfo() const;
 
-SoINTERNAL public:
+public: // Internal API
   static void initClass(void);
   SoGLShaderProgram *shaderProgram;
 
