@@ -37,14 +37,6 @@
 
 #include "C/basic.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-
 /* Win32 API support disabled in minimal build */
-
-#ifdef __cplusplus
-} /* extern "C" */
-#endif /* __cplusplus */
 
 #endif /* !COIN_WIN32API_H */
