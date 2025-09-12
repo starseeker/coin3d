@@ -47,7 +47,7 @@ set(SUBDIRS
   actions base bundles caches details elements
   engines errors events fields fonts glue io misc rendering lists
   nodes shapenodes projectors sensors
-  collision shadows geo threads shaders
+  collision shadows geo threads shaders tools
   hardcopy
 )
 # TODO - see how to make draggers toolkit independent
@@ -176,6 +176,7 @@ else()
     $<TARGET_OBJECTS:shadows>
     $<TARGET_OBJECTS:shapenodes>
     $<TARGET_OBJECTS:threads>
+    $<TARGET_OBJECTS:tools>
   )
 endif()
 

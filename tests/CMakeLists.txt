@@ -30,6 +30,7 @@ add_executable(CoinTests
     # Phase 3 modernization tests
     tools/test_pimpl_basic.cpp
     tools/test_pimpl_modernization.cpp
+    tools/test_modern_utils.cpp
     # Additional modules will be added as they are validated
     # TODO: Add the complete migrated test files once compilation issues are resolved:
     # base/test_base_complete.cpp
