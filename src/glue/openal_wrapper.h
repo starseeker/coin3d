@@ -35,14 +35,6 @@
 
 /* Minimal stub wrapper for OpenAL functionality - disabled for minimal build */
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-
 /* OpenAL support disabled in minimal build */
-
-#ifdef __cplusplus
-} /* extern "C" */
-#endif /* __cplusplus */
 
 #endif /* !COIN_OPENAL_WRAPPER_H */
