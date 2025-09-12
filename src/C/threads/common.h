@@ -1,5 +1,5 @@
-#ifndef CC_HASHP_H
-#define CC_HASHP_H
+#ifndef CC_THREADCOMMON_H
+#define CC_THREADCOMMON_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,37 +33,66 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_INTERNAL
-#error this is a private header file
-#endif /* ! COIN_INTERNAL */
+#include "C/basic.h"  /* COIN_DLL_API */
 
-#include <Inventor/C/base/memalloc.h>
-#define COIN_ALLOW_CC_HASH
-#include <Inventor/C/base/hash.h>
+/* ********************************************************************** */
+
+/* Implementation note: it is important that this header file can be
+   included even when Coin was built with no threads support.
+
+   (This simplifies client code, as we get away with far less #ifdef
+   HAVE_THREADS wrapping.) */
+
+/* ********************************************************************** */
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
-  struct cc_hash_entry {
-    cc_hash_key key;
-    void * val;
-    struct cc_hash_entry * next;
-  };
-  typedef struct cc_hash_entry cc_hash_entry;
+/* ********************************************************************** */
 
-  struct cc_hash {
-    unsigned int size;
-    unsigned int elements;
-    float loadfactor;
-    unsigned int threshold;
-    cc_hash_entry ** buckets;
-    cc_hash_func * hashfunc;
-    cc_memalloc * memalloc;
+  typedef struct cc_sched cc_sched;
+  typedef struct cc_wpool cc_wpool;
+  typedef struct cc_worker cc_worker;
+  typedef struct cc_thread cc_thread;
+  typedef struct cc_mutex cc_mutex;
+  typedef struct cc_rwmutex cc_rwmutex;
+  typedef struct cc_condvar cc_condvar;
+  typedef struct cc_storage cc_storage;
+  typedef struct cc_fifo cc_fifo;
+  typedef struct cc_recmutex cc_recmutex;
+
+  /* used by rwmutex - read_precedence is default */
+  enum cc_precedence {
+    CC_READ_PRECEDENCE,
+    CC_WRITE_PRECEDENCE
   };
+
+  enum cc_threads_implementation {
+    CC_NO_THREADS = -1,
+    CC_PTHREAD    = 0,
+    CC_W32THREAD
+  };
+
+  enum cc_retval {
+    CC_ERROR = 0,
+    CC_OK = 1,
+    CC_TIMEOUT,
+    CC_BUSY
+  };
+
+  typedef enum cc_precedence cc_precedence;
+  typedef enum cc_threads_implementation cc_threads_implementation;
+  typedef enum cc_retval cc_retval;
+
+  /* ********************************************************************** */
+
+  COIN_DLL_API int cc_thread_implementation(void);
+
+  /* ********************************************************************** */
 
 #ifdef __cplusplus
 } /* extern "C" */
 #endif /* __cplusplus */
 
-#endif /* ! CC_HASHP_H */
+#endif /* ! CC_THREADCOMMON_H */

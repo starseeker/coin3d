@@ -79,7 +79,7 @@ public:
   SoSFString name;
   SoSFInt32 identifier;
 
-  SoINTERNAL public:
+  public: // Internal API
   static void initClass();
 
 protected:
@@ -96,7 +96,7 @@ class COIN_DLL_API SoUniformShaderParameter : public SoShaderParameter {
   typedef SoShaderParameter inherited;
   SO_NODE_ABSTRACT_HEADER(SoUniformShaderParameter);
 
-  SoINTERNAL public:
+  public: // Internal API
   static void initClass(void);
   virtual void updateParameter(SoGLShaderObject *shaderObject) = 0;
 
@@ -123,7 +123,7 @@ public:
   SoSFFloat value;
   SoShaderParameter1f();
 
-  SoINTERNAL public:
+  public: // Internal API
   static void initClass();
   virtual void updateParameter(SoGLShaderObject *shaderObject);
 
@@ -143,7 +143,7 @@ public:
   SoSFInt32 value;
   SoShaderParameter1i();
 
-  SoINTERNAL public:
+  public: // Internal API
   static void initClass();
   virtual void updateParameter(SoGLShaderObject *shaderObject);
 
@@ -163,7 +163,7 @@ public:
   SoSFVec2f value;
   SoShaderParameter2f();
 
-  SoINTERNAL public:
+  public: // Internal API
   static void initClass();
   virtual void updateParameter(SoGLShaderObject *shaderObject);
 
@@ -183,7 +183,7 @@ public:
   SoSFVec2i32 value;
   SoShaderParameter2i();
 
-  SoINTERNAL public:
+  public: // Internal API
   static void initClass();
   virtual void updateParameter(SoGLShaderObject *shaderObject);
 
@@ -204,7 +204,7 @@ public:
 
   SoShaderParameter3f();
 
-  SoINTERNAL public:
+  public: // Internal API
   static void initClass();
   virtual void updateParameter(SoGLShaderObject *shaderObject);
 
@@ -225,7 +225,7 @@ public:
 
   SoShaderParameter3i();
 
-  SoINTERNAL public:
+  public: // Internal API
   static void initClass();
   virtual void updateParameter(SoGLShaderObject *shaderObject);
 
@@ -246,7 +246,7 @@ public:
 
   SoShaderParameter4f();
 
-  SoINTERNAL public:
+  public: // Internal API
   static void initClass();
   virtual void updateParameter(SoGLShaderObject *shaderObject);
 
@@ -267,7 +267,7 @@ public:
 
   SoShaderParameter4i();
 
-  SoINTERNAL public:
+  public: // Internal API
   static void initClass();
   virtual void updateParameter(SoGLShaderObject *shaderObject);
 
@@ -288,7 +288,7 @@ public:
 
   SoShaderParameterArray1f();
 
-  SoINTERNAL public:
+  public: // Internal API
   static void initClass();
   virtual void updateParameter(SoGLShaderObject *shaderObject);
 
@@ -309,7 +309,7 @@ public:
 
   SoShaderParameterArray1i();
 
-  SoINTERNAL public:
+  public: // Internal API
   static void initClass();
   virtual void updateParameter(SoGLShaderObject *shaderObject);
 
@@ -330,7 +330,7 @@ public:
 
   SoShaderParameterArray2f();
 
-  SoINTERNAL public:
+  public: // Internal API
   static void initClass();
   virtual void updateParameter(SoGLShaderObject *shaderObject);
 
@@ -350,7 +350,7 @@ public:
 
   SoShaderParameterArray2i();
 
-  SoINTERNAL public:
+  public: // Internal API
   static void initClass();
   virtual void updateParameter(SoGLShaderObject *shaderObject);
 
@@ -371,7 +371,7 @@ public:
 
   SoShaderParameterArray3f();
 
-  SoINTERNAL public:
+  public: // Internal API
   static void initClass();
   virtual void updateParameter(SoGLShaderObject *shaderObject);
 
@@ -392,7 +392,7 @@ public:
 
   SoShaderParameterArray3i();
 
-  SoINTERNAL public:
+  public: // Internal API
   static void initClass();
   virtual void updateParameter(SoGLShaderObject *shaderObject);
 
@@ -413,7 +413,7 @@ public:
 
   SoShaderParameterArray4f();
 
-  SoINTERNAL public:
+  public: // Internal API
   static void initClass();
   virtual void updateParameter(SoGLShaderObject *shaderObject);
 
@@ -435,7 +435,7 @@ public:
 
   SoShaderParameterArray4i();
 
-  SoINTERNAL public:
+  public: // Internal API
   static void initClass();
   virtual void updateParameter(SoGLShaderObject *shaderObject);
 
@@ -456,7 +456,7 @@ public:
 
   SoShaderParameterMatrix();
 
-  SoINTERNAL public:
+  public: // Internal API
   static void initClass();
   virtual void updateParameter(SoGLShaderObject *shaderObject);
 
@@ -477,7 +477,7 @@ public:
 
   SoShaderParameterMatrixArray();
 
-  SoINTERNAL public:
+  public: // Internal API
   static void initClass();
   virtual void updateParameter(SoGLShaderObject *shaderObject);
 

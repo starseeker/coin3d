@@ -36,7 +36,7 @@
 #include <cassert>
 #include <cstdio>
 
-#include <Inventor/C/base/string.h>
+#include "C/base/string.h"
 
 #include "base/dict.h"
 #include "threads/threadsutilp.h"

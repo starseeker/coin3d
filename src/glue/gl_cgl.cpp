@@ -48,13 +48,14 @@
 #include <cstring>
 #include <cassert>
 
-#include <Inventor/C/tidbits.h>
-#include <Inventor/C/glue/gl.h>
-#include <Inventor/C/errors/debugerror.h>
-#include <Inventor/C/glue/dl.h>
+#include "C/tidbits.h"
+#include "C/glue/gl.h"
+#include "C/errors/debugerror.h"
+#include "C/glue/dl.h"
 
 #include "glue/glp.h"
 #include "glue/dlp.h"
+#include "misc/SoEnvironment.h"
 
 /* ********************************************************************** */
 
@@ -150,7 +151,7 @@ cglglue_get_pbuffer_enable(void)
 {
   /* Make it possible to turn off pBuffer support completely.
      Mostly relevant for debugging purposes. */
-  const char * env = coin_getenv("COIN_CGLGLUE_NO_PBUFFERS");
+  const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_CGLGLUE_NO_PBUFFERS");
   if (env && atoi(env) > 0) { 
     return FALSE; 
   } else { 

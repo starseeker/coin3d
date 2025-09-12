@@ -1,5 +1,5 @@
-#ifndef COIN_SOMFULONG_H
-#define COIN_SOMFULONG_H
+#ifndef CC_THREAD_H
+#define CC_THREAD_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,13 +33,35 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#if defined(IV_STRICT)
-#error SoMFULong has been obsoleted. Use SoMFUInt32 instead.
-#else // !IV_STRICT
-//#warning SoMFULong has been obsoleted. Use SoMFUInt32 instead.
-#endif // !IV_STRICT
+#include "C/basic.h"  /* COIN_DLL_API */
+#include "C/threads/common.h"  /* cc_thread */
 
-#include <Inventor/fields/SoMFUInt32.h>
-typedef SoMFUInt32 SoMFULong;
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
-#endif // !COIN_SOMFULONG_H
+/* ********************************************************************** */
+
+typedef void * cc_thread_f(void *);
+
+COIN_DLL_API cc_thread * cc_thread_construct(cc_thread_f * func, void * closure);
+COIN_DLL_API void cc_thread_destruct(cc_thread * thread);
+
+COIN_DLL_API int cc_thread_join(cc_thread * thread, void ** retvalptr);
+
+COIN_DLL_API unsigned long cc_thread_id(void);
+COIN_DLL_API void cc_sleep(float seconds);
+
+/*
+COIN_DLL_API int cc_thread_priority_set(cc_thread * thread, int value);
+COIN_DLL_API int cc_thread_priority_change(cc_thread * thread, int change);
+COIN_DLL_API int cc_thread_priority_get(cc_thread * thread);
+*/
+
+/* ********************************************************************** */
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif /* __cplusplus */
+
+#endif /* ! CC_THREAD_H */

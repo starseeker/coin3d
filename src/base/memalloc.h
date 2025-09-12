@@ -1,3 +1,6 @@
+#ifndef CC_MEMALLOC_H
+#define CC_MEMALLOC_H
+
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
  * All rights reserved.
@@ -30,4 +33,30 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#error SoLongElement is obsoleted by SoInt32Element
+#include "C/basic.h" /* COIN_DLL_API */
+
+#include <stdarg.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
+  typedef struct cc_memalloc cc_memalloc;
+  typedef int cc_memalloc_strategy_cb(const int numunits_allocated);
+
+/* ********************************************************************** */
+  
+  COIN_DLL_API cc_memalloc * cc_memalloc_construct(const unsigned int unitsize);
+  COIN_DLL_API void cc_memalloc_destruct(cc_memalloc * allocator);
+  COIN_DLL_API void * cc_memalloc_allocate(cc_memalloc * allocator);
+  COIN_DLL_API void cc_memalloc_deallocate(cc_memalloc * allocator, void * ptr);
+  COIN_DLL_API void cc_memalloc_clear(cc_memalloc * allocator);
+  COIN_DLL_API void cc_memalloc_set_strategy(cc_memalloc * allocator, cc_memalloc_strategy_cb * cb);
+
+/* ********************************************************************** */
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif /* __cplusplus */
+
+#endif /* ! CC_MEMALLOC_H */

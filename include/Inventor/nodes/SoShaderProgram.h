@@ -59,11 +59,11 @@ public:
   void setEnableCallback(SoShaderProgramEnableCB * cb,
                          void * closure);
 
-SoEXTENDER public:
+public: // Extender API  
   virtual void GLRender(SoGLRenderAction * action);
   virtual void search(SoSearchAction * action);
 
-SoINTERNAL public:
+public: // Internal API
   static void initClass();
 
 protected:

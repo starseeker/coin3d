@@ -75,7 +75,7 @@
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
-#include <Inventor/C/threads/storage.h>
+#include "C/threads/storage.h"
 #include <Inventor/SbImage.h>
 #include <Inventor/elements/SoGLCacheContextElement.h>
 #include <Inventor/elements/SoGLDisplayList.h>

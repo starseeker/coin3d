@@ -1,3 +1,6 @@
+#ifndef CC_CONDVAR_H
+#define CC_CONDVAR_H
+
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
  * All rights reserved.
@@ -30,16 +33,29 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_SOMFLONG_H
-#define COIN_SOMFLONG_H
+#include "C/basic.h"  /* COIN_DLL_API */
+#include "C/threads/common.h"  /* cc_condvar */
 
-#if defined(IV_STRICT)
-#error SoMFLong has been obsoleted. Use SoMFInt32 instead.
-#else // !IV_STRICT
-//#warning SoMFLong has been obsoleted. Use SoMFInt32 instead.
-#endif // !IV_STRICT
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
-#include <Inventor/fields/SoMFInt32.h>
-typedef SoMFInt32 SoMFLong;
+/* ********************************************************************** */
 
-#endif // !COIN_SOMFLONG_H
+  COIN_DLL_API cc_condvar * cc_condvar_construct(void);
+  COIN_DLL_API void cc_condvar_destruct(cc_condvar * condvar);
+  
+  COIN_DLL_API int cc_condvar_wait(cc_condvar * condvar, cc_mutex * mutex);
+  COIN_DLL_API int cc_condvar_timed_wait(cc_condvar * condvar, cc_mutex * mutex,
+                                         double period);
+  
+  COIN_DLL_API void cc_condvar_wake_one(cc_condvar * condvar);
+  COIN_DLL_API void cc_condvar_wake_all(cc_condvar * condvar);
+
+/* ********************************************************************** */
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif /* __cplusplus */
+
+#endif /* ! CC_CONDVAR_H */

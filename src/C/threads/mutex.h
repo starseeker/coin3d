@@ -1,5 +1,5 @@
-#ifndef COIN_GLUE_DL_H
-#define COIN_GLUE_DL_H
+#ifndef CC_MUTEX_H
+#define CC_MUTEX_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,36 +33,26 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-/* This is a cross-platform interface abstraction against the various
-   methods on different operating systems for doing dynamic, run-time
-   linking of symbols. */
-
-/* ********************************************************************** */
-
-#include <Inventor/C/basic.h>
-
-/* ********************************************************************** */
+#include "C/basic.h"  /* COIN_DLL_API */
+#include "C/threads/common.h"  /* cc_mutex */
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
-#if 0 /* to get proper auto-indentation in emacs */
-}
-#endif /* emacs indentation */
-
 /* ********************************************************************** */
 
-typedef struct cc_libhandle_struct * cc_libhandle;
+COIN_DLL_API cc_mutex * cc_mutex_construct(void);
+COIN_DLL_API void cc_mutex_destruct(cc_mutex * mutex);
 
-COIN_DLL_API cc_libhandle cc_dl_open(const char * filename);
-COIN_DLL_API void * cc_dl_sym(cc_libhandle handle, const char * symbolname);
-COIN_DLL_API void cc_dl_close(cc_libhandle handle);
+COIN_DLL_API void cc_mutex_lock(cc_mutex * mutex);
+COIN_DLL_API int cc_mutex_try_lock(cc_mutex * mutex);
+COIN_DLL_API void cc_mutex_unlock(cc_mutex * mutex);
 
 /* ********************************************************************** */
 
 #ifdef __cplusplus
-}
+} /* extern "C" */
 #endif /* __cplusplus */
 
-#endif /* !COIN_GLUE_DL_H */
+#endif /* ! CC_MUTEX_H */

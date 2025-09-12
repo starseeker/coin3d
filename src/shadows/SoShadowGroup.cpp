@@ -333,7 +333,7 @@
 #include <Inventor/lists/SbList.h>
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/SbMatrix.h>
-#include <Inventor/C/glue/gl.h>
+#include "C/glue/gl.h"
 
 #include "nodes/SoSubNodeP.h"
 #include "shaders/SoShader.h"

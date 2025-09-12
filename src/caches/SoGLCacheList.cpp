@@ -43,7 +43,7 @@
 #include <config.h>
 #endif // HAVE_CONFIG_H
 
-#include <Inventor/C/tidbits.h>
+#include "misc/SoEnvironment.h"
 #include <Inventor/actions/SoGLRenderAction.h>
 #include <Inventor/caches/SoGLRenderCache.h>
 #include <Inventor/elements/SoCacheElement.h>
@@ -130,13 +130,13 @@ SoGLCacheList::SoGLCacheList(int numcaches)
 
   // auto caching must be enabled using an environment variable
   if (COIN_AUTO_CACHING < 0) {
-    const char * env = coin_getenv("COIN_AUTO_CACHING");
-    if (env) COIN_AUTO_CACHING = atoi(env);
+    auto env = CoinInternal::getEnvironmentVariable("COIN_AUTO_CACHING");
+    if (env.has_value()) COIN_AUTO_CACHING = std::atoi(env->c_str());
     else COIN_AUTO_CACHING = 1;
   }
   if (COIN_SMART_CACHING < 0) {
-    const char * env = coin_getenv("COIN_SMART_CACHING");
-    if (env) COIN_SMART_CACHING = atoi(env);
+    auto env = CoinInternal::getEnvironmentVariable("COIN_SMART_CACHING");
+    if (env.has_value()) COIN_SMART_CACHING = std::atoi(env->c_str());
     else COIN_SMART_CACHING = 0;
   }
 

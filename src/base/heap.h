@@ -1,5 +1,5 @@
-#ifndef CC_MUTEX_H
-#define CC_MUTEX_H
+#ifndef CC_HEAP_H
+#define CC_HEAP_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,21 +33,33 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#include <Inventor/C/basic.h>  /* COIN_DLL_API */
-#include <Inventor/C/threads/common.h>  /* cc_mutex */
+#include "C/basic.h"
+#include <Inventor/SbString.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
-/* ********************************************************************** */
+  typedef int cc_heap_compare_cb(void * o1, void * o2);
+  typedef void cc_heap_print_cb(void * o, SbString& str);
 
-COIN_DLL_API cc_mutex * cc_mutex_construct(void);
-COIN_DLL_API void cc_mutex_destruct(cc_mutex * mutex);
+  typedef struct cc_heap cc_heap;
 
-COIN_DLL_API void cc_mutex_lock(cc_mutex * mutex);
-COIN_DLL_API int cc_mutex_try_lock(cc_mutex * mutex);
-COIN_DLL_API void cc_mutex_unlock(cc_mutex * mutex);
+  COIN_DLL_API cc_heap * cc_heap_construct(unsigned int size,
+                                           cc_heap_compare_cb * comparecb,
+                                           SbBool support_remove);
+  
+  COIN_DLL_API void cc_heap_destruct(cc_heap * h);
+  COIN_DLL_API void cc_heap_clear(cc_heap * h);
+  
+  COIN_DLL_API void cc_heap_add(cc_heap * h, void * o);
+  COIN_DLL_API void * cc_heap_get_top(cc_heap * h);
+  COIN_DLL_API void * cc_heap_extract_top(cc_heap * h);
+  COIN_DLL_API int cc_heap_remove(cc_heap * h, void * o);
+  COIN_DLL_API int cc_heap_update(cc_heap * h, void * o);
+  COIN_DLL_API unsigned int cc_heap_elements(cc_heap * h);
+  COIN_DLL_API SbBool cc_heap_empty(cc_heap * h);
+  COIN_DLL_API void cc_heap_print(cc_heap * h, cc_heap_print_cb * printcb, SbString& str, SbBool printLeveled = FALSE);
 
 /* ********************************************************************** */
 
@@ -55,4 +67,4 @@ COIN_DLL_API void cc_mutex_unlock(cc_mutex * mutex);
 } /* extern "C" */
 #endif /* __cplusplus */
 
-#endif /* ! CC_MUTEX_H */
+#endif /* ! CC_HEAP_H */

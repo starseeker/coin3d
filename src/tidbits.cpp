@@ -36,7 +36,7 @@
   Coin portable.
 */
 
-#include <Inventor/C/tidbits.h>
+#include "C/tidbits.h"
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -73,12 +73,13 @@
 #include <direct.h> /* _getcwd() */
 #endif /* HAVE_DIRECT_H */
 
-#include <Inventor/C/base/string.h>
-#include <Inventor/C/base/list.h>
-#include <Inventor/C/errors/debugerror.h>
+#include "C/base/string.h"
+#include "base/list.h"
+#include "C/errors/debugerror.h"
 
 #include "tidbitsp.h"
 #include "coindefs.h"
+#include "misc/SoEnvironment.h"
 
 /**************************************************************************/
 
@@ -174,14 +175,14 @@ coin_init_tidbits(void)
   const char * env;
   /* no need to initialize std::mutex */
 
-  env  = coin_getenv("COIN_DEBUG_EXTRA");
+  env  = CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_EXTRA");
   if (env && atoi(env) == 1) {
     COIN_DEBUG_EXTRA = 1;
   }
   else {
     COIN_DEBUG_EXTRA = 0;
   }
-  env = coin_getenv("COIN_DEBUG_NORMALIZE");
+  env = CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_NORMALIZE");
   if (env && atoi(env) == 1) {
     COIN_DEBUG_NORMALIZE = 1;
   }
@@ -208,7 +209,7 @@ coin_common_vsnprintf(func_vsnprintf * func,
   static int debug = -1;
 
   if (debug == -1) {
-    const char * env = coin_getenv("COIN_DEBUG_NPRINTF");
+    const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_NPRINTF");
     debug = (env && (atoi(env) > 0)) ? 1 : 0;
   }
 
@@ -690,35 +691,6 @@ coin_unsetenv(const char * name)
 
 /**************************************************************************/
 
-/*
-  strncasecmp() is not available on all platforms (it's neither ISO C
-  nor POSIX). At least MSVC doesn't have it.
- */
-int
-coin_strncasecmp(const char * s1, const char * s2, int len)
-{
-#ifdef HAVE_STRNCASECMP
-
-  return strncasecmp(s1, s2, len);
-
-#else /* !HAVE_STRNCASECMP */
-
-  assert(s1 && s2);
-  while (len > 0) {
-    int c1 = tolower(*s1);
-    int c2 = tolower(*s2);
-    if (c1 < c2) { return -1; }
-    if (c1 > c2) { return +1; }
-    if (c1=='\0' && c2=='\0') { return 0; } /* in case len is too large */
-    len--; s1++; s2++;
-  }
-  return 0;
-
-#endif /* !HAVE_STRNCASECMP */
-}
-
-/**************************************************************************/
-
 #define COIN_BSWAP_8(x)  ((x) & 0xff)
 #define COIN_BSWAP_16(x) ((COIN_BSWAP_8(x)  << 8)  | COIN_BSWAP_8((x)  >> 8))
 #define COIN_BSWAP_32(x) ((COIN_BSWAP_16(x) << 16) | COIN_BSWAP_16((x) >> 16))
@@ -874,29 +846,6 @@ coin_ntoh_double_bytes(const char * value)
 }
 
 /**************************************************************************/
-
-/*
-  isascii() is neither ANSI C nor POSIX, but a BSD extension and SVID
-  extension.
- */
-SbBool
-coin_isascii(const int c)
-{
-  return (c >= 0x00) && (c < 0x80);
-}
-
-/* We provide our own version of the isspace() method, as we don't
-   really want it to be locale-dependent (which is known to have
-   caused trouble for us with some specific German characters under
-   Microsoft Windows, at least). */
-SbBool
-coin_isspace(const char c)
-{
-  /* This is what isspace() does under the POSIX and C locales,
-     according to the GNU libc man page. */
-  return (c==' ') || (c=='\n') || (c=='\t') ||
-         (c=='\r') || (c=='\f') || (c=='\v');
-}
 
 /**************************************************************************/
 
@@ -1126,7 +1075,7 @@ coin_atexit_cleanup(void)
 
   /* std::mutex destructor automatically called */
 
-  debugstr = coin_getenv("COIN_DEBUG_CLEANUP");
+  debugstr = CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_CLEANUP");
   debug = debugstr && (atoi(debugstr) > 0);
 
   n = cc_list_get_length(atexit_list);
@@ -1794,7 +1743,7 @@ coin_debug_caching_level(void)
 #if COIN_DEBUG
   static int COIN_DEBUG_CACHING = -1;
   if (COIN_DEBUG_CACHING < 0) {
-    const char * env = coin_getenv("COIN_DEBUG_CACHING");
+    const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_CACHING");
     if (env) COIN_DEBUG_CACHING = atoi(env);
     else COIN_DEBUG_CACHING = 0;
   }

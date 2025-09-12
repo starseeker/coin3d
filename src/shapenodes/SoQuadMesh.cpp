@@ -172,7 +172,7 @@
 #include <config.h>
 #endif // HAVE_CONFIG_H
 
-#include <Inventor/C/tidbits.h>
+#include "C/tidbits.h"
 #include <Inventor/SbPlane.h>
 #include <Inventor/SoPrimitiveVertex.h>
 #include <Inventor/actions/SoGLRenderAction.h>
@@ -192,6 +192,7 @@
 
 #include "rendering/SoGL.h"
 #include "nodes/SoSubNodeP.h"
+#include "misc/SoEnvironment.h"
 
 /*!
   \var SoSFInt32 SoQuadMesh::verticesPerColumn
@@ -911,7 +912,7 @@ SoQuadMesh::GLRender(SoGLRenderAction * action)
   // Check if precise lighting rendering is requested.
   static int preciselighting = -1;
   if (preciselighting == -1) {
-    const char * env = coin_getenv("COIN_QUADMESH_PRECISE_LIGHTING");
+    const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_QUADMESH_PRECISE_LIGHTING");
     preciselighting = env && (atoi(env) > 0);
   }
 

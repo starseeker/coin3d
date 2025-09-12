@@ -63,7 +63,7 @@
 #include <Inventor/elements/SoGLMultiTextureCoordinateElement.h>
 #include <Inventor/elements/SoTextureUnitElement.h>
 #include <Inventor/system/gl.h>
-#include <Inventor/C/glue/gl.h>
+#include "C/glue/gl.h"
 
 #include "nodes/SoSubNodeP.h"
 

@@ -151,14 +151,15 @@
 #include <CoreFoundation/CFURL.h>
 #endif // COIN_MACOS_10
 
-#include <Inventor/C/errors/debugerror.h>
-#include <Inventor/C/glue/dl.h>
-#include <Inventor/C/tidbits.h>
+#include "C/errors/debugerror.h"
+#include "C/glue/dl.h"
+#include "C/tidbits.h"
 #include <Inventor/system/gl.h> /* for glGetString */
 #include <Inventor/SbString.h>
 
 #include "glue/dlp.h"
 #include "tidbitsp.h"
+#include "misc/SoEnvironment.h"
 
 #ifndef MAXPATHLEN
 #define MAXPATHLEN (4096)
@@ -345,8 +346,8 @@ cc_dl_debugging(void)
 {
   static int d = -1;
   if (d == -1) {
-    const char * val = coin_getenv("COIN_DEBUG_DL");
-    d = val ? atoi(val) : 0;
+    auto val = CoinInternal::getEnvironmentVariable("COIN_DEBUG_DL");
+    d = val.has_value() ? std::atoi(val->c_str()) : 0;
   }
   return (d > 0) ? 1 : 0;
 }

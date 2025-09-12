@@ -41,7 +41,7 @@
 
 #include <cassert>
 
-#include <Inventor/C/base/list.h>
+#include "base/list.h"
 
 #include "fontlib_wrapper.h"
 #include "coindefs.h"

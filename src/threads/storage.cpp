@@ -54,7 +54,7 @@
   \brief The type definition for the thread local memory storage structure.
 */
 
-#include <Inventor/C/threads/storage.h>
+#include "C/threads/storage.h"
 #include "coindefs.h"
 
 #include <cstdlib>
@@ -69,8 +69,8 @@
    cc_mutex interfaces *working*, dummy skeletons when no thread
    abstractions are available?  20040615 mortene. */
 #ifdef HAVE_THREADS
-#include <Inventor/C/threads/thread.h>
-#include <Inventor/C/threads/mutex.h>
+#include "C/threads/thread.h"
+#include "C/threads/mutex.h"
 #endif /* HAVE_THREADS */
 
 #include "threads/storagep.h"

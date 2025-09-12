@@ -38,9 +38,9 @@
 #endif
 
 #include <stdio.h>
-#include <Inventor/C/tidbits.h>
-#include <Inventor/C/basic.h>
-#include <Inventor/C/base/string.h>
+#include "C/tidbits.h"
+#include "C/basic.h"
+#include "C/base/string.h"
 
 #ifdef __cplusplus
 extern "C" {

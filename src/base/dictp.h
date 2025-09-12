@@ -37,7 +37,7 @@
 #error this is a private header file
 #endif /* ! COIN_INTERNAL */
 
-#include <Inventor/C/base/memalloc.h>
+#include "base/memalloc.h"
 #include "dict.h"
 
 #ifdef __cplusplus

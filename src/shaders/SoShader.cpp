@@ -190,11 +190,12 @@
 #include <Inventor/nodes/SoGeometryShader.h>
 #include <Inventor/nodes/SoShaderParameter.h>
 #include <Inventor/elements/SoGLShaderProgramElement.h>
-#include <Inventor/C/tidbits.h>
+#include "C/tidbits.h"
 #include <Inventor/errors/SoDebugError.h>
 
 #include "misc/SbHash.h"
 #include "tidbitsp.h"
+#include "misc/SoEnvironment.h"
 
 // *************************************************************************
 
@@ -303,7 +304,7 @@ SoShader::init(void)
     SoShaderParameterArray4i::initClass();
 #endif
 
-  SO_SHADER_DIR = coin_getenv("SO_SHADER_DIR");
+  SO_SHADER_DIR = CoinInternal::getEnvironmentVariableRaw("SO_SHADER_DIR");
   shader_dict = new SbHash<const char *, char *>;
   shader_builtin_dict = new SbHash<const char *, char *>;
   setupBuiltinShaders();

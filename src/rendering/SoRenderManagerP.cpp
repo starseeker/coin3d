@@ -32,6 +32,7 @@
 
 #include "SoRenderManagerP.h"
 #include "coindefs.h"
+#include "misc/SoEnvironment.h"
 
 #include <limits>
 
@@ -366,7 +367,7 @@ SbBool
 SoRenderManagerRootSensor::debug(void)
 {
   if (SoRenderManagerRootSensor::debugrootnotifications == -1) {
-    const char * env = coin_getenv("COIN_DEBUG_ROOT_NOTIFICATIONS");
+    const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_ROOT_NOTIFICATIONS");
     SoRenderManagerRootSensor::debugrootnotifications = env && (atoi(env) > 0);
   }
   return SoRenderManagerRootSensor::debugrootnotifications ? TRUE : FALSE;

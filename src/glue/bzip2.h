@@ -35,7 +35,7 @@
 
 /* Minimal stub wrapper for bzip2 functionality - disabled for minimal build */
 
-#include <Inventor/C/basic.h>
+#include "C/basic.h"
 #include <cstdio>
 
 #ifdef __cplusplus

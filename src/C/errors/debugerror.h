@@ -1,5 +1,5 @@
-#ifndef CC_MEMALLOC_H
-#define CC_MEMALLOC_H
+#ifndef CC_DEBUGERROR_H
+#define CC_DEBUGERROR_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,7 +33,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#include <Inventor/C/basic.h> /* COIN_DLL_API */
+#include "C/basic.h"
+#include "C/errors/error.h"
 
 #include <stdarg.h>
 
@@ -41,17 +42,44 @@
 extern "C" {
 #endif /* __cplusplus */
 
-  typedef struct cc_memalloc cc_memalloc;
-  typedef int cc_memalloc_strategy_cb(const int numunits_allocated);
+/* ********************************************************************** */
+
+typedef enum CC_DEBUGERROR_SEVERITY {
+  CC_DEBUGERROR_ERROR,
+  CC_DEBUGERROR_WARNING,
+  CC_DEBUGERROR_INFO
+} CC_DEBUGERROR_SEVERITY;
+
+typedef struct cc_debugerror {
+  cc_error super; /* make struct is-A cc_error */
+
+  CC_DEBUGERROR_SEVERITY severity;
+} cc_debugerror;
+
+typedef void cc_debugerror_cb(const cc_debugerror * err, void * data);
 
 /* ********************************************************************** */
-  
-  COIN_DLL_API cc_memalloc * cc_memalloc_construct(const unsigned int unitsize);
-  COIN_DLL_API void cc_memalloc_destruct(cc_memalloc * allocator);
-  COIN_DLL_API void * cc_memalloc_allocate(cc_memalloc * allocator);
-  COIN_DLL_API void cc_memalloc_deallocate(cc_memalloc * allocator, void * ptr);
-  COIN_DLL_API void cc_memalloc_clear(cc_memalloc * allocator);
-  COIN_DLL_API void cc_memalloc_set_strategy(cc_memalloc * allocator, cc_memalloc_strategy_cb * cb);
+
+/* FIXME: missing stuff from SoDebugError: type-system,
+   COIN_DEBUG_BREAK handling, ... 20020524 mortene. */
+
+/* ********************************************************************** */
+
+COIN_DLL_API void cc_debugerror_post(const char * source, const char * format, ...);
+COIN_DLL_API void cc_debugerror_postwarning(const char * source, const char * format, ...);
+COIN_DLL_API void cc_debugerror_postinfo(const char * source, const char * format, ...);
+
+
+COIN_DLL_API void cc_debugerror_init(cc_debugerror * me);
+COIN_DLL_API void cc_debugerror_clean(cc_debugerror * me);
+
+COIN_DLL_API CC_DEBUGERROR_SEVERITY cc_debugerror_get_severity(const cc_debugerror * me);
+
+COIN_DLL_API void cc_debugerror_set_handler_callback(cc_debugerror_cb * function, void * data);
+COIN_DLL_API cc_debugerror_cb * cc_debugerror_get_handler_callback(void);
+COIN_DLL_API void * cc_debugerror_get_handler_data(void);
+
+COIN_DLL_API cc_debugerror_cb * cc_debugerror_get_handler(void ** data);
 
 /* ********************************************************************** */
 
@@ -59,4 +87,4 @@ extern "C" {
 } /* extern "C" */
 #endif /* __cplusplus */
 
-#endif /* ! CC_MEMALLOC_H */
+#endif /* ! CC_DEBUGERROR_H */

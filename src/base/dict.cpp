@@ -37,8 +37,8 @@
 #include <cstdio>
 #include <cstring>
 
-#include <Inventor/C/tidbits.h>
-#include <Inventor/C/errors/debugerror.h>
+#include "C/tidbits.h"
+#include "C/errors/debugerror.h"
 
 #include "tidbitsp.h"
 #include "base/dictp.h"

@@ -38,7 +38,7 @@
 #endif // COIN_INTERNAL
 
 #include <stdlib.h>
-#include <Inventor/C/basic.h>
+#include "C/basic.h"
 
 #ifdef __cplusplus
 extern "C" {

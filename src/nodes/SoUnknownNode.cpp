@@ -53,7 +53,7 @@
 #include <Inventor/fields/SoSFNode.h>
 #include <Inventor/misc/SoChildList.h>
 #include <Inventor/nodes/SoGroup.h>
-#include <Inventor/C/tidbits.h>
+#include "C/tidbits.h"
 
 #include "io/SoWriterefCounter.h"
 #include "io/SoInputP.h"

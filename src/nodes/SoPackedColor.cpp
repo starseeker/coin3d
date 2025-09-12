@@ -65,7 +65,7 @@
 #include <Inventor/elements/SoOverrideElement.h>
 #include <Inventor/elements/SoGLLazyElement.h>
 #include <Inventor/elements/SoGLVBOElement.h>
-#include <Inventor/C/tidbits.h>
+#include "C/tidbits.h"
 
 #include "nodes/SoSubNodeP.h"
 #include "rendering/SoVBO.h"

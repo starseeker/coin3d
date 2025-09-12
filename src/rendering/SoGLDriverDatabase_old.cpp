@@ -47,14 +47,14 @@
 
 #include <cstring>
 
-#include <Inventor/C/tidbits.h>
+#include "C/tidbits.h"
 #include <Inventor/SbName.h>
 #include <Inventor/SbString.h>
-#include <Inventor/C/glue/gl.h>
+#include "C/glue/gl.h"
 #include <Inventor/errors/SoDebugError.h>
-#include <Inventor/C/tidbits.h>
-#include <Inventor/C/XML/document.h>
-#include <Inventor/C/XML/element.h>
+#include "C/tidbits.h"
+#include "C/XML/document.h"
+#include "C/XML/element.h"
 
 #include "misc/SbHash.h"
 #include "glue/glp.h"

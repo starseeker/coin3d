@@ -62,7 +62,7 @@ public:
   void * getUserData(const int idx) const;
   void setUserData(const int idx, void * const data);
 
-  int addPoint(const SbVec3f & pt, void * const userdata = NULL);
+  int addPoint(const SbVec3f & pt, void * const userdata = nullptr);
   int removePoint(const SbVec3f & pt);
   void removePoint(const int idx);
   int findPoint(const SbVec3f & pos) const;

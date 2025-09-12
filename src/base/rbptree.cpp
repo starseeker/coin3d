@@ -37,15 +37,15 @@
  * page number refers to the corresponding pseude-code in the book.
  */
 
-#include <Inventor/C/base/rbptree.h>
+#include "C/base/rbptree.h"
 
 #include <cassert>
 #include <cstddef>
 #include <cstdlib>
 #include <cstdio>
 
-#include <Inventor/C/base/string.h>
-#include <Inventor/C/errors/debugerror.h>
+#include "C/base/string.h"
+#include "C/errors/debugerror.h"
 
 #include "coindefs.h"
 #include "tidbitsp.h"

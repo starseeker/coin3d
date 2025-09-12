@@ -53,7 +53,7 @@
 #include <string.h> // memset()
 
 #include <Inventor/lists/SbList.h>
-#include <Inventor/C/base/memalloc.h>
+#include "base/memalloc.h"
 
 #include "tidbitsp.h"
 #include "coindefs.h"

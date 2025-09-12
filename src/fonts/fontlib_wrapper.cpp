@@ -45,9 +45,9 @@
 #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include <Inventor/C/tidbits.h>
-#include <Inventor/C/base/string.h>
-#include <Inventor/C/errors/debugerror.h>
+#include "C/tidbits.h"
+#include "C/base/string.h"
+#include "C/errors/debugerror.h"
 
 #include "base/dict.h"
 #include "base/dynarray.h"
@@ -56,6 +56,7 @@
 #include "fonts/defaultfonts.h"
 #include "threads/threadsutilp.h"
 #include "tidbitsp.h"
+#include "misc/SoEnvironment.h"
 
 /* ********************************************************************** */
 
@@ -175,12 +176,10 @@ static SbBool
 using_freetype(void)
 {
   if (!tried_init_freetype_fontlib) {
-    const char * env;
-
     tried_init_freetype_fontlib = TRUE;
 
-    env = coin_getenv("COIN_FORCE_FREETYPE_OFF");
-    fontlib_freetype_available = (env && (atoi(env) > 0)) ? FALSE : TRUE;
+    auto env = CoinInternal::getEnvironmentVariable("COIN_FORCE_FREETYPE_OFF");
+    fontlib_freetype_available = (env.has_value() && (std::atoi(env->c_str()) > 0)) ? FALSE : TRUE;
     fontlib_freetype_available = fontlib_freetype_available && cc_flwft_initialize();
     if (cc_font_debug()) {
       cc_debugerror_postinfo("using_freetype",
@@ -205,12 +204,10 @@ static SbBool
 using_win32api(void)
 {
   if (!tried_init_win32_fontlib) {
-    const char * env;
-
     tried_init_win32_fontlib = TRUE;
 
-    env = coin_getenv("COIN_FORCE_WIN32FONTS_OFF");
-    fontlib_win32_available = (env && (atoi(env) > 0)) ? FALSE : TRUE;
+    auto env = CoinInternal::getEnvironmentVariable("COIN_FORCE_WIN32FONTS_OFF");
+    fontlib_win32_available = (env.has_value() && (std::atoi(env->c_str()) > 0)) ? FALSE : TRUE;
     fontlib_win32_available = fontlib_win32_available && cc_flww32_initialize();
     if (cc_font_debug()) {
       cc_debugerror_postinfo("cc_flw_initialize",

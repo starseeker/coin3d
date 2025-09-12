@@ -60,7 +60,7 @@
 #include <cstdio>
 #include <cstdlib>
 
-#include <Inventor/C/tidbits.h>
+#include "C/tidbits.h"
 #include <Inventor/SbName.h>
 #include <Inventor/SoPath.h>
 #include <Inventor/engines/SoEngine.h>

@@ -40,9 +40,10 @@
 #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include <Inventor/C/base/list.h>
+#include "base/list.h"
 
 #include "glue/GLUWrapper.h"
+#include "../misc/SoEnvironment.h"
 
 /* ************************************************************************* */
 
@@ -114,10 +115,11 @@ static int flww32_calcfontsize(float complexity);
 #include <wingdi.h>
 #undef WIN32_LEAN_AND_MEAN
 
-#include <Inventor/C/tidbits.h>
-#include <Inventor/C/base/string.h>
+#include "C/tidbits.h"
+#include "C/base/string.h"
 
 #include "base/dict.h"
+#include "misc/SoUtilities.h"
 #include "glue/win32api.h"
 #include "fonts/common.h"
 
@@ -381,7 +383,7 @@ static HFONT cc_flww32_create_font(const char* fontname, int sizey,
                                    float angle, BOOL bold, BOOL italic)
 {
   HFONT font;
-  static const int disable_utf8 = (coin_getenv("COIN_DISABLE_UTF8") != NULL);
+  static const int disable_utf8 = CoinInternal::getEnvironmentVariable("COIN_DISABLE_UTF8").has_value();
 
   if (disable_utf8) {
     font = CreateFont(-sizey,
@@ -512,7 +514,7 @@ cc_flww32_get_font(const char * fontname, int sizey, float angle, float complexi
 
   size_t fontnamelen = strlen(fontname);
   if (cc_string_length(realname) != fontnamelen ||
-      coin_strncasecmp(cc_string_get_text(realname), fontname, (int)fontnamelen)) {
+      CoinInternal::stringCompareIgnoreCase(cc_string_get_text(realname), fontname, fontnamelen)) {
     /*
     The names are different, we probably got a bogus font (Arial plain)
     Let's try stripping the bold/italic part from the font name and set those as flags instead
@@ -557,7 +559,7 @@ cc_flww32_get_font(const char * fontname, int sizey, float angle, float complexi
       if (wfont2) {
         cc_flww32_get_font_name(wfont2, realname);
         if (((int) cc_string_length(realname) == baselen) &&
-            !coin_strncasecmp(cc_string_get_text(realname),
+            !CoinInternal::stringCompareIgnoreCase(cc_string_get_text(realname),
                               cc_string_get_text(basename),
                               baselen)) {
           /* The new font was a perfect match. Replace the old one. */
@@ -718,7 +720,7 @@ cc_flww32_get_vector_advance(void * font, int glyph, float * x, float * y)
 {
   LOGFONT lfont;
   GLYPHMETRICS gm;
-  static const int disable_utf8 = (coin_getenv("COIN_DISABLE_UTF8") != NULL);
+  static const int disable_utf8 = CoinInternal::getEnvironmentVariable("COIN_DISABLE_UTF8").has_value();
 
   /* NOTE: Do not make this matrix 'static'. It seems like Win95/98/ME
      fails if the idmatrix is static. Newer versions seems to not mind
@@ -850,7 +852,7 @@ cc_flww32_get_bitmap(void * font, int glyph)
 {
   struct cc_font_bitmap * bm = NULL;
   GLYPHMETRICS gm;
-  static const int disable_utf8 = (coin_getenv("COIN_DISABLE_UTF8") != NULL);
+  static const int disable_utf8 = CoinInternal::getEnvironmentVariable("COIN_DISABLE_UTF8").has_value();
 
   /* NOTE: Do not make this matrix 'static'. It seems like Win95/98/ME
      fails if the idmatrix is static. Newer versions seems to not mind
@@ -1087,7 +1089,7 @@ cc_flww32_get_vector_glyph(void * font, unsigned int glyph, float complexity)
   unsigned int size;
   uintptr_t cast_aid;
   UINT previous;
-  static const int disable_utf8 = (coin_getenv("COIN_DISABLE_UTF8") != NULL);
+  static const int disable_utf8 = CoinInternal::getEnvironmentVariable("COIN_DISABLE_UTF8").has_value();
 
 
   if (!GLUWrapper()->available) {

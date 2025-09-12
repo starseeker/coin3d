@@ -109,7 +109,7 @@
 #include <cassert>
 #include <cfloat>
 
-#include <Inventor/C/base/heap.h>
+#include "base/heap.h"
 #include <Inventor/SbBSPTree.h>
 #include <Inventor/SbSphere.h>
 #include <Inventor/lists/SbList.h>

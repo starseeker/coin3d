@@ -112,7 +112,7 @@
 
 #include <Inventor/SoInput.h>
 
-#include <Inventor/C/tidbits.h>
+#include "C/tidbits.h"
 #include <Inventor/SbName.h>
 #include <Inventor/SoDB.h>
 #include <Inventor/errors/SoDebugError.h>
@@ -124,11 +124,13 @@
 #include <Inventor/threads/SbStorage.h>
 
 #include "misc/SbHash.h"
+#include "misc/SoUtilities.h"
 #include "tidbitsp.h"
 #include "glue/zlib.h"
 #include "coindefs.h" // COIN_STUB(), COIN_OBSOLETED()
 #include "io/SoInputP.h"
 #include "io/SoInput_FileInfo.h"
+#include "misc/SoEnvironment.h"
 
 // This (POSIX-compliant) macro is missing from the Win32 API header
 // files for MSVC++ 6.0.
@@ -408,14 +410,14 @@ SoInput::checkISReference(SoFieldContainer * container,
         switch (state) {
         case STATE_WAIT_I:
           if (c == 'I') state = STATE_EXPECT_S;
-          else if (!coin_isspace(c)) state = STATE_NOTFOUND;
+          else if (!CoinInternal::isSpace(c)) state = STATE_NOTFOUND;
           break;
         case STATE_EXPECT_S:
           if (c == 'S') state = STATE_EXPECT_SPACE;
           else state = STATE_NOTFOUND;
           break;
         case STATE_EXPECT_SPACE:
-          if (coin_isspace(c)) state = STATE_FOUND;
+          if (CoinInternal::isSpace(c)) state = STATE_FOUND;
           else state = STATE_NOTFOUND;
           break;
         default:
@@ -1611,7 +1613,7 @@ SoInput::findReference(const SbName & name) const
 
     static int COIN_SOINPUT_SEARCH_GLOBAL_DICT = -1;
     if (COIN_SOINPUT_SEARCH_GLOBAL_DICT < 0) {
-      const char * env = coin_getenv("COIN_SOINPUT_SEARCH_GLOBAL_DICT");
+      const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_SOINPUT_SEARCH_GLOBAL_DICT");
       if (env) COIN_SOINPUT_SEARCH_GLOBAL_DICT = atoi(env);
       else COIN_SOINPUT_SEARCH_GLOBAL_DICT = 0;
     }
@@ -1725,7 +1727,7 @@ SoInput::addEnvDirectoriesIdx(int startidx,
                               const char * envVarName,
                               const char * separator)
 {
-  const char * p = coin_getenv(envVarName);
+  const char * p = CoinInternal::getEnvironmentVariableRaw(envVarName);
   if (!p) {
 #if COIN_DEBUG
     SoDebugError::postWarning("SoInput::addEnvDirectoriesFirst",
@@ -2520,7 +2522,7 @@ SoInput::findFile(const char * basename, SbString & fullname)
     return NULL;
   }
 
-  const char * env = coin_getenv("COIN_DEBUG_SOINPUT_FINDFILE");
+  const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_SOINPUT_FINDFILE");
   const SbBool DEBUG_FILE_SEARCHING = env && (atoi(env) > 0);
   if (DEBUG_FILE_SEARCHING) {
     cc_string str;

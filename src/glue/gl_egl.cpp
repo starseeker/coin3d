@@ -48,13 +48,14 @@
 #include <cstring>
 #include <cassert>
 
-#include <Inventor/C/tidbits.h>
-#include <Inventor/C/glue/gl.h>
-#include <Inventor/C/errors/debugerror.h>
-#include <Inventor/C/glue/dl.h>
+#include "C/tidbits.h"
+#include "C/glue/gl.h"
+#include "C/errors/debugerror.h"
+#include "C/glue/dl.h"
 
 #include "glue/glp.h"
 #include "glue/dlp.h"
+#include "misc/SoEnvironment.h"
 
 /* ********************************************************************** */
 
@@ -310,7 +311,7 @@ eglglue_context_create_offscreen(unsigned int width, unsigned int height)
     return NULL;
   }
 
-  const char * env = coin_getenv("COIN_EGLGLUE_NO_PBUFFERS");
+  const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_EGLGLUE_NO_PBUFFERS");
   if (env && atoi(env) > 0) {
     attrib[3] = EGL_PIXMAP_BIT;
     if (coin_glglue_debug()) {

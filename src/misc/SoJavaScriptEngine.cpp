@@ -47,7 +47,7 @@
   
 #include <Inventor/misc/SoJavaScriptEngine.h>
 #include <Inventor/errors/SoDebugError.h>
-#include <Inventor/C/tidbits.h>
+#include "misc/SoEnvironment.h"
 #include "coindefs.h"
 
 // *************************************************************************
@@ -387,8 +387,8 @@ SoJavaScriptEngine::debug(void)
 {
   static int d = -1;
   if (d == -1) {
-    const char * env = coin_getenv("COIN_DEBUG_VRMLSCRIPT");
-    d = (env && (atoi(env) > 0)) ? 1 : 0;
+    auto env = CoinInternal::getEnvironmentVariable("COIN_DEBUG_VRMLSCRIPT");
+    d = (env.has_value() && (std::atoi(env->c_str()) > 0)) ? 1 : 0;
 
   }
   return d ? TRUE : FALSE;

@@ -61,7 +61,7 @@ public:
   const SbVec3f & get(int index) const;
   void send(int index) const;
   
-  SoNormalGenerator * generator; // SoINTERNAL public
+  SoNormalGenerator * generator; // Internal API - public for access
   
 private:
   const SoNormalElement * elem;

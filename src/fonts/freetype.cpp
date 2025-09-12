@@ -38,7 +38,7 @@
 #include "coindefs.h"
 #include "fonts/freetype.h"
 #include "fonts/common.h"
-#include <Inventor/C/base/string.h>
+#include "C/base/string.h"
 #include <cstdlib>
 
 #define STRUETYPE_IMPLEMENTATION

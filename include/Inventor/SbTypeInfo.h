@@ -62,7 +62,13 @@
 #ifndef DOXYGEN_SKIP_THIS
 
 #include <cstdint>
-#include <Inventor/C/basic.h>
+// Modern C++17 basic types instead of legacy C API
+#ifdef COIN_INTERNAL
+#include "base/CoinBasic.h"
+#else
+// For external users, provide essential type definitions inline
+#include <Inventor/SbBasic.h>
+#endif
 
 // *************************************************************************
 // Predeclarations

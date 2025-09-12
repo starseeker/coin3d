@@ -1,5 +1,5 @@
-#ifndef COIN_SOGLNORMALIZEELEMENT_H
-#define COIN_SOGLNORMALIZEELEMENT_H
+#ifndef CC_RBPTREE_H
+#define CC_RBPTREE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,6 +33,42 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#error This element is obsoleted (2002-09-12)
+#include "C/basic.h"
 
-#endif // !COIN_SOGLNORMALIZEELEMENT_H
+#include <stdarg.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
+
+typedef struct cc_rbptree_node cc_rbptree_node;
+
+typedef struct cc_rbptree {
+  cc_rbptree_node * root;
+  
+  /* store two items inline to avoid allocating memory for small tree */
+  void * inlinepointer[2];
+  void * inlinedata[2];
+  uint32_t counter;
+} cc_rbptree;
+
+COIN_DLL_API void cc_rbptree_init(cc_rbptree * t);
+COIN_DLL_API void cc_rbptree_clean(cc_rbptree * t);
+
+COIN_DLL_API void cc_rbptree_insert(cc_rbptree * t, void * p, void * data);
+COIN_DLL_API SbBool cc_rbptree_remove(cc_rbptree * t, void * p);
+COIN_DLL_API uint32_t cc_rbptree_size(const cc_rbptree * t);
+
+/* traverse all elements */
+typedef void cc_rbptree_traversecb(void * p, void * data, void * closure);
+COIN_DLL_API void cc_rbptree_traverse(const cc_rbptree * t, cc_rbptree_traversecb * func, void * closure);
+
+/* only for debugging */
+COIN_DLL_API void cc_rbptree_debug(const cc_rbptree * t);
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif /* __cplusplus */
+
+#endif /* ! CC_RBPTREE_H */

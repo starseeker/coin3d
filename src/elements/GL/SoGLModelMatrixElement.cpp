@@ -49,7 +49,9 @@
 #endif // HAVE_CONFIG_H
 
 #include <Inventor/system/gl.h>
-#include <Inventor/C/tidbits.h>
+#include "C/tidbits.h"
+
+#include "misc/SoEnvironment.h"
 
 #if COIN_DEBUG
 #include <Inventor/errors/SoDebugError.h>
@@ -68,7 +70,7 @@ SoGLModelMatrixElement::initClass(void)
 {
   SO_ELEMENT_INIT_CLASS(SoGLModelMatrixElement, inherited);
 
-  const char * env = coin_getenv("COIN_HANDLE_STACK_OVERFLOW");
+  const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_HANDLE_STACK_OVERFLOW");
   if (env && atoi(env) > 0) COIN_HANDLE_STACK_OVERFLOW = 1;
   else COIN_HANDLE_STACK_OVERFLOW = 0;
 }

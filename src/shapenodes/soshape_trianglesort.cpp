@@ -48,7 +48,7 @@
 #include <Inventor/elements/SoViewVolumeElement.h>
 #include <Inventor/bundles/SoMaterialBundle.h>
 #include <Inventor/SbPlane.h>
-#include <Inventor/C/tidbits.h>
+#include "C/tidbits.h"
 #include <Inventor/system/gl.h>
 
 soshape_trianglesort::soshape_trianglesort(void)

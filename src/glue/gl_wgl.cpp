@@ -40,14 +40,15 @@
 #include <cstdlib>
 #include <cassert>
 
-#include <Inventor/C/glue/gl.h>
-#include <Inventor/C/errors/debugerror.h>
-#include <Inventor/C/tidbits.h>
-#include <Inventor/C/glue/dl.h>
+#include "C/glue/gl.h"
+#include "C/errors/debugerror.h"
+#include "C/tidbits.h"
+#include "C/glue/dl.h"
 #include <Inventor/elements/SoGLCacheContextElement.h>
 
 #include "glue/glp.h"
 #include "glue/dlp.h"
+#include "misc/SoEnvironment.h"
 
 #ifdef HAVE_WIN32_API
 /* Conditional inclusion, as the functions in win32api.h will not be
@@ -1091,7 +1092,7 @@ wglglue_context_create_offscreen(unsigned int width, unsigned int height, SbBool
 
   /* developer or user can force pbuffer support off with this envvar */
   {
-    const char * env = coin_getenv("COIN_WGLGLUE_NO_PBUFFERS");
+    const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_WGLGLUE_NO_PBUFFERS");
     if (env && atoi(env) > 0) { return swctx; }
   }
 

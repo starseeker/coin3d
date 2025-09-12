@@ -42,8 +42,8 @@
 #error this is a private header file
 #endif /* ! COIN_INTERNAL */
 
-#include <Inventor/C/basic.h>
-#include <Inventor/C/glue/dl.h>
+#include "C/basic.h"
+#include "C/glue/dl.h"
 
 /* ********************************************************************** */
 
