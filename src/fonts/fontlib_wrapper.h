@@ -54,7 +54,7 @@
 
 #include <Inventor/C/tidbits.h>
 #include <Inventor/C/base/string.h>
-#include <Inventor/C/base/list.h>
+#include "base/list.h"
 #include "fontspec.h"
 
 #include "common.h"

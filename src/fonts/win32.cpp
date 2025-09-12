@@ -40,7 +40,7 @@
 #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include <Inventor/C/base/list.h>
+#include "base/list.h"
 
 #include "glue/GLUWrapper.h"
 #include "../misc/SoEnvironment.h"

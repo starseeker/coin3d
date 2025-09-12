@@ -75,7 +75,7 @@
 
 #include "base/dict.h"  // Use cc_dict instead of cc_hash
 #include <Inventor/lists/SbPList.h>
-#include <Inventor/C/base/memalloc.h>
+#include "base/memalloc.h"
 
 #include "SbBasicP.h"
 

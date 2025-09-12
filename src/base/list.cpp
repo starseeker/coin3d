@@ -30,7 +30,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#include <Inventor/C/base/list.h>
+#include "base/list.h"
 
 #include <cassert>
 #include <cstddef>

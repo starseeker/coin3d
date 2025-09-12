@@ -38,7 +38,7 @@
 #endif /* !COIN_INTERNAL */
 
 #include "base/dict.h"
-#include <Inventor/C/base/heap.h>
+#include "base/heap.h"
 
 // Forward declaration for the modern STL-based implementation
 // The actual definition is in heap.cpp to encapsulate STL headers

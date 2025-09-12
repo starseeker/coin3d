@@ -30,7 +30,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#include <Inventor/C/base/memalloc.h>
+#include "base/memalloc.h"
 
 #include <cstdlib>
 #include <cstddef>
