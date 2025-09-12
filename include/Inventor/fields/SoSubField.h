@@ -87,8 +87,8 @@ public: \
   void setValue(_valref_ newvalue); \
   _valref_ operator=(_valref_ newvalue) { this->setValue(newvalue); return this->value; } \
  \
-  int operator==(const _class_ & field) const; \
-  int operator!=(const _class_ & field) const { return ! operator==(field); }
+  SbBool operator==(const _class_ & field) const; \
+  SbBool operator!=(const _class_ & field) const { return ! operator==(field); }
 
 
 // FIXME: is really the operator=() definition below necessary?
