@@ -34,7 +34,7 @@ class COIN_DLL_API SbByteBuffer {
  public:
   SbByteBuffer(const char * buffer);
   SbByteBuffer(const SbByteBuffer & buffer);
-  SbByteBuffer(size_t size = 0, const char * buffer = NULL);
+  SbByteBuffer(size_t size = 0, const char * buffer = nullptr);
   SbByteBuffer(size_t size, const unsigned char * buffer);
   ~SbByteBuffer();
 

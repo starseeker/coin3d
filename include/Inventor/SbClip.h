@@ -47,15 +47,15 @@ typedef void * SbClipCallback(const SbVec3f & v0, void * vdata0,
 
 class COIN_DLL_API SbClip {
 public:
-  SbClip(SbClipCallback * callback = NULL, void * userdata = NULL);
+  SbClip(SbClipCallback * callback = nullptr, void * userdata = nullptr);
   
-  void addVertex(const SbVec3f &v, void * vdata = NULL);  
+  void addVertex(const SbVec3f &v, void * vdata = nullptr);  
   void reset(void);
 
   void clip(const SbPlane & plane);
 
   int getNumVertices(void) const;
-  void getVertex(const int idx, SbVec3f & v, void ** vdata = NULL) const; 
+  void getVertex(const int idx, SbVec3f & v, void ** vdata = nullptr) const; 
   void * getVertexData(const int idx) const;
   
 private:
