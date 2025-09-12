@@ -35,45 +35,24 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdlib>
+#include <vector>
+#include <algorithm>
 
 #include "coindefs.h"
 
 #define CC_LIST_DEFAULT_SIZE 4
 
-#ifndef COIN_WORKAROUND_NO_USING_STD_FUNCS
-using std::malloc;
-using std::free;
-#endif // !COIN_WORKAROUND_NO_USING_STD_FUNCS
-
-/* ********************************************************************** */
-
-/* FIXME: consider making this struct public to enable users to have
-   lists on the stack */
+// Modern STL-based implementation that maintains C interface compatibility
 struct cc_list {
-  int itembuffersize;
-  int numitems;
-  void ** itembuffer;
-  void * builtinbuffer[CC_LIST_DEFAULT_SIZE];
-};
-
-/* ********************************************************************** */
-
-static void 
-list_grow(cc_list * list) 
-{
-  int i, n;
-  void ** newbuffer;
-  list->itembuffersize <<= 1;
-
-  newbuffer = static_cast<void**>(malloc(list->itembuffersize*sizeof(void*)));
+  std::vector<void*> items;
   
-  n = list->numitems;
-  for (i = 0; i < n; i++) newbuffer[i] = list->itembuffer[i];
-  if (list->itembuffer != list->builtinbuffer) {
-    free(list->itembuffer);
+  // Constructor with capacity
+  explicit cc_list(int initial_capacity = CC_LIST_DEFAULT_SIZE) {
+    if (initial_capacity > 0) {
+      items.reserve(initial_capacity);
+    }
   }
-  list->itembuffer = newbuffer;
-}
+};
 
 /* ********************************************************************** */
 
@@ -86,58 +65,48 @@ cc_list_construct(void)
 cc_list *
 cc_list_construct_sized(int size)
 {
-  cc_list * list = static_cast<cc_list*>(malloc(sizeof(cc_list)));
-  assert(list);
-  if (size > CC_LIST_DEFAULT_SIZE) {
-    list->itembuffer = static_cast<void**>(malloc(sizeof(void*)*size));
-    assert(list->itembuffer);
-    list->itembuffersize = size;
+  try {
+    return new cc_list(size > 0 ? size : CC_LIST_DEFAULT_SIZE);
+  } catch (const std::bad_alloc&) {
+    return nullptr;
   }
-  else {
-    list->itembuffer = list->builtinbuffer;
-    list->itembuffersize = CC_LIST_DEFAULT_SIZE;
-  }
-  list->numitems = 0;
-  return list;
 }
 
 cc_list * 
 cc_list_clone(cc_list * list)
 {
-  int i;
-  cc_list * cloned = cc_list_construct_sized(list->numitems);
-
-  for (i = 0; i < list->numitems; i++) {
-    cloned->itembuffer[i] = list->itembuffer[i];
+  if (!list) return nullptr;
+  
+  try {
+    cc_list * cloned = new cc_list(static_cast<int>(list->items.size()));
+    cloned->items = list->items; // STL vector copy
+    return cloned;
+  } catch (const std::bad_alloc&) {
+    return nullptr;
   }
-  cloned->numitems = list->numitems;
-  return cloned;
 }
 
 void
 cc_list_destruct(cc_list * list)
 {
-  if (list->itembuffer != list->builtinbuffer) {
-    free(list->itembuffer);
-  }
-  free(list);
+  delete list;
 }
 
 void
 cc_list_append(cc_list * list, void * item)
 {
-  if (list->numitems == list->itembuffersize) {
-    list_grow(list);
-  }
-  list->itembuffer[list->numitems++] = item;
+  if (!list) return;
+  list->items.push_back(item);
 }
 
 int
 cc_list_find(cc_list * list, void * item)
 {
-  int i, n = list->numitems;
-  for (i = 0; i < n; i++) {
-    if (list->itembuffer[i] == item) return i;
+  if (!list) return -1;
+  
+  auto it = std::find(list->items.begin(), list->items.end(), item);
+  if (it != list->items.end()) {
+    return static_cast<int>(std::distance(list->items.begin(), it));
   }
   return -1;
 }
@@ -145,115 +114,126 @@ cc_list_find(cc_list * list, void * item)
 void
 cc_list_insert(cc_list * list, void * item, int insertbefore)
 {
-  int i;
+  if (!list) return;
+  
 #ifdef COIN_EXTRA_DEBUG
-  assert(insertbefore >= 0 && insertbefore <= list->numitems);
+  assert(insertbefore >= 0 && insertbefore <= static_cast<int>(list->items.size()));
 #endif /* COIN_EXTRA_DEBUG */
-  if (list->numitems == list->itembuffersize) {
-    list_grow(list);
-  }  
-  for (i = list->numitems; i > insertbefore; i--) {
-    list->itembuffer[i] = list->itembuffer[i-1];
+  
+  if (insertbefore >= 0 && insertbefore <= static_cast<int>(list->items.size())) {
+    list->items.insert(list->items.begin() + insertbefore, item);
   }
-  list->itembuffer[insertbefore] = item;
-  list->numitems++;
 }
 
 void
 cc_list_remove(cc_list * list, int index)
 {
-  int i;
+  if (!list) return;
+  
 #ifdef COIN_EXTRA_DEBUG
-  assert(index >= 0 && index < list->numitems);
+  assert(index >= 0 && index < static_cast<int>(list->items.size()));
 #endif /* COIN_EXTRA_DEBUG */
-  list->numitems--;
-  for (i = index; i < list->numitems; i++) {
-    list->itembuffer[i] = list->itembuffer[i + 1];
+  
+  if (index >= 0 && index < static_cast<int>(list->items.size())) {
+    list->items.erase(list->items.begin() + index);
   }
 }
 
 void
 cc_list_remove_item(cc_list * list, void * item)
 {
+  if (!list) return;
+  
   int idx = cc_list_find(list, item);
 #ifdef COIN_EXTRA_DEBUG
   assert(idx != -1);
 #endif /* COIN_EXTRA_DEBUG */
-  cc_list_remove(list, idx);
+  if (idx != -1) {
+    cc_list_remove(list, idx);
+  }
 }
 
 void
 cc_list_remove_fast(cc_list * list, int index)
 {
+  if (!list) return;
+  
 #ifdef COIN_EXTRA_DEBUG
-  assert(index >= 0 && index < list->numitems);
+  assert(index >= 0 && index < static_cast<int>(list->items.size()));
 #endif /* COIN_EXTRA_DEBUG */
-  list->itembuffer[index] = list->itembuffer[--list->numitems];
+  
+  if (index >= 0 && index < static_cast<int>(list->items.size())) {
+    // Fast removal: swap with last element and pop
+    if (index != static_cast<int>(list->items.size()) - 1) {
+      list->items[index] = list->items.back();
+    }
+    list->items.pop_back();
+  }
 }
-
 
 void
 cc_list_fit(cc_list * list)
 {
-  int i;
-  int items = list->numitems;
+  if (!list) return;
   
-  if (items < list->itembuffersize) {
-    void ** newitembuffer = list->builtinbuffer;
-    if (items > CC_LIST_DEFAULT_SIZE) newitembuffer = static_cast<void**>(malloc(sizeof(void*)*items));
-    
-    if (newitembuffer != list->itembuffer) {
-      for (i = 0; i < items; i++) {
-        newitembuffer[i] = list->itembuffer[i];
-      }
-    }
-    
-    if (list->itembuffer != list->builtinbuffer) {
-      free(list->itembuffer);
-    }
-    list->itembuffer = newitembuffer;
-    list->itembuffersize = items > CC_LIST_DEFAULT_SIZE ? items : CC_LIST_DEFAULT_SIZE;
-  }
+  // STL shrink_to_fit provides similar functionality
+  list->items.shrink_to_fit();
 }
 
 void
 cc_list_truncate(cc_list * list, int length)
 {
+  if (!list) return;
+  
 #ifdef COIN_EXTRA_DEBUG
-  assert(length <= list->numitems);
+  assert(length <= static_cast<int>(list->items.size()));
 #endif /* COIN_EXTRA_DEBUG */
-  list->numitems = length;
+  
+  if (length >= 0 && length <= static_cast<int>(list->items.size())) {
+    list->items.resize(length);
+  }
 }
 
 void
 cc_list_truncate_fit(cc_list * list, int length)
 {
+  if (!list) return;
+  
 #ifdef COIN_EXTRA_DEBUG
-  assert(length <= list->numitems);
+  assert(length <= static_cast<int>(list->items.size()));
 #endif /* COIN_EXTRA_DEBUG */
-  list->numitems = length;
+  
+  cc_list_truncate(list, length);
   cc_list_fit(list);
 }
 
 int
 cc_list_get_length(cc_list * list)
 {
-  return list->numitems;
+  if (!list) return 0;
+  return static_cast<int>(list->items.size());
 }
 
 void **
 cc_list_get_array(cc_list * list)
 {
-  return list->itembuffer;
+  if (!list || list->items.empty()) return nullptr;
+  return list->items.data();
 }
 
 void * 
 cc_list_get(cc_list * list, int itempos)
 {
+  if (!list) return nullptr;
+  
 #ifdef COIN_EXTRA_DEBUG
-  assert(itempos < list->numitems);
+  assert(itempos < static_cast<int>(list->items.size()));
 #endif /* COIN_EXTRA_DEBUG */
-  return list->itembuffer[itempos];
+  
+  if (itempos >= 0 && itempos < static_cast<int>(list->items.size())) {
+    return list->items[itempos];
+  }
+  return nullptr;
 }
 
 void
@@ -265,10 +245,15 @@ cc_list_push(cc_list * list, void * item)
 void *
 cc_list_pop(cc_list * list)
 {
+  if (!list || list->items.empty()) return nullptr;
+  
 #ifdef COIN_EXTRA_DEBUG
-  assert(list->numitems > 0);
+  assert(!list->items.empty());
 #endif /* COIN_EXTRA_DEBUG */
-  return list->itembuffer[--list->numitems];
+  
+  void * item = list->items.back();
+  list->items.pop_back();
+  return item;
 }
 
 #undef CC_LIST_DEFAULT_SIZE
