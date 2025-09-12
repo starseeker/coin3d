@@ -44,11 +44,11 @@
 static so_eval_node *
 create_node(int id)
 {
-  so_eval_node *node = (so_eval_node*) malloc(sizeof(so_eval_node));
+  so_eval_node *node = new so_eval_node();
   node->id = id;
-  node->child1 = NULL;
-  node->child2 = NULL;
-  node->child3 = NULL;
+  node->child1 = nullptr;
+  node->child2 = nullptr;
+  node->child3 = nullptr;
   node->regidx = -1;
   node->regname[0] = 'x';
   node->regname[1] = 0;
@@ -99,7 +99,7 @@ so_eval_create_ternary(int id, so_eval_node *cond, so_eval_node *branch1,
 so_eval_node *
 so_eval_create_reg(const char *regname)
 {
-  so_eval_node *node = NULL;
+  so_eval_node *node = nullptr;
   int idx;
 
   /* find where to look for field name (upper case means vectors) */
@@ -461,7 +461,7 @@ void
 so_eval_evaluate(so_eval_node *node, const so_eval_cbdata *cbdata)
 {
   so_eval_param dummy;
-  if (node == NULL) return;
+  if (node == nullptr) return;
   so_eval_traverse(node, &dummy, cbdata);
 }
 
@@ -469,10 +469,10 @@ so_eval_evaluate(so_eval_node *node, const so_eval_cbdata *cbdata)
 void
 so_eval_delete(so_eval_node *node)
 {
-  if (node != NULL) {
+  if (node != nullptr) {
     if (node->child1) so_eval_delete(node->child1);
     if (node->child2) so_eval_delete(node->child2);
     if (node->child3) so_eval_delete(node->child3);
-    free(node);
+    delete node;
   }
 }
