@@ -295,7 +295,7 @@ public:
                                  const SoPrimitiveVertex * v1,
                                  SbBool renderAsBlack);
 
-  int scanOffscreenBuffer(SoNode * root);
+  SbBool scanOffscreenBuffer(SoNode * root);
   void addVisitedPath(const SoPath *path);
 
   SbBool checkOffscreenRendererCapabilities();
