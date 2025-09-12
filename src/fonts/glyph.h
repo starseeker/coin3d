@@ -51,14 +51,6 @@
 
 /* ********************************************************************** */
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#if 0 /* hack for emacs indentation */
-}
-#endif
-
 struct cc_glyph {
   int refcount;
 
@@ -69,8 +61,6 @@ struct cc_glyph {
   cc_font_specification * fontspec;
 };
 
-typedef struct cc_glyph cc_glyph;
-
 /* ********************************************************************** */
 
 typedef void cc_glyph_finalize(cc_glyph *);
@@ -78,9 +68,5 @@ typedef void cc_glyph_finalize(cc_glyph *);
 void cc_glyph_unref(cc_dict * d, cc_glyph * g, cc_glyph_finalize * f);
 
 /* ********************************************************************** */
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* !COIN_GLYPH_H */
