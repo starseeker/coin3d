@@ -45,6 +45,7 @@
 #include <string>
 #include <cstdio>
 #include <cstdarg>
+#include <cstdlib>
 #include <type_traits>
 
 // Internal namespace for Coin3D implementation details
@@ -146,6 +147,44 @@ inline std::string formatString(const char* format, Args&&... args) {
     result.resize(size); // Remove the extra null terminator
     
     return result;
+}
+
+/*!
+ * \brief C++17 replacement for coin_atexit functionality
+ * 
+ * Modern replacement for cc_coin_atexit using standard library features.
+ * This provides both regular and static cleanup functionality.
+ */
+namespace AtExit {
+    using cleanup_function = void(*)(void);
+    
+    /*!
+     * \brief Register a function to be called at exit
+     * 
+     * C++17 replacement for cc_coin_atexit(). This is a simple wrapper
+     * around std::atexit with error handling.
+     * 
+     * \param func Function to call at exit
+     * \return true if successfully registered, false otherwise
+     */
+    inline bool registerCleanup(cleanup_function func) {
+        return std::atexit(func) == 0;
+    }
+    
+    /*!
+     * \brief Register internal static cleanup function
+     * 
+     * C++17 replacement for cc_coin_atexit_static_internal().
+     * For internal use only - registers cleanup functions for static data.
+     * 
+     * \param func Function to call for static cleanup
+     * \return true if successfully registered, false otherwise
+     */
+    inline bool registerStaticCleanup(cleanup_function func) {
+        // For now, use the same mechanism as regular cleanup
+        // In the future, this could be enhanced with priority levels
+        return registerCleanup(func);
+    }
 }
 
 /*!
