@@ -38,7 +38,7 @@
 #include <cstdio>
 
 #include <Inventor/C/basic.h>
-#include <Inventor/C/base/list.h>
+#include "base/list.h"
 #include <Inventor/C/base/string.h>
 
 #include "tidbitsp.h"

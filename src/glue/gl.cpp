@@ -242,7 +242,7 @@
 #include <Inventor/C/errors/debugerror.h>
 #include <Inventor/C/glue/dl.h>
 #include <Inventor/C/tidbits.h>
-#include <Inventor/C/base/list.h>
+#include "base/list.h"
 
 #include "coindefs.h"
 #include "tidbitsp.h"

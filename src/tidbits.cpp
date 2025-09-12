@@ -74,7 +74,7 @@
 #endif /* HAVE_DIRECT_H */
 
 #include <Inventor/C/base/string.h>
-#include <Inventor/C/base/list.h>
+#include "base/list.h"
 #include <Inventor/C/errors/debugerror.h>
 
 #include "tidbitsp.h"
