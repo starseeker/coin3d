@@ -44,6 +44,7 @@
 // policy.
 
 #include <Inventor/SbBasic.h>
+#include <memory>
 
 /* ********************************************************************** */
 
@@ -75,7 +76,7 @@ protected:
   T * getNew(void) const;
 
 protected:
-  mutable T * ptr;
+  mutable std::unique_ptr<T> ptr;
 
 }; // SbLazyPimplPtr
 
