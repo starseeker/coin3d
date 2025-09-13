@@ -38,9 +38,11 @@
 #endif
 
 #include <stdio.h>
-#include "C/tidbits.h"
-#include "C/basic.h"
-#include "C/base/string.h"
+#include "C/CoinTidbits.h"
+/* #include "C/base/string.h" */
+
+/* Forward declaration to avoid header conflicts */
+typedef struct cc_string cc_string;
 
 #ifdef __cplusplus
 extern "C" {

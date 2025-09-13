@@ -318,7 +318,7 @@
 #include <climits> // SHRT_MAX
 
 #include "C/glue/gl.h"
-#include "C/tidbits.h"
+#include "C/CoinTidbits.h"
 #include <Inventor/SbMatrix.h>
 #include <Inventor/SbVec2f.h>
 #include <Inventor/SbViewportRegion.h>

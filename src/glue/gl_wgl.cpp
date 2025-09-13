@@ -42,7 +42,7 @@
 
 #include "C/glue/gl.h"
 #include "C/errors/debugerror.h"
-#include "C/tidbits.h"
+#include "C/CoinTidbits.h"
 #include "C/glue/dl.h"
 #include <Inventor/elements/SoGLCacheContextElement.h>
 

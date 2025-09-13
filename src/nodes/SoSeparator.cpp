@@ -83,7 +83,7 @@
 #include <Inventor/misc/SoState.h>
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/system/gl.h>
-#include "C/tidbits.h"
+#include "C/CoinTidbits.h"
 #include <Inventor/threads/SbStorage.h>
 
 #ifdef COIN_THREADSAFE

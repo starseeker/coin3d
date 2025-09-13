@@ -35,7 +35,7 @@
 
 /*!
  * \file CoinTidbits.h
- * \brief C++17 replacement for Inventor/C/tidbits.h
+ * \brief C++17 replacement for Inventor/C/CoinTidbits.h
  * 
  * This file provides C++17-based replacements for the utility functions
  * from the legacy C tidbits API, using standard library features and
@@ -143,7 +143,7 @@ inline const char* coin_getenv(const char* name) {
  * 
  * C++17 replacement for coin_setenv()
  */
-inline bool coin_setenv(const char* name, const char* value, int overwrite) {
+inline SbBool coin_setenv(const char* name, const char* value, int overwrite) {
     if (!name || !value) return false;
     
 #ifdef _WIN32
@@ -269,7 +269,7 @@ inline double coin_ntoh_double_bytes(const char* value) {
 /*!
  * \brief Check if a number is a power of two
  */
-inline bool coin_is_power_of_two(std::uint32_t x) {
+inline SbBool coin_is_power_of_two(std::uint32_t x) {
     return isPowerOfTwo(x);
 }
 
@@ -310,14 +310,82 @@ inline void coin_viewvolume_jitter(int numpasses, int curpass, const int* vpsize
     jitter[1] = dy * ((curpass / 4) - 1.5f) * 0.5f;
 }
 
+// ===== DEBUG UTILITIES =====
+
+// COIN_DEBUG is typically defined for debug builds
+#ifndef COIN_DEBUG
+#if !defined(NDEBUG) || defined(_DEBUG) || defined(DEBUG)
+#define COIN_DEBUG 1
+#else
+#define COIN_DEBUG 0
+#endif
+#endif
+
+/*!
+ * \brief Get debug caching level
+ * 
+ * C++17 replacement for coin_debug_caching_level()
+ */
+inline int coin_debug_caching_level() {
+#if COIN_DEBUG
+    static int debug_level = -1;
+    if (debug_level < 0) {
+        const char* env = coin_getenv("COIN_DEBUG_CACHING");
+        debug_level = env ? std::atoi(env) : 0;
+    }
+    return debug_level;
+#else
+    return 0;
+#endif
+}
+
+/*!
+ * \brief Check if extra debugging is enabled
+ * 
+ * C++17 replacement for coin_debug_extra()
+ */
+inline int coin_debug_extra() {
+#if COIN_DEBUG
+    static int debug_extra = -1;
+    if (debug_extra < 0) {
+        const char* env = coin_getenv("COIN_DEBUG_EXTRA");
+        debug_extra = (env && std::atoi(env) == 1) ? 1 : 0;
+    }
+    return debug_extra;
+#else
+    return 0;
+#endif
+}
+
+/*!
+ * \brief Check if normalize debugging is enabled
+ * 
+ * C++17 replacement for coin_debug_normalize()
+ */
+inline int coin_debug_normalize() {
+#if COIN_DEBUG
+    static int debug_normalize = -1;
+    if (debug_normalize < 0) {
+        const char* env = coin_getenv("COIN_DEBUG_NORMALIZE");
+        debug_normalize = (env && std::atoi(env) == 1) ? 1 : 0;
+    }
+    return debug_normalize;
+#else
+    return 0;
+#endif
+}
+
 } // namespace CoinInternal
 
 // ===== C API COMPATIBILITY LAYER =====
 
 extern "C" {
 
+// Make sure SbBool and constants are available in global scope
+using ::SbBool;
+
 // Legacy C types for compatibility
-using coin_atexit_f = void (*)(void);
+typedef void coin_atexit_f(void);
 
 // C API functions that wrap the C++ implementation
 COIN_DLL_API int coin_host_get_endianness(void);
@@ -325,7 +393,7 @@ COIN_DLL_API int coin_snprintf(char* dst, unsigned int n, const char* fmtstr, ..
 COIN_DLL_API int coin_vsnprintf(char* dst, unsigned int n, const char* fmtstr, va_list args);
 
 COIN_DLL_API const char* coin_getenv(const char* name);
-COIN_DLL_API int coin_setenv(const char* name, const char* value, int overwrite);
+COIN_DLL_API SbBool coin_setenv(const char* name, const char* value, int overwrite);
 COIN_DLL_API void coin_unsetenv(const char* name);
 
 COIN_DLL_API std::uint16_t coin_hton_uint16(std::uint16_t value);
@@ -340,7 +408,7 @@ COIN_DLL_API float coin_ntoh_float_bytes(const char* value);
 COIN_DLL_API void coin_hton_double_bytes(double value, char* result);
 COIN_DLL_API double coin_ntoh_double_bytes(const char* value);
 
-COIN_DLL_API int coin_is_power_of_two(std::uint32_t x);
+COIN_DLL_API SbBool coin_is_power_of_two(std::uint32_t x);
 COIN_DLL_API std::uint32_t coin_next_power_of_two(std::uint32_t x);
 COIN_DLL_API std::uint32_t coin_geq_power_of_two(std::uint32_t x);
 
@@ -348,6 +416,10 @@ COIN_DLL_API void coin_viewvolume_jitter(int numpasses, int curpass, const int* 
 
 COIN_DLL_API void cc_coin_atexit(coin_atexit_f* fp);
 COIN_DLL_API void cc_coin_atexit_static_internal(coin_atexit_f* fp);
+
+COIN_DLL_API int coin_debug_caching_level(void);
+COIN_DLL_API int coin_debug_extra(void);
+COIN_DLL_API int coin_debug_normalize(void);
 
 } // extern "C"
 

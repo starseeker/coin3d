@@ -49,7 +49,7 @@
 #endif // HAVE_CONFIG_H
 
 #include <Inventor/system/gl.h>
-#include "C/tidbits.h"
+#include "C/CoinTidbits.h"
 
 #include "misc/SoEnvironment.h"
 

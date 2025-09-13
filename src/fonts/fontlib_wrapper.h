@@ -52,7 +52,7 @@
 
 /* ********************************************************************** */
 
-#include "C/tidbits.h"
+#include "C/CoinTidbits.h"
 #include "C/base/string.h"
 #include "base/list.h"
 #include "fontspec.h"

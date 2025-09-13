@@ -46,7 +46,7 @@
 
 #include "C/glue/dl.h"
 #include "C/errors/debugerror.h"
-#include "C/tidbits.h"
+#include "C/CoinTidbits.h"
 
 #include "tidbitsp.h"
 #include "threads/threadsutilp.h"

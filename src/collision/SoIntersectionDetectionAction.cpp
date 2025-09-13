@@ -133,7 +133,7 @@
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
-#include "C/tidbits.h"
+#include "C/CoinTidbits.h"
 #include <Inventor/SbOctTree.h>
 #include <Inventor/SbRotation.h>
 #include <Inventor/SbTime.h>

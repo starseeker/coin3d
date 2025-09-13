@@ -123,7 +123,7 @@
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/lists/SbList.h>
 #include <Inventor/misc/SoState.h>
-#include "C/tidbits.h"
+#include "C/CoinTidbits.h"
 
 #include "tidbitsp.h"
 #include "coindefs.h"
@@ -220,7 +220,7 @@ SoCache::addElement(const SoElement * const elem)
     idx >>= 3; // get byte number
     if (!(PRIVATE(this)->elementflags[idx] & flag)) {
 #if COIN_DEBUG // debug
-      if (coin_debug_caching_level() > 1) {
+      if (CoinInternal::coin_debug_caching_level() > 1) {
         SoDebugError::postInfo("SoCache::addElement",
                                "cache: %p, elem: %s", this,
                                elem->getTypeId().getName().getString());
@@ -278,7 +278,7 @@ SoCache::getInvalidElement(const SoState * const state) const
     elem = ptr[i];
     if (!elem->matches(state->getConstElement(elem->getStackIndex()))) {
 #if COIN_DEBUG
-      if (coin_debug_caching_level() > 0) {
+      if (CoinInternal::coin_debug_caching_level() > 0) {
         SoDebugError::postInfo("SoCache::getInvalidElement",
                                "cache: %p, invalid element: %s", this,
                                elem->getTypeId().getName().getString());

@@ -37,7 +37,7 @@
 #include <cstdio>
 #include <cstring>
 
-#include "C/tidbits.h"
+#include "C/CoinTidbits.h"
 #include "C/errors/debugerror.h"
 
 #include "tidbitsp.h"

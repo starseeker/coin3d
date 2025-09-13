@@ -48,7 +48,7 @@
 #include <cstring>
 #include <cassert>
 
-#include "C/tidbits.h"
+#include "C/CoinTidbits.h"
 #include "C/glue/gl.h"
 #include "C/errors/debugerror.h"
 #include "C/glue/dl.h"
