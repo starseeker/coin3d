@@ -41,7 +41,7 @@ foreach(_tgt ${COIN_TARGET_LINK_LIBRARIES})
   endif()
 endforeach()
 
-set(COIN_SOURCE tidbits.cpp CACHE INTERNAL "COIN_SOURCE")
+set(COIN_SOURCE C/CoinTidbits.cpp CACHE INTERNAL "COIN_SOURCE")
 # Minimal core subdirectories - removed GUI/toolkit but keeping minimal dependencies
 set(SUBDIRS
   actions base bundles caches details elements

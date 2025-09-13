@@ -39,10 +39,10 @@
 
 #include <stdio.h>
 #include "C/CoinTidbits.h"
-/* #include "C/base/string.h" */
+#include "C/base/string.h"
 
 /* Forward declaration to avoid header conflicts */
-typedef struct cc_string cc_string;
+/* typedef struct cc_string cc_string; */
 
 #ifdef __cplusplus
 extern "C" {
