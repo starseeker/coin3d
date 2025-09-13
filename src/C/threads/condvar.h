@@ -33,7 +33,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#include "C/basic.h"  /* COIN_DLL_API */
+#include "Inventor/C/basic.h"  /* COIN_DLL_API */
 #include "C/threads/common.h"  /* cc_condvar */
 
 #ifdef __cplusplus

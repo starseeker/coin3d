@@ -35,7 +35,7 @@
 
 /* Minimal stub wrapper for zlib functionality - disabled for minimal build */
 
-#include "C/basic.h"
+#include "Inventor/C/basic.h"
 
 /* Stub functions that return FALSE - compression disabled */
 SbBool cc_zlibglue_available(void);

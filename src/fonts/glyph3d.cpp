@@ -38,7 +38,7 @@
 #include <cassert>
 #include <cstdio>
 
-#include "C/basic.h"
+#include "Inventor/C/basic.h"
 #include "base/list.h"
 #include "C/base/string.h"
 

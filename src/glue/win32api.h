@@ -35,7 +35,7 @@
 
 /* Minimal stub wrapper for win32api functionality - disabled for minimal build */
 
-#include "C/basic.h"
+#include "Inventor/C/basic.h"
 
 /* Win32 API support disabled in minimal build */
 

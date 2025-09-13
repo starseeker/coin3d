@@ -42,7 +42,7 @@
 #error this is a private header file
 #endif /* ! COIN_INTERNAL */
 
-#include "C/basic.h"
+#include "Inventor/C/basic.h"
 #include "C/glue/dl.h"
 
 /* ********************************************************************** */
