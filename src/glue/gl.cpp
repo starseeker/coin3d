@@ -211,6 +211,7 @@
 
 // *************************************************************************
 
+#include <algorithm>
 #include <cassert>
 #include <cstdlib>
 #include <cstring>
@@ -4687,8 +4688,8 @@ cc_glglue_context_max_dimensions(unsigned int * width, unsigned int * height)
                                pbufmax[0], pbufmax[1], pbufmax[2]);
       }
 
-      *width = cc_min(*width, pbufmax[0]);
-      *height = cc_min(*height, pbufmax[1]);
+      *width = std::min(*width, pbufmax[0]);
+      *height = std::min(*height, pbufmax[1]);
 
       while ((*width * *height) > pbufmax[2]) {
         if (modulo % 2) { *width /= 2; }
@@ -4728,8 +4729,8 @@ cc_glglue_context_max_dimensions(unsigned int * width, unsigned int * height)
      only limited time right now for testing that removing this would
      not cause badness.
   */
-  *width = cc_min(*width, 4096);
-  *height = cc_min(*height, 4096);
+  *width = std::min(*width, 4096u);
+  *height = std::min(*height, 4096u);
 
   if (coin_glglue_debug()) {
     cc_debugerror_postinfo("cc_glglue_context_max_dimensions",
@@ -4899,7 +4900,7 @@ proxy_mipmap_2d(int width, int height,
 {
   GLint w;
   int level;
-  int levels = compute_log(cc_max(width, height));
+  int levels = compute_log(std::max(width, height));
 
   glTexImage2D(GL_PROXY_TEXTURE_2D, 0, internalFormat, width, height, 0,
                format, type, NULL);
@@ -4932,7 +4933,7 @@ proxy_mipmap_3d(const cc_glglue * glw, int width, int height, int depth,
 {
   GLint w;
   int level;
-  int levels = compute_log(cc_max(cc_max(width, height), depth));
+  int levels = compute_log(std::max({width, height, depth}));
 
   cc_glglue_glTexImage3D(glw, GL_PROXY_TEXTURE_3D, 0, internalFormat,
                          width, height, depth, 0, format, type,
