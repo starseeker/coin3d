@@ -47,6 +47,34 @@
 #include <cstdlib>
 #include <cstring>
 #include <cmath>
+#include <vector>
+#include <algorithm>
+#include <mutex>
+#include <cassert>
+
+// Forward declare the enum from tidbitsp.h to avoid circular includes
+enum coin_atexit_priorities {
+  CC_ATEXIT_EXTERNAL = 2147483647,
+  CC_ATEXIT_NORMAL = 0,
+  CC_ATEXIT_DYNLIBS = -2147483647,
+  CC_ATEXIT_REALTIME_FIELD = 10,
+  CC_ATEXIT_DRAGGERDEFAULTS = 2,
+  CC_ATEXIT_TRACK_SOBASE_INSTANCES = 1,
+  CC_ATEXIT_NORMAL_LOWPRIORITY = -1,
+  CC_ATEXIT_STATIC_DATA = -10,
+  CC_ATEXIT_SODB = -20,
+  CC_ATEXIT_SOBASE = -30,
+  CC_ATEXIT_SOTYPE = -40,
+  CC_ATEXIT_FONT_SUBSYSTEM = -100,
+  CC_ATEXIT_FONT_SUBSYSTEM_HIGHPRIORITY = -99,
+  CC_ATEXIT_FONT_SUBSYSTEM_LOWPRIORITY = -101,
+  CC_ATEXIT_MSG_SUBSYSTEM = -200,
+  CC_ATEXIT_SBNAME = -500,
+  CC_ATEXIT_THREADING_SUBSYSTEM = -1000,
+  CC_ATEXIT_THREADING_SUBSYSTEM_LOWPRIORITY = -1001,
+  CC_ATEXIT_THREADING_SUBSYSTEM_VERYLOWPRIORITY = -1002,
+  CC_ATEXIT_ENVIRONMENT = -2147483637
+};
 
 // ===== C API Implementation Functions =====
 
@@ -237,15 +265,95 @@ void coin_viewvolume_jitter(int numpasses, int curpass, const int* vpsize, float
     jitter[1] = dy * ((curpass / 4) - 1.5f) * 0.5f;
 }
 
+// ===== Priority-based atexit system =====
+
+struct tb_atexit_data {
+    char* name;
+    coin_atexit_f* func;
+    std::int32_t priority;
+    std::uint32_t cnt;
+};
+
+static std::vector<tb_atexit_data*> atexit_list;
+static bool isexiting = false;
+static std::mutex atexit_list_mutex;
+
+static int atexit_qsort_cb(const void* q0, const void* q1) {
+    tb_atexit_data* p0 = *((tb_atexit_data**)q0);
+    tb_atexit_data* p1 = *((tb_atexit_data**)q1);
+
+    /* sort list on ascending priorities, so that high priority
+       callbacks are called first  */
+    if (p0->priority < p1->priority) return -1;
+    if (p0->priority > p1->priority) return 1;
+
+    /* when priority is equal, use LIFO */
+    if (p0->cnt < p1->cnt) return -1;
+    return 1;
+}
+
+void coin_atexit_cleanup(void) {
+    if (atexit_list.empty()) return;
+
+    isexiting = true;
+
+    const char* debugstr = coin_getenv("COIN_DEBUG_CLEANUP");
+    bool debug = debugstr && (std::atoi(debugstr) > 0);
+
+    // Sort the atexit list by priority
+    std::sort(atexit_list.begin(), atexit_list.end(), [](tb_atexit_data* a, tb_atexit_data* b) {
+        if (a->priority != b->priority) {
+            return a->priority < b->priority;  // Lower priority values come first
+        }
+        return a->cnt < b->cnt;  // LIFO for same priority
+    });
+
+    // Call cleanup functions in reverse order (high priority first)
+    for (auto it = atexit_list.rbegin(); it != atexit_list.rend(); ++it) {
+        tb_atexit_data* data = *it;
+        if (debug) {
+            std::fprintf(stdout, "coin_atexit_cleanup: invoking %s()\n", data->name);
+        }
+        data->func();
+        std::free(data->name);
+        std::free(data);
+    }
+
+    atexit_list.clear();
+    isexiting = false;
+
+    if (debug) {
+        std::fprintf(stdout, "coin_atexit_cleanup: fini\n");
+    }
+}
+
+void coin_atexit_func(const char* name, coin_atexit_f* func, coin_atexit_priorities priority) {
+    std::lock_guard<std::mutex> lock(atexit_list_mutex);
+    
+    assert(!isexiting && "tried to attach an atexit function while exiting");
+
+    tb_atexit_data* data = (tb_atexit_data*)std::malloc(sizeof(tb_atexit_data));
+    data->name = strdup(name);
+    data->func = func;
+    data->priority = priority;
+    data->cnt = static_cast<std::uint32_t>(atexit_list.size());
+
+    atexit_list.push_back(data);
+}
+
+SbBool coin_is_exiting(void) {
+    return isexiting;
+}
+
 void cc_coin_atexit(coin_atexit_f* fp) {
     if (fp) {
-        std::atexit(fp);
+        coin_atexit_func("cc_coin_atexit", fp, CC_ATEXIT_EXTERNAL);
     }
 }
 
 void cc_coin_atexit_static_internal(coin_atexit_f* fp) {
     if (fp) {
-        std::atexit(fp);
+        coin_atexit_func("cc_coin_atexit_static_internal", fp, CC_ATEXIT_STATIC_DATA);
     }
 }
 
@@ -309,16 +417,7 @@ void coin_init_tidbits(void) {
     // Initialize tidbits - now mostly empty since we use standard C++17
 }
 
-void coin_atexit_cleanup(void) {
-    // Cleanup function - now mostly empty since we use standard C++17
-}
-
-void coin_atexit_func(const char* name, coin_atexit_f* func, int priority) {
-    // Register atexit function with priority - simplified to standard atexit
-    if (func) {
-        std::atexit(func);
-    }
-}
+// The atexit functions are now implemented above with priority support
 
 // Simple implementations for file descriptor functions
 FILE* coin_get_stdin(void) {
@@ -377,20 +476,47 @@ unsigned long coin_geq_prime_number(unsigned long num) {
 }
 
 // Placeholder implementations for locale and other functions
-typedef struct cc_string cc_string; // Forward declaration
+struct cc_string; // Forward declaration
 
-bool coin_locale_set_portable(cc_string* storeold) {
+SbBool coin_locale_set_portable(struct cc_string* storeold) {
     // Simplified - return false meaning no change needed
     return false;
 }
 
-void coin_locale_reset(cc_string* storedold) {
+void coin_locale_reset(struct cc_string* storedold) {
     // Simplified - do nothing
 }
 
-bool coin_getcwd(cc_string* str) {
+double coin_atof(const char* ptr) {
+    // Use standard atof which should be equivalent for most uses
+    return std::atof(ptr);
+}
+
+SbBool coin_getcwd(struct cc_string* str) {
     // Simplified - return false for now
     return false;
+}
+
+int coin_isinf(double value) {
+    return std::isinf(value);
+}
+
+int coin_isnan(double value) {
+    return std::isnan(value);
+}
+
+SbBool coin_parse_versionstring(const char* versionstr, int* major, int* minor, int* patch) {
+    if (!versionstr) return false;
+    
+    // Simple version string parsing
+    int maj = 0, min = 0, pat = 0;
+    int parsed = std::sscanf(versionstr, "%d.%d.%d", &maj, &min, &pat);
+    
+    if (major) *major = maj;
+    if (minor) *minor = (parsed >= 2) ? min : 0;
+    if (patch) *patch = (parsed >= 3) ? pat : 0;
+    
+    return parsed >= 1;
 }
 
 // Placeholder implementations for ASCII85 functions  

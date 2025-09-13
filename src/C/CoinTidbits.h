@@ -45,6 +45,7 @@
 // Minimal includes to avoid conflicts
 #include <cstdint>
 #include <cstdarg>
+#include <cstdio>  // For FILE*
 
 // Forward declaration for compatibility
 #ifndef _WIN32
@@ -62,6 +63,9 @@ extern "C" {
 
 // Legacy C types for compatibility
 typedef void coin_atexit_f(void);
+
+// The coin_atexit_priorities enum and coin_atexit macro are defined in tidbitsp.h
+// which includes this header. This avoids conflicts when both headers are included.
 
 // C API functions that wrap the C++ implementation
 int coin_host_get_endianness(void);
@@ -92,6 +96,45 @@ void coin_viewvolume_jitter(int numpasses, int curpass, const int* vpsize, float
 
 void cc_coin_atexit(coin_atexit_f* fp);
 void cc_coin_atexit_static_internal(coin_atexit_f* fp);
+
+// These functions are implemented by CoinTidbits.cpp but declared in tidbitsp.h:
+// - void coin_atexit_func(const char* name, coin_atexit_f* fp, coin_atexit_priorities priority);
+// - void coin_atexit_cleanup(void);
+// - SbBool coin_is_exiting(void);
+// - coin_atexit macro and coin_atexit_priorities enum
+
+// Additional utility functions from tidbitsp.h
+FILE* coin_get_stdin(void);
+FILE* coin_get_stdout(void);
+FILE* coin_get_stderr(void);
+
+// Locale functions (forward declarations, avoid cc_string dependency)
+struct cc_string;
+SbBool coin_locale_set_portable(struct cc_string* storeold);
+void coin_locale_reset(struct cc_string* storedold);
+double coin_atof(const char* ptr);
+
+// ASCII85 encoding functions
+void coin_output_ascii85(FILE* fp, const unsigned char val, unsigned char* tuple,
+                        unsigned char* linebuf, int* tuplecnt, int* linecnt,
+                        const int rowlen, const SbBool flush);
+void coin_flush_ascii85(FILE* fp, unsigned char* tuple, unsigned char* linebuf,
+                       int* tuplecnt, int* linecnt, const int rowlen);
+
+// Version parsing
+SbBool coin_parse_versionstring(const char* versionstr, int* major, int* minor, int* patch);
+
+// Utility functions
+SbBool coin_getcwd(struct cc_string* str);
+int coin_isinf(double value);
+int coin_isnan(double value);
+int coin_finite(double value);
+unsigned long coin_geq_prime_number(unsigned long num);
+
+// OS detection (enum defined in tidbitsp.h)
+int coin_runtime_os(void);
+
+#define COIN_MAC_FRAMEWORK_IDENTIFIER_CSTRING ("org.coin3d.Coin.framework")
 
 int coin_debug_caching_level(void);
 int coin_debug_extra(void);
