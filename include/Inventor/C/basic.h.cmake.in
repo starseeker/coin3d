@@ -35,34 +35,35 @@
 #define COIN_BASIC_H
 
 /*
-  NOTE: basic.h is automatically generated from basic.h.in, so don't
+  NOTE: basic.h is automatically generated from basic.h.cmake.in, so don't
   edit basic.h directly.
 */
 
 /* *********************************************************************** */
 
-/* Documented for Doxygen in SoDB.cpp. */
-// C++17 modernization: Use native bool type for C++, maintain int for C compatibility
+/* Essential C++17 modernized includes for standard integer types */
+#ifdef __cplusplus
+#include <cstdint>
+#include <cstddef>
+#else
+#include <stdint.h>
+#include <stddef.h>
+#endif
+
+/* Include math.h for compatibility - some code depends on this */
+#include <math.h>
+
+/* *********************************************************************** */
+
+/* SbBool type definition for Open Inventor compatibility */
 #ifdef __cplusplus
 typedef bool SbBool;
 #else
 typedef int SbBool;
 #endif
 
-#ifdef DOXYGEN_SKIP_THIS
-#ifndef USE_STATIC_CONSTS
-//POTENTIAL_ROTTING_DOCUMENTATION
-/*
-  Using static consts might have some problems with merging on older
-  compilers, so lie for doxygen for now, this is tested and found
-  working on GCC 4.(1-3)
-*/
-#define USE_STATIC_CONSTS
-#endif //USE_STATIC_CONSTS
-#endif //DOXYGEN_SKIP_THIS
-
+/* TRUE/FALSE constants - kept for Open Inventor compatibility */
 #ifndef FALSE
-// C++17 modernization: Use native bool constants for C++, maintain compatibility for C
 #ifdef __cplusplus
 static const SbBool FALSE = false;
 #else
@@ -80,41 +81,21 @@ static const SbBool TRUE = true;
 
 /* *********************************************************************** */
 
-/* Ye good olde min/max macros. No library would be complete without them. */
+/* Math constants for systems that don't provide them.
+ * Modern C++17 compilers provide these, but kept for compatibility. */
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif /* !M_PI */
 
-#define cc_min(x, y) (((x) < (y)) ? (x) : (y))
-#define cc_max(x, y) (((x) > (y)) ? (x) : (y))
+#ifndef M_PI_2
+#define M_PI_2 1.57079632679489661923
+#endif /* !M_PI_2 */
 
-/* *********************************************************************** */
+#ifndef M_PI_4
+#define M_PI_4 0.78539816339744830962
+#endif /* !M_PI_4 */
 
-/* Include this to 1) be compatible with Open Inventor's SbBasic.h, 2)
- * provide a way for application programmers to get hold of the type
- * definitions without explicitly including cstdint.
- *
- * Since C++17, the standard integer types are guaranteed to be available
- * in <cstdint>, making the custom inttypes.h header obsolete.
- */
-#ifdef __cplusplus
-#include <cstdint>
-#include <cstddef>
-#else
-#include <stdint.h>
-#include <stddef.h>
-#endif
-
-/* Internal note for Coin developers: in other sourcefiles in Coin, we
- * depend on math.h being included through SbBasic.h. It is done this
- * way to always make sure we have the M_* symbols available under
- * MSWin (see below). So don't remove the following line unless you
- * know very well what you are doing.
- */
-#include <math.h>
-
-/* Define misc values if they are not available from math.h. UNIX
- * systems typically have these defines, and MSWindows systems don't.
- * NB: MSVC at least since VS 2005 knows about some of the values if
- *     _USE_MATH_DEFINES is set before calling #include <math.h>.
- */
+/* Additional math constants (for legacy compatibility) */
 #ifndef M_E
 #define M_E 2.7182818284590452354
 #endif /* !M_E */
@@ -130,18 +111,9 @@ static const SbBool TRUE = true;
 #ifndef M_LN10
 #define M_LN10 2.30258509299404568402
 #endif /* !M_LN10 */
-#ifndef M_PI
-#define M_PI 3.14159265358979323846
-#endif /* !M_PI */
 #ifndef M_TWOPI
 #define M_TWOPI (M_PI * 2.0)
 #endif /* !M_TWOPI */
-#ifndef M_PI_2
-#define M_PI_2 1.57079632679489661923
-#endif /* !M_PI_2 */
-#ifndef M_PI_4
-#define M_PI_4 0.78539816339744830962
-#endif /* !M_PI_4 */
 #ifndef M_3PI_4
 #define M_3PI_4 2.3561944901923448370E0
 #endif /* !M_3PI_4 */
@@ -182,18 +154,9 @@ static const SbBool TRUE = true;
 #define M_INVLN2 1.4426950408889633870E0 /* 1 / log(2) */
 #endif /* !M_INVLN2 */
 
-/***************************************************************************
- * COIN_UNIQUE_ID_UINT32
- *
- * Set this define for backwards compatibility where unique id is a 32 bit
- * unsigned integer. To address integer overruns that result in changes not
- * correctly being propagated in the scene, unique id type was changed to
- * 64 bit.
- *
- * Default is to typedef SbUniqueId to uint64_t.
- */
+/* *********************************************************************** */
 
-/* Documented for Doxygen in SoNode.cpp. */
+/* SbUniqueId type for node identification */
 #ifndef COIN_UNIQUE_ID_UINT32
 typedef uint64_t SbUniqueId;
 #else
@@ -202,61 +165,29 @@ typedef uint32_t SbUniqueId;
 
 /* *********************************************************************** */
 
-/* A unique identifier to recognize whether or not we're running under
- * Kongsberg Oil & Gas Technologies's Coin library.
- */
+/* Coin library identification */
 #define __COIN__
 
-/* The following #undef'ed defines are automatically defined and
- * synchronized with the settings in configure.in when ``configure''
- * is executed.
- *
- * The #ifndef wrapper is necessary because during development, these
- * are also defined in the config.h file generated by ``configure''.
- */
+/* Version information */
 #ifndef COIN_VERSION
-
-/* These are available for adding or omitting features based on Coin
- * version numbers in client application sources. */
 #define COIN_MAJOR_VERSION @COIN_MAJOR_VERSION@
 #define COIN_MINOR_VERSION @COIN_MINOR_VERSION@
 #define COIN_MICRO_VERSION @COIN_MICRO_VERSION@
 #define COIN_BETA_VERSION @COIN_BETA_VERSION@
 #define COIN_VERSION "@COIN_VERSION@"
 
-/* This define is set by the configure script if singleprecision math
-   functions are available from the C library API headers. */
-/* #undef HAVE_SINGLEPRECISION_MATH */
-
-/* Most compilers should have "hash quoting", as it is part of the
-   ANSI standard. */
 #define HAVE_HASH_QUOTING 1
-/* #undef HAVE_APOSTROPHES_QUOTING */
-
-/* IN_PATH define in HPUX's sys/unistd.h conflicts with SoAction::IN_PATH */
-/* #undef COIN_UNDEF_IN_PATH_HACK */
-
-#endif /* !COIN_VERSION */ /* Ends configure-generated defines. */
+#endif /* !COIN_VERSION */
 
 /* *********************************************************************** */
 
-/* SO__QUOTE(str)        - use the preprocessor to quote a string.
- * SO__CONCAT(str1,str2) - use the preprocessor to concatenate two strings.
- */
-
-#ifdef HAVE_HASH_QUOTING
+/* Preprocessor utility macros */
 #define SO__QUOTE(str)           #str
 #define SO__CONCAT(str1, str2)   str1##str2
-#elif defined(HAVE_APOSTROPHES_QUOTING)
-#define SO__QUOTE(str)           "str"
-#define SO__CONCAT(str1, str2)   str1/**/str2
-#else
-#error No valid way to do macro quoting!
-#endif
 
 /* *********************************************************************** */
 
-/* For Visual Studio compiler use COIN_DLL by default and auto-linking. */
+/* Windows DLL support - still needed for compatibility */
 #if !defined(COIN_INTERNAL) && defined(_MSC_VER)
 # if !defined(COIN_NOT_DLL) && !defined(COIN_DLL)
 #  define COIN_DLL
@@ -278,12 +209,11 @@ typedef uint32_t SbUniqueId;
 # undef COIN_STRINGIFY
 #endif
 
-
-/* Precaution to avoid an some errors easily made by the application
-   programmer. */
+/* DLL API declarations */
 #ifdef COIN_DLL_API
 # error Leave the internal COIN_DLL_API define alone.
 #endif /* COIN_DLL_API */
+
 #ifdef COIN_INTERNAL
 # ifdef COIN_NOT_DLL
 #  error The COIN_NOT_DLL define is not supposed to be used when building the library, only when building Win32 applications.
@@ -293,37 +223,6 @@ typedef uint32_t SbUniqueId;
 # endif /* COIN_INTERNAL && COIN_DLL */
 #endif /* COIN_INTERNAL */
 
-/*
-  On MSWindows platforms, one of these defines must always be set when
-  building application programs:
-
-   - "COIN_DLL", when the application programmer is using the library
-     in the form of a dynamic link library (DLL)
-
-   - "COIN_NOT_DLL", when the application programmer is using the
-     library in the form of a static object library (LIB)
-
-  Note that either COIN_DLL or COIN_NOT_DLL _must_ be defined by the
-  application programmer on MSWindows platforms, or else the #error
-  statement will hit. Set up one or the other of these two defines in
-  your compiler environment according to how the library was built --
-  as a DLL (use "COIN_DLL") or as a LIB (use "COIN_NOT_DLL").
-
-  (Setting up defines for the compiler is typically done by either
-  adding something like "/DCOIN_DLL" to the compiler's argument line
-  (for command-line build processes), or by adding the define to the
-  list of preprocessor symbols in your IDE GUI (in the MSVC IDE, this
-  is done from the "Project"->"Settings" menu, choose the "C/C++" tab,
-  then "Preprocessor" from the dropdown box and add the appropriate
-  define)).
-
-  It is extremely important that the application programmer uses the
-  correct define, as using "COIN_NOT_DLL" when "COIN_DLL" is correct
-  will cause mysterious crashes.
- */
-/* FIXME: use a feature check to see if this is a platform which can
-   recognize the __declspec keyword instead of the crap #if below.
-   20011201 mortene. */
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
 # ifdef COIN_INTERNAL
 #  ifdef COIN_MAKE_DLL
