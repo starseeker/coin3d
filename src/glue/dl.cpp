@@ -158,7 +158,7 @@
 #include <Inventor/SbString.h>
 
 #include "glue/dlp.h"
-#include "tidbitsp.h"
+
 #include "misc/SoEnvironment.h"
 
 #ifndef MAXPATHLEN

@@ -46,7 +46,7 @@
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/nodes/SoNode.h>
 
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 #include "SbBasicP.h"
 
 /*!

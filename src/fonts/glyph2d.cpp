@@ -40,7 +40,7 @@
 
 #include "base/dict.h"
 #include "threads/threadsutilp.h"
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 #include "fonts/glyph2d.h"
 #include "fonts/glyph.h"
 #include "coindefs.h"

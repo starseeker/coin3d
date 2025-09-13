@@ -30,63 +30,28 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-/*!
-  \class SoSFFloat SoSFFloat.h Inventor/fields/SoSFFloat.h
-  \brief The SoSFFloat class is a container for a floating point value.
+#ifndef COIN_SUUTILS_H
+#define COIN_SUUTILS_H
 
-  \ingroup coin_fields
+#include <Inventor/C/basic.h>
 
-  This field is used where nodes, engines or other field containers
-  need to store a single floating point value.
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
-  \sa SoMFFloat
-*/
+/* ********************************************************************** */
 
-// *************************************************************************
+/* Function pointer type for atexit cleanup functions */
+typedef void coin_atexit_f(void);
 
-#include <Inventor/fields/SoSFFloat.h>
+/* Internal function used for cleaning up static data. 
+   Used by Coin macros like SoSubNode, SoSubEvent, etc. */
+COIN_DLL_API void cc_coin_atexit_static_internal(coin_atexit_f * fp);
 
-#include <Inventor/SoInput.h>
-#include <Inventor/errors/SoDebugError.h>
-#include <Inventor/errors/SoReadError.h>
+/* ********************************************************************** */
 
-#include "C/CoinTidbits.h"
-#include "fields/SoSubFieldP.h"
-#include "fields/shared.h"
+#ifdef __cplusplus
+} /* extern "C" */
+#endif /* __cplusplus */
 
-// *************************************************************************
-
-SO_SFIELD_SOURCE(SoSFFloat, float, float);
-
-// *************************************************************************
-
-/*!
-  \copydetails SoField::initClass(void)
-*/
-void
-SoSFFloat::initClass(void)
-{
-  SO_SFIELD_INTERNAL_INIT_CLASS(SoSFFloat);
-}
-
-// No need to document readValue() and writeValue() here, as the
-// necessary information is provided by the documentation of the
-// parent classes.
-#ifndef DOXYGEN_SKIP_THIS
-
-SbBool
-SoSFFloat::readValue(SoInput * in)
-{
-  return in->read(this->value);
-}
-
-void
-SoSFFloat::writeValue(SoOutput * out) const
-{
-  sosffloat_write_value(out, this->getValue());
-}
-
-#endif // DOXYGEN_SKIP_THIS
-
-// *************************************************************************
-
+#endif /* !COIN_SUUTILS_H */

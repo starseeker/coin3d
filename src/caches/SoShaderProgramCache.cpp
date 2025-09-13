@@ -44,7 +44,7 @@
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/SbString.h>
 
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 
 // *************************************************************************
 

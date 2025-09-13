@@ -73,7 +73,7 @@
 #include <Inventor/SoRenderManager.h>
 #include <Inventor/SoEventManager.h>
 
-#include "tidbitsp.h"
+
 #include "misc/SoSceneManagerP.h"
 
 #define PRIVATE(p) (p->pimpl)

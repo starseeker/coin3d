@@ -70,7 +70,7 @@
 #endif /* COIN_THREADSAFE */
 
 #include "coindefs.h"
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 
 /* ********************************************************************** */
 

@@ -33,7 +33,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#include <Inventor/C/tidbits.h>
+#include <Inventor/SuUtils.h>
 
 // *************************************************************************
 

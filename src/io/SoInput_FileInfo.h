@@ -56,7 +56,7 @@
 // Async I/O has been removed as part of C threading API cleanup.
 // The feature was not enabled by default and used the deprecated C threading API.
 
-#include "tidbitsp.h"
+
 #include "io/SoInput_Reader.h"
 
 class SoProto;

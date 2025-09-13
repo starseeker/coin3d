@@ -94,7 +94,7 @@
 #include <Inventor/fields/SoFieldContainer.h>
 #include <Inventor/fields/SoField.h>
 
-#include "tidbitsp.h"
+
 #include "misc/SbHash.h"
 #include "glue/zlib.h"
 #include "glue/bzip2.h"

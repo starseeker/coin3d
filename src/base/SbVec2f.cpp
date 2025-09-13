@@ -60,7 +60,7 @@
 #include <Inventor/errors/SoDebugError.h>
 #endif // COIN_DEBUG
 
-#include "tidbitsp.h" // coin_debug_normalize()
+#include "C/CoinTidbits.h" // coin_debug_normalize()
 
 // *************************************************************************
 

@@ -136,7 +136,7 @@
 #include "io/SoWriterefCounter.h"
 #include "misc/SoConfigSettings.h"
 #include "threads/threadsutilp.h"
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 inline unsigned int SbHashFunc(const void * key);
 #include "misc/SbHash.h"
 inline unsigned int SbHashFunc(const void * key)

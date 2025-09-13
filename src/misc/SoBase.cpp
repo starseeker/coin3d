@@ -89,7 +89,7 @@
 #include "fields/SoGlobalField.h"
 #include "misc/SbHash.h"
 #include "threads/threadsutilp.h"
-#include "tidbitsp.h"
+
 #include "io/SoInputP.h"
 #include "io/SoWriterefCounter.h"
 #include "coindefs.h"

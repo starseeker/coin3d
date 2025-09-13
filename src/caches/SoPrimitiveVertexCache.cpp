@@ -76,7 +76,7 @@
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/misc/SoGLDriverDatabase.h>
 
-#include "tidbitsp.h"
+
 #include "misc/SbHash.h"
 #include "rendering/SoGL.h"
 #include "rendering/SoVBO.h"

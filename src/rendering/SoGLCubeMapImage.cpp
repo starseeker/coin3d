@@ -66,7 +66,7 @@
 #include <Inventor/threads/SbMutex.h>
 #endif // COIN_THREADSAFE
 
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 #include "glue/glp.h"
 #include "rendering/SoGL.h"
 

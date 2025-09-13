@@ -77,7 +77,7 @@
 #include "threads/threadp.h"
 #include "threads/mutexp.h"
 #include "threads/recmutexp.h"
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 
 
 /* ********************************************************************** */

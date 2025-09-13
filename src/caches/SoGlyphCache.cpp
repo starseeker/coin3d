@@ -47,7 +47,7 @@
 #include <Inventor/elements/SoComplexityElement.h>
 #include <Inventor/errors/SoDebugError.h>
 
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 
 class SoGlyphCacheP {
 public:

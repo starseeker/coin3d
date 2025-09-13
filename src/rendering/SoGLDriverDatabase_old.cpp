@@ -52,13 +52,13 @@
 #include <Inventor/SbString.h>
 #include "C/glue/gl.h"
 #include <Inventor/errors/SoDebugError.h>
-#include "C/CoinTidbits.h"
+
 #include "C/XML/document.h"
 #include "C/XML/element.h"
 
 #include "misc/SbHash.h"
 #include "glue/glp.h"
-#include "tidbitsp.h"
+
 
 class SoGLDriverDatabaseP {
   class SoGLDriver {

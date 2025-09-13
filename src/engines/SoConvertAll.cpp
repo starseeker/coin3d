@@ -52,7 +52,7 @@
 #include <Inventor/lists/SoFieldList.h>
 #include <Inventor/lists/SoTypeList.h>
 
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 #include "engines/SoSubEngineP.h"
 #include "misc/SbHash.h"
 

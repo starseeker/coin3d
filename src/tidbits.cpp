@@ -77,7 +77,7 @@
 #include "base/list.h"
 #include "C/errors/debugerror.h"
 
-#include "tidbitsp.h"
+
 #include "coindefs.h"
 #include "misc/SoEnvironment.h"
 

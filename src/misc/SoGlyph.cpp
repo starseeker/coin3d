@@ -77,7 +77,7 @@
 #include <Inventor/elements/SoFontNameElement.h>
 #include <Inventor/elements/SoFontSizeElement.h>
 
-#include "tidbitsp.h"
+
 #include "threads/threadsutilp.h"
 #include "fonts/common.h"
 #include "fonts/fontlib_wrapper.h"
