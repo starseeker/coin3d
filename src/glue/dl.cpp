@@ -153,7 +153,7 @@
 
 #include "C/errors/debugerror.h"
 #include "C/glue/dl.h"
-#include "C/tidbits.h"
+#include "C/CoinTidbits.h"
 #include <Inventor/system/gl.h> /* for glGetString */
 #include <Inventor/SbString.h>
 

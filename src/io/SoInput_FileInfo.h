@@ -44,7 +44,7 @@
 
 #include <Inventor/SoDB.h>
 #include <Inventor/SbName.h>
-#include "C/tidbits.h"
+#include "C/CoinTidbits.h"
 #include <Inventor/lists/SbList.h>
 #include "misc/SbHash.h"
 #include "misc/SoUtilities.h"

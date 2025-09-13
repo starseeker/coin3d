@@ -45,7 +45,7 @@
 #include <cassert>
 #include <cstdlib>
 
-#include "C/tidbits.h"
+#include "C/CoinTidbits.h"
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/misc/SoGLDriverDatabase.h>
 

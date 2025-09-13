@@ -49,7 +49,7 @@
 #include <Inventor/misc/SoGLDriverDatabase.h>
 #include <Inventor/elements/SoGLCacheContextElement.h>
 #include <Inventor/elements/SoShapeStyleElement.h>
-#include "C/tidbits.h"
+#include "C/CoinTidbits.h"
 #include <Inventor/SbVec3f.h>
 #include <Inventor/errors/SoDebugError.h>
 

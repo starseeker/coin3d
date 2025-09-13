@@ -242,7 +242,7 @@
 
 #include "C/errors/debugerror.h"
 #include "C/glue/dl.h"
-#include "C/tidbits.h"
+#include "C/CoinTidbits.h"
 #include "base/list.h"
 
 #include "coindefs.h"

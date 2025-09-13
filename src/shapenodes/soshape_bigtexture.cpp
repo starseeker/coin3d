@@ -51,7 +51,7 @@
 #include <Inventor/elements/SoMultiTextureImageElement.h>
 #include <Inventor/bundles/SoMaterialBundle.h>
 #include <Inventor/nodes/SoShape.h>
-#include "C/tidbits.h"
+#include "C/CoinTidbits.h"
 #include <Inventor/system/gl.h>
 
 soshape_bigtexture::soshape_bigtexture(void)

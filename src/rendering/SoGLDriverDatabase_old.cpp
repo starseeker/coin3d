@@ -47,12 +47,12 @@
 
 #include <cstring>
 
-#include "C/tidbits.h"
+#include "C/CoinTidbits.h"
 #include <Inventor/SbName.h>
 #include <Inventor/SbString.h>
 #include "C/glue/gl.h"
 #include <Inventor/errors/SoDebugError.h>
-#include "C/tidbits.h"
+#include "C/CoinTidbits.h"
 #include "C/XML/document.h"
 #include "C/XML/element.h"
 

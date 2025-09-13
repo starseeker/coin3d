@@ -45,7 +45,7 @@
 #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include "C/tidbits.h"
+#include "C/CoinTidbits.h"
 #include "C/base/string.h"
 #include "C/errors/debugerror.h"
 

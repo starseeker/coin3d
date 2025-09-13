@@ -39,7 +39,7 @@
 #include <cstring>
 
 #include "C/errors/debugerror.h"
-#include "C/tidbits.h"
+#include "C/CoinTidbits.h"
 
 #include "coindefs.h"
 #include "misc/SoEnvironment.h"
