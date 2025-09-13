@@ -42,45 +42,30 @@
 /* *********************************************************************** */
 
 /* Essential C++17 modernized includes for standard integer types */
-#ifdef __cplusplus
 #include <cstdint>
 #include <cstddef>
-#else
-#include <stdint.h>
-#include <stddef.h>
-#endif
+#include <cmath>
+#include <algorithm>
 
 /* Include math.h for compatibility - some code depends on this */
-#include <math.h>
+//#include <math.h>
 
 /* *********************************************************************** */
 
-/* SbBool type definition for Open Inventor compatibility */
-#ifdef __cplusplus
-typedef bool SbBool;
-#else
-typedef int SbBool;
-#endif
+// C++17 modernization: Use native bool for SbBool
+// This aligns internal code with the modernized public API
+using SbBool = bool;
 
 /* TRUE/FALSE constants - kept for Open Inventor compatibility */
-#ifndef FALSE
-#ifdef __cplusplus
+#if !defined(FALSE) && defined(__cplusplus)
 static const SbBool FALSE = false;
-#else
-#define FALSE 0
-#endif
 #endif /* !FALSE */
-
-#ifndef TRUE
-#ifdef __cplusplus
+#if !defined(TRUE) && defined(__cplusplus)
 static const SbBool TRUE = true;
-#else
-#define TRUE 1
-#endif
 #endif /* !TRUE */
 
 /* *********************************************************************** */
-
+#if 0
 /* Math constants for systems that don't provide them.
  * Modern C++17 compilers provide these, but kept for compatibility. */
 #ifndef M_PI
@@ -153,7 +138,7 @@ static const SbBool TRUE = true;
 #ifndef M_INVLN2
 #define M_INVLN2 1.4426950408889633870E0 /* 1 / log(2) */
 #endif /* !M_INVLN2 */
-
+#endif
 /* *********************************************************************** */
 
 /* SbUniqueId type for node identification */
@@ -176,6 +161,8 @@ typedef uint32_t SbUniqueId;
 #define COIN_BETA_VERSION @COIN_BETA_VERSION@
 #define COIN_VERSION "@COIN_VERSION@"
 
+// Macro utilities for string handling - keep these as-is for compatibility
+// Most compilers should have "hash quoting", as it is part of the ANSI standard.
 #define HAVE_HASH_QUOTING 1
 #endif /* !COIN_VERSION */
 
@@ -246,5 +233,46 @@ typedef uint32_t SbUniqueId;
 #ifndef COIN_DLL_API
 # define COIN_DLL_API
 #endif /* !COIN_DLL_API */
+
+// ===== UTILITY MATH FUNCTIONS =====
+
+namespace CoinInternal {
+
+/*!
+ * \brief Check if a number is a power of two
+ * 
+ * C++17 replacement for coin_is_power_of_two
+ */
+constexpr bool isPowerOfTwo(std::uint32_t x) noexcept {
+    return x != 0 && (x & (x - 1)) == 0;
+}
+
+/*!
+ * \brief Get the next power of two >= x
+ * 
+ * C++17 replacement for coin_next_power_of_two
+ */
+constexpr std::uint32_t nextPowerOfTwo(std::uint32_t x) noexcept {
+    if (x == 0) return 1;
+    --x;
+    x |= x >> 1;
+    x |= x >> 2;
+    x |= x >> 4;
+    x |= x >> 8;
+    x |= x >> 16;
+    return ++x;
+}
+
+/*!
+ * \brief Get smallest power of two >= x 
+ * 
+ * C++17 replacement for coin_geq_power_of_two
+ */
+constexpr std::uint32_t geqPowerOfTwo(std::uint32_t x) noexcept {
+    return isPowerOfTwo(x) ? x : nextPowerOfTwo(x);
+}
+
+} // namespace CoinInternal
+
 
 #endif /* !COIN_BASIC_H */

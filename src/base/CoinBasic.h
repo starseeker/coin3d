@@ -207,44 +207,4 @@ constexpr double M_INVLN2 = 1.4426950408889633870E0; /* 1 / log(2) */
 #endif /* !COIN_DLL_API */
 #endif /* !COIN_DLL_API */
 
-// ===== UTILITY MATH FUNCTIONS =====
-
-namespace CoinInternal {
-
-/*!
- * \brief Check if a number is a power of two
- * 
- * C++17 replacement for coin_is_power_of_two
- */
-constexpr bool isPowerOfTwo(std::uint32_t x) noexcept {
-    return x != 0 && (x & (x - 1)) == 0;
-}
-
-/*!
- * \brief Get the next power of two >= x
- * 
- * C++17 replacement for coin_next_power_of_two
- */
-constexpr std::uint32_t nextPowerOfTwo(std::uint32_t x) noexcept {
-    if (x == 0) return 1;
-    --x;
-    x |= x >> 1;
-    x |= x >> 2;
-    x |= x >> 4;
-    x |= x >> 8;
-    x |= x >> 16;
-    return ++x;
-}
-
-/*!
- * \brief Get smallest power of two >= x 
- * 
- * C++17 replacement for coin_geq_power_of_two
- */
-constexpr std::uint32_t geqPowerOfTwo(std::uint32_t x) noexcept {
-    return isPowerOfTwo(x) ? x : nextPowerOfTwo(x);
-}
-
-} // namespace CoinInternal
-
 #endif // COIN_BASIC_INTERNAL_H
