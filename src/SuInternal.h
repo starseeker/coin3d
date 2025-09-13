@@ -1,4 +1,3 @@
-/* src/C/basic.h - Internal wrapper for modernized basic.h */
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
  * All rights reserved.
@@ -31,19 +30,32 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_INTERNAL_BASIC_H
-#define COIN_INTERNAL_BASIC_H
+#ifndef COIN_SUINTERNAL_H
+#define COIN_SUINTERNAL_H
 
-/*
-  This is a wrapper for internal use that includes the consolidated public basic.h
-  and adds internal utilities as needed. This file consolidates the previously
-  scattered basic.h files for C++17 modernization.
-*/
-
-/* Include the consolidated public basic.h */
 #include <Inventor/C/basic.h>
 
-/* Include internal utility macros */
-#include "../SuInternal.h"
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
-#endif /* !COIN_INTERNAL_BASIC_H */
+/* ********************************************************************** */
+
+/* Internal utility macros and definitions for Coin library development.
+ * These are implementation details not exposed to the public API.
+ */
+
+/* Ye good olde min/max macros. No library would be complete without them.
+ * Modern C++ code should prefer std::min/std::max, but these are kept
+ * for legacy internal code compatibility. */
+
+#define cc_min(x, y) (((x) < (y)) ? (x) : (y))
+#define cc_max(x, y) (((x) > (y)) ? (x) : (y))
+
+/* ********************************************************************** */
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif /* __cplusplus */
+
+#endif /* !COIN_SUINTERNAL_H */
