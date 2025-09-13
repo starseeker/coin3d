@@ -34,7 +34,7 @@
 \**************************************************************************/
 
 #include <Inventor/details/SoDetail.h>
-#include <Inventor/C/tidbits.h> // for cc_coin_atexit()
+#include <Inventor/C/tidbits.h> // for cc_coin_atexit_static_internal()
 #include <Inventor/SbName.h> // for implicit char* -> SbName cast in
                              // SoType::createType()
 #include <cassert>
@@ -83,10 +83,7 @@ SoType _class_::getClassTypeId(void) { return _class_::classTypeId; }
     _class_::classTypeId = \
            SoType::createType(_parentclass_::getClassTypeId(), \
                               SO__QUOTE(_class_)); \
-    /* FIXME: internal code should not use this function, but use the coin_atexit() function */ \
-    /* with priority set to CC_ATEXIT_NORMAL. As it is now, the clean-up functions for */ \
-    /* these classes will always be run before all other Coin at-exit clean-ups. 20070126 mortene */ \
-    cc_coin_atexit(reinterpret_cast<coin_atexit_f *>(_class_::cleanupClass)); \
+    cc_coin_atexit_static_internal(reinterpret_cast<coin_atexit_f *>(_class_::cleanupClass)); \
   } WHILE_0
 
 // *************************************************************************
