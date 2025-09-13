@@ -66,7 +66,7 @@
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/misc/SoState.h>
 #include <Inventor/nodes/SoNode.h>
-#include "C/tidbits.h"
+#include "C/CoinTidbits.h"
 #include "misc/CoinUtilities.h"
 #include "rendering/SoVBO.h"
 #include <coindefs.h> // COIN_OBSOLETED

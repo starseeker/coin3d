@@ -37,10 +37,6 @@
 
 #include "C/basic.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-
 /* Stub functions that return FALSE - compression disabled */
 SbBool cc_zlibglue_available(void);
 
@@ -55,9 +51,5 @@ int cc_zlibglue_inflateInit2(void * strm, int windowBits);
 int cc_zlibglue_inflateEnd(void * strm);
 int cc_zlibglue_inflate(void * strm, int flush);
 int cc_zlibglue_inflateReset(void * strm);
-
-#ifdef __cplusplus
-} /* extern "C" */
-#endif /* __cplusplus */
 
 #endif /* !COIN_ZLIB_H */

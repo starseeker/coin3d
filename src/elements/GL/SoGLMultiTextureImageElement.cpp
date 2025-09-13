@@ -55,7 +55,7 @@
 #include <Inventor/misc/SoGLImage.h>
 #include <Inventor/misc/SoGLBigImage.h>
 #include <Inventor/SbImage.h>
-#include "C/tidbits.h"
+#include "C/CoinTidbits.h"
 #include <Inventor/lists/SbList.h>
 
 #include <Inventor/errors/SoDebugError.h>

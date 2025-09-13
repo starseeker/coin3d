@@ -41,33 +41,24 @@
 
 #include "C/basic.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+struct cc_font_bitmap {
+  unsigned char * buffer; /* bitmap data */
+  int bearingX; /* left side of bitmap relative to pen */
+  int bearingY; /* top of bitmap relative to pen */
+  unsigned int rows; /* height of bitmap */
+  unsigned int width; /* width of bitmap */
+  unsigned int pitch; /* number of bytes occupied by each row (rows are padded to nearest byte) */
+  int advanceX; /* where to position pen for next glyph */
+  int advanceY;
+  SbBool mono; /* monochrome or antialiased gray level bitmap */
+};
 
-  struct cc_font_bitmap {
-    unsigned char * buffer; /* bitmap data */
-    int bearingX; /* left side of bitmap relative to pen */
-    int bearingY; /* top of bitmap relative to pen */
-    unsigned int rows; /* height of bitmap */
-    unsigned int width; /* width of bitmap */
-    unsigned int pitch; /* number of bytes occupied by each row (rows are padded to nearest byte) */
-    int advanceX; /* where to position pen for next glyph */
-    int advanceY;
-    SbBool mono; /* monochrome or antialiased gray level bitmap */
-  };
+struct cc_font_vector_glyph {
+  float * vertices;
+  int * faceindices;
+  int * edgeindices;
+};
 
-  struct cc_font_vector_glyph {
-    float * vertices;
-    int * faceindices;
-    int * edgeindices;
-  };
-
-
-  SbBool cc_font_debug(void);
-
-#ifdef __cplusplus
-}
-#endif
+SbBool cc_font_debug(void);
 
 #endif /* !COIN_FONTS_COMMON_H */

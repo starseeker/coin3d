@@ -32,6 +32,7 @@
 
 #include "fonts/glyph3d.h"
 
+#include <algorithm>
 #include <cfloat> /* FLT_MIN */
 #include <cstring>
 #include <cassert>
@@ -377,10 +378,10 @@ glyph3d_calcboundingbox(cc_glyph3d * g)
 
   while ((*edgeptr >= 0) && (*edgeptr != -1)) {
 
-    g->bbox[0] = cc_min(coordptr[(*edgeptr)*2], g->bbox[0]);
-    g->bbox[1] = cc_min(coordptr[(*edgeptr)*2 + 1], g->bbox[1]);
-    g->bbox[2] = cc_max(coordptr[(*edgeptr)*2], g->bbox[2]);
-    g->bbox[3] = cc_max(coordptr[(*edgeptr)*2 + 1], g->bbox[3]);
+    g->bbox[0] = std::min(coordptr[(*edgeptr)*2], g->bbox[0]);
+    g->bbox[1] = std::min(coordptr[(*edgeptr)*2 + 1], g->bbox[1]);
+    g->bbox[2] = std::max(coordptr[(*edgeptr)*2], g->bbox[2]);
+    g->bbox[3] = std::max(coordptr[(*edgeptr)*2 + 1], g->bbox[3]);
 
     edgeptr++;
   }

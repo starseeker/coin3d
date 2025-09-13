@@ -41,42 +41,42 @@
 
 template <typename T>
 SbPimplPtr<T>::SbPimplPtr(void)
-: ptr(NULL)
 {
-  this->set(this->getNew());
+  this->ptr = std::make_unique<T>();
 }
 
 template <typename T>
 SbPimplPtr<T>::SbPimplPtr(T * initial)
 {
-  this->ptr = initial;
+  this->ptr.reset(initial);
 }
 
 template <typename T>
 SbPimplPtr<T>::SbPimplPtr(const SbPimplPtr<T> & copy)
 {
-  *this = copy;
+  if (copy.ptr) {
+    this->ptr = std::make_unique<T>(*copy.ptr);
+  }
 }
 
 template <typename T>
 SbPimplPtr<T>::~SbPimplPtr(void)
 {
-  this->set(NULL);
+  // std::unique_ptr automatically cleans up
 }
 
 template <typename T>
 void
 SbPimplPtr<T>::set(T * value)
 {
-  delete this->ptr;
-  this->ptr = value;
+  this->ptr.reset(value);
 }
 
 template <typename T>
 T &
 SbPimplPtr<T>::get(void) const
 {
-  return *(this->ptr);
+  return *this->ptr;
 }
 
 template <typename T>
@@ -90,7 +90,13 @@ template <typename T>
 SbPimplPtr<T> &
 SbPimplPtr<T>::operator = (const SbPimplPtr<T> & copy)
 {
-  this->get() = copy.get();
+  if (this != &copy) {
+    if (copy.ptr) {
+      this->ptr = std::make_unique<T>(*copy.ptr);
+    } else {
+      this->ptr.reset();
+    }
+  }
   return *this;
 }
 
@@ -112,14 +118,14 @@ template <typename T>
 const T *
 SbPimplPtr<T>::operator -> (void) const
 {
-  return &(this->get());
+  return this->ptr.get();
 }
 
 template <typename T>
 T *
 SbPimplPtr<T>::operator -> (void)
 {
-  return &(this->get());
+  return this->ptr.get();
 }
 
 /* ********************************************************************** */

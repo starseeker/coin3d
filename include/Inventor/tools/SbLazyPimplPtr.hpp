@@ -41,44 +41,45 @@
 
 template <typename T>
 SbLazyPimplPtr<T>::SbLazyPimplPtr(void)
-: ptr(NULL)
 {
+  // ptr remains null for lazy initialization
 }
 
 template <typename T>
 SbLazyPimplPtr<T>::SbLazyPimplPtr(T * initial)
 {
-  this->ptr = initial;
+  this->ptr.reset(initial);
 }
 
 template <typename T>
 SbLazyPimplPtr<T>::SbLazyPimplPtr(const SbLazyPimplPtr<T> & copy)
 {
-  *this = copy;
+  if (copy.ptr) {
+    this->ptr = std::make_unique<T>(*copy.ptr);
+  }
 }
 
 template <typename T>
 SbLazyPimplPtr<T>::~SbLazyPimplPtr(void)
 {
-  this->set(NULL);
+  // std::unique_ptr automatically cleans up
 }
 
 template <typename T>
 void
 SbLazyPimplPtr<T>::set(T * value)
 {
-  delete this->ptr;
-  this->ptr = value;
+  this->ptr.reset(value);
 }
 
 template <typename T>
 T &
 SbLazyPimplPtr<T>::get(void) const
 {
-  if (this->ptr == NULL) {
-    this->ptr = this->getNew();
+  if (!this->ptr) {
+    this->ptr = std::make_unique<T>();
   }
-  return *(this->ptr);
+  return *this->ptr;
 }
 
 template <typename T>
@@ -92,7 +93,13 @@ template <typename T>
 SbLazyPimplPtr<T> &
 SbLazyPimplPtr<T>::operator = (const SbLazyPimplPtr<T> & copy)
 {
-  this->get() = copy.get();
+  if (this != &copy) {
+    if (copy.ptr) {
+      this->ptr = std::make_unique<T>(*copy.ptr);
+    } else {
+      this->ptr.reset();
+    }
+  }
   return *this;
 }
 
@@ -114,14 +121,20 @@ template <typename T>
 const T *
 SbLazyPimplPtr<T>::operator -> (void) const
 {
-  return &(this->get());
+  if (!this->ptr) {
+    this->ptr = std::make_unique<T>();
+  }
+  return this->ptr.get();
 }
 
 template <typename T>
 T *
 SbLazyPimplPtr<T>::operator -> (void)
 {
-  return &(this->get());
+  if (!this->ptr) {
+    this->ptr = std::make_unique<T>();
+  }
+  return this->ptr.get();
 }
 
 /* ********************************************************************** */

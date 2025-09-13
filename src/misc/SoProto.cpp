@@ -49,7 +49,7 @@
 
 #include <cstring>
 
-#include "C/tidbits.h"
+#include "C/CoinTidbits.h"
 #include <Inventor/SbName.h>
 #include <Inventor/SoDB.h>
 #include <Inventor/SoInput.h>

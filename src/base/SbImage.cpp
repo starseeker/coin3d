@@ -71,7 +71,7 @@
 #include <Inventor/lists/SbStringList.h>
 #include <Inventor/lists/SbList.h>
 #include <Inventor/errors/SoDebugError.h>
-#include "C/tidbits.h"
+#include "C/CoinTidbits.h"
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>

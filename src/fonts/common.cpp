@@ -33,7 +33,7 @@
 #include "common.h"
 
 #include <cstdlib>
-#include "C/tidbits.h"
+#include "C/CoinTidbits.h"
 #include "../misc/SoEnvironment.h"
 
 /* ********************************************************************** */

@@ -38,8 +38,8 @@ set(COIN_ENGINES_FILES
 	SoTriggerAny.cpp
 	SoTexture2Convert.cpp
 	SoHeightMapToNormalMap.cpp
-	evaluator.c
-	evaluator_tab.c
+	evaluator.cpp
+	evaluator_tab.cpp
 )
 
 # Files excluded from public API documentation, included in complete documentation.
@@ -47,8 +47,8 @@ set(COIN_ENGINES_INTERNAL_FILES
 	SoConvertAll.h
 	SoConvertAll.cpp
 	evaluator.h
-	evaluator.c
-	evaluator_tab.c
+	evaluator.cpp
+	evaluator_tab.cpp
 	SoSubEngineP.h
 	SoSubNodeEngineP.h
 )

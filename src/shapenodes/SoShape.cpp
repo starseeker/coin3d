@@ -53,7 +53,7 @@
 #endif // HAVE_CONFIG_H
 
 #include "C/glue/gl.h"
-#include "C/tidbits.h"
+#include "C/CoinTidbits.h"
 #include <Inventor/SbBox2f.h>
 #include <Inventor/SbClip.h>
 #include <Inventor/SbPlane.h>

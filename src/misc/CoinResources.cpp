@@ -70,7 +70,7 @@
 
 #include <Inventor/SbName.h>
 #include <Inventor/SbString.h>
-#include "C/tidbits.h"
+#include "C/CoinTidbits.h"
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/SbByteBuffer.h>
 

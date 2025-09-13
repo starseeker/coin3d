@@ -35,15 +35,7 @@
 
 /* Minimal stub wrapper for freetype functionality - disabled for minimal build */
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-
 /* FreeType support disabled in minimal build */
 #define FREETYPE_AVAILABLE 0
-
-#ifdef __cplusplus
-} /* extern "C" */
-#endif /* __cplusplus */
 
 #endif /* !COIN_FREETYPE_H */

@@ -303,7 +303,7 @@
 #include <Inventor/SbImage.h>
 #include "C/glue/gl.h"
 #include <Inventor/misc/SoGLImage.h>
-#include "C/tidbits.h"
+#include "C/CoinTidbits.h"
 #include <Inventor/system/gl.h>
 #include <Inventor/misc/SoGLDriverDatabase.h>
 

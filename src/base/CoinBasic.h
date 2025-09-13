@@ -54,17 +54,12 @@
 
 // ===== LEGACY TYPE COMPATIBILITY =====
 
-// Note: We maintain SbBool as int for ABI compatibility
-// Even though bool would be more natural in C++17
-using SbBool = int;
+// C++17 modernization: Use native bool for SbBool
+// This aligns internal code with the modernized public API
+using SbBool = bool;
 
-// Legacy constants for compatibility - avoid conflict with macros
-#ifndef FALSE
-constexpr SbBool FALSE = 0;
-#endif
-#ifndef TRUE  
-constexpr SbBool TRUE = 1;
-#endif
+// Note: FALSE and TRUE constants are already defined in the C basic.h header
+// No need to redefine them here to avoid conflicts
 
 // Unique ID type - already C++17 compatible
 #ifndef COIN_UNIQUE_ID_UINT32

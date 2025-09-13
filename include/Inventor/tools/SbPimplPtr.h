@@ -43,6 +43,7 @@
 // See also SbLazyPimplPtr<>, our implementation of the lazy-creation policy.
 
 #include <Inventor/SbBasic.h>
+#include <memory>
 
 /* ********************************************************************** */
 
@@ -74,7 +75,7 @@ protected:
   T * getNew(void) const;
 
 protected:
-  T * ptr;
+  std::unique_ptr<T> ptr;
 
 }; // SbPimplPtr
 

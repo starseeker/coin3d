@@ -36,7 +36,7 @@
   Coin portable.
 */
 
-#include "C/tidbits.h"
+#include "C/CoinTidbits.h"
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"

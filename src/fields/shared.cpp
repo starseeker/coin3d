@@ -96,12 +96,14 @@ SbBool
 sosfbool_read_value(SoInput * in, SbBool & val)
 {
   // accept 0 or 1
-  if (in->read(val)) {
-    if (val != 0 && val != 1) {
+  int intval;
+  if (in->read(intval)) {
+    if (intval != 0 && intval != 1) {
       SoReadError::post(in, "Illegal value for field: %d (must be 0 or 1)",
-                        val);
+                        intval);
       return FALSE;
     }
+    val = (intval != 0);
     return TRUE;
   }
 

@@ -53,7 +53,7 @@
 #include <cstring>
 
 #include "C/glue/gl.h"
-#include "C/tidbits.h"
+#include "C/CoinTidbits.h"
 #include <Inventor/SbVec3f.h>
 #include <Inventor/SoPrimitiveVertex.h>
 #include <Inventor/details/SoFaceDetail.h>

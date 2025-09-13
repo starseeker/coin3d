@@ -107,7 +107,8 @@ protected:
 
 private:
   static SoType classTypeId;
-  SbBool donotify;
+  // Note: donotify is used as a bitmask, so it needs to be int, not SbBool
+  int donotify;
 
 }; // SoFieldContainer
 

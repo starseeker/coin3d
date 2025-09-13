@@ -42,7 +42,12 @@
 /* *********************************************************************** */
 
 /* Documented for Doxygen in SoDB.cpp. */
+// C++17 modernization: Use native bool type for C++, maintain int for C compatibility
+#ifdef __cplusplus
+typedef bool SbBool;
+#else
 typedef int SbBool;
+#endif
 
 #ifdef DOXYGEN_SKIP_THIS
 #ifndef USE_STATIC_CONSTS
@@ -57,19 +62,20 @@ typedef int SbBool;
 #endif //DOXYGEN_SKIP_THIS
 
 #ifndef FALSE
-#ifdef USE_STATIC_CONSTS
-static const SbBool FALSE = 0;
+// C++17 modernization: Use native bool constants for C++, maintain compatibility for C
+#ifdef __cplusplus
+static const SbBool FALSE = false;
 #else
 #define FALSE 0
-#endif //USE_STATIC_CONSTS
+#endif
 #endif /* !FALSE */
 
 #ifndef TRUE
-#ifdef USE_STATIC_CONSTS
-static const SbBool TRUE = 1;
+#ifdef __cplusplus
+static const SbBool TRUE = true;
 #else
 #define TRUE 1
-#endif //USE_STATIC_CONSTS
+#endif
 #endif /* !TRUE */
 
 /* *********************************************************************** */

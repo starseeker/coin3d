@@ -68,7 +68,7 @@
 #include <cctype>
 #include <cstring>
 
-#include "C/tidbits.h"
+#include "C/CoinTidbits.h"
 #include <Inventor/SbString.h>
 
 #include "tidbitsp.h"
