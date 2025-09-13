@@ -35,7 +35,7 @@
 
 #include <Inventor/SbBasic.h> // for SO__QUOTE() definition
 #include <Inventor/SbName.h> // SoType::createType() needs to know SbName.
-#include <Inventor/C/tidbits.h>
+#include <Inventor/SuUtils.h>
 #include <cassert>
 
 #ifndef COIN_INTERNAL

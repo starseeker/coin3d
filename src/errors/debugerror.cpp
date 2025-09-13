@@ -38,7 +38,7 @@
 #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 
 static cc_debugerror_cb * dbgerr_callback =
   reinterpret_cast<cc_debugerror_cb *>(cc_error_default_handler_cb);

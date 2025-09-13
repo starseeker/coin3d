@@ -64,7 +64,7 @@
 #include "C/errors/debugerror.h"
 
 #include "threads/mutexp.h"
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 #include "misc/SoEnvironment.h"
 
 #ifdef USE_PTHREAD

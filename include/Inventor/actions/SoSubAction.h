@@ -38,7 +38,7 @@
 #include <Inventor/SbString.h>
 #include <Inventor/actions/SoAction.h>
 #endif // COIN_INTERNAL
-#include <Inventor/C/tidbits.h>
+#include <Inventor/SuUtils.h>
 
 // *************************************************************************
 

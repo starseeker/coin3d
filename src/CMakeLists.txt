@@ -1,5 +1,4 @@
-# Configure internal C headers
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/C/basic.h.cmake.in ${CMAKE_CURRENT_SOURCE_DIR}/C/basic.h)
+# Note: src/C/basic.h files are obsolete - now using include/Inventor/C/basic.h.cmake.in
 
 # The following two-stage generation of config.h replaces configure_file(config.h.cmake.in config.h)
 # and is necessary for the proper definition of COIN_SYSTEM_LIBRARY_NAME in config.h.

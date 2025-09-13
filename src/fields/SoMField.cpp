@@ -254,7 +254,7 @@
 #include <Inventor/fields/SoSubField.h>
 
 #include "threads/threadsutilp.h"
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 #include "coindefs.h" // COIN_WORKAROUND_*
 
 #ifndef COIN_WORKAROUND_NO_USING_STD_FUNCS

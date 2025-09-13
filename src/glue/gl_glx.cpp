@@ -54,7 +54,7 @@
 #include <cstring>
 #include <cstdio>
 
-#include "C/basic.h"
+#include "Inventor/C/basic.h"
 #include "C/glue/dl.h"
 #include "C/errors/debugerror.h"
 #include "C/CoinTidbits.h"

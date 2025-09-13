@@ -80,7 +80,7 @@
 #include <Inventor/SbVec.h>
 #define COIN_INTERNAL
 
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 #include "misc/SbHash.h"
 #include "io/SoWriterefCounter.h"
 #include "coindefs.h" // COIN_STUB()

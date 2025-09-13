@@ -54,7 +54,7 @@
 
 #include <Inventor/SbString.h>
 
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 
 class SoLockManager_pimpl {
 public:

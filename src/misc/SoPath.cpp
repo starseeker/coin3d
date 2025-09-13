@@ -82,7 +82,7 @@
 #include <Inventor/nodes/SoGroup.h>
 
 #include "io/SoWriterefCounter.h"
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 #include "coindefs.h" // COIN_STUB()
 
 // *************************************************************************

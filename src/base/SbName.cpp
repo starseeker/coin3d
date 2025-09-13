@@ -71,7 +71,7 @@
 #include "C/CoinTidbits.h"
 #include <Inventor/SbString.h>
 
-#include "tidbitsp.h"
+
 #include "misc/SoUtilities.h"
 #include "base/namemap.h"
 #include "coindefs.h"

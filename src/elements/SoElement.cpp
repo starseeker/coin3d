@@ -307,7 +307,7 @@
 
 #include "elements/SoTextureScalePolicyElement.h" // internal element
 #include "elements/SoTextureScaleQualityElement.h" // internal  element
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 #include "coindefs.h"
 
 // *************************************************************************

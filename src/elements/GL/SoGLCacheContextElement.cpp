@@ -55,7 +55,7 @@
 
 #include "rendering/SoGL.h"
 #include "threads/threadsutilp.h"
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 
 // *************************************************************************
 

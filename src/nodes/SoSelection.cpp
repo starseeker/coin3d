@@ -159,7 +159,7 @@
 #include <Inventor/SoPickedPoint.h>
 #include <Inventor/events/SoMouseButtonEvent.h>
 
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 #include "nodes/SoSubNodeP.h"
 
 // *************************************************************************

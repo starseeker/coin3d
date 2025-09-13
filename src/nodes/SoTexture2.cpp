@@ -203,7 +203,7 @@
 #include "coindefs.h" // COIN_OBSOLETED()
 #include "elements/SoTextureScalePolicyElement.h"
 #include "nodes/SoSubNodeP.h"
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 #include "C/glue/gl.h"
 #include <Inventor/SbImage.h>
 #include <Inventor/SoInput.h>

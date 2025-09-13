@@ -39,7 +39,7 @@
 #include <Inventor/misc/SoContextHandler.h>
 #include <Inventor/elements/SoGLCacheContextElement.h>
 
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 #include "misc/SoEnvironment.h"
 
 #if defined(HAVE_CONFIG_H)

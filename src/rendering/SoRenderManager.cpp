@@ -83,7 +83,7 @@
 #include <Inventor/SoDB.h>
 
 #include "coindefs.h"
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 
 #include "coindefs.h"
 

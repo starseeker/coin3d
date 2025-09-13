@@ -39,7 +39,7 @@
 
 /* ********************************************************************** */
 
-#include "C/basic.h"
+#include "Inventor/C/basic.h"
 
 struct cc_font_bitmap {
   unsigned char * buffer; /* bitmap data */

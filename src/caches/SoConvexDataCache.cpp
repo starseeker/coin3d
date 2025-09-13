@@ -56,7 +56,7 @@
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/lists/SbList.h>
 
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 #include "base/SbGLUTessellator.h"
 
 // *************************************************************************

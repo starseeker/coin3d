@@ -58,6 +58,7 @@
 #include <Inventor/nodes/SoPerspectiveCamera.h>
 #include <Inventor/SbImage.h>
 #include "C/glue/gl.h"
+#include "C/CoinTidbits.h"
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>

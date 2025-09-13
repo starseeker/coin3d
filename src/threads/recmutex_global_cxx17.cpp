@@ -49,7 +49,7 @@
 #include <mutex>
 #include <cassert>
 
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 
 /* ********************************************************************** */
 

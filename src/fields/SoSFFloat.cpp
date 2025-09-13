@@ -50,7 +50,7 @@
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/errors/SoReadError.h>
 
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 #include "fields/SoSubFieldP.h"
 #include "fields/shared.h"
 

@@ -56,7 +56,7 @@
 #include "rendering/SoVertexArrayIndexer.h"
 #include "threads/threadsutilp.h"
 #include "glue/glp.h"
-#include "tidbitsp.h"
+
 #include "../misc/SoEnvironment.h"
 
 static int vbo_vertex_count_min_limit = -1;

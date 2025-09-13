@@ -109,7 +109,7 @@
 #include <Inventor/threads/SbStorage.h>
 #include <Inventor/system/gl.h>
 
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 #include "coindefs.h" // COIN_OBSOLETED()
 #include "nodes/SoSubNodeP.h"
 

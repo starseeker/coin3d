@@ -30,9 +30,28 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#include "utils/test_common.h"
+#ifndef COIN_SUUTILS_H
+#define COIN_SUUTILS_H
 
-using namespace CoinTestUtils;
+#include <Inventor/C/basic.h>
 
-// Complete migrated tests for manips module
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
+/* ********************************************************************** */
+
+/* Function pointer type for atexit cleanup functions */
+typedef void coin_atexit_f(void);
+
+/* Internal function used for cleaning up static data. 
+   Used by Coin macros like SoSubNode, SoSubEvent, etc. */
+COIN_DLL_API void cc_coin_atexit_static_internal(coin_atexit_f * fp);
+
+/* ********************************************************************** */
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif /* __cplusplus */
+
+#endif /* !COIN_SUUTILS_H */

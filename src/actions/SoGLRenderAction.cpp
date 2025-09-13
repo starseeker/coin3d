@@ -110,11 +110,11 @@
 #include <Inventor/nodes/SoShapeHints.h>
 #include <Inventor/sensors/SoAlarmSensor.h>
 #include <Inventor/sensors/SoNodeSensor.h>
-#include "C/CoinTidbits.h"
+
 #include <Inventor/system/gl.h>
 
 #include "coindefs.h"
-#include "tidbitsp.h"
+
 #include "SbBasicP.h"
 #include "actions/SoActionP.h"
 #include "actions/SoSubActionP.h"

@@ -55,7 +55,7 @@
 #include <Inventor/misc/SoProto.h>
 #include <Inventor/sensors/SoNodeSensor.h>
 
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 #include "misc/SbHash.h"
 
 // *************************************************************************

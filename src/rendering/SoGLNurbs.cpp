@@ -54,7 +54,7 @@
 #include "glue/GLUWrapper.h"
 #include <Inventor/system/gl.h>
 #include <Inventor/threads/SbStorage.h>
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 #include "glue/glp.h"
 #include "misc/SoEnvironment.h"
 

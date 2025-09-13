@@ -43,7 +43,7 @@
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/threads/SbMutex.h>
 #include <Inventor/annex/Profiler/SbProfilingData.h>
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 
 // *************************************************************************
 

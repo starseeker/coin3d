@@ -77,7 +77,7 @@
 #include <Inventor/threads/SbStorage.h>
 
 #include "glue/GLUWrapper.h"
-#include "tidbitsp.h"
+
 #include "glue/glp.h"
 #include "misc/SoEnvironment.h"
 

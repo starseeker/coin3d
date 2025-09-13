@@ -37,7 +37,8 @@
 #include <cstring>
 
 #include "threads/threadsutilp.h"
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
+#include "C/base/string.h"
 #include "coindefs.h"
 
 #ifndef COIN_WORKAROUND_NO_USING_STD_FUNCS

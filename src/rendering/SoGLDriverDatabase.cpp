@@ -62,7 +62,7 @@
 
 #include "misc/SbHash.h"
 #include "glue/glp.h"
-#include "tidbitsp.h"
+
 
 // Forward declarations for OpenGL feature test functions
 typedef SbBool glglue_feature_test_f(const cc_glglue * glue);

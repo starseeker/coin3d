@@ -112,7 +112,7 @@
 #include "rendering/SoGL.h"
 #include "glue/glp.h"
 #include "threads/threadsutilp.h"
-#include "tidbitsp.h"
+
 #include "rendering/SoVBO.h"
 #include "coindefs.h" // COIN_OBSOLETED()
 

@@ -38,11 +38,11 @@
 #include <cassert>
 #include <cstdio>
 
-#include "C/basic.h"
+#include "Inventor/C/basic.h"
 #include "base/list.h"
 #include "C/base/string.h"
 
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 #include "base/dict.h"
 #include "threads/threadsutilp.h"
 #include "fonts/fontlib_wrapper.h"

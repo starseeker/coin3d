@@ -194,7 +194,7 @@
 #include <Inventor/errors/SoDebugError.h>
 
 #include "misc/SbHash.h"
-#include "tidbitsp.h"
+
 #include "misc/SoEnvironment.h"
 
 // *************************************************************************

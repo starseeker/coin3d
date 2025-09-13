@@ -67,7 +67,7 @@
 
 #include "misc/SbHash.h"
 #include "threads/threadsutilp.h"
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 #include "glue/glp.h"
 
 // *************************************************************************

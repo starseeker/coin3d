@@ -170,7 +170,7 @@
 
 #include "nodes/SoSubNodeP.h"
 #include "glue/GLUWrapper.h"
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 
 // *************************************************************************
 

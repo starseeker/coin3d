@@ -86,7 +86,7 @@
 #include <Inventor/elements/SoTextureUnitElement.h>
 #include <Inventor/system/gl.h>
 
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 #include "nodes/SoSubNodeP.h"
 
 // *************************************************************************

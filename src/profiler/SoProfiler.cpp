@@ -92,7 +92,7 @@
 #include <Inventor/annex/Profiler/nodekits/SoProfilerVisualizeKit.h>
 #endif // HAVE_NODEKITS
 
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 #include "misc/SoDBP.h"
 #include "misc/SoEnvironment.h"
 
