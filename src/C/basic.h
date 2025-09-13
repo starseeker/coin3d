@@ -43,7 +43,4 @@
 /* Include the consolidated public basic.h */
 #include <Inventor/C/basic.h>
 
-/* Include internal utility macros */
-#include "../SuInternal.h"
-
 #endif /* !COIN_INTERNAL_BASIC_H */

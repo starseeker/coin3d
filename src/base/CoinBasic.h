@@ -70,11 +70,6 @@ using SbUniqueId = std::uint32_t;
 
 // ===== C++17 REPLACEMENTS FOR LEGACY MACROS =====
 
-// Modern C++17 min/max - use std::min/std::max instead of macros
-// Note: We keep the macro versions for compatibility where used in C code
-#define cc_min(x, y) (((x) < (y)) ? (x) : (y))
-#define cc_max(x, y) (((x) > (y)) ? (x) : (y))
-
 // But provide C++17 template versions for new code
 namespace CoinInternal {
     template<typename T>

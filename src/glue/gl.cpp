@@ -4646,8 +4646,6 @@ cc_glglue_context_max_dimensions(unsigned int * width, unsigned int * height)
 
        Eventually, this special case check should be removed, though.
     */
-/*     size[0] = cc_min(size[0], 512); */
-/*     size[1] = cc_min(size[1], 512); */
   }
 
   *width = (unsigned int) size[0];
