@@ -44,8 +44,7 @@
  * - src/tidbits.cpp
  */
 
-#include "C/basic.h"
-#include "base/CoinBasic.h"
+#include "Inventor/C/basic.h"
 #include <cstdint>
 #include <cstdarg>
 #include <cstdio>

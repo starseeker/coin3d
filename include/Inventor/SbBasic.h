@@ -40,7 +40,6 @@
 
 // Start migrating to C++17 - internal use only
 #ifdef COIN_INTERNAL
-#include "base/CoinBasic.h"
 #ifndef NDEBUG
 #include "errors/CoinDebugError.h"
 #endif // !NDEBUG
