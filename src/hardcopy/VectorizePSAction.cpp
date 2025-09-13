@@ -48,7 +48,7 @@
 #include <Inventor/errors/SoDebugError.h>
 
 #include "hardcopy/VectorizeActionP.h"
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 #include "actions/SoSubActionP.h"
 
 

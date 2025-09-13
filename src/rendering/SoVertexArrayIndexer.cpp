@@ -46,7 +46,7 @@
 #include <Inventor/elements/SoGLCacheContextElement.h>
 #include <Inventor/misc/SoGLDriverDatabase.h>
 
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 #include "rendering/SoVBO.h"
 #include "coindefs.h"
 

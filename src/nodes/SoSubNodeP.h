@@ -33,6 +33,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
+#include "C/CoinTidbits.h"
+
 // The macro definitions in this file are used internally by Coin
 // classes, and mirrors some of the public macros available in
 // SoSubNode.h with a few modifications so they are suited for the

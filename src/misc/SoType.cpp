@@ -146,7 +146,7 @@
 #include "C/CoinTidbits.h"
 #include "C/glue/dl.h"
 
-#include "tidbitsp.h"
+
 #include "misc/SbHash.h"
 #include "SoEnvironment.h"
 

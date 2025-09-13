@@ -39,7 +39,7 @@
   FIXME: write doc.
 */
 
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 #include "SbBasicP.h"
 
 #include <Inventor/elements/SoFontNameElement.h>

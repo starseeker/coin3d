@@ -76,7 +76,7 @@
 #include <Inventor/manips/SoTransformerManip.h>
 #endif // HAVE_MANIPULATORS
 
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 
 static SbBool interaction_isinitialized = FALSE;
 

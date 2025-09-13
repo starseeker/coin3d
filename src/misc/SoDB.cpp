@@ -110,7 +110,7 @@
 
 #include "coindefs.h" // COIN_STUB(), COIN_INIT_CHECK_THREAD()
 #include "shaders/SoShader.h"
-#include "tidbitsp.h"
+
 #include "fields/SoGlobalField.h"
 #include "misc/CoinStaticObjectInDLL.h"
 #include "misc/systemsanity.icc"

@@ -214,7 +214,7 @@ SbUniqueId is not really a class, just a \c typedef.
 #include <Inventor/engines/SoNodeEngine.h>
 #include <Inventor/lists/SoEngineOutputList.h>
 
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 #include "misc/SbHash.h"
 #include "rendering/SoGL.h"
 #include "nodes/SoSubNodeP.h"

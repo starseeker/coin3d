@@ -48,7 +48,7 @@
 #include "C/errors/debugerror.h"
 
 #include "coindefs.h"
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 #include "threads/threadsutilp.h"
 
 #ifndef COIN_WORKAROUND_NO_USING_STD_FUNCS

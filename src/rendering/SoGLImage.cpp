@@ -217,7 +217,7 @@
 #include <Inventor/threads/SbMutex.h>
 #endif // COIN_THREADSAFE
 
-#include "tidbitsp.h"
+
 #include "rendering/SoGL.h"
 #include "elements/SoTextureScaleQualityElement.h"
 #include "glue/GLUWrapper.h"

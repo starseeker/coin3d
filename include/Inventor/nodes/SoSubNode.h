@@ -60,7 +60,7 @@
 #include <Inventor/SoType.h>
 #include <Inventor/fields/SoFieldData.h>
 #include <Inventor/nodes/SoNode.h>
-#include <Inventor/C/tidbits.h>
+#include <Inventor/SuUtils.h>
 
 // *************************************************************************
 

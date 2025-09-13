@@ -125,7 +125,7 @@
 #include <Inventor/misc/SoState.h>
 #include "C/CoinTidbits.h"
 
-#include "tidbitsp.h"
+
 #include "coindefs.h"
 
 #ifndef COIN_WORKAROUND_NO_USING_STD_FUNCS

@@ -54,7 +54,7 @@
 #include <Inventor/elements/SoMultiTextureMatrixElement.h>
 #include <Inventor/details/SoDetail.h>
 
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 
 
 //

@@ -66,7 +66,7 @@
 #include <Inventor/SbViewportRegion.h>
 #include <Inventor/SbName.h>
 
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 
 SO_EVENT_ABSTRACT_SOURCE(SoEvent);
 

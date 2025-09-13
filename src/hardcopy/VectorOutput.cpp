@@ -34,7 +34,7 @@
 
 #include <Inventor/SbBasic.h>
 
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 
 // *************************************************************************
 

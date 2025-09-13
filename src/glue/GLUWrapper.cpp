@@ -48,7 +48,7 @@
 #include "C/errors/debugerror.h"
 #include "C/CoinTidbits.h"
 
-#include "tidbitsp.h"
+
 #include "threads/threadsutilp.h"
 #include "misc/SoEnvironment.h"
 

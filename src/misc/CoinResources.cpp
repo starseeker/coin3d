@@ -83,7 +83,7 @@
 #include <CoreFoundation/CFURL.h>
 #endif // COIN_MACOS_10 && COIN_MACOSX_FRAMEWORK
 
-#include "tidbitsp.h"
+
 #include "coindefs.h"
 #include "SoEnvironment.h"
 

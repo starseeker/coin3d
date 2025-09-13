@@ -40,7 +40,7 @@
 #include <Inventor/misc/SoBase.h>
 #include <Inventor/nodes/SoNode.h>
 
-#include "tidbitsp.h"
+
 #include "threads/threadsutilp.h"
 #include "misc/SbHash.h"
 #include "../misc/SoEnvironment.h"

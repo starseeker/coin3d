@@ -32,503 +32,1207 @@
 
 /*!
  * \file CoinTidbits.cpp
- * \brief C++17 implementation for C API compatibility functions
+ * \brief Consolidated C++17 utility functions for Coin
  * 
- * This file provides the actual implementation for the C API compatibility
- * layer, allowing the header to contain only declarations to avoid
- * circular inclusion problems.
+ * This file consolidates functionality from the former tidbits files:
+ * - src/tidbits.cpp
+ * - src/C/tidbits.h
+ * - src/tidbitsp.h
+ * 
+ * Contains various utility functions that don't really belong anywhere 
+ * specific in Coin, but which are included to keep Coin portable.
  */
 
 #include "C/CoinTidbits.h"
-#include "misc/CoinUtilities.h"
-#include "base/CoinBasic.h"
-#include <cstdio>
-#include <cstdarg>
-#include <cstdlib>
-#include <cstring>
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif /* HAVE_CONFIG_H */
+
+#include <cassert>
+#include <cerrno>
 #include <cmath>
+#include <cfloat>
+#include <clocale>
+#include <cstring>
+#include <cstdio>
+#include <cstdlib>
+#include <cctype>
 #include <vector>
 #include <algorithm>
 #include <mutex>
-#include <cassert>
 
-// Forward declare the enum from tidbitsp.h to avoid circular includes
-enum coin_atexit_priorities {
-  CC_ATEXIT_EXTERNAL = 2147483647,
-  CC_ATEXIT_NORMAL = 0,
-  CC_ATEXIT_DYNLIBS = -2147483647,
-  CC_ATEXIT_REALTIME_FIELD = 10,
-  CC_ATEXIT_DRAGGERDEFAULTS = 2,
-  CC_ATEXIT_TRACK_SOBASE_INSTANCES = 1,
-  CC_ATEXIT_NORMAL_LOWPRIORITY = -1,
-  CC_ATEXIT_STATIC_DATA = -10,
-  CC_ATEXIT_SODB = -20,
-  CC_ATEXIT_SOBASE = -30,
-  CC_ATEXIT_SOTYPE = -40,
-  CC_ATEXIT_FONT_SUBSYSTEM = -100,
-  CC_ATEXIT_FONT_SUBSYSTEM_HIGHPRIORITY = -99,
-  CC_ATEXIT_FONT_SUBSYSTEM_LOWPRIORITY = -101,
-  CC_ATEXIT_MSG_SUBSYSTEM = -200,
-  CC_ATEXIT_SBNAME = -500,
-  CC_ATEXIT_THREADING_SUBSYSTEM = -1000,
-  CC_ATEXIT_THREADING_SUBSYSTEM_LOWPRIORITY = -1001,
-  CC_ATEXIT_THREADING_SUBSYSTEM_VERYLOWPRIORITY = -1002,
-  CC_ATEXIT_ENVIRONMENT = -2147483637
-};
+#ifdef HAVE_WINDOWS_H
+#include <windows.h>
+#endif /* HAVE_WINDOWS_H */
 
-// ===== C API Implementation Functions =====
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
+#ifdef HAVE_IO_H
+#include <io.h>
+#endif /* HAVE_IO_H */
+
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif /* HAVE_UNISTD_H */
+
+#ifdef HAVE_IEEEFP_H
+#include <ieeefp.h>
+#endif /* HAVE_IEEEFP_H */
+
+#ifdef HAVE_DIRECT_H
+#include <direct.h>
+#endif /* HAVE_DIRECT_H */
+
+#include "C/base/string.h"
+#include "base/list.h"
+#include "C/errors/debugerror.h"
+#include "coindefs.h"
+#include "misc/SoEnvironment.h"
+
+/* ********************************************************************** */
+
+#ifdef __cplusplus
 extern "C" {
+#endif
 
-int coin_host_get_endianness(void) {
-    // Runtime endianness detection
-    union {
-        std::uint32_t i;
-        char c[4];
-    } test = {0x01020304};
+/* ********************************************************************** */
+/* Global state variables */
+
+#ifdef COIN_THREADSAFE
+static std::mutex atexit_list_monitor;
+#endif /* COIN_THREADSAFE */
+
+static int COIN_DEBUG_EXTRA = -1;
+static int COIN_DEBUG_NORMALIZE = -1;
+
+/* ********************************************************************** */
+/* Initialization function */
+
+void coin_init_tidbits(void)
+{
+    const char* env;
     
-    return (test.c[0] == 1) ? 1 : 0;  // 1 = big endian, 0 = little endian
-}
-
-// Helper function to check if system is big endian
-static bool is_big_endian() {
-    return coin_host_get_endianness() == 1;
-}
-
-// Byte swapping macros
-static std::uint16_t bswap_16(std::uint16_t x) {
-    return (x << 8) | (x >> 8);
-}
-
-static std::uint32_t bswap_32(std::uint32_t x) {
-    return ((x & 0x000000FF) << 24) |
-           ((x & 0x0000FF00) << 8)  |
-           ((x & 0x00FF0000) >> 8)  |
-           ((x & 0xFF000000) >> 24);
-}
-
-static std::uint64_t bswap_64(std::uint64_t x) {
-    return ((x & 0x00000000000000FFULL) << 56) |
-           ((x & 0x000000000000FF00ULL) << 40) |
-           ((x & 0x0000000000FF0000ULL) << 24) |
-           ((x & 0x00000000FF000000ULL) << 8)  |
-           ((x & 0x000000FF00000000ULL) >> 8)  |
-           ((x & 0x0000FF0000000000ULL) >> 24) |
-           ((x & 0x00FF000000000000ULL) >> 40) |
-           ((x & 0xFF00000000000000ULL) >> 56);
-}
-
-int coin_snprintf(char* dst, unsigned int n, const char* fmtstr, ...) {
-    va_list args;
-    va_start(args, fmtstr);
-    int result = coin_vsnprintf(dst, n, fmtstr, args);
-    va_end(args);
-    return result;
-}
-
-int coin_vsnprintf(char* dst, unsigned int n, const char* fmtstr, va_list args) {
-    if (n == 0) return -1;
-    
-    int result = std::vsnprintf(dst, n, fmtstr, args);
-    
-    // Ensure null termination
-    if (result >= 0 && static_cast<unsigned int>(result) >= n) {
-        dst[n - 1] = '\0';
-        return -1; // Indicate truncation
+    env = CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_EXTRA");
+    if (env && atoi(env) == 1) {
+        COIN_DEBUG_EXTRA = 1;
+    } else {
+        COIN_DEBUG_EXTRA = 0;
     }
     
-    return result;
+    env = CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_NORMALIZE");
+    if (env && atoi(env) == 1) {
+        COIN_DEBUG_NORMALIZE = 1;
+    } else {
+        COIN_DEBUG_NORMALIZE = 0;
+    }
 }
 
-const char* coin_getenv(const char* name) {
-    return std::getenv(name);
-}
+/* ********************************************************************** */
+/* sprintf/snprintf wrapper functions */
 
-SbBool coin_setenv(const char* name, const char* value, int overwrite) {
-    if (!name || !value) return false;
+typedef int func_vsnprintf(char*, size_t, const char*, va_list);
+
+static int coin_common_vsnprintf(func_vsnprintf* func,
+                                char* dst, size_t n,
+                                const char* fmtstr, va_list args)
+{
+    int length;
+    static int debug = -1;
     
-#ifdef _WIN32
-    // Windows doesn't have setenv, use _putenv_s
-    if (!overwrite && std::getenv(name)) return true;
-    return _putenv_s(name, value) == 0;
+    if (debug == -1) {
+        const char* env = CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_NPRINTF");
+        debug = (env && (atoi(env) > 0)) ? 1 : 0;
+    }
+    
+    assert(n > 1);
+    n -= 1;
+    
+    if (debug) {
+        printf("dst==%p, n==%zu, fmtstr=='%s'\n", dst, n, fmtstr);
+    }
+    
+#ifdef HAVE_VA_COPY_MACRO
+    va_list argscopy;
+    va_copy(argscopy, args);
+    length = (*func)(dst, n, fmtstr, argscopy);
+    va_end(argscopy);
 #else
-    return setenv(name, value, overwrite) == 0;
+    length = (*func)(dst, n, fmtstr, args);
+#endif
+    
+    if (debug) {
+        printf("==> length==%d\n", length);
+    }
+    
+    if (length >= (((int)n) - 1)) {
+        length = -1;
+    }
+    
+    return length;
+}
+
+#ifdef HAVE_VSNPRINTF
+
+int coin_vsnprintf(char* dst, unsigned int n, const char* fmtstr, va_list args)
+{
+    return coin_common_vsnprintf(vsnprintf, dst, (size_t)n, fmtstr, args);
+}
+
+#elif defined HAVE__VSNPRINTF
+
+int coin_vsnprintf(char* dst, unsigned int n, const char* fmtstr, va_list args)
+{
+    return coin_common_vsnprintf(_vsnprintf, dst, (size_t)n, fmtstr, args);
+}
+
+#else /* neither vsnprintf() nor _vsnprintf() available, roll our own */
+
+static FILE* nullfileptr(void)
+{
+    static FILE* nullfp = NULL;
+    
+    if (!nullfp) {
+        struct stat sbuf;
+        const char unixdevnull[] = "/dev/null";
+        int nullfd = -1;
+        
+        if ((stat(unixdevnull, &sbuf) == 0) && (sbuf.st_mode & S_IFCHR))
+            nullfd = open(unixdevnull, O_WRONLY);
+        
+        if (nullfd == -1) {
+            const char* tmpname = tmpnam(NULL);
+            if (tmpname) {
+                nullfd = open(tmpname, O_CREAT|O_WRONLY);
+                (void)remove(tmpname);
+            }
+        }
+        
+        if (nullfd != -1) nullfp = fdopen(nullfd, "w");
+        if (!nullfp) nullfp = stderr;
+    }
+    
+    return nullfp;
+}
+
+int coin_vsnprintf(char* dst, unsigned int n, const char* fmtstr, va_list args)
+{
+    int len;
+    
+#ifdef HAVE_VA_COPY_MACRO
+    va_list argscopy;
+    
+    va_copy(argscopy, args);
+    len = vfprintf(nullfileptr(), fmtstr, argscopy);
+    va_end(argscopy);
+    
+    if (((unsigned int) len + 1) > n) return -1;
+    
+    va_copy(argscopy, args);
+    (void)vsprintf(dst, fmtstr, argscopy);
+    va_end(argscopy);
+#else
+    len = vfprintf(nullfileptr(), fmtstr, args);
+    if (((unsigned int) len + 1) > n) return -1;
+    (void)vsprintf(dst, fmtstr, args);
+#endif
+    
+    return len;
+}
+
+#endif /* coin_vsnprintf() */
+
+int coin_snprintf(char* dst, unsigned int n, const char* fmtstr, ...)
+{
+    int len;
+    va_list argptr;
+    va_start(argptr, fmtstr);
+    len = coin_vsnprintf(dst, n, fmtstr, argptr);
+    va_end(argptr);
+    return len;
+}
+
+/* ********************************************************************** */
+/* Environment variable functions */
+
+#ifdef HAVE_GETENVIRONMENTVARIABLE
+static struct envvar_data* envlist_head = NULL;
+static struct envvar_data* envlist_tail = NULL;
+
+struct envvar_data {
+    char* name;
+    char* val;
+    struct envvar_data* next;
+};
+
+static void envlist_cleanup(void)
+{
+    struct envvar_data* ptr = envlist_head;
+    while (ptr != NULL) {
+        struct envvar_data* tmp = ptr;
+        free(ptr->name);
+        free(ptr->val);
+        ptr = ptr->next;
+        free(tmp);
+    }
+    envlist_head = NULL;
+    envlist_tail = NULL;
+}
+
+static void envlist_append(struct envvar_data* item)
+{
+    item->next = NULL;
+    if (envlist_head == NULL) {
+        envlist_head = item;
+        envlist_tail = item;
+        coin_atexit_func("envlist_cleanup", envlist_cleanup, CC_ATEXIT_ENVIRONMENT);
+    } else {
+        envlist_tail->next = item;
+        envlist_tail = item;
+    }
+}
+#endif /* HAVE_GETENVIRONMENTVARIABLE */
+
+const char* coin_getenv(const char* envname)
+{
+#ifdef HAVE_GETENVIRONMENTVARIABLE
+    int neededsize;
+    neededsize = GetEnvironmentVariable(envname, NULL, 0);
+    
+    if (neededsize >= 1) {
+        int resultsize;
+        struct envvar_data* envptr;
+        char* valbuf = (char*)malloc(neededsize);
+        if (valbuf == NULL) {
+            return NULL;
+        }
+        resultsize = GetEnvironmentVariable(envname, valbuf, neededsize);
+        if (resultsize != (neededsize - 1)) {
+            free(valbuf);
+            return NULL;
+        }
+        
+        envptr = envlist_head;
+        while ((envptr != NULL) && (strcmp(envptr->name, envname) != 0))
+            envptr = envptr->next;
+        
+        if (envptr != NULL) {
+            free(envptr->val);
+            envptr->val = valbuf;
+        } else {
+            envptr = (struct envvar_data*)malloc(sizeof(struct envvar_data));
+            if (envptr == NULL) {
+                free(valbuf);
+                return NULL;
+            }
+            envptr->name = strdup(envname);
+            if (envptr->name == NULL) {
+                free(envptr);
+                free(valbuf);
+                return NULL;
+            }
+            envptr->val = valbuf;
+            envlist_append(envptr);
+        }
+        return envptr->val;
+    }
+    return NULL;
+#else
+    return getenv(envname);
 #endif
 }
 
-void coin_unsetenv(const char* name) {
-    if (!name) return;
+SbBool coin_setenv(const char* name, const char* value, int overwrite)
+{
+#ifdef HAVE_GETENVIRONMENTVARIABLE
+    struct envvar_data* envptr, * prevptr;
+    envptr = envlist_head;
+    prevptr = NULL;
+    while ((envptr != NULL) && (strcmp(envptr->name, name) != 0)) {
+        prevptr = envptr;
+        envptr = envptr->next;
+    }
+    if (envptr) {
+        if (prevptr) prevptr->next = envptr->next;
+        else envlist_head = envptr->next;
+        if (envlist_tail == envptr) envlist_tail = prevptr;
+        free(envptr->name);
+        free(envptr->val);
+        free(envptr);
+    }
     
-#ifdef _WIN32
-    _putenv_s(name, "");
+    if (overwrite || (GetEnvironmentVariable(name, NULL, 0) == 0))
+        return SetEnvironmentVariable(name, value) ? COIN_TRUE : COIN_FALSE;
+    else
+        return COIN_TRUE;
+#else
+    return (setenv(name, value, overwrite) == 0);
+#endif
+}
+
+void coin_unsetenv(const char* name)
+{
+#ifdef HAVE_GETENVIRONMENTVARIABLE
+    struct envvar_data* envptr, * prevptr;
+    envptr = envlist_head;
+    prevptr = NULL;
+    while ((envptr != NULL) && (strcmp(envptr->name, name) != 0)) {
+        prevptr = envptr;
+        envptr = envptr->next;
+    }
+    if (envptr) {
+        if (prevptr) prevptr->next = envptr->next;
+        else envlist_head = envptr->next;
+        if (envlist_tail == envptr) envlist_tail = prevptr;
+        free(envptr->name);
+        free(envptr->val);
+        free(envptr);
+    }
+    SetEnvironmentVariable(name, NULL);
 #else
     unsetenv(name);
 #endif
 }
 
-std::uint16_t coin_hton_uint16(std::uint16_t value) {
-    return is_big_endian() ? value : bswap_16(value);
+/* ********************************************************************** */
+/* Endianness and byte order functions */
+
+#define COIN_BSWAP_8(x)  ((x) & 0xff)
+#define COIN_BSWAP_16(x) ((COIN_BSWAP_8(x)  << 8)  | COIN_BSWAP_8((x)  >> 8))
+#define COIN_BSWAP_32(x) ((COIN_BSWAP_16(x) << 16) | COIN_BSWAP_16((x) >> 16))
+#define COIN_BSWAP_64(x) ((COIN_BSWAP_32(x) << 32) | COIN_BSWAP_32((x) >> 32))
+
+static int coin_endianness = COIN_HOST_IS_UNKNOWNENDIAN;
+
+int coin_host_get_endianness(void)
+{
+    union temptype {
+        uint32_t value;
+        uint8_t  bytes[4];
+    } temp;
+    
+    if (coin_endianness != COIN_HOST_IS_UNKNOWNENDIAN) {
+        return coin_endianness;
+    }
+    
+    temp.bytes[0] = 0x00;
+    temp.bytes[1] = 0x01;
+    temp.bytes[2] = 0x02;
+    temp.bytes[3] = 0x03;
+    switch (temp.value) {
+        case 0x03020100: return coin_endianness = COIN_HOST_IS_LITTLEENDIAN;
+        case 0x00010203: return coin_endianness = COIN_HOST_IS_BIGENDIAN;
+    }
+    assert(0 && "system has unknown endianness");
+    return COIN_HOST_IS_UNKNOWNENDIAN;
 }
 
-std::uint16_t coin_ntoh_uint16(std::uint16_t value) {
+std::uint16_t coin_hton_uint16(std::uint16_t value)
+{
+    switch (coin_host_get_endianness()) {
+    case COIN_HOST_IS_BIGENDIAN:
+        break;
+    case COIN_HOST_IS_LITTLEENDIAN:
+        value = COIN_BSWAP_16(value);
+        break;
+    default:
+        assert(0 && "system has unknown endianness");
+    }
+    return value;
+}
+
+std::uint16_t coin_ntoh_uint16(std::uint16_t value)
+{
     return coin_hton_uint16(value);
 }
 
-std::uint32_t coin_hton_uint32(std::uint32_t value) {
-    return is_big_endian() ? value : bswap_32(value);
+std::uint32_t coin_hton_uint32(std::uint32_t value)
+{
+    switch (coin_host_get_endianness()) {
+    case COIN_HOST_IS_BIGENDIAN:
+        break;
+    case COIN_HOST_IS_LITTLEENDIAN:
+        value = COIN_BSWAP_32(value);
+        break;
+    default:
+        assert(0 && "system has unknown endianness");
+    }
+    return value;
 }
 
-std::uint32_t coin_ntoh_uint32(std::uint32_t value) {
+std::uint32_t coin_ntoh_uint32(std::uint32_t value)
+{
     return coin_hton_uint32(value);
 }
 
-std::uint64_t coin_hton_uint64(std::uint64_t value) {
-    return is_big_endian() ? value : bswap_64(value);
+std::uint64_t coin_hton_uint64(std::uint64_t value)
+{
+    switch (coin_host_get_endianness()) {
+    case COIN_HOST_IS_BIGENDIAN:
+        break;
+    case COIN_HOST_IS_LITTLEENDIAN:
+        value = COIN_BSWAP_64(value);
+        break;
+    default:
+        assert(0 && "system has unknown endianness");
+    }
+    return value;
 }
 
-std::uint64_t coin_ntoh_uint64(std::uint64_t value) {
+std::uint64_t coin_ntoh_uint64(std::uint64_t value)
+{
     return coin_hton_uint64(value);
 }
 
-void coin_hton_float_bytes(float value, char* result) {
-    static_assert(sizeof(float) == 4, "Float must be 4 bytes");
-    std::uint32_t int_value;
-    memcpy(&int_value, &value, sizeof(float));
-    int_value = coin_hton_uint32(int_value);
-    memcpy(result, &int_value, sizeof(float));
+void coin_hton_float_bytes(float value, char* result)
+{
+    union {
+        float f32;
+        uint32_t u32;
+    } val;
+    
+    assert(sizeof(float) == sizeof(uint32_t));
+    val.f32 = value;
+    val.u32 = coin_hton_uint32(val.u32);
+    memcpy(result, &val.u32, sizeof(uint32_t));
 }
 
-float coin_ntoh_float_bytes(const char* value) {
-    static_assert(sizeof(float) == 4, "Float must be 4 bytes");
-    std::uint32_t int_value;
-    memcpy(&int_value, value, sizeof(float));
-    int_value = coin_ntoh_uint32(int_value);
-    float result;
-    memcpy(&result, &int_value, sizeof(float));
-    return result;
+float coin_ntoh_float_bytes(const char* value)
+{
+    union {
+        float f32;
+        uint32_t u32;
+    } val;
+    
+    assert(sizeof(float) == sizeof(uint32_t));
+    memcpy(&val.u32, value, sizeof(uint32_t));
+    val.u32 = coin_ntoh_uint32(val.u32);
+    return val.f32;
 }
 
-void coin_hton_double_bytes(double value, char* result) {
-    static_assert(sizeof(double) == 8, "Double must be 8 bytes");
-    std::uint64_t int_value;
-    memcpy(&int_value, &value, sizeof(double));
-    int_value = coin_hton_uint64(int_value);
-    memcpy(result, &int_value, sizeof(double));
+void coin_hton_double_bytes(double value, char* result)
+{
+    union {
+        double d64;
+        uint64_t u64;
+    } val;
+    
+    assert(sizeof(double) == sizeof(uint64_t));
+    val.d64 = value;
+    val.u64 = coin_hton_uint64(val.u64);
+    memcpy(result, &val.u64, sizeof(uint64_t));
 }
 
-double coin_ntoh_double_bytes(const char* value) {
-    static_assert(sizeof(double) == 8, "Double must be 8 bytes");
-    std::uint64_t int_value;
-    memcpy(&int_value, value, sizeof(double));
-    int_value = coin_ntoh_uint64(int_value);
-    double result;
-    memcpy(&result, &int_value, sizeof(double));
-    return result;
+double coin_ntoh_double_bytes(const char* value)
+{
+    union {
+        double d64;
+        uint64_t u64;
+    } val;
+    
+    assert(sizeof(double) == sizeof(uint64_t));
+    memcpy(&val.u64, value, sizeof(uint64_t));
+    val.u64 = coin_ntoh_uint64(val.u64);
+    return val.d64;
 }
 
-SbBool coin_is_power_of_two(std::uint32_t x) {
-    // Direct implementation of power of two check
+/* ********************************************************************** */
+/* Power of two functions */
+
+SbBool coin_is_power_of_two(std::uint32_t x)
+{
     return (x != 0) && ((x & (x - 1)) == 0);
 }
 
-std::uint32_t coin_next_power_of_two(std::uint32_t x) {
-    // Direct implementation of next power of two
-    if (x == 0) return 1;
-    --x;
-    x |= x >> 1;
-    x |= x >> 2;
-    x |= x >> 4;
-    x |= x >> 8;
-    x |= x >> 16;
-    return ++x;
+std::uint32_t coin_next_power_of_two(std::uint32_t x)
+{
+    assert((x < (uint32_t)(1 << 31)) && "overflow");
+    
+    x |= (x >> 1);
+    x |= (x >> 2);
+    x |= (x >> 4);
+    x |= (x >> 8);
+    x |= (x >> 16);
+    
+    return x + 1;
 }
 
-std::uint32_t coin_geq_power_of_two(std::uint32_t x) {
-    // Direct implementation of geq power of two
-    return coin_is_power_of_two(x) ? x : coin_next_power_of_two(x);
+std::uint32_t coin_geq_power_of_two(std::uint32_t x)
+{
+    if (coin_is_power_of_two(x)) return x;
+    return coin_next_power_of_two(x);
 }
 
-void coin_viewvolume_jitter(int numpasses, int curpass, const int* vpsize, float* jitter) {
-    if (!jitter || !vpsize || numpasses <= 0 || curpass < 0 || curpass >= numpasses) {
-        if (jitter) {
-            jitter[0] = jitter[1] = 0.0f;
-        }
-        return;
+/* ********************************************************************** */
+/* Jitter function */
+
+void coin_viewvolume_jitter(int numpasses, int curpass, const int* vpsize, float* jitter)
+{
+    /* jitter values from OpenGL Programming Guide */
+    static float jitter2[] = {
+        0.25f, 0.75f,
+        0.75f, 0.25f
+    };
+    static float jitter3[] = {
+        0.5033922635f, 0.8317967229f,
+        0.7806016275f, 0.2504380877f,
+        0.2261828938f, 0.4131553612f
+    };
+    static float jitter4[] = {
+        0.375f, 0.25f,
+        0.125f, 0.75f,
+        0.875f, 0.25f,
+        0.625f, 0.75f
+    };
+    static float jitter5[] = {
+        0.5f, 0.5f,
+        0.3f, 0.1f,
+        0.7f, 0.9f,
+        0.9f, 0.3f,
+        0.1f, 0.7f
+    };
+    static float jitter6[] = {
+        0.4646464646f, 0.4646464646f,
+        0.1313131313f, 0.7979797979f,
+        0.5353535353f, 0.8686868686f,
+        0.8686868686f, 0.5353535353f,
+        0.7979797979f, 0.1313131313f,
+        0.2020202020f, 0.2020202020f
+    };
+    static float jitter8[] = {
+        0.5625f, 0.4375f,
+        0.0625f, 0.9375f,
+        0.3125f, 0.6875f,
+        0.6875f, 0.8125f,
+        0.8125f, 0.1875f,
+        0.9375f, 0.5625f,
+        0.4375f, 0.0625f,
+        0.1875f, 0.3125f
+    };
+    static float jitter9[] = {
+        0.5f, 0.5f,
+        0.1666666666f, 0.9444444444f,
+        0.5f, 0.1666666666f,
+        0.5f, 0.8333333333f,
+        0.1666666666f, 0.2777777777f,
+        0.8333333333f, 0.3888888888f,
+        0.1666666666f, 0.6111111111f,
+        0.8333333333f, 0.7222222222f,
+        0.8333333333f, 0.0555555555f
+    };
+    static float jitter12[] = {
+        0.4166666666f, 0.625f,
+        0.9166666666f, 0.875f,
+        0.25f, 0.375f,
+        0.4166666666f, 0.125f,
+        0.75f, 0.125f,
+        0.0833333333f, 0.125f,
+        0.75f, 0.625f,
+        0.25f, 0.875f,
+        0.5833333333f, 0.375f,
+        0.9166666666f, 0.375f,
+        0.0833333333f, 0.625f,
+        0.583333333f, 0.875f
+    };
+    static float jitter16[] = {
+        0.375f, 0.4375f,
+        0.625f, 0.0625f,
+        0.875f, 0.1875f,
+        0.125f, 0.0625f,
+        0.375f, 0.6875f,
+        0.875f, 0.4375f,
+        0.625f, 0.5625f,
+        0.375f, 0.9375f,
+        0.625f, 0.3125f,
+        0.125f, 0.5625f,
+        0.125f, 0.8125f,
+        0.375f, 0.1875f,
+        0.875f, 0.9375f,
+        0.875f, 0.6875f,
+        0.125f, 0.3125f,
+        0.625f, 0.8125f
+    };
+    
+    static float* jittertab[] = {
+        jitter2,
+        jitter3,
+        jitter4,
+        jitter5,
+        jitter6,
+        jitter8,
+        jitter8,
+        jitter9,
+        jitter12,
+        jitter12,
+        jitter12,
+        jitter16,
+        jitter16,
+        jitter16,
+        jitter16
+    };
+    
+    float* jittab;
+    
+    if (numpasses > 16) numpasses = 16;
+    if (curpass >= numpasses) curpass = numpasses - 1;
+    
+    jittab = jittertab[numpasses-2];
+    
+    if (numpasses < 2) {
+        jitter[0] = 0.0f;
+        jitter[1] = 0.0f;
+        jitter[2] = 0.0f;
+    } else {
+        jitter[0] = (jittab[curpass*2] - 0.5f) * 2.0f / ((float)vpsize[0]);
+        jitter[1] = (jittab[curpass*2+1] - 0.5f) * 2.0f / ((float)vpsize[1]);
+        jitter[2] = 0.0f;
     }
-    
-    // Simple jitter pattern - can be enhanced later
-    float dx = 1.0f / vpsize[0];
-    float dy = 1.0f / vpsize[1];
-    
-    // Create a simple jitter pattern based on pass number
-    jitter[0] = dx * ((curpass % 4) - 1.5f) * 0.5f;
-    jitter[1] = dy * ((curpass / 4) - 1.5f) * 0.5f;
 }
 
-// ===== Priority-based atexit system =====
+/* ********************************************************************** */
+/* Atexit system */
 
-struct tb_atexit_data {
+void free_std_fds(void);
+
+typedef struct {
     char* name;
     coin_atexit_f* func;
-    std::int32_t priority;
-    std::uint32_t cnt;
-};
+    int32_t priority;
+    uint32_t cnt;
+} tb_atexit_data;
 
-static std::vector<tb_atexit_data*> atexit_list;
-static bool isexiting = false;
-static std::mutex atexit_list_mutex;
+static cc_list* atexit_list = NULL;
+static SbBool isexiting = COIN_FALSE;
 
-static int atexit_qsort_cb(const void* q0, const void* q1) {
-    tb_atexit_data* p0 = *((tb_atexit_data**)q0);
-    tb_atexit_data* p1 = *((tb_atexit_data**)q1);
-
-    /* sort list on ascending priorities, so that high priority
-       callbacks are called first  */
+static int atexit_qsort_cb(const void* q0, const void* q1)
+{
+    tb_atexit_data* p0, * p1;
+    
+    p0 = *((tb_atexit_data**) q0);
+    p1 = *((tb_atexit_data**) q1);
+    
     if (p0->priority < p1->priority) return -1;
     if (p0->priority > p1->priority) return 1;
-
-    /* when priority is equal, use LIFO */
+    
     if (p0->cnt < p1->cnt) return -1;
     return 1;
 }
 
-void coin_atexit_cleanup(void) {
-    if (atexit_list.empty()) return;
-
-    isexiting = true;
-
-    const char* debugstr = coin_getenv("COIN_DEBUG_CLEANUP");
-    bool debug = debugstr && (std::atoi(debugstr) > 0);
-
-    // Sort the atexit list by priority
-    std::sort(atexit_list.begin(), atexit_list.end(), [](tb_atexit_data* a, tb_atexit_data* b) {
-        if (a->priority != b->priority) {
-            return a->priority < b->priority;  // Lower priority values come first
-        }
-        return a->cnt < b->cnt;  // LIFO for same priority
-    });
-
-    // Call cleanup functions in reverse order (high priority first)
-    for (auto it = atexit_list.rbegin(); it != atexit_list.rend(); ++it) {
-        tb_atexit_data* data = *it;
+void coin_atexit_cleanup(void)
+{
+    int i, n;
+    tb_atexit_data* data;
+    const char* debugstr;
+    SbBool debug = COIN_FALSE;
+    
+    if (!atexit_list) return;
+    
+    isexiting = COIN_TRUE;
+    
+    debugstr = CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_CLEANUP");
+    debug = debugstr && (atoi(debugstr) > 0);
+    
+    n = cc_list_get_length(atexit_list);
+    qsort(cc_list_get_array(atexit_list), n, sizeof(void*), atexit_qsort_cb);
+    
+    for (i = n-1; i >= 0; i--) {
+        data = (tb_atexit_data*) cc_list_get(atexit_list, i);
         if (debug) {
-            std::fprintf(stdout, "coin_atexit_cleanup: invoking %s()\n", data->name);
+            fprintf(stdout, "coin_atexit_cleanup: invoking %s()\n", data->name);
         }
         data->func();
-        std::free(data->name);
-        std::free(data);
+        free(data->name);
+        free(data);
     }
-
-    atexit_list.clear();
-    isexiting = false;
-
+    
+    free_std_fds();
+    
+    cc_list_destruct(atexit_list);
+    atexit_list = NULL;
+    isexiting = COIN_FALSE;
+    
     if (debug) {
-        std::fprintf(stdout, "coin_atexit_cleanup: fini\n");
+        fprintf(stdout, "coin_atexit_cleanup: fini\n");
     }
 }
 
-void coin_atexit_func(const char* name, coin_atexit_f* func, coin_atexit_priorities priority) {
-    std::lock_guard<std::mutex> lock(atexit_list_mutex);
+void coin_atexit_func(const char* name, coin_atexit_f* f, coin_atexit_priorities priority)
+{
+#ifdef COIN_THREADSAFE
+    atexit_list_monitor.lock();
+#endif /* COIN_THREADSAFE */
     
     assert(!isexiting && "tried to attach an atexit function while exiting");
-
-    tb_atexit_data* data = (tb_atexit_data*)std::malloc(sizeof(tb_atexit_data));
-    data->name = strdup(name);
-    data->func = func;
-    data->priority = priority;
-    data->cnt = static_cast<std::uint32_t>(atexit_list.size());
-
-    atexit_list.push_back(data);
+    
+    if (atexit_list == NULL) {
+        atexit_list = cc_list_construct();
+    }
+    
+    {
+        tb_atexit_data* data;
+        
+        data = (tb_atexit_data*) malloc(sizeof(tb_atexit_data));
+        data->name = strdup(name);
+        data->func = f;
+        data->priority = priority;
+        data->cnt = cc_list_get_length(atexit_list);
+        
+        cc_list_append(atexit_list, data);
+    }
+    
+#ifdef COIN_THREADSAFE
+    atexit_list_monitor.unlock();
+#endif /* COIN_THREADSAFE */
 }
 
-SbBool coin_is_exiting(void) {
+void cc_coin_atexit(coin_atexit_f* f)
+{
+    coin_atexit_func("cc_coin_atexit", f, CC_ATEXIT_EXTERNAL);
+}
+
+void cc_coin_atexit_static_internal(coin_atexit_f* fp)
+{
+    coin_atexit_func("cc_coin_atexit_static_internal", fp, CC_ATEXIT_STATIC_DATA);
+}
+
+SbBool coin_is_exiting(void)
+{
     return isexiting;
 }
 
-void cc_coin_atexit(coin_atexit_f* fp) {
-    if (fp) {
-        coin_atexit_func("cc_coin_atexit", fp, CC_ATEXIT_EXTERNAL);
+/* ********************************************************************** */
+/* File descriptor functions */
+
+#ifndef STDIN_FILENO
+#define STDIN_FILENO 0
+#endif
+#ifndef STDOUT_FILENO
+#define STDOUT_FILENO 1
+#endif
+#ifndef STDERR_FILENO
+#define STDERR_FILENO 2
+#endif
+
+static FILE* coin_stdin = NULL;
+static FILE* coin_stdout = NULL;
+static FILE* coin_stderr = NULL;
+static int coin_dup_stdin = -1;
+static int coin_dup_stdout = -1;
+static int coin_dup_stderr = -1;
+
+void free_std_fds(void)
+{
+    if (coin_stdin) {
+        assert(coin_dup_stdin != -1);
+        fclose(coin_stdin);
+        coin_stdin = NULL;
+        dup2(coin_dup_stdin, STDIN_FILENO);
+        close(coin_dup_stdin);
+        coin_dup_stdin = -1;
+    }
+    if (coin_stdout) {
+        assert(coin_dup_stdout != -1);
+        fclose(coin_stdout);
+        coin_stdout = NULL;
+        dup2(coin_dup_stdout, STDOUT_FILENO);
+        close(coin_dup_stdout);
+        coin_dup_stdout = -1;
+    }
+    if (coin_stderr) {
+        assert(coin_dup_stderr != -1);
+        fclose(coin_stderr);
+        coin_stderr = NULL;
+        dup2(coin_dup_stderr, STDERR_FILENO);
+        close(coin_dup_stderr);
+        coin_dup_stderr = -1;
     }
 }
 
-void cc_coin_atexit_static_internal(coin_atexit_f* fp) {
-    if (fp) {
-        coin_atexit_func("cc_coin_atexit_static_internal", fp, CC_ATEXIT_STATIC_DATA);
+FILE* coin_get_stdin(void)
+{
+    if (!coin_stdin) {
+        coin_dup_stdin = dup(STDIN_FILENO);
+        coin_stdin = fdopen(STDIN_FILENO, "r");
     }
+    return coin_stdin;
 }
 
-// COIN_DEBUG is typically defined for debug builds
-#ifndef COIN_DEBUG
-#if !defined(NDEBUG) || defined(_DEBUG) || defined(DEBUG)
-#define COIN_DEBUG 1
-#else
-#define COIN_DEBUG 0
-#endif
-#endif
-
-int coin_debug_caching_level(void) {
-#if COIN_DEBUG
-    static int debug_level = -1;
-    if (debug_level < 0) {
-        const char* env = coin_getenv("COIN_DEBUG_CACHING");
-        debug_level = env ? std::atoi(env) : 0;
+FILE* coin_get_stdout(void)
+{
+    if (!coin_stdout) {
+        coin_dup_stdout = dup(STDOUT_FILENO);
+        coin_stdout = fdopen(STDOUT_FILENO, "w");
     }
-    return debug_level;
-#else
-    return 0;
-#endif
+    return coin_stdout;
 }
 
-int coin_debug_extra(void) {
-#if COIN_DEBUG
-    static int debug_extra = -1;
-    if (debug_extra < 0) {
-        const char* env = coin_getenv("COIN_DEBUG_EXTRA");
-        debug_extra = (env && std::atoi(env) == 1) ? 1 : 0;
+FILE* coin_get_stderr(void)
+{
+    if (!coin_stderr) {
+        coin_dup_stderr = dup(STDERR_FILENO);
+        coin_stderr = fdopen(STDERR_FILENO, "w");
     }
-    return debug_extra;
-#else
-    return 0;
-#endif
+    return coin_stderr;
 }
 
-int coin_debug_normalize(void) {
-#if COIN_DEBUG
-    static int debug_normalize = -1;
-    if (debug_normalize < 0) {
-        const char* env = coin_getenv("COIN_DEBUG_NORMALIZE");
-        debug_normalize = (env && std::atoi(env) == 1) ? 1 : 0;
-    }
-    return debug_normalize;
-#else
-    return 0;
-#endif
-}
+/* ********************************************************************** */
+/* Locale functions */
 
-} // extern "C"
-
-// ===== Additional internal functions that were in tidbits.cpp =====
-// These are not part of the public API but are used internally
-
-extern "C" {
-
-// Simple implementations for missing internal functions
-void coin_init_tidbits(void) {
-    // Initialize tidbits - now mostly empty since we use standard C++17
-}
-
-// The atexit functions are now implemented above with priority support
-
-// Simple implementations for file descriptor functions
-FILE* coin_get_stdin(void) {
-    return stdin;
-}
-
-FILE* coin_get_stdout(void) {
-    return stdout;
-}
-
-FILE* coin_get_stderr(void) {
-    return stderr;
-}
-
-// Simple implementations for missing utility functions
-int coin_finite(double value) {
-    return std::isfinite(value);
-}
-
-int coin_runtime_os(void) {
-#if defined(__APPLE__)
-    return 1; // COIN_OS_X
-#elif defined(_WIN32)
-    return 2; // COIN_MSWINDOWS  
-#else
-    return 0; // COIN_UNIX
-#endif
-}
-
-unsigned long coin_geq_prime_number(unsigned long num) {
-    // Simple prime number table for basic functionality
-    static const unsigned long primes[] = {
-        2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71,
-        73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151,
-        157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233,
-        239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, 317,
-        331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397, 401, 409, 419,
-        421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499, 503,
-        509, 521, 523, 541, 547, 557, 563, 569, 571, 577, 587, 593, 599, 601, 607,
-        613, 617, 619, 631, 641, 643, 647, 653, 659, 661, 673, 677, 683, 691, 701,
-        709, 719, 727, 733, 739, 743, 751, 757, 761, 769, 773, 787, 797, 809, 811,
-        821, 823, 827, 829, 839, 853, 857, 859, 863, 877, 881, 883, 887, 907, 911,
-        919, 929, 937, 941, 947, 953, 967, 971, 977, 983, 991, 997, 1009, 1013,
-        1019, 1021, 1031, 1033, 1039, 1049, 1051, 1061, 1063, 1069, 1087, 1091,
-        1093, 1097, 1103, 1109, 1117, 1123, 1129, 1151, 1153, 1163, 1171, 1181,
-        1187, 1193, 1201, 1213, 1217, 1223, 1229, 1231, 1237, 1249, 1259, 1277,
-        4294967291UL // Large prime for hash tables
-    };
+SbBool coin_locale_set_portable(cc_string* storeold)
+{
+    const char* loc;
     
-    for (size_t i = 0; i < sizeof(primes) / sizeof(primes[0]); ++i) {
-        if (primes[i] >= num) {
-            return primes[i];
+    const char* deflocale = setlocale(LC_NUMERIC, NULL);
+    if (strcmp(deflocale, "C") == 0) {
+        return COIN_FALSE;
+    }
+    
+    cc_string_construct(storeold);
+    cc_string_set_text(storeold, deflocale);
+    
+    loc = setlocale(LC_NUMERIC, "C");
+    assert(loc != NULL && "could not set locale to supposed portable C locale");
+    return COIN_TRUE;
+}
+
+void coin_locale_reset(cc_string* storedold)
+{
+    const char* l = setlocale(LC_NUMERIC, cc_string_get_text(storedold));
+    assert(l != NULL && "could not reset locale");
+    cc_string_clean(storedold);
+}
+
+double coin_atof(const char* ptr)
+{
+    double v;
+    cc_string storedlocale;
+    SbBool changed = coin_locale_set_portable(&storedlocale);
+    v = atof(ptr);
+    if (changed) {
+        coin_locale_reset(&storedlocale);
+    }
+    return v;
+}
+
+/* ********************************************************************** */
+/* ASCII85 functions */
+
+static int coin_encode_ascii85(const unsigned char* in, unsigned char* out)
+{
+    uint32_t data =
+        ((uint32_t)(in[0])<<24) |
+        ((uint32_t)(in[1])<<16) |
+        ((uint32_t)(in[2])<< 8) |
+        ((uint32_t)(in[3]));
+    
+    if (data == 0) {
+        out[0] = 'z';
+        return 1;
+    }
+    out[4] = (unsigned char) (data%85 + '!');
+    data /= 85;
+    out[3] = (unsigned char) (data%85 + '!');
+    data /= 85;
+    out[2] = (unsigned char) (data%85 + '!');
+    data /= 85;
+    out[1] = (unsigned char) (data%85 + '!');
+    data /= 85;
+    out[0] = (unsigned char) (data%85 + '!');
+    return 5;
+}
+
+void coin_output_ascii85(FILE* fp,
+                        const unsigned char val,
+                        unsigned char* tuple,
+                        unsigned char* linebuf,
+                        int* tuplecnt, int* linecnt,
+                        const int rowlen,
+                        const SbBool flush)
+{
+    int i;
+    if (flush) {
+        for (i = *tuplecnt; i < 4; i++) tuple[i] = 0;
+    } else {
+        tuple[(*tuplecnt)++] = val;
+    }
+    if (flush || *tuplecnt == 4) {
+        if (*tuplecnt) {
+            int add = coin_encode_ascii85(tuple, linebuf + *linecnt);
+            if (flush) {
+                if (add == 1) {
+                    for (i = 0; i < 5; i++) linebuf[*linecnt + i] = '!';
+                }
+                *linecnt += *tuplecnt + 1;
+            } else {
+                *linecnt += add;
+            }
+            *tuplecnt = 0;
+        }
+        if (*linecnt >= rowlen) {
+            unsigned char store = linebuf[rowlen];
+            linebuf[rowlen] = 0;
+            fprintf(fp, "%s\n", linebuf);
+            linebuf[rowlen] = store;
+            for (i = rowlen; i < *linecnt; i++) {
+                linebuf[i-rowlen] = linebuf[i];
+            }
+            *linecnt -= rowlen;
+        }
+        if (flush && *linecnt) {
+            linebuf[*linecnt] = 0;
+            fprintf(fp, "%s\n", linebuf);
         }
     }
-    return num; // Fallback
 }
 
-// Placeholder implementations for locale and other functions
-struct cc_string; // Forward declaration
-
-SbBool coin_locale_set_portable(struct cc_string* storeold) {
-    // Simplified - return false meaning no change needed
-    return false;
+void coin_flush_ascii85(FILE* fp,
+                       unsigned char* tuple,
+                       unsigned char* linebuf,
+                       int* tuplecnt, int* linecnt,
+                       const int rowlen)
+{
+    coin_output_ascii85(fp, 0, tuple, linebuf, tuplecnt, linecnt, rowlen, COIN_TRUE);
 }
 
-void coin_locale_reset(struct cc_string* storedold) {
-    // Simplified - do nothing
-}
+/* ********************************************************************** */
+/* Version parsing */
 
-double coin_atof(const char* ptr) {
-    // Use standard atof which should be equivalent for most uses
-    return std::atof(ptr);
-}
-
-SbBool coin_getcwd(struct cc_string* str) {
-    // Simplified - return false for now
-    return false;
-}
-
-int coin_isinf(double value) {
-    return std::isinf(value);
-}
-
-int coin_isnan(double value) {
-    return std::isnan(value);
-}
-
-SbBool coin_parse_versionstring(const char* versionstr, int* major, int* minor, int* patch) {
-    if (!versionstr) return false;
+SbBool coin_parse_versionstring(const char* versionstr,
+                               int* major,
+                               int* minor,
+                               int* patch)
+{
+    char buffer[256];
+    char* dotptr;
     
-    // Simple version string parsing
-    int maj = 0, min = 0, pat = 0;
-    int parsed = std::sscanf(versionstr, "%d.%d.%d", &maj, &min, &pat);
+    *major = 0;
+    if (minor) *minor = 0;
+    if (patch) *patch = 0;
+    if (versionstr == NULL) return COIN_FALSE;
     
-    if (major) *major = maj;
-    if (minor) *minor = (parsed >= 2) ? min : 0;
-    if (patch) *patch = (parsed >= 3) ? pat : 0;
+    (void)strncpy(buffer, versionstr, 255);
+    buffer[255] = '\0';
+    dotptr = strchr(buffer, '.');
+    if (dotptr) {
+        char* spaceptr;
+        char* start = buffer;
+        *dotptr = '\0';
+        *major = atoi(start);
+        if (minor == NULL) return COIN_TRUE;
+        start = ++dotptr;
+        
+        dotptr = strchr(start, '.');
+        spaceptr = strchr(start, ' ');
+        if (!dotptr && spaceptr) dotptr = spaceptr;
+        if (dotptr && spaceptr && spaceptr < dotptr) dotptr = spaceptr;
+        if (dotptr) {
+            int terminate = *dotptr == ' ';
+            *dotptr = '\0';
+            *minor = atoi(start);
+            if (patch == NULL) return COIN_TRUE;
+            if (!terminate) {
+                start = ++dotptr;
+                dotptr = strchr(start, ' ');
+                if (dotptr) *dotptr = '\0';
+                *patch = atoi(start);
+            }
+        } else {
+            *minor = atoi(start);
+        }
+    } else {
+        cc_debugerror_post("coin_parse_versionstring",
+                          "Invalid versionstring: \"%s\"\n", versionstr);
+        return COIN_FALSE;
+    }
+    return COIN_TRUE;
+}
+
+/* ********************************************************************** */
+/* File system functions */
+
+#ifdef HAVE__GETCWD
+#define getcwd_wrapper(buf, size) _getcwd(buf, (int)size)
+#elif defined(HAVE_GETCWD)
+#define getcwd_wrapper(buf, size) getcwd(buf, size)
+#else
+#define getcwd_wrapper(buf, size) NULL
+#endif
+
+SbBool coin_getcwd(cc_string* str)
+{
+    char buf[256], * dynbuf = NULL;
+    size_t bufsize = sizeof(buf);
+    char* cwd = getcwd_wrapper(buf, bufsize);
     
-    return parsed >= 1;
+    while ((cwd == NULL) && (errno == ERANGE)) {
+        bufsize *= 2;
+        free(dynbuf);
+        dynbuf = (char*)malloc(bufsize);
+        cwd = getcwd_wrapper(dynbuf, bufsize);
+    }
+    if (cwd == NULL) {
+        cc_string_set_text(str, strerror(errno));
+    } else {
+        cc_string_set_text(str, cwd);
+    }
+    
+    free(dynbuf);
+    return cwd ? COIN_TRUE : COIN_FALSE;
 }
 
-// Placeholder implementations for ASCII85 functions  
-void coin_output_ascii85(FILE* fp, const unsigned char val, unsigned char* tuple,
-                         unsigned char* linebuf, int* tuplecnt, int* linecnt,
-                         const int rowlen, const bool flush) {
-    // Simplified placeholder
+/* ********************************************************************** */
+/* Math utility functions */
+
+int coin_isinf(double value)
+{
+#ifdef HAVE_ISINF
+    return isinf(value);
+#elif defined(HAVE_FPCLASS)
+    if (fpclass(value) == FP_NINF) { return -1; }
+    if (fpclass(value) == FP_PINF) { return +1; }
+    return 0;
+#elif defined(HAVE__FPCLASS)
+    if (_fpclass(value) == _FPCLASS_NINF) { return -1; }
+    if (_fpclass(value) == _FPCLASS_PINF) { return +1; }
+    return 0;
+#else
+    return 0;
+#endif
 }
 
-void coin_flush_ascii85(FILE* fp, unsigned char* tuple, unsigned char* linebuf,
-                        int* tuplecnt, int* linecnt, const int rowlen) {
-    // Simplified placeholder
+int coin_isnan(double value)
+{
+#ifdef HAVE_ISNAN
+    return isnan(value);
+#elif defined(HAVE__ISNAN)
+    return _isnan(value);
+#elif defined(HAVE_FPCLASS)
+    if (fpclass(value) == FP_SNAN) { return 1; }
+    if (fpclass(value) == FP_QNAN) { return 1; }
+    return 0;
+#elif defined(HAVE__FPCLASS)
+    if (_fpclass(value) == _FPCLASS_SNAN) { return 1; }
+    if (_fpclass(value) == _FPCLASS_QNAN) { return 1; }
+    return 0;
+#else
+    return 0;
+#endif
 }
 
-} // extern "C"
+int coin_finite(double value)
+{
+#ifdef HAVE_FINITE
+    return finite(value);
+#elif defined(HAVE__FINITE)
+    return _finite(value);
+#else
+    return !coin_isinf(value) && !coin_isnan(value);
+#endif
+}
+
+/* ********************************************************************** */
+/* Prime number functions */
+
+static const unsigned long coin_prime_table[32] = {
+    2,
+    5,
+    11,
+    17,
+    37,
+    67,
+    131,
+    257,
+    521,
+    1031,
+    2053,
+    4099,
+    8209,
+    16411,
+    32771,
+    65537,
+    131101,
+    262147,
+    524309,
+    1048583,
+    2097169,
+    4194319,
+    8388617,
+    16777259,
+    33554467,
+    67108879,
+    134217757,
+    268435459,
+    536870923,
+    1073741827,
+    2147483659U,
+    4294967291U
+};
+
+unsigned long coin_geq_prime_number(unsigned long num)
+{
+    int i;
+    for (i = 0; i < 32; i++) {
+        if (coin_prime_table[i] >= num) {
+            return coin_prime_table[i];
+        }
+    }
+    return num;
+}
+
+/* ********************************************************************** */
+/* OS detection */
+
+int coin_runtime_os(void)
+{
+#if defined(__APPLE__)
+    return COIN_OS_X;
+#elif defined(HAVE_WIN32_API)
+    return COIN_MSWINDOWS;
+#else
+    return COIN_UNIX;
+#endif
+}
+
+/* ********************************************************************** */
+/* Debug functions */
+
+int coin_debug_extra(void)
+{
+#if COIN_DEBUG
+    return COIN_DEBUG_EXTRA;
+#else
+    return 0;
+#endif
+}
+
+int coin_debug_normalize(void)
+{
+#if COIN_DEBUG
+    return COIN_DEBUG_NORMALIZE;
+#else
+    return 0;
+#endif
+}
+
+int coin_debug_caching_level(void)
+{
+#if COIN_DEBUG
+    static int COIN_DEBUG_CACHING = -1;
+    if (COIN_DEBUG_CACHING < 0) {
+        const char* env = CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_CACHING");
+        if (env) COIN_DEBUG_CACHING = atoi(env);
+        else COIN_DEBUG_CACHING = 0;
+    }
+    return COIN_DEBUG_CACHING;
+#else
+    return 0;
+#endif
+}
+
+/* ********************************************************************** */
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif

@@ -55,7 +55,7 @@
 #include "fonts/win32.h"
 #include "fonts/defaultfonts.h"
 #include "threads/threadsutilp.h"
-#include "tidbitsp.h"
+
 #include "misc/SoEnvironment.h"
 
 /* ********************************************************************** */

@@ -41,7 +41,7 @@
 
 #include <Inventor/elements/SoProfileCoordinateElement.h>
 
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 #include "SbBasicP.h"
 
 #include <cassert>

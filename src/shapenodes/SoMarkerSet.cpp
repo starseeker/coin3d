@@ -99,7 +99,7 @@
 #endif // COIN_DEBUG
 
 #include "coindefs.h" // COIN_OBSOLETED
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 #include "nodes/SoSubNodeP.h"
 
 /*!

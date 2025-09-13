@@ -223,7 +223,7 @@
 #include <Inventor/system/gl.h>
 #include <Inventor/errors/SoDebugError.h>
 
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 #include "coindefs.h" // COIN_OBSOLETED
 #include "actions/SoActionP.h"
 #include "misc/SoDBP.h" // for global envvar COIN_PROFILER

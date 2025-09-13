@@ -45,7 +45,7 @@
 #include <Inventor/actions/SoWriteAction.h>
 #include <Inventor/SbName.h>
 
-#include "tidbitsp.h"
+
 #include "SoEnvironment.h"
 
 inline unsigned int SbHashFunc(const void * key);

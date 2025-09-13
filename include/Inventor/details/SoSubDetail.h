@@ -34,7 +34,7 @@
 \**************************************************************************/
 
 #include <Inventor/details/SoDetail.h>
-#include <Inventor/C/tidbits.h> // for cc_coin_atexit_static_internal()
+#include <Inventor/SuUtils.h> // for cc_coin_atexit_static_internal()
 #include <Inventor/SbName.h> // for implicit char* -> SbName cast in
                              // SoType::createType()
 #include <cassert>

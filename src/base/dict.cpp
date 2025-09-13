@@ -40,7 +40,7 @@
 #include "C/CoinTidbits.h"
 #include "C/errors/debugerror.h"
 
-#include "tidbitsp.h"
+
 #include "base/dictp.h"
 #include "coindefs.h"
 

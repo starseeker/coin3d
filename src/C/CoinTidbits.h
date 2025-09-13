@@ -35,46 +35,106 @@
 
 /*!
  * \file CoinTidbits.h
- * \brief C++17 replacement for Inventor/C/tidbits.h
+ * \brief Consolidated C++17 utility functions for Coin
  * 
- * This file provides C++17-based replacements for the utility functions
- * from the legacy C tidbits API, using standard library features and
- * modern C++ practices.
+ * This file consolidates all utility functions from the former tidbits files:
+ * - include/Inventor/C/tidbits.h 
+ * - src/C/tidbits.h
+ * - src/tidbitsp.h 
+ * - src/tidbits.cpp
  */
 
-// Minimal includes to avoid conflicts
+#include "C/basic.h"
+#include "base/CoinBasic.h"
 #include <cstdint>
 #include <cstdarg>
-#include <cstdio>  // For FILE*
+#include <cstdio>
 
-// Forward declaration for compatibility
-#ifndef _WIN32
-#include <unistd.h>
+#ifndef COIN_INTERNAL
+#error this is a private header file
 #endif
 
-// Use the existing SbBool definition to maintain compatibility
+// Forward declare SbBool to avoid header dependencies
 #ifndef SBBOOL_HEADER_FILE
 typedef bool SbBool;
+#define COIN_TRUE true
+#define COIN_FALSE false
+#else
+#define COIN_TRUE TRUE
+#define COIN_FALSE FALSE
 #endif
 
-// ===== C API COMPATIBILITY LAYER =====
-
+#ifdef __cplusplus
 extern "C" {
+#endif /* __cplusplus */
 
-// Legacy C types for compatibility
+/* ********************************************************************** */
+
+/* Endianness constants */
+enum CoinEndiannessValues {
+    COIN_HOST_IS_UNKNOWNENDIAN = -1,
+    COIN_HOST_IS_LITTLEENDIAN = 0,
+    COIN_HOST_IS_BIGENDIAN = 1
+};
+
+/* OS detection constants */
+enum CoinOSType {
+    COIN_UNIX,
+    COIN_OS_X,
+    COIN_MSWINDOWS
+};
+
+/* Atexit priorities enum */
+enum coin_atexit_priorities {
+    /* Absolute priorities goes first */
+    CC_ATEXIT_EXTERNAL = 2147483647,
+    CC_ATEXIT_NORMAL = 0,
+    CC_ATEXIT_DYNLIBS = -2147483647,
+    
+    /* Relative priorities */
+    CC_ATEXIT_REALTIME_FIELD = CC_ATEXIT_NORMAL + 10,
+    CC_ATEXIT_DRAGGERDEFAULTS = CC_ATEXIT_NORMAL + 2,
+    CC_ATEXIT_TRACK_SOBASE_INSTANCES = CC_ATEXIT_NORMAL + 1,
+    CC_ATEXIT_NORMAL_LOWPRIORITY = CC_ATEXIT_NORMAL - 1,
+    CC_ATEXIT_STATIC_DATA = CC_ATEXIT_NORMAL - 10,
+    CC_ATEXIT_SODB = CC_ATEXIT_NORMAL - 20,
+    CC_ATEXIT_SOBASE = CC_ATEXIT_NORMAL - 30,
+    CC_ATEXIT_SOTYPE = CC_ATEXIT_NORMAL - 40,
+    CC_ATEXIT_FONT_SUBSYSTEM = CC_ATEXIT_NORMAL - 100,
+    CC_ATEXIT_FONT_SUBSYSTEM_HIGHPRIORITY = CC_ATEXIT_FONT_SUBSYSTEM + 1,
+    CC_ATEXIT_FONT_SUBSYSTEM_LOWPRIORITY = CC_ATEXIT_FONT_SUBSYSTEM - 1,
+    CC_ATEXIT_MSG_SUBSYSTEM = CC_ATEXIT_NORMAL - 200,
+    CC_ATEXIT_SBNAME = CC_ATEXIT_NORMAL - 500,
+    CC_ATEXIT_THREADING_SUBSYSTEM = CC_ATEXIT_NORMAL - 1000,
+    CC_ATEXIT_THREADING_SUBSYSTEM_LOWPRIORITY = CC_ATEXIT_THREADING_SUBSYSTEM - 1,
+    CC_ATEXIT_THREADING_SUBSYSTEM_VERYLOWPRIORITY = CC_ATEXIT_THREADING_SUBSYSTEM - 2,
+    CC_ATEXIT_ENVIRONMENT = CC_ATEXIT_DYNLIBS + 10
+};
+
+/* Function pointer type for atexit cleanup functions */
 typedef void coin_atexit_f(void);
 
-// The coin_atexit_priorities enum and coin_atexit macro are defined in tidbitsp.h
-// which includes this header. This avoids conflicts when both headers are included.
+/* ********************************************************************** */
+/* Initialization */
 
-// C API functions that wrap the C++ implementation
+void coin_init_tidbits(void);
+
+/* ********************************************************************** */
+/* Basic utility functions */
+
 int coin_host_get_endianness(void);
 int coin_snprintf(char* dst, unsigned int n, const char* fmtstr, ...);
 int coin_vsnprintf(char* dst, unsigned int n, const char* fmtstr, va_list args);
 
+/* ********************************************************************** */
+/* Environment variable functions */
+
 const char* coin_getenv(const char* name);
 SbBool coin_setenv(const char* name, const char* value, int overwrite);
 void coin_unsetenv(const char* name);
+
+/* ********************************************************************** */
+/* Network byte order conversion functions */
 
 std::uint16_t coin_hton_uint16(std::uint16_t value);
 std::uint16_t coin_ntoh_uint16(std::uint16_t value);
@@ -88,58 +148,87 @@ float coin_ntoh_float_bytes(const char* value);
 void coin_hton_double_bytes(double value, char* result);
 double coin_ntoh_double_bytes(const char* value);
 
+/* ********************************************************************** */
+/* Power of two functions */
+
 SbBool coin_is_power_of_two(std::uint32_t x);
 std::uint32_t coin_next_power_of_two(std::uint32_t x);
 std::uint32_t coin_geq_power_of_two(std::uint32_t x);
 
+/* ********************************************************************** */
+/* Jitter functions */
+
 void coin_viewvolume_jitter(int numpasses, int curpass, const int* vpsize, float* jitter);
+
+/* ********************************************************************** */
+/* Atexit functions */
+
+#define coin_atexit(func, priority) \
+        coin_atexit_func(SO__QUOTE(func), func, priority)
+
+void coin_atexit_func(const char* name, coin_atexit_f* fp, coin_atexit_priorities priority);
+void coin_atexit_cleanup(void);
+SbBool coin_is_exiting(void);
 
 void cc_coin_atexit(coin_atexit_f* fp);
 void cc_coin_atexit_static_internal(coin_atexit_f* fp);
 
-// These functions are implemented by CoinTidbits.cpp but declared in tidbitsp.h:
-// - void coin_atexit_func(const char* name, coin_atexit_f* fp, coin_atexit_priorities priority);
-// - void coin_atexit_cleanup(void);
-// - SbBool coin_is_exiting(void);
-// - coin_atexit macro and coin_atexit_priorities enum
+/* ********************************************************************** */
+/* File descriptor functions */
 
-// Additional utility functions from tidbitsp.h
 FILE* coin_get_stdin(void);
 FILE* coin_get_stdout(void);
 FILE* coin_get_stderr(void);
 
-// Locale functions (forward declarations, avoid cc_string dependency)
+/* ********************************************************************** */
+/* Locale functions */
+
 struct cc_string;
 SbBool coin_locale_set_portable(struct cc_string* storeold);
 void coin_locale_reset(struct cc_string* storedold);
 double coin_atof(const char* ptr);
 
-// ASCII85 encoding functions
+/* ********************************************************************** */
+/* ASCII85 encoding functions */
+
 void coin_output_ascii85(FILE* fp, const unsigned char val, unsigned char* tuple,
                         unsigned char* linebuf, int* tuplecnt, int* linecnt,
                         const int rowlen, const SbBool flush);
 void coin_flush_ascii85(FILE* fp, unsigned char* tuple, unsigned char* linebuf,
                        int* tuplecnt, int* linecnt, const int rowlen);
 
-// Version parsing
+/* ********************************************************************** */
+/* Version parsing */
+
 SbBool coin_parse_versionstring(const char* versionstr, int* major, int* minor, int* patch);
 
-// Utility functions
+/* ********************************************************************** */
+/* Utility functions */
+
 SbBool coin_getcwd(struct cc_string* str);
 int coin_isinf(double value);
 int coin_isnan(double value);
 int coin_finite(double value);
 unsigned long coin_geq_prime_number(unsigned long num);
 
-// OS detection (enum defined in tidbitsp.h)
+/* ********************************************************************** */
+/* OS detection */
+
 int coin_runtime_os(void);
 
 #define COIN_MAC_FRAMEWORK_IDENTIFIER_CSTRING ("org.coin3d.Coin.framework")
+
+/* ********************************************************************** */
+/* Debug functions */
 
 int coin_debug_caching_level(void);
 int coin_debug_extra(void);
 int coin_debug_normalize(void);
 
-} // extern "C"
+/* ********************************************************************** */
 
-#endif // COIN_TIDBITS_INTERNAL_H
+#ifdef __cplusplus
+} /* extern "C" */
+#endif /* __cplusplus */
+
+#endif /* !COIN_TIDBITS_INTERNAL_H */

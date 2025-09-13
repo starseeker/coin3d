@@ -261,7 +261,7 @@
 #include <Inventor/errors/SoDebugError.h>
 
 #include "coindefs.h" // COIN_OBSOLETED
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 #include "nodekits/SoSubKitP.h"
 #include "SbBasicP.h"
 

@@ -36,7 +36,7 @@
 #include <cassert>
 #include <Inventor/SbName.h>
 #include <Inventor/SoType.h>
-#include <Inventor/C/tidbits.h>
+#include <Inventor/SuUtils.h>
 #include <Inventor/engines/SoEngine.h>
 #include <Inventor/engines/SoOutputData.h>
 #include <Inventor/fields/SoFieldData.h>

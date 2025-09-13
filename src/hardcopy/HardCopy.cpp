@@ -128,7 +128,7 @@
 
 #include <Inventor/annex/HardCopy/SoVectorizePSAction.h>
 
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 
 // *************************************************************************
 
