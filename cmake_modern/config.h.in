@@ -1,0 +1,105 @@
+#ifndef COIN_CONFIG_H
+#define COIN_CONFIG_H
+
+/* Modern Coin3D configuration header */
+
+/* Version information */
+#define COIN_MAJOR_VERSION @PROJECT_VERSION_MAJOR@
+#define COIN_MINOR_VERSION @PROJECT_VERSION_MINOR@
+#define COIN_MICRO_VERSION @PROJECT_VERSION_PATCH@
+#define COIN_VERSION "@PROJECT_VERSION@"
+#define COIN_VERSION_STRING "@PROJECT_VERSION@"
+
+/* Build configuration */
+#cmakedefine COIN_DEBUG @COIN_DEBUG@
+#cmakedefine COIN_THREADSAFE
+
+/* Platform detection */
+#ifdef _WIN32
+  #define COIN_SYSTEM "windows"
+  #ifdef COIN_MAKE_DLL
+    #define COINAPI __declspec(dllexport)
+  #elif defined(COIN_DLL)
+    #define COINAPI __declspec(dllimport)
+  #else
+    #define COINAPI
+  #endif
+#else
+  #define COINAPI
+  #ifdef __APPLE__
+    #define COIN_SYSTEM "macos"
+  #else
+    #define COIN_SYSTEM "unix"
+  #endif
+#endif
+
+/* Standard library features (C++20 assumes these) */
+#define HAVE_STDINT_H 1
+#define HAVE_STDDEF_H 1
+#define HAVE_UNISTD_H 1
+#define HAVE_SYS_TIME_H 1
+#define HAVE_TIME_H 1
+
+/* Math functions (C++20/C11 standard) */
+#define HAVE_ISINF 1
+#define HAVE_ISNAN 1
+#define HAVE_FINITE 1
+#define HAVE_VSNPRINTF 1
+
+/* Threading support */
+#ifdef COIN_THREADSAFE
+  #define HAVE_THREADS 1
+  #define USE_PTHREAD 1
+#endif
+
+/* OpenGL configuration */
+#cmakedefine COIN3D_USE_OSMESA
+#ifdef COIN3D_USE_OSMESA
+  #define HAVE_OSMESA 1
+  #define USE_MGL_NAMESPACE 1
+#else
+  #define HAVE_OPENGL 1
+  #define HAVE_GLU 1
+#endif
+
+/* Library naming */
+#define COIN_SYSTEM_LIBRARY_NAME "@COIN_SYSTEM_LIBRARY_NAME@"
+
+/* Optional features */
+#cmakedefine HAVE_NODEKITS
+#cmakedefine HAVE_DRAGGERS  
+#cmakedefine HAVE_MANIPULATORS
+
+/* Compiler function name macros */
+#if defined(__GNUC__) || defined(__clang__)
+  #define HAVE_CPP_COMPILER_FUNCTION_NAME_VAR __PRETTY_FUNCTION__
+  #define HAVE_C_COMPILER_FUNCTION_NAME_VAR __PRETTY_FUNCTION__
+#elif defined(_MSC_VER)
+  #define HAVE_CPP_COMPILER_FUNCTION_NAME_VAR __FUNCTION__ 
+  #define HAVE_C_COMPILER_FUNCTION_NAME_VAR __FUNCTION__
+#else
+  #define HAVE_CPP_COMPILER_FUNCTION_NAME_VAR __func__
+  #define HAVE_C_COMPILER_FUNCTION_NAME_VAR __func__
+#endif
+
+/* Fixed-width integer types (C++11/C++20 standard) */
+#include <cstdint>
+#define COIN_INT8_T int8_t
+#define COIN_UINT8_T uint8_t
+#define COIN_INT16_T int16_t
+#define COIN_UINT16_T uint16_t
+#define COIN_INT32_T int32_t
+#define COIN_UINT32_T uint32_t
+#define COIN_INT64_T int64_t
+#define COIN_UINT64_T uint64_t
+#define COIN_INTPTR_T intptr_t
+#define COIN_UINTPTR_T uintptr_t
+
+/* Time structures (modern systems) */
+#define SIM_TIMEVAL_TV_SEC_T time_t
+#define SIM_TIMEVAL_TV_USEC_T suseconds_t
+
+/* Build timestamp */
+#define COIN_BUILD_YEAR "@CMAKE_CURRENT_LIST_DIR@"
+
+#endif /* COIN_CONFIG_H */

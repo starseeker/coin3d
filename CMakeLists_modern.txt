@@ -45,7 +45,7 @@ cmake_dependent_option(HAVE_MANIPULATORS "Enable Manipulator support" OFF "HAVE_
 option(COIN3D_USE_OSMESA "Use OSMesa for offscreen rendering" OFF)
 
 # Set C++ standard
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -97,10 +97,52 @@ else()
     set(COIN_SYSTEM_LIBRARY_NAME "Coin")
 endif()
 
+# Configure headers that need generation
+# Create the Inventor/C directory in the build tree
+execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/include/Inventor/C")
+execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/include/Inventor/system")
+
+# Set up variables needed for configuration
+set(COIN_MAJOR_VERSION 4)
+set(COIN_MINOR_VERSION 0)
+set(COIN_MICRO_VERSION 5)
+set(COIN_BETA_VERSION "")
+set(COIN_VERSION "4.0.5")
+
+# GL Headers configuration for different platforms
+if(WIN32)
+    set(SIM_INCLUDE_WINDOWS_H "#include <windows.h>")
+else()
+    set(SIM_INCLUDE_WINDOWS_H "/* not windows */")
+endif()
+
+if(COIN3D_USE_OSMESA)
+    set(SIM_INCLUDE_GL_H "#include <GL/osmesa.h>")
+    set(SIM_INCLUDE_GLU_H "/* OSMesa - no GLU */")
+else()
+    set(SIM_INCLUDE_GL_H "#include <GL/gl.h>")
+    set(SIM_INCLUDE_GLU_H "#include <GL/glu.h>")
+endif()
+set(SIM_INCLUDE_GLEXT_H "#include <GL/glext.h>")
+
 # Configure config header
 configure_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modern/config.h.in"
     "${CMAKE_CURRENT_BINARY_DIR}/include/config.h"
+    @ONLY
+)
+
+# Configure basic header
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/Inventor/C/basic.h.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/include/Inventor/C/basic.h"
+    @ONLY
+)
+
+# Configure OpenGL headers
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/Inventor/system/gl-headers.h.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/include/Inventor/system/gl-headers.h"
     @ONLY
 )
 

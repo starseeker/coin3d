@@ -1,0 +1,46 @@
+@PACKAGE_INIT@
+
+# Modern Coin3D CMake configuration file
+
+include(CMakeFindDependencyMacro)
+
+# Find required dependencies
+find_dependency(Threads)
+
+# Find OpenGL dependencies based on build configuration  
+if(@COIN3D_USE_OSMESA@)
+    # OSMesa backend
+    find_path(OSMesa_INCLUDE_DIR GL/osmesa.h)
+    find_library(OSMesa_LIBRARY OSMesa)
+    if(NOT OSMesa_INCLUDE_DIR OR NOT OSMesa_LIBRARY)
+        set(Coin_FOUND FALSE)
+        set(Coin_NOT_FOUND_MESSAGE "OSMesa dependency not found")
+        return()
+    endif()
+else()
+    # System OpenGL backend
+    find_dependency(OpenGL)
+    if(UNIX AND NOT APPLE)
+        find_dependency(X11)
+    endif()
+endif()
+
+# Include targets file
+include("${CMAKE_CURRENT_LIST_DIR}/CoinTargets.cmake")
+
+# Set legacy variables for compatibility
+set(Coin_LIBRARIES Coin::Coin)
+set(Coin_INCLUDE_DIRS "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_INCLUDEDIR@")
+set(Coin_FOUND TRUE)
+
+# Print configuration info
+if(NOT Coin_FIND_QUIETLY)
+    message(STATUS "Found Coin ${Coin_VERSION}")
+    if(@COIN3D_USE_OSMESA@)
+        message(STATUS "  Using OSMesa backend for offscreen rendering")
+    else()
+        message(STATUS "  Using system OpenGL backend")
+    endif()
+endif()
+
+check_required_components(Coin)
