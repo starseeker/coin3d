@@ -99,7 +99,7 @@ endif()
 
 # Configure config header
 configure_file(
-    "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modern/config.h.in"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/config.h.in"
     "${CMAKE_CURRENT_BINARY_DIR}/include/config.h"
     @ONLY
 )
@@ -156,7 +156,7 @@ target_link_libraries(Coin
 )
 
 # Add source files from subdirectories
-include(cmake_modern/CoinSources.cmake)
+include(cmake/CoinSources.cmake)
 
 # Set compiler warnings
 if(MSVC)
@@ -201,7 +201,7 @@ install(EXPORT CoinTargets
 include(CMakePackageConfigHelpers)
 
 configure_package_config_file(
-    "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modern/CoinConfig.cmake.in"
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/CoinConfig.cmake.in"
     "${CMAKE_CURRENT_BINARY_DIR}/CoinConfig.cmake"
     INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Coin
 )
@@ -225,7 +225,7 @@ endif()
 
 if(COIN_BUILD_TESTS)
     enable_testing()
-    add_subdirectory(tests_modern)
+    add_subdirectory(testsuite)
 endif()
 
 if(COIN_BUILD_DOCUMENTATION)
