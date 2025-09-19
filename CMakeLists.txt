@@ -92,19 +92,8 @@ option(HAVE_SOUND "Enable OpenAL sound support" OFF)
 option(HAVE_3DS_IMPORT_CAPABILITIES "Enable 3ds import capabilities" OFF)
 
 # External dependencies
-option(USE_EXTERNAL_EXPAT "Use system install of Expat" OFF)
 option(USE_EXCEPTIONS "Compile with exceptions (g++ only)" ON)
 option(USE_SUPERGLU "Use superglu library, otherwise platform GLU" OFF)
-
-# Runtime linking options
-option(FONTCONFIG_RUNTIME_LINKING "Enable FontConfig runtime linking" ON)
-option(FREETYPE_RUNTIME_LINKING "Enable FreeType runtime linking" ON)
-option(LIBBZIP2_RUNTIME_LINKING "Enable libBZip2 runtime linking" ON)
-option(OPENAL_RUNTIME_LINKING "Enable OpenAL runtime linking" ON)
-option(SIMAGE_RUNTIME_LINKING "Enable simage runtime linking" ON)
-option(ZLIB_RUNTIME_LINKING "Enable ZLib runtime linking" ON)
-option(GLU_RUNTIME_LINKING "Enable GLU runtime linking" ON)
-option(SPIDERMONKEY_RUNTIME_LINKING "Enable SpiderMonkey runtime linking" ON)
 
 # Development and debug options
 option(COIN_VERBOSE "Add verbose debugging information during configure process" OFF)
@@ -130,11 +119,6 @@ cmake_dependent_option(COIN_DEBUG_CHECK_THREAD "Enable thread check in central C
 # ============================================================================
 # Installation paths configuration
 # ============================================================================
-
-if(HAVE_MULTIPLE_VERSION)
-    # TODO: Implement versioned installation paths if needed
-    message(WARNING "HAVE_MULTIPLE_VERSION is not fully implemented in modernized build")
-endif()
 
 # Coin-specific data directory
 set(CMAKE_INSTALL_DATADIR "${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}")
@@ -253,24 +237,6 @@ elseif(CMAKE_USE_PTHREADS_INIT)
 endif()
 list(APPEND COIN_TARGET_LINK_LIBRARIES Threads::Threads)
 
-# External XML parser
-if(USE_EXTERNAL_EXPAT)
-    find_package(EXPAT REQUIRED)
-    set(HAVE_EXPAT 1)
-    if(NOT TARGET EXPAT::EXPAT)
-        add_library(EXPAT::EXPAT UNKNOWN IMPORTED)
-        set_target_properties(EXPAT::EXPAT PROPERTIES
-            IMPORTED_LINK_INTERFACE_LANGUAGES "C"
-            IMPORTED_LOCATION "${EXPAT_LIBRARIES}"
-            INTERFACE_INCLUDE_DIRECTORIES "${EXPAT_INCLUDE_DIRS}")
-    endif()
-    list(APPEND COIN_TARGET_LINK_LIBRARIES EXPAT::EXPAT)
-else()
-    if(NOT WIN32)
-        set(XML_DEV_URANDOM 1)
-    endif()
-endif()
-
 # Super GLU support
 if(USE_SUPERGLU)
     find_package(superglu)
@@ -283,80 +249,6 @@ if(USE_SUPERGLU)
             list(REMOVE_ITEM COIN_TARGET_LINK_LIBRARIES OpenGL::GLU)
         endif()
         list(APPEND COIN_TARGET_LINK_LIBRARIES superglu::GLU)
-    endif()
-endif()
-
-# Audio support (OpenAL)
-if(HAVE_SOUND AND NOT OPENAL_RUNTIME_LINKING)
-    find_package(OpenAL)
-    if(OpenAL_FOUND)
-        set(HAVE_OPENAL 1)
-        
-        # Check for different OpenAL header locations
-        set(CMAKE_REQUIRED_INCLUDES ${OpenAL_INCLUDE_DIRS})
-        check_include_file(AL/al.h HAVE_AL_AL_H)
-        check_include_file(OpenAL/al.h HAVE_OPENAL_AL_H)
-        set(CMAKE_REQUIRED_INCLUDES)
-        
-        if(NOT TARGET OpenAL::OpenAL)
-            add_library(OpenAL::OpenAL UNKNOWN IMPORTED)
-            set_target_properties(OpenAL::OpenAL PROPERTIES
-                IMPORTED_LINK_INTERFACE_LANGUAGES "C"
-                IMPORTED_LOCATION "${OPENAL_LIBRARY}"
-                INTERFACE_INCLUDE_DIRECTORIES "${OPENAL_INCLUDE_DIR}")
-        endif()
-        list(APPEND COIN_TARGET_LINK_LIBRARIES OpenAL::OpenAL)
-    endif()
-endif()
-
-# Compression libraries
-if(NOT ZLIB_RUNTIME_LINKING)
-    find_package(ZLIB)
-    if(ZLIB_FOUND)
-        set(HAVE_ZLIB 1)
-        list(APPEND COIN_TARGET_LINK_LIBRARIES ZLIB::ZLIB)
-    endif()
-endif()
-
-if(NOT LIBBZIP2_RUNTIME_LINKING)
-    find_package(BZip2)
-    if(BZip2_FOUND)
-        set(HAVE_BZIP2 1)
-        list(APPEND COIN_TARGET_LINK_LIBRARIES BZip2::BZip2)
-    endif()
-endif()
-
-# Font libraries
-if(NOT FREETYPE_RUNTIME_LINKING)
-    find_package(Freetype)
-    if(Freetype_FOUND)
-        set(HAVE_FREETYPE 1)
-        set(HAVE_FREETYPE_H 1)
-        list(APPEND COIN_TARGET_LINK_LIBRARIES Freetype::Freetype)
-    endif()
-endif()
-
-if(NOT FONTCONFIG_RUNTIME_LINKING)
-    find_package(Fontconfig)
-    if(Fontconfig_FOUND)
-        set(HAVE_FONTCONFIG 1)
-        if(NOT TARGET Fontconfig::Fontconfig)
-            add_library(Fontconfig::Fontconfig UNKNOWN IMPORTED)
-            set_target_properties(Fontconfig::Fontconfig PROPERTIES
-                IMPORTED_LOCATION "${FONTCONFIG_LIBRARIES}"
-                INTERFACE_COMPILE_OPTIONS "${FONTCONFIG_COMPILE_OPTIONS}"
-                INTERFACE_INCLUDE_DIRECTORIES "${FONTCONFIG_INCLUDE_DIR}")
-        endif()
-        list(APPEND COIN_TARGET_LINK_LIBRARIES Fontconfig::Fontconfig)
-    endif()
-endif()
-
-# Image library
-if(NOT SIMAGE_RUNTIME_LINKING)
-    find_package(simage)
-    if(simage_FOUND)
-        set(HAVE_LIBSIMAGE 1)
-        list(APPEND COIN_TARGET_LINK_LIBRARIES simage::simage)
     endif()
 endif()
 
@@ -820,9 +712,6 @@ add_feature_info(ThreadSafe COIN_THREADSAFE "Thread safe render traversals")
 add_feature_info(NodeKits HAVE_NODEKITS "NodeKit support")
 add_feature_info(Draggers HAVE_DRAGGERS "Dragger support")
 add_feature_info(Manipulators HAVE_MANIPULATORS "Manipulator support") 
-add_feature_info(Sound HAVE_SOUND "Sound support")
-add_feature_info(3dsImport HAVE_3DS_IMPORT_CAPABILITIES "3ds import capabilities")
-add_feature_info(Expat USE_EXTERNAL_EXPAT "Use system install of Expat")
 add_feature_info(Exceptions USE_EXCEPTIONS "Compile with exceptions")
 add_feature_info(SuperGLU USE_SUPERGLU "Use superglu library")
 
