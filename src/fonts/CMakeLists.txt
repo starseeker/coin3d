@@ -1,7 +1,6 @@
 # source files
 set(COIN_FONTS_FILES
 	fontlib_wrapper.cpp
-	win32.cpp
 	coretext.cpp
 	freetype.cpp
 	profont_data.cpp
@@ -18,8 +17,6 @@ set(COIN_FONTS_FILES
 set(COIN_FONTS_INTERNAL_FILES
 	fontlib_wrapper.h
 	fontlib_wrapper.cpp
-	win32.h
-	win32.cpp
 	freetype.h
 	freetype.cpp
 	profont_data.h

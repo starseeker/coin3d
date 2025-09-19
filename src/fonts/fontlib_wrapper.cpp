@@ -52,7 +52,6 @@
 #include "base/dict.h"
 #include "base/dynarray.h"
 #include "fonts/freetype.h"
-#include "fonts/win32.h"
 #include "fonts/defaultfonts.h"
 #include "threads/threadsutilp.h"
 
@@ -70,9 +69,7 @@ static void * flw_global_lock = NULL;
 static int flw_global_font_index = 0;
 static SbBool initialized = FALSE;
 static SbBool tried_init_freetype_fontlib = FALSE;
-static SbBool tried_init_win32_fontlib = FALSE;
 static SbBool fontlib_freetype_available = FALSE;
-static SbBool fontlib_win32_available = FALSE;
 
 
 /* Debug: enable this in case code hangs waiting for a lock.  A hang
@@ -198,52 +195,8 @@ using_freetype(void)
   return fontlib_freetype_available;
 }
 
-static void win32api_cleanup(void) { cc_flww32_exit(); }
-
-static SbBool
-using_win32api(void)
-{
-  if (!tried_init_win32_fontlib) {
-    tried_init_win32_fontlib = TRUE;
-
-    auto env = CoinInternal::getEnvironmentVariable("COIN_FORCE_WIN32FONTS_OFF");
-    fontlib_win32_available = (env.has_value() && (std::atoi(env->c_str()) > 0)) ? FALSE : TRUE;
-    fontlib_win32_available = fontlib_win32_available && cc_flww32_initialize();
-    if (cc_font_debug()) {
-      cc_debugerror_postinfo("cc_flw_initialize",
-                             "Win32 API can%s be used for font support",
-                             fontlib_win32_available ? "" : " not");
-    }
-
-    /* Allow only one of the availability flags to be set, as it is too
-       easy to get bugs in our code in this file if we depend on
-       always checking one particular flag before the other.
-
-       We prefer to consistently use the FreeType library over the
-       Win32 API if available -- assuming that FreeType has been
-       installed for a good reason on the Windows machine in question.
-    */
-
-    if (fontlib_win32_available && using_freetype()) {
-      if (cc_font_debug()) {
-        cc_debugerror_postinfo("using_win32api",
-                               "FreeType library will take precedence "
-                               "over Win32 API");
-      }
-      cc_flww32_exit();
-      fontlib_win32_available = FALSE;
-    }
-
-    if (fontlib_win32_available) {
-      coin_atexit((coin_atexit_f *)win32api_cleanup,
-                  /* priority must be lower than for abstraction
-                     interface, so don't change this willy-nilly: */
-                  CC_ATEXIT_FONT_SUBSYSTEM_LOWPRIORITY);
-    }
-  }
-
-  return fontlib_win32_available;
-}
+/* Win32 font support has been removed. The library now relies on FreeType
+   for portable font handling across all platforms. */
 
 /* ********************************************************************** */
 
@@ -388,8 +341,8 @@ flw_exit(void)
   fontarray = NULL;
   initialized = FALSE;
 
-  tried_init_freetype_fontlib = tried_init_win32_fontlib = FALSE;
-  fontlib_freetype_available = fontlib_win32_available = FALSE;
+  tried_init_freetype_fontlib = FALSE;
+  fontlib_freetype_available = FALSE;
 
   CC_MUTEX_DESTRUCT(flw_global_lock);
   flw_global_font_index = 0;
@@ -496,8 +449,7 @@ cc_flw_unref_font(int fontid)
       fs->refcount--;
       if (fs->refcount == 0) {
         if (!fs->defaultfont) {
-          if (using_win32api()) { cc_flww32_done_font(fs->nativefonthandle); }
-          else if (using_freetype()) { cc_flwft_done_font(fs->nativefonthandle); }
+          if (using_freetype()) { cc_flwft_done_font(fs->nativefonthandle); }
         }
         fontstruct_rmfont(fontid);
       }
@@ -551,10 +503,7 @@ cc_flw_get_font_id(const char * fontname, unsigned int sizey,
      best match for "defaultFont" (and get a positive result for some
      random font). */
   if (strcmp(fontname, "defaultFont") != 0) {
-    if (using_win32api()) {
-      font = cc_flww32_get_font(fontname, sizey, angle, complexity);
-    }
-    else if (using_freetype()) {
+    if (using_freetype()) {
      font = cc_flwft_get_font(fontname, sizey);
     }
   }
@@ -577,10 +526,7 @@ cc_flw_get_font_id(const char * fontname, unsigned int sizey,
 
     fs->angle = angle;
 
-    if (using_win32api()) {
-      cc_flww32_get_font_name(font, &realname);
-    }
-    else if (using_freetype()) {
+    if (using_freetype()) {
       cc_flwft_set_char_size(font, sizey);
       cc_flwft_set_font_rotation(font, angle);
       cc_flwft_get_font_name(font, &realname);
@@ -648,8 +594,7 @@ cc_flw_get_glyph(int font, unsigned int character)
     }
 
     if (!fs->defaultfont) {
-      if (using_win32api()) { glyph = cc_flww32_get_glyph(fs->nativefonthandle, character); }
-      else if (using_freetype()) { glyph = cc_flwft_get_glyph(fs->nativefonthandle, character); }
+      if (using_freetype()) { glyph = cc_flwft_get_glyph(fs->nativefonthandle, character); }
 
       if (glyph > 0) {
         gs->nativeglyphidx = glyph;
@@ -738,13 +683,9 @@ cc_flw_get_vector_advance(int font, unsigned int glyph, float * x, float * y)
     *x = coin_default3dfont_get_advance(gs->character);
   }
   else {
-    if (using_win32api()) {
-      cc_flww32_get_vector_advance(fs->nativefonthandle, gs->nativeglyphidx,
-                                   x, y);
-    }
-    else if (using_freetype()) {
+    if (using_freetype()) {
       cc_flwft_get_vector_advance(fs->nativefonthandle, gs->nativeglyphidx,
-                                  x, y);
+                                   x, y);
     }
   }
 
@@ -768,15 +709,10 @@ cc_flw_get_bitmap_kerning(int font, unsigned int glyph1, unsigned int glyph2,
     gs1 = flw_glyphidx2glyphptr(fs, glyph1);
     gs2 = flw_glyphidx2glyphptr(fs, glyph2);
     assert(gs1 && gs2);
-    if (using_win32api()) {
-      cc_flww32_get_bitmap_kerning(fs->nativefonthandle,
+    if (using_freetype()) {
+      cc_flwft_get_bitmap_kerning(fs->nativefonthandle,
                                    gs1->nativeglyphidx,
                                    gs2->nativeglyphidx, x, y);
-    }
-    else if (using_freetype()) {
-      cc_flwft_get_bitmap_kerning(fs->nativefonthandle,
-                                  gs1->nativeglyphidx,
-                                  gs2->nativeglyphidx, x, y);
     }
   }
 
@@ -801,8 +737,8 @@ cc_flw_get_vector_kerning(int font, unsigned int glyph1, unsigned int glyph2,
   *x = *y = 0.0f;
 
   if (!fs->defaultfont) {
-    if (using_win32api()) {
-      cc_flww32_get_vector_kerning(fs->nativefonthandle,
+    if (using_freetype()) {
+      cc_flwft_get_vector_kerning(fs->nativefonthandle,
                                    gs1->nativeglyphidx,
                                    gs2->nativeglyphidx, x, y);
     }
@@ -835,8 +771,8 @@ cc_flw_done_glyph(int fontidx, unsigned int glyphidx)
   if (cc_font_debug()) { dump_cc_flw_glyph("cc_flw_done_glyph", gs); }
 
   if (!gs->fromdefaultfont) {
-    if (using_win32api()) {
-      cc_flww32_done_glyph(fs->nativefonthandle, gs->nativeglyphidx);
+    if (using_freetype()) {
+      cc_flwft_done_glyph(fs->nativefonthandle, gs->nativeglyphidx);
     }
     else if (using_freetype()) {
       cc_flwft_done_glyph(fs->nativefonthandle, gs->nativeglyphidx);
@@ -866,8 +802,8 @@ cc_flw_get_bitmap(int font, unsigned int glyph)
   if (gs->bitmap == NULL) {
 
     if (!gs->fromdefaultfont) {
-      if (using_win32api()) {
-        bm = cc_flww32_get_bitmap(fs->nativefonthandle, gs->nativeglyphidx);
+      if (using_freetype()) {
+        bm = cc_flwft_get_bitmap(fs->nativefonthandle, gs->nativeglyphidx);
       }
       else if (using_freetype()) {
         bm = cc_flwft_get_bitmap(fs->nativefonthandle, gs->nativeglyphidx);
@@ -921,8 +857,8 @@ cc_flw_get_vector_glyph(int font, unsigned int glyph)
                                                fs->complexity);
       if (!vector_glyph) { gs->fromdefaultfont = TRUE; }
     }
-    else if (using_win32api()) {
-      vector_glyph = cc_flww32_get_vector_glyph(fs->nativefonthandle,
+    else if (using_freetype()) {
+      vector_glyph = cc_flwft_get_vector_glyph(fs->nativefonthandle,
                                                 gs->nativeglyphidx,
                                                 fs->complexity);
       if (!vector_glyph) { gs->fromdefaultfont = TRUE; }
