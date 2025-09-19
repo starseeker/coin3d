@@ -251,11 +251,7 @@
 #include "base/namemap.h"
 #include "glue/glp.h"
 #include "glue/dlp.h"
-#include "glue/gl_agl.h"
-#include "glue/gl_cgl.h"
-#include "glue/gl_egl.h"
-#include "glue/gl_glx.h"
-#include "glue/gl_wgl.h"
+/* Platform-specific glue headers are no longer needed with callback-based contexts */
 #include "threads/threadsutilp.h"
 #include "misc/SoEnvironment.h"
 
@@ -273,8 +269,6 @@ static cc_list * gl_instance_created_cblist = NULL;
 static int COIN_MAXIMUM_TEXTURE2_SIZE = -1;
 static int COIN_MAXIMUM_TEXTURE3_SIZE = -1;
 static cc_glglue_offscreen_cb_functions* offscreen_cb = NULL;
-static int COIN_USE_AGL = -1;
-static int COIN_USE_EGL = -1;
 
 /* ********************************************************************** */
 
@@ -589,18 +583,10 @@ cc_glglue_getprocaddress(const cc_glglue * glue, const char * symname)
 {
   void * ptr = NULL;
 
-  // FIXME: also supply 'glue' to coin_[x]gl_getprocaddress()
-  ptr = coin_wgl_getprocaddress(glue, symname);
-  if (ptr) goto returnpoint;
-
-  ptr = eglglue_getprocaddress(glue, symname);
-  if (ptr) goto returnpoint;
-
-  ptr = glxglue_getprocaddress(glue, symname);
-  if (ptr) goto returnpoint;
-
+  /* With callback-based contexts, the application is responsible for
+     providing complete OpenGL function loading. We only attempt to
+     find the function through the shared library. */
   ptr = cc_dl_sym(coin_glglue_dl_handle(glue), symname);
-  if (ptr) goto returnpoint;
 
 returnpoint:
   if (coin_glglue_debug()) {
@@ -632,24 +618,7 @@ glglue_cleanup(void)
   }
   offscreen_cb = NULL;
 
-#ifdef HAVE_WGL
-  wglglue_cleanup();
-#else
-#if defined(HAVE_EGL)
-  if (COIN_USE_EGL > 0) eglglue_cleanup(); else
-#endif
-#if defined(HAVE_GLX)
-  glxglue_cleanup();
-#endif
-#if defined(HAVE_AGL)
-  if (COIN_USE_AGL > 0) aglglue_cleanup(); else
-#endif
-#if defined(HAVE_CGL)
-  cglglue_cleanup();
-#else
-  ;
-#endif
-#endif
+  /* Platform-specific cleanup is no longer needed with callback-based contexts */
 }
 
 static SbBool
@@ -2176,37 +2145,8 @@ glglue_check_driver(const char * vendor, const char * renderer,
   }
 }
 
-static void check_force_agl()
-{
-#ifdef HAVE_AGL
-  if (COIN_USE_AGL == -1) {
-    auto env = CoinInternal::getEnvironmentVariable("COIN_FORCE_AGL");
-    if (env.has_value()) {
-      COIN_USE_AGL = std::atoi(env->c_str());
-    }
-    else
-#ifdef HAVE_CGL
-    COIN_USE_AGL = 0;
-#else
-    COIN_USE_AGL = 1;
-#endif
-  }
-#endif
-}
-
-static void check_egl()
-{
-#if defined(HAVE_EGL) && !defined(HAVE_GLX)
-  COIN_USE_EGL = 1;
-#else
-  if (COIN_USE_EGL == -1) {
-    auto env = CoinInternal::getEnvironmentVariable("COIN_EGL");
-    if (env.has_value()) {
-      COIN_USE_EGL = std::atoi(env->c_str());
-    }
-  }
-#endif
-}
+/* Platform detection functions have been removed as they are no longer needed
+   with callback-based contexts */
 
 /* We're basically using the Singleton pattern to instantiate and
    return OpenGL-glue "object structs". We're constructing one
@@ -2233,8 +2173,7 @@ cc_glglue_instance(int contextid)
     if (env.has_value()) COIN_MAXIMUM_TEXTURE3_SIZE = std::atoi(env->c_str());
     else COIN_MAXIMUM_TEXTURE3_SIZE = -1;
   }
-  check_force_agl();
-  check_egl();
+  /* Platform detection calls removed */
 
   if (!gldict) {  /* First invocation, do initializations. */
     gldict = cc_dict_construct(16, 0.75f);
@@ -2312,20 +2251,8 @@ cc_glglue_instance(int contextid)
 
     glglue_set_glVersion(gi);
 
-#if defined(HAVE_EGL)
-    if (COIN_USE_EGL > 0) {
-      eglglue_init(gi);
-    } else {
-#endif
-
-    // Although the name is somewhat misleading this function does initialization
-    // for both GLX and non GLX.  See file gl_glx.cpp.
-    // wgl code depends on this initialization!
-    glxglue_init(gi);
-
-#if defined(HAVE_EGL)
-    }
-#endif
+  /* Platform-specific initialization is no longer needed with callback-based contexts.
+     Applications are responsible for providing complete OpenGL contexts through callbacks. */
 
     gi->vendorstr = (const char *)glGetString(GL_VENDOR);
     gi->vendor_is_SGI = strcmp((const char *)gi->vendorstr, "SGI") == 0;
@@ -4603,51 +4530,9 @@ cc_glglue_context_max_dimensions(unsigned int * width, unsigned int * height)
   *width = (unsigned int) size[0];
   *height = (unsigned int) size[1];
 
-  /* Check additional limits from pbuffer capabilities: */
-  {
-    /* will be filled with max-width, max-height and max-pixels: */
-    unsigned int pbufmax[3];
-    /* query functions below should return TRUE if implemented, and
-       the current offscreen buffer is a pbuffer: */
-    SbBool ok = FALSE;
-#if defined(HAVE_WGL)
-    ok = wglglue_context_pbuffer_max(ctx, pbufmax);
-#endif
-
-#if defined(HAVE_EGL)
-    if (COIN_USE_EGL > 0) ok = eglglue_context_pbuffer_max(ctx, pbufmax); else
-#endif
-#if defined(HAVE_GLX)
-    ok = glxglue_context_pbuffer_max(ctx, pbufmax);
-#else
-    ;
-#endif
-    
-#if defined(HAVE_AGL) || defined(HAVE_CGL)
-    /* FIXME: implement check on max pbuffer width, height and number
-       of pixels for AGL/CGL, if any such limits are imposed there.
-       20040713 mortene. */
-#endif
-    if (ok) {
-      int modulo = 0;
-
-      if (coin_glglue_debug()) {
-        cc_debugerror_postinfo("cc_glglue_context_max_dimensions",
-                               "pbuffer max dimensions, "
-                               "width==%u, height==%u, pixels==%u",
-                               pbufmax[0], pbufmax[1], pbufmax[2]);
-      }
-
-      *width = std::min(*width, pbufmax[0]);
-      *height = std::min(*height, pbufmax[1]);
-
-      while ((*width * *height) > pbufmax[2]) {
-        if (modulo % 2) { *width /= 2; }
-        else { *height /= 2; }
-        modulo++;
-      }
-    }
-  }
+  /* With callback-based contexts and FBO rendering, pbuffer limitations
+     do not apply. The maximum dimensions are determined by OpenGL texture
+     size limits and the standard 4096x4096 clamp below. */
 
   cc_glglue_context_reinstate_previous(ctx);
   cc_glglue_context_destruct(ctx);
@@ -4697,135 +4582,45 @@ cc_glglue_context_max_dimensions(unsigned int * width, unsigned int * height)
 SbBool
 cc_glglue_context_can_render_to_texture(void * COIN_UNUSED_ARG(ctx))
 {
-  /* No render-to-texture support in external offscreen rendering. */
-  if (offscreen_cb) return FALSE;
-
-#if defined(HAVE_NOGL)
+  /* Render-to-texture is not supported with the current FBO+callback architecture.
+     This functionality has been superseded by the portable FBO-based offscreen rendering. */
   return FALSE;
-#elif defined(HAVE_WGL)
-  return wglglue_context_can_render_to_texture(ctx);
-#else
-#if defined(HAVE_EGL)
-  if (COIN_USE_EGL > 0) return eglglue_context_can_render_to_texture(ctx);
-#endif
-#if defined(HAVE_GLX)
-  return FALSE;
-#endif
-#if defined(HAVE_AGL)
-  if (COIN_USE_AGL > 0) return aglglue_context_can_render_to_texture(ctx); else
-#endif
-#if defined(HAVE_CGL)
-  return cglglue_context_can_render_to_texture(ctx);
-#else
-  ;
-#endif
-#endif
 }
 
 
 void
 cc_glglue_context_bind_pbuffer(void * COIN_UNUSED_ARG(ctx))
 {
-  /* No render-to-texture support in external offscreen rendering. */
-  if (offscreen_cb) return;
-
-#if defined(HAVE_GLX) || defined(HAVE_NOGL)
-  /* FIXME: Implement for GLX.  The problem is that in GLX, there is
-     no way to bind a PBuffer as a texture (i.e. there is no
-     equivalent to the aglTexImagePBuffer() and wglBindTexImageARB()
-     calls).  kyrah 20031123. */
-  assert(FALSE && "unimplemented");
-#elif defined(HAVE_EGL)
-  eglglue_context_bind_pbuffer(ctx);
-#elif defined(HAVE_WGL)
-  wglglue_context_bind_pbuffer(ctx);
-#else
-#if defined(HAVE_AGL)
-  if (COIN_USE_AGL > 0) aglglue_context_bind_pbuffer(ctx); else
-#endif
-#if defined(HAVE_CGL)
-  cglglue_context_bind_pbuffer(ctx);
-#else
-  ;
-#endif
-#endif
+  /* PBuffer functionality is not needed with FBO-based offscreen rendering.
+     This is a no-op in the current architecture. */
 }
 
 void
 cc_glglue_context_release_pbuffer(void * COIN_UNUSED_ARG(ctx))
 {
-  /* No render-to-texture support in external offscreen rendering. */
-  if (offscreen_cb) return;
-
-#if defined(HAVE_NOGL)
-  assert(FALSE && "unimplemented");
-#elif defined(HAVE_WGL)
-  wglglue_context_release_pbuffer(ctx);
-#else
-#if defined(HAVE_EGL)
-  if (COIN_USE_EGL > 0) eglglue_context_release_pbuffer(ctx); else
-#endif
-#if defined(HAVE_GLX)
-  /* FIXME: Implement for GLX. kyrah 20031123. */
-  assert(FALSE && "unimplemented");
-#endif
-#if defined(HAVE_AGL)
-  if (COIN_USE_AGL > 0) aglglue_context_release_pbuffer(ctx); else
-#endif
-#if defined(HAVE_CGL)
-  cglglue_context_release_pbuffer(ctx);
-#else
-  ;
-#endif
-#endif
+  /* PBuffer functionality is not needed with FBO-based offscreen rendering.
+     This is a no-op in the current architecture. */
 }
 
 SbBool
 cc_glglue_context_pbuffer_is_bound(void * COIN_UNUSED_ARG(ctx))
 {
-  /* No render-to-texture support in external offscreen rendering. */
-  if (offscreen_cb) return FALSE;
-
-#if defined(HAVE_NOGL)
-  assert(FALSE && "unimplemented");
+  /* PBuffer functionality is not needed with FBO-based offscreen rendering.
+     Always return FALSE as PBuffers are not used. */
   return FALSE;
-#elif defined(HAVE_WGL)
-  return wglglue_context_pbuffer_is_bound(ctx);
-#else
-#if defined(HAVE_EGL)
-  if (COIN_USE_EGL > 0) return eglglue_context_pbuffer_is_bound(ctx);
-#endif
-#if defined(HAVE_GLX)
-  /* FIXME: Implement for GLX. kyrah 20031123. */
-  assert(FALSE && "unimplemented");
-  return FALSE;
-#endif
-#if defined(HAVE_AGL)
-  if (COIN_USE_AGL > 0) return aglglue_context_pbuffer_is_bound(ctx); else
-#endif
-#if defined(HAVE_CGL)
-  return cglglue_context_pbuffer_is_bound(ctx);
-#else
-  return false;
-#endif
-#endif
 }
 
-/* This abomination is needed to support SoOffscreenRenderer::getDC(). */
+/* Win32 HDC support has been removed as it was platform-specific
+   and is not needed with the callback-based context architecture. */
 const void *
 cc_glglue_win32_HDC(void * COIN_UNUSED_ARG(ctx))
 {
-#if defined(HAVE_WGL)
-  return wglglue_context_win32_HDC(ctx);
-#else /* not WGL */
   return NULL;
-#endif /* not WGL */
 }
+
 void cc_glglue_win32_updateHDCBitmap(void * COIN_UNUSED_ARG(ctx))
 {
-#if defined(HAVE_WGL)
-  wglglue_copy_to_bitmap_win32_HDC(ctx);
-#endif /* not WGL */
+  /* No-op: HDC functionality has been removed */
 }
 
 /*** </Offscreen buffer handling.> ******************************************/
@@ -5142,37 +4937,9 @@ coin_catch_gl_errors(cc_string * str)
 void *
 coin_gl_current_context(void)
 {
-  void * ctx = NULL;
-
-#ifdef HAVE_EGL
-  if (COIN_USE_EGL > 0) {
-    ctx = eglGetCurrentContext();
-    if (ctx) {
-      return ctx;
-    }
-  } else {
-#endif /* HAVE_EGL */
-
-#ifdef HAVE_GLX
-  ctx = glXGetCurrentContext();
-#endif /* HAVE_GLX */
-
-#ifdef HAVE_EGL
-  }
-#endif /* HAVE_EGL */
-
-#ifdef HAVE_WGL
-  ctx = wglGetCurrentContext();
-#endif /* HAVE_WGL */
-
-#if defined(HAVE_AGL) || defined(HAVE_CGL)
-  /* Note: We cannot use aglGetCurrentContext() here, since that only
-     returns a value != NULL if the context has been set using
-     aglSetCurrentContext(). */
-  ctx = CGLGetCurrentContext();
-#endif
-
-  return ctx;
+  /* With callback-based contexts, current context information is managed
+     by the application and not available through this interface. */
+  return NULL;
 }
 
 /* ********************************************************************** */

@@ -2,11 +2,6 @@
 set(COIN_GLUE_FILES
 	dl.cpp
 	gl.cpp
-	gl_wgl.cpp
-	gl_agl.cpp
-	gl_cgl.cpp
-	gl_egl.cpp
-	gl_glx.cpp
 	GLUWrapper.cpp
 	simage_wrapper.cpp
 	toojpeg.cpp
@@ -16,16 +11,6 @@ set(COIN_GLUE_FILES
 
 # Files excluded from public API documentation, included in complete documentation.
 set(COIN_GLUE_INTERNAL_FILES
-	gl_wgl.h
-	gl_wgl.cpp
-	gl_agl.h
-	gl_agl.cpp
-	gl_cgl.h
-	gl_cgl.cpp
-	gl_egl.h
-	gl_egl.cpp
-	gl_glx.h
-	gl_glx.cpp
 	GLUWrapper.h
 	GLUWrapper.cpp
 	simage_wrapper.h

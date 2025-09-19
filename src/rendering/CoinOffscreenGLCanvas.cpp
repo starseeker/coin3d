@@ -44,7 +44,6 @@
 
 #if defined(HAVE_CONFIG_H)
 #include "config.h"
-#include "glue/gl_wgl.h"
 #endif /* HAVE_CONFIG_H */
 
 // *************************************************************************
