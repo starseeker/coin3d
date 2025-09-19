@@ -1,58 +1,46 @@
-cmake_minimum_required(VERSION 3.0...3.31)
+cmake_minimum_required(VERSION 3.16...3.31)
 
-set(COIN_MAJOR_VERSION 4)
-set(COIN_MINOR_VERSION 0)
-set(COIN_MICRO_VERSION 5)
+# Modern CMake project definition with metadata
+project(Coin
+    VERSION 4.0.5
+    DESCRIPTION "A high-level 3D visualization library with Open Inventor 2.1 API"
+    HOMEPAGE_URL "https://github.com/coin3d/coin"
+    LANGUAGES C CXX
+)
+
+# Set modern CMake policies
+cmake_policy(SET CMP0054 NEW)  # Only interpret if() arguments as variables or keywords when unquoted
+cmake_policy(SET CMP0072 NEW)  # FindOpenGL prefers GLVND
+cmake_policy(SET CMP0075 NEW)  # Include CMAKE_REQUIRED_LIBRARIES in CheckIncludeFile
+cmake_policy(SET CMP0077 NEW)  # option() honors normal variables
+cmake_policy(SET CMP0079 NEW)  # target_link_libraries() allows use with targets in other directories
+
+# Project variables for compatibility
+set(COIN_MAJOR_VERSION ${PROJECT_VERSION_MAJOR})
+set(COIN_MINOR_VERSION ${PROJECT_VERSION_MINOR})
+set(COIN_MICRO_VERSION ${PROJECT_VERSION_PATCH})
 set(COIN_BETA_VERSION)
-set(COIN_VERSION ${COIN_MAJOR_VERSION}.${COIN_MINOR_VERSION}.${COIN_MICRO_VERSION}${COIN_BETA_VERSION})
-
-project(Coin VERSION ${COIN_MAJOR_VERSION}.${COIN_MINOR_VERSION}.${COIN_MICRO_VERSION})
+set(COIN_VERSION ${PROJECT_VERSION})
 string(TOLOWER ${PROJECT_NAME} PROJECT_NAME_LOWER)
 
 string(TIMESTAMP COIN_BUILD_YEAR "%Y")
 math(EXPR COIN_SO_VERSION ${PROJECT_VERSION_MAJOR}*20)
 
-# ############################################################################
-# these will be removed after upgrading CMake minimum version
-set(PROJECT_DESCRIPTION "A high-level 3D visualization library with Open Inventor 2.1 API")
-# ############################################################################
-
-if(POLICY CMP0054)
-  # CMake version 3.14.5 warns when the policy is not set and uses OLD behaviour
-  cmake_policy(SET CMP0054 NEW)
-endif()
-
-if(POLICY CMP0072)
-  # get rid of OpenGL GLVND warning from CMake 3.11
-  cmake_policy(SET CMP0072 NEW)
-endif()
-
-if(POLICY CMP0075)
-  # get rid of CMAKE_REQUIRED_LIBRARIES warning from CMake 3.12.2
-  cmake_policy(SET CMP0075 NEW)
-endif()
-
-# ############################################################################
-# Prevent in-source builds, as they often cause severe build problems
-# ############################################################################
-
+# Enforce out-of-source builds
 if(PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
-  message(FATAL_ERROR "${CMAKE_PROJECT_NAME} requires an out of source build. Please create a separate build directory and run 'cmake <path_to_${CMAKE_PROJECT_NAME}> [options]' from there.")
+    message(FATAL_ERROR "${CMAKE_PROJECT_NAME} requires an out-of-source build. Please create a separate build directory and run 'cmake <path_to_${CMAKE_PROJECT_NAME}> [options]' from there.")
 endif()
 
-# ############################################################################
-# Set minimum C++ standard needed to compile the Coin code
-# ############################################################################
-set( CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard used for the build" )
-message( STATUS "Setting C++ standard: '${CMAKE_CXX_STANDARD}', which is the minimum needed to compile Coin.")
+# Set C++ standard requirements
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+message(STATUS "Setting C++ standard: C++${CMAKE_CXX_STANDARD} (required)")
 
-# ############################################################################
-# Include necessary submodules
-# ############################################################################
+# Add path for Coin-specific utility scripts
+list(PREPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
-# Add path for Coin specific utility scripts
-set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" "${CMAKE_MODULE_PATH}")
-
+# Standard CMake modules
 include(CheckCSourceRuns)
 include(CheckCXXSourceCompiles)
 include(CheckIncludeFile)
@@ -65,215 +53,179 @@ include(CheckTypeSize)
 include(CMakeDependentOption)
 include(GNUInstallDirs)
 include(FeatureSummary)
-# include(CoinCMakeUtilities)
 
-# ############################################################################
-# Provide options to customise the build
-# ############################################################################
+# Build type handling
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type" FORCE)
+    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
+endif()
 
-option(COIN_BUILD_SHARED_LIBS "Build shared library when ON (default), static when OFF." ON)
-option(COIN_BUILD_TESTS "Build unit tests when ON (default), skips them when OFF." ON)
-option(COIN_BUILD_DOCUMENTATION "Build and install API documentation (requires Doxygen)." OFF)
-option(COIN_BUILD_AWESOME_DOCUMENTATION "Build and install API documentation in new modern style (requires Doxygen)." OFF)
-option(COIN_BUILD_EXAMPLES "Build examples when ON (default), skips them when OFF." OFF)
-cmake_dependent_option(COIN_BUILD_INTERNAL_DOCUMENTATION "Document internal code not part of the API." OFF "COIN_BUILD_DOCUMENTATION" OFF)
-cmake_dependent_option(COIN_BUILD_DOCUMENTATION_MAN "Build Coin man pages." OFF "COIN_BUILD_DOCUMENTATION" OFF)
-cmake_dependent_option(COIN_BUILD_DOCUMENTATION_QTHELP "Build QtHelp documentation." OFF "COIN_BUILD_DOCUMENTATION" OFF)
-cmake_dependent_option(COIN_BUILD_DOCUMENTATION_CHM "Build compressed HTML help manual (requires HTML help compiler)" OFF "COIN_BUILD_DOCUMENTATION" OFF)
+# ============================================================================
+# Build configuration options
+# ============================================================================
 
-option(COIN3D_USE_OSMESA "Build Coin3D against OSMesa for offscreen/headless rendering" OFF)
-option(COIN_THREADSAFE "Enable thread safe render traversals." OFF)
+# Core build options
+option(BUILD_SHARED_LIBS "Build shared library when ON, static when OFF" ON)
+option(COIN_BUILD_TESTS "Build unit tests" ON)
+option(COIN_BUILD_EXAMPLES "Build examples" OFF)
 
-option(HAVE_NODEKITS "Enable NodeKit support." OFF)
-cmake_dependent_option(HAVE_DRAGGERS "Enable Dragger support." OFF "HAVE_NODEKITS" OFF)
-cmake_dependent_option(HAVE_MANIPULATORS "Enable Manipulator support." OFF "HAVE_NODEKITS" OFF)
-option(HAVE_SOUND "Enable OpenAL sound support." OFF)
-option(HAVE_3DS_IMPORT_CAPABILITIES "Enable 3ds import capabilities." OFF)
-option(USE_EXTERNAL_EXPAT "Use system install of Expat." OFF)
-option(USE_EXCEPTIONS "Compile with exceptions (g++ only)." ON)
-option(USE_SUPERGLU "Use superglu library when ON, GLU implementation of platform when OFF (default)." OFF)
+# Compatibility alias for legacy code
+set(COIN_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
 
-option(FONTCONFIG_RUNTIME_LINKING   "Enable FontConfig runtime linking when ON (default), disable when OFF." ON)
-option(FREETYPE_RUNTIME_LINKING     "Enable FreeType runtime linking when ON (default), disable when OFF." ON)
-option(LIBBZIP2_RUNTIME_LINKING     "Enable libBZip2 runtime linking when ON (default), disable when OFF." ON)
-option(OPENAL_RUNTIME_LINKING       "Enable OpenAL runtime linking when ON (default), disable when OFF." ON)
-option(SIMAGE_RUNTIME_LINKING       "Enable simage runtime linking when ON (default), disable when OFF" ON)
-option(ZLIB_RUNTIME_LINKING         "Enable ZLib runtime linking when ON (default), disable when OFF." ON)
-option(GLU_RUNTIME_LINKING          "Enable GLU runtime linking when ON (default), disable when OFF." ON)
-option(SPIDERMONKEY_RUNTIME_LINKING "Enable SpiderMonkey runtime linking when ON (default), disable when OFF." ON)
+# Documentation options
+option(COIN_BUILD_DOCUMENTATION "Build and install API documentation (requires Doxygen)" OFF)
+option(COIN_BUILD_AWESOME_DOCUMENTATION "Build modern style API documentation (requires Doxygen)" OFF)
+cmake_dependent_option(COIN_BUILD_INTERNAL_DOCUMENTATION "Document internal code not part of the API" OFF "COIN_BUILD_DOCUMENTATION" OFF)
+cmake_dependent_option(COIN_BUILD_DOCUMENTATION_MAN "Build man pages" OFF "COIN_BUILD_DOCUMENTATION" OFF)
+cmake_dependent_option(COIN_BUILD_DOCUMENTATION_QTHELP "Build QtHelp documentation" OFF "COIN_BUILD_DOCUMENTATION" OFF)
+cmake_dependent_option(COIN_BUILD_DOCUMENTATION_CHM "Build compressed HTML help manual" OFF "COIN_BUILD_DOCUMENTATION" OFF)
 
-option(COIN_VERBOSE "Add verbose debugging information during the configure process." OFF)
-option(HAVE_MULTIPLE_VERSION "Forces versioned paths for includes and documentation when ON, usual behaviour otherwise." OFF)
-option(COIN_USE_CPACK "If enabled the cpack subrepo is mandatory" OFF)
+# Feature options
+option(COIN3D_USE_OSMESA "Build against OSMesa for offscreen/headless rendering" OFF)
+option(COIN_THREADSAFE "Enable thread safe render traversals" OFF)
 
-cmake_dependent_option(COIN_BUILD_MAC_FRAMEWORK "Build framework instead of dylib on Mac OS X when ON. Only valid if COIN_BUILD_SHARED_LIBS is ON." OFF "APPLE;NOT IOS;COIN_BUILD_SHARED_LIBS" OFF)
-cmake_dependent_option(COIN_BUILD_MAC_X11 "Build for X11 on Mac OS X when ON. Default is OFF." OFF "APPLE" OFF)
-cmake_dependent_option(COIN_BUILD_MAC_AGL "Build for AGL on Mac OS X when ON. Default is OFF." OFF "APPLE" OFF)
+# Component options
+option(HAVE_NODEKITS "Enable NodeKit support" OFF)
+cmake_dependent_option(HAVE_DRAGGERS "Enable Dragger support" OFF "HAVE_NODEKITS" OFF)
+cmake_dependent_option(HAVE_MANIPULATORS "Enable Manipulator support" OFF "HAVE_NODEKITS" OFF)
+option(HAVE_SOUND "Enable OpenAL sound support" OFF)
+option(HAVE_3DS_IMPORT_CAPABILITIES "Enable 3ds import capabilities" OFF)
 
-option(COIN_BUILD_GLX "Build for GLX on Linux when ON. Default is ON." ON)
-option(COIN_BUILD_EGL "Build for EGL on Linux when ON. Default is ON." ON)
+# External dependencies
+option(USE_EXTERNAL_EXPAT "Use system install of Expat" OFF)
+option(USE_EXCEPTIONS "Compile with exceptions (g++ only)" ON)
+option(USE_SUPERGLU "Use superglu library, otherwise platform GLU" OFF)
 
+# Runtime linking options
+option(FONTCONFIG_RUNTIME_LINKING "Enable FontConfig runtime linking" ON)
+option(FREETYPE_RUNTIME_LINKING "Enable FreeType runtime linking" ON)
+option(LIBBZIP2_RUNTIME_LINKING "Enable libBZip2 runtime linking" ON)
+option(OPENAL_RUNTIME_LINKING "Enable OpenAL runtime linking" ON)
+option(SIMAGE_RUNTIME_LINKING "Enable simage runtime linking" ON)
+option(ZLIB_RUNTIME_LINKING "Enable ZLib runtime linking" ON)
+option(GLU_RUNTIME_LINKING "Enable GLU runtime linking" ON)
+option(SPIDERMONKEY_RUNTIME_LINKING "Enable SpiderMonkey runtime linking" ON)
+
+# Development and debug options
+option(COIN_VERBOSE "Add verbose debugging information during configure process" OFF)
+option(HAVE_MULTIPLE_VERSION "Forces versioned paths for includes and documentation" OFF)
+option(COIN_USE_CPACK "Enable CPack packaging" OFF)
+
+# Platform-specific options
+if(APPLE)
+    cmake_dependent_option(COIN_BUILD_MAC_FRAMEWORK "Build framework instead of dylib on macOS" OFF "NOT IOS;BUILD_SHARED_LIBS" OFF)
+    cmake_dependent_option(COIN_BUILD_MAC_X11 "Build for X11 on macOS" OFF "APPLE" OFF)
+    cmake_dependent_option(COIN_BUILD_MAC_AGL "Build for AGL on macOS" OFF "APPLE" OFF)
+endif()
+
+if(UNIX AND NOT APPLE)
+    option(COIN_BUILD_GLX "Build for GLX on Linux" ON)
+    option(COIN_BUILD_EGL "Build for EGL on Linux" ON)
+endif()
+
+# Thread debugging (requires C++11 thread support)
 check_include_file_cxx(thread HAVE_STD_THREAD)
-cmake_dependent_option(COIN_DEBUG_CHECK_THREAD "Enable thread check in several central Coin functions." OFF "HAVE_STD_THREAD" OFF)
+cmake_dependent_option(COIN_DEBUG_CHECK_THREAD "Enable thread check in central Coin functions" OFF "HAVE_STD_THREAD" OFF)
 
-# report_prepare(
-#   COIN_BUILD_SHARED_LIBS
-#   COIN_BUILD_TESTS
-#   COIN_BUILD_DOCUMENTATION
-#   COIN_BUILD_INTERNAL_DOCUMENTATION
-#   COIN_BUILD_DOCUMENTATION_MAN
-#   COIN_BUILD_DOCUMENTATION_QTHELP
-#   COIN_BUILD_DOCUMENTATION_CHM
-#   COIN_BUILD_EGL
-#   COIN_BUILD_AWESOME_DOCUMENTATION
-#   COIN_THREADSAFE
-#   HAVE_NODEKITS
-#   HAVE_DRAGGERS
-#   HAVE_MANIPULATORS
-#   HAVE_SOUND
-#   HAVE_3DS_IMPORT_CAPABILITIES
-#   USE_EXTERNAL_EXPAT
-#   USE_EXCEPTIONS
-#   USE_SUPERGLU
-#   FONTCONFIG_RUNTIME_LINKING
-#   FREETYPE_RUNTIME_LINKING
-#   LIBBZIP2_RUNTIME_LINKING
-#   OPENAL_RUNTIME_LINKING
-#   SIMAGE_RUNTIME_LINKING
-#   ZLIB_RUNTIME_LINKING
-#   GLU_RUNTIME_LINKING
-#   SPIDERMONKEY_RUNTIME_LINKING
-#   HAVE_MULTIPLE_VERSION
-#   IF_APPLE
-#     COIN_BUILD_MAC_FRAMEWORK
-#     COIN_BUILD_MAC_X11
-#     COIN_BUILD_MAC_AGL
-#   IF_MSVC
-#     COIN_BUILD_MSVC_STATIC_RUNTIME
-#     COIN_BUILD_SINGLE_LIB
-#     MSVC_VERSION
-#     COIN_BUILD_MSVC_MP
-# )
+# ============================================================================
+# Installation paths configuration
+# ============================================================================
 
-# if(HAVE_MULTIPLE_VERSION)
-#   # Modifies the installation path for distributed includes, docs and datadir
-#   versionize(INCLUDEDIR DOCDIR DATADIR)
-#   dump_variable(
-#     CMAKE_INSTALL_DATADIR
-#     CMAKE_INSTALL_FULL_DATADIR
-#     CMAKE_INSTALL_INCLUDEDIR
-#     CMAKE_INSTALL_FULL_INCLUDEDIR
-#     CMAKE_INSTALL_DOCDIR
-#     CMAKE_INSTALL_FULL_DOCDIR
-#   )
-# else()
-  set(CMAKE_INSTALL_DATADIR "${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}")
-# endif()
+if(HAVE_MULTIPLE_VERSION)
+    # TODO: Implement versioned installation paths if needed
+    message(WARNING "HAVE_MULTIPLE_VERSION is not fully implemented in modernized build")
+endif()
 
-# ############################################################################
-# Find all necessary and optional Coin3D dependencies
-# ############################################################################
+# Coin-specific data directory
+set(CMAKE_INSTALL_DATADIR "${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}")
 
-# Fail early if one of the required packages cannot be found
+# ============================================================================
+# Dependency management
+# ============================================================================
 
-# As not all CMake FindXXX modules and config packages provide target support,
-# we should explicitly check for them on.
-# find_package(Boost REQUIRED) # almost any Boost will do
-# Boost::boost - Target for header only dependencies (Boost include directory)
-# if(NOT TARGET Boost::boost)
-#   list(APPEND COIN_TARGET_INCLUDE_DIRECTORIES ${Boost_INCLUDE_DIRS})
-# else()
-#   list(APPEND COIN_TARGET_LINK_LIBRARIES Boost::boost)
-# endif()
+# Initialize lists for target properties (modern approach)
+set(COIN_TARGET_LINK_LIBRARIES)
+set(COIN_TARGET_INCLUDE_DIRECTORIES)
+set(COIN_TARGET_LINK_LIBRARIES_GL)
 
+# X11 dependencies (macOS with X11)
 if(COIN_BUILD_MAC_X11)
-  find_package(X11 REQUIRED)
-  # On Mac OS X, GLX is provided as a separate OpenGL implementation, different
-  # from the standard OpenGL framework which provides support for GLUT and native
-  # Mac OS X applications.
-  if(X11_FOUND)
-    find_path(X11_GL_INCLUDE_PATH GL/glx.h ${X11_INC_SEARCH_PATH})
-    if(NOT X11_GL_INCLUDE_PATH)
-      message(FATAL_ERROR "Could not find GL/glx.h")
-    endif()
+    find_package(X11 REQUIRED)
+    if(X11_FOUND)
+        find_path(X11_GL_INCLUDE_PATH GL/glx.h ${X11_INC_SEARCH_PATH})
+        if(NOT X11_GL_INCLUDE_PATH)
+            message(FATAL_ERROR "Could not find GL/glx.h")
+        endif()
 
-    find_library(X11_GL_LIB GL ${X11_LIB_SEARCH_PATH})
-    if(NOT X11_GL_LIB)
-      message(FATAL_ERROR "Could not find libGL.dylib")
-    endif()
+        find_library(X11_GL_LIB GL ${X11_LIB_SEARCH_PATH})
+        if(NOT X11_GL_LIB)
+            message(FATAL_ERROR "Could not find libGL.dylib")
+        endif()
 
-    find_library(X11_GLU_LIB GLU ${X11_LIB_SEARCH_PATH})
-    if(NOT X11_GLU_LIB)
-      message(FATAL_ERROR "Could not find libGLU.dylib")
+        find_library(X11_GLU_LIB GLU ${X11_LIB_SEARCH_PATH})
+        if(NOT X11_GLU_LIB)
+            message(FATAL_ERROR "Could not find libGLU.dylib")
+        endif()
+        
+        list(APPEND COIN_TARGET_INCLUDE_DIRECTORIES ${X11_INCLUDE_DIR} ${X11_GL_INCLUDE_PATH})
+        list(APPEND COIN_TARGET_LINK_LIBRARIES ${X11_LIBRARIES} ${X11_GL_LIB} ${X11_GLU_LIB})
     endif()
-    list(APPEND COIN_TARGET_INCLUDE_DIRECTORIES ${X11_INCLUDE_DIR} ${X11_GL_INCLUDE_PATH})
-    list(APPEND COIN_TARGET_LINK_LIBRARIES ${X11_LIBRARIES} ${X11_GL_LIB} ${X11_GLU_LIB})
-  endif()
-else()
-  if(UNIX AND NOT APPLE AND COIN_BUILD_GLX)
+    
+# X11 dependencies (Linux/Unix)
+elseif(UNIX AND NOT APPLE AND COIN_BUILD_GLX)
     find_package(X11 REQUIRED)
     list(APPEND COIN_TARGET_INCLUDE_DIRECTORIES ${X11_INCLUDE_DIR})
     list(APPEND COIN_TARGET_LINK_LIBRARIES ${X11_LIBRARIES})
-  endif()
-  
-  # OpenGL Backend Selection: OSMesa vs System OpenGL
-  if(COIN3D_USE_OSMESA)
+endif()
+
+# OpenGL backend selection
+if(COIN3D_USE_OSMESA)
     # OSMesa backend for offscreen/headless rendering
     find_package(OSMesa REQUIRED)
     if(OSMesa_FOUND)
-      set(HAVE_OPENGL 1)
-      set(HAVE_OSMESA 1)
-      if(TARGET OSMesa::OSMesa)
-        list(APPEND COIN_TARGET_LINK_LIBRARIES_GL OSMesa::OSMesa)
-      elseif(TARGET osmesa)
-        # starseeker/osmesa submodule target
-        list(APPEND COIN_TARGET_LINK_LIBRARIES_GL osmesa)
-        list(APPEND COIN_TARGET_INCLUDE_DIRECTORIES ${OSMesa_INCLUDE_DIRS})
-      else()
-        list(APPEND COIN_TARGET_INCLUDE_DIRECTORIES ${OSMesa_INCLUDE_DIRS})
-        list(APPEND COIN_TARGET_LINK_LIBRARIES_GL ${OSMesa_LIBRARIES})
-      endif()
-      message(STATUS "Using OSMesa for offscreen/headless rendering")
+        set(HAVE_OPENGL 1)
+        set(HAVE_OSMESA 1)
+        
+        if(TARGET OSMesa::OSMesa)
+            list(APPEND COIN_TARGET_LINK_LIBRARIES_GL OSMesa::OSMesa)
+        elseif(TARGET osmesa)
+            # starseeker/osmesa submodule target
+            list(APPEND COIN_TARGET_LINK_LIBRARIES_GL osmesa)
+            list(APPEND COIN_TARGET_INCLUDE_DIRECTORIES ${OSMesa_INCLUDE_DIRS})
+        else()
+            list(APPEND COIN_TARGET_INCLUDE_DIRECTORIES ${OSMesa_INCLUDE_DIRS})
+            list(APPEND COIN_TARGET_LINK_LIBRARIES_GL ${OSMesa_LIBRARIES})
+        endif()
+        
+        message(STATUS "Using OSMesa for offscreen/headless rendering")
     endif()
-  else()
+else()
     # System OpenGL backend (default)
     find_package(OpenGL REQUIRED)
-    if(OPENGL_FOUND)
-      set(HAVE_OPENGL 1)
-      set(OPENGL_SYSTEM_LIBRARY_NAME "${OPENGL_gl_LIBRARY}${CMAKE_SHARED_LIBRARY_SUFFIX}")
-      if(COIN_BUILD_EGL)
-        if (OpenGL_EGL_FOUND)
-          set(HAVE_EGL 1)
-          if (NOT TARGET OpenGL::EGL)
-            list(APPEND COIN_TARGET_INCLUDE_DIRECTORIES ${OPENGL_EGL_INCLUDE_DIR})
-            list(APPEND COIN_TARGET_LINK_LIBRARIES_GL ${OPENGL_egl_LIBRARY})
-          else()
-            list(APPEND COIN_TARGET_LINK_LIBRARIES_GL OpenGL::EGL)
-          endif()
-        endif()
-      endif ()
-      if(APPLE)
-        set(GLU_IS_PART_OF_GL 1)
-      endif()
-      #include_directories("${OPENGL_INCLUDE_DIR}")
-      if (NOT TARGET OpenGL::GL)
-        list(APPEND COIN_TARGET_INCLUDE_DIRECTORIES ${OPENGL_INCLUDE_DIR})
-        list(APPEND COIN_TARGET_LINK_LIBRARIES_GL ${OPENGL_gl_LIBRARY})
-      else()
+    set(HAVE_OPENGL 1)
+    
+    if(OpenGL_OpenGL_FOUND)
+        list(APPEND COIN_TARGET_LINK_LIBRARIES_GL OpenGL::OpenGL)
+    else()
         list(APPEND COIN_TARGET_LINK_LIBRARIES_GL OpenGL::GL)
-      endif()
-      if(OpenGL_GLU_FOUND AND NOT COIN_BUILD_EGL)
-        set(HAVE_GLU 1)
-        if (NOT TARGET OpenGL::GLU)
-          list(APPEND COIN_TARGET_INCLUDE_DIRECTORIES ${OPENGL_INCLUDE_DIR})
-          list(APPEND COIN_TARGET_LINK_LIBRARIES_GL ${OPENGL_glu_LIBRARY})
-        else()
-          list(APPEND COIN_TARGET_LINK_LIBRARIES_GL OpenGL::GLU)
-        endif()
-      endif()
-      message(STATUS "Using system OpenGL")
     endif()
-  endif()
+    
+    if(OpenGL_GLU_FOUND)
+        set(HAVE_GLU 1)
+        list(APPEND COIN_TARGET_LINK_LIBRARIES_GL OpenGL::GLU)
+    endif()
+    
+    if(COIN_BUILD_EGL AND OpenGL_EGL_FOUND)
+        set(HAVE_EGL 1)
+        list(APPEND COIN_TARGET_LINK_LIBRARIES_GL OpenGL::EGL)
+    endif()
+    
+    # macOS specific settings
+    if(APPLE)
+        set(GLU_IS_PART_OF_GL 1)
+    endif()
+    
+    message(STATUS "Using system OpenGL")
 endif()
 
 list(APPEND COIN_TARGET_LINK_LIBRARIES ${COIN_TARGET_LINK_LIBRARIES_GL})
@@ -289,21 +241,17 @@ else()
   message(STATUS "Library will be named: lib${COIN3D_OUTPUT_NAME}")
 endif()
 
-set(CMAKE_THREAD_PREFER_PTHREAD 1)
-set(THREADS_PREFER_PTHREAD_FLAG 1)
-find_package(Threads)
-if(Threads_FOUND)
-  set(HAVE_THREADS 1)
-  if(CMAKE_USE_WIN32_THREADS_INIT)
+# Threading support
+find_package(Threads REQUIRED)
+set(HAVE_THREADS 1)
+if(CMAKE_USE_WIN32_THREADS_INIT)
     set(USE_W32THREAD 1)
     set(COIN_THREADID_TYPE DWORD)
-  elseif(CMAKE_USE_PTHREADS_INIT)
+elseif(CMAKE_USE_PTHREADS_INIT)
     set(USE_PTHREAD 1)
     set(COIN_THREADID_TYPE pthread_t)
-  endif()
-  list(APPEND COIN_TARGET_LINK_LIBRARIES Threads::Threads)
-  #pthreads does not provide pkg-config file, therefore not added here
 endif()
+list(APPEND COIN_TARGET_LINK_LIBRARIES Threads::Threads)
 
 if(USE_EXTERNAL_EXPAT)
   find_package(EXPAT)
