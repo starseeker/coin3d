@@ -12,9 +12,6 @@ CMakeFiles/
 cmake_install.cmake
 Makefile
 CTestTestfile.cmake
-*.cmake
-!CMakeLists.txt
-!cmake/
 
 # Autotools generated files
 config.log
@@ -28,11 +25,6 @@ autom4te.cache/
 *.dll
 *.exe
 *.dylib
-
-# Generated source files (from .in templates)
-src/*/SbBasic.cpp
-src/config.h
-src/setup.h
 
 # IDE files
 .vscode/

@@ -1,21 +1,19 @@
-# Note: src/C/basic.h files are obsolete - now using include/Inventor/C/basic.h.cmake.in
+# ============================================================================
+# Configuration file generation
+# ============================================================================
 
-# The following two-stage generation of config.h replaces configure_file(config.h.cmake.in config.h)
-# and is necessary for the proper definition of COIN_SYSTEM_LIBRARY_NAME in config.h.
-# Ref. https://public.kitware.com/pipermail/cmake/2015-April/060350.html
-# Deal with @...@ configurable items:
-  configure_file(
+# Two-stage configuration for proper generator expression handling
+configure_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake.in"
     "${CMAKE_CURRENT_BINARY_DIR}/config.h_at_configured"
     @ONLY
-    )
-# Deal with items configured with generator expressions:
-  file(GENERATE
-    OUTPUT
-    "${CMAKE_CURRENT_BINARY_DIR}/config.h"
-    INPUT
-    "${CMAKE_CURRENT_BINARY_DIR}/config.h_at_configured"
-    )
+)
+
+file(GENERATE
+    OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/config.h"
+    INPUT "${CMAKE_CURRENT_BINARY_DIR}/config.h_at_configured"
+)
+
 configure_file(setup.h.cmake.in setup.h)
 
 add_compile_options(-DHAVE_CONFIG_H -DCOIN_INTERNAL -DCOIN_DEBUG=$<CONFIG:Debug>)
@@ -42,17 +40,15 @@ endforeach()
 
 set(COIN_SOURCE C/CoinTidbits.cpp CACHE INTERNAL "COIN_SOURCE")
 # Minimal core subdirectories - removed GUI/toolkit but keeping minimal dependencies
-set(SUBDIRS
+set(COIN_SUBDIRS
   actions base bundles caches details elements
   engines errors events fields fonts glue io misc rendering lists
   nodes shapenodes projectors sensors
   collision shadows geo threads shaders tools
   hardcopy
 )
-# TODO - see how to make draggers toolkit independent
-# TODO - see what we need from manips
 
-foreach(_subdir ${SUBDIRS})
+foreach(_subdir ${COIN_SUBDIRS})
   add_subdirectory(${_subdir})
 endforeach()
 add_subdirectory(doc)
@@ -134,55 +130,98 @@ source_group("Source Files\\vrml97"                    REGULAR_EXPRESSION ".*/sr
 # Binaries, Headers, and Resources are properly created we add at headers and resources to
 # the target.
 
-if(COIN_BUILD_SHARED_LIBS)
-  set(COIN_LIBRARY_TYPE SHARED)
-else()
-  set(COIN_LIBRARY_TYPE STATIC)
-endif()
+# ============================================================================
+# Library target creation
+# ============================================================================
 
-set(ADDITIONAL_HDRS ${PROJECT_SOURCE_DIR}/include/SoWinEnterScope.h ${PROJECT_SOURCE_DIR}/include/SoWinLeaveScope.h ${PROJECT_SOURCE_DIR}/include/SoDebug.h ${PROJECT_BINARY_DIR}/src/config.h)
+# Determine library type
+set(COIN_LIBRARY_TYPE $<IF:$<BOOL:${BUILD_SHARED_LIBS}>,SHARED,STATIC>)
 
-# Create the library target
+# Additional headers to include in target
+set(COIN_ADDITIONAL_HDRS 
+    ${PROJECT_SOURCE_DIR}/include/SoWinEnterScope.h 
+    ${PROJECT_SOURCE_DIR}/include/SoWinLeaveScope.h 
+    ${PROJECT_SOURCE_DIR}/include/SoDebug.h 
+    ${PROJECT_BINARY_DIR}/src/config.h
+)
+
+# Create the main library target
 if(COIN_BUILD_SINGLE_LIB)
-  add_library(${PROJECT_NAME} ${COIN_LIBRARY_TYPE} ${COIN_SOURCE} ${COMMON_HDRS} ${ADDITIONAL_HDRS} ${COMMON_RESOURCES})
+    add_library(${PROJECT_NAME} ${COIN_SOURCE} ${COIN_ADDITIONAL_HDRS})
 else()
-  add_library(${PROJECT_NAME} ${COIN_LIBRARY_TYPE} ${COIN_SOURCE} ${COMMON_HDRS} ${ADDITIONAL_HDRS} ${COMMON_RESOURCES}
-    $<TARGET_OBJECTS:actions>
-    $<TARGET_OBJECTS:base>
-    $<TARGET_OBJECTS:bundles>
-    $<TARGET_OBJECTS:caches>
-    $<TARGET_OBJECTS:collision>
-    $<TARGET_OBJECTS:details>
-    $<TARGET_OBJECTS:elements>
-    $<TARGET_OBJECTS:engines>
-    $<TARGET_OBJECTS:errors>
-    $<TARGET_OBJECTS:events>
-    $<TARGET_OBJECTS:fields>
-    $<TARGET_OBJECTS:fonts>
-    $<TARGET_OBJECTS:geo>
-    $<TARGET_OBJECTS:glelements>
-    $<TARGET_OBJECTS:glue>
-    $<TARGET_OBJECTS:hardcopy>
-    $<TARGET_OBJECTS:io>
-    $<TARGET_OBJECTS:lists>
-    $<TARGET_OBJECTS:misc>
-
-    $<TARGET_OBJECTS:nodes>
-    $<TARGET_OBJECTS:projectors>
-    $<TARGET_OBJECTS:rendering>
-    $<TARGET_OBJECTS:sensors>
-    $<TARGET_OBJECTS:shaders>
-    $<TARGET_OBJECTS:shadows>
-    $<TARGET_OBJECTS:shapenodes>
-    $<TARGET_OBJECTS:threads>
-    $<TARGET_OBJECTS:tools>
-  )
+    add_library(${PROJECT_NAME} ${COIN_SOURCE} ${COIN_ADDITIONAL_HDRS}
+        $<TARGET_OBJECTS:actions>
+        $<TARGET_OBJECTS:base>
+        $<TARGET_OBJECTS:bundles>
+        $<TARGET_OBJECTS:caches>
+        $<TARGET_OBJECTS:collision>
+        $<TARGET_OBJECTS:details>
+        $<TARGET_OBJECTS:elements>
+        $<TARGET_OBJECTS:engines>
+        $<TARGET_OBJECTS:errors>
+        $<TARGET_OBJECTS:events>
+        $<TARGET_OBJECTS:fields>
+        $<TARGET_OBJECTS:fonts>
+        $<TARGET_OBJECTS:geo>
+        $<TARGET_OBJECTS:glelements>
+        $<TARGET_OBJECTS:glue>
+        $<TARGET_OBJECTS:hardcopy>
+        $<TARGET_OBJECTS:io>
+        $<TARGET_OBJECTS:lists>
+        $<TARGET_OBJECTS:misc>
+        $<TARGET_OBJECTS:nodes>
+        $<TARGET_OBJECTS:projectors>
+        $<TARGET_OBJECTS:rendering>
+        $<TARGET_OBJECTS:sensors>
+        $<TARGET_OBJECTS:shaders>
+        $<TARGET_OBJECTS:shadows>
+        $<TARGET_OBJECTS:shapenodes>
+        $<TARGET_OBJECTS:threads>
+        $<TARGET_OBJECTS:tools>
+    )
 endif()
 
-# Set the output name based on backend selection
+# Set target properties
+set_target_properties(${PROJECT_NAME} PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+    CXX_EXTENSIONS OFF
+)
+
+# Set library output name based on backend selection
 if(DEFINED COIN3D_OUTPUT_NAME)
-  set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME ${COIN3D_OUTPUT_NAME})
+    set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME ${COIN3D_OUTPUT_NAME})
 endif()
+
+# ============================================================================
+# Target-specific compile definitions and properties
+# ============================================================================
+
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+    HAVE_CONFIG_H
+    COIN_INTERNAL 
+    COIN_DEBUG=$<CONFIG:Debug>
+)
+
+# Target-specific include directories (modern approach)
+target_include_directories(${PROJECT_NAME} 
+    PRIVATE
+        "${PROJECT_BINARY_DIR}/include"
+        "${PROJECT_SOURCE_DIR}/include"
+        "${CMAKE_CURRENT_BINARY_DIR}"
+        "${CMAKE_CURRENT_SOURCE_DIR}"
+        "${PROJECT_SOURCE_DIR}/include/Inventor/annex"
+        "${PROJECT_BINARY_DIR}/src/shadows"
+        ${COIN_TARGET_INCLUDE_DIRECTORIES}
+    PUBLIC
+        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+        $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
+    INTERFACE
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+)
+
+# Target-specific linking (modern approach)  
+target_link_libraries(${PROJECT_NAME} PRIVATE ${COIN_TARGET_LINK_LIBRARIES})
 
 if(WIN32)
   if(COIN_BUILD_SHARED_LIBS)
@@ -232,16 +271,21 @@ elseif(APPLE)
   endif()
 endif()
 
-target_include_directories(${PROJECT_NAME} PRIVATE ${COIN_TARGET_INCLUDE_DIRECTORIES})
-target_link_libraries(${PROJECT_NAME} PRIVATE ${COIN_TARGET_LINK_LIBRARIES})
-if(NOT COIN_BUILD_MAC_FRAMEWORK)
-  target_include_directories(${PROJECT_NAME} INTERFACE $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
-endif()
+# ============================================================================
+# Platform-specific configuration
+# ============================================================================
 
+# Set library version properties
 if(WIN32 AND NOT MINGW)
-  set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${PROJECT_VERSION} SOVERSION ${COIN_SO_VERSION})
+    set_target_properties(${PROJECT_NAME} PROPERTIES 
+        VERSION ${PROJECT_VERSION} 
+        SOVERSION ${COIN_SO_VERSION}
+    )
 else()
-  set_target_properties(${PROJECT_NAME} PROPERTIES VERSION "${COIN_SO_VERSION}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}" SOVERSION ${COIN_SO_VERSION})
+    set_target_properties(${PROJECT_NAME} PROPERTIES 
+        VERSION "${COIN_SO_VERSION}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}" 
+        SOVERSION ${COIN_SO_VERSION}
+    )
 endif()
 
 # Setting up a framework means adding all the files and links under a framework
