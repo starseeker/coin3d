@@ -9,6 +9,7 @@ set(COIN_GLUE_FILES
 	gl_glx.cpp
 	GLUWrapper.cpp
 	simage_wrapper.cpp
+	toojpeg.cpp
 	zlib.cpp
 	bzip2.cpp
 )
@@ -29,6 +30,9 @@ set(COIN_GLUE_INTERNAL_FILES
 	GLUWrapper.cpp
 	simage_wrapper.h
 	simage_wrapper.cpp
+	toojpeg.h
+	toojpeg.cpp
+	svpng.h
 	zlib.h
 	zlib.cpp
 	bzip2.h
