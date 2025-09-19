@@ -89,3 +89,6 @@ CHECK_CXX_COMPILER_FLAG(-Wtautological-compare DISABLE_WARNING_TAUTOLOGCOMPARE)
 if(DISABLE_WARNING_TAUTOLOGCOMPARE)
     target_compile_options(CoinTests PUBLIC -Wno-tautological-compare)
 endif()
+
+# Include FBO demo
+include(fbo_demo.cmake)
