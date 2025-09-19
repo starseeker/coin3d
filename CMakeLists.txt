@@ -795,43 +795,47 @@ endif()
 
 # COIN_DOCUMENTATION_FILES is filled with all source files.
 unset(COIN_DOCUMENTATION_FILES CACHE)
-# COIN_INTERNAL_DOCUMENTATION_FILES is filled with source files that are not part of the public API.
-# If COIN_BUILD_INTERNAL_DOCUMENTATION is YES then these files are added to DOXYGEN_INPUT, otherwise
-# they are put in DOXYGEN_EXCLUDE.
-unset(COIN_INTERNAL_DOCUMENTATION_FILES CACHE)
+# ============================================================================
+# Add subdirectories
+# ============================================================================
 
 add_subdirectory(include)
 add_subdirectory(src)
 
-if (COIN_BUILD_EXAMPLES)
-  add_subdirectory(examples)
+if(COIN_BUILD_EXAMPLES)
+    add_subdirectory(examples)
 endif()
 
 if(COIN_BUILD_TESTS)
-  enable_testing()
-  add_subdirectory(testsuite)  # Legacy tests only - main tests are in tests/
-  # Add primary explicit Catch2-based test system
-  # Primary test system: explicit Catch2-based tests
-  add_subdirectory(tests)
+    enable_testing()
+    add_subdirectory(testsuite)  # Legacy threading tests
+    add_subdirectory(tests)      # Main Catch2-based test system
 endif()
 
-# add_feature_info(ThreadSafe COIN_THREADSAFE "Thread safe render traversals.")
-# add_feature_info(NodeKits HAVE_NODEKITS "NodeKit support.")
-# add_feature_info(Draggers HAVE_DRAGGERS "Dragger support.")
-# add_feature_info(Manipulators HAVE_MANIPULATORS "Manipulator support.")
-# add_feature_info(Sound HAVE_SOUND "Sound support.")
-# add_feature_info(3dsImport HAVE_3DS_IMPORT_CAPABILITIES "3ds import capabilities.")
-# add_feature_info(Expat USE_EXTERNAL_EXPAT "Use system install of Expat.")
-# add_feature_info(Exceptions USE_EXCEPTIONS "Compile with exceptions (g++ only).")
-# add_feature_info(SuperGLU USE_SUPERGLU "Use superglu library.")
-# feature_summary(WHAT ALL
-#                 INCLUDE_QUIET_PACKAGES
-#                 DESCRIPTION "Enabled Features:"
-#                 VAR enabledFeaturesText)
-# message(STATUS "${enabledFeaturesText}")
+# ============================================================================
+# Feature summary
+# ============================================================================
 
-# ############################################################################
-# New CPACK section, please see the README file inside cpack.d directory.
-if (COIN_USE_CPACK)
-  add_subdirectory(cpack.d)
+add_feature_info(ThreadSafe COIN_THREADSAFE "Thread safe render traversals")
+add_feature_info(NodeKits HAVE_NODEKITS "NodeKit support")
+add_feature_info(Draggers HAVE_DRAGGERS "Dragger support")
+add_feature_info(Manipulators HAVE_MANIPULATORS "Manipulator support") 
+add_feature_info(Sound HAVE_SOUND "Sound support")
+add_feature_info(3dsImport HAVE_3DS_IMPORT_CAPABILITIES "3ds import capabilities")
+add_feature_info(Expat USE_EXTERNAL_EXPAT "Use system install of Expat")
+add_feature_info(Exceptions USE_EXCEPTIONS "Compile with exceptions")
+add_feature_info(SuperGLU USE_SUPERGLU "Use superglu library")
+
+feature_summary(WHAT ALL
+                INCLUDE_QUIET_PACKAGES
+                DESCRIPTION "Enabled Features:"
+                VAR enabledFeaturesText)
+message(STATUS "${enabledFeaturesText}")
+
+# ============================================================================
+# Packaging
+# ============================================================================
+
+if(COIN_USE_CPACK)
+    add_subdirectory(cpack.d)
 endif()
