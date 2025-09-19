@@ -38,6 +38,7 @@
 #include "coindefs.h"
 #include "fonts/freetype.h"
 #include "fonts/common.h"
+#include "fonts/profont_data.h"
 #include "C/base/string.h"
 #include <cstdlib>
 #include <cstring>
@@ -57,50 +58,22 @@ struct cc_font_handle {
 };
 
 // Try to load a system font file
-static unsigned char* load_system_font(const char* fontname, int* data_size) {
-  const char* font_paths[] = {
-    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-    "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
-    "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
-    "/System/Library/Fonts/Arial.ttf", /* macOS */
-    "C:\\Windows\\Fonts\\arial.ttf", /* Windows */
-    NULL
-  };
-  
-  for (int i = 0; font_paths[i]; i++) {
-    FILE* f = fopen(font_paths[i], "rb");
-    if (f) {
-      fseek(f, 0, SEEK_END);
-      long size = ftell(f);
-      fseek(f, 0, SEEK_SET);
-      
-      if (size > 0 && size < 10*1024*1024) { /* Reasonable font size limit */
-        unsigned char* data = (unsigned char*)malloc(size);
-        if (data && fread(data, 1, size, f) == size) {
-          fclose(f);
-          *data_size = (int)size;
-          return data;
-        }
-        if (data) free(data);
-      }
-      fclose(f);
-    }
+// Get embedded ProFont data - replaces system font loading for deterministic behavior
+static unsigned char* get_profont_data(int* data_size) {
+  // Allocate memory for font data copy
+  unsigned char* data = (unsigned char*)malloc(profont_ttf_data_size);
+  if (!data) {
+    *data_size = 0;
+    return NULL;
   }
   
-  *data_size = 0;
-  return NULL;
+  // Copy embedded ProFont data
+  memcpy(data, profont_ttf_data, profont_ttf_data_size);
+  *data_size = profont_ttf_data_size;
+  return data;
 }
 
-// Basic embedded font data - minimal fallback font
-// This is a placeholder - in practice you'd include minimal font data
-static unsigned char default_font_data[] = {
-  // Minimal TrueType font header - this is just a placeholder
-  // Real implementation would include actual minimal font data
-  0x00, 0x01, 0x00, 0x00, 0x00, 0x0c, 0x00, 0x80, 0x00, 0x03, 0x00, 0x70,
-  0x68, 0x65, 0x61, 0x64, 0x00, 0x00, 0x00, 0x36, 0x00, 0x00, 0x00, 0x36
-  // In a real implementation, you'd include actual TTF/OTF font data here
-  // or use an embedded minimal font like the one from struetype examples
-};
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -138,17 +111,17 @@ cc_flwft_get_font(const char * fontname, unsigned int pixelsize)
   handle->valid = 0;
   handle->scale = 1.0f;
   
-  /* Try to load system font first */
-  handle->font_data = load_system_font(fontname, &handle->data_size);
+  /* Load embedded ProFont data */
+  handle->font_data = get_profont_data(&handle->data_size);
   
   if (handle->font_data && handle->data_size > 0) {
-    /* Try to initialize with loaded font */
+    /* Try to initialize with ProFont */
     int result = stt_InitFont(&handle->font_info, handle->font_data, handle->data_size, 0);
     if (result) {
       handle->valid = 1;
       handle->scale = stt_ScaleForPixelHeight(&handle->font_info, handle->size);
     } else {
-      /* Font loading failed, free the data */
+      /* Font initialization failed, free the data */
       free(handle->font_data);
       handle->font_data = NULL;
       handle->data_size = 0;
@@ -156,18 +129,9 @@ cc_flwft_get_font(const char * fontname, unsigned int pixelsize)
   }
   
   if (!handle->valid) {
-    /* Fallback to default font data (though it's minimal) */
-    handle->font_data = (unsigned char*)malloc(sizeof(default_font_data));
-    if (handle->font_data) {
-      memcpy(handle->font_data, default_font_data, sizeof(default_font_data));
-      handle->data_size = sizeof(default_font_data);
-      /* Note: This will likely fail with minimal data, but provides graceful fallback */
-      int result = stt_InitFont(&handle->font_info, handle->font_data, handle->data_size, 0);
-      if (result) {
-        handle->valid = 1;
-        handle->scale = stt_ScaleForPixelHeight(&handle->font_info, handle->size);
-      }
-    }
+    /* ProFont failed to load - this shouldn't happen with embedded data */
+    free(handle);
+    return NULL;
   }
   
   return handle;
@@ -176,9 +140,9 @@ cc_flwft_get_font(const char * fontname, unsigned int pixelsize)
 void
 cc_flwft_get_font_name(void * font, cc_string * str)
 {
-  /* Set a default font name */
+  /* Return ProFont name */
   if (str) {
-    cc_string_set_text(str, "struetype-default");
+    cc_string_set_text(str, "ProFont");
   }
 }
 

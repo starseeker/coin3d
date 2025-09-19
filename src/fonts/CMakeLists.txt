@@ -4,6 +4,7 @@ set(COIN_FONTS_FILES
 	win32.cpp
 	coretext.cpp
 	freetype.cpp
+	profont_data.cpp
 	fontspec.cpp
 	glyph.cpp
 	glyph2d.cpp
@@ -21,6 +22,8 @@ set(COIN_FONTS_INTERNAL_FILES
 	win32.cpp
 	freetype.h
 	freetype.cpp
+	profont_data.h
+	profont_data.cpp
 	fontspec.h
 	fontspec.cpp
 	coretext.h
