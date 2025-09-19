@@ -4429,30 +4429,21 @@ cc_glglue_context_create_offscreen(unsigned int width, unsigned int height)
   if (offscreen_cb && offscreen_cb->create_offscreen) {
     return (*offscreen_cb->create_offscreen)(width, height);
   } else {
-#ifdef HAVE_NOGL
-  assert(FALSE && "unimplemented");
-  return NULL;
-#elif defined(HAVE_WGL)
-  return wglglue_context_create_offscreen(width, height);
-#else
-#if defined(HAVE_EGL)
-    if (COIN_USE_EGL > 0) return eglglue_context_create_offscreen(width, height);
-#endif
-#if defined(HAVE_GLX)
-    return glxglue_context_create_offscreen(width, height);
-#endif
-#if defined(HAVE_AGL)
-  check_force_agl();
-  if (COIN_USE_AGL > 0) return aglglue_context_create_offscreen(width, height); else
-#endif
-#if defined(HAVE_CGL)
-  return cglglue_context_create_offscreen(width, height);
-#else
-#endif
-#endif
+    // ERROR: No context creation callbacks provided
+    // Applications must provide context creation callbacks via cc_glglue_context_set_offscreen_cb_functions()
+    // The old built-in platform-specific context creation is no longer supported.
+    
+    static int error_shown = 0;
+    if (!error_shown) {
+      error_shown = 1;
+      fprintf(stderr, "ERROR: No context creation callbacks provided. "
+                      "Applications must provide context creation callbacks "
+                      "via cc_glglue_context_set_offscreen_cb_functions(). "
+                      "See examples/osmesa_example.h for reference implementation.\n");
+    }
+    
+    return NULL;
   }
-  assert(FALSE && "unimplemented");
-  return NULL;
 }
 
 SbBool
@@ -4461,30 +4452,16 @@ cc_glglue_context_make_current(void * ctx)
   if (offscreen_cb && offscreen_cb->make_current) {
     return (*offscreen_cb->make_current)(ctx);
   } else {
-#ifdef HAVE_NOGL
-  assert(FALSE && "unimplemented");
-  return FALSE;
-#elif defined(HAVE_WGL)
-  return wglglue_context_make_current(ctx);
-#else
-#if defined(HAVE_EGL)
-    if (COIN_USE_EGL > 0) return eglglue_context_make_current(ctx);
-#endif
-#if defined(HAVE_GLX)
-    return glxglue_context_make_current(ctx);
-#endif
-#if defined(HAVE_AGL)
-  if (COIN_USE_AGL > 0) return aglglue_context_make_current(ctx); else
-#endif
-#if defined(HAVE_CGL)
-  return cglglue_context_make_current(ctx);
-#else
-  ;
-#endif
-#endif
+    // ERROR: No context callback functions provided
+    static int error_shown = 0;
+    if (!error_shown) {
+      error_shown = 1;
+      fprintf(stderr, "ERROR: No context callback functions provided. "
+                      "Applications must provide context management callbacks "
+                      "via cc_glglue_context_set_offscreen_cb_functions().\n");
+    }
+    return FALSE;
   }
-  assert(FALSE && "unimplemented");
-  return FALSE;
 }
 
 void
@@ -4504,26 +4481,11 @@ cc_glglue_context_reinstate_previous(void * ctx)
   if (offscreen_cb && offscreen_cb->reinstate_previous) {
     (*offscreen_cb->reinstate_previous)(ctx);
   } else {
-#ifdef HAVE_NOGL
-  assert(FALSE && "unimplemented");
-#elif defined(HAVE_WGL)
-  wglglue_context_reinstate_previous(ctx);
-#else
-#if defined(HAVE_EGL)
-    if (COIN_USE_EGL > 0) eglglue_context_reinstate_previous(ctx); else
-#endif
-#if defined(HAVE_GLX)
-    glxglue_context_reinstate_previous(ctx);
-#endif
-#if defined(HAVE_AGL)
-  if (COIN_USE_AGL > 0) aglglue_context_reinstate_previous(ctx); else
-#endif
-#if defined(HAVE_CGL)
-  cglglue_context_reinstate_previous(ctx);
-#else
-  ;
-#endif
-#endif
+    // Context reinstatement is callback-only - no fallback available
+    // This is typically a no-op for many implementations
+    if (ctx) {
+      // Silently ignore - many context implementations don't need explicit reinstatement
+    }
   }
 }
 
@@ -4533,26 +4495,16 @@ cc_glglue_context_destruct(void * ctx)
   if (offscreen_cb && offscreen_cb->destruct) {
     (*offscreen_cb->destruct)(ctx);
   } else {
-#ifdef HAVE_NOGL
-  assert(FALSE && "unimplemented");
-#elif defined(HAVE_WGL)
-  wglglue_context_destruct(ctx);
-#else
-#if defined(HAVE_EGL)
-    if (COIN_USE_EGL > 0) eglglue_context_destruct(ctx); else
-#endif
-#if defined(HAVE_GLX)
-    glxglue_context_destruct(ctx);
-#endif
-#if defined(HAVE_AGL)
-  if (COIN_USE_AGL > 0) aglglue_context_destruct(ctx); else
-#endif
-#if defined(HAVE_CGL)
-  cglglue_context_destruct(ctx);
-#else
-  ;
-#endif
-#endif
+    // ERROR: No context callback functions provided for destruction
+    static int error_shown = 0;
+    if (!error_shown) {
+      error_shown = 1;
+      fprintf(stderr, "ERROR: No context destruction callback provided. "
+                      "Context may not be properly cleaned up. "
+                      "Applications must provide context management callbacks "
+                      "via cc_glglue_context_set_offscreen_cb_functions().\n");
+    }
+    // Cannot safely destroy context without callbacks
   }
 }
 

@@ -181,35 +181,32 @@ CoinOffscreenGLCanvas::tryActivateGLContext(void)
   if (this->size == SbVec2s(0, 0)) { return 0; }
 
   if (this->context == NULL) {
-#if defined(HAVE_WGL)
-    /* NOTE: This discrepancy between the different glue flavors is due to a
-    driver bug that causes the coordinates fed to the gl_FragCoord fragment
-    shader input register to be flipped when using render-to-texture capable
-    pbuffers. Ref COINSUPPORT-1284. 20101214 tarjei. */
-    this->context = wglglue_context_create_offscreen(this->size[0],
-                                                     this->size[1],
-                                                     FALSE);
-#else
+    // Always use the callback-based context creation system
+    // Applications must provide context creation callbacks
     this->context = cc_glglue_context_create_offscreen(this->size[0],
                                                        this->size[1]);
-#endif
+    
     if (CoinOffscreenGLCanvas::debug()) {
       SoDebugError::postInfo("CoinOffscreenGLCanvas::tryActivateGLContext",
                              "Tried to create offscreen context of dimensions "
-                             "<%d, %d> -- %s",
+                             "<%d, %d> via callback system -- %s",
                              this->size[0], this->size[1],
                              this->context == NULL ? "failed" : "succeeded");
     }
 
-    if (this->context == NULL) { return 0; }
+    if (this->context == NULL) { 
+      SoDebugError::post("CoinOffscreenGLCanvas::tryActivateGLContext",
+                         "No context created. Applications must provide context "
+                         "creation callbacks via cc_glglue_context_set_offscreen_cb_functions()");
+      return 0; 
+    }
 
     // Set up mapping from GL context to SoGLRenderAction context id.
     this->renderid = SoGLCacheContextElement::getUniqueCacheContext();
 
-    // need to change this, for the getHDC() function, since a
-    // reference to current_hdc is returned (yes, this is dumb, but
-    // such is the TGS / Mercury Inventor API)
-    this->current_hdc = cc_glglue_win32_HDC(this->context);
+    // Note: HDC handling is Windows-specific and should be handled by 
+    // the callback implementation if needed
+    this->current_hdc = NULL;
   }
 
   if (cc_glglue_context_make_current(this->context) == FALSE) {
@@ -312,16 +309,24 @@ CoinOffscreenGLCanvas::destructContext(void)
 
 // *************************************************************************
 
-/* This abomination is needed to support SoOffscreenRenderer::getDC(). */
+/* This method supports SoOffscreenRenderer::getDC(). Note that HDC 
+   support depends on the context implementation provided by callbacks. */
 const void * const &
 CoinOffscreenGLCanvas::getHDC(void) const
 {
+  // HDC is platform-specific (Windows) and should be managed by the callback implementation
+  // Return null if not available - applications using callbacks should handle this
   return this->current_hdc;
 }
 
 void CoinOffscreenGLCanvas::updateDCBitmap()
 {
-cc_glglue_win32_updateHDCBitmap(this->context);
+  // HDC bitmap updates are platform-specific and should be handled by callback implementations
+  // This method is now a no-op - applications using callbacks should handle DC updates
+  if (CoinOffscreenGLCanvas::debug()) {
+    SoDebugError::postInfo("CoinOffscreenGLCanvas::updateDCBitmap",
+                           "HDC operations should be handled by context callbacks");
+  }
 }
 // *************************************************************************
 
