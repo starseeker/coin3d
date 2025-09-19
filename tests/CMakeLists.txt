@@ -106,6 +106,55 @@ endif()
 # in headless environments. Run manually with a display when needed.
 # add_test(NAME OffscreenRenderingTest COMMAND OffscreenRenderingTest)
 
+# Enhanced offscreen rendering test with PNG output
+add_executable(EnhancedOffscreenTest
+    enhanced_offscreen_test.cpp
+)
+
+target_link_libraries(EnhancedOffscreenTest 
+    Coin 
+    ${COIN_TARGET_LINK_LIBRARIES}
+)
+
+target_include_directories(EnhancedOffscreenTest PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${PROJECT_SOURCE_DIR}/include
+    ${PROJECT_SOURCE_DIR}/include/Inventor/annex
+    ${PROJECT_BINARY_DIR}/include
+    ${COIN_TARGET_INCLUDE_DIRECTORIES}
+)
+
+if (USE_PTHREAD)
+    target_link_libraries(EnhancedOffscreenTest pthread)
+endif()
+
+# Note: This enhanced test can run in headless environments using OSMesa
+# Run with: ./EnhancedOffscreenTest
+
+# FBO demonstration test with PNG output
+add_executable(FBODemonstrationTest
+    fbo_demonstration_test.cpp
+)
+
+target_link_libraries(FBODemonstrationTest 
+    Coin 
+    ${COIN_TARGET_LINK_LIBRARIES}
+)
+
+target_include_directories(FBODemonstrationTest PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${PROJECT_SOURCE_DIR}/include
+    ${PROJECT_SOURCE_DIR}/include/Inventor/annex
+    ${PROJECT_BINARY_DIR}/include
+    ${COIN_TARGET_INCLUDE_DIRECTORIES}
+)
+
+if (USE_PTHREAD)
+    target_link_libraries(FBODemonstrationTest pthread)
+endif()
+
+# This test demonstrates FBO and OSMesa functionality with PNG output
+
 # Enable compiler warnings suppression for tautological comparisons on macOS
 include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG(-Wtautological-compare DISABLE_WARNING_TAUTOLOGCOMPARE)
