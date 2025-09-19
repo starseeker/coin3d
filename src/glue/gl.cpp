@@ -256,6 +256,7 @@
 #include "glue/gl_egl.h"
 #include "glue/gl_glx.h"
 #include "glue/gl_wgl.h"
+#include "glue/gl_osmesa.h"
 #include "glue/gl_fbo.h"
 #include "threads/threadsutilp.h"
 #include "misc/SoEnvironment.h"
@@ -277,6 +278,25 @@ static cc_glglue_offscreen_cb_functions* offscreen_cb = NULL;
 static int COIN_USE_AGL = -1;
 static int COIN_USE_EGL = -1;
 static int COIN_USE_FBO_OFFSCREEN = -1;
+static int COIN_USE_OSMESA_FALLBACK = -1;
+
+/* ********************************************************************** */
+
+/* Context type identification for handling multiple backend types */
+enum coin_context_type {
+  COIN_CONTEXT_TYPE_UNKNOWN = 0,
+  COIN_CONTEXT_TYPE_GLX,
+  COIN_CONTEXT_TYPE_WGL, 
+  COIN_CONTEXT_TYPE_CGL,
+  COIN_CONTEXT_TYPE_AGL,
+  COIN_CONTEXT_TYPE_EGL,
+  COIN_CONTEXT_TYPE_OSMESA
+};
+
+struct coin_context_wrapper {
+  enum coin_context_type type;
+  void * context;
+};
 
 /* FBO-based offscreen rendering callbacks */
 static cc_glglue_offscreen_cb_functions fbo_offscreen_cb = {
@@ -299,6 +319,33 @@ check_force_fbo_offscreen(void)
     }
   }
   return COIN_USE_FBO_OFFSCREEN;
+}
+
+/* Check environment variable for OSMesa fallback */
+static int
+check_use_osmesa_fallback(void)
+{
+  if (COIN_USE_OSMESA_FALLBACK == -1) {
+    auto env = CoinInternal::getEnvironmentVariable("COIN_USE_OSMESA_FALLBACK");
+    if (env.has_value()) {
+      COIN_USE_OSMESA_FALLBACK = std::atoi(env->c_str());
+    } else {
+      COIN_USE_OSMESA_FALLBACK = 1; /* Default to using OSMesa as fallback */
+    }
+  }
+  return COIN_USE_OSMESA_FALLBACK;
+}
+
+/* Check if we should force OSMesa for guaranteed context creation */
+static int
+check_force_osmesa(void)
+{
+  static int force_osmesa = -1;
+  if (force_osmesa == -1) {
+    auto env = CoinInternal::getEnvironmentVariable("COIN_FORCE_OSMESA");
+    force_osmesa = env.has_value() ? std::atoi(env->c_str()) : 0;
+  }
+  return force_osmesa;
 }
 
 /* Set up FBO-based offscreen rendering if available and enabled */
@@ -4460,33 +4507,75 @@ cc_glglue_context_set_offscreen_cb_functions(cc_glglue_offscreen_cb_functions* p
 void *
 cc_glglue_context_create_offscreen(unsigned int width, unsigned int height)
 {
+  void * ctx = NULL;
+  
   if (offscreen_cb && offscreen_cb->create_offscreen) {
     return (*offscreen_cb->create_offscreen)(width, height);
-  } else {
+  }
+  
+  /* Check if OSMesa should be forced (for guaranteed context creation) */
+  if (check_force_osmesa() > 0) {
+#ifdef HAVE_OSMESA
+    ctx = osmesaglue_context_create_offscreen(width, height);
+    if (ctx) return ctx;
+#endif
+  }
+  
+  /* Try platform-specific implementations first */
 #ifdef HAVE_NOGL
-  assert(FALSE && "unimplemented");
-  return NULL;
+  /* No OpenGL implementation available */
 #elif defined(HAVE_WGL)
-  return wglglue_context_create_offscreen(width, height);
+  ctx = wglglue_context_create_offscreen(width, height);
 #else
 #if defined(HAVE_EGL)
-    if (COIN_USE_EGL > 0) return eglglue_context_create_offscreen(width, height);
+  if (COIN_USE_EGL > 0) {
+    ctx = eglglue_context_create_offscreen(width, height);
+    if (ctx) return ctx;
+  }
 #endif
 #if defined(HAVE_GLX)
-    return glxglue_context_create_offscreen(width, height);
+  ctx = glxglue_context_create_offscreen(width, height);
+  if (ctx) return ctx;
 #endif
 #if defined(HAVE_AGL)
   check_force_agl();
-  if (COIN_USE_AGL > 0) return aglglue_context_create_offscreen(width, height); else
+  if (COIN_USE_AGL > 0) {
+    ctx = aglglue_context_create_offscreen(width, height);
+    if (ctx) return ctx;
+  }
 #endif
 #if defined(HAVE_CGL)
-  return cglglue_context_create_offscreen(width, height);
-#else
+  ctx = cglglue_context_create_offscreen(width, height);
+  if (ctx) return ctx;
 #endif
+#endif
+
+  /* If platform-specific methods failed and OSMesa fallback is enabled, try OSMesa */
+  if (!ctx && check_use_osmesa_fallback() > 0) {
+#ifdef HAVE_OSMESA
+    if (osmesaglue_available()) {
+      ctx = osmesaglue_context_create_offscreen(width, height);
+      if (ctx) {
+        if (coin_glglue_debug()) {
+          cc_debugerror_postinfo("cc_glglue_context_create_offscreen",
+                                 "Using OSMesa fallback for offscreen context %dx%d",
+                                 width, height);
+        }
+        return ctx;
+      }
+    }
 #endif
   }
-  assert(FALSE && "unimplemented");
-  return NULL;
+
+  if (!ctx) {
+    if (coin_glglue_debug()) {
+      cc_debugerror_postwarning("cc_glglue_context_create_offscreen",
+                               "All offscreen context creation methods failed for %dx%d",
+                               width, height);
+    }
+  }
+
+  return ctx;
 }
 
 SbBool

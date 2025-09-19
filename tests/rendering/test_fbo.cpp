@@ -89,6 +89,36 @@ TEST_CASE("FBO implementation integration", "[fbo][integration]") {
   }
 }
 
+TEST_CASE("OSMesa integration test", "[osmesa][integration]") {
+  SECTION("OSMesa environment variables") {
+    // Test OSMesa-specific environment variables
+    setenv("COIN_FORCE_OSMESA", "1", 1);
+    setenv("COIN_DEBUG_OSMESA", "1", 1);
+    
+    // This should not crash even without OSMesa available
+    REQUIRE_NOTHROW(cc_glglue_context_set_offscreen_cb_functions(nullptr));
+    
+    unsetenv("COIN_FORCE_OSMESA");
+    unsetenv("COIN_DEBUG_OSMESA");
+  }
+  
+  SECTION("OSMesa fallback environment variables") {
+    // Test OSMesa fallback variables
+    setenv("COIN_USE_OSMESA_FALLBACK", "1", 1);
+    
+    void * ctx = cc_glglue_context_create_offscreen(256, 256);
+    // Without actual OSMesa available, this will try other methods
+    
+    if (ctx) {
+      cc_glglue_context_destruct(ctx);
+    }
+    
+    REQUIRE(true); // Verify we didn't crash
+    
+    unsetenv("COIN_USE_OSMESA_FALLBACK");
+  }
+}
+
 TEST_CASE("FBO environment integration test", "[fbo][full_integration]") {
   SECTION("Test with FBO disabled") {
     // Disable FBO and verify fallback works

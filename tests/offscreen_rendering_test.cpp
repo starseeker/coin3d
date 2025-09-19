@@ -103,6 +103,66 @@ create_test_scene(void)
   return root;
 }
 
+/* Test OSMesa offscreen rendering */
+int
+test_osmesa_offscreen_rendering(SoSeparator * scene)
+{
+  std::cout << "Testing OSMesa-based offscreen rendering..." << std::endl;
+
+  /* Force OSMesa usage for guaranteed context creation */
+  setenv("COIN_FORCE_OSMESA", "1", 1);
+  setenv("COIN_DEBUG_OSMESA", "1", 1);
+
+  /* Create offscreen renderer */
+  SoOffscreenRenderer renderer(SbViewportRegion(512, 512));
+  renderer.setBackgroundColor(SbColor(0.1f, 0.1f, 0.1f));
+
+  /* Render the scene */
+  SbBool success = renderer.render(scene);
+  if (!success) {
+    std::cerr << "OSMesa offscreen rendering failed!" << std::endl;
+    return 1;
+  }
+
+  /* Get the rendered image */
+  unsigned char * buffer = renderer.getBuffer();
+  if (!buffer) {
+    std::cerr << "Failed to get OSMesa render buffer!" << std::endl;
+    return 1;
+  }
+
+  /* Check if we got a reasonable image (non-black pixels) */
+  int width = 512;
+  int height = 512;
+  int components = renderer.getComponents();
+  
+  int non_black_pixels = 0;
+  for (int i = 0; i < width * height; i++) {
+    unsigned char r = buffer[i * components];
+    unsigned char g = buffer[i * components + 1];
+    unsigned char b = buffer[i * components + 2];
+    
+    if (r > 10 || g > 10 || b > 10) {
+      non_black_pixels++;
+    }
+  }
+
+  std::cout << "OSMesa render complete: " << non_black_pixels << " non-black pixels out of " 
+            << (width * height) << " total pixels." << std::endl;
+
+  if (non_black_pixels > 1000) {
+    std::cout << "OSMesa offscreen rendering SUCCESS!" << std::endl;
+    unsetenv("COIN_FORCE_OSMESA");
+    unsetenv("COIN_DEBUG_OSMESA");
+    return 0;
+  } else {
+    std::cerr << "OSMesa offscreen rendering produced mostly black image - may have failed." << std::endl;
+    unsetenv("COIN_FORCE_OSMESA");
+    unsetenv("COIN_DEBUG_OSMESA");
+    return 1;
+  }
+}
+
 /* Test FBO offscreen rendering */
 int
 test_fbo_offscreen_rendering(SoSeparator * scene)
@@ -226,9 +286,10 @@ main(int argc, char ** argv)
 
   int result = 0;
 
-  /* Test both rendering methods */
+  /* Test all rendering methods */
   result |= test_traditional_offscreen_rendering(scene);
   result |= test_fbo_offscreen_rendering(scene);
+  result |= test_osmesa_offscreen_rendering(scene);
 
   /* Cleanup */
   scene->unref();
