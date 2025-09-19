@@ -181,6 +181,9 @@ CoinOffscreenGLCanvas::tryActivateGLContext(void)
   if (this->size == SbVec2s(0, 0)) { return 0; }
 
   if (this->context == NULL) {
+    /* Try to use FBO-based offscreen rendering when we have a current context */
+    cc_glglue_setup_fbo_offscreen_if_available();
+    
 #if defined(HAVE_WGL)
     /* NOTE: This discrepancy between the different glue flavors is due to a
     driver bug that causes the coordinates fed to the gl_FragCoord fragment

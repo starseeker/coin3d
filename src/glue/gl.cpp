@@ -256,6 +256,7 @@
 #include "glue/gl_egl.h"
 #include "glue/gl_glx.h"
 #include "glue/gl_wgl.h"
+#include "glue/gl_fbo.h"
 #include "threads/threadsutilp.h"
 #include "misc/SoEnvironment.h"
 
@@ -275,6 +276,39 @@ static int COIN_MAXIMUM_TEXTURE3_SIZE = -1;
 static cc_glglue_offscreen_cb_functions* offscreen_cb = NULL;
 static int COIN_USE_AGL = -1;
 static int COIN_USE_EGL = -1;
+static int COIN_USE_FBO_OFFSCREEN = -1;
+
+/* FBO-based offscreen rendering callbacks */
+static cc_glglue_offscreen_cb_functions fbo_offscreen_cb = {
+  fbo_context_create_offscreen,
+  fbo_context_make_current,
+  fbo_context_reinstate_previous,
+  fbo_context_destruct
+};
+
+/* Check environment variable for FBO offscreen rendering preference */
+static int
+check_force_fbo_offscreen(void)
+{
+  if (COIN_USE_FBO_OFFSCREEN == -1) {
+    auto env = CoinInternal::getEnvironmentVariable("COIN_USE_FBO_OFFSCREEN");
+    if (env.has_value()) {
+      COIN_USE_FBO_OFFSCREEN = std::atoi(env->c_str());
+    } else {
+      COIN_USE_FBO_OFFSCREEN = 1; /* Default to using FBO when available */
+    }
+  }
+  return COIN_USE_FBO_OFFSCREEN;
+}
+
+/* Set up FBO-based offscreen rendering if available and enabled */
+void
+cc_glglue_setup_fbo_offscreen_if_available(void)
+{
+  if (check_force_fbo_offscreen() > 0 && fbo_offscreen_available()) {
+    cc_glglue_context_set_offscreen_cb_functions(&fbo_offscreen_cb);
+  }
+}
 
 /* ********************************************************************** */
 

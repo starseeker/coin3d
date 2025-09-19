@@ -655,6 +655,9 @@ typedef struct cc_glglue_offscreen_cb_functions {
  */
 COIN_DLL_API void cc_glglue_context_set_offscreen_cb_functions(cc_glglue_offscreen_cb_functions* p);
 
+/* Set up FBO-based offscreen rendering if available and enabled */
+COIN_DLL_API void cc_glglue_setup_fbo_offscreen_if_available(void);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
