@@ -253,224 +253,137 @@ elseif(CMAKE_USE_PTHREADS_INIT)
 endif()
 list(APPEND COIN_TARGET_LINK_LIBRARIES Threads::Threads)
 
+# External XML parser
 if(USE_EXTERNAL_EXPAT)
-  find_package(EXPAT)
-  if(EXPAT_FOUND)
+    find_package(EXPAT REQUIRED)
     set(HAVE_EXPAT 1)
     if(NOT TARGET EXPAT::EXPAT)
-      add_library(EXPAT::EXPAT UNKNOWN IMPORTED)
-      set_target_properties(EXPAT::EXPAT PROPERTIES
-        IMPORTED_LINK_INTERFACE_LANGUAGES "C"
-        IMPORTED_LOCATION "${EXPAT_LIBRARIES}"
-        INTERFACE_INCLUDE_DIRECTORIES "${EXPAT_INCLUDE_DIRS}")
+        add_library(EXPAT::EXPAT UNKNOWN IMPORTED)
+        set_target_properties(EXPAT::EXPAT PROPERTIES
+            IMPORTED_LINK_INTERFACE_LANGUAGES "C"
+            IMPORTED_LOCATION "${EXPAT_LIBRARIES}"
+            INTERFACE_INCLUDE_DIRECTORIES "${EXPAT_INCLUDE_DIRS}")
     endif()
     list(APPEND COIN_TARGET_LINK_LIBRARIES EXPAT::EXPAT)
-  endif()
 else()
-  if(NOT WIN32)
-    set(XML_DEV_URANDOM 1)
-  endif()
-endif()
-
-if(USE_SUPERGLU)
-  find_package(superglu)
-  if(superglu_FOUND)
-    set(HAVE_SUPERGLU 1)
-    set(GLU_RUNTIME_LINKING OFF)
-    list(REMOVE_ITEM COIN_TARGET_LINK_LIBRARIES ${OPENGL_glu_LIBRARY})
-    if(TARGET OpenGL::GLU)
-      list(REMOVE_ITEM COIN_TARGET_LINK_LIBRARIES OpenGL::GLU)
+    if(NOT WIN32)
+        set(XML_DEV_URANDOM 1)
     endif()
-    list(APPEND COIN_TARGET_LINK_LIBRARIES superglu::GLU)
-  endif()
 endif()
 
-#find_package(FLEX)
-#if(FLEX_FOUND)
-# set(HAVE_FLEX 1)
-# #include_directories(${FLEX_INCLUDE_DIRS})
-# #list(APPEND COIN_TARGET_INCLUDE_DIRECTORIES ${FLEX_INCLUDE_DIRS})
-#endif()
-#
-#find_package(BISON)
-#if(BISON_FOUND)
-# set(HAVE_BISON 1)
-# #include_directories(${BISON_INCLUDE_DIRS})
-# #list(APPEND COIN_TARGET_INCLUDE_DIRECTORIES ${BISON_INCLUDE_DIRS})
-#endif()
+# Super GLU support
+if(USE_SUPERGLU)
+    find_package(superglu)
+    if(superglu_FOUND)
+        set(HAVE_SUPERGLU 1)
+        set(GLU_RUNTIME_LINKING OFF)
+        # Remove any existing OpenGL GLU libraries since we're using superglu
+        list(REMOVE_ITEM COIN_TARGET_LINK_LIBRARIES ${OPENGL_glu_LIBRARY})
+        if(TARGET OpenGL::GLU)
+            list(REMOVE_ITEM COIN_TARGET_LINK_LIBRARIES OpenGL::GLU)
+        endif()
+        list(APPEND COIN_TARGET_LINK_LIBRARIES superglu::GLU)
+    endif()
+endif()
 
-if(HAVE_SOUND)
-  if(NOT OPENAL_RUNTIME_LINKING)
+# Audio support (OpenAL)
+if(HAVE_SOUND AND NOT OPENAL_RUNTIME_LINKING)
     find_package(OpenAL)
     if(OpenAL_FOUND)
-      set(HAVE_OPENAL 1)
-      # Checks specific OpenAL configurations
-      set(CMAKE_REQUIRED_INCLUDES ${OPENGL_INCLUDE_DIR})
-      check_include_file(AL/al.h HAVE_AL_AL_H)
-      check_include_file(OpenAL/al.h HAVE_OPENAL_AL_H)
-      set(CMAKE_REQUIRED_INCLUDES)
-      if(NOT TARGET OpenAL::OpenAL)
-        add_library(OpenAL::OpenAL UNKNOWN IMPORTED)
-        set_target_properties(OpenAL::OpenAL PROPERTIES
-          IMPORTED_LINK_INTERFACE_LANGUAGES "C"
-          IMPORTED_LOCATION "${OPENAL_LIBRARY}"
-          INTERFACE_INCLUDE_DIRECTORIES "${OPENAL_INCLUDE_DIR}")
-      endif()
-      list(APPEND COIN_TARGET_LINK_LIBRARIES OpenAL::OpenAL)
+        set(HAVE_OPENAL 1)
+        
+        # Check for different OpenAL header locations
+        set(CMAKE_REQUIRED_INCLUDES ${OpenAL_INCLUDE_DIRS})
+        check_include_file(AL/al.h HAVE_AL_AL_H)
+        check_include_file(OpenAL/al.h HAVE_OPENAL_AL_H)
+        set(CMAKE_REQUIRED_INCLUDES)
+        
+        if(NOT TARGET OpenAL::OpenAL)
+            add_library(OpenAL::OpenAL UNKNOWN IMPORTED)
+            set_target_properties(OpenAL::OpenAL PROPERTIES
+                IMPORTED_LINK_INTERFACE_LANGUAGES "C"
+                IMPORTED_LOCATION "${OPENAL_LIBRARY}"
+                INTERFACE_INCLUDE_DIRECTORIES "${OPENAL_INCLUDE_DIR}")
+        endif()
+        list(APPEND COIN_TARGET_LINK_LIBRARIES OpenAL::OpenAL)
     endif()
-  endif()
 endif()
 
+# Compression libraries
 if(NOT ZLIB_RUNTIME_LINKING)
-  find_package(ZLIB)
-  if(ZLIB_FOUND)
-    set(HAVE_ZLIB 1)
-    if(NOT TARGET ZLIB::ZLIB)
-      add_library(ZLIB::ZLIB UNKNOWN IMPORTED)
-      set_target_properties(ZLIB::ZLIB PROPERTIES
-        IMPORTED_LINK_INTERFACE_LANGUAGES "C"
-        INTERFACE_INCLUDE_DIRECTORIES "${ZLIB_INCLUDE_DIRS}")
-
-      if(ZLIB_LIBRARY_RELEASE)
-        set_property(TARGET ZLIB::ZLIB APPEND PROPERTY
-          IMPORTED_CONFIGURATIONS RELEASE)
-        set_target_properties(ZLIB::ZLIB PROPERTIES
-          IMPORTED_LOCATION_RELEASE "${ZLIB_LIBRARY_RELEASE}")
-      endif()
-
-      if(ZLIB_LIBRARY_DEBUG)
-        set_property(TARGET ZLIB::ZLIB APPEND PROPERTY
-          IMPORTED_CONFIGURATIONS DEBUG)
-        set_target_properties(ZLIB::ZLIB PROPERTIES
-          IMPORTED_LOCATION_DEBUG "${ZLIB_LIBRARY_DEBUG}")
-      endif()
-
-      if(NOT ZLIB_LIBRARY_RELEASE AND NOT ZLIB_LIBRARY_DEBUG)
-        set_property(TARGET ZLIB::ZLIB APPEND PROPERTY
-          IMPORTED_LOCATION "${ZLIB_LIBRARY}")
-      endif()
+    find_package(ZLIB)
+    if(ZLIB_FOUND)
+        set(HAVE_ZLIB 1)
+        list(APPEND COIN_TARGET_LINK_LIBRARIES ZLIB::ZLIB)
     endif()
-    list(APPEND COIN_TARGET_LINK_LIBRARIES ZLIB::ZLIB)
-  endif()
 endif()
 
 if(NOT LIBBZIP2_RUNTIME_LINKING)
-  find_package(BZip2)
-  if(BZip2_FOUND)
-    set(HAVE_BZIP2 1)
-    if(NOT TARGET BZip2::BZip2)
-      add_library(BZip2::BZip2 UNKNOWN IMPORTED)
-      set_target_properties(BZip2::BZip2 PROPERTIES
-        IMPORTED_LINK_INTERFACE_LANGUAGES "C"
-        INTERFACE_INCLUDE_DIRECTORIES "${BZIP2_INCLUDE_DIRS}")
-
-      if(BZIP2_LIBRARY_RELEASE)
-        set_property(TARGET BZip2::BZip2 APPEND PROPERTY
-          IMPORTED_CONFIGURATIONS RELEASE)
-        set_target_properties(BZip2::BZip2 PROPERTIES
-          IMPORTED_LOCATION_RELEASE "${BZIP2_LIBRARY_RELEASE}")
-      endif()
-
-      if(BZIP2_LIBRARY_DEBUG)
-        set_property(TARGET BZip2::BZip2 APPEND PROPERTY
-          IMPORTED_CONFIGURATIONS DEBUG)
-        set_target_properties(BZip2::BZip2 PROPERTIES
-          IMPORTED_LOCATION_DEBUG "${BZIP2_LIBRARY_DEBUG}")
-      endif()
-
-      if(NOT BZIP2_LIBRARY_RELEASE AND NOT BZIP2_LIBRARY_DEBUG)
-        set_property(TARGET BZip2::BZip2 APPEND PROPERTY
-          IMPORTED_LOCATION "${BZIP2_LIBRARY}")
-      endif()
+    find_package(BZip2)
+    if(BZip2_FOUND)
+        set(HAVE_BZIP2 1)
+        list(APPEND COIN_TARGET_LINK_LIBRARIES BZip2::BZip2)
     endif()
-    list(APPEND COIN_TARGET_LINK_LIBRARIES BZip2::BZip2)
-  endif()
 endif()
 
+# Font libraries
 if(NOT FREETYPE_RUNTIME_LINKING)
-  find_package(Freetype)
-  if(Freetype_FOUND)
-    set(HAVE_FREETYPE 1)
-    if(NOT TARGET Freetype::Freetype)
-      add_library(Freetype::Freetype UNKNOWN IMPORTED)
-      set_target_properties(Freetype::Freetype PROPERTIES
-        IMPORTED_LINK_INTERFACE_LANGUAGES "C"
-        INTERFACE_INCLUDE_DIRECTORIES "${FREETYPE_INCLUDE_DIRS}")
-
-      if(FREETYPE_LIBRARY_RELEASE)
-        set_property(TARGET Freetype::Freetype APPEND PROPERTY
-          IMPORTED_CONFIGURATIONS RELEASE)
-        set_target_properties(Freetype::Freetype PROPERTIES
-          IMPORTED_LOCATION_RELEASE "${FREETYPE_LIBRARY_RELEASE}")
-      endif()
-
-      if(FREETYPE_LIBRARY_DEBUG)
-        set_property(TARGET Freetype::Freetype APPEND PROPERTY
-          IMPORTED_CONFIGURATIONS DEBUG)
-        set_target_properties(Freetype::Freetype PROPERTIES
-          IMPORTED_LOCATION_DEBUG "${FREETYPE_LIBRARY_DEBUG}")
-      endif()
-
-      if(NOT FREETYPE_LIBRARY_RELEASE AND NOT FREETYPE_LIBRARY_DEBUG)
-        set_target_properties(Freetype::Freetype PROPERTIES
-          IMPORTED_LOCATION "${FREETYPE_LIBRARY}")
-      endif()
+    find_package(Freetype)
+    if(Freetype_FOUND)
+        set(HAVE_FREETYPE 1)
+        set(HAVE_FREETYPE_H 1)
+        list(APPEND COIN_TARGET_LINK_LIBRARIES Freetype::Freetype)
     endif()
-    set(HAVE_FREETYPE_H 1)
-    list(APPEND COIN_TARGET_LINK_LIBRARIES Freetype::Freetype)
-  endif()
 endif()
 
 if(NOT FONTCONFIG_RUNTIME_LINKING)
-  find_package(Fontconfig)
-  if(Fontconfig_FOUND)
-    set(HAVE_FONTCONFIG 1)
-    if(NOT TARGET Fontconfig::Fontconfig)
-      add_library(Fontconfig::Fontconfig UNKNOWN IMPORTED)
-      set_target_properties(Fontconfig::Fontconfig PROPERTIES
-        IMPORTED_LOCATION "${FONTCONFIG_LIBRARIES}"
-        INTERFACE_COMPILE_OPTIONS "${FONTCONFIG_COMPILE_OPTIONS}"
-        INTERFACE_INCLUDE_DIRECTORIES "${FONTCONFIG_INCLUDE_DIR}"
-      )
+    find_package(Fontconfig)
+    if(Fontconfig_FOUND)
+        set(HAVE_FONTCONFIG 1)
+        if(NOT TARGET Fontconfig::Fontconfig)
+            add_library(Fontconfig::Fontconfig UNKNOWN IMPORTED)
+            set_target_properties(Fontconfig::Fontconfig PROPERTIES
+                IMPORTED_LOCATION "${FONTCONFIG_LIBRARIES}"
+                INTERFACE_COMPILE_OPTIONS "${FONTCONFIG_COMPILE_OPTIONS}"
+                INTERFACE_INCLUDE_DIRECTORIES "${FONTCONFIG_INCLUDE_DIR}")
+        endif()
+        list(APPEND COIN_TARGET_LINK_LIBRARIES Fontconfig::Fontconfig)
     endif()
-    list(APPEND COIN_TARGET_LINK_LIBRARIES Fontconfig::Fontconfig)
-  endif()
 endif()
 
+# Image library
 if(NOT SIMAGE_RUNTIME_LINKING)
-  find_package(simage)
-  if(simage_FOUND)
-    set(HAVE_LIBSIMAGE 1)
-    list(APPEND COIN_TARGET_LINK_LIBRARIES simage::simage)
-  endif()
+    find_package(simage)
+    if(simage_FOUND)
+        set(HAVE_LIBSIMAGE 1)
+        list(APPEND COIN_TARGET_LINK_LIBRARIES simage::simage)
+    endif()
 endif()
 
-message(STATUS "${COIN_TARGET_INCLUDE_DIRECTORIES}")
-message(STATUS "${COIN_TARGET_LINK_LIBRARIES}")
-
-# ##########################################################################
-# Setup build environment
-# ##########################################################################
-
-if(NOT CMAKE_BUILD_TYPE)
-  # Has no effect for multi configuration generators (VisualStudio, Xcode).
-  set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose type of build, options are Debug, Release, RelWithDebInfo, MinSizeRel." FORCE)
+# Debug messages for development
+if(COIN_VERBOSE)
+    message(STATUS "Target include directories: ${COIN_TARGET_INCLUDE_DIRECTORIES}")
+    message(STATUS "Target link libraries: ${COIN_TARGET_LINK_LIBRARIES}")
 endif()
-# Set common output directories for all targets built.
-# First for the generic no-config case (e.g. with mingw)
+
+# ============================================================================
+# Build environment configuration  
+# ============================================================================
+
+# Output directories (consistent for all configurations)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
-# Second, for multi-config builds (e.g. msvc)
-foreach (_config ${CMAKE_CONFIGURATION_TYPES})
-  string(TOUPPER ${_config} _config)
-  set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${_config} "${CMAKE_BINARY_DIR}/lib")
-  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${_config} "${CMAKE_BINARY_DIR}/lib")
-  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${_config} "${CMAKE_BINARY_DIR}/bin")
+
+# Multi-config generators (Visual Studio, Xcode)
+foreach(_config ${CMAKE_CONFIGURATION_TYPES})
+    string(TOUPPER ${_config} _config)
+    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${_config} "${CMAKE_BINARY_DIR}/lib")
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${_config} "${CMAKE_BINARY_DIR}/lib")
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${_config} "${CMAKE_BINARY_DIR}/bin")
 endforeach()
 
-# Checks for existence of specified types and set variable to the first type found
-# Using C++17 standard fixed-width integer types
+# Modern fixed-width integer types (C++17)
 set(COIN_INT8_T "int8_t")
 set(COIN_UINT8_T "uint8_t")
 set(COIN_INT16_T "int16_t")
@@ -482,28 +395,42 @@ set(COIN_UINT64_T "uint64_t")
 set(COIN_INTPTR_T "intptr_t")
 set(COIN_UINTPTR_T "uintptr_t")
 
+# Platform-specific compiler settings
 if(MSVC)
-  option(COIN_BUILD_MSVC_STATIC_RUNTIME "Build against the static Microsoft Visual C runtime library." OFF)
-  option(COIN_BUILD_SINGLE_LIB "Build only one library when ON, multiple when OFF." ON)
-  if (MSVC_VERSION GREATER 1500 OR MSVC_VERSION EQUAL 1500)
-    option(COIN_BUILD_MSVC_MP "Enable build with multiple processes in Visual Studio" ON)
-  else()
-    set(COIN_BUILD_MSVC_MP OFF CACHE BOOL "Compiler option /MP requires at least Visual Studio 2008 (VS9) or newer" FORCE)
-  endif()
-  if(COIN_BUILD_MSVC_MP)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
-  endif ()
+    # MSVC-specific options
+    option(COIN_BUILD_MSVC_STATIC_RUNTIME "Build against the static Microsoft Visual C runtime library" OFF)
+    option(COIN_BUILD_SINGLE_LIB "Build only one library when ON, multiple when OFF" ON)
+    
+    if(MSVC_VERSION GREATER_EQUAL 1500)
+        option(COIN_BUILD_MSVC_MP "Enable build with multiple processes in Visual Studio" ON)
+    else()
+        set(COIN_BUILD_MSVC_MP OFF CACHE BOOL "Compiler option /MP requires at least Visual Studio 2008 (VS9) or newer" FORCE)
+    endif()
+    
+    if(COIN_BUILD_MSVC_MP)
+        add_compile_options(/MP)
+    endif()
 
-  # Enable C++ exception handling (for code that uses boost in SbByteBuffer)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc")
-
-  coin_msvc_link_static_crt(${COIN_BUILD_MSVC_STATIC_RUNTIME})
-  add_definitions(-D_CRT_NONSTDC_NO_DEPRECATE -D_CRT_SECURE_NO_DEPRECATE -D_CRT_SECURE_NO_WARNINGS -D_USE_MATH_DEFINES)
+    # Enable C++ exception handling
+    add_compile_options(/EHsc)
+    
+    # Static runtime linking
+    if(COIN_BUILD_MSVC_STATIC_RUNTIME)
+        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    endif()
+    
+    # MSVC-specific definitions
+    add_compile_definitions(
+        _CRT_NONSTDC_NO_DEPRECATE
+        _CRT_SECURE_NO_DEPRECATE 
+        _CRT_SECURE_NO_WARNINGS
+        _USE_MATH_DEFINES)
 else()
-  if(APPLE)
-    add_definitions(-DGL_SILENCE_DEPRECATION)
-  endif()
-  option(COIN_BUILD_SINGLE_LIB "Build only one library when ON, multiple when OFF." OFF)
+    # Non-MSVC platforms
+    if(APPLE)
+        add_definitions(-DGL_SILENCE_DEPRECATION)
+    endif()
+    option(COIN_BUILD_SINGLE_LIB "Build only one library when ON, multiple when OFF" OFF)
 endif()
 
 set(HAVE_GZDOPEN 1)
