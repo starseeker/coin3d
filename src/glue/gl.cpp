@@ -4429,30 +4429,21 @@ cc_glglue_context_create_offscreen(unsigned int width, unsigned int height)
   if (offscreen_cb && offscreen_cb->create_offscreen) {
     return (*offscreen_cb->create_offscreen)(width, height);
   } else {
-#ifdef HAVE_NOGL
-  assert(FALSE && "unimplemented");
-  return NULL;
-#elif defined(HAVE_WGL)
-  return wglglue_context_create_offscreen(width, height);
-#else
-#if defined(HAVE_EGL)
-    if (COIN_USE_EGL > 0) return eglglue_context_create_offscreen(width, height);
-#endif
-#if defined(HAVE_GLX)
-    return glxglue_context_create_offscreen(width, height);
-#endif
-#if defined(HAVE_AGL)
-  check_force_agl();
-  if (COIN_USE_AGL > 0) return aglglue_context_create_offscreen(width, height); else
-#endif
-#if defined(HAVE_CGL)
-  return cglglue_context_create_offscreen(width, height);
-#else
-#endif
-#endif
+    // ERROR: No context creation callbacks provided
+    // Applications must provide context creation callbacks via cc_glglue_context_set_offscreen_cb_functions()
+    // The old built-in platform-specific context creation is no longer supported.
+    
+    static int error_shown = 0;
+    if (!error_shown) {
+      error_shown = 1;
+      fprintf(stderr, "ERROR: No context creation callbacks provided. "
+                      "Applications must provide context creation callbacks "
+                      "via cc_glglue_context_set_offscreen_cb_functions(). "
+                      "See examples/osmesa_example.h for reference implementation.\n");
+    }
+    
+    return NULL;
   }
-  assert(FALSE && "unimplemented");
-  return NULL;
 }
 
 SbBool
