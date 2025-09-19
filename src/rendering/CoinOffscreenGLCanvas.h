@@ -72,11 +72,23 @@ private:
   uint32_t tryActivateGLContext(void);
   void destructContext(void);
   
+  // FBO management helpers
+  SbBool initializeFBO(void);
+  void cleanupFBO(void);
+  SbBool bindFBO(void);
+  void unbindFBO(void);
+  
   SbVec2s size;
 
   void * context;
   uint32_t renderid;
   const void * current_hdc;
+  
+  // FBO-based offscreen rendering support
+  unsigned int fbo;          // Framebuffer object ID
+  unsigned int color_rb;     // Color renderbuffer ID  
+  unsigned int depth_rb;     // Depth renderbuffer ID
+  SbBool fbo_initialized;
 };
 
 // *************************************************************************
