@@ -1549,26 +1549,8 @@ SoGLImageP::resizeImage(SoState * state, unsigned char *& imageptr,
           (void)memcpy(glimage_tmpimagebuffer, result, numbytes);
           simage_wrapper()->simage_free_image(result);
         }
-        else if (GLUWrapper()->available) {
-          glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-          glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
-          glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
-          glPixelStorei(GL_PACK_ROW_LENGTH, 0);
-          glPixelStorei(GL_PACK_SKIP_PIXELS, 0);
-          glPixelStorei(GL_PACK_SKIP_ROWS, 0);
-          glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-          glPixelStorei(GL_PACK_ALIGNMENT, 1);
-
-          // FIXME: ignoring the error code. Silly. 20000929 mortene.
-          (void)GLUWrapper()->gluScaleImage(coin_glglue_get_texture_format(glw, numcomponents),
-                                            xsize, ysize,
-                                            GL_UNSIGNED_BYTE, bytes,
-                                            newx, newy, GL_UNSIGNED_BYTE,
-                                            glimage_tmpimagebuffer);
-          glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-          glPixelStorei(GL_PACK_ALIGNMENT, 4);
-        }
-        else { // fall back to the internal low-quality resize function
+        else {
+          // Use the internal resize function instead of GLU
           fast_image_resize(bytes, glimage_tmpimagebuffer,
                             xsize, ysize, numcomponents,
                             newx, newy);

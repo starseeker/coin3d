@@ -628,10 +628,6 @@ SoNode::initClasses(void)
   SoIndexedMarkerSet::initClass();
   SoIndexedTriangleStripSet::initClass();
   SoImage::initClass();
-  SoIndexedNurbsCurve::initClass();
-  SoIndexedNurbsSurface::initClass();
-  SoNurbsCurve::initClass();
-  SoNurbsSurface::initClass();
   SoSphere::initClass();
   SoText2::initClass();
   SoText3::initClass();
@@ -682,7 +678,6 @@ SoNode::initClasses(void)
   SoLightModel::initClass();
   SoProfile::initClass();
   SoLinearProfile::initClass();
-  SoNurbsProfile::initClass();
   SoMaterial::initClass();
   SoMaterialBinding::initClass();
   SoVertexAttributeBinding::initClass();
