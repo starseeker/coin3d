@@ -1,10 +1,8 @@
-# Full profiler implementation - core components
+# Full profiler implementation - core components only
 set(COIN_PROFILER_FILES
 	SbProfilingData.cpp
 	SoProfiler.cpp
 	SoProfilerElement.cpp
-	SoProfilerP.cpp
-	SoProfilerStats.cpp
 )
 
 # build library
