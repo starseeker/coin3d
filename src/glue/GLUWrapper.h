@@ -59,34 +59,11 @@
 extern "C" {
 #endif /* __cplusplus */
 
-/* Callback func type. */
-typedef void (APIENTRY * gluNurbsCallback_cb_t)(void *, ...);
-
 /* Typedefinitions of function signatures for GLU calls we use. We
    need these for casting from the void-pointer return of dlsym().*/
 typedef const GLubyte * (APIENTRY *gluGetString_t)(GLenum);
 typedef const GLubyte * (APIENTRY *gluErrorString_t)(GLenum);
 typedef GLint (APIENTRY *gluScaleImage_t)(GLenum, GLsizei, GLsizei, GLenum, const void *, GLsizei, GLsizei, GLenum, GLvoid *);
-
-/* The first argument for these methods is actually either GLUnurbs or
-   GLUnurbsObj, depending on the GLU version (yes, they managed to
-   change the API over version 1.x to 1.y, for some value of [0, 3]
-   for x and y, where x < y). */
-typedef void * (APIENTRY *gluNewNurbsRenderer_t)(void);
-typedef void (APIENTRY *gluDeleteNurbsRenderer_t)(void *);
-typedef void (APIENTRY *gluNurbsProperty_t)(void *, GLenum, GLfloat);
-typedef void (APIENTRY *gluLoadSamplingMatrices_t)(void *, const GLfloat *, const GLfloat *, const GLint *);
-typedef void (APIENTRY *gluBeginSurface_t)(void *);
-typedef void (APIENTRY *gluEndSurface_t)(void *);
-typedef void (APIENTRY *gluNurbsSurface_t)(void *, GLint, GLfloat *, GLint, GLfloat *, GLint, GLint, GLfloat *, GLint, GLint, GLenum);
-typedef void (APIENTRY *gluBeginTrim_t)(void *);
-typedef void (APIENTRY *gluEndTrim_t)(void *);
-typedef void (APIENTRY *gluBeginCurve_t)(void *);
-typedef void (APIENTRY *gluEndCurve_t)(void *);
-typedef void (APIENTRY *gluNurbsCurve_t)(void *, GLint, GLfloat *, GLint, GLfloat *, GLint, GLenum);
-typedef void (APIENTRY *gluPwlCurve_t)(void *, GLint, GLfloat *, GLint, GLenum);
-typedef void (APIENTRY *gluNurbsCallback_t)(void *, GLenum, gluNurbsCallback_cb_t);
-typedef void (APIENTRY *gluNurbsCallbackData_t)(void *, GLvoid *);
 
 /* gluTessellator routines */
 typedef struct coin_GLUtessellator coin_GLUtessellator;
@@ -124,21 +101,6 @@ typedef struct {
   gluGetString_t gluGetString;
   gluErrorString_t gluErrorString;
   gluScaleImage_t gluScaleImage; /* always present */
-  gluNewNurbsRenderer_t gluNewNurbsRenderer;
-  gluDeleteNurbsRenderer_t gluDeleteNurbsRenderer;
-  gluNurbsProperty_t gluNurbsProperty;
-  gluLoadSamplingMatrices_t gluLoadSamplingMatrices;
-  gluBeginSurface_t gluBeginSurface;
-  gluEndSurface_t gluEndSurface;
-  gluNurbsSurface_t gluNurbsSurface;
-  gluBeginTrim_t gluBeginTrim;
-  gluEndTrim_t gluEndTrim;
-  gluBeginCurve_t gluBeginCurve;
-  gluEndCurve_t gluEndCurve;
-  gluNurbsCurve_t gluNurbsCurve;
-  gluPwlCurve_t gluPwlCurve;
-  gluNurbsCallback_t gluNurbsCallback;
-  gluNurbsCallbackData_t gluNurbsCallbackData;
 
   gluNewTess_t gluNewTess;
   gluTessCallback_t gluTessCallback; 
@@ -150,8 +112,6 @@ typedef struct {
   gluTessVertex_t gluTessVertex;
   gluDeleteTess_t gluDeleteTess;
   gluTessNormal_t gluTessNormal;
-
-  gluNurbsSurface_t gluNurbsSurface_in_GLU;
 
 } GLUWrapper_t;
 

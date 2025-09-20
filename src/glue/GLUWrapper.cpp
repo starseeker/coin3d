@@ -243,99 +243,6 @@ GLUWrapper_gluScaleImage(GLenum COIN_UNUSED_ARG(a), GLsizei COIN_UNUSED_ARG(b), 
 }
 
 /* ******************************************************************** */
-/*
-  Wraps the GLU library's gluNurbsSurface() function, to provide
-  debugging facilities on the input parameters.
-*/
-
-static void
-GLUWrapper_gluNurbsSurface(void * nurb, /* this is really of type "GLUnurbs *" */
-                           GLint sKnotCount,
-                           GLfloat * sKnots,
-                           GLint tKnotCount,
-                           GLfloat * tKnots,
-                           GLint sStride,
-                           GLint tStride,
-                           GLfloat * control,
-                           GLint sOrder,
-                           GLint tOrder,
-                           GLenum type)
-{
-  GLint i;
-  cc_string s, tmp;
-
-  cc_string_construct(&s);
-  cc_string_construct(&tmp);
-
-  cc_string_sprintf(&s,
-                    "GLUnurbs*==%p, sKnotCount==%d, sKnots==%p, tKnotCount==%d, tKnots==%p, "
-                    "sStride==%d, tStride==%d, control==%p, sOrder==%d, tOrder==%d, type==0x%0x\n",
-                    nurb,
-                    sKnotCount, sKnots,
-                    tKnotCount, tKnots,
-                    sStride, tStride,
-                    control,
-                    sOrder, tOrder,
-                    type);
-
-  {
-    cc_string_append_text(&s, "sKnots=='");
-    for (i = 0; i < sKnotCount; i++) {
-      if (i > 0) { cc_string_append_text(&s, ", "); }
-      cc_string_sprintf(&tmp, "%f", sKnots[i]);
-      cc_string_append_string(&s, &tmp);
-    }
-    cc_string_append_text(&s, "'\n");
-  }
-  {
-    cc_string_append_text(&s, "tKnots=='");
-    for (i = 0; i < tKnotCount; i++) {
-      if (i > 0) { cc_string_append_text(&s, ", "); }
-      cc_string_sprintf(&tmp, "%f", tKnots[i]);
-      cc_string_append_string(&s, &tmp);
-    }
-    cc_string_append_text(&s, "'\n");
-  }
-
-  cc_string_sprintf(&tmp,
-                    "(sKnotCount - sOrder) * (tKnotCount - tOrder) => %d control points\n",
-                    (sKnotCount - sOrder) * (tKnotCount - tOrder));
-  cc_string_append_string(&s, &tmp);
-
-  {
-    GLint nrofctrlpoints = (sKnotCount - sOrder) * (tKnotCount - tOrder);
-    cc_string_append_text(&s, "controlpoints=='");
-#if 0 // dumping the full list is usually not what we want
-    for (i = 0; i < nrofctrlpoints; i++) {
-      if (i > 0) { printf(", "); }
-      cc_string_sprintf(&tmp, "%f %f %f", control[i*3 + 0], control[i*3 + 1], control[i*3 + 2]);
-      cc_string_append_string(&s, &tmp);
-    }
-#else // just dump the first and last entries
-    cc_string_sprintf(&tmp, "%f %f %f, ...suppressed..., %f %f %f",
-                      control[0], control[1], control[2],
-                      control[(nrofctrlpoints - 1) * 3 + 0],
-                      control[(nrofctrlpoints - 1) * 3 + 1],
-                      control[(nrofctrlpoints - 1) * 3 + 2]);
-    cc_string_append_string(&s, &tmp);
-#endif
-    cc_string_append_text(&s, "'\n");
-  }
-
-  cc_debugerror_postinfo("GLUWrapper_gluNurbsSurface", "%s", cc_string_get_text(&s));
-  cc_string_clean(&s);
-  cc_string_clean(&tmp);
-
-  GLUWrapper()->gluNurbsSurface_in_GLU(nurb,
-                                       sKnotCount, sKnots,
-                                       tKnotCount, tKnots,
-                                       sStride, tStride,
-                                       control,
-                                       sOrder, tOrder,
-                                       type);
-}
-
-/* ******************************************************************** */
 
 /* Implemented by using the singleton pattern. */
 const GLUWrapper_t *
@@ -452,32 +359,6 @@ GLUWrapper(void)
   GLUWRAPPER_REGISTER_FUNC(gluScaleImage, gluScaleImage_t);
   GLUWRAPPER_REGISTER_FUNC(gluGetString, gluGetString_t);
   GLUWRAPPER_REGISTER_FUNC(gluErrorString, gluErrorString_t);
-  GLUWRAPPER_REGISTER_FUNC(gluNewNurbsRenderer, gluNewNurbsRenderer_t);
-  GLUWRAPPER_REGISTER_FUNC(gluDeleteNurbsRenderer, gluDeleteNurbsRenderer_t);
-  GLUWRAPPER_REGISTER_FUNC(gluNurbsProperty, gluNurbsProperty_t);
-  GLUWRAPPER_REGISTER_FUNC(gluLoadSamplingMatrices, gluLoadSamplingMatrices_t);
-  GLUWRAPPER_REGISTER_FUNC(gluBeginSurface, gluBeginSurface_t);
-  GLUWRAPPER_REGISTER_FUNC(gluEndSurface, gluEndSurface_t);
-  GLUWRAPPER_REGISTER_FUNC(gluNurbsSurface, gluNurbsSurface_t);
-  GLUWRAPPER_REGISTER_FUNC(gluBeginTrim, gluBeginTrim_t);
-  GLUWRAPPER_REGISTER_FUNC(gluEndTrim, gluEndTrim_t);
-  GLUWRAPPER_REGISTER_FUNC(gluBeginCurve, gluBeginCurve_t);
-  GLUWRAPPER_REGISTER_FUNC(gluEndCurve, gluEndCurve_t);
-  GLUWRAPPER_REGISTER_FUNC(gluNurbsCurve, gluNurbsCurve_t);
-  GLUWRAPPER_REGISTER_FUNC(gluPwlCurve, gluPwlCurve_t);
-  GLUWRAPPER_REGISTER_FUNC(gluNurbsCallback, gluNurbsCallback_t);
-#if defined(GLU_VERSION_1_3) || defined(GLU_RUNTIME_LINKING)
-  // Note: nurbs tessellation is also available if the GLU_EXTENSION
-  // string contains GLU_EXT_nurbs_tessellator, but most platforms
-  // should have GLU 1.3, and on Windows -- the sole platform we know
-  // of where a GLU older than 1.3 is common -- the extension is not
-  // available. So we don't bother. Yet.
-  //
-  // mortene & kyrah.
-  GLUWRAPPER_REGISTER_FUNC(gluNurbsCallbackData, gluNurbsCallbackData_t);
-#else /* !gluNurbsCallbackData */
-  gi->gluNurbsCallbackData = NULL;
-#endif /* !gluNurbsCallbackData */
   GLUWRAPPER_REGISTER_FUNC(gluNewTess, gluNewTess_t);
   GLUWRAPPER_REGISTER_FUNC(gluTessCallback, gluTessCallback_t);
   GLUWRAPPER_REGISTER_FUNC(gluTessProperty, gluTessProperty_t);
@@ -495,17 +376,6 @@ GLUWrapper(void)
     gi->gluScaleImage = GLUWrapper_gluScaleImage;
   if (gi->gluGetString == NULL) /* Was missing in GLU v1.0. */
     gi->gluGetString = GLUWrapper_gluGetString;
-
-  /* Makes it possible to place a debugging "filter" in front of the
-     gluNurbsSurface() function to dump the input arguments as debug
-     output. Useful for debugging NURBS problems. */
-  {
-    const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_GLUNURBSSURFACE");
-    if (env && (atoi(env) > 0)) {
-      gi->gluNurbsSurface_in_GLU = gi->gluNurbsSurface;
-      if (gi->gluNurbsSurface != NULL) { gi->gluNurbsSurface = (gluNurbsSurface_t)GLUWrapper_gluNurbsSurface; }
-    }
-  }
 
   /* Parse the version string once and expose the version numbers
      through the GLUWrapper API.

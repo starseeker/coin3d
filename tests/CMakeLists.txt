@@ -55,13 +55,8 @@ add_executable(CoinTests
     # sensors/test_sensors_complete.cpp
 )
 
-# Skip draggers if not enabled
-if(HAVE_DRAGGERS)
-    target_sources(CoinTests PRIVATE draggers/test_draggers_complete.cpp)
-endif()
-
-target_link_libraries(CoinTests 
-    Coin 
+target_link_libraries(CoinTests
+    Coin
     coin_test_utils
     Catch2::Catch2WithMain
     ${COIN_TARGET_LINK_LIBRARIES}

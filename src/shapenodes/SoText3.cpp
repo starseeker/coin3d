@@ -154,7 +154,6 @@
 #include <Inventor/misc/SoState.h>
 #include <Inventor/misc/SoNormalGenerator.h>
 #include <Inventor/nodes/SoProfile.h>
-#include <Inventor/nodes/SoNurbsProfile.h>
 #include <Inventor/SbLine.h>
 #include <Inventor/SbBox2f.h>
 #include <Inventor/lists/SbList.h>
@@ -405,38 +404,15 @@ SoText3::computeBBox(SoAction * action, SbBox3f & box, SbVec3f & center)
     assert(profilenodes[0]->getTypeId().isDerivedFrom(SoProfile::getClassTypeId()));
     for (int i = numprofiles-1; i >= 0; i--) {
       SoProfile *pn = (SoProfile *)profilenodes[i];
-      if (pn->isOfType(SoNurbsProfile::getClassTypeId())) {
-        // Don't use SoProfile::getVertices() for SoNurbsProfile
-        // nodes as this would cause a call to the GLU library, which
-        // requires a valid GL context. Instead we approximate using
-        // SoNurbsProfile::getTrimCurve(), and use the control points
-        // to calculate the bounding box. This is an approximation,
-        // but the same technique is used in So[Indexed]NurbsSurface
-        // and So[Indexed]NurbsCurve. To avoid this approximation we
-        // would need our own NURBS library.    pederb, 20000926
-        SoNurbsProfile * np = (SoNurbsProfile*) pn;
-        float * knots;
-        int32_t numknots;
-        int dim;
-        int32_t numpts;
-        float * points;
-        np->getTrimCurve(state, numpts, points, dim,
-                         numknots, knots);
-        for (int j = 0; j < numpts; j++) {
-          if (-points[j*dim] > maxz) maxz = -points[j*dim];
-          if (-points[j*dim] < minz) minz = -points[j*dim];
-          if (points[j*dim+1] > profsize) profsize = points[j*dim+1];
-        }
-      }
-      else {
-        int32_t num;
-        SbVec2f *coords;
-        pn->getVertices(state, num, coords);
-        for (int j = 0; j < num; j++) {
-          if (-coords[j][0] > maxz) maxz = -coords[j][0];
-          if (-coords[j][0] < minz) minz = -coords[j][0];
-          if (coords[j][1] > profsize) profsize = coords[j][1];
-        }
+      // Skip NURBS profiles as they are no longer supported
+      // Only handle linear profiles
+      int32_t num;
+      SbVec2f *coords;
+      pn->getVertices(state, num, coords);
+      for (int j = 0; j < num; j++) {
+        if (-coords[j][0] > maxz) maxz = -coords[j][0];
+        if (-coords[j][0] < minz) minz = -coords[j][0];
+        if (coords[j][1] > profsize) profsize = coords[j][1];
       }
     }
   }

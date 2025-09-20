@@ -10,6 +10,11 @@ set(COIN_DETAILS_FILES
 	SoTextDetail.cpp
 )
 
+# Add nodekit-specific details if nodekits are enabled
+if(HAVE_NODEKITS)
+	list(APPEND COIN_DETAILS_FILES SoNodeKitDetail.cpp)
+endif()
+
 # build library
 if(COIN_BUILD_SINGLE_LIB)
 	foreach(SRCFILE ${COIN_DETAILS_FILES})

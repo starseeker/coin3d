@@ -5,7 +5,6 @@ set(COIN_RENDERING_FILES
 	SoGLDriverDatabase.cpp
 	SoGLImage.cpp
 	SoGLCubeMapImage.cpp
-	SoGLNurbs.cpp
 	SoRenderManager.cpp
 	SoRenderManagerP.cpp
 	SoOffscreenRenderer.cpp
@@ -18,8 +17,6 @@ set(COIN_RENDERING_FILES
 set(COIN_RENDERING_INTERNAL_FILES
 	SoGL.h
 	SoGL.cpp
-	SoGLNurbs.h
-	SoGLNurbs.cpp
 	SoRenderManagerP.h
 	SoRenderManagerP.cpp
 	SoVBO.h

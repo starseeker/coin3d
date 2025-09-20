@@ -38,7 +38,7 @@
 #include <cstdarg>
 #include <cstring>
 
-#include <memory>  // for std::unique_ptr
+#include <memory>
 
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/threads/SbMutex.h>
@@ -455,7 +455,8 @@ SoProfilingReportGenerator::generate(const SbProfilingData & data,
       sortingconfig = NULL;
       return;
     }
-    std::unique_ptr<int[]> indexarray(new int[numindexes]);
+    std::unique_ptr<int[]> indexarray;
+    indexarray.reset(new int [ numindexes ]);
     for (c = 0; c < numindexes; ++c) {
       indexarray[c] = c;
     }
@@ -506,7 +507,8 @@ SoProfilingReportGenerator::generate(const SbProfilingData & data,
       sortingconfig = NULL;
       return;
     }
-    std::unique_ptr<int[]> indexarray(new int[numindexes]);
+    std::unique_ptr<int[]> indexarray;
+    indexarray.reset(new int [ numindexes ]);
     for (c = 0; c < numindexes; ++c) {
       indexarray[c] = c;
     }
@@ -558,7 +560,8 @@ SoProfilingReportGenerator::generate(const SbProfilingData & data,
       sortingconfig = NULL;
       return;
     }
-    std::unique_ptr<int[]> indexarray(new int[numindexes]);
+    std::unique_ptr<int[]> indexarray;
+    indexarray.reset(new int [ numindexes ]);
     for (c = 0; c < numindexes; ++c) {
       indexarray[c] = c;
     }

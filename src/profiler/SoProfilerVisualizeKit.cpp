@@ -46,7 +46,7 @@
 #include <Inventor/annex/Profiler/nodekits/SoProfilerVisualizeKit.h>
 #include "coindefs.h"
 
-#include <memory>  // for std::unique_ptr
+#include <memory>
 
 #include <Inventor/actions/SoGLRenderAction.h>
 #include <Inventor/annex/Profiler/nodekits/SoNodeVisualize.h>

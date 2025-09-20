@@ -9,16 +9,12 @@ set(COIN_SHAPENODES_FILES
 	SoIndexedFaceSet.cpp
 	SoIndexedLineSet.cpp
 	SoIndexedMarkerSet.cpp
-	SoIndexedNurbsCurve.cpp
-	SoIndexedNurbsSurface.cpp
 	SoIndexedPointSet.cpp
 	SoIndexedShape.cpp
 	SoIndexedTriangleStripSet.cpp
 	SoLineSet.cpp
 	SoMarkerSet.cpp
 	SoNonIndexedShape.cpp
-	SoNurbsCurve.cpp
-	SoNurbsSurface.cpp
 	SoPointSet.cpp
 	SoQuadMesh.cpp
 	SoShape.cpp
@@ -35,7 +31,6 @@ set(COIN_SHAPENODES_FILES
 
 # Files excluded from public API documentation, included in complete documentation.
 set(COIN_SHAPENODES_INTERNAL_FILES
-	SoNurbsP.h
 	soshape_bigtexture.h
 	soshape_bigtexture.cpp
 	soshape_bumprender.h

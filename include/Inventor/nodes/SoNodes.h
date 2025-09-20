@@ -59,10 +59,6 @@
 #include <Inventor/nodes/SoIndexedPointSet.h>
 #include <Inventor/nodes/SoIndexedTriangleStripSet.h>
 #include <Inventor/nodes/SoImage.h>
-#include <Inventor/nodes/SoIndexedNurbsCurve.h>
-#include <Inventor/nodes/SoIndexedNurbsSurface.h>
-#include <Inventor/nodes/SoNurbsCurve.h>
-#include <Inventor/nodes/SoNurbsSurface.h>
 #include <Inventor/nodes/SoSphere.h>
 #include <Inventor/nodes/SoText2.h>
 #include <Inventor/nodes/SoText3.h>
@@ -117,7 +113,6 @@
 #include <Inventor/nodes/SoLightModel.h>
 #include <Inventor/nodes/SoProfile.h>
 #include <Inventor/nodes/SoLinearProfile.h>
-#include <Inventor/nodes/SoNurbsProfile.h>
 #include <Inventor/nodes/SoMaterial.h>
 #include <Inventor/nodes/SoMaterialBinding.h>
 #include <Inventor/nodes/SoVertexAttribute.h>
