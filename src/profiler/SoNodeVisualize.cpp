@@ -49,8 +49,7 @@
 
 #include <map>
 #include <string>
-
-#include <boost/scoped_ptr.hpp>
+#include <memory>
 
 #include <Inventor/SoDB.h>
 #include <Inventor/SoInput.h>
@@ -70,6 +69,8 @@
 #include <Inventor/nodes/SoTexture2Transform.h>
 #include <Inventor/nodes/SoTranslation.h>
 #include <Inventor/nodes/SoVertexProperty.h>
+
+#include "C/CoinTidbits.h"
 
 struct TextureImageData {
   int width;

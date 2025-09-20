@@ -48,9 +48,7 @@
 #include <cstdlib>
 #include <cstdio>
 
-#include <boost/scoped_ptr.hpp>
-#include <boost/scoped_array.hpp>
-#include <boost/intrusive_ptr.hpp>
+#include <memory>
 
 #include <Inventor/SbTime.h>
 #include <Inventor/SbColor.h>
@@ -95,7 +93,7 @@ public:
 
 class SoScrollingGraphKitP {
 public:
-  SoScrollingGraphKitP(void) : kit(NULL), first(NULL), last(NULL) {
+  SoScrollingGraphKitP(void) : kit(NULL), first(NULL), last(NULL), chart(NULL) {
     this->cachedmaxvalue = 0.0f;
     this->cachedrealmaxvalue = 0.0f;
   }
@@ -115,8 +113,8 @@ public:
     }
   }
 
-  boost::intrusive_ptr<SoSeparator> chart;
-  boost::scoped_ptr<SoFieldSensor> addValuesSensor;
+  SoSeparator * chart;
+  std::unique_ptr<SoFieldSensor> addValuesSensor;
 
   void pullStatistics(void);
   Graph * getGraph(const SbName & key);
@@ -350,11 +348,11 @@ SoScrollingGraphKitP::generateStackedBarsChart(void)
   const int numgraphs = this->graphs.getNumElements();
   if (numgraphs == 0) return;
 
-  boost::scoped_array<SoBaseColor *> colors(new SoBaseColor * [numgraphs]);
-  boost::scoped_array<SoCoordinate3 *> coords(new SoCoordinate3 * [numgraphs]);
-  boost::scoped_array<SoLineSet *> lines(new SoLineSet * [numgraphs]);
-  boost::scoped_array<SoTranslation *> texttrans(new SoTranslation * [numgraphs]);
-  boost::scoped_array<SoText2 *> textnodes(new SoText2 * [numgraphs]);
+  std::unique_ptr<SoBaseColor *[]> colors(new SoBaseColor * [numgraphs]);
+  std::unique_ptr<SoCoordinate3 *[]> coords(new SoCoordinate3 * [numgraphs]);
+  std::unique_ptr<SoLineSet *[]> lines(new SoLineSet * [numgraphs]);
+  std::unique_ptr<SoTranslation *[]> texttrans(new SoTranslation * [numgraphs]);
+  std::unique_ptr<SoText2 *[]> textnodes(new SoText2 * [numgraphs]);
 
   if (this->chart->getNumChildren() != (numgraphs * 4 + 3) ||
       !(this->chart->getChild(2+2)->isOfType(SoLineSet::getClassTypeId()))) {
