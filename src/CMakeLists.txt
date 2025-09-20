@@ -48,10 +48,8 @@ set(COIN_SUBDIRS
   hardcopy
 )
 
-# Add nodekits and related components if enabled
-if(HAVE_NODEKITS)
-  list(APPEND COIN_SUBDIRS nodekits profiler foreignfiles)
-endif()
+# Add nodekits and related components - always enabled in minimalist approach
+list(APPEND COIN_SUBDIRS nodekits profiler foreignfiles draggers manips)
 
 foreach(_subdir ${COIN_SUBDIRS})
   add_subdirectory(${_subdir})

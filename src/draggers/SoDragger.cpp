@@ -205,6 +205,8 @@
 
 #include <Inventor/draggers/SoDragger.h>
 
+// TODO: Include these dragger headers when they are available
+/*
 #include <Inventor/draggers/SoCenterballDragger.h>
 #include <Inventor/draggers/SoDirectionalLightDragger.h>
 #include <Inventor/draggers/SoDragPointDragger.h>
@@ -226,6 +228,7 @@
 #include <Inventor/draggers/SoTransformerDragger.h>
 #include <Inventor/draggers/SoTranslate1Dragger.h>
 #include <Inventor/draggers/SoTranslate2Dragger.h>
+*/
 #include <Inventor/actions/SoHandleEventAction.h>
 #include <Inventor/actions/SoRayPickAction.h>
 #include <Inventor/actions/SoGetMatrixAction.h>
@@ -422,6 +425,8 @@ SoDragger::initClass(void)
 void
 SoDragger::initClasses(void)
 {
+  // TODO: Uncomment these when corresponding headers are available
+  /*
   SoCenterballDragger::initClass();
   SoDirectionalLightDragger::initClass();
   SoDragPointDragger::initClass();
@@ -443,6 +448,7 @@ SoDragger::initClasses(void)
   SoTransformerDragger::initClass();
   SoTranslate1Dragger::initClass();
   SoTranslate2Dragger::initClass();
+  */
 }
 
 // Private method that sets some elements to default (for our

@@ -78,10 +78,10 @@ set(COIN_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
 option(COIN3D_USE_OSMESA "Build against OSMesa for offscreen/headless rendering" OFF)
 option(COIN_THREADSAFE "Enable thread safe render traversals" OFF)
 
-# Component options
-option(HAVE_NODEKITS "Enable NodeKit support" ON)
-cmake_dependent_option(HAVE_DRAGGERS "Enable Dragger support" OFF "HAVE_NODEKITS" OFF)
-cmake_dependent_option(HAVE_MANIPULATORS "Enable Manipulator support" OFF "HAVE_NODEKITS" OFF)
+# Component options - draggers and manipulators are always enabled in minimalist approach
+set(HAVE_NODEKITS ON CACHE BOOL "NodeKit support - always enabled")
+set(HAVE_DRAGGERS ON CACHE BOOL "Dragger support - always enabled")
+set(HAVE_MANIPULATORS ON CACHE BOOL "Manipulator support - always enabled")
 
 # External dependencies
 option(USE_EXCEPTIONS "Compile with exceptions (g++ only)" ON)

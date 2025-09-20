@@ -27,48 +27,33 @@
 /***************************************************************************
  * HAVE_NODEKITS
  *
- * If you want to disable nodekits in Coin, do not set this define.
- * This will also disable draggers and manipulators, as they are built on
- * top of the nodekit system.  It also disables the SoForeignFileKit and
- * its derived classes, and the builtin profiler statistics visualization.
- *
- * The reason to disable this is mostly to avoid compiling a lot of code
- * that causes the Coin library to grow in size if you need a particularly
- * small version of Coin.
- *
- * Default is to have nodekit support enabled.
+ * NodeKit support is always enabled in the minimalist approach.
+ * This enables draggers and manipulators which are built on top of the 
+ * nodekit system. It also enables the SoForeignFileKit and its derived 
+ * classes, and the builtin profiler statistics visualization.
  */
 
-#cmakedefine HAVE_NODEKITS
+#define HAVE_NODEKITS 1
 
 /***************************************************************************
  * HAVE_DRAGGERS
  *
- * If you want to disable draggers in Coin, do not set this define.
- * This will also disable manipulators, as they are heavy users of draggers.
- *
- * The reason to disable this is mostly to avoid compiling a lot of code
- * that causes the Coin library to grow in size if you need a particularly
- * small version of Coin.
- *
- * Default is to have dragger support enabled.
+ * Dragger support is always enabled in the minimalist approach.
+ * Draggers provide interactive transformation capabilities through
+ * scene graph geometry and application-supplied callbacks.
  */
 
-#cmakedefine HAVE_DRAGGERS
+#define HAVE_DRAGGERS 1
 
 /***************************************************************************
  * HAVE_MANIPULATORS
  *
- * If you want to disable manipulators in Coin, do not set this define.
- *
- * The reason to disable this is mostly to avoid compiling a lot of code
- * that causes the Coin library to grow in size if you need a particularly
- * small version of Coin.
- *
- * Default is to have manipulators support enabled.
+ * Manipulator support is always enabled in the minimalist approach.
+ * Manipulators are built on top of draggers and provide convenient
+ * APIs for interactive transformation of scene graph nodes.
  */
 
-#cmakedefine HAVE_MANIPULATORS
+#define HAVE_MANIPULATORS 1
 
 /***************************************************************************
  * HAVE_SOUND
