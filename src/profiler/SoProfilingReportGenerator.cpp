@@ -38,12 +38,12 @@
 #include <cstdarg>
 #include <cstring>
 
-#include <boost/scoped_array.hpp>
+#include <memory>
 
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/threads/SbMutex.h>
 #include <Inventor/annex/Profiler/SbProfilingData.h>
-#include "tidbitsp.h"
+#include "C/CoinTidbits.h"
 
 // *************************************************************************
 
@@ -455,7 +455,7 @@ SoProfilingReportGenerator::generate(const SbProfilingData & data,
       sortingconfig = NULL;
       return;
     }
-    boost::scoped_array<int> indexarray;
+    std::unique_ptr<int[]> indexarray;
     indexarray.reset(new int [ numindexes ]);
     for (c = 0; c < numindexes; ++c) {
       indexarray[c] = c;
@@ -507,7 +507,7 @@ SoProfilingReportGenerator::generate(const SbProfilingData & data,
       sortingconfig = NULL;
       return;
     }
-    boost::scoped_array<int> indexarray;
+    std::unique_ptr<int[]> indexarray;
     indexarray.reset(new int [ numindexes ]);
     for (c = 0; c < numindexes; ++c) {
       indexarray[c] = c;
@@ -560,7 +560,7 @@ SoProfilingReportGenerator::generate(const SbProfilingData & data,
       sortingconfig = NULL;
       return;
     }
-    boost::scoped_array<int> indexarray;
+    std::unique_ptr<int[]> indexarray;
     indexarray.reset(new int [ numindexes ]);
     for (c = 0; c < numindexes; ++c) {
       indexarray[c] = c;

@@ -46,7 +46,7 @@
 #include <Inventor/annex/Profiler/nodekits/SoProfilerTopKit.h>
 #include "coindefs.h"
 
-#include <boost/intrusive_ptr.hpp>
+#include <memory>
 
 #include <Inventor/annex/Profiler/engines/SoProfilerTopEngine.h>
 #include <Inventor/annex/Profiler/nodes/SoProfilerStats.h>
@@ -79,8 +79,8 @@ public:
   void detachFromStats();
   void attachToStats();
 
-  boost::intrusive_ptr<SoCalculator> geometryEngine;
-  boost::intrusive_ptr<SoProfilerTopEngine> topListEngine;
+  SoCalculator * geometryEngine;
+  SoProfilerTopEngine * topListEngine;
   SoProfilerStats * last_stats;
   SoFieldSensor * stats_sensor;
 };
@@ -167,9 +167,11 @@ SoProfilerTopKit::SoProfilerTopKit(void)
   SO_KIT_INIT_INSTANCE();
 
   PRIVATE(this)->topListEngine = new SoProfilerTopEngine;
+  PRIVATE(this)->topListEngine->ref();
   PRIVATE(this)->topListEngine->decay.setValue(0.99f);
 
   PRIVATE(this)->geometryEngine = new SoCalculator;
+  PRIVATE(this)->geometryEngine->ref();
 
   const char * expr[] = {
     // A = viewportsize, B = wanted position
@@ -206,6 +208,12 @@ SoProfilerTopKit::SoProfilerTopKit(void)
 
 SoProfilerTopKit::~SoProfilerTopKit(void)
 {
+  if (PRIVATE(this)->topListEngine) {
+    PRIVATE(this)->topListEngine->unref();
+  }
+  if (PRIVATE(this)->geometryEngine) {
+    PRIVATE(this)->geometryEngine->unref();
+  }
 }
 
 #undef PRIVATE

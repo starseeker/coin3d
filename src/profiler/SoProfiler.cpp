@@ -94,6 +94,7 @@
 
 #include "C/CoinTidbits.h"
 #include "misc/SoDBP.h"
+#include "misc/SoEnvironment.h"
 
 // *************************************************************************
 
