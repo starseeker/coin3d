@@ -79,7 +79,7 @@ option(COIN3D_USE_OSMESA "Build against OSMesa for offscreen/headless rendering"
 option(COIN_THREADSAFE "Enable thread safe render traversals" OFF)
 
 # Component options
-option(HAVE_NODEKITS "Enable NodeKit support" OFF)
+option(HAVE_NODEKITS "Enable NodeKit support" ON)
 cmake_dependent_option(HAVE_DRAGGERS "Enable Dragger support" OFF "HAVE_NODEKITS" OFF)
 cmake_dependent_option(HAVE_MANIPULATORS "Enable Manipulator support" OFF "HAVE_NODEKITS" OFF)
 
