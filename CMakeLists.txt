@@ -2,11 +2,11 @@ cmake_minimum_required(VERSION 3.16...3.31)
 
 # Modern CMake project definition with metadata
 project(Coin
-    VERSION 4.0.5
-    DESCRIPTION "A high-level 3D visualization library with Open Inventor 2.1 API"
-    HOMEPAGE_URL "https://github.com/coin3d/coin"
-    LANGUAGES C CXX
-)
+  VERSION 4.0.5
+  DESCRIPTION "A high-level 3D visualization library with Open Inventor 2.1 API"
+  HOMEPAGE_URL "https://github.com/coin3d/coin"
+  LANGUAGES C CXX
+  )
 
 # Set modern CMake policies
 cmake_policy(SET CMP0054 NEW)  # Only interpret if() arguments as variables or keywords when unquoted
@@ -28,7 +28,7 @@ math(EXPR COIN_SO_VERSION ${PROJECT_VERSION_MAJOR}*20)
 
 # Enforce out-of-source builds
 if(PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
-    message(FATAL_ERROR "${CMAKE_PROJECT_NAME} requires an out-of-source build. Please create a separate build directory and run 'cmake <path_to_${CMAKE_PROJECT_NAME}> [options]' from there.")
+  message(FATAL_ERROR "${CMAKE_PROJECT_NAME} requires an out-of-source build. Please create a separate build directory and run 'cmake <path_to_${CMAKE_PROJECT_NAME}> [options]' from there.")
 endif()
 
 # Set C++ standard requirements
@@ -56,8 +56,8 @@ include(FeatureSummary)
 
 # Build type handling
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type" FORCE)
-    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
+  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type" FORCE)
+  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
 # ============================================================================
@@ -112,47 +112,47 @@ set(COIN_TARGET_LINK_LIBRARIES_GL)
 
 # OpenGL backend selection
 if(COIN3D_USE_OSMESA)
-    # OSMesa backend for offscreen/headless rendering
-    find_package(OSMesa REQUIRED)
-    if(OSMesa_FOUND)
-        set(HAVE_OPENGL 1)
-        set(HAVE_OSMESA 1)
-        
-        if(TARGET OSMesa::OSMesa)
-            list(APPEND COIN_TARGET_LINK_LIBRARIES_GL OSMesa::OSMesa)
-        elseif(TARGET osmesa_interface)
-            # starseeker/osmesa submodule interface wrapper
-            list(APPEND COIN_TARGET_LINK_LIBRARIES_GL osmesa_interface)
-            list(APPEND COIN_TARGET_INCLUDE_DIRECTORIES ${OSMesa_INCLUDE_DIRS})
-        else()
-            list(APPEND COIN_TARGET_INCLUDE_DIRECTORIES ${OSMesa_INCLUDE_DIRS})
-            list(APPEND COIN_TARGET_LINK_LIBRARIES_GL ${OSMesa_LIBRARIES})
-        endif()
-        
-        message(STATUS "Using OSMesa for offscreen/headless rendering")
-    endif()
-else()
-    # System OpenGL backend (default)
-    find_package(OpenGL REQUIRED)
+  # OSMesa backend for offscreen/headless rendering
+  find_package(OSMesa REQUIRED)
+  if(OSMesa_FOUND)
     set(HAVE_OPENGL 1)
-    
-    if(OpenGL_OpenGL_FOUND)
-        list(APPEND COIN_TARGET_LINK_LIBRARIES_GL OpenGL::OpenGL)
+    set(HAVE_OSMESA 1)
+
+    if(TARGET OSMesa::OSMesa)
+      list(APPEND COIN_TARGET_LINK_LIBRARIES_GL OSMesa::OSMesa)
+    elseif(TARGET osmesa_interface)
+      # starseeker/osmesa submodule interface wrapper
+      list(APPEND COIN_TARGET_LINK_LIBRARIES_GL osmesa_interface)
+      list(APPEND COIN_TARGET_INCLUDE_DIRECTORIES ${OSMesa_INCLUDE_DIRS})
     else()
-        list(APPEND COIN_TARGET_LINK_LIBRARIES_GL OpenGL::GL)
+      list(APPEND COIN_TARGET_INCLUDE_DIRECTORIES ${OSMesa_INCLUDE_DIRS})
+      list(APPEND COIN_TARGET_LINK_LIBRARIES_GL ${OSMesa_LIBRARIES})
     endif()
-    
-    if(OpenGL_GLU_FOUND)
-        set(HAVE_GLU 1)
-        list(APPEND COIN_TARGET_LINK_LIBRARIES_GL OpenGL::GLU)
-    endif()
-    
-    # macOS specific settings
-    if(APPLE)
-        set(GLU_IS_PART_OF_GL 1)
-    endif()
-    
-    message(STATUS "Using system OpenGL")
+
+    message(STATUS "Using OSMesa for offscreen/headless rendering")
+  endif()
+else()
+  # System OpenGL backend (default)
+  find_package(OpenGL REQUIRED)
+  set(HAVE_OPENGL 1)
+
+  if(OpenGL_OpenGL_FOUND)
+    list(APPEND COIN_TARGET_LINK_LIBRARIES_GL OpenGL::OpenGL)
+  else()
+    list(APPEND COIN_TARGET_LINK_LIBRARIES_GL OpenGL::GL)
+  endif()
+
+  if(OpenGL_GLU_FOUND)
+    set(HAVE_GLU 1)
+    list(APPEND COIN_TARGET_LINK_LIBRARIES_GL OpenGL::GLU)
+  endif()
+
+  # macOS specific settings
+  if(APPLE)
+    set(GLU_IS_PART_OF_GL 1)
+  endif()
+
+  message(STATUS "Using system OpenGL")
 endif()
 
 list(APPEND COIN_TARGET_LINK_LIBRARIES ${COIN_TARGET_LINK_LIBRARIES_GL})
@@ -172,11 +172,11 @@ endif()
 find_package(Threads REQUIRED)
 set(HAVE_THREADS 1)
 if(CMAKE_USE_WIN32_THREADS_INIT)
-    set(USE_W32THREAD 1)
-    set(COIN_THREADID_TYPE DWORD)
+  set(USE_W32THREAD 1)
+  set(COIN_THREADID_TYPE DWORD)
 elseif(CMAKE_USE_PTHREADS_INIT)
-    set(USE_PTHREAD 1)
-    set(COIN_THREADID_TYPE pthread_t)
+  set(USE_PTHREAD 1)
+  set(COIN_THREADID_TYPE pthread_t)
 endif()
 list(APPEND COIN_TARGET_LINK_LIBRARIES Threads::Threads)
 
@@ -191,10 +191,10 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
 # Multi-config generators (Visual Studio, Xcode)
 foreach(_config ${CMAKE_CONFIGURATION_TYPES})
-    string(TOUPPER ${_config} _config)
-    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${_config} "${CMAKE_BINARY_DIR}/lib")
-    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${_config} "${CMAKE_BINARY_DIR}/lib")
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${_config} "${CMAKE_BINARY_DIR}/bin")
+  string(TOUPPER ${_config} _config)
+  set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${_config} "${CMAKE_BINARY_DIR}/lib")
+  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${_config} "${CMAKE_BINARY_DIR}/lib")
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${_config} "${CMAKE_BINARY_DIR}/bin")
 endforeach()
 
 # Modern fixed-width integer types (C++17)
@@ -211,40 +211,40 @@ set(COIN_UINTPTR_T "uintptr_t")
 
 # Platform-specific compiler settings
 if(MSVC)
-    # MSVC-specific options
-    option(COIN_BUILD_MSVC_STATIC_RUNTIME "Build against the static Microsoft Visual C runtime library" OFF)
-    option(COIN_BUILD_SINGLE_LIB "Build only one library when ON, multiple when OFF" ON)
-    
-    if(MSVC_VERSION GREATER_EQUAL 1500)
-        option(COIN_BUILD_MSVC_MP "Enable build with multiple processes in Visual Studio" ON)
-    else()
-        set(COIN_BUILD_MSVC_MP OFF CACHE BOOL "Compiler option /MP requires at least Visual Studio 2008 (VS9) or newer" FORCE)
-    endif()
-    
-    if(COIN_BUILD_MSVC_MP)
-        add_compile_options(/MP)
-    endif()
+  # MSVC-specific options
+  option(COIN_BUILD_MSVC_STATIC_RUNTIME "Build against the static Microsoft Visual C runtime library" OFF)
+  option(COIN_BUILD_SINGLE_LIB "Build only one library when ON, multiple when OFF" ON)
 
-    # Enable C++ exception handling
-    add_compile_options(/EHsc)
-    
-    # Static runtime linking
-    if(COIN_BUILD_MSVC_STATIC_RUNTIME)
-        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-    endif()
-    
-    # MSVC-specific definitions
-    add_compile_definitions(
-        _CRT_NONSTDC_NO_DEPRECATE
-        _CRT_SECURE_NO_DEPRECATE 
-        _CRT_SECURE_NO_WARNINGS
-        _USE_MATH_DEFINES)
+  if(MSVC_VERSION GREATER_EQUAL 1500)
+    option(COIN_BUILD_MSVC_MP "Enable build with multiple processes in Visual Studio" ON)
+  else()
+    set(COIN_BUILD_MSVC_MP OFF CACHE BOOL "Compiler option /MP requires at least Visual Studio 2008 (VS9) or newer" FORCE)
+  endif()
+
+  if(COIN_BUILD_MSVC_MP)
+    add_compile_options(/MP)
+  endif()
+
+  # Enable C++ exception handling
+  add_compile_options(/EHsc)
+
+  # Static runtime linking
+  if(COIN_BUILD_MSVC_STATIC_RUNTIME)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+  endif()
+
+  # MSVC-specific definitions
+  add_compile_definitions(
+    _CRT_NONSTDC_NO_DEPRECATE
+    _CRT_SECURE_NO_DEPRECATE 
+    _CRT_SECURE_NO_WARNINGS
+    _USE_MATH_DEFINES)
 else()
-    # Non-MSVC platforms
-    if(APPLE)
-        add_definitions(-DGL_SILENCE_DEPRECATION)
-    endif()
-    option(COIN_BUILD_SINGLE_LIB "Build only one library when ON, multiple when OFF" OFF)
+  # Non-MSVC platforms
+  if(APPLE)
+    add_definitions(-DGL_SILENCE_DEPRECATION)
+  endif()
+  option(COIN_BUILD_SINGLE_LIB "Build only one library when ON, multiple when OFF" OFF)
 endif()
 
 set(HAVE_GZDOPEN 1)
@@ -340,7 +340,7 @@ endif()
 if(COIN3D_USE_OSMESA)
   # starseeker/osmesa backend - use starseeker/osmesa headers (MGL mangling is automatic when USE_MGL_NAMESPACE is defined)
   set(SIM_INCLUDE_GL_H "#include <OSMesa/osmesa.h>
-#include <OSMesa/gl.h>")
+  #include <OSMesa/gl.h>")
   set(SIM_INCLUDE_GLU_H "/* #include <GL/glu.h> - GLU not typically used with OSMesa */")
   message(STATUS "Using starseeker/osmesa headers for GL with automatic MGL name mangling")
 else()
@@ -432,13 +432,13 @@ add_subdirectory(include)
 add_subdirectory(src)
 
 if(COIN_BUILD_EXAMPLES)
-    add_subdirectory(examples)
+  add_subdirectory(examples)
 endif()
 
 if(COIN_BUILD_TESTS)
-    enable_testing()
-    add_subdirectory(testsuite)  # Legacy threading tests
-    add_subdirectory(tests)      # Main Catch2-based test system
+  enable_testing()
+  add_subdirectory(testsuite)  # Legacy threading tests
+  add_subdirectory(tests)      # Main Catch2-based test system
 endif()
 
 # ============================================================================
@@ -452,9 +452,9 @@ add_feature_info(Manipulators HAVE_MANIPULATORS "Manipulator support")
 add_feature_info(Exceptions USE_EXCEPTIONS "Compile with exceptions")
 
 feature_summary(WHAT ALL
-                INCLUDE_QUIET_PACKAGES
-                DESCRIPTION "Enabled Features:"
-                VAR enabledFeaturesText)
+  INCLUDE_QUIET_PACKAGES
+  DESCRIPTION "Enabled Features:"
+  VAR enabledFeaturesText)
 message(STATUS "${enabledFeaturesText}")
 
 # ============================================================================
@@ -462,5 +462,12 @@ message(STATUS "${enabledFeaturesText}")
 # ============================================================================
 
 if(COIN_USE_CPACK)
-    add_subdirectory(cpack.d)
+  add_subdirectory(cpack.d)
 endif()
+
+# Local Variables:
+# tab-width: 8
+# mode: cmake
+# indent-tabs-mode: t
+# End:
+# ex: shiftwidth=2 tabstop=8 cino=N-s
