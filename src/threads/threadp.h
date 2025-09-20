@@ -43,20 +43,12 @@
 #include <config.h>
 #endif /* HAVE_CONFIG_H */
 
-#define NO_IMPLEMENTATION
-
-#ifdef USE_PTHREAD
-#include <pthread.h>
-#undef NO_IMPLEMENTATION
-#ifdef HAVE_SCHED_H
-#include <sched.h>
-#endif /* HAVE_SCHED_H */
-#endif /* USE_PTHREAD */
-
-#ifdef USE_W32THREAD
-#include <windows.h>
-#undef NO_IMPLEMENTATION
-#endif /* USE_W32THREAD */
+// C++17 threading is the only supported implementation
+#if defined(__cplusplus) && __cplusplus >= 201703L
+#define USE_CXX17_THREADS
+#else
+#error "C++17 or later is required for threading support"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -68,25 +60,15 @@ struct cc_thread {
   void * (*func)(void *);
   void * closure;
 
-#ifdef USE_PTHREAD
-  struct cc_pthread_data {
-    pthread_t threadid;
-    pthread_attr_t threadattrs;
-  } pthread;
-#undef NO_IMPLEMENTATION
-#endif /* USE_PTHREAD */
-
-#ifdef USE_W32THREAD
-  struct cc_w32thread_data {
-    HANDLE threadhandle;
-  } w32thread;
-#undef NO_IMPLEMENTATION
-#endif /* USE_W32THREAD */
+  // C++17 implementation only
+  struct cc_cxx17_data {
+    void * thread_ptr;  // std::thread* stored as void* for C compatibility
+  } cxx17;
 };
 
 #ifdef NO_IMPLEMENTATION
 #error missing threads implementation support
-#endif /* NO_IMPLEMENTATION */
+#endif /* ! NO_IMPLEMENTATION */
 
 /* ********************************************************************** */
 

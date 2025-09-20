@@ -58,16 +58,18 @@
 #include "C/threads/mutex.h"
 #include "C/errors/debugerror.h"
 
+// C++17 includes for modern threading
+#ifdef USE_CXX17_THREADS
+#include <condition_variable>
+#include <memory>
+#include <chrono>
+#endif
+
 #include "threads/condvarp.h"
 
 /* ********************************************************************** */
-#ifdef USE_PTHREAD
-#include "condvar_pthread.icc"
-#endif /* USE_PTHREAD */
-
-#ifdef USE_W32THREAD
-#include "condvar_win32.icc"
-#endif /* USE_W32THREAD */
+// C++17 threading is the only supported implementation
+#include "condvar_cxx17.icc"
 
 /*
   \internal

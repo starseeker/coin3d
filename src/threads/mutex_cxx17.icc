@@ -1,0 +1,144 @@
+/**************************************************************************\
+ * Copyright (c) Kongsberg Oil & Gas Technologies AS
+ * All rights reserved.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ * 
+ * Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ * 
+ * Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the
+ * documentation and/or other materials provided with the distribution.
+ * 
+ * Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from
+ * this software without specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+\**************************************************************************/
+
+/*!
+  \file mutex_cxx17.icc
+  \brief C++17 mutex implementation replacing platform-specific pthread/win32 code
+  
+  This file provides portable C++17 mutex implementation using std::mutex,
+  eliminating the need for separate pthread and win32 implementations.
+*/
+
+/* this file should only be included from mutex.cpp */
+
+#include <mutex>
+#include <memory>
+
+static int
+internal_mutex_struct_init(cc_mutex * mutex_struct)
+{
+  try {
+    // Create a new std::mutex and store it
+    auto std_mutex = std::make_unique<std::mutex>();
+    mutex_struct->cxx17.mutex_ptr = std_mutex.release();
+    return CC_OK;
+  }
+  catch (const std::exception& e) {
+    if (COIN_DEBUG)
+      cc_debugerror_post("internal_mutex_struct_init", "std::mutex creation error: %s\n", e.what());
+    return CC_ERROR;
+  }
+}
+
+static int
+internal_mutex_struct_clean(cc_mutex * mutex_struct)
+{
+  try {
+    if (mutex_struct->cxx17.mutex_ptr) {
+      std::mutex* std_mutex = static_cast<std::mutex*>(mutex_struct->cxx17.mutex_ptr);
+      delete std_mutex;
+      mutex_struct->cxx17.mutex_ptr = nullptr;
+    }
+    return CC_OK;
+  }
+  catch (const std::exception& e) {
+    if (COIN_DEBUG)
+      cc_debugerror_post("internal_mutex_struct_clean", "std::mutex cleanup error: %s\n", e.what());
+    return CC_ERROR;
+  }
+}
+
+static int
+internal_mutex_lock(cc_mutex * mutex)
+{
+  try {
+    if (!mutex->cxx17.mutex_ptr) {
+      if (COIN_DEBUG)
+        cc_debugerror_post("internal_mutex_lock", "mutex pointer is null\n");
+      return CC_ERROR;
+    }
+    
+    std::mutex* std_mutex = static_cast<std::mutex*>(mutex->cxx17.mutex_ptr);
+    std_mutex->lock();
+    return CC_OK;
+  }
+  catch (const std::exception& e) {
+    if (COIN_DEBUG)
+      cc_debugerror_post("internal_mutex_lock", "std::mutex lock error: %s\n", e.what());
+    return CC_ERROR;
+  }
+}
+
+static int
+internal_mutex_try_lock(cc_mutex * mutex)
+{
+  try {
+    if (!mutex->cxx17.mutex_ptr) {
+      if (COIN_DEBUG)
+        cc_debugerror_post("internal_mutex_try_lock", "mutex pointer is null\n");
+      return CC_ERROR;
+    }
+    
+    std::mutex* std_mutex = static_cast<std::mutex*>(mutex->cxx17.mutex_ptr);
+    if (std_mutex->try_lock()) {
+      return CC_OK;
+    } else {
+      return CC_BUSY;
+    }
+  }
+  catch (const std::exception& e) {
+    if (COIN_DEBUG)
+      cc_debugerror_post("internal_mutex_try_lock", "std::mutex try_lock error: %s\n", e.what());
+    return CC_ERROR;
+  }
+}
+
+static int
+internal_mutex_unlock(cc_mutex * mutex)
+{
+  try {
+    if (!mutex->cxx17.mutex_ptr) {
+      if (COIN_DEBUG)
+        cc_debugerror_post("internal_mutex_unlock", "mutex pointer is null\n");
+      return CC_ERROR;
+    }
+    
+    std::mutex* std_mutex = static_cast<std::mutex*>(mutex->cxx17.mutex_ptr);
+    std_mutex->unlock();
+    return CC_OK;
+  }
+  catch (const std::exception& e) {
+    if (COIN_DEBUG)
+      cc_debugerror_post("internal_mutex_unlock", "std::mutex unlock error: %s\n", e.what());
+    return CC_ERROR;
+  }
+}
