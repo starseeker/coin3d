@@ -45,7 +45,7 @@
 #include <Inventor/elements/SoShapeHintsElement.h>
 
 #include "base/SbGLUTessellator.h"
-#include "../caches/SoConvexDataCacheTessellator.h"
+#include "../caches/SoConvexDataCacheEarcutTessellator.h"
 
 // *************************************************************************
 
@@ -66,8 +66,8 @@ soshape_primdata::soshape_primdata(void)
   this->tess = NULL;
   this->glutess = NULL;
 
-  if (SoConvexDataCacheTessellator::preferred()) {
-    this->glutess = new SoConvexDataCacheTessellator(soshape_primdata::tess_callback, this);
+  if (SoConvexDataCacheEarcutTessellator::preferred()) {
+    this->glutess = new SoConvexDataCacheEarcutTessellator(soshape_primdata::tess_callback, this);
   }
   else {
     this->tess = new SbTesselator(soshape_primdata::tess_callback, this);
@@ -129,7 +129,7 @@ soshape_primdata::endShape(void)
       }
     }
     else {
-      if (SoConvexDataCacheTessellator::preferred()) {
+      if (SoConvexDataCacheEarcutTessellator::preferred()) {
         this->glutess->beginPolygon();
         for (int i = 0; i < counter; i++) {
           this->glutess->addVertex(vertsArray[i].getPoint(), &vertsArray[i]);
