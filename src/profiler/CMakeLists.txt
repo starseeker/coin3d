@@ -1,8 +1,21 @@
-# Full profiler implementation - core components only
+# source files
 set(COIN_PROFILER_FILES
-	SbProfilingData.cpp
 	SoProfiler.cpp
 	SoProfilerElement.cpp
+	SoProfilerOverlayKit.cpp
+	SoProfilerStats.cpp
+	SoProfilingReportGenerator.cpp
+	SoProfilerTopEngine.cpp
+	SoScrollingGraphKit.cpp
+	SoNodeVisualize.cpp
+	SoProfilerTopKit.cpp
+	SoProfilerVisualizeKit.cpp
+	SbProfilingData.cpp
+)
+
+# Files excluded from public API documentation, included in complete documentation.
+set(COIN_PROFILER_INTERNAL_FILES
+	SoNodeProfiling.h
 )
 
 # build library

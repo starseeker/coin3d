@@ -1,5 +1,5 @@
-#ifndef COIN_SOPROFILERELEMENT_H
-#define COIN_SOPROFILERELEMENT_H
+#ifndef COIN_SOSCROLLINGGRAPHKIT_H
+#define COIN_SOSCROLLINGGRAPHKIT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,37 +33,71 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#include <Inventor/elements/SoElement.h>
-#include <Inventor/elements/SoSubElement.h>
+#include <Inventor/nodekits/SoBaseKit.h>
+#include <Inventor/nodekits/SoSubKit.h>
 
-#include <Inventor/annex/Profiler/SbProfilingData.h>
+#include <Inventor/tools/SbPimplPtr.h>
+#include <Inventor/fields/SoSFVec3f.h>
+#include <Inventor/fields/SoSFEnum.h>
+#include <Inventor/fields/SoSFTime.h>
+#include <Inventor/fields/SoMFFloat.h>
+#include <Inventor/fields/SoMFColor.h>
+#include <Inventor/fields/SoMFName.h>
 
-// *************************************************************************
+class SoSensor;
+class SoScrollingGraphKitP;
 
-class COIN_DLL_API SoProfilerElement : public SoElement {
-  typedef SoElement inherited;
-  SO_ELEMENT_HEADER(SoProfilerElement);
+class SoScrollingGraphKit : public SoBaseKit {
+  typedef SoBaseKit inherited;
+  SO_KIT_HEADER(SoScrollingGraphKit);
+  SO_KIT_CATALOG_ENTRY_HEADER(scene);
 
 public:
   static void initClass(void);
 
-  static SoProfilerElement * get(SoState * state);
+  SoScrollingGraphKit(void);
 
-  virtual SbBool matches(const SoElement * element) const;
-  virtual SoElement * copyMatchInfo(void) const;
+  enum GraphicsType {
+    LINES,
+    STACKED_BARS,
+    DEFAULT_GRAPHICS = STACKED_BARS
+  };
 
-  SbProfilingData & getProfilingData(void);
-  const SbProfilingData & getProfilingData(void) const;
+  enum RangeType {
+    ABSOLUTE_ACCUMULATIVE,
+    //ABSOLUTE_OVERWRITE,
+    //RELATIVE_ACCUMULATIVE,
+    //RELATIVE_OVERWRITE,
+    DEFAULT_RANGETYPE = ABSOLUTE_ACCUMULATIVE
+  };
+
+  // config
+  SoSFEnum graphicsType;
+  SoSFEnum rangeType;
+  SoSFTime seconds; // seconds to pass over graph area (20)
+  SoMFColor colors; // rotating color list
+
+  // geometry
+  SoSFVec3f viewportSize; // input
+  SoSFVec3f position;     // input
+  SoSFVec3f size;         // input
+
+  // the dynamic inputs
+  SoMFName addKeys;
+  SoMFFloat addValues; // input
 
 protected:
-  virtual ~SoProfilerElement(void);
+  virtual ~SoScrollingGraphKit(void);
 
-  SbProfilingData data;
+  static void addValuesCB(void * closure, SoSensor * sensor);
 
 private:
-  virtual void push(SoState * state);
-  virtual void pop(SoState * state, const SoElement * elt);
+  SbPimplPtr<SoScrollingGraphKitP> pimpl;
 
-}; // SoProfilerElement
+  // NOT IMPLEMENTED
+  SoScrollingGraphKit(const SoScrollingGraphKit &);
+  SoScrollingGraphKit & operator = (const SoScrollingGraphKit &);
 
-#endif // !COIN_SOPROFILERELEMENT_H
+}; // SoScrollingGraphKit
+
+#endif // !COIN_SOSCROLLINGGRAPHKIT_H

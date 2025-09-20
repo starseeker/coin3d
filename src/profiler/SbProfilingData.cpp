@@ -190,13 +190,7 @@ SbProfilingData::SbProfilingData(const SbProfilingData & rhs)
 */
 SbProfilingData::~SbProfilingData(void)
 {
-  if (this->pimpl) {
-    PRIVATE(this)->nodeData.clear();
-    PRIVATE(this)->nodeTypeData.clear();
-    PRIVATE(this)->nodeNameData.clear();
-    delete this->pimpl;
-    this->pimpl = NULL;
-  }
+  this->reset();
 }
 
 /*!
@@ -205,7 +199,6 @@ SbProfilingData::~SbProfilingData(void)
 void
 SbProfilingData::constructorInit(void)
 {
-  this->pimpl = new SbProfilingDataP;
   // NB: if resource allocation is added, rewrite reset() to not call here
   this->actionType = SoType::badType();
   this->actionStartTime = SbTime::zero();
@@ -219,18 +212,13 @@ SbProfilingData::constructorInit(void)
 void
 SbProfilingData::reset(void)
 {
-  this->actionType = SoType::badType();
-  this->actionStartTime = SbTime::zero();
-  this->actionStopTime = SbTime::zero();
-  if (this->pimpl) {
-    PRIVATE(this)->lastPathIndex = -1;
-    PRIVATE(this)->nodeData.clear();
-    PRIVATE(this)->nodeTypeData.clear();
-    PRIVATE(this)->nodeNameData.clear();
-    assert(PRIVATE(this)->nodeData.size() == 0);
-    assert(PRIVATE(this)->nodeTypeData.size() == 0);
-    assert(PRIVATE(this)->nodeNameData.size() == 0);
-  }
+  this->constructorInit();
+  PRIVATE(this)->nodeData.clear();
+  PRIVATE(this)->nodeTypeData.clear();
+  PRIVATE(this)->nodeNameData.clear();
+  assert(PRIVATE(this)->nodeData.size() == 0);
+  assert(PRIVATE(this)->nodeTypeData.size() == 0);
+  assert(PRIVATE(this)->nodeNameData.size() == 0);
 }
 
 /*!
@@ -498,7 +486,7 @@ SbProfilingData::getActionDuration(void) const
  */
 
 SbBool
-SbProfilingData::isPathMatch(const SoFullPath * fullpath, int pathlen, int idx) const
+SbProfilingData::isPathMatch(const SoFullPath * fullpath, int pathlen, int idx)
 {
   assert(pathlen > 0 && pathlen <= fullpath->getLength());
   while (pathlen > 0 && idx != -1) {
@@ -755,7 +743,7 @@ SbProfilingData::setNodeTiming(const SoPath * path, SbTime timing)
   assert(path->getLength() > 0);
   assert(timing.getValue() >= 0.0);
 
-  const int idx = this->getIndex(path, FALSE);
+  const int idx = this->getIndex(path);
   this->setNodeTiming(idx, timing);
 }
 

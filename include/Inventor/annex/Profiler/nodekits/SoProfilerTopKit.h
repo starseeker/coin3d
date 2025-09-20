@@ -1,5 +1,5 @@
-#ifndef COIN_SOPROFILERELEMENT_H
-#define COIN_SOPROFILERELEMENT_H
+#ifndef COIN_SOPROFILERTOPKIT
+#define COIN_SOPROFILERTOPKIT
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,37 +33,44 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#include <Inventor/elements/SoElement.h>
-#include <Inventor/elements/SoSubElement.h>
+#include <Inventor/annex/Profiler/nodekits/SoProfilerOverlayKit.h>
+#include <Inventor/fields/SoSFColor.h>
+#include <Inventor/fields/SoSFInt32.h>
+#include <Inventor/fields/SoSFVec2f.h>
+#include <Inventor/fields/SoSFVec3f.h>
+#include <Inventor/tools/SbPimplPtr.h>
 
-#include <Inventor/annex/Profiler/SbProfilingData.h>
+class SoProfilerTopKitP;
 
-// *************************************************************************
-
-class COIN_DLL_API SoProfilerElement : public SoElement {
-  typedef SoElement inherited;
-  SO_ELEMENT_HEADER(SoProfilerElement);
+class COIN_DLL_API SoProfilerTopKit : public SoProfilerOverlayKit {
+  typedef SoProfilerOverlayKit inherited;
+  SO_KIT_HEADER(SoProfilerTopKit);
+  SO_KIT_CATALOG_ENTRY_HEADER(textSep);
+  SO_KIT_CATALOG_ENTRY_HEADER(color);
+  SO_KIT_CATALOG_ENTRY_HEADER(translation);
+  SO_KIT_CATALOG_ENTRY_HEADER(text);
+  SO_KIT_CATALOG_ENTRY_HEADER(graph);
 
 public:
   static void initClass(void);
+  SoProfilerTopKit(void);
 
-  static SoProfilerElement * get(SoState * state);
+  SoSFColor txtColor;
+  SoSFInt32 lines;
 
-  virtual SbBool matches(const SoElement * element) const;
-  virtual SoElement * copyMatchInfo(void) const;
-
-  SbProfilingData & getProfilingData(void);
-  const SbProfilingData & getProfilingData(void) const;
+  SoSFVec2f topKitSize;    // output set from internal parts
+  SoSFVec3f position;      // input set from SoProfilerOverlayKit
 
 protected:
-  virtual ~SoProfilerElement(void);
-
-  SbProfilingData data;
+  virtual ~SoProfilerTopKit(void);
 
 private:
-  virtual void push(SoState * state);
-  virtual void pop(SoState * state, const SoElement * elt);
+  SbPimplPtr<SoProfilerTopKitP> pimpl;
+  friend class SoProfilerTopKitP;
 
-}; // SoProfilerElement
+  SoProfilerTopKit(const SoProfilerTopKit & rhs);
+  SoProfilerTopKit & operator = (const SoProfilerTopKit & rhs);
 
-#endif // !COIN_SOPROFILERELEMENT_H
+}; // SoProfilerTopKit
+
+#endif //!COIN_SOPROFILERTOPKIT

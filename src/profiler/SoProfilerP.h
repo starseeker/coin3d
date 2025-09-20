@@ -37,22 +37,23 @@
 
 class SbProfilingData;
 
-namespace SoProfilerP {
-  SbBool shouldContinuousRender(void);
-  float getContinuousRenderDelay(void);
+class SoProfilerP {
+public:
+  static SbBool shouldContinuousRender(void);
+  static float getContinuousRenderDelay(void);
 
-  SbBool shouldSyncGL(void);
+  static SbBool shouldSyncGL(void);
 
-  SbBool shouldClearConsole(void);
-  SbBool shouldOutputHeaderOnConsole(void);
+  static SbBool shouldClearConsole(void);
+  static SbBool shouldOutputHeaderOnConsole(void);
 
-  void parseCoinProfilerVariable(void);
-  void parseCoinProfilerOverlayVariable(void);
+  static void parseCoinProfilerVariable(void);
+  static void parseCoinProfilerOverlayVariable(void);
 
-  void setActionType(SoType actiontype);
-  SoType getActionType(void);
+  static void setActionType(SoType actiontype);
+  static SoType getActionType(void);
 
-  void dumpToConsole(const SbProfilingData & data);
-}
+  static void dumpToConsole(const SbProfilingData & data);
+};
 
 #endif // !COIN_SOPROFILERP_H

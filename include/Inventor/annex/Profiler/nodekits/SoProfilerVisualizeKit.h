@@ -1,5 +1,5 @@
-#ifndef COIN_SOPROFILERELEMENT_H
-#define COIN_SOPROFILERELEMENT_H
+#ifndef COIN_SOPROFILERVISUALIZEKIT
+#define COIN_SOPROFILERVISUALIZEKIT
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,37 +33,45 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#include <Inventor/elements/SoElement.h>
-#include <Inventor/elements/SoSubElement.h>
+#include <Inventor/nodekits/SoBaseKit.h>
+#include <Inventor/nodekits/SoSubKit.h>
+#include <Inventor/fields/SoSFNode.h>
+#include <Inventor/fields/SoSFTrigger.h>
+#include <Inventor/fields/SoMFNode.h>
+#include <Inventor/tools/SbPimplPtr.h>
 
-#include <Inventor/annex/Profiler/SbProfilingData.h>
+struct SoProfilerVisualizeKitP;
 
-// *************************************************************************
-
-class COIN_DLL_API SoProfilerElement : public SoElement {
-  typedef SoElement inherited;
-  SO_ELEMENT_HEADER(SoProfilerElement);
+class COIN_DLL_API SoProfilerVisualizeKit : public SoBaseKit {
+  typedef SoBaseKit inherited;
+  SO_KIT_HEADER(SoProfilerVisualizeKit);
+  SO_KIT_CATALOG_ENTRY_HEADER(top);
+  SO_KIT_CATALOG_ENTRY_HEADER(pretree);
+  SO_KIT_CATALOG_ENTRY_HEADER(visualtree);
 
 public:
   static void initClass(void);
+  SoProfilerVisualizeKit(void);
 
-  static SoProfilerElement * get(SoState * state);
+  /// Set this to be the root of the scenegraph we visualize.
+  SoSFNode root;
 
-  virtual SbBool matches(const SoElement * element) const;
-  virtual SoElement * copyMatchInfo(void) const;
+  /// Set this to be the stats field.
+  SoSFTrigger statsTrigger;
+  SoSFNode stats;
 
-  SbProfilingData & getProfilingData(void);
-  const SbProfilingData & getProfilingData(void) const;
+  // Fields picked up from SoProfilerStats follow here.
+  SoMFNode separatorsWithGLCaches;
 
 protected:
-  virtual ~SoProfilerElement(void);
-
-  SbProfilingData data;
+  virtual ~SoProfilerVisualizeKit(void);
 
 private:
-  virtual void push(SoState * state);
-  virtual void pop(SoState * state, const SoElement * elt);
+  /// NOT IMPLEMENTED
+  SoProfilerVisualizeKit(const SoProfilerVisualizeKit&);
+  /// NOT IMPLEMENTED
+  SoProfilerVisualizeKit &operator=(const SoProfilerVisualizeKit&);
+  SbPimplPtr<SoProfilerVisualizeKitP> pimpl;
+};
 
-}; // SoProfilerElement
-
-#endif // !COIN_SOPROFILERELEMENT_H
+#endif //!COIN_SOPROFILERVISUALIZEKIT
