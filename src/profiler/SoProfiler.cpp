@@ -81,15 +81,15 @@
 #include <Inventor/nodekits/SoNodeKit.h>
 
 #include <Inventor/annex/Profiler/elements/SoProfilerElement.h>
-#include <Inventor/annex/Profiler/nodes/SoProfilerStats.h>
-#include <Inventor/annex/Profiler/engines/SoProfilerTopEngine.h>
-#include <Inventor/annex/Profiler/utils/SoProfilingReportGenerator.h>
+// #include <Inventor/annex/Profiler/nodes/SoProfilerStats.h>  // Not included in minimal build
+// #include <Inventor/annex/Profiler/engines/SoProfilerTopEngine.h>
+// #include <Inventor/annex/Profiler/utils/SoProfilingReportGenerator.h>
 #ifdef HAVE_NODEKITS
-#include <Inventor/annex/Profiler/nodekits/SoNodeVisualize.h>
-#include <Inventor/annex/Profiler/nodekits/SoProfilerOverlayKit.h>
-#include <Inventor/annex/Profiler/nodekits/SoProfilerTopKit.h>
-#include <Inventor/annex/Profiler/nodekits/SoScrollingGraphKit.h>
-#include <Inventor/annex/Profiler/nodekits/SoProfilerVisualizeKit.h>
+// #include <Inventor/annex/Profiler/nodekits/SoNodeVisualize.h>
+// #include <Inventor/annex/Profiler/nodekits/SoProfilerOverlayKit.h>
+// #include <Inventor/annex/Profiler/nodekits/SoProfilerTopKit.h>
+// #include <Inventor/annex/Profiler/nodekits/SoScrollingGraphKit.h>
+// #include <Inventor/annex/Profiler/nodekits/SoProfilerVisualizeKit.h>
 #endif // HAVE_NODEKITS
 
 #include "C/CoinTidbits.h"
@@ -126,8 +126,6 @@ namespace {
       static SbBool clear = FALSE;
       static SbBool header = FALSE;
       static int lines = 20;
-      static SoProfilingReportGenerator::DataCategorization category =
-        SoProfilingReportGenerator::NODES;
       static SoType actiontype = SoType::badType();
       static SbBool onstdout = FALSE;
       static SbBool onstderr = FALSE;
@@ -164,19 +162,19 @@ SoProfiler::init(void)
 {
   if (profiler::initialized) return;
 
-  SoProfilerStats::initClass();
-  SoProfilerTopEngine::initClass();
+  // SoProfilerStats::initClass();  // Not included in minimal build
+  // SoProfilerTopEngine::initClass();
 
 #ifdef HAVE_NODEKITS
   SoNodeKit::init();
-  SoProfilerOverlayKit::initClass();
-  SoProfilerVisualizeKit::initClass();
-  SoProfilerTopKit::initClass();
-  SoScrollingGraphKit::initClass();
-  SoNodeVisualize::initClass();
+  // SoProfilerOverlayKit::initClass();
+  // SoProfilerVisualizeKit::initClass();
+  // SoProfilerTopKit::initClass();
+  // SoScrollingGraphKit::initClass();
+  // SoNodeVisualize::initClass();
 #endif // HAVE_NODEKITS
 
-  SoProfilingReportGenerator::init();
+  // SoProfilingReportGenerator::init();
 
   profiler::enabled = TRUE;
 
@@ -275,8 +273,8 @@ SoProfilerP::setActionType(SoType actiontype)
   else IF_ACTION(SoGetMatrixAction)
   else IF_ACTION(SoGetPrimitiveCountAction)
   else IF_ACTION(SoHandleEventAction)
-  else IF_ACTION(SoToVRMLAction)
-  else IF_ACTION(SoSimplifyAction)
+  // else IF_ACTION(SoToVRMLAction)  // Not available in this build
+  // else IF_ACTION(SoSimplifyAction)  // Not available in this build
   else {
     SoDebugError::postInfo("SoProfilerP::setActionType",
                            "profiling action of type '%s' is not supported",
@@ -428,20 +426,9 @@ SoProfilerP::parseCoinProfilerOverlayVariable(void)
 
       else if (param[0].compare("category") == 0) {
         if (subargs.size() > 0) {
-          if (subargs[0].compare("nodes") == 0) {
-            profiler::console::category =
-              SoProfilingReportGenerator::NODES;
-          } else if (subargs[0].compare("types") == 0) {
-            profiler::console::category =
-              SoProfilingReportGenerator::TYPES;
-          } else if (subargs[0].compare("names") == 0) {
-            profiler::console::category =
-              SoProfilingReportGenerator::NAMES;
-          } else {
-            SoDebugError::postWarning("SoProfiler",
-                                      "'category' argument must be nodes, types, or names - was '%s'.",
-                                      subargs[0].data());
-          }
+          // For now, just accept the parameter but don't process it
+          // since SoProfilingReportGenerator is not available
+          SoDebugError::postInfo("SoProfiler", "category parameter accepted but not processed");
         } else {
           SoDebugError::postWarning("SoProfiler",
                                     "'category' must have argument nodes, types, or names.");
@@ -539,53 +526,54 @@ SoProfilerP::parseCoinProfilerOverlayVariable(void)
 }
 
 /*
-  Default implementation for dumping on console instead of overlaying
-  statistics over the 3D graphics.
+  Minimal implementation for dumping profiling data to console.
+  This replaces the full SoProfilingReportGenerator functionality.
 */
 void
 SoProfilerP::dumpToConsole(const SbProfilingData & data)
 {
-  SoProfilingReportGenerator::ReportCB * callback = NULL;
+  FILE * output = NULL;
   if (profiler::console::onstdout) {
-    callback = SoProfilingReportGenerator::stdoutCB;
+    output = coin_get_stdout();
   }
   else if (profiler::console::onstderr) {
-    callback = SoProfilingReportGenerator::stderrCB;
+    output = coin_get_stderr();
   }
-  if (!callback) {
+  if (!output) {
     return;
   }
 
   if (SoProfilerP::shouldClearConsole()) {
     // send ansi-console clear screen code
     static const char CLEAR_SEQUENCE[] = "\033c";
-    if (profiler::console::onstdout) {
-      fputs(CLEAR_SEQUENCE,coin_get_stdout());
-    } else if (profiler::console::onstderr) {
-      fputs(CLEAR_SEQUENCE,coin_get_stderr());
-    }
+    fputs(CLEAR_SEQUENCE, output);
   }
 
-  SoProfilingReportGenerator::DataCategorization category =
-    profiler::console::category;
-
-  // set up how to sort the toplist
-  SbProfilingReportSortCriteria * sortsettings =
-    SoProfilingReportGenerator::getDefaultReportSortCriteria(category);
-
-  // set up how to print the toplist
-  SbProfilingReportPrintCriteria * printsettings =
-    SoProfilingReportGenerator::getDefaultReportPrintCriteria(category);
-
-  SoProfilingReportGenerator::generate(data,
-                                       category,
-                                       sortsettings,
-                                       printsettings,
-                                       profiler::console::lines,
-                                       SoProfilerP::shouldOutputHeaderOnConsole(),
-                                       callback,
-                                       NULL);
-
-  SoProfilingReportGenerator::freeCriteria(sortsettings);
-  SoProfilingReportGenerator::freeCriteria(printsettings);
+  // Simple profiling output
+  fprintf(output, "=== Coin3D Profiler Report ===\n");
+  fprintf(output, "Action Type: %s\n", 
+          data.getActionType() != SoType::badType() ? 
+          data.getActionType().getName().getString() : "Unknown");
+  
+  SbTime duration = data.getActionDuration();
+  fprintf(output, "Total Duration: %.3f ms\n", duration.getValue() * 1000.0);
+  fprintf(output, "Node Entries: %d\n", data.getNumNodeEntries());
+  
+  // Print node timing information if available
+  for (int i = 0; i < data.getNumNodeEntries() && i < profiler::console::lines; ++i) {
+    SbTime nodeTiming = data.getNodeTiming(i);
+    SoType nodeType = data.getNodeType(i);
+    SbName nodeName = data.getNodeName(i);
+    
+    if (nodeTiming.getValue() > 0.0) {
+      fprintf(output, "  [%d] %s (%s): %.3f ms\n", 
+              i, 
+              nodeType != SoType::badType() ? nodeType.getName().getString() : "Unknown",
+              nodeName.getString(),
+              nodeTiming.getValue() * 1000.0);
+    }
+  }
+  
+  fprintf(output, "==============================\n");
+  fflush(output);
 }
