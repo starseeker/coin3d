@@ -415,7 +415,7 @@ else()
 endif()
 
 # ############################################################################
-# Install config package and pkgconfig file
+# Install config package
 # ############################################################################
 
 if(COIN_BUILD_MAC_FRAMEWORK)
@@ -425,8 +425,6 @@ else()
   set(COIN_CONFIG_PACKAGE_LOCATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}-${PROJECT_VERSION})
   string(TOLOWER ${PROJECT_NAME} COIN_CONFIG_PACKAGE_BASENAME)
   if(UNIX OR MINGW)
-    configure_file("${PROJECT_SOURCE_DIR}/${PROJECT_NAME}.pc.cmake.in" "${CMAKE_BINARY_DIR}/${PROJECT_NAME}.pc" @ONLY)
-    install(FILES "${CMAKE_BINARY_DIR}/${PROJECT_NAME}.pc" DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
     install(FILES "${CMAKE_BINARY_DIR}/${PROJECT_NAME_LOWER}-default.cfg" DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/Coin/conf)
   endif()
 endif()
