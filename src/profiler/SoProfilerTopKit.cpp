@@ -67,9 +67,9 @@ class SoProfilerTopKitP
 {
 public:
   SoProfilerTopKitP()
-    : geometryEngine(NULL),
-      topListEngine(NULL),
-      last_stats(NULL)
+    : geometryEngine(nullptr),
+      topListEngine(nullptr),
+      last_stats(nullptr)
   { }
 
   SoProfilerTopKit * master;
@@ -134,7 +134,7 @@ SoProfilerTopKitP::attachToStats()
   SoProfilerStats * statsNode =
     (SoProfilerStats *)PUBLIC(this)->getPart("profilingStats",
                                              FALSE);
-  if (statsNode == NULL)
+  if (statsNode == nullptr)
     return ;
 
   this->topListEngine->statisticsNames.connectFrom(&statsNode->renderedNodeType);

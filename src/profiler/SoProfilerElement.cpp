@@ -69,7 +69,7 @@ SoProfilerElement::get(SoState * state)
 {
   assert(state);
   if (!state->isElementEnabled(SoProfilerElement::classStackIndex)) {
-    return NULL;
+    return nullptr;
   }
 
   SoElement * elt = state->getElementNoPush(SoProfilerElement::classStackIndex);
@@ -135,7 +135,7 @@ SoProfilerElement::setTimingProfile(SoNode * node, SbTime t, SoNode * parent)
   this->data.accumulateTraversalTime(parent ? parent->getTypeId() : SoType::badType(),
                                      node->getTypeId(), t);
 
-  if (parent == NULL) return;
+  if (parent == nullptr) return;
   this->data.setChildTiming(parent, node, t);
 }
 */

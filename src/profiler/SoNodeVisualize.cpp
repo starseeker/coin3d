@@ -147,7 +147,7 @@ namespace {
       for (it = this->nodemap.begin(), end = this->nodemap.end();
            it != end; ++it) {
         it->second->unref();
-        it->second = NULL;
+        it->second = nullptr;
       }
       this->nodemap.clear();
     }
@@ -246,9 +246,9 @@ SoNodeVisualize::SoNodeVisualize(void)
   SoRotation *rot=static_cast<SoRotation*>(this->getAnyPart("rotation",TRUE));
   rot->rotation.setValue(SbVec3f(0, 1, 0), 1.5707963f);
 
-  this->parent=NULL;
+  this->parent=nullptr;
   this->dirty=true;
-  this->node=NULL;
+  this->node=nullptr;
 
 }
 

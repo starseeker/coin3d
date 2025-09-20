@@ -64,7 +64,7 @@ class SoProfilingReportGeneratorP {
 public:
   static SbMutex * mutex;
 
-  typedef int SortFunction(const SbProfilingData & data, SoProfilingReportGenerator::DataCategorization category, int idx1, int idx2);
+  using SortFunction = int(const SbProfilingData & data, SoProfilingReportGenerator::DataCategorization category, int idx1, int idx2);
   static int cmpTimeAsc(const SbProfilingData & data, SoProfilingReportGenerator::DataCategorization category, int idx1, int idx2);
   static int cmpTimeDes(const SbProfilingData & data, SoProfilingReportGenerator::DataCategorization category, int idx1, int idx2);
   static int cmpTimeMaxAsc(const SbProfilingData & data, SoProfilingReportGenerator::DataCategorization category, int idx1, int idx2);
@@ -80,7 +80,7 @@ public:
   static int cmpGfxMemAsc(const SbProfilingData & data, SoProfilingReportGenerator::DataCategorization category, int idx1, int idx2);
   static int cmpGfxMemDes(const SbProfilingData & data, SoProfilingReportGenerator::DataCategorization category, int idx1, int idx2);
 
-  typedef void PrintFunction(const SbProfilingData & data, SbString & string, int idx);
+  using PrintFunction = void(const SbProfilingData & data, SbString & string, int idx);
   static void printName(const SbProfilingData & data, SbString & string, int idx);
   static void printType(const SbProfilingData & data, SbString & string, int idx);
   static void printCount(const SbProfilingData & data, SbString & string, int idx);
@@ -100,14 +100,14 @@ public:
 
 };
 
-SbMutex * SoProfilingReportGeneratorP::mutex = NULL;
+SbMutex * SoProfilingReportGeneratorP::mutex = nullptr;
 
 // *************************************************************************
 
 class SbProfilingReportSortCriteria {
 public:
   SbProfilingReportSortCriteria(void)
-    : numfunctions(0), functions(NULL)
+    : numfunctions(0), functions(nullptr)
   {
   }
 
@@ -227,7 +227,7 @@ SoProfilingReportGenerator::freeCriteria(SbProfilingReportSortCriteria * criteri
 class SbProfilingReportPrintCriteria {
 public:
   SbProfilingReportPrintCriteria(void)
-    : numfunctions(0), functions(NULL), needstringlengths(FALSE)
+    : numfunctions(0), functions(nullptr), needstringlengths(FALSE)
   {
   }
   ~SbProfilingReportPrintCriteria(void) {
@@ -362,12 +362,12 @@ SoProfilingReportGenerator::freeCriteria(SbProfilingReportPrintCriteria * criter
 
 // *************************************************************************
 
-static const SbProfilingData * profdata = NULL;
-static const int * arraystart = NULL;
-static const int * arrayend = NULL;
+static const SbProfilingData * profdata = nullptr;
+static const int * arraystart = nullptr;
+static const int * arrayend = nullptr;
 static SoProfilingReportGenerator::DataCategorization sortcategory = SoProfilingReportGenerator::TYPES;
-static SbProfilingReportSortCriteria * sortingconfig = NULL;
-static SbList<SbProfilingNodeNameKey> * namekeys = NULL;
+static SbProfilingReportSortCriteria * sortingconfig = nullptr;
+static SbList<SbProfilingNodeNameKey> * namekeys = nullptr;
 static SbList<SbProfilingNodeTypeKey> * typekeys = NULL;
 static int longestnamelength = 0;
 static int longesttypenamelength = 0;

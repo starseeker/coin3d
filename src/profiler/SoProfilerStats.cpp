@@ -108,7 +108,7 @@ private:
   };
 
 public:
-  SoProfilerStatsP(void) : master(NULL) {
+  SoProfilerStatsP(void) : master(nullptr) {
   }
   ~SoProfilerStatsP(void) { }
 

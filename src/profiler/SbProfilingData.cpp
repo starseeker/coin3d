@@ -125,7 +125,7 @@ struct SbNameProfilingData {
 // inlined methods
 
 SbNodeProfilingData::SbNodeProfilingData(void)
-: node(NULL), /* nodename(NULL), */ nodetype(0),
+: node(nullptr), /* nodename(nullptr), */ nodetype(0),
   parentidx(-1), childidx(0),
   traversaltime(0.0), memorysize(0), texturesize(0), traversalcount(0)
 {
@@ -195,7 +195,7 @@ SbProfilingData::~SbProfilingData(void)
     PRIVATE(this)->nodeTypeData.clear();
     PRIVATE(this)->nodeNameData.clear();
     delete this->pimpl;
-    this->pimpl = NULL;
+    this->pimpl = nullptr;
   }
 }
 
@@ -372,7 +372,7 @@ SbProfilingData::operator += (const SbProfilingData & rhs)
   }
 
   { // nodeTypeData
-    typedef std::map<SbProfilingNodeTypeKey, SbTypeProfilingData> maptype;
+    using maptype = std::map<SbProfilingNodeTypeKey, SbTypeProfilingData>;
     maptype::const_iterator srctypeit = PRIVATE(&rhs)->nodeTypeData.begin();
     while (srctypeit != PRIVATE(&rhs)->nodeTypeData.end()) {
       maptype::iterator dsttypeit = PRIVATE(this)->nodeTypeData.find(srctypeit->first);
@@ -391,7 +391,7 @@ SbProfilingData::operator += (const SbProfilingData & rhs)
   }
 
   { // nodeNameData
-    typedef std::map<SbProfilingNodeNameKey, SbNameProfilingData> maptype;
+    using maptype = std::map<SbProfilingNodeNameKey, SbNameProfilingData>;
     maptype::const_iterator srctypeit = PRIVATE(&rhs)->nodeNameData.begin();
     while (srctypeit != PRIVATE(&rhs)->nodeNameData.end()) {
       maptype::iterator dsttypeit = PRIVATE(this)->nodeNameData.find(srctypeit->first);
@@ -590,7 +590,7 @@ SbProfilingData::getIndexCreate(const SoFullPath * fullpath, int COIN_UNUSED_ARG
 
     SbNodeProfilingData data;
     SoNode * rootnode = fullpath->getNode(0);
-    assert(rootnode != NULL);
+    assert(rootnode != nullptr);
     data.node = static_cast<SbProfilingNodeKey>(rootnode);
     data.nodetype = static_cast<SbProfilingNodeTypeKey>(rootnode->getTypeId().getKey());
     data.nodename = static_cast<SbProfilingNodeNameKey>(rootnode->getName().getString());

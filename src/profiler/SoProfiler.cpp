@@ -301,7 +301,7 @@ SoProfilerP::parseCoinProfilerVariable(void)
   // - [nocaching - implies on] // todo
 
   const char * env = CoinInternal::getEnvironmentVariableRaw(SoDBP::EnvVars::COIN_PROFILER);
-  if (env == NULL) return;
+  if (env == nullptr) return;
   std::vector<std::string> parameters;
   tokenize(env, ":", parameters);
   if ((parameters.size() == 1) &&
@@ -335,7 +335,7 @@ void
 SoProfilerP::parseCoinProfilerOverlayVariable(void)
 {
   const char * env = CoinInternal::getEnvironmentVariableRaw(SoDBP::EnvVars::COIN_PROFILER_OVERLAY);
-  if (env == NULL) return;
+  if (env == nullptr) return;
   std::vector<std::string> parameters;
   tokenize(env, ":", parameters);
 
@@ -532,7 +532,7 @@ SoProfilerP::parseCoinProfilerOverlayVariable(void)
 void
 SoProfilerP::dumpToConsole(const SbProfilingData & data)
 {
-  FILE * output = NULL;
+  FILE * output = nullptr;
   if (profiler::console::onstdout) {
     output = coin_get_stdout();
   }

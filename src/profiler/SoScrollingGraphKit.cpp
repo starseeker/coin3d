@@ -82,7 +82,7 @@ public:
 
 class Datum {
 public:
-  Datum(void) : next(NULL) { }
+  Datum(void) : next(nullptr) { }
   SbTime when;
   SbList<float> datum;
   Datum * next;
@@ -94,7 +94,7 @@ public:
 
 class SoScrollingGraphKitP {
 public:
-  SoScrollingGraphKitP(void) : kit(NULL), first(NULL), last(NULL) {
+  SoScrollingGraphKitP(void) : kit(nullptr), first(nullptr), last(nullptr) {
     this->cachedmaxvalue = 0.0f;
     this->cachedrealmaxvalue = 0.0f;
   }
@@ -102,7 +102,7 @@ public:
     SbList<const char *> keys;
     this->graphs.makeKeyList(keys);
     for (int c = 0; c < keys.getLength(); ++c) {
-      Graph * obj = NULL;
+      Graph * obj = nullptr;
       if (this->graphs.get(keys[c], obj)) { delete obj; }
     }
     this->graphs.clear();
@@ -268,7 +268,7 @@ SoScrollingGraphKitP::pullStatistics(void)
 void
 SoScrollingGraphKitP::addDatum(Datum * newDatum)
 {
-  if (this->first == NULL) {
+  if (this->first == nullptr) {
     this->first = this->last = newDatum;
   } else {
     this->last->next = newDatum;
@@ -276,7 +276,7 @@ SoScrollingGraphKitP::addDatum(Datum * newDatum)
   }
 
   SbTime maxtime(this->kit->seconds.getValue());
-  while ((this->first->next != NULL) &&
+  while ((this->first->next != nullptr) &&
          ((newDatum->when - this->first->next->when) > maxtime)) {
     Datum * datum = this->first;
     this->first = this->first->next;
@@ -288,7 +288,7 @@ Graph *
 SoScrollingGraphKitP::getGraph(const SbName & key)
 {
   assert(key != SbName::empty());
-  Graph * graph = NULL;
+  Graph * graph = nullptr;
   if (!this->graphs.get(key.getString(), graph)) {
     graph = new Graph;
     graph->key = key;
@@ -311,12 +311,12 @@ SoScrollingGraphKitP::getGraph(int idx)
   SbList<const char *> keys;
   this->graphs.makeKeyList(keys);
   for (int i = 0; i < keys.getLength(); ++i) {
-    Graph * graph = NULL;
+    Graph * graph = nullptr;
     this->graphs.get(keys[i], graph);
     if (graph->index == idx) return graph;
   }
   assert(!"serious problem - did not find graph index data");
-  return NULL;
+  return nullptr;
 }
 
 
@@ -332,7 +332,7 @@ new_node(const char * buffer)
     assert(!"node field arguments error");
     node->ref();
     node->unref();
-    return NULL;
+    return nullptr;
   }
   return node;
 }
