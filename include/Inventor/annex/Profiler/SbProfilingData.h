@@ -35,32 +35,134 @@
 
 #include <Inventor/SbBasic.h>
 #include <Inventor/SbTime.h>
+#include <Inventor/SoType.h>
+#include <Inventor/SbName.h>
+#include <Inventor/lists/SbList.h>
 #include <cstddef>
+#include <cstdint>
 
 class SoFullPath;
 class SoPath;
+class SoNode;
+class SbProfilingDataP;
+class SbProfilingData;
 
-class SbProfilingData {
+// Type definitions for profiling keys
+typedef void * SbProfilingNodeKey;
+typedef int16_t SbProfilingNodeTypeKey;
+typedef const char * SbProfilingNodeNameKey;
+
+// Callback type for profiling data reporting
+typedef void SbProfilingDataCB(void * userdata, const SbProfilingData & data, 
+                               const SbList<SoNode*> & pointers, 
+                               const SbList<int> & indices, int idx);
+
+class COIN_DLL_API SbProfilingData {
 public:
-  SbProfilingData() {}
-  ~SbProfilingData() {}
-  
-  // Memory size constants
-  enum { MEMORY_SIZE, VIDEO_MEMORY_SIZE, GL_CACHED_FLAG };
-  
-  // Methods used by SoNodeProfiling.h
-  int getParentIndex(int index) const { return -1; }
-  void preOffsetNodeTiming(int index, const SbTime& offset) {}
-  SbTime getNodeTiming(int index) const { return SbTime::zero(); }
-  void setNodeTiming(int index, const SbTime& time) {}
-  
-  // Additional methods needed
-  int getIndex(const SoPath* path, SbBool create) { return 0; }
-  void setNodeFootprint(int index, int type, int value) {}
-  size_t getNodeFootprint(int index, int type) { return 0; }
-  void setNodeFlag(const SoPath* path, int flag, SbBool value) {}
-  void setActionStartTime(const SbTime& time) {}
-  SbTime getActionStartTime() const { return SbTime::zero(); }
+  SbProfilingData(void);
+  SbProfilingData(const SbProfilingData & rhs);
+  ~SbProfilingData(void);
+
+  // Enums for footprint types and node flags
+  enum FootprintType {
+    MEMORY_SIZE,
+    VIDEO_MEMORY_SIZE
+  };
+
+  enum NodeFlag {
+    GL_CACHED_FLAG,
+    CULLED_FLAG
+  };
+
+  // Constants for flags
+  enum {
+    INCLUDE_CHILDREN = 0x01
+  };
+
+  // Assignment operators
+  SbProfilingData & operator = (const SbProfilingData & rhs);
+  SbProfilingData & operator += (const SbProfilingData & rhs);
+
+  // Comparison operators
+  int operator == (const SbProfilingData & rhs) const;
+  int operator != (const SbProfilingData & rhs) const;
+
+  // Reset and initialization
+  void reset(void);
+
+  // Action type management
+  void setActionType(SoType actiontype);
+  SoType getActionType(void) const;
+
+  // Action timing
+  void setActionStartTime(SbTime starttime);
+  SbTime getActionStartTime(void) const;
+  void setActionStopTime(SbTime stoptime);
+  SbTime getActionStopTime(void) const;
+  SbTime getActionDuration(void) const;
+
+  // Path/node indexing
+  int getIndex(const SoPath * path, SbBool create);
+  int getParentIndex(int index) const;
+
+  // Node timing
+  void setNodeTiming(const SoPath * path, SbTime timing);
+  void setNodeTiming(int index, SbTime timing);
+  void preOffsetNodeTiming(int index, SbTime timing);
+  SbTime getNodeTiming(const SoPath * path, unsigned int flags = 0) const;
+  SbTime getNodeTiming(int index, unsigned int flags = 0) const;
+
+  // Node footprint (memory usage)
+  void setNodeFootprint(const SoPath * path, FootprintType footprinttype, size_t footprint);
+  void setNodeFootprint(int index, FootprintType footprinttype, size_t footprint);
+  size_t getNodeFootprint(const SoPath * path, FootprintType footprinttype, unsigned int flags = 0) const;
+  size_t getNodeFootprint(int index, FootprintType footprinttype, unsigned int flags = 0) const;
+
+  // Node flags
+  void setNodeFlag(const SoPath * path, NodeFlag flag, SbBool on);
+  void setNodeFlag(int index, NodeFlag flag, SbBool on);
+  SbBool getNodeFlag(const SoPath * path, NodeFlag flag) const;
+  SbBool getNodeFlag(int index, NodeFlag flag) const;
+
+  // Node information
+  SoType getNodeType(int index) const;
+  SbName getNodeName(int index) const;
+  int getLongestNameLength(void) const;
+  int getLongestTypeNameLength(void) const;
+  int getNumNodeEntries(void) const;
+
+  // Data size and reporting
+  size_t getProfilingDataSize(void) const;
+  void reportAll(SbProfilingDataCB * callback, void * userdata) const;
+
+  // Statistics by type
+  void getStatsForTypesKeyList(SbList<SbProfilingNodeTypeKey> & keys_out) const;
+  void getStatsForType(SbProfilingNodeTypeKey type, SbTime & total_out, 
+                       SbTime & max_out, uint32_t & count_out) const;
+
+  // Statistics by name
+  void getStatsForNamesKeyList(SbList<SbProfilingNodeNameKey> & keys_out) const;
+  void getStatsForName(SbProfilingNodeNameKey name, SbTime & total_out,
+                       SbTime & max_out, uint32_t & count_out) const;
+
+private:
+  // Constructor helper
+  void constructorInit(void);
+
+  // Internal methods for path handling
+  SbBool isPathMatch(const SoFullPath * fullpath, int pathlen, int idx) const;
+  int getIndexCreate(const SoFullPath * fullpath, int pathlen);
+  int getIndexNoCreate(const SoPath * path, int pathlen) const;
+  int getIndexForwardCreate(const SoFullPath * fullpath, int pathlen, int parentindex);
+  int getIndexForwardNoCreate(const SoFullPath * fullpath, int pathlen, int parentindex) const;
+
+  // Private implementation
+  SbProfilingDataP * pimpl;
+
+  // Public data members (for compatibility with existing code)
+  SoType actionType;
+  SbTime actionStartTime;
+  SbTime actionStopTime;
 };
 
 #endif // !COIN_SBPROFILINGDATA_H

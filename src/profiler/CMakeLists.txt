@@ -1,6 +1,10 @@
-# Minimal profiler implementation for nodekit support
+# Full profiler implementation - core components
 set(COIN_PROFILER_FILES
-	SoProfilerMinimal.cpp
+	SbProfilingData.cpp
+	SoProfiler.cpp
+	SoProfilerElement.cpp
+	SoProfilerP.cpp
+	SoProfilerStats.cpp
 )
 
 # build library
