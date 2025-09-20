@@ -300,20 +300,6 @@ SbTime::getValue(time_t & sec, long & usec) const
 }
 
 /*!
-  Returns the time as a \a timeval structure. For information on the \a timeval
-  structure, please consult your system developer documentation.
-
-  \sa setValue().
- */
-void
-SbTime::getValue(struct timeval * tv) const
-{
-  tv->tv_sec = static_cast<SIM_TIMEVAL_TV_SEC_T>(this->dtime);
-  double us = fmod(this->dtime, 1.0) * 1000000.0;
-  tv->tv_usec = static_cast<SIM_TIMEVAL_TV_USEC_T>(us + (us < 0.0 ? -0.5 : 0.5));
-}
-
-/*!
   Return number of milliseconds which the SbTime instance represents.
 
   Important note: you should in general avoid using this function, as

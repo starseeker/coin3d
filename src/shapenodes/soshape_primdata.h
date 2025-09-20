@@ -88,7 +88,7 @@ private:
   int arraySize;
   int counter;
   class SbTesselator * tess;
-  class SbGLUTessellator * glutess;
+  class SoConvexDataCacheEarcutTessellator * glutess;
   int faceCounter;
 
   SbBool matPerFace;

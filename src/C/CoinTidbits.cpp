@@ -205,7 +205,7 @@ static FILE* nullfileptr(void)
         if (nullfd == -1) {
             const char* tmpname = tmpnam(NULL);
             if (tmpname) {
-                nullfd = open(tmpname, O_CREAT|O_WRONLY);
+                nullfd = open(tmpname, O_CREAT|O_WRONLY, 0666);
                 (void)remove(tmpname);
             }
         }

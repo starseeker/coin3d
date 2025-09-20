@@ -66,7 +66,6 @@ public:
   void setMsecValue(const unsigned long msec);
   double getValue(void) const;
   void getValue(time_t & sec, long & usec) const;
-  void getValue(struct timeval * tv) const;
   unsigned long getMsecValue(void) const;
   SbString format(const char * const fmt = "%S.%i") const;
   SbString formatDate(const char * const fmt = NULL) const;

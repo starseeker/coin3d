@@ -41,16 +41,12 @@
 #include <config.h>
 #endif /* HAVE_CONFIG_H */
 
-#define NO_IMPLEMENTATION
-
-#ifdef USE_PTHREAD
-#include <pthread.h>
-#endif /* USE_PTHREAD */
-
-#ifdef USE_W32THREAD
-#include <windows.h>
-#include "threads/threadp.h"
-#endif /* USE_W32THREAD */
+// C++17 threading is the only supported implementation
+#if defined(__cplusplus) && __cplusplus >= 201703L
+#define USE_CXX17_THREADS
+#else
+#error "C++17 or later is required for threading support"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -59,26 +55,15 @@ extern "C" {
 /* ********************************************************************** */
 
 struct cc_condvar {
-#ifdef USE_PTHREAD
-  struct cc_pthread_condvar_data {
-    pthread_cond_t condid;
-  } pthread;
-#undef NO_IMPLEMENTATION
-#endif /* USE_PTHREAD */
-
-#ifdef USE_W32THREAD
-  struct cc_w32thread_condvar_data {
-    HANDLE eventhandle[2];
-    uint32_t waiters_count;
-    CRITICAL_SECTION waiters_count_lock;
-  } w32thread;
-#undef NO_IMPLEMENTATION
-#endif /* USE_W32THREAD */
+  // C++17 implementation only
+  struct cc_cxx17_condvar_data {
+    void * condvar_ptr;  // std::condition_variable* stored as void* for C compatibility
+  } cxx17;
 };
 
 #ifdef NO_IMPLEMENTATION
 #error missing threads implementation support
-#endif /* NO_IMPLEMENTATION */
+#endif /* ! NO_IMPLEMENTATION */
 
 /* ********************************************************************** */
 
