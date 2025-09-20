@@ -45,9 +45,17 @@
 
 #define NO_IMPLEMENTATION
 
+// Enable C++17 implementation when available - takes priority over pthread/win32
+#if defined(__cplusplus) && __cplusplus >= 201703L
+#define USE_CXX17_THREADS
+#undef NO_IMPLEMENTATION
+#endif
+
 #ifdef USE_PTHREAD
 #include <pthread.h>
+#ifndef USE_CXX17_THREADS
 #undef NO_IMPLEMENTATION
+#endif
 #ifdef HAVE_SCHED_H
 #include <sched.h>
 #endif /* HAVE_SCHED_H */
@@ -55,14 +63,10 @@
 
 #ifdef USE_W32THREAD
 #include <windows.h>
-#undef NO_IMPLEMENTATION
-#endif /* USE_W32THREAD */
-
-// Enable C++17 implementation when available
-#if defined(__cplusplus) && __cplusplus >= 201703L
-#define USE_CXX17_THREADS
+#ifndef USE_CXX17_THREADS
 #undef NO_IMPLEMENTATION
 #endif
+#endif /* USE_W32THREAD */
 
 #ifdef __cplusplus
 extern "C" {
