@@ -36,8 +36,6 @@
 #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include "glue/GLUWrapper.h"
-
 /* ************************************************************************* */
 
 #ifdef __cplusplus
