@@ -10,7 +10,7 @@
 #include <Inventor/nodes/SoDirectionalLight.h>
 #include <Inventor/nodes/SoCamera.h>
 #include <Inventor/nodes/SoPerspectiveCamera.h>
-#include <Inventor/rendering/SoOffscreenRenderer.h>
+#include <Inventor/SoOffscreenRenderer.h>
 #include <Inventor/SbViewportRegion.h>
 #include <catch2/catch_test_macros.hpp>
 #include <memory>
