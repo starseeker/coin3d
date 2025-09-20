@@ -253,6 +253,15 @@ SoNodeKitPath::containsNode(SoBaseKit * node) const
 }
 
 /*!
+  Virtual override of SoPath::containsNode for SoNode*.
+*/
+SbBool
+SoNodeKitPath::containsNode(const SoNode * const node) const
+{
+  return SoPath::containsNode(node);
+}
+
+/*!
   Returns the index of last common nodekit, or -1 if head
   node differs.
 */
@@ -264,6 +273,15 @@ SoNodeKitPath::findFork(const SoNodeKitPath * path) const
     if (this->getNode(i) != path->getNode(i)) break;
   }
   return i-1;
+}
+
+/*!
+  Virtual override of SoPath::findFork for SoPath*.
+*/
+int
+SoNodeKitPath::findFork(const SoPath * const path) const
+{
+  return SoPath::findFork(path);
 }
 
 /*!

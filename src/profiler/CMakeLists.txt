@@ -1,21 +1,6 @@
-# source files
+# Minimal profiler implementation for nodekit support
 set(COIN_PROFILER_FILES
-	SoProfiler.cpp
-	SoProfilerElement.cpp
-	SoProfilerOverlayKit.cpp
-	SoProfilerStats.cpp
-	SoProfilingReportGenerator.cpp
-	SoProfilerTopEngine.cpp
-	SoScrollingGraphKit.cpp
-	SoNodeVisualize.cpp
-	SoProfilerTopKit.cpp
-	SoProfilerVisualizeKit.cpp
-	SbProfilingData.cpp
-)
-
-# Files excluded from public API documentation, included in complete documentation.
-set(COIN_PROFILER_INTERNAL_FILES
-	SoNodeProfiling.h
+	SoProfilerMinimal.cpp
 )
 
 # build library
