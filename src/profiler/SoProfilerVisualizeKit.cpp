@@ -96,7 +96,7 @@ namespace {
     SoProfilerVisualizeKit * kit = (SoProfilerVisualizeKit*)data;
     kit->statsTrigger.disconnect();
     SoNode * node = kit->stats.getValue();
-    if (node != NULL) {
+    if (node != nullptr) {
       if (node->isOfType(SoProfilerStats::getClassTypeId())) {
         SoProfilerStats * statsnode = (SoProfilerStats *)node;
         kit->statsTrigger.connectFrom(&statsnode->profilingUpdate);
@@ -117,7 +117,7 @@ namespace {
 
   void statsTriggerCB(void * data, SoSensor * s) {
     SoProfilerVisualizeKit * kit = (SoProfilerVisualizeKit*)data;
-    if (kit->stats.getValue() != NULL)
+    if (kit->stats.getValue() != nullptr)
       cacheSensorCB(data, s);
   }
 };
@@ -151,10 +151,10 @@ SoProfilerVisualizeKit::SoProfilerVisualizeKit()
   SO_KIT_ADD_CATALOG_ENTRY(visualtree, SoNodeVisualize, TRUE, top, "", TRUE);
   SO_KIT_INIT_INSTANCE();
 
-  SO_KIT_ADD_FIELD(stats, (NULL));
+  SO_KIT_ADD_FIELD(stats, (nullptr));
   SO_KIT_ADD_FIELD(statsTrigger, ());
-  SO_KIT_ADD_FIELD(root, (NULL));
-  SO_KIT_ADD_FIELD(separatorsWithGLCaches, (NULL));
+  SO_KIT_ADD_FIELD(root, (nullptr));
+  SO_KIT_ADD_FIELD(separatorsWithGLCaches, (nullptr));
 
   this->separatorsWithGLCaches.setNum(0);
   this->separatorsWithGLCaches.setDefault(FALSE);

@@ -59,10 +59,10 @@
 
 class SoProfilerTopEngineP {
 public:
-  SoProfilerTopEngineP(void) : datasize(0), data(NULL) { }
+  SoProfilerTopEngineP(void) : datasize(0), data(nullptr) { }
   ~SoProfilerTopEngineP(void) {
     delete [] data;
-    data = NULL;
+    data = nullptr;
     //delete [] tmpdata;
     //tmpdata = NULL;
   }
@@ -274,7 +274,7 @@ SoProfilerTopEngine::evaluate(void)
   const bool have_counts = (this->statisticsCounts.getNum() == inputsize);
   const bool have_maxtimings = (this->statisticsTimingsMax.getNum() == inputsize);
   const bool have_olddata =
-    ((PRIVATE(this)->datasize == inputsize) && (PRIVATE(this)->data != NULL));
+    ((PRIVATE(this)->datasize == inputsize) && (PRIVATE(this)->data != nullptr));
   /*const int olddatasize = PRIVATE(this)->datasize;*/
   SoProfilerTopEngineP::StatDataItem * const olddata = PRIVATE(this)->data;
 

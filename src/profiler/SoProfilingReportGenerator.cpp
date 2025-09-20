@@ -368,7 +368,7 @@ static const int * arrayend = nullptr;
 static SoProfilingReportGenerator::DataCategorization sortcategory = SoProfilingReportGenerator::TYPES;
 static SbProfilingReportSortCriteria * sortingconfig = nullptr;
 static SbList<SbProfilingNodeNameKey> * namekeys = nullptr;
-static SbList<SbProfilingNodeTypeKey> * typekeys = NULL;
+static SbList<SbProfilingNodeTypeKey> * typekeys = nullptr;
 static int longestnamelength = 0;
 static int longesttypenamelength = 0;
 
@@ -399,7 +399,7 @@ gencompare(const void * ptr1, const void * ptr2)
 void
 SoProfilingReportGenerator::init(void)
 {
-  assert(SoProfilingReportGeneratorP::mutex == NULL);
+  assert(SoProfilingReportGeneratorP::mutex == nullptr);
   SoProfilingReportGeneratorP::mutex = new SbMutex;
 }
 
@@ -451,8 +451,8 @@ SoProfilingReportGenerator::generate(const SbProfilingData & data,
     int c = 0;
     const int numindexes = data.getNumNodeEntries();
     if (numindexes == 0) {
-      profdata = NULL;
-      sortingconfig = NULL;
+      profdata = nullptr;
+      sortingconfig = nullptr;
       return;
     }
     std::unique_ptr<int[]> indexarray(new int[numindexes]);
@@ -493,7 +493,7 @@ SoProfilingReportGenerator::generate(const SbProfilingData & data,
   }
   else if (categorization == NAMES) {
     int c = 0;
-    if (namekeys == NULL) {
+    if (namekeys == nullptr) {
       namekeys = new SbList<SbProfilingNodeNameKey>;
     } else {
       namekeys->truncate(0);
@@ -502,8 +502,8 @@ SoProfilingReportGenerator::generate(const SbProfilingData & data,
 
     const int numindexes = namekeys->getLength();
     if (numindexes == 0) {
-      profdata = NULL;
-      sortingconfig = NULL;
+      profdata = nullptr;
+      sortingconfig = nullptr;
       return;
     }
     std::unique_ptr<int[]> indexarray(new int[numindexes]);
@@ -554,8 +554,8 @@ SoProfilingReportGenerator::generate(const SbProfilingData & data,
 
     const int numindexes = typekeys->getLength();
     if (numindexes == 0) {
-      profdata = NULL;
-      sortingconfig = NULL;
+      profdata = nullptr;
+      sortingconfig = nullptr;
       return;
     }
     std::unique_ptr<int[]> indexarray(new int[numindexes]);
@@ -599,10 +599,10 @@ SoProfilingReportGenerator::generate(const SbProfilingData & data,
     assert(!"no such data categorization implemented");
   }
 
-  profdata = NULL;
-  sortingconfig = NULL;
-  arraystart = NULL;
-  arrayend = NULL;
+  profdata = nullptr;
+  sortingconfig = nullptr;
+  arraystart = nullptr;
+  arrayend = nullptr;
 }
 
 #undef OUTPUT_PADDING

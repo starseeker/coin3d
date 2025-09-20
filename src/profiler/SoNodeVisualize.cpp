@@ -255,7 +255,7 @@ SoNodeVisualize::SoNodeVisualize(void)
 SoNodeVisualize*
 SoNodeVisualize::visualize(SoNode * node) {
   this->node=node;
-  if (node!=NULL) {
+  if (node!=nullptr) {
     SoType type = node->getTypeId();
     //FIXME: Exchange all the named textures, with images
     //FIXME: Make the images better fitting for its shape
@@ -465,7 +465,7 @@ SoNodeVisualize::traverse(SoProfilerStats * stats)
   float transparency = material->transparency[0];
 
   float green = 0.0f;
-  if ((parent != NULL) && (this->node != NULL)) {
+  if ((parent != nullptr) && (this->node != nullptr)) {
     const unsigned long CRITICAL = 10;
 
     //SoNode * parent = this->parent->node;
@@ -737,7 +737,7 @@ SoNodeVisualize::nodeNumChildren() {
 */
 void
 SoNodeVisualize::reset() {
-  this->node=NULL;
+  this->node=nullptr;
   SoSeparator * sep=static_cast<SoSeparator*>(this->getAnyPart("childGeometry",TRUE));
   sep->removeAllChildren();
 }
