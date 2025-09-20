@@ -57,7 +57,7 @@
 #include <Inventor/lists/SbList.h>
 
 #include "C/CoinTidbits.h"
-#include "base/SbGLUTessellator.h"
+#include "SoConvexDataCacheTessellator.h"
 
 // *************************************************************************
 
@@ -278,9 +278,9 @@ SoConvexDataCache::generate(const SoCoordinateElement * const coords,
   tessdata.firstvertex = TRUE;
 
   // create tessellator
-  SbGLUTessellator glutess(do_triangle, &tessdata);
+  SoConvexDataCacheTessellator glutess(do_triangle, &tessdata);
   SbTesselator tess(do_triangle, &tessdata);
-  const SbBool gt = SbGLUTessellator::preferred();
+  const SbBool gt = SoConvexDataCacheTessellator::preferred();
 
   // if PER_FACE binding, the binding must change to PER_FACE_INDEXED
   // if convexify data is used.
