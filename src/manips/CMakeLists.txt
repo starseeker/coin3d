@@ -11,7 +11,7 @@ set(COIN_MANIPS_FILES
 	SoTabBoxManip.cpp
 	SoTrackballManip.cpp
 	SoTransformBoxManip.cpp
-	SoTransformerManip.cpp
+	# SoTransformerManip.cpp  # Temporarily disabled - needs SoTransformerDragger methods
 	commoncode.cpp
 )
 
