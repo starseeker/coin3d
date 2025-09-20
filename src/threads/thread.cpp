@@ -98,14 +98,8 @@
 
 /* ********************************************************************** */
 
-// C++17 implementation has highest priority for modern compilers
-#ifdef USE_CXX17_THREADS
+// C++17 threading is the only supported implementation
 #include "threads/thread_cxx17.icc"
-#elif defined(USE_PTHREAD)
-#include "threads/thread_pthread.icc"
-#elif defined(USE_W32THREAD)
-#include "threads/thread_win32.icc"
-#endif
 
 /*
 */
@@ -165,20 +159,11 @@ cc_thread_join(cc_thread * thread,
 void
 cc_sleep(float seconds)
 {
-#ifdef USE_CXX17_THREADS
   // Use C++17 std::this_thread::sleep_for for portable, precise sleep
   auto duration = std::chrono::duration<float>(seconds);
   std::this_thread::sleep_for(duration);
-#elif !defined(_WIN32)
-  /* FIXME: 20011107, thammer: create a configure macro to detect
-   * which sleep function is available */
-  sleep(floor(seconds));
-#else
-  Sleep((int)(seconds*1000.0));
-#endif
 };
 
-#ifdef USE_CXX17_THREADS
 unsigned long 
 cc_thread_id(void)
 {
@@ -187,60 +172,14 @@ cc_thread_id(void)
   std::hash<std::thread::id> hasher;
   return static_cast<unsigned long>(hasher(id));
 }
-#elif defined(USE_PTHREAD)
-unsigned long 
-cc_thread_id(void)
-{
-  return (unsigned long) pthread_self();
-}
-#elif defined(USE_W32THREAD)
-
-static DWORD win32_threadid_idx;
-
-unsigned long 
-cc_thread_id(void)
-{
-  static unsigned long currentidx = 1;
-  LPVOID val = TlsGetValue(win32_threadid_idx);
-  if (val == 0) { /* not set yet */
-    cc_mutex_global_lock();
-    val = (LPVOID) (uintptr_t)currentidx++;
-    cc_mutex_global_unlock();
-    if (!TlsSetValue(win32_threadid_idx, (LPVOID)val)) {
-      assert(0 && "unexpected failure");
-    }
-  }
-  return (unsigned long) (intptr_t) (val);
-}
-
-static void 
-win32_threadid_idx_cleanup(void)
-{
-  TlsFree(win32_threadid_idx);
-}
-
-#endif /* USE_W32THREAD */
 
 
 void
 cc_thread_init(void)
 {
   cc_mutex_init();
-#ifdef USE_CXX17_THREADS
   // C++17 std::thread doesn't need explicit thread ID setup
   // Thread IDs are automatically managed by std::this_thread::get_id()
-#elif defined(USE_W32THREAD)
-  /* needed to quickly generate a thread-id for each thread */
-  win32_threadid_idx = TlsAlloc();
-  assert(win32_threadid_idx != TLS_OUT_OF_INDEXES); 
-  /* cleanup priority for the thread sub-system in Coin is set so it
-     is done very late at exit */
-  /* FIXME: not sure if this really needs the "- 2", but I added it
-     to keep the same order wrt the other thread-related cleanup
-     functions, since before I changed hard-coded numbers for
-     enumerated values for coin_atexit() invocations. 20060301 mortene. */
-  coin_atexit(win32_threadid_idx_cleanup, CC_ATEXIT_THREADING_SUBSYSTEM_VERYLOWPRIORITY);
-#endif /* USE_WIN32THREAD */ 
   cc_recmutex_init();
 }
 

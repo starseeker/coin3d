@@ -68,14 +68,8 @@
 #include "threads/condvarp.h"
 
 /* ********************************************************************** */
-// C++17 implementation has highest priority for modern compilers
-#ifdef USE_CXX17_THREADS
+// C++17 threading is the only supported implementation
 #include "condvar_cxx17.icc"
-#elif defined(USE_PTHREAD)
-#include "condvar_pthread.icc"
-#elif defined(USE_W32THREAD)
-#include "condvar_win32.icc"
-#endif
 
 /*
   \internal

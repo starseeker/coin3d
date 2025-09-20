@@ -41,27 +41,12 @@
 #include <config.h>
 #endif /* HAVE_CONFIG_H */
 
-#define NO_IMPLEMENTATION
-
-// Enable C++17 implementation when available - takes priority over pthread/win32
+// C++17 threading is the only supported implementation
 #if defined(__cplusplus) && __cplusplus >= 201703L
 #define USE_CXX17_THREADS
-#undef NO_IMPLEMENTATION
+#else
+#error "C++17 or later is required for threading support"
 #endif
-
-#ifdef USE_PTHREAD
-#include <pthread.h>
-#ifndef USE_CXX17_THREADS
-#undef NO_IMPLEMENTATION
-#endif
-#endif /* USE_PTHREAD */
-
-#ifdef USE_W32THREAD
-#include <windows.h>
-#ifndef USE_CXX17_THREADS
-#undef NO_IMPLEMENTATION
-#endif
-#endif /* USE_W32THREAD */
 
 #ifdef __cplusplus
 extern "C" {
@@ -70,22 +55,10 @@ extern "C" {
 /* ********************************************************************** */
 
 struct cc_mutex {
-#ifdef USE_PTHREAD
-  struct cc_pthread_mutex_data {
-    pthread_mutex_t mutexid;
-  } pthread;
-#endif /* USE_PTHREAD */
-#ifdef USE_W32THREAD
-  union cc_w32thread_mutex_data {
-    HANDLE mutexhandle;
-    CRITICAL_SECTION critical_section;
-  } w32thread;
-#endif /* USE_W32THREAD */
-#ifdef USE_CXX17_THREADS
+  // C++17 implementation only
   struct cc_cxx17_mutex_data {
     void * mutex_ptr;  // std::mutex* stored as void* for C compatibility
   } cxx17;
-#endif /* USE_CXX17_THREADS */
 };
 
 #ifdef NO_IMPLEMENTATION
