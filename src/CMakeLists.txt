@@ -223,11 +223,6 @@ target_include_directories(${PROJECT_NAME}
 # Target-specific linking (modern approach)  
 target_link_libraries(${PROJECT_NAME} PRIVATE ${COIN_TARGET_LINK_LIBRARIES})
 
-# Special handling for osmesa target to avoid export issues
-if(COIN3D_USE_OSMESA AND COIN_USE_OSMESA_TARGET AND TARGET osmesa)
-    target_link_libraries(${PROJECT_NAME} PRIVATE osmesa)
-endif()
-
 if(WIN32)
   if(COIN_BUILD_SHARED_LIBS)
     configure_file(${PROJECT_NAME}.rc.cmake.in ${PROJECT_NAME}.rc)

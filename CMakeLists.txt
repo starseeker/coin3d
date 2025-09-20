@@ -129,9 +129,9 @@ if(COIN3D_USE_OSMESA)
         
         if(TARGET OSMesa::OSMesa)
             list(APPEND COIN_TARGET_LINK_LIBRARIES_GL OSMesa::OSMesa)
-        elseif(TARGET osmesa)
-            # starseeker/osmesa submodule target - handle linking in src/CMakeLists.txt
-            set(COIN_USE_OSMESA_TARGET TRUE)
+        elseif(TARGET osmesa_interface)
+            # starseeker/osmesa submodule interface wrapper
+            list(APPEND COIN_TARGET_LINK_LIBRARIES_GL osmesa_interface)
             list(APPEND COIN_TARGET_INCLUDE_DIRECTORIES ${OSMesa_INCLUDE_DIRS})
         else()
             list(APPEND COIN_TARGET_INCLUDE_DIRECTORIES ${OSMesa_INCLUDE_DIRS})

@@ -22,9 +22,13 @@ if(EXISTS "${PROJECT_SOURCE_DIR}/external/osmesa/CMakeLists.txt")
     # Add the osmesa subproject
     add_subdirectory("${PROJECT_SOURCE_DIR}/external/osmesa" osmesa_build EXCLUDE_FROM_ALL)
     
+    # Create an interface wrapper to avoid export issues
+    add_library(osmesa_interface INTERFACE)
+    target_link_libraries(osmesa_interface INTERFACE osmesa)
+    
     # Set up the variables for the submodule build
     set(OSMesa_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/external/osmesa/include")
-    set(OSMesa_LIBRARY osmesa)  # This will be the target name from the submodule
+    set(OSMesa_LIBRARY osmesa_interface)  # Use the interface wrapper
     set(OSMesa_FOUND TRUE)
     set(OSMesa_LIBRARIES ${OSMesa_LIBRARY})
     set(OSMesa_INCLUDE_DIRS ${OSMesa_INCLUDE_DIR})
