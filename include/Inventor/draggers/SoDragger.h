@@ -37,13 +37,16 @@
 #include <Inventor/fields/SoSFBool.h>
 #include <Inventor/lists/SoCallbackList.h>
 #include <Inventor/misc/SoState.h>
+#include <Inventor/SbVec3f.h>
+#include <Inventor/SbMatrix.h>
+#include <Inventor/SbViewportRegion.h>
+#include <Inventor/SbViewVolume.h>
+#include <Inventor/SbName.h>
+#include <Inventor/SbRotation.h>
 
 class SoEvent;
 class SoHandleEventAction;
 class SoPath;
-class SbMatrix;
-class SbViewportRegion;
-class SbViewVolume;
 class SoPickedPoint;
 class SoDragger;
 
@@ -97,10 +100,10 @@ public:
   void setMotionMatrix(const SbMatrix &matrix);
 
   void setViewportRegion(const SbViewportRegion &newRegion);
-  const SbViewportRegion &getViewportRegion(void) const;
+  const SbViewportRegion &getViewportRegion(void);
 
   void setViewVolume(const SbViewVolume &vol);
-  const SbViewVolume &getViewVolume(void) const;
+  const SbViewVolume &getViewVolume(void);
 
   void setPickPath(const SoPath *newPath);
   const SoPath *getPickPath(void) const;
@@ -125,6 +128,36 @@ public:
 
   void setIgnoreInBbox(SbBool val);
   SbBool getIgnoreInBbox(void) const;
+
+  SbVec3f getLocalStartingPoint(void);
+  SbVec3f getWorldStartingPoint(void);
+  void getPartToLocalMatrix(const SbName &partname, SbMatrix &parttolocal, SbMatrix &localtopart);
+  void transformMatrixLocalToWorld(const SbMatrix &frommatrix, SbMatrix &tomatrix);
+  void transformMatrixWorldToLocal(const SbMatrix &frommatrix, SbMatrix &tomatrix);
+  void transformMatrixToLocalSpace(const SbMatrix &frommatrix, SbMatrix &tomatrix, const SbName &fromspacepartname);
+  void valueChanged(void);
+  const SbMatrix &getStartMotionMatrix(void);
+  const SoEvent *getEvent(void) const;
+  SoPath *createPathToThis(void);
+  const SoPath *getSurrogatePartPickedOwner(void) const;
+  const SbName &getSurrogatePartPickedName(void) const;
+  const SoPath *getSurrogatePartPickedPath(void) const;
+  void setStartingPoint(const SoPickedPoint *newPoint);
+  void setStartingPoint(const SbVec3f &newPoint);
+  SoHandleEventAction *getHandleEventAction(void) const;
+  void setHandleEventAction(SoHandleEventAction *action);
+
+  void workFieldsIntoTransform(SbMatrix &matrix);
+  void setFrontOnProjector(ProjectorFrontSetting setting);
+  ProjectorFrontSetting getFrontOnProjector(void) const;
+
+  void workValuesIntoTransform(SbMatrix &matrix, const SbVec3f *translation, const SbRotation *rotation, const SbVec3f *scaleFactor, const SbRotation *scaleOrientation, const SbVec3f *center);
+  void getTransformFast(SbMatrix &matrix, SbVec3f &translation, SbRotation &rotation, SbVec3f &scaleFactor, SbRotation &scaleOrientation, const SbVec3f &center);
+  void getTransformFast(SbMatrix &matrix, SbVec3f &translation, SbRotation &rotation, SbVec3f &scaleFactor, SbRotation &scaleOrientation);
+  
+  SbMatrix appendTranslation(const SbMatrix &matrix, const SbVec3f &translation, const SbMatrix *conversion = NULL);
+  SbMatrix appendScale(const SbMatrix &matrix, const SbVec3f &scale, const SbVec3f &scalecenter, const SbMatrix *conversion = NULL);
+  SbMatrix appendRotation(const SbMatrix &matrix, const SbRotation &rot, const SbVec3f &rotcenter, const SbMatrix *conversion = NULL);
 
 protected:
   virtual ~SoDragger();
