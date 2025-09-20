@@ -67,18 +67,25 @@
 #include "C/CoinTidbits.h"
 #include "misc/SoEnvironment.h"
 
-#ifdef USE_PTHREAD
-#include "mutex_pthread.icc"
-#endif /* USE_PTHREAD */
+// C++17 includes for modern threading
+#ifdef USE_CXX17_THREADS
+#include <mutex>
+#include <memory>
+#endif
 
-#ifdef USE_W32THREAD
+// C++17 implementation has highest priority for modern compilers
+#ifdef USE_CXX17_THREADS
+#include "mutex_cxx17.icc"
+#elif defined(USE_PTHREAD)
+#include "mutex_pthread.icc"
+#elif defined(USE_W32THREAD)
 /* we test if Win32 TryEnterCriticalSection exists, and use Win32
    critical section if it does, and Win32 mutex if it doesn't */
 typedef BOOL (WINAPI * cc_mutex_TryEnterCriticalSection_func)(LPCRITICAL_SECTION);
 static cc_mutex_TryEnterCriticalSection_func cc_mutex_TryEnterCriticalSection = NULL; 
 #include "mutex_win32mutex.icc" 
 #include "mutex_win32cs.icc" 
-#endif /* USE_W32THREAD */
+#endif
 
 /**************************************************************************/
 
@@ -95,14 +102,16 @@ void
 cc_mutex_struct_init(cc_mutex * mutex_struct)
 {
   int ok;
-#ifdef USE_W32THREAD
+#ifdef USE_CXX17_THREADS
+  ok = internal_mutex_struct_init(mutex_struct);
+#elif defined(USE_W32THREAD)
   if (cc_mutex_TryEnterCriticalSection)
     ok = win32_cs_struct_init(mutex_struct);
   else 
     ok = win32_mutex_struct_init(mutex_struct);
-#else /* USE_W32THREAD */
+#else /* USE_PTHREAD */
   ok = internal_mutex_struct_init(mutex_struct);
-#endif /* ! USE_W32THREAD */
+#endif
   assert(ok);
 }
 
@@ -115,14 +124,16 @@ cc_mutex_struct_clean(cc_mutex * mutex_struct)
 {
   int ok;
   assert(mutex_struct);
-#ifdef USE_W32THREAD
+#ifdef USE_CXX17_THREADS
+  ok = internal_mutex_struct_clean(mutex_struct);
+#elif defined(USE_W32THREAD)
   if (cc_mutex_TryEnterCriticalSection)
     ok = win32_cs_struct_clean(mutex_struct);
   else 
     ok = win32_mutex_struct_clean(mutex_struct);
-#else /* USE_W32THREAD */  
+#else /* USE_PTHREAD */  
   ok = internal_mutex_struct_clean(mutex_struct);
-#endif /* ! USE_W32THREAD */
+#endif
   assert(ok == CC_OK);
 }
 
@@ -209,11 +220,13 @@ cc_mutex_lock(cc_mutex * mutex)
   timeit = (maxmutexlocktime != DBL_MAX) || (reportmutexlocktiming != DBL_MAX);
   if (timeit) { start = get_current_time_seconds(); }
 
-#ifdef USE_W32THREAD
-  ok = cc_mutex_TryEnterCriticalSection ? win32_cs_lock(mutex) : win32_mutex_lock(mutex);
-#else /* USE_W32THREAD */  
+#ifdef USE_CXX17_THREADS
   ok = internal_mutex_lock(mutex);
-#endif /* USE_W32THREAD */
+#elif defined(USE_W32THREAD)
+  ok = cc_mutex_TryEnterCriticalSection ? win32_cs_lock(mutex) : win32_mutex_lock(mutex);
+#else /* USE_PTHREAD */  
+  ok = internal_mutex_lock(mutex);
+#endif
 
   assert(ok == CC_OK);
 
@@ -242,14 +255,16 @@ cc_mutex_try_lock(cc_mutex * mutex)
 {
   int ok;
   assert(mutex != NULL);
-#ifdef USE_W32THREAD
+#ifdef USE_CXX17_THREADS
+  ok = internal_mutex_try_lock(mutex);
+#elif defined(USE_W32THREAD)
   if (cc_mutex_TryEnterCriticalSection)
     ok = win32_cs_try_lock(mutex);
   else 
     ok = win32_mutex_try_lock(mutex);
-#else /* USE_W32THREAD */  
+#else /* USE_PTHREAD */  
   ok = internal_mutex_try_lock(mutex);
-#endif /* ! USE_W32THREAD */
+#endif
   assert(ok == CC_OK || ok == CC_BUSY);
   return ok;
 }
@@ -261,14 +276,16 @@ cc_mutex_unlock(cc_mutex * mutex)
 {
   int ok;
   assert(mutex != NULL);
-#ifdef USE_W32THREAD
+#ifdef USE_CXX17_THREADS
+  ok = internal_mutex_unlock(mutex);
+#elif defined(USE_W32THREAD)
   if (cc_mutex_TryEnterCriticalSection)
     ok = win32_cs_unlock(mutex);
   else 
     ok = win32_mutex_unlock(mutex);
-#else /* USE_W32THREAD */  
+#else /* USE_PTHREAD */  
   ok = internal_mutex_unlock(mutex);
-#endif /* USE_W32THREAD */
+#endif
 
   assert(ok == CC_OK);
 }

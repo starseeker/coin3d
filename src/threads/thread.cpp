@@ -72,6 +72,13 @@
 #include <unistd.h>
 #endif /* HAVE_UNISTD_H */
 
+// C++17 includes for modern threading
+#ifdef USE_CXX17_THREADS
+#include <thread>
+#include <chrono>
+#include <functional>
+#endif
+
 #include "C/errors/debugerror.h"
 
 #include "threads/threadp.h"
@@ -91,13 +98,14 @@
 
 /* ********************************************************************** */
 
-#ifdef USE_PTHREAD
+// C++17 implementation has highest priority for modern compilers
+#ifdef USE_CXX17_THREADS
+#include "threads/thread_cxx17.icc"
+#elif defined(USE_PTHREAD)
 #include "threads/thread_pthread.icc"
-#endif /* USE_PTHREAD */
-
-#ifdef USE_W32THREAD
+#elif defined(USE_W32THREAD)
 #include "threads/thread_win32.icc"
-#endif /* USE_W32THREAD */
+#endif
 
 /*
 */
@@ -157,7 +165,11 @@ cc_thread_join(cc_thread * thread,
 void
 cc_sleep(float seconds)
 {
-#ifndef _WIN32
+#ifdef USE_CXX17_THREADS
+  // Use C++17 std::this_thread::sleep_for for portable, precise sleep
+  auto duration = std::chrono::duration<float>(seconds);
+  std::this_thread::sleep_for(duration);
+#elif !defined(_WIN32)
   /* FIXME: 20011107, thammer: create a configure macro to detect
    * which sleep function is available */
   sleep(floor(seconds));
@@ -166,15 +178,22 @@ cc_sleep(float seconds)
 #endif
 };
 
-#ifdef USE_PTHREAD
+#ifdef USE_CXX17_THREADS
+unsigned long 
+cc_thread_id(void)
+{
+  // Use C++17 std::this_thread::get_id() and convert to hash
+  auto id = std::this_thread::get_id();
+  std::hash<std::thread::id> hasher;
+  return static_cast<unsigned long>(hasher(id));
+}
+#elif defined(USE_PTHREAD)
 unsigned long 
 cc_thread_id(void)
 {
   return (unsigned long) pthread_self();
 }
-#endif /* USE_PTHREAD */
-
-#ifdef USE_W32THREAD
+#elif defined(USE_W32THREAD)
 
 static DWORD win32_threadid_idx;
 
@@ -200,14 +219,17 @@ win32_threadid_idx_cleanup(void)
   TlsFree(win32_threadid_idx);
 }
 
-#endif /* USE_WIN32THREAD */
+#endif /* USE_W32THREAD */
 
 
 void
 cc_thread_init(void)
 {
   cc_mutex_init();
-#ifdef USE_W32THREAD
+#ifdef USE_CXX17_THREADS
+  // C++17 std::thread doesn't need explicit thread ID setup
+  // Thread IDs are automatically managed by std::this_thread::get_id()
+#elif defined(USE_W32THREAD)
   /* needed to quickly generate a thread-id for each thread */
   win32_threadid_idx = TlsAlloc();
   assert(win32_threadid_idx != TLS_OUT_OF_INDEXES); 

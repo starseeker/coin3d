@@ -96,11 +96,8 @@ internal_condvar_timed_wait(cc_condvar * condvar, cc_mutex * mutex, double perio
   when = current_seconds.count() + period;
   sec = floor(when);
   timeout.tv_sec = (int) sec;
-#if defined(HAVE_PTHREAD_TIMESPEC_NSEC)
+  // timespec always uses tv_nsec for nanoseconds, not tv_usec
   timeout.tv_nsec = (int) ((when - sec) * 1000000000.0);
-#else
-  timeout.tv_usec = (int) ((when - sec) * 1000000.0);
-#endif
   status = pthread_cond_timedwait(&condvar->pthread.condid,
                                   &mutex->pthread.mutexid, &timeout);
   ret = CC_OK;

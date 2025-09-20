@@ -45,12 +45,20 @@
 
 #ifdef USE_PTHREAD
 #include <pthread.h>
+#undef NO_IMPLEMENTATION
 #endif /* USE_PTHREAD */
 
 #ifdef USE_W32THREAD
 #include <windows.h>
 #include "threads/threadp.h"
+#undef NO_IMPLEMENTATION
 #endif /* USE_W32THREAD */
+
+// Enable C++17 implementation when available
+#if defined(__cplusplus) && __cplusplus >= 201703L
+#define USE_CXX17_THREADS
+#undef NO_IMPLEMENTATION
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -74,6 +82,13 @@ struct cc_condvar {
   } w32thread;
 #undef NO_IMPLEMENTATION
 #endif /* USE_W32THREAD */
+
+#ifdef USE_CXX17_THREADS
+  struct cc_cxx17_condvar_data {
+    void * condvar_ptr;  // std::condition_variable* stored as void* for C compatibility
+  } cxx17;
+#undef NO_IMPLEMENTATION
+#endif /* USE_CXX17_THREADS */
 };
 
 #ifdef NO_IMPLEMENTATION
