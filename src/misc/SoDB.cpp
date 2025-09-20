@@ -104,10 +104,6 @@
 #include <Inventor/misc/CoinResources.h>
 #include <Inventor/misc/SoGeo.h>
 
-#ifdef HAVE_NODEKITS
-#include <Inventor/annex/ForeignFiles/SoForeignFileKit.h>
-#endif // HAVE_NODEKITS
-
 #include "coindefs.h" // COIN_STUB(), COIN_INIT_CHECK_THREAD()
 #include "shaders/SoShader.h"
 
@@ -529,15 +525,6 @@ SbBool
 SoDB::read(SoInput * in, SoBase *& base)
 {
   SbBool valid = in->isValidFile();
-
-#ifdef HAVE_NODEKITS
-  if (!valid &&
-       SoForeignFileKit::getClassTypeId() != SoType::badType() &&
-       SoForeignFileKit::isFileSupported(in)) {
-    base = SoForeignFileKit::createForeignFileKit(in);
-    return (base != NULL);
-  }
-#endif // NODEKITS
 
   if (!valid && SoDBP::is3dsFile(in)) {
     base = SoDBP::read3DSFile(in);
@@ -1154,19 +1141,6 @@ SoDB::readAllWrapper(SoInput * in, const SoType & grouptype)
   assert(grouptype.isDerivedFrom(SoGroup::getClassTypeId()));
 
   SbBool valid = in->isValidFile();
-
-#ifdef HAVE_NODEKITS
-  if (!valid &&
-       SoForeignFileKit::getClassTypeId() != SoType::badType() &&
-       SoForeignFileKit::isFileSupported(in)) {
-    SoForeignFileKit * kit = SoForeignFileKit::createForeignFileKit(in);
-    if (kit) {
-      SoGroup * root = (SoGroup *) grouptype.createInstance();
-      root->addChild(kit);
-      return root;
-    }
-  }
-#endif // HAVE_NODEKITS
 
   if (!valid && SoDBP::is3dsFile(in)) {
     SoSeparator * root3ds = SoDBP::read3DSFile(in);

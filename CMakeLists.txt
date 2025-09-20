@@ -80,16 +80,11 @@ option(COIN_THREADSAFE "Enable thread safe render traversals" OFF)
 
 # Component options
 option(HAVE_NODEKITS "Enable NodeKit support" ON)
-cmake_dependent_option(HAVE_DRAGGERS "Enable Dragger support" OFF "HAVE_NODEKITS" OFF)
-cmake_dependent_option(HAVE_MANIPULATORS "Enable Manipulator support" OFF "HAVE_NODEKITS" OFF)
+option(HAVE_DRAGGERS "Enable Dragger support" ON)
+option(HAVE_MANIPULATORS "Enable Manipulator support" ON)
 
 # External dependencies
 option(USE_EXCEPTIONS "Compile with exceptions (g++ only)" ON)
-
-# Development and debug options
-option(COIN_USE_CPACK "Enable CPack packaging" OFF)
-
-# Platform-specific options removed - no Mac framework support needed
 
 # Thread debugging (requires C++11 thread support)
 check_include_file_cxx(thread HAVE_STD_THREAD)
@@ -181,7 +176,7 @@ endif()
 list(APPEND COIN_TARGET_LINK_LIBRARIES Threads::Threads)
 
 # ============================================================================
-# Build environment configuration  
+# Build environment configuration
 # ============================================================================
 
 # Output directories (consistent for all configurations)
@@ -446,9 +441,6 @@ endif()
 # ============================================================================
 
 add_feature_info(ThreadSafe COIN_THREADSAFE "Thread safe render traversals")
-add_feature_info(NodeKits HAVE_NODEKITS "NodeKit support")
-add_feature_info(Draggers HAVE_DRAGGERS "Dragger support")
-add_feature_info(Manipulators HAVE_MANIPULATORS "Manipulator support") 
 add_feature_info(Exceptions USE_EXCEPTIONS "Compile with exceptions")
 
 feature_summary(WHAT ALL
@@ -456,14 +448,6 @@ feature_summary(WHAT ALL
   DESCRIPTION "Enabled Features:"
   VAR enabledFeaturesText)
 message(STATUS "${enabledFeaturesText}")
-
-# ============================================================================
-# Packaging
-# ============================================================================
-
-if(COIN_USE_CPACK)
-  add_subdirectory(cpack.d)
-endif()
 
 # Local Variables:
 # tab-width: 8

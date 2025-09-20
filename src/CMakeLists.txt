@@ -41,94 +41,20 @@ endforeach()
 set(COIN_SOURCE C/CoinTidbits.cpp CACHE INTERNAL "COIN_SOURCE")
 # Minimal core subdirectories - removed GUI/toolkit but keeping minimal dependencies
 set(COIN_SUBDIRS
-  actions base bundles caches details elements
-  engines errors events fields fonts glue io misc rendering lists
+  actions base bundles caches details draggers elements
+  engines errors events fields fonts glue io manips misc rendering lists
   nodes shapenodes projectors sensors
   collision shadows geo threads shaders tools
   hardcopy
 )
 
 # Add nodekits and related components if enabled
-if(HAVE_NODEKITS)
-  list(APPEND COIN_SUBDIRS nodekits profiler foreignfiles)
-endif()
+list(APPEND COIN_SUBDIRS nodekits profiler)
 
 foreach(_subdir ${COIN_SUBDIRS})
   add_subdirectory(${_subdir})
 endforeach()
 add_subdirectory(doc)
-
-# Adding source groups for IDE's (Visual Studio, XCode, Qt Creator, etc.)
-source_group("Header Files\\Inventor"                            REGULAR_EXPRESSION ".*/include/Inventor/.*[.]h")
-source_group("Header Files\\Inventor\\actions"                   REGULAR_EXPRESSION ".*/include/Inventor/actions/.*[.]h")
-source_group("Header Files\\Inventor\\annex"                     REGULAR_EXPRESSION ".*/include/Inventor/annex/.*[.]h")
-source_group("Header Files\\Inventor\\annex\\ForeignFiles"       REGULAR_EXPRESSION ".*/include/Inventor/annex/ForeignFiles/.*[.]h")
-source_group("Header Files\\Inventor\\annex\\FXViz"              REGULAR_EXPRESSION ".*/include/Inventor/annex/FXViz/.*[.]h")
-source_group("Header Files\\Inventor\\annex\\FXViz\\elements"    REGULAR_EXPRESSION ".*/include/Inventor/annex/FXViz/elements/.*[.]h")
-source_group("Header Files\\Inventor\\annex\\FXViz\\nodes"       REGULAR_EXPRESSION ".*/include/Inventor/annex/FXViz/nodes/.*[.]h")
-source_group("Header Files\\Inventor\\annex\\Hardcopy"           REGULAR_EXPRESSION ".*/include/Inventor/annex/Hardcopy/.*[.]h")
-source_group("Header Files\\Inventor\\annex\\Profiler"           REGULAR_EXPRESSION ".*/include/Inventor/annex/Profiler/.*[.]h")
-source_group("Header Files\\Inventor\\annex\\Profiler\\elements" REGULAR_EXPRESSION ".*/include/Inventor/annex/Profiler/elements/.*[.]h")
-source_group("Header Files\\Inventor\\annex\\Profiler\\engines"  REGULAR_EXPRESSION ".*/include/Inventor/annex/Profiler/engines/.*[.]h")
-source_group("Header Files\\Inventor\\annex\\Profiler\\nodekits" REGULAR_EXPRESSION ".*/include/Inventor/annex/Profiler/nodekits/.*[.]h")
-source_group("Header Files\\Inventor\\annex\\Profiler\\nodes"    REGULAR_EXPRESSION ".*/include/Inventor/annex/Profiler/nodes/.*[.]h")
-source_group("Header Files\\Inventor\\annex\\Profiler\\utils"    REGULAR_EXPRESSION ".*/include/Inventor/annex/Profiler/utils/.*[.]h")
-source_group("Header Files\\Inventor\\bundles"                   REGULAR_EXPRESSION ".*/include/Inventor/bundles/.*[.]h")
-source_group("Header Files\\Inventor\\C"                         REGULAR_EXPRESSION ".*/include/Inventor/C/.*[.]h")
-source_group("Header Files\\Inventor\\C\\base"                   REGULAR_EXPRESSION ".*/include/Inventor/C/base/.*[.]h")
-source_group("Header Files\\Inventor\\C\\errors"                 REGULAR_EXPRESSION ".*/include/Inventor/C/errors/.*[.]h")
-source_group("Header Files\\Inventor\\C\\glue"                   REGULAR_EXPRESSION ".*/include/Inventor/C/glue/.*[.]h")
-source_group("Header Files\\Inventor\\C\\threads"                REGULAR_EXPRESSION ".*/include/Inventor/C/threads/.*[.]h")
-source_group("Header Files\\Inventor\\C\\XML"                    REGULAR_EXPRESSION ".*/include/Inventor/C/XML/.*[.]h")
-source_group("Header Files\\Inventor\\manips"                    REGULAR_EXPRESSION ".*/include/Inventor/manips/.*[.]h")
-source_group("Header Files\\Inventor\\misc"                      REGULAR_EXPRESSION ".*/include/Inventor/misc/.*[.]h")
-
-source_group("Header Files\\Inventor\\nodekits"                  REGULAR_EXPRESSION ".*/include/Inventor/nodekits/.*[.]h")
-source_group("Header Files\\Inventor\\nodes"                     REGULAR_EXPRESSION ".*/include/Inventor/nodes/.*[.]h")
-source_group("Header Files\\Inventor\\projectors"                REGULAR_EXPRESSION ".*/include/Inventor/projectors/.*[.]h")
-source_group("Header Files\\Inventor\\scxml"                     REGULAR_EXPRESSION ".*/include/Inventor/scxml/.*[.]h")
-source_group("Header Files\\Inventor\\sensors"                   REGULAR_EXPRESSION ".*/include/Inventor/sensors/.*[.]h")
-source_group("Header Files\\Inventor\\system"                    REGULAR_EXPRESSION ".*/include/Inventor/system/.*[.]h")
-source_group("Header Files\\Inventor\\VRMLnodes"                 REGULAR_EXPRESSION ".*/include/Inventor/VRMLnodes/.*[.]h")
-
-source_group("Source Files\\3ds"                       REGULAR_EXPRESSION ".*/src/3ds/.*[.](h|c|cpp)")
-source_group("Source Files\\actions"                   REGULAR_EXPRESSION ".*/src/actions/.*[.](h|c|cpp)")
-source_group("Source Files\\base"                      REGULAR_EXPRESSION ".*/src/base/.*[.](h|c|cpp)")
-source_group("Source Files\\bundles"                   REGULAR_EXPRESSION ".*/src/bundles/.*[.](h|c|cpp)")
-source_group("Source Files\\caches"                    REGULAR_EXPRESSION ".*/src/caches/.*[.](h|c|cpp)")
-source_group("Source Files\\collision"                 REGULAR_EXPRESSION ".*/src/collision/.*[.](h|c|cpp)")
-source_group("Source Files\\details"                   REGULAR_EXPRESSION ".*/src/details/.*[.](h|c|cpp)")
-source_group("Source Files\\elements"                  REGULAR_EXPRESSION ".*/src/elements/.*[.](h|c|cpp)")
-source_group("Source Files\\elements\\GL"              REGULAR_EXPRESSION ".*/src/elements/GL/.*[.](h|c|cpp)")
-source_group("Source Files\\engines"                   REGULAR_EXPRESSION ".*/src/engines/.*[.](h|c|cpp)")
-source_group("Source Files\\errors"                    REGULAR_EXPRESSION ".*/src/errors/.*[.](h|c|cpp)")
-source_group("Source Files\\events"                    REGULAR_EXPRESSION ".*/src/events/.*[.](h|c|cpp)")
-source_group("Source Files\\fields"                    REGULAR_EXPRESSION ".*/src/fields/.*[.](h|c|cpp)")
-source_group("Source Files\\fonts"                     REGULAR_EXPRESSION ".*/src/fonts/.*[.](h|c|cpp)")
-source_group("Source Files\\foreignfiles"              REGULAR_EXPRESSION ".*/src/foreignfiles/.*[.](h|c|cpp)")
-source_group("Source Files\\geo"                       REGULAR_EXPRESSION ".*/src/geo/.*[.](h|c|cpp)")
-source_group("Source Files\\glue"                      REGULAR_EXPRESSION ".*/src/glue/.*[.](h|c|cpp)")
-source_group("Source Files\\hardcopy"                  REGULAR_EXPRESSION ".*/src/hardcopy/.*[.](h|c|cpp)")
-source_group("Source Files\\io"                        REGULAR_EXPRESSION ".*/src/io/.*[.](h|c|cpp)")
-source_group("Source Files\\lists"                     REGULAR_EXPRESSION ".*/src/lists/.*[.](h|c|cpp)")
-source_group("Source Files\\manips"                    REGULAR_EXPRESSION ".*/src/manips/.*[.](h|c|cpp)")
-source_group("Source Files\\misc"                      REGULAR_EXPRESSION ".*/src/misc/.*[.](h|c|cpp)")
-source_group("Source Files\\navigation"                REGULAR_EXPRESSION ".*/src/navigation/.*[.](h|c|cpp)")
-source_group("Source Files\\nodekits"                  REGULAR_EXPRESSION ".*/src/nodekits/.*[.](h|c|cpp)")
-source_group("Source Files\\nodes"                     REGULAR_EXPRESSION ".*/src/nodes/.*[.](h|c|cpp)")
-source_group("Source Files\\profiler"                  REGULAR_EXPRESSION ".*/src/profiler/.*[.](h|c|cpp)")
-source_group("Source Files\\profiler\\tools"           REGULAR_EXPRESSION ".*/src/profiler/tools/.*[.](h|c|cpp)")
-source_group("Source Files\\projectors"                REGULAR_EXPRESSION ".*/src/projectors/.*[.](h|c|cpp)")
-source_group("Source Files\\rendering"                 REGULAR_EXPRESSION ".*/src/rendering/.*[.](h|c|cpp)")
-source_group("Source Files\\scxml"                     REGULAR_EXPRESSION ".*/src/scxml/.*[.](h|c|cpp)")
-source_group("Source Files\\sensors"                   REGULAR_EXPRESSION ".*/src/sensors/.*[.](h|c|cpp)")
-source_group("Source Files\\shaders"                   REGULAR_EXPRESSION ".*/src/shaders/.*[.](h|c|cpp)")
-source_group("Source Files\\shadows"                   REGULAR_EXPRESSION ".*/src/shadows/.*[.](h|c|cpp)")
-source_group("Source Files\\shapenodes"                REGULAR_EXPRESSION ".*/src/shapenodes/.*[.](h|c|cpp)")
-source_group("Source Files\\soscxml"                   REGULAR_EXPRESSION ".*/src/soscxml/.*[.](h|c|cpp)")
-source_group("Source Files\\system"                    REGULAR_EXPRESSION ".*/src/system/.*[.](h|c|cpp)")
-source_group("Source Files\\threads"                   REGULAR_EXPRESSION ".*/src/threads/.*[.](h|c|cpp)")
-source_group("Source Files\\vrml97"                    REGULAR_EXPRESSION ".*/src/vrml97/.*[.](h|c|cpp)")
 
 # As CMake does not support deep header hierarchies for framework generation we tweak the
 # installation paths for the install commands.  To make sure the symbolic links for versioned
@@ -161,6 +87,7 @@ else()
         $<TARGET_OBJECTS:caches>
         $<TARGET_OBJECTS:collision>
         $<TARGET_OBJECTS:details>
+        $<TARGET_OBJECTS:draggers>
         $<TARGET_OBJECTS:elements>
         $<TARGET_OBJECTS:engines>
         $<TARGET_OBJECTS:errors>
@@ -173,8 +100,11 @@ else()
         $<TARGET_OBJECTS:hardcopy>
         $<TARGET_OBJECTS:io>
         $<TARGET_OBJECTS:lists>
+        $<TARGET_OBJECTS:manips>
         $<TARGET_OBJECTS:misc>
+        $<TARGET_OBJECTS:nodekits>
         $<TARGET_OBJECTS:nodes>
+        $<TARGET_OBJECTS:profiler>
         $<TARGET_OBJECTS:projectors>
         $<TARGET_OBJECTS:rendering>
         $<TARGET_OBJECTS:sensors>
@@ -183,9 +113,6 @@ else()
         $<TARGET_OBJECTS:shapenodes>
         $<TARGET_OBJECTS:threads>
         $<TARGET_OBJECTS:tools>
-        $<$<BOOL:${HAVE_NODEKITS}>:$<TARGET_OBJECTS:nodekits>>
-        $<$<BOOL:${HAVE_NODEKITS}>:$<TARGET_OBJECTS:profiler>>
-        $<$<BOOL:${HAVE_NODEKITS}>:$<TARGET_OBJECTS:foreignfiles>>
     )
 endif()
 
@@ -207,7 +134,7 @@ endif()
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
     HAVE_CONFIG_H
-    COIN_INTERNAL 
+    COIN_INTERNAL
     COIN_DEBUG=$<CONFIG:Debug>
 )
 
@@ -245,9 +172,6 @@ if(WIN32)
       set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /Z7")                       # Override default /Zi to embed
       set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} /Z7")     # debugging info in the .lib.
     endif()
-  endif()
-  if(MSVC)
-    # No SCXML-related Bison warnings to suppress after removing SCXML
   endif()
 elseif(APPLE)
   if(COIN_BUILD_MAC_FRAMEWORK)
@@ -385,10 +309,6 @@ else()
           COMPONENT development 
           FILES_MATCHING PATTERN "*.h")
   install(FILES ${PROJECT_SOURCE_DIR}/include/SoWinEnterScope.h ${PROJECT_SOURCE_DIR}/include/SoWinLeaveScope.h ${PROJECT_SOURCE_DIR}/include/SoDebug.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} COMPONENT development)
-
-# ############################################################################
-# Install dragger .iv files
-# ############################################################################
 
 # ############################################################################
 # Install target
