@@ -75,13 +75,12 @@
 #include <Inventor/actions/SoSearchAction.h>
 #include <Inventor/actions/SoGetBoundingBoxAction.h>
 #include <Inventor/actions/SoGetMatrixAction.h>
-#include <Inventor/actions/SoAudioRenderAction.h>
 
 #if COIN_DEBUG
 #include <Inventor/errors/SoDebugError.h>
 #endif // COIN_DEBUG
 
-#include "tidbitsp.h"
+#include "../C/CoinTidbits.h"
 #include "nodes/SoSubNodeP.h"
 
 static SoTypeList * sonodekitlistpart_deflist = NULL;
@@ -142,9 +141,8 @@ void
 SoNodeKitListPart::initClass(void)
 {
   SO_NODE_INTERNAL_INIT_CLASS(SoNodeKitListPart, SO_FROM_INVENTOR_1);
-  SoType type = SoNodeKitListPart::getClassTypeId();
-  SoAudioRenderAction::addMethod(type,
-                                 SoAudioRenderAction::callDoAction);
+  // Note: Removed SoAudioRenderAction registration as it's not essential
+  // for core nodekit functionality
 }
 
 /*!

@@ -96,7 +96,7 @@
 #include <Inventor/nodes/SoText2.h>
 #include <Inventor/sensors/SoFieldSensor.h>
 
-#include "tidbitsp.h"
+#include "../C/CoinTidbits.h"
 #include "coindefs.h" // COIN_OBSOLETED()
 #include "nodekits/SoSubKitP.h"
 
