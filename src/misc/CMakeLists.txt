@@ -34,8 +34,12 @@ set(COIN_MISC_FILES
 	CoinResources.cpp
 	SoDBP.cpp
 	SoEventManager.cpp
-	SoProfiler_stubs.cpp
 )
+
+# Add profiler stubs only if nodekits are NOT enabled (use real profiler when nodekits enabled)
+if(NOT HAVE_NODEKITS)
+	list(APPEND COIN_MISC_FILES SoProfiler_stubs.cpp)
+endif()
 
 # Files excluded from public API documentation, included in complete documentation.
 set(COIN_MISC_INTERNAL_FILES

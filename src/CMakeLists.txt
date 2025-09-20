@@ -48,9 +48,9 @@ set(COIN_SUBDIRS
   hardcopy
 )
 
-# Add nodekits if enabled
+# Add nodekits and related components if enabled
 if(HAVE_NODEKITS)
-  list(APPEND COIN_SUBDIRS nodekits)
+  list(APPEND COIN_SUBDIRS nodekits profiler foreignfiles)
 endif()
 
 foreach(_subdir ${COIN_SUBDIRS})
@@ -184,6 +184,8 @@ else()
         $<TARGET_OBJECTS:threads>
         $<TARGET_OBJECTS:tools>
         $<$<BOOL:${HAVE_NODEKITS}>:$<TARGET_OBJECTS:nodekits>>
+        $<$<BOOL:${HAVE_NODEKITS}>:$<TARGET_OBJECTS:profiler>>
+        $<$<BOOL:${HAVE_NODEKITS}>:$<TARGET_OBJECTS:foreignfiles>>
     )
 endif()
 
