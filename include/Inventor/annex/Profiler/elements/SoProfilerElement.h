@@ -6,6 +6,7 @@
  **************************************************************************/
 
 #include <Inventor/elements/SoElement.h>
+#include <Inventor/annex/Profiler/SbProfilingData.h>
 
 class COIN_DLL_API SoProfilerElement : public SoElement {
   typedef SoElement inherited;
@@ -16,6 +17,9 @@ public:
   static int getClassStackIndex(void);
   
   static SoProfilerElement * get(SoState * state);
+  
+  // Stub method for profiling data access
+  SbProfilingData& getProfilingData() const;
   
   virtual void init(SoState * state);
   virtual void push(SoState * state);
@@ -29,6 +33,8 @@ protected:
 private:
   static SoType classTypeId;
   static int classStackIndex;
+  
+  SbProfilingData data;
 };
 
 #endif // !COIN_SOPROFILERELEMENT_H

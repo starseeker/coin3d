@@ -1,5 +1,5 @@
-#ifndef COIN_SOPROFILERP_H
-#define COIN_SOPROFILERP_H
+#ifndef COIN_SBPROFILINGDATA_H
+#define COIN_SBPROFILINGDATA_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,26 +33,34 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#include <Inventor/SoType.h>
+#include <Inventor/SbBasic.h>
+#include <Inventor/SbTime.h>
+#include <cstddef>
 
-class SbProfilingData;
+class SoFullPath;
+class SoPath;
 
-namespace SoProfilerP {
-  SbBool shouldContinuousRender(void);
-  float getContinuousRenderDelay(void);
+class SbProfilingData {
+public:
+  SbProfilingData() {}
+  ~SbProfilingData() {}
+  
+  // Memory size constants
+  enum { MEMORY_SIZE, VIDEO_MEMORY_SIZE, GL_CACHED_FLAG };
+  
+  // Methods used by SoNodeProfiling.h
+  int getParentIndex(int index) const { return -1; }
+  void preOffsetNodeTiming(int index, const SbTime& offset) {}
+  SbTime getNodeTiming(int index) const { return SbTime::zero(); }
+  void setNodeTiming(int index, const SbTime& time) {}
+  
+  // Additional methods needed
+  int getIndex(const SoPath* path, SbBool create) { return 0; }
+  void setNodeFootprint(int index, int type, int value) {}
+  size_t getNodeFootprint(int index, int type) { return 0; }
+  void setNodeFlag(const SoPath* path, int flag, SbBool value) {}
+  void setActionStartTime(const SbTime& time) {}
+  SbTime getActionStartTime() const { return SbTime::zero(); }
+};
 
-  SbBool shouldSyncGL(void);
-
-  SbBool shouldClearConsole(void);
-  SbBool shouldOutputHeaderOnConsole(void);
-
-  void parseCoinProfilerVariable(void);
-  void parseCoinProfilerOverlayVariable(void);
-
-  void setActionType(SoType actiontype);
-  SoType getActionType(void);
-
-  void dumpToConsole(const SbProfilingData & data);
-}
-
-#endif // !COIN_SOPROFILERP_H
+#endif // !COIN_SBPROFILINGDATA_H

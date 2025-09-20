@@ -549,7 +549,7 @@
 #include <Inventor/lists/SoPickedPointList.h>
 #include <Inventor/lists/SoNodeList.h>
 #include <Inventor/errors/SoReadError.h>
-#include <Inventor/C/tidbits.h> // coin_isspace()
+#include "misc/SoUtilities.h" // CoinInternal::isSpace()
 #include <Inventor/errors/SoDebugError.h>
 
 #include "coindefs.h" // COIN_OBSOLETED()
@@ -805,7 +805,7 @@ skip_spaces(const char * ptr)
   // character (was it ü?) with ASCII value > 127 made isspace()
   // return non-nil on a German system. So we're using our own
   // locale-independent isspace() implementation instead.
-  while (coin_isspace(*ptr)) ptr++;
+  while (CoinInternal::isSpace(*ptr)) ptr++;
   return ptr;
 }
 
@@ -813,7 +813,7 @@ static int
 find_partname_length(const char * ptr)
 {
   int cnt = 0;
-  while (ptr[cnt] && !coin_isspace(ptr[cnt]) &&
+  while (ptr[cnt] && !CoinInternal::isSpace(ptr[cnt]) &&
          ptr[cnt] != '{' && ptr[cnt] != '}') {
     cnt++;
   }

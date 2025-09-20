@@ -25,6 +25,7 @@ namespace SoProfilerP {
   void parseCoinProfilerVariable(void);
   SbBool shouldContinuousRender(void);
   float getContinuousRenderDelay(void);
+  SbBool shouldSyncGL(void);
 }
 
 #endif // !COIN_SOPROFILER_H

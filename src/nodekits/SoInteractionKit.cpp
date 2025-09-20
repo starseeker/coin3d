@@ -82,7 +82,7 @@
 
 #include <cstdlib>
 
-#include <Inventor/C/tidbits.h>
+#include "../C/CoinTidbits.h"
 #include <Inventor/SoDB.h>
 #include <Inventor/SoInput.h>
 #include <Inventor/actions/SoSearchAction.h>

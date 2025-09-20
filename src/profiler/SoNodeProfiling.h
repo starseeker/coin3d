@@ -38,6 +38,7 @@
 #include <Inventor/nodes/SoGroup.h>
 #include <Inventor/system/gl.h>
 #include <Inventor/annex/Profiler/SoProfiler.h>
+#include <Inventor/annex/Profiler/SbProfilingData.h>
 #include <Inventor/annex/Profiler/elements/SoProfilerElement.h>
 
 #include "misc/SoDBP.h" // for global envvar COIN_PROFILER
