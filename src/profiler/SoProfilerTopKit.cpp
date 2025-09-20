@@ -115,11 +115,11 @@ SoProfilerTopKitP::statsNodeChanged(void * userdata, SoSensor * COIN_UNUSED_ARG(
 void
 SoProfilerTopKitP::detachFromStats()
 {
-  this->topListEngine->statisticsNames.disconnect();
-  this->topListEngine->statisticsCounts.disconnect();
-  this->topListEngine->statisticsTimings.disconnect();
-  this->topListEngine->statisticsTimingsMax.disconnect();
-  this->topListEngine->maxLines.disconnect();
+  this->topListEngine.get()->statisticsNames.disconnect();
+  this->topListEngine.get()->statisticsCounts.disconnect();
+  this->topListEngine.get()->statisticsTimings.disconnect();
+  this->topListEngine.get()->statisticsTimingsMax.disconnect();
+  this->topListEngine.get()->maxLines.disconnect();
 
   SoScrollingGraphKit * graph =
     (SoScrollingGraphKit *) PUBLIC(this)->getAnyPart("graph", TRUE);
@@ -137,11 +137,11 @@ SoProfilerTopKitP::attachToStats()
   if (statsNode == nullptr)
     return ;
 
-  this->topListEngine->statisticsNames.connectFrom(&statsNode->renderedNodeType);
-  this->topListEngine->statisticsCounts.connectFrom(&statsNode->renderedNodeTypeCount);
-  this->topListEngine->statisticsTimings.connectFrom(&statsNode->renderingTimePerNodeType);
-  this->topListEngine->statisticsTimingsMax.connectFrom(&statsNode->renderingTimeMaxPerNodeType);
-  this->topListEngine->maxLines.connectFrom(&PUBLIC(this)->lines);
+  this->topListEngine.get()->statisticsNames.connectFrom(&statsNode->renderedNodeType);
+  this->topListEngine.get()->statisticsCounts.connectFrom(&statsNode->renderedNodeTypeCount);
+  this->topListEngine.get()->statisticsTimings.connectFrom(&statsNode->renderingTimePerNodeType);
+  this->topListEngine.get()->statisticsTimingsMax.connectFrom(&statsNode->renderingTimeMaxPerNodeType);
+  this->topListEngine.get()->maxLines.connectFrom(&PUBLIC(this)->lines);
 
 
   SoScrollingGraphKit * graph =
@@ -179,10 +179,12 @@ SoProfilerTopKit::SoProfilerTopKit(void)
 
   SO_KIT_INIT_INSTANCE();
 
-  PRIVATE(this)->topListEngine = new SoProfilerTopEngine;
-  PRIVATE(this)->topListEngine->decay.setValue(0.99f);
+  PRIVATE(this)->topListEngine.reset(new SoProfilerTopEngine);
+  PRIVATE(this)->topListEngine.get()->ref();
+  PRIVATE(this)->topListEngine.get()->decay.setValue(0.99f);
 
-  PRIVATE(this)->geometryEngine = new SoCalculator;
+  PRIVATE(this)->geometryEngine.reset(new SoCalculator);
+  PRIVATE(this)->geometryEngine.get()->ref();
 
   const char * expr[] = {
     // A = viewportsize, B = wanted position
@@ -194,18 +196,18 @@ SoProfilerTopKit::SoProfilerTopKit(void)
   };
 
   const int num = sizeof(expr) / sizeof(const char *);
-  PRIVATE(this)->geometryEngine->expression.setNum(num);
-  PRIVATE(this)->geometryEngine->expression.setValues(0, num, expr);
+  PRIVATE(this)->geometryEngine.get()->expression.setNum(num);
+  PRIVATE(this)->geometryEngine.get()->expression.setValues(0, num, expr);
 
-  PRIVATE(this)->geometryEngine->A.connectFrom(&viewportSize);
-  PRIVATE(this)->geometryEngine->B.connectFrom(&position);
+  PRIVATE(this)->geometryEngine.get()->A.connectFrom(&this->position);
+  PRIVATE(this)->geometryEngine.get()->B.connectFrom(&this->position);
 
   SoTranslation * transe = (SoTranslation *) this->getAnyPart("translation",
                                                               TRUE);
-  transe->translation.connectFrom(&(PRIVATE(this)->geometryEngine->oA));
+  transe->translation.connectFrom(&(PRIVATE(this)->geometryEngine.get()->oA));
 
   SoText2 * txt = (SoText2 *) this->getAnyPart("text", TRUE);
-  txt->string.connectFrom(&PRIVATE(this)->topListEngine->prettyText);
+  txt->string.connectFrom(PRIVATE(this)->topListEngine.get()->prettyText);
 
   SoBaseColor * colorNd = (SoBaseColor *) this->getAnyPart("color", TRUE);
   colorNd->rgb.connectFrom(&this->txtColor);

@@ -207,7 +207,10 @@ SoScrollingGraphKit::SoScrollingGraphKit(void)
   PRIVATE(this)->addValuesSensor->setData(this);
   PRIVATE(this)->addValuesSensor->attach(&(this->addValues));
 
-  PRIVATE(this)->chart = static_cast<SoSeparator *>(this->getAnyPart("scene", TRUE));
+  PRIVATE(this)->chart.reset(static_cast<SoSeparator *>(this->getAnyPart("scene", TRUE)));
+  if (PRIVATE(this)->chart.get()) {
+    PRIVATE(this)->chart.get()->ref();  // Take ownership
+  }
 }
 
 SoScrollingGraphKit::~SoScrollingGraphKit(void)

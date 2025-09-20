@@ -1,8 +1,16 @@
-# Full profiler implementation - core components only
+# Full profiler implementation - expanded to include all components
 set(COIN_PROFILER_FILES
 	SbProfilingData.cpp
 	SoProfiler.cpp
 	SoProfilerElement.cpp
+	# Additional profiler components as requested
+	SoScrollingGraphKit.cpp
+	SoProfilingReportGenerator.cpp
+	SoProfilerTopKit.cpp
+	SoProfilerStats.cpp
+	SoNodeVisualize.cpp
+	SoProfilerVisualizeKit.cpp
+	SoProfilerTopEngine.cpp
 )
 
 # build library

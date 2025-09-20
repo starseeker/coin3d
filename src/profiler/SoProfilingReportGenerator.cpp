@@ -344,7 +344,7 @@ SoProfilingReportGenerator::getDefaultReportPrintCriteria(DataCategorization cat
     order.append(NAME);
     order.append(TIME_PERCENT);
     order.append(TIME_MSECS);
-    order.append(MEM_KILOBYTES);
+    order.append(SoProfilingReportGenerator::MEM_KILOBYTES);
     break;
   default:
     assert(!"unsupported category");
