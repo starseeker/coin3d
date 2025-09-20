@@ -88,33 +88,20 @@ option(COIN_THREADSAFE "Enable thread safe render traversals" OFF)
 option(HAVE_NODEKITS "Enable NodeKit support" OFF)
 cmake_dependent_option(HAVE_DRAGGERS "Enable Dragger support" OFF "HAVE_NODEKITS" OFF)
 cmake_dependent_option(HAVE_MANIPULATORS "Enable Manipulator support" OFF "HAVE_NODEKITS" OFF)
-option(HAVE_SOUND "Enable OpenAL sound support" OFF)
-option(HAVE_3DS_IMPORT_CAPABILITIES "Enable 3ds import capabilities" OFF)
 
 # External dependencies
 option(USE_EXCEPTIONS "Compile with exceptions (g++ only)" ON)
-option(USE_SUPERGLU "Use superglu library, otherwise platform GLU" OFF)
 
 # Development and debug options
-option(COIN_VERBOSE "Add verbose debugging information during configure process" OFF)
-option(HAVE_MULTIPLE_VERSION "Forces versioned paths for includes and documentation" OFF)
 option(COIN_USE_CPACK "Enable CPack packaging" OFF)
 
 # Platform-specific options
 if(APPLE)
     cmake_dependent_option(COIN_BUILD_MAC_FRAMEWORK "Build framework instead of dylib on macOS" OFF "NOT IOS;BUILD_SHARED_LIBS" OFF)
-    cmake_dependent_option(COIN_BUILD_MAC_X11 "Build for X11 on macOS" OFF "APPLE" OFF)
-    cmake_dependent_option(COIN_BUILD_MAC_AGL "Build for AGL on macOS" OFF "APPLE" OFF)
-endif()
-
-if(UNIX AND NOT APPLE)
-    option(COIN_BUILD_GLX "Build for GLX on Linux" ON)
-    option(COIN_BUILD_EGL "Build for EGL on Linux" ON)
 endif()
 
 # Thread debugging (requires C++11 thread support)
 check_include_file_cxx(thread HAVE_STD_THREAD)
-cmake_dependent_option(COIN_DEBUG_CHECK_THREAD "Enable thread check in central Coin functions" OFF "HAVE_STD_THREAD" OFF)
 
 # ============================================================================
 # Installation paths configuration
@@ -132,36 +119,6 @@ set(COIN_TARGET_LINK_LIBRARIES)
 set(COIN_TARGET_INCLUDE_DIRECTORIES)
 set(COIN_TARGET_LINK_LIBRARIES_GL)
 
-# X11 dependencies (macOS with X11)
-if(COIN_BUILD_MAC_X11)
-    find_package(X11 REQUIRED)
-    if(X11_FOUND)
-        find_path(X11_GL_INCLUDE_PATH GL/glx.h ${X11_INC_SEARCH_PATH})
-        if(NOT X11_GL_INCLUDE_PATH)
-            message(FATAL_ERROR "Could not find GL/glx.h")
-        endif()
-
-        find_library(X11_GL_LIB GL ${X11_LIB_SEARCH_PATH})
-        if(NOT X11_GL_LIB)
-            message(FATAL_ERROR "Could not find libGL.dylib")
-        endif()
-
-        find_library(X11_GLU_LIB GLU ${X11_LIB_SEARCH_PATH})
-        if(NOT X11_GLU_LIB)
-            message(FATAL_ERROR "Could not find libGLU.dylib")
-        endif()
-        
-        list(APPEND COIN_TARGET_INCLUDE_DIRECTORIES ${X11_INCLUDE_DIR} ${X11_GL_INCLUDE_PATH})
-        list(APPEND COIN_TARGET_LINK_LIBRARIES ${X11_LIBRARIES} ${X11_GL_LIB} ${X11_GLU_LIB})
-    endif()
-    
-# X11 dependencies (Linux/Unix)
-elseif(UNIX AND NOT APPLE AND COIN_BUILD_GLX)
-    find_package(X11 REQUIRED)
-    list(APPEND COIN_TARGET_INCLUDE_DIRECTORIES ${X11_INCLUDE_DIR})
-    list(APPEND COIN_TARGET_LINK_LIBRARIES ${X11_LIBRARIES})
-endif()
-
 # OpenGL backend selection
 if(COIN3D_USE_OSMESA)
     # OSMesa backend for offscreen/headless rendering
@@ -172,9 +129,9 @@ if(COIN3D_USE_OSMESA)
         
         if(TARGET OSMesa::OSMesa)
             list(APPEND COIN_TARGET_LINK_LIBRARIES_GL OSMesa::OSMesa)
-        elseif(TARGET osmesa)
-            # starseeker/osmesa submodule target
-            list(APPEND COIN_TARGET_LINK_LIBRARIES_GL osmesa)
+        elseif(TARGET osmesa_interface)
+            # starseeker/osmesa submodule interface wrapper
+            list(APPEND COIN_TARGET_LINK_LIBRARIES_GL osmesa_interface)
             list(APPEND COIN_TARGET_INCLUDE_DIRECTORIES ${OSMesa_INCLUDE_DIRS})
         else()
             list(APPEND COIN_TARGET_INCLUDE_DIRECTORIES ${OSMesa_INCLUDE_DIRS})
@@ -197,11 +154,6 @@ else()
     if(OpenGL_GLU_FOUND)
         set(HAVE_GLU 1)
         list(APPEND COIN_TARGET_LINK_LIBRARIES_GL OpenGL::GLU)
-    endif()
-    
-    if(COIN_BUILD_EGL AND OpenGL_EGL_FOUND)
-        set(HAVE_EGL 1)
-        list(APPEND COIN_TARGET_LINK_LIBRARIES_GL OpenGL::EGL)
     endif()
     
     # macOS specific settings
@@ -236,27 +188,6 @@ elseif(CMAKE_USE_PTHREADS_INIT)
     set(COIN_THREADID_TYPE pthread_t)
 endif()
 list(APPEND COIN_TARGET_LINK_LIBRARIES Threads::Threads)
-
-# Super GLU support
-if(USE_SUPERGLU)
-    find_package(superglu)
-    if(superglu_FOUND)
-        set(HAVE_SUPERGLU 1)
-        set(GLU_RUNTIME_LINKING OFF)
-        # Remove any existing OpenGL GLU libraries since we're using superglu
-        list(REMOVE_ITEM COIN_TARGET_LINK_LIBRARIES ${OPENGL_glu_LIBRARY})
-        if(TARGET OpenGL::GLU)
-            list(REMOVE_ITEM COIN_TARGET_LINK_LIBRARIES OpenGL::GLU)
-        endif()
-        list(APPEND COIN_TARGET_LINK_LIBRARIES superglu::GLU)
-    endif()
-endif()
-
-# Debug messages for development
-if(COIN_VERBOSE)
-    message(STATUS "Target include directories: ${COIN_TARGET_INCLUDE_DIRECTORIES}")
-    message(STATUS "Target link libraries: ${COIN_TARGET_LINK_LIBRARIES}")
-endif()
 
 # ============================================================================
 # Build environment configuration  
@@ -441,82 +372,10 @@ else()
   check_library_exists(dld shl_load "" HAVE_DLD_LIB)
 endif()
 
-set(CMAKE_REQUIRED_INCLUDES ${COIN_TARGET_INCLUDE_DIRECTORIES})
-if(WIN32)
-  set(CMAKE_REQUIRED_LIBRARIES ${COIN_TARGET_LINK_LIBRARIES} gdi32)
-  check_cxx_source_compiles("
-    #include <windows.h>
-    #include <GL/gl.h>
-    int main() { (void)wglCreateContext(0L); return 0; }
-  " HAVE_WGL)
-elseif(APPLE)
-  set(CMAKE_REQUIRED_LIBRARIES ${COIN_TARGET_LINK_LIBRARIES})
-  if(COIN_BUILD_MAC_X11)
-    check_cxx_source_compiles("
-      #include <GL/gl.h>
-      #include <GL/glx.h>
-      int main() { (void)glXChooseVisual(0L, 0, 0L); glEnd(); return 0; }
-    " HAVE_GLX)
-  else()
-    if(COIN_BUILD_MAC_AGL)
-      set(CMAKE_REQUIRED_LIBRARIES ${COIN_TARGET_LINK_LIBRARIES} "-Wl,-framework,ApplicationServices" "-Wl,-framework,AGL" "-Wl,-framework,Carbon")
-      check_cxx_source_compiles("
-        #include <AGL/agl.h>
-        #define __CARBONSOUND__
-        #include <Carbon/Carbon.h>
-        int main() { AGLContext ctx; WindowRef wref = aglGetWindowRef(ctx); HIViewRef href = HIViewGetRoot(wref); return 0; }
-      " HAVE_AGL)
-      check_cxx_source_compiles("
-        #include <AGL/agl.h>
-        int main() { AGLPBuffer pbuffer; return 0; }
-      " HAVE_AGL_PBUFFER)
-    endif()
-    set(CMAKE_REQUIRED_LIBRARIES ${COIN_TARGET_LINK_LIBRARIES})
-    check_cxx_source_compiles("
-      #include <OpenGL/OpenGL.h>
-      int main() { CGLGetCurrentContext(); return 0; }
-    " HAVE_CGL)
-    check_cxx_source_compiles("
-      #include <OpenGL/OpenGL.h>
-      int main() { CGLPBufferObj pbuffer; return 0; }
-    " HAVE_CGL_PBUFFER)
-  endif()
-endif()
-
-if(UNIX AND NOT APPLE AND COIN_BUILD_GLX)
-  if (NOT TARGET OpenGL::GLX)
-    if (OPENGL_glx_LIBRARY)
-      list(APPEND COIN_TARGET_LINK_LIBRARIES ${OPENGL_glx_LIBRARY})
-    endif()
-  else()
-    list(APPEND COIN_TARGET_LINK_LIBRARIES OpenGL::GLX)
-  endif()
-  set(CMAKE_REQUIRED_LIBRARIES ${COIN_TARGET_LINK_LIBRARIES})
-  check_cxx_source_compiles("
-    #include <GL/gl.h>
-    #include <GL/glx.h>
-    int main() { (void)glXChooseVisual(0L, 0, 0L); glEnd(); return 0; }
-  " HAVE_GLX)
-endif()
-
-# Checks specific OpenGL configurations
-if(HAVE_WINDOWS_H)
-  check_include_files("windows.h;GL/gl.h" HAVE_GL_GL_H)
-  check_include_files("windows.h;GL/glu.h" HAVE_GL_GLU_H)
-  check_include_files("windows.h;GL/gl.h;GL/glext.h" HAVE_GL_GLEXT_H)
-elseif(APPLE AND NOT COIN_BUILD_MAC_X11)
-  check_include_file(OpenGL/gl.h HAVE_OPENGL_GL_H)
-  check_include_file(OpenGL/glu.h HAVE_OPENGL_GLU_H)
-  check_include_file(OpenGL/glext.h HAVE_OPENGL_GLEXT_H)
-  check_include_file(OpenGL/CGLCurrent.h HAVE_OPENGL_CGLCURRENT_H)
-else()
-  check_include_files("GL/gl.h" HAVE_GL_GL_H)
-  check_include_files("GL/glu.h" HAVE_GL_GLU_H)
-  check_include_files("GL/gl.h;GL/glext.h" HAVE_GL_GLEXT_H)
-endif()
-
-set(CMAKE_REQUIRED_INCLUDES)
-set(CMAKE_REQUIRED_LIBRARIES)
+# Simplified OpenGL header detection (portable only)
+check_include_file(GL/gl.h HAVE_GL_GL_H)
+check_include_file(GL/glu.h HAVE_GL_GLU_H)
+check_include_files("GL/gl.h;GL/glext.h" HAVE_GL_GLEXT_H)
 
 if(HAVE_WINDOWS_H)
   set(SIM_INCLUDE_WINDOWS_H "#include <windows.h>")
@@ -654,22 +513,7 @@ if(NOT HAVE_HASH_QUOTING)
   " HAVE_APOSTROPHES_QUOTING)
 endif()
 
-if(HAVE_3DS_IMPORT_CAPABILITIES)
-  set(FEAT_HAVE_3DS 1)
-else()
-  set(FEAT_HAVE_3DS 0)
-endif()
 set(FEAT_HAVE_VRML97 0)
-if(HAVE_SOUND)
-  set(FEAT_HAVE_SOUND 1)
-else()
-  set(FEAT_HAVE_SOUND 0)
-endif()
-if(HAVE_SUPERGLU)
-  set(FEAT_HAVE_SUPERGLU 1)
-else()
-  set(FEAT_HAVE_SUPERGLU 0)
-endif()
 if(HAVE_THREADS)
   set(FEAT_HAVE_THREADS 1)
 else()
@@ -713,7 +557,6 @@ add_feature_info(NodeKits HAVE_NODEKITS "NodeKit support")
 add_feature_info(Draggers HAVE_DRAGGERS "Dragger support")
 add_feature_info(Manipulators HAVE_MANIPULATORS "Manipulator support") 
 add_feature_info(Exceptions USE_EXCEPTIONS "Compile with exceptions")
-add_feature_info(SuperGLU USE_SUPERGLU "Use superglu library")
 
 feature_summary(WHAT ALL
                 INCLUDE_QUIET_PACKAGES

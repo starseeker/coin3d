@@ -32,8 +32,17 @@
 
 #include "glue/simage_wrapper.h"
 #include <cstddef>
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
 
-/* Minimal stub implementation for simage functionality - disabled for minimal build */
+/* Functional image saving implementation using toojpeg and svpng */
+
+#define TOOJPEG_IMPLEMENTATION
+#include "toojpeg.h"
+
+#define SVPNG_LINKAGE static
+#include "svpng.h"
 
 static unsigned char *
 stub_simage_read_image(const char * filename, int * w, int * h, int * nc)
@@ -77,56 +86,190 @@ stub_simage_resize3d(unsigned char * imagedata, int width, int height, int depth
 static int
 stub_simage_check_save_supported(const char * filename)
 {
-  return 0; /* Image saving disabled in minimal build */
+  if (!filename) return 0;
+  
+  const char* ext = strrchr(filename, '.');
+  if (!ext) return 0;
+  
+  /* Check if it's a supported format */
+  if (strcmp(ext, ".jpg") == 0 || strcmp(ext, ".jpeg") == 0 || 
+      strcmp(ext, ".JPG") == 0 || strcmp(ext, ".JPEG") == 0) {
+    return 1; /* JPEG supported */
+  }
+  if (strcmp(ext, ".png") == 0 || strcmp(ext, ".PNG") == 0) {
+    return 1; /* PNG supported */
+  }
+  return 0; /* Format not supported */
 }
 
 static int
 stub_simage_get_num_savers(void)
 {
-  return 0; /* Image saving disabled in minimal build */
+  return 2; /* JPEG and PNG savers available */
 }
 
 static void *
 stub_simage_get_saver_handle(int idx)
 {
-  return NULL; /* Image saving disabled in minimal build */
+  static const char* savers[] = {"jpeg", "png"};
+  if (idx >= 0 && idx < 2) {
+    return (void*)savers[idx];
+  }
+  return NULL;
 }
 
 static const char *
 stub_simage_get_saver_extensions(void * handle)
 {
-  return ""; /* Image saving disabled in minimal build */
+  if (!handle) return "";
+  
+  const char* saver = (const char*)handle;
+  if (strcmp(saver, "jpeg") == 0) {
+    return "jpg,jpeg";
+  }
+  if (strcmp(saver, "png") == 0) {
+    return "png";
+  }
+  return "";
 }
 
 static const char *
 stub_simage_get_saver_fullname(void * handle)
 {
-  return "None"; /* Image saving disabled in minimal build */
+  if (!handle) return "None";
+  
+  const char* saver = (const char*)handle;
+  if (strcmp(saver, "jpeg") == 0) {
+    return "JPEG File Format";
+  }
+  if (strcmp(saver, "png") == 0) {
+    return "PNG File Format";
+  }
+  return "None";
 }
 
 static const char *
 stub_simage_get_saver_description(void * handle)
 {
+  if (!handle) return "Image saving disabled in minimal build";
+  
+  const char* saver = (const char*)handle;
+  if (strcmp(saver, "jpeg") == 0) {
+    return "JPEG image saver using TooJPEG library";
+  }
+  if (strcmp(saver, "png") == 0) {
+    return "PNG image saver using svpng library";
+  }
   return "Image saving disabled in minimal build";
 }
 
 static void
 stub_simage_version(int * major, int * minor, int * micro)
 {
-  if (major) *major = 0;
+  if (major) *major = 1;
   if (minor) *minor = 0;
   if (micro) *micro = 0;
+}
+
+/* Helper structures for image writing */
+struct jpeg_write_context {
+  FILE* file;
+  int error;
+};
+
+/* Global context pointer - not thread-safe, but matches simage API design */
+static jpeg_write_context* jpeg_write_context_ptr = NULL;
+
+static void jpeg_write_callback(unsigned char byte)
+{
+  jpeg_write_context* ctx = (jpeg_write_context*)jpeg_write_context_ptr;
+  if (ctx && ctx->file && !ctx->error) {
+    if (fputc(byte, ctx->file) == EOF) {
+      ctx->error = 1;
+    }
+  }
 }
 
 static int
 stub_simage_save_image(const char * filename, const unsigned char * imagedata,
                        int width, int height, int nc, const char * filetypeext)
 {
-  return 0; /* Image saving disabled in minimal build */
+  if (!filename || !imagedata || width <= 0 || height <= 0 || nc <= 0) {
+    return 0;
+  }
+  
+  const char* ext = filetypeext;
+  if (!ext) {
+    ext = strrchr(filename, '.');
+    if (!ext) return 0;
+    ext++; /* Skip the dot */
+  }
+  
+  FILE* file = fopen(filename, "wb");
+  if (!file) return 0;
+  
+  int success = 0;
+  
+  if (strcmp(ext, "jpg") == 0 || strcmp(ext, "jpeg") == 0 || 
+      strcmp(ext, "JPG") == 0 || strcmp(ext, "JPEG") == 0) {
+    /* Save as JPEG using TooJPEG */
+    jpeg_write_context ctx;
+    ctx.file = file;
+    ctx.error = 0;
+    jpeg_write_context_ptr = &ctx;
+    
+    /* Convert data format if needed */
+    bool isRGB = (nc >= 3);
+    if (nc == 4) {
+      /* Convert RGBA to RGB by discarding alpha channel */
+      unsigned char* rgb_data = (unsigned char*)malloc(width * height * 3);
+      if (rgb_data) {
+        for (int i = 0; i < width * height; i++) {
+          rgb_data[i*3] = imagedata[i*4];
+          rgb_data[i*3+1] = imagedata[i*4+1];
+          rgb_data[i*3+2] = imagedata[i*4+2];
+        }
+        success = TooJpeg::writeJpeg(jpeg_write_callback, rgb_data, width, height, true, 90) ? 1 : 0;
+        free(rgb_data);
+      }
+    } else {
+      success = TooJpeg::writeJpeg(jpeg_write_callback, imagedata, width, height, isRGB, 90) ? 1 : 0;
+    }
+    
+    jpeg_write_context_ptr = NULL;
+    
+    if (ctx.error) success = 0;
+    
+  } else if (strcmp(ext, "png") == 0 || strcmp(ext, "PNG") == 0) {
+    /* Save as PNG using svpng */
+    if (nc == 3) {
+      /* RGB format */
+      svpng(file, width, height, imagedata, 0);
+      success = 1;
+    } else if (nc == 4) {
+      /* RGBA format */
+      svpng(file, width, height, imagedata, 1);
+      success = 1;
+    } else if (nc == 1) {
+      /* Grayscale - convert to RGB */
+      unsigned char* rgb_data = (unsigned char*)malloc(width * height * 3);
+      if (rgb_data) {
+        for (int i = 0; i < width * height; i++) {
+          rgb_data[i*3] = rgb_data[i*3+1] = rgb_data[i*3+2] = imagedata[i];
+        }
+        svpng(file, width, height, rgb_data, 0);
+        free(rgb_data);
+        success = 1;
+      }
+    }
+  }
+  
+  fclose(file);
+  return success;
 }
 
 static cc_simage_wrapper simage_instance = {
-  0, /* available = FALSE */
+  1, /* available = TRUE */
   stub_simage_read_image,
   stub_simage_free_image,
   stub_simage_get_last_error,

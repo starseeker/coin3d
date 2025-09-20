@@ -351,17 +351,9 @@
 
 #include "CoinOffscreenGLCanvas.h"
 
-#ifdef HAVE_GLX
-#include "SoOffscreenGLXData.h"
-#endif // HAVE_GLX
-
-#ifdef COIN_MACOS_10
-#include "SoOffscreenCGData.h"
-#endif // COIN_MACOS_10
-
-#ifdef HAVE_WGL
-#include "SoOffscreenWGLData.h"
-#endif // HAVE_WGL
+// Note: Platform-specific resolution detection has been removed.
+// The system now uses a standard 72 DPI default, which is appropriate
+// for most offscreen rendering use cases.
 
 // *************************************************************************
 
@@ -507,14 +499,10 @@ SoOffscreenRenderer::~SoOffscreenRenderer()
 float
 SoOffscreenRenderer::getScreenPixelsPerInch(void)
 {
+  // Use standard 72 DPI for offscreen rendering. This is appropriate
+  // for most use cases and eliminates platform-specific dependencies.
+  // Applications requiring specific DPI can scale their rendering accordingly.
   SbVec2f pixmmres(72.0f / 25.4f, 72.0f / 25.4f);
-#ifdef HAVE_GLX
-  pixmmres = SoOffscreenGLXData::getResolution();
-#elif defined(HAVE_WGL)
-  pixmmres = SoOffscreenWGLData::getResolution();
-#elif defined(COIN_MACOS_10)
-  pixmmres = SoOffscreenCGData::getResolution();
-#endif // COIN_MACOS_10
 
   // The API-signature of this method is not what it should be: it
   // assumes the same resolution in the vertical and horizontal

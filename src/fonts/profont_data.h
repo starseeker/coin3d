@@ -1,7 +1,4 @@
-#ifndef COIN_GLUE_INTERNAL_WGL_H
-#define COIN_GLUE_INTERNAL_WGL_H
-
-/**************************************************************************\
+/***************************************************************************
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
  * All rights reserved.
  * 
@@ -33,39 +30,24 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_INTERNAL
-#error this is a private header file
-#endif
+/*
+  ProFont TTF data - embedded font data for coin3d text rendering.
+  ProFont is licensed under MIT License - see profont_license.txt
+*/
 
-#include <Inventor/SbBasic.h> // SbBool
-#include "C/glue/gl.h"
+#ifndef COIN_PROFONT_DATA_H
+#define COIN_PROFONT_DATA_H
 
 #ifdef __cplusplus
 extern "C" {
-#endif /* __cplusplus */
+#endif
 
-void * coin_wgl_getprocaddress(const cc_glglue * glue, const char * fname);
-
-void * wglglue_context_create_offscreen(unsigned int width, unsigned int height, SbBool texture = TRUE);
-SbBool wglglue_context_make_current(void * ctx);
-void wglglue_context_reinstate_previous(void * ctx);
-void wglglue_context_destruct(void * ctx);
-
-void wglglue_context_bind_pbuffer(void * ctx);
-void wglglue_context_release_pbuffer(void * ctx);
-SbBool wglglue_context_pbuffer_is_bound(void * ctx);
-SbBool wglglue_context_can_render_to_texture(void * ctx);
-
-SbBool wglglue_context_pbuffer_max(void * ctx, unsigned int * lims);
-
-/* This abomination is needed to support SoOffscreenRenderer::getDC(). */
-const void * wglglue_context_win32_HDC(void * ctx);
-void wglglue_copy_to_bitmap_win32_HDC(void * ctx);
-
-void wglglue_cleanup(void);
+/* ProFont TTF data - 93492 bytes, MIT licensed */
+extern const unsigned char profont_ttf_data[];
+extern const int profont_ttf_data_size;
 
 #ifdef __cplusplus
 }
-#endif /* __cplusplus */
+#endif
 
-#endif /* !COIN_GLUE_INTERNAL_WGL_H */
+#endif /* COIN_PROFONT_DATA_H */

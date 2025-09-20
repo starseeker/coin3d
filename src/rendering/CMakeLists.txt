@@ -9,9 +9,6 @@ set(COIN_RENDERING_FILES
 	SoRenderManager.cpp
 	SoRenderManagerP.cpp
 	SoOffscreenRenderer.cpp
-	SoOffscreenCGData.cpp
-	SoOffscreenGLXData.cpp
-	SoOffscreenWGLData.cpp
 	SoVBO.cpp
 	SoVertexArrayIndexer.cpp
 	CoinOffscreenGLCanvas.cpp
@@ -25,12 +22,6 @@ set(COIN_RENDERING_INTERNAL_FILES
 	SoGLNurbs.cpp
 	SoRenderManagerP.h
 	SoRenderManagerP.cpp
-	SoOffscreenCGData.h
-	SoOffscreenCGData.cpp
-	SoOffscreenGLXData.h
-	SoOffscreenGLXData.cpp
-	SoOffscreenWGLData.h
-	SoOffscreenWGLData.cpp
 	SoVBO.h
 	SoVBO.cpp
 	SoVertexArrayIndexer.h
