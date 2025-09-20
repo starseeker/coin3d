@@ -1,5 +1,5 @@
-#ifndef COIN_SOPROFILERP_H
-#define COIN_SOPROFILERP_H
+#ifndef COIN_SONODEKITPATH_H
+#define COIN_SONODEKITPATH_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,26 +33,50 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#include <Inventor/SoType.h>
+#include <Inventor/SoPath.h>
 
-class SbProfilingData;
+class SoNode;
+class SoSearchAction;
+class SoBaseKit;
 
-namespace SoProfilerP {
-  SbBool shouldContinuousRender(void);
-  float getContinuousRenderDelay(void);
+class COIN_DLL_API SoNodeKitPath : public SoPath {
+  typedef SoPath inherited;
 
-  SbBool shouldSyncGL(void);
+public:
+  SoNodeKitPath(const int approxLength = 4);
+  virtual ~SoNodeKitPath();
 
-  SbBool shouldClearConsole(void);
-  SbBool shouldOutputHeaderOnConsole(void);
+  virtual int getLength(void) const;
+  virtual SoNode * getTail(void) const;
+  virtual SoNode * getNode(const int idx) const;
+  virtual SoNode * getNodeFromTail(const int idx) const;
+  virtual void truncate(const int length);
+  virtual void pop(void);
+  virtual void append(SoNode * const node);
+  virtual void append(const SoNodeKitPath * const path);
+  void append(SoBaseKit * childKit);
+  void append(const int);
+  void append(const SoPath *);
+  virtual SbBool containsNode(const SoNode * const node) const;
+  SbBool containsNode(SoBaseKit * node) const;
+  virtual int findFork(const SoPath * const path) const;
+  int findFork(const SoNodeKitPath * path) const;
 
-  void parseCoinProfilerVariable(void);
-  void parseCoinProfilerOverlayVariable(void);
+  SbBool containsOnlyNodeKits(void) const;
+  
+  // Additional methods from implementation
+  static void clean(void);
+  static SoSearchAction * getSearchAction(void);
+  void push(const int);
+  int getIndex(const int) const;
+  int getIndexFromTail(const int) const;
+  void insertIndex(SoNode *, const int);
+  void removeIndex(SoNode *, const int);
+  void replaceIndex(SoNode *, const int, SoNode *);
 
-  void setActionType(SoType actiontype);
-  SoType getActionType(void);
+private:
+  static SoSearchAction * searchAction;
+  friend class SoBaseKit;
+};
 
-  void dumpToConsole(const SbProfilingData & data);
-}
-
-#endif // !COIN_SOPROFILERP_H
+#endif // !COIN_SONODEKITPATH_H

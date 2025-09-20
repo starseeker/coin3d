@@ -48,6 +48,11 @@ set(COIN_SUBDIRS
   hardcopy
 )
 
+# Add nodekits if enabled
+if(HAVE_NODEKITS)
+  list(APPEND COIN_SUBDIRS nodekits)
+endif()
+
 foreach(_subdir ${COIN_SUBDIRS})
   add_subdirectory(${_subdir})
 endforeach()
@@ -178,6 +183,7 @@ else()
         $<TARGET_OBJECTS:shapenodes>
         $<TARGET_OBJECTS:threads>
         $<TARGET_OBJECTS:tools>
+        $<$<BOOL:${HAVE_NODEKITS}>:$<TARGET_OBJECTS:nodekits>>
     )
 endif()
 

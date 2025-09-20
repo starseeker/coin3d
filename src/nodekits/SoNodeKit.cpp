@@ -50,7 +50,6 @@
 
 #include <Inventor/SbBasic.h>
 #include <Inventor/SoDB.h>
-#include <Inventor/C/tidbits.h>
 
 #ifdef HAVE_NODEKITS
 #include <Inventor/nodekits/SoAppearanceKit.h>
@@ -60,10 +59,9 @@
 #include <Inventor/nodekits/SoSceneKit.h>
 #include <Inventor/nodekits/SoShapeKit.h>
 #include <Inventor/nodekits/SoWrapperKit.h>
-#include <ForeignFiles/SoForeignFileKit.h>
 #endif // HAVE_NODEKITS
 
-#include "tidbitsp.h"
+#include "../C/CoinTidbits.h"
 
 static SbBool nodekit_isinitialized = FALSE;
 
@@ -101,7 +99,6 @@ SoNodeKit::init(void)
   SoSeparatorKit::initClass();
   SoShapeKit::initClass();
   SoWrapperKit::initClass();
-  SoForeignFileKit::initClass();
 #endif // HAVE_NODEKITS
 
   nodekit_isinitialized = TRUE;

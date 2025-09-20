@@ -1,6 +1,3 @@
-#ifndef COIN_SOPROFILERP_H
-#define COIN_SOPROFILERP_H
-
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
  * All rights reserved.
@@ -33,26 +30,51 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#include <Inventor/SoType.h>
+// Stub implementations for SoProfilerP namespace functions
 
-class SbProfilingData;
+#include "SoProfilerP.h"
+#include <Inventor/annex/Profiler/SbProfilingData.h>
 
 namespace SoProfilerP {
-  SbBool shouldContinuousRender(void);
-  float getContinuousRenderDelay(void);
 
-  SbBool shouldSyncGL(void);
-
-  SbBool shouldClearConsole(void);
-  SbBool shouldOutputHeaderOnConsole(void);
-
-  void parseCoinProfilerVariable(void);
-  void parseCoinProfilerOverlayVariable(void);
-
-  void setActionType(SoType actiontype);
-  SoType getActionType(void);
-
-  void dumpToConsole(const SbProfilingData & data);
+SbBool shouldContinuousRender(void) {
+  return FALSE;
 }
 
-#endif // !COIN_SOPROFILERP_H
+float getContinuousRenderDelay(void) {
+  return 0.0f;
+}
+
+SbBool shouldSyncGL(void) {
+  return FALSE;
+}
+
+SbBool shouldClearConsole(void) {
+  return FALSE;
+}
+
+SbBool shouldOutputHeaderOnConsole(void) {
+  return FALSE;
+}
+
+void parseCoinProfilerVariable(void) {
+  // Stub implementation
+}
+
+void parseCoinProfilerOverlayVariable(void) {
+  // Stub implementation
+}
+
+void setActionType(SoType actiontype) {
+  // Stub implementation
+}
+
+SoType getActionType(void) {
+  return SoType::badType();
+}
+
+void dumpToConsole(const SbProfilingData & data) {
+  // Stub implementation
+}
+
+} // namespace SoProfilerP

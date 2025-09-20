@@ -36,7 +36,6 @@
 #include <Inventor/nodes/SoSubNode.h>
 #include <Inventor/fields/SoSFNode.h>
 #include <Inventor/nodekits/SoNodekitCatalog.h>
-#include <Inventor/C/tidbits.h>
 
 #ifndef COIN_INTERNAL
 // Include this header file for better Open Inventor compatibility.

@@ -82,7 +82,7 @@
 
 #include <cstdlib>
 
-#include <Inventor/C/tidbits.h>
+#include "../C/CoinTidbits.h"
 #include <Inventor/SoDB.h>
 #include <Inventor/SoInput.h>
 #include <Inventor/actions/SoSearchAction.h>
@@ -96,7 +96,7 @@
 #include <Inventor/nodes/SoText2.h>
 #include <Inventor/sensors/SoFieldSensor.h>
 
-#include "tidbitsp.h"
+#include "../C/CoinTidbits.h"
 #include "coindefs.h" // COIN_OBSOLETED()
 #include "nodekits/SoSubKitP.h"
 
