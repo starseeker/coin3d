@@ -44,7 +44,6 @@ set(COIN_NODES_FILES
 	SoNode.cpp
 	SoNormal.cpp
 	SoNormalBinding.cpp
-	SoNurbsProfile.cpp
 	SoOrthographicCamera.cpp
 	SoPackedColor.cpp
 	SoPathSwitch.cpp

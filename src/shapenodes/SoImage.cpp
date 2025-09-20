@@ -817,6 +817,55 @@ SoImage::getSize(void) const
   return size;
 }
 
+// Simple bilinear image resize function to replace gluScaleImage
+static void
+simple_image_resize(const unsigned char * src, unsigned char * dest,
+                   int src_width, int src_height, int num_components,
+                   int dest_width, int dest_height)
+{
+  float x_ratio = ((float)(src_width - 1)) / dest_width;
+  float y_ratio = ((float)(src_height - 1)) / dest_height;
+  
+  for (int y = 0; y < dest_height; y++) {
+    for (int x = 0; x < dest_width; x++) {
+      float x_src = x * x_ratio;
+      float y_src = y * y_ratio;
+      
+      int x1 = (int)x_src;
+      int y1 = (int)y_src;
+      int x2 = x1 + 1;
+      int y2 = y1 + 1;
+      
+      // Clamp to source bounds
+      if (x2 >= src_width) x2 = src_width - 1;
+      if (y2 >= src_height) y2 = src_height - 1;
+      
+      float x_diff = x_src - x1;
+      float y_diff = y_src - y1;
+      
+      for (int c = 0; c < num_components; c++) {
+        // Get the four corner pixel values
+        int idx1 = (y1 * src_width + x1) * num_components + c;
+        int idx2 = (y1 * src_width + x2) * num_components + c;
+        int idx3 = (y2 * src_width + x1) * num_components + c;
+        int idx4 = (y2 * src_width + x2) * num_components + c;
+        
+        float val1 = src[idx1];
+        float val2 = src[idx2];
+        float val3 = src[idx3]; 
+        float val4 = src[idx4];
+        
+        // Bilinear interpolation
+        float interp1 = val1 * (1 - x_diff) + val2 * x_diff;
+        float interp2 = val3 * (1 - x_diff) + val4 * x_diff;
+        float final_val = interp1 * (1 - y_diff) + interp2 * y_diff;
+        
+        dest[(y * dest_width + x) * num_components + c] = (unsigned char)(final_val + 0.5f);
+      }
+    }
+  }
+}
+
 const unsigned char *
 SoImage::getImage(SbVec2s & size, int & nc)
 {
@@ -847,35 +896,13 @@ SoImage::getImage(SbVec2s & size, int & nc)
         simage_wrapper()->simage_free_image(result);
         this->resizedimagevalid = TRUE;
       }
-      else if (GLUWrapper()->available) {
+      else {
+        // Use simple bilinear resize function instead of GLU
         this->resizedimage->setValue(newsize, nc, NULL);
         const unsigned char * rezdata = this->resizedimage->getValue(newsize, nc);
-        GLenum format;
-        switch (nc) {
-        default: // avoid compiler warnings
-        case 1: format = GL_LUMINANCE; break;
-        case 2: format = GL_LUMINANCE_ALPHA; break;
-        case 3: format = GL_RGB; break;
-        case 4: format = GL_RGBA; break;
-        }
-        glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-        glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
-        glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
-        glPixelStorei(GL_PACK_ROW_LENGTH, 0);
-        glPixelStorei(GL_PACK_SKIP_PIXELS, 0);
-        glPixelStorei(GL_PACK_SKIP_ROWS, 0);
-        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-        glPixelStorei(GL_PACK_ALIGNMENT, 1);
-
-        (void)GLUWrapper()->gluScaleImage(format,
-                                          orgsize[0], orgsize[1],
-                                          GL_UNSIGNED_BYTE, (void*) orgdata,
-                                          newsize[0], newsize[1],
-                                          GL_UNSIGNED_BYTE,
-                                          (void*) rezdata);
-        // restore to default
-        glPixelStorei(GL_PACK_ALIGNMENT, 4);
-        glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+        simple_image_resize(orgdata, (unsigned char*)rezdata,
+                           orgsize[0], orgsize[1], nc,
+                           newsize[0], newsize[1]);
         this->resizedimagevalid = TRUE;
       }
 #if COIN_DEBUG
