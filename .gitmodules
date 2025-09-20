@@ -3,7 +3,7 @@
 	url = https://github.com/coin3d/doxygen-awesome-css.git
 	branch = coin3d
 [submodule "osmesa"]
-	path = osmesa
+	path = external/osmesa
 	url = https://github.com/starseeker/osmesa.git
 [submodule "external/Catch2"]
 	path = external/Catch2
