@@ -565,6 +565,30 @@ CoinOffscreenGLCanvas::initializeFBO(void)
 {
   if (this->fbo_initialized) { return TRUE; }
   
+  // Ensure the context is current before calling cc_glglue_instance
+  if (this->context && !cc_glglue_context_make_current(this->context)) {
+    if (CoinOffscreenGLCanvas::debug()) {
+      SoDebugError::post("CoinOffscreenGLCanvas::initializeFBO",
+                         "Failed to make context current before FBO initialization");
+    }
+    return FALSE;
+  }
+  
+  // Additional debugging for OSMesa builds
+#ifdef COIN3D_OSMESA_BUILD
+  if (CoinOffscreenGLCanvas::debug()) {
+    const char* version = (const char*)glGetString(GL_VERSION);
+    const char* vendor = (const char*)glGetString(GL_VENDOR);
+    SoDebugError::postInfo("CoinOffscreenGLCanvas::initializeFBO",
+                          "OpenGL context info: %s, %s", 
+                          version ? version : "(null)",
+                          vendor ? vendor : "(null)");
+    SoDebugError::postInfo("CoinOffscreenGLCanvas::initializeFBO",
+                          "About to call cc_glglue_instance with context ID: %d", 
+                          static_cast<int>(this->renderid));
+  }
+#endif
+  
   // Get the current glglue instance to access FBO functions
   const cc_glglue * glue = cc_glglue_instance(static_cast<int>(this->renderid));
   if (!glue) {
@@ -574,6 +598,13 @@ CoinOffscreenGLCanvas::initializeFBO(void)
     }
     return FALSE;
   }
+  
+#ifdef COIN3D_OSMESA_BUILD
+  if (CoinOffscreenGLCanvas::debug()) {
+    SoDebugError::postInfo("CoinOffscreenGLCanvas::initializeFBO",
+                          "cc_glglue_instance succeeded, checking FBO support");
+  }
+#endif
   
   // Check if FBO extension is supported
   if (!cc_glglue_has_framebuffer_objects(glue)) {
