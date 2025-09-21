@@ -688,7 +688,9 @@ SoMField::deleteValues(int start, int numarg)
 
   if (numarg == -1) numarg = oldnum - start;
   if (numarg == 0) return;
+#if COIN_DEBUG
   int end = start + numarg; // First element behind the delete block.
+#endif
 
 #if COIN_DEBUG
   if (start < 0 || start >= oldnum || end > oldnum || numarg < -1) {

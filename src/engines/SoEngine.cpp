@@ -471,6 +471,7 @@ SoEngine::copy(void) const
   // Call findCopy() to have copyContents() run once.
   SoEngine * dummy = coin_assert_cast<SoEngine *>(SoFieldContainer::findCopy(this, TRUE));
   assert(dummy == cp);
+  (void)dummy; /* avoid unused variable warning in release builds */
 
   SoFieldContainer::copyDone();
   // unrefNoDelete() so that we return a copy with reference count 0

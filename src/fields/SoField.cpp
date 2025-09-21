@@ -232,6 +232,7 @@ public:
   {
     size_t ok = this->maptoconverter.erase(item);
     assert(ok);
+    (void)ok; /* avoid unused variable warning in release builds */
   }
 
   SoFieldConverter * findConverter(const void * item)
@@ -413,6 +414,7 @@ SoFieldP::hashRealloc(void * bufptr, size_t size)
   char ** bufptrptr = NULL;
   SbBool ok = SoFieldP::ptrhash->get(static_cast<char *>(bufptr), bufptrptr);
   assert(ok);
+  (void)ok; /* avoid unused variable warning in release builds */
 
   // If *bufptrptr contains a NULL pointer, this is the first
   // invocation and the initial memory buffer was on the stack.
@@ -429,6 +431,7 @@ SoFieldP::hashRealloc(void * bufptr, size_t size)
   if (newbuf != bufptr) {
     size_t isok = SoFieldP::ptrhash->erase(static_cast<char *>(bufptr));
     assert(isok);
+    (void)isok; /* avoid unused variable warning in release builds */
     *bufptrptr = newbuf;
     SoFieldP::ptrhash->put(newbuf, bufptrptr);
   }
@@ -1381,6 +1384,7 @@ SoField::get(SbString & valuestring)
   CC_MUTEX_LOCK(sofield_mutex);
   SbBool ok = SoFieldP::getReallocHash()->put(initbuffer, &bufferptr);
   assert(ok);
+  (void)ok; /* avoid unused variable warning in release builds */
   CC_MUTEX_UNLOCK(sofield_mutex);
 
   out.setBuffer(initbuffer, sizeof(initbuffer), SoFieldP::hashRealloc);
@@ -1408,6 +1412,7 @@ SoField::get(SbString & valuestring)
   CC_MUTEX_LOCK(sofield_mutex);
   size_t isok = SoFieldP::getReallocHash()->erase(bufferptr ? bufferptr : initbuffer);
   assert(isok);
+  (void)isok; /* avoid unused variable warning in release builds */
   CC_MUTEX_UNLOCK(sofield_mutex);
 }
 
@@ -2449,6 +2454,7 @@ SoField::resolveWriteConnection(SbName & mastername) const
     assert(fc);
     SbBool ok = fc->getFieldName(fieldmaster, mastername);
     assert(ok);
+    (void)ok; /* avoid unused variable warning in release builds */
   }
   else if (this->getConnectedEngine(enginemaster)) {
     fc = enginemaster->getFieldContainer();
@@ -2459,6 +2465,7 @@ SoField::resolveWriteConnection(SbName & mastername) const
       coin_assert_cast<SoNodeEngine *>(fc)->getOutputName(enginemaster, mastername) :
       coin_assert_cast<SoEngine *>(fc)->getOutputName(enginemaster, mastername);
     assert(ok);
+    (void)ok; /* avoid unused variable warning in release builds */
   }
   else assert(FALSE);
 

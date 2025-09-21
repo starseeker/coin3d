@@ -93,6 +93,7 @@ cc_mutex_struct_init(cc_mutex * mutex_struct)
   int ok;
   ok = internal_mutex_struct_init(mutex_struct);
   assert(ok);
+  (void)ok; /* avoid unused variable warning in release builds */
 }
 
 /*
@@ -106,6 +107,7 @@ cc_mutex_struct_clean(cc_mutex * mutex_struct)
   assert(mutex_struct);
   ok = internal_mutex_struct_clean(mutex_struct);
   assert(ok == CC_OK);
+  (void)ok; /* avoid unused variable warning in release builds */
 }
 
 /**************************************************************************/
@@ -194,6 +196,7 @@ cc_mutex_lock(cc_mutex * mutex)
   ok = internal_mutex_lock(mutex);
 
   assert(ok == CC_OK);
+  (void)ok; /* avoid unused variable warning in release builds */
 
   /* This is here as an optional debugging aid, when having problems
      related to locks that are held too long. (Typically resulting in
@@ -234,6 +237,7 @@ cc_mutex_unlock(cc_mutex * mutex)
   assert(mutex != NULL);
   ok = internal_mutex_unlock(mutex);
   assert(ok == CC_OK);
+  (void)ok; /* avoid unused variable warning in release builds */
 }
 
 static cc_mutex * cc_global_mutex = NULL;

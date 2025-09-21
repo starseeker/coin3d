@@ -880,6 +880,7 @@ SoFieldContainer::addCopy(const SoFieldContainer * orig,
   assert(s);
   s = contentscopied->put(orig, FALSE);
   assert(s);
+  (void)s; /* avoid unused variable warning in release builds */
 }
 
 
@@ -942,6 +943,7 @@ SoFieldContainer::findCopy(const SoFieldContainer * orig,
 
   assert(copiedinstances);
   assert(contentscopied);
+  (void)copiedinstances; /* avoid unused variable warning in release builds */
 
   const SoNode * protonode = coin_safe_cast<const SoNode *>(orig);
   SoProtoInstance * protoinst = protonode ?
@@ -987,6 +989,7 @@ SoFieldContainer::findCopy(const SoFieldContainer * orig,
     SbBool copied = FALSE;
     SbBool chk = contentscopied->get(orig, copied);
     assert(chk);
+    (void)chk; /* avoid unused variable warning in release builds */
 
     if (!copied) {
       // we have to update the dictionary _before_ calling
@@ -1097,6 +1100,7 @@ SoFieldContainer::getFieldsMemorySize(size_t & managed, size_t & unmanaged) cons
 
       const SoSField * sfield = static_cast<const SoSField *>(field);
       SoType sftype = sfield->getTypeId();
+      (void)sftype; /* avoid unused variable warning */
 
       if (sfield->getTypeId().isDerivedFrom(SoSFImage::getClassTypeId())) {
         const SoSFImage * imgfield = static_cast<const SoSFImage *>(sfield);
