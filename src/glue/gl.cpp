@@ -1883,23 +1883,50 @@ glglue_resolve_symbols(cc_glglue * w)
      w->has_shadow) ||
     w->has_arb_fragment_program;
   
+  /* Try ARB framebuffer objects first (OpenGL 3.0+ core or ARB extension) */
   if (cc_glglue_glext_supported(w, "GL_ARB_framebuffer_object") ||
       cc_glglue_glversion_matches_at_least(w, 3, 0, 0)) {
+    
+    /* Load ARB/Core framebuffer functions */
+    w->glIsRenderbuffer = (COIN_PFNGLISRENDERBUFFERPROC) cc_glglue_getprocaddress(w, "glIsRenderbuffer");
+    w->glBindRenderbuffer = (COIN_PFNGLBINDRENDERBUFFERPROC) cc_glglue_getprocaddress(w, "glBindRenderbuffer");
+    w->glDeleteRenderbuffers = (COIN_PFNGLDELETERENDERBUFFERSPROC)cc_glglue_getprocaddress(w, "glDeleteRenderbuffers");
+    w->glGenRenderbuffers = (COIN_PFNGLGENRENDERBUFFERSPROC)cc_glglue_getprocaddress(w, "glGenRenderbuffers");
+    w->glRenderbufferStorage = (COIN_PFNGLRENDERBUFFERSTORAGEPROC)cc_glglue_getprocaddress(w, "glRenderbufferStorage");
+    w->glGetRenderbufferParameteriv = (COIN_PFNGLGETRENDERBUFFERPARAMETERIVPROC)cc_glglue_getprocaddress(w, "glGetRenderbufferParameteriv");
+    w->glIsFramebuffer = (COIN_PFNGLISFRAMEBUFFERPROC)cc_glglue_getprocaddress(w, "glIsFramebuffer");
+    w->glBindFramebuffer = (COIN_PFNGLBINDFRAMEBUFFERPROC)cc_glglue_getprocaddress(w, "glBindFramebuffer");
+    w->glDeleteFramebuffers = (COIN_PFNGLDELETEFRAMEBUFFERSPROC)cc_glglue_getprocaddress(w, "glDeleteFramebuffers");
+    w->glGenFramebuffers = (COIN_PFNGLGENFRAMEBUFFERSPROC)cc_glglue_getprocaddress(w, "glGenFramebuffers");
+    w->glCheckFramebufferStatus = (COIN_PFNGLCHECKFRAMEBUFFERSTATUSPROC)cc_glglue_getprocaddress(w, "glCheckFramebufferStatus");
+    w->glFramebufferTexture1D = (COIN_PFNGLFRAMEBUFFERTEXTURE1DPROC)cc_glglue_getprocaddress(w, "glFramebufferTexture1D");
+    w->glFramebufferTexture2D = (COIN_PFNGLFRAMEBUFFERTEXTURE2DPROC)cc_glglue_getprocaddress(w, "glFramebufferTexture2D");
+    w->glFramebufferTexture3D = (COIN_PFNGLFRAMEBUFFERTEXTURE3DPROC)cc_glglue_getprocaddress(w, "glFramebufferTexture3D");
+    w->glFramebufferRenderbuffer = (COIN_PFNGLFRAMEBUFFERRENDERBUFFERPROC)cc_glglue_getprocaddress(w, "glFramebufferRenderbuffer");
+    w->glGetFramebufferAttachmentParameteriv = (COIN_PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC)
+      cc_glglue_getprocaddress(w, "glGetFramebufferAttachmentParameteriv");
     w->glGenerateMipmap = (COIN_PFNGLGENERATEMIPMAPPROC)
       cc_glglue_getprocaddress(w, "glGenerateMipmap");
     if (!w->glGenerateMipmap) {
       w->glGenerateMipmap = (COIN_PFNGLGENERATEMIPMAPPROC)
         cc_glglue_getprocaddress(w, "glGenerateMipmapARB");
     }
-  }
-  if (!w->glGenerateMipmap) {
-    if (cc_glglue_glext_supported(w, "GL_EXT_framebuffer_object")) {
-      w->glGenerateMipmap = (COIN_PFNGLGENERATEMIPMAPPROC)
-        cc_glglue_getprocaddress(w, "glGenerateMipmapEXT");
+    
+    /* Check if all ARB functions were loaded successfully */
+    if (w->glIsRenderbuffer && w->glBindRenderbuffer && w->glDeleteRenderbuffers &&
+        w->glGenRenderbuffers && w->glRenderbufferStorage && w->glGetRenderbufferParameteriv &&
+        w->glIsFramebuffer && w->glBindFramebuffer && w->glDeleteFramebuffers &&
+        w->glGenFramebuffers && w->glCheckFramebufferStatus && w->glFramebufferTexture1D &&
+        w->glFramebufferTexture2D && w->glFramebufferTexture3D && w->glFramebufferRenderbuffer &&
+        w->glGetFramebufferAttachmentParameteriv && w->glGenerateMipmap) {
+      w->has_fbo = TRUE;
     }
   }
-
-  if (cc_glglue_glext_supported(w, "GL_EXT_framebuffer_object")) {
+  
+  /* Fall back to EXT framebuffer objects if ARB version not available */
+  if (!w->has_fbo && cc_glglue_glext_supported(w, "GL_EXT_framebuffer_object")) {
+    
+    /* Load EXT framebuffer functions */
     w->glIsRenderbuffer = (COIN_PFNGLISRENDERBUFFERPROC) cc_glglue_getprocaddress(w, "glIsRenderbufferEXT");
     w->glBindRenderbuffer = (COIN_PFNGLBINDRENDERBUFFERPROC) cc_glglue_getprocaddress(w, "glBindRenderbufferEXT");
     w->glDeleteRenderbuffers = (COIN_PFNGLDELETERENDERBUFFERSPROC)cc_glglue_getprocaddress(w, "glDeleteRenderbuffersEXT");
@@ -1917,16 +1944,20 @@ glglue_resolve_symbols(cc_glglue * w)
     w->glFramebufferRenderbuffer = (COIN_PFNGLFRAMEBUFFERRENDERBUFFERPROC)cc_glglue_getprocaddress(w, "glFramebufferRenderbufferEXT");
     w->glGetFramebufferAttachmentParameteriv = (COIN_PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC)
       cc_glglue_getprocaddress(w, "glGetFramebufferAttachmentParameterivEXT");
-
-    if (!w->glIsRenderbuffer || !w->glBindRenderbuffer || !w->glDeleteRenderbuffers ||
-        !w->glGenRenderbuffers || !w->glRenderbufferStorage || !w->glGetRenderbufferParameteriv ||
-        !w->glIsFramebuffer || !w->glBindFramebuffer || !w->glDeleteFramebuffers ||
-        !w->glGenFramebuffers || !w->glCheckFramebufferStatus || !w->glFramebufferTexture1D ||
-        !w->glFramebufferTexture2D || !w->glFramebufferTexture3D || !w->glFramebufferRenderbuffer ||
-        !w->glGetFramebufferAttachmentParameteriv || !w->glGenerateMipmap) {
-      w->has_fbo = FALSE;
+    
+    /* Load glGenerateMipmap for EXT version if not already loaded */
+    if (!w->glGenerateMipmap) {
+      w->glGenerateMipmap = (COIN_PFNGLGENERATEMIPMAPPROC)
+        cc_glglue_getprocaddress(w, "glGenerateMipmapEXT");
     }
-    else {
+
+    /* Check if all EXT functions were loaded successfully */
+    if (w->glIsRenderbuffer && w->glBindRenderbuffer && w->glDeleteRenderbuffers &&
+        w->glGenRenderbuffers && w->glRenderbufferStorage && w->glGetRenderbufferParameteriv &&
+        w->glIsFramebuffer && w->glBindFramebuffer && w->glDeleteFramebuffers &&
+        w->glGenFramebuffers && w->glCheckFramebufferStatus && w->glFramebufferTexture1D &&
+        w->glFramebufferTexture2D && w->glFramebufferTexture3D && w->glFramebufferRenderbuffer &&
+        w->glGetFramebufferAttachmentParameteriv && w->glGenerateMipmap) {
       w->has_fbo = TRUE;
     }
   }
