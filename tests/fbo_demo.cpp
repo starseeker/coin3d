@@ -20,8 +20,7 @@
 // For now, we'll use a simple software-based context since OSMesa might not be available
 // This demonstrates the FBO functionality with regular OpenGL
 
-#define COIN_INTERNAL
-#include "../src/glue/glp.h"
+#include "utils/internal_glue.h"
 #include <Inventor/SoDB.h>
 #include <Inventor/nodes/SoCube.h>
 #include <Inventor/nodes/SoSeparator.h>

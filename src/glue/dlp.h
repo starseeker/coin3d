@@ -34,7 +34,11 @@
 \**************************************************************************/
 
 /* Functions internal to the library, related to the dynamic linking
-   interface. */
+   interface. 
+   
+   This header consolidates functionality from src/C/glue/dl.h which was
+   previously part of the public API. The functionality has been moved to
+   internal implementation details to reduce the public API footprint. */
 
 /* ********************************************************************** */
 

@@ -46,8 +46,7 @@
 
 #include <OSMesa/osmesa.h>
 #include <OSMesa/gl.h>
-#define COIN_INTERNAL
-#include "../src/glue/glp.h"
+#include "internal_glue.h"
 #include <memory>
 #include <vector>
 #include <string>

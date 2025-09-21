@@ -33,6 +33,16 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
+/* This header consolidates all OpenGL glue functionality that was previously
+   exposed in public headers include/Inventor/C/glue/gl.h and src/C/glue/gl.h.
+   
+   The public API has been moved to internal implementation details to reduce 
+   the public API footprint and eliminate code duplication. The functionality
+   remains the same but is now accessible only to internal library code.
+   
+   External applications should use the high-level Coin3D APIs instead of
+   directly accessing these low-level OpenGL wrapper functions. */
+
 #ifndef COIN_INTERNAL
 #error this is a private header file
 #endif /* ! COIN_INTERNAL */

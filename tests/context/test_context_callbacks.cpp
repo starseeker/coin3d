@@ -1,5 +1,4 @@
-#define COIN_INTERNAL
-#include "../src/glue/glp.h"
+#include "../utils/internal_glue.h"
 #include <Inventor/SoDB.h>
 #include <catch2/catch_test_macros.hpp>
 
