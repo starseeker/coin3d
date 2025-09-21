@@ -1,0 +1,977 @@
+/coin3d/src/C/CoinTidbits.cpp: In function ‘SbBool coin_locale_set_portable(cc_string*)’:
+/coin3d/src/C/CoinTidbits.cpp:885:17: warning: variable ‘loc’ set but not used [-Wunused-but-set-variable]
+  885 |     const char* loc;
+      |                 ^~~
+/coin3d/src/C/CoinTidbits.cpp: In function ‘void coin_locale_reset(cc_string*)’:
+/coin3d/src/C/CoinTidbits.cpp:902:17: warning: unused variable ‘l’ [-Wunused-variable]
+  902 |     const char* l = setlocale(LC_NUMERIC, cc_string_get_text(storedold));
+      |                 ^
+/coin3d/src/C/CoinTidbits.cpp: At global scope:
+/coin3d/src/C/CoinTidbits.cpp:138:12: warning: ‘int coin_common_vsnprintf(int (*)(char*, size_t, const char*, __va_list_tag*), char*, size_t, const char*, __va_list_tag*)’ defined but not used [-Wunused-function]
+  138 | static int coin_common_vsnprintf(func_vsnprintf* func,
+      |            ^~~~~~~~~~~~~~~~~~~~~
+In file included from /coin3d/include/Inventor/SoPath.h:37,
+                 from /coin3d/include/Inventor/SoFullPath.h:36,
+                 from /coin3d/include/Inventor/misc/SoTempPath.h:36,
+                 from /coin3d/include/Inventor/actions/SoAction.h:38,
+                 from /coin3d/include/Inventor/actions/SoSimplifyAction.h:36,
+                 from /coin3d/include/Inventor/actions/SoReorganizeAction.h:36,
+                 from /coin3d/src/actions/SoReorganizeAction.cpp:250:
+In member function ‘void SbList<Type>::grow(int) [with Type = bool]’,
+    inlined from ‘void SbList<Type>::append(Type) [with Type = bool]’ at /coin3d/include/Inventor/lists/SbList.h:122:59,
+    inlined from ‘SbBool SoReorganizeActionP::initShape(SoCallbackAction*)’ at /coin3d/src/actions/SoReorganizeAction.cpp:624:29:
+/coin3d/include/Inventor/lists/SbList.h:248:46: warning: array subscript 0 is outside array bounds of ‘bool [0]’ [-Warray-bounds=]
+  248 |     for (int i = 0; i < n; i++) newbuffer[i] = this->itembuffer[i];
+      |                                 ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~
+/coin3d/include/Inventor/lists/SbList.h:246:24: note: object of size 0 allocated by ‘operator new []’
+  246 |     Type * newbuffer = new Type[this->itembuffersize];
+      |                        ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/coin3d/src/base/rbptree.cpp: In function ‘void rbptree_delete_fixup(cc_rbptree*, cc_rbptree_node*)’:
+/coin3d/src/base/rbptree.cpp:269:26: warning: variable ‘nil’ set but not used [-Wunused-but-set-variable]
+  269 |   cc_rbptree_node * w, * nil;
+      |                          ^~~
+/coin3d/src/base/SbBSPTree.cpp: In member function ‘void coin_bspnode::split()’:
+/coin3d/src/base/SbBSPTree.cpp:273:9: warning: unused variable ‘mid’ [-Wunused-variable]
+  273 |   float mid = (box.getMin()[dim] + box.getMax()[dim]) / 2.0f;
+      |         ^~~
+In file included from /coin3d/include/Inventor/SbHeap.h:37,
+                 from /coin3d/src/base/SbHeap.cpp:69:
+In member function ‘void SbList<Type>::grow(int) [with Type = void*]’,
+    inlined from ‘void SbList<Type>::append(Type) [with Type = void*]’ at /coin3d/include/Inventor/lists/SbList.h:122:59,
+    inlined from ‘void SbHeap::emptyHeap()’ at /coin3d/src/base/SbHeap.cpp:104:20:
+/coin3d/include/Inventor/lists/SbList.h:248:46: warning: array subscript 0 is outside array bounds of ‘void* [0]’ [-Warray-bounds=]
+  248 |     for (int i = 0; i < n; i++) newbuffer[i] = this->itembuffer[i];
+      |                                 ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~
+/coin3d/include/Inventor/lists/SbList.h:246:24: note: object of size 0 allocated by ‘operator new []’
+  246 |     Type * newbuffer = new Type[this->itembuffersize];
+      |                        ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/coin3d/src/base/SbDPViewVolume.cpp: In member function ‘double SbDPViewVolume::getWorldToScreenScale(const SbVec3d&, double) const’:
+/coin3d/src/base/SbDPViewVolume.cpp:621:12: warning: unused variable ‘result’ [-Wunused-variable]
+  621 |     SbBool result = p.intersect(tl, tangentpt);
+      |            ^~~~~~
+/coin3d/src/caches/SoNormalCache.cpp: In member function ‘void SoNormalCache::generatePerFace(const SbVec3f*, unsigned int, const int32_t*, int, SbBool)’:
+/coin3d/src/caches/SoNormalCache.cpp:467:19: warning: unused variable ‘cstart’ [-Wunused-variable]
+  467 |   const int32_t * cstart = cind;
+      |                   ^~~~~~
+/coin3d/src/caches/SoNormalCache.cpp: In member function ‘void SoNormalCache::generatePerFaceStrip(const SbVec3f*, unsigned int, const int32_t*, int, SbBool)’:
+/coin3d/src/caches/SoNormalCache.cpp:622:19: warning: unused variable ‘cstart’ [-Wunused-variable]
+  622 |   const int32_t * cstart = cind;
+      |                   ^~~~~~
+/coin3d/src/caches/SoNormalCache.cpp: In member function ‘void SoNormalCache::generatePerStrip(const SbVec3f*, unsigned int, const int32_t*, int, SbBool)’:
+/coin3d/src/caches/SoNormalCache.cpp:781:19: warning: unused variable ‘cstart’ [-Wunused-variable]
+  781 |   const int32_t * cstart = cind;
+      |                   ^~~~~~
+/coin3d/src/draggers/SoDirectionalLightDragger.cpp: In constructor ‘SoDirectionalLightDragger::SoDirectionalLightDragger()’:
+/coin3d/src/draggers/SoDirectionalLightDragger.cpp:202:14: warning: unused variable ‘pdragger’ [-Wunused-variable]
+  202 |   SoDragger *pdragger = SO_GET_ANY_PART(this, "translator", SoDragPointDragger);
+      |              ^~~~~~~~
+/coin3d/src/draggers/SoDirectionalLightDragger.cpp:204:14: warning: unused variable ‘sdragger’ [-Wunused-variable]
+  204 |   SoDragger *sdragger = SO_GET_ANY_PART(this, "rotator", SoDragPointDragger);
+      |              ^~~~~~~~
+/coin3d/src/draggers/SoPointLightDragger.cpp: In constructor ‘SoPointLightDragger::SoPointLightDragger()’:
+/coin3d/src/draggers/SoPointLightDragger.cpp:157:14: warning: unused variable ‘pdragger’ [-Wunused-variable]
+  157 |   SoDragger *pdragger = SO_GET_ANY_PART(this, "translator", SoDragPointDragger);
+      |              ^~~~~~~~
+/coin3d/src/draggers/SoSpotLightDragger.cpp: In constructor ‘SoSpotLightDragger::SoSpotLightDragger()’:
+/coin3d/src/draggers/SoSpotLightDragger.cpp:234:14: warning: unused variable ‘pdragger’ [-Wunused-variable]
+  234 |   SoDragger *pdragger = SO_GET_ANY_PART(this, "translator", SoDragPointDragger);
+      |              ^~~~~~~~
+/coin3d/src/draggers/SoSpotLightDragger.cpp:236:14: warning: unused variable ‘sdragger’ [-Wunused-variable]
+  236 |   SoDragger *sdragger = SO_GET_ANY_PART(this, "rotator", SoDragPointDragger);
+      |              ^~~~~~~~
+/coin3d/src/elements/SoTextureCombineElement.cpp: In copy constructor ‘SoTextureCombineElement::UnitData::UnitData(const SoTextureCombineElement::UnitData&)’:
+/coin3d/src/elements/SoTextureCombineElement.cpp:317:9: warning: ‘void* memcpy(void*, const void*, size_t)’ writing to an object of non-trivially copyable type ‘class SoTextureCombineElement::UnitData’; use copy-assignment or copy-initialization instead [-Wclass-memaccess]
+  317 |   memcpy(this, &org, sizeof(*this));
+      |   ~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /coin3d/src/elements/SoTextureCombineElement.cpp:46:
+/coin3d/include/Inventor/elements/SoTextureCombineElement.h:125:9: note: ‘class SoTextureCombineElement::UnitData’ declared here
+  125 |   class UnitData {
+      |         ^~~~~~~~
+/coin3d/src/elements/GL/SoGLCacheContextElement.cpp:90:15: warning: ‘glcache_mutex’ defined but not used [-Wunused-variable]
+   90 | static void * glcache_mutex;
+      |               ^~~~~~~~~~~~~
+/coin3d/src/elements/GL/SoGLClipPlaneElement.cpp: In static member function ‘static int SoGLClipPlaneElement::getMaxGLPlanes()’:
+/coin3d/src/elements/GL/SoGLClipPlaneElement.cpp:121:10: warning: unused variable ‘err’ [-Wunused-variable]
+  121 |   GLenum err = sogl_glerror_debugging() ? glGetError() : GL_NO_ERROR;
+      |          ^~~
+/coin3d/src/elements/GL/SoGLLightIdElement.cpp: In static member function ‘static int32_t SoGLLightIdElement::getMaxGLSources()’:
+/coin3d/src/elements/GL/SoGLLightIdElement.cpp:184:10: warning: unused variable ‘err’ [-Wunused-variable]
+  184 |   GLenum err = sogl_glerror_debugging() ? glGetError() : GL_NO_ERROR;
+      |          ^~~
+/coin3d/src/elements/GL/SoGLVertexAttributeElement.cpp: In function ‘void enable_vbo(const char* const&, SoVertexAttributeData* const&, void*)’:
+/coin3d/src/elements/GL/SoGLVertexAttributeElement.cpp:208:31: warning: unused variable ‘coords’ [-Wunused-variable]
+  208 |   const SoCoordinateElement * coords =
+      |                               ^~~~~~
+/coin3d/src/engines/SoEngine.cpp: In member function ‘SoEngine* SoEngine::copy() const’:
+/coin3d/src/engines/SoEngine.cpp:472:14: warning: unused variable ‘dummy’ [-Wunused-variable]
+  472 |   SoEngine * dummy = coin_assert_cast<SoEngine *>(SoFieldContainer::findCopy(this, TRUE));
+      |              ^~~~~
+In file included from /coin3d/src/engines/evaluator_tab.cpp:2186:
+/coin3d/src/engines/so_eval.ic:195: warning: "YY_NULL" redefined
+  195 | #define YY_NULL 0
+      | 
+/coin3d/src/engines/evaluator_tab.cpp:140: note: this is the location of the previous definition
+  140 | #   define YY_NULL nullptr
+      | 
+/coin3d/src/engines/so_eval.ic:1535:17: warning: ‘void yyunput(int, char*)’ defined but not used [-Wunused-function]
+ 1535 |     static void yyunput (int c, char * yy_bp )
+      |                 ^~~~~~~
+/coin3d/src/engines/SoConvertAll.cpp: In function ‘void register_convertfunc(void (*)(SoField*, SoField*), SoType, SoType)’:
+/coin3d/src/engines/SoConvertAll.cpp:666:10: warning: unused variable ‘nonexist’ [-Wunused-variable]
+  666 |   SbBool nonexist = convertfunc_dict->put(val, f);
+      |          ^~~~~~~~
+/coin3d/src/fields/SoField.cpp: In member function ‘void SoConnectStorage::removeConverter(const void*)’:
+/coin3d/src/fields/SoField.cpp:233:12: warning: unused variable ‘ok’ [-Wunused-variable]
+  233 |     size_t ok = this->maptoconverter.erase(item);
+      |            ^~
+/coin3d/src/fields/SoField.cpp: In static member function ‘static void* SoFieldP::hashRealloc(void*, size_t)’:
+/coin3d/src/fields/SoField.cpp:430:12: warning: unused variable ‘isok’ [-Wunused-variable]
+  430 |     size_t isok = SoFieldP::ptrhash->erase(static_cast<char *>(bufptr));
+      |            ^~~~
+/coin3d/src/fields/SoField.cpp:414:10: warning: unused variable ‘ok’ [-Wunused-variable]
+  414 |   SbBool ok = SoFieldP::ptrhash->get(static_cast<char *>(bufptr), bufptrptr);
+      |          ^~
+/coin3d/src/fields/SoField.cpp: In member function ‘void SoField::get(SbString&)’:
+/coin3d/src/fields/SoField.cpp:1382:10: warning: unused variable ‘ok’ [-Wunused-variable]
+ 1382 |   SbBool ok = SoFieldP::getReallocHash()->put(initbuffer, &bufferptr);
+      |          ^~
+/coin3d/src/fields/SoField.cpp:1409:10: warning: unused variable ‘isok’ [-Wunused-variable]
+ 1409 |   size_t isok = SoFieldP::getReallocHash()->erase(bufferptr ? bufferptr : initbuffer);
+      |          ^~~~
+/coin3d/src/fields/SoField.cpp: In member function ‘SoFieldContainer* SoField::resolveWriteConnection(SbName&) const’:
+/coin3d/src/fields/SoField.cpp:2450:12: warning: unused variable ‘ok’ [-Wunused-variable]
+ 2450 |     SbBool ok = fc->getFieldName(fieldmaster, mastername);
+      |            ^~
+/coin3d/src/fields/SoField.cpp:2457:12: warning: unused variable ‘ok’ [-Wunused-variable]
+ 2457 |     SbBool ok =
+      |            ^~
+/coin3d/src/fields/SoField.cpp: At global scope:
+/coin3d/src/fields/SoField.cpp:162:15: warning: ‘sofield_mutex’ defined but not used [-Wunused-variable]
+  162 | static void * sofield_mutex = NULL;
+      |               ^~~~~~~~~~~~~
+/coin3d/src/fields/SoFieldContainer.cpp: In static member function ‘static void SoFieldContainer::addCopy(const SoFieldContainer*, const SoFieldContainer*)’:
+/coin3d/src/fields/SoFieldContainer.cpp:879:10: warning: variable ‘s’ set but not used [-Wunused-but-set-variable]
+  879 |   SbBool s = copiedinstances->put(orig, copy);
+      |          ^
+/coin3d/src/fields/SoFieldContainer.cpp: In static member function ‘static SoFieldContainer* SoFieldContainer::findCopy(const SoFieldContainer*, SbBool)’:
+/coin3d/src/fields/SoFieldContainer.cpp:988:12: warning: variable ‘chk’ set but not used [-Wunused-but-set-variable]
+  988 |     SbBool chk = contentscopied->get(orig, copied);
+      |            ^~~
+/coin3d/src/fields/SoFieldContainer.cpp:940:29: warning: unused variable ‘copiedinstances’ [-Wunused-variable]
+  940 |   SoFieldContainerCopyMap * copiedinstances = (*(copydict->copiedinstancestack))[0];
+      |                             ^~~~~~~~~~~~~~~
+/coin3d/src/fields/SoFieldContainer.cpp: In member function ‘virtual void SoFieldContainer::getFieldsMemorySize(size_t&, size_t&) const’:
+/coin3d/src/fields/SoFieldContainer.cpp:1099:14: warning: variable ‘sftype’ set but not used [-Wunused-but-set-variable]
+ 1099 |       SoType sftype = sfield->getTypeId();
+      |              ^~~~~~
+/coin3d/src/fields/SoMField.cpp: In member function ‘virtual void SoMField::deleteValues(int, int)’:
+/coin3d/src/fields/SoMField.cpp:691:7: warning: unused variable ‘end’ [-Wunused-variable]
+  691 |   int end = start + numarg; // First element behind the delete block.
+      |       ^~~
+/coin3d/src/fields/SoMField.cpp: At global scope:
+/coin3d/src/fields/SoMField.cpp:293:15: warning: ‘somfield_mutex’ defined but not used [-Wunused-variable]
+  293 | static void * somfield_mutex = NULL;
+      |               ^~~~~~~~~~~~~~
+/coin3d/src/fonts/glyph.cpp: In function ‘void cc_glyph_unref(cc_dict*, cc_glyph*, void (*)(cc_glyph*))’:
+/coin3d/src/fonts/glyph.cpp:59:7: warning: variable ‘ret’ set but not used [-Wunused-but-set-variable]
+   59 |   int ret;
+      |       ^~~
+In file included from /coin3d/src/glue/simage_wrapper.cpp:42:
+/coin3d/src/glue/toojpeg.h:92:36: warning: integer overflow in expression of type ‘int’ results in ‘-131071’ [-Woverflow]
+   92 |   const auto MaxPixels  = MaxWidth * MaxHeight;
+      |                           ~~~~~~~~~^~~~~~~~~~~
+/coin3d/src/glue/GLUWrapper.cpp:80:21: warning: ‘GLU_libhandle’ defined but not used [-Wunused-variable]
+   80 | static cc_libhandle GLU_libhandle = NULL;
+      |                     ^~~~~~~~~~~~~
+/coin3d/src/io/SoInput_FileInfo.cpp: In member function ‘SbBool SoInput_FileInfo::readInteger(int32_t&)’:
+/coin3d/src/io/SoInput_FileInfo.cpp:463:10: warning: variable ‘minus’ set but not used [-Wunused-but-set-variable]
+  463 |   SbBool minus = FALSE;
+      |          ^~~~~
+/coin3d/src/manips/SoDirectionalLightManip.cpp: In member function ‘SbBool SoDirectionalLightManip::replaceNode(SoPath*)’:
+/coin3d/src/manips/SoDirectionalLightManip.cpp:200:12: warning: unused variable ‘tail’ [-Wunused-variable]
+  200 |   SoNode * tail = path->getTail();
+      |            ^~~~
+In file included from /coin3d/src/io/SoOutput.cpp:92:
+In member function ‘void SbList<Type>::grow(int) [with Type = SoOutputROUTEList*]’,
+    inlined from ‘void SbList<Type>::append(Type) [with Type = SoOutputROUTEList*]’ at /coin3d/include/Inventor/lists/SbList.h:122:59,
+    inlined from ‘virtual void SoOutput::reset()’ at /coin3d/src/io/SoOutput.cpp:1177:35:
+/coin3d/include/Inventor/lists/SbList.h:248:46: warning: array subscript 0 is outside array bounds of ‘SoOutputROUTEList* [0]’ [-Warray-bounds=]
+  248 |     for (int i = 0; i < n; i++) newbuffer[i] = this->itembuffer[i];
+      |                                 ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~
+/coin3d/include/Inventor/lists/SbList.h:246:24: note: object of size 0 allocated by ‘operator new []’
+  246 |     Type * newbuffer = new Type[this->itembuffersize];
+      |                        ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In member function ‘void SbList<Type>::grow(int) [with Type = SbHash<const char*, void*>*]’,
+    inlined from ‘void SbList<Type>::append(Type) [with Type = SbHash<const char*, void*>*]’ at /coin3d/include/Inventor/lists/SbList.h:122:59,
+    inlined from ‘virtual void SoOutput::reset()’ at /coin3d/src/io/SoOutput.cpp:1184:33:
+/coin3d/include/Inventor/lists/SbList.h:248:46: warning: array subscript 0 is outside array bounds of ‘SbHash<const char*, void*>* [0]’ [-Warray-bounds=]
+  248 |     for (int i = 0; i < n; i++) newbuffer[i] = this->itembuffer[i];
+      |                                 ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~
+/coin3d/include/Inventor/lists/SbList.h:246:24: note: object of size 0 allocated by ‘operator new []’
+  246 |     Type * newbuffer = new Type[this->itembuffersize];
+      |                        ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/coin3d/src/io/SoWriterefCounter.cpp: In static member function ‘static void SoWriterefCounter::create(SoOutput*, SoOutput*)’:
+/coin3d/src/io/SoWriterefCounter.cpp:217:10: warning: unused variable ‘ret’ [-Wunused-variable]
+  217 |   SbBool ret = SoWriterefCounterP::outputdict->put(out, inst);
+      |          ^~~
+/coin3d/src/io/SoWriterefCounter.cpp: In static member function ‘static SoWriterefCounter* SoWriterefCounter::instance(SoOutput*)’:
+/coin3d/src/io/SoWriterefCounter.cpp:268:16: warning: unused variable ‘ok’ [-Wunused-variable]
+  268 |   const SbBool ok = SoWriterefCounterP::outputdict->get(out, inst);
+      |                ^~
+/coin3d/src/glue/gl.cpp: In function ‘SbBool glglue_allow_newer_opengl(const cc_glglue*)’:
+/coin3d/src/glue/gl.cpp:410:20: warning: comparison of constant ‘-1’ with boolean expression is always false [-Wbool-compare]
+  410 |   if (fullindirect == -1) {
+      |       ~~~~~~~~~~~~~^~~~~
+/coin3d/src/glue/gl.cpp:414:16: warning: comparison of constant ‘-1’ with boolean expression is always false [-Wbool-compare]
+  414 |   if (force1_0 == -1) {
+      |       ~~~~~~~~~^~~~~
+/coin3d/src/glue/gl.cpp: In function ‘void* cc_glglue_getprocaddress(const cc_glglue*, const char*)’:
+/coin3d/src/glue/gl.cpp:591:1: warning: label ‘returnpoint’ defined but not used [-Wunused-label]
+  591 | returnpoint:
+      | ^~~~~~~~~~~
+/coin3d/src/glue/gl.cpp: In function ‘const cc_glglue* cc_glglue_instance(int)’:
+/coin3d/src/glue/gl.cpp:2203:20: warning: unused variable ‘current_ctx’ [-Wunused-variable]
+ 2203 |       const void * current_ctx = coin_gl_current_context();
+      |                    ^~~~~~~~~~~
+/coin3d/src/misc/SoBaseP.cpp: In static member function ‘static void SoBase::PImpl::removeName2Obj(SoBase*, const char*)’:
+/coin3d/src/misc/SoBaseP.cpp:117:10: warning: unused variable ‘found’ [-Wunused-variable]
+  117 |   SbBool found = (iter != SoBase::PImpl::name2obj->const_end());
+      |          ^~~~~
+/coin3d/src/misc/SoCompactPathList.cpp: In constructor ‘SoCompactPathList::SoCompactPathList(const SoPathList&)’:
+/coin3d/src/misc/SoCompactPathList.cpp:66:12: warning: unused variable ‘head’ [-Wunused-variable]
+   66 |   SoNode * head = FULL_PATH(list, 0)->getHead();
+      |            ^~~~
+In file included from /coin3d/src/fonts/freetype.cpp:48:
+/coin3d/src/fonts/struetype.h: In function ‘int stt_FindGlyphIndex(const stt_fontinfo*, int)’:
+/coin3d/src/fonts/struetype.h:1607:15: warning: unused variable ‘data’ [-Wunused-variable]
+ 1607 |    stt_uint8 *data = info->data;
+      |               ^~~~
+/coin3d/src/fonts/struetype.h: At global scope:
+/coin3d/src/fonts/struetype.h:1355:18: warning: ‘stt_int32 stt__safe_ttLONG(const stt_fontinfo*, const unsigned char*)’ defined but not used [-Wunused-function]
+ 1355 | static stt_int32 stt__safe_ttLONG(const stt_fontinfo *info, const unsigned char *p)
+      |                  ^~~~~~~~~~~~~~~~
+/coin3d/src/fonts/struetype.h:1349:19: warning: ‘stt_uint32 stt__safe_ttULONG(const stt_fontinfo*, const unsigned char*)’ defined but not used [-Wunused-function]
+ 1349 | static stt_uint32 stt__safe_ttULONG(const stt_fontinfo *info, const unsigned char *p)
+      |                   ^~~~~~~~~~~~~~~~~
+/coin3d/src/fonts/struetype.h:1337:19: warning: ‘stt_uint16 stt__safe_ttUSHORT(const stt_fontinfo*, const unsigned char*)’ defined but not used [-Wunused-function]
+ 1337 | static stt_uint16 stt__safe_ttUSHORT(const stt_fontinfo *info, const unsigned char *p)
+      |                   ^~~~~~~~~~~~~~~~~~
+/coin3d/src/fonts/struetype.h:1331:17: warning: ‘stt_int8 stt__safe_ttCHAR(const stt_fontinfo*, const unsigned char*)’ defined but not used [-Wunused-function]
+ 1331 | static stt_int8 stt__safe_ttCHAR(const stt_fontinfo *info, const unsigned char *p)
+      |                 ^~~~~~~~~~~~~~~~
+/coin3d/src/fonts/struetype.h:1325:18: warning: ‘stt_uint8 stt__safe_ttBYTE(const stt_fontinfo*, const unsigned char*)’ defined but not used [-Wunused-function]
+ 1325 | static stt_uint8 stt__safe_ttBYTE(const stt_fontinfo *info, const unsigned char *p)
+      |                  ^~~~~~~~~~~~~~~~
+In file included from /coin3d/src/misc/SoConfigSettings.cpp:5:
+/coin3d/src/misc/SbHash.h: In instantiation of ‘Type& SbHash<Key, Type>::operator[](const Key&) [with Key = SbString; Type = SbString]’:
+/coin3d/src/misc/SoConfigSettings.cpp:76:49:   required from here
+/coin3d/src/misc/SbHash.h:356:14: warning: variable ‘ok’ set but not used [-Wunused-but-set-variable]
+  356 |       SbBool ok;
+      |              ^~
+/coin3d/src/misc/SoConfigSettings.cpp:24:10: warning: ‘SbBool {anonymous}::isValidOption(const SbString&)’ defined but not used [-Wunused-function]
+   24 |   SbBool isValidOption(const SbString & option)
+      |          ^~~~~~~~~~~~~
+In file included from /coin3d/src/misc/SoConfigSettings.cpp:2:
+In member function ‘SbString& SbString::operator=(const char*)’,
+    inlined from ‘void SoConfigSettings::reinitialize()’ at /coin3d/src/misc/SoConfigSettings.cpp:76:72:
+/coin3d/include/Inventor/SbString.h:102:23: warning: ‘obj’ may be used uninitialized [-Wmaybe-uninitialized]
+  102 |   { cc_string_set_text(&this->str, s); return *this; }
+      |     ~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~
+/coin3d/src/misc/SbHash.h: In member function ‘void SoConfigSettings::reinitialize()’:
+/coin3d/src/misc/SbHash.h:353:12: note: ‘obj’ was declared here
+  353 |     Type * obj;
+      |            ^~~
+/coin3d/src/misc/SoContextHandler.cpp: In static member function ‘static void SoContextHandler::removeContextDestructionCallback(void (*)(uint32_t, void*), void*)’:
+/coin3d/src/misc/SoContextHandler.cpp:261:10: warning: unused variable ‘didremove’ [-Wunused-variable]
+  261 |   size_t didremove = socontexthandler_hashlist->erase(item);
+      |          ^~~~~~~~~
+In file included from /coin3d/src/misc/SoContextHandler.cpp:68:
+/coin3d/src/misc/SbHash.h: In instantiation of ‘Type& SbHash<Key, Type>::operator[](const Key&) [with Key = socontexthandler_cbitem; Type = unsigned int]’:
+/coin3d/src/misc/SoContextHandler.cpp:242:36:   required from here
+/coin3d/src/misc/SbHash.h:356:14: warning: variable ‘ok’ set but not used [-Wunused-but-set-variable]
+  356 |       SbBool ok;
+      |              ^~
+/coin3d/src/misc/SoContextHandler.cpp: At global scope:
+/coin3d/src/misc/SoContextHandler.cpp:126:15: warning: ‘socontexthandler_mutex’ defined but not used [-Wunused-variable]
+  126 | static void * socontexthandler_mutex;
+      |               ^~~~~~~~~~~~~~~~~~~~~~
+In member function ‘SbBool SbHash<Key, Type>::put(const Key&, const Type&) [with Key = socontexthandler_cbitem; Type = unsigned int]’,
+    inlined from ‘Type& SbHash<Key, Type>::operator[](const Key&) [with Key = socontexthandler_cbitem; Type = unsigned int]’ at /coin3d/src/misc/SbHash.h:357:15,
+    inlined from ‘static void SoContextHandler::addContextDestructionCallback(void (*)(uint32_t, void*), void*)’ at /coin3d/src/misc/SoContextHandler.cpp:242:36:
+/coin3d/src/misc/SbHash.h:461:20: warning: ‘dummy’ may be used uninitialized [-Wmaybe-uninitialized]
+  461 |         entry->obj = obj;
+      |         ~~~~~~~~~~~^~~~~
+/coin3d/src/misc/SbHash.h: In static member function ‘static void SoContextHandler::addContextDestructionCallback(void (*)(uint32_t, void*), void*)’:
+/coin3d/src/misc/SbHash.h:355:12: note: ‘dummy’ was declared here
+  355 |       Type dummy;
+      |            ^~~~~
+/coin3d/src/misc/SoContextHandler.cpp:242:38: warning: ‘obj’ may be used uninitialized [-Wmaybe-uninitialized]
+  242 |   (*socontexthandler_hashlist)[item] = item.idx;
+/coin3d/src/misc/SbHash.h:353:12: note: ‘obj’ was declared here
+  353 |     Type * obj;
+      |            ^~~
+/coin3d/src/misc/SoGlyph.cpp: In member function ‘const SbBox2f& SoGlyph::getBoundingBox() const’:
+/coin3d/src/misc/SoGlyph.cpp:317:13: warning: variable ‘max’ set but not used [-Wunused-but-set-variable]
+  317 |     SbVec2f max = PRIVATE(this)->bbox.getMax();
+      |             ^~~
+In file included from /coin3d/include/Inventor/misc/SoLightPath.h:37,
+                 from /coin3d/src/misc/SoLightPath.cpp:46:
+In member function ‘void SbList<Type>::grow(int) [with Type = int]’,
+    inlined from ‘void SbList<Type>::append(Type) [with Type = int]’ at /coin3d/include/Inventor/lists/SbList.h:122:59,
+    inlined from ‘void SoLightPath::setHead(SoNode*)’ at /coin3d/src/misc/SoLightPath.cpp:94:23:
+/coin3d/include/Inventor/lists/SbList.h:248:46: warning: array subscript 0 is outside array bounds of ‘int [0]’ [-Warray-bounds=]
+  248 |     for (int i = 0; i < n; i++) newbuffer[i] = this->itembuffer[i];
+      |                                 ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~
+/coin3d/include/Inventor/lists/SbList.h:246:24: note: object of size 0 allocated by ‘operator new []’
+  246 |     Type * newbuffer = new Type[this->itembuffersize];
+      |                        ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /coin3d/src/misc/SoBaseP.h:36,
+                 from /coin3d/src/misc/SoBase.cpp:87:
+/coin3d/src/misc/SbHash.h: In instantiation of ‘Type& SbHash<Key, Type>::operator[](const Key&) [with Key = const char*; Type = SbPList*]’:
+/coin3d/src/misc/SoBase.cpp:759:36:   required from here
+/coin3d/src/misc/SbHash.h:356:14: warning: variable ‘ok’ set but not used [-Wunused-but-set-variable]
+  356 |       SbBool ok;
+      |              ^~
+/coin3d/src/misc/SbHash.h: In instantiation of ‘Type& SbHash<Key, Type>::operator[](const Key&) [with Key = const SoBase*; Type = const char*]’:
+/coin3d/src/misc/SoBase.cpp:771:31:   required from here
+/coin3d/src/misc/SbHash.h:356:14: warning: variable ‘ok’ set but not used [-Wunused-but-set-variable]
+/coin3d/src/misc/SbHash.h: In instantiation of ‘Type& SbHash<Key, Type>::operator[](const Key&) [with Key = const SoBase*; Type = SoAuditorList*]’:
+/coin3d/src/misc/SoBase.cpp:891:39:   required from here
+/coin3d/src/misc/SbHash.h:356:14: warning: variable ‘ok’ set but not used [-Wunused-but-set-variable]
+In member function ‘Type& SbHash<Key, Type>::operator[](const Key&) [with Key = const char*; Type = SbPList*]’,
+    inlined from ‘static void SoBase::addName(SoBase*, const char*)’ at /coin3d/src/misc/SoBase.cpp:759:36:
+/coin3d/src/misc/SbHash.h:357:15: warning: ‘dummy’ may be used uninitialized [-Wmaybe-uninitialized]
+  357 |       ok = put(key,dummy);
+      |            ~~~^~~~~~~~~~~
+/coin3d/src/misc/SbHash.h: In static member function ‘static void SoBase::addName(SoBase*, const char*)’:
+/coin3d/src/misc/SbHash.h:454:10: note: by argument 3 of type ‘SbPList* const&’ to ‘SbBool SbHash<Key, Type>::put(const Key&, const Type&) [with Key = const char*; Type = SbPList*]’ declared here
+  454 |   SbBool put(const Key & key, const Type & obj)
+      |          ^~~
+/coin3d/src/misc/SbHash.h:355:12: note: ‘dummy’ declared here
+  355 |       Type dummy;
+      |            ^~~~~
+In member function ‘Type& SbHash<Key, Type>::operator[](const Key&) [with Key = const SoBase*; Type = const char*]’,
+    inlined from ‘static void SoBase::addName(SoBase*, const char*)’ at /coin3d/src/misc/SoBase.cpp:771:31:
+/coin3d/src/misc/SbHash.h:357:15: warning: ‘dummy’ may be used uninitialized [-Wmaybe-uninitialized]
+  357 |       ok = put(key,dummy);
+      |            ~~~^~~~~~~~~~~
+/coin3d/src/misc/SbHash.h: In static member function ‘static void SoBase::addName(SoBase*, const char*)’:
+/coin3d/src/misc/SbHash.h:454:10: note: by argument 3 of type ‘const char* const&’ to ‘SbBool SbHash<Key, Type>::put(const Key&, const Type&) [with Key = const SoBase*; Type = const char*]’ declared here
+  454 |   SbBool put(const Key & key, const Type & obj)
+      |          ^~~
+/coin3d/src/misc/SbHash.h:355:12: note: ‘dummy’ declared here
+  355 |       Type dummy;
+      |            ^~~~~
+/coin3d/src/misc/SoBase.cpp:759:38: warning: ‘obj’ may be used uninitialized [-Wmaybe-uninitialized]
+  759 |     (*SoBase::PImpl::name2obj)[name] = l;
+/coin3d/src/misc/SbHash.h:353:12: note: ‘obj’ was declared here
+  353 |     Type * obj;
+      |            ^~~
+/coin3d/src/misc/SoBase.cpp:771:33: warning: ‘obj’ may be used uninitialized [-Wmaybe-uninitialized]
+  771 |   (*SoBase::PImpl::obj2name)[b] = name;
+/coin3d/src/misc/SbHash.h:353:12: note: ‘obj’ was declared here
+  353 |     Type * obj;
+      |            ^~~
+In member function ‘Type& SbHash<Key, Type>::operator[](const Key&) [with Key = const SoBase*; Type = SoAuditorList*]’,
+    inlined from ‘const SoAuditorList& SoBase::getAuditors() const’ at /coin3d/src/misc/SoBase.cpp:891:39:
+/coin3d/src/misc/SbHash.h:357:15: warning: ‘dummy’ may be used uninitialized [-Wmaybe-uninitialized]
+  357 |       ok = put(key,dummy);
+      |            ~~~^~~~~~~~~~~
+/coin3d/src/misc/SbHash.h: In member function ‘const SoAuditorList& SoBase::getAuditors() const’:
+/coin3d/src/misc/SbHash.h:454:10: note: by argument 3 of type ‘SoAuditorList* const&’ to ‘SbBool SbHash<Key, Type>::put(const Key&, const Type&) [with Key = const SoBase*; Type = SoAuditorList*]’ declared here
+  454 |   SbBool put(const Key & key, const Type & obj)
+      |          ^~~
+/coin3d/src/misc/SbHash.h:355:12: note: ‘dummy’ declared here
+  355 |       Type dummy;
+      |            ^~~~~
+/coin3d/src/misc/SoBase.cpp:891:41: warning: ‘obj’ may be used uninitialized [-Wmaybe-uninitialized]
+  891 |     (*SoBase::PImpl::auditordict)[this] = new SoAuditorList;
+/coin3d/src/misc/SbHash.h:353:12: note: ‘obj’ was declared here
+  353 |     Type * obj;
+      |            ^~~
+/coin3d/src/misc/SoDB.cpp: In static member function ‘static SoGroup* SoDB::readAllWrapper(SoInput*, const SoType&)’:
+/coin3d/src/misc/SoDB.cpp:1164:13: warning: unused variable ‘stackdepth’ [-Wunused-variable]
+ 1164 |   const int stackdepth = in->filestack.getLength();
+      |             ^~~~~~~~~~
+/coin3d/src/misc/SoDB.cpp: In static member function ‘static void SoDB::createRoute(SoNode*, const char*, SoNode*, const char*)’:
+/coin3d/src/misc/SoDB.cpp:1542:12: warning: variable ‘ok’ set but not used [-Wunused-but-set-variable]
+ 1542 |     SbBool ok;
+      |            ^~
+/coin3d/src/misc/SoDB.cpp: At global scope:
+/coin3d/src/misc/SoDB.cpp:179:17: warning: ‘a_static_variable’ defined but not used [-Wunused-variable]
+  179 | static uint32_t a_static_variable = 0xdeadbeef;
+      |                 ^~~~~~~~~~~~~~~~~
+In file included from /coin3d/src/misc/SoDB.cpp:112:
+/coin3d/src/misc/systemsanity.icc:17:1: warning: ‘void SoDB_compileTimeAsserts()’ defined but not used [-Wunused-function]
+   17 | SoDB_compileTimeAsserts(void)
+      | ^~~~~~~~~~~~~~~~~~~~~~~
+/coin3d/src/misc/SoDBP.cpp: In function ‘void forward_sprintf(char*, unsigned int, const char*, ...)’:
+/coin3d/src/misc/SoDBP.cpp:63:7: warning: variable ‘len’ set but not used [-Wunused-but-set-variable]
+   63 |   int len = coin_vsnprintf(dst, (unsigned int)(strlen(fmtstr) - 1), fmtstr, args);
+      |       ^~~
+/coin3d/src/misc/SoProto.cpp: In member function ‘SoNode* SoProto::createInstanceRoot(SoProtoInstance*) const’:
+/coin3d/src/misc/SoProto.cpp:867:16: warning: variable ‘ok’ set but not used [-Wunused-but-set-variable]
+  867 |         SbBool ok;
+      |                ^~
+/coin3d/src/misc/SoProto.cpp: At global scope:
+/coin3d/src/misc/SoProto.cpp:86:15: warning: ‘soproto_mutex’ defined but not used [-Wunused-variable]
+   86 | static void * soproto_mutex;
+      |               ^~~~~~~~~~~~~
+/coin3d/src/rendering/SoRenderManager.cpp:1680:1: warning: "/*" within comment [-Wcomment]
+ 1680 | /*!
+      |  
+/coin3d/src/rendering/SoRenderManager.cpp: In member function ‘void SoRenderManager::initStencilBufferForInterleavedStereo()’:
+/coin3d/src/rendering/SoRenderManager.cpp:1071:17: warning: variable ‘oldorigin’ set but not used [-Wunused-but-set-variable]
+ 1071 |   const SbVec2s oldorigin = PRIVATE(this)->stereostencilmaskvp.getViewportOriginPixels();
+      |                 ^~~~~~~~~
+/coin3d/src/rendering/SoOffscreenRenderer.cpp: In member function ‘SbBool SoOffscreenRendererP::renderFromBase(SoBase*)’:
+/coin3d/src/rendering/SoOffscreenRenderer.cpp:881:20: warning: unused variable ‘w’ [-Wunused-variable]
+  881 |             SbBool w = SoOffscreenRendererP::writeToRGB(f, fullsize[0], fullsize[1],
+      |                    ^
+/coin3d/src/rendering/SoOffscreenRenderer.cpp:884:23: warning: unused variable ‘r’ [-Wunused-variable]
+  884 |             const int r = fclose(f);
+      |                       ^
+/coin3d/src/rendering/SoOffscreenRenderer.cpp: In static member function ‘static SbBool SoOffscreenRendererP::writeToRGB(FILE*, unsigned int, unsigned int, unsigned int, const uint8_t*)’:
+/coin3d/src/rendering/SoOffscreenRenderer.cpp:1117:16: warning: unused variable ‘wrote’ [-Wunused-variable]
+ 1117 |   const size_t wrote = fwrite(buf, 1, BUFSIZE, fp);
+      |                ^~~~~
+In file included from /coin3d/src/rendering/SoGLDriverDatabase.cpp:63:
+/coin3d/src/misc/SbHash.h: In instantiation of ‘Type& SbHash<Key, Type>::operator[](const Key&) [with Key = const char*; Type = bool (*)(const cc_glglue*)]’:
+/coin3d/src/rendering/SoGLDriverDatabase.cpp:217:64:   required from here
+/coin3d/src/misc/SbHash.h:356:14: warning: variable ‘ok’ set but not used [-Wunused-but-set-variable]
+  356 |       SbBool ok;
+      |              ^~
+In member function ‘SbBool SbHash<Key, Type>::put(const Key&, const Type&) [with Key = const char*; Type = bool (*)(const cc_glglue*)]’,
+    inlined from ‘Type& SbHash<Key, Type>::operator[](const Key&) [with Key = const char*; Type = bool (*)(const cc_glglue*)]’ at /coin3d/src/misc/SbHash.h:357:15:
+/coin3d/src/misc/SbHash.h:461:20: warning: ‘dummy’ may be used uninitialized [-Wmaybe-uninitialized]
+  461 |         entry->obj = obj;
+      |         ~~~~~~~~~~~^~~~~
+/coin3d/src/misc/SbHash.h: In member function ‘Type& SbHash<Key, Type>::operator[](const Key&) [with Key = const char*; Type = bool (*)(const cc_glglue*)]’:
+/coin3d/src/misc/SbHash.h:355:12: note: ‘dummy’ was declared here
+  355 |       Type dummy;
+      |            ^~~~~
+/coin3d/src/misc/SbHash.h:362:13: warning: ‘obj’ may be used uninitialized [-Wmaybe-uninitialized]
+  362 |     return *obj;
+      |             ^~~
+/coin3d/src/misc/SbHash.h:353:12: note: ‘obj’ was declared here
+  353 |     Type * obj;
+      |            ^~~
+In member function ‘SbBool SbHash<Key, Type>::put(const Key&, const Type&) [with Key = const char*; Type = bool (*)(const cc_glglue*)]’,
+    inlined from ‘Type& SbHash<Key, Type>::operator[](const Key&) [with Key = const char*; Type = bool (*)(const cc_glglue*)]’ at /coin3d/src/misc/SbHash.h:357:15,
+    inlined from ‘void SoGLDriverDatabaseP::initFunctions()’ at /coin3d/src/rendering/SoGLDriverDatabase.cpp:217:64:
+/coin3d/src/misc/SbHash.h:461:20: warning: ‘dummy’ may be used uninitialized [-Wmaybe-uninitialized]
+  461 |         entry->obj = obj;
+      |         ~~~~~~~~~~~^~~~~
+/coin3d/src/misc/SbHash.h: In member function ‘void SoGLDriverDatabaseP::initFunctions()’:
+/coin3d/src/misc/SbHash.h:355:12: note: ‘dummy’ was declared here
+  355 |       Type dummy;
+      |            ^~~~~
+In member function ‘SbBool SbHash<Key, Type>::put(const Key&, const Type&) [with Key = const char*; Type = bool (*)(const cc_glglue*)]’,
+    inlined from ‘Type& SbHash<Key, Type>::operator[](const Key&) [with Key = const char*; Type = bool (*)(const cc_glglue*)]’ at /coin3d/src/misc/SbHash.h:357:15,
+    inlined from ‘void SoGLDriverDatabaseP::initFunctions()’ at /coin3d/src/rendering/SoGLDriverDatabase.cpp:219:60:
+/coin3d/src/misc/SbHash.h:461:20: warning: ‘dummy’ may be used uninitialized [-Wmaybe-uninitialized]
+  461 |         entry->obj = obj;
+      |         ~~~~~~~~~~~^~~~~
+/coin3d/src/misc/SbHash.h: In member function ‘void SoGLDriverDatabaseP::initFunctions()’:
+/coin3d/src/misc/SbHash.h:355:12: note: ‘dummy’ was declared here
+  355 |       Type dummy;
+      |            ^~~~~
+In member function ‘SbBool SbHash<Key, Type>::put(const Key&, const Type&) [with Key = const char*; Type = bool (*)(const cc_glglue*)]’,
+    inlined from ‘Type& SbHash<Key, Type>::operator[](const Key&) [with Key = const char*; Type = bool (*)(const cc_glglue*)]’ at /coin3d/src/misc/SbHash.h:357:15,
+    inlined from ‘void SoGLDriverDatabaseP::initFunctions()’ at /coin3d/src/rendering/SoGLDriverDatabase.cpp:221:60:
+/coin3d/src/misc/SbHash.h:461:20: warning: ‘dummy’ may be used uninitialized [-Wmaybe-uninitialized]
+  461 |         entry->obj = obj;
+      |         ~~~~~~~~~~~^~~~~
+/coin3d/src/misc/SbHash.h: In member function ‘void SoGLDriverDatabaseP::initFunctions()’:
+/coin3d/src/misc/SbHash.h:355:12: note: ‘dummy’ was declared here
+  355 |       Type dummy;
+      |            ^~~~~
+In member function ‘SbBool SbHash<Key, Type>::put(const Key&, const Type&) [with Key = const char*; Type = bool (*)(const cc_glglue*)]’,
+    inlined from ‘Type& SbHash<Key, Type>::operator[](const Key&) [with Key = const char*; Type = bool (*)(const cc_glglue*)]’ at /coin3d/src/misc/SbHash.h:357:15,
+    inlined from ‘void SoGLDriverDatabaseP::initFunctions()’ at /coin3d/src/rendering/SoGLDriverDatabase.cpp:223:57:
+/coin3d/src/misc/SbHash.h:461:20: warning: ‘dummy’ may be used uninitialized [-Wmaybe-uninitialized]
+  461 |         entry->obj = obj;
+      |         ~~~~~~~~~~~^~~~~
+/coin3d/src/misc/SbHash.h: In member function ‘void SoGLDriverDatabaseP::initFunctions()’:
+/coin3d/src/misc/SbHash.h:355:12: note: ‘dummy’ was declared here
+  355 |       Type dummy;
+      |            ^~~~~
+In member function ‘SbBool SbHash<Key, Type>::put(const Key&, const Type&) [with Key = const char*; Type = bool (*)(const cc_glglue*)]’,
+    inlined from ‘Type& SbHash<Key, Type>::operator[](const Key&) [with Key = const char*; Type = bool (*)(const cc_glglue*)]’ at /coin3d/src/misc/SbHash.h:357:15,
+    inlined from ‘void SoGLDriverDatabaseP::initFunctions()’ at /coin3d/src/rendering/SoGLDriverDatabase.cpp:225:58:
+/coin3d/src/misc/SbHash.h:461:20: warning: ‘dummy’ may be used uninitialized [-Wmaybe-uninitialized]
+  461 |         entry->obj = obj;
+      |         ~~~~~~~~~~~^~~~~
+/coin3d/src/misc/SbHash.h: In member function ‘void SoGLDriverDatabaseP::initFunctions()’:
+/coin3d/src/misc/SbHash.h:355:12: note: ‘dummy’ was declared here
+  355 |       Type dummy;
+      |            ^~~~~
+In member function ‘SbBool SbHash<Key, Type>::put(const Key&, const Type&) [with Key = const char*; Type = bool (*)(const cc_glglue*)]’,
+    inlined from ‘Type& SbHash<Key, Type>::operator[](const Key&) [with Key = const char*; Type = bool (*)(const cc_glglue*)]’ at /coin3d/src/misc/SbHash.h:357:15,
+    inlined from ‘void SoGLDriverDatabaseP::initFunctions()’ at /coin3d/src/rendering/SoGLDriverDatabase.cpp:227:57:
+/coin3d/src/misc/SbHash.h:461:20: warning: ‘dummy’ may be used uninitialized [-Wmaybe-uninitialized]
+  461 |         entry->obj = obj;
+      |         ~~~~~~~~~~~^~~~~
+/coin3d/src/misc/SbHash.h: In member function ‘void SoGLDriverDatabaseP::initFunctions()’:
+/coin3d/src/misc/SbHash.h:355:12: note: ‘dummy’ was declared here
+  355 |       Type dummy;
+      |            ^~~~~
+In member function ‘SbBool SbHash<Key, Type>::put(const Key&, const Type&) [with Key = const char*; Type = bool (*)(const cc_glglue*)]’,
+    inlined from ‘Type& SbHash<Key, Type>::operator[](const Key&) [with Key = const char*; Type = bool (*)(const cc_glglue*)]’ at /coin3d/src/misc/SbHash.h:357:15,
+    inlined from ‘void SoGLDriverDatabaseP::initFunctions()’ at /coin3d/src/rendering/SoGLDriverDatabase.cpp:229:63:
+/coin3d/src/misc/SbHash.h:461:20: warning: ‘dummy’ may be used uninitialized [-Wmaybe-uninitialized]
+  461 |         entry->obj = obj;
+      |         ~~~~~~~~~~~^~~~~
+/coin3d/src/misc/SbHash.h: In member function ‘void SoGLDriverDatabaseP::initFunctions()’:
+/coin3d/src/misc/SbHash.h:355:12: note: ‘dummy’ was declared here
+  355 |       Type dummy;
+      |            ^~~~~
+In member function ‘SbBool SbHash<Key, Type>::put(const Key&, const Type&) [with Key = const char*; Type = bool (*)(const cc_glglue*)]’,
+    inlined from ‘Type& SbHash<Key, Type>::operator[](const Key&) [with Key = const char*; Type = bool (*)(const cc_glglue*)]’ at /coin3d/src/misc/SbHash.h:357:15,
+    inlined from ‘void SoGLDriverDatabaseP::initFunctions()’ at /coin3d/src/rendering/SoGLDriverDatabase.cpp:231:64:
+/coin3d/src/misc/SbHash.h:461:20: warning: ‘dummy’ may be used uninitialized [-Wmaybe-uninitialized]
+  461 |         entry->obj = obj;
+      |         ~~~~~~~~~~~^~~~~
+/coin3d/src/misc/SbHash.h: In member function ‘void SoGLDriverDatabaseP::initFunctions()’:
+/coin3d/src/misc/SbHash.h:355:12: note: ‘dummy’ was declared here
+  355 |       Type dummy;
+      |            ^~~~~
+In member function ‘SbBool SbHash<Key, Type>::put(const Key&, const Type&) [with Key = const char*; Type = bool (*)(const cc_glglue*)]’,
+    inlined from ‘Type& SbHash<Key, Type>::operator[](const Key&) [with Key = const char*; Type = bool (*)(const cc_glglue*)]’ at /coin3d/src/misc/SbHash.h:357:15,
+    inlined from ‘void SoGLDriverDatabaseP::initFunctions()’ at /coin3d/src/rendering/SoGLDriverDatabase.cpp:235:58:
+/coin3d/src/misc/SbHash.h:461:20: warning: ‘dummy’ may be used uninitialized [-Wmaybe-uninitialized]
+  461 |         entry->obj = obj;
+      |         ~~~~~~~~~~~^~~~~
+/coin3d/src/misc/SbHash.h: In member function ‘void SoGLDriverDatabaseP::initFunctions()’:
+/coin3d/src/misc/SbHash.h:355:12: note: ‘dummy’ was declared here
+  355 |       Type dummy;
+      |            ^~~~~
+In member function ‘SbBool SbHash<Key, Type>::put(const Key&, const Type&) [with Key = const char*; Type = bool (*)(const cc_glglue*)]’,
+    inlined from ‘Type& SbHash<Key, Type>::operator[](const Key&) [with Key = const char*; Type = bool (*)(const cc_glglue*)]’ at /coin3d/src/misc/SbHash.h:357:15,
+    inlined from ‘void SoGLDriverDatabaseP::initFunctions()’ at /coin3d/src/rendering/SoGLDriverDatabase.cpp:237:61:
+/coin3d/src/misc/SbHash.h:461:20: warning: ‘dummy’ may be used uninitialized [-Wmaybe-uninitialized]
+  461 |         entry->obj = obj;
+      |         ~~~~~~~~~~~^~~~~
+/coin3d/src/misc/SbHash.h: In member function ‘void SoGLDriverDatabaseP::initFunctions()’:
+/coin3d/src/misc/SbHash.h:355:12: note: ‘dummy’ was declared here
+  355 |       Type dummy;
+      |            ^~~~~
+In member function ‘SbBool SbHash<Key, Type>::put(const Key&, const Type&) [with Key = const char*; Type = bool (*)(const cc_glglue*)]’,
+    inlined from ‘Type& SbHash<Key, Type>::operator[](const Key&) [with Key = const char*; Type = bool (*)(const cc_glglue*)]’ at /coin3d/src/misc/SbHash.h:357:15,
+    inlined from ‘void SoGLDriverDatabaseP::initFunctions()’ at /coin3d/src/rendering/SoGLDriverDatabase.cpp:239:63:
+/coin3d/src/misc/SbHash.h:461:20: warning: ‘dummy’ may be used uninitialized [-Wmaybe-uninitialized]
+  461 |         entry->obj = obj;
+      |         ~~~~~~~~~~~^~~~~
+/coin3d/src/misc/SbHash.h: In member function ‘void SoGLDriverDatabaseP::initFunctions()’:
+/coin3d/src/misc/SbHash.h:355:12: note: ‘dummy’ was declared here
+  355 |       Type dummy;
+      |            ^~~~~
+In member function ‘SbBool SbHash<Key, Type>::put(const Key&, const Type&) [with Key = const char*; Type = bool (*)(const cc_glglue*)]’,
+    inlined from ‘Type& SbHash<Key, Type>::operator[](const Key&) [with Key = const char*; Type = bool (*)(const cc_glglue*)]’ at /coin3d/src/misc/SbHash.h:357:15,
+    inlined from ‘void SoGLDriverDatabaseP::initFunctions()’ at /coin3d/src/rendering/SoGLDriverDatabase.cpp:241:60:
+/coin3d/src/misc/SbHash.h:461:20: warning: ‘dummy’ may be used uninitialized [-Wmaybe-uninitialized]
+  461 |         entry->obj = obj;
+      |         ~~~~~~~~~~~^~~~~
+/coin3d/src/misc/SbHash.h: In member function ‘void SoGLDriverDatabaseP::initFunctions()’:
+/coin3d/src/misc/SbHash.h:355:12: note: ‘dummy’ was declared here
+  355 |       Type dummy;
+      |            ^~~~~
+In member function ‘SbBool SbHash<Key, Type>::put(const Key&, const Type&) [with Key = const char*; Type = bool (*)(const cc_glglue*)]’,
+    inlined from ‘Type& SbHash<Key, Type>::operator[](const Key&) [with Key = const char*; Type = bool (*)(const cc_glglue*)]’ at /coin3d/src/misc/SbHash.h:357:15,
+    inlined from ‘void SoGLDriverDatabaseP::initFunctions()’ at /coin3d/src/rendering/SoGLDriverDatabase.cpp:243:58:
+/coin3d/src/misc/SbHash.h:461:20: warning: ‘dummy’ may be used uninitialized [-Wmaybe-uninitialized]
+  461 |         entry->obj = obj;
+      |         ~~~~~~~~~~~^~~~~
+/coin3d/src/misc/SbHash.h: In member function ‘void SoGLDriverDatabaseP::initFunctions()’:
+/coin3d/src/misc/SbHash.h:355:12: note: ‘dummy’ was declared here
+  355 |       Type dummy;
+      |            ^~~~~
+In member function ‘SbBool SbHash<Key, Type>::put(const Key&, const Type&) [with Key = const char*; Type = bool (*)(const cc_glglue*)]’,
+    inlined from ‘Type& SbHash<Key, Type>::operator[](const Key&) [with Key = const char*; Type = bool (*)(const cc_glglue*)]’ at /coin3d/src/misc/SbHash.h:357:15,
+    inlined from ‘void SoGLDriverDatabaseP::initFunctions()’ at /coin3d/src/rendering/SoGLDriverDatabase.cpp:245:67:
+/coin3d/src/misc/SbHash.h:461:20: warning: ‘dummy’ may be used uninitialized [-Wmaybe-uninitialized]
+  461 |         entry->obj = obj;
+      |         ~~~~~~~~~~~^~~~~
+/coin3d/src/misc/SbHash.h: In member function ‘void SoGLDriverDatabaseP::initFunctions()’:
+/coin3d/src/misc/SbHash.h:355:12: note: ‘dummy’ was declared here
+  355 |       Type dummy;
+      |            ^~~~~
+In member function ‘SbBool SbHash<Key, Type>::put(const Key&, const Type&) [with Key = const char*; Type = bool (*)(const cc_glglue*)]’,
+    inlined from ‘Type& SbHash<Key, Type>::operator[](const Key&) [with Key = const char*; Type = bool (*)(const cc_glglue*)]’ at /coin3d/src/misc/SbHash.h:357:15,
+    inlined from ‘void SoGLDriverDatabaseP::initFunctions()’ at /coin3d/src/rendering/SoGLDriverDatabase.cpp:247:66:
+/coin3d/src/misc/SbHash.h:461:20: warning: ‘dummy’ may be used uninitialized [-Wmaybe-uninitialized]
+  461 |         entry->obj = obj;
+      |         ~~~~~~~~~~~^~~~~
+/coin3d/src/misc/SbHash.h: In member function ‘void SoGLDriverDatabaseP::initFunctions()’:
+/coin3d/src/misc/SbHash.h:355:12: note: ‘dummy’ was declared here
+  355 |       Type dummy;
+      |            ^~~~~
+/coin3d/src/rendering/SoGLDriverDatabase.cpp:217:66: warning: ‘obj’ may be used uninitialized [-Wmaybe-uninitialized]
+  217 |   this->featuremap[SbName(SO_GL_MULTIDRAW_ELEMENTS).getString()] =
+/coin3d/src/misc/SbHash.h:353:12: note: ‘obj’ was declared here
+  353 |     Type * obj;
+      |            ^~~
+/coin3d/src/rendering/SoGLDriverDatabase.cpp:219:62: warning: ‘obj’ may be used uninitialized [-Wmaybe-uninitialized]
+  219 |   this->featuremap[SbName(SO_GL_POLYGON_OFFSET).getString()] =
+/coin3d/src/misc/SbHash.h:353:12: note: ‘obj’ was declared here
+  353 |     Type * obj;
+      |            ^~~
+/coin3d/src/rendering/SoGLDriverDatabase.cpp:221:62: warning: ‘obj’ may be used uninitialized [-Wmaybe-uninitialized]
+  221 |   this->featuremap[SbName(SO_GL_TEXTURE_OBJECT).getString()] =
+/coin3d/src/misc/SbHash.h:353:12: note: ‘obj’ was declared here
+  353 |     Type * obj;
+      |            ^~~
+/coin3d/src/rendering/SoGLDriverDatabase.cpp:223:59: warning: ‘obj’ may be used uninitialized [-Wmaybe-uninitialized]
+  223 |   this->featuremap[SbName(SO_GL_3D_TEXTURES).getString()] =
+/coin3d/src/misc/SbHash.h:353:12: note: ‘obj’ was declared here
+  353 |     Type * obj;
+      |            ^~~
+/coin3d/src/rendering/SoGLDriverDatabase.cpp:225:60: warning: ‘obj’ may be used uninitialized [-Wmaybe-uninitialized]
+  225 |   this->featuremap[SbName(SO_GL_MULTITEXTURE).getString()] =
+/coin3d/src/misc/SbHash.h:353:12: note: ‘obj’ was declared here
+  353 |     Type * obj;
+      |            ^~~
+/coin3d/src/rendering/SoGLDriverDatabase.cpp:227:59: warning: ‘obj’ may be used uninitialized [-Wmaybe-uninitialized]
+  227 |   this->featuremap[SbName(SO_GL_TEXSUBIMAGE).getString()] =
+/coin3d/src/misc/SbHash.h:353:12: note: ‘obj’ was declared here
+  353 |     Type * obj;
+      |            ^~~
+/coin3d/src/rendering/SoGLDriverDatabase.cpp:229:65: warning: ‘obj’ may be used uninitialized [-Wmaybe-uninitialized]
+  229 |   this->featuremap[SbName(SO_GL_2D_PROXY_TEXTURES).getString()] =
+/coin3d/src/misc/SbHash.h:353:12: note: ‘obj’ was declared here
+  353 |     Type * obj;
+      |            ^~~
+/coin3d/src/rendering/SoGLDriverDatabase.cpp:231:66: warning: ‘obj’ may be used uninitialized [-Wmaybe-uninitialized]
+  231 |   this->featuremap[SbName(SO_GL_TEXTURE_EDGE_CLAMP).getString()] =
+/coin3d/src/misc/SbHash.h:353:12: note: ‘obj’ was declared here
+  353 |     Type * obj;
+      |            ^~~
+/coin3d/src/rendering/SoGLDriverDatabase.cpp:235:60: warning: ‘obj’ may be used uninitialized [-Wmaybe-uninitialized]
+  235 |   this->featuremap[SbName(SO_GL_COLOR_TABLES).getString()] =
+/coin3d/src/misc/SbHash.h:353:12: note: ‘obj’ was declared here
+  353 |     Type * obj;
+      |            ^~~
+/coin3d/src/rendering/SoGLDriverDatabase.cpp:237:63: warning: ‘obj’ may be used uninitialized [-Wmaybe-uninitialized]
+  237 |   this->featuremap[SbName(SO_GL_COLOR_SUBTABLES).getString()] =
+/coin3d/src/misc/SbHash.h:353:12: note: ‘obj’ was declared here
+  353 |     Type * obj;
+      |            ^~~
+/coin3d/src/rendering/SoGLDriverDatabase.cpp:239:65: warning: ‘obj’ may be used uninitialized [-Wmaybe-uninitialized]
+  239 |   this->featuremap[SbName(SO_GL_PALETTED_TEXTURES).getString()] =
+/coin3d/src/misc/SbHash.h:353:12: note: ‘obj’ was declared here
+  353 |     Type * obj;
+      |            ^~~
+/coin3d/src/rendering/SoGLDriverDatabase.cpp:241:62: warning: ‘obj’ may be used uninitialized [-Wmaybe-uninitialized]
+  241 |   this->featuremap[SbName(SO_GL_BLEND_EQUATION).getString()] =
+/coin3d/src/misc/SbHash.h:353:12: note: ‘obj’ was declared here
+  353 |     Type * obj;
+      |            ^~~
+/coin3d/src/rendering/SoGLDriverDatabase.cpp:243:60: warning: ‘obj’ may be used uninitialized [-Wmaybe-uninitialized]
+  243 |   this->featuremap[SbName(SO_GL_VERTEX_ARRAY).getString()] =
+/coin3d/src/misc/SbHash.h:353:12: note: ‘obj’ was declared here
+  353 |     Type * obj;
+      |            ^~~
+/coin3d/src/rendering/SoGLDriverDatabase.cpp:245:69: warning: ‘obj’ may be used uninitialized [-Wmaybe-uninitialized]
+  245 |   this->featuremap[SbName(SO_GL_NV_VERTEX_ARRAY_RANGE).getString()] =
+/coin3d/src/misc/SbHash.h:353:12: note: ‘obj’ was declared here
+  353 |     Type * obj;
+      |            ^~~
+/coin3d/src/rendering/SoGLDriverDatabase.cpp:247:68: warning: ‘obj’ may be used uninitialized [-Wmaybe-uninitialized]
+  247 |   this->featuremap[SbName(SO_GL_VERTEX_BUFFER_OBJECT).getString()] =
+/coin3d/src/misc/SbHash.h:353:12: note: ‘obj’ was declared here
+  353 |     Type * obj;
+      |            ^~~
+/coin3d/src/nodes/SoCamera.cpp: In member function ‘SbViewVolume SoCamera::getViewVolume(const SbViewportRegion&, SbViewportRegion&, const SbMatrix&) const’:
+/coin3d/src/nodes/SoCamera.cpp:458:24: warning: variable ‘oldvp’ set but not used [-Wunused-but-set-variable]
+  458 |       SbViewportRegion oldvp = resultvp;
+      |                        ^~~~~
+/coin3d/src/nodes/SoExtSelection.cpp: In member function ‘virtual void SoExtSelection::GLRenderBelowPath(SoGLRenderAction*)’:
+/coin3d/src/nodes/SoExtSelection.cpp:1238:13: warning: variable ‘vpo’ set but not used [-Wunused-but-set-variable]
+ 1238 |     SbVec2s vpo = vp.getViewportOriginPixels();
+      |             ^~~
+/coin3d/src/nodes/SoExtSelection.cpp:1239:13: warning: variable ‘vps’ set but not used [-Wunused-but-set-variable]
+ 1239 |     SbVec2s vps = vp.getViewportSizePixels();
+      |             ^~~
+/coin3d/src/nodes/SoNode.cpp:347:15: warning: ‘sonode_mutex’ defined but not used [-Wunused-variable]
+  347 | static void * sonode_mutex = NULL;
+      |               ^~~~~~~~~~~~
+/coin3d/src/nodes/SoVertexAttribute.cpp: In member function ‘virtual void SoVertexAttribute::GLRender(SoGLRenderAction*)’:
+/coin3d/src/nodes/SoVertexAttribute.cpp:287:10: warning: variable ‘setvbo’ set but not used [-Wunused-but-set-variable]
+  287 |   SbBool setvbo = FALSE;
+      |          ^~~~~~
+/coin3d/src/shapenodes/SoAsciiText.cpp: In member function ‘void SoAsciiTextP::calculateStringStretch(int, const cc_font_specification*, float&, float&)’:
+/coin3d/src/shapenodes/SoAsciiText.cpp:539:9: warning: variable ‘originalmaxx’ set but not used [-Wunused-but-set-variable]
+  539 |   float originalmaxx = 0.0f;
+      |         ^~~~~~~~~~~~
+/coin3d/src/shapenodes/SoIndexedShape.cpp:110:1: warning: ‘void error_idx_out_of_bounds(const SoIndexedShape*, int, int)’ defined but not used [-Wunused-function]
+  110 | error_idx_out_of_bounds(const SoIndexedShape * node, int idxidx, int upper)
+      | ^~~~~~~~~~~~~~~~~~~~~~~
+/coin3d/src/shapenodes/soshape_bumprender.cpp:247:1: warning: ‘void soshape_bumprender_specularprogramdeletion(long unsigned int, void*)’ defined but not used [-Wunused-function]
+  247 | soshape_bumprender_specularprogramdeletion(unsigned long COIN_UNUSED_ARG(key), void * COIN_UNUSED_ARG(value))
+      | ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/coin3d/src/shapenodes/soshape_bumprender.cpp:233:1: warning: ‘void soshape_bumprender_diffuseprogramdeletion(long unsigned int, void*)’ defined but not used [-Wunused-function]
+  233 | soshape_bumprender_diffuseprogramdeletion(unsigned long COIN_UNUSED_ARG(key), void * COIN_UNUSED_ARG(value))
+      | ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/coin3d/src/shapenodes/soshape_primdata.cpp: In member function ‘void soshape_primdata::shapeVertex(const SoPrimitiveVertex*)’:
+/coin3d/src/shapenodes/soshape_primdata.cpp:204:13: warning: ‘void* memcpy(void*, const void*, size_t)’ writing to an object of type ‘class SoPrimitiveVertex’ with no trivial copy-assignment; use copy-assignment or copy-initialization instead [-Wclass-memaccess]
+  204 |       memcpy(newArray, this->vertsArray,
+      |       ~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  205 |              sizeof(SoPrimitiveVertex)* this->counter);
+      |              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /coin3d/src/shapenodes/soshape_primdata.cpp:38:
+/coin3d/include/Inventor/SoPrimitiveVertex.h:43:20: note: ‘class SoPrimitiveVertex’ declared here
+   43 | class COIN_DLL_API SoPrimitiveVertex {
+      |                    ^~~~~~~~~~~~~~~~~
+/coin3d/src/shapenodes/soshape_primdata.cpp:210:13: warning: ‘void* memcpy(void*, const void*, size_t)’ writing to an object of type ‘class SoPointDetail’ with no trivial copy-assignment; use copy-assignment or copy-initialization instead [-Wclass-memaccess]
+  210 |       memcpy(newparray, this->pointDetails,
+      |       ~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  211 |              sizeof(SoPointDetail)* this->counter);
+      |              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /coin3d/include/Inventor/details/SoFaceDetail.h:36,
+                 from /coin3d/src/shapenodes/soshape_primdata.cpp:40:
+/coin3d/include/Inventor/details/SoPointDetail.h:38:20: note: ‘class SoPointDetail’ declared here
+   38 | class COIN_DLL_API SoPointDetail : public SoDetail {
+      |                    ^~~~~~~~~~~~~
+/coin3d/src/geo/SoGeo.cpp:206:24: warning: ‘SbUTMProjection find_utm_projection(const SbString*, int, const SbVec3d&, SbVec3d&)’ defined but not used [-Wunused-function]
+  206 | static SbUTMProjection find_utm_projection(const SbString * system,
+      |                        ^~~~~~~~~~~~~~~~~~~
+/coin3d/src/geo/SbPolarStereographic.cpp: In member function ‘virtual void SbPolarStereographic::unproject(double, double, SbGeoAngle*, SbGeoAngle*) const’:
+/coin3d/src/geo/SbPolarStereographic.cpp:123:14: warning: variable ‘phiF’ set but not used [-Wunused-but-set-variable]
+  123 |   SbGeoAngle phiF = this->ellipsoid.getLatStdParallel();
+      |              ^~~~
+/coin3d/src/threads/mutex.cpp: In function ‘void cc_mutex_struct_init(cc_mutex*)’:
+/coin3d/src/threads/mutex.cpp:93:7: warning: variable ‘ok’ set but not used [-Wunused-but-set-variable]
+   93 |   int ok;
+      |       ^~
+/coin3d/src/threads/mutex.cpp: In function ‘void cc_mutex_struct_clean(cc_mutex*)’:
+/coin3d/src/threads/mutex.cpp:105:7: warning: variable ‘ok’ set but not used [-Wunused-but-set-variable]
+  105 |   int ok;
+      |       ^~
+/coin3d/src/threads/mutex.cpp: In function ‘void cc_mutex_lock(cc_mutex*)’:
+/coin3d/src/threads/mutex.cpp:185:7: warning: variable ‘ok’ set but not used [-Wunused-but-set-variable]
+  185 |   int ok;
+      |       ^~
+/coin3d/src/threads/mutex.cpp: In function ‘void cc_mutex_unlock(cc_mutex*)’:
+/coin3d/src/threads/mutex.cpp:233:7: warning: variable ‘ok’ set but not used [-Wunused-but-set-variable]
+  233 |   int ok;
+      |       ^~
+/coin3d/src/threads/condvar.cpp: In function ‘void cc_condvar_struct_init(cc_condvar*)’:
+/coin3d/src/threads/condvar.cpp:81:7: warning: variable ‘ok’ set but not used [-Wunused-but-set-variable]
+   81 |   int ok;
+      |       ^~
+/coin3d/src/threads/condvar.cpp: In function ‘void cc_condvar_struct_clean(cc_condvar*)’:
+/coin3d/src/threads/condvar.cpp:92:7: warning: variable ‘ok’ set but not used [-Wunused-but-set-variable]
+   92 |   int ok;
+      |       ^~
+/coin3d/src/threads/condvar.cpp: In function ‘void cc_condvar_wake_one(cc_condvar*)’:
+/coin3d/src/threads/condvar.cpp:155:7: warning: variable ‘ok’ set but not used [-Wunused-but-set-variable]
+  155 |   int ok;
+      |       ^~
+/coin3d/src/threads/condvar.cpp: In function ‘void cc_condvar_wake_all(cc_condvar*)’:
+/coin3d/src/threads/condvar.cpp:166:7: warning: variable ‘ok’ set but not used [-Wunused-but-set-variable]
+  166 |   int ok;
+      |       ^~
+/coin3d/src/shadows/SoShadowGroup.cpp: In member function ‘void SoShadowGroupP::updateShadowLights(SoGLRenderAction*)’:
+/coin3d/src/shadows/SoShadowGroup.cpp:952:11: warning: variable ‘smoothing’ set but not used [-Wunused-but-set-variable]
+  952 |     float smoothing = PUBLIC(this)->smoothBorder.getValue();
+      |           ^~~~~~~~~
+/coin3d/src/threads/thread.cpp: In function ‘void cc_thread_destruct(cc_thread*)’:
+/coin3d/src/threads/thread.cpp:133:7: warning: variable ‘ok’ set but not used [-Wunused-but-set-variable]
+  133 |   int ok;
+      |       ^~
+/coin3d/src/shapenodes/SoQuadMesh.cpp: In instantiation of ‘void {anonymous}::SoGL::QuadMesh::GLRender(const SoGLCoordinateElement*, const SbVec3f*, SoMaterialBundle*, const SoTextureCoordinateBundle*, SbBool, int, int, int, SbBool) [with int NormalBinding = 0; int MaterialBinding = 0; int TexturingEnabled = 1; SbBool = bool]’:
+/coin3d/src/shapenodes/SoQuadMesh.cpp:966:3:   required from here
+/coin3d/src/shapenodes/SoQuadMesh.cpp:576:24: warning: unused variable ‘quadok’ [-Wunused-variable]
+  576 |                 SbBool quadok = qmeshNormalize(n, n1->sqrLength() + n2->sqrLength() +
+      |                        ^~~~~~
+/coin3d/src/shapenodes/SoQuadMesh.cpp: In instantiation of ‘void {anonymous}::SoGL::QuadMesh::GLRender(const SoGLCoordinateElement*, const SbVec3f*, SoMaterialBundle*, const SoTextureCoordinateBundle*, SbBool, int, int, int, SbBool) [with int NormalBinding = 0; int MaterialBinding = 0; int TexturingEnabled = 0; SbBool = bool]’:
+/coin3d/src/shapenodes/SoQuadMesh.cpp:966:3:   required from here
+/coin3d/src/shapenodes/SoQuadMesh.cpp:576:24: warning: unused variable ‘quadok’ [-Wunused-variable]
+/coin3d/src/shapenodes/SoQuadMesh.cpp: In instantiation of ‘void {anonymous}::SoGL::QuadMesh::GLRender(const SoGLCoordinateElement*, const SbVec3f*, SoMaterialBundle*, const SoTextureCoordinateBundle*, SbBool, int, int, int, SbBool) [with int NormalBinding = 0; int MaterialBinding = 1; int TexturingEnabled = 1; SbBool = bool]’:
+/coin3d/src/shapenodes/SoQuadMesh.cpp:966:3:   required from here
+/coin3d/src/shapenodes/SoQuadMesh.cpp:576:24: warning: unused variable ‘quadok’ [-Wunused-variable]
+/coin3d/src/shapenodes/SoQuadMesh.cpp: In instantiation of ‘void {anonymous}::SoGL::QuadMesh::GLRender(const SoGLCoordinateElement*, const SbVec3f*, SoMaterialBundle*, const SoTextureCoordinateBundle*, SbBool, int, int, int, SbBool) [with int NormalBinding = 0; int MaterialBinding = 1; int TexturingEnabled = 0; SbBool = bool]’:
+/coin3d/src/shapenodes/SoQuadMesh.cpp:966:3:   required from here
+/coin3d/src/shapenodes/SoQuadMesh.cpp:576:24: warning: unused variable ‘quadok’ [-Wunused-variable]
+/coin3d/src/shapenodes/SoQuadMesh.cpp: In instantiation of ‘void {anonymous}::SoGL::QuadMesh::GLRender(const SoGLCoordinateElement*, const SbVec3f*, SoMaterialBundle*, const SoTextureCoordinateBundle*, SbBool, int, int, int, SbBool) [with int NormalBinding = 0; int MaterialBinding = 2; int TexturingEnabled = 1; SbBool = bool]’:
+/coin3d/src/shapenodes/SoQuadMesh.cpp:966:3:   required from here
+/coin3d/src/shapenodes/SoQuadMesh.cpp:576:24: warning: unused variable ‘quadok’ [-Wunused-variable]
+/coin3d/src/shapenodes/SoQuadMesh.cpp: In instantiation of ‘void {anonymous}::SoGL::QuadMesh::GLRender(const SoGLCoordinateElement*, const SbVec3f*, SoMaterialBundle*, const SoTextureCoordinateBundle*, SbBool, int, int, int, SbBool) [with int NormalBinding = 0; int MaterialBinding = 2; int TexturingEnabled = 0; SbBool = bool]’:
+/coin3d/src/shapenodes/SoQuadMesh.cpp:966:3:   required from here
+/coin3d/src/shapenodes/SoQuadMesh.cpp:576:24: warning: unused variable ‘quadok’ [-Wunused-variable]
+/coin3d/src/shapenodes/SoQuadMesh.cpp: In instantiation of ‘void {anonymous}::SoGL::QuadMesh::GLRender(const SoGLCoordinateElement*, const SbVec3f*, SoMaterialBundle*, const SoTextureCoordinateBundle*, SbBool, int, int, int, SbBool) [with int NormalBinding = 0; int MaterialBinding = 3; int TexturingEnabled = 1; SbBool = bool]’:
+/coin3d/src/shapenodes/SoQuadMesh.cpp:966:3:   required from here
+/coin3d/src/shapenodes/SoQuadMesh.cpp:576:24: warning: unused variable ‘quadok’ [-Wunused-variable]
+/coin3d/src/shapenodes/SoQuadMesh.cpp: In instantiation of ‘void {anonymous}::SoGL::QuadMesh::GLRender(const SoGLCoordinateElement*, const SbVec3f*, SoMaterialBundle*, const SoTextureCoordinateBundle*, SbBool, int, int, int, SbBool) [with int NormalBinding = 0; int MaterialBinding = 3; int TexturingEnabled = 0; SbBool = bool]’:
+/coin3d/src/shapenodes/SoQuadMesh.cpp:966:3:   required from here
+/coin3d/src/shapenodes/SoQuadMesh.cpp:576:24: warning: unused variable ‘quadok’ [-Wunused-variable]
+/coin3d/src/shapenodes/SoQuadMesh.cpp: In instantiation of ‘void {anonymous}::SoGL::QuadMesh::GLRender(const SoGLCoordinateElement*, const SbVec3f*, SoMaterialBundle*, const SoTextureCoordinateBundle*, SbBool, int, int, int, SbBool) [with int NormalBinding = 1; int MaterialBinding = 0; int TexturingEnabled = 1; SbBool = bool]’:
+/coin3d/src/shapenodes/SoQuadMesh.cpp:966:3:   required from here
+/coin3d/src/shapenodes/SoQuadMesh.cpp:576:24: warning: unused variable ‘quadok’ [-Wunused-variable]
+/coin3d/src/shapenodes/SoQuadMesh.cpp: In instantiation of ‘void {anonymous}::SoGL::QuadMesh::GLRender(const SoGLCoordinateElement*, const SbVec3f*, SoMaterialBundle*, const SoTextureCoordinateBundle*, SbBool, int, int, int, SbBool) [with int NormalBinding = 1; int MaterialBinding = 0; int TexturingEnabled = 0; SbBool = bool]’:
+/coin3d/src/shapenodes/SoQuadMesh.cpp:966:3:   required from here
+/coin3d/src/shapenodes/SoQuadMesh.cpp:576:24: warning: unused variable ‘quadok’ [-Wunused-variable]
+/coin3d/src/shapenodes/SoQuadMesh.cpp: In instantiation of ‘void {anonymous}::SoGL::QuadMesh::GLRender(const SoGLCoordinateElement*, const SbVec3f*, SoMaterialBundle*, const SoTextureCoordinateBundle*, SbBool, int, int, int, SbBool) [with int NormalBinding = 1; int MaterialBinding = 1; int TexturingEnabled = 1; SbBool = bool]’:
+/coin3d/src/shapenodes/SoQuadMesh.cpp:966:3:   required from here
+/coin3d/src/shapenodes/SoQuadMesh.cpp:576:24: warning: unused variable ‘quadok’ [-Wunused-variable]
+/coin3d/src/shapenodes/SoQuadMesh.cpp: In instantiation of ‘void {anonymous}::SoGL::QuadMesh::GLRender(const SoGLCoordinateElement*, const SbVec3f*, SoMaterialBundle*, const SoTextureCoordinateBundle*, SbBool, int, int, int, SbBool) [with int NormalBinding = 1; int MaterialBinding = 1; int TexturingEnabled = 0; SbBool = bool]’:
+/coin3d/src/shapenodes/SoQuadMesh.cpp:966:3:   required from here
+/coin3d/src/shapenodes/SoQuadMesh.cpp:576:24: warning: unused variable ‘quadok’ [-Wunused-variable]
+/coin3d/src/shapenodes/SoQuadMesh.cpp: In instantiation of ‘void {anonymous}::SoGL::QuadMesh::GLRender(const SoGLCoordinateElement*, const SbVec3f*, SoMaterialBundle*, const SoTextureCoordinateBundle*, SbBool, int, int, int, SbBool) [with int NormalBinding = 1; int MaterialBinding = 2; int TexturingEnabled = 1; SbBool = bool]’:
+/coin3d/src/shapenodes/SoQuadMesh.cpp:966:3:   required from here
+/coin3d/src/shapenodes/SoQuadMesh.cpp:576:24: warning: unused variable ‘quadok’ [-Wunused-variable]
+/coin3d/src/shapenodes/SoQuadMesh.cpp: In instantiation of ‘void {anonymous}::SoGL::QuadMesh::GLRender(const SoGLCoordinateElement*, const SbVec3f*, SoMaterialBundle*, const SoTextureCoordinateBundle*, SbBool, int, int, int, SbBool) [with int NormalBinding = 1; int MaterialBinding = 2; int TexturingEnabled = 0; SbBool = bool]’:
+/coin3d/src/shapenodes/SoQuadMesh.cpp:966:3:   required from here
+/coin3d/src/shapenodes/SoQuadMesh.cpp:576:24: warning: unused variable ‘quadok’ [-Wunused-variable]
+/coin3d/src/shapenodes/SoQuadMesh.cpp: In instantiation of ‘void {anonymous}::SoGL::QuadMesh::GLRender(const SoGLCoordinateElement*, const SbVec3f*, SoMaterialBundle*, const SoTextureCoordinateBundle*, SbBool, int, int, int, SbBool) [with int NormalBinding = 1; int MaterialBinding = 3; int TexturingEnabled = 1; SbBool = bool]’:
+/coin3d/src/shapenodes/SoQuadMesh.cpp:966:3:   required from here
+/coin3d/src/shapenodes/SoQuadMesh.cpp:576:24: warning: unused variable ‘quadok’ [-Wunused-variable]
+/coin3d/src/shapenodes/SoQuadMesh.cpp: In instantiation of ‘void {anonymous}::SoGL::QuadMesh::GLRender(const SoGLCoordinateElement*, const SbVec3f*, SoMaterialBundle*, const SoTextureCoordinateBundle*, SbBool, int, int, int, SbBool) [with int NormalBinding = 1; int MaterialBinding = 3; int TexturingEnabled = 0; SbBool = bool]’:
+/coin3d/src/shapenodes/SoQuadMesh.cpp:966:3:   required from here
+/coin3d/src/shapenodes/SoQuadMesh.cpp:576:24: warning: unused variable ‘quadok’ [-Wunused-variable]
+/coin3d/src/shapenodes/SoQuadMesh.cpp: In instantiation of ‘void {anonymous}::SoGL::QuadMesh::GLRender(const SoGLCoordinateElement*, const SbVec3f*, SoMaterialBundle*, const SoTextureCoordinateBundle*, SbBool, int, int, int, SbBool) [with int NormalBinding = 2; int MaterialBinding = 0; int TexturingEnabled = 1; SbBool = bool]’:
+/coin3d/src/shapenodes/SoQuadMesh.cpp:966:3:   required from here
+/coin3d/src/shapenodes/SoQuadMesh.cpp:576:24: warning: unused variable ‘quadok’ [-Wunused-variable]
+/coin3d/src/shapenodes/SoQuadMesh.cpp: In instantiation of ‘void {anonymous}::SoGL::QuadMesh::GLRender(const SoGLCoordinateElement*, const SbVec3f*, SoMaterialBundle*, const SoTextureCoordinateBundle*, SbBool, int, int, int, SbBool) [with int NormalBinding = 2; int MaterialBinding = 0; int TexturingEnabled = 0; SbBool = bool]’:
+/coin3d/src/shapenodes/SoQuadMesh.cpp:966:3:   required from here
+/coin3d/src/shapenodes/SoQuadMesh.cpp:576:24: warning: unused variable ‘quadok’ [-Wunused-variable]
+/coin3d/src/shapenodes/SoQuadMesh.cpp: In instantiation of ‘void {anonymous}::SoGL::QuadMesh::GLRender(const SoGLCoordinateElement*, const SbVec3f*, SoMaterialBundle*, const SoTextureCoordinateBundle*, SbBool, int, int, int, SbBool) [with int NormalBinding = 2; int MaterialBinding = 1; int TexturingEnabled = 1; SbBool = bool]’:
+/coin3d/src/shapenodes/SoQuadMesh.cpp:966:3:   required from here
+/coin3d/src/shapenodes/SoQuadMesh.cpp:576:24: warning: unused variable ‘quadok’ [-Wunused-variable]
+/coin3d/src/shapenodes/SoQuadMesh.cpp: In instantiation of ‘void {anonymous}::SoGL::QuadMesh::GLRender(const SoGLCoordinateElement*, const SbVec3f*, SoMaterialBundle*, const SoTextureCoordinateBundle*, SbBool, int, int, int, SbBool) [with int NormalBinding = 2; int MaterialBinding = 1; int TexturingEnabled = 0; SbBool = bool]’:
+/coin3d/src/shapenodes/SoQuadMesh.cpp:966:3:   required from here
+/coin3d/src/shapenodes/SoQuadMesh.cpp:576:24: warning: unused variable ‘quadok’ [-Wunused-variable]
+/coin3d/src/shapenodes/SoQuadMesh.cpp: In instantiation of ‘void {anonymous}::SoGL::QuadMesh::GLRender(const SoGLCoordinateElement*, const SbVec3f*, SoMaterialBundle*, const SoTextureCoordinateBundle*, SbBool, int, int, int, SbBool) [with int NormalBinding = 2; int MaterialBinding = 2; int TexturingEnabled = 1; SbBool = bool]’:
+/coin3d/src/shapenodes/SoQuadMesh.cpp:966:3:   required from here
+/coin3d/src/shapenodes/SoQuadMesh.cpp:576:24: warning: unused variable ‘quadok’ [-Wunused-variable]
+/coin3d/src/shapenodes/SoQuadMesh.cpp: In instantiation of ‘void {anonymous}::SoGL::QuadMesh::GLRender(const SoGLCoordinateElement*, const SbVec3f*, SoMaterialBundle*, const SoTextureCoordinateBundle*, SbBool, int, int, int, SbBool) [with int NormalBinding = 2; int MaterialBinding = 2; int TexturingEnabled = 0; SbBool = bool]’:
+/coin3d/src/shapenodes/SoQuadMesh.cpp:966:3:   required from here
+/coin3d/src/shapenodes/SoQuadMesh.cpp:576:24: warning: unused variable ‘quadok’ [-Wunused-variable]
+/coin3d/src/shapenodes/SoQuadMesh.cpp: In instantiation of ‘void {anonymous}::SoGL::QuadMesh::GLRender(const SoGLCoordinateElement*, const SbVec3f*, SoMaterialBundle*, const SoTextureCoordinateBundle*, SbBool, int, int, int, SbBool) [with int NormalBinding = 2; int MaterialBinding = 3; int TexturingEnabled = 1; SbBool = bool]’:
+/coin3d/src/shapenodes/SoQuadMesh.cpp:966:3:   required from here
+/coin3d/src/shapenodes/SoQuadMesh.cpp:576:24: warning: unused variable ‘quadok’ [-Wunused-variable]
+/coin3d/src/shapenodes/SoQuadMesh.cpp: In instantiation of ‘void {anonymous}::SoGL::QuadMesh::GLRender(const SoGLCoordinateElement*, const SbVec3f*, SoMaterialBundle*, const SoTextureCoordinateBundle*, SbBool, int, int, int, SbBool) [with int NormalBinding = 2; int MaterialBinding = 3; int TexturingEnabled = 0; SbBool = bool]’:
+/coin3d/src/shapenodes/SoQuadMesh.cpp:966:3:   required from here
+/coin3d/src/shapenodes/SoQuadMesh.cpp:576:24: warning: unused variable ‘quadok’ [-Wunused-variable]
+/coin3d/src/shapenodes/SoQuadMesh.cpp: In instantiation of ‘void {anonymous}::SoGL::QuadMesh::GLRender(const SoGLCoordinateElement*, const SbVec3f*, SoMaterialBundle*, const SoTextureCoordinateBundle*, SbBool, int, int, int, SbBool) [with int NormalBinding = 3; int MaterialBinding = 0; int TexturingEnabled = 1; SbBool = bool]’:
+/coin3d/src/shapenodes/SoQuadMesh.cpp:966:3:   required from here
+/coin3d/src/shapenodes/SoQuadMesh.cpp:576:24: warning: unused variable ‘quadok’ [-Wunused-variable]
+/coin3d/src/shapenodes/SoQuadMesh.cpp: In instantiation of ‘void {anonymous}::SoGL::QuadMesh::GLRender(const SoGLCoordinateElement*, const SbVec3f*, SoMaterialBundle*, const SoTextureCoordinateBundle*, SbBool, int, int, int, SbBool) [with int NormalBinding = 3; int MaterialBinding = 0; int TexturingEnabled = 0; SbBool = bool]’:
+/coin3d/src/shapenodes/SoQuadMesh.cpp:966:3:   required from here
+/coin3d/src/shapenodes/SoQuadMesh.cpp:576:24: warning: unused variable ‘quadok’ [-Wunused-variable]
+/coin3d/src/shapenodes/SoQuadMesh.cpp: In instantiation of ‘void {anonymous}::SoGL::QuadMesh::GLRender(const SoGLCoordinateElement*, const SbVec3f*, SoMaterialBundle*, const SoTextureCoordinateBundle*, SbBool, int, int, int, SbBool) [with int NormalBinding = 3; int MaterialBinding = 1; int TexturingEnabled = 1; SbBool = bool]’:
+/coin3d/src/shapenodes/SoQuadMesh.cpp:966:3:   required from here
+/coin3d/src/shapenodes/SoQuadMesh.cpp:576:24: warning: unused variable ‘quadok’ [-Wunused-variable]
+/coin3d/src/shapenodes/SoQuadMesh.cpp: In instantiation of ‘void {anonymous}::SoGL::QuadMesh::GLRender(const SoGLCoordinateElement*, const SbVec3f*, SoMaterialBundle*, const SoTextureCoordinateBundle*, SbBool, int, int, int, SbBool) [with int NormalBinding = 3; int MaterialBinding = 1; int TexturingEnabled = 0; SbBool = bool]’:
+/coin3d/src/shapenodes/SoQuadMesh.cpp:966:3:   required from here
+/coin3d/src/shapenodes/SoQuadMesh.cpp:576:24: warning: unused variable ‘quadok’ [-Wunused-variable]
+/coin3d/src/shapenodes/SoQuadMesh.cpp: In instantiation of ‘void {anonymous}::SoGL::QuadMesh::GLRender(const SoGLCoordinateElement*, const SbVec3f*, SoMaterialBundle*, const SoTextureCoordinateBundle*, SbBool, int, int, int, SbBool) [with int NormalBinding = 3; int MaterialBinding = 2; int TexturingEnabled = 1; SbBool = bool]’:
+/coin3d/src/shapenodes/SoQuadMesh.cpp:966:3:   required from here
+/coin3d/src/shapenodes/SoQuadMesh.cpp:576:24: warning: unused variable ‘quadok’ [-Wunused-variable]
+/coin3d/src/shapenodes/SoQuadMesh.cpp: In instantiation of ‘void {anonymous}::SoGL::QuadMesh::GLRender(const SoGLCoordinateElement*, const SbVec3f*, SoMaterialBundle*, const SoTextureCoordinateBundle*, SbBool, int, int, int, SbBool) [with int NormalBinding = 3; int MaterialBinding = 2; int TexturingEnabled = 0; SbBool = bool]’:
+/coin3d/src/shapenodes/SoQuadMesh.cpp:966:3:   required from here
+/coin3d/src/shapenodes/SoQuadMesh.cpp:576:24: warning: unused variable ‘quadok’ [-Wunused-variable]
+/coin3d/src/shapenodes/SoQuadMesh.cpp: In instantiation of ‘void {anonymous}::SoGL::QuadMesh::GLRender(const SoGLCoordinateElement*, const SbVec3f*, SoMaterialBundle*, const SoTextureCoordinateBundle*, SbBool, int, int, int, SbBool) [with int NormalBinding = 3; int MaterialBinding = 3; int TexturingEnabled = 1; SbBool = bool]’:
+/coin3d/src/shapenodes/SoQuadMesh.cpp:966:3:   required from here
+/coin3d/src/shapenodes/SoQuadMesh.cpp:576:24: warning: unused variable ‘quadok’ [-Wunused-variable]
+/coin3d/src/shapenodes/SoQuadMesh.cpp: In instantiation of ‘void {anonymous}::SoGL::QuadMesh::GLRender(const SoGLCoordinateElement*, const SbVec3f*, SoMaterialBundle*, const SoTextureCoordinateBundle*, SbBool, int, int, int, SbBool) [with int NormalBinding = 3; int MaterialBinding = 3; int TexturingEnabled = 0; SbBool = bool]’:
+/coin3d/src/shapenodes/SoQuadMesh.cpp:966:3:   required from here
+/coin3d/src/shapenodes/SoQuadMesh.cpp:576:24: warning: unused variable ‘quadok’ [-Wunused-variable]
+In file included from /coin3d/include/Inventor/fields/SoFieldData.h:37,
+                 from /coin3d/include/Inventor/nodes/SoSubNode.h:61,
+                 from /coin3d/include/Inventor/nodekits/SoSubKit.h:36,
+                 from /coin3d/include/Inventor/nodekits/SoBaseKit.h:36,
+                 from /coin3d/src/nodekits/SoNodekitCatalog.cpp:51:
+In member function ‘void SbList<Type>::grow(int) [with Type = CatalogItem*]’,
+    inlined from ‘void SbList<Type>::append(Type) [with Type = CatalogItem*]’ at /coin3d/include/Inventor/lists/SbList.h:122:59,
+    inlined from ‘SbBool SoNodekitCatalog::reallyAddEntry(CatalogItem*)’ at /coin3d/src/nodekits/SoNodekitCatalog.cpp:599:23:
+/coin3d/include/Inventor/lists/SbList.h:248:46: warning: array subscript 0 is outside array bounds of ‘CatalogItem* [0]’ [-Warray-bounds=]
+  248 |     for (int i = 0; i < n; i++) newbuffer[i] = this->itembuffer[i];
+      |                                 ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~
+/coin3d/include/Inventor/lists/SbList.h:246:24: note: object of size 0 allocated by ‘operator new []’
+  246 |     Type * newbuffer = new Type[this->itembuffersize];
+      |                        ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/coin3d/src/hardcopy/VectorizeActionP.cpp: In static member function ‘static SoCallbackAction::Response SoVectorizeActionP::pre_text2_cb(void*, SoCallbackAction*, const SoNode*)’:
+/coin3d/src/hardcopy/VectorizeActionP.cpp:556:11: warning: variable ‘vpsize’ set but not used [-Wunused-but-set-variable]
+  556 |   SbVec2s vpsize = vp.getViewportSizePixels();
+      |           ^~~~~~
+/coin3d/src/hardcopy/VectorizeActionP.cpp: In member function ‘SbColor4f SoVectorizeActionP::shade_vertex(SoState*, const SbVec3f&, const SbColor4f&, const SbVec3f&)’:
+/coin3d/src/hardcopy/VectorizeActionP.cpp:823:15: warning: variable ‘A’ set but not used [-Wunused-but-set-variable]
+  823 |   float R,G,B,A;
+      |               ^
+In file included from /coin3d/include/Inventor/fields/SoFieldData.h:37,
+                 from /coin3d/include/Inventor/nodes/SoSubNode.h:61,
+                 from /coin3d/include/Inventor/nodekits/SoSubKit.h:36,
+                 from /coin3d/include/Inventor/nodekits/SoBaseKit.h:36,
+                 from /coin3d/src/nodekits/SoBaseKit.cpp:527:
+In member function ‘void SbList<Type>::grow(int) [with Type = SoSFNode*]’,
+    inlined from ‘void SbList<Type>::append(Type) [with Type = SoSFNode*]’ at /coin3d/include/Inventor/lists/SbList.h:122:59,
+    inlined from ‘void SoBaseKit::createFieldList()’ at /coin3d/src/nodekits/SoBaseKit.cpp:1972:39:
+/coin3d/include/Inventor/lists/SbList.h:248:46: warning: array subscript 0 is outside array bounds of ‘SoSFNode* [0]’ [-Warray-bounds=]
+  248 |     for (int i = 0; i < n; i++) newbuffer[i] = this->itembuffer[i];
+      |                                 ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~
+/coin3d/include/Inventor/lists/SbList.h:246:24: note: object of size 0 allocated by ‘operator new []’
+  246 |     Type * newbuffer = new Type[this->itembuffersize];
+      |                        ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/coin3d/src/profiler/SoScrollingGraphKit.cpp: In constructor ‘SoScrollingGraphKitP::SoScrollingGraphKitP()’:
+/coin3d/src/profiler/SoScrollingGraphKit.cpp:130:11: warning: ‘SoScrollingGraphKitP::last’ will be initialized after [-Wreorder]
+  130 |   Datum * last;
+      |           ^~~~
+/coin3d/src/profiler/SoScrollingGraphKit.cpp:116:17: warning:   ‘SoSeparator* SoScrollingGraphKitP::chart’ [-Wreorder]
+  116 |   SoSeparator * chart;
+      |                 ^~~~~
+/coin3d/src/profiler/SoScrollingGraphKit.cpp:96:3: warning:   when initialized here [-Wreorder]
+   96 |   SoScrollingGraphKitP(void) : kit(NULL), first(NULL), last(NULL), chart(NULL) {
+      |   ^~~~~~~~~~~~~~~~~~~~
+/coin3d/tests/misc/test_misc.cpp: In function ‘void CATCH2_INTERNAL_TEST_0()’:
+/coin3d/tests/misc/test_misc.cpp:53:16: warning: variable ‘newtype’ set but not used [-Wunused-but-set-variable]
+   53 |         SoType newtype = SoType::createType(SoNode::getClassTypeId(), SbName("MyClass"), createInstance, 0);
+      |                ^~~~~~~
+/coin3d/src/profiler/SbProfilingData.cpp: In member function ‘int SbProfilingData::getIndexForwardCreate(const SoFullPath*, int, int)’:
+/coin3d/src/profiler/SbProfilingData.cpp:673:22: warning: unused variable ‘parent’ [-Wunused-variable]
+  673 |   SbProfilingNodeKey parent =
+      |                      ^~~~~~
+/coin3d/src/profiler/SbProfilingData.cpp:675:7: warning: unused variable ‘pidx’ [-Wunused-variable]
+  675 |   int pidx = fullpath->getIndex(pathlen - 2);
+      |       ^~~~
+/coin3d/src/profiler/SbProfilingData.cpp: In member function ‘int SbProfilingData::getIndexForwardNoCreate(const SoFullPath*, int, int) const’:
+/coin3d/src/profiler/SbProfilingData.cpp:713:22: warning: unused variable ‘parent’ [-Wunused-variable]
+  713 |   SbProfilingNodeKey parent =
+      |                      ^~~~~~
+/coin3d/src/profiler/SbProfilingData.cpp:715:7: warning: unused variable ‘pidx’ [-Wunused-variable]
+  715 |   int pidx = fullpath->getIndex(pathlen - 2);
+      |       ^~~~
+/coin3d/src/profiler/SoNodeVisualize.cpp: In member function ‘virtual void SoNodeVisualize::handleEvent(SoHandleEventAction*)’:
+/coin3d/src/profiler/SoNodeVisualize.cpp:666:13: warning: variable ‘point’ set but not used [-Wunused-but-set-variable]
+  666 |     SbVec3f point = pp->getPoint();
+      |             ^~~~~
+/coin3d/tests/fbo_demo.cpp:68:6: warning: ‘void {anonymous}::writePPM(const std::string&, const unsigned char*, int, int)’ defined but not used [-Wunused-function]
+   68 | void writePPM(const std::string& filename, const unsigned char* pixels, int width, int height) {
+      |      ^~~~~~~~
+/coin3d/testsuite/threadsTest.cpp: In function ‘void* coin_test_suite_ThreadingMigration_TestSuite::mutex_test_func(void*)’:
+/coin3d/testsuite/threadsTest.cpp:72:9: warning: unused variable ‘thread_id’ [-Wunused-variable]
+   72 |   int * thread_id = static_cast<int*>(data);
+      |         ^~~~~~~~~
+/coin3d/testsuite/threadsTest.cpp: In function ‘void* coin_test_suite_ThreadingMigration_TestSuite::recursive_mutex_test_func(void*)’:
+/coin3d/testsuite/threadsTest.cpp:86:9: warning: unused variable ‘thread_id’ [-Wunused-variable]
+   86 |   int * thread_id = static_cast<int*>(data);
+      |         ^~~~~~~~~
+/coin3d/testsuite/threadsTest.cpp: In function ‘void* coin_test_suite_ThreadingMigration_TestSuite::rwmutex_reader_func(void*)’:
+/coin3d/testsuite/threadsTest.cpp:146:9: warning: unused variable ‘thread_id’ [-Wunused-variable]
+  146 |   int * thread_id = static_cast<int*>(data);
+      |         ^~~~~~~~~
+/coin3d/testsuite/threadsTest.cpp: In function ‘void* coin_test_suite_ThreadingMigration_TestSuite::rwmutex_writer_func(void*)’:
+/coin3d/testsuite/threadsTest.cpp:162:9: warning: unused variable ‘thread_id’ [-Wunused-variable]
+  162 |   int * thread_id = static_cast<int*>(data);
+      |         ^~~~~~~~~
+/coin3d/testsuite/threadsTest.cpp: In function ‘void* coin_test_suite_ThreadingMigration_TestSuite::barrier_test_func(void*)’:
+/coin3d/testsuite/threadsTest.cpp:177:9: warning: unused variable ‘thread_id’ [-Wunused-variable]
+  177 |   int * thread_id = static_cast<int*>(data);
+      |         ^~~~~~~~~
+/coin3d/testsuite/threadsTest.cpp: In function ‘void* coin_test_suite_ThreadingMigration_TestSuite::fifo_consumer_func(void*)’:
+/coin3d/testsuite/threadsTest.cpp:207:9: warning: unused variable ‘thread_id’ [-Wunused-variable]
+  207 |   int * thread_id = static_cast<int*>(data);
+      |         ^~~~~~~~~
+/usr/bin/ld: src/CMakeFiles/Coin.dir/C/CoinTidbits.cpp.o: in function `coin_vsnprintf':
+CoinTidbits.cpp:(.text+0x2b6): warning: the use of `tmpnam' is dangerous, better use `mkstemp'
+

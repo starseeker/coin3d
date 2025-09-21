@@ -8,6 +8,8 @@ project(Coin
   LANGUAGES C CXX
   )
 
+add_definitions(-Wall)
+
 # Set modern CMake policies
 cmake_policy(SET CMP0054 NEW)  # Only interpret if() arguments as variables or keywords when unquoted
 cmake_policy(SET CMP0072 NEW)  # FindOpenGL prefers GLVND
