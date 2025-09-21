@@ -38,7 +38,7 @@
 #include <cstring>
 
 #include "C/CoinTidbits.h"
-#include "C/errors/debugerror.h"
+#include "errors/CoinInternalError.h"
 
 
 #include "base/dictp.h"

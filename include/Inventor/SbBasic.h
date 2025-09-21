@@ -34,14 +34,24 @@
 \**************************************************************************/
 
 #include <Inventor/C/basic.h>
-#ifndef NDEBUG
-#include <Inventor/C/errors/debugerror.h>
-#endif // !NDEBUG
 
 // Start migrating to C++17 - internal use only
 #ifdef COIN_INTERNAL
 #ifndef NDEBUG
-#include "errors/CoinDebugError.h"
+#include "errors/CoinInternalError.h"
+#endif // !NDEBUG
+#else
+// For external builds, provide minimal compatibility
+#ifndef NDEBUG
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+void cc_debugerror_post(const char * source, const char * format, ...);
+void cc_debugerror_postwarning(const char * source, const char * format, ...);
+void cc_debugerror_postinfo(const char * source, const char * format, ...);
+#ifdef __cplusplus
+} /* extern "C" */
+#endif /* __cplusplus */
 #endif // !NDEBUG
 #endif // COIN_INTERNAL
 

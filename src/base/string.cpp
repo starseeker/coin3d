@@ -38,7 +38,7 @@
 #include <cstdlib>
 #include <cstring>
 
-#include "C/errors/debugerror.h"
+#include "errors/CoinInternalError.h"
 
 #include "coindefs.h"
 #include "misc/SoEnvironment.h"
