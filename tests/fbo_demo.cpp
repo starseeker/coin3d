@@ -20,7 +20,6 @@
 // For now, we'll use a simple software-based context since OSMesa might not be available
 // This demonstrates the FBO functionality with regular OpenGL
 
-#include "utils/internal_glue.h"
 #include <Inventor/SoDB.h>
 #include <Inventor/nodes/SoCube.h>
 #include <Inventor/nodes/SoSeparator.h>
@@ -48,35 +47,38 @@ struct MockOffscreenContext {
 };
 
 #ifndef COIN3D_OSMESA_BUILD
-// Global callback functions for Coin3D context management (fallback mode only)
-static void* mock_create_offscreen(unsigned int width, unsigned int height) {
-    // This is a mock implementation - in real usage, this would create an OSMesa context
-    // For now, we return a mock to demonstrate the architecture
-    auto* ctx = new MockOffscreenContext(width, height);
-    if (!ctx->isValid()) {
-        delete ctx;
-        return nullptr;
+// Mock context provider for demonstration (fallback mode only)
+class MockContextProvider : public SoOffscreenRenderer::ContextProvider {
+public:
+    virtual void * createOffscreenContext(unsigned int width, unsigned int height) override {
+        // This is a mock implementation - in real usage, this would create an OSMesa context
+        // For now, we return a mock to demonstrate the architecture
+        auto* ctx = new MockOffscreenContext(width, height);
+        if (!ctx->isValid()) {
+            delete ctx;
+            return nullptr;
+        }
+        return ctx;
     }
-    return ctx;
-}
-
-static SbBool mock_make_current(void* context) {
-    if (!context) return FALSE;
-    auto* ctx = static_cast<MockOffscreenContext*>(context);
-    return ctx->makeCurrent() ? TRUE : FALSE;
-}
-
-static void mock_reinstate_previous(void* context) {
-    // Mock implementation
-    (void)context;
-}
-
-static void mock_destruct(void* context) {
-    if (context) {
+    
+    virtual SbBool makeContextCurrent(void * context) override {
+        if (!context) return FALSE;
         auto* ctx = static_cast<MockOffscreenContext*>(context);
-        delete ctx;
+        return ctx->makeCurrent() ? TRUE : FALSE;
     }
-}
+    
+    virtual void restorePreviousContext(void * context) override {
+        // Mock implementation
+        (void)context;
+    }
+    
+    virtual void destroyContext(void * context) override {
+        if (context) {
+            auto* ctx = static_cast<MockOffscreenContext*>(context);
+            delete ctx;
+        }
+    }
+};
 #endif // !COIN3D_OSMESA_BUILD
 
 void writePPM(const std::string& filename, const unsigned char* pixels, int width, int height, int components = 4) {
@@ -162,26 +164,23 @@ int main(int argc, char* argv[]) {
     
 #ifdef COIN3D_OSMESA_BUILD
     std::cout << "NOTE: Using OSMesa for real offscreen rendering" << std::endl;
-    std::cout << "Built with OSMesa support - no mock callbacks needed" << std::endl;
+    std::cout << "Built with OSMesa support - no mock provider needed" << std::endl;
     std::cout << std::endl;
     
-    // With OSMesa build, use the real rendering context (no mock callbacks needed)
+    // With OSMesa build, use the real rendering context (no mock provider needed)
     // The library is already configured for OSMesa rendering
 #else
     std::cout << "NOTE: This demo shows the FBO architecture without OSMesa" << std::endl;
     std::cout << "To use with OSMesa, rebuild with -DCOIN3D_USE_OSMESA=ON" << std::endl;
     std::cout << std::endl;
     
-    // Set up mock callbacks to demonstrate the architecture (fallback mode)
-    cc_glglue_offscreen_cb_functions callbacks = {
-        mock_create_offscreen,
-        mock_make_current,
-        mock_reinstate_previous,
-        mock_destruct
-    };
-    cc_glglue_context_set_offscreen_cb_functions(&callbacks);
+    // Set up mock context provider to demonstrate the architecture (fallback mode)
+    MockContextProvider mockProvider;
+    SoOffscreenRenderer::ContextProvider* originalProvider = 
+        SoOffscreenRenderer::getContextProvider();
+    SoOffscreenRenderer::setContextProvider(&mockProvider);
     
-    std::cout << "Mock callbacks registered with Coin3D" << std::endl;
+    std::cout << "Mock context provider registered with Coin3D" << std::endl;
 #endif
     
     // Create a simple 3D scene
@@ -260,8 +259,8 @@ int main(int argc, char* argv[]) {
     root->unref();
     
 #ifndef COIN3D_OSMESA_BUILD
-    // Clear callbacks (only needed for mock mode)
-    cc_glglue_context_set_offscreen_cb_functions(nullptr);
+    // Restore original context provider (only needed for mock mode)
+    SoOffscreenRenderer::setContextProvider(originalProvider);
 #endif
     
     std::cout << "\nDemo completed!" << std::endl;

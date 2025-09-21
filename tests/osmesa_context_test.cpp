@@ -3,8 +3,8 @@
 #include <iostream>
 #include <vector>
 #include <memory>
-#include "utils/internal_glue.h"
 #include <Inventor/SoDB.h>
+#include <Inventor/SoOffscreenRenderer.h>
 #include <Inventor/nodes/SoCube.h>
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/actions/SoGLRenderAction.h>
@@ -171,12 +171,8 @@ int main() {
     
     root->unref();
     
-    // Clean up
-    cc_glglue_context_reinstate_previous(ctx);
-    cc_glglue_context_destruct(ctx);
-    
-    // Reset to default callbacks
-    cc_glglue_context_set_offscreen_cb_functions(nullptr);
+    // Clean up - restore original context provider
+    SoOffscreenRenderer::setContextProvider(originalProvider);
     
     std::cout << "OSMesa context test completed successfully" << std::endl;
     return 0;

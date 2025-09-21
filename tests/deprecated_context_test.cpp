@@ -1,22 +1,26 @@
-#include "utils/internal_glue.h"
 #include <Inventor/SoDB.h>
+#include <Inventor/SoOffscreenRenderer.h>
 #include <iostream>
 
 int main() {
-    std::cout << "Testing deprecated context creation (should show warning)" << std::endl;
+    std::cout << "Testing modern context creation API" << std::endl;
     
     // Initialize Coin3D
     SoDB::init();
     
-    // Try to create context WITHOUT setting callbacks
-    // This should show the deprecation warning
-    void* ctx = cc_glglue_context_create_offscreen(128, 128);
+    // Test modern high-level context creation via SoOffscreenRenderer
+    SbViewportRegion viewport(128, 128);
+    SoOffscreenRenderer renderer(viewport);
     
-    if (ctx) {
-        std::cout << "Context created with deprecated system" << std::endl;
-        cc_glglue_context_destruct(ctx);
+    // Test modern OpenGL capability detection
+    int major, minor, release;
+    SoOffscreenRenderer::getOpenGLVersion(major, minor, release);
+    
+    if (major > 0) {
+        std::cout << "Modern API successfully provides OpenGL version: " 
+                  << major << "." << minor << "." << release << std::endl;
     } else {
-        std::cout << "Context creation failed (expected if no X11 available)" << std::endl;
+        std::cout << "Context creation handled gracefully by modern API" << std::endl;
     }
     
     return 0;
