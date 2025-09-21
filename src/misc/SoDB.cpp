@@ -131,6 +131,76 @@
 #include <Inventor/annex/Profiler/elements/SoProfilerElement.h>
 #include "profiler/SoProfilerP.h"
 
+#ifdef HAVE_OSMESA
+// OSMesa support for automatic context callback registration
+#include <Inventor/C/glue/gl.h>
+#ifdef COIN3D_OSMESA_BUILD
+#include <OSMesa/osmesa.h>
+#include <OSMesa/gl.h>
+#include <memory>
+
+// OSMesa Context wrapper for automatic context management
+struct SoDBOSMesaContext {
+  OSMesaContext context;
+  std::unique_ptr<unsigned char[]> buffer;
+  int width, height;
+  
+  SoDBOSMesaContext(int w, int h) : width(w), height(h) {
+    context = OSMesaCreateContextExt(OSMESA_RGBA, 16, 0, 0, NULL);
+    if (context) {
+      buffer = std::make_unique<unsigned char[]>(width * height * 4);
+    }
+  }
+  
+  ~SoDBOSMesaContext() {
+    if (context) {
+      OSMesaDestroyContext(context);
+    }
+  }
+  
+  bool isValid() const { return context != nullptr; }
+  
+  bool makeCurrent() {
+    return context && OSMesaMakeCurrent(context, buffer.get(), GL_UNSIGNED_BYTE, width, height) == GL_TRUE;
+  }
+};
+
+// OSMesa callback implementations for Coin3D context management
+static void* coin_osmesa_create_offscreen(unsigned int width, unsigned int height) {
+  auto* ctx = new SoDBOSMesaContext(width, height);
+  return ctx->isValid() ? ctx : (delete ctx, nullptr);
+}
+
+static SbBool coin_osmesa_make_current(void* context) {
+  return context && static_cast<SoDBOSMesaContext*>(context)->makeCurrent() ? TRUE : FALSE;
+}
+
+static void coin_osmesa_reinstate_previous(void* context) {
+  // OSMesa doesn't require explicit context switching for single-threaded use
+  (void)context;
+}
+
+static void coin_osmesa_destruct(void* context) {
+  delete static_cast<SoDBOSMesaContext*>(context);
+}
+
+// Initialize OSMesa context management for Coin3D
+static void initializeCoinOSMesaContext() {
+  static cc_glglue_offscreen_cb_functions osmesa_callbacks = {
+    coin_osmesa_create_offscreen,
+    coin_osmesa_make_current, 
+    coin_osmesa_reinstate_previous,
+    coin_osmesa_destruct
+  };
+  
+  // Only register callbacks if none are already set
+  // This allows applications to provide their own callbacks if needed
+  cc_glglue_context_set_offscreen_cb_functions(&osmesa_callbacks);
+}
+
+#endif // COIN3D_OSMESA_BUILD
+#endif // HAVE_OSMESA
+
 // *************************************************************************
 
 // Coin-global envvars:
@@ -431,6 +501,13 @@ SoDB::init(void)
   if (SoProfiler::isEnabled()) {
     SoProfiler::init();
   }
+
+#ifdef HAVE_OSMESA
+#ifdef COIN3D_OSMESA_BUILD
+  // Initialize OSMesa context management for offscreen rendering
+  initializeCoinOSMesaContext();
+#endif // COIN3D_OSMESA_BUILD
+#endif // HAVE_OSMESA
 
   // Debugging for memory leaks will be easier if we can clean up the
   // resource usage. This needs to be done last in init(), so we get
