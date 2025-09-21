@@ -5,6 +5,7 @@ set(COIN_BASE_FILES
 	list.cpp
 	memalloc.cpp
 	string.cpp
+	utf8.cpp
 	dynarray.cpp
 	namemap.cpp
 	SbBSPTree.cpp
