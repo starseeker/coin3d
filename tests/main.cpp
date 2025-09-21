@@ -52,26 +52,21 @@ namespace {
 namespace {
     struct GlobalTestSetup {
         GlobalTestSetup() {
-            std::cout << "=== GlobalTestSetup: Initializing Coin3D and OSMesa ===" << std::endl;
-            
             // Initialize Coin3D first
             if (!SoDB::isInitialized()) {
                 SoDB::init();
                 SoInteraction::init();
-                std::cout << "=== GlobalTestSetup: Coin3D initialized ===" << std::endl;
             }
             
 #ifdef COIN3D_OSMESA_BUILD
             // Set up OSMesa callbacks for all tests that need rendering
             if (!g_global_osmesa_manager) {
                 g_global_osmesa_manager = std::make_unique<CoinTestUtils::OSMesaCallbackManager>();
-                std::cout << "=== GlobalTestSetup: OSMesa callbacks set up ===" << std::endl;
             }
 #endif
         }
         
         ~GlobalTestSetup() {
-            std::cout << "=== GlobalTestSetup: Cleaning up ===" << std::endl;
 #ifdef COIN3D_OSMESA_BUILD
             // Clean up OSMesa callbacks
             g_global_osmesa_manager.reset();
