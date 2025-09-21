@@ -592,6 +592,25 @@ cc_glglue_getprocaddress(const cc_glglue * glue, const char * symname)
      find the function through the shared library. */
   ptr = cc_dl_sym(coin_glglue_dl_handle(glue), symname);
 
+#ifdef COIN3D_OSMESA_BUILD
+  /* OSMesa uses MGL name mangling, so if the standard name lookup fails,
+     try the MGL-mangled version by prefixing with "mgl" instead of "gl" */
+  if (ptr == NULL && strncmp(symname, "gl", 2) == 0) {
+    /* Create MGL-mangled name: "gl" -> "mgl" */
+    size_t namelen = strlen(symname);
+    char * mgl_name = (char*)malloc(namelen + 2); /* +1 for 'm', +1 for '\0' */
+    if (mgl_name) {
+      strcpy(mgl_name, "mgl");
+      strcat(mgl_name, symname + 2); /* Skip "gl" prefix */
+      ptr = cc_dl_sym(coin_glglue_dl_handle(glue), mgl_name);
+      if (coin_glglue_debug()) {
+        cc_debugerror_postinfo("cc_glglue_getprocaddress", "MGL fallback: %s -> %s == %p", symname, mgl_name, ptr);
+      }
+      free(mgl_name);
+    }
+  }
+#endif
+
   if (coin_glglue_debug()) {
     cc_debugerror_postinfo("cc_glglue_getprocaddress", "%s==%p", symname, ptr);
   }
