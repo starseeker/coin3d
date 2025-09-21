@@ -690,6 +690,12 @@ SoOffscreenRendererP::GLRenderAbortCallback(void *userData)
 SbBool
 SoOffscreenRendererP::renderFromBase(SoBase * base)
 {
+#ifdef COIN3D_OSMESA_BUILD
+  if (coin_glglue_debug()) {
+    cc_debugerror_postinfo("SoOffscreenRendererP::renderFromBase", "Called with base = %p", base);
+  }
+#endif
+
   if (SoOffscreenRendererP::offscreenContextsNotSupported()) {
     static SbBool first = TRUE;
     if (first) {
@@ -704,8 +710,21 @@ SoOffscreenRendererP::renderFromBase(SoBase * base)
   const SbVec2s fullsize = this->viewport.getViewportSizePixels();
   this->glcanvas.setWantedSize(fullsize);
 
+#ifdef COIN3D_OSMESA_BUILD
+  if (coin_glglue_debug()) {
+    cc_debugerror_postinfo("SoOffscreenRendererP::renderFromBase", "Viewport size: %dx%d", 
+                          fullsize[0], fullsize[1]);
+  }
+#endif
+
   // check if no possible canvas size was found
   if (this->glcanvas.getActualSize() == SbVec2s(0, 0)) { return FALSE; }
+
+#ifdef COIN3D_OSMESA_BUILD
+  if (coin_glglue_debug()) {
+    cc_debugerror_postinfo("SoOffscreenRendererP::renderFromBase", "About to activate GL context");
+  }
+#endif
 
   const uint32_t newcontext = this->glcanvas.activateGLContext();
   if (newcontext == 0) {
@@ -713,6 +732,12 @@ SoOffscreenRendererP::renderFromBase(SoBase * base)
                               "Could not set up an offscreen OpenGL context.");
     return FALSE;
   }
+
+#ifdef COIN3D_OSMESA_BUILD
+  if (coin_glglue_debug()) {
+    cc_debugerror_postinfo("SoOffscreenRendererP::renderFromBase", "GL context activated, newcontext = %u", newcontext);
+  }
+#endif
 
   const SbVec2s glsize = this->glcanvas.getActualSize();
 
