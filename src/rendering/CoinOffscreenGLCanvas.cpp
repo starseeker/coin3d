@@ -714,6 +714,14 @@ CoinOffscreenGLCanvas::initializeFBO(void)
 void
 CoinOffscreenGLCanvas::cleanupFBO(void)
 {
+#ifdef COIN3D_OSMESA_BUILD
+  // OSMesa contexts don't use FBO - no cleanup needed
+  if (CoinOffscreenGLCanvas::debug()) {
+    SoDebugError::postInfo("CoinOffscreenGLCanvas::cleanupFBO",
+                           "Skipping FBO cleanup for OSMesa build");
+  }
+  return;
+#else
   if (!this->fbo_initialized) { return; }
   
   const cc_glglue * glue = cc_glglue_instance(static_cast<int>(this->renderid));
@@ -740,11 +748,21 @@ CoinOffscreenGLCanvas::cleanupFBO(void)
     SoDebugError::postInfo("CoinOffscreenGLCanvas::cleanupFBO",
                            "FBO resources cleaned up");
   }
+#endif
 }
 
 SbBool
 CoinOffscreenGLCanvas::bindFBO(void)
 {
+#ifdef COIN3D_OSMESA_BUILD
+  // OSMesa contexts are inherently offscreen and don't need FBO
+  // Skip FBO operations to avoid compatibility issues
+  if (CoinOffscreenGLCanvas::debug()) {
+    SoDebugError::postInfo("CoinOffscreenGLCanvas::bindFBO",
+                           "Skipping FBO operations for OSMesa build - using native offscreen rendering");
+  }
+  return TRUE;
+#else
   if (!this->fbo_initialized) {
     if (!this->initializeFBO()) {
       return FALSE;
@@ -760,15 +778,25 @@ CoinOffscreenGLCanvas::bindFBO(void)
   glViewport(0, 0, this->size[0], this->size[1]);
   
   return TRUE;
+#endif
 }
 
 void
 CoinOffscreenGLCanvas::unbindFBO(void)
 {
+#ifdef COIN3D_OSMESA_BUILD
+  // OSMesa contexts don't use FBO - no need to unbind
+  if (CoinOffscreenGLCanvas::debug()) {
+    SoDebugError::postInfo("CoinOffscreenGLCanvas::unbindFBO",
+                           "Skipping FBO unbind for OSMesa build");
+  }
+  return;
+#else
   const cc_glglue * glue = cc_glglue_instance(static_cast<int>(this->renderid));
   if (!glue) { return; }
   
   cc_glglue_glBindFramebuffer(glue, GL_FRAMEBUFFER_EXT, 0);
+#endif
 }
 
 // *************************************************************************
