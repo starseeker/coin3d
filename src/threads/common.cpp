@@ -30,7 +30,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#include "C/threads/common.h"
+#include "threads/threads.h"
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>

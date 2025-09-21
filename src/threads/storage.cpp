@@ -43,7 +43,7 @@
 /* ********************************************************************** */
 
 /*!
-  \struct cc_storage common.h Inventor/C/threads/common.h
+  \struct cc_storage threads.h src/threads/threads.h
   \ingroup coin_threads
   \brief The structure for the thread local memory storage.
 */
@@ -54,7 +54,7 @@
   \brief The type definition for the thread local memory storage structure.
 */
 
-#include "C/threads/storage.h"
+#include "threads/threads.h"
 #include "coindefs.h"
 
 #include <cstdlib>
@@ -69,8 +69,8 @@
    cc_mutex interfaces *working*, dummy skeletons when no thread
    abstractions are available?  20040615 mortene. */
 #ifdef HAVE_THREADS
-#include "C/threads/thread.h"
-#include "C/threads/mutex.h"
+
+
 #endif /* HAVE_THREADS */
 
 #include "threads/storagep.h"

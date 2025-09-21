@@ -33,7 +33,27 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#include <Inventor/C/threads/storage.h>
+#include <Inventor/C/basic.h>
+
+// Forward declarations for thread storage types
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef struct cc_storage cc_storage;
+typedef void cc_storage_f(void * closure);
+
+// Storage API functions
+extern cc_storage * cc_storage_construct(unsigned int size);
+extern cc_storage * cc_storage_construct_etc(unsigned int size, 
+                                             cc_storage_f * constructor,
+                                             cc_storage_f * destructor);
+extern void cc_storage_destruct(cc_storage * storage);
+extern void * cc_storage_get(cc_storage * storage);
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif
 
 template <typename Type>
 class SbTypedStorage {

@@ -41,7 +41,7 @@
 */
 
 /*!
-  \struct cc_mutex common.h Inventor/C/threads/common.h
+  \struct cc_mutex threads.h src/threads/threads.h
   \ingroup coin_threads
   \brief The structure for a mutex.
 */
@@ -52,7 +52,7 @@
   \brief The type definition for the mutex structure.
 */
 
-#include "C/threads/mutex.h"
+#include "threads/threads.h"
 
 #include <cstdlib>
 #include <cassert>

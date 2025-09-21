@@ -31,7 +31,7 @@
 \**************************************************************************/
 
 /*!
-  \struct cc_recmutex common.h Inventor/C/threads/common.h
+  \struct cc_recmutex threads.h src/threads/threads.h
   \ingroup coin_threads
   \brief The structure for the recursive mutex.
 */
@@ -42,15 +42,15 @@
   \brief The type definition for the recursive mutex structure.
 */
 
-#include "C/threads/recmutex.h"
+#include "threads/threads.h"
 
 #include <cstdlib>
 #include <cassert>
 
 #include "errors/CoinInternalError.h"
-#include "C/threads/mutex.h"
-#include "C/threads/thread.h"
-#include "C/threads/condvar.h"
+
+
+
 
 #include "C/CoinTidbits.h"
 #include "threads/recmutexp.h"

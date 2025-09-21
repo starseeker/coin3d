@@ -51,7 +51,7 @@
 #error this is a private header file
 #endif /* ! COIN_INTERNAL */
 
-#include "C/threads/common.h"
+#include "threads/threads.h"
 #include "threads/storagep.h"
 
 #include <memory>

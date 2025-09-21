@@ -297,10 +297,6 @@ else()
           COMPONENT development 
           FILES_MATCHING PATTERN "*.h"
           # Exclude specific internal C headers that are no longer part of public API
-          PATTERN "C/threads/condvar.h" EXCLUDE  
-          PATTERN "C/threads/mutex.h" EXCLUDE
-          PATTERN "C/threads/recmutex.h" EXCLUDE
-          PATTERN "C/threads/thread.h" EXCLUDE
           PATTERN "C/glue/dl.h" EXCLUDE
           PATTERN "C/basic.h.in" EXCLUDE
           PATTERN "C/basic.h.cmake.in" EXCLUDE)
