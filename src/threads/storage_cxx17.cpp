@@ -53,8 +53,8 @@
 #include <config.h>
 #endif /* HAVE_CONFIG_H */
 
-#include "C/threads/thread.h"
-#include "C/threads/mutex.h"
+#include "threads/threads.h"
+
 #include "base/dict.h"
 
 namespace CoinInternal {

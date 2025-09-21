@@ -59,7 +59,7 @@
   \brief The type definition for the return value enumerator.
 */
 
-#include "C/threads/thread.h"
+#include "threads/threads.h"
 
 #include <cstdlib>
 #include <cassert>

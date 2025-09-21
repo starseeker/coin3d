@@ -42,7 +42,7 @@
   \brief The type definition for the conditional variable structure.
 */
 
-#include "C/threads/condvar.h"
+#include "threads/threads.h"
 
 #include <cstdlib>
 #include <cassert>
@@ -55,7 +55,7 @@
 #include <unistd.h>
 #endif /* HAVE_UNISTD_H */
 
-#include "C/threads/mutex.h"
+
 #include "errors/CoinInternalError.h"
 
 // C++17 includes for modern threading

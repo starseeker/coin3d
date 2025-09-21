@@ -52,7 +52,7 @@
   \brief The type definition for the mutex structure.
 */
 
-#include "C/threads/mutex.h"
+#include "threads/threads.h"
 
 #include <cstdlib>
 #include <cassert>
