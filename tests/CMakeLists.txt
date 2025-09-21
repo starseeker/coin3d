@@ -46,6 +46,8 @@ add_executable(CoinTests
     context/test_context_callbacks.cpp
     # FBO-based rendering tests
     rendering/test_fbo_rendering.cpp
+    # Modern API tests
+    rendering/test_modern_api.cpp
     # PNG utility tests
     utils/test_png_output.cpp
     # Comprehensive testing modules - NEW FRAMEWORK
