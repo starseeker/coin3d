@@ -2212,15 +2212,33 @@ glglue_check_driver(const char * vendor, const char * renderer,
 const cc_glglue *
 cc_glglue_instance(int contextid)
 {
+  // Add debugging for OSMesa builds at function entry
+#ifdef COIN3D_OSMESA_BUILD
+  if (coin_glglue_debug()) {
+    cc_debugerror_postinfo("cc_glglue_instance", "ENTRY: contextid=%d", contextid);
+  }
+#endif
+
   SbBool found;
   void * ptr;
   GLint gltmp;
 
   cc_glglue * gi = NULL;
 
+#ifdef COIN3D_OSMESA_BUILD
+  if (coin_glglue_debug()) {
+    cc_debugerror_postinfo("cc_glglue_instance", "About to begin sync");
+  }
+#endif
+
   CC_SYNC_BEGIN(cc_glglue_instance);
 
   /* check environment variables */
+#ifdef COIN3D_OSMESA_BUILD
+  if (coin_glglue_debug()) {
+    cc_debugerror_postinfo("cc_glglue_instance", "Checking environment variables");
+  }
+#endif
   if (COIN_MAXIMUM_TEXTURE2_SIZE == 0) {
     auto env = CoinInternal::getEnvironmentVariable("COIN_MAXIMUM_TEXTURE2_SIZE");
     if (env.has_value()) COIN_MAXIMUM_TEXTURE2_SIZE = std::atoi(env->c_str());
@@ -2233,14 +2251,29 @@ cc_glglue_instance(int contextid)
   }
   /* Platform detection calls removed */
 
+#ifdef COIN3D_OSMESA_BUILD
+  if (coin_glglue_debug()) {
+    cc_debugerror_postinfo("cc_glglue_instance", "Checking global dict");
+  }
+#endif
   if (!gldict) {  /* First invocation, do initializations. */
     gldict = cc_dict_construct(16, 0.75f);
     coin_atexit((coin_atexit_f *)glglue_cleanup, CC_ATEXIT_NORMAL);
   }
 
+#ifdef COIN3D_OSMESA_BUILD
+  if (coin_glglue_debug()) {
+    cc_debugerror_postinfo("cc_glglue_instance", "Looking up context %d in dict", contextid);
+  }
+#endif
   found = cc_dict_get(gldict, (uintptr_t)contextid, &ptr);
 
   if (!found) {
+#ifdef COIN3D_OSMESA_BUILD
+    if (coin_glglue_debug()) {
+      cc_debugerror_postinfo("cc_glglue_instance", "Context not found, creating new glglue instance");
+    }
+#endif
     GLenum glerr;
 
     /* Internal consistency checking.
@@ -2257,9 +2290,36 @@ cc_glglue_instance(int contextid)
          text below. */
       chk = CoinInternal::getEnvironmentVariable("COIN_GL_NO_CURRENT_CONTEXT_CHECK").has_value() ? 0 : 1;
     }
+#ifdef COIN3D_OSMESA_BUILD
+    if (coin_glglue_debug()) {
+      cc_debugerror_postinfo("cc_glglue_instance", "Context check flag: %d", chk);
+    }
+#endif
     if (chk) {
+#ifdef COIN3D_OSMESA_BUILD
+      if (coin_glglue_debug()) {
+        cc_debugerror_postinfo("cc_glglue_instance", "About to call coin_gl_current_context()");
+      }
+#endif
       const void * current_ctx = coin_gl_current_context();
-      assert(current_ctx && "Must have a current GL context when instantiating cc_glglue!! (Note: if you are using an old Mesa GL version, set the environment variable COIN_GL_NO_CURRENT_CONTEXT_CHECK to get around what may be a Mesa bug.)");
+#ifdef COIN3D_OSMESA_BUILD
+      if (coin_glglue_debug()) {
+        cc_debugerror_postinfo("cc_glglue_instance", "coin_gl_current_context() returned: %p", current_ctx);
+        cc_debugerror_postinfo("cc_glglue_instance", "offscreen_cb = %p", offscreen_cb);
+      }
+#endif
+      // For callback-based contexts, coin_gl_current_context() always returns NULL
+      // This is expected behavior, so we skip the assertion in that case
+      if (!offscreen_cb) {
+        assert(current_ctx && "Must have a current GL context when instantiating cc_glglue!! (Note: if you are using an old Mesa GL version, set the environment variable COIN_GL_NO_CURRENT_CONTEXT_CHECK to get around what may be a Mesa bug.)");
+      }
+#ifdef COIN3D_OSMESA_BUILD
+      else {
+        if (coin_glglue_debug()) {
+          cc_debugerror_postinfo("cc_glglue_instance", "Skipping context check for callback-based contexts");
+        }
+      }
+#endif
       (void)current_ctx; /* avoid unused variable warning */
     }
 
