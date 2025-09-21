@@ -217,9 +217,10 @@ SoDB::init(void)
   // probable bug in the Intel compiler.
   assert(SoNode::getClassTypeId() == SoType::badType() && "Data init failed! Get in touch with maintainers at <coin-support@coin3d.org>");
 
-  // Sanity check. Must be done early, as e.g.  SoDebugError::post*()
-  // may fail if there are problems.
-  SoDBP::variableArgsSanityCheck();
+  // Note: variableArgsSanityCheck() was removed as it's no longer needed.
+  // The underlying cc_string_vsprintf() function now uses modern C++17 
+  // std::vsnprintf with proper va_copy handling, eliminating the variable
+  // argument reuse issues that the sanity check was designed to detect.
 
 
 #ifdef HAVE_THREADS
