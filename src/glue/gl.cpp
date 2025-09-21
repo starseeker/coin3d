@@ -666,8 +666,13 @@ glglue_set_glVersion(cc_glglue * w)
    * setting up a cc_glglue instance was made when there is no current
    * OpenGL context. */
   if (coin_glglue_debug()) {
-    cc_debugerror_postinfo("glglue_set_glVersion",
-                           "glGetString(GL_VERSION)=='%s'", w->versionstr);
+    if (w->versionstr && strlen(w->versionstr) > 0) {
+      cc_debugerror_postinfo("glglue_set_glVersion",
+                             "glGetString(GL_VERSION)=='%s'", w->versionstr);
+    } else {
+      cc_debugerror_postinfo("glglue_set_glVersion",
+                             "glGetString(GL_VERSION)==%p (NULL or empty)", w->versionstr);
+    }
   }
 
   w->version.major = 0;
@@ -2300,6 +2305,18 @@ cc_glglue_instance(int contextid)
      * setting up a cc_glglue instance was made when there is no
      * current OpenGL context. */
     gi->versionstr = (const char *)glGetString(GL_VERSION);
+    
+    /* Additional debugging for OSMesa context */
+    if (coin_glglue_debug()) {
+      cc_debugerror_postinfo("cc_glglue_instance", "glGetString(GL_VERSION) returned: %p", gi->versionstr);
+      if (gi->versionstr) {
+        /* Try to safely check if the string is readable */
+        volatile char testchar = gi->versionstr[0];
+        cc_debugerror_postinfo("cc_glglue_instance", "Version string first char: 0x%02x ('%c')", 
+                              (unsigned char)testchar, (testchar >= 32 && testchar < 127) ? testchar : '?');
+      }
+    }
+    
     assert(gi->versionstr && "could not call glGetString() -- no current GL context?");
     assert(glGetError() == GL_NO_ERROR && "GL error when calling glGetString() -- no current GL context?");
 

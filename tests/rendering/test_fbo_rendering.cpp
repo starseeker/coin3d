@@ -67,6 +67,24 @@ static SbBool osmesa_fbo_make_current(void* context) {
     auto* ctx = static_cast<OSMesaFBOTestContext*>(context);
     SbBool result = ctx->makeCurrent() ? TRUE : FALSE;
     fprintf(stderr, "DEBUG: osmesa_fbo_make_current - result: %s\n", result ? "TRUE" : "FALSE");
+    
+    // Add debugging to test glGetString immediately after making context current
+    if (result) {
+        fprintf(stderr, "DEBUG: Testing glGetString after context made current\n");
+        GLenum error = glGetError();
+        fprintf(stderr, "DEBUG: Initial GL error state: %d\n", error);
+        
+        const char* vendor = (const char*)glGetString(GL_VENDOR);
+        const char* renderer = (const char*)glGetString(GL_RENDERER);
+        const char* version = (const char*)glGetString(GL_VERSION);
+        
+        error = glGetError();
+        fprintf(stderr, "DEBUG: GL_VENDOR: %s\n", vendor ? vendor : "(null)");
+        fprintf(stderr, "DEBUG: GL_RENDERER: %s\n", renderer ? renderer : "(null)");
+        fprintf(stderr, "DEBUG: GL_VERSION: %s\n", version ? version : "(null)");
+        fprintf(stderr, "DEBUG: GL error after glGetString calls: %d\n", error);
+    }
+    
     return result;
 }
 
