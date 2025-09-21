@@ -2382,10 +2382,24 @@ cc_glglue_instance(int contextid)
 
     glglue_set_glVersion(gi);
 
+#ifdef COIN3D_OSMESA_BUILD
+    if (coin_glglue_debug()) {
+      cc_debugerror_postinfo("cc_glglue_instance", "About to call glGetString(GL_VENDOR)");
+    }
+#endif
+
   /* Platform-specific initialization is no longer needed with callback-based contexts.
      Applications are responsible for providing complete OpenGL contexts through callbacks. */
 
     gi->vendorstr = (const char *)glGetString(GL_VENDOR);
+
+#ifdef COIN3D_OSMESA_BUILD
+    if (coin_glglue_debug()) {
+      cc_debugerror_postinfo("cc_glglue_instance", "glGetString(GL_VENDOR)=='%s' (=> vendor_is_SGI==%s)", 
+                            gi->vendorstr ? gi->vendorstr : "(null)",
+                            strcmp((const char *)gi->vendorstr, "SGI") == 0 ? "TRUE" : "FALSE");
+    }
+#endif
     gi->vendor_is_SGI = strcmp((const char *)gi->vendorstr, "SGI") == 0;
     gi->vendor_is_nvidia = strcmp((const char*)gi->vendorstr, "NVIDIA Corporation") == 0;
     gi->vendor_is_intel =
@@ -2394,6 +2408,12 @@ cc_glglue_instance(int contextid)
     gi->vendor_is_ati = (strcmp((const char *) gi->vendorstr, "ATI Technologies Inc.") == 0);
     gi->vendor_is_3dlabs = strcmp((const char *) gi->vendorstr, "3Dlabs") == 0;
     
+#ifdef COIN3D_OSMESA_BUILD
+    if (coin_glglue_debug()) {
+      cc_debugerror_postinfo("cc_glglue_instance", "Vendor flags set, about to process nvidia bug workaround");
+    }
+#endif
+    
     /* FIXME: update when nVidia fixes their driver. pederb, 2004-09-01 */
     gi->nvidia_color_per_face_bug = gi->vendor_is_nvidia;
     if (gi->nvidia_color_per_face_bug) {
@@ -2401,8 +2421,21 @@ cc_glglue_instance(int contextid)
       if (env.has_value()) gi->nvidia_color_per_face_bug = 0;
     }
 
+#ifdef COIN3D_OSMESA_BUILD
+    if (coin_glglue_debug()) {
+      cc_debugerror_postinfo("cc_glglue_instance", "About to call glGetString(GL_RENDERER)");
+    }
+#endif
+
     gi->rendererstr = (const char *)glGetString(GL_RENDERER);
     gi->extensionsstr = (const char *)glGetString(GL_EXTENSIONS);
+
+#ifdef COIN3D_OSMESA_BUILD
+    if (coin_glglue_debug()) {
+      cc_debugerror_postinfo("cc_glglue_instance", "Extensions string: %s", 
+                            gi->extensionsstr ? gi->extensionsstr : "(null)");
+    }
+#endif
 
     /* Randall O'Reilly reports that the above call is deprecated from OpenGL 3.0
        onwards and may, particularly on some Linux systems, return NULL.
@@ -2412,8 +2445,18 @@ cc_glglue_instance(int contextid)
        same result as the old method.
     */
     if (gi->extensionsstr == NULL) {
+#ifdef COIN3D_OSMESA_BUILD
+      if (coin_glglue_debug()) {
+        cc_debugerror_postinfo("cc_glglue_instance", "Extensions string is NULL, trying glGetStringi fallback");
+      }
+#endif
       COIN_PFNGLGETSTRINGIPROC glGetStringi = NULL;
       glGetStringi = (COIN_PFNGLGETSTRINGIPROC)cc_glglue_getprocaddress(gi, "glGetStringi");
+#ifdef COIN3D_OSMESA_BUILD
+      if (coin_glglue_debug()) {
+        cc_debugerror_postinfo("cc_glglue_instance", "glGetStringi = %p", glGetStringi);
+      }
+#endif
       if (glGetStringi != NULL) {
         GLint num_strings = 0;
         glGetIntegerv(GL_NUM_EXTENSIONS, &num_strings);
@@ -2538,6 +2581,12 @@ cc_glglue_instance(int contextid)
 
   CC_SYNC_END(cc_glglue_instance);
 
+#ifdef COIN3D_OSMESA_BUILD
+  if (coin_glglue_debug()) {
+    cc_debugerror_postinfo("cc_glglue_instance", "About to execute instance created callbacks");
+  }
+#endif
+
   if (!found && gl_instance_created_cblist) {
     int i, n = cc_list_get_length(gl_instance_created_cblist) / 2;
     for (i = 0; i < n; i++) {
@@ -2546,6 +2595,13 @@ cc_glglue_instance(int contextid)
       cb(contextid, cc_list_get(gl_instance_created_cblist, i*2+1));
     }
   }
+
+#ifdef COIN3D_OSMESA_BUILD
+  if (coin_glglue_debug()) {
+    cc_debugerror_postinfo("cc_glglue_instance", "RETURN: cc_glglue_instance returning successfully");
+  }
+#endif
+
   return gi;
 }
 

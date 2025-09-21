@@ -607,6 +607,12 @@ CoinOffscreenGLCanvas::initializeFBO(void)
 #endif
   
   // Check if FBO extension is supported
+#ifdef COIN3D_OSMESA_BUILD
+  if (CoinOffscreenGLCanvas::debug()) {
+    SoDebugError::postInfo("CoinOffscreenGLCanvas::initializeFBO",
+                          "About to check cc_glglue_has_framebuffer_objects");
+  }
+#endif
   if (!cc_glglue_has_framebuffer_objects(glue)) {
     if (CoinOffscreenGLCanvas::debug()) {
       SoDebugError::post("CoinOffscreenGLCanvas::initializeFBO",
@@ -614,9 +620,21 @@ CoinOffscreenGLCanvas::initializeFBO(void)
     }
     return FALSE;
   }
+#ifdef COIN3D_OSMESA_BUILD
+  if (CoinOffscreenGLCanvas::debug()) {
+    SoDebugError::postInfo("CoinOffscreenGLCanvas::initializeFBO",
+                          "FBO extension check passed, about to generate framebuffer");
+  }
+#endif
   
   // Generate framebuffer object
   cc_glglue_glGenFramebuffers(glue, 1, &this->fbo);
+#ifdef COIN3D_OSMESA_BUILD
+  if (CoinOffscreenGLCanvas::debug()) {
+    SoDebugError::postInfo("CoinOffscreenGLCanvas::initializeFBO",
+                          "cc_glglue_glGenFramebuffers returned, fbo=%u", this->fbo);
+  }
+#endif
   if (this->fbo == 0) {
     if (CoinOffscreenGLCanvas::debug()) {
       SoDebugError::post("CoinOffscreenGLCanvas::initializeFBO",
