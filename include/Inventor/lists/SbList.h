@@ -245,7 +245,9 @@ private:
 
     Type * newbuffer = new Type[this->itembuffersize];
     const int n = this->numitems;
-    for (int i = 0; i < n; i++) newbuffer[i] = this->itembuffer[i];
+    if (n > 0) {
+      for (int i = 0; i < n; i++) newbuffer[i] = this->itembuffer[i];
+    }
     if (this->itembuffer != this->builtinbuffer) delete[] this->itembuffer;
     this->itembuffer = newbuffer;
   }

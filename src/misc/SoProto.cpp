@@ -83,7 +83,7 @@ static SoType soproto_type;
 static SbList <SoProto*> * protolist;
 static SoFetchExternProtoCB * soproto_fetchextern_cb = NULL;
 static void * soproto_fetchextern_closure = NULL;
-static void * soproto_mutex;
+static void * soproto_mutex __attribute__((unused));
 
 // atexit callback
 static void
