@@ -50,7 +50,7 @@
 #include <Inventor/elements/SoGLCacheContextElement.h>
 #include <Inventor/nodes/SoNode.h>
 #include <Inventor/lists/SbList.h>
-#include "C/glue/gl.h"
+#include "glue/glp.h"
 #include <Inventor/misc/SoGLDriverDatabase.h>
 
 #include "rendering/SoGL.h"

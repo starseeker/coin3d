@@ -34,7 +34,7 @@
 
 #include <climits>
 
-#include "C/glue/gl.h"
+#include "glue/glp.h"
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/misc/SoContextHandler.h>
 #include <Inventor/elements/SoGLCacheContextElement.h>

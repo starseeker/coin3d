@@ -140,7 +140,7 @@
 #include <Inventor/elements/SoGLMultiTextureEnabledElement.h>
 #include <Inventor/misc/SoState.h>
 #include <Inventor/SbColor4f.h>
-#include "C/glue/gl.h"
+#include "glue/glp.h"
 #include "C/CoinTidbits.h"
 
 #if COIN_DEBUG

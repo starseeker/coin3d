@@ -40,7 +40,7 @@
 // *************************************************************************
 
 #include <Inventor/SbString.h>
-#include "C/glue/gl.h"
+#include "glue/glp.h"
 #include <Inventor/nodes/SoShaderProgram.h>
 #include <Inventor/lists/SbList.h>
 

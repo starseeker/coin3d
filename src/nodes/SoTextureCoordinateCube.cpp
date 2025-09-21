@@ -57,7 +57,7 @@
 #include <config.h>
 #endif // HAVE_CONFIG
 
-#include "C/glue/gl.h"
+#include "glue/glp.h"
 #include <Inventor/SbBox3f.h>
 #include <Inventor/SoFullPath.h>
 #include <Inventor/actions/SoCallbackAction.h>

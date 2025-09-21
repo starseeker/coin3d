@@ -50,7 +50,7 @@
 
 #include <cassert>
 
-#include "C/glue/gl.h"
+#include "glue/glp.h"
 #include <Inventor/SbImage.h>
 #include <Inventor/SoFullPath.h>
 #include <Inventor/actions/SoGLRenderAction.h>

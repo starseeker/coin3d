@@ -46,7 +46,8 @@
 
 #include <OSMesa/osmesa.h>
 #include <OSMesa/gl.h>
-#include <Inventor/C/glue/gl.h>
+#include <Inventor/SoOffscreenRenderer.h>
+#include <Inventor/C/basic.h>
 #include <memory>
 #include <vector>
 #include <string>
@@ -132,10 +133,10 @@ private:
 };
 
 /**
- * @brief RAII manager for OSMesa callback registration with Coin3D
+ * @brief RAII manager for OSMesa context provider registration with Coin3D
  * 
- * Automatically registers and unregisters OSMesa callbacks with Coin3D's
- * context management system for seamless integration.
+ * Automatically registers and unregisters OSMesa context provider with Coin3D's
+ * modern context management system for seamless integration.
  */
 class OSMesaCallbackManager {
 public:
@@ -149,10 +150,9 @@ public:
     OSMesaCallbackManager& operator=(OSMesaCallbackManager&&) = delete;
 
 private:
-    static void* createOffscreen(unsigned int width, unsigned int height);
-    static SbBool makeCurrent(void* context);
-    static void reinstatePrevious(void* context);
-    static void destruct(void* context);
+    class OSMesaContextProvider;
+    std::unique_ptr<OSMesaContextProvider> provider_;
+    SoOffscreenRenderer::ContextProvider* originalProvider_;
 };
 
 /**

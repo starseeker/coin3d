@@ -38,7 +38,7 @@
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
-#include "C/glue/gl.h"
+#include "glue/glp.h"
 #include <Inventor/SbMatrix.h>
 #include <Inventor/details/SoPointDetail.h>
 #include <Inventor/elements/SoBumpMapElement.h>

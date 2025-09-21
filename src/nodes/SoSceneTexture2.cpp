@@ -301,7 +301,7 @@
 #include <Inventor/lists/SbStringList.h>
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/SbImage.h>
-#include "C/glue/gl.h"
+#include "glue/glp.h"
 #include <Inventor/misc/SoGLImage.h>
 #include "C/CoinTidbits.h"
 #include <Inventor/system/gl.h>

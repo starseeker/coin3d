@@ -4,7 +4,7 @@
 /* OSMesa-specific code - Full context management example */
 #include <OSMesa/osmesa.h>
 #include <OSMesa/gl.h>
-#include <Inventor/C/glue/gl.h>
+#include "internal_glue.h"
 #include <memory>
 
 struct CoinOSMesaContext {
@@ -64,7 +64,7 @@ inline void initializeCoinOSMesaContext() {
 /* System OpenGL code - Platform-specific context creation */
 #include <GL/gl.h>
 #include <GL/glu.h>
-#include <Inventor/C/glue/gl.h>
+#include "internal_glue.h"
 
 // NOTE: With the new Coin3D context management, applications must provide
 // context creation callbacks even for system OpenGL. The library no longer

@@ -41,7 +41,7 @@
   question on your build system.  The cc_glglue abstraction is here
   to relieve the application programmer for that burden.
 
-  To use the cc_glglue interface, include Inventor/C/glue/gl.h.
+  To use the cc_glglue interface, include glue/glp.h for internal code.
 
   The cc_glglue interface is part of the public API of Coin, but is
   not documented on the public documentation pages at
@@ -238,10 +238,7 @@
 #include <EGL/eglext.h>
 #endif /* HAVE_EGL */
 
-#include "C/glue/gl.h"
-
 #include "errors/CoinInternalError.h"
-#include "C/glue/dl.h"
 #include "C/CoinTidbits.h"
 #include "base/list.h"
 
@@ -4522,7 +4519,7 @@ cc_glglue_glXGetCurrentDisplay(const cc_glglue * w)
   works:
  */
 /*
-  #include "C/glue/gl.h"
+  #include "glue/glp.h"
   #include <Inventor/elements/SoGLCacheContextElement.h>
   #include <Inventor/SoDB.h>
   #include <cassert>

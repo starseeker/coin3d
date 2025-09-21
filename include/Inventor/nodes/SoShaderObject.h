@@ -39,7 +39,6 @@
 #include <Inventor/fields/SoSFEnum.h>
 #include <Inventor/fields/SoSFBool.h>
 #include <Inventor/fields/SoMFNode.h>
-#include <Inventor/C/glue/gl.h>
 
 class SoGLShaderObject;
 class SoGLShaderProgram;

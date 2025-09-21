@@ -38,7 +38,7 @@
 #endif /* !COIN_INTERNAL */
 
 #include <Inventor/system/gl.h>
-#include "C/glue/gl.h"
+#include "glue/glp.h"
 
 #include "misc/SbHash.h"
 
