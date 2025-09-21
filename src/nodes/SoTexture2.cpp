@@ -204,7 +204,7 @@
 #include "elements/SoTextureScalePolicyElement.h"
 #include "nodes/SoSubNodeP.h"
 #include "C/CoinTidbits.h"
-#include "C/glue/gl.h"
+#include "glue/glp.h"
 #include <Inventor/SbImage.h>
 #include <Inventor/SoInput.h>
 #include <Inventor/actions/SoCallbackAction.h>

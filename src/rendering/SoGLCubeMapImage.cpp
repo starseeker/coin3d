@@ -59,7 +59,7 @@
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/system/gl.h>
 #include <Inventor/lists/SbList.h>
-#include "C/glue/gl.h"
+#include "glue/glp.h"
 #include <Inventor/misc/SoContextHandler.h>
 
 #ifdef COIN_THREADSAFE

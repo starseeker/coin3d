@@ -33,8 +33,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#include <Inventor/C/glue/gl.h>
 #include <Inventor/lists/SbList.h>
+
+/* Forward declaration */
+struct cc_glglue;
 
 class SoGLDriver;
 class SoGLDriverDatabaseP;

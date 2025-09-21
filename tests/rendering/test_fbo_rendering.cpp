@@ -3,7 +3,8 @@
 
 #include <OSMesa/osmesa.h>
 #include <OSMesa/gl.h>
-#include <Inventor/C/glue/gl.h>
+#define COIN_INTERNAL
+#include "../src/glue/glp.h"
 #include <Inventor/SoDB.h>
 #include <Inventor/nodes/SoCube.h>
 #include <Inventor/nodes/SoSeparator.h>

@@ -317,7 +317,7 @@
 #include <cmath> // for ceil()
 #include <climits> // SHRT_MAX
 
-#include "C/glue/gl.h"
+#include "glue/glp.h"
 #include "C/CoinTidbits.h"
 #include <Inventor/SbMatrix.h>
 #include <Inventor/SbVec2f.h>

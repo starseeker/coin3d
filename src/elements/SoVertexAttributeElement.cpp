@@ -49,7 +49,7 @@
 #include <Inventor/elements/SoGLCacheContextElement.h>
 #include <Inventor/fields/SoMFFloat.h>
 #include <Inventor/errors/SoDebugError.h>
-#include "C/glue/gl.h"
+#include "glue/glp.h"
 
 class SoVertexAttributeElementP {
 public:

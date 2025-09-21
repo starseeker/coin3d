@@ -1,4 +1,5 @@
-#include <Inventor/C/glue/gl.h>
+#define COIN_INTERNAL
+#include "../src/glue/glp.h"
 #include <Inventor/SoDB.h>
 #include <iostream>
 

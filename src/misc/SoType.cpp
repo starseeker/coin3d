@@ -144,7 +144,7 @@
 #include <Inventor/SoDB.h>
 #include <Inventor/lists/SbList.h>
 #include "C/CoinTidbits.h"
-#include "C/glue/dl.h"
+#include "glue/dlp.h"
 
 
 #include "misc/SbHash.h"

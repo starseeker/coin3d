@@ -133,7 +133,7 @@
 
 #ifdef HAVE_OSMESA
 // OSMesa support for automatic context callback registration
-#include <Inventor/C/glue/gl.h>
+#include "glue/glp.h"
 #ifdef COIN3D_OSMESA_BUILD
 #include <OSMesa/osmesa.h>
 #include <OSMesa/gl.h>
