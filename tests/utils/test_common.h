@@ -37,6 +37,18 @@
 #include <Inventor/SoDB.h>
 #include <Inventor/SoInteraction.h>
 
+// Forward declarations for comprehensive testing utilities
+namespace CoinTestUtils {
+    class OSMesaTestContext;
+    class OSMesaTestFixture;
+    class StandardTestScenes;
+    class SceneGraphValidator;
+    class RenderingTestUtils;
+    class ActionTestUtils;
+    class FieldTestUtils;
+    class ComprehensiveTestRunner;
+}
+
 namespace CoinTestUtils {
 
 // Test fixture for Coin initialization
@@ -60,6 +72,35 @@ public:
 #define COIN_CHECK_MESSAGE(condition, message) INFO(message); CHECK(condition)
 #define COIN_CHECK_EQUAL(left, right) CHECK((left) == (right))
 #define COIN_REQUIRE(condition) REQUIRE(condition)
+
+// Comprehensive testing macros
+#define COIN_TEST_SCENE(scene_name) \
+    SECTION(#scene_name " scene validation") { \
+        auto scene = StandardTestScenes::create##scene_name##Scene(); \
+        REQUIRE(scene != nullptr); \
+        CHECK(SceneGraphValidator::validateSceneStructure(scene)); \
+        scene->unref(); \
+    }
+
+#define COIN_RENDER_TEST(scene_name, test_name) \
+    SECTION(#scene_name " " #test_name) { \
+        COIN_TEST_WITH_OSMESA_CONTEXT(256, 256) { \
+            auto scene = StandardTestScenes::create##scene_name##Scene(); \
+            REQUIRE(scene != nullptr); \
+            RenderingTestUtils::RenderTestFixture fixture(256, 256); \
+            CHECK(fixture.renderScene(scene)); \
+            CHECK(RenderingTestUtils::validateRenderOutput(fixture)); \
+            scene->unref(); \
+        } \
+    }
+
+#ifdef COIN3D_OSMESA_BUILD
+#define COIN_TEST_WITH_OSMESA_CONTEXT(width, height) \
+    if (true)
+#else
+#define COIN_TEST_WITH_OSMESA_CONTEXT(width, height) \
+    if (false)
+#endif
 
 } // namespace CoinTestUtils
 

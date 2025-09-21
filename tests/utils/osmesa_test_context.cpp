@@ -1,0 +1,200 @@
+/**************************************************************************\
+* Copyright (c) Kongsberg Oil & Gas Technologies AS
+* All rights reserved.
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted provided that the following conditions are
+* met:
+*
+* Redistributions of source code must retain the above copyright notice,
+* this list of conditions and the following disclaimer.
+*
+* Redistributions in binary form must reproduce the above copyright
+* notice, this list of conditions and the following disclaimer in the
+* documentation and/or other materials provided with the distribution.
+*
+* Neither the name of the copyright holder nor the names of its
+* contributors may be used to endorse or promote products derived from
+* this software without specific prior written permission.
+*
+* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+* "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+* LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+* A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+* HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+* SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+* LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+* DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+* THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+* (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+* OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+\**************************************************************************/
+
+#include "osmesa_test_context.h"
+
+#ifdef COIN3D_OSMESA_BUILD
+
+#include <iostream>
+#include <fstream>
+#include <cstring>
+
+namespace CoinTestUtils {
+
+// ============================================================================
+// OSMesaTestContext Implementation
+// ============================================================================
+
+OSMesaTestContext::OSMesaTestContext(unsigned int width, unsigned int height, GLenum format)
+    : context_(nullptr), width_(width), height_(height), format_(format) {
+    
+    // Allocate pixel buffer
+    size_t buffer_size = width_ * height_ * 4; // RGBA
+    buffer_ = std::make_unique<unsigned char[]>(buffer_size);
+    
+    // Create OSMesa context
+    context_ = OSMesaCreateContext(format_, nullptr);
+    if (!context_) {
+        std::cerr << "Failed to create OSMesa context" << std::endl;
+        return;
+    }
+    
+    // Bind context to buffer
+    if (!OSMesaMakeCurrent(context_, buffer_.get(), GL_UNSIGNED_BYTE, width_, height_)) {
+        std::cerr << "Failed to make OSMesa context current" << std::endl;
+        OSMesaDestroyContext(context_);
+        context_ = nullptr;
+        return;
+    }
+}
+
+OSMesaTestContext::~OSMesaTestContext() {
+    cleanup();
+}
+
+OSMesaTestContext::OSMesaTestContext(OSMesaTestContext&& other) noexcept
+    : context_(other.context_), buffer_(std::move(other.buffer_)),
+      width_(other.width_), height_(other.height_), format_(other.format_) {
+    other.context_ = nullptr;
+    other.width_ = 0;
+    other.height_ = 0;
+}
+
+OSMesaTestContext& OSMesaTestContext::operator=(OSMesaTestContext&& other) noexcept {
+    if (this != &other) {
+        cleanup();
+        context_ = other.context_;
+        buffer_ = std::move(other.buffer_);
+        width_ = other.width_;
+        height_ = other.height_;
+        format_ = other.format_;
+        
+        other.context_ = nullptr;
+        other.width_ = 0;
+        other.height_ = 0;
+    }
+    return *this;
+}
+
+bool OSMesaTestContext::makeCurrent() {
+    if (!context_ || !buffer_) return false;
+    return OSMesaMakeCurrent(context_, buffer_.get(), GL_UNSIGNED_BYTE, width_, height_);
+}
+
+bool OSMesaTestContext::saveToPPM(const std::string& filename) const {
+    if (!buffer_ || !isValid()) return false;
+    
+    std::ofstream file(filename, std::ios::binary);
+    if (!file) return false;
+    
+    // PPM header
+    file << "P6\n" << width_ << " " << height_ << "\n255\n";
+    
+    // Convert RGBA to RGB and flip vertically (PPM expects top-down)
+    for (int y = height_ - 1; y >= 0; --y) {
+        for (unsigned int x = 0; x < width_; ++x) {
+            size_t offset = (y * width_ + x) * 4;
+            file.put(buffer_[offset]);     // R
+            file.put(buffer_[offset + 1]); // G  
+            file.put(buffer_[offset + 2]); // B
+            // Skip alpha
+        }
+    }
+    
+    return file.good();
+}
+
+void OSMesaTestContext::clearBuffer(float r, float g, float b, float a) {
+    if (!isValid()) return;
+    
+    makeCurrent();
+    glClearColor(r, g, b, a);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+}
+
+void OSMesaTestContext::cleanup() {
+    if (context_) {
+        OSMesaDestroyContext(context_);
+        context_ = nullptr;
+    }
+}
+
+// ============================================================================
+// OSMesaCallbackManager Implementation  
+// ============================================================================
+
+OSMesaCallbackManager::OSMesaCallbackManager() {
+    cc_glglue_offscreen_cb_functions callbacks = {
+        createOffscreen,
+        makeCurrent, 
+        reinstatePrevious,
+        destruct
+    };
+    
+    cc_glglue_context_set_offscreen_cb_functions(&callbacks);
+}
+
+OSMesaCallbackManager::~OSMesaCallbackManager() {
+    cc_glglue_context_set_offscreen_cb_functions(nullptr);
+}
+
+void* OSMesaCallbackManager::createOffscreen(unsigned int width, unsigned int height) {
+    auto* context = new OSMesaTestContext(width, height);
+    if (!context->isValid()) {
+        delete context;
+        return nullptr;
+    }
+    return context;
+}
+
+SbBool OSMesaCallbackManager::makeCurrent(void* context) {
+    if (!context) return FALSE;
+    auto* osmesa_ctx = static_cast<OSMesaTestContext*>(context);
+    return osmesa_ctx->makeCurrent() ? TRUE : FALSE;
+}
+
+void OSMesaCallbackManager::reinstatePrevious(void* context) {
+    // OSMesa doesn't need explicit context switching in our test setup
+    (void)context;
+}
+
+void OSMesaCallbackManager::destruct(void* context) {
+    if (context) {
+        delete static_cast<OSMesaTestContext*>(context);
+    }
+}
+
+// ============================================================================
+// OSMesaTestFixture Implementation
+// ============================================================================
+
+OSMesaTestFixture::OSMesaTestFixture(unsigned int width, unsigned int height)
+    : callback_manager_(), context_(width, height) {
+    
+    if (!context_.isValid()) {
+        std::cerr << "Warning: OSMesa test context creation failed" << std::endl;
+    }
+}
+
+} // namespace CoinTestUtils
+
+#endif // COIN3D_OSMESA_BUILD

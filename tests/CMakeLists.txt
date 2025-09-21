@@ -7,10 +7,20 @@ if(NOT Catch2_FOUND)
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../external/Catch2 ${CMAKE_CURRENT_BINARY_DIR}/Catch2)
 endif()
 
-# Common test utilities
+# Common test utilities with comprehensive testing framework
 add_library(coin_test_utils STATIC
     utils/test_common.cpp
+    utils/scene_graph_test_utils.cpp
 )
+
+# Add OSMesa test utilities if available
+if(COIN3D_USE_OSMESA)
+    target_sources(coin_test_utils PRIVATE 
+        utils/osmesa_test_context.cpp
+    )
+    target_compile_definitions(coin_test_utils PUBLIC COIN3D_OSMESA_BUILD)
+endif()
+
 target_link_libraries(coin_test_utils Coin Catch2::Catch2)
 target_include_directories(coin_test_utils PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/utils
@@ -20,7 +30,7 @@ target_include_directories(coin_test_utils PUBLIC
     ${COIN_TARGET_INCLUDE_DIRECTORIES}
 )
 
-# Primary explicit test executable 
+# Primary explicit test executable with comprehensive testing
 add_executable(CoinTests
     main.cpp
     # Core test modules (migrated from embedded tests)
@@ -35,7 +45,13 @@ add_executable(CoinTests
     context/test_context_callbacks.cpp
     # FBO-based rendering tests
     rendering/test_fbo_rendering.cpp
-    # Additional modules will be added as they are validated
+    # Comprehensive testing modules - NEW FRAMEWORK
+    nodes/test_nodes_comprehensive.cpp
+    actions/test_actions_comprehensive.cpp
+    # TODO: Add more comprehensive test modules:
+    # actions/test_actions_comprehensive.cpp
+    # engines/test_engines_comprehensive.cpp  
+    # sensors/test_sensors_comprehensive.cpp
     # TODO: Add the complete migrated test files once compilation issues are resolved:
     # base/test_base_complete.cpp
     # fields/test_fields_complete.cpp
