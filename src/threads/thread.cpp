@@ -134,6 +134,7 @@ cc_thread_destruct(cc_thread * thread)
   assert(thread != NULL);
   ok = internal_clean(thread);
   assert(ok == CC_OK);
+  (void)ok; /* avoid unused variable warning in release builds */
   free(thread);
 }
 

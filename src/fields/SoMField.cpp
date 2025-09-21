@@ -290,7 +290,7 @@ using std::strlen;
 SoType SoMField::classTypeId STATIC_SOTYPE_INIT;
 
 // need one static mutex for field_buffer in SoMField::get1(SbString &)
-static void * somfield_mutex = NULL;
+static void * somfield_mutex __attribute__((unused)) = NULL;
 
 static void
 somfield_mutex_cleanup(void)
@@ -688,7 +688,9 @@ SoMField::deleteValues(int start, int numarg)
 
   if (numarg == -1) numarg = oldnum - start;
   if (numarg == 0) return;
+#if COIN_DEBUG
   int end = start + numarg; // First element behind the delete block.
+#endif
 
 #if COIN_DEBUG
   if (start < 0 || start >= oldnum || end > oldnum || numarg < -1) {

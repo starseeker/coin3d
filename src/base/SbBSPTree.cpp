@@ -270,8 +270,8 @@ coin_bspnode::split()
 
   this->dimension = dim; // set the dimension
 
-  float mid = (box.getMin()[dim] + box.getMax()[dim]) / 2.0f;
 #ifdef BSP_SORTED_SPLIT
+  float mid = (box.getMin()[dim] + box.getMax()[dim]) / 2.0f;
   this->sort(); // sort vertices on ascending dimension values
 
   int splitidx = n / 2;

@@ -344,7 +344,7 @@ SbUniqueId is not really a class, just a \c typedef.
 SbUniqueId SoNode::nextUniqueId = 1;
 int SoNode::nextActionMethodIndex = 0;
 SoType SoNode::classTypeId STATIC_SOTYPE_INIT;
-static void * sonode_mutex = NULL;
+static void * sonode_mutex __attribute__((unused)) = NULL;
 
 typedef SbHash<int16_t, uint32_t> Int16ToUInt32Map;
 static Int16ToUInt32Map * compatibility_dict = NULL;

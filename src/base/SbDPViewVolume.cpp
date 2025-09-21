@@ -620,6 +620,7 @@ SbDPViewVolume::getWorldToScreenScale(const SbVec3d& worldCenter,
     SbVec3f tangentpt;
     SbBool result = p.intersect(tl, tangentpt);
     assert(result != FALSE);
+    (void)result; /* avoid unused variable warning in release builds */
 
     // Return radius (which is equal to the scale factor, since we're
     // dealing with a unit sphere).

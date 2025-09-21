@@ -122,8 +122,6 @@ void coin_init_tidbits(void);
 /* Basic utility functions */
 
 int coin_host_get_endianness(void);
-int coin_snprintf(char* dst, unsigned int n, const char* fmtstr, ...);
-int coin_vsnprintf(char* dst, unsigned int n, const char* fmtstr, va_list args);
 
 /* ********************************************************************** */
 /* Environment variable functions */

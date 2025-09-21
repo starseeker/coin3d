@@ -156,6 +156,7 @@ SoPointLightDragger::SoPointLightDragger(void)
 
   SoDragger *pdragger = SO_GET_ANY_PART(this, "translator", SoDragPointDragger);
   assert(pdragger);
+  (void)pdragger; // suppress unused variable warning in release builds
 
   this->setPartAsDefault("material", "pointLightOverallMaterial");
 

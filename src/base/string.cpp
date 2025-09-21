@@ -39,7 +39,6 @@
 #include <cstring>
 
 #include "C/errors/debugerror.h"
-#include "C/CoinTidbits.h"
 
 #include "coindefs.h"
 #include "misc/SoEnvironment.h"
@@ -544,24 +543,21 @@ cc_string_vsprintf(cc_string * me, const char * formatstr, va_list args)
   SbBool expand;
 
   do {
-    length = coin_vsnprintf(me->pointer, (unsigned int)me->bufsize, formatstr, args);
-    expand = (length == -1);
+    // Use standard C++17 std::vsnprintf instead of coin_vsnprintf wrapper
+    length = std::vsnprintf(me->pointer, me->bufsize, formatstr, args);
+    
+    // Check if buffer was too small (standard C++17 behavior)
+    expand = (length < 0 || static_cast<size_t>(length) >= me->bufsize);
+    
     if ( expand ) {
-      /* Note: On Microsoft Windows, using Microsoft's CRT, _vsnprintf(),
-         called by coin_vsnprintf(), doesn't add a terminating '0' at
-         the end of the buffer if the number of characters to write is
-         equal to or larger than the buffer size (second parameter to
-         _vsnprintf). This is documented in MSDN's entry for
-         _vsnprintf().
-
-         To make sure me->buffer never contains a string that is not
-         '0'-terminated, we clear the buffer below before we grow it
-         and retry coin_vsnprintf().
-
-         20070927 thammer.  */
+      /* Modern std::vsnprintf behavior: always null-terminates if buffer size > 0,
+         and returns the number of characters that would have been written.
+         This eliminates the need for the old Microsoft-specific workarounds. */
       cc_string_clear_no_free(me);
-      /* increase linearly in 1Kb intervals */
-      cc_string_grow_buffer(me, me->bufsize + 1024);
+      
+      // If length is valid, allocate exactly what's needed, otherwise increase by 1KB
+      size_t needed_size = (length > 0) ? static_cast<size_t>(length) + 1 : me->bufsize + 1024;
+      cc_string_grow_buffer(me, needed_size);
     }
   } while ( expand );
 } /* cc_string_vsprintf() */

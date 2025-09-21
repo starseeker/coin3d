@@ -77,8 +77,6 @@ public:
     static const char * COIN_PROFILER_OVERLAY;
   };
 
-  static void variableArgsSanityCheck(void);
-
   static void clean(void);
   static void removeRealTimeFieldCB(void);
   static void updateRealTimeFieldCB(void * data, SoSensor * sensor);

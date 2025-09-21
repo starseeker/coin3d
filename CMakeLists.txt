@@ -8,6 +8,8 @@ project(Coin
   LANGUAGES C CXX
   )
 
+add_definitions(-Wall)
+
 # Set modern CMake policies
 cmake_policy(SET CMP0054 NEW)  # Only interpret if() arguments as variables or keywords when unquoted
 cmake_policy(SET CMP0072 NEW)  # FindOpenGL prefers GLVND
@@ -76,7 +78,7 @@ set(COIN_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
 
 # Feature options
 option(COIN3D_USE_OSMESA "Build against OSMesa for offscreen/headless rendering" OFF)
-option(COIN_THREADSAFE "Enable thread safe render traversals" OFF)
+option(COIN_THREADSAFE "Enable thread safe render traversals" ON)
 
 # Component options
 option(HAVE_NODEKITS "Enable NodeKit support" ON)

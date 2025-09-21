@@ -402,17 +402,21 @@ glglue_resolve_envvar(const char * txt)
 static SbBool
 glglue_allow_newer_opengl(const cc_glglue * w)
 {
-  static SbBool fullindirect = -1;
-  static SbBool force1_0 = -1;
+  static int fullindirect_initialized = 0;
+  static int force1_0_initialized = 0;
+  static SbBool fullindirect = FALSE;
+  static SbBool force1_0 = FALSE;
   static const char * COIN_FULL_INDIRECT_RENDERING = "COIN_FULL_INDIRECT_RENDERING";
   static const char * COIN_DONT_INFORM_INDIRECT_RENDERING = "COIN_DONT_INFORM_INDIRECT_RENDERING";
 
-  if (fullindirect == -1) {
+  if (!fullindirect_initialized) {
     fullindirect = (glglue_resolve_envvar(COIN_FULL_INDIRECT_RENDERING) > 0);
+    fullindirect_initialized = 1;
   }
 
-  if (force1_0 == -1) {
+  if (!force1_0_initialized) {
     force1_0 = (glglue_resolve_envvar("COIN_FORCE_GL1_0_ONLY") > 0);
+    force1_0_initialized = 1;
   }
 
   if (force1_0) return FALSE;
@@ -588,7 +592,6 @@ cc_glglue_getprocaddress(const cc_glglue * glue, const char * symname)
      find the function through the shared library. */
   ptr = cc_dl_sym(coin_glglue_dl_handle(glue), symname);
 
-returnpoint:
   if (coin_glglue_debug()) {
     cc_debugerror_postinfo("cc_glglue_getprocaddress", "%s==%p", symname, ptr);
   }
@@ -2202,6 +2205,7 @@ cc_glglue_instance(int contextid)
     if (chk) {
       const void * current_ctx = coin_gl_current_context();
       assert(current_ctx && "Must have a current GL context when instantiating cc_glglue!! (Note: if you are using an old Mesa GL version, set the environment variable COIN_GL_NO_CURRENT_CONTEXT_CHECK to get around what may be a Mesa bug.)");
+      (void)current_ctx; /* avoid unused variable warning */
     }
 
     /* FIXME: this is not free'd until app exit, which is bad because

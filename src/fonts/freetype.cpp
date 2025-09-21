@@ -45,7 +45,10 @@
 #include <cstdio>
 
 #define STRUETYPE_IMPLEMENTATION
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
 #include "struetype.h"
+#pragma GCC diagnostic pop
 
 // Simple font manager to handle font loading
 struct cc_font_handle {

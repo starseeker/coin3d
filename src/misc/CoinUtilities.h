@@ -101,7 +101,7 @@ inline bool isLittleEndian() noexcept {
 /*!
  * \brief Safe sprintf replacement using C++17
  * 
- * Modern replacement for coin_snprintf that uses std::snprintf with
+ * Modern C++17 sprintf replacement that uses std::snprintf with
  * proper bounds checking.
  * 
  * \param buffer Output buffer

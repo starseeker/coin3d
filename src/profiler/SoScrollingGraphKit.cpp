@@ -93,7 +93,7 @@ public:
 
 class SoScrollingGraphKitP {
 public:
-  SoScrollingGraphKitP(void) : kit(NULL), first(NULL), last(NULL), chart(NULL) {
+  SoScrollingGraphKitP(void) : chart(NULL), kit(NULL), first(NULL), last(NULL) {
     this->cachedmaxvalue = 0.0f;
     this->cachedrealmaxvalue = 0.0f;
   }
