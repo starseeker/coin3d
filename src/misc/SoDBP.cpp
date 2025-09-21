@@ -59,15 +59,21 @@ forward_sprintf(char * dst, unsigned int realdstlen, const char * fmtstr, ...)
   va_start(args, fmtstr);
 
   // This first call is just to get one invocation of va_arg() done
-  // from the system's std::vsnprintf().
-  int len = std::vsnprintf(dst, strlen(fmtstr) - 1, fmtstr, args);
+  // from the system's std::vsnprintf(). Use va_copy to avoid undefined behavior.
+  va_list args_copy;
+  va_copy(args_copy, args);
+  int len = std::vsnprintf(dst, strlen(fmtstr) - 1, fmtstr, args_copy);
+  va_end(args_copy);
   assert(len == -1);
 
   // The next call is made to see whether or not additional
   // invocations of vsnprintf() on the system without an intervening
   // va_start()/va_end() pair will cause va_arg() to start picking up
   // arguments after the end of the actual argument list.
-  len = std::vsnprintf(dst, realdstlen, fmtstr, args);
+  // Use a fresh copy of the args to get consistent behavior.
+  va_copy(args_copy, args);
+  len = std::vsnprintf(dst, realdstlen, fmtstr, args_copy);
+  va_end(args_copy);
   assert(len != -1);
   (void)len; // suppress unused variable warning in release builds
 
