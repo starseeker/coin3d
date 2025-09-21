@@ -88,7 +88,8 @@ public:
     }
     
     ~OSMesaFBOCallbackManager() {
-        cc_glglue_context_set_offscreen_cb_functions(nullptr);
+        // Don't nullify callbacks since they should persist globally for OSMesa builds
+        // cc_glglue_context_set_offscreen_cb_functions(nullptr);
     }
     
 private:
@@ -122,7 +123,6 @@ TEST_CASE("FBO-based Offscreen Rendering", "[fbo][osmesa][rendering]") {
     
     SECTION("Basic FBO rendering with simple scene") {
         OSMesaFBOCallbackManager manager;
-        
         // Create a simple scene with lighting
         SoSeparator* root = new SoSeparator;
         root->ref();
@@ -145,8 +145,16 @@ TEST_CASE("FBO-based Offscreen Rendering", "[fbo][osmesa][rendering]") {
         SoOffscreenRenderer renderer(viewport);
         renderer.setBackgroundColor(SbColor(0.2f, 0.3f, 0.4f));
         
-        // This should now use FBO-based rendering
+        // Check OpenGL state before rendering
+        void* ctx = cc_glglue_context_create_offscreen(32, 32);
+        if (ctx) {
+            if (cc_glglue_context_make_current(ctx)) {
+                cc_glglue_context_destruct(ctx);
+            }
+        }
+        
         SbBool renderResult = renderer.render(root);
+        REQUIRE(renderResult == TRUE);
         REQUIRE(renderResult == TRUE);
         
         // Test getting the rendered image

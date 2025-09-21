@@ -126,7 +126,6 @@
 #include "misc/SbHash.h"
 #include "misc/SoUtilities.h"
 
-#include "glue/zlib.h"
 #include "coindefs.h" // COIN_STUB(), COIN_OBSOLETED()
 #include "io/SoInputP.h"
 #include "io/SoInput_FileInfo.h"

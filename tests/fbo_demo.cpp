@@ -7,8 +7,7 @@
 #include <cstring>
 
 // Try to include OSMesa headers
-#include <GL/gl.h>
-#include <GL/glu.h>
+#include <OSMesa/gl.h>
 
 // For now, we'll use a simple software-based context since OSMesa might not be available
 // This demonstrates the FBO functionality with regular OpenGL

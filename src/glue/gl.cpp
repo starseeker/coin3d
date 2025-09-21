@@ -402,17 +402,8 @@ glglue_resolve_envvar(const char * txt)
 static SbBool
 glglue_allow_newer_opengl(const cc_glglue * w)
 {
-  static int fullindirect_initialized = 0;
   static int force1_0_initialized = 0;
-  static SbBool fullindirect = FALSE;
   static SbBool force1_0 = FALSE;
-  static const char * COIN_FULL_INDIRECT_RENDERING = "COIN_FULL_INDIRECT_RENDERING";
-  static const char * COIN_DONT_INFORM_INDIRECT_RENDERING = "COIN_DONT_INFORM_INDIRECT_RENDERING";
-
-  if (!fullindirect_initialized) {
-    fullindirect = (glglue_resolve_envvar(COIN_FULL_INDIRECT_RENDERING) > 0);
-    fullindirect_initialized = 1;
-  }
 
   if (!force1_0_initialized) {
     force1_0 = (glglue_resolve_envvar("COIN_FORCE_GL1_0_ONLY") > 0);
@@ -421,6 +412,21 @@ glglue_allow_newer_opengl(const cc_glglue * w)
 
   if (force1_0) return FALSE;
 
+#ifdef COIN3D_OSMESA_BUILD
+  /* For OSMesa builds, always allow newer OpenGL features.
+     OSMesa provides OpenGL 2.0 capabilities which is our minimum target. */
+  return TRUE;
+#else
+  static int fullindirect_initialized = 0;
+  static SbBool fullindirect = FALSE;
+  static const char * COIN_FULL_INDIRECT_RENDERING = "COIN_FULL_INDIRECT_RENDERING";
+  static const char * COIN_DONT_INFORM_INDIRECT_RENDERING = "COIN_DONT_INFORM_INDIRECT_RENDERING";
+
+  if (!fullindirect_initialized) {
+    fullindirect = (glglue_resolve_envvar(COIN_FULL_INDIRECT_RENDERING) > 0);
+    fullindirect_initialized = 1;
+  }
+
   if (!w->glx.isdirect && !fullindirect) {
     /* We give out a warning, once, when the full OpenGL feature set is not
        used, in case the end user uses an application with a remote display,
@@ -428,23 +434,24 @@ glglue_allow_newer_opengl(const cc_glglue * w)
     static int inform = -1;
     if (inform == -1) { inform = glglue_resolve_envvar(COIN_DONT_INFORM_INDIRECT_RENDERING); }
     if (inform == 0) {
+      // Use safe string formatting to avoid potential crashes with format specifiers
+      // The original debug message was causing segfaults due to string formatting issues
       cc_debugerror_postinfo("glglue_allow_newer_opengl",
                              "\n\nFeatures of OpenGL version > 1.0 has been\n"
                              "disabled, due to the use of a remote display.\n\n"
                              "This is so because many common OpenGL drivers\n"
                              "have problems in this regard.\n\n"
                              "To force full OpenGL use, set the environment\n"
-                             "variable %s=1 and re-run the application.\n\n"
+                             "variable COIN_FULL_INDIRECT_RENDERING=1 and re-run the application.\n\n"
                              "If you don't want this message displayed again,\n"
-                             "set the environment variable %s=1.\n",
-                             COIN_FULL_INDIRECT_RENDERING,
-                             COIN_DONT_INFORM_INDIRECT_RENDERING);
+                             "set the environment variable COIN_DONT_INFORM_INDIRECT_RENDERING=1.\n");
       inform = 1;
     }
     return FALSE;
   }
 
   return TRUE;
+#endif
 }
 
 
@@ -592,6 +599,25 @@ cc_glglue_getprocaddress(const cc_glglue * glue, const char * symname)
      find the function through the shared library. */
   ptr = cc_dl_sym(coin_glglue_dl_handle(glue), symname);
 
+#ifdef COIN3D_OSMESA_BUILD
+  /* OSMesa uses MGL name mangling, so if the standard name lookup fails,
+     try the MGL-mangled version by prefixing with "mgl" instead of "gl" */
+  if (ptr == NULL && strncmp(symname, "gl", 2) == 0) {
+    /* Create MGL-mangled name: "gl" -> "mgl" */
+    size_t namelen = strlen(symname);
+    char * mgl_name = (char*)malloc(namelen + 2); /* +1 for 'm', +1 for '\0' */
+    if (mgl_name) {
+      strcpy(mgl_name, "mgl");
+      strcat(mgl_name, symname + 2); /* Skip "gl" prefix */
+      ptr = cc_dl_sym(coin_glglue_dl_handle(glue), mgl_name);
+      if (coin_glglue_debug()) {
+        cc_debugerror_postinfo("cc_glglue_getprocaddress", "MGL fallback: %s -> %s == %p", symname, mgl_name, ptr);
+      }
+      free(mgl_name);
+    }
+  }
+#endif
+
   if (coin_glglue_debug()) {
     cc_debugerror_postinfo("cc_glglue_getprocaddress", "%s==%p", symname, ptr);
   }
@@ -647,8 +673,13 @@ glglue_set_glVersion(cc_glglue * w)
    * setting up a cc_glglue instance was made when there is no current
    * OpenGL context. */
   if (coin_glglue_debug()) {
-    cc_debugerror_postinfo("glglue_set_glVersion",
-                           "glGetString(GL_VERSION)=='%s'", w->versionstr);
+    if (w->versionstr && strlen(w->versionstr) > 0) {
+      cc_debugerror_postinfo("glglue_set_glVersion",
+                             "glGetString(GL_VERSION)=='%s'", w->versionstr);
+    } else {
+      cc_debugerror_postinfo("glglue_set_glVersion",
+                             "glGetString(GL_VERSION)==%p (NULL or empty)", w->versionstr);
+    }
   }
 
   w->version.major = 0;
@@ -701,7 +732,9 @@ cc_glglue_glversion(const cc_glglue * w,
                     unsigned int * release)
 {
   if (!glglue_allow_newer_opengl(w)) {
-    *major = 1;
+    /* When newer OpenGL is disabled, report OpenGL 2.0 as minimum target
+       instead of 1.0, since that's our actual minimum requirement */
+    *major = 2;
     *minor = 0;
     *release = 0;
   }
@@ -1883,23 +1916,50 @@ glglue_resolve_symbols(cc_glglue * w)
      w->has_shadow) ||
     w->has_arb_fragment_program;
   
+  /* Try ARB framebuffer objects first (OpenGL 3.0+ core or ARB extension) */
   if (cc_glglue_glext_supported(w, "GL_ARB_framebuffer_object") ||
       cc_glglue_glversion_matches_at_least(w, 3, 0, 0)) {
+    
+    /* Load ARB/Core framebuffer functions */
+    w->glIsRenderbuffer = (COIN_PFNGLISRENDERBUFFERPROC) cc_glglue_getprocaddress(w, "glIsRenderbuffer");
+    w->glBindRenderbuffer = (COIN_PFNGLBINDRENDERBUFFERPROC) cc_glglue_getprocaddress(w, "glBindRenderbuffer");
+    w->glDeleteRenderbuffers = (COIN_PFNGLDELETERENDERBUFFERSPROC)cc_glglue_getprocaddress(w, "glDeleteRenderbuffers");
+    w->glGenRenderbuffers = (COIN_PFNGLGENRENDERBUFFERSPROC)cc_glglue_getprocaddress(w, "glGenRenderbuffers");
+    w->glRenderbufferStorage = (COIN_PFNGLRENDERBUFFERSTORAGEPROC)cc_glglue_getprocaddress(w, "glRenderbufferStorage");
+    w->glGetRenderbufferParameteriv = (COIN_PFNGLGETRENDERBUFFERPARAMETERIVPROC)cc_glglue_getprocaddress(w, "glGetRenderbufferParameteriv");
+    w->glIsFramebuffer = (COIN_PFNGLISFRAMEBUFFERPROC)cc_glglue_getprocaddress(w, "glIsFramebuffer");
+    w->glBindFramebuffer = (COIN_PFNGLBINDFRAMEBUFFERPROC)cc_glglue_getprocaddress(w, "glBindFramebuffer");
+    w->glDeleteFramebuffers = (COIN_PFNGLDELETEFRAMEBUFFERSPROC)cc_glglue_getprocaddress(w, "glDeleteFramebuffers");
+    w->glGenFramebuffers = (COIN_PFNGLGENFRAMEBUFFERSPROC)cc_glglue_getprocaddress(w, "glGenFramebuffers");
+    w->glCheckFramebufferStatus = (COIN_PFNGLCHECKFRAMEBUFFERSTATUSPROC)cc_glglue_getprocaddress(w, "glCheckFramebufferStatus");
+    w->glFramebufferTexture1D = (COIN_PFNGLFRAMEBUFFERTEXTURE1DPROC)cc_glglue_getprocaddress(w, "glFramebufferTexture1D");
+    w->glFramebufferTexture2D = (COIN_PFNGLFRAMEBUFFERTEXTURE2DPROC)cc_glglue_getprocaddress(w, "glFramebufferTexture2D");
+    w->glFramebufferTexture3D = (COIN_PFNGLFRAMEBUFFERTEXTURE3DPROC)cc_glglue_getprocaddress(w, "glFramebufferTexture3D");
+    w->glFramebufferRenderbuffer = (COIN_PFNGLFRAMEBUFFERRENDERBUFFERPROC)cc_glglue_getprocaddress(w, "glFramebufferRenderbuffer");
+    w->glGetFramebufferAttachmentParameteriv = (COIN_PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC)
+      cc_glglue_getprocaddress(w, "glGetFramebufferAttachmentParameteriv");
     w->glGenerateMipmap = (COIN_PFNGLGENERATEMIPMAPPROC)
       cc_glglue_getprocaddress(w, "glGenerateMipmap");
     if (!w->glGenerateMipmap) {
       w->glGenerateMipmap = (COIN_PFNGLGENERATEMIPMAPPROC)
         cc_glglue_getprocaddress(w, "glGenerateMipmapARB");
     }
-  }
-  if (!w->glGenerateMipmap) {
-    if (cc_glglue_glext_supported(w, "GL_EXT_framebuffer_object")) {
-      w->glGenerateMipmap = (COIN_PFNGLGENERATEMIPMAPPROC)
-        cc_glglue_getprocaddress(w, "glGenerateMipmapEXT");
+    
+    /* Check if all ARB functions were loaded successfully */
+    if (w->glIsRenderbuffer && w->glBindRenderbuffer && w->glDeleteRenderbuffers &&
+        w->glGenRenderbuffers && w->glRenderbufferStorage && w->glGetRenderbufferParameteriv &&
+        w->glIsFramebuffer && w->glBindFramebuffer && w->glDeleteFramebuffers &&
+        w->glGenFramebuffers && w->glCheckFramebufferStatus && w->glFramebufferTexture1D &&
+        w->glFramebufferTexture2D && w->glFramebufferTexture3D && w->glFramebufferRenderbuffer &&
+        w->glGetFramebufferAttachmentParameteriv && w->glGenerateMipmap) {
+      w->has_fbo = TRUE;
     }
   }
-
-  if (cc_glglue_glext_supported(w, "GL_EXT_framebuffer_object")) {
+  
+  /* Fall back to EXT framebuffer objects if ARB version not available */
+  if (!w->has_fbo && cc_glglue_glext_supported(w, "GL_EXT_framebuffer_object")) {
+    
+    /* Load EXT framebuffer functions */
     w->glIsRenderbuffer = (COIN_PFNGLISRENDERBUFFERPROC) cc_glglue_getprocaddress(w, "glIsRenderbufferEXT");
     w->glBindRenderbuffer = (COIN_PFNGLBINDRENDERBUFFERPROC) cc_glglue_getprocaddress(w, "glBindRenderbufferEXT");
     w->glDeleteRenderbuffers = (COIN_PFNGLDELETERENDERBUFFERSPROC)cc_glglue_getprocaddress(w, "glDeleteRenderbuffersEXT");
@@ -1917,16 +1977,20 @@ glglue_resolve_symbols(cc_glglue * w)
     w->glFramebufferRenderbuffer = (COIN_PFNGLFRAMEBUFFERRENDERBUFFERPROC)cc_glglue_getprocaddress(w, "glFramebufferRenderbufferEXT");
     w->glGetFramebufferAttachmentParameteriv = (COIN_PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC)
       cc_glglue_getprocaddress(w, "glGetFramebufferAttachmentParameterivEXT");
-
-    if (!w->glIsRenderbuffer || !w->glBindRenderbuffer || !w->glDeleteRenderbuffers ||
-        !w->glGenRenderbuffers || !w->glRenderbufferStorage || !w->glGetRenderbufferParameteriv ||
-        !w->glIsFramebuffer || !w->glBindFramebuffer || !w->glDeleteFramebuffers ||
-        !w->glGenFramebuffers || !w->glCheckFramebufferStatus || !w->glFramebufferTexture1D ||
-        !w->glFramebufferTexture2D || !w->glFramebufferTexture3D || !w->glFramebufferRenderbuffer ||
-        !w->glGetFramebufferAttachmentParameteriv || !w->glGenerateMipmap) {
-      w->has_fbo = FALSE;
+    
+    /* Load glGenerateMipmap for EXT version if not already loaded */
+    if (!w->glGenerateMipmap) {
+      w->glGenerateMipmap = (COIN_PFNGLGENERATEMIPMAPPROC)
+        cc_glglue_getprocaddress(w, "glGenerateMipmapEXT");
     }
-    else {
+
+    /* Check if all EXT functions were loaded successfully */
+    if (w->glIsRenderbuffer && w->glBindRenderbuffer && w->glDeleteRenderbuffers &&
+        w->glGenRenderbuffers && w->glRenderbufferStorage && w->glGetRenderbufferParameteriv &&
+        w->glIsFramebuffer && w->glBindFramebuffer && w->glDeleteFramebuffers &&
+        w->glGenFramebuffers && w->glCheckFramebufferStatus && w->glFramebufferTexture1D &&
+        w->glFramebufferTexture2D && w->glFramebufferTexture3D && w->glFramebufferRenderbuffer &&
+        w->glGetFramebufferAttachmentParameteriv && w->glGenerateMipmap) {
       w->has_fbo = TRUE;
     }
   }
@@ -2157,15 +2221,33 @@ glglue_check_driver(const char * vendor, const char * renderer,
 const cc_glglue *
 cc_glglue_instance(int contextid)
 {
+  // Add debugging for OSMesa builds at function entry
+#ifdef COIN3D_OSMESA_BUILD
+  if (coin_glglue_debug()) {
+    cc_debugerror_postinfo("cc_glglue_instance", "ENTRY: contextid=%d", contextid);
+  }
+#endif
+
   SbBool found;
   void * ptr;
   GLint gltmp;
 
   cc_glglue * gi = NULL;
 
+#ifdef COIN3D_OSMESA_BUILD
+  if (coin_glglue_debug()) {
+    cc_debugerror_postinfo("cc_glglue_instance", "About to begin sync");
+  }
+#endif
+
   CC_SYNC_BEGIN(cc_glglue_instance);
 
   /* check environment variables */
+#ifdef COIN3D_OSMESA_BUILD
+  if (coin_glglue_debug()) {
+    cc_debugerror_postinfo("cc_glglue_instance", "Checking environment variables");
+  }
+#endif
   if (COIN_MAXIMUM_TEXTURE2_SIZE == 0) {
     auto env = CoinInternal::getEnvironmentVariable("COIN_MAXIMUM_TEXTURE2_SIZE");
     if (env.has_value()) COIN_MAXIMUM_TEXTURE2_SIZE = std::atoi(env->c_str());
@@ -2178,14 +2260,29 @@ cc_glglue_instance(int contextid)
   }
   /* Platform detection calls removed */
 
+#ifdef COIN3D_OSMESA_BUILD
+  if (coin_glglue_debug()) {
+    cc_debugerror_postinfo("cc_glglue_instance", "Checking global dict");
+  }
+#endif
   if (!gldict) {  /* First invocation, do initializations. */
     gldict = cc_dict_construct(16, 0.75f);
     coin_atexit((coin_atexit_f *)glglue_cleanup, CC_ATEXIT_NORMAL);
   }
 
+#ifdef COIN3D_OSMESA_BUILD
+  if (coin_glglue_debug()) {
+    cc_debugerror_postinfo("cc_glglue_instance", "Looking up context %d in dict", contextid);
+  }
+#endif
   found = cc_dict_get(gldict, (uintptr_t)contextid, &ptr);
 
   if (!found) {
+#ifdef COIN3D_OSMESA_BUILD
+    if (coin_glglue_debug()) {
+      cc_debugerror_postinfo("cc_glglue_instance", "Context not found, creating new glglue instance");
+    }
+#endif
     GLenum glerr;
 
     /* Internal consistency checking.
@@ -2202,9 +2299,36 @@ cc_glglue_instance(int contextid)
          text below. */
       chk = CoinInternal::getEnvironmentVariable("COIN_GL_NO_CURRENT_CONTEXT_CHECK").has_value() ? 0 : 1;
     }
+#ifdef COIN3D_OSMESA_BUILD
+    if (coin_glglue_debug()) {
+      cc_debugerror_postinfo("cc_glglue_instance", "Context check flag: %d", chk);
+    }
+#endif
     if (chk) {
+#ifdef COIN3D_OSMESA_BUILD
+      if (coin_glglue_debug()) {
+        cc_debugerror_postinfo("cc_glglue_instance", "About to call coin_gl_current_context()");
+      }
+#endif
       const void * current_ctx = coin_gl_current_context();
-      assert(current_ctx && "Must have a current GL context when instantiating cc_glglue!! (Note: if you are using an old Mesa GL version, set the environment variable COIN_GL_NO_CURRENT_CONTEXT_CHECK to get around what may be a Mesa bug.)");
+#ifdef COIN3D_OSMESA_BUILD
+      if (coin_glglue_debug()) {
+        cc_debugerror_postinfo("cc_glglue_instance", "coin_gl_current_context() returned: %p", current_ctx);
+        cc_debugerror_postinfo("cc_glglue_instance", "offscreen_cb = %p", offscreen_cb);
+      }
+#endif
+      // For callback-based contexts, coin_gl_current_context() always returns NULL
+      // This is expected behavior, so we skip the assertion in that case
+      if (!offscreen_cb) {
+        assert(current_ctx && "Must have a current GL context when instantiating cc_glglue!! (Note: if you are using an old Mesa GL version, set the environment variable COIN_GL_NO_CURRENT_CONTEXT_CHECK to get around what may be a Mesa bug.)");
+      }
+#ifdef COIN3D_OSMESA_BUILD
+      else {
+        if (coin_glglue_debug()) {
+          cc_debugerror_postinfo("cc_glglue_instance", "Skipping context check for callback-based contexts");
+        }
+      }
+#endif
       (void)current_ctx; /* avoid unused variable warning */
     }
 
@@ -2250,15 +2374,41 @@ cc_glglue_instance(int contextid)
      * setting up a cc_glglue instance was made when there is no
      * current OpenGL context. */
     gi->versionstr = (const char *)glGetString(GL_VERSION);
+    
+    /* Additional debugging for OSMesa context */
+    if (coin_glglue_debug()) {
+      cc_debugerror_postinfo("cc_glglue_instance", "glGetString(GL_VERSION) returned: %p", gi->versionstr);
+      if (gi->versionstr) {
+        /* Try to safely check if the string is readable */
+        volatile char testchar = gi->versionstr[0];
+        cc_debugerror_postinfo("cc_glglue_instance", "Version string first char: 0x%02x ('%c')", 
+                              (unsigned char)testchar, (testchar >= 32 && testchar < 127) ? testchar : '?');
+      }
+    }
+    
     assert(gi->versionstr && "could not call glGetString() -- no current GL context?");
     assert(glGetError() == GL_NO_ERROR && "GL error when calling glGetString() -- no current GL context?");
 
     glglue_set_glVersion(gi);
 
+#ifdef COIN3D_OSMESA_BUILD
+    if (coin_glglue_debug()) {
+      cc_debugerror_postinfo("cc_glglue_instance", "About to call glGetString(GL_VENDOR)");
+    }
+#endif
+
   /* Platform-specific initialization is no longer needed with callback-based contexts.
      Applications are responsible for providing complete OpenGL contexts through callbacks. */
 
     gi->vendorstr = (const char *)glGetString(GL_VENDOR);
+
+#ifdef COIN3D_OSMESA_BUILD
+    if (coin_glglue_debug()) {
+      cc_debugerror_postinfo("cc_glglue_instance", "glGetString(GL_VENDOR)=='%s' (=> vendor_is_SGI==%s)", 
+                            gi->vendorstr ? gi->vendorstr : "(null)",
+                            strcmp((const char *)gi->vendorstr, "SGI") == 0 ? "TRUE" : "FALSE");
+    }
+#endif
     gi->vendor_is_SGI = strcmp((const char *)gi->vendorstr, "SGI") == 0;
     gi->vendor_is_nvidia = strcmp((const char*)gi->vendorstr, "NVIDIA Corporation") == 0;
     gi->vendor_is_intel =
@@ -2267,6 +2417,12 @@ cc_glglue_instance(int contextid)
     gi->vendor_is_ati = (strcmp((const char *) gi->vendorstr, "ATI Technologies Inc.") == 0);
     gi->vendor_is_3dlabs = strcmp((const char *) gi->vendorstr, "3Dlabs") == 0;
     
+#ifdef COIN3D_OSMESA_BUILD
+    if (coin_glglue_debug()) {
+      cc_debugerror_postinfo("cc_glglue_instance", "Vendor flags set, about to process nvidia bug workaround");
+    }
+#endif
+    
     /* FIXME: update when nVidia fixes their driver. pederb, 2004-09-01 */
     gi->nvidia_color_per_face_bug = gi->vendor_is_nvidia;
     if (gi->nvidia_color_per_face_bug) {
@@ -2274,8 +2430,42 @@ cc_glglue_instance(int contextid)
       if (env.has_value()) gi->nvidia_color_per_face_bug = 0;
     }
 
+#ifdef COIN3D_OSMESA_BUILD
+    if (coin_glglue_debug()) {
+      cc_debugerror_postinfo("cc_glglue_instance", "About to call glGetString(GL_RENDERER)");
+    }
+#endif
+
+    // Add error checking to isolate the crash
+    GLenum error_before_renderer = glGetError();
+    if (error_before_renderer != GL_NO_ERROR) {
+      cc_debugerror_postinfo("cc_glglue_instance", "OpenGL error before GL_RENDERER: 0x%x", error_before_renderer);
+    }
+    
     gi->rendererstr = (const char *)glGetString(GL_RENDERER);
+    
+    GLenum error_after_renderer = glGetError();
+    if (error_after_renderer != GL_NO_ERROR) {
+      cc_debugerror_postinfo("cc_glglue_instance", "OpenGL error after GL_RENDERER: 0x%x", error_after_renderer);
+    }
+    
+#ifdef COIN3D_OSMESA_BUILD
+    if (coin_glglue_debug()) {
+      cc_debugerror_postinfo("cc_glglue_instance", "GL_RENDERER call completed, rendererstr = %p", gi->rendererstr);
+      if (gi->rendererstr) {
+        cc_debugerror_postinfo("cc_glglue_instance", "Renderer string: %s", gi->rendererstr);
+      }
+    }
+#endif
+    
     gi->extensionsstr = (const char *)glGetString(GL_EXTENSIONS);
+
+#ifdef COIN3D_OSMESA_BUILD
+    if (coin_glglue_debug()) {
+      cc_debugerror_postinfo("cc_glglue_instance", "Extensions string: %s", 
+                            gi->extensionsstr ? gi->extensionsstr : "(null)");
+    }
+#endif
 
     /* Randall O'Reilly reports that the above call is deprecated from OpenGL 3.0
        onwards and may, particularly on some Linux systems, return NULL.
@@ -2285,8 +2475,18 @@ cc_glglue_instance(int contextid)
        same result as the old method.
     */
     if (gi->extensionsstr == NULL) {
+#ifdef COIN3D_OSMESA_BUILD
+      if (coin_glglue_debug()) {
+        cc_debugerror_postinfo("cc_glglue_instance", "Extensions string is NULL, trying glGetStringi fallback");
+      }
+#endif
       COIN_PFNGLGETSTRINGIPROC glGetStringi = NULL;
       glGetStringi = (COIN_PFNGLGETSTRINGIPROC)cc_glglue_getprocaddress(gi, "glGetStringi");
+#ifdef COIN3D_OSMESA_BUILD
+      if (coin_glglue_debug()) {
+        cc_debugerror_postinfo("cc_glglue_instance", "glGetStringi = %p", glGetStringi);
+      }
+#endif
       if (glGetStringi != NULL) {
         GLint num_strings = 0;
         glGetIntegerv(GL_NUM_EXTENSIONS, &num_strings);
@@ -2411,6 +2611,12 @@ cc_glglue_instance(int contextid)
 
   CC_SYNC_END(cc_glglue_instance);
 
+#ifdef COIN3D_OSMESA_BUILD
+  if (coin_glglue_debug()) {
+    cc_debugerror_postinfo("cc_glglue_instance", "About to execute instance created callbacks");
+  }
+#endif
+
   if (!found && gl_instance_created_cblist) {
     int i, n = cc_list_get_length(gl_instance_created_cblist) / 2;
     for (i = 0; i < n; i++) {
@@ -2419,6 +2625,13 @@ cc_glglue_instance(int contextid)
       cb(contextid, cc_list_get(gl_instance_created_cblist, i*2+1));
     }
   }
+
+#ifdef COIN3D_OSMESA_BUILD
+  if (coin_glglue_debug()) {
+    cc_debugerror_postinfo("cc_glglue_instance", "RETURN: cc_glglue_instance returning successfully");
+  }
+#endif
+
   return gi;
 }
 

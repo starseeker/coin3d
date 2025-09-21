@@ -1759,6 +1759,9 @@ SoOffscreenRendererP::offscreenContextsNotSupported(void)
   return FALSE;
 #elif defined(COIN_MACOS_10)
   return FALSE;
+#elif defined(HAVE_OSMESA)
+  // OSMesa provides offscreen rendering via software Mesa implementation
+  return FALSE;
 #endif
 
   // No win-system GL binding was found, so we're sure that offscreen
