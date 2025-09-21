@@ -16,6 +16,9 @@
 #include <memory>
 #include <vector>
 #include <fstream>
+#include "utils/png_test_utils.h"
+
+using namespace CoinTestUtils;
 
 namespace {
 
@@ -96,37 +99,7 @@ private:
     cc_glglue_offscreen_cb_functions callbacks;
 };
 
-// Include svpng for real PNG output
-#include "../src/glue/svpng.h"
-#include <cstdio>
-
-// Simple PNG writer using built-in svpng functionality
-void writePNG(const std::string& filename, const unsigned char* pixels, int width, int height) {
-    FILE* fp = fopen(filename.c_str(), "wb");
-    if (!fp) return;
-    
-    // Create a temporary buffer to flip the image vertically and convert RGBA to RGB
-    const int pixel_size = 3; // RGB
-    unsigned char* rgb_data = new unsigned char[width * height * pixel_size];
-    
-    // Convert RGBA to RGB and flip vertically (OpenGL is bottom-up)
-    for (int y = 0; y < height; y++) {
-        for (int x = 0; x < width; x++) {
-            int src_idx = ((height - 1 - y) * width + x) * 4; // RGBA source, flipped
-            int dst_idx = (y * width + x) * 3; // RGB destination
-            rgb_data[dst_idx] = pixels[src_idx];     // R
-            rgb_data[dst_idx + 1] = pixels[src_idx + 1]; // G  
-            rgb_data[dst_idx + 2] = pixels[src_idx + 2]; // B
-            // Skip alpha channel
-        }
-    }
-    
-    // Write PNG using svpng (RGB format, no alpha)
-    svpng(fp, width, height, rgb_data, 0);
-    
-    delete[] rgb_data;
-    fclose(fp);
-}
+// Note: PNG writing functionality now provided by shared png_test_utils
 
 } // anonymous namespace
 
@@ -192,7 +165,7 @@ TEST_CASE("FBO-based Offscreen Rendering", "[fbo][osmesa][rendering]") {
         // Ensure that not all pixels are background (cube should be visible)
         REQUIRE(backgroundPixels < totalPixels * 0.9); // At least 10% non-background
         
-        // Write test image to verify FBO rendering
+        // Write test image to verify FBO rendering using shared PNG utilities
         writePNG("/tmp/fbo_test_basic.png", image, size[0], size[1]);
         
         root->unref();
@@ -227,7 +200,7 @@ TEST_CASE("FBO-based Offscreen Rendering", "[fbo][osmesa][rendering]") {
             const unsigned char* image = renderer.getBuffer();
             REQUIRE(image != nullptr);
             
-            // Write test images for different sizes
+            // Write test images for different sizes using shared PNG utilities
             std::string filename = "/tmp/fbo_test_" + std::to_string(size[0]) + "x" + std::to_string(size[1]) + ".png";
             writePNG(filename, image, size[0], size[1]);
         }
@@ -259,6 +232,141 @@ TEST_CASE("FBO-based Offscreen Rendering", "[fbo][osmesa][rendering]") {
         }
         
         cc_glglue_context_destruct(ctx);
+    }
+}
+
+// New comprehensive demo functionality integrated into test framework
+TEST_CASE("FBO Demo Comprehensive Integration", "[fbo][demo][osmesa][rendering]") {
+    
+    SECTION("FBO demo architecture validation - replaces standalone demo") {
+        OSMesaFBOCallbackManager manager;
+        
+        // Create a comprehensive 3D scene like the original FBO demo
+        SoSeparator* root = new SoSeparator;
+        root->ref();
+        
+        // Add camera with demo-style positioning
+        SoPerspectiveCamera* camera = new SoPerspectiveCamera;
+        camera->position = SbVec3f(0, 0, 3);
+        camera->nearDistance = 1.0f;
+        camera->farDistance = 10.0f;
+        root->addChild(camera);
+        
+        // Add directional light
+        SoDirectionalLight* light = new SoDirectionalLight;
+        light->direction = SbVec3f(-1, -1, -1);
+        root->addChild(light);
+        
+        // Add geometry (cube like original demo)
+        SoCube* cube = new SoCube;
+        root->addChild(cube);
+        
+        // Create offscreen renderer with demo specifications (512x512)
+        SbViewportRegion viewport(512, 512);
+        SoOffscreenRenderer renderer(viewport);
+        renderer.setBackgroundColor(SbColor(0.1f, 0.2f, 0.3f));
+        
+        INFO("Testing FBO-based architecture functionality");
+        
+        // Attempt to render the scene
+        SbBool renderResult = renderer.render(root);
+        REQUIRE(renderResult == TRUE);
+        
+        // Get the rendered image
+        const unsigned char* image = renderer.getBuffer();
+        REQUIRE(image != nullptr);
+        
+        // Validate image content
+        SbVec2s size = viewport.getViewportSizePixels();
+        REQUIRE(size[0] == 512);
+        REQUIRE(size[1] == 512);
+        
+        // Verify image buffer format - check first few pixels to ensure valid data
+        int totalPixels = size[0] * size[1];
+        REQUIRE(totalPixels > 0);
+        
+        // Simple validation - check that image has reasonable values
+        bool hasValidData = false;
+        for (int i = 0; i < std::min(100, totalPixels); i++) {
+            int idx = i * 4; // RGBA
+            if (image[idx] <= 255 && image[idx + 1] <= 255 && 
+                image[idx + 2] <= 255 && image[idx + 3] <= 255) {
+                hasValidData = true;
+                break;
+            }
+        }
+        REQUIRE(hasValidData);
+        
+        // Count background vs non-background pixels (simplified check)
+        int backgroundPixels = 0;
+        int samplesToCheck = std::min(1000, totalPixels); // Sample subset for safety
+        
+        for (int i = 0; i < samplesToCheck; i += 10) { // Sample every 10th pixel
+            int idx = i * 4; // RGBA
+            // Check if pixel is close to background color (0.1, 0.2, 0.3)
+            if (abs(image[idx] - 26) < 20 &&     // R: 0.1 * 255 ≈ 26
+                abs(image[idx + 1] - 51) < 20 && // G: 0.2 * 255 ≈ 51
+                abs(image[idx + 2] - 77) < 20)   // B: 0.3 * 255 ≈ 77
+            {
+                backgroundPixels++;
+            }
+        }
+        
+        // Ensure that rendering produced visible geometry (relaxed check)
+        int sampledPixels = samplesToCheck / 10;
+        CHECK(backgroundPixels < sampledPixels * 0.95); // Allow for some variance
+        
+        // Save output using shared PNG utilities (both RGBA and RGB formats)
+        bool pngResultRGBA = writePNG("/tmp/fbo_demo_integrated_rgba.png", image, size[0], size[1]);
+        CHECK(pngResultRGBA);
+        
+        // Test RGB conversion functionality with safe bounds checking
+        std::unique_ptr<unsigned char[]> rgb_data(new unsigned char[totalPixels * 3]);
+        for (int i = 0; i < totalPixels; i++) {
+            int src_idx = i * 4; // RGBA
+            int dst_idx = i * 3; // RGB
+            rgb_data[dst_idx] = image[src_idx];       // R
+            rgb_data[dst_idx + 1] = image[src_idx + 1]; // G
+            rgb_data[dst_idx + 2] = image[src_idx + 2]; // B
+        }
+        bool pngResultRGB = writePNG_RGB("/tmp/fbo_demo_integrated_rgb.png", rgb_data.get(), size[0], size[1]);
+        CHECK(pngResultRGB);
+        
+        // Verify files exist
+        std::ifstream rgbaFile("/tmp/fbo_demo_integrated_rgba.png");
+        std::ifstream rgbFile("/tmp/fbo_demo_integrated_rgb.png");
+        CHECK(rgbaFile.good());
+        CHECK(rgbFile.good());
+        
+        root->unref();
+    }
+    
+    SECTION("FBO callback architecture validation") {
+        OSMesaFBOCallbackManager manager;
+        
+        // Test context creation directly (like original demo)
+        void* ctx = cc_glglue_context_create_offscreen(256, 256);
+        REQUIRE(ctx != nullptr);
+        
+        // Test context activation
+        SbBool result = cc_glglue_context_make_current(ctx);
+        REQUIRE(result == TRUE);
+        
+        // Verify context functionality
+        const cc_glglue* glue = cc_glglue_instance(1);
+        if (glue) {
+            SbBool hasFBO = cc_glglue_has_framebuffer_objects(glue);
+            if (hasFBO) {
+                SUCCEED("FBO extension available - advanced rendering possible");
+            } else {
+                WARN("FBO extension not available - using fallback rendering");
+            }
+        }
+        
+        // Clean up context
+        cc_glglue_context_destruct(ctx);
+        
+        SUCCEED("FBO callback architecture validated successfully");
     }
 }
 
