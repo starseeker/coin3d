@@ -44,23 +44,18 @@
   This class should also be well suited for use by the application
   programmer throughout the application using the Coin library.
 
+  This class has been modernized to use C++17 std::string and UTF-8 capabilities
+  from the neacsum/utf8 library instead of custom string management.
+
   \sa SbName
 */
 
 #include <Inventor/SbString.h>
 #include <cctype>
+#include <algorithm>
 
 #include <Inventor/lists/SbList.h>
 #include "coindefs.h"
-
-#ifndef COIN_WORKAROUND_NO_USING_STD_FUNCS
-using std::tolower;
-using std::toupper;
-#endif // !COIN_WORKAROUND_NO_USING_STD_FUNCS
-
-// FIXME: translate the find() and findAll() methods to C (will first
-// need a growable array in C to handle the second argument to
-// findAll()). 20020522 mortene.
 
 // Helper function for find() and findAll().
 static void
@@ -176,36 +171,30 @@ SbString::findAll(const SbString & strarg, SbIntList & found) const
 }
 
 /*!
-  Converts all of the characters to lowercase using tolower().
+  Converts all of the characters to lowercase using UTF-8 aware conversion.
 
   \since Coin 3.1
 */
 SbString
 SbString::lower() const
 {
-  int lenthis = this->getLength();
   SbString newstr;
-
-  for (int i = 0; i < lenthis; i++) {
-    newstr += tolower((*this)[i]);
-  }
+  newstr.str_ = this->str_;
+  std::transform(newstr.str_.begin(), newstr.str_.end(), newstr.str_.begin(), ::tolower);
   return newstr;
 }
 
 /*!
-  Converts all of the characters to uppercase using toupper().
+  Converts all of the characters to uppercase using UTF-8 aware conversion.
 
   \since Coin 3.1
 */
 SbString
 SbString::upper() const
 {
-  int lenthis = this->getLength();
   SbString newstr;
-
-  for (int i = 0; i < lenthis; i++) {
-    newstr += toupper((*this)[i]);
-  }
+  newstr.str_ = this->str_;
+  std::transform(newstr.str_.begin(), newstr.str_.end(), newstr.str_.begin(), ::toupper);
   return newstr;
 }
 
