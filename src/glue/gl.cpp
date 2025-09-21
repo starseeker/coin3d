@@ -2427,7 +2427,28 @@ cc_glglue_instance(int contextid)
     }
 #endif
 
+    // Add error checking to isolate the crash
+    GLenum error_before_renderer = glGetError();
+    if (error_before_renderer != GL_NO_ERROR) {
+      cc_debugerror_postinfo("cc_glglue_instance", "OpenGL error before GL_RENDERER: 0x%x", error_before_renderer);
+    }
+    
     gi->rendererstr = (const char *)glGetString(GL_RENDERER);
+    
+    GLenum error_after_renderer = glGetError();
+    if (error_after_renderer != GL_NO_ERROR) {
+      cc_debugerror_postinfo("cc_glglue_instance", "OpenGL error after GL_RENDERER: 0x%x", error_after_renderer);
+    }
+    
+#ifdef COIN3D_OSMESA_BUILD
+    if (coin_glglue_debug()) {
+      cc_debugerror_postinfo("cc_glglue_instance", "GL_RENDERER call completed, rendererstr = %p", gi->rendererstr);
+      if (gi->rendererstr) {
+        cc_debugerror_postinfo("cc_glglue_instance", "Renderer string: %s", gi->rendererstr);
+      }
+    }
+#endif
+    
     gi->extensionsstr = (const char *)glGetString(GL_EXTENSIONS);
 
 #ifdef COIN3D_OSMESA_BUILD
