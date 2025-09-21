@@ -216,6 +216,7 @@ SoWriterefCounter::create(SoOutput * out, SoOutput * copyfrom)
   CC_MUTEX_LOCK(SoWriterefCounterP::mutex);
   SbBool ret = SoWriterefCounterP::outputdict->put(out, inst);
   assert(ret && "writeref instance already exists!");
+  (void)ret; /* avoid unused variable warning in release builds */
   CC_MUTEX_UNLOCK(SoWriterefCounterP::mutex);
 }
 
@@ -267,6 +268,7 @@ SoWriterefCounter::instance(SoOutput * out)
 
   const SbBool ok = SoWriterefCounterP::outputdict->get(out, inst);
   assert(ok && "no instance");
+  (void)ok; /* avoid unused variable warning in release builds */
 
   SoWriterefCounterP::current = inst;
   CC_MUTEX_UNLOCK(SoWriterefCounterP::mutex);

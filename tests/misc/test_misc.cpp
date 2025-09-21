@@ -51,6 +51,7 @@ TEST_CASE("SoType tests", "[misc][SoType]") {
         CHECK(SoType::fromName(SbName("MyClass")) == SoType::badType());
         
         SoType newtype = SoType::createType(SoNode::getClassTypeId(), SbName("MyClass"), createInstance, 0);
+        (void)newtype; // Variable needed for type registration but not used afterwards
         CHECK(SoType::fromName(SbName("MyClass")) != SoType::badType());
         
         bool success = SoType::removeType(SbName("MyClass"));

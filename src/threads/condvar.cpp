@@ -81,6 +81,7 @@ cc_condvar_struct_init(cc_condvar * condvar_struct)
   int ok;
   ok = internal_condvar_struct_init(condvar_struct);
   assert(ok == CC_OK);
+  (void)ok; /* avoid unused variable warning in release builds */
 }
 
 /*
@@ -93,6 +94,7 @@ cc_condvar_struct_clean(cc_condvar * condvar_struct)
   assert(condvar_struct != NULL);
   ok = internal_condvar_struct_clean(condvar_struct);
   assert(ok == CC_OK);
+  (void)ok; /* avoid unused variable warning in release builds */
 }
 
 /* ********************************************************************** */
@@ -156,6 +158,7 @@ cc_condvar_wake_one(cc_condvar * condvar)
   assert(condvar != NULL);
   ok = internal_condvar_wake_one(condvar);
   assert(ok == CC_OK);
+  (void)ok; /* avoid unused variable warning in release builds */
 }
 
 /*! Wake all threads waiting for the \a condvar conditional variable. */
@@ -168,5 +171,6 @@ cc_condvar_wake_all(cc_condvar * condvar)
 
   ok = internal_condvar_wake_all(condvar);
   assert(ok == CC_OK);
+  (void)ok; /* avoid unused variable warning in release builds */
 }
 
