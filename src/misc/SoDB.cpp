@@ -115,7 +115,8 @@
 #include "misc/SoConfigSettings.h"
 #include "rendering/SoVBO.h"
 
-// Threading migration: threadp.h removed - functionality replaced with C++17 equivalents
+// Threading support
+#include "threads/threadp.h"
 
 #ifdef COIN_THREADSAFE
 #include <Inventor/threads/SbRWMutex.h>
@@ -205,6 +206,9 @@ SoDB::init(void)
   (void)a_static_variable; // suppress unused variable warning in release builds
 
   if (SoDB::isInitialized()) return;
+
+  // Initialize threading subsystem first as it's needed for other components
+  cc_thread_init();
 
   // Releasing the mutex used for detecting multiple Coin instances in
   // the process image.
