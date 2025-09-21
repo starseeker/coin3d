@@ -159,7 +159,7 @@ inline unsigned int SbHashFunc(const void * key)
 
 static const int SOFIELD_GET_STACKBUFFER_SIZE = 1024;
 // need one static mutex for field_buffer in SoField::get(SbString &)
-static void * sofield_mutex = NULL;
+static void * sofield_mutex __attribute__((unused)) = NULL;
 
 // flags for this->statusbits
 

@@ -290,7 +290,7 @@ using std::strlen;
 SoType SoMField::classTypeId STATIC_SOTYPE_INIT;
 
 // need one static mutex for field_buffer in SoMField::get1(SbString &)
-static void * somfield_mutex = NULL;
+static void * somfield_mutex __attribute__((unused)) = NULL;
 
 static void
 somfield_mutex_cleanup(void)
