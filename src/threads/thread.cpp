@@ -79,7 +79,7 @@
 #include <functional>
 #endif
 
-#include "C/errors/debugerror.h"
+#include "errors/CoinInternalError.h"
 
 #include "threads/threadp.h"
 #include "threads/mutexp.h"

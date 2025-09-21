@@ -42,7 +42,7 @@
  * compatibility with the legacy C API.
  */
 
-#include "CoinBasic.h"
+#include "Inventor/C/basic.h"
 #include <functional>
 #include <string>
 #include <cstdarg>
