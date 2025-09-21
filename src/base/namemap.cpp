@@ -35,19 +35,20 @@
 #include <cstdlib>
 #include <cassert>
 #include <cstring>
+#include <string>
+#include <functional>
 
 #include "threads/threadsutilp.h"
 #include "C/CoinTidbits.h"
-#include "C/base/string.h"
 #include "coindefs.h"
 
-#ifndef COIN_WORKAROUND_NO_USING_STD_FUNCS
-using std::malloc;
-using std::free;
-using std::strcpy;
-using std::strlen;
-using std::strcmp;
-#endif // !COIN_WORKAROUND_NO_USING_STD_FUNCS
+// Modern C++17 hash function for strings
+namespace {
+  uint32_t string_hash(const char* str) {
+    std::hash<std::string> hasher;
+    return static_cast<uint32_t>(hasher(std::string(str ? str : "")));
+  }
+}
 
 /* ************************************************************************* */
 
@@ -175,7 +176,7 @@ namemap_find_or_add_string(const char * str, SbBool addifnotfound)
   if (nametable == NULL) { namemap_init(); }
   assert(nametable != static_cast<struct NamemapBucketEntry **>(NULL) && "name hash dead");
 
-  h = cc_string_hash_text(str);
+  h = string_hash(str);
   i = h % NAME_TABLE_SIZE;
   entry = nametable[i];
 
