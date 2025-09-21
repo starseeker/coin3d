@@ -31,6 +31,7 @@
 \**************************************************************************/
 
 #include "osmesa_test_context.h"
+#include "png_test_utils.h"
 
 #ifdef COIN3D_OSMESA_BUILD
 
@@ -121,6 +122,12 @@ bool OSMesaTestContext::saveToPPM(const std::string& filename) const {
     }
     
     return file.good();
+}
+
+bool OSMesaTestContext::saveToPNG(const std::string& filename) const {
+    if (!buffer_ || !isValid()) return false;
+    
+    return CoinTestUtils::writePNG(filename, buffer_.get(), width_, height_, true);
 }
 
 void OSMesaTestContext::clearBuffer(float r, float g, float b, float a) {

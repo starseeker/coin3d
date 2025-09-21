@@ -11,6 +11,7 @@ endif()
 add_library(coin_test_utils STATIC
     utils/test_common.cpp
     utils/scene_graph_test_utils.cpp
+    utils/png_test_utils.cpp
 )
 
 # Add OSMesa test utilities if available
@@ -45,6 +46,8 @@ add_executable(CoinTests
     context/test_context_callbacks.cpp
     # FBO-based rendering tests
     rendering/test_fbo_rendering.cpp
+    # PNG utility tests
+    utils/test_png_output.cpp
     # Comprehensive testing modules - NEW FRAMEWORK
     nodes/test_nodes_comprehensive.cpp
     actions/test_actions_comprehensive.cpp
