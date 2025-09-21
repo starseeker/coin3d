@@ -999,7 +999,23 @@ SoOffscreenRendererP::renderFromBase(SoBase * base)
 SbBool
 SoOffscreenRenderer::render(SoNode * scene)
 {
-  return PRIVATE(this)->renderFromBase(scene);
+#ifdef COIN3D_OSMESA_BUILD
+  if (coin_glglue_debug()) {
+    cc_debugerror_postinfo("SoOffscreenRenderer::render", "Starting render with OSMesa");
+  }
+#endif
+
+  // Add error checking for OSMesa builds
+  SbBool result = PRIVATE(this)->renderFromBase(scene);
+  
+#ifdef COIN3D_OSMESA_BUILD
+  if (coin_glglue_debug()) {
+    cc_debugerror_postinfo("SoOffscreenRenderer::render", "Render completed, result = %s", 
+                          result ? "TRUE" : "FALSE");
+  }
+#endif
+
+  return result;
 }
 
 /*!
