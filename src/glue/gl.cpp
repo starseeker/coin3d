@@ -240,7 +240,7 @@
 
 #include "C/glue/gl.h"
 
-#include "C/errors/debugerror.h"
+#include "errors/CoinInternalError.h"
 #include "C/glue/dl.h"
 #include "C/CoinTidbits.h"
 #include "base/list.h"

@@ -151,7 +151,7 @@
 #include <CoreFoundation/CFURL.h>
 #endif // COIN_MACOS_10
 
-#include "C/errors/debugerror.h"
+#include "errors/CoinInternalError.h"
 #include "C/glue/dl.h"
 #include "C/CoinTidbits.h"
 #include <Inventor/system/gl.h> /* for glGetString */

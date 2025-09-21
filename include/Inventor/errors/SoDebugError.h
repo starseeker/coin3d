@@ -34,7 +34,31 @@
 \**************************************************************************/
 
 #include <Inventor/errors/SoError.h>
-#include <Inventor/C/errors/debugerror.h>
+
+// Minimal debugerror structures for compatibility
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
+#ifndef CC_DEBUGERROR_STRUCT_DEFINED
+#define CC_DEBUGERROR_STRUCT_DEFINED
+
+typedef enum CC_DEBUGERROR_SEVERITY {
+  CC_DEBUGERROR_ERROR,
+  CC_DEBUGERROR_WARNING,
+  CC_DEBUGERROR_INFO
+} CC_DEBUGERROR_SEVERITY;
+
+typedef struct cc_debugerror {
+  cc_error super;
+  CC_DEBUGERROR_SEVERITY severity;
+} cc_debugerror;
+
+#endif /* CC_DEBUGERROR_STRUCT_DEFINED */
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif /* __cplusplus */
 
 // Avoid problem with Microsoft Win32 API headers (yes, they actually
 // #define ERROR -- in wingdi.h).

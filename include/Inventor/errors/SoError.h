@@ -35,8 +35,33 @@
 
 #include <Inventor/SbBasic.h>
 #include <Inventor/SbString.h>
-#include <Inventor/C/errors/error.h>
 #include <Inventor/SoType.h>
+
+// Minimal C error structures for compatibility
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
+#include <Inventor/C/base/string.h>
+
+#ifndef CC_ERROR_STRUCT_DEFINED
+#define CC_ERROR_STRUCT_DEFINED
+
+typedef struct cc_error {
+  cc_string debugstring;
+} cc_error;
+
+typedef void cc_error_cb(const cc_error * err, void * data);
+
+#endif /* CC_ERROR_STRUCT_DEFINED */
+
+/* Basic error functions */
+COIN_DLL_API void cc_error_init(cc_error * me);
+COIN_DLL_API void cc_error_clean(cc_error * me);
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif /* __cplusplus */
 
 class SoBase;
 class SoNode;

@@ -54,6 +54,7 @@
 #include <Inventor/errors/SoErrors.h>
 
 #include "coindefs.h"
+#include "errors/CoinInternalError.h"
 
 #include <cassert>
 #include <cstdarg>

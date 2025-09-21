@@ -35,7 +35,7 @@
 
 #include <Inventor/SoType.h>
 #include <Inventor/lists/SoAuditorList.h>
-#include <Inventor/C/base/rbptree.h>
+#include <map>
 
 class SbString;
 class SoBaseList;
@@ -126,7 +126,7 @@ private:
   } objdata;
 
   void doNotify(SoNotList * l, const void * auditor, const SoNotRec::Type type);
-  cc_rbptree auditortree;
+  std::map<void*, void*> auditortree;
 
   class PImpl;
   friend class PImpl; // MSVC6

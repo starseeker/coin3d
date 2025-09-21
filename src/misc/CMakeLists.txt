@@ -13,7 +13,6 @@ set(COIN_MISC_FILES
 	SoGenerate.cpp
 	SoGlyph.cpp
 	SoInteraction.cpp
-	SoJavaScriptEngine.cpp
 	SoLightPath.cpp
 	SoLockManager.cpp
 	SoNormalGenerator.cpp

@@ -166,6 +166,11 @@ public:
         bool saveRenderResult(const std::string& filename);
         
         /**
+         * @brief Save rendered result as PNG for debugging
+         */
+        bool saveRenderResultPNG(const std::string& filename);
+        
+        /**
          * @brief Analyze rendered pixels for validation
          */
         struct PixelAnalysis {

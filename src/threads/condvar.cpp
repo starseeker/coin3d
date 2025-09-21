@@ -56,7 +56,7 @@
 #endif /* HAVE_UNISTD_H */
 
 #include "C/threads/mutex.h"
-#include "C/errors/debugerror.h"
+#include "errors/CoinInternalError.h"
 
 // C++17 includes for modern threading
 #ifdef USE_CXX17_THREADS

@@ -80,7 +80,7 @@
 #include <cstdlib>
 #include <cstring>
 
-#include "C/errors/debugerror.h"
+#include "errors/CoinInternalError.h"
 #include "misc/SoEnvironment.h"
 #include <Inventor/SbName.h>
 #include <Inventor/SoType.h>

@@ -107,6 +107,11 @@ public:
     bool saveToPPM(const std::string& filename) const;
     
     /**
+     * @brief Save framebuffer to PNG file for debugging
+     */
+    bool saveToPNG(const std::string& filename) const;
+    
+    /**
      * @brief Clear framebuffer to specified color
      */
     void clearBuffer(float r = 0.0f, float g = 0.0f, float b = 0.0f, float a = 1.0f);

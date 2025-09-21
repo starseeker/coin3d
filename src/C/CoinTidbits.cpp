@@ -88,7 +88,7 @@
 
 #include "C/base/string.h"
 #include "base/list.h"
-#include "C/errors/debugerror.h"
+#include "errors/CoinInternalError.h"
 #include "coindefs.h"
 #include "misc/SoEnvironment.h"
 

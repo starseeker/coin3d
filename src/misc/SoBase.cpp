@@ -202,7 +202,7 @@ SoBase::SoBase(void)
   assert((SoBase::classTypeId != SoType::badType()) &&
          "An SoBase-derived class was attempted instantiated *before* Coin initialization. (Have you perhaps placed an SoBase-derived instance (e.g. a scene graph node) in non-heap memory?) See SoBase class documentation for more info.");
 
-  cc_rbptree_init(&this->auditortree);
+  // Initialize auditor tree (std::map is automatically initialized)
 
   this->objdata.referencecount = 0;
 
@@ -247,7 +247,7 @@ SoBase::~SoBase()
       //delete l;
     }
   }
-  cc_rbptree_clean(&this->auditortree);
+  this->auditortree.clear(); // std::map cleanup
 
 #if COIN_DEBUG
   if (SoBase::PImpl::trackbaseobjects) {
@@ -317,7 +317,11 @@ SoBase::destroy(void)
   // Find all auditors that they need to cut off their link to this
   // object. I believe this is necessary only for sensors.
   SbList<SoDataSensor *> auditingsensors;
-  cc_rbptree_traverse(&this->auditortree, (cc_rbptree_traversecb *)sobase_sensor_add_cb, &auditingsensors);
+  
+  // Traverse the std::map and call sobase_sensor_add_cb for each entry
+  for (const auto& pair : this->auditortree) {
+    sobase_sensor_add_cb(pair.first, pair.second, &auditingsensors);
+  }
 
   // Notify sensors that we're dying.
   for (int j = 0; j < auditingsensors.getLength(); j++)
@@ -815,11 +819,14 @@ SoBase::notify(SoNotList * l)
 #endif // debug
 
   SoBase::PImpl::NotifyData notdata;
-  notdata.cnt = cc_rbptree_size(&this->auditortree);
+  notdata.cnt = this->auditortree.size();
   notdata.list = l;
   notdata.thisp = this;
 
-  cc_rbptree_traverse(&this->auditortree, (cc_rbptree_traversecb *)SoBase::PImpl::rbptree_notify_cb, &notdata);
+  // Traverse the std::map and call the callback for each entry
+  for (const auto& pair : this->auditortree) {
+    SoBase::PImpl::auditor_notify_cb(pair.first, pair.second, &notdata);
+  }
   assert(notdata.cnt == 0);
 }
 
@@ -835,7 +842,7 @@ SoBase::addAuditor(void * const auditor, const SoNotRec::Type type)
   // MSVC7 on 64-bit Windows wants to go through this type before
   // casting to void*.
   const uintptr_t val = (uintptr_t)type;
-  cc_rbptree_insert(&this->auditortree, auditor, (void *)val);
+  this->auditortree[auditor] = (void *)val;
 }
 
 /*!
@@ -847,7 +854,7 @@ SoBase::addAuditor(void * const auditor, const SoNotRec::Type type)
 void
 SoBase::removeAuditor(void * const auditor, const SoNotRec::Type COIN_UNUSED_ARG(type))
 {
-  cc_rbptree_remove(&this->auditortree, auditor);
+  this->auditortree.erase(auditor);
 }
 
 
@@ -890,7 +897,11 @@ SoBase::getAuditors(void) const
   else {
     (*SoBase::PImpl::auditordict)[this] = new SoAuditorList;
   }
-  cc_rbptree_traverse(&this->auditortree, (cc_rbptree_traversecb*)sobase_audlist_add, l);
+  
+  // Traverse the std::map and call sobase_audlist_add for each entry
+  for (const auto& pair : this->auditortree) {
+    sobase_audlist_add(pair.first, pair.second, l);
+  }
 
   CC_MUTEX_UNLOCK(SoBase::PImpl::auditor_mutex);
 

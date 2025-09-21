@@ -47,7 +47,7 @@
 #include <cstdlib>
 #include <cassert>
 
-#include "C/errors/debugerror.h"
+#include "errors/CoinInternalError.h"
 #include "C/threads/mutex.h"
 #include "C/threads/thread.h"
 #include "C/threads/condvar.h"

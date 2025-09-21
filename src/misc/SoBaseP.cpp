@@ -186,10 +186,10 @@ SoBase::PImpl::check_for_leaks(void)
 }
 
 //
-// Callback from cc_rbptree_traverse().
+// Callback for auditor traversal.
 //
 void
-SoBase::PImpl::rbptree_notify_cb(void * auditor, void * type, void * closure)
+SoBase::PImpl::auditor_notify_cb(void * auditor, void * type, void * closure)
 {
   NotifyData * data = static_cast<NotifyData *>(closure);
   data->cnt--;

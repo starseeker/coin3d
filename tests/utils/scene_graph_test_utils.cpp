@@ -31,6 +31,7 @@
 \**************************************************************************/
 
 #include "scene_graph_test_utils.h"
+#include "png_test_utils.h"
 #include <Inventor/nodes/SoCube.h>
 #include <Inventor/nodes/SoSphere.h>
 #include <Inventor/nodes/SoCylinder.h>
@@ -378,6 +379,10 @@ bool RenderingTestUtils::RenderTestFixture::renderScene(SoNode* scene) {
 
 bool RenderingTestUtils::RenderTestFixture::saveRenderResult(const std::string& filename) {
     return getContext().saveToPPM(filename);
+}
+
+bool RenderingTestUtils::RenderTestFixture::saveRenderResultPNG(const std::string& filename) {
+    return getContext().saveToPNG(filename);
 }
 
 RenderingTestUtils::RenderTestFixture::PixelAnalysis 

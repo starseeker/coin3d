@@ -47,7 +47,7 @@
 
 #include "C/CoinTidbits.h"
 #include "C/base/string.h"
-#include "C/errors/debugerror.h"
+#include "errors/CoinInternalError.h"
 
 #include "base/dict.h"
 #include "base/dynarray.h"

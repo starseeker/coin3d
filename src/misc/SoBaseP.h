@@ -95,11 +95,11 @@ public:
   static SoBase * createInstance(SoInput * in, const SbName & classname);
   static void flushInput(SoInput * in);
 
-  static void rbptree_notify_cb(void * auditor, void * type, void * closure);
+  static void auditor_notify_cb(void * auditor, void * type, void * closure);
 
   static SoNode * readNode(SoInput * in);
 
-  // only needed for the callback from cc_rbptree_traverse
+  // callback data structure for auditor traversal
   struct NotifyData {
     int cnt;
     int total;

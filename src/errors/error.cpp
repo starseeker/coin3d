@@ -52,7 +52,7 @@
   The definition for an error callback handler.
 */
 
-#include "C/errors/error.h"
+#include "errors/CoinInternalError.h"
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"

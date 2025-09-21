@@ -61,7 +61,7 @@
 #include <cfloat>
 #include <chrono>
 
-#include "C/errors/debugerror.h"
+#include "errors/CoinInternalError.h"
 
 #include "threads/mutexp.h"
 #include "C/CoinTidbits.h"
