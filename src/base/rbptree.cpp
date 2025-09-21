@@ -269,6 +269,7 @@ rbptree_delete_fixup(cc_rbptree * t, cc_rbptree_node * x)
   cc_rbptree_node * w, * nil;
 
   nil = &rbptree_sentinel;
+  (void)nil; // suppress unused variable warning in release builds
 
   while (x != t->root && x->color == RBPTREE_BLACK) {
     if (x == x->parent->left) { /* x is left child */

@@ -69,6 +69,7 @@ forward_sprintf(char * dst, unsigned int realdstlen, const char * fmtstr, ...)
   // arguments after the end of the actual argument list.
   len = coin_vsnprintf(dst, realdstlen, fmtstr, args);
   assert(len != -1);
+  (void)len; // suppress unused variable warning in release builds
 
   va_end(args);
 }
