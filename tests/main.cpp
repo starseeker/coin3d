@@ -33,6 +33,49 @@
 #include "utils/test_common.h"
 #include <Inventor/SoDB.h>
 #include <Inventor/SoInteraction.h>
+#include <iostream>
+
+#ifdef COIN3D_OSMESA_BUILD
+#include "utils/osmesa_test_context.h"
+#include <memory>
+
+// Global OSMesa context manager for all tests
+namespace {
+    std::unique_ptr<CoinTestUtils::OSMesaCallbackManager> g_global_osmesa_manager;
+}
+#endif
 
 // Main entry point for Catch2 explicit tests
 // This replaces the comment-driven test generation approach
+
+// Global initialization that runs before any tests  
+namespace {
+    struct GlobalTestSetup {
+        GlobalTestSetup() {
+            std::cout << "=== GlobalTestSetup: Initializing Coin3D and OSMesa ===" << std::endl;
+            
+            // Initialize Coin3D first
+            if (!SoDB::isInitialized()) {
+                SoDB::init();
+                SoInteraction::init();
+                std::cout << "=== GlobalTestSetup: Coin3D initialized ===" << std::endl;
+            }
+            
+#ifdef COIN3D_OSMESA_BUILD
+            // Set up OSMesa callbacks for all tests that need rendering
+            if (!g_global_osmesa_manager) {
+                g_global_osmesa_manager = std::make_unique<CoinTestUtils::OSMesaCallbackManager>();
+                std::cout << "=== GlobalTestSetup: OSMesa callbacks set up ===" << std::endl;
+            }
+#endif
+        }
+        
+        ~GlobalTestSetup() {
+            std::cout << "=== GlobalTestSetup: Cleaning up ===" << std::endl;
+#ifdef COIN3D_OSMESA_BUILD
+            // Clean up OSMesa callbacks
+            g_global_osmesa_manager.reset();
+#endif
+        }
+    } g_test_setup;
+}

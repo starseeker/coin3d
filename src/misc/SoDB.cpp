@@ -193,8 +193,7 @@ static void initializeCoinOSMesaContext() {
     coin_osmesa_destruct
   };
   
-  // Only register callbacks if none are already set
-  // This allows applications to provide their own callbacks if needed
+  // Register callbacks for OSMesa offscreen rendering
   cc_glglue_context_set_offscreen_cb_functions(&osmesa_callbacks);
 }
 

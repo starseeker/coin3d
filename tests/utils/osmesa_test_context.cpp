@@ -154,7 +154,8 @@ OSMesaCallbackManager::OSMesaCallbackManager() {
 }
 
 OSMesaCallbackManager::~OSMesaCallbackManager() {
-    cc_glglue_context_set_offscreen_cb_functions(nullptr);
+    // Don't nullify callbacks since they should persist globally for OSMesa builds
+    // cc_glglue_context_set_offscreen_cb_functions(nullptr);
 }
 
 void* OSMesaCallbackManager::createOffscreen(unsigned int width, unsigned int height) {
