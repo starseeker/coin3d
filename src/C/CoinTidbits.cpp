@@ -137,7 +137,7 @@ typedef int func_vsnprintf(char*, size_t, const char*, va_list);
 
 static int coin_common_vsnprintf(func_vsnprintf* func,
                                 char* dst, size_t n,
-                                const char* fmtstr, va_list args)
+                                const char* fmtstr, va_list args) __attribute__((unused))
 {
     int length;
     static int debug = -1;
@@ -894,6 +894,7 @@ SbBool coin_locale_set_portable(cc_string* storeold)
     
     loc = setlocale(LC_NUMERIC, "C");
     assert(loc != NULL && "could not set locale to supposed portable C locale");
+    (void)loc; // suppress unused variable warning in release builds
     return COIN_TRUE;
 }
 
@@ -901,6 +902,7 @@ void coin_locale_reset(cc_string* storedold)
 {
     const char* l = setlocale(LC_NUMERIC, cc_string_get_text(storedold));
     assert(l != NULL && "could not reset locale");
+    (void)l; // suppress unused variable warning in release builds
     cc_string_clean(storedold);
 }
 

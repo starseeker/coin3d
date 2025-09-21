@@ -2183,7 +2183,10 @@ get_regname(char reg, int regtype)
 
 
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
 #include "so_eval.ic" /* our lexical scanner */
+#pragma GCC diagnostic pop
 
 /* some very simple error handling for now :) */
 static char *myerrorptr;

@@ -202,6 +202,7 @@ SoDB::init(void)
   // information.
   assert((a_static_variable == 0xdeadbeef) &&
          "SoDB::init() called before Coin DLL initialization!");
+  (void)a_static_variable; // suppress unused variable warning in release builds
 
   if (SoDB::isInitialized()) return;
 

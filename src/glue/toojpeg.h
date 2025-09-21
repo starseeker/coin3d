@@ -89,7 +89,7 @@ namespace TooJpeg
   // reject file if image dimensions exceed this threshold (security feature)
   const auto MaxWidth   = MaxResolution;
   const auto MaxHeight  = MaxResolution;
-  const auto MaxPixels  = MaxWidth * MaxHeight;
+  const auto MaxPixels  = static_cast<uint64_t>(MaxWidth) * MaxHeight;
 
   // compression level 1...100, smaller is better compression, 10 means the same as quality 90
   // I strongly recommend values between 70 and 95

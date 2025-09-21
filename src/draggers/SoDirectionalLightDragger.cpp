@@ -203,6 +203,8 @@ SoDirectionalLightDragger::SoDirectionalLightDragger(void)
   assert(pdragger);
   SoDragger *sdragger = SO_GET_ANY_PART(this, "rotator", SoDragPointDragger);
   assert(sdragger);
+  (void)pdragger; // suppress unused variable warning in release builds  
+  (void)sdragger; // suppress unused variable warning in release builds
 
   this->setPartAsDefault("material", "directionalLightOverallMaterial");
 

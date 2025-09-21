@@ -460,9 +460,8 @@ SoInput_FileInfo::readInteger(int32_t & l)
   // length. Ouch. 19990530 mortene.
   char str[512];
   char * s = str;
-  SbBool minus = FALSE;
+  // Read optional sign character directly into the string
   if (this->readChar(s, '-')) {
-    minus = TRUE;
     s++;
   }
   else if (this->readChar(s, '+')) s++;
