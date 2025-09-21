@@ -1,5 +1,5 @@
-# Simple demo to test FBO-based rendering with OSMesa
-cmake_minimum_required(VERSION 3.5)
+# FBO demo executable - integrated with test framework
+cmake_minimum_required(VERSION 3.10)
 
 # Add demo executable 
 add_executable(fbo_demo

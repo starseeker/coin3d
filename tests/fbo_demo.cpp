@@ -36,7 +36,7 @@ using namespace CoinTestUtils;
 
 namespace {
 
-// Simple mock context for demonstration (would normally be OSMesa)
+// Simple mock context for demonstration (used only when OSMesa is not available)
 struct MockOffscreenContext {
     int width, height;
     bool valid;
@@ -47,7 +47,8 @@ struct MockOffscreenContext {
     bool makeCurrent() { return valid; }
 };
 
-// Global callback functions for Coin3D context management
+#ifndef COIN3D_OSMESA_BUILD
+// Global callback functions for Coin3D context management (fallback mode only)
 static void* mock_create_offscreen(unsigned int width, unsigned int height) {
     // This is a mock implementation - in real usage, this would create an OSMesa context
     // For now, we return a mock to demonstrate the architecture
@@ -76,6 +77,7 @@ static void mock_destruct(void* context) {
         delete ctx;
     }
 }
+#endif // !COIN3D_OSMESA_BUILD
 
 void writePPM(const std::string& filename, const unsigned char* pixels, int width, int height, int components = 4) {
     if (!pixels) {
