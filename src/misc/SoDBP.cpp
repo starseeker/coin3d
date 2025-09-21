@@ -39,8 +39,8 @@ SbList<SoDBP::ProgressCallbackInfo> * SoDBP::progresscblist = NULL;
 //
 // This checks that the undefined behaviour of the system's
 // vsnprintf() works the way we need it to when the (C99) va_copy()
-// macro is not available on the system. See coin_vsnprintf() in
-// tidbits.c for more information.
+// macro is not available on the system. See std::vsnprintf() in
+// the C++ standard library for more information.
 //
 // The relevant part of ISO/IEC 9899:1999 ("C99") says (in section
 // 7.19.6.12):
@@ -59,15 +59,15 @@ forward_sprintf(char * dst, unsigned int realdstlen, const char * fmtstr, ...)
   va_start(args, fmtstr);
 
   // This first call is just to get one invocation of va_arg() done
-  // from the system's vsnprintf().
-  int len = coin_vsnprintf(dst, (unsigned int)(strlen(fmtstr) - 1), fmtstr, args);
+  // from the system's std::vsnprintf().
+  int len = std::vsnprintf(dst, strlen(fmtstr) - 1, fmtstr, args);
   assert(len == -1);
 
   // The next call is made to see whether or not additional
   // invocations of vsnprintf() on the system without an intervening
   // va_start()/va_end() pair will cause va_arg() to start picking up
   // arguments after the end of the actual argument list.
-  len = coin_vsnprintf(dst, realdstlen, fmtstr, args);
+  len = std::vsnprintf(dst, realdstlen, fmtstr, args);
   assert(len != -1);
   (void)len; // suppress unused variable warning in release builds
 
