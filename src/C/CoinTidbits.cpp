@@ -137,7 +137,7 @@ typedef int func_vsnprintf(char*, size_t, const char*, va_list);
 
 static int coin_common_vsnprintf(func_vsnprintf* func,
                                 char* dst, size_t n,
-                                const char* fmtstr, va_list args) __attribute__((unused))
+                                const char* fmtstr, va_list args)
 {
     int length;
     static int debug = -1;
