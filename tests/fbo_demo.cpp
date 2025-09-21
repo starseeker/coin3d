@@ -5,6 +5,7 @@
 #include <fstream>
 #include <memory>
 #include <cstring>
+#include <cstdio>
 
 // Try to include OSMesa headers
 #include <OSMesa/gl.h>
@@ -20,6 +21,9 @@
 #include <Inventor/nodes/SoPerspectiveCamera.h>
 #include <Inventor/SoOffscreenRenderer.h>
 #include <Inventor/SbViewportRegion.h>
+
+// Include svpng for PNG output
+#include "../src/glue/svpng.h"
 
 namespace {
 
@@ -88,6 +92,39 @@ void writePPM(const std::string& filename, const unsigned char* pixels, int widt
     std::cout << "Rendered image saved to: " << filename << std::endl;
 }
 
+void writePNG(const std::string& filename, const unsigned char* pixels, int width, int height) {
+    FILE* fp = fopen(filename.c_str(), "wb");
+    if (!fp) {
+        std::cerr << "Failed to create PNG file: " << filename << std::endl;
+        return;
+    }
+    
+    // Create a temporary buffer to flip the image vertically and convert RGBA to RGB
+    const int pixel_size = 3; // RGB
+    const int row_size = width * pixel_size;
+    unsigned char* rgb_data = new unsigned char[width * height * pixel_size];
+    
+    // Convert RGBA to RGB and flip vertically (OpenGL is bottom-up)
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            int src_idx = ((height - 1 - y) * width + x) * 4; // RGBA source, flipped
+            int dst_idx = (y * width + x) * 3; // RGB destination
+            rgb_data[dst_idx] = pixels[src_idx];     // R
+            rgb_data[dst_idx + 1] = pixels[src_idx + 1]; // G  
+            rgb_data[dst_idx + 2] = pixels[src_idx + 2]; // B
+            // Skip alpha channel
+        }
+    }
+    
+    // Write PNG using svpng (RGB format, no alpha)
+    svpng(fp, width, height, rgb_data, 0);
+    
+    delete[] rgb_data;
+    fclose(fp);
+    
+    std::cout << "Rendered image saved to: " << filename << std::endl;
+}
+
 } // anonymous namespace
 
 int main(int argc, char* argv[]) {
@@ -152,6 +189,13 @@ int main(int argc, char* argv[]) {
         if (image) {
             std::cout << "✓ Image buffer retrieved successfully" << std::endl;
             std::cout << "✓ FBO-based rendering architecture is working!" << std::endl;
+            
+            // Save output in both formats for comparison
+            writePPM("/tmp/fbo_demo_output.ppm", image, 512, 512);
+            writePNG("/tmp/fbo_demo_output.png", image, 512, 512);
+            
+            std::cout << "  Rendered output saved to /tmp/fbo_demo_output.ppm and .png" << std::endl;
+            std::cout << "  PNG format is preferred for easier debugging and inspection!" << std::endl;
         } else {
             std::cout << "⚠ WARNING: Image buffer is null" << std::endl;
         }

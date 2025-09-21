@@ -96,25 +96,36 @@ private:
     cc_glglue_offscreen_cb_functions callbacks;
 };
 
-// Simple PNG writer using built-in functionality
+// Include svpng for real PNG output
+#include "../src/glue/svpng.h"
+#include <cstdio>
+
+// Simple PNG writer using built-in svpng functionality
 void writePNG(const std::string& filename, const unsigned char* pixels, int width, int height) {
-    std::ofstream file(filename, std::ios::binary);
-    if (!file) return;
+    FILE* fp = fopen(filename.c_str(), "wb");
+    if (!fp) return;
     
-    // For testing purposes, write a simple PGM format instead of PNG
-    // This is easier and doesn't require external dependencies
-    file << "P6\n" << width << " " << height << "\n255\n";
+    // Create a temporary buffer to flip the image vertically and convert RGBA to RGB
+    const int pixel_size = 3; // RGB
+    unsigned char* rgb_data = new unsigned char[width * height * pixel_size];
     
     // Convert RGBA to RGB and flip vertically (OpenGL is bottom-up)
-    for (int y = height - 1; y >= 0; y--) {
+    for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {
-            int idx = (y * width + x) * 4; // Assuming RGBA format
-            file.put(pixels[idx]);     // R
-            file.put(pixels[idx + 1]); // G  
-            file.put(pixels[idx + 2]); // B
+            int src_idx = ((height - 1 - y) * width + x) * 4; // RGBA source, flipped
+            int dst_idx = (y * width + x) * 3; // RGB destination
+            rgb_data[dst_idx] = pixels[src_idx];     // R
+            rgb_data[dst_idx + 1] = pixels[src_idx + 1]; // G  
+            rgb_data[dst_idx + 2] = pixels[src_idx + 2]; // B
             // Skip alpha channel
         }
     }
+    
+    // Write PNG using svpng (RGB format, no alpha)
+    svpng(fp, width, height, rgb_data, 0);
+    
+    delete[] rgb_data;
+    fclose(fp);
 }
 
 } // anonymous namespace
@@ -182,7 +193,7 @@ TEST_CASE("FBO-based Offscreen Rendering", "[fbo][osmesa][rendering]") {
         REQUIRE(backgroundPixels < totalPixels * 0.9); // At least 10% non-background
         
         // Write test image to verify FBO rendering
-        writePNG("/tmp/fbo_test_basic.ppm", image, size[0], size[1]);
+        writePNG("/tmp/fbo_test_basic.png", image, size[0], size[1]);
         
         root->unref();
     }
@@ -217,7 +228,7 @@ TEST_CASE("FBO-based Offscreen Rendering", "[fbo][osmesa][rendering]") {
             REQUIRE(image != nullptr);
             
             // Write test images for different sizes
-            std::string filename = "/tmp/fbo_test_" + std::to_string(size[0]) + "x" + std::to_string(size[1]) + ".ppm";
+            std::string filename = "/tmp/fbo_test_" + std::to_string(size[0]) + "x" + std::to_string(size[1]) + ".png";
             writePNG(filename, image, size[0], size[1]);
         }
         
