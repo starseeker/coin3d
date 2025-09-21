@@ -303,8 +303,9 @@ TEST_CASE("Geometry Nodes - Complex Shapes", "[nodes][geometry][complex][compreh
         // Validate scene structure
         CHECK(SceneGraphValidator::validateSceneStructure(scene));
         auto node_counts = SceneGraphValidator::countNodeTypes(scene);
-        CHECK(node_counts["SoIndexedFaceSet"] == 1);
-        CHECK(node_counts["SoCoordinate3"] == 1);
+        
+        CHECK(node_counts["IndexedFaceSet"] == 1);
+        CHECK(node_counts["Coordinate3"] == 1);
         
         scene->unref();
         faceset->unref();
@@ -412,7 +413,7 @@ TEST_CASE("Property Nodes - Material and Appearance", "[nodes][properties][compr
         SbVec3f axis;
         float angle;
         transform->rotation.getValue(axis, angle);
-        CHECK(axis == SbVec3f(0, 1, 0));
+        CHECK(axis.equals(SbVec3f(0, 1, 0), 0.001f));
         CHECK(abs(angle - M_PI/4) < 0.001f);
         
         transform->unref();
@@ -465,7 +466,7 @@ TEST_CASE("Camera Nodes - Viewing and Projection", "[nodes][cameras][comprehensi
         SbVec3f axis;
         float angle;
         camera->orientation.getValue(axis, angle);
-        CHECK(axis == SbVec3f(0, 1, 0));
+        CHECK(axis.equals(SbVec3f(0, 1, 0), 0.001f));
         
         // Test with scene rendering
         COIN_TEST_WITH_OSMESA_CONTEXT(256, 256) {
