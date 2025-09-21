@@ -46,7 +46,6 @@
 #include <Inventor/nodes/SoNode.h>
 
 #include "C/CoinTidbits.h"
-#include "glue/zlib.h"
 
 // *************************************************************************
 

@@ -38,7 +38,6 @@ set(COIN_BASE_FILES
 	SbSphere.cpp
 	SbString.cpp
 	SbTesselator.cpp
-	SbGLUTessellator.cpp
 	SbTime.cpp
 	SbVec2b.cpp
 	SbVec2ub.cpp
@@ -82,8 +81,6 @@ set(COIN_BASE_INTERNAL_FILES
 	heapp.h
 	namemap.h
 	namemap.cpp
-	SbGLUTessellator.h
-	SbGLUTessellator.cpp
 )
 
 # build library

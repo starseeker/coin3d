@@ -220,7 +220,6 @@
 
 #include "rendering/SoGL.h"
 #include "elements/SoTextureScaleQualityElement.h"
-#include "glue/GLUWrapper.h"
 #include "glue/glp.h"
 #include "glue/simage_wrapper.h"
 #include "threads/threadsutilp.h"

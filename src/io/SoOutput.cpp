@@ -96,8 +96,6 @@
 
 
 #include "misc/SbHash.h"
-#include "glue/zlib.h"
-#include "glue/bzip2.h"
 #include "io/SoOutput_Writer.h"
 #include "io/SoWriterefCounter.h"
 #include "misc/SoEnvironment.h"
@@ -272,28 +270,6 @@ private:
 static SbList <SbName> * SoOutput_compmethods = NULL;
 
 // *************************************************************************
-
-static void
-SoOutput_compression_list_cleanup(void)
-{
-  delete SoOutput_compmethods;
-  SoOutput_compmethods = NULL;
-}
-
-static void
-SoOutput_compression_list_init(void)
-{
-  if (SoOutput_compmethods) return;
-
-  SoOutput_compmethods = new SbList <SbName>;
-  if (cc_zlibglue_available()) {
-    SoOutput_compmethods->append(SbName("GZIP"));
-  }
-  if (cc_bzglue_available()) {
-    SoOutput_compmethods->append(SbName("BZIP2"));
-  }
-  coin_atexit((coin_atexit_f*) SoOutput_compression_list_cleanup, CC_ATEXIT_NORMAL);
-}
 
 #define PRIVATE(obj) (obj->pimpl)
 
@@ -476,13 +452,11 @@ SoOutput::setCompression(const SbName & compmethod, const float level)
   PRIVATE(this)->compmethod = compmethod;
 
   if (compmethod == "GZIP") {
-    if (cc_zlibglue_available()) return TRUE;
     SoDebugError::postWarning("SoOutput::setCompression",
                               "Requested GZIP compression, but zlib is not available.");
 
   }
   if (compmethod == "BZIP2") {
-    if (cc_bzglue_available()) return TRUE;
     SoDebugError::postWarning("SoOutput::setCompression",
                               "Requested BZIP2 compression, but libbz2 is not available.");
   }
@@ -507,9 +481,8 @@ SoOutput::setCompression(const SbName & compmethod, const float level)
 const SbName *
 SoOutput::getAvailableCompressionMethods(unsigned int & num)
 {
-  SoOutput_compression_list_init();
-  num = SoOutput_compmethods->getLength();
-  return SoOutput_compmethods->getArrayPtr();
+  num = 0;
+  return NULL;
 }
 
 /*!

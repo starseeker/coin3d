@@ -44,7 +44,6 @@
 #include <Inventor/elements/SoNormalBindingElement.h>
 #include <Inventor/elements/SoShapeHintsElement.h>
 
-#include "base/SbGLUTessellator.h"
 #include "../caches/SoConvexDataCacheEarcutTessellator.h"
 
 // *************************************************************************

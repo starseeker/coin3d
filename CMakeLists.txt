@@ -77,7 +77,7 @@ set(COIN_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
 # Documentation options removed - not needed for minimal library build
 
 # Feature options
-option(COIN3D_USE_OSMESA "Build against OSMesa for offscreen/headless rendering" OFF)
+option(COIN3D_USE_OSMESA "Build against OSMesa for offscreen/headless rendering" ON)
 option(COIN_THREADSAFE "Enable thread safe render traversals" ON)
 
 # Component options
@@ -137,16 +137,6 @@ else()
     list(APPEND COIN_TARGET_LINK_LIBRARIES_GL OpenGL::OpenGL)
   else()
     list(APPEND COIN_TARGET_LINK_LIBRARIES_GL OpenGL::GL)
-  endif()
-
-  if(OpenGL_GLU_FOUND)
-    set(HAVE_GLU 1)
-    list(APPEND COIN_TARGET_LINK_LIBRARIES_GL OpenGL::GLU)
-  endif()
-
-  # macOS specific settings
-  if(APPLE)
-    set(GLU_IS_PART_OF_GL 1)
   endif()
 
   message(STATUS "Using system OpenGL")
@@ -323,8 +313,6 @@ endif()
 # OpenGL header detection (simplified)
 check_include_file(GL/gl.h HAVE_GL_GL_H)
 check_include_file(OpenGL/gl.h HAVE_OPENGL_GL_H)
-check_include_file(GL/glu.h HAVE_GL_GLU_H)
-check_include_file(OpenGL/glu.h HAVE_OPENGL_GLU_H)
 check_include_files("GL/gl.h;GL/glext.h" HAVE_GL_GLEXT_H)
 check_include_files("OpenGL/gl.h;OpenGL/glext.h" HAVE_OPENGL_GLEXT_H)
 
@@ -338,7 +326,6 @@ if(COIN3D_USE_OSMESA)
   # starseeker/osmesa backend - use starseeker/osmesa headers (MGL mangling is automatic when USE_MGL_NAMESPACE is defined)
   set(SIM_INCLUDE_GL_H "#include <OSMesa/osmesa.h>
   #include <OSMesa/gl.h>")
-  set(SIM_INCLUDE_GLU_H "/* #include <GL/glu.h> - GLU not typically used with OSMesa */")
   message(STATUS "Using starseeker/osmesa headers for GL with automatic MGL name mangling")
 else()
   # System OpenGL backend
@@ -348,15 +335,6 @@ else()
     set(SIM_INCLUDE_GL_H "#include <OpenGL/gl.h>")
   else()
     set(SIM_INCLUDE_GL_H "#error \"don't know how to include gl.h header\"")
-  endif()
-  if(HAVE_SUPERGLU)
-    set(SIM_INCLUDE_GLU_H "/* #include <GL/glu.h> - not used, Coin linked with embedded SuperGLU */")
-  elseif(HAVE_GL_GLU_H)
-    set(SIM_INCLUDE_GLU_H "#include <GL/glu.h>")
-  elseif(HAVE_OPENGL_GLU_H)
-    set(SIM_INCLUDE_GLU_H "#include <OpenGL/glu.h>")
-  else()
-    set(SIM_INCLUDE_GLU_H "/* #include <GL/glu.h> - not found on system */")
   endif()
 endif()
 if(HAVE_GL_GLEXT_H)

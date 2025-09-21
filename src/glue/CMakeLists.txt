@@ -2,26 +2,17 @@
 set(COIN_GLUE_FILES
 	dl.cpp
 	gl.cpp
-	GLUWrapper.cpp
 	simage_wrapper.cpp
 	toojpeg.cpp
-	zlib.cpp
-	bzip2.cpp
 )
 
 # Files excluded from public API documentation, included in complete documentation.
 set(COIN_GLUE_INTERNAL_FILES
-	GLUWrapper.h
-	GLUWrapper.cpp
 	simage_wrapper.h
 	simage_wrapper.cpp
 	toojpeg.h
 	toojpeg.cpp
 	svpng.h
-	zlib.h
-	zlib.cpp
-	bzip2.h
-	bzip2.cpp
 )
 
 # build library
