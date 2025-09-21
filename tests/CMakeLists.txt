@@ -47,6 +47,7 @@ add_executable(CoinTests
     rendering/test_fbo_rendering.cpp
     # Comprehensive testing modules - NEW FRAMEWORK
     nodes/test_nodes_comprehensive.cpp
+    actions/test_actions_comprehensive.cpp
     # TODO: Add more comprehensive test modules:
     # actions/test_actions_comprehensive.cpp
     # engines/test_engines_comprehensive.cpp  
