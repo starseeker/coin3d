@@ -51,10 +51,10 @@ add_executable(CoinTests
     # Comprehensive testing modules - NEW FRAMEWORK
     nodes/test_nodes_comprehensive.cpp
     actions/test_actions_comprehensive.cpp
-    # TODO: Add more comprehensive test modules:
-    # actions/test_actions_comprehensive.cpp
-    # engines/test_engines_comprehensive.cpp  
-    # sensors/test_sensors_comprehensive.cpp
+    engines/test_engines_comprehensive.cpp
+    sensors/test_sensors_comprehensive.cpp
+    elements/test_elements_comprehensive.cpp
+    events/test_events_comprehensive.cpp
     # TODO: Add the complete migrated test files once compilation issues are resolved:
     # base/test_base_complete.cpp
     # fields/test_fields_complete.cpp
