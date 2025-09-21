@@ -131,7 +131,7 @@ cc_glyph2d_ref(uint32_t character, const cc_font_specification * spec, float ang
   int i;
   struct cc_font_bitmap * bm;
   cc_font_specification * newspec;
-  cc_string * fonttoload;
+  std::string fonttoload;
   cc_list * glyphlist;
 
 
@@ -177,16 +177,15 @@ cc_glyph2d_ref(uint32_t character, const cc_font_specification * spec, float ang
 
   /* FIXME: fonttoload variable should be allocated on the
      stack. 20030921 mortene. */
-  fonttoload = cc_string_construct_new();
-  cc_string_set_text(fonttoload, cc_string_get_text(&spec->name));
-  if (cc_string_length(&spec->style) > 0) {
-    cc_string_append_text(fonttoload, " ");
-    cc_string_append_string(fonttoload, &spec->style);
+  fonttoload = spec->name;
+  if (!spec->style.empty()) {
+    fonttoload += " ";
+    fonttoload += spec->style;
   }
   
   /* FIXME: get rid of angle -- not used. 20050516 mortene. */
   fontidx =
-    cc_flw_get_font_id(cc_string_get_text(fonttoload),
+    cc_flw_get_font_id(fonttoload.c_str(),
                        (unsigned int)(newspec->size), angle,
                        /* FIXME: passing in -1 for complexity below is
                           necessary because the Win32 API code in
@@ -202,8 +201,6 @@ cc_glyph2d_ref(uint32_t character, const cc_font_specification * spec, float ang
                           good design taste is the code in
                           win32.c. 20050706 mortene.*/
                        -1.0f);
-
-  cc_string_destruct(fonttoload);
   assert(fontidx >= 0);
 
   cc_flw_ref_font(fontidx);
@@ -250,8 +247,8 @@ glyph2d_specmatch(const cc_font_specification * spec1,
   assert(spec1);
   assert(spec2);
 
-  if ((!cc_string_compare(&spec1->name, &spec2->name)) &&
-      (!cc_string_compare(&spec1->style, &spec2->style)) &&
+  if ((spec1->name == spec2->name) &&
+      (spec1->style == spec2->style) &&
       (int(spec1->size) == int(spec2->size))) {
     /* No need to compare complexity for 2D fonts */
     return TRUE;

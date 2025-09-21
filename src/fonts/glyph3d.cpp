@@ -37,10 +37,10 @@
 #include <cstring>
 #include <cassert>
 #include <cstdio>
+#include <string>
 
 #include "Inventor/C/basic.h"
 #include "base/list.h"
-#include "C/base/string.h"
 
 #include "C/CoinTidbits.h"
 #include "base/dict.h"
@@ -143,7 +143,7 @@ cc_glyph3d_ref(uint32_t character, const cc_font_specification * spec)
   int fontidx;
   void * val;
   cc_font_specification * newspec;
-  cc_string * fonttoload;
+  std::string fonttoload;
   cc_list * glyphlist = NULL;
 
   /* because this function is the entry point for glyph3d, the mutex
@@ -191,19 +191,16 @@ cc_glyph3d_ref(uint32_t character, const cc_font_specification * spec)
 
   /* FIXME: fonttoload variable should be allocated on the
      stack. 20030921 mortene. */
-  fonttoload = cc_string_construct_new();
-  cc_string_set_text(fonttoload, cc_string_get_text(&spec->name));
-  if (cc_string_length(&spec->style) > 0) {
-    cc_string_append_text(fonttoload, " ");
-    cc_string_append_string(fonttoload, &spec->style);
+  fonttoload = spec->name;
+  if (!spec->style.empty()) {
+    fonttoload += " ";
+    fonttoload += spec->style;
   }
   
-  fontidx = cc_flw_get_font_id(cc_string_get_text(fonttoload), 
+  fontidx = cc_flw_get_font_id(fonttoload.c_str(), 
                                glyph3d_standardfontsize,
                                0.0f,
                                newspec->complexity);
-
-  cc_string_destruct(fonttoload);
   assert(fontidx >= 0);
 
   cc_flw_ref_font(fontidx);
@@ -432,8 +429,8 @@ glyph3d_specmatch(const cc_font_specification * spec1,
   temp1 = (int) (c1 * 10.0f);
   temp2 = (int) (c2 * 10.0f);
   
-  if ((!cc_string_compare(&spec1->name, &spec2->name)) &&
-      (!cc_string_compare(&spec1->style, &spec2->style)) &&
+  if ((spec1->name == spec2->name) &&
+      (spec1->style == spec2->style) &&
       (temp1 == temp2)) {
     /* No need to compare size for 3D fonts */
     return TRUE;
