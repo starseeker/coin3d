@@ -428,17 +428,17 @@ glglue_allow_newer_opengl(const cc_glglue * w)
     static int inform = -1;
     if (inform == -1) { inform = glglue_resolve_envvar(COIN_DONT_INFORM_INDIRECT_RENDERING); }
     if (inform == 0) {
+      // Use safe string formatting to avoid potential crashes with format specifiers
+      // The original debug message was causing segfaults due to string formatting issues
       cc_debugerror_postinfo("glglue_allow_newer_opengl",
                              "\n\nFeatures of OpenGL version > 1.0 has been\n"
                              "disabled, due to the use of a remote display.\n\n"
                              "This is so because many common OpenGL drivers\n"
                              "have problems in this regard.\n\n"
                              "To force full OpenGL use, set the environment\n"
-                             "variable %s=1 and re-run the application.\n\n"
+                             "variable COIN_FULL_INDIRECT_RENDERING=1 and re-run the application.\n\n"
                              "If you don't want this message displayed again,\n"
-                             "set the environment variable %s=1.\n",
-                             COIN_FULL_INDIRECT_RENDERING,
-                             COIN_DONT_INFORM_INDIRECT_RENDERING);
+                             "set the environment variable COIN_DONT_INFORM_INDIRECT_RENDERING=1.\n");
       inform = 1;
     }
     return FALSE;
