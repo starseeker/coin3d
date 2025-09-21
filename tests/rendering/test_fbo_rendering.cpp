@@ -47,18 +47,27 @@ struct OSMesaFBOTestContext {
 
 // Global callback functions for Coin3D context management
 static void* osmesa_fbo_create_offscreen(unsigned int width, unsigned int height) {
+    fprintf(stderr, "DEBUG: osmesa_fbo_create_offscreen called with %dx%d\n", width, height);
     auto* ctx = new OSMesaFBOTestContext(width, height);
     if (!ctx->isValid()) {
+        fprintf(stderr, "DEBUG: osmesa_fbo_create_offscreen - context invalid\n");
         delete ctx;
         return nullptr;
     }
+    fprintf(stderr, "DEBUG: osmesa_fbo_create_offscreen - context created successfully\n");
     return ctx;
 }
 
 static SbBool osmesa_fbo_make_current(void* context) {
-    if (!context) return FALSE;
+    fprintf(stderr, "DEBUG: osmesa_fbo_make_current called\n");
+    if (!context) {
+        fprintf(stderr, "DEBUG: osmesa_fbo_make_current - null context\n");
+        return FALSE;
+    }
     auto* ctx = static_cast<OSMesaFBOTestContext*>(context);
-    return ctx->makeCurrent() ? TRUE : FALSE;
+    SbBool result = ctx->makeCurrent() ? TRUE : FALSE;
+    fprintf(stderr, "DEBUG: osmesa_fbo_make_current - result: %s\n", result ? "TRUE" : "FALSE");
+    return result;
 }
 
 static void osmesa_fbo_reinstate_previous(void* context) {
@@ -77,14 +86,18 @@ static void osmesa_fbo_destruct(void* context) {
 class OSMesaFBOCallbackManager {
 public:
     OSMesaFBOCallbackManager() {
+        fprintf(stderr, "DEBUG: OSMesaFBOCallbackManager constructor - before SoDB::init()\n");
         SoDB::init();
+        fprintf(stderr, "DEBUG: OSMesaFBOCallbackManager constructor - after SoDB::init()\n");
         
         callbacks.create_offscreen = osmesa_fbo_create_offscreen;
         callbacks.make_current = osmesa_fbo_make_current;
         callbacks.reinstate_previous = osmesa_fbo_reinstate_previous;
         callbacks.destruct = osmesa_fbo_destruct;
         
+        fprintf(stderr, "DEBUG: OSMesaFBOCallbackManager constructor - before setting callbacks\n");
         cc_glglue_context_set_offscreen_cb_functions(&callbacks);
+        fprintf(stderr, "DEBUG: OSMesaFBOCallbackManager constructor - after setting callbacks\n");
     }
     
     ~OSMesaFBOCallbackManager() {
@@ -121,32 +134,48 @@ void writePNG(const std::string& filename, const unsigned char* pixels, int widt
 TEST_CASE("FBO-based Offscreen Rendering", "[fbo][osmesa][rendering]") {
     
     SECTION("Basic FBO rendering with simple scene") {
+        fprintf(stderr, "DEBUG: About to create OSMesaFBOCallbackManager\n");
         OSMesaFBOCallbackManager manager;
+        fprintf(stderr, "DEBUG: OSMesaFBOCallbackManager created successfully\n");
         
         // Create a simple scene with lighting
         SoSeparator* root = new SoSeparator;
+        fprintf(stderr, "DEBUG: SoSeparator created\n");
         root->ref();
+        fprintf(stderr, "DEBUG: SoSeparator ref'd\n");
         
         SoPerspectiveCamera* camera = new SoPerspectiveCamera;
+        fprintf(stderr, "DEBUG: SoPerspectiveCamera created\n");
         camera->position = SbVec3f(0, 0, 3);
+        fprintf(stderr, "DEBUG: SoPerspectiveCamera position set\n");
         camera->nearDistance = 1.0f;
         camera->farDistance = 10.0f;
         root->addChild(camera);
+        fprintf(stderr, "DEBUG: Camera added to root\n");
         
         SoDirectionalLight* light = new SoDirectionalLight;
+        fprintf(stderr, "DEBUG: SoDirectionalLight created\n");
         light->direction = SbVec3f(-1, -1, -1);
         root->addChild(light);
+        fprintf(stderr, "DEBUG: Light added to root\n");
         
         SoCube* cube = new SoCube;
+        fprintf(stderr, "DEBUG: SoCube created\n");
         root->addChild(cube);
+        fprintf(stderr, "DEBUG: Cube added to root\n");
         
         // Test offscreen rendering using FBOs
         SbViewportRegion viewport(256, 256);
+        fprintf(stderr, "DEBUG: SbViewportRegion created\n");
         SoOffscreenRenderer renderer(viewport);
+        fprintf(stderr, "DEBUG: SoOffscreenRenderer created\n");
         renderer.setBackgroundColor(SbColor(0.2f, 0.3f, 0.4f));
+        fprintf(stderr, "DEBUG: Background color set\n");
         
         // This should now use FBO-based rendering
+        fprintf(stderr, "DEBUG: About to call renderer.render()\n");
         SbBool renderResult = renderer.render(root);
+        fprintf(stderr, "DEBUG: renderer.render() returned: %s\n", renderResult ? "TRUE" : "FALSE");
         REQUIRE(renderResult == TRUE);
         
         // Test getting the rendered image
