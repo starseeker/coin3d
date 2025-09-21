@@ -43,7 +43,7 @@
 /* ********************************************************************** */
 
 /*!
-  \struct cc_storage common.h Inventor/C/threads/common.h
+  \struct cc_storage threads.h src/threads/threads.h
   \ingroup coin_threads
   \brief The structure for the thread local memory storage.
 */

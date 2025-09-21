@@ -31,7 +31,7 @@
 \**************************************************************************/
 
 /*!
-  \struct cc_recmutex common.h Inventor/C/threads/common.h
+  \struct cc_recmutex threads.h src/threads/threads.h
   \ingroup coin_threads
   \brief The structure for the recursive mutex.
 */

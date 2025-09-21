@@ -31,7 +31,7 @@
 \**************************************************************************/
 
 /*!
-  \struct cc_condvar common.h Inventor/C/threads/common.h
+  \struct cc_condvar threads.h src/threads/threads.h
   \ingroup coin_threads
   \brief The structure for a conditional variable.
 */
