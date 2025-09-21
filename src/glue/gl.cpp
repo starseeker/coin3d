@@ -402,17 +402,8 @@ glglue_resolve_envvar(const char * txt)
 static SbBool
 glglue_allow_newer_opengl(const cc_glglue * w)
 {
-  static int fullindirect_initialized = 0;
   static int force1_0_initialized = 0;
-  static SbBool fullindirect = FALSE;
   static SbBool force1_0 = FALSE;
-  static const char * COIN_FULL_INDIRECT_RENDERING = "COIN_FULL_INDIRECT_RENDERING";
-  static const char * COIN_DONT_INFORM_INDIRECT_RENDERING = "COIN_DONT_INFORM_INDIRECT_RENDERING";
-
-  if (!fullindirect_initialized) {
-    fullindirect = (glglue_resolve_envvar(COIN_FULL_INDIRECT_RENDERING) > 0);
-    fullindirect_initialized = 1;
-  }
 
   if (!force1_0_initialized) {
     force1_0 = (glglue_resolve_envvar("COIN_FORCE_GL1_0_ONLY") > 0);
@@ -420,6 +411,21 @@ glglue_allow_newer_opengl(const cc_glglue * w)
   }
 
   if (force1_0) return FALSE;
+
+#ifdef COIN3D_OSMESA_BUILD
+  /* For OSMesa builds, always allow newer OpenGL features.
+     OSMesa provides OpenGL 2.0 capabilities which is our minimum target. */
+  return TRUE;
+#else
+  static int fullindirect_initialized = 0;
+  static SbBool fullindirect = FALSE;
+  static const char * COIN_FULL_INDIRECT_RENDERING = "COIN_FULL_INDIRECT_RENDERING";
+  static const char * COIN_DONT_INFORM_INDIRECT_RENDERING = "COIN_DONT_INFORM_INDIRECT_RENDERING";
+
+  if (!fullindirect_initialized) {
+    fullindirect = (glglue_resolve_envvar(COIN_FULL_INDIRECT_RENDERING) > 0);
+    fullindirect_initialized = 1;
+  }
 
   if (!w->glx.isdirect && !fullindirect) {
     /* We give out a warning, once, when the full OpenGL feature set is not
@@ -445,6 +451,7 @@ glglue_allow_newer_opengl(const cc_glglue * w)
   }
 
   return TRUE;
+#endif
 }
 
 
@@ -725,7 +732,9 @@ cc_glglue_glversion(const cc_glglue * w,
                     unsigned int * release)
 {
   if (!glglue_allow_newer_opengl(w)) {
-    *major = 1;
+    /* When newer OpenGL is disabled, report OpenGL 2.0 as minimum target
+       instead of 1.0, since that's our actual minimum requirement */
+    *major = 2;
     *minor = 0;
     *release = 0;
   }
