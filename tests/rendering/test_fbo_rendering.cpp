@@ -174,6 +174,31 @@ TEST_CASE("FBO-based Offscreen Rendering", "[fbo][osmesa][rendering]") {
         
         // This should now use FBO-based rendering
         fprintf(stderr, "DEBUG: About to call renderer.render()\n");
+        
+        // Check OpenGL state before rendering
+        void* ctx = cc_glglue_context_create_offscreen(32, 32);
+        if (ctx) {
+            fprintf(stderr, "DEBUG: Test context created\n");
+            if (cc_glglue_context_make_current(ctx)) {
+                fprintf(stderr, "DEBUG: Test context made current\n");
+                GLenum error = glGetError();
+                fprintf(stderr, "DEBUG: Initial GL error state: %d\n", error);
+                
+                const char* vendor = (const char*)glGetString(GL_VENDOR);
+                const char* renderer = (const char*)glGetString(GL_RENDERER);
+                const char* version = (const char*)glGetString(GL_VERSION);
+                
+                fprintf(stderr, "DEBUG: GL_VENDOR: %s\n", vendor ? vendor : "(null)");
+                fprintf(stderr, "DEBUG: GL_RENDERER: %s\n", renderer ? renderer : "(null)");
+                fprintf(stderr, "DEBUG: GL_VERSION: %s\n", version ? version : "(null)");
+                
+                error = glGetError();
+                fprintf(stderr, "DEBUG: GL error after glGetString calls: %d\n", error);
+                
+                cc_glglue_context_destruct(ctx);
+            }
+        }
+        
         SbBool renderResult = renderer.render(root);
         fprintf(stderr, "DEBUG: renderer.render() returned: %s\n", renderResult ? "TRUE" : "FALSE");
         REQUIRE(renderResult == TRUE);

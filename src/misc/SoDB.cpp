@@ -196,7 +196,6 @@ static void initializeCoinOSMesaContext() {
   // Only register callbacks if none are already set
   // This allows applications to provide their own callbacks if needed
   cc_glglue_context_set_offscreen_cb_functions(&osmesa_callbacks);
-  fprintf(stderr, "DEBUG: OSMesa context callbacks registered successfully.\n");
 }
 
 #endif // COIN3D_OSMESA_BUILD
@@ -506,8 +505,7 @@ SoDB::init(void)
 #ifdef HAVE_OSMESA
 #ifdef COIN3D_OSMESA_BUILD
   // Initialize OSMesa context management for offscreen rendering
-  // Temporarily commented out to debug test issues
-  // initializeCoinOSMesaContext();
+  initializeCoinOSMesaContext();
 #endif // COIN3D_OSMESA_BUILD
 #endif // HAVE_OSMESA
 
