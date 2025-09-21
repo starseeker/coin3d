@@ -189,6 +189,13 @@ int main(int argc, char* argv[]) {
         if (image) {
             std::cout << "✓ Image buffer retrieved successfully" << std::endl;
             std::cout << "✓ FBO-based rendering architecture is working!" << std::endl;
+            
+            // Save output in both formats for comparison
+            writePPM("/tmp/fbo_demo_output.ppm", image, 512, 512);
+            writePNG("/tmp/fbo_demo_output.png", image, 512, 512);
+            
+            std::cout << "  Rendered output saved to /tmp/fbo_demo_output.ppm and .png" << std::endl;
+            std::cout << "  PNG format is preferred for easier debugging and inspection!" << std::endl;
         } else {
             std::cout << "⚠ WARNING: Image buffer is null" << std::endl;
         }
