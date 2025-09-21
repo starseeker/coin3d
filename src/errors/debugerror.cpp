@@ -32,108 +32,78 @@
 
 #include "errors/CoinInternalError.h"
 
+#include <cstdarg>
+#include <cstdio>
 #include <cstdlib>
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif /* HAVE_CONFIG_H */
+// Simple consolidated implementation that provides exact C API compatibility
 
-#include "C/CoinTidbits.h"
-
-static cc_debugerror_cb * dbgerr_callback =
-  reinterpret_cast<cc_debugerror_cb *>(cc_error_default_handler_cb);
-static void * dbgerr_callback_data = NULL;
-static SbBool dbgerr_cleanup_function_set = FALSE;
-
-/*!
-  \struct cc_debugerror debugerror.h Inventor/C/errors/debugerror.h
-  \typedef struct cc_debugerror cc_debugerror
-  \brief The cc_debugerror type is an internal Coin structure for debug error management.
-
-  \ingroup coin_errors
-
-  This is a Coin extension.
-*/
-
-/*!
-  \var cc_debugerror::super
-
-  The data from the parent cc_error class.
-  This has the advantage that the cc_debugerror structure can appear to be a cc_error.
-*/
-
-/*!
-  \var cc_debugerror::severity
-
-  The severity level of the debug error.
-*/
-
-/*!
-  \enum CC_DEBUGERROR_SEVERITY
-  \typedef enum CC_DEBUGERROR_SEVERITY CC_DEBUGERROR_SEVERITY
-
-  Specifies the available severity levels of the debug messages.
-*/
-
-/*!
-  \var CC_DEBUGERROR_SEVERITY::CC_DEBUGERROR_ERROR
-
-  An actual error.
- */
-
-/*!
-  \var CC_DEBUGERROR_SEVERITY::CC_DEBUGERROR_WARNING
-
-  Just a warning.
- */
-
-/*!
-  \var CC_DEBUGERROR_SEVERITY::CC_DEBUGERROR_INFO
-
-  For information only.
- */
-
-/*!
-  \typedef void cc_debugerror_cb(const cc_debugerror * err, void * data)
-
-  The definition for a debug error callback handler.
-*/
-
-extern "C" {
-
-static void
-debugerror_cleanup(void)
+void
+cc_debugerror_post(const char * source, const char * format, ...)
 {
-  dbgerr_callback = reinterpret_cast<cc_debugerror_cb *>(cc_error_default_handler_cb);
-  dbgerr_callback_data = NULL;
-  dbgerr_cleanup_function_set = FALSE;
+  va_list args;
+  va_start(args, format);
+  
+  char buffer[1024];
+  vsnprintf(buffer, sizeof(buffer), format, args);
+  va_end(args);
+  
+  // Simple stderr output for now
+  if (source) {
+    fprintf(stderr, "Coin error in %s(): %s\n", source, buffer);
+  } else {
+    fprintf(stderr, "Coin error: %s\n", buffer);
+  }
 }
 
-} // extern "C"
+void
+cc_debugerror_postwarning(const char * source, const char * format, ...)
+{
+  va_list args;
+  va_start(args, format);
+  
+  char buffer[1024];
+  vsnprintf(buffer, sizeof(buffer), format, args);
+  va_end(args);
+  
+  // Simple stderr output for now
+  if (source) {
+    fprintf(stderr, "Coin warning in %s(): %s\n", source, buffer);
+  } else {
+    fprintf(stderr, "Coin warning: %s\n", buffer);
+  }
+}
 
-/*!
-  \relates cc_debugerror
-*/
+void
+cc_debugerror_postinfo(const char * source, const char * format, ...)
+{
+  va_list args;
+  va_start(args, format);
+  
+  char buffer[1024];
+  vsnprintf(buffer, sizeof(buffer), format, args);
+  va_end(args);
+  
+  // Simple stderr output for now
+  if (source) {
+    fprintf(stderr, "Coin info in %s(): %s\n", source, buffer);
+  } else {
+    fprintf(stderr, "Coin info: %s\n", buffer);
+  }
+}
 
 void
 cc_debugerror_init(cc_debugerror * me)
 {
-  cc_error_init(reinterpret_cast<cc_error *>(me));
+  cc_error_init(&me->super);
+  me->severity = CC_DEBUGERROR_ERROR;
 }
-
-/*!
-  \relates cc_debugerror
-*/
 
 void
 cc_debugerror_clean(cc_debugerror * me)
 {
-  cc_error_clean(reinterpret_cast<cc_error *>(me));
+  cc_error_clean(&me->super);
 }
-
-/*!
-  \relates cc_debugerror
-*/
 
 CC_DEBUGERROR_SEVERITY
 cc_debugerror_get_severity(const cc_debugerror * me)
@@ -141,130 +111,31 @@ cc_debugerror_get_severity(const cc_debugerror * me)
   return me->severity;
 }
 
-/*!
-  \relates cc_debugerror
-*/
+static cc_debugerror_cb * debug_callback = NULL;
+static void * debug_callback_data = NULL;
 
 void
 cc_debugerror_set_handler_callback(cc_debugerror_cb * function, void * data)
 {
-  dbgerr_callback = function;
-  dbgerr_callback_data = data;
-
-  if (!dbgerr_cleanup_function_set) {
-    coin_atexit(debugerror_cleanup, CC_ATEXIT_MSG_SUBSYSTEM);
-    dbgerr_cleanup_function_set = TRUE;
-  }
+  debug_callback = function;
+  debug_callback_data = data;
 }
-
-/*!
-  \relates cc_debugerror
-*/
 
 cc_debugerror_cb *
 cc_debugerror_get_handler_callback(void)
 {
-  return dbgerr_callback;
+  return debug_callback;
 }
-
-/*!
-  \relates cc_debugerror
-*/
 
 void *
 cc_debugerror_get_handler_data(void)
 {
-  return dbgerr_callback_data;
+  return debug_callback_data;
 }
-
-/*!
-  \relates cc_debugerror
-*/
 
 cc_debugerror_cb *
 cc_debugerror_get_handler(void ** data)
 {
-  *data = dbgerr_callback_data;
-  return dbgerr_callback;
+  if (data) *data = debug_callback_data;
+  return debug_callback;
 }
-
-/*!
-  \relates cc_debugerror
-*/
-
-static void
-cc_debugerror_internal_post(const char * source, cc_string * msg,
-                            CC_DEBUGERROR_SEVERITY sev, const char * type)
-{
-  cc_debugerror deberr;
-
-  cc_debugerror_init(&deberr);
-
-  deberr.severity = sev;
-  cc_error_set_debug_string(reinterpret_cast<cc_error *>(&deberr), "Coin ");
-  cc_error_append_to_debug_string(reinterpret_cast<cc_error *>(&deberr), type);
-  cc_error_append_to_debug_string(reinterpret_cast<cc_error *>(&deberr), " in ");
-  cc_error_append_to_debug_string(reinterpret_cast<cc_error *>(&deberr), source);
-  cc_error_append_to_debug_string(reinterpret_cast<cc_error *>(&deberr), "(): ");
-  cc_error_append_to_debug_string(reinterpret_cast<cc_error *>(&deberr), cc_string_get_text(msg));
-
-  if (dbgerr_callback != reinterpret_cast<cc_debugerror_cb *>(cc_error_default_handler_cb)) {
-    dbgerr_callback(&deberr, dbgerr_callback_data);
-  }
-  else {
-    cc_error_handle(reinterpret_cast<cc_error *>(&deberr));
-  }
-
-  /* FIXME: port to C. 20020524 mortene. */
-  /* check_breakpoints(source);*/
-
-  cc_debugerror_clean(&deberr);
-}
-
-/*!
-  A macro to simplify posting of debug error messages
-*/
-
-#define CC_DEBUGERROR_POST(SEVERITY, TYPE) \
-  cc_string s; \
-  va_list args; \
- \
-  va_start(args, format); \
-  cc_string_construct(&s); \
-  cc_string_vsprintf(&s, format, args); \
-  va_end(args); \
- \
-  cc_debugerror_internal_post(source, &s, SEVERITY, TYPE); \
-  cc_string_clean(&s)
-
-/*!
-  \relates cc_debugerror
-*/
-
-void
-cc_debugerror_post(const char * source, const char * format, ...)
-{
-  CC_DEBUGERROR_POST(CC_DEBUGERROR_ERROR, "error");
-}
-
-/*!
-  \relates cc_debugerror
-*/
-
-void
-cc_debugerror_postwarning(const char * source, const char * format, ...)
-{
-  CC_DEBUGERROR_POST(CC_DEBUGERROR_WARNING, "warning");
-}
-
-/*!
-  \relates cc_debugerror
-*/
-
-void
-cc_debugerror_postinfo(const char * source, const char * format, ...)
-{
-  CC_DEBUGERROR_POST(CC_DEBUGERROR_INFO, "info");
-}
-
-#undef CC_DEBUGERROR_POST

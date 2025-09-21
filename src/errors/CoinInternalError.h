@@ -41,17 +41,12 @@
  * exposed as public C API in include/Inventor/C/errors/. The functionality
  * is now internal implementation detail only.
  * 
- * The implementation leverages the modern C++17 CoinDebugError system while
- * maintaining compatibility with legacy C API callers.
+ * The implementation can leverage the modern C++17 CoinDebugError system
+ * but provides a clean C API interface for legacy code compatibility.
  */
 
 #include "C/base/string.h"
 #include <stdarg.h>
-
-// Include the modern C++17 implementation for internal use
-#ifdef __cplusplus
-#include "CoinDebugError.h"
-#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -132,7 +127,5 @@ COIN_DLL_API cc_debugerror_cb * cc_debugerror_get_handler(void ** data);
 #ifdef __cplusplus
 } /* extern "C" */
 #endif /* __cplusplus */
-
-/* ********************************************************************** */
 
 #endif /* ! COIN_INTERNAL_ERROR_H */
