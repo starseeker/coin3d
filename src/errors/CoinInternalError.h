@@ -40,10 +40,18 @@
  * This file consolidates the error handling functionality that was previously
  * exposed as public C API in include/Inventor/C/errors/. The functionality
  * is now internal implementation detail only.
+ * 
+ * The implementation leverages the modern C++17 CoinDebugError system while
+ * maintaining compatibility with legacy C API callers.
  */
 
 #include "C/base/string.h"
 #include <stdarg.h>
+
+// Include the modern C++17 implementation for internal use
+#ifdef __cplusplus
+#include "CoinDebugError.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
