@@ -55,10 +55,6 @@ namespace CoinTestUtils {
 class CoinTestFixture {
 public:
     CoinTestFixture() {
-        if (!SoDB::isInitialized()) {
-            SoDB::init();
-            SoInteraction::init();
-        }
     }
 
     ~CoinTestFixture() {

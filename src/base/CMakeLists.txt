@@ -1,3 +1,9 @@
+add_compile_options("$<$<C_COMPILER_ID:MSVC>:/utf-8>")
+add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
+add_definitions(-DUNICODE -D_UNICODE)
+
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/utf8/include)
+
 # source files
 set(COIN_BASE_FILES
 	dict.cpp
@@ -67,7 +73,17 @@ set(COIN_BASE_FILES
 	SbViewportRegion.cpp
 	SbXfBox3f.cpp
 	SbXfBox3d.cpp
+	utf8/casecvt.cpp
+	utf8/ini.cpp
+	utf8/utf8.cpp
 )
+
+if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
+	set(COIN_BASE_FILES ${COIN_BASE_FILES}
+		buffer.cpp
+		win.cpp
+	)
+endif()
 
 # Files excluded from public API documentation, included in complete documentation.
 set(COIN_BASE_INTERNAL_FILES

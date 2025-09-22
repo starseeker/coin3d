@@ -9,6 +9,7 @@ project(Coin
   )
 
 add_definitions(-Wall)
+add_definitions(-g)
 
 # Set modern CMake policies
 cmake_policy(SET CMP0054 NEW)  # Only interpret if() arguments as variables or keywords when unquoted
