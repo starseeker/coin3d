@@ -594,7 +594,7 @@ static void time2string(const SbTime & t, SbString & s)
   // Value is less than a year, assume we're counting seconds. Use
   // resolution at millisecond accuracy.
   if (t.getValue() < (60.0*60.0*24.0*365.0)) {
-    cc_string storedlocale;
+    std::string storedlocale;
     SbBool changed = coin_locale_set_portable(&storedlocale);
     s.sprintf("%.3f", t.getValue());
     if (changed) { coin_locale_reset(&storedlocale); }

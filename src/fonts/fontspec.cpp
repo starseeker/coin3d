@@ -32,11 +32,12 @@
 
 /*
   Basic implementations for font specification handling.
+  Modernized to use std::string instead of cc_string.
 */
 
 #include "coindefs.h"
 #include "fonts/fontspec.h"
-#include "C/base/string.h"
+#include <string>
 #include <cstring>
 #include <cstdlib>
 
@@ -55,9 +56,9 @@ cc_fontspec_construct(cc_font_specification * spec,
   spec->size = size;
   spec->complexity = complexity;
   
-  /* Initialize strings */
-  cc_string_construct(&spec->name);
-  cc_string_construct(&spec->style);
+  /* Initialize strings using std::string constructors */
+  new (&spec->name) std::string();
+  new (&spec->style) std::string();
   
   if (name_style) {
     /* Simple parsing: assume format is "fontname" or "fontname:style" */
@@ -65,23 +66,17 @@ cc_fontspec_construct(cc_font_specification * spec,
     if (colon) {
       /* Extract font name and style */
       size_t name_len = colon - name_style;
-      char * name_part = (char*)malloc(name_len + 1);
-      if (name_part) {
-        strncpy(name_part, name_style, name_len);
-        name_part[name_len] = '\0';
-        cc_string_set_text(&spec->name, name_part);
-        free(name_part);
-      }
-      cc_string_set_text(&spec->style, colon + 1);
+      spec->name = std::string(name_style, name_len);
+      spec->style = std::string(colon + 1);
     } else {
       /* Just font name, no style */
-      cc_string_set_text(&spec->name, name_style);
-      cc_string_set_text(&spec->style, "");
+      spec->name = std::string(name_style);
+      spec->style = std::string();
     }
   } else {
     /* Default font name and style */
-    cc_string_set_text(&spec->name, "defaultFont");
-    cc_string_set_text(&spec->style, "");
+    spec->name = std::string("defaultFont");
+    spec->style = std::string();
   }
 }
 
@@ -95,11 +90,9 @@ cc_fontspec_copy(const cc_font_specification * from,
   to->size = from->size;
   to->complexity = from->complexity;
   
-  /* Copy strings */
-  cc_string_construct(&to->name);
-  cc_string_construct(&to->style);
-  cc_string_set_string(&to->name, &from->name);
-  cc_string_set_string(&to->style, &from->style);
+  /* Copy strings using std::string copy constructor */
+  new (&to->name) std::string(from->name);
+  new (&to->style) std::string(from->style);
 }
 
 void
@@ -107,9 +100,9 @@ cc_fontspec_clean(cc_font_specification * spec)
 {
   if (!spec) return;
   
-  /* Clean up strings */
-  cc_string_clean(&spec->name);
-  cc_string_clean(&spec->style);
+  /* Clean up strings using std::string destructor */
+  spec->name.~basic_string();
+  spec->style.~basic_string();
 }
 
 #ifdef __cplusplus

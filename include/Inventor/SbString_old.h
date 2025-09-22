@@ -35,10 +35,9 @@
 
 #include <cstdarg>
 #include <cstdio>
+
 #include <cstdint>
-#include <string>
-#include <cstring>
-#include "utf8/utf8.h"
+#include <Inventor/C/base/string.h>
 
 #ifdef COIN_INTERNAL
  #define COIN_ALLOW_SBINTLIST
@@ -52,142 +51,81 @@
 
 class COIN_DLL_API SbString {
 public:
-  SbString(void) = default;
+  SbString(void) { cc_string_construct(&this->str); }
 
-  SbString(const char * s) : str_(s ? s : "") {}
+  SbString(const char * s)
+  { cc_string_construct(&this->str); cc_string_set_text(&this->str, s); }
 
-  SbString(const wchar_t * s) {
-    if (s) {
-      // Use neacsum/utf8 library for proper wide character to UTF-8 conversion
-      str_ = utf8::narrow(s);
-    }
+  SbString(const wchar_t * s)
+  { cc_string_construct(&this->str); cc_string_set_wtext(&this->str, s); }
+
+  SbString(const char * s, int start, int end)
+  { cc_string_construct(&this->str); cc_string_set_subtext(&this->str, s, start, end); }
+
+  SbString(const SbString & s)
+  { cc_string_construct(&this->str); cc_string_set_string(&this->str, &s.str); }
+
+  SbString(const int digits)
+  { cc_string_construct(&this->str); cc_string_set_integer(&this->str, digits); }
+
+  ~SbString() { cc_string_clean(&this->str); }
+
+  uint32_t hash(void) const { return cc_string_hash(&this->str); }
+  static uint32_t hash(const char * s) { return cc_string_hash_text(s); }
+
+  int getLength(void) const { return cc_string_length(&this->str); }
+
+  void makeEmpty(SbBool freeold = TRUE)
+  {
+    if ( freeold ) cc_string_clear(&this->str);
+    else cc_string_clear_no_free(&this->str);
   }
 
-  SbString(const char * s, int start, int end) {
-    if (s && start >= 0) {
-      std::string temp(s);
-      if (end == -1) end = static_cast<int>(temp.length()) - 1;
-      if (end >= start && start < static_cast<int>(temp.length())) {
-        str_ = temp.substr(start, end - start + 1);
-      }
-    }
+  const char * getString(void) const { return cc_string_get_text(&this->str); }
+
+  SbString getSubString(int startidx, int endidx = -1) const
+  {
+    SbString s;
+    cc_string_set_subtext(&s.str, cc_string_get_text(&this->str), startidx, endidx);
+    return s;
+  }
+  void deleteSubString(int startidx, int endidx = -1)
+  {
+    cc_string_remove_substring(&this->str, startidx, endidx);
   }
 
-  SbString(const SbString & s) = default;
+  void addIntString(const int value) { cc_string_append_integer(&this->str, value); }
 
-  SbString(const int digits) : str_(std::to_string(digits)) {}
+  char operator[](int index) const { return this->str.pointer[index]; }
 
-  ~SbString() = default;
+  SbString & operator=(const char * s)
+  { cc_string_set_text(&this->str, s); return *this; }
+  SbString & operator=(const SbString & s)
+  { cc_string_set_text(&this->str, s.str.pointer); return *this; }
 
-  uint32_t hash(void) const { 
-    std::hash<std::string> hasher;
-    return static_cast<uint32_t>(hasher(str_));
-  }
-  
-  static uint32_t hash(const char * s) { 
-    std::hash<std::string> hasher;
-    return static_cast<uint32_t>(hasher(s ? s : ""));
-  }
+  SbString & operator+=(const char * s)
+  { cc_string_append_text(&this->str, s); return *this; }
+  SbString & operator+=(const SbString & s)
+  { cc_string_append_string(&this->str, &s.str); return *this; }
+  SbString & operator+=(const char c)
+  { cc_string_append_char(&this->str, c); return *this; }
 
-  int getLength(void) const { 
-    return static_cast<int>(str_.length());
-  }
+  int operator!(void) const { return ! cc_string_is(&this->str); }
 
-  void makeEmpty(SbBool freeold = TRUE) {
-    str_.clear();
-  }
+  int compareSubString(const char * text, int offset = 0) const
+  { return cc_string_compare_subtext(&this->str, text, offset); }
 
-  const char * getString(void) const { return str_.c_str(); }
-
-  SbString getSubString(int startidx, int endidx = -1) const {
-    if (startidx < 0) return SbString();
-    
-    std::string temp = str_;
-    if (endidx == -1) endidx = static_cast<int>(temp.length()) - 1;
-    
-    if (startidx < static_cast<int>(temp.length()) && endidx >= startidx) {
-      return SbString(temp.substr(startidx, endidx - startidx + 1).c_str());
-    }
-    return SbString();
+  SbString & sprintf(const char * formatstr, ...)
+  {
+    va_list args; va_start(args, formatstr);
+    cc_string_vsprintf(&this->str, formatstr, args);
+    va_end(args); return *this;
   }
-  
-  void deleteSubString(int startidx, int endidx = -1) {
-    if (startidx < 0) return;
-    
-    if (endidx == -1) endidx = static_cast<int>(str_.length()) - 1;
-    
-    if (startidx < static_cast<int>(str_.length()) && endidx >= startidx) {
-      str_.erase(startidx, endidx - startidx + 1);
-    }
-  }
-
-  void addIntString(const int value) { str_ += std::to_string(value); }
-
-  char operator[](int index) const { 
-    return (index >= 0 && index < static_cast<int>(str_.length())) ? str_[index] : '\0';
-  }
-
-  SbString & operator=(const char * s) {
-    str_ = s ? s : "";
-    return *this;
-  }
-  
-  SbString & operator=(const SbString & s) = default;
-
-  SbString & operator+=(const char * s) {
-    if (s) str_ += s;
-    return *this;
-  }
-  
-  SbString & operator+=(const SbString & s) {
-    str_ += s.str_;
-    return *this;
-  }
-  
-  SbString & operator+=(const char c) {
-    str_ += c;
-    return *this;
-  }
-
-  int operator!(void) const { return str_.empty(); }
-
-  int compareSubString(const char * text, int offset = 0) const {
-    if (!text || offset < 0 || offset >= static_cast<int>(str_.length())) {
-      return text && *text ? -1 : 0;
-    }
-    
-    std::string substr = str_.substr(offset, std::strlen(text));
-    return substr.compare(text);
-  }
-
-  SbString & sprintf(const char * formatstr, ...) {
-    va_list args;
-    va_start(args, formatstr);
-    vsprintf(formatstr, args);
-    va_end(args);
-    return *this;
-  }
-  
-  SbString & vsprintf(const char * formatstr, va_list args) {
-    // Determine required size
-    va_list args_copy;
-    va_copy(args_copy, args);
-    int size = std::vsnprintf(nullptr, 0, formatstr, args);
-    va_end(args_copy);
-    
-    if (size > 0) {
-      str_.resize(size + 1);
-      std::vsnprintf(&str_[0], size + 1, formatstr, args);
-      str_.resize(size); // Remove the null terminator
-    } else {
-      str_.clear();
-    }
-    
-    return *this;
-  }
+  SbString & vsprintf(const char * formatstr, va_list args)
+  { cc_string_vsprintf(&this->str, formatstr, args); return *this; }
 
   void apply(char (*func)(char input)) {
-    std::transform(str_.begin(), str_.end(), str_.begin(), func);
+    cc_string_apply(&this->str, reinterpret_cast<cc_apply_f>(func));
   }
 
   int find(const SbString & s) const;
@@ -215,36 +153,36 @@ public:
   friend const SbString operator+(const char * s, const SbString & sbstr);
 
 private:
-  std::string str_;
+  struct cc_string str;
 };
 
 inline int operator==(const SbString & sbstr, const char * s)
-{ return (sbstr.str_.compare(s ? s : "") == 0); }
+{ return (cc_string_compare_text(sbstr.str.pointer, s) == 0); }
 inline int operator==(const char * s, const SbString & sbstr)
-{ return (sbstr.str_.compare(s ? s : "") == 0); }
+{ return (cc_string_compare_text(s, sbstr.str.pointer) == 0); }
 inline int operator==(const SbString & str1, const SbString & str2)
-{ return (str1.str_ == str2.str_); }
+{ return (cc_string_compare_text(str1.str.pointer, str2.str.pointer) == 0); }
 
 inline int operator!=(const SbString & sbstr, const char * s)
-{ return (sbstr.str_.compare(s ? s : "") != 0); }
+{ return (cc_string_compare_text(sbstr.str.pointer, s) != 0); }
 inline int operator!=(const char * s, const SbString & sbstr)
-{ return (sbstr.str_.compare(s ? s : "") != 0); }
+{ return (cc_string_compare_text(s, sbstr.str.pointer) != 0); }
 inline int operator!=(const SbString & str1, const SbString & str2)
-{ return (str1.str_ != str2.str_); }
+{ return (cc_string_compare_text(str1.str.pointer, str2.str.pointer) != 0); }
 
 inline int operator<(const SbString & sbstr, const char * s)
-{ return (sbstr.str_.compare(s ? s : "") < 0); }
+{ return (cc_string_compare_text(sbstr.str.pointer, s) < 0); }
 inline int operator<(const char * s, const SbString & sbstr)
-{ return ((s ? s : "") < sbstr.str_); }
+{ return (cc_string_compare_text(s, sbstr.str.pointer) < 0); }
 inline int operator<(const SbString & str1, const SbString & str2)
-{ return (str1.str_ < str2.str_); }
+{ return (cc_string_compare_text(str1.str.pointer, str2.str.pointer) < 0); }
 
 inline int operator>(const SbString & sbstr, const char * s)
-{ return (sbstr.str_.compare(s ? s : "") > 0); }
+{ return (cc_string_compare_text(sbstr.str.pointer, s) > 0); }
 inline int operator>(const char * s, const SbString & sbstr)
-{ return ((s ? s : "") > sbstr.str_); }
+{ return (cc_string_compare_text(s, sbstr.str.pointer) > 0); }
 inline int operator>(const SbString & str1, const SbString & str2)
-{ return (str1.str_ > str2.str_); }
+{ return (cc_string_compare_text(str1.str.pointer, str2.str.pointer) > 0); }
 
 inline const SbString operator+(const SbString & str1, const SbString & str2)
 { 
@@ -264,5 +202,10 @@ inline const SbString operator+(const char * s, const SbString & sbstr)
   newstr += sbstr;
   return newstr;
 }
+
+#ifndef COIN_INTERNAL
+// For Open Inventor compatibility.
+#include <Inventor/SbName.h>
+#endif // !COIN_INTERNAL
 
 #endif // !COIN_SBSTRING_H

@@ -1245,7 +1245,7 @@ SoOffscreenRenderer::writeToPostScript(FILE * fp,
   const SbVec2s scaledsize((short) ceil(size[0]*defaultdpi/dpi),
                            (short) ceil(size[1]*defaultdpi/dpi));
 
-  cc_string storedlocale;
+  std::string storedlocale;
   SbBool changed = coin_locale_set_portable(&storedlocale);
 
   fprintf(fp, "%%!PS-Adobe-2.0 EPSF-1.2\n");

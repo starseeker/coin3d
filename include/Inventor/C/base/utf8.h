@@ -1,5 +1,5 @@
-#ifndef COIN_FLWFREETYPE_H
-#define COIN_FLWFREETYPE_H
+#ifndef COIN_UTF8_H
+#define COIN_UTF8_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -34,52 +34,43 @@
 \**************************************************************************/
 
 /*
-  Here is the glue between the FLW and the FreeType font lib.
-
-  See http://www.freetype.org for more information about
-  the FreeType font library.
+  Modern UTF-8 support using neacsum/utf8 library.
+  Replaces legacy cc_string UTF-8 functions with C++17 standard library
+  backed implementation.
 */
 
-/* ********************************************************************** */
-
-#ifndef COIN_INTERNAL
-#error this is a private header file
-#endif /* ! COIN_INTERNAL */
-
-/* ********************************************************************** */
-
-#include "Inventor/C/basic.h"
-#include <string>
+#include <cstdint>
+#include <cstddef>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-  SbBool cc_flwft_initialize(void);
-  void cc_flwft_exit(void);
+// Modern UTF-8 API using neacsum/utf8 library internally
+// These replace the legacy cc_string_utf8_* functions
 
-  void * cc_flwft_get_font(const char * fontname, unsigned int pixelsize);
-  void cc_flwft_get_font_name(void * font, std::string * str);
-  void cc_flwft_done_font(void * font);
+/// Validate UTF-8 string and return number of Unicode code points
+/// Replaces: cc_string_utf8_validate_length
+size_t coin_utf8_validate_length(const char* str);
 
-  int cc_flwft_get_num_charmaps(void * font);
-  const char * cc_flwft_get_charmap_name(void * font, int charmap);
-  void cc_flwft_set_charmap(void * font, int charmap);
+/// Get Unicode code point at current position
+/// Replaces: cc_string_utf8_get_char
+uint32_t coin_utf8_get_char(const char* str);
 
-  void cc_flwft_set_char_size(void * font, int height);
-  void cc_flwft_set_font_rotation(void * font, float angle);
+/// Advance to next Unicode code point
+/// Replaces: cc_string_utf8_next_char
+const char* coin_utf8_next_char(const char* str);
 
-  int cc_flwft_get_glyph(void * font, unsigned int charidx);
-  void cc_flwft_get_vector_advance(void * font, int glyph, float * x, float * y);
-  void cc_flwft_get_bitmap_kerning(void * font, int glyph1, int glyph2, int * x, int * y);
-  void cc_flwft_get_vector_kerning(void * font, int glyph1, int glyph2, float * x, float * y);
-  void cc_flwft_done_glyph(void * font, int glyph);
+/// Decode UTF-8 bytes into Unicode code point
+/// Replaces: cc_string_utf8_decode  
+size_t coin_utf8_decode(const char* src, size_t srclen, uint32_t* value);
 
-  struct cc_font_bitmap * cc_flwft_get_bitmap(void * font, unsigned int glyph);
-  struct cc_font_vector_glyph * cc_flwft_get_vector_glyph(void * font, unsigned int glyph, float complexity);
+/// Encode Unicode code point into UTF-8 bytes
+/// Replaces: cc_string_utf8_encode
+size_t coin_utf8_encode(char* buffer, size_t buflen, uint32_t value);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* !COIN_FLWFREETYPE_H */
+#endif /* COIN_UTF8_H */
