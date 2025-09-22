@@ -35,6 +35,9 @@
 #include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
+#include <cstdio>
+#include <cstdarg>
+#include <string>
 
 // Simple consolidated implementation that provides exact C API compatibility
 
@@ -136,6 +139,92 @@ cc_debugerror_get_handler_data(void)
 cc_debugerror_cb *
 cc_debugerror_get_handler(void ** data)
 {
-  if (data) *data = debug_callback_data;
-  return debug_callback;
+  *data = dbgerr_callback_data;
+  return dbgerr_callback;
 }
+
+/*!
+  \relates cc_debugerror
+*/
+
+static void
+cc_debugerror_internal_post(const char * source, const std::string & msg,
+                            CC_DEBUGERROR_SEVERITY sev, const char * type)
+{
+  cc_debugerror deberr;
+
+  cc_debugerror_init(&deberr);
+
+  deberr.severity = sev;
+  cc_error_set_debug_string(reinterpret_cast<cc_error *>(&deberr), "Coin ");
+  cc_error_append_to_debug_string(reinterpret_cast<cc_error *>(&deberr), type);
+  cc_error_append_to_debug_string(reinterpret_cast<cc_error *>(&deberr), " in ");
+  cc_error_append_to_debug_string(reinterpret_cast<cc_error *>(&deberr), source);
+  cc_error_append_to_debug_string(reinterpret_cast<cc_error *>(&deberr), "(): ");
+  cc_error_append_to_debug_string(reinterpret_cast<cc_error *>(&deberr), msg.c_str());
+
+  if (dbgerr_callback != reinterpret_cast<cc_debugerror_cb *>(cc_error_default_handler_cb)) {
+    dbgerr_callback(&deberr, dbgerr_callback_data);
+  }
+  else {
+    cc_error_handle(reinterpret_cast<cc_error *>(&deberr));
+  }
+
+  /* FIXME: port to C. 20020524 mortene. */
+  /* check_breakpoints(source);*/
+
+  cc_debugerror_clean(&deberr);
+}
+
+/*!
+  A macro to simplify posting of debug error messages
+*/
+
+#define CC_DEBUGERROR_POST(SEVERITY, TYPE) \
+  va_list args; \
+  va_start(args, format); \
+ \
+  /* Use modern C++17 vsnprintf approach */ \
+  va_list args_copy; \
+  va_copy(args_copy, args); \
+  int size = std::vsnprintf(nullptr, 0, format, args) + 1; \
+  if (size > 0) { \
+    std::string formatted_string(size, '\0'); \
+    std::vsnprintf(&formatted_string[0], size, format, args_copy); \
+    formatted_string.resize(size - 1); \
+    cc_debugerror_internal_post(source, formatted_string, SEVERITY, TYPE); \
+  } \
+  va_end(args_copy); \
+  va_end(args)
+
+/*!
+  \relates cc_debugerror
+*/
+
+void
+cc_debugerror_post(const char * source, const char * format, ...)
+{
+  CC_DEBUGERROR_POST(CC_DEBUGERROR_ERROR, "error");
+}
+
+/*!
+  \relates cc_debugerror
+*/
+
+void
+cc_debugerror_postwarning(const char * source, const char * format, ...)
+{
+  CC_DEBUGERROR_POST(CC_DEBUGERROR_WARNING, "warning");
+}
+
+/*!
+  \relates cc_debugerror
+*/
+
+void
+cc_debugerror_postinfo(const char * source, const char * format, ...)
+{
+  CC_DEBUGERROR_POST(CC_DEBUGERROR_INFO, "info");
+}
+
+#undef CC_DEBUGERROR_POST
