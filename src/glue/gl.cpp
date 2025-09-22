@@ -2413,16 +2413,25 @@ cc_glglue_instance(int contextid)
     if (coin_glglue_debug()) {
       cc_debugerror_postinfo("cc_glglue_instance", "glGetString(GL_VENDOR)=='%s' (=> vendor_is_SGI==%s)", 
                             gi->vendorstr ? gi->vendorstr : "(null)",
-                            strcmp((const char *)gi->vendorstr, "SGI") == 0 ? "TRUE" : "FALSE");
+                            gi->vendorstr && strcmp((const char *)gi->vendorstr, "SGI") == 0 ? "TRUE" : "FALSE");
     }
 #endif
-    gi->vendor_is_SGI = strcmp((const char *)gi->vendorstr, "SGI") == 0;
-    gi->vendor_is_nvidia = strcmp((const char*)gi->vendorstr, "NVIDIA Corporation") == 0;
-    gi->vendor_is_intel =
-      strstr((const char *)gi->vendorstr, "Tungsten") ||
-      strstr((const char *)gi->vendorstr, "Intel");
-    gi->vendor_is_ati = (strcmp((const char *) gi->vendorstr, "ATI Technologies Inc.") == 0);
-    gi->vendor_is_3dlabs = strcmp((const char *) gi->vendorstr, "3Dlabs") == 0;
+    /* Safely handle null vendor string */
+    if (gi->vendorstr == NULL) {
+      gi->vendor_is_SGI = FALSE;
+      gi->vendor_is_nvidia = FALSE;
+      gi->vendor_is_intel = FALSE;
+      gi->vendor_is_ati = FALSE;
+      gi->vendor_is_3dlabs = FALSE;
+    } else {
+      gi->vendor_is_SGI = strcmp((const char *)gi->vendorstr, "SGI") == 0;
+      gi->vendor_is_nvidia = strcmp((const char*)gi->vendorstr, "NVIDIA Corporation") == 0;
+      gi->vendor_is_intel =
+        strstr((const char *)gi->vendorstr, "Tungsten") ||
+        strstr((const char *)gi->vendorstr, "Intel");
+      gi->vendor_is_ati = (strcmp((const char *) gi->vendorstr, "ATI Technologies Inc.") == 0);
+      gi->vendor_is_3dlabs = strcmp((const char *) gi->vendorstr, "3Dlabs") == 0;
+    }
     
 #ifdef COIN3D_OSMESA_BUILD
     if (coin_glglue_debug()) {
