@@ -40,6 +40,7 @@
 #include <cstdlib>
 #include <cassert>
 #include <cstddef>
+#include <string>
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -122,8 +123,8 @@ struct cc_flw_glyph {
 
 struct cc_flw_font {
   void * nativefonthandle;
-  cc_string * fontname;
-  cc_string * requestname;
+  std::string fontname;
+  std::string requestname;
   cc_dict * glyphdict;
   unsigned int sizey;
   float angle;
@@ -146,8 +147,8 @@ dump_cc_flw_font(const char * srcfunc, struct cc_flw_font * f)
                          "complexity==%f, defaultfont==%s, fontindex==%d, "
                          "refcount==%d",
                          f->nativefonthandle,
-                         cc_string_get_text(f->fontname),
-                         cc_string_get_text(f->requestname),
+                         f->fontname.c_str(),
+                         f->requestname.c_str(),
                          f->glyphdict, f->sizey, f->angle,
                          f->complexity,
                          f->defaultfont ? "TRUE" : "FALSE",
@@ -282,8 +283,8 @@ fontstruct_rmfont(int font)
   assert(i < n);
   arrayindex = i;
 
-  if (fs->fontname) cc_string_destruct(fs->fontname);
-  if (fs->requestname) cc_string_destruct(fs->requestname);
+  // Note: std::string members are automatically destructed
+  // No need for manual string cleanup
 
   cc_dict_apply(fs->glyphdict, fontstruct_rmglyph_apply, fs);
   cc_dict_destruct(fs->glyphdict);
@@ -325,8 +326,8 @@ flw_exit(void)
             "complexity==%f, defaultfont==%s, fontindex==%d, "
             "refcount==%d",
             fs->nativefonthandle,
-            cc_string_get_text(fs->fontname),
-            cc_string_get_text(fs->requestname),
+            fs->fontname.c_str(),
+            fs->requestname.c_str(),
             fs->glyphdict, fs->sizey, fs->angle,
             fs->complexity,
             fs->defaultfont ? "TRUE" : "FALSE",
@@ -404,7 +405,7 @@ flw_find_font(const char * fontname, const unsigned int sizey,
   for (i = 0; i < n; i++) {
     struct cc_flw_font * fs = (struct cc_flw_font *)cc_dynarray_get(fontarray, i);
     if ((fs->sizey == sizey) &&
-        (strcmp(fontname, cc_string_get_text(fs->requestname))==0) &&
+        (fontname == fs->requestname) &&
         (fs->angle == angle) &&
         (fs->complexity == complexity)) {
       FLW_MUTEX_UNLOCK(flw_global_lock);
@@ -515,14 +516,12 @@ cc_flw_get_font_id(const char * fontname, unsigned int sizey,
   fs->glyphdict = cc_dict_construct(256, 0.7f);
   fs->fontindex = flw_global_font_index++;
   fs->refcount = 0;
-  fs->requestname = cc_string_construct_new();
-  cc_string_set_text(fs->requestname, fontname);
-  fs->fontname = cc_string_construct_new();
+  fs->requestname = fontname;
+  // fs->fontname will be set later based on font availability
   fs->sizey = sizey;
 
   if (font) {
-    cc_string realname;
-    cc_string_construct(&realname);
+    std::string realname;
 
     fs->angle = angle;
 
@@ -535,22 +534,21 @@ cc_flw_get_font_id(const char * fontname, unsigned int sizey,
       assert(FALSE && "incomplete code path");
     }
 
-    cc_string_set_text(fs->fontname, cc_string_get_text(&realname));
+    fs->fontname = realname;
 
     if (cc_font_debug()) {
       cc_debugerror_postinfo("cc_flw_get_font",
                              "'%s', size==%u => realname='%s'",
                              fontname, sizey,
-                             cc_string_get_text(&realname));
+                             realname.c_str());
     }
-
-    cc_string_clean(&realname);
+    // No cleanup needed for std::string
   }
   else {
     /* Using a built-in default font for the given fontname and size,
        trying to match as close as possible to the requested size.
     */
-    cc_string_set_text(fs->fontname, "defaultFont");
+    fs->fontname = "defaultFont";
     fs->angle = 0.0f;
   }
 
@@ -621,7 +619,7 @@ cc_flw_get_glyph(int font, unsigned int character)
         if (cc_font_debug()) {
           cc_debugerror_postwarning("cc_flw_get_glyph",
                                     "no character 0x%x was found in font '%s'",
-                                    character, cc_string_get_text(fs->fontname));
+                                    character, fs->fontname.c_str());
         }
       }
     }

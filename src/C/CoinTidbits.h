@@ -45,6 +45,7 @@
  */
 
 #include "Inventor/C/basic.h"
+#include <string>
 #include <cstdint>
 #include <cstdarg>
 #include <cstdio>
@@ -180,9 +181,8 @@ FILE* coin_get_stderr(void);
 /* ********************************************************************** */
 /* Locale functions */
 
-struct cc_string;
-SbBool coin_locale_set_portable(struct cc_string* storeold);
-void coin_locale_reset(struct cc_string* storedold);
+SbBool coin_locale_set_portable(std::string* storeold);
+void coin_locale_reset(std::string* storedold);
 double coin_atof(const char* ptr);
 
 /* ********************************************************************** */
@@ -202,7 +202,7 @@ SbBool coin_parse_versionstring(const char* versionstr, int* major, int* minor, 
 /* ********************************************************************** */
 /* Utility functions */
 
-SbBool coin_getcwd(struct cc_string* str);
+SbBool coin_getcwd(std::string* str);
 int coin_isinf(double value);
 int coin_isnan(double value);
 int coin_finite(double value);

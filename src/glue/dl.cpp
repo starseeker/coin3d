@@ -108,6 +108,7 @@
 #endif /* HAVE_CONFIG_H */
 
 #include <cassert>
+#include <string>
 #include <cstddef> /* NULL definition. */
 #include <cstdlib> /* atoi() */
 #include <cerrno>
@@ -416,7 +417,7 @@ cc_dirname(const char *path) {
    dynamic libraries, separated by ':'. Needed since Mac OS X
    requires to have a full path to the library when loading it. */
 
-static cc_string * 
+static std::string * 
 cc_build_search_list(const char * libname)
 {
 /* We search for libraries in several locations:
@@ -440,10 +441,10 @@ cc_build_search_list(const char * libname)
        dynamic loading of OpenAL symbols.)
 */
 
-  cc_string * path = cc_string_construct_new();
+  std::string * path = new std::string();
 
   int i, image_count = _dyld_image_count();
-  cc_string res_path, framework_path, dyld_path;
+  std::string res_path, framework_path, dyld_path;
 
 #if defined(COIN_MACOS_10) && defined(COIN_MACOSX_FRAMEWORK)
   /* (1) Bundled with Coin framework, inside Libraries/ */
@@ -467,7 +468,7 @@ cc_build_search_list(const char * libname)
     }
     CFRelease(coinbundleurl);
     strcat(buf, "/Libraries:");
-    cc_string_append_text(path, buf);
+    path->append(buf);
   } while (FALSE);
 #endif // COIN_MACOSX_FRAMEWORK
 
@@ -486,30 +487,28 @@ cc_build_search_list(const char * libname)
     }
     CFRelease(appbundleurl);
     strcat(buf, "/Contents/MacOS:");
-    cc_string_append_text(path, buf);
+    path->append(buf);
   } while (FALSE);
 #endif // COIN_MACOS_10
 
   /* (3) default library search path  */
-  cc_string_construct(&dyld_path);
   char * dyld_library_path = getenv("DYLD_LIBRARY_PATH"); 
   if (dyld_library_path) {
-    cc_string_append_text(&dyld_path, dyld_library_path);
+    dyld_path.append(dyld_library_path);
     if (dyld_library_path[strlen(dyld_library_path)-1] != ':') {
-      cc_string_append_text(&dyld_path, ":");
+      dyld_path.append(":");
     }
   }
   char * dyld_fallback_library_path = getenv("DYLD_FALLBACK_LIBRARY_PATH");
   if (dyld_fallback_library_path) {
-    cc_string_append_text(&dyld_path, dyld_fallback_library_path);
+    dyld_path.append(dyld_fallback_library_path);
     if (dyld_fallback_library_path[strlen(dyld_fallback_library_path)-1] != ':') {
-      cc_string_append_text(&dyld_path, ":");
+      dyld_path.append(":");
     }
   } else {
-    cc_string_append_text(&dyld_path, "/lib:/usr/lib:");
+    dyld_path.append("/lib:/usr/lib:");
   }
-  cc_string_append_string(path, &dyld_path);
-  cc_string_clean(&dyld_path);
+  path->append(dyld_path);
 
 #ifdef COIN_MACOS_10
   /* (4) Check if library exists as framework (as in OS Xs 'OpenAL') */
@@ -517,13 +516,10 @@ cc_build_search_list(const char * libname)
       (strstr(libname, ".dylib") == NULL) &&
       (strstr(libname, ".so") == NULL) &&
       (strstr(libname, ".dll") == NULL)) {
-    cc_string_construct(&framework_path);
     const char * framework_prefix = "/Library/Frameworks/";
     const char * framework_ext = ".framework";
-    cc_string_sprintf(&framework_path, "%s%s%s:", framework_prefix,
-                      libname, framework_ext);
-    cc_string_append_string(path, &framework_path);
-    cc_string_clean(&framework_path);
+    framework_path = framework_prefix + std::string(libname) + framework_ext + ":";
+    path->append(framework_path);
   }
 #endif // COIN_MACOS_10
 
@@ -534,28 +530,28 @@ cc_build_search_list(const char * libname)
    library and framework search path, NULL otherwise. It is the
    caller's responsibility to free the returned string. */
 
-static cc_string *
+static std::string *
 cc_find_file(const char * file)
 {
   int end_reached = 0;
-  cc_string * path = cc_string_construct_new();
-  cc_string * list = cc_build_search_list(file);
-  const char * listptr = cc_string_get_text(list);
+  std::string * path = new std::string();
+  std::string * list = cc_build_search_list(file);
+  const char * listptr = list->c_str();
 
   while (!end_reached) {
     char * currententry = strsep((char **) &listptr, ":");
     end_reached = (listptr == NULL);
     if (currententry) {
       struct stat sbuf;
-      cc_string_sprintf(path, "%s/%s", currententry, file);
-      if (stat(cc_string_get_text(path), &sbuf) == 0) {
+      *path = std::string(currententry) + "/" + file;
+      if (stat(path->c_str(), &sbuf) == 0) {
         break;
       } else {
-        cc_string_clear(path);
+        path->clear();
       }
     }
   }
-  cc_string_destruct(list);
+  delete list;
   return path;
 }
 
@@ -593,16 +589,16 @@ cc_dl_open(const char * filename)
      or directly in application bundle. */
 
   if (h->nativehnd == NULL) {
-    cc_string * path = cc_find_file(filename);
-    if (cc_string_length(path) > 0) {
+    std::string * path = cc_find_file(filename);
+    if (!path->empty()) {
       if (cc_dl_debugging()) {
         cc_debugerror_postinfo("cc_dl_open", "opening: %s", 
-                               cc_string_get_text(path));
+                               path->c_str());
       }
-      h->nativehnd = dlopen(cc_string_get_text(path), 
+      h->nativehnd = dlopen(path->c_str(), 
                             RTLD_LAZY);      
     }
-    cc_string_destruct(path);
+    delete path;
   }
 #endif /* HAVE_DYLD_RUNTIME_BINDING */
 
@@ -659,14 +655,14 @@ cc_dl_open(const char * filename)
        modules/bundles. See NSModule(3), NSObjectFileImage(3) and
        http://fink.sourceforge.net/doc/porting/shared.php for details.
     */
-    cc_string * path = cc_find_file(filename);
-    if (cc_string_length(path) > 0) {
+    std::string * path = cc_find_file(filename);
+    if (!path->empty()) {
       if (cc_dl_debugging()) {
         cc_debugerror_postinfo("cc_dlopen", "opening: %s", 
-                               cc_string_get_text(path));
+                               path->c_str());
       }
 
-      h->nativehnd = (void *) NSAddImage(cc_string_get_text(path), 
+      h->nativehnd = (void *) NSAddImage(path->c_str(), 
                                          NSADDIMAGE_OPTION_RETURN_ON_ERROR);
 
       if (cc_dl_debugging() && !h->nativehnd) {
@@ -677,7 +673,7 @@ cc_dl_open(const char * filename)
         NSLinkEditError(&c, &e, &file, &errstr);
         cc_debugerror_post("cc_dlopen", "%s", errstr);
       }
-      cc_string_destruct(path);
+      delete path;
     } 
   }
 
@@ -701,11 +697,8 @@ cc_dl_open(const char * filename)
     h->nativehnd = LoadLibrary(filename);
 
     if (cc_dl_debugging() && (h->nativehnd == NULL)) {
-      cc_string funcstr;
-      cc_string_construct(&funcstr);
-      cc_string_sprintf(&funcstr, "LoadLibrary(\"%s\")", filename);
-      cc_win32_print_error("cc_dl_open", cc_string_get_text(&funcstr), GetLastError());
-      cc_string_clean(&funcstr);
+      std::string funcstr = std::string("LoadLibrary(\"") + filename + "\")";
+      cc_win32_print_error("cc_dl_open", funcstr.c_str(), GetLastError());
     }
   }
   else {
@@ -878,11 +871,8 @@ cc_dl_sym(cc_libhandle handle, const char * symbolname)
   ptr = dl_internal::cstyle_cast<void *>(GetProcAddress((HINSTANCE) handle->nativehnd, symbolname));
 
   if (cc_dl_debugging() && (ptr == NULL)) {
-    cc_string funcstr;
-    cc_string_construct(&funcstr);
-    cc_string_sprintf(&funcstr, "GetProcAddress(\"%s\", \"%s\")", handle->libname.getString(), symbolname);
-    cc_win32_print_error("cc_dl_sym", cc_string_get_text(&funcstr), GetLastError());
-    cc_string_clean(&funcstr);
+    std::string funcstr = std::string("GetProcAddress(\"") + handle->libname.getString() + "\", \"" + symbolname + "\")";
+    cc_win32_print_error("cc_dl_sym", funcstr.c_str(), GetLastError());
   }
 
 #elif defined (HAVE_DLD_LIB)
@@ -948,11 +938,8 @@ cc_dl_close(cc_libhandle handle)
     BOOL result = FreeLibrary((HINSTANCE) handle->nativehnd);
     
     if (!result) {
-      cc_string funcstr;
-      cc_string_construct(&funcstr);
-      cc_string_sprintf(&funcstr, "FreeLibrary(\"%s\")", handle->libname.getString());
-      cc_win32_print_error("cc_dl_close", cc_string_get_text(&funcstr), GetLastError());
-      cc_string_clean(&funcstr);
+      std::string funcstr = std::string("FreeLibrary(\"") + handle->libname.getString() + "\")";
+      cc_win32_print_error("cc_dl_close", funcstr.c_str(), GetLastError());
     }
   }
 #elif defined (HAVE_DLD_LIB)

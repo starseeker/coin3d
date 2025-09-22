@@ -43,6 +43,8 @@
    External applications should use the high-level Coin3D APIs instead of
    directly accessing these low-level OpenGL wrapper functions. */
 
+#include <string>
+
 #ifndef COIN_INTERNAL
 #error this is a private header file
 #endif /* ! COIN_INTERNAL */
@@ -916,7 +918,7 @@ const cc_glglue * cc_glglue_instance_from_context_ptr(void * ptr);
 /* ********************************************************************** */
 
 /* Scanning for and printing info about current set of glGetError()s. */
-unsigned int coin_catch_gl_errors(cc_string *);
+unsigned int coin_catch_gl_errors(std::string *);
 /* Convert OpenGL glGetError() error code to string. */
 const char * coin_glerror_string(GLenum errorcode);
 
