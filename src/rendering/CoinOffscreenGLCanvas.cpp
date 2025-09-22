@@ -614,6 +614,13 @@ CoinOffscreenGLCanvas::initializeFBO(void)
   }
 #endif
   if (!cc_glglue_has_framebuffer_objects(glue)) {
+#ifdef COIN3D_OSMESA_BUILD
+    if (CoinOffscreenGLCanvas::debug()) {
+      SoDebugError::post("CoinOffscreenGLCanvas::initializeFBO",
+                         "FBO extension not detected by cc_glglue, but OSMesa should support it. "
+                         "This might indicate a context binding issue.");
+    }
+#endif
     if (CoinOffscreenGLCanvas::debug()) {
       SoDebugError::post("CoinOffscreenGLCanvas::initializeFBO",
                          "GL_EXT_framebuffer_object extension not supported");
@@ -715,13 +722,18 @@ void
 CoinOffscreenGLCanvas::cleanupFBO(void)
 {
 #ifdef COIN3D_OSMESA_BUILD
-  // OSMesa contexts don't use FBO - no cleanup needed
-  if (CoinOffscreenGLCanvas::debug()) {
-    SoDebugError::postInfo("CoinOffscreenGLCanvas::cleanupFBO",
-                           "Skipping FBO cleanup for OSMesa build");
+  // Check if OSMesa FBO support is explicitly enabled
+  static const char* osmesa_fbo_env = coin_getenv("COIN_OSMESA_USE_FBO");
+  if (!osmesa_fbo_env || (strcmp(osmesa_fbo_env, "1") != 0 && strcmp(osmesa_fbo_env, "true") != 0)) {
+    // OSMesa contexts don't use FBO - no cleanup needed
+    if (CoinOffscreenGLCanvas::debug()) {
+      SoDebugError::postInfo("CoinOffscreenGLCanvas::cleanupFBO",
+                             "Skipping FBO cleanup for OSMesa build");
+    }
+    return;
   }
-  return;
-#else
+#endif
+
   if (!this->fbo_initialized) { return; }
   
   const cc_glglue * glue = cc_glglue_instance(static_cast<int>(this->renderid));
@@ -748,21 +760,26 @@ CoinOffscreenGLCanvas::cleanupFBO(void)
     SoDebugError::postInfo("CoinOffscreenGLCanvas::cleanupFBO",
                            "FBO resources cleaned up");
   }
-#endif
 }
 
 SbBool
 CoinOffscreenGLCanvas::bindFBO(void)
 {
 #ifdef COIN3D_OSMESA_BUILD
-  // OSMesa contexts are inherently offscreen and don't need FBO
-  // Skip FBO operations to avoid compatibility issues
-  if (CoinOffscreenGLCanvas::debug()) {
-    SoDebugError::postInfo("CoinOffscreenGLCanvas::bindFBO",
-                           "Skipping FBO operations for OSMesa build - using native offscreen rendering");
+  // Check if OSMesa FBO support is explicitly enabled
+  static const char* osmesa_fbo_env = coin_getenv("COIN_OSMESA_USE_FBO");
+  if (!osmesa_fbo_env || (strcmp(osmesa_fbo_env, "1") != 0 && strcmp(osmesa_fbo_env, "true") != 0)) {
+    // OSMesa contexts are inherently offscreen and don't need FBO by default
+    // Skip FBO operations to avoid compatibility issues unless explicitly enabled
+    if (CoinOffscreenGLCanvas::debug()) {
+      SoDebugError::postInfo("CoinOffscreenGLCanvas::bindFBO",
+                             "Skipping FBO operations for OSMesa build - using native offscreen rendering. "
+                             "Set COIN_OSMESA_USE_FBO=1 to enable FBO support.");
+    }
+    return TRUE;
   }
-  return TRUE;
-#else
+#endif
+
   if (!this->fbo_initialized) {
     if (!this->initializeFBO()) {
       return FALSE;
@@ -778,25 +795,28 @@ CoinOffscreenGLCanvas::bindFBO(void)
   glViewport(0, 0, this->size[0], this->size[1]);
   
   return TRUE;
-#endif
 }
 
 void
 CoinOffscreenGLCanvas::unbindFBO(void)
 {
 #ifdef COIN3D_OSMESA_BUILD
-  // OSMesa contexts don't use FBO - no need to unbind
-  if (CoinOffscreenGLCanvas::debug()) {
-    SoDebugError::postInfo("CoinOffscreenGLCanvas::unbindFBO",
-                           "Skipping FBO unbind for OSMesa build");
+  // Check if OSMesa FBO support is explicitly enabled
+  static const char* osmesa_fbo_env = coin_getenv("COIN_OSMESA_USE_FBO");
+  if (!osmesa_fbo_env || (strcmp(osmesa_fbo_env, "1") != 0 && strcmp(osmesa_fbo_env, "true") != 0)) {
+    // OSMesa contexts don't use FBO - no need to unbind
+    if (CoinOffscreenGLCanvas::debug()) {
+      SoDebugError::postInfo("CoinOffscreenGLCanvas::unbindFBO",
+                             "Skipping FBO unbind for OSMesa build");
+    }
+    return;
   }
-  return;
-#else
+#endif
+
   const cc_glglue * glue = cc_glglue_instance(static_cast<int>(this->renderid));
   if (!glue) { return; }
   
   cc_glglue_glBindFramebuffer(glue, GL_FRAMEBUFFER_EXT, 0);
-#endif
 }
 
 // *************************************************************************
