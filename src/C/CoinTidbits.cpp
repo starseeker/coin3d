@@ -86,6 +86,8 @@
 #include <direct.h>
 #endif /* HAVE_DIRECT_H */
 
+#include <string>
+
 #include "C/base/string.h"
 #include "base/list.h"
 #include "errors/CoinInternalError.h"
@@ -756,7 +758,7 @@ FILE* coin_get_stderr(void)
 /* ********************************************************************** */
 /* Locale functions */
 
-SbBool coin_locale_set_portable(cc_string* storeold)
+SbBool coin_locale_set_portable(std::string* storeold)
 {
     const char* loc;
     
@@ -765,8 +767,7 @@ SbBool coin_locale_set_portable(cc_string* storeold)
         return COIN_FALSE;
     }
     
-    cc_string_construct(storeold);
-    cc_string_set_text(storeold, deflocale);
+    *storeold = deflocale;
     
     loc = setlocale(LC_NUMERIC, "C");
     assert(loc != NULL && "could not set locale to supposed portable C locale");
@@ -774,18 +775,18 @@ SbBool coin_locale_set_portable(cc_string* storeold)
     return COIN_TRUE;
 }
 
-void coin_locale_reset(cc_string* storedold)
+void coin_locale_reset(std::string* storedold)
 {
-    const char* l = setlocale(LC_NUMERIC, cc_string_get_text(storedold));
+    const char* l = setlocale(LC_NUMERIC, storedold->c_str());
     assert(l != NULL && "could not reset locale");
     (void)l; // suppress unused variable warning in release builds
-    cc_string_clean(storedold);
+    storedold->clear();
 }
 
 double coin_atof(const char* ptr)
 {
     double v;
-    cc_string storedlocale;
+    std::string storedlocale;
     SbBool changed = coin_locale_set_portable(&storedlocale);
     v = atof(ptr);
     if (changed) {
@@ -938,7 +939,7 @@ SbBool coin_parse_versionstring(const char* versionstr,
 #define getcwd_wrapper(buf, size) NULL
 #endif
 
-SbBool coin_getcwd(cc_string* str)
+SbBool coin_getcwd(std::string* str)
 {
     char buf[256], * dynbuf = NULL;
     size_t bufsize = sizeof(buf);
@@ -951,9 +952,9 @@ SbBool coin_getcwd(cc_string* str)
         cwd = getcwd_wrapper(dynbuf, bufsize);
     }
     if (cwd == NULL) {
-        cc_string_set_text(str, strerror(errno));
+        *str = strerror(errno);
     } else {
-        cc_string_set_text(str, cwd);
+        *str = cwd;
     }
     
     free(dynbuf);

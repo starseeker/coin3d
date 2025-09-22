@@ -184,6 +184,8 @@
      <URL:http://developer.apple.com/techpubs/macosx/DeveloperTools/MachORuntime/5rt_api_reference/_Object_Fil_e_Functions.html>
 */
 
+#include <string>
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif /* HAVE_CONFIG_H */
@@ -5123,21 +5125,21 @@ coin_glerror_string(GLenum errorcode)
    OpenGL. */
 
 unsigned int
-coin_catch_gl_errors(cc_string * str)
+coin_catch_gl_errors(std::string * str)
 {
   unsigned int errs = 0;
   GLenum glerr = glGetError();
   while (glerr != GL_NO_ERROR) {
     if (errs < 10) {
       if (errs > 0) {
-        cc_string_append_char(str, ' ');
+        str->push_back(' ');
       }
-      cc_string_append_text(str, coin_glerror_string(glerr));
+      str->append(coin_glerror_string(glerr));
     }
     /* ignore > 10, so we don't run into a situation were we end up
        practically locking up the app due to vast amounts of errors */
     else if (errs == 10) {
-      cc_string_append_text(str, "... and more");
+      str->append("... and more");
     }
 
     errs++;

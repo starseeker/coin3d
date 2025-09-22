@@ -135,6 +135,8 @@
 #include <config.h>
 #endif // HAVE_CONFIG_H
 
+#include "Inventor/C/base/utf8.h" // Modern UTF-8 support
+
 #include <Inventor/SoPrimitiveVertex.h>
 #include <Inventor/actions/SoGLRenderAction.h>
 #include <Inventor/actions/SoGetPrimitiveCountAction.h>
@@ -659,14 +661,14 @@ SoText3P::render(SoState * state, const cc_font_specification * fontspec,
     SbString str = PUBLIC(this)->string[i];
     cc_glyph3d * prevglyph = NULL;
     const char * p = str.getString();
-    size_t length = cc_string_utf8_validate_length(p);
+    size_t length = coin_utf8_validate_length(p);
     // No assertion as zero length is handled correctly (results in a new line)
 
     for (unsigned int strcharidx = 0; strcharidx < length; strcharidx++) {
       uint32_t glyphidx = 0;
 
-      glyphidx = cc_string_utf8_get_char(p);
-      p = cc_string_utf8_next_char(p);
+      glyphidx = coin_utf8_get_char(p);
+      p = coin_utf8_next_char(p);
 
       cc_glyph3d * glyph = cc_glyph3d_ref(glyphidx, fontspec);
       const SbVec2f * coords = (SbVec2f *) cc_glyph3d_getcoords(glyph);
@@ -1079,14 +1081,14 @@ SoText3P::generate(SoAction * action, const cc_font_specification * fontspec,
     SbString str = PUBLIC(this)->string[i];
     cc_glyph3d * prevglyph = NULL;
     const char * p = str.getString();
-    size_t length = cc_string_utf8_validate_length(p);
+    size_t length = coin_utf8_validate_length(p);
     // No assertion as zero length is handled correctly (results in a new line)
 
     for (unsigned int strcharidx = 0; strcharidx < length; strcharidx++) {
       uint32_t glyphidx = 0;
 
-      glyphidx = cc_string_utf8_get_char(p);
-      p = cc_string_utf8_next_char(p);
+      glyphidx = coin_utf8_get_char(p);
+      p = coin_utf8_next_char(p);
 
       cc_glyph3d * glyph = cc_glyph3d_ref(glyphidx, fontspec);
       const SbVec2f * coords = (SbVec2f *) cc_glyph3d_getcoords(glyph);
@@ -1448,14 +1450,14 @@ SoText3P::setUpGlyphs(SoState * state, SoText3 * textnode)
 
     SbString str = textnode->string[i];
     const char * p = str.getString();
-    size_t length = cc_string_utf8_validate_length(p);
+    size_t length = coin_utf8_validate_length(p);
     // No assertion as zero length is handled correctly (results in a new line)
 
     for (unsigned int strcharidx = 0; strcharidx < length; strcharidx++) {
       uint32_t glyphidx = 0;
 
-      glyphidx = cc_string_utf8_get_char(p);
-      p = cc_string_utf8_next_char(p);
+      glyphidx = coin_utf8_get_char(p);
+      p = coin_utf8_next_char(p);
 
       cc_glyph3d * glyph = cc_glyph3d_ref(glyphidx, fontspec);
       this->cache->addGlyph(glyph);

@@ -35,6 +35,9 @@
 #include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
+#include <cstdio>
+#include <cstdarg>
+#include <string>
 
 // Simple consolidated implementation that provides exact C API compatibility
 
@@ -136,6 +139,6 @@ cc_debugerror_get_handler_data(void)
 cc_debugerror_cb *
 cc_debugerror_get_handler(void ** data)
 {
-  if (data) *data = debug_callback_data;
+  *data = debug_callback_data;
   return debug_callback;
 }

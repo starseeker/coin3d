@@ -43,6 +43,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <cstdio>
+#include <string>
 
 #define STRUETYPE_IMPLEMENTATION
 #pragma GCC diagnostic push
@@ -141,11 +142,11 @@ cc_flwft_get_font(const char * fontname, unsigned int pixelsize)
 }
 
 void
-cc_flwft_get_font_name(void * font, cc_string * str)
+cc_flwft_get_font_name(void * font, std::string * str)
 {
   /* Return ProFont name */
   if (str) {
-    cc_string_set_text(str, "ProFont");
+    *str = "ProFont";
   }
 }
 

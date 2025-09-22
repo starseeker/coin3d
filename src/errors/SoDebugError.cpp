@@ -251,9 +251,9 @@ SoDebugError::callbackForwarder(const struct cc_debugerror * error,
     break;
   }
 
-  const cc_string * dbgstr =
+  const std::string * dbgstr =
     cc_error_get_debug_string(reinterpret_cast<const cc_error *>(error));
-  const char * dbgstrc = cc_string_get_text(dbgstr);
+  const char * dbgstrc = dbgstr->c_str();
   wrappederr.setDebugString(dbgstrc);
 
   assert(SoDebugError::callback != NULL);
