@@ -42,11 +42,18 @@
 #include "C/CoinTidbits.h"
 #include "coindefs.h"
 
-// Modern C++17 hash function for strings
+// Simple, reliable string hash function  
 namespace {
   uint32_t string_hash(const char* str) {
-    std::hash<std::string> hasher;
-    return static_cast<uint32_t>(hasher(std::string(str ? str : "")));
+    if (!str) return 0;
+    
+    // djb2 hash algorithm - simple and reliable
+    uint32_t hash = 5381;
+    int c;
+    while ((c = *str++)) {
+      hash = ((hash << 5) + hash) + c; // hash * 33 + c
+    }
+    return hash;
   }
 }
 
