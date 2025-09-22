@@ -62,15 +62,16 @@ add_executable(CoinTests
     details/test_details_comprehensive.cpp
     lists/test_lists_comprehensive.cpp
     geo/test_geo_comprehensive.cpp
+    # Additional comprehensive test modules for increased coverage
+    shaders/test_shaders_comprehensive.cpp
+    shadows/test_shadows_comprehensive.cpp
+    manips/test_manips_comprehensive.cpp
     # TODO: Add remaining complete migrated test files once compilation issues are resolved:
     # base/test_base_complete.cpp
     # fields/test_fields_complete.cpp
     # misc/test_misc_complete.cpp
     # nodes/test_nodes_complete.cpp
     # actions/test_actions_complete.cpp
-    # shaders/test_shaders_complete.cpp
-    # shadows/test_shadows_complete.cpp
-    # manips/test_manips_complete.cpp
 )
 
 target_link_libraries(CoinTests
