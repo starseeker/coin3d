@@ -35,7 +35,15 @@ struct OSMesaTestContext {
     bool isValid() const { return context != nullptr; }
     
     bool makeCurrent() {
-        return context && OSMesaMakeCurrent(context, buffer.get(), GL_UNSIGNED_BYTE, width, height) == GL_TRUE;
+        bool result = OSMesaMakeCurrent(context, buffer.get(), GL_UNSIGNED_BYTE, width, height) == GL_TRUE;
+        if (result) {
+            // Verify FBO extension is available after making context current
+            const char* extensions = (const char*)glGetString(GL_EXTENSIONS);
+            if (extensions && strstr(extensions, "GL_EXT_framebuffer_object")) {
+                std::cout << "FBO extension detected in OSMesa context" << std::endl;
+            }
+        }
+        return result;
     }
 };
 

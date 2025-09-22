@@ -116,6 +116,59 @@ private:
 
 } // anonymous namespace
 
+// Simple test to verify OSMesa FBO functionality through standard path without custom providers
+TEST_CASE("OSMesa Standard FBO Test", "[osmesa][simple][fbo]") {
+    
+    SECTION("Test OSMesa FBO through standard path") {
+        // Create a simple scene
+        SoSeparator* root = new SoSeparator;
+        root->ref();
+        
+        SoPerspectiveCamera* camera = new SoPerspectiveCamera;
+        camera->position = SbVec3f(0, 0, 3);
+        camera->nearDistance = 1.0f;
+        camera->farDistance = 10.0f;
+        root->addChild(camera);
+        
+        SoDirectionalLight* light = new SoDirectionalLight;
+        light->direction = SbVec3f(0, 0, -1);
+        root->addChild(light);
+        
+        SoCube* cube = new SoCube;
+        cube->width = 1.0f;
+        cube->height = 1.0f;
+        cube->depth = 1.0f;
+        root->addChild(cube);
+        
+        // Create offscreen renderer using standard path
+        SoOffscreenRenderer renderer(SbViewportRegion(256, 256));
+        renderer.setBackgroundColor(SbColor(0.2f, 0.3f, 0.4f));
+        
+        // Render the scene
+        bool result = renderer.render(root);
+        
+        // Check that rendering succeeded
+        REQUIRE(result == true);
+        
+        // Get the rendered image and check basic properties
+        unsigned char* buffer = renderer.getBuffer();
+        REQUIRE(buffer != nullptr);
+        
+        // Just check that we got some non-zero pixels
+        bool hasNonZeroPixels = false;
+        int imageSize = 256 * 256 * 4; // RGBA
+        for (int i = 0; i < imageSize; i++) {
+            if (buffer[i] != 0) {
+                hasNonZeroPixels = true;
+                break;
+            }
+        }
+        REQUIRE(hasNonZeroPixels == true);
+        
+        root->unref();
+    }
+}
+
 TEST_CASE("FBO-based Offscreen Rendering", "[fbo][osmesa][rendering]") {
     
     SECTION("Basic FBO rendering with simple scene") {

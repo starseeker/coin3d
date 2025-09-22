@@ -501,12 +501,9 @@ SoDB::init(void)
     SoProfiler::init();
   }
 
-#ifdef HAVE_OSMESA
-#ifdef COIN3D_OSMESA_BUILD
-  // Initialize OSMesa context management for offscreen rendering
-  initializeCoinOSMesaContext();
-#endif // COIN3D_OSMESA_BUILD
-#endif // HAVE_OSMESA
+  // Note: OSMesa context initialization has been moved to test applications
+  // Applications must provide context creation callbacks via cc_glglue_context_set_offscreen_cb_functions()
+  // See examples/osmesa_example.h for reference implementation
 
   // Debugging for memory leaks will be easier if we can clean up the
   // resource usage. This needs to be done last in init(), so we get
