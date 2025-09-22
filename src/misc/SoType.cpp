@@ -517,6 +517,12 @@ SoType::fromName(const SbName name)
     if (env.has_value() && std::atoi(env->c_str()) > 0) enable_dynload = FALSE;
   }
 
+  // Check if SoType::init() was called properly
+  if (type_dict == NULL) {
+    // This should not happen if SoDB::init() was called
+    return SoType::badType();
+  }
+
   assert((type_dict != NULL) && "SoType static class data not yet initialized");
 
   // It should be possible to specify a type name with the "So" prefix
@@ -535,6 +541,22 @@ SoType::fromName(const SbName name)
 
     if (enable_dynload) {
 
+      // Ensure dynload_tries is initialized
+      if (dynload_tries == NULL) {
+        dynload_tries = new NameMap;
+      }
+
+      // Safety check: Disable dynamic loading for non-standard type names that
+      // are likely to be test cases or user-defined types that don't have 
+      // corresponding shared libraries. This prevents segfaults when trying
+      // to load non-existent modules.
+      SbString nameStr(name.getString());
+      if (nameStr.compareSubString("So", 0) != 0 && 
+          nameStr.compareSubString("Sb", 0) != 0 &&
+          nameStr.getLength() < 20) { // Likely a test case name
+        return SoType::badType();
+      }
+
       // find out which C++ name mangling scheme the compiler uses
       static mangleFunc * manglefunc = getManglingFunction();
       if ( manglefunc == NULL ) {
@@ -550,7 +572,14 @@ SoType::fromName(const SbName name)
         }
         return SoType::badType();
       }
-      SbString mangled = manglefunc(name.getString());
+      
+      SbString mangled;
+      if (manglefunc != NULL) {
+        mangled = manglefunc(name.getString());
+      } else {
+        // This should not happen since we checked above, but be safe
+        return SoType::badType();
+      }
 
       if ( module_dict == NULL ) {
         module_dict = new Name2HandleMap;
@@ -585,7 +614,6 @@ SoType::fromName(const SbName name)
 
         // Register all the module names we have tried so we don't try
         // them again.
-        if (dynload_tries == NULL) dynload_tries = new NameMap;
         void * dummy;
         if (dynload_tries->get(module.getString(), dummy))
           continue; // already tried

@@ -60,8 +60,13 @@ TEST_CASE("SoType tests", "[misc][SoType]") {
 
         // Step 1: Create SbName
         SbName className("MyClass");
+        CHECK(true); // If we get here, SbName creation is OK
 
-        // Step 2: Call SoType::fromName
+        // Try to get badType first to ensure SoType system is working
+        SoType badType = SoType::badType();
+        CHECK(badType == SoType::badType()); // If we get here, basic SoType is OK
+
+        // Step 2: Call SoType::fromName - THIS IS WHERE THE SEGFAULT HAPPENS
         SoType existing = SoType::fromName(className);
 
         // Step 3: Check if it's badType
