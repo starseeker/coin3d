@@ -47,6 +47,15 @@ static void * createInstance(void)
 TEST_CASE("SoType tests", "[misc][SoType]") {
     CoinTestFixture fixture;
 
+    SECTION("basic type operations") {
+        // Test basic SoType functionality without createType/removeType
+        SoType badType = SoType::badType();
+        CHECK(badType == SoType::badType());
+        
+        SoType nodeType = SoNode::getClassTypeId();
+        CHECK(nodeType != SoType::badType());
+    }
+
     SECTION("testRemoveType") {
         CHECK(SoType::fromName(SbName("MyClass")) == SoType::badType());
         

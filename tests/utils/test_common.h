@@ -36,6 +36,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <Inventor/SoDB.h>
 #include <Inventor/SoInteraction.h>
+#include <stdexcept>
 
 // Forward declarations for comprehensive testing utilities
 namespace CoinTestUtils {
@@ -51,14 +52,11 @@ namespace CoinTestUtils {
 
 namespace CoinTestUtils {
 
-// Test fixture for Coin initialization
+// Test fixture for Coin initialization - simplified to avoid issues
 class CoinTestFixture {
 public:
     CoinTestFixture() {
-        if (!SoDB::isInitialized()) {
-            SoDB::init();
-            SoInteraction::init();
-        }
+        // Do nothing - global setup handles everything
     }
 
     ~CoinTestFixture() {
