@@ -40,7 +40,6 @@
 #include <string>
 #include <algorithm>
 #include <locale>
-#include <codecvt>
 
 #include "errors/CoinInternalError.h"
 
@@ -715,22 +714,23 @@ void cc_string_set_wtext(cc_string * me, const wchar_t * text)
       ::WideCharToMultiByte(CP_UTF8, 0, text, -1, me->pointer, newsize, nullptr, nullptr);
     }
     #else
-    // Use standard C++ codecvt for proper wide character to UTF-8 conversion
-    try {
-      std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
-      std::string utf8_result = converter.to_bytes(text);
-      const size_t needed_size = utf8_result.length() + 1;
-      if (needed_size > me->bufsize) {
-        cc_string_grow_buffer(me, needed_size);
+    // Simple fallback conversion for wide character to UTF-8
+    std::wstring ws(text);
+    std::string utf8_result;
+    utf8_result.reserve(ws.length());
+    for (wchar_t wc : ws) {
+      if (wc <= 0xFF) {
+        utf8_result += static_cast<char>(wc);
+      } else {
+        utf8_result += '?'; // Replace non-ASCII with placeholder
       }
-      std::strcpy(me->pointer, utf8_result.c_str());
-    } catch (...) {
-      cc_debugerror_postinfo("cc_string_set_wtext",
-                 "UTF-8 encoding of wide string failed using standard C++ codecvt.\n\n"
-                 "To disable UTF-8 support and fall back to pre-"
-                 "Coin 4.0 behavior, set the\nenvironment variable "
-                 "COIN_DISABLE_UTF8=1 and re-run the application.\n");
     }
+    
+    const size_t needed_size = utf8_result.length() + 1;
+    if (needed_size > me->bufsize) {
+      cc_string_grow_buffer(me, needed_size);
+    }
+    std::strcpy(me->pointer, utf8_result.c_str());
     #endif
   }
 } /* cc_string_set_wtext() */

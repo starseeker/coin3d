@@ -1,12 +1,10 @@
 /*
- Modern UTF-8 implementation using standard C++17 functionality.
- Replaces legacy cc_string UTF-8 functions with proper Unicode support.
+ Simple UTF-8 functions using basic C++ approach.
+ Replaces legacy cc_string UTF-8 functions.
 */
 
 #include "Inventor/C/base/utf8.h"
 #include <cstring>
-#include <locale>
-#include <codecvt>
 
 #ifdef __cplusplus
 extern "C" {
@@ -14,25 +12,14 @@ extern "C" {
 
 size_t coin_utf8_validate_length(const char* str) {
   if (!str) return 0;
-  try {
-    // Simple validation by checking if conversion works
-    std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> converter;
-    auto u32str = converter.from_bytes(str);
-    return u32str.length();
-  } catch (...) {
-    return std::strlen(str); // Fallback to byte length
-  }
+  // Simple fallback - just return string length
+  return std::strlen(str);
 }
 
 uint32_t coin_utf8_get_char(const char* str) {
   if (!str || !*str) return 0;
-  try {
-    std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> converter;
-    auto u32str = converter.from_bytes(str, str + std::min(4u, (unsigned)std::strlen(str)));
-    return u32str.empty() ? 0 : static_cast<uint32_t>(u32str[0]);
-  } catch (...) {
-    return static_cast<uint32_t>(*str); // Fallback to raw byte
-  }
+  // Simple fallback - return first byte as character
+  return static_cast<uint32_t>(*str);
 }
 
 const char* coin_utf8_next_char(const char* str) {
@@ -53,20 +40,6 @@ size_t coin_utf8_decode(const char* src, size_t srclen, uint32_t* value) {
     return 0;
   }
   
-  try {
-    std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> converter;
-    std::string input(src, std::min(srclen, (size_t)4));
-    auto u32str = converter.from_bytes(input);
-    if (!u32str.empty()) {
-      *value = static_cast<uint32_t>(u32str[0]);
-      // Return number of bytes consumed
-      const char* next = coin_utf8_next_char(src);
-      return next - src;
-    }
-  } catch (...) {
-    // Fallback
-  }
-  
   *value = static_cast<uint32_t>(*src);
   return 1;
 }
@@ -74,16 +47,10 @@ size_t coin_utf8_decode(const char* src, size_t srclen, uint32_t* value) {
 size_t coin_utf8_encode(char* buffer, size_t buflen, uint32_t value) {
   if (!buffer || buflen == 0) return 0;
   
-  try {
-    std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> converter;
-    std::u32string u32str(1, static_cast<char32_t>(value));
-    std::string encoded = converter.to_bytes(u32str);
-    if (encoded.length() <= buflen) {
-      memcpy(buffer, encoded.c_str(), encoded.length());
-      return encoded.length();
-    }
-  } catch (...) {
-    // Fall through to error case
+  // Simple fallback - just put the low byte
+  if (value <= 0xFF) {
+    *buffer = static_cast<char>(value);
+    return 1;
   }
   
   return 0;

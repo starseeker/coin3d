@@ -181,17 +181,8 @@ SbString::lower() const
 {
   SbString newstr;
   newstr.str_ = this->str_;
-  
-  // Use locale-aware conversion for better Unicode support
-  try {
-    std::locale loc("");  // Use user's locale
-    std::transform(newstr.str_.begin(), newstr.str_.end(), newstr.str_.begin(), 
-                   [&loc](unsigned char c) { return std::tolower(c, loc); });
-  } catch (...) {
-    // Fallback to basic ASCII conversion
-    std::transform(newstr.str_.begin(), newstr.str_.end(), newstr.str_.begin(), ::tolower);
-  }
-  
+  std::transform(newstr.str_.begin(), newstr.str_.end(), newstr.str_.begin(), 
+                 [](unsigned char c) { return static_cast<char>(::tolower(c)); });
   return newstr;
 }
 
@@ -205,17 +196,8 @@ SbString::upper() const
 {
   SbString newstr;
   newstr.str_ = this->str_;
-  
-  // Use locale-aware conversion for better Unicode support
-  try {
-    std::locale loc("");  // Use user's locale
-    std::transform(newstr.str_.begin(), newstr.str_.end(), newstr.str_.begin(), 
-                   [&loc](unsigned char c) { return std::toupper(c, loc); });
-  } catch (...) {
-    // Fallback to basic ASCII conversion
-    std::transform(newstr.str_.begin(), newstr.str_.end(), newstr.str_.begin(), ::toupper);
-  }
-  
+  std::transform(newstr.str_.begin(), newstr.str_.end(), newstr.str_.begin(), 
+                 [](unsigned char c) { return static_cast<char>(::toupper(c)); });
   return newstr;
 }
 

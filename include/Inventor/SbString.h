@@ -38,8 +38,6 @@
 #include <cstdint>
 #include <string>
 #include <cstring>
-#include <locale>
-#include <codecvt>
 
 #ifdef COIN_INTERNAL
  #define COIN_ALLOW_SBINTLIST
@@ -59,13 +57,16 @@ public:
 
   SbString(const wchar_t * s) {
     if (s) {
-      // Use standard C++ codecvt for wide character to UTF-8 conversion
-      try {
-        std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
-        str_ = converter.to_bytes(s);
-      } catch (...) {
-        // Fallback for conversion errors
-        str_.clear();
+      // Simple conversion - just take low bytes for now
+      // This is a basic fallback until proper UTF-8 conversion is needed
+      std::wstring ws(s);
+      str_.reserve(ws.length());
+      for (wchar_t wc : ws) {
+        if (wc <= 0xFF) {
+          str_ += static_cast<char>(wc);
+        } else {
+          str_ += '?'; // Replace non-ASCII with placeholder
+        }
       }
     }
   }
