@@ -53,6 +53,7 @@
 #include <Inventor/SbString.h>
 #include <cctype>
 #include <algorithm>
+#include <locale>
 
 #include <Inventor/lists/SbList.h>
 #include "coindefs.h"
@@ -180,7 +181,17 @@ SbString::lower() const
 {
   SbString newstr;
   newstr.str_ = this->str_;
-  std::transform(newstr.str_.begin(), newstr.str_.end(), newstr.str_.begin(), ::tolower);
+  
+  // Use locale-aware conversion for better Unicode support
+  try {
+    std::locale loc("");  // Use user's locale
+    std::transform(newstr.str_.begin(), newstr.str_.end(), newstr.str_.begin(), 
+                   [&loc](unsigned char c) { return std::tolower(c, loc); });
+  } catch (...) {
+    // Fallback to basic ASCII conversion
+    std::transform(newstr.str_.begin(), newstr.str_.end(), newstr.str_.begin(), ::tolower);
+  }
+  
   return newstr;
 }
 
@@ -194,7 +205,17 @@ SbString::upper() const
 {
   SbString newstr;
   newstr.str_ = this->str_;
-  std::transform(newstr.str_.begin(), newstr.str_.end(), newstr.str_.begin(), ::toupper);
+  
+  // Use locale-aware conversion for better Unicode support
+  try {
+    std::locale loc("");  // Use user's locale
+    std::transform(newstr.str_.begin(), newstr.str_.end(), newstr.str_.begin(), 
+                   [&loc](unsigned char c) { return std::toupper(c, loc); });
+  } catch (...) {
+    // Fallback to basic ASCII conversion
+    std::transform(newstr.str_.begin(), newstr.str_.end(), newstr.str_.begin(), ::toupper);
+  }
+  
   return newstr;
 }
 
