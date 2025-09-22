@@ -563,6 +563,24 @@ CoinOffscreenGLCanvas::allowResourcehog(void)
 SbBool
 CoinOffscreenGLCanvas::initializeFBO(void)
 {
+#ifdef COIN3D_OSMESA_BUILD
+  // Check if OSMesa FBO support is explicitly enabled
+  static const char* osmesa_fbo_env = coin_getenv("COIN_OSMESA_USE_FBO");
+  if (!osmesa_fbo_env || (strcmp(osmesa_fbo_env, "1") != 0 && strcmp(osmesa_fbo_env, "true") != 0)) {
+    // FBO not enabled for OSMesa - this should not be called
+    if (CoinOffscreenGLCanvas::debug()) {
+      SoDebugError::postInfo("CoinOffscreenGLCanvas::initializeFBO",
+                             "FBO initialization called but OSMesa FBO support not enabled");
+    }
+    return FALSE;
+  }
+  
+  if (CoinOffscreenGLCanvas::debug()) {
+    SoDebugError::postInfo("CoinOffscreenGLCanvas::initializeFBO",
+                          "OSMesa FBO support enabled - proceeding with FBO initialization");
+  }
+#endif
+
   if (this->fbo_initialized) { return TRUE; }
   
   // Ensure the context is current before calling cc_glglue_instance
