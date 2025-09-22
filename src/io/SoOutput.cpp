@@ -822,7 +822,7 @@ SoOutput::write(const int i)
   if (!this->isBinary()) {
     // Use portable locale, to make sure we don't write thousands
     // separators for integers.
-    cc_string storedlocale;
+    std::string storedlocale;
     SbBool changed = coin_locale_set_portable(&storedlocale);
 
     SbString s;
@@ -870,7 +870,7 @@ SoOutput::write(const short s)
   if (!this->isBinary()) {
     // Use portable locale, to make sure we don't write thousands
     // separators for integers.
-    cc_string storedlocale;
+    std::string storedlocale;
     SbBool changed = coin_locale_set_portable(&storedlocale);
 
     SbString str;
@@ -911,7 +911,7 @@ SoOutput::write(const float f)
   if (!this->isBinary()) {
     // Use portable locale, to make sure we don't write thousands
     // separators for integers.
-    cc_string storedlocale;
+    std::string storedlocale;
     SbBool changed = coin_locale_set_portable(&storedlocale);
 
     SbString s;
@@ -948,7 +948,7 @@ SoOutput::write(const double d)
   if (!this->isBinary()) {
     // Use portable locale, to make sure we don't write thousands
     // separators for integers.
-    cc_string storedlocale;
+    std::string storedlocale;
     SbBool changed = coin_locale_set_portable(&storedlocale);
 
     SbString s;
