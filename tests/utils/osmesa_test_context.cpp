@@ -149,46 +149,45 @@ void OSMesaTestContext::cleanup() {
 // OSMesaCallbackManager Implementation  
 // ============================================================================
 
-OSMesaCallbackManager::OSMesaCallbackManager() {
-    cc_glglue_offscreen_cb_functions callbacks = {
-        createOffscreen,
-        makeCurrent, 
-        reinstatePrevious,
-        destruct
-    };
+// Modern C++ ContextProvider implementation for OSMesa
+class OSMesaCallbackManager::OSMesaContextProvider : public SoOffscreenRenderer::ContextProvider {
+public:
+    virtual void * createOffscreenContext(unsigned int width, unsigned int height) override {
+        auto* context = new OSMesaTestContext(width, height);
+        if (!context->isValid()) {
+            delete context;
+            return nullptr;
+        }
+        return context;
+    }
     
-    cc_glglue_context_set_offscreen_cb_functions(&callbacks);
+    virtual SbBool makeContextCurrent(void * context) override {
+        if (!context) return FALSE;
+        auto* osmesa_ctx = static_cast<OSMesaTestContext*>(context);
+        return osmesa_ctx->makeCurrent() ? TRUE : FALSE;
+    }
+    
+    virtual void restorePreviousContext(void * context) override {
+        // OSMesa doesn't need explicit context switching in our test setup
+        (void)context;
+    }
+    
+    virtual void destroyContext(void * context) override {
+        if (context) {
+            delete static_cast<OSMesaTestContext*>(context);
+        }
+    }
+};
+
+OSMesaCallbackManager::OSMesaCallbackManager() 
+    : provider_(std::make_unique<OSMesaContextProvider>())
+    , originalProvider_(SoOffscreenRenderer::getContextProvider()) {
+    SoOffscreenRenderer::setContextProvider(provider_.get());
 }
 
 OSMesaCallbackManager::~OSMesaCallbackManager() {
-    // Don't nullify callbacks since they should persist globally for OSMesa builds
-    // cc_glglue_context_set_offscreen_cb_functions(nullptr);
-}
-
-void* OSMesaCallbackManager::createOffscreen(unsigned int width, unsigned int height) {
-    auto* context = new OSMesaTestContext(width, height);
-    if (!context->isValid()) {
-        delete context;
-        return nullptr;
-    }
-    return context;
-}
-
-SbBool OSMesaCallbackManager::makeCurrent(void* context) {
-    if (!context) return FALSE;
-    auto* osmesa_ctx = static_cast<OSMesaTestContext*>(context);
-    return osmesa_ctx->makeCurrent() ? TRUE : FALSE;
-}
-
-void OSMesaCallbackManager::reinstatePrevious(void* context) {
-    // OSMesa doesn't need explicit context switching in our test setup
-    (void)context;
-}
-
-void OSMesaCallbackManager::destruct(void* context) {
-    if (context) {
-        delete static_cast<OSMesaTestContext*>(context);
-    }
+    // Restore original context provider
+    SoOffscreenRenderer::setContextProvider(originalProvider_);
 }
 
 // ============================================================================

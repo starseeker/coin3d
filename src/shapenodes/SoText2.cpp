@@ -107,6 +107,8 @@
 #include <config.h>
 #endif // HAVE_CONFIG_H
 
+#include "Inventor/C/base/utf8.h" // Modern UTF-8 support
+
 #include <Inventor/SbBox2s.h>
 #include <Inventor/SbLine.h>
 #include <Inventor/SbPlane.h>
@@ -439,13 +441,13 @@ SoText2::GLRender(SoGLRenderAction * action)
       int advancey = 0;
 
       const char * p = str.getString();
-      size_t length = cc_string_utf8_validate_length(p);
+      size_t length = coin_utf8_validate_length(p);
 
       for (unsigned int strcharidx = 0; strcharidx < length; strcharidx++) {
         uint32_t glyphidx = 0;
 
-        glyphidx = cc_string_utf8_get_char(p);
-        p = cc_string_utf8_next_char(p);
+        glyphidx = coin_utf8_get_char(p);
+        p = coin_utf8_next_char(p);
 
         cc_glyph2d * glyph = cc_glyph2d_ref(glyphidx, fontspec, 0.0f);
 
@@ -879,14 +881,14 @@ SoText2P::buildGlyphCache(SoState * state)
     int bitmappos[2];
     const cc_glyph2d * prevglyph = NULL;
     const char * p = str.getString();
-    size_t length = cc_string_utf8_validate_length(p);
+    size_t length = coin_utf8_validate_length(p);
 
     // fetch all glyphs first
     for (unsigned int strcharidx = 0; strcharidx < length; strcharidx++) {
       uint32_t glyphidx = 0;
 
-      glyphidx = cc_string_utf8_get_char(p);
-      p = cc_string_utf8_next_char(p);
+      glyphidx = coin_utf8_get_char(p);
+      p = coin_utf8_next_char(p);
 
       cc_glyph2d * glyph = cc_glyph2d_ref(glyphidx, fontspec, 0.0f);
       // Should _always_ be able to get hold of a glyph -- if no

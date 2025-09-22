@@ -1,5 +1,5 @@
-#ifndef COIN_GLUE_DL_H
-#define COIN_GLUE_DL_H
+#ifndef COIN_UTF8_H
+#define COIN_UTF8_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,36 +33,44 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-/* This is a cross-platform interface abstraction against the various
-   methods on different operating systems for doing dynamic, run-time
-   linking of symbols. */
+/*
+  Modern UTF-8 support using neacsum/utf8 library.
+  Replaces legacy cc_string UTF-8 functions with C++17 standard library
+  backed implementation.
+*/
 
-/* ********************************************************************** */
-
-#include "Inventor/C/basic.h"
-
-/* ********************************************************************** */
+#include <cstdint>
+#include <cstddef>
 
 #ifdef __cplusplus
 extern "C" {
-#endif /* __cplusplus */
+#endif
 
-#if 0 /* to get proper auto-indentation in emacs */
-}
-#endif /* emacs indentation */
+// Modern UTF-8 API using neacsum/utf8 library internally
+// These replace the legacy cc_string_utf8_* functions
 
-/* ********************************************************************** */
+/// Validate UTF-8 string and return number of Unicode code points
+/// Replaces: cc_string_utf8_validate_length
+size_t coin_utf8_validate_length(const char* str);
 
-typedef struct cc_libhandle_struct * cc_libhandle;
+/// Get Unicode code point at current position
+/// Replaces: cc_string_utf8_get_char
+uint32_t coin_utf8_get_char(const char* str);
 
-COIN_DLL_API cc_libhandle cc_dl_open(const char * filename);
-COIN_DLL_API void * cc_dl_sym(cc_libhandle handle, const char * symbolname);
-COIN_DLL_API void cc_dl_close(cc_libhandle handle);
+/// Advance to next Unicode code point
+/// Replaces: cc_string_utf8_next_char
+const char* coin_utf8_next_char(const char* str);
 
-/* ********************************************************************** */
+/// Decode UTF-8 bytes into Unicode code point
+/// Replaces: cc_string_utf8_decode  
+size_t coin_utf8_decode(const char* src, size_t srclen, uint32_t* value);
+
+/// Encode Unicode code point into UTF-8 bytes
+/// Replaces: cc_string_utf8_encode
+size_t coin_utf8_encode(char* buffer, size_t buflen, uint32_t value);
 
 #ifdef __cplusplus
 }
-#endif /* __cplusplus */
+#endif
 
-#endif /* !COIN_GLUE_DL_H */
+#endif /* COIN_UTF8_H */

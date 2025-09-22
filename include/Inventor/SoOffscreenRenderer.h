@@ -100,6 +100,25 @@ public:
   void setPbufferEnable(SbBool enable);
   SbBool getPbufferEnable(void) const;
 
+  // Context management and OpenGL capability detection
+  static void getOpenGLVersion(int & major, int & minor, int & release);
+  static SbBool isOpenGLExtensionSupported(const char * extension);
+  static SbBool hasFramebufferObjectSupport(void);
+  static SbBool isVersionAtLeast(int major, int minor, int release = 0);
+
+  // Context provider callback support for custom rendering backends
+  class ContextProvider {
+  public:
+    virtual ~ContextProvider() {}
+    virtual void * createOffscreenContext(unsigned int width, unsigned int height) = 0;
+    virtual SbBool makeContextCurrent(void * context) = 0;
+    virtual void restorePreviousContext(void * context) = 0;
+    virtual void destroyContext(void * context) = 0;
+  };
+  
+  static void setContextProvider(ContextProvider * provider);
+  static ContextProvider * getContextProvider(void);
+
 private:
   friend class SoOffscreenRendererP;
   class SoOffscreenRendererP * pimpl;

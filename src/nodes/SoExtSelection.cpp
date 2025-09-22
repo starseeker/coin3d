@@ -86,7 +86,7 @@
 #include <config.h>
 #endif // HAVE_CONFIG_H
 
-#include "C/glue/gl.h"
+#include "glue/glp.h"
 #include "C/CoinTidbits.h"
 #include <Inventor/SbBox2s.h>
 #include <Inventor/SbBox3f.h>

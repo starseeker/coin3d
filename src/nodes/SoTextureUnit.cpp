@@ -68,7 +68,7 @@
 #include <Inventor/elements/SoGLMultiTextureEnabledElement.h>
 #include <Inventor/elements/SoGLMultiTextureMatrixElement.h>
 #include <Inventor/elements/SoGLCacheContextElement.h>
-#include "C/glue/gl.h"
+#include "glue/glp.h"
 #include <Inventor/errors/SoDebugError.h>
 
 #include "nodes/SoSubNodeP.h"

@@ -31,7 +31,7 @@
 \**************************************************************************/
 
 /*!
-  \struct cc_thread common.h Inventor/C/threads/common.h
+  \struct cc_thread threads.h src/threads/threads.h
   \ingroup coin_threads
   \brief The structure for a thread.
 */
@@ -59,7 +59,7 @@
   \brief The type definition for the return value enumerator.
 */
 
-#include "C/threads/thread.h"
+#include "threads/threads.h"
 
 #include <cstdlib>
 #include <cassert>

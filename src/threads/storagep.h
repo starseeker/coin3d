@@ -37,7 +37,7 @@
 #error this is a private header file
 #endif /* ! COIN_INTERNAL */
 
-#include "C/threads/common.h"  /* cc_storage */
+#include "threads/threads.h"
 
 #include "base/dict.h"
 #ifdef HAVE_CONFIG_H

@@ -46,6 +46,8 @@ add_executable(CoinTests
     context/test_context_callbacks.cpp
     # FBO-based rendering tests
     rendering/test_fbo_rendering.cpp
+    # Modern API tests
+    rendering/test_modern_api.cpp
     # PNG utility tests
     utils/test_png_output.cpp
     # Comprehensive testing modules - NEW FRAMEWORK
@@ -55,23 +57,26 @@ add_executable(CoinTests
     sensors/test_sensors_comprehensive.cpp
     elements/test_elements_comprehensive.cpp
     events/test_events_comprehensive.cpp
-    # TODO: Add the complete migrated test files once compilation issues are resolved:
+    # New comprehensive test modules - API coverage expansion
+    caches/test_caches_comprehensive.cpp
+    details/test_details_comprehensive.cpp
+    lists/test_lists_comprehensive.cpp
+    geo/test_geo_comprehensive.cpp
+    # Additional comprehensive test modules for increased coverage
+    shaders/test_shaders_comprehensive.cpp
+    shadows/test_shadows_comprehensive.cpp
+    manips/test_manips_safe.cpp
+    # New comprehensive test modules for missing areas
+    draggers/test_draggers_comprehensive.cpp
+    errors/test_errors_comprehensive.cpp
+    nodekits/test_nodekits_comprehensive.cpp
+    io/test_io_comprehensive.cpp
+    # TODO: Add remaining complete migrated test files once compilation issues are resolved:
     # base/test_base_complete.cpp
     # fields/test_fields_complete.cpp
     # misc/test_misc_complete.cpp
     # nodes/test_nodes_complete.cpp
     # actions/test_actions_complete.cpp
-    # geo/test_geo_complete.cpp
-    # shaders/test_shaders_complete.cpp
-    # shadows/test_shadows_complete.cpp
-    # caches/test_caches_complete.cpp
-    # details/test_details_complete.cpp
-    # elements/test_elements_complete.cpp
-    # engines/test_engines_complete.cpp
-    # events/test_events_complete.cpp
-    # lists/test_lists_complete.cpp
-    # manips/test_manips_complete.cpp
-    # sensors/test_sensors_complete.cpp
 )
 
 target_link_libraries(CoinTests

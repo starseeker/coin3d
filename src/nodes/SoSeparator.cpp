@@ -738,16 +738,14 @@ SoSeparator::GLRenderBelowPath(SoGLRenderAction * action)
       // node caused the error.
       static SbBool chkglerr = sogl_glerror_debugging();
       if (chkglerr) {
-        cc_string str;
-        cc_string_construct(&str);
-        const unsigned int errs = coin_catch_gl_errors(&str);
+        std::string glerrors;
+        const unsigned int errs = coin_catch_gl_errors(&glerrors);
         if (errs > 0) {
           SoDebugError::post("SoSeparator::GLRenderBelowPath",
                              "GL error: '%s', nodetype: %s",
-                             cc_string_get_text(&str),
+                             glerrors.c_str(),
                              (*this->children)[i]->getTypeId().getName().getString());
         }
-        cc_string_clean(&str);
       }
 #endif // COIN_DEBUG
     }

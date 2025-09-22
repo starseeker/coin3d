@@ -52,14 +52,14 @@
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
-#include "C/threads/storage.h"
+#include "threads/threads.h"
 #include <Inventor/SbImage.h>
 #include <Inventor/elements/SoGLCacheContextElement.h>
 #include <Inventor/elements/SoGLDisplayList.h>
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/system/gl.h>
 #include <Inventor/lists/SbList.h>
-#include "C/glue/gl.h"
+#include "glue/glp.h"
 #include <Inventor/misc/SoContextHandler.h>
 
 #ifdef COIN_THREADSAFE

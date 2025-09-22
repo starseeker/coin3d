@@ -68,7 +68,7 @@
 #include <cstring>
 #include <memory>
 
-#include "C/glue/gl.h"
+#include "glue/glp.h"
 #include "C/CoinTidbits.h"
 #include <Inventor/SbColor.h>
 #include <Inventor/SbPlane.h>

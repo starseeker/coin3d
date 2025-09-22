@@ -60,7 +60,7 @@
 
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/system/gl.h>
-#include "C/glue/gl.h"
+#include "glue/glp.h"
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"

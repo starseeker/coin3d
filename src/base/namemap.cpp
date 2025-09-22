@@ -35,19 +35,27 @@
 #include <cstdlib>
 #include <cassert>
 #include <cstring>
+#include <string>
+#include <functional>
 
 #include "threads/threadsutilp.h"
 #include "C/CoinTidbits.h"
-#include "C/base/string.h"
 #include "coindefs.h"
 
-#ifndef COIN_WORKAROUND_NO_USING_STD_FUNCS
-using std::malloc;
-using std::free;
-using std::strcpy;
-using std::strlen;
-using std::strcmp;
-#endif // !COIN_WORKAROUND_NO_USING_STD_FUNCS
+// Simple, reliable string hash function  
+namespace {
+  uint32_t string_hash(const char* str) {
+    if (!str) return 0;
+    
+    // djb2 hash algorithm - simple and reliable
+    uint32_t hash = 5381;
+    int c;
+    while ((c = *str++)) {
+      hash = ((hash << 5) + hash) + c; // hash * 33 + c
+    }
+    return hash;
+  }
+}
 
 /* ************************************************************************* */
 
@@ -175,7 +183,7 @@ namemap_find_or_add_string(const char * str, SbBool addifnotfound)
   if (nametable == NULL) { namemap_init(); }
   assert(nametable != static_cast<struct NamemapBucketEntry **>(NULL) && "name hash dead");
 
-  h = cc_string_hash_text(str);
+  h = string_hash(str);
   i = h % NAME_TABLE_SIZE;
   entry = nametable[i];
 

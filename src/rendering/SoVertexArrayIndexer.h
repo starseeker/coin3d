@@ -39,7 +39,7 @@
 
 #include <Inventor/lists/SbList.h>
 #include <Inventor/system/gl.h>
-#include "C/glue/gl.h"
+#include "glue/glp.h"
 #include <stdlib.h>
 
 class SoVBO;

@@ -85,7 +85,7 @@
 #include <Inventor/elements/SoTextureUnitElement.h>
 #include <Inventor/elements/SoGLCacheContextElement.h>
 #include <Inventor/system/gl.h>
-#include "C/glue/gl.h"
+#include "glue/glp.h"
 
 #include "C/CoinTidbits.h"
 #include "nodes/SoSubNodeP.h"

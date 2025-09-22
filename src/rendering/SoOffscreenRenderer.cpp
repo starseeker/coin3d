@@ -317,7 +317,7 @@
 #include <cmath> // for ceil()
 #include <climits> // SHRT_MAX
 
-#include "C/glue/gl.h"
+#include "glue/glp.h"
 #include "C/CoinTidbits.h"
 #include <Inventor/SbMatrix.h>
 #include <Inventor/SbVec2f.h>
@@ -1245,7 +1245,7 @@ SoOffscreenRenderer::writeToPostScript(FILE * fp,
   const SbVec2s scaledsize((short) ceil(size[0]*defaultdpi/dpi),
                            (short) ceil(size[1]*defaultdpi/dpi));
 
-  cc_string storedlocale;
+  std::string storedlocale;
   SbBool changed = coin_locale_set_portable(&storedlocale);
 
   fprintf(fp, "%%!PS-Adobe-2.0 EPSF-1.2\n");
@@ -1647,6 +1647,272 @@ SoOffscreenRenderer::getPbufferEnable(void) const
   // mortene.
 
   return TRUE;
+}
+
+// ======================================================================
+// Context management and OpenGL capability detection methods
+
+/*!
+  Get the current OpenGL version.
+  
+  \param[out] major Major version number
+  \param[out] minor Minor version number  
+  \param[out] release Release version number
+  
+  \since Coin 4.0
+*/
+void
+SoOffscreenRenderer::getOpenGLVersion(int & major, int & minor, int & release)
+{
+  // Ensure we have a valid OpenGL context for querying version information
+  ContextProvider * provider = getContextProvider();
+  void * temp_context = nullptr;
+  SbBool context_created = FALSE;
+  
+  if (provider) {
+    // Create a minimal temporary context for version querying
+    temp_context = provider->createOffscreenContext(32, 32);
+    if (temp_context) {
+      context_created = provider->makeContextCurrent(temp_context);
+    }
+  }
+  
+  if (context_created) {
+    const cc_glglue * glue = cc_glglue_instance(1);
+    if (glue) {
+      unsigned int maj, min, rel;
+      cc_glglue_glversion(glue, &maj, &min, &rel);
+      major = static_cast<int>(maj);
+      minor = static_cast<int>(min);
+      release = static_cast<int>(rel);
+    } else {
+      major = minor = release = 0;
+    }
+    
+    // Clean up temporary context
+    if (provider && temp_context) {
+      provider->restorePreviousContext(temp_context);
+      provider->destroyContext(temp_context);
+    }
+  } else {
+    // No context provider available or context creation failed
+    major = minor = release = 0;
+  }
+}
+
+/*!
+  Check if a specific OpenGL extension is supported.
+  
+  \param extension The extension name to check (e.g., "GL_EXT_framebuffer_object")
+  \return TRUE if the extension is supported, FALSE otherwise
+  
+  \since Coin 4.0
+*/
+SbBool
+SoOffscreenRenderer::isOpenGLExtensionSupported(const char * extension)
+{
+  if (!extension) return FALSE;
+  
+  // Ensure we have a valid OpenGL context for querying extension support
+  ContextProvider * provider = getContextProvider();
+  void * temp_context = nullptr;
+  SbBool context_created = FALSE;
+  SbBool result = FALSE;
+  
+  if (provider) {
+    // Create a minimal temporary context for extension querying
+    temp_context = provider->createOffscreenContext(32, 32);
+    if (temp_context) {
+      context_created = provider->makeContextCurrent(temp_context);
+    }
+  }
+  
+  if (context_created) {
+    const cc_glglue * glue = cc_glglue_instance(1);
+    if (glue) {
+      result = cc_glglue_glext_supported(glue, extension);
+    }
+    
+    // Clean up temporary context
+    if (provider && temp_context) {
+      provider->restorePreviousContext(temp_context);
+      provider->destroyContext(temp_context);
+    }
+  }
+  
+  return result;
+}
+
+/*!
+  Check if framebuffer object (FBO) support is available.
+  
+  \return TRUE if FBO support is available, FALSE otherwise
+  
+  \since Coin 4.0
+*/
+SbBool
+SoOffscreenRenderer::hasFramebufferObjectSupport(void)
+{
+  // Ensure we have a valid OpenGL context for querying FBO support
+  ContextProvider * provider = getContextProvider();
+  void * temp_context = nullptr;
+  SbBool context_created = FALSE;
+  SbBool result = FALSE;
+  
+  if (provider) {
+    // Create a minimal temporary context for FBO support querying
+    temp_context = provider->createOffscreenContext(32, 32);
+    if (temp_context) {
+      context_created = provider->makeContextCurrent(temp_context);
+    }
+  }
+  
+  if (context_created) {
+    const cc_glglue * glue = cc_glglue_instance(1);
+    if (glue) {
+      result = cc_glglue_has_framebuffer_objects(glue);
+    }
+    
+    // Clean up temporary context
+    if (provider && temp_context) {
+      provider->restorePreviousContext(temp_context);
+      provider->destroyContext(temp_context);
+    }
+  }
+  
+  return result;
+}
+
+/*!
+  Check if the OpenGL version is at least the specified version.
+  
+  \param major Minimum major version required
+  \param minor Minimum minor version required  
+  \param release Minimum release version required (default: 0)
+  \return TRUE if current version meets or exceeds the requirement, FALSE otherwise
+  
+  \since Coin 4.0
+*/
+SbBool
+SoOffscreenRenderer::isVersionAtLeast(int major, int minor, int release)
+{
+  // Ensure we have a valid OpenGL context for version comparison
+  ContextProvider * provider = getContextProvider();
+  void * temp_context = nullptr;
+  SbBool context_created = FALSE;
+  SbBool result = FALSE;
+  
+  if (provider) {
+    // Create a minimal temporary context for version comparison
+    temp_context = provider->createOffscreenContext(32, 32);
+    if (temp_context) {
+      context_created = provider->makeContextCurrent(temp_context);
+    }
+  }
+  
+  if (context_created) {
+    const cc_glglue * glue = cc_glglue_instance(1);
+    if (glue) {
+      result = cc_glglue_glversion_matches_at_least(glue, 
+                                                   static_cast<unsigned int>(major),
+                                                   static_cast<unsigned int>(minor), 
+                                                   static_cast<unsigned int>(release));
+    }
+    
+    // Clean up temporary context
+    if (provider && temp_context) {
+      provider->restorePreviousContext(temp_context);
+      provider->destroyContext(temp_context);
+    }
+  }
+  
+  return result;
+}
+
+// ======================================================================
+// Context provider callback support
+
+// Safe static storage for context provider using function-local static
+namespace {
+  SoOffscreenRenderer::ContextProvider *& getContextProviderRef() {
+    static SoOffscreenRenderer::ContextProvider * g_context_provider = nullptr;
+    return g_context_provider;
+  }
+  
+  // C-style callback wrapper functions - these need to be careful about null pointer access
+  void * context_provider_create_offscreen(unsigned int width, unsigned int height) {
+    SoOffscreenRenderer::ContextProvider * provider = getContextProviderRef();
+    if (provider) {
+      return provider->createOffscreenContext(width, height);
+    }
+    return nullptr;
+  }
+  
+  SbBool context_provider_make_current(void * context) {
+    SoOffscreenRenderer::ContextProvider * provider = getContextProviderRef();
+    if (provider) {
+      return provider->makeContextCurrent(context);
+    }
+    return FALSE;
+  }
+  
+  void context_provider_reinstate_previous(void * context) {
+    SoOffscreenRenderer::ContextProvider * provider = getContextProviderRef();
+    if (provider) {
+      provider->restorePreviousContext(context);
+    }
+  }
+  
+  void context_provider_destruct(void * context) {
+    SoOffscreenRenderer::ContextProvider * provider = getContextProviderRef();
+    if (provider) {
+      provider->destroyContext(context);
+    }
+  }
+}
+
+/*!
+  Set a custom context provider for offscreen rendering.
+  
+  This allows applications to provide their own context creation and management
+  implementation, which is particularly useful for testing frameworks or custom
+  rendering backends (e.g., OSMesa, EGL, etc.).
+  
+  \param provider The context provider instance, or NULL to reset to default
+  
+  \since Coin 4.0
+*/
+void
+SoOffscreenRenderer::setContextProvider(ContextProvider * provider)
+{
+  getContextProviderRef() = provider;
+  
+  if (provider) {
+    // Set up the C-style callback structure
+    static cc_glglue_offscreen_cb_functions callbacks = {
+      context_provider_create_offscreen,
+      context_provider_make_current,
+      context_provider_reinstate_previous,
+      context_provider_destruct
+    };
+    cc_glglue_context_set_offscreen_cb_functions(&callbacks);
+  } else {
+    // Reset to default (pass NULL to clear callbacks)
+    cc_glglue_context_set_offscreen_cb_functions(nullptr);
+  }
+}
+
+/*!
+  Get the currently set context provider.
+  
+  \return The current context provider, or NULL if none is set
+  
+  \since Coin 4.0
+*/
+SoOffscreenRenderer::ContextProvider *
+SoOffscreenRenderer::getContextProvider(void)
+{
+  return getContextProviderRef();
 }
 
 // *************************************************************************

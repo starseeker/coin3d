@@ -39,6 +39,7 @@
 
 /* ********************************************************************** */
 
+#include <cstdint>
 #include "fontspec.h"
 
 typedef struct cc_glyph3d cc_glyph3d;

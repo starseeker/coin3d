@@ -57,7 +57,7 @@
 #include "C/CoinTidbits.h"
 #include <Inventor/SbName.h>
 #include <Inventor/SbString.h>
-#include "C/glue/gl.h"
+#include "glue/glp.h"
 #include <Inventor/errors/SoDebugError.h>
 
 #include "misc/SbHash.h"

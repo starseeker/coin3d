@@ -45,7 +45,10 @@
  * but provides a clean C API interface for legacy code compatibility.
  */
 
-#include "C/base/string.h"
+/* ********************************************************************** */
+
+#include <Inventor/C/base/string.h>
+#include <string>
 #include <stdarg.h>
 
 #ifdef __cplusplus
@@ -60,7 +63,7 @@ extern "C" {
 #define CC_ERROR_STRUCT_DEFINED
 
 typedef struct cc_error {
-  cc_string debugstring;
+  std::string debugstring;
 } cc_error;
 
 typedef void cc_error_cb(const cc_error * err, void * data);
@@ -72,9 +75,12 @@ COIN_DLL_API void cc_error_init(cc_error * me);
 COIN_DLL_API void cc_error_clean(cc_error * me);
 COIN_DLL_API void cc_error_copy(const cc_error * src, cc_error * dst);
 
-COIN_DLL_API const cc_string * cc_error_get_debug_string(const cc_error * me);
+  /*   const SbString & getDebugString(void) const; */
+COIN_DLL_API const std::string * cc_error_get_debug_string(const cc_error * me);
 COIN_DLL_API void cc_error_set_debug_string(cc_error * me, const char * str);
 COIN_DLL_API void cc_error_append_to_debug_string(cc_error * me, const char * str);
+
+/*   static void setHandlerCallback(SoErrorCB * const func, void * const data); */
 
 COIN_DLL_API void cc_error_set_handler_callback(cc_error_cb * func, void * data);
 COIN_DLL_API cc_error_cb * cc_error_get_handler_callback(void);

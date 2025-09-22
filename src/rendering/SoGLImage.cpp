@@ -196,7 +196,7 @@
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
-#include "C/glue/gl.h"
+#include "glue/glp.h"
 #include "C/CoinTidbits.h"
 #include <Inventor/SbImage.h>
 #include <Inventor/actions/SoGLRenderAction.h>

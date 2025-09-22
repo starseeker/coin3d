@@ -51,7 +51,7 @@
 #include <cstring>
 #include <cassert>
 
-#include "C/glue/gl.h"
+#include "glue/glp.h"
 #include <Inventor/caches/SoGLRenderCache.h>
 #include <Inventor/elements/SoCacheElement.h>
 #include <Inventor/elements/SoGLCacheContextElement.h>

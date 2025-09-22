@@ -50,7 +50,7 @@
 
 #include <Inventor/nodes/SoNode.h>
 #include <Inventor/lists/SbList.h>
-#include "C/glue/gl.h"
+#include "glue/glp.h"
 #include <Inventor/system/gl.h>
 
 #include "coindefs.h"

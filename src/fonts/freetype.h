@@ -49,7 +49,7 @@
 /* ********************************************************************** */
 
 #include "Inventor/C/basic.h"
-#include "C/base/string.h"
+#include <string>
 
 #ifdef __cplusplus
 extern "C" {
@@ -59,7 +59,7 @@ extern "C" {
   void cc_flwft_exit(void);
 
   void * cc_flwft_get_font(const char * fontname, unsigned int pixelsize);
-  void cc_flwft_get_font_name(void * font, cc_string * str);
+  void cc_flwft_get_font_name(void * font, std::string * str);
   void cc_flwft_done_font(void * font);
 
   int cc_flwft_get_num_charmaps(void * font);

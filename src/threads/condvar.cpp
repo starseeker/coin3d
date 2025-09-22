@@ -31,7 +31,7 @@
 \**************************************************************************/
 
 /*!
-  \struct cc_condvar common.h Inventor/C/threads/common.h
+  \struct cc_condvar threads.h src/threads/threads.h
   \ingroup coin_threads
   \brief The structure for a conditional variable.
 */
@@ -42,7 +42,7 @@
   \brief The type definition for the conditional variable structure.
 */
 
-#include "C/threads/condvar.h"
+#include "threads/threads.h"
 
 #include <cstdlib>
 #include <cassert>
@@ -55,7 +55,7 @@
 #include <unistd.h>
 #endif /* HAVE_UNISTD_H */
 
-#include "C/threads/mutex.h"
+
 #include "errors/CoinInternalError.h"
 
 // C++17 includes for modern threading

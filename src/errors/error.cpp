@@ -60,6 +60,8 @@
 
 #include <cstdio>
 #include <cassert>
+#include <string>
+#include <cstdarg>
 #ifdef HAVE_UNISTD_H
 #include <unistd.h> /* STDERR_FILENO */
 #endif /* HAVE_UNISTD_H */
@@ -99,8 +101,8 @@ cc_error_default_handler_cb(const cc_error * err, void * COIN_UNUSED_ARG(data))
   FILE * coin_stderr = coin_get_stderr();
 
   if (coin_stderr) {
-    const cc_string * str = cc_error_get_debug_string(err);
-    (void)fprintf(coin_stderr, "%s\n", cc_string_get_text(str));
+    const std::string * str = cc_error_get_debug_string(err);
+    (void)fprintf(coin_stderr, "%s\n", str->c_str());
     (void)fflush(coin_stderr);
   }
 }
@@ -124,7 +126,8 @@ cc_error_cleanup(void)
 void
 cc_error_init(cc_error * me)
 {
-  cc_string_construct(&(me->debugstring));
+  // std::string is default-constructed to empty string
+  // No explicit initialization needed
 }
 
 /*!
@@ -134,7 +137,8 @@ cc_error_init(cc_error * me)
 void
 cc_error_clean(cc_error * me)
 {
-  cc_string_clean(&(me->debugstring));
+  // std::string automatically cleans up
+  // No explicit cleanup needed
 }
 
 /*!
@@ -144,7 +148,7 @@ cc_error_clean(cc_error * me)
 void
 cc_error_copy(const cc_error * src, cc_error * dst)
 {
-  cc_string_set_string(&dst->debugstring, &src->debugstring);
+  dst->debugstring = src->debugstring;
 }
 
 /*!
@@ -154,7 +158,7 @@ cc_error_copy(const cc_error * src, cc_error * dst)
 void
 cc_error_set_debug_string(cc_error * me, const char * str)
 {
-  cc_string_set_text(&(me->debugstring), str);
+  me->debugstring = str ? str : "";
 }
 
 /*!
@@ -164,7 +168,9 @@ cc_error_set_debug_string(cc_error * me, const char * str)
 void
 cc_error_append_to_debug_string(cc_error * me, const char * str)
 {
-  cc_string_append_text(&(me->debugstring), str);
+  if (str) {
+    me->debugstring += str;
+  }
 }
 
 /*!
@@ -241,7 +247,7 @@ cc_error_get_handler(void ** data)
   \relates cc_error
 */
 
-const cc_string *
+const std::string *
 cc_error_get_debug_string(const cc_error * me)
 {
   return &(me->debugstring);
@@ -254,19 +260,29 @@ cc_error_get_debug_string(const cc_error * me)
 void
 cc_error_post_arglist(const char * format, va_list args)
 {
-  cc_string s;
+  // Use modern C++17 vsnprintf approach for string formatting
+  va_list args_copy;
+  va_copy(args_copy, args);
+  
+  // First, determine the required buffer size
+  int size = std::vsnprintf(nullptr, 0, format, args) + 1;
+  if (size <= 0) {
+    va_end(args_copy);
+    return; // Invalid format string
+  }
+  
+  // Create string with appropriate size and format into it
+  std::string formatted_string(size, '\0');
+  std::vsnprintf(&formatted_string[0], size, format, args_copy);
+  formatted_string.resize(size - 1); // Remove the null terminator
+  
+  va_end(args_copy);
+  
   cc_error err;
-
-  cc_string_construct(&s);
-
-  cc_string_vsprintf(&s, format, args);
-
   cc_error_init(&err);
-  cc_error_set_debug_string(&err, cc_string_get_text(&s));
+  cc_error_set_debug_string(&err, formatted_string.c_str());
   cc_error_handle(&err);
   cc_error_clean(&err);
-
-  cc_string_clean(&s);
 }
 
 /*!

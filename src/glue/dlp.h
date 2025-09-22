@@ -34,7 +34,11 @@
 \**************************************************************************/
 
 /* Functions internal to the library, related to the dynamic linking
-   interface. */
+   interface. 
+   
+   This header consolidates functionality from src/C/glue/dl.h which was
+   previously part of the public API. The functionality has been moved to
+   internal implementation details to reduce the public API footprint. */
 
 /* ********************************************************************** */
 
@@ -43,7 +47,6 @@
 #endif /* ! COIN_INTERNAL */
 
 #include "Inventor/C/basic.h"
-#include "C/glue/dl.h"
 
 /* ********************************************************************** */
 
@@ -57,6 +60,9 @@ extern "C" {
 
 /* ********************************************************************** */
 
+/* Forward declaration of cc_libhandle */
+typedef struct cc_libhandle_struct * cc_libhandle;
+
 SbBool cc_dl_available(void);
 
 cc_libhandle cc_dl_handle_with_gl_symbols(void);
@@ -64,6 +70,14 @@ cc_libhandle cc_dl_handle_with_gl_symbols(void);
 cc_libhandle cc_dl_process_handle(void);
 cc_libhandle cc_dl_coin_handle(void);
 cc_libhandle cc_dl_opengl_handle(void);
+
+/* ********************************************************************** */
+
+/* Public API functions moved from src/C/glue/dl.h for internal use only */
+
+cc_libhandle cc_dl_open(const char * filename);
+void * cc_dl_sym(cc_libhandle handle, const char * symbolname);
+void cc_dl_close(cc_libhandle handle);
 
 /* ********************************************************************** */
 

@@ -45,17 +45,39 @@ static void * createInstance(void)
 
 // Tests for SoType class (ported from src/misc/SoType.cpp)
 TEST_CASE("SoType tests", "[misc][SoType]") {
-    CoinTestFixture fixture;
+
+    SECTION("basic type operations") {
+        // Test basic SoType functionality without createType/removeType
+        SoType badType = SoType::badType();
+        CHECK(badType == SoType::badType());
+
+        SoType nodeType = SoNode::getClassTypeId();
+        CHECK(nodeType != SoType::badType());
+    }
 
     SECTION("testRemoveType") {
-        CHECK(SoType::fromName(SbName("MyClass")) == SoType::badType());
-        
-        SoType newtype = SoType::createType(SoNode::getClassTypeId(), SbName("MyClass"), createInstance, 0);
+        // Test each step one by one to isolate the issue
+
+        // Step 1: Create SbName
+        SbName className("MyClass");
+        CHECK(true); // If we get here, SbName creation is OK
+
+        // Try to get badType first to ensure SoType system is working
+        SoType badType = SoType::badType();
+        CHECK(badType == SoType::badType()); // If we get here, basic SoType is OK
+
+        // Step 2: Call SoType::fromName - THIS IS WHERE THE SEGFAULT HAPPENS
+        SoType existing = SoType::fromName(className);
+
+        // Step 3: Check if it's badType
+        CHECK(existing == SoType::badType());
+
+        SoType newtype = SoType::createType(SoNode::getClassTypeId(), className, createInstance, 0);
         (void)newtype; // Variable needed for type registration but not used afterwards
-        CHECK(SoType::fromName(SbName("MyClass")) != SoType::badType());
-        
-        bool success = SoType::removeType(SbName("MyClass"));
+        CHECK(SoType::fromName(className) != SoType::badType());
+
+        bool success = SoType::removeType(className);
         CHECK(success);
-        CHECK(SoType::fromName(SbName("MyClass")) == SoType::badType());
+        CHECK(SoType::fromName(className) == SoType::badType());
     }
 }

@@ -2524,20 +2524,18 @@ SoInput::findFile(const char * basename, SbString & fullname)
   const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_SOINPUT_FINDFILE");
   const SbBool DEBUG_FILE_SEARCHING = env && (atoi(env) > 0);
   if (DEBUG_FILE_SEARCHING) {
-    cc_string str;
-    cc_string_construct(&str);
-    SbBool ok = coin_getcwd(&str);
+    std::string cwd;
+    SbBool ok = coin_getcwd(&cwd);
     if (!ok) {
       SoDebugError::post("SoInput::findFile",
                          "Couldn't get current working directory: %s",
-                         cc_string_get_text(&str));
+                         cwd.c_str());
     }
     else {
       SoDebugError::postInfo("SoInput::findFile",
                              "Current working directory: '%s'",
-                             cc_string_get_text(&str));
+                             cwd.c_str());
     }
-    cc_string_clean(&str);
   }
 
   SbStringList sl = SoInput::getDirectories();
@@ -2581,13 +2579,11 @@ SoInput::findFile(const char * basename, SbString & fullname)
   // it.
   SbBool foundbutcouldntopen = fullname.getLength() > 0;
   if (!foundbutcouldntopen) {
-    cc_string str;
-    cc_string_construct(&str);
-    SbBool ok = coin_getcwd(&str);
+    std::string cwd;
+    SbBool ok = coin_getcwd(&cwd);
     fullname.sprintf("Could not find '%s' in any of the "
                      "following directories (from cwd '%s'):",
-                     basename, ok ? cc_string_get_text(&str) : "<unknown>");
-    cc_string_clean(&str);
+                     basename, ok ? cwd.c_str() : "<unknown>");
 
     for (int diridx = 0; diridx < sl.getLength(); diridx++) {
       fullname += "\n\t'";

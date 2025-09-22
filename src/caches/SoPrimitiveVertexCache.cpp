@@ -52,7 +52,7 @@
 #include <cstdlib>
 #include <cstring>
 
-#include "C/glue/gl.h"
+#include "glue/glp.h"
 #include "C/CoinTidbits.h"
 #include <Inventor/SbVec3f.h>
 #include <Inventor/SoPrimitiveVertex.h>

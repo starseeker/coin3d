@@ -34,7 +34,9 @@
 \**************************************************************************/
 
 #include <Inventor/elements/SoLazyElement.h>
-#include <Inventor/C/glue/gl.h>
+
+/* Forward declaration */
+struct cc_glglue;
 
 class SoGLRenderCache;
 class SoGLLazyElementP;

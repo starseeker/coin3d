@@ -68,7 +68,7 @@
 #include <Inventor/elements/SoTextureUnitElement.h>
 #include <Inventor/elements/SoGLCacheContextElement.h>
 #include <Inventor/elements/SoShapeStyleElement.h>
-#include "C/glue/gl.h"
+#include "glue/glp.h"
 
 #include "nodes/SoSubNodeP.h"
 
