@@ -66,6 +66,11 @@ add_executable(CoinTests
     shaders/test_shaders_comprehensive.cpp
     shadows/test_shadows_comprehensive.cpp
     manips/test_manips_safe.cpp
+    # New comprehensive test modules for missing areas
+    draggers/test_draggers_comprehensive.cpp
+    errors/test_errors_comprehensive.cpp
+    nodekits/test_nodekits_comprehensive.cpp
+    io/test_io_comprehensive.cpp
     # TODO: Add remaining complete migrated test files once compilation issues are resolved:
     # base/test_base_complete.cpp
     # fields/test_fields_complete.cpp
