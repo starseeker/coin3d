@@ -36,6 +36,8 @@
 #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
+#include <string>
+
 /* ************************************************************************* */
 
 #ifdef __cplusplus
@@ -69,7 +71,7 @@ cc_flwct_get_font(const char * fontname, unsigned int pixelsize)
 }
 
 void
-cc_flwct_get_font_name(void * font, cc_string * str)
+cc_flwct_get_font_name(void * font, std::string * str)
 {}
 
 void

@@ -39,7 +39,7 @@
 
 /* ********************************************************************** */
 
-#include "C/base/string.h"
+#include <string>
 
 #ifdef __cplusplus
 extern "C" {
@@ -47,8 +47,8 @@ extern "C" {
 
   typedef struct {
     float size;
-    cc_string name;  
-    cc_string style; /* 'Bold', 'Italic' or 'Bold Italic' */
+    std::string name;  
+    std::string style; /* 'Bold', 'Italic' or 'Bold Italic' */
 
     float complexity;  /* detail level for vector glyphs
 

@@ -45,6 +45,7 @@ static void * createInstance(void)
 
 // Tests for SoType class (ported from src/misc/SoType.cpp)
 TEST_CASE("SoType tests", "[misc][SoType]") {
+
     SECTION("basic type operations") {
         // Test basic SoType functionality without createType/removeType
         SoType badType = SoType::badType();
@@ -72,6 +73,6 @@ TEST_CASE("SoType tests", "[misc][SoType]") {
 
         bool success = SoType::removeType(className);
         CHECK(success);
-        CHECK(SoType::fromName(SbName("MyClass")) == SoType::badType());
+        CHECK(SoType::fromName(className) == SoType::badType());
     }
 }
