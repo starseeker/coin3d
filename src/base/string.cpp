@@ -45,6 +45,7 @@
 
 #include "coindefs.h"
 #include "misc/SoEnvironment.h"
+#include "utf8/utf8.h"
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
@@ -551,142 +552,173 @@ cc_string_vsprintf(cc_string * me, const char * formatstr, va_list args)
 size_t
 cc_string_utf8_decode(const char * src, size_t srclen, uint32_t * value)
 {
-  const unsigned char * s = reinterpret_cast<const unsigned char *>(src);
+  static const int disable_utf8 = (CoinInternal::getEnvironmentVariableRaw("COIN_DISABLE_UTF8") != NULL);
+  
+  if (disable_utf8) {
+    // Fall back to simple ASCII interpretation
+    if (srclen > 0) {
+      *value = static_cast<uint8_t>(*src);
+      return 1;
+    }
+    return 0;
+  }
 
-  if ((s[0] & 0x80) == 0x00) {                    // Check s[0] == 0xxxxxxx
-    *value = s[0];
-    return 1;
-  }
-  if ((srclen < 2) || ((s[1] & 0xC0) != 0x80)) {  // Check s[1] != 10xxxxxx
+  try {
+    // Use utf8 library for robust decoding
+    // Convert to string iterators for the utf8 library
+    std::string temp_str(src, srclen);
+    auto iter = temp_str.cbegin();
+    
+    // Decode using utf8 library
+    char32_t decoded_char = utf8::next(iter, temp_str.cend());
+    
+    if (decoded_char == utf8::REPLACEMENT_CHARACTER) {
+      // Invalid UTF-8 sequence
+      return 0;
+    }
+    
+    *value = static_cast<uint32_t>(decoded_char);
+    return static_cast<size_t>(std::distance(temp_str.cbegin(), iter));
+    
+  } catch (const utf8::exception&) {
+    // UTF-8 decoding failed
     return 0;
   }
-  // Accumulate the trailer byte values in value16, and combine it with the
-  // relevant bits from s[0], once we've determined the sequence length.
-  uint32_t value16 = (s[1] & 0x3F);
-  if ((s[0] & 0xE0) == 0xC0) {                    // Check s[0] == 110xxxxx
-    *value = ((s[0] & 0x1F) << 6) | value16;
-    return 2;
-  }
-  if ((srclen < 3) || ((s[2] & 0xC0) != 0x80)) {  // Check s[2] != 10xxxxxx
-    return 0;
-  }
-  value16 = (value16 << 6) | (s[2] & 0x3F);
-  if ((s[0] & 0xF0) == 0xE0) {                    // Check s[0] == 1110xxxx
-    *value = ((s[0] & 0x0F) << 12) | value16;
-    return 3;
-  }
-  if ((srclen < 4) || ((s[3] & 0xC0) != 0x80)) {  // Check s[3] != 10xxxxxx
-    return 0;
-  }
-  value16 = (value16 << 6) | (s[3] & 0x3F);
-  if ((s[0] & 0xF8) == 0xF0) {                    // Check s[0] == 11110xxx
-    *value = ((s[0] & 0x07) << 18) | value16;
-    return 4;
-  }
-  return 0;
 }
 
 size_t
 cc_string_utf8_encode(char * buffer, size_t buflen, uint32_t value)
 {
-  if ((value <= 0x7F) && (buflen >= 1)) {
-    buffer[0] = static_cast<unsigned char>(value);
-    return 1;
+  static const int disable_utf8 = (CoinInternal::getEnvironmentVariableRaw("COIN_DISABLE_UTF8") != NULL);
+  
+  if (disable_utf8) {
+    // Fall back to simple ASCII encoding
+    if (buflen >= 1 && value <= 0x7F) {
+      buffer[0] = static_cast<unsigned char>(value);
+      return 1;
+    }
+    return 0;
   }
-  if ((value <= 0x7FF) && (buflen >= 2)) {
-    buffer[0] = 0xC0 | static_cast<unsigned char>(value >> 6);
-    buffer[1] = 0x80 | static_cast<unsigned char>(value & 0x3F);
-    return 2;
+
+  try {
+    // Use utf8 library for robust encoding
+    std::string encoded = utf8::narrow(static_cast<char32_t>(value));
+    
+    if (encoded.length() > buflen) {
+      // Buffer too small
+      return 0;
+    }
+    
+    std::memcpy(buffer, encoded.c_str(), encoded.length());
+    return encoded.length();
+    
+  } catch (const utf8::exception&) {
+    // UTF-8 encoding failed
+    return 0;
   }
-  if ((value <= 0xFFFF) && (buflen >= 3)) {
-    buffer[0] = 0xE0 | static_cast<unsigned char>(value >> 12);
-    buffer[1] = 0x80 | static_cast<unsigned char>((value >> 6) & 0x3F);
-    buffer[2] = 0x80 | static_cast<unsigned char>(value & 0x3F);
-    return 3;
-  }
-  if ((value <= 0x1FFFFF) && (buflen >= 4)) {
-    buffer[0] = 0xF0 | static_cast<unsigned char>(value >> 18);
-    buffer[1] = 0x80 | static_cast<unsigned char>((value >> 12) & 0x3F);
-    buffer[2] = 0x80 | static_cast<unsigned char>((value >> 6) & 0x3F);
-    buffer[3] = 0x80 | static_cast<unsigned char>(value & 0x3F);
-    return 4;
-  }
-  return 0;
 }
 
 uint32_t
 cc_string_utf8_get_char(const char * str)
 {
   static const int disable_utf8 = (CoinInternal::getEnvironmentVariableRaw("COIN_DISABLE_UTF8") != NULL);
-  uint32_t value = 0;
-  size_t declen = 0;
 
   if (disable_utf8) {
-    value = static_cast<uint8_t>(*str);
-  } else {
-    declen = cc_string_utf8_decode(str, strlen(str), &value);
-    if (!declen) {
-      cc_debugerror_postinfo("cc_string_utf8_get_char",
-			     "UTF-8 decoding of string \"%s\" failed.\n\n"
-			     "To disable UTF-8 support and fall back to pre"
-			     "Coin 4.0 behavior, set the\nenvironment variable "
-			     "COIN_DISABLE_UTF8=1 and re-run the application.\n", str);
-    }
+    return static_cast<uint8_t>(*str);
   }
-  return value;
+
+  try {
+    // Use utf8 library for robust character extraction
+    char32_t decoded_char = utf8::rune(str);
+    
+    if (decoded_char == utf8::REPLACEMENT_CHARACTER) {
+      cc_debugerror_postinfo("cc_string_utf8_get_char",
+                           "UTF-8 decoding of string \"%s\" failed.\n\n"
+                           "To disable UTF-8 support and fall back to pre"
+                           "Coin 4.0 behavior, set the\nenvironment variable "
+                           "COIN_DISABLE_UTF8=1 and re-run the application.\n", str);
+    }
+    
+    return static_cast<uint32_t>(decoded_char);
+    
+  } catch (const utf8::exception&) {
+    cc_debugerror_postinfo("cc_string_utf8_get_char",
+                         "UTF-8 decoding of string \"%s\" failed.\n\n"
+                         "To disable UTF-8 support and fall back to pre"
+                         "Coin 4.0 behavior, set the\nenvironment variable "
+                         "COIN_DISABLE_UTF8=1 and re-run the application.\n", str);
+    return 0;
+  }
 }
 
 const char *
 cc_string_utf8_next_char(const char * str)
 {
   static const int disable_utf8 = (CoinInternal::getEnvironmentVariableRaw("COIN_DISABLE_UTF8") != NULL);
-  uint32_t value = 0;
-  size_t declen = 0;
 
   if (disable_utf8) {
-    declen = 1;
-  } else {
-    declen = cc_string_utf8_decode(str, strlen(str), &value);
-    if (!declen) {
-      cc_debugerror_postinfo("cc_string_utf8_get_char",
-			     "UTF-8 decoding of string \"%s\" failed.\n\n"
-			     "To disable UTF-8 support and fall back to pre"
-			     "Coin 4.0 behavior, set the\nenvironment variable "
-			     "COIN_DISABLE_UTF8=1 and re-run the application.\n", str);
-    }
+    return str + 1;
   }
-  return str+declen;
+
+  try {
+    // Use utf8 library for robust character advancement
+    const char* ptr = str;
+    char32_t decoded_char = utf8::next(ptr);
+    
+    if (decoded_char == utf8::REPLACEMENT_CHARACTER) {
+      cc_debugerror_postinfo("cc_string_utf8_next_char",
+                           "UTF-8 decoding of string \"%s\" failed.\n\n"
+                           "To disable UTF-8 support and fall back to pre"
+                           "Coin 4.0 behavior, set the\nenvironment variable "
+                           "COIN_DISABLE_UTF8=1 and re-run the application.\n", str);
+    }
+    
+    return ptr;
+    
+  } catch (const utf8::exception&) {
+    cc_debugerror_postinfo("cc_string_utf8_next_char",
+                         "UTF-8 decoding of string \"%s\" failed.\n\n"
+                         "To disable UTF-8 support and fall back to pre"
+                         "Coin 4.0 behavior, set the\nenvironment variable "
+                         "COIN_DISABLE_UTF8=1 and re-run the application.\n", str);
+    return str + 1; // Fallback: advance by one byte
+  }
 }
 
 size_t
 cc_string_utf8_validate_length(const char * str)
 {
   static const int disable_utf8 = (CoinInternal::getEnvironmentVariableRaw("COIN_DISABLE_UTF8") != NULL);
-  const char * s = str;
-  size_t declen = 0;
-  size_t srclen = strlen(str);
-  size_t utf8len = 0;
-  uint32_t value = 0;
 
   if (disable_utf8) {
-    utf8len = srclen;
-  } else {
-    while (srclen) {
-      if (!(declen = cc_string_utf8_decode(s, srclen, &value))) {
-	cc_debugerror_postinfo("cc_string_utf8_get_char",
-			       "UTF-8 decoding of string \"%s\" failed.\n\n"
-			       "To disable UTF-8 support and fall back to pre"
-			       "Coin 4.0 behavior, set the\nenvironment variable "
-			       "COIN_DISABLE_UTF8=1 and re-run the application.\n", str);
-	return 0;
-      }
-      srclen -= declen;
-      s += declen;
-      ++utf8len;
-    }
+    return strlen(str);
   }
 
-  return utf8len;
+  try {
+    // Use utf8 library for robust character counting
+    std::string s(str);
+    
+    // Validate the string first
+    if (!utf8::valid_str(s)) {
+      cc_debugerror_postinfo("cc_string_utf8_validate_length",
+                           "UTF-8 validation of string \"%s\" failed.\n\n"
+                           "To disable UTF-8 support and fall back to pre"
+                           "Coin 4.0 behavior, set the\nenvironment variable "
+                           "COIN_DISABLE_UTF8=1 and re-run the application.\n", str);
+      return 0;
+    }
+    
+    // Return the character count (not byte count)
+    return utf8::length(s);
+    
+  } catch (const utf8::exception&) {
+    cc_debugerror_postinfo("cc_string_utf8_validate_length",
+                         "UTF-8 processing of string \"%s\" failed.\n\n"
+                         "To disable UTF-8 support and fall back to pre"
+                         "Coin 4.0 behavior, set the\nenvironment variable "
+                         "COIN_DISABLE_UTF8=1 and re-run the application.\n", str);
+    return 0;
+  }
 }
 
 
