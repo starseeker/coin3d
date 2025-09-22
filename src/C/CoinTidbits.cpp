@@ -758,7 +758,7 @@ FILE* coin_get_stderr(void)
 /* ********************************************************************** */
 /* Locale functions */
 
-SbBool coin_locale_set_portable(cc_string* storeold)
+SbBool coin_locale_set_portable(std::string* storeold)
 {
     const char* loc;
     
@@ -767,8 +767,7 @@ SbBool coin_locale_set_portable(cc_string* storeold)
         return COIN_FALSE;
     }
     
-    cc_string_construct(storeold);
-    cc_string_set_text(storeold, deflocale);
+    *storeold = deflocale;
     
     loc = setlocale(LC_NUMERIC, "C");
     assert(loc != NULL && "could not set locale to supposed portable C locale");
@@ -776,12 +775,12 @@ SbBool coin_locale_set_portable(cc_string* storeold)
     return COIN_TRUE;
 }
 
-void coin_locale_reset(cc_string* storedold)
+void coin_locale_reset(std::string* storedold)
 {
-    const char* l = setlocale(LC_NUMERIC, cc_string_get_text(storedold));
+    const char* l = setlocale(LC_NUMERIC, storedold->c_str());
     assert(l != NULL && "could not reset locale");
     (void)l; // suppress unused variable warning in release builds
-    cc_string_clean(storedold);
+    storedold->clear();
 }
 
 double coin_atof(const char* ptr)
