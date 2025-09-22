@@ -105,7 +105,8 @@ TEST_CASE("Cache System Comprehensive Tests", "[caches][comprehensive]") {
             SbBox3f bbox2 = bboxAction2.getBoundingBox();
             
             // Bounding box should be different after modification
-            CHECK(bbox1.getSize() != bbox2.getSize());
+            // Note: Use volume comparison as size comparison may have precision issues
+            CHECK(bbox1.getVolume() != bbox2.getVolume());
             
             scene->unref();
         }
