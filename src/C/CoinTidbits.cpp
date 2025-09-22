@@ -86,6 +86,8 @@
 #include <direct.h>
 #endif /* HAVE_DIRECT_H */
 
+#include <string>
+
 #include "C/base/string.h"
 #include "base/list.h"
 #include "errors/CoinInternalError.h"
@@ -785,7 +787,7 @@ void coin_locale_reset(cc_string* storedold)
 double coin_atof(const char* ptr)
 {
     double v;
-    cc_string storedlocale;
+    std::string storedlocale;
     SbBool changed = coin_locale_set_portable(&storedlocale);
     v = atof(ptr);
     if (changed) {
@@ -938,7 +940,7 @@ SbBool coin_parse_versionstring(const char* versionstr,
 #define getcwd_wrapper(buf, size) NULL
 #endif
 
-SbBool coin_getcwd(cc_string* str)
+SbBool coin_getcwd(std::string* str)
 {
     char buf[256], * dynbuf = NULL;
     size_t bufsize = sizeof(buf);
@@ -951,9 +953,9 @@ SbBool coin_getcwd(cc_string* str)
         cwd = getcwd_wrapper(dynbuf, bufsize);
     }
     if (cwd == NULL) {
-        cc_string_set_text(str, strerror(errno));
+        *str = strerror(errno);
     } else {
-        cc_string_set_text(str, cwd);
+        *str = cwd;
     }
     
     free(dynbuf);
