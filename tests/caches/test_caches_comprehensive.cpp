@@ -94,10 +94,10 @@ TEST_CASE("Cache System Comprehensive Tests", "[caches][comprehensive]") {
             bboxAction1.apply(scene);
             SbBox3f bbox1 = bboxAction1.getBoundingBox();
             
-            // Modify the scene
-            cube->width.setValue(2.0f);
-            cube->height.setValue(2.0f);
-            cube->depth.setValue(2.0f);
+            // Modify the scene to different size
+            cube->width.setValue(4.0f);
+            cube->height.setValue(4.0f);
+            cube->depth.setValue(4.0f);
             
             // Apply action again - cache should be invalidated and rebuilt
             SoGetBoundingBoxAction bboxAction2(SbViewportRegion(100, 100));
