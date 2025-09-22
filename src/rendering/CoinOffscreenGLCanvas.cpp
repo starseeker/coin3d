@@ -563,24 +563,6 @@ CoinOffscreenGLCanvas::allowResourcehog(void)
 SbBool
 CoinOffscreenGLCanvas::initializeFBO(void)
 {
-#ifdef COIN3D_OSMESA_BUILD
-  // Check if OSMesa FBO support is explicitly enabled
-  static const char* osmesa_fbo_env = coin_getenv("COIN_OSMESA_USE_FBO");
-  if (!osmesa_fbo_env || (strcmp(osmesa_fbo_env, "1") != 0 && strcmp(osmesa_fbo_env, "true") != 0)) {
-    // FBO not enabled for OSMesa - this should not be called
-    if (CoinOffscreenGLCanvas::debug()) {
-      SoDebugError::postInfo("CoinOffscreenGLCanvas::initializeFBO",
-                             "FBO initialization called but OSMesa FBO support not enabled");
-    }
-    return FALSE;
-  }
-  
-  if (CoinOffscreenGLCanvas::debug()) {
-    SoDebugError::postInfo("CoinOffscreenGLCanvas::initializeFBO",
-                          "OSMesa FBO support enabled - proceeding with FBO initialization");
-  }
-#endif
-
   if (this->fbo_initialized) { return TRUE; }
   
   // Ensure the context is current before calling cc_glglue_instance
@@ -592,21 +574,6 @@ CoinOffscreenGLCanvas::initializeFBO(void)
     return FALSE;
   }
   
-  // Additional debugging for OSMesa builds
-#ifdef COIN3D_OSMESA_BUILD
-  if (CoinOffscreenGLCanvas::debug()) {
-    const char* version = (const char*)glGetString(GL_VERSION);
-    const char* vendor = (const char*)glGetString(GL_VENDOR);
-    SoDebugError::postInfo("CoinOffscreenGLCanvas::initializeFBO",
-                          "OpenGL context info: %s, %s", 
-                          version ? version : "(null)",
-                          vendor ? vendor : "(null)");
-    SoDebugError::postInfo("CoinOffscreenGLCanvas::initializeFBO",
-                          "About to call cc_glglue_instance with context ID: %d", 
-                          static_cast<int>(this->renderid));
-  }
-#endif
-  
   // Get the current glglue instance to access FBO functions
   const cc_glglue * glue = cc_glglue_instance(static_cast<int>(this->renderid));
   if (!glue) {
@@ -617,49 +584,17 @@ CoinOffscreenGLCanvas::initializeFBO(void)
     return FALSE;
   }
   
-#ifdef COIN3D_OSMESA_BUILD
-  if (CoinOffscreenGLCanvas::debug()) {
-    SoDebugError::postInfo("CoinOffscreenGLCanvas::initializeFBO",
-                          "cc_glglue_instance succeeded, checking FBO support");
-  }
-#endif
-  
   // Check if FBO extension is supported
-#ifdef COIN3D_OSMESA_BUILD
-  if (CoinOffscreenGLCanvas::debug()) {
-    SoDebugError::postInfo("CoinOffscreenGLCanvas::initializeFBO",
-                          "About to check cc_glglue_has_framebuffer_objects");
-  }
-#endif
   if (!cc_glglue_has_framebuffer_objects(glue)) {
-#ifdef COIN3D_OSMESA_BUILD
-    if (CoinOffscreenGLCanvas::debug()) {
-      SoDebugError::post("CoinOffscreenGLCanvas::initializeFBO",
-                         "FBO extension not detected by cc_glglue, but OSMesa should support it. "
-                         "This might indicate a context binding issue.");
-    }
-#endif
     if (CoinOffscreenGLCanvas::debug()) {
       SoDebugError::post("CoinOffscreenGLCanvas::initializeFBO",
                          "GL_EXT_framebuffer_object extension not supported");
     }
     return FALSE;
   }
-#ifdef COIN3D_OSMESA_BUILD
-  if (CoinOffscreenGLCanvas::debug()) {
-    SoDebugError::postInfo("CoinOffscreenGLCanvas::initializeFBO",
-                          "FBO extension check passed, about to generate framebuffer");
-  }
-#endif
   
   // Generate framebuffer object
   cc_glglue_glGenFramebuffers(glue, 1, &this->fbo);
-#ifdef COIN3D_OSMESA_BUILD
-  if (CoinOffscreenGLCanvas::debug()) {
-    SoDebugError::postInfo("CoinOffscreenGLCanvas::initializeFBO",
-                          "cc_glglue_glGenFramebuffers returned, fbo=%u", this->fbo);
-  }
-#endif
   if (this->fbo == 0) {
     if (CoinOffscreenGLCanvas::debug()) {
       SoDebugError::post("CoinOffscreenGLCanvas::initializeFBO",
@@ -739,19 +674,6 @@ CoinOffscreenGLCanvas::initializeFBO(void)
 void
 CoinOffscreenGLCanvas::cleanupFBO(void)
 {
-#ifdef COIN3D_OSMESA_BUILD
-  // Check if OSMesa FBO support is explicitly enabled
-  static const char* osmesa_fbo_env = coin_getenv("COIN_OSMESA_USE_FBO");
-  if (!osmesa_fbo_env || (strcmp(osmesa_fbo_env, "1") != 0 && strcmp(osmesa_fbo_env, "true") != 0)) {
-    // OSMesa contexts don't use FBO - no cleanup needed
-    if (CoinOffscreenGLCanvas::debug()) {
-      SoDebugError::postInfo("CoinOffscreenGLCanvas::cleanupFBO",
-                             "Skipping FBO cleanup for OSMesa build");
-    }
-    return;
-  }
-#endif
-
   if (!this->fbo_initialized) { return; }
   
   const cc_glglue * glue = cc_glglue_instance(static_cast<int>(this->renderid));
@@ -783,21 +705,6 @@ CoinOffscreenGLCanvas::cleanupFBO(void)
 SbBool
 CoinOffscreenGLCanvas::bindFBO(void)
 {
-#ifdef COIN3D_OSMESA_BUILD
-  // Check if OSMesa FBO support is explicitly enabled
-  static const char* osmesa_fbo_env = coin_getenv("COIN_OSMESA_USE_FBO");
-  if (!osmesa_fbo_env || (strcmp(osmesa_fbo_env, "1") != 0 && strcmp(osmesa_fbo_env, "true") != 0)) {
-    // OSMesa contexts are inherently offscreen and don't need FBO by default
-    // Skip FBO operations to avoid compatibility issues unless explicitly enabled
-    if (CoinOffscreenGLCanvas::debug()) {
-      SoDebugError::postInfo("CoinOffscreenGLCanvas::bindFBO",
-                             "Skipping FBO operations for OSMesa build - using native offscreen rendering. "
-                             "Set COIN_OSMESA_USE_FBO=1 to enable FBO support.");
-    }
-    return TRUE;
-  }
-#endif
-
   if (!this->fbo_initialized) {
     if (!this->initializeFBO()) {
       return FALSE;
@@ -818,19 +725,6 @@ CoinOffscreenGLCanvas::bindFBO(void)
 void
 CoinOffscreenGLCanvas::unbindFBO(void)
 {
-#ifdef COIN3D_OSMESA_BUILD
-  // Check if OSMesa FBO support is explicitly enabled
-  static const char* osmesa_fbo_env = coin_getenv("COIN_OSMESA_USE_FBO");
-  if (!osmesa_fbo_env || (strcmp(osmesa_fbo_env, "1") != 0 && strcmp(osmesa_fbo_env, "true") != 0)) {
-    // OSMesa contexts don't use FBO - no need to unbind
-    if (CoinOffscreenGLCanvas::debug()) {
-      SoDebugError::postInfo("CoinOffscreenGLCanvas::unbindFBO",
-                             "Skipping FBO unbind for OSMesa build");
-    }
-    return;
-  }
-#endif
-
   const cc_glglue * glue = cc_glglue_instance(static_cast<int>(this->renderid));
   if (!glue) { return; }
   
