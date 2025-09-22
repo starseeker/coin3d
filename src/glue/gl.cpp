@@ -683,6 +683,16 @@ glglue_set_glVersion(cc_glglue * w)
   w->version.minor = 0;
   w->version.release = 0;
 
+  /* Safely handle null or empty version string */
+  if (w->versionstr == NULL || strlen(w->versionstr) == 0) {
+    /* No valid GL context or version string - set defaults and return */
+    if (coin_glglue_debug()) {
+      cc_debugerror_postinfo("glglue_set_glVersion",
+                             "No valid GL version string available - using defaults");
+    }
+    return;
+  }
+
   (void)strncpy(buffer, (const char *)w->versionstr, 255);
   buffer[255] = '\0'; /* strncpy() will not null-terminate if strlen > 255 */
   dotptr = strchr(buffer, '.');
