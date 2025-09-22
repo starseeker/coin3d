@@ -241,9 +241,9 @@ TEST_CASE("List System Comprehensive Tests", "[lists][comprehensive]") {
             vecList.append(vec3);
             
             CHECK(vecList.getLength() == 3);
-            CHECK(vecList[0] == vec1);
-            CHECK(vecList[1] == vec2);
-            CHECK(vecList[2] == vec3);
+            CHECK(*vecList[0] == *vec1);
+            CHECK(*vecList[1] == *vec2);
+            CHECK(*vecList[2] == *vec3);
             
             // Test vector access (dereference pointers for operations)
             SbVec3f sum = *vec1 + *vec2 + *vec3;

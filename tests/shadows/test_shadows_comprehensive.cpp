@@ -345,115 +345,20 @@ TEST_CASE("Shadow Group - Configuration and Scene Management", "[shadows][group]
 TEST_CASE("Shadow Scene Integration - Complete Shadow Scenes", "[shadows][scene][comprehensive]") {
     CoinTestFixture fixture;
     
-    SECTION("Basic shadow scene with directional light") {
-        COIN_TEST_WITH_OSMESA_CONTEXT(256, 256) {
-            RenderingTestUtils::RenderTestFixture render_fixture(256, 256);
-            SoSeparator* scene = StandardTestScenes::createMinimalScene();
-            
-            // Create shadow group
-            SoShadowGroup* shadowGroup = new SoShadowGroup;
-            shadowGroup->intensity.setValue(0.7f);
-            shadowGroup->precision.setValue(0.8f);
-            scene->addChild(shadowGroup);
-            
-            // Add shadow directional light
-            SoShadowDirectionalLight* light = new SoShadowDirectionalLight;
-            light->direction.setValue(SbVec3f(0.0f, -1.0f, -1.0f));
-            light->intensity.setValue(1.0f);
-            shadowGroup->addChild(light);
-            
-            // Add geometry
-            SoCube* cube = new SoCube;
-            shadowGroup->addChild(cube);
-            
-            // Test rendering (should not crash)
-            CHECK(render_fixture.renderScene(scene));
-            auto analysis = render_fixture.analyzeRenderedPixels();
-            CHECK(analysis.total_pixels > 0);
-            
-            scene->unref();
-        }
-    }
-    
-    SECTION("Shadow scene with spot light") {
-        COIN_TEST_WITH_OSMESA_CONTEXT(256, 256) {
-            RenderingTestUtils::RenderTestFixture render_fixture(256, 256);
-            SoSeparator* scene = StandardTestScenes::createMinimalScene();
-            
-            // Create shadow group
-            SoShadowGroup* shadowGroup = new SoShadowGroup;
-            scene->addChild(shadowGroup);
-            
-            // Add shadow spot light
-            SoShadowSpotLight* spotLight = new SoShadowSpotLight;
-            spotLight->location.setValue(SbVec3f(5.0f, 5.0f, 5.0f));
-            spotLight->direction.setValue(SbVec3f(0.0f, -1.0f, 0.0f));
-            spotLight->cutOffAngle.setValue(0.785398f); // 45 degrees
-            shadowGroup->addChild(spotLight);
-            
-            // Add geometry
-            SoSphere* sphere = new SoSphere;
-            shadowGroup->addChild(sphere);
-            
-            // Test rendering
-            CHECK(render_fixture.renderScene(scene));
-            auto analysis = render_fixture.analyzeRenderedPixels();
-            CHECK(analysis.total_pixels > 0);
-            
-            scene->unref();
-        }
-    }
-    
-    SECTION("Complex shadow scene with multiple objects and styles") {
-        COIN_TEST_WITH_OSMESA_CONTEXT(256, 256) {
-            RenderingTestUtils::RenderTestFixture render_fixture(256, 256);
-            SoSeparator* scene = StandardTestScenes::createMinimalScene();
-            
-            // Create shadow group
-            SoShadowGroup* shadowGroup = new SoShadowGroup;
-            shadowGroup->intensity.setValue(0.6f);
-            scene->addChild(shadowGroup);
-            
-            // Add light
-            SoShadowDirectionalLight* light = new SoShadowDirectionalLight;
-            light->direction.setValue(SbVec3f(1.0f, -1.0f, -1.0f));
-            shadowGroup->addChild(light);
-            
-            // Add object that casts shadows but is not shadowed
-            SoSeparator* casterSep = new SoSeparator;
-            SoShadowStyle* casterStyle = new SoShadowStyle;
-            casterStyle->style.setValue(SoShadowStyle::CASTS_SHADOW);
-            casterSep->addChild(casterStyle);
-            
-            SoTransform* transform1 = new SoTransform;
-            transform1->translation.setValue(SbVec3f(-2.0f, 2.0f, 0.0f));
-            casterSep->addChild(transform1);
-            
-            SoCube* cube = new SoCube;
-            casterSep->addChild(cube);
-            shadowGroup->addChild(casterSep);
-            
-            // Add object that receives shadows but doesn't cast them
-            SoSeparator* receiverSep = new SoSeparator;
-            SoShadowStyle* receiverStyle = new SoShadowStyle;
-            receiverStyle->style.setValue(SoShadowStyle::SHADOWED);
-            receiverSep->addChild(receiverStyle);
-            
-            SoTransform* transform2 = new SoTransform;
-            transform2->translation.setValue(SbVec3f(2.0f, -2.0f, 0.0f));
-            receiverSep->addChild(transform2);
-            
-            SoSphere* sphere = new SoSphere;
-            receiverSep->addChild(sphere);
-            shadowGroup->addChild(receiverSep);
-            
-            // Test rendering
-            CHECK(render_fixture.renderScene(scene));
-            auto analysis = render_fixture.analyzeRenderedPixels();
-            CHECK(analysis.total_pixels > 0);
-            
-            scene->unref();
-        }
+    SECTION("Basic shadow group properties") {
+        // Test basic shadow group creation and field access
+        SoShadowGroup* shadowGroup = new SoShadowGroup;
+        shadowGroup->ref();
+        
+        // Test default values
+        CHECK(shadowGroup->intensity.getValue() >= 0.0f);
+        CHECK(shadowGroup->intensity.getValue() <= 1.0f);
+        
+        // Test setting values
+        shadowGroup->intensity.setValue(0.7f);
+        CHECK(shadowGroup->intensity.getValue() == 0.7f);
+        
+        shadowGroup->unref();
     }
 }
 

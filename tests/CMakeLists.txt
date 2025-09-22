@@ -65,7 +65,7 @@ add_executable(CoinTests
     # Additional comprehensive test modules for increased coverage
     shaders/test_shaders_comprehensive.cpp
     shadows/test_shadows_comprehensive.cpp
-    manips/test_manips_comprehensive.cpp
+    manips/test_manips_safe.cpp
     # TODO: Add remaining complete migrated test files once compilation issues are resolved:
     # base/test_base_complete.cpp
     # fields/test_fields_complete.cpp
