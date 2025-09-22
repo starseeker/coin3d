@@ -1664,14 +1664,38 @@ SoOffscreenRenderer::getPbufferEnable(void) const
 void
 SoOffscreenRenderer::getOpenGLVersion(int & major, int & minor, int & release)
 {
-  const cc_glglue * glue = cc_glglue_instance(1);
-  if (glue) {
-    unsigned int maj, min, rel;
-    cc_glglue_glversion(glue, &maj, &min, &rel);
-    major = static_cast<int>(maj);
-    minor = static_cast<int>(min);
-    release = static_cast<int>(rel);
+  // Ensure we have a valid OpenGL context for querying version information
+  ContextProvider * provider = getContextProvider();
+  void * temp_context = nullptr;
+  SbBool context_created = FALSE;
+  
+  if (provider) {
+    // Create a minimal temporary context for version querying
+    temp_context = provider->createOffscreenContext(32, 32);
+    if (temp_context) {
+      context_created = provider->makeContextCurrent(temp_context);
+    }
+  }
+  
+  if (context_created) {
+    const cc_glglue * glue = cc_glglue_instance(1);
+    if (glue) {
+      unsigned int maj, min, rel;
+      cc_glglue_glversion(glue, &maj, &min, &rel);
+      major = static_cast<int>(maj);
+      minor = static_cast<int>(min);
+      release = static_cast<int>(rel);
+    } else {
+      major = minor = release = 0;
+    }
+    
+    // Clean up temporary context
+    if (provider && temp_context) {
+      provider->restorePreviousContext(temp_context);
+      provider->destroyContext(temp_context);
+    }
   } else {
+    // No context provider available or context creation failed
     major = minor = release = 0;
   }
 }
@@ -1687,11 +1711,36 @@ SoOffscreenRenderer::getOpenGLVersion(int & major, int & minor, int & release)
 SbBool
 SoOffscreenRenderer::isOpenGLExtensionSupported(const char * extension)
 {
-  const cc_glglue * glue = cc_glglue_instance(1);
-  if (glue && extension) {
-    return cc_glglue_glext_supported(glue, extension);
+  if (!extension) return FALSE;
+  
+  // Ensure we have a valid OpenGL context for querying extension support
+  ContextProvider * provider = getContextProvider();
+  void * temp_context = nullptr;
+  SbBool context_created = FALSE;
+  SbBool result = FALSE;
+  
+  if (provider) {
+    // Create a minimal temporary context for extension querying
+    temp_context = provider->createOffscreenContext(32, 32);
+    if (temp_context) {
+      context_created = provider->makeContextCurrent(temp_context);
+    }
   }
-  return FALSE;
+  
+  if (context_created) {
+    const cc_glglue * glue = cc_glglue_instance(1);
+    if (glue) {
+      result = cc_glglue_glext_supported(glue, extension);
+    }
+    
+    // Clean up temporary context
+    if (provider && temp_context) {
+      provider->restorePreviousContext(temp_context);
+      provider->destroyContext(temp_context);
+    }
+  }
+  
+  return result;
 }
 
 /*!
@@ -1704,11 +1753,34 @@ SoOffscreenRenderer::isOpenGLExtensionSupported(const char * extension)
 SbBool
 SoOffscreenRenderer::hasFramebufferObjectSupport(void)
 {
-  const cc_glglue * glue = cc_glglue_instance(1);
-  if (glue) {
-    return cc_glglue_has_framebuffer_objects(glue);
+  // Ensure we have a valid OpenGL context for querying FBO support
+  ContextProvider * provider = getContextProvider();
+  void * temp_context = nullptr;
+  SbBool context_created = FALSE;
+  SbBool result = FALSE;
+  
+  if (provider) {
+    // Create a minimal temporary context for FBO support querying
+    temp_context = provider->createOffscreenContext(32, 32);
+    if (temp_context) {
+      context_created = provider->makeContextCurrent(temp_context);
+    }
   }
-  return FALSE;
+  
+  if (context_created) {
+    const cc_glglue * glue = cc_glglue_instance(1);
+    if (glue) {
+      result = cc_glglue_has_framebuffer_objects(glue);
+    }
+    
+    // Clean up temporary context
+    if (provider && temp_context) {
+      provider->restorePreviousContext(temp_context);
+      provider->destroyContext(temp_context);
+    }
+  }
+  
+  return result;
 }
 
 /*!
@@ -1724,14 +1796,37 @@ SoOffscreenRenderer::hasFramebufferObjectSupport(void)
 SbBool
 SoOffscreenRenderer::isVersionAtLeast(int major, int minor, int release)
 {
-  const cc_glglue * glue = cc_glglue_instance(1);
-  if (glue) {
-    return cc_glglue_glversion_matches_at_least(glue, 
-                                               static_cast<unsigned int>(major),
-                                               static_cast<unsigned int>(minor), 
-                                               static_cast<unsigned int>(release));
+  // Ensure we have a valid OpenGL context for version comparison
+  ContextProvider * provider = getContextProvider();
+  void * temp_context = nullptr;
+  SbBool context_created = FALSE;
+  SbBool result = FALSE;
+  
+  if (provider) {
+    // Create a minimal temporary context for version comparison
+    temp_context = provider->createOffscreenContext(32, 32);
+    if (temp_context) {
+      context_created = provider->makeContextCurrent(temp_context);
+    }
   }
-  return FALSE;
+  
+  if (context_created) {
+    const cc_glglue * glue = cc_glglue_instance(1);
+    if (glue) {
+      result = cc_glglue_glversion_matches_at_least(glue, 
+                                                   static_cast<unsigned int>(major),
+                                                   static_cast<unsigned int>(minor), 
+                                                   static_cast<unsigned int>(release));
+    }
+    
+    // Clean up temporary context
+    if (provider && temp_context) {
+      provider->restorePreviousContext(temp_context);
+      provider->destroyContext(temp_context);
+    }
+  }
+  
+  return result;
 }
 
 // ======================================================================
