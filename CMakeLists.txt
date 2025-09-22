@@ -33,6 +33,18 @@ if(PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
   message(FATAL_ERROR "${CMAKE_PROJECT_NAME} requires an out-of-source build. Please create a separate build directory and run 'cmake <path_to_${CMAKE_PROJECT_NAME}> [options]' from there.")
 endif()
 
+# Make sure submodules are initialized
+if (NOT EXISTS ${PROJECT_SOURCE_DIR}/external/osmesa/CMakeLists.txt)
+  find_program(GIT_EXECUTABLE git)
+  if (NOT GIT_EXECUTABLE)
+    message(FATAL_ERROR "Need to populate Git submodule, but unable to find git executable")
+  endif (NOT GIT_EXECUTABLE)
+  execute_process(
+    COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive ${PROJECT_SOURCE_DIR}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+endif()
+
 # Set C++ standard requirements
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
