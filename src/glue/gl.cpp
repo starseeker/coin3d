@@ -620,7 +620,7 @@ cc_glglue_getprocaddress(const cc_glglue * glue, const char * symname)
      This is the proper way to load OpenGL extensions in OSMesa according to
      the OSMesa glew examples. */
   if (ptr == NULL) {
-    ptr = OSMesaGetProcAddress(symname);
+    ptr = (void*)OSMesaGetProcAddress(symname);
     if (coin_glglue_debug()) {
       cc_debugerror_postinfo("cc_glglue_getprocaddress", "OSMesaGetProcAddress('%s') == %p", symname, ptr);
     }

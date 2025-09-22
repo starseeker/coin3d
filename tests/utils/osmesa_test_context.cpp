@@ -108,8 +108,8 @@ bool OSMesaTestContext::makeCurrent() {
         const char* extensions = (const char*)glGetString(GL_EXTENSIONS);
         if (extensions && strstr(extensions, "GL_EXT_framebuffer_object")) {
             // Extension is in the string, ensure functions are loadable
-            void* genFBO = OSMesaGetProcAddress("glGenFramebuffersEXT");
-            void* bindFBO = OSMesaGetProcAddress("glBindFramebufferEXT"); 
+            void* genFBO = (void*)OSMesaGetProcAddress("glGenFramebuffersEXT");
+            void* bindFBO = (void*)OSMesaGetProcAddress("glBindFramebufferEXT"); 
             if (genFBO && bindFBO) {
                 std::cout << "OSMesa FBO functions successfully detected" << std::endl;
             }

@@ -49,8 +49,8 @@ struct OSMesaContextData {
             }
             
             // Verify key FBO functions are available through OSMesa
-            void* genFramebuffers = OSMesaGetProcAddress("glGenFramebuffersEXT");
-            void* bindFramebuffer = OSMesaGetProcAddress("glBindFramebufferEXT");
+            void* genFramebuffers = (void*)OSMesaGetProcAddress("glGenFramebuffersEXT");
+            void* bindFramebuffer = (void*)OSMesaGetProcAddress("glBindFramebufferEXT");
             std::cout << "OSMesa FBO functions - glGenFramebuffersEXT: " << genFramebuffers 
                       << ", glBindFramebufferEXT: " << bindFramebuffer << std::endl;
         }
@@ -87,8 +87,8 @@ static SbBool osmesa_make_current(void* context) {
                 std::cout << "✓ GL_EXT_framebuffer_object detected in OSMesa context" << std::endl;
                 
                 // Test function availability like OSMesa glew example
-                void* genFBO = OSMesaGetProcAddress("glGenFramebuffersEXT");
-                void* bindFBO = OSMesaGetProcAddress("glBindFramebufferEXT");
+                void* genFBO = (void*)OSMesaGetProcAddress("glGenFramebuffersEXT");
+                void* bindFBO = (void*)OSMesaGetProcAddress("glBindFramebufferEXT");
                 std::cout << "OSMesa FBO functions: glGenFramebuffersEXT=" << genFBO 
                           << ", glBindFramebufferEXT=" << bindFBO << std::endl;
             } else {
