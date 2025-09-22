@@ -10,6 +10,9 @@
 #include <Inventor/actions/SoGLRenderAction.h>
 #include <Inventor/SbViewportRegion.h>
 
+// Include glue system for context management and extension detection
+#include "glue/glp.h"
+
 // OSMesa Context wrapper struct
 struct OSMesaContextData {
     OSMesaContext context;
@@ -34,7 +37,24 @@ struct OSMesaContextData {
     }
     
     bool makeCurrent() {
-        return OSMesaMakeCurrent(context, buffer.get(), GL_UNSIGNED_BYTE, width, height) == GL_TRUE;
+        bool result = OSMesaMakeCurrent(context, buffer.get(), GL_UNSIGNED_BYTE, width, height) == GL_TRUE;
+        if (result) {
+            // After making context current, we need to ensure extensions are available
+            // This is equivalent to what glewInit() does in the OSMesa glew example
+            
+            // Force loading of extension string to trigger extension detection
+            const char* extensions = (const char*)glGetString(GL_EXTENSIONS);
+            if (extensions && strstr(extensions, "GL_EXT_framebuffer_object")) {
+                std::cout << "OSMesa context detected GL_EXT_framebuffer_object extension" << std::endl;
+            }
+            
+            // Verify key FBO functions are available through OSMesa
+            void* genFramebuffers = OSMesaGetProcAddress("glGenFramebuffersEXT");
+            void* bindFramebuffer = OSMesaGetProcAddress("glBindFramebufferEXT");
+            std::cout << "OSMesa FBO functions - glGenFramebuffersEXT: " << genFramebuffers 
+                      << ", glBindFramebufferEXT: " << bindFramebuffer << std::endl;
+        }
+        return result;
     }
 };
 
@@ -57,6 +77,26 @@ static SbBool osmesa_make_current(void* context) {
     bool result = ctx->makeCurrent();
     if (result) {
         std::cout << "Made OSMesa context current" << std::endl;
+        
+        // Crucial: After making context current, verify extension detection works
+        // This is equivalent to what happens after glewInit() in OSMesa glew examples
+        const char* extensions = (const char*)glGetString(GL_EXTENSIONS);
+        if (extensions) {
+            std::cout << "Extension string available, length: " << strlen(extensions) << std::endl;
+            if (strstr(extensions, "GL_EXT_framebuffer_object")) {
+                std::cout << "✓ GL_EXT_framebuffer_object detected in OSMesa context" << std::endl;
+                
+                // Test function availability like OSMesa glew example
+                void* genFBO = OSMesaGetProcAddress("glGenFramebuffersEXT");
+                void* bindFBO = OSMesaGetProcAddress("glBindFramebufferEXT");
+                std::cout << "OSMesa FBO functions: glGenFramebuffersEXT=" << genFBO 
+                          << ", glBindFramebufferEXT=" << bindFBO << std::endl;
+            } else {
+                std::cout << "✗ GL_EXT_framebuffer_object NOT found in extensions" << std::endl;
+            }
+        } else {
+            std::cout << "✗ No extension string available" << std::endl;
+        }
     } else {
         std::cerr << "Failed to make OSMesa context current" << std::endl;
     }
@@ -80,10 +120,8 @@ static void osmesa_destruct(void* context) {
 int main() {
     std::cout << "Testing OSMesa context management with Coin3D" << std::endl;
     
-    // Initialize Coin3D
-    SoDB::init();
-    
-    // Set up OSMesa callback functions
+    // Set up OSMesa callback functions BEFORE SoDB::init()
+    // This ensures callbacks are available when Coin3D initializes OpenGL glue
     cc_glglue_offscreen_cb_functions osmesa_callbacks = {
         osmesa_create_offscreen,
         osmesa_make_current,
@@ -91,8 +129,11 @@ int main() {
         osmesa_destruct
     };
     
-    // Register our OSMesa callbacks with Coin3D
+    // Register our OSMesa callbacks with Coin3D BEFORE initialization
     cc_glglue_context_set_offscreen_cb_functions(&osmesa_callbacks);
+    
+    // Now initialize Coin3D - this will use our callbacks for any OpenGL context needs
+    SoDB::init();
     
     // Test creating an offscreen context through Coin3D's API
     void* ctx = cc_glglue_context_create_offscreen(256, 256);
@@ -109,9 +150,45 @@ int main() {
         return 1;
     }
     
+    // Force OpenGL extension detection by getting a glue instance
+    // This triggers extension loading similar to what glewInit() does
+    uint32_t contextid = 1; // Use a simple context ID
+    const cc_glglue* glue = cc_glglue_instance(contextid);
+    if (!glue) {
+        std::cerr << "Failed to get cc_glglue instance" << std::endl;
+        cc_glglue_context_destruct(ctx);
+        return 1;
+    }
+    
     // Test basic OpenGL functionality
     GLenum error = glGetError(); // Clear any pending errors
     
+    // Test extension detection - this is the core of the issue
+    std::cout << "Testing FBO extension detection:" << std::endl;
+    
+    // Check if extensions are loaded properly
+    const GLubyte* extensions = glGetString(GL_EXTENSIONS);
+    if (extensions && strstr((const char*)extensions, "GL_EXT_framebuffer_object")) {
+        std::cout << "✓ GL_EXT_framebuffer_object found in extensions string" << std::endl;
+    } else {
+        std::cout << "✗ GL_EXT_framebuffer_object NOT found in extensions string" << std::endl;
+        if (!extensions) {
+            std::cout << "  Extensions string is NULL" << std::endl;
+        }
+    }
+    
+    // Test Coin3D's extension detection
+    if (cc_glglue_has_framebuffer_objects(glue)) {
+        std::cout << "✓ Coin3D cc_glglue_has_framebuffer_objects: TRUE" << std::endl;
+    } else {
+        std::cout << "✗ Coin3D cc_glglue_has_framebuffer_objects: FALSE" << std::endl;
+    }
+    
+    // Test direct function loading like OSMesa glew example
+    void* glGenFramebuffersEXT_func = cc_glglue_getprocaddress(glue, "glGenFramebuffersEXT");
+    std::cout << "cc_glglue_getprocaddress('glGenFramebuffersEXT'): " << glGenFramebuffersEXT_func << std::endl;
+    
+    // Continue with basic OpenGL functionality tests
     const GLubyte* version = glGetString(GL_VERSION);
     error = glGetError();
     if (error == GL_NO_ERROR && version) {

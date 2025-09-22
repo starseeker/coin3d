@@ -615,6 +615,16 @@ cc_glglue_getprocaddress(const cc_glglue * glue, const char * symname)
       free(mgl_name);
     }
   }
+  
+  /* If shared library lookup failed, try OSMesaGetProcAddress for extensions.
+     This is the proper way to load OpenGL extensions in OSMesa according to
+     the OSMesa glew examples. */
+  if (ptr == NULL) {
+    ptr = OSMesaGetProcAddress(symname);
+    if (coin_glglue_debug()) {
+      cc_debugerror_postinfo("cc_glglue_getprocaddress", "OSMesaGetProcAddress('%s') == %p", symname, ptr);
+    }
+  }
 #endif
 
   if (coin_glglue_debug()) {

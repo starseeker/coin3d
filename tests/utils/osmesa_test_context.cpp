@@ -98,7 +98,24 @@ OSMesaTestContext& OSMesaTestContext::operator=(OSMesaTestContext&& other) noexc
 
 bool OSMesaTestContext::makeCurrent() {
     if (!context_ || !buffer_) return false;
-    return OSMesaMakeCurrent(context_, buffer_.get(), GL_UNSIGNED_BYTE, width_, height_);
+    
+    bool result = OSMesaMakeCurrent(context_, buffer_.get(), GL_UNSIGNED_BYTE, width_, height_);
+    if (result) {
+        // After making context current, ensure OpenGL extensions are properly detected
+        // This is crucial for FBO support detection - equivalent to glewInit() in OSMesa examples
+        
+        // Verify extensions are available
+        const char* extensions = (const char*)glGetString(GL_EXTENSIONS);
+        if (extensions && strstr(extensions, "GL_EXT_framebuffer_object")) {
+            // Extension is in the string, ensure functions are loadable
+            void* genFBO = OSMesaGetProcAddress("glGenFramebuffersEXT");
+            void* bindFBO = OSMesaGetProcAddress("glBindFramebufferEXT"); 
+            if (genFBO && bindFBO) {
+                std::cout << "OSMesa FBO functions successfully detected" << std::endl;
+            }
+        }
+    }
+    return result;
 }
 
 bool OSMesaTestContext::saveToPPM(const std::string& filename) const {
