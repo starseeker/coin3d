@@ -26,6 +26,7 @@ include_directories(BEFORE
   "${PROJECT_SOURCE_DIR}/include/Inventor/annex"
   "${PROJECT_BINARY_DIR}/src/shadows"
   "${PROJECT_SOURCE_DIR}"
+  "${PROJECT_SOURCE_DIR}/external/utf8/include"
 )
 
 # add include dirs for non targets

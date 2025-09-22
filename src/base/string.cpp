@@ -39,6 +39,7 @@
 #include <cstring>
 #include <string>
 #include <algorithm>
+#include "utf8/utf8.h"
 
 #include "errors/CoinInternalError.h"
 
@@ -713,30 +714,17 @@ void cc_string_set_wtext(cc_string * me, const wchar_t * text)
       ::WideCharToMultiByte(CP_UTF8, 0, text, -1, me->pointer, newsize, nullptr, nullptr);
     }
     #else
-    // Use C++17 approach for UTF-32 to UTF-8 conversion
-    if (sizeof(wchar_t) == 4) {
-      // Convert wchar_t string to UTF-8 using modern C++ approach
-      std::string utf8_result;
-      const wchar_t * readptr = text;
-      
-      while (*readptr) {
-        char utf8_buffer[5] = {0}; // Max 4 bytes + null terminator
-        size_t encoded = cc_string_utf8_encode(utf8_buffer, 4, static_cast<uint32_t>(*readptr));
-        if (encoded > 0) {
-          utf8_result.append(utf8_buffer, encoded);
-        }
-        ++readptr;
-      }
-      
+    // Use neacsum/utf8 library for proper wide character to UTF-8 conversion
+    try {
+      std::string utf8_result = utf8::narrow(text);
       const size_t needed_size = utf8_result.length() + 1;
       if (needed_size > me->bufsize) {
         cc_string_grow_buffer(me, needed_size);
       }
       std::strcpy(me->pointer, utf8_result.c_str());
-    } else {
+    } catch (const utf8::exception&) {
       cc_debugerror_postinfo("cc_string_set_wtext",
-                 "UTF-8 encoding of wide string failed "
-                 "(unsupported wchar_t size).\n\n"
+                 "UTF-8 encoding of wide string failed using neacsum/utf8 library.\n\n"
                  "To disable UTF-8 support and fall back to pre-"
                  "Coin 4.0 behavior, set the\nenvironment variable "
                  "COIN_DISABLE_UTF8=1 and re-run the application.\n");
