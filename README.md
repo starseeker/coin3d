@@ -11,6 +11,10 @@ in the scientific and engineering community after its release.
 Coin is based on this API, but was developed from
 scratch independently before SGI Open Inventor became open source.
 
+**Note**: This branch implements strict context management requiring a `ContextManager*` 
+parameter for `SoDB::init()`. See `docs/CONTEXT_MANAGEMENT_API.md` for details on the 
+new public API.
+
 ## What is Obol?
 
 The name Obol itself is a reference to an ancient small denomination Greek coin

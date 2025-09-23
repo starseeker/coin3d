@@ -39,10 +39,35 @@
 
 using namespace SIM::Coin3D::Coin;
 
+// Simple null context manager for legacy test suite
+// This allows tests to run without rendering capabilities
+class LegacyTestContextManager : public SoDB::ContextManager {
+public:
+    virtual void* createOffscreenContext(unsigned int width, unsigned int height) override {
+        (void)width; (void)height;
+        return nullptr; // No rendering context available
+    }
+    
+    virtual SbBool makeContextCurrent(void* context) override {
+        (void)context;
+        return FALSE; // No context to make current
+    }
+    
+    virtual void restorePreviousContext(void* context) override {
+        (void)context;
+        // No-op
+    }
+    
+    virtual void destroyContext(void* context) override {
+        (void)context;
+        // No-op
+    }
+};
 
 int main(int argc, char* argv[])
 {
-    SoDB::init();
+    LegacyTestContextManager contextManager;
+    SoDB::init(&contextManager);
     SoInteraction::init();
     TestSuite::Init();
 
