@@ -41,6 +41,7 @@
 #include "utils/test_common.h"
 #include "utils/osmesa_test_context.h"
 #include "utils/scene_graph_test_utils.h"
+#include <iostream>
 
 // Core cache classes
 #include <Inventor/caches/SoCache.h>
@@ -145,12 +146,28 @@ TEST_CASE("Cache System Comprehensive Tests", "[caches][comprehensive]") {
         }
     }
     
+    SECTION("Debug cache scene creation") {
+        std::cout << "Debug: About to create scene..." << std::endl;
+        auto scene = StandardTestScenes::createBasicGeometryScene();
+        std::cout << "Debug: Scene created: " << scene << std::endl;
+        
+        if (scene) {
+            std::cout << "Debug: Scene has " << scene->getNumChildren() << " children" << std::endl;
+            scene->unref();
+            std::cout << "Debug: Scene unreferenced successfully" << std::endl;
+        }
+    }
+    
     SECTION("Normal cache tests") {
         SECTION("Normal generation and caching") {
+            std::cout << "Debug: Normal cache test starting..." << std::endl;
             auto scene = StandardTestScenes::createBasicGeometryScene();
+            std::cout << "Debug: Scene created for normal cache test" << std::endl;
             
             COIN_TEST_WITH_OSMESA_CONTEXT(256, 256) {
+                std::cout << "Debug: About to create RenderTestFixture..." << std::endl;
                 RenderingTestUtils::RenderTestFixture render_fixture(256, 256);
+                std::cout << "Debug: RenderTestFixture created" << std::endl;
                 
                 // Render to trigger normal cache creation
                 CHECK(render_fixture.renderScene(scene));
