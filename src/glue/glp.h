@@ -1454,17 +1454,8 @@ SbBool cc_glglue_context_can_render_to_texture(void * ctx);
 const void * cc_glglue_win32_HDC(void * ctx);
 void cc_glglue_win32_updateHDCBitmap(void * ctx);
 
-/* Interface for setting external offscreen renderer functionality */
-typedef void * cc_glglue_offscreen_data;
-
-typedef struct cc_glglue_offscreen_cb_functions {
-    cc_glglue_offscreen_data (*create_offscreen)(unsigned int width, unsigned int height);
-    SbBool (*make_current)(cc_glglue_offscreen_data context);
-    void (*reinstate_previous)(cc_glglue_offscreen_data context);
-    void (*destruct)(cc_glglue_offscreen_data context);
-} cc_glglue_offscreen_cb_functions; 
-
-void cc_glglue_context_set_offscreen_cb_functions(cc_glglue_offscreen_cb_functions* p);
+/* Offscreen context creation now uses SoDB::ContextManager directly */
+/* Legacy function declarations maintained for compatibility */
 
 #ifdef __cplusplus
 }

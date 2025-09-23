@@ -22,6 +22,13 @@ The Coin3D library uses **explicit Catch2-based tests** as the primary testing s
 
 ## Running Tests
 
+### Build Requirements
+
+**Important**: The new API requires that all applications (including tests) provide a `ContextManager*` to `SoDB::init()`. The test framework automatically handles this:
+
+- **OSMesa builds**: Uses `OSMesaContextManager` for real offscreen rendering  
+- **Non-OSMesa builds**: Uses `NullContextManager` for API testing without rendering
+
 ### Run All Tests
 ```bash
 # Build the project first

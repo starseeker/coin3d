@@ -38,6 +38,7 @@
 #include <iostream>
 #include <fstream>
 #include <cstring>
+#include <Inventor/SoDB.h>
 
 namespace CoinTestUtils {
 
@@ -98,7 +99,24 @@ OSMesaTestContext& OSMesaTestContext::operator=(OSMesaTestContext&& other) noexc
 
 bool OSMesaTestContext::makeCurrent() {
     if (!context_ || !buffer_) return false;
-    return OSMesaMakeCurrent(context_, buffer_.get(), GL_UNSIGNED_BYTE, width_, height_);
+    
+    bool result = OSMesaMakeCurrent(context_, buffer_.get(), GL_UNSIGNED_BYTE, width_, height_);
+    if (result) {
+        // After making context current, ensure OpenGL extensions are properly detected
+        // This is crucial for FBO support detection - equivalent to glewInit() in OSMesa examples
+        
+        // Verify extensions are available
+        const char* extensions = (const char*)glGetString(GL_EXTENSIONS);
+        if (extensions && strstr(extensions, "GL_EXT_framebuffer_object")) {
+            // Extension is in the string, ensure functions are loadable
+            void* genFBO = (void*)OSMesaGetProcAddress("glGenFramebuffersEXT");
+            void* bindFBO = (void*)OSMesaGetProcAddress("glBindFramebufferEXT"); 
+            if (genFBO && bindFBO) {
+                std::cout << "OSMesa FBO functions successfully detected" << std::endl;
+            }
+        }
+    }
+    return result;
 }
 
 bool OSMesaTestContext::saveToPPM(const std::string& filename) const {
@@ -149,8 +167,8 @@ void OSMesaTestContext::cleanup() {
 // OSMesaCallbackManager Implementation  
 // ============================================================================
 
-// Modern C++ ContextProvider implementation for OSMesa
-class OSMesaCallbackManager::OSMesaContextProvider : public SoOffscreenRenderer::ContextProvider {
+// OSMesa ContextManager implementation for SoDB::init()
+class OSMesaCallbackManager::OSMesaContextManager : public SoDB::ContextManager {
 public:
     virtual void * createOffscreenContext(unsigned int width, unsigned int height) override {
         auto* context = new OSMesaTestContext(width, height);
@@ -180,14 +198,14 @@ public:
 };
 
 OSMesaCallbackManager::OSMesaCallbackManager() 
-    : provider_(std::make_unique<OSMesaContextProvider>())
-    , originalProvider_(SoOffscreenRenderer::getContextProvider()) {
-    SoOffscreenRenderer::setContextProvider(provider_.get());
+    : context_manager_(std::make_unique<OSMesaContextManager>()) {
+    // Set up the context manager via SoDB::init()
+    SoDB::init(context_manager_.get());
 }
 
 OSMesaCallbackManager::~OSMesaCallbackManager() {
-    // Restore original context provider
-    SoOffscreenRenderer::setContextProvider(originalProvider_);
+    // Context manager will be automatically cleaned up when the unique_ptr is destroyed
+    // SoDB will continue to use the context manager until the library is shut down
 }
 
 // ============================================================================

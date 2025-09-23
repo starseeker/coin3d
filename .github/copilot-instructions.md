@@ -14,18 +14,14 @@
 
 ### Essential Dependencies
 - **CMake 3.0+** (tested with 3.31.6) - primary build system
-- **Boost 1.45.0+** (header-only libraries sufficient)
-- **OpenGL** and **GLU** libraries
-- **freeglut3-dev** (Linux) - for OpenGL context management
-- **X11 libraries** (Linux: libX11, libXext, libSM, libICE)
 
 ### Documentation Dependencies
 - **Doxygen** - for API documentation generation (required by default)
 
 ### Platform-Specific Requirements
-- **Linux**: `sudo apt-get install freeglut3-dev libboost-dev doxygen`
-- **Windows**: Boost binaries from sourceforge, Visual Studio 2022
-- **macOS**: `brew install boost`, XQuartz for X11 builds
+- **Linux**: `sudo apt-get install gdb`
+- **Windows**: Visual Studio 2022
+- **macOS**: XQuartz for X11 builds
 
 ## Critical Build Instructions
 

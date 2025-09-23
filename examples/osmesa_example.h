@@ -5,6 +5,7 @@
 #include <OSMesa/osmesa.h>
 #include <OSMesa/gl.h>
 #include "internal_glue.h"
+#include <Inventor/SoDB.h> // For new public context management API
 #include <memory>
 
 struct CoinOSMesaContext {
@@ -58,6 +59,34 @@ inline void initializeCoinOSMesaContext() {
         coin_osmesa_destruct
     };
     cc_glglue_context_set_offscreen_cb_functions(&osmesa_callbacks);
+}
+
+// NEW: Alternative using the PUBLIC SoDB API (recommended approach)
+class CoinOSMesaContextManager : public SoDB::ContextManager {
+public:
+    virtual void* createOffscreenContext(unsigned int width, unsigned int height) override {
+        auto* ctx = new CoinOSMesaContext(width, height);
+        return ctx->isValid() ? ctx : (delete ctx, nullptr);
+    }
+    
+    virtual SbBool makeContextCurrent(void* context) override {
+        return context && static_cast<CoinOSMesaContext*>(context)->makeCurrent() ? TRUE : FALSE;
+    }
+    
+    virtual void restorePreviousContext(void* context) override {
+        // OSMesa doesn't require explicit context switching for single-threaded use
+        (void)context;
+    }
+    
+    virtual void destroyContext(void* context) override {
+        delete static_cast<CoinOSMesaContext*>(context);
+    }
+};
+
+// NEW: Initialize OSMesa context management using PUBLIC API
+inline void initializeCoinOSMesaContextNew() {
+    static CoinOSMesaContextManager osmesa_manager;
+    SoDB::setContextManager(&osmesa_manager);
 }
 
 #else

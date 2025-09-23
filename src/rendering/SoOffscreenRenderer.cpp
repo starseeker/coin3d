@@ -319,6 +319,7 @@
 
 #include "glue/glp.h"
 #include "C/CoinTidbits.h"
+#include <Inventor/SoDB.h>
 #include <Inventor/SbMatrix.h>
 #include <Inventor/SbVec2f.h>
 #include <Inventor/SbViewportRegion.h>
@@ -1664,16 +1665,17 @@ SoOffscreenRenderer::getPbufferEnable(void) const
 void
 SoOffscreenRenderer::getOpenGLVersion(int & major, int & minor, int & release)
 {
-  // Ensure we have a valid OpenGL context for querying version information
-  ContextProvider * provider = getContextProvider();
-  void * temp_context = nullptr;
+  // Use the global context manager for querying version information
+  // Context should have been set up during SoDB::init(context_manager)
+  SoDB::ContextManager* manager = SoDB::getContextManager();
+  void* temp_context = nullptr;
   SbBool context_created = FALSE;
   
-  if (provider) {
+  if (manager) {
     // Create a minimal temporary context for version querying
-    temp_context = provider->createOffscreenContext(32, 32);
+    temp_context = manager->createOffscreenContext(32, 32);
     if (temp_context) {
-      context_created = provider->makeContextCurrent(temp_context);
+      context_created = manager->makeContextCurrent(temp_context);
     }
   }
   
@@ -1690,12 +1692,12 @@ SoOffscreenRenderer::getOpenGLVersion(int & major, int & minor, int & release)
     }
     
     // Clean up temporary context
-    if (provider && temp_context) {
-      provider->restorePreviousContext(temp_context);
-      provider->destroyContext(temp_context);
+    if (manager && temp_context) {
+      manager->restorePreviousContext(temp_context);
+      manager->destroyContext(temp_context);
     }
   } else {
-    // No context provider available or context creation failed
+    // No context manager available or context creation failed
     major = minor = release = 0;
   }
 }
@@ -1713,17 +1715,18 @@ SoOffscreenRenderer::isOpenGLExtensionSupported(const char * extension)
 {
   if (!extension) return FALSE;
   
-  // Ensure we have a valid OpenGL context for querying extension support
-  ContextProvider * provider = getContextProvider();
-  void * temp_context = nullptr;
+  // Use the global context manager for querying extension support
+  // Context should have been set up during SoDB::init(context_manager)
+  SoDB::ContextManager* manager = SoDB::getContextManager();
+  void* temp_context = nullptr;
   SbBool context_created = FALSE;
   SbBool result = FALSE;
   
-  if (provider) {
+  if (manager) {
     // Create a minimal temporary context for extension querying
-    temp_context = provider->createOffscreenContext(32, 32);
+    temp_context = manager->createOffscreenContext(32, 32);
     if (temp_context) {
-      context_created = provider->makeContextCurrent(temp_context);
+      context_created = manager->makeContextCurrent(temp_context);
     }
   }
   
@@ -1734,9 +1737,9 @@ SoOffscreenRenderer::isOpenGLExtensionSupported(const char * extension)
     }
     
     // Clean up temporary context
-    if (provider && temp_context) {
-      provider->restorePreviousContext(temp_context);
-      provider->destroyContext(temp_context);
+    if (manager && temp_context) {
+      manager->restorePreviousContext(temp_context);
+      manager->destroyContext(temp_context);
     }
   }
   
@@ -1753,17 +1756,18 @@ SoOffscreenRenderer::isOpenGLExtensionSupported(const char * extension)
 SbBool
 SoOffscreenRenderer::hasFramebufferObjectSupport(void)
 {
-  // Ensure we have a valid OpenGL context for querying FBO support
-  ContextProvider * provider = getContextProvider();
-  void * temp_context = nullptr;
+  // Use the global context manager for querying FBO support
+  // Context should have been set up during SoDB::init(context_manager)
+  SoDB::ContextManager* manager = SoDB::getContextManager();
+  void* temp_context = nullptr;
   SbBool context_created = FALSE;
   SbBool result = FALSE;
   
-  if (provider) {
+  if (manager) {
     // Create a minimal temporary context for FBO support querying
-    temp_context = provider->createOffscreenContext(32, 32);
+    temp_context = manager->createOffscreenContext(32, 32);
     if (temp_context) {
-      context_created = provider->makeContextCurrent(temp_context);
+      context_created = manager->makeContextCurrent(temp_context);
     }
   }
   
@@ -1774,9 +1778,9 @@ SoOffscreenRenderer::hasFramebufferObjectSupport(void)
     }
     
     // Clean up temporary context
-    if (provider && temp_context) {
-      provider->restorePreviousContext(temp_context);
-      provider->destroyContext(temp_context);
+    if (manager && temp_context) {
+      manager->restorePreviousContext(temp_context);
+      manager->destroyContext(temp_context);
     }
   }
   
@@ -1796,17 +1800,18 @@ SoOffscreenRenderer::hasFramebufferObjectSupport(void)
 SbBool
 SoOffscreenRenderer::isVersionAtLeast(int major, int minor, int release)
 {
-  // Ensure we have a valid OpenGL context for version comparison
-  ContextProvider * provider = getContextProvider();
-  void * temp_context = nullptr;
+  // Use the global context manager for version comparison
+  // Context should have been set up during SoDB::init(context_manager)
+  SoDB::ContextManager* manager = SoDB::getContextManager();
+  void* temp_context = nullptr;
   SbBool context_created = FALSE;
   SbBool result = FALSE;
   
-  if (provider) {
+  if (manager) {
     // Create a minimal temporary context for version comparison
-    temp_context = provider->createOffscreenContext(32, 32);
+    temp_context = manager->createOffscreenContext(32, 32);
     if (temp_context) {
-      context_created = provider->makeContextCurrent(temp_context);
+      context_created = manager->makeContextCurrent(temp_context);
     }
   }
   
@@ -1820,9 +1825,9 @@ SoOffscreenRenderer::isVersionAtLeast(int major, int minor, int release)
     }
     
     // Clean up temporary context
-    if (provider && temp_context) {
-      provider->restorePreviousContext(temp_context);
-      provider->destroyContext(temp_context);
+    if (manager && temp_context) {
+      manager->restorePreviousContext(temp_context);
+      manager->destroyContext(temp_context);
     }
   }
   
@@ -1830,90 +1835,9 @@ SoOffscreenRenderer::isVersionAtLeast(int major, int minor, int release)
 }
 
 // ======================================================================
-// Context provider callback support
-
-// Safe static storage for context provider using function-local static
-namespace {
-  SoOffscreenRenderer::ContextProvider *& getContextProviderRef() {
-    static SoOffscreenRenderer::ContextProvider * g_context_provider = nullptr;
-    return g_context_provider;
-  }
-  
-  // C-style callback wrapper functions - these need to be careful about null pointer access
-  void * context_provider_create_offscreen(unsigned int width, unsigned int height) {
-    SoOffscreenRenderer::ContextProvider * provider = getContextProviderRef();
-    if (provider) {
-      return provider->createOffscreenContext(width, height);
-    }
-    return nullptr;
-  }
-  
-  SbBool context_provider_make_current(void * context) {
-    SoOffscreenRenderer::ContextProvider * provider = getContextProviderRef();
-    if (provider) {
-      return provider->makeContextCurrent(context);
-    }
-    return FALSE;
-  }
-  
-  void context_provider_reinstate_previous(void * context) {
-    SoOffscreenRenderer::ContextProvider * provider = getContextProviderRef();
-    if (provider) {
-      provider->restorePreviousContext(context);
-    }
-  }
-  
-  void context_provider_destruct(void * context) {
-    SoOffscreenRenderer::ContextProvider * provider = getContextProviderRef();
-    if (provider) {
-      provider->destroyContext(context);
-    }
-  }
-}
-
-/*!
-  Set a custom context provider for offscreen rendering.
-  
-  This allows applications to provide their own context creation and management
-  implementation, which is particularly useful for testing frameworks or custom
-  rendering backends (e.g., OSMesa, EGL, etc.).
-  
-  \param provider The context provider instance, or NULL to reset to default
-  
-  \since Coin 4.0
-*/
-void
-SoOffscreenRenderer::setContextProvider(ContextProvider * provider)
-{
-  getContextProviderRef() = provider;
-  
-  if (provider) {
-    // Set up the C-style callback structure
-    static cc_glglue_offscreen_cb_functions callbacks = {
-      context_provider_create_offscreen,
-      context_provider_make_current,
-      context_provider_reinstate_previous,
-      context_provider_destruct
-    };
-    cc_glglue_context_set_offscreen_cb_functions(&callbacks);
-  } else {
-    // Reset to default (pass NULL to clear callbacks)
-    cc_glglue_context_set_offscreen_cb_functions(nullptr);
-  }
-}
-
-/*!
-  Get the currently set context provider.
-  
-  \return The current context provider, or NULL if none is set
-  
-  \since Coin 4.0
-*/
-SoOffscreenRenderer::ContextProvider *
-SoOffscreenRenderer::getContextProvider(void)
-{
-  return getContextProviderRef();
-}
+// Context provider callback support has been removed
+// Context providers should now be set globally via SoDB::init(context_manager) 
+// before library initialization.
 
 // *************************************************************************
 
