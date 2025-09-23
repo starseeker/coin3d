@@ -27,69 +27,6 @@ inline void demonstrateModernOSMesaUsage() {
     SbBool hasGL3 = SoOffscreenRenderer::isVersionAtLeast(3, 0);
 }
 
-#ifdef NEVER_DEFINED  // Old ContextProvider API examples (no longer available)
-
-struct CoinOSMesaContext {
-    OSMesaContext context;
-    std::unique_ptr<unsigned char[]> buffer;
-    int width, height;
-    
-    CoinOSMesaContext(int w, int h) : width(w), height(h) {
-        buffer = std::make_unique<unsigned char[]>(width * height * 4);
-        context = OSMesaCreateContext(OSMESA_RGBA, nullptr);
-    }
-    
-    ~CoinOSMesaContext() {
-        if (context) {
-            OSMesaDestroyContext(context);
-        }
-    }
-    
-    bool makeCurrent() {
-        return OSMesaMakeCurrent(context, buffer.get(), GL_UNSIGNED_BYTE, width, height) == GL_TRUE;
-    }
-    
-    bool isValid() const {
-        return context != nullptr;
-    }
-};
-
-// Modern C++ context provider implementation
-class CoinOSMesaContextProvider : public SoOffscreenRenderer::ContextProvider {
-public:
-    virtual void * createOffscreenContext(unsigned int width, unsigned int height) override {
-        auto* context = new CoinOSMesaContext(width, height);
-        if (!context->isValid()) {
-            delete context;
-            return nullptr;
-        }
-        return context;
-    }
-    
-    virtual SbBool makeContextCurrent(void * context) override {
-        if (!context) return FALSE;
-        auto* osmesa_ctx = static_cast<CoinOSMesaContext*>(context);
-        return osmesa_ctx->makeCurrent() ? TRUE : FALSE;
-    }
-    
-    virtual void restorePreviousContext(void * context) override {
-        // OSMesa doesn't need explicit context restoration
-        (void)context;
-    }
-    
-    virtual void destroyContext(void * context) override {
-        if (context) {
-            delete static_cast<CoinOSMesaContext*>(context);
-        }
-    }
-};
-
-// Initialize modern OSMesa context management for Coin3D
-inline void initializeModernCoinOSMesaContext() {
-    static CoinOSMesaContextProvider provider;
-    SoOffscreenRenderer::setContextProvider(&provider);
-}
-
 #else
 /* System OpenGL code - Uses standard context creation */
 #include <GL/gl.h>
@@ -121,33 +58,6 @@ inline void demonstrateModernStandardUsage() {
     // No need for manual context management in most cases
 }
 
-// Example: GLX-based custom context provider (advanced usage)
-#ifdef HAVE_GLX
-#include <GL/glx.h>
-
-class GLXContextProvider : public SoOffscreenRenderer::ContextProvider {
-    // Implementation would go here for advanced GLX context management
-    // This is only needed for specialized rendering scenarios
-public:
-    virtual void * createOffscreenContext(unsigned int width, unsigned int height) override {
-        // Custom GLX pbuffer creation would go here
-        return nullptr; // Simplified for example
-    }
-    
-    virtual SbBool makeContextCurrent(void * context) override {
-        return FALSE; // Simplified for example
-    }
-    
-    virtual void restorePreviousContext(void * context) override {
-        // Custom context restoration
-    }
-    
-    virtual void destroyContext(void * context) override {
-        // Custom context destruction
-    }
-};
-#endif
-
 #endif
 
 // ============================================================================
@@ -172,7 +82,5 @@ public:
  * SoOffscreenRenderer::getOpenGLVersion(major, minor, release);
  * SoOffscreenRenderer::isVersionAtLeast(3, 0);
  */
-
-#endif // NEVER_DEFINED - Old ContextProvider examples disabled
 
 #endif // COIN3D_OSMESA_BUILD

@@ -48,75 +48,6 @@ struct OSMesaFBOTestContext {
     }
 };
 
-#ifdef NEVER_DEFINED  // ContextProvider API has been removed
-
-// Global callback functions for Coin3D context management
-static void* osmesa_fbo_create_offscreen(unsigned int width, unsigned int height) {
-    auto* ctx = new OSMesaFBOTestContext(width, height);
-    if (!ctx->isValid()) {
-        delete ctx;
-        return nullptr;
-    }
-    return ctx;
-}
-
-static SbBool osmesa_fbo_make_current(void* context) {
-    if (!context) return FALSE;
-    auto* ctx = static_cast<OSMesaFBOTestContext*>(context);
-    return ctx->makeCurrent() ? TRUE : FALSE;
-}
-
-static void osmesa_fbo_reinstate_previous(void* context) {
-    // OSMesa doesn't need explicit context switching in our test setup
-    (void)context;
-}
-
-static void osmesa_fbo_destruct(void* context) {
-    if (context) {
-        auto* ctx = static_cast<OSMesaFBOTestContext*>(context);
-        delete ctx;
-    }
-}
-
-// Modern C++ ContextProvider implementation for OSMesa FBO testing
-class OSMesaFBOContextProvider : public SoOffscreenRenderer::ContextProvider {
-public:
-    virtual void * createOffscreenContext(unsigned int width, unsigned int height) override {
-        return osmesa_fbo_create_offscreen(width, height);
-    }
-    
-    virtual SbBool makeContextCurrent(void * context) override {
-        return osmesa_fbo_make_current(context);
-    }
-    
-    virtual void restorePreviousContext(void * context) override {
-        osmesa_fbo_reinstate_previous(context);
-    }
-    
-    virtual void destroyContext(void * context) override {
-        osmesa_fbo_destruct(context);
-    }
-};
-
-// RAII wrapper for modern OSMesa context provider management
-class OSMesaFBOCallbackManager {
-public:
-    OSMesaFBOCallbackManager() {
-        provider = std::make_unique<OSMesaFBOContextProvider>();
-        SoOffscreenRenderer::setContextProvider(provider.get());
-    }
-    
-    ~OSMesaFBOCallbackManager() {
-        // Reset to default context provider
-        SoOffscreenRenderer::setContextProvider(nullptr);
-    }
-    
-private:
-    std::unique_ptr<OSMesaFBOContextProvider> provider;
-};
-
-#endif // NEVER_DEFINED - ContextProvider API disabled
-
 // Note: PNG writing functionality now provided by shared png_test_utils
 
 } // anonymous namespace
@@ -275,22 +206,9 @@ TEST_CASE("FBO-based Offscreen Rendering", "[fbo][osmesa][rendering]") {
     
     SECTION("FBO extension availability check") {
         // ContextProvider API has been removed - context management is now global
-
-#if 0
-        // Check FBO support using modern API
-        SbBool hasFBO = SoOffscreenRenderer::hasFramebufferObjectSupport();
-
-        // Note: This might not be available in all OSMesa builds
-        // The test should succeed regardless, but log the capability
-        if (hasFBO) {
-            SUCCEED("GL_EXT_framebuffer_object extension is available in OSMesa context");
-        } else {
-            WARN("GL_EXT_framebuffer_object extension not available - falling back to default framebuffer");
-        }
-#endif
-	// Just check that the context provider is set correctly
-	// Skip the OpenGL capability checks for now
-         SUCCEED("FBO callback architecture validated successfully");
+        // Just check that the context provider is set correctly
+        // Skip the OpenGL capability checks for now
+        SUCCEED("FBO callback architecture validated successfully");
     }
 }
 
