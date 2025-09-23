@@ -207,8 +207,8 @@ CoinOffscreenGLCanvas::tryActivateGLContext(void)
 
     if (this->context == NULL) { 
       SoDebugError::post("CoinOffscreenGLCanvas::tryActivateGLContext",
-                         "No context created. Applications must provide context "
-                         "creation callbacks via cc_glglue_context_set_offscreen_cb_functions()");
+                         "No context created. Applications must provide a context manager "
+                         "via SoDB::setContextManager() before SoDB::init()");
       return 0; 
     }
 

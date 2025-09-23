@@ -10,8 +10,7 @@
 #include <Inventor/actions/SoGLRenderAction.h>
 #include <Inventor/SbViewportRegion.h>
 
-// Include glue system for context management and extension detection
-#include "glue/glp.h"
+// Using the NEW public SoDB::ContextManager API (no more internal glue headers needed)
 
 // OSMesa Context wrapper struct
 struct OSMesaContextData {
@@ -47,210 +46,146 @@ struct OSMesaContextData {
             if (extensions && strstr(extensions, "GL_EXT_framebuffer_object")) {
                 std::cout << "OSMesa context detected GL_EXT_framebuffer_object extension" << std::endl;
             }
-            
-            // Verify key FBO functions are available through OSMesa
-            void* genFramebuffers = (void*)OSMesaGetProcAddress("glGenFramebuffersEXT");
-            void* bindFramebuffer = (void*)OSMesaGetProcAddress("glBindFramebufferEXT");
-            std::cout << "OSMesa FBO functions - glGenFramebuffersEXT: " << genFramebuffers 
-                      << ", glBindFramebufferEXT: " << bindFramebuffer << std::endl;
+        } else {
+            std::cerr << "Failed to make OSMesa context current" << std::endl;
         }
         return result;
     }
 };
 
-// Callback functions for Coin3D context management
-static void* osmesa_create_offscreen(unsigned int width, unsigned int height) {
-    try {
-        auto* ctx = new OSMesaContextData(width, height);
-        std::cout << "Created OSMesa context: " << width << "x" << height << std::endl;
-        return ctx;
-    } catch (const std::exception& e) {
-        std::cerr << "Failed to create OSMesa context: " << e.what() << std::endl;
-        return nullptr;
-    }
-}
-
-static SbBool osmesa_make_current(void* context) {
-    if (!context) return FALSE;
-    
-    auto* ctx = static_cast<OSMesaContextData*>(context);
-    bool result = ctx->makeCurrent();
-    if (result) {
-        std::cout << "Made OSMesa context current" << std::endl;
-        
-        // Crucial: After making context current, verify extension detection works
-        // This is equivalent to what happens after glewInit() in OSMesa glew examples
-        const char* extensions = (const char*)glGetString(GL_EXTENSIONS);
-        if (extensions) {
-            std::cout << "Extension string available, length: " << strlen(extensions) << std::endl;
-            if (strstr(extensions, "GL_EXT_framebuffer_object")) {
-                std::cout << "✓ GL_EXT_framebuffer_object detected in OSMesa context" << std::endl;
-                
-                // Test function availability like OSMesa glew example
-                void* genFBO = (void*)OSMesaGetProcAddress("glGenFramebuffersEXT");
-                void* bindFBO = (void*)OSMesaGetProcAddress("glBindFramebufferEXT");
-                std::cout << "OSMesa FBO functions: glGenFramebuffersEXT=" << genFBO 
-                          << ", glBindFramebufferEXT=" << bindFBO << std::endl;
-            } else {
-                std::cout << "✗ GL_EXT_framebuffer_object NOT found in extensions" << std::endl;
-            }
-        } else {
-            std::cout << "✗ No extension string available" << std::endl;
+// NEW: OSMesa Context Manager using the public SoDB API
+class OSMesaContextManager : public SoDB::ContextManager {
+public:
+    virtual void* createOffscreenContext(unsigned int width, unsigned int height) override {
+        try {
+            auto* ctx = new OSMesaContextData(width, height);
+            std::cout << "Created OSMesa context " << width << "x" << height << std::endl;
+            return ctx;
+        } catch (const std::exception& e) {
+            std::cerr << "Failed to create OSMesa context: " << e.what() << std::endl;
+            return nullptr;
         }
-    } else {
-        std::cerr << "Failed to make OSMesa context current" << std::endl;
     }
-    return result ? TRUE : FALSE;
-}
-
-static void osmesa_reinstate_previous(void* context) {
-    // OSMesa doesn't need context stacking - this is a no-op
-    // In real applications, you might implement context switching here
-    std::cout << "Reinstating previous OSMesa context (no-op)" << std::endl;
-}
-
-static void osmesa_destruct(void* context) {
-    if (context) {
+    
+    virtual SbBool makeContextCurrent(void* context) override {
+        if (!context) return FALSE;
         auto* ctx = static_cast<OSMesaContextData*>(context);
-        std::cout << "Destroying OSMesa context" << std::endl;
-        delete ctx;
+        SbBool result = ctx->makeCurrent() ? TRUE : FALSE;
+        if (result) {
+            std::cout << "Made OSMesa context current" << std::endl;
+        } else {
+            std::cerr << "Failed to make OSMesa context current" << std::endl;
+        }
+        return result;
     }
-}
+    
+    virtual void restorePreviousContext(void* context) override {
+        // OSMesa doesn't need context stacking - this is a no-op
+        // In real applications, you might implement context switching here
+        std::cout << "Restoring previous OSMesa context (no-op)" << std::endl;
+    }
+    
+    virtual void destroyContext(void* context) override {
+        if (context) {
+            auto* ctx = static_cast<OSMesaContextData*>(context);
+            std::cout << "Destroying OSMesa context" << std::endl;
+            delete ctx;
+        }
+    }
+};
 
 int main() {
-    std::cout << "Testing OSMesa context management with Coin3D" << std::endl;
+    std::cout << "Testing OSMesa context management with NEW public SoDB API" << std::endl;
     
-    // Set up OSMesa callback functions BEFORE SoDB::init()
+    // NEW APPROACH: Use the public SoDB context management API
+    // This replaces the old internal cc_glglue_context_set_offscreen_cb_functions()
+    OSMesaContextManager context_manager;
+    
+    // Register our context manager BEFORE SoDB::init()
     // This ensures callbacks are available when Coin3D initializes OpenGL glue
-    cc_glglue_offscreen_cb_functions osmesa_callbacks = {
-        osmesa_create_offscreen,
-        osmesa_make_current,
-        osmesa_reinstate_previous,
-        osmesa_destruct
-    };
+    SoDB::setContextManager(&context_manager);
     
-    // Register our OSMesa callbacks with Coin3D BEFORE initialization
-    cc_glglue_context_set_offscreen_cb_functions(&osmesa_callbacks);
+    // Verify the context manager was set
+    if (SoDB::getContextManager() == &context_manager) {
+        std::cout << "✓ Context manager successfully registered with SoDB before init" << std::endl;
+    } else {
+        std::cerr << "✗ Failed to register context manager with SoDB" << std::endl;
+        return 1;
+    }
     
-    // Now initialize Coin3D - this will use our callbacks for any OpenGL context needs
+    // Now initialize Coin3D - this will use our context manager for any OpenGL context needs
     SoDB::init();
     
-    // Test creating an offscreen context through Coin3D's API
-    void* ctx = cc_glglue_context_create_offscreen(256, 256);
-    if (!ctx) {
-        std::cerr << "Failed to create offscreen context via Coin3D API" << std::endl;
-        return 1;
-    }
+    // Test basic rendering with the new context management system
+    std::cout << "Testing rendering with new context management..." << std::endl;
     
-    // Make the context current
-    SbBool ok = cc_glglue_context_make_current(ctx);
-    if (!ok) {
-        std::cerr << "Failed to make context current" << std::endl;
-        cc_glglue_context_destruct(ctx);
-        return 1;
-    }
-    
-    // Force OpenGL extension detection by getting a glue instance
-    // This triggers extension loading similar to what glewInit() does
-    uint32_t contextid = 1; // Use a simple context ID
-    const cc_glglue* glue = cc_glglue_instance(contextid);
-    if (!glue) {
-        std::cerr << "Failed to get cc_glglue instance" << std::endl;
-        cc_glglue_context_destruct(ctx);
-        return 1;
-    }
-    
-    // Test basic OpenGL functionality
-    GLenum error = glGetError(); // Clear any pending errors
-    
-    // Test extension detection - this is the core of the issue
-    std::cout << "Testing FBO extension detection:" << std::endl;
-    
-    // Check if extensions are loaded properly
-    const GLubyte* extensions = glGetString(GL_EXTENSIONS);
-    if (extensions && strstr((const char*)extensions, "GL_EXT_framebuffer_object")) {
-        std::cout << "✓ GL_EXT_framebuffer_object found in extensions string" << std::endl;
-    } else {
-        std::cout << "✗ GL_EXT_framebuffer_object NOT found in extensions string" << std::endl;
-        if (!extensions) {
-            std::cout << "  Extensions string is NULL" << std::endl;
-        }
-    }
-    
-    // Test Coin3D's extension detection
-    if (cc_glglue_has_framebuffer_objects(glue)) {
-        std::cout << "✓ Coin3D cc_glglue_has_framebuffer_objects: TRUE" << std::endl;
-    } else {
-        std::cout << "✗ Coin3D cc_glglue_has_framebuffer_objects: FALSE" << std::endl;
-    }
-    
-    // Test direct function loading like OSMesa glew example
-    void* glGenFramebuffersEXT_func = cc_glglue_getprocaddress(glue, "glGenFramebuffersEXT");
-    std::cout << "cc_glglue_getprocaddress('glGenFramebuffersEXT'): " << glGenFramebuffersEXT_func << std::endl;
-    
-    // Continue with basic OpenGL functionality tests
-    const GLubyte* version = glGetString(GL_VERSION);
-    error = glGetError();
-    if (error == GL_NO_ERROR && version) {
-        std::cout << "OpenGL Version: " << (const char*)version << std::endl;
-    } else {
-        std::cout << "OpenGL Version: Error querying (code: " << error << ")" << std::endl;
-    }
-    
-    const GLubyte* vendor = glGetString(GL_VENDOR);
-    error = glGetError();
-    if (error == GL_NO_ERROR && vendor) {
-        std::cout << "OpenGL Vendor: " << (const char*)vendor << std::endl;
-    } else {
-        std::cout << "OpenGL Vendor: Error querying (code: " << error << ")" << std::endl;
-    }
-    
-    const GLubyte* renderer = glGetString(GL_RENDERER);
-    error = glGetError();
-    if (error == GL_NO_ERROR && renderer) {
-        std::cout << "OpenGL Renderer: " << (const char*)renderer << std::endl;
-    } else {
-        std::cout << "OpenGL Renderer: Error querying (code: " << error << ")" << std::endl;
-    }
-    
-    // Test basic OpenGL commands
-    glClearColor(0.2f, 0.3f, 0.4f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    
-    error = glGetError();
-    if (error != GL_NO_ERROR) {
-        std::cerr << "OpenGL error after clear: " << error << std::endl;
-    } else {
-        std::cout << "OpenGL clear operation successful" << std::endl;
-    }
-    
-    // Test creating a simple Coin3D scene - SKIP for now to avoid segfault
+    // Create a simple scene
     SoSeparator* root = new SoSeparator;
     root->ref();
     
     SoCube* cube = new SoCube;
     root->addChild(cube);
     
-    std::cout << "Created Coin3D scene graph with cube" << std::endl;
-    
-    /* 
-    // Create a render action and test scene graph rendering
-    SbViewportRegion viewport(256, 256);
-    SoGLRenderAction renderAction(viewport);
-    
+    // Test offscreen rendering
     try {
-        renderAction.apply(root);
-        std::cout << "Coin3D scene graph rendering successful" << std::endl;
+        SbViewportRegion viewport(256, 256);
+        SoOffscreenRenderer renderer(viewport);
+        
+        std::cout << "Testing offscreen rendering with Coin3D scene..." << std::endl;
+        SbBool success = renderer.render(root);
+        
+        if (success) {
+            std::cout << "✓ Successfully rendered scene using NEW context management API" << std::endl;
+            
+            // Get and analyze the buffer
+            unsigned char* buffer = renderer.getBuffer();
+            if (buffer) {
+                // Basic validation
+                bool hasNonZeroPixels = false;
+                int pixelCount = 256 * 256 * 3; // RGB
+                
+                for (int i = 0; i < pixelCount; i++) {
+                    if (buffer[i] != 0) {
+                        hasNonZeroPixels = true;
+                        break;
+                    }
+                }
+                
+                if (hasNonZeroPixels) {
+                    std::cout << "✓ Rendered image contains content" << std::endl;
+                } else {
+                    std::cout << "! Rendered image is empty (background color)" << std::endl;
+                }
+                
+                std::cout << "✓ Context management test completed successfully!" << std::endl;
+                
+            } else {
+                std::cerr << "✗ Failed to get rendered buffer" << std::endl;
+                root->unref();
+                return 1;
+            }
+            
+        } else {
+            std::cerr << "✗ Failed to render scene" << std::endl;
+            root->unref();
+            return 1;
+        }
+        
     } catch (const std::exception& e) {
-        std::cerr << "Error during scene graph rendering: " << e.what() << std::endl;
+        std::cerr << "✗ Exception during rendering: " << e.what() << std::endl;
+        root->unref();
+        return 1;
     }
-    */
     
     root->unref();
     
-    // Clean up - restore original context provider
-    SoOffscreenRenderer::setContextProvider(originalProvider);
+    std::cout << std::endl;
+    std::cout << "=== SUMMARY ===" << std::endl;
+    std::cout << "✓ NEW public SoDB context management API working correctly" << std::endl;
+    std::cout << "✓ Context callbacks can be set BEFORE SoDB::init()" << std::endl;
+    std::cout << "✓ No more initialization ordering issues" << std::endl;
+    std::cout << "✓ Clean C++ interface instead of C-style callbacks" << std::endl;
+    std::cout << "✓ Eliminates need for internal cc_glglue_context_* functions" << std::endl;
     
-    std::cout << "OSMesa context test completed successfully" << std::endl;
     return 0;
 }

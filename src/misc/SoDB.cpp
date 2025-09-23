@@ -106,7 +106,7 @@
 
 #include "coindefs.h" // COIN_STUB(), COIN_INIT_CHECK_THREAD()
 #include "shaders/SoShader.h"
-#include "glue/glp.h" // For context management callbacks
+/* glue/glp.h include removed - no longer needed for old callback system */
 
 #include "fields/SoGlobalField.h"
 #include "misc/CoinStaticObjectInDLL.h"
@@ -132,74 +132,7 @@
 #include <Inventor/annex/Profiler/elements/SoProfilerElement.h>
 #include "profiler/SoProfilerP.h"
 
-#ifdef HAVE_OSMESA
-// OSMesa support for automatic context callback registration
-#include "glue/glp.h"
-#ifdef COIN3D_OSMESA_BUILD
-#include <OSMesa/osmesa.h>
-#include <OSMesa/gl.h>
-#include <memory>
-
-// OSMesa Context wrapper for automatic context management
-struct SoDBOSMesaContext {
-  OSMesaContext context;
-  std::unique_ptr<unsigned char[]> buffer;
-  int width, height;
-  
-  SoDBOSMesaContext(int w, int h) : width(w), height(h) {
-    context = OSMesaCreateContextExt(OSMESA_RGBA, 16, 0, 0, NULL);
-    if (context) {
-      buffer = std::make_unique<unsigned char[]>(width * height * 4);
-    }
-  }
-  
-  ~SoDBOSMesaContext() {
-    if (context) {
-      OSMesaDestroyContext(context);
-    }
-  }
-  
-  bool isValid() const { return context != nullptr; }
-  
-  bool makeCurrent() {
-    return context && OSMesaMakeCurrent(context, buffer.get(), GL_UNSIGNED_BYTE, width, height) == GL_TRUE;
-  }
-};
-
-// OSMesa callback implementations for Coin3D context management
-static void* coin_osmesa_create_offscreen(unsigned int width, unsigned int height) {
-  auto* ctx = new SoDBOSMesaContext(width, height);
-  return ctx->isValid() ? ctx : (delete ctx, nullptr);
-}
-
-static SbBool coin_osmesa_make_current(void* context) {
-  return context && static_cast<SoDBOSMesaContext*>(context)->makeCurrent() ? TRUE : FALSE;
-}
-
-static void coin_osmesa_reinstate_previous(void* context) {
-  // OSMesa doesn't require explicit context switching for single-threaded use
-  (void)context;
-}
-
-static void coin_osmesa_destruct(void* context) {
-  delete static_cast<SoDBOSMesaContext*>(context);
-}
-
-// Initialize OSMesa context management for Coin3D
-static void initializeCoinOSMesaContext() {
-  static cc_glglue_offscreen_cb_functions osmesa_callbacks = {
-    coin_osmesa_create_offscreen,
-    coin_osmesa_make_current, 
-    coin_osmesa_reinstate_previous,
-    coin_osmesa_destruct
-  };
-  
-  // Register callbacks for OSMesa offscreen rendering
-  cc_glglue_context_set_offscreen_cb_functions(&osmesa_callbacks);
-}
-
-#endif // COIN3D_OSMESA_BUILD
-#endif // HAVE_OSMESA
+/* Old OSMesa initialization code removed - now uses public SoDB::ContextManager API */
 
 // *************************************************************************
 
@@ -1688,47 +1621,12 @@ SoDB::removeRoute(SoNode * fromnode, const char * eventout,
 
 // Context manager support for applications
 // This provides a public API for applications to register OpenGL context
-// management callbacks before SoDB::init(), which is essential for proper
+// management before SoDB::init(), which is essential for proper
 // initialization ordering with custom rendering backends.
 
 namespace {
   // Static storage for the global context manager
   SoDB::ContextManager * global_context_manager = nullptr;
-  
-  // C-style callback wrappers that bridge to the C++ ContextManager interface
-  void * context_manager_create_offscreen(unsigned int width, unsigned int height) {
-    if (global_context_manager) {
-      return global_context_manager->createOffscreenContext(width, height);
-    }
-    return nullptr;
-  }
-  
-  SbBool context_manager_make_current(void * context) {
-    if (global_context_manager) {
-      return global_context_manager->makeContextCurrent(context);
-    }
-    return FALSE;
-  }
-  
-  void context_manager_reinstate_previous(void * context) {
-    if (global_context_manager) {
-      global_context_manager->restorePreviousContext(context);
-    }
-  }
-  
-  void context_manager_destruct(void * context) {
-    if (global_context_manager) {
-      global_context_manager->destroyContext(context);
-    }
-  }
-  
-  // The callback structure that will be registered with the glue system
-  cc_glglue_offscreen_cb_functions context_manager_callbacks = {
-    context_manager_create_offscreen,
-    context_manager_make_current,
-    context_manager_reinstate_previous,
-    context_manager_destruct
-  };
 }
 
 /*!
@@ -1762,14 +1660,8 @@ void
 SoDB::setContextManager(ContextManager * manager)
 {
   global_context_manager = manager;
-  
-  if (manager) {
-    // Register our C-style callbacks with the glue system
-    cc_glglue_context_set_offscreen_cb_functions(&context_manager_callbacks);
-  } else {
-    // Clear the callbacks
-    cc_glglue_context_set_offscreen_cb_functions(nullptr);
-  }
+  // Context manager is now used directly by the glue layer
+  // No callback registration needed - cleaner implementation
 }
 
 /*!
@@ -1783,6 +1675,14 @@ SoDB::ContextManager *
 SoDB::getContextManager(void)
 {
   return global_context_manager;
+}
+
+// C-style helper function for glue layer to access context manager
+// This avoids circular dependencies between glue and SoDB
+extern "C" {
+  void* coin_get_context_manager(void) {
+    return SoDB::getContextManager();
+  }
 }
 
 /* *********************************************************************** */

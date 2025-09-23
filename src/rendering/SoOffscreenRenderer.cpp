@@ -319,6 +319,7 @@
 
 #include "glue/glp.h"
 #include "C/CoinTidbits.h"
+#include <Inventor/SoDB.h>
 #include <Inventor/SbMatrix.h>
 #include <Inventor/SbVec2f.h>
 #include <Inventor/SbViewportRegion.h>
@@ -1839,36 +1840,7 @@ namespace {
     return g_context_provider;
   }
   
-  // C-style callback wrapper functions - these need to be careful about null pointer access
-  void * context_provider_create_offscreen(unsigned int width, unsigned int height) {
-    SoOffscreenRenderer::ContextProvider * provider = getContextProviderRef();
-    if (provider) {
-      return provider->createOffscreenContext(width, height);
-    }
-    return nullptr;
-  }
-  
-  SbBool context_provider_make_current(void * context) {
-    SoOffscreenRenderer::ContextProvider * provider = getContextProviderRef();
-    if (provider) {
-      return provider->makeContextCurrent(context);
-    }
-    return FALSE;
-  }
-  
-  void context_provider_reinstate_previous(void * context) {
-    SoOffscreenRenderer::ContextProvider * provider = getContextProviderRef();
-    if (provider) {
-      provider->restorePreviousContext(context);
-    }
-  }
-  
-  void context_provider_destruct(void * context) {
-    SoOffscreenRenderer::ContextProvider * provider = getContextProviderRef();
-    if (provider) {
-      provider->destroyContext(context);
-    }
-  }
+  /* Old C-style callback wrapper functions removed - now using SoDB::ContextManager directly */
 }
 
 /*!
@@ -1888,17 +1860,38 @@ SoOffscreenRenderer::setContextProvider(ContextProvider * provider)
   getContextProviderRef() = provider;
   
   if (provider) {
-    // Set up the C-style callback structure
-    static cc_glglue_offscreen_cb_functions callbacks = {
-      context_provider_create_offscreen,
-      context_provider_make_current,
-      context_provider_reinstate_previous,
-      context_provider_destruct
+    // Convert the ContextProvider to a SoDB::ContextManager and register it globally
+    // This bridges the SoOffscreenRenderer API to the main context management system
+    
+    // Create an adapter that implements SoDB::ContextManager using the ContextProvider
+    class ProviderAdapter : public SoDB::ContextManager {
+    private:
+      SoOffscreenRenderer::ContextProvider* provider;
+    public:
+      ProviderAdapter(SoOffscreenRenderer::ContextProvider* p) : provider(p) {}
+      
+      virtual void* createOffscreenContext(unsigned int width, unsigned int height) override {
+        return provider ? provider->createOffscreenContext(width, height) : nullptr;
+      }
+      
+      virtual SbBool makeContextCurrent(void* context) override {
+        return provider ? provider->makeContextCurrent(context) : FALSE;
+      }
+      
+      virtual void restorePreviousContext(void* context) override {
+        if (provider) provider->restorePreviousContext(context);
+      }
+      
+      virtual void destroyContext(void* context) override {
+        if (provider) provider->destroyContext(context);
+      }
     };
-    cc_glglue_context_set_offscreen_cb_functions(&callbacks);
+    
+    static ProviderAdapter adapter(provider);
+    SoDB::setContextManager(&adapter);
   } else {
-    // Reset to default (pass NULL to clear callbacks)
-    cc_glglue_context_set_offscreen_cb_functions(nullptr);
+    // Clear the global context manager
+    SoDB::setContextManager(nullptr);
   }
 }
 
