@@ -106,6 +106,7 @@
 
 #include "coindefs.h" // COIN_STUB(), COIN_INIT_CHECK_THREAD()
 #include "shaders/SoShader.h"
+#include "glue/glp.h" // For context management callbacks
 
 #include "fields/SoGlobalField.h"
 #include "misc/CoinStaticObjectInDLL.h"
@@ -1681,6 +1682,107 @@ SoDB::removeRoute(SoNode * fromnode, const char * eventout,
                               tonodename.getString(), eventin);
   }
 #endif // COIN_DEBUG
+}
+
+// *************************************************************************
+
+// Context manager support for applications
+// This provides a public API for applications to register OpenGL context
+// management callbacks before SoDB::init(), which is essential for proper
+// initialization ordering with custom rendering backends.
+
+namespace {
+  // Static storage for the global context manager
+  SoDB::ContextManager * global_context_manager = nullptr;
+  
+  // C-style callback wrappers that bridge to the C++ ContextManager interface
+  void * context_manager_create_offscreen(unsigned int width, unsigned int height) {
+    if (global_context_manager) {
+      return global_context_manager->createOffscreenContext(width, height);
+    }
+    return nullptr;
+  }
+  
+  SbBool context_manager_make_current(void * context) {
+    if (global_context_manager) {
+      return global_context_manager->makeContextCurrent(context);
+    }
+    return FALSE;
+  }
+  
+  void context_manager_reinstate_previous(void * context) {
+    if (global_context_manager) {
+      global_context_manager->restorePreviousContext(context);
+    }
+  }
+  
+  void context_manager_destruct(void * context) {
+    if (global_context_manager) {
+      global_context_manager->destroyContext(context);
+    }
+  }
+  
+  // The callback structure that will be registered with the glue system
+  cc_glglue_offscreen_cb_functions context_manager_callbacks = {
+    context_manager_create_offscreen,
+    context_manager_make_current,
+    context_manager_reinstate_previous,
+    context_manager_destruct
+  };
+}
+
+/*!
+  Set the global context manager for OpenGL context creation.
+  
+  This method allows applications to provide their own OpenGL context
+  management implementation before calling SoDB::init(). This is essential
+  for applications using custom rendering backends like OSMesa or when
+  fine-grained control over OpenGL context creation is needed.
+  
+  The context manager must be set BEFORE calling SoDB::init() to ensure
+  proper initialization ordering. Once set, Coin3D will use the provided
+  context manager for all offscreen rendering operations.
+  
+  \param manager The context manager instance, or NULL to reset to default
+  
+  Example usage:
+  \code
+  class MyContextManager : public SoDB::ContextManager {
+    // ... implement virtual methods ...
+  };
+  
+  MyContextManager manager;
+  SoDB::setContextManager(&manager);  // MUST be called before SoDB::init()
+  SoDB::init();
+  \endcode
+  
+  \since Coin 4.0
+*/
+void
+SoDB::setContextManager(ContextManager * manager)
+{
+  global_context_manager = manager;
+  
+  if (manager) {
+    // Register our C-style callbacks with the glue system
+    cc_glglue_context_set_offscreen_cb_functions(&context_manager_callbacks);
+  } else {
+    // Clear the callbacks
+    cc_glglue_context_set_offscreen_cb_functions(nullptr);
+  }
+}
+
+/*!
+  Get the currently set global context manager.
+  
+  \return The current context manager, or NULL if none is set
+  
+  \since Coin 4.0
+*/
+SoDB::ContextManager *
+SoDB::getContextManager(void)
+{
+  return global_context_manager;
 }
 
 /* *********************************************************************** */

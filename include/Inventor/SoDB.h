@@ -117,6 +117,22 @@ public:
   static void removeRoute(SoNode * from, const char * eventout,
                           SoNode * to, const char * eventin);
 
+  // OpenGL Context Management API
+  // These methods allow applications to provide OpenGL context management
+  // callbacks BEFORE calling SoDB::init(), which is required for proper
+  // initialization ordering when using custom rendering backends like OSMesa.
+  class ContextManager {
+  public:
+    virtual ~ContextManager() {}
+    virtual void * createOffscreenContext(unsigned int width, unsigned int height) = 0;
+    virtual SbBool makeContextCurrent(void * context) = 0;
+    virtual void restorePreviousContext(void * context) = 0;
+    virtual void destroyContext(void * context) = 0;
+  };
+
+  static void setContextManager(ContextManager * manager);
+  static ContextManager * getContextManager(void);
+
 private:
   static SoGroup * readAllWrapper(SoInput * input, const SoType & grouptype);
 };

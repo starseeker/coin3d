@@ -102,6 +102,31 @@ endif()
 include(CTest)
 add_test(NAME CoinTests COMMAND CoinTests)
 
+# OSMesa Context Management Test - Demonstrates new public API
+if(COIN3D_USE_OSMESA)
+    add_executable(osmesa_context_test_new
+        osmesa_context_test_new.cpp
+    )
+    
+    target_link_libraries(osmesa_context_test_new
+        Coin
+        coin_test_utils
+        osmesa_interface
+    )
+    
+    target_include_directories(osmesa_context_test_new PRIVATE
+        ${OSMESA_INCLUDE_DIRS}
+        ${PROJECT_SOURCE_DIR}/include
+        ${PROJECT_BINARY_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/utils
+    )
+    
+    target_compile_definitions(osmesa_context_test_new PRIVATE COIN3D_OSMESA_BUILD)
+    
+    # Add this as a test
+    add_test(NAME OSMesaContextTest COMMAND osmesa_context_test_new)
+endif()
+
 # Enable compiler warnings suppression for tautological comparisons on macOS
 include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG(-Wtautological-compare DISABLE_WARNING_TAUTOLOGCOMPARE)
