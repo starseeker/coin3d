@@ -166,45 +166,17 @@ void OSMesaTestContext::cleanup() {
 // OSMesaCallbackManager Implementation  
 // ============================================================================
 
-// Modern C++ ContextProvider implementation for OSMesa
-class OSMesaCallbackManager::OSMesaContextProvider : public SoOffscreenRenderer::ContextProvider {
-public:
-    virtual void * createOffscreenContext(unsigned int width, unsigned int height) override {
-        auto* context = new OSMesaTestContext(width, height);
-        if (!context->isValid()) {
-            delete context;
-            return nullptr;
-        }
-        return context;
-    }
-    
-    virtual SbBool makeContextCurrent(void * context) override {
-        if (!context) return FALSE;
-        auto* osmesa_ctx = static_cast<OSMesaTestContext*>(context);
-        return osmesa_ctx->makeCurrent() ? TRUE : FALSE;
-    }
-    
-    virtual void restorePreviousContext(void * context) override {
-        // OSMesa doesn't need explicit context switching in our test setup
-        (void)context;
-    }
-    
-    virtual void destroyContext(void * context) override {
-        if (context) {
-            delete static_cast<OSMesaTestContext*>(context);
-        }
-    }
-};
+// Note: ContextProvider API has been removed from SoOffscreenRenderer.
+// This manager is now a no-op for backward compatibility.
 
-OSMesaCallbackManager::OSMesaCallbackManager() 
-    : provider_(std::make_unique<OSMesaContextProvider>())
-    , originalProvider_(SoOffscreenRenderer::getContextProvider()) {
-    SoOffscreenRenderer::setContextProvider(provider_.get());
+OSMesaCallbackManager::OSMesaCallbackManager() {
+    // Context management should now be done via SoDB::init(context_manager)
+    // This constructor is now a no-op for backward compatibility
 }
 
 OSMesaCallbackManager::~OSMesaCallbackManager() {
-    // Restore original context provider
-    SoOffscreenRenderer::setContextProvider(originalProvider_);
+    // Context management should now be done via SoDB::init(context_manager)
+    // This destructor is now a no-op for backward compatibility
 }
 
 // ============================================================================

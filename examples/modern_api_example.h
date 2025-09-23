@@ -1,11 +1,33 @@
-/* Modern C++ example demonstrating the new idiomatic API for context management */
+/* Modern C++ example demonstrating context management API changes */
+
+// NOTE: The ContextProvider API has been removed from SoOffscreenRenderer
+// Context management should now be done via SoDB::init(context_manager) before library initialization
 
 #ifdef COIN3D_OSMESA_BUILD
-/* OSMesa-specific code - Uses modern C++ context provider API */
+/* OSMesa-specific code - Context management now handled globally */
 #include <OSMesa/osmesa.h>
 #include <OSMesa/gl.h>
 #include <Inventor/SoOffscreenRenderer.h>
 #include <memory>
+
+// Example: Modern usage without ContextProvider API
+inline void demonstrateModernOSMesaUsage() {
+    // Context management is now handled globally via SoDB::init(context_manager)
+    // No need for per-renderer context providers
+    
+    SbViewportRegion viewport(256, 256);
+    SoOffscreenRenderer renderer(viewport);
+    
+    // OpenGL capabilities can be queried directly
+    int major, minor, release;
+    SoOffscreenRenderer::getOpenGLVersion(major, minor, release);
+    
+    SbBool hasFBO = SoOffscreenRenderer::hasFramebufferObjectSupport();
+    SbBool hasExtension = SoOffscreenRenderer::isOpenGLExtensionSupported("GL_ARB_vertex_buffer_object");
+    SbBool hasGL3 = SoOffscreenRenderer::isVersionAtLeast(3, 0);
+}
+
+#ifdef NEVER_DEFINED  // Old ContextProvider API examples (no longer available)
 
 struct CoinOSMesaContext {
     OSMesaContext context;
@@ -133,18 +155,24 @@ public:
 // ============================================================================
 
 /*
- * OLD WAY (discouraged):
- * 
- * #include "internal_glue.h"
- * cc_glglue_offscreen_cb_functions callbacks = { ... };
- * cc_glglue_context_set_offscreen_cb_functions(&callbacks);
- * const cc_glglue* glue = cc_glglue_instance(1);
- * cc_glglue_has_framebuffer_objects(glue);
- * 
- * NEW WAY (recommended):
+ * OLD WAY (no longer available):
  * 
  * #include <Inventor/SoOffscreenRenderer.h>
  * class MyProvider : public SoOffscreenRenderer::ContextProvider { ... };
  * SoOffscreenRenderer::setContextProvider(&provider);
  * SoOffscreenRenderer::hasFramebufferObjectSupport();
+ * 
+ * NEW WAY (current approach):
+ * 
+ * Context management should be done via SoDB::init(context_manager) at initialization.
+ * OpenGL capabilities can be queried directly:
+ * 
+ * #include <Inventor/SoOffscreenRenderer.h>
+ * SoOffscreenRenderer::hasFramebufferObjectSupport();
+ * SoOffscreenRenderer::getOpenGLVersion(major, minor, release);
+ * SoOffscreenRenderer::isVersionAtLeast(3, 0);
  */
+
+#endif // NEVER_DEFINED - Old ContextProvider examples disabled
+
+#endif // COIN3D_OSMESA_BUILD
