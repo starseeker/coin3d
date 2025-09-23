@@ -38,6 +38,9 @@
 #include <Inventor/SoInteraction.h>
 #include <Inventor/SoPath.h>
 #include <Inventor/SoPickedPoint.h>
+#include <Inventor/nodes/SoCube.h>
+#include <Inventor/nodes/SoSphere.h>
+#include <Inventor/nodes/SoNode.h>
 #include <Inventor/SoPrimitiveVertex.h>
 #include <Inventor/misc/SoState.h>
 #include <Inventor/misc/SoNotification.h>
@@ -292,15 +295,23 @@ TEST_CASE("SoType advanced functionality", "[misc][SoType][advanced]") {
         SbName typeName = cubeType.getName();
         
         CHECK(typeName.getLength() > 0);
-        CHECK(strcmp(typeName.getString(), "SoCube") == 0);
+        // Internal Coin nodes have "So" prefix stripped in their type names
+        CHECK(strcmp(typeName.getString(), "Cube") == 0);
     }
 
     SECTION("type lookup") {
-        SbName cubeName("SoCube");
+        // Type lookup should work with both full name and short name
+        SbName cubeName("Cube");  // Use the actual internal name
         SoType cubeType = SoType::fromName(cubeName);
         
         CHECK(cubeType != SoType::badType());
         CHECK(cubeType == SoCube::getClassTypeId());
+        
+        // Also verify that the "SoCube" name lookup works through the fromName logic
+        SbName cubeFullName("SoCube");
+        SoType cubeTypeFromFull = SoType::fromName(cubeFullName);
+        CHECK(cubeTypeFromFull != SoType::badType());
+        CHECK(cubeTypeFromFull == SoCube::getClassTypeId());
     }
 }
 
