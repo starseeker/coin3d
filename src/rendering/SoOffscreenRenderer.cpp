@@ -1667,15 +1667,37 @@ SoOffscreenRenderer::getOpenGLVersion(int & major, int & minor, int & release)
 {
   // Use the global context manager for querying version information
   // Context should have been set up during SoDB::init(context_manager)
-  const cc_glglue * glue = cc_glglue_instance(1);
-  if (glue) {
-    unsigned int maj, min, rel;
-    cc_glglue_glversion(glue, &maj, &min, &rel);
-    major = static_cast<int>(maj);
-    minor = static_cast<int>(min);
-    release = static_cast<int>(rel);
+  SoDB::ContextManager* manager = SoDB::getContextManager();
+  void* temp_context = nullptr;
+  SbBool context_created = FALSE;
+  
+  if (manager) {
+    // Create a minimal temporary context for version querying
+    temp_context = manager->createOffscreenContext(32, 32);
+    if (temp_context) {
+      context_created = manager->makeContextCurrent(temp_context);
+    }
+  }
+  
+  if (context_created) {
+    const cc_glglue * glue = cc_glglue_instance(1);
+    if (glue) {
+      unsigned int maj, min, rel;
+      cc_glglue_glversion(glue, &maj, &min, &rel);
+      major = static_cast<int>(maj);
+      minor = static_cast<int>(min);
+      release = static_cast<int>(rel);
+    } else {
+      major = minor = release = 0;
+    }
+    
+    // Clean up temporary context
+    if (manager && temp_context) {
+      manager->restorePreviousContext(temp_context);
+      manager->destroyContext(temp_context);
+    }
   } else {
-    // No context available - this means context wasn't set up properly at init
+    // No context manager available or context creation failed
     major = minor = release = 0;
   }
 }
@@ -1695,12 +1717,33 @@ SoOffscreenRenderer::isOpenGLExtensionSupported(const char * extension)
   
   // Use the global context manager for querying extension support
   // Context should have been set up during SoDB::init(context_manager)
-  const cc_glglue * glue = cc_glglue_instance(1);
-  if (glue) {
-    return cc_glglue_glext_supported(glue, extension);
+  SoDB::ContextManager* manager = SoDB::getContextManager();
+  void* temp_context = nullptr;
+  SbBool context_created = FALSE;
+  SbBool result = FALSE;
+  
+  if (manager) {
+    // Create a minimal temporary context for extension querying
+    temp_context = manager->createOffscreenContext(32, 32);
+    if (temp_context) {
+      context_created = manager->makeContextCurrent(temp_context);
+    }
   }
   
-  return FALSE;
+  if (context_created) {
+    const cc_glglue * glue = cc_glglue_instance(1);
+    if (glue) {
+      result = cc_glglue_glext_supported(glue, extension);
+    }
+    
+    // Clean up temporary context
+    if (manager && temp_context) {
+      manager->restorePreviousContext(temp_context);
+      manager->destroyContext(temp_context);
+    }
+  }
+  
+  return result;
 }
 
 /*!
@@ -1715,12 +1758,33 @@ SoOffscreenRenderer::hasFramebufferObjectSupport(void)
 {
   // Use the global context manager for querying FBO support
   // Context should have been set up during SoDB::init(context_manager)
-  const cc_glglue * glue = cc_glglue_instance(1);
-  if (glue) {
-    return cc_glglue_has_framebuffer_objects(glue);
+  SoDB::ContextManager* manager = SoDB::getContextManager();
+  void* temp_context = nullptr;
+  SbBool context_created = FALSE;
+  SbBool result = FALSE;
+  
+  if (manager) {
+    // Create a minimal temporary context for FBO support querying
+    temp_context = manager->createOffscreenContext(32, 32);
+    if (temp_context) {
+      context_created = manager->makeContextCurrent(temp_context);
+    }
   }
   
-  return FALSE;
+  if (context_created) {
+    const cc_glglue * glue = cc_glglue_instance(1);
+    if (glue) {
+      result = cc_glglue_has_framebuffer_objects(glue);
+    }
+    
+    // Clean up temporary context
+    if (manager && temp_context) {
+      manager->restorePreviousContext(temp_context);
+      manager->destroyContext(temp_context);
+    }
+  }
+  
+  return result;
 }
 
 /*!
@@ -1738,15 +1802,36 @@ SoOffscreenRenderer::isVersionAtLeast(int major, int minor, int release)
 {
   // Use the global context manager for version comparison
   // Context should have been set up during SoDB::init(context_manager)
-  const cc_glglue * glue = cc_glglue_instance(1);
-  if (glue) {
-    return cc_glglue_glversion_matches_at_least(glue, 
-                                               static_cast<unsigned int>(major),
-                                               static_cast<unsigned int>(minor), 
-                                               static_cast<unsigned int>(release));
+  SoDB::ContextManager* manager = SoDB::getContextManager();
+  void* temp_context = nullptr;
+  SbBool context_created = FALSE;
+  SbBool result = FALSE;
+  
+  if (manager) {
+    // Create a minimal temporary context for version comparison
+    temp_context = manager->createOffscreenContext(32, 32);
+    if (temp_context) {
+      context_created = manager->makeContextCurrent(temp_context);
+    }
   }
   
-  return FALSE;
+  if (context_created) {
+    const cc_glglue * glue = cc_glglue_instance(1);
+    if (glue) {
+      result = cc_glglue_glversion_matches_at_least(glue, 
+                                                   static_cast<unsigned int>(major),
+                                                   static_cast<unsigned int>(minor), 
+                                                   static_cast<unsigned int>(release));
+    }
+    
+    // Clean up temporary context
+    if (manager && temp_context) {
+      manager->restorePreviousContext(temp_context);
+      manager->destroyContext(temp_context);
+    }
+  }
+  
+  return result;
 }
 
 // ======================================================================

@@ -135,9 +135,8 @@ private:
 /**
  * @brief RAII manager for OSMesa context provider registration with Coin3D
  * 
- * Note: The ContextProvider API has been removed from SoOffscreenRenderer.
- * Context management should now be done via SoDB::init(context_manager).
- * This class is kept for legacy test compatibility but no longer manages providers.
+ * This class now provides a SoDB::ContextManager implementation for OSMesa
+ * and automatically sets it up via SoDB::init(context_manager).
  */
 class OSMesaCallbackManager {
 public:
@@ -151,7 +150,8 @@ public:
     OSMesaCallbackManager& operator=(OSMesaCallbackManager&&) = delete;
 
 private:
-    // ContextProvider API has been removed - this class is now a no-op
+    class OSMesaContextManager;
+    std::unique_ptr<OSMesaContextManager> context_manager_;
 };
 
 /**

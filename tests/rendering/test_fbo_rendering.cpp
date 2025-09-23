@@ -16,6 +16,7 @@
 #include <vector>
 #include <fstream>
 #include "utils/png_test_utils.h"
+#include "../utils/osmesa_test_context.h"
 
 using namespace CoinTestUtils;
 
@@ -176,7 +177,6 @@ TEST_CASE("OSMesa Standard FBO Test", "[osmesa][simple][fbo]") {
 TEST_CASE("FBO-based Offscreen Rendering", "[fbo][osmesa][rendering]") {
     
     SECTION("Basic FBO rendering with simple scene") {
-        // ContextProvider API has been removed - context management is now global
         // Create a simple scene with lighting
         SoSeparator* root = new SoSeparator;
         root->ref();
@@ -239,8 +239,6 @@ TEST_CASE("FBO-based Offscreen Rendering", "[fbo][osmesa][rendering]") {
     }
     
     SECTION("FBO rendering with different viewport sizes") {
-        // ContextProvider API has been removed - context management is now global
-        
         // Create a simple scene
         SoSeparator* root = new SoSeparator;
         root->ref();
@@ -300,8 +298,6 @@ TEST_CASE("FBO-based Offscreen Rendering", "[fbo][osmesa][rendering]") {
 TEST_CASE("FBO Demo Comprehensive Integration", "[fbo][demo][osmesa][rendering]") {
     
     SECTION("FBO demo architecture validation - replaces standalone demo") {
-        // ContextProvider API has been removed - context management is now global
-        
         // Create a comprehensive 3D scene like the original FBO demo
         SoSeparator* root = new SoSeparator;
         root->ref();

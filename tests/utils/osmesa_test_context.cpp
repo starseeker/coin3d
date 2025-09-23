@@ -38,6 +38,7 @@
 #include <iostream>
 #include <fstream>
 #include <cstring>
+#include <Inventor/SoDB.h>
 
 namespace CoinTestUtils {
 
@@ -166,17 +167,45 @@ void OSMesaTestContext::cleanup() {
 // OSMesaCallbackManager Implementation  
 // ============================================================================
 
-// Note: ContextProvider API has been removed from SoOffscreenRenderer.
-// This manager is now a no-op for backward compatibility.
+// OSMesa ContextManager implementation for SoDB::init()
+class OSMesaCallbackManager::OSMesaContextManager : public SoDB::ContextManager {
+public:
+    virtual void * createOffscreenContext(unsigned int width, unsigned int height) override {
+        auto* context = new OSMesaTestContext(width, height);
+        if (!context->isValid()) {
+            delete context;
+            return nullptr;
+        }
+        return context;
+    }
+    
+    virtual SbBool makeContextCurrent(void * context) override {
+        if (!context) return FALSE;
+        auto* osmesa_ctx = static_cast<OSMesaTestContext*>(context);
+        return osmesa_ctx->makeCurrent() ? TRUE : FALSE;
+    }
+    
+    virtual void restorePreviousContext(void * context) override {
+        // OSMesa doesn't need explicit context switching in our test setup
+        (void)context;
+    }
+    
+    virtual void destroyContext(void * context) override {
+        if (context) {
+            delete static_cast<OSMesaTestContext*>(context);
+        }
+    }
+};
 
-OSMesaCallbackManager::OSMesaCallbackManager() {
-    // Context management should now be done via SoDB::init(context_manager)
-    // This constructor is now a no-op for backward compatibility
+OSMesaCallbackManager::OSMesaCallbackManager() 
+    : context_manager_(std::make_unique<OSMesaContextManager>()) {
+    // Set up the context manager via SoDB::init()
+    SoDB::init(context_manager_.get());
 }
 
 OSMesaCallbackManager::~OSMesaCallbackManager() {
-    // Context management should now be done via SoDB::init(context_manager)
-    // This destructor is now a no-op for backward compatibility
+    // Context manager will be automatically cleaned up when the unique_ptr is destroyed
+    // SoDB will continue to use the context manager until the library is shut down
 }
 
 // ============================================================================

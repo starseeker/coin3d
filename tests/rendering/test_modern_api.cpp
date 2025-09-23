@@ -6,6 +6,7 @@
  */
 
 #include <catch2/catch_test_macros.hpp>
+#include <Inventor/SoDB.h>
 #include <Inventor/SoOffscreenRenderer.h>
 #include <Inventor/SbViewportRegion.h>
 #include <Inventor/nodes/SoCube.h>
@@ -23,6 +24,7 @@ TEST_CASE("Modern C++ API for OpenGL capabilities", "[rendering][modern][api]") 
     
     SECTION("OpenGL version detection") {
         // Test OpenGL version detection using the simplified API
+        // Global OSMesa context manager is already set up in main.cpp
         int major, minor, release;
         SoOffscreenRenderer::getOpenGLVersion(major, minor, release);
         
@@ -33,6 +35,7 @@ TEST_CASE("Modern C++ API for OpenGL capabilities", "[rendering][modern][api]") 
     
     SECTION("OpenGL extension support detection") {
         // Test extension support detection using the simplified API
+        // Global OSMesa context manager is already set up in main.cpp
         SbBool hasVBO = SoOffscreenRenderer::isOpenGLExtensionSupported("GL_ARB_vertex_buffer_object");
         SbBool hasFBO = SoOffscreenRenderer::hasFramebufferObjectSupport();
         
@@ -45,6 +48,7 @@ TEST_CASE("Modern C++ API for OpenGL capabilities", "[rendering][modern][api]") 
     
     SECTION("OpenGL version comparison") {
         // Test version comparison using the simplified API
+        // Global OSMesa context manager is already set up in main.cpp
         SbBool hasGL2 = SoOffscreenRenderer::isVersionAtLeast(2, 0);
         SbBool hasGL3 = SoOffscreenRenderer::isVersionAtLeast(3, 0);
         

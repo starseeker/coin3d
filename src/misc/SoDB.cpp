@@ -232,6 +232,18 @@ SoDB::init(ContextManager * context_manager)
     global_context_manager = context_manager;
   }
 
+  // Allow re-initialization if a context manager is provided, even if already initialized
+  // This enables tests to be run in isolation with proper context setup
+  if (SoDB::isInitialized() && !context_manager) {
+    return; // No re-initialization without context manager
+  }
+
+  // If already initialized and context manager is provided, just update the context manager
+  if (SoDB::isInitialized() && context_manager) {
+    global_context_manager = context_manager;
+    return; // Context manager updated, no need to re-initialize everything else
+  }
+
   // This is to catch the (unlikely) event that the C++ compiler adds
   // padding or rtti information to the SbVec3f (or similar) base classes.
   // We assume this isn't done several places in Coin, so the best thing to
@@ -245,8 +257,6 @@ SoDB::init(ContextManager * context_manager)
   assert((a_static_variable == 0xdeadbeef) &&
          "SoDB::init() called before Coin DLL initialization!");
   (void)a_static_variable; // suppress unused variable warning in release builds
-
-  if (SoDB::isInitialized()) return;
 
   // Initialize threading subsystem first as it's needed for other components
   cc_thread_init();
