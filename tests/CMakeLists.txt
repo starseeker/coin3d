@@ -71,12 +71,12 @@ add_executable(CoinTests
     errors/test_errors_comprehensive.cpp
     nodekits/test_nodekits_comprehensive.cpp
     io/test_io_comprehensive.cpp
-    # TODO: Add remaining complete migrated test files once compilation issues are resolved:
-    # base/test_base_complete.cpp
-    # fields/test_fields_complete.cpp
-    # misc/test_misc_complete.cpp
-    # nodes/test_nodes_complete.cpp
-    # actions/test_actions_complete.cpp
+    # Complete migrated test files - comprehensive testing
+    base/test_base_complete.cpp
+    fields/test_fields_complete.cpp
+    misc/test_misc_complete.cpp
+    nodes/test_nodes_complete.cpp
+    actions/test_actions_complete.cpp
 )
 
 target_link_libraries(CoinTests
