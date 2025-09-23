@@ -38,6 +38,7 @@
 #include <iostream>
 #include <fstream>
 #include <cstring>
+#include <Inventor/SoDB.h>
 
 namespace CoinTestUtils {
 
@@ -166,8 +167,8 @@ void OSMesaTestContext::cleanup() {
 // OSMesaCallbackManager Implementation  
 // ============================================================================
 
-// Modern C++ ContextProvider implementation for OSMesa
-class OSMesaCallbackManager::OSMesaContextProvider : public SoOffscreenRenderer::ContextProvider {
+// OSMesa ContextManager implementation for SoDB::init()
+class OSMesaCallbackManager::OSMesaContextManager : public SoDB::ContextManager {
 public:
     virtual void * createOffscreenContext(unsigned int width, unsigned int height) override {
         auto* context = new OSMesaTestContext(width, height);
@@ -197,14 +198,14 @@ public:
 };
 
 OSMesaCallbackManager::OSMesaCallbackManager() 
-    : provider_(std::make_unique<OSMesaContextProvider>())
-    , originalProvider_(SoOffscreenRenderer::getContextProvider()) {
-    SoOffscreenRenderer::setContextProvider(provider_.get());
+    : context_manager_(std::make_unique<OSMesaContextManager>()) {
+    // Set up the context manager via SoDB::init()
+    SoDB::init(context_manager_.get());
 }
 
 OSMesaCallbackManager::~OSMesaCallbackManager() {
-    // Restore original context provider
-    SoOffscreenRenderer::setContextProvider(originalProvider_);
+    // Context manager will be automatically cleaned up when the unique_ptr is destroyed
+    // SoDB will continue to use the context manager until the library is shut down
 }
 
 // ============================================================================

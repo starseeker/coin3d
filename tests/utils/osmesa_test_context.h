@@ -135,8 +135,8 @@ private:
 /**
  * @brief RAII manager for OSMesa context provider registration with Coin3D
  * 
- * Automatically registers and unregisters OSMesa context provider with Coin3D's
- * modern context management system for seamless integration.
+ * This class now provides a SoDB::ContextManager implementation for OSMesa
+ * and automatically sets it up via SoDB::init(context_manager).
  */
 class OSMesaCallbackManager {
 public:
@@ -150,9 +150,8 @@ public:
     OSMesaCallbackManager& operator=(OSMesaCallbackManager&&) = delete;
 
 private:
-    class OSMesaContextProvider;
-    std::unique_ptr<OSMesaContextProvider> provider_;
-    SoOffscreenRenderer::ContextProvider* originalProvider_;
+    class OSMesaContextManager;
+    std::unique_ptr<OSMesaContextManager> context_manager_;
 };
 
 /**
