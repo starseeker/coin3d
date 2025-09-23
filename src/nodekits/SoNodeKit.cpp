@@ -86,7 +86,13 @@ SoNodeKit::init(void)
 {
   if (nodekit_isinitialized) return;
 
-  if (!SoDB::isInitialized()) SoDB::init(nullptr);
+  if (!SoDB::isInitialized()) {
+    // Use fprintf instead of SoDebugError to avoid dependency on initialized system
+    fprintf(stderr, "SoNodeKit::init: ERROR - SoDB::init() has not been called. "
+                    "Applications must call SoDB::init(&context_manager) before using any Coin3D functionality. "
+                    "See documentation for SoDB::ContextManager for details.\n");
+    return;
+  }
 
 #ifdef HAVE_NODEKITS
   SoNodeKitListPart::initClass();
