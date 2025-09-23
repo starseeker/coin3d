@@ -218,24 +218,23 @@ int main(int argc, char* argv[]) {
     SoDB::init(&context_manager);
     
     std::cout << "NOTE: Using OSMesa for real offscreen rendering" << std::endl;
-    std::cout << "Built with OSMesa support - no mock provider needed" << std::endl;
+    std::cout << "Built with OSMesa support - modern API only" << std::endl;
 #else
-    // For non-OSMesa builds, this will fail as expected since we need context management
-    std::cout << "ERROR: This demo requires OSMesa build for context management" << std::endl;
-    std::cout << "Please build with -DCOIN3D_USE_OSMESA=ON" << std::endl;
-    return 1;
+    // For non-OSMesa builds, we'll use a simple null context manager
+    // This demonstrates the modern API architecture
+    class NullContextManager : public SoDB::ContextManager {
+    public:
+        virtual void* createOffscreenContext(unsigned int, unsigned int) override { return nullptr; }
+        virtual SbBool makeContextCurrent(void*) override { return FALSE; }
+        virtual void restorePreviousContext(void*) override {}
+        virtual void destroyContext(void*) override {}
+    } null_manager;
+    
+    SoDB::init(&null_manager);
+    std::cout << "NOTE: Running without OSMesa - no actual rendering possible" << std::endl;
+    std::cout << "To enable real rendering, build with -DCOIN3D_USE_OSMESA=ON" << std::endl;
 #endif
-    std::cout << "To use with OSMesa, rebuild with -DCOIN3D_USE_OSMESA=ON" << std::endl;
     std::cout << std::endl;
-    
-    // Set up mock context provider to demonstrate the architecture (fallback mode)
-    MockContextProvider mockProvider;
-    SoOffscreenRenderer::ContextProvider* originalProvider = 
-        SoOffscreenRenderer::getContextProvider();
-    SoOffscreenRenderer::setContextProvider(&mockProvider);
-    
-    std::cout << "Mock context provider registered with Coin3D" << std::endl;
-#endif
     
     // Create a simple 3D scene
     SoSeparator* root = new SoSeparator;
@@ -311,11 +310,6 @@ int main(int argc, char* argv[]) {
     
     // Cleanup
     root->unref();
-    
-#ifndef COIN3D_OSMESA_BUILD
-    // Restore original context provider (only needed for mock mode)
-    SoOffscreenRenderer::setContextProvider(originalProvider);
-#endif
     
     std::cout << "\nDemo completed!" << std::endl;
     std::cout << "The FBO-based architecture is properly implemented." << std::endl;
