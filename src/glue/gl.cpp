@@ -254,6 +254,26 @@
 #include "threads/threadsutilp.h"
 #include "misc/SoEnvironment.h"
 
+// Include for SoDB context manager - minimal include to avoid circular dependencies
+class SoDB { 
+public: 
+  class ContextManager {
+  public:
+    virtual ~ContextManager() {}
+    virtual void * createOffscreenContext(unsigned int width, unsigned int height) = 0;
+    virtual SbBool makeContextCurrent(void * context) = 0;
+    virtual void restorePreviousContext(void * context) = 0;
+    virtual void destroyContext(void * context) = 0;
+  }; 
+  static ContextManager* getContextManager(); 
+};
+
+namespace { 
+  SoDB::ContextManager * getSoDBContextManager() {
+    return SoDB::getContextManager();
+  }
+}
+
 /* ********************************************************************** */
 
 #ifdef __cplusplus
@@ -267,7 +287,7 @@ extern "C" {
 static cc_list * gl_instance_created_cblist = NULL;
 static int COIN_MAXIMUM_TEXTURE2_SIZE = -1;
 static int COIN_MAXIMUM_TEXTURE3_SIZE = -1;
-static cc_glglue_offscreen_cb_functions* offscreen_cb = NULL;
+/* Removed old C-style callback system - now uses SoDB::ContextManager directly */
 
 /* ********************************************************************** */
 
@@ -654,7 +674,7 @@ glglue_cleanup(void)
     cc_dict_destruct(gldict);
     gldict = NULL;
   }
-  offscreen_cb = NULL;
+  /* No more callback cleanup needed - context manager is managed by SoDB */
 
   /* Platform-specific cleanup is no longer needed with callback-based contexts */
 }
@@ -2323,12 +2343,14 @@ cc_glglue_instance(int contextid)
 #ifdef COIN3D_OSMESA_BUILD
       if (coin_glglue_debug()) {
         cc_debugerror_postinfo("cc_glglue_instance", "coin_gl_current_context() returned: %p", current_ctx);
-        cc_debugerror_postinfo("cc_glglue_instance", "offscreen_cb = %p", offscreen_cb);
+        SoDB::ContextManager* manager = getSoDBContextManager();
+        cc_debugerror_postinfo("cc_glglue_instance", "context_manager = %p", manager);
       }
 #endif
       // For callback-based contexts, coin_gl_current_context() always returns NULL
       // This is expected behavior, so we skip the assertion in that case
-      if (!offscreen_cb) {
+      SoDB::ContextManager* manager = getSoDBContextManager();
+      if (!manager) {
         assert(current_ctx && "Must have a current GL context when instantiating cc_glglue!! (Note: if you are using an old Mesa GL version, set the environment variable COIN_GL_NO_CURRENT_CONTEXT_CHECK to get around what may be a Mesa bug.)");
       }
 #ifdef COIN3D_OSMESA_BUILD
@@ -4568,31 +4590,30 @@ cc_glglue_glXGetCurrentDisplay(const cc_glglue * w)
   }
 */
 
-/* offscreen rendering callback handling */
-
-void
-cc_glglue_context_set_offscreen_cb_functions(cc_glglue_offscreen_cb_functions* p)
-{
-  offscreen_cb = p;
+// Forward declaration and helper for SoDB context manager access
+// This allows the glue layer to access SoDB without circular dependencies
+extern "C" {
+  // Defined in SoDB.cpp - returns the current context manager
+  void* coin_get_context_manager(void);
 }
+
+/* offscreen rendering - now uses SoDB::ContextManager directly */
 
 void *
 cc_glglue_context_create_offscreen(unsigned int width, unsigned int height)
 {
-  if (offscreen_cb && offscreen_cb->create_offscreen) {
-    return (*offscreen_cb->create_offscreen)(width, height);
+  SoDB::ContextManager* manager = getSoDBContextManager();
+  if (manager) {
+    return manager->createOffscreenContext(width, height);
   } else {
-    // ERROR: No context creation callbacks provided
-    // Applications must provide context creation callbacks via cc_glglue_context_set_offscreen_cb_functions()
-    // The old built-in platform-specific context creation is no longer supported.
-    
+    // ERROR: No context manager provided
     static int error_shown = 0;
     if (!error_shown) {
       error_shown = 1;
-      fprintf(stderr, "ERROR: No context creation callbacks provided. "
-                      "Applications must provide context creation callbacks "
-                      "via cc_glglue_context_set_offscreen_cb_functions(). "
-                      "See examples/osmesa_example.h for reference implementation.\n");
+      fprintf(stderr, "ERROR: No context manager provided. "
+                      "Applications must provide a context manager "
+                      "via SoDB::setContextManager() before SoDB::init(). "
+                      "See documentation for SoDB::ContextManager.\n");
     }
     
     return NULL;
@@ -4602,16 +4623,17 @@ cc_glglue_context_create_offscreen(unsigned int width, unsigned int height)
 SbBool
 cc_glglue_context_make_current(void * ctx)
 {
-  if (offscreen_cb && offscreen_cb->make_current) {
-    return (*offscreen_cb->make_current)(ctx);
+  SoDB::ContextManager* manager = getSoDBContextManager();
+  if (manager) {
+    return manager->makeContextCurrent(ctx);
   } else {
-    // ERROR: No context callback functions provided
+    // ERROR: No context manager provided
     static int error_shown = 0;
     if (!error_shown) {
       error_shown = 1;
-      fprintf(stderr, "ERROR: No context callback functions provided. "
-                      "Applications must provide context management callbacks "
-                      "via cc_glglue_context_set_offscreen_cb_functions().\n");
+      fprintf(stderr, "ERROR: No context manager provided. "
+                      "Applications must provide a context manager "
+                      "via SoDB::setContextManager() before SoDB::init().\n");
     }
     return FALSE;
   }
@@ -4626,38 +4648,34 @@ cc_glglue_context_reinstate_previous(void * ctx)
      in the GLX implementation, which I have checked), but only the
      last context is kept track of.
 
-     Probably needs to be fixed. Or at least we should detect and
-     assert, if this is not allowed for some reason.
+     FIXME: So, the API for this feature is fucked up. Should probably
+     redesign it by adding a stack concept. 20030717 mortene.
+   */
 
-     20040621 mortene. */
-
-  if (offscreen_cb && offscreen_cb->reinstate_previous) {
-    (*offscreen_cb->reinstate_previous)(ctx);
-  } else {
-    // Context reinstatement is callback-only - no fallback available
-    // This is typically a no-op for many implementations
-    if (ctx) {
-      // Silently ignore - many context implementations don't need explicit reinstatement
-    }
+  SoDB::ContextManager* manager = getSoDBContextManager();
+  if (manager) {
+    manager->restorePreviousContext(ctx);
   }
+  // No error message here - this is optional functionality
 }
 
 void
 cc_glglue_context_destruct(void * ctx)
 {
-  if (offscreen_cb && offscreen_cb->destruct) {
-    (*offscreen_cb->destruct)(ctx);
+  SoDB::ContextManager* manager = getSoDBContextManager();
+  if (manager) {
+    manager->destroyContext(ctx);
   } else {
-    // ERROR: No context callback functions provided for destruction
+    // ERROR: No context manager provided for destruction
     static int error_shown = 0;
     if (!error_shown) {
       error_shown = 1;
-      fprintf(stderr, "ERROR: No context destruction callback provided. "
+      fprintf(stderr, "ERROR: No context manager provided. "
                       "Context may not be properly cleaned up. "
-                      "Applications must provide context management callbacks "
-                      "via cc_glglue_context_set_offscreen_cb_functions().\n");
+                      "Applications must provide a context manager "
+                      "via SoDB::setContextManager().\n");
     }
-    // Cannot safely destroy context without callbacks
+    // Cannot safely destroy context without manager
   }
 }
 

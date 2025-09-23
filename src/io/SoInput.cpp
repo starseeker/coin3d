@@ -209,15 +209,19 @@ SoInput::constructorsCommon(void)
 {
   // In general, we force app programmers to call SoDB::init(),
   // directly or indirectly, before using any other part of the Coin
-  // API. We grant slack in one particular spot, though: it should be
-  // possible to construct an SoInput before SoDB::init() has been
-  // invoked from app code, as it is common to just have an SoInput on
-  // the stack of the main() function.
+  // API. With the new strict initialization requirements, SoDB::init()
+  // must be called with a proper ContextManager before constructing
+  // any Coin3D objects, including SoInput.
   //
-  // But since SoInput uses threads, which need to be initialized, we
-  // need to check for SoDB::init() here, and invoke it if it was not
-  // yet called.
-  if (!SoDB::isInitialized()) { SoDB::init(); }
+  // Note: The previous "forgiving" behavior of automatically calling
+  // SoDB::init() has been removed to enforce proper initialization ordering.
+  if (!SoDB::isInitialized()) {
+    // Use fprintf instead of SoDebugError to avoid dependency on initialized system
+    fprintf(stderr, "SoInput::SoInput: ERROR - SoDB::init() has not been called. "
+                    "Applications must call SoDB::init(&context_manager) before creating any Coin3D objects. "
+                    "See documentation for SoDB::ContextManager for details.\n");
+    // Continue with limited functionality but warn about potential issues
+  }
 
   PRIVATE(this) = new SoInputP(this);
 

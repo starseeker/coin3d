@@ -106,6 +106,7 @@
 
 #include "coindefs.h" // COIN_STUB(), COIN_INIT_CHECK_THREAD()
 #include "shaders/SoShader.h"
+/* glue/glp.h include removed - no longer needed for old callback system */
 
 #include "fields/SoGlobalField.h"
 #include "misc/CoinStaticObjectInDLL.h"
@@ -131,74 +132,12 @@
 #include <Inventor/annex/Profiler/elements/SoProfilerElement.h>
 #include "profiler/SoProfilerP.h"
 
-#ifdef HAVE_OSMESA
-// OSMesa support for automatic context callback registration
-#include "glue/glp.h"
-#ifdef COIN3D_OSMESA_BUILD
-#include <OSMesa/osmesa.h>
-#include <OSMesa/gl.h>
-#include <memory>
+/* Old OSMesa initialization code removed - now uses public SoDB::ContextManager API */
 
-// OSMesa Context wrapper for automatic context management
-struct SoDBOSMesaContext {
-  OSMesaContext context;
-  std::unique_ptr<unsigned char[]> buffer;
-  int width, height;
-  
-  SoDBOSMesaContext(int w, int h) : width(w), height(h) {
-    context = OSMesaCreateContextExt(OSMESA_RGBA, 16, 0, 0, NULL);
-    if (context) {
-      buffer = std::make_unique<unsigned char[]>(width * height * 4);
-    }
-  }
-  
-  ~SoDBOSMesaContext() {
-    if (context) {
-      OSMesaDestroyContext(context);
-    }
-  }
-  
-  bool isValid() const { return context != nullptr; }
-  
-  bool makeCurrent() {
-    return context && OSMesaMakeCurrent(context, buffer.get(), GL_UNSIGNED_BYTE, width, height) == GL_TRUE;
-  }
-};
-
-// OSMesa callback implementations for Coin3D context management
-static void* coin_osmesa_create_offscreen(unsigned int width, unsigned int height) {
-  auto* ctx = new SoDBOSMesaContext(width, height);
-  return ctx->isValid() ? ctx : (delete ctx, nullptr);
+// Static storage for the global context manager
+namespace {
+  SoDB::ContextManager * global_context_manager = nullptr;
 }
-
-static SbBool coin_osmesa_make_current(void* context) {
-  return context && static_cast<SoDBOSMesaContext*>(context)->makeCurrent() ? TRUE : FALSE;
-}
-
-static void coin_osmesa_reinstate_previous(void* context) {
-  // OSMesa doesn't require explicit context switching for single-threaded use
-  (void)context;
-}
-
-static void coin_osmesa_destruct(void* context) {
-  delete static_cast<SoDBOSMesaContext*>(context);
-}
-
-// Initialize OSMesa context management for Coin3D
-static void initializeCoinOSMesaContext() {
-  static cc_glglue_offscreen_cb_functions osmesa_callbacks = {
-    coin_osmesa_create_offscreen,
-    coin_osmesa_make_current, 
-    coin_osmesa_reinstate_previous,
-    coin_osmesa_destruct
-  };
-  
-  // Register callbacks for OSMesa offscreen rendering
-  cc_glglue_context_set_offscreen_cb_functions(&osmesa_callbacks);
-}
-
-#endif // COIN3D_OSMESA_BUILD
-#endif // HAVE_OSMESA
 
 // *************************************************************************
 
@@ -251,14 +190,47 @@ static uint32_t a_static_variable = 0xdeadbeef;
 // *************************************************************************
 
 /*!
-  Initialize the Coin system. This needs to be done as the first
-  thing before you start using the library, or you'll probably see an
-  early crash.
+  Initialize the Coin library with the provided OpenGL context manager.
+
+  This function sets up the Coin library with the specified context manager
+  for OpenGL operations. The context manager must be provided and will be
+  used for all offscreen rendering operations throughout the library's lifetime.
+
+  Note that this function should be called before using any other Coin
+  class or function. If the Coin library is built as a DLL under Microsoft
+  Windows and you are experiencing problems with initializing the library,
+  please see the class documentation of SoDB for a description of how to
+  work around this problem.
+
+  It's safe to call this function multiple times with the same context manager.
+
+  Make sure you call SoDB::cleanup() before application termination, for
+  the Coin library to be able to clean up internal static data structures.
+
+  \param context_manager The OpenGL context manager to use for rendering operations.
+                        Must not be NULL.
+
+  \sa cleanup(), finish()
+
+  \since Coin 4.0 (breaking change - context manager is now required)
  */
 void
-SoDB::init(void)
+SoDB::init(ContextManager * context_manager)
 {
   COIN_INIT_CHECK_THREAD();
+
+  // Require a valid context manager
+  if (!context_manager) {
+    SoDebugError::post("SoDB::init", 
+                       "Context manager is NULL. "
+                       "Applications must provide a valid ContextManager implementation. "
+                       "For internal library use, this will proceed with limited functionality.");
+    // For internal library calls, we proceed but with limited context support
+    // Applications should always provide a proper context manager
+  } else {
+    // Set the global context manager
+    global_context_manager = context_manager;
+  }
 
   // This is to catch the (unlikely) event that the C++ compiler adds
   // padding or rtti information to the SbVec3f (or similar) base classes.
@@ -1681,6 +1653,34 @@ SoDB::removeRoute(SoNode * fromnode, const char * eventout,
                               tonodename.getString(), eventin);
   }
 #endif // COIN_DEBUG
+}
+
+// *************************************************************************
+
+// Context manager support for applications
+// This provides a public API for applications to register OpenGL context
+// management before SoDB::init(), which is essential for proper
+// initialization ordering with custom rendering backends.
+
+/*!
+  Get the currently set global context manager.
+  
+  \return The current context manager, or NULL if none is set
+  
+  \since Coin 4.0
+*/
+SoDB::ContextManager *
+SoDB::getContextManager(void)
+{
+  return global_context_manager;
+}
+
+// C-style helper function for glue layer to access context manager
+// This avoids circular dependencies between glue and SoDB
+extern "C" {
+  void* coin_get_context_manager(void) {
+    return SoDB::getContextManager();
+  }
 }
 
 /* *********************************************************************** */

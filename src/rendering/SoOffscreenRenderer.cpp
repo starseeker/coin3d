@@ -319,6 +319,7 @@
 
 #include "glue/glp.h"
 #include "C/CoinTidbits.h"
+#include <Inventor/SoDB.h>
 #include <Inventor/SbMatrix.h>
 #include <Inventor/SbVec2f.h>
 #include <Inventor/SbViewportRegion.h>
@@ -1839,36 +1840,7 @@ namespace {
     return g_context_provider;
   }
   
-  // C-style callback wrapper functions - these need to be careful about null pointer access
-  void * context_provider_create_offscreen(unsigned int width, unsigned int height) {
-    SoOffscreenRenderer::ContextProvider * provider = getContextProviderRef();
-    if (provider) {
-      return provider->createOffscreenContext(width, height);
-    }
-    return nullptr;
-  }
-  
-  SbBool context_provider_make_current(void * context) {
-    SoOffscreenRenderer::ContextProvider * provider = getContextProviderRef();
-    if (provider) {
-      return provider->makeContextCurrent(context);
-    }
-    return FALSE;
-  }
-  
-  void context_provider_reinstate_previous(void * context) {
-    SoOffscreenRenderer::ContextProvider * provider = getContextProviderRef();
-    if (provider) {
-      provider->restorePreviousContext(context);
-    }
-  }
-  
-  void context_provider_destruct(void * context) {
-    SoOffscreenRenderer::ContextProvider * provider = getContextProviderRef();
-    if (provider) {
-      provider->destroyContext(context);
-    }
-  }
+  /* Old C-style callback wrapper functions removed - now using SoDB::ContextManager directly */
 }
 
 /*!
@@ -1885,20 +1857,18 @@ namespace {
 void
 SoOffscreenRenderer::setContextProvider(ContextProvider * provider)
 {
+  // NOTE: With the new context management architecture, context providers 
+  // should be set globally via SoDB::init(context_manager) before library initialization.
+  // The per-renderer context provider API is deprecated and no longer supported.
+  
+  // Store the provider for potential future use but warn about the change
   getContextProviderRef() = provider;
   
   if (provider) {
-    // Set up the C-style callback structure
-    static cc_glglue_offscreen_cb_functions callbacks = {
-      context_provider_create_offscreen,
-      context_provider_make_current,
-      context_provider_reinstate_previous,
-      context_provider_destruct
-    };
-    cc_glglue_context_set_offscreen_cb_functions(&callbacks);
-  } else {
-    // Reset to default (pass NULL to clear callbacks)
-    cc_glglue_context_set_offscreen_cb_functions(nullptr);
+    SoDebugError::postWarning("SoOffscreenRenderer::setContextProvider",
+                              "The per-renderer context provider API is deprecated. "
+                              "Applications should provide context management via "
+                              "SoDB::init(context_manager) before library initialization.");
   }
 }
 
