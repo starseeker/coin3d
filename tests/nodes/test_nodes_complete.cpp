@@ -80,7 +80,7 @@ TEST_CASE("SoNode base functionality", "[nodes][SoNode][complete]") {
     SECTION("type system") {
         SoType nodeType = SoNode::getClassTypeId();
         CHECK(nodeType != SoType::badType());
-        CHECK(nodeType.getName() == SbName("SoNode"));
+        CHECK(nodeType.getName() == SbName("Node"));
     }
 
     SECTION("reference counting") {
