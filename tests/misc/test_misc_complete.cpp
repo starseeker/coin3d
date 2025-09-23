@@ -41,9 +41,6 @@
 #include <Inventor/nodes/SoCube.h>
 #include <Inventor/nodes/SoSphere.h>
 #include <Inventor/nodes/SoNode.h>
-#include <iostream>
-#include <cstring>
-#include <algorithm>
 #include <Inventor/SoPrimitiveVertex.h>
 #include <Inventor/misc/SoState.h>
 #include <Inventor/misc/SoNotification.h>
