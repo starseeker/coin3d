@@ -217,7 +217,7 @@ SoInput::constructorsCommon(void)
   // But since SoInput uses threads, which need to be initialized, we
   // need to check for SoDB::init() here, and invoke it if it was not
   // yet called.
-  if (!SoDB::isInitialized()) { SoDB::init(); }
+  if (!SoDB::isInitialized()) { SoDB::init(nullptr); }
 
   PRIVATE(this) = new SoInputP(this);
 

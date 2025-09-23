@@ -95,24 +95,20 @@ public:
 int main() {
     std::cout << "Testing NEW public SoDB context management API with OSMesa" << std::endl;
     
-    // NEW: Use the public SoDB context management API
+    // NEW APPROACH: Pass context manager directly to SoDB::init()
     OSMesaContextManager context_manager;
     
-    // Register our context manager BEFORE SoDB::init()
-    // This ensures proper initialization ordering
-    SoDB::setContextManager(&context_manager);
+    // Initialize Coin3D with our context manager
+    // This enforces proper initialization ordering by construction
+    SoDB::init(&context_manager);
     
-    // Verify the context manager was set
+    // Verify the context manager was set correctly
     if (SoDB::getContextManager() == &context_manager) {
-        std::cout << "✓ Context manager successfully registered with SoDB" << std::endl;
+        std::cout << "✓ Context manager successfully set via SoDB::init()" << std::endl;
     } else {
-        std::cerr << "✗ Failed to register context manager with SoDB" << std::endl;
+        std::cerr << "✗ Context manager not set correctly" << std::endl;
         return 1;
     }
-    
-    // Now initialize Coin3D - this will use our context manager for any OpenGL context needs
-    SoDB::init();
-    std::cout << "✓ SoDB::init() completed with registered context manager" << std::endl;
     
     // Test creating a simple scene to verify rendering works
     SoSeparator* root = new SoSeparator;
@@ -168,10 +164,10 @@ int main() {
     
     std::cout << "✓ All tests completed successfully with new public API!" << std::endl;
     
-    // Test context manager cleanup
-    SoDB::setContextManager(nullptr);
-    if (SoDB::getContextManager() == nullptr) {
-        std::cout << "✓ Context manager successfully cleared" << std::endl;
+    // Test context manager cleanup - no longer possible with new API
+    // Context managers are set at init time and managed by the library
+    if (SoDB::getContextManager() == &context_manager) {
+        std::cout << "✓ Context manager still accessible via SoDB::getContextManager()" << std::endl;
     }
     
     return 0;

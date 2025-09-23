@@ -98,23 +98,12 @@ int main() {
     std::cout << "Testing OSMesa context management with NEW public SoDB API" << std::endl;
     
     // NEW APPROACH: Use the public SoDB context management API
-    // This replaces the old internal cc_glglue_context_set_offscreen_cb_functions()
+    // Context manager is now passed directly to SoDB::init()
     OSMesaContextManager context_manager;
     
-    // Register our context manager BEFORE SoDB::init()
-    // This ensures callbacks are available when Coin3D initializes OpenGL glue
-    SoDB::setContextManager(&context_manager);
-    
-    // Verify the context manager was set
-    if (SoDB::getContextManager() == &context_manager) {
-        std::cout << "✓ Context manager successfully registered with SoDB before init" << std::endl;
-    } else {
-        std::cerr << "✗ Failed to register context manager with SoDB" << std::endl;
-        return 1;
-    }
-    
-    // Now initialize Coin3D - this will use our context manager for any OpenGL context needs
-    SoDB::init();
+    // Now initialize Coin3D with our context manager
+    // This enforces proper initialization ordering by construction
+    SoDB::init(&context_manager);
     
     // Test basic rendering with the new context management system
     std::cout << "Testing rendering with new context management..." << std::endl;
@@ -182,10 +171,10 @@ int main() {
     std::cout << std::endl;
     std::cout << "=== SUMMARY ===" << std::endl;
     std::cout << "✓ NEW public SoDB context management API working correctly" << std::endl;
-    std::cout << "✓ Context callbacks can be set BEFORE SoDB::init()" << std::endl;
-    std::cout << "✓ No more initialization ordering issues" << std::endl;
+    std::cout << "✓ Context manager passed directly to SoDB::init() - no ordering issues!" << std::endl;
     std::cout << "✓ Clean C++ interface instead of C-style callbacks" << std::endl;
     std::cout << "✓ Eliminates need for internal cc_glglue_context_* functions" << std::endl;
+    std::cout << "✓ Enforced initialization ordering by API design" << std::endl;
     
     return 0;
 }

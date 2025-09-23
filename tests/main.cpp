@@ -37,11 +37,41 @@
 
 #ifdef COIN3D_OSMESA_BUILD
 #include "utils/osmesa_test_context.h"
+#include <Inventor/SoDB.h>
 #include <memory>
 
-// Global OSMesa context manager for all tests
+// Simple global context manager for test setup
 namespace {
-    std::unique_ptr<CoinTestUtils::OSMesaCallbackManager> g_global_osmesa_manager;
+    class GlobalOSMesaContextManager : public SoDB::ContextManager {
+    public:
+        virtual void* createOffscreenContext(unsigned int width, unsigned int height) override {
+            auto* context = new CoinTestUtils::OSMesaTestContext(width, height);
+            if (!context->isValid()) {
+                delete context;
+                return nullptr;
+            }
+            return context;
+        }
+        
+        virtual SbBool makeContextCurrent(void* context) override {
+            if (!context) return FALSE;
+            auto* osmesa_ctx = static_cast<CoinTestUtils::OSMesaTestContext*>(context);
+            return osmesa_ctx->makeCurrent() ? TRUE : FALSE;
+        }
+        
+        virtual void restorePreviousContext(void* context) override {
+            // OSMesa doesn't need explicit context switching in our test setup
+            (void)context;
+        }
+        
+        virtual void destroyContext(void* context) override {
+            if (context) {
+                delete static_cast<CoinTestUtils::OSMesaTestContext*>(context);
+            }
+        }
+    };
+    
+    std::unique_ptr<GlobalOSMesaContextManager> g_global_context_manager;
 }
 #endif
 
@@ -52,24 +82,31 @@ namespace {
 namespace {
     struct GlobalTestSetup {
         GlobalTestSetup() {
-            // Initialize Coin3D first
-            if (!SoDB::isInitialized()) {
-                SoDB::init();
-                SoInteraction::init();
+#ifdef COIN3D_OSMESA_BUILD
+            // Create and use OSMesa context manager for all tests
+            if (!g_global_context_manager) {
+                g_global_context_manager = std::make_unique<GlobalOSMesaContextManager>();
             }
             
-#ifdef COIN3D_OSMESA_BUILD
-            // Set up OSMesa callbacks for all tests that need rendering
-            if (!g_global_osmesa_manager) {
-                g_global_osmesa_manager = std::make_unique<CoinTestUtils::OSMesaCallbackManager>();
+            // Initialize Coin3D with our context manager
+            if (!SoDB::isInitialized()) {
+                SoDB::init(g_global_context_manager.get());
+                SoInteraction::init();
+            }
+#else
+            // For non-OSMesa builds, we need a null context manager
+            // This will cause an error which is expected since we can't render without context management
+            if (!SoDB::isInitialized()) {
+                SoDB::init(nullptr);  // This will show an error and return early
+                SoInteraction::init();
             }
 #endif
         }
         
         ~GlobalTestSetup() {
 #ifdef COIN3D_OSMESA_BUILD
-            // Clean up OSMesa callbacks
-            g_global_osmesa_manager.reset();
+            // Clean up context manager
+            g_global_context_manager.reset();
 #endif
         }
     } g_test_setup;

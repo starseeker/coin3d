@@ -53,7 +53,10 @@ typedef void SoDBHeaderCB(void * data, SoInput * input);
 
 class COIN_DLL_API SoDB {
 public:
-  static void init(void);
+  // Forward declaration of ContextManager for init function
+  class ContextManager;
+
+  static void init(ContextManager * context_manager);
   static void finish(void);
   static void cleanup(void);
 
@@ -130,7 +133,6 @@ public:
     virtual void destroyContext(void * context) = 0;
   };
 
-  static void setContextManager(ContextManager * manager);
   static ContextManager * getContextManager(void);
 
 private:

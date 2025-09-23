@@ -134,6 +134,11 @@
 
 /* Old OSMesa initialization code removed - now uses public SoDB::ContextManager API */
 
+// Static storage for the global context manager
+namespace {
+  SoDB::ContextManager * global_context_manager = nullptr;
+}
+
 // *************************************************************************
 
 // Coin-global envvars:
@@ -185,14 +190,47 @@ static uint32_t a_static_variable = 0xdeadbeef;
 // *************************************************************************
 
 /*!
-  Initialize the Coin system. This needs to be done as the first
-  thing before you start using the library, or you'll probably see an
-  early crash.
+  Initialize the Coin library with the provided OpenGL context manager.
+
+  This function sets up the Coin library with the specified context manager
+  for OpenGL operations. The context manager must be provided and will be
+  used for all offscreen rendering operations throughout the library's lifetime.
+
+  Note that this function should be called before using any other Coin
+  class or function. If the Coin library is built as a DLL under Microsoft
+  Windows and you are experiencing problems with initializing the library,
+  please see the class documentation of SoDB for a description of how to
+  work around this problem.
+
+  It's safe to call this function multiple times with the same context manager.
+
+  Make sure you call SoDB::cleanup() before application termination, for
+  the Coin library to be able to clean up internal static data structures.
+
+  \param context_manager The OpenGL context manager to use for rendering operations.
+                        Must not be NULL.
+
+  \sa cleanup(), finish()
+
+  \since Coin 4.0 (breaking change - context manager is now required)
  */
 void
-SoDB::init(void)
+SoDB::init(ContextManager * context_manager)
 {
   COIN_INIT_CHECK_THREAD();
+
+  // Require a valid context manager
+  if (!context_manager) {
+    SoDebugError::post("SoDB::init", 
+                       "Context manager is NULL. "
+                       "Applications must provide a valid ContextManager implementation. "
+                       "For internal library use, this will proceed with limited functionality.");
+    // For internal library calls, we proceed but with limited context support
+    // Applications should always provide a proper context manager
+  } else {
+    // Set the global context manager
+    global_context_manager = context_manager;
+  }
 
   // This is to catch the (unlikely) event that the C++ compiler adds
   // padding or rtti information to the SbVec3f (or similar) base classes.
@@ -1623,46 +1661,6 @@ SoDB::removeRoute(SoNode * fromnode, const char * eventout,
 // This provides a public API for applications to register OpenGL context
 // management before SoDB::init(), which is essential for proper
 // initialization ordering with custom rendering backends.
-
-namespace {
-  // Static storage for the global context manager
-  SoDB::ContextManager * global_context_manager = nullptr;
-}
-
-/*!
-  Set the global context manager for OpenGL context creation.
-  
-  This method allows applications to provide their own OpenGL context
-  management implementation before calling SoDB::init(). This is essential
-  for applications using custom rendering backends like OSMesa or when
-  fine-grained control over OpenGL context creation is needed.
-  
-  The context manager must be set BEFORE calling SoDB::init() to ensure
-  proper initialization ordering. Once set, Coin3D will use the provided
-  context manager for all offscreen rendering operations.
-  
-  \param manager The context manager instance, or NULL to reset to default
-  
-  Example usage:
-  \code
-  class MyContextManager : public SoDB::ContextManager {
-    // ... implement virtual methods ...
-  };
-  
-  MyContextManager manager;
-  SoDB::setContextManager(&manager);  // MUST be called before SoDB::init()
-  SoDB::init();
-  \endcode
-  
-  \since Coin 4.0
-*/
-void
-SoDB::setContextManager(ContextManager * manager)
-{
-  global_context_manager = manager;
-  // Context manager is now used directly by the glue layer
-  // No callback registration needed - cleaner implementation
-}
 
 /*!
   Get the currently set global context manager.

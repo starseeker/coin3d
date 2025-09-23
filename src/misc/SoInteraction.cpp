@@ -123,7 +123,7 @@ SoInteraction::init(void)
 {
   if (interaction_isinitialized) return;
 
-  if (!SoDB::isInitialized()) SoDB::init();
+  if (!SoDB::isInitialized()) SoDB::init(nullptr);
 
   SoAntiSquish::initClass();
   SoSelection::initClass();

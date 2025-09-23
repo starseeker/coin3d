@@ -86,7 +86,7 @@ SoNodeKit::init(void)
 {
   if (nodekit_isinitialized) return;
 
-  if (!SoDB::isInitialized()) SoDB::init();
+  if (!SoDB::isInitialized()) SoDB::init(nullptr);
 
 #ifdef HAVE_NODEKITS
   SoNodeKitListPart::initClass();

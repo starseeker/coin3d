@@ -499,7 +499,7 @@ ComprehensiveTestRunner::ComprehensiveTestRunner() {
 void ComprehensiveTestRunner::setupTestEnvironment() {
     // Initialize Coin3D if not already done
     if (!SoDB::isInitialized()) {
-        SoDB::init();
+        SoDB::init(nullptr);
         SoInteraction::init();
     }
 }

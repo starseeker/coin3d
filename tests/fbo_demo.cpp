@@ -46,6 +46,57 @@ struct MockOffscreenContext {
     bool makeCurrent() { return valid; }
 };
 
+#ifdef COIN3D_OSMESA_BUILD
+#include <OSMesa/osmesa.h>
+#include <OSMesa/gl.h>
+#include <memory>
+
+// OSMesa Context for the demo
+struct OSMesaDemoContext {
+    OSMesaContext context;
+    std::unique_ptr<unsigned char[]> buffer;
+    int width, height;
+    
+    OSMesaDemoContext(int w, int h) : width(w), height(h) {
+        context = OSMesaCreateContextExt(OSMESA_RGBA, 16, 0, 0, NULL);
+        if (context) {
+            buffer = std::make_unique<unsigned char[]>(width * height * 4);
+        }
+    }
+    
+    ~OSMesaDemoContext() {
+        if (context) OSMesaDestroyContext(context);
+    }
+    
+    bool makeCurrent() {
+        return context && OSMesaMakeCurrent(context, buffer.get(), GL_UNSIGNED_BYTE, width, height);
+    }
+    
+    bool isValid() const { return context != nullptr; }
+};
+
+// Context Manager for the demo
+class OSMesaDemoContextManager : public SoDB::ContextManager {
+public:
+    virtual void* createOffscreenContext(unsigned int width, unsigned int height) override {
+        auto* ctx = new OSMesaDemoContext(width, height);
+        return ctx->isValid() ? ctx : (delete ctx, nullptr);
+    }
+    
+    virtual SbBool makeContextCurrent(void* context) override {
+        return context && static_cast<OSMesaDemoContext*>(context)->makeCurrent() ? TRUE : FALSE;
+    }
+    
+    virtual void restorePreviousContext(void* context) override {
+        (void)context; // OSMesa doesn't need context switching
+    }
+    
+    virtual void destroyContext(void* context) override {
+        delete static_cast<OSMesaDemoContext*>(context);
+    }
+};
+#endif
+
 #ifndef COIN3D_OSMESA_BUILD
 // Mock context provider for demonstration (fallback mode only)
 class MockContextProvider : public SoOffscreenRenderer::ContextProvider {
@@ -159,18 +210,21 @@ int main(int argc, char* argv[]) {
     std::cout << "Coin3D FBO-based Offscreen Rendering Demo" << std::endl;
     std::cout << "==========================================" << std::endl;
     
-    // Initialize Coin3D
-    SoDB::init();
-    
 #ifdef COIN3D_OSMESA_BUILD
+    // Create OSMesa context manager for the demo
+    OSMesaDemoContextManager context_manager;
+    
+    // Initialize Coin3D with context manager
+    SoDB::init(&context_manager);
+    
     std::cout << "NOTE: Using OSMesa for real offscreen rendering" << std::endl;
     std::cout << "Built with OSMesa support - no mock provider needed" << std::endl;
-    std::cout << std::endl;
-    
-    // With OSMesa build, use the real rendering context (no mock provider needed)
-    // The library is already configured for OSMesa rendering
 #else
-    std::cout << "NOTE: This demo shows the FBO architecture without OSMesa" << std::endl;
+    // For non-OSMesa builds, this will fail as expected since we need context management
+    std::cout << "ERROR: This demo requires OSMesa build for context management" << std::endl;
+    std::cout << "Please build with -DCOIN3D_USE_OSMESA=ON" << std::endl;
+    return 1;
+#endif
     std::cout << "To use with OSMesa, rebuild with -DCOIN3D_USE_OSMESA=ON" << std::endl;
     std::cout << std::endl;
     

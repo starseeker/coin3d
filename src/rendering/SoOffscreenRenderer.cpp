@@ -1857,41 +1857,18 @@ namespace {
 void
 SoOffscreenRenderer::setContextProvider(ContextProvider * provider)
 {
+  // NOTE: With the new context management architecture, context providers 
+  // should be set globally via SoDB::init(context_manager) before library initialization.
+  // The per-renderer context provider API is deprecated and no longer supported.
+  
+  // Store the provider for potential future use but warn about the change
   getContextProviderRef() = provider;
   
   if (provider) {
-    // Convert the ContextProvider to a SoDB::ContextManager and register it globally
-    // This bridges the SoOffscreenRenderer API to the main context management system
-    
-    // Create an adapter that implements SoDB::ContextManager using the ContextProvider
-    class ProviderAdapter : public SoDB::ContextManager {
-    private:
-      SoOffscreenRenderer::ContextProvider* provider;
-    public:
-      ProviderAdapter(SoOffscreenRenderer::ContextProvider* p) : provider(p) {}
-      
-      virtual void* createOffscreenContext(unsigned int width, unsigned int height) override {
-        return provider ? provider->createOffscreenContext(width, height) : nullptr;
-      }
-      
-      virtual SbBool makeContextCurrent(void* context) override {
-        return provider ? provider->makeContextCurrent(context) : FALSE;
-      }
-      
-      virtual void restorePreviousContext(void* context) override {
-        if (provider) provider->restorePreviousContext(context);
-      }
-      
-      virtual void destroyContext(void* context) override {
-        if (provider) provider->destroyContext(context);
-      }
-    };
-    
-    static ProviderAdapter adapter(provider);
-    SoDB::setContextManager(&adapter);
-  } else {
-    // Clear the global context manager
-    SoDB::setContextManager(nullptr);
+    SoDebugError::postWarning("SoOffscreenRenderer::setContextProvider",
+                              "The per-renderer context provider API is deprecated. "
+                              "Applications should provide context management via "
+                              "SoDB::init(context_manager) before library initialization.");
   }
 }
 
