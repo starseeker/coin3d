@@ -163,18 +163,34 @@ SoSeparator* createGradientScene() {
 }
 
 // Helper to save PNG
-bool savePNG(const std::string& filename, const unsigned char* buffer, int width, int height) {
+bool savePNG(const std::string& filename, const unsigned char* buffer, int width, int height, int components) {
     FILE* file = fopen(filename.c_str(), "wb");
     if (!file) return false;
     
-    std::unique_ptr<unsigned char[]> rgb_data(new unsigned char[width * height * 3]);
-    for (int i = 0; i < width * height; i++) {
-        rgb_data[i * 3 + 0] = buffer[i * 4 + 0]; // R
-        rgb_data[i * 3 + 1] = buffer[i * 4 + 1]; // G
-        rgb_data[i * 3 + 2] = buffer[i * 4 + 2]; // B
+    if (components == 3) {
+        // Buffer is already RGB, save directly
+        svpng(file, width, height, buffer, 0);
+    } else if (components == 4) {
+        // Buffer is RGBA, extract RGB for PNG output
+        std::unique_ptr<unsigned char[]> rgb_data(new unsigned char[width * height * 3]);
+        for (int i = 0; i < width * height; i++) {
+            rgb_data[i * 3 + 0] = buffer[i * 4 + 0]; // R
+            rgb_data[i * 3 + 1] = buffer[i * 4 + 1]; // G
+            rgb_data[i * 3 + 2] = buffer[i * 4 + 2]; // B
+        }
+        svpng(file, width, height, rgb_data.get(), 0);
+    } else {
+        // For 1 or 2 component buffers, expand to RGB
+        std::unique_ptr<unsigned char[]> rgb_data(new unsigned char[width * height * 3]);
+        for (int i = 0; i < width * height; i++) {
+            unsigned char gray = buffer[i * components];
+            rgb_data[i * 3 + 0] = gray; // R
+            rgb_data[i * 3 + 1] = gray; // G
+            rgb_data[i * 3 + 2] = gray; // B
+        }
+        svpng(file, width, height, rgb_data.get(), 0);
     }
     
-    svpng(file, width, height, rgb_data.get(), 0);
     fclose(file);
     return true;
 }
@@ -265,7 +281,7 @@ int main() {
         analyzePixels(buffer, 256, 256, renderer.getComponents());
         
         // Save as PNG for visual inspection
-        if (!savePNG(filename, buffer, 256, 256)) {
+        if (!savePNG(filename, buffer, 256, 256, (int)renderer.getComponents())) {
             scene->unref();
             runner.endTest(false, "Failed to save PNG");
             return runner.getSummary();
@@ -312,7 +328,7 @@ int main() {
         analyzePixels(buffer, 256, 256, renderer.getComponents());
         
         // Save as PNG for visual inspection
-        if (!savePNG(filename, buffer, 256, 256)) {
+        if (!savePNG(filename, buffer, 256, 256, (int)renderer.getComponents())) {
             scene->unref();
             runner.endTest(false, "Failed to save PNG");
             return runner.getSummary();
