@@ -161,80 +161,81 @@ SoSeparator* createComplexScene() {
     SoSeparator* root = new SoSeparator;
     root->ref();
     
-    // Add camera
+    // Add camera - FIXED: Further increased distance and narrowed FOV 
     SoPerspectiveCamera* camera = new SoPerspectiveCamera;
-    camera->position = SbVec3f(0, 0, 8);
-    camera->orientation = SbRotation(SbVec3f(1, 0, 0), -0.2f);
+    camera->position = SbVec3f(0, 0, 16);  // Further increased from 12 to 16
+    camera->orientation = SbRotation(SbVec3f(1, 0, 0), -0.1f);  // Further reduced tilt
+    camera->heightAngle = 0.6f;  // Explicitly set narrower FOV (default is ~0.78)
     camera->nearDistance = 1.0f;
-    camera->farDistance = 20.0f;
-    camera->focalDistance = 8.0f;
+    camera->farDistance = 30.0f;  // Increased for larger distance
+    camera->focalDistance = 16.0f;  // Updated to match position
     root->addChild(camera);
     
-    // Add lighting
+    // Add lighting - FIXED: Reduced intensity to minimize specular artifacts
     SoDirectionalLight* light = new SoDirectionalLight;
     light->direction = SbVec3f(-1, -1, -1);
-    light->intensity = 0.8f;
+    light->intensity = 0.6f;  // Reduced from 0.8f
     root->addChild(light);
     
-    // Create central red cube
+    // Create central red cube - FIXED: Reduced size
     SoSeparator* cubeGroup = new SoSeparator;
     SoMaterial* redMaterial = new SoMaterial;
     redMaterial->diffuseColor = SbColor(0.8f, 0.2f, 0.2f);
-    redMaterial->specularColor = SbColor(1.0f, 1.0f, 1.0f);
-    redMaterial->shininess = 0.5f;
+    redMaterial->specularColor = SbColor(0.3f, 0.3f, 0.3f);  // Reduced specular
+    redMaterial->shininess = 0.1f;  // Reduced shininess
     cubeGroup->addChild(redMaterial);
     SoCube* cube = new SoCube;
-    cube->width = 1.5f;
-    cube->height = 1.5f;
-    cube->depth = 1.5f;
+    cube->width = 1.0f;   // Reduced from 1.5f
+    cube->height = 1.0f;  // Reduced from 1.5f
+    cube->depth = 1.0f;   // Reduced from 1.5f
     cubeGroup->addChild(cube);
     root->addChild(cubeGroup);
     
-    // Create green sphere (upper right)
+    // Create green sphere (upper right) - FIXED: Further reduced position
     SoSeparator* sphereGroup = new SoSeparator;
     SoTransform* sphereTransform = new SoTransform;
-    sphereTransform->translation = SbVec3f(3, 2, 0);
+    sphereTransform->translation = SbVec3f(1.5, 1.0, 0);  // Further reduced from (2,1.5,0)
     sphereGroup->addChild(sphereTransform);
     SoMaterial* greenMaterial = new SoMaterial;
     greenMaterial->diffuseColor = SbColor(0.2f, 0.8f, 0.2f);
-    greenMaterial->specularColor = SbColor(1.0f, 1.0f, 1.0f);
-    greenMaterial->shininess = 0.7f;
+    greenMaterial->specularColor = SbColor(0.3f, 0.3f, 0.3f);  // Reduced specular
+    greenMaterial->shininess = 0.1f;  // Reduced shininess
     sphereGroup->addChild(greenMaterial);
     SoSphere* sphere = new SoSphere;
-    sphere->radius = 1.0f;
+    sphere->radius = 0.7f;  // Reduced from 1.0f
     sphereGroup->addChild(sphere);
     root->addChild(sphereGroup);
     
-    // Create blue cone (upper left)
+    // Create blue cone (upper left) - FIXED: Further reduced position
     SoSeparator* coneGroup = new SoSeparator;
     SoTransform* coneTransform = new SoTransform;
-    coneTransform->translation = SbVec3f(-3, 2, 0);
+    coneTransform->translation = SbVec3f(-1.5, 1.0, 0);  // Further reduced from (-2,1.5,0)
     coneGroup->addChild(coneTransform);
     SoMaterial* blueMaterial = new SoMaterial;
     blueMaterial->diffuseColor = SbColor(0.2f, 0.2f, 0.8f);
-    blueMaterial->specularColor = SbColor(1.0f, 1.0f, 1.0f);
-    blueMaterial->shininess = 0.3f;
+    blueMaterial->specularColor = SbColor(0.3f, 0.3f, 0.3f);  // Reduced specular
+    blueMaterial->shininess = 0.1f;  // Reduced shininess
     coneGroup->addChild(blueMaterial);
     SoCone* cone = new SoCone;
-    cone->bottomRadius = 1.0f;
-    cone->height = 2.0f;
+    cone->bottomRadius = 0.7f;  // Reduced from 1.0f
+    cone->height = 1.5f;        // Reduced from 2.0f
     coneGroup->addChild(cone);
     root->addChild(coneGroup);
     
-    // Create yellow cylinder (lower center)
+    // Create yellow cylinder (lower center) - FIXED: Further reduced position
     SoSeparator* cylinderGroup = new SoSeparator;
     SoTransform* cylinderTransform = new SoTransform;
-    cylinderTransform->translation = SbVec3f(0, -2.5f, 1);
+    cylinderTransform->translation = SbVec3f(0, -1.5f, 0.5);  // Further reduced from (0,-2,1)
     cylinderTransform->rotation = SbRotation(SbVec3f(0, 0, 1), M_PI_4);
     cylinderGroup->addChild(cylinderTransform);
     SoMaterial* yellowMaterial = new SoMaterial;
     yellowMaterial->diffuseColor = SbColor(0.8f, 0.8f, 0.2f);
-    yellowMaterial->specularColor = SbColor(1.0f, 1.0f, 1.0f);
-    yellowMaterial->shininess = 0.4f;
+    yellowMaterial->specularColor = SbColor(0.3f, 0.3f, 0.3f);  // Reduced specular
+    yellowMaterial->shininess = 0.1f;  // Reduced shininess
     cylinderGroup->addChild(yellowMaterial);
     SoCylinder* cylinder = new SoCylinder;
-    cylinder->radius = 0.8f;
-    cylinder->height = 3.0f;
+    cylinder->radius = 0.6f;  // Reduced from 0.8f
+    cylinder->height = 2.0f;  // Reduced from 3.0f
     cylinderGroup->addChild(cylinder);
     root->addChild(cylinderGroup);
     
@@ -436,34 +437,34 @@ std::pair<bool, PixelAnalysis> validateSceneRendering(const unsigned char* buffe
     
     bool passed = true;
     
-    // Check that we have reasonable amount of background (should be majority, but allow for lighting effects)
-    if (analysis.background_percentage < 30.0f) {
+    // Check that we have reasonable amount of background (tightened criteria after fixes)
+    if (analysis.background_percentage < 50.0f) {
         std::cout << "✗ FAIL: Background percentage too low (" 
-                  << analysis.background_percentage << "% < 30%)" << std::endl;
+                  << analysis.background_percentage << "% < 50%)" << std::endl;
         passed = false;
     } else {
         std::cout << "✓ Background percentage acceptable (" 
                   << analysis.background_percentage << "%)" << std::endl;
     }
     
-    // Check that we have some visible geometry (relaxed thresholds)
-    if (analysis.geometry_percentage < 1.0f) {
+    // Check that we have some visible geometry (tightened thresholds after fixes)
+    if (analysis.geometry_percentage < 5.0f) {
         std::cout << "✗ FAIL: Geometry percentage too low (" 
-                  << analysis.geometry_percentage << "% < 1%) - shapes likely not visible" << std::endl;
+                  << analysis.geometry_percentage << "% < 5%) - shapes likely not visible" << std::endl;
         passed = false;
-    } else if (analysis.geometry_percentage > 60.0f) {
+    } else if (analysis.geometry_percentage > 40.0f) {
         std::cout << "✗ FAIL: Geometry percentage too high ("
-                  << analysis.geometry_percentage << "% > 60%) - geometry dominating scene" << std::endl;
+                  << analysis.geometry_percentage << "% > 40%) - geometry dominating scene" << std::endl;
         passed = false;
     } else {
         std::cout << "✓ Geometry percentage acceptable (" 
                   << analysis.geometry_percentage << "%)" << std::endl;
     }
     
-    // Check for excessive artifacts (more relaxed threshold accounting for lighting)
-    if (analysis.artifact_percentage > 60.0f) {
+    // Check for excessive artifacts (tightened threshold after fixes)
+    if (analysis.artifact_percentage > 20.0f) {
         std::cout << "✗ FAIL: Too many artifact pixels (" 
-                  << analysis.artifact_percentage << "% > 60%) - significant visual artifacts!" << std::endl;
+                  << analysis.artifact_percentage << "% > 20%) - visual artifacts detected!" << std::endl;
         passed = false;
     } else {
         std::cout << "✓ Artifact percentage acceptable (" 
