@@ -31,6 +31,7 @@
 #include <Inventor/nodes/SoVertexProperty.h>
 #include <Inventor/nodes/SoShapeHints.h>
 #include <Inventor/nodes/SoMaterialBinding.h>
+#include <Inventor/nodes/SoMaterial.h>
 #include <Inventor/SbViewportRegion.h>
 
 // Include svpng for PNG output
@@ -102,7 +103,7 @@ public:
     }
 };
 
-// Create a simple horizontal gradient quad
+// Create a simple horizontal gradient using separate geometry with emissive materials
 SoSeparator* createGradientScene() {
     SoSeparator* root = new SoSeparator;
     root->ref();
@@ -116,38 +117,47 @@ SoSeparator* createGradientScene() {
     camera->height = 2.0f; // -1 to 1 range
     root->addChild(camera);
     
-    // Create vertex property with colors
-    SoVertexProperty* vertexProp = new SoVertexProperty;
+    // Create a simple horizontal gradient using multiple colored rectangles
+    const int numStrips = 10; // Number of vertical strips for gradient
+    const float stripWidth = 2.0f / numStrips; // Width of each strip
     
-    // Define a simple quad from -1 to 1 in both X and Y
-    vertexProp->vertex.set1Value(0, SbVec3f(-1.0f, -1.0f, 0.0f)); // Bottom left
-    vertexProp->vertex.set1Value(1, SbVec3f( 1.0f, -1.0f, 0.0f)); // Bottom right  
-    vertexProp->vertex.set1Value(2, SbVec3f( 1.0f,  1.0f, 0.0f)); // Top right
-    vertexProp->vertex.set1Value(3, SbVec3f(-1.0f,  1.0f, 0.0f)); // Top left
-    
-    // Define colors for horizontal gradient: left=red, right=green
-    vertexProp->orderedRGBA.set1Value(0, SbColor(1.0f, 0.0f, 0.0f).getPackedValue()); // Red
-    vertexProp->orderedRGBA.set1Value(1, SbColor(0.0f, 1.0f, 0.0f).getPackedValue()); // Green
-    vertexProp->orderedRGBA.set1Value(2, SbColor(0.0f, 1.0f, 0.0f).getPackedValue()); // Green
-    vertexProp->orderedRGBA.set1Value(3, SbColor(1.0f, 0.0f, 0.0f).getPackedValue()); // Red
-    
-    // Set material binding to per vertex
-    SoMaterialBinding* binding = new SoMaterialBinding;
-    binding->value = SoMaterialBinding::PER_VERTEX;
-    root->addChild(binding);
-    
-    // Create the face set
-    SoIndexedFaceSet* faceSet = new SoIndexedFaceSet;
-    faceSet->vertexProperty = vertexProp;
-    
-    // Define face indices (counter-clockwise)
-    faceSet->coordIndex.set1Value(0, 0);
-    faceSet->coordIndex.set1Value(1, 1);
-    faceSet->coordIndex.set1Value(2, 2);
-    faceSet->coordIndex.set1Value(3, 3);
-    faceSet->coordIndex.set1Value(4, -1); // End face
-    
-    root->addChild(faceSet);
+    for (int i = 0; i < numStrips; i++) {
+        SoSeparator* stripGroup = new SoSeparator;
+        
+        // Calculate color: interpolate from red (left) to green (right)
+        float t = (float)i / (numStrips - 1); // 0.0 to 1.0
+        float red = 1.0f - t;   // 1.0 to 0.0
+        float green = t;        // 0.0 to 1.0
+        
+        // Create emissive material for this strip
+        SoMaterial* material = new SoMaterial;
+        material->emissiveColor = SbColor(red, green, 0.0f); // Red to Green gradient
+        material->diffuseColor = SbColor(0.0f, 0.0f, 0.0f);  // No diffuse
+        material->ambientColor = SbColor(0.0f, 0.0f, 0.0f);  // No ambient
+        stripGroup->addChild(material);
+        
+        // Create coordinates for this strip
+        SoCoordinate3* coords = new SoCoordinate3;
+        float leftX = -1.0f + i * stripWidth;
+        float rightX = leftX + stripWidth;
+        
+        coords->point.set1Value(0, SbVec3f(leftX, -1.0f, 0.0f));   // Bottom left
+        coords->point.set1Value(1, SbVec3f(rightX, -1.0f, 0.0f));  // Bottom right
+        coords->point.set1Value(2, SbVec3f(rightX, 1.0f, 0.0f));   // Top right
+        coords->point.set1Value(3, SbVec3f(leftX, 1.0f, 0.0f));    // Top left
+        stripGroup->addChild(coords);
+        
+        // Create face set for this strip
+        SoIndexedFaceSet* faceSet = new SoIndexedFaceSet;
+        faceSet->coordIndex.set1Value(0, 0);
+        faceSet->coordIndex.set1Value(1, 1);
+        faceSet->coordIndex.set1Value(2, 2);
+        faceSet->coordIndex.set1Value(3, 3);
+        faceSet->coordIndex.set1Value(4, -1); // End face
+        stripGroup->addChild(faceSet);
+        
+        root->addChild(stripGroup);
+    }
     
     return root;
 }
