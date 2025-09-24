@@ -3,7 +3,7 @@
  Replaces legacy cc_string UTF-8 functions.
 */
 
-#include "Inventor/C/base/utf8.h"
+#include "SbUtf8.h"
 #include <cstring>
 
 #ifdef __cplusplus

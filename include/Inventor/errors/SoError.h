@@ -42,7 +42,8 @@
 extern "C" {
 #endif /* __cplusplus */
 
-#include <Inventor/C/base/string.h>
+// TODO - stop using this
+#include "../../../src/C/base/string.h"
 
 #ifndef CC_ERROR_STRUCT_DEFINED
 #define CC_ERROR_STRUCT_DEFINED
