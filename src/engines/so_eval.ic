@@ -704,7 +704,7 @@ char *so_evaltext;
  *
  */
 
-#include <Inventor/C/basic.h>
+#include <Inventor/basic.h>
 #include <float.h>
 #include <stdlib.h>
 #include "engines/evaluator.h"

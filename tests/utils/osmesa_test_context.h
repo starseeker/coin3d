@@ -47,7 +47,7 @@
 #include <OSMesa/osmesa.h>
 #include <OSMesa/gl.h>
 #include <Inventor/SoOffscreenRenderer.h>
-#include <Inventor/C/basic.h>
+#include <Inventor/basic.h>
 #include <memory>
 #include <vector>
 #include <string>

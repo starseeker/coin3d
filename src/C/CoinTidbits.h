@@ -44,7 +44,7 @@
  * - src/tidbits.cpp
  */
 
-#include "Inventor/C/basic.h"
+#include "Inventor/basic.h"
 #include <string>
 #include <cstdint>
 #include <cstdarg>

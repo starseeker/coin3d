@@ -11,7 +11,6 @@ set(COIN_BASE_FILES
 	list.cpp
 	memalloc.cpp
 	string.cpp
-	utf8.cpp
 	dynarray.cpp
 	namemap.cpp
 	SbBSPTree.cpp
@@ -45,6 +44,7 @@ set(COIN_BASE_FILES
 	SbString.cpp
 	SbTesselator.cpp
 	SbTime.cpp
+	SbUtf8.cpp
 	SbVec2b.cpp
 	SbVec2ub.cpp
 	SbVec2s.cpp

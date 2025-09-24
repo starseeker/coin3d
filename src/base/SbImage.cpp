@@ -690,7 +690,7 @@ SbImage::addReadImageCB(SbImageReadImageCB * cb, void * closure)
 {
   if (!SbImageP::readimagecallbacks) {
     SbImageP::readimagecallbacks = new SbList <SbImageP::ReadImageCBData>;
-    cc_coin_atexit(static_cast<coin_atexit_f*>(SbImage_cleanup_callback));
+    std::atexit(SbImage_cleanup_callback);
   }
   SbImageP::ReadImageCBData data;
   data.cb = cb;

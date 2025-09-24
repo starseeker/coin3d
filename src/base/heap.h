@@ -33,7 +33,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#include "Inventor/C/basic.h"
+#include "Inventor/basic.h"
 #include <Inventor/SbString.h>
 
 #ifdef __cplusplus

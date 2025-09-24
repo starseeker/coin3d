@@ -267,6 +267,51 @@ inline std::uint64_t networkToHost(std::uint64_t value) noexcept { return hostTo
 
 } // namespace ByteOrder
 
+/*!
+ * \brief Modern C++17 math utilities
+ * 
+ * Replacements for coin_finite, coin_isinf, coin_isnan using std:: functions.
+ */
+namespace MathUtils {
+
+/*!
+ * \brief Check if floating point value is finite
+ * 
+ * Modern C++17 replacement for coin_finite().
+ * 
+ * \param value Value to check
+ * \return true if value is finite (not infinite and not NaN), false otherwise
+ */
+inline bool isFinite(double value) noexcept {
+    return std::isfinite(value);
+}
+
+/*!
+ * \brief Check if floating point value is infinite
+ * 
+ * Modern C++17 replacement for coin_isinf().
+ * 
+ * \param value Value to check
+ * \return true if value is infinite, false otherwise
+ */
+inline bool isInfinite(double value) noexcept {
+    return std::isinf(value);
+}
+
+/*!
+ * \brief Check if floating point value is NaN
+ * 
+ * Modern C++17 replacement for coin_isnan().
+ * 
+ * \param value Value to check
+ * \return true if value is NaN, false otherwise
+ */
+inline bool isNaN(double value) noexcept {
+    return std::isnan(value);
+}
+
+} // namespace MathUtils
+
 } // namespace CoinInternal
 
 #endif // COIN_UTILITIES_H

@@ -1,5 +1,5 @@
-#ifndef COIN_AUDIOTOOLS_H
-#define COIN_AUDIOTOOLS_H
+#ifndef COIN_PCH_H
+#define COIN_PCH_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,19 +33,34 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-/* Minimal stub wrapper for audio functionality - disabled for minimal build */
+/*
+  Precompiled header for Coin3D library.
+  Contains the most commonly included standard library headers to speed up compilation.
+  This file is only used internally during library build.
+  
+  Note: We only include standard C++ library headers here to avoid conflicts
+  with internal types and order-dependent includes.
+*/
 
-#include "Inventor/C/basic.h"
+#ifndef COIN_INTERNAL
+#error this is a private header file
+#endif
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
+// Standard C++ library headers (commonly used and safe to precompile)
+#include <cassert>      // 279 occurrences
+#include <cstring>      // 93 occurrences  
+#include <cstdlib>      // 76 occurrences
+#include <cstdio>       // 54 occurrences
 
-/* Audio support disabled in minimal build */
-SbBool coin_sound_should_traverse(void);
+// Additional safe standard library headers that are commonly used
+#include <cmath>
+#include <iostream>
+#include <algorithm>
+#include <memory>
+#include <vector>
+#include <string>
 
-#ifdef __cplusplus
-} /* extern "C" */
-#endif /* __cplusplus */
+// Coin3D headers
+#include "Inventor/errors/SoDebugError.h"
 
-#endif /* !COIN_AUDIOTOOLS_H */
+#endif /* !COIN_PCH_H */

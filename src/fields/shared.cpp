@@ -328,7 +328,7 @@ sosftime_read_value(SoInput * in, SbTime & t)
     return FALSE;
   }
 
-  if (!coin_finite(val)) {
+  if (!std::isfinite(val)) {
     SoReadError::post(in,
                       "Detected non-valid floating point number, replacing "
                       "with 0.0f");

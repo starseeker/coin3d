@@ -31,7 +31,7 @@
 \**************************************************************************/
 
 #include "engines/evaluator.h"
-#include <Inventor/C/basic.h>
+#include <Inventor/basic.h>
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>

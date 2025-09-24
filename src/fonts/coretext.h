@@ -49,7 +49,7 @@
 
 /* ********************************************************************** */
 
-#include "Inventor/C/basic.h"
+#include "Inventor/basic.h"
 #include <string>
 
 #ifdef __cplusplus

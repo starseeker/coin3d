@@ -224,7 +224,7 @@ const SbString &
 SoError::getDebugString(void) const
 {
   // Cast away constness and fetch value from underlying cc_error instance.
-  const_cast<SbString &>(this->debugstring) = cc_error_get_debug_string(&this->err)->c_str();
+  const_cast<SbString &>(this->debugstring) = cc_error_get_debug_string(&this->err).c_str();
   return this->debugstring;
 }
 

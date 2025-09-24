@@ -107,7 +107,7 @@
 #include <config.h>
 #endif // HAVE_CONFIG_H
 
-#include "Inventor/C/base/utf8.h" // Modern UTF-8 support
+#include "../base/SbUtf8.h" // Modern UTF-8 support
 
 #include <Inventor/SbBox2s.h>
 #include <Inventor/SbLine.h>
