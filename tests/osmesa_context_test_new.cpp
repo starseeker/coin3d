@@ -112,7 +112,6 @@ public:
     virtual SbBool IsInitialized() override {
         // For this example, we consider it initialized if OSMesa functions are available
         // In a real implementation, you might track initialization state
-        std::cout << "OSMesa IsInitialized() called - returning TRUE" << std::endl;
         return TRUE; // OSMesa is statically linked and always available
     }
 };
