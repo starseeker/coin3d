@@ -67,6 +67,7 @@
 #include <Inventor/nodes/SoCylinder.h>
 #include <Inventor/nodes/SoPerspectiveCamera.h>
 #include <Inventor/nodes/SoDirectionalLight.h>
+#include <Inventor/nodes/SoEnvironment.h>
 #include <Inventor/nodes/SoMaterial.h>
 #include <Inventor/nodes/SoTransform.h>
 #include <Inventor/nodes/SoTranslation.h>
@@ -171,18 +172,27 @@ SoSeparator* createComplexScene() {
     camera->focalDistance = 16.0f;  // Updated to match position
     root->addChild(camera);
     
-    // Add lighting - FIXED: Reduced intensity to minimize specular artifacts
+    // Add lighting - FIXED: Bright lighting setup for vibrant colors
     SoDirectionalLight* light = new SoDirectionalLight;
     light->direction = SbVec3f(-1, -1, -1);
-    light->intensity = 0.6f;  // Reduced from 0.8f
+    light->intensity = 1.0f;  // Full intensity
+    light->color = SbColor(1.0f, 1.0f, 1.0f);  // Pure white light
     root->addChild(light);
     
-    // Create central red cube - FIXED: Reduced size
+    // Add environment to ensure proper ambient lighting
+    SoEnvironment* env = new SoEnvironment;
+    env->ambientIntensity = 0.5f;  // Strong ambient light for vibrant colors
+    env->ambientColor = SbColor(1.0f, 1.0f, 1.0f);  // White ambient
+    root->addChild(env);
+    
+    // Create central red cube - FIXED: Strong emissive colors for visibility
     SoSeparator* cubeGroup = new SoSeparator;
     SoMaterial* redMaterial = new SoMaterial;
-    redMaterial->diffuseColor = SbColor(0.8f, 0.2f, 0.2f);
-    redMaterial->specularColor = SbColor(0.3f, 0.3f, 0.3f);  // Reduced specular
-    redMaterial->shininess = 0.1f;  // Reduced shininess
+    redMaterial->diffuseColor = SbColor(0.6f, 0.2f, 0.2f);
+    redMaterial->ambientColor = SbColor(0.4f, 0.1f, 0.1f);  // Strong ambient
+    redMaterial->emissiveColor = SbColor(0.3f, 0.0f, 0.0f); // Strong emissive for red visibility
+    redMaterial->specularColor = SbColor(0.7f, 0.7f, 0.7f);  
+    redMaterial->shininess = 0.3f;  
     cubeGroup->addChild(redMaterial);
     SoCube* cube = new SoCube;
     cube->width = 1.0f;   // Reduced from 1.5f
@@ -197,9 +207,11 @@ SoSeparator* createComplexScene() {
     sphereTransform->translation = SbVec3f(1.5, 1.0, 0);  // Further reduced from (2,1.5,0)
     sphereGroup->addChild(sphereTransform);
     SoMaterial* greenMaterial = new SoMaterial;
-    greenMaterial->diffuseColor = SbColor(0.2f, 0.8f, 0.2f);
-    greenMaterial->specularColor = SbColor(0.3f, 0.3f, 0.3f);  // Reduced specular
-    greenMaterial->shininess = 0.1f;  // Reduced shininess
+    greenMaterial->diffuseColor = SbColor(0.2f, 0.6f, 0.2f);
+    greenMaterial->ambientColor = SbColor(0.1f, 0.4f, 0.1f);  // Strong ambient
+    greenMaterial->emissiveColor = SbColor(0.0f, 0.3f, 0.0f); // Strong emissive for green visibility
+    greenMaterial->specularColor = SbColor(0.7f, 0.7f, 0.7f);  
+    greenMaterial->shininess = 0.3f;  
     sphereGroup->addChild(greenMaterial);
     SoSphere* sphere = new SoSphere;
     sphere->radius = 0.7f;  // Reduced from 1.0f
@@ -212,9 +224,11 @@ SoSeparator* createComplexScene() {
     coneTransform->translation = SbVec3f(-1.5, 1.0, 0);  // Further reduced from (-2,1.5,0)
     coneGroup->addChild(coneTransform);
     SoMaterial* blueMaterial = new SoMaterial;
-    blueMaterial->diffuseColor = SbColor(0.2f, 0.2f, 0.8f);
-    blueMaterial->specularColor = SbColor(0.3f, 0.3f, 0.3f);  // Reduced specular
-    blueMaterial->shininess = 0.1f;  // Reduced shininess
+    blueMaterial->diffuseColor = SbColor(0.2f, 0.2f, 0.6f);
+    blueMaterial->ambientColor = SbColor(0.1f, 0.1f, 0.4f);  // Strong ambient
+    blueMaterial->emissiveColor = SbColor(0.0f, 0.0f, 0.3f); // Strong emissive for blue visibility
+    blueMaterial->specularColor = SbColor(0.7f, 0.7f, 0.7f);  
+    blueMaterial->shininess = 0.3f;  
     coneGroup->addChild(blueMaterial);
     SoCone* cone = new SoCone;
     cone->bottomRadius = 0.7f;  // Reduced from 1.0f
@@ -229,9 +243,11 @@ SoSeparator* createComplexScene() {
     cylinderTransform->rotation = SbRotation(SbVec3f(0, 0, 1), M_PI_4);
     cylinderGroup->addChild(cylinderTransform);
     SoMaterial* yellowMaterial = new SoMaterial;
-    yellowMaterial->diffuseColor = SbColor(0.8f, 0.8f, 0.2f);
-    yellowMaterial->specularColor = SbColor(0.3f, 0.3f, 0.3f);  // Reduced specular
-    yellowMaterial->shininess = 0.1f;  // Reduced shininess
+    yellowMaterial->diffuseColor = SbColor(0.6f, 0.6f, 0.2f);
+    yellowMaterial->ambientColor = SbColor(0.4f, 0.4f, 0.1f);  // Strong ambient
+    yellowMaterial->emissiveColor = SbColor(0.3f, 0.3f, 0.0f); // Strong emissive for yellow visibility
+    yellowMaterial->specularColor = SbColor(0.7f, 0.7f, 0.7f);  
+    yellowMaterial->shininess = 0.3f;  
     cylinderGroup->addChild(yellowMaterial);
     SoCylinder* cylinder = new SoCylinder;
     cylinder->radius = 0.6f;  // Reduced from 0.8f
