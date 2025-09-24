@@ -49,7 +49,7 @@
 
 /* Removed BOOST_WORKAROUND dependency - no longer needed for C++17 */
 
-#include "Inventor/C/basic.h" /* For COMPILE_ONLY_BEFORE */
+#include "Inventor/basic.h" /* For COMPILE_ONLY_BEFORE */
 
 #ifdef __FILE__
 #define COIN_STUB_FILE __FILE__

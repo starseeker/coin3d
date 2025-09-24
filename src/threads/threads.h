@@ -37,7 +37,7 @@
 #error this is a private header file
 #endif /* ! COIN_INTERNAL */
 
-#include <Inventor/C/basic.h>  /* COIN_DLL_API */
+#include <Inventor/basic.h>  /* COIN_DLL_API */
 
 /* ********************************************************************** */
 

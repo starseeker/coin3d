@@ -129,7 +129,7 @@
 /* isatty() on windows */
 #include <io.h>
 #endif /* HAVE_IO_H */
-#include <Inventor/C/basic.h>
+#include <Inventor/basic.h>
 #include "engines/evaluator.h"
 #define yyalloc so_evalalloc
 

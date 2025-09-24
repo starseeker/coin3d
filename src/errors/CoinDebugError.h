@@ -42,7 +42,7 @@
  * compatibility with the legacy C API.
  */
 
-#include "Inventor/C/basic.h"
+#include "Inventor/basic.h"
 #include <functional>
 #include <string>
 #include <cstdarg>

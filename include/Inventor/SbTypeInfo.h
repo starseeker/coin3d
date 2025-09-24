@@ -64,7 +64,7 @@
 #include <cstdint>
 // Modern C++17 basic types instead of legacy C API
 #ifdef COIN_INTERNAL
-#include "Inventor/C/basic.h"
+#include "Inventor/basic.h"
 #else
 // For external users, provide essential type definitions inline
 #include <Inventor/SbBasic.h>

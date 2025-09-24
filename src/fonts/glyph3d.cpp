@@ -39,7 +39,7 @@
 #include <cstdio>
 #include <string>
 
-#include "Inventor/C/basic.h"
+#include "Inventor/basic.h"
 #include "base/list.h"
 
 #include "C/CoinTidbits.h"
