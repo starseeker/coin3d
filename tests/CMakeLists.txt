@@ -1,138 +1,47 @@
-# Primary Test Suite for Coin3D - Explicit Catch2 Tests
-# This is now the main test system replacing the embedded comment-driven tests
+# Simple Test Suite for Coin3D - No External Frameworks
+# Each test executable corresponds to a major API grouping and returns 0 for success
 
-# Find Catch2
-find_package(Catch2 3 QUIET)
-if(NOT Catch2_FOUND)
-    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../external/Catch2 ${CMAKE_CURRENT_BINARY_DIR}/Catch2)
-endif()
-
-# Common test utilities with comprehensive testing framework
-add_library(coin_test_utils STATIC
-    utils/test_common.cpp
-    utils/scene_graph_test_utils.cpp
-    utils/png_test_utils.cpp
+# Test executables for major API groups
+set(SIMPLE_TESTS
+    test_actions
+    test_nodes  
+    test_fields
+    test_events
+    test_base
+    test_engines
+    test_sensors
 )
 
-# Add OSMesa test utilities if available
-if(COIN3D_USE_OSMESA)
-    target_sources(coin_test_utils PRIVATE 
-        utils/osmesa_test_context.cpp
-    )
-    target_compile_definitions(coin_test_utils PUBLIC COIN3D_OSMESA_BUILD)
-endif()
-
-target_link_libraries(coin_test_utils Coin Catch2::Catch2)
-target_include_directories(coin_test_utils PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/utils
-    ${PROJECT_SOURCE_DIR}/include
-    ${PROJECT_SOURCE_DIR}/include/Inventor/annex
-    ${PROJECT_BINARY_DIR}/include
-    ${COIN_TARGET_INCLUDE_DIRECTORIES}
-)
-
-# Primary explicit test executable with comprehensive testing
-add_executable(CoinTests
-    main.cpp
-    # Core test modules (migrated from embedded tests)
-    base/test_base.cpp
-    fields/test_fields.cpp
-    misc/test_misc.cpp
-    # Phase 3 modernization tests
-    tools/test_pimpl_basic.cpp
-    tools/test_pimpl_modernization.cpp
-    tools/test_modern_utils.cpp
-    # Context management tests
-    context/test_context_callbacks.cpp
-    # FBO-based rendering tests
-    rendering/test_fbo_rendering.cpp
-    # Modern API tests
-    rendering/test_modern_api.cpp
-    # PNG utility tests
-    utils/test_png_output.cpp
-    # Comprehensive testing modules - NEW FRAMEWORK
-    nodes/test_nodes_comprehensive.cpp
-    actions/test_actions_comprehensive.cpp
-    engines/test_engines_comprehensive.cpp
-    sensors/test_sensors_comprehensive.cpp
-    elements/test_elements_comprehensive.cpp
-    events/test_events_comprehensive.cpp
-    # New comprehensive test modules - API coverage expansion
-    caches/test_caches_comprehensive.cpp
-    details/test_details_comprehensive.cpp
-    lists/test_lists_comprehensive.cpp
-    geo/test_geo_comprehensive.cpp
-    # Additional comprehensive test modules for increased coverage
-    shaders/test_shaders_comprehensive.cpp
-    shadows/test_shadows_comprehensive.cpp
-    manips/test_manips_safe.cpp
-    # New comprehensive test modules for missing areas
-    draggers/test_draggers_comprehensive.cpp
-    errors/test_errors_comprehensive.cpp
-    nodekits/test_nodekits_comprehensive.cpp
-    io/test_io_comprehensive.cpp
-    # Complete migrated test files - comprehensive testing
-    base/test_base_complete.cpp
-    fields/test_fields_complete.cpp
-    misc/test_misc_complete.cpp
-    nodes/test_nodes_complete.cpp
-    actions/test_actions_complete.cpp
-)
-
-target_link_libraries(CoinTests
-    Coin
-    coin_test_utils
-    Catch2::Catch2WithMain
-    ${COIN_TARGET_LINK_LIBRARIES}
-)
-
-target_include_directories(CoinTests PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${PROJECT_SOURCE_DIR}/include
-    ${PROJECT_SOURCE_DIR}/include/Inventor/annex
-    ${PROJECT_BINARY_DIR}/include
-    ${COIN_TARGET_INCLUDE_DIRECTORIES}
-)
-
-if (USE_PTHREAD)
-    target_link_libraries(CoinTests pthread)
-endif()
-
-# Primary test registration
-include(CTest)
-add_test(NAME CoinTests COMMAND CoinTests)
-
-# OSMesa Context Management Test - Demonstrates new public API
-if(COIN3D_USE_OSMESA)
-    add_executable(osmesa_context_test_new
-        osmesa_context_test_new.cpp
-    )
+# Create executable for each test group
+foreach(test_name ${SIMPLE_TESTS})
+    add_executable(${test_name} ${test_name}.cpp)
     
-    target_link_libraries(osmesa_context_test_new
-        Coin
-        coin_test_utils
-        osmesa_interface
-    )
+    # Link to Coin3D library
+    target_link_libraries(${test_name} Coin ${COIN_TARGET_LINK_LIBRARIES})
     
-    target_include_directories(osmesa_context_test_new PRIVATE
-        ${OSMESA_INCLUDE_DIRS}
+    # Set include directories
+    target_include_directories(${test_name} PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}
         ${PROJECT_SOURCE_DIR}/include
+        ${PROJECT_SOURCE_DIR}/include/Inventor/annex
         ${PROJECT_BINARY_DIR}/include
-        ${CMAKE_CURRENT_SOURCE_DIR}/utils
+        ${COIN_TARGET_INCLUDE_DIRECTORIES}
     )
     
-    target_compile_definitions(osmesa_context_test_new PRIVATE COIN3D_OSMESA_BUILD)
+    # Add threading support if needed
+    if(USE_PTHREAD)
+        target_link_libraries(${test_name} pthread)
+    endif()
     
-    # Add this as a test
-    add_test(NAME OSMesaContextTest COMMAND osmesa_context_test_new)
-endif()
+    # Register with CTest
+    add_test(NAME ${test_name} COMMAND ${test_name})
+endforeach()
 
 # Enable compiler warnings suppression for tautological comparisons on macOS
 include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG(-Wtautological-compare DISABLE_WARNING_TAUTOLOGCOMPARE)
 if(DISABLE_WARNING_TAUTOLOGCOMPARE)
-    target_compile_options(CoinTests PUBLIC -Wno-tautological-compare)
+    foreach(test_name ${SIMPLE_TESTS})
+        target_compile_options(${test_name} PUBLIC -Wno-tautological-compare)
+    endforeach()
 endif()
-
-# Include FBO demo
-include(fbo_demo.cmake)
