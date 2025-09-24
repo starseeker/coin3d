@@ -55,6 +55,10 @@ struct OSMesaContextData {
         
         bool result = OSMesaMakeCurrent(context, buffer.get(), GL_UNSIGNED_BYTE, width, height);
         if (result) {
+            // Set Y axis to increase downward (like image coordinates) instead of upward (OpenGL default)
+            // This avoids the need to flip pixels during readback
+            OSMesaPixelStore(OSMESA_Y_UP, 0);
+            
             GLenum error;
             while ((error = glGetError()) != GL_NO_ERROR) {}
             const char* extensions = (const char*)glGetString(GL_EXTENSIONS);

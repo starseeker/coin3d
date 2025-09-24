@@ -104,6 +104,10 @@ struct OSMesaContextData {
         
         bool result = OSMesaMakeCurrent(context, buffer.get(), GL_UNSIGNED_BYTE, width, height);
         if (result) {
+            // Set Y axis to increase downward (like image coordinates) instead of upward (OpenGL default)
+            // This avoids the need to flip pixels during readback
+            OSMesaPixelStore(OSMESA_Y_UP, 0);
+            
             // Clear any GL errors that might have occurred during context creation
             // This prevents warnings in cc_glglue_instance() about context setup errors
             GLenum error;
