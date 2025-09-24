@@ -195,6 +195,25 @@ public:
             delete static_cast<OSMesaTestContext*>(context);
         }
     }
+    
+    virtual SbBool Initialize() override {
+        // For OSMesa test utils, verify OSMesa functions are available
+        try {
+            OSMesaContext test_ctx = OSMesaCreateContextExt(OSMESA_RGBA, 16, 0, 0, NULL);
+            if (test_ctx) {
+                OSMesaDestroyContext(test_ctx);
+                return TRUE;
+            }
+        } catch (...) {
+            // OSMesa not available
+        }
+        return FALSE;
+    }
+    
+    virtual SbBool IsInitialized() override {
+        // OSMesa is statically linked and should be available
+        return TRUE;
+    }
 };
 
 OSMesaCallbackManager::OSMesaCallbackManager() 

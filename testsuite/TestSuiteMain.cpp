@@ -62,6 +62,16 @@ public:
         (void)context;
         // No-op
     }
+    
+    virtual SbBool Initialize() override {
+        // Legacy test manager is always "initialized" (no actual context needed)
+        return TRUE;
+    }
+    
+    virtual SbBool IsInitialized() override {
+        // Legacy test manager is always considered initialized
+        return TRUE;
+    }
 };
 
 int main(int argc, char* argv[])

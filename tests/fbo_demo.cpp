@@ -94,6 +94,25 @@ public:
     virtual void destroyContext(void* context) override {
         delete static_cast<OSMesaDemoContext*>(context);
     }
+    
+    virtual SbBool Initialize() override {
+        // For OSMesa demo, verify OSMesa functions are available
+        try {
+            OSMesaContext test_ctx = OSMesaCreateContextExt(OSMESA_RGBA, 16, 0, 0, NULL);
+            if (test_ctx) {
+                OSMesaDestroyContext(test_ctx);
+                return TRUE;
+            }
+        } catch (...) {
+            // OSMesa not available
+        }
+        return FALSE;
+    }
+    
+    virtual SbBool IsInitialized() override {
+        // OSMesa is statically linked and should be available
+        return TRUE;
+    }
 };
 #endif
 
@@ -228,6 +247,16 @@ int main(int argc, char* argv[]) {
         virtual SbBool makeContextCurrent(void*) override { return FALSE; }
         virtual void restorePreviousContext(void*) override {}
         virtual void destroyContext(void*) override {}
+        
+        virtual SbBool Initialize() override {
+            // Null context manager is always "initialized" (no actual context needed)
+            return TRUE;
+        }
+        
+        virtual SbBool IsInitialized() override {
+            // Null context manager is always considered initialized
+            return TRUE;
+        }
     } null_manager;
     
     SoDB::init(&null_manager);

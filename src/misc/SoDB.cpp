@@ -221,6 +221,8 @@ SoDB::init(ContextManager * context_manager)
 
   // Require a valid context manager
   if (!context_manager) {
+    printf("DEBUG: No context manager provided\n");
+    fflush(stdout);
     SoDebugError::post("SoDB::init", 
                        "Context manager is NULL. "
                        "Applications must provide a valid ContextManager implementation. "
@@ -228,20 +230,53 @@ SoDB::init(ContextManager * context_manager)
     // For internal library calls, we proceed but with limited context support
     // Applications should always provide a proper context manager
   } else {
-    // Set the global context manager
-    global_context_manager = context_manager;
+    printf("DEBUG: Context manager provided\n");
+    fflush(stdout);
   }
 
   // Allow re-initialization if a context manager is provided, even if already initialized
   // This enables tests to be run in isolation with proper context setup
   if (SoDB::isInitialized() && !context_manager) {
+    printf("DEBUG: Already initialized, no context manager - returning\n");
+    fflush(stdout);
     return; // No re-initialization without context manager
   }
 
   // If already initialized and context manager is provided, just update the context manager
   if (SoDB::isInitialized() && context_manager) {
+    printf("DEBUG: Already initialized, updating context manager - returning\n");
+    fflush(stdout);
     global_context_manager = context_manager;
     return; // Context manager updated, no need to re-initialize everything else
+  }
+
+  // Validate context manager initialization before proceeding with main initialization
+  if (context_manager) {
+    printf("DEBUG: Context manager validation starting\n");
+    fflush(stdout);
+    if (!context_manager->IsInitialized()) {
+      printf("DEBUG: Context manager not initialized, calling Initialize()\n");
+      fflush(stdout);
+      // Try to initialize the context manager
+      if (!context_manager->Initialize()) {
+        // Log warning but continue - some contexts may work without full initialization
+        // In a real application, this might be a fatal error
+        fprintf(stderr, "Warning: Context manager Initialize() failed. Continuing with limited context support.\n");
+        fflush(stderr);
+      }
+      
+      // Check again after initialization attempt - but don't fail if still not initialized
+      if (!context_manager->IsInitialized()) {
+        fprintf(stderr, "Warning: Context manager IsInitialized() still returns FALSE after Initialize().\n");
+        fflush(stderr);
+      }
+    } else {
+      printf("DEBUG: Context manager already initialized\n");
+      fflush(stdout);
+    }
+    
+    // Set the global context manager after validation (even if initialization failed)
+    global_context_manager = context_manager;
   }
 
   // This is to catch the (unlikely) event that the C++ compiler adds

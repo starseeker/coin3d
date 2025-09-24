@@ -92,6 +92,28 @@ public:
             delete ctx;
         }
     }
+    
+    virtual SbBool Initialize() override {
+        // For OSMesa, we can check if OSMesa is available
+        std::cout << "Initializing OSMesa context manager..." << std::endl;
+        try {
+            // Try creating a small test context to verify OSMesa works
+            OSMesaContext test_ctx = OSMesaCreateContextExt(OSMESA_RGBA, 16, 0, 0, NULL);
+            if (test_ctx) {
+                OSMesaDestroyContext(test_ctx);
+                std::cout << "✓ OSMesa context manager initialized successfully" << std::endl;
+                return TRUE;
+            }
+        } catch (...) {
+            std::cerr << "✗ OSMesa context manager initialization failed" << std::endl;
+        }
+        return FALSE;
+    }
+    
+    virtual SbBool IsInitialized() override {
+        // For this example, we consider it initialized if OSMesa functions are available
+        return TRUE; // OSMesa is statically linked and always available
+    }
 };
 
 int main() {

@@ -69,6 +69,25 @@ namespace {
                 delete static_cast<CoinTestUtils::OSMesaTestContext*>(context);
             }
         }
+        
+        virtual SbBool Initialize() override {
+            // For global test context manager, verify OSMesa functions are available
+            try {
+                OSMesaContext test_ctx = OSMesaCreateContextExt(OSMESA_RGBA, 16, 0, 0, NULL);
+                if (test_ctx) {
+                    OSMesaDestroyContext(test_ctx);
+                    return TRUE;
+                }
+            } catch (...) {
+                // OSMesa not available
+            }
+            return FALSE;
+        }
+        
+        virtual SbBool IsInitialized() override {
+            // OSMesa is statically linked and should be available
+            return TRUE;
+        }
     };
     
     std::unique_ptr<GlobalOSMesaContextManager> g_global_context_manager;

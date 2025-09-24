@@ -131,6 +131,10 @@ public:
     virtual SbBool makeContextCurrent(void * context) = 0;
     virtual void restorePreviousContext(void * context) = 0;
     virtual void destroyContext(void * context) = 0;
+    
+    // Context initialization verification methods
+    virtual SbBool Initialize() = 0;
+    virtual SbBool IsInitialized() = 0;
   };
 
   static ContextManager * getContextManager(void);
