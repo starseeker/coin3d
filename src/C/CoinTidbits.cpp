@@ -964,6 +964,28 @@ SbBool coin_getcwd(std::string* str)
 /* ********************************************************************** */
 /* Math utility functions */
 
+int coin_isinf(double value)
+{
+#ifdef HAVE_ISINF
+    return std::isinf(value) ? 1 : 0;
+#elif defined(HAVE__ISINF)
+    return _isinf(value);
+#else
+    return std::isinf(value) ? 1 : 0;
+#endif
+}
+
+int coin_isnan(double value)
+{
+#ifdef HAVE_ISNAN
+    return std::isnan(value) ? 1 : 0;
+#elif defined(HAVE__ISNAN)
+    return _isnan(value);
+#else
+    return std::isnan(value) ? 1 : 0;
+#endif
+}
+
 int coin_finite(double value)
 {
 #ifdef HAVE_FINITE

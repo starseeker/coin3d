@@ -1372,7 +1372,7 @@ SoInput::read(float & f)
   else {
     READ_REAL(f, float);
   }
-  if (!coin_finite((double)f)) {
+  if (!std::isfinite((double)f)) {
     SoReadError::post(this,
                       "Detected non-valid floating point number, replacing "
                       "with 0.0f");
@@ -1399,7 +1399,7 @@ SoInput::read(double & d)
   else {
     READ_REAL(d, double);
   }
-  if (!coin_finite(d)) {
+  if (!std::isfinite(d)) {
     SoReadError::post(this,
                       "Detected non-valid floating point number, replacing "
                       "with 0.0");
