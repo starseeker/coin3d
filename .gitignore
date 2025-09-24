@@ -38,6 +38,7 @@ autom4te.cache/
 Thumbs.db
 
 # Temporary files
+*.swp
 *.tmp
 *.temp
 *~

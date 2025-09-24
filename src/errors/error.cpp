@@ -101,8 +101,8 @@ cc_error_default_handler_cb(const cc_error * err, void * COIN_UNUSED_ARG(data))
   FILE * coin_stderr = coin_get_stderr();
 
   if (coin_stderr) {
-    const std::string * str = cc_error_get_debug_string(err);
-    (void)fprintf(coin_stderr, "%s\n", str->c_str());
+    std::string str = cc_error_get_debug_string(err);
+    (void)fprintf(coin_stderr, "%s\n", str.c_str());
     (void)fflush(coin_stderr);
   }
 }
@@ -158,7 +158,11 @@ cc_error_copy(const cc_error * src, cc_error * dst)
 void
 cc_error_set_debug_string(cc_error * me, const char * str)
 {
-  me->debugstring = str ? str : "";
+  if (str) {
+    cc_string_set_text(&me->debugstring, str);
+  } else {
+    cc_string_set_text(&me->debugstring, "");
+  }
 }
 
 /*!
@@ -169,7 +173,7 @@ void
 cc_error_append_to_debug_string(cc_error * me, const char * str)
 {
   if (str) {
-    me->debugstring += str;
+    cc_string_append_text(&me->debugstring, str);
   }
 }
 
@@ -247,10 +251,10 @@ cc_error_get_handler(void ** data)
   \relates cc_error
 */
 
-const std::string *
+const std::string
 cc_error_get_debug_string(const cc_error * me)
 {
-  return &(me->debugstring);
+  return std::string(cc_string_get_text(&(me->debugstring)));
 }
 
 /*!

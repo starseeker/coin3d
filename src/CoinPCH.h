@@ -60,4 +60,7 @@
 #include <vector>
 #include <string>
 
+// Coin3D headers
+#include "Inventor/errors/SoDebugError.h"
+
 #endif /* !COIN_PCH_H */
