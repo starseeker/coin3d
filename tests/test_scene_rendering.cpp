@@ -104,6 +104,9 @@ struct OSMesaContextData {
         
         bool result = OSMesaMakeCurrent(context, buffer.get(), GL_UNSIGNED_BYTE, width, height);
         if (result) {
+            // IMPORTANT: Set Y_UP immediately after making context current
+            OSMesaPixelStore(OSMESA_Y_UP, 0);
+            
             // Clear any GL errors that might have occurred during context creation
             // This prevents warnings in cc_glglue_instance() about context setup errors
             GLenum error;

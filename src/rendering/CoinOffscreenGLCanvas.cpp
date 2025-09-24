@@ -33,6 +33,7 @@
 #include "CoinOffscreenGLCanvas.h"
 
 #include <climits>
+#include <cstring>
 
 #include "glue/glp.h"
 #include <Inventor/errors/SoDebugError.h>
@@ -444,28 +445,86 @@ CoinOffscreenGLCanvas::readPixels(uint8_t * dst,
 
   assert((nrcomponents >= 1) && (nrcomponents <= 4));
 
-  if (nrcomponents < 3) {
-    unsigned char * tmp = new unsigned char[vpdims[0]*vpdims[1]*4];
-    glReadPixels(0, 0, vpdims[0], vpdims[1],
-                 nrcomponents == 1 ? GL_RGB : GL_RGBA, GL_UNSIGNED_BYTE, tmp);
+  unsigned char * readbuffer;
+  SbBool flip_needed = FALSE;
 
-    const unsigned char * src = tmp;
-    // manually convert to grayscale
-    for (short y = 0; y < vpdims[1]; y++) {
-      for (short x = 0; x < vpdims[0]; x++) {
-        double v = src[0] * 0.3 + src[1] * 0.59 + src[2] * 0.11;
-        *dst++ = (unsigned char) v;
-        if (nrcomponents == 2) {
-          *dst++ = src[3];
-        }
-        src += nrcomponents == 1 ? 3 : 4;
-      }
-    }
-    delete[] tmp;
+#ifdef COIN3D_OSMESA_BUILD
+  // OSMesa builds need Y-axis flipping because OSMesa creates a coordinate system mismatch:
+  // - OpenGL renders with (0,0) at bottom-left
+  // - OSMesa buffers are organized for image output with (0,0) at top-left  
+  // - glReadPixels() reads in OpenGL coordinates but outputs to image-format buffer
+  flip_needed = TRUE;
+#endif
+
+  if (nrcomponents < 3) {
+    readbuffer = new unsigned char[vpdims[0]*vpdims[1]*4];
+    glReadPixels(0, 0, vpdims[0], vpdims[1],
+                 nrcomponents == 1 ? GL_RGB : GL_RGBA, GL_UNSIGNED_BYTE, readbuffer);
   }
   else {
-    glReadPixels(0, 0, vpdims[0], vpdims[1],
-                 nrcomponents == 3 ? GL_RGB : GL_RGBA, GL_UNSIGNED_BYTE, dst);
+    // For RGB/RGBA, may need temporary buffer for Y-flipping in OSMesa builds
+    if (flip_needed) {
+      readbuffer = new unsigned char[vpdims[0]*vpdims[1]*nrcomponents];
+      glReadPixels(0, 0, vpdims[0], vpdims[1],
+                   nrcomponents == 3 ? GL_RGB : GL_RGBA, GL_UNSIGNED_BYTE, readbuffer);
+    } else {
+      // Non-OSMesa builds can read directly to destination
+      glReadPixels(0, 0, vpdims[0], vpdims[1],
+                   nrcomponents == 3 ? GL_RGB : GL_RGBA, GL_UNSIGNED_BYTE, dst);
+    }
+  }
+
+  // Flip Y-axis to convert from OpenGL (bottom-left) to image (top-left) coordinates
+  // This is only needed for OSMesa builds
+  if (flip_needed) {
+    const int width = vpdims[0];
+    const int height = vpdims[1];
+    const int src_components = (nrcomponents < 3) ? ((nrcomponents == 1) ? 3 : 4) : nrcomponents;
+    const int row_size = width * src_components;
+    
+    if (nrcomponents < 3) {
+      // Convert to grayscale with Y-flipping
+      for (short y = 0; y < height; y++) {
+        // Read from bottom row of source (height - 1 - y)
+        const unsigned char * src_row = readbuffer + ((height - 1 - y) * width * src_components);
+        for (short x = 0; x < width; x++) {
+          double v = src_row[0] * 0.3 + src_row[1] * 0.59 + src_row[2] * 0.11;
+          *dst++ = (unsigned char) v;
+          if (nrcomponents == 2) {
+            *dst++ = src_row[3];
+          }
+          src_row += src_components;
+        }
+      }
+    } else {
+      // RGB/RGBA with Y-flipping
+      for (short y = 0; y < height; y++) {
+        // Read from bottom row of source (height - 1 - y)  
+        const unsigned char * src_row = readbuffer + ((height - 1 - y) * row_size);
+        memcpy(dst + (y * row_size), src_row, row_size);
+      }
+    }
+    
+    delete[] readbuffer;
+  }
+  else {
+    // Non-OSMesa builds: no Y-flipping needed, but still handle grayscale conversion
+    if (nrcomponents < 3) {
+      const unsigned char * src = readbuffer;
+      // manually convert to grayscale without Y-flipping
+      for (short y = 0; y < vpdims[1]; y++) {
+        for (short x = 0; x < vpdims[0]; x++) {
+          double v = src[0] * 0.3 + src[1] * 0.59 + src[2] * 0.11;
+          *dst++ = (unsigned char) v;
+          if (nrcomponents == 2) {
+            *dst++ = src[3];
+          }
+          src += nrcomponents == 1 ? 3 : 4;
+        }
+      }
+      delete[] readbuffer;
+    }
+    // For RGB/RGBA non-OSMesa, data was written directly to dst, no further processing needed
   }
   glFlush(); glFinish();
 

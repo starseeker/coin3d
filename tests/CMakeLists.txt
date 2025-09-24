@@ -11,6 +11,10 @@ set(SIMPLE_TESTS
     test_engines
     test_sensors
     test_scene_rendering
+    test_gradient_debug
+    test_simple_debug
+    test_coordinate_debug
+    test_sphere_positioning
 )
 
 # Create executable for each test group
