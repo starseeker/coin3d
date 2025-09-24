@@ -86,7 +86,12 @@ struct OSMesaContextData {
         // Create RGBA context with 16-bit depth, 0 stencil, 0 accum
         context = OSMesaCreateContextExt(OSMESA_RGBA, 16, 0, 0, NULL);
         if (context) {
-            buffer = std::make_unique<unsigned char[]>(width * height * 4);
+            // Allocate larger buffer like BRL-CAD does - OSMesa needs space for internal
+            // operations like textures, framebuffers, etc. beyond just the final image
+            // Use at least 4096x4096 to match OSMesa's MAX_WIDTH/MAX_HEIGHT settings
+            size_t buffer_size = std::max(static_cast<size_t>(4096 * 4096 * 4), 
+                                         static_cast<size_t>(width * height * 4));
+            buffer = std::make_unique<unsigned char[]>(buffer_size);
         }
     }
     
@@ -95,7 +100,26 @@ struct OSMesaContextData {
     }
     
     bool makeCurrent() {
-        return context && OSMesaMakeCurrent(context, buffer.get(), GL_UNSIGNED_BYTE, width, height);
+        if (!context || !buffer) return false;
+        
+        bool result = OSMesaMakeCurrent(context, buffer.get(), GL_UNSIGNED_BYTE, width, height);
+        if (result) {
+            // Clear any GL errors that might have occurred during context creation
+            // This prevents warnings in cc_glglue_instance() about context setup errors
+            GLenum error;
+            while ((error = glGetError()) != GL_NO_ERROR) {
+                // Clear errors without reporting - context creation can generate spurious errors
+            }
+            
+            // Ensure OpenGL extension loading is triggered after making context current
+            // This is equivalent to what glewInit() does in OSMesa examples
+            const char* extensions = (const char*)glGetString(GL_EXTENSIONS);
+            if (extensions) {
+                // Extension string retrieved successfully - this triggers proper GL state initialization
+                (void)extensions; // Avoid unused variable warning
+            }
+        }
+        return result;
     }
     
     bool isValid() const { return context != nullptr; }
