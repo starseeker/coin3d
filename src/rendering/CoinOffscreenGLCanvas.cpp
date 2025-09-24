@@ -448,21 +448,34 @@ CoinOffscreenGLCanvas::readPixels(uint8_t * dst,
   unsigned char * readbuffer;
   SbBool flip_needed = FALSE;
 
+#ifdef COIN3D_OSMESA_BUILD
+  // OSMesa builds need Y-axis flipping because OSMesa creates a coordinate system mismatch:
+  // - OpenGL renders with (0,0) at bottom-left
+  // - OSMesa buffers are organized for image output with (0,0) at top-left  
+  // - glReadPixels() reads in OpenGL coordinates but outputs to image-format buffer
+  flip_needed = TRUE;
+#endif
+
   if (nrcomponents < 3) {
     readbuffer = new unsigned char[vpdims[0]*vpdims[1]*4];
     glReadPixels(0, 0, vpdims[0], vpdims[1],
                  nrcomponents == 1 ? GL_RGB : GL_RGBA, GL_UNSIGNED_BYTE, readbuffer);
-    flip_needed = TRUE;
   }
   else {
-    // For RGB/RGBA, allocate temporary buffer for Y-flipping
-    readbuffer = new unsigned char[vpdims[0]*vpdims[1]*nrcomponents];
-    glReadPixels(0, 0, vpdims[0], vpdims[1],
-                 nrcomponents == 3 ? GL_RGB : GL_RGBA, GL_UNSIGNED_BYTE, readbuffer);
-    flip_needed = TRUE;
+    // For RGB/RGBA, may need temporary buffer for Y-flipping in OSMesa builds
+    if (flip_needed) {
+      readbuffer = new unsigned char[vpdims[0]*vpdims[1]*nrcomponents];
+      glReadPixels(0, 0, vpdims[0], vpdims[1],
+                   nrcomponents == 3 ? GL_RGB : GL_RGBA, GL_UNSIGNED_BYTE, readbuffer);
+    } else {
+      // Non-OSMesa builds can read directly to destination
+      glReadPixels(0, 0, vpdims[0], vpdims[1],
+                   nrcomponents == 3 ? GL_RGB : GL_RGBA, GL_UNSIGNED_BYTE, dst);
+    }
   }
 
   // Flip Y-axis to convert from OpenGL (bottom-left) to image (top-left) coordinates
+  // This is only needed for OSMesa builds
   if (flip_needed) {
     const int width = vpdims[0];
     const int height = vpdims[1];
@@ -495,9 +508,10 @@ CoinOffscreenGLCanvas::readPixels(uint8_t * dst,
     delete[] readbuffer;
   }
   else {
-    // This path should not be reached with current logic, but kept for safety
+    // Non-OSMesa builds: no Y-flipping needed, but still handle grayscale conversion
     if (nrcomponents < 3) {
       const unsigned char * src = readbuffer;
+      // manually convert to grayscale without Y-flipping
       for (short y = 0; y < vpdims[1]; y++) {
         for (short x = 0; x < vpdims[0]; x++) {
           double v = src[0] * 0.3 + src[1] * 0.59 + src[2] * 0.11;
@@ -510,6 +524,7 @@ CoinOffscreenGLCanvas::readPixels(uint8_t * dst,
       }
       delete[] readbuffer;
     }
+    // For RGB/RGBA non-OSMesa, data was written directly to dst, no further processing needed
   }
   glFlush(); glFinish();
 
