@@ -2307,6 +2307,45 @@ cc_glglue_instance(int contextid)
   found = cc_dict_get(gldict, (uintptr_t)contextid, &ptr);
 
   if (!found) {
+    /* Check for callback-based context managers first */
+    SoDB::ContextManager* manager = getSoDBContextManager();
+    if (manager) {
+      /* For callback-based contexts, create a minimal glglue instance without GL calls */
+      if (coin_glglue_debug()) {
+        cc_debugerror_postinfo("cc_glglue_instance", 
+                              "Creating minimal glglue for callback-based context");
+      }
+      
+      gi = (cc_glglue*)malloc(sizeof(cc_glglue));
+      memset(gi, 0, sizeof(cc_glglue));
+      gi->contextid = (uint32_t) contextid;
+      
+      /* Set safe defaults */
+      gi->versionstr = nullptr;
+      gi->vendorstr = nullptr;
+      gi->rendererstr = nullptr;
+      gi->extensionsstr = nullptr;
+      gi->version.major = 1;
+      gi->version.minor = 0;
+      gi->version.release = 0;
+      gi->vendor_is_SGI = FALSE;
+      gi->vendor_is_nvidia = FALSE;
+      gi->vendor_is_intel = FALSE;
+      gi->vendor_is_ati = FALSE;
+      gi->vendor_is_3dlabs = FALSE;
+      gi->nvidia_color_per_face_bug = FALSE;
+      
+      /* Create dict for extensions but don't populate it yet */
+      gi->glextdict = cc_dict_construct(256, 0.75f);
+      
+      /* Store in dict */
+      ptr = gi;
+      cc_dict_put(gldict, (uintptr_t)contextid, ptr);
+      
+      /* Skip all GL initialization and go to end */
+      goto callback_context_done;
+    }
+    
 #ifdef COIN3D_OSMESA_BUILD
     if (coin_glglue_debug()) {
       cc_debugerror_postinfo("cc_glglue_instance", "Context not found, creating new glglue instance");
@@ -2640,6 +2679,7 @@ cc_glglue_instance(int contextid)
     gi = (cc_glglue *)ptr;
   }
 
+callback_context_done:
   CC_SYNC_END(cc_glglue_instance);
 
 #ifdef COIN3D_OSMESA_BUILD
