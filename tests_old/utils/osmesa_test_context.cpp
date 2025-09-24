@@ -49,8 +49,11 @@ namespace CoinTestUtils {
 OSMesaTestContext::OSMesaTestContext(unsigned int width, unsigned int height, GLenum format)
     : context_(nullptr), width_(width), height_(height), format_(format) {
     
-    // Allocate pixel buffer
-    size_t buffer_size = width_ * height_ * 4; // RGBA
+    // Allocate larger buffer like BRL-CAD does - OSMesa needs space for internal
+    // operations like textures, framebuffers, etc. beyond just the final image
+    // Use at least 4096x4096 to match OSMesa's MAX_WIDTH/MAX_HEIGHT settings
+    size_t buffer_size = std::max(static_cast<size_t>(4096 * 4096 * 4), 
+                                 static_cast<size_t>(width_ * height_ * 4));
     buffer_ = std::make_unique<unsigned char[]>(buffer_size);
     
     // Create OSMesa context
@@ -66,6 +69,13 @@ OSMesaTestContext::OSMesaTestContext(unsigned int width, unsigned int height, GL
         OSMesaDestroyContext(context_);
         context_ = nullptr;
         return;
+    }
+    
+    // Clear any GL errors that might have occurred during context creation
+    // This prevents warnings in cc_glglue_instance() about context setup errors
+    GLenum error;
+    while ((error = glGetError()) != GL_NO_ERROR) {
+        // Clear errors without reporting - context creation can generate spurious errors
     }
 }
 
@@ -102,6 +112,13 @@ bool OSMesaTestContext::makeCurrent() {
     
     bool result = OSMesaMakeCurrent(context_, buffer_.get(), GL_UNSIGNED_BYTE, width_, height_);
     if (result) {
+        // Clear any GL errors that might have occurred during context creation
+        // This prevents warnings in cc_glglue_instance() about context setup errors
+        GLenum error;
+        while ((error = glGetError()) != GL_NO_ERROR) {
+            // Clear errors without reporting - context creation can generate spurious errors
+        }
+        
         // After making context current, ensure OpenGL extensions are properly detected
         // This is crucial for FBO support detection - equivalent to glewInit() in OSMesa examples
         

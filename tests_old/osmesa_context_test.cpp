@@ -25,8 +25,12 @@ struct OSMesaContextData {
             throw std::runtime_error("Failed to create OSMesa context");
         }
         
-        // Allocate buffer for offscreen rendering
-        buffer = std::make_unique<unsigned char[]>(width * height * 4);
+        // Allocate larger buffer like BRL-CAD does - OSMesa needs space for internal
+        // operations like textures, framebuffers, etc. beyond just the final image
+        // Use at least 4096x4096 to match OSMesa's MAX_WIDTH/MAX_HEIGHT settings
+        size_t buffer_size = std::max(static_cast<size_t>(4096 * 4096 * 4), 
+                                     static_cast<size_t>(width * height * 4));
+        buffer = std::make_unique<unsigned char[]>(buffer_size);
     }
     
     ~OSMesaContextData() {
@@ -38,6 +42,13 @@ struct OSMesaContextData {
     bool makeCurrent() {
         bool result = OSMesaMakeCurrent(context, buffer.get(), GL_UNSIGNED_BYTE, width, height) == GL_TRUE;
         if (result) {
+            // Clear any GL errors that might have occurred during context creation
+            // This prevents warnings in cc_glglue_instance() about context setup errors
+            GLenum error;
+            while ((error = glGetError()) != GL_NO_ERROR) {
+                // Clear errors without reporting - context creation can generate spurious errors
+            }
+            
             // After making context current, we need to ensure extensions are available
             // This is equivalent to what glewInit() does in the OSMesa glew example
             
