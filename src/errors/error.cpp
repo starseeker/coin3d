@@ -127,7 +127,7 @@ void
 cc_error_init(cc_error * me)
 {
   // std::string is default-constructed to empty string
-  // No explicit initialization needed
+  me->debugstring = std::string();
 }
 
 /*!
@@ -159,9 +159,9 @@ void
 cc_error_set_debug_string(cc_error * me, const char * str)
 {
   if (str) {
-    cc_string_set_text(&me->debugstring, str);
+    me->debugstring = str;
   } else {
-    cc_string_set_text(&me->debugstring, "");
+    me->debugstring = "";
   }
 }
 
@@ -173,7 +173,7 @@ void
 cc_error_append_to_debug_string(cc_error * me, const char * str)
 {
   if (str) {
-    cc_string_append_text(&me->debugstring, str);
+    me->debugstring += str;
   }
 }
 
@@ -254,7 +254,7 @@ cc_error_get_handler(void ** data)
 const std::string
 cc_error_get_debug_string(const cc_error * me)
 {
-  return std::string(cc_string_get_text(&(me->debugstring)));
+  return me->debugstring;
 }
 
 /*!

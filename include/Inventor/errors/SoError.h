@@ -36,20 +36,18 @@
 #include <Inventor/SbBasic.h>
 #include <Inventor/SbString.h>
 #include <Inventor/SoType.h>
+#include <string>
 
 // Minimal C error structures for compatibility
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
-// TODO - stop using this
-#include "../../../src/C/base/string.h"
-
 #ifndef CC_ERROR_STRUCT_DEFINED
 #define CC_ERROR_STRUCT_DEFINED
 
 typedef struct cc_error {
-  cc_string debugstring;
+  std::string debugstring;
 } cc_error;
 
 typedef void cc_error_cb(const cc_error * err, void * data);

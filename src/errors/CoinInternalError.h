@@ -47,7 +47,6 @@
 
 /* ********************************************************************** */
 
-#include "../C/base/string.h"
 #include <string>
 #include <stdarg.h>
 
