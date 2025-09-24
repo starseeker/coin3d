@@ -593,7 +593,7 @@ SoNodeVisualize::initClass(void)
   if(getClassTypeId() == SoType::badType()) {
     SO_KIT_INIT_CLASS(SoNodeVisualize, SoBaseKit, "BaseKit");
 
-    cc_coin_atexit(cleanClass);
+    std::atexit(cleanClass);
   }
 }
 
