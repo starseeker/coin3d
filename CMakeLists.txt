@@ -429,6 +429,8 @@ endif()
 if(COIN_BUILD_TESTS)
   enable_testing()
   add_subdirectory(testsuite)  # Legacy threading tests
+  # Recommend the following for gdb users:
+  # https://github.com/catchorg/Catch2/blob/devel/extras/gdbinit
   add_subdirectory(tests)      # Main Catch2-based test system
 endif()
 
