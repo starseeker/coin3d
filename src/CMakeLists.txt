@@ -58,6 +58,22 @@ foreach(_subdir ${COIN_SUBDIRS})
 endforeach()
 add_subdirectory(doc)
 
+# ============================================================================
+# Apply precompiled headers to all object libraries
+# ============================================================================
+
+# Enable precompiled headers for all object libraries if requested and supported
+if(COIN_USE_PRECOMPILED_HEADERS AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.16")
+    message(STATUS "Applying precompiled headers to object libraries")
+    foreach(_subdir ${COIN_SUBDIRS})
+        if(TARGET ${_subdir})
+            target_precompile_headers(${_subdir} PRIVATE
+                "${CMAKE_CURRENT_SOURCE_DIR}/CoinPCH.h"
+            )
+        endif()
+    endforeach()
+endif()
+
 # As CMake does not support deep header hierarchies for framework generation we tweak the
 # installation paths for the install commands.  To make sure the symbolic links for versioned
 # Binaries, Headers, and Resources are properly created we add at headers and resources to
@@ -128,6 +144,20 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 # Set library output name based on backend selection
 if(DEFINED COIN3D_OUTPUT_NAME)
     set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME ${COIN3D_OUTPUT_NAME})
+endif()
+
+# ============================================================================
+# Precompiled Headers Support
+# ============================================================================
+
+# Enable precompiled headers if requested and supported (CMake 3.16+)
+if(COIN_USE_PRECOMPILED_HEADERS AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.16")
+    message(STATUS "Enabling precompiled headers for faster compilation")
+    target_precompile_headers(${PROJECT_NAME} PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/CoinPCH.h"
+    )
+elseif(COIN_USE_PRECOMPILED_HEADERS)
+    message(WARNING "Precompiled headers requested but require CMake 3.16+. Current version: ${CMAKE_VERSION}")
 endif()
 
 # ============================================================================

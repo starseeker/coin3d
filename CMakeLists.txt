@@ -101,6 +101,9 @@ option(HAVE_MANIPULATORS "Enable Manipulator support" ON)
 # External dependencies
 option(USE_EXCEPTIONS "Compile with exceptions (g++ only)" ON)
 
+# Build optimization options
+option(COIN_USE_PRECOMPILED_HEADERS "Use precompiled headers to speed up compilation" ON)
+
 # Thread debugging (requires C++11 thread support)
 check_include_file_cxx(thread HAVE_STD_THREAD)
 
