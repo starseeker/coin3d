@@ -41,6 +41,7 @@
 
 #include "test_utils.h"
 #include <memory>
+#include <vector>
 
 #if defined(HAVE_CONFIG_H)
 #include "config.h"
@@ -53,6 +54,7 @@
 #include <Inventor/nodes/SoMaterial.h>
 #include <Inventor/nodes/SoTransform.h>
 #include <Inventor/nodes/SoPerspectiveCamera.h>
+#include <Inventor/nodes/SoOrthographicCamera.h>
 #include <Inventor/nodes/SoDirectionalLight.h>
 #include <Inventor/SoOffscreenRenderer.h>
 #include <Inventor/SbViewportRegion.h>
@@ -147,10 +149,11 @@ constexpr float SPHERE_RADIUS = 0.2f;
 constexpr float SPHERE_X = 0.3f;  // Offset right from center
 constexpr float SPHERE_Y = 0.2f;  // Offset up from center
 
-// Expected sphere center in pixel coordinates (accounting for viewport transform)
-constexpr int EXPECTED_SPHERE_CENTER_X = static_cast<int>(IMAGE_WIDTH * (0.5f + SPHERE_X * 0.25f));
-constexpr int EXPECTED_SPHERE_CENTER_Y = static_cast<int>(IMAGE_HEIGHT * (0.5f + SPHERE_Y * 0.25f));
-constexpr int EXPECTED_SPHERE_RADIUS_PX = static_cast<int>(SPHERE_RADIUS * IMAGE_WIDTH * 0.25f);
+// Expected sphere center in pixel coordinates (orthographic projection)
+// Camera height = 2.0, so world coordinates -1 to +1 map to the full viewport
+constexpr int EXPECTED_SPHERE_CENTER_X = static_cast<int>(IMAGE_WIDTH * (0.5f + SPHERE_X * 0.5f));
+constexpr int EXPECTED_SPHERE_CENTER_Y = static_cast<int>(IMAGE_HEIGHT * (0.5f - SPHERE_Y * 0.5f));  // Y is flipped in OpenGL
+constexpr int EXPECTED_SPHERE_RADIUS_PX = static_cast<int>(SPHERE_RADIUS * IMAGE_WIDTH * 0.5f);
 
 // Colors
 struct RGB { unsigned char r, g, b; };
@@ -181,12 +184,13 @@ void savePNG(const char* filename, const unsigned char* buffer, int width, int h
 SoSeparator* createSphereScene() {
     SoSeparator* root = new SoSeparator;
     
-    // Add camera
-    SoPerspectiveCamera* camera = new SoPerspectiveCamera;
+    // Use orthographic camera for predictable coordinate mapping
+    SoOrthographicCamera* camera = new SoOrthographicCamera;
     camera->position.setValue(0.0f, 0.0f, 3.0f);
     camera->orientation.setValue(SbVec3f(0, 1, 0), 0);
     camera->nearDistance = 1.0f;
     camera->farDistance = 10.0f;
+    camera->height = 2.0f;  // This controls the view volume height
     root->addChild(camera);
     
     // Add uniform background lighting
@@ -289,8 +293,11 @@ bool analyzeSpherePositioning(const unsigned char* buffer, int width, int height
         }
     }
     
-    // Count sphere pixels
+    // Count sphere pixels and find bounding box
     int sphere_pixel_count = 0;
+    int min_x = width, max_x = -1, min_y = height, max_y = -1;
+    vector<pair<int, int>> sphere_pixels;
+    
     for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {
             int pixel_idx = (y * width + x) * components;
@@ -300,12 +307,36 @@ bool analyzeSpherePositioning(const unsigned char* buffer, int width, int height
                 abs(pixel_color.g - SPHERE_COLOR.g) < 30 && 
                 abs(pixel_color.b - SPHERE_COLOR.b) < 30) {
                 sphere_pixel_count++;
+                sphere_pixels.push_back({x, y});
+                min_x = min(min_x, x);
+                max_x = max(max_x, x);
+                min_y = min(min_y, y);
+                max_y = max(max_y, y);
             }
         }
     }
     
     cout << "Total sphere pixels found: " << sphere_pixel_count << endl;
     cout << "Expected sphere area: ~" << (3.14159f * EXPECTED_SPHERE_RADIUS_PX * EXPECTED_SPHERE_RADIUS_PX) << " pixels" << endl;
+    
+    if (sphere_pixel_count > 0) {
+        int actual_center_x = (min_x + max_x) / 2;
+        int actual_center_y = (min_y + max_y) / 2;
+        int actual_width = max_x - min_x + 1;
+        int actual_height = max_y - min_y + 1;
+        
+        cout << "=== ACTUAL SPHERE LOCATION ===" << endl;
+        cout << "Bounding box: (" << min_x << "," << min_y << ") to (" << max_x << "," << max_y << ")" << endl;
+        cout << "Actual center: (" << actual_center_x << "," << actual_center_y << ")" << endl;
+        cout << "Actual size: " << actual_width << "x" << actual_height << " pixels" << endl;
+        cout << "Expected center: (" << EXPECTED_SPHERE_CENTER_X << "," << EXPECTED_SPHERE_CENTER_Y << ")" << endl;
+        cout << "Center offset: (" << (actual_center_x - EXPECTED_SPHERE_CENTER_X) << "," << (actual_center_y - EXPECTED_SPHERE_CENTER_Y) << ")" << endl;
+        
+        // Calculate coordinate transformation factors
+        float x_scale = (float)actual_width / (EXPECTED_SPHERE_RADIUS_PX * 2);
+        float y_scale = (float)actual_height / (EXPECTED_SPHERE_RADIUS_PX * 2);
+        cout << "Scale factors: X=" << x_scale << ", Y=" << y_scale << endl;
+    }
     
     return all_correct;
 }
