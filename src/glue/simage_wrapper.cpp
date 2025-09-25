@@ -36,13 +36,10 @@
 #include <cstring>
 #include <cstdlib>
 
-/* Functional image saving implementation using toojpeg and svpng */
+/* Functional image saving implementation using toojpeg */
 
 #define TOOJPEG_IMPLEMENTATION
 #include "toojpeg.h"
-
-#define SVPNG_LINKAGE static
-#include "svpng.h"
 
 static unsigned char *
 stub_simage_read_image(const char * filename, int * w, int * h, int * nc)
@@ -96,9 +93,6 @@ stub_simage_check_save_supported(const char * filename)
       strcmp(ext, ".JPG") == 0 || strcmp(ext, ".JPEG") == 0) {
     return 1; /* JPEG supported */
   }
-  if (strcmp(ext, ".png") == 0 || strcmp(ext, ".PNG") == 0) {
-    return 1; /* PNG supported */
-  }
   return 0; /* Format not supported */
 }
 
@@ -111,8 +105,8 @@ stub_simage_get_num_savers(void)
 static void *
 stub_simage_get_saver_handle(int idx)
 {
-  static const char* savers[] = {"jpeg", "png"};
-  if (idx >= 0 && idx < 2) {
+  static const char* savers[] = {"jpeg"};
+  if (idx >= 0 && idx < 1) {
     return (void*)savers[idx];
   }
   return NULL;
@@ -127,9 +121,6 @@ stub_simage_get_saver_extensions(void * handle)
   if (strcmp(saver, "jpeg") == 0) {
     return "jpg,jpeg";
   }
-  if (strcmp(saver, "png") == 0) {
-    return "png";
-  }
   return "";
 }
 
@@ -142,9 +133,6 @@ stub_simage_get_saver_fullname(void * handle)
   if (strcmp(saver, "jpeg") == 0) {
     return "JPEG File Format";
   }
-  if (strcmp(saver, "png") == 0) {
-    return "PNG File Format";
-  }
   return "None";
 }
 
@@ -156,9 +144,6 @@ stub_simage_get_saver_description(void * handle)
   const char* saver = (const char*)handle;
   if (strcmp(saver, "jpeg") == 0) {
     return "JPEG image saver using TooJPEG library";
-  }
-  if (strcmp(saver, "png") == 0) {
-    return "PNG image saver using svpng library";
   }
   return "Image saving disabled in minimal build";
 }
@@ -240,28 +225,6 @@ stub_simage_save_image(const char * filename, const unsigned char * imagedata,
     
     if (ctx.error) success = 0;
     
-  } else if (strcmp(ext, "png") == 0 || strcmp(ext, "PNG") == 0) {
-    /* Save as PNG using svpng */
-    if (nc == 3) {
-      /* RGB format */
-      svpng(file, width, height, imagedata, 0);
-      success = 1;
-    } else if (nc == 4) {
-      /* RGBA format */
-      svpng(file, width, height, imagedata, 1);
-      success = 1;
-    } else if (nc == 1) {
-      /* Grayscale - convert to RGB */
-      unsigned char* rgb_data = (unsigned char*)malloc(width * height * 3);
-      if (rgb_data) {
-        for (int i = 0; i < width * height; i++) {
-          rgb_data[i*3] = rgb_data[i*3+1] = rgb_data[i*3+2] = imagedata[i];
-        }
-        svpng(file, width, height, rgb_data, 0);
-        free(rgb_data);
-        success = 1;
-      }
-    }
   }
   
   fclose(file);

@@ -12,7 +12,6 @@ set(COIN_GLUE_INTERNAL_FILES
 	simage_wrapper.cpp
 	toojpeg.h
 	toojpeg.cpp
-	svpng.h
 )
 
 # build library
