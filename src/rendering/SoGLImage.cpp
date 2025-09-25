@@ -1811,16 +1811,35 @@ SoGLImageP::reallyCreateTexture(SoState *state,
 
     if (mipmap && (this->flags & SoGLImage::RECTANGLE)) {
       mipmapimage = FALSE;
+#ifdef COIN3D_OSMESA_BUILD
+      // WORKAROUND: Disable automatic mipmap generation for OSMesa to avoid memory bug
+      if (coin_glglue_debug()) {
+        SoDebugError::postInfo("SoGLImageP::reallyCreateTexture",
+                               "Disabling GL_SGIS_generate_mipmap for OSMesa (RECTANGLE texture)");
+      }
+      mipmapfilter = FALSE; // Disable mipmap filtering for RECTANGLE textures
+#else
       if (SoGLDriverDatabase::isSupported(glw, "GL_SGIS_generate_mipmap")) {
         glTexParameteri(target, GL_GENERATE_MIPMAP_SGIS, GL_TRUE);
       }
       else mipmapfilter = FALSE;
+#endif
     }
     // prefer GL_SGIS_generate_mipmap to glGenerateMipmap. It seems to
     // be better supported in drivers.
     else if (mipmap && SoGLDriverDatabase::isSupported(glw, "GL_SGIS_generate_mipmap")) {
+#ifdef COIN3D_OSMESA_BUILD
+      // WORKAROUND: Disable automatic mipmap generation for OSMesa to avoid memory bug
+      if (coin_glglue_debug()) {
+        SoDebugError::postInfo("SoGLImageP::reallyCreateTexture",
+                               "Disabling GL_SGIS_generate_mipmap for OSMesa (regular texture)");
+      }
+      mipmapimage = FALSE; // No automatic generation, use manual approach later
+      mipmapfilter = FALSE; // Disable mipmap filtering
+#else
       glTexParameteri(target, GL_GENERATE_MIPMAP_SGIS, GL_TRUE);
       mipmapimage = FALSE;
+#endif
     }
     // using glGenerateMipmap() while creating a display list is not
     // supported (even if the display list is never used). This is
@@ -1841,6 +1860,19 @@ SoGLImageP::reallyCreateTexture(SoState *state,
                    border, dataFormat, GL_UNSIGNED_BYTE, texture);
 
       if (generatemipmap) {
+#ifdef COIN3D_OSMESA_BUILD
+        // WORKAROUND: Disable mipmap generation for OSMesa to avoid memory corruption bug
+        // OSMesa's _mesa_generate_mipmap() in mipmap.c:971 calls free() on non-malloc'd memory
+        // This causes crashes when texture data is allocated by Coin3D's memory management.
+        // See: https://github.com/starseeker/coin3d/issues/XXX
+        if (coin_glglue_debug()) {
+          SoDebugError::postInfo("SoGLImageP::reallyCreateTexture", 
+                                 "Skipping mipmap generation for OSMesa (memory bug workaround)");
+        }
+        // Instead of mipmap generation, use linear filtering to maintain visual quality
+        glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+#else
         SbBool wasenabled = TRUE;
         // Workaround for ATi driver bug. GL_TEXTURE_2D needs to be
         // enabled when using glGenerateMipmap(), according to
@@ -1853,6 +1885,7 @@ SoGLImageP::reallyCreateTexture(SoState *state,
         }
         cc_glglue_glGenerateMipmap(glw, target);
         if (!wasenabled) glDisable(GL_TEXTURE_2D);
+#endif // COIN3D_OSMESA_BUILD
       }
     }
     else { // mipmaps
