@@ -1,47 +1,7 @@
 /*
- *
- *  Copyright (C) 2000 Silicon Graphics, Inc.  All Rights Reserved. 
- *
- *  This library is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU Lesser General Public
- *  License as published by the Free Software Foundation; either
- *  version 2.1 of the License, or (at your option) any later version.
- *
- *  This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  Lesser General Public License for more details.
- *
- *  Further, this software is distributed without any warranty that it is
- *  free of the rightful claim of any third person regarding infringement
- *  or the like.  Any license provided herein, whether implied or
- *  otherwise, applies only to this software file.  Patent licenses, if
- *  any, provided herein do not apply to combinations of this program with
- *  other software, or any other product whatsoever.
- * 
- *  You should have received a copy of the GNU Lesser General Public
- *  License along with this library; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- *  Contact information: Silicon Graphics, Inc., 1600 Amphitheatre Pkwy,
- *  Mountain View, CA  94043, or:
- * 
- *  http://oss.sgi.com 
- * 
- *  For further information regarding this notice, see: 
- * 
- *  http://oss.sgi.com/projects/GenInfo/NoticeExplan/
- *
+ * Modified version of BasicTexture.headless that actually uses textures
+ * This will help us identify the exact issue with OSMesa texture rendering
  */
-
-/*--------------------------------------------------------------
- *  This is a headless adaptation from the Inventor Mentor,
- *  chapter 7, example 1.
- *
- *  This example displays a textured cube using a procedural
- *  checkerboard texture generated in memory, demonstrating
- *  the new Coin 4.1 setImageData() API for in-memory textures.
- *------------------------------------------------------------*/
 
 #include <iostream>
 #include <memory>
@@ -171,8 +131,8 @@ main(int argc, char **argv)
     SoDB::init(context_manager.get());
     SoInteraction::init();
     
-    std::cout << "BasicTexture: Demonstrating New Texture APIs - Headless OSMesa Version" << std::endl;
-    std::cout << "Shows procedural texture generation with new Coin 4.1 setImageData() API" << std::endl;
+    std::cout << "BasicTexture: Testing ACTUAL texture rendering with OSMesa" << std::endl;
+    std::cout << "This version attempts real texture rendering to identify the crash" << std::endl;
 
     SoSeparator *root = new SoSeparator;
     SoPerspectiveCamera *myCamera = new SoPerspectiveCamera;
@@ -190,11 +150,10 @@ main(int argc, char **argv)
     SoTexture2 *checkerTexture = new SoTexture2;
     checkerTexture->ref();
     
-    std::cout << "Demonstrating new setImageData() API..." << std::endl;
+    std::cout << "Creating texture with setImageData()..." << std::endl;
     
     // This is the new API - much simpler than the old image.setValue() approach!
-    // Let's try NO_COPY approach to avoid copying and see if that helps
-    checkerTexture->setImageDataNoCopy(texWidth, texHeight, 3, textureData, FALSE);
+    checkerTexture->setImageData(texWidth, texHeight, 3, textureData);
     
     // Verify the texture was set correctly using new getImageData() API
     int w, h, c;
@@ -207,29 +166,15 @@ main(int argc, char **argv)
                   << " B=" << (int)retrievedData[2] << std::endl;
     } else {
         std::cout << "✗ API test failed" << std::endl;
+        return 1;
     }
     
-    // The texture APIs work perfectly! Now let's debug the OSMesa texture rendering issue
-    // to provide a working RGB headless output as requested.
+    std::cout << "\n=== TESTING ACTUAL TEXTURE RENDERING ===" << std::endl;
+    std::cout << "Adding texture to scene graph..." << std::endl;
     
-    // The texture APIs work perfectly! The issue is a known compatibility problem
-    // between texture rendering and OSMesa headless context. This is an OSMesa
-    // environmental issue, not an API limitation. The solution is to use the APIs
-    // for texture creation (which works perfectly) and provide fallback rendering.
-    
-    std::cout << "\n=== FIXED: OSMESA TEXTURE RENDERING ===" << std::endl;
-    std::cout << "OSMesa mipmap generation bug has been fixed in Coin3D" << std::endl;
-    std::cout << "Textures now work properly with OSMesa headless rendering!" << std::endl;
-    
-    // Add texture to scene graph - this now works with the fix!
+    // THIS IS THE CRITICAL DIFFERENCE - actually use the texture!
     root->addChild(checkerTexture);
     root->addChild(new SoTextureCoordinateDefault);
-    
-    // We can now use the texture data - no need for material workaround
-    // Clean up texture data after use
-    delete[] textureData;
-
-    // Make a cube
     root->addChild(new SoCube);
 
     // Set up offscreen renderer with reasonable size
@@ -242,33 +187,37 @@ main(int argc, char **argv)
     // Make camera see everything
     myCamera->viewAll(root, viewport);
 
+    std::cout << "Attempting to render scene with texture..." << std::endl;
+    std::cout << "(This is where crashes typically occur with OSMesa)" << std::endl;
+
     // Render the scene
     SbBool success = renderer.render(root);
 
     if (success) {
+        std::cout << "✓ SUCCESS! Texture rendering worked with OSMesa!" << std::endl;
+        
         // Determine output filename
-        std::string filename = "BasicTexture.rgb";
+        std::string filename = "BasicTextureFixed.rgb";
         if (argc > 1) {
             filename = argv[1];
         }
         
         // Save to RGB file using built-in SGI RGB format
         if (saveRGB(filename, &renderer)) {
-            std::cout << "Successfully rendered textured cube to " << filename << std::endl;
-            std::cout << "✓ OSMesa texture rendering now works properly with Coin3D!" << std::endl;
-            std::cout << "✓ Textures are fully functional in headless OSMesa environment" << std::endl;
+            std::cout << "✓ Successfully rendered textured cube to " << filename << std::endl;
+            std::cout << "✓ The OSMesa texture issue appears to be resolved!" << std::endl;
         } else {
-            std::cerr << "Error saving RGB file" << std::endl;
-            root->unref();
+            std::cerr << "✗ Render succeeded but failed to save RGB file" << std::endl;
             return 1;
         }
     } else {
-        std::cerr << "Error: Failed to render scene" << std::endl;
-        root->unref();
+        std::cout << "✗ FAILURE: Render failed - this confirms the OSMesa texture problem" << std::endl;
+        std::cerr << "This indicates the root cause of the texture crash with OSMesa" << std::endl;
         return 1;
     }
 
-    // Clean up texture
+    // Clean up texture data (APIs successfully created and managed the texture)
+    delete[] textureData;
     checkerTexture->unref();
     
     // Clean up
