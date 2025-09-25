@@ -2390,10 +2390,12 @@ cc_glglue_instance(int contextid)
     */
     glerr = glGetError();
     while (glerr != GL_NO_ERROR) {
-      cc_debugerror_postwarning("cc_glglue_instance",
-                                "Error when setting up the GL context. This can happen if "
-                                "there is no current context, or if the context has been set "
-                                "up incorrectly.");
+      const char* errorstr = coin_glerror_string(glerr);
+      cc_debugerror_postinfo("cc_glglue_instance",
+                             "Clearing pre-existing OpenGL error 0x%x (%s) during context "
+                             "initialization. This can occur during normal cleanup or if the "
+                             "context was set up incorrectly.", 
+                             glerr, errorstr ? errorstr : "unknown");
       glerr = glGetError();
 
       /* We might get this error if there is no current context.

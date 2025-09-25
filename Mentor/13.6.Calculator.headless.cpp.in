@@ -26,7 +26,7 @@
  *  Contact information: Silicon Graphics, Inc., 1600 Amphitheatre Pkwy,
  *  Mountain View, CA  94043, or:
  * 
- *  http://www.sgi.com 
+ *  http://oss.sgi.com 
  * 
  *  For further information regarding this notice, see: 
  * 
@@ -35,14 +35,18 @@
  */
 
 /*--------------------------------------------------------------
- *  This is a headless adaptation from the Inventor Mentor,
- *  chapter 2, example 1.
+ *  This is a headless adaptation from the Inventor Mentor
+ *  chapter 13, example 6.
  *
- *  Hello Cone example program; draws a red cone and saves to RGB.
+ *  A calculator engine computes a closed, planar curve.
+ *  The output from the engine is connected to the translation
+ *  applied to a sphere object, which consequently moves
+ *  along the path of the curve. This demonstrates field engines.
  *------------------------------------------------------------*/
 
 #include <iostream>
 #include <memory>
+#include <cmath>
 
 // OSMesa headers for headless rendering
 #ifdef __has_include
@@ -57,11 +61,18 @@
 #include <Inventor/SoDB.h>
 #include <Inventor/SoInteraction.h>
 #include <Inventor/SoOffscreenRenderer.h>
-#include <Inventor/nodes/SoCone.h>
+#include <Inventor/engines/SoCalculator.h>
+#include <Inventor/engines/SoElapsedTime.h>
+#include <Inventor/engines/SoTimeCounter.h>
 #include <Inventor/nodes/SoDirectionalLight.h>
 #include <Inventor/nodes/SoMaterial.h>
 #include <Inventor/nodes/SoPerspectiveCamera.h>
+#include <Inventor/nodes/SoRotationXYZ.h>
 #include <Inventor/nodes/SoSeparator.h>
+#include <Inventor/nodes/SoTransform.h>
+#include <Inventor/nodes/SoTranslation.h>
+#include <Inventor/nodes/SoSphere.h>
+#include <Inventor/nodes/SoCube.h>
 #include <Inventor/SbViewportRegion.h>
 
 #ifdef HAVE_OSMESA
@@ -121,7 +132,7 @@ public:
     }
 };
 
-// Save RGBA buffer to RGB file using built-in SGI RGB format
+// Save RGB buffer to RGB file using built-in SGI RGB format
 bool saveRGB(const std::string& filename, SoOffscreenRenderer* renderer) {
     SbBool result = renderer->writeToRGB(filename.c_str());
     if (result) {
@@ -144,56 +155,143 @@ main(int argc, char **argv)
     SoDB::init(context_manager.get());
     SoInteraction::init();
     
-    std::cout << "Hello Cone - Headless OSMesa Version" << std::endl;
-    
-    // Make a scene containing a red cone (same as original)
+    std::cout << "Calculator Engine: Rose Curve - Headless OSMesa Version" << std::endl;
+
     SoSeparator *root = new SoSeparator;
-    SoPerspectiveCamera *myCamera = new SoPerspectiveCamera;
-    SoMaterial *myMaterial = new SoMaterial;
     root->ref();
+
+    // Add a camera and light
+    SoPerspectiveCamera *myCamera = new SoPerspectiveCamera;
+    myCamera->position.setValue(0, 0, 20.0);
+    myCamera->nearDistance = 10.0;
+    myCamera->farDistance = 30.0;
     root->addChild(myCamera);
     root->addChild(new SoDirectionalLight);
-    myMaterial->diffuseColor.setValue(1.0, 0.0, 0.0);   // Red
-    root->addChild(myMaterial);
-    root->addChild(new SoCone);
+
+    // Rotate scene slightly to get better view
+    SoRotationXYZ *globalRotXYZ = new SoRotationXYZ;
+    globalRotXYZ->axis = SoRotationXYZ::X;
+    globalRotXYZ->angle = M_PI/7;
+    root->addChild(globalRotXYZ);
+
+/////////////////////////////////////////////////////////////
+// CODE FOR The Inventor Mentor STARTS HERE  
+
+    // Create a path of cubes to show the trail
+    SoSeparator *pathGroup = new SoSeparator;
+    root->addChild(pathGroup);
+    SoMaterial *pathMaterial = new SoMaterial;
+    pathMaterial->diffuseColor.setValue(0.3, 0.3, 0.8);
+    pathMaterial->transparency = 0.7;
+    pathGroup->addChild(pathMaterial);
+
+    // Draw multiple positions along the curve to show the path
+    for (int i = 0; i < 72; i += 4) {  // Every 5 degrees
+        float theta = i * M_PI / 180.0f;
+        float r = 5.0f * cos(5 * theta);
+        float x = r * cos(theta);
+        float z = r * sin(theta);
+        
+        SoSeparator *cubeGroup = new SoSeparator;
+        pathGroup->addChild(cubeGroup);
+        
+        SoTransform *cubeTransform = new SoTransform;
+        cubeTransform->translation.setValue(x, 0, z);
+        cubeTransform->scaleFactor.setValue(0.2f, 0.2f, 0.2f);
+        cubeGroup->addChild(cubeTransform);
+        cubeGroup->addChild(new SoCube);
+    }
+
+    // Moving object group
+    SoSeparator *movingGroup = new SoSeparator;
+    root->addChild(movingGroup);
+
+    // Set up the object transformations
+    SoTranslation *danceTranslation = new SoTranslation;
+    SoTransform *initialTransform = new SoTransform;
+    movingGroup->addChild(danceTranslation);
+    initialTransform->scaleFactor.setValue(0.5f, 0.5f, 0.5f);
+    movingGroup->addChild(initialTransform);
     
+    // Add material for the moving sphere
+    SoMaterial *sphereMaterial = new SoMaterial;
+    sphereMaterial->diffuseColor.setValue(1.0, 0.3, 0.3);  // Red
+    movingGroup->addChild(sphereMaterial);
+    movingGroup->addChild(new SoSphere);
+
+    // Set up an engine to calculate the motion path:
+    // r = 5*cos(5*theta); x = r*cos(theta); z = r*sin(theta)
+    // Theta is incremented using a time counter engine,
+    // and converted to radians using an expression in
+    // the calculator engine.
+    SoCalculator *calcXZ = new SoCalculator; 
+    calcXZ->ref();
+    SoTimeCounter *thetaCounter = new SoTimeCounter;
+    thetaCounter->ref();
+
+    thetaCounter->max = 360;
+    thetaCounter->step = 4;
+    thetaCounter->frequency = 0.075f;
+
+    calcXZ->a.connectFrom(&thetaCounter->output);    
+    calcXZ->expression.set1Value(0, "ta=a*M_PI/180"); // theta
+    calcXZ->expression.set1Value(1, "tb=5*cos(5*ta)"); // r
+    calcXZ->expression.set1Value(2, "td=tb*cos(ta)"); // x 
+    calcXZ->expression.set1Value(3, "te=tb*sin(ta)"); // z 
+    calcXZ->expression.set1Value(4, "oA=vec3f(td,0,te)"); 
+    danceTranslation->translation.connectFrom(&calcXZ->oA);
+
+// CODE FOR The Inventor Mentor ENDS HERE
+/////////////////////////////////////////////////////////////
+
     // Set up offscreen renderer with reasonable size
     const int width = 512;
     const int height = 512;
     SbViewportRegion viewport(width, height);
     SoOffscreenRenderer renderer(viewport);
-    renderer.setBackgroundColor(SbColor(0.2f, 0.2f, 0.2f)); // Gray background
-    
-    // Make camera see everything (same as original)
+    renderer.setBackgroundColor(SbColor(0.1f, 0.1f, 0.1f)); // Dark background
+
+    // Make camera see everything
     myCamera->viewAll(root, viewport);
+
+    // Force an evaluation by triggering the engines
+    // This sets a specific time for the snapshot
+    SoDB::getSensorManager()->processTimerQueue();
+    SoDB::getSensorManager()->processDelayQueue(FALSE);
     
-    // Render the scene using correct API
+    // Render the scene at a specific moment
     SbBool success = renderer.render(root);
-    
+
     if (success) {
         // Determine output filename
-        std::string filename = "HelloCone.rgb";
+        std::string filename = "Calculator.rgb";
         if (argc > 1) {
             filename = argv[1];
         }
         
         // Save to RGB file using built-in SGI RGB format
         if (saveRGB(filename, &renderer)) {
-            std::cout << "Successfully rendered red cone to " << filename << std::endl;
+            std::cout << "Successfully rendered calculator engine rose curve to " << filename << std::endl;
         } else {
             std::cerr << "Error saving RGB file" << std::endl;
             root->unref();
+            calcXZ->unref();
+            thetaCounter->unref();
             return 1;
         }
     } else {
         std::cerr << "Error: Failed to render scene" << std::endl;
         root->unref();
+        calcXZ->unref();
+        thetaCounter->unref();
         return 1;
     }
-    
+
     // Clean up
     root->unref();
-    
+    calcXZ->unref();
+    thetaCounter->unref();
+
     return 0;
     
 #else

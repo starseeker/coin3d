@@ -36,9 +36,9 @@
 
 /*--------------------------------------------------------------
  *  This is a headless adaptation from the Inventor Mentor,
- *  chapter 2, example 1.
+ *  chapter 5, example 1.
  *
- *  Hello Cone example program; draws a red cone and saves to RGB.
+ *  This example builds an obelisk using the Face Set node.
  *------------------------------------------------------------*/
 
 #include <iostream>
@@ -57,11 +57,15 @@
 #include <Inventor/SoDB.h>
 #include <Inventor/SoInteraction.h>
 #include <Inventor/SoOffscreenRenderer.h>
-#include <Inventor/nodes/SoCone.h>
-#include <Inventor/nodes/SoDirectionalLight.h>
+#include <Inventor/nodes/SoCoordinate3.h>
+#include <Inventor/nodes/SoFaceSet.h>
 #include <Inventor/nodes/SoMaterial.h>
-#include <Inventor/nodes/SoPerspectiveCamera.h>
+#include <Inventor/nodes/SoNormal.h>
+#include <Inventor/nodes/SoNormalBinding.h>
 #include <Inventor/nodes/SoSeparator.h>
+#include <Inventor/nodes/SoVertexProperty.h>
+#include <Inventor/nodes/SoPerspectiveCamera.h>
+#include <Inventor/nodes/SoDirectionalLight.h>
 #include <Inventor/SbViewportRegion.h>
 
 #ifdef HAVE_OSMESA
@@ -121,7 +125,98 @@ public:
     }
 };
 
-// Save RGBA buffer to RGB file using built-in SGI RGB format
+//////////////////////////////////////////////////////////////
+// CODE FOR The Inventor Mentor STARTS HERE
+
+//  Eight polygons. The first four are triangles 
+//  The second four are quadrilaterals for the sides.
+static const float vertices[28][3] =
+{
+   { 0, 30, 0}, {-2,27, 2}, { 2,27, 2},            //front tri
+   { 0, 30, 0}, {-2,27,-2}, {-2,27, 2},            //left  tri
+   { 0, 30, 0}, { 2,27,-2}, {-2,27,-2},            //rear  tri
+   { 0, 30, 0}, { 2,27, 2}, { 2,27,-2},            //right tri
+   {-2, 27, 2}, {-4,0, 4}, { 4,0, 4}, { 2,27, 2},  //front quad
+   {-2, 27,-2}, {-4,0,-4}, {-4,0, 4}, {-2,27, 2},  //left  quad
+   { 2, 27,-2}, { 4,0,-4}, {-4,0,-4}, {-2,27,-2},  //rear  quad
+   { 2, 27, 2}, { 4,0, 4}, { 4,0,-4}, { 2,27,-2}   //right quad
+};
+
+// Number of vertices in each polygon:
+static int32_t numvertices[8] = {3, 3, 3, 3, 4, 4, 4, 4};
+
+// Normals for each polygon:
+static const float norms[8][3] =
+{ 
+   {0, .555,  .832}, {-.832, .555, 0}, //front, left tris
+   {0, .555, -.832}, { .832, .555, 0}, //rear, right tris
+   
+   {0, .0739,  .9973}, {-.9972, .0739, 0},//front, left quads
+   {0, .0739, -.9973}, { .9972, .0739, 0},//rear, right quads
+};
+
+SoSeparator *
+makeObeliskFaceSet()
+{
+   SoSeparator *obelisk = new SoSeparator();
+   obelisk->ref();
+
+#ifdef IV_STRICT
+   // This is the preferred code for Inventor 2.1
+
+   // Using the new SoVertexProperty node is more efficient
+   SoVertexProperty *myVertexProperty = new SoVertexProperty;
+
+   // Define the normals used:
+   myVertexProperty->normal.setValues(0, 8, norms);
+   myVertexProperty->normalBinding = SoNormalBinding::PER_FACE;
+
+   // Define material for obelisk
+   myVertexProperty->orderedRGBA.setValue(SbColor(.4,.4,.4).getPackedValue());
+
+   // Define coordinates for vertices
+   myVertexProperty->vertex.setValues(0, 28, vertices);
+
+   // Define the FaceSet
+   SoFaceSet *myFaceSet = new SoFaceSet;
+   myFaceSet->numVertices.setValues(0, 8, numvertices);
+ 
+   myFaceSet->vertexProperty.setValue(myVertexProperty);
+   obelisk->addChild(myFaceSet);
+
+#else
+   // Define the normals used:
+   SoNormal *myNormals = new SoNormal;
+   myNormals->vector.setValues(0, 8, norms);
+   obelisk->addChild(myNormals);
+   SoNormalBinding *myNormalBinding = new SoNormalBinding;
+   myNormalBinding->value = SoNormalBinding::PER_FACE;
+   obelisk->addChild(myNormalBinding);
+
+   // Define material for obelisk
+   SoMaterial *myMaterial = new SoMaterial;
+   myMaterial->diffuseColor.setValue(.4, .4, .4);
+   obelisk->addChild(myMaterial);
+
+   // Define coordinates for vertices
+   SoCoordinate3 *myCoords = new SoCoordinate3;
+   myCoords->point.setValues(0, 28, vertices);
+   obelisk->addChild(myCoords);
+
+   // Define the FaceSet
+   SoFaceSet *myFaceSet = new SoFaceSet;
+   myFaceSet->numVertices.setValues(0, 8, numvertices);
+   obelisk->addChild(myFaceSet);
+#endif
+
+   obelisk->unrefNoDelete();
+   return obelisk;
+}
+
+// CODE FOR The Inventor Mentor ENDS HERE
+//////////////////////////////////////////////////////////////
+
+// Save RGB buffer to RGB file using built-in SGI RGB format
 bool saveRGB(const std::string& filename, SoOffscreenRenderer* renderer) {
     SbBool result = renderer->writeToRGB(filename.c_str());
     if (result) {
@@ -144,42 +239,39 @@ main(int argc, char **argv)
     SoDB::init(context_manager.get());
     SoInteraction::init();
     
-    std::cout << "Hello Cone - Headless OSMesa Version" << std::endl;
-    
-    // Make a scene containing a red cone (same as original)
+    std::cout << "FaceSet: Obelisk - Headless OSMesa Version" << std::endl;
+
     SoSeparator *root = new SoSeparator;
     SoPerspectiveCamera *myCamera = new SoPerspectiveCamera;
-    SoMaterial *myMaterial = new SoMaterial;
     root->ref();
     root->addChild(myCamera);
     root->addChild(new SoDirectionalLight);
-    myMaterial->diffuseColor.setValue(1.0, 0.0, 0.0);   // Red
-    root->addChild(myMaterial);
-    root->addChild(new SoCone);
-    
+
+    root->addChild(makeObeliskFaceSet());
+
     // Set up offscreen renderer with reasonable size
     const int width = 512;
     const int height = 512;
     SbViewportRegion viewport(width, height);
     SoOffscreenRenderer renderer(viewport);
     renderer.setBackgroundColor(SbColor(0.2f, 0.2f, 0.2f)); // Gray background
-    
-    // Make camera see everything (same as original)
+
+    // Make camera see everything
     myCamera->viewAll(root, viewport);
-    
-    // Render the scene using correct API
+
+    // Render the scene
     SbBool success = renderer.render(root);
-    
+
     if (success) {
         // Determine output filename
-        std::string filename = "HelloCone.rgb";
+        std::string filename = "FaceSet.rgb";
         if (argc > 1) {
             filename = argv[1];
         }
         
         // Save to RGB file using built-in SGI RGB format
         if (saveRGB(filename, &renderer)) {
-            std::cout << "Successfully rendered red cone to " << filename << std::endl;
+            std::cout << "Successfully rendered obelisk face set to " << filename << std::endl;
         } else {
             std::cerr << "Error saving RGB file" << std::endl;
             root->unref();
@@ -190,10 +282,10 @@ main(int argc, char **argv)
         root->unref();
         return 1;
     }
-    
+
     // Clean up
     root->unref();
-    
+
     return 0;
     
 #else

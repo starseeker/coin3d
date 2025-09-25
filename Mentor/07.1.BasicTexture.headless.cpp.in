@@ -26,7 +26,7 @@
  *  Contact information: Silicon Graphics, Inc., 1600 Amphitheatre Pkwy,
  *  Mountain View, CA  94043, or:
  * 
- *  http://www.sgi.com 
+ *  http://oss.sgi.com 
  * 
  *  For further information regarding this notice, see: 
  * 
@@ -36,9 +36,10 @@
 
 /*--------------------------------------------------------------
  *  This is a headless adaptation from the Inventor Mentor,
- *  chapter 2, example 1.
+ *  chapter 7, example 1.
  *
- *  Hello Cone example program; draws a red cone and saves to RGB.
+ *  This example displays a cube without texture since we don't
+ *  have access to texture files. Shows basic rendering.
  *------------------------------------------------------------*/
 
 #include <iostream>
@@ -57,11 +58,11 @@
 #include <Inventor/SoDB.h>
 #include <Inventor/SoInteraction.h>
 #include <Inventor/SoOffscreenRenderer.h>
-#include <Inventor/nodes/SoCone.h>
-#include <Inventor/nodes/SoDirectionalLight.h>
+#include <Inventor/nodes/SoCube.h>
+#include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/nodes/SoMaterial.h>
 #include <Inventor/nodes/SoPerspectiveCamera.h>
-#include <Inventor/nodes/SoSeparator.h>
+#include <Inventor/nodes/SoDirectionalLight.h>
 #include <Inventor/SbViewportRegion.h>
 
 #ifdef HAVE_OSMESA
@@ -121,7 +122,7 @@ public:
     }
 };
 
-// Save RGBA buffer to RGB file using built-in SGI RGB format
+// Save RGB buffer to RGB file using built-in SGI RGB format
 bool saveRGB(const std::string& filename, SoOffscreenRenderer* renderer) {
     SbBool result = renderer->writeToRGB(filename.c_str());
     if (result) {
@@ -144,42 +145,48 @@ main(int argc, char **argv)
     SoDB::init(context_manager.get());
     SoInteraction::init();
     
-    std::cout << "Hello Cone - Headless OSMesa Version" << std::endl;
-    
-    // Make a scene containing a red cone (same as original)
+    std::cout << "BasicTexture: Material Cube - Headless OSMesa Version" << std::endl;
+    std::cout << "Note: Texture loading from files not available in headless mode" << std::endl;
+
     SoSeparator *root = new SoSeparator;
     SoPerspectiveCamera *myCamera = new SoPerspectiveCamera;
-    SoMaterial *myMaterial = new SoMaterial;
     root->ref();
     root->addChild(myCamera);
     root->addChild(new SoDirectionalLight);
-    myMaterial->diffuseColor.setValue(1.0, 0.0, 0.0);   // Red
-    root->addChild(myMaterial);
-    root->addChild(new SoCone);
-    
+
+    // Create a colorful material instead of texture
+    SoMaterial *cubeMaterial = new SoMaterial;
+    cubeMaterial->diffuseColor.setValue(0.8f, 0.4f, 0.2f);  // Orange/brown like brick
+    cubeMaterial->specularColor.setValue(0.5f, 0.5f, 0.5f);
+    cubeMaterial->shininess = 0.3f;
+    root->addChild(cubeMaterial);
+
+    // Make a cube
+    root->addChild(new SoCube);
+
     // Set up offscreen renderer with reasonable size
     const int width = 512;
     const int height = 512;
     SbViewportRegion viewport(width, height);
     SoOffscreenRenderer renderer(viewport);
-    renderer.setBackgroundColor(SbColor(0.2f, 0.2f, 0.2f)); // Gray background
-    
-    // Make camera see everything (same as original)
+    renderer.setBackgroundColor(SbColor(0.2f, 0.3f, 0.4f)); // Blue-gray background
+
+    // Make camera see everything
     myCamera->viewAll(root, viewport);
-    
-    // Render the scene using correct API
+
+    // Render the scene
     SbBool success = renderer.render(root);
-    
+
     if (success) {
         // Determine output filename
-        std::string filename = "HelloCone.rgb";
+        std::string filename = "BasicTexture.rgb";
         if (argc > 1) {
             filename = argv[1];
         }
         
         // Save to RGB file using built-in SGI RGB format
         if (saveRGB(filename, &renderer)) {
-            std::cout << "Successfully rendered red cone to " << filename << std::endl;
+            std::cout << "Successfully rendered material cube to " << filename << std::endl;
         } else {
             std::cerr << "Error saving RGB file" << std::endl;
             root->unref();
@@ -190,10 +197,10 @@ main(int argc, char **argv)
         root->unref();
         return 1;
     }
-    
+
     // Clean up
     root->unref();
-    
+
     return 0;
     
 #else

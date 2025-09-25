@@ -36,13 +36,16 @@
 
 /*--------------------------------------------------------------
  *  This is a headless adaptation from the Inventor Mentor,
- *  chapter 2, example 1.
+ *  chapter 11, example 2.
  *
- *  Hello Cone example program; draws a red cone and saves to RGB.
+ *  Example of creating a scene graph by reading from a string.
+ *  Create a dodecahedron, made of an IndexedFaceSet.  
  *------------------------------------------------------------*/
 
 #include <iostream>
 #include <memory>
+#include <assert.h>
+#include <string.h>
 
 // OSMesa headers for headless rendering
 #ifdef __has_include
@@ -55,13 +58,12 @@
 
 // Coin3D headers
 #include <Inventor/SoDB.h>
+#include <Inventor/SoInput.h>
 #include <Inventor/SoInteraction.h>
 #include <Inventor/SoOffscreenRenderer.h>
-#include <Inventor/nodes/SoCone.h>
-#include <Inventor/nodes/SoDirectionalLight.h>
-#include <Inventor/nodes/SoMaterial.h>
-#include <Inventor/nodes/SoPerspectiveCamera.h>
 #include <Inventor/nodes/SoSeparator.h>
+#include <Inventor/nodes/SoPerspectiveCamera.h>
+#include <Inventor/nodes/SoDirectionalLight.h>
 #include <Inventor/SbViewportRegion.h>
 
 #ifdef HAVE_OSMESA
@@ -121,7 +123,80 @@ public:
     }
 };
 
-// Save RGBA buffer to RGB file using built-in SGI RGB format
+/////////////////////////////////////////////////////////////
+// CODE FOR The Inventor Mentor STARTS HERE
+
+// Reads a dodecahedron from the following string: 
+// (Note: ANSI compilers automatically concatenate 
+// adjacent string literals together, so the compiler sees 
+// this as one big string)
+
+static const char *dodecahedron =
+   "Separator {"
+   "   Normal {"
+   "      vector ["
+   "         0.553341 0 0.832955, 0.832955 0.553341 0,"
+   "         0.832955 -0.553341 0, 0 -0.832955 0.553341,"
+   "         -0.553341 0 0.832955, 0 0.832955 0.553341,"
+   "         0 0.832955 -0.553341, -0.832955 0.553341 0,"
+   "         -0.832955 -0.553341 0, 0 -0.832955 -0.553341,"
+   "         0.553341 0 -0.832955, -0.553341 0 -0.832955,"
+   "      ]"
+   "   }"
+   "   NormalBinding { value PER_FACE }"
+   "   Material {"
+   "      diffuseColor ["
+   "         1  0  0,   0 1  0,   0  0 1,   0  1  1,"
+   "         1  0  1,  .5 1  0,  .5  0 1,  .5  1  1,"
+   "         1 .3 .7,  .3 1 .7,  .3 .7 1,  .5 .5 .8"
+   "      ]"
+   "   }"
+   "   MaterialBinding { value PER_FACE }"
+   "   Coordinate3 {"
+   "      point ["
+   "         1.7265 0 0.618,    1 1 1,"
+   "         0 0.618 1.7265,    0 -0.618 1.7265,"
+   "         1 -1 1,    -1 -1 1,"
+   "         -0.618 -1.7265 0,    0.618 -1.7265 0,"
+   "         1 -1 -1,    1.7265 0 -0.618,"
+   "         1 1 -1,    0.618 1.7265 0,"
+   "         -0.618 1.7265 0,    -1 1 1,"
+   "         -1.7265 0 0.618,    -1.7265 0 -0.618,"
+   "         -1 -1 -1,    0 -0.618 -1.7265,"
+   "         0 0.618 -1.7265,    -1 1 -1"
+   "      ]"
+   "   }"
+   "   IndexedFaceSet {"
+   "      coordIndex ["
+   "         1, 2, 3, 4, 0, -1,  0, 9, 10, 11, 1, -1,"
+   "         4, 7, 8, 9, 0, -1,  3, 5, 6, 7, 4, -1,"
+   "         2, 13, 14, 5, 3, -1,  1, 11, 12, 13, 2, -1,"
+   "         10, 18, 19, 12, 11, -1,  19, 15, 14, 13, 12, -1,"
+   "         15, 16, 6, 5, 14, -1,  8, 7, 6, 16, 17, -1,"
+   "         9, 8, 17, 18, 10, -1,  18, 17, 16, 15, 19, -1,"
+   "      ]"
+   "   }"
+   "}";
+
+// Routine to create a scene graph representing a dodecahedron
+SoNode *
+makeDodecahedron()
+{
+   // Read from the string.
+   SoInput in;
+   in.setBuffer(dodecahedron, strlen(dodecahedron));
+
+   SoNode *result;
+   SbBool readok = SoDB::read(&in, result);
+   assert(readok);
+
+   return result;
+}
+
+// CODE FOR The Inventor Mentor ENDS HERE
+/////////////////////////////////////////////////////////////
+
+// Save RGB buffer to RGB file using built-in SGI RGB format
 bool saveRGB(const std::string& filename, SoOffscreenRenderer* renderer) {
     SbBool result = renderer->writeToRGB(filename.c_str());
     if (result) {
@@ -144,42 +219,42 @@ main(int argc, char **argv)
     SoDB::init(context_manager.get());
     SoInteraction::init();
     
-    std::cout << "Hello Cone - Headless OSMesa Version" << std::endl;
-    
-    // Make a scene containing a red cone (same as original)
+    std::cout << "ReadString: Dodecahedron - Headless OSMesa Version" << std::endl;
+
+    // Create main scene graph
     SoSeparator *root = new SoSeparator;
     SoPerspectiveCamera *myCamera = new SoPerspectiveCamera;
-    SoMaterial *myMaterial = new SoMaterial;
     root->ref();
     root->addChild(myCamera);
     root->addChild(new SoDirectionalLight);
-    myMaterial->diffuseColor.setValue(1.0, 0.0, 0.0);   // Red
-    root->addChild(myMaterial);
-    root->addChild(new SoCone);
-    
+
+    // Add the dodecahedron created from string
+    SoNode *dodec = makeDodecahedron();
+    root->addChild(dodec);
+
     // Set up offscreen renderer with reasonable size
     const int width = 512;
     const int height = 512;
     SbViewportRegion viewport(width, height);
     SoOffscreenRenderer renderer(viewport);
-    renderer.setBackgroundColor(SbColor(0.2f, 0.2f, 0.2f)); // Gray background
-    
-    // Make camera see everything (same as original)
+    renderer.setBackgroundColor(SbColor(0.1f, 0.1f, 0.2f)); // Dark blue background
+
+    // Make camera see everything
     myCamera->viewAll(root, viewport);
-    
-    // Render the scene using correct API
+
+    // Render the scene
     SbBool success = renderer.render(root);
-    
+
     if (success) {
         // Determine output filename
-        std::string filename = "HelloCone.rgb";
+        std::string filename = "ReadString.rgb";
         if (argc > 1) {
             filename = argv[1];
         }
         
         // Save to RGB file using built-in SGI RGB format
         if (saveRGB(filename, &renderer)) {
-            std::cout << "Successfully rendered red cone to " << filename << std::endl;
+            std::cout << "Successfully rendered dodecahedron from string to " << filename << std::endl;
         } else {
             std::cerr << "Error saving RGB file" << std::endl;
             root->unref();
@@ -190,10 +265,10 @@ main(int argc, char **argv)
         root->unref();
         return 1;
     }
-    
+
     // Clean up
     root->unref();
-    
+
     return 0;
     
 #else
