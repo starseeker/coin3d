@@ -38,7 +38,7 @@
  *  This is a headless adaptation from the Inventor Mentor,
  *  chapter 2, example 1.
  *
- *  Hello Cone example program; draws a red cone and saves to PNG.
+ *  Hello Cone example program; draws a red cone and saves to RGB.
  *------------------------------------------------------------*/
 
 #include <iostream>
@@ -121,27 +121,16 @@ public:
     }
 };
 
-// Save RGBA buffer to PNG file using svpng
-bool savePNG(const std::string& filename, const unsigned char* buffer, int width, int height) {
-    FILE* file = fopen(filename.c_str(), "wb");
-    if (!file) {
-        std::cerr << "Error: Could not open file " << filename << " for writing" << std::endl;
+// Save RGBA buffer to RGB file using built-in SGI RGB format
+bool saveRGB(const std::string& filename, SoOffscreenRenderer* renderer) {
+    SbBool result = renderer->writeToRGB(filename.c_str());
+    if (result) {
+        std::cout << "RGB saved to: " << filename << std::endl;
+        return true;
+    } else {
+        std::cerr << "Error: Could not save RGB file " << filename << std::endl;
         return false;
     }
-    
-    // Convert RGBA to RGB for svpng
-    std::unique_ptr<unsigned char[]> rgb_data(new unsigned char[width * height * 3]);
-    for (int i = 0; i < width * height; i++) {
-        rgb_data[i * 3 + 0] = buffer[i * 4 + 0]; // R
-        rgb_data[i * 3 + 1] = buffer[i * 4 + 1]; // G
-        rgb_data[i * 3 + 2] = buffer[i * 4 + 2]; // B
-    }
-    
-    svpng(file, width, height, rgb_data.get(), 0);
-    fclose(file);
-    
-    std::cout << "PNG saved to: " << filename << std::endl;
-    return true;
 }
 
 #endif // HAVE_OSMESA
@@ -182,20 +171,17 @@ main(int argc, char **argv)
     SbBool success = renderer.render(root);
     
     if (success) {
-        // Get the rendered image data
-        const unsigned char* buffer = renderer.getBuffer();
-        
         // Determine output filename
-        std::string filename = "HelloCone.png";
+        std::string filename = "HelloCone.rgb";
         if (argc > 1) {
             filename = argv[1];
         }
         
-        // Save to PNG file
-        if (savePNG(filename, buffer, width, height)) {
+        // Save to RGB file using built-in SGI RGB format
+        if (saveRGB(filename, &renderer)) {
             std::cout << "Successfully rendered red cone to " << filename << std::endl;
         } else {
-            std::cerr << "Error saving PNG file" << std::endl;
+            std::cerr << "Error saving RGB file" << std::endl;
             root->unref();
             return 1;
         }
