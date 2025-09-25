@@ -64,9 +64,6 @@
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/SbViewportRegion.h>
 
-// PNG output using integrated svpng
-#include "../src/glue/svpng.h"
-
 #ifdef HAVE_OSMESA
 
 // OSMesa context wrapper
