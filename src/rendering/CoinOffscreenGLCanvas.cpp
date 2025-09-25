@@ -449,11 +449,11 @@ CoinOffscreenGLCanvas::readPixels(uint8_t * dst,
   SbBool flip_needed = FALSE;
 
 #ifdef COIN3D_OSMESA_BUILD
-  // OSMesa builds need Y-axis flipping because OSMesa creates a coordinate system mismatch:
-  // - OpenGL renders with (0,0) at bottom-left
-  // - OSMesa buffers are organized for image output with (0,0) at top-left  
-  // - glReadPixels() reads in OpenGL coordinates but outputs to image-format buffer
-  flip_needed = TRUE;
+  // OSMesa Y-axis flipping depends on the OSMESA_Y_UP setting:
+  // - If OSMESA_Y_UP is 0 (default): Y increases bottom-to-top (like OpenGL) - no flip needed
+  // - If OSMESA_Y_UP is 1: Y increases top-to-bottom (like images) - flip needed
+  // Since most headless examples set OSMESA_Y_UP=0, we should NOT flip by default
+  flip_needed = FALSE;
 #endif
 
   if (nrcomponents < 3) {
