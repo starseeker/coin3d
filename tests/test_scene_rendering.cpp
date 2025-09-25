@@ -66,6 +66,7 @@
 #include <Inventor/nodes/SoCone.h>
 #include <Inventor/nodes/SoCylinder.h>
 #include <Inventor/nodes/SoPerspectiveCamera.h>
+#include <Inventor/nodes/SoOrthographicCamera.h>
 #include <Inventor/nodes/SoDirectionalLight.h>
 #include <Inventor/nodes/SoEnvironment.h>
 #include <Inventor/nodes/SoMaterial.h>
@@ -162,14 +163,14 @@ SoSeparator* createComplexScene() {
     SoSeparator* root = new SoSeparator;
     root->ref();
     
-    // Add camera - FIXED: Further increased distance and narrowed FOV 
-    SoPerspectiveCamera* camera = new SoPerspectiveCamera;
-    camera->position = SbVec3f(0, 0, 16);  // Further increased from 12 to 16
-    camera->orientation = SbRotation(SbVec3f(1, 0, 0), -0.1f);  // Further reduced tilt
-    camera->heightAngle = 0.6f;  // Explicitly set narrower FOV (default is ~0.78)
+    // Add camera - FIXED: Use orthographic camera for predictable viewport scaling 
+    SoOrthographicCamera* camera = new SoOrthographicCamera;
+    camera->position = SbVec3f(0, 0, 16);  // Same distance
+    camera->orientation = SbRotation(SbVec3f(1, 0, 0), -0.1f);  // Same tilt
+    camera->height = 6.0f;  // Control the view volume height - smaller values = tighter crop
     camera->nearDistance = 1.0f;
-    camera->farDistance = 30.0f;  // Increased for larger distance
-    camera->focalDistance = 16.0f;  // Updated to match position
+    camera->farDistance = 30.0f;  
+    camera->focalDistance = 16.0f;  
     root->addChild(camera);
     
     // Add lighting - FIXED: Bright lighting setup for vibrant colors
@@ -195,16 +196,16 @@ SoSeparator* createComplexScene() {
     redMaterial->shininess = 0.3f;  
     cubeGroup->addChild(redMaterial);
     SoCube* cube = new SoCube;
-    cube->width = 1.0f;   // Reduced from 1.5f
-    cube->height = 1.0f;  // Reduced from 1.5f
-    cube->depth = 1.0f;   // Reduced from 1.5f
+    cube->width = 0.8f;   // Further reduced from 1.0f
+    cube->height = 0.8f;  // Further reduced from 1.0f
+    cube->depth = 0.8f;   // Further reduced from 1.0f
     cubeGroup->addChild(cube);
     root->addChild(cubeGroup);
     
     // Create green sphere (upper right) - FIXED: Further reduced position
     SoSeparator* sphereGroup = new SoSeparator;
     SoTransform* sphereTransform = new SoTransform;
-    sphereTransform->translation = SbVec3f(1.5, 1.0, 0);  // Further reduced from (2,1.5,0)
+    sphereTransform->translation = SbVec3f(1.2, 0.8, 0);  // Further moved toward center from (1.5, 1.0, 0)
     sphereGroup->addChild(sphereTransform);
     SoMaterial* greenMaterial = new SoMaterial;
     greenMaterial->diffuseColor = SbColor(0.2f, 0.6f, 0.2f);
@@ -214,14 +215,14 @@ SoSeparator* createComplexScene() {
     greenMaterial->shininess = 0.3f;  
     sphereGroup->addChild(greenMaterial);
     SoSphere* sphere = new SoSphere;
-    sphere->radius = 0.7f;  // Reduced from 1.0f
+    sphere->radius = 0.5f;  // Further reduced from 0.7f
     sphereGroup->addChild(sphere);
     root->addChild(sphereGroup);
     
     // Create blue cone (upper left) - FIXED: Further reduced position
     SoSeparator* coneGroup = new SoSeparator;
     SoTransform* coneTransform = new SoTransform;
-    coneTransform->translation = SbVec3f(-1.5, 1.0, 0);  // Further reduced from (-2,1.5,0)
+    coneTransform->translation = SbVec3f(-1.2, 0.8, 0);  // Further moved toward center from (-1.5, 1.0, 0)
     coneGroup->addChild(coneTransform);
     SoMaterial* blueMaterial = new SoMaterial;
     blueMaterial->diffuseColor = SbColor(0.2f, 0.2f, 0.6f);
@@ -231,16 +232,16 @@ SoSeparator* createComplexScene() {
     blueMaterial->shininess = 0.3f;  
     coneGroup->addChild(blueMaterial);
     SoCone* cone = new SoCone;
-    cone->bottomRadius = 0.7f;  // Reduced from 1.0f
-    cone->height = 1.5f;        // Reduced from 2.0f
+    cone->bottomRadius = 0.5f;  // Further reduced from 0.7f
+    cone->height = 1.0f;        // Further reduced from 1.5f
     coneGroup->addChild(cone);
     root->addChild(coneGroup);
     
-    // Create yellow cylinder (lower center) - FIXED: Further reduced position
+    // Create yellow cylinder (lower center) - FIXED: Smaller, less intrusive positioning
     SoSeparator* cylinderGroup = new SoSeparator;
     SoTransform* cylinderTransform = new SoTransform;
-    cylinderTransform->translation = SbVec3f(0, -1.5f, 0.5);  // Further reduced from (0,-2,1)
-    cylinderTransform->rotation = SbRotation(SbVec3f(0, 0, 1), M_PI_4);
+    cylinderTransform->translation = SbVec3f(0, -0.8f, 0.3);  // Further moved up and forward from (-1.0f, 0.5)
+    cylinderTransform->rotation = SbRotation(SbVec3f(0, 0, 1), M_PI/6);  // 30 degrees rotation (reduced from M_PI_4)
     cylinderGroup->addChild(cylinderTransform);
     SoMaterial* yellowMaterial = new SoMaterial;
     yellowMaterial->diffuseColor = SbColor(0.6f, 0.6f, 0.2f);
@@ -250,8 +251,8 @@ SoSeparator* createComplexScene() {
     yellowMaterial->shininess = 0.3f;  
     cylinderGroup->addChild(yellowMaterial);
     SoCylinder* cylinder = new SoCylinder;
-    cylinder->radius = 0.6f;  // Reduced from 0.8f
-    cylinder->height = 2.0f;  // Reduced from 3.0f
+    cylinder->radius = 0.4f;  // Further reduced from 0.6f
+    cylinder->height = 1.2f;  // Further reduced from 2.0f
     cylinderGroup->addChild(cylinder);
     root->addChild(cylinderGroup);
     
