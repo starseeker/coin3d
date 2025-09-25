@@ -27,7 +27,7 @@
 #include <Inventor/nodes/SoMaterial.h>
 #include <Inventor/SbViewportRegion.h>
 
-#include "../../src/glue/svpng.h"
+#include "../../src/glue/test_utils.h""
 
 namespace SimpleDebug {
 
@@ -121,36 +121,24 @@ SoSeparator* createRedCubeScene() {
     return root;
 }
 
-bool savePNG(const std::string& filename, const unsigned char* buffer, int width, int height, int components) {
-    FILE* file = fopen(filename.c_str(), "wb");
-    if (!file) return false;
-    
+bool saveRGB(const std::string& filename, const unsigned char* buffer, int width, int height, int components) {
     if (components == 3) {
-        // RGB - save directly
-        svpng(file, width, height, buffer, 0);
+        // RGB - save directly using RGB utilities
+        return SimpleTest::RGBOutput::saveRGB(filename, buffer, width, height, true);
     } else if (components == 4) {
-        // RGBA - convert to RGB
-        std::unique_ptr<unsigned char[]> rgb_data(new unsigned char[width * height * 3]);
-        for (int i = 0; i < width * height; i++) {
-            rgb_data[i * 3 + 0] = buffer[i * 4 + 0]; // R
-            rgb_data[i * 3 + 1] = buffer[i * 4 + 1]; // G
-            rgb_data[i * 3 + 2] = buffer[i * 4 + 2]; // B
-        }
-        svpng(file, width, height, rgb_data.get(), 0);
+        // RGBA - use RGBA-to-RGB utility
+        return SimpleTest::RGBOutput::saveRGBA_toRGB(filename, buffer, width, height, true);
     } else {
         // Grayscale - expand to RGB
-        std::unique_ptr<unsigned char[]> rgb_data(new unsigned char[width * height * 3]);
+        std::vector<unsigned char> rgb_data(width * height * 3);
         for (int i = 0; i < width * height; i++) {
             unsigned char gray = buffer[i * components];
             rgb_data[i * 3 + 0] = gray; // R
             rgb_data[i * 3 + 1] = gray; // G
             rgb_data[i * 3 + 2] = gray; // B
         }
-        svpng(file, width, height, rgb_data.get(), 0);
+        return SimpleTest::RGBOutput::saveRGB(filename, rgb_data.data(), width, height, true);
     }
-    
-    fclose(file);
-    return true;
 }
 
 void analyzePixels(const unsigned char* buffer, int width, int height, int components) {
@@ -227,7 +215,7 @@ int main() {
                 continue;
             }
             
-            std::string filename = "simple_debug_" + componentNames[i] + ".png";
+            std::string filename = "simple_debug_" + componentNames[i] + ".rgb";
             SbViewportRegion viewport(128, 128); // Small size for easier debugging
             SoOffscreenRenderer renderer(viewport);
             renderer.setComponents(componentTypes[i]);
@@ -248,7 +236,7 @@ int main() {
             
             analyzePixels(buffer, 128, 128, (int)componentTypes[i]);
             
-            if (!savePNG(filename, buffer, 128, 128, (int)componentTypes[i])) {
+            if (!saveRGB(filename, buffer, 128, 128, (int)componentTypes[i])) {
                 scene->unref();
                 runner.endTest(false, "Failed to save PNG");
                 continue;

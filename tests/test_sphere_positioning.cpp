@@ -77,8 +77,8 @@
   #endif
 #endif
 
-// Small PNG encoder from single header library
-#include "../src/glue/svpng.h"
+// Use RGB output utilities
+#include "test_utils.h"
 
 using namespace std;
 
@@ -160,25 +160,14 @@ struct RGB { unsigned char r, g, b; };
 constexpr RGB BACKGROUND_COLOR = {50, 50, 50};    // Dark gray background
 constexpr RGB SPHERE_COLOR = {255, 100, 100};     // Red sphere
 
-void savePNG(const char* filename, const unsigned char* buffer, int width, int height, int components) {
-    FILE* fp = fopen(filename, "wb");
-    if (!fp) return;
-    
+void saveRGB(const char* filename, const unsigned char* buffer, int width, int height, int components) {
     if (components == 3) {
-        // RGB buffer - save directly
-        svpng(fp, width, height, buffer, 0);
+        // RGB buffer - save directly using RGB utilities
+        SimpleTest::RGBOutput::saveRGB(std::string(filename), buffer, width, height, true);
     } else if (components == 4) {
-        // RGBA buffer - extract RGB channels
-        unsigned char* rgb_buffer = new unsigned char[width * height * 3];
-        for (int i = 0; i < width * height; i++) {
-            rgb_buffer[i*3 + 0] = buffer[i*4 + 0]; // R
-            rgb_buffer[i*3 + 1] = buffer[i*4 + 1]; // G
-            rgb_buffer[i*3 + 2] = buffer[i*4 + 2]; // B
-        }
-        svpng(fp, width, height, rgb_buffer, 0);
-        delete[] rgb_buffer;
+        // RGBA buffer - use RGBA-to-RGB utility 
+        SimpleTest::RGBOutput::saveRGBA_toRGB(std::string(filename), buffer, width, height, true);
     }
-    fclose(fp);
 }
 
 SoSeparator* createSphereScene() {
@@ -369,8 +358,8 @@ int main() {
     const unsigned char* buffer = renderer.getBuffer();
     
     // Save image for visual inspection
-    savePNG("sphere_positioning_test.png", buffer, IMAGE_WIDTH, IMAGE_HEIGHT, 3);
-    cout << "Test image saved as: sphere_positioning_test.png" << endl;
+    saveRGB("sphere_positioning_test.rgb", buffer, IMAGE_WIDTH, IMAGE_HEIGHT, 3);
+    cout << "Test image saved as: sphere_positioning_test.rgb" << endl;
     
     // Analyze positioning
     bool positioning_correct = analyzeSpherePositioning(buffer, IMAGE_WIDTH, IMAGE_HEIGHT, 3);

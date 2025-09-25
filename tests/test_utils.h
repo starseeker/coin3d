@@ -45,8 +45,10 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <cstdio>
 #include <Inventor/SoDB.h>
 #include <Inventor/SoInteraction.h>
+#include <Inventor/SoOffscreenRenderer.h>
 
 namespace SimpleTest {
 
@@ -131,6 +133,43 @@ public:
         // Cleanup if needed
     }
 };
+
+// RGB output utilities to replace PNG functions
+// Uses SoOffscreenRenderer::writeToRGB() for SGI RGB format
+namespace RGBOutput {
+
+/**
+ * @brief Save RGB image data to SGI RGB file format
+ * @param filename Output filename (should end in .rgb)
+ * @param buffer RGB pixel data (3 bytes per pixel, no alpha)
+ * @param width Image width
+ * @param height Image height
+ * @param flip_vertically If true, flip image vertically (for OpenGL output)
+ * @return true if successful, false on error
+ */
+bool saveRGB(const std::string& filename, const unsigned char* buffer, 
+             int width, int height, bool flip_vertically = true);
+
+/**
+ * @brief Save RGBA image data to SGI RGB file format (alpha channel discarded)
+ * @param filename Output filename (should end in .rgb)
+ * @param buffer RGBA pixel data (4 bytes per pixel)
+ * @param width Image width
+ * @param height Image height
+ * @param flip_vertically If true, flip image vertically (for OpenGL output)
+ * @return true if successful, false on error
+ */
+bool saveRGBA_toRGB(const std::string& filename, const unsigned char* buffer, 
+                    int width, int height, bool flip_vertically = true);
+
+/**
+ * @brief Helper to create RGB buffer from framebuffer data
+ * Utility function to strip alpha channel from RGBA data
+ */
+std::vector<unsigned char> convertRGBA_toRGB(const unsigned char* rgba_buffer, 
+                                            int width, int height);
+
+} // namespace RGBOutput
 
 } // namespace SimpleTest
 

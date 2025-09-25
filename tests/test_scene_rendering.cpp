@@ -74,9 +74,7 @@
 #include <Inventor/nodes/SoTranslation.h>
 #include <Inventor/nodes/SoRotation.h>
 #include <Inventor/SbViewportRegion.h>
-
-// Include svpng for PNG output
-#include "../../src/glue/svpng.h"
+#include "test_utils.h"
 
 namespace SimpleTest {
 
@@ -259,27 +257,10 @@ SoSeparator* createComplexScene() {
     return root;
 }
 
-// Helper function to save image as PNG using svpng
-bool savePNG(const std::string& filename, const unsigned char* buffer, int width, int height) {
-    FILE* file = fopen(filename.c_str(), "wb");
-    if (!file) {
-        return false;
-    }
-    
-    // Convert RGBA to RGB for PNG output (svpng can handle both)
-    std::unique_ptr<unsigned char[]> rgb_data(new unsigned char[width * height * 3]);
-    for (int i = 0; i < width * height; i++) {
-        rgb_data[i * 3 + 0] = buffer[i * 4 + 0]; // R
-        rgb_data[i * 3 + 1] = buffer[i * 4 + 1]; // G
-        rgb_data[i * 3 + 2] = buffer[i * 4 + 2]; // B
-        // Skip alpha channel
-    }
-    
-    // Use svpng to write PNG (0 = RGB, no alpha)
-    svpng(file, width, height, rgb_data.get(), 0);
-    fclose(file);
-    
-    return true;
+// Helper function to save image as RGB using SGI RGB format
+bool saveRGB(const std::string& filename, const unsigned char* buffer, int width, int height) {
+    // Use the RGB utility function instead of PNG
+    return RGBOutput::saveRGBA_toRGB(filename, buffer, width, height);
 }
 
 // Pixel validation functions for analyzing rendered output
@@ -545,7 +526,7 @@ int main() {
     // Test rendering and PNG output
     runner.startTest("Scene rendering and PNG output");
     try {
-        const std::string filename = "coin3d_scene_test.png";
+        const std::string filename = "coin3d_scene_test.rgb";
         
         // Create offscreen renderer
         SbViewportRegion viewport(512, 512);
@@ -569,7 +550,7 @@ int main() {
         }
         
         // Save as PNG
-        if (!savePNG(filename, buffer, 512, 512)) {
+        if (!saveRGB(filename, buffer, 512, 512)) {
             scene->unref();
             runner.endTest(false, "Failed to save PNG");
             return runner.getSummary();
@@ -613,7 +594,7 @@ int main() {
         bool allSuccess = true;
         for (const auto& res : resolutions) {
             std::string filename = "coin3d_scene_" + std::to_string(res.first) + "x" + 
-                                   std::to_string(res.second) + ".png";
+                                   std::to_string(res.second) + ".rgb";
             
             // Create offscreen renderer for this resolution
             SbViewportRegion viewport(res.first, res.second);
@@ -632,7 +613,7 @@ int main() {
                 break;
             }
             
-            if (!savePNG(filename, buffer, res.first, res.second)) {
+            if (!saveRGB(filename, buffer, res.first, res.second)) {
                 allSuccess = false;
                 break;
             }
@@ -717,9 +698,9 @@ int main() {
     
     std::cout << std::endl << "Integration test completed successfully!" << std::endl;
     std::cout << "Check the generated PNG files to verify scene rendering:" << std::endl;
-    std::cout << "  - coin3d_scene_test.png (512x512)" << std::endl;
-    std::cout << "  - coin3d_scene_256x256.png" << std::endl; 
-    std::cout << "  - coin3d_scene_1024x768.png" << std::endl;
+    std::cout << "  - coin3d_scene_test.rgb (512x512)" << std::endl;
+    std::cout << "  - coin3d_scene_256x256.rgb" << std::endl; 
+    std::cout << "  - coin3d_scene_1024x768.rgb" << std::endl;
     
 #else
     // OSMesa not available - skip rendering tests
