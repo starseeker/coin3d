@@ -1,10 +1,20 @@
 macro(add_example name)
   configure_file(${name}.cpp.in ${name}.cpp @ONLY)
   add_executable(${name} ${CMAKE_CURRENT_BINARY_DIR}/${name}.cpp)
-  target_link_libraries(${name} ${PROJECT_NAME})
+  target_link_libraries(${name} ${PROJECT_NAME} ${COIN_TARGET_LINK_LIBRARIES})
+  
+  # Add include directories for OSMesa support (needed for headless examples)
+  target_include_directories(${name} PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${PROJECT_SOURCE_DIR}/include
+    ${PROJECT_SOURCE_DIR}/include/Inventor/annex
+    ${PROJECT_BINARY_DIR}/include
+    ${COIN_TARGET_INCLUDE_DIRECTORIES}
+  )
 endmacro(add_example)
 
 add_example(02.1.HelloCone)
+add_example(02.1.HelloCone.headless)
 #add_example(02.2.EngineSpin)
 #add_example(02.3.Trackball)
 #add_example(02.4.Examiner)

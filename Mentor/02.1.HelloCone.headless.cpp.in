@@ -1,0 +1,220 @@
+/*
+ *
+ *  Copyright (C) 2000 Silicon Graphics, Inc.  All Rights Reserved. 
+ *
+ *  This library is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU Lesser General Public
+ *  License as published by the Free Software Foundation; either
+ *  version 2.1 of the License, or (at your option) any later version.
+ *
+ *  This library is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  Lesser General Public License for more details.
+ *
+ *  Further, this software is distributed without any warranty that it is
+ *  free of the rightful claim of any third person regarding infringement
+ *  or the like.  Any license provided herein, whether implied or
+ *  otherwise, applies only to this software file.  Patent licenses, if
+ *  any, provided herein do not apply to combinations of this program with
+ *  other software, or any other product whatsoever.
+ * 
+ *  You should have received a copy of the GNU Lesser General Public
+ *  License along with this library; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ *  Contact information: Silicon Graphics, Inc., 1600 Amphitheatre Pkwy,
+ *  Mountain View, CA  94043, or:
+ * 
+ *  http://www.sgi.com 
+ * 
+ *  For further information regarding this notice, see: 
+ * 
+ *  http://oss.sgi.com/projects/GenInfo/NoticeExplan/
+ *
+ */
+
+/*--------------------------------------------------------------
+ *  This is a headless adaptation from the Inventor Mentor,
+ *  chapter 2, example 1.
+ *
+ *  Hello Cone example program; draws a red cone and saves to PNG.
+ *------------------------------------------------------------*/
+
+#include <iostream>
+#include <memory>
+
+// OSMesa headers for headless rendering
+#ifdef __has_include
+  #if __has_include(<OSMesa/osmesa.h>)
+    #include <OSMesa/osmesa.h>
+    #include <OSMesa/gl.h>
+    #define HAVE_OSMESA
+  #endif
+#endif
+
+// Coin3D headers
+#include <Inventor/SoDB.h>
+#include <Inventor/SoInteraction.h>
+#include <Inventor/SoOffscreenRenderer.h>
+#include <Inventor/nodes/SoCone.h>
+#include <Inventor/nodes/SoDirectionalLight.h>
+#include <Inventor/nodes/SoMaterial.h>
+#include <Inventor/nodes/SoPerspectiveCamera.h>
+#include <Inventor/nodes/SoSeparator.h>
+#include <Inventor/SbViewportRegion.h>
+
+// PNG output using integrated svpng
+#include "../src/glue/svpng.h"
+
+#ifdef HAVE_OSMESA
+
+// OSMesa context wrapper
+struct OSMesaContextData {
+    OSMesaContext context;
+    std::unique_ptr<unsigned char[]> buffer;
+    int width, height;
+    
+    OSMesaContextData(int w, int h) : width(w), height(h) {
+        context = OSMesaCreateContextExt(OSMESA_RGBA, 16, 0, 0, NULL);
+        if (context) {
+            buffer = std::make_unique<unsigned char[]>(width * height * 4);
+        }
+    }
+    
+    ~OSMesaContextData() {
+        if (context) OSMesaDestroyContext(context);
+    }
+    
+    bool makeCurrent() {
+        if (!context || !buffer) return false;
+        
+        bool result = OSMesaMakeCurrent(context, buffer.get(), GL_UNSIGNED_BYTE, width, height);
+        if (result) {
+            // Set Y-axis orientation for proper image output
+            OSMesaPixelStore(OSMESA_Y_UP, 0);
+        }
+        return result;
+    }
+    
+    bool isValid() const { return context != nullptr; }
+    
+    const unsigned char* getBuffer() const { return buffer.get(); }
+};
+
+// OSMesa Context Manager for Coin3D
+class OSMesaContextManager : public SoDB::ContextManager {
+public:
+    virtual void* createOffscreenContext(unsigned int width, unsigned int height) override {
+        auto* ctx = new OSMesaContextData(width, height);
+        return ctx->isValid() ? ctx : (delete ctx, nullptr);
+    }
+    
+    virtual SbBool makeContextCurrent(void* context) override {
+        return context && static_cast<OSMesaContextData*>(context)->makeCurrent() ? TRUE : FALSE;
+    }
+    
+    virtual void restorePreviousContext(void* context) override {
+        // OSMesa doesn't need context stacking for single-threaded use
+        (void)context;
+    }
+    
+    virtual void destroyContext(void* context) override {
+        delete static_cast<OSMesaContextData*>(context);
+    }
+};
+
+// Save RGBA buffer to PNG file using svpng
+bool savePNG(const std::string& filename, const unsigned char* buffer, int width, int height) {
+    FILE* file = fopen(filename.c_str(), "wb");
+    if (!file) {
+        std::cerr << "Error: Could not open file " << filename << " for writing" << std::endl;
+        return false;
+    }
+    
+    // Convert RGBA to RGB for svpng
+    std::unique_ptr<unsigned char[]> rgb_data(new unsigned char[width * height * 3]);
+    for (int i = 0; i < width * height; i++) {
+        rgb_data[i * 3 + 0] = buffer[i * 4 + 0]; // R
+        rgb_data[i * 3 + 1] = buffer[i * 4 + 1]; // G
+        rgb_data[i * 3 + 2] = buffer[i * 4 + 2]; // B
+    }
+    
+    svpng(file, width, height, rgb_data.get(), 0);
+    fclose(file);
+    
+    std::cout << "PNG saved to: " << filename << std::endl;
+    return true;
+}
+
+#endif // HAVE_OSMESA
+
+int
+main(int argc, char **argv)
+{
+#ifdef HAVE_OSMESA
+    // Initialize Coin3D with OSMesa context management
+    std::unique_ptr<OSMesaContextManager> context_manager = std::make_unique<OSMesaContextManager>();
+    SoDB::init(context_manager.get());
+    SoInteraction::init();
+    
+    std::cout << "Hello Cone - Headless OSMesa Version" << std::endl;
+    
+    // Make a scene containing a red cone (same as original)
+    SoSeparator *root = new SoSeparator;
+    SoPerspectiveCamera *myCamera = new SoPerspectiveCamera;
+    SoMaterial *myMaterial = new SoMaterial;
+    root->ref();
+    root->addChild(myCamera);
+    root->addChild(new SoDirectionalLight);
+    myMaterial->diffuseColor.setValue(1.0, 0.0, 0.0);   // Red
+    root->addChild(myMaterial);
+    root->addChild(new SoCone);
+    
+    // Set up offscreen renderer with reasonable size
+    const int width = 512;
+    const int height = 512;
+    SbViewportRegion viewport(width, height);
+    SoOffscreenRenderer renderer(viewport);
+    renderer.setBackgroundColor(SbColor(0.2f, 0.2f, 0.2f)); // Gray background
+    
+    // Make camera see everything (same as original)
+    myCamera->viewAll(root, viewport);
+    
+    // Render the scene using correct API
+    SbBool success = renderer.render(root);
+    
+    if (success) {
+        // Get the rendered image data
+        const unsigned char* buffer = renderer.getBuffer();
+        
+        // Determine output filename
+        std::string filename = "HelloCone.png";
+        if (argc > 1) {
+            filename = argv[1];
+        }
+        
+        // Save to PNG file
+        if (savePNG(filename, buffer, width, height)) {
+            std::cout << "Successfully rendered red cone to " << filename << std::endl;
+        } else {
+            std::cerr << "Error saving PNG file" << std::endl;
+            root->unref();
+            return 1;
+        }
+    } else {
+        std::cerr << "Error: Failed to render scene" << std::endl;
+        root->unref();
+        return 1;
+    }
+    
+    // Clean up
+    root->unref();
+    
+    return 0;
+    
+#else
+    std::cerr << "Error: OSMesa support not available. Cannot run headless rendering." << std::endl;
+    return 1;
+#endif
+}
