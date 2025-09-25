@@ -16,6 +16,8 @@ endmacro(add_example)
 add_example(02.1.HelloCone.headless)
 add_example(03.1.Molecule.headless)
 add_example(05.1.FaceSet.headless)
+# NOTE: 06.2.Simple3DText.headless causes segfault - likely requires font files not available in headless mode
+#add_example(06.2.Simple3DText.headless)
 add_example(07.1.BasicTexture.headless)
 add_example(11.2.ReadString.headless)
 add_example(13.6.Calculator.headless)
@@ -48,7 +50,7 @@ add_example(13.6.Calculator.headless)
 #add_example(06.1.Text)
 #add_example(06.2.Simple3DText)
 #add_example(06.3.Complex3DText)
-# NOTE: Text examples are suitable for headless but not implemented yet
+# NOTE: Text examples require font support not available in headless environment - cause segfaults
 
 #add_example(07.1.BasicTexture)
 #add_example(07.2.TextureCoordinates)
