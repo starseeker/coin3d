@@ -13,8 +13,10 @@ macro(add_example name)
   )
 endmacro(add_example)
 
-add_example(02.1.HelloCone)
 add_example(02.1.HelloCone.headless)
+
+# Disable GUI examples - missing GUI libraries in CI environment
+#add_example(02.1.HelloCone)
 #add_example(02.2.EngineSpin)
 #add_example(02.3.Trackball)
 #add_example(02.4.Examiner)
