@@ -498,10 +498,11 @@ CoinOffscreenGLCanvas::readPixels(uint8_t * dst,
       }
     } else {
       // RGB/RGBA with Y-flipping
+      const int dst_row_size = width * nrcomponents;
       for (short y = 0; y < height; y++) {
         // Read from bottom row of source (height - 1 - y)  
         const unsigned char * src_row = readbuffer + ((height - 1 - y) * row_size);
-        memcpy(dst + (y * row_size), src_row, row_size);
+        memcpy(dst + (y * dstrowsize), src_row, dst_row_size);
       }
     }
     
