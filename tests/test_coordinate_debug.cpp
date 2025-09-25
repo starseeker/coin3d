@@ -292,7 +292,7 @@ int main() {
             return runner.getSummary();
         }
         
-        std::string filename = "coordinate_debug_corners.png";
+        std::string filename = "coordinate_debug_corners.rgb";
         SbViewportRegion viewport(256, 256);
         SoOffscreenRenderer renderer(viewport);
         renderer.setComponents(SoOffscreenRenderer::RGB);

@@ -34,9 +34,6 @@
 #include <Inventor/nodes/SoMaterial.h>
 #include <Inventor/SbViewportRegion.h>
 
-// Include svpng for PNG output
-#include "../../src/glue/svpng.h"
-
 namespace GradientDebug {
 
 #ifdef HAVE_OSMESA
@@ -165,37 +162,26 @@ SoSeparator* createGradientScene() {
     return root;
 }
 
-// Helper to save PNG
-bool savePNG(const std::string& filename, const unsigned char* buffer, int width, int height, int components) {
-    FILE* file = fopen(filename.c_str(), "wb");
-    if (!file) return false;
-    
+// Helper to save RGB
+bool saveRGB(const std::string& filename, const unsigned char* buffer, int width, int height, int components) {
     if (components == 3) {
         // Buffer is already RGB, save directly
-        svpng(file, width, height, buffer, 0);
+        return SimpleTest::RGBOutput::saveRGB(filename, buffer, width, height, true);
     } else if (components == 4) {
-        // Buffer is RGBA, extract RGB for PNG output
-        std::unique_ptr<unsigned char[]> rgb_data(new unsigned char[width * height * 3]);
-        for (int i = 0; i < width * height; i++) {
-            rgb_data[i * 3 + 0] = buffer[i * 4 + 0]; // R
-            rgb_data[i * 3 + 1] = buffer[i * 4 + 1]; // G
-            rgb_data[i * 3 + 2] = buffer[i * 4 + 2]; // B
-        }
-        svpng(file, width, height, rgb_data.get(), 0);
+        // Buffer is RGBA, use RGBA-to-RGB utility
+        return SimpleTest::RGBOutput::saveRGBA_toRGB(filename, buffer, width, height, true);
     } else {
         // For 1 or 2 component buffers, expand to RGB
-        std::unique_ptr<unsigned char[]> rgb_data(new unsigned char[width * height * 3]);
+        std::vector<unsigned char> rgb_data(width * height * 3);
         for (int i = 0; i < width * height; i++) {
             unsigned char gray = buffer[i * components];
             rgb_data[i * 3 + 0] = gray; // R
             rgb_data[i * 3 + 1] = gray; // G
             rgb_data[i * 3 + 2] = gray; // B
         }
-        svpng(file, width, height, rgb_data.get(), 0);
+        return SimpleTest::RGBOutput::saveRGB(filename, rgb_data.data(), width, height, true);
     }
-    
-    fclose(file);
-    return true;
+}
 }
 
 // Helper to analyze specific pixel values
@@ -261,7 +247,7 @@ int main() {
         }
         
         // Test RGB rendering
-        const std::string filename = "gradient_debug_rgb.png";
+        const std::string filename = "gradient_debug_rgb.rgb";
         SbViewportRegion viewport(256, 256);
         SoOffscreenRenderer renderer(viewport);
         renderer.setComponents(SoOffscreenRenderer::RGB);
@@ -283,10 +269,10 @@ int main() {
         // Analyze the pixel values
         analyzePixels(buffer, 256, 256, renderer.getComponents());
         
-        // Save as PNG for visual inspection
-        if (!savePNG(filename, buffer, 256, 256, (int)renderer.getComponents())) {
+        // Save as RGB for visual inspection
+        if (!saveRGB(filename, buffer, 256, 256, (int)renderer.getComponents())) {
             scene->unref();
-            runner.endTest(false, "Failed to save PNG");
+            runner.endTest(false, "Failed to save RGB");
             return runner.getSummary();
         }
         
@@ -308,7 +294,7 @@ int main() {
             return runner.getSummary();
         }
         
-        const std::string filename = "gradient_debug_rgba.png";
+        const std::string filename = "gradient_debug_rgba.rgb";
         SbViewportRegion viewport(256, 256);
         SoOffscreenRenderer renderer(viewport);
         renderer.setComponents(SoOffscreenRenderer::RGB_TRANSPARENCY);
@@ -330,10 +316,10 @@ int main() {
         // Analyze the pixel values
         analyzePixels(buffer, 256, 256, renderer.getComponents());
         
-        // Save as PNG for visual inspection
-        if (!savePNG(filename, buffer, 256, 256, (int)renderer.getComponents())) {
+        // Save as RGB for visual inspection
+        if (!saveRGB(filename, buffer, 256, 256, (int)renderer.getComponents())) {
             scene->unref();
-            runner.endTest(false, "Failed to save PNG");
+            runner.endTest(false, "Failed to save RGB");
             return runner.getSummary();
         }
         
