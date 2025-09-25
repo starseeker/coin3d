@@ -34,6 +34,7 @@
 \**************************************************************************/
 
 #include <cstdint>
+#include <iostream>
 #include <Inventor/SbBasic.h>
 #include <Inventor/lists/SbList.h>
 #include <cstdio> // FILE
@@ -86,6 +87,7 @@ public:
   virtual const char * getCurFileName(void) const;
   virtual void setBuffer(const void * bufpointer, size_t bufsize);
           void setStringArray(const char * strings[]);
+  virtual void setStream(std::istream * stream);
   virtual size_t getNumBytesRead(void) const;
   virtual SbString getHeader(void);
   virtual float getIVVersion(void);

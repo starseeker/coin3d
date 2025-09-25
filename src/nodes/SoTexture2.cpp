@@ -683,6 +683,89 @@ SoTexture2::readImage(const SbString & COIN_UNUSED_ARG(fname), int & COIN_UNUSED
 }
 
 /*!
+  Convenience method for setting texture data from raw pixel data in memory.
+  
+  This method provides an easy way to set texture data without needing to 
+  directly manipulate the SoSFImage field. The pixel data should be organized
+  as width*height*numComponents bytes.
+
+  \param width Width of the texture in pixels
+  \param height Height of the texture in pixels  
+  \param numComponents Number of components per pixel (1=grayscale, 2=grayscale+alpha, 3=RGB, 4=RGBA)
+  \param pixels Pointer to the pixel data
+  \param copyPolicy Policy for handling the pixel data (COPY, NO_COPY, etc.)
+
+  \since Coin 4.1
+*/
+void
+SoTexture2::setImageData(int width, int height, int numComponents, 
+                        const unsigned char * pixels, 
+                        SoSFImage::CopyPolicy copyPolicy)
+{
+  // Clear filename to indicate we're using direct image data
+  this->filename.setValue("");
+  
+  // Set the image data using the SoSFImage field
+  SbVec2s size(width, height);
+  this->image.setValue(size, numComponents, pixels, copyPolicy);
+  
+  // Mark image field as non-default since we're setting it directly
+  this->image.setDefault(FALSE);
+}
+
+/*!
+  Convenience method for setting texture data from raw pixel data without copying.
+  
+  This method is useful when you want to avoid copying large texture data. The
+  texture node will use the provided pixel data directly. The caller is responsible
+  for ensuring the pixel data remains valid for the lifetime of the texture.
+
+  \param width Width of the texture in pixels
+  \param height Height of the texture in pixels  
+  \param numComponents Number of components per pixel (1=grayscale, 2=grayscale+alpha, 3=RGB, 4=RGBA)
+  \param pixels Pointer to the pixel data (must remain valid)
+  \param freeOnDestroy If TRUE, the pixel data will be freed when the texture is destroyed
+
+  \since Coin 4.1
+*/
+void
+SoTexture2::setImageDataNoCopy(int width, int height, int numComponents, 
+                              unsigned char * pixels, SbBool freeOnDestroy)
+{
+  // Clear filename to indicate we're using direct image data  
+  this->filename.setValue("");
+  
+  // Set the image data using the appropriate no-copy policy
+  SbVec2s size(width, height);
+  SoSFImage::CopyPolicy policy = freeOnDestroy ? 
+    SoSFImage::NO_COPY_AND_FREE : SoSFImage::NO_COPY;
+  this->image.setValue(size, numComponents, pixels, policy);
+  
+  // Mark image field as non-default since we're setting it directly
+  this->image.setDefault(FALSE);
+}
+
+/*!
+  Convenience method for getting the current texture data.
+
+  \param width Returns the width of the texture in pixels
+  \param height Returns the height of the texture in pixels
+  \param numComponents Returns the number of components per pixel
+  \return Pointer to the pixel data, or NULL if no image data is set
+
+  \since Coin 4.1
+*/
+const unsigned char *
+SoTexture2::getImageData(int & width, int & height, int & numComponents) const
+{
+  SbVec2s size;
+  const unsigned char * pixels = this->image.getValue(size, numComponents);
+  width = size[0];
+  height = size[1];
+  return pixels;
+}
+
+/*!
   Returns read status. 1 for success, 0 for failure.
 */
 int

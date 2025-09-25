@@ -35,6 +35,7 @@
 
 #include <cstring>
 #include <cassert>
+#include <iostream>
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -198,5 +199,48 @@ SoOutput_MemBufferWriter::makeRoomInBuf(size_t bytes)
     return FALSE;
   }
   return TRUE;
+}
+
+//
+// iostream stream writer class
+//
+
+SoOutput_StreamWriter::SoOutput_StreamWriter(std::ostream * streamarg)
+{
+  this->stream = streamarg;
+  this->byteswritten = 0;
+}
+
+SoOutput_StreamWriter::~SoOutput_StreamWriter()
+{
+  // Don't delete the stream - we don't own it
+}
+
+size_t
+SoOutput_StreamWriter::bytesInBuf(void)
+{
+  return this->byteswritten;
+}
+
+SoOutput_Writer::WriterType
+SoOutput_StreamWriter::getType(void) const
+{
+  return IOSTREAM;
+}
+
+size_t
+SoOutput_StreamWriter::write(const char * buf, size_t numbytes, const SbBool /* binary */)
+{
+  if (!this->stream || !this->stream->good()) {
+    return 0;
+  }
+
+  this->stream->write(buf, numbytes);
+  if (this->stream->good()) {
+    this->byteswritten += numbytes;
+    return numbytes;
+  }
+  
+  return 0;
 }
 

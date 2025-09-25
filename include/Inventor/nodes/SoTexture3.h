@@ -78,6 +78,11 @@ public:
   virtual void GLRender(SoGLRenderAction *action);
   virtual void callback(SoCallbackAction *action);
 
+  // Convenience methods for in-memory 3D texture management
+  void setImageData(int width, int height, int depth, int numComponents, 
+                    const unsigned char * pixels);
+  const unsigned char * getImageData(int & width, int & height, int & depth, int & numComponents) const;
+
 protected:
   virtual ~SoTexture3();
 

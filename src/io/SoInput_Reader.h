@@ -40,6 +40,7 @@
 // *************************************************************************
 
 #include <Inventor/SbString.h>
+#include <iostream>
 #include <stdio.h>
 
 // *************************************************************************
@@ -54,7 +55,8 @@ public:
     REGULAR_FILE,
     MEMBUFFER,
     GZFILE,
-    BZ2FILE
+    BZ2FILE,
+    IOSTREAM
   };
 
   // must be overloaded to return type
@@ -138,6 +140,21 @@ public:
 public:
   void * bzfp;
   SbString filename;
+};
+
+class SoInput_StreamReader : public SoInput_Reader {
+public:
+  SoInput_StreamReader(std::istream * stream);
+  virtual ~SoInput_StreamReader();
+
+  virtual ReaderType getType(void) const;
+  virtual size_t readBuffer(char * buf, const size_t readlen);
+
+  virtual const SbString & getFilename(void);
+
+public:
+  std::istream * stream;
+  SbString streamname;
 };
 
 #endif // COIN_SOINPUT_READER_H

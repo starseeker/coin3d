@@ -82,6 +82,14 @@ public:
 
   static SbBool readImage(const SbString & fname, int & w, int & h, int & nc,
                           unsigned char *& bytes);
+  
+  // Convenience methods for in-memory texture management
+  void setImageData(int width, int height, int numComponents, 
+                    const unsigned char * pixels, 
+                    SoSFImage::CopyPolicy copyPolicy = SoSFImage::COPY);
+  void setImageDataNoCopy(int width, int height, int numComponents, 
+                          unsigned char * pixels, SbBool freeOnDestroy = FALSE);
+  const unsigned char * getImageData(int & width, int & height, int & numComponents) const;
 protected:
   virtual ~SoTexture2();
 
