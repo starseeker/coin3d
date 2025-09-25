@@ -2,7 +2,10 @@
 # Each test executable corresponds to a major API grouping and returns 0 for success
 
 # Common test utilities
-add_library(simple_test_utils STATIC test_utils.cpp)
+add_library(simple_test_utils STATIC 
+    test_utils.cpp
+    utils/scene_graph_utils.cpp
+)
 target_link_libraries(simple_test_utils Coin ${COIN_TARGET_LINK_LIBRARIES})
 target_include_directories(simple_test_utils PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
@@ -26,6 +29,8 @@ set(SIMPLE_TESTS
     test_simple_debug
     test_coordinate_debug
     test_sphere_positioning
+    test_comprehensive
+    test_legacy_integration
 )
 
 # Create executable for each test group
