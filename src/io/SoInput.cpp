@@ -747,6 +747,32 @@ SoInput::setBuffer(const void * bufpointer, size_t bufsize)
 }
 
 /*!
+  Sets up the input stream for reading from a C++ iostream stream.
+  Closes all open files in the file stack first.
+
+  This method enables reading Inventor data from std::iostream objects,
+  including std::stringstream, std::ifstream, and other stream types.
+
+  \param stream Pointer to the input stream to read from. The stream should
+  remain valid for the lifetime of this SoInput object or until closeFile()
+  is called. SoInput does not take ownership of the stream.
+
+  \since Coin 4.1
+  \sa setBuffer(), setFilePointer()
+*/
+void
+SoInput::setStream(std::istream * stream)
+{
+  this->closeFile();
+  SoInput_Reader * reader = NULL;
+
+  reader = new SoInput_StreamReader(stream);
+  SoInput_FileInfo * newfile =
+    new SoInput_FileInfo(reader, PRIVATE(this)->copied_references);
+  this->filestack.insert(newfile, 0);
+}
+
+/*!
   Returns number of bytes read so far from the current file or memory
   buffer.
   You can only use this method while you're reading the file.
