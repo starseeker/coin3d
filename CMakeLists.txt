@@ -81,7 +81,8 @@ endif()
 
 # Core build options
 option(BUILD_SHARED_LIBS "Build shared library when ON, static when OFF" ON)
-option(COIN_BUILD_TESTS "Build tests" ON)
+option(COIN_BUILD_TESTS "Build unit tests" ON)
+option(COIN_BUILD_EXAMPLES "Build examples" OFF)
 
 # Compatibility alias for legacy code
 set(COIN_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
@@ -421,8 +422,14 @@ endif()
 add_subdirectory(include)
 add_subdirectory(src)
 
+if(COIN_BUILD_EXAMPLES)
+  add_subdirectory(examples)
+endif()
+
 if(COIN_BUILD_TESTS)
   enable_testing()
+  add_subdirectory(testsuite)    # Legacy threading tests
+  add_subdirectory(tests)
   add_subdirectory(Mentor)
 endif()
 
