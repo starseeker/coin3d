@@ -168,6 +168,7 @@ main(int argc, char **argv)
     root->addChild(myCamera);
     root->addChild(new SoDirectionalLight);
     myMaterial->diffuseColor.setValue(1.0, 0.0, 0.0);   // Red
+    myMaterial->emissiveColor.setValue(0.8, 0.0, 0.0);  // Add emission to ensure visibility
     root->addChild(myMaterial);
     root->addChild(new SoCone);
     
@@ -176,7 +177,7 @@ main(int argc, char **argv)
     const int height = 512;
     SbViewportRegion viewport(width, height);
     SoOffscreenRenderer renderer(viewport);
-    renderer.setBackgroundColor(SbColor(0.2f, 0.2f, 0.2f)); // Gray background
+    renderer.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f)); // Black background
     
     // Make camera see everything (same as original)
     myCamera->viewAll(root, viewport);
