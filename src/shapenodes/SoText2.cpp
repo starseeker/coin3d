@@ -165,6 +165,7 @@
 // the "#define WIN32_LEAN_AND_MEAN" hack. 20030625 mortene.
 
 #include "fonts/glyph2d.h"
+#include "../misc/SoEnvironment.h"
 
 /*!
   \enum SoText2::Justification
@@ -346,6 +347,16 @@ SoText2::GLRender(SoGLRenderAction * action)
   PRIVATE(this)->buildGlyphCache(state);
   SoCacheElement::addCacheDependency(state, PRIVATE(this)->cache);
 
+  // Debug bbox right after building cache
+  auto env = CoinInternal::getEnvironmentVariable("COIN_DEBUG_TEXT2D");
+  if (env.has_value() && (std::atoi(env->c_str()) > 0)) {
+    short xmin, ymin, xmax, ymax;
+    PRIVATE(this)->bbox.getBounds(xmin, ymin, xmax, ymax);
+    SoDebugError::postInfo("SoText2::GLRender", 
+                          "After buildGlyphCache: bbox bounds = (%d,%d) to (%d,%d)", 
+                          xmin, ymin, xmax, ymax);
+  }
+
   const cc_font_specification * fontspec = PRIVATE(this)->cache->getCachedFontspec();
 
   // Render only if bbox not outside cull planes.
@@ -369,6 +380,14 @@ SoText2::GLRender(SoGLRenderAction * action)
     SbVec2s bbsize = PRIVATE(this)->bbox.getSize();
     const SbVec2s& bbmin = PRIVATE(this)->bbox.getMin();
     const SbVec2s& bbmax = PRIVATE(this)->bbox.getMax();
+    
+    // Debug bounding box
+    auto env = CoinInternal::getEnvironmentVariable("COIN_DEBUG_TEXT2D");
+    if (env.has_value() && (std::atoi(env->c_str()) > 0)) {
+      SoDebugError::postInfo("SoText2::GLRender", 
+                            "Bbox: min=(%d,%d) max=(%d,%d) size=(%d,%d)", 
+                            bbmin[0], bbmin[1], bbmax[0], bbmax[1], bbsize[0], bbsize[1]);
+    }
 
     float textscreenoffsetx = nilpoint[0]+bbmin[0];
     switch (this->justification.getValue()) {
@@ -543,7 +562,19 @@ SoText2::GLRender(SoGLRenderAction * action)
 
       rastery = (int)floor(nilpoint[1]+0.5) - bbsize[1] + bbmax[1];
 
-      SoText2P::setRasterPos3f((GLfloat)floor(textscreenoffsetx+0.5), (GLfloat)rastery, -nilpoint[2]);
+      GLfloat raster_x = (GLfloat)floor(textscreenoffsetx+0.5);
+      GLfloat raster_y = (GLfloat)rastery;
+      GLfloat raster_z = -nilpoint[2];
+      
+      // Debug output for text positioning
+      auto env = CoinInternal::getEnvironmentVariable("COIN_DEBUG_TEXT2D");
+      if (env.has_value() && (std::atoi(env->c_str()) > 0)) {
+        SoDebugError::postInfo("SoText2::GLRender", 
+                              "Rendering text at raster pos (%.2f, %.2f, %.2f), bbsize=%dx%d, textoffset=%.2f", 
+                              raster_x, raster_y, raster_z, bbsize[0], bbsize[1], textscreenoffsetx);
+      }
+      
+      SoText2P::setRasterPos3f(raster_x, raster_y, raster_z);
       glDrawPixels(bbsize[0], bbsize[1], GL_RGBA, GL_UNSIGNED_BYTE, (const GLubyte *)PRIVATE(this)->pixel_buffer);
     }
 
@@ -865,12 +896,22 @@ SoText2P::buildGlyphCache(SoState * state)
   const cc_font_specification * fontspec = this->cache->getCachedFontspec();
 
   this->bbox.makeEmpty();
+  
+  // Debug bbox initialization
+  auto env = CoinInternal::getEnvironmentVariable("COIN_DEBUG_TEXT2D");
+  if (env.has_value() && (std::atoi(env->c_str()) > 0)) {
+    short xmin, ymin, xmax, ymax;
+    this->bbox.getBounds(xmin, ymin, xmax, ymax);
+    printf("After makeEmpty: bbox bounds = (%d,%d) to (%d,%d)\n", xmin, ymin, xmax, ymax);
+    fflush(stdout);
+  }
 
   for (int i=0; i < nrlines; i++) {
     SbString str = PUBLIC(this)->string[i];
     this->positions.append(SbList<SbVec2s>());
 
     SbBox2s linebbox;
+    linebbox.makeEmpty();
     int xpos = 0;
     int actuallength = 0;
     int kerningx = 0;
@@ -915,6 +956,16 @@ SoText2P::buildGlyphCache(SoState * state)
       linebbox.extendBy(pos);
       linebbox.extendBy(pos + SbVec2s(bitmapsize[0], bitmapsize[1]));
       this->positions[i].append(pos);
+      
+      // Debug linebbox after extend
+      auto env2 = CoinInternal::getEnvironmentVariable("COIN_DEBUG_TEXT2D");
+      if (env2.has_value() && (std::atoi(env2->c_str()) > 0) && strcharidx == 0) {
+        short lxmin, lymin, lxmax, lymax;
+        linebbox.getBounds(lxmin, lymin, lxmax, lymax);
+        printf("First char linebbox: pos=(%d,%d), size=(%d,%d), bounds=(%d,%d) to (%d,%d)\n", 
+               pos[0], pos[1], bitmapsize[0], bitmapsize[1], lxmin, lymin, lxmax, lymax);
+        fflush(stdout);
+      }
 
       actuallength += (advancex + kerningx);
 
@@ -923,6 +974,17 @@ SoText2P::buildGlyphCache(SoState * state)
     }
 
     this->bbox.extendBy(linebbox);
+    
+    // Debug after merging linebbox
+    auto env3 = CoinInternal::getEnvironmentVariable("COIN_DEBUG_TEXT2D");
+    if (env3.has_value() && (std::atoi(env3->c_str()) > 0) && i == 0) {
+      short bxmin, bymin, bxmax, bymax;
+      this->bbox.getBounds(bxmin, bymin, bxmax, bymax);
+      printf("After merging line %d: bbox bounds = (%d,%d) to (%d,%d)\n", 
+             i, bxmin, bymin, bxmax, bymax);
+      fflush(stdout);
+    }
+    
     this->stringwidth.append(actuallength);
     if (actuallength > this->maxwidth) this->maxwidth=actuallength;
 
@@ -941,7 +1003,23 @@ SoText2P::buildGlyphCache(SoState * state)
   // position, because there can be other strings with bitmaps going beyond
   if (maxoverhang > INT_MIN)
   {
+    short bxmin, bymin, bxmax, bymax;
+    this->bbox.getBounds(bxmin, bymin, bxmax, bymax);
+    auto env4 = CoinInternal::getEnvironmentVariable("COIN_DEBUG_TEXT2D");
+    if (env4.has_value() && (std::atoi(env4->c_str()) > 0)) {
+      printf("Before maxoverhang extend: bbox=(%d,%d) to (%d,%d), maxwidth=%d, maxoverhang=%d\n",
+             bxmin, bymin, bxmax, bymax, this->maxwidth, maxoverhang);
+      fflush(stdout);
+    }
+    
     this->bbox.extendBy(SbVec2s(this->maxwidth + maxoverhang, this->bbox.getMax()[1]));
+    
+    this->bbox.getBounds(bxmin, bymin, bxmax, bymax);
+    if (env4.has_value() && (std::atoi(env4->c_str()) > 0)) {
+      printf("After maxoverhang extend: bbox=(%d,%d) to (%d,%d)\n",
+             bxmin, bymin, bxmax, bymax);
+      fflush(stdout);
+    }
   }
 
   state->pop();
@@ -979,7 +1057,7 @@ SoText2P::setRasterPos3f(GLfloat x, GLfloat y, GLfloat z)
   float offsetx = x >= 0 ? 0 : x;
 
   float rpy = y >= 0 ? y : 0;
-  offvp = offvp || y < 0 ? 1 : 0;
+  offvp = (offvp || y < 0) ? 1 : 0;
   float offsety = y >= 0 ? 0 : y;
 
   glRasterPos3f(rpx,rpy,z);
