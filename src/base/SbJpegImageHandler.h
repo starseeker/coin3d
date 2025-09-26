@@ -1,6 +1,3 @@
-#ifndef COIN_SIMAGE_WRAPPER_H
-#define COIN_SIMAGE_WRAPPER_H
-
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
  * All rights reserved.
@@ -33,38 +30,51 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-/* Minimal stub wrapper for simage functionality - disabled for minimal build */
+#ifndef COIN_SBJPEGIMAGEHANDLER_H
+#define COIN_SBJPEGIMAGEHANDLER_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
+#include "SbImageFormatHandler.h"
+#include <cstdio>
 
-/* Stub simage wrapper structure */
-typedef struct cc_simage_wrapper {
-  int available;
-  unsigned char * (*simage_read_image)(const char * filename, int * w, int * h, int * nc);
-  void (*simage_free_image)(unsigned char * imagedata);
-  const char * (*simage_get_last_error)(void);
-  int (*versionMatchesAtLeast)(int major, int minor, int micro);
-  unsigned char * (*simage_resize)(unsigned char * imagedata, int width, int height, int nc,
-                                   int newwidth, int newheight);
-  unsigned char * (*simage_resize3d)(unsigned char * imagedata, int width, int height, int depth, int nc,
-                                      int newwidth, int newheight, int newdepth);
-  int (*simage_check_save_supported)(const char * filename);
-  int (*simage_get_num_savers)(void);
-  void * (*simage_get_saver_handle)(int idx);
-  const char * (*simage_get_saver_extensions)(void * handle);
-  const char * (*simage_get_saver_fullname)(void * handle);
-  const char * (*simage_get_saver_description)(void * handle);
-  void (*simage_version)(int * major, int * minor, int * micro);
-  int (*simage_save_image)(const char * filename, const unsigned char * imagedata,
-                           int width, int height, int nc, const char * filetypeext);
-} cc_simage_wrapper;
+/*!
+  \class SbJpegImageHandler SbJpegImageHandler.h
+  \brief JPEG image format handler using TooJPEG library.
+  
+  This handler provides JPEG image saving capability using the embedded
+  TooJPEG library. Reading is not currently supported (returns null).
+*/
+class SbJpegImageHandler : public SbImageFormatHandler {
+public:
+  SbJpegImageHandler();
+  virtual ~SbJpegImageHandler() = default;
+  
+  // Format identification
+  const char* getFormatName() const override;
+  const char* getDescription() const override;
+  std::vector<std::string> getExtensions() const override;
+  
+  // Image I/O operations
+  unsigned char* readImage(const char* filename, int* width, int* height, int* components) override;
+  bool saveImage(const char* filename, const unsigned char* imagedata,
+                int width, int height, int components) override;
+  
+  // Version info
+  void getVersion(int* major, int* minor, int* micro) const override;
 
-const cc_simage_wrapper * simage_wrapper(void);
+private:
+  // JPEG writing context for TooJPEG callback
+  struct JpegWriteContext {
+    FILE* file;
+    bool error;
+    
+    JpegWriteContext() : file(nullptr), error(false) {}
+  };
+  
+  // TooJPEG callback function
+  static void writeCallback(unsigned char byte);
+  
+  // Global context pointer for write context (not thread-safe but compatible with existing code)
+  static JpegWriteContext* currentContext;
+};
 
-#ifdef __cplusplus
-} /* extern "C" */
-#endif /* __cplusplus */
-
-#endif /* !COIN_SIMAGE_WRAPPER_H */
+#endif // COIN_SBJPEGIMAGEHANDLER_H

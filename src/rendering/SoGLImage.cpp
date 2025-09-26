@@ -221,7 +221,8 @@
 #include "rendering/SoGL.h"
 #include "elements/SoTextureScaleQualityElement.h"
 #include "glue/glp.h"
-#include "glue/simage_wrapper.h"
+#include "base/SbImageFormatHandler.h"
+#include "base/SbJpegImageHandler.h"
 #include "threads/threadsutilp.h"
 #include "coindefs.h"
 #include "misc/SoEnvironment.h"
@@ -1530,47 +1531,54 @@ SoGLImageP::resizeImage(SoState * state, unsigned char *& imageptr,
       // function. We prefer to use that to avoid using GLU, since
       // there are lots of buggy GLU libraries out there.
       if (zsize == 0) { // 2D image
-        // simage_resize and gluScaleImage can be pretty slow. Use
-        // fast_image_resize() if high quality isn't needed
-        if (SoTextureScaleQualityElement::get(state) < 0.5f) {
-          fast_image_resize(bytes, glimage_tmpimagebuffer,
-                            xsize, ysize, numcomponents,
-                            newx, newy);
+        // Use high-quality resize when texture quality is important
+        bool highQuality = (SoTextureScaleQualityElement::get(state) >= 0.5f);
+        
+        // Initialize format handlers to ensure resize capability is available
+        static bool handlersInitialized = false;
+        if (!handlersInitialized) {
+          auto& registry = SbImageFormatRegistry::getInstance();
+          registry.registerHandler(std::make_unique<SbJpegImageHandler>());
+          handlersInitialized = true;
         }
-        else if (simage_wrapper()->available &&
-                 simage_wrapper()->versionMatchesAtLeast(1,1,1) &&
-                 simage_wrapper()->simage_resize) {
-
-          unsigned char *result =
-            simage_wrapper()->simage_resize((unsigned char*) bytes,
-                                            xsize, ysize, numcomponents,
-                                            newx, newy);
+        
+        auto& registry = SbImageFormatRegistry::getInstance();
+        unsigned char* result = registry.resizeImage((unsigned char*)bytes,
+                                                    xsize, ysize, numcomponents,
+                                                    newx, newy, highQuality);
+        if (result) {
           (void)memcpy(glimage_tmpimagebuffer, result, numbytes);
-          simage_wrapper()->simage_free_image(result);
-        }
-        else {
-          // Use the internal resize function instead of GLU
+          registry.freeImageData(result);
+        } else {
+          // Fallback to internal fast resize if registry fails
           fast_image_resize(bytes, glimage_tmpimagebuffer,
-                            xsize, ysize, numcomponents,
-                            newx, newy);
+                           xsize, ysize, numcomponents,
+                           newx, newy);
         }
       }
       else { // (zsize > 0) => 3D image
-        if (simage_wrapper()->available &&
-            simage_wrapper()->versionMatchesAtLeast(1,3,0) &&
-            simage_wrapper()->simage_resize3d) {
-          unsigned char *result =
-            simage_wrapper()->simage_resize3d((unsigned char*) bytes,
-                                              xsize, ysize, numcomponents, zsize,
-                                              newx, newy, newz);
-          (void)memcpy(glimage_tmpimagebuffer, result, numbytes);
-          simage_wrapper()->simage_free_image(result);
+        bool highQuality = (SoTextureScaleQualityElement::get(state) >= 0.5f);
+        
+        // Initialize format handlers
+        static bool handlersInitialized = false;
+        if (!handlersInitialized) {
+          auto& registry = SbImageFormatRegistry::getInstance();
+          registry.registerHandler(std::make_unique<SbJpegImageHandler>());
+          handlersInitialized = true;
         }
-        else {
-          // fall back to the internal low-quality resize function
+        
+        auto& registry = SbImageFormatRegistry::getInstance();
+        unsigned char* result = registry.resize3DImage((unsigned char*)bytes,
+                                                      xsize, ysize, zsize, numcomponents,
+                                                      newx, newy, newz, highQuality);
+        if (result) {
+          (void)memcpy(glimage_tmpimagebuffer, result, numbytes);
+          registry.freeImageData(result);
+        } else {
+          // Fallback to internal fast resize if registry fails
           fast_image_resize3d(bytes, glimage_tmpimagebuffer,
-                              xsize, ysize, numcomponents, zsize,
-                              newx, newy, newz);
+                             xsize, ysize, numcomponents, zsize,
+                             newx, newy, newz);
         }
       }
     }

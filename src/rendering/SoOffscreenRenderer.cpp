@@ -341,12 +341,23 @@
 #include <Inventor/system/gl.h>
 #include <Inventor/SbTime.h>
 
-#include "glue/simage_wrapper.h"
+#include "base/SbImageFormatHandler.h"
+#include "base/SbJpegImageHandler.h"
 
 #include "coindefs.h" // COIN_STUB()
 #include "misc/SoEnvironment.h"
 
 // boost/current_function.hpp replaced with C++11 __func__
+
+// Initialize format handlers for offscreen renderer
+static void init_format_handlers(void) {
+  static bool initialized = false;
+  if (!initialized) {
+    auto& registry = SbImageFormatRegistry::getInstance();
+    registry.registerHandler(std::make_unique<SbJpegImageHandler>());
+    initialized = true;
+  }
+}
 
 // *************************************************************************
 
@@ -1409,21 +1420,20 @@ SoOffscreenRenderer::writeToPostScript(const char * filename,
 SbBool
 SoOffscreenRenderer::isWriteSupported(const SbName & filetypeextension) const
 {
-  if (!simage_wrapper()->versionMatchesAtLeast(1,1,0)) {
-
-    if (CoinOffscreenGLCanvas::debug()) {
-      if (!simage_wrapper()->available) {
-        SoDebugError::postInfo("SoOffscreenRenderer::isWriteSupported",
-                               "simage library not available.");
-      } else {
-        SoDebugError::postInfo("SoOffscreenRenderer::isWriteSupported",
-                               "You need simage v1.1 for this functionality.");
-      }
-    }
-    return FALSE;
+  init_format_handlers();
+  auto& registry = SbImageFormatRegistry::getInstance();
+  
+  // Check if the extension is supported by our format handlers
+  std::string ext = filetypeextension.getString();
+  bool supported = registry.isExtensionSupported(ext);
+  
+  if (!supported && CoinOffscreenGLCanvas::debug()) {
+    SoDebugError::postInfo("SoOffscreenRenderer::isWriteSupported",
+                           "Format '%s' not supported by available handlers.", 
+                           ext.c_str());
   }
-  int ret = simage_wrapper()->simage_check_save_supported(filetypeextension.getString());
-  return ret ? TRUE : FALSE;
+  
+  return supported ? TRUE : FALSE;
 }
 
 /*!
@@ -1444,14 +1454,9 @@ SoOffscreenRenderer::isWriteSupported(const SbName & filetypeextension) const
 int
 SoOffscreenRenderer::getNumWriteFiletypes(void) const
 {
-  if (!simage_wrapper()->versionMatchesAtLeast(1,1,0)) {
-#if COIN_DEBUG
-    SoDebugError::postInfo("SoOffscreenRenderer::getNumWriteFiletypes",
-                           "You need simage v1.1 for this functionality.");
-#endif // COIN_DEBUG
-    return 0;
-  }
-  return simage_wrapper()->simage_get_num_savers();
+  init_format_handlers();
+  auto& registry = SbImageFormatRegistry::getInstance();
+  return registry.getNumHandlers();
 }
 
 /*!
@@ -1519,37 +1524,30 @@ SoOffscreenRenderer::getWriteFiletypeInfo(const int idx,
                                           SbString & fullname,
                                           SbString & description)
 {
-  if (!simage_wrapper()->versionMatchesAtLeast(1,1,0)) {
-#if COIN_DEBUG
-    SoDebugError::postInfo("SoOffscreenRenderer::getNumWriteFiletypes",
-                           "You need simage v1.1 for this functionality.");
-#endif // COIN_DEBUG
-    return;
-  }
+  init_format_handlers();
+  auto& registry = SbImageFormatRegistry::getInstance();
+  
   extlist.truncate(0);
   assert(idx >= 0 && idx < this->getNumWriteFiletypes());
-  void * saver = simage_wrapper()->simage_get_saver_handle(idx);
-  SbString allext(simage_wrapper()->simage_get_saver_extensions(saver));
-  const char * start = allext.getString();
-  const char * curr = start;
-  const char * end = strchr(curr, ',');
-  while (end) {
-    const ptrdiff_t offset_start = curr - start;
-    const ptrdiff_t offset_end = end - start - 1;
-    SbString ext = allext.getSubString((int)offset_start, (int)offset_end);
-    SbName extname(ext.getString());
-    extlist.append((void*)extname.getString());
-    curr = end+1;
-    end = strchr(curr, ',');
+  
+  SbImageFormatHandler* handler = registry.getHandler(idx);
+  if (!handler) {
+    fullname = "";
+    description = "";
+    return;
   }
-  const ptrdiff_t offset = curr - start;
-  SbString ext = allext.getSubString((int)offset);
-  SbName extname(ext.getString());
-  extlist.append((void*)extname.getString());
-  const char * fullname_s = simage_wrapper()->simage_get_saver_fullname(saver);
-  const char * desc_s = simage_wrapper()->simage_get_saver_description(saver);
-  fullname = fullname_s ? SbString(fullname_s) : SbString("");
-  description = desc_s ? SbString(desc_s) : SbString("");
+  
+  // Get extensions and add them to the list
+  auto extensions = handler->getExtensions();
+  for (const auto& ext : extensions) {
+    // Store extensions as static strings to ensure lifetime
+    static std::vector<std::string> static_extensions;
+    static_extensions.push_back(ext);
+    extlist.append((void*)static_extensions.back().c_str());
+  }
+  
+  fullname = handler->getFormatName();
+  description = handler->getDescription();
 }
 
 /*!
@@ -1568,36 +1566,37 @@ SoOffscreenRenderer::getWriteFiletypeInfo(const int idx,
 SbBool
 SoOffscreenRenderer::writeToFile(const SbString & filename, const SbName & filetypeextension) const
 {
-  if (!simage_wrapper()->versionMatchesAtLeast(1,1,0)) {
-    //FIXME: Now using C++11 __func__ instead of BOOST_CURRENT_FUNCTION
-    //HAVE_CPP_COMPILER_FUNCTION_NAME_VAR should be massaged correctly
-    //to fit here. BFG 20090917
-    if (!simage_wrapper()->available) {
-      SoDebugError::post(__func__,
-                             "simage library not available.");
-    }
-    else {
-      int major, minor, micro;
-      simage_wrapper()->simage_version(&major,&minor,&micro);
-      SoDebugError::post(__func__,
-                         "simage version is older than 1.1.0, available version is %d.%d.%d", major,minor,micro);
-    }
-    return FALSE;
-  }
+  init_format_handlers();
+  auto& registry = SbImageFormatRegistry::getInstance();
+  
   if (SoOffscreenRendererP::offscreenContextsNotSupported()) {
     SoDebugError::post(__func__,
                        "Offscreen contexts not supported.");
     return FALSE;
   }
 
+  // Check if the format is supported
+  std::string ext = filetypeextension.getString();
+  if (!registry.isExtensionSupported(ext)) {
+    SoDebugError::post(__func__,
+                       "Image format '%s' not supported by available handlers.", 
+                       ext.c_str());
+    return FALSE;
+  }
+
   SbVec2s size = PRIVATE(this)->viewport.getViewportSizePixels();
   int comp = (int) this->getComponents();
   unsigned char * bytes = this->getBuffer();
-  int ret = simage_wrapper()->simage_save_image(filename.getString(),
-                                                bytes,
-                                                int(size[0]), int(size[1]), comp,
-                                                filetypeextension.getString());
-  return ret ? TRUE : FALSE;
+  
+  bool success = registry.saveImage(filename.getString(), bytes, 
+                                   int(size[0]), int(size[1]), comp);
+  
+  if (!success) {
+    SoDebugError::post(__func__,
+                       "Failed to save image: %s", registry.getLastError());
+  }
+  
+  return success ? TRUE : FALSE;
 }
 
 // *************************************************************************
