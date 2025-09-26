@@ -221,7 +221,7 @@
 #include "rendering/SoGL.h"
 #include "elements/SoTextureScaleQualityElement.h"
 #include "glue/glp.h"
-#include "glue/simage_wrapper_compat.h"
+// Note: Image resizing functionality removed - using internal functions
 #include "threads/threadsutilp.h"
 #include "coindefs.h"
 #include "misc/SoEnvironment.h"
@@ -1532,46 +1532,16 @@ SoGLImageP::resizeImage(SoState * state, unsigned char *& imageptr,
       if (zsize == 0) { // 2D image
         // simage_resize and gluScaleImage can be pretty slow. Use
         // fast_image_resize() if high quality isn't needed
-        if (SoTextureScaleQualityElement::get(state) < 0.5f) {
-          fast_image_resize(bytes, glimage_tmpimagebuffer,
-                            xsize, ysize, numcomponents,
-                            newx, newy);
-        }
-        else if (simage_wrapper()->available &&
-                 simage_wrapper()->versionMatchesAtLeast(1,1,1) &&
-                 simage_wrapper()->simage_resize) {
-
-          unsigned char *result =
-            simage_wrapper()->simage_resize((unsigned char*) bytes,
-                                            xsize, ysize, numcomponents,
-                                            newx, newy);
-          (void)memcpy(glimage_tmpimagebuffer, result, numbytes);
-          simage_wrapper()->simage_free_image(result);
-        }
-        else {
-          // Use the internal resize function instead of GLU
-          fast_image_resize(bytes, glimage_tmpimagebuffer,
-                            xsize, ysize, numcomponents,
-                            newx, newy);
-        }
+        // Use internal resize function (simage resize functionality removed)
+        fast_image_resize(bytes, glimage_tmpimagebuffer,
+                          xsize, ysize, numcomponents,
+                          newx, newy);
       }
       else { // (zsize > 0) => 3D image
-        if (simage_wrapper()->available &&
-            simage_wrapper()->versionMatchesAtLeast(1,3,0) &&
-            simage_wrapper()->simage_resize3d) {
-          unsigned char *result =
-            simage_wrapper()->simage_resize3d((unsigned char*) bytes,
-                                              xsize, ysize, numcomponents, zsize,
-                                              newx, newy, newz);
-          (void)memcpy(glimage_tmpimagebuffer, result, numbytes);
-          simage_wrapper()->simage_free_image(result);
-        }
-        else {
-          // fall back to the internal low-quality resize function
-          fast_image_resize3d(bytes, glimage_tmpimagebuffer,
-                              xsize, ysize, numcomponents, zsize,
-                              newx, newy, newz);
-        }
+        // Use internal low-quality resize function (simage 3D resize functionality removed)
+        fast_image_resize3d(bytes, glimage_tmpimagebuffer,
+                            xsize, ysize, numcomponents, zsize,
+                            newx, newy, newz);
       }
     }
     imageptr = glimage_tmpimagebuffer;

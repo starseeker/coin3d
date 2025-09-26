@@ -172,7 +172,7 @@
 #include <Inventor/system/gl.h>
 
 #include "nodes/SoSubNodeP.h"
-#include "glue/simage_wrapper_compat.h"
+// Note: Image resizing functionality removed - using internal functions
 
 
 /*!
@@ -880,23 +880,9 @@ SoImage::getImage(SbVec2s & size, int & nc)
       const unsigned char * orgdata = this->image.getValue(orgsize, nc);
       SbVec2s newsize = this->getSize();
 
-      // simage version 1.1.1 has a pretty high quality resize
-      // function. We prefer to use that to avoid using GLU, since
-      // GLU might require a valid GL context for gluScale to work.
-      // Also, there are lots of buggy GLU versions out there.
-      if (simage_wrapper()->available &&
-          simage_wrapper()->versionMatchesAtLeast(1,1,1) &&
-          simage_wrapper()->simage_resize) {
-        unsigned char * result =
-          simage_wrapper()->simage_resize((unsigned char*) orgdata,
-                                          int(orgsize[0]), int(orgsize[1]),
-                                          nc, int(newsize[0]), int(newsize[1]));
-        this->resizedimage->setValue(newsize, nc, result);
-        simage_wrapper()->simage_free_image(result);
-        this->resizedimagevalid = TRUE;
-      }
-      else {
-        // Use simple bilinear resize function instead of GLU
+      // Use simple bilinear resize function (simage resize functionality removed)
+      // GLU might require a valid GL context and has buggy versions
+      {
         this->resizedimage->setValue(newsize, nc, NULL);
         const unsigned char * rezdata = this->resizedimage->getValue(newsize, nc);
         simple_image_resize(orgdata, (unsigned char*)rezdata,
