@@ -183,8 +183,9 @@ main(int argc, char **argv)
     texturedComplexity->value = 0.55;
     leftSide->addChild(texturedSphereSep);
 
-    // Try to add texture (will fail gracefully if file not found)
-    // Commented out due to texture loading issues in current headless environment
+    // Try to add texture from Mentor/data/globe.rgb (if provided by user)
+    // Will gracefully fall back to untextured sphere if file not found
+    // Currently commented out due to texture loading issues in headless environment
     // SoInput::addDirectoryFirst("./Mentor/data");
     // SoTexture2 *myTexture2 = new SoTexture2;
     // texturedSphereSep->addChild(myTexture2);
