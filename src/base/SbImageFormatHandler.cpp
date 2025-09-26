@@ -186,7 +186,7 @@ unsigned char* SbImageFormatRegistry::resizeImage(unsigned char* imagedata, int 
   }
   
   // Fall back to built-in resize algorithms
-  SbImageResizeQuality quality = highQuality ? SB_IMAGE_RESIZE_HIGH : SB_IMAGE_RESIZE_FAST;
+  SbImageResizeFilter quality = highQuality ? SB_IMAGE_RESIZE_HIGH : SB_IMAGE_RESIZE_FAST;
   return SbImageResize_resize2D(imagedata, width, height, components, newwidth, newheight, quality);
 }
 
@@ -210,7 +210,7 @@ unsigned char* SbImageFormatRegistry::resize3DImage(unsigned char* imagedata, in
   }
   
   // Fall back to built-in 3D resize algorithms
-  SbImageResizeQuality quality = highQuality ? SB_IMAGE_RESIZE_HIGH : SB_IMAGE_RESIZE_FAST;
+  SbImageResizeFilter quality = highQuality ? SB_IMAGE_RESIZE_HIGH : SB_IMAGE_RESIZE_FAST;
   return SbImageResize_resize3D(imagedata, width, height, depth, components, 
                                newwidth, newheight, newdepth, quality);
 }

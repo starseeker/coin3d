@@ -73,9 +73,6 @@ enum SbImageResizeFilter {
   SB_IMAGE_RESIZE_FILTER_MITCHELL = 5   // Mitchell filter
 };
 
-// Deprecated: Use SbImageResizeFilter instead
-typedef SbImageResizeFilter SbImageResizeQuality;
-
 /*!
   \brief Resize a 2D image using the specified filter/quality setting.
   
