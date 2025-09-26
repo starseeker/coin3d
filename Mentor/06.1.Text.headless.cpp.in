@@ -64,6 +64,7 @@
 #include <Inventor/nodes/SoComplexity.h>
 #include <Inventor/nodes/SoFont.h>
 #include <Inventor/nodes/SoGroup.h>
+#include <Inventor/nodes/SoPerspectiveCamera.h>
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/nodes/SoSphere.h>
 #include <Inventor/nodes/SoText2.h>
@@ -155,6 +156,13 @@ main(int argc, char **argv)
     SoGroup *root = new SoGroup;
     root->ref();
 
+    // Set up camera for proper text viewing
+    SoPerspectiveCamera *myCamera = new SoPerspectiveCamera;
+    myCamera->position.setValue(0, 0, 10);
+    myCamera->nearDistance.setValue(5.0);
+    myCamera->farDistance.setValue(15.0);
+    root->addChild(myCamera);
+
     // Choose ProFont for reliable headless rendering
     SoFont *myFont = new SoFont;
     myFont->name.setValue("ProFont");
@@ -245,6 +253,9 @@ main(int argc, char **argv)
     SbViewportRegion viewport(width, height);
     SoOffscreenRenderer renderer(viewport);
     renderer.setBackgroundColor(SbColor(0.2f, 0.2f, 0.2f)); // Gray background
+    
+    // Make camera see everything
+    myCamera->viewAll(root, viewport);
     
     // Render the scene
     SbBool success = renderer.render(root);

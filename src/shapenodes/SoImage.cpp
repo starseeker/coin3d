@@ -484,7 +484,7 @@ SoImage::GLRender(SoGLRenderAction * action)
   GLfloat offsetx = xpos >= 0 ? 0.0f : xpos;
 
   GLfloat rpy = ypos >= 0 ? ypos : 0.0f;
-  offvp = offvp || ypos < 0 ? TRUE : FALSE;
+  offvp = (offvp || ypos < 0) ? TRUE : FALSE;  // FIXED: Operator precedence bug
   GLfloat offsety = ypos >= 0 ? 0.0f : ypos;
 
   glRasterPos3f(rpx, rpy, -nilpoint[2]);
