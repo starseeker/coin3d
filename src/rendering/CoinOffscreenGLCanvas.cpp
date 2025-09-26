@@ -730,6 +730,9 @@ CoinOffscreenGLCanvas::bindFBO(void)
 void
 CoinOffscreenGLCanvas::unbindFBO(void)
 {
+  // Check if renderid is valid before attempting to use it
+  if (this->renderid == 0) { return; }
+  
   const cc_glglue * glue = cc_glglue_instance(static_cast<int>(this->renderid));
   if (!glue) { return; }
   

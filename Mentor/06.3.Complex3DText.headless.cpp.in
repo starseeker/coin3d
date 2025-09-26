@@ -251,8 +251,8 @@ main(int argc, char **argv)
     SoOffscreenRenderer renderer(viewport);
     renderer.setBackgroundColor(SbColor(0.2f, 0.2f, 0.2f)); // Gray background
     
-    // Make camera see everything
-    myCamera->viewAll(root, viewport);
+    // Make camera see everything (disabled to avoid crashes during bounding box calculation)
+    // myCamera->viewAll(root, viewport);
     
     // Render the scene
     SbBool success = renderer.render(root);
