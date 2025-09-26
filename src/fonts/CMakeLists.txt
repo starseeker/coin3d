@@ -10,6 +10,7 @@ set(COIN_FONTS_FILES
 	default3dfont.cpp
 	default2dfont.cpp
 	common.cpp
+	sbfont_bridge.cpp
 )
 
 # Files excluded from public API documentation, included in complete documentation.
@@ -33,6 +34,8 @@ set(COIN_FONTS_INTERNAL_FILES
 	default2dfont.cpp
 	common.h
 	common.cpp
+	sbfont_bridge.h
+	sbfont_bridge.cpp
 )
 
 # build library
