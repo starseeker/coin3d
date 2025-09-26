@@ -33,6 +33,338 @@
 #include "SbImageResize.h"
 #include <cstring>
 #include <algorithm>
+#include <cmath>
+#include <cstdlib>
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
+// High-quality resize internal structures and functions
+// Adapted from resize.c (original simage implementation)
+
+typedef struct {
+  int pixel;
+  float weight;
+} CONTRIB;
+
+typedef struct {
+  int n;                /* number of contributors */
+  CONTRIB* p;           /* pointer to list of contributions */
+} CLIST;
+
+typedef struct {
+  int xsize;            /* horizontal size of the image in Pixels */
+  int ysize;            /* vertical size of the image in Pixels */  
+  int bpp;              /* bytes per pixel */
+  unsigned char* data;  /* pointer to first scanline of image */
+  int span;             /* byte offset between two scanlines */
+} Image;
+
+// High-quality filter functions
+
+static float bell_filter(float t) 
+{
+  if (t < 0.0f) t = -t;
+  if (t < 0.5f) return (0.75f - (t * t));
+  if (t < 1.5f) {
+    t = (t - 1.5f);
+    return (0.5f * (t * t));
+  }
+  return (0.0f);
+}
+#define bell_support (1.5f)
+
+static float B_spline_filter(float t)
+{
+  float tt;
+  if (t < 0.0f) t = -t;
+  if (t < 1.0f) {
+    tt = t * t;
+    return ((.5f * tt * t) - tt + (2.0f / 3.0f));
+  } else if (t < 2.0f) {
+    t = 2.0f - t;
+    return ((1.0f / 6.0f) * (t * t * t));
+  }
+  return (0.0f);
+}
+#define B_spline_support (2.0f)
+
+static float sinc(float x)
+{
+  x *= (float)M_PI;
+  if (x != 0.0f) return (float)(sin(x) / x);
+  return (1.0f);
+}
+
+static float Lanczos3_filter(float t)
+{
+  if (t < 0.0f) t = -t;
+  if (t < 3.0f) return (sinc(t) * sinc(t/3.0f));
+  return (0.0f);
+}
+#define Lanczos3_support (3.0f)
+
+#define Mitchell_B (1.0f / 3.0f)
+#define Mitchell_C (1.0f / 3.0f)
+static float Mitchell_filter(float t)
+{
+  float tt = t * t;
+  if (t < 0.0f) t = -t;
+  if (t < 1.0f) {
+    t = (((12.0f - 9.0f * Mitchell_B - 6.0f * Mitchell_C) * (t * tt))
+         + ((-18.0f + 12.0f * Mitchell_B + 6.0f * Mitchell_C) * tt)
+         + (6.0f - 2.0f * Mitchell_B));
+    return (t / 6.0f);
+  }
+  else if (t < 2.0f) {
+    t = (((-1.0f * Mitchell_B - 6.0f * Mitchell_C) * (t * tt))
+         + ((6.0f * Mitchell_B + 30.0f * Mitchell_C) * tt)
+         + ((-12.0f * Mitchell_B - 48.0f * Mitchell_C) * t)
+         + (8.0f * Mitchell_B + 24.0f * Mitchell_C));
+    return (t / 6.0f);
+  }
+  return (0.0f);
+}
+#define Mitchell_support (2.0f)
+
+// Image utility functions
+
+static void get_row(unsigned char* row, const Image* image, int y)
+{
+  if (y < 0 || y >= image->ysize) return;
+  std::memcpy(row, image->data + (y * image->span), image->bpp * image->xsize);
+}
+
+static void get_column(unsigned char* column, const Image* image, int x)
+{
+  if (x < 0 || x >= image->xsize) return;
+  
+  int bpp = image->bpp;
+  int ysize = image->ysize;
+  int span = image->span;
+  unsigned char* p = image->data + x * bpp;
+  
+  for (int i = 0; i < ysize; i++, p += span) {
+    for (int j = 0; j < bpp; j++) {
+      *column++ = p[j];
+    }
+  }
+}
+
+static void put_pixel(const Image* image, int x, int y, float* data)
+{
+  if (x < 0 || x >= image->xsize || y < 0 || y >= image->ysize) return;
+  
+  int bpp = image->bpp;
+  unsigned char* p = image->data + image->span * y + x * bpp;
+  
+  for (int i = 0; i < bpp; i++) {
+    float val = data[i];
+    if (val < 0.0f) val = 0.0f;
+    else if (val > 255.0f) val = 255.0f;
+    *p++ = (unsigned char)val;
+  }
+}
+
+static Image* new_image(int xsize, int ysize, int bpp, unsigned char* data)
+{
+  Image* img = new Image;
+  img->xsize = xsize;
+  img->ysize = ysize;
+  img->bpp = bpp;
+  img->span = xsize * bpp;
+  img->data = data;
+  if (data == nullptr) {
+    img->data = new unsigned char[img->span * img->ysize];
+  }
+  return img;
+}
+
+static void free_image(Image* img)
+{
+  if (img) {
+    delete img;
+  }
+}
+
+// High-quality zoom function adapted from resize.c
+static void zoom(Image* dst, const Image* src, float (*filterf)(float), float fwidth)
+{
+  CLIST* contrib;
+  Image* tmp;
+  float xscale, yscale;
+  int i, j, k, b;
+  int n;
+  int left, right;
+  float center;
+  float width, fscale, weight;
+  unsigned char* raster;
+  float pixel[4];
+  int bpp;
+  unsigned char* dstptr;
+  int dstxsize, dstysize;
+
+  bpp = src->bpp;
+  dstxsize = dst->xsize;
+  dstysize = dst->ysize;
+
+  // Create intermediate image to hold horizontal zoom
+  tmp = new_image(dstxsize, src->ysize, dst->bpp, nullptr);
+  xscale = (float)dstxsize / (float)src->xsize;
+  yscale = (float)dstysize / (float)src->ysize;
+
+  // Pre-calculate filter contributions for a row
+  contrib = (CLIST*)std::calloc(dstxsize, sizeof(CLIST));
+  if (xscale < 1.0f) {
+    width = fwidth / xscale;
+    fscale = 1.0f / xscale;
+    for (i = 0; i < dstxsize; i++) {
+      contrib[i].n = 0;
+      contrib[i].p = (CONTRIB*)std::calloc((int)(width * 2 + 1), sizeof(CONTRIB));
+      center = (float)i / xscale;
+      left = (int)std::ceil(center - width);
+      right = (int)std::floor(center + width);
+      for (j = left; j <= right; j++) {
+        weight = center - (float)j;
+        weight = (*filterf)(weight / fscale) / fscale;
+        if (j < 0) {
+          n = -j;
+        } else if (j >= src->xsize) {
+          n = (src->xsize - j) + src->xsize - 1;
+        } else {
+          n = j;
+        }
+        k = contrib[i].n++;
+        contrib[i].p[k].pixel = n * bpp;
+        contrib[i].p[k].weight = weight;
+      }
+    }
+  } else {
+    for (i = 0; i < dstxsize; i++) {
+      contrib[i].n = 0;
+      contrib[i].p = (CONTRIB*)std::calloc((int)(fwidth * 2 + 1), sizeof(CONTRIB));
+      center = (float)i / xscale;
+      left = (int)std::ceil(center - fwidth);
+      right = (int)std::floor(center + fwidth);
+      for (j = left; j <= right; j++) {
+        weight = center - (float)j;
+        weight = (*filterf)(weight);
+        if (j < 0) {
+          n = -j;
+        } else if (j >= src->xsize) {
+          n = (src->xsize - j) + src->xsize - 1;
+        } else {
+          n = j;
+        }
+        k = contrib[i].n++;
+        contrib[i].p[k].pixel = n * bpp;
+        contrib[i].p[k].weight = weight;
+      }
+    }
+  }
+
+  // Apply filter to zoom horizontally from src to tmp
+  raster = (unsigned char*)std::calloc(src->xsize, src->bpp);
+  dstptr = tmp->data;
+
+  for (k = 0; k < tmp->ysize; k++) {
+    get_row(raster, src, k);
+    for (i = 0; i < tmp->xsize; i++) {
+      for (b = 0; b < bpp; b++) pixel[b] = 0.0f;
+      for (j = 0; j < contrib[i].n; j++) {
+        for (b = 0; b < bpp; b++) {
+          pixel[b] += raster[contrib[i].p[j].pixel + b] * contrib[i].p[j].weight;
+        }
+      }
+      put_pixel(tmp, i, k, pixel);
+    }
+  }
+  std::free(raster);
+
+  // Free the memory allocated for horizontal filter weights
+  for (i = 0; i < tmp->xsize; i++) {
+    std::free(contrib[i].p);
+  }
+  std::free(contrib);
+
+  // Pre-calculate filter contributions for a column
+  contrib = (CLIST*)std::calloc(dstysize, sizeof(CLIST));
+  if (yscale < 1.0f) {
+    width = fwidth / yscale;
+    fscale = 1.0f / yscale;
+    for (i = 0; i < dstysize; i++) {
+      contrib[i].n = 0;
+      contrib[i].p = (CONTRIB*)std::calloc((int)(width * 2 + 1), sizeof(CONTRIB));
+      center = (float)i / yscale;
+      left = (int)std::ceil(center - width);
+      right = (int)std::floor(center + width);
+      for (j = left; j <= right; j++) {
+        weight = center - (float)j;
+        weight = (*filterf)(weight / fscale) / fscale;
+        if (j < 0) {
+          n = -j;
+        } else if (j >= tmp->ysize) {
+          n = (tmp->ysize - j) + tmp->ysize - 1;
+        } else {
+          n = j;
+        }
+        k = contrib[i].n++;
+        contrib[i].p[k].pixel = n * bpp;
+        contrib[i].p[k].weight = weight;
+      }
+    }
+  } else {
+    for (i = 0; i < dstysize; i++) {
+      contrib[i].n = 0;
+      contrib[i].p = (CONTRIB*)std::calloc((int)(fwidth * 2 + 1), sizeof(CONTRIB));
+      center = (float)i / yscale;
+      left = (int)std::ceil(center - fwidth);
+      right = (int)std::floor(center + fwidth);
+      for (j = left; j <= right; j++) {
+        weight = center - (float)j;
+        weight = (*filterf)(weight);
+        if (j < 0) {
+          n = -j;
+        } else if (j >= tmp->ysize) {
+          n = (tmp->ysize - j) + tmp->ysize - 1;
+        } else {
+          n = j;
+        }
+        k = contrib[i].n++;
+        contrib[i].p[k].pixel = n * bpp;
+        contrib[i].p[k].weight = weight;
+      }
+    }
+  }
+
+  // Apply filter to zoom vertically from tmp to dst
+  raster = (unsigned char*)std::calloc(tmp->ysize, tmp->bpp);
+  for (k = 0; k < dstxsize; k++) {
+    get_column(raster, tmp, k);
+    dstptr = dst->data + k * bpp;
+    for (i = 0; i < dstysize; i++) {
+      for (b = 0; b < bpp; b++) pixel[b] = 0.0f;
+      for (j = 0; j < contrib[i].n; ++j) {
+        for (b = 0; b < bpp; b++) {
+          pixel[b] += raster[contrib[i].p[j].pixel + b] * contrib[i].p[j].weight;
+        }
+      }
+      put_pixel(dst, k, i, pixel);
+      dstptr += bpp * dstxsize;
+    }
+  }
+
+  std::free(raster);
+
+  // Free the memory allocated for vertical filter weights
+  for (i = 0; i < dstysize; ++i) {
+    std::free(contrib[i].p);
+  }
+  std::free(contrib);
+  delete[] tmp->data;
+  free_image(tmp);
+}
 
 // Fast resize implementation (extracted from SoGLImage.cpp)
 static void fast_resize_2d(const unsigned char* src, unsigned char* dest,
@@ -137,9 +469,18 @@ static void high_quality_resize_2d(const unsigned char* src, unsigned char* dest
                                   int width, int height, int components,
                                   int newwidth, int newheight)
 {
-  // For now, use bilinear interpolation as high quality
-  // Future enhancement: implement bicubic or Lanczos algorithms
-  bilinear_resize_2d(src, dest, width, height, components, newwidth, newheight);
+  // Use high-quality Bell filter from original simage implementation
+  Image* srcimg = new_image(width, height, components, const_cast<unsigned char*>(src));
+  Image* dstimg = new_image(newwidth, newheight, components, dest);
+  
+  // Using the Bell filter as it provides good quality balance
+  zoom(dstimg, srcimg, bell_filter, bell_support);
+  
+  // Clean up (don't delete the data as it's owned by caller)
+  srcimg->data = nullptr;  // Don't delete src data - it belongs to caller
+  dstimg->data = nullptr;  // Don't delete dest data - it belongs to caller
+  free_image(srcimg);
+  free_image(dstimg);
 }
 
 static void high_quality_resize_3d(const unsigned char* src, unsigned char* dest,
