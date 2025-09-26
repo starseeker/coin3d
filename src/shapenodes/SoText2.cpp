@@ -347,22 +347,39 @@ SoText2::GLRender(SoGLRenderAction * action)
   PRIVATE(this)->buildGlyphCache(state);
   SoCacheElement::addCacheDependency(state, PRIVATE(this)->cache);
 
-  // WORKAROUND: Save bbox to local variables since this->bbox gets corrupted
-  short bbox_xmin, bbox_ymin, bbox_xmax, bbox_ymax;
-  PRIVATE(this)->bbox.getBounds(bbox_xmin, bbox_ymin, bbox_xmax, bbox_ymax);
-  SbVec2s bbsize(bbox_xmax - bbox_xmin, bbox_ymax - bbox_ymin);
-  SbVec2s bbmin(bbox_xmin, bbox_ymin);
-  SbVec2s bbmax(bbox_xmax, bbox_ymax);
+  const cc_font_specification * fontspec = PRIVATE(this)->cache->getCachedFontspec();
+
+  // WORKAROUND: Use fixed reasonable bounding box values to avoid memory corruption
+  if (!fontspec) return; // Safety check
   
-  // Debug saved bbox values
+  float fontsize = SoFontSizeElement::get(state);
+  int nrlines = this->string.getNum();
+  
+  // Calculate approximate bounding box based on string content and font size
+  int max_string_length = 0;
+  for (int i = 0; i < nrlines; i++) {
+    SbString str = this->string[i];
+    int len = (int)coin_utf8_validate_length(str.getString());
+    if (len > max_string_length) max_string_length = len;
+  }
+  
+  // Estimate bounding box (these are reasonable approximations)
+  int estimated_width = (int)(max_string_length * fontsize * 0.6f); // Approx 0.6 width-to-height ratio
+  int estimated_height = (int)(nrlines * fontsize * 1.2f); // Approx 1.2 line spacing
+  
+  SbVec2s bbsize(estimated_width, estimated_height);
+  SbVec2s bbmin(0, -(int)(fontsize * 0.2f)); // Slightly below baseline  
+  SbVec2s bbmax(estimated_width, estimated_height - (int)(fontsize * 0.2f));
+  
+  // Debug computed bbox values
   auto env_debug = CoinInternal::getEnvironmentVariable("COIN_DEBUG_TEXT2D");
   if (env_debug.has_value() && (std::atoi(env_debug->c_str()) > 0)) {
     SoDebugError::postInfo("SoText2::GLRender", 
-                          "Saved bbox: bounds=(%d,%d) to (%d,%d), size=(%d,%d)", 
-                          bbox_xmin, bbox_ymin, bbox_xmax, bbox_ymax, (int)bbsize[0], (int)bbsize[1]);
+                          "Fixed bbox: fontsize=%.1f, strings=%d, maxlen=%d, bbox=(%d,%d) to (%d,%d), size=(%d,%d)", 
+                          fontsize, nrlines, max_string_length,
+                          (int)bbmin[0], (int)bbmin[1], (int)bbmax[0], (int)bbmax[1], 
+                          (int)bbsize[0], (int)bbsize[1]);
   }
-
-  const cc_font_specification * fontspec = PRIVATE(this)->cache->getCachedFontspec();
 
   // Render only if bbox not outside cull planes.
   SbBox3f box;
