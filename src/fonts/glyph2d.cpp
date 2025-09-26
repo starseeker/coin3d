@@ -283,22 +283,6 @@ cc_glyph2d_getbitmap(const cc_glyph2d * g, int * size, int * offset)
   offset[0] = g->bitmapoffsetx;
   offset[1] = g->bitmapoffsety;
 
-  // Debug output for bitmap access
-  static int debug_initialized = 0;
-  static int debug_enabled = 0;
-  if (!debug_initialized) {
-    debug_initialized = 1;
-    const char* env = getenv("COIN_DEBUG_TEXT2D");
-    debug_enabled = (env && atoi(env) > 0);
-  }
-  
-  if (debug_enabled) {
-    printf("cc_glyph2d_getbitmap: char=0x%x, bitmapsize=%dx%d, offset=%d,%d, buffer=%p\n",
-           g->c.character, g->bitmapwidth, g->bitmapheight, 
-           g->bitmapoffsetx, g->bitmapoffsety, (void*)g->bitmap);
-    fflush(stdout);
-  }
-
   return g->bitmap;
 }
 

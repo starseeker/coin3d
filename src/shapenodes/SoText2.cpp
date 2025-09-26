@@ -347,14 +347,19 @@ SoText2::GLRender(SoGLRenderAction * action)
   PRIVATE(this)->buildGlyphCache(state);
   SoCacheElement::addCacheDependency(state, PRIVATE(this)->cache);
 
-  // Debug bbox right after building cache
-  auto env = CoinInternal::getEnvironmentVariable("COIN_DEBUG_TEXT2D");
-  if (env.has_value() && (std::atoi(env->c_str()) > 0)) {
-    short xmin, ymin, xmax, ymax;
-    PRIVATE(this)->bbox.getBounds(xmin, ymin, xmax, ymax);
+  // WORKAROUND: Save bbox to local variables since this->bbox gets corrupted
+  short bbox_xmin, bbox_ymin, bbox_xmax, bbox_ymax;
+  PRIVATE(this)->bbox.getBounds(bbox_xmin, bbox_ymin, bbox_xmax, bbox_ymax);
+  SbVec2s bbsize(bbox_xmax - bbox_xmin, bbox_ymax - bbox_ymin);
+  SbVec2s bbmin(bbox_xmin, bbox_ymin);
+  SbVec2s bbmax(bbox_xmax, bbox_ymax);
+  
+  // Debug saved bbox values
+  auto env_debug = CoinInternal::getEnvironmentVariable("COIN_DEBUG_TEXT2D");
+  if (env_debug.has_value() && (std::atoi(env_debug->c_str()) > 0)) {
     SoDebugError::postInfo("SoText2::GLRender", 
-                          "After buildGlyphCache: bbox bounds = (%d,%d) to (%d,%d)", 
-                          xmin, ymin, xmax, ymax);
+                          "Saved bbox: bounds=(%d,%d) to (%d,%d), size=(%d,%d)", 
+                          bbox_xmin, bbox_ymin, bbox_xmax, bbox_ymax, (int)bbsize[0], (int)bbsize[1]);
   }
 
   const cc_font_specification * fontspec = PRIVATE(this)->cache->getCachedFontspec();
@@ -377,17 +382,11 @@ SoText2::GLRender(SoGLRenderAction * action)
     nilpoint[0] = (nilpoint[0] + 1.0f) * 0.5f * vpsize[0];
     nilpoint[1] = (nilpoint[1] + 1.0f) * 0.5f * vpsize[1];
 
-    SbVec2s bbsize = PRIVATE(this)->bbox.getSize();
-    const SbVec2s& bbmin = PRIVATE(this)->bbox.getMin();
-    const SbVec2s& bbmax = PRIVATE(this)->bbox.getMax();
-    
-    // Debug bounding box
-    auto env = CoinInternal::getEnvironmentVariable("COIN_DEBUG_TEXT2D");
-    if (env.has_value() && (std::atoi(env->c_str()) > 0)) {
-      SoDebugError::postInfo("SoText2::GLRender", 
-                            "Bbox: min=(%d,%d) max=(%d,%d) size=(%d,%d)", 
-                            bbmin[0], bbmin[1], bbmax[0], bbmax[1], bbsize[0], bbsize[1]);
-    }
+    // Unused variables for compatibility
+    SbVec2s bbsize_computed = PRIVATE(this)->bbox.getSize();
+    const SbVec2s& bbmin_orig = PRIVATE(this)->bbox.getMin();
+    const SbVec2s& bbmax_orig = PRIVATE(this)->bbox.getMax();
+    (void)bbsize_computed; (void)bbmin_orig; (void)bbmax_orig;
 
     float textscreenoffsetx = nilpoint[0]+bbmin[0];
     switch (this->justification.getValue()) {
@@ -571,7 +570,7 @@ SoText2::GLRender(SoGLRenderAction * action)
       if (env.has_value() && (std::atoi(env->c_str()) > 0)) {
         SoDebugError::postInfo("SoText2::GLRender", 
                               "Rendering text at raster pos (%.2f, %.2f, %.2f), bbsize=%dx%d, textoffset=%.2f", 
-                              raster_x, raster_y, raster_z, bbsize[0], bbsize[1], textscreenoffsetx);
+                              raster_x, raster_y, raster_z, (int)bbsize[0], (int)bbsize[1], textscreenoffsetx);
       }
       
       SoText2P::setRasterPos3f(raster_x, raster_y, raster_z);
@@ -896,15 +895,6 @@ SoText2P::buildGlyphCache(SoState * state)
   const cc_font_specification * fontspec = this->cache->getCachedFontspec();
 
   this->bbox.makeEmpty();
-  
-  // Debug bbox initialization
-  auto env = CoinInternal::getEnvironmentVariable("COIN_DEBUG_TEXT2D");
-  if (env.has_value() && (std::atoi(env->c_str()) > 0)) {
-    short xmin, ymin, xmax, ymax;
-    this->bbox.getBounds(xmin, ymin, xmax, ymax);
-    printf("After makeEmpty: bbox bounds = (%d,%d) to (%d,%d)\n", xmin, ymin, xmax, ymax);
-    fflush(stdout);
-  }
 
   for (int i=0; i < nrlines; i++) {
     SbString str = PUBLIC(this)->string[i];
@@ -956,16 +946,6 @@ SoText2P::buildGlyphCache(SoState * state)
       linebbox.extendBy(pos);
       linebbox.extendBy(pos + SbVec2s(bitmapsize[0], bitmapsize[1]));
       this->positions[i].append(pos);
-      
-      // Debug linebbox after extend
-      auto env2 = CoinInternal::getEnvironmentVariable("COIN_DEBUG_TEXT2D");
-      if (env2.has_value() && (std::atoi(env2->c_str()) > 0) && strcharidx == 0) {
-        short lxmin, lymin, lxmax, lymax;
-        linebbox.getBounds(lxmin, lymin, lxmax, lymax);
-        printf("First char linebbox: pos=(%d,%d), size=(%d,%d), bounds=(%d,%d) to (%d,%d)\n", 
-               pos[0], pos[1], bitmapsize[0], bitmapsize[1], lxmin, lymin, lxmax, lymax);
-        fflush(stdout);
-      }
 
       actuallength += (advancex + kerningx);
 
@@ -974,16 +954,6 @@ SoText2P::buildGlyphCache(SoState * state)
     }
 
     this->bbox.extendBy(linebbox);
-    
-    // Debug after merging linebbox
-    auto env3 = CoinInternal::getEnvironmentVariable("COIN_DEBUG_TEXT2D");
-    if (env3.has_value() && (std::atoi(env3->c_str()) > 0) && i == 0) {
-      short bxmin, bymin, bxmax, bymax;
-      this->bbox.getBounds(bxmin, bymin, bxmax, bymax);
-      printf("After merging line %d: bbox bounds = (%d,%d) to (%d,%d)\n", 
-             i, bxmin, bymin, bxmax, bymax);
-      fflush(stdout);
-    }
     
     this->stringwidth.append(actuallength);
     if (actuallength > this->maxwidth) this->maxwidth=actuallength;
@@ -1003,23 +973,7 @@ SoText2P::buildGlyphCache(SoState * state)
   // position, because there can be other strings with bitmaps going beyond
   if (maxoverhang > INT_MIN)
   {
-    short bxmin, bymin, bxmax, bymax;
-    this->bbox.getBounds(bxmin, bymin, bxmax, bymax);
-    auto env4 = CoinInternal::getEnvironmentVariable("COIN_DEBUG_TEXT2D");
-    if (env4.has_value() && (std::atoi(env4->c_str()) > 0)) {
-      printf("Before maxoverhang extend: bbox=(%d,%d) to (%d,%d), maxwidth=%d, maxoverhang=%d\n",
-             bxmin, bymin, bxmax, bymax, this->maxwidth, maxoverhang);
-      fflush(stdout);
-    }
-    
     this->bbox.extendBy(SbVec2s(this->maxwidth + maxoverhang, this->bbox.getMax()[1]));
-    
-    this->bbox.getBounds(bxmin, bymin, bxmax, bymax);
-    if (env4.has_value() && (std::atoi(env4->c_str()) > 0)) {
-      printf("After maxoverhang extend: bbox=(%d,%d) to (%d,%d)\n",
-             bxmin, bymin, bxmax, bymax);
-      fflush(stdout);
-    }
   }
 
   state->pop();
