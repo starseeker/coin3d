@@ -140,6 +140,34 @@ static float Mitchell_filter(float t)
 }
 #define Mitchell_support (2.0f)
 
+// Filter selection helper function
+static void get_filter_function(SbImageResizeFilter filter, float (**filter_func)(float), float* support)
+{
+  switch (filter) {
+    case SB_IMAGE_RESIZE_FILTER_BELL:
+      *filter_func = bell_filter;
+      *support = bell_support;
+      break;
+    case SB_IMAGE_RESIZE_FILTER_B_SPLINE:
+      *filter_func = B_spline_filter;
+      *support = B_spline_support;
+      break;
+    case SB_IMAGE_RESIZE_FILTER_LANCZOS3:
+      *filter_func = Lanczos3_filter;
+      *support = Lanczos3_support;
+      break;
+    case SB_IMAGE_RESIZE_FILTER_MITCHELL:
+      *filter_func = Mitchell_filter;
+      *support = Mitchell_support;
+      break;
+    default:
+      // Default to Bell filter
+      *filter_func = bell_filter;
+      *support = bell_support;
+      break;
+  }
+}
+
 // Image utility functions
 
 static void get_row(unsigned char* row, const Image* image, int y)
@@ -378,6 +406,11 @@ static void zoom(Image* dst, const Image* src, float (*filterf)(float), float fw
   free_image(tmp);
 }
 
+// Forward declarations
+static void filter_resize_2d(const unsigned char* src, unsigned char* dest,
+                            int width, int height, int components,
+                            int newwidth, int newheight, SbImageResizeFilter filter);
+
 // Fast resize implementation (extracted from SoGLImage.cpp)
 static void fast_resize_2d(const unsigned char* src, unsigned char* dest,
                           int width, int height, int components,
@@ -481,14 +514,24 @@ static void high_quality_resize_2d(const unsigned char* src, unsigned char* dest
                                   int width, int height, int components,
                                   int newwidth, int newheight)
 {
-  // Use high-quality Bell filter from original simage implementation
-  // Bell filter provides excellent quality with reasonable performance
+  // Use Bell filter as default for backward compatibility
+  filter_resize_2d(src, dest, width, height, components, newwidth, newheight, SB_IMAGE_RESIZE_FILTER_BELL);
+}
+
+// Generalized high-quality resize function with filter selection
+static void filter_resize_2d(const unsigned char* src, unsigned char* dest,
+                            int width, int height, int components,
+                            int newwidth, int newheight, SbImageResizeFilter filter)
+{
+  float (*filter_func)(float);
+  float support;
+  get_filter_function(filter, &filter_func, &support);
+  
   Image* srcimg = new_image(width, height, components, const_cast<unsigned char*>(src));
   Image* dstimg = new_image(newwidth, newheight, components, dest);
   
-  // Using the Bell filter as it provides good quality balance
-  // Other available filters: B_spline_filter, Lanczos3_filter, Mitchell_filter
-  zoom(dstimg, srcimg, bell_filter, bell_support);
+  // Apply the selected filter
+  zoom(dstimg, srcimg, filter_func, support);
   
   // Clean up (don't delete the data as it's owned by caller)
   srcimg->data = nullptr;  // Don't delete src data - it belongs to caller
@@ -580,5 +623,43 @@ bool SbImageResize_resize2D_inplace(const unsigned char* src, unsigned char* des
       break;
   }
   
+  return true;
+}
+
+// New filter-based API functions
+
+unsigned char* SbImageResize_resize2D_filter(const unsigned char* src,
+                                            int width, int height, int components,
+                                            int newwidth, int newheight,
+                                            SbImageResizeFilter filter)
+{
+  if (!src || width <= 0 || height <= 0 || components <= 0 || 
+      newwidth <= 0 || newheight <= 0) {
+    return nullptr;
+  }
+  
+  size_t dest_size = (size_t)newwidth * newheight * components;
+  unsigned char* dest = new unsigned char[dest_size];
+  
+  if (!SbImageResize_resize2D_inplace_filter(src, dest, width, height, components, 
+                                            newwidth, newheight, filter)) {
+    delete[] dest;
+    return nullptr;
+  }
+  
+  return dest;
+}
+
+bool SbImageResize_resize2D_inplace_filter(const unsigned char* src, unsigned char* dest,
+                                          int width, int height, int components,
+                                          int newwidth, int newheight,
+                                          SbImageResizeFilter filter)
+{
+  if (!src || !dest || width <= 0 || height <= 0 || components <= 0 || 
+      newwidth <= 0 || newheight <= 0) {
+    return false;
+  }
+  
+  filter_resize_2d(src, dest, width, height, components, newwidth, newheight, filter);
   return true;
 }
