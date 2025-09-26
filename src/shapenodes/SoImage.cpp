@@ -172,7 +172,8 @@
 #include <Inventor/system/gl.h>
 
 #include "nodes/SoSubNodeP.h"
-#include "glue/simage_wrapper.h"
+#include "base/SbImageFormatHandler.h"
+#include "base/SbJpegImageHandler.h"
 
 
 /*!
@@ -880,23 +881,25 @@ SoImage::getImage(SbVec2s & size, int & nc)
       const unsigned char * orgdata = this->image.getValue(orgsize, nc);
       SbVec2s newsize = this->getSize();
 
-      // simage version 1.1.1 has a pretty high quality resize
-      // function. We prefer to use that to avoid using GLU, since
-      // GLU might require a valid GL context for gluScale to work.
-      // Also, there are lots of buggy GLU versions out there.
-      if (simage_wrapper()->available &&
-          simage_wrapper()->versionMatchesAtLeast(1,1,1) &&
-          simage_wrapper()->simage_resize) {
-        unsigned char * result =
-          simage_wrapper()->simage_resize((unsigned char*) orgdata,
-                                          int(orgsize[0]), int(orgsize[1]),
-                                          nc, int(newsize[0]), int(newsize[1]));
-        this->resizedimage->setValue(newsize, nc, result);
-        simage_wrapper()->simage_free_image(result);
-        this->resizedimagevalid = TRUE;
+      // Use high-quality resize from format handler system (restored simage capability)
+      // Initialize format handlers to ensure resize capability is available
+      static bool handlersInitialized = false;
+      if (!handlersInitialized) {
+        auto& registry = SbImageFormatRegistry::getInstance();
+        registry.registerHandler(std::make_unique<SbJpegImageHandler>());
+        handlersInitialized = true;
       }
-      else {
-        // Use simple bilinear resize function instead of GLU
+      
+      auto& registry = SbImageFormatRegistry::getInstance();
+      unsigned char* result = registry.resizeImage((unsigned char*)orgdata,
+                                                  int(orgsize[0]), int(orgsize[1]), nc,
+                                                  int(newsize[0]), int(newsize[1]), true);
+      if (result) {
+        this->resizedimage->setValue(newsize, nc, result);
+        registry.freeImageData(result);
+        this->resizedimagevalid = TRUE;
+      } else {
+        // Fallback to internal simple resize if registry fails
         this->resizedimage->setValue(newsize, nc, NULL);
         const unsigned char * rezdata = this->resizedimage->getValue(newsize, nc);
         simple_image_resize(orgdata, (unsigned char*)rezdata,
