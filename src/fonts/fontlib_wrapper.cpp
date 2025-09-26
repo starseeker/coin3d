@@ -283,8 +283,9 @@ fontstruct_rmfont(int font)
   assert(i < n);
   arrayindex = i;
 
-  // Note: std::string members are automatically destructed
-  // No need for manual string cleanup
+  // Properly destruct std::string members before freeing
+  fs->fontname.~basic_string();
+  fs->requestname.~basic_string();
 
   cc_dict_apply(fs->glyphdict, fontstruct_rmglyph_apply, fs);
   cc_dict_destruct(fs->glyphdict);
@@ -510,6 +511,11 @@ cc_flw_get_font_id(const char * fontname, unsigned int sizey,
   }
 
   fs = (struct cc_flw_font *)malloc(sizeof(struct cc_flw_font));
+  
+  // Properly construct std::string members using placement new
+  new (&fs->fontname) std::string();
+  new (&fs->requestname) std::string();
+  
   fs->nativefonthandle = font;
   fs->defaultfont = font ? FALSE : TRUE;
   fs->complexity = complexity;

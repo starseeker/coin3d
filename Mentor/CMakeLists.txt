@@ -16,8 +16,10 @@ endmacro(add_example)
 add_example(02.1.HelloCone.headless)
 add_example(03.1.Molecule.headless)
 add_example(05.1.FaceSet.headless)
-# NOTE: 06.2.Simple3DText.headless causes segfault - likely requires font files not available in headless mode
-#add_example(06.2.Simple3DText.headless)
+# Text examples with embedded ProFont for reliable headless rendering
+add_example(06.1.Text.headless)
+add_example(06.2.Simple3DText.headless)
+add_example(06.3.Complex3DText.headless)
 add_example(07.1.BasicTexture.headless)
 add_example(11.2.ReadString.headless)
 add_example(13.6.Calculator.headless)

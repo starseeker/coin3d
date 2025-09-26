@@ -1,0 +1,290 @@
+/*
+ *
+ *  Copyright (C) 2000 Silicon Graphics, Inc.  All Rights Reserved. 
+ *
+ *  This library is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  Lesser General Public License for more details.
+ *
+ *  Further, this software is distributed without any warranty that it is
+ *  free of the rightful claim of any third person regarding infringement
+ *  or the like.  Any license provided herein, whether implied or
+ *  otherwise, applies only to this software file.  Patent licenses, if
+ *  any, provided herein do not apply to combinations of this program with
+ *  other software, or any other product whatsoever.
+ * 
+ *  You should have received a copy of the GNU Lesser General Public
+ *  License along with this library; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ *  Contact information: Silicon Graphics, Inc., 1600 Amphitheatre Pkwy,
+ *  Mountain View, CA  94043, or:
+ * 
+ *  http://www.sgi.com 
+ * 
+ *  For further information regarding this notice, see: 
+ * 
+ *  http://oss.sgi.com/projects/GenInfo/NoticeExplan/
+ *
+ */
+
+/*--------------------------------------------------------------
+ *  This is a headless adaptation from the Inventor Mentor,
+ *  chapter 6, example 3.
+ *
+ *  This example renders beveled text with complex materials.
+ *  Uses embedded ProFont for reliable headless rendering.
+ *------------------------------------------------------------*/
+
+#include <iostream>
+#include <memory>
+
+// OSMesa headers for headless rendering
+#ifdef __has_include
+  #if __has_include(<OSMesa/osmesa.h>)
+    #include <OSMesa/osmesa.h>
+    #include <OSMesa/gl.h>
+    #define HAVE_OSMESA
+  #endif
+#endif
+
+// Coin3D headers
+#include <Inventor/SoDB.h>
+#include <Inventor/SoInteraction.h>
+#include <Inventor/SoOffscreenRenderer.h>
+#include <Inventor/SbViewportRegion.h>
+
+#include <Inventor/nodes/SoFont.h>
+#include <Inventor/nodes/SoGroup.h>
+#include <Inventor/nodes/SoLinearProfile.h>
+#include <Inventor/nodes/SoMaterial.h>
+#include <Inventor/nodes/SoMaterialBinding.h>
+#include <Inventor/nodes/SoPerspectiveCamera.h>
+#include <Inventor/nodes/SoProfileCoordinate2.h>
+#include <Inventor/nodes/SoSeparator.h>
+#include <Inventor/nodes/SoText3.h>
+#include <Inventor/nodes/SoTranslation.h>
+
+#ifdef HAVE_OSMESA
+
+// OSMesa context wrapper
+struct OSMesaContextData {
+    OSMesaContext context;
+    std::unique_ptr<unsigned char[]> buffer;
+    int width, height;
+    
+    OSMesaContextData(int w, int h) : width(w), height(h) {
+        context = OSMesaCreateContextExt(OSMESA_RGBA, 16, 0, 0, NULL);
+        if (context) {
+            buffer = std::make_unique<unsigned char[]>(width * height * 4);
+        }
+    }
+    
+    ~OSMesaContextData() {
+        if (context) OSMesaDestroyContext(context);
+    }
+    
+    bool makeCurrent() {
+        if (!context || !buffer) return false;
+        
+        bool result = OSMesaMakeCurrent(context, buffer.get(), GL_UNSIGNED_BYTE, width, height);
+        if (result) {
+            // Set Y-axis orientation for proper image output
+            OSMesaPixelStore(OSMESA_Y_UP, 0);
+        }
+        return result;
+    }
+    
+    bool isValid() const { return context != nullptr; }
+    
+    const unsigned char* getBuffer() const { return buffer.get(); }
+};
+
+// OSMesa Context Manager for Coin3D
+class OSMesaContextManager : public SoDB::ContextManager {
+public:
+    virtual void* createOffscreenContext(unsigned int width, unsigned int height) override {
+        auto* ctx = new OSMesaContextData(width, height);
+        return ctx->isValid() ? ctx : (delete ctx, nullptr);
+    }
+    
+    virtual SbBool makeContextCurrent(void* context) override {
+        return context && static_cast<OSMesaContextData*>(context)->makeCurrent() ? TRUE : FALSE;
+    }
+    
+    virtual void restorePreviousContext(void* context) override {
+        // OSMesa doesn't need context stacking for single-threaded use
+        (void)context;
+    }
+    
+    virtual void destroyContext(void* context) override {
+        delete static_cast<OSMesaContextData*>(context);
+    }
+};
+
+// Save RGBA buffer to RGB file using built-in SGI RGB format
+bool saveRGB(const std::string& filename, SoOffscreenRenderer* renderer) {
+    SbBool result = renderer->writeToRGB(filename.c_str());
+    if (result) {
+        std::cout << "RGB saved to: " << filename << std::endl;
+        return true;
+    } else {
+        std::cerr << "Error: Could not save RGB file " << filename << std::endl;
+        return false;
+    }
+}
+
+#endif // HAVE_OSMESA
+
+int
+main(int argc, char **argv)
+{
+#ifdef HAVE_OSMESA
+    // Initialize Coin3D with OSMesa context management
+    std::unique_ptr<OSMesaContextManager> context_manager = std::make_unique<OSMesaContextManager>();
+    SoDB::init(context_manager.get());
+    SoInteraction::init();
+    
+    std::cout << "Complex 3D Text - Headless OSMesa Version" << std::endl;
+
+    SoGroup *root = new SoGroup;
+    root->ref();
+
+    // Set up camera 
+    SoPerspectiveCamera	*myCamera = new SoPerspectiveCamera;
+    myCamera->position.setValue(0, -(argc - 1) / 2, 10);
+    myCamera->nearDistance.setValue(5.0);
+    myCamera->farDistance.setValue(15.0);
+    root->addChild(myCamera);
+
+    // Let's make the front of the text white, 
+    // and the sides and back shiny yellow
+    SoMaterial *myMaterial = new SoMaterial;
+    SbColor colors[3];
+    // diffuse
+    colors[0].setValue(1, 1, 1);
+    colors[1].setValue(1, 1, 0);
+    colors[2].setValue(1, 1, 0);
+    myMaterial->diffuseColor.setValues(0, 3, colors);
+
+    // specular
+    colors[0].setValue(1, 1, 1);
+    // Note: Inventor 2.1 doesn't support multiple specular colors.
+    /* 
+      colors[1].setValue(1, 1, 0);
+      colors[2].setValue(1, 1, 0);
+      myMaterial->specularColor.setValues(0, 3, colors);
+    */
+    myMaterial->specularColor.setValue(colors[0]);
+    myMaterial->shininess.setValue(.1);
+    root->addChild(myMaterial);
+
+    // Choose ProFont for reliable headless rendering
+    SoFont *myFont = new SoFont;
+    myFont->name.setValue("ProFont");
+    root->addChild(myFont);
+
+    // Specify a beveled cross-section for the text
+    SoProfileCoordinate2 *myProfileCoords = 
+             new SoProfileCoordinate2;
+    SbVec2f coords[4];
+    coords[0].setValue( .00, .00);
+    coords[1].setValue( .25, .25);
+    coords[2].setValue(1.25, .25);
+    coords[3].setValue(1.50, .00);
+    myProfileCoords->point.setValues(0, 4, coords);
+    root->addChild(myProfileCoords);
+
+    SoLinearProfile *myLinearProfile = new SoLinearProfile;
+    int32_t	index[4] ;
+    index[0] = 0;
+    index[1] = 1;
+    index[2] = 2;
+    index[3] = 3;
+    myLinearProfile->index.setValues(0, 4, index);
+    root->addChild(myLinearProfile);
+
+    // Set the material binding to PER_PART
+    SoMaterialBinding *myMaterialBinding = new SoMaterialBinding;
+    myMaterialBinding->
+             value.setValue(SoMaterialBinding::PER_PART);
+    root->addChild(myMaterialBinding);
+
+    // Left side: Beveled text with complex profile
+    SoSeparator *leftSide = new SoSeparator;
+    SoTranslation *leftTranslate = new SoTranslation;
+    leftTranslate->translation.setValue(-3, 0, 0);  // Move to left
+    leftSide->addChild(leftTranslate);
+    root->addChild(leftSide);
+
+    // Add the beveled text to left side
+    SoText3 *beveledText = new SoText3;
+    beveledText->string.setValue("Beveled Text");
+    beveledText->justification.setValue(SoText3::CENTER);
+    beveledText->parts.setValue(SoText3::ALL);
+    leftSide->addChild(beveledText);
+
+    // Right side: Simple extruded text for comparison
+    SoSeparator *rightSide = new SoSeparator;
+    SoTranslation *rightTranslate = new SoTranslation;
+    rightTranslate->translation.setValue(3, 0, 0);  // Move to right
+    rightSide->addChild(rightTranslate);
+    root->addChild(rightSide);
+
+    // Simple material for right side
+    SoMaterial *simpleMaterial = new SoMaterial;
+    simpleMaterial->diffuseColor.setValue(0.7, 0.7, 1.0);  // Light blue
+    rightSide->addChild(simpleMaterial);
+
+    // Add simple extruded text to right side (no profile, simpler appearance)
+    SoText3 *simpleText = new SoText3;
+    simpleText->string.setValue("Simple Text");
+    simpleText->justification.setValue(SoText3::CENTER);
+    simpleText->parts.setValue(SoText3::ALL);
+    rightSide->addChild(simpleText);
+
+    // Set up offscreen renderer
+    const int width = 640;
+    const int height = 480;
+    SbViewportRegion viewport(width, height);
+    SoOffscreenRenderer renderer(viewport);
+    renderer.setBackgroundColor(SbColor(0.2f, 0.2f, 0.2f)); // Gray background
+    
+    // Make camera see everything
+    myCamera->viewAll(root, viewport);
+    
+    // Render the scene
+    SbBool success = renderer.render(root);
+    
+    if (success) {
+        // Determine output filename
+        std::string filename = "Complex3DText.rgb";
+        if (argc > 1) {
+            filename = argv[1];
+        }
+        
+        // Save to RGB file using built-in SGI RGB format
+        if (saveRGB(filename, &renderer)) {
+            std::cout << "Successfully rendered complex 3D text scene to " << filename << std::endl;
+        } else {
+            std::cerr << "Error saving RGB file" << std::endl;
+            root->unref();
+            return 1;
+        }
+    } else {
+        std::cerr << "Error: Failed to render scene" << std::endl;
+        root->unref();
+        return 1;
+    }
+    
+    // Clean up
+    root->unref();
+    
+    return 0;
+    
+#else
+    std::cerr << "Error: OSMesa support not available. Cannot run headless rendering." << std::endl;
+    return 1;
+#endif
+}

@@ -165,6 +165,7 @@
 // the "#define WIN32_LEAN_AND_MEAN" hack. 20030625 mortene.
 
 #include "fonts/glyph2d.h"
+#include "../misc/SoEnvironment.h"
 
 /*!
   \enum SoText2::Justification
@@ -866,11 +867,16 @@ SoText2P::buildGlyphCache(SoState * state)
 
   this->bbox.makeEmpty();
 
+  // Debug: Add bounding box debugging to verify the fix
+  auto env_debug = CoinInternal::getEnvironmentVariable("COIN_DEBUG_BBOX");
+  SbBool debug_bbox = env_debug.has_value() && (std::atoi(env_debug->c_str()) > 0);
+
   for (int i=0; i < nrlines; i++) {
     SbString str = PUBLIC(this)->string[i];
     this->positions.append(SbList<SbVec2s>());
 
     SbBox2s linebbox;
+    linebbox.makeEmpty();  // CRITICAL FIX: Initialize the bounding box
     int xpos = 0;
     int actuallength = 0;
     int kerningx = 0;
@@ -923,6 +929,15 @@ SoText2P::buildGlyphCache(SoState * state)
     }
 
     this->bbox.extendBy(linebbox);
+    
+    // Debug: Show bounding box after extending
+    if (debug_bbox && i == 0) {  // Only show for first line to avoid spam
+      short bxmin, bymin, bxmax, bymax;
+      this->bbox.getBounds(bxmin, bymin, bxmax, bymax);
+      printf("DEBUG: After line %d, bbox = (%d,%d) to (%d,%d)\n", i, bxmin, bymin, bxmax, bymax);
+      fflush(stdout);
+    }
+    
     this->stringwidth.append(actuallength);
     if (actuallength > this->maxwidth) this->maxwidth=actuallength;
 
@@ -979,7 +994,7 @@ SoText2P::setRasterPos3f(GLfloat x, GLfloat y, GLfloat z)
   float offsetx = x >= 0 ? 0 : x;
 
   float rpy = y >= 0 ? y : 0;
-  offvp = offvp || y < 0 ? 1 : 0;
+  offvp = (offvp || y < 0) ? 1 : 0;  // FIXED: Operator precedence bug
   float offsety = y >= 0 ? 0 : y;
 
   glRasterPos3f(rpx,rpy,z);

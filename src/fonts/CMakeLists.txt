@@ -1,7 +1,6 @@
 # source files
 set(COIN_FONTS_FILES
 	fontlib_wrapper.cpp
-	coretext.cpp
 	freetype.cpp
 	profont_data.cpp
 	fontspec.cpp
@@ -23,8 +22,6 @@ set(COIN_FONTS_INTERNAL_FILES
 	profont_data.cpp
 	fontspec.h
 	fontspec.cpp
-	coretext.h
-	coretext.cpp
 	glyph.h
 	glyph.cpp
 	glyph2d.h
