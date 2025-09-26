@@ -33,6 +33,7 @@ set(COIN_BASE_FILES
 	SbDPPlane.cpp
 	SbDPRotation.cpp
 	SbHeap.cpp
+	SbFont.cpp
 	SbImage.cpp
 	SbImageFormatHandler.cpp
 	SbImageResize.cpp

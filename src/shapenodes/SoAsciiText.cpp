@@ -168,7 +168,7 @@
 #include <Inventor/threads/SbMutex.h>
 
 #include "caches/SoGlyphCache.h"
-#include "fonts/glyph3d.h"
+#include "fonts/sbfont_bridge.h"
 #include "nodes/SoSubNodeP.h"
 
 // *************************************************************************
@@ -394,7 +394,7 @@ SoAsciiText::GLRender(SoGLRenderAction * action)
     }
 
     SbString str = this->string[i];
-    cc_glyph3d * prevglyph = NULL;
+    sb_glyph3d * prevglyph = NULL;
     const char * p = str.getString();
     size_t length = coin_utf8_validate_length(p);
     // No assertion as zero length is handled correctly (results in a new line)
@@ -405,22 +405,22 @@ SoAsciiText::GLRender(SoGLRenderAction * action)
       glyphidx = coin_utf8_get_char(p);
       p = coin_utf8_next_char(p);
 
-      cc_glyph3d * glyph = cc_glyph3d_ref(glyphidx, fontspec);
+      sb_glyph3d * glyph = sb_glyph3d_ref(glyphidx, fontspec);
 
       // Get kerning
       if (strcharidx > 0) {
         float kerningx, kerningy;
-        cc_glyph3d_getkerning(prevglyph, glyph, &kerningx, &kerningy);
+        sb_glyph3d_getkerning(prevglyph, glyph, &kerningx, &kerningy);
         xpos += kerningx * stretchfactor * fontspec->size;
       }
 
       if (prevglyph) {
-        cc_glyph3d_unref(prevglyph);
+        sb_glyph3d_unref(prevglyph);
       }
       prevglyph = glyph;
 
-      const SbVec2f * coords = (SbVec2f *) cc_glyph3d_getcoords(glyph);
-      const int * ptr = cc_glyph3d_getfaceindices(glyph);
+      const SbVec2f * coords = (SbVec2f *) sb_glyph3d_getcoords(glyph);
+      const int * ptr = sb_glyph3d_getfaceindices(glyph);
 
       while (*ptr >= 0) {
         SbVec2f v0, v1, v2;
@@ -449,11 +449,11 @@ SoAsciiText::GLRender(SoGLRenderAction * action)
       }
 
       float advancex, advancey;
-      cc_glyph3d_getadvance(glyph, &advancex, &advancey);
+      sb_glyph3d_getadvance(glyph, &advancex, &advancey);
       xpos += (advancex * stretchfactor * fontspec->size);
     }
     if (prevglyph) {
-      cc_glyph3d_unref(prevglyph);
+      sb_glyph3d_unref(prevglyph);
       prevglyph = NULL;
     }
 
@@ -494,16 +494,16 @@ SoAsciiText::getPrimitiveCount(SoGetPrimitiveCountAction * action)
 	glyphidx = coin_utf8_get_char(p);
 	p = coin_utf8_next_char(p);
 
-        cc_glyph3d * glyph = cc_glyph3d_ref(glyphidx, fontspec);
+        sb_glyph3d * glyph = sb_glyph3d_ref(glyphidx, fontspec);
 
         int cnt = 0;
-        const int * ptr = cc_glyph3d_getfaceindices(glyph);
+        const int * ptr = sb_glyph3d_getfaceindices(glyph);
         while (*ptr++ >= 0) 
           cnt++;
 
         numtris += cnt / 3;
         
-        cc_glyph3d_unref(glyph);
+        sb_glyph3d_unref(glyph);
       }
     }
     action->addNumTriangles(numtris);
@@ -537,7 +537,7 @@ void SoAsciiTextP::calculateStringStretch(const int i, const cc_font_specificati
   // Approximate the stretchfactor
   stretchfactor = master->width[i] / this->stringwidths[i];
 
-  cc_glyph3d * prevglyph = NULL;
+  sb_glyph3d * prevglyph = NULL;
   float originalmaxx = 0.0f;
   float originalmaxxpos = 0.0f;
   float originalxpos = 0.0f;
@@ -557,13 +557,13 @@ void SoAsciiTextP::calculateStringStretch(const int i, const cc_font_specificati
     glyphidx = coin_utf8_get_char(p);
     p = coin_utf8_next_char(p);
 
-    cc_glyph3d * glyph = cc_glyph3d_ref(glyphidx, fontspec);
-    float glyphwidth = cc_glyph3d_getwidth(glyph) * fontspec->size;
+    sb_glyph3d * glyph = sb_glyph3d_ref(glyphidx, fontspec);
+    float glyphwidth = sb_glyph3d_getwidth(glyph) * fontspec->size;
 
     // Adjust the distance between neighbouring characters
     if (prevglyph) {
       float kerningx, kerningy;
-      cc_glyph3d_getkerning(prevglyph, glyph, &kerningx, &kerningy);
+      sb_glyph3d_getkerning(prevglyph, glyph, &kerningx, &kerningy);
       originalxpos += kerningx * fontspec->size;
     }
 
@@ -579,12 +579,12 @@ void SoAsciiTextP::calculateStringStretch(const int i, const cc_font_specificati
 
     // Advance to the next character in the x-direction
     float advancex, advancey;
-    cc_glyph3d_getadvance(glyph, &advancex, &advancey);
+    sb_glyph3d_getadvance(glyph, &advancex, &advancey);
     originalxpos += advancex * fontspec->size;
 
     // Remove the previous glyph from memory
     if (prevglyph) {
-      cc_glyph3d_unref(prevglyph);
+      sb_glyph3d_unref(prevglyph);
     }
 
     // Make ready for next run
@@ -592,7 +592,7 @@ void SoAsciiTextP::calculateStringStretch(const int i, const cc_font_specificati
   }
 
   // Unreference the last glyph
-  cc_glyph3d_unref(prevglyph);
+  sb_glyph3d_unref(prevglyph);
   prevglyph = NULL;
   
   // Calculate the accurate stretchfactor and the width of the
@@ -737,7 +737,7 @@ SoAsciiText::generatePrimitives(SoAction * action)
     }
     
     SbString str = this->string[i];
-    cc_glyph3d * prevglyph = NULL;
+    sb_glyph3d * prevglyph = NULL;
     const char * p = str.getString();
     size_t length = coin_utf8_validate_length(p);
     // No assertion as zero length is handled correctly (results in a new line)
@@ -748,23 +748,23 @@ SoAsciiText::generatePrimitives(SoAction * action)
       glyphidx = coin_utf8_get_char(p);
       p = coin_utf8_next_char(p);
 
-      cc_glyph3d * glyph = cc_glyph3d_ref(glyphidx, fontspec);
+      sb_glyph3d * glyph = sb_glyph3d_ref(glyphidx, fontspec);
       
       // Get kerning
       if (strcharidx > 0) {
         float kerningx, kerningy;
-        cc_glyph3d_getkerning(prevglyph, glyph, &kerningx, &kerningy);
+        sb_glyph3d_getkerning(prevglyph, glyph, &kerningx, &kerningy);
         xpos += kerningx * stretchfactor * fontspec->size;
       }
       if (prevglyph) {
-        cc_glyph3d_unref(prevglyph);
+        sb_glyph3d_unref(prevglyph);
       }
 
       prevglyph = glyph;
       detail.setCharacterIndex(strcharidx);
 
-      const SbVec2f * coords = (SbVec2f *) cc_glyph3d_getcoords(glyph);
-      const int * ptr = cc_glyph3d_getfaceindices(glyph);
+      const SbVec2f * coords = (SbVec2f *) sb_glyph3d_getcoords(glyph);
+      const int * ptr = sb_glyph3d_getfaceindices(glyph);
 
       while (*ptr >= 0) {
         SbVec2f v0, v1, v2;
@@ -794,12 +794,12 @@ SoAsciiText::generatePrimitives(SoAction * action)
         this->shapeVertex(&vertex);
       }
       float advancex, advancey;
-      cc_glyph3d_getadvance(glyph, &advancex, &advancey);
+      sb_glyph3d_getadvance(glyph, &advancex, &advancey);
       xpos += (advancex * stretchfactor * fontspec->size);
     }
     ypos -= fontspec->size * this->spacing.getValue();
     if (prevglyph) {
-      cc_glyph3d_unref(prevglyph);
+      sb_glyph3d_unref(prevglyph);
       prevglyph = NULL;
     }
   }
@@ -871,7 +871,7 @@ SoAsciiTextP::setUpGlyphs(SoState * state, SoAsciiText * textnode)
   float kerningy = 0;
   float advancex = 0;
   float advancey = 0;
-  cc_glyph3d * prevglyph = NULL;
+  sb_glyph3d * prevglyph = NULL;
 
   for (int i = 0; i < textnode->string.getNum(); i++) {
     float stringwidth = 0.0f;
@@ -887,22 +887,23 @@ SoAsciiTextP::setUpGlyphs(SoState * state, SoAsciiText * textnode)
       glyphidx = coin_utf8_get_char(p);
       p = coin_utf8_next_char(p);
 
-      cc_glyph3d * glyph = cc_glyph3d_ref(glyphidx, fontspecptr);
-      this->cache->addGlyph(glyph);
+      sb_glyph3d * glyph = sb_glyph3d_ref(glyphidx, fontspecptr);
+      // Cache disabled for SbFont migration - optimization can be re-added later
+      // this->cache->addGlyph(glyph);
       assert(glyph);
 
-      maxbbox = cc_glyph3d_getboundingbox(glyph); // Get max height
+      maxbbox = sb_glyph3d_getboundingbox(glyph); // Get max height
       this->maxglyphbbox.extendBy(SbVec3f(0, maxbbox[0] * fontspecptr->size, 0));
       this->maxglyphbbox.extendBy(SbVec3f(0, maxbbox[1] * fontspecptr->size, 0));
 
       // FIXME: Shouldn't it be the 'advance' value be stored in this
       // list?  This data is only accessed via the public 'getWidth()'
       // method. (20031002 handegar)
-      this->glyphwidths.append(cc_glyph3d_getwidth(glyph));
+      this->glyphwidths.append(sb_glyph3d_getwidth(glyph));
    
       if (strcharidx > 0) 
-        cc_glyph3d_getkerning(prevglyph, glyph, &kerningx, &kerningy);          
-      cc_glyph3d_getadvance(glyph, &advancex, &advancey);
+        sb_glyph3d_getkerning(prevglyph, glyph, &kerningx, &kerningy);          
+      sb_glyph3d_getadvance(glyph, &advancex, &advancey);
 
       stringwidth += (advancex + kerningx) * fontspecptr->size;
 
@@ -911,7 +912,7 @@ SoAsciiTextP::setUpGlyphs(SoState * state, SoAsciiText * textnode)
 
     if (prevglyph) {
       // Have to remove the appended advance and add the last character to the calculated with
-      stringwidth += (cc_glyph3d_getwidth(prevglyph) - advancex) * fontspecptr->size;
+      stringwidth += (sb_glyph3d_getwidth(prevglyph) - advancex) * fontspecptr->size;
       prevglyph = NULL; // To make sure the next line starts with blank sheets
     }
 

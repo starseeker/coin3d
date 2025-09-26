@@ -81,7 +81,15 @@
 #include "threads/threadsutilp.h"
 #include "fonts/common.h"
 #include "fonts/fontlib_wrapper.h"
-#include "fonts/defaultfonts.h"
+//    #include "fonts/defaultfonts.h"  // Removed - using SbFont system now
+
+// Stub implementations for removed default font functions
+static const float * stub_coords[] = { NULL };
+static const int * stub_indices[] = { NULL };
+
+static inline const float ** coin_default3dfont_get_coords(void) { return stub_coords; }
+static inline const int ** coin_default3dfont_get_faceidx(void) { return stub_indices; }
+static inline const int ** coin_default3dfont_get_edgeidx(void) { return stub_indices; }
 
 class SoGlyphP {
 public:

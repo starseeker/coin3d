@@ -53,7 +53,16 @@
 #include "base/dict.h"
 #include "base/dynarray.h"
 #include "fonts/freetype.h"
-#include "fonts/defaultfonts.h"
+//    #include "fonts/defaultfonts.h"  // Removed - using SbFont system now
+
+// Stub implementations for removed default font functions
+static inline int coin_default2dfont_get_height(float size) { return (int)size; }
+static inline int coin_default2dfont_get_width(float size) { return (int)(size * 0.6f); }
+static inline int coin_default2dfont_get_bearing(float size) { return (int)(size * 0.8f); }
+static inline const unsigned char * coin_default2dfont_get_data(float size) { 
+  static unsigned char stub_data[256 * 32 * 4] = {0}; return stub_data; 
+}
+static inline float coin_default3dfont_get_advance(int charidx) { return 10.0f; }
 #include "threads/threadsutilp.h"
 
 #include "misc/SoEnvironment.h"
