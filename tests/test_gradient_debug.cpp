@@ -224,8 +224,6 @@ void analyzePixels(const unsigned char* buffer, int width, int height, SoOffscre
 
 #endif // HAVE_OSMESA
 
-} // namespace GradientDebug
-
 int main() {
     using namespace GradientDebug;
     

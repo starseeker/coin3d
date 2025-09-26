@@ -27,7 +27,7 @@
 #include <Inventor/nodes/SoMaterial.h>
 #include <Inventor/SbViewportRegion.h>
 
-#include "../../src/glue/test_utils.h""
+#include "test_utils.h"
 
 namespace SimpleDebug {
 

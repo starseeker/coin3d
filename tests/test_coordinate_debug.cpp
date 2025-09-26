@@ -26,10 +26,6 @@
 #include <Inventor/nodes/SoMaterialBinding.h>
 #include <Inventor/SbViewportRegion.h>
 
-#include "../../src/glue/svpng.h"
-
-namespace CoordinateDebug {
-
 #ifdef HAVE_OSMESA
 
 struct OSMesaContextData {
@@ -198,24 +194,16 @@ SoSeparator* createCornerTestScene() {
     return root;
 }
 
-bool savePNG(const std::string& filename, const unsigned char* buffer, int width, int height, int components) {
-    FILE* file = fopen(filename.c_str(), "wb");
-    if (!file) return false;
-    
-    if (components == 3) {
-        svpng(file, width, height, buffer, 0);
+// Save RGBA buffer to RGB file using built-in SGI RGB format
+bool saveRGB(const std::string& filename, SoOffscreenRenderer* renderer) {
+    SbBool result = renderer->writeToRGB(filename.c_str());
+    if (result) {
+        std::cout << "RGB saved to: " << filename << std::endl;
+        return true;
     } else {
-        std::unique_ptr<unsigned char[]> rgb_data(new unsigned char[width * height * 3]);
-        for (int i = 0; i < width * height; i++) {
-            rgb_data[i * 3 + 0] = buffer[i * components + 0]; // R
-            rgb_data[i * 3 + 1] = buffer[i * components + 1]; // G 
-            rgb_data[i * 3 + 2] = buffer[i * components + 2]; // B
-        }
-        svpng(file, width, height, rgb_data.get(), 0);
+        std::cerr << "Error: Could not save RGB file " << filename << std::endl;
+        return false;
     }
-    
-    fclose(file);
-    return true;
 }
 
 void analyzeCorners(const unsigned char* buffer, int width, int height, int components) {
@@ -272,10 +260,7 @@ void analyzeCorners(const unsigned char* buffer, int width, int height, int comp
 
 #endif // HAVE_OSMESA
 
-} // namespace CoordinateDebug
-
 int main() {
-    using namespace CoordinateDebug;
     
     SimpleTest::TestRunner runner;
     
@@ -313,9 +298,9 @@ int main() {
         
         analyzeCorners(buffer, 256, 256, 3);
         
-        if (!savePNG(filename, buffer, 256, 256, 3)) {
+        if (!saveRGB(filename, &renderer)) {
             scene->unref();
-            runner.endTest(false, "Failed to save PNG");
+            runner.endTest(false, "Failed to save RGB");
             return runner.getSummary();
         }
         
