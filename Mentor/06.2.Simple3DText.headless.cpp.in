@@ -1,0 +1,300 @@
+/*
+ *
+ *  Copyright (C) 2000 Silicon Graphics, Inc.  All Rights Reserved. 
+ *
+ *  This library is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  Lesser General Public License for more details.
+ *
+ *  Further, this software is distributed without any warranty that it is
+ *  free of the rightful claim of any third person regarding infringement
+ *  or the like.  Any license provided herein, whether implied or
+ *  otherwise, applies only to this software file.  Patent licenses, if
+ *  any, provided herein do not apply to combinations of this program with
+ *  other software, or any other product whatsoever.
+ * 
+ *  You should have received a copy of the GNU Lesser General Public
+ *  License along with this library; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ *  Contact information: Silicon Graphics, Inc., 1600 Amphitheatre Pkwy,
+ *  Mountain View, CA  94043, or:
+ * 
+ *  http://www.sgi.com 
+ * 
+ *  For further information regarding this notice, see: 
+ * 
+ *  http://oss.sgi.com/projects/GenInfo/NoticeExplan/
+ *
+ */
+
+/*--------------------------------------------------------------
+ *  This is a headless adaptation from the Inventor Mentor,
+ *  chapter 6, example 2.
+ *
+ *  This example renders a globe and uses 3D text to label the
+ *  continents Africa and Asia. Uses embedded ProFont for reliable headless rendering.
+ *------------------------------------------------------------*/
+
+#include <iostream>
+#include <memory>
+
+// OSMesa headers for headless rendering
+#ifdef __has_include
+  #if __has_include(<OSMesa/osmesa.h>)
+    #include <OSMesa/osmesa.h>
+    #include <OSMesa/gl.h>
+    #define HAVE_OSMESA
+  #endif
+#endif
+
+// Coin3D headers
+#include <Inventor/SoDB.h>
+#include <Inventor/SoInteraction.h>
+#include <Inventor/SoOffscreenRenderer.h>
+#include <Inventor/SbViewportRegion.h>
+#include <Inventor/SoInput.h>
+#include <Inventor/errors/SoDebugError.h>
+
+#include <Inventor/nodes/SoComplexity.h>
+#include <Inventor/nodes/SoFont.h>
+#include <Inventor/nodes/SoGroup.h>
+#include <Inventor/nodes/SoMaterial.h>
+#include <Inventor/nodes/SoMaterialBinding.h>
+#include <Inventor/nodes/SoSeparator.h>
+#include <Inventor/nodes/SoSphere.h>
+#include <Inventor/nodes/SoText3.h>
+#include <Inventor/nodes/SoTexture2.h>
+#include <Inventor/nodes/SoTransform.h>
+#include <Inventor/nodes/SoTranslation.h>
+
+#ifdef HAVE_OSMESA
+
+// OSMesa context wrapper
+struct OSMesaContextData {
+    OSMesaContext context;
+    std::unique_ptr<unsigned char[]> buffer;
+    int width, height;
+    
+    OSMesaContextData(int w, int h) : width(w), height(h) {
+        context = OSMesaCreateContextExt(OSMESA_RGBA, 16, 0, 0, NULL);
+        if (context) {
+            buffer = std::make_unique<unsigned char[]>(width * height * 4);
+        }
+    }
+    
+    ~OSMesaContextData() {
+        if (context) OSMesaDestroyContext(context);
+    }
+    
+    bool makeCurrent() {
+        if (!context || !buffer) return false;
+        
+        bool result = OSMesaMakeCurrent(context, buffer.get(), GL_UNSIGNED_BYTE, width, height);
+        if (result) {
+            // Set Y-axis orientation for proper image output
+            OSMesaPixelStore(OSMESA_Y_UP, 0);
+        }
+        return result;
+    }
+    
+    bool isValid() const { return context != nullptr; }
+    
+    const unsigned char* getBuffer() const { return buffer.get(); }
+};
+
+// OSMesa Context Manager for Coin3D
+class OSMesaContextManager : public SoDB::ContextManager {
+public:
+    virtual void* createOffscreenContext(unsigned int width, unsigned int height) override {
+        auto* ctx = new OSMesaContextData(width, height);
+        return ctx->isValid() ? ctx : (delete ctx, nullptr);
+    }
+    
+    virtual SbBool makeContextCurrent(void* context) override {
+        return context && static_cast<OSMesaContextData*>(context)->makeCurrent() ? TRUE : FALSE;
+    }
+    
+    virtual void restorePreviousContext(void* context) override {
+        // OSMesa doesn't need context stacking for single-threaded use
+        (void)context;
+    }
+    
+    virtual void destroyContext(void* context) override {
+        delete static_cast<OSMesaContextData*>(context);
+    }
+};
+
+// Save RGBA buffer to RGB file using built-in SGI RGB format
+bool saveRGB(const std::string& filename, SoOffscreenRenderer* renderer) {
+    SbBool result = renderer->writeToRGB(filename.c_str());
+    if (result) {
+        std::cout << "RGB saved to: " << filename << std::endl;
+        return true;
+    } else {
+        std::cerr << "Error: Could not save RGB file " << filename << std::endl;
+        return false;
+    }
+}
+
+#endif // HAVE_OSMESA
+
+int
+main(int argc, char **argv)
+{
+#ifdef HAVE_OSMESA
+    // Initialize Coin3D with OSMesa context management
+    std::unique_ptr<OSMesaContextManager> context_manager = std::make_unique<OSMesaContextManager>();
+    SoDB::init(context_manager.get());
+    SoInteraction::init();
+    
+    std::cout << "Simple 3D Text - Headless OSMesa Version" << std::endl;
+
+    SoGroup *root = new SoGroup;
+    root->ref();
+
+    // Choose ProFont for reliable headless rendering
+    SoFont *myFont = new SoFont;
+    myFont->name.setValue("ProFont");
+    myFont->size.setValue(.2);
+    root->addChild(myFont);
+
+    // We'll color the front of the text white, and the sides 
+    // dark grey. So use a materialBinding of PER_PART and
+    // two diffuseColor values in the material node.
+    SoMaterial        *myMaterial = new SoMaterial;
+    SoMaterialBinding *myBinding = new SoMaterialBinding;
+    myMaterial->diffuseColor.set1Value(0,SbColor(1,1,1));
+    myMaterial->diffuseColor.set1Value(1,SbColor(.1,.1,.1));
+    myBinding->value = SoMaterialBinding::PER_PART;
+    root->addChild(myMaterial);
+    root->addChild(myBinding);
+
+    // Left side: Attempt to load textured sphere (with fallback to untextured)
+    SoSeparator *leftSide = new SoSeparator;
+    SoTranslation *leftTranslate = new SoTranslation;
+    leftTranslate->translation.setValue(-2.0, 0, 0);  // Move to left
+    leftSide->addChild(leftTranslate);
+    root->addChild(leftSide);
+
+    SoSeparator *texturedSphereSep = new SoSeparator;
+    SoComplexity *texturedComplexity = new SoComplexity;
+    texturedComplexity->value = 0.55;
+    leftSide->addChild(texturedSphereSep);
+
+    // Try to add texture from Mentor/data/globe.rgb (if provided by user)
+    // Will gracefully fall back to untextured sphere if file not found
+    // Currently commented out due to texture loading issues in headless environment
+    // SoInput::addDirectoryFirst("./Mentor/data");
+    // SoTexture2 *myTexture2 = new SoTexture2;
+    // texturedSphereSep->addChild(myTexture2);
+    // myTexture2->filename = "globe.rgb";
+
+    texturedSphereSep->addChild(texturedComplexity);
+    texturedSphereSep->addChild(new SoSphere);
+
+    // Add Text3 for AFRICA on left sphere
+    SoSeparator *africaLeftSep = new SoSeparator;
+    SoTransform *africaLeftTransform = new SoTransform;
+    SoText3 *africaLeftText = new SoText3;
+    africaLeftTransform->rotation.setValue(SbVec3f(0,1,0),.4);
+    africaLeftTransform->translation.setValue(.25,.0,1.25);
+    africaLeftText->parts = SoText3::ALL;
+    africaLeftText->string = "AFRICA";
+    leftSide->addChild(africaLeftSep);
+    africaLeftSep->addChild(africaLeftTransform);
+    africaLeftSep->addChild(africaLeftText);
+
+    // Add Text3 for ASIA on left sphere
+    SoSeparator *asiaLeftSep = new SoSeparator;
+    SoTransform *asiaLeftTransform = new SoTransform;
+    SoText3 *asiaLeftText = new SoText3;
+    asiaLeftTransform->rotation.setValue(SbVec3f(0,1,0),1.5);
+    asiaLeftTransform->translation.setValue(.8,.6,.5);
+    asiaLeftText->parts = SoText3::ALL;
+    asiaLeftText->string = "ASIA";
+    leftSide->addChild(asiaLeftSep);
+    asiaLeftSep->addChild(asiaLeftTransform);
+    asiaLeftSep->addChild(asiaLeftText);
+
+    // Right side: Simple sphere (guaranteed to work)
+    SoSeparator *rightSide = new SoSeparator;
+    SoTranslation *rightTranslate = new SoTranslation;
+    rightTranslate->translation.setValue(2.0, 0, 0);  // Move to right
+    rightSide->addChild(rightTranslate);
+    root->addChild(rightSide);
+
+    SoSeparator *simpleSphereSep = new SoSeparator;
+    SoComplexity *simpleComplexity = new SoComplexity;
+    simpleComplexity->value = 0.55;
+    rightSide->addChild(simpleSphereSep);
+
+    simpleSphereSep->addChild(simpleComplexity);
+    simpleSphereSep->addChild(new SoSphere);
+
+    // Add Text3 for AFRICA on right sphere
+    SoSeparator *africaRightSep = new SoSeparator;
+    SoTransform *africaRightTransform = new SoTransform;
+    SoText3 *africaRightText = new SoText3;
+    africaRightTransform->rotation.setValue(SbVec3f(0,1,0),.4);
+    africaRightTransform->translation.setValue(.25,.0,1.25);
+    africaRightText->parts = SoText3::ALL;
+    africaRightText->string = "AFRICA";
+    rightSide->addChild(africaRightSep);
+    africaRightSep->addChild(africaRightTransform);
+    africaRightSep->addChild(africaRightText);
+
+    // Add Text3 for ASIA on right sphere  
+    SoSeparator *asiaRightSep = new SoSeparator;
+    SoTransform *asiaRightTransform = new SoTransform;
+    SoText3 *asiaRightText = new SoText3;
+    asiaRightTransform->rotation.setValue(SbVec3f(0,1,0),1.5);
+    asiaRightTransform->translation.setValue(.8,.6,.5);
+    asiaRightText->parts = SoText3::ALL;
+    asiaRightText->string = "ASIA";
+    rightSide->addChild(asiaRightSep);
+    asiaRightSep->addChild(asiaRightTransform);
+    asiaRightSep->addChild(asiaRightText);
+
+    // Set up offscreen renderer
+    const int width = 640;
+    const int height = 480;
+    SbViewportRegion viewport(width, height);
+    SoOffscreenRenderer renderer(viewport);
+    renderer.setBackgroundColor(SbColor(0.2f, 0.2f, 0.2f)); // Gray background
+    
+    // Render the scene
+    SbBool success = renderer.render(root);
+    
+    if (success) {
+        // Determine output filename
+        std::string filename = "Simple3DText.rgb";
+        if (argc > 1) {
+            filename = argv[1];
+        }
+        
+        // Save to RGB file using built-in SGI RGB format
+        if (saveRGB(filename, &renderer)) {
+            std::cout << "Successfully rendered simple 3D text scene to " << filename << std::endl;
+        } else {
+            std::cerr << "Error saving RGB file" << std::endl;
+            root->unref();
+            return 1;
+        }
+    } else {
+        std::cerr << "Error: Failed to render scene" << std::endl;
+        root->unref();
+        return 1;
+    }
+    
+    // Clean up
+    root->unref();
+    
+    return 0;
+    
+#else
+    std::cerr << "Error: OSMesa support not available. Cannot run headless rendering." << std::endl;
+    return 1;
+#endif
+}
