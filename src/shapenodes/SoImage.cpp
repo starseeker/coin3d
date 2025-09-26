@@ -172,7 +172,7 @@
 #include <Inventor/system/gl.h>
 
 #include "nodes/SoSubNodeP.h"
-#include "glue/simage_wrapper.h"
+#include "glue/simage_wrapper_compat.h"
 
 
 /*!

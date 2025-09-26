@@ -81,7 +81,8 @@
 #include <Inventor/threads/SbRWMutex.h>
 #endif // COIN_THREADSAFE
 
-#include "glue/simage_wrapper.h"
+#include "SbImageFormatHandler.h"
+#include "SbJpegImageHandler.h"
 #include "coindefs.h"
 
 #ifndef COIN_WORKAROUND_NO_USING_STD_FUNCS
@@ -98,7 +99,7 @@ public:
 
   enum DataType {
     INTERNAL_DATA,
-    SIMAGE_DATA,
+    FORMAT_HANDLER_DATA,
     SETVALUEPTR_DATA
   };
 
@@ -123,8 +124,8 @@ public:
         delete[] this->bytes;
         this->bytes = NULL;
         break;
-      case SIMAGE_DATA:
-        simage_wrapper()->simage_free_image(this->bytes);
+      case FORMAT_HANDLER_DATA:
+        SbImageFormatRegistry::getInstance().freeImageData(this->bytes);
         this->bytes = NULL;
         break;
       case SETVALUEPTR_DATA:
@@ -179,6 +180,15 @@ extern "C" {
 static void SbImage_cleanup_callback(void) {
   delete SbImageP::readimagecallbacks;
   SbImageP::readimagecallbacks = NULL;
+}
+
+static void SbImage_init_format_handlers(void) {
+  static bool initialized = false;
+  if (!initialized) {
+    auto& registry = SbImageFormatRegistry::getInstance();
+    registry.registerHandler(std::make_unique<SbJpegImageHandler>());
+    initialized = true;
+  }
 }
 
 } // extern "C"
@@ -463,7 +473,7 @@ SbImage::readFile(const SbString & filename,
                   const SbString * const * searchdirectories,
                   const int numdirectories)
 {
-  // FIXME: Add 3D image support when that is added to simage (kintel 20011118)
+  // FIXME: Add 3D image support when that is added to format handlers (kintel 20011118)
 
   if (filename.getLength() == 0) {
     // This is really an internal error, should perhaps assert. <mortene>.
@@ -471,6 +481,9 @@ SbImage::readFile(const SbString & filename,
                        "attempted to read file from empty filename.");
     return FALSE;
   }
+
+  // Initialize format handlers on first use
+  SbImage_init_format_handlers();
 
   SbString finalname = SbImage::searchForFile(filename, searchdirectories,
                                               numdirectories);
@@ -482,9 +495,6 @@ SbImage::readFile(const SbString & filename,
       if (finalname.getLength() > 0 && cbdata.cb(finalname, this, cbdata.closure)) return TRUE;
       if (cbdata.cb(filename, this, cbdata.closure)) return TRUE;
     }
-    if (!simage_wrapper()->available) {
-      return FALSE;
-    }
   }
 
   if (finalname.getLength() == 0) {
@@ -493,45 +503,30 @@ SbImage::readFile(const SbString & filename,
     return FALSE;
   }
   
-  // try simage
-  if (!simage_wrapper()->available) {
-    SoDebugError::postWarning("SbImage::readFile",
-                              "The simage library is not available, "
-                              "cannot import any images from disk.");
-    return FALSE;
-  }
-
-  assert(simage_wrapper()->simage_read_image);
+  // try format handlers
+  auto& registry = SbImageFormatRegistry::getInstance();
   int w, h, nc;
-  unsigned char * simagedata =
-    simage_wrapper()->simage_read_image(finalname.getString(), 
-                                        &w, &h, &nc);
-  if (simagedata) {
+  unsigned char * imagedata = registry.readImage(finalname.getString(), &w, &h, &nc);
+  
+  if (imagedata) {
     //FIXME: Add 3'rd dimension (kintel 20011110)
     this->setValuePtr(
                     SbVec3s(static_cast<short>(w),
                            static_cast<short>(h),
                            static_cast<short>(0)
                            ),
-                    nc, simagedata);
+                    nc, imagedata);
     // NB, this is a trick. We use setValuePtr() to set the size
-    // and data pointer, and then we change the data type to simage
-    // peder, 2002-03-22
-    PRIVATE(this)->datatype = SbImageP::SIMAGE_DATA;
+    // and data pointer, and then we change the data type to FORMAT_HANDLER_DATA
+    // so it gets freed correctly
+    PRIVATE(this)->datatype = SbImageP::FORMAT_HANDLER_DATA;
     return TRUE;
   }
 #if COIN_DEBUG
   else {
     SoDebugError::post("SbImage::readFile", "(%s) %s",
                        filename.getString(),
-                       // FIXME: "getlasterror" is a crap strategy, as
-                       // it places extra burden on the client to
-                       // lock. Should keep a single entry-lock within
-                       // simage_wrapper() to work around
-                       // this. 20020628 mortene.
-                       simage_wrapper()->simage_get_last_error ?
-                       simage_wrapper()->simage_get_last_error() :
-                       "Unknown error");
+                       registry.getLastError());
   }
 #endif // COIN_DEBUG
     
@@ -593,9 +588,9 @@ SbImage::operator=(const SbImage & image)
         assert(0 && "unknown data type");
         break;
       case SbImageP::INTERNAL_DATA:
-      case SbImageP::SIMAGE_DATA:
-        // need to copy data both for INTERNAL and SIMAGE data, since
-        // we can only free the data once when the data is of SIMAGE type.
+      case SbImageP::FORMAT_HANDLER_DATA:
+        // need to copy data both for INTERNAL and FORMAT_HANDLER_DATA, since
+        // we can only free the data once when the data is of FORMAT_HANDLER_DATA type.
         this->setValue(PRIVATE(&image)->size,
                        PRIVATE(&image)->bpp,
                        PRIVATE(&image)->bytes);

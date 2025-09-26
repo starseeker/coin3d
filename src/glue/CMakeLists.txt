@@ -2,14 +2,14 @@
 set(COIN_GLUE_FILES
 	dl.cpp
 	gl.cpp
-	simage_wrapper.cpp
+	simage_wrapper_compat.cpp
 	toojpeg.cpp
 )
 
 # Files excluded from public API documentation, included in complete documentation.
 set(COIN_GLUE_INTERNAL_FILES
-	simage_wrapper.h
-	simage_wrapper.cpp
+	simage_wrapper_compat.h
+	simage_wrapper_compat.cpp
 	toojpeg.h
 	toojpeg.cpp
 )

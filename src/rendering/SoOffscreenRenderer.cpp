@@ -341,7 +341,7 @@
 #include <Inventor/system/gl.h>
 #include <Inventor/SbTime.h>
 
-#include "glue/simage_wrapper.h"
+#include "glue/simage_wrapper_compat.h"
 
 #include "coindefs.h" // COIN_STUB()
 #include "misc/SoEnvironment.h"

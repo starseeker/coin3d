@@ -34,6 +34,9 @@ set(COIN_BASE_FILES
 	SbDPRotation.cpp
 	SbHeap.cpp
 	SbImage.cpp
+	SbImageFormatHandler.cpp
+	SbImageCompat.cpp
+	SbJpegImageHandler.cpp
 	SbLine.cpp
 	SbMatrix.cpp
 	SbName.cpp

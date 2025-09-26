@@ -221,7 +221,7 @@
 #include "rendering/SoGL.h"
 #include "elements/SoTextureScaleQualityElement.h"
 #include "glue/glp.h"
-#include "glue/simage_wrapper.h"
+#include "glue/simage_wrapper_compat.h"
 #include "threads/threadsutilp.h"
 #include "coindefs.h"
 #include "misc/SoEnvironment.h"
