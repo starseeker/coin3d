@@ -56,7 +56,7 @@
 #endif
 #endif
 
-#include <mapbox/earcut.hpp>
+#include "earcut.hpp"
 
 namespace sttmesh {
 
