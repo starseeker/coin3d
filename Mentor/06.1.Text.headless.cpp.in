@@ -67,6 +67,7 @@
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/nodes/SoSphere.h>
 #include <Inventor/nodes/SoText2.h>
+#include <Inventor/nodes/SoTexture2.h>
 #include <Inventor/nodes/SoTranslation.h>
 
 #ifdef HAVE_OSMESA
@@ -160,34 +161,81 @@ main(int argc, char **argv)
     myFont->size.setValue(24.0);
     root->addChild(myFont);
 
-    // Add a simple sphere (no texture to avoid file dependencies)
-    SoSeparator *sphereSep = new SoSeparator;
-    SoComplexity *sphereComplexity = new SoComplexity;
-    sphereComplexity->value = 0.55;
-    root->addChild(sphereSep);
+    // Left side: Attempt to load textured sphere (with fallback to untextured)
+    SoSeparator *leftSide = new SoSeparator;
+    SoTranslation *leftTranslate = new SoTranslation;
+    leftTranslate->translation.setValue(-2.0, 0, 0);  // Move to left
+    leftSide->addChild(leftTranslate);
+    root->addChild(leftSide);
 
-    sphereSep->addChild(sphereComplexity);
-    sphereSep->addChild(new SoSphere);
+    SoSeparator *texturedSphereSep = new SoSeparator;
+    SoComplexity *texturedComplexity = new SoComplexity;
+    texturedComplexity->value = 0.55;
+    leftSide->addChild(texturedSphereSep);
 
-    // Add Text2 for AFRICA, translated to proper location.
-    SoSeparator *africaSep = new SoSeparator;
-    SoTranslation *africaTranslate = new SoTranslation;
-    SoText2 *africaText = new SoText2;
-    africaTranslate->translation.setValue(.25,.0,1.25);
-    africaText->string = "AFRICA";
-    root->addChild(africaSep);
-    africaSep->addChild(africaTranslate);
-    africaSep->addChild(africaText);
+    // Try to add texture (testing simple raw RGB format)
+    SoInput::addDirectoryFirst("./Mentor/data");
+    SoTexture2 *myTexture2 = new SoTexture2;
+    texturedSphereSep->addChild(myTexture2);
+    myTexture2->filename = "globe.rgb";
 
-    // Add Text2 for ASIA, translated to proper location.
-    SoSeparator *asiaSep = new SoSeparator;
-    SoTranslation *asiaTranslate = new SoTranslation;
-    SoText2 *asiaText = new SoText2;
-    asiaTranslate->translation.setValue(.8,.8,0);
-    asiaText->string = "ASIA";
-    root->addChild(asiaSep);
-    asiaSep->addChild(asiaTranslate);
-    asiaSep->addChild(asiaText);
+    texturedSphereSep->addChild(texturedComplexity);
+    texturedSphereSep->addChild(new SoSphere);
+
+    // Add Text2 for AFRICA on left sphere
+    SoSeparator *africaLeftSep = new SoSeparator;
+    SoTranslation *africaLeftTranslate = new SoTranslation;
+    SoText2 *africaLeftText = new SoText2;
+    africaLeftTranslate->translation.setValue(.25,.0,1.25);
+    africaLeftText->string = "AFRICA";
+    leftSide->addChild(africaLeftSep);
+    africaLeftSep->addChild(africaLeftTranslate);
+    africaLeftSep->addChild(africaLeftText);
+
+    // Add Text2 for ASIA on left sphere
+    SoSeparator *asiaLeftSep = new SoSeparator;
+    SoTranslation *asiaLeftTranslate = new SoTranslation;
+    SoText2 *asiaLeftText = new SoText2;
+    asiaLeftTranslate->translation.setValue(.8,.8,0);
+    asiaLeftText->string = "ASIA";
+    leftSide->addChild(asiaLeftSep);
+    asiaLeftSep->addChild(asiaLeftTranslate);
+    asiaLeftSep->addChild(asiaLeftText);
+
+    // Right side: Simple sphere (guaranteed to work)
+    SoSeparator *rightSide = new SoSeparator;
+    SoTranslation *rightTranslate = new SoTranslation;
+    rightTranslate->translation.setValue(2.0, 0, 0);  // Move to right
+    rightSide->addChild(rightTranslate);
+    root->addChild(rightSide);
+
+    SoSeparator *simpleSphereSep = new SoSeparator;
+    SoComplexity *simpleComplexity = new SoComplexity;
+    simpleComplexity->value = 0.55;
+    rightSide->addChild(simpleSphereSep);
+
+    simpleSphereSep->addChild(simpleComplexity);
+    simpleSphereSep->addChild(new SoSphere);
+
+    // Add Text2 for AFRICA on right sphere
+    SoSeparator *africaRightSep = new SoSeparator;
+    SoTranslation *africaRightTranslate = new SoTranslation;
+    SoText2 *africaRightText = new SoText2;
+    africaRightTranslate->translation.setValue(.25,.0,1.25);
+    africaRightText->string = "AFRICA";
+    rightSide->addChild(africaRightSep);
+    africaRightSep->addChild(africaRightTranslate);
+    africaRightSep->addChild(africaRightText);
+
+    // Add Text2 for ASIA on right sphere
+    SoSeparator *asiaRightSep = new SoSeparator;
+    SoTranslation *asiaRightTranslate = new SoTranslation;
+    SoText2 *asiaRightText = new SoText2;
+    asiaRightTranslate->translation.setValue(.8,.8,0);
+    asiaRightText->string = "ASIA";
+    rightSide->addChild(asiaRightSep);
+    asiaRightSep->addChild(asiaRightTranslate);
+    asiaRightSep->addChild(asiaRightText);
 
     // Set up offscreen renderer
     const int width = 640;

@@ -62,7 +62,9 @@
 #include <Inventor/nodes/SoMaterialBinding.h>
 #include <Inventor/nodes/SoPerspectiveCamera.h>
 #include <Inventor/nodes/SoProfileCoordinate2.h>
+#include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/nodes/SoText3.h>
+#include <Inventor/nodes/SoTranslation.h>
 
 #ifdef HAVE_OSMESA
 
@@ -209,13 +211,38 @@ main(int argc, char **argv)
              value.setValue(SoMaterialBinding::PER_PART);
     root->addChild(myMaterialBinding);
 
-    // Add the text
-    SoText3 *myText3 = new SoText3;
-    myText3->string.setValue("Beveled Text");
-    myText3->justification.setValue(SoText3::CENTER);
-    myText3->parts.setValue(SoText3::ALL);
-    
-    root->addChild(myText3);
+    // Left side: Beveled text with complex profile
+    SoSeparator *leftSide = new SoSeparator;
+    SoTranslation *leftTranslate = new SoTranslation;
+    leftTranslate->translation.setValue(-3, 0, 0);  // Move to left
+    leftSide->addChild(leftTranslate);
+    root->addChild(leftSide);
+
+    // Add the beveled text to left side
+    SoText3 *beveledText = new SoText3;
+    beveledText->string.setValue("Beveled Text");
+    beveledText->justification.setValue(SoText3::CENTER);
+    beveledText->parts.setValue(SoText3::ALL);
+    leftSide->addChild(beveledText);
+
+    // Right side: Simple extruded text for comparison
+    SoSeparator *rightSide = new SoSeparator;
+    SoTranslation *rightTranslate = new SoTranslation;
+    rightTranslate->translation.setValue(3, 0, 0);  // Move to right
+    rightSide->addChild(rightTranslate);
+    root->addChild(rightSide);
+
+    // Simple material for right side
+    SoMaterial *simpleMaterial = new SoMaterial;
+    simpleMaterial->diffuseColor.setValue(0.7, 0.7, 1.0);  // Light blue
+    rightSide->addChild(simpleMaterial);
+
+    // Add simple extruded text to right side (no profile, simpler appearance)
+    SoText3 *simpleText = new SoText3;
+    simpleText->string.setValue("Simple Text");
+    simpleText->justification.setValue(SoText3::CENTER);
+    simpleText->parts.setValue(SoText3::ALL);
+    rightSide->addChild(simpleText);
 
     // Set up offscreen renderer
     const int width = 640;
