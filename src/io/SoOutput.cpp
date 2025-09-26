@@ -566,6 +566,27 @@ SoOutput::setBuffer(void * bufPointer, size_t initSize,
 }
 
 /*!
+  Sets up the output stream for writing to a C++ iostream stream.
+  Resets and clears all previous settings.
+
+  This method enables writing Inventor data to std::iostream objects,
+  including std::stringstream, std::ofstream, and other stream types.
+
+  \param stream Pointer to the output stream to write to. The stream should
+  remain valid for the lifetime of this SoOutput object or until reset()
+  is called. SoOutput does not take ownership of the stream.
+
+  \since Coin 4.1
+  \sa setBuffer(), setFilePointer()
+*/
+void
+SoOutput::setStream(std::ostream * stream)
+{
+  this->reset();
+  PRIVATE(this)->setWriter(new SoOutput_StreamWriter(stream));
+}
+
+/*!
   Returns the current buffer in \a bufPointer and the current
   write position of the buffer in \a nBytes. If we're writing into a
   file and not a memory buffer, \a FALSE is returned and the other return

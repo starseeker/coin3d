@@ -38,8 +38,9 @@
  *  This is a headless adaptation from the Inventor Mentor,
  *  chapter 7, example 1.
  *
- *  This example displays a cube without texture since we don't
- *  have access to texture files. Shows basic rendering.
+ *  This example displays a textured cube using a procedural
+ *  checkerboard texture generated in memory, demonstrating
+ *  the new Coin 4.1 setImageData() API for in-memory textures.
  *------------------------------------------------------------*/
 
 #include <iostream>
@@ -60,7 +61,9 @@
 #include <Inventor/SoOffscreenRenderer.h>
 #include <Inventor/nodes/SoCube.h>
 #include <Inventor/nodes/SoSeparator.h>
+#include <Inventor/nodes/SoTexture2.h>
 #include <Inventor/nodes/SoMaterial.h>
+#include <Inventor/nodes/SoTextureCoordinateDefault.h>
 #include <Inventor/nodes/SoPerspectiveCamera.h>
 #include <Inventor/nodes/SoDirectionalLight.h>
 #include <Inventor/SbViewportRegion.h>
@@ -134,7 +137,93 @@ bool saveRGB(const std::string& filename, SoOffscreenRenderer* renderer) {
     }
 }
 
+// Validate that rendered pixels contain proper black and white values
+bool validateCheckerboardPixels(SoOffscreenRenderer* renderer, int width, int height) {
+    const unsigned char* buffer = renderer->getBuffer();
+    if (!buffer) {
+        std::cerr << "Error: Could not get render buffer" << std::endl;
+        return false;
+    }
+    
+    int blackPixels = 0;
+    int whitePixels = 0;
+    int otherPixels = 0;
+    
+    // Sample pixels from the center area where the textured cube should be
+    int startX = width / 4;
+    int endX = 3 * width / 4;
+    int startY = height / 4;
+    int endY = 3 * height / 4;
+    
+    for (int y = startY; y < endY; y += 8) {  // Sample every 8th pixel
+        for (int x = startX; x < endX; x += 8) {
+            int idx = (y * width + x) * 4;  // RGBA format
+            unsigned char r = buffer[idx];
+            unsigned char g = buffer[idx + 1];
+            unsigned char b = buffer[idx + 2];
+            
+            // Check if it's black (all values close to 0)
+            if (r < 32 && g < 32 && b < 32) {
+                blackPixels++;
+            }
+            // Check if it's white (all values close to 255)
+            else if (r > 220 && g > 220 && b > 220) {
+                whitePixels++;
+            }
+            else {
+                otherPixels++;
+            }
+        }
+    }
+    
+    int totalSampled = blackPixels + whitePixels + otherPixels;
+    std::cout << "\nPixel validation results:" << std::endl;
+    std::cout << "  Black pixels: " << blackPixels << " (" << (100 * blackPixels / totalSampled) << "%)" << std::endl;
+    std::cout << "  White pixels: " << whitePixels << " (" << (100 * whitePixels / totalSampled) << "%)" << std::endl;
+    std::cout << "  Other pixels: " << otherPixels << " (" << (100 * otherPixels / totalSampled) << "%)" << std::endl;
+    
+    // For a proper checkerboard, we should have roughly equal black and white pixels
+    // Allow some tolerance for edge effects and sampling
+    bool hasBlackPixels = blackPixels > totalSampled / 10;
+    bool hasWhitePixels = whitePixels > totalSampled / 10;
+    bool fewOtherPixels = otherPixels < totalSampled / 2;
+    
+    if (hasBlackPixels && hasWhitePixels && fewOtherPixels) {
+        std::cout << "✓ Checkerboard texture rendered correctly with black and white pixels" << std::endl;
+        return true;
+    } else {
+        std::cout << "✗ Checkerboard texture validation failed" << std::endl;
+        if (!hasBlackPixels) std::cout << "  - Missing black pixels" << std::endl;
+        if (!hasWhitePixels) std::cout << "  - Missing white pixels" << std::endl;
+        if (!fewOtherPixels) std::cout << "  - Too many non-black/white pixels" << std::endl;
+        return false;
+    }
+}
+
 #endif // HAVE_OSMESA
+
+// Generate a pure black and white checkerboard texture pattern
+void generateCheckerboardTexture(int width, int height, unsigned char* data) {
+    const int checkerSize = 32;  // Larger squares for easier validation
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            bool checkX = (x / checkerSize) % 2;
+            bool checkY = (y / checkerSize) % 2;
+            bool isWhite = checkX ^ checkY;
+            
+            int idx = (y * width + x) * 3;  // RGB format
+            if (isWhite) {
+                data[idx] = 255;     // R - pure white
+                data[idx + 1] = 255; // G 
+                data[idx + 2] = 255; // B
+            } else {
+                data[idx] = 0;       // R - pure black
+                data[idx + 1] = 0;   // G
+                data[idx + 2] = 0;   // B
+            }
+        }
+    }
+}
 
 int
 main(int argc, char **argv)
@@ -145,21 +234,42 @@ main(int argc, char **argv)
     SoDB::init(context_manager.get());
     SoInteraction::init();
     
-    std::cout << "BasicTexture: Material Cube - Headless OSMesa Version" << std::endl;
-    std::cout << "Note: Texture loading from files not available in headless mode" << std::endl;
+    std::cout << "BasicTexture: Black and White Checkerboard Test - Headless OSMesa" << std::endl;
+    std::cout << "Testing texture rendering with pure black and white checkerboard" << std::endl;
 
     SoSeparator *root = new SoSeparator;
     SoPerspectiveCamera *myCamera = new SoPerspectiveCamera;
     root->ref();
     root->addChild(myCamera);
+    
+    // Add lighting - important for texture rendering
     root->addChild(new SoDirectionalLight);
 
-    // Create a colorful material instead of texture
-    SoMaterial *cubeMaterial = new SoMaterial;
-    cubeMaterial->diffuseColor.setValue(0.8f, 0.4f, 0.2f);  // Orange/brown like brick
-    cubeMaterial->specularColor.setValue(0.5f, 0.5f, 0.5f);
-    cubeMaterial->shininess = 0.3f;
-    root->addChild(cubeMaterial);
+    // Generate pure black and white checkerboard texture
+    const int texWidth = 128;
+    const int texHeight = 128;
+    unsigned char* textureData = new unsigned char[texWidth * texHeight * 3];
+    generateCheckerboardTexture(texWidth, texHeight, textureData);
+
+    // Create texture using setImageData API  
+    SoTexture2 *checkerTexture = new SoTexture2;
+    checkerTexture->ref();
+    
+    // Use the standard setImageData API
+    checkerTexture->setImageData(texWidth, texHeight, 3, textureData);
+    
+    // Add material first - white base material to let texture show through
+    SoMaterial* material = new SoMaterial;
+    material->diffuseColor = SbColor(1.0f, 1.0f, 1.0f);  // White
+    material->ambientColor = SbColor(0.2f, 0.2f, 0.2f);  // Light gray ambient
+    root->addChild(material);
+    
+    // Add texture to scene graph
+    root->addChild(checkerTexture);
+    root->addChild(new SoTextureCoordinateDefault);
+    
+    // Clean up texture data after setting it
+    delete[] textureData;
 
     // Make a cube
     root->addChild(new SoCube);
@@ -178,6 +288,9 @@ main(int argc, char **argv)
     SbBool success = renderer.render(root);
 
     if (success) {
+        // Validate the rendered pixels first
+        bool pixelsValid = validateCheckerboardPixels(&renderer, width, height);
+        
         // Determine output filename
         std::string filename = "BasicTexture.rgb";
         if (argc > 1) {
@@ -186,7 +299,12 @@ main(int argc, char **argv)
         
         // Save to RGB file using built-in SGI RGB format
         if (saveRGB(filename, &renderer)) {
-            std::cout << "Successfully rendered material cube to " << filename << std::endl;
+            std::cout << "Successfully rendered textured cube to " << filename << std::endl;
+            if (pixelsValid) {
+                std::cout << "✓ Texture rendering validation PASSED - black and white pixels detected correctly" << std::endl;
+            } else {
+                std::cout << "✗ Texture rendering validation FAILED - pixel values not as expected" << std::endl;
+            }
         } else {
             std::cerr << "Error saving RGB file" << std::endl;
             root->unref();
@@ -198,6 +316,9 @@ main(int argc, char **argv)
         return 1;
     }
 
+    // Clean up texture
+    checkerTexture->unref();
+    
     // Clean up
     root->unref();
 

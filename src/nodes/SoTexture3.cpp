@@ -427,6 +427,59 @@ SoTexture3::setReadStatus(int s)
   this->readstatus = s;
 }
 
+/*!
+  Convenience method for setting 3D texture data from raw pixel data in memory.
+  
+  This method provides an easy way to set 3D texture data without needing to 
+  directly manipulate the SoSFImage3 field. The pixel data should be organized
+  as width*height*depth*numComponents bytes.
+
+  \param width Width of the texture in pixels
+  \param height Height of the texture in pixels
+  \param depth Depth of the texture in pixels  
+  \param numComponents Number of components per pixel (1=grayscale, 2=grayscale+alpha, 3=RGB, 4=RGBA)
+  \param pixels Pointer to the pixel data
+
+  \since Coin 4.1
+*/
+void
+SoTexture3::setImageData(int width, int height, int depth, int numComponents, 
+                        const unsigned char * pixels)
+{
+  // Clear filenames to indicate we're using direct image data
+  this->filenames.deleteValues(0, -1);
+  
+  // Set the image data using the SoSFImage3 field
+  SbVec3s size(width, height, depth);
+  this->images.setValue(size, numComponents, pixels);
+  
+  // Mark image field as non-default since we're setting it directly
+  this->images.setDefault(FALSE);
+  this->glimagevalid = FALSE; // recreate GL image in next GLRender()
+}
+
+/*!
+  Convenience method for getting the current 3D texture data.
+
+  \param width Returns the width of the texture in pixels
+  \param height Returns the height of the texture in pixels
+  \param depth Returns the depth of the texture in pixels
+  \param numComponents Returns the number of components per pixel
+  \return Pointer to the pixel data, or NULL if no image data is set
+
+  \since Coin 4.1
+*/
+const unsigned char *
+SoTexture3::getImageData(int & width, int & height, int & depth, int & numComponents) const
+{
+  SbVec3s size;
+  const unsigned char * pixels = this->images.getValue(size, numComponents);
+  width = size[0];
+  height = size[1];
+  depth = size[2];
+  return pixels;
+}
+
 // Documented in superclass.
 void
 SoTexture3::notify(SoNotList * l)

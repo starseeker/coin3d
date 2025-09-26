@@ -34,6 +34,7 @@
 \**************************************************************************/
 
 #include <cstdint>
+#include <iostream>
 #include <Inventor/SbBasic.h>
 #include <Inventor/SbString.h>
 #include <cstdio>
@@ -69,6 +70,7 @@ public:
 
   virtual void setBuffer(void * bufPointer, size_t initSize,
                          SoOutputReallocCB * reallocFunc, int32_t offset = 0);
+  virtual void setStream(std::ostream * stream);
   virtual SbBool getBuffer(void * & bufPointer, size_t & nBytes) const;
   virtual size_t getBufferSize(void) const;
   virtual void resetBuffer(void);

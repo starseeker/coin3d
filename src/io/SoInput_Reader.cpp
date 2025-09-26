@@ -34,6 +34,7 @@
 
 #include <cstring>
 #include <cassert>
+#include <iostream>
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif // HAVE_CONFIG_H
@@ -176,5 +177,43 @@ SoInput_MemBufferReader::readBuffer(char * buffer, const size_t readlen)
   this->bufpos += len;
 
   return len;
+}
+
+//
+// iostream stream reader class
+//
+
+SoInput_StreamReader::SoInput_StreamReader(std::istream * streamarg)
+{
+  this->stream = streamarg;
+  this->streamname = "<iostream>";
+}
+
+SoInput_StreamReader::~SoInput_StreamReader()
+{
+  // Don't delete the stream - we don't own it
+}
+
+SoInput_Reader::ReaderType
+SoInput_StreamReader::getType(void) const
+{
+  return IOSTREAM;
+}
+
+size_t
+SoInput_StreamReader::readBuffer(char * buffer, const size_t readlen)
+{
+  if (!this->stream || !this->stream->good()) {
+    return 0;
+  }
+
+  this->stream->read(buffer, readlen);
+  return static_cast<size_t>(this->stream->gcount());
+}
+
+const SbString &
+SoInput_StreamReader::getFilename(void)
+{
+  return this->streamname;
 }
 

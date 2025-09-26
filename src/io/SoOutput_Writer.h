@@ -40,6 +40,7 @@
 // *************************************************************************
 
 #include <Inventor/SoOutput.h>
+#include <iostream>
 #include <stdio.h>
 
 // *************************************************************************
@@ -54,7 +55,8 @@ public:
     REGULAR_FILE,
     MEMBUFFER,
     GZFILE,
-    BZ2FILE
+    BZ2FILE,
+    IOSTREAM
   };
 
   // default method returns NULL. Should return the FILE pointer if
@@ -145,6 +147,20 @@ public:
   void * bzfp;
   FILE * fp;
   size_t writecounter;
+};
+
+class SoOutput_StreamWriter : public SoOutput_Writer {
+public:
+  SoOutput_StreamWriter(std::ostream * stream);
+  virtual ~SoOutput_StreamWriter();
+
+  virtual size_t bytesInBuf(void);
+  virtual WriterType getType(void) const;
+  virtual size_t write(const char * buf, size_t numbytes, const SbBool binary);
+
+public:
+  std::ostream * stream;
+  size_t byteswritten;
 };
 
 #endif // COIN_SOOUTPUT_WRITER_H
