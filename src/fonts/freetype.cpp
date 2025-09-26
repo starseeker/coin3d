@@ -44,7 +44,6 @@
 #include <cstring>
 #include <cstdio>
 #include <string>
-#include <cstdint>
 
 #define STRUETYPE_IMPLEMENTATION
 #pragma GCC diagnostic push
@@ -156,22 +155,11 @@ cc_flwft_done_font(void * font)
 {
   /* Cleanup font handle */
   if (font) {
-    /* Validate font pointer to detect corruption */
-    uintptr_t ptr_val = (uintptr_t)font;
-    if (ptr_val < 0x1000 || (ptr_val & 0xFF) > 0x7F) {
-      /* Pointer looks corrupted - don't try to free */
-      return;
-    }
-    
     cc_font_handle* handle = (cc_font_handle*)font;
-    
-    /* Additional validation before accessing handle members */
-    if (handle->size >= 1.0f && handle->size <= 1000.0f) {
-      if (handle->font_data) {
-        free(handle->font_data);
-      }
-      free(handle);
+    if (handle->font_data) {
+      free(handle->font_data);
     }
+    free(handle);
   }
 }
 
@@ -200,15 +188,7 @@ cc_flwft_set_char_size(void * font, int height)
 {
   if (!font) return;
   
-  /* Validate font pointer to detect corruption */
-  uintptr_t ptr_val = (uintptr_t)font;
   cc_font_handle* handle = (cc_font_handle*)font;
-  if (ptr_val < 0x1000 || (ptr_val & 0xFF) > 0x7F || 
-      handle->size < 1.0f || handle->size > 1000.0f) {
-    /* Pointer looks corrupted - return silently */
-    return;
-  }
-  
   handle->size = (float)height;
   
   if (handle->valid) {
@@ -228,36 +208,7 @@ cc_flwft_get_glyph(void * font, unsigned int charidx)
 {
   if (!font) return -1;
   
-  /* Validate font pointer to detect corruption */
-  uintptr_t ptr_val = (uintptr_t)font;
-  
-  /* Check for the specific corruption pattern: ProFont string as pointer */
-  if (ptr_val == 0x746e6f466f7250ULL) {
-    /* This is the corrupted "ProFont" string pointer - fall back */
-    return (int)charidx;
-  }
-  
-  /* General pointer validation */
-  if (ptr_val < 0x1000) {
-    /* Pointer too low - likely corruption */
-    return (int)charidx;
-  }
-  
   cc_font_handle* handle = (cc_font_handle*)font;
-  
-  /* Try to check if this looks like a valid font handle structure */
-  /* Be careful about accessing memory that might be invalid */
-  if (ptr_val > 0x7f0000000000ULL) {
-    /* Pointer suspiciously high - likely corruption */
-    return (int)charidx;
-  }
-  
-  /* Check if the size field looks reasonable */
-  if (handle->size < 1.0f || handle->size > 1000.0f) {
-    /* Size field is unreasonable - likely corruption */
-    return (int)charidx;
-  }
-  
   if (!handle->valid) {
     /* Without valid font data, just return the character as glyph index */
     return (int)charidx;
@@ -279,17 +230,7 @@ cc_flwft_get_vector_advance(void * font, int glyph, float * x, float * y)
     return;
   }
   
-  /* Validate font pointer to detect corruption */
-  uintptr_t ptr_val = (uintptr_t)font;
   cc_font_handle* handle = (cc_font_handle*)font;
-  if (ptr_val < 0x1000 || (ptr_val & 0xFF) > 0x7F || 
-      handle->size < 1.0f || handle->size > 1000.0f) {
-    /* Pointer looks corrupted - fall back to defaults */
-    if (x) *x = 10.0f;
-    if (y) *y = 0.0f;
-    return;
-  }
-  
   if (!handle->valid) {
     /* Set default advance values for basic character spacing */
     if (x) *x = handle->size * 0.6f; /* Reasonable default based on font size */
@@ -332,15 +273,7 @@ cc_flwft_get_bitmap(void * font, unsigned int glyph)
 {
   if (!font) return NULL;
   
-  /* Validate font pointer to detect corruption */
-  uintptr_t ptr_val = (uintptr_t)font;
   cc_font_handle* handle = (cc_font_handle*)font;
-  if (ptr_val < 0x1000 || (ptr_val & 0xFF) > 0x7F || 
-      handle->size < 1.0f || handle->size > 1000.0f) {
-    /* Pointer looks corrupted - return NULL */
-    return NULL;
-  }
-  
   if (!handle->valid) {
     return NULL; /* No bitmap available without valid font */
   }
