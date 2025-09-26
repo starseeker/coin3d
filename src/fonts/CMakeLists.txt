@@ -4,11 +4,6 @@ set(COIN_FONTS_FILES
 	freetype.cpp
 	profont_data.cpp
 	fontspec.cpp
-	glyph.cpp
-	glyph2d.cpp
-	glyph3d.cpp
-	default3dfont.cpp
-	default2dfont.cpp
 	common.cpp
 	sbfont_bridge.cpp
 )
@@ -23,15 +18,6 @@ set(COIN_FONTS_INTERNAL_FILES
 	profont_data.cpp
 	fontspec.h
 	fontspec.cpp
-	glyph.h
-	glyph.cpp
-	glyph2d.h
-	glyph2d.cpp
-	glyph3d.h
-	glyph3d.cpp
-	defaultfonts.h
-	default3dfont.cpp
-	default2dfont.cpp
 	common.h
 	common.cpp
 	sbfont_bridge.h

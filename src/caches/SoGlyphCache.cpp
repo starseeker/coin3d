@@ -51,8 +51,8 @@
 
 class SoGlyphCacheP {
 public:
-  SbList <cc_glyph2d*> glyphlist2d;
-  SbList <cc_glyph3d*> glyphlist3d;
+  SbList <sb_glyph2d*> glyphlist2d;
+  SbList <sb_glyph3d*> glyphlist3d;
   cc_font_specification * fontspec;
 };
 
@@ -86,31 +86,31 @@ SoGlyphCache::~SoGlyphCache()
   int i;
   this->readFontspec(NULL);
   for (i = 0; i < PRIVATE(this)->glyphlist2d.getLength(); i++) {
-    cc_glyph2d_unref(PRIVATE(this)->glyphlist2d[i]);
+    sb_glyph2d_unref(PRIVATE(this)->glyphlist2d[i]);
   }
   for (i = 0; i < PRIVATE(this)->glyphlist3d.getLength(); i++) {
-    cc_glyph3d_unref(PRIVATE(this)->glyphlist3d[i]);
+    sb_glyph3d_unref(PRIVATE(this)->glyphlist3d[i]);
   }
   delete PRIVATE(this);
 }
 
 /*
-  Add a glyph that is created using cc_glyph2d_ref(). The cache will
-  call cc_glyph2d_unref() when destructed.
+  Add a glyph that is created using sb_glyph2d_ref(). The cache will
+  call sb_glyph2d_unref() when destructed.
 */
 void
-SoGlyphCache::addGlyph(cc_glyph2d * glyph)
+SoGlyphCache::addGlyph(sb_glyph2d * glyph)
 {
   PRIVATE(this)->glyphlist2d.append(glyph);
 }
 
 /*
-  Add a glyph that is created using cc_glyph2d_ref(). The cache will
-  call cc_glyph2d_unref() when destructed.
+  Add a glyph that is created using sb_glyph2d_ref(). The cache will
+  call sb_glyph2d_unref() when destructed.
 */
 
 void
-SoGlyphCache::addGlyph(cc_glyph3d * glyph)
+SoGlyphCache::addGlyph(sb_glyph3d * glyph)
 {
   PRIVATE(this)->glyphlist3d.append(glyph);
 }

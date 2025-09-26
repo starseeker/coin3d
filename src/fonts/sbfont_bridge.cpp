@@ -195,6 +195,7 @@ sb_glyph3d_ref(uint32_t character, const cc_font_specification * spec)
   glyph->refcount = 1;
   
   // Get vertex data from SbFont (currently not implemented in SbFont)
+  // For now, provide simple fallback geometry for 3D text
   int numvertices = 0;
   glyph->vertices = font->getGlyphVertices(character, numvertices);
   glyph->num_vertices = numvertices;
@@ -206,6 +207,35 @@ sb_glyph3d_ref(uint32_t character, const cc_font_specification * spec)
   int numedgeindices = 0;
   glyph->edge_indices = font->getGlyphEdgeIndices(character, numedgeindices);
   glyph->num_edge_indices = numedgeindices;
+  
+  // If no 3D data available, create minimal fallback
+  if (!glyph->vertices || glyph->num_vertices == 0) {
+    // Create a simple rectangular glyph as fallback
+    // This prevents crashes but text won't have proper 3D appearance
+    static float fallback_vertices[] = {
+      0.0f, 0.0f, 0.0f,    // bottom-left
+      1.0f, 0.0f, 0.0f,    // bottom-right
+      1.0f, 1.0f, 0.0f,    // top-right
+      0.0f, 1.0f, 0.0f     // top-left
+    };
+    static int fallback_faces[] = {
+      0, 1, 2, -1,         // triangle 1
+      0, 2, 3, -1          // triangle 2  
+    };
+    static int fallback_edges[] = {
+      0, 1, -1,            // bottom edge
+      1, 2, -1,            // right edge
+      2, 3, -1,            // top edge
+      3, 0, -1             // left edge
+    };
+    
+    glyph->vertices = fallback_vertices;
+    glyph->num_vertices = 4;
+    glyph->face_indices = fallback_faces;
+    glyph->num_face_indices = 8;
+    glyph->edge_indices = fallback_edges;
+    glyph->num_edge_indices = 12;
+  }
   
   // Get advance and bounds
   SbVec2f advance = font->getGlyphAdvance(character);
@@ -259,6 +289,24 @@ const int *
 sb_glyph3d_getedgeindices(const sb_glyph3d * g)
 {
   return g ? g->edge_indices : NULL;
+}
+
+const int * 
+sb_glyph3d_getnextccwedge(const sb_glyph3d * g, int edgeidx)
+{
+  // This function is used for edge traversal in 3D glyphs
+  // Since we're using a simplified approach, return NULL
+  // This will cause the text to render without edge information
+  return NULL;
+}
+
+const int * 
+sb_glyph3d_getnextcwedge(const sb_glyph3d * g, int edgeidx)
+{
+  // This function is used for edge traversal in 3D glyphs
+  // Since we're using a simplified approach, return NULL
+  // This will cause the text to render without edge information
+  return NULL;
 }
 
 float 

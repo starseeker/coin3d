@@ -90,6 +90,8 @@ void sb_glyph3d_unref(sb_glyph3d * glyph);
 const float * sb_glyph3d_getcoords(const sb_glyph3d * g);
 const int * sb_glyph3d_getfaceindices(const sb_glyph3d * g);
 const int * sb_glyph3d_getedgeindices(const sb_glyph3d * g);
+const int * sb_glyph3d_getnextccwedge(const sb_glyph3d * g, int edgeidx);
+const int * sb_glyph3d_getnextcwedge(const sb_glyph3d * g, int edgeidx);
 float sb_glyph3d_getwidth(const sb_glyph3d * g);
 const float * sb_glyph3d_getboundingbox(const sb_glyph3d * g);
 void sb_glyph3d_getadvance(const sb_glyph3d * g, float * x, float * y);

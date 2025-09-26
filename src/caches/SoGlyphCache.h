@@ -43,8 +43,7 @@
 #include <Inventor/SbVec3f.h>
 #include <Inventor/SbVec4f.h>
 #include <Inventor/SbVec2f.h>
-#include "../src/fonts/glyph2d.h"
-#include "../src/fonts/glyph3d.h"
+#include "../src/fonts/sbfont_bridge.h"
 #include "../src/fonts/fontspec.h"
 
 class SoGlyphCacheP;
@@ -62,8 +61,8 @@ public:
   void readFontspec(SoState * state);
   const cc_font_specification * getCachedFontspec(void) const;
 
-  void addGlyph(cc_glyph2d * glyph);
-  void addGlyph(cc_glyph3d * glyph);
+  void addGlyph(sb_glyph2d * glyph);
+  void addGlyph(sb_glyph3d * glyph);
 
 private:
   friend class SoGlyphCacheP;

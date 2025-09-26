@@ -172,7 +172,7 @@
 
 #include "coindefs.h" // COIN_OBSOLETED()
 #include "nodes/SoSubNodeP.h"
-#include "fonts/glyph3d.h"
+#include "fonts/sbfont_bridge.h"
 #include "caches/SoGlyphCache.h"
 
 // *************************************************************************
@@ -659,7 +659,7 @@ SoText3P::render(SoState * state, const cc_font_specification * fontspec,
     }
 
     SbString str = PUBLIC(this)->string[i];
-    cc_glyph3d * prevglyph = NULL;
+    sb_glyph3d * prevglyph = NULL;
     const char * p = str.getString();
     size_t length = coin_utf8_validate_length(p);
     // No assertion as zero length is handled correctly (results in a new line)
@@ -670,22 +670,22 @@ SoText3P::render(SoState * state, const cc_font_specification * fontspec,
       glyphidx = coin_utf8_get_char(p);
       p = coin_utf8_next_char(p);
 
-      cc_glyph3d * glyph = cc_glyph3d_ref(glyphidx, fontspec);
-      const SbVec2f * coords = (SbVec2f *) cc_glyph3d_getcoords(glyph);
+      sb_glyph3d * glyph = sb_glyph3d_ref(glyphidx, fontspec);
+      const SbVec2f * coords = (SbVec2f *) sb_glyph3d_getcoords(glyph);
 
       // Get kerning
       if (strcharidx > 0) {
         float kerningx, kerningy;
-        cc_glyph3d_getkerning(prevglyph, glyph, &kerningx, &kerningy);
+        sb_glyph3d_getkerning(prevglyph, glyph, &kerningx, &kerningy);
         xpos += kerningx * fontspec->size;
       }
       if (prevglyph) {
-        cc_glyph3d_unref(prevglyph);
+        sb_glyph3d_unref(prevglyph);
       }
       prevglyph = glyph;
 
       if (part != SoText3::SIDES) {  // FRONT & BACK
-        const int * ptr = cc_glyph3d_getfaceindices(glyph);
+        const int * ptr = sb_glyph3d_getfaceindices(glyph);
         glBegin(GL_TRIANGLES);
 
         while (*ptr >= 0) {
@@ -724,7 +724,7 @@ SoText3P::render(SoState * state, const cc_font_specification * fontspec,
       else { // SIDES
 
         if (!validprofile) {  // no profile - extrude
-          const int * ptr = cc_glyph3d_getedgeindices(glyph);
+          const int * ptr = sb_glyph3d_getedgeindices(glyph);
           SbVec2f v0, v1;
           int counter = 0;
 
@@ -733,8 +733,8 @@ SoText3P::render(SoState * state, const cc_font_specification * fontspec,
           while (*ptr >= 0) {
             v1 = coords[*ptr++];
             v0 = coords[*ptr++];
-            const int * ccw = (int *) cc_glyph3d_getnextccwedge(glyph, counter);
-            const int * cw  = (int *) cc_glyph3d_getnextcwedge(glyph, counter);
+            const int * ccw = (int *) sb_glyph3d_getnextccwedge(glyph, counter);
+            const int * cw  = (int *) sb_glyph3d_getnextcwedge(glyph, counter);
             SbVec3f vleft(coords[*(ccw+1)][0], coords[*(ccw+1)][1], 0);
             SbVec3f vright(coords[*cw][0], coords[*cw][1], 0);
             counter++;
@@ -817,7 +817,7 @@ SoText3P::render(SoState * state, const cc_font_specification * fontspec,
         else {  // profile
           assert(validprofile && firstprofile >= 0);
 
-          const int * indices = cc_glyph3d_getedgeindices(glyph);
+          const int * indices = sb_glyph3d_getedgeindices(glyph);
           int ind = 0;
           SbVec3f normala, normalb;
 
@@ -830,8 +830,8 @@ SoText3P::render(SoState * state, const cc_font_specification * fontspec,
             int i1 = *indices++;
             SbVec3f va(coords[i0][0], coords[i0][1], nearz);
             SbVec3f vb(coords[i1][0], coords[i1][1], nearz);
-            const int * ccw = (int *) cc_glyph3d_getnextccwedge(glyph, ind);
-            const int * cw  = (int *) cc_glyph3d_getnextcwedge(glyph, ind);
+            const int * ccw = (int *) sb_glyph3d_getnextccwedge(glyph, ind);
+            const int * cw  = (int *) sb_glyph3d_getnextcwedge(glyph, ind);
             SbVec3f vleft(coords[*(ccw+1)][0], coords[*(ccw+1)][1], nearz);
             SbVec3f vright(coords[*cw][0], coords[*cw][1], nearz);
             ind++;
@@ -949,12 +949,12 @@ SoText3P::render(SoState * state, const cc_font_specification * fontspec,
       }
 
       float advancex, advancey;
-      cc_glyph3d_getadvance(glyph, &advancex, &advancey);
+      sb_glyph3d_getadvance(glyph, &advancex, &advancey);
       xpos += advancex * fontspec->size;
 
     }
     if (prevglyph) {
-      cc_glyph3d_unref(prevglyph);
+      sb_glyph3d_unref(prevglyph);
       prevglyph = NULL;
     }
     ypos -= fontspec->size * PUBLIC(this)->spacing.getValue();
@@ -1079,7 +1079,7 @@ SoText3P::generate(SoAction * action, const cc_font_specification * fontspec,
     }
 
     SbString str = PUBLIC(this)->string[i];
-    cc_glyph3d * prevglyph = NULL;
+    sb_glyph3d * prevglyph = NULL;
     const char * p = str.getString();
     size_t length = coin_utf8_validate_length(p);
     // No assertion as zero length is handled correctly (results in a new line)
@@ -1090,24 +1090,24 @@ SoText3P::generate(SoAction * action, const cc_font_specification * fontspec,
       glyphidx = coin_utf8_get_char(p);
       p = coin_utf8_next_char(p);
 
-      cc_glyph3d * glyph = cc_glyph3d_ref(glyphidx, fontspec);
-      const SbVec2f * coords = (SbVec2f *) cc_glyph3d_getcoords(glyph);
+      sb_glyph3d * glyph = sb_glyph3d_ref(glyphidx, fontspec);
+      const SbVec2f * coords = (SbVec2f *) sb_glyph3d_getcoords(glyph);
 
       detail.setCharacterIndex(strcharidx);
 
       // Get kerning
       if (strcharidx > 0) {
         float kerningx, kerningy;
-        cc_glyph3d_getkerning(prevglyph, glyph, &kerningx, &kerningy);
+        sb_glyph3d_getkerning(prevglyph, glyph, &kerningx, &kerningy);
         xpos += kerningx * fontspec->size;
       }
       if (prevglyph) {
-        cc_glyph3d_unref(prevglyph);
+        sb_glyph3d_unref(prevglyph);
       }
       prevglyph = glyph;
 
       if (part != SoText3::SIDES) {  // FRONT & BACK
-        const int * ptr = cc_glyph3d_getfaceindices(glyph);
+        const int * ptr = sb_glyph3d_getfaceindices(glyph);
         PUBLIC(this)->beginShape(action, SoShape::TRIANGLES, NULL);
 
         while (*ptr >= 0) {
@@ -1153,7 +1153,7 @@ SoText3P::generate(SoAction * action, const cc_font_specification * fontspec,
       else { // SIDES
         if (profilenodes.getLength() == 0) {  // no profile - extrude
 
-          const int * ptr = cc_glyph3d_getedgeindices(glyph);
+          const int * ptr = sb_glyph3d_getedgeindices(glyph);
           SbVec2f v0, v1;
           int counter = 0;
           PUBLIC(this)->beginShape(action, SoShape::QUADS, NULL);
@@ -1161,8 +1161,8 @@ SoText3P::generate(SoAction * action, const cc_font_specification * fontspec,
           while (*ptr >= 0) {
             v1 = coords[*ptr++];
             v0 = coords[*ptr++];
-            const int * ccw = (int *) cc_glyph3d_getnextccwedge(glyph, counter);
-            const int * cw  = (int *) cc_glyph3d_getnextcwedge(glyph, counter);
+            const int * ccw = (int *) sb_glyph3d_getnextccwedge(glyph, counter);
+            const int * cw  = (int *) sb_glyph3d_getnextcwedge(glyph, counter);
             SbVec3f vleft(coords[*(ccw+1)][0], coords[*(ccw+1)][1], 0);
             SbVec3f vright(coords[*cw][0], coords[*cw][1], 0);
             counter++;
@@ -1269,7 +1269,7 @@ SoText3P::generate(SoAction * action, const cc_font_specification * fontspec,
         }
         else {  // profile
 
-          const int *indices = cc_glyph3d_getedgeindices(glyph);
+          const int *indices = sb_glyph3d_getedgeindices(glyph);
           int ind = 0;
           SbVec3f normala, normalb;
 
@@ -1282,8 +1282,8 @@ SoText3P::generate(SoAction * action, const cc_font_specification * fontspec,
             int i1 = *indices++;
             SbVec3f va(coords[i0][0], coords[i0][1], nearz);
             SbVec3f vb(coords[i1][0], coords[i1][1], nearz);
-            const int *ccw = (int *) cc_glyph3d_getnextccwedge(glyph, ind);
-            const int *cw  = (int *) cc_glyph3d_getnextcwedge(glyph, ind);
+            const int *ccw = (int *) sb_glyph3d_getnextccwedge(glyph, ind);
+            const int *cw  = (int *) sb_glyph3d_getnextcwedge(glyph, ind);
             SbVec3f vleft(coords[*(ccw+1)][0], coords[*(ccw+1)][1], nearz);
             SbVec3f vright(coords[*cw][0], coords[*cw][1], nearz);
             ind++;
@@ -1390,12 +1390,12 @@ SoText3P::generate(SoAction * action, const cc_font_specification * fontspec,
       }
 
       float advancex, advancey;
-      cc_glyph3d_getadvance(glyph, &advancex, &advancey);
+      sb_glyph3d_getadvance(glyph, &advancex, &advancey);
       xpos += advancex * fontspec->size;
 
     }
     if (prevglyph) {
-      cc_glyph3d_unref(prevglyph);
+      sb_glyph3d_unref(prevglyph);
       prevglyph = NULL;
     }
     ypos -= fontspec->size * PUBLIC(this)->spacing.getValue();
@@ -1443,7 +1443,7 @@ SoText3P::setUpGlyphs(SoState * state, SoText3 * textnode)
     float kerningy = 0;
     float advancex = 0;
     float advancey = 0;
-    cc_glyph3d * prevglyph = NULL;
+    sb_glyph3d * prevglyph = NULL;
 
     const float * maxbbox;
     this->maxglyphbbox.makeEmpty();
@@ -1459,18 +1459,19 @@ SoText3P::setUpGlyphs(SoState * state, SoText3 * textnode)
       glyphidx = coin_utf8_get_char(p);
       p = coin_utf8_next_char(p);
 
-      cc_glyph3d * glyph = cc_glyph3d_ref(glyphidx, fontspec);
-      this->cache->addGlyph(glyph);
+      sb_glyph3d * glyph = sb_glyph3d_ref(glyphidx, fontspec);
+      // Cache disabled for SbFont migration - optimization can be re-added later
+      // this->cache->addGlyph(glyph);
       assert(glyph);
 
-      maxbbox = cc_glyph3d_getboundingbox(glyph); // Get max height
+      maxbbox = sb_glyph3d_getboundingbox(glyph); // Get max height
 
       this->maxglyphbbox.extendBy(SbVec3f(0, maxbbox[1] * fontspec->size, 0));
       this->maxglyphbbox.extendBy(SbVec3f(0, maxbbox[3] * fontspec->size, 0)); 
 
       if (strcharidx > 0)
-        cc_glyph3d_getkerning(prevglyph, glyph, &kerningx, &kerningy);
-      cc_glyph3d_getadvance(glyph, &advancex, &advancey);
+        sb_glyph3d_getkerning(prevglyph, glyph, &kerningx, &kerningy);
+      sb_glyph3d_getadvance(glyph, &advancex, &advancey);
 
       stringwidth += (advancex + kerningx) * fontspec->size;
       prevglyph = glyph;
@@ -1478,8 +1479,8 @@ SoText3P::setUpGlyphs(SoState * state, SoText3 * textnode)
 
     if (prevglyph != NULL) {
       // Italic font might cause last letter to be outside bbox. Add width if needed.
-      if (advancex < cc_glyph3d_getwidth(prevglyph))
-        stringwidth += (cc_glyph3d_getwidth(prevglyph) - advancex) * fontspec->size;
+      if (advancex < sb_glyph3d_getwidth(prevglyph))
+        stringwidth += (sb_glyph3d_getwidth(prevglyph) - advancex) * fontspec->size;
     }
 
     this->widths.append(stringwidth);
