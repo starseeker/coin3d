@@ -39,17 +39,48 @@
   
   This header provides centralized image resizing capabilities that can be
   used by format handlers and other parts of the system. It provides both
-  high-quality and fast resizing algorithms.
+  high-quality and fast resizing algorithms with unified filter control.
 */
 
-enum SbImageResizeQuality {
-  SB_IMAGE_RESIZE_FAST,      // Fast, lower quality resize (good for interactive use)
-  SB_IMAGE_RESIZE_BILINEAR,  // Bilinear interpolation (good balance)
-  SB_IMAGE_RESIZE_HIGH       // High quality resize (placeholder for future simage-quality implementation)
+/*!
+  \brief Unified resize filter/quality options for image resizing.
+  
+  This enum combines both legacy quality levels and specific filter types
+  into a single unified interface. Legacy quality options are maintained
+  for backward compatibility:
+  
+  **Legacy Quality Options:**
+  - SB_IMAGE_RESIZE_FAST: Fast nearest-neighbor scaling
+  - SB_IMAGE_RESIZE_BILINEAR: Bilinear interpolation
+  - SB_IMAGE_RESIZE_HIGH: High quality using Bell filter (same as SB_IMAGE_RESIZE_FILTER_BELL)
+  
+  **Specific Filter Types:**
+  - SB_IMAGE_RESIZE_FILTER_BELL: Excellent balance of quality and performance  
+  - SB_IMAGE_RESIZE_FILTER_B_SPLINE: Smooth results, good for photographic content
+  - SB_IMAGE_RESIZE_FILTER_LANCZOS3: Sharp results, excellent for preserving fine details
+  - SB_IMAGE_RESIZE_FILTER_MITCHELL: Good general-purpose filter with balanced sharpness
+*/
+enum SbImageResizeFilter {
+  // Legacy quality options for backward compatibility
+  SB_IMAGE_RESIZE_FAST = 0,      // Fast, lower quality resize (good for interactive use)
+  SB_IMAGE_RESIZE_BILINEAR = 1,  // Bilinear interpolation (good balance)
+  SB_IMAGE_RESIZE_HIGH = 2,      // High quality resize (uses Bell filter)
+  
+  // Specific filter types from original simage library  
+  SB_IMAGE_RESIZE_FILTER_BELL = 2,      // Bell filter (same as SB_IMAGE_RESIZE_HIGH)
+  SB_IMAGE_RESIZE_FILTER_B_SPLINE = 3,  // B-spline filter  
+  SB_IMAGE_RESIZE_FILTER_LANCZOS3 = 4,  // Lanczos3 filter
+  SB_IMAGE_RESIZE_FILTER_MITCHELL = 5   // Mitchell filter
 };
 
+// Deprecated: Use SbImageResizeFilter instead
+typedef SbImageResizeFilter SbImageResizeQuality;
+
 /*!
-  \brief Resize a 2D image using the specified quality setting.
+  \brief Resize a 2D image using the specified filter/quality setting.
+  
+  This function supports both legacy quality options and specific filter types
+  through the unified SbImageResizeFilter enum.
   
   \param src Source image data
   \param width Source image width
@@ -57,16 +88,16 @@ enum SbImageResizeQuality {
   \param components Number of components per pixel (1=grayscale, 3=RGB, 4=RGBA)
   \param newwidth Target image width
   \param newheight Target image height
-  \param quality Resize quality setting
+  \param filter Filter/quality setting to use for resizing
   \return Newly allocated resized image data, or NULL on failure. Caller must free with delete[].
 */
 unsigned char* SbImageResize_resize2D(const unsigned char* src,
                                      int width, int height, int components,
                                      int newwidth, int newheight,
-                                     SbImageResizeQuality quality = SB_IMAGE_RESIZE_HIGH);
+                                     SbImageResizeFilter filter = SB_IMAGE_RESIZE_HIGH);
 
 /*!
-  \brief Resize a 3D image (volume) using the specified quality setting.
+  \brief Resize a 3D image (volume) using the specified filter/quality setting.
   
   \param src Source image data
   \param width Source image width
@@ -76,13 +107,13 @@ unsigned char* SbImageResize_resize2D(const unsigned char* src,
   \param newwidth Target image width
   \param newheight Target image height
   \param newdepth Target image depth
-  \param quality Resize quality setting
+  \param filter Filter/quality setting to use for resizing
   \return Newly allocated resized image data, or NULL on failure. Caller must free with delete[].
 */
 unsigned char* SbImageResize_resize3D(const unsigned char* src,
                                      int width, int height, int depth, int components,
                                      int newwidth, int newheight, int newdepth,
-                                     SbImageResizeQuality quality = SB_IMAGE_RESIZE_HIGH);
+                                     SbImageResizeFilter filter = SB_IMAGE_RESIZE_HIGH);
 
 /*!
   \brief In-place resize a 2D image into pre-allocated destination buffer.
@@ -94,12 +125,12 @@ unsigned char* SbImageResize_resize3D(const unsigned char* src,
   \param components Number of components per pixel
   \param newwidth Target image width
   \param newheight Target image height
-  \param quality Resize quality setting
+  \param filter Filter/quality setting to use for resizing
   \return true on success, false on failure
 */
 bool SbImageResize_resize2D_inplace(const unsigned char* src, unsigned char* dest,
                                    int width, int height, int components,
                                    int newwidth, int newheight,
-                                   SbImageResizeQuality quality = SB_IMAGE_RESIZE_HIGH);
+                                   SbImageResizeFilter filter = SB_IMAGE_RESIZE_HIGH);
 
 #endif // COIN_SBIMAGERESIZE_H
