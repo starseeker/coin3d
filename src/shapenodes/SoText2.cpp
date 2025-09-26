@@ -217,9 +217,10 @@
 
 class SoText2P {
 public:
-  SoText2P(SoText2 * textnode) : maxwidth(0), master(textnode), font(NULL)
+  SoText2P(SoText2 * textnode) : maxwidth(0), master(textnode)
   {
     this->bbox.makeEmpty();
+    this->font = new SbFont();  // Initialize with default ProFont
   }
 
   SbBool getQuad(SoState * state, SbVec3f & v0, SbVec3f & v1,
@@ -229,7 +230,7 @@ public:
   SbBool shouldBuildGlyphCache(SoState * state);
   void dumpBuffer(unsigned char * buffer, SbVec2s size, SbVec2s pos, SbBool mono);
   void computeBBox(SoAction * action, SbBox3f & box, SbVec3f & center);
-  void updateFont(SoState * state);  // Update SbFont from state elements
+  void updateFont(SoState * state);  // Update SbFont from state elements  
   static void setRasterPos3f(GLfloat x, GLfloat y, GLfloat z);
 
 
@@ -239,7 +240,7 @@ public:
   SbBox2s bbox;
 
   SoGlyphCache * cache;
-  SbFont * font;  // Modern font API - replaces bridge interface
+  SbFont * font;  // Direct SbFont for modern font handling
   SoFieldSensor * spacingsensor;
   SoFieldSensor * stringsensor;
   unsigned char * pixel_buffer;
@@ -305,7 +306,6 @@ SoText2::SoText2(void)
   PRIVATE(this)->spacingsensor->attach(&this->spacing);
   PRIVATE(this)->spacingsensor->setPriority(0);
   PRIVATE(this)->cache = NULL;
-  PRIVATE(this)->font = new SbFont();  // Initialize with default ProFont
   PRIVATE(this)->pixel_buffer = NULL;
   PRIVATE(this)->pixel_buffer_size = 0;
 }
@@ -351,7 +351,7 @@ SoText2::GLRender(SoGLRenderAction * action)
   PRIVATE(this)->buildGlyphCache(state);
   SoCacheElement::addCacheDependency(state, PRIVATE(this)->cache);
 
-  // Update font with current state settings
+  // Update font with current state
   PRIVATE(this)->updateFont(state);
 
   // Render only if bbox not outside cull planes.
@@ -406,7 +406,7 @@ SoText2::GLRender(SoGLRenderAction * action)
     int bitmappos[2];
     int bitmapsize[2];
     const unsigned char * buffer = NULL;
-    int prevcharacter = 0;  // For kerning - replaces prevglyph
+    int prevcharacter = 0;  // For kerning
 
     const int nrlines = this->string.getNum();
 
@@ -450,30 +450,30 @@ SoText2::GLRender(SoGLRenderAction * action)
       size_t length = coin_utf8_validate_length(p);
 
       for (unsigned int strcharidx = 0; strcharidx < length; strcharidx++) {
-        uint32_t character = 0;
+        uint32_t glyphidx = 0;
 
-        character = coin_utf8_get_char(p);
+        glyphidx = coin_utf8_get_char(p);
         p = coin_utf8_next_char(p);
 
         // Get glyph data directly from SbFont
         SbVec2s bitmapsize_vec, bitmappos_vec;
-        buffer = PRIVATE(this)->font->getGlyphBitmap(character, bitmapsize_vec, bitmappos_vec);
+        buffer = PRIVATE(this)->font->getGlyphBitmap(glyphidx, bitmapsize_vec, bitmappos_vec);
         
         bitmapsize[0] = bitmapsize_vec[0];
         bitmapsize[1] = bitmapsize_vec[1];
         bitmappos[0] = bitmappos_vec[0];
         bitmappos[1] = bitmappos_vec[1];
-        
+
         ix = bitmapsize[0];
         iy = bitmapsize[1];
 
         // Advance & Kerning using SbFont
         if (strcharidx > 0) {
-          SbVec2f kern = PRIVATE(this)->font->getGlyphKerning(prevcharacter, character);
+          SbVec2f kern = PRIVATE(this)->font->getGlyphKerning(prevcharacter, glyphidx);
           kerningx = (int)kern[0];
           kerningy = (int)kern[1];
         }
-        SbVec2f advance = PRIVATE(this)->font->getGlyphAdvance(character);
+        SbVec2f advance = PRIVATE(this)->font->getGlyphAdvance(glyphidx);
         advancex = (int)advance[0];
         advancey = (int)advance[1];
 
@@ -481,11 +481,12 @@ SoText2::GLRender(SoGLRenderAction * action)
         rastery = ypos + (bitmappos[1] - bitmapsize[1]);
 
         if (buffer) {
-          // SbFont provides grayscale bitmaps, so we don't check for mono
+          // SbFont provides consistent bitmap format, so render directly
           SoText2P::setRasterPos3f((float)rasterx + textscreenoffsetx, (float)rastery + (int)nilpoint[1], -nilpoint[2]);
           glBitmap(ix,iy,0,0,0,0,(const GLubyte *)buffer);
-          }
-          else {
+        }
+        else {
+          // Handle pixel buffer rendering for cases where direct bitmap doesn't work
             if (!drawPixelBuffer) {
               int numpixels = bbsize[0] * bbsize[1];
               if (numpixels > PRIVATE(this)->pixel_buffer_size) {
@@ -532,13 +533,13 @@ SoText2::GLRender(SoGLRenderAction * action)
         }
 
         xpos += (advancex + kerningx);
-        prevcharacter = character;  // Update for next iteration kerning
+        prevcharacter = glyphidx;  // Track for next iteration's kerning
       }
 
       ypos -= (int)(((int) fontsize) * this->spacing.getValue());
     }
 
-    // No need for glyph cleanup with SbFont
+    // No cleanup needed with direct SbFont usage
 
     if (drawPixelBuffer) {
       glEnable(GL_ALPHA_TEST);
@@ -1022,15 +1023,14 @@ SoText2P::updateFont(SoState * state)
   SbName fontname = SoFontNameElement::get(state);
   float fontsize = SoFontSizeElement::get(state);
   
-  // Set the size - SbFont uses ProFont by default
+  // Set the size
   this->font->setSize(fontsize);
   
-  // If a specific font name is requested (not "defaultFont"), try to load it
-  if (fontname != SbName("defaultFont") && fontname.getString()[0] != '\0') {
-    // For simplicity, we'll use ProFont for now
-    // In a full implementation, we could try to load the requested font file
-    // this->font->loadFont(fontname.getString());
-  }
+  // For now, we use ProFont as the default. In a full implementation,
+  // we could try to load specific font files based on fontname
+  // if (fontname != SbName("defaultFont") && fontname.getString()[0] != '\0') {
+  //   this->font->loadFont(fontname.getString()); 
+  // }
 }
 
 #undef PRIVATE
