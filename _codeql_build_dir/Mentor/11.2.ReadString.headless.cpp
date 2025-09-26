@@ -1,0 +1,278 @@
+/*
+ *
+ *  Copyright (C) 2000 Silicon Graphics, Inc.  All Rights Reserved. 
+ *
+ *  This library is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU Lesser General Public
+ *  License as published by the Free Software Foundation; either
+ *  version 2.1 of the License, or (at your option) any later version.
+ *
+ *  This library is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  Lesser General Public License for more details.
+ *
+ *  Further, this software is distributed without any warranty that it is
+ *  free of the rightful claim of any third person regarding infringement
+ *  or the like.  Any license provided herein, whether implied or
+ *  otherwise, applies only to this software file.  Patent licenses, if
+ *  any, provided herein do not apply to combinations of this program with
+ *  other software, or any other product whatsoever.
+ * 
+ *  You should have received a copy of the GNU Lesser General Public
+ *  License along with this library; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ *  Contact information: Silicon Graphics, Inc., 1600 Amphitheatre Pkwy,
+ *  Mountain View, CA  94043, or:
+ * 
+ *  http://www.sgi.com 
+ * 
+ *  For further information regarding this notice, see: 
+ * 
+ *  http://oss.sgi.com/projects/GenInfo/NoticeExplan/
+ *
+ */
+
+/*--------------------------------------------------------------
+ *  This is a headless adaptation from the Inventor Mentor,
+ *  chapter 11, example 2.
+ *
+ *  Example of creating a scene graph by reading from a string.
+ *  Create a dodecahedron, made of an IndexedFaceSet.  
+ *------------------------------------------------------------*/
+
+#include <iostream>
+#include <memory>
+#include <assert.h>
+#include <string.h>
+
+// OSMesa headers for headless rendering
+#ifdef __has_include
+  #if __has_include(<OSMesa/osmesa.h>)
+    #include <OSMesa/osmesa.h>
+    #include <OSMesa/gl.h>
+    #define HAVE_OSMESA
+  #endif
+#endif
+
+// Coin3D headers
+#include <Inventor/SoDB.h>
+#include <Inventor/SoInput.h>
+#include <Inventor/SoInteraction.h>
+#include <Inventor/SoOffscreenRenderer.h>
+#include <Inventor/nodes/SoSeparator.h>
+#include <Inventor/nodes/SoPerspectiveCamera.h>
+#include <Inventor/nodes/SoDirectionalLight.h>
+#include <Inventor/SbViewportRegion.h>
+
+#ifdef HAVE_OSMESA
+
+// OSMesa context wrapper
+struct OSMesaContextData {
+    OSMesaContext context;
+    std::unique_ptr<unsigned char[]> buffer;
+    int width, height;
+    
+    OSMesaContextData(int w, int h) : width(w), height(h) {
+        context = OSMesaCreateContextExt(OSMESA_RGBA, 16, 0, 0, NULL);
+        if (context) {
+            buffer = std::make_unique<unsigned char[]>(width * height * 4);
+        }
+    }
+    
+    ~OSMesaContextData() {
+        if (context) OSMesaDestroyContext(context);
+    }
+    
+    bool makeCurrent() {
+        if (!context || !buffer) return false;
+        
+        bool result = OSMesaMakeCurrent(context, buffer.get(), GL_UNSIGNED_BYTE, width, height);
+        if (result) {
+            // Set Y-axis orientation for proper image output
+            OSMesaPixelStore(OSMESA_Y_UP, 0);
+        }
+        return result;
+    }
+    
+    bool isValid() const { return context != nullptr; }
+    
+    const unsigned char* getBuffer() const { return buffer.get(); }
+};
+
+// OSMesa Context Manager for Coin3D
+class OSMesaContextManager : public SoDB::ContextManager {
+public:
+    virtual void* createOffscreenContext(unsigned int width, unsigned int height) override {
+        auto* ctx = new OSMesaContextData(width, height);
+        return ctx->isValid() ? ctx : (delete ctx, nullptr);
+    }
+    
+    virtual SbBool makeContextCurrent(void* context) override {
+        return context && static_cast<OSMesaContextData*>(context)->makeCurrent() ? TRUE : FALSE;
+    }
+    
+    virtual void restorePreviousContext(void* context) override {
+        // OSMesa doesn't need context stacking for single-threaded use
+        (void)context;
+    }
+    
+    virtual void destroyContext(void* context) override {
+        delete static_cast<OSMesaContextData*>(context);
+    }
+};
+
+/////////////////////////////////////////////////////////////
+// CODE FOR The Inventor Mentor STARTS HERE
+
+// Reads a dodecahedron from the following string: 
+// (Note: ANSI compilers automatically concatenate 
+// adjacent string literals together, so the compiler sees 
+// this as one big string)
+
+static const char *dodecahedron =
+   "Separator {"
+   "   Normal {"
+   "      vector ["
+   "         0.553341 0 0.832955, 0.832955 0.553341 0,"
+   "         0.832955 -0.553341 0, 0 -0.832955 0.553341,"
+   "         -0.553341 0 0.832955, 0 0.832955 0.553341,"
+   "         0 0.832955 -0.553341, -0.832955 0.553341 0,"
+   "         -0.832955 -0.553341 0, 0 -0.832955 -0.553341,"
+   "         0.553341 0 -0.832955, -0.553341 0 -0.832955,"
+   "      ]"
+   "   }"
+   "   NormalBinding { value PER_FACE }"
+   "   Material {"
+   "      diffuseColor ["
+   "         1  0  0,   0 1  0,   0  0 1,   0  1  1,"
+   "         1  0  1,  .5 1  0,  .5  0 1,  .5  1  1,"
+   "         1 .3 .7,  .3 1 .7,  .3 .7 1,  .5 .5 .8"
+   "      ]"
+   "   }"
+   "   MaterialBinding { value PER_FACE }"
+   "   Coordinate3 {"
+   "      point ["
+   "         1.7265 0 0.618,    1 1 1,"
+   "         0 0.618 1.7265,    0 -0.618 1.7265,"
+   "         1 -1 1,    -1 -1 1,"
+   "         -0.618 -1.7265 0,    0.618 -1.7265 0,"
+   "         1 -1 -1,    1.7265 0 -0.618,"
+   "         1 1 -1,    0.618 1.7265 0,"
+   "         -0.618 1.7265 0,    -1 1 1,"
+   "         -1.7265 0 0.618,    -1.7265 0 -0.618,"
+   "         -1 -1 -1,    0 -0.618 -1.7265,"
+   "         0 0.618 -1.7265,    -1 1 -1"
+   "      ]"
+   "   }"
+   "   IndexedFaceSet {"
+   "      coordIndex ["
+   "         1, 2, 3, 4, 0, -1,  0, 9, 10, 11, 1, -1,"
+   "         4, 7, 8, 9, 0, -1,  3, 5, 6, 7, 4, -1,"
+   "         2, 13, 14, 5, 3, -1,  1, 11, 12, 13, 2, -1,"
+   "         10, 18, 19, 12, 11, -1,  19, 15, 14, 13, 12, -1,"
+   "         15, 16, 6, 5, 14, -1,  8, 7, 6, 16, 17, -1,"
+   "         9, 8, 17, 18, 10, -1,  18, 17, 16, 15, 19, -1,"
+   "      ]"
+   "   }"
+   "}";
+
+// Routine to create a scene graph representing a dodecahedron
+SoNode *
+makeDodecahedron()
+{
+   // Read from the string.
+   SoInput in;
+   in.setBuffer(dodecahedron, strlen(dodecahedron));
+
+   SoNode *result;
+   SbBool readok = SoDB::read(&in, result);
+   assert(readok);
+
+   return result;
+}
+
+// CODE FOR The Inventor Mentor ENDS HERE
+/////////////////////////////////////////////////////////////
+
+// Save RGB buffer to RGB file using built-in SGI RGB format
+bool saveRGB(const std::string& filename, SoOffscreenRenderer* renderer) {
+    SbBool result = renderer->writeToRGB(filename.c_str());
+    if (result) {
+        std::cout << "RGB saved to: " << filename << std::endl;
+        return true;
+    } else {
+        std::cerr << "Error: Could not save RGB file " << filename << std::endl;
+        return false;
+    }
+}
+
+#endif // HAVE_OSMESA
+
+int
+main(int argc, char **argv)
+{
+#ifdef HAVE_OSMESA
+    // Initialize Coin3D with OSMesa context management
+    std::unique_ptr<OSMesaContextManager> context_manager = std::make_unique<OSMesaContextManager>();
+    SoDB::init(context_manager.get());
+    SoInteraction::init();
+    
+    std::cout << "ReadString: Dodecahedron - Headless OSMesa Version" << std::endl;
+
+    // Create main scene graph
+    SoSeparator *root = new SoSeparator;
+    SoPerspectiveCamera *myCamera = new SoPerspectiveCamera;
+    root->ref();
+    root->addChild(myCamera);
+    root->addChild(new SoDirectionalLight);
+
+    // Add the dodecahedron created from string
+    SoNode *dodec = makeDodecahedron();
+    root->addChild(dodec);
+
+    // Set up offscreen renderer with reasonable size
+    const int width = 512;
+    const int height = 512;
+    SbViewportRegion viewport(width, height);
+    SoOffscreenRenderer renderer(viewport);
+    renderer.setBackgroundColor(SbColor(0.1f, 0.1f, 0.2f)); // Dark blue background
+
+    // Make camera see everything
+    myCamera->viewAll(root, viewport);
+
+    // Render the scene
+    SbBool success = renderer.render(root);
+
+    if (success) {
+        // Determine output filename
+        std::string filename = "ReadString.rgb";
+        if (argc > 1) {
+            filename = argv[1];
+        }
+        
+        // Save to RGB file using built-in SGI RGB format
+        if (saveRGB(filename, &renderer)) {
+            std::cout << "Successfully rendered dodecahedron from string to " << filename << std::endl;
+        } else {
+            std::cerr << "Error saving RGB file" << std::endl;
+            root->unref();
+            return 1;
+        }
+    } else {
+        std::cerr << "Error: Failed to render scene" << std::endl;
+        root->unref();
+        return 1;
+    }
+
+    // Clean up
+    root->unref();
+
+    return 0;
+    
+#else
+    std::cerr << "Error: OSMesa support not available. Cannot run headless rendering." << std::endl;
+    return 1;
+#endif
+}

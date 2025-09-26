@@ -1,0 +1,331 @@
+/*
+ *
+ *  Copyright (C) 2000 Silicon Graphics, Inc.  All Rights Reserved. 
+ *
+ *  This library is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU Lesser General Public
+ *  License as published by the Free Software Foundation; either
+ *  version 2.1 of the License, or (at your option) any later version.
+ *
+ *  This library is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  Lesser General Public License for more details.
+ *
+ *  Further, this software is distributed without any warranty that it is
+ *  free of the rightful claim of any third person regarding infringement
+ *  or the like.  Any license provided herein, whether implied or
+ *  otherwise, applies only to this software file.  Patent licenses, if
+ *  any, provided herein do not apply to combinations of this program with
+ *  other software, or any other product whatsoever.
+ * 
+ *  You should have received a copy of the GNU Lesser General Public
+ *  License along with this library; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ *  Contact information: Silicon Graphics, Inc., 1600 Amphitheatre Pkwy,
+ *  Mountain View, CA  94043, or:
+ * 
+ *  http://oss.sgi.com 
+ * 
+ *  For further information regarding this notice, see: 
+ * 
+ *  http://oss.sgi.com/projects/GenInfo/NoticeExplan/
+ *
+ */
+
+/*--------------------------------------------------------------
+ *  This is a headless adaptation from the Inventor Mentor,
+ *  chapter 7, example 1.
+ *
+ *  This example displays a textured cube using a procedural
+ *  checkerboard texture generated in memory, demonstrating
+ *  the new Coin 4.1 setImageData() API for in-memory textures.
+ *------------------------------------------------------------*/
+
+#include <iostream>
+#include <memory>
+
+// OSMesa headers for headless rendering
+#ifdef __has_include
+  #if __has_include(<OSMesa/osmesa.h>)
+    #include <OSMesa/osmesa.h>
+    #include <OSMesa/gl.h>
+    #define HAVE_OSMESA
+  #endif
+#endif
+
+// Coin3D headers
+#include <Inventor/SoDB.h>
+#include <Inventor/SoInteraction.h>
+#include <Inventor/SoOffscreenRenderer.h>
+#include <Inventor/nodes/SoCube.h>
+#include <Inventor/nodes/SoSeparator.h>
+#include <Inventor/nodes/SoTexture2.h>
+#include <Inventor/nodes/SoMaterial.h>
+#include <Inventor/nodes/SoTextureCoordinateDefault.h>
+#include <Inventor/nodes/SoPerspectiveCamera.h>
+#include <Inventor/nodes/SoDirectionalLight.h>
+#include <Inventor/SbViewportRegion.h>
+
+#ifdef HAVE_OSMESA
+
+// OSMesa context wrapper
+struct OSMesaContextData {
+    OSMesaContext context;
+    std::unique_ptr<unsigned char[]> buffer;
+    int width, height;
+    
+    OSMesaContextData(int w, int h) : width(w), height(h) {
+        context = OSMesaCreateContextExt(OSMESA_RGBA, 16, 0, 0, NULL);
+        if (context) {
+            buffer = std::make_unique<unsigned char[]>(width * height * 4);
+        }
+    }
+    
+    ~OSMesaContextData() {
+        if (context) OSMesaDestroyContext(context);
+    }
+    
+    bool makeCurrent() {
+        if (!context || !buffer) return false;
+        
+        bool result = OSMesaMakeCurrent(context, buffer.get(), GL_UNSIGNED_BYTE, width, height);
+        if (result) {
+            // Set Y-axis orientation for proper image output
+            OSMesaPixelStore(OSMESA_Y_UP, 0);
+        }
+        return result;
+    }
+    
+    bool isValid() const { return context != nullptr; }
+    
+    const unsigned char* getBuffer() const { return buffer.get(); }
+};
+
+// OSMesa Context Manager for Coin3D
+class OSMesaContextManager : public SoDB::ContextManager {
+public:
+    virtual void* createOffscreenContext(unsigned int width, unsigned int height) override {
+        auto* ctx = new OSMesaContextData(width, height);
+        return ctx->isValid() ? ctx : (delete ctx, nullptr);
+    }
+    
+    virtual SbBool makeContextCurrent(void* context) override {
+        return context && static_cast<OSMesaContextData*>(context)->makeCurrent() ? TRUE : FALSE;
+    }
+    
+    virtual void restorePreviousContext(void* context) override {
+        // OSMesa doesn't need context stacking for single-threaded use
+        (void)context;
+    }
+    
+    virtual void destroyContext(void* context) override {
+        delete static_cast<OSMesaContextData*>(context);
+    }
+};
+
+// Save RGB buffer to RGB file using built-in SGI RGB format
+bool saveRGB(const std::string& filename, SoOffscreenRenderer* renderer) {
+    SbBool result = renderer->writeToRGB(filename.c_str());
+    if (result) {
+        std::cout << "RGB saved to: " << filename << std::endl;
+        return true;
+    } else {
+        std::cerr << "Error: Could not save RGB file " << filename << std::endl;
+        return false;
+    }
+}
+
+// Validate that rendered pixels contain proper black and white values
+bool validateCheckerboardPixels(SoOffscreenRenderer* renderer, int width, int height) {
+    const unsigned char* buffer = renderer->getBuffer();
+    if (!buffer) {
+        std::cerr << "Error: Could not get render buffer" << std::endl;
+        return false;
+    }
+    
+    int blackPixels = 0;
+    int whitePixels = 0;
+    int otherPixels = 0;
+    
+    // Sample pixels from the center area where the textured cube should be
+    int startX = width / 4;
+    int endX = 3 * width / 4;
+    int startY = height / 4;
+    int endY = 3 * height / 4;
+    
+    for (int y = startY; y < endY; y += 8) {  // Sample every 8th pixel
+        for (int x = startX; x < endX; x += 8) {
+            int idx = (y * width + x) * 4;  // RGBA format
+            unsigned char r = buffer[idx];
+            unsigned char g = buffer[idx + 1];
+            unsigned char b = buffer[idx + 2];
+            
+            // Check if it's black (all values close to 0)
+            if (r < 32 && g < 32 && b < 32) {
+                blackPixels++;
+            }
+            // Check if it's white (all values close to 255)
+            else if (r > 220 && g > 220 && b > 220) {
+                whitePixels++;
+            }
+            else {
+                otherPixels++;
+            }
+        }
+    }
+    
+    int totalSampled = blackPixels + whitePixels + otherPixels;
+    std::cout << "\nPixel validation results:" << std::endl;
+    std::cout << "  Black pixels: " << blackPixels << " (" << (100 * blackPixels / totalSampled) << "%)" << std::endl;
+    std::cout << "  White pixels: " << whitePixels << " (" << (100 * whitePixels / totalSampled) << "%)" << std::endl;
+    std::cout << "  Other pixels: " << otherPixels << " (" << (100 * otherPixels / totalSampled) << "%)" << std::endl;
+    
+    // For a proper checkerboard, we should have roughly equal black and white pixels
+    // Allow some tolerance for edge effects and sampling
+    bool hasBlackPixels = blackPixels > totalSampled / 10;
+    bool hasWhitePixels = whitePixels > totalSampled / 10;
+    bool fewOtherPixels = otherPixels < totalSampled / 2;
+    
+    if (hasBlackPixels && hasWhitePixels && fewOtherPixels) {
+        std::cout << "✓ Checkerboard texture rendered correctly with black and white pixels" << std::endl;
+        return true;
+    } else {
+        std::cout << "✗ Checkerboard texture validation failed" << std::endl;
+        if (!hasBlackPixels) std::cout << "  - Missing black pixels" << std::endl;
+        if (!hasWhitePixels) std::cout << "  - Missing white pixels" << std::endl;
+        if (!fewOtherPixels) std::cout << "  - Too many non-black/white pixels" << std::endl;
+        return false;
+    }
+}
+
+#endif // HAVE_OSMESA
+
+// Generate a pure black and white checkerboard texture pattern
+void generateCheckerboardTexture(int width, int height, unsigned char* data) {
+    const int checkerSize = 32;  // Larger squares for easier validation
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            bool checkX = (x / checkerSize) % 2;
+            bool checkY = (y / checkerSize) % 2;
+            bool isWhite = checkX ^ checkY;
+            
+            int idx = (y * width + x) * 3;  // RGB format
+            if (isWhite) {
+                data[idx] = 255;     // R - pure white
+                data[idx + 1] = 255; // G 
+                data[idx + 2] = 255; // B
+            } else {
+                data[idx] = 0;       // R - pure black
+                data[idx + 1] = 0;   // G
+                data[idx + 2] = 0;   // B
+            }
+        }
+    }
+}
+
+int
+main(int argc, char **argv)
+{
+#ifdef HAVE_OSMESA
+    // Initialize Coin3D with OSMesa context management
+    std::unique_ptr<OSMesaContextManager> context_manager = std::make_unique<OSMesaContextManager>();
+    SoDB::init(context_manager.get());
+    SoInteraction::init();
+    
+    std::cout << "BasicTexture: Black and White Checkerboard Test - Headless OSMesa" << std::endl;
+    std::cout << "Testing texture rendering with pure black and white checkerboard" << std::endl;
+
+    SoSeparator *root = new SoSeparator;
+    SoPerspectiveCamera *myCamera = new SoPerspectiveCamera;
+    root->ref();
+    root->addChild(myCamera);
+    
+    // Add lighting - important for texture rendering
+    root->addChild(new SoDirectionalLight);
+
+    // Generate pure black and white checkerboard texture
+    const int texWidth = 128;
+    const int texHeight = 128;
+    unsigned char* textureData = new unsigned char[texWidth * texHeight * 3];
+    generateCheckerboardTexture(texWidth, texHeight, textureData);
+
+    // Create texture using setImageData API  
+    SoTexture2 *checkerTexture = new SoTexture2;
+    checkerTexture->ref();
+    
+    // Use the standard setImageData API
+    checkerTexture->setImageData(texWidth, texHeight, 3, textureData);
+    
+    // Add material first - white base material to let texture show through
+    SoMaterial* material = new SoMaterial;
+    material->diffuseColor = SbColor(1.0f, 1.0f, 1.0f);  // White
+    material->ambientColor = SbColor(0.2f, 0.2f, 0.2f);  // Light gray ambient
+    root->addChild(material);
+    
+    // Add texture to scene graph
+    root->addChild(checkerTexture);
+    root->addChild(new SoTextureCoordinateDefault);
+    
+    // Clean up texture data after setting it
+    delete[] textureData;
+
+    // Make a cube
+    root->addChild(new SoCube);
+
+    // Set up offscreen renderer with reasonable size
+    const int width = 512;
+    const int height = 512;
+    SbViewportRegion viewport(width, height);
+    SoOffscreenRenderer renderer(viewport);
+    renderer.setBackgroundColor(SbColor(0.2f, 0.3f, 0.4f)); // Blue-gray background
+
+    // Make camera see everything
+    myCamera->viewAll(root, viewport);
+
+    // Render the scene
+    SbBool success = renderer.render(root);
+
+    if (success) {
+        // Validate the rendered pixels first
+        bool pixelsValid = validateCheckerboardPixels(&renderer, width, height);
+        
+        // Determine output filename
+        std::string filename = "BasicTexture.rgb";
+        if (argc > 1) {
+            filename = argv[1];
+        }
+        
+        // Save to RGB file using built-in SGI RGB format
+        if (saveRGB(filename, &renderer)) {
+            std::cout << "Successfully rendered textured cube to " << filename << std::endl;
+            if (pixelsValid) {
+                std::cout << "✓ Texture rendering validation PASSED - black and white pixels detected correctly" << std::endl;
+            } else {
+                std::cout << "✗ Texture rendering validation FAILED - pixel values not as expected" << std::endl;
+            }
+        } else {
+            std::cerr << "Error saving RGB file" << std::endl;
+            root->unref();
+            return 1;
+        }
+    } else {
+        std::cerr << "Error: Failed to render scene" << std::endl;
+        root->unref();
+        return 1;
+    }
+
+    // Clean up texture
+    checkerTexture->unref();
+    
+    // Clean up
+    root->unref();
+
+    return 0;
+    
+#else
+    std::cerr << "Error: OSMesa support not available. Cannot run headless rendering." << std::endl;
+    return 1;
+#endif
+}
