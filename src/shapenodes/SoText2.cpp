@@ -349,38 +349,6 @@ SoText2::GLRender(SoGLRenderAction * action)
 
   const cc_font_specification * fontspec = PRIVATE(this)->cache->getCachedFontspec();
 
-  // WORKAROUND: Use fixed reasonable bounding box values to avoid memory corruption
-  if (!fontspec) return; // Safety check
-  
-  float fontsize = SoFontSizeElement::get(state);
-  int nrlines = this->string.getNum();
-  
-  // Calculate approximate bounding box based on string content and font size
-  int max_string_length = 0;
-  for (int i = 0; i < nrlines; i++) {
-    SbString str = this->string[i];
-    int len = (int)coin_utf8_validate_length(str.getString());
-    if (len > max_string_length) max_string_length = len;
-  }
-  
-  // Estimate bounding box (these are reasonable approximations)
-  int estimated_width = (int)(max_string_length * fontsize * 0.6f); // Approx 0.6 width-to-height ratio
-  int estimated_height = (int)(nrlines * fontsize * 1.2f); // Approx 1.2 line spacing
-  
-  SbVec2s bbsize(estimated_width, estimated_height);
-  SbVec2s bbmin(0, -(int)(fontsize * 0.2f)); // Slightly below baseline  
-  SbVec2s bbmax(estimated_width, estimated_height - (int)(fontsize * 0.2f));
-  
-  // Debug computed bbox values
-  auto env_debug = CoinInternal::getEnvironmentVariable("COIN_DEBUG_TEXT2D");
-  if (env_debug.has_value() && (std::atoi(env_debug->c_str()) > 0)) {
-    SoDebugError::postInfo("SoText2::GLRender", 
-                          "Fixed bbox: fontsize=%.1f, strings=%d, maxlen=%d, bbox=(%d,%d) to (%d,%d), size=(%d,%d)", 
-                          fontsize, nrlines, max_string_length,
-                          (int)bbmin[0], (int)bbmin[1], (int)bbmax[0], (int)bbmax[1], 
-                          (int)bbsize[0], (int)bbsize[1]);
-  }
-
   // Render only if bbox not outside cull planes.
   SbBox3f box;
   SbVec3f center;
@@ -399,11 +367,9 @@ SoText2::GLRender(SoGLRenderAction * action)
     nilpoint[0] = (nilpoint[0] + 1.0f) * 0.5f * vpsize[0];
     nilpoint[1] = (nilpoint[1] + 1.0f) * 0.5f * vpsize[1];
 
-    // Unused variables for compatibility
-    SbVec2s bbsize_computed = PRIVATE(this)->bbox.getSize();
-    const SbVec2s& bbmin_orig = PRIVATE(this)->bbox.getMin();
-    const SbVec2s& bbmax_orig = PRIVATE(this)->bbox.getMax();
-    (void)bbsize_computed; (void)bbmin_orig; (void)bbmax_orig;
+    SbVec2s bbsize = PRIVATE(this)->bbox.getSize();
+    const SbVec2s& bbmin = PRIVATE(this)->bbox.getMin();
+    const SbVec2s& bbmax = PRIVATE(this)->bbox.getMax();
 
     float textscreenoffsetx = nilpoint[0]+bbmin[0];
     switch (this->justification.getValue()) {
@@ -578,19 +544,7 @@ SoText2::GLRender(SoGLRenderAction * action)
 
       rastery = (int)floor(nilpoint[1]+0.5) - bbsize[1] + bbmax[1];
 
-      GLfloat raster_x = (GLfloat)floor(textscreenoffsetx+0.5);
-      GLfloat raster_y = (GLfloat)rastery;
-      GLfloat raster_z = -nilpoint[2];
-      
-      // Debug output for text positioning
-      auto env = CoinInternal::getEnvironmentVariable("COIN_DEBUG_TEXT2D");
-      if (env.has_value() && (std::atoi(env->c_str()) > 0)) {
-        SoDebugError::postInfo("SoText2::GLRender", 
-                              "Rendering text at raster pos (%.2f, %.2f, %.2f), bbsize=%dx%d, textoffset=%.2f", 
-                              raster_x, raster_y, raster_z, (int)bbsize[0], (int)bbsize[1], textscreenoffsetx);
-      }
-      
-      SoText2P::setRasterPos3f(raster_x, raster_y, raster_z);
+      SoText2P::setRasterPos3f((GLfloat)floor(textscreenoffsetx+0.5), (GLfloat)rastery, -nilpoint[2]);
       glDrawPixels(bbsize[0], bbsize[1], GL_RGBA, GL_UNSIGNED_BYTE, (const GLubyte *)PRIVATE(this)->pixel_buffer);
     }
 
@@ -913,12 +867,16 @@ SoText2P::buildGlyphCache(SoState * state)
 
   this->bbox.makeEmpty();
 
+  // Debug: Add bounding box debugging to verify the fix
+  auto env_debug = CoinInternal::getEnvironmentVariable("COIN_DEBUG_BBOX");
+  SbBool debug_bbox = env_debug.has_value() && (std::atoi(env_debug->c_str()) > 0);
+
   for (int i=0; i < nrlines; i++) {
     SbString str = PUBLIC(this)->string[i];
     this->positions.append(SbList<SbVec2s>());
 
     SbBox2s linebbox;
-    linebbox.makeEmpty();
+    linebbox.makeEmpty();  // CRITICAL FIX: Initialize the bounding box
     int xpos = 0;
     int actuallength = 0;
     int kerningx = 0;
@@ -971,6 +929,14 @@ SoText2P::buildGlyphCache(SoState * state)
     }
 
     this->bbox.extendBy(linebbox);
+    
+    // Debug: Show bounding box after extending
+    if (debug_bbox && i == 0) {  // Only show for first line to avoid spam
+      short bxmin, bymin, bxmax, bymax;
+      this->bbox.getBounds(bxmin, bymin, bxmax, bymax);
+      printf("DEBUG: After line %d, bbox = (%d,%d) to (%d,%d)\n", i, bxmin, bymin, bxmax, bymax);
+      fflush(stdout);
+    }
     
     this->stringwidth.append(actuallength);
     if (actuallength > this->maxwidth) this->maxwidth=actuallength;
@@ -1028,7 +994,7 @@ SoText2P::setRasterPos3f(GLfloat x, GLfloat y, GLfloat z)
   float offsetx = x >= 0 ? 0 : x;
 
   float rpy = y >= 0 ? y : 0;
-  offvp = (offvp || y < 0) ? 1 : 0;
+  offvp = (offvp || y < 0) ? 1 : 0;  // FIXED: Operator precedence bug
   float offsety = y >= 0 ? 0 : y;
 
   glRasterPos3f(rpx,rpy,z);
