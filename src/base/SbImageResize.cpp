@@ -30,6 +30,18 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
+/*
+ * This file implements high-quality image resizing algorithms.
+ * The high-quality resize implementation incorporates sophisticated filtering
+ * algorithms from the original simage library's resize.c, including:
+ * - Bell filter (default for high quality)
+ * - B-spline filter  
+ * - Lanczos3 filter
+ * - Mitchell filter
+ * 
+ * These provide superior quality compared to simple bilinear interpolation.
+ */
+
 #include "SbImageResize.h"
 #include <cstring>
 #include <algorithm>
@@ -463,17 +475,19 @@ static void fast_resize_3d(const unsigned char* src, unsigned char* dest,
   }
 }
 
-// High-quality resize placeholder (currently falls back to bilinear)
-// TODO: Implement advanced algorithms like bicubic, Lanczos, etc.
+// High-quality resize implementation using Bell filter from original simage
+// Replaces the previous stub that fell back to bilinear interpolation
 static void high_quality_resize_2d(const unsigned char* src, unsigned char* dest,
                                   int width, int height, int components,
                                   int newwidth, int newheight)
 {
   // Use high-quality Bell filter from original simage implementation
+  // Bell filter provides excellent quality with reasonable performance
   Image* srcimg = new_image(width, height, components, const_cast<unsigned char*>(src));
   Image* dstimg = new_image(newwidth, newheight, components, dest);
   
   // Using the Bell filter as it provides good quality balance
+  // Other available filters: B_spline_filter, Lanczos3_filter, Mitchell_filter
   zoom(dstimg, srcimg, bell_filter, bell_support);
   
   // Clean up (don't delete the data as it's owned by caller)
