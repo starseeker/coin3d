@@ -31,6 +31,7 @@
 \**************************************************************************/
 
 #include "SbImageFormatHandler.h"
+#include "SbImageResize.h"
 #include <algorithm>
 #include <cstring>
 #include <cstdlib>
@@ -164,6 +165,54 @@ void SbImageFormatRegistry::freeImageData(unsigned char* imagedata)
     // For now, use standard delete[] - individual handlers can override if needed
     delete[] imagedata;
   }
+}
+
+unsigned char* SbImageFormatRegistry::resizeImage(unsigned char* imagedata, int width, int height, int components,
+                                                 int newwidth, int newheight, bool highQuality)
+{
+  if (!imagedata) {
+    setError("Null image data provided for resizing");
+    return nullptr;
+  }
+  
+  // Try to find a handler that supports high-quality resizing
+  if (highQuality) {
+    for (const auto& handler : handlers) {
+      unsigned char* result = handler->resizeImage(imagedata, width, height, components, newwidth, newheight);
+      if (result) {
+        return result;
+      }
+    }
+  }
+  
+  // Fall back to built-in resize algorithms
+  SbImageResizeQuality quality = highQuality ? SB_IMAGE_RESIZE_HIGH : SB_IMAGE_RESIZE_FAST;
+  return SbImageResize_resize2D(imagedata, width, height, components, newwidth, newheight, quality);
+}
+
+unsigned char* SbImageFormatRegistry::resize3DImage(unsigned char* imagedata, int width, int height, int depth, int components,
+                                                   int newwidth, int newheight, int newdepth, bool highQuality)
+{
+  if (!imagedata) {
+    setError("Null image data provided for 3D resizing");
+    return nullptr;
+  }
+  
+  // Try to find a handler that supports high-quality 3D resizing
+  if (highQuality) {
+    for (const auto& handler : handlers) {
+      unsigned char* result = handler->resize3DImage(imagedata, width, height, depth, components, 
+                                                    newwidth, newheight, newdepth);
+      if (result) {
+        return result;
+      }
+    }
+  }
+  
+  // Fall back to built-in 3D resize algorithms
+  SbImageResizeQuality quality = highQuality ? SB_IMAGE_RESIZE_HIGH : SB_IMAGE_RESIZE_FAST;
+  return SbImageResize_resize3D(imagedata, width, height, depth, components, 
+                               newwidth, newheight, newdepth, quality);
 }
 
 bool SbImageFormatRegistry::isExtensionSupported(const std::string& extension) const

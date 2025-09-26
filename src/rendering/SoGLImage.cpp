@@ -221,7 +221,8 @@
 #include "rendering/SoGL.h"
 #include "elements/SoTextureScaleQualityElement.h"
 #include "glue/glp.h"
-// Note: Image resizing functionality removed - using internal functions
+#include "base/SbImageFormatHandler.h"
+#include "base/SbJpegImageHandler.h"
 #include "threads/threadsutilp.h"
 #include "coindefs.h"
 #include "misc/SoEnvironment.h"
@@ -1530,18 +1531,55 @@ SoGLImageP::resizeImage(SoState * state, unsigned char *& imageptr,
       // function. We prefer to use that to avoid using GLU, since
       // there are lots of buggy GLU libraries out there.
       if (zsize == 0) { // 2D image
-        // simage_resize and gluScaleImage can be pretty slow. Use
-        // fast_image_resize() if high quality isn't needed
-        // Use internal resize function (simage resize functionality removed)
-        fast_image_resize(bytes, glimage_tmpimagebuffer,
-                          xsize, ysize, numcomponents,
-                          newx, newy);
+        // Use high-quality resize when texture quality is important
+        bool highQuality = (SoTextureScaleQualityElement::get(state) >= 0.5f);
+        
+        // Initialize format handlers to ensure resize capability is available
+        static bool handlersInitialized = false;
+        if (!handlersInitialized) {
+          auto& registry = SbImageFormatRegistry::getInstance();
+          registry.registerHandler(std::make_unique<SbJpegImageHandler>());
+          handlersInitialized = true;
+        }
+        
+        auto& registry = SbImageFormatRegistry::getInstance();
+        unsigned char* result = registry.resizeImage((unsigned char*)bytes,
+                                                    xsize, ysize, numcomponents,
+                                                    newx, newy, highQuality);
+        if (result) {
+          (void)memcpy(glimage_tmpimagebuffer, result, numbytes);
+          registry.freeImageData(result);
+        } else {
+          // Fallback to internal fast resize if registry fails
+          fast_image_resize(bytes, glimage_tmpimagebuffer,
+                           xsize, ysize, numcomponents,
+                           newx, newy);
+        }
       }
       else { // (zsize > 0) => 3D image
-        // Use internal low-quality resize function (simage 3D resize functionality removed)
-        fast_image_resize3d(bytes, glimage_tmpimagebuffer,
-                            xsize, ysize, numcomponents, zsize,
-                            newx, newy, newz);
+        bool highQuality = (SoTextureScaleQualityElement::get(state) >= 0.5f);
+        
+        // Initialize format handlers
+        static bool handlersInitialized = false;
+        if (!handlersInitialized) {
+          auto& registry = SbImageFormatRegistry::getInstance();
+          registry.registerHandler(std::make_unique<SbJpegImageHandler>());
+          handlersInitialized = true;
+        }
+        
+        auto& registry = SbImageFormatRegistry::getInstance();
+        unsigned char* result = registry.resize3DImage((unsigned char*)bytes,
+                                                      xsize, ysize, zsize, numcomponents,
+                                                      newx, newy, newz, highQuality);
+        if (result) {
+          (void)memcpy(glimage_tmpimagebuffer, result, numbytes);
+          registry.freeImageData(result);
+        } else {
+          // Fallback to internal fast resize if registry fails
+          fast_image_resize3d(bytes, glimage_tmpimagebuffer,
+                             xsize, ysize, numcomponents, zsize,
+                             newx, newy, newz);
+        }
       }
     }
     imageptr = glimage_tmpimagebuffer;

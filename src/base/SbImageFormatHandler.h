@@ -104,6 +104,12 @@ public:
                 int width, int height, int components);
   void freeImageData(unsigned char* imagedata);
   
+  // Image resize operations
+  unsigned char* resizeImage(unsigned char* imagedata, int width, int height, int components,
+                           int newwidth, int newheight, bool highQuality = true);
+  unsigned char* resize3DImage(unsigned char* imagedata, int width, int height, int depth, int components,
+                             int newwidth, int newheight, int newdepth, bool highQuality = true);
+  
   // Format capability queries
   bool isExtensionSupported(const std::string& extension) const;
   bool isSaveSupported(const char* filename) const;

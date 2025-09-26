@@ -172,7 +172,8 @@
 #include <Inventor/system/gl.h>
 
 #include "nodes/SoSubNodeP.h"
-// Note: Image resizing functionality removed - using internal functions
+#include "base/SbImageFormatHandler.h"
+#include "base/SbJpegImageHandler.h"
 
 
 /*!
@@ -880,9 +881,25 @@ SoImage::getImage(SbVec2s & size, int & nc)
       const unsigned char * orgdata = this->image.getValue(orgsize, nc);
       SbVec2s newsize = this->getSize();
 
-      // Use simple bilinear resize function (simage resize functionality removed)
-      // GLU might require a valid GL context and has buggy versions
-      {
+      // Use high-quality resize from format handler system (restored simage capability)
+      // Initialize format handlers to ensure resize capability is available
+      static bool handlersInitialized = false;
+      if (!handlersInitialized) {
+        auto& registry = SbImageFormatRegistry::getInstance();
+        registry.registerHandler(std::make_unique<SbJpegImageHandler>());
+        handlersInitialized = true;
+      }
+      
+      auto& registry = SbImageFormatRegistry::getInstance();
+      unsigned char* result = registry.resizeImage((unsigned char*)orgdata,
+                                                  int(orgsize[0]), int(orgsize[1]), nc,
+                                                  int(newsize[0]), int(newsize[1]), true);
+      if (result) {
+        this->resizedimage->setValue(newsize, nc, result);
+        registry.freeImageData(result);
+        this->resizedimagevalid = TRUE;
+      } else {
+        // Fallback to internal simple resize if registry fails
         this->resizedimage->setValue(newsize, nc, NULL);
         const unsigned char * rezdata = this->resizedimage->getValue(newsize, nc);
         simple_image_resize(orgdata, (unsigned char*)rezdata,
