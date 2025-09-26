@@ -29,6 +29,7 @@ set(SIMPLE_TESTS
     test_simple_debug
     test_coordinate_debug
     test_sphere_positioning
+    test_texture_checkerboard
     test_comprehensive
     test_legacy_integration
 )

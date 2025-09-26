@@ -137,11 +137,74 @@ bool saveRGB(const std::string& filename, SoOffscreenRenderer* renderer) {
     }
 }
 
+// Validate that rendered pixels contain proper black and white values
+bool validateCheckerboardPixels(SoOffscreenRenderer* renderer, int width, int height) {
+    const unsigned char* buffer = renderer->getBuffer();
+    if (!buffer) {
+        std::cerr << "Error: Could not get render buffer" << std::endl;
+        return false;
+    }
+    
+    int blackPixels = 0;
+    int whitePixels = 0;
+    int otherPixels = 0;
+    
+    // Sample pixels from the center area where the textured cube should be
+    int startX = width / 4;
+    int endX = 3 * width / 4;
+    int startY = height / 4;
+    int endY = 3 * height / 4;
+    
+    for (int y = startY; y < endY; y += 8) {  // Sample every 8th pixel
+        for (int x = startX; x < endX; x += 8) {
+            int idx = (y * width + x) * 4;  // RGBA format
+            unsigned char r = buffer[idx];
+            unsigned char g = buffer[idx + 1];
+            unsigned char b = buffer[idx + 2];
+            
+            // Check if it's black (all values close to 0)
+            if (r < 32 && g < 32 && b < 32) {
+                blackPixels++;
+            }
+            // Check if it's white (all values close to 255)
+            else if (r > 220 && g > 220 && b > 220) {
+                whitePixels++;
+            }
+            else {
+                otherPixels++;
+            }
+        }
+    }
+    
+    int totalSampled = blackPixels + whitePixels + otherPixels;
+    std::cout << "\nPixel validation results:" << std::endl;
+    std::cout << "  Black pixels: " << blackPixels << " (" << (100 * blackPixels / totalSampled) << "%)" << std::endl;
+    std::cout << "  White pixels: " << whitePixels << " (" << (100 * whitePixels / totalSampled) << "%)" << std::endl;
+    std::cout << "  Other pixels: " << otherPixels << " (" << (100 * otherPixels / totalSampled) << "%)" << std::endl;
+    
+    // For a proper checkerboard, we should have roughly equal black and white pixels
+    // Allow some tolerance for edge effects and sampling
+    bool hasBlackPixels = blackPixels > totalSampled / 10;
+    bool hasWhitePixels = whitePixels > totalSampled / 10;
+    bool fewOtherPixels = otherPixels < totalSampled / 2;
+    
+    if (hasBlackPixels && hasWhitePixels && fewOtherPixels) {
+        std::cout << "✓ Checkerboard texture rendered correctly with black and white pixels" << std::endl;
+        return true;
+    } else {
+        std::cout << "✗ Checkerboard texture validation failed" << std::endl;
+        if (!hasBlackPixels) std::cout << "  - Missing black pixels" << std::endl;
+        if (!hasWhitePixels) std::cout << "  - Missing white pixels" << std::endl;
+        if (!fewOtherPixels) std::cout << "  - Too many non-black/white pixels" << std::endl;
+        return false;
+    }
+}
+
 #endif // HAVE_OSMESA
 
-// Generate a checkerboard texture pattern in memory
+// Generate a pure black and white checkerboard texture pattern
 void generateCheckerboardTexture(int width, int height, unsigned char* data) {
-    const int checkerSize = 16;
+    const int checkerSize = 32;  // Larger squares for easier validation
     for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {
             bool checkX = (x / checkerSize) % 2;
@@ -150,13 +213,13 @@ void generateCheckerboardTexture(int width, int height, unsigned char* data) {
             
             int idx = (y * width + x) * 3;  // RGB format
             if (isWhite) {
-                data[idx] = 220;     // R - brick color
-                data[idx + 1] = 180; // G 
-                data[idx + 2] = 100; // B
+                data[idx] = 255;     // R - pure white
+                data[idx + 1] = 255; // G 
+                data[idx + 2] = 255; // B
             } else {
-                data[idx] = 140;     // R - mortar color
-                data[idx + 1] = 60;  // G
-                data[idx + 2] = 30;  // B
+                data[idx] = 0;       // R - pure black
+                data[idx + 1] = 0;   // G
+                data[idx + 2] = 0;   // B
             }
         }
     }
@@ -171,62 +234,41 @@ main(int argc, char **argv)
     SoDB::init(context_manager.get());
     SoInteraction::init();
     
-    std::cout << "BasicTexture: Demonstrating New Texture APIs - Headless OSMesa Version" << std::endl;
-    std::cout << "Shows procedural texture generation with new Coin 4.1 setImageData() API" << std::endl;
+    std::cout << "BasicTexture: Black and White Checkerboard Test - Headless OSMesa" << std::endl;
+    std::cout << "Testing texture rendering with pure black and white checkerboard" << std::endl;
 
     SoSeparator *root = new SoSeparator;
     SoPerspectiveCamera *myCamera = new SoPerspectiveCamera;
     root->ref();
     root->addChild(myCamera);
+    
+    // Add lighting - important for texture rendering
     root->addChild(new SoDirectionalLight);
 
-    // Generate and demonstrate the NEW Coin 4.1 setImageData() API
+    // Generate pure black and white checkerboard texture
     const int texWidth = 128;
     const int texHeight = 128;
     unsigned char* textureData = new unsigned char[texWidth * texHeight * 3];
     generateCheckerboardTexture(texWidth, texHeight, textureData);
 
-    // Create texture using NEW Coin 4.1 setImageData() convenience API  
+    // Create texture using setImageData API  
     SoTexture2 *checkerTexture = new SoTexture2;
     checkerTexture->ref();
     
-    std::cout << "Demonstrating new setImageData() API..." << std::endl;
+    // Use the standard setImageData API
+    checkerTexture->setImageData(texWidth, texHeight, 3, textureData);
     
-    // This is the new API - much simpler than the old image.setValue() approach!
-    // Let's try NO_COPY approach to avoid copying and see if that helps
-    checkerTexture->setImageDataNoCopy(texWidth, texHeight, 3, textureData, FALSE);
+    // Add material first - white base material to let texture show through
+    SoMaterial* material = new SoMaterial;
+    material->diffuseColor = SbColor(1.0f, 1.0f, 1.0f);  // White
+    material->ambientColor = SbColor(0.2f, 0.2f, 0.2f);  // Light gray ambient
+    root->addChild(material);
     
-    // Verify the texture was set correctly using new getImageData() API
-    int w, h, c;
-    const unsigned char* retrievedData = checkerTexture->getImageData(w, h, c);
-    if (retrievedData && w == texWidth && h == texHeight && c == 3) {
-        std::cout << "✓ Successfully created " << w << "x" << h << " procedural texture using setImageData()" << std::endl;
-        std::cout << "✓ Texture data verified using getImageData()" << std::endl;
-        std::cout << "  Sample colors: R=" << (int)retrievedData[0] 
-                  << " G=" << (int)retrievedData[1] 
-                  << " B=" << (int)retrievedData[2] << std::endl;
-    } else {
-        std::cout << "✗ API test failed" << std::endl;
-    }
-    
-    // The texture APIs work perfectly! Now let's debug the OSMesa texture rendering issue
-    // to provide a working RGB headless output as requested.
-    
-    // The texture APIs work perfectly! The issue is a known compatibility problem
-    // between texture rendering and OSMesa headless context. This is an OSMesa
-    // environmental issue, not an API limitation. The solution is to use the APIs
-    // for texture creation (which works perfectly) and provide fallback rendering.
-    
-    std::cout << "\n=== FIXED: OSMESA TEXTURE RENDERING ===" << std::endl;
-    std::cout << "OSMesa mipmap generation bug has been fixed in Coin3D" << std::endl;
-    std::cout << "Textures now work properly with OSMesa headless rendering!" << std::endl;
-    
-    // Add texture to scene graph - this now works with the fix!
+    // Add texture to scene graph
     root->addChild(checkerTexture);
     root->addChild(new SoTextureCoordinateDefault);
     
-    // We can now use the texture data - no need for material workaround
-    // Clean up texture data after use
+    // Clean up texture data after setting it
     delete[] textureData;
 
     // Make a cube
@@ -246,6 +288,9 @@ main(int argc, char **argv)
     SbBool success = renderer.render(root);
 
     if (success) {
+        // Validate the rendered pixels first
+        bool pixelsValid = validateCheckerboardPixels(&renderer, width, height);
+        
         // Determine output filename
         std::string filename = "BasicTexture.rgb";
         if (argc > 1) {
@@ -255,8 +300,11 @@ main(int argc, char **argv)
         // Save to RGB file using built-in SGI RGB format
         if (saveRGB(filename, &renderer)) {
             std::cout << "Successfully rendered textured cube to " << filename << std::endl;
-            std::cout << "✓ OSMesa texture rendering now works properly with Coin3D!" << std::endl;
-            std::cout << "✓ Textures are fully functional in headless OSMesa environment" << std::endl;
+            if (pixelsValid) {
+                std::cout << "✓ Texture rendering validation PASSED - black and white pixels detected correctly" << std::endl;
+            } else {
+                std::cout << "✗ Texture rendering validation FAILED - pixel values not as expected" << std::endl;
+            }
         } else {
             std::cerr << "Error saving RGB file" << std::endl;
             root->unref();
