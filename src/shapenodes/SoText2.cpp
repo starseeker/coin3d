@@ -453,29 +453,44 @@ SoText2::GLRender(SoGLRenderAction * action)
         glyphidx = coin_utf8_get_char(p);
         p = coin_utf8_next_char(p);
 
-        // Use SbFont directly instead of bridge
-        SbVec2s bitmapsize_sb, bitmapbearing;
-        buffer = PRIVATE(this)->font->getGlyphBitmap(glyphidx, bitmapsize_sb, bitmapbearing);
-        
-        // Convert SbFont data to legacy format for compatibility
-        bitmapsize[0] = bitmapsize_sb[0];
-        bitmapsize[1] = bitmapsize_sb[1];
-        bitmappos[0] = bitmapbearing[0];
-        bitmappos[1] = bitmapbearing[1];
-
-        ix = bitmapsize[0];
-        iy = bitmapsize[1];
-
-        // Advance & Kerning using SbFont
-        if (strcharidx > 0 && prevglyphchar != 0) {
-          SbVec2f kern = PRIVATE(this)->font->getGlyphKerning(prevglyphchar, glyphidx);
-          kerningx = (int)kern[0];
-          // kerningy not used for 2D text
+        // Use enhanced glyph caching for better performance
+        SbGlyph2D * glyph = PRIVATE(this)->cache->getGlyph2D(glyphidx, PRIVATE(this)->font);
+        if (glyph) {
+          // Use cached glyph data
+          buffer = glyph->bitmap;
+          bitmapsize[0] = glyph->size[0];
+          bitmapsize[1] = glyph->size[1];
+          bitmappos[0] = glyph->bearing[0];
+          bitmappos[1] = glyph->bearing[1];
+          
+          ix = bitmapsize[0];
+          iy = bitmapsize[1];
+          
+          // Advance from cached data
+          advancex = (int)glyph->advance[0];
+          
+          // Kerning (calculate between current and previous character)
+          if (strcharidx > 0 && prevglyphchar != 0) {
+            SbVec2f kern = PRIVATE(this)->font->getGlyphKerning(prevglyphchar, glyphidx);
+            kerningx = (int)kern[0];
+          }
+        } else {
+          // Fallback to direct SbFont calls if caching fails
+          SbVec2s bitmapsize_sb, bitmapbearing;
+          buffer = PRIVATE(this)->font->getGlyphBitmap(glyphidx, bitmapsize_sb, bitmapbearing);
+          bitmapsize[0] = bitmapsize_sb[0];
+          bitmapsize[1] = bitmapsize_sb[1];
+          bitmappos[0] = bitmapbearing[0];
+          bitmappos[1] = bitmapbearing[1];
+          ix = bitmapsize[0];
+          iy = bitmapsize[1];
+          SbVec2f advance = PRIVATE(this)->font->getGlyphAdvance(glyphidx);
+          advancex = (int)advance[0];
+          if (strcharidx > 0 && prevglyphchar != 0) {
+            SbVec2f kern = PRIVATE(this)->font->getGlyphKerning(prevglyphchar, glyphidx);
+            kerningx = (int)kern[0];
+          }
         }
-        
-        SbVec2f advance = PRIVATE(this)->font->getGlyphAdvance(glyphidx);
-        advancex = (int)advance[0];
-        // advancey not used for 2D text
 
         rasterx = xpos + kerningx + bitmappos[0];
         rastery = ypos + (bitmappos[1] - bitmapsize[1]);
@@ -903,26 +918,36 @@ SoText2P::buildGlyphCache(SoState * state)
       glyphidx = coin_utf8_get_char(p);
       p = coin_utf8_next_char(p);
 
-      // Use SbFont directly instead of bridge
-      SbVec2s bitmapsize_sb, bitmapbearing;
-      (void)this->font->getGlyphBitmap(glyphidx, bitmapsize_sb, bitmapbearing); // For bbox calc
-      
-      // Convert to legacy format
-      bitmapsize[0] = bitmapsize_sb[0];
-      bitmapsize[1] = bitmapsize_sb[1];
-      bitmappos[0] = bitmapbearing[0];
-      bitmappos[1] = bitmapbearing[1];
-
-      // Advance & Kerning using SbFont
-      if (strcharidx > 0 && prevglyphchar != 0) {
-        SbVec2f kern = this->font->getGlyphKerning(prevglyphchar, glyphidx);
-        kerningx = (int)kern[0];
-        // kerningy not used for 2D text
+      // Use enhanced glyph caching for bbox calculation as well
+      SbGlyph2D * glyph = this->cache->getGlyph2D(glyphidx, this->font);
+      if (glyph) {
+        // Use cached glyph data for bbox calculation
+        bitmapsize[0] = glyph->size[0];
+        bitmapsize[1] = glyph->size[1];
+        bitmappos[0] = glyph->bearing[0];
+        bitmappos[1] = glyph->bearing[1];
+        advancex = (int)glyph->advance[0];
+        
+        // Kerning calculation
+        if (strcharidx > 0 && prevglyphchar != 0) {
+          SbVec2f kern = this->font->getGlyphKerning(prevglyphchar, glyphidx);
+          kerningx = (int)kern[0];
+        }
+      } else {
+        // Fallback to direct SbFont calls
+        SbVec2s bitmapsize_sb, bitmapbearing;
+        (void)this->font->getGlyphBitmap(glyphidx, bitmapsize_sb, bitmapbearing);
+        bitmapsize[0] = bitmapsize_sb[0];
+        bitmapsize[1] = bitmapsize_sb[1];
+        bitmappos[0] = bitmapbearing[0];
+        bitmappos[1] = bitmapbearing[1];
+        SbVec2f advance = this->font->getGlyphAdvance(glyphidx);
+        advancex = (int)advance[0];
+        if (strcharidx > 0 && prevglyphchar != 0) {
+          SbVec2f kern = this->font->getGlyphKerning(prevglyphchar, glyphidx);
+          kerningx = (int)kern[0];
+        }
       }
-      
-      SbVec2f advance = this->font->getGlyphAdvance(glyphidx);
-      advancex = (int)advance[0];
-      // advancey not used for 2D text
 
       SbVec2s pos;
       pos[0] = xpos + kerningx + bitmappos[0];

@@ -40,19 +40,19 @@
 #include "caches/SoGlyphCache.h"
 
 #include <cassert>
-
 #include <Inventor/lists/SbList.h>
 #include <Inventor/elements/SoFontNameElement.h>
 #include <Inventor/elements/SoFontSizeElement.h>
 #include <Inventor/elements/SoComplexityElement.h>
 #include <Inventor/errors/SoDebugError.h>
+#include <Inventor/SbFont.h>
 
 #include "C/CoinTidbits.h"
 
 class SoGlyphCacheP {
 public:
-  SbList <sb_glyph2d*> glyphlist2d;
-  SbList <sb_glyph3d*> glyphlist3d;
+  SbList <SbGlyph2D*> glyphlist2d;
+  SbList <SbGlyph3D*> glyphlist3d;
   cc_font_specification * fontspec;
 };
 
@@ -83,36 +83,24 @@ SoGlyphCache::~SoGlyphCache()
   }
 #endif // debug
 
-  int i;
+  // Clean up cached glyph data
+  for (int i = 0; i < PRIVATE(this)->glyphlist2d.getLength(); i++) {
+    SbGlyph2D * glyph = PRIVATE(this)->glyphlist2d[i];
+    glyph->refcount--;
+    if (glyph->refcount <= 0) {
+      delete glyph;
+    }
+  }
+  for (int i = 0; i < PRIVATE(this)->glyphlist3d.getLength(); i++) {
+    SbGlyph3D * glyph = PRIVATE(this)->glyphlist3d[i];
+    glyph->refcount--;
+    if (glyph->refcount <= 0) {
+      delete glyph;
+    }
+  }
+
   this->readFontspec(NULL);
-  for (i = 0; i < PRIVATE(this)->glyphlist2d.getLength(); i++) {
-    sb_glyph2d_unref(PRIVATE(this)->glyphlist2d[i]);
-  }
-  for (i = 0; i < PRIVATE(this)->glyphlist3d.getLength(); i++) {
-    sb_glyph3d_unref(PRIVATE(this)->glyphlist3d[i]);
-  }
   delete PRIVATE(this);
-}
-
-/*
-  Add a glyph that is created using sb_glyph2d_ref(). The cache will
-  call sb_glyph2d_unref() when destructed.
-*/
-void
-SoGlyphCache::addGlyph(sb_glyph2d * glyph)
-{
-  PRIVATE(this)->glyphlist2d.append(glyph);
-}
-
-/*
-  Add a glyph that is created using sb_glyph2d_ref(). The cache will
-  call sb_glyph2d_unref() when destructed.
-*/
-
-void
-SoGlyphCache::addGlyph(sb_glyph3d * glyph)
-{
-  PRIVATE(this)->glyphlist3d.append(glyph);
 }
 
 /*!
@@ -146,6 +134,94 @@ SoGlyphCache::getCachedFontspec(void) const
 {
   assert(PRIVATE(this)->fontspec);
   return PRIVATE(this)->fontspec;
+}
+
+/*!
+  Add a 2D glyph to the cache. The cache will manage the glyph's reference count.
+*/
+void
+SoGlyphCache::addGlyph(SbGlyph2D * glyph)
+{
+  if (glyph) {
+    glyph->refcount++;
+    PRIVATE(this)->glyphlist2d.append(glyph);
+  }
+}
+
+/*!
+  Add a 3D glyph to the cache. The cache will manage the glyph's reference count.
+*/
+void
+SoGlyphCache::addGlyph(SbGlyph3D * glyph)
+{
+  if (glyph) {
+    glyph->refcount++;
+    PRIVATE(this)->glyphlist3d.append(glyph);
+  }
+}
+
+/*!
+  Get a cached 2D glyph or create a new one using SbFont data.
+*/
+SbGlyph2D *
+SoGlyphCache::getGlyph2D(int character, SbFont * font)
+{
+  if (!font || !font->isValid()) return nullptr;
+  
+  // First check if we already have this glyph cached
+  for (int i = 0; i < PRIVATE(this)->glyphlist2d.getLength(); i++) {
+    SbGlyph2D * glyph = PRIVATE(this)->glyphlist2d[i];
+    if (glyph->character == character) {
+      return glyph;
+    }
+  }
+  
+  // Create new glyph from SbFont data
+  SbGlyph2D * glyph = new SbGlyph2D();
+  glyph->character = character;
+  glyph->advance = font->getGlyphAdvance(character);
+  glyph->bounds = font->getGlyphBounds(character);
+  glyph->bitmap = font->getGlyphBitmap(character, glyph->size, glyph->bearing);
+  
+  // Add to cache (will increment refcount)
+  this->addGlyph(glyph);
+  
+  return glyph;
+}
+
+/*!
+  Get a cached 3D glyph or create a new one using SbFont data.
+*/
+SbGlyph3D *
+SoGlyphCache::getGlyph3D(int character, SbFont * font)
+{
+  if (!font || !font->isValid()) return nullptr;
+  
+  // First check if we already have this glyph cached
+  for (int i = 0; i < PRIVATE(this)->glyphlist3d.getLength(); i++) {
+    SbGlyph3D * glyph = PRIVATE(this)->glyphlist3d[i];
+    if (glyph->character == character) {
+      return glyph;
+    }
+  }
+  
+  // Create new glyph from SbFont data
+  SbGlyph3D * glyph = new SbGlyph3D();
+  glyph->character = character;
+  glyph->advance = font->getGlyphAdvance(character);
+  glyph->bounds = font->getGlyphBounds(character);
+  glyph->width = glyph->bounds.getMax()[0] - glyph->bounds.getMin()[0];
+  
+  // Get 3D geometry data from SbFont
+  glyph->vertices = font->getGlyphVertices(character, glyph->num_vertices);
+  glyph->face_indices = font->getGlyphFaceIndices(character, glyph->num_face_indices);
+  glyph->edge_indices = font->getGlyphEdgeIndices(character, glyph->num_edge_indices);
+  glyph->edge_connectivity = font->getGlyphEdgeConnectivity(character, glyph->num_edges);
+  
+  // Add to cache (will increment refcount)
+  this->addGlyph(glyph);
+  
+  return glyph;
 }
 
 

@@ -43,8 +43,52 @@
 #include <Inventor/SbVec3f.h>
 #include <Inventor/SbVec4f.h>
 #include <Inventor/SbVec2f.h>
-#include "../src/fonts/sbfont_bridge.h"
+#include <Inventor/SbVec2s.h>
+#include <Inventor/SbBox2f.h>
 #include "../src/fonts/fontspec.h"
+
+class SoGlyphCacheP;
+class SoState;
+
+// Modern glyph data structures using SbFont data
+struct SbGlyph2D {
+  unsigned char * bitmap;
+  SbVec2s size;
+  SbVec2s bearing;
+  SbVec2f advance;
+  SbVec2f kerning;  // for next character
+  SbBox2f bounds;
+  int character;
+  int refcount;
+  
+  SbGlyph2D() : bitmap(nullptr), character(0), refcount(1) {}
+  ~SbGlyph2D() { 
+    // Note: bitmap is owned by SbFont, don't delete
+  }
+};
+
+struct SbGlyph3D {
+  const float * vertices;
+  const int * face_indices;
+  const int * edge_indices;
+  const int * edge_connectivity;
+  int num_vertices;
+  int num_face_indices;
+  int num_edge_indices;
+  int num_edges;
+  SbVec2f advance;
+  SbBox2f bounds;
+  float width;
+  int character;
+  int refcount;
+  
+  SbGlyph3D() : vertices(nullptr), face_indices(nullptr), edge_indices(nullptr),
+                edge_connectivity(nullptr), num_vertices(0), num_face_indices(0),
+                num_edge_indices(0), num_edges(0), width(0.0f), character(0), refcount(1) {}
+  ~SbGlyph3D() {
+    // Note: data is owned by SbFont, don't delete
+  }
+};
 
 class SoGlyphCacheP;
 class SoState;
@@ -60,9 +104,14 @@ public:
 
   void readFontspec(SoState * state);
   const cc_font_specification * getCachedFontspec(void) const;
-
-  void addGlyph(sb_glyph2d * glyph);
-  void addGlyph(sb_glyph3d * glyph);
+  
+  // Modern glyph caching using SbFont data
+  void addGlyph(SbGlyph2D * glyph);
+  void addGlyph(SbGlyph3D * glyph);
+  
+  // Get cached glyphs for performance
+  SbGlyph2D * getGlyph2D(int character, class SbFont * font);
+  SbGlyph3D * getGlyph3D(int character, class SbFont * font);
 
 private:
   friend class SoGlyphCacheP;
