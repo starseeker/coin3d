@@ -45,6 +45,10 @@
 #include <Inventor/SbVec2s.h>
 #include <Inventor/SbBox2f.h>
 
+// Include struetype and glyph mesh for proper edge connectivity
+#include "struetype.h"  
+#include "stt_glyph_mesh.hpp"
+
 // Global font instance for bridge operations
 // This is a simplified approach - in production code you might want per-thread fonts
 static SbFont * g_bridge_font = NULL;
@@ -193,9 +197,10 @@ sb_glyph3d_ref(uint32_t character, const cc_font_specification * spec)
   // Initialize structure
   glyph->character = character;
   glyph->refcount = 1;
+  glyph->edge_connectivity = NULL;
+  glyph->num_edges = 0;
   
-  // Get vertex data from SbFont (currently not implemented in SbFont)
-  // For now, provide simple fallback geometry for 3D text
+  // Get vertex data from SbFont
   int numvertices = 0;
   glyph->vertices = font->getGlyphVertices(character, numvertices);
   glyph->num_vertices = numvertices;
@@ -207,6 +212,65 @@ sb_glyph3d_ref(uint32_t character, const cc_font_specification * spec)
   int numedgeindices = 0;
   glyph->edge_indices = font->getGlyphEdgeIndices(character, numedgeindices);
   glyph->num_edge_indices = numedgeindices;
+  
+  // Build edge connectivity for proper 3D extrusion
+  if (glyph->edge_indices && glyph->num_edge_indices > 0) {
+    // We need to rebuild the mesh to get contour information for proper edge connectivity
+    SbFont* sbfont = get_bridge_font();
+    if (sbfont->isValid()) {
+      // Access the internal font data to rebuild mesh with contour info
+      // This is a bit of a hack, but necessary for proper edge traversal
+      
+      // For now, let's build a simplified connectivity that should work for most cases
+      // Parse edge indices: format is [v0, v1, -1, v1, v2, -1, ...]
+      std::vector<std::pair<int, int>> edges;
+      
+      for (int i = 0; i < glyph->num_edge_indices; i += 3) {
+        if (i + 2 < glyph->num_edge_indices && 
+            glyph->edge_indices[i + 2] == -1) {
+          edges.push_back({glyph->edge_indices[i], glyph->edge_indices[i + 1]});
+        }
+      }
+      
+      glyph->num_edges = (int)edges.size();
+      
+      if (glyph->num_edges > 0) {
+        // Allocate connectivity array: for each edge, store [prev_vertex, current_vertex, next_vertex]
+        glyph->edge_connectivity = (int*)malloc(glyph->num_edges * 3 * sizeof(int));
+        if (glyph->edge_connectivity) {
+          
+          // Build adjacency by finding connected edges
+          for (int i = 0; i < glyph->num_edges; i++) {
+            int v0 = edges[i].first;
+            int v1 = edges[i].second;
+            
+            // Find previous edge (one that ends at v0)
+            int prev_vertex = v0; // default fallback
+            for (int j = 0; j < glyph->num_edges; j++) {
+              if (j != i && edges[j].second == v0) {
+                prev_vertex = edges[j].first;
+                break;
+              }
+            }
+            
+            // Find next edge (one that starts at v1) 
+            int next_vertex = v1; // default fallback
+            for (int j = 0; j < glyph->num_edges; j++) {
+              if (j != i && edges[j].first == v1) {
+                next_vertex = edges[j].second;
+                break;
+              }
+            }
+            
+            // Store connectivity: [prev, current_start, current_end]
+            glyph->edge_connectivity[i * 3 + 0] = prev_vertex;
+            glyph->edge_connectivity[i * 3 + 1] = v0; 
+            glyph->edge_connectivity[i * 3 + 2] = next_vertex;
+          }
+        }
+      }
+    }
+  }
   
   // If no 3D data available, create minimal fallback
   if (!glyph->vertices || glyph->num_vertices == 0) {
@@ -268,6 +332,10 @@ sb_glyph3d_unref(sb_glyph3d * glyph)
   
   glyph->refcount--;
   if (glyph->refcount <= 0) {
+    // Free edge connectivity data we allocated
+    if (glyph->edge_connectivity) {
+      free(glyph->edge_connectivity);
+    }
     // Note: we don't free vertex data because SbFont owns it
     free(glyph);
   }
@@ -294,21 +362,28 @@ sb_glyph3d_getedgeindices(const sb_glyph3d * g)
 const int * 
 sb_glyph3d_getnextccwedge(const sb_glyph3d * g, int edgeidx)
 {
-  // This function is used for edge traversal in 3D glyphs
-  // For now, provide a safe fallback that won't cause segfaults
-  // Return a static array with safe indices (0, 0) that reference the first vertex
-  static const int safe_edge[2] = {0, 0};
-  return (g && g->num_vertices > 0) ? safe_edge : NULL;
+  if (!g || !g->edge_connectivity || edgeidx < 0 || edgeidx >= g->num_edges) {
+    // Return safe fallback for invalid cases
+    static const int safe_edge[2] = {0, 0};
+    return (g && g->num_vertices > 0) ? safe_edge : NULL;
+  }
+  
+  // Return pointer to connectivity data for this edge
+  // For CCW (counter-clockwise), we want [prev_vertex, current_vertex] 
+  return &g->edge_connectivity[edgeidx * 3];
 }
 
 const int * 
 sb_glyph3d_getnextcwedge(const sb_glyph3d * g, int edgeidx)
 {
-  // This function is used for edge traversal in 3D glyphs  
-  // For now, provide a safe fallback that won't cause segfaults
-  // Return a static array with safe index (0) that references the first vertex
-  static const int safe_edge[1] = {0};
-  return (g && g->num_vertices > 0) ? safe_edge : NULL;
+  if (!g || !g->edge_connectivity || edgeidx < 0 || edgeidx >= g->num_edges) {
+    // Return safe fallback for invalid cases
+    static const int safe_edge[1] = {0};
+    return (g && g->num_vertices > 0) ? safe_edge : NULL;
+  }
+  
+  // For CW (clockwise), we want [next_vertex]
+  return &g->edge_connectivity[edgeidx * 3 + 2];
 }
 
 float 
