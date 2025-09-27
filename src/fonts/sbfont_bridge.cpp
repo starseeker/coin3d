@@ -53,11 +53,16 @@
 // This is a simplified approach - in production code you might want per-thread fonts
 static SbFont * g_bridge_font = NULL;
 
+// Forward declaration
+void sb_font_bridge_cleanup();
+
 static SbFont *
 get_bridge_font()
 {
   if (!g_bridge_font) {
     g_bridge_font = new SbFont();
+    // Register cleanup function to be called at exit
+    std::atexit(sb_font_bridge_cleanup);
   }
   return g_bridge_font;
 }
