@@ -699,7 +699,7 @@ SoText3P::render(SoState * state, const cc_font_specification * fontspec,
         const int * ptr = this->font->getGlyphFaceIndices(glyphidx, numfaceindices);
         glBegin(GL_TRIANGLES);
 
-        while (*ptr >= 0) {
+        while (ptr && *ptr >= 0) {
           SbVec2f v0, v1, v2;
           float zval;
           if (part == SoText3::FRONT) {
@@ -1144,7 +1144,7 @@ SoText3P::generate(SoAction * action, const cc_font_specification * fontspec,
         const int * ptr = this->font->getGlyphFaceIndices(glyphidx, numfaceindices);
         PUBLIC(this)->beginShape(action, SoShape::TRIANGLES, NULL);
 
-        while (*ptr >= 0) {
+        while (ptr && *ptr >= 0) {
           SbVec2f v0, v1, v2;
           float zval;
           if (part == SoText3::FRONT) {
