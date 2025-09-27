@@ -56,6 +56,12 @@
 
 #include "earcut.hpp"
 
+// Forward declaration for fallback tessellation
+#ifdef COIN_DLL_API
+#include <Inventor/SbTesselator.h>
+#define HAVE_SBTESSELATOR
+#endif
+
 namespace sttmesh {
 
 // 2D point
@@ -395,6 +401,116 @@ inline static std::vector<RingGroup> buildRingGroups(const Outline& o) {
   return groups;
 }
 
+// ------------------------ Fallback Tessellation with SbTesselator ----------------------------
+
+#ifdef HAVE_SBTESSELATOR
+// Structure to collect tessellation results
+struct TessellationData {
+  std::vector<Vec2>* positions;
+  std::vector<uint32_t>* indices;
+  uint32_t baseIndex;
+};
+
+// Callback function for SbTesselator - must be at namespace level
+inline static void tessCallback(void* v0, void* v1, void* v2, void* userData) {
+  TessellationData* data = static_cast<TessellationData*>(userData);
+  
+  // The vertices are pointers to our original Vec2 structures
+  Vec2* vtx0 = static_cast<Vec2*>(v0);
+  Vec2* vtx1 = static_cast<Vec2*>(v1);  
+  Vec2* vtx2 = static_cast<Vec2*>(v2);
+  
+  // Find the indices of these vertices in our positions array
+  uint32_t idx0 = static_cast<uint32_t>(vtx0 - data->positions->data()) + data->baseIndex;
+  uint32_t idx1 = static_cast<uint32_t>(vtx1 - data->positions->data()) + data->baseIndex;
+  uint32_t idx2 = static_cast<uint32_t>(vtx2 - data->positions->data()) + data->baseIndex;
+  
+  // Add triangle indices (note: SbTesselator may have different winding order)
+  data->indices->push_back(idx0);
+  data->indices->push_back(idx1);
+  data->indices->push_back(idx2);
+}
+
+// Fallback tessellation using Coin3D's SbTesselator
+inline static bool fallbackTriangulateGlyph(const Outline& outline,
+                                           GlyphMesh& mesh)
+{
+
+  try {
+    // Build groups using same logic as earcut
+    std::vector<RingGroup> groups = buildRingGroups(outline);
+    
+    for (const RingGroup& g : groups) {
+      if (g.outer < 0) continue;
+
+      // Collect all vertices for this group
+      std::vector<Vec2> groupVertices;
+      std::vector<int> contourSizes;
+      
+      // Add outer ring vertices
+      const ContourSpan& outerSpan = outline.contours[g.outer];
+      if (outerSpan.count < 3) continue; // Skip degenerate
+      
+      const Vec2* outerStart = outline.points.data() + outerSpan.start;
+      groupVertices.insert(groupVertices.end(), outerStart, outerStart + outerSpan.count);
+      contourSizes.push_back(outerSpan.count);
+      
+      // Add hole vertices
+      for (int h : g.holes) {
+        const ContourSpan& holeSpan = outline.contours[h];
+        if (holeSpan.count < 3) continue; // Skip degenerate holes
+        
+        const Vec2* holeStart = outline.points.data() + holeSpan.start;
+        groupVertices.insert(groupVertices.end(), holeStart, holeStart + holeSpan.count);
+        contourSizes.push_back(holeSpan.count);
+      }
+      
+      if (groupVertices.empty()) continue;
+
+      // Set up tessellation data
+      TessellationData tessData;
+      tessData.positions = &groupVertices;
+      tessData.indices = &mesh.indices;
+      tessData.baseIndex = static_cast<uint32_t>(mesh.positions.size());
+      
+      // Create tessellator
+      SbTesselator tess(tessCallback, &tessData);
+      
+      // Begin tessellation - compute normal from first triangle
+      SbVec3f normal(0.0f, 0.0f, 1.0f); // Assume 2D polygons are in XY plane
+      tess.beginPolygon(FALSE, normal);
+      
+      // Add vertices contour by contour
+      int vertexIndex = 0;
+      for (size_t contourIdx = 0; contourIdx < contourSizes.size(); ++contourIdx) {
+        int contourSize = contourSizes[contourIdx];
+        
+        // Add vertices for this contour
+        for (int i = 0; i < contourSize; ++i) {
+          Vec2& vertex = groupVertices[vertexIndex + i];
+          SbVec3f sbVertex(vertex.x, vertex.y, 0.0f);
+          tess.addVertex(sbVertex, &vertex); // Pass pointer to our Vec2 as user data
+        }
+        
+        vertexIndex += contourSize;
+      }
+      
+      // Trigger tessellation
+      tess.endPolygon();
+      
+      // Add the group's vertices to the mesh
+      mesh.positions.insert(mesh.positions.end(), groupVertices.begin(), groupVertices.end());
+    }
+    
+    return !mesh.indices.empty();
+    
+  } catch (...) {
+    // Fallback tessellation failed
+    return false;
+  }
+}
+#endif // HAVE_SBTESSELATOR
+
 // ------------------------ Triangulation with Earcut ----------------------------
 
 inline static GlyphMesh triangulateGlyph(const Outline& outline,
@@ -422,6 +538,8 @@ inline static GlyphMesh triangulateGlyph(const Outline& outline,
   using DPoint = std::array<double, 2>;
   using Ring   = std::vector<DPoint>;
   using Poly   = std::vector<Ring>;
+  
+  bool anyTriangulationSucceeded = false;
 
   for (const RingGroup& g : groups) {
     if (g.outer < 0) continue;
@@ -432,45 +550,106 @@ inline static GlyphMesh triangulateGlyph(const Outline& outline,
     auto make_ring = [&](int contourIdx) {
       Ring r;
       const ContourSpan& s = outline.contours[contourIdx];
+      if (s.count < 3) {
+        // Degenerate contour - need at least 3 points for a polygon
+        return r;
+      }
+      
       r.reserve((size_t)s.count);
       const Vec2* p = outline.points.data() + s.start;
       for (int i = 0; i < s.count; ++i) {
         r.push_back({ (double)p[i].x, (double)p[i].y });
       }
+      
       // Drop trailing duplicate if present (shouldn't be if we cleaned earlier)
       if (r.size() >= 2 && r.front() == r.back()) r.pop_back();
+      
+      // Final validation - need at least 3 points for a valid polygon
+      if (r.size() < 3) {
+        r.clear();
+      }
+      
       return r;
     };
 
     poly.push_back(make_ring(g.outer));
     for (int h : g.holes) {
-      poly.push_back(make_ring(h));
+      Ring hole = make_ring(h);
+      if (!hole.empty()) {
+        poly.push_back(hole);
+      }
+    }
+
+    // Validate polygon before triangulation
+    if (poly.empty() || poly[0].empty()) {
+      // No valid outer ring - skip this group
+      continue;
     }
 
     // Earcut indices are local to this poly
     std::vector<uint32_t> local = mapbox::earcut<uint32_t>(poly);
+    
+    // Check if triangulation succeeded - be more permissive
+    if (local.empty() || local.size() % 3 != 0) {
+      // Earcut failed or returned invalid results - try to continue with other polygons
+      // instead of completely skipping this group
+      continue;
+    }
 
     // Append vertices to global mesh.positions in same order as in 'poly'
     uint32_t base = (uint32_t)mesh.positions.size();
+    uint32_t expectedVertexCount = 0;
+    
     // Outer ring
     {
       const ContourSpan& s = outline.contours[g.outer];
       const Vec2* p = outline.points.data() + s.start;
       mesh.positions.insert(mesh.positions.end(), p, p + s.count);
+      expectedVertexCount += s.count;
     }
     // Holes
     for (int h : g.holes) {
       const ContourSpan& s = outline.contours[h];
       const Vec2* p = outline.points.data() + s.start;
       mesh.positions.insert(mesh.positions.end(), p, p + s.count);
+      expectedVertexCount += s.count;
     }
 
-    // Offset local indices and append
+    // Validate and offset local indices
     mesh.indices.reserve(mesh.indices.size() + local.size());
+    bool indicesValid = true;
     for (uint32_t idx : local) {
+      if (idx >= expectedVertexCount) {
+        // Index out of bounds - earcut returned invalid indices
+        indicesValid = false;
+        break;
+      }
       mesh.indices.push_back(base + idx);
     }
+    
+    // If indices were invalid, remove the vertices we just added
+    if (!indicesValid) {
+      mesh.positions.resize(base);
+      mesh.indices.resize(mesh.indices.size() - local.size());
+    } else {
+      anyTriangulationSucceeded = true;
+    }
   }
+
+  // If earcut failed to produce meaningful triangles, try fallback tessellation
+#ifdef HAVE_SBTESSELATOR
+  if (!anyTriangulationSucceeded && !outline.contours.empty()) {
+    // Clear any partial results from earcut attempts
+    mesh.positions.clear();
+    mesh.indices.clear();
+    
+    // Try fallback tessellation
+    if (fallbackTriangulateGlyph(outline, mesh)) {
+      // Fallback succeeded - preserve outline contours for stroking
+      mesh.outlineContours = outline.contours;
+    }
+  }
+#endif // HAVE_SBTESSELATOR
 
   return mesh;
 }
