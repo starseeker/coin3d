@@ -201,7 +201,7 @@ inline static bool buildOutlineFromGlyph(const stt_fontinfo& font,
   for (int i = 0; i < n; i++) {
     stt_vertex v = verts[i];
     switch (v.type) {
-      case STBTT_vmove: {
+      case STT_vmove: {
         if (hasOpen) {
           // Finish previous contour
           if (!tmp.empty()) {
@@ -223,7 +223,7 @@ inline static bool buildOutlineFromGlyph(const stt_fontinfo& font,
         hasOpen = true;
       } break;
 
-      case STBTT_vline: {
+      case STT_vline: {
         Vec2 p1 { v.x * cfg.scale, v.y * cfg.scale * ysign };
         // avoid exact duplicate
         if (tmp.empty() || tmp.back().x != p1.x || tmp.back().y != p1.y) {
@@ -232,14 +232,14 @@ inline static bool buildOutlineFromGlyph(const stt_fontinfo& font,
         pen = p1;
       } break;
 
-      case STBTT_vcurve: {
+      case STT_vcurve: {
         Vec2 c  { v.cx * cfg.scale,  v.cy * cfg.scale * ysign };
         Vec2 p1 { v.x  * cfg.scale,  v.y  * cfg.scale * ysign };
         flattenQuadratic(pen, c, p1, cfg.epsilon, 0, tmp);
         pen = p1;
       } break;
 
-      case STBTT_vcubic: {
+      case STT_vcubic: {
         Vec2 c1 { v.cx  * cfg.scale,  v.cy  * cfg.scale * ysign };
         Vec2 c2 { v.cx1 * cfg.scale,  v.cy1 * cfg.scale * ysign };
         Vec2 p1 { v.x   * cfg.scale,  v.y   * cfg.scale * ysign };

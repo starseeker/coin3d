@@ -73,6 +73,10 @@ typedef struct {
   float bbox[4]; // xmin, ymin, xmax, ymax
   uint32_t character;
   int refcount;
+  
+  // Edge connectivity for 3D extrusion
+  int * edge_connectivity;  // Array storing next/prev vertex indices for each edge
+  int num_edges;           // Number of actual edges (not indices)
 } sb_glyph3d;
 
 // 2D glyph interface (for SoText2)

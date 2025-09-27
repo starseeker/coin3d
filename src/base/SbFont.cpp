@@ -56,6 +56,9 @@
 // Include struetype header (implementation is in freetype.cpp)
 #include "fonts/struetype.h"
 
+// Include stt_glyph_mesh for 3D vector glyph generation
+#include "fonts/stt_glyph_mesh.hpp"
+
 // Internal implementation class
 class SbFontP {
 public:
@@ -80,6 +83,7 @@ public:
   // Cached glyph data (simple cache for performance)
   struct GlyphCache {
     int character;
+    SbBool valid;
     unsigned char * bitmap;
     SbVec2s bitmapsize;
     SbVec2s bearing;
@@ -240,7 +244,7 @@ SbFontP::findOrCreateGlyph(int character)
   
   // Simple linear search in cache (adequate for small cache)
   for (int i = 0; i < CACHE_SIZE; i++) {
-    if (cache[i].character == character && cache[i].bitmap) {
+    if (cache[i].valid && cache[i].character == character) {
       return &cache[i];
     }
   }
@@ -257,6 +261,7 @@ SbFontP::findOrCreateGlyph(int character)
   *entry = GlyphCache(); // Zero-initialize properly
   
   entry->character = character;
+  entry->valid = TRUE;
   
   // Get glyph metrics
   int advanceWidth, leftSideBearing;
@@ -267,6 +272,75 @@ SbFontP::findOrCreateGlyph(int character)
   int x0, y0, x1, y1;
   stt_GetCodepointBitmapBox(&fontinfo, character, scale, scale, &x0, &y0, &x1, &y1);
   entry->bounds.setBounds(SbVec2f(x0, y0), SbVec2f(x1, y1));
+  
+  // Generate 3D mesh data using stt_glyph_mesh
+  sttmesh::GlyphBuildConfig cfg;
+  cfg.scale = scale;
+  cfg.epsilon = 0.5f;    // curve flattening tolerance
+  cfg.flipY = false;     // keep Y-up coordinate system for Coin3D
+  
+  try {
+    sttmesh::GlyphMesh mesh = sttmesh::build_codepoint_mesh(fontinfo, character, cfg);
+    
+    if (!mesh.positions.empty() && !mesh.indices.empty()) {
+      // Copy vertex positions (convert Vec2 to 3D coordinates with z=0)
+      entry->numvertices = (int)mesh.positions.size();
+      entry->vertices = (float*)malloc(entry->numvertices * 3 * sizeof(float));
+      if (entry->vertices) {
+        for (int i = 0; i < entry->numvertices; i++) {
+          entry->vertices[i * 3 + 0] = mesh.positions[i].x;
+          entry->vertices[i * 3 + 1] = mesh.positions[i].y;
+          entry->vertices[i * 3 + 2] = 0.0f;  // Z coordinate is 0 for flat glyphs
+        }
+      }
+      
+      // Copy face indices (convert triangles to Coin3D format with -1 terminators)
+      int numTriangles = (int)mesh.indices.size() / 3;
+      entry->numfaceindices = numTriangles * 4; // 3 indices + 1 terminator per triangle
+      entry->faceindices = (int*)malloc(entry->numfaceindices * sizeof(int));
+      if (entry->faceindices) {
+        for (int i = 0; i < numTriangles; i++) {
+          entry->faceindices[i * 4 + 0] = (int)mesh.indices[i * 3 + 0];
+          entry->faceindices[i * 4 + 1] = (int)mesh.indices[i * 3 + 1];
+          entry->faceindices[i * 4 + 2] = (int)mesh.indices[i * 3 + 2];
+          entry->faceindices[i * 4 + 3] = -1;  // Coin3D triangle terminator
+        }
+      }
+      
+      // Generate edge indices from outline contours for wireframe rendering
+      if (!mesh.outlineContours.empty()) {
+        // Calculate total number of edges needed
+        int totalEdges = 0;
+        for (const auto& contour : mesh.outlineContours) {
+          totalEdges += contour.count; // Each contour creates count edge segments  
+        }
+        
+        entry->numedgeindices = totalEdges * 3; // 2 indices + 1 terminator per edge
+        entry->edgeindices = (int*)malloc(entry->numedgeindices * sizeof(int));
+        if (entry->edgeindices) {
+          int edgeIdx = 0;
+          for (const auto& contour : mesh.outlineContours) {
+            for (int i = 0; i < contour.count; i++) {
+              int current = contour.start + i;
+              int next = contour.start + ((i + 1) % contour.count);
+              entry->edgeindices[edgeIdx++] = current;
+              entry->edgeindices[edgeIdx++] = next;
+              entry->edgeindices[edgeIdx++] = -1; // Coin3D edge terminator
+            }
+          }
+        }
+      }
+      
+      // Update bounds from mesh bbox if available
+      if (mesh.bbox.valid) {
+        entry->bounds.setBounds(SbVec2f(mesh.bbox.x0, mesh.bbox.y0), 
+                               SbVec2f(mesh.bbox.x1, mesh.bbox.y1));
+      }
+    }
+  } catch (...) {
+    // If mesh generation fails, ensure we have clean state
+    // (vertices, faceindices, edgeindices remain NULL as initialized)
+  }
   
   return entry;
 }
@@ -471,23 +545,37 @@ SbFont::getGlyphVertices(int character, int & numvertices) const
   numvertices = 0;
   if (!pimpl->valid) return NULL;
   
-  // Vector glyphs not implemented in this initial version
-  // This would require converting struetype glyph outlines to vertex arrays
-  return NULL;
+  SbFontP::GlyphCache * glyph = pimpl->findOrCreateGlyph(character);
+  if (!glyph) return NULL;
+  
+  numvertices = glyph->numvertices;
+  return glyph->vertices;
 }
 
 const int *
 SbFont::getGlyphFaceIndices(int character, int & numindices) const
 {
   numindices = 0;
-  return NULL;
+  if (!pimpl->valid) return NULL;
+  
+  SbFontP::GlyphCache * glyph = pimpl->findOrCreateGlyph(character);
+  if (!glyph) return NULL;
+  
+  numindices = glyph->numfaceindices;
+  return glyph->faceindices;
 }
 
 const int *
 SbFont::getGlyphEdgeIndices(int character, int & numindices) const
 {
   numindices = 0;
-  return NULL;
+  if (!pimpl->valid) return NULL;
+  
+  SbFontP::GlyphCache * glyph = pimpl->findOrCreateGlyph(character);
+  if (!glyph) return NULL;
+  
+  numindices = glyph->numedgeindices;
+  return glyph->edgeindices;
 }
 
 SbVec2f
