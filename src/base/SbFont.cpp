@@ -625,9 +625,7 @@ SbFont::getGlyphNextCCWEdge(int character, int edgeidx) const
   
   SbFontP::GlyphCache * glyph = pimpl->findOrCreateGlyph(character);
   if (!glyph || !glyph->edgeconnectivity || edgeidx < 0 || edgeidx >= glyph->numedges) {
-    // Return safe fallback for invalid cases
-    static const int safe_edge[2] = {0, 0};
-    return (glyph && glyph->numvertices > 0) ? safe_edge : NULL;
+    return NULL;
   }
   
   // For CCW (counter-clockwise), we want [prev_vertex, current_vertex]
@@ -641,12 +639,10 @@ SbFont::getGlyphNextCWEdge(int character, int edgeidx) const
   
   SbFontP::GlyphCache * glyph = pimpl->findOrCreateGlyph(character);
   if (!glyph || !glyph->edgeconnectivity || edgeidx < 0 || edgeidx >= glyph->numedges) {
-    // Return safe fallback for invalid cases
-    static const int safe_edge[1] = {0};
-    return (glyph && glyph->numvertices > 0) ? safe_edge : NULL;
+    return NULL;
   }
   
-  // For CW (clockwise), we want [next_vertex]
+  // For CW (clockwise), we want [next_vertex] (but return from offset 2)
   return &glyph->edgeconnectivity[edgeidx * 3 + 2];
 }
 

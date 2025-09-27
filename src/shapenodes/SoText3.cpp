@@ -747,8 +747,19 @@ SoText3P::render(SoState * state, const cc_font_specification * fontspec,
             v0 = coords[*ptr++];
             const int * ccw = this->font->getGlyphNextCCWEdge(glyphidx, counter);
             const int * cw  = this->font->getGlyphNextCWEdge(glyphidx, counter);
-            SbVec3f vleft(coords[*(ccw+1)][0], coords[*(ccw+1)][1], 0);
-            SbVec3f vright(coords[*cw][0], coords[*cw][1], 0);
+            
+            // Safely handle potential NULL pointers for edge connectivity
+            SbVec3f vleft, vright;
+            if (ccw) {
+              vleft.setValue(coords[*(ccw+1)][0], coords[*(ccw+1)][1], 0);
+            } else {
+              vleft.setValue(v0[0], v0[1], 0); // fallback to current vertex
+            }
+            if (cw) {
+              vright.setValue(coords[*cw][0], coords[*cw][1], 0);
+            } else {
+              vright.setValue(v1[0], v1[1], 0); // fallback to next vertex
+            }
             counter++;
 
             // create two 'normal' vectors pointing out from the edges
@@ -845,8 +856,19 @@ SoText3P::render(SoState * state, const cc_font_specification * fontspec,
             SbVec3f vb(coords[i1][0], coords[i1][1], nearz);
             const int * ccw = this->font->getGlyphNextCCWEdge(glyphidx, ind);
             const int * cw  = this->font->getGlyphNextCWEdge(glyphidx, ind);
-            SbVec3f vleft(coords[*(ccw+1)][0], coords[*(ccw+1)][1], nearz);
-            SbVec3f vright(coords[*cw][0], coords[*cw][1], nearz);
+            
+            // Safely handle potential NULL pointers for edge connectivity
+            SbVec3f vleft, vright;
+            if (ccw) {
+              vleft.setValue(coords[*(ccw+1)][0], coords[*(ccw+1)][1], nearz);
+            } else {
+              vleft.setValue(coords[i0][0], coords[i0][1], nearz); // fallback to current vertex
+            }
+            if (cw) {
+              vright.setValue(coords[*cw][0], coords[*cw][1], nearz);
+            } else {
+              vright.setValue(coords[i1][0], coords[i1][1], nearz); // fallback to next vertex
+            }
             ind++;
 
             va[0] = va[0] * fontspec->size;
@@ -1176,8 +1198,19 @@ SoText3P::generate(SoAction * action, const cc_font_specification * fontspec,
             v0 = coords[*ptr++];
             const int * ccw = this->font->getGlyphNextCCWEdge(glyphidx, counter);
             const int * cw  = this->font->getGlyphNextCWEdge(glyphidx, counter);
-            SbVec3f vleft(coords[*(ccw+1)][0], coords[*(ccw+1)][1], 0);
-            SbVec3f vright(coords[*cw][0], coords[*cw][1], 0);
+            
+            // Safely handle potential NULL pointers for edge connectivity
+            SbVec3f vleft, vright;
+            if (ccw) {
+              vleft.setValue(coords[*(ccw+1)][0], coords[*(ccw+1)][1], 0);
+            } else {
+              vleft.setValue(v0[0], v0[1], 0); // fallback to current vertex
+            }
+            if (cw) {
+              vright.setValue(coords[*cw][0], coords[*cw][1], 0);
+            } else {
+              vright.setValue(v1[0], v1[1], 0); // fallback to next vertex
+            }
             counter++;
 
             v0[0] = v0[0] * fontspec->size;
@@ -1298,8 +1331,19 @@ SoText3P::generate(SoAction * action, const cc_font_specification * fontspec,
             SbVec3f vb(coords[i1][0], coords[i1][1], nearz);
             const int *ccw = this->font->getGlyphNextCCWEdge(glyphidx, ind);
             const int *cw  = this->font->getGlyphNextCWEdge(glyphidx, ind);
-            SbVec3f vleft(coords[*(ccw+1)][0], coords[*(ccw+1)][1], nearz);
-            SbVec3f vright(coords[*cw][0], coords[*cw][1], nearz);
+            
+            // Safely handle potential NULL pointers for edge connectivity
+            SbVec3f vleft, vright;
+            if (ccw) {
+              vleft.setValue(coords[*(ccw+1)][0], coords[*(ccw+1)][1], nearz);
+            } else {
+              vleft.setValue(coords[i0][0], coords[i0][1], nearz); // fallback to current vertex
+            }
+            if (cw) {
+              vright.setValue(coords[*cw][0], coords[*cw][1], nearz);
+            } else {
+              vright.setValue(coords[i1][0], coords[i1][1], nearz); // fallback to next vertex
+            }
             ind++;
 
             va[0] = va[0] * fontspec->size;
