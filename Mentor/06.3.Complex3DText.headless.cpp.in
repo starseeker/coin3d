@@ -217,7 +217,7 @@ main(int argc, char **argv)
 
     // Set up camera 
     SoPerspectiveCamera	*myCamera = new SoPerspectiveCamera;
-    myCamera->position.setValue(0, -(argc - 1) / 2, 10);
+    myCamera->position.setValue(0, 0, 10);  // Fixed camera position for reliable viewing
     myCamera->nearDistance.setValue(5.0);
     myCamera->farDistance.setValue(15.0);
     root->addChild(myCamera);
@@ -247,6 +247,7 @@ main(int argc, char **argv)
     // Choose ProFont for reliable headless rendering
     SoFont *myFont = new SoFont;
     myFont->name.setValue("ProFont");
+    myFont->size.setValue(2.0);  // Set font size for visibility (same as Simple3DText)
     root->addChild(myFont);
 
     // Specify a beveled cross-section for the text
