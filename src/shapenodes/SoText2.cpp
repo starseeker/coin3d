@@ -863,7 +863,12 @@ SoText2P::buildGlyphCache(SoState * state)
   SoCacheElement::set(state, this->cache);
   this->cache->readFontspec(state);
 
+  // CRITICAL FIX: Update font from state elements before bbox calculation
+  // This ensures the font scale matches between bbox calculation and rendering
+  SbName fontname = SoFontNameElement::get(state);
   float fontsize = SoFontSizeElement::get(state);
+  this->font->setSize(fontsize);
+  
   int ypos = 0;
   int maxoverhang = INT_MIN;
 
