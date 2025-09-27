@@ -95,6 +95,9 @@ public:
     int numfaceindices;
     int * edgeindices;
     int numedgeindices;
+    // Edge connectivity data for 3D extrusion
+    int * edgeconnectivity;  // [prev_vertex, current_vertex, next_vertex] for each edge
+    int numedges;           // Number of actual edges
   };
   
   static const int CACHE_SIZE = 128;
@@ -145,6 +148,9 @@ SbFontP::clearCache()
     }
     if (cache[i].edgeindices) {
       free(cache[i].edgeindices);
+    }
+    if (cache[i].edgeconnectivity) {
+      free(cache[i].edgeconnectivity);
     }
     // Zero-initialize the struct properly
     cache[i] = GlyphCache();
@@ -258,6 +264,7 @@ SbFontP::findOrCreateGlyph(int character)
   if (entry->vertices) free(entry->vertices);
   if (entry->faceindices) free(entry->faceindices);
   if (entry->edgeindices) free(entry->edgeindices);
+  if (entry->edgeconnectivity) free(entry->edgeconnectivity);
   *entry = GlyphCache(); // Zero-initialize properly
   
   entry->character = character;
@@ -326,6 +333,26 @@ SbFontP::findOrCreateGlyph(int character)
               entry->edgeindices[edgeIdx++] = current;
               entry->edgeindices[edgeIdx++] = next;
               entry->edgeindices[edgeIdx++] = -1; // Coin3D edge terminator
+            }
+          }
+        }
+        
+        // Build edge connectivity for 3D extrusion
+        entry->numedges = totalEdges;
+        entry->edgeconnectivity = (int*)malloc(entry->numedges * 3 * sizeof(int));
+        if (entry->edgeconnectivity) {
+          int edgeIdx = 0;
+          for (const auto& contour : mesh.outlineContours) {
+            for (int i = 0; i < contour.count; i++) {
+              int current = contour.start + i;
+              int next = contour.start + ((i + 1) % contour.count);
+              int prev = contour.start + ((i - 1 + contour.count) % contour.count);
+              
+              // For each edge, store [prev_vertex, current_vertex, next_vertex]
+              entry->edgeconnectivity[edgeIdx * 3 + 0] = prev;
+              entry->edgeconnectivity[edgeIdx * 3 + 1] = current;
+              entry->edgeconnectivity[edgeIdx * 3 + 2] = next;
+              edgeIdx++;
             }
           }
         }
@@ -576,6 +603,47 @@ SbFont::getGlyphEdgeIndices(int character, int & numindices) const
   
   numindices = glyph->numedgeindices;
   return glyph->edgeindices;
+}
+
+const int *
+SbFont::getGlyphEdgeConnectivity(int character, int & numedges) const
+{
+  numedges = 0;
+  if (!pimpl->valid) return NULL;
+  
+  SbFontP::GlyphCache * glyph = pimpl->findOrCreateGlyph(character);
+  if (!glyph) return NULL;
+  
+  numedges = glyph->numedges;
+  return glyph->edgeconnectivity;
+}
+
+const int *
+SbFont::getGlyphNextCCWEdge(int character, int edgeidx) const
+{
+  if (!pimpl->valid) return NULL;
+  
+  SbFontP::GlyphCache * glyph = pimpl->findOrCreateGlyph(character);
+  if (!glyph || !glyph->edgeconnectivity || edgeidx < 0 || edgeidx >= glyph->numedges) {
+    return NULL;
+  }
+  
+  // For CCW (counter-clockwise), we want [prev_vertex, current_vertex]
+  return &glyph->edgeconnectivity[edgeidx * 3];
+}
+
+const int *
+SbFont::getGlyphNextCWEdge(int character, int edgeidx) const
+{
+  if (!pimpl->valid) return NULL;
+  
+  SbFontP::GlyphCache * glyph = pimpl->findOrCreateGlyph(character);
+  if (!glyph || !glyph->edgeconnectivity || edgeidx < 0 || edgeidx >= glyph->numedges) {
+    return NULL;
+  }
+  
+  // For CW (clockwise), we want [next_vertex] (but return from offset 2)
+  return &glyph->edgeconnectivity[edgeidx * 3 + 2];
 }
 
 SbVec2f

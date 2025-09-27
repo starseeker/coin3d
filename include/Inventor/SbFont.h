@@ -88,6 +88,11 @@ public:
   const int * getGlyphFaceIndices(int character, int & numindices) const;
   const int * getGlyphEdgeIndices(int character, int & numindices) const;
 
+  // Edge connectivity for 3D extrusion
+  const int * getGlyphEdgeConnectivity(int character, int & numedges) const;
+  const int * getGlyphNextCCWEdge(int character, int edgeidx) const;
+  const int * getGlyphNextCWEdge(int character, int edgeidx) const;
+
   // String metrics
   SbVec2f getStringBounds(const char * text) const;
   float getStringWidth(const char * text) const;
