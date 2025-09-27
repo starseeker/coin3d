@@ -170,6 +170,7 @@
 #include "caches/SoGlyphCache.h"
 #include "fonts/sbfont_bridge.h"
 #include "nodes/SoSubNodeP.h"
+#include <Inventor/SbFont.h>
 
 // *************************************************************************
 
@@ -238,7 +239,14 @@
 class SoAsciiTextP {
 public:
 
-  SoAsciiTextP(SoAsciiText * master) : master(master) { }
+  SoAsciiTextP(SoAsciiText * master) : master(master) { 
+    this->font = new SbFont();  // Initialize with ProFont default
+  }
+  
+  ~SoAsciiTextP() {
+    delete this->font;
+  }
+  
   SoAsciiText * master;
 
   void setUpGlyphs(SoState * state, SoAsciiText * textnode);
@@ -250,6 +258,7 @@ public:
   SbBox3f maxglyphbbox;
 
   SoGlyphCache * cache;
+  SbFont * font;
 
 #ifdef COIN_THREADSAFE
   void lock(void) { this->mutex.lock(); }
@@ -394,7 +403,7 @@ SoAsciiText::GLRender(SoGLRenderAction * action)
     }
 
     SbString str = this->string[i];
-    sb_glyph3d * prevglyph = NULL;
+    uint32_t prevglyphchar = 0;
     const char * p = str.getString();
     size_t length = coin_utf8_validate_length(p);
     // No assertion as zero length is handled correctly (results in a new line)
@@ -405,56 +414,62 @@ SoAsciiText::GLRender(SoGLRenderAction * action)
       glyphidx = coin_utf8_get_char(p);
       p = coin_utf8_next_char(p);
 
-      sb_glyph3d * glyph = sb_glyph3d_ref(glyphidx, fontspec);
-
+      // Use SbFont directly instead of bridge
+      
+      // Update font size
+      PRIVATE(this)->font->setSize(fontspec->size);
+      
       // Get kerning
-      if (strcharidx > 0) {
-        float kerningx, kerningy;
-        sb_glyph3d_getkerning(prevglyph, glyph, &kerningx, &kerningy);
-        xpos += kerningx * stretchfactor * fontspec->size;
+      if (strcharidx > 0 && prevglyphchar != 0) {
+        SbVec2f kern = PRIVATE(this)->font->getGlyphKerning(prevglyphchar, glyphidx);
+        xpos += kern[0] * stretchfactor * fontspec->size;
       }
 
-      if (prevglyph) {
-        sb_glyph3d_unref(prevglyph);
+      prevglyphchar = glyphidx;
+
+      // Get geometry from SbFont
+      int numvertices, numfaceindices;
+      const float * vertices = PRIVATE(this)->font->getGlyphVertices(glyphidx, numvertices);
+      const int * faceindices = PRIVATE(this)->font->getGlyphFaceIndices(glyphidx, numfaceindices);
+      
+      if (vertices && faceindices) {
+        const int * ptr = faceindices;
+        while (*ptr >= 0) {
+          SbVec2f v0, v1, v2;
+          // Convert 3D vertices to 2D (Z coordinate should be 0)
+          int idx2 = *ptr++;
+          int idx1 = *ptr++;
+          int idx0 = *ptr++;
+          
+          if (idx0 < numvertices && idx1 < numvertices && idx2 < numvertices) {
+            v2.setValue(vertices[idx2 * 3], vertices[idx2 * 3 + 1]);
+            v1.setValue(vertices[idx1 * 3], vertices[idx1 * 3 + 1]);
+            v0.setValue(vertices[idx0 * 3], vertices[idx0 * 3 + 1]);
+
+            // FIXME: Is the text textured correctly when stretching is
+            // applied (when width values have been given that are
+            // not the same as the length of the string)? jornskaa 20040716
+            if (do2Dtextures) {
+              glTexCoord2f(v0[0] + xpos/fontspec->size, v0[1] + ypos/fontspec->size);
+            }
+            glVertex3f(v0[0] * fontspec->size + xpos, v0[1] * fontspec->size + ypos, 0.0f);
+            
+            if (do2Dtextures) {
+              glTexCoord2f(v1[0] + xpos/fontspec->size, v1[1] + ypos/fontspec->size);
+            }
+            glVertex3f(v1[0] * fontspec->size + xpos, v1[1] * fontspec->size + ypos, 0.0f);
+            
+            if (do2Dtextures) {
+              glTexCoord2f(v2[0] + xpos/fontspec->size, v2[1] + ypos/fontspec->size);
+            }
+            glVertex3f(v2[0] * fontspec->size + xpos, v2[1] * fontspec->size + ypos, 0.0f);
+          }
+        }
       }
-      prevglyph = glyph;
 
-      const SbVec2f * coords = (SbVec2f *) sb_glyph3d_getcoords(glyph);
-      const int * ptr = sb_glyph3d_getfaceindices(glyph);
-
-      while (*ptr >= 0) {
-        SbVec2f v0, v1, v2;
-        v2 = coords[*ptr++];
-        v1 = coords[*ptr++];
-        v0 = coords[*ptr++];
-
-        // FIXME: Is the text textured correctly when stretching is
-        // applied (when width values have been given that are
-        // not the same as the length of the string)? jornskaa 20040716
-        if (do2Dtextures) {
-          glTexCoord2f(v0[0] + xpos/fontspec->size, v0[1] + ypos/fontspec->size);
-        }
-        glVertex3f(v0[0] * fontspec->size + xpos, v0[1] * fontspec->size + ypos, 0.0f);
-        
-        if (do2Dtextures) {
-          glTexCoord2f(v1[0] + xpos/fontspec->size, v1[1] + ypos/fontspec->size);
-        }
-        glVertex3f(v1[0] * fontspec->size + xpos, v1[1] * fontspec->size + ypos, 0.0f);
-        
-        if (do2Dtextures) {
-          glTexCoord2f(v2[0] + xpos/fontspec->size, v2[1] + ypos/fontspec->size);
-        }
-        glVertex3f(v2[0] * fontspec->size + xpos, v2[1] * fontspec->size + ypos, 0.0f);
-
-      }
-
-      float advancex, advancey;
-      sb_glyph3d_getadvance(glyph, &advancex, &advancey);
-      xpos += (advancex * stretchfactor * fontspec->size);
-    }
-    if (prevglyph) {
-      sb_glyph3d_unref(prevglyph);
-      prevglyph = NULL;
+      // Get advance
+      SbVec2f advance = PRIVATE(this)->font->getGlyphAdvance(glyphidx);
+      xpos += (advance[0] * stretchfactor * fontspec->size);
     }
 
     ypos -= fontspec->size * this->spacing.getValue();
@@ -494,16 +509,20 @@ SoAsciiText::getPrimitiveCount(SoGetPrimitiveCountAction * action)
 	glyphidx = coin_utf8_get_char(p);
 	p = coin_utf8_next_char(p);
 
-        sb_glyph3d * glyph = sb_glyph3d_ref(glyphidx, fontspec);
-
-        int cnt = 0;
-        const int * ptr = sb_glyph3d_getfaceindices(glyph);
-        while (*ptr++ >= 0) 
-          cnt++;
-
-        numtris += cnt / 3;
+        // Use SbFont directly instead of bridge
+        PRIVATE(this)->font->setSize(fontspec->size);
         
-        sb_glyph3d_unref(glyph);
+        int numfaceindices;
+        const int * faceindices = PRIVATE(this)->font->getGlyphFaceIndices(glyphidx, numfaceindices);
+        
+        if (faceindices) {
+          int cnt = 0;
+          const int * ptr = faceindices;
+          while (*ptr++ >= 0) 
+            cnt++;
+
+          numtris += cnt / 3;
+        }
       }
     }
     action->addNumTriangles(numtris);
@@ -537,8 +556,7 @@ void SoAsciiTextP::calculateStringStretch(const int i, const cc_font_specificati
   // Approximate the stretchfactor
   stretchfactor = master->width[i] / this->stringwidths[i];
 
-  sb_glyph3d * prevglyph = NULL;
-  float originalmaxx = 0.0f;
+  uint32_t prevglyphchar = 0;
   float originalmaxxpos = 0.0f;
   float originalxpos = 0.0f;
   float maxglyphwidth = 0.0f;
@@ -557,43 +575,37 @@ void SoAsciiTextP::calculateStringStretch(const int i, const cc_font_specificati
     glyphidx = coin_utf8_get_char(p);
     p = coin_utf8_next_char(p);
 
-    sb_glyph3d * glyph = sb_glyph3d_ref(glyphidx, fontspec);
-    float glyphwidth = sb_glyph3d_getwidth(glyph) * fontspec->size;
+    // Use SbFont directly instead of bridge
+    this->font->setSize(fontspec->size);
+    
+    SbBox2f glyphbbox = this->font->getGlyphBounds(glyphidx);
+    float glyphwidth = 0.0f;
+    if (!glyphbbox.isEmpty()) {
+      glyphwidth = (glyphbbox.getMax()[0] - glyphbbox.getMin()[0]) * fontspec->size;
+    }
 
     // Adjust the distance between neighbouring characters
-    if (prevglyph) {
-      float kerningx, kerningy;
-      sb_glyph3d_getkerning(prevglyph, glyph, &kerningx, &kerningy);
-      originalxpos += kerningx * fontspec->size;
+    if (prevglyphchar != 0) {
+      SbVec2f kern = this->font->getGlyphKerning(prevglyphchar, glyphidx);
+      originalxpos += kern[0] * fontspec->size;
     }
 
     // Find the maximum endposition in the x-direction
     float endx = originalxpos * stretchfactor + glyphwidth;
     if (endx > maxx) {
       originalmaxxpos = originalxpos;
-      originalmaxx = originalxpos + glyphwidth;
 
       maxx = endx;
       maxglyphwidth = glyphwidth;
     }
 
     // Advance to the next character in the x-direction
-    float advancex, advancey;
-    sb_glyph3d_getadvance(glyph, &advancex, &advancey);
-    originalxpos += advancex * fontspec->size;
-
-    // Remove the previous glyph from memory
-    if (prevglyph) {
-      sb_glyph3d_unref(prevglyph);
-    }
+    SbVec2f advance = this->font->getGlyphAdvance(glyphidx);
+    originalxpos += advance[0] * fontspec->size;
 
     // Make ready for next run
-    prevglyph = glyph;
+    prevglyphchar = glyphidx;
   }
-
-  // Unreference the last glyph
-  sb_glyph3d_unref(prevglyph);
-  prevglyph = NULL;
   
   // Calculate the accurate stretchfactor and the width of the
   // string. This should be close to the specified width unless the
@@ -737,7 +749,7 @@ SoAsciiText::generatePrimitives(SoAction * action)
     }
     
     SbString str = this->string[i];
-    sb_glyph3d * prevglyph = NULL;
+    uint32_t prevglyphchar = 0;
     const char * p = str.getString();
     size_t length = coin_utf8_validate_length(p);
     // No assertion as zero length is handled correctly (results in a new line)
@@ -748,60 +760,66 @@ SoAsciiText::generatePrimitives(SoAction * action)
       glyphidx = coin_utf8_get_char(p);
       p = coin_utf8_next_char(p);
 
-      sb_glyph3d * glyph = sb_glyph3d_ref(glyphidx, fontspec);
+      // Use SbFont directly instead of bridge
+      PRIVATE(this)->font->setSize(fontspec->size);
       
       // Get kerning
-      if (strcharidx > 0) {
-        float kerningx, kerningy;
-        sb_glyph3d_getkerning(prevglyph, glyph, &kerningx, &kerningy);
-        xpos += kerningx * stretchfactor * fontspec->size;
-      }
-      if (prevglyph) {
-        sb_glyph3d_unref(prevglyph);
+      if (strcharidx > 0 && prevglyphchar != 0) {
+        SbVec2f kern = PRIVATE(this)->font->getGlyphKerning(prevglyphchar, glyphidx);
+        xpos += kern[0] * stretchfactor * fontspec->size;
       }
 
-      prevglyph = glyph;
+      prevglyphchar = glyphidx;
       detail.setCharacterIndex(strcharidx);
 
-      const SbVec2f * coords = (SbVec2f *) sb_glyph3d_getcoords(glyph);
-      const int * ptr = sb_glyph3d_getfaceindices(glyph);
+      // Get geometry from SbFont
+      int numvertices, numfaceindices;
+      const float * vertices = PRIVATE(this)->font->getGlyphVertices(glyphidx, numvertices);
+      const int * faceindices = PRIVATE(this)->font->getGlyphFaceIndices(glyphidx, numfaceindices);
+      
+      if (vertices && faceindices) {
+        const int * ptr = faceindices;
+        while (*ptr >= 0) {
+          SbVec2f v0, v1, v2;
+          // Convert 3D vertices to 2D (Z coordinate should be 0)
+          int idx2 = *ptr++;
+          int idx1 = *ptr++;
+          int idx0 = *ptr++;
+          
+          if (idx0 < numvertices && idx1 < numvertices && idx2 < numvertices) {
+            v2.setValue(vertices[idx2 * 3], vertices[idx2 * 3 + 1]);
+            v1.setValue(vertices[idx1 * 3], vertices[idx1 * 3 + 1]);
+            v0.setValue(vertices[idx0 * 3], vertices[idx0 * 3 + 1]);
 
-      while (*ptr >= 0) {
-        SbVec2f v0, v1, v2;
-        v2 = coords[*ptr++];
-        v1 = coords[*ptr++];
-        v0 = coords[*ptr++];
+            // FIXME: Is the text textured correctly when stretching is
+            // applied (when width values have been given that are
+            // not the same as the length of the string)? jornskaa 20040716
+            if(do2Dtextures) {
+              vertex.setTextureCoords(SbVec2f(v0[0] + xpos/fontspec->size, v0[1] + ypos/fontspec->size));
+            }
+            vertex.setPoint(SbVec3f(v0[0] * fontspec->size + xpos, v0[1] * fontspec->size + ypos, 0.0f));
+            this->shapeVertex(&vertex);
 
-        // FIXME: Is the text textured correctly when stretching is
-        // applied (when width values have been given that are
-        // not the same as the length of the string)? jornskaa 20040716
-        if(do2Dtextures) {
-          vertex.setTextureCoords(SbVec2f(v0[0] + xpos/fontspec->size, v0[1] + ypos/fontspec->size));
+            if(do2Dtextures) {
+              vertex.setTextureCoords(SbVec2f(v1[0] + xpos/fontspec->size, v1[1] + ypos/fontspec->size));
+            }
+            vertex.setPoint(SbVec3f(v1[0] * fontspec->size + xpos, v1[1] * fontspec->size + ypos, 0.0f));
+            this->shapeVertex(&vertex);
+
+            if(do2Dtextures) {
+              vertex.setTextureCoords(SbVec2f(v2[0] + xpos/fontspec->size, v2[1] + ypos/fontspec->size));
+            }
+            vertex.setPoint(SbVec3f(v2[0] * fontspec->size + xpos, v2[1] * fontspec->size + ypos, 0.0f));
+            this->shapeVertex(&vertex);
+          }
         }
-        vertex.setPoint(SbVec3f(v0[0] * fontspec->size + xpos, v0[1] * fontspec->size + ypos, 0.0f));
-        this->shapeVertex(&vertex);
-
-        if(do2Dtextures) {
-          vertex.setTextureCoords(SbVec2f(v1[0] + xpos/fontspec->size, v1[1] + ypos/fontspec->size));
-        }
-        vertex.setPoint(SbVec3f(v1[0] * fontspec->size + xpos, v1[1] * fontspec->size + ypos, 0.0f));
-        this->shapeVertex(&vertex);
-
-        if(do2Dtextures) {
-          vertex.setTextureCoords(SbVec2f(v2[0] + xpos/fontspec->size, v2[1] + ypos/fontspec->size));
-        }
-        vertex.setPoint(SbVec3f(v2[0] * fontspec->size + xpos, v2[1] * fontspec->size + ypos, 0.0f));
-        this->shapeVertex(&vertex);
       }
-      float advancex, advancey;
-      sb_glyph3d_getadvance(glyph, &advancex, &advancey);
-      xpos += (advancex * stretchfactor * fontspec->size);
+      
+      // Get advance
+      SbVec2f advance = PRIVATE(this)->font->getGlyphAdvance(glyphidx);
+      xpos += (advance[0] * stretchfactor * fontspec->size);
     }
     ypos -= fontspec->size * this->spacing.getValue();
-    if (prevglyph) {
-      sb_glyph3d_unref(prevglyph);
-      prevglyph = NULL;
-    }
   }
   this->endShape();
   PRIVATE(this)->unlock();
@@ -861,22 +879,24 @@ SoAsciiTextP::setUpGlyphs(SoState * state, SoAsciiText * textnode)
   this->cache->ref();
   SoCacheElement::set(state, this->cache);
   this->cache->readFontspec(state);
-  const cc_font_specification * fontspecptr = this->cache->getCachedFontspec(); 
+  const cc_font_specification * fontspecptr = this->cache->getCachedFontspec();
+  
+  // Update SbFont size from specification
+  if (fontspecptr && fontspecptr->size > 0) {
+    this->font->setSize(fontspecptr->size);
+  }
 
   this->glyphwidths.truncate(0);
   this->stringwidths.truncate(0);
   this->maxglyphbbox.makeEmpty();
 
   float kerningx = 0;
-  float kerningy = 0;
   float advancex = 0;
-  float advancey = 0;
-  sb_glyph3d * prevglyph = NULL;
+  uint32_t prevglyphchar = 0;
 
   for (int i = 0; i < textnode->string.getNum(); i++) {
     float stringwidth = 0.0f;
     SbString str = textnode->string[i];
-    const float * maxbbox;
     const char * p = str.getString();
     size_t length = coin_utf8_validate_length(p);
     // No assertion as zero length is handled correctly (results in a new line)
@@ -887,33 +907,46 @@ SoAsciiTextP::setUpGlyphs(SoState * state, SoAsciiText * textnode)
       glyphidx = coin_utf8_get_char(p);
       p = coin_utf8_next_char(p);
 
-      sb_glyph3d * glyph = sb_glyph3d_ref(glyphidx, fontspecptr);
-      // Cache disabled for SbFont migration - optimization can be re-added later
-      // this->cache->addGlyph(glyph);
-      assert(glyph);
-
-      maxbbox = sb_glyph3d_getboundingbox(glyph); // Get max height
-      this->maxglyphbbox.extendBy(SbVec3f(0, maxbbox[0] * fontspecptr->size, 0));
-      this->maxglyphbbox.extendBy(SbVec3f(0, maxbbox[1] * fontspecptr->size, 0));
-
-      // FIXME: Shouldn't it be the 'advance' value be stored in this
-      // list?  This data is only accessed via the public 'getWidth()'
-      // method. (20031002 handegar)
-      this->glyphwidths.append(sb_glyph3d_getwidth(glyph));
+      // Use SbFont directly instead of bridge
+      SbBox2f glyphbbox = this->font->getGlyphBounds(glyphidx);
+      
+      // Update max glyph bounding box (scaled by font size)
+      if (!glyphbbox.isEmpty()) {
+        this->maxglyphbbox.extendBy(SbVec3f(0, glyphbbox.getMin()[1] * fontspecptr->size, 0));
+        this->maxglyphbbox.extendBy(SbVec3f(0, glyphbbox.getMax()[1] * fontspecptr->size, 0));
+        
+        // FIXME: Shouldn't it be the 'advance' value be stored in this
+        // list?  This data is only accessed via the public 'getWidth()'
+        // method. (20031002 handegar)
+        float glyphwidth = glyphbbox.getMax()[0] - glyphbbox.getMin()[0];
+        this->glyphwidths.append(glyphwidth);
+      } else {
+        this->glyphwidths.append(0.0f);
+      }
    
-      if (strcharidx > 0) 
-        sb_glyph3d_getkerning(prevglyph, glyph, &kerningx, &kerningy);          
-      sb_glyph3d_getadvance(glyph, &advancex, &advancey);
+      // Kerning using SbFont
+      if (strcharidx > 0 && prevglyphchar != 0) {
+        SbVec2f kern = this->font->getGlyphKerning(prevglyphchar, glyphidx);
+        kerningx = kern[0];
+      }
+      
+      // Advance using SbFont  
+      SbVec2f advance = this->font->getGlyphAdvance(glyphidx);
+      advancex = advance[0];
 
       stringwidth += (advancex + kerningx) * fontspecptr->size;
 
-      prevglyph = glyph;
+      prevglyphchar = glyphidx;
     }
 
-    if (prevglyph) {
-      // Have to remove the appended advance and add the last character to the calculated with
-      stringwidth += (sb_glyph3d_getwidth(prevglyph) - advancex) * fontspecptr->size;
-      prevglyph = NULL; // To make sure the next line starts with blank sheets
+    if (prevglyphchar != 0) {
+      // Have to remove the appended advance and add the last character to the calculated width
+      SbBox2f lastglyphbbox = this->font->getGlyphBounds(prevglyphchar);
+      if (!lastglyphbbox.isEmpty()) {
+        float lastglyphwidth = lastglyphbbox.getMax()[0] - lastglyphbbox.getMin()[0];
+        stringwidth += (lastglyphwidth - advancex) * fontspecptr->size;
+      }
+      prevglyphchar = 0; // To make sure the next line starts with blank sheets
     }
 
     this->stringwidths.append(stringwidth);

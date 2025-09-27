@@ -174,6 +174,7 @@
 #include "nodes/SoSubNodeP.h"
 #include "fonts/sbfont_bridge.h"
 #include "caches/SoGlyphCache.h"
+#include <Inventor/SbFont.h>
 
 // *************************************************************************
 
@@ -260,7 +261,13 @@
 
 class SoText3P {
 public:
-  SoText3P(SoText3 * master) : master(master) { }
+  SoText3P(SoText3 * master) : master(master) { 
+    this->font = new SbFont();  // Initialize with ProFont default
+  }
+  
+  ~SoText3P() {
+    delete this->font;
+  }
 
   void render(SoState * state, const cc_font_specification * fontspec, unsigned int part);
   void generate(SoAction * action, const cc_font_specification * fontspec, unsigned int part);
@@ -271,6 +278,7 @@ public:
   SoNormalGenerator * normalgenerator;
 
   SoGlyphCache * cache;
+  SbFont * font;
 
   void lock(void) {
 #ifdef COIN_THREADSAFE
@@ -1434,18 +1442,20 @@ SoText3P::setUpGlyphs(SoState * state, SoText3 * textnode)
   this->cache->readFontspec(state);
   const cc_font_specification * fontspec = this->cache->getCachedFontspec();
 
+  // Update SbFont size from specification  
+  if (fontspec && fontspec->size > 0) {
+    this->font->setSize(fontspec->size);
+  }
+
   this->widths.truncate(0);
 
   for (int i = 0; i < textnode->string.getNum(); i++) {
 
     float stringwidth = 0.0f;
     float kerningx = 0;
-    float kerningy = 0;
     float advancex = 0;
-    float advancey = 0;
-    sb_glyph3d * prevglyph = NULL;
+    uint32_t prevglyphchar = 0;
 
-    const float * maxbbox;
     this->maxglyphbbox.makeEmpty();
 
     SbString str = textnode->string[i];
@@ -1459,28 +1469,39 @@ SoText3P::setUpGlyphs(SoState * state, SoText3 * textnode)
       glyphidx = coin_utf8_get_char(p);
       p = coin_utf8_next_char(p);
 
-      sb_glyph3d * glyph = sb_glyph3d_ref(glyphidx, fontspec);
-      // Cache disabled for SbFont migration - optimization can be re-added later
-      // this->cache->addGlyph(glyph);
-      assert(glyph);
+      // Use SbFont directly instead of bridge
+      SbBox2f glyphbbox = this->font->getGlyphBounds(glyphidx);
+      
+      // Update max glyph bounding box (scaled by font size)
+      if (!glyphbbox.isEmpty()) {
+        this->maxglyphbbox.extendBy(SbVec3f(0, glyphbbox.getMin()[1] * fontspec->size, 0));
+        this->maxglyphbbox.extendBy(SbVec3f(0, glyphbbox.getMax()[1] * fontspec->size, 0)); 
+      }
 
-      maxbbox = sb_glyph3d_getboundingbox(glyph); // Get max height
-
-      this->maxglyphbbox.extendBy(SbVec3f(0, maxbbox[1] * fontspec->size, 0));
-      this->maxglyphbbox.extendBy(SbVec3f(0, maxbbox[3] * fontspec->size, 0)); 
-
-      if (strcharidx > 0)
-        sb_glyph3d_getkerning(prevglyph, glyph, &kerningx, &kerningy);
-      sb_glyph3d_getadvance(glyph, &advancex, &advancey);
+      // Kerning using SbFont
+      if (strcharidx > 0 && prevglyphchar != 0) {
+        SbVec2f kern = this->font->getGlyphKerning(prevglyphchar, glyphidx);
+        kerningx = kern[0];
+        // kerningy not used for bounding box calculation
+      }
+      
+      // Advance using SbFont
+      SbVec2f advance = this->font->getGlyphAdvance(glyphidx);
+      advancex = advance[0];
+      // advancey not used for bounding box calculation
 
       stringwidth += (advancex + kerningx) * fontspec->size;
-      prevglyph = glyph;
+      prevglyphchar = glyphidx;
     }
 
-    if (prevglyph != NULL) {
+    if (prevglyphchar != 0) {
       // Italic font might cause last letter to be outside bbox. Add width if needed.
-      if (advancex < sb_glyph3d_getwidth(prevglyph))
-        stringwidth += (sb_glyph3d_getwidth(prevglyph) - advancex) * fontspec->size;
+      SbBox2f lastglyphbbox = this->font->getGlyphBounds(prevglyphchar);
+      if (!lastglyphbbox.isEmpty()) {
+        float glyphwidth = lastglyphbbox.getMax()[0] - lastglyphbbox.getMin()[0];
+        if (advancex < glyphwidth)
+          stringwidth += (glyphwidth - advancex) * fontspec->size;
+      }
     }
 
     this->widths.append(stringwidth);
