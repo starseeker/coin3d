@@ -324,8 +324,10 @@ coin_bspnode::split()
     }
     fprintf(stderr,"pos: %f\n",
             pos);
+#ifdef BSP_SORTED_SPLIT
     fprintf(stderr,"mid: %f\n",
             mid);
+#endif
     fprintf(stderr,"dim: %d\n", dim);
     fprintf(stderr,"diag: %f %f %f\n",
             diag[0], diag[1], diag[2]);
