@@ -50,10 +50,8 @@
 #include <algorithm>
 #include <utility>
 
-#ifndef STB_TRUETYPE_H
-#ifndef STRUETYPE_H_INCLUDE_GUARD
+#ifndef __INCLUDE_STRUETYPE_H__
 #warning "Include struetype.h before including stt_glyph_mesh.hpp"
-#endif
 #endif
 
 #include "earcut.hpp"
