@@ -351,10 +351,8 @@ SoText2::GLRender(SoGLRenderAction * action)
   PRIVATE(this)->buildGlyphCache(state);
   SoCacheElement::addCacheDependency(state, PRIVATE(this)->cache);
 
-  // Update SbFont with current state (showing direct usage alongside bridge)
+  // Update SbFont with current state (direct usage instead of bridge)
   PRIVATE(this)->updateFont(state);
-  
-  const cc_font_specification * fontspec = PRIVATE(this)->cache->getCachedFontspec();
 
   // Render only if bbox not outside cull planes.
   SbBox3f box;
@@ -408,7 +406,7 @@ SoText2::GLRender(SoGLRenderAction * action)
     int bitmappos[2];
     int bitmapsize[2];
     const unsigned char * buffer = NULL;
-    sb_glyph2d * prevglyph = NULL;
+    uint32_t prevglyphchar = 0;
 
     const int nrlines = this->string.getNum();
 
@@ -444,9 +442,7 @@ SoText2::GLRender(SoGLRenderAction * action)
       }
 
       int kerningx = 0;
-      int kerningy = 0;
       int advancex = 0;
-      int advancey = 0;
 
       const char * p = str.getString();
       size_t length = coin_utf8_validate_length(p);
@@ -457,23 +453,36 @@ SoText2::GLRender(SoGLRenderAction * action)
         glyphidx = coin_utf8_get_char(p);
         p = coin_utf8_next_char(p);
 
-        sb_glyph2d * glyph = sb_glyph2d_ref(glyphidx, fontspec, 0.0f);
-
-        buffer = sb_glyph2d_getbitmap(glyph, bitmapsize, bitmappos);
+        // Use SbFont directly instead of bridge
+        SbVec2s bitmapsize_sb, bitmapbearing;
+        buffer = PRIVATE(this)->font->getGlyphBitmap(glyphidx, bitmapsize_sb, bitmapbearing);
+        
+        // Convert SbFont data to legacy format for compatibility
+        bitmapsize[0] = bitmapsize_sb[0];
+        bitmapsize[1] = bitmapsize_sb[1];
+        bitmappos[0] = bitmapbearing[0];
+        bitmappos[1] = bitmapbearing[1];
 
         ix = bitmapsize[0];
         iy = bitmapsize[1];
 
-        // Advance & Kerning
-        if (strcharidx > 0)
-          sb_glyph2d_getkerning(prevglyph, glyph, &kerningx, &kerningy);
-        sb_glyph2d_getadvance(glyph, &advancex, &advancey);
+        // Advance & Kerning using SbFont
+        if (strcharidx > 0 && prevglyphchar != 0) {
+          SbVec2f kern = PRIVATE(this)->font->getGlyphKerning(prevglyphchar, glyphidx);
+          kerningx = (int)kern[0];
+          // kerningy not used for 2D text
+        }
+        
+        SbVec2f advance = PRIVATE(this)->font->getGlyphAdvance(glyphidx);
+        advancex = (int)advance[0];
+        // advancey not used for 2D text
 
         rasterx = xpos + kerningx + bitmappos[0];
         rastery = ypos + (bitmappos[1] - bitmapsize[1]);
 
         if (buffer) {
-          if (sb_glyph2d_getmono(glyph)) {
+          // SbFont uses grayscale rendering, not mono
+          if (FALSE) { // Never mono with SbFont
             SoText2P::setRasterPos3f((float)rasterx + textscreenoffsetx, (float)rastery + (int)nilpoint[1], -nilpoint[2]);
             glBitmap(ix,iy,0,0,0,0,(const GLubyte *)buffer);
           }
@@ -525,21 +534,11 @@ SoText2::GLRender(SoGLRenderAction * action)
 
         xpos += (advancex + kerningx);
 
-        if (prevglyph) {
-          // should be safe to unref here. SoGlyphCache will have a
-          // ref'ed instance
-          sb_glyph2d_unref(prevglyph);
-        }
-        prevglyph = glyph;
+        // Track the previous character for kerning
+        prevglyphchar = glyphidx;
       }
 
       ypos -= (int)(((int) fontsize) * this->spacing.getValue());
-    }
-
-    if (prevglyph) {
-      // should be safe to unref here. SoGlyphCache will have a ref'ed
-      // instance
-      sb_glyph2d_unref(prevglyph);
     }
 
     if (drawPixelBuffer) {
@@ -870,8 +869,6 @@ SoText2P::buildGlyphCache(SoState * state)
 
   const int nrlines = PUBLIC(this)->string.getNum();
 
-  const cc_font_specification * fontspec = this->cache->getCachedFontspec();
-
   this->bbox.makeEmpty();
 
   // Debug: Add bounding box debugging to verify the fix
@@ -887,12 +884,10 @@ SoText2P::buildGlyphCache(SoState * state)
     int xpos = 0;
     int actuallength = 0;
     int kerningx = 0;
-    int kerningy = 0;
     int advancex = 0;
-    int advancey = 0;
     int bitmapsize[2];
     int bitmappos[2];
-    sb_glyph2d * prevglyph = NULL;
+    uint32_t prevglyphchar = 0;
     const char * p = str.getString();
     size_t length = coin_utf8_validate_length(p);
 
@@ -903,24 +898,26 @@ SoText2P::buildGlyphCache(SoState * state)
       glyphidx = coin_utf8_get_char(p);
       p = coin_utf8_next_char(p);
 
-      sb_glyph2d * glyph = sb_glyph2d_ref(glyphidx, fontspec, 0.0f);
-      // Should _always_ be able to get hold of a glyph -- if no
-      // glyph is available for a specific character, a default
-      // empty rectangle should be used.  -mortene.
-      assert(glyph);
+      // Use SbFont directly instead of bridge
+      SbVec2s bitmapsize_sb, bitmapbearing;
+      (void)this->font->getGlyphBitmap(glyphidx, bitmapsize_sb, bitmapbearing); // For bbox calc
+      
+      // Convert to legacy format
+      bitmapsize[0] = bitmapsize_sb[0];
+      bitmapsize[1] = bitmapsize_sb[1];
+      bitmappos[0] = bitmapbearing[0];
+      bitmappos[1] = bitmapbearing[1];
 
-      // Cache disabled for SbFont migration - optimization can be re-added later
-      // this->cache->addGlyph(glyph);
-
-      // Must fetch special modifiers so that heights for chars like
-      // 'q' and 'g' will be taken into account when creating a
-      // boundingbox.
-      (void) sb_glyph2d_getbitmap(glyph, bitmapsize, bitmappos);
-
-      // Advance & Kerning
-      if (strcharidx > 0)
-        sb_glyph2d_getkerning(prevglyph, glyph, &kerningx, &kerningy);
-      sb_glyph2d_getadvance(glyph, &advancex, &advancey);
+      // Advance & Kerning using SbFont
+      if (strcharidx > 0 && prevglyphchar != 0) {
+        SbVec2f kern = this->font->getGlyphKerning(prevglyphchar, glyphidx);
+        kerningx = (int)kern[0];
+        // kerningy not used for 2D text
+      }
+      
+      SbVec2f advance = this->font->getGlyphAdvance(glyphidx);
+      advancex = (int)advance[0];
+      // advancey not used for 2D text
 
       SbVec2s pos;
       pos[0] = xpos + kerningx + bitmappos[0];
@@ -933,10 +930,7 @@ SoText2P::buildGlyphCache(SoState * state)
       actuallength += (advancex + kerningx);
 
       xpos += (advancex + kerningx);
-      if (prevglyph && prevglyph != glyph) {
-        sb_glyph2d_unref(prevglyph);
-      }
-      prevglyph = glyph;
+      prevglyphchar = glyphidx;
     }
 
     this->bbox.extendBy(linebbox);
@@ -961,9 +955,6 @@ SoText2P::buildGlyphCache(SoState * state)
 
     ypos -= (int)(((int)fontsize) * PUBLIC(this)->spacing.getValue());
     
-    if (prevglyph) {
-      sb_glyph2d_unref(prevglyph);
-    }
   }
 
   // extent bbox to include maxoverhang at the maxwidth string
