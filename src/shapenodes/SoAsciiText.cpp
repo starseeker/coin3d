@@ -168,7 +168,6 @@
 #include <Inventor/threads/SbMutex.h>
 
 #include "caches/SoGlyphCache.h"
-#include "fonts/sbfont_bridge.h"
 #include "nodes/SoSubNodeP.h"
 #include <Inventor/SbFont.h>
 

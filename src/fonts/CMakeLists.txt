@@ -1,17 +1,13 @@
 # source files
 set(COIN_FONTS_FILES
-	fontlib_wrapper.cpp
 	freetype.cpp
 	profont_data.cpp
 	fontspec.cpp
 	common.cpp
-	sbfont_bridge.cpp
 )
 
 # Files excluded from public API documentation, included in complete documentation.
 set(COIN_FONTS_INTERNAL_FILES
-	fontlib_wrapper.h
-	fontlib_wrapper.cpp
 	freetype.h
 	freetype.cpp
 	profont_data.h
@@ -20,8 +16,6 @@ set(COIN_FONTS_INTERNAL_FILES
 	fontspec.cpp
 	common.h
 	common.cpp
-	sbfont_bridge.h
-	sbfont_bridge.cpp
 )
 
 # build library
