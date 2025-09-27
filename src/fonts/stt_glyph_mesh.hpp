@@ -538,6 +538,8 @@ inline static GlyphMesh triangulateGlyph(const Outline& outline,
   using DPoint = std::array<double, 2>;
   using Ring   = std::vector<DPoint>;
   using Poly   = std::vector<Ring>;
+  
+  bool anyTriangulationSucceeded = false;
 
   for (const RingGroup& g : groups) {
     if (g.outer < 0) continue;
@@ -587,15 +589,10 @@ inline static GlyphMesh triangulateGlyph(const Outline& outline,
     // Earcut indices are local to this poly
     std::vector<uint32_t> local = mapbox::earcut<uint32_t>(poly);
     
-    // Check if triangulation succeeded
-    if (local.empty()) {
-      // Earcut failed to triangulate this polygon - skip it
-      continue;
-    }
-    
-    // Validate triangulation result
-    if (local.size() % 3 != 0) {
-      // Invalid triangulation - indices must be multiple of 3
+    // Check if triangulation succeeded - be more permissive
+    if (local.empty() || local.size() % 3 != 0) {
+      // Earcut failed or returned invalid results - try to continue with other polygons
+      // instead of completely skipping this group
       continue;
     }
 
@@ -634,14 +631,17 @@ inline static GlyphMesh triangulateGlyph(const Outline& outline,
     if (!indicesValid) {
       mesh.positions.resize(base);
       mesh.indices.resize(mesh.indices.size() - local.size());
+    } else {
+      anyTriangulationSucceeded = true;
     }
   }
 
-  // If earcut failed to produce any triangles, try fallback tessellation
+  // If earcut failed to produce meaningful triangles, try fallback tessellation
 #ifdef HAVE_SBTESSELATOR
-  if (mesh.indices.empty() && !outline.contours.empty()) {
+  if (!anyTriangulationSucceeded && !outline.contours.empty()) {
     // Clear any partial results from earcut attempts
     mesh.positions.clear();
+    mesh.indices.clear();
     
     // Try fallback tessellation
     if (fallbackTriangulateGlyph(outline, mesh)) {
