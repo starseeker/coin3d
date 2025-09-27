@@ -432,43 +432,92 @@ inline static GlyphMesh triangulateGlyph(const Outline& outline,
     auto make_ring = [&](int contourIdx) {
       Ring r;
       const ContourSpan& s = outline.contours[contourIdx];
+      if (s.count < 3) {
+        // Degenerate contour - need at least 3 points for a polygon
+        return r;
+      }
+      
       r.reserve((size_t)s.count);
       const Vec2* p = outline.points.data() + s.start;
       for (int i = 0; i < s.count; ++i) {
         r.push_back({ (double)p[i].x, (double)p[i].y });
       }
+      
       // Drop trailing duplicate if present (shouldn't be if we cleaned earlier)
       if (r.size() >= 2 && r.front() == r.back()) r.pop_back();
+      
+      // Final validation - need at least 3 points for a valid polygon
+      if (r.size() < 3) {
+        r.clear();
+      }
+      
       return r;
     };
 
     poly.push_back(make_ring(g.outer));
     for (int h : g.holes) {
-      poly.push_back(make_ring(h));
+      Ring hole = make_ring(h);
+      if (!hole.empty()) {
+        poly.push_back(hole);
+      }
+    }
+
+    // Validate polygon before triangulation
+    if (poly.empty() || poly[0].empty()) {
+      // No valid outer ring - skip this group
+      continue;
     }
 
     // Earcut indices are local to this poly
     std::vector<uint32_t> local = mapbox::earcut<uint32_t>(poly);
+    
+    // Check if triangulation succeeded
+    if (local.empty()) {
+      // Earcut failed to triangulate this polygon - skip it
+      continue;
+    }
+    
+    // Validate triangulation result
+    if (local.size() % 3 != 0) {
+      // Invalid triangulation - indices must be multiple of 3
+      continue;
+    }
 
     // Append vertices to global mesh.positions in same order as in 'poly'
     uint32_t base = (uint32_t)mesh.positions.size();
+    uint32_t expectedVertexCount = 0;
+    
     // Outer ring
     {
       const ContourSpan& s = outline.contours[g.outer];
       const Vec2* p = outline.points.data() + s.start;
       mesh.positions.insert(mesh.positions.end(), p, p + s.count);
+      expectedVertexCount += s.count;
     }
     // Holes
     for (int h : g.holes) {
       const ContourSpan& s = outline.contours[h];
       const Vec2* p = outline.points.data() + s.start;
       mesh.positions.insert(mesh.positions.end(), p, p + s.count);
+      expectedVertexCount += s.count;
     }
 
-    // Offset local indices and append
+    // Validate and offset local indices
     mesh.indices.reserve(mesh.indices.size() + local.size());
+    bool indicesValid = true;
     for (uint32_t idx : local) {
+      if (idx >= expectedVertexCount) {
+        // Index out of bounds - earcut returned invalid indices
+        indicesValid = false;
+        break;
+      }
       mesh.indices.push_back(base + idx);
+    }
+    
+    // If indices were invalid, remove the vertices we just added
+    if (!indicesValid) {
+      mesh.positions.resize(base);
+      mesh.indices.resize(mesh.indices.size() - local.size());
     }
   }
 
