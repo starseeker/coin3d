@@ -907,12 +907,6 @@ SoImage::getImage(SbVec2s & size, int & nc)
                            newsize[0], newsize[1]);
         this->resizedimagevalid = TRUE;
       }
-#if COIN_DEBUG
-      else {
-        SoDebugError::postInfo("SoImage::getImage",
-                               "No resize function found.");
-      }
-#endif // COIN_DEBUG
     }
     return this->resizedimage->getValue(size, nc);
   }

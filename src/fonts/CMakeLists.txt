@@ -1,36 +1,19 @@
 # source files
 set(COIN_FONTS_FILES
-	fontlib_wrapper.cpp
 	freetype.cpp
 	profont_data.cpp
 	fontspec.cpp
-	glyph.cpp
-	glyph2d.cpp
-	glyph3d.cpp
-	default3dfont.cpp
-	default2dfont.cpp
 	common.cpp
 )
 
 # Files excluded from public API documentation, included in complete documentation.
 set(COIN_FONTS_INTERNAL_FILES
-	fontlib_wrapper.h
-	fontlib_wrapper.cpp
 	freetype.h
 	freetype.cpp
 	profont_data.h
 	profont_data.cpp
 	fontspec.h
 	fontspec.cpp
-	glyph.h
-	glyph.cpp
-	glyph2d.h
-	glyph2d.cpp
-	glyph3d.h
-	glyph3d.cpp
-	defaultfonts.h
-	default3dfont.cpp
-	default2dfont.cpp
 	common.h
 	common.cpp
 )

@@ -1057,7 +1057,7 @@ SbTime::addToString(SbString & str, const double v) const
 void
 SbTime::print(FILE * fp) const
 {
-#if COIN_DEBUG
+#if 0
   struct timeval tm;
   this->getValue(&tm);
   SbString str = this->formatDate();

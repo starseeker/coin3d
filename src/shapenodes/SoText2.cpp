@@ -164,7 +164,7 @@
 // windows.h and GL/glx.h are available. If that works fine, remove
 // the "#define WIN32_LEAN_AND_MEAN" hack. 20030625 mortene.
 
-#include "fonts/glyph2d.h"
+#include <Inventor/SbFont.h>
 #include "../misc/SoEnvironment.h"
 
 /*!
@@ -220,6 +220,7 @@ public:
   SoText2P(SoText2 * textnode) : maxwidth(0), master(textnode)
   {
     this->bbox.makeEmpty();
+    this->font = new SbFont();  // Initialize with ProFont default
   }
 
   SbBool getQuad(SoState * state, SbVec3f & v0, SbVec3f & v1,
@@ -229,6 +230,7 @@ public:
   SbBool shouldBuildGlyphCache(SoState * state);
   void dumpBuffer(unsigned char * buffer, SbVec2s size, SbVec2s pos, SbBool mono);
   void computeBBox(SoAction * action, SbBox3f & box, SbVec3f & center);
+  void updateFont(SoState * state);  // Update SbFont from state elements
   static void setRasterPos3f(GLfloat x, GLfloat y, GLfloat z);
 
 
@@ -238,6 +240,7 @@ public:
   SbBox2s bbox;
 
   SoGlyphCache * cache;
+  SbFont * font;  // Direct SbFont for modern usage
   SoFieldSensor * spacingsensor;
   SoFieldSensor * stringsensor;
   unsigned char * pixel_buffer;
@@ -313,6 +316,7 @@ SoText2::SoText2(void)
 SoText2::~SoText2()
 {
   if (PRIVATE(this)->cache) PRIVATE(this)->cache->unref();
+  delete PRIVATE(this)->font;  // Clean up SbFont
   delete[] PRIVATE(this)->pixel_buffer;
   delete PRIVATE(this)->stringsensor;
   delete PRIVATE(this)->spacingsensor;
@@ -347,7 +351,8 @@ SoText2::GLRender(SoGLRenderAction * action)
   PRIVATE(this)->buildGlyphCache(state);
   SoCacheElement::addCacheDependency(state, PRIVATE(this)->cache);
 
-  const cc_font_specification * fontspec = PRIVATE(this)->cache->getCachedFontspec();
+  // Update SbFont with current state (direct usage instead of bridge)
+  PRIVATE(this)->updateFont(state);
 
   // Render only if bbox not outside cull planes.
   SbBox3f box;
@@ -401,7 +406,7 @@ SoText2::GLRender(SoGLRenderAction * action)
     int bitmappos[2];
     int bitmapsize[2];
     const unsigned char * buffer = NULL;
-    cc_glyph2d * prevglyph = NULL;
+    uint32_t prevglyphchar = 0;
 
     const int nrlines = this->string.getNum();
 
@@ -437,9 +442,7 @@ SoText2::GLRender(SoGLRenderAction * action)
       }
 
       int kerningx = 0;
-      int kerningy = 0;
       int advancex = 0;
-      int advancey = 0;
 
       const char * p = str.getString();
       size_t length = coin_utf8_validate_length(p);
@@ -450,23 +453,51 @@ SoText2::GLRender(SoGLRenderAction * action)
         glyphidx = coin_utf8_get_char(p);
         p = coin_utf8_next_char(p);
 
-        cc_glyph2d * glyph = cc_glyph2d_ref(glyphidx, fontspec, 0.0f);
-
-        buffer = cc_glyph2d_getbitmap(glyph, bitmapsize, bitmappos);
-
-        ix = bitmapsize[0];
-        iy = bitmapsize[1];
-
-        // Advance & Kerning
-        if (strcharidx > 0)
-          cc_glyph2d_getkerning(prevglyph, glyph, &kerningx, &kerningy);
-        cc_glyph2d_getadvance(glyph, &advancex, &advancey);
+        // Use enhanced glyph caching for better performance
+        SbGlyph2D * glyph = PRIVATE(this)->cache->getGlyph2D(glyphidx, PRIVATE(this)->font);
+        if (glyph) {
+          // Use cached glyph data
+          buffer = glyph->bitmap;
+          bitmapsize[0] = glyph->size[0];
+          bitmapsize[1] = glyph->size[1];
+          bitmappos[0] = glyph->bearing[0];
+          bitmappos[1] = glyph->bearing[1];
+          
+          ix = bitmapsize[0];
+          iy = bitmapsize[1];
+          
+          // Advance from cached data
+          advancex = (int)glyph->advance[0];
+          
+          // Kerning (calculate between current and previous character)
+          if (strcharidx > 0 && prevglyphchar != 0) {
+            SbVec2f kern = PRIVATE(this)->font->getGlyphKerning(prevglyphchar, glyphidx);
+            kerningx = (int)kern[0];
+          }
+        } else {
+          // Fallback to direct SbFont calls if caching fails
+          SbVec2s bitmapsize_sb, bitmapbearing;
+          buffer = PRIVATE(this)->font->getGlyphBitmap(glyphidx, bitmapsize_sb, bitmapbearing);
+          bitmapsize[0] = bitmapsize_sb[0];
+          bitmapsize[1] = bitmapsize_sb[1];
+          bitmappos[0] = bitmapbearing[0];
+          bitmappos[1] = bitmapbearing[1];
+          ix = bitmapsize[0];
+          iy = bitmapsize[1];
+          SbVec2f advance = PRIVATE(this)->font->getGlyphAdvance(glyphidx);
+          advancex = (int)advance[0];
+          if (strcharidx > 0 && prevglyphchar != 0) {
+            SbVec2f kern = PRIVATE(this)->font->getGlyphKerning(prevglyphchar, glyphidx);
+            kerningx = (int)kern[0];
+          }
+        }
 
         rasterx = xpos + kerningx + bitmappos[0];
         rastery = ypos + (bitmappos[1] - bitmapsize[1]);
 
         if (buffer) {
-          if (cc_glyph2d_getmono(glyph)) {
+          // SbFont uses grayscale rendering, not mono
+          if (FALSE) { // Never mono with SbFont
             SoText2P::setRasterPos3f((float)rasterx + textscreenoffsetx, (float)rastery + (int)nilpoint[1], -nilpoint[2]);
             glBitmap(ix,iy,0,0,0,0,(const GLubyte *)buffer);
           }
@@ -518,21 +549,11 @@ SoText2::GLRender(SoGLRenderAction * action)
 
         xpos += (advancex + kerningx);
 
-        if (prevglyph) {
-          // should be safe to unref here. SoGlyphCache will have a
-          // ref'ed instance
-          cc_glyph2d_unref(prevglyph);
-        }
-        prevglyph = glyph;
+        // Track the previous character for kerning
+        prevglyphchar = glyphidx;
       }
 
       ypos -= (int)(((int) fontsize) * this->spacing.getValue());
-    }
-
-    if (prevglyph) {
-      // should be safe to unref here. SoGlyphCache will have a ref'ed
-      // instance
-      cc_glyph2d_unref(prevglyph);
     }
 
     if (drawPixelBuffer) {
@@ -857,13 +878,16 @@ SoText2P::buildGlyphCache(SoState * state)
   SoCacheElement::set(state, this->cache);
   this->cache->readFontspec(state);
 
+  // CRITICAL FIX: Update font from state elements before bbox calculation
+  // This ensures the font scale matches between bbox calculation and rendering
+  SbName fontname = SoFontNameElement::get(state);
   float fontsize = SoFontSizeElement::get(state);
+  this->font->setSize(fontsize);
+  
   int ypos = 0;
   int maxoverhang = INT_MIN;
 
   const int nrlines = PUBLIC(this)->string.getNum();
-
-  const cc_font_specification * fontspec = this->cache->getCachedFontspec();
 
   this->bbox.makeEmpty();
 
@@ -880,12 +904,10 @@ SoText2P::buildGlyphCache(SoState * state)
     int xpos = 0;
     int actuallength = 0;
     int kerningx = 0;
-    int kerningy = 0;
     int advancex = 0;
-    int advancey = 0;
     int bitmapsize[2];
     int bitmappos[2];
-    const cc_glyph2d * prevglyph = NULL;
+    uint32_t prevglyphchar = 0;
     const char * p = str.getString();
     size_t length = coin_utf8_validate_length(p);
 
@@ -896,23 +918,36 @@ SoText2P::buildGlyphCache(SoState * state)
       glyphidx = coin_utf8_get_char(p);
       p = coin_utf8_next_char(p);
 
-      cc_glyph2d * glyph = cc_glyph2d_ref(glyphidx, fontspec, 0.0f);
-      // Should _always_ be able to get hold of a glyph -- if no
-      // glyph is available for a specific character, a default
-      // empty rectangle should be used.  -mortene.
-      assert(glyph);
-
-      this->cache->addGlyph(glyph);
-
-      // Must fetch special modifiers so that heights for chars like
-      // 'q' and 'g' will be taken into account when creating a
-      // boundingbox.
-      (void) cc_glyph2d_getbitmap(glyph, bitmapsize, bitmappos);
-
-      // Advance & Kerning
-      if (strcharidx > 0)
-        cc_glyph2d_getkerning(prevglyph, glyph, &kerningx, &kerningy);
-      cc_glyph2d_getadvance(glyph, &advancex, &advancey);
+      // Use enhanced glyph caching for bbox calculation as well
+      SbGlyph2D * glyph = this->cache->getGlyph2D(glyphidx, this->font);
+      if (glyph) {
+        // Use cached glyph data for bbox calculation
+        bitmapsize[0] = glyph->size[0];
+        bitmapsize[1] = glyph->size[1];
+        bitmappos[0] = glyph->bearing[0];
+        bitmappos[1] = glyph->bearing[1];
+        advancex = (int)glyph->advance[0];
+        
+        // Kerning calculation
+        if (strcharidx > 0 && prevglyphchar != 0) {
+          SbVec2f kern = this->font->getGlyphKerning(prevglyphchar, glyphidx);
+          kerningx = (int)kern[0];
+        }
+      } else {
+        // Fallback to direct SbFont calls
+        SbVec2s bitmapsize_sb, bitmapbearing;
+        (void)this->font->getGlyphBitmap(glyphidx, bitmapsize_sb, bitmapbearing);
+        bitmapsize[0] = bitmapsize_sb[0];
+        bitmapsize[1] = bitmapsize_sb[1];
+        bitmappos[0] = bitmapbearing[0];
+        bitmappos[1] = bitmapbearing[1];
+        SbVec2f advance = this->font->getGlyphAdvance(glyphidx);
+        advancex = (int)advance[0];
+        if (strcharidx > 0 && prevglyphchar != 0) {
+          SbVec2f kern = this->font->getGlyphKerning(prevglyphchar, glyphidx);
+          kerningx = (int)kern[0];
+        }
+      }
 
       SbVec2s pos;
       pos[0] = xpos + kerningx + bitmappos[0];
@@ -925,7 +960,7 @@ SoText2P::buildGlyphCache(SoState * state)
       actuallength += (advancex + kerningx);
 
       xpos += (advancex + kerningx);
-      prevglyph = glyph;
+      prevglyphchar = glyphidx;
     }
 
     this->bbox.extendBy(linebbox);
@@ -949,6 +984,7 @@ SoText2P::buildGlyphCache(SoState * state)
     }
 
     ypos -= (int)(((int)fontsize) * PUBLIC(this)->spacing.getValue());
+    
   }
 
   // extent bbox to include maxoverhang at the maxwidth string
@@ -999,6 +1035,21 @@ SoText2P::setRasterPos3f(GLfloat x, GLfloat y, GLfloat z)
 
   glRasterPos3f(rpx,rpy,z);
   if (offvp) { glBitmap(0, 0, 0, 0,offsetx,offsety, NULL); }
+}
+
+// Update SbFont with current font state elements
+void
+SoText2P::updateFont(SoState * state)
+{
+  // Get font information from state elements  
+  SbName fontname = SoFontNameElement::get(state);
+  float fontsize = SoFontSizeElement::get(state);
+  
+  // Set the size for the SbFont
+  this->font->setSize(fontsize);
+  
+  // For now, we use ProFont as default. In a complete implementation,
+  // we could load specific font files based on the fontname parameter.
 }
 
 #undef PRIVATE
