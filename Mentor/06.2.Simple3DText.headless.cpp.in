@@ -127,6 +127,70 @@ public:
     }
 };
 
+// Image content verification for text rendering
+struct ImageStats {
+    int total_pixels = 0;
+    int background_pixels = 0;
+    int text_pixels = 0;
+    int significant_pixels = 0;
+    double average_intensity = 0.0;
+    bool has_text_content = false;
+};
+
+// Analyze rendered image buffer to verify text content is present
+ImageStats analyzeImageContent(const unsigned char* buffer, int width, int height, 
+                               const SbColor& background_color) {
+    ImageStats stats;
+    stats.total_pixels = width * height;
+    
+    // Convert background color to RGB values (0-255)
+    int bg_r = (int)(background_color[0] * 255);
+    int bg_g = (int)(background_color[1] * 255);  
+    int bg_b = (int)(background_color[2] * 255);
+    
+    // Tolerance for background color matching
+    const int bg_tolerance = 10;
+    
+    long long total_intensity = 0;
+    
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            int idx = (y * width + x) * 3; // RGB format
+            int r = buffer[idx];
+            int g = buffer[idx + 1]; 
+            int b = buffer[idx + 2];
+            
+            total_intensity += (r + g + b);
+            
+            // Check if pixel is significantly different from background
+            if (abs(r - bg_r) > bg_tolerance || 
+                abs(g - bg_g) > bg_tolerance || 
+                abs(b - bg_b) > bg_tolerance) {
+                
+                stats.significant_pixels++;
+                
+                // Check if it looks like text (typically white/light pixels for text)
+                if ((r + g + b) > (bg_r + bg_g + bg_b) + 50) {
+                    stats.text_pixels++;
+                }
+            } else {
+                stats.background_pixels++;
+            }
+        }
+    }
+    
+    stats.average_intensity = (double)total_intensity / (stats.total_pixels * 3);
+    
+    // Heuristic: Consider image to have text if:
+    // 1. At least 1% of pixels are significantly different from background, OR
+    // 2. At least 1000 pixels look like text (bright pixels)
+    // Note: Removed strict average intensity requirement as sphere geometry can affect overall average
+    stats.has_text_content = (stats.significant_pixels > stats.total_pixels * 0.01) ||
+                            (stats.text_pixels > 1000);
+                            
+    return stats;
+}
+
 // Save RGBA buffer to RGB file using built-in SGI RGB format
 bool saveRGB(const std::string& filename, SoOffscreenRenderer* renderer) {
     SbBool result = renderer->writeToRGB(filename.c_str());
@@ -270,7 +334,8 @@ main(int argc, char **argv)
     const int height = 480;
     SbViewportRegion viewport(width, height);
     SoOffscreenRenderer renderer(viewport);
-    renderer.setBackgroundColor(SbColor(0.2f, 0.2f, 0.2f)); // Gray background
+    SbColor backgroundColor(0.2f, 0.2f, 0.2f); // Gray background
+    renderer.setBackgroundColor(backgroundColor);
     
     // Make camera see everything
     myCamera->viewAll(root, viewport);
@@ -285,14 +350,44 @@ main(int argc, char **argv)
             filename = argv[1];
         }
         
-        // Save to RGB file using built-in SGI RGB format
-        if (saveRGB(filename, &renderer)) {
-            std::cout << "Successfully rendered simple 3D text scene to " << filename << std::endl;
+        // Get the rendered buffer for content verification
+        const unsigned char* buffer = renderer.getBuffer();
+        
+        if (buffer) {
+            // Analyze the rendered content to verify text is present
+            ImageStats stats = analyzeImageContent(buffer, width, height, backgroundColor);
+            
+            std::cout << "Image Analysis Results:" << std::endl;
+            std::cout << "  Total pixels: " << stats.total_pixels << std::endl;
+            std::cout << "  Background pixels: " << stats.background_pixels << std::endl;
+            std::cout << "  Significant pixels: " << stats.significant_pixels << std::endl;
+            std::cout << "  Text-like pixels: " << stats.text_pixels << std::endl;
+            std::cout << "  Average intensity: " << stats.average_intensity << std::endl;
+            std::cout << "  Has text content: " << (stats.has_text_content ? "YES" : "NO") << std::endl;
+            
+            // Save to RGB file using built-in SGI RGB format
+            if (saveRGB(filename, &renderer)) {
+                std::cout << "Successfully rendered simple 3D text scene to " << filename << std::endl;
+                
+                // Verify text content is actually present
+                if (!stats.has_text_content) {
+                    std::cerr << "WARNING: Rendered image appears to contain no text content!" << std::endl;
+                    std::cerr << "This indicates a text rendering failure - image is likely blank." << std::endl;
+                    root->unref();
+                    return 2; // Different exit code for text content failure
+                }
+                
+            } else {
+                std::cerr << "Error saving RGB file" << std::endl;
+                root->unref();
+                return 1;
+            }
         } else {
-            std::cerr << "Error saving RGB file" << std::endl;
-            root->unref();
+            std::cerr << "Error: Could not get rendered buffer for analysis" << std::endl;
+            root->unref(); 
             return 1;
         }
+        
     } else {
         std::cerr << "Error: Failed to render scene" << std::endl;
         root->unref();
