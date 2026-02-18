@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.16)
 
 project(MentorHeadlessExamples)
 
@@ -9,54 +9,39 @@ set(IMAGE_COMPARISON_HASH_THRESHOLD "5" CACHE STRING "Perceptual hash comparison
 set(IMAGE_COMPARISON_RMSE_THRESHOLD "5.0" CACHE STRING "RMSE comparison threshold (0-255)")
 set(IMAGE_COMPARISON_TEST_TIMEOUT "30" CACHE STRING "Timeout in seconds for each test (default 30)")
 
-# Find Coin package
-# First try to find Coin in the build tree
-set(Coin_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../build")
-find_package(Coin QUIET)
-
-if(NOT Coin_FOUND)
-    # Try to use the library from the build directory directly
-    set(COIN_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../include")
-    set(COIN_BUILD_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../build/include")
-    set(COIN_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../build/lib")
-    
-    # Add include directories
-    include_directories(${COIN_BUILD_INCLUDE_DIR})
-    include_directories(${COIN_INCLUDE_DIR})
-    include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-    
-    # Find required libraries
-    find_package(OpenGL REQUIRED)
-    
-    # Link directories
-    link_directories(${COIN_LIB_DIR})
-    
-    # Macro to add headless examples
-    macro(add_headless_example name)
-        add_executable(${name} ${name}.cpp)
-        target_include_directories(${name} PRIVATE 
-            ${COIN_BUILD_INCLUDE_DIR}
-            ${COIN_INCLUDE_DIR} 
-            ${CMAKE_CURRENT_SOURCE_DIR})
-        target_link_libraries(${name} Coin ${OPENGL_LIBRARIES})
-        set_target_properties(${name} PROPERTIES
-            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin"
-        )
-    endmacro()
+# When built as subdirectory, Coin target is already available
+# When built standalone, try to find the installed Coin library
+if(NOT TARGET Coin)
+    # Try to find Coin package installed on system
+    find_package(Coin REQUIRED)
+    set(COIN_TARGET Coin::Coin)
+    # When using installed Coin, we may need to find OSMesa separately
+    # For now, assume it's part of the Coin installation
 else()
-    # Use found Coin package
-    include_directories(${Coin_INCLUDE_DIRS})
-    include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-    
-    macro(add_headless_example name)
-        add_executable(${name} ${name}.cpp)
-        target_include_directories(${name} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-        target_link_libraries(${name} Coin::Coin)
-        set_target_properties(${name} PROPERTIES
-            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin"
-        )
-    endmacro()
+    # Use the Coin target from parent build (includes OSMesa internally)
+    set(COIN_TARGET Coin)
+    # Add OSMesa include directory from external submodule
+    set(OSMESA_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../external/osmesa/include")
 endif()
+
+# Macro to add headless examples
+# Examples link against Coin which includes OSMesa for offscreen rendering
+macro(add_headless_example name)
+    add_executable(${name} ${name}.cpp)
+    target_include_directories(${name} PRIVATE 
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${OSMESA_INCLUDE_DIR}
+    )
+    # Link against Coin and osmesa_interface (for OSMesa functions used in headless_utils.h)
+    if(TARGET osmesa_interface)
+        target_link_libraries(${name} ${COIN_TARGET} osmesa_interface)
+    else()
+        target_link_libraries(${name} ${COIN_TARGET})
+    endif()
+    set_target_properties(${name} PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin"
+    )
+endmacro()
 
 # Add headless examples
 add_headless_example(02.1.HelloCone)
