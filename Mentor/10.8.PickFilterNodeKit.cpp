@@ -222,7 +222,8 @@ int main(int, char **argv)
     SoPath *path0 = new SoPath(sel);
     path0->append(sel);
     path0->append(sel->getChild(2));  // First shape kit after camera and light
-    path0->append(((SoShapeKit*)sel->getChild(2))->getChild(0));
+    SoShapeKit *shapeKit0 = (SoShapeKit*)sel->getChild(2);
+    path0->append(shapeKit0->getPart("shape", FALSE));
     sel->select(path0);
     
     printf("--- State 2: Nodekit 0 selected (default material) ---\n");
@@ -230,12 +231,14 @@ int main(int, char **argv)
     
     // Simulate user changing material to red in editor
     printf("\n--- User changes material to red in editor ---\n");
-    SoMaterial redMtl;
-    redMtl.diffuseColor.setValue(1.0f, 0.0f, 0.0f);
-    redMtl.ambientColor.setValue(0.3f, 0.0f, 0.0f);
-    redMtl.specularColor.setValue(0.5f, 0.5f, 0.5f);
-    redMtl.shininess.setValue(0.5f);
-    ed->setMaterial(redMtl);
+    SoMaterial *redMtl = new SoMaterial;
+    redMtl->ref();
+    redMtl->diffuseColor.setValue(1.0f, 0.0f, 0.0f);
+    redMtl->ambientColor.setValue(0.3f, 0.0f, 0.0f);
+    redMtl->specularColor.setValue(0.5f, 0.5f, 0.5f);
+    redMtl->shininess.setValue(0.5f);
+    ed->setMaterial(*redMtl);
+    redMtl->unref();
     
     printf("--- State 3: Selected nodekit now red ---\n");
     viewer->render("10.8.PickFilterNodeKit-red.rgb");
@@ -246,7 +249,8 @@ int main(int, char **argv)
     SoPath *path3 = new SoPath(sel);
     path3->append(sel);
     path3->append(sel->getChild(5));  // Different shape kit
-    path3->append(((SoShapeKit*)sel->getChild(5))->getChild(0));
+    SoShapeKit *shapeKit3 = (SoShapeKit*)sel->getChild(5);
+    path3->append(shapeKit3->getPart("shape", FALSE));
     sel->select(path3);
     
     printf("--- State 4: Different nodekit selected ---\n");
@@ -255,12 +259,14 @@ int main(int, char **argv)
     
     // Change this one to blue
     printf("\n--- User changes this nodekit's material to blue ---\n");
-    SoMaterial blueMtl;
-    blueMtl.diffuseColor.setValue(0.0f, 0.3f, 1.0f);
-    blueMtl.ambientColor.setValue(0.0f, 0.1f, 0.3f);
-    blueMtl.specularColor.setValue(0.8f, 0.8f, 0.8f);
-    blueMtl.shininess.setValue(0.8f);
-    ed->setMaterial(blueMtl);
+    SoMaterial *blueMtl = new SoMaterial;
+    blueMtl->ref();
+    blueMtl->diffuseColor.setValue(0.0f, 0.3f, 1.0f);
+    blueMtl->ambientColor.setValue(0.0f, 0.1f, 0.3f);
+    blueMtl->specularColor.setValue(0.8f, 0.8f, 0.8f);
+    blueMtl->shininess.setValue(0.8f);
+    ed->setMaterial(*blueMtl);
+    blueMtl->unref();
     
     printf("--- State 5: Now have both red and blue nodekits ---\n");
     viewer->render("10.8.PickFilterNodeKit-multiple-colors.rgb");
@@ -273,7 +279,8 @@ int main(int, char **argv)
     SoPath *path6 = new SoPath(sel);
     path6->append(sel);
     path6->append(sel->getChild(8));  // Another shape kit
-    path6->append(((SoShapeKit*)sel->getChild(8))->getChild(0));
+    SoShapeKit *shapeKit6 = (SoShapeKit*)sel->getChild(8);
+    path6->append(shapeKit6->getPart("shape", FALSE));
     sel->select(path6);
     
     printf("--- State 6: Multiple nodekits selected ---\n");
@@ -281,12 +288,14 @@ int main(int, char **argv)
     
     // Change material of all selected
     printf("\n--- User changes material to green (affects all selected) ---\n");
-    SoMaterial greenMtl;
-    greenMtl.diffuseColor.setValue(0.0f, 0.8f, 0.1f);
-    greenMtl.ambientColor.setValue(0.0f, 0.3f, 0.05f);
-    greenMtl.specularColor.setValue(0.6f, 0.6f, 0.6f);
-    greenMtl.shininess.setValue(0.6f);
-    ed->setMaterial(greenMtl);
+    SoMaterial *greenMtl = new SoMaterial;
+    greenMtl->ref();
+    greenMtl->diffuseColor.setValue(0.0f, 0.8f, 0.1f);
+    greenMtl->ambientColor.setValue(0.0f, 0.3f, 0.05f);
+    greenMtl->specularColor.setValue(0.6f, 0.6f, 0.6f);
+    greenMtl->shininess.setValue(0.6f);
+    ed->setMaterial(*greenMtl);
+    greenMtl->unref();
     
     printf("--- State 7: Multiple nodekits changed to green ---\n");
     viewer->render("10.8.PickFilterNodeKit-multi-edit.rgb");

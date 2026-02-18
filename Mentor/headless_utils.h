@@ -27,16 +27,68 @@
 #include <cstdio>
 #include <cstring>
 #include <cmath>
+#include <memory>
+
+// OSMesa headers for offscreen rendering
+#include <OSMesa/osmesa.h>
+#include <OSMesa/gl.h>
 
 // Default image dimensions
 #define DEFAULT_WIDTH 800
 #define DEFAULT_HEIGHT 600
 
+// OSMesa context structure for offscreen rendering
+struct CoinOSMesaContext {
+    OSMesaContext context;
+    std::unique_ptr<unsigned char[]> buffer;
+    int width, height;
+    
+    CoinOSMesaContext(int w, int h) : width(w), height(h) {
+        context = OSMesaCreateContextExt(OSMESA_RGBA, 16, 0, 0, NULL);
+        if (context) {
+            buffer = std::make_unique<unsigned char[]>(width * height * 4);
+        }
+    }
+    
+    ~CoinOSMesaContext() {
+        if (context) OSMesaDestroyContext(context);
+    }
+    
+    bool makeCurrent() {
+        return context && OSMesaMakeCurrent(context, buffer.get(), GL_UNSIGNED_BYTE, width, height);
+    }
+    
+    bool isValid() const { return context != nullptr; }
+};
+
+// OSMesa context manager implementation for Coin
+class CoinOSMesaContextManager : public SoDB::ContextManager {
+public:
+    virtual void* createOffscreenContext(unsigned int width, unsigned int height) override {
+        auto* ctx = new CoinOSMesaContext(width, height);
+        return ctx->isValid() ? ctx : (delete ctx, nullptr);
+    }
+    
+    virtual SbBool makeContextCurrent(void* context) override {
+        return context && static_cast<CoinOSMesaContext*>(context)->makeCurrent() ? TRUE : FALSE;
+    }
+    
+    virtual void restorePreviousContext(void* context) override {
+        // OSMesa doesn't require explicit context switching for single-threaded use
+        (void)context;
+    }
+    
+    virtual void destroyContext(void* context) override {
+        delete static_cast<CoinOSMesaContext*>(context);
+    }
+};
+
 /**
- * Initialize Coin database for headless operation
+ * Initialize Coin database for headless operation with OSMesa
  */
 inline void initCoinHeadless() {
-    SoDB::init();
+    static CoinOSMesaContextManager osmesa_manager;
+    SoDB::init(&osmesa_manager);
 }
 
 /**

@@ -142,37 +142,43 @@ int main(int, char **argv)
 
     // Simulate user changing material to red
     printf("\n--- State 2: User changes to red material ---\n");
-    SoMaterial redMaterial;
-    redMaterial.diffuseColor.setValue(1.0f, 0.0f, 0.0f);
-    redMaterial.ambientColor.setValue(0.3f, 0.0f, 0.0f);
-    redMaterial.specularColor.setValue(0.5f, 0.5f, 0.5f);
-    redMaterial.shininess.setValue(0.5f);
+    SoMaterial *redMaterial = new SoMaterial;
+    redMaterial->ref();
+    redMaterial->diffuseColor.setValue(1.0f, 0.0f, 0.0f);
+    redMaterial->ambientColor.setValue(0.3f, 0.0f, 0.0f);
+    redMaterial->specularColor.setValue(0.5f, 0.5f, 0.5f);
+    redMaterial->shininess.setValue(0.5f);
     
     // User edits material in editor - triggers callback
-    myEditor->setMaterial(redMaterial);
+    myEditor->setMaterial(*redMaterial);
     myRenderArea->render("16.2.Callback-red.rgb");
+    redMaterial->unref();
 
     // Simulate user changing material to blue
     printf("\n--- State 3: User changes to blue material ---\n");
-    SoMaterial blueMaterial;
-    blueMaterial.diffuseColor.setValue(0.0f, 0.3f, 1.0f);
-    blueMaterial.ambientColor.setValue(0.0f, 0.1f, 0.3f);
-    blueMaterial.specularColor.setValue(0.8f, 0.8f, 0.8f);
-    blueMaterial.shininess.setValue(0.8f);
+    SoMaterial *blueMaterial = new SoMaterial;
+    blueMaterial->ref();
+    blueMaterial->diffuseColor.setValue(0.0f, 0.3f, 1.0f);
+    blueMaterial->ambientColor.setValue(0.0f, 0.1f, 0.3f);
+    blueMaterial->specularColor.setValue(0.8f, 0.8f, 0.8f);
+    blueMaterial->shininess.setValue(0.8f);
     
-    myEditor->setMaterial(blueMaterial);
+    myEditor->setMaterial(*blueMaterial);
     myRenderArea->render("16.2.Callback-blue.rgb");
+    blueMaterial->unref();
 
     // Simulate user changing material to gold
     printf("\n--- State 4: User changes to gold material ---\n");
-    SoMaterial goldMaterial;
-    goldMaterial.diffuseColor.setValue(1.0f, 0.84f, 0.0f);
-    goldMaterial.ambientColor.setValue(0.3f, 0.25f, 0.0f);
-    goldMaterial.specularColor.setValue(1.0f, 1.0f, 0.5f);
-    goldMaterial.shininess.setValue(0.9f);
+    SoMaterial *goldMaterial = new SoMaterial;
+    goldMaterial->ref();
+    goldMaterial->diffuseColor.setValue(1.0f, 0.84f, 0.0f);
+    goldMaterial->ambientColor.setValue(0.3f, 0.25f, 0.0f);
+    goldMaterial->specularColor.setValue(1.0f, 1.0f, 0.5f);
+    goldMaterial->shininess.setValue(0.9f);
     
-    myEditor->setMaterial(goldMaterial);
+    myEditor->setMaterial(*goldMaterial);
     myRenderArea->render("16.2.Callback-gold.rgb");
+    goldMaterial->unref();
 
     printf("\n=== Summary ===\n");
     printf("Generated 4 images showing different materials applied via editor callbacks\n");

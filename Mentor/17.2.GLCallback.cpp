@@ -55,11 +55,8 @@
 #include <windows.h>
 #endif
 
-#if defined(__APPLE__)
-#include <OpenGL/gl.h>
-#else
-#include <GL/gl.h>
-#endif
+// Use OSMesa headers for offscreen rendering
+#include <OSMesa/gl.h>
 
 #include <Inventor/SbLinear.h>
 #include <Inventor/nodes/SoCallback.h>
