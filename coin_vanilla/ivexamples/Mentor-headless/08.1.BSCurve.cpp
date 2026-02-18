@@ -1,0 +1,148 @@
+/*
+ *
+ *  Copyright (C) 2000 Silicon Graphics, Inc.  All Rights Reserved.
+ *
+ *  This library is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU Lesser General Public
+ *  License as published by the Free Software Foundation; either
+ *  version 2.1 of the License, or (at your option) any later version.
+ *
+ *  This library is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  Lesser General Public License for more details.
+ *
+ *  Further, this software is distributed without any warranty that it is
+ *  free of the rightful claim of any third person regarding infringement
+ *  or the like.  Any license provided herein, whether implied or
+ *  otherwise, applies only to this software file.  Patent licenses, if
+ *  any, provided herein do not apply to combinations of this program with
+ *  other software, or any other product whatsoever.
+ *
+ *  You should have received a copy of the GNU Lesser General Public
+ *  License along with this library; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ *  Contact information: Silicon Graphics, Inc., 1600 Amphitheatre Pkwy,
+ *  Mountain View, CA  94043, or:
+ *
+ *  http://www.sgi.com
+ *
+ *  For further information regarding this notice, see:
+ *
+ *  http://oss.sgi.com/projects/GenInfo/NoticeExplan/
+ *
+ */
+
+/*
+ * Headless version of Inventor Mentor example 8.1
+ * 
+ * Original: BSCurve - displays B-spline curve with floor and shadow
+ * Headless: Renders B-spline curve from multiple angles
+ */
+
+#include "headless_utils.h"
+#include <Inventor/nodes/SoBaseColor.h>
+#include <Inventor/nodes/SoComplexity.h>
+#include <Inventor/nodes/SoCoordinate3.h>
+#include <Inventor/nodes/SoDrawStyle.h>
+#include <Inventor/nodes/SoLightModel.h>
+#include <Inventor/nodes/SoNurbsCurve.h>
+#include <Inventor/nodes/SoSeparator.h>
+#include <Inventor/nodes/SoPerspectiveCamera.h>
+#include <Inventor/nodes/SoDirectionalLight.h>
+#include <cmath>
+#include <cstdio>
+
+// The control points for this curve
+const float pts[7][3] = {
+   { 4.0, -6.0,  6.0},
+   {-4.0,  1.0,  0.0},
+   {-1.5,  5.0, -6.0},
+   { 0.0,  2.0, -2.0},
+   { 1.5,  5.0, -6.0},
+   { 4.0,  1.0,  0.0},
+   {-4.0, -6.0,  6.0}};
+
+// The knot vector
+const float knots[10] = {1, 2, 3, 4, 5, 5, 6, 7, 8, 9};
+
+// Create the nodes needed for the B-Spline curve
+SoSeparator *makeCurve()
+{
+    SoSeparator *curveSep = new SoSeparator();
+    curveSep->ref();
+
+    // Set the draw style of the curve
+    SoDrawStyle *drawStyle = new SoDrawStyle;
+    drawStyle->lineWidth = 4;
+    curveSep->addChild(drawStyle);
+
+    // Define the NURBS curve including the control points and complexity
+    SoComplexity *complexity = new SoComplexity;
+    SoCoordinate3 *controlPts = new SoCoordinate3;
+    SoNurbsCurve *curve = new SoNurbsCurve;
+    complexity->value = 0.8;
+    controlPts->point.setValues(0, 7, pts);
+    curve->numControlPoints = 7;
+    curve->knotVector.setValues(0, 10, knots);
+    curveSep->addChild(complexity);
+    curveSep->addChild(controlPts);
+    curveSep->addChild(curve);
+
+    curveSep->unrefNoDelete();
+    return curveSep;
+}
+
+int main(int argc, char **argv)
+{
+    // Initialize Coin for headless operation
+    initCoinHeadless();
+
+    SoSeparator *root = new SoSeparator;
+    root->ref();
+
+    // Add camera and light
+    SoPerspectiveCamera *camera = new SoPerspectiveCamera;
+    root->addChild(camera);
+    root->addChild(new SoDirectionalLight);
+
+    // Create the scene graph for the curve
+    SoSeparator *heart = new SoSeparator;
+    SoSeparator *curveSep = makeCurve();
+    SoLightModel *lmodel = new SoLightModel;
+    SoBaseColor *clr = new SoBaseColor;
+
+    lmodel->model = SoLightModel::BASE_COLOR;
+    clr->rgb.setValue(SbColor(1.0, 0.0, 0.1));
+    heart->addChild(lmodel);
+    heart->addChild(clr);
+    heart->addChild(curveSep);
+    root->addChild(heart);
+
+    // Setup camera
+    camera->position.setValue(SbVec3f(-6.0, 8.0, 20.0));
+    camera->pointAt(SbVec3f(0.0, -2.0, -4.0));
+
+    const char *baseFilename = (argc > 1) ? argv[1] : "08.1.BSCurve";
+    char filename[256];
+
+    // View from camera position
+    snprintf(filename, sizeof(filename), "%s_view1.rgb", baseFilename);
+    renderToFile(root, filename);
+
+    // Side view
+    camera->position.setValue(SbVec3f(20.0, 0.0, 0.0));
+    camera->pointAt(SbVec3f(0.0, 0.0, 0.0));
+    snprintf(filename, sizeof(filename), "%s_side.rgb", baseFilename);
+    renderToFile(root, filename);
+
+    // Top view
+    camera->position.setValue(SbVec3f(0.0, 20.0, 0.0));
+    camera->pointAt(SbVec3f(0.0, 0.0, 0.0));
+    snprintf(filename, sizeof(filename), "%s_top.rgb", baseFilename);
+    renderToFile(root, filename);
+
+    root->unref();
+    return 0;
+}
