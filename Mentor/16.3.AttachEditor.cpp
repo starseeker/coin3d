@@ -166,10 +166,12 @@ int main(int, char **argv)
     
     // Demonstrate programmatic material change also syncs to editor
     printf("\n--- State 5: Programmatic material change (should sync to editor) ---\n");
-    SoMaterial tempMaterial;
-    tempMaterial.diffuseColor.setValue(1.0f, 0.5f, 0.0f);  // Orange
-    tempMaterial.ambientColor.setValue(0.3f, 0.15f, 0.0f);
-    myMaterial->copyFieldValues(&tempMaterial);
+    SoMaterial *tempMaterial = new SoMaterial;
+    tempMaterial->ref();
+    tempMaterial->diffuseColor.setValue(1.0f, 0.5f, 0.0f);  // Orange
+    tempMaterial->ambientColor.setValue(0.3f, 0.15f, 0.0f);
+    myMaterial->copyFieldValues(tempMaterial);
+    tempMaterial->unref();
     // In a real GUI editor, this would update the UI controls
     printf("Material changed programmatically - attached editor syncs automatically\n");
     myRenderArea->render("16.3.AttachEditor-orange.rgb");

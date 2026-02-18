@@ -144,7 +144,7 @@ int main(int, char **argv)
     myCamera->viewAll(myScene, myRegion);
 
     myRenderArea->setSceneGraph(myScene);
-    myRenderArea->setTitle("NodeKit Editors Demo");
+    // myRenderArea->setTitle("NodeKit Editors Demo");  // No title in headless mode
 
     // Render initial state
     printf("\n--- State 1: Initial desk with default lighting ---\n");
@@ -163,7 +163,7 @@ int main(int, char **argv)
         return 1;
     }
     mtlEditor->attach(mtl);
-    mtlEditor->setTitle("Material of Desk");
+    // mtlEditor->setTitle("Material of Desk");  // No title in headless mode
     printf("Material editor attached to desk material\n");
 
     // DIRECTIONAL LIGHT EDITOR!! Attach it to the 
@@ -180,7 +180,7 @@ int main(int, char **argv)
         return 1;
     }
     ltEditor->attach(ltPath);
-    ltEditor->setTitle("Lighting of Desk");
+    // ltEditor->setTitle("Lighting of Desk");  // No title in headless mode
     printf("Light editor attached to directional light\n");
 
     // Simulate user changing material to a darker wood color
