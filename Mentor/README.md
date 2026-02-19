@@ -21,8 +21,9 @@ The goal of these headless examples is to:
 ## Documentation
 
 - **[STATUS.md](STATUS.md)** - Complete status of all 66 examples, organized by chapter
-- **[MOCK_TOOLKIT_GUIDE.md](MOCK_TOOLKIT_GUIDE.md)** - **NEW**: Mock GUI toolkit functions and patterns (4 new examples)
-- **[IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)** - **NEW**: Summary of mock toolkit implementation
+- **[OPENGL_BACKEND_GUIDE.md](OPENGL_BACKEND_GUIDE.md)** - **NEW**: Guide for OSMesa vs system OpenGL builds
+- **[MOCK_TOOLKIT_GUIDE.md](MOCK_TOOLKIT_GUIDE.md)** - Mock GUI toolkit functions and patterns (4 new examples)
+- **[IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)** - Summary of mock toolkit implementation
 - **[TOOLKIT_AGNOSTIC_SUMMARY.md](TOOLKIT_AGNOSTIC_SUMMARY.md)** - Comprehensive analysis of what is/isn't toolkit-agnostic
 - **[NEW_CONVERSIONS.md](NEW_CONVERSIONS.md)** - Details of previous conversions (Chapters 14, 15, 17)
 - **[MANIPULATOR_ANALYSIS.md](MANIPULATOR_ANALYSIS.md)** - Analysis proving manipulators are toolkit-agnostic
@@ -36,18 +37,29 @@ The goal of these headless examples is to:
 
 ### Prerequisites
 - CMake 3.0 or later
-- Coin library (built with offscreen rendering support)
-- X11 libraries (or EGL for Linux)
-- OpenGL libraries
-- Xvfb (for headless execution on Linux)
+- Coin library (built with OSMesa or system OpenGL - see [OPENGL_BACKEND_GUIDE.md](OPENGL_BACKEND_GUIDE.md))
+- For OSMesa builds: OSMesa library (included as submodule)
+- For system OpenGL builds: X11 libraries, OpenGL development libraries, display server
 
 ### Build Instructions
 
+The examples automatically detect and adapt to how the parent Coin library was compiled:
+
 ```bash
-cd ivexamples/Mentor-headless
-mkdir build
-cd build
-cmake ..
+# Build Coin with OSMesa (headless, no display required)
+mkdir build && cd build
+cmake -DCOIN3D_USE_OSMESA=ON -DCOIN_BUILD_TESTS=ON ..
+make
+
+# Or build with system OpenGL (requires display server)
+mkdir build && cd build
+cmake -DCOIN3D_USE_OSMESA=OFF -DCOIN_BUILD_TESTS=ON ..
+make
+```
+
+**Note:** `COIN_BUILD_TESTS=ON` is required to build Mentor examples.
+
+See [OPENGL_BACKEND_GUIDE.md](OPENGL_BACKEND_GUIDE.md) for detailed backend selection and configuration.
 make
 ```
 

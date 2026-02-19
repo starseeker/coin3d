@@ -9,35 +9,73 @@ set(IMAGE_COMPARISON_HASH_THRESHOLD "5" CACHE STRING "Perceptual hash comparison
 set(IMAGE_COMPARISON_RMSE_THRESHOLD "5.0" CACHE STRING "RMSE comparison threshold (0-255)")
 set(IMAGE_COMPARISON_TEST_TIMEOUT "30" CACHE STRING "Timeout in seconds for each test (default 30)")
 
+# Detect how parent Coin was built (OSMesa or system OpenGL)
+# This is needed to adapt examples to match the Coin configuration
+if(DEFINED COIN3D_USE_OSMESA)
+    # Building as subdirectory - use parent's configuration
+    set(EXAMPLES_USE_OSMESA ${COIN3D_USE_OSMESA})
+    message(STATUS "Mentor examples: Using parent Coin configuration (OSMESA=${COIN3D_USE_OSMESA})")
+else()
+    # Building standalone - try to detect from installed Coin
+    # Default to ON (OSMesa) for backward compatibility
+    set(EXAMPLES_USE_OSMESA ON CACHE BOOL "Build examples for OSMesa (ON) or system OpenGL (OFF)")
+    message(STATUS "Mentor examples: Standalone build with OSMESA=${EXAMPLES_USE_OSMESA}")
+endif()
+
 # When built as subdirectory, Coin target is already available
 # When built standalone, try to find the installed Coin library
 if(NOT TARGET Coin)
     # Try to find Coin package installed on system
     find_package(Coin REQUIRED)
     set(COIN_TARGET Coin::Coin)
-    # When using installed Coin, we may need to find OSMesa separately
-    # For now, assume it's part of the Coin installation
 else()
-    # Use the Coin target from parent build (includes OSMesa internally)
+    # Use the Coin target from parent build
     set(COIN_TARGET Coin)
-    # Add OSMesa include directory from external submodule
-    set(OSMESA_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../external/osmesa/include")
+endif()
+
+# Configure OSMesa includes based on build configuration
+if(EXAMPLES_USE_OSMESA)
+    # OSMesa build - need OSMesa headers
+    if(TARGET Coin)
+        # Built as subdirectory - use external submodule
+        set(OSMESA_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../external/osmesa/include")
+    else()
+        # Standalone build - OSMesa should be in system or Coin's install
+        # Try to find it or assume it's available
+        find_path(OSMESA_INCLUDE_DIR OSMesa/osmesa.h
+            HINTS ${Coin_INCLUDE_DIRS}
+            PATH_SUFFIXES include
+        )
+    endif()
+    message(STATUS "Mentor examples: Building with OSMesa for headless rendering")
+else()
+    # System OpenGL build - no special includes needed
+    message(STATUS "Mentor examples: Building with system OpenGL (requires display)")
+    message(WARNING "System OpenGL examples require a display server to run")
 endif()
 
 # Macro to add headless examples
-# Examples link against Coin which includes OSMesa for offscreen rendering
+# Examples adapt to how Coin was compiled (OSMesa or system OpenGL)
 macro(add_headless_example name)
     add_executable(${name} ${name}.cpp)
     target_include_directories(${name} PRIVATE 
         ${CMAKE_CURRENT_SOURCE_DIR}
-        ${OSMESA_INCLUDE_DIR}
     )
-    # Link against Coin and osmesa_interface (for OSMesa functions used in headless_utils.h)
-    if(TARGET osmesa_interface)
-        target_link_libraries(${name} ${COIN_TARGET} osmesa_interface)
-    else()
-        target_link_libraries(${name} ${COIN_TARGET})
+    
+    # Add OSMesa includes if building with OSMesa
+    if(EXAMPLES_USE_OSMESA AND OSMESA_INCLUDE_DIR)
+        target_include_directories(${name} PRIVATE ${OSMESA_INCLUDE_DIR})
+        target_compile_definitions(${name} PRIVATE COIN3D_OSMESA_BUILD)
     endif()
+    
+    # Link against Coin
+    target_link_libraries(${name} ${COIN_TARGET})
+    
+    # Add osmesa_interface if available (for OSMesa builds as subdirectory)
+    if(TARGET osmesa_interface AND EXAMPLES_USE_OSMESA)
+        target_link_libraries(${name} osmesa_interface)
+    endif()
+    
     set_target_properties(${name} PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin"
     )

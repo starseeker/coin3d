@@ -29,13 +29,20 @@
 #include <cmath>
 #include <memory>
 
-// OSMesa headers for offscreen rendering
-#include <OSMesa/osmesa.h>
-#include <OSMesa/gl.h>
-
 // Default image dimensions
 #define DEFAULT_WIDTH 800
 #define DEFAULT_HEIGHT 600
+
+// ============================================================================
+// Context Management: Adapts to how Coin was compiled
+// ============================================================================
+
+#ifdef COIN3D_OSMESA_BUILD
+// ----------------------------------------------------------------------------
+// OSMesa Backend: For offscreen/headless rendering without display server
+// ----------------------------------------------------------------------------
+#include <OSMesa/osmesa.h>
+#include <OSMesa/gl.h>
 
 // OSMesa context structure for offscreen rendering
 struct CoinOSMesaContext {
@@ -62,7 +69,7 @@ struct CoinOSMesaContext {
 };
 
 // OSMesa context manager implementation for Coin
-class CoinOSMesaContextManager : public SoDB::ContextManager {
+class CoinHeadlessContextManager : public SoDB::ContextManager {
 public:
     virtual void* createOffscreenContext(unsigned int width, unsigned int height) override {
         auto* ctx = new CoinOSMesaContext(width, height);
@@ -83,12 +90,68 @@ public:
     }
 };
 
+#else
+// ----------------------------------------------------------------------------
+// System OpenGL Backend: For rendering with platform OpenGL (GLX/WGL/CGL)
+// ----------------------------------------------------------------------------
+#ifdef HAVE_WINDOWS_H
+#include <windows.h>
+#include <GL/gl.h>
+#else
+#include <GL/gl.h>
+#endif
+
+// Note: When Coin is built with system OpenGL, applications must ensure
+// an OpenGL context is available. For truly headless operation (no display),
+// build Coin with OSMesa instead (COIN3D_USE_OSMESA=ON).
+// 
+// This stub allows examples to compile with system OpenGL builds but they
+// will fail at runtime if no display server is available.
+
+// Stub context manager for system OpenGL builds
+class CoinHeadlessContextManager : public SoDB::ContextManager {
+public:
+    virtual void* createOffscreenContext(unsigned int width, unsigned int height) override {
+        // System OpenGL builds rely on Coin's internal context management
+        // which typically requires a display server (X11, Wayland, etc.)
+        (void)width;
+        (void)height;
+        fprintf(stderr, 
+            "Warning: Examples compiled with system OpenGL build.\n"
+            "Offscreen rendering requires a display server or building Coin with OSMesa.\n"
+            "For headless operation, rebuild Coin with -DCOIN3D_USE_OSMESA=ON\n");
+        return nullptr;
+    }
+    
+    virtual SbBool makeContextCurrent(void* context) override {
+        (void)context;
+        return FALSE;
+    }
+    
+    virtual void restorePreviousContext(void* context) override {
+        (void)context;
+    }
+    
+    virtual void destroyContext(void* context) override {
+        (void)context;
+    }
+};
+
+#endif // COIN3D_OSMESA_BUILD
+
 /**
- * Initialize Coin database for headless operation with OSMesa
+ * Initialize Coin database for headless operation
+ * Adapts to how Coin was compiled (OSMesa or system OpenGL)
  */
 inline void initCoinHeadless() {
-    static CoinOSMesaContextManager osmesa_manager;
-    SoDB::init(&osmesa_manager);
+    static CoinHeadlessContextManager context_manager;
+    SoDB::init(&context_manager);
+    
+#ifdef COIN3D_OSMESA_BUILD
+    printf("Coin examples initialized with OSMesa backend for headless rendering\n");
+#else
+    printf("Coin examples initialized with system OpenGL backend (requires display)\n");
+#endif
 }
 
 /**
