@@ -111,9 +111,9 @@ int main(int argc, char **argv)
 
     // Read the geometry from a file and add to the scene
     SoInput myInput;
-    const char *dataDir16_2 = getenv("COIN_DATA_DIR");
-    if (dataDir16_2) {
-        SoInput::addDirectoryFirst(dataDir16_2);
+    const char *dataDir = getenv("COIN_DATA_DIR");
+    if (dataDir) {
+        SoInput::addDirectoryFirst(dataDir);
     } else {
         SoInput::addDirectoryFirst("../../data");
         SoInput::addDirectoryFirst("data");
