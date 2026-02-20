@@ -70,24 +70,22 @@ static const char red_cone_iv[] =
 SbBool generateTextureMap(SoNode *root, SoTexture2 *texture, 
                           short textureWidth, short textureHeight)
 {
-    SbViewportRegion myViewport(textureWidth, textureHeight);
-    SoOffscreenRenderer::Components comp = SoOffscreenRenderer::RGB;
-
-    // Render the scene
-    SoOffscreenRenderer *myRenderer = new SoOffscreenRenderer(myViewport);
-    myRenderer->setComponents(comp);
+    // Use the shared persistent renderer so we don't create a second GL context.
+    // (In headless Mesa/GLX environments only one offscreen context can be
+    // created successfully per process; a second attempt fails.)
+    // The renderer always operates at DEFAULT_WIDTH x DEFAULT_HEIGHT.
+    SoOffscreenRenderer *myRenderer = getSharedRenderer();
+    myRenderer->setComponents(SoOffscreenRenderer::RGB);
     myRenderer->setBackgroundColor(SbColor(0.8, 0.8, 0.0));
     
     if (!myRenderer->render(root)) {
-        delete myRenderer;
         return FALSE;
     }
 
-    // Generate the texture from the rendered buffer
-    texture->image.setValue(SbVec2s(textureWidth, textureHeight),
-                           comp, myRenderer->getBuffer());
+    // Apply the rendered buffer as texture at full DEFAULT_WIDTH x DEFAULT_HEIGHT
+    texture->image.setValue(SbVec2s(DEFAULT_WIDTH, DEFAULT_HEIGHT),
+                           SoOffscreenRenderer::RGB, myRenderer->getBuffer());
 
-    delete myRenderer;
     return TRUE;
 }
 

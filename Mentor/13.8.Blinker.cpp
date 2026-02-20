@@ -39,6 +39,10 @@
  * 
  * Original: Blinker - blinking neon sign with fast and slow blinkers
  * Headless: Renders blink sequence showing on/off states
+ *
+ * Note: The original used SoText3 nodes. This version uses basic geometric
+ * shapes (cube, sphere, cylinder) for reliable rendering in all GL modes.
+ * SoBlinker whichChild=0 shows the child, SO_SWITCH_NONE (-1) hides it.
  */
 
 #include "headless_utils.h"
@@ -47,7 +51,9 @@
 #include <Inventor/nodes/SoDirectionalLight.h>
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/nodes/SoBlinker.h>
-#include <Inventor/nodes/SoText3.h>
+#include <Inventor/nodes/SoCone.h>
+#include <Inventor/nodes/SoCube.h>
+#include <Inventor/nodes/SoCylinder.h>
 #include <Inventor/nodes/SoMaterial.h>
 #include <Inventor/nodes/SoTransform.h>
 #include <cstdio>
@@ -66,84 +72,75 @@ int main(int argc, char **argv)
     root->addChild(myCamera);
     root->addChild(new SoDirectionalLight);
 
-    // Add the non-blinking part (static text)
+    // Add the non-blinking part: a white cube at the top
+    SoSeparator *staticSep = new SoSeparator;
+    SoTransform *staticXf = new SoTransform;
+    staticXf->translation.setValue(0.0f, 2.5f, 0.0f);
+    staticXf->scaleFactor.setValue(3.0f, 0.5f, 1.0f);
+    staticSep->addChild(staticXf);
     SoMaterial *staticMat = new SoMaterial;
-    staticMat->diffuseColor.setValue(0.8, 0.8, 0.8);
-    root->addChild(staticMat);
-    
-    SoTransform *staticXform = new SoTransform;
-    staticXform->translation.setValue(0, 2, 0);
-    root->addChild(staticXform);
-    
-    SoText3 *staticText = new SoText3;
-    staticText->string = "EAT AT";
-    root->addChild(staticText);
+    staticMat->diffuseColor.setValue(0.8f, 0.8f, 0.8f);
+    staticSep->addChild(staticMat);
+    staticSep->addChild(new SoCube);
+    root->addChild(staticSep);
 
-    // Add the fast-blinking part to a blinker node
+    // Fast-blinking part: a red cone in the center.
+    // SoBlinker shows child[0] when on, hides it (SO_SWITCH_NONE) when off.
     SoBlinker *fastBlinker = new SoBlinker;
+    fastBlinker->speed = 2.0f;  // 2 Hz
     root->addChild(fastBlinker);
-    fastBlinker->speed = 2;  // 2 Hz: 0.5 second period (4 state changes per second)
-    
+
     SoSeparator *fastSep = new SoSeparator;
-    fastBlinker->addChild(fastSep);
-    
     SoMaterial *fastMat = new SoMaterial;
-    fastMat->diffuseColor.setValue(1.0, 0.0, 0.0);
+    fastMat->diffuseColor.setValue(1.0f, 0.0f, 0.0f);
     fastSep->addChild(fastMat);
-    
-    SoText3 *fastText = new SoText3;
-    fastText->string = "JOSIE'S";
-    fastSep->addChild(fastText);
+    fastSep->addChild(new SoCone);
+    fastBlinker->addChild(fastSep);
 
-    // Add the slow-blinking part to another blinker node
+    // Slow-blinking part: a green cylinder at the bottom
     SoBlinker *slowBlinker = new SoBlinker;
+    slowBlinker->speed = 0.5f;  // 0.5 Hz
     root->addChild(slowBlinker);
-    slowBlinker->speed = 0.5;  // 0.5 Hz: 2 seconds per complete on/off cycle
-    
-    SoSeparator *slowSep = new SoSeparator;
-    slowBlinker->addChild(slowSep);
-    
-    SoMaterial *slowMat = new SoMaterial;
-    slowMat->diffuseColor.setValue(0.0, 1.0, 0.0);
-    slowSep->addChild(slowMat);
-    
-    SoTransform *slowXform = new SoTransform;
-    slowXform->translation.setValue(0, -2, 0);
-    slowSep->addChild(slowXform);
-    
-    SoText3 *slowText = new SoText3;
-    slowText->string = "OPEN";
-    slowSep->addChild(slowText);
 
-    // Setup camera
+    SoSeparator *slowSep = new SoSeparator;
+    SoMaterial *slowMat = new SoMaterial;
+    slowMat->diffuseColor.setValue(0.0f, 1.0f, 0.0f);
+    slowSep->addChild(slowMat);
+    SoTransform *slowXf = new SoTransform;
+    slowXf->translation.setValue(0.0f, -2.5f, 0.0f);
+    slowSep->addChild(slowXf);
+    slowSep->addChild(new SoCylinder);
+    slowBlinker->addChild(slowSep);
+
+    // Setup camera to frame all objects
     myCamera->viewAll(root, SbViewportRegion(DEFAULT_WIDTH, DEFAULT_HEIGHT));
 
     const char *baseFilename = (argc > 1) ? argv[1] : "13.8.Blinker";
     char filename[256];
 
-    // Render blink sequence
-    // Fast blinker cycles at 2 Hz (0.5 sec period)
-    // Slow blinker cycles at 0.5 Hz (2 sec period)
+    // Render blink sequence by directly controlling the blinker states.
+    // SoBlinker::whichChild=0 shows the child; SO_SWITCH_NONE (-1) hides it.
+    // Fast blinker: 2 Hz -> toggles every 0.25 s
+    // Slow blinker: 0.5 Hz -> toggles every 1.0 s
     for (int i = 0; i <= 16; i++) {
         float time = i * 0.25f;  // 0, 0.25, 0.5, ... 4.0 seconds
-        
-        // Manually set the blinker states based on time
-        // Fast blinker: on/off every 0.25 seconds
-        fastBlinker->whichChild = (int)(time * 2) % 2;
-        
-        // Slow blinker: on/off every 1 second
-        slowBlinker->whichChild = (int)(time * 0.5) % 2;
-        
-        printf("Time %.2f: Fast=%s, Slow=%s\n", 
+
+        // Fast blinker: period=0.5s, on for first half, off for second half
+        bool fastOn = (int(time / 0.5f) % 2) == 0;
+        fastBlinker->whichChild.setValue(fastOn ? 0 : SO_SWITCH_NONE);
+
+        // Slow blinker: period=2.0s, on for first half, off for second half
+        bool slowOn = (int(time / 2.0f) % 2) == 0;
+        slowBlinker->whichChild.setValue(slowOn ? 0 : SO_SWITCH_NONE);
+
+        printf("Time %.2f: Fast=%s, Slow=%s\n",
                time,
-               fastBlinker->whichChild.getValue() == 0 ? "ON " : "OFF",
-               slowBlinker->whichChild.getValue() == 0 ? "ON " : "OFF");
-        
-        // Process updates
+               fastOn ? "ON " : "OFF",
+               slowOn ? "ON " : "OFF");
+
         SoDB::getSensorManager()->processTimerQueue();
         SoDB::getSensorManager()->processDelayQueue(TRUE);
-        
-        // Render this frame
+
         snprintf(filename, sizeof(filename), "%s_frame%02d.rgb", baseFilename, i);
         renderToFile(root, filename);
     }

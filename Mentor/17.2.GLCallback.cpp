@@ -55,8 +55,13 @@
 #include <windows.h>
 #endif
 
-// Use OSMesa headers for offscreen rendering
+#ifdef COIN3D_OSMESA_BUILD
 #include <OSMesa/gl.h>
+#elif defined(__APPLE__)
+#include <OpenGL/gl.h>
+#else
+#include <GL/gl.h>
+#endif
 
 #include <Inventor/SbLinear.h>
 #include <Inventor/nodes/SoCallback.h>
@@ -177,7 +182,7 @@ myCallbackRoutine(void *, SoAction *action)
 }
 
 int
-main(int, char **)
+main(int argc, char **argv)
 {
    initCoinHeadless();
 
@@ -200,27 +205,34 @@ main(int, char **)
    root->addChild(myCallback);
 
    buildScene(root);
+
+   const char *baseFilename = (argc > 1) ? argv[1] : "17.2.GLCallback";
+   char filename[512];
    
    printf("Rendering scene with OpenGL callback for floor...\n");
    
    // Render from default viewpoint
-   renderToFile(root, "output/17.2.GLCallback_00_default.rgb", 
+   snprintf(filename, sizeof(filename), "%s_00_default.rgb", baseFilename);
+   renderToFile(root, filename, 
                 DEFAULT_WIDTH, DEFAULT_HEIGHT, SbColor(0.8f, 0.8f, 0.8f));
    
    // Render from different camera angles to show the OpenGL floor
    myCamera->position.setValue(-3.0, 2.0, 5.0);
    myCamera->orientation.setValue(SbRotation(SbVec3f(0, 1, 0), 0.3f));
-   renderToFile(root, "output/17.2.GLCallback_01_angle1.rgb",
+   snprintf(filename, sizeof(filename), "%s_01_angle1.rgb", baseFilename);
+   renderToFile(root, filename,
                 DEFAULT_WIDTH, DEFAULT_HEIGHT, SbColor(0.8f, 0.8f, 0.8f));
    
    myCamera->position.setValue(3.0, 2.0, 5.0);
    myCamera->orientation.setValue(SbRotation(SbVec3f(0, 1, 0), -0.3f));
-   renderToFile(root, "output/17.2.GLCallback_02_angle2.rgb",
+   snprintf(filename, sizeof(filename), "%s_02_angle2.rgb", baseFilename);
+   renderToFile(root, filename,
                 DEFAULT_WIDTH, DEFAULT_HEIGHT, SbColor(0.8f, 0.8f, 0.8f));
    
    myCamera->position.setValue(0.0, 4.0, 5.0);
    myCamera->orientation.setValue(SbRotation(SbVec3f(1, 0, 0), -0.4f));
-   renderToFile(root, "output/17.2.GLCallback_03_top.rgb",
+   snprintf(filename, sizeof(filename), "%s_03_top.rgb", baseFilename);
+   renderToFile(root, filename,
                 DEFAULT_WIDTH, DEFAULT_HEIGHT, SbColor(0.8f, 0.8f, 0.8f));
    
    printf("Done! Rendered 4 views showing OpenGL callback integration.\n");

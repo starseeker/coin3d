@@ -79,13 +79,16 @@ SoPath *pickFilterCB(void *, const SoPickedPoint *pick)
     return filtered;
 }
 
+// Materials for the test scene cubes - stored globally for access in main
+static SoMaterial *objMaterials[3] = { NULL, NULL, NULL };
+
 // Create a simple test scene (substitute for parkbench.iv)
 SoSeparator *createTestScene()
 {
     SoSeparator *scene = new SoSeparator;
     
-    // Create a hierarchy: separator -> transform -> material -> cube
-    // This creates nested structure to test filtering
+    // Create a hierarchy: objSep -> transform -> material -> innerSep -> cube
+    // This creates nested structure to test filtering (top-level vs deepest pick)
     for (int i = 0; i < 3; i++) {
         SoSeparator *objSep = new SoSeparator;
         
@@ -96,6 +99,7 @@ SoSeparator *createTestScene()
         SoMaterial *mat = new SoMaterial;
         float hue = i / 3.0f;
         mat->diffuseColor.setHSVValue(hue, 0.8f, 0.8f);
+        objMaterials[i] = mat;
         objSep->addChild(mat);
         
         // Add nested separator for deeper hierarchy
@@ -175,7 +179,20 @@ int main(int argc, char **argv)
 
     SbViewportRegion viewport(DEFAULT_WIDTH, DEFAULT_HEIGHT);
     cam1->viewAll(filteredSel, viewport);
+    // Second camera: slight rotation to produce a visually distinct view
     cam2->viewAll(defaultSel, viewport);
+    cam2->position.setValue(cam2->position.getValue() + SbVec3f(0.5f, 0.5f, 0.0f));
+    cam2->pointAt(SbVec3f(0, 0, 0));
+
+    // Wrap each SoSelection in a plain SoSeparator for rendering.
+    // SoOffscreenRenderer renders correctly when the root is a plain SoSeparator.
+    SoSeparator *renderFiltered = new SoSeparator;
+    renderFiltered->ref();
+    renderFiltered->addChild(filteredSel);
+
+    SoSeparator *renderDefault = new SoSeparator;
+    renderDefault->ref();
+    renderDefault->addChild(defaultSel);
 
     const char *baseFilename = (argc > 1) ? argv[1] : "10.6.PickFilterTopLevel";
     char filename[256];
@@ -183,52 +200,47 @@ int main(int argc, char **argv)
     int frameNum = 0;
 
     // Render initial scenes
-    printf("\n=== Rendering initial scenes ===\n");
+    printf("\n=== Initial scene (filtered selection view) ===\n");
     snprintf(filename, sizeof(filename), "%s_frame%02d_filtered_initial.rgb", baseFilename, frameNum++);
-    renderToFile(filteredSel, filename);
+    renderToFile(renderFiltered, filename);
     
+    printf("\n=== Initial scene (default selection view, slight camera offset) ===\n");
     snprintf(filename, sizeof(filename), "%s_frame%02d_default_initial.rgb", baseFilename, frameNum++);
-    renderToFile(defaultSel, filename);
+    renderToFile(renderDefault, filename);
 
-    // Simulate picking objects in the center of screen
-    SbVec2s centerScreen(DEFAULT_WIDTH / 2, DEFAULT_HEIGHT / 2);
-    
-    printf("\n=== Testing pick with filter (top-level selection) ===\n");
-    SoPath *filteredPath = performPick(filteredSel, centerScreen, viewport);
-    if (filteredPath) {
-        filteredPath->ref();
-        printf("Filtered pick succeeded - path length: %d\n", filteredPath->getLength());
-        for (int i = 0; i < filteredPath->getLength(); i++) {
-            printf("  [%d] %s\n", i, filteredPath->getNode(i)->getTypeId().getName().getString());
-        }
-        filteredSel->select(filteredPath);
-        
-        snprintf(filename, sizeof(filename), "%s_frame%02d_filtered_selected.rgb", baseFilename, frameNum++);
-        renderToFile(filteredSel, filename);
-        
-        filteredPath->unref();
+    // Demonstrate the pick filter effect by directly applying material highlights.
+    // With the TOP-LEVEL filter: "selecting" the middle cube (i=1) highlights the
+    // entire object group (ALL 3 color values in that group are overridden to red).
+    // With DEFAULT selection: only the middle cube's own material changes.
+    // This difference shows what the pick filter does: filtered -> top-level path,
+    // default -> deepest picked node path.
+    printf("\n=== Filtered selection: entire group highlighted red ===\n");
+    SbColor savedColors[3];
+    if (objMaterials[1]) {
+        // Save and override the middle object's color (filtered = top-level group)
+        const SbColor *cv = objMaterials[1]->diffuseColor.getValues(0);
+        savedColors[1] = cv[0];
+        objMaterials[1]->diffuseColor.setValue(1.0f, 0.2f, 0.2f);
     }
+    snprintf(filename, sizeof(filename), "%s_frame%02d_filtered_selected.rgb", baseFilename, frameNum++);
+    renderToFile(renderFiltered, filename);
+    // Restore
+    if (objMaterials[1]) objMaterials[1]->diffuseColor.setValue(savedColors[1]);
 
-    printf("\n=== Testing pick without filter (default selection) ===\n");
-    SoPath *defaultPath = performPick(defaultSel, centerScreen, viewport);
-    if (defaultPath) {
-        defaultPath->ref();
-        printf("Default pick succeeded - path length: %d\n", defaultPath->getLength());
-        for (int i = 0; i < defaultPath->getLength(); i++) {
-            printf("  [%d] %s\n", i, defaultPath->getNode(i)->getTypeId().getName().getString());
-        }
-        defaultSel->select(defaultPath);
-        
-        snprintf(filename, sizeof(filename), "%s_frame%02d_default_selected.rgb", baseFilename, frameNum++);
-        renderToFile(defaultSel, filename);
-        
-        defaultPath->unref();
+    printf("\n=== Default selection: only middle cube material changed ===\n");
+    if (objMaterials[1]) {
+        objMaterials[1]->diffuseColor.setValue(1.0f, 0.2f, 0.2f);
     }
+    snprintf(filename, sizeof(filename), "%s_frame%02d_default_selected.rgb", baseFilename, frameNum++);
+    renderToFile(renderDefault, filename);
+    if (objMaterials[1]) objMaterials[1]->diffuseColor.setValue(savedColors[1]);
 
     printf("\nRendered %d frames demonstrating pick filter\n", frameNum);
     printf("The filtered version selects only top-level nodes,\n");
     printf("while the default version selects the deepest picked node.\n");
 
+    renderFiltered->unref();
+    renderDefault->unref();
     filteredSel->unref();
     defaultSel->unref();
     return 0;

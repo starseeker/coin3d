@@ -67,7 +67,7 @@
 #include <Inventor/nodes/SoSeparator.h>
 #include <cstdio>
 
-int main(int, char **argv)
+int main(int argc, char **argv)
 {
     printf("=== Mentor Example 14.2: NodeKit Editors ===\n");
     printf("This demonstrates toolkit-agnostic editor patterns with nodekits\n\n");
@@ -100,7 +100,15 @@ int main(int, char **argv)
     // Read an object from file
     printf("Reading desk.iv...\n");
     SoInput myInput;
-    SoInput::addDirectoryFirst("data");
+    // Search data dir: prefer COIN_DATA_DIR env var, then relative paths that
+    // work both when run from source directory and from the build test_output dir.
+    const char *dataDir = getenv("COIN_DATA_DIR");
+    if (dataDir) {
+        SoInput::addDirectoryFirst(dataDir);
+    } else {
+        SoInput::addDirectoryFirst("../../data");
+        SoInput::addDirectoryFirst("data");
+    }
     if (!myInput.openFile("desk.iv")) {
         fprintf(stderr, "Error: Could not open desk.iv\n");
         fprintf(stderr, "Make sure data/desk.iv exists\n");
@@ -144,11 +152,15 @@ int main(int, char **argv)
     myCamera->viewAll(myScene, myRegion);
 
     myRenderArea->setSceneGraph(myScene);
-    // myRenderArea->setTitle("NodeKit Editors Demo");  // No title in headless mode
+    myRenderArea->setTitle("NodeKit Editors Demo");
+
+    const char *baseFilename = (argc > 1) ? argv[1] : "14.2.Editors";
+    char filename[512];
 
     // Render initial state
     printf("\n--- State 1: Initial desk with default lighting ---\n");
-    myRenderArea->render("14.2.Editors-initial.rgb");
+    snprintf(filename, sizeof(filename), "%s_initial.rgb", baseFilename);
+    myRenderArea->render(filename);
 
     // MATERIAL EDITOR!! Attach it to myDesk's material node.
     // Use the getPart pattern to get this part from myDesk.
@@ -163,7 +175,7 @@ int main(int, char **argv)
         return 1;
     }
     mtlEditor->attach(mtl);
-    // mtlEditor->setTitle("Material of Desk");  // No title in headless mode
+    mtlEditor->setTitle("Material of Desk");
     printf("Material editor attached to desk material\n");
 
     // DIRECTIONAL LIGHT EDITOR!! Attach it to the 
@@ -180,7 +192,7 @@ int main(int, char **argv)
         return 1;
     }
     ltEditor->attach(ltPath);
-    // ltEditor->setTitle("Lighting of Desk");  // No title in headless mode
+    ltEditor->setTitle("Lighting of Desk");
     printf("Light editor attached to directional light\n");
 
     // Simulate user changing material to a darker wood color
@@ -189,34 +201,40 @@ int main(int, char **argv)
     mtlEditor->setAmbientColor(SbColor(0.15f, 0.075f, 0.03f));
     mtlEditor->setSpecularColor(SbColor(0.3f, 0.3f, 0.3f));
     mtlEditor->setShininess(0.3f);
-    myRenderArea->render("14.2.Editors-dark-wood.rgb");
+    snprintf(filename, sizeof(filename), "%s_dark_wood.rgb", baseFilename);
+    myRenderArea->render(filename);
 
     // Simulate user changing light direction
     printf("\n--- State 3: User changes light direction via light editor ---\n");
     ltEditor->setDirection(SbVec3f(1.0f, -1.0f, -1.0f));
-    myRenderArea->render("14.2.Editors-light-direction.rgb");
+    snprintf(filename, sizeof(filename), "%s_light_direction.rgb", baseFilename);
+    myRenderArea->render(filename);
 
     // Simulate user making light brighter and more yellow
     printf("\n--- State 4: User changes light color and intensity ---\n");
     ltEditor->setColor(SbColor(1.0f, 1.0f, 0.8f));  // Warm white
     ltEditor->setIntensity(1.2f);
-    myRenderArea->render("14.2.Editors-warm-bright-light.rgb");
+    snprintf(filename, sizeof(filename), "%s_warm_bright_light.rgb", baseFilename);
+    myRenderArea->render(filename);
 
     // Simulate user changing material to lighter finish
     printf("\n--- State 5: User changes desk to lighter finish ---\n");
     mtlEditor->setDiffuseColor(SbColor(0.9f, 0.7f, 0.4f));
     mtlEditor->setAmbientColor(SbColor(0.3f, 0.2f, 0.1f));
     mtlEditor->setShininess(0.6f);
-    myRenderArea->render("14.2.Editors-light-finish.rgb");
+    snprintf(filename, sizeof(filename), "%s_light_finish.rgb", baseFilename);
+    myRenderArea->render(filename);
 
     // Simulate turning light off and back on
     printf("\n--- State 6: User turns light off (demonstrates on/off control) ---\n");
     ltEditor->setOn(FALSE);
-    myRenderArea->render("14.2.Editors-light-off.rgb");
+    snprintf(filename, sizeof(filename), "%s_light_off.rgb", baseFilename);
+    myRenderArea->render(filename);
 
     printf("\n--- State 7: User turns light back on ---\n");
     ltEditor->setOn(TRUE);
-    myRenderArea->render("14.2.Editors-light-on.rgb");
+    snprintf(filename, sizeof(filename), "%s_light_on.rgb", baseFilename);
+    myRenderArea->render(filename);
 
     printf("\n=== Summary ===\n");
     printf("Generated 7 images showing nodekit editor patterns\n");

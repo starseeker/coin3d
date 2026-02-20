@@ -80,7 +80,9 @@ int main(int argc, char **argv)
     SoSeparator *scene = NULL;
     
     // Try to read from data directory
-    const char *dataDir = "/home/runner/work/coin/coin/data";
+    const char *dataDir = getenv("COIN_DATA_DIR");
+    if (!dataDir) dataDir = getenv("IVEXAMPLES_DATA_DIR");
+    if (!dataDir) dataDir = "../../data";
     char filepath[512];
     snprintf(filepath, sizeof(filepath), "%s/star.iv", dataDir);
     

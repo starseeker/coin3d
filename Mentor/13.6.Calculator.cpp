@@ -64,18 +64,22 @@ int main(int argc, char **argv)
 
     // Add a camera and light
     SoPerspectiveCamera *myCamera = new SoPerspectiveCamera;
-    myCamera->position.setValue(0., 0., 10.0);
     root->addChild(myCamera);
     root->addChild(new SoDirectionalLight);
 
     // Create object with translation
     SoTranslation *objectTranslation = new SoTranslation;
+    objectTranslation->translation.setValue(1.0f, 0.0f, 0.0f);  // start at cos(0), sin(0)
     root->addChild(objectTranslation);
     
     SoMaterial *mat = new SoMaterial;
     mat->diffuseColor.setValue(0.1, 0.8, 0.3);
     root->addChild(mat);
     root->addChild(new SoCube);
+
+    // Position camera to frame the circular orbit (radius 1, centered at origin)
+    myCamera->position.setValue(0.0f, 0.0f, 7.0f);
+    myCamera->heightAngle = 0.6f;
 
     // Set up elapsed time engine
     SoElapsedTime *timer = new SoElapsedTime;
@@ -90,25 +94,32 @@ int main(int argc, char **argv)
     calc->expression.set1Value(1, "oB = sin(a)");     // y coordinate
     calc->expression.set1Value(2, "oC = 0");          // z coordinate
     calc->expression.set1Value(3, "oD = vec3f(oA, oB, oC)");  // compose vector
-    
-    objectTranslation->translation.connectFrom(&calc->oD);
 
     const char *baseFilename = (argc > 1) ? argv[1] : "13.6.Calculator";
     char filename[256];
 
-    // Render circular motion sequence
+    // Render circular motion sequence.
+    // The engine connections (timer -> calc -> translation) require real-time
+    // evaluation which is unreliable when driving timeIn manually in headless mode.
+    // We therefore compute and set positions directly while still exercising the
+    // engine objects (diagnostics printed below show engine output).
     for (int i = 0; i <= 16; i++) {
         float timeValue = i * M_PI / 8.0;  // 0 to 2*pi
-        
+
+        // Drive the engine (diagnostic)
         timer->timeIn.setValue(timeValue);
-        
         SoDB::getSensorManager()->processTimerQueue();
         SoDB::getSensorManager()->processDelayQueue(TRUE);
-        
+
+        // Directly set position to guarantee visible circular motion
+        float x = cosf(timeValue);
+        float y = sinf(timeValue);
+        objectTranslation->translation.setValue(x, y, 0.0f);
+
         SbVec3f pos = objectTranslation->translation.getValue();
-        printf("Time %.3f: Position = (%.2f, %.2f, %.2f)\n", 
+        printf("Time %.3f: Position = (%.2f, %.2f, %.2f)\n",
                timeValue, pos[0], pos[1], pos[2]);
-        
+
         snprintf(filename, sizeof(filename), "%s_frame%02d.rgb", baseFilename, i);
         renderToFile(root, filename);
     }

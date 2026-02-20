@@ -76,7 +76,7 @@ void myMaterialEditorCB(void *userData, const SoMaterial *newMtl)
     myMtl->copyFieldValues(newMtl);
 }
 
-int main(int, char **argv)
+int main(int argc, char **argv)
 {
     printf("=== Mentor Example 16.2: Material Editor Callback ===\n");
     printf("This demonstrates toolkit-agnostic material editor patterns\n\n");
@@ -111,7 +111,13 @@ int main(int, char **argv)
 
     // Read the geometry from a file and add to the scene
     SoInput myInput;
-    SoInput::addDirectoryFirst("data");
+    const char *dataDir16_2 = getenv("COIN_DATA_DIR");
+    if (dataDir16_2) {
+        SoInput::addDirectoryFirst(dataDir16_2);
+    } else {
+        SoInput::addDirectoryFirst("../../data");
+        SoInput::addDirectoryFirst("data");
+    }
     if (!myInput.openFile("dogDish.iv")) {
         fprintf(stderr, "Error: Could not open dogDish.iv\n");
         fprintf(stderr, "Make sure data/dogDish.iv exists\n");
@@ -136,9 +142,13 @@ int main(int, char **argv)
     // Set the scene graph
     myRenderArea->setSceneGraph(root);
 
+    const char *baseFilename = (argc > 1) ? argv[1] : "16.2.Callback";
+    char filename[512];
+
     // Render initial state with default material
     printf("\n--- State 1: Default material ---\n");
-    myRenderArea->render("16.2.Callback-default.rgb");
+    snprintf(filename, sizeof(filename), "%s_default.rgb", baseFilename);
+    myRenderArea->render(filename);
 
     // Simulate user changing material to red
     printf("\n--- State 2: User changes to red material ---\n");
@@ -151,8 +161,9 @@ int main(int, char **argv)
     
     // User edits material in editor - triggers callback
     myEditor->setMaterial(*redMaterial);
-    myRenderArea->render("16.2.Callback-red.rgb");
     redMaterial->unref();
+    snprintf(filename, sizeof(filename), "%s_red.rgb", baseFilename);
+    myRenderArea->render(filename);
 
     // Simulate user changing material to blue
     printf("\n--- State 3: User changes to blue material ---\n");
@@ -164,8 +175,9 @@ int main(int, char **argv)
     blueMaterial->shininess.setValue(0.8f);
     
     myEditor->setMaterial(*blueMaterial);
-    myRenderArea->render("16.2.Callback-blue.rgb");
     blueMaterial->unref();
+    snprintf(filename, sizeof(filename), "%s_blue.rgb", baseFilename);
+    myRenderArea->render(filename);
 
     // Simulate user changing material to gold
     printf("\n--- State 4: User changes to gold material ---\n");
@@ -177,8 +189,9 @@ int main(int, char **argv)
     goldMaterial->shininess.setValue(0.9f);
     
     myEditor->setMaterial(*goldMaterial);
-    myRenderArea->render("16.2.Callback-gold.rgb");
     goldMaterial->unref();
+    snprintf(filename, sizeof(filename), "%s_gold.rgb", baseFilename);
+    myRenderArea->render(filename);
 
     printf("\n=== Summary ===\n");
     printf("Generated 4 images showing different materials applied via editor callbacks\n");

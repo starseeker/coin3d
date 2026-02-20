@@ -42,9 +42,6 @@
  */
 
 #include "headless_utils.h"
-#include <Inventor/SbLinear.h>
-#include <Inventor/SoDB.h>
-#include <Inventor/SoInput.h>
 #include <Inventor/nodes/SoDirectionalLight.h>
 #include <Inventor/nodes/SoMaterial.h>
 #include <Inventor/nodes/SoOrthographicCamera.h>
@@ -67,44 +64,38 @@ int main(int argc, char **argv)
     // Create a light
     root->addChild(new SoDirectionalLight);
 
-    // Create a simple scene (replace file reading with built-in geometry)
-    // Create a bench-like structure
-    SoSeparator *sceneContent = new SoSeparator;
-    
-    SoMaterial *myMaterial = new SoMaterial;
-    myMaterial->diffuseColor.setValue(0.8, 0.23, 0.03);
-    sceneContent->addChild(myMaterial);
-    
-    // Seat
-    SoTransform *seatTransform = new SoTransform;
-    seatTransform->translation.setValue(0, 1, 0);
-    seatTransform->scaleFactor.setValue(3, 0.2, 1);
-    sceneContent->addChild(seatTransform);
-    sceneContent->addChild(new SoCube);
-    
-    // Back
-    SoSeparator *backSep = new SoSeparator;
-    SoTransform *backTransform = new SoTransform;
-    backTransform->translation.setValue(0, 2, -0.4);
-    backTransform->scaleFactor.setValue(3, 1.5, 0.2);
-    backSep->addChild(backTransform);
-    backSep->addChild(new SoCube);
-    sceneContent->addChild(backSep);
-    
-    // Legs
-    for (int i = 0; i < 4; i++) {
-        SoSeparator *legSep = new SoSeparator;
-        SoTransform *legTransform = new SoTransform;
-        float x = (i < 2) ? -1.2 : 1.2;
-        float z = (i % 2 == 0) ? -0.4 : 0.4;
-        legTransform->translation.setValue(x, 0.0, z);
-        legTransform->scaleFactor.setValue(0.2, 1, 0.2);
-        legSep->addChild(legTransform);
-        legSep->addChild(new SoCube);
-        sceneContent->addChild(legSep);
-    }
-    
-    root->addChild(sceneContent);
+    // Create a scene with three distinct 3D shapes at different depths.
+    // Depth variation makes the perspective vs. orthographic difference obvious.
+
+    // Red cone – left, slightly in front
+    SoSeparator *coneSep = new SoSeparator;
+    SoMaterial *coneMat = new SoMaterial;
+    coneMat->diffuseColor.setValue(0.85f, 0.15f, 0.10f);
+    coneSep->addChild(coneMat);
+    SoTransform *coneXf = new SoTransform;
+    coneXf->translation.setValue(-2.5f, 0.0f, 1.0f);
+    coneSep->addChild(coneXf);
+    coneSep->addChild(new SoCone);
+    root->addChild(coneSep);
+
+    // Green sphere – centre
+    SoSeparator *sphereSep = new SoSeparator;
+    SoMaterial *sphereMat = new SoMaterial;
+    sphereMat->diffuseColor.setValue(0.15f, 0.70f, 0.20f);
+    sphereSep->addChild(sphereMat);
+    sphereSep->addChild(new SoSphere);
+    root->addChild(sphereSep);
+
+    // Blue cube – right, slightly behind
+    SoSeparator *cubeSep = new SoSeparator;
+    SoMaterial *cubeMat = new SoMaterial;
+    cubeMat->diffuseColor.setValue(0.15f, 0.30f, 0.85f);
+    cubeSep->addChild(cubeMat);
+    SoTransform *cubeXf = new SoTransform;
+    cubeXf->translation.setValue(2.5f, 0.0f, -1.0f);
+    cubeSep->addChild(cubeXf);
+    cubeSep->addChild(new SoCube);
+    root->addChild(cubeSep);
 
     // Create three cameras
     SoOrthographicCamera *orthoViewAll = new SoOrthographicCamera;

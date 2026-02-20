@@ -80,27 +80,41 @@ int main(int argc, char **argv)
     const char *baseFilename = (argc > 1) ? argv[1] : "13.1.GlobalFlds";
     char filename[256];
 
-    // Render at current time
-    printf("Current realTime value: %s\n", myText->string[0].getString());
+    // For deterministic headless rendering we fix realTime to three known
+    // reference values rather than using the live system clock.  This
+    // demonstrates the field-connection mechanism while producing images
+    // that are identical across runs (required for regression testing).
+    SoSFTime *realTime =
+        (SoSFTime *)SoDB::getGlobalField("realTime");
+
+    // Reference time 1: midnight 2000-01-01 (Unix epoch + 10957 days)
+    const double REF_TIME_1 = 946684800.0;
+    const double REF_TIME_2 = REF_TIME_1 + 3661.0;   // +1h 1m 1s
+    const double REF_TIME_3 = REF_TIME_1 + 7322.0;   // +2h 2m 2s
+
+    // Flush any pending sensor callbacks, then override realTime with a
+    // fixed value so the Text3 node displays a known string.
+    SoDB::getSensorManager()->processTimerQueue();
+    SoDB::getSensorManager()->processDelayQueue(TRUE);
+    realTime->setValue(SbTime(REF_TIME_1));
+    SoDB::getSensorManager()->processDelayQueue(TRUE);
+    printf("Reference realTime value 1: %s\n", myText->string[0].getString());
     snprintf(filename, sizeof(filename), "%s_time1.rgb", baseFilename);
     renderToFile(root, filename);
 
-    // Wait a bit and render again (simulate time passing)
-    // We can't actually control realTime directly as it's maintained by the system
-    // But we can demonstrate the connection is working
-    printf("\nProcessing any pending updates...\n");
     SoDB::getSensorManager()->processTimerQueue();
     SoDB::getSensorManager()->processDelayQueue(TRUE);
-
-    printf("Updated realTime value: %s\n", myText->string[0].getString());
+    realTime->setValue(SbTime(REF_TIME_2));
+    SoDB::getSensorManager()->processDelayQueue(TRUE);
+    printf("Reference realTime value 2: %s\n", myText->string[0].getString());
     snprintf(filename, sizeof(filename), "%s_time2.rgb", baseFilename);
     renderToFile(root, filename);
 
-    // Render once more
     SoDB::getSensorManager()->processTimerQueue();
     SoDB::getSensorManager()->processDelayQueue(TRUE);
-    
-    printf("Final realTime value: %s\n", myText->string[0].getString());
+    realTime->setValue(SbTime(REF_TIME_3));
+    SoDB::getSensorManager()->processDelayQueue(TRUE);
+    printf("Reference realTime value 3: %s\n", myText->string[0].getString());
     snprintf(filename, sizeof(filename), "%s_time3.rgb", baseFilename);
     renderToFile(root, filename);
 

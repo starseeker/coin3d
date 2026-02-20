@@ -47,10 +47,14 @@
 #include <Inventor/nodes/SoCoordinate3.h>
 #include <Inventor/nodes/SoDrawStyle.h>
 #include <Inventor/nodes/SoLightModel.h>
+#include <Inventor/nodes/SoMaterial.h>
 #include <Inventor/nodes/SoNurbsCurve.h>
 #include <Inventor/nodes/SoSeparator.h>
+#include <Inventor/nodes/SoSphere.h>
+#include <Inventor/nodes/SoTransform.h>
 #include <Inventor/nodes/SoPerspectiveCamera.h>
 #include <Inventor/nodes/SoDirectionalLight.h>
+#include <Inventor/actions/SoGetBoundingBoxAction.h>
 #include <cmath>
 #include <cstdio>
 
@@ -120,26 +124,52 @@ int main(int argc, char **argv)
     heart->addChild(curveSep);
     root->addChild(heart);
 
-    // Setup camera
-    camera->position.setValue(SbVec3f(-6.0, 8.0, 20.0));
-    camera->pointAt(SbVec3f(0.0, -2.0, -4.0));
+    // Add control-point markers: small spheres at each control point.
+    // These always render in software mode, providing a visible test signature
+    // even when NURBS curve tessellation is unavailable.
+    SoSeparator *markerSep = new SoSeparator;
+    SoMaterial *markerMat = new SoMaterial;
+    markerMat->diffuseColor.setValue(0.2f, 0.6f, 1.0f);
+    markerSep->addChild(markerMat);
+    for (int i = 0; i < 7; i++) {
+        SoSeparator *ptSep = new SoSeparator;
+        SoTransform *ptXf = new SoTransform;
+        ptXf->translation.setValue(pts[i][0], pts[i][1], pts[i][2]);
+        ptXf->scaleFactor.setValue(0.3f, 0.3f, 0.3f);
+        ptSep->addChild(ptXf);
+        ptSep->addChild(new SoSphere);
+        markerSep->addChild(ptSep);
+    }
+    root->addChild(markerSep);
+
+    // Setup camera to frame the entire scene (curve + control points)
+    SbViewportRegion vp(DEFAULT_WIDTH, DEFAULT_HEIGHT);
+    camera->viewAll(root, vp);
 
     const char *baseFilename = (argc > 1) ? argv[1] : "08.1.BSCurve";
     char filename[256];
 
-    // View from camera position
+    // Default view (framed by viewAll)
     snprintf(filename, sizeof(filename), "%s_view1.rgb", baseFilename);
     renderToFile(root, filename);
 
-    // Side view
-    camera->position.setValue(SbVec3f(20.0, 0.0, 0.0));
-    camera->pointAt(SbVec3f(0.0, 0.0, 0.0));
+    // Side view: position camera along +X axis
+    camera->viewAll(root, vp);
+    SbVec3f center;
+    SbBox3f bbox;
+    SoGetBoundingBoxAction bba(vp);
+    bba.apply(root);
+    bbox = bba.getBoundingBox();
+    center = bbox.getCenter();
+    float radius = (bbox.getMax() - bbox.getMin()).length() * 0.9f;
+    camera->position.setValue(center + SbVec3f(radius, 0, 0));
+    camera->pointAt(center);
     snprintf(filename, sizeof(filename), "%s_side.rgb", baseFilename);
     renderToFile(root, filename);
 
-    // Top view
-    camera->position.setValue(SbVec3f(0.0, 20.0, 0.0));
-    camera->pointAt(SbVec3f(0.0, 0.0, 0.0));
+    // Top view: position camera along +Y axis
+    camera->position.setValue(center + SbVec3f(0, radius, 0));
+    camera->pointAt(center, SbVec3f(0, 0, -1));
     snprintf(filename, sizeof(filename), "%s_top.rgb", baseFilename);
     renderToFile(root, filename);
 

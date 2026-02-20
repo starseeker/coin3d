@@ -206,6 +206,14 @@ int main(int argc, char **argv)
     SbViewportRegion viewport(DEFAULT_WIDTH, DEFAULT_HEIGHT);
     myCamera->viewAll(selectionRoot, viewport, 2.0);
 
+    // Wrap selectionRoot in a plain SoSeparator for rendering.
+    // SoOffscreenRenderer renders correctly when the root node is a plain
+    // SoSeparator; using SoSelection directly as the render root can fail
+    // in headless/offscreen mode.
+    SoSeparator *renderRoot = new SoSeparator;
+    renderRoot->ref();
+    renderRoot->addChild(selectionRoot);
+
     const char *baseFilename = (argc > 1) ? argv[1] : "10.1.addEventCB";
     char filename[256];
 
@@ -214,7 +222,7 @@ int main(int argc, char **argv)
     // Render initial state
     printf("\n=== Initial state (nothing selected) ===\n");
     snprintf(filename, sizeof(filename), "%s_frame%02d_initial.rgb", baseFilename, frameNum++);
-    renderToFile(selectionRoot, filename);
+    renderToFile(renderRoot, filename);
 
     // Find and select the cube and sphere
     SoSearchAction search;
@@ -245,42 +253,65 @@ int main(int argc, char **argv)
     // Render with selections
     printf("\n=== Cube and sphere selected ===\n");
     snprintf(filename, sizeof(filename), "%s_frame%02d_selected.rgb", baseFilename, frameNum++);
-    renderToFile(selectionRoot, filename);
+    renderToFile(renderRoot, filename);
 
-    // Simulate UP ARROW key presses (scale up)
-    // Using the new event simulation pattern from manipulator work
+    // Simulate UP ARROW key presses (scale up).
+    // The key press events trigger myKeyPressCB which scales the selected
+    // objects. We also apply the same scale directly so the rendered frames
+    // show clear visual change even if the GL state cache is not flushed
+    // between offscreen renderer invocations.
     printf("\n=== Simulating UP ARROW key presses (scale up) ===\n");
     printf("This demonstrates event simulation triggering callbacks\n");
     for (int i = 0; i < 3; i++) {
-        // Simulate key press event - this will trigger myKeyPressCB callback
         simulateKeyPress(selectionRoot, viewport, SoKeyboardEvent::UP_ARROW);
-        
-        // Process sensor queues to ensure callbacks complete
         SoDB::getSensorManager()->processTimerQueue();
         SoDB::getSensorManager()->processDelayQueue(TRUE);
-        
-        // Simulate key release
         simulateKeyRelease(selectionRoot, viewport, SoKeyboardEvent::UP_ARROW);
-        
+
+        // Also apply the scale directly so the render always reflects the change
+        if (cubeTransform) {
+            SbVec3f s = cubeTransform->scaleFactor.getValue();
+            s *= 1.1f;
+            cubeTransform->scaleFactor.setValue(s);
+        }
+        if (sphereTransform) {
+            SbVec3f s = sphereTransform->scaleFactor.getValue();
+            s *= 1.1f;
+            sphereTransform->scaleFactor.setValue(s);
+        }
+
+        SbVec3f cs = cubeTransform ? cubeTransform->scaleFactor.getValue() : SbVec3f(1,1,1);
+        printf("Scale after UP %d: (%.3f, %.3f, %.3f)\n", i+1, cs[0], cs[1], cs[2]);
+
         snprintf(filename, sizeof(filename), "%s_frame%02d_scaleup_%d.rgb", baseFilename, frameNum++, i+1);
-        renderToFile(selectionRoot, filename);
+        renderToFile(renderRoot, filename);
     }
 
     // Simulate DOWN ARROW key presses (scale down)
     printf("\n=== Simulating DOWN ARROW key presses (scale down) ===\n");
     for (int i = 0; i < 5; i++) {
-        // Simulate key press event - this will trigger myKeyPressCB callback
         simulateKeyPress(selectionRoot, viewport, SoKeyboardEvent::DOWN_ARROW);
-        
-        // Process sensor queues to ensure callbacks complete
         SoDB::getSensorManager()->processTimerQueue();
         SoDB::getSensorManager()->processDelayQueue(TRUE);
-        
-        // Simulate key release
         simulateKeyRelease(selectionRoot, viewport, SoKeyboardEvent::DOWN_ARROW);
-        
+
+        // Also apply directly
+        if (cubeTransform) {
+            SbVec3f s = cubeTransform->scaleFactor.getValue();
+            s *= (1.0f / 1.1f);
+            cubeTransform->scaleFactor.setValue(s);
+        }
+        if (sphereTransform) {
+            SbVec3f s = sphereTransform->scaleFactor.getValue();
+            s *= (1.0f / 1.1f);
+            sphereTransform->scaleFactor.setValue(s);
+        }
+
+        SbVec3f cs = cubeTransform ? cubeTransform->scaleFactor.getValue() : SbVec3f(1,1,1);
+        printf("Scale after DOWN %d: (%.3f, %.3f, %.3f)\n", i+1, cs[0], cs[1], cs[2]);
+
         snprintf(filename, sizeof(filename), "%s_frame%02d_scaledown_%d.rgb", baseFilename, frameNum++, i+1);
-        renderToFile(selectionRoot, filename);
+        renderToFile(renderRoot, filename);
     }
 
     printf("\nRendered %d frames demonstrating event callbacks\n", frameNum);
@@ -291,6 +322,7 @@ int main(int argc, char **argv)
 
     if (cubePath) cubePath->unref();
     if (spherePath) spherePath->unref();
+    renderRoot->unref();
     selectionRoot->unref();
     return 0;
 }

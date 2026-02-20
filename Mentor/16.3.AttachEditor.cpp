@@ -65,7 +65,7 @@
 #include <Inventor/nodes/SoSeparator.h>
 #include <cstdio>
 
-int main(int, char **argv)
+int main(int argc, char **argv)
 {
     printf("=== Mentor Example 16.3: Attach Material Editor ===\n");
     printf("This demonstrates toolkit-agnostic material editor attachment\n\n");
@@ -100,7 +100,13 @@ int main(int, char **argv)
 
     // Read the geometry from a file and add to the scene
     SoInput myInput;
-    SoInput::addDirectoryFirst("data");
+    const char *dataDir16_3 = getenv("COIN_DATA_DIR");
+    if (dataDir16_3) {
+        SoInput::addDirectoryFirst(dataDir16_3);
+    } else {
+        SoInput::addDirectoryFirst("../../data");
+        SoInput::addDirectoryFirst("data");
+    }
     if (!myInput.openFile("dogDish.iv")) {
         fprintf(stderr, "Error: Could not open dogDish.iv\n");
         fprintf(stderr, "Make sure data/dogDish.iv exists\n");
@@ -121,27 +127,28 @@ int main(int, char **argv)
     
     // Set the scene graph 
     myRenderArea->setSceneGraph(root);
+
+    const char *baseFilename = (argc > 1) ? argv[1] : "16.3.AttachEditor";
+    char filename[512];
     
     // Render initial state with default material
     printf("\n--- State 1: Default material (before attach) ---\n");
-    myRenderArea->render("16.3.AttachEditor-default.rgb");
+    snprintf(filename, sizeof(filename), "%s_default.rgb", baseFilename);
+    myRenderArea->render(filename);
     
     // Attach material editor to the material
-    // This creates bidirectional binding:
-    // - Editor syncs to show current material values
-    // - Material updates when editor changes
     printf("\n--- Attaching editor to material node ---\n");
     myEditor->attach(myMaterial);
     printf("Editor is now synchronized with material node\n");
     
     // Simulate user changing material through editor
-    // Because it's attached, this automatically updates myMaterial node
     printf("\n--- State 2: User edits to red via attached editor ---\n");
     myEditor->setDiffuseColor(SbColor(1.0f, 0.0f, 0.0f));
     myEditor->setAmbientColor(SbColor(0.3f, 0.0f, 0.0f));
     myEditor->setSpecularColor(SbColor(0.5f, 0.5f, 0.5f));
     myEditor->setShininess(0.5f);
-    myRenderArea->render("16.3.AttachEditor-red.rgb");
+    snprintf(filename, sizeof(filename), "%s_red.rgb", baseFilename);
+    myRenderArea->render(filename);
     
     // Verify material node was updated
     SbColor diffuse = myMaterial->diffuseColor[0];
@@ -154,7 +161,8 @@ int main(int, char **argv)
     myEditor->setAmbientColor(SbColor(0.0f, 0.1f, 0.3f));
     myEditor->setSpecularColor(SbColor(0.8f, 0.8f, 0.8f));
     myEditor->setShininess(0.8f);
-    myRenderArea->render("16.3.AttachEditor-blue.rgb");
+    snprintf(filename, sizeof(filename), "%s_blue.rgb", baseFilename);
+    myRenderArea->render(filename);
     
     // Change to green
     printf("\n--- State 4: User edits to green via attached editor ---\n");
@@ -162,7 +170,8 @@ int main(int, char **argv)
     myEditor->setAmbientColor(SbColor(0.0f, 0.3f, 0.05f));
     myEditor->setSpecularColor(SbColor(0.6f, 0.6f, 0.6f));
     myEditor->setShininess(0.6f);
-    myRenderArea->render("16.3.AttachEditor-green.rgb");
+    snprintf(filename, sizeof(filename), "%s_green.rgb", baseFilename);
+    myRenderArea->render(filename);
     
     // Demonstrate programmatic material change also syncs to editor
     printf("\n--- State 5: Programmatic material change (should sync to editor) ---\n");
@@ -174,7 +183,8 @@ int main(int, char **argv)
     tempMaterial->unref();
     // In a real GUI editor, this would update the UI controls
     printf("Material changed programmatically - attached editor syncs automatically\n");
-    myRenderArea->render("16.3.AttachEditor-orange.rgb");
+    snprintf(filename, sizeof(filename), "%s_orange.rgb", baseFilename);
+    myRenderArea->render(filename);
 
     printf("\n=== Summary ===\n");
     printf("Generated 5 images showing bidirectional material editor attachment\n");
