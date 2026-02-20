@@ -19,6 +19,7 @@ if(EXAMPLES_USE_OSMESA)
 else()
     message(STATUS "Mentor examples: Building with system OpenGL backend")
     find_package(X11 QUIET)
+    find_package(OpenGL QUIET)
 endif()
 
 # Image comparison sensitivity control
@@ -65,7 +66,7 @@ if(NOT Coin_FOUND)
                 target_include_directories(${name} PRIVATE ${OSMESA_INCLUDE_DIR})
             endif()
         elseif(X11_FOUND)
-            target_link_libraries(${name} ${X11_X11_LIB})
+            target_link_libraries(${name} ${X11_X11_LIB} ${OPENGL_LIBRARIES})
             target_include_directories(${name} PRIVATE ${X11_INCLUDE_DIR})
         endif()
         set_target_properties(${name} PROPERTIES
@@ -78,6 +79,7 @@ else()
     include_directories(${CMAKE_CURRENT_SOURCE_DIR})
     
     find_package(X11 QUIET)
+    find_package(OpenGL QUIET)
     
     macro(add_headless_example name)
         add_executable(${name} ${name}.cpp)
@@ -89,7 +91,7 @@ else()
                 target_include_directories(${name} PRIVATE ${OSMESA_INCLUDE_DIR})
             endif()
         elseif(X11_FOUND)
-            target_link_libraries(${name} ${X11_X11_LIB})
+            target_link_libraries(${name} ${X11_X11_LIB} ${OPENGL_LIBRARIES})
             target_include_directories(${name} PRIVATE ${X11_INCLUDE_DIR})
         endif()
         set_target_properties(${name} PROPERTIES
@@ -120,10 +122,11 @@ add_headless_example(06.3.Complex3DText)
 add_headless_example(07.1.BasicTexture)
 add_headless_example(07.2.TextureCoordinates)
 add_headless_example(07.3.TextureFunction)
-add_headless_example(08.1.BSCurve)
-add_headless_example(08.2.UniCurve)
-add_headless_example(08.3.BezSurf)
-add_headless_example(08.4.TrimSurf)
+# Chapter 8: NURBS examples - SKIPPED (SoNurbs* nodes not available in this fork)
+# add_headless_example(08.1.BSCurve)
+# add_headless_example(08.2.UniCurve)
+# add_headless_example(08.3.BezSurf)
+# add_headless_example(08.4.TrimSurf)
 add_headless_example(09.1.Print)
 add_headless_example(09.2.Texture)
 add_headless_example(09.3.Search)
@@ -315,10 +318,11 @@ add_image_test(06.3.Complex3DText)
 add_image_test(07.1.BasicTexture)
 add_image_test(07.2.TextureCoordinates)
 add_image_test(07.3.TextureFunction)
-add_image_test(08.1.BSCurve)
-add_image_test(08.2.UniCurve)
-add_image_test(08.3.BezSurf)
-add_image_test(08.4.TrimSurf)
+# Chapter 8: NURBS examples - SKIPPED (SoNurbs* nodes not available in this fork)
+# add_image_test(08.1.BSCurve)
+# add_image_test(08.2.UniCurve)
+# add_image_test(08.3.BezSurf)
+# add_image_test(08.4.TrimSurf)
 add_image_test(09.1.Print)
 add_image_test(09.2.Texture)
 add_image_test(09.3.Search)
@@ -377,7 +381,6 @@ add_custom_target(generate_controls
         05.1.FaceSet 05.2.IndexedFaceSet 05.3.TriangleStripSet 05.4.QuadMesh 05.5.Binding 05.6.TransformOrdering
         06.1.Text 06.2.Simple3DText 06.3.Complex3DText
         07.1.BasicTexture 07.2.TextureCoordinates 07.3.TextureFunction
-        08.1.BSCurve 08.2.UniCurve 08.3.BezSurf 08.4.TrimSurf
         09.1.Print 09.2.Texture 09.3.Search 09.4.PickAction 09.5.GenSph
         10.1.addEventCB 10.2.setEventCB 10.5.SelectionCB 10.6.PickFilterTopLevel 10.7.PickFilterManip 10.8.PickFilterNodeKit
         11.1.ReadFile 11.2.ReadString

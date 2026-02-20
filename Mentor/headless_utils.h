@@ -8,6 +8,9 @@
  * Backend selection (compile-time):
  *   COIN3D_OSMESA_BUILD: use OSMesa for truly headless operation
  *   default:             use system OpenGL (GLX on Linux) with Xvfb
+ *
+ * Both paths require a SoDB::ContextManager since this Coin fork's
+ * SoDB::init() always requires one.
  */
 
 #ifndef HEADLESS_UTILS_H
@@ -103,7 +106,6 @@ inline void initCoinHeadless() {
 
 /**
  * Render a scene to an image file (OSMesa backend).
- * Each call creates a fresh renderer since OSMesa contexts are lightweight.
  */
 inline bool renderToFile(
     SoNode *root,
@@ -142,13 +144,201 @@ inline bool renderToFile(
 // ============================================================================
 #ifdef __unix__
 #include <X11/Xlib.h>
+#include <GL/glx.h>
 #endif
+
+#ifdef __unix__
+// GLX offscreen context (pbuffer or pixmap)
+struct GLXOffscreenCtx {
+    Display  *dpy;
+    int       width, height;
+    GLXContext ctx;
+    // pbuffer approach
+    GLXPbuffer   pbuffer;
+    GLXFBConfig  fbconfig;
+    bool         use_pbuffer;
+    // pixmap fallback
+    Pixmap       xpixmap;
+    GLXPixmap    glxpixmap;
+    XVisualInfo *vi;
+    // restore state
+    GLXContext   prev_ctx;
+    GLXDrawable  prev_draw;
+    GLXDrawable  prev_read;
+};
+
+/**
+ * GLX context manager for system OpenGL headless rendering.
+ * Requires a running X server (real or Xvfb).
+ * Set COIN_GLXGLUE_NO_PBUFFERS=1 to skip pbuffer and use pixmap fallback.
+ * Set COIN_GLX_PIXMAP_DIRECT_RENDERING=1 to request direct rendering.
+ */
+class GLXContextManager : public SoDB::ContextManager {
+public:
+    GLXContextManager() : m_dpy(nullptr) {}
+
+    virtual ~GLXContextManager() {
+        if (m_dpy) {
+            XCloseDisplay(m_dpy);
+            m_dpy = nullptr;
+        }
+    }
+
+    virtual void* createOffscreenContext(unsigned int width, unsigned int height) override {
+        Display *dpy = getDisplay();
+        if (!dpy) return nullptr;
+        int screen = DefaultScreen(dpy);
+
+        GLXOffscreenCtx *ctx = new GLXOffscreenCtx;
+        ctx->dpy        = dpy;
+        ctx->width      = width;
+        ctx->height     = height;
+        ctx->ctx        = nullptr;
+        ctx->pbuffer    = 0;
+        ctx->use_pbuffer = false;
+        ctx->xpixmap    = 0;
+        ctx->glxpixmap  = 0;
+        ctx->vi         = nullptr;
+        ctx->prev_ctx   = nullptr;
+        ctx->prev_draw  = 0;
+        ctx->prev_read  = 0;
+
+        bool no_pbuffer = false;
+        const char *env = getenv("COIN_GLXGLUE_NO_PBUFFERS");
+        if (env && env[0] != '0') no_pbuffer = true;
+
+        if (!no_pbuffer) {
+            int fbattribs[] = {
+                GLX_DRAWABLE_TYPE, GLX_PBUFFER_BIT,
+                GLX_RENDER_TYPE,   GLX_RGBA_BIT,
+                GLX_RED_SIZE,   8, GLX_GREEN_SIZE, 8, GLX_BLUE_SIZE, 8,
+                GLX_DEPTH_SIZE, 16,
+                GLX_DOUBLEBUFFER, False,
+                None
+            };
+            int nfb = 0;
+            GLXFBConfig *fbcfgs = glXChooseFBConfig(dpy, screen, fbattribs, &nfb);
+            if (fbcfgs && nfb > 0) {
+                int pbattribs[] = {
+                    GLX_PBUFFER_WIDTH,  (int)width,
+                    GLX_PBUFFER_HEIGHT, (int)height,
+                    GLX_PRESERVED_CONTENTS, False,
+                    None
+                };
+                ctx->fbconfig = fbcfgs[0];
+                ctx->pbuffer  = glXCreatePbuffer(dpy, fbcfgs[0], pbattribs);
+                if (ctx->pbuffer) {
+                    // Pbuffers require direct rendering; always use True
+                    ctx->ctx = glXCreateNewContext(dpy, fbcfgs[0], GLX_RGBA_TYPE, nullptr, True);
+                    if (ctx->ctx) {
+                        ctx->use_pbuffer = true;
+                        XFree(fbcfgs);
+                        return ctx;
+                    }
+                    glXDestroyPbuffer(dpy, ctx->pbuffer);
+                    ctx->pbuffer = 0;
+                }
+                XFree(fbcfgs);
+            }
+        }
+
+        // Fallback: Pixmap
+        // Modern X servers disable indirect rendering (BadValue from X_GLXCreateContext
+        // when direct=False). Check COIN_GLX_PIXMAP_DIRECT_RENDERING to use direct.
+        Bool direct = False;
+        const char *dr = getenv("COIN_GLX_PIXMAP_DIRECT_RENDERING");
+        if (dr && dr[0] != '0') direct = True;
+
+        int vattribs[] = {
+            GLX_RGBA, GLX_RED_SIZE, 8, GLX_GREEN_SIZE, 8, GLX_BLUE_SIZE, 8,
+            GLX_DEPTH_SIZE, 16, None
+        };
+        ctx->vi = glXChooseVisual(dpy, screen, vattribs);
+        if (!ctx->vi) { delete ctx; return nullptr; }
+
+        ctx->xpixmap = XCreatePixmap(dpy, RootWindow(dpy, screen),
+                                     width, height, ctx->vi->depth);
+        if (!ctx->xpixmap) { XFree(ctx->vi); delete ctx; return nullptr; }
+
+        ctx->glxpixmap = glXCreateGLXPixmap(dpy, ctx->vi, ctx->xpixmap);
+        ctx->ctx       = glXCreateContext(dpy, ctx->vi, nullptr, direct);
+
+        if (!ctx->ctx && !direct) {
+            // If indirect failed, retry with direct rendering
+            ctx->ctx = glXCreateContext(dpy, ctx->vi, nullptr, True);
+        }
+
+        if (!ctx->ctx || !ctx->glxpixmap) {
+            if (ctx->glxpixmap) glXDestroyGLXPixmap(dpy, ctx->glxpixmap);
+            if (ctx->xpixmap)   XFreePixmap(dpy, ctx->xpixmap);
+            XFree(ctx->vi);
+            delete ctx;
+            return nullptr;
+        }
+        return ctx;
+    }
+
+    virtual SbBool makeContextCurrent(void* context) override {
+        GLXOffscreenCtx *ctx = static_cast<GLXOffscreenCtx*>(context);
+        if (!ctx || !ctx->ctx) return FALSE;
+
+        ctx->prev_ctx  = glXGetCurrentContext();
+        ctx->prev_draw = glXGetCurrentDrawable();
+        ctx->prev_read = glXGetCurrentReadDrawable();
+
+        Bool ok = ctx->use_pbuffer
+            ? glXMakeCurrent(ctx->dpy, ctx->pbuffer, ctx->ctx)
+            : glXMakeCurrent(ctx->dpy, ctx->glxpixmap, ctx->ctx);
+        return ok ? TRUE : FALSE;
+    }
+
+    virtual void restorePreviousContext(void* context) override {
+        GLXOffscreenCtx *ctx = static_cast<GLXOffscreenCtx*>(context);
+        if (!ctx) return;
+        if (ctx->prev_ctx)
+            glXMakeCurrent(ctx->dpy, ctx->prev_draw, ctx->prev_ctx);
+        else
+            glXMakeCurrent(ctx->dpy, None, nullptr);
+    }
+
+    virtual void destroyContext(void* context) override {
+        GLXOffscreenCtx *ctx = static_cast<GLXOffscreenCtx*>(context);
+        if (!ctx) return;
+        glXMakeCurrent(ctx->dpy, None, nullptr);
+        if (ctx->ctx) glXDestroyContext(ctx->dpy, ctx->ctx);
+        if (ctx->use_pbuffer) {
+            if (ctx->pbuffer) glXDestroyPbuffer(ctx->dpy, ctx->pbuffer);
+        } else {
+            if (ctx->glxpixmap) glXDestroyGLXPixmap(ctx->dpy, ctx->glxpixmap);
+            if (ctx->xpixmap)   XFreePixmap(ctx->dpy, ctx->xpixmap);
+            if (ctx->vi)        XFree(ctx->vi);
+        }
+        delete ctx;
+    }
+
+private:
+    Display *m_dpy;
+
+    Display* getDisplay() {
+        if (!m_dpy) {
+            m_dpy = XOpenDisplay(nullptr);
+            if (!m_dpy) {
+                fprintf(stderr,
+                    "GLXContextManager: Cannot open X display. "
+                    "Make sure DISPLAY is set (run under Xvfb).\n");
+            }
+        }
+        return m_dpy;
+    }
+};
+#endif // __unix__
 
 /**
  * Initialize Coin database for headless operation (system OpenGL backend).
  *
  * On X11 systems, a non-exiting X error handler is installed to prevent
  * spurious BadMatch errors from Mesa/llvmpipe from aborting the process.
+ * A GLXContextManager is provided so SoDB::init() gets a valid context manager.
  */
 inline void initCoinHeadless() {
 #ifdef __unix__
@@ -157,8 +347,20 @@ inline void initCoinHeadless() {
                 (int)err->error_code, (int)err->request_code, (int)err->minor_code);
         return 0;
     });
+    static GLXContextManager glx_context_manager;
+    SoDB::init(&glx_context_manager);
+#else
+    // Non-Unix: provide a stub context manager (rendering may not work)
+    class StubContextManager : public SoDB::ContextManager {
+    public:
+        virtual void* createOffscreenContext(unsigned int, unsigned int) override { return nullptr; }
+        virtual SbBool makeContextCurrent(void*) override { return FALSE; }
+        virtual void restorePreviousContext(void*) override {}
+        virtual void destroyContext(void*) override {}
+    };
+    static StubContextManager stub;
+    SoDB::init(&stub);
 #endif
-    SoDB::init();
     SoNodeKit::init();
     SoInteraction::init();
 }
@@ -280,6 +482,15 @@ inline void viewAll(SoNode *root, SoCamera *camera, const SbViewportRegion &view
 
 /**
  * Orbit camera around the scene center by specified angles.
+ *
+ * The camera position is moved along the surface of a sphere centered at the
+ * origin (the default target of viewAll()), keeping the camera pointed at the
+ * center. This produces correct non-blank images for side/angle views even
+ * when the scene is small relative to the camera distance.
+ *
+ * @param camera   Camera to reposition
+ * @param azimuth  Horizontal orbit angle in radians (around world Y axis)
+ * @param elevation Vertical orbit angle in radians (positive = higher vantage)
  */
 inline void rotateCamera(SoCamera *camera, float azimuth, float elevation) {
     if (!camera) return;

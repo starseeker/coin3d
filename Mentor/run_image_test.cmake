@@ -56,9 +56,13 @@ if(UNIX AND NOT APPLE)
     if(NOT DEFINED ENV{DISPLAY} OR "$ENV{DISPLAY}" STREQUAL "")
         find_program(_xvfb_run NAMES xvfb-run)
         if(_xvfb_run)
-            set(_exec_cmd "${_xvfb_run}" "--auto-servernum" "--server-args=-screen 0 1024x768x24" "${EXECUTABLE}" "${TEST_BASE}")
+            set(_exec_cmd "${_xvfb_run}" "--auto-servernum" "--server-args=-screen 0 1024x768x24 +extension GLX" "${EXECUTABLE}" "${TEST_BASE}")
         endif()
     endif()
+    # Enable full indirect rendering for Xvfb compatibility
+    # Enable direct rendering for GLX pixmaps (required on modern X servers)
+    set(ENV{COIN_FULL_INDIRECT_RENDERING} "1")
+    set(ENV{COIN_GLX_PIXMAP_DIRECT_RENDERING} "1")
 endif()
 
 # Run the example with the base name as argv[1]

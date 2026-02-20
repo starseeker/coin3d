@@ -155,6 +155,23 @@ else()
     list(APPEND COIN_TARGET_LINK_LIBRARIES_GL OpenGL::GL)
   endif()
 
+  # On Unix/Linux, detect GLX for offscreen rendering support
+  if(UNIX AND NOT APPLE)
+    find_package(X11 QUIET)
+    if(X11_FOUND AND X11_X11_LIB)
+      # Check for GLX support (required for offscreen rendering on Linux)
+      include(CheckIncludeFileCXX)
+      set(CMAKE_REQUIRED_INCLUDES ${X11_INCLUDE_DIR} ${OPENGL_INCLUDE_DIR})
+      check_include_file_cxx("GL/glx.h" HAVE_GLX_H)
+      if(HAVE_GLX_H)
+        set(HAVE_GLX 1)
+        list(APPEND COIN_TARGET_LINK_LIBRARIES_GL ${X11_X11_LIB})
+        list(APPEND COIN_TARGET_INCLUDE_DIRECTORIES ${X11_INCLUDE_DIR})
+        message(STATUS "GLX offscreen rendering support enabled")
+      endif()
+    endif()
+  endif()
+
   message(STATUS "Using system OpenGL")
 endif()
 

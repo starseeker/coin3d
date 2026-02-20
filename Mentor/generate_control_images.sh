@@ -101,10 +101,10 @@ EXAMPLES=(
     "07.1.BasicTexture"
     "07.2.TextureCoordinates"
     "07.3.TextureFunction"
-    "08.1.BSCurve"
-    "08.2.UniCurve"
-    "08.3.BezSurf"
-    "08.4.TrimSurf"
+    # "08.1.BSCurve"  # NURBS not available in this fork
+    # "08.2.UniCurve" # NURBS not available in this fork
+    # "08.3.BezSurf"  # NURBS not available in this fork
+    # "08.4.TrimSurf" # NURBS not available in this fork
     "09.1.Print"
     "09.2.Texture"
     "09.3.Search"
