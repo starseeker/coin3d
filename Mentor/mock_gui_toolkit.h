@@ -34,6 +34,7 @@
 #include <Inventor/actions/SoHandleEventAction.h>
 #include <cstdio>
 #include <cstdlib>
+#include <string>
 #include <vector>
 #include <functional>
 
@@ -233,6 +234,7 @@ public:
     // In real toolkit, this would show the editor window
     void show() { printf("MockMaterialEditor::show()\n"); }
     void hide() { printf("MockMaterialEditor::hide()\n"); }
+    void setTitle(const char* title) { m_title = title; printf("MockMaterialEditor::setTitle(\"%s\")\n", title); }
     
 protected:
     void notifyCallbacks() {
@@ -245,6 +247,7 @@ protected:
     SoMaterial* m_attachedMaterial;
     SoMaterial* m_currentMaterial;
     bool m_ignoreCallback;
+    std::string m_title;
     std::vector<CallbackInfo> m_callbacks;
 };
 

@@ -131,9 +131,10 @@ SoSeparator *makeStellatedDodecahedron(int bindingType)
             }
         }
     }
-    // For PER_FACE_INDEXED, set face material indices
+    // For PER_FACE_INDEXED, use a non-sequential mapping so the result
+    // is visually distinct from the PER_FACE case (reversed order here).
     else if (bindingType == 2) {
-        int32_t faceIndices[12] = {0,1,2,3,4,5,6,7,8,9,10,11};
+        int32_t faceIndices[12] = {11,10,9,8,7,6,5,4,3,2,1,0};
         myFaceSet->materialIndex.setValues(0, 12, faceIndices);
     }
     

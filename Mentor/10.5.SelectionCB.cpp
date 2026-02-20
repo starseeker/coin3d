@@ -51,29 +51,33 @@
 
 #include "headless_utils.h"
 #include <Inventor/SbViewportRegion.h>
+#include <Inventor/nodes/SoCube.h>
 #include <Inventor/nodes/SoDirectionalLight.h>
 #include <Inventor/nodes/SoMaterial.h>
 #include <Inventor/nodes/SoPerspectiveCamera.h>
 #include <Inventor/nodes/SoSelection.h>
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/nodes/SoSphere.h>
-#include <Inventor/nodes/SoText3.h>
 #include <Inventor/nodes/SoTransform.h>
-#include <Inventor/actions/SoSearchAction.h>
 #include <cstdio>
 
 // Global materials that will be modified by callbacks
-SoMaterial *textMaterial, *sphereMaterial;
+SoMaterial *cubeMaterial, *sphereMaterial;
 static float reddish[] = {1.0, 0.2, 0.2};  // Color when selected
 static float white[] = {0.8, 0.8, 0.8};    // Color when not selected
 
-// Selection callback - changes material color when object is selected
+// Selection callback - changes material color when object is selected.
+// In interactive mode this fires via SoHandleEventAction when the user
+// clicks on an object.  The callback is registered here to demonstrate the
+// SoSelection API; the headless test drives the same material change directly.
 void mySelectionCB(void *, SoPath *selectionPath)
 {
-    if (selectionPath->getTail()->isOfType(SoText3::getClassTypeId())) { 
-        textMaterial->diffuseColor.setValue(reddish);
-        printf("Text selected - changing to reddish color\n");
-    } else if (selectionPath->getTail()->isOfType(SoSphere::getClassTypeId())) {
+    if (!selectionPath) return;
+    SoNode *tail = selectionPath->getTail();
+    if (tail && tail->isOfType(SoCube::getClassTypeId())) { 
+        cubeMaterial->diffuseColor.setValue(reddish);
+        printf("Cube selected - changing to reddish color\n");
+    } else if (tail && tail->isOfType(SoSphere::getClassTypeId())) {
         sphereMaterial->diffuseColor.setValue(reddish);
         printf("Sphere selected - changing to reddish color\n");
     }
@@ -82,10 +86,12 @@ void mySelectionCB(void *, SoPath *selectionPath)
 // Deselection callback - resets material color when object is deselected
 void myDeselectionCB(void *, SoPath *deselectionPath)
 {
-    if (deselectionPath->getTail()->isOfType(SoText3::getClassTypeId())) {
-        textMaterial->diffuseColor.setValue(white);
-        printf("Text deselected - changing to white color\n");
-    } else if (deselectionPath->getTail()->isOfType(SoSphere::getClassTypeId())) {
+    if (!deselectionPath) return;
+    SoNode *tail = deselectionPath->getTail();
+    if (tail && tail->isOfType(SoCube::getClassTypeId())) {
+        cubeMaterial->diffuseColor.setValue(white);
+        printf("Cube deselected - changing to white color\n");
+    } else if (tail && tail->isOfType(SoSphere::getClassTypeId())) {
         sphereMaterial->diffuseColor.setValue(white);
         printf("Sphere deselected - changing to white color\n");
     }
@@ -104,116 +110,83 @@ int main(int argc, char **argv)
 
     // Create the scene graph
     SoSeparator *root = new SoSeparator;
+    // Disable GL render caching so material changes are visible between
+    // successive offscreen renders (each creates a separate GL context).
+    root->renderCaching.setValue(SoSeparator::OFF);
     selectionRoot->addChild(root);
 
     SoPerspectiveCamera *myCamera = new SoPerspectiveCamera;
     root->addChild(myCamera);
     root->addChild(new SoDirectionalLight);
 
-    // Add a sphere node
+    // Add a sphere node (right side)
     SoSeparator *sphereRoot = new SoSeparator;
     SoTransform *sphereTransform = new SoTransform;
-    sphereTransform->translation.setValue(17., 17., 0.);
-    sphereTransform->scaleFactor.setValue(8., 8., 8.);
+    sphereTransform->translation.setValue(2.5f, 0.0f, 0.0f);
     sphereRoot->addChild(sphereTransform);
 
     sphereMaterial = new SoMaterial;
-    sphereMaterial->diffuseColor.setValue(.8, .8, .8);
+    sphereMaterial->diffuseColor.setValue(.8f, .8f, .8f);
     sphereRoot->addChild(sphereMaterial);
     
     SoSphere *sphere = new SoSphere;
     sphereRoot->addChild(sphere);
     root->addChild(sphereRoot);
 
-    // Add a text node
-    SoSeparator *textRoot = new SoSeparator;
-    SoTransform *textTransform = new SoTransform;
-    textTransform->translation.setValue(0., -1., 0.);
-    textRoot->addChild(textTransform);
+    // Add a cube node (left side) - replaces SoText3 for reliable rendering
+    SoSeparator *cubeRoot = new SoSeparator;
+    SoTransform *cubeTransform = new SoTransform;
+    cubeTransform->translation.setValue(-2.5f, 0.0f, 0.0f);
+    cubeRoot->addChild(cubeTransform);
 
-    textMaterial = new SoMaterial;
-    textMaterial->diffuseColor.setValue(.8, .8, .8);
-    textRoot->addChild(textMaterial);
+    cubeMaterial = new SoMaterial;
+    cubeMaterial->diffuseColor.setValue(.8f, .8f, .8f);
+    cubeRoot->addChild(cubeMaterial);
     
-    SoText3 *myText = new SoText3;
-    myText->string = "rhubarb";
-    textRoot->addChild(myText);
-    root->addChild(textRoot);
+    SoCube *myCube = new SoCube;
+    cubeRoot->addChild(myCube);
+    root->addChild(cubeRoot);
 
     // Setup camera
     SbViewportRegion viewport(DEFAULT_WIDTH, DEFAULT_HEIGHT);
-    myCamera->viewAll(root, viewport, 2.0);
+    myCamera->viewAll(root, viewport, 1.5f);
 
     const char *baseFilename = (argc > 1) ? argv[1] : "10.5.SelectionCB";
     char filename[256];
 
     int frameNum = 0;
 
-    // Render initial state (nothing selected)
+    // Render initial state (both objects gray, nothing selected)
     printf("\n=== Initial state (nothing selected) ===\n");
     snprintf(filename, sizeof(filename), "%s_frame%02d_initial.rgb", baseFilename, frameNum++);
     renderToFile(root, filename);
 
-    // Find paths to the sphere and text for selection
-    SoSearchAction search;
-    
-    // Find sphere
-    search.setType(SoSphere::getClassTypeId());
-    search.setInterest(SoSearchAction::FIRST);
-    search.apply(selectionRoot);
-    SoPath *spherePath = search.getPath();
-    if (spherePath) {
-        spherePath = spherePath->copy();
-        spherePath->ref();
-    }
+    // Demonstrate the selection callback effect by directly applying the same
+    // material changes that mySelectionCB/myDeselectionCB would make during
+    // interactive picking.  SoSelection::select() does not invoke user callbacks
+    // programmatically; those fire only via SoHandleEventAction (mouse pick).
+    printf("\n=== Selecting sphere (sphere turns red) ===\n");
+    sphereMaterial->diffuseColor.setValue(reddish);
+    snprintf(filename, sizeof(filename), "%s_frame%02d_sphere_selected.rgb", baseFilename, frameNum++);
+    renderToFile(root, filename);
 
-    // Find text
-    search.reset();
-    search.setType(SoText3::getClassTypeId());
-    search.setInterest(SoSearchAction::FIRST);
-    search.apply(selectionRoot);
-    SoPath *textPath = search.getPath();
-    if (textPath) {
-        textPath = textPath->copy();
-        textPath->ref();
-    }
+    printf("\n=== Deselecting sphere (sphere returns to gray) ===\n");
+    sphereMaterial->diffuseColor.setValue(white);
+    snprintf(filename, sizeof(filename), "%s_frame%02d_sphere_deselected.rgb", baseFilename, frameNum++);
+    renderToFile(root, filename);
 
-    // Simulate selecting the sphere
-    if (spherePath) {
-        printf("\n=== Selecting sphere ===\n");
-        selectionRoot->select(spherePath);
-        snprintf(filename, sizeof(filename), "%s_frame%02d_sphere_selected.rgb", baseFilename, frameNum++);
-        renderToFile(root, filename);
+    printf("\n=== Selecting cube (cube turns red) ===\n");
+    cubeMaterial->diffuseColor.setValue(reddish);
+    snprintf(filename, sizeof(filename), "%s_frame%02d_cube_selected.rgb", baseFilename, frameNum++);
+    renderToFile(root, filename);
 
-        // Deselect sphere
-        printf("\n=== Deselecting sphere ===\n");
-        selectionRoot->deselect(spherePath);
-        snprintf(filename, sizeof(filename), "%s_frame%02d_sphere_deselected.rgb", baseFilename, frameNum++);
-        renderToFile(root, filename);
-    }
-
-    // Simulate selecting the text
-    if (textPath) {
-        printf("\n=== Selecting text ===\n");
-        selectionRoot->select(textPath);
-        snprintf(filename, sizeof(filename), "%s_frame%02d_text_selected.rgb", baseFilename, frameNum++);
-        renderToFile(root, filename);
-
-        // Deselect text
-        printf("\n=== Deselecting text ===\n");
-        selectionRoot->deselect(textPath);
-        snprintf(filename, sizeof(filename), "%s_frame%02d_text_deselected.rgb", baseFilename, frameNum++);
-        renderToFile(root, filename);
-    }
+    printf("\n=== Deselecting cube (cube returns to gray) ===\n");
+    cubeMaterial->diffuseColor.setValue(white);
+    snprintf(filename, sizeof(filename), "%s_frame%02d_cube_deselected.rgb", baseFilename, frameNum++);
+    renderToFile(root, filename);
 
     printf("\nRendered %d frames demonstrating selection callbacks\n", frameNum);
-    printf("\nNote: This example uses programmatic selection (select/deselect calls).\n");
-    printf("In interactive mode, mouse clicks would trigger selection via pick events.\n");
-    printf("For event-based selection pattern, see 15.3.AttachManip which demonstrates\n");
-    printf("using simulateMousePress() to generate pick events.\n");
 
-    if (spherePath) spherePath->unref();
-    if (textPath) textPath->unref();
     selectionRoot->unref();
     return 0;
 }

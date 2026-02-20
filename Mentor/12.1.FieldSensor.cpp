@@ -100,9 +100,17 @@ int main(int argc, char **argv)
     printf("\nRendering initial state...\n");
     renderToFile(root, filename);
 
-    // Change camera position and process sensors
+    // Change camera position and process sensors.
+    // After each position change, point the camera at the cube (origin) and
+    // set reasonable near/far distances so it stays in frame.
+    // The test's goal is to show that the POSITION changed (triggering the
+    // sensor callback).
+    SbViewportRegion vp(DEFAULT_WIDTH, DEFAULT_HEIGHT);
+    
     printf("\nChanging camera position 1...\n");
     camera->position.setValue(2, 3, 10);
+    camera->pointAt(SbVec3f(0, 0, 0));
+    camera->viewAll(root, vp);  // recalculate near/far for new position
     SoDB::getSensorManager()->processTimerQueue();
     SoDB::getSensorManager()->processDelayQueue(TRUE);
     snprintf(filename, sizeof(filename), "%s_pos1.rgb", baseFilename);
@@ -111,6 +119,8 @@ int main(int argc, char **argv)
     // Change camera position again
     printf("\nChanging camera position 2...\n");
     camera->position.setValue(-3, 2, 8);
+    camera->pointAt(SbVec3f(0, 0, 0));
+    camera->viewAll(root, vp);
     SoDB::getSensorManager()->processTimerQueue();
     SoDB::getSensorManager()->processDelayQueue(TRUE);
     snprintf(filename, sizeof(filename), "%s_pos2.rgb", baseFilename);
@@ -119,6 +129,8 @@ int main(int argc, char **argv)
     // Change camera position once more
     printf("\nChanging camera position 3...\n");
     camera->position.setValue(0, -4, 6);
+    camera->pointAt(SbVec3f(0, 0, 0));
+    camera->viewAll(root, vp);
     SoDB::getSensorManager()->processTimerQueue();
     SoDB::getSensorManager()->processDelayQueue(TRUE);
     snprintf(filename, sizeof(filename), "%s_pos3.rgb", baseFilename);

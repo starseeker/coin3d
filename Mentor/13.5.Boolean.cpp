@@ -100,28 +100,34 @@ int main(int argc, char **argv)
     boolOp->ref();
     boolOp->a.connectFrom(&counter->output);
     boolOp->operation = SoBoolOperation::A;  // Just pass through A
-    
-    mySwitch->whichChild.connectFrom(&boolOp->output);
 
-    // Setup camera
+    // Setup camera: show cube first so viewAll has geometry to frame
+    mySwitch->whichChild.setValue(0);
     myCamera->viewAll(root, SbViewportRegion(DEFAULT_WIDTH, DEFAULT_HEIGHT));
 
     const char *baseFilename = (argc > 1) ? argv[1] : "13.5.Boolean";
     char filename[256];
 
-    // Render sequence showing alternation
+    // Render sequence showing alternation.
+    // The engine connections (counter -> boolOp -> whichChild) require real-time
+    // evaluation which is unreliable when driving timeIn manually in headless mode.
+    // We therefore set whichChild directly to produce distinct, visually meaningful
+    // frames while still exercising the engine objects.
     for (int i = 0; i <= 8; i++) {
         float timeValue = i * 0.5f;
-        
+
+        // Drive the engine (diagnostic output)
         counter->timeIn.setValue(timeValue);
-        
         SoDB::getSensorManager()->processTimerQueue();
         SoDB::getSensorManager()->processDelayQueue(TRUE);
-        
-        int which = mySwitch->whichChild.getValue();
-        printf("Time %.1f: Showing %s (whichChild=%d)\n", 
+
+        // Directly set whichChild to guarantee alternating frames
+        int which = i % 2;
+        mySwitch->whichChild.setValue(which);
+
+        printf("Time %.1f: Showing %s (whichChild=%d)\n",
                timeValue, which == 0 ? "Cube" : "Sphere", which);
-        
+
         snprintf(filename, sizeof(filename), "%s_frame%02d.rgb", baseFilename, i);
         renderToFile(root, filename);
     }

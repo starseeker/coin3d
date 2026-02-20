@@ -37,10 +37,14 @@
 /*
  * Image comparison utility for testing headless rendering
  * 
- * Compares two SGI RGB format images using:
+ * Compares two images (SGI RGB or PNG format) using:
  * 1. Pixel-perfect comparison (exact match)
  * 2. Perceptual hash comparison (approximate match for rendering variations)
  * 
+ * PNG support: PNG files are decoded to raw RGB pixel data for comparison.
+ * This allows PNG-compressed control images to be compared against
+ * SGI RGB runtime output without any lossy conversion.
+ *
  * Returns 0 if images match within threshold, 1 otherwise
  */
 
@@ -50,6 +54,10 @@
 #include <cmath>
 #include <vector>
 #include <string>
+
+#ifdef HAVE_LIBPNG
+#include <png.h>
+#endif
 
 // Default thresholds - should match CMake defaults in CMakeLists.txt
 // IMAGE_COMPARISON_HASH_THRESHOLD and IMAGE_COMPARISON_RMSE_THRESHOLD
@@ -112,10 +120,10 @@ static bool read_rgb_header(FILE* fp, RGBHeader& header) {
 }
 
 // Read uncompressed RGB image data
+// SGI RGB stores data in planar format (all R, then G, then B) and rows
+// are ordered bottom-to-top. We convert to interleaved RGB and flip rows
+// to top-to-bottom so the layout matches PNG-decoded data for comparison.
 static bool read_rgb_data(FILE* fp, const RGBHeader& header, std::vector<unsigned char>& data) {
-    // SGI RGB stores data in planar format: all R, then all G, then all B
-    // We need to convert to interleaved RGB
-    
     int width = header.xsize;
     int height = header.ysize;
     int channels = header.zsize;
@@ -123,7 +131,7 @@ static bool read_rgb_data(FILE* fp, const RGBHeader& header, std::vector<unsigne
     data.resize(width * height * channels);
     
     if (header.storage == 0) {
-        // Verbatim (uncompressed)
+        // Verbatim (uncompressed): read each planar channel
         std::vector<unsigned char> plane_data(width * height);
         
         for (int c = 0; c < channels; c++) {
@@ -131,16 +139,18 @@ static bool read_rgb_data(FILE* fp, const RGBHeader& header, std::vector<unsigne
                 return false;
             }
             
-            // Convert planar to interleaved
-            for (int i = 0; i < width * height; i++) {
-                data[i * channels + c] = plane_data[i];
+            // Convert planar to interleaved, flipping rows so that row 0 in
+            // data[] is the top of the image (matching PNG row order).
+            // SGI RGB row 0 = bottom of image, so src_row = (height-1) - y.
+            for (int y = 0; y < height; y++) {
+                int src_row = (height - 1) - y;
+                for (int x = 0; x < width; x++) {
+                    data[(y * width + x) * channels + c] = plane_data[src_row * width + x];
+                }
             }
         }
     } else {
         fprintf(stderr, "Error: RLE compressed RGB files not supported.\n");
-        fprintf(stderr, "Please convert to uncompressed format using:\n");
-        fprintf(stderr, "  ImageMagick: convert input.rgb output.rgb\n");
-        fprintf(stderr, "  Or simage_convert if simage library is installed\n");
         return false;
     }
     
@@ -175,6 +185,100 @@ static bool load_rgb_image(const char* filename, int& width, int& height, int& c
     
     fclose(fp);
     return true;
+}
+
+// Load PNG image (decoded to interleaved RGB/RGBA pixel data)
+// Returns pixel data in the same interleaved format as load_rgb_image
+#ifdef HAVE_LIBPNG
+static bool load_png_image(const char* filename, int& width, int& height, int& channels,
+                           std::vector<unsigned char>& data) {
+    FILE* fp = fopen(filename, "rb");
+    if (!fp) {
+        fprintf(stderr, "Error: Cannot open file %s\n", filename);
+        return false;
+    }
+
+    // Check PNG signature
+    unsigned char sig[8];
+    if (fread(sig, 1, 8, fp) != 8 || png_sig_cmp(sig, 0, 8) != 0) {
+        fprintf(stderr, "Error: Not a valid PNG file: %s\n", filename);
+        fclose(fp);
+        return false;
+    }
+
+    png_structp png = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+    if (!png) {
+        fprintf(stderr, "Error: png_create_read_struct failed\n");
+        fclose(fp);
+        return false;
+    }
+
+    png_infop info = png_create_info_struct(png);
+    if (!info) {
+        fprintf(stderr, "Error: png_create_info_struct failed\n");
+        png_destroy_read_struct(&png, NULL, NULL);
+        fclose(fp);
+        return false;
+    }
+
+    if (setjmp(png_jmpbuf(png))) {
+        fprintf(stderr, "Error: PNG read error in %s\n", filename);
+        png_destroy_read_struct(&png, &info, NULL);
+        fclose(fp);
+        return false;
+    }
+
+    png_init_io(png, fp);
+    png_set_sig_bytes(png, 8);
+    png_read_info(png, info);
+
+    width = (int)png_get_image_width(png, info);
+    height = (int)png_get_image_height(png, info);
+    png_byte color_type = png_get_color_type(png, info);
+    png_byte bit_depth = png_get_bit_depth(png, info);
+
+    // Normalize to 8-bit RGB
+    if (bit_depth == 16)
+        png_set_strip_16(png);
+    if (color_type == PNG_COLOR_TYPE_PALETTE)
+        png_set_palette_to_rgb(png);
+    if (color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8)
+        png_set_expand_gray_1_2_4_to_8(png);
+    if (png_get_valid(png, info, PNG_INFO_tRNS))
+        png_set_tRNS_to_alpha(png);
+    // Strip alpha channel - we only want RGB for comparison with SGI RGB images
+    if (color_type == PNG_COLOR_TYPE_RGBA || color_type == PNG_COLOR_TYPE_GRAY_ALPHA)
+        png_set_strip_alpha(png);
+    // Convert grayscale to RGB
+    if (color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_GRAY_ALPHA)
+        png_set_gray_to_rgb(png);
+
+    png_read_update_info(png, info);
+    channels = (int)png_get_channels(png, info);
+
+    // Allocate row pointers and read image
+    std::vector<png_bytep> row_pointers(height);
+    int rowbytes = (int)png_get_rowbytes(png, info);
+    data.resize(height * rowbytes);
+    for (int y = 0; y < height; y++)
+        row_pointers[y] = data.data() + y * rowbytes;
+
+    png_read_image(png, row_pointers.data());
+    png_destroy_read_struct(&png, &info, NULL);
+    fclose(fp);
+    return true;
+}
+#endif /* HAVE_LIBPNG */
+
+// Determine file type by extension and load image accordingly
+static bool load_image(const char* filename, int& width, int& height, int& channels,
+                       std::vector<unsigned char>& data) {
+    const char* ext = strrchr(filename, '.');
+#ifdef HAVE_LIBPNG
+    if (ext && (strcmp(ext, ".png") == 0 || strcmp(ext, ".PNG") == 0))
+        return load_png_image(filename, width, height, channels, data);
+#endif
+    return load_rgb_image(filename, width, height, channels, data);
 }
 
 // Compute perceptual hash of an image
@@ -217,10 +321,15 @@ static unsigned long long compute_perceptual_hash(const std::vector<unsigned cha
     }
     unsigned char avg = sum / (HASH_SIZE * HASH_SIZE);
     
-    // Create hash
+    // Create hash: use strict > so that a uniform/black image (avg==0) produces
+    // hash 0 instead of all-1s.  The `>=` form would set all bits for an
+    // all-zero sample set (since 0 >= 0 is true), producing a spuriously large
+    // Hamming distance when compared against a nearly-identical image whose
+    // sampled pixels happen to hit one or two bright spots (raising the average
+    // above zero and suppressing those bits).
     unsigned long long hash = 0;
     for (int i = 0; i < HASH_SIZE * HASH_SIZE; i++) {
-        if (grayscale[i] >= avg) {
+        if (grayscale[i] > avg) {
             hash |= (1ULL << i);
         }
     }
@@ -257,7 +366,8 @@ static double compute_rmse(const std::vector<unsigned char>& data1,
 
 // Print usage
 static void print_usage(const char* prog) {
-    fprintf(stderr, "Usage: %s [options] <reference_image.rgb> <test_image.rgb>\n", prog);
+    fprintf(stderr, "Usage: %s [options] <reference_image> <test_image>\n", prog);
+    fprintf(stderr, "\nSupported formats: .rgb (SGI RGB), .png (PNG, requires libpng)\n");
     fprintf(stderr, "\nOptions:\n");
     fprintf(stderr, "  -t, --threshold <N>    Set perceptual hash threshold (0-64, default: 5)\n");
     fprintf(stderr, "                         Lower = stricter, Higher = more tolerant\n");
@@ -332,11 +442,11 @@ int main(int argc, char** argv) {
     int test_width, test_height, test_channels;
     std::vector<unsigned char> ref_data, test_data;
     
-    if (!load_rgb_image(ref_filename, ref_width, ref_height, ref_channels, ref_data)) {
+    if (!load_image(ref_filename, ref_width, ref_height, ref_channels, ref_data)) {
         return 2;
     }
     
-    if (!load_rgb_image(test_filename, test_width, test_height, test_channels, test_data)) {
+    if (!load_image(test_filename, test_width, test_height, test_channels, test_data)) {
         return 2;
     }
     

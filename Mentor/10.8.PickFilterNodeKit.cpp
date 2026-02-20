@@ -67,6 +67,7 @@
 #include <Inventor/actions/SoBoxHighlightRenderAction.h>
 #include <Inventor/nodekits/SoShapeKit.h>
 #include <Inventor/nodes/SoCube.h>
+#include <Inventor/nodes/SoGroup.h>
 #include <Inventor/nodes/SoMaterial.h>
 #include <Inventor/nodes/SoSelection.h>
 #include <Inventor/nodes/SoTransform.h>
@@ -109,7 +110,7 @@ SoNode *buildScene()
     for (int i = 0; i < 12; i++) {
         k = new SoShapeKit;
         k->setPart("shape", new SoCube);
-        xf = (SoTransform *) k->getPart("transform", TRUE);
+        xf = (SoTransform *) k->getPart("localTransform", TRUE);
         xf->translation.setValue(
             8.0f*sinf(i*float(M_PI)/6.0f), 
             8.0f*cosf(i*float(M_PI)/6.0f), 
@@ -157,7 +158,7 @@ void mtlChangeCB(void *userData, const SoMaterial *mtl)
     }
 }
 
-int main(int, char **argv)
+int main(int argc, char **argv)
 {
     printf("=== Mentor Example 10.8: Pick Filter for NodeKits ===\n");
     printf("This demonstrates toolkit-agnostic pick filtering and material editing\n");
@@ -188,6 +189,12 @@ int main(int, char **argv)
     // Add the scene content
     sel->addChild(buildScene());
 
+    // Position the camera to view all scene geometry with correct clipping planes
+    {
+        SbViewportRegion vp(800, 600);
+        camera->viewAll(sel, vp);
+    }
+
     // Create a mock viewer (in real toolkit, would be ExaminerViewer widget)
     printf("Creating mock examiner viewer...\n");
     MockExaminerViewer *viewer = new MockExaminerViewer(800, 600);
@@ -211,23 +218,28 @@ int main(int, char **argv)
     sel->addSelectionCallback(selectCB, &userData);
     
     printf("\nCallbacks registered. Now simulating user interactions...\n");
-    
+
+    const char *baseFilename = (argc > 1) ? argv[1] : "10.8.PickFilterNodeKit";
+    char filename[512];
+
     // Render initial scene
     printf("\n--- State 1: Initial scene (nothing selected) ---\n");
-    viewer->render("10.8.PickFilterNodeKit-initial.rgb");
+    snprintf(filename, sizeof(filename), "%s_initial.rgb", baseFilename);
+    viewer->render(filename);
     
     // Simulate picking a nodekit by path
     // In real toolkit, user would click with mouse
+    // Scene structure: sel -> camera(0), light(1), sceneGroup(2) -> shapekits(0..11)
+    SoGroup *sceneGroup = (SoGroup*)sel->getChild(2);
     printf("\n--- Simulating pick on nodekit 0 (top) ---\n");
     SoPath *path0 = new SoPath(sel);
-    path0->append(sel);
-    path0->append(sel->getChild(2));  // First shape kit after camera and light
-    SoShapeKit *shapeKit0 = (SoShapeKit*)sel->getChild(2);
-    path0->append(shapeKit0->getPart("shape", FALSE));
+    path0->append(sceneGroup);               // SoGroup from buildScene()
+    path0->append(sceneGroup->getChild(0));  // First SoShapeKit
     sel->select(path0);
     
     printf("--- State 2: Nodekit 0 selected (default material) ---\n");
-    viewer->render("10.8.PickFilterNodeKit-selected-default.rgb");
+    snprintf(filename, sizeof(filename), "%s_selected_default.rgb", baseFilename);
+    viewer->render(filename);
     
     // Simulate user changing material to red in editor
     printf("\n--- User changes material to red in editor ---\n");
@@ -241,21 +253,21 @@ int main(int, char **argv)
     redMtl->unref();
     
     printf("--- State 3: Selected nodekit now red ---\n");
-    viewer->render("10.8.PickFilterNodeKit-red.rgb");
+    snprintf(filename, sizeof(filename), "%s_red.rgb", baseFilename);
+    viewer->render(filename);
     
     // Select a different nodekit
     printf("\n--- Simulating pick on nodekit 3 (right side) ---\n");
     sel->deselectAll();
     SoPath *path3 = new SoPath(sel);
-    path3->append(sel);
-    path3->append(sel->getChild(5));  // Different shape kit
-    SoShapeKit *shapeKit3 = (SoShapeKit*)sel->getChild(5);
-    path3->append(shapeKit3->getPart("shape", FALSE));
+    path3->append(sceneGroup);               // SoGroup from buildScene()
+    path3->append(sceneGroup->getChild(3));  // 4th SoShapeKit
     sel->select(path3);
     
     printf("--- State 4: Different nodekit selected ---\n");
     printf("(Editor should sync to show this nodekit's material)\n");
-    viewer->render("10.8.PickFilterNodeKit-select-different.rgb");
+    snprintf(filename, sizeof(filename), "%s_select_different.rgb", baseFilename);
+    viewer->render(filename);
     
     // Change this one to blue
     printf("\n--- User changes this nodekit's material to blue ---\n");
@@ -269,7 +281,8 @@ int main(int, char **argv)
     blueMtl->unref();
     
     printf("--- State 5: Now have both red and blue nodekits ---\n");
-    viewer->render("10.8.PickFilterNodeKit-multiple-colors.rgb");
+    snprintf(filename, sizeof(filename), "%s_multiple_colors.rgb", baseFilename);
+    viewer->render(filename);
     
     // Select multiple nodekits
     printf("\n--- Selecting multiple nodekits ---\n");
@@ -277,14 +290,13 @@ int main(int, char **argv)
     sel->select(path0);
     
     SoPath *path6 = new SoPath(sel);
-    path6->append(sel);
-    path6->append(sel->getChild(8));  // Another shape kit
-    SoShapeKit *shapeKit6 = (SoShapeKit*)sel->getChild(8);
-    path6->append(shapeKit6->getPart("shape", FALSE));
+    path6->append(sceneGroup);               // SoGroup from buildScene()
+    path6->append(sceneGroup->getChild(6));  // 7th SoShapeKit
     sel->select(path6);
     
     printf("--- State 6: Multiple nodekits selected ---\n");
-    viewer->render("10.8.PickFilterNodeKit-multi-select.rgb");
+    snprintf(filename, sizeof(filename), "%s_multi_select.rgb", baseFilename);
+    viewer->render(filename);
     
     // Change material of all selected
     printf("\n--- User changes material to green (affects all selected) ---\n");
@@ -298,7 +310,8 @@ int main(int, char **argv)
     greenMtl->unref();
     
     printf("--- State 7: Multiple nodekits changed to green ---\n");
-    viewer->render("10.8.PickFilterNodeKit-multi-edit.rgb");
+    snprintf(filename, sizeof(filename), "%s_multi_edit.rgb", baseFilename);
+    viewer->render(filename);
 
     printf("\n=== Summary ===\n");
     printf("Generated 7 images showing pick filtering and material editing\n");

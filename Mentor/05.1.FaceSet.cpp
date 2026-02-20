@@ -53,30 +53,33 @@
 #include <cmath>
 #include <cstdio>
 
-// Eight polygons. The first four are triangles, the second four are quadrilaterals
+// Eight polygons. The first four are triangles, the second four are quadrilaterals.
+// Vertex Y coordinates are scaled and centred at the origin (y = -7.5 to +7.5)
+// so that rotateCamera() orbits correctly and the obelisk fills the views
+// with a proportional 2:1 height-to-base ratio.
 static const float vertices[28][3] =
 {
-   { 0, 30, 0}, {-2,27, 2}, { 2,27, 2},            //front tri
-   { 0, 30, 0}, {-2,27,-2}, {-2,27, 2},            //left  tri
-   { 0, 30, 0}, { 2,27,-2}, {-2,27,-2},            //rear  tri
-   { 0, 30, 0}, { 2,27, 2}, { 2,27,-2},            //right tri
-   {-2, 27, 2}, {-4,0, 4}, { 4,0, 4}, { 2,27, 2},  //front quad
-   {-2, 27,-2}, {-4,0,-4}, {-4,0, 4}, {-2,27, 2},  //left  quad
-   { 2, 27,-2}, { 4,0,-4}, {-4,0,-4}, {-2,27,-2},  //rear  quad
-   { 2, 27, 2}, { 4,0, 4}, { 4,0,-4}, { 2,27,-2}   //right quad
+   { 0,  7.5f, 0}, {-2, 6, 2}, { 2, 6, 2},            //front tri
+   { 0,  7.5f, 0}, {-2, 6,-2}, {-2, 6, 2},            //left  tri
+   { 0,  7.5f, 0}, { 2, 6,-2}, {-2, 6,-2},            //rear  tri
+   { 0,  7.5f, 0}, { 2, 6, 2}, { 2, 6,-2},            //right tri
+   {-2,  6, 2}, {-4,-7.5f, 4}, { 4,-7.5f, 4}, { 2, 6, 2},  //front quad
+   {-2,  6,-2}, {-4,-7.5f,-4}, {-4,-7.5f, 4}, {-2, 6, 2},  //left  quad
+   { 2,  6,-2}, { 4,-7.5f,-4}, {-4,-7.5f,-4}, {-2, 6,-2},  //rear  quad
+   { 2,  6, 2}, { 4,-7.5f, 4}, { 4,-7.5f,-4}, { 2, 6,-2}   //right quad
 };
 
 // Number of vertices in each polygon
 static int32_t numvertices[8] = {3, 3, 3, 3, 4, 4, 4, 4};
 
-// Normals for each polygon
+// Normals for each polygon (recalculated for the scaled vertex positions)
 static const float norms[8][3] =
 { 
-   {0, .555,  .832}, {-.832, .555, 0}, //front, left tris
-   {0, .555, -.832}, { .832, .555, 0}, //rear, right tris
+   {0, .8f,  .6f}, {-.6f, .8f, 0}, //front, left tris
+   {0, .8f, -.6f}, { .6f, .8f, 0}, //rear, right tris
    
-   {0, .0739,  .9973}, {-.9972, .0739, 0},//front, left quads
-   {0, .0739, -.9973}, { .9972, .0739, 0},//rear, right quads
+   {0, .1466f,  .9892f}, {-.9892f, .1466f, 0},//front, left quads
+   {0, .1466f, -.9892f}, { .9892f, .1466f, 0},//rear, right quads
 };
 
 SoSeparator *makeObeliskFaceSet()
@@ -93,9 +96,9 @@ SoSeparator *makeObeliskFaceSet()
     myNormalBinding->value = SoNormalBinding::PER_FACE;
     obelisk->addChild(myNormalBinding);
 
-    // Define material for obelisk
+    // Define material for obelisk (warm sandstone tone for good contrast)
     SoMaterial *myMaterial = new SoMaterial;
-    myMaterial->diffuseColor.setValue(.4, .4, .4);
+    myMaterial->diffuseColor.setValue(.75f, .60f, .35f);
     obelisk->addChild(myMaterial);
 
     // Define coordinates for vertices
@@ -120,10 +123,16 @@ int main(int argc, char **argv)
     SoSeparator *root = new SoSeparator;
     root->ref();
 
-    // Add camera and light
+    // Add camera and two lights (key + fill) so no face is completely black
     SoPerspectiveCamera *camera = new SoPerspectiveCamera;
     root->addChild(camera);
-    root->addChild(new SoDirectionalLight);
+    SoDirectionalLight *keyLight = new SoDirectionalLight;
+    keyLight->direction.setValue(-1, -1, -1);
+    root->addChild(keyLight);
+    SoDirectionalLight *fillLight = new SoDirectionalLight;
+    fillLight->direction.setValue(1, 0.5, 1);
+    fillLight->intensity = 0.4f;
+    root->addChild(fillLight);
 
     root->addChild(makeObeliskFaceSet());
 
@@ -133,18 +142,21 @@ int main(int argc, char **argv)
     const char *baseFilename = (argc > 1) ? argv[1] : "05.1.FaceSet";
     char filename[256];
 
-    // Front view
+    // Front view – slight elevation so the apex is visible
+    camera->viewAll(root, SbViewportRegion(DEFAULT_WIDTH, DEFAULT_HEIGHT));
+    rotateCamera(camera, 0, M_PI / 8);
     snprintf(filename, sizeof(filename), "%s_front.rgb", baseFilename);
     renderToFile(root, filename);
 
-    // Side view
-    rotateCamera(camera, M_PI / 2, 0);
+    // Side view – 3/4 angle from the left with elevation
+    camera->viewAll(root, SbViewportRegion(DEFAULT_WIDTH, DEFAULT_HEIGHT));
+    rotateCamera(camera, M_PI / 3, M_PI / 8);
     snprintf(filename, sizeof(filename), "%s_side.rgb", baseFilename);
     renderToFile(root, filename);
 
-    // Angled view
+    // Angled view – isometric-like vantage from above-left
     camera->viewAll(root, SbViewportRegion(DEFAULT_WIDTH, DEFAULT_HEIGHT));
-    rotateCamera(camera, M_PI / 4, M_PI / 6);
+    rotateCamera(camera, M_PI / 4, M_PI / 5);
     snprintf(filename, sizeof(filename), "%s_angle.rgb", baseFilename);
     renderToFile(root, filename);
 

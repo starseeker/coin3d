@@ -4,12 +4,21 @@
  * This provides common functionality for converting interactive
  * Mentor examples to headless, offscreen rendering tests that
  * produce reference images for validation.
+ *
+ * Backend selection (compile-time):
+ *   COIN3D_OSMESA_BUILD: use OSMesa for truly headless operation
+ *   default:             use system OpenGL (GLX on Linux) with Xvfb
+ *
+ * Both paths require a SoDB::ContextManager since this Coin fork's
+ * SoDB::init() always requires one.
  */
 
 #ifndef HEADLESS_UTILS_H
 #define HEADLESS_UTILS_H
 
 #include <Inventor/SoDB.h>
+#include <Inventor/nodekits/SoNodeKit.h>
+#include <Inventor/SoInteraction.h>
 #include <Inventor/SoOffscreenRenderer.h>
 #include <Inventor/SbViewportRegion.h>
 #include <Inventor/nodes/SoNode.h>
@@ -27,22 +36,18 @@
 #include <cstdio>
 #include <cstring>
 #include <cmath>
-#include <memory>
 
 // Default image dimensions
 #define DEFAULT_WIDTH 800
 #define DEFAULT_HEIGHT 600
 
-// ============================================================================
-// Context Management: Adapts to how Coin was compiled
-// ============================================================================
-
 #ifdef COIN3D_OSMESA_BUILD
-// ----------------------------------------------------------------------------
+// ============================================================================
 // OSMesa Backend: For offscreen/headless rendering without display server
-// ----------------------------------------------------------------------------
+// ============================================================================
 #include <OSMesa/osmesa.h>
 #include <OSMesa/gl.h>
+#include <memory>
 
 // OSMesa context structure for offscreen rendering
 struct CoinOSMesaContext {
@@ -68,7 +73,7 @@ struct CoinOSMesaContext {
     bool isValid() const { return context != nullptr; }
 };
 
-// OSMesa context manager implementation for Coin
+// OSMesa context manager for Coin
 class CoinHeadlessContextManager : public SoDB::ContextManager {
 public:
     virtual void* createOffscreenContext(unsigned int width, unsigned int height) override {
@@ -81,7 +86,6 @@ public:
     }
     
     virtual void restorePreviousContext(void* context) override {
-        // OSMesa doesn't require explicit context switching for single-threaded use
         (void)context;
     }
     
@@ -90,81 +94,21 @@ public:
     }
 };
 
-#else
-// ----------------------------------------------------------------------------
-// System OpenGL Backend: For rendering with platform OpenGL (GLX/WGL/CGL)
-// ----------------------------------------------------------------------------
-#ifdef HAVE_WINDOWS_H
-#include <windows.h>
-#include <GL/gl.h>
-#else
-#include <GL/gl.h>
-#endif
-
-// Note: When Coin is built with system OpenGL, applications must ensure
-// an OpenGL context is available. For truly headless operation (no display),
-// build Coin with OSMesa instead (COIN3D_USE_OSMESA=ON).
-// 
-// This stub allows examples to compile with system OpenGL builds but they
-// will fail at runtime if no display server is available.
-
-// Stub context manager for system OpenGL builds
-class CoinHeadlessContextManager : public SoDB::ContextManager {
-public:
-    virtual void* createOffscreenContext(unsigned int width, unsigned int height) override {
-        // System OpenGL builds rely on Coin's internal context management
-        // which typically requires a display server (X11, Wayland, etc.)
-        (void)width;
-        (void)height;
-        fprintf(stderr, 
-            "Warning: Examples compiled with system OpenGL build.\n"
-            "Offscreen rendering requires a display server or building Coin with OSMesa.\n"
-            "For headless operation, rebuild Coin with -DCOIN3D_USE_OSMESA=ON\n");
-        return nullptr;
-    }
-    
-    virtual SbBool makeContextCurrent(void* context) override {
-        (void)context;
-        return FALSE;
-    }
-    
-    virtual void restorePreviousContext(void* context) override {
-        (void)context;
-    }
-    
-    virtual void destroyContext(void* context) override {
-        (void)context;
-    }
-};
-
-#endif // COIN3D_OSMESA_BUILD
-
 /**
- * Initialize Coin database for headless operation
- * Adapts to how Coin was compiled (OSMesa or system OpenGL)
+ * Initialize Coin database for headless operation (OSMesa backend)
  */
 inline void initCoinHeadless() {
     static CoinHeadlessContextManager context_manager;
     SoDB::init(&context_manager);
-    
-#ifdef COIN3D_OSMESA_BUILD
-    printf("Coin examples initialized with OSMesa backend for headless rendering\n");
-#else
-    printf("Coin examples initialized with system OpenGL backend (requires display)\n");
-#endif
+    SoNodeKit::init();
+    SoInteraction::init();
 }
 
 /**
- * Render a scene to an image file
- * @param root Scene graph root
- * @param filename Output filename (extension determines format: .png, .jpg, .rgb)
- * @param width Image width
- * @param height Image height
- * @param backgroundColor Background color (default: black)
- * @return true if successful
+ * Render a scene to an image file (OSMesa backend).
  */
 inline bool renderToFile(
-    SoNode *root, 
+    SoNode *root,
     const char *filename,
     int width = DEFAULT_WIDTH,
     int height = DEFAULT_HEIGHT,
@@ -175,19 +119,16 @@ inline bool renderToFile(
         return false;
     }
 
-    // Create viewport and renderer
     SbViewportRegion viewport(width, height);
     SoOffscreenRenderer renderer(viewport);
     renderer.setComponents(SoOffscreenRenderer::RGB);
     renderer.setBackgroundColor(backgroundColor);
 
-    // Render the scene
     if (!renderer.render(root)) {
         fprintf(stderr, "Error: Failed to render scene\n");
         return false;
     }
 
-    // Write to file - use writeToRGB for SGI RGB format (doesn't need simage)
     if (!renderer.writeToRGB(filename)) {
         fprintf(stderr, "Error: Failed to write to RGB file %s\n", filename);
         return false;
@@ -197,10 +138,288 @@ inline bool renderToFile(
     return true;
 }
 
+#else // !COIN3D_OSMESA_BUILD
+// ============================================================================
+// System OpenGL Backend: GLX on Linux (use Xvfb for headless operation)
+// ============================================================================
+#ifdef __unix__
+#include <X11/Xlib.h>
+#include <GL/glx.h>
+#endif
+
+#ifdef __unix__
+// GLX offscreen context (pbuffer or pixmap)
+struct GLXOffscreenCtx {
+    Display  *dpy;
+    int       width, height;
+    GLXContext ctx;
+    // pbuffer approach
+    GLXPbuffer   pbuffer;
+    GLXFBConfig  fbconfig;
+    bool         use_pbuffer;
+    // pixmap fallback
+    Pixmap       xpixmap;
+    GLXPixmap    glxpixmap;
+    XVisualInfo *vi;
+    // restore state
+    GLXContext   prev_ctx;
+    GLXDrawable  prev_draw;
+    GLXDrawable  prev_read;
+};
+
+/**
+ * GLX context manager for system OpenGL headless rendering.
+ * Requires a running X server (real or Xvfb).
+ * Set COIN_GLXGLUE_NO_PBUFFERS=1 to skip pbuffer and use pixmap fallback.
+ * Set COIN_GLX_PIXMAP_DIRECT_RENDERING=1 to request direct rendering.
+ */
+class GLXContextManager : public SoDB::ContextManager {
+public:
+    GLXContextManager() : m_dpy(nullptr) {}
+
+    virtual ~GLXContextManager() {
+        if (m_dpy) {
+            XCloseDisplay(m_dpy);
+            m_dpy = nullptr;
+        }
+    }
+
+    virtual void* createOffscreenContext(unsigned int width, unsigned int height) override {
+        Display *dpy = getDisplay();
+        if (!dpy) return nullptr;
+        int screen = DefaultScreen(dpy);
+
+        GLXOffscreenCtx *ctx = new GLXOffscreenCtx;
+        ctx->dpy        = dpy;
+        ctx->width      = width;
+        ctx->height     = height;
+        ctx->ctx        = nullptr;
+        ctx->pbuffer    = 0;
+        ctx->use_pbuffer = false;
+        ctx->xpixmap    = 0;
+        ctx->glxpixmap  = 0;
+        ctx->vi         = nullptr;
+        ctx->prev_ctx   = nullptr;
+        ctx->prev_draw  = 0;
+        ctx->prev_read  = 0;
+
+        bool no_pbuffer = false;
+        const char *env = getenv("COIN_GLXGLUE_NO_PBUFFERS");
+        if (env && env[0] != '0') no_pbuffer = true;
+
+        if (!no_pbuffer) {
+            int fbattribs[] = {
+                GLX_DRAWABLE_TYPE, GLX_PBUFFER_BIT,
+                GLX_RENDER_TYPE,   GLX_RGBA_BIT,
+                GLX_RED_SIZE,   8, GLX_GREEN_SIZE, 8, GLX_BLUE_SIZE, 8,
+                GLX_DEPTH_SIZE, 16,
+                GLX_DOUBLEBUFFER, False,
+                None
+            };
+            int nfb = 0;
+            GLXFBConfig *fbcfgs = glXChooseFBConfig(dpy, screen, fbattribs, &nfb);
+            if (fbcfgs && nfb > 0) {
+                int pbattribs[] = {
+                    GLX_PBUFFER_WIDTH,  (int)width,
+                    GLX_PBUFFER_HEIGHT, (int)height,
+                    GLX_PRESERVED_CONTENTS, False,
+                    None
+                };
+                ctx->fbconfig = fbcfgs[0];
+                ctx->pbuffer  = glXCreatePbuffer(dpy, fbcfgs[0], pbattribs);
+                if (ctx->pbuffer) {
+                    // Pbuffers require direct rendering; always use True
+                    ctx->ctx = glXCreateNewContext(dpy, fbcfgs[0], GLX_RGBA_TYPE, nullptr, True);
+                    if (ctx->ctx) {
+                        ctx->use_pbuffer = true;
+                        XFree(fbcfgs);
+                        return ctx;
+                    }
+                    glXDestroyPbuffer(dpy, ctx->pbuffer);
+                    ctx->pbuffer = 0;
+                }
+                XFree(fbcfgs);
+            }
+        }
+
+        // Fallback: Pixmap
+        // Modern X servers disable indirect rendering (BadValue from X_GLXCreateContext
+        // when direct=False). Check COIN_GLX_PIXMAP_DIRECT_RENDERING to use direct.
+        Bool direct = False;
+        const char *dr = getenv("COIN_GLX_PIXMAP_DIRECT_RENDERING");
+        if (dr && dr[0] != '0') direct = True;
+
+        int vattribs[] = {
+            GLX_RGBA, GLX_RED_SIZE, 8, GLX_GREEN_SIZE, 8, GLX_BLUE_SIZE, 8,
+            GLX_DEPTH_SIZE, 16, None
+        };
+        ctx->vi = glXChooseVisual(dpy, screen, vattribs);
+        if (!ctx->vi) { delete ctx; return nullptr; }
+
+        ctx->xpixmap = XCreatePixmap(dpy, RootWindow(dpy, screen),
+                                     width, height, ctx->vi->depth);
+        if (!ctx->xpixmap) { XFree(ctx->vi); delete ctx; return nullptr; }
+
+        ctx->glxpixmap = glXCreateGLXPixmap(dpy, ctx->vi, ctx->xpixmap);
+        ctx->ctx       = glXCreateContext(dpy, ctx->vi, nullptr, direct);
+
+        if (!ctx->ctx && !direct) {
+            // If indirect failed, retry with direct rendering
+            ctx->ctx = glXCreateContext(dpy, ctx->vi, nullptr, True);
+        }
+
+        if (!ctx->ctx || !ctx->glxpixmap) {
+            if (ctx->glxpixmap) glXDestroyGLXPixmap(dpy, ctx->glxpixmap);
+            if (ctx->xpixmap)   XFreePixmap(dpy, ctx->xpixmap);
+            XFree(ctx->vi);
+            delete ctx;
+            return nullptr;
+        }
+        return ctx;
+    }
+
+    virtual SbBool makeContextCurrent(void* context) override {
+        GLXOffscreenCtx *ctx = static_cast<GLXOffscreenCtx*>(context);
+        if (!ctx || !ctx->ctx) return FALSE;
+
+        ctx->prev_ctx  = glXGetCurrentContext();
+        ctx->prev_draw = glXGetCurrentDrawable();
+        ctx->prev_read = glXGetCurrentReadDrawable();
+
+        Bool ok = ctx->use_pbuffer
+            ? glXMakeCurrent(ctx->dpy, ctx->pbuffer, ctx->ctx)
+            : glXMakeCurrent(ctx->dpy, ctx->glxpixmap, ctx->ctx);
+        return ok ? TRUE : FALSE;
+    }
+
+    virtual void restorePreviousContext(void* context) override {
+        GLXOffscreenCtx *ctx = static_cast<GLXOffscreenCtx*>(context);
+        if (!ctx) return;
+        if (ctx->prev_ctx)
+            glXMakeCurrent(ctx->dpy, ctx->prev_draw, ctx->prev_ctx);
+        else
+            glXMakeCurrent(ctx->dpy, None, nullptr);
+    }
+
+    virtual void destroyContext(void* context) override {
+        GLXOffscreenCtx *ctx = static_cast<GLXOffscreenCtx*>(context);
+        if (!ctx) return;
+        glXMakeCurrent(ctx->dpy, None, nullptr);
+        if (ctx->ctx) glXDestroyContext(ctx->dpy, ctx->ctx);
+        if (ctx->use_pbuffer) {
+            if (ctx->pbuffer) glXDestroyPbuffer(ctx->dpy, ctx->pbuffer);
+        } else {
+            if (ctx->glxpixmap) glXDestroyGLXPixmap(ctx->dpy, ctx->glxpixmap);
+            if (ctx->xpixmap)   XFreePixmap(ctx->dpy, ctx->xpixmap);
+            if (ctx->vi)        XFree(ctx->vi);
+        }
+        delete ctx;
+    }
+
+private:
+    Display *m_dpy;
+
+    Display* getDisplay() {
+        if (!m_dpy) {
+            m_dpy = XOpenDisplay(nullptr);
+            if (!m_dpy) {
+                fprintf(stderr,
+                    "GLXContextManager: Cannot open X display. "
+                    "Make sure DISPLAY is set (run under Xvfb).\n");
+            }
+        }
+        return m_dpy;
+    }
+};
+#endif // __unix__
+
+/**
+ * Initialize Coin database for headless operation (system OpenGL backend).
+ *
+ * On X11 systems, a non-exiting X error handler is installed to prevent
+ * spurious BadMatch errors from Mesa/llvmpipe from aborting the process.
+ * A GLXContextManager is provided so SoDB::init() gets a valid context manager.
+ */
+inline void initCoinHeadless() {
+#ifdef __unix__
+    XSetErrorHandler([](Display *, XErrorEvent *err) -> int {
+        fprintf(stderr, "Coin headless: X error ignored (code=%d opcode=%d/%d)\n",
+                (int)err->error_code, (int)err->request_code, (int)err->minor_code);
+        return 0;
+    });
+    static GLXContextManager glx_context_manager;
+    SoDB::init(&glx_context_manager);
+#else
+    // Non-Unix: provide a stub context manager (rendering may not work)
+    class StubContextManager : public SoDB::ContextManager {
+    public:
+        virtual void* createOffscreenContext(unsigned int, unsigned int) override { return nullptr; }
+        virtual SbBool makeContextCurrent(void*) override { return FALSE; }
+        virtual void restorePreviousContext(void*) override {}
+        virtual void destroyContext(void*) override {}
+    };
+    static StubContextManager stub;
+    SoDB::init(&stub);
+#endif
+    SoNodeKit::init();
+    SoInteraction::init();
+}
+
+/**
+ * Return the single persistent offscreen renderer shared by all headless
+ * examples.
+ *
+ * Only ONE GLX offscreen context can be successfully created per process in
+ * Mesa/llvmpipe headless environments.  Sharing a single renderer object
+ * across all render calls avoids this limitation.
+ */
+inline SoOffscreenRenderer* getSharedRenderer() {
+    static SoOffscreenRenderer *s_renderer = nullptr;
+    if (!s_renderer) {
+        SbViewportRegion vp(DEFAULT_WIDTH, DEFAULT_HEIGHT);
+        s_renderer = new SoOffscreenRenderer(vp);
+    }
+    return s_renderer;
+}
+
+/**
+ * Render a scene to an image file (system OpenGL backend).
+ * Uses the shared renderer to avoid GLX context recreation issues.
+ */
+inline bool renderToFile(
+    SoNode *root,
+    const char *filename,
+    int width = DEFAULT_WIDTH,
+    int height = DEFAULT_HEIGHT,
+    const SbColor &backgroundColor = SbColor(0.0f, 0.0f, 0.0f))
+{
+    if (!root || !filename) {
+        fprintf(stderr, "Error: Invalid parameters to renderToFile\n");
+        return false;
+    }
+
+    SoOffscreenRenderer *renderer = getSharedRenderer();
+    renderer->setComponents(SoOffscreenRenderer::RGB);
+    renderer->setBackgroundColor(backgroundColor);
+
+    if (!renderer->render(root)) {
+        fprintf(stderr, "Error: Failed to render scene\n");
+        return false;
+    }
+
+    if (!renderer->writeToRGB(filename)) {
+        fprintf(stderr, "Error: Failed to write to RGB file %s\n", filename);
+        return false;
+    }
+
+    printf("Successfully rendered to %s (%dx%d)\n", filename, width, height);
+    return true;
+}
+
+#endif // COIN3D_OSMESA_BUILD
+
 /**
  * Find camera in scene graph
- * @param root Scene graph root
- * @return First camera found, or NULL
  */
 inline SoCamera* findCamera(SoNode *root) {
     SoSearchAction search;
@@ -216,8 +435,6 @@ inline SoCamera* findCamera(SoNode *root) {
 
 /**
  * Ensure scene has a camera, add one if missing
- * @param root Scene graph separator (must be SoSeparator or compatible)
- * @return Camera in scene (existing or newly added)
  */
 inline SoCamera* ensureCamera(SoSeparator *root) {
     SoCamera *camera = findCamera(root);
@@ -225,7 +442,6 @@ inline SoCamera* ensureCamera(SoSeparator *root) {
         return camera;
     }
     
-    // Add a default perspective camera
     SoPerspectiveCamera *newCam = new SoPerspectiveCamera;
     root->insertChild(newCam, 0);
     return newCam;
@@ -233,7 +449,6 @@ inline SoCamera* ensureCamera(SoSeparator *root) {
 
 /**
  * Ensure scene has a light, add one if missing
- * @param root Scene graph separator
  */
 inline void ensureLight(SoSeparator *root) {
     SoSearchAction search;
@@ -242,9 +457,7 @@ inline void ensureLight(SoSeparator *root) {
     search.apply(root);
     
     if (!search.getPath()) {
-        // Add a default directional light
         SoDirectionalLight *light = new SoDirectionalLight;
-        // Insert after camera (if exists) or at beginning
         SoCamera *cam = findCamera(root);
         int insertPos = 0;
         if (cam) {
@@ -261,9 +474,6 @@ inline void ensureLight(SoSeparator *root) {
 
 /**
  * Setup camera to view entire scene
- * @param root Scene graph root
- * @param camera Camera to position
- * @param viewport Viewport region for aspect ratio
  */
 inline void viewAll(SoNode *root, SoCamera *camera, const SbViewportRegion &viewport) {
     if (!camera) return;
@@ -271,34 +481,46 @@ inline void viewAll(SoNode *root, SoCamera *camera, const SbViewportRegion &view
 }
 
 /**
- * Rotate camera around scene by specified angles
- * @param camera Camera to rotate
- * @param azimuth Horizontal rotation in radians
- * @param elevation Vertical rotation in radians
+ * Orbit camera around the scene center by specified angles.
+ *
+ * The camera position is moved along the surface of a sphere centered at the
+ * origin (the default target of viewAll()), keeping the camera pointed at the
+ * center. This produces correct non-blank images for side/angle views even
+ * when the scene is small relative to the camera distance.
+ *
+ * @param camera   Camera to reposition
+ * @param azimuth  Horizontal orbit angle in radians (around world Y axis)
+ * @param elevation Vertical orbit angle in radians (positive = higher vantage)
  */
 inline void rotateCamera(SoCamera *camera, float azimuth, float elevation) {
     if (!camera) return;
-    
-    // Get current position and orientation
-    SbVec3f position = camera->position.getValue();
-    SbRotation orientation = camera->orientation.getValue();
-    
-    // Create rotation around Y axis (azimuth) and X axis (elevation)
-    SbRotation azimuthRot(SbVec3f(0, 1, 0), azimuth);
-    SbRotation elevationRot(SbVec3f(1, 0, 0), elevation);
-    
-    // Apply rotations
-    SbRotation newOrientation = orientation * azimuthRot * elevationRot;
-    camera->orientation.setValue(newOrientation);
+
+    const SbVec3f center(0.0f, 0.0f, 0.0f);
+    SbVec3f offset = camera->position.getValue() - center;
+
+    SbRotation azimuthRot(SbVec3f(0.0f, 1.0f, 0.0f), azimuth);
+    azimuthRot.multVec(offset, offset);
+
+    SbVec3f viewDir = -offset;
+    viewDir.normalize();
+    SbVec3f up(0.0f, 1.0f, 0.0f);
+    SbVec3f rightVec = up.cross(viewDir);
+    float rLen = rightVec.length();
+    if (rLen < 1e-4f) {
+        rightVec = SbVec3f(1.0f, 0.0f, 0.0f);
+    } else {
+        rightVec *= (1.0f / rLen);
+    }
+
+    SbRotation elevationRot(rightVec, elevation);
+    elevationRot.multVec(offset, offset);
+
+    camera->position.setValue(center + offset);
+    camera->pointAt(center, SbVec3f(0.0f, 1.0f, 0.0f));
 }
 
 /**
  * Simulate a mouse button press event
- * @param root Scene graph root
- * @param viewport Viewport region
- * @param x Screen X coordinate (pixels)
- * @param y Screen Y coordinate (pixels)
- * @param button Mouse button (default: BUTTON1)
  */
 inline void simulateMousePress(
     SoNode *root,
@@ -319,11 +541,6 @@ inline void simulateMousePress(
 
 /**
  * Simulate a mouse button release event
- * @param root Scene graph root
- * @param viewport Viewport region
- * @param x Screen X coordinate (pixels)
- * @param y Screen Y coordinate (pixels)
- * @param button Mouse button (default: BUTTON1)
  */
 inline void simulateMouseRelease(
     SoNode *root,
@@ -344,10 +561,6 @@ inline void simulateMouseRelease(
 
 /**
  * Simulate mouse motion event
- * @param root Scene graph root
- * @param viewport Viewport region
- * @param x Screen X coordinate (pixels)
- * @param y Screen Y coordinate (pixels)
  */
 inline void simulateMouseMotion(
     SoNode *root,
@@ -365,14 +578,6 @@ inline void simulateMouseMotion(
 
 /**
  * Simulate a mouse drag gesture from start to end position
- * @param root Scene graph root
- * @param viewport Viewport region
- * @param startX Start X coordinate
- * @param startY Start Y coordinate
- * @param endX End X coordinate
- * @param endY End Y coordinate
- * @param steps Number of intermediate steps (default: 10)
- * @param button Mouse button (default: BUTTON1)
  */
 inline void simulateMouseDrag(
     SoNode *root,
@@ -382,10 +587,8 @@ inline void simulateMouseDrag(
     int steps = 10,
     SoMouseButtonEvent::Button button = SoMouseButtonEvent::BUTTON1)
 {
-    // Initial press
     simulateMousePress(root, viewport, startX, startY, button);
     
-    // Simulate dragging with intermediate motion events
     for (int i = 1; i <= steps; i++) {
         float t = (float)i / (float)steps;
         int x = (int)(startX + t * (endX - startX));
@@ -393,15 +596,11 @@ inline void simulateMouseDrag(
         simulateMouseMotion(root, viewport, x, y);
     }
     
-    // Final release
     simulateMouseRelease(root, viewport, endX, endY, button);
 }
 
 /**
  * Simulate a keyboard key press event
- * @param root Scene graph root
- * @param viewport Viewport region
- * @param key Key to press
  */
 inline void simulateKeyPress(
     SoNode *root,
@@ -420,9 +619,6 @@ inline void simulateKeyPress(
 
 /**
  * Simulate a keyboard key release event
- * @param root Scene graph root
- * @param viewport Viewport region
- * @param key Key to release
  */
 inline void simulateKeyRelease(
     SoNode *root,

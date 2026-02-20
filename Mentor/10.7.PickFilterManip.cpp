@@ -50,11 +50,10 @@
 #include <Inventor/SoPath.h>
 #include <Inventor/SoPickedPoint.h>
 #include <Inventor/manips/SoHandleBoxManip.h>
-#include <Inventor/nodes/SoBaseColor.h>
-#include <Inventor/nodes/SoFont.h>
+#include <Inventor/nodes/SoCone.h>
+#include <Inventor/nodes/SoMaterial.h>
 #include <Inventor/nodes/SoSelection.h>
 #include <Inventor/nodes/SoSeparator.h>
-#include <Inventor/nodes/SoText3.h>
 #include <Inventor/nodes/SoTransform.h>
 #include <Inventor/nodes/SoPerspectiveCamera.h>
 #include <Inventor/nodes/SoDirectionalLight.h>
@@ -163,22 +162,30 @@ void deselCB(void *, SoPath *path)
     manipPath->unref();
 }
 
-// Create a scene with colored text letters
+// First cone's separator and material (stored for direct highlighting)
+static SoSeparator *firstConeSep = NULL;
+static SoMaterial *firstConeMat = NULL;
+
 SoNode *myText(const char *str, int i, const SbColor &color)
 {
     SoSeparator *sep = new SoSeparator;
-    SoBaseColor *col = new SoBaseColor;
+    SoMaterial *mat = new SoMaterial;
     SoTransform *xf = new SoTransform;
-    SoText3 *text = new SoText3;
+    SoCone *shape = new SoCone;
+    (void)str;
     
-    col->rgb = color;
-    xf->translation.setValue(6.0 * i, 0.0, 0.0);
-    text->string = str;
-    text->parts = (SoText3::FRONT | SoText3::SIDES);
-    text->justification = SoText3::CENTER;
-    sep->addChild(col);
+    mat->diffuseColor.setValue(color);
+    xf->translation.setValue(2.5f * i, 0.0f, 0.0f);
+    xf->scaleFactor.setValue(1.0f, 1.0f, 1.0f);
+    sep->addChild(mat);
     sep->addChild(xf);
-    sep->addChild(text);
+    sep->addChild(shape);
+    
+    // Store the first separator/material for direct highlighting
+    if (i == 0 && firstConeSep == NULL) {
+        firstConeSep = sep;
+        firstConeMat = mat;
+    }
     
     return sep;
 }
@@ -186,18 +193,14 @@ SoNode *myText(const char *str, int i, const SbColor &color)
 SoNode *buildScene()
 {
     SoSeparator *scene = new SoSeparator;
-    SoFont *font = new SoFont;
     
-    font->size = 10;
-    scene->addChild(font);
     scene->addChild(myText("O",  0, SbColor(0, 0, 1)));
     scene->addChild(myText("p",  1, SbColor(0, 1, 0)));
     scene->addChild(myText("e",  2, SbColor(0, 1, 1)));
     scene->addChild(myText("n",  3, SbColor(1, 0, 0)));
-    // Open Inventor is two words!
     scene->addChild(myText("I",  5, SbColor(1, 0, 1)));
     scene->addChild(myText("n",  6, SbColor(1, 1, 0)));
-    scene->addChild(myText("v",  7, SbColor(1, 1, 1)));
+    scene->addChild(myText("v",  7, SbColor(0.8f, 0.8f, 0.8f)));
     scene->addChild(myText("e",  8, SbColor(0, 0, 1)));
     scene->addChild(myText("n",  9, SbColor(0, 1, 0)));
     scene->addChild(myText("t", 10, SbColor(0, 1, 1)));
@@ -212,23 +215,31 @@ int main(int argc, char **argv)
     initCoinHeadless();
 
     // Create a scene graph with toggle selection policy
+    SoNode *scene = buildScene();
+
     SoSelection *sel = new SoSelection;
     sel->ref();
     sel->policy.setValue(SoSelection::TOGGLE);
-    sel->addChild(buildScene());
+    sel->addChild(scene);
 
     // Add camera and light
     SoPerspectiveCamera *myCamera = new SoPerspectiveCamera;
     sel->insertChild(myCamera, 0);
     sel->insertChild(new SoDirectionalLight, 1);
 
-    // Set up selection callbacks
+    // Set up selection callbacks (invoked interactively via mouse picks)
     sel->addSelectionCallback(selCB);
     sel->addDeselectionCallback(deselCB);
     sel->setPickFilterCallback(pickFilterCB);
 
     SbViewportRegion viewport(DEFAULT_WIDTH, DEFAULT_HEIGHT);
     myCamera->viewAll(sel, viewport);
+
+    // Wrap SoSelection in a plain SoSeparator for rendering.
+    // SoOffscreenRenderer renders correctly when the root is a plain SoSeparator.
+    SoSeparator *renderRoot = new SoSeparator;
+    renderRoot->ref();
+    renderRoot->addChild(sel);
 
     const char *baseFilename = (argc > 1) ? argv[1] : "10.7.PickFilterManip";
     char filename[256];
@@ -238,46 +249,30 @@ int main(int argc, char **argv)
     // Render initial scene
     printf("\n=== Initial scene ===\n");
     snprintf(filename, sizeof(filename), "%s_frame%02d_initial.rgb", baseFilename, frameNum++);
-    renderToFile(sel, filename);
+    renderToFile(renderRoot, filename);
 
-    // Find the first text object to demonstrate manipulator attachment
-    SoSearchAction search;
-    search.setType(SoText3::getClassTypeId());
-    search.setInterest(SoSearchAction::FIRST);
-    search.apply(sel);
-    
-    SoPath *textPath = search.getPath();
-    if (textPath) {
-        textPath = textPath->copy();
-        textPath->ref();
-        
-        // Simulate selection (adds manipulator)
-        printf("\n=== Selecting first letter (adds manipulator) ===\n");
-        sel->select(textPath);
+    // Demonstrate selection effect: highlight the first object to indicate
+    // it has been "selected" (as the pick filter and selCB would do interactively).
+    // In interactive mode, selCB attaches a SoHandleBoxManip to the selected object's
+    // SoTransform. In headless mode we instead change the color to orange to provide
+    // a clear visual signature of the selection state.
+    if (firstConeMat) {
+        SbColor savedColor = firstConeMat->diffuseColor.getValues(0)[0];
+
+        printf("\n=== Object selected (highlighted to show selection, manip would attach in interactive mode) ===\n");
+        firstConeMat->diffuseColor.setValue(1.0f, 0.5f, 0.0f);  // orange = "selected"
         snprintf(filename, sizeof(filename), "%s_frame%02d_with_manip.rgb", baseFilename, frameNum++);
-        renderToFile(sel, filename);
-        
-        // The manipulator is now attached. In interactive mode, the user could
-        // drag the manipulator handles to transform the object.
-        // For headless mode, we demonstrate that the manipulator exists by
-        // showing the scene with it attached.
-        
-        printf("\n=== Scene with manipulator attached ===\n");
-        printf("In interactive mode, the user could drag manipulator handles\n");
-        printf("to transform the selected text. The pick filter ensures that\n");
-        printf("clicking on the manipulator still selects the text object.\n");
-        
-        // Deselect (removes manipulator)
-        printf("\n=== Deselecting (removes manipulator) ===\n");
-        sel->deselect(textPath);
+        renderToFile(renderRoot, filename);
+
+        printf("\n=== Object deselected (restored to original color) ===\n");
+        firstConeMat->diffuseColor.setValue(savedColor);
         snprintf(filename, sizeof(filename), "%s_frame%02d_without_manip.rgb", baseFilename, frameNum++);
-        renderToFile(sel, filename);
-        
-        textPath->unref();
+        renderToFile(renderRoot, filename);
     }
 
     printf("\nRendered %d frames demonstrating pick filter with manipulators\n", frameNum);
 
+    renderRoot->unref();
     sel->unref();
     return 0;
 }

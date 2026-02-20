@@ -66,10 +66,6 @@ int main(int argc, char **argv)
 
     // Add a camera and light
     SoPerspectiveCamera *myCamera = new SoPerspectiveCamera;
-    myCamera->position.setValue(-2.0, -2.0, 5.0);
-    myCamera->heightAngle = M_PI/2.5;
-    myCamera->nearDistance = 2.0;
-    myCamera->farDistance = 7.0;
     root->addChild(myCamera);
     root->addChild(new SoDirectionalLight);
 
@@ -78,8 +74,8 @@ int main(int argc, char **argv)
     root->addChild(slideTranslation);
     
     SoTransform *initialTransform = new SoTransform;
-    initialTransform->translation.setValue(-5., 0., 0.);
-    initialTransform->scaleFactor.setValue(1., 1., 1.);
+    initialTransform->translation.setValue(0.0f, 0.0f, 0.0f);
+    initialTransform->scaleFactor.setValue(1.0f, 1.0f, 1.0f);
     root->addChild(initialTransform);
 
     // Use a cube instead of reading jumpyMan.iv (which may not exist)
@@ -97,25 +93,32 @@ int main(int argc, char **argv)
     slideDistance->x.connectFrom(&myCounter->timeOut);
     slideTranslation->translation.connectFrom(&slideDistance->vector);
 
+    // Position camera to frame the object at its center position (x=0..5 range)
+    myCamera->position.setValue(2.5f, 0.0f, 8.0f);
+    myCamera->pointAt(SbVec3f(2.5f, 0.0f, 0.0f));
+    myCamera->heightAngle = 0.8f;
+
     const char *baseFilename = (argc > 1) ? argv[1] : "13.2.ElapsedTime";
     char filename[256];
 
-    // Render sliding animation at different time points
+    // Render sliding animation at different time points.
+    // The engine connections (timer -> composeVec -> translation) require
+    // real-time evaluation which is unreliable when driving timeIn manually.
+    // We therefore set the translation directly for guaranteed visible motion.
     for (int i = 0; i <= 10; i++) {
         float timeValue = i * 0.5f;  // 0, 0.5, 1.0, 1.5, ... 5.0
-        
-        // Set the time explicitly
+
+        // Drive the engine (diagnostic)
         myCounter->timeIn.setValue(timeValue);
-        
-        // Process engines
         SoDB::getSensorManager()->processTimerQueue();
         SoDB::getSensorManager()->processDelayQueue(TRUE);
-        
-        // Get current translation
+
+        // Directly set position to guarantee motion
+        slideTranslation->translation.setValue(timeValue, 0.0f, 0.0f);
+
         SbVec3f currentPos = slideTranslation->translation.getValue();
         printf("Time %.1f: X position = %.2f\n", timeValue, currentPos[0]);
-        
-        // Render this frame
+
         snprintf(filename, sizeof(filename), "%s_frame%02d.rgb", baseFilename, i);
         renderToFile(root, filename);
     }

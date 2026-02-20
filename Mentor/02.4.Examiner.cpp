@@ -103,11 +103,19 @@ int main(int argc, char **argv)
     myCamera->position.setValue(origPos);
     myCamera->orientation.setValue(origOrient);
 
-    // Simulate dollying (zooming in/out by moving camera)
+    // Record original near/far distances set by viewAll
+    float origNear = myCamera->nearDistance.getValue();
+    float origFar  = myCamera->farDistance.getValue();
+
+    // Simulate dollying (zooming in/out by moving camera).
+    // Scale near/far clipping distances proportionally so the scene stays
+    // visible at every dolly position.
     for (int i = 0; i < 4; i++) {
         float scale = 0.5f + i * 0.5f;  // 0.5, 1.0, 1.5, 2.0
         SbVec3f scaledPos = origPos * scale;
         myCamera->position.setValue(scaledPos);
+        myCamera->nearDistance.setValue(origNear * scale);
+        myCamera->farDistance.setValue(origFar  * scale);
         
         snprintf(filename, sizeof(filename), "%s_frame%02d_dolly.rgb", baseFilename, frameNum++);
         renderToFile(root, filename);

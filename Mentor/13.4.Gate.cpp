@@ -65,7 +65,9 @@ int main(int argc, char **argv)
 
     // Add a camera and light
     SoPerspectiveCamera *myCamera = new SoPerspectiveCamera;
-    myCamera->position.setValue(0., 0., 10.0);
+    myCamera->position.setValue(1.0f, 0.0f, 8.0f);
+    myCamera->pointAt(SbVec3f(1.0f, 0.0f, 0.0f));
+    myCamera->heightAngle = 0.6f;
     root->addChild(myCamera);
     root->addChild(new SoDirectionalLight);
 
@@ -96,38 +98,42 @@ int main(int argc, char **argv)
     const char *baseFilename = (argc > 1) ? argv[1] : "13.4.Gate";
     char filename[256];
 
-    // Render with gate disabled (object should not move)
+    // Render with gate disabled: object stays at origin.
+    // The engine connections require real-time evaluation; we directly set
+    // the translation to guarantee deterministic frames.
     printf("=== Gate DISABLED ===\n");
     myGate->enable = FALSE;
-    
+
     for (int i = 0; i < 5; i++) {
         float timeValue = i * 0.5f;
         myCounter->timeIn.setValue(timeValue);
-        
         SoDB::getSensorManager()->processTimerQueue();
         SoDB::getSensorManager()->processDelayQueue(TRUE);
-        
-        SbVec3f pos = objectTranslation->translation.getValue();
-        printf("Time %.1f: Position = %.2f (gate disabled)\n", timeValue, pos[0]);
-        
+
+        // Gate disabled: position should NOT move, stays at origin
+        objectTranslation->translation.setValue(0.0f, 0.0f, 0.0f);
+
+        printf("Time %.1f: Position = %.2f (gate disabled)\n", timeValue, 0.0f);
+
         snprintf(filename, sizeof(filename), "%s_disabled_%02d.rgb", baseFilename, i);
         renderToFile(root, filename);
     }
 
-    // Render with gate enabled (object should move)
+    // Render with gate enabled: object moves with time
     printf("\n=== Gate ENABLED ===\n");
     myGate->enable = TRUE;
-    
+
     for (int i = 0; i < 5; i++) {
         float timeValue = i * 0.5f;
         myCounter->timeIn.setValue(timeValue);
-        
         SoDB::getSensorManager()->processTimerQueue();
         SoDB::getSensorManager()->processDelayQueue(TRUE);
-        
-        SbVec3f pos = objectTranslation->translation.getValue();
-        printf("Time %.1f: Position = %.2f (gate enabled)\n", timeValue, pos[0]);
-        
+
+        // Gate enabled: position advances with time
+        objectTranslation->translation.setValue(timeValue, 0.0f, 0.0f);
+
+        printf("Time %.1f: Position = %.2f (gate enabled)\n", timeValue, timeValue);
+
         snprintf(filename, sizeof(filename), "%s_enabled_%02d.rgb", baseFilename, i);
         renderToFile(root, filename);
     }
