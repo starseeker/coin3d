@@ -582,10 +582,9 @@ void
 SoText3P::render(SoState * state, const cc_font_specification * fontspec,
                  unsigned int part)
 {
-  // Update font size to match the specification
-  if (fontspec && fontspec->size > 0) {
-    this->font->setSize(fontspec->size);
-  }
+  // setUpGlyphs() sets font to unit scale (1.0f) before this is called.
+  // Vertex positions from getGlyphVertices() are unit-normalized;
+  // the rendering code scales them by fontspec->size to get scene coordinates.
   
   int i, n = this->widths.getLength();
 
@@ -690,7 +689,7 @@ SoText3P::render(SoState * state, const cc_font_specification * fontspec,
       // Get kerning
       if (strcharidx > 0) {
         SbVec2f kerning = this->font->getGlyphKerning(prevcharacter, glyphidx);
-        xpos += kerning[0];
+        xpos += kerning[0] * fontspec->size;
       }
       prevcharacter = glyphidx;
 
@@ -984,7 +983,7 @@ SoText3P::render(SoState * state, const cc_font_specification * fontspec,
       }
 
       SbVec2f advance = this->font->getGlyphAdvance(glyphidx);
-      xpos += advance[0];
+      xpos += advance[0] * fontspec->size;
 
     }
     ypos -= fontspec->size * PUBLIC(this)->spacing.getValue();
@@ -1135,7 +1134,7 @@ SoText3P::generate(SoAction * action, const cc_font_specification * fontspec,
       // Get kerning
       if (strcharidx > 0) {
         SbVec2f kerning = this->font->getGlyphKerning(prevcharacter, glyphidx);
-        xpos += kerning[0];
+        xpos += kerning[0] * fontspec->size;
       }
       prevcharacter = glyphidx;
 
@@ -1448,7 +1447,7 @@ SoText3P::generate(SoAction * action, const cc_font_specification * fontspec,
       }
 
       SbVec2f advance = this->font->getGlyphAdvance(glyphidx);
-      xpos += advance[0];
+      xpos += advance[0] * fontspec->size;
 
     }
     ypos -= fontspec->size * PUBLIC(this)->spacing.getValue();
@@ -1487,10 +1486,11 @@ SoText3P::setUpGlyphs(SoState * state, SoText3 * textnode)
   this->cache->readFontspec(state);
   const cc_font_specification * fontspec = this->cache->getCachedFontspec();
 
-  // Update SbFont size from specification  
-  if (fontspec && fontspec->size > 0) {
-    this->font->setSize(fontspec->size);
-  }
+  // Set font to unit scale (1 EM = 1 unit) so that the rendering code can
+  // apply fontspec->size as a multiplier to get scene-unit coordinates.
+  // The rendering code does: vertex * fontspec->size, so the font must return
+  // unit-normalized vertices (not already pre-scaled by fontspec->size).
+  this->font->setSize(1.0f);
 
   this->widths.truncate(0);
 

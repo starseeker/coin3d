@@ -65,6 +65,12 @@ if(UNIX AND NOT APPLE)
     set(ENV{COIN_GLX_PIXMAP_DIRECT_RENDERING} "1")
 endif()
 
+# Set data directory for examples that load .iv files
+if(DEFINED COIN_DATA_DIR)
+    set(ENV{COIN_DATA_DIR} "${COIN_DATA_DIR}")
+    set(ENV{IVEXAMPLES_DATA_DIR} "${COIN_DATA_DIR}")
+endif()
+
 # Run the example with the base name as argv[1]
 message("Running example: ${EXECUTABLE}")
 execute_process(

@@ -138,6 +138,21 @@ inline bool renderToFile(
     return true;
 }
 
+/**
+ * Get a shared persistent SoOffscreenRenderer for the OSMesa backend.
+ * Some examples reuse an offscreen renderer to capture intermediate frames
+ * (e.g. to generate a texture map from a rendered scene).  Providing a
+ * shared instance mirrors the GLX backend behaviour.
+ */
+inline SoOffscreenRenderer* getSharedRenderer() {
+    static SoOffscreenRenderer *s_renderer = nullptr;
+    if (!s_renderer) {
+        SbViewportRegion vp(DEFAULT_WIDTH, DEFAULT_HEIGHT);
+        s_renderer = new SoOffscreenRenderer(vp);
+    }
+    return s_renderer;
+}
+
 #else // !COIN3D_OSMESA_BUILD
 // ============================================================================
 // System OpenGL Backend: GLX on Linux (use Xvfb for headless operation)
