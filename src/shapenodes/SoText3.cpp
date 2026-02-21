@@ -582,8 +582,9 @@ void
 SoText3P::render(SoState * state, const cc_font_specification * fontspec,
                  unsigned int part)
 {
-  // Font is already set to unit scale (1.0f) in setUpGlyphs(); the rendering
-  // code scales vertices by fontspec->size to get scene-unit coordinates.
+  // setUpGlyphs() sets font to unit scale (1.0f) before this is called.
+  // Vertex positions from getGlyphVertices() are unit-normalized;
+  // the rendering code scales them by fontspec->size to get scene coordinates.
   
   int i, n = this->widths.getLength();
 

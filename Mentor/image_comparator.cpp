@@ -287,6 +287,11 @@ static bool load_png_image(const char* filename, int& width, int& height, int& c
     fseek(fp, 0, SEEK_END);
     long fsize = ftell(fp);
     fseek(fp, 0, SEEK_SET);
+    if (fsize <= 0) {
+        fprintf(stderr, "Error: Empty or invalid file %s\n", filename);
+        fclose(fp);
+        return false;
+    }
     std::vector<unsigned char> file_data((size_t)fsize);
     if (fread(file_data.data(), 1, (size_t)fsize, fp) != (size_t)fsize) {
         fprintf(stderr, "Error: Failed to read file %s\n", filename);
