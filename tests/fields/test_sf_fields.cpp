@@ -67,11 +67,17 @@
 #include <Inventor/fields/SoSFVec3f.h>
 #include <Inventor/fields/SoSFVec4f.h>
 #include <Inventor/fields/SoSFColor.h>
+#include <Inventor/fields/SoSFColorRGBA.h>
 #include <Inventor/fields/SoSFString.h>
 #include <Inventor/fields/SoSFRotation.h>
 #include <Inventor/fields/SoSFMatrix.h>
 #include <Inventor/fields/SoSFName.h>
 #include <Inventor/fields/SoSFTime.h>
+#include <Inventor/fields/SoSFEnum.h>
+#include <Inventor/fields/SoSFBitMask.h>
+#include <Inventor/fields/SoSFPlane.h>
+#include <Inventor/fields/SoSFNode.h>
+#include <Inventor/fields/SoSFTrigger.h>
 #include <Inventor/SoType.h>
 #include <Inventor/SbName.h>
 
@@ -202,6 +208,17 @@ int main()
         bool pass = (c[0] == 0.5f && c[1] == 0.25f && c[2] == 0.75f);
         runner.endTest(pass, pass ? "" : "SoSFColor set/get round-trip failed");
     }
+
+    // -----------------------------------------------------------------------
+    // Remaining SoSF* types: class initialized
+    // Baseline: individual COIN_TEST_SUITE (initialized) blocks
+    // -----------------------------------------------------------------------
+    TEST_SF_INITIALIZED("SoSFColorRGBA", SoSFColorRGBA)
+    TEST_SF_INITIALIZED("SoSFEnum",      SoSFEnum)
+    TEST_SF_INITIALIZED("SoSFBitMask",   SoSFBitMask)
+    TEST_SF_INITIALIZED("SoSFPlane",     SoSFPlane)
+    TEST_SF_INITIALIZED("SoSFNode",      SoSFNode)
+    TEST_SF_INITIALIZED("SoSFTrigger",   SoSFTrigger)
 
     return runner.getSummary();
 }

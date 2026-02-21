@@ -52,8 +52,12 @@
 #include <Inventor/sensors/SoTimerSensor.h>
 #include <Inventor/sensors/SoAlarmSensor.h>
 #include <Inventor/sensors/SoOneShotSensor.h>
+#include <Inventor/sensors/SoIdleSensor.h>
+#include <Inventor/sensors/SoPathSensor.h>
 #include <Inventor/nodes/SoCube.h>
+#include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/SoDB.h>
+#include <Inventor/SoPath.h>
 using namespace SimpleTest;
 
 static int s_fieldFired = 0;
@@ -175,6 +179,47 @@ int main()
         pass = pass && !oss.isScheduled();
         runner.endTest(pass, pass ? "" :
             "SoOneShotSensor schedule/unschedule failed");
+    }
+
+    // -----------------------------------------------------------------------
+    // SoIdleSensor: schedule/unschedule without crash
+    // -----------------------------------------------------------------------
+    runner.startTest("SoIdleSensor schedule/unschedule");
+    {
+        SoIdleSensor ids(onTimer, nullptr);
+        ids.schedule();
+        bool pass = ids.isScheduled();
+        ids.unschedule();
+        pass = pass && !ids.isScheduled();
+        runner.endTest(pass, pass ? "" :
+            "SoIdleSensor schedule/unschedule failed");
+    }
+
+    // -----------------------------------------------------------------------
+    // SoPathSensor: attach/detach to a path
+    // -----------------------------------------------------------------------
+    runner.startTest("SoPathSensor attach/detach");
+    {
+        SoSeparator* root = new SoSeparator;
+        root->ref();
+        SoCube* cube = new SoCube;
+        root->addChild(cube);
+
+        SoPath* path = new SoPath(root);
+        path->ref();
+        path->append(cube);
+
+        SoPathSensor ps(onNodeChange, nullptr);
+        ps.attach(path);
+        bool attached = (ps.getAttachedPath() == path);
+        ps.detach();
+        bool detached = (ps.getAttachedPath() == nullptr);
+
+        path->unref();
+        root->unref();
+
+        bool pass = attached && detached;
+        runner.endTest(pass, pass ? "" : "SoPathSensor attach/detach failed");
     }
 
     return runner.getSummary();

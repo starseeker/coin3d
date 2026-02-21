@@ -47,13 +47,20 @@
 #include <Inventor/SoInput.h>
 #include <Inventor/SoOutput.h>
 #include <Inventor/SbViewportRegion.h>
+#include <Inventor/SoType.h>
 #include <Inventor/actions/SoCallbackAction.h>
 #include <Inventor/actions/SoSearchAction.h>
 #include <Inventor/actions/SoGetBoundingBoxAction.h>
 #include <Inventor/actions/SoWriteAction.h>
+#include <Inventor/actions/SoGetMatrixAction.h>
+#include <Inventor/actions/SoGetPrimitiveCountAction.h>
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/nodes/SoSwitch.h>
 #include <Inventor/nodes/SoCube.h>
+#include <Inventor/nodes/SoSphere.h>
+#include <Inventor/nodes/SoTranslation.h>
+#include <Inventor/SbVec3f.h>
+#include <Inventor/SbMatrix.h>
 
 #include <cstring>
 #include <cstdlib>
@@ -240,6 +247,57 @@ int main()
         root->unref();
         runner.endTest(pass, pass ? "" :
             "SoGetBoundingBoxAction unit cube returned wrong bounds");
+    }
+
+    // -----------------------------------------------------------------------
+    // SoGetMatrixAction: identity matrix for empty separator
+    // -----------------------------------------------------------------------
+    runner.startTest("SoGetMatrixAction identity for empty separator");
+    {
+        SoSeparator* root = new SoSeparator;
+        root->ref();
+
+        SoGetMatrixAction gma(SbViewportRegion(100, 100));
+        gma.apply(root);
+
+        SbMatrix mat = gma.getMatrix();
+        SbMatrix identity = SbMatrix::identity();
+        bool pass = (mat == identity);
+        root->unref();
+        runner.endTest(pass, pass ? "" :
+            "SoGetMatrixAction did not return identity for empty scene");
+    }
+
+    runner.startTest("SoGetMatrixAction class initialized");
+    {
+        SoGetMatrixAction gma(SbViewportRegion(100, 100));
+        bool pass = (gma.getTypeId() != SoType::badType());
+        runner.endTest(pass, pass ? "" : "SoGetMatrixAction has bad type");
+    }
+
+    // -----------------------------------------------------------------------
+    // SoGetPrimitiveCountAction: count primitives in a scene
+    // -----------------------------------------------------------------------
+    runner.startTest("SoGetPrimitiveCountAction class initialized");
+    {
+        SoGetPrimitiveCountAction gpca(SbViewportRegion(100, 100));
+        bool pass = (gpca.getTypeId() != SoType::badType());
+        runner.endTest(pass, pass ? "" : "SoGetPrimitiveCountAction has bad type");
+    }
+
+    runner.startTest("SoGetPrimitiveCountAction empty scene");
+    {
+        SoSeparator* root = new SoSeparator;
+        root->ref();
+
+        SoGetPrimitiveCountAction gpca(SbViewportRegion(100, 100));
+        gpca.apply(root);
+
+        // Empty scene: no triangles, no lines, no points
+        bool pass = (gpca.getTriangleCount() == 0);
+        root->unref();
+        runner.endTest(pass, pass ? "" :
+            "SoGetPrimitiveCountAction should count 0 triangles for empty scene");
     }
 
     return runner.getSummary();

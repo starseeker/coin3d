@@ -55,6 +55,7 @@
 #include <Inventor/fields/SoMFVec3f.h>
 #include <Inventor/fields/SoMFVec4f.h>
 #include <Inventor/fields/SoMFColor.h>
+#include <Inventor/fields/SoMFColorRGBA.h>
 #include <Inventor/fields/SoMFString.h>
 #include <Inventor/fields/SoMFRotation.h>
 #include <Inventor/fields/SoMFBool.h>
@@ -62,6 +63,9 @@
 #include <Inventor/fields/SoMFName.h>
 #include <Inventor/fields/SoMFTime.h>
 #include <Inventor/fields/SoMFPlane.h>
+#include <Inventor/fields/SoMFEnum.h>
+#include <Inventor/fields/SoMFBitMask.h>
+#include <Inventor/fields/SoMFNode.h>
 #include <Inventor/SoType.h>
 #include <Inventor/SbVec3f.h>
 #include <Inventor/SbColor.h>
@@ -181,6 +185,15 @@ int main()
                     (field[1] == SbColor(0.0f, 1.0f, 0.0f));
         runner.endTest(pass, pass ? "" : "SoMFColor set/get values failed");
     }
+
+    // -----------------------------------------------------------------------
+    // Remaining SoMF* types: class initialized with zero elements
+    // Baseline: individual COIN_TEST_SUITE (initialized) blocks
+    // -----------------------------------------------------------------------
+    TEST_MF_INITIALIZED("SoMFColorRGBA", SoMFColorRGBA)
+    TEST_MF_INITIALIZED("SoMFEnum",      SoMFEnum)
+    TEST_MF_INITIALIZED("SoMFBitMask",   SoMFBitMask)
+    TEST_MF_INITIALIZED("SoMFNode",      SoMFNode)
 
     return runner.getSummary();
 }

@@ -56,18 +56,29 @@
 
 #include <Inventor/SbVec2f.h>
 #include <Inventor/SbVec3f.h>
+#include <Inventor/SbVec3d.h>
+#include <Inventor/SbVec3s.h>
+#include <Inventor/SbVec4f.h>
 #include <Inventor/SbBox2f.h>
+#include <Inventor/SbBox2d.h>
+#include <Inventor/SbBox2s.h>
 #include <Inventor/SbBox3f.h>
+#include <Inventor/SbBox3d.h>
 #include <Inventor/SbBox3i32.h>
+#include <Inventor/SbBox3s.h>
 #include <Inventor/SbByteBuffer.h>
 #include <Inventor/SbBSPTree.h>
 #include <Inventor/SbMatrix.h>
 #include <Inventor/SbDPMatrix.h>
+#include <Inventor/SbDPRotation.h>
+#include <Inventor/SbDPPlane.h>
+#include <Inventor/SbDPLine.h>
 #include <Inventor/SbRotation.h>
 #include <Inventor/SbString.h>
 #include <Inventor/SbPlane.h>
 #include <Inventor/SbLine.h>
 #include <Inventor/SbViewVolume.h>
+#include <Inventor/SbImage.h>
 
 #include <cmath>
 #include <cstring>
@@ -453,6 +464,178 @@ int main()
                     floatNear(isect.getMax()[1], 1.0f,  0.01f) &&
                     floatNear(isect.getMax()[2], 0.75f, 0.01f);
         runner.endTest(pass, pass ? "" : "SbViewVolume perspective intersection wrong");
+    }
+
+    // -----------------------------------------------------------------------
+    // SbVec3d: fromString
+    // Baseline: src/base/SbVec3d.cpp COIN_TEST_SUITE
+    // -----------------------------------------------------------------------
+    runner.startTest("SbVec3d fromString");
+    {
+        SbVec3d foo;
+        SbString test = "0.3333333333333333 -2 -3.0";
+        SbVec3d trueVal(0.3333333333333333, -2, -3);
+        SbBool ok = foo.fromString(test);
+        bool pass = ok && (trueVal == foo);
+        runner.endTest(pass, pass ? "" : "SbVec3d::fromString failed");
+    }
+
+    // -----------------------------------------------------------------------
+    // SbVec4f: normalize already-normalized vector
+    // Baseline: src/base/SbVec4f.cpp COIN_TEST_SUITE
+    // -----------------------------------------------------------------------
+    runner.startTest("SbVec4f normalize already-normalized vector");
+    {
+        const float SQRT2 = sqrtf(2.0f) / 2.0f;
+        SbVec4f vec(0, -SQRT2, 0, SQRT2);
+        vec.normalize();
+        bool pass = (vec[0] == 0.0f) &&
+                    (fabsf(vec[1] - (-SQRT2)) < 1e-5f) &&
+                    (vec[2] == 0.0f) &&
+                    (fabsf(vec[3] - SQRT2)    < 1e-5f);
+        runner.endTest(pass, pass ? "" : "SbVec4f normalize already-normalized failed");
+    }
+
+    // -----------------------------------------------------------------------
+    // SbVec3s: fromString / fromInvalidString
+    // Baseline: src/base/SbVec3s.cpp COIN_TEST_SUITE
+    // -----------------------------------------------------------------------
+    runner.startTest("SbVec3s fromString");
+    {
+        SbVec3s foo;
+        SbString test = "1 -2 3";
+        SbVec3s trueVal(1, -2, 3);
+        foo.fromString(test);
+        bool pass = (trueVal == foo);
+        runner.endTest(pass, pass ? "" : "SbVec3s::fromString failed");
+    }
+
+    runner.startTest("SbVec3s fromInvalidString");
+    {
+        SbVec3s foo;
+        SbString test = "a,2,3";
+        SbBool ok = foo.fromString(test);
+        bool pass = (ok == FALSE);
+        runner.endTest(pass, pass ? "" : "SbVec3s::fromString should fail for 'a,2,3'");
+    }
+
+    // -----------------------------------------------------------------------
+    // SbBox2d: getSize / getClosestPoint
+    // Baseline: src/base/SbBox2d.cpp COIN_TEST_SUITE
+    // -----------------------------------------------------------------------
+    runner.startTest("SbBox2d getSize");
+    {
+        SbVec2d minPt(1, 2), maxPt(3, 4);
+        SbBox2d box(minPt, maxPt);
+        SbVec2d diff = maxPt - minPt;
+        bool pass = (box.getSize() == diff);
+        runner.endTest(pass, pass ? "" : "SbBox2d getSize incorrect");
+    }
+
+    runner.startTest("SbBox2d getClosestPoint outside");
+    {
+        SbVec2d point(1524, 13794);
+        SbBox2d box(SbVec2d(1557, 3308), SbVec2d(3113, 30157));
+        SbVec2d expected(1557, 13794);
+        bool pass = (box.getClosestPoint(point) == expected);
+        runner.endTest(pass, pass ? "" : "SbBox2d getClosestPoint outside wrong");
+    }
+
+    // -----------------------------------------------------------------------
+    // SbBox3d: getClosestPoint
+    // Baseline: src/base/SbBox3d.cpp COIN_TEST_SUITE
+    // -----------------------------------------------------------------------
+    runner.startTest("SbBox3d getClosestPoint outside");
+    {
+        SbVec3d point(1524, 13794, 851);
+        SbBox3d box(SbVec3d(1557, 3308, 850), SbVec3d(3113, 30157, 1886));
+        SbVec3d expected(1557, 13794, 851);
+        bool pass = (box.getClosestPoint(point) == expected);
+        runner.endTest(pass, pass ? "" : "SbBox3d getClosestPoint outside wrong");
+    }
+
+    // -----------------------------------------------------------------------
+    // SbBox2s: getSize
+    // Baseline: src/base/SbBox2s.cpp COIN_TEST_SUITE
+    // -----------------------------------------------------------------------
+    runner.startTest("SbBox2s getSize");
+    {
+        SbVec2s minPt(1, 2), maxPt(3, 4);
+        SbBox2s box(minPt, maxPt);
+        SbVec2s diff = maxPt - minPt;
+        bool pass = (box.getSize() == diff);
+        runner.endTest(pass, pass ? "" : "SbBox2s getSize incorrect");
+    }
+
+    // -----------------------------------------------------------------------
+    // SbBox3s: getSize / getClosestPoint
+    // Baseline: src/base/SbBox3s.cpp COIN_TEST_SUITE
+    // -----------------------------------------------------------------------
+    runner.startTest("SbBox3s getSize");
+    {
+        SbVec3s minPt(1, 2, 3), maxPt(3, 4, 5);
+        SbBox3s box(minPt, maxPt);
+        SbVec3s diff = maxPt - minPt;
+        bool pass = (box.getSize() == diff);
+        runner.endTest(pass, pass ? "" : "SbBox3s getSize incorrect");
+    }
+
+    runner.startTest("SbBox3s getClosestPoint outside");
+    {
+        SbVec3f point(1524.0f, 13794.0f, 851.0f);
+        SbBox3s box(SbVec3s(1557, 3308, 850), SbVec3s(3113, 30157, 1886));
+        SbVec3f expected(1557.0f, 13794.0f, 851.0f);
+        bool pass = (box.getClosestPoint(point) == expected);
+        runner.endTest(pass, pass ? "" : "SbBox3s getClosestPoint outside wrong");
+    }
+
+    // -----------------------------------------------------------------------
+    // SbDPRotation: construction (TGS compliance)
+    // Baseline: src/base/SbDPRotation.cpp COIN_TEST_SUITE (tgsCompliance)
+    // -----------------------------------------------------------------------
+    runner.startTest("SbDPRotation construct from axis/angle");
+    {
+        SbDPRotation rot(SbVec3d(0, 1, 2), 3.0);
+        // A non-trivial rotation should have a non-zero quaternion w component
+        double q[4];
+        rot.getValue(q[0], q[1], q[2], q[3]);
+        bool pass = (q[3] != 0.0);
+        runner.endTest(pass, pass ? "" : "SbDPRotation construction failed");
+    }
+
+    // -----------------------------------------------------------------------
+    // SbDPPlane: intersect two planes and verify sign of result
+    // Baseline: src/base/SbDPPlane.cpp COIN_TEST_SUITE (signCorrect)
+    // -----------------------------------------------------------------------
+    runner.startTest("SbDPPlane plane-plane intersection sign correct");
+    {
+        SbDPPlane plane1(SbVec3d(0.0, 0.0, 1.0), 3.0);
+        SbDPPlane plane2(SbVec3d(1.0, 0.0, 0.0), 21.0);
+        SbDPLine line;
+        bool ok = plane1.intersect(plane2, line);
+        // The intersection line position z-component should be >= plane1 distance (3.0)
+        bool pass = ok && (line.getPosition()[2] > 0.0);
+        runner.endTest(pass, pass ? "" : "SbDPPlane intersection sign wrong");
+    }
+
+    // -----------------------------------------------------------------------
+    // SbImage: copy construction
+    // Baseline: src/base/SbImage.cpp COIN_TEST_SUITE (copyConstruct)
+    // -----------------------------------------------------------------------
+    runner.startTest("SbImage copy construct");
+    {
+        unsigned char buf[4] = {0, 1, 2, 3};
+        SbImage bar(buf, SbVec2s(2, 2), 1);
+        SbImage foo(bar);
+
+        SbVec2s tmp1; int tmp2;
+        const unsigned char* barData = bar.getValue(tmp1, tmp2);
+        const unsigned char* fooData = foo.getValue(tmp1, tmp2);
+
+        bool pass = (fooData != nullptr) && (barData != nullptr);
+        for (int i = 0; i < 4 && pass; ++i)
+            pass = (fooData[i] == barData[i]);
+        runner.endTest(pass, pass ? "" : "SbImage copy construct values differ");
     }
 
     return runner.getSummary();
