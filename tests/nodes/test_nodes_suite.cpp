@@ -48,6 +48,8 @@
 
 #include <Inventor/SoType.h>
 #include <Inventor/SbName.h>
+#include <Inventor/SbVec3f.h>
+#include <Inventor/SbRotation.h>
 #include <Inventor/nodes/SoNode.h>
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/nodes/SoCube.h>
@@ -58,8 +60,23 @@
 #include <Inventor/nodes/SoGroup.h>
 #include <Inventor/nodes/SoTranslation.h>
 #include <Inventor/nodes/SoRotation.h>
+#include <Inventor/nodes/SoScale.h>
+#include <Inventor/nodes/SoTransform.h>
 #include <Inventor/nodes/SoMaterial.h>
 #include <Inventor/nodes/SoDirectionalLight.h>
+#include <Inventor/nodes/SoPointLight.h>
+#include <Inventor/nodes/SoSpotLight.h>
+#include <Inventor/nodes/SoPerspectiveCamera.h>
+#include <Inventor/nodes/SoOrthographicCamera.h>
+#include <Inventor/nodes/SoSwitch.h>
+#include <Inventor/nodes/SoCoordinate3.h>
+#include <Inventor/nodes/SoNormal.h>
+#include <Inventor/nodes/SoShaderProgram.h>
+#include <Inventor/nodes/SoFragmentShader.h>
+#include <Inventor/nodes/SoVertexShader.h>
+#include <Inventor/nodes/SoGeometryShader.h>
+#include <Inventor/nodes/SoGeoOrigin.h>
+#include <Inventor/nodes/SoGeoCoordinate.h>
 
 using namespace SimpleTest;
 
@@ -241,6 +258,211 @@ int main()
         mat->unref();
         runner.endTest(pass, pass ? "" :
             "SoMaterial default diffuseColor should have 1 value");
+    }
+
+    // -----------------------------------------------------------------------
+    // SoCylinder: default field values
+    // -----------------------------------------------------------------------
+    runner.startTest("SoCylinder default fields");
+    {
+        SoCylinder* cyl = new SoCylinder;
+        cyl->ref();
+        bool pass = (cyl->radius.getValue() == 1.0f) &&
+                    (cyl->height.getValue() == 2.0f);
+        cyl->unref();
+        runner.endTest(pass, pass ? "" : "SoCylinder default field values wrong");
+    }
+
+    // -----------------------------------------------------------------------
+    // Light nodes: default fields
+    // -----------------------------------------------------------------------
+    runner.startTest("SoDirectionalLight class initialized");
+    {
+        SoDirectionalLight* light = new SoDirectionalLight;
+        light->ref();
+        bool pass = (light->getTypeId() != SoType::badType());
+        light->unref();
+        runner.endTest(pass, pass ? "" : "SoDirectionalLight has bad type");
+    }
+
+    runner.startTest("SoPointLight class initialized");
+    {
+        SoPointLight* light = new SoPointLight;
+        light->ref();
+        bool pass = (light->getTypeId() != SoType::badType());
+        light->unref();
+        runner.endTest(pass, pass ? "" : "SoPointLight has bad type");
+    }
+
+    runner.startTest("SoSpotLight class initialized");
+    {
+        SoSpotLight* light = new SoSpotLight;
+        light->ref();
+        bool pass = (light->getTypeId() != SoType::badType());
+        light->unref();
+        runner.endTest(pass, pass ? "" : "SoSpotLight has bad type");
+    }
+
+    // -----------------------------------------------------------------------
+    // Transform nodes: default field values
+    // -----------------------------------------------------------------------
+    runner.startTest("SoTranslation default translation");
+    {
+        SoTranslation* t = new SoTranslation;
+        t->ref();
+        SbVec3f v = t->translation.getValue();
+        bool pass = (v == SbVec3f(0, 0, 0));
+        t->unref();
+        runner.endTest(pass, pass ? "" : "SoTranslation default translation != (0,0,0)");
+    }
+
+    runner.startTest("SoRotation default rotation");
+    {
+        SoRotation* r = new SoRotation;
+        r->ref();
+        // Default rotation is identity (0,0,1,0) = zero angle around z
+        SbVec3f axis; float angle;
+        r->rotation.getValue().getValue(axis, angle);
+        bool pass = (angle == 0.0f);
+        r->unref();
+        runner.endTest(pass, pass ? "" : "SoRotation default rotation is not identity");
+    }
+
+    runner.startTest("SoScale default scaleFactor");
+    {
+        SoScale* s = new SoScale;
+        s->ref();
+        SbVec3f sf = s->scaleFactor.getValue();
+        bool pass = (sf == SbVec3f(1, 1, 1));
+        s->unref();
+        runner.endTest(pass, pass ? "" : "SoScale default scaleFactor != (1,1,1)");
+    }
+
+    runner.startTest("SoTransform default translation");
+    {
+        SoTransform* xf = new SoTransform;
+        xf->ref();
+        SbVec3f t = xf->translation.getValue();
+        bool pass = (t == SbVec3f(0, 0, 0));
+        xf->unref();
+        runner.endTest(pass, pass ? "" : "SoTransform default translation != (0,0,0)");
+    }
+
+    // -----------------------------------------------------------------------
+    // Camera nodes: default fields
+    // -----------------------------------------------------------------------
+    runner.startTest("SoPerspectiveCamera class initialized");
+    {
+        SoPerspectiveCamera* cam = new SoPerspectiveCamera;
+        cam->ref();
+        bool pass = (cam->getTypeId() != SoType::badType());
+        cam->unref();
+        runner.endTest(pass, pass ? "" : "SoPerspectiveCamera has bad type");
+    }
+
+    runner.startTest("SoOrthographicCamera class initialized");
+    {
+        SoOrthographicCamera* cam = new SoOrthographicCamera;
+        cam->ref();
+        bool pass = (cam->getTypeId() != SoType::badType());
+        cam->unref();
+        runner.endTest(pass, pass ? "" : "SoOrthographicCamera has bad type");
+    }
+
+    // -----------------------------------------------------------------------
+    // SoSwitch: whichChild default value
+    // -----------------------------------------------------------------------
+    runner.startTest("SoSwitch default whichChild");
+    {
+        SoSwitch* sw = new SoSwitch;
+        sw->ref();
+        // Default whichChild is SO_SWITCH_NONE (-1)
+        bool pass = (sw->whichChild.getValue() == SO_SWITCH_NONE);
+        sw->unref();
+        runner.endTest(pass, pass ? "" : "SoSwitch default whichChild != SO_SWITCH_NONE");
+    }
+
+    // -----------------------------------------------------------------------
+    // Geometry support nodes: class initialized
+    // -----------------------------------------------------------------------
+    runner.startTest("SoCoordinate3 class initialized");
+    {
+        SoCoordinate3* coord = new SoCoordinate3;
+        coord->ref();
+        bool pass = (coord->getTypeId() != SoType::badType());
+        coord->unref();
+        runner.endTest(pass, pass ? "" : "SoCoordinate3 has bad type");
+    }
+
+    runner.startTest("SoNormal class initialized");
+    {
+        SoNormal* norm = new SoNormal;
+        norm->ref();
+        bool pass = (norm->getTypeId() != SoType::badType());
+        norm->unref();
+        runner.endTest(pass, pass ? "" : "SoNormal has bad type");
+    }
+
+    // -----------------------------------------------------------------------
+    // Shader nodes: class initialized
+    // Baseline: src/shaders/SoShaderProgram.cpp, SoFragmentShader.cpp, etc.
+    // -----------------------------------------------------------------------
+    runner.startTest("SoShaderProgram class initialized");
+    {
+        SoShaderProgram* prog = new SoShaderProgram;
+        prog->ref();
+        bool pass = (prog->getTypeId() != SoType::badType());
+        prog->unref();
+        runner.endTest(pass, pass ? "" : "SoShaderProgram has bad type");
+    }
+
+    runner.startTest("SoFragmentShader class initialized");
+    {
+        SoFragmentShader* fs = new SoFragmentShader;
+        fs->ref();
+        bool pass = (fs->getTypeId() != SoType::badType());
+        fs->unref();
+        runner.endTest(pass, pass ? "" : "SoFragmentShader has bad type");
+    }
+
+    runner.startTest("SoVertexShader class initialized");
+    {
+        SoVertexShader* vs = new SoVertexShader;
+        vs->ref();
+        bool pass = (vs->getTypeId() != SoType::badType());
+        vs->unref();
+        runner.endTest(pass, pass ? "" : "SoVertexShader has bad type");
+    }
+
+    runner.startTest("SoGeometryShader class initialized");
+    {
+        SoGeometryShader* gs = new SoGeometryShader;
+        gs->ref();
+        bool pass = (gs->getTypeId() != SoType::badType());
+        gs->unref();
+        runner.endTest(pass, pass ? "" : "SoGeometryShader has bad type");
+    }
+
+    // -----------------------------------------------------------------------
+    // Geo nodes: class initialized
+    // Baseline: src/geo/SoGeoOrigin.cpp, SoGeoCoordinate.cpp
+    // -----------------------------------------------------------------------
+    runner.startTest("SoGeoOrigin class initialized");
+    {
+        SoGeoOrigin* geo = new SoGeoOrigin;
+        geo->ref();
+        bool pass = (geo->getTypeId() != SoType::badType());
+        geo->unref();
+        runner.endTest(pass, pass ? "" : "SoGeoOrigin has bad type");
+    }
+
+    runner.startTest("SoGeoCoordinate class initialized");
+    {
+        SoGeoCoordinate* geo = new SoGeoCoordinate;
+        geo->ref();
+        bool pass = (geo->getTypeId() != SoType::badType());
+        geo->unref();
+        runner.endTest(pass, pass ? "" : "SoGeoCoordinate has bad type");
     }
 
     return runner.getSummary();

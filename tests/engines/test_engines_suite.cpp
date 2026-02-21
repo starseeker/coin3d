@@ -50,10 +50,19 @@
 
 #include <Inventor/engines/SoCalculator.h>
 #include <Inventor/engines/SoComposeVec3f.h>
+#include <Inventor/engines/SoComposeVec2f.h>
+#include <Inventor/engines/SoComposeVec4f.h>
+#include <Inventor/engines/SoComposeMatrix.h>
+#include <Inventor/engines/SoComposeRotation.h>
 #include <Inventor/engines/SoDecomposeVec3f.h>
 #include <Inventor/engines/SoBoolOperation.h>
 #include <Inventor/engines/SoElapsedTime.h>
 #include <Inventor/engines/SoConcatenate.h>
+#include <Inventor/engines/SoGate.h>
+#include <Inventor/engines/SoInterpolateFloat.h>
+#include <Inventor/engines/SoSelectOne.h>
+#include <Inventor/engines/SoCounter.h>
+#include <Inventor/engines/SoTimeCounter.h>
 #include <Inventor/fields/SoSFFloat.h>
 #include <Inventor/fields/SoSFVec3f.h>
 #include <Inventor/fields/SoMFFloat.h>
@@ -203,6 +212,114 @@ int main()
         bool pass = (eng->getTypeId() != SoType::badType());
         eng->unref();
         runner.endTest(pass, pass ? "" : "SoConcatenate has bad type");
+    }
+
+    // -----------------------------------------------------------------------
+    // SoComposeMatrix: class type check
+    // -----------------------------------------------------------------------
+    runner.startTest("SoComposeMatrix class initialized");
+    {
+        SoComposeMatrix* eng = new SoComposeMatrix;
+        eng->ref();
+        bool pass = (eng->getTypeId() != SoType::badType());
+        eng->unref();
+        runner.endTest(pass, pass ? "" : "SoComposeMatrix has bad type");
+    }
+
+    // -----------------------------------------------------------------------
+    // SoComposeRotation: class type check
+    // -----------------------------------------------------------------------
+    runner.startTest("SoComposeRotation class initialized");
+    {
+        SoComposeRotation* eng = new SoComposeRotation;
+        eng->ref();
+        bool pass = (eng->getTypeId() != SoType::badType());
+        eng->unref();
+        runner.endTest(pass, pass ? "" : "SoComposeRotation has bad type");
+    }
+
+    // -----------------------------------------------------------------------
+    // SoComposeVec2f: class type check
+    // -----------------------------------------------------------------------
+    runner.startTest("SoComposeVec2f class initialized");
+    {
+        SoComposeVec2f* eng = new SoComposeVec2f;
+        eng->ref();
+        bool pass = (eng->getTypeId() != SoType::badType());
+        eng->unref();
+        runner.endTest(pass, pass ? "" : "SoComposeVec2f has bad type");
+    }
+
+    // -----------------------------------------------------------------------
+    // SoComposeVec4f: class type check
+    // -----------------------------------------------------------------------
+    runner.startTest("SoComposeVec4f class initialized");
+    {
+        SoComposeVec4f* eng = new SoComposeVec4f;
+        eng->ref();
+        bool pass = (eng->getTypeId() != SoType::badType());
+        eng->unref();
+        runner.endTest(pass, pass ? "" : "SoComposeVec4f has bad type");
+    }
+
+    // -----------------------------------------------------------------------
+    // SoGate: class type check
+    // -----------------------------------------------------------------------
+    runner.startTest("SoGate class initialized");
+    {
+        SoGate* eng = new SoGate(SoMFFloat::getClassTypeId());
+        eng->ref();
+        bool pass = (eng->getTypeId() != SoType::badType());
+        eng->unref();
+        runner.endTest(pass, pass ? "" : "SoGate has bad type");
+    }
+
+    // -----------------------------------------------------------------------
+    // SoInterpolateFloat: class type check
+    // -----------------------------------------------------------------------
+    runner.startTest("SoInterpolateFloat class initialized");
+    {
+        SoInterpolateFloat* eng = new SoInterpolateFloat;
+        eng->ref();
+        bool pass = (eng->getTypeId() != SoType::badType());
+        eng->unref();
+        runner.endTest(pass, pass ? "" : "SoInterpolateFloat has bad type");
+    }
+
+    // -----------------------------------------------------------------------
+    // SoSelectOne: class type check
+    // -----------------------------------------------------------------------
+    runner.startTest("SoSelectOne class initialized");
+    {
+        SoSelectOne* eng = new SoSelectOne(SoMFFloat::getClassTypeId());
+        eng->ref();
+        bool pass = (eng->getTypeId() != SoType::badType());
+        eng->unref();
+        runner.endTest(pass, pass ? "" : "SoSelectOne has bad type");
+    }
+
+    // -----------------------------------------------------------------------
+    // SoCounter: class type check
+    // -----------------------------------------------------------------------
+    runner.startTest("SoCounter class initialized");
+    {
+        SoCounter* eng = new SoCounter;
+        eng->ref();
+        bool pass = (eng->getTypeId() != SoType::badType());
+        eng->unref();
+        runner.endTest(pass, pass ? "" : "SoCounter has bad type");
+    }
+
+    // -----------------------------------------------------------------------
+    // SoTimeCounter: class type check
+    // -----------------------------------------------------------------------
+    runner.startTest("SoTimeCounter class initialized");
+    {
+        SoTimeCounter* eng = new SoTimeCounter;
+        eng->ref();
+        bool pass = (eng->getTypeId() != SoType::badType());
+        eng->unref();
+        runner.endTest(pass, pass ? "" : "SoTimeCounter has bad type");
     }
 
     return runner.getSummary();
