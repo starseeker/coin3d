@@ -41,43 +41,40 @@ set(IMAGE_COMPARISON_RMSE_THRESHOLD "5.0" CACHE STRING "RMSE comparison threshol
 set(IMAGE_COMPARISON_TEST_TIMEOUT "30" CACHE STRING "Timeout in seconds for each test (default 30)")
 
 # Find Coin package
-# First try to find Coin in the build tree
-set(Coin_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../build")
-find_package(Coin QUIET)
-
-if(NOT Coin_FOUND)
-    # Try to use the library from the build directory directly
-    set(COIN_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../include")
-    set(COIN_BUILD_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../build/include")
-    set(COIN_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../build/lib")
-    
-    # Add include directories
-    include_directories(${COIN_BUILD_INCLUDE_DIR})
-    include_directories(${COIN_INCLUDE_DIR})
+# Priority:
+# 1. When built as part of the main Coin project the Coin target is available directly.
+# 2. Try to locate an installed or build-tree package via find_package(Coin).
+# 3. Fall back to referencing the build directory directly (standalone build).
+if(TARGET Coin)
+    # Building inside the main project: Coin target already defined.
+    # Set a local alias so the macro below uses the correct target name.
+    set(_COIN_LINK_TARGET Coin)
+    set(Coin_FOUND TRUE)
     include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-    
-    # Find required libraries
-    find_package(OpenGL REQUIRED)
+    if(COIN_TARGET_INCLUDE_DIRECTORIES)
+        include_directories(${COIN_TARGET_INCLUDE_DIRECTORIES})
+    endif()
     find_package(X11 QUIET)
-    
-    # Link directories
-    link_directories(${COIN_LIB_DIR})
-    
-    # Macro to add headless examples
+    find_package(OpenGL QUIET)
     macro(add_headless_example name)
         add_executable(${name} ${name}.cpp)
-        target_include_directories(${name} PRIVATE 
-            ${COIN_BUILD_INCLUDE_DIR}
-            ${COIN_INCLUDE_DIR} 
-            ${CMAKE_CURRENT_SOURCE_DIR})
-        target_link_libraries(${name} Coin ${OPENGL_LIBRARIES})
+        target_include_directories(${name} PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}
+            ${PROJECT_SOURCE_DIR}/include
+            ${PROJECT_SOURCE_DIR}/include/Inventor/annex
+            ${PROJECT_BINARY_DIR}/include
+            ${COIN_TARGET_INCLUDE_DIRECTORIES}
+        )
+        target_link_libraries(${name} Coin ${COIN_TARGET_LINK_LIBRARIES})
         if(EXAMPLES_USE_OSMESA)
             target_compile_definitions(${name} PRIVATE COIN3D_OSMESA_BUILD)
             if(OSMESA_INCLUDE_DIR)
                 target_include_directories(${name} PRIVATE ${OSMESA_INCLUDE_DIR})
             endif()
-            if(OSMESA_LINK_TARGET)
-                target_link_libraries(${name} ${OSMESA_LINK_TARGET})
+            if(TARGET osmesa_interface)
+                target_link_libraries(${name} osmesa_interface)
+            elseif(TARGET osmesa)
+                target_link_libraries(${name} osmesa)
             endif()
         elseif(X11_FOUND)
             target_link_libraries(${name} ${X11_X11_LIB} ${OPENGL_LIBRARIES})
@@ -88,33 +85,70 @@ if(NOT Coin_FOUND)
         )
     endmacro()
 else()
-    # Use found Coin package
-    include_directories(${Coin_INCLUDE_DIRS})
-    include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-    
-    find_package(X11 QUIET)
-    find_package(OpenGL QUIET)
-    
-    macro(add_headless_example name)
-        add_executable(${name} ${name}.cpp)
-        target_include_directories(${name} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-        target_link_libraries(${name} Coin::Coin)
-        if(EXAMPLES_USE_OSMESA)
-            target_compile_definitions(${name} PRIVATE COIN3D_OSMESA_BUILD)
-            if(OSMESA_INCLUDE_DIR)
-                target_include_directories(${name} PRIVATE ${OSMESA_INCLUDE_DIR})
+    set(Coin_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../build")
+    find_package(Coin QUIET)
+
+    if(Coin_FOUND)
+        # Use found Coin package (Coin::Coin imported target)
+        include_directories(${Coin_INCLUDE_DIRS})
+        include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+        find_package(X11 QUIET)
+        find_package(OpenGL QUIET)
+        macro(add_headless_example name)
+            add_executable(${name} ${name}.cpp)
+            target_include_directories(${name} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+            target_link_libraries(${name} Coin::Coin)
+            if(EXAMPLES_USE_OSMESA)
+                target_compile_definitions(${name} PRIVATE COIN3D_OSMESA_BUILD)
+                if(OSMESA_INCLUDE_DIR)
+                    target_include_directories(${name} PRIVATE ${OSMESA_INCLUDE_DIR})
+                endif()
+                if(OSMESA_LINK_TARGET)
+                    target_link_libraries(${name} ${OSMESA_LINK_TARGET})
+                endif()
+            elseif(X11_FOUND)
+                target_link_libraries(${name} ${X11_X11_LIB} ${OPENGL_LIBRARIES})
+                target_include_directories(${name} PRIVATE ${X11_INCLUDE_DIR})
             endif()
-            if(OSMESA_LINK_TARGET)
-                target_link_libraries(${name} ${OSMESA_LINK_TARGET})
+            set_target_properties(${name} PROPERTIES
+                RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin"
+            )
+        endmacro()
+    else()
+        # Standalone build: reference the library from the build directory directly
+        set(COIN_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../include")
+        set(COIN_BUILD_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../build/include")
+        set(COIN_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../build/lib")
+        include_directories(${COIN_BUILD_INCLUDE_DIR})
+        include_directories(${COIN_INCLUDE_DIR})
+        include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+        find_package(OpenGL REQUIRED)
+        find_package(X11 QUIET)
+        link_directories(${COIN_LIB_DIR})
+        macro(add_headless_example name)
+            add_executable(${name} ${name}.cpp)
+            target_include_directories(${name} PRIVATE
+                ${COIN_BUILD_INCLUDE_DIR}
+                ${COIN_INCLUDE_DIR}
+                ${CMAKE_CURRENT_SOURCE_DIR})
+            target_link_libraries(${name} Coin ${OPENGL_LIBRARIES})
+            if(EXAMPLES_USE_OSMESA)
+                target_compile_definitions(${name} PRIVATE COIN3D_OSMESA_BUILD)
+                if(OSMESA_INCLUDE_DIR)
+                    target_include_directories(${name} PRIVATE ${OSMESA_INCLUDE_DIR})
+                endif()
+                if(OSMESA_LINK_TARGET)
+                    target_link_libraries(${name} ${OSMESA_LINK_TARGET})
+                endif()
+            elseif(X11_FOUND)
+                target_link_libraries(${name} ${X11_X11_LIB} ${OPENGL_LIBRARIES})
+                target_include_directories(${name} PRIVATE ${X11_INCLUDE_DIR})
             endif()
-        elseif(X11_FOUND)
-            target_link_libraries(${name} ${X11_X11_LIB} ${OPENGL_LIBRARIES})
-            target_include_directories(${name} PRIVATE ${X11_INCLUDE_DIR})
-        endif()
-        set_target_properties(${name} PROPERTIES
-            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin"
-        )
-    endmacro()
+            set_target_properties(${name} PROPERTIES
+                RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin"
+            )
+        endmacro()
+    endif()
 endif()
 
 # Add headless examples
@@ -189,19 +223,23 @@ add_headless_example(16.3.AttachEditor)
 add_headless_example(17.2.GLCallback)
 
 # Build image comparator utility (with optional PNG support via libpng)
+# When building as part of the main project, reuse the image_comparator target
+# that is already defined in the tests/ directory to avoid duplicate targets.
 find_package(PNG QUIET)
-add_executable(image_comparator image_comparator.cpp)
-if(PNG_FOUND)
-    target_compile_definitions(image_comparator PRIVATE HAVE_LIBPNG)
-    target_include_directories(image_comparator PRIVATE ${PNG_INCLUDE_DIRS})
-    target_link_libraries(image_comparator ${PNG_LIBRARIES})
+if(NOT TARGET image_comparator)
+    add_executable(image_comparator image_comparator.cpp)
+    if(PNG_FOUND)
+        target_compile_definitions(image_comparator PRIVATE HAVE_LIBPNG)
+        target_include_directories(image_comparator PRIVATE ${PNG_INCLUDE_DIRS})
+        target_link_libraries(image_comparator ${PNG_LIBRARIES})
+    endif()
+    set_target_properties(image_comparator PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin"
+    )
 endif()
-set_target_properties(image_comparator PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin"
-)
 
 # Build rgb_to_png converter (requires libpng)
-if(PNG_FOUND)
+if(PNG_FOUND AND NOT TARGET rgb_to_png)
     add_executable(rgb_to_png rgb_to_png.c)
     target_include_directories(rgb_to_png PRIVATE ${PNG_INCLUDE_DIRS})
     target_link_libraries(rgb_to_png ${PNG_LIBRARIES})
