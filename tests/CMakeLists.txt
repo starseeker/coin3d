@@ -98,17 +98,16 @@ endforeach()
 # Subdirectory tests
 # -----------------------------------------------------------------------
 add_subdirectory(threads)
+add_subdirectory(base)
+add_subdirectory(fields)
+add_subdirectory(actions)
+add_subdirectory(nodes)
+add_subdirectory(io)
+add_subdirectory(sensors)
+add_subdirectory(engines)
 
-# Placeholder subdirectories for future tests (add add_subdirectory() calls
-# here as tests are written):
-#   add_subdirectory(actions)
-#   add_subdirectory(base)
-#   add_subdirectory(engines)
-#   add_subdirectory(fields)
-#   add_subdirectory(io)
-#   add_subdirectory(nodes)
+# Placeholder subdirectories for future tests:
 #   add_subdirectory(rendering)
-#   add_subdirectory(sensors)
 
 # -----------------------------------------------------------------------
 # Image comparison utilities
