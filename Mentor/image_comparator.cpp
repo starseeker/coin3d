@@ -57,6 +57,12 @@
 
 #ifdef HAVE_LIBPNG
 #include <png.h>
+#else
+// Fall back to stb_image for PNG decoding when libpng is not available
+#define STB_IMAGE_IMPLEMENTATION
+#define STBI_ONLY_PNG
+#define STBI_NO_STDIO
+#include "stb_image.h"
 #endif
 
 // Default thresholds - should match CMake defaults in CMakeLists.txt
@@ -268,16 +274,51 @@ static bool load_png_image(const char* filename, int& width, int& height, int& c
     fclose(fp);
     return true;
 }
+#else
+// stb_image PNG loader - used when libpng is not available
+static bool load_png_image(const char* filename, int& width, int& height, int& channels,
+                           std::vector<unsigned char>& data) {
+    // Read file into memory for stb_image (STBI_NO_STDIO is defined)
+    FILE* fp = fopen(filename, "rb");
+    if (!fp) {
+        fprintf(stderr, "Error: Cannot open file %s\n", filename);
+        return false;
+    }
+    fseek(fp, 0, SEEK_END);
+    long fsize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+    std::vector<unsigned char> file_data((size_t)fsize);
+    if (fread(file_data.data(), 1, (size_t)fsize, fp) != (size_t)fsize) {
+        fprintf(stderr, "Error: Failed to read file %s\n", filename);
+        fclose(fp);
+        return false;
+    }
+    fclose(fp);
+
+    // Decode PNG - force 3 channels (RGB) for comparison with SGI RGB images
+    int w = 0, h = 0, c = 0;
+    unsigned char* pixels = stbi_load_from_memory(
+        file_data.data(), (int)fsize, &w, &h, &c, 3);
+    if (!pixels) {
+        fprintf(stderr, "Error: stb_image failed to decode %s: %s\n",
+                filename, stbi_failure_reason());
+        return false;
+    }
+    width = w;
+    height = h;
+    channels = 3;
+    data.assign(pixels, pixels + (size_t)(w * h * 3));
+    stbi_image_free(pixels);
+    return true;
+}
 #endif /* HAVE_LIBPNG */
 
 // Determine file type by extension and load image accordingly
 static bool load_image(const char* filename, int& width, int& height, int& channels,
                        std::vector<unsigned char>& data) {
     const char* ext = strrchr(filename, '.');
-#ifdef HAVE_LIBPNG
     if (ext && (strcmp(ext, ".png") == 0 || strcmp(ext, ".PNG") == 0))
         return load_png_image(filename, width, height, channels, data);
-#endif
     return load_rgb_image(filename, width, height, channels, data);
 }
 
