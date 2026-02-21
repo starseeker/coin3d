@@ -15,6 +15,11 @@ scratch independently before SGI Open Inventor became open source.
 parameter for `SoDB::init()`. See `docs/CONTEXT_MANAGEMENT_API.md` for details on the 
 new public API.
 
+We are actively working to remove the public C api and focus on just C++, and
+in some cases that will mean designing more "Idiomatic" C++ api for features
+previously handled via C (fonts being a case in point).  For some useful info
+about changes made so far, see the documents in the docs/ directory.
+
 ## What is Obol?
 
 The name Obol itself is a reference to an ancient small denomination Greek coin
