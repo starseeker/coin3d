@@ -445,7 +445,6 @@ endif()
 
 if(COIN_BUILD_TESTS)
   enable_testing()
-  add_subdirectory(testsuite)    # Legacy threading tests
   add_subdirectory(tests)
   add_subdirectory(Mentor)
 endif()
