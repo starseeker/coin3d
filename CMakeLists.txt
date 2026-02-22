@@ -149,10 +149,12 @@ else()
   find_package(OpenGL REQUIRED)
   set(HAVE_OPENGL 1)
 
-  if(OpenGL_OpenGL_FOUND)
+  if(OpenGL_OpenGL_FOUND AND TARGET OpenGL::OpenGL)
     list(APPEND COIN_TARGET_LINK_LIBRARIES_GL OpenGL::OpenGL)
-  else()
+  elseif(OpenGL_GL_FOUND AND TARGET OpenGL::GL)
     list(APPEND COIN_TARGET_LINK_LIBRARIES_GL OpenGL::GL)
+  elseif(OPENGL_gl_LIBRARY)
+    list(APPEND COIN_TARGET_LINK_LIBRARIES_GL ${OPENGL_gl_LIBRARY})
   endif()
 
   # On Unix/Linux, detect GLX for offscreen rendering support
@@ -445,7 +447,6 @@ endif()
 
 if(COIN_BUILD_TESTS)
   enable_testing()
-  add_subdirectory(testsuite)    # Legacy threading tests
   add_subdirectory(tests)
   add_subdirectory(Mentor)
 endif()

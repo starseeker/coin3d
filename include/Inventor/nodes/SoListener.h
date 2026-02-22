@@ -44,7 +44,6 @@ class COIN_DLL_API SoListener : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_HEADER(SoListener);
-  friend class SoAudioRenderAction;
 
 public:
   static void initClass();

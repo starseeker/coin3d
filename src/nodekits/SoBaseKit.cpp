@@ -680,8 +680,6 @@ SoBaseKit::initClass(void)
   // set rayPick method
   SoType type = SoBaseKit::getClassTypeId();
   SoRayPickAction::addMethod(type, SoNode::rayPickS);
-  // Note: Removed SoAudioRenderAction registration as it's not essential
-  // for core nodekit functionality
   SoBaseKit::searchchildren = FALSE;
 }
 

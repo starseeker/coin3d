@@ -141,8 +141,6 @@ void
 SoNodeKitListPart::initClass(void)
 {
   SO_NODE_INTERNAL_INIT_CLASS(SoNodeKitListPart, SO_FROM_INVENTOR_1);
-  // Note: Removed SoAudioRenderAction registration as it's not essential
-  // for core nodekit functionality
 }
 
 /*!

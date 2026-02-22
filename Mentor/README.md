@@ -96,7 +96,7 @@ To generate control images for all examples:
 
 ```bash
 cd build
-make generate_controls
+make generate_mentor_controls
 ```
 
 Or manually:

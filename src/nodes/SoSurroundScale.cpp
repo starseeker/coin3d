@@ -430,7 +430,9 @@ SoSurroundScale::updateMySurroundParams(SoAction * action,
 
   SbViewportRegion vp(100, 100);
   // need to test if SoViewportRegionElement is enabled since this
-  // element is not enabled for SoAudioRenderAction.
+  // element is not enabled for SoAudioRenderAction.  TODO - Obol
+  // removed audio support - does this code need updating or
+  // removal?
 
   if (action->getState()->isElementEnabled(SoViewportRegionElement::getClassStackIndex())) {
     vp = SoViewportRegionElement::get(action->getState());

@@ -34,7 +34,7 @@ BUILD_DIR=build ./generate_control_images.sh
 Or use CMake:
 ```bash
 cd build
-make generate_controls
+make generate_mentor_controls
 ```
 
 ### 3. Run Tests

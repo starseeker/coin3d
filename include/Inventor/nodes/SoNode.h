@@ -50,7 +50,6 @@ class SoPickAction;
 class SoRayPickAction;
 class SoSearchAction;
 class SoWriteAction;
-class SoAudioRenderAction;
 class SbDict;
 
 class COIN_DLL_API SoNode : public SoFieldContainer {
