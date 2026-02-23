@@ -54,6 +54,7 @@
 #endif // HAVE_CONFIG_H
 
 #include <Inventor/SoDB.h>
+#include <Inventor/nodekits/SoNodeKit.h>
 #include <Inventor/nodes/SoAntiSquish.h>
 #include <Inventor/nodes/SoExtSelection.h>
 #include <Inventor/nodes/SoSurroundScale.h>
@@ -61,6 +62,10 @@
 #ifdef HAVE_DRAGGERS
 #include <Inventor/draggers/SoDragger.h>
 #endif // HAVE_DRAGGERS
+
+#ifdef HAVE_NODEKITS
+#include <Inventor/nodekits/SoInteractionKit.h>
+#endif // HAVE_NODEKITS
 
 #ifdef HAVE_MANIPULATORS
 #include <Inventor/manips/SoCenterballManip.h>
@@ -135,6 +140,11 @@ SoInteraction::init(void)
   SoSelection::initClass();
   SoExtSelection::initClass();
   SoSurroundScale::initClass();
+
+  SoNodeKit::init();
+#ifdef HAVE_NODEKITS
+  SoInteractionKit::initClass();
+#endif // HAVE_NODEKITS
 
 #ifdef HAVE_DRAGGERS
   SoDragger::initClass();

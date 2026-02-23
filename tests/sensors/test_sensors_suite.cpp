@@ -54,6 +54,7 @@
 #include <Inventor/sensors/SoOneShotSensor.h>
 #include <Inventor/sensors/SoIdleSensor.h>
 #include <Inventor/sensors/SoPathSensor.h>
+#include <Inventor/sensors/SoDataSensor.h>
 #include <Inventor/nodes/SoCube.h>
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/SoDB.h>
@@ -220,6 +221,31 @@ int main()
 
         bool pass = attached && detached;
         runner.endTest(pass, pass ? "" : "SoPathSensor attach/detach failed");
+    }
+
+    // -----------------------------------------------------------------------
+    // SoDataSensor: class initialized and API via SoFieldSensor (concrete
+    // derived class); getTriggerField returns NULL before any trigger fires.
+    // -----------------------------------------------------------------------
+    runner.startTest("SoDataSensor class initialized via SoFieldSensor");
+    {
+        SoFieldSensor fs(onFieldChange, nullptr);
+        // SoFieldSensor IS-A SoDataSensor – verify the SoDataSensor API is
+        // accessible without crashing.
+        SoField* tf = fs.getTriggerField();     // NULL before attach/trigger
+        SbBool pathFlag = fs.getTriggerPathFlag(); // default FALSE
+        bool pass = (tf == nullptr) && (pathFlag == FALSE);
+        runner.endTest(pass, pass ? "" :
+            "SoDataSensor getTriggerField/getTriggerPathFlag initial state wrong");
+    }
+
+    runner.startTest("SoDataSensor setTriggerPathFlag");
+    {
+        SoFieldSensor fs(onFieldChange, nullptr);
+        fs.setTriggerPathFlag(TRUE);
+        bool pass = (fs.getTriggerPathFlag() == TRUE);
+        runner.endTest(pass, pass ? "" :
+            "SoDataSensor setTriggerPathFlag did not stick");
     }
 
     return runner.getSummary();

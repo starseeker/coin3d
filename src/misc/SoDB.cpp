@@ -221,10 +221,11 @@ SoDB::init(ContextManager * context_manager)
 
   // Require a valid context manager
   if (!context_manager) {
-    SoDebugError::post("SoDB::init", 
-                       "Context manager is NULL. "
-                       "Applications must provide a valid ContextManager implementation. "
-                       "For internal library use, this will proceed with limited functionality.");
+    // Use fprintf here because SoError::initClasses() has not been called yet;
+    // calling SoDebugError::post() before that would trigger an assert.
+    fprintf(stderr, "SoDB::init: Context manager is NULL. "
+                    "Applications must provide a valid ContextManager implementation. "
+                    "Proceeding with limited functionality.\n");
     // For internal library calls, we proceed but with limited context support
     // Applications should always provide a proper context manager
   } else {

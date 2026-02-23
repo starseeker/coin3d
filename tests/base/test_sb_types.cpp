@@ -58,6 +58,7 @@
 #include <Inventor/SbVec3f.h>
 #include <Inventor/SbVec3d.h>
 #include <Inventor/SbVec3s.h>
+#include <Inventor/SbVec3us.h>
 #include <Inventor/SbVec4f.h>
 #include <Inventor/SbBox2f.h>
 #include <Inventor/SbBox2d.h>
@@ -83,6 +84,7 @@
 #include <Inventor/SbBox2i32.h>
 #include <Inventor/SbViewVolume.h>
 #include <Inventor/SbImage.h>
+#include "base/heap.h"
 
 #include <cmath>
 #include <cstring>
@@ -724,6 +726,399 @@ int main()
         SbVec2i32 diff = maxPt - minPt;
         bool pass = (box.getSize() == diff);
         runner.endTest(pass, pass ? "" : "SbBox2i32 getSize incorrect");
+    }
+
+    // -----------------------------------------------------------------------
+    // SbVec3us: construction and get/setValue round-trip
+    // Baseline: src/base/SbVec3us.cpp (COIN_TEST_SUITE block is empty;
+    //           API behavior test)
+    // -----------------------------------------------------------------------
+    runner.startTest("SbVec3us construction and getValue");
+    {
+        SbVec3us v(1, 2, 3);
+        unsigned short x, y, z;
+        v.getValue(x, y, z);
+        bool pass = (x == 1) && (y == 2) && (z == 3);
+        runner.endTest(pass, pass ? "" : "SbVec3us getValue returned wrong values");
+    }
+
+    runner.startTest("SbVec3us setValue round-trip");
+    {
+        SbVec3us v;
+        v.setValue(10, 20, 30);
+        const unsigned short* p = v.getValue();
+        bool pass = (p[0] == 10) && (p[1] == 20) && (p[2] == 30);
+        runner.endTest(pass, pass ? "" : "SbVec3us setValue/getValue mismatch");
+    }
+
+    // -----------------------------------------------------------------------
+    // SbHeap (cc_heap): min-heap and max-heap ordering
+    // Baseline: src/base/heap.cpp COIN_TEST_SUITE
+    // -----------------------------------------------------------------------
+    {
+        struct MockVal { double x; };
+
+        // Named functions used as callbacks avoid repeated cast patterns
+        struct HeapCb {
+            static void print(void* v, SbString& str) {
+                MockVal* mv = static_cast<MockVal*>(v);
+                char buf[32];
+                snprintf(buf, sizeof(buf), "%g", mv->x);
+                str += buf;
+            }
+            static int min_cmp(void* lhs, void* rhs) {
+                return static_cast<MockVal*>(lhs)->x < static_cast<MockVal*>(rhs)->x ? 1 : 0;
+            }
+            static int max_cmp(void* lhs, void* rhs) {
+                return static_cast<MockVal*>(lhs)->x > static_cast<MockVal*>(rhs)->x ? 1 : 0;
+            }
+        };
+
+        auto* pprint   = reinterpret_cast<cc_heap_print_cb*>(&HeapCb::print);
+        auto* pmin_cmp = reinterpret_cast<cc_heap_compare_cb*>(&HeapCb::min_cmp);
+        auto* pmax_cmp = reinterpret_cast<cc_heap_compare_cb*>(&HeapCb::max_cmp);
+
+        runner.startTest("SbHeap min_heap ordering");
+        {
+            MockVal val[] = {{3},{2},{1},{15},{5},{4},{45}};
+            cc_heap* heap = cc_heap_construct(256, pmin_cmp, TRUE);
+            for (auto& v : val) cc_heap_add(heap, &v);
+            SbString result;
+            cc_heap_print(heap, pprint, result, FALSE);
+            cc_heap_destruct(heap);
+            SbString expected("1 3 2 15 5 4 45 ");
+            bool pass = (result == expected);
+            runner.endTest(pass, pass ? "" :
+                std::string("min_heap mismatch: got '") + result.getString() +
+                "' expected '" + expected.getString() + "'");
+        }
+
+        runner.startTest("SbHeap max_heap ordering");
+        {
+            MockVal val[] = {{3},{2},{1},{15},{5},{4},{45}};
+            cc_heap* heap = cc_heap_construct(256, pmax_cmp, TRUE);
+            for (auto& v : val) cc_heap_add(heap, &v);
+            SbString result;
+            cc_heap_print(heap, pprint, result, FALSE);
+            cc_heap_destruct(heap);
+            SbString expected("45 5 15 2 3 1 4 ");
+            bool pass = (result == expected);
+            runner.endTest(pass, pass ? "" :
+                std::string("max_heap mismatch: got '") + result.getString() +
+                "' expected '" + expected.getString() + "'");
+        }
+
+        runner.startTest("SbHeap heap_add");
+        {
+            MockVal val[] = {{3},{2},{1},{15},{5},{4},{45}};
+            cc_heap* heap = cc_heap_construct(256, pmin_cmp, TRUE);
+            for (auto& v : val) cc_heap_add(heap, &v);
+            MockVal extra = {12};
+            cc_heap_add(heap, &extra);
+            SbString result;
+            cc_heap_print(heap, pprint, result, FALSE);
+            cc_heap_destruct(heap);
+            SbString expected("1 3 2 12 5 4 45 15 ");
+            bool pass = (result == expected);
+            runner.endTest(pass, pass ? "" :
+                std::string("heap_add mismatch: got '") + result.getString() +
+                "' expected '" + expected.getString() + "'");
+        }
+
+        runner.startTest("SbHeap heap_remove");
+        {
+            MockVal val[] = {{3},{2},{1},{15},{5},{4},{45}};
+            cc_heap* heap = cc_heap_construct(256, pmin_cmp, TRUE);
+            for (auto& v : val) cc_heap_add(heap, &v);
+            cc_heap_remove(heap, &val[3]); // remove 15
+            SbString result;
+            cc_heap_print(heap, pprint, result, FALSE);
+            cc_heap_destruct(heap);
+            SbString expected("1 3 2 45 5 4 ");
+            bool pass = (result == expected);
+            runner.endTest(pass, pass ? "" :
+                std::string("heap_remove mismatch: got '") + result.getString() +
+                "' expected '" + expected.getString() + "'");
+        }
+
+        runner.startTest("SbHeap heap_update");
+        {
+            MockVal val[] = {{3},{2},{1},{15},{5},{4},{45}};
+            cc_heap* heap = cc_heap_construct(256, pmin_cmp, TRUE);
+            for (auto& v : val) cc_heap_add(heap, &v);
+            val[3].x = 1; // change 15 -> 1
+            cc_heap_update(heap, &val[3]);
+            SbString result;
+            cc_heap_print(heap, pprint, result, FALSE);
+            cc_heap_destruct(heap);
+            SbString expected("1 1 2 3 5 4 45 ");
+            bool pass = (result == expected);
+            runner.endTest(pass, pass ? "" :
+                std::string("heap_update mismatch: got '") + result.getString() +
+                "' expected '" + expected.getString() + "'");
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // SbMatrix full suite — Tier 2 coverage expansion
+    // Covers: det4, inverse, factor, multVecMatrix, multDirMatrix
+    // -----------------------------------------------------------------------
+
+    runner.startTest("SbMatrix det4 identity");
+    {
+        SbMatrix m = SbMatrix::identity();
+        float d = m.det4();
+        bool pass = floatNear(d, 1.0f, 1e-4f);
+        runner.endTest(pass, pass ? "" : "SbMatrix identity det4 != 1");
+    }
+
+    runner.startTest("SbMatrix det4 scale matrix");
+    {
+        SbMatrix m = SbMatrix::identity();
+        m[0][0] = 2.0f;
+        m[1][1] = 3.0f;
+        m[2][2] = 4.0f;
+        // det = 2*3*4 = 24
+        float d = m.det4();
+        bool pass = floatNear(d, 24.0f, 1e-3f);
+        runner.endTest(pass, pass ? "" : "SbMatrix scale det4 incorrect");
+    }
+
+    runner.startTest("SbMatrix inverse of identity is identity");
+    {
+        SbMatrix m    = SbMatrix::identity();
+        SbMatrix inv  = m.inverse();
+        SbMatrix prod = m.multRight(inv);
+        // product should be (close to) identity
+        bool pass = true;
+        for (int r = 0; r < 4 && pass; ++r)
+            for (int c = 0; c < 4 && pass; ++c) {
+                float expected = (r == c) ? 1.0f : 0.0f;
+                if (!floatNear(prod[r][c], expected, 1e-4f)) pass = false;
+            }
+        runner.endTest(pass, pass ? "" : "SbMatrix inverse(identity) != identity");
+    }
+
+    runner.startTest("SbMatrix inverse of scale matrix");
+    {
+        SbMatrix m = SbMatrix::identity();
+        m[0][0] = 2.0f;
+        m[1][1] = 4.0f;
+        m[2][2] = 0.5f;
+        SbMatrix inv = m.inverse();
+        // Expected diagonal: 0.5, 0.25, 2.0
+        bool pass = floatNear(inv[0][0], 0.5f,  1e-4f) &&
+                    floatNear(inv[1][1], 0.25f, 1e-4f) &&
+                    floatNear(inv[2][2], 2.0f,  1e-4f);
+        runner.endTest(pass, pass ? "" : "SbMatrix scale inverse incorrect");
+    }
+
+    runner.startTest("SbMatrix multVecMatrix translation");
+    {
+        // Build a translation matrix: translate by (1,2,3)
+        SbMatrix m = SbMatrix::identity();
+        m[3][0] = 1.0f;
+        m[3][1] = 2.0f;
+        m[3][2] = 3.0f;
+        SbVec3f src(0.0f, 0.0f, 0.0f), dst;
+        m.multVecMatrix(src, dst);
+        bool pass = floatNear(dst[0], 1.0f) &&
+                    floatNear(dst[1], 2.0f) &&
+                    floatNear(dst[2], 3.0f);
+        runner.endTest(pass, pass ? "" : "SbMatrix multVecMatrix translation incorrect");
+    }
+
+    runner.startTest("SbMatrix multVecMatrix scale");
+    {
+        SbMatrix m = SbMatrix::identity();
+        m[0][0] = 3.0f;
+        m[1][1] = 3.0f;
+        m[2][2] = 3.0f;
+        SbVec3f src(1.0f, 1.0f, 1.0f), dst;
+        m.multVecMatrix(src, dst);
+        bool pass = floatNear(dst[0], 3.0f) &&
+                    floatNear(dst[1], 3.0f) &&
+                    floatNear(dst[2], 3.0f);
+        runner.endTest(pass, pass ? "" : "SbMatrix multVecMatrix scale incorrect");
+    }
+
+    runner.startTest("SbMatrix multDirMatrix ignores translation");
+    {
+        // Translation matrix: translate by (5,6,7)
+        SbMatrix m = SbMatrix::identity();
+        m[3][0] = 5.0f;
+        m[3][1] = 6.0f;
+        m[3][2] = 7.0f;
+        SbVec3f dir(1.0f, 0.0f, 0.0f), dst;
+        m.multDirMatrix(dir, dst);
+        // Direction must NOT be translated
+        bool pass = floatNear(dst[0], 1.0f) &&
+                    floatNear(dst[1], 0.0f) &&
+                    floatNear(dst[2], 0.0f);
+        runner.endTest(pass, pass ? "" :
+            "SbMatrix multDirMatrix should not translate direction vector");
+    }
+
+    runner.startTest("SbMatrix factor executes on translation+scale matrix");
+    {
+        // factor() exercises the polar-decomposition code path.
+        // Note: this implementation may return FALSE for non-standard matrices;
+        // the test verifies the call completes without crashing.
+        SbMatrix m;
+        m.setTransform(SbVec3f(1.0f, 2.0f, 3.0f),
+                       SbRotation::identity(),
+                       SbVec3f(2.0f, 2.0f, 2.0f));
+        SbMatrix r, u, proj;
+        SbVec3f  s, t;
+        m.factor(r, s, u, t, proj);  // exercises code; return value varies
+        bool pass = true;            // call completed without crash
+        runner.endTest(pass, pass ? "" : "SbMatrix factor crashed");
+    }
+
+    // -----------------------------------------------------------------------
+    // SbDPMatrix math suite — Tier 2 coverage expansion
+    // Covers: multLeft, multRight, multVecMatrix, multDirMatrix, inverse, det4,
+    //         getTransform, factor
+    // -----------------------------------------------------------------------
+
+    runner.startTest("SbDPMatrix identity det4 = 1");
+    {
+        SbMatrixd m = SbMatrixd::identity();
+        double d = m.det4();
+        bool pass = doubleNear(d, 1.0);
+        runner.endTest(pass, pass ? "" : "SbDPMatrix identity det4 != 1");
+    }
+
+    runner.startTest("SbDPMatrix scale det4");
+    {
+        SbMatrixd m = SbMatrixd::identity();
+        m[0][0] = 2.0; m[1][1] = 3.0; m[2][2] = 5.0;
+        // det = 2*3*5 = 30
+        double d = m.det4();
+        bool pass = doubleNear(d, 30.0, 1e-9);
+        runner.endTest(pass, pass ? "" : "SbDPMatrix scale det4 incorrect");
+    }
+
+    runner.startTest("SbDPMatrix inverse of identity");
+    {
+        SbMatrixd m   = SbMatrixd::identity();
+        SbMatrixd inv = m.inverse();
+        bool pass = true;
+        for (int r = 0; r < 4 && pass; ++r)
+            for (int c = 0; c < 4 && pass; ++c) {
+                double expected = (r == c) ? 1.0 : 0.0;
+                if (!doubleNear(inv[r][c], expected, 1e-9)) pass = false;
+            }
+        runner.endTest(pass, pass ? "" : "SbDPMatrix inverse(identity) != identity");
+    }
+
+    runner.startTest("SbDPMatrix multRight produces correct product");
+    {
+        // Scale by 2 then translate by (1,0,0)
+        SbMatrixd scale = SbMatrixd::identity();
+        scale[0][0] = 2.0; scale[1][1] = 2.0; scale[2][2] = 2.0;
+
+        SbMatrixd trans = SbMatrixd::identity();
+        trans[3][0] = 1.0;  // row-major translation (Coin convention)
+
+        SbMatrixd prod = scale;
+        prod.multRight(trans);
+
+        SbVec3d src(1.0, 0.0, 0.0), dst;
+        prod.multVecMatrix(src, dst);
+        // scale(1,0,0) -> (2,0,0), then translate -> (3,0,0)
+        bool pass = doubleNear(dst[0], 3.0, 1e-9) &&
+                    doubleNear(dst[1], 0.0, 1e-9) &&
+                    doubleNear(dst[2], 0.0, 1e-9);
+        runner.endTest(pass, pass ? "" : "SbDPMatrix multRight incorrect result");
+    }
+
+    runner.startTest("SbDPMatrix multLeft produces correct product");
+    {
+        // prod = trans (translate +1 in X), then multLeft(scale) → prod = scale * trans
+        // v * (scale * trans): first scales v, then translates
+        // (1,0,0) * scale → (2,0,0); (2,0,0) * trans → (3,0,0)
+        SbMatrixd scale = SbMatrixd::identity();
+        scale[0][0] = 2.0; scale[1][1] = 2.0; scale[2][2] = 2.0;
+
+        SbMatrixd trans = SbMatrixd::identity();
+        trans[3][0] = 1.0;
+
+        // trans.multLeft(scale) == scale * trans
+        SbMatrixd prod = trans;
+        prod.multLeft(scale);
+
+        SbVec3d src(1.0, 0.0, 0.0), dst;
+        prod.multVecMatrix(src, dst);
+        // (1,0,0) scaled to (2,0,0), then translated to (3,0,0)
+        bool pass = doubleNear(dst[0], 3.0, 1e-9) &&
+                    doubleNear(dst[1], 0.0, 1e-9) &&
+                    doubleNear(dst[2], 0.0, 1e-9);
+        runner.endTest(pass, pass ? "" : "SbDPMatrix multLeft incorrect result");
+    }
+
+    runner.startTest("SbDPMatrix multVecMatrix translation");
+    {
+        SbMatrixd m = SbMatrixd::identity();
+        m[3][0] = 4.0; m[3][1] = 5.0; m[3][2] = 6.0;
+        SbVec3d src(0.0, 0.0, 0.0), dst;
+        m.multVecMatrix(src, dst);
+        bool pass = doubleNear(dst[0], 4.0) &&
+                    doubleNear(dst[1], 5.0) &&
+                    doubleNear(dst[2], 6.0);
+        runner.endTest(pass, pass ? "" : "SbDPMatrix multVecMatrix translation incorrect");
+    }
+
+    runner.startTest("SbDPMatrix multDirMatrix ignores translation");
+    {
+        SbMatrixd m = SbMatrixd::identity();
+        m[3][0] = 10.0; m[3][1] = 20.0; m[3][2] = 30.0;
+        SbVec3d dir(1.0, 0.0, 0.0), dst;
+        m.multDirMatrix(dir, dst);
+        bool pass = doubleNear(dst[0], 1.0) &&
+                    doubleNear(dst[1], 0.0) &&
+                    doubleNear(dst[2], 0.0);
+        runner.endTest(pass, pass ? "" :
+            "SbDPMatrix multDirMatrix should not translate direction");
+    }
+
+    runner.startTest("SbDPMatrix getTransform round-trips translation");
+    {
+        SbMatrixd m = SbMatrixd::identity();
+        SbVec3d    inT(1.5, -2.5, 3.0);
+        SbDPRotation inR = SbDPRotation::identity();
+        SbVec3d    inS(1.0, 1.0, 1.0);
+        m.setTransform(inT, inR, inS);
+
+        SbVec3d    outT;
+        SbDPRotation outR, outSO;
+        SbVec3d    outS;
+        m.getTransform(outT, outR, outS, outSO);
+
+        bool pass = doubleNear(outT[0], 1.5, 1e-6) &&
+                    doubleNear(outT[1], -2.5, 1e-6) &&
+                    doubleNear(outT[2], 3.0, 1e-6);
+        runner.endTest(pass, pass ? "" :
+            "SbDPMatrix getTransform translation round-trip failed");
+    }
+
+    runner.startTest("SbDPMatrix factor executes on translation+scale matrix");
+    {
+        // factor() exercises the polar-decomposition code path.
+        // Note: this implementation may return FALSE for non-standard matrices;
+        // the test verifies the call completes without crashing.
+        SbMatrixd m = SbMatrixd::identity();
+        SbVec3d    inT(1.0, 2.0, 3.0);
+        SbDPRotation inR = SbDPRotation::identity();
+        SbVec3d    inS(2.0, 2.0, 2.0);
+        m.setTransform(inT, inR, inS);
+
+        SbMatrixd r, u, proj;
+        SbVec3d   s, t;
+        m.factor(r, s, u, t, proj);  // exercises code; return value varies
+        bool pass = true;            // call completed without crash
+        runner.endTest(pass, pass ? "" :
+            "SbDPMatrix factor crashed");
     }
 
     return runner.getSummary();

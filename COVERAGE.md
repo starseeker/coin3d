@@ -24,7 +24,7 @@ Tests in `tests/` subdirectories are baselined against the
 | `SbVec2f` | ✅ | (via SbBox2f) | Covered through box tests |
 | `SbVec3d` | ✅ | `src/base/SbVec3d.cpp` | fromString |
 | `SbVec3s` | ✅ | `src/base/SbVec3s.cpp` | fromString, fromInvalidString |
-| `SbVec3us` | ❌ | `src/base/SbVec3us.cpp` | |
+| `SbVec3us` | ✅ | `src/base/SbVec3us.cpp` | construction, getValue, setValue round-trip |
 | `SbVec4f` | ✅ | `src/base/SbVec4f.cpp` | normalize already-normalized |
 | `SbBox2f` | ✅ | `src/base/SbBox2f.cpp` | getSize, getClosestPoint (outside, center) |
 | `SbBox2d` | ✅ | `src/base/SbBox2d.cpp` | getSize, getClosestPoint |
@@ -50,7 +50,7 @@ Tests in `tests/` subdirectories are baselined against the
 | `SbLine` | ✅ | — | getClosestPoint, getClosestPoints (parallel lines) |
 | `SbSphere` | ✅ | — | pointInside, getRadius/setRadius, setCenter |
 | `SbCylinder` | ✅ | — | construction, getRadius |
-| `SbHeap` | ❌ | `src/base/heap.cpp` | |
+| `SbHeap` | ✅ | `src/base/heap.cpp` | min_heap, max_heap, heap_add, heap_remove, heap_update |
 
 ---
 
@@ -141,8 +141,8 @@ Tests in `tests/` subdirectories are baselined against the
 | `SoPickAction` | ❌ | — | base class; tested via SoRayPickAction |
 | `SoRayPickAction` | ✅ | — | class initialized, no picks on empty scene, picks cube at origin, pick point on cube surface + path |
 | `SoGetPrimitiveCountAction` | ✅ | — | class initialized, count 0 for empty scene |
-| `SoReorganizeAction` | ❌ | — | |
-| `SoAudioRenderAction` | ❌ | — | |
+| `SoReorganizeAction` | ✅ | — | class initialized (type registered) |
+| `SoAudioRenderAction` | ❌ | — | removed from Obol |
 
 ---
 
@@ -217,7 +217,7 @@ Tests in `tests/` subdirectories are baselined against the
 | `SoDB::isValidHeader` | ✅ | — | |
 | `SoDB::readAll` (VRML 2.0) | ❌ | `src/misc/SoDB.cpp` | readChildList (VRML) – removed in Obol |
 | `SoBase` write/read | ✅ | `src/misc/SoBase.cpp` | unnamed multi-ref DEF/USE, same-named node disambiguation (+N) |
-| Binary format I/O | ❌ | — | |
+| Binary format I/O | ✅ | — | binary write produces `#Inventor V2.1 binary` header; binary output non-empty |
 
 ---
 
@@ -234,7 +234,7 @@ Tests in `tests/` subdirectories are baselined against the
 | `SoOneShotSensor` | 🔶 | type check, schedule/unschedule |
 | `SoIdleSensor` | 🔶 | schedule/unschedule |
 | `SoPathSensor` | 🔶 | attach/detach |
-| `SoDataSensor` | ❌ | |
+| `SoDataSensor` | ✅ | — | class initialized (via SoFieldSensor); getTriggerField, getTriggerPathFlag, setTriggerPathFlag |
 
 ---
 
@@ -318,6 +318,8 @@ pixel output against PNG control images.  Control images are generated from Obol
 Tests run with both OSMesa and GLX backends; per-test RMSE thresholds accommodate
 the small rendering differences between backends.
 
+### Image-comparison tests (pixel output vs stored PNG)
+
 | Test | Tests | Backend | Scene / Properties Verified |
 |------|-------|---------|------------------------------|
 | `render_primitives` | ✅ | GLX + OSMesa | `SoGLRenderAction`: SoSphere, SoCube, SoCone, SoCylinder, all 4 in 2×2 grid with distinct colours |
@@ -327,6 +329,24 @@ the small rendering differences between backends.
 | `render_cameras` | ✅ | GLX + OSMesa | `SoPerspectiveCamera` vs `SoOrthographicCamera` – same depth scene, two renders |
 | `render_drawstyle` | ✅ | GLX + OSMesa | `SoDrawStyle`: FILLED, LINES, POINTS modes of a low-res icosphere |
 | `render_texture` | ✅ | GLX + OSMesa | `SoTexture2`: procedural 8×8 checker (red/white) mapped onto a sphere, untextured sphere as reference |
+| `render_text2` | ✅ | GLX + OSMesa | `SoText2`: flat text rendering with default ProFont |
+| `render_text3` | ✅ | GLX + OSMesa | `SoText3`: extruded text rendering with default ProFont |
+| `render_gradient` | ✅ | GLX + OSMesa | `SoCoordinate3` + `SoIndexedFaceSet`: 10-strip red→green colour gradient |
+| `render_colored_cube` | ✅ | GLX + OSMesa | Single red `SoCube` with Phong shading |
+| `render_coordinates` | ✅ | GLX + OSMesa | `SoVertexProperty` + `SoIndexedFaceSet`: 4-quadrant colour orientation test |
+| `render_scene` | ✅ | GLX + OSMesa | 2×2 grid of primitives in a single compound scene |
+
+### Self-validating pixel-analysis tests (return 0/1 directly)
+
+| Test | Tests | What is Validated |
+|------|-------|-------------------|
+| `render_sphere_position` | ✅ | Pixel-accurate sphere positioning: orthographic + `SoTransform` offset matches predicted pixel centre |
+| `render_checker_texture` | ✅ | Checkerboard texture mapping: `SoTexture2` → near-equal black+white pixel counts in centre region |
+| `render_face_set` | ✅ | `SoFaceSet` + `SoCoordinate3`: green quad in lower-left, black background in upper-right |
+| `render_line_set` | ✅ | `SoLineSet` + `SoCoordinate3` + `SoBaseColor`: red horizontal line visible at expected pixel row |
+| `render_switch_visibility` | ✅ | `SoSwitch` (SO_SWITCH_ALL / SO_SWITCH_NONE): spheres appear/disappear across 3 rendered frames |
+| `render_vertex_colors` | ✅ | `SoPackedColor` + `SoMaterialBinding::PER_VERTEX_INDEXED` + `SoIndexedFaceSet`: 4-corner colour interpolation |
+| `render_clip_plane` | ✅ | `SoClipPlane`: upper hemisphere of sphere visible; lower half clipped to background |
 
 **Infrastructure:**
 - `tests/rendering/CMakeLists.txt` – backend-aware build macro (OSMesa or GLX)
@@ -340,6 +360,65 @@ the small rendering differences between backends.
   differences between vanilla Coin (FreeType) and Obol (Profont).
 - OSMesa vs GLX differences are expected (RMSE 1–8); thresholds set at 2× maximum
   observed difference to catch real regressions while tolerating backend variation.
+- `SoBaseColor` is used for line/point primitives instead of `SoMaterial::emissiveColor`
+  because the emissive path does not colour non-face geometry under the default
+  Phong lighting model.
+
+---
+
+## Code Coverage (`COIN_COVERAGE`)
+
+Obol includes built-in support for generating lcov HTML coverage reports.
+
+### Enabling coverage
+
+```bash
+cmake -S . -B build_cov \
+    -DCMAKE_BUILD_TYPE=Debug \
+    -DCOIN3D_USE_OSMESA=ON \
+    -DCOIN_COVERAGE=ON
+
+cmake --build build_cov          # compile with --coverage instrumentation
+cmake --build build_cov --target coverage   # run tests + generate report
+```
+
+The `coverage` target:
+1. Resets all gcov counters (`lcov --zerocounters`)
+2. Runs the full CTest suite (`ctest --output-on-failure`)
+3. Captures per-source coverage data (`lcov --capture`)
+4. Strips out system headers (`/usr/*`) and third-party submodules (`external/`, `upstream/`)
+5. Generates an HTML report at `<build>/coverage_report/index.html`
+
+### Requirements
+
+- GCC or Clang (tested with GCC 12+)
+- `lcov` and `genhtml` installed: `sudo apt-get install lcov`
+- Debug build type recommended (avoids inlining that confuses coverage counters)
+
+### Interpreting results
+
+The HTML report breaks coverage down by:
+- **Line coverage** – which source lines were executed by at least one test
+- **Function coverage** – which functions were called
+- **Branch coverage** – which conditional branches (if/else, switch cases) were taken
+
+### Baseline metrics (captured 2026-02-23)
+
+| Metric | Hit | Total | Percentage |
+|--------|----:|------:|----------:|
+| Lines (`src/` only) | 27,572 | 87,284 | **31.6 %** |
+| Functions (`src/` only) | 6,560 | 16,102 | **40.7 %** |
+| Lines (all project files) | 36,056 | 97,507 | **37.0 %** |
+
+See `COVERAGE_PLAN.md` for per-subsystem breakdown, the top files by uncovered lines,
+and a prioritised plan to reach ≥ 70 % line coverage.
+
+Focus areas for improving coverage:
+- `src/draggers/` (17 %) – constructor/destructor paths require a rendering context
+- `src/manips/` (4 %) – manipulator state-machine code; built on draggers
+- `src/shadows/` (11 %) – `SoShadowGroup` render path
+- `src/shapenodes/` (30 %) – `SoIndexedFaceSet`, `SoIndexedLineSet`, `SoQuadMesh` render paths
+- `src/rendering/` (31 %) – `SoGLRenderAction` and `SoOffscreenRenderer` edge cases
 
 ---
 
@@ -347,28 +426,30 @@ the small rendering differences between backends.
 
 | Category | Covered | Total (approx.) |
 |----------|---------|-----------------|
-| Base types | 26 | ~30 |
+| Base types | 28 | ~30 |
 | SF Fields | 53 | 53 |
 | MF Fields | 41 | 41 |
-| Actions | 10 | 11 |
+| Actions | 11 | 11 |
 | Nodes | 74 | 75+ |
-| I/O / SoDB | 7 | 10 |
-| Sensors | 7 | 8 |
+| I/O / SoDB | 9 | 10 |
+| Sensors | 8 | 8 |
 | Engines | 16 | 16 |
 | Threads | 10 | 10 |
 | XML/ScXML | 0 | 0 (removed in Obol) |
 | Shaders/Shadows/Geo | 16 | 16 |
 | Draggers | 1 (partial) | 20+ |
-| Visual rendering | 7 | ~10 |
+| Visual rendering (image-comparison) | 13 | ~15 |
+| Visual rendering (pixel-validation) | 7 | ~10 |
 
 ---
 
 ## Next Steps (Priority Order)
 
-1. **SoText2 / SoText3 visual rendering** – defer until font strategy is decided
+1. **SoDB / I/O** – `SoDB::readAll` (VRML 2.0 path removed in Obol); binary read-back round-trip (currently crashes – needs investigation)
+2. **Dragger deep-copy test** – needs rendering context for dragger construction; other dragger types still need coverage
+3. **SoText2 / SoText3 visual rendering** – defer until font strategy is decided
    (vanilla uses FreeType; Obol uses Profont – direct pixel comparison is impractical
    without a shared font baseline)
-2. **Dragger deep-copy test** – needs rendering context for dragger construction; other dragger types still need coverage
-3. **SoDB / I/O** – binary format I/O, `SoDB::readAll` (VRML 2.0 path removed in Obol)
-4. **SoDataSensor** – class initialized and value-change callback
-5. **SbHeap** – `src/base/heap.cpp` has upstream test baseline; verify Obol still passes
+4. **lcov baseline** – run `cmake --build <dir> --target coverage` against the current test suite and commit the baseline coverage percentage to this file
+5. **Increase rendering coverage** – add tests for `SoQuadMesh`, `SoTriangleStripSet`, `SoLOD`, `SoEnvironment` (fog), `SoAnnotation`, `SoArray`/`SoMultipleCopy`
+

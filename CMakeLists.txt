@@ -101,6 +101,10 @@ option(HAVE_MANIPULATORS "Enable Manipulator support" ON)
 # External dependencies
 option(USE_EXCEPTIONS "Compile with exceptions (g++ only)" ON)
 
+# Code coverage (GCC/Clang only; builds with --coverage flags and provides a
+# 'coverage' target that runs CTest then generates an lcov HTML report)
+option(COIN_COVERAGE "Enable code coverage instrumentation (GCC/Clang)" OFF)
+
 # Build optimization options
 option(COIN_USE_PRECOMPILED_HEADERS "Use precompiled headers to speed up compilation" ON)
 
@@ -358,9 +362,13 @@ else()
 endif()
 
 if(COIN3D_USE_OSMESA)
-  # starseeker/osmesa backend - use starseeker/osmesa headers (MGL mangling is automatic when USE_MGL_NAMESPACE is defined)
+  # starseeker/osmesa backend - use starseeker/osmesa headers only.
+  # OSMesa's gl.h already includes OSMesa/glext.h, so no system glext needed.
+  # Mixing system GL/glext.h with OSMesa's MGL-mangled headers causes symbol
+  # conflicts that corrupt the heap at runtime.
   set(SIM_INCLUDE_GL_H "#include <OSMesa/osmesa.h>
   #include <OSMesa/gl.h>")
+  set(SIM_INCLUDE_GLEXT_H "/* OSMesa/gl.h already includes OSMesa/glext.h - system GL/glext.h must NOT be included */")
   message(STATUS "Using starseeker/osmesa headers for GL with automatic MGL name mangling")
 else()
   # System OpenGL backend
@@ -371,13 +379,13 @@ else()
   else()
     set(SIM_INCLUDE_GL_H "#error \"don't know how to include gl.h header\"")
   endif()
-endif()
-if(HAVE_GL_GLEXT_H)
-  set(SIM_INCLUDE_GLEXT_H "#include <GL/glext.h>")
-elseif(HAVE_OPENGL_GLEXT_H)
-  set(SIM_INCLUDE_GLEXT_H "#include <OpenGL/glext.h>")
-else()
-  set(SIM_INCLUDE_GLEXT_H "/* #include <GL/glext.h> - not found on system */")
+  if(HAVE_GL_GLEXT_H)
+    set(SIM_INCLUDE_GLEXT_H "#include <GL/glext.h>")
+  elseif(HAVE_OPENGL_GLEXT_H)
+    set(SIM_INCLUDE_GLEXT_H "#include <OpenGL/glext.h>")
+  else()
+    set(SIM_INCLUDE_GLEXT_H "/* #include <GL/glext.h> - not found on system */")
+  endif()
 endif()
 
 # Essential function checks only (simplified for modern C++)
@@ -435,6 +443,42 @@ else()
 endif()
 
 # ============================================================================
+# Code coverage instrumentation flags
+#
+# When COIN_COVERAGE=ON (and the compiler is GCC or Clang), add --coverage
+# to the compile and link flags for the entire project.  This must be done
+# BEFORE the source subdirectories are added so that the Coin library and all
+# test executables are instrumented.
+#
+# After building, run:
+#   cmake --build <dir> --target coverage
+# to execute the test suite and generate an lcov HTML report.
+# ============================================================================
+if(COIN_COVERAGE)
+  if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang" OR
+     CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    find_program(LCOV_EXECUTABLE    lcov    DOC "lcov coverage tool")
+    find_program(GENHTML_EXECUTABLE genhtml DOC "genhtml report generator")
+    if(LCOV_EXECUTABLE AND GENHTML_EXECUTABLE)
+      message(STATUS "Code coverage instrumentation enabled")
+      message(STATUS "  lcov:    ${LCOV_EXECUTABLE}")
+      message(STATUS "  genhtml: ${GENHTML_EXECUTABLE}")
+      add_compile_options(--coverage)
+      add_link_options(--coverage)
+    else()
+      message(WARNING
+        "COIN_COVERAGE=ON but lcov/genhtml not found – coverage disabled. "
+        "Install with: sudo apt-get install lcov")
+      set(COIN_COVERAGE OFF CACHE BOOL "" FORCE)
+    endif()
+  else()
+    message(WARNING
+      "COIN_COVERAGE=ON but compiler is not GCC/Clang – coverage disabled.")
+    set(COIN_COVERAGE OFF CACHE BOOL "" FORCE)
+  endif()
+endif()
+
+# ============================================================================
 # Add subdirectories
 # ============================================================================
 
@@ -449,6 +493,75 @@ if(COIN_BUILD_TESTS)
   enable_testing()
   add_subdirectory(tests)
   add_subdirectory(Mentor)
+endif()
+
+# ============================================================================
+# Code coverage report target (lcov + genhtml)
+# Enabled when -DCOIN_COVERAGE=ON (see flags block above, before add_subdirectory).
+#
+# Usage:
+#   cmake -DCOIN_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug ...
+#   cmake --build <build_dir>
+#   cmake --build <build_dir> --target coverage
+#
+# The target:
+#   1. Resets all coverage counters.
+#   2. Runs ctest (all registered tests).
+#   3. Captures coverage data with lcov, filtering out system headers and
+#      third-party code (external/, upstream/).
+#   4. Generates an HTML report in <build>/coverage_report/.
+# ============================================================================
+if(COIN_COVERAGE AND LCOV_EXECUTABLE AND GENHTML_EXECUTABLE)
+  set(COVERAGE_OUTPUT_DIR "${CMAKE_BINARY_DIR}/coverage_report")
+  set(COVERAGE_INFO_FILE  "${CMAKE_BINARY_DIR}/coverage.info")
+
+  add_custom_target(coverage
+    COMMENT "Collecting lcov coverage data and generating HTML report"
+
+    # 1. Reset counters
+    COMMAND ${LCOV_EXECUTABLE}
+        --zerocounters
+        --directory "${CMAKE_BINARY_DIR}"
+
+    # 2. Run all registered tests; continue even if some tests fail so that
+    #    coverage data is captured from passing tests.  A CMake script wrapper
+    #    is used to execute ctest and suppress its non-zero exit code.
+    COMMAND ${CMAKE_COMMAND}
+        -DCTEST_COMMAND=${CMAKE_CTEST_COMMAND}
+        -DBUILD_CONFIG=$<CONFIG>
+        -DTEST_TIMEOUT=120
+        -P "${CMAKE_CURRENT_LIST_DIR}/cmake/run_tests_for_coverage.cmake"
+
+    # 3. Capture coverage data
+    COMMAND ${LCOV_EXECUTABLE}
+        --capture
+        --directory "${CMAKE_BINARY_DIR}"
+        --output-file "${COVERAGE_INFO_FILE}"
+        --rc branch_coverage=1
+        --ignore-errors mismatch
+
+    # 4. Remove noise: system headers and external / upstream subtrees
+    COMMAND ${LCOV_EXECUTABLE}
+        --remove "${COVERAGE_INFO_FILE}"
+        "/usr/*"
+        "${CMAKE_SOURCE_DIR}/external/*"
+        "${CMAKE_SOURCE_DIR}/upstream/*"
+        --output-file "${COVERAGE_INFO_FILE}"
+        --ignore-errors unused
+
+    # 5. Generate HTML report
+    COMMAND ${GENHTML_EXECUTABLE}
+        "${COVERAGE_INFO_FILE}"
+        --output-directory "${COVERAGE_OUTPUT_DIR}"
+        --branch-coverage
+        --title "Obol Coverage Report"
+
+    WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+  )
+
+  message(STATUS
+    "Run 'cmake --build <dir> --target coverage' to generate the HTML report")
+  message(STATUS "  Report will be written to: ${COVERAGE_OUTPUT_DIR}")
 endif()
 
 # ============================================================================

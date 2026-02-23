@@ -76,16 +76,38 @@ static void* bufGrow(void* ptr, size_t size)
     return g_buf;
 }
 
-// Convenience: write a node to a freshly allocated buffer
+// Convenience: write a node to a freshly allocated buffer.
+// Returns the actual bytes written via SoOutput::getBuffer(), not
+// the allocated buffer size (g_buf_size may be larger due to realloc).
 static void writeNode(SoNode* root, char** outBuf, size_t* outSize)
 {
     g_buf = nullptr; g_buf_size = 0;
     SoOutput out;
-    out.setBuffer(nullptr, 0, bufGrow);
+    out.setBuffer(nullptr, 1, bufGrow);
     SoWriteAction wa(&out);
     wa.apply(root);
-    *outBuf  = g_buf;
-    *outSize = g_buf_size;
+    // getBuffer() reports actual bytes written, not allocated size
+    void* ptr = nullptr; size_t nbytes = 0;
+    out.getBuffer(ptr, nbytes);
+    *outBuf  = static_cast<char*>(ptr);
+    *outSize = nbytes;
+}
+
+// Convenience: write a node in binary format to a freshly allocated buffer.
+// Returns the actual bytes written via SoOutput::getBuffer().
+static void writeNodeBinary(SoNode* root, char** outBuf, size_t* outSize)
+{
+    g_buf = nullptr; g_buf_size = 0;
+    SoOutput out;
+    out.setBuffer(nullptr, 1, bufGrow);
+    out.setBinary(TRUE);
+    SoWriteAction wa(&out);
+    wa.apply(root);
+    // getBuffer() reports actual bytes written, not allocated size
+    void* ptr = nullptr; size_t nbytes = 0;
+    out.getBuffer(ptr, nbytes);
+    *outBuf  = static_cast<char*>(ptr);
+    *outSize = nbytes;
 }
 
 int main()
@@ -292,6 +314,69 @@ int main()
         bool pass = hasMyNode && hasPlus && hasDef && hasUse;
         runner.endTest(pass, pass ? "" :
             "Same-named multi-ref nodes should produce disambiguation ('+N') in output");
+    }
+
+    // -----------------------------------------------------------------------
+    // Binary format I/O: write in binary, read back, verify structure
+    // -----------------------------------------------------------------------
+    runner.startTest("Binary format write produces non-ASCII output");
+    {
+        SoSeparator* root = new SoSeparator;
+        root->ref();
+        SoCube* cube = new SoCube;
+        root->addChild(cube);
+
+        char* buf = nullptr; size_t bsz = 0;
+        writeNodeBinary(root, &buf, &bsz);
+        root->unref();
+
+        // Binary Inventor format starts with "#Inventor V2.1 binary" header.
+        bool hasData   = (buf != nullptr) && (bsz > 0);
+        bool hasHeader = hasData && bsz >= 21 &&
+            std::memcmp(buf, "#Inventor V2.1 binary", 21) == 0;
+        std::free(buf);
+        bool pass = hasData && hasHeader;
+        runner.endTest(pass, pass ? "" :
+            "Binary write produced empty or header-less output");
+    }
+
+    runner.startTest("Binary format write/read round-trip preserves structure");
+    {
+        SoSeparator* root = new SoSeparator;
+        root->ref();
+        SoCube*   cube   = new SoCube;
+        SoSphere* sphere = new SoSphere;
+        root->addChild(cube);
+        root->addChild(sphere);
+
+        char* buf = nullptr; size_t bsz = 0;
+        writeNodeBinary(root, &buf, &bsz);
+        root->unref();
+
+        // Verify the binary output has the binary IV header and
+        // sufficient content (actual bytes written, not allocated size)
+        bool hasHeader = buf && bsz > 0 &&
+            std::memcmp(buf, "#Inventor V2.1 binary", 21) == 0;
+        bool hasSufficientData = (bsz > 30);
+
+        // Read back the binary buffer and verify child count is preserved
+        bool readOk = false;
+        if (hasHeader && hasSufficientData) {
+            SoInput in;
+            in.setBuffer(buf, bsz);
+            SoSeparator* r2 = SoDB::readAll(&in);
+            readOk = (r2 != nullptr);
+            if (readOk) {
+                r2->ref();
+                readOk = (r2->getNumChildren() == 2);
+                r2->unref();
+            }
+        }
+
+        std::free(buf);
+        bool pass = hasHeader && hasSufficientData && readOk;
+        runner.endTest(pass, pass ? "" :
+            "Binary write/read round-trip failed: header, data, or child count mismatch");
     }
 
     return runner.getSummary();

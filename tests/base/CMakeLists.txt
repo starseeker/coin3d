@@ -10,6 +10,7 @@ target_include_directories(test_sb_types PRIVATE
     ${PROJECT_SOURCE_DIR}/include
     ${PROJECT_SOURCE_DIR}/include/Inventor/annex
     ${PROJECT_BINARY_DIR}/include
+    ${PROJECT_SOURCE_DIR}/src
     ${COIN_TARGET_INCLUDE_DIRECTORIES}
 )
 if(USE_PTHREAD)

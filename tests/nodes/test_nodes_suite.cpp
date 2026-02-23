@@ -105,7 +105,28 @@
 #include <Inventor/nodes/SoGeoCoordinate.h>
 #include <Inventor/annex/FXViz/nodes/SoShadowGroup.h>
 #include <Inventor/annex/FXViz/nodes/SoShadowStyle.h>
+// Dragger headers
+#include <Inventor/draggers/SoCenterballDragger.h>
+#include <Inventor/draggers/SoDirectionalLightDragger.h>
+#include <Inventor/draggers/SoDragPointDragger.h>
+#include <Inventor/draggers/SoHandleBoxDragger.h>
+#include <Inventor/draggers/SoJackDragger.h>
+#include <Inventor/draggers/SoPointLightDragger.h>
+#include <Inventor/draggers/SoRotateCylindricalDragger.h>
+#include <Inventor/draggers/SoRotateDiscDragger.h>
+#include <Inventor/draggers/SoRotateSphericalDragger.h>
+#include <Inventor/draggers/SoScale1Dragger.h>
+#include <Inventor/draggers/SoScale2Dragger.h>
+#include <Inventor/draggers/SoScale2UniformDragger.h>
+#include <Inventor/draggers/SoScaleUniformDragger.h>
+#include <Inventor/draggers/SoSpotLightDragger.h>
+#include <Inventor/draggers/SoTabBoxDragger.h>
+#include <Inventor/draggers/SoTabPlaneDragger.h>
+#include <Inventor/draggers/SoTrackballDragger.h>
+#include <Inventor/draggers/SoTransformBoxDragger.h>
 #include <Inventor/draggers/SoTransformerDragger.h>
+#include <Inventor/draggers/SoTranslate1Dragger.h>
+#include <Inventor/draggers/SoTranslate2Dragger.h>
 
 using namespace SimpleTest;
 
@@ -915,16 +936,210 @@ int main()
     }
 
     // -----------------------------------------------------------------------
-    // SoTransformerDragger: class type registered
-    // Baseline: src/draggers/SoTransformerDragger.cpp COIN_TEST_SUITE
-    // Note: Dragger construction requires rendering resources; we verify
-    // that the class is registered (getClassTypeId) without instantiating.
+    // Dragger class types: all dragger classes registered in the type system
+    // Baseline: src/draggers/SoXxxDragger.cpp COIN_TEST_SUITE blocks
     // -----------------------------------------------------------------------
-    runner.startTest("SoTransformerDragger class type registered");
+    runner.startTest("All dragger class types registered");
     {
-        SoType t = SoTransformerDragger::getClassTypeId();
-        bool pass = (t != SoType::badType());
-        runner.endTest(pass, pass ? "" : "SoTransformerDragger class type not registered");
+        bool pass =
+            (SoCenterballDragger::getClassTypeId()       != SoType::badType()) &&
+            (SoDirectionalLightDragger::getClassTypeId() != SoType::badType()) &&
+            (SoDragPointDragger::getClassTypeId()        != SoType::badType()) &&
+            (SoHandleBoxDragger::getClassTypeId()        != SoType::badType()) &&
+            (SoJackDragger::getClassTypeId()             != SoType::badType()) &&
+            (SoPointLightDragger::getClassTypeId()       != SoType::badType()) &&
+            (SoRotateCylindricalDragger::getClassTypeId()!= SoType::badType()) &&
+            (SoRotateDiscDragger::getClassTypeId()       != SoType::badType()) &&
+            (SoRotateSphericalDragger::getClassTypeId()  != SoType::badType()) &&
+            (SoScale1Dragger::getClassTypeId()           != SoType::badType()) &&
+            (SoScale2Dragger::getClassTypeId()           != SoType::badType()) &&
+            (SoScale2UniformDragger::getClassTypeId()    != SoType::badType()) &&
+            (SoScaleUniformDragger::getClassTypeId()     != SoType::badType()) &&
+            (SoSpotLightDragger::getClassTypeId()        != SoType::badType()) &&
+            (SoTabBoxDragger::getClassTypeId()           != SoType::badType()) &&
+            (SoTabPlaneDragger::getClassTypeId()         != SoType::badType()) &&
+            (SoTrackballDragger::getClassTypeId()        != SoType::badType()) &&
+            (SoTransformBoxDragger::getClassTypeId()     != SoType::badType()) &&
+            (SoTransformerDragger::getClassTypeId()      != SoType::badType()) &&
+            (SoTranslate1Dragger::getClassTypeId()       != SoType::badType()) &&
+            (SoTranslate2Dragger::getClassTypeId()       != SoType::badType());
+        runner.endTest(pass, pass ? "" : "One or more dragger class types not registered");
+    }
+
+    // -----------------------------------------------------------------------
+    // Dragger deep-copy: construction and copy() for single-piece draggers
+    // Baseline: src/draggers/SoTransformerDragger.cpp COIN_TEST_SUITE
+    //           dragger_deep_copy test
+    //
+    // Compound draggers (SoCenterballDragger, SoHandleBoxDragger,
+    // SoTabBoxDragger, SoTabPlaneDragger, SoTransformerDragger,
+    // SoTrackballDragger, etc.) load IV resources at construction time and
+    // require a rendering context (SoDB::ContextManager).  They are tested
+    // visually in the rendering suite.
+    //
+    // Single-piece draggers can be constructed and deep-copied without a
+    // rendering context and are verified here.
+    // -----------------------------------------------------------------------
+    runner.startTest("SoTranslate1Dragger deep copy produces independent nodes");
+    {
+        SoSeparator* root = new SoSeparator;
+        root->ref();
+        root->addChild(new SoTranslate1Dragger);
+        SoSeparator* copy = static_cast<SoSeparator*>(root->copy());
+        bool pass = (copy != nullptr);
+        if (pass) {
+            copy->ref();
+            pass = (copy->getNumChildren() == 1) &&
+                   (copy->getChild(0) != root->getChild(0));
+            copy->unref();
+        }
+        root->unref();
+        runner.endTest(pass, pass ? "" :
+            "SoTranslate1Dragger deep copy failed or shared child pointer");
+    }
+
+    runner.startTest("SoTranslate2Dragger deep copy produces independent nodes");
+    {
+        SoSeparator* root = new SoSeparator;
+        root->ref();
+        root->addChild(new SoTranslate2Dragger);
+        SoSeparator* copy = static_cast<SoSeparator*>(root->copy());
+        bool pass = (copy != nullptr);
+        if (pass) {
+            copy->ref();
+            pass = (copy->getNumChildren() == 1) &&
+                   (copy->getChild(0) != root->getChild(0));
+            copy->unref();
+        }
+        root->unref();
+        runner.endTest(pass, pass ? "" :
+            "SoTranslate2Dragger deep copy failed or shared child pointer");
+    }
+
+    runner.startTest("SoDragPointDragger deep copy produces independent nodes");
+    {
+        SoSeparator* root = new SoSeparator;
+        root->ref();
+        root->addChild(new SoDragPointDragger);
+        SoSeparator* copy = static_cast<SoSeparator*>(root->copy());
+        bool pass = (copy != nullptr);
+        if (pass) {
+            copy->ref();
+            pass = (copy->getNumChildren() == 1) &&
+                   (copy->getChild(0) != root->getChild(0));
+            copy->unref();
+        }
+        root->unref();
+        runner.endTest(pass, pass ? "" :
+            "SoDragPointDragger deep copy failed or shared child pointer");
+    }
+
+    runner.startTest("SoRotateDiscDragger deep copy produces independent nodes");
+    {
+        SoSeparator* root = new SoSeparator;
+        root->ref();
+        root->addChild(new SoRotateDiscDragger);
+        SoSeparator* copy = static_cast<SoSeparator*>(root->copy());
+        bool pass = (copy != nullptr);
+        if (pass) {
+            copy->ref();
+            pass = (copy->getNumChildren() == 1) &&
+                   (copy->getChild(0) != root->getChild(0));
+            copy->unref();
+        }
+        root->unref();
+        runner.endTest(pass, pass ? "" :
+            "SoRotateDiscDragger deep copy failed or shared child pointer");
+    }
+
+    runner.startTest("SoRotateCylindricalDragger deep copy produces independent nodes");
+    {
+        SoSeparator* root = new SoSeparator;
+        root->ref();
+        root->addChild(new SoRotateCylindricalDragger);
+        SoSeparator* copy = static_cast<SoSeparator*>(root->copy());
+        bool pass = (copy != nullptr);
+        if (pass) {
+            copy->ref();
+            pass = (copy->getNumChildren() == 1) &&
+                   (copy->getChild(0) != root->getChild(0));
+            copy->unref();
+        }
+        root->unref();
+        runner.endTest(pass, pass ? "" :
+            "SoRotateCylindricalDragger deep copy failed or shared child pointer");
+    }
+
+    runner.startTest("SoRotateSphericalDragger deep copy produces independent nodes");
+    {
+        SoSeparator* root = new SoSeparator;
+        root->ref();
+        root->addChild(new SoRotateSphericalDragger);
+        SoSeparator* copy = static_cast<SoSeparator*>(root->copy());
+        bool pass = (copy != nullptr);
+        if (pass) {
+            copy->ref();
+            pass = (copy->getNumChildren() == 1) &&
+                   (copy->getChild(0) != root->getChild(0));
+            copy->unref();
+        }
+        root->unref();
+        runner.endTest(pass, pass ? "" :
+            "SoRotateSphericalDragger deep copy failed or shared child pointer");
+    }
+
+    runner.startTest("SoScale1Dragger deep copy produces independent nodes");
+    {
+        SoSeparator* root = new SoSeparator;
+        root->ref();
+        root->addChild(new SoScale1Dragger);
+        SoSeparator* copy = static_cast<SoSeparator*>(root->copy());
+        bool pass = (copy != nullptr);
+        if (pass) {
+            copy->ref();
+            pass = (copy->getNumChildren() == 1) &&
+                   (copy->getChild(0) != root->getChild(0));
+            copy->unref();
+        }
+        root->unref();
+        runner.endTest(pass, pass ? "" :
+            "SoScale1Dragger deep copy failed or shared child pointer");
+    }
+
+    runner.startTest("SoScale2Dragger deep copy produces independent nodes");
+    {
+        SoSeparator* root = new SoSeparator;
+        root->ref();
+        root->addChild(new SoScale2Dragger);
+        SoSeparator* copy = static_cast<SoSeparator*>(root->copy());
+        bool pass = (copy != nullptr);
+        if (pass) {
+            copy->ref();
+            pass = (copy->getNumChildren() == 1) &&
+                   (copy->getChild(0) != root->getChild(0));
+            copy->unref();
+        }
+        root->unref();
+        runner.endTest(pass, pass ? "" :
+            "SoScale2Dragger deep copy failed or shared child pointer");
+    }
+
+    runner.startTest("SoDirectionalLightDragger deep copy produces independent nodes");
+    {
+        SoSeparator* root = new SoSeparator;
+        root->ref();
+        root->addChild(new SoDirectionalLightDragger);
+        SoSeparator* copy = static_cast<SoSeparator*>(root->copy());
+        bool pass = (copy != nullptr);
+        if (pass) {
+            copy->ref();
+            pass = (copy->getNumChildren() == 1) &&
+                   (copy->getChild(0) != root->getChild(0));
+            copy->unref();
+        }
+        root->unref();
+        runner.endTest(pass, pass ? "" :
+            "SoDirectionalLightDragger deep copy failed or shared child pointer");
     }
 
     return runner.getSummary();

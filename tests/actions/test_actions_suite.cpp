@@ -58,12 +58,20 @@
 #include <Inventor/actions/SoGetPrimitiveCountAction.h>
 #include <Inventor/actions/SoRayPickAction.h>
 #include <Inventor/actions/SoHandleEventAction.h>
+#include <Inventor/actions/SoReorganizeAction.h>
 #include <Inventor/events/SoMouseButtonEvent.h>
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/nodes/SoSwitch.h>
 #include <Inventor/nodes/SoCube.h>
 #include <Inventor/nodes/SoSphere.h>
 #include <Inventor/nodes/SoTranslation.h>
+#include <Inventor/nodes/SoCoordinate3.h>
+#include <Inventor/nodes/SoFaceSet.h>
+#include <Inventor/nodes/SoIndexedFaceSet.h>
+#include <Inventor/nodes/SoNormal.h>
+#include <Inventor/nodes/SoNormalBinding.h>
+#include <Inventor/nodes/SoTransform.h>
+#include <Inventor/details/SoFaceDetail.h>
 #include <Inventor/SbVec3f.h>
 #include <Inventor/SbMatrix.h>
 
@@ -406,6 +414,215 @@ int main()
         root->unref();
         runner.endTest(pass, pass ? "" :
             "SoHandleEventAction should not be handled for empty scene");
+    }
+
+    // -----------------------------------------------------------------------
+    // SoReorganizeAction: class initialized (type registered)
+    // -----------------------------------------------------------------------
+    runner.startTest("SoReorganizeAction class initialized");
+    {
+        SoReorganizeAction ra;
+        bool pass = (ra.getTypeId() != SoType::badType());
+        runner.endTest(pass, pass ? "" : "SoReorganizeAction has bad type");
+    }
+
+    // -----------------------------------------------------------------------
+    // SoRayPickAction integration: face set + transform scene
+    // Tier 2: validates picked path, intersection point, and face detail
+    // -----------------------------------------------------------------------
+
+    runner.startTest("SoRayPickAction picks SoFaceSet quad");
+    {
+        // A simple quad at z=0 facing +Z, covering the XY range [-1,1]
+        SoSeparator* root = new SoSeparator;
+        root->ref();
+
+        SoCoordinate3* coords = new SoCoordinate3;
+        coords->point.set1Value(0, SbVec3f(-1.0f, -1.0f, 0.0f));
+        coords->point.set1Value(1, SbVec3f( 1.0f, -1.0f, 0.0f));
+        coords->point.set1Value(2, SbVec3f( 1.0f,  1.0f, 0.0f));
+        coords->point.set1Value(3, SbVec3f(-1.0f,  1.0f, 0.0f));
+        root->addChild(coords);
+
+        SoFaceSet* fs = new SoFaceSet;
+        fs->numVertices.set1Value(0, 4);
+        root->addChild(fs);
+
+        SoRayPickAction rpa(SbViewportRegion(100, 100));
+        // Ray from (0,0,10) pointing -Z: should hit the quad at (0,0,0)
+        rpa.setRay(SbVec3f(0.0f, 0.0f, 10.0f), SbVec3f(0.0f, 0.0f, -1.0f));
+        rpa.apply(root);
+
+        SoPickedPoint* pp = rpa.getPickedPoint();
+        bool pass = (pp != nullptr);
+        if (pass) {
+            SbVec3f pt = pp->getPoint();
+            pass = (fabsf(pt[2]) < 0.01f); // hit at z~0
+        }
+        root->unref();
+        runner.endTest(pass, pass ? "" :
+            "SoRayPickAction should pick the quad face set at z~0");
+    }
+
+    runner.startTest("SoRayPickAction misses SoFaceSet when ray offset");
+    {
+        SoSeparator* root = new SoSeparator;
+        root->ref();
+
+        SoCoordinate3* coords = new SoCoordinate3;
+        coords->point.set1Value(0, SbVec3f(-1.0f, -1.0f, 0.0f));
+        coords->point.set1Value(1, SbVec3f( 1.0f, -1.0f, 0.0f));
+        coords->point.set1Value(2, SbVec3f( 1.0f,  1.0f, 0.0f));
+        coords->point.set1Value(3, SbVec3f(-1.0f,  1.0f, 0.0f));
+        root->addChild(coords);
+
+        SoFaceSet* fs = new SoFaceSet;
+        fs->numVertices.set1Value(0, 4);
+        root->addChild(fs);
+
+        SoRayPickAction rpa(SbViewportRegion(100, 100));
+        // Ray offset to x=5: should miss the quad
+        rpa.setRay(SbVec3f(5.0f, 0.0f, 10.0f), SbVec3f(0.0f, 0.0f, -1.0f));
+        rpa.apply(root);
+
+        bool pass = (rpa.getPickedPoint() == nullptr);
+        root->unref();
+        runner.endTest(pass, pass ? "" :
+            "SoRayPickAction should miss the quad when ray is offset");
+    }
+
+    runner.startTest("SoRayPickAction picks through SoTranslation correctly");
+    {
+        // Cube translated to (3,0,0); ray aimed at (3,0,10) -> should hit
+        SoSeparator* root = new SoSeparator;
+        root->ref();
+
+        SoTranslation* t = new SoTranslation;
+        t->translation.setValue(3.0f, 0.0f, 0.0f);
+        root->addChild(t);
+
+        SoCube* cube = new SoCube; // 2x2x2, now centred at (3,0,0)
+        root->addChild(cube);
+
+        SoRayPickAction rpa(SbViewportRegion(100, 100));
+        rpa.setRay(SbVec3f(3.0f, 0.0f, 10.0f), SbVec3f(0.0f, 0.0f, -1.0f));
+        rpa.apply(root);
+
+        bool pass = (rpa.getPickedPoint() != nullptr);
+        root->unref();
+        runner.endTest(pass, pass ? "" :
+            "SoRayPickAction should pick translated cube");
+    }
+
+    runner.startTest("SoRayPickAction misses when ray passes beside translated cube");
+    {
+        SoSeparator* root = new SoSeparator;
+        root->ref();
+
+        SoTranslation* t = new SoTranslation;
+        t->translation.setValue(3.0f, 0.0f, 0.0f);
+        root->addChild(t);
+
+        root->addChild(new SoCube);
+
+        SoRayPickAction rpa(SbViewportRegion(100, 100));
+        // Ray at x=0 should miss a cube at x=3
+        rpa.setRay(SbVec3f(0.0f, 0.0f, 10.0f), SbVec3f(0.0f, 0.0f, -1.0f));
+        rpa.apply(root);
+
+        bool pass = (rpa.getPickedPoint() == nullptr);
+        root->unref();
+        runner.endTest(pass, pass ? "" :
+            "SoRayPickAction should miss cube that is out of ray path");
+    }
+
+    runner.startTest("SoRayPickAction pick path ends at SoCube node");
+    {
+        SoSeparator* root = new SoSeparator;
+        root->ref();
+        SoCube* cube = new SoCube;
+        root->addChild(cube);
+
+        SoRayPickAction rpa(SbViewportRegion(100, 100));
+        rpa.setRay(SbVec3f(0.0f, 0.0f, 10.0f), SbVec3f(0.0f, 0.0f, -1.0f));
+        rpa.apply(root);
+
+        SoPickedPoint* pp = rpa.getPickedPoint();
+        bool pass = false;
+        if (pp != nullptr) {
+            SoPath* path = pp->getPath();
+            pass = (path != nullptr) && (path->getTail() == cube);
+        }
+        root->unref();
+        runner.endTest(pass, pass ? "" :
+            "SoRayPickAction: pick path tail should be the SoCube node");
+    }
+
+    runner.startTest("SoRayPickAction getPickedPointList returns all picks");
+    {
+        // Two cubes offset in Y; shoot a ray that hits the front one
+        SoSeparator* root = new SoSeparator;
+        root->ref();
+
+        SoSeparator* s1 = new SoSeparator;
+        SoTranslation* t1 = new SoTranslation;
+        t1->translation.setValue(0.0f, 0.0f, 1.0f);
+        s1->addChild(t1);
+        s1->addChild(new SoCube);
+        root->addChild(s1);
+
+        SoSeparator* s2 = new SoSeparator;
+        SoTranslation* t2 = new SoTranslation;
+        t2->translation.setValue(0.0f, 0.0f, -1.0f);
+        s2->addChild(t2);
+        s2->addChild(new SoCube);
+        root->addChild(s2);
+
+        SoRayPickAction rpa(SbViewportRegion(100, 100));
+        rpa.setPickAll(TRUE);  // collect all intersections
+        rpa.setRay(SbVec3f(0.0f, 0.0f, 10.0f), SbVec3f(0.0f, 0.0f, -1.0f));
+        rpa.apply(root);
+
+        const SoPickedPointList& list = rpa.getPickedPointList();
+        // Both cubes are on the ray path; expect 2 picked points
+        bool pass = (list.getLength() >= 2);
+        root->unref();
+        runner.endTest(pass, pass ? "" :
+            "SoRayPickAction getPickedPointList should return >= 2 for two cubes on ray");
+    }
+
+    runner.startTest("SoRayPickAction SoIndexedFaceSet pick");
+    {
+        // Build a simple triangle via SoIndexedFaceSet
+        SoSeparator* root = new SoSeparator;
+        root->ref();
+
+        SoCoordinate3* coords = new SoCoordinate3;
+        coords->point.set1Value(0, SbVec3f(-1.0f, -1.0f, 0.0f));
+        coords->point.set1Value(1, SbVec3f( 1.0f, -1.0f, 0.0f));
+        coords->point.set1Value(2, SbVec3f( 0.0f,  1.0f, 0.0f));
+        root->addChild(coords);
+
+        SoIndexedFaceSet* ifs = new SoIndexedFaceSet;
+        ifs->coordIndex.set1Value(0, 0);
+        ifs->coordIndex.set1Value(1, 1);
+        ifs->coordIndex.set1Value(2, 2);
+        ifs->coordIndex.set1Value(3, -1); // end-of-face
+        root->addChild(ifs);
+
+        SoRayPickAction rpa(SbViewportRegion(100, 100));
+        rpa.setRay(SbVec3f(0.0f, 0.0f, 10.0f), SbVec3f(0.0f, 0.0f, -1.0f));
+        rpa.apply(root);
+
+        SoPickedPoint* pp = rpa.getPickedPoint();
+        bool pass = (pp != nullptr);
+        if (pass) {
+            SbVec3f pt = pp->getPoint();
+            pass = (fabsf(pt[2]) < 0.01f);
+        }
+        root->unref();
+        runner.endTest(pass, pass ? "" :
+            "SoRayPickAction should pick SoIndexedFaceSet triangle");
     }
 
     return runner.getSummary();

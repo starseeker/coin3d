@@ -86,22 +86,46 @@ struct CoinOSMesaContext {
     OSMesaContext context;
     std::unique_ptr<unsigned char[]> buffer;
     int width, height;
-    
-    CoinOSMesaContext(int w, int h) : width(w), height(h) {
+    // Previous context/buffer saved at makeContextCurrent time so that
+    // restorePreviousContext() can reinstate it after temporary use.
+    OSMesaContext prev_context;
+    void         *prev_buffer;
+    GLsizei       prev_width, prev_height, prev_bytesPerRow;
+    GLenum        prev_format;
+
+    CoinOSMesaContext(int w, int h) : width(w), height(h),
+        prev_context(nullptr), prev_buffer(nullptr),
+        prev_width(0), prev_height(0), prev_bytesPerRow(0), prev_format(0)
+    {
         context = OSMesaCreateContextExt(OSMESA_RGBA, 16, 0, 0, NULL);
         if (context) {
             buffer = std::make_unique<unsigned char[]>(width * height * 4);
         }
     }
-    
+
     ~CoinOSMesaContext() {
         if (context) OSMesaDestroyContext(context);
     }
-    
+
     bool makeCurrent() {
-        return context && OSMesaMakeCurrent(context, buffer.get(), GL_UNSIGNED_BYTE, width, height);
+        if (!context) return false;
+        // Save the currently-active OSMesa context so restorePreviousContext
+        // can put it back.  OSMesaGetCurrentContext() returns NULL when none
+        // is active, which is a valid value to restore to.
+        prev_context = OSMesaGetCurrentContext();
+        prev_buffer  = nullptr;
+        prev_width   = prev_height = prev_bytesPerRow = 0;
+        prev_format  = 0;
+        if (prev_context) {
+            GLint fmt = 0;
+            OSMesaGetColorBuffer(prev_context, &prev_width, &prev_height,
+                                 &fmt, &prev_buffer);
+            prev_format = (GLenum)fmt;
+        }
+        return OSMesaMakeCurrent(context, buffer.get(), GL_UNSIGNED_BYTE,
+                                 width, height) != 0;
     }
-    
+
     bool isValid() const { return context != nullptr; }
 };
 
@@ -118,7 +142,17 @@ public:
     }
     
     virtual void restorePreviousContext(void* context) override {
-        (void)context;
+        CoinOSMesaContext *ctx = static_cast<CoinOSMesaContext*>(context);
+        if (!ctx) return;
+        if (ctx->prev_context && ctx->prev_buffer) {
+            // Reinstate the previously-active context with its buffer.
+            OSMesaMakeCurrent(ctx->prev_context, ctx->prev_buffer,
+                              GL_UNSIGNED_BYTE,
+                              ctx->prev_width, ctx->prev_height);
+        } else {
+            // No previous context was active; release the current binding.
+            OSMesaMakeCurrent(nullptr, nullptr, 0, 0, 0);
+        }
     }
     
     virtual void destroyContext(void* context) override {
