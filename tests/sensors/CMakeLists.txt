@@ -17,8 +17,38 @@ if(USE_PTHREAD)
 endif()
 add_test(NAME test_sensors_suite COMMAND test_sensors_suite)
 
+add_executable(test_sensors_deeper test_sensors_deeper.cpp)
+target_link_libraries(test_sensors_deeper simple_test_utils Coin ${COIN_TARGET_LINK_LIBRARIES})
+target_include_directories(test_sensors_deeper PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/..
+    ${PROJECT_SOURCE_DIR}/include
+    ${PROJECT_SOURCE_DIR}/include/Inventor/annex
+    ${PROJECT_BINARY_DIR}/include
+    ${COIN_TARGET_INCLUDE_DIRECTORIES}
+)
+if(USE_PTHREAD)
+    target_link_libraries(test_sensors_deeper pthread)
+endif()
+add_test(NAME test_sensors_deeper COMMAND test_sensors_deeper)
+
+add_executable(test_sensors_extra test_sensors_extra.cpp)
+target_link_libraries(test_sensors_extra simple_test_utils Coin ${COIN_TARGET_LINK_LIBRARIES})
+target_include_directories(test_sensors_extra PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/..
+    ${PROJECT_SOURCE_DIR}/include
+    ${PROJECT_SOURCE_DIR}/include/Inventor/annex
+    ${PROJECT_BINARY_DIR}/include
+    ${COIN_TARGET_INCLUDE_DIRECTORIES}
+)
+if(USE_PTHREAD)
+    target_link_libraries(test_sensors_extra pthread)
+endif()
+add_test(NAME test_sensors_extra COMMAND test_sensors_extra)
+
 include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG(-Wtautological-compare _SENSORS_DISABLE_TAUTCOMP)
 if(_SENSORS_DISABLE_TAUTCOMP)
     target_compile_options(test_sensors_suite PUBLIC -Wno-tautological-compare)
+    target_compile_options(test_sensors_deeper PUBLIC -Wno-tautological-compare)
+    target_compile_options(test_sensors_extra PUBLIC -Wno-tautological-compare)
 endif()

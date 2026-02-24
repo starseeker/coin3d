@@ -526,11 +526,6 @@ SoIndexedFaceSet::GLRender(SoGLRenderAction * action)
 
   mb.sendFirst(); // make sure we have the correct material
 
-#if 0
-  fprintf(stderr,"numindices: %d, convex: %d, ncache: %d, nbind: %d, mbind: %d, tbind: %d, va: %d\n",
-          numindices, convexcacheused, normalCacheUsed, nbind, mbind, tbind,
-          cc_glglue_has_vertex_array(sogl_glue_instance(state)));
-#endif
 
   const uint32_t contextid = action->getCacheContext();
   SoGLLazyElement * lelem = NULL;
@@ -603,9 +598,6 @@ SoIndexedFaceSet::GLRender(SoGLRenderAction * action)
       else {
         delete indexer;
       }
-#if 0
-      fprintf(stderr,"XXX: create VertexArrayIndexer: %d\n", indexer->getNumVertices());
-#endif
     }
 
     if (PRIVATE(this)->vaindexer) {

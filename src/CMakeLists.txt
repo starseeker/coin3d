@@ -46,7 +46,7 @@ set(COIN_SUBDIRS
   actions base bundles caches details draggers elements
   engines errors events fields fonts glue io manips misc rendering lists
   nodes shapenodes projectors sensors
-  collision shadows geo threads shaders tools
+  shadows threads shaders tools
   hardcopy
 )
 
@@ -103,7 +103,6 @@ else()
         $<TARGET_OBJECTS:base>
         $<TARGET_OBJECTS:bundles>
         $<TARGET_OBJECTS:caches>
-        $<TARGET_OBJECTS:collision>
         $<TARGET_OBJECTS:details>
         $<TARGET_OBJECTS:draggers>
         $<TARGET_OBJECTS:elements>
@@ -112,7 +111,6 @@ else()
         $<TARGET_OBJECTS:events>
         $<TARGET_OBJECTS:fields>
         $<TARGET_OBJECTS:fonts>
-        $<TARGET_OBJECTS:geo>
         $<TARGET_OBJECTS:glelements>
         $<TARGET_OBJECTS:glue>
         $<TARGET_OBJECTS:hardcopy>

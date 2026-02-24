@@ -106,7 +106,13 @@ add_subdirectory(events)
 add_subdirectory(projectors)
 add_subdirectory(errors)
 add_subdirectory(caches)
+add_subdirectory(elements)
 add_subdirectory(misc)
+add_subdirectory(details)
+add_subdirectory(bundles)
+add_subdirectory(tools)
+add_subdirectory(profiler)
+add_subdirectory(lists)
 
 # -----------------------------------------------------------------------
 # Image comparison utilities

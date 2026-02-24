@@ -138,16 +138,16 @@ SoTextureCoordinateEnvironment::initClass(void)
   coin_atexit((coin_atexit_f *)SoTextureCoordinateEnvironmentP::cleanup_func, CC_ATEXIT_NORMAL);
 }
 
-// generates texture coordinates for GLRender, callback and pick actions
+// Software sphere-map coordinate generator.  Used by callback and pick
+// actions, and registered as the fallback path for GLRender.  Produces
+// coordinates equivalent to OpenGL GL_SPHERE_MAP hardware texgen (set up
+// in handleTexgen()).  The formula is from the OpenGL Programming Guide
+// (Red Book), section on sphere mapping.
 const SbVec4f &
 SoTextureCoordinateEnvironment::generate(void *userdata,
                                          const SbVec3f & /* p */,
                                          const SbVec3f &n)
 {
-  //
-  // from formula in the Red Book
-  //
-
   SoState *state = (SoState*)userdata;
   SbVec3f wn; // normal in world (eye) coordinates
   SoModelMatrixElement::get(state).multDirMatrix(n, wn);
@@ -222,13 +222,13 @@ SoTextureCoordinateEnvironment::pick(SoPickAction * action)
 void
 SoTextureCoordinateEnvironment::handleTexgen(void * /* data */)
 {
-#if 0 // from red book
-  glTexGenfv(GL_S, GL_SPHERE_MAP, 0);
-  glTexGenfv(GL_T, GL_SPHERE_MAP, 0);
-#else // from siggraph 96
+  // Configure OpenGL hardware sphere-map texture coordinate generation
+  // for the S and T coordinates.  GL_TEXTURE_GEN_MODE + GL_SPHERE_MAP is
+  // the correct API: glTexGenf(coord, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP).
+  // Using GL_SPHERE_MAP directly as the pname (as a naive reading of some
+  // older documentation suggests) is invalid and produces GL_INVALID_ENUM.
   glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
   glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
-#endif
 
   // supply dummy plane for R and Q so that texture generation works
   // properly

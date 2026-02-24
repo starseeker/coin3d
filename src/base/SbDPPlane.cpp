@@ -234,14 +234,7 @@ SbDPPlane::isInHalfSpace(const SbVec3d & point) const
   // vectors are within 90° (which is the same as checking the sign
   // of the dot product).
   //                                                    19980816 mortene.
-#if 0 // not very efficient code, disabled 19991012 pederb
-  SbVec3d pointToPlaneBase = point - (this->normal * this->distance);
-  double dotWithNormal = this->normal.dot(pointToPlaneBase);
-  if(dotWithNormal >= 0.0f) return TRUE;
-  return FALSE;
-#else // this code uses distance to plane instead
   return this->getDistance(point) >= 0.0f;
-#endif // new code
 }
 
 /*!

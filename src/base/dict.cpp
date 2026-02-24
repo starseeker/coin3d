@@ -154,14 +154,6 @@ cc_dict_destruct(cc_dict * ht)
 void
 cc_dict_clear(cc_dict * ht)
 {
-  // cc_memalloc_clear() will free memory used by internal
-  // structures. To avoid continuous memory allocation/deallocation
-  // that could be bad for performance (cc_dict is used in
-  // SoSensorManager) we manually free all entries from cc_memalloc
-  // instead.
-#if 0 // disabled
-  cc_memalloc_clear(ht->memalloc); /* free all memory used by all entries */
-#else // new version that will not trigger any malloc()/free() calls
   unsigned int i;
   cc_dict_entry * entry;
   cc_dict_entry * next;
@@ -173,7 +165,6 @@ cc_dict_clear(cc_dict * ht)
       entry = next;
     }
   }
-#endif // new version
 
   // all memory has been freed. Just clear buckets
   memset(ht->buckets, 0, ht->size * sizeof(cc_dict_entry*));

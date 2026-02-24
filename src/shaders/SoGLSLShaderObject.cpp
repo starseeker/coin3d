@@ -252,11 +252,6 @@ SoGLSLShaderObject::updateCoinParameter(SoState * COIN_UNUSED_ARG(state), const 
       GLint location = glue->glGetUniformLocationARB(pHandle,
                                                      (const COIN_GLchar *)name.getString());
 
-#if 0
-      fprintf(stderr,"action: %s, name: %s, loc: %d, handle: %p\n",
-              state->getAction()->getTypeId().getName().getString(),
-              name.getString(), location, pHandle);
-#endif
       if (location >= 0) {
         glue->glUniform1iARB(location, value);
       }

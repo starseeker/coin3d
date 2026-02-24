@@ -415,7 +415,6 @@ SoAction::initClasses(void)
   SoRayPickAction::initClass();
   SoSearchAction::initClass();
   SoWriteAction::initClass();
-  SoIntersectionDetectionAction::initClass();
 
   SoSimplifyAction::initClass();
   SoReorganizeAction::initClass();

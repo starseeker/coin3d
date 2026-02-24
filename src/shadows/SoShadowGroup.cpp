@@ -1572,10 +1572,6 @@ SoShadowGroupP::setVertexShader(SoState * state)
     else {
       this->vertexshader->parameter.setNum(0);
     }
-#if 0 // for debugging
-    fprintf(stderr,"new vertex program:\n%s\n",
-            gen.getShaderProgram().getString());
-#endif
   }
 
 
@@ -1995,11 +1991,6 @@ SoShadowGroupP::setFragmentShader(SoState * state)
     this->cameratransform->value.touch();
     this->fragmentshader->sourceProgram = gen.getShaderProgram();
     this->fragmentshader->sourceType = SoShaderObject::GLSL_PROGRAM;
-
-#if 0 // for debugging
-    fprintf(stderr,"new fragment program:\n%s\n",
-            gen.getShaderProgram().getString());
-#endif // debugging
 
   }
 

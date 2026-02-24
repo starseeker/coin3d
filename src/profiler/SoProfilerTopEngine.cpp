@@ -59,12 +59,12 @@
 
 class SoProfilerTopEngineP {
 public:
-  SoProfilerTopEngineP(void) : datasize(0), data(NULL) { }
+  SoProfilerTopEngineP(void) : datasize(0), data(NULL), tmpdata(NULL) { }
   ~SoProfilerTopEngineP(void) {
     delete [] data;
     data = NULL;
-    //delete [] tmpdata;
-    //tmpdata = NULL;
+    delete [] tmpdata;
+    tmpdata = NULL;
   }
 
   struct StatDataItem {
@@ -78,7 +78,7 @@ public:
 
   int datasize;
   StatDataItem * data;
-  //StatDataItem * tmpdata;
+  StatDataItem * tmpdata;
 
   static int qsort_time_dec(const void *, const void *);
   static int qsort_time_avg_dec(const void *, const void *);
@@ -275,16 +275,16 @@ SoProfilerTopEngine::evaluate(void)
   const bool have_maxtimings = (this->statisticsTimingsMax.getNum() == inputsize);
   const bool have_olddata =
     ((PRIVATE(this)->datasize == inputsize) && (PRIVATE(this)->data != NULL));
-  /*const int olddatasize = PRIVATE(this)->datasize;*/
   SoProfilerTopEngineP::StatDataItem * const olddata = PRIVATE(this)->data;
 
-  //if (PRIVATE(this)->tmpdata && PRIVATE(this)->datasize == inputsize) {
-  //  PRIVATE(this)->data = PRIVATE(this)->tmpdata;
-  //  PRIVATE(this)->tmpdata = olddata;
-  //} else {
+  if (PRIVATE(this)->tmpdata && PRIVATE(this)->datasize == inputsize) {
+    PRIVATE(this)->data = PRIVATE(this)->tmpdata;
+  } else {
+    delete [] PRIVATE(this)->tmpdata;
     PRIVATE(this)->data = new SoProfilerTopEngineP::StatDataItem [ inputsize ];
     PRIVATE(this)->datasize = inputsize;
-  //}
+  }
+  PRIVATE(this)->tmpdata = olddata;
 
   const float decayvalue = SbMax(0.0f, SbMin(1.0f, this->decay.getValue()));
   const float newvaluefactor = 1.0f - decayvalue;
@@ -464,9 +464,6 @@ SoProfilerTopEngine::evaluate(void)
     }
     SO_ENGINE_OUTPUT(this->prettyText, SoMFString, set1Value(c, entryline));
   }
-
-  delete [] olddata;
-  // olddata = NULL;
 }
 
 #undef PRIVATE

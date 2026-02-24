@@ -546,13 +546,6 @@ SoReorganizeActionP::pre_shape_cb(void * userdata, SoCallbackAction * COIN_UNUSE
 SoCallbackAction::Response
 SoReorganizeActionP::post_shape_cb(void * COIN_UNUSED_ARG(userdata), SoCallbackAction * COIN_UNUSED_ARG(action), const SoNode * COIN_UNUSED_ARG(node))
 {
-#if 0 // debug
-  SoReorganizeActionP * thisp = (SoReorganizeActionP*) userdata;
-  fprintf(stderr,"shape: %s, numtri: %d, pvcache: %p\n",
-          node->getTypeId().getName().getString(),
-          thisp->numtriangles,
-          thisp->pvcache);
-#endif // debug
   return SoCallbackAction::CONTINUE;
 }
 

@@ -595,10 +595,6 @@ SbTime::parsedate(const char * const date)
   }
 #endif // COIN_DEBUG
 
-#if 0 // debug
-  SoDebugError::postInfo("SbTime::parseDate", "date string: '%s'", date);
-#endif // debug
-
   struct tm time;
   char months[12][4] = {
     "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -1057,12 +1053,4 @@ SbTime::addToString(SbString & str, const double v) const
 void
 SbTime::print(FILE * fp) const
 {
-#if 0
-  struct timeval tm;
-  this->getValue(&tm);
-  SbString str = this->formatDate();
-  (void)fprintf(fp, "%s", str.getString());
-  (void)fprintf(fp, ", secs: %ld, msecs: %ld\n", static_cast<long int>(tm.tv_sec),
-               static_cast<long int>(tm.tv_usec));
-#endif // COIN_DEBUG
 }

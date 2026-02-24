@@ -107,9 +107,6 @@ SoNotRec::getType(void) const
 const SoNotRec *
 SoNotRec::getPrevious(void) const
 {
-#if 0 // OBSOLETED: see comment on setPrevious(). 20000304 mortene.
-  assert(this != this->prev);
-#endif // OBSOLETED
   return this->prev;
 }
 
@@ -119,11 +116,6 @@ SoNotRec::getPrevious(void) const
 void
 SoNotRec::setPrevious(const SoNotRec * const prevptr)
 {
-#if 0 // OBSOLETED: looks like this can be allowed (and need to be
-      // allowed under the current circumstances, as it hits under certain
-      // conditions). 20000304 mortene
-  assert(this != prevptr);
-#endif // OBSOLETED
   this->prev = prevptr;
 }
 

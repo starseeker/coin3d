@@ -199,19 +199,7 @@ SbTesselator::PImpl::heap_evaluate(void * v)
     if ((fabs(area) > vertex->thisp->epsilon) &&
         istriangle &&
         isclippable) {
-#if 0 // testing code to avoid empty triangles
       vertex->weight = vertex->thisp->circleSize(vertex);
-      Vertex *v2 = vertex->next;
-      if (vertex->weight != FLT_MAX &&
-          v2->thisp->keepVertices &&
-          v2->thisp->numVerts > 4 &&
-          fabs(v2->thisp->area(v2)) < v2->thisp->epsilon) {
-        vertex->weight = 0.0f; // cut immediately!
-      }
-
-#else
-      vertex->weight = vertex->thisp->circleSize(vertex);
-#endif
     }
     else
       vertex->weight = FLT_MAX;

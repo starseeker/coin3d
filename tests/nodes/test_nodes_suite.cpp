@@ -101,8 +101,6 @@
 #include <Inventor/nodes/SoVertexShader.h>
 #include <Inventor/nodes/SoGeometryShader.h>
 #include <Inventor/nodes/SoShaderParameter.h>
-#include <Inventor/nodes/SoGeoOrigin.h>
-#include <Inventor/nodes/SoGeoCoordinate.h>
 #include <Inventor/annex/FXViz/nodes/SoShadowGroup.h>
 #include <Inventor/annex/FXViz/nodes/SoShadowStyle.h>
 // Dragger headers
@@ -525,28 +523,6 @@ int main()
         bool pass = (gs->getTypeId() != SoType::badType());
         gs->unref();
         runner.endTest(pass, pass ? "" : "SoGeometryShader has bad type");
-    }
-
-    // -----------------------------------------------------------------------
-    // Geo nodes: class initialized
-    // Baseline: src/geo/SoGeoOrigin.cpp, SoGeoCoordinate.cpp
-    // -----------------------------------------------------------------------
-    runner.startTest("SoGeoOrigin class initialized");
-    {
-        SoGeoOrigin* geo = new SoGeoOrigin;
-        geo->ref();
-        bool pass = (geo->getTypeId() != SoType::badType());
-        geo->unref();
-        runner.endTest(pass, pass ? "" : "SoGeoOrigin has bad type");
-    }
-
-    runner.startTest("SoGeoCoordinate class initialized");
-    {
-        SoGeoCoordinate* geo = new SoGeoCoordinate;
-        geo->ref();
-        bool pass = (geo->getTypeId() != SoType::badType());
-        geo->unref();
-        runner.endTest(pass, pass ? "" : "SoGeoCoordinate has bad type");
     }
 
     // -----------------------------------------------------------------------

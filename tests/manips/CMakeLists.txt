@@ -16,8 +16,24 @@ if(USE_PTHREAD)
 endif()
 add_test(NAME test_manips COMMAND test_manips)
 
+# Deeper manip coverage: light manips + clip plane manip
+add_executable(test_manips_deep test_manips_deep.cpp)
+target_link_libraries(test_manips_deep simple_test_utils Coin ${COIN_TARGET_LINK_LIBRARIES})
+target_include_directories(test_manips_deep PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/..
+    ${PROJECT_SOURCE_DIR}/include
+    ${PROJECT_SOURCE_DIR}/include/Inventor/annex
+    ${PROJECT_BINARY_DIR}/include
+    ${COIN_TARGET_INCLUDE_DIRECTORIES}
+)
+if(USE_PTHREAD)
+    target_link_libraries(test_manips_deep pthread)
+endif()
+add_test(NAME test_manips_deep COMMAND test_manips_deep)
+
 include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG(-Wtautological-compare _MANIPS_DISABLE_TAUTCOMP)
 if(_MANIPS_DISABLE_TAUTCOMP)
     target_compile_options(test_manips PUBLIC -Wno-tautological-compare)
+    target_compile_options(test_manips_deep PUBLIC -Wno-tautological-compare)
 endif()

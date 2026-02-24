@@ -1173,56 +1173,6 @@ glglue_resolve_symbols(cc_glglue * w)
   }
 #endif /* GL_EXT_paletted_texture */
 
-  /*
-    Using the SGI_texture_color_table extension has been temporarily
-    disabled, as it uses a different enum value for
-    glColorTable(<target>,...), and seems to only support 2D
-    textures. Quoting from the extension spec document:
-
-        Accepted by the <cap> parameter of Enable, Disable, and
-        IsEnabled, [...] and by the <target> parameter of
-        ColorTableSGI, CopyColorTableSGI, GetColorTableSGI,
-        ColorTableParameterfvSGI, ColorTableParameterivSGI,
-        GetColorTableParameterfvSGI, GetColorTableParameterivSGI:
-
-        TEXTURE_COLOR_TABLE_SGI         0x80BC
-
-        Accepted by the <target> parameter of ColorTableSGI,
-        GetColorTableParameterivSGI, and GetColorTableParameterfvSGI:
-
-        PROXY_TEXTURE_COLOR_TABLE_SGI   0x80BD
-
-    As paletted textures can only be supported through extensions, we
-    should probably implement support for using this one in addition
-    to EXT_paletted_texture.
-
-    Note: our O2 supports this extension, but not
-    EXT_paletted_texture, so it can be used for development and
-    testing of support for this extension.
-
-    20030129 mortene.
-   */
-#if 0
-  w->supportsPalettedTextures = w->supportsPalettedTextures ||
-    cc_glglue_glext_supported(w, "GL_SGI_texture_color_table");
-
-#ifdef GL_SGI_texture_color_table
-  /* Note that SGI_texture_color_table defines glColorTableEXT et al
-     "on it's own", i.e. it doesn't need the presence of
-     EXT_color_table / SGI_color_table / OGL1.2+ + ARB_imaging. It
-     only defines a *subset* of what EXT_color_table etc defines,
-     though. */
-  if ((w->glColorTable == NULL) &&
-      cc_glglue_glext_supported(w, "GL_SGI_texture_color_table")) {
-    w->glColorTable = (COIN_PFNGLCOLORTABLEPROC)PROC(w, glColorTableSGI);
-    w->glGetColorTable = (COIN_PFNGLGETCOLORTABLEPROC)PROC(w, glGetColorTableSGI);
-    w->glGetColorTableParameteriv = (COIN_PFNGLGETCOLORTABLEPARAMETERIVPROC)PROC(w, glGetColorTableParameterivSGI);
-    w->glGetColorTableParameterfv = (COIN_PFNGLGETCOLORTABLEPARAMETERFVPROC)PROC(w, glGetColorTableParameterfvSGI);
-  }
-#endif /* GL_SGI_texture_color_table */
-#endif /* disabled */
-
-
   w->glBlendEquation = NULL;
   w->glBlendEquationEXT = NULL;
 
@@ -2864,9 +2814,6 @@ cc_glglue_glGenTextures(const cc_glglue * w, GLsizei n, GLuint * textures)
   assert(w->glGenTextures);
   w->glGenTextures(n, textures);
 
-#if 0 /* debug */
-  cc_debugerror_postinfo("cc_glglue_glGenTextures", "%p, size==%d, textures==%p", w, n, textures);
-#endif /* debug */
 }
 
 void
@@ -2875,9 +2822,6 @@ cc_glglue_glBindTexture(const cc_glglue * w, GLenum target, GLuint texture)
   assert(w->glBindTexture);
   w->glBindTexture(target, texture);
 
-#if 0 /* debug */
-  cc_debugerror_postinfo("cc_glglue_glBindTexture", "%p, ..., %d", w, texture);
-#endif /* debug */
 }
 
 void
@@ -2886,9 +2830,6 @@ cc_glglue_glDeleteTextures(const cc_glglue * w, GLsizei n, const GLuint * textur
   assert(w->glDeleteTextures);
   w->glDeleteTextures(n, textures);
 
-#if 0 /* debug */
-  cc_debugerror_postinfo("cc_glglue_glDeleteTextures", "%p, size==%d, textures==%p", w, n, textures);
-#endif /* debug */
 }
 
 /*!

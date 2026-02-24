@@ -171,12 +171,6 @@ public:
   static const SbMat IDENTITYMATRIX;
 
   static SbBool isIdentity(const float fm[][4]) {
-#if 0 // I would assume that the memcmp() version is faster..? Should run some profile checks.
-    return ((fm[0][0] == 1.0f) && (fm[0][1] == 0.0f) && (fm[0][2] == 0.0f) && (fm[0][3] == 0.0f) &&
-            (fm[1][0] == 0.0f) && (fm[1][1] == 1.0f) && (fm[1][2] == 0.0f) && (fm[1][3] == 0.0f) &&
-            (fm[2][0] == 0.0f) && (fm[2][1] == 0.0f) && (fm[2][2] == 1.0f) && (fm[2][3] == 0.0f) &&
-            (fm[3][0] == 0.0f) && (fm[3][1] == 0.0f) && (fm[3][2] == 0.0f) && (fm[3][3] == 1.0f));
-#else
     // Note: as far as I know, memcmp() only compares bytes until
     // there's a mismatch (and does *not* run over the full array and
     // adds up a total, as it sometimes seems from documentation). So
@@ -185,7 +179,6 @@ public:
     // Also, we check the first value on its own, to avoid the function
     // call for the most common case.
     return (fm[0][0]==1.0f) && memcmp(&fm[0][1], &IDENTITYMATRIX[0][1], (4 * 3 + 3) * sizeof(float)) == 0;
-#endif
   }
 
   static HMatrix mat_id;

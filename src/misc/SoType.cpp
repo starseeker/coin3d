@@ -178,16 +178,6 @@ struct SoTypeData {
   SoType::instantiationMethod method;
 };
 
-// OBSOLETED: this code was only active for GCC 2.7.x, and I don't
-// think we support that old compiler version anyhow. Do look into if
-// this is what the old SGI MIPSpro CC compiler for IRIX6.2 needs to
-// stop spitting out all those linker warnings, though. 20000208 mortene.
-#if 0 // obsoleted
-// #if defined(NEED_TEMPLATE_DEFINITION)
-template class SbList<SoTypeData *>;
-// [...]
-#endif // obsoleted
-
 // *************************************************************************
 
 // list of SoType internal data structures, indexed over SoType 'data' id.

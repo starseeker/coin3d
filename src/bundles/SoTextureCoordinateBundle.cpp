@@ -385,15 +385,9 @@ SoTextureCoordinateBundle::initDefaultCallback(SoAction * action)
       // clear on this point (surprise), but the VRML specification states
       // that if the two dimensions are equal, the ordering X>Y>Z should
       // be used.
-#if 0 // the correct way to do it
-      if (this->defaultdim0 > this->defaultdim1) {
-        SbSwap(this->defaultdim0, this->defaultdim1);
-      }
-#else // the OIV way to do it.
       if (this->defaultdim0 < this->defaultdim1) {
         SbSwap(this->defaultdim0, this->defaultdim1);
       }
-#endif // OIV compatibility fix
     }
     else if (size[this->defaultdim0] < size[this->defaultdim1]) {
       SbSwap(this->defaultdim0, this->defaultdim1);

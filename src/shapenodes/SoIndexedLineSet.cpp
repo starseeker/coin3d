@@ -375,9 +375,6 @@ SoIndexedLineSet::GLRender(SoGLRenderAction * action)
       else {
         delete indexer;
       }
-#if 0
-      fprintf(stderr,"XXX: ILS create VertexArrayIndexer: %d\n", indexer->getNumVertices());
-#endif
     }
 
     if (PRIVATE(this)->vaindexer) {

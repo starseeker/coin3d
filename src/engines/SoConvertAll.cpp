@@ -602,13 +602,7 @@ static void time2string(const SbTime & t, SbString & s)
 
   // Value is more than a year, assume we're interested in the date
   // and time.
-#if 0 // Don't default to ISO 8601 conformant string, ...
-  // Note: if this is ever enabled, remember that the format string
-  // need to be different on Microsoft Windows systems.
-  else s = t.formatDate("%A %Y-%m-%d %H:%M:%S");
-#else // .. follow Open Inventor instead.
   else s = t.formatDate();
-#endif
 }
 
 // Function for converting SoSFTime -> SoSFString.

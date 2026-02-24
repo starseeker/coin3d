@@ -896,14 +896,6 @@ SoOffscreenRendererP::renderFromBase(SoBase * base)
             const int r = fclose(f);
             assert(r == 0);
 		  }
-
-          // This is sometimes useful to enable during debugging to
-          // see the exact order and position of the tiles. Not
-          // enabled by default because it makes the final buffer
-          // completely blank.
-#if 0 // debug
-          (void)memset(this->buffer, 0x00, bufsize);
-#endif // debug
         }
       }
     }

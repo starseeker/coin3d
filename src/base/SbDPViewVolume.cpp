@@ -855,15 +855,6 @@ SbDPViewVolume::perspective(double fovy, double aspect,
     else if (fovy>M_PI) fovy=M_PI;
   }
 
-#if 0 // obsoleted 2003-02-03 pederb. A negative aspect ratio is ok
-  if (aspect<0.0f) {
-    SoDebugError::postWarning("SbDPViewVolume::perspective",
-                              "Aspect ratio 'aspect' (%d) should be >=0.0f. "
-                              "Clamping to 0.0f.",aspect);
-    aspect=0.0f;
-  }
-#endif // obsoleted
-
   if (nearval>farval) {
     SoDebugError::postWarning("SbDPViewVolume::perspective",
                               "far coordinate (%f) should be larger than "

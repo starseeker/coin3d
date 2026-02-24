@@ -219,13 +219,6 @@ SoCache::addElement(const SoElement * const elem)
     int flag = 0x1 << (idx & 0x7);
     idx >>= 3; // get byte number
     if (!(PRIVATE(this)->elementflags[idx] & flag)) {
-#if 0// debug
-      if (CoinInternal::coin_debug_caching_level() > 1) {
-        SoDebugError::postInfo("SoCache::addElement",
-                               "cache: %p, elem: %s", this,
-                               elem->getTypeId().getName().getString());
-      }
-#endif // debug
       SoElement * copy = elem->copyMatchInfo();
       if (copy) PRIVATE(this)->elements.append(copy);
       PRIVATE(this)->elementflags[idx] |= flag;
@@ -277,13 +270,6 @@ SoCache::getInvalidElement(const SoState * const state) const
   for (int i = 0; i < n; i++) {
     elem = ptr[i];
     if (!elem->matches(state->getConstElement(elem->getStackIndex()))) {
-#if 0
-      if (CoinInternal::coin_debug_caching_level() > 0) {
-        SoDebugError::postInfo("SoCache::getInvalidElement",
-                               "cache: %p, invalid element: %s", this,
-                               elem->getTypeId().getName().getString());
-      }
-#endif // debug
       return elem;
     }
   }

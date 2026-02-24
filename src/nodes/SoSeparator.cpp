@@ -591,11 +591,7 @@ SoSeparator::getBoundingBox(SoGetBoundingBoxAction * action)
     action->extendBy(childrenbbox);
     if (childrencenterset) {
       // FIXME: shouldn't this assert() hold up? Investigate. 19990422 mortene.
-#if 0 // disabled
-      assert(!action->isCenterSet());
-#else
       action->resetCenter();
-#endif
       action->setCenter(childrencenter, TRUE);
     }
   }
@@ -983,20 +979,6 @@ SoSeparatorP::doCull(SoSeparatorP * thisp, SoState * state,
       outside = (*cullfunc)(state, bbox, TRUE);
     }
   }
-
-#if 0
-// temporarily disabled. setNodeFlag() needs current path, which is
-// unavailable here
-  if (outside && SoProfiler::isEnabled()) {
-#ifdef HAVE_NODEKITS
-    SoProfilerElement * elt = SoProfilerElement::get(state);
-    if (elt) {
-      // FIXME: need current path to set this flag. move outside cullTest()?
-      // elt->getProfilingData().setNodeFlag(PUBLIC(thisp)->getCurPath(), SbProfilingData::CULLED_FLAG, TRUE);
-    }
-#endif
-  }
-#endif
 
   return outside;
 }

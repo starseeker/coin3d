@@ -213,17 +213,7 @@ SoProtoInstance::getRootNode(void)
 void
 SoProtoInstance::write(SoWriteAction * action)
 {
-#if 0 // just testing, disabled pederb, 2002-06-18
-  SoOutput * out = action->getOutput();
-  if (out->getStage() == SoOutput::COUNT_REFS) {
-    this->addWriteReference(out, FALSE);
-  }
-  else if (out->getStage() == SoOutput::WRITE) {
-  }
-  else assert(0 && "unknown stage");
-#else
   inherited::write(action);
-#endif
 }
 
 // Doc in parent

@@ -162,10 +162,7 @@ public:
   void initFunctions(void);
   SbBool isSupported(const cc_glglue * context, const SbName & feature);
   SbBool isBroken(const cc_glglue * context, const SbName & feature);
-  SbBool isSlow(const cc_glglue * context, const SbName & feature);
-  SbBool isFast(const cc_glglue * context, const SbName & feature);
   SbBool isDisabled(const cc_glglue * context, const SbName & feature);
-  SbName getComment(const cc_glglue * context, const SbName & feature);
 
   // Runtime feature detection function map
   SbHash<const char*, glglue_feature_test_f *> featuremap;
@@ -304,31 +301,10 @@ SoGLDriverDatabaseP::isBroken(const cc_glglue * context, const SbName & feature)
 }
 
 SbBool
-SoGLDriverDatabaseP::isSlow(const cc_glglue * context, const SbName & feature)
-{
-  const FeatureOverride* override = findOverride(context, feature);
-  return override && (override->status == FeatureOverride::SLOW);
-}
-
-SbBool
-SoGLDriverDatabaseP::isFast(const cc_glglue * context, const SbName & feature)
-{
-  const FeatureOverride* override = findOverride(context, feature);
-  return override && (override->status == FeatureOverride::FAST);
-}
-
-SbBool
 SoGLDriverDatabaseP::isDisabled(const cc_glglue * context, const SbName & feature)
 {
   const FeatureOverride* override = findOverride(context, feature);
   return override && (override->status == FeatureOverride::DISABLED);
-}
-
-SbName
-SoGLDriverDatabaseP::getComment(const cc_glglue * context, const SbName & feature)
-{
-  const FeatureOverride* override = findOverride(context, feature);
-  return override ? SbName(override->comment) : SbName("");
 }
 
 // Helper function to match simple wildcard patterns
@@ -394,88 +370,16 @@ pimpl(void)
   return sogldriverdatabase_instance;
 }
 
-// Class method that provides access to the singleton instance
-SoGLDriverDatabaseP *
-SoGLDriverDatabase::pimpl(void)
-{
-  return ::pimpl();
-}
-
 // Public API implementation
 
 void
 SoGLDriverDatabase::init(void)
 {
-  (void) pimpl(); // Initialize the singleton
+  (void) ::pimpl(); // Initialize the singleton
 }
 
 SbBool
 SoGLDriverDatabase::isSupported(const cc_glglue * context, const SbName & feature)
 {
-  return pimpl()->isSupported(context, feature);
-}
-
-SbBool
-SoGLDriverDatabase::isBroken(const cc_glglue * context, const SbName & feature)
-{
-  return pimpl()->isBroken(context, feature);
-}
-
-SbBool
-SoGLDriverDatabase::isSlow(const cc_glglue * context, const SbName & feature)
-{
-  return pimpl()->isSlow(context, feature);
-}
-
-SbBool
-SoGLDriverDatabase::isFast(const cc_glglue * context, const SbName & feature)
-{
-  return pimpl()->isFast(context, feature);
-}
-
-SbName
-SoGLDriverDatabase::getComment(const cc_glglue * context, const SbName & feature)
-{
-  return pimpl()->getComment(context, feature);
-}
-
-// Legacy XML loading methods - now stubs since we use embedded data
-void
-SoGLDriverDatabase::loadFromBuffer(const char * buffer)
-{
-  // XML loading removed - using embedded database
-  SoDebugError::post("SoGLDriverDatabase::loadFromBuffer",
-                     "XML loading is no longer supported. Using embedded driver database.");
-}
-
-void
-SoGLDriverDatabase::loadFromFile(const SbName & filename)
-{
-  // XML loading removed - using embedded database  
-  SoDebugError::post("SoGLDriverDatabase::loadFromFile",
-                     "XML loading is no longer supported. Using embedded driver database.");
-}
-
-void
-SoGLDriverDatabase::addBuffer(const char * buffer)
-{
-  // XML loading removed - using embedded database
-  SoDebugError::post("SoGLDriverDatabase::addBuffer",
-                     "XML loading is no longer supported. Using embedded driver database.");
-}
-
-void
-SoGLDriverDatabase::addFile(const SbName & filename)
-{
-  // XML loading removed - using embedded database
-  SoDebugError::post("SoGLDriverDatabase::addFile",
-                     "XML loading is no longer supported. Using embedded driver database.");
-}
-
-void
-SoGLDriverDatabase::addFeature(const SbName & feature, const SbName & comment)
-{
-  // Runtime feature addition removed - use embedded database
-  SoDebugError::post("SoGLDriverDatabase::addFeature",
-                     "Runtime feature addition is no longer supported. Using embedded driver database.");
+  return ::pimpl()->isSupported(context, feature);
 }

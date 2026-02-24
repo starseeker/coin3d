@@ -289,29 +289,6 @@ SoShaderObject::search(SoSearchAction * action)
   // Include this node in the search.
   SoNode::search(action);
   if (action->isFound()) return;
-
-  // we really can't do this since this node hasn't got an SoChildList
-  // instance
-#if 0 // disabled, not possible to search under this node
-  int numindices;
-  const int * indices;
-  if (action->getPathCode(numindices, indices) == SoAction::IN_PATH) {
-    // FIXME: not implemented -- 20050129 martin
-  }
-  else { // traverse all shader parameter
-    int num = this->parameter.getNum();
-    for (int i=0; i<num; i++) {
-      SoNode * node = this->parameter[i];
-      action->pushCurPath(i, node);
-      SoNodeProfiling profiling;
-      profiling.preTraversal(action);
-      node->search(action);
-      profiling.postTraversal(action);
-      action->popCurPath();
-      if (action->isFound()) return;
-    }
-  }
-#endif // disabled
 }
 
 // doc from parent

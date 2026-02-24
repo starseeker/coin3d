@@ -693,17 +693,6 @@ SoBase::setName(const SbName & newname)
   // COIN_DEBUG_TRACK_SOBASE_INSTANCES envvar to track down where
   // un-deallocated SoBase-instances were allocated from. (I.e., run it
   // in a debugger and check the backtrace.)  -mortene.
-#if 0 // debug
-  static SbBool checked = FALSE;
-  static const char * tracename = NULL;
-  if (!checked) {
-    auto env = CoinInternal::getEnvironmentVariable("COIN_DEBUG_ASSERT_SOBASE_SETNAME");
-    tracename = env.has_value() ? env->c_str() : nullptr;
-    checked = TRUE;
-  }
-  if (tracename) { assert(newname != tracename); }
-#endif // debug
-
 
   // remove old name first
   SbName oldName = this->getName();

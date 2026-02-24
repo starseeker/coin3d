@@ -527,11 +527,7 @@ SoLevelOfDetail::getBoundingBox(SoGetBoundingBoxAction * action)
     action->extendBy(childrenbbox);
     if (childrencenterset) {
       // FIXME: shouldn't this assert() hold up? Investigate. 19990422 mortene.
-#if 0 // disabled
-      assert(!action->isCenterSet());
-#else
       action->resetCenter();
-#endif
       action->setCenter(childrencenter, TRUE);
     }
   }

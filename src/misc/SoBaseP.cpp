@@ -534,9 +534,6 @@ SoBase::PImpl::createInstance(SoInput * in, const SbName & classname)
 void
 SoBase::PImpl::flushInput(SoInput * in)
 {
-#if 0 // FIXME: obsoleted, see comment at the end of SoBase::readBase(). 20020531 mortene.
-  assert(FALSE);
-#else // obsoleted
   assert(!in->isBinary());
 
   int nestlevel = 1;
@@ -546,7 +543,6 @@ SoBase::PImpl::flushInput(SoInput * in)
     if (c == CLOSE_BRACE) nestlevel--;
     else if (c == OPEN_BRACE) nestlevel++;
   }
-#endif // obsoleted
 }
 
 // *************************************************************************

@@ -108,9 +108,6 @@ SoInput_FileInfo::doBufferRead(void)
     this->readbufidx = 0;
     this->readbuflen = 0;
     this->eof = TRUE;
-#if 0 // debug
-    SoDebugError::postInfo("doBufferRead", "met Mr End-of-file");
-#endif // debug
   }
   else {
     this->totalread += this->readbufidx;

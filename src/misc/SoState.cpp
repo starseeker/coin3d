@@ -235,16 +235,6 @@ SoState::getElement(const int stackindex)
   if (!this->isElementEnabled(stackindex)) return NULL;
   SoElement * element = this->stack[stackindex];
 
-#if 0 // debug
-  SoDebugError::postInfo("SoState::getElement",
-                         "stackindex: %d, element: %p ('%s'), "
-                         "stackdepth: %d, pushstack: %s",
-                         stackindex, element,
-                         element->getTypeId().getName().getString(),
-                         element->getDepth(),
-                         (element->getDepth() < PRIVATE(this)->depth) ?
-                         "yes" : "no");
-#endif // debug
 
   if (element->getDepth() < PRIVATE(this)->depth) { // create elt of correct depth
     SoElement * next = element->nextup;

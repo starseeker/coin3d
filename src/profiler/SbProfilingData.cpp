@@ -905,7 +905,12 @@ SbProfilingData::getNodeTiming(int idx, unsigned int flags) const
   if (idx == -1) return SbTime::zero();
   SbTime sum = PRIVATE(this)->nodeData[idx].traversaltime;
   if ((flags & INCLUDE_CHILDREN) != 0) {
-    // FIXME: find all children of the node ad add to the sum
+    const int numentries = (int)PRIVATE(this)->nodeData.size();
+    for (int i = 0; i < numentries; ++i) {
+      if (PRIVATE(this)->nodeData[i].parentidx == idx) {
+        sum += this->getNodeTiming(i, flags);
+      }
+    }
   }
   return sum;
 }
@@ -978,7 +983,12 @@ SbProfilingData::getNodeFootprint(int idx, FootprintType footprinttype, unsigned
     break;
   }
   if ((flags & INCLUDE_CHILDREN) != 0) {
-    // FIXME: add children data to footprint
+    const int numentries = (int)PRIVATE(this)->nodeData.size();
+    for (int i = 0; i < numentries; ++i) {
+      if (PRIVATE(this)->nodeData[i].parentidx == idx) {
+        footprint += this->getNodeFootprint(i, footprinttype, flags);
+      }
+    }
   }
   return footprint;
 }

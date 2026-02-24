@@ -212,10 +212,6 @@ SbCylinder::intersect(const SbLine& l, SbVec3f& enter, SbVec3f& exit) const
   if (len == 0.0f) {
     // They are parallel, check if we're inside or outside the cylinder
     // by getting the distance between the cylinder axis and the ray.
-#if 0
-    float dist = cv.dot(this->axis.getDirection());
-    dist = (cv - dist*this->axis.getDirection()).length();
-#endif
     if((this->axis.getClosestPoint(l.getPosition()) -
         l.getPosition()).length() <= radius) {
       // We're inside the cylinder, set enter and exit points to be

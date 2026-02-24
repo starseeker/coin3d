@@ -202,7 +202,6 @@ Tests in `tests/` subdirectories are baselined against the
 | Shader nodes | ✅ | `src/shaders/` | SoShaderProgram, SoFragmentShader, SoVertexShader, SoGeometryShader class initialized |
 | Shader parameter nodes | ✅ | `src/shaders/SoShaderParameter.cpp` | 1f/1i/2f/2i/3f/3i/4f/4i/Array1f/Array1i/Matrix/MatrixArray/StateMatrix |
 | Shadow nodes | ✅ | `src/shadows/` | SoShadowGroup, SoShadowStyle class initialized |
-| Geo nodes | ✅ | `src/geo/` | SoGeoOrigin, SoGeoCoordinate class initialized |
 
 ---
 
@@ -285,7 +284,7 @@ Tests in `tests/` subdirectories are baselined against the
 
 ---
 
-## Shaders / Shadows / Geo (`tests/nodes/test_nodes_suite.cpp`)
+## Shaders / Shadows (`tests/nodes/test_nodes_suite.cpp`)
 
 | Module | Tests | Vanilla Baseline |
 |--------|-------|-----------------|
@@ -296,8 +295,6 @@ Tests in `tests/` subdirectories are baselined against the
 | `SoShaderParameter*` | ✅ | `src/shaders/SoShaderParameter.cpp` | 1f/1i/2f/2i/3f/3i/4f/4i/Array1f/Array1i/Matrix/MatrixArray/StateMatrix |
 | `SoShadowGroup` | ✅ | `src/shadows/SoShadowGroup.cpp` | class initialized |
 | `SoShadowStyle` | ✅ | `src/shadows/SoShadowStyle.cpp` | class initialized |
-| `SoGeoCoordinate` | ✅ | `src/geo/SoGeoCoordinate.cpp` | class initialized |
-| `SoGeoOrigin` | ✅ | `src/geo/SoGeoOrigin.cpp` | class initialized |
 
 ---
 
@@ -417,7 +414,6 @@ and a prioritised plan to reach ≥ 70 % line coverage.
 
 Focus areas for improving coverage:
 - `src/manips/` (26 %) – manipulator state-machine code; built on draggers
-- `src/geo/` (12 %) – geo coordinate nodes
 - `src/rendering/` (39 %) – `SoGLRenderAction` and `SoOffscreenRenderer` edge cases
 - `src/base/` (34 %) – matrix math and other base types
 - `src/fonts/` (34 %) – font rasterizer (SoText2/SoText3 paths)
@@ -438,7 +434,8 @@ Focus areas for improving coverage:
 | Engines | 16 | 16 |
 | Threads | 10 | 10 |
 | XML/ScXML | 0 | 0 (removed in Obol) |
-| Shaders/Shadows/Geo | 16 | 16 |
+| Geo/Collision | 0 | 0 (removed in Obol) |
+| Shaders/Shadows | 14 | 14 |
 | Draggers | 1 (partial) | 20+ |
 | Visual rendering (image-comparison) | 13 | ~15 |
 | Visual rendering (pixel-validation) | 7 | ~10 |

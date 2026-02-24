@@ -1218,10 +1218,6 @@ SoInput::read(SbName & n, SbBool validIdent)
     s += buf;
     n = SbName(s);
 
-#if 0 // debug
-    SoDebugError::postInfo("SoInput::read",
-                           "string read: \"%s\"", s.getString());
-#endif // debug
 
     if (s.getLength() == 0) return FALSE;
   }
@@ -2503,23 +2499,6 @@ SoInput::setDirectories(SbStringList * dirs)
 
   (*SoInput::dirsearchlist) = *dirs;
 }
-
-/*!
-  \COININTERNAL
-
-  Return the currently active stream.
-*/
-#if 0
-SoInput_FileInfo *
-SoInput::getTopOfStack(void) const
-{
-  if (this->filestack.getLength() == 0) {
-    SoDebugError::post("SoInput::getTopOfStack", "no files in stack");
-    return NULL;
-  }
-  return this->filestack[0];
-}
-#endif
 
 /*!
   Scan through the include directories in order and try to find a file

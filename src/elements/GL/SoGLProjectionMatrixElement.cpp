@@ -95,9 +95,6 @@ SoGLProjectionMatrixElement::setElt(const SbMatrix & matrix)
 void
 SoGLProjectionMatrixElement::updategl(void)
 {
-#if 0 // debug
-  SoDebugError::postInfo("SoGLProjectionMatrixElement::updategl", "");
-#endif // debug
   glMatrixMode(GL_PROJECTION);
   glLoadMatrixf((float*)this->projectionMatrix);
   glMatrixMode(GL_MODELVIEW);

@@ -189,7 +189,7 @@ public:
   SoFieldData * fielddata;
   SoGroup * defroot;
   SbName name;
-  SbList <SoNode*> isnodelist; // FIXME: consider using SoNodeList
+  SoNodeList isnodelist;
   SbList <SbName> isfieldlist;
   SbList <SbName> isnamelist;
   Name2SoBaseMap refdict;

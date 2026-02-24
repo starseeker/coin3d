@@ -220,12 +220,6 @@ SbXfBox3d::extendBy(const SbBox3d & bb)
       // Don't try to optimize the transformation out of the loop,
       // it's not as easy as it seems.
       im.multVecMatrix(corner, dst);
-#if 0 // debug
-      SoDebugError::postInfo("SbXfBox3f::extendBy",
-                             "point: <%f, %f, %f> -> <%f, %f, %f>",
-                             corner[0], corner[1], corner[2],
-                             dst[0], dst[1], dst[2]);
-#endif // debug
       box1.extendBy(dst);
     }
   }
@@ -245,12 +239,6 @@ SbXfBox3d::extendBy(const SbBox3d & bb)
 
   SbXfBox3d xfbox(box1);
   xfbox.setTransform(this->matrix);
-#if 0 // debug
-  SoDebugError::postInfo("SbXfBox3f::extendBy",
-                         "kintel-volume: %f, mortene-volume: %f",
-                         xfbox.getVolume(), box2.getVolume());
-#endif // debug
-
   // Choose result from one of the two techniques based on the volume
   // of the resultant bbox.
   SbBool firstsmaller;
@@ -309,16 +297,6 @@ SbXfBox3d::extendBy(const SbXfBox3d & bb)
     return;
   }
 
-#if 0 // debug
-  SoDebugError::postInfo("SbXfBox3d::extendBy",
-                         "bb: <%f, %f, %f>, <%f, %f, %f>",
-                         bb.getMin()[0],
-                         bb.getMin()[1],
-                         bb.getMin()[2],
-                         bb.getMax()[0],
-                         bb.getMax()[1],
-                         bb.getMax()[2]);
-#endif // debug
 
   // Try extending while keeping the transform on "this" first.
   SbXfBox3d box1 = *this;
@@ -334,25 +312,7 @@ SbXfBox3d::extendBy(const SbXfBox3d & bb)
                         points[(i&2)>>1][1],
                         points[i&1][2]);
         m.multVecMatrix(corner, dst);
-#if 0 // debug
-        SoDebugError::postInfo("SbXfBox3d::extendBy",
-                               "corner: <%f, %f, %f>, dst <%f, %f, %f>",
-                               corner[0], corner[1], corner[2],
-                               dst[0], dst[1], dst[2]);
-#endif // debug
         static_cast<SbBox3d *>(&box1)->extendBy(dst);
-#if 0 // debug
-        SoDebugError::postInfo("SbXfBox3d::extendBy",
-                               "dst: <%f, %f, %f>  ->   "
-                               "box1: <%f, %f, %f>, <%f, %f, %f>",
-                               dst[0], dst[1], dst[2],
-                               box1.getMin()[0],
-                               box1.getMin()[1],
-                               box1.getMin()[2],
-                               box1.getMax()[0],
-                               box1.getMax()[1],
-                               box1.getMax()[2]);
-#endif // debug
       }
     }
   }
@@ -371,34 +331,10 @@ SbXfBox3d::extendBy(const SbXfBox3d & bb)
                         points[(i&2)>>1][1],
                         points[i&1][2]);
         m.multVecMatrix(corner, dst);
-#if 0 // debug
-        SoDebugError::postInfo("SbXfBox3d::extendBy",
-                               "corner: <%f, %f, %f>, dst <%f, %f, %f>",
-                               corner[0], corner[1], corner[2],
-                               dst[0], dst[1], dst[2]);
-#endif // debug
         static_cast<SbBox3d *>(&box2)->extendBy(dst);
-#if 0 // debug
-        SoDebugError::postInfo("SbXfBox3d::extendBy",
-                               "dst: <%f, %f, %f>  ->   "
-                               "box2: <%f, %f, %f>, <%f, %f, %f>",
-                               dst[0], dst[1], dst[2],
-                               box2.getMin()[0],
-                               box2.getMin()[1],
-                               box2.getMin()[2],
-                               box2.getMax()[0],
-                               box2.getMax()[1],
-                               box2.getMax()[2]);
-#endif // debug
       }
     }
   }
-
-#if 0 // debug
-  SoDebugError::postInfo("SbXfBox3d::extendBy",
-                         "box1-volume: %f, box2-volume: %f",
-                         box1.getVolume(), box2.getVolume());
-#endif // debug
 
   // Compare volumes and pick the smallest bounding box.
   SbBool firstsmaller;

@@ -773,64 +773,30 @@ SoGLBigImageP::copyResizeSubImage(SoGLBigImageTls * tls,
   }
 }
 
-#if 0 // FIXME: Not in use
-// create a lower resolution image by averaging all pixels in a block
-// (from the full resolution image) into a new pixel. This is pretty
-// slow, but yields a higher quality result compared to when each
-// level is calculated based on the previous level.
-static  unsigned char *
-image_downsample(const unsigned char * bytes, const SbVec2s fullsize,
-                 const int nc, const SbVec2s subsize, const int div)
-{
-  unsigned char * dst = new unsigned char[subsize[0]*subsize[1]*nc];
-  unsigned char * dstptr = dst;
-
-  int starty = 0;
-  int stopy = div;
-  for (int y = 0; y < subsize[1]; y++) {
-    assert(starty < fullsize[1]);
-
-    int startx = 0;
-    int stopx = div;
-
-    for (int x = 0; x < subsize[0]; x++) {
-      assert(startx < fullsize[0]);
-
-      int avg[4] = {0};
-      int numavg = 0;
-
-      for (int y2 = starty; y2 < stopy; y2++) {
-        for (int x2 = startx; x2 < stopx; x2++) {
-          const unsigned char * src = bytes + (fullsize[0]*y2 + x2) * nc;
-          for (int c = 0; c < nc; c++) {
-            avg[c] += src[c];
-          }
-          numavg++;
-        }
-      }
-      assert(numavg > 0);
-      for (int c = 0; c < nc; c++) {
-        *dstptr++ = avg[c] / numavg;
-      }
-      startx += div;
-      if (startx >= fullsize[0]) startx = fullsize[0] - 1;
-      stopx += div;
-      if (stopx > fullsize[0]) stopx = fullsize[0];
-    }
-    starty += div;
-    if (starty >= fullsize[1]) starty = fullsize[1]-1;
-    stopy += div;
-    if (stopy > fullsize[1]) stopy = fullsize[1];
-  }
-
-  return dst;
-}
-#endif
-
-// create a lower resolution image by averaging four and four pixels
-// into a new pixel. This is the same technique as the one usually
-// used when creating OpenGL mipmaps. Each level is calculated based
-// on the previous level, not on the full-resolution image.
+// Downsample image by a factor of 2 in each dimension using a 2x2 box
+// filter.  Each mip level is computed from the previous level, NOT from
+// the original full-resolution image.
+//
+// This is the standard OpenGL mipmap generation algorithm.  It is O(N^2)
+// in total work across all levels.  The tradeoff versus computing each
+// level directly from the full-resolution source (a "box-filter pyramid"):
+//
+//   Fast (this function): chains 2x2 averages through the pyramid.
+//     Accumulates one integer truncation step per level (e.g. 10 steps
+//     for a 1024->1 chain).  Each output byte is computed from exactly
+//     4 source bytes.  Quality loss is imperceptible for most images at
+//     normal rendering scales.
+//
+//   Full-source (alternative): computes each level i by averaging a
+//     (2^i x 2^i) block of original pixels.  Zero truncation error
+//     accumulation but O(N^2 * log N) work, which is prohibitive for
+//     the large images SoGLBigImage is designed to handle.
+//
+// Neither is a high-quality filter in the signal-processing sense; both
+// are plain box filters.  For applications requiring the highest quality
+// CPU-side mipmap generation, a Lanczos or Catmull-Rom kernel should be
+// used.  For GPU rendering, glGenerateMipmap() is preferred and avoids
+// this CPU work entirely.
 static void
 image_downsample_fast(const int width, const int height, const int nc,
                       const unsigned char * datain, unsigned char * dataout)
@@ -887,15 +853,6 @@ SoGLBigImageP::createCache(const unsigned char * bytes, const SbVec2s& size, con
   this->cachesize[0] = size;
 
   for (int l = 1; l < levels; l++) {
-#if 0 // high-quality downsample is too slow, currently disabled
-    int sx = size[0] >> l;
-    if (sx == 0) sx = 1;
-    int sy = size[1] >> l;
-    if (sy == 0) sy = 1;
-
-    this->cachesize[l] = SbVec2s((short)sx, (short)sy);
-    this->cache[l] = image_downsample(bytes, size, nc, this->cachesize[l], 1<<l);
-#else // end of high quality downsample
     short w = size[0]>>l;
     short h = size[1]>>l;
     if (w == 0) w = 1;
@@ -904,7 +861,6 @@ SoGLBigImageP::createCache(const unsigned char * bytes, const SbVec2s& size, con
     this->cache[l] = new unsigned char[w*h*nc];
     image_downsample_fast(this->cachesize[l-1][0], this->cachesize[l-1][1], nc,
                           this->cache[l-1], this->cache[l]);
-#endif // end of low quality downsample
   }
   this->cache[0] = NULL;
   this->cachesize[0] = SbVec2s(0, 0);

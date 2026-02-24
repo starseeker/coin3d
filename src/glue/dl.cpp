@@ -944,20 +944,6 @@ cc_dl_close(cc_libhandle handle)
   }
 #elif defined (HAVE_DLD_LIB)
 
-  /* FIXME: lib unloading disabled, as on HP-UX PA32, no reference
-     counter is held. And we don't want to unload a library that is in
-     use. On HP-UX PA64, we should unload, as reference counting is
-     done there. 20030305 mortene. */
-#if 0
-  int result = shl_unload((shl_t)handle->nativehnd);
-
-  if (result == -1) {
-    const char * e = strerror(errno);
-    cc_debugerror_post("cc_dl_close", "shl_unload(\"%s\") failed with: '%s'",
-                       handle->libname.getString(), e);
-  }
-#endif
-
 #endif
 
   delete handle;

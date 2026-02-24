@@ -113,15 +113,6 @@ public:
     const SbTime adjusted(childrenoffset + duration);
     assert(adjusted.getValue() >= 0.0);
     data.setNodeTiming(this->entryindex, adjusted);
-#if 0 // DEBUG
-    const SoFullPath * fullpath = (const SoFullPath *)action->getCurPath();
-    SoDebugError::postInfo("Profiling",
-                           "%20s (%d): duration %g, offset %g, adjusted %g",
-                           fullpath->getTail()->getTypeId().getName().getString(),
-                           fullpath->getLength(),
-                           duration.getValue(), childrenoffset.getValue(),
-                           adjusted.getValue());
-#endif
   }
 
   static bool isActive(SoAction * action)

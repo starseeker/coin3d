@@ -230,29 +230,25 @@ SbBool bumphack = TRUE;
 // *************************************************************************
 
 static void
-soshape_bumprender_diffuseprogramdeletion(unsigned long COIN_UNUSED_ARG(key), void * COIN_UNUSED_ARG(value))
+soshape_bumprender_diffuseprogramdeletion(void * value, uint32_t contextid)
 {
-#if 0 // FIXME: cleanup routines not implemented yet (for no good
-      // reason, really). 20050524 mortene.
-  diffuse_programidx * pidx = (diffuse_programidx *) value;
-  /* FIXME: There are no pointlight program initialized for diffuse
-     rendering yet. Enable when implemented. (20040209 handegar) */
-  //pidx->glue->glDeleteProgramsARB(1, &pidx->pointlight);
-  cc_glglue_glDeletePrograms(pidx->glue, 1, &pidx->dirlight);
-  cc_glglue_glDeletePrograms(pidx->glue, 1, &pidx->normalrendering);
-#endif // FIXME
+  soshape_bumprender::diffuse_programidx * pidx = (soshape_bumprender::diffuse_programidx *) value;
+  const cc_glglue * glue = cc_glglue_instance((int) contextid);
+  cc_glglue_glDeletePrograms(glue, 1, &pidx->pointlight);
+  cc_glglue_glDeletePrograms(glue, 1, &pidx->dirlight);
+  cc_glglue_glDeletePrograms(glue, 1, &pidx->normalrendering);
+  delete pidx;
 }
 
 static void
-soshape_bumprender_specularprogramdeletion(unsigned long COIN_UNUSED_ARG(key), void * COIN_UNUSED_ARG(value))
+soshape_bumprender_specularprogramdeletion(void * value, uint32_t contextid)
 {
-#if 0 // FIXME: cleanup routines not implemented yet (for no good
-      // reason, really). 20050524 mortene.
-  spec_programidx * pidx = (spec_programidx *) value;
-  cc_glglue_glDeletePrograms(pidx->glue, 1, &pidx->pointlight);
-  cc_glglue_glDeletePrograms(pidx->glue, 1, &pidx->dirlight);
-  cc_glglue_glDeletePrograms(pidx->glue, 1, &pidx->fragment);
-#endif // FIXME
+  soshape_bumprender::spec_programidx * pidx = (soshape_bumprender::spec_programidx *) value;
+  const cc_glglue * glue = cc_glglue_instance((int) contextid);
+  cc_glglue_glDeletePrograms(glue, 1, &pidx->pointlight);
+  cc_glglue_glDeletePrograms(glue, 1, &pidx->dirlight);
+  cc_glglue_glDeletePrograms(glue, 1, &pidx->fragment);
+  delete pidx;
 }
 
 soshape_bumprender::soshape_bumprender(void)
@@ -263,12 +259,18 @@ soshape_bumprender::soshape_bumprender(void)
 
 soshape_bumprender::~soshape_bumprender()
 {
-
-  // FIXME: Cannot delete programs just yet, as we dont know if the
-  // context was valid or not. We must wait for new functionality to be
-  // implemented for the context element code. (20040209 handegar)
-  //this->diffuseprogramdict.applyToAll(soshape_bumprender_diffuseprogramdeletion);
-  //this->specularprogramdict.applyToAll(soshape_bumprender_specularprogramdeletion);
+  for (ContextId2DiffuseStruct::const_iterator iter = this->diffuseprogramdict.const_begin();
+       iter != this->diffuseprogramdict.const_end(); ++iter) {
+    SoGLCacheContextElement::scheduleDeleteCallback((uint32_t) iter->key,
+                                                    soshape_bumprender_diffuseprogramdeletion,
+                                                    iter->obj);
+  }
+  for (ContextId2SpecStruct::const_iterator iter = this->specularprogramdict.const_begin();
+       iter != this->specularprogramdict.const_end(); ++iter) {
+    SoGLCacheContextElement::scheduleDeleteCallback((uint32_t) iter->key,
+                                                    soshape_bumprender_specularprogramdeletion,
+                                                    iter->obj);
+  }
 }
 
 // to avoid warnings from SbVec3f::normalize()

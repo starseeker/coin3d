@@ -238,31 +238,7 @@ SoBaseList::operator[](const int idx) const
 void
 SoBaseList::addReferences(const SbBool flag)
 {
-#if 0 // OBSOLETED: don't do this, it looks like it could give the
-      // user some nasty surprises. 20000228 mortene.
-
-  // this method should probably never be called when there are items in
-  // the list, but I think the code below should handle that case also.
-  // If refing changes from on to off, all items are unref'ed, since
-  // they were ref'ed when inserted. If state changes from off to on, all
-  // items are ref'ed, since they will be unref'ed when removed from list.
-
-  if (flag == this->referencing) return; // no change
-
-  const int n = this->getLength();
-  for (int i = 0; i < n; i++) {
-    SoBase * item = GET_BASEPTR(i);
-    if (item) {
-      if (flag) item->ref();
-      else item->unref();
-    }
-  }
-
-#else
-
   assert(this->getLength() == 0);
-
-#endif
 
   this->referencing = flag;
 }

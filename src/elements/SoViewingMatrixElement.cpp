@@ -110,10 +110,6 @@ SoViewingMatrixElement::init(SoState * state)
 {
   inherited::init(state);
   viewingMatrix.makeIdentity();
-#if 0 // debug
-  SoDebugError::postInfo("SoViewingMatrixElement::init",
-                         "matrix set to identity");
-#endif // debug
 }
 
 //! FIXME: write doc.
@@ -122,9 +118,4 @@ void
 SoViewingMatrixElement::setElt(const SbMatrix &matrix)
 {
   this->viewingMatrix = matrix;
-#if 0 // debug
-  SoDebugError::postInfo("SoViewingMatrixElement::setElt",
-                         "viewingmatrix:");
-  matrix.print(stdout);
-#endif // debug
 }

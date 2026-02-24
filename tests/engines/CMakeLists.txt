@@ -31,6 +31,34 @@ if(USE_PTHREAD)
 endif()
 add_test(NAME test_engines_deep COMMAND test_engines_deep)
 
+add_executable(test_engines_suite2 test_engines_suite2.cpp)
+target_link_libraries(test_engines_suite2 simple_test_utils Coin ${COIN_TARGET_LINK_LIBRARIES})
+target_include_directories(test_engines_suite2 PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/..
+    ${PROJECT_SOURCE_DIR}/include
+    ${PROJECT_SOURCE_DIR}/include/Inventor/annex
+    ${PROJECT_BINARY_DIR}/include
+    ${COIN_TARGET_INCLUDE_DIRECTORIES}
+)
+if(USE_PTHREAD)
+    target_link_libraries(test_engines_suite2 pthread)
+endif()
+add_test(NAME test_engines_suite2 COMMAND test_engines_suite2)
+
+add_executable(test_engines_advanced test_engines_advanced.cpp)
+target_link_libraries(test_engines_advanced simple_test_utils Coin ${COIN_TARGET_LINK_LIBRARIES})
+target_include_directories(test_engines_advanced PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/..
+    ${PROJECT_SOURCE_DIR}/include
+    ${PROJECT_SOURCE_DIR}/include/Inventor/annex
+    ${PROJECT_BINARY_DIR}/include
+    ${COIN_TARGET_INCLUDE_DIRECTORIES}
+)
+if(USE_PTHREAD)
+    target_link_libraries(test_engines_advanced pthread)
+endif()
+add_test(NAME test_engines_advanced COMMAND test_engines_advanced)
+
 include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG(-Wtautological-compare _ENGINES_DISABLE_TAUTCOMP)
 if(_ENGINES_DISABLE_TAUTCOMP)
