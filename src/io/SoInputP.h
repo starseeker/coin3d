@@ -60,10 +60,6 @@ public:
 
   static SbBool isNameStartChar(unsigned char c, SbBool validIdent);
   static SbBool isNameChar(unsigned char c, SbBool validIdent);
-  static SbBool isNameStartCharVRML1(unsigned char c, SbBool validIdent);
-  static SbBool isNameCharVRML1(unsigned char c, SbBool validIdent);
-  static SbBool isNameStartCharVRML2(unsigned char c, SbBool validIdent);
-  static SbBool isNameCharVRML2(unsigned char c, SbBool validIdent);
 
   SbBool usingstdin;
 

@@ -171,7 +171,30 @@ inline void initCoinHeadless() {
 }
 
 /**
+ * Get a shared persistent SoOffscreenRenderer for the OSMesa backend.
+ * Some examples reuse an offscreen renderer to capture intermediate frames
+ * (e.g. to generate a texture map from a rendered scene).  Providing a
+ * shared instance mirrors the GLX backend behaviour.
+ */
+inline SoOffscreenRenderer* getSharedRenderer() {
+    static SoOffscreenRenderer *s_renderer = nullptr;
+    if (!s_renderer) {
+        SbViewportRegion vp(DEFAULT_WIDTH, DEFAULT_HEIGHT);
+        s_renderer = new SoOffscreenRenderer(vp);
+    }
+    return s_renderer;
+}
+
+/**
  * Render a scene to an image file (OSMesa backend).
+ *
+ * Uses the shared persistent renderer to avoid creating multiple OSMesa
+ * contexts in the same process.  Creating separate SoOffscreenRenderer
+ * instances (each with its own OSMesa context) while rendering scenes that
+ * contain SoText3 nodes triggers a pre-existing OSMesa font-cache crash
+ * because each context attempts to reinitialise the font state.  Reusing a
+ * single shared context prevents this.  This matches the GLX backend
+ * behaviour where renderToFile also delegates to getSharedRenderer().
  */
 inline bool renderToFile(
     SoNode *root,
@@ -185,38 +208,24 @@ inline bool renderToFile(
         return false;
     }
 
+    SoOffscreenRenderer *renderer = getSharedRenderer();
     SbViewportRegion viewport(width, height);
-    SoOffscreenRenderer renderer(viewport);
-    renderer.setComponents(SoOffscreenRenderer::RGB);
-    renderer.setBackgroundColor(backgroundColor);
+    renderer->setViewportRegion(viewport);
+    renderer->setComponents(SoOffscreenRenderer::RGB);
+    renderer->setBackgroundColor(backgroundColor);
 
-    if (!renderer.render(root)) {
+    if (!renderer->render(root)) {
         fprintf(stderr, "Error: Failed to render scene\n");
         return false;
     }
 
-    if (!renderer.writeToRGB(filename)) {
+    if (!renderer->writeToRGB(filename)) {
         fprintf(stderr, "Error: Failed to write to RGB file %s\n", filename);
         return false;
     }
 
     printf("Successfully rendered to %s (%dx%d)\n", filename, width, height);
     return true;
-}
-
-/**
- * Get a shared persistent SoOffscreenRenderer for the OSMesa backend.
- * Some examples reuse an offscreen renderer to capture intermediate frames
- * (e.g. to generate a texture map from a rendered scene).  Providing a
- * shared instance mirrors the GLX backend behaviour.
- */
-inline SoOffscreenRenderer* getSharedRenderer() {
-    static SoOffscreenRenderer *s_renderer = nullptr;
-    if (!s_renderer) {
-        SbViewportRegion vp(DEFAULT_WIDTH, DEFAULT_HEIGHT);
-        s_renderer = new SoOffscreenRenderer(vp);
-    }
-    return s_renderer;
 }
 
 #else // !COIN3D_OSMESA_BUILD

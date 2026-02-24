@@ -432,7 +432,7 @@ SoFieldContainer::getFields(SoFieldList & fields) const
 }
 
 /*!
-  Returns VRML eventIn and eventOut fields in addition to the
+  Returns eventIn and eventOut fields in addition to the
   "ordinary" fields.
 
   \sa getFields()

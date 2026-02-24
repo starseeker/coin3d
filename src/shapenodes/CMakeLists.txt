@@ -16,6 +16,7 @@ set(COIN_SHAPENODES_FILES
 	SoMarkerSet.cpp
 	SoNonIndexedShape.cpp
 	SoPointSet.cpp
+	SoProceduralShape.cpp
 	SoQuadMesh.cpp
 	SoShape.cpp
 	SoSphere.cpp

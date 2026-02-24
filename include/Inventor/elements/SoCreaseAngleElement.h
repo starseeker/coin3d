@@ -51,9 +51,7 @@ public:
                   const float complexity);
   static void set(SoState * const state, const float complexity);
   static float get(SoState * const state);
-  static float get(SoState * const state, const SbBool isvrml1);
   static float getDefault(void);
-  static float getDefault(const SbBool isvrml1);
 };
 
 #endif // !COIN_SOCREASEANGLEELEMENT_H

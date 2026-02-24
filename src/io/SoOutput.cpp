@@ -45,7 +45,7 @@
 /*!
   \page coin_compression_overview File compression
 
-  Coin can support reading and writing Inventor and VRML files compressed
+  Coin can support reading and writing Inventor files compressed
   with either gzip or bzip2 (as of yet - more formats may come in the
   future).  This functionality is of course only enabled when Coin can link
   with the corresponding compression libraries.
@@ -798,11 +798,6 @@ SoOutput::write(const SbString & s)
   }
   else {
     // Backslash-quote all apostrophe-characters, i.e. " -> \".
-    //
-    // Note that VRML97 also needs backslashes themselves to be
-    // backslash-quoted (like in e.g. C strings), but this is taken
-    // care of upstream (in SoSFString's write method), since we can't
-    // know here whether or not we're writing a VRML97 node.
     //
     // FIXME: SbString should have had a replaceAll() method, so we
     // wouldn't have to spell out the iteration loop below. 20040614 mortene.
@@ -1700,8 +1695,7 @@ SoOutput::removeSoBase2IdRef(const SoBase * base)
   PRIVATE(this)->counter->removeSoBase2IdRef(base);
 }
 
-// FIXME: temporary workaround needed to test if we are currently
-// exporting a VRML97 or an Inventor file. Used from
+// FIXME: temporary workaround to get the file header string. Used from
 // SoBase::writeHeader(). pederb, 2003-02-18
 SbString
 SoOutput_getHeaderString(const SoOutputP * pout)

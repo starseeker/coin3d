@@ -205,7 +205,7 @@ SoNormalBinding::~SoNormalBinding()
 void
 SoNormalBinding::initClass(void)
 {
-  SO_NODE_INTERNAL_INIT_CLASS(SoNormalBinding, SO_FROM_INVENTOR_1|SoNode::VRML1);
+  SO_NODE_INTERNAL_INIT_CLASS(SoNormalBinding, SO_FROM_INVENTOR_1);
 
   SO_ENABLE(SoGLRenderAction, SoNormalBindingElement);
   SO_ENABLE(SoPickAction, SoNormalBindingElement);

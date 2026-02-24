@@ -164,9 +164,6 @@ SoDebug::write(SoNode * node)
 {
   node->ref();
   SoOutput out;
-  if (node->getNodeType() == SoNode::VRML2) {
-    out.setHeaderString("#VRML V2.0 utf8");
-  }
   SoWriteAction wa(&out);
   wa.apply(node);
   node->unrefNoDelete();
@@ -183,9 +180,6 @@ SoDebug::writeToFile(SoNode * node, const char * filename)
   const char * fname = filename ? filename : "/tmp/debug.iv";
   SoOutput out;
   out.openFile(fname);
-  if (node->getNodeType() == SoNode::VRML2) {
-    out.setHeaderString("#VRML V2.0 utf8");
-  }
   SoWriteAction wa(&out);
   wa.apply(node);
   out.closeFile();

@@ -261,7 +261,7 @@ SoMaterialBinding::~SoMaterialBinding()
 void
 SoMaterialBinding::initClass(void)
 {
-  SO_NODE_INTERNAL_INIT_CLASS(SoMaterialBinding, SO_FROM_INVENTOR_1|SoNode::VRML1);
+  SO_NODE_INTERNAL_INIT_CLASS(SoMaterialBinding, SO_FROM_INVENTOR_1);
 
   SO_ENABLE(SoGLRenderAction, SoMaterialBindingElement);
   SO_ENABLE(SoPickAction, SoMaterialBindingElement);

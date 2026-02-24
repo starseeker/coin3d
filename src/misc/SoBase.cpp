@@ -54,11 +54,6 @@
 
 // *************************************************************************
 
-// FIXME: There's a lot of methods in SoBase used to implement VRML
-// support which are missing.
-//
-// UPDATE 20020217 mortene: is this FIXME still correct?
-
 // FIXME: One more thing missing: detect cases where we should
 // instantiate SoUnknownEngine instead of SoUnknownNode.
 
@@ -672,7 +667,7 @@ SoBase::getName(void) const
 
   Some characters are invalid to use as parts of names for SoBase
   derived objects, as object names needs to be consistent with the
-  syntax of Inventor and VRML files upon file export / import
+  syntax of Inventor files upon file export / import
   operations (so one must for instance avoid using special token
   characters).
 
@@ -1090,9 +1085,8 @@ SoBase::read(SoInput * in, SoBase *& base, SoType expectedtype)
   }
 #endif // COIN_DEBUG
 
-  // read all (vrml97) routes. Do this also for non-vrml97 files,
-  // since in Coin we can have a mix of Inventor and VRML97 nodes in
-  // the same file.
+  // read all routes. Do this also for regular files,
+  // since in Coin we can have routes in any file.
   while (result && name == PImpl::ROUTE_KEYWORD) {
     result = SoBase::readRoute(in);
     // read next ROUTE keyword
@@ -1196,9 +1190,8 @@ SoBase::hasMultipleWriteRefs(void) const
   return SoWriterefCounter::instance(NULL)->getWriteref(this) > 1;
 }
 
-// FIXME: temporary bug-workaround needed to test if we are exporting
-// a VRML97 or an Inventor file. Implementation in SoOutput.cpp.
-// pederb, 2003-03-18
+// FIXME: temporary bug-workaround to get the file header string.
+// Implementation in SoOutput.cpp. pederb, 2003-03-18
 extern SbString SoOutput_getHeaderString(const SoOutputP * out);
 
 /*!
@@ -1255,38 +1248,7 @@ SoBase::writeHeader(SoOutput * out, SbBool isgroup, SbBool isengine) const
       if (!out->isBinary()) out->write(' ');
     }
 
-    if (this->isOfType(SoNode::getClassTypeId()) &&
-        ((SoNode*)this)->getNodeType() == SoNode::VRML2) {
-      SbString nodename(this->getFileFormatName());
-      if (nodename.getLength() > 4) {
-        SbString vrml = nodename.getSubString(0, 3);
-        const char vrml2headerprefix[] = "#VRML V2.0 utf8";
-        const size_t len = sizeof(vrml2headerprefix) - 1;
-        const SbString fullheader = SoOutput_getHeaderString(out->pimpl);
-        const SbString fileid = ((size_t)fullheader.getLength() < len) ?
-          fullheader : fullheader.getSubString(0, len - 1);
-        // FIXME: using a temporary workaround to test if we're
-        // exporting a VRML97 file. pederb, 2003-03-18
-        //
-        // UPDATE 20060207 mortene: a better solution would be to
-        // carry along the format information in the SoOutput (or an
-        // internal private SoOutputP class?) as an enum or something,
-        // methinks.
-        if ((vrml == "VRML") && (fileid == vrml2headerprefix)) {
-          SbString substring = nodename.getSubString(4);
-          out->write(substring.getString());
-        }
-        else {
-          out->write(nodename.getString());
-        }
-      }
-      else {
-        out->write(nodename.getString());
-      }
-    }
-    else {
-      out->write(this->getFileFormatName());
-    }
+    out->write(this->getFileFormatName());
     if (out->isBinary()) {
       unsigned int flags = 0x0;
       if (isgroup) flags |= SoBase::IS_GROUP;
@@ -1404,8 +1366,8 @@ SoBase::connectRoute(SoInput * COIN_UNUSED_ARG(in),
 /*!
   \COININTERNAL
 
-  Reads a (VRML97) ROUTE. We decided to also add support for routes in
-  Coin, as a generic feature, since we think it is nicer than setting
+  Reads a ROUTE. Routes are supported in Coin as a generic feature,
+  since field connections expressed via routes are nicer than setting
   up field connections inside the nodes.
 
 */

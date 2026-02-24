@@ -169,28 +169,9 @@ sosfdouble_write_value(SoOutput * out, double val)
 // Write SbString value to output stream. Used from SoSFString and
 // SoMFString.
 void
-sosfstring_write_value(const SoField * f, SoOutput * out, const SbString & val)
+sosfstring_write_value(const SoField * /*f*/, SoOutput * out, const SbString & val)
 {
-  // VRML97 needs backslashes themselves to be backslash-quoted (like
-  // in e.g. C strings), which is taken care of here instead of
-  // downstream, as this is the last place we can find out whether or
-  // not we're writing a VRML97 node.
-  const SoFieldContainer * fc = f->getContainer();
-  if (fc && fc->isOfType(SoNode::getClassTypeId()) &&
-      (coin_assert_cast<const SoNode *>(fc)->getNodeType() & SoNode::VRML2)) {
-    // FIXME: SbString should have had a replaceAll() method, so we
-    // wouldn't have to spell out the iteration loop below. 20040614 mortene.
-    SbString ws;
-    for (int i = 0; i < val.getLength(); i++) {
-      if (val[i] == '\\') { ws += '\\'; }
-      ws += val[i];
-    }
-    out->write(ws);
-  }
-  else { // *Not* a VRML97 node, so write backslashes verbatim, as
-         // dictated by the Inventor file format:
-    out->write(val);
-  }
+  out->write(val);
 }
 
 // *************************************************************************
@@ -272,7 +253,7 @@ sosfrotation_read_value(SoInput * in, SbRotation & r)
   SbVec3f axis(f[0], f[1], f[2]);
   const float angle = f[3];
 
-  // vrml97 identity rotations are often specified with a null vector.
+  // identity rotations are sometimes specified with a null vector.
   // test for this and just set to z-axis.
   if (axis == SbVec3f(0.0f, 0.0f, 0.0f) && angle == 0.0f) {
     axis = SbVec3f(0.0f, 0.0f, 1.0f);

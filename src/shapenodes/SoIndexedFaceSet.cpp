@@ -321,7 +321,7 @@ SoIndexedFaceSet::~SoIndexedFaceSet()
 void
 SoIndexedFaceSet::initClass(void)
 {
-  SO_NODE_INTERNAL_INIT_CLASS(SoIndexedFaceSet, SO_FROM_INVENTOR_1|SoNode::VRML1);
+  SO_NODE_INTERNAL_INIT_CLASS(SoIndexedFaceSet, SO_FROM_INVENTOR_1);
 }
 
 //
@@ -474,18 +474,6 @@ SoIndexedFaceSet::GLRender(SoGLRenderAction * action)
   }
   else if (normalCacheUsed && nbind == PER_FACE_INDEXED) {
     nbind = PER_FACE;
-  }
-  if (this->getNodeType() == SoNode::VRML1) {
-    // For VRML1, PER_VERTEX means per vertex in shape, not PER_VERTEX
-    // on the state.
-    if (mbind == PER_VERTEX) {
-      mbind = PER_VERTEX_INDEXED;
-      mindices = cindices;
-    }
-    if (nbind == PER_VERTEX) {
-      nbind = PER_VERTEX_INDEXED;
-      nindices = cindices;
-    }
   }
 
   Binding tbind = NONE;
@@ -728,19 +716,6 @@ SoIndexedFaceSet::generatePrimitives(SoAction *action)
   }
   else if (normalCacheUsed && nbind == PER_FACE_INDEXED) {
     nbind = PER_FACE;
-  }
-
-  if (this->getNodeType() == SoNode::VRML1) {
-    // For VRML1, PER_VERTEX means per vertex in shape, not PER_VERTEX
-    // on the state.
-    if (mbind == PER_VERTEX) {
-      mbind = PER_VERTEX_INDEXED;
-      mindices = cindices;
-    }
-    if (nbind == PER_VERTEX) {
-      nbind = PER_VERTEX_INDEXED;
-      nindices = cindices;
-    }
   }
 
   Binding tbind = NONE;
@@ -1018,19 +993,6 @@ SoIndexedFaceSet::useConvexCache(SoAction * action,
   Binding mbind = this->findMaterialBinding(state);
   Binding nbind = this->findNormalBinding(state);
 
-  if (this->getNodeType() == SoNode::VRML1) {
-    // For VRML1, PER_VERTEX means per vertex in shape, not PER_VERTEX
-    // on the state.
-    if (mbind == PER_VERTEX) {
-      mbind = PER_VERTEX_INDEXED;
-      mindices = cindices;
-    }
-    if (nbind == PER_VERTEX) {
-      nbind = PER_VERTEX_INDEXED;
-      nindices = cindices;
-    }
-  }
-
   if (normalsfromcache && nbind == PER_VERTEX) {
     nbind = PER_VERTEX_INDEXED;
   }
@@ -1102,7 +1064,7 @@ SoIndexedFaceSet::generateDefaultNormals(SoState * state,
                           numcoords,
                           coordIndex.getValues(0),
                           coordIndex.getNum(),
-                          SoCreaseAngleElement::get(state, this->getNodeType() == SoNode::VRML1),
+                          SoCreaseAngleElement::get(state),
                           NULL,
                           -1,
                           ccw);

@@ -278,25 +278,6 @@ SoBase::PImpl::readBase(SoInput * in, SbName & classname, SoBase *& base)
 
   SbName refname;
 
-  if (in->isFileVRML2()) {
-    if (classname == PROTO_KEYWORD ||
-        classname == EXTERNPROTO_KEYWORD) { // special case to handle [EXTERN]PROTO definitions
-      SoProto * proto = new SoProto(classname == EXTERNPROTO_KEYWORD);
-      proto->ref();
-      ret = proto->readInstance(in, 0);
-      if (ret) {
-        proto->unrefNoDelete();
-        in->addProto(proto);
-      }
-      else {
-        proto->unref();
-        return FALSE;
-      }
-      base = proto;
-      return TRUE;
-    }
-  }
-
   if (classname == DEF_KEYWORD) {
     if (!in->read(refname, FALSE) || !in->read(classname, TRUE)) {
       if (in->eof()) {
@@ -479,18 +460,6 @@ SoBase::PImpl::createInstance(SoInput * in, const SbName & classname)
   assert(classname != "");
 
   SoType type = SoType::badType();
-  if (in->isFileVRML2()) {
-    SbString newname;
-    newname.sprintf("VRML%s", classname.getString());
-    type = SoType::fromName(SbName(newname.getString()));
-#if COIN_DEBUG && 0 // debug
-    if (type != SoType::badType()) {
-      SoDebugError::postInfo("SoBase::createInstance",
-                             "Created VRML V2.0 type: %s",
-                             type.getName().getString());
-    }
-#endif // debug
-  }
 
   // search for PROTO in current SoInput instance
   SoProto * proto = in->findProto(classname);

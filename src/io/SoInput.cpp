@@ -330,7 +330,7 @@ SoInput::addProto(SoProto * proto)
 
 /*!
   Pushed a PROTO \a proto onto the PROTO stack. The PROTO stack is used during
-  VRML2 file parsing.
+  file parsing.
 
   \COIN_FUNCTION_EXTENSION
 
@@ -1046,14 +1046,12 @@ SoInput::read(SbString & s)
         if (*buf == '\\') {
           if (!fi->get(c)) return FALSE;
           if (c == '\"') {
-            // VRML 2.0 allows for strings to contain literal
-            // newlines, Inventor/VRML V1.0 doesn't.  This also checks
-            // for a special case in Inventor/VRML 1.0 files where the
+            // Check for a special case in Inventor files where the
             // last two characters of a line containing a quoted
             // string are \". In this case, the backslash should be
             // considered literal and the quote should terminate the
             // string.
-            if (!this->isFileVRML2() && fi->get(c)) {
+            if (fi->get(c)) {
               fi->putBack(c);
               if ((c == '\r') || (c == '\n'))
                 fi->putBack('\"');
@@ -1064,8 +1062,7 @@ SoInput::read(SbString & s)
               *buf = c;
             }
           }
-          // In VRML V2.0, backslashes must be quoted.
-          else if (c != '\\' || !this->isFileVRML2()) {
+          else {
             fi->putBack(c);
           }
         }
@@ -1093,7 +1090,7 @@ SoInput::read(SbString & s)
 
   This method should not be used specifically to read all instances of
   SbName. The semantics of the interface is such that it is designed
-  to handle identifier tokens from the Inventor / VRML file
+  to handle identifier tokens from the Inventor file
   formats. I.e. cases where node names, node types and field names are
   to be read. If your goal is to read the value of a SbName field that
   is not any of the above, and at least when the string might be
@@ -1116,9 +1113,6 @@ SoInput::read(SbName & n, SbBool validIdent)
   SoInput_FileInfo * fi = PRIVATE(this)->getTopOfStackPopOnEOF();
   if (!this->checkHeader()) return FALSE;
 
-  const enum CodePath { INVENTOR, VRML1, VRML2 } codepath =
-    fi->isFileVRML2() ? VRML2 : (fi->isFileVRML1() ? VRML1 : INVENTOR);
-
   // Binary format.
   if (fi->isBinary()) { // Checkheader has already been called
     SbString s;
@@ -1127,31 +1121,10 @@ SoInput::read(SbName & n, SbBool validIdent)
     n = s;
     const int strlength = s.getLength();
 
-    switch (codepath) {
-    case INVENTOR:
-      if (validIdent && strlength > 0) {
-        if (!SoInputP::isNameStartChar(s[0], validIdent)) return FALSE;
-        for (int i = 1; i < strlength; i++)
-          if (!SoInputP::isNameChar(s[i], validIdent)) return FALSE;
-      }
-      break;
-    case VRML1:
-      if (validIdent && strlength > 0) {
-        if (!SoInputP::isNameStartCharVRML1(s[0], validIdent)) return FALSE;
-        for (int i = 1; i < strlength; i++)
-          if (!SoInputP::isNameCharVRML1(s[i], validIdent)) return FALSE;
-      }
-      break;
-    case VRML2:
-      if (validIdent && strlength > 0) {
-        if (!SoInputP::isNameStartCharVRML2(s[0], validIdent)) return FALSE;
-        for (int i = 1; i < strlength; i++)
-          if (!SoInputP::isNameCharVRML2(s[i], validIdent)) return FALSE;
-      }
-      break;
-    default:
-      assert(!"invalid code path");
-      break;
+    if (validIdent && strlength > 0) {
+      if (!SoInputP::isNameStartChar(s[0], validIdent)) return FALSE;
+      for (int i = 1; i < strlength; i++)
+        if (!SoInputP::isNameChar(s[i], validIdent)) return FALSE;
     }
 
     return TRUE;
@@ -1166,49 +1139,16 @@ SoInput::read(SbName & n, SbBool validIdent)
     char c;
     SbBool gotchar = FALSE;
 
-    switch (codepath) {
-    case INVENTOR:
-      if ((gotchar = fi->get(c)) && SoInputP::isNameStartChar(c, validIdent)) {
+    if ((gotchar = fi->get(c)) && SoInputP::isNameStartChar(c, validIdent)) {
+      *b++ = c;
+      while ((gotchar = fi->get(c)) && SoInputP::isNameChar(c, validIdent)) {
         *b++ = c;
-        while ((gotchar = fi->get(c)) && SoInputP::isNameChar(c, validIdent)) {
-          *b++ = c;
-          if (b - buf == 255) {
-            *b = '\0';
-            s += buf;
-            b = buf;
-          }
+        if (b - buf == 255) {
+          *b = '\0';
+          s += buf;
+          b = buf;
         }
       }
-      break;
-    case VRML1:
-      if ((gotchar = fi->get(c)) && SoInputP::isNameStartCharVRML1(c, validIdent)) {
-        *b++ = c;
-        while ((gotchar = fi->get(c)) && SoInputP::isNameCharVRML1(c, validIdent)) {
-          *b++ = c;
-          if (b - buf == 255) {
-            *b = '\0';
-            s += buf;
-            b = buf;
-          }
-        }
-      }
-      break;
-    case VRML2:
-      if ((gotchar = fi->get(c)) && SoInputP::isNameStartCharVRML2(c, validIdent)) {
-        *b++ = c;
-        while ((gotchar = fi->get(c)) && SoInputP::isNameCharVRML2(c, validIdent)) {
-          *b++ = c;
-          if (b - buf == 255) {
-            *b = '\0';
-            s += buf;
-            b = buf;
-          }
-        }
-      }
-      break;
-    default:
-      assert(!"invalid code path");
-      break;
     }
     // This behavior is pretty silly, but this is how it is supposed
     // to work, apparently -- _not_ returning FALSE upon end-of-file.
@@ -1851,7 +1791,7 @@ SoInput::clearDirectories(void)
 
 /*!
   Returns the list of directories which will be searched upon loading
-  Coin and VRML format files. Directory searches will be done whenever
+  Coin format files. Directory searches will be done whenever
   any external references appears in a file, for instance for texture images.
  */
 const SbStringList &
@@ -2413,34 +2353,6 @@ SoInput::convertDoubleArray(char * from, double * to, int len)
     from += sizeof(double);
     to++;
   }
-}
-
-/*!
-  Returns \c TRUE if current file is a VRML V1.0 file.
-
-  \COIN_FUNCTION_EXTENSION
-*/
-SbBool
-SoInput::isFileVRML1(void)
-{
-  (void) this->checkHeader();
-  SoInput_FileInfo * fi = this->getTopOfStack();
-  if (fi) return fi->isFileVRML1();
-  return FALSE;
-}
-
-/*!
-  Returns \c TRUE if current file is a VRML 2 / VRML97 file.
-
-  \COIN_FUNCTION_EXTENSION
-*/
-SbBool
-SoInput::isFileVRML2(void)
-{
-  (void) this->checkHeader();
-  SoInput_FileInfo * fi = this->getTopOfStack();
-  if (fi) return fi->isFileVRML2();
-  return FALSE;
 }
 
 /*!

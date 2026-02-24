@@ -11,20 +11,6 @@
  */
 
 /***************************************************************************
- * HAVE_VRML97
- *
- * If you want to disable VRML97 support in Coin, do not set this define.
- *
- * The reason to disable this is mostly to avoid compiling a lot of code
- * that causes the Coin library to grow considerably if you need a
- * particularly small version of Coin.
- *
- * Default is to have VRML97 support enabled.
- */
-
-#cmakedefine HAVE_VRML97
-
-/***************************************************************************
  * HAVE_NODEKITS
  *
  * If you want to disable nodekits in Coin, do not set this define.
@@ -116,7 +102,6 @@
  * enhancements.
  *
  * Default is to have this define set.
- * If VRML97 is disabled, JavaScript support is also disabled.
  */
 
 #cmakedefine COIN_HAVE_JAVASCRIPT

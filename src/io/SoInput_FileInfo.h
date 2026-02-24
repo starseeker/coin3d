@@ -111,12 +111,6 @@ public:
   float ivVersion(void) {
     return this->ivversion;
   }
-  SbBool isFileVRML1(void) {
-    return this->vrml1file;
-  }
-  SbBool isFileVRML2(void) {
-    return this->vrml2file;
-  }
   void setIvVersion(const float v) {
       this->ivversion = v;
   }
@@ -170,27 +164,7 @@ public:
   }
 
   SbBool isSpace(const char c) {
-    // For vrml97, comma is treated as whitespace. Added this function
-    // and converted isspace() calls to calls to this function.
-    // 2001-10-24, pederb.
-    //
-    // From the VRML97 specification:
-    //   The carriage return (0x0d), linefeed (0x0a), space (0x20), tab
-    //   (0x09), and comma (0x2c) characters are whitespace characters
-    //   wherever they appear outside of quoted SFString or MFString
-    //   fields. Any number of whitespace characters and comments may be
-    //   used to separate the syntactic entities of a VRML file.
-    //
-    //
-    /////
-    //
-    // ANSI C isspace() takes the current locale into account. Under
-    // Microsoft Windows, this can lead to "interesting" artifacts, like a
-    // case with RR tracked down and fixed by <thammer@sim.no> where a
-    // character (was it ü?) with ASCII value > 127 made isspace()
-    // return non-nil on a German system. So we're using our own
-    // locale-independent isspace() implementation instead.
-    return CoinInternal::isSpace(c) || (this->vrml2file && c == ',');
+    return CoinInternal::isSpace(c);
   }
 
   void connectRoutes(SoInput * in);
@@ -221,7 +195,6 @@ private:
   SoDBHeaderCB * prefunc, * postfunc;
   void * userdata;
   SbBool isbinary;
-
   char * readbuf;
   size_t readbufidx;
   size_t readbuflen;
@@ -230,8 +203,6 @@ private:
   int lastputback; // The last character put back into the stream.
   int lastchar; // Last read character.
   SbBool headerisread, eof;
-  SbBool vrml1file;
-  SbBool vrml2file;
 
   SbList <SbName> routelist;
   SbList <SoProto*> protolist;

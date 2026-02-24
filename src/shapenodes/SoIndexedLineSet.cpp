@@ -140,7 +140,7 @@ SoIndexedLineSet::~SoIndexedLineSet()
 void
 SoIndexedLineSet::initClass(void)
 {
-  SO_NODE_INTERNAL_INIT_CLASS(SoIndexedLineSet, SO_FROM_INVENTOR_1|SoNode::VRML1);
+  SO_NODE_INTERNAL_INIT_CLASS(SoIndexedLineSet, SO_FROM_INVENTOR_1);
 }
 
 //
@@ -280,19 +280,6 @@ SoIndexedLineSet::GLRender(SoGLRenderAction * action)
     }
     sendNormals = FALSE;
     SoLazyElement::setLightModel(state, SoLazyElement::BASE_COLOR);
-  }
-
-  if (this->getNodeType() == SoNode::VRML1) {
-    // For VRML1, PER_VERTEX means per vertex in shape, not PER_VERTEX
-    // on the state.
-    if (mbind == PER_VERTEX) {
-      mbind = PER_VERTEX_INDEXED;
-      mindices = cindices;
-    }
-    if (nbind == PER_VERTEX) {
-      nbind = PER_VERTEX_INDEXED;
-      nindices = cindices;
-    }
   }
 
   if (doTextures) {
@@ -500,19 +487,6 @@ SoIndexedLineSet::generatePrimitives(SoAction *action)
   if (normals == NULL) {
     sendNormals = FALSE;
     nbind = OVERALL;
-  }
-
-  if (this->getNodeType() == SoNode::VRML1) {
-    // For VRML1, PER_VERTEX means per vertex in shape, not PER_VERTEX
-    // on the state.
-    if (mbind == PER_VERTEX) {
-      mbind = PER_VERTEX_INDEXED;
-      matindices = cindices;
-    }
-    if (nbind == PER_VERTEX) {
-      nbind = PER_VERTEX_INDEXED;
-      normindices = cindices;
-    }
   }
 
   SoTextureCoordinateBundle tb(action, FALSE, FALSE);

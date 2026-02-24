@@ -130,6 +130,7 @@
 #include <Inventor/annex/Profiler/SoProfiler.h>
 #include <Inventor/annex/Profiler/elements/SoProfilerElement.h>
 #include "profiler/SoProfilerP.h"
+#include <Inventor/annex/HUD/SoHUD.h>
 
 /* Old OSMesa initialization code removed - now uses public SoDB::ContextManager API */
 
@@ -443,6 +444,8 @@ SoDB::init(ContextManager * context_manager)
     SoProfiler::init();
   }
 
+  SoHUD::init();
+
   // Note: OSMesa context initialization has been moved to test applications
   // Applications must provide context creation callbacks via cc_glglue_context_set_offscreen_cb_functions()
   // See examples/osmesa_example.h for reference implementation
@@ -684,7 +687,7 @@ SoDB::isValidHeader(const char * teststring)
 /*!
   Register a header string which should be recognized by SoInput upon
   file import. This is a convenient way for library users to register
-  their own VRML or Coin derived file formats.
+  their own Coin derived file formats.
 
   Set \a isbinary to \c TRUE if the file should be read as binary
   data, and set \a ivversion to indicate which Coin library version is
@@ -1473,10 +1476,10 @@ find_route_field(SoNode * node, const SbName & fieldname)
 }
 
 /*!
-  Create a connection from one VRML97 node field to another.
+  Create a connection from one node field to another.
 
   ("Routes" are what field-to-field connections are called for the
-  VRML97 standard.)
+  Inventor standard.)
 
   Connections made in this manner will be persistent upon file export.
 

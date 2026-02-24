@@ -272,78 +272,12 @@ public:
   // (Used in the master::~SoField() -> slave::disconnect(master)
   // chain.)
   SoType fieldtype;
-  void add_vrml2_routes(SoOutput * out, const SoField * f);
 
 private:
   // Dictionary of void* -> SoFieldConverter* mappings.
   SbHash<const void *, SoFieldConverter *> maptoconverter;
 
 };
-
-// helper function. Used to check if field is in a vrml2 node
-static SbBool
-is_vrml2_field(const SoField * f)
-{
-  assert(f);
-  SoFieldContainer * fc = f->getContainer();
-  // test fc to support fields with no container
-  if (fc && fc->isOfType(SoNode::getClassTypeId())) {
-    if (fc->isOfType(SoProtoInstance::getClassTypeId())) return TRUE;
-    if (coin_assert_cast<SoNode *>(fc)->getNodeType() & SoNode::VRML2) return TRUE;
-  }
-
-  return FALSE;
-}
-
-//
-// add all connections to this field as routes in SoOutput.  SoOutput
-// will decide when to write the ROUTEs.
-//
-void
-SoConnectStorage::add_vrml2_routes(SoOutput * out, const SoField * f)
-{
-  SoFieldContainer * tofc = f->getContainer();
-  assert(tofc);
-  SbName toname, fromname;
-  (void) tofc->getFieldName(f, toname);
-
-  int i;
-  for (i = 0; i < this->masterfields.getLength(); i++) {
-    SoField * master = this->masterfields[i];
-    SoFieldContainer * fc = master->getContainer();
-    assert(fc);
-    (void) fc->getFieldName(master, fromname);
-
-    if (out->getStage() == SoOutput::COUNT_REFS) {
-      fc->addWriteReference(out, TRUE);
-      tofc->addWriteReference(out, TRUE);
-    }
-    else {
-      out->addRoute(fc, fromname, tofc, toname);
-    }
-  }
-  for (i = 0; i < this->masterengineouts.getLength(); i++) {
-    SoEngineOutput * engineout = this->masterengineouts[i];
-    SoFieldContainer * fc = engineout->getFieldContainer();
-    if (engineout->isNodeEngineOutput()) {
-      SoNodeEngine * engine = engineout->getNodeContainer();
-      assert(engine);
-      (void) engine->getOutputName(engineout, fromname);
-    }
-    else {
-      SoEngine * engine = engineout->getContainer();
-      assert(engine);
-      (void) engine->getOutputName(engineout, fromname);
-    }
-    if (out->getStage() == SoOutput::COUNT_REFS) {
-      fc->addWriteReference(out, TRUE);
-      tofc->addWriteReference(out, TRUE);
-    }
-    else {
-      out->addRoute(fc, fromname, tofc, toname);
-    }
-  }
-}
 
 // Collects some private code for SoField.
 //
@@ -2040,24 +1974,6 @@ SoField::write(SoOutput * out, const SbName & name) const
   if (fc && (SoWriterefCounter::instance(out)->shouldWrite(fc) || fc->isOfType(SoEngine::getClassTypeId())))
     writeconnection = TRUE;
 
-  // check VRML2 connections. Since VRML2 fields can have multiple
-  // master fields/engines, the field can still be default even though
-  // it is connected, and we should _not_ write the field. The ROUTEs
-  // should be added though. pederb, 2002-06-13
-
-  if (is_vrml2_field(this)) {
-    if (writeconnection) {
-      writeconnection = FALSE;
-      this->storage->add_vrml2_routes(out, this);
-      // if no value has been set, don't write field even if it is
-      // connected
-      if (this->isDefault()) return;
-    }
-    // never write eventIn or eventOut fields
-    if ((this->getFieldType() == SoField::EVENTIN_FIELD) ||
-        (this->getFieldType() == SoField::EVENTOUT_FIELD)) return;
-  }
-
   // ASCII write.
   if (!out->isBinary()) {
     out->indent();
@@ -2103,33 +2019,24 @@ SoField::write(SoOutput * out, const SbName & name) const
 void
 SoField::countWriteRefs(SoOutput * out) const
 {
-  // Count all connected fields/engines. Inventor only allows one
-  // master field/engine, but VRML2 can have multiple. This code
-  // should work for both Inventor and VRML2 scene graphs
-  // though. pederb, 2002-06-13
   if (this->isConnected()) {
-    if (is_vrml2_field(this)) {
-      this->storage->add_vrml2_routes(out, this);
+    int i;
+    for (i = 0; i < this->storage->masterfields.getLength(); i++) {
+      SoField * master = this->storage->masterfields[i];
+      SoFieldContainer * fc = master->getContainer();
+      assert(fc);
+      // TRUE = reference is from field connection. This is needed
+      // so that the fields inside 'fc' is counted only once
+      fc->addWriteReference(out, TRUE);
     }
-    else {
-      int i;
-      for (i = 0; i < this->storage->masterfields.getLength(); i++) {
-        SoField * master = this->storage->masterfields[i];
-        SoFieldContainer * fc = master->getContainer();
-        assert(fc);
-        // TRUE = reference is from field connection. This is needed
-        // so that the fields inside 'fc' is counted only once
-        fc->addWriteReference(out, TRUE);
-      }
-      for (i = 0; i < this->storage->masterengineouts.getLength(); i++) {
-        SoEngineOutput * engineout = this->storage->masterengineouts[i];
-        SoFieldContainer * fc = engineout->getFieldContainer();
-        assert(fc);
-        // since engines are always connected directly to the field
-        // (they're not nodes), engines are always counted with
-        // isfromfield = FALSE
-        fc->addWriteReference(out, FALSE);
-      }
+    for (i = 0; i < this->storage->masterengineouts.getLength(); i++) {
+      SoEngineOutput * engineout = this->storage->masterengineouts[i];
+      SoFieldContainer * fc = engineout->getFieldContainer();
+      assert(fc);
+      // since engines are always connected directly to the field
+      // (they're not nodes), engines are always counted with
+      // isfromfield = FALSE
+      fc->addWriteReference(out, FALSE);
     }
   }
 }
@@ -2568,7 +2475,7 @@ SoField::notifyAuditors(SoNotList * l)
 
   The possible values for \a type is: 0 for ordinary fields, 1 for
   eventIn fields, 2 for eventOut fields, 3 for internal fields, 4 for
-  VRML2 exposedField fields. There are also enum values in SoField.h.
+  exposed fields. There are also enum values in SoField.h.
 */
 void
 SoField::setFieldType(int type)

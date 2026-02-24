@@ -176,7 +176,7 @@ SoTextureCoordinate2::~SoTextureCoordinate2()
 void
 SoTextureCoordinate2::initClass(void)
 {
-  SO_NODE_INTERNAL_INIT_CLASS(SoTextureCoordinate2, SO_FROM_INVENTOR_1|SoNode::VRML1);
+  SO_NODE_INTERNAL_INIT_CLASS(SoTextureCoordinate2, SO_FROM_INVENTOR_1);
 
   SO_ENABLE(SoGLRenderAction, SoGLMultiTextureCoordinateElement);
   SO_ENABLE(SoCallbackAction, SoMultiTextureCoordinateElement);

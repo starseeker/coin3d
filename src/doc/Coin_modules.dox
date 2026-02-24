@@ -329,18 +329,9 @@
   \details
   This is the set of nodes Coin implements using the original Open
   Inventor pattern, meaning they read and write to and from files
-  using the Inventor/VRML1 format, and produce side-effects for
+  using the Inventor file format, and produce side-effects for
   subsequent siblings under the same SoSeparator node during action
   traversal.
-
-  A subset of these nodes constitute the VRML1 format, and a bigger
-  subset constitutes the Inventor format.  The rest of the nodes are
-  extensions that are not part of any standardized format.
-
-  For VRML97 nodes, see the \ref VRMLnodes page.
-
-  The VRML1.0 specification is at
-  http://www.web3d.org/x3d/specifications/vrml/VRML1.0/index.html
 
 */
 
@@ -457,27 +448,6 @@
 */
 
 // *************************************************************************
-
-/*!
-  \defgroup coin_VRMLnodes VRML97 Classes
-
-  \brief
-  Nodes implementing the VRML97 standard.
-
-  \details
-  This is the set of items specified by VRML97, also known as VRML2.0.
-  These nodes are different from VRML1/Inventor nodes in the way you
-  structure them into scene-graphs, and in the requirements they set
-  for traversing them correctly (VRML1/Inventor require that you
-  traverse siblings on the left side before the node of interest,
-  while for VRML2.0 this is not true).
-
-  You can find out more about VRML97 in \ref vrml2refbook.
-
-  The VRML97 specification is online at
-  http://www.web3d.org/documents/specifications/14772/V2.0/
-
-*/
 
 // *************************************************************************
 

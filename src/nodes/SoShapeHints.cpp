@@ -338,7 +338,7 @@ SoShapeHints::~SoShapeHints()
 void
 SoShapeHints::initClass(void)
 {
-  SO_NODE_INTERNAL_INIT_CLASS(SoShapeHints, SO_FROM_INVENTOR_2_0|SoNode::VRML1);
+  SO_NODE_INTERNAL_INIT_CLASS(SoShapeHints, SO_FROM_INVENTOR_2_0);
 
   SO_ENABLE(SoCallbackAction, SoCreaseAngleElement);
   SO_ENABLE(SoCallbackAction, SoShapeHintsElement);
@@ -387,14 +387,6 @@ SoShapeHints::doAction(SoAction * action)
 
   if (!this->creaseAngle.isIgnored() && !TEST_OVERRIDE(CREASE_ANGLE)) {
     float ca = this->creaseAngle.getValue();
-    // Fix to handle VRML1 ShapeHints nodes correctly. The default
-    // creaseAngle value for VRML1 is 0.5, while it's 0.0 for
-    // Inventor 2.1
-    if (this->creaseAngle.isDefault() &&
-        (this->getNodeType() == SoNode::VRML1) &&
-        (ca == 0.0f)) {
-      ca = 0.5f;
-    }
     SoCreaseAngleElement::set(state, this, ca);
     if (this->isOverride()) {
       SoOverrideElement::setCreaseAngleOverride(state, this, TRUE);

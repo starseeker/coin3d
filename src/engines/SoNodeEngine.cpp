@@ -41,7 +41,7 @@
   engines in the scene graph.
 
   The main rationale for this class is to simplify the implementation
-  of VRML interpolator nodes, which are in a sense engines embedded in
+  of interpolator nodes, which are in a sense engines embedded in
   the shape of ordinary nodes.
 
   This abstract superclass will likely be of no interest to the Coin

@@ -65,9 +65,5 @@
 // as a later add-on to the core library, and it's not unlikely that
 // we'll eventually make their inclusion a configure/build
 // option. That goes for nodekits, draggers, and manips.
-//
-// The library can be built without VRML97 nodes, and without the
-// thread abstraction classes, so they are also not part of this
-// header file.
 
 #endif // !COIN_SO_H

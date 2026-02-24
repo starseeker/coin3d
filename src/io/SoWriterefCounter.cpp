@@ -398,14 +398,9 @@ SoWriterefCounter::removeWriteref(const SoBase * base)
 // a "+<refid>" suffix.
 //
 static SbBool
-dont_mangle_output_names(const SoBase *base)
+dont_mangle_output_names(const SoBase * /*base*/)
 {
   static int COIN_DONT_MANGLE_OUTPUT_NAMES = -1;
-
-  // Always unmangle node names in VRML1 and VRML2
-  if (base->isOfType(SoNode::getClassTypeId()) &&
-      (((SoNode *)base)->getNodeType()==SoNode::VRML1 ||
-       ((SoNode *)base)->getNodeType()==SoNode::VRML2)) return TRUE;
 
   if (COIN_DONT_MANGLE_OUTPUT_NAMES < 0) {
     COIN_DONT_MANGLE_OUTPUT_NAMES = 0;

@@ -836,10 +836,7 @@ SoCallbackAction::getProfile(void) const
 /*!
   Returns current vertex ordering shape hint setting.
 
-  Please note that this is the vertex ordering set by the SoShapeHints
-  node. If you want to find the vertex ordering for VRML nodes you'll
-  need to read this directly from the \a ccw field in those
-  nodes.
+  Please note that this is the vertex ordering set by the SoShapeHints node.
 */
 SoShapeHints::VertexOrdering
 SoCallbackAction::getVertexOrdering(void) const
@@ -852,10 +849,7 @@ SoCallbackAction::getVertexOrdering(void) const
 /*!
   Returns current shape type hint setting.
 
-  Please note that this is the shape type set by the SoShapeHints
-  node. If you want to find the shape type for VRML nodes you'll
-  need to read this directly from the \a solid field in those
-  nodes.
+  Please note that this is the shape type set by the SoShapeHints node.
 */
 SoShapeHints::ShapeType
 SoCallbackAction::getShapeType(void) const
@@ -868,10 +862,7 @@ SoCallbackAction::getShapeType(void) const
 /*!
   Returns current face type hint setting.
 
-  Please note that this is the face type set by the SoShapeHints
-  node. If you want to find the face type for VRML nodes you'll
-  need to read this directly from the \a convex field in those
-  nodes.
+  Please note that this is the face type set by the SoShapeHints node.
 
 */
 SoShapeHints::FaceType
@@ -884,9 +875,7 @@ SoCallbackAction::getFaceType(void) const
 
 /*!
   Returns current crease angle setting. Please note that this is the
-  crease angle value set by the SoShapeHints node. If you want to find
-  the crease angle for VRML nodes you'll need to read this directly
-  from the creaseAngle field in those nodes.
+  crease angle value set by the SoShapeHints node.
 */
 float
 SoCallbackAction::getCreaseAngle(void) const

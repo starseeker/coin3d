@@ -209,7 +209,7 @@ SbName::isIdentChar(const char c)
 
   SoBase derived objects needs to be named in a manner which will not
   clash with the special characters reserved as tokens in the syntax
-  rules of Open Inventor and VRML files.
+  rules of Open Inventor files.
 
   Legal characters for the first character of an SoBase object name is
   underscore ("_") and any uppercase and lowercase alphabetic
@@ -239,7 +239,7 @@ SbName::isBaseNameStartChar(const char c)
 
   SoBase derived objects needs to be named in a manner which will not
   clash with the special characters reserved as tokens in the syntax
-  rules of Open Inventor and VRML files.
+  rules of Open Inventor files.
 
   Legal characters to use for an SoBase object name is any character
   from the ASCII character set from and including character 33 (hex

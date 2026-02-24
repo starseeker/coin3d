@@ -67,20 +67,6 @@
   pdf file online, but we recommend having it in print.
 
 
-  \section vrml2refbook The Annotated VRML2.0 Reference Manual
-
-  This book covers the VRML97 (aka VRML 2.0) standard, which Coin has
-  implemented with its Inventor/VRMLnodes/ classes, which is an
-  extension made beyond the Open Inventor V2.1 API.
-
-  The VRML97 format has some significant differences from the Inventor
-  and VRML1 formats, so it is a useful book if you want to use that
-  part of Coin.
-
-  ISBN 0-201-41974-2.  You will find the specification documents for
-  VRML97 online at <http://www.web3d.org/>.
-
-
   \section openglbook The Open GL Programming Manual
 
   This is the bible when it comes to OpenGL programming and is

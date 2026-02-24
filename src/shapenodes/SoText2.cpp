@@ -565,8 +565,28 @@ SoText2::GLRender(SoGLRenderAction * action)
 
       rastery = (int)floor(nilpoint[1]+0.5) - bbsize[1] + bbmax[1];
 
-      SoText2P::setRasterPos3f((GLfloat)floor(textscreenoffsetx+0.5), (GLfloat)rastery, -nilpoint[2]);
-      glDrawPixels(bbsize[0], bbsize[1], GL_RGBA, GL_UNSIGNED_BYTE, (const GLubyte *)PRIVATE(this)->pixel_buffer);
+      // Guard: skip the draw entirely if the bounding box is fully outside
+      // the viewport (avoids out-of-bounds writes in the software rasteriser).
+      int drawH = bbsize[1];
+      int drawRastery = rastery;
+      const unsigned char * drawBuffer = PRIVATE(this)->pixel_buffer;
+      if (drawRastery < 0) {
+        int skip = -drawRastery;
+        if (skip >= drawH) drawH = 0;
+        else {
+          drawH -= skip;
+          drawRastery = 0;
+          drawBuffer += skip * bbsize[0] * 4;
+        }
+      }
+      if (drawRastery + drawH > (int)vpsize[1]) {
+        drawH = (int)vpsize[1] - drawRastery;
+      }
+
+      if (drawH > 0) {
+        SoText2P::setRasterPos3f((GLfloat)floor(textscreenoffsetx+0.5), (GLfloat)drawRastery, -nilpoint[2]);
+        glDrawPixels(bbsize[0], drawH, GL_RGBA, GL_UNSIGNED_BYTE, (const GLubyte *)drawBuffer);
+      }
     }
 
     // pop old state

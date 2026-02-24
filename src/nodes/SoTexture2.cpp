@@ -465,7 +465,7 @@ SoTexture2::~SoTexture2()
 void
 SoTexture2::initClass(void)
 {
-  SO_NODE_INTERNAL_INIT_CLASS(SoTexture2, SO_FROM_INVENTOR_1|SoNode::VRML1);
+  SO_NODE_INTERNAL_INIT_CLASS(SoTexture2, SO_FROM_INVENTOR_1);
 
   SO_ENABLE(SoGLRenderAction, SoGLMultiTextureImageElement);
   SO_ENABLE(SoGLRenderAction, SoGLMultiTextureEnabledElement);

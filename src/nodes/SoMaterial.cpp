@@ -74,35 +74,6 @@
   the second material node. The default value of
   SoMaterial::ambientColor will be used.)
 
-  Note that nodes imported as part of a VRML V1.0 file has a special
-  case, where the fields SoMaterial::ambientColor,
-  SoMaterial::diffuseColor and SoMaterial::specularColor contains zero
-  values, and SoMaterial::emissiveColor contains one or more
-  values. The values in SoMaterial::emissiveColor should then be
-  treated as precalculated lighting, and the other fields should be
-  ignored.
-
-  You can detect this case by checking the values of the material
-  elements when the scene graph is traversed using an
-  SoCallbackAction. SoDiffuseColorElement, SoAmbientColorElement, and
-  SoSpecularColorElement will contain one value with a completely
-  black color (0.0f, 0.0f, 0.0f), SoShininessElement will contain one
-  value of 0.0f, and SoEmissiveColorElement will contain one or more
-  values. It is done like this to make rendering work correctly on
-  systems that do not test for this specific case.
-
-  You should only check for this case when you're traversing a VRML
-  V1.0 file scene graph, of course. See SoNode::getNodeType() for
-  information about how nodes can be tested for whether or not they
-  have been imported or otherwise set up as of VRML1 type versus
-  Inventor type.
-
-  When the scene graph is rendered using an SoGLRenderAction, the
-  elements will be set differently to optimize rendering.  The
-  SoDiffuseColorElement will be set to the values in
-  SoMaterial::emissiveColor, and the light model will be set to
-  SoLightModel::BASE_COLOR.
-
   The SoMaterial::transparency values will always be treated normally.
 
   Here is a very simple usage example:
@@ -281,9 +252,8 @@
 */
 
 // defines for materialtype
-#define TYPE_UNKNOWN            0
-#define TYPE_NORMAL             1
-#define TYPE_VRML1_ONLYEMISSIVE 2 // special case in vrml1
+#define TYPE_UNKNOWN 0
+#define TYPE_NORMAL  1
 
 // *************************************************************************
 
@@ -368,7 +338,7 @@ SoMaterial::~SoMaterial()
 void
 SoMaterial::initClass(void)
 {
-  SO_NODE_INTERNAL_INIT_CLASS(SoMaterial, SO_FROM_INVENTOR_1|SoNode::VRML1);
+  SO_NODE_INTERNAL_INIT_CLASS(SoMaterial, SO_FROM_INVENTOR_1);
 
   SO_ENABLE(SoGLRenderAction, SoGLLazyElement);
   SO_ENABLE(SoCallbackAction, SoLazyElement);
@@ -499,19 +469,6 @@ SoMaterial::doAction(SoAction * action)
     const SbColor * diffuseptr = this->diffuseColor.getValues(0);
     int numdiffuse = this->diffuseColor.getNum();
 
-    if (this->getMaterialType() == TYPE_VRML1_ONLYEMISSIVE) {
-      bitmask |= SoLazyElement::DIFFUSE_MASK;
-      bitmask &= ~SoLazyElement::EMISSIVE_MASK;
-      diffuseptr = this->emissiveColor.getValues(0);
-      numdiffuse = this->emissiveColor.getNum();
-      // if only emissive color, turn off lighting and render as diffuse.
-      // this is much faster
-      SoLightModelElement::set(state, this, SoLightModelElement::BASE_COLOR);
-    }
-    else if (this->getNodeType() == SoNode::VRML1) {
-      SoLightModelElement::set(state, this, SoLightModelElement::PHONG);
-    }
-
 #if COIN_DEBUG
     if (bitmask & SoLazyElement::SHININESS_MASK) {
       static int didwarn = 0;
@@ -582,33 +539,17 @@ SoMaterial::notify(SoNotList *list)
 }
 
 //
-// to test for special vrml1 case. It's not used right now,
-// but it might be enabled again later. pederb, 2002-09-11
+// Returns the material type.
 //
 int
 SoMaterial::getMaterialType(void)
 {
-  if (this->getNodeType() != SoNode::VRML1) return TYPE_NORMAL;
-  else {
-    if (PRIVATE(this)->materialtype == TYPE_UNKNOWN) {
-      if (!this->diffuseColor.isIgnored() && this->diffuseColor.getNum() == 0 &&
-          !this->ambientColor.isIgnored() && this->ambientColor.getNum() == 0 &&
-          !this->specularColor.isIgnored() && this->specularColor.getNum() == 0 &&
-          !this->emissiveColor.isIgnored() && this->emissiveColor.getNum()) {
-        PRIVATE(this)->materialtype = TYPE_VRML1_ONLYEMISSIVE;
-      }
-      else if (this->emissiveColor.getNum() > this->diffuseColor.getNum()) {
-        PRIVATE(this)->materialtype = TYPE_VRML1_ONLYEMISSIVE;
-      }
-      else {
-        PRIVATE(this)->materialtype = TYPE_NORMAL;
-      }
-    }
-    return PRIVATE(this)->materialtype;
+  if (PRIVATE(this)->materialtype == TYPE_UNKNOWN) {
+    PRIVATE(this)->materialtype = TYPE_NORMAL;
   }
+  return PRIVATE(this)->materialtype;
 }
 
 #undef PRIVATE
 #undef TYPE_UNKNOWN
 #undef TYPE_NORMAL
-#undef TYPE_VRML1_ONLYEMISSIVE

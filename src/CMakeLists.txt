@@ -51,7 +51,7 @@ set(COIN_SUBDIRS
 )
 
 # Add nodekits and related components if enabled
-list(APPEND COIN_SUBDIRS nodekits profiler)
+list(APPEND COIN_SUBDIRS nodekits profiler hud)
 
 foreach(_subdir ${COIN_SUBDIRS})
   add_subdirectory(${_subdir})
@@ -121,6 +121,7 @@ else()
         $<TARGET_OBJECTS:nodekits>
         $<TARGET_OBJECTS:nodes>
         $<TARGET_OBJECTS:profiler>
+        $<TARGET_OBJECTS:hud>
         $<TARGET_OBJECTS:projectors>
         $<TARGET_OBJECTS:rendering>
         $<TARGET_OBJECTS:sensors>

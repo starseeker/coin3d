@@ -60,6 +60,7 @@
 #include <Inventor/nodes/SoIndexedTriangleStripSet.h>
 #include <Inventor/nodes/SoImage.h>
 #include <Inventor/nodes/SoSphere.h>
+#include <Inventor/nodes/SoProceduralShape.h>
 #include <Inventor/nodes/SoText2.h>
 #include <Inventor/nodes/SoText3.h>
 #include <Inventor/nodes/SoGroup.h>

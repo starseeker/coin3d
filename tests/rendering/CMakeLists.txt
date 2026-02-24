@@ -127,6 +127,12 @@ add_rendering_test(render_annotation)
 add_rendering_test(render_reset_transform)
 add_rendering_test(render_transparency)
 add_rendering_test(render_marker_set)
+add_rendering_test(render_hud_overlay)
+add_rendering_test(render_hud_no3d)
+add_rendering_test(render_hud_interaction)
+add_rendering_test(render_procedural_shape)
+add_rendering_test(render_arb8_draggers)
+add_rendering_test(render_arb8_edit_cycle)
 add_rendering_test(render_pick_interaction)
 add_rendering_test(render_simple_draggers)
 add_rendering_test(render_light_manips)
@@ -157,6 +163,15 @@ add_rendering_test(render_callback_action_deep)
 add_rendering_test(render_text3_parts)
 add_rendering_test(render_write_read_action)
 add_rendering_test(render_sensors_rendering)
+add_rendering_test(render_ext_selection_events)
+add_rendering_test(render_render_manager_full)
+add_rendering_test(render_offscreen_advanced)
+add_rendering_test(render_glrender_deep)
+add_rendering_test(render_engine_converter)
+add_rendering_test(render_image_deep)
+add_rendering_test(render_quad_mesh_deep)
+add_rendering_test(render_field_connections)
+add_rendering_test(render_sogl_bindings)
 
 # ---- CTest image-comparison integration --------------------------------------
 # Control images live in the shared tests/control_images/ directory.
@@ -255,6 +270,19 @@ if(RENDERING_USE_OSMESA)
     add_rendering_image_test(render_shadow RMSE_THRESHOLD 25.0)
 endif()
 
+# HUD image-comparison tests (text rendering: higher RMSE threshold for
+# subpixel font differences between platforms / backends).
+add_rendering_image_test(render_hud_overlay  RMSE_THRESHOLD 25.0)
+add_rendering_image_test(render_hud_no3d     RMSE_THRESHOLD 25.0)
+
+# SoProceduralShape visual regression test: solid filled + wireframe cone.
+add_rendering_image_test(render_procedural_shape RMSE_THRESHOLD 15.0)
+
+# ARB8 edit-cycle visual progression test: 4-step edit cycle with
+# selection display (handle spheres + text labels) and vertex manipulation.
+# Text labels increase subpixel variance so a higher RMSE threshold is used.
+add_rendering_image_test(render_arb8_edit_cycle RMSE_THRESHOLD 25.0)
+
 # ---- Validation tests: run unconditionally, check exit code only -------------
 # These tests perform their own pixel analysis and return 0/1 directly.
 # run_rendering_test.cmake wraps with xvfb-run when DISPLAY is not set.
@@ -279,6 +307,7 @@ foreach(_vtest render_sphere_position render_checker_texture
                render_gl_big_image render_cubemap render_gl_features
                render_multi_texture render_marker_set
                render_annotation render_reset_transform render_transparency
+               render_hud_interaction
                render_pick_interaction render_simple_draggers
                render_light_manips render_event_callback_interaction
                render_selection_interaction
@@ -295,7 +324,18 @@ foreach(_vtest render_sphere_position render_checker_texture
                render_ext_selection render_view_volume_ops
                render_glrender_action_modes
                render_callback_action_deep render_text3_parts
-               render_write_read_action render_sensors_rendering)
+               render_write_read_action render_sensors_rendering
+               render_procedural_shape render_arb8_edit_cycle
+               render_ext_selection_events
+               render_render_manager_full
+               render_offscreen_advanced
+               render_glrender_deep
+               render_engine_converter
+               render_image_deep
+               render_quad_mesh_deep
+               render_field_connections
+               render_sogl_bindings
+               render_procedural_shape)
     add_test(
         NAME ${_vtest}
         COMMAND "${CMAKE_COMMAND}"
@@ -346,6 +386,9 @@ if(PNG_FOUND)
             render_point_set render_lod render_scene_texture
             render_array_multiple_copy
             render_shadow
+            render_hud_overlay render_hud_no3d
+            render_procedural_shape
+            render_arb8_edit_cycle
         COMMENT "Generating PNG control images for rendering regression tests"
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )

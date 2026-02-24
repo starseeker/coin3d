@@ -146,7 +146,7 @@ SoDirectionalLight::~SoDirectionalLight()
 void
 SoDirectionalLight::initClass(void)
 {
-  SO_NODE_INTERNAL_INIT_CLASS(SoDirectionalLight, SO_FROM_INVENTOR_1|SoNode::VRML1);
+  SO_NODE_INTERNAL_INIT_CLASS(SoDirectionalLight, SO_FROM_INVENTOR_1);
 }
 
 // *************************************************************************

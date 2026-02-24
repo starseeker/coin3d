@@ -59,6 +59,7 @@
 #include <Inventor/nodekits/SoSceneKit.h>
 #include <Inventor/nodekits/SoShapeKit.h>
 #include <Inventor/nodekits/SoWrapperKit.h>
+#include <Inventor/annex/HUD/nodekits/SoHUDKit.h>
 #endif // HAVE_NODEKITS
 
 #include "../C/CoinTidbits.h"
@@ -105,6 +106,7 @@ SoNodeKit::init(void)
   SoSeparatorKit::initClass();
   SoShapeKit::initClass();
   SoWrapperKit::initClass();
+  SoHUDKit::initClass();
 #endif // HAVE_NODEKITS
 
   nodekit_isinitialized = TRUE;

@@ -66,8 +66,6 @@ public:
 
   enum NodeType {
     INVENTOR     = 0x0000,
-    VRML1        = 0x0001,
-    VRML2        = 0x0002,
     INVENTOR_1   = 0x0004,
     INVENTOR_2_0 = 0x0008,
     INVENTOR_2_1 = 0x0010,

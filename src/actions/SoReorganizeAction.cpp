@@ -205,14 +205,6 @@
     }
     SoSeparator * root = SoDB::readAll(&input);
 
-    SbBool vrml1 = input.isFileVRML1();
-    SbBool vrml2 = input.isFileVRML2();
-
-    if (vrml2) {
-      fprintf(stderr,"VRML2 not supported yet\n");
-      return -1;
-    }
-
     if (!root) {
       fprintf(stderr,"Unable to read file.\n");
       return -1;
@@ -315,7 +307,6 @@ class SoReorganizeActionP {
   int numtriangles;
   int numlines;
   int numpoints;
-  SbBool isvrml;
 
   SbBool didinit;
   SbBool hastexture;
@@ -341,9 +332,7 @@ class SoReorganizeActionP {
   SbBool initShape(SoCallbackAction * action);
   void replaceNode(SoFullPath * path);
   void replaceIfs(SoFullPath * path);
-  void replaceVrmlIfs(SoFullPath * path);
   void replaceIls(SoFullPath * path);
-  void replaceVrmlIls(SoFullPath * path);
 
   SoVertexProperty * createVertexProperty(const SbBool forlines);
 };
@@ -468,29 +457,6 @@ SoReorganizeAction::apply(SoNode * root)
     this->apply(pl[i]);
   }
   PRIVATE(this)->sa.reset();
-
-#ifdef HAVE_VRML97
-  PRIVATE(this)->sa.setType(SoVRMLIndexedFaceSet::getClassTypeId());
-  PRIVATE(this)->sa.setSearchingAll(TRUE);
-  PRIVATE(this)->sa.setInterest(SoSearchAction::ALL);
-  PRIVATE(this)->sa.apply(root);
-  SoPathList & pl2 = PRIVATE(this)->sa.getPaths();
-
-  for (i = 0; i < pl2.getLength(); i++) {
-    this->apply(pl2[i]);
-  }
-  PRIVATE(this)->sa.reset();
-
-  PRIVATE(this)->sa.setType(SoVRMLIndexedLineSet::getClassTypeId());
-  PRIVATE(this)->sa.setSearchingAll(TRUE);
-  PRIVATE(this)->sa.setInterest(SoSearchAction::ALL);
-  PRIVATE(this)->sa.apply(root);
-  SoPathList & pl3 = PRIVATE(this)->sa.getPaths();
-  for (i = 0; i < pl3.getLength(); i++) {
-    this->apply(pl3[i]);
-  }
-  PRIVATE(this)->sa.reset();
-#endif // HAVE_VRML97
 }
 
 void
@@ -529,14 +495,10 @@ SoReorganizeAction::beginTraversal(SoNode * /* node */)
 
 
 SoCallbackAction::Response
-SoReorganizeActionP::pre_shape_cb(void * userdata, SoCallbackAction * COIN_UNUSED_ARG(action), const SoNode * node)
+SoReorganizeActionP::pre_shape_cb(void * userdata, SoCallbackAction * COIN_UNUSED_ARG(action), const SoNode * COIN_UNUSED_ARG(node))
 {
   SoReorganizeActionP * thisp = static_cast<SoReorganizeActionP *>(userdata);
   thisp->didinit = FALSE;
-  thisp->isvrml = FALSE;
-#ifdef HAVE_VRML97
-  thisp->isvrml = node->isOfType(SoVRMLGeometry::getClassTypeId());
-#endif // HAVE_VRML97
   thisp->numtriangles = 0;
   thisp->numpoints = 0;
   thisp->numlines = 0;
@@ -686,20 +648,10 @@ SoReorganizeActionP::replaceNode(SoFullPath * path)
   this->pvcache->fit(); // needed to do optimize-sort of data
 
   if (this->pvcache->getNumTriangleIndices()) {
-    if (this->isvrml) {
-      this->replaceVrmlIfs(path);
-    }
-    else {
-      this->replaceIfs(path);
-    }
+    this->replaceIfs(path);
   }
   else if (this->pvcache->getNumLineIndices()) {
-    if (this->isvrml) {
-      this->replaceVrmlIls(path);
-    }
-    else {
-      this->replaceIls(path);
-    }
+    this->replaceIls(path);
   }
   this->pvcache->unref();
   this->pvcache = NULL;
@@ -801,105 +753,6 @@ SoReorganizeActionP::replaceIfs(SoFullPath * path)
 }
 
 void
-SoReorganizeActionP::replaceVrmlIfs(SoFullPath * path)
-{
-#ifdef HAVE_VRML97
-  SoNode * parent = path->getNodeFromTail(1);
-  if (!parent->isOfType(SoGroup::getClassTypeId()) &&
-      !parent->isOfType(SoVRMLShape::getClassTypeId())) {
-    return;
-  }
-
-  SoVRMLIndexedFaceSet * oldifs = coin_assert_cast<SoVRMLIndexedFaceSet *>(path->getTail());
-  assert(oldifs->isOfType(SoVRMLIndexedFaceSet::getClassTypeId()));
-  SoVRMLIndexedFaceSet * ifs = new SoVRMLIndexedFaceSet;
-  ifs->ref();
-  ifs->normalPerVertex = this->lighting;
-  ifs->colorPerVertex = this->pvcache->colorPerVertex();
-  ifs->ccw = oldifs->ccw;
-  ifs->solid = oldifs->solid;
-  ifs->creaseAngle = oldifs->creaseAngle;
-
-  int numv = this->pvcache->getNumVertices();
-
-  if (this->hastexture) {
-    SoVRMLTextureCoordinate * tc = new SoVRMLTextureCoordinate;
-    tc->point.setNum(numv);
-    SbVec2f * dst = tc->point.startEditing();
-    const SbVec4f * src = this->pvcache->getTexCoordArray();
-
-    for (int i = 0; i < numv; i++) {
-      SbVec4f tmp = src[i];
-      if (tmp[3] != 0.0f) {
-        tmp[0] /= tmp[3];
-        tmp[1] /= tmp[3];
-      }
-      dst[i][0] = tmp[0];
-      dst[i][1] = tmp[1];
-    }
-    tc->point.finishEditing();
-    ifs->texCoord = tc;
-  }
-
-  SoVRMLCoordinate * c = new SoVRMLCoordinate;
-  c->point.setValues(0, numv,
-                     this->pvcache->getVertexArray());
-  ifs->coord = c;
-
-  if (this->lighting) {
-    SoVRMLNormal * norm = new SoVRMLNormal;
-    norm->vector.setValues(0, numv,
-                           this->pvcache->getNormalArray());
-    ifs->normal = norm;
-  }
-  if (this->pvcache->colorPerVertex()) {
-    SoVRMLColor * col = new SoVRMLColor;
-    col->color.setNum(numv);
-    uint8_t * src = const_cast<uint8_t *>(this->pvcache->getColorArray());
-    SbColor * dst = col->color.startEditing();
-    for (int i = 0; i < numv; i++) {
-      dst[i] = SbColor(src[0]/255.0f,
-                       src[1]/255.0f,
-                       src[2]/255.0f);
-      src += 4;
-    }
-    col->color.finishEditing();
-    ifs->color = col;
-  }
-
-  ifs->normalIndex.setNum(0);
-  ifs->colorIndex.setNum(0);
-  ifs->texCoordIndex.setNum(0);
-
-  int numtri = this->pvcache->getNumTriangleIndices() / 3;
-  const GLint * indices = this->pvcache->getTriangleIndices();
-  ifs->coordIndex.setNum(numtri * 4);
-  int32_t * ptr = ifs->coordIndex.startEditing();
-
-  for (int i = 0; i < numtri; i++) {
-    *ptr++ = static_cast<int32_t>(indices[i*3]);
-    *ptr++ = static_cast<int32_t>(indices[i*3+1]);
-    *ptr++ = static_cast<int32_t>(indices[i*3+2]);
-    *ptr++ = -1;
-  }
-  ifs->coordIndex.finishEditing();
-
-  int idx = path->getIndexFromTail(0);
-  path->pop();
-  if (parent->isOfType(SoGroup::getClassTypeId())) {
-    SoGroup * g = coin_assert_cast<SoGroup *>(parent);
-    g->replaceChild(idx, ifs);
-  }
-  else {
-    SoVRMLShape * shape = coin_assert_cast<SoVRMLShape *>(parent);
-    shape->geometry = ifs;
-  }
-  path->push(idx);
-  ifs->unrefNoDelete();
-#endif // HAVE_VRML97
-}
-
-void
 SoReorganizeActionP::replaceIls(SoFullPath * path)
 {
   SoNode * parent = path->getNodeFromTail(1);
@@ -933,69 +786,6 @@ SoReorganizeActionP::replaceIls(SoFullPath * path)
   g->replaceChild(idx, ils);
   path->push(idx);
   ils->unrefNoDelete();
-}
-
-void
-SoReorganizeActionP::replaceVrmlIls(SoFullPath * path)
-{
-#ifdef HAVE_VRML97
-  SoNode * parent = path->getNodeFromTail(1);
-  if (!parent->isOfType(SoGroup::getClassTypeId()) &&
-      !parent->isOfType(SoVRMLShape::getClassTypeId())) {
-    return;
-  }
-
-  SoVRMLIndexedLineSet * ils = new SoVRMLIndexedLineSet;
-  ils->ref();
-
-  int numv = this->pvcache->getNumVertices();
-  int numlines = this->pvcache->getNumLineIndices() / 2;
-  const GLint * indices = this->pvcache->getLineIndices();
-  ils->coordIndex.setNum(numlines * 3);
-  int32_t * ptr = ils->coordIndex.startEditing();
-
-  for (int i = 0; i < numlines; i++) {
-    *ptr++ = static_cast<int32_t>(indices[i*2]);
-    *ptr++ = static_cast<int32_t>(indices[i*2+1]);
-    *ptr++ = -1;
-  }
-  ils->coordIndex.finishEditing();
-
-  SoVRMLCoordinate * c = new SoVRMLCoordinate;
-  c->point.setValues(0, numv,
-                     this->pvcache->getVertexArray());
-  ils->coord = c;
-
-  if (this->pvcache->colorPerVertex()) {
-    ils->colorPerVertex = TRUE;
-    SoVRMLColor * col = new SoVRMLColor;
-    col->color.setNum(numv);
-    uint8_t * src = const_cast<uint8_t *>(this->pvcache->getColorArray());
-    SbColor * dst = col->color.startEditing();
-    for (int i = 0; i < numv; i++) {
-      dst[i] = SbColor(src[0]/255.0f,
-                       src[1]/255.0f,
-                       src[2]/255.0f);
-      src += 4;
-    }
-    col->color.finishEditing();
-    ils->color = col;
-  }
-  ils->colorIndex.setNum(0);
-
-  int idx = path->getIndexFromTail(0);
-  path->pop();
-  if (parent->isOfType(SoGroup::getClassTypeId())) {
-    SoGroup * g = coin_assert_cast<SoGroup *>(parent);
-    g->replaceChild(idx, ils);
-  }
-  else {
-    SoVRMLShape * shape = coin_assert_cast<SoVRMLShape *>(parent);
-    shape->geometry = ils;
-  }
-  path->push(idx);
-  ils->unrefNoDelete();
-#endif // HAVE_VRML97
 }
 
 #undef PRIVATE
