@@ -406,6 +406,10 @@ public:
     this->maxshadowdistance = new SoShaderParameter1f;
     this->maxshadowdistance->ref();
 
+    this->shadowmatrix = new SoShaderParameterMatrix;
+    this->shadowmatrix->ref();
+    this->shadowmatrix->value = SbMatrix::identity();
+
     this->path = path->copy();
     this->path->ref();
     assert(((SoFullPath*)path)->getTail()->isOfType(SoLight::getClassTypeId()));
@@ -497,6 +501,7 @@ public:
     if (this->depthmapscene) this->depthmapscene->unref();
     if (this->bboxnode) this->bboxnode->unref();
     if (this->maxshadowdistance) this->maxshadowdistance->unref();
+    if (this->shadowmatrix) this->shadowmatrix->unref();
     if (this->vsm_program) this->vsm_program->unref();
     if (this->vsm_farval) this->vsm_farval->unref();
     if (this->vsm_nearval) this->vsm_nearval->unref();
@@ -600,6 +605,7 @@ public:
   SoShaderGenerator vsm_vertex_generator;
   SoShaderGenerator vsm_fragment_generator;
   SoShaderParameter1f * maxshadowdistance;
+  SoShaderParameterMatrix * shadowmatrix;
 
   SoColorPacker colorpacker;
   SbColor color;
@@ -1231,6 +1237,7 @@ SoShadowGroupP::updateSpotCamera(SoState * COIN_UNUSED_ARG(state), SoShadowLight
 
   vv.getMatrices(affine, proj);
   cache->matrix = affine * proj;
+  cache->shadowmatrix->value = cache->matrix;
 }
 
 void
@@ -1291,19 +1298,6 @@ SoShadowGroupP::updateDirectionalCamera(SoState * state, SoShadowLightCache * ca
   SbVec3f N = plane.getNormal();
   float D = plane.getDistanceFromOrigin();
 
-#if 0
-  fprintf(stderr,"isect: %g %g %g, %g %g %g\n",
-          isect.getMin()[0],
-          isect.getMin()[1],
-          isect.getMin()[2],
-          isect.getMax()[0],
-          isect.getMax()[1],
-          isect.getMax()[2]);
-  fprintf(stderr,"plane: %g %g %g, %g\n", N[0], N[1], N[2], D);
-  fprintf(stderr,"nearfar: %g %g\n", cam->nearDistance.getValue(), cam->farDistance.getValue());
-  fprintf(stderr,"aspect: %g\n", SoViewportRegionElement::get(state).getViewportAspectRatio());
-#endif
-
   cache->fragment_lightplane->value.setValue(N[0], N[1], N[2], D);
 
   //SoShadowGroup::VisibilityFlag visflag = (SoShadowGroup::VisibilityFlag) PUBLIC(this)->visibilityFlag.getValue();
@@ -1332,6 +1326,7 @@ SoShadowGroupP::updateDirectionalCamera(SoState * state, SoShadowLightCache * ca
   SbMatrix affine, proj;
   vv.getMatrices(affine, proj);
   cache->matrix = affine * proj;
+  cache->shadowmatrix->value = cache->matrix;
 }
 
 void
@@ -1441,6 +1436,8 @@ SoShadowGroupP::setVertexShader(SoState * state)
       str.sprintf("varying vec3 spotVertexColor%d;", i);
       gen.addDeclaration(str, FALSE);
     }
+    str.sprintf("uniform mat4 shadowMatrix%d;", i);
+    gen.addDeclaration(str, FALSE);
   }
 
   if (numshadowlights) {
@@ -1512,7 +1509,7 @@ SoShadowGroupP::setVertexShader(SoState * state)
   }
   for (i = 0; i < numshadowlights; i++) {
     SoShadowLightCache * cache = this->shadowlights[i];
-    str.sprintf("shadowCoord%d = gl_TextureMatrix[%d] * pos;\n", i, cache->texunit); // in light space
+    str.sprintf("shadowCoord%d = shadowMatrix%d * pos;\n", i, i); // in light space
     gen.addMainStatement(str);
 
     if (!perpixelspot) {
@@ -1542,8 +1539,8 @@ SoShadowGroupP::setVertexShader(SoState * state)
     break;
   }
   gen.addMainStatement("perVertexColor = vec3(clamp(color.r, 0.0, 1.0), clamp(color.g, 0.0, 1.0), clamp(color.b, 0.0, 1.0));"
-                       "gl_TexCoord[0] = gl_TextureMatrix[0] * gl_MultiTexCoord0;\n"
-                       "gl_TexCoord[1] = gl_TextureMatrix[1] * gl_MultiTexCoord1;\n"
+                       "gl_TexCoord[0] = gl_MultiTexCoord0;\n"
+                       "gl_TexCoord[1] = gl_MultiTexCoord1;\n"
                        "gl_Position = ftransform();\n"
                        "gl_FrontColor = gl_Color;\n");
 
@@ -1562,12 +1559,21 @@ SoShadowGroupP::setVertexShader(SoState * state)
 
     if (numshadowlights) {
       this->vertexshader->parameter.set1Value(0, this->cameratransform);
+      for (i = 0; i < numshadowlights; i++) {
+        SoShadowLightCache * cache = this->shadowlights[i];
+        SbString str;
+        str.sprintf("shadowMatrix%d", i);
+        if (cache->shadowmatrix->name.getValue() != str) {
+          cache->shadowmatrix->name = str;
+        }
+        this->vertexshader->parameter.set1Value(1 + i, cache->shadowmatrix);
+      }
     }
     else {
       this->vertexshader->parameter.setNum(0);
     }
 #if 0 // for debugging
-    fprintf(stderr,"new vertex program: %s\n",
+    fprintf(stderr,"new vertex program:\n%s\n",
             gen.getShaderProgram().getString());
 #endif
   }
@@ -1991,7 +1997,7 @@ SoShadowGroupP::setFragmentShader(SoState * state)
     this->fragmentshader->sourceType = SoShaderObject::GLSL_PROGRAM;
 
 #if 0 // for debugging
-    fprintf(stderr,"new fragment program: %s\n",
+    fprintf(stderr,"new fragment program:\n%s\n",
             gen.getShaderProgram().getString());
 #endif // debugging
 

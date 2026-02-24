@@ -101,33 +101,49 @@ gen_control() {
     fi
 
     # Convert any secondary outputs  (e.g. _ortho, _lines, _points)
+    # Convention: <test>_control_<variant>.png  (e.g. render_cameras_control_ortho.png)
     for secondary in "$TMPDIR_OUT/${name}_control_"*.rgb; do
         [ -f "$secondary" ] || continue
         local suffix
         suffix="$(basename "$secondary" .rgb | sed "s|${name}_control||")"
-        "$RGB_TO_PNG" "$secondary" "$CONTROL_DIR/${name}${suffix}_control.png"
-        echo "    -> ${name}${suffix}_control.png"
+        "$RGB_TO_PNG" "$secondary" "$CONTROL_DIR/${name}_control${suffix}.png"
+        echo "    -> ${name}_control${suffix}.png"
     done
 }
 
-gen_control render_primitives  render_primitives
-gen_control render_materials   render_materials
-gen_control render_lighting    render_lighting
-gen_control render_transforms  render_transforms
-gen_control render_cameras     render_cameras
-gen_control render_drawstyle   render_drawstyle
-gen_control render_texture     render_texture
-gen_control render_text2       render_text2
-gen_control render_text3       render_text3
+gen_control render_primitives         render_primitives
+gen_control render_materials          render_materials
+gen_control render_lighting           render_lighting
+gen_control render_transforms         render_transforms
+gen_control render_cameras            render_cameras
+gen_control render_drawstyle          render_drawstyle
+gen_control render_texture            render_texture
+gen_control render_text2              render_text2
+gen_control render_text3              render_text3
+gen_control render_gradient           render_gradient
+gen_control render_colored_cube       render_colored_cube
+gen_control render_coordinates        render_coordinates
+gen_control render_scene              render_scene
+gen_control render_shape_hints        render_shape_hints
+gen_control render_environment        render_environment
+gen_control render_texture3           render_texture3
+gen_control render_bump_map           render_bump_map
+gen_control render_texture_transform  render_texture_transform
+gen_control render_depth_buffer       render_depth_buffer
+gen_control render_alpha_test         render_alpha_test
+gen_control render_indexed_face_set   render_indexed_face_set
+gen_control render_quad_mesh          render_quad_mesh
+gen_control render_indexed_line_set   render_indexed_line_set
+gen_control render_point_set          render_point_set
+gen_control render_lod                render_lod
+gen_control render_scene_texture      render_scene_texture
+gen_control render_array_multiple_copy render_array_multiple_copy
 
-# Tier 2: rendered with OSMesa backend (noted for future GLX revisit)
-gen_control render_shape_hints       render_shape_hints
-gen_control render_environment       render_environment
-gen_control render_texture3          render_texture3
-gen_control render_bump_map          render_bump_map
-gen_control render_texture_transform render_texture_transform
-gen_control render_depth_buffer      render_depth_buffer
-gen_control render_alpha_test        render_alpha_test
+# Shadow rendering: SoShadowGroup GLSL shader compilation crashes on headless
+# GLX pixmap contexts (multiple GL contexts in the same process).  OSMesa
+# handles this correctly; use an OSMesa build (COIN3D_USE_OSMESA=ON) to
+# regenerate this control image.
+gen_control render_shadow             render_shadow
 
 echo ""
 echo "=== Done – control images in $CONTROL_DIR ==="

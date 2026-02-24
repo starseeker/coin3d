@@ -2,7 +2,7 @@
  * render_shadow.cpp - Integration test: SoShadowGroup + SoShadowStyle
  *
  * Builds a scene inside an SoShadowGroup containing:
- *   - A directional light positioned above the scene.
+ *   - A shadow directional light positioned above the scene.
  *   - A white ground plane (SoFaceSet) marked SHADOWED.
  *   - A red sphere marked CASTS_SHADOW_AND_SHADOWED, suspended above the plane.
  *
@@ -32,6 +32,7 @@
 #include <Inventor/nodes/SoTranslation.h>
 #include <Inventor/annex/FXViz/nodes/SoShadowGroup.h>
 #include <Inventor/annex/FXViz/nodes/SoShadowStyle.h>
+#include <Inventor/annex/FXViz/nodes/SoShadowDirectionalLight.h>
 #include <Inventor/SbViewportRegion.h>
 #include <cstdio>
 
@@ -43,7 +44,9 @@ static bool validateScene(const unsigned char *buf)
     int nonbg = 0;
     for (int i = 0; i < W * H; ++i) {
         const unsigned char *p = buf + i * 3;
-        if (p[0] > 20 || p[1] > 20 || p[2] > 20) ++nonbg;
+        // Accept any pixel slightly above pure black; ambient-only lighting
+        // is roughly 10/255, so use threshold of 5 to catch it.
+        if (p[0] > 5 || p[1] > 5 || p[2] > 5) ++nonbg;
     }
     printf("render_shadow: nonbg=%d\n", nonbg);
 
@@ -89,8 +92,9 @@ int main(int argc, char **argv)
     sg->smoothBorder.setValue(0.1f);
     root->addChild(sg);
 
-    // Regular directional light
-    SoDirectionalLight *light = new SoDirectionalLight;
+    // SoShadowDirectionalLight is required for directional shadow casting
+    // within SoShadowGroup (SoDirectionalLight does not cast shadows).
+    SoShadowDirectionalLight *light = new SoShadowDirectionalLight;
     light->direction.setValue(-0.3f, -1.0f, -0.4f);
     light->intensity.setValue(1.0f);
     sg->addChild(light);
@@ -156,7 +160,7 @@ int main(int argc, char **argv)
     SbViewportRegion vp(W, H);
     SoOffscreenRenderer renderer(vp);
     renderer.setComponents(SoOffscreenRenderer::RGB);
-    renderer.setBackgroundColor(SbColor(0.05f, 0.05f, 0.1f));
+    renderer.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
 
     bool ok = false;
     if (renderer.render(root)) {

@@ -544,7 +544,9 @@ SoShape::shouldGLRender(SoGLRenderAction * action)
 
   if (PRIVATE(this)->bboxcache && !state->isCacheOpen() && !SoCullElement::completelyInside(state)) {
     if (PRIVATE(this)->bboxcache->isValid(state)) {
-      if (SoCullElement::cullTest(state, PRIVATE(this)->bboxcache->getProjectedBox())) {
+      SbBox3f projbox = PRIVATE(this)->bboxcache->getProjectedBox();
+      SbBool culled = SoCullElement::cullTest(state, projbox);
+      if (culled) {
         return FALSE;
       }
     }

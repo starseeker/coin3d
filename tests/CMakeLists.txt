@@ -100,6 +100,13 @@ add_subdirectory(io)
 add_subdirectory(sensors)
 add_subdirectory(engines)
 add_subdirectory(rendering)
+add_subdirectory(draggers)
+add_subdirectory(manips)
+add_subdirectory(events)
+add_subdirectory(projectors)
+add_subdirectory(errors)
+add_subdirectory(caches)
+add_subdirectory(misc)
 
 # -----------------------------------------------------------------------
 # Image comparison utilities
@@ -113,7 +120,19 @@ set(IMAGE_COMPARISON_TEST_TIMEOUT   "30"  CACHE STRING "Per-test timeout in seco
 set(CONTROL_IMAGES_DIR "${CMAKE_CURRENT_SOURCE_DIR}/control_images")
 
 # image_comparator: standalone tool for comparing SGI RGB / PNG images
-find_package(PNG QUIET)
+# Prefer the bundled external/libpng (built as png_static in the parent
+# project) over any system libpng so that builds without libpng-dev still
+# produce a fully-featured comparator.
+if(TARGET png_static)
+    set(PNG_FOUND TRUE)
+    set(PNG_INCLUDE_DIRS
+          "${CMAKE_SOURCE_DIR}/external/libpng"
+          "${CMAKE_BINARY_DIR}/libpng_build")
+    set(PNG_LIBRARIES png_static)
+    message(STATUS "Tests: using bundled png_static for image tools")
+else()
+    find_package(PNG QUIET)
+endif()
 add_executable(image_comparator utils/image_comparator.cpp)
 if(PNG_FOUND)
     target_compile_definitions(image_comparator PRIVATE HAVE_LIBPNG)

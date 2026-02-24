@@ -18,6 +18,34 @@ if(USE_PTHREAD)
 endif()
 add_test(NAME test_sb_types COMMAND test_sb_types)
 
+add_executable(test_sbdpmatrix_full test_sbdpmatrix_full.cpp)
+target_link_libraries(test_sbdpmatrix_full simple_test_utils Coin ${COIN_TARGET_LINK_LIBRARIES})
+target_include_directories(test_sbdpmatrix_full PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/..
+    ${PROJECT_SOURCE_DIR}/include
+    ${PROJECT_SOURCE_DIR}/include/Inventor/annex
+    ${PROJECT_BINARY_DIR}/include
+    ${COIN_TARGET_INCLUDE_DIRECTORIES}
+)
+if(USE_PTHREAD)
+    target_link_libraries(test_sbdpmatrix_full pthread)
+endif()
+add_test(NAME test_sbdpmatrix_full COMMAND test_sbdpmatrix_full)
+
+add_executable(test_base_extras test_base_extras.cpp)
+target_link_libraries(test_base_extras simple_test_utils Coin ${COIN_TARGET_LINK_LIBRARIES})
+target_include_directories(test_base_extras PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/..
+    ${PROJECT_SOURCE_DIR}/include
+    ${PROJECT_SOURCE_DIR}/include/Inventor/annex
+    ${PROJECT_BINARY_DIR}/include
+    ${COIN_TARGET_INCLUDE_DIRECTORIES}
+)
+if(USE_PTHREAD)
+    target_link_libraries(test_base_extras pthread)
+endif()
+add_test(NAME test_base_extras COMMAND test_base_extras)
+
 include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG(-Wtautological-compare _BASE_DISABLE_TAUTCOMP)
 if(_BASE_DISABLE_TAUTCOMP)

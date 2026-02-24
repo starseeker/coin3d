@@ -402,23 +402,25 @@ The HTML report breaks coverage down by:
 - **Function coverage** – which functions were called
 - **Branch coverage** – which conditional branches (if/else, switch cases) were taken
 
-### Baseline metrics (captured 2026-02-23)
+### Baseline metrics (captured 2026-02-24)
 
 | Metric | Hit | Total | Percentage |
 |--------|----:|------:|----------:|
-| Lines (`src/` only) | 27,572 | 87,284 | **31.6 %** |
-| Functions (`src/` only) | 6,560 | 16,102 | **40.7 %** |
-| Lines (all project files) | 36,056 | 97,507 | **37.0 %** |
+| Lines (`src/` only) | 35,877 | 87,303 | **41.1 %** |
+| Functions (`src/` only) | 7,603 | 16,102 | **47.2 %** |
+| Lines (all project files) | 46,681 | 99,374 | **47.0 %** |
+
+*Previous baseline (2026-02-23): 31.6 % lines / 40.7 % functions (`src/` only).*
 
 See `COVERAGE_PLAN.md` for per-subsystem breakdown, the top files by uncovered lines,
 and a prioritised plan to reach ≥ 70 % line coverage.
 
 Focus areas for improving coverage:
-- `src/draggers/` (17 %) – constructor/destructor paths require a rendering context
-- `src/manips/` (4 %) – manipulator state-machine code; built on draggers
-- `src/shadows/` (11 %) – `SoShadowGroup` render path
-- `src/shapenodes/` (30 %) – `SoIndexedFaceSet`, `SoIndexedLineSet`, `SoQuadMesh` render paths
-- `src/rendering/` (31 %) – `SoGLRenderAction` and `SoOffscreenRenderer` edge cases
+- `src/manips/` (26 %) – manipulator state-machine code; built on draggers
+- `src/geo/` (12 %) – geo coordinate nodes
+- `src/rendering/` (39 %) – `SoGLRenderAction` and `SoOffscreenRenderer` edge cases
+- `src/base/` (34 %) – matrix math and other base types
+- `src/fonts/` (34 %) – font rasterizer (SoText2/SoText3 paths)
 
 ---
 
@@ -450,6 +452,6 @@ Focus areas for improving coverage:
 3. **SoText2 / SoText3 visual rendering** – defer until font strategy is decided
    (vanilla uses FreeType; Obol uses Profont – direct pixel comparison is impractical
    without a shared font baseline)
-4. **lcov baseline** – run `cmake --build <dir> --target coverage` against the current test suite and commit the baseline coverage percentage to this file
+4. ~~**lcov baseline**~~ – ✅ Done (see baseline metrics above; re-baselined 2026-02-24)
 5. **Increase rendering coverage** – add tests for `SoQuadMesh`, `SoTriangleStripSet`, `SoLOD`, `SoEnvironment` (fog), `SoAnnotation`, `SoArray`/`SoMultipleCopy`
 

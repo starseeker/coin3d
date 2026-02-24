@@ -490,6 +490,28 @@ if(COIN_BUILD_EXAMPLES)
 endif()
 
 if(COIN_BUILD_TESTS)
+  # Build libpng from the bundled submodule so that rgb_to_png and
+  # image_comparator can write / compare PNG control images without
+  # requiring a system-installed libpng-dev package.
+  if(EXISTS "${PROJECT_SOURCE_DIR}/external/libpng/CMakeLists.txt")
+    set(PNG_SHARED      OFF CACHE BOOL "Build libpng shared library" FORCE)
+    set(PNG_STATIC      ON  CACHE BOOL "Build libpng static library" FORCE)
+    set(PNG_TESTS       OFF CACHE BOOL "Build libpng tests"          FORCE)
+    set(PNG_TOOLS       OFF CACHE BOOL "Build libpng tools"          FORCE)
+    set(PNG_EXECUTABLES OFF CACHE BOOL "Build libpng executables"    FORCE)
+    add_subdirectory("${PROJECT_SOURCE_DIR}/external/libpng" libpng_build
+                     EXCLUDE_FROM_ALL)
+    # Expose the built library to the tests subdirectory via standard
+    # find_package(PNG) variables so no changes are needed in tests/.
+    set(PNG_FOUND        TRUE  CACHE BOOL   "" FORCE)
+    set(PNG_INCLUDE_DIRS
+          "${PROJECT_SOURCE_DIR}/external/libpng"
+          "${CMAKE_BINARY_DIR}/libpng_build"
+        CACHE STRING "" FORCE)
+    set(PNG_LIBRARIES    png_static CACHE STRING "" FORCE)
+    message(STATUS "Using bundled libpng from external/libpng")
+  endif()
+
   enable_testing()
   add_subdirectory(tests)
   add_subdirectory(Mentor)

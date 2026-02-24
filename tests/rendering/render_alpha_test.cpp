@@ -72,7 +72,7 @@ int main(int argc, char **argv)
 
     SbViewportRegion vp(W, H);
     SoOffscreenRenderer renderer(vp);
-    renderer.setComponents(SoOffscreenRenderer::RGB_TRANSPARENCY);
+    renderer.setComponents(SoOffscreenRenderer::RGB);
     renderer.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
 
     // -----------------------------------------------------------------------
