@@ -48,7 +48,7 @@
   \sa SoViewingMatrixElement
 */
 
-#include "coindefs.h"
+#include "config.h"
 #include "SbBasicP.h"
 
 #include <Inventor/elements/SoModelMatrixElement.h>

@@ -103,9 +103,7 @@
    problems suspected to be caused by mismatches.
 */
 
-#ifdef HAVE_CONFIG_H
 #include "config.h"
-#endif /* HAVE_CONFIG_H */
 
 #include <cassert>
 #include <string>
@@ -153,7 +151,7 @@
 #endif // COIN_MACOS_10
 
 #include "errors/CoinInternalError.h"
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 #include <Inventor/system/gl.h> /* for glGetString */
 #include <Inventor/SbString.h>
 

@@ -48,12 +48,10 @@
 #include <cstring>
 #include <cstdlib>
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif // HAVE_CONFIG_H
+#include "config.h"
 
 #include "glue/glp.h"
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 #include <Inventor/SbBox2f.h>
 #include <Inventor/SbClip.h>
 #include <Inventor/SbPlane.h>
@@ -114,7 +112,6 @@
 #include "threads/threadsutilp.h"
 
 #include "rendering/SoVBO.h"
-#include "coindefs.h" // COIN_OBSOLETED()
 
 // SoShape.cpp grew too big, so I had to move some code into new
 // files. pederb, 2001-07-18

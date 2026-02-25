@@ -202,7 +202,7 @@
 */
 
 #include <Inventor/nodes/SoShaderProgram.h>
-#include "coindefs.h"
+#include "config.h"
 
 #include <cassert>
 

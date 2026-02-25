@@ -192,6 +192,9 @@ static void setupCamera(SoSeparator* root, float backoff = 1.4f)
             SoPerspectiveCamera* cam = static_cast<SoPerspectiveCamera*>(child);
             cam->viewAll(root, vp);
             cam->position.setValue(cam->position.getValue() * backoff);
+            // Extend the far clipping plane so the full scene depth remains
+            // visible after moving the camera back.
+            cam->farDistance.setValue(cam->farDistance.getValue() * backoff * 1.5f);
             return;
         }
     }
@@ -288,6 +291,15 @@ int main(int argc, char** argv)
         shapeSep->addChild(shape);
         root->addChild(shapeSep);
 
+        // Set up camera based on geometry only, BEFORE adding the selection
+        // display so that SoText2 labels cannot skew viewAll.
+        setupCamera(root, 1.7f);
+        SoCamera* cam2 = findCamera(root);
+        if (cam2) {
+            // Orbit: 35° azimuth (look from right-front), 20° elevation
+            rotateCamera(cam2, 0.61f, 0.35f);
+        }
+
         // Selection-display overlay (sphere markers + text labels at handles)
         SoSeparator* selDisp = shape->buildSelectionDisplay();
         if (selDisp) {
@@ -298,15 +310,6 @@ int main(int argc, char** argv)
             selSep->addChild(selCol);
             selSep->addChild(selDisp);
             root->addChild(selSep);
-        }
-
-        // Set up camera then rotate to a 3/4-view so front-bottom handles
-        // aren't hidden behind the solid cube body.
-        setupCamera(root, 1.7f);
-        SoCamera* cam2 = findCamera(root);
-        if (cam2) {
-            // Orbit: 35° azimuth (look from right-front), 20° elevation
-            rotateCamera(cam2, 0.61f, 0.35f);
         }
 
         char out[1024];
@@ -347,6 +350,15 @@ int main(int argc, char** argv)
         shapeSep->addChild(shape);
         root->addChild(shapeSep);
 
+        // Set up camera based on geometry only, BEFORE adding the selection
+        // display so that SoText2 labels cannot skew viewAll.
+        setupCamera(root, 1.6f);
+        // Rotate to show the dragged corner (v0 at -2,-1,-1) prominently
+        SoCamera* cam3 = findCamera(root);
+        if (cam3) {
+            rotateCamera(cam3, -0.4f, 0.25f);  // orbit: look from left-front slightly above
+        }
+
         // Overlay handle spheres on edited shape
         SoSeparator* selDisp = shape->buildSelectionDisplay();
         if (selDisp) {
@@ -356,13 +368,6 @@ int main(int argc, char** argv)
             selSep->addChild(selCol);
             selSep->addChild(selDisp);
             root->addChild(selSep);
-        }
-
-        setupCamera(root, 1.6f);
-        // Rotate to show the dragged corner (v0 at -2,-1,-1) prominently
-        SoCamera* cam3 = findCamera(root);
-        if (cam3) {
-            rotateCamera(cam3, -0.4f, 0.25f);  // orbit: look from left-front slightly above
         }
 
         char out[1024];
@@ -404,7 +409,9 @@ int main(int argc, char** argv)
             root->addChild(sep);
         }
 
-        // -- Centre: edited solid + handle display --
+        // -- Centre: edited solid (geometry only, no selDisp yet) --
+        SoSeparator* centerSep = nullptr;
+        SoProceduralShape* centerShape = nullptr;
         {
             SoSeparator* sep = new SoSeparator;
             SoTranslation* t = new SoTranslation;
@@ -428,16 +435,8 @@ int main(int argc, char** argv)
             SbString json = shape->getCurrentParamsJSON();
             printf("Edit cycle getCurrentParamsJSON: %s\n", json.getString());
 
-            // Handle-display overlay
-            SoSeparator* selDisp = shape->buildSelectionDisplay();
-            if (selDisp) {
-                SoSeparator* selSep = new SoSeparator;
-                SoBaseColor* selCol = new SoBaseColor;
-                selCol->rgb.setValue(1.0f, 0.95f, 0.0f);
-                selSep->addChild(selCol);
-                selSep->addChild(selDisp);
-                sep->addChild(selSep);
-            }
+            centerSep   = sep;
+            centerShape = shape;
             root->addChild(sep);
         }
 
@@ -469,9 +468,28 @@ int main(int argc, char** argv)
             root->addChild(sep);
         }
 
+        // Set up the camera based on the three geometry panels only (before
+        // adding any SoText2 labels that could skew viewAll).  Extend the far
+        // distance to account for moving the camera back, preventing the
+        // rightmost wireframe panel from being clipped by the far plane.
         SbViewportRegion vp(DEFAULT_WIDTH, DEFAULT_HEIGHT);
         cam->viewAll(root, vp);
         cam->position.setValue(cam->position.getValue() * 1.4f);
+        cam->farDistance.setValue(cam->farDistance.getValue() * 2.5f);
+
+        // Add handle-display overlay to the centre panel after the camera is
+        // already positioned so SoText2 labels don't affect viewAll above.
+        if (centerShape) {
+            SoSeparator* selDisp = centerShape->buildSelectionDisplay();
+            if (selDisp) {
+                SoSeparator* selSep = new SoSeparator;
+                SoBaseColor* selCol = new SoBaseColor;
+                selCol->rgb.setValue(1.0f, 0.95f, 0.0f);
+                selSep->addChild(selCol);
+                selSep->addChild(selDisp);
+                centerSep->addChild(selSep);
+            }
+        }
 
         char out[1024];
         snprintf(out, sizeof(out), "%s.rgb", base);

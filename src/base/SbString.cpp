@@ -56,7 +56,7 @@
 #include <locale>
 
 #include <Inventor/lists/SbList.h>
-#include "coindefs.h"
+#include "config.h"
 
 // Helper function for find() and findAll().
 static void

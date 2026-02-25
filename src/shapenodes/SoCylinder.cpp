@@ -91,7 +91,7 @@
 */
 
 #include <Inventor/nodes/SoCylinder.h>
-#include "coindefs.h"
+#include "config.h"
 
 #include <cmath>
 

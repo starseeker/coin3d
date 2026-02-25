@@ -50,14 +50,11 @@
 // *************************************************************************
 
 #include <Inventor/nodes/SoTextureCoordinateReflectionMap.h>
-#include "coindefs.h"
+#include "config.h"
 
 #include <cstdlib>
 #include <cfloat>
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif // HAVE_CONFIG_H
 
 #include <Inventor/SbVec3f.h>
 #include <Inventor/actions/SoGLRenderAction.h>
@@ -68,7 +65,7 @@
 #include <Inventor/system/gl.h>
 
 #include "nodes/SoSubNodeP.h"
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 
 // *************************************************************************
 

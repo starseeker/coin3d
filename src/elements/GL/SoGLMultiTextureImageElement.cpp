@@ -55,16 +55,14 @@
 #include <Inventor/misc/SoGLImage.h>
 #include <Inventor/misc/SoGLBigImage.h>
 #include <Inventor/SbImage.h>
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 #include <Inventor/lists/SbList.h>
 
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/system/gl.h>
 #include "glue/glp.h"
 
-#ifdef HAVE_CONFIG_H
 #include "config.h"
-#endif // HAVE_CONFIG_H
 
 #include "shaders/SoGLShaderProgram.h"
 #include "rendering/SoGL.h" // GL wrapper.

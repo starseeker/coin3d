@@ -82,10 +82,9 @@
 #include <Inventor/fields/SoSFTime.h>
 #include <Inventor/SoDB.h>
 
-#include "coindefs.h"
-#include "C/CoinTidbits.h"
+#include "config.h"
+#include "CoinTidbits.h"
 
-#include "coindefs.h"
 
 /* Legacy MSVC6 workaround removed - not needed for C++17 */
 

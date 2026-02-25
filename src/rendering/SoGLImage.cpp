@@ -155,12 +155,10 @@
 #include <cstring>
 #include <utility>
 
-#ifdef HAVE_CONFIG_H
 #include "config.h"
-#endif // HAVE_CONFIG_H
 
 #include "glue/glp.h"
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 #include <Inventor/SbImage.h>
 #include <Inventor/actions/SoGLRenderAction.h>
 #include <Inventor/elements/SoGLCacheContextElement.h>
@@ -187,7 +185,6 @@
 #include "base/SbImageFormatHandler.h"
 #include "base/SbJpegImageHandler.h"
 #include "threads/threadsutilp.h"
-#include "coindefs.h"
 #include "misc/SoEnvironment.h"
 
 /* Legacy MSVC6 workaround removed - not needed for C++17 */

@@ -177,7 +177,7 @@
 // *************************************************************************
 
 #include <Inventor/annex/HardCopy/SoVectorizeAction.h>
-#include "coindefs.h"
+#include "config.h"
 
 #include <Inventor/SbViewportRegion.h>
 

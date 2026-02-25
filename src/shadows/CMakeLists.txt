@@ -14,7 +14,7 @@ macro(glsl2c _input _postfix)
   STRING(REGEX REPLACE "\r?\n" "\\\\n\"\n  \"" COIN_STR_SOURCE_CODE "${f2}")
   # Remove the src/shadows prefix from the path since we're already in that directory
   string(REPLACE "src/shadows/" "" _relative_path "${_path}")
-  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/glsl2ctemplate.cmake.in "${CMAKE_CURRENT_BINARY_DIR}/${_relative_path}/${_basename}.h")
+  configure_file(${PROJECT_SOURCE_DIR}/cmake/strfytemplate.cmake.in "${CMAKE_CURRENT_BINARY_DIR}/${_relative_path}/${_basename}.h")
 endmacro()
 
 # process shader files in src/shadows

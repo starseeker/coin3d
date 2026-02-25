@@ -62,7 +62,7 @@
 #include <Inventor/errors/SoDebugError.h>
 #endif // COIN_DEBUG
 
-#include <coindefs.h> // COIN_OBSOLETED()
+#include "config.h" // COIN_OBSOLETED()
 #include <cassert>
 
 /*!

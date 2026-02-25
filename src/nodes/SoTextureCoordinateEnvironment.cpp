@@ -74,9 +74,7 @@
 #include <cstdlib>
 #include <cfloat>
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif // HAVE_CONFIG_H
+#include "config.h"
 
 #include <Inventor/SbVec3f.h>
 #include <Inventor/actions/SoGLRenderAction.h>
@@ -87,7 +85,7 @@
 #include <Inventor/system/gl.h>
 #include "glue/glp.h"
 
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 #include "nodes/SoSubNodeP.h"
 
 // *************************************************************************

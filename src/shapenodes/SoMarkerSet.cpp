@@ -71,9 +71,7 @@
 #include <cmath>
 #include <cstring>
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif // HAVE_CONFIG_H
+#include "config.h"
 
 #include <Inventor/misc/SoState.h>
 #include <Inventor/SoPrimitiveVertex.h>
@@ -98,8 +96,7 @@
 #include <Inventor/errors/SoDebugError.h>
 #endif // COIN_DEBUG
 
-#include "coindefs.h" // COIN_OBSOLETED
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 #include "nodes/SoSubNodeP.h"
 
 /*!

@@ -45,7 +45,7 @@
 */
 
 #include <Inventor/annex/Profiler/SbProfilingData.h>
-#include "coindefs.h"
+#include "config.h"
 
 #include <algorithm> // std::reverse
 #include <cstring>

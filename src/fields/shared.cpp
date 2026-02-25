@@ -85,7 +85,7 @@
 #include <Inventor/fields/SoField.h>
 #include <Inventor/nodes/SoNode.h>
 
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 #include "SbBasicP.h"
 
 // *************************************************************************

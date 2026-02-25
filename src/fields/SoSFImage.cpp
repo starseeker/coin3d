@@ -117,7 +117,7 @@
 
 #include <Inventor/fields/SoSFImage.h>
 
-#include "coindefs.h"
+#include "config.h"
 
 #include <cstdlib> // free()
 

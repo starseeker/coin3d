@@ -61,7 +61,7 @@
 #include <Inventor/SbVec2f.h>
 #include <Inventor/SbPlane.h>
 #include <cassert>
-#include "coindefs.h"
+#include "config.h"
 
 /*!
   \fn SbProjector::~SbProjector()

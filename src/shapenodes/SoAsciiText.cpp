@@ -138,14 +138,11 @@
 // *************************************************************************
 
 #include <Inventor/nodes/SoAsciiText.h>
-#include "coindefs.h"
+#include "config.h"
 
 #include <cstring>
 #include <cfloat> // FLT_MIN
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif // HAVE_CONFIG_H
 
 #include "../base/SbUtf8.h" // Modern UTF-8 support
 

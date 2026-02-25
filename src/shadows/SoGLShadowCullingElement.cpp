@@ -44,7 +44,7 @@
 #include <Inventor/annex/FXViz/elements/SoGLShadowCullingElement.h>
 #include <cassert>
 #include <Inventor/system/gl.h>
-#include "coindefs.h"
+#include "config.h"
 
 /*!
   \fn SoGLShadowCullingElement::Mode

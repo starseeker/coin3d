@@ -31,7 +31,7 @@
 \**************************************************************************/
 
 #include <Inventor/annex/Profiler/utils/SoProfilingReportGenerator.h>
-#include "coindefs.h"
+#include "config.h"
 
 #include <cassert>
 #include <cstdlib>
@@ -43,7 +43,7 @@
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/threads/SbMutex.h>
 #include <Inventor/annex/Profiler/SbProfilingData.h>
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 
 // *************************************************************************
 

@@ -44,7 +44,7 @@
 #include <Inventor/lists/SoPathList.h>
 #include <Inventor/SoPath.h>
 #include <Inventor/SoFullPath.h>
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 #include <cassert>
 
 

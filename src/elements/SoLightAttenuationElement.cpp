@@ -40,7 +40,7 @@
 */
 
 #include "SbBasicP.h"
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 
 #include <Inventor/elements/SoLightAttenuationElement.h>
 

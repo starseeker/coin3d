@@ -39,9 +39,7 @@
 
 #include <Inventor/caches/SoGLCacheList.h>
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif // HAVE_CONFIG_H
+#include "config.h"
 
 #include "misc/SoEnvironment.h"
 #include <Inventor/actions/SoGLRenderAction.h>
@@ -55,7 +53,7 @@
 #include <Inventor/misc/SoContextHandler.h>
 #include <Inventor/system/gl.h>
 
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 #include "glue/glp.h"
 #include "rendering/SoGL.h"
 

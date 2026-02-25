@@ -67,7 +67,7 @@
 */
 
 #include <Inventor/nodes/SoCube.h>
-#include "coindefs.h"
+#include "config.h"
 
 #include <Inventor/SbPlane.h>
 #include <Inventor/SoPickedPoint.h>

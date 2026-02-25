@@ -78,7 +78,7 @@
 
 #include "threads/threadsutilp.h"
 #include "io/SoInputP.h"
-#include "coindefs.h" // COIN_STUB()
+#include "config.h" // COIN_STUB()
 
 // *************************************************************************
 

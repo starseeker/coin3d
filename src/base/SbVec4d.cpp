@@ -44,7 +44,7 @@
 #include <Inventor/errors/SoDebugError.h>
 #endif // COIN_DEBUG
 
-#include "C/CoinTidbits.h" // coin_debug_normalize()
+#include "CoinTidbits.h" // coin_debug_normalize()
 
 /*!
   \class SbVec4d SbVec4d.h Inventor/SbVec4d.h

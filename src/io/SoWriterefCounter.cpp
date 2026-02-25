@@ -34,7 +34,7 @@
 
 #include <cassert>
 
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 #include <Inventor/SoOutput.h>
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/misc/SoBase.h>

@@ -40,7 +40,7 @@
 
 #include <Inventor/elements/SoTextureOverrideElement.h>
 
-#include "coindefs.h"
+#include "config.h"
 #include "SbBasicP.h"
 
 #include <cassert>

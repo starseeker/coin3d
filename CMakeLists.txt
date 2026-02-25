@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16...3.31)
+cmake_minimum_required(VERSION 3.16)
 
 # Modern CMake project definition with metadata
 project(Coin
@@ -97,7 +97,7 @@ option(COIN_THREADSAFE "Enable thread safe render traversals" ON)
 option(HAVE_NODEKITS "Enable NodeKit support" ON)
 option(HAVE_DRAGGERS "Enable Dragger support" ON)
 option(HAVE_MANIPULATORS "Enable Manipulator support" ON)
-option(COIN_HARDCOPY "Enable PostScript hardcopy output subsystem" ON)
+option(COIN_PROFILING "Enable profiling subsystem" OFF)
 
 # External dependencies
 option(USE_EXCEPTIONS "Compile with exceptions (g++ only)" ON)
@@ -224,17 +224,6 @@ foreach(_config ${CMAKE_CONFIGURATION_TYPES})
   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${_config} "${CMAKE_BINARY_DIR}/bin")
 endforeach()
 
-# Modern fixed-width integer types (C++17)
-set(COIN_INT8_T "int8_t")
-set(COIN_UINT8_T "uint8_t")
-set(COIN_INT16_T "int16_t")
-set(COIN_UINT16_T "uint16_t")
-set(COIN_INT32_T "int32_t")
-set(COIN_UINT32_T "uint32_t")
-set(COIN_INT64_T "int64_t")
-set(COIN_UINT64_T "uint64_t")
-set(COIN_INTPTR_T "intptr_t")
-set(COIN_UINTPTR_T "uintptr_t")
 
 # Platform-specific compiler settings
 if(MSVC)
@@ -389,24 +378,10 @@ else()
   endif()
 endif()
 
-# Essential function checks only (simplified for modern C++)
-check_symbol_exists(va_copy stdarg.h HAVE_VA_COPY_MACRO)
-check_symbol_exists(memmove string.h HAVE_MEMMOVE)
-check_symbol_exists(fstat "sys/stat.h;sys/types.h" HAVE_FSTAT)
-if(NOT HAVE_FSTAT)
-  check_symbol_exists(_fstat "sys/stat.h;sys/types.h" HAVE__FSTAT)
-endif()
+# getcwd detection (POSIX vs Windows)
 check_symbol_exists(getcwd unistd.h HAVE_GETCWD)
 if(NOT HAVE_GETCWD)
   check_symbol_exists(_getcwd direct.h HAVE__GETCWD)
-endif()
-
-# Math functions (C++17 should provide these, but check for fallbacks)
-check_symbol_exists(isinf math.h HAVE_ISINF)
-check_symbol_exists(isnan math.h HAVE_ISNAN)
-check_symbol_exists(finite math.h HAVE_FINITE)
-if(NOT HAVE_FINITE)
-  check_symbol_exists(_finite float.h HAVE__FINITE)
 endif()
 
 # C++ function name support

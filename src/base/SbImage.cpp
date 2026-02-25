@@ -71,11 +71,9 @@
 #include <Inventor/lists/SbStringList.h>
 #include <Inventor/lists/SbList.h>
 #include <Inventor/errors/SoDebugError.h>
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif // HAVE_CONFIG_H
+#include "config.h"
 
 #ifdef COIN_THREADSAFE
 #include <Inventor/threads/SbRWMutex.h>
@@ -83,7 +81,6 @@
 
 #include "SbImageFormatHandler.h"
 #include "SbJpegImageHandler.h"
-#include "coindefs.h"
 
 #ifndef COIN_WORKAROUND_NO_USING_STD_FUNCS
 using std::memcmp;

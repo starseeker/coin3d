@@ -141,7 +141,7 @@
 #include <Inventor/misc/SoState.h>
 #include <Inventor/SbColor4f.h>
 #include "glue/glp.h"
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 
 #if COIN_DEBUG
 #include <Inventor/errors/SoDebugError.h>

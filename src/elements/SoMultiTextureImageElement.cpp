@@ -43,7 +43,7 @@
   \since Coin 2.2
 */
 
-#include "coindefs.h"
+#include "config.h"
 #include "SbBasicP.h"
 
 #include <Inventor/elements/SoMultiTextureImageElement.h>

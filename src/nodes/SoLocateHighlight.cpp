@@ -58,9 +58,7 @@
 
 #include <Inventor/nodes/SoLocateHighlight.h>
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif // HAVE_CONFIG_H
+#include "config.h"
 
 #include <Inventor/elements/SoOverrideElement.h>
 #include <Inventor/elements/SoLazyElement.h>
@@ -76,7 +74,7 @@
 #include <Inventor/threads/SbStorage.h>
 #endif // COIN_THREADSAFE
 
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 #include "nodes/SoSubNodeP.h"
 
 // *************************************************************************

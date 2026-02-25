@@ -55,7 +55,7 @@
 
 #include <Inventor/engines/SoOutputData.h>
 
-#include "coindefs.h" // COIN_STUB()
+#include "config.h" // COIN_STUB()
 #include "SbBasicP.h"
 
 #include <Inventor/engines/SoEngine.h>

@@ -12,7 +12,7 @@ macro(strfy _input _postfix)
   STRING(REGEX REPLACE "\\\\" "\\\\\\\\" f1 "${f0}")
   STRING(REGEX REPLACE "\"" "\\\\\"" f2 "${f1}")
   STRING(REGEX REPLACE "\r?\n" "\\\\n\"\n  \"" COIN_STR_SOURCE_CODE "${f2}")
-  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/strfytemplate.cmake.in "${CMAKE_CURRENT_BINARY_DIR}/${_path}/${_basename}.h")
+  configure_file(${PROJECT_SOURCE_DIR}/cmake/strfytemplate.cmake.in "${CMAKE_CURRENT_BINARY_DIR}/${_path}/${_basename}.h")
 endmacro()
 
 # Process dragger .iv files to generate header files

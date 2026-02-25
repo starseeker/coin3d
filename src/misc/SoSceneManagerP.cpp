@@ -31,11 +31,8 @@
 \**************************************************************************/
 
 #include "SoSceneManagerP.h"
-#include "coindefs.h"
-
-#ifdef HAVE_CONFIG_H
 #include "config.h"
-#endif // HAVE_CONFIG_H
+
 
 #include <Inventor/SoDB.h>
 #include <Inventor/system/gl.h>

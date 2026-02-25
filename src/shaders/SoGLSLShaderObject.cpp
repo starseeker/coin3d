@@ -31,7 +31,7 @@
 \**************************************************************************/
 
 #include "shaders/SoGLSLShaderObject.h"
-#include "coindefs.h"
+#include "config.h"
 
 #include <cassert>
 #include <cstdio>

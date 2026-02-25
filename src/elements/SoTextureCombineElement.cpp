@@ -53,7 +53,7 @@
 #include "glue/glp.h"
 #include <Inventor/system/gl.h>
 
-#include "coindefs.h"
+#include "config.h"
 #include "SbBasicP.h"
 
 #ifndef COIN_WORKAROUND_NO_USING_STD_FUNCS

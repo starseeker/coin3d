@@ -54,7 +54,7 @@
 // *************************************************************************
 
 #include <Inventor/nodes/SoBlinker.h>
-#include "coindefs.h"
+#include "config.h"
 
 #include <Inventor/actions/SoWriteAction.h>
 #include <Inventor/sensors/SoFieldSensor.h>

@@ -54,13 +54,12 @@
 */
 
 #include "SbBasicP.h"
-#include "coindefs.h"
+#include "config.h"
 
 #include <Inventor/elements/SoMultiTextureEnabledElement.h>
 #include <Inventor/elements/SoShapeStyleElement.h>
 #include <Inventor/lists/SbList.h>
 
-#include "coindefs.h"
 
 class SoMultiTextureEnabledElementP {
  public:

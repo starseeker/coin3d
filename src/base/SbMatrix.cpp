@@ -132,7 +132,7 @@
 #include <Inventor/errors/SoDebugError.h>
 #endif // COIN_DEBUG
 
-#include "coindefs.h" // COIN_STUB()
+#include "config.h" // COIN_STUB()
 
 #ifndef COIN_WORKAROUND_NO_USING_STD_FUNCS
 using std::memmove;

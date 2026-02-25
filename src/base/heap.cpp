@@ -42,7 +42,7 @@
 
 #include "base/dict.h"
 #include "base/heapp.h"
-#include "coindefs.h"
+#include "config.h"
 
 // Modern STL-based implementation that maintains C interface compatibility
 struct cc_heap {

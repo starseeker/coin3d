@@ -98,14 +98,11 @@
 */
 
 #include <Inventor/nodes/SoText2.h>
-#include "coindefs.h"
+#include "config.h"
 
 #include <climits>
 #include <cstring>
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif // HAVE_CONFIG_H
 
 #include "../base/SbUtf8.h" // Modern UTF-8 support
 
@@ -214,6 +211,23 @@
 
   Default value is SoText2::LEFT.
 */
+/*!
+  \var SoSFBool SoText2::depthTest
+
+  Controls whether the text pixels are tested against the depth buffer.
+
+  When TRUE (the default), SoText2 follows the same depth-buffer rules as
+  other geometry — text will be hidden by closer objects, matching upstream
+  Coin behaviour.
+
+  Set to FALSE to render the text always on top of all previously drawn 3D
+  geometry, regardless of depth.  This matches the classic SGI OpenInventor
+  2.1 behaviour and is useful for annotation labels that must always be
+  readable (e.g. interactive handle markers produced by
+  SoProceduralShape::buildSelectionDisplay()).
+
+  Default value is TRUE.
+*/
 
 class SoText2P {
 public:
@@ -293,6 +307,7 @@ SoText2::SoText2(void)
   SO_NODE_ADD_FIELD(string, (""));
   SO_NODE_ADD_FIELD(spacing, (1.0f));
   SO_NODE_ADD_FIELD(justification, (SoText2::LEFT));
+  SO_NODE_ADD_FIELD(depthTest, (TRUE));
 
   SO_NODE_DEFINE_ENUM_VALUE(Justification, LEFT);
   SO_NODE_DEFINE_ENUM_VALUE(Justification, RIGHT);
@@ -424,6 +439,10 @@ SoText2::GLRender(SoGLRenderAction * action)
 
     glPushAttrib(GL_ENABLE_BIT | GL_PIXEL_MODE_BIT | GL_COLOR_BUFFER_BIT);
     glPushClientAttrib(GL_CLIENT_PIXEL_STORE_BIT);
+
+    // Optionally draw on top of all geometry, regardless of depth.
+    // glPushAttrib(GL_ENABLE_BIT) above will restore GL_DEPTH_TEST on pop.
+    if (!this->depthTest.getValue()) glDisable(GL_DEPTH_TEST);
 
     SbBool drawPixelBuffer = FALSE;
 

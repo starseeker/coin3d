@@ -32,7 +32,7 @@
 
 #include "SoGLARBShaderParameter.h"
 #include "SoGLARBShaderObject.h"
-#include "coindefs.h"
+#include "config.h"
 
 #include <cstring>
 

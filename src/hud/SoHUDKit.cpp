@@ -47,14 +47,11 @@
   \ingroup coin_hud
 */
 
-#ifdef HAVE_CONFIG_H
 #include "config.h"
-#endif
 
 #ifdef HAVE_NODEKITS
 
 #include <Inventor/annex/HUD/nodekits/SoHUDKit.h>
-#include "coindefs.h"
 
 #include <Inventor/system/gl.h>
 #include <Inventor/SbVec2s.h>

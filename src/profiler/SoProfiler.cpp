@@ -65,9 +65,7 @@
 
 /**************************************************************************/
 
-#ifdef HAVE_CONFIG_H
 #include "config.h"
-#endif // HAVE_CONFIG_H
 
 #include <Inventor/annex/Profiler/SoProfiler.h>
 #include "profiler/SoProfilerP.h"
@@ -92,7 +90,7 @@
 #include <Inventor/annex/Profiler/nodekits/SoProfilerVisualizeKit.h>
 #endif // HAVE_NODEKITS
 
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 #include "misc/SoDBP.h"
 #include "misc/SoEnvironment.h"
 
@@ -226,7 +224,11 @@ SoProfiler::enable(SbBool enable)
 SbBool
 SoProfiler::isEnabled(void)
 {
+#ifdef COIN_PROFILING
   return profiler::enabled;
+#else
+  return FALSE;
+#endif
 }
 
 SbBool

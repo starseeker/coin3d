@@ -46,7 +46,7 @@
 #include <cassert>
 
 #include "SbBasicP.h"
-#include "coindefs.h"
+#include "config.h"
 
 // FIXME: make it possible to control this constant. pederb, 2005-01-10
 #define VERTEX_ARRAY_LIMIT 0.51f

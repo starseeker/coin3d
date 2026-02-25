@@ -79,7 +79,7 @@
 */
 
 #include <Inventor/nodes/SoSphere.h>
-#include "coindefs.h"
+#include "config.h"
 
 #include <Inventor/SbSphere.h>
 #include <Inventor/SoPickedPoint.h>

@@ -2,28 +2,30 @@
 
 ## Background
 
-Coin is an OpenGL-based, 3D graphics library that has its roots in the
-Open Inventor 2.1 API - a scene graph based,
-retained mode, rendering and model manipulation, C++ class library
-originally designed by SGI.  It quickly became the de facto standard
-graphics library for 3D visualization and visual simulation software
-in the scientific and engineering community after its release.
-Coin is based on this API, but was developed from
+Obol is an OpenGL-based, 3D graphics library that has its roots in the the Coin
+implementation of the Open Inventor 2.1 API.  Open Inventor was a scene graph
+based, retained mode, rendering and model manipulation API originally designed
+by SGI.  It quickly became the de facto standard graphics library for 3D
+visualization and visual simulation software in the scientific and engineering
+community after its release.  Coin implements this API, but was developed from
 scratch independently before SGI Open Inventor became open source.
 
-**Note**: This branch implements strict context management requiring a `ContextManager*` 
-parameter for `SoDB::init()`. See `docs/CONTEXT_MANAGEMENT_API.md` for details on the 
-new public API.
-
-We are actively working to remove the public C api and focus on just C++, and
-in some cases that will mean designing more "Idiomatic" C++ api for features
-previously handled via C (fonts being a case in point).  For some useful info
-about changes made so far, see the documents in the docs/ directory.
+**Note**: Obol does not maintain API compatibility with either Coin or Open
+Inventor 2.1 itself.  There are a number of changes, including the deliberate
+removal of all VRML/XML related code,, but the one users will see most
+immediately strict context management requirements - i.e you need a
+`ContextManager*` parameter for `SoDB::init()` - this isolates the platform
+specific elements of OpenGL interaction.  Most modern toolkits have their own
+solutions to such things, so Obol leverages what they do rather than being in
+the business of defining specific toolkit interactions.  For event driven
+interactions, the application needs to translate its specific events into
+Obol's terms.  See `docs/API_DIFFERENCES.md` for details on the new public API
+and how it differs from Coin's.
 
 The upstream sources we started from can be found in the "upstream" top level
 directory, if they need to be referred to when debugging changes
 
-## What is Obol?
+## Why call this Obol?
 
 The name Obol itself is a reference to an ancient small denomination Greek coin
 worth one sixth of a drachma - a play on the upstream Coin project

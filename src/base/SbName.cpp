@@ -68,13 +68,13 @@
 #include <cctype>
 #include <cstring>
 
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 #include <Inventor/SbString.h>
 
 
 #include "misc/SoUtilities.h"
 #include "base/namemap.h"
-#include "coindefs.h"
+#include "config.h"
 
 #ifndef COIN_WORKAROUND_NO_USING_STD_FUNCS
 using std::strlen;

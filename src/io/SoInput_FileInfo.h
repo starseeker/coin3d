@@ -44,14 +44,12 @@
 
 #include <Inventor/SoDB.h>
 #include <Inventor/SbName.h>
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 #include <Inventor/lists/SbList.h>
 #include "misc/SbHash.h"
 #include "misc/SoUtilities.h"
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif // HAVE_CONFIG_H
+#include "config.h"
 
 // Async I/O has been removed as part of C threading API cleanup.
 // The feature was not enabled by default and used the deprecated C threading API.

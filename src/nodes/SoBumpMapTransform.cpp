@@ -57,7 +57,7 @@
 */
 
 #include <Inventor/nodes/SoBumpMapTransform.h>
-#include "coindefs.h"
+#include "config.h"
 
 #include <Inventor/actions/SoGLRenderAction.h>
 #include <Inventor/actions/SoPickAction.h>

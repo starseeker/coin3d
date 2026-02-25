@@ -86,9 +86,7 @@
 
 #include <cassert>
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif // HAVE_CONFIG_H
+#include "config.h"
 
 // FIXME: find fd_set definition properly through something configure
 // based.  19991214 mortene.  (Note: fd_set is in time.h under AIX?)
@@ -108,7 +106,6 @@
 #endif // COIN_THREADSAFE
 
 #include "misc/SbHash.h"
-#include "coindefs.h" // COIN_STUB()
 
 // *************************************************************************
 

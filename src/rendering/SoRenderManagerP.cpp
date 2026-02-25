@@ -31,7 +31,7 @@
 \**************************************************************************/
 
 #include "SoRenderManagerP.h"
-#include "coindefs.h"
+#include "config.h"
 #include "misc/SoEnvironment.h"
 
 #include <limits>

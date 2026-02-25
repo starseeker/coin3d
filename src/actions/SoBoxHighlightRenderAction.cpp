@@ -65,9 +65,7 @@
 #include "actions/SoSubActionP.h"
 #include "SbBasicP.h"
 
-#ifdef HAVE_CONFIG_H
 #include "config.h"
-#endif // HAVE_CONFIG_H
 
 /*!
   \var SoBoxHighlightRenderAction::hlVisible
@@ -409,7 +407,7 @@ void
 SoBoxHighlightRenderAction::drawBoxes(SoPath * pathtothis, const SoPathList * pathlist)
 {
   int i;
-  int thispos = reclassify_cast<SoFullPath *>(pathtothis)->getLength()-1;
+  int thispos = static_cast<SoFullPath *>(pathtothis)->getLength()-1;
   assert(thispos >= 0);
   PRIVATE(this)->postprocpath->setHead(pathtothis->getHead()); // reset
 
@@ -426,7 +424,7 @@ SoBoxHighlightRenderAction::drawBoxes(SoPath * pathtothis, const SoPathList * pa
   thestate->push();
 
   for (i = 0; i < pathlist->getLength(); i++) {
-    SoFullPath * path = reclassify_cast<SoFullPath *>((*pathlist)[i]);
+    SoFullPath * path = static_cast<SoFullPath *>((*pathlist)[i]);
     PRIVATE(this)->postprocpath->append(path->getHead());
     for (int j = 1; j < path->getLength(); j++) {
       PRIVATE(this)->postprocpath->append(path->getIndex(j));

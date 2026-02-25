@@ -241,9 +241,7 @@
 
 #include <Inventor/actions/SoReorganizeAction.h>
 
-#ifdef HAVE_CONFIG_H
 #include "config.h"
-#endif // HAVE_CONFIG_H
 
 #include <cstring>
 #include <cassert>
@@ -271,7 +269,6 @@
 #include <Inventor/caches/SoPrimitiveVertexCache.h>
 #include <Inventor/SbColor4f.h>
 
-#include "coindefs.h" // COIN_STUB()
 #include "SbBasicP.h"
 #include "actions/SoSubActionP.h"
 
@@ -463,7 +460,7 @@ void
 SoReorganizeAction::apply(SoPath * path)
 {
   PRIVATE(this)->cbaction.apply(path);
-  PRIVATE(this)->replaceNode(reclassify_cast<SoFullPath *>(path));
+  PRIVATE(this)->replaceNode(static_cast<SoFullPath *>(path));
 }
 
 void

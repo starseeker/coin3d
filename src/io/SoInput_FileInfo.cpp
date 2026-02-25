@@ -35,9 +35,7 @@
 #include <cstring>
 #include <cmath> // pow()
 
-#ifdef HAVE_CONFIG_H
 #include "config.h"
-#endif // HAVE_CONFIG_H
 
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/errors/SoReadError.h>
@@ -45,7 +43,7 @@
 #include <Inventor/misc/SoProto.h>
 #include <Inventor/nodes/SoNode.h>
 
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 
 // *************************************************************************
 

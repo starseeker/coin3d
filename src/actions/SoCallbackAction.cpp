@@ -225,7 +225,7 @@
 
 class SoCallbackData { //internal class
 public:
-  SoCallbackData(void * cbfunc = NULL, void * userdata = NULL)
+  SoCallbackData(void (*cbfunc)() = nullptr, void * userdata = nullptr)
     : func(cbfunc), data(userdata), next(NULL) {}
 
 
@@ -259,7 +259,7 @@ public:
                         const SoPrimitiveVertex * v);
 
 public:
-  void * func;
+  void (*func)();
   void * data;
   SoCallbackData * next;
 };
@@ -274,7 +274,7 @@ SoCallbackData::doNodeCallbacks(SoCallbackAction * action,
   while (cbdata) {
     assert(cbdata->func != NULL);
     SoCallbackAction::SoCallbackActionCB * cbfunc =
-      object_to_function_cast<SoCallbackAction::SoCallbackActionCB *>( cbdata->func);
+      reinterpret_cast<SoCallbackAction::SoCallbackActionCB *>(cbdata->func);
     SoCallbackAction::Response ret = cbfunc(cbdata->data, action, node);
     if (ret == SoCallbackAction::ABORT) return SoCallbackAction::ABORT;
     if (ret == SoCallbackAction::PRUNE) response = ret;
@@ -292,7 +292,7 @@ SoCallbackData::doTriangleCallbacks(SoCallbackAction * action,
   SoCallbackData * cbdata = this;
   while (cbdata) {
     assert(cbdata->func != NULL);
-    SoTriangleCB * tricb = object_to_function_cast<SoTriangleCB *> (cbdata->func);
+    SoTriangleCB * tricb = reinterpret_cast<SoTriangleCB *>(cbdata->func);
     tricb(cbdata->data, action, v1, v2, v3);
     cbdata = cbdata->next;
   }
@@ -306,7 +306,7 @@ SoCallbackData::doLineSegmentCallbacks(SoCallbackAction * action,
   SoCallbackData * cbdata = this;
   while (cbdata) {
     assert(cbdata->func != NULL);
-    SoLineSegmentCB * linecb = object_to_function_cast<SoLineSegmentCB *>( cbdata->func);
+    SoLineSegmentCB * linecb = reinterpret_cast<SoLineSegmentCB *>(cbdata->func);
     linecb(cbdata->data, action, v1, v2);
     cbdata = cbdata->next;
   }
@@ -319,7 +319,7 @@ SoCallbackData::doPointCallbacks(SoCallbackAction * action,
   SoCallbackData * cbdata = this;
   while (cbdata) {
     assert(cbdata->func != NULL);
-    SoPointCB * ptcb = object_to_function_cast<SoPointCB *>( cbdata->func);
+    SoPointCB * ptcb = reinterpret_cast<SoPointCB *>(cbdata->func);
     ptcb(cbdata->data, action, v);
     cbdata = cbdata->next;
   }
@@ -493,7 +493,7 @@ SoCallbackAction::~SoCallbackAction()
 //
 static void
 set_callback_data_idx(SbList<SoCallbackData *> & list, const int idx,
-                      void * func, void * data)
+                      void (*func)(), void * data)
 {
   int n = list.getLength();
   while (n <= idx) {
@@ -506,7 +506,7 @@ set_callback_data_idx(SbList<SoCallbackData *> & list, const int idx,
 
 static void
 set_callback_data(SbList<SoCallbackData *> & list, const SoType type,
-                  void * func, void * data)
+                  void (*func)(), void * data)
 {
   SoTypeList derivedtypes;
   int n = SoType::getAllDerivedFrom(type, derivedtypes);
@@ -524,7 +524,7 @@ void
 SoCallbackAction::addPreCallback(const SoType type, SoCallbackActionCB * cb,
                                  void * userdata)
 {
-  set_callback_data(PRIVATE(this)->precallback, type, function_to_object_cast<void *>(cb), userdata);
+  set_callback_data(PRIVATE(this)->precallback, type, reinterpret_cast<void (*)()>(cb), userdata);
 }
 
 /*!
@@ -535,7 +535,7 @@ void
 SoCallbackAction::addPostCallback(const SoType type, SoCallbackActionCB * cb,
                                   void * userdata)
 {
-  set_callback_data(PRIVATE(this)->postcallback, type, function_to_object_cast<void *>(cb), userdata);
+  set_callback_data(PRIVATE(this)->postcallback, type, reinterpret_cast<void (*)()>(cb), userdata);
 }
 
 /*!
@@ -546,9 +546,9 @@ void
 SoCallbackAction::addPreTailCallback(SoCallbackActionCB * cb, void * userdata)
 {
   if (PRIVATE(this)->pretailcallback == NULL)
-    PRIVATE(this)->pretailcallback = new SoCallbackData(function_to_object_cast<void *>(cb), userdata);
+    PRIVATE(this)->pretailcallback = new SoCallbackData(reinterpret_cast<void (*)()>(cb), userdata);
   else
-    PRIVATE(this)->pretailcallback->append(new SoCallbackData(function_to_object_cast<void *>(cb), userdata));
+    PRIVATE(this)->pretailcallback->append(new SoCallbackData(reinterpret_cast<void (*)()>(cb), userdata));
 }
 
 /*!
@@ -559,9 +559,9 @@ void
 SoCallbackAction::addPostTailCallback(SoCallbackActionCB * cb, void * userdata)
 {
   if (PRIVATE(this)->posttailcallback == NULL)
-    PRIVATE(this)->posttailcallback = new SoCallbackData(function_to_object_cast<void *>(cb), userdata);
+    PRIVATE(this)->posttailcallback = new SoCallbackData(reinterpret_cast<void (*)()>(cb), userdata);
   else
-    PRIVATE(this)->posttailcallback->append(new SoCallbackData(function_to_object_cast<void *>(cb), userdata));
+    PRIVATE(this)->posttailcallback->append(new SoCallbackData(reinterpret_cast<void (*)()>(cb), userdata));
 }
 
 /*!
@@ -573,7 +573,7 @@ void
 SoCallbackAction::addTriangleCallback(const SoType type, SoTriangleCB * cb,
                                       void * userdata)
 {
-  set_callback_data(PRIVATE(this)->trianglecallback, type, function_to_object_cast<void *>(cb), userdata);
+  set_callback_data(PRIVATE(this)->trianglecallback, type, reinterpret_cast<void (*)()>(cb), userdata);
 }
 
 /*!
@@ -585,7 +585,7 @@ void
 SoCallbackAction::addLineSegmentCallback(const SoType type, SoLineSegmentCB * cb,
                                          void * userdata)
 {
-  set_callback_data(PRIVATE(this)->linecallback, type, function_to_object_cast<void *>(cb), userdata);
+  set_callback_data(PRIVATE(this)->linecallback, type, reinterpret_cast<void (*)()>(cb), userdata);
 }
 
 /*!
@@ -597,7 +597,7 @@ void
 SoCallbackAction::addPointCallback(const SoType type, SoPointCB * cb,
                                    void * userdata)
 {
-  set_callback_data(PRIVATE(this)->pointcallback, type, function_to_object_cast<void *>(cb), userdata);
+  set_callback_data(PRIVATE(this)->pointcallback, type, reinterpret_cast<void (*)()>(cb), userdata);
 }
 
 /************************************************************************************/

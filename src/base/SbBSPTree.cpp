@@ -37,7 +37,7 @@
 #include <cstdio>
 #include <cfloat>
 
-#include "coindefs.h"
+#include "config.h"
 
 // define this to do a sorted split (slower, but more efficient?)
 //#define BSP_SORTED_SPLIT

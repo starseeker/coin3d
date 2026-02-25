@@ -33,7 +33,7 @@
 // FIXME: this class has not been implemented yet. 20000627 mortene.
 
 #include <Inventor/misc/SoTranReceiver.h>
-#include <coindefs.h> // COIN_STUB
+#include "config.h" // COIN_STUB
 
 
 SoTranReceiver::SoTranReceiver(SoGroup * COIN_UNUSED_ARG(root))

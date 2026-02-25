@@ -81,8 +81,8 @@
 #include <Inventor/SoPickedPoint.h>
 
 #include "nodes/SoSubNodeP.h"
-#include "coindefs.h"
-#include "C/CoinTidbits.h"
+#include "config.h"
+#include "CoinTidbits.h"
 
 
 /*!

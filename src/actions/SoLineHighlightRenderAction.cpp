@@ -346,7 +346,7 @@ SoLineHighlightRenderActionP::drawBoxes(SoPath * pathtothis,
                                         const SoPathList * pathlist)
 {
   int i;
-  int thispos = reclassify_cast<SoFullPath *>(pathtothis)->getLength()-1;
+  int thispos = static_cast<SoFullPath *>(pathtothis)->getLength()-1;
   assert(thispos >= 0);
   this->postprocpath->setHead(pathtothis->getHead()); // reset
 
@@ -388,7 +388,7 @@ SoLineHighlightRenderActionP::drawBoxes(SoPath * pathtothis,
   SoTextureOverrideElement::setQualityOverride(state, TRUE);
 
   for (i = 0; i < pathlist->getLength(); i++) {
-    SoFullPath * path = reclassify_cast<SoFullPath *>((*pathlist)[i]);
+    SoFullPath * path = static_cast<SoFullPath *>((*pathlist)[i]);
 
     this->postprocpath->append(path->getHead());
     for (int j = 1; j < path->getLength(); j++) {

@@ -46,9 +46,13 @@
 #include <Inventor/annex/Profiler/SoProfiler.h>
 #include <Inventor/annex/Profiler/SbProfilingData.h>
 #include <Inventor/annex/Profiler/nodes/SoProfilerStats.h>
+#include <Inventor/annex/Profiler/elements/SoProfilerElement.h>
 #include <Inventor/SbTime.h>
 #include <Inventor/SoType.h>
 #include <Inventor/actions/SoGetBoundingBoxAction.h>
+#include <Inventor/actions/SoGLRenderAction.h>
+#include <Inventor/SbViewportRegion.h>
+#include <Inventor/misc/SoState.h>
 
 using namespace SimpleTest;
 
@@ -192,6 +196,70 @@ int main()
 
         lhs += rhs;
         runner.endTest(true);
+    }
+
+    // -----------------------------------------------------------------------
+    // SoProfiler enable + isEnabled + enable(FALSE) round-trip (after init)
+    // -----------------------------------------------------------------------
+    runner.startTest("SoProfiler enable/disable round-trip after init");
+    {
+        // init sets enabled=TRUE; verify we can toggle it and restore state
+        SbBool originalState = SoProfiler::isEnabled();
+        SoProfiler::enable(FALSE);
+        bool disabledOk = (SoProfiler::isEnabled() == FALSE);
+        SoProfiler::enable(TRUE);
+        bool enabledOk = (SoProfiler::isEnabled() == TRUE);
+        // Restore original state
+        SoProfiler::enable(originalState);
+        bool pass = disabledOk && enabledOk;
+        runner.endTest(pass, pass ? "" :
+            "enable/disable round-trip failed after SoProfiler::init()");
+    }
+
+    // -----------------------------------------------------------------------
+    // SoProfilerElement is accessible on SoGLRenderAction state when enabled
+    // -----------------------------------------------------------------------
+    runner.startTest("SoProfilerElement is enabled for SoGLRenderAction when profiler is on");
+    {
+        // SoProfilerStats::initClass() calls SO_ENABLE(SoGLRenderAction, SoProfilerElement)
+        // so after SoProfiler::init(), the element must be available on that action.
+        SoProfiler::enable(TRUE);
+        SoGLRenderAction action(SbViewportRegion(100, 100));
+        SoState * state = action.getState();
+        bool pass = (state != NULL) &&
+            state->isElementEnabled(SoProfilerElement::getClassStackIndex());
+        SoProfiler::enable(FALSE);
+        runner.endTest(pass, pass ? "" :
+            "SoProfilerElement not enabled on SoGLRenderAction state after profiler init");
+    }
+
+    // -----------------------------------------------------------------------
+    // SbProfilingData::reset clears action type
+    // -----------------------------------------------------------------------
+    runner.startTest("SbProfilingData::reset clears action type");
+    {
+        SbProfilingData data;
+        data.setActionType(SoGetBoundingBoxAction::getClassTypeId());
+        data.reset();
+        bool pass = (data.getActionType() == SoType::badType());
+        runner.endTest(pass, pass ? "" :
+            "reset() did not clear the action type");
+    }
+
+    // -----------------------------------------------------------------------
+    // SbProfilingData setActionStartTime/StopTime survive reset
+    // -----------------------------------------------------------------------
+    runner.startTest("SbProfilingData timing reset clears duration");
+    {
+        SbProfilingData data;
+        data.setActionStartTime(SbTime(1.0));
+        data.setActionStopTime(SbTime(2.0));
+        data.reset();
+        // After reset, both start and stop times are SbTime::zero(), so duration == 0.0
+        SbTime duration = data.getActionDuration();
+        bool pass = (duration.getValue() == 0.0);
+        runner.endTest(pass, pass ? "" :
+            "reset() did not clear timing data to zero");
     }
 
     return runner.getSummary();

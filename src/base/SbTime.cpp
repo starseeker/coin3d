@@ -51,13 +51,9 @@
 #include <cerrno>
 #include <cmath>
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif // HAVE_CONFIG_H
+#include "config.h"
 
-#ifdef HAVE_TIME_H
 #include <ctime> // struct timeval (Linux)
-#endif // HAVE_TIME_H
 
 #ifdef HAVE_SYS_TIME_H
 #include <sys/time.h> // struct timeval (IRIX)
@@ -68,13 +64,11 @@
 #endif // HAVE_WINDOWS_H
 
 #include <Inventor/errors/SoDebugError.h>
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 #include "misc/CoinUtilities.h"
 #include <thread>
 #include <chrono>
-#include <chrono>
 
-#include "coindefs.h"
 
 #ifndef COIN_WORKAROUND_NO_USING_STD_FUNCS
 using std::strlen;

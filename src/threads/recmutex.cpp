@@ -52,7 +52,7 @@
 
 
 
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 #include "threads/recmutexp.h"
 #include "threads/recmutex_global_cxx17.h"
 #include "misc/SoEnvironment.h"

@@ -50,9 +50,7 @@
 #include <cstdio>
 #include <cstdlib>
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif // HAVE_CONFIG_H
+#include "config.h"
 
 #ifdef HAVE_WINDOWS_H
 #include <windows.h>

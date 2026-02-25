@@ -31,7 +31,7 @@
 \**************************************************************************/
 
 #include "SoGLShaderObject.h"
-#include "coindefs.h"
+#include "config.h"
 
 #include <cassert>
 

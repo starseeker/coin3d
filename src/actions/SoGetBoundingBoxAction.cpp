@@ -450,8 +450,8 @@ void
 SoGetBoundingBoxAction::checkResetBefore(void)
 {
   if (this->resetpath && this->isResetBefore()) {
-    const SoFullPath * curpath = reclassify_cast<const SoFullPath *>(this->getCurPath());
-    const SoFullPath * theresetpath = reclassify_cast<const SoFullPath *>(this->resetpath);
+    const SoFullPath * curpath = static_cast<const SoFullPath *>(this->getCurPath());
+    const SoFullPath * theresetpath = static_cast<const SoFullPath *>(this->resetpath);
     if ((curpath->getTail() == theresetpath->getTail()) &&
         curpath->containsPath(theresetpath)) {
       if (this->resettype & SoGetBoundingBoxAction::TRANSFORM) {
@@ -474,8 +474,8 @@ void
 SoGetBoundingBoxAction::checkResetAfter(void)
 {
   if (this->resetpath && !this->isResetBefore()) {
-    const SoFullPath * curpath = reclassify_cast<const SoFullPath *>(this->getCurPath());
-    const SoFullPath * theresetpath = reclassify_cast<const SoFullPath *>(this->resetpath);
+    const SoFullPath * curpath = static_cast<const SoFullPath *>(this->getCurPath());
+    const SoFullPath * theresetpath = static_cast<const SoFullPath *>(this->resetpath);
     if ((curpath->getTail() == theresetpath->getTail()) &&
         curpath->containsPath(theresetpath)) {
       if (this->resettype & SoGetBoundingBoxAction::TRANSFORM) {

@@ -37,14 +37,11 @@
   \ingroup coin_profiler
 */
 
-#ifdef HAVE_CONFIG_H
 #include "config.h"
-#endif // HAVE_CONFIG_H
 
 #ifdef HAVE_NODEKITS
 
 #include <Inventor/annex/Profiler/nodekits/SoProfilerOverlayKit.h>
-#include "coindefs.h"
 
 #include <Inventor/system/gl.h>
 #include <Inventor/SbVec2s.h>

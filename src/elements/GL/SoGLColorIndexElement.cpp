@@ -54,9 +54,7 @@
 #include <Inventor/misc/SoState.h>
 #include <cassert>
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif // HAVE_CONFIG_H
+#include "config.h"
 
 #include <Inventor/system/gl.h>
 

@@ -60,16 +60,14 @@
 
 #include <Inventor/actions/SoGLRenderAction.h>
 
-#ifdef HAVE_CONFIG_H
 #include "config.h"
-#endif // HAVE_CONFIG_H
 
 #include <cstdlib>
 #include <cstring>
 #include <memory>
 
 #include "glue/glp.h"
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 #include <Inventor/SbColor.h>
 #include <Inventor/SbPlane.h>
 #include <Inventor/SoFullPath.h>
@@ -113,7 +111,6 @@
 
 #include <Inventor/system/gl.h>
 
-#include "coindefs.h"
 
 #include "SbBasicP.h"
 #include "actions/SoActionP.h"
@@ -123,7 +120,13 @@
 #include "rendering/SoGL.h"
 #include "misc/SoEnvironment.h"
 
-// Profiler functionality removed - nodekit elimination
+#include <Inventor/annex/Profiler/elements/SoProfilerElement.h>
+#include <Inventor/annex/Profiler/SoProfiler.h>
+#include "profiler/SoProfilerP.h"
+#ifdef HAVE_NODEKITS
+#include <Inventor/annex/Profiler/nodekits/SoProfilerTopKit.h>
+#include <Inventor/annex/Profiler/nodekits/SoProfilerVisualizeKit.h>
+#endif // HAVE_NODEKITS
 
 // *************************************************************************
 
@@ -1022,7 +1025,29 @@ SoGLRenderAction::beginTraversal(SoNode * node)
         (coin_assert_cast<SoGroup *>(node))->getNumChildren() > 0) {
       PRIVATE(this)->cachedprofilingsg = node;
 
-      // Profiler functionality removed - nodekit elimination
+#ifdef HAVE_NODEKITS
+      SoNode * kit = SoActionP::getProfilerOverlay();
+      if (kit) {
+        SoSearchAction sa;
+        sa.setType(SoProfilerVisualizeKit::getClassTypeId());
+        sa.setSearchingAll(TRUE);
+        sa.setInterest(SoSearchAction::ALL);
+        SbBool oldchildsearch = SoBaseKit::isSearchingChildren();
+        SoBaseKit::setSearchingChildren(TRUE);
+        sa.apply(kit);
+        SoBaseKit::setSearchingChildren(oldchildsearch);
+        SoPathList plist = sa.getPaths();
+        for (int i = 0, n = plist.getLength(); i < n; ++i) {
+          SoFullPath * path = static_cast<SoFullPath *>(plist[i]);
+          SoNode * tail = path->getTail();
+          if ((tail != NULL) &&
+              (tail->isOfType(SoProfilerVisualizeKit::getClassTypeId()))) {
+            SoProfilerVisualizeKit * viskit = coin_assert_cast<SoProfilerVisualizeKit *>(tail);
+            viskit->root.setValue(node);
+          }
+        }
+      }
+#endif // HAVE_NODEKITS
     }
   }
 
@@ -1097,7 +1122,28 @@ void
 SoGLRenderAction::endTraversal(SoNode * node)
 {
   inherited::endTraversal(node);
-  // Profiler functionality removed - nodekit elimination
+  if (SoProfilerP::shouldContinuousRender()) {
+    float delay = SoProfilerP::getContinuousRenderDelay();
+    if (delay == 0.0f) {
+      node->touch();
+    } else {
+      if (PRIVATE(this)->redrawSensor.get() == NULL) {
+        PRIVATE(this)->redrawSensor.reset(new SoAlarmSensor);
+      }
+      if (PRIVATE(this)->redrawSensor->isScheduled()) {
+        PRIVATE(this)->redrawSensor->unschedule();
+      }
+      PRIVATE(this)->redrawSensor->setFunction(SoGLRenderActionP::redrawSensorCB);
+      PRIVATE(this)->redrawSensor->setData(node);
+      PRIVATE(this)->redrawSensor->setTimeFromNow(SbTime(static_cast<double>(delay)));
+      PRIVATE(this)->redrawSensor->schedule();
+      if (PRIVATE(this)->deleteSensor.get() == NULL) {
+        PRIVATE(this)->deleteSensor.reset(new SoNodeSensor);
+      }
+      PRIVATE(this)->deleteSensor->setDeleteCallback(SoGLRenderActionP::deleteNodeCB, &(PRIVATE(this).get()));
+      PRIVATE(this)->deleteSensor->attach(node);
+    }
+  }
 }
 
 /*
@@ -1547,7 +1593,7 @@ SoGLRenderActionP::addSortTransPath(SoPath * path)
   }
 
   SoState * state = action->getState();
-  SoNode * tail = reclassify_cast<SoFullPath *>(path)->getTail();
+  SoNode * tail = static_cast<SoFullPath *>(path)->getTail();
   float dist;
   SbBox3f bbox;
   // test if we can find the bbox using SoShape::getBoundingBoxCache()
@@ -1692,7 +1738,26 @@ SoGLRenderActionP::render(SoNode * node)
     this->renderSingle(node);
   }
 
-  // Profiler functionality removed - nodekit elimination
+  if (SoProfiler::isOverlayActive()) {
+    if (node == this->cachedprofilingsg) {
+      SoNode * profileroverlay = SoActionP::getProfilerOverlay();
+      if (profileroverlay) {
+        this->isrenderingoverlay = TRUE;
+        SoProfiler::enable(FALSE);
+        this->renderSingle(profileroverlay);
+        SoProfiler::enable(TRUE);
+        this->isrenderingoverlay = FALSE;
+      }
+    } else {
+      static SbBool first = TRUE;
+      if (first) {
+        SoDebugError::postWarning("SoGLRenderActionP::render",
+                                  "Profiling overlay is only enabled for the first "
+                                  "scene graph in the viewer.");
+        first = FALSE;
+      }
+    }
+  }
 
   state->pop();
   this->isrendering = FALSE;

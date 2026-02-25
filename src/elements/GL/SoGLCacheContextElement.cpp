@@ -39,7 +39,7 @@
 
 // *************************************************************************
 
-#include "coindefs.h"
+#include "config.h"
 #include <Inventor/elements/SoGLCacheContextElement.h>
 
 #include <cstdlib>
@@ -55,7 +55,7 @@
 
 #include "rendering/SoGL.h"
 #include "threads/threadsutilp.h"
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 
 // *************************************************************************
 

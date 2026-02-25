@@ -73,7 +73,7 @@
 #include <Inventor/fields/SoSFTime.h>
 #include <Inventor/sensors/SoFieldSensor.h>
 
-#include "coindefs.h"
+#include "config.h"
 #include "nodes/SoSubNodeP.h"
 
 // *************************************************************************

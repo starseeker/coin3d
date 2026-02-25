@@ -49,7 +49,7 @@
 #include <Inventor/elements/SoDrawStyleElement.h>
 #include <Inventor/elements/SoComplexityTypeElement.h>
 
-#include <coindefs.h> // COIN_OBSOLETED()
+#include "config.h" // COIN_OBSOLETED()
 #include <cassert>
 
 

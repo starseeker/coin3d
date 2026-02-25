@@ -57,9 +57,7 @@
 
 #include <Inventor/nodes/SoPointLight.h>
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif // HAVE_CONFIG_H
+#include "config.h"
 
 #include <Inventor/SbColor4f.h>
 #include <Inventor/SbVec4f.h>

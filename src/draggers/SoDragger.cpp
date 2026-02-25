@@ -30,9 +30,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifdef HAVE_CONFIG_H
 #include "config.h"
-#endif // HAVE_CONFIG_H
 
 #ifdef HAVE_DRAGGERS
 
@@ -260,8 +258,7 @@
 
 #include <Inventor/errors/SoDebugError.h>
 
-#include "coindefs.h" // COIN_OBSOLETED
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 #include "nodekits/SoSubKitP.h"
 #include "SbBasicP.h"
 
@@ -269,7 +266,7 @@
 class SoDraggerCache {
 public:
   SoDraggerCache(SoDragger * parent) :
-    path(reclassify_cast<SoFullPath *>(new SoPath(4))),
+    path(static_cast<SoFullPath *>(new SoPath(4))),
     dragger(parent),
     matrixAction(new SoGetMatrixAction(dragger->getViewportRegion())),
     draggerToWorld(SbMatrix::identity()),
@@ -879,7 +876,7 @@ SoDragger::getPartToLocalMatrix(const SbName & partname, SbMatrix & parttolocalm
   SoPath * pathtothis = this->createPathToThis();
   assert(pathtothis);
   pathtothis->ref();
-  SoPath * path = reclassify_cast<SoPath *>(this->createPathToAnyPart(partname, FALSE, FALSE, FALSE, pathtothis));
+  SoPath * path = static_cast<SoPath *>(this->createPathToAnyPart(partname, FALSE, FALSE, FALSE, pathtothis));
   assert(path);
   pathtothis->unref();
 
@@ -1018,7 +1015,7 @@ SoDragger::createPathToThis(void)
 {
   assert(PRIVATE(this)->draggercache);
   assert(PRIVATE(this)->draggercache->path);
-  SoPath * orgpath = reclassify_cast<SoPath *>(PRIVATE(this)->draggercache->path);
+  SoPath * orgpath = static_cast<SoPath *>(PRIVATE(this)->draggercache->path);
   return new SoPath(*orgpath);
 }
 
@@ -1576,8 +1573,8 @@ SoDragger::shouldGrabBasedOnSurrogate(const SoPath * pickpath, const SoPath * su
 {
   if (!pickpath->containsPath(surrogatepath)) return FALSE;
 
-  const SoFullPath * pick = reclassify_cast<const SoFullPath *>(pickpath);
-  const SoFullPath * surr = reclassify_cast<const SoFullPath *>(surrogatepath);
+  const SoFullPath * pick = static_cast<const SoFullPath *>(pickpath);
+  const SoFullPath * surr = static_cast<const SoFullPath *>(surrogatepath);
 
   SoNode * tail = surr->getTail();
   SoType draggertype = SoDragger::getClassTypeId();
@@ -1930,7 +1927,7 @@ SbBool
 SoDragger::isPicked(SoPath * path)
 {
   // last dragger in path must be this one
-  SoFullPath * fullpath = reclassify_cast<SoFullPath *>(path);
+  SoFullPath * fullpath = static_cast<SoFullPath *>(path);
 
   int i = fullpath->findNode(this);
   if (i < 0) return FALSE;
@@ -1962,7 +1959,7 @@ SoDragger::updateDraggerCache(const SoPath * path)
 {
   if (PRIVATE(this)->draggercache == NULL)
     PRIVATE(this)->draggercache = new SoDraggerCache(this);
-  if (path) PRIVATE(this)->draggercache->update(reclassify_cast<const SoFullPath *>(path), path->findNode(this));
+  if (path) PRIVATE(this)->draggercache->update(static_cast<const SoFullPath *>(path), path->findNode(this));
   else PRIVATE(this)->draggercache->updateMatrix();
 }
 

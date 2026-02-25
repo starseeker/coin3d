@@ -31,13 +31,10 @@
 \**************************************************************************/
 
 #include "shapenodes/soshape_bigtexture.h"
-#include "coindefs.h"
+#include "config.h"
 
 #include <cstdlib>
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif // HAVE_CONFIG_H
 
 #include <Inventor/SbClip.h>
 #include <Inventor/SbPlane.h>
@@ -51,7 +48,7 @@
 #include <Inventor/elements/SoMultiTextureImageElement.h>
 #include <Inventor/bundles/SoMaterialBundle.h>
 #include <Inventor/nodes/SoShape.h>
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 #include <Inventor/system/gl.h>
 
 soshape_bigtexture::soshape_bigtexture(void)

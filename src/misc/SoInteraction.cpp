@@ -49,9 +49,7 @@
 
 #include <Inventor/SoInteraction.h>
 
-#ifdef HAVE_CONFIG_H
 #include "config.h"
-#endif // HAVE_CONFIG_H
 
 #include <Inventor/SoDB.h>
 #include <Inventor/nodekits/SoNodeKit.h>
@@ -81,7 +79,7 @@
 #include <Inventor/manips/SoTransformerManip.h>
 #endif // HAVE_MANIPULATORS
 
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 
 static SbBool interaction_isinitialized = FALSE;
 

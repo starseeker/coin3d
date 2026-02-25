@@ -82,12 +82,10 @@
 #include <climits>
 #include <cstring> // memset()
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif // HAVE_CONFIG_H
+#include "config.h"
 
 #include "glue/glp.h"
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 #include <Inventor/SbBox2s.h>
 #include <Inventor/SbBox3f.h>
 #include <Inventor/SbMatrix.h>
@@ -127,7 +125,6 @@
 #include <Inventor/misc/SoGLDriverDatabase.h>
 
 #include "nodes/SoSubNodeP.h"
-#include "coindefs.h" // COIN_OBSOLETED()
 #include "../misc/SoEnvironment.h"
 
 // *************************************************************************

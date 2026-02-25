@@ -47,7 +47,7 @@
 #include <Inventor/nodes/SoNode.h>
 #include <Inventor/elements/SoGLVBOElement.h>
 
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 #include "SbBasicP.h"
 
 // static variables

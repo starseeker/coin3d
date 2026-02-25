@@ -56,7 +56,7 @@
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/lists/SbList.h>
 
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 #include "SoConvexDataCacheEarcutTessellator.h"
 
 // *************************************************************************

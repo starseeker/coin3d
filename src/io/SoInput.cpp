@@ -89,9 +89,7 @@
   \sa SoOutput, SoDB
 */
 
-#ifdef HAVE_CONFIG_H
 #include "config.h"
-#endif // HAVE_CONFIG_H
 
 #include <cerrno>
 #include <cstdlib>
@@ -112,7 +110,7 @@
 
 #include <Inventor/SoInput.h>
 
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 #include <Inventor/SbName.h>
 #include <Inventor/SoDB.h>
 #include <Inventor/errors/SoDebugError.h>
@@ -126,7 +124,6 @@
 #include "misc/SbHash.h"
 #include "misc/SoUtilities.h"
 
-#include "coindefs.h" // COIN_STUB(), COIN_OBSOLETED()
 #include "io/SoInputP.h"
 #include "io/SoInput_FileInfo.h"
 #include "misc/SoEnvironment.h"

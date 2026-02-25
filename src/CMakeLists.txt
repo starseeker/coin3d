@@ -14,12 +14,10 @@ file(GENERATE
     INPUT "${CMAKE_CURRENT_BINARY_DIR}/config.h_at_configured"
 )
 
-configure_file(setup.h.cmake.in setup.h)
-
 add_compile_options(-DHAVE_CONFIG_H -DCOIN_INTERNAL -DCOIN_DEBUG=$<CONFIG:Debug>)
 
-if(COIN_HARDCOPY)
-  add_compile_options(-DCOIN_HARDCOPY)
+if(COIN_PROFILING)
+  add_compile_options(-DCOIN_PROFILING)
 endif()
 
 include_directories(BEFORE
@@ -27,6 +25,7 @@ include_directories(BEFORE
   "${PROJECT_SOURCE_DIR}/include"
   "${CMAKE_CURRENT_BINARY_DIR}"
   "${CMAKE_CURRENT_SOURCE_DIR}"
+  "${CMAKE_CURRENT_SOURCE_DIR}/misc"
   "${PROJECT_SOURCE_DIR}/include/Inventor/annex"
   "${PROJECT_BINARY_DIR}/src/shadows"
   "${PROJECT_SOURCE_DIR}"
@@ -44,7 +43,7 @@ foreach(_tgt ${COIN_TARGET_LINK_LIBRARIES})
   endif()
 endforeach()
 
-set(COIN_SOURCE C/CoinTidbits.cpp CACHE INTERNAL "COIN_SOURCE")
+set(COIN_SOURCE misc/CoinTidbits.cpp CACHE INTERNAL "COIN_SOURCE")
 # Minimal core subdirectories - removed GUI/toolkit but keeping minimal dependencies
 set(COIN_SUBDIRS
   actions base bundles caches details draggers elements
@@ -53,9 +52,7 @@ set(COIN_SUBDIRS
   shadows threads shaders tools
 )
 
-if(COIN_HARDCOPY)
-  list(APPEND COIN_SUBDIRS hardcopy)
-endif()
+list(APPEND COIN_SUBDIRS hardcopy)
 
 # Add nodekits and related components if enabled
 list(APPEND COIN_SUBDIRS nodekits profiler hud)
@@ -75,7 +72,7 @@ if(COIN_USE_PRECOMPILED_HEADERS AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.16")
     foreach(_subdir ${COIN_SUBDIRS})
         if(TARGET ${_subdir})
             target_precompile_headers(${_subdir} PRIVATE
-                "${CMAKE_CURRENT_SOURCE_DIR}/CoinPCH.h"
+                "${CMAKE_CURRENT_SOURCE_DIR}/misc/CoinPCH.h"
             )
         endif()
     endforeach()
@@ -95,9 +92,6 @@ set(COIN_LIBRARY_TYPE $<IF:$<BOOL:${BUILD_SHARED_LIBS}>,SHARED,STATIC>)
 
 # Additional headers to include in target
 set(COIN_ADDITIONAL_HDRS 
-    ${PROJECT_SOURCE_DIR}/include/SoWinEnterScope.h 
-    ${PROJECT_SOURCE_DIR}/include/SoWinLeaveScope.h 
-    ${PROJECT_SOURCE_DIR}/include/SoDebug.h 
     ${PROJECT_BINARY_DIR}/src/config.h
 )
 
@@ -136,10 +130,8 @@ else()
         $<TARGET_OBJECTS:shapenodes>
         $<TARGET_OBJECTS:threads>
         $<TARGET_OBJECTS:tools>
+        $<TARGET_OBJECTS:hardcopy>
     )
-    if(COIN_HARDCOPY)
-        list(APPEND _coin_objects $<TARGET_OBJECTS:hardcopy>)
-    endif()
     add_library(${PROJECT_NAME} ${COIN_SOURCE} ${COIN_ADDITIONAL_HDRS} ${_coin_objects})
 endif()
 
@@ -163,7 +155,7 @@ endif()
 if(COIN_USE_PRECOMPILED_HEADERS AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.16")
     message(STATUS "Enabling precompiled headers for faster compilation")
     target_precompile_headers(${PROJECT_NAME} PRIVATE
-        "${CMAKE_CURRENT_SOURCE_DIR}/CoinPCH.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/misc/CoinPCH.h"
     )
 elseif(COIN_USE_PRECOMPILED_HEADERS)
     message(WARNING "Precompiled headers requested but require CMake 3.16+. Current version: ${CMAKE_VERSION}")
@@ -186,6 +178,7 @@ target_include_directories(${PROJECT_NAME}
         "${PROJECT_SOURCE_DIR}/include"
         "${CMAKE_CURRENT_BINARY_DIR}"
         "${CMAKE_CURRENT_SOURCE_DIR}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/misc"
         "${PROJECT_SOURCE_DIR}/include/Inventor/annex"
         "${PROJECT_BINARY_DIR}/src/shadows"
         ${COIN_TARGET_INCLUDE_DIRECTORIES}
@@ -345,7 +338,7 @@ else()
           DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Inventor 
           COMPONENT development 
           FILES_MATCHING PATTERN "*.h")
-  install(FILES ${PROJECT_SOURCE_DIR}/include/SoWinEnterScope.h ${PROJECT_SOURCE_DIR}/include/SoWinLeaveScope.h ${PROJECT_SOURCE_DIR}/include/SoDebug.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} COMPONENT development)
+  install(FILES ${PROJECT_SOURCE_DIR}/include/SoWinEnterScope.h ${PROJECT_SOURCE_DIR}/include/SoWinLeaveScope.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} COMPONENT development)
 
 # ############################################################################
 # Install target
@@ -402,7 +395,7 @@ set(COINDIR ${CMAKE_INSTALL_PREFIX})
 
 include(CMakePackageConfigHelpers)
 
-configure_package_config_file(${PROJECT_NAME_LOWER}-config.cmake.in "${CMAKE_CURRENT_BINARY_DIR}/${COIN_CONFIG_PACKAGE_BASENAME}-config.cmake"
+configure_package_config_file(${PROJECT_SOURCE_DIR}/cmake/${PROJECT_NAME_LOWER}-config.cmake.in "${CMAKE_CURRENT_BINARY_DIR}/${COIN_CONFIG_PACKAGE_BASENAME}-config.cmake"
   INSTALL_DESTINATION ${COIN_CONFIG_PACKAGE_LOCATION}
   PATH_VARS COINDIR COIN_INCLUDE_DIR COIN_LIB_DIR COIN_DOC_DIR
 )

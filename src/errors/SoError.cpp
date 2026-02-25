@@ -53,7 +53,7 @@
 
 #include <Inventor/errors/SoErrors.h>
 
-#include "coindefs.h"
+#include "config.h"
 #include "errors/CoinInternalError.h"
 
 #include <cassert>
@@ -61,15 +61,12 @@
 #include <cstdio>
 #include <cstdlib>
 
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 #include <Inventor/SbName.h>
 #include <Inventor/SoPath.h>
 #include <Inventor/engines/SoEngine.h>
 #include <Inventor/nodes/SoNode.h>
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif // HAVE_CONFIG_H
 
 /*!
   \typedef void SoErrorCB(const class SoError * error, void * data)

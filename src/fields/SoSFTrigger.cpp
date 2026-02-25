@@ -49,7 +49,7 @@
 
 #include <Inventor/fields/SoSFTrigger.h>
 
-#include "coindefs.h"
+#include "config.h"
 
 #include "fields/SoSubFieldP.h"
 

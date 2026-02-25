@@ -34,9 +34,7 @@
 
 #include <cassert>
 
-#ifdef HAVE_CONFIG_H
 #include "config.h"
-#endif // HAVE_CONFIG_H
 
 #include "glue/glp.h"
 #include <Inventor/SbMatrix.h>

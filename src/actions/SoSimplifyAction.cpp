@@ -40,7 +40,7 @@
 
 #include <Inventor/SbName.h>
 
-#include "coindefs.h" // COIN_STUB()
+#include "config.h" // COIN_STUB()
 #include "actions/SoSubActionP.h"
 
 class SoSimplifyActionP {

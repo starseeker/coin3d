@@ -254,8 +254,8 @@
 #include <Inventor/fields/SoSubField.h>
 
 #include "threads/threadsutilp.h"
-#include "C/CoinTidbits.h"
-#include "coindefs.h" // COIN_WORKAROUND_*
+#include "CoinTidbits.h"
+#include "config.h" // COIN_WORKAROUND_*
 
 #ifndef COIN_WORKAROUND_NO_USING_STD_FUNCS
 using std::memcpy;

@@ -44,9 +44,7 @@
 
 #include <Inventor/nodekits/SoNodeKit.h>
 
-#ifdef HAVE_CONFIG_H
 #include "config.h"
-#endif // HAVE_CONFIG_H
 
 #include <Inventor/SbBasic.h>
 #include <Inventor/SoDB.h>
@@ -62,7 +60,7 @@
 #include <Inventor/annex/HUD/nodekits/SoHUDKit.h>
 #endif // HAVE_NODEKITS
 
-#include "../C/CoinTidbits.h"
+#include "CoinTidbits.h"
 
 static SbBool nodekit_isinitialized = FALSE;
 

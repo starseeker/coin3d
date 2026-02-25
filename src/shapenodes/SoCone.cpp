@@ -74,7 +74,7 @@
 */
 
 #include <Inventor/nodes/SoCone.h>
-#include "coindefs.h"
+#include "config.h"
 
 #include <cassert>
 #include <cmath>

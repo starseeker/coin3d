@@ -31,15 +31,12 @@
 \**************************************************************************/
 
 #include "io/SoOutput_Writer.h"
-#include "coindefs.h"
+#include "config.h"
 
 #include <cstring>
 #include <cassert>
 #include <iostream>
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif // HAVE_CONFIG_H
 
 #ifdef HAVE_UNISTD_H
 #include <unistd.h> // dup()

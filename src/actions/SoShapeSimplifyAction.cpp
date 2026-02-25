@@ -42,7 +42,7 @@
 
 #include <Inventor/SbName.h>
 #include <Inventor/actions/SoShapeSimplifyAction.h>
-#include <coindefs.h> // COIN_STUB()
+#include "config.h" // COIN_STUB()
 
 
 SO_ACTION_SOURCE(SoShapeSimplifyAction);

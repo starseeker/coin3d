@@ -64,9 +64,7 @@
 #include <cstdlib>
 #include <cassert>
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif /* HAVE_CONFIG_H */
+#include "config.h"
 
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
@@ -84,14 +82,13 @@
 #include "threads/threadp.h"
 #include "threads/mutexp.h"
 #include "threads/recmutexp.h"
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 
 
 /* ********************************************************************** */
 
 /*
  FIXME:
- - copy struct malloc/free/init/clean setup scheme from cc_string
  - use static table of cc_thread structures?
  - use cc_storage to reference self-structure for cc_thread_get_self()?
 */

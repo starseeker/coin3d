@@ -38,7 +38,7 @@
 #include <vector>
 #include <algorithm>
 
-#include "coindefs.h"
+#include "config.h"
 
 #define CC_LIST_DEFAULT_SIZE 4
 

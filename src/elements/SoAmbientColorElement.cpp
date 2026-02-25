@@ -45,7 +45,7 @@
 #include <cassert>
 #include <cstdlib>
 
-#include "coindefs.h"
+#include "config.h"
 #include "SbBasicP.h"
 
 SO_ELEMENT_SOURCE(SoAmbientColorElement);

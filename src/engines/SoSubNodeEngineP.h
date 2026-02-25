@@ -47,7 +47,7 @@
 
 #include <Inventor/engines/SoSubNodeEngine.h>
 
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 
 // Be aware that any changes to the SO_ENGINE_INTERNAL_CONSTRUCTOR
 // macro should be matched by similar changes to the constructor in

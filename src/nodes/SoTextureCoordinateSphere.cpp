@@ -49,11 +49,8 @@
 // *************************************************************************
 
 #include <Inventor/nodes/SoTextureCoordinateSphere.h>
-#include "coindefs.h"
+#include "config.h"
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif // HAVE_CONFIG
 
 #include "glue/glp.h"
 #include <Inventor/SbBox3f.h>

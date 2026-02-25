@@ -114,7 +114,7 @@
 #include <Inventor/sensors/SoNodeSensor.h>
 #include <Inventor/errors/SoDebugError.h>
 
-#include "coindefs.h"
+#include "config.h"
 #include "actions/SoSubActionP.h"
 #include "io/SoWriterefCounter.h"
 

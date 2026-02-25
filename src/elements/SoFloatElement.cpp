@@ -48,7 +48,7 @@
   \sa SoReplacedElement, SoInt32Element, SoAccumulatedElement
 */
 
-#include "coindefs.h"
+#include "config.h"
 #include "SbBasicP.h"
 
 #include <Inventor/elements/SoFloatElement.h>

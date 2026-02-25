@@ -64,9 +64,7 @@
 
 #include <Inventor/SoDB.h>
 
-#ifdef HAVE_CONFIG_H
 #include "config.h"
-#endif // HAVE_CONFIG_H
 
 #include <cstdlib>
 #include <cassert>
@@ -77,7 +75,7 @@
 #include <unistd.h> // fd_set (?)
 #endif // HAVE_UNISTD_H
 
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 #include "misc/SoEnvironment.h"
 #include <Inventor/SbVec3f.h>
 #include <Inventor/SoInput.h>
@@ -96,16 +94,13 @@
 #include <Inventor/misc/SoProtoInstance.h>
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/sensors/SoTimerSensor.h>
-#ifdef COIN_HARDCOPY
 #include <Inventor/annex/HardCopy/SoHardCopy.h>
-#endif
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/annex/FXViz/nodes/SoShadowGroup.h>
 
 #include <Inventor/misc/SoGLDriverDatabase.h>
 #include <Inventor/misc/CoinResources.h>
 
-#include "coindefs.h" // COIN_STUB(), COIN_INIT_CHECK_THREAD()
 #include "shaders/SoShader.h"
 /* glue/glp.h include removed - no longer needed for old callback system */
 
@@ -348,9 +343,7 @@ SoDB::init(ContextManager * context_manager)
   SoGLImage::initClass();
   SoGLBigImage::initClass();
 
-#ifdef COIN_HARDCOPY
   SoHardCopy::init();
-#endif
 
   SoShader::init();
   SoVBO::init();

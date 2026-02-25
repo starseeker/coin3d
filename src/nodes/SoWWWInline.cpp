@@ -88,9 +88,7 @@
 #include <cstdlib>
 #include <cstdio>
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif /* HAVE_CONFIG_H */
+#include "config.h"
 
 #include <Inventor/SbColor.h>
 #include <Inventor/actions/SoGetBoundingBoxAction.h>
@@ -109,8 +107,7 @@
 #include <Inventor/threads/SbStorage.h>
 #include <Inventor/system/gl.h>
 
-#include "C/CoinTidbits.h"
-#include "coindefs.h" // COIN_OBSOLETED()
+#include "CoinTidbits.h"
 #include "nodes/SoSubNodeP.h"
 
 // *************************************************************************

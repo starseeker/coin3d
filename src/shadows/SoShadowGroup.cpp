@@ -274,7 +274,7 @@
 // *************************************************************************
 
 #include <FXViz/nodes/SoShadowGroup.h>
-#include "coindefs.h"
+#include "config.h"
 
 #include <cmath>
 

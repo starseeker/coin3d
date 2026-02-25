@@ -197,7 +197,7 @@ typedef void sbdict_dummy_apply_func(SbDict::Key, void *);
 static void
 sbdict_dummy_apply(SbDict::Key key, void * value, void * closure)
 {
-  sbdict_dummy_apply_func * func = (sbdict_dummy_apply_func*) closure;
+  sbdict_dummy_apply_func * func = *static_cast<sbdict_dummy_apply_func **>(closure);
   func(key, value);
 }
 }
@@ -207,7 +207,7 @@ sbdict_dummy_apply(SbDict::Key key, void * value, void * closure)
 void
 SbDict::applyToAll(SbDictApplyFunc * rtn) const
 {
-  cc_dict_apply(reinterpret_cast<cc_dict *>(this->hashtable), sbdict_dummy_apply, function_to_object_cast<void *>(rtn));
+  cc_dict_apply(reinterpret_cast<cc_dict *>(this->hashtable), sbdict_dummy_apply, static_cast<void *>(&rtn));
 }
 
 /*!

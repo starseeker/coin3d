@@ -51,7 +51,7 @@
 // *************************************************************************
 
 #include <Inventor/nodes/SoLinearProfile.h>
-#include "coindefs.h"
+#include "config.h"
 
 #include <cstdlib>
 
@@ -60,10 +60,7 @@
 #include <Inventor/threads/SbStorage.h>
 #include <Inventor/errors/SoDebugError.h>
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif // HAVE_CONFIG_H
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 #include "nodes/SoSubNodeP.h"
 
 // *************************************************************************

@@ -131,9 +131,7 @@
 #include <cstring>
 #include <cfloat> // FLT_MAX, FLT_MIN
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif // HAVE_CONFIG_H
+#include "config.h"
 
 #include "../base/SbUtf8.h" // Modern UTF-8 support
 
@@ -170,7 +168,6 @@
 #include <Inventor/errors/SoDebugError.h>
 #endif // COIN_DEBUG
 
-#include "coindefs.h" // COIN_OBSOLETED()
 #include "nodes/SoSubNodeP.h"
 #include "caches/SoGlyphCache.h"
 #include <Inventor/SbFont.h>

@@ -30,9 +30,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifdef HAVE_CONFIG_H
 #include "config.h"
-#endif // HAVE_CONFIG_H
 
 #ifdef HAVE_DRAGGERS
 
@@ -110,7 +108,6 @@
 
 #include <defaults/transformerDragger.h>
 
-#include "coindefs.h" // COIN_STUB() & COIN_OBSOLETED()
 #include "nodekits/SoSubKitP.h"
 #include "SbBasicP.h"
 
@@ -1851,7 +1848,7 @@ SoTransformerDragger::updateAntiSquishList(void)
 
     SoPathList &pl = sa.getPaths();
     for (int i = 0; i < pl.getLength(); i++) {
-      SoFullPath * path = reclassify_cast<SoFullPath *>(pl[i]);
+      SoFullPath * path = static_cast<SoFullPath *>(pl[i]);
       SoNode * tail = path->getTail();
       int j, n = this->antiSquishList.getLength();
       for (j = 0; j < n; j++) {

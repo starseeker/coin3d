@@ -40,9 +40,7 @@
   \ingroup coin_hud
 */
 
-#ifdef HAVE_CONFIG_H
 #include "config.h"
-#endif
 
 #include <Inventor/annex/HUD/nodes/SoHUDLabel.h>
 

@@ -64,7 +64,7 @@
 #include "errors/CoinInternalError.h"
 
 #include "threads/mutexp.h"
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 #include "misc/SoEnvironment.h"
 
 // C++17 includes for modern threading

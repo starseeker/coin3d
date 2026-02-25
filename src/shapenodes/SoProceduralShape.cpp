@@ -58,6 +58,7 @@
 #include <Inventor/misc/SoState.h>
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/nodes/SoSphere.h>
+#include <Inventor/nodes/SoFont.h>
 #include <Inventor/nodes/SoText2.h>
 #include <Inventor/nodes/SoTranslation.h>
 #include <Inventor/nodes/SoRotation.h>
@@ -1002,11 +1003,11 @@ SoProceduralShape::buildSelectionDisplay() const
       (entry->topologyParsed && i < (int)entry->parsedHandles.size())
         ? &entry->parsedHandles[i] : nullptr;
 
-    // Radius: vertex → 0.05, edge → 0.07, face → 0.10
-    float radius = 0.05f;
+    // Radius: vertex → 0.12, edge → 0.09, face → 0.18
+    float radius = 0.12f;
     if (ph) {
-      if (ph->elementType == 1) radius = 0.07f;  // edge
-      if (ph->elementType == 2) radius = 0.10f;  // face
+      if (ph->elementType == 1) radius = 0.09f;  // edge
+      if (ph->elementType == 2) radius = 0.18f;  // face
     }
 
     SoSeparator* hsep = new SoSeparator;
@@ -1019,8 +1020,15 @@ SoProceduralShape::buildSelectionDisplay() const
     sphere->radius.setValue(radius);
     hsep->addChild(sphere);
 
+    SoFont* font = new SoFont;
+    font->size.setValue(12.0f);
+    hsep->addChild(font);
+
+    // depthTest=FALSE: label always renders on top of the sphere and solid
+    // geometry regardless of depth — mirrors SGI OpenInventor 2.1 behaviour.
     SoText2* label = new SoText2;
     label->string.setValue(h.name);
+    label->depthTest.setValue(FALSE);
     hsep->addChild(label);
 
     sep->addChild(hsep);

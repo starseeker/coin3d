@@ -34,7 +34,7 @@
 \**************************************************************************/
 
 #include "Inventor/basic.h"
-#include "../errors/CoinInternalError.h"
+#include "CoinInternalError.h"
 
 #include <stdarg.h>
 

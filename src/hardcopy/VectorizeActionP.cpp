@@ -35,7 +35,7 @@
 //
 
 #include "VectorizeActionP.h"
-#include "coindefs.h"
+#include "config.h"
 #include <Inventor/elements/SoViewingMatrixElement.h>
 #include <Inventor/elements/SoProjectionMatrixElement.h>
 #include <Inventor/elements/SoModelMatrixElement.h>

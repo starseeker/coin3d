@@ -50,7 +50,7 @@
 #include <Inventor/events/SoKeyboardEvent.h>
 
 #include "SbBasicP.h"
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 #include "misc/SbHash.h"
 
 #include <cassert>

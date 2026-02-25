@@ -74,9 +74,7 @@
 
 #include <Inventor/SoOutput.h>
 
-#ifdef HAVE_CONFIG_H
 #include "config.h"
-#endif // HAVE_CONFIG_H
 
 #include <cassert>
 #include <cstring>
@@ -85,7 +83,7 @@
 #include <windows.h>
 #endif // HAVE_WINDOWS_H
 
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/SbName.h>
 #include <Inventor/SbString.h>

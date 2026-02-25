@@ -190,7 +190,7 @@
 #include <Inventor/nodes/SoGeometryShader.h>
 #include <Inventor/nodes/SoShaderParameter.h>
 #include <Inventor/elements/SoGLShaderProgramElement.h>
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 #include <Inventor/errors/SoDebugError.h>
 
 #include "misc/SbHash.h"

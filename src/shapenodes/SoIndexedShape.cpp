@@ -53,7 +53,7 @@
 #include <Inventor/nodes/SoVertexProperty.h>
 
 #include "nodes/SoSubNodeP.h"
-#include "coindefs.h" // COIN_OBSOLETED()
+#include "config.h" // COIN_OBSOLETED()
 
 /*!
   \var SoMFInt32 SoIndexedShape::coordIndex

@@ -35,7 +35,7 @@
   Modernized to use std::string instead of cc_string.
 */
 
-#include "coindefs.h"
+#include "config.h"
 #include "fonts/fontspec.h"
 #include <string>
 #include <cstring>

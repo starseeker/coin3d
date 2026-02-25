@@ -43,7 +43,7 @@
 
 #include <cassert>
 
-#include "coindefs.h"
+#include "config.h"
 #include "SbBasicP.h"
 
 SO_ELEMENT_SOURCE(SoDepthBufferElement);

@@ -119,9 +119,7 @@
  * The patch is explained at the top of the diff file.
  */
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif /* HAVE_CONFIG_H */
+#include "config.h"
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>

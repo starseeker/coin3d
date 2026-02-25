@@ -43,7 +43,7 @@
   the scene graph.
 */
 
-#include "coindefs.h"
+#include "config.h"
 #include <Inventor/elements/SoGLViewingMatrixElement.h>
 #include <Inventor/actions/SoGLRenderAction.h>
 
@@ -53,9 +53,6 @@
 #include <Inventor/errors/SoDebugError.h>
 #endif // COIN_DEBUG
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif // HAVE_CONFIG_H
 
 #include <Inventor/system/gl.h>
 #include "elements/GL/SoResetMatrixElement.h"

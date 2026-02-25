@@ -135,7 +135,7 @@
 #include <cassert>
 #include <cstdlib>
 
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 
 #include "misc/SoEnvironment.h"
 

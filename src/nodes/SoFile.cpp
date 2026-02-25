@@ -58,11 +58,11 @@
 // *************************************************************************
 
 #include <Inventor/nodes/SoFile.h>
-#include "coindefs.h"
+#include "config.h"
 
 #include <cstring>
 
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 #include <Inventor/SoDB.h>
 #include <Inventor/SoInput.h>
 #include <Inventor/actions/SoCallbackAction.h>

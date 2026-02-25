@@ -41,9 +41,7 @@
 
 #include <Inventor/elements/SoGLClipPlaneElement.h>
 
-#ifdef HAVE_CONFIG_H
 #include "config.h"
-#endif // HAVE_CONFIG_H
 
 #include <Inventor/system/gl.h>
 #include <Inventor/errors/SoDebugError.h>

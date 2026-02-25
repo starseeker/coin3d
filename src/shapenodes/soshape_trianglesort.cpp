@@ -35,9 +35,7 @@
 #include <cstdlib>
 #include <cassert>
 
-#ifdef HAVE_CONFIG_H
 #include "config.h"
-#endif // HAVE_CONFIG_H
 
 #include <Inventor/lists/SbList.h>
 #include <Inventor/SoPrimitiveVertex.h>
@@ -48,7 +46,7 @@
 #include <Inventor/elements/SoViewVolumeElement.h>
 #include <Inventor/bundles/SoMaterialBundle.h>
 #include <Inventor/SbPlane.h>
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 #include <Inventor/system/gl.h>
 
 soshape_trianglesort::soshape_trianglesort(void)

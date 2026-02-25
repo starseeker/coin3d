@@ -30,7 +30,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#include <SoDebug.h>
+#include <Inventor/SoDebug.h>
 
 #include <cstdarg>
 #include <cassert>
@@ -38,7 +38,7 @@
 #include <cstdio>
 #include <cstdlib>
 
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 #include <Inventor/nodes/SoNode.h>
 #include <Inventor/fields/SoField.h>
 #include <Inventor/SoOutput.h>
@@ -58,7 +58,7 @@ inline unsigned int SbHashFunc(const void * key)
 // *************************************************************************
 
 /*!
-  \class SoDebug SoDebug.h SoDebug.h
+  \class SoDebug Inventor/SoDebug.h Inventor/SoDebug.h
   The SoDebug class is a small collection of debugging related functions.
 */
 

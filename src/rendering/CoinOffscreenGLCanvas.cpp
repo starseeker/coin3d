@@ -40,12 +40,10 @@
 #include <Inventor/misc/SoContextHandler.h>
 #include <Inventor/elements/SoGLCacheContextElement.h>
 
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 #include "misc/SoEnvironment.h"
 
-#if defined(HAVE_CONFIG_H)
 #include "config.h"
-#endif /* HAVE_CONFIG_H */
 
 // *************************************************************************
 

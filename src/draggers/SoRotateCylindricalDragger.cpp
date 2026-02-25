@@ -30,9 +30,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifdef HAVE_CONFIG_H
 #include "config.h"
-#endif // HAVE_CONFIG_H
 
 #ifdef HAVE_DRAGGERS
 
@@ -68,7 +66,6 @@
 #include <defaults/rotateCylindricalDragger.h>
 
 #include "nodekits/SoSubKitP.h"
-#include "coindefs.h"
 #include "SbBasicP.h"
 
 #define THISP(d) static_cast<SoRotateCylindricalDragger *>(d)

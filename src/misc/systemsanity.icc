@@ -20,18 +20,14 @@ static
 void
 SoDB_compileTimeAsserts(void)
 {
-  COIN_CT_ASSERT(sizeof(uint8_t) == 1);
-  COIN_CT_ASSERT(sizeof(int8_t) == 1);
-  COIN_CT_ASSERT(sizeof(uint16_t) == 2);
-  COIN_CT_ASSERT(sizeof(int16_t) == 2);
-  COIN_CT_ASSERT(sizeof(uint32_t) == 4);
-  COIN_CT_ASSERT(sizeof(int32_t) == 4);
-#ifdef HAVE_UINT64_T
-  COIN_CT_ASSERT(sizeof(uint64_t) == 8);
-#endif // HAVE_UINT64_T
-#ifdef HAVE_INT64_T
-  COIN_CT_ASSERT(sizeof(int64_t) == 8);
-#endif // HAVE_INT64_T
+  static_assert(sizeof(uint8_t) == 1);
+  static_assert(sizeof(int8_t) == 1);
+  static_assert(sizeof(uint16_t) == 2);
+  static_assert(sizeof(int16_t) == 2);
+  static_assert(sizeof(uint32_t) == 4);
+  static_assert(sizeof(int32_t) == 4);
+  static_assert(sizeof(uint64_t) == 8);
+  static_assert(sizeof(int64_t) == 8);
 
   // This now obsoleted sanity check used to be necessary because if
   // the unsigned long type is less than the pointer size (which is
@@ -47,7 +43,7 @@ SoDB_compileTimeAsserts(void)
   //   http://msdn.microsoft.com/library/default.asp?url=/library/en-us/win64/win64/getting_ready_for_64_bit_windows.asp
   //
 #if 0 // OBSOLETED
-  COIN_CT_ASSERT(sizeof(unsigned long) >= sizeof(void *));
+  static_assert(sizeof(unsigned long) >= sizeof(void *));
 #endif // OBSOLETED
 }
 

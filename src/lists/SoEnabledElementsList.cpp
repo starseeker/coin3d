@@ -47,9 +47,7 @@
 #include <Inventor/lists/SoEnabledElementsList.h>
 #include <cassert>
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif // HAVE_CONFIG_H
+#include "config.h"
 
 #ifdef COIN_THREADSAFE
 #include <Inventor/threads/SbMutex.h>

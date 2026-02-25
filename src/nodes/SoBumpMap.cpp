@@ -87,9 +87,7 @@
 
 #include <cassert>
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif // HAVE_CONFIG_H
+#include "config.h"
 
 #include <Inventor/SoInput.h>
 #include <Inventor/actions/SoCallbackAction.h>
@@ -108,7 +106,6 @@
 #include <Inventor/misc/SoGLDriverDatabase.h>
 #include <Inventor/engines/SoHeightMapToNormalMap.h>
 
-#include "coindefs.h" // COIN_OBSOLETED()
 #include "nodes/SoSubNodeP.h"
 
 /*!

@@ -54,9 +54,7 @@
 
 #include "errors/CoinInternalError.h"
 
-#ifdef HAVE_CONFIG_H
 #include "config.h"
-#endif /* HAVE_CONFIG_H */
 
 #include <cstdio>
 #include <cassert>
@@ -71,8 +69,7 @@
 #include "threads/mutexp.h"
 #endif /* COIN_THREADSAFE */
 
-#include "coindefs.h"
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 
 /* ********************************************************************** */
 

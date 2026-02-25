@@ -60,7 +60,7 @@
 
 #include <Inventor/fields/SoMFPath.h>
 
-#include "coindefs.h"
+#include "config.h"
 #include "SbBasicP.h"
 
 #include <Inventor/fields/SoSFPath.h>

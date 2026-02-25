@@ -64,7 +64,7 @@
 
 #include <Inventor/fields/SoSFPath.h>
 
-#include "coindefs.h"
+#include "config.h"
 #include "SbBasicP.h"
 
 #include <Inventor/SoInput.h>

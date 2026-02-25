@@ -43,7 +43,7 @@
 
 #include <Inventor/elements/SoShininessElement.h>
 
-#include "coindefs.h"
+#include "config.h"
 #include "SbBasicP.h"
 
 #include <Inventor/elements/SoLazyElement.h>

@@ -112,7 +112,7 @@
 
 #include <Inventor/engines/SoTimeCounter.h>
 
-#include "coindefs.h"
+#include "config.h"
 #include "SbBasicP.h"
 #include "engines/SoSubEngineP.h"
 

@@ -69,10 +69,7 @@
 #include <Inventor/lists/SoEngineList.h>
 #include <Inventor/lists/SoEngineOutputList.h>
 
-#ifdef HAVE_CONFIG_H
 #include "config.h"
-#endif // HAVE_CONFIG_H
-#include "coindefs.h" // COIN_STUB()
 #ifdef COIN_THREADSAFE
 #include "threads/recmutexp.h"
 #endif // COIN_THREADSAFE

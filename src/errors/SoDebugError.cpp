@@ -86,8 +86,8 @@
 #include <Inventor/SoType.h>
 #include <Inventor/lists/SbList.h>
 
-#include "coindefs.h"
-#include "C/CoinTidbits.h"
+#include "config.h"
+#include "CoinTidbits.h"
 
 #ifndef COIN_WORKAROUND_NO_USING_STD_FUNCS
 using std::strcmp;
@@ -103,14 +103,9 @@ using std::memcpy;
 #endif
 
 #if defined(_MSC_VER)
-  #if _MSC_VER >= COIN_MSVC_8_0_VERSION
-    #include <intrin.h>
-  #endif
-  #if _MSC_VER >= COIN_MSVC_7_0_VERSION
-    #define COIN_DEBUGGER_BREAK(x) __debugbreak()
-  #else
-    #define COIN_DEBUGGER_BREAK(x) __asm { int 3 }
-  #endif
+  /* C++17 requires MSVC 2017+, which has both <intrin.h> and __debugbreak() */
+  #include <intrin.h>
+  #define COIN_DEBUGGER_BREAK(x) __debugbreak()
 #else
   #if defined (MINGW32) || defined (CYGWIN)
     #include <windows.h>

@@ -57,15 +57,12 @@
 #include <Inventor/actions/SoGLRenderAction.h>
 #include <Inventor/caches/SoBoundingBoxCache.h>
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
+#include "config.h"
 
 #include <Inventor/system/gl.h>
 
 #include <cassert>
 #include "SbBasicP.h"
-#include "coindefs.h"
 
 #define FLAG_FUNCTION           0x01
 #define FLAG_NEEDCOORDS         0x02

@@ -60,9 +60,7 @@
 
 #include <Inventor/nodes/SoSeparator.h>
 
-#ifdef HAVE_CONFIG_H
 #include "config.h"
-#endif // HAVE_CONFIG_H
 
 #include <cstdlib> // strtol(), rand()
 #include <climits> // LONG_MIN, LONG_MAX
@@ -83,14 +81,13 @@
 #include <Inventor/misc/SoState.h>
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/system/gl.h>
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 #include <Inventor/threads/SbStorage.h>
 
 #ifdef COIN_THREADSAFE
 #include <Inventor/threads/SbMutex.h>
 #endif // COIN_THREADSAFE
 
-#include "coindefs.h" // COIN_OBSOLETED()
 #include "nodes/SoSubNodeP.h"
 #include "glue/glp.h"
 #include "misc/SoEnvironment.h"

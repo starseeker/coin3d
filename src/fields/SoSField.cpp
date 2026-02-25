@@ -97,7 +97,7 @@
 #include <Inventor/fields/SoSubField.h>
 #include <Inventor/errors/SoDebugError.h>
 
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 
 // *************************************************************************
 

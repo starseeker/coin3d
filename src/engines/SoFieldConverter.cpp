@@ -73,7 +73,7 @@
 
 #include "engines/SoConvertAll.h"
 #include "engines/SoSubEngineP.h"
-#include "coindefs.h" // COIN_OBSOLETED
+#include "config.h" // COIN_OBSOLETED
 
 /*!
   \fn SoField * SoFieldConverter::getInput(SoType type)

@@ -39,9 +39,7 @@
 
 #include "threads/threads.h"
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif /* HAVE_CONFIG_H */
+#include "config.h"
 
 // C++17 threading is the only supported implementation
 #if defined(__cplusplus) && __cplusplus >= 201703L

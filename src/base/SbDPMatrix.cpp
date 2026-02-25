@@ -69,7 +69,7 @@
 #include <Inventor/SbDPLine.h>
 #include <Inventor/SbMatrix.h>
 
-#include "coindefs.h" // COIN_STUB()
+#include "config.h" // COIN_STUB()
 
 #if COIN_DEBUG
 #include <Inventor/errors/SoDebugError.h>

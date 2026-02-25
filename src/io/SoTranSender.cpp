@@ -33,7 +33,7 @@
 // FIXME: this class has not been implemented yet. 20000627 mortene.
 
 #include <Inventor/misc/SoTranSender.h>
-#include <coindefs.h> // COIN_STUB
+#include "config.h" // COIN_STUB
 #include <cstdlib>
 
 SoTranSender::SoTranSender(SoOutput * COIN_UNUSED_ARG(output))

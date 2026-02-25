@@ -38,11 +38,8 @@
 */
 
 #include <Inventor/elements/SoGLDrawStyleElement.h>
-#include "coindefs.h"
+#include "config.h"
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif // HAVE_CONFIG_H
 
 #include <Inventor/system/gl.h>
 

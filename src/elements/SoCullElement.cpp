@@ -88,7 +88,7 @@
 #include <cstring>
 #include <cassert>
 
-#include "coindefs.h"
+#include "config.h"
 #include "SbBasicP.h"
 
 #if COIN_DEBUG

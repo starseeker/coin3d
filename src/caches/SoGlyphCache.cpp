@@ -47,7 +47,7 @@
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/SbFont.h>
 
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 
 class SoGlyphCacheP {
 public:

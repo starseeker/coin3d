@@ -168,11 +168,9 @@
 #include <cmath> // ilogb
 #include <cfloat> // _logb
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif // HAVE_CONFIG_H
+#include "config.h"
 
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 #include <Inventor/SbPlane.h>
 #include <Inventor/SoPrimitiveVertex.h>
 #include <Inventor/actions/SoGLRenderAction.h>
@@ -320,14 +318,7 @@ static float precalculateWeight(int i)
 }
 static float qmeshGetWeight(float value)
 {
-#if defined(HAVE_ILOGB)
   int exponent = ilogb(value) + (QUADMESH_WEIGHTS_NR / 2);
-#elif defined(HAVE__LOGB)
-  int exponent = ((int) _logb(value)) + (QUADMESH_WEIGHTS_NR / 2);
-#else // HAVE__LOGB
-  // FIXME: implement coin_ilogb(double). pederb, 2002-12-19
-  int exponent = QUADMESH_WEIGHTS_NR / 2;
-#endif // !HAVE_ILOGB && ! HAVE__LOGB
   if (exponent < 0) return 0.f;
   if (exponent >= QUADMESH_WEIGHTS_NR) return 1.f;
   return precompWeights[exponent];

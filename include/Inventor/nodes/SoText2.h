@@ -36,6 +36,7 @@
 #include <Inventor/nodes/SoSubNode.h>
 #include <Inventor/nodes/SoShape.h>
 #include <Inventor/fields/SoMFString.h>
+#include <Inventor/fields/SoSFBool.h>
 #include <Inventor/fields/SoSFFloat.h>
 #include <Inventor/fields/SoSFEnum.h>
 
@@ -57,6 +58,13 @@ public:
   SoMFString string;
   SoSFFloat spacing;
   SoSFEnum justification;
+  /*!
+   * When TRUE (the default), text pixels are depth-tested against geometry
+   * that was drawn earlier in the scene — matching upstream Coin behaviour.
+   * Set to FALSE to draw the label always on top of (i.e. unoccluded by)
+   * any 3D geometry, which is the classic SGI OpenInventor 2.1 behaviour.
+   */
+  SoSFBool depthTest;
 
   virtual void GLRender(SoGLRenderAction * action);
   virtual void rayPick(SoRayPickAction * action);

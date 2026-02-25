@@ -184,9 +184,7 @@
 
 #include <cassert>
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif // HAVE_CONFIG_H
+#include "config.h"
 
 #include <Inventor/SoPrimitiveVertex.h>
 #include <Inventor/actions/SoGLRenderAction.h>
@@ -224,7 +222,7 @@
 #include <Inventor/threads/SbRWMutex.h>
 
 #include "nodes/SoSubNodeP.h"
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 #include "threads/threadsutilp.h"
 #include "rendering/SoVertexArrayIndexer.h"
 #include "rendering/SoVBO.h"

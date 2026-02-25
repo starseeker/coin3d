@@ -43,7 +43,7 @@
 */
 
 #include <Inventor/SbFont.h>
-#include "coindefs.h"
+#include "config.h"
 
 #include <cstdlib>
 #include <cstring>

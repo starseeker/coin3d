@@ -63,9 +63,7 @@
 #include <Inventor/actions/SoGLRenderAction.h>
 #include <Inventor/system/gl.h>
 
-#ifdef HAVE_CONFIG_H
 #include "config.h"
-#endif // HAVE_CONFIG_H
 #include "nodes/SoSubNodeP.h"
 
 

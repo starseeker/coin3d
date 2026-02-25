@@ -40,12 +40,12 @@
 */
 
 #include <Inventor/elements/SoGLPolygonOffsetElement.h>
-#include "coindefs.h"
+#include "config.h"
 
 #include <cassert>
 #include <cstdlib>
 
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/misc/SoGLDriverDatabase.h>
 

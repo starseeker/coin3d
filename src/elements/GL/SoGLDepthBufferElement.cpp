@@ -39,7 +39,7 @@
   \since Coin 3.0
 */
 #include <Inventor/elements/SoGLDepthBufferElement.h>
-#include "coindefs.h"
+#include "config.h"
 
 #include <cassert>
 

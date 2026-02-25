@@ -31,7 +31,7 @@
 \**************************************************************************/
 
 #include <Inventor/nodes/SoSceneTextureCubeMap.h>
-#include "coindefs.h"
+#include "config.h"
 #include <Inventor/SoInput.h>
 #include <Inventor/nodes/SoSubNode.h>
 #include <Inventor/actions/SoCallbackAction.h>
@@ -58,11 +58,8 @@
 #include <Inventor/nodes/SoPerspectiveCamera.h>
 #include <Inventor/SbImage.h>
 #include "glue/glp.h"
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif // HAVE_CONFIG_H
 
 #ifdef COIN_THREADSAFE
 #include <Inventor/threads/SbMutex.h>

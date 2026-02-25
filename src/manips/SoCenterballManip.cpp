@@ -30,9 +30,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifdef HAVE_CONFIG_H
 #include "config.h"
-#endif // HAVE_CONFIG_H
 
 #ifdef HAVE_MANIPULATORS
 
@@ -60,7 +58,6 @@
 #include <Inventor/nodes/SoSurroundScale.h>
 #include <Inventor/sensors/SoFieldSensor.h>
 
-#include "coindefs.h"
 #include "nodes/SoSubNodeP.h"
 
 class SoCenterballManipP {

@@ -48,9 +48,7 @@
 #include <cstring>
 #include <cassert>
 
-#ifdef HAVE_CONFIG_H
 #include "config.h"
-#endif // HAVE_CONFIG_H
 
 #include "threads/threads.h"
 #include <Inventor/SbImage.h>
@@ -66,7 +64,7 @@
 #include <Inventor/threads/SbMutex.h>
 #endif // COIN_THREADSAFE
 
-#include "C/CoinTidbits.h"
+#include "CoinTidbits.h"
 #include "glue/glp.h"
 #include "rendering/SoGL.h"
 
