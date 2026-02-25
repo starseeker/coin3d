@@ -161,7 +161,7 @@ void
 CoinResources::init(void)
 {
   CoinResources::resourcemap = new CoinResources::ResourceMap;
-  cc_coin_atexit_static_internal((coin_atexit_f*) CoinResources::cleanup);
+  SbAtexitStaticInternal((coin_atexit_f*) CoinResources::cleanup);
 }
 
 

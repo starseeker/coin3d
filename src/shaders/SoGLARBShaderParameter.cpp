@@ -61,7 +61,7 @@ SoGLARBShaderParameter::set1f(const SoGLShaderObject * shader,
                               const float value, const char*, const int idx)
 {
   if (this->isValid(shader, idx))
-    cc_glglue_glProgramLocalParameter4f(shader->GLContext(),
+    SoGLContext_glProgramLocalParameter4f(shader->GLContext(),
                                         this->target, this->identifier,
                                         value, value, value, value);
 }
@@ -71,7 +71,7 @@ SoGLARBShaderParameter::set2f(const SoGLShaderObject * shader,
                               const float * value, const char*, const int idx)
 {
   if (this->isValid(shader, idx))
-    cc_glglue_glProgramLocalParameter4f(shader->GLContext(),
+    SoGLContext_glProgramLocalParameter4f(shader->GLContext(),
                                         this->target, this->identifier,
                                         value[0], value[1], value[0], value[0]);
 }
@@ -81,7 +81,7 @@ SoGLARBShaderParameter::set3f(const SoGLShaderObject * shader,
                               const float * value, const char*, const int idx)
 {
   if (this->isValid(shader, idx))
-    cc_glglue_glProgramLocalParameter4f(shader->GLContext(),
+    SoGLContext_glProgramLocalParameter4f(shader->GLContext(),
                                         this->target, this->identifier,
                                         value[0], value[1], value[2], value[0]);
 }
@@ -91,7 +91,7 @@ SoGLARBShaderParameter::set4f(const SoGLShaderObject * shader,
                               const float * value, const char*, const int idx)
 {
   if (this->isValid(shader, idx))
-    cc_glglue_glProgramLocalParameter4f(shader->GLContext(),
+    SoGLContext_glProgramLocalParameter4f(shader->GLContext(),
                                         this->target, this->identifier,
                                         value[0], value[1], value[2], value[3]);
 }

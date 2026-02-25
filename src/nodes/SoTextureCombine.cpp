@@ -490,7 +490,7 @@ SoTextureCombine::initClass(void)
 void
 SoTextureCombine::GLRender(SoGLRenderAction * action)
 {
-  const cc_glglue * glue = cc_glglue_instance(action->getCacheContext());
+  const SoGLContext * glue = SoGLContext_instance(action->getCacheContext());
 
   SoTextureCombine::Operation rgbaop =
     (SoTextureCombine::Operation) this->rgbOperation.getValue();
@@ -498,7 +498,7 @@ SoTextureCombine::GLRender(SoGLRenderAction * action)
   SoTextureCombine::Operation alphaop =
     (SoTextureCombine::Operation) this->alphaOperation.getValue();
 
-  SbBool supported = cc_glglue_glversion_matches_at_least(glue, 1, 3, 0);
+  SbBool supported = SoGLContext_glversion_matches_at_least(glue, 1, 3, 0);
 
   if (!supported) {
     supported = SoGLDriverDatabase::isSupported(glue, "GL_ARB_texture_env_combine");
@@ -574,9 +574,9 @@ SoTextureCombine::doAction(SoAction * action)
   col[3] = tmp[3];
 
 
-  const cc_glglue * glue = 
-    cc_glglue_instance(SoGLCacheContextElement::get(state));
-  int maxunits = cc_glglue_max_texture_units(glue);
+  const SoGLContext * glue = 
+    SoGLContext_instance(SoGLCacheContextElement::get(state));
+  int maxunits = SoGLContext_max_texture_units(glue);
 
   if (unit < maxunits) {
     SoTextureCombineElement::set(state, this, unit,

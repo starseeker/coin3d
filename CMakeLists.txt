@@ -97,6 +97,7 @@ option(COIN_THREADSAFE "Enable thread safe render traversals" ON)
 option(HAVE_NODEKITS "Enable NodeKit support" ON)
 option(HAVE_DRAGGERS "Enable Dragger support" ON)
 option(HAVE_MANIPULATORS "Enable Manipulator support" ON)
+option(COIN_HARDCOPY "Enable PostScript hardcopy output subsystem" ON)
 
 # External dependencies
 option(USE_EXCEPTIONS "Compile with exceptions (g++ only)" ON)

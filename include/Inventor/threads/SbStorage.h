@@ -35,51 +35,20 @@
 
 #include <Inventor/basic.h>
 
-// Forward declarations for thread storage types
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-typedef struct cc_storage cc_storage;
-typedef void cc_storage_f(void * closure);
-typedef void cc_storage_apply_func(void * dataptr, void * closure);
-
-// Storage API functions
-extern cc_storage * cc_storage_construct(unsigned int size);
-extern cc_storage * cc_storage_construct_etc(unsigned int size, 
-                                             cc_storage_f * constructor,
-                                             cc_storage_f * destructor);
-extern void cc_storage_destruct(cc_storage * storage);
-extern void * cc_storage_get(cc_storage * storage);
-extern void cc_storage_apply_to_all(cc_storage * storage, 
-                                    cc_storage_apply_func * func, 
-                                    void * closure);
-
-#ifdef __cplusplus
-} /* extern "C" */
-#endif
-
 typedef void SbStorageApplyFunc(void * tls, void * closure);
+typedef void SbStorageConstructFunc(void * closure);
 
-class SbStorage {
+class COIN_DLL_API SbStorage {
 public:
-  SbStorage(unsigned int size) { this->storage = cc_storage_construct(size); }
-  SbStorage(unsigned int size, cc_storage_f * constr, cc_storage_f * destr)
-    { this->storage = cc_storage_construct_etc(size, constr, destr); }
-  ~SbStorage(void) { cc_storage_destruct(this->storage); }
+  SbStorage(unsigned int size);
+  SbStorage(unsigned int size, SbStorageConstructFunc * constr, SbStorageConstructFunc * destr);
+  ~SbStorage(void);
 
-  void * get(void) { return cc_storage_get(this->storage); }
-  void applyToAll(SbStorageApplyFunc * func, void * closure) {
-    cc_storage_apply_to_all(this->storage, 
-                            reinterpret_cast<cc_storage_apply_func *>(func), closure);
-  }
+  void * get(void);
+  void applyToAll(SbStorageApplyFunc * func, void * closure);
 
 private:
-  cc_storage * storage;
-
-  // NOTE: For now, keeping original C implementation to avoid complex thread_local
-  // registry issues. For a future C++20+ migration, consider implementing with
-  // std::jthread and proper thread_local storage with enumeration support.
+  void * impl;
 };
 
 #endif // !COIN_SBSTORAGE_H

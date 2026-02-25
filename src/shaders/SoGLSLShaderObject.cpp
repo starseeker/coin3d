@@ -175,7 +175,7 @@ SoGLSLShaderObject::isAttached(void) const
 }
 
 void
-SoGLSLShaderObject::printInfoLog(const cc_glglue * g, COIN_GLhandle handle, int objType)
+SoGLSLShaderObject::printInfoLog(const SoGLContext * g, COIN_GLhandle handle, int objType)
 {
   GLint length = 0;
 
@@ -240,7 +240,7 @@ SoGLSLShaderObject::updateCoinParameter(SoState * COIN_UNUSED_ARG(state), const 
 {
   COIN_GLhandle pHandle = this->programHandle;
   if (pHandle) {
-    const cc_glglue * glue = this->GLContext();
+    const SoGLContext * glue = this->GLContext();
 
     // FIXME: set up a dict for the supported Coin variables
     SoShaderParameter1i * p = (SoShaderParameter1i*) param;

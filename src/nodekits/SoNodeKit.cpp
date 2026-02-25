@@ -110,5 +110,5 @@ SoNodeKit::init(void)
 #endif // HAVE_NODEKITS
 
   nodekit_isinitialized = TRUE;
-  cc_coin_atexit_static_internal((coin_atexit_f*) nodekit_cleanup);
+  SbAtexitStaticInternal((coin_atexit_f*) nodekit_cleanup);
 }

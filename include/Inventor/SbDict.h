@@ -82,7 +82,7 @@ public:
   void setHashingFunction(SbDictHashingFunc * func);
 
 private:
-  struct cc_dict * hashtable;
+  void * hashtable;
 
 };
 

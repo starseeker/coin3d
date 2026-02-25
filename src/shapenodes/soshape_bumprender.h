@@ -69,14 +69,14 @@ public:
   void renderNormal(SoState * state, const SoPrimitiveVertexCache * cache);
 
   struct spec_programidx {
-    const cc_glglue * glue;
+    const SoGLContext * glue;
     GLuint dirlight;
     GLuint pointlight;
     GLuint fragment;
   };
 
   struct diffuse_programidx {
-    const cc_glglue * glue;
+    const SoGLContext * glue;
     GLuint pointlight; // Pointlight diffuse rendering not implemented as a program yet.
     GLuint dirlight;
     GLuint normalrendering;
@@ -87,8 +87,8 @@ private:
   void initLight(SoLight * light, const SbMatrix & m);
   void calcTSBCoords(const SoPrimitiveVertexCache * cache, SoLight * light);
   SbVec3f getLightVec(const SbVec3f & v) const;
-  void initPrograms(const cc_glglue * glue, SoState * state);
-  void initDiffusePrograms(const cc_glglue * glue, SoState * state);
+  void initPrograms(const SoGLContext * glue, SoState * state);
+  void initDiffusePrograms(const SoGLContext * glue, SoState * state);
 
   void soshape_diffuseprogramdeletion(unsigned long key, void * value);
   void soshape_specularprogramdeletion(unsigned long key, void * value);

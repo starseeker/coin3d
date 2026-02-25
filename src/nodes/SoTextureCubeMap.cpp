@@ -391,7 +391,7 @@ SoTextureCubeMap::GLRender(SoGLRenderAction * action)
 
   float quality = SoTextureQualityElement::get(state);
 
-  const cc_glglue * glue = cc_glglue_instance(SoGLCacheContextElement::get(state));
+  const SoGLContext * glue = SoGLContext_instance(SoGLCacheContextElement::get(state));
 
   LOCK_GLIMAGE(this);
 
@@ -427,7 +427,7 @@ SoTextureCubeMap::GLRender(SoGLRenderAction * action)
     this->model.getValue();
   
   if (glmodel == SoMultiTextureImageElement::REPLACE) {
-    if (!cc_glglue_glversion_matches_at_least(glue, 1, 1, 0)) {
+    if (!SoGLContext_glversion_matches_at_least(glue, 1, 1, 0)) {
       static int didwarn = 0;
       if (!didwarn) {
         SoDebugError::postWarning("SoTextureCubeMap::GLRender",
@@ -443,7 +443,7 @@ SoTextureCubeMap::GLRender(SoGLRenderAction * action)
   }
   
   int unit = SoTextureUnitElement::get(state);
-  int maxunits = cc_glglue_max_texture_units(glue);
+  int maxunits = SoGLContext_max_texture_units(glue);
   if (unit < maxunits) {
     SoGLMultiTextureImageElement::set(state, this, unit,
                                       PRIVATE(this)->glimagevalid ? PRIVATE(this)->glimage : NULL,

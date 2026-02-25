@@ -230,12 +230,13 @@ SoDebugError::initClass(void)
 }
 
 void
-SoDebugError::callbackForwarder(const struct cc_debugerror * error,
+SoDebugError::callbackForwarder(const void * error_ptr,
                             void * COIN_UNUSED_ARG(data)
                             )
 {
   SoDebugError wrappederr;
 
+  const cc_debugerror * error = static_cast<const cc_debugerror *>(error_ptr);
   switch (cc_debugerror_get_severity(error)) {
   case CC_DEBUGERROR_ERROR:
     wrappederr.severity = SoDebugError::ERROR;
@@ -427,3 +428,16 @@ SoDebugError::getHandler(void * & data) const
 
 #undef SODEBUGERROR_POST
 #undef COIN_DEBUGGER_BREAK
+
+// Provide the Inventor-style API for external builds (wraps SoDebugError::post)
+// This implements SbDebugError_post declared in SbBasic.h for non-COIN_INTERNAL builds.
+void
+SbDebugError_post(const char * source, const char * format, ...)
+{
+  va_list args;
+  va_start(args, format);
+  SbString s;
+  s.vsprintf(format, args);
+  va_end(args);
+  SoDebugError::post(source, "%s", s.getString());
+}

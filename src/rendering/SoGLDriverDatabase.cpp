@@ -65,15 +65,15 @@
 
 
 // Forward declarations for OpenGL feature test functions
-typedef SbBool glglue_feature_test_f(const cc_glglue * glue);
+typedef SbBool glglue_feature_test_f(const SoGLContext * glue);
 
 // Function declarations for runtime feature tests
 extern "C" {
-  SbBool multidraw_elements_wrapper(const cc_glglue * glue);
-  SbBool glsl_clip_vertex_hw_wrapper(const cc_glglue * glue);
-  SbBool coin_glglue_vbo_in_displaylist_supported(const cc_glglue * glue);
-  SbBool coin_glglue_non_power_of_two_textures(const cc_glglue * glue);
-  SbBool coin_glglue_has_generate_mipmap(const cc_glglue * glue);
+  SbBool multidraw_elements_wrapper(const SoGLContext * glue);
+  SbBool glsl_clip_vertex_hw_wrapper(const SoGLContext * glue);
+  SbBool SoGLContext_vbo_in_displaylist_supported(const SoGLContext * glue);
+  SbBool SoGLContext_non_power_of_two_textures(const SoGLContext * glue);
+  SbBool SoGLContext_has_generate_mipmap(const SoGLContext * glue);
 }
 
 // Driver identification structure for embedded workarounds
@@ -160,9 +160,9 @@ public:
   ~SoGLDriverDatabaseP();
 
   void initFunctions(void);
-  SbBool isSupported(const cc_glglue * context, const SbName & feature);
-  SbBool isBroken(const cc_glglue * context, const SbName & feature);
-  SbBool isDisabled(const cc_glglue * context, const SbName & feature);
+  SbBool isSupported(const SoGLContext * context, const SbName & feature);
+  SbBool isBroken(const SoGLContext * context, const SbName & feature);
+  SbBool isDisabled(const SoGLContext * context, const SbName & feature);
 
   // Runtime feature detection function map
   SbHash<const char*, glglue_feature_test_f *> featuremap;
@@ -170,25 +170,25 @@ public:
 private:
   // Helper methods for driver pattern matching
   SbBool matchesPattern(const char* text, const char* pattern);
-  SbBool matchesDriver(const cc_glglue * context, const DriverInfo& driver);
-  const FeatureOverride* findOverride(const cc_glglue * context, const SbName & feature);
+  SbBool matchesDriver(const SoGLContext * context, const DriverInfo& driver);
+  const FeatureOverride* findOverride(const SoGLContext * context, const SbName & feature);
 };
 
 static SoGLDriverDatabaseP * sogldriverdatabase_instance = NULL;
 
 // Feature test wrapper functions
 SbBool 
-multidraw_elements_wrapper(const cc_glglue * glue)
+multidraw_elements_wrapper(const SoGLContext * glue)
 {
   // Implement multidraw elements test - check for GL_EXT_multi_draw_arrays
-  return cc_glglue_glext_supported(glue, "GL_EXT_multi_draw_arrays");
+  return SoGLContext_glext_supported(glue, "GL_EXT_multi_draw_arrays");
 }
 
 SbBool 
-glsl_clip_vertex_hw_wrapper(const cc_glglue * glue) 
+glsl_clip_vertex_hw_wrapper(const SoGLContext * glue) 
 {
   // GLSL clip vertex hardware support test
-  if (!cc_glglue_has_arb_vertex_shader(glue)) return FALSE;
+  if (!SoGLContext_has_arb_vertex_shader(glue)) return FALSE;
   // Additional vendor-specific checks for proper clip vertex support
   // ATI drivers before a certain version had broken clip vertex support
   if (glue->vendor_is_ati) return FALSE;
@@ -214,70 +214,70 @@ SoGLDriverDatabaseP::initFunctions(void)
   this->featuremap[SbName(SO_GL_MULTIDRAW_ELEMENTS).getString()] =
                        (glglue_feature_test_f *) &multidraw_elements_wrapper;
   this->featuremap[SbName(SO_GL_POLYGON_OFFSET).getString()] =
-                       (glglue_feature_test_f *) &cc_glglue_has_polygon_offset;
+                       (glglue_feature_test_f *) &SoGLContext_has_polygon_offset;
   this->featuremap[SbName(SO_GL_TEXTURE_OBJECT).getString()] =
-                       (glglue_feature_test_f *) &cc_glglue_has_texture_objects;
+                       (glglue_feature_test_f *) &SoGLContext_has_texture_objects;
   this->featuremap[SbName(SO_GL_3D_TEXTURES).getString()] =
-                       (glglue_feature_test_f *) &cc_glglue_has_3d_textures;
+                       (glglue_feature_test_f *) &SoGLContext_has_3d_textures;
   this->featuremap[SbName(SO_GL_MULTITEXTURE).getString()] =
-                       (glglue_feature_test_f *) &cc_glglue_has_multitexture;
+                       (glglue_feature_test_f *) &SoGLContext_has_multitexture;
   this->featuremap[SbName(SO_GL_TEXSUBIMAGE).getString()] =
-                       (glglue_feature_test_f *) &cc_glglue_has_texsubimage;
+                       (glglue_feature_test_f *) &SoGLContext_has_texsubimage;
   this->featuremap[SbName(SO_GL_2D_PROXY_TEXTURES).getString()] =
-                       (glglue_feature_test_f *) &cc_glglue_has_2d_proxy_textures;
+                       (glglue_feature_test_f *) &SoGLContext_has_2d_proxy_textures;
   this->featuremap[SbName(SO_GL_TEXTURE_EDGE_CLAMP).getString()] =
-                       (glglue_feature_test_f *) &cc_glglue_has_texture_edge_clamp;
+                       (glglue_feature_test_f *) &SoGLContext_has_texture_edge_clamp;
   this->featuremap[SbName(SO_GL_TEXTURE_COMPRESSION).getString()] =
                        (glglue_feature_test_f *) &cc_glue_has_texture_compression;
   this->featuremap[SbName(SO_GL_COLOR_TABLES).getString()] =
-                       (glglue_feature_test_f *) &cc_glglue_has_color_tables;
+                       (glglue_feature_test_f *) &SoGLContext_has_color_tables;
   this->featuremap[SbName(SO_GL_COLOR_SUBTABLES).getString()] =
-                       (glglue_feature_test_f *) &cc_glglue_has_color_subtables;
+                       (glglue_feature_test_f *) &SoGLContext_has_color_subtables;
   this->featuremap[SbName(SO_GL_PALETTED_TEXTURES).getString()] =
-                       (glglue_feature_test_f *) &cc_glglue_has_paletted_textures;
+                       (glglue_feature_test_f *) &SoGLContext_has_paletted_textures;
   this->featuremap[SbName(SO_GL_BLEND_EQUATION).getString()] =
-                       (glglue_feature_test_f *) &cc_glglue_has_blendequation;
+                       (glglue_feature_test_f *) &SoGLContext_has_blendequation;
   this->featuremap[SbName(SO_GL_VERTEX_ARRAY).getString()] =
-                       (glglue_feature_test_f *) &cc_glglue_has_vertex_array;
+                       (glglue_feature_test_f *) &SoGLContext_has_vertex_array;
   this->featuremap[SbName(SO_GL_NV_VERTEX_ARRAY_RANGE).getString()] =
-                       (glglue_feature_test_f *) &cc_glglue_has_nv_vertex_array_range;
+                       (glglue_feature_test_f *) &SoGLContext_has_nv_vertex_array_range;
   this->featuremap[SbName(SO_GL_VERTEX_BUFFER_OBJECT).getString()] =
-                       (glglue_feature_test_f *) &cc_glglue_has_vertex_buffer_object;
+                       (glglue_feature_test_f *) &SoGLContext_has_vertex_buffer_object;
   this->featuremap[SbName(SO_GL_ARB_FRAGMENT_PROGRAM).getString()] =
-                       (glglue_feature_test_f *) &cc_glglue_has_arb_fragment_program;
+                       (glglue_feature_test_f *) &SoGLContext_has_arb_fragment_program;
   this->featuremap[SbName(SO_GL_ARB_VERTEX_PROGRAM).getString()] =
-                       (glglue_feature_test_f *) &cc_glglue_has_arb_vertex_program;
+                       (glglue_feature_test_f *) &SoGLContext_has_arb_vertex_program;
   this->featuremap[SbName(SO_GL_ARB_VERTEX_SHADER).getString()] =
-                       (glglue_feature_test_f *) &cc_glglue_has_arb_vertex_shader;
+                       (glglue_feature_test_f *) &SoGLContext_has_arb_vertex_shader;
   this->featuremap[SbName(SO_GL_ARB_SHADER_OBJECT).getString()] =
-                       (glglue_feature_test_f *) &cc_glglue_has_arb_shader_objects;
+                       (glglue_feature_test_f *) &SoGLContext_has_arb_shader_objects;
   this->featuremap[SbName(SO_GL_OCCLUSION_QUERY).getString()] =
-                       (glglue_feature_test_f *) &cc_glglue_has_occlusion_query;
+                       (glglue_feature_test_f *) &SoGLContext_has_occlusion_query;
   this->featuremap[SbName(SO_GL_FRAMEBUFFER_OBJECT).getString()] =
-                       (glglue_feature_test_f *) &cc_glglue_has_framebuffer_objects;
+                       (glglue_feature_test_f *) &SoGLContext_has_framebuffer_objects;
   this->featuremap[SbName(SO_GL_ANISOTROPIC_FILTERING).getString()] =
-                       (glglue_feature_test_f *) &cc_glglue_can_do_anisotropic_filtering;
+                       (glglue_feature_test_f *) &SoGLContext_can_do_anisotropic_filtering;
   this->featuremap[SbName(SO_GL_SORTED_LAYERS_BLEND).getString()] =
-                       (glglue_feature_test_f *) &cc_glglue_can_do_sortedlayersblend;
+                       (glglue_feature_test_f *) &SoGLContext_can_do_sortedlayersblend;
   this->featuremap[SbName(SO_GL_BUMPMAPPING).getString()] =
-                       (glglue_feature_test_f *) &cc_glglue_can_do_bumpmapping;
+                       (glglue_feature_test_f *) &SoGLContext_can_do_bumpmapping;
   this->featuremap[SbName(SO_GL_VBO_IN_DISPLAYLIST).getString()] =
-                       (glglue_feature_test_f *) &coin_glglue_vbo_in_displaylist_supported;
+                       (glglue_feature_test_f *) &SoGLContext_vbo_in_displaylist_supported;
   this->featuremap[SbName(SO_GL_NON_POWER_OF_TWO_TEXTURES).getString()] =
-                       (glglue_feature_test_f *) &coin_glglue_non_power_of_two_textures;
+                       (glglue_feature_test_f *) &SoGLContext_non_power_of_two_textures;
   this->featuremap[SbName(SO_GL_GENERATE_MIPMAP).getString()] =
-                       (glglue_feature_test_f *) &coin_glglue_has_generate_mipmap;
+                       (glglue_feature_test_f *) &SoGLContext_has_generate_mipmap;
   this->featuremap[SbName(SO_GL_GLSL_CLIP_VERTEX_HW).getString()] =
                        (glglue_feature_test_f *) &glsl_clip_vertex_hw_wrapper;
 }
 
 SbBool
-SoGLDriverDatabaseP::isSupported(const cc_glglue * context, const SbName & feature)
+SoGLDriverDatabaseP::isSupported(const SoGLContext * context, const SbName & feature)
 {
   // check if we're asking about an actual GL extension
   const char * str = feature.getString();
   if ((feature.getLength() > 3) && (str[0] == 'G') && (str[1] == 'L') && (str[2] == '_')) {
-    if (!cc_glglue_glext_supported(context, feature)) return FALSE;
+    if (!SoGLContext_glext_supported(context, feature)) return FALSE;
   }
   else { // check our lookup table
     SbHash<const char*, glglue_feature_test_f *>::const_iterator iter = this->featuremap.find(feature.getString());
@@ -294,14 +294,14 @@ SoGLDriverDatabaseP::isSupported(const cc_glglue * context, const SbName & featu
 }
 
 SbBool
-SoGLDriverDatabaseP::isBroken(const cc_glglue * context, const SbName & feature)
+SoGLDriverDatabaseP::isBroken(const SoGLContext * context, const SbName & feature)
 {
   const FeatureOverride* override = findOverride(context, feature);
   return override && (override->status == FeatureOverride::BROKEN);
 }
 
 SbBool
-SoGLDriverDatabaseP::isDisabled(const cc_glglue * context, const SbName & feature)
+SoGLDriverDatabaseP::isDisabled(const SoGLContext * context, const SbName & feature)
 {
   const FeatureOverride* override = findOverride(context, feature);
   return override && (override->status == FeatureOverride::DISABLED);
@@ -330,7 +330,7 @@ SoGLDriverDatabaseP::matchesPattern(const char* text, const char* pattern)
 
 // Check if the current driver matches the given driver info
 SbBool
-SoGLDriverDatabaseP::matchesDriver(const cc_glglue * context, const DriverInfo& driver)
+SoGLDriverDatabaseP::matchesDriver(const SoGLContext * context, const DriverInfo& driver)
 {
   const char* vendor = (const char*)glGetString(GL_VENDOR);
   const char* renderer = (const char*)glGetString(GL_RENDERER);
@@ -345,7 +345,7 @@ SoGLDriverDatabaseP::matchesDriver(const cc_glglue * context, const DriverInfo& 
 
 // Find an override for the given feature and driver context
 const FeatureOverride*
-SoGLDriverDatabaseP::findOverride(const cc_glglue * context, const SbName & feature)
+SoGLDriverDatabaseP::findOverride(const SoGLContext * context, const SbName & feature)
 {
   const char* feature_str = feature.getString();
   
@@ -379,7 +379,7 @@ SoGLDriverDatabase::init(void)
 }
 
 SbBool
-SoGLDriverDatabase::isSupported(const cc_glglue * context, const SbName & feature)
+SoGLDriverDatabase::isSupported(const SoGLContext * context, const SbName & feature)
 {
   return ::pimpl()->isSupported(context, feature);
 }

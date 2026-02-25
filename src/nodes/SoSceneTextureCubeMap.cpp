@@ -251,7 +251,7 @@ SoSceneTextureCubeMap::GLRender(SoGLRenderAction * action)
 
   float quality = SoTextureQualityElement::get(state);
 
-  const cc_glglue * glue = cc_glglue_instance(SoGLCacheContextElement::get(state));
+  const SoGLContext * glue = SoGLContext_instance(SoGLCacheContextElement::get(state));
   SoNode * root = this->scene.getValue();
 
   LOCK_GLIMAGE(this);
@@ -271,7 +271,7 @@ SoSceneTextureCubeMap::GLRender(SoGLRenderAction * action)
     this->model.getValue();
   
   if (glmodel == SoMultiTextureImageElement::REPLACE) {
-    if (!cc_glglue_glversion_matches_at_least(glue, 1, 1, 0)) {
+    if (!SoGLContext_glversion_matches_at_least(glue, 1, 1, 0)) {
       static int didwarn = 0;
       if (!didwarn) {
         SoDebugError::postWarning("SoSceneTextureCubeMap::GLRender",
@@ -287,7 +287,7 @@ SoSceneTextureCubeMap::GLRender(SoGLRenderAction * action)
   }
   
   int unit = SoTextureUnitElement::get(state);
-  int maxunits = cc_glglue_max_texture_units(glue);
+  int maxunits = SoGLContext_max_texture_units(glue);
   if (unit < maxunits) {
     SoGLMultiTextureImageElement::set(state, this, unit,
                                       PRIVATE(this)->glimage,
@@ -376,7 +376,7 @@ SoSceneTextureCubeMapP::~SoSceneTextureCubeMapP()
   if (this->glimage) this->glimage->unref(NULL);
   this->destroyCamera();
   if (this->glcontext != NULL) {
-    cc_glglue_context_destruct(this->glcontext);
+    SoGLContext_context_destruct(this->glcontext);
   }
   delete[] this->offscreenbuffer;
   delete this->glaction;
@@ -396,7 +396,7 @@ SoSceneTextureCubeMapP::updatePBuffer(SoState * state, const float quality)
       this->glimage = NULL;
     }
     if (this->glcontext) {
-      cc_glglue_context_destruct(this->glcontext);
+      SoGLContext_context_destruct(this->glcontext);
       this->glcontextsize.setValue(-1,-1);
       this->glcontext = NULL;
     }
@@ -445,9 +445,9 @@ SoSceneTextureCubeMapP::updatePBuffer(SoState * state, const float quality)
     unsigned int x = this->glcontextsize[0];
     unsigned int y = this->glcontextsize[1];
     
-    this->glcontext = cc_glglue_context_create_offscreen(x, y);
+    this->glcontext = SoGLContext_context_create_offscreen(x, y);
     this->canrendertotexture = 
-      cc_glglue_context_can_render_to_texture(this->glcontext);
+      SoGLContext_context_can_render_to_texture(this->glcontext);
 
     if (!this->glaction) {
       this->contextid = (int)SoGLCacheContextElement::getUniqueCacheContext();
@@ -471,7 +471,7 @@ SoSceneTextureCubeMapP::updatePBuffer(SoState * state, const float quality)
     this->glaction->setTransparencyType((SoGLRenderAction::TransparencyType)
                                         SoShapeStyleElement::getTransparencyType(state));
 
-    cc_glglue_context_make_current(this->glcontext);
+    SoGLContext_context_make_current(this->glcontext);
 
 
     glEnable(GL_DEPTH_TEST);
@@ -499,7 +499,7 @@ SoSceneTextureCubeMapP::updatePBuffer(SoState * state, const float quality)
       }
     }
 
-    cc_glglue_context_reinstate_previous(this->glcontext);
+    SoGLContext_context_reinstate_previous(this->glcontext);
   }
 
   if (!this->glimagevalid || (this->glimage == NULL)) {

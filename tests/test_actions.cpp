@@ -58,6 +58,17 @@
 // Other includes
 #include <Inventor/SbViewportRegion.h>
 #include <Inventor/SoOutput.h>
+#include <cstdlib>
+
+// Realloc callback for SoOutput buffer writes
+static char *  g_act_buf      = nullptr;
+static size_t  g_act_buf_size = 0;
+static void * actBufGrow(void * ptr, size_t size)
+{
+    g_act_buf      = static_cast<char *>(std::realloc(ptr, size));
+    g_act_buf_size = size;
+    return g_act_buf;
+}
 
 using namespace SimpleTest;
 
@@ -179,8 +190,9 @@ int main() {
         scene->addChild(cube);
         
         SoOutput output;
-        // Try to set up output to a buffer instead of file
-        output.setBuffer(NULL, 0, NULL);
+        // Set up output to a dynamic buffer (initSize=1, grow callback required)
+        g_act_buf = nullptr; g_act_buf_size = 0;
+        output.setBuffer(nullptr, 1, actBufGrow);
         
         SoWriteAction write_action(&output);
         write_action.apply(scene);

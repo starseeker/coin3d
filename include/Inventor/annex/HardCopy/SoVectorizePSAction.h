@@ -60,6 +60,14 @@ public:
   SoPSVectorOutput * getOutput(void) const;
   SoPSVectorOutput * getPSOutput(void) const;
 
+  static SbBool exportToPS(SoNode * root,
+                           const char * filename,
+                           PageSize pagesize = A4,
+                           Orientation orientation = PORTRAIT,
+                           float border = 10.0f,
+                           SbBool background = FALSE,
+                           const SbColor & bgcolor = SbColor(0.0f, 0.0f, 0.0f));
+
 protected:
   virtual void printHeader(void) const;
   virtual void printFooter(void) const;

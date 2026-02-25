@@ -86,17 +86,30 @@ void * SoError::callbackData = NULL;
 
 // *************************************************************************
 
-// "Converter" constructor.
-SoError::SoError(const cc_error * error)
+SoError::SoError(void)
 {
-  cc_error_init(&this->err);
-  cc_error_copy(error, &this->err);
+  this->impl = new cc_error();
+  cc_error_init(static_cast<cc_error *>(this->impl));
+}
+
+SoError::~SoError()
+{
+  cc_error_clean(static_cast<cc_error *>(this->impl));
+  delete static_cast<cc_error *>(this->impl);
+}
+
+// "Converter" constructor.
+SoError::SoError(const void * error)
+{
+  this->impl = new cc_error();
+  cc_error_init(static_cast<cc_error *>(this->impl));
+  cc_error_copy(static_cast<const cc_error *>(error), static_cast<cc_error *>(this->impl));
 }
 
 void
-SoError::callbackForwarder(const cc_error * error, void * COIN_UNUSED_ARG(data))
+SoError::callbackForwarder(const void * error_ptr, void * COIN_UNUSED_ARG(data))
 {
-  SoError wrappederr(error);
+  SoError wrappederr(error_ptr);
 
   assert(SoError::callback != NULL);
   (*SoError::callback)(&wrappederr, SoError::callbackData);
@@ -224,7 +237,7 @@ const SbString &
 SoError::getDebugString(void) const
 {
   // Cast away constness and fetch value from underlying cc_error instance.
-  const_cast<SbString &>(this->debugstring) = cc_error_get_debug_string(&this->err).c_str();
+  const_cast<SbString &>(this->debugstring) = cc_error_get_debug_string(static_cast<const cc_error *>(this->impl)).c_str();
   return this->debugstring;
 }
 
@@ -287,7 +300,7 @@ SoError::getString(const SoEngine * const engine)
 void
 SoError::defaultHandlerCB(const SoError * error, void * data)
 {
-  cc_error_default_handler_cb(&error->err, data);
+  cc_error_default_handler_cb(static_cast<const cc_error *>(error->impl), data);
 }
 
 /*!
@@ -307,7 +320,7 @@ SoError::getHandler(void * & data) const
 void
 SoError::setDebugString(const char * const str)
 {
-  cc_error_set_debug_string(&this->err, str);
+  cc_error_set_debug_string(static_cast<cc_error *>(this->impl), str);
 }
 
 /*!
@@ -316,7 +329,7 @@ SoError::setDebugString(const char * const str)
 void
 SoError::appendToDebugString(const char * const str)
 {
-  cc_error_append_to_debug_string(&this->err, str);
+  cc_error_append_to_debug_string(static_cast<cc_error *>(this->impl), str);
 }
 
 /*!
@@ -332,7 +345,7 @@ SoError::handleError(void)
   assert((SoError::classTypeId != SoType::badType()) &&
          "SoError attempted used before class was initialized");
 
-  cc_error_handle(&this->err);
+  cc_error_handle(static_cast<cc_error *>(this->impl));
 }
 
 /*!

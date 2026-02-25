@@ -137,7 +137,7 @@ SoGLPolygonOffsetElement::setElt(float factor, float units,
 void
 SoGLPolygonOffsetElement::updategl(void)
 {
-  const cc_glglue * w = sogl_glue_instance(this->state);
+  const SoGLContext * w = sogl_glue_instance(this->state);
   if (!SoGLDriverDatabase::isSupported(w, SO_GL_POLYGON_OFFSET)) {
     static SbBool first = TRUE;
     if (first) {
@@ -152,15 +152,15 @@ SoGLPolygonOffsetElement::updategl(void)
 
   if (this->active) {
     int styles = 0;
-    styles |= (this->style & FILLED) ? cc_glglue_FILLED : 0;
-    styles |= (this->style & LINES) ? cc_glglue_LINES : 0;
-    styles |= (this->style & POINTS) ? cc_glglue_POINTS : 0;
-    cc_glglue_glPolygonOffsetEnable(w, TRUE, styles);
+    styles |= (this->style & FILLED) ? SoGLContext_FILLED : 0;
+    styles |= (this->style & LINES) ? SoGLContext_LINES : 0;
+    styles |= (this->style & POINTS) ? SoGLContext_POINTS : 0;
+    SoGLContext_glPolygonOffsetEnable(w, TRUE, styles);
 
-    cc_glglue_glPolygonOffset(w, this->offsetfactor, this->offsetunits);
+    SoGLContext_glPolygonOffset(w, this->offsetfactor, this->offsetunits);
   }
   else { // ! active
-    int all = cc_glglue_FILLED | cc_glglue_LINES | cc_glglue_POINTS;
-    cc_glglue_glPolygonOffsetEnable(w, FALSE, all);
+    int all = SoGLContext_FILLED | SoGLContext_LINES | SoGLContext_POINTS;
+    SoGLContext_glPolygonOffsetEnable(w, FALSE, all);
   }
 }

@@ -613,7 +613,7 @@ SoFaceSet::GLRender(SoGLRenderAction * action)
       int numprimitives = this->numVertices.getNum();
       if (PRIVATE(this)->primitivetype == GL_TRIANGLES) numprimitives *= 3;
       else numprimitives *= 4; // quads
-      cc_glglue_glDrawArrays(sogl_glue_instance(state), PRIVATE(this)->primitivetype,
+      SoGLContext_glDrawArrays(sogl_glue_instance(state), PRIVATE(this)->primitivetype,
                              idx, numprimitives); 
       this->finishVertexArray(action, dovbo, nbind == PER_VERTEX,
                               doTextures, (mbind == PER_VERTEX));

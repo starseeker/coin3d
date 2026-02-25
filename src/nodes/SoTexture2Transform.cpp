@@ -146,9 +146,9 @@ SoTexture2Transform::GLRender(SoGLRenderAction * action)
 
   int unit = SoTextureUnitElement::get(state);
 
-  const cc_glglue * glue =
-    cc_glglue_instance(SoGLCacheContextElement::get(state));
-  int maxunits = cc_glglue_max_texture_units(glue);
+  const SoGLContext * glue =
+    SoGLContext_instance(SoGLCacheContextElement::get(state));
+  int maxunits = SoGLContext_max_texture_units(glue);
 
   if (unit < maxunits) {
     SbMatrix mat;

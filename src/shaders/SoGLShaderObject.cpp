@@ -49,12 +49,12 @@ SoGLShaderObject::SoGLShaderObject(const uint32_t cachecontext)
   this->isActiveFlag = TRUE;
   this->shadertype = VERTEX;
   this->paramsdirty = TRUE;
-  this->glctx = cc_glglue_instance(cachecontext);
+  this->glctx = SoGLContext_instance(cachecontext);
   this->cachecontext = cachecontext;
   this->id = ++shaderid;
 }
 
-const cc_glglue *
+const SoGLContext *
 SoGLShaderObject::GLContext(void) const
 {
   return this->glctx;

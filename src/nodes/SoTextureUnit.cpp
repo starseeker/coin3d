@@ -155,8 +155,8 @@ SoTextureUnit::GLRender(SoGLRenderAction * action)
   SoTextureUnit::doAction((SoAction*)action);
 
   SoState * state = action->getState();
-  const cc_glglue * glue = cc_glglue_instance(SoGLCacheContextElement::get(state));
-  int maxunits = cc_glglue_max_texture_units(glue);
+  const SoGLContext * glue = SoGLContext_instance(SoGLCacheContextElement::get(state));
+  int maxunits = SoGLContext_max_texture_units(glue);
 
   if (this->unit.getValue() >= maxunits) {
     static SbBool first = TRUE;
@@ -217,7 +217,7 @@ SoTextureUnit::getMatrix(SoGetMatrixAction * action)
   multi-texturing.
 
   This function is provided only to be compatible with TGS Inventor.
-  It's better to use cc_glglue_max_texture_units() if you're using
+  It's better to use SoGLContext_max_texture_units() if you're using
   Coin (declared in Inventor/C/glue/gl.h).
 */
 uint32_t

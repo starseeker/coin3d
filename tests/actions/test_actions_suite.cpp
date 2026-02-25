@@ -177,7 +177,7 @@ int main()
         s_buffer_size = 0;
 
         SoOutput out;
-        out.setBuffer(nullptr, 0, bufferRealloc);
+        out.setBuffer(nullptr, 1, bufferRealloc);
 
         SoWriteAction wa(&out);
         wa.apply(root);

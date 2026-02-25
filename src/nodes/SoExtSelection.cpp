@@ -1139,7 +1139,7 @@ SoExtSelection::handleEvent(SoHandleEventAction * action)
 void
 SoExtSelection::draw(SoGLRenderAction *action)
 {
-  const cc_glglue * glw = cc_glglue_instance(action->getCacheContext());
+  const SoGLContext * glw = SoGLContext_instance(action->getCacheContext());
   pimpl->has3DTextures = SoGLDriverDatabase::isSupported(glw, SO_GL_3D_TEXTURES);
 
   SbViewportRegion vp = SoViewportRegionElement::get(action->getState());
@@ -2650,7 +2650,7 @@ SoExtSelectionP::performSelection(SoHandleEventAction * action)
       upon, if possible.
     */
     unsigned int maxsize[2];
-    cc_glglue_context_max_dimensions(&maxsize[0], &maxsize[1]);
+    SoGLContext_context_max_dimensions(&maxsize[0], &maxsize[1]);
 
     this->requestedsize = action->getViewportRegion().getViewportSizePixels();
 

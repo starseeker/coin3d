@@ -278,7 +278,7 @@ SoTexture3::GLRender(SoGLRenderAction * action)
 {
   SoState * state = action->getState();
 
-  const cc_glglue * glue = cc_glglue_instance((uint32_t) SoGLCacheContextElement::get(state));
+  const SoGLContext * glue = SoGLContext_instance((uint32_t) SoGLCacheContextElement::get(state));
 
   int unit = SoTextureUnitElement::get(state);
   

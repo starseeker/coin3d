@@ -11,7 +11,6 @@ set(COIN_MISC_FILES
 	SoDebug.cpp
 	SoFullPath.cpp
 	SoGenerate.cpp
-	SoGlyph.cpp
 	SoInteraction.cpp
 	SoLightPath.cpp
 	SoLockManager.cpp

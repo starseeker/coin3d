@@ -126,9 +126,9 @@ SoGLLightIdElement::increment(SoState * const state,
     getElement(state, getClassStackIndex());
 
   if (element) {
-    const cc_glglue * glue = sogl_glue_instance(state);
+    const SoGLContext * glue = sogl_glue_instance(state);
     element->data++;
-    int maxl = cc_glglue_get_max_lights(glue);
+    int maxl = SoGLContext_get_max_lights(glue);
 
     if (element->data >= maxl) {
       element->data--;

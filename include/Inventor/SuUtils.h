@@ -44,9 +44,9 @@ extern "C" {
 /* Function pointer type for atexit cleanup functions */
 typedef void coin_atexit_f(void);
 
-/* Internal function used for cleaning up static data. 
-   Used by Coin macros like SoSubNode, SoSubEvent, etc. */
-COIN_DLL_API void cc_coin_atexit_static_internal(coin_atexit_f * fp);
+/* Internal function used for cleaning up static data.
+   Used by Inventor macros like SO_NODE_INIT_CLASS, SO_SUB_NODE_INIT_CLASS, etc. */
+COIN_DLL_API void SbAtexitStaticInternal(coin_atexit_f * fp);
 
 /* ********************************************************************** */
 

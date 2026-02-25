@@ -214,7 +214,7 @@ _class_::createInstance(void) \
     /* Store parent's data pointers for later use in the constructor. */ \
     _class_::parentinputdata = _parentclass_::getInputDataPtr(); \
     _class_::parentoutputdata = _parentclass_::getOutputDataPtr(); \
-    cc_coin_atexit_static_internal \
+    SbAtexitStaticInternal \
       (reinterpret_cast<coin_atexit_f*>(_class_::atexit_cleanup));  \
   } WHILE_0
 

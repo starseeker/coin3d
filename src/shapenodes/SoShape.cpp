@@ -648,7 +648,7 @@ SoShape::shouldGLRender(SoGLRenderAction * action)
     }
   }
 
-  const cc_glglue * glue = sogl_glue_instance(state);
+  const SoGLContext * glue = sogl_glue_instance(state);
 
   if (shapestyleflags & SoShapeStyleElement::BUMPMAP) {
     const SoNodeList & lights = SoLightElement::getLights(state);
@@ -1544,7 +1544,7 @@ SoShape::startVertexArray(SoGLRenderAction * action,
                           const SbBool colorpervertex)
 {
   SoState * state = action->getState();
-  const cc_glglue * glue = sogl_glue_instance(state);
+  const SoGLContext * glue = sogl_glue_instance(state);
   const SoGLVBOElement * vboelem = SoGLVBOElement::getInstance(state);
   const uint32_t contextid = action->getCacheContext();
 
@@ -1569,18 +1569,18 @@ SoShape::startVertexArray(SoGLRenderAction * action,
     }
     else {
       if (didbind) {
-        cc_glglue_glBindBuffer(glue, GL_ARRAY_BUFFER, 0);
+        SoGLContext_glBindBuffer(glue, GL_ARRAY_BUFFER, 0);
         didbind = FALSE;
       }
       dataptr = (const GLvoid*) lelem->getDiffusePointer();
     }
     if (colorvbo) {
-      cc_glglue_glColorPointer(glue, 4, GL_UNSIGNED_BYTE, 0, dataptr);
+      SoGLContext_glColorPointer(glue, 4, GL_UNSIGNED_BYTE, 0, dataptr);
     }
     else {
-      cc_glglue_glColorPointer(glue, 3, GL_FLOAT, 0, dataptr);
+      SoGLContext_glColorPointer(glue, 3, GL_FLOAT, 0, dataptr);
     }
-    cc_glglue_glEnableClientState(glue, GL_COLOR_ARRAY);
+    SoGLContext_glEnableClientState(glue, GL_COLOR_ARRAY);
   }
   if (texpervertex) {
     const SoMultiTextureCoordinateElement * mtelem = NULL;
@@ -1616,7 +1616,7 @@ SoShape::startVertexArray(SoGLRenderAction * action,
         case 4: tptr = (const GLvoid*) mtelem->getArrayPtr4(i); break;
         }
 	if (SoGLDriverDatabase::isSupported(glue, SO_GL_MULTITEXTURE)) {
-	  cc_glglue_glClientActiveTexture(glue, GL_TEXTURE0 + i);
+	  SoGLContext_glClientActiveTexture(glue, GL_TEXTURE0 + i);
 	}
         vbo = dovbo ? vboelem->getTexCoordVBO(i) : NULL;
         if (vbo) {
@@ -1626,12 +1626,12 @@ SoShape::startVertexArray(SoGLRenderAction * action,
         }
         else {
           if (didbind) {
-            cc_glglue_glBindBuffer(glue, GL_ARRAY_BUFFER, 0);
+            SoGLContext_glBindBuffer(glue, GL_ARRAY_BUFFER, 0);
             didbind = FALSE;
           }
         }
-        cc_glglue_glTexCoordPointer(glue, dim, GL_FLOAT, 0, tptr);
-        cc_glglue_glEnableClientState(glue, GL_TEXTURE_COORD_ARRAY);
+        SoGLContext_glTexCoordPointer(glue, dim, GL_FLOAT, 0, tptr);
+        SoGLContext_glEnableClientState(glue, GL_TEXTURE_COORD_ARRAY);
       }
     }
   }
@@ -1645,12 +1645,12 @@ SoShape::startVertexArray(SoGLRenderAction * action,
     else {
       dataptr = (const GLvoid*) pervertexnormals;
       if (didbind) {
-        cc_glglue_glBindBuffer(glue, GL_ARRAY_BUFFER, 0);
+        SoGLContext_glBindBuffer(glue, GL_ARRAY_BUFFER, 0);
         didbind = FALSE;
       }
     }
-    cc_glglue_glNormalPointer(glue, GL_FLOAT, 0, dataptr);
-    cc_glglue_glEnableClientState(glue, GL_NORMAL_ARRAY);
+    SoGLContext_glNormalPointer(glue, GL_FLOAT, 0, dataptr);
+    SoGLContext_glEnableClientState(glue, GL_NORMAL_ARRAY);
   }
   const GLvoid * dataptr = NULL;
   if (vertexvbo) {
@@ -1661,9 +1661,9 @@ SoShape::startVertexArray(SoGLRenderAction * action,
       ((const GLvoid *)coords->getArrayPtr3()) :
       ((const GLvoid *)coords->getArrayPtr4());
   }
-  cc_glglue_glVertexPointer(glue, coords->is3D() ? 3 : 4, GL_FLOAT, 0,
+  SoGLContext_glVertexPointer(glue, coords->is3D() ? 3 : 4, GL_FLOAT, 0,
                             dataptr);
-  cc_glglue_glEnableClientState(glue, GL_VERTEX_ARRAY);
+  SoGLContext_glEnableClientState(glue, GL_VERTEX_ARRAY);
 
   SoGLVertexAttributeElement::getInstance(state)->enableVBO(action);
 
@@ -1686,7 +1686,7 @@ SoShape::finishVertexArray(SoGLRenderAction * action,
                            const SbBool colorpervertex)
 {
   SoState * state = action->getState();
-  const cc_glglue * glue = sogl_glue_instance(state);
+  const SoGLContext * glue = sogl_glue_instance(state);
 
   if (vbo) {
     if (!SoGLDriverDatabase::isSupported(glue, SO_GL_VBO_IN_DISPLAYLIST)) {
@@ -1695,11 +1695,11 @@ SoShape::finishVertexArray(SoGLRenderAction * action,
                                                SoGLCacheContextElement::DONT_AUTO_CACHE);
     }
     // unset VBO buffer
-    cc_glglue_glBindBuffer(glue, GL_ARRAY_BUFFER, 0);
+    SoGLContext_glBindBuffer(glue, GL_ARRAY_BUFFER, 0);
   }
-  cc_glglue_glDisableClientState(glue, GL_VERTEX_ARRAY);
+  SoGLContext_glDisableClientState(glue, GL_VERTEX_ARRAY);
   if (normpervertex) {
-    cc_glglue_glDisableClientState(glue, GL_NORMAL_ARRAY);
+    SoGLContext_glDisableClientState(glue, GL_NORMAL_ARRAY);
   }
   if (texpervertex) {
     int lastenabled;
@@ -1716,18 +1716,18 @@ SoShape::finishVertexArray(SoGLRenderAction * action,
     for (int i = 0; i <= lastenabled; i++) {
       if (enabledunits[i] && mtelem->getNum(i)) {
 	if (SoGLDriverDatabase::isSupported(glue, SO_GL_MULTITEXTURE)) {
-	  cc_glglue_glClientActiveTexture(glue, GL_TEXTURE0 + i);
+	  SoGLContext_glClientActiveTexture(glue, GL_TEXTURE0 + i);
 	}
-        cc_glglue_glDisableClientState(glue, GL_TEXTURE_COORD_ARRAY);
+        SoGLContext_glDisableClientState(glue, GL_TEXTURE_COORD_ARRAY);
       }
     }
-    cc_glglue_glClientActiveTexture(glue, GL_TEXTURE0);
+    SoGLContext_glClientActiveTexture(glue, GL_TEXTURE0);
   }
   if (colorpervertex) {
     SoGLLazyElement * lelem = (SoGLLazyElement*) SoLazyElement::getInstance(state);
     lelem->reset(state, SoLazyElement::DIFFUSE_MASK);
 
-    cc_glglue_glDisableClientState(glue, GL_COLOR_ARRAY);
+    SoGLContext_glDisableClientState(glue, GL_COLOR_ARRAY);
   }
 
   SoGLVertexAttributeElement::getInstance(state)->disableVBO(action);

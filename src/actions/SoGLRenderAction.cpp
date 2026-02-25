@@ -1153,7 +1153,7 @@ SbBool
 SoGLRenderAction::handleTransparency(SbBool istransparent)
 {
   SoState * thestate = this->getState();
-  const cc_glglue *glue = sogl_glue_instance(thestate);
+  const SoGLContext *glue = sogl_glue_instance(thestate);
 
   SoGLRenderAction::TransparencyType transptype =
     static_cast<SoGLRenderAction::TransparencyType>(
@@ -1617,8 +1617,8 @@ SoGLRenderActionP::isDirectRendering(const SoState * state) const
 {
   SbBool isdirect;
   if (this->rendering == RENDERING_UNSET) {
-    const cc_glglue * w = sogl_glue_instance(state);
-    isdirect = cc_glglue_isdirect(w);
+    const SoGLContext * w = sogl_glue_instance(state);
+    isdirect = SoGLContext_isdirect(w);
   }
   else {
     isdirect = this->rendering == RENDERING_SET_DIRECT;
@@ -1761,7 +1761,7 @@ SoGLRenderActionP::renderSingle(SoNode * node)
     glGetIntegerv(GL_DEPTH_BITS, &depthbits);
     glGetIntegerv(GL_ALPHA_BITS, &alphabits);
 
-    const cc_glglue * w = sogl_glue_instance(state);
+    const SoGLContext * w = sogl_glue_instance(state);
     // FIXME: What should we do when >8bits per channel becomes normal? (20031125 handegar)
     if (SoGLDriverDatabase::isSupported(w, SO_GL_SORTED_LAYERS_BLEND) && (depthbits >= 24) && (alphabits == 8)) {
       doSortedLayersBlendRendering(state, node);
@@ -1971,7 +1971,7 @@ void
 SoGLRenderActionP::doSortedLayersBlendRendering(const SoState * state, SoNode * node)
 {
 
-  const cc_glglue *glue = sogl_glue_instance(state);
+  const SoGLContext *glue = sogl_glue_instance(state);
   this->initSortedLayersBlendRendering(state);
   this->setupSortedLayersBlendTextures(state);
   this->sortedlayersblendinitialized = TRUE;
@@ -2047,7 +2047,7 @@ SoGLRenderActionP::renderOneBlendLayer(const SoState * state,
                                        SbBool peel, SbBool updatedepthtexture, SoNode * node)
 {
 
-  const cc_glglue * glue = sogl_glue_instance(state);
+  const SoGLContext * glue = sogl_glue_instance(state);
 
   // Setup clearcolor alpha value to 1.0f when blending using NVIDIA
   // extensions. Must do this every time to make sure the alpha-value
@@ -2079,28 +2079,28 @@ SoGLRenderActionP::renderOneBlendLayer(const SoState * state,
       glDisable(GL_TEXTURE_RECTANGLE_EXT);
       glDisable(GL_ALPHA_TEST);
 
-      cc_glglue_glActiveTexture(glue, GL_TEXTURE3);
+      SoGLContext_glActiveTexture(glue, GL_TEXTURE3);
       glDisable(GL_TEXTURE_RECTANGLE_EXT);
       this->texgenEnable(FALSE);
 
       glMatrixMode(GL_TEXTURE);
       glLoadIdentity();
       glMatrixMode(GL_MODELVIEW);
-      cc_glglue_glActiveTexture(glue, GL_TEXTURE0);
+      SoGLContext_glActiveTexture(glue, GL_TEXTURE0);
       glDisable(GL_TEXTURE_RECTANGLE_EXT);
       glDisable(GL_ALPHA_TEST);
 
     }
     else {
       // Regular NViDIA register combiner cleanup
-      cc_glglue_glActiveTexture(glue, GL_TEXTURE3);
+      SoGLContext_glActiveTexture(glue, GL_TEXTURE3);
       glDisable(GL_TEXTURE_RECTANGLE_EXT);
       this->texgenEnable(FALSE);
 
       glMatrixMode(GL_TEXTURE);
       glLoadIdentity();
       glMatrixMode(GL_MODELVIEW);
-      cc_glglue_glActiveTexture(glue, GL_TEXTURE0);
+      SoGLContext_glActiveTexture(glue, GL_TEXTURE0);
       glDisable(GL_REGISTER_COMBINERS_NV);
       glDisable(GL_ALPHA_TEST);
 
@@ -2151,7 +2151,7 @@ SoGLRenderActionP::initSortedLayersBlendRendering(const SoState * state)
 
   this->rgbatextureids.reset(new GLuint[this->sortedlayersblendpasses]);
 
-  const cc_glglue * glue = sogl_glue_instance(state);
+  const SoGLContext * glue = sogl_glue_instance(state);
   if (glue->has_arb_fragment_program && !this->usenvidiaregistercombiners) {
 
     // Initialize fragment program
@@ -2188,7 +2188,7 @@ SoGLRenderActionP::setupFragmentProgram()
 
   if (this->sortedlayersblendcounter == 0)  // Is this not the first pass?
     return;
-  const cc_glglue * glue = sogl_glue_instance(this->action->getState());
+  const SoGLContext * glue = sogl_glue_instance(this->action->getState());
 
 
   glEnable(GL_FRAGMENT_PROGRAM_ARB);
@@ -2196,7 +2196,7 @@ SoGLRenderActionP::setupFragmentProgram()
 
   // UNIT #3
   glMatrixMode(GL_MODELVIEW);
-  cc_glglue_glActiveTexture(glue, GL_TEXTURE3);
+  SoGLContext_glActiveTexture(glue, GL_TEXTURE3);
 
   glBindTexture(GL_TEXTURE_RECTANGLE_NV, this->depthtextureid);
   glEnable(GL_TEXTURE_RECTANGLE_NV);
@@ -2219,7 +2219,7 @@ SoGLRenderActionP::setupFragmentProgram()
   glEnable(GL_ALPHA_TEST);
 
   // UNIT #0
-  cc_glglue_glActiveTexture(glue, GL_TEXTURE0);
+  SoGLContext_glActiveTexture(glue, GL_TEXTURE0);
 
 }
 
@@ -2231,16 +2231,16 @@ SoGLRenderActionP::setupRegisterCombinersNV()
   //
   // Setting up the texture units to handle the sorted layers blending
   //
-  const cc_glglue * glue = sogl_glue_instance(this->action->getState());
+  const SoGLContext * glue = sogl_glue_instance(this->action->getState());
   glEnable(GL_TEXTURE_SHADER_NV);
 
   // UNIT #0
-  cc_glglue_glActiveTexture(glue, GL_TEXTURE0);
+  SoGLContext_glActiveTexture(glue, GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, this->hilotextureid);
   glTexEnvi(GL_TEXTURE_SHADER_NV, GL_SHADER_OPERATION_NV, GL_TEXTURE_2D);
 
   // UNIT #1
-  cc_glglue_glActiveTexture(glue, GL_TEXTURE1);
+  SoGLContext_glActiveTexture(glue, GL_TEXTURE1);
   glTexEnvi(GL_TEXTURE_SHADER_NV, GL_SHADER_OPERATION_NV, GL_DOT_PRODUCT_NV);
   glTexEnvi(GL_TEXTURE_SHADER_NV, GL_PREVIOUS_TEXTURE_INPUT_NV, GL_TEXTURE0);
   glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_NONE);
@@ -2260,7 +2260,7 @@ SoGLRenderActionP::setupRegisterCombinersNV()
   glMatrixMode(GL_MODELVIEW);
 
   // UNIT #2
-  cc_glglue_glActiveTexture(glue, GL_TEXTURE2);
+  SoGLContext_glActiveTexture(glue, GL_TEXTURE2);
   glTexEnvi(GL_TEXTURE_SHADER_NV, GL_SHADER_OPERATION_NV, GL_DOT_PRODUCT_DEPTH_REPLACE_NV);
   glTexEnvi(GL_TEXTURE_SHADER_NV, GL_PREVIOUS_TEXTURE_INPUT_NV, GL_TEXTURE0);
   glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_NONE);
@@ -2282,11 +2282,11 @@ SoGLRenderActionP::setupRegisterCombinersNV()
   glMatrixMode(GL_MODELVIEW);
 
   // UNIT #0
-  cc_glglue_glActiveTexture(glue, GL_TEXTURE0);
+  SoGLContext_glActiveTexture(glue, GL_TEXTURE0);
 
   if (this->sortedlayersblendcounter > 0) { // Is this not the first pass?
 
-    cc_glglue_glActiveTexture(glue, GL_TEXTURE3);
+    SoGLContext_glActiveTexture(glue, GL_TEXTURE3);
     glTexEnvi(GL_TEXTURE_SHADER_NV, GL_SHADER_OPERATION_NV, GL_TEXTURE_RECTANGLE_NV);
     glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_NONE);
 
@@ -2308,7 +2308,7 @@ SoGLRenderActionP::setupRegisterCombinersNV()
     glEnable(GL_TEXTURE_RECTANGLE_NV);
 
     // UNIT #0
-    cc_glglue_glActiveTexture(glue, GL_TEXTURE0);
+    SoGLContext_glActiveTexture(glue, GL_TEXTURE0);
 
     //
     // Register combiners 1.0 script:
@@ -2379,7 +2379,7 @@ SoGLRenderActionP::setupSortedLayersBlendTextures(const SoState * state)
        (canvassize[0] != this->viewportwidth)) ||
       !this->sortedlayersblendinitialized) {
 
-    const cc_glglue * glue = sogl_glue_instance(state);
+    const SoGLContext * glue = sogl_glue_instance(state);
 
 
     if (this->sortedlayersblendinitialized) {
@@ -2454,7 +2454,7 @@ void
 SoGLRenderActionP::renderSortedLayersFP(const SoState * state)
 {
 
-  const cc_glglue * glue = sogl_glue_instance(state);
+  const SoGLContext * glue = sogl_glue_instance(state);
 
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
@@ -2472,7 +2472,7 @@ SoGLRenderActionP::renderSortedLayersFP(const SoState * state)
   glDisable(GL_FRAGMENT_PROGRAM_ARB);
   glDisable(GL_ALPHA_TEST);
 
-  cc_glglue_glActiveTexture(glue, GL_TEXTURE0);
+  SoGLContext_glActiveTexture(glue, GL_TEXTURE0);
 
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -2512,7 +2512,7 @@ void
 SoGLRenderActionP::renderSortedLayersNV(const SoState * state)
 {
 
-  const cc_glglue * glue = sogl_glue_instance(state);
+  const SoGLContext * glue = sogl_glue_instance(state);
 
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
@@ -2532,7 +2532,7 @@ SoGLRenderActionP::renderSortedLayersNV(const SoState * state)
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   glEnable(GL_BLEND);
 
-  cc_glglue_glActiveTexture(glue, GL_TEXTURE0);
+  SoGLContext_glActiveTexture(glue, GL_TEXTURE0);
 
   //
   //  Register combiners 1.0 script:

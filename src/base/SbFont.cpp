@@ -53,8 +53,12 @@
 #include <Inventor/errors/SoDebugError.h>
 #include "fonts/profont_data.h"
 
-// Include struetype header (implementation is in freetype.cpp)
+// struetype single-header library - define implementation here
+#define STRUETYPE_IMPLEMENTATION
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
 #include "fonts/struetype.h"
+#pragma GCC diagnostic pop
 
 // Include stt_glyph_mesh for 3D vector glyph generation
 #include "fonts/stt_glyph_mesh.hpp"

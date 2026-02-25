@@ -94,9 +94,9 @@ SoVBO::SoVBO(const GLenum target, const GLenum usage)
 void
 SoVBO::vbo_delete(void * closure, uint32_t contextid)
 {
-  const cc_glglue * glue = cc_glglue_instance((int) contextid);
+  const SoGLContext * glue = SoGLContext_instance((int) contextid);
   GLuint id = (GLuint) ((uintptr_t) closure);
-  cc_glglue_glDeleteBuffers(glue, 1, &id);
+  SoGLContext_glDeleteBuffers(glue, 1, &id);
 }
 
 /*!
@@ -137,7 +137,7 @@ static void vbo_atexit_cleanup(void)
 void
 SoVBO::init(void)
 {
-  coin_glglue_add_instance_created_callback(context_created, NULL);
+  SoGLContext_add_instance_created_callback(context_created, NULL);
 
   vbo_isfast_hash = new SbHash<uint32_t, SbBool> (3);
   coin_atexit(vbo_atexit_cleanup, CC_ATEXIT_NORMAL);
@@ -304,14 +304,14 @@ SoVBO::bindBuffer(uint32_t contextid)
     return;
   }
 
-  const cc_glglue * glue = cc_glglue_instance((int) contextid);
+  const SoGLContext * glue = SoGLContext_instance((int) contextid);
 
   GLuint buffer;
   if (!this->vbohash.get(contextid, buffer)) {
     // need to create a new buffer for this context
-    cc_glglue_glGenBuffers(glue, 1, &buffer);
-    cc_glglue_glBindBuffer(glue, this->target, buffer);
-    cc_glglue_glBufferData(glue, this->target,
+    SoGLContext_glGenBuffers(glue, 1, &buffer);
+    SoGLContext_glBindBuffer(glue, this->target, buffer);
+    SoGLContext_glBufferData(glue, this->target,
                            this->datasize,
                            this->data,
                            this->usage);
@@ -319,7 +319,7 @@ SoVBO::bindBuffer(uint32_t contextid)
   }
   else {
     // buffer already exists, bind it
-    cc_glglue_glBindBuffer(glue, this->target, buffer);
+    SoGLContext_glBindBuffer(glue, this->target, buffer);
   }
 
 #if COIN_DEBUG
@@ -350,8 +350,8 @@ SoVBO::context_destruction_cb(uint32_t context, void * userdata)
   SoVBO * thisp = (SoVBO*) userdata;
 
   if (thisp->vbohash.get(context, buffer)) {
-    const cc_glglue * glue = cc_glglue_instance((int) context);
-    cc_glglue_glDeleteBuffers(glue, 1, &buffer);
+    const SoGLContext * glue = SoGLContext_instance((int) context);
+    SoGLContext_glDeleteBuffers(glue, 1, &buffer);
     thisp->vbohash.erase(context);
   }
 }
@@ -450,7 +450,7 @@ SoVBO::testGLPerformance(const uint32_t contextid)
   // VBO should be fast on all platforms supporting it now. It was
   // really just one obscure laptop driver that caused problems for
   // us. This should be handled in the driver database anyway
-  const cc_glglue * glue = cc_glglue_instance(contextid);
+  const SoGLContext * glue = SoGLContext_instance(contextid);
   if (SoGLDriverDatabase::isSupported(glue, SO_GL_VERTEX_BUFFER_OBJECT)) {
     vbo_isfast_hash->put(contextid, TRUE);
   }

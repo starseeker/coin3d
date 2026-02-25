@@ -319,7 +319,7 @@ SoGLCacheContextElement::extSupported(SoState * state, int extid)
       return info->supported[i];
     }
   }
-  const cc_glglue * w = sogl_glue_instance(state);
+  const SoGLContext * w = sogl_glue_instance(state);
   SbBool supported = SoGLDriverDatabase::isSupported(w, info->extname.getString());
   info->context.append(currcontext);
   info->supported.append(supported);
@@ -338,9 +338,9 @@ SoGLCacheContextElement::getOpenGLVersion(SoState * state,
                                           int & major, int & minor)
 {
   int currcontext = SoGLCacheContextElement::get(state);
-  const cc_glglue * w = cc_glglue_instance(currcontext);
+  const SoGLContext * w = SoGLContext_instance(currcontext);
   unsigned int majoru, minoru, dummy;
-  cc_glglue_glversion(w, &majoru, &minoru, &dummy);
+  SoGLContext_glversion(w, &majoru, &minoru, &dummy);
   major = (int)majoru;
   minor = (int)minoru;
 }
@@ -441,8 +441,8 @@ SoGLCacheContextElement::isDirectRendering(SoState * state) const
 {
   SbBool isdirect;
   if (this->rendering == RENDERING_UNSET) {
-    const cc_glglue * w = sogl_glue_instance(state);
-    isdirect = cc_glglue_isdirect(w);
+    const SoGLContext * w = sogl_glue_instance(state);
+    isdirect = SoGLContext_isdirect(w);
   }
   else {
     isdirect = this->rendering == RENDERING_SET_DIRECT;

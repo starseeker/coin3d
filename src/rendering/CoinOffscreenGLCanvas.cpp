@@ -170,9 +170,9 @@ CoinOffscreenGLCanvas::setWantedSize(SbVec2s reqsize)
 
   // Clean up FBO if size is changing - it will be recreated with new size
   if (this->context && this->fbo_initialized) {
-    if (cc_glglue_context_make_current(this->context)) {
+    if (SoGLContext_context_make_current(this->context)) {
       this->cleanupFBO();
-      cc_glglue_context_reinstate_previous(this->context);
+      SoGLContext_context_reinstate_previous(this->context);
     }
   }
 
@@ -195,7 +195,7 @@ CoinOffscreenGLCanvas::tryActivateGLContext(void)
   if (this->context == NULL) {
     // Always use the callback-based context creation system
     // Applications must provide context creation callbacks
-    this->context = cc_glglue_context_create_offscreen(this->size[0],
+    this->context = SoGLContext_context_create_offscreen(this->size[0],
                                                        this->size[1]);
     
     if (CoinOffscreenGLCanvas::debug()) {
@@ -221,7 +221,7 @@ CoinOffscreenGLCanvas::tryActivateGLContext(void)
     this->current_hdc = NULL;
   }
 
-  if (cc_glglue_context_make_current(this->context) == FALSE) {
+  if (SoGLContext_context_make_current(this->context) == FALSE) {
     if (CoinOffscreenGLCanvas::debug()) {
       SoDebugError::post("CoinOffscreenGLCanvas::tryActivateGLContext",
                          "Couldn't make context current.");
@@ -304,7 +304,7 @@ CoinOffscreenGLCanvas::deactivateGLContext(void)
   // Unbind FBO before deactivating context
   this->unbindFBO();
   
-  cc_glglue_context_reinstate_previous(this->context);
+  SoGLContext_context_reinstate_previous(this->context);
 }
 
 // *************************************************************************
@@ -314,7 +314,7 @@ CoinOffscreenGLCanvas::destructContext(void)
 {
   assert(this->context);
 
-  if (cc_glglue_context_make_current(this->context)) {
+  if (SoGLContext_context_make_current(this->context)) {
     // Clean up FBO resources before destroying context
     this->cleanupFBO();
     
@@ -329,7 +329,7 @@ CoinOffscreenGLCanvas::destructContext(void)
     }
   }
 
-  cc_glglue_context_destruct(this->context);
+  SoGLContext_context_destruct(this->context);
 
   this->context = NULL;
   this->renderid = 0;
@@ -367,9 +367,9 @@ CoinOffscreenGLCanvas::readPixels(uint8_t * dst,
                                   unsigned int nrcomponents) const
 {
   // Ensure FBO is bound for reading pixels from offscreen render target
-  const cc_glglue * glue = cc_glglue_instance(static_cast<int>(this->renderid));
+  const SoGLContext * glue = SoGLContext_instance(static_cast<int>(this->renderid));
   if (glue && this->fbo_initialized && this->fbo != 0) {
-    cc_glglue_glBindFramebuffer(glue, GL_FRAMEBUFFER_EXT, this->fbo);
+    SoGLContext_glBindFramebuffer(glue, GL_FRAMEBUFFER_EXT, this->fbo);
   }
   
   glPushAttrib(GL_ALL_ATTRIB_BITS);
@@ -502,11 +502,11 @@ CoinOffscreenGLCanvas::getMaxTileSize(void)
   coin_atexit((coin_atexit_f*) tilesize_cleanup, CC_ATEXIT_NORMAL);
 
   unsigned int width, height;
-  cc_glglue_context_max_dimensions(&width, &height);
+  SoGLContext_context_max_dimensions(&width, &height);
 
   if (CoinOffscreenGLCanvas::debug()) {
     SoDebugError::postInfo("CoinOffscreenGLCanvas::getMaxTileSize",
-                           "cc_glglue_context_max_dimensions()==[%u, %u]",
+                           "SoGLContext_context_max_dimensions()==[%u, %u]",
                            width, height);
   }
 
@@ -570,8 +570,8 @@ CoinOffscreenGLCanvas::initializeFBO(void)
 {
   if (this->fbo_initialized) { return TRUE; }
   
-  // Ensure the context is current before calling cc_glglue_instance
-  if (this->context && !cc_glglue_context_make_current(this->context)) {
+  // Ensure the context is current before calling SoGLContext_instance
+  if (this->context && !SoGLContext_context_make_current(this->context)) {
     if (CoinOffscreenGLCanvas::debug()) {
       SoDebugError::post("CoinOffscreenGLCanvas::initializeFBO",
                          "Failed to make context current before FBO initialization");
@@ -580,7 +580,7 @@ CoinOffscreenGLCanvas::initializeFBO(void)
   }
   
   // Get the current glglue instance to access FBO functions
-  const cc_glglue * glue = cc_glglue_instance(static_cast<int>(this->renderid));
+  const SoGLContext * glue = SoGLContext_instance(static_cast<int>(this->renderid));
   if (!glue) {
     if (CoinOffscreenGLCanvas::debug()) {
       SoDebugError::post("CoinOffscreenGLCanvas::initializeFBO",
@@ -590,7 +590,7 @@ CoinOffscreenGLCanvas::initializeFBO(void)
   }
   
   // Check if FBO extension is supported
-  if (!cc_glglue_has_framebuffer_objects(glue)) {
+  if (!SoGLContext_has_framebuffer_objects(glue)) {
     if (CoinOffscreenGLCanvas::debug()) {
       SoDebugError::post("CoinOffscreenGLCanvas::initializeFBO",
                          "GL_EXT_framebuffer_object extension not supported");
@@ -599,7 +599,7 @@ CoinOffscreenGLCanvas::initializeFBO(void)
   }
   
   // Generate framebuffer object
-  cc_glglue_glGenFramebuffers(glue, 1, &this->fbo);
+  SoGLContext_glGenFramebuffers(glue, 1, &this->fbo);
   if (this->fbo == 0) {
     if (CoinOffscreenGLCanvas::debug()) {
       SoDebugError::post("CoinOffscreenGLCanvas::initializeFBO",
@@ -609,9 +609,9 @@ CoinOffscreenGLCanvas::initializeFBO(void)
   }
   
   // Generate color renderbuffer
-  cc_glglue_glGenRenderbuffers(glue, 1, &this->color_rb);
+  SoGLContext_glGenRenderbuffers(glue, 1, &this->color_rb);
   if (this->color_rb == 0) {
-    cc_glglue_glDeleteFramebuffers(glue, 1, &this->fbo);
+    SoGLContext_glDeleteFramebuffers(glue, 1, &this->fbo);
     this->fbo = 0;
     if (CoinOffscreenGLCanvas::debug()) {
       SoDebugError::post("CoinOffscreenGLCanvas::initializeFBO",
@@ -621,10 +621,10 @@ CoinOffscreenGLCanvas::initializeFBO(void)
   }
   
   // Generate depth renderbuffer
-  cc_glglue_glGenRenderbuffers(glue, 1, &this->depth_rb);
+  SoGLContext_glGenRenderbuffers(glue, 1, &this->depth_rb);
   if (this->depth_rb == 0) {
-    cc_glglue_glDeleteRenderbuffers(glue, 1, &this->color_rb);
-    cc_glglue_glDeleteFramebuffers(glue, 1, &this->fbo);
+    SoGLContext_glDeleteRenderbuffers(glue, 1, &this->color_rb);
+    SoGLContext_glDeleteFramebuffers(glue, 1, &this->fbo);
     this->fbo = 0;
     this->color_rb = 0;
     if (CoinOffscreenGLCanvas::debug()) {
@@ -635,24 +635,24 @@ CoinOffscreenGLCanvas::initializeFBO(void)
   }
   
   // Bind and setup color renderbuffer
-  cc_glglue_glBindRenderbuffer(glue, GL_RENDERBUFFER_EXT, this->color_rb);
-  cc_glglue_glRenderbufferStorage(glue, GL_RENDERBUFFER_EXT, GL_RGBA8, 
+  SoGLContext_glBindRenderbuffer(glue, GL_RENDERBUFFER_EXT, this->color_rb);
+  SoGLContext_glRenderbufferStorage(glue, GL_RENDERBUFFER_EXT, GL_RGBA8, 
                                   this->size[0], this->size[1]);
   
   // Bind and setup depth renderbuffer
-  cc_glglue_glBindRenderbuffer(glue, GL_RENDERBUFFER_EXT, this->depth_rb);
-  cc_glglue_glRenderbufferStorage(glue, GL_RENDERBUFFER_EXT, GL_DEPTH_COMPONENT24,
+  SoGLContext_glBindRenderbuffer(glue, GL_RENDERBUFFER_EXT, this->depth_rb);
+  SoGLContext_glRenderbufferStorage(glue, GL_RENDERBUFFER_EXT, GL_DEPTH_COMPONENT24,
                                   this->size[0], this->size[1]);
   
   // Bind framebuffer and attach renderbuffers
-  cc_glglue_glBindFramebuffer(glue, GL_FRAMEBUFFER_EXT, this->fbo);
-  cc_glglue_glFramebufferRenderbuffer(glue, GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT,
+  SoGLContext_glBindFramebuffer(glue, GL_FRAMEBUFFER_EXT, this->fbo);
+  SoGLContext_glFramebufferRenderbuffer(glue, GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT,
                                       GL_RENDERBUFFER_EXT, this->color_rb);
-  cc_glglue_glFramebufferRenderbuffer(glue, GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT,
+  SoGLContext_glFramebufferRenderbuffer(glue, GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT,
                                       GL_RENDERBUFFER_EXT, this->depth_rb);
   
   // Check framebuffer completeness
-  GLenum status = cc_glglue_glCheckFramebufferStatus(glue, GL_FRAMEBUFFER_EXT);
+  GLenum status = SoGLContext_glCheckFramebufferStatus(glue, GL_FRAMEBUFFER_EXT);
   if (status != GL_FRAMEBUFFER_COMPLETE_EXT) {
     if (CoinOffscreenGLCanvas::debug()) {
       SoDebugError::post("CoinOffscreenGLCanvas::initializeFBO",
@@ -663,7 +663,7 @@ CoinOffscreenGLCanvas::initializeFBO(void)
   }
   
   // Unbind framebuffer
-  cc_glglue_glBindFramebuffer(glue, GL_FRAMEBUFFER_EXT, 0);
+  SoGLContext_glBindFramebuffer(glue, GL_FRAMEBUFFER_EXT, 0);
   
   this->fbo_initialized = TRUE;
   
@@ -681,21 +681,21 @@ CoinOffscreenGLCanvas::cleanupFBO(void)
 {
   if (!this->fbo_initialized) { return; }
   
-  const cc_glglue * glue = cc_glglue_instance(static_cast<int>(this->renderid));
+  const SoGLContext * glue = SoGLContext_instance(static_cast<int>(this->renderid));
   if (!glue) { return; }
   
   if (this->depth_rb != 0) {
-    cc_glglue_glDeleteRenderbuffers(glue, 1, &this->depth_rb);
+    SoGLContext_glDeleteRenderbuffers(glue, 1, &this->depth_rb);
     this->depth_rb = 0;
   }
   
   if (this->color_rb != 0) {
-    cc_glglue_glDeleteRenderbuffers(glue, 1, &this->color_rb);
+    SoGLContext_glDeleteRenderbuffers(glue, 1, &this->color_rb);
     this->color_rb = 0;
   }
   
   if (this->fbo != 0) {
-    cc_glglue_glDeleteFramebuffers(glue, 1, &this->fbo);
+    SoGLContext_glDeleteFramebuffers(glue, 1, &this->fbo);
     this->fbo = 0;
   }
   
@@ -716,10 +716,10 @@ CoinOffscreenGLCanvas::bindFBO(void)
     }
   }
   
-  const cc_glglue * glue = cc_glglue_instance(static_cast<int>(this->renderid));
+  const SoGLContext * glue = SoGLContext_instance(static_cast<int>(this->renderid));
   if (!glue) { return FALSE; }
   
-  cc_glglue_glBindFramebuffer(glue, GL_FRAMEBUFFER_EXT, this->fbo);
+  SoGLContext_glBindFramebuffer(glue, GL_FRAMEBUFFER_EXT, this->fbo);
   
   // Set viewport to match FBO size
   glViewport(0, 0, this->size[0], this->size[1]);
@@ -730,10 +730,10 @@ CoinOffscreenGLCanvas::bindFBO(void)
 void
 CoinOffscreenGLCanvas::unbindFBO(void)
 {
-  const cc_glglue * glue = cc_glglue_instance(static_cast<int>(this->renderid));
+  const SoGLContext * glue = SoGLContext_instance(static_cast<int>(this->renderid));
   if (!glue) { return; }
   
-  cc_glglue_glBindFramebuffer(glue, GL_FRAMEBUFFER_EXT, 0);
+  SoGLContext_glBindFramebuffer(glue, GL_FRAMEBUFFER_EXT, 0);
 }
 
 // *************************************************************************

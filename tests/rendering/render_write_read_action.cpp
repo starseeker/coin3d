@@ -36,6 +36,17 @@
 #include <Inventor/SbViewportRegion.h>
 #include <cstdio>
 #include <cstring>
+#include <cstdlib>
+
+// Realloc callback for SoOutput dynamic buffer writes
+static char *  g_wra_buf      = nullptr;
+static size_t  g_wra_buf_size = 0;
+static void * wraGrow(void * ptr, size_t size)
+{
+    g_wra_buf      = static_cast<char *>(std::realloc(ptr, size));
+    g_wra_buf_size = size;
+    return g_wra_buf;
+}
 
 static const int W = 128;
 static const int H = 128;
@@ -107,7 +118,8 @@ static bool test1_writeReadBuffer()
 
     // Write to buffer (NULL ptr = Coin manages the buffer; NULL grow = default)
     SoOutput out;
-    out.setBuffer(nullptr, 0, nullptr);
+    g_wra_buf = nullptr; g_wra_buf_size = 0;
+    out.setBuffer(nullptr, 1, wraGrow);
 
     SoWriteAction wa(&out);
     wa.apply(origRoot);
@@ -254,7 +266,8 @@ static bool test3_complexWrite()
 
     // Write to buffer
     SoOutput out;
-    out.setBuffer(nullptr, 0, nullptr);
+    g_wra_buf = nullptr; g_wra_buf_size = 0;
+    out.setBuffer(nullptr, 1, wraGrow);
     SoWriteAction wa(&out);
     wa.apply(root);
 
@@ -295,7 +308,8 @@ static bool test4_getOutput()
     root->addChild(new SoCube);
 
     SoOutput *pOut = new SoOutput;
-    pOut->setBuffer(nullptr, 0, nullptr);
+    g_wra_buf = nullptr; g_wra_buf_size = 0;
+    pOut->setBuffer(nullptr, 1, wraGrow);
 
     SoWriteAction wa(pOut);
 

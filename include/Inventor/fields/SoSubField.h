@@ -127,7 +127,7 @@ public: \
     assert(_class_::classTypeId == SoType::badType()); \
     _class_::classTypeId = \
       SoType::createType(_parent_::getClassTypeId(), _classname_, _createfunc_); \
-    cc_coin_atexit_static_internal \
+    SbAtexitStaticInternal \
       ( \
        _class_::atexit_cleanup \
        ); \

@@ -1671,10 +1671,10 @@ SoOffscreenRenderer::getOpenGLVersion(int & major, int & minor, int & release)
   }
   
   if (context_created) {
-    const cc_glglue * glue = cc_glglue_instance(1);
+    const SoGLContext * glue = SoGLContext_instance(1);
     if (glue) {
       unsigned int maj, min, rel;
-      cc_glglue_glversion(glue, &maj, &min, &rel);
+      SoGLContext_glversion(glue, &maj, &min, &rel);
       major = static_cast<int>(maj);
       minor = static_cast<int>(min);
       release = static_cast<int>(rel);
@@ -1722,9 +1722,9 @@ SoOffscreenRenderer::isOpenGLExtensionSupported(const char * extension)
   }
   
   if (context_created) {
-    const cc_glglue * glue = cc_glglue_instance(1);
+    const SoGLContext * glue = SoGLContext_instance(1);
     if (glue) {
-      result = cc_glglue_glext_supported(glue, extension);
+      result = SoGLContext_glext_supported(glue, extension);
     }
     
     // Clean up temporary context
@@ -1763,9 +1763,9 @@ SoOffscreenRenderer::hasFramebufferObjectSupport(void)
   }
   
   if (context_created) {
-    const cc_glglue * glue = cc_glglue_instance(1);
+    const SoGLContext * glue = SoGLContext_instance(1);
     if (glue) {
-      result = cc_glglue_has_framebuffer_objects(glue);
+      result = SoGLContext_has_framebuffer_objects(glue);
     }
     
     // Clean up temporary context
@@ -1807,9 +1807,9 @@ SoOffscreenRenderer::isVersionAtLeast(int major, int minor, int release)
   }
   
   if (context_created) {
-    const cc_glglue * glue = cc_glglue_instance(1);
+    const SoGLContext * glue = SoGLContext_instance(1);
     if (glue) {
-      result = cc_glglue_glversion_matches_at_least(glue, 
+      result = SoGLContext_glversion_matches_at_least(glue, 
                                                    static_cast<unsigned int>(major),
                                                    static_cast<unsigned int>(minor), 
                                                    static_cast<unsigned int>(release));

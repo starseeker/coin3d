@@ -71,6 +71,7 @@ set(SIMPLE_TESTS
     test_comprehensive
     test_legacy_integration
     test_hud
+    test_hardcopy
 )
 
 foreach(test_name ${SIMPLE_TESTS})

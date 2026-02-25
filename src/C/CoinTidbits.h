@@ -169,7 +169,7 @@ void coin_atexit_cleanup(void);
 SbBool coin_is_exiting(void);
 
 void cc_coin_atexit(coin_atexit_f* fp);
-void cc_coin_atexit_static_internal(coin_atexit_f* fp);
+void SbAtexitStaticInternal(coin_atexit_f* fp);
 
 /* ********************************************************************** */
 /* File descriptor functions */

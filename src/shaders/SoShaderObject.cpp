@@ -218,7 +218,7 @@ private:
   void checkType(void); // sets cachedSourceType
   void readSource(void); // sets cachedSourceProgram depending on sourceType
 
-  SbBool isSupported(SoShaderObject::SourceType sourceType, const cc_glglue * glue);
+  SbBool isSupported(SoShaderObject::SourceType sourceType, const SoGLContext * glue);
 
 #if defined(SOURCE_HINT)
   SbString getSourceHint(void) const;
@@ -381,7 +381,7 @@ SoShaderObjectP::GLRender(SoGLRenderAction * action)
   }
 
   const uint32_t cachecontext = SoGLCacheContextElement::get(state);
-  const cc_glglue * glue = cc_glglue_instance(cachecontext);
+  const SoGLContext * glue = SoGLContext_instance(cachecontext);
 
   SoGLShaderObject * shaderobject = this->getGLShaderObject(cachecontext);
 
@@ -564,7 +564,7 @@ SoShaderObjectP::readSource(void)
 }
 
 SbBool
-SoShaderObjectP::isSupported(SoShaderObject::SourceType sourceType, const cc_glglue * glue)
+SoShaderObjectP::isSupported(SoShaderObject::SourceType sourceType, const SoGLContext * glue)
 {
   if (this->owner->isOfType(SoVertexShader::getClassTypeId())) {
     // don't call this function. It's not context safe. pederb, 20051103

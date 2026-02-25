@@ -110,7 +110,7 @@ SoType _class_::classTypeId STATIC_SOTYPE_INIT
     \
     _class_::classTypeId = \
       SoType::createType(_parentclass_::getClassTypeId(), SO__QUOTE(_class_)); \
-    cc_coin_atexit_static_internal(reinterpret_cast<coin_atexit_f *>(cleanupClass)); \
+    SbAtexitStaticInternal(reinterpret_cast<coin_atexit_f *>(cleanupClass)); \
   } WHILE_0
 
 #define SO_EVENT_INIT_CLASS(_class_, _parentclass_) \
@@ -122,7 +122,7 @@ SoType _class_::classTypeId STATIC_SOTYPE_INIT
     \
     _class_::classTypeId = \
       SoType::createType(_parentclass_::getClassTypeId(), SO__QUOTE(_class_), _class_::createInstance); \
-    cc_coin_atexit_static_internal(reinterpret_cast<coin_atexit_f *>(cleanupClass)); \
+    SbAtexitStaticInternal(reinterpret_cast<coin_atexit_f *>(cleanupClass)); \
   } WHILE_0
 
 // *************************************************************************

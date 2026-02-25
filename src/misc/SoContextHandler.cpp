@@ -207,7 +207,7 @@ SoContextHandler::destructingContext(uint32_t contextid)
   }
 
   // tell glglue that this context is dead
-  coin_glglue_destruct(contextid);
+  SoGLContext_destruct(contextid);
 }
 
 // *************************************************************************

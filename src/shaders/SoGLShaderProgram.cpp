@@ -98,7 +98,7 @@ void
 SoGLShaderProgram::enable(SoState * state)
 {
   const uint32_t cachecontext = SoGLCacheContextElement::get(state);
-  const cc_glglue * glctx = cc_glglue_instance(cachecontext);
+  const SoGLContext * glctx = SoGLContext_instance(cachecontext);
 
   this->arbShaderProgram->enable();
   // CG support disabled in minimal build
@@ -115,7 +115,7 @@ void
 SoGLShaderProgram::disable(SoState * state)
 {
   const uint32_t cachecontext = SoGLCacheContextElement::get(state);
-  const cc_glglue * glctx = cc_glglue_instance(cachecontext);
+  const SoGLContext * glctx = SoGLContext_instance(cachecontext);
 
   this->arbShaderProgram->disable();
   // CG support disabled in minimal build
@@ -171,7 +171,7 @@ uint32_t
 SoGLShaderProgram::getGLSLShaderProgramHandle(SoState * state) const
 {
   const uint32_t cachecontext = SoGLCacheContextElement::get(state);
-  const cc_glglue * glctx = cc_glglue_instance(cachecontext);
+  const SoGLContext * glctx = SoGLContext_instance(cachecontext);
 
   return this->glslShaderProgram->getProgramHandle(glctx);
 }

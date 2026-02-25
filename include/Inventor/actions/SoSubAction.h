@@ -161,7 +161,7 @@ _classname_::atexit_cleanup(void) \
     _classname_::classTypeId = SoType::createType(_parentclassname_::getClassTypeId(), SO__QUOTE(_classname_)); \
     _classname_::enabledElements = new SoEnabledElementsList(_parentclassname_::getClassEnabledElements()); \
     _classname_::methods = new SoActionMethodList(_parentclassname_::getClassActionMethods()); \
-    cc_coin_atexit_static_internal(reinterpret_cast<coin_atexit_f *>(_classname_::atexit_cleanup));  \
+    SbAtexitStaticInternal(reinterpret_cast<coin_atexit_f *>(_classname_::atexit_cleanup));  \
   } WHILE_0
 
 // *************************************************************************

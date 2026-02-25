@@ -233,10 +233,10 @@ static void
 soshape_bumprender_diffuseprogramdeletion(void * value, uint32_t contextid)
 {
   soshape_bumprender::diffuse_programidx * pidx = (soshape_bumprender::diffuse_programidx *) value;
-  const cc_glglue * glue = cc_glglue_instance((int) contextid);
-  cc_glglue_glDeletePrograms(glue, 1, &pidx->pointlight);
-  cc_glglue_glDeletePrograms(glue, 1, &pidx->dirlight);
-  cc_glglue_glDeletePrograms(glue, 1, &pidx->normalrendering);
+  const SoGLContext * glue = SoGLContext_instance((int) contextid);
+  SoGLContext_glDeletePrograms(glue, 1, &pidx->pointlight);
+  SoGLContext_glDeletePrograms(glue, 1, &pidx->dirlight);
+  SoGLContext_glDeletePrograms(glue, 1, &pidx->normalrendering);
   delete pidx;
 }
 
@@ -244,10 +244,10 @@ static void
 soshape_bumprender_specularprogramdeletion(void * value, uint32_t contextid)
 {
   soshape_bumprender::spec_programidx * pidx = (soshape_bumprender::spec_programidx *) value;
-  const cc_glglue * glue = cc_glglue_instance((int) contextid);
-  cc_glglue_glDeletePrograms(glue, 1, &pidx->pointlight);
-  cc_glglue_glDeletePrograms(glue, 1, &pidx->dirlight);
-  cc_glglue_glDeletePrograms(glue, 1, &pidx->fragment);
+  const SoGLContext * glue = SoGLContext_instance((int) contextid);
+  SoGLContext_glDeletePrograms(glue, 1, &pidx->pointlight);
+  SoGLContext_glDeletePrograms(glue, 1, &pidx->dirlight);
+  SoGLContext_glDeletePrograms(glue, 1, &pidx->fragment);
   delete pidx;
 }
 
@@ -286,7 +286,7 @@ inline void NORMALIZE(SbVec3f &v)
 }
 
 void
-soshape_bumprender::initDiffusePrograms(const cc_glglue * glue, SoState * state)
+soshape_bumprender::initDiffusePrograms(const SoGLContext * glue, SoState * state)
 {
   const int contextid = SoGLCacheContextElement::get(state);
   diffuse_programidx * old;
@@ -296,9 +296,9 @@ soshape_bumprender::initDiffusePrograms(const cc_glglue * glue, SoState * state)
   }
   else {
 
-    cc_glglue_glGenPrograms(glue, 1, &this->diffusebumpdirlightvertexprogramid);
-    cc_glglue_glBindProgram(glue, GL_VERTEX_PROGRAM_ARB, this->diffusebumpdirlightvertexprogramid);
-    cc_glglue_glProgramString(glue, GL_VERTEX_PROGRAM_ARB, GL_PROGRAM_FORMAT_ASCII_ARB,
+    SoGLContext_glGenPrograms(glue, 1, &this->diffusebumpdirlightvertexprogramid);
+    SoGLContext_glBindProgram(glue, GL_VERTEX_PROGRAM_ARB, this->diffusebumpdirlightvertexprogramid);
+    SoGLContext_glProgramString(glue, GL_VERTEX_PROGRAM_ARB, GL_PROGRAM_FORMAT_ASCII_ARB,
                               (GLsizei)strlen(diffusebumpdirlightvpprogram),
                               diffusebumpdirlightvpprogram);
     GLint errorPos;
@@ -312,9 +312,9 @@ soshape_bumprender::initDiffusePrograms(const cc_glglue * glue, SoState * state)
 
     }
 
-    cc_glglue_glGenPrograms(glue, 1, &this->normalrenderingvertexprogramid);
-    cc_glglue_glBindProgram(glue, GL_VERTEX_PROGRAM_ARB, this->normalrenderingvertexprogramid);
-    cc_glglue_glProgramString(glue, GL_VERTEX_PROGRAM_ARB, GL_PROGRAM_FORMAT_ASCII_ARB,
+    SoGLContext_glGenPrograms(glue, 1, &this->normalrenderingvertexprogramid);
+    SoGLContext_glBindProgram(glue, GL_VERTEX_PROGRAM_ARB, this->normalrenderingvertexprogramid);
+    SoGLContext_glProgramString(glue, GL_VERTEX_PROGRAM_ARB, GL_PROGRAM_FORMAT_ASCII_ARB,
                               (GLsizei)strlen(normalrenderingvpprogram),
                               normalrenderingvpprogram);
     err = glGetError();
@@ -328,7 +328,7 @@ soshape_bumprender::initDiffusePrograms(const cc_glglue * glue, SoState * state)
     }
 
     diffuse_programidx * newstruct = new diffuse_programidx;
-    newstruct->glue = glue; // Store the cc_glglue for later when class is to be destructed.
+    newstruct->glue = glue; // Store the SoGLContext for later when class is to be destructed.
     newstruct->dirlight = this->diffusebumpdirlightvertexprogramid;
     newstruct->pointlight = 0; // Pointlight vertex program not implemented yet.
     newstruct->normalrendering = this->normalrenderingvertexprogramid;
@@ -341,7 +341,7 @@ soshape_bumprender::initDiffusePrograms(const cc_glglue * glue, SoState * state)
 }
 
 void
-soshape_bumprender::initPrograms(const cc_glglue * glue, SoState * state)
+soshape_bumprender::initPrograms(const SoGLContext * glue, SoState * state)
 {
   const int contextid = SoGLCacheContextElement::get(state);
   spec_programidx * old;
@@ -351,9 +351,9 @@ soshape_bumprender::initPrograms(const cc_glglue * glue, SoState * state)
     this->pointlightvertexprogramid = old->pointlight;
   }
   else {
-    cc_glglue_glGenPrograms(glue, 1, &this->fragmentprogramid); // -- Fragment program
-    cc_glglue_glBindProgram(glue, GL_FRAGMENT_PROGRAM_ARB, this->fragmentprogramid);
-    cc_glglue_glProgramString(glue, GL_FRAGMENT_PROGRAM_ARB, GL_PROGRAM_FORMAT_ASCII_ARB,
+    SoGLContext_glGenPrograms(glue, 1, &this->fragmentprogramid); // -- Fragment program
+    SoGLContext_glBindProgram(glue, GL_FRAGMENT_PROGRAM_ARB, this->fragmentprogramid);
+    SoGLContext_glProgramString(glue, GL_FRAGMENT_PROGRAM_ARB, GL_PROGRAM_FORMAT_ASCII_ARB,
                               (GLsizei)strlen(bumpspecfpprogram), bumpspecfpprogram);
     // FIXME: Maybe a wrapper for catching fragment program errors
     // should be a part of GLUE... (20031204 handegar)
@@ -367,9 +367,9 @@ soshape_bumprender::initPrograms(const cc_glglue * glue, SoState * state)
 
     }
 
-    cc_glglue_glGenPrograms(glue, 1, &this->dirlightvertexprogramid); // -- Directional light program
-    cc_glglue_glBindProgram(glue, GL_VERTEX_PROGRAM_ARB, this->dirlightvertexprogramid);
-    cc_glglue_glProgramString(glue, GL_VERTEX_PROGRAM_ARB, GL_PROGRAM_FORMAT_ASCII_ARB,
+    SoGLContext_glGenPrograms(glue, 1, &this->dirlightvertexprogramid); // -- Directional light program
+    SoGLContext_glBindProgram(glue, GL_VERTEX_PROGRAM_ARB, this->dirlightvertexprogramid);
+    SoGLContext_glProgramString(glue, GL_VERTEX_PROGRAM_ARB, GL_PROGRAM_FORMAT_ASCII_ARB,
                               (GLsizei)strlen(directionallightvpprogram), directionallightvpprogram);
 
     err = glGetError();
@@ -382,9 +382,9 @@ soshape_bumprender::initPrograms(const cc_glglue * glue, SoState * state)
 
     }
 
-    cc_glglue_glGenPrograms(glue, 1, &this->pointlightvertexprogramid); // -- Point light program
-    cc_glglue_glBindProgram(glue, GL_VERTEX_PROGRAM_ARB, this->pointlightvertexprogramid);
-    cc_glglue_glProgramString(glue, GL_VERTEX_PROGRAM_ARB, GL_PROGRAM_FORMAT_ASCII_ARB,
+    SoGLContext_glGenPrograms(glue, 1, &this->pointlightvertexprogramid); // -- Point light program
+    SoGLContext_glBindProgram(glue, GL_VERTEX_PROGRAM_ARB, this->pointlightvertexprogramid);
+    SoGLContext_glProgramString(glue, GL_VERTEX_PROGRAM_ARB, GL_PROGRAM_FORMAT_ASCII_ARB,
                               (GLsizei)strlen(pointlightvpprogram), pointlightvpprogram);
 
     err = glGetError();
@@ -397,7 +397,7 @@ soshape_bumprender::initPrograms(const cc_glglue * glue, SoState * state)
     }
 
     spec_programidx * newstruct = new spec_programidx;
-    newstruct->glue = glue; // Store the cc_glglue for later when class is to be destructed.
+    newstruct->glue = glue; // Store the SoGLContext for later when class is to be destructed.
     newstruct->fragment = this->fragmentprogramid;
     newstruct->dirlight = this->dirlightvertexprogramid;
     newstruct->pointlight = this->pointlightvertexprogramid;
@@ -421,7 +421,7 @@ soshape_bumprender::renderBumpSpecular(SoState * state,
   const int n = cache->getNumTriangleIndices();
   if (n == 0) return;
 
-  const cc_glglue * glue = sogl_glue_instance(state);
+  const SoGLContext * glue = sogl_glue_instance(state);
   const SbColor spec = SoLazyElement::getSpecular(state);
   float shininess = SoLazyElement::getShininess(state);
 
@@ -446,7 +446,7 @@ soshape_bumprender::renderBumpSpecular(SoState * state,
   SoGLImage * bumpimage = SoBumpMapElement::get(state);
   assert(bumpimage);
   // set up textures
-  cc_glglue_glActiveTexture(glue, GL_TEXTURE0);
+  SoGLContext_glActiveTexture(glue, GL_TEXTURE0);
 
   if (bumpmapmatrix != oldtexture0matrix) {
     glMatrixMode(GL_TEXTURE);
@@ -458,11 +458,11 @@ soshape_bumprender::renderBumpSpecular(SoState * state,
 
   // FRAGMENT: Setting up spec. colour and shininess for the fragment program
   glEnable(GL_FRAGMENT_PROGRAM_ARB);
-  cc_glglue_glBindProgram(glue, GL_FRAGMENT_PROGRAM_ARB, fragmentprogramid);
-  cc_glglue_glProgramEnvParameter4f(glue, GL_FRAGMENT_PROGRAM_ARB, 0,
+  SoGLContext_glBindProgram(glue, GL_FRAGMENT_PROGRAM_ARB, fragmentprogramid);
+  SoGLContext_glProgramEnvParameter4f(glue, GL_FRAGMENT_PROGRAM_ARB, 0,
                                     spec[0], spec[1], spec[2], 1.0f);
 
-  cc_glglue_glProgramEnvParameter4f(glue, GL_FRAGMENT_PROGRAM_ARB, 1,
+  SoGLContext_glProgramEnvParameter4f(glue, GL_FRAGMENT_PROGRAM_ARB, 1,
                                     shininess * 64, 0.0f, 0.0f, 1.0f);
 
   const SbViewVolume & vv = SoViewVolumeElement::get(state);
@@ -474,30 +474,30 @@ soshape_bumprender::renderBumpSpecular(SoState * state,
   // VERTEX: Setting up lightprograms
   glEnable(GL_VERTEX_PROGRAM_ARB);
   if (!this->ispointlight) {
-    cc_glglue_glBindProgram(glue, GL_VERTEX_PROGRAM_ARB, dirlightvertexprogramid);
+    SoGLContext_glBindProgram(glue, GL_VERTEX_PROGRAM_ARB, dirlightvertexprogramid);
   }
   else {
-    cc_glglue_glBindProgram(glue, GL_VERTEX_PROGRAM_ARB, pointlightvertexprogramid);
+    SoGLContext_glBindProgram(glue, GL_VERTEX_PROGRAM_ARB, pointlightvertexprogramid);
   }
 
-  cc_glglue_glProgramEnvParameter4f(glue, GL_VERTEX_PROGRAM_ARB, 0,
+  SoGLContext_glProgramEnvParameter4f(glue, GL_VERTEX_PROGRAM_ARB, 0,
                                     this->lightvec[0],
                                     this->lightvec[1],
                                     this->lightvec[2], 1);
 
-  cc_glglue_glProgramEnvParameter4f(glue, GL_VERTEX_PROGRAM_ARB, 1,
+  SoGLContext_glProgramEnvParameter4f(glue, GL_VERTEX_PROGRAM_ARB, 1,
                                     eyepos[0],
                                     eyepos[1],
                                     eyepos[2], 1);
 
   if (oldtexture2matrix != SbMatrix::identity()) {
-    cc_glglue_glActiveTexture(glue, GL_TEXTURE2);
+    SoGLContext_glActiveTexture(glue, GL_TEXTURE2);
     glMatrixMode(GL_TEXTURE);
     glLoadIdentity(); // load identity texture matrix
     glMatrixMode(GL_MODELVIEW);
   }
 
-  cc_glglue_glActiveTexture(glue, GL_TEXTURE1);
+  SoGLContext_glActiveTexture(glue, GL_TEXTURE1);
   if (oldtexture1matrix != SbMatrix::identity()) {
     glMatrixMode(GL_TEXTURE);
     glLoadIdentity(); // load identity texture matrix
@@ -505,41 +505,41 @@ soshape_bumprender::renderBumpSpecular(SoState * state,
   }
   glEnable(GL_TEXTURE_CUBE_MAP);
 
-  cc_glglue_glActiveTexture(glue, GL_TEXTURE0);
+  SoGLContext_glActiveTexture(glue, GL_TEXTURE0);
 
   //const SbVec3f * cmptr = this->cubemaplist.getArrayPtr();
   const SbVec3f * tptr = this->tangentlist.getArrayPtr();
   
-  cc_glglue_glVertexPointer(glue, 3, GL_FLOAT, 0,
+  SoGLContext_glVertexPointer(glue, 3, GL_FLOAT, 0,
                             (GLvoid*) cache->getVertexArray());
-  cc_glglue_glEnableClientState(glue, GL_VERTEX_ARRAY);
+  SoGLContext_glEnableClientState(glue, GL_VERTEX_ARRAY);
 
-  cc_glglue_glTexCoordPointer(glue, 2, GL_FLOAT, 0,
+  SoGLContext_glTexCoordPointer(glue, 2, GL_FLOAT, 0,
                               (GLvoid*) cache->getBumpCoordArray());
-  cc_glglue_glEnableClientState(glue, GL_TEXTURE_COORD_ARRAY);
+  SoGLContext_glEnableClientState(glue, GL_TEXTURE_COORD_ARRAY);
 
-  cc_glglue_glNormalPointer(glue, GL_FLOAT, 0,
+  SoGLContext_glNormalPointer(glue, GL_FLOAT, 0,
                            (GLvoid*) cache->getNormalArray());
-  cc_glglue_glEnableClientState(glue, GL_NORMAL_ARRAY);
+  SoGLContext_glEnableClientState(glue, GL_NORMAL_ARRAY);
 
-  cc_glglue_glClientActiveTexture(glue, GL_TEXTURE1);
-  cc_glglue_glTexCoordPointer(glue, 3, GL_FLOAT, 6*sizeof(float), (GLvoid*) tptr);
-  cc_glglue_glEnableClientState(glue, GL_TEXTURE_COORD_ARRAY);
+  SoGLContext_glClientActiveTexture(glue, GL_TEXTURE1);
+  SoGLContext_glTexCoordPointer(glue, 3, GL_FLOAT, 6*sizeof(float), (GLvoid*) tptr);
+  SoGLContext_glEnableClientState(glue, GL_TEXTURE_COORD_ARRAY);
 
-  cc_glglue_glClientActiveTexture(glue, GL_TEXTURE2);
-  cc_glglue_glTexCoordPointer(glue, 3, GL_FLOAT, 6*sizeof(float), (GLvoid*) (tptr + 1));
-  cc_glglue_glEnableClientState(glue, GL_TEXTURE_COORD_ARRAY);
+  SoGLContext_glClientActiveTexture(glue, GL_TEXTURE2);
+  SoGLContext_glTexCoordPointer(glue, 3, GL_FLOAT, 6*sizeof(float), (GLvoid*) (tptr + 1));
+  SoGLContext_glEnableClientState(glue, GL_TEXTURE_COORD_ARRAY);
 
-  cc_glglue_glDrawElements(glue, GL_TRIANGLES, n, GL_UNSIGNED_INT,
+  SoGLContext_glDrawElements(glue, GL_TRIANGLES, n, GL_UNSIGNED_INT,
                            (const GLvoid*) cache->getTriangleIndices());
 
-  cc_glglue_glDisableClientState(glue, GL_TEXTURE_COORD_ARRAY);
-  cc_glglue_glClientActiveTexture(glue, GL_TEXTURE1);
-  cc_glglue_glDisableClientState(glue, GL_TEXTURE_COORD_ARRAY);
-  cc_glglue_glClientActiveTexture(glue, GL_TEXTURE0);
-  cc_glglue_glDisableClientState(glue, GL_TEXTURE_COORD_ARRAY);
-  cc_glglue_glDisableClientState(glue, GL_VERTEX_ARRAY);
-  cc_glglue_glDisableClientState(glue, GL_NORMAL_ARRAY);
+  SoGLContext_glDisableClientState(glue, GL_TEXTURE_COORD_ARRAY);
+  SoGLContext_glClientActiveTexture(glue, GL_TEXTURE1);
+  SoGLContext_glDisableClientState(glue, GL_TEXTURE_COORD_ARRAY);
+  SoGLContext_glClientActiveTexture(glue, GL_TEXTURE0);
+  SoGLContext_glDisableClientState(glue, GL_TEXTURE_COORD_ARRAY);
+  SoGLContext_glDisableClientState(glue, GL_VERTEX_ARRAY);
+  SoGLContext_glDisableClientState(glue, GL_NORMAL_ARRAY);
 
   glDisable(GL_FRAGMENT_PROGRAM_ARB);
   glDisable(GL_VERTEX_PROGRAM_ARB);
@@ -551,13 +551,13 @@ soshape_bumprender::renderBumpSpecular(SoState * state,
   }
 
   if (oldtexture2matrix != SbMatrix::identity()) {
-    cc_glglue_glActiveTexture(glue, GL_TEXTURE2);
+    SoGLContext_glActiveTexture(glue, GL_TEXTURE2);
     glMatrixMode(GL_TEXTURE);
     glLoadMatrixf(oldtexture2matrix[0]);
     glMatrixMode(GL_MODELVIEW);
   }
 
-  cc_glglue_glActiveTexture(glue, GL_TEXTURE1);
+  SoGLContext_glActiveTexture(glue, GL_TEXTURE1);
   glDisable(GL_TEXTURE_CUBE_MAP);
   if (oldtexture1matrix != SbMatrix::identity()) {
     glMatrixMode(GL_TEXTURE);
@@ -565,7 +565,7 @@ soshape_bumprender::renderBumpSpecular(SoState * state,
     glMatrixMode(GL_MODELVIEW);
   }
 
-  cc_glglue_glActiveTexture(glue, GL_TEXTURE0);
+  SoGLContext_glActiveTexture(glue, GL_TEXTURE0);
 
   if (bumpmapmatrix != oldtexture0matrix) {
     glMatrixMode(GL_TEXTURE);
@@ -587,7 +587,7 @@ soshape_bumprender::renderBump(SoState * state,
 
   this->initLight(light, toobjectspace);
 
-  const cc_glglue * glue = sogl_glue_instance(state);
+  const SoGLContext * glue = sogl_glue_instance(state);
   const SbMatrix & oldtexture0matrix = SoMultiTextureMatrixElement::get(state, 0);
   const SbMatrix & oldtexture1matrix = SoMultiTextureMatrixElement::get(state, 1);
   const SbMatrix & bumpmapmatrix = SoBumpMapMatrixElement::get(state);
@@ -618,7 +618,7 @@ soshape_bumprender::renderBump(SoState * state,
   assert(bumpimage);
 
   // set up textures
-  cc_glglue_glActiveTexture(glue, GL_TEXTURE0);
+  SoGLContext_glActiveTexture(glue, GL_TEXTURE0);
 
   if (bumpmapmatrix != oldtexture0matrix) {
     glMatrixMode(GL_TEXTURE);
@@ -631,7 +631,7 @@ soshape_bumprender::renderBump(SoState * state,
   glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE0_RGB, GL_TEXTURE);
   glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB, GL_REPLACE);
 
-  cc_glglue_glActiveTexture(glue, GL_TEXTURE1);
+  SoGLContext_glActiveTexture(glue, GL_TEXTURE1);
 
   if (oldtexture1matrix != SbMatrix::identity()) {
     glMatrixMode(GL_TEXTURE);
@@ -653,56 +653,56 @@ soshape_bumprender::renderBump(SoState * state,
                                              SoGLCacheContextElement::DONT_AUTO_CACHE);
   }
 
-  cc_glglue_glVertexPointer(glue, 3, GL_FLOAT, 0,
+  SoGLContext_glVertexPointer(glue, 3, GL_FLOAT, 0,
                             (GLvoid*) cache->getVertexArray());
-  cc_glglue_glEnableClientState(glue, GL_VERTEX_ARRAY);
-  cc_glglue_glTexCoordPointer(glue, 2, GL_FLOAT, 0,
+  SoGLContext_glEnableClientState(glue, GL_VERTEX_ARRAY);
+  SoGLContext_glTexCoordPointer(glue, 2, GL_FLOAT, 0,
                               (GLvoid*) cache->getBumpCoordArray());
-  cc_glglue_glEnableClientState(glue, GL_TEXTURE_COORD_ARRAY);
+  SoGLContext_glEnableClientState(glue, GL_TEXTURE_COORD_ARRAY);
 
-  cc_glglue_glClientActiveTexture(glue, GL_TEXTURE1);
+  SoGLContext_glClientActiveTexture(glue, GL_TEXTURE1);
   if (use_vertex_program) {
-    cc_glglue_glColorPointer(glue, 3, GL_FLOAT, 6*sizeof(float),
+    SoGLContext_glColorPointer(glue, 3, GL_FLOAT, 6*sizeof(float),
                              (GLvoid*) (tsptr + 1));
-    cc_glglue_glEnableClientState(glue, GL_COLOR_ARRAY);
-    cc_glglue_glTexCoordPointer(glue, 3, GL_FLOAT, 6*sizeof(float),
+    SoGLContext_glEnableClientState(glue, GL_COLOR_ARRAY);
+    SoGLContext_glTexCoordPointer(glue, 3, GL_FLOAT, 6*sizeof(float),
                                 (GLvoid*) tsptr);
-    cc_glglue_glNormalPointer(glue, GL_FLOAT, 0,
+    SoGLContext_glNormalPointer(glue, GL_FLOAT, 0,
                               (GLvoid*) cache->getNormalArray());
-    cc_glglue_glEnableClientState(glue, GL_NORMAL_ARRAY);
+    SoGLContext_glEnableClientState(glue, GL_NORMAL_ARRAY);
   }
   else {
-    cc_glglue_glTexCoordPointer(glue, 3, GL_FLOAT, 0,
+    SoGLContext_glTexCoordPointer(glue, 3, GL_FLOAT, 0,
                                 (GLvoid*) cmptr);
   }
-  cc_glglue_glEnableClientState(glue, GL_TEXTURE_COORD_ARRAY);
+  SoGLContext_glEnableClientState(glue, GL_TEXTURE_COORD_ARRAY);
 
   if (use_vertex_program) {
     glEnable(GL_VERTEX_PROGRAM_ARB);
     if (!this->ispointlight) {
-      cc_glglue_glBindProgram(glue, GL_VERTEX_PROGRAM_ARB, diffusebumpdirlightvertexprogramid);
+      SoGLContext_glBindProgram(glue, GL_VERTEX_PROGRAM_ARB, diffusebumpdirlightvertexprogramid);
     }
     else {
       assert(0);
     }
-    cc_glglue_glProgramEnvParameter4f(glue, GL_VERTEX_PROGRAM_ARB, 0,
+    SoGLContext_glProgramEnvParameter4f(glue, GL_VERTEX_PROGRAM_ARB, 0,
                                       this->lightvec[0],
                                       this->lightvec[1],
                                       this->lightvec[2], 1);
   }
 
-  cc_glglue_glDrawElements(glue, GL_TRIANGLES, n, GL_UNSIGNED_INT,
+  SoGLContext_glDrawElements(glue, GL_TRIANGLES, n, GL_UNSIGNED_INT,
                            (const GLvoid*) cache->getTriangleIndices());
 
   if (use_vertex_program) {
-    cc_glglue_glDisableClientState(glue, GL_NORMAL_ARRAY);
-    cc_glglue_glDisableClientState(glue, GL_COLOR_ARRAY);
+    SoGLContext_glDisableClientState(glue, GL_NORMAL_ARRAY);
+    SoGLContext_glDisableClientState(glue, GL_COLOR_ARRAY);
     glDisable(GL_VERTEX_PROGRAM_ARB);
   }
-  cc_glglue_glDisableClientState(glue, GL_TEXTURE_COORD_ARRAY);
-  cc_glglue_glClientActiveTexture(glue, GL_TEXTURE0);
-  cc_glglue_glDisableClientState(glue, GL_TEXTURE_COORD_ARRAY);
-  cc_glglue_glDisableClientState(glue, GL_VERTEX_ARRAY);
+  SoGLContext_glDisableClientState(glue, GL_TEXTURE_COORD_ARRAY);
+  SoGLContext_glClientActiveTexture(glue, GL_TEXTURE0);
+  SoGLContext_glDisableClientState(glue, GL_TEXTURE_COORD_ARRAY);
+  SoGLContext_glDisableClientState(glue, GL_VERTEX_ARRAY);
 
   glDisable(GL_TEXTURE_CUBE_MAP); // unit 1
 
@@ -712,13 +712,13 @@ soshape_bumprender::renderBump(SoState * state,
   }
 
   if (oldtexture1matrix != SbMatrix::identity()) {
-    cc_glglue_glActiveTexture(glue, GL_TEXTURE1);
+    SoGLContext_glActiveTexture(glue, GL_TEXTURE1);
     glMatrixMode(GL_TEXTURE);
     glLoadMatrixf(oldtexture1matrix[0]);
     glMatrixMode(GL_MODELVIEW);
   }
 
-  cc_glglue_glActiveTexture(glue, GL_TEXTURE0);
+  SoGLContext_glActiveTexture(glue, GL_TEXTURE0);
 
   if (bumpmapmatrix != oldtexture0matrix) {
     glMatrixMode(GL_TEXTURE);
@@ -731,7 +731,7 @@ soshape_bumprender::renderBump(SoState * state,
 void
 soshape_bumprender::renderNormal(SoState * state, const SoPrimitiveVertexCache * cache)
 {
-  const cc_glglue * glue = sogl_glue_instance(state);
+  const SoGLContext * glue = sogl_glue_instance(state);
   int lastenabled = -1;
   //const SbBool * enabled = SoMultiTextureEnabledElement::getEnabledUnits(state, lastenabled);
 
@@ -745,7 +745,7 @@ soshape_bumprender::renderNormal(SoState * state, const SoPrimitiveVertexCache *
       this->initDiffusePrograms(glue, state);
     }
     glEnable(GL_VERTEX_PROGRAM_ARB);
-    cc_glglue_glBindProgram(glue, GL_VERTEX_PROGRAM_ARB, normalrenderingvertexprogramid);
+    SoGLContext_glBindProgram(glue, GL_VERTEX_PROGRAM_ARB, normalrenderingvertexprogramid);
   }
 
   int arrays =

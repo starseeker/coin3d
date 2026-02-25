@@ -159,12 +159,12 @@ SoGLDisplayList::SoGLDisplayList(SoState * state, Type type, int allocnum,
 
   if (PRIVATE(this)->type == TEXTURE_OBJECT) {
     assert(allocnum == 1 && "it is only possible to create one texture object at a time");
-    const cc_glglue * glw = cc_glglue_instance(PRIVATE(this)->context);
+    const SoGLContext * glw = SoGLContext_instance(PRIVATE(this)->context);
     if (SoGLDriverDatabase::isSupported(glw, SO_GL_TEXTURE_OBJECT)) {
       // use temporary variable, in case GLuint is typedef'ed to
       // something other than unsigned int
       GLuint tmpindex;
-      cc_glglue_glGenTextures(glw, 1, &tmpindex);
+      SoGLContext_glGenTextures(glw, 1, &tmpindex);
       PRIVATE(this)->firstindex = (unsigned int )tmpindex;
     }
     else { // Fall back to display list, allocation happens further down below.
@@ -202,14 +202,14 @@ SoGLDisplayList::~SoGLDisplayList()
   else {
     assert(PRIVATE(this)->type == TEXTURE_OBJECT);
 
-    const cc_glglue * glw = cc_glglue_instance(PRIVATE(this)->context);
-    assert(cc_glglue_has_texture_objects(glw));
+    const SoGLContext * glw = SoGLContext_instance(PRIVATE(this)->context);
+    assert(SoGLContext_has_texture_objects(glw));
 
     // Use temporary variable in case GLUint != unsigned int.
     GLuint tmpindex = (GLuint) PRIVATE(this)->firstindex;
     // It is only possible to create one texture object at a time, so
     // there's only one index to delete.
-    cc_glglue_glDeleteTextures(glw, 1, &tmpindex);
+    SoGLContext_glDeleteTextures(glw, 1, &tmpindex);
   }
   delete PRIVATE(this);
 }
@@ -275,15 +275,15 @@ SoGLDisplayList::close(SoState * COIN_UNUSED_ARG(state))
     glCallList((GLuint) (PRIVATE(this)->firstindex + PRIVATE(this)->openindex));
   }
   else {
-    const cc_glglue * glw = cc_glglue_instance(PRIVATE(this)->context);
-    assert(cc_glglue_has_texture_objects(glw));
+    const SoGLContext * glw = SoGLContext_instance(PRIVATE(this)->context);
+    assert(SoGLContext_has_texture_objects(glw));
     GLenum target = PRIVATE(this)->texturetarget;
     if (target == 0) {
       // target is not set. Assume normal 2D texture.
       target = GL_TEXTURE_2D;
     }
     // unbind current texture object
-    cc_glglue_glBindTexture(glw, target, (GLuint) 0);
+    SoGLContext_glBindTexture(glw, target, (GLuint) 0);
   }
 }
 
@@ -396,15 +396,15 @@ SoGLDisplayList::getTextureTarget(void) const
 void
 SoGLDisplayList::bindTexture(SoState * COIN_UNUSED_ARG(state))
 {
-  const cc_glglue * glw = cc_glglue_instance(PRIVATE(this)->context);
-  assert(cc_glglue_has_texture_objects(glw));
+  const SoGLContext * glw = SoGLContext_instance(PRIVATE(this)->context);
+  assert(SoGLContext_has_texture_objects(glw));
 
   GLenum target = PRIVATE(this)->texturetarget;
   if (target == 0) {
     // target is not set. Assume normal 2D texture.
     target = GL_TEXTURE_2D;
   }
-  cc_glglue_glBindTexture(glw, target, (GLuint)PRIVATE(this)->firstindex);
+  SoGLContext_glBindTexture(glw, target, (GLuint)PRIVATE(this)->firstindex);
 }
 
 #undef PRIVATE

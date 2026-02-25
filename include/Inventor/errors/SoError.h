@@ -36,31 +36,6 @@
 #include <Inventor/SbBasic.h>
 #include <Inventor/SbString.h>
 #include <Inventor/SoType.h>
-#include <string>
-
-// Minimal C error structures for compatibility
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-
-#ifndef CC_ERROR_STRUCT_DEFINED
-#define CC_ERROR_STRUCT_DEFINED
-
-typedef struct cc_error {
-  std::string debugstring;
-} cc_error;
-
-typedef void cc_error_cb(const cc_error * err, void * data);
-
-#endif /* CC_ERROR_STRUCT_DEFINED */
-
-/* Basic error functions */
-COIN_DLL_API void cc_error_init(cc_error * me);
-COIN_DLL_API void cc_error_clean(cc_error * me);
-
-#ifdef __cplusplus
-} /* extern "C" */
-#endif /* __cplusplus */
 
 class SoBase;
 class SoNode;
@@ -73,8 +48,8 @@ typedef SoErrorCB * SoErrorCBPtr;
 
 class COIN_DLL_API SoError {
 public:
-  SoError(void) { cc_error_init(&this->err); }
-  virtual ~SoError() { cc_error_clean(&this->err); }
+  SoError(void);
+  virtual ~SoError();
 
   static void setHandlerCallback(SoErrorCB * const func, void * const data);
   static SoErrorCB * getHandlerCallback(void);
@@ -105,18 +80,18 @@ protected:
   void handleError(void);
 
 private:
-  SoError(const cc_error * error);
+  SoError(const void * error);
   static void generateBaseString(SbString & str, const SoBase * const base,
                                  const char * const what);
 
-  static void callbackForwarder(const cc_error * err, void * data);
+  static void callbackForwarder(const void * err, void * data);
 
   static SoType classTypeId;
   static SoErrorCB * callback;
   static void * callbackData;
   SbString debugstring;
 
-  cc_error err;
+  void * impl;
 };
 
 #endif // !COIN_SOERROR_H

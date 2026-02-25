@@ -107,7 +107,7 @@ SbDict::SbDict(const SbDict & from)
 */
 SbDict::~SbDict()
 {
-  cc_dict_destruct(this->hashtable);
+  cc_dict_destruct(reinterpret_cast<cc_dict *>(this->hashtable));
 }
 
 extern "C" {
@@ -135,9 +135,9 @@ SbDict::operator=(const SbDict & from)
   if (this->hashtable) {
     // clear old values
     this->clear();
-    cc_dict_destruct(this->hashtable);
+    cc_dict_destruct(reinterpret_cast<cc_dict *>(this->hashtable));
   }
-  this->hashtable = cc_dict_construct(cc_dict_get_num_elements(from.hashtable), 0.75f);
+  this->hashtable = cc_dict_construct(cc_dict_get_num_elements(reinterpret_cast<cc_dict *>(from.hashtable)), 0.75f);
   from.applyToAll(copyval, this);
   return *this;
 }
@@ -148,7 +148,7 @@ SbDict::operator=(const SbDict & from)
 void
 SbDict::clear(void)
 {
-  cc_dict_clear(this->hashtable);
+  cc_dict_clear(reinterpret_cast<cc_dict *>(this->hashtable));
 }
 
 /*!
@@ -162,7 +162,7 @@ SbDict::clear(void)
 SbBool
 SbDict::enter(const Key key, void * const value)
 {
-  return cc_dict_put(this->hashtable, key, value);
+  return cc_dict_put(reinterpret_cast<cc_dict *>(this->hashtable), key, value);
 }
 
 /*!
@@ -173,7 +173,7 @@ SbDict::enter(const Key key, void * const value)
 SbBool
 SbDict::find(const Key key, void *& value) const
 {
-  return cc_dict_get(this->hashtable, key, &value);
+  return cc_dict_get(reinterpret_cast<cc_dict *>(this->hashtable), key, &value);
 }
 
 /*!
@@ -183,7 +183,7 @@ SbDict::find(const Key key, void *& value) const
 SbBool
 SbDict::remove(const Key key)
 {
-  return cc_dict_remove(this->hashtable, key);
+  return cc_dict_remove(reinterpret_cast<cc_dict *>(this->hashtable), key);
 }
 
 
@@ -207,7 +207,7 @@ sbdict_dummy_apply(SbDict::Key key, void * value, void * closure)
 void
 SbDict::applyToAll(SbDictApplyFunc * rtn) const
 {
-  cc_dict_apply(this->hashtable, sbdict_dummy_apply, function_to_object_cast<void *>(rtn));
+  cc_dict_apply(reinterpret_cast<cc_dict *>(this->hashtable), sbdict_dummy_apply, function_to_object_cast<void *>(rtn));
 }
 
 /*!
@@ -216,7 +216,7 @@ SbDict::applyToAll(SbDictApplyFunc * rtn) const
 void
 SbDict::applyToAll(SbDictApplyDataFunc * rtn, void * data) const
 {
-  cc_dict_apply(this->hashtable, static_cast<cc_dict_apply_func *>(rtn), data);
+  cc_dict_apply(reinterpret_cast<cc_dict *>(this->hashtable), static_cast<cc_dict_apply_func *>(rtn), data);
 }
 
 typedef struct {
@@ -246,7 +246,7 @@ SbDict::makePList(SbPList & keys, SbPList & values)
   applydata.keys = &keys;
   applydata.values = &values;
 
-  cc_dict_apply(this->hashtable, static_cast<cc_dict_apply_func *>(sbdict_makeplist_cb), &applydata);
+  cc_dict_apply(reinterpret_cast<cc_dict *>(this->hashtable), static_cast<cc_dict_apply_func *>(sbdict_makeplist_cb), &applydata);
 }
 
 /*!
@@ -264,5 +264,5 @@ SbDict::makePList(SbPList & keys, SbPList & values)
 void
 SbDict::setHashingFunction(SbDictHashingFunc * func)
 {
-  cc_dict_set_hash_func(this->hashtable, static_cast<cc_dict_hash_func *>(func));
+  cc_dict_set_hash_func(reinterpret_cast<cc_dict *>(this->hashtable), static_cast<cc_dict_hash_func *>(func));
 }

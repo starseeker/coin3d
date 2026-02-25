@@ -115,7 +115,7 @@ static void send_attribs(const Key & COIN_UNUSED_ARG(key),
   }
 
   const int dataindex = *((const int *) closure);
-  const cc_glglue * glue = sogl_glue_instance(data->state);
+  const SoGLContext * glue = sogl_glue_instance(data->state);
 
 #if COIN_DEBUG
   if (dataindex >= data->data->getNum()) {
@@ -170,7 +170,7 @@ static void query_attribs(const Key & key,
                           void * COIN_UNUSED_ARG(closure))
 {
   SoVertexAttributeData * data = (SoVertexAttributeData *) attribdata;
-  const cc_glglue * glue = sogl_glue_instance(data->state);
+  const SoGLContext * glue = sogl_glue_instance(data->state);
 
   SoGLShaderProgram * shaderprogram =
     static_cast<SoGLShaderProgram *>(SoGLShaderProgramElement::get(data->state));
@@ -203,7 +203,7 @@ static void enable_vbo(const Key & COIN_UNUSED_ARG(key),
   if (data->index < 0) { return; }
 
   SoGLRenderAction * action = static_cast<SoGLRenderAction *>(closure);
-  const cc_glglue * glue = sogl_glue_instance(action->getState());
+  const SoGLContext * glue = sogl_glue_instance(action->getState());
 
   const SoCoordinateElement * coords =
     SoCoordinateElement::getInstance(action->getState());
@@ -214,7 +214,7 @@ static void enable_vbo(const Key & COIN_UNUSED_ARG(key),
   if (data->vbo) {
     data->vbo->bindBuffer(action->getCacheContext());
   } else {
-    cc_glglue_glBindBuffer(glue, GL_ARRAY_BUFFER, 0);
+    SoGLContext_glBindBuffer(glue, GL_ARRAY_BUFFER, 0);
     dataptr = attribdata->dataptr;
   }
 
@@ -239,7 +239,7 @@ static void disable_vbo(const Key & COIN_UNUSED_ARG(key),
   if (data->index < 0) { return; }
 
   SoGLRenderAction * action = static_cast<SoGLRenderAction *>(closure);
-  const cc_glglue * glue = sogl_glue_instance(action->getState());
+  const SoGLContext * glue = sogl_glue_instance(action->getState());
 
   glue->glDisableVertexAttribArrayARB(data->index);
 }

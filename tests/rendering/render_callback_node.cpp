@@ -30,6 +30,7 @@
 #include <Inventor/nodes/SoCallback.h>
 #include <Inventor/actions/SoGLRenderAction.h>
 #include <Inventor/actions/SoAction.h>
+#include <Inventor/elements/SoCacheElement.h>
 
 #include <cstdio>
 
@@ -293,7 +294,10 @@ static void t6CB(void *ud, SoAction *action)
     if (!action->isOfType(SoGLRenderAction::getClassTypeId())) return;
     T6Data *d = static_cast<T6Data *>(ud);
     ++d->renderCount;
-    // Could push/pop GL state here; just count renders for verification
+    // Invalidate the render cache so this callback fires on every render,
+    // not just the first time the scene graph is traversed (cached renders
+    // skip callbacks by design, see SoCallback documentation).
+    SoCacheElement::invalidate(action->getState());
 }
 
 static bool test6_callbackAcrossFrames(const char *basepath)

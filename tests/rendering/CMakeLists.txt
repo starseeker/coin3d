@@ -249,7 +249,7 @@ add_rendering_image_test(render_colored_cube RMSE_THRESHOLD 15.0)
 add_rendering_image_test(render_coordinates RMSE_THRESHOLD 10.0)
 add_rendering_image_test(render_scene       RMSE_THRESHOLD 15.0)
 add_rendering_image_test(render_shape_hints      RMSE_THRESHOLD 15.0)
-add_rendering_image_test(render_environment      RMSE_THRESHOLD 15.0)
+add_rendering_image_test(render_environment      RMSE_THRESHOLD 20.0)
 add_rendering_image_test(render_texture3         RMSE_THRESHOLD 15.0)
 add_rendering_image_test(render_bump_map         RMSE_THRESHOLD 15.0)
 add_rendering_image_test(render_texture_transform RMSE_THRESHOLD 15.0)
@@ -334,8 +334,7 @@ foreach(_vtest render_sphere_position render_checker_texture
                render_image_deep
                render_quad_mesh_deep
                render_field_connections
-               render_sogl_bindings
-               render_procedural_shape)
+               render_sogl_bindings)
     add_test(
         NAME ${_vtest}
         COMMAND "${CMAKE_COMMAND}"

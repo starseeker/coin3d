@@ -113,7 +113,9 @@ static SoSeparator * readFromBuffer(void * buf, size_t bufLen)
 {
     SoInput in;
     in.setBuffer(buf, bufLen);
-    return SoDB::readAll(&in);
+    SoSeparator * root = SoDB::readAll(&in);
+    if (root) root->ref();
+    return root;
 }
 
 int main()
@@ -325,6 +327,7 @@ int main()
             in.setBuffer(buf, bufLen);
             SoSeparator * root = SoDB::readAll(&in);
             if (root) {
+                root->ref();
                 root->unref();
                 pass = (in.eof() == TRUE);
             }
@@ -447,6 +450,7 @@ int main()
             in.setBuffer(buf2, len2);  // second call — should override
             SoSeparator * root = SoDB::readAll(&in);
             if (root) {
+                root->ref();
                 // The second scene has 2 children; check we got something
                 pass = (root->getNumChildren() >= 1);
                 root->unref();

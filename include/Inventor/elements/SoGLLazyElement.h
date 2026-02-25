@@ -36,7 +36,7 @@
 #include <Inventor/elements/SoLazyElement.h>
 
 /* Forward declaration */
-struct cc_glglue;
+struct SoGLContext;
 
 class SoGLRenderCache;
 class SoGLLazyElementP;
@@ -160,7 +160,7 @@ private:
   void sendShininess(const float shininess) const;
   void sendTransparency(const int stipplenum) const;
   void enableBlending(const int sfactor, const int dfactor) const;
-  void enableSeparateBlending(const cc_glglue * glue,
+  void enableSeparateBlending(const SoGLContext * glue,
                               const int sfactor, const int dfactor,
                               const int alpha_sfactor, const int alpha_dfactor) const;
   void disableBlending(void) const;

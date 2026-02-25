@@ -285,8 +285,8 @@ SoTextureCoordinateCylinder::GLRender(SoGLRenderAction * action)
   data->currentshape = NULL;  
   
   int unit = SoTextureUnitElement::get(data->currentstate);
-  const cc_glglue * glue = cc_glglue_instance(SoGLCacheContextElement::get(action->getState()));
-  int maxunits = cc_glglue_max_texture_units(glue);
+  const SoGLContext * glue = SoGLContext_instance(SoGLCacheContextElement::get(action->getState()));
+  int maxunits = SoGLContext_max_texture_units(glue);
   if (unit < maxunits) {        
     SoMultiTextureCoordinateElement::setFunction(data->currentstate, this,
                                                  unit, textureCoordinateCylinderCallback,

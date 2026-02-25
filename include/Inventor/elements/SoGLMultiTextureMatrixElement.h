@@ -35,8 +35,6 @@
 
 #include <Inventor/elements/SoMultiTextureMatrixElement.h>
 
-typedef struct cc_glglue cc_glue; // same as in glue/gl.h
-
 class COIN_DLL_API SoGLMultiTextureMatrixElement : public SoMultiTextureMatrixElement {
   typedef SoMultiTextureMatrixElement inherited;
 

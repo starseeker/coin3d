@@ -319,7 +319,7 @@ SoIndexedPointSet::GLRender(SoGLRenderAction * action)
 
   mb.sendFirst(); // always do this, even if mbind != OVERALL
 
-  const cc_glglue * glue = sogl_glue_instance(state);
+  const SoGLContext * glue = sogl_glue_instance(state);
   const uint32_t contextid = action->getCacheContext();
 
   SbBool dova =

@@ -288,7 +288,7 @@ SoBumpMap::GLRender(SoGLRenderAction * action)
 {
   SoState * state = action->getState();
 
-  const cc_glglue * glue = cc_glglue_instance(action->getCacheContext());
+  const SoGLContext * glue = SoGLContext_instance(action->getCacheContext());
 
   if (SoGLDriverDatabase::isSupported(glue, SO_GL_BUMPMAPPING)) {
     int nc;

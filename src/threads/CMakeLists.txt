@@ -6,6 +6,7 @@ set(COIN_THREADS_FILES
 	common.cpp
 	storage.cpp
 	storage_cxx17.cpp
+	SbStorage.cpp
 	recmutex.cpp
 	recmutex_global_cxx17.cpp
 	mutex.cpp

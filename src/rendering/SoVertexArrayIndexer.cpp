@@ -241,7 +241,7 @@ SoVertexArrayIndexer::close(void)
   Render all added targets/indices.
 */
 void
-SoVertexArrayIndexer::render(const cc_glglue * glue, const SbBool renderasvbo, const uint32_t contextid)
+SoVertexArrayIndexer::render(const SoGLContext * glue, const SbBool renderasvbo, const uint32_t contextid)
 {
   switch (this->target) {
   case GL_TRIANGLES:
@@ -266,15 +266,15 @@ SoVertexArrayIndexer::render(const cc_glglue * glue, const SbBool renderasvbo, c
         }
       }
       this->vbo->bindBuffer(contextid);
-      cc_glglue_glDrawElements(glue,
+      SoGLContext_glDrawElements(glue,
                                this->target,
                                this->indexarray.getLength(),
                                this->use_shorts ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, NULL);
-      cc_glglue_glBindBuffer(glue, GL_ELEMENT_ARRAY_BUFFER, 0);
+      SoGLContext_glBindBuffer(glue, GL_ELEMENT_ARRAY_BUFFER, 0);
     }
     else {
       const GLint * idxptr = this->indexarray.getArrayPtr();
-      cc_glglue_glDrawElements(glue,
+      SoGLContext_glDrawElements(glue,
                                this->target,
                                this->indexarray.getLength(),
                                GL_UNSIGNED_INT,
@@ -283,7 +283,7 @@ SoVertexArrayIndexer::render(const cc_glglue * glue, const SbBool renderasvbo, c
     break;
   default:
     if (SoGLDriverDatabase::isSupported(glue, SO_GL_MULTIDRAW_ELEMENTS)) {
-      cc_glglue_glMultiDrawElements(glue,
+      SoGLContext_glMultiDrawElements(glue,
                                     this->target,
                                     (GLsizei*) this->countarray.getArrayPtr(),
                                     GL_UNSIGNED_INT,
@@ -294,7 +294,7 @@ SoVertexArrayIndexer::render(const cc_glglue * glue, const SbBool renderasvbo, c
       for (int i = 0; i < this->countarray.getLength(); i++) {
         const GLsizei * ptr = this->ciarray[i];
         GLsizei cnt = this->countarray[i];
-        cc_glglue_glDrawElements(glue,
+        SoGLContext_glDrawElements(glue,
                                  this->target,
                                  cnt,
                                  GL_UNSIGNED_INT,

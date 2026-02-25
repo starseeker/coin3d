@@ -91,7 +91,9 @@ int main(int argc, char **argv)
     snprintf(vanesPath, sizeof(vanesPath), "%s/windmillVanes.iv", dataDir);
 
     SoSeparator *windmillTower = readFile(towerPath);
+    if (windmillTower) windmillTower->ref();
     SoSeparator *windmillVanes = readFile(vanesPath);
+    if (windmillVanes) windmillVanes->ref();
 
     // Add a rotor node to spin the vanes
     SoRotor *myRotor = new SoRotor;

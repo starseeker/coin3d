@@ -55,7 +55,7 @@ public:
   SoGLShaderObject(const uint32_t cachecontext);
   virtual ~SoGLShaderObject() { }
 
-  const cc_glglue * GLContext(void) const;
+  const SoGLContext * GLContext(void) const;
   uint32_t getCacheContext(void) const;
 
   virtual SbBool isLoaded(void) const = 0;
@@ -90,7 +90,7 @@ public:
 #endif
 
 protected:
-  const cc_glglue * glctx;
+  const SoGLContext * glctx;
   uint32_t cachecontext;
 
 private:

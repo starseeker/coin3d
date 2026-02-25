@@ -352,7 +352,7 @@ SoGLLazyElement::enableBlending(const int sfactor, const int dfactor) const
 }
 
 inline void
-SoGLLazyElement::enableSeparateBlending(const cc_glglue * glue,
+SoGLLazyElement::enableSeparateBlending(const SoGLContext * glue,
                                         const int sfactor,
                                         const int dfactor,
                                         const int alpha_sfactor,
@@ -360,8 +360,8 @@ SoGLLazyElement::enableSeparateBlending(const cc_glglue * glue,
 {
   glEnable(GL_BLEND);
 
-  if (cc_glglue_has_blendfuncseparate(glue)) {
-    cc_glglue_glBlendFuncSeparate(glue, sfactor, dfactor, alpha_sfactor, alpha_dfactor);
+  if (SoGLContext_has_blendfuncseparate(glue)) {
+    SoGLContext_glBlendFuncSeparate(glue, sfactor, dfactor, alpha_sfactor, alpha_dfactor);
   }
   else {
       // fall back to normal blending
@@ -621,7 +621,7 @@ SoGLLazyElement::send(const SoState * stateptr, uint32_t mask) const
               this->coinstate.alpha_blend_dfactor != this->glstate.alpha_blend_dfactor) {
             if ((this->coinstate.alpha_blend_sfactor != 0) &&
                 (this->coinstate.alpha_blend_dfactor != 0)) {
-              this->enableSeparateBlending(cc_glglue_instance(SoGLCacheContextElement::get((SoState*)stateptr)),
+              this->enableSeparateBlending(SoGLContext_instance(SoGLCacheContextElement::get((SoState*)stateptr)),
                                            this->coinstate.blend_sfactor,
                                            this->coinstate.blend_dfactor,
                                            this->coinstate.alpha_blend_sfactor,

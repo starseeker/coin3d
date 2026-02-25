@@ -150,9 +150,9 @@ SoGLMultiTextureMatrixElement::setElt(const int unit, const SbMatrix & matrix)
 void
 SoGLMultiTextureMatrixElement::updategl(const int unit) const
 {
-  const cc_glglue * glue = cc_glglue_instance(this->cachecontext);
+  const SoGLContext * glue = SoGLContext_instance(this->cachecontext);
   if (unit != 0) {
-    cc_glglue_glActiveTexture(glue, (GLenum) (int(GL_TEXTURE0) + unit));
+    SoGLContext_glActiveTexture(glue, (GLenum) (int(GL_TEXTURE0) + unit));
   }
   glMatrixMode(GL_TEXTURE);
   if (unit < this->getNumUnits()) {
@@ -163,7 +163,7 @@ SoGLMultiTextureMatrixElement::updategl(const int unit) const
   }
   glMatrixMode(GL_MODELVIEW);
   if (unit != 0) {
-    cc_glglue_glActiveTexture(glue, (GLenum) GL_TEXTURE0);
+    SoGLContext_glActiveTexture(glue, (GLenum) GL_TEXTURE0);
   }
 }
 

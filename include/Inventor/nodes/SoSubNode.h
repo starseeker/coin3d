@@ -226,7 +226,7 @@ _class_::createInstance(void) \
     _class_::parentFieldData = _parentclass_::getFieldDataPtr(); \
 \
     /* Make sure also external nodes are cleaned up */ \
-    cc_coin_atexit_static_internal(_class_::atexit_cleanup); \
+    SbAtexitStaticInternal(_class_::atexit_cleanup); \
   } WHILE_0
 
 

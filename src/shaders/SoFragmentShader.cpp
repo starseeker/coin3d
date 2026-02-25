@@ -111,7 +111,7 @@ SoFragmentShader::isSupported(SourceType sourceType)
   assert(ptr && "No active OpenGL context found!");
   if (!ptr) return FALSE; // Always bail out. Even when compiled in 'release' mode.
 
-  const cc_glglue * glue = cc_glglue_instance_from_context_ptr(ptr);
+  const SoGLContext * glue = SoGLContext_instance_from_context_ptr(ptr);
 
   if (sourceType == ARB_PROGRAM) {
     return SoGLDriverDatabase::isSupported(glue, SO_GL_ARB_FRAGMENT_PROGRAM);

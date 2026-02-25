@@ -35,42 +35,21 @@
 
 #include <Inventor/basic.h>
 
-// Forward declarations for thread storage types
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-typedef struct cc_storage cc_storage;
-typedef void cc_storage_f(void * closure);
-
-// Storage API functions
-extern cc_storage * cc_storage_construct(unsigned int size);
-extern cc_storage * cc_storage_construct_etc(unsigned int size, 
-                                             cc_storage_f * constructor,
-                                             cc_storage_f * destructor);
-extern void cc_storage_destruct(cc_storage * storage);
-extern void * cc_storage_get(cc_storage * storage);
-
-#ifdef __cplusplus
-} /* extern "C" */
-#endif
+#include <Inventor/threads/SbStorage.h>
 
 template <typename Type>
 class SbTypedStorage {
 public:
-  SbTypedStorage(unsigned int size) { this->storage = cc_storage_construct(size); }
+  SbTypedStorage(unsigned int size) : storage(size) {}
   SbTypedStorage(unsigned int size, void (*constr)(void *), void (*destr)(void *))
-    { this->storage = cc_storage_construct_etc(size, constr, destr); }
-  ~SbTypedStorage(void) { cc_storage_destruct(this->storage); }
+    : storage(size, reinterpret_cast<SbStorageConstructFunc *>(constr),
+                    reinterpret_cast<SbStorageConstructFunc *>(destr)) {}
+  ~SbTypedStorage(void) {}
 
-  Type get(void) { return (Type) cc_storage_get(this->storage); }
+  Type get(void) { return static_cast<Type>(storage.get()); }
 
 private:
-  cc_storage * storage;
-
-  // NOTE: For now, keeping original C implementation to avoid complex thread_local
-  // registry issues. For a future C++20+ migration, consider implementing with
-  // std::jthread and proper thread_local storage with enumeration support.
+  SbStorage storage;
 };
 
 #endif // !COIN_SBTYPEDSTORAGE_H

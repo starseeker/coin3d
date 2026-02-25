@@ -76,7 +76,7 @@ SoMaterialBundle::SoMaterialBundle(SoAction *action)
   if (SoLazyElement::getLightModel(this->state) == SoLazyElement::BASE_COLOR) 
     this->coloronly |= FLAG_COLORONLY;
 
-  const cc_glglue * glue = sogl_glue_instance(this->state);
+  const SoGLContext * glue = sogl_glue_instance(this->state);
   if (glue->nvidia_color_per_face_bug) {
     this->coloronly |= FLAG_NVIDIA_BUG;
   }

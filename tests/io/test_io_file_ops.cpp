@@ -50,6 +50,7 @@
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/nodes/SoCube.h>
 #include <Inventor/actions/SoWriteAction.h>
+#include <Inventor/errors/SoError.h>
 
 #include <cstdio>
 #include <cstring>

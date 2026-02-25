@@ -83,12 +83,12 @@
 
 // Convenience function for access to OpenGL wrapper from an SoState
 // pointer.
-const cc_glglue *
+const SoGLContext *
 sogl_glue_instance(const SoState * state)
 {
   SoGLRenderAction * action = (SoGLRenderAction *)state->getAction();
   if (action->isOfType(SoGLRenderAction::getClassTypeId())) {
-    return cc_glglue_instance(action->getCacheContext());
+    return SoGLContext_instance(action->getCacheContext());
   }
   static int didwarn = 0;
   if (!didwarn) {
@@ -97,9 +97,9 @@ sogl_glue_instance(const SoState * state)
                               "Wrong action type detected. Please report this to <coin-support@coin3d.org>, "
                               "and include information about your system (compiler, Linux version, etc.");
   }
-  // just return some cc_glglue instance. It usually doesn't matter
+  // just return some SoGLContext instance. It usually doesn't matter
   // that much unless multiple contexts on multiple displays are used.
-  return cc_glglue_instance(1);
+  return SoGLContext_instance(1);
 }
 
 
@@ -140,7 +140,7 @@ sogl_render_cone(const float radius,
 {
   const SbBool * unitenabled = NULL;
   int maxunit = 0;
-  const cc_glglue * glue = NULL;
+  const SoGLContext * glue = NULL;
 
   int flags = flagsin;
 
@@ -209,7 +209,7 @@ sogl_render_cone(const float radius,
       if (flags & SOGL_NEED_MULTITEXCOORDS) {
         for (u = 1; u <= maxunit; u++) {
           if (unitenabled[u]) {
-            cc_glglue_glMultiTexCoord2f(glue, (GLenum) (GL_TEXTURE0 + u),
+            SoGLContext_glMultiTexCoord2f(glue, (GLenum) (GL_TEXTURE0 + u),
                                         t - delta*0.5f, 1.0f);
           }
         }
@@ -228,7 +228,7 @@ sogl_render_cone(const float radius,
       if (flags & SOGL_NEED_MULTITEXCOORDS) {
         for (u = 1; u <= maxunit; u++) {
           if (unitenabled[u]) {
-            cc_glglue_glMultiTexCoord2f(glue, (GLenum) (GL_TEXTURE0 + u),
+            SoGLContext_glMultiTexCoord2f(glue, (GLenum) (GL_TEXTURE0 + u),
                                         t, 0.0f);
           }
         }
@@ -247,7 +247,7 @@ sogl_render_cone(const float radius,
       if (flags & SOGL_NEED_MULTITEXCOORDS) {
         for (u = 1; u <= maxunit; u++) {
           if (unitenabled[u]) {
-            cc_glglue_glMultiTexCoord2f(glue, (GLenum) (GL_TEXTURE0 + u),
+            SoGLContext_glMultiTexCoord2f(glue, (GLenum) (GL_TEXTURE0 + u),
                                         t - delta, 0.0f);
           }
         }
@@ -279,7 +279,7 @@ sogl_render_cone(const float radius,
       if (flags & SOGL_NEED_MULTITEXCOORDS) {
         for (u = 1; u <= maxunit; u++) {
           if (unitenabled[u]) {
-            cc_glglue_glMultiTexCoord2f(glue, (GLenum) (GL_TEXTURE0 + u),
+            SoGLContext_glMultiTexCoord2f(glue, (GLenum) (GL_TEXTURE0 + u),
                                         texcoords[i][0]+0.5f, texcoords[i][1]+0.5f);
           }
         }
@@ -310,7 +310,7 @@ sogl_render_cylinder(const float radius,
 {
   const SbBool * unitenabled = NULL;
   int maxunit = 0;
-  const cc_glglue * glue = NULL;
+  const SoGLContext * glue = NULL;
 
   int flags = flagsin;
 
@@ -372,7 +372,7 @@ sogl_render_cylinder(const float radius,
       if (flags & SOGL_NEED_MULTITEXCOORDS) {
         for (u = 1; u <= maxunit; u++) {
           if (unitenabled[u]) {
-            cc_glglue_glMultiTexCoord2f(glue, (GLenum) (GL_TEXTURE0 + u),
+            SoGLContext_glMultiTexCoord2f(glue, (GLenum) (GL_TEXTURE0 + u),
                                         t, 1.0f);
           }
         }
@@ -389,7 +389,7 @@ sogl_render_cylinder(const float radius,
       if (flags & SOGL_NEED_MULTITEXCOORDS) {
         for (u = 1; u <= maxunit; u++) {
           if (unitenabled[u]) {
-            cc_glglue_glMultiTexCoord2f(glue, (GLenum) (GL_TEXTURE0 + u),
+            SoGLContext_glMultiTexCoord2f(glue, (GLenum) (GL_TEXTURE0 + u),
                                         t, 0.0f);
           }
         }
@@ -426,7 +426,7 @@ sogl_render_cylinder(const float radius,
       if (flags & SOGL_NEED_MULTITEXCOORDS) {
         for (u = 1; u <= maxunit; u++) {
           if (unitenabled[u]) {
-            cc_glglue_glMultiTexCoord2f(glue, (GLenum) (GL_TEXTURE0 + u),
+            SoGLContext_glMultiTexCoord2f(glue, (GLenum) (GL_TEXTURE0 + u),
                                        texcoords[i][0]+0.5f, 1.0f - texcoords[i][1]-0.5f);
           }
         }
@@ -454,7 +454,7 @@ sogl_render_cylinder(const float radius,
       if (flags & SOGL_NEED_MULTITEXCOORDS) {
         for (u = 1; u <= maxunit; u++) {
           if (unitenabled[u]) {
-            cc_glglue_glMultiTexCoord2f(glue, (GLenum) (GL_TEXTURE0 + u),
+            SoGLContext_glMultiTexCoord2f(glue, (GLenum) (GL_TEXTURE0 + u),
                                         texcoords[i][0]+0.5f, texcoords[i][1]+0.5f);
           }
         }
@@ -484,7 +484,7 @@ sogl_render_sphere(const float radius,
 {
   const SbBool * unitenabled = NULL;
   int maxunit = 0;
-  const cc_glglue * glue = NULL;
+  const SoGLContext * glue = NULL;
 
   unsigned int flags = flagsin;
 
@@ -553,7 +553,7 @@ sogl_render_sphere(const float radius,
     if (flags & SOGL_NEED_MULTITEXCOORDS) {
       for (u = 1; u <= maxunit; u++) {
         if (unitenabled[u]) {
-          cc_glglue_glMultiTexCoord2f(glue, (GLenum) (GL_TEXTURE0 + u),
+          SoGLContext_glMultiTexCoord2f(glue, (GLenum) (GL_TEXTURE0 + u),
                                       currs + 0.5f * incs, 1.0f);
         }
       }
@@ -570,7 +570,7 @@ sogl_render_sphere(const float radius,
     if (flags & SOGL_NEED_MULTITEXCOORDS) {
       for (u = 1; u <= maxunit; u++) {
         if (unitenabled[u]) {
-          cc_glglue_glMultiTexCoord2f(glue, (GLenum) (GL_TEXTURE0 + u),
+          SoGLContext_glMultiTexCoord2f(glue, (GLenum) (GL_TEXTURE0 + u),
                                       currs, T);
         }
       }
@@ -597,7 +597,7 @@ sogl_render_sphere(const float radius,
     if (flags & SOGL_NEED_MULTITEXCOORDS) {
       for (u = 1; u <= maxunit; u++) {
         if (unitenabled[u]) {
-          cc_glglue_glMultiTexCoord2f(glue, (GLenum) (GL_TEXTURE0 + u),
+          SoGLContext_glMultiTexCoord2f(glue, (GLenum) (GL_TEXTURE0 + u),
                                       currs, T);
         }
       }
@@ -625,7 +625,7 @@ sogl_render_sphere(const float radius,
       if (flags & SOGL_NEED_MULTITEXCOORDS) {
         for (u = 1; u <= maxunit; u++) {
           if (unitenabled[u]) {
-            cc_glglue_glMultiTexCoord2f(glue, (GLenum) (GL_TEXTURE0 + u),
+            SoGLContext_glMultiTexCoord2f(glue, (GLenum) (GL_TEXTURE0 + u),
                                         S[j], T);
           }
         }
@@ -646,7 +646,7 @@ sogl_render_sphere(const float radius,
       if (flags & SOGL_NEED_MULTITEXCOORDS) {
         for (u = 1; u <= maxunit; u++) {
           if (unitenabled[u]) {
-            cc_glglue_glMultiTexCoord2f(glue, (GLenum) (GL_TEXTURE0 + u),
+            SoGLContext_glMultiTexCoord2f(glue, (GLenum) (GL_TEXTURE0 + u),
                                         S[j], T - dT);
           }
         }
@@ -674,7 +674,7 @@ sogl_render_sphere(const float radius,
     if (flags & SOGL_NEED_MULTITEXCOORDS) {
       for (u = 1; u <= maxunit; u++) {
         if (unitenabled[u]) {
-          cc_glglue_glMultiTexCoord2f(glue, (GLenum) (GL_TEXTURE0 + u),
+          SoGLContext_glMultiTexCoord2f(glue, (GLenum) (GL_TEXTURE0 + u),
                                       S[j], T);
         }
       }
@@ -691,7 +691,7 @@ sogl_render_sphere(const float radius,
     if (flags & SOGL_NEED_MULTITEXCOORDS) {
       for (u = 1; u <= maxunit; u++) {
         if (unitenabled[u]) {
-          cc_glglue_glMultiTexCoord2f(glue, (GLenum) (GL_TEXTURE0 + u),
+          SoGLContext_glMultiTexCoord2f(glue, (GLenum) (GL_TEXTURE0 + u),
                                       S[j]+incs*0.5f, 0.0f);
         }
       }
@@ -708,7 +708,7 @@ sogl_render_sphere(const float radius,
     if (flags & SOGL_NEED_MULTITEXCOORDS) {
       for (u = 1; u <= maxunit; u++) {
         if (unitenabled[u]) {
-          cc_glglue_glMultiTexCoord2f(glue, (GLenum) (GL_TEXTURE0 + u),
+          SoGLContext_glMultiTexCoord2f(glue, (GLenum) (GL_TEXTURE0 + u),
                                       S[j+1], T);
         }
       }
@@ -796,7 +796,7 @@ sogl_render_cube(const float width,
 {
   const SbBool * unitenabled = NULL;
   int maxunit = 0;
-  const cc_glglue * glue = NULL;
+  const SoGLContext * glue = NULL;
 
   int flags = flagsin;
 
@@ -835,7 +835,7 @@ sogl_render_cube(const float width,
       if (flags & SOGL_NEED_MULTITEXCOORDS) {
         for (u = 1; u <= maxunit; u++) {
           if (unitenabled[u]) {
-            cc_glglue_glMultiTexCoord2fv(glue, (GLenum) (GL_TEXTURE0 + u),
+            SoGLContext_glMultiTexCoord2fv(glue, (GLenum) (GL_TEXTURE0 + u),
                                          &sogl_cube_texcoords[j<<1]);
           }
         }
@@ -2412,7 +2412,7 @@ static void offscreenrenderer_cleanup(void)
 }
 
 // This is really obsoleted now that we have
-// cc_glglue_context_create_offscreen() et al in the OpenGL
+// SoGLContext_context_create_offscreen() et al in the OpenGL
 // wrapper. So don't use this function any more from within Coin.
 //
 // FIXME: must be kept around due to ABI & API compatibility reasons

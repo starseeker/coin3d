@@ -35,25 +35,10 @@
 
 #include <Inventor/basic.h>
 
-// Start migrating to C++17 - internal use only
-#ifdef COIN_INTERNAL
+// Debug error posting - Inventor-style API for debug builds
 #ifndef NDEBUG
-#include "errors/CoinInternalError.h"
+COIN_DLL_API void SbDebugError_post(const char * source, const char * format, ...);
 #endif // !NDEBUG
-#else
-// For external builds, provide minimal compatibility
-#ifndef NDEBUG
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-void cc_debugerror_post(const char * source, const char * format, ...);
-void cc_debugerror_postwarning(const char * source, const char * format, ...);
-void cc_debugerror_postinfo(const char * source, const char * format, ...);
-#ifdef __cplusplus
-} /* extern "C" */
-#endif /* __cplusplus */
-#endif // !NDEBUG
-#endif // COIN_INTERNAL
 
 /* ********************************************************************** */
 /* Trap people trying to use Inventor headers while compiling C source code.
@@ -114,7 +99,7 @@ constexpr Type SbSqr(const Type val) noexcept {
 template <typename Type>
 constexpr void SbDividerChk(const char * funcname, Type divider) noexcept {
   if (!(divider != static_cast<Type>(0)))
-    cc_debugerror_post(funcname, "divide by zero error.", divider);
+    SbDebugError_post(funcname, "divide by zero error.", divider);
 }
 #else
 template <typename Type>

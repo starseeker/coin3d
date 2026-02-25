@@ -250,7 +250,7 @@ SoPointSet::GLRender(SoGLRenderAction * action)
   int32_t idx = this->startIndex.getValue();
   if (numpts < 0) numpts = coords->getNum() - idx;
   
-  const cc_glglue * glue = sogl_glue_instance(state);
+  const SoGLContext * glue = sogl_glue_instance(state);
   const uint32_t contextid = action->getCacheContext();
 
   SbBool dova = 
@@ -277,7 +277,7 @@ SoPointSet::GLRender(SoGLRenderAction * action)
                                         doTextures,
                                         mbind == PER_VERTEX);
     didrenderasvbo = vbo;
-    cc_glglue_glDrawArrays(glue, GL_POINTS, idx, numpts);
+    SoGLContext_glDrawArrays(glue, GL_POINTS, idx, numpts);
     this->finishVertexArray(action, vbo,
                             (needNormals && (nbind != OVERALL)),
                             doTextures,

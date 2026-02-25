@@ -67,7 +67,7 @@
         _class_::classcatalog = (*_class_::parentcatalogptr)->clone(mytype); \
       else \
         _class_::classcatalog = new SoNodekitCatalog; \
-      cc_coin_atexit_static_internal(reinterpret_cast<coin_atexit_f*>(_class_::atexit_cleanupkit)); \
+      SbAtexitStaticInternal(reinterpret_cast<coin_atexit_f*>(_class_::atexit_cleanupkit)); \
     } \
     SoBase::staticDataUnlock(); \
   } while (0)

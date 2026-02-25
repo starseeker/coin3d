@@ -52,7 +52,7 @@ SoGLARBShaderObject::~SoGLARBShaderObject()
 SbBool
 SoGLARBShaderObject::isLoaded(void) const
 {
-  return cc_glglue_glIsProgram(this->glctx, this->arbProgramID);
+  return SoGLContext_glIsProgram(this->glctx, this->arbProgramID);
 }
 
 void
@@ -68,9 +68,9 @@ SoGLARBShaderObject::load(const char * srcStr)
   if (len == 0) return;
 
   glEnable(this->target);
-  cc_glglue_glGenPrograms(this->glctx, 1, &this->arbProgramID);
-  cc_glglue_glBindProgram(this->glctx, this->target, this->arbProgramID);
-  cc_glglue_glProgramString(this->glctx, this->target, GL_PROGRAM_FORMAT_ASCII_ARB, (GLsizei)len, srcStr);
+  SoGLContext_glGenPrograms(this->glctx, 1, &this->arbProgramID);
+  SoGLContext_glBindProgram(this->glctx, this->target, this->arbProgramID);
+  SoGLContext_glProgramString(this->glctx, this->target, GL_PROGRAM_FORMAT_ASCII_ARB, (GLsizei)len, srcStr);
 
   if (glGetError() == GL_INVALID_OPERATION) {
     GLint errorPos;
@@ -89,10 +89,10 @@ SoGLARBShaderObject::load(const char * srcStr)
 void
 SoGLARBShaderObject::unload(void)
 {
-  if (cc_glglue_glIsProgram(this->glctx, this->arbProgramID)) {
+  if (SoGLContext_glIsProgram(this->glctx, this->arbProgramID)) {
     // FIXME: make sure this is only called when in the correct, valid
     // GL context. 20050120 mortene.
-    cc_glglue_glDeletePrograms(this->glctx, 1, &this->arbProgramID);
+    SoGLContext_glDeletePrograms(this->glctx, 1, &this->arbProgramID);
     this->arbProgramID = 0;
   }
 }
@@ -113,7 +113,7 @@ void
 SoGLARBShaderObject::enable(void)
 {
   if (this->isActive()) {
-    cc_glglue_glBindProgram(this->glctx, this->target, this->arbProgramID);
+    SoGLContext_glBindProgram(this->glctx, this->target, this->arbProgramID);
     glEnable(this->target);
   }
 }

@@ -35,8 +35,6 @@
 
 #include <Inventor/elements/SoMultiTextureEnabledElement.h>
 
-typedef struct cc_glglue cc_glglue;
-
 class COIN_DLL_API SoGLMultiTextureEnabledElement : public SoMultiTextureEnabledElement {
   typedef SoMultiTextureEnabledElement inherited;
 

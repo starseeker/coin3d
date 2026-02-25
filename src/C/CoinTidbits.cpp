@@ -88,7 +88,6 @@
 
 #include <string>
 
-#include "C/base/string.h"
 #include "base/list.h"
 #include "errors/CoinInternalError.h"
 #include "coindefs.h"
@@ -670,9 +669,9 @@ void cc_coin_atexit(coin_atexit_f* f)
     coin_atexit_func("cc_coin_atexit", f, CC_ATEXIT_EXTERNAL);
 }
 
-void cc_coin_atexit_static_internal(coin_atexit_f* fp)
+void SbAtexitStaticInternal(coin_atexit_f* fp)
 {
-    coin_atexit_func("cc_coin_atexit_static_internal", fp, CC_ATEXIT_STATIC_DATA);
+    coin_atexit_func("SbAtexitStaticInternal", fp, CC_ATEXIT_STATIC_DATA);
 }
 
 SbBool coin_is_exiting(void)

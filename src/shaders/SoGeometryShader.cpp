@@ -191,7 +191,7 @@ SoGeometryShader::GLRender(SoGLRenderAction * action)
   if (this->isActive.getValue()) {
     SoState * state = action->getState();
     const uint32_t cachecontext = SoGLCacheContextElement::get(state);
-    const cc_glglue * glue = cc_glglue_instance(cachecontext);
+    const SoGLContext * glue = SoGLContext_instance(cachecontext);
     
     if (!SoGLDriverDatabase::isSupported(glue, "GL_EXT_geometry_shader4")) {
       static int first = 1;
@@ -263,7 +263,7 @@ SoGeometryShader::isSupported(SourceType sourceType)
   assert(ptr && "No active OpenGL context found!");
   if (!ptr) return FALSE; // Always bail out. Even when compiled in 'release' mode.
 
-  const cc_glglue * glue = cc_glglue_instance_from_context_ptr(ptr);
+  const SoGLContext * glue = SoGLContext_instance_from_context_ptr(ptr);
 
   if (sourceType == ARB_PROGRAM) {
     return FALSE;

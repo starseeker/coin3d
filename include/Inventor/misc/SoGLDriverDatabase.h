@@ -36,13 +36,13 @@
 #include <Inventor/lists/SbList.h>
 
 /* Forward declaration */
-struct cc_glglue;
+struct SoGLContext;
 
 class SbName;
 
 class COIN_DLL_API SoGLDriverDatabase {
 public:
-  static SbBool isSupported(const cc_glglue * context, const SbName & feature);
+  static SbBool isSupported(const SoGLContext * context, const SbName & feature);
 
   static void init(void);
 };

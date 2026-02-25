@@ -73,13 +73,6 @@ public:
     MIPMAP
   };
 
-  typedef SbBool SoGLImageResizeCB(SoState * state,
-                                   const SbVec3s &newsize,
-                                   unsigned char * destbuffer,
-                                   ResizeReason reason,
-                                   void * closure,
-                                   class SoGLImage * image);
-
   void setGLDisplayList(SoGLDisplayList * dl,
                         SoState * state,
                         const Wrap wraps = REPEAT,
@@ -161,13 +154,11 @@ public:
 
   virtual SoGLDisplayList * getGLDisplayList(SoState * state);
   SbBool hasTransparency(void) const;
-  SbBool useAlphaTest(void) const;
   Wrap getWrapS(void) const;
   Wrap getWrapT(void) const;
   Wrap getWrapR(void) const;
 
   float getQuality(void) const;
-  uint32_t getGLImageId(void) const;
 
 protected:
 
@@ -176,28 +167,16 @@ protected:
   virtual void unrefOldDL(SoState * state, const uint32_t maxage);
   virtual ~SoGLImage();
 
+public:
+  static void initClass(void);
+  static void tagImage(SoState * state, SoGLImage * image);
+
 private:
 
   class SoGLImageP * pimpl;
   friend class SoGLImageP;
   static void cleanupClass(void);
 
-public:
-  // internal methods for texture resource management
-  static void beginFrame(SoState * state);
-  static void tagImage(SoState * state, SoGLImage * image);
-  static void endFrame(SoState * state);
-  static void setDisplayListMaxAge(const uint32_t maxage);
-  static void freeAllImages(SoState * state = NULL);
-
-  void setEndFrameCallback(void (*cb)(void *), void * closure);
-  int getNumFramesSinceUsed(void) const;
-
-public:
-  static void initClass(void);
-  static void setResizeCallback(SoGLImageResizeCB * f, void * closure);
-
-private:
   static void registerImage(SoGLImage * image);
   static void unregisterImage(SoGLImage * image);
 };

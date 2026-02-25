@@ -583,9 +583,36 @@ SoText2::GLRender(SoGLRenderAction * action)
         drawH = (int)vpsize[1] - drawRastery;
       }
 
-      if (drawH > 0) {
-        SoText2P::setRasterPos3f((GLfloat)floor(textscreenoffsetx+0.5), (GLfloat)drawRastery, -nilpoint[2]);
-        glDrawPixels(bbsize[0], drawH, GL_RGBA, GL_UNSIGNED_BYTE, (const GLubyte *)drawBuffer);
+      // Guard: clip in X to avoid out-of-bounds writes when text is
+      // partially outside the viewport (e.g. centred text near an edge).
+      int drawX   = (int)floor(textscreenoffsetx + 0.5);
+      int drawW   = bbsize[0];
+      int skipCols = 0;
+      if (drawX < 0) {
+        skipCols = -drawX;
+        if (skipCols >= drawW) { drawW = 0; }
+        else {
+          drawW -= skipCols;
+          drawX  = 0;
+        }
+      }
+      if (drawX + drawW > (int)vpsize[0]) {
+        drawW = (int)vpsize[0] - drawX;
+      }
+
+      if (drawH > 0 && drawW > 0) {
+        // If we clipped columns from the left, use GL_UNPACK_SKIP_PIXELS so
+        // we only upload the visible portion of the pixel buffer.
+        if (skipCols > 0) {
+          glPixelStorei(GL_UNPACK_ROW_LENGTH, bbsize[0]);
+          glPixelStorei(GL_UNPACK_SKIP_PIXELS, skipCols);
+        }
+        SoText2P::setRasterPos3f((GLfloat)drawX, (GLfloat)drawRastery, -nilpoint[2]);
+        glDrawPixels(drawW, drawH, GL_RGBA, GL_UNSIGNED_BYTE, (const GLubyte *)drawBuffer);
+        if (skipCols > 0) {
+          glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
+          glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+        }
       }
     }
 

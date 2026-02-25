@@ -47,6 +47,7 @@
 
 /* ********************************************************************** */
 
+#include "Inventor/basic.h"
 #include <string>
 #include <stdarg.h>
 

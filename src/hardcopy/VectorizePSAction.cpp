@@ -405,6 +405,49 @@ SoVectorizePSAction::printItem(const SoVectorizeItem * item) const
   }
 }
 
+/*!
+  Convenience method to export a scene graph directly to a PostScript file
+  without requiring a viewer render-loop.  The method handles all setup
+  (page layout, calibration, traversal, and teardown) internally.
+
+  \a root is the scene graph to vectorize.
+  \a filename is the path of the PostScript file to write.
+  \a pagesize selects the output paper size (default A4).
+  \a orientation selects PORTRAIT or LANDSCAPE (default PORTRAIT).
+  \a border is the margin in millimetres around the drawable area (default 10).
+  \a background when TRUE, the page background is filled with \a bgcolor.
+  \a bgcolor is the background colour used when \a background is TRUE.
+
+  Returns TRUE on success, or FALSE if the output file could not be opened.
+*/
+SbBool
+SoVectorizePSAction::exportToPS(SoNode * root,
+                                const char * filename,
+                                PageSize pagesize,
+                                Orientation orientation,
+                                float border,
+                                SbBool background,
+                                const SbColor & bgcolor)
+{
+  SoVectorizePSAction action;
+  if (!action.getOutput()->openFile(filename)) {
+    return FALSE;
+  }
+  action.setOrientation(orientation);
+  if (background) {
+    action.setBackgroundColor(TRUE, bgcolor);
+  }
+  action.beginStandardPage(pagesize, border);
+  // Calibrate pixel-based attributes (line width, font size, etc.) using a
+  // viewport whose aspect ratio matches the page so that the output looks
+  // consistent even without a live viewer.
+  action.calibrate(action.getViewportRegion());
+  action.apply(root);
+  action.endPage();
+  action.getOutput()->closeFile();
+  return TRUE;
+}
+
 static int count_bits(uint16_t mask, int & pos, SbBool onoff)
 {
   int cnt = -1;

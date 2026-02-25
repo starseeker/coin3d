@@ -149,6 +149,10 @@ static int g_t3_pressCount = 0;
 
 static void t3CB(void *, SoEventCallback *cb)
 {
+    // Only count button-press (DOWN) events, not releases.
+    const SoMouseButtonEvent *e =
+        static_cast<const SoMouseButtonEvent *>(cb->getEvent());
+    if (e->getState() != SoButtonEvent::DOWN) return;
     ++g_t3_pressCount;
     if (g_t3_mat) {
         // Cycle through colors

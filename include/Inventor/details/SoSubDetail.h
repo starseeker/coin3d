@@ -34,7 +34,7 @@
 \**************************************************************************/
 
 #include <Inventor/details/SoDetail.h>
-#include <Inventor/SuUtils.h> // for cc_coin_atexit_static_internal()
+#include <Inventor/SuUtils.h> // for SbAtexitStaticInternal()
 #include <Inventor/SbName.h> // for implicit char* -> SbName cast in
                              // SoType::createType()
 #include <cassert>
@@ -83,7 +83,7 @@ SoType _class_::getClassTypeId(void) { return _class_::classTypeId; }
     _class_::classTypeId = \
            SoType::createType(_parentclass_::getClassTypeId(), \
                               SO__QUOTE(_class_)); \
-    cc_coin_atexit_static_internal(reinterpret_cast<coin_atexit_f *>(_class_::cleanupClass)); \
+    SbAtexitStaticInternal(reinterpret_cast<coin_atexit_f *>(_class_::cleanupClass)); \
   } WHILE_0
 
 // *************************************************************************

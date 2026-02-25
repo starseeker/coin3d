@@ -1,21 +1,15 @@
 # source files
 set(COIN_FONTS_FILES
-	freetype.cpp
 	profont_data.cpp
 	fontspec.cpp
-	common.cpp
 )
 
 # Files excluded from public API documentation, included in complete documentation.
 set(COIN_FONTS_INTERNAL_FILES
-	freetype.h
-	freetype.cpp
 	profont_data.h
 	profont_data.cpp
 	fontspec.h
 	fontspec.cpp
-	common.h
-	common.cpp
 )
 
 # build library

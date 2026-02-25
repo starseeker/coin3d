@@ -18,6 +18,10 @@ configure_file(setup.h.cmake.in setup.h)
 
 add_compile_options(-DHAVE_CONFIG_H -DCOIN_INTERNAL -DCOIN_DEBUG=$<CONFIG:Debug>)
 
+if(COIN_HARDCOPY)
+  add_compile_options(-DCOIN_HARDCOPY)
+endif()
+
 include_directories(BEFORE
   "${PROJECT_BINARY_DIR}/include"
   "${PROJECT_SOURCE_DIR}/include"
@@ -47,8 +51,11 @@ set(COIN_SUBDIRS
   engines errors events fields fonts glue io manips misc rendering lists
   nodes shapenodes projectors sensors
   shadows threads shaders tools
-  hardcopy
 )
+
+if(COIN_HARDCOPY)
+  list(APPEND COIN_SUBDIRS hardcopy)
+endif()
 
 # Add nodekits and related components if enabled
 list(APPEND COIN_SUBDIRS nodekits profiler hud)
@@ -98,7 +105,7 @@ set(COIN_ADDITIONAL_HDRS
 if(COIN_BUILD_SINGLE_LIB)
     add_library(${PROJECT_NAME} ${COIN_SOURCE} ${COIN_ADDITIONAL_HDRS})
 else()
-    add_library(${PROJECT_NAME} ${COIN_SOURCE} ${COIN_ADDITIONAL_HDRS}
+    set(_coin_objects
         $<TARGET_OBJECTS:actions>
         $<TARGET_OBJECTS:base>
         $<TARGET_OBJECTS:bundles>
@@ -113,7 +120,6 @@ else()
         $<TARGET_OBJECTS:fonts>
         $<TARGET_OBJECTS:glelements>
         $<TARGET_OBJECTS:glue>
-        $<TARGET_OBJECTS:hardcopy>
         $<TARGET_OBJECTS:io>
         $<TARGET_OBJECTS:lists>
         $<TARGET_OBJECTS:manips>
@@ -131,6 +137,10 @@ else()
         $<TARGET_OBJECTS:threads>
         $<TARGET_OBJECTS:tools>
     )
+    if(COIN_HARDCOPY)
+        list(APPEND _coin_objects $<TARGET_OBJECTS:hardcopy>)
+    endif()
+    add_library(${PROJECT_NAME} ${COIN_SOURCE} ${COIN_ADDITIONAL_HDRS} ${_coin_objects})
 endif()
 
 # Set target properties

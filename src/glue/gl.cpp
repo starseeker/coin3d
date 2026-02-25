@@ -38,12 +38,12 @@
   since you have to have both compile-time and runtime tests for
   OpenGL version, and what extensions are available. In addition, you
   might not have an entry point to the (extension) function in
-  question on your build system.  The cc_glglue abstraction is here
+  question on your build system.  The SoGLContext abstraction is here
   to relieve the application programmer for that burden.
 
-  To use the cc_glglue interface, include glue/glp.h for internal code.
+  To use the SoGLContext interface, include glue/glp.h for internal code.
 
-  The cc_glglue interface is part of the public API of Coin, but is
+  The SoGLContext interface is part of the public API of Coin, but is
   not documented on the public documentation pages at
   https://coin3d.github.io/coin/ yet. The status for client application
   usage is "unofficial, use at own risk, interface may change without
@@ -55,38 +55,38 @@
   o OpenGL calls that are part of OpenGL 1.0 can safely be used
     without any kind of checking.
 
-  o Do _not_ use cc_glglue unless you are sure that you have a valid
-    OpenGL context. cc_glglue implicitly assumes that this is the case
+  o Do _not_ use SoGLContext unless you are sure that you have a valid
+    OpenGL context. SoGLContext implicitly assumes that this is the case
     for most of its functions. In short, only use OpenGL functions
     inside an SoGLRenderAction.
 
-  o To get hold of a cc_glglue instance:
-      const cc_glglue * cc_glglue_instance(int contextid);
+  o To get hold of a SoGLContext instance:
+      const SoGLContext * SoGLContext_instance(int contextid);
     or
-      const cc_glglue * cc_glglue_instance_from_context_ptr(void * ctx);
+      const SoGLContext * SoGLContext_instance_from_context_ptr(void * ctx);
 
     See header file for more information about these.
 
   o Always check that the capability you want to use is supported.
-    Queries for this is supported through the cc_glglue_has_*()
+    Queries for this is supported through the SoGLContext_has_*()
     functions.
 
-  o cc_glglue has some functions for querying OpenGL/GLX version and
+  o SoGLContext has some functions for querying OpenGL/GLX version and
     extension availability. Usually you shouldn't need to use these
-    unless you want to bypass cc_glglue or your function isn't
-    supported by cc_glglue (in which case you should add it).
+    unless you want to bypass SoGLContext or your function isn't
+    supported by SoGLContext (in which case you should add it).
 
   o SoGLCacheContextElement also has some functions for querying
     OpenGL version and extension availability. These are public, so
-    you can use them even in external code. However, use cc_glglue
+    you can use them even in external code. However, use SoGLContext
     internally for consistency.
 
-  What cc_glglue supplies
+  What SoGLContext supplies
   -----------------------
 
-  o cc_glglue supplies function pointer to OpenGL and GLX functions
+  o SoGLContext supplies function pointer to OpenGL and GLX functions
     used in Coin that are _not_ part of OpenGL 1.0 and GLX 1.1.  Note
-    that cc_glglue supplies OpenGL extension functions as if they were
+    that SoGLContext supplies OpenGL extension functions as if they were
     standard functions (i.e. without the EXT suffix).
 
   o In addition, the Inventor/system/gl.h file supplies OpenGL enums
@@ -98,9 +98,9 @@
 
   ------ 8< --------- [snip] --------------------- 8< --------- [snip] -----
 
-  const cc_glglue * glw = cc_glglue_instance(SoGLCacheContextElement::get(state));
-  if (cc_glglue_has_3d_textures(glw)) {
-    cc_glglue_glTexImage3D(glw, GL_PROXY_TEXTURE_3D, 0, GL_RGBA,
+  const SoGLContext * glw = SoGLContext_instance(SoGLCacheContextElement::get(state));
+  if (SoGLContext_has_3d_textures(glw)) {
+    SoGLContext_glTexImage3D(glw, GL_PROXY_TEXTURE_3D, 0, GL_RGBA,
                            64, 64, 64, 0,
                            GL_RGBA, GL_UNSIGNED_BYTE,
                            NULL);
@@ -419,7 +419,7 @@ glglue_resolve_envvar(const char * txt)
    environment variable that disables it.)
 */
 static SbBool
-glglue_allow_newer_opengl(const cc_glglue * w)
+glglue_allow_newer_opengl(const SoGLContext * w)
 {
   static int force1_0_initialized = 0;
   static SbBool force1_0 = FALSE;
@@ -478,7 +478,7 @@ glglue_allow_newer_opengl(const cc_glglue * w)
    to a value > 0. If so, all known driver bugs will just be silently
    accepted and attempted worked around. */
 static int
-coin_glglue_silence_all_driver_warnings(void)
+SoGLContext_silence_all_driver_warnings(void)
 {
   static int d = -1;
   if (d == -1) { d = glglue_resolve_envvar("COIN_GLGLUE_SILENCE_DRIVER_WARNINGS"); }
@@ -488,11 +488,11 @@ coin_glglue_silence_all_driver_warnings(void)
 
 /* Return value of COIN_GLGLUE_NO_RADEON_WARNING environment variable. */
 static int
-coin_glglue_radeon_warning(void)
+SoGLContext_radeon_warning(void)
 {
   static int d = -1;
 
-  if (coin_glglue_silence_all_driver_warnings()) { return 0; }
+  if (SoGLContext_silence_all_driver_warnings()) { return 0; }
 
   if (d == -1) { d = glglue_resolve_envvar("COIN_GLGLUE_NO_RADEON_WARNING"); }
   /* Note the inversion of the envvar value versus the return value. */
@@ -501,11 +501,11 @@ coin_glglue_radeon_warning(void)
 
 /* Return value of COIN_GLGLUE_NO_G400_WARNING environment variable. */
 static int
-coin_glglue_old_matrox_warning(void)
+SoGLContext_old_matrox_warning(void)
 {
   static int d = -1;
 
-  if (coin_glglue_silence_all_driver_warnings()) { return 0; }
+  if (SoGLContext_silence_all_driver_warnings()) { return 0; }
 
   if (d == -1) { d = glglue_resolve_envvar("COIN_GLGLUE_NO_G400_WARNING"); }
   /* Note the inversion of the envvar value versus the return value. */
@@ -514,11 +514,11 @@ coin_glglue_old_matrox_warning(void)
 
 /* Return value of COIN_GLGLUE_NO_ELSA_WARNING environment variable. */
 static int
-coin_glglue_old_elsa_warning(void)
+SoGLContext_old_elsa_warning(void)
 {
   static int d = -1;
 
-  if (coin_glglue_silence_all_driver_warnings()) { return 0; }
+  if (SoGLContext_silence_all_driver_warnings()) { return 0; }
 
   if (d == -1) { d = glglue_resolve_envvar("COIN_GLGLUE_NO_ELSA_WARNING"); }
   /* Note the inversion of the envvar value versus the return value. */
@@ -527,11 +527,11 @@ coin_glglue_old_elsa_warning(void)
 
 /* Return value of COIN_GLGLUE_NO_SUN_EXPERT3D_WARNING environment variable. */
 static int
-coin_glglue_sun_expert3d_warning(void)
+SoGLContext_sun_expert3d_warning(void)
 {
   static int d = -1;
 
-  if (coin_glglue_silence_all_driver_warnings()) { return 0; }
+  if (SoGLContext_silence_all_driver_warnings()) { return 0; }
 
   if (d == -1) { d = glglue_resolve_envvar("COIN_GLGLUE_NO_SUN_EXPERT3D_WARNING"); }
   /* Note the inversion of the envvar value versus the return value. */
@@ -540,11 +540,11 @@ coin_glglue_sun_expert3d_warning(void)
 
 /* Return value of COIN_GLGLUE_NO_TRIDENT_WARNING environment variable. */
 static int
-coin_glglue_trident_warning(void)
+SoGLContext_trident_warning(void)
 {
   static int d = -1;
 
-  if (coin_glglue_silence_all_driver_warnings()) { return 0; }
+  if (SoGLContext_silence_all_driver_warnings()) { return 0; }
 
   if (d == -1) { d = glglue_resolve_envvar("COIN_GLGLUE_NO_TRIDENT_WARNING"); }
   /* Note the inversion of the envvar value versus the return value. */
@@ -553,7 +553,7 @@ coin_glglue_trident_warning(void)
 
 /* Return value of COIN_DEBUG_GLGLUE environment variable. */
 int
-coin_glglue_debug(void)
+SoGLContext_debug(void)
 {
   static int d = -1;
   if (d == -1) { d = glglue_resolve_envvar("COIN_DEBUG_GLGLUE"); }
@@ -591,7 +591,7 @@ glglue_prefer_glPolygonOffsetEXT(void)
    20060223 mortene.
 */
 int
-coin_glglue_stencil_bits_hack(void)
+SoGLContext_stencil_bits_hack(void)
 {
   auto env = CoinInternal::getEnvironmentVariable("COIN_OFFSCREEN_STENCIL_BITS");
   if (!env.has_value()) { return -1; }
@@ -599,24 +599,24 @@ coin_glglue_stencil_bits_hack(void)
 }
 
 cc_libhandle
-coin_glglue_dl_handle(const cc_glglue * glue)
+SoGLContext_dl_handle(const SoGLContext * glue)
 {
   if (!glue->dl_handle) {
-    const_cast <cc_glglue *> (glue)->dl_handle = cc_dl_handle_with_gl_symbols();
+    const_cast <SoGLContext *> (glue)->dl_handle = cc_dl_handle_with_gl_symbols();
   }
   return glue->dl_handle;
 }
 
 /* doc in header file */
 void *
-cc_glglue_getprocaddress(const cc_glglue * glue, const char * symname)
+SoGLContext_getprocaddress(const SoGLContext * glue, const char * symname)
 {
   void * ptr = NULL;
 
   /* With callback-based contexts, the application is responsible for
      providing complete OpenGL function loading. We only attempt to
      find the function through the shared library. */
-  ptr = cc_dl_sym(coin_glglue_dl_handle(glue), symname);
+  ptr = cc_dl_sym(SoGLContext_dl_handle(glue), symname);
 
 #ifdef COIN3D_OSMESA_BUILD
   /* OSMesa uses MGL name mangling, so if the standard name lookup fails,
@@ -628,9 +628,9 @@ cc_glglue_getprocaddress(const cc_glglue * glue, const char * symname)
     if (mgl_name) {
       strcpy(mgl_name, "mgl");
       strcat(mgl_name, symname + 2); /* Skip "gl" prefix */
-      ptr = cc_dl_sym(coin_glglue_dl_handle(glue), mgl_name);
-      if (coin_glglue_debug()) {
-        cc_debugerror_postinfo("cc_glglue_getprocaddress", "MGL fallback: %s -> %s == %p", symname, mgl_name, ptr);
+      ptr = cc_dl_sym(SoGLContext_dl_handle(glue), mgl_name);
+      if (SoGLContext_debug()) {
+        cc_debugerror_postinfo("SoGLContext_getprocaddress", "MGL fallback: %s -> %s == %p", symname, mgl_name, ptr);
       }
       free(mgl_name);
     }
@@ -641,26 +641,26 @@ cc_glglue_getprocaddress(const cc_glglue * glue, const char * symname)
      the OSMesa glew examples. */
   if (ptr == NULL) {
     ptr = (void*)OSMesaGetProcAddress(symname);
-    if (coin_glglue_debug()) {
-      cc_debugerror_postinfo("cc_glglue_getprocaddress", "OSMesaGetProcAddress('%s') == %p", symname, ptr);
+    if (SoGLContext_debug()) {
+      cc_debugerror_postinfo("SoGLContext_getprocaddress", "OSMesaGetProcAddress('%s') == %p", symname, ptr);
     }
   }
 #endif
 
-  if (coin_glglue_debug()) {
-    cc_debugerror_postinfo("cc_glglue_getprocaddress", "%s==%p", symname, ptr);
+  if (SoGLContext_debug()) {
+    cc_debugerror_postinfo("SoGLContext_getprocaddress", "%s==%p", symname, ptr);
   }
   return ptr;
 }
 
 /* Global dictionary which stores the mappings from the context IDs to
-   actual cc_glglue instances. */
+   actual SoGLContext instances. */
 static cc_dict * gldict = NULL;
 
 static void
 free_glglue_instance(uintptr_t COIN_UNUSED_ARG(key), void * value, void * COIN_UNUSED_ARG(closure))
 {
-  cc_glglue * glue = (cc_glglue*) value;
+  SoGLContext * glue = (SoGLContext*) value;
   cc_dict_destruct(glue->glextdict);
   free(value);
 }
@@ -686,22 +686,22 @@ glglue_has_nvidia_framebuffer_object_bug(int major, int minor, int release)
 }
 
 /*
-  Set the OpenGL version variables in the given cc_glglue struct
+  Set the OpenGL version variables in the given SoGLContext struct
   instance.
 
   Note: this code has been copied from GLUWrapper.c, so if any changes
   are made, make sure they are propagated over if necessary.
 */
 static void
-glglue_set_glVersion(cc_glglue * w)
+glglue_set_glVersion(SoGLContext * w)
 {
   char buffer[256];
   char * dotptr;
 
   /* NB: if you are getting a crash here, it's because an attempt at
-   * setting up a cc_glglue instance was made when there is no current
+   * setting up a SoGLContext instance was made when there is no current
    * OpenGL context. */
-  if (coin_glglue_debug()) {
+  if (SoGLContext_debug()) {
     if (w->versionstr && strlen(w->versionstr) > 0) {
       cc_debugerror_postinfo("glglue_set_glVersion",
                              "glGetString(GL_VERSION)=='%s'", w->versionstr);
@@ -745,7 +745,7 @@ glglue_set_glVersion(cc_glglue * w)
     }
   }
 
-  if (coin_glglue_debug()) {
+  if (SoGLContext_debug()) {
     cc_debugerror_postinfo("glglue_set_glVersion",
                            "parsed to major=='%d', minor=='%d', micro=='%d'",
                            w->version.major,
@@ -755,7 +755,7 @@ glglue_set_glVersion(cc_glglue * w)
 }
 
 void
-cc_glglue_glversion(const cc_glglue * w,
+SoGLContext_glversion(const SoGLContext * w,
                     unsigned int * major,
                     unsigned int * minor,
                     unsigned int * release)
@@ -776,13 +776,13 @@ cc_glglue_glversion(const cc_glglue * w,
 
 
 SbBool
-cc_glglue_glversion_matches_at_least(const cc_glglue * w,
+SoGLContext_glversion_matches_at_least(const SoGLContext * w,
                                      unsigned int major,
                                      unsigned int minor,
                                      unsigned int revision)
 {
   unsigned int glmajor, glminor, glrev;
-  cc_glglue_glversion(w, &glmajor, &glminor, &glrev);
+  SoGLContext_glversion(w, &glmajor, &glminor, &glrev);
 
   if (glmajor < major) return FALSE;
   else if (glmajor > major) return TRUE;
@@ -793,7 +793,7 @@ cc_glglue_glversion_matches_at_least(const cc_glglue * w,
 }
 
 SbBool
-cc_glglue_glxversion_matches_at_least(const cc_glglue * w,
+SoGLContext_glxversion_matches_at_least(const SoGLContext * w,
                                       int major,
                                       int minor)
 {
@@ -804,7 +804,7 @@ cc_glglue_glxversion_matches_at_least(const cc_glglue * w,
 }
 
 int
-coin_glglue_extension_available(const char * extensions, const char * ext)
+SoGLContext_extension_available(const char * extensions, const char * ext)
 {
   const char * start;
   size_t extlen;
@@ -833,8 +833,8 @@ coin_glglue_extension_available(const char * extensions, const char * ext)
   }
 
 done:
-  if (coin_glglue_debug()) {
-    cc_debugerror_postinfo("coin_glglue_extension_available",
+  if (SoGLContext_debug()) {
+    cc_debugerror_postinfo("SoGLContext_extension_available",
                            "extension '%s' is%s present",
                            ext, found ? "" : " NOT");
   }
@@ -843,7 +843,7 @@ done:
 }
 
 SbBool
-cc_glglue_glext_supported(const cc_glglue * wrapper, const char * extension)
+SoGLContext_glext_supported(const SoGLContext * wrapper, const char * extension)
 {
   const uintptr_t key = (uintptr_t)cc_namemap_get_address(extension);
 
@@ -851,7 +851,7 @@ cc_glglue_glext_supported(const cc_glglue * wrapper, const char * extension)
   if (cc_dict_get(wrapper->glextdict, key, &result)) {
     return result != NULL;
   }
-  result = coin_glglue_extension_available(wrapper->extensionsstr, extension) ?
+  result = SoGLContext_extension_available(wrapper->extensionsstr, extension) ?
     (void*) 1 : NULL;
   cc_dict_put(wrapper->glextdict, key, result);
 
@@ -860,7 +860,7 @@ cc_glglue_glext_supported(const cc_glglue * wrapper, const char * extension)
 
 #ifdef HAVE_DYNAMIC_LINKING
 
-#define PROC(_glue_, _func_) cc_glglue_getprocaddress(_glue_, SO__QUOTE(_func_))
+#define PROC(_glue_, _func_) SoGLContext_getprocaddress(_glue_, SO__QUOTE(_func_))
 
 /* The OpenGL library which we dynamically pick up symbols from
    /could/ have all these defined. For the code below which tries to
@@ -909,7 +909,7 @@ cc_glglue_glext_supported(const cc_glglue * wrapper, const char * extension)
 
 
 static void
-glglue_resolve_symbols(cc_glglue * w)
+glglue_resolve_symbols(SoGLContext * w)
 {
   /* Note that there's a good reason why we use version checking
      *along* with dynamic resolving (if the platform allows it): the
@@ -918,16 +918,16 @@ glglue_resolve_symbols(cc_glglue * w)
 
   /* Appeared in OpenGL v1.1. We store both the "real" function
      pointer and the extension pointer, in case we need to work around
-     an SGI bug (see comments in cc_glglue_glPolygonOffset(). */
+     an SGI bug (see comments in SoGLContext_glPolygonOffset(). */
   w->glPolygonOffset = NULL;
   w->glPolygonOffsetEXT = NULL;
 #ifdef GL_VERSION_1_1
-  if (cc_glglue_glversion_matches_at_least(w, 1, 1, 0)) {
+  if (SoGLContext_glversion_matches_at_least(w, 1, 1, 0)) {
     w->glPolygonOffset = (COIN_PFNGLPOLYGONOFFSETPROC)PROC(w, glPolygonOffset);
   }
 #endif /* GL_VERSION_1_1 */
 #ifdef GL_EXT_polygon_offset
-  if (cc_glglue_glext_supported(w, "GL_EXT_polygon_offset")) {
+  if (SoGLContext_glext_supported(w, "GL_EXT_polygon_offset")) {
     w->glPolygonOffsetEXT = (COIN_PFNGLPOLYGONOFFSETPROC)PROC(w, glPolygonOffsetEXT);
   }
 #endif /* GL_EXT_polygon_offset */
@@ -939,14 +939,14 @@ glglue_resolve_symbols(cc_glglue * w)
   w->glBindTexture = NULL;
   w->glDeleteTextures = NULL;
 #ifdef GL_VERSION_1_1
-  if (cc_glglue_glversion_matches_at_least(w, 1, 1, 0)) {
+  if (SoGLContext_glversion_matches_at_least(w, 1, 1, 0)) {
     w->glGenTextures = (COIN_PFNGLGENTEXTURESPROC)PROC(w, glGenTextures);
     w->glBindTexture = (COIN_PFNGLBINDTEXTUREPROC)PROC(w, glBindTexture);
     w->glDeleteTextures = (COIN_PFNGLDELETETEXTURESPROC)PROC(w, glDeleteTextures);
   }
 #endif /* GL_VERSION_1_1 */
 #ifdef GL_EXT_texture_object
-  if (!w->glGenTextures && cc_glglue_glext_supported(w, "GL_EXT_texture_object")) {
+  if (!w->glGenTextures && SoGLContext_glext_supported(w, "GL_EXT_texture_object")) {
     w->glGenTextures = (COIN_PFNGLGENTEXTURESPROC)PROC(w, glGenTexturesEXT);
     w->glBindTexture = (COIN_PFNGLBINDTEXTUREPROC)PROC(w, glBindTextureEXT);
     w->glDeleteTextures = (COIN_PFNGLDELETETEXTURESPROC)PROC(w, glDeleteTexturesEXT);
@@ -956,12 +956,12 @@ glglue_resolve_symbols(cc_glglue * w)
   /* Appeared in OpenGL v1.1. */
   w->glTexSubImage2D = NULL;
 #ifdef GL_VERSION_1_1
-  if (cc_glglue_glversion_matches_at_least(w, 1, 1, 0)) {
+  if (SoGLContext_glversion_matches_at_least(w, 1, 1, 0)) {
     w->glTexSubImage2D = (COIN_PFNGLTEXSUBIMAGE2DPROC)PROC(w, glTexSubImage2D);
   }
 #endif /* GL_VERSION_1_1 */
 #ifdef GL_EXT_subtexture
-  if (!w->glTexSubImage2D && cc_glglue_glext_supported(w, "GL_EXT_subtexture")) {
+  if (!w->glTexSubImage2D && SoGLContext_glext_supported(w, "GL_EXT_subtexture")) {
     w->glTexSubImage2D = (COIN_PFNGLTEXSUBIMAGE2DPROC)PROC(w, glTexSubImage2DEXT);
   }
 #endif /* GL_EXT_subtexture */
@@ -970,7 +970,7 @@ glglue_resolve_symbols(cc_glglue * w)
   w->glPushClientAttrib = NULL;
   w->glPopClientAttrib = NULL;
 #ifdef GL_VERSION_1_1
-  if (cc_glglue_glversion_matches_at_least(w, 1, 1, 0)) {
+  if (SoGLContext_glversion_matches_at_least(w, 1, 1, 0)) {
     w->glPushClientAttrib = (COIN_PFNGLPUSHCLIENTATTRIBPROC) PROC(w, glPushClientAttrib);
     w->glPopClientAttrib = (COIN_PFNGLPOPCLIENTATTRIBPROC) PROC(w, glPopClientAttrib);
   }
@@ -981,14 +981,14 @@ glglue_resolve_symbols(cc_glglue * w)
   w->glCopyTexSubImage3D = NULL;
   w->glTexSubImage3D = NULL;
 #ifdef GL_VERSION_1_2
-  if (cc_glglue_glversion_matches_at_least(w, 1, 2, 0)) {
+  if (SoGLContext_glversion_matches_at_least(w, 1, 2, 0)) {
     w->glTexImage3D = (COIN_PFNGLTEXIMAGE3DPROC)PROC(w, glTexImage3D);
     w->glCopyTexSubImage3D = (COIN_PFNGLCOPYTEXSUBIMAGE3DPROC)PROC(w, glCopyTexSubImage3D);
     w->glTexSubImage3D = (COIN_PFNGLTEXSUBIMAGE3DPROC)PROC(w, glTexSubImage3D);
   }
 #endif /* GL_VERSION_1_2 */
 #ifdef GL_EXT_texture3D
-  if (!w->glTexImage3D && cc_glglue_glext_supported(w, "GL_EXT_texture3D")) {
+  if (!w->glTexImage3D && SoGLContext_glext_supported(w, "GL_EXT_texture3D")) {
     w->glTexImage3D = (COIN_PFNGLTEXIMAGE3DPROC)PROC(w, glTexImage3DEXT);
     /* These are implicitly given if GL_EXT_texture3D is defined. */
     w->glCopyTexSubImage3D = (COIN_PFNGLCOPYTEXSUBIMAGE3DPROC)PROC(w, glCopyTexSubImage3DEXT);
@@ -1033,7 +1033,7 @@ glglue_resolve_symbols(cc_glglue * w)
   w->glMultiTexCoord3fv = NULL;
   w->glMultiTexCoord4fv = NULL;
 #ifdef GL_VERSION_1_3
-  if (cc_glglue_glversion_matches_at_least(w, 1, 3, 0)) {
+  if (SoGLContext_glversion_matches_at_least(w, 1, 3, 0)) {
     w->glActiveTexture = (COIN_PFNGLACTIVETEXTUREPROC)PROC(w, glActiveTexture);
     w->glClientActiveTexture = (COIN_PFNGLCLIENTACTIVETEXTUREPROC)PROC(w, glClientActiveTexture);
     w->glMultiTexCoord2f = (COIN_PFNGLMULTITEXCOORD2FPROC)PROC(w, glMultiTexCoord2f);
@@ -1043,7 +1043,7 @@ glglue_resolve_symbols(cc_glglue * w)
   }
 #endif /* GL_VERSION_1_3 */
 #ifdef GL_ARB_multitexture
-  if (!w->glActiveTexture && cc_glglue_glext_supported(w, "GL_ARB_multitexture")) {
+  if (!w->glActiveTexture && SoGLContext_glext_supported(w, "GL_ARB_multitexture")) {
     w->glActiveTexture = (COIN_PFNGLACTIVETEXTUREPROC)PROC(w, glActiveTextureARB);
     w->glClientActiveTexture = (COIN_PFNGLACTIVETEXTUREPROC)PROC(w, glClientActiveTextureARB);
     w->glMultiTexCoord2f = (COIN_PFNGLMULTITEXCOORD2FPROC)PROC(w, glMultiTexCoord2fARB);
@@ -1059,8 +1059,8 @@ glglue_resolve_symbols(cc_glglue * w)
         !w->glMultiTexCoord2fv ||
         !w->glMultiTexCoord3fv ||
         !w->glMultiTexCoord4fv) {
-      w->glActiveTexture = NULL; /* cc_glglue_has_multitexture() will return FALSE */
-      if (COIN_DEBUG || coin_glglue_debug()) {
+      w->glActiveTexture = NULL; /* SoGLContext_has_multitexture() will return FALSE */
+      if (COIN_DEBUG || SoGLContext_debug()) {
         cc_debugerror_postwarning("glglue_init",
                                   "glActiveTexture found, but one or more of the other "
                                   "multitexture functions were not found");
@@ -1083,7 +1083,7 @@ glglue_resolve_symbols(cc_glglue * w)
   w->glGetCompressedTexImage = NULL;
 
 #ifdef GL_VERSION_1_3
-  if (cc_glglue_glversion_matches_at_least(w, 1, 3, 0)) {
+  if (SoGLContext_glversion_matches_at_least(w, 1, 3, 0)) {
     w->glCompressedTexImage1D = (COIN_PFNGLCOMPRESSEDTEXIMAGE1DPROC)PROC(w, glCompressedTexImage1D);
     w->glCompressedTexImage2D = (COIN_PFNGLCOMPRESSEDTEXIMAGE2DPROC)PROC(w, glCompressedTexImage2D);
     w->glCompressedTexImage3D = (COIN_PFNGLCOMPRESSEDTEXIMAGE3DPROC)PROC(w, glCompressedTexImage3D);
@@ -1096,7 +1096,7 @@ glglue_resolve_symbols(cc_glglue * w)
 
 #ifdef GL_ARB_texture_compression
   if ((w->glCompressedTexImage1D == NULL) &&
-      cc_glglue_glext_supported(w, "GL_ARB_texture_compression")) {
+      SoGLContext_glext_supported(w, "GL_ARB_texture_compression")) {
     w->glCompressedTexImage1D = (COIN_PFNGLCOMPRESSEDTEXIMAGE1DPROC)PROC(w, glCompressedTexImage1DARB);
     w->glCompressedTexImage2D = (COIN_PFNGLCOMPRESSEDTEXIMAGE2DPROC)PROC(w, glCompressedTexImage2DARB);
     w->glCompressedTexImage3D = (COIN_PFNGLCOMPRESSEDTEXIMAGE3DPROC)PROC(w, glCompressedTexImage3DARB);
@@ -1114,8 +1114,8 @@ glglue_resolve_symbols(cc_glglue * w)
   w->glGetColorTableParameterfv = NULL;
 
 #if defined(GL_VERSION_1_2) && defined(GL_ARB_imaging)
-  if (cc_glglue_glversion_matches_at_least(w, 1, 2, 0) &&
-      cc_glglue_glext_supported(w, "GL_ARB_imaging")) {
+  if (SoGLContext_glversion_matches_at_least(w, 1, 2, 0) &&
+      SoGLContext_glext_supported(w, "GL_ARB_imaging")) {
     w->glColorTable = (COIN_PFNGLCOLORTABLEPROC)PROC(w, glColorTable);
     w->glColorSubTable = (COIN_PFNGLCOLORSUBTABLEPROC)PROC(w, glColorSubTable);
     w->glGetColorTable = (COIN_PFNGLGETCOLORTABLEPROC)PROC(w, glGetColorTable);
@@ -1126,7 +1126,7 @@ glglue_resolve_symbols(cc_glglue * w)
 
 #if defined(GL_EXT_color_table)
   if ((w->glColorTable == NULL) &&
-      cc_glglue_glext_supported(w, "GL_EXT_color_table")) {
+      SoGLContext_glext_supported(w, "GL_EXT_color_table")) {
     w->glColorTable = (COIN_PFNGLCOLORTABLEPROC)PROC(w, glColorTableEXT);
     w->glGetColorTable = (COIN_PFNGLGETCOLORTABLEPROC)PROC(w, glGetColorTableEXT);
     w->glGetColorTableParameteriv = (COIN_PFNGLGETCOLORTABLEPARAMETERIVPROC)PROC(w, glGetColorTableParameterivEXT);
@@ -1136,7 +1136,7 @@ glglue_resolve_symbols(cc_glglue * w)
 
 #if defined(GL_SGI_color_table)
   if ((w->glColorTable == NULL) &&
-      cc_glglue_glext_supported(w, "GL_SGI_color_table")) {
+      SoGLContext_glext_supported(w, "GL_SGI_color_table")) {
     w->glColorTable = (COIN_PFNGLCOLORTABLEPROC)PROC(w, glColorTableSGI);
     w->glGetColorTable = (COIN_PFNGLGETCOLORTABLEPROC)PROC(w, glGetColorTableSGI);
     w->glGetColorTableParameteriv = (COIN_PFNGLGETCOLORTABLEPARAMETERIVPROC)PROC(w, glGetColorTableParameterivSGI);
@@ -1146,13 +1146,13 @@ glglue_resolve_symbols(cc_glglue * w)
 
 #if defined(GL_EXT_color_subtable)
   if ((w->glColorSubTable == NULL) &&
-      cc_glglue_glext_supported(w, "GL_EXT_color_subtable")) {
+      SoGLContext_glext_supported(w, "GL_EXT_color_subtable")) {
     w->glColorSubTable = (COIN_PFNGLCOLORSUBTABLEPROC)PROC(w, glColorSubTableEXT);
   }
 #endif /* GL_EXT_color_subtable */
 
   w->supportsPalettedTextures =
-    cc_glglue_glext_supported(w, "GL_EXT_paletted_texture");
+    SoGLContext_glext_supported(w, "GL_EXT_paletted_texture");
   /* FIXME: is paletted textures _really_ not supported through any
      non-extension mechanism for the later OpenGL spec versions?
      Investigate. 20031027 mortene. */
@@ -1164,7 +1164,7 @@ glglue_resolve_symbols(cc_glglue * w)
      only defines a *subset* of what EXT_color_table etc defines,
      though. */
   if ((w->glColorTable == NULL) &&
-      cc_glglue_glext_supported(w, "GL_EXT_paletted_texture")) {
+      SoGLContext_glext_supported(w, "GL_EXT_paletted_texture")) {
     w->glColorTable = (COIN_PFNGLCOLORTABLEPROC)PROC(w, glColorTableEXT);
     w->glColorSubTable = (COIN_PFNGLCOLORSUBTABLEPROC)PROC(w, glColorSubTableEXT);
     w->glGetColorTable = (COIN_PFNGLGETCOLORTABLEPROC)PROC(w, glGetColorTableEXT);
@@ -1177,36 +1177,36 @@ glglue_resolve_symbols(cc_glglue * w)
   w->glBlendEquationEXT = NULL;
 
 #if defined(GL_VERSION_1_4)
-  if (cc_glglue_glversion_matches_at_least(w, 1, 4, 0)) {
+  if (SoGLContext_glversion_matches_at_least(w, 1, 4, 0)) {
     w->glBlendEquation = (COIN_PFNGLBLENDEQUATIONPROC)PROC(w, glBlendEquation);
   }
 #endif /* GL_VERSION_1_4 */
 
   if (w->glBlendEquation == NULL) {
 #if defined(GL_VERSION_1_2) && defined(GL_ARB_imaging)
-    if (cc_glglue_glversion_matches_at_least(w, 1, 2, 0) &&
-        cc_glglue_glext_supported(w, "GL_ARB_imaging")) {
+    if (SoGLContext_glversion_matches_at_least(w, 1, 2, 0) &&
+        SoGLContext_glext_supported(w, "GL_ARB_imaging")) {
       w->glBlendEquation = (COIN_PFNGLBLENDEQUATIONPROC)PROC(w, glBlendEquation);
     }
 #endif /* GL_VERSION_1_2 && GL_ARB_imaging */
   }
 
 #ifdef GL_EXT_blend_minmax
-  if (cc_glglue_glext_supported(w, "GL_EXT_blend_minmax")) {
+  if (SoGLContext_glext_supported(w, "GL_EXT_blend_minmax")) {
     w->glBlendEquationEXT = (COIN_PFNGLBLENDEQUATIONPROC)PROC(w, glBlendEquationEXT);
   }
 #endif /* GL_EXT_blend_minmax */
 
   w->glBlendFuncSeparate = NULL;
 #if defined(GL_VERSION_1_4)
-  if (cc_glglue_glversion_matches_at_least(w, 1, 4, 0)) {
+  if (SoGLContext_glversion_matches_at_least(w, 1, 4, 0)) {
     w->glBlendFuncSeparate = (COIN_PFNGLBLENDFUNCSEPARATEPROC)PROC(w, glBlendFuncSeparate);
   }
 #endif /* GL_VERSION_1_4 */
 
-  w->glVertexPointer = NULL; /* for cc_glglue_has_vertex_array() */
+  w->glVertexPointer = NULL; /* for SoGLContext_has_vertex_array() */
 #if defined(GL_VERSION_1_1)
-  if (cc_glglue_glversion_matches_at_least(w, 1, 1, 0)) {
+  if (SoGLContext_glversion_matches_at_least(w, 1, 1, 0)) {
     w->glVertexPointer = (COIN_PFNGLVERTEXPOINTERPROC) PROC(w, glVertexPointer);
     w->glTexCoordPointer = (COIN_PFNGLTEXCOORDPOINTERPROC) PROC(w, glTexCoordPointer);
     w->glNormalPointer = (COIN_PFNGLNORMALPOINTERPROC) PROC(w, glNormalPointer);
@@ -1230,8 +1230,8 @@ glglue_resolve_symbols(cc_glglue * w)
         !w->glDrawArrays ||
         !w->glDrawElements ||
         !w->glArrayElement) {
-      w->glVertexPointer = NULL; /* cc_glglue_has_vertex_array() will return FALSE */
-      if (COIN_DEBUG || coin_glglue_debug()) {
+      w->glVertexPointer = NULL; /* SoGLContext_has_vertex_array() will return FALSE */
+      if (COIN_DEBUG || SoGLContext_debug()) {
         cc_debugerror_postwarning("glglue_init",
                                   "glVertexPointer found, but one or more of the other "
                                   "vertex array functions were not found");
@@ -1243,7 +1243,7 @@ glglue_resolve_symbols(cc_glglue * w)
 
 #if defined(GL_VERSION_1_2)
   w->glDrawRangeElements = NULL;
-  if (cc_glglue_glversion_matches_at_least(w, 1, 2, 0))
+  if (SoGLContext_glversion_matches_at_least(w, 1, 2, 0))
     w->glDrawRangeElements = (COIN_PFNGLDRAWRANGEELEMENTSPROC) PROC(w, glDrawRangeElements);
 #endif /* GL_VERSION_1_2 */
 
@@ -1252,21 +1252,21 @@ glglue_resolve_symbols(cc_glglue * w)
   w->glMultiDrawArrays = NULL;
   w->glMultiDrawElements = NULL;
 #if defined(GL_VERSION_1_4)
-  if (cc_glglue_glversion_matches_at_least(w, 1, 4, 0)) {
+  if (SoGLContext_glversion_matches_at_least(w, 1, 4, 0)) {
     w->glMultiDrawArrays = (COIN_PFNGLMULTIDRAWARRAYSPROC) PROC(w, glMultiDrawArrays);
     w->glMultiDrawElements = (COIN_PFNGLMULTIDRAWELEMENTSPROC) PROC(w, glMultiDrawElements);
   }
 #endif /* GL_VERSION_1_4 */
 #if defined(GL_EXT_multi_draw_arrays)
-  if ((w->glMultiDrawArrays == NULL) && cc_glglue_glext_supported(w, "GL_EXT_multi_draw_arrays")) {
+  if ((w->glMultiDrawArrays == NULL) && SoGLContext_glext_supported(w, "GL_EXT_multi_draw_arrays")) {
     w->glMultiDrawArrays = (COIN_PFNGLMULTIDRAWARRAYSPROC) PROC(w, glMultiDrawArraysEXT);
     w->glMultiDrawElements = (COIN_PFNGLMULTIDRAWELEMENTSPROC) PROC(w, glMultiDrawElementsEXT);
   }
 #endif /* GL_EXT_multi_draw_arrays */
 
-  w->glBindBuffer = NULL; /* so that cc_glglue_has_vertex_buffer_objects() works  */
+  w->glBindBuffer = NULL; /* so that SoGLContext_has_vertex_buffer_objects() works  */
 #if defined(GL_VERSION_1_5)
-  if (cc_glglue_glversion_matches_at_least(w, 1, 5, 0)) {
+  if (SoGLContext_glversion_matches_at_least(w, 1, 5, 0)) {
     w->glBindBuffer = (COIN_PFNGLBINDBUFFERPROC) PROC(w, glBindBuffer);
     w->glDeleteBuffers = (COIN_PFNGLDELETEBUFFERSPROC) PROC(w, glDeleteBuffers);
     w->glGenBuffers = (COIN_PFNGLGENBUFFERSPROC) PROC(w, glGenBuffers);
@@ -1282,7 +1282,7 @@ glglue_resolve_symbols(cc_glglue * w)
 #endif /* GL_VERSION_1_5 */
 
 #if defined(GL_ARB_vertex_buffer_object)
-  if ((w->glBindBuffer == NULL) && cc_glglue_glext_supported(w, "GL_ARB_vertex_buffer_object")) {
+  if ((w->glBindBuffer == NULL) && SoGLContext_glext_supported(w, "GL_ARB_vertex_buffer_object")) {
     w->glBindBuffer = (COIN_PFNGLBINDBUFFERPROC) PROC(w, glBindBufferARB);
     w->glDeleteBuffers = (COIN_PFNGLDELETEBUFFERSPROC) PROC(w, glDeleteBuffersARB);
     w->glGenBuffers = (COIN_PFNGLGENBUFFERSPROC) PROC(w, glGenBuffersARB);
@@ -1302,7 +1302,7 @@ glglue_resolve_symbols(cc_glglue * w)
      is therefore disabled for this driver. The issue was solved for
      the 53.28 driver (version 1.4.1). */
   if (!strcmp(w->vendorstr, "NVIDIA Corporation")) {
-    if (!cc_glglue_glversion_matches_at_least(w, 1, 4, 1)) {
+    if (!SoGLContext_glversion_matches_at_least(w, 1, 4, 1)) {
       w->glBindBuffer = NULL;
     }
     /* VBOs seems really slow on the GeForce4 Go GPUs, but this test
@@ -1338,7 +1338,7 @@ glglue_resolve_symbols(cc_glglue * w)
     version is detected (the driver version was 2.0)
    */
   if (w->glBindBuffer && w->vendor_is_3dlabs
-      && !cc_glglue_glversion_matches_at_least(w, 2,0,1)) {
+      && !SoGLContext_glversion_matches_at_least(w, 2,0,1)) {
     /* Enable users to override this workaround by setting COIN_VBO=1 */
     auto env = CoinInternal::getEnvironmentVariable("COIN_VBO");
     if (!env.has_value() || (std::atoi(env->c_str()) > 0)) {
@@ -1359,8 +1359,8 @@ glglue_resolve_symbols(cc_glglue * w)
         !w->glUnmapBuffer ||
         !w->glGetBufferParameteriv ||
         !w->glGetBufferPointerv) {
-      w->glBindBuffer = NULL; /* so that cc_glglue_has_vertex_buffer_object() will return FALSE */
-      if (COIN_DEBUG || coin_glglue_debug()) {
+      w->glBindBuffer = NULL; /* so that SoGLContext_has_vertex_buffer_object() will return FALSE */
+      if (COIN_DEBUG || SoGLContext_debug()) {
         cc_debugerror_postwarning("glglue_init",
                                   "glBindBuffer found, but one or more of the other "
                                   "vertex buffer object functions were not found");
@@ -1386,14 +1386,14 @@ glglue_resolve_symbols(cc_glglue * w)
 
 #ifdef GL_NV_register_combiners
 
-  if (cc_glglue_glext_supported(w, "GL_NV_register_combiners")) {
+  if (SoGLContext_glext_supported(w, "GL_NV_register_combiners")) {
 
 #define BIND_FUNCTION_WITH_WARN(_func_, _type_) \
    w->_func_ = (_type_)PROC(w, _func_); \
    do { \
      if (!w->_func_) { \
        w->has_nv_register_combiners = FALSE; \
-       if (COIN_DEBUG || coin_glglue_debug()) { \
+       if (COIN_DEBUG || SoGLContext_debug()) { \
          static SbBool error_reported = FALSE; \
          if (!error_reported) { \
            cc_debugerror_postwarning("glglue_init", \
@@ -1426,24 +1426,24 @@ glglue_resolve_symbols(cc_glglue * w)
 
 
   /* GL_[NV/EXT]_texture_rectangle */
-  w->has_ext_texture_rectangle = (cc_glglue_glext_supported(w, "GL_EXT_texture_rectangle") ||
-                                  cc_glglue_glext_supported(w, "GL_NV_texture_rectangle"));
+  w->has_ext_texture_rectangle = (SoGLContext_glext_supported(w, "GL_EXT_texture_rectangle") ||
+                                  SoGLContext_glext_supported(w, "GL_NV_texture_rectangle"));
 
   /* GL_NV_texture_shader */
-  w->has_nv_texture_shader = cc_glglue_glext_supported(w, "GL_NV_texture_shader");
+  w->has_nv_texture_shader = SoGLContext_glext_supported(w, "GL_NV_texture_shader");
 
   /* GL_ARB_shadow */
-  w->has_shadow = (cc_glglue_glext_supported(w, "GL_ARB_shadow") ||
-                   cc_glglue_glversion_matches_at_least(w, 1, 4, 0));
+  w->has_shadow = (SoGLContext_glext_supported(w, "GL_ARB_shadow") ||
+                   SoGLContext_glversion_matches_at_least(w, 1, 4, 0));
 
   /* GL_ARB_depth_texture */
-  w->has_depth_texture = (cc_glglue_glext_supported(w, "GL_ARB_depth_texture") ||
-                          cc_glglue_glversion_matches_at_least(w, 1, 4, 0));
+  w->has_depth_texture = (SoGLContext_glext_supported(w, "GL_ARB_depth_texture") ||
+                          SoGLContext_glversion_matches_at_least(w, 1, 4, 0));
 
   /* GL_[ARB/EXT]_texture_env_combine */
-  w->has_texture_env_combine = (cc_glglue_glext_supported(w, "GL_ARB_texture_env_combine") ||
-                                cc_glglue_glext_supported(w, "GL_EXT_texture_env_combine") ||
-                                cc_glglue_glversion_matches_at_least(w, 1, 3, 0));
+  w->has_texture_env_combine = (SoGLContext_glext_supported(w, "GL_ARB_texture_env_combine") ||
+                                SoGLContext_glext_supported(w, "GL_EXT_texture_env_combine") ||
+                                SoGLContext_glversion_matches_at_least(w, 1, 3, 0));
 
   /* GL_ARB_fragment_program */
   w->glProgramStringARB = NULL;
@@ -1468,14 +1468,14 @@ glglue_resolve_symbols(cc_glglue * w)
   w->has_arb_fragment_program = FALSE;
 
 #ifdef GL_ARB_fragment_program
-  if (cc_glglue_glext_supported(w, "GL_ARB_fragment_program")) {
+  if (SoGLContext_glext_supported(w, "GL_ARB_fragment_program")) {
 
 #define BIND_FUNCTION_WITH_WARN(_func_, _type_) \
    w->_func_ = (_type_)PROC(w, _func_); \
    do { \
      if (!w->_func_) { \
        w->has_arb_fragment_program = FALSE; \
-       if (COIN_DEBUG || coin_glglue_debug()) { \
+       if (COIN_DEBUG || SoGLContext_debug()) { \
          static SbBool error_reported = FALSE; \
          if (!error_reported) { \
            cc_debugerror_postwarning("glglue_init", \
@@ -1579,14 +1579,14 @@ glglue_resolve_symbols(cc_glglue * w)
 
 #ifdef GL_ARB_vertex_program
 
-  if (cc_glglue_glext_supported(w, "GL_ARB_vertex_program")) {
+  if (SoGLContext_glext_supported(w, "GL_ARB_vertex_program")) {
 
 #define BIND_FUNCTION_WITH_WARN(_func_, _type_) \
    w->_func_ = (_type_)PROC(w, _func_); \
    do { \
      if (!w->_func_) { \
        w->has_arb_vertex_program = FALSE; \
-       if (COIN_DEBUG || coin_glglue_debug()) { \
+       if (COIN_DEBUG || SoGLContext_debug()) { \
          static SbBool error_reported = FALSE; \
          if (!error_reported) { \
            cc_debugerror_postwarning("glglue_init", \
@@ -1673,14 +1673,14 @@ glglue_resolve_symbols(cc_glglue * w)
   w->glGetActiveAttribARB = NULL;
   w->glGetAttribLocationARB = NULL;
 
-  if (cc_glglue_glext_supported(w, "GL_ARB_vertex_shader")) {
+  if (SoGLContext_glext_supported(w, "GL_ARB_vertex_shader")) {
 
 #define BIND_FUNCTION_WITH_WARN(_func_, _type_) \
    w->_func_ = (_type_)PROC(w, _func_); \
    do { \
      if (!w->_func_) { \
        w->has_arb_vertex_shader = FALSE; \
-       if (COIN_DEBUG || coin_glglue_debug()) { \
+       if (COIN_DEBUG || SoGLContext_debug()) { \
          static SbBool error_reported = FALSE; \
          if (!error_reported) { \
            cc_debugerror_postwarning("glglue_init", \
@@ -1739,14 +1739,14 @@ glglue_resolve_symbols(cc_glglue * w)
 
 #ifdef GL_ARB_shader_objects
 
-  if (cc_glglue_glext_supported(w, "GL_ARB_shader_objects")) {
+  if (SoGLContext_glext_supported(w, "GL_ARB_shader_objects")) {
 
 #define BIND_FUNCTION_WITH_WARN(_func_, _type_) \
    w->_func_ = (_type_)PROC(w, _func_); \
    do { \
      if (!w->_func_) { \
        w->has_arb_shader_objects = FALSE; \
-       if (COIN_DEBUG || coin_glglue_debug()) { \
+       if (COIN_DEBUG || SoGLContext_debug()) { \
          static SbBool error_reported = FALSE; \
          if (!error_reported) { \
            cc_debugerror_postwarning("glglue_init", \
@@ -1794,16 +1794,16 @@ glglue_resolve_symbols(cc_glglue * w)
 
 
     w->glProgramParameteriEXT = NULL;
-    if (cc_glglue_glext_supported(w, "GL_EXT_geometry_shader4")) {
+    if (SoGLContext_glext_supported(w, "GL_EXT_geometry_shader4")) {
       BIND_FUNCTION_WITH_WARN(glProgramParameteriEXT, COIN_PFNGLPROGRAMPARAMETERIEXT);
     }
 #undef BIND_FUNCTION_WITH_WARN
   }
 #endif /* GL_ARB_shader_objects */
 
-  w->glGenQueries = NULL; /* so that cc_glglue_has_occlusion_query() works  */
+  w->glGenQueries = NULL; /* so that SoGLContext_has_occlusion_query() works  */
 #if defined(GL_VERSION_1_5)
-  if (cc_glglue_glversion_matches_at_least(w, 1, 5, 0)) {
+  if (SoGLContext_glversion_matches_at_least(w, 1, 5, 0)) {
     w->glGenQueries = (COIN_PFNGLGENQUERIESPROC)PROC(w, glGenQueries);
     w->glDeleteQueries = (COIN_PFNGLDELETEQUERIESPROC)PROC(w, glDeleteQueries);
     w->glIsQuery = (COIN_PFNGLISQUERYPROC)PROC(w, glIsQuery);
@@ -1816,7 +1816,7 @@ glglue_resolve_symbols(cc_glglue * w)
 #endif /* GL_VERSION_1_5 */
 
 #if defined(GL_ARB_occlusion_query)
-  if ((w->glGenQueries == NULL) && cc_glglue_glext_supported(w, "GL_ARB_occlusion_query")) {
+  if ((w->glGenQueries == NULL) && SoGLContext_glext_supported(w, "GL_ARB_occlusion_query")) {
     w->glGenQueries = (COIN_PFNGLGENQUERIESPROC)PROC(w, glGenQueriesARB);
     w->glDeleteQueries = (COIN_PFNGLDELETEQUERIESPROC)PROC(w, glDeleteQueriesARB);
     w->glIsQuery = (COIN_PFNGLISQUERYPROC)PROC(w, glIsQueryARB);
@@ -1836,8 +1836,8 @@ glglue_resolve_symbols(cc_glglue * w)
         !w->glGetQueryiv ||
         !w->glGetQueryObjectiv ||
         !w->glGetQueryObjectuiv) {
-      w->glGenQueries = NULL; /* so that cc_glglue_has_occlusion_query() will return FALSE */
-      if (COIN_DEBUG || coin_glglue_debug()) {
+      w->glGenQueries = NULL; /* so that SoGLContext_has_occlusion_query() will return FALSE */
+      if (COIN_DEBUG || SoGLContext_debug()) {
         cc_debugerror_postwarning("glglue_init",
                                   "glGenQueries found, but one or more of the other "
                                   "occlusion query functions were not found");
@@ -1847,7 +1847,7 @@ glglue_resolve_symbols(cc_glglue * w)
 
   w->glVertexArrayRangeNV = NULL;
 #if defined(GL_NV_vertex_array_range) && (defined(HAVE_GLX) || defined(HAVE_WGL))
-  if (cc_glglue_glext_supported(w, "GL_NV_vertex_array_range")) {
+  if (SoGLContext_glext_supported(w, "GL_NV_vertex_array_range")) {
     w->glVertexArrayRangeNV = (COIN_PFNGLVERTEXARRAYRANGENVPROC) PROC(w, glVertexArrayRangeNV);
     w->glFlushVertexArrayRangeNV = (COIN_PFNGLFLUSHVERTEXARRAYRANGENVPROC) PROC(w, glFlushVertexArrayRangeNV);
 #ifdef HAVE_GLX
@@ -1863,7 +1863,7 @@ glglue_resolve_symbols(cc_glglue * w)
           !w->glAllocateMemoryNV ||
           !w->glFreeMemoryNV) {
         w->glVertexArrayRangeNV = NULL;
-        if (COIN_DEBUG || coin_glglue_debug()) {
+        if (COIN_DEBUG || SoGLContext_debug()) {
           cc_debugerror_postwarning("glglue_init",
                                     "glVertexArrayRangeNV found, but one or more of the other "
                                     "vertex array functions were not found");
@@ -1875,10 +1875,10 @@ glglue_resolve_symbols(cc_glglue * w)
 
   w->can_do_bumpmapping = FALSE;
   if (w->glActiveTexture &&
-      (cc_glglue_glversion_matches_at_least(w, 1, 3, 0) ||
-       (cc_glglue_glext_supported(w, "GL_ARB_texture_cube_map") &&
+      (SoGLContext_glversion_matches_at_least(w, 1, 3, 0) ||
+       (SoGLContext_glext_supported(w, "GL_ARB_texture_cube_map") &&
         w->has_texture_env_combine &&
-        cc_glglue_glext_supported(w, "GL_ARB_texture_env_dot3")))) {
+        SoGLContext_glext_supported(w, "GL_ARB_texture_env_dot3")))) {
     w->can_do_bumpmapping = TRUE;
   }
 
@@ -1896,32 +1896,32 @@ glglue_resolve_symbols(cc_glglue * w)
     w->has_arb_fragment_program;
   
   /* Try ARB framebuffer objects first (OpenGL 3.0+ core or ARB extension) */
-  if (cc_glglue_glext_supported(w, "GL_ARB_framebuffer_object") ||
-      cc_glglue_glversion_matches_at_least(w, 3, 0, 0)) {
+  if (SoGLContext_glext_supported(w, "GL_ARB_framebuffer_object") ||
+      SoGLContext_glversion_matches_at_least(w, 3, 0, 0)) {
     
     /* Load ARB/Core framebuffer functions */
-    w->glIsRenderbuffer = (COIN_PFNGLISRENDERBUFFERPROC) cc_glglue_getprocaddress(w, "glIsRenderbuffer");
-    w->glBindRenderbuffer = (COIN_PFNGLBINDRENDERBUFFERPROC) cc_glglue_getprocaddress(w, "glBindRenderbuffer");
-    w->glDeleteRenderbuffers = (COIN_PFNGLDELETERENDERBUFFERSPROC)cc_glglue_getprocaddress(w, "glDeleteRenderbuffers");
-    w->glGenRenderbuffers = (COIN_PFNGLGENRENDERBUFFERSPROC)cc_glglue_getprocaddress(w, "glGenRenderbuffers");
-    w->glRenderbufferStorage = (COIN_PFNGLRENDERBUFFERSTORAGEPROC)cc_glglue_getprocaddress(w, "glRenderbufferStorage");
-    w->glGetRenderbufferParameteriv = (COIN_PFNGLGETRENDERBUFFERPARAMETERIVPROC)cc_glglue_getprocaddress(w, "glGetRenderbufferParameteriv");
-    w->glIsFramebuffer = (COIN_PFNGLISFRAMEBUFFERPROC)cc_glglue_getprocaddress(w, "glIsFramebuffer");
-    w->glBindFramebuffer = (COIN_PFNGLBINDFRAMEBUFFERPROC)cc_glglue_getprocaddress(w, "glBindFramebuffer");
-    w->glDeleteFramebuffers = (COIN_PFNGLDELETEFRAMEBUFFERSPROC)cc_glglue_getprocaddress(w, "glDeleteFramebuffers");
-    w->glGenFramebuffers = (COIN_PFNGLGENFRAMEBUFFERSPROC)cc_glglue_getprocaddress(w, "glGenFramebuffers");
-    w->glCheckFramebufferStatus = (COIN_PFNGLCHECKFRAMEBUFFERSTATUSPROC)cc_glglue_getprocaddress(w, "glCheckFramebufferStatus");
-    w->glFramebufferTexture1D = (COIN_PFNGLFRAMEBUFFERTEXTURE1DPROC)cc_glglue_getprocaddress(w, "glFramebufferTexture1D");
-    w->glFramebufferTexture2D = (COIN_PFNGLFRAMEBUFFERTEXTURE2DPROC)cc_glglue_getprocaddress(w, "glFramebufferTexture2D");
-    w->glFramebufferTexture3D = (COIN_PFNGLFRAMEBUFFERTEXTURE3DPROC)cc_glglue_getprocaddress(w, "glFramebufferTexture3D");
-    w->glFramebufferRenderbuffer = (COIN_PFNGLFRAMEBUFFERRENDERBUFFERPROC)cc_glglue_getprocaddress(w, "glFramebufferRenderbuffer");
+    w->glIsRenderbuffer = (COIN_PFNGLISRENDERBUFFERPROC) SoGLContext_getprocaddress(w, "glIsRenderbuffer");
+    w->glBindRenderbuffer = (COIN_PFNGLBINDRENDERBUFFERPROC) SoGLContext_getprocaddress(w, "glBindRenderbuffer");
+    w->glDeleteRenderbuffers = (COIN_PFNGLDELETERENDERBUFFERSPROC)SoGLContext_getprocaddress(w, "glDeleteRenderbuffers");
+    w->glGenRenderbuffers = (COIN_PFNGLGENRENDERBUFFERSPROC)SoGLContext_getprocaddress(w, "glGenRenderbuffers");
+    w->glRenderbufferStorage = (COIN_PFNGLRENDERBUFFERSTORAGEPROC)SoGLContext_getprocaddress(w, "glRenderbufferStorage");
+    w->glGetRenderbufferParameteriv = (COIN_PFNGLGETRENDERBUFFERPARAMETERIVPROC)SoGLContext_getprocaddress(w, "glGetRenderbufferParameteriv");
+    w->glIsFramebuffer = (COIN_PFNGLISFRAMEBUFFERPROC)SoGLContext_getprocaddress(w, "glIsFramebuffer");
+    w->glBindFramebuffer = (COIN_PFNGLBINDFRAMEBUFFERPROC)SoGLContext_getprocaddress(w, "glBindFramebuffer");
+    w->glDeleteFramebuffers = (COIN_PFNGLDELETEFRAMEBUFFERSPROC)SoGLContext_getprocaddress(w, "glDeleteFramebuffers");
+    w->glGenFramebuffers = (COIN_PFNGLGENFRAMEBUFFERSPROC)SoGLContext_getprocaddress(w, "glGenFramebuffers");
+    w->glCheckFramebufferStatus = (COIN_PFNGLCHECKFRAMEBUFFERSTATUSPROC)SoGLContext_getprocaddress(w, "glCheckFramebufferStatus");
+    w->glFramebufferTexture1D = (COIN_PFNGLFRAMEBUFFERTEXTURE1DPROC)SoGLContext_getprocaddress(w, "glFramebufferTexture1D");
+    w->glFramebufferTexture2D = (COIN_PFNGLFRAMEBUFFERTEXTURE2DPROC)SoGLContext_getprocaddress(w, "glFramebufferTexture2D");
+    w->glFramebufferTexture3D = (COIN_PFNGLFRAMEBUFFERTEXTURE3DPROC)SoGLContext_getprocaddress(w, "glFramebufferTexture3D");
+    w->glFramebufferRenderbuffer = (COIN_PFNGLFRAMEBUFFERRENDERBUFFERPROC)SoGLContext_getprocaddress(w, "glFramebufferRenderbuffer");
     w->glGetFramebufferAttachmentParameteriv = (COIN_PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC)
-      cc_glglue_getprocaddress(w, "glGetFramebufferAttachmentParameteriv");
+      SoGLContext_getprocaddress(w, "glGetFramebufferAttachmentParameteriv");
     w->glGenerateMipmap = (COIN_PFNGLGENERATEMIPMAPPROC)
-      cc_glglue_getprocaddress(w, "glGenerateMipmap");
+      SoGLContext_getprocaddress(w, "glGenerateMipmap");
     if (!w->glGenerateMipmap) {
       w->glGenerateMipmap = (COIN_PFNGLGENERATEMIPMAPPROC)
-        cc_glglue_getprocaddress(w, "glGenerateMipmapARB");
+        SoGLContext_getprocaddress(w, "glGenerateMipmapARB");
     }
     
     /* Check if all ARB functions were loaded successfully */
@@ -1936,31 +1936,31 @@ glglue_resolve_symbols(cc_glglue * w)
   }
   
   /* Fall back to EXT framebuffer objects if ARB version not available */
-  if (!w->has_fbo && cc_glglue_glext_supported(w, "GL_EXT_framebuffer_object")) {
+  if (!w->has_fbo && SoGLContext_glext_supported(w, "GL_EXT_framebuffer_object")) {
     
     /* Load EXT framebuffer functions */
-    w->glIsRenderbuffer = (COIN_PFNGLISRENDERBUFFERPROC) cc_glglue_getprocaddress(w, "glIsRenderbufferEXT");
-    w->glBindRenderbuffer = (COIN_PFNGLBINDRENDERBUFFERPROC) cc_glglue_getprocaddress(w, "glBindRenderbufferEXT");
-    w->glDeleteRenderbuffers = (COIN_PFNGLDELETERENDERBUFFERSPROC)cc_glglue_getprocaddress(w, "glDeleteRenderbuffersEXT");
-    w->glGenRenderbuffers = (COIN_PFNGLGENRENDERBUFFERSPROC)cc_glglue_getprocaddress(w, "glGenRenderbuffersEXT");
-    w->glRenderbufferStorage = (COIN_PFNGLRENDERBUFFERSTORAGEPROC)cc_glglue_getprocaddress(w, "glRenderbufferStorageEXT");
-    w->glGetRenderbufferParameteriv = (COIN_PFNGLGETRENDERBUFFERPARAMETERIVPROC)cc_glglue_getprocaddress(w, "glGetRenderbufferParameterivEXT");
-    w->glIsFramebuffer = (COIN_PFNGLISFRAMEBUFFERPROC)cc_glglue_getprocaddress(w, "glIsFramebufferEXT");
-    w->glBindFramebuffer = (COIN_PFNGLBINDFRAMEBUFFERPROC)cc_glglue_getprocaddress(w, "glBindFramebufferEXT");
-    w->glDeleteFramebuffers = (COIN_PFNGLDELETEFRAMEBUFFERSPROC)cc_glglue_getprocaddress(w, "glDeleteFramebuffersEXT");
-    w->glGenFramebuffers = (COIN_PFNGLGENFRAMEBUFFERSPROC)cc_glglue_getprocaddress(w, "glGenFramebuffersEXT");
-    w->glCheckFramebufferStatus = (COIN_PFNGLCHECKFRAMEBUFFERSTATUSPROC)cc_glglue_getprocaddress(w, "glCheckFramebufferStatusEXT");
-    w->glFramebufferTexture1D = (COIN_PFNGLFRAMEBUFFERTEXTURE1DPROC)cc_glglue_getprocaddress(w, "glFramebufferTexture1DEXT");
-    w->glFramebufferTexture2D = (COIN_PFNGLFRAMEBUFFERTEXTURE2DPROC)cc_glglue_getprocaddress(w, "glFramebufferTexture2DEXT");
-    w->glFramebufferTexture3D = (COIN_PFNGLFRAMEBUFFERTEXTURE3DPROC)cc_glglue_getprocaddress(w, "glFramebufferTexture3DEXT");
-    w->glFramebufferRenderbuffer = (COIN_PFNGLFRAMEBUFFERRENDERBUFFERPROC)cc_glglue_getprocaddress(w, "glFramebufferRenderbufferEXT");
+    w->glIsRenderbuffer = (COIN_PFNGLISRENDERBUFFERPROC) SoGLContext_getprocaddress(w, "glIsRenderbufferEXT");
+    w->glBindRenderbuffer = (COIN_PFNGLBINDRENDERBUFFERPROC) SoGLContext_getprocaddress(w, "glBindRenderbufferEXT");
+    w->glDeleteRenderbuffers = (COIN_PFNGLDELETERENDERBUFFERSPROC)SoGLContext_getprocaddress(w, "glDeleteRenderbuffersEXT");
+    w->glGenRenderbuffers = (COIN_PFNGLGENRENDERBUFFERSPROC)SoGLContext_getprocaddress(w, "glGenRenderbuffersEXT");
+    w->glRenderbufferStorage = (COIN_PFNGLRENDERBUFFERSTORAGEPROC)SoGLContext_getprocaddress(w, "glRenderbufferStorageEXT");
+    w->glGetRenderbufferParameteriv = (COIN_PFNGLGETRENDERBUFFERPARAMETERIVPROC)SoGLContext_getprocaddress(w, "glGetRenderbufferParameterivEXT");
+    w->glIsFramebuffer = (COIN_PFNGLISFRAMEBUFFERPROC)SoGLContext_getprocaddress(w, "glIsFramebufferEXT");
+    w->glBindFramebuffer = (COIN_PFNGLBINDFRAMEBUFFERPROC)SoGLContext_getprocaddress(w, "glBindFramebufferEXT");
+    w->glDeleteFramebuffers = (COIN_PFNGLDELETEFRAMEBUFFERSPROC)SoGLContext_getprocaddress(w, "glDeleteFramebuffersEXT");
+    w->glGenFramebuffers = (COIN_PFNGLGENFRAMEBUFFERSPROC)SoGLContext_getprocaddress(w, "glGenFramebuffersEXT");
+    w->glCheckFramebufferStatus = (COIN_PFNGLCHECKFRAMEBUFFERSTATUSPROC)SoGLContext_getprocaddress(w, "glCheckFramebufferStatusEXT");
+    w->glFramebufferTexture1D = (COIN_PFNGLFRAMEBUFFERTEXTURE1DPROC)SoGLContext_getprocaddress(w, "glFramebufferTexture1DEXT");
+    w->glFramebufferTexture2D = (COIN_PFNGLFRAMEBUFFERTEXTURE2DPROC)SoGLContext_getprocaddress(w, "glFramebufferTexture2DEXT");
+    w->glFramebufferTexture3D = (COIN_PFNGLFRAMEBUFFERTEXTURE3DPROC)SoGLContext_getprocaddress(w, "glFramebufferTexture3DEXT");
+    w->glFramebufferRenderbuffer = (COIN_PFNGLFRAMEBUFFERRENDERBUFFERPROC)SoGLContext_getprocaddress(w, "glFramebufferRenderbufferEXT");
     w->glGetFramebufferAttachmentParameteriv = (COIN_PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC)
-      cc_glglue_getprocaddress(w, "glGetFramebufferAttachmentParameterivEXT");
+      SoGLContext_getprocaddress(w, "glGetFramebufferAttachmentParameterivEXT");
     
     /* Load glGenerateMipmap for EXT version if not already loaded */
     if (!w->glGenerateMipmap) {
       w->glGenerateMipmap = (COIN_PFNGLGENERATEMIPMAPPROC)
-        cc_glglue_getprocaddress(w, "glGenerateMipmapEXT");
+        SoGLContext_getprocaddress(w, "glGenerateMipmapEXT");
     }
 
     /* Check if all EXT functions were loaded successfully */
@@ -2017,7 +2017,7 @@ glglue_check_driver(const char * vendor, const char * renderer,
 #ifdef COIN_DEBUG
   /* Only spit out this in debug builds, as the bug was never properly
      confirmed. */
-  if (coin_glglue_radeon_warning()) {
+  if (SoGLContext_radeon_warning()) {
     if (strcmp(renderer, "Radeon 7500 DDR x86/SSE2") == 0) {
       cc_debugerror_postwarning("glglue_check_driver",
                                 "We've had an unconfirmed bugreport that "
@@ -2056,7 +2056,7 @@ glglue_check_driver(const char * vendor, const char * renderer,
   }
 #endif /* COIN_DEBUG */
 
-  if (coin_glglue_old_matrox_warning() &&
+  if (SoGLContext_old_matrox_warning() &&
       (strcmp(renderer, "Matrox G400") == 0) &&
       (strcmp(version, "1.1.3 Aug 30 2001") == 0)) {
     cc_debugerror_postwarning("glglue_check_driver",
@@ -2068,7 +2068,7 @@ glglue_check_driver(const char * vendor, const char * renderer,
                               renderer, version);
   }
 
-  if (coin_glglue_old_elsa_warning() &&
+  if (SoGLContext_old_elsa_warning() &&
       (strcmp(renderer, "ELSA TNT2 Vanta/PCI/SSE") == 0) &&
       (strcmp(version, "1.1.4 (4.06.00.266)") == 0)) {
     cc_debugerror_postwarning("glglue_check_driver",
@@ -2130,7 +2130,7 @@ glglue_check_driver(const char * vendor, const char * renderer,
     does not have the bug any more.
   */
 
-  if (coin_glglue_sun_expert3d_warning() &&
+  if (SoGLContext_sun_expert3d_warning() &&
       (strcmp(renderer, "Sun Expert3D, VIS") == 0) &&
       (strcmp(version, "1.2 Sun OpenGL 1.2.1 patch 109544-19 for Solaris") == 0)) {
     cc_debugerror_postwarning("glglue_check_driver",
@@ -2171,7 +2171,7 @@ glglue_check_driver(const char * vendor, const char * renderer,
   */
   }
 
-  if (coin_glglue_trident_warning() &&
+  if (SoGLContext_trident_warning() &&
       glglue_check_trident_clampedge_bug(vendor, renderer, version)) {
     cc_debugerror_postwarning("glglue_check_driver",
                               "This OpenGL driver (\"%s\" \"%s\" \"%s\") has "
@@ -2197,13 +2197,13 @@ glglue_check_driver(const char * vendor, const char * renderer,
 /* We're basically using the Singleton pattern to instantiate and
    return OpenGL-glue "object structs". We're constructing one
    instance for each OpenGL context, though.  */
-const cc_glglue *
-cc_glglue_instance(int contextid)
+const SoGLContext *
+SoGLContext_instance(int contextid)
 {
   // Add debugging for OSMesa builds at function entry
 #ifdef COIN3D_OSMESA_BUILD
-  if (coin_glglue_debug()) {
-    cc_debugerror_postinfo("cc_glglue_instance", "ENTRY: contextid=%d", contextid);
+  if (SoGLContext_debug()) {
+    cc_debugerror_postinfo("SoGLContext_instance", "ENTRY: contextid=%d", contextid);
   }
 #endif
 
@@ -2211,20 +2211,20 @@ cc_glglue_instance(int contextid)
   void * ptr;
   GLint gltmp;
 
-  cc_glglue * gi = NULL;
+  SoGLContext * gi = NULL;
 
 #ifdef COIN3D_OSMESA_BUILD
-  if (coin_glglue_debug()) {
-    cc_debugerror_postinfo("cc_glglue_instance", "About to begin sync");
+  if (SoGLContext_debug()) {
+    cc_debugerror_postinfo("SoGLContext_instance", "About to begin sync");
   }
 #endif
 
-  CC_SYNC_BEGIN(cc_glglue_instance);
+  CC_SYNC_BEGIN(SoGLContext_instance);
 
   /* check environment variables */
 #ifdef COIN3D_OSMESA_BUILD
-  if (coin_glglue_debug()) {
-    cc_debugerror_postinfo("cc_glglue_instance", "Checking environment variables");
+  if (SoGLContext_debug()) {
+    cc_debugerror_postinfo("SoGLContext_instance", "Checking environment variables");
   }
 #endif
   if (COIN_MAXIMUM_TEXTURE2_SIZE == 0) {
@@ -2240,8 +2240,8 @@ cc_glglue_instance(int contextid)
   /* Platform detection calls removed */
 
 #ifdef COIN3D_OSMESA_BUILD
-  if (coin_glglue_debug()) {
-    cc_debugerror_postinfo("cc_glglue_instance", "Checking global dict");
+  if (SoGLContext_debug()) {
+    cc_debugerror_postinfo("SoGLContext_instance", "Checking global dict");
   }
 #endif
   if (!gldict) {  /* First invocation, do initializations. */
@@ -2250,16 +2250,16 @@ cc_glglue_instance(int contextid)
   }
 
 #ifdef COIN3D_OSMESA_BUILD
-  if (coin_glglue_debug()) {
-    cc_debugerror_postinfo("cc_glglue_instance", "Looking up context %d in dict", contextid);
+  if (SoGLContext_debug()) {
+    cc_debugerror_postinfo("SoGLContext_instance", "Looking up context %d in dict", contextid);
   }
 #endif
   found = cc_dict_get(gldict, (uintptr_t)contextid, &ptr);
 
   if (!found) {
 #ifdef COIN3D_OSMESA_BUILD
-    if (coin_glglue_debug()) {
-      cc_debugerror_postinfo("cc_glglue_instance", "Context not found, creating new glglue instance");
+    if (SoGLContext_debug()) {
+      cc_debugerror_postinfo("SoGLContext_instance", "Context not found, creating new glglue instance");
     }
 #endif
     GLenum glerr;
@@ -2279,34 +2279,34 @@ cc_glglue_instance(int contextid)
       chk = CoinInternal::getEnvironmentVariable("COIN_GL_NO_CURRENT_CONTEXT_CHECK").has_value() ? 0 : 1;
     }
 #ifdef COIN3D_OSMESA_BUILD
-    if (coin_glglue_debug()) {
-      cc_debugerror_postinfo("cc_glglue_instance", "Context check flag: %d", chk);
+    if (SoGLContext_debug()) {
+      cc_debugerror_postinfo("SoGLContext_instance", "Context check flag: %d", chk);
     }
 #endif
     if (chk) {
 #ifdef COIN3D_OSMESA_BUILD
-      if (coin_glglue_debug()) {
-        cc_debugerror_postinfo("cc_glglue_instance", "About to call coin_gl_current_context()");
+      if (SoGLContext_debug()) {
+        cc_debugerror_postinfo("SoGLContext_instance", "About to call coin_gl_current_context()");
       }
 #endif
       const void * current_ctx = coin_gl_current_context();
 #ifdef COIN3D_OSMESA_BUILD
-      if (coin_glglue_debug()) {
-        cc_debugerror_postinfo("cc_glglue_instance", "coin_gl_current_context() returned: %p", current_ctx);
+      if (SoGLContext_debug()) {
+        cc_debugerror_postinfo("SoGLContext_instance", "coin_gl_current_context() returned: %p", current_ctx);
         SoDB::ContextManager* manager = getSoDBContextManager();
-        cc_debugerror_postinfo("cc_glglue_instance", "context_manager = %p", manager);
+        cc_debugerror_postinfo("SoGLContext_instance", "context_manager = %p", manager);
       }
 #endif
       // For callback-based contexts, coin_gl_current_context() always returns NULL
       // This is expected behavior, so we skip the assertion in that case
       SoDB::ContextManager* manager = getSoDBContextManager();
       if (!manager) {
-        assert(current_ctx && "Must have a current GL context when instantiating cc_glglue!! (Note: if you are using an old Mesa GL version, set the environment variable COIN_GL_NO_CURRENT_CONTEXT_CHECK to get around what may be a Mesa bug.)");
+        assert(current_ctx && "Must have a current GL context when instantiating SoGLContext!! (Note: if you are using an old Mesa GL version, set the environment variable COIN_GL_NO_CURRENT_CONTEXT_CHECK to get around what may be a Mesa bug.)");
       }
 #ifdef COIN3D_OSMESA_BUILD
       else {
-        if (coin_glglue_debug()) {
-          cc_debugerror_postinfo("cc_glglue_instance", "Skipping context check for callback-based contexts");
+        if (SoGLContext_debug()) {
+          cc_debugerror_postinfo("SoGLContext_instance", "Skipping context check for callback-based contexts");
         }
       }
 #endif
@@ -2319,9 +2319,9 @@ cc_glglue_instance(int contextid)
        invalid instance instead of creating a new one. Should rather
        hook into SoContextHandler and kill off an instance when a GL
        context is taken out. 20051104 mortene. */
-    gi = (cc_glglue*)malloc(sizeof(cc_glglue));
+    gi = (SoGLContext*)malloc(sizeof(SoGLContext));
     /* clear to set all pointers and variables to NULL or 0 */
-    memset(gi, 0, sizeof(cc_glglue));
+    memset(gi, 0, sizeof(SoGLContext));
     /* FIXME: handle out-of-memory on malloc(). 20000928 mortene. */
 
     gi->contextid = (uint32_t) contextid;
@@ -2341,7 +2341,7 @@ cc_glglue_instance(int contextid)
     glerr = glGetError();
     while (glerr != GL_NO_ERROR) {
       const char* errorstr = coin_glerror_string(glerr);
-      cc_debugerror_postinfo("cc_glglue_instance",
+      cc_debugerror_postinfo("SoGLContext_instance",
                              "Clearing pre-existing OpenGL error 0x%x (%s) during context "
                              "initialization. This can occur during normal cleanup or if the "
                              "context was set up incorrectly.", 
@@ -2354,17 +2354,17 @@ cc_glglue_instance(int contextid)
     }
 
     /* NB: if you are getting a crash here, it's because an attempt at
-     * setting up a cc_glglue instance was made when there is no
+     * setting up a SoGLContext instance was made when there is no
      * current OpenGL context. */
     gi->versionstr = (const char *)glGetString(GL_VERSION);
     
     /* Additional debugging for OSMesa context */
-    if (coin_glglue_debug()) {
-      cc_debugerror_postinfo("cc_glglue_instance", "glGetString(GL_VERSION) returned: %p", gi->versionstr);
+    if (SoGLContext_debug()) {
+      cc_debugerror_postinfo("SoGLContext_instance", "glGetString(GL_VERSION) returned: %p", gi->versionstr);
       if (gi->versionstr) {
         /* Try to safely check if the string is readable */
         volatile char testchar = gi->versionstr[0];
-        cc_debugerror_postinfo("cc_glglue_instance", "Version string first char: 0x%02x ('%c')", 
+        cc_debugerror_postinfo("SoGLContext_instance", "Version string first char: 0x%02x ('%c')", 
                               (unsigned char)testchar, (testchar >= 32 && testchar < 127) ? testchar : '?');
       }
     }
@@ -2375,8 +2375,8 @@ cc_glglue_instance(int contextid)
     glglue_set_glVersion(gi);
 
 #ifdef COIN3D_OSMESA_BUILD
-    if (coin_glglue_debug()) {
-      cc_debugerror_postinfo("cc_glglue_instance", "About to call glGetString(GL_VENDOR)");
+    if (SoGLContext_debug()) {
+      cc_debugerror_postinfo("SoGLContext_instance", "About to call glGetString(GL_VENDOR)");
     }
 #endif
 
@@ -2386,8 +2386,8 @@ cc_glglue_instance(int contextid)
     gi->vendorstr = (const char *)glGetString(GL_VENDOR);
 
 #ifdef COIN3D_OSMESA_BUILD
-    if (coin_glglue_debug()) {
-      cc_debugerror_postinfo("cc_glglue_instance", "glGetString(GL_VENDOR)=='%s' (=> vendor_is_SGI==%s)", 
+    if (SoGLContext_debug()) {
+      cc_debugerror_postinfo("SoGLContext_instance", "glGetString(GL_VENDOR)=='%s' (=> vendor_is_SGI==%s)", 
                             gi->vendorstr ? gi->vendorstr : "(null)",
                             strcmp((const char *)gi->vendorstr, "SGI") == 0 ? "TRUE" : "FALSE");
     }
@@ -2401,8 +2401,8 @@ cc_glglue_instance(int contextid)
     gi->vendor_is_3dlabs = strcmp((const char *) gi->vendorstr, "3Dlabs") == 0;
     
 #ifdef COIN3D_OSMESA_BUILD
-    if (coin_glglue_debug()) {
-      cc_debugerror_postinfo("cc_glglue_instance", "Vendor flags set, about to process nvidia bug workaround");
+    if (SoGLContext_debug()) {
+      cc_debugerror_postinfo("SoGLContext_instance", "Vendor flags set, about to process nvidia bug workaround");
     }
 #endif
     
@@ -2414,29 +2414,29 @@ cc_glglue_instance(int contextid)
     }
 
 #ifdef COIN3D_OSMESA_BUILD
-    if (coin_glglue_debug()) {
-      cc_debugerror_postinfo("cc_glglue_instance", "About to call glGetString(GL_RENDERER)");
+    if (SoGLContext_debug()) {
+      cc_debugerror_postinfo("SoGLContext_instance", "About to call glGetString(GL_RENDERER)");
     }
 #endif
 
     // Add error checking to isolate the crash
     GLenum error_before_renderer = glGetError();
     if (error_before_renderer != GL_NO_ERROR) {
-      cc_debugerror_postinfo("cc_glglue_instance", "OpenGL error before GL_RENDERER: 0x%x", error_before_renderer);
+      cc_debugerror_postinfo("SoGLContext_instance", "OpenGL error before GL_RENDERER: 0x%x", error_before_renderer);
     }
     
     gi->rendererstr = (const char *)glGetString(GL_RENDERER);
     
     GLenum error_after_renderer = glGetError();
     if (error_after_renderer != GL_NO_ERROR) {
-      cc_debugerror_postinfo("cc_glglue_instance", "OpenGL error after GL_RENDERER: 0x%x", error_after_renderer);
+      cc_debugerror_postinfo("SoGLContext_instance", "OpenGL error after GL_RENDERER: 0x%x", error_after_renderer);
     }
     
 #ifdef COIN3D_OSMESA_BUILD
-    if (coin_glglue_debug()) {
-      cc_debugerror_postinfo("cc_glglue_instance", "GL_RENDERER call completed, rendererstr = %p", gi->rendererstr);
+    if (SoGLContext_debug()) {
+      cc_debugerror_postinfo("SoGLContext_instance", "GL_RENDERER call completed, rendererstr = %p", gi->rendererstr);
       if (gi->rendererstr) {
-        cc_debugerror_postinfo("cc_glglue_instance", "Renderer string: %s", gi->rendererstr);
+        cc_debugerror_postinfo("SoGLContext_instance", "Renderer string: %s", gi->rendererstr);
       }
     }
 #endif
@@ -2444,8 +2444,8 @@ cc_glglue_instance(int contextid)
     gi->extensionsstr = (const char *)glGetString(GL_EXTENSIONS);
 
 #ifdef COIN3D_OSMESA_BUILD
-    if (coin_glglue_debug()) {
-      cc_debugerror_postinfo("cc_glglue_instance", "Extensions string: %s", 
+    if (SoGLContext_debug()) {
+      cc_debugerror_postinfo("SoGLContext_instance", "Extensions string: %s", 
                             gi->extensionsstr ? gi->extensionsstr : "(null)");
     }
 #endif
@@ -2459,15 +2459,15 @@ cc_glglue_instance(int contextid)
     */
     if (gi->extensionsstr == NULL) {
 #ifdef COIN3D_OSMESA_BUILD
-      if (coin_glglue_debug()) {
-        cc_debugerror_postinfo("cc_glglue_instance", "Extensions string is NULL, trying glGetStringi fallback");
+      if (SoGLContext_debug()) {
+        cc_debugerror_postinfo("SoGLContext_instance", "Extensions string is NULL, trying glGetStringi fallback");
       }
 #endif
       COIN_PFNGLGETSTRINGIPROC glGetStringi = NULL;
-      glGetStringi = (COIN_PFNGLGETSTRINGIPROC)cc_glglue_getprocaddress(gi, "glGetStringi");
+      glGetStringi = (COIN_PFNGLGETSTRINGIPROC)SoGLContext_getprocaddress(gi, "glGetStringi");
 #ifdef COIN3D_OSMESA_BUILD
-      if (coin_glglue_debug()) {
-        cc_debugerror_postinfo("cc_glglue_instance", "glGetStringi = %p", glGetStringi);
+      if (SoGLContext_debug()) {
+        cc_debugerror_postinfo("SoGLContext_instance", "glGetStringi = %p", glGetStringi);
       }
 #endif
       if (glGetStringi != NULL) {
@@ -2491,13 +2491,13 @@ cc_glglue_instance(int contextid)
           ext_strings_buffer[++buffer_pos] = '\0';  // NULL terminate.
           gi->extensionsstr = ext_strings_buffer;   // Handing over ownership, don't free here.
         } else {
-          cc_debugerror_postwarning ("cc_glglue_instance",
+          cc_debugerror_postwarning ("SoGLContext_instance",
                                      "glGetIntegerv(GL_NUM_EXTENSIONS) did not return a value, "
                                      "so unable to get extensions for this GL driver, ",
                                      "version: %s, vendor: %s", gi->versionstr, gi->vendorstr);
         }
       } else {
-        cc_debugerror_postwarning ("cc_glglue_instance",
+        cc_debugerror_postwarning ("SoGLContext_instance",
                                    "glGetString(GL_EXTENSIONS) returned null, but glGetStringi "
                                    "procedure not found, so unable to get extensions for this GL driver, "
                                    "version: %s, vendor: %s", gi->versionstr, gi->vendorstr);
@@ -2548,19 +2548,19 @@ cc_glglue_instance(int contextid)
       gi->line_width_range[1] = vals[1];
     }
 
-    if (coin_glglue_debug()) {
-      cc_debugerror_postinfo("cc_glglue_instance",
+    if (SoGLContext_debug()) {
+      cc_debugerror_postinfo("SoGLContext_instance",
                              "glGetString(GL_VENDOR)=='%s' (=> vendor_is_SGI==%s)",
                              gi->vendorstr,
                              gi->vendor_is_SGI ? "TRUE" : "FALSE");
-      cc_debugerror_postinfo("cc_glglue_instance",
+      cc_debugerror_postinfo("SoGLContext_instance",
                              "glGetString(GL_RENDERER)=='%s'",
                              gi->rendererstr);
-      cc_debugerror_postinfo("cc_glglue_instance",
+      cc_debugerror_postinfo("SoGLContext_instance",
                              "glGetString(GL_EXTENSIONS)=='%s'",
                              gi->extensionsstr);
 
-      cc_debugerror_postinfo("cc_glglue_instance",
+      cc_debugerror_postinfo("SoGLContext_instance",
                              "Rendering is %sdirect.",
                              gi->glx.isdirect ? "" : "in");
     }
@@ -2568,11 +2568,11 @@ cc_glglue_instance(int contextid)
     /* anisotropic test */
     gi->can_do_anisotropic_filtering = FALSE;
     gi->max_anisotropy = 0.0f;
-    if (cc_glglue_glext_supported(gi, "GL_EXT_texture_filter_anisotropic")) {
+    if (SoGLContext_glext_supported(gi, "GL_EXT_texture_filter_anisotropic")) {
       gi->can_do_anisotropic_filtering = TRUE;
       glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &gi->max_anisotropy);
-      if (coin_glglue_debug()) {
-        cc_debugerror_postinfo("cc_glglue_instance",
+      if (SoGLContext_debug()) {
+        cc_debugerror_postinfo("SoGLContext_instance",
                                "Anisotropic filtering: %s (%g)",
                                gi->can_do_anisotropic_filtering ? "TRUE" : "FALSE",
                                gi->max_anisotropy);
@@ -2582,44 +2582,44 @@ cc_glglue_instance(int contextid)
     glglue_check_driver(gi->vendorstr, gi->rendererstr, gi->versionstr);
 
     gi->non_power_of_two_textures =
-      (cc_glglue_glversion_matches_at_least(gi, 2, 1, 0) ||
-       cc_glglue_glext_supported(gi, "GL_ARB_texture_non_power_of_two"));
+      (SoGLContext_glversion_matches_at_least(gi, 2, 1, 0) ||
+       SoGLContext_glext_supported(gi, "GL_ARB_texture_non_power_of_two"));
 
     /* Resolve our function pointers. */
       glglue_resolve_symbols(gi);
   }
   else {
-    gi = (cc_glglue *)ptr;
+    gi = (SoGLContext *)ptr;
   }
 
-  CC_SYNC_END(cc_glglue_instance);
+  CC_SYNC_END(SoGLContext_instance);
 
 #ifdef COIN3D_OSMESA_BUILD
-  if (coin_glglue_debug()) {
-    cc_debugerror_postinfo("cc_glglue_instance", "About to execute instance created callbacks");
+  if (SoGLContext_debug()) {
+    cc_debugerror_postinfo("SoGLContext_instance", "About to execute instance created callbacks");
   }
 #endif
 
   if (!found && gl_instance_created_cblist) {
     int i, n = cc_list_get_length(gl_instance_created_cblist) / 2;
     for (i = 0; i < n; i++) {
-      coin_glglue_instance_created_cb * cb =
-        (coin_glglue_instance_created_cb *) cc_list_get(gl_instance_created_cblist, i*2);
+      SoGLContext_instance_created_cb * cb =
+        (SoGLContext_instance_created_cb *) cc_list_get(gl_instance_created_cblist, i*2);
       cb(contextid, cc_list_get(gl_instance_created_cblist, i*2+1));
     }
   }
 
 #ifdef COIN3D_OSMESA_BUILD
-  if (coin_glglue_debug()) {
-    cc_debugerror_postinfo("cc_glglue_instance", "RETURN: cc_glglue_instance returning successfully");
+  if (SoGLContext_debug()) {
+    cc_debugerror_postinfo("SoGLContext_instance", "RETURN: SoGLContext_instance returning successfully");
   }
 #endif
 
   return gi;
 }
 
-const cc_glglue *
-cc_glglue_instance_from_context_ptr(void * ctx)
+const SoGLContext *
+SoGLContext_instance_from_context_ptr(void * ctx)
 {
   /* The id can really be anything unique for the current context, but
      we should avoid a crash with the possible ids defined by
@@ -2632,21 +2632,21 @@ cc_glglue_instance_from_context_ptr(void * ctx)
      20050525 mortene.*/
   const int id = (int)cast_aid;
 
-  return cc_glglue_instance(id);
+  return SoGLContext_instance(id);
 }
 
 void
-coin_glglue_destruct(uint32_t contextid)
+SoGLContext_destruct(uint32_t contextid)
 {
   SbBool found;
   void * ptr;
-  CC_SYNC_BEGIN(cc_glglue_instance);
-  if (gldict) { // might happen if a context is destructed without using the cc_glglue interface
+  CC_SYNC_BEGIN(SoGLContext_instance);
+  if (gldict) { // might happen if a context is destructed without using the SoGLContext interface
     found = cc_dict_get(gldict, (uintptr_t)contextid, &ptr);
     if (found) {
-      cc_glglue * glue = (cc_glglue*) ptr;
+      SoGLContext * glue = (SoGLContext*) ptr;
       if (glue->normalizationcubemap) {
-        cc_glglue_glDeleteTextures(glue, 1, &glue->normalizationcubemap);
+        SoGLContext_glDeleteTextures(glue, 1, &glue->normalizationcubemap);
       }
       (void)cc_dict_remove(gldict, (uintptr_t)contextid);
 
@@ -2655,11 +2655,11 @@ coin_glglue_destruct(uint32_t contextid)
       }
     }
   }
-  CC_SYNC_END(cc_glglue_instance);
+  CC_SYNC_END(SoGLContext_instance);
 }
 
 SbBool
-cc_glglue_isdirect(const cc_glglue * w)
+SoGLContext_isdirect(const SoGLContext * w)
 {
   return w->glx.isdirect;
 }
@@ -2670,10 +2670,10 @@ cc_glglue_isdirect(const cc_glglue * w)
   1.1 or the GL_EXT_polygon_offset extension is available.
 
   Method then available for use:
-  \li cc_glglue_glPolygonOffset
+  \li SoGLContext_glPolygonOffset
 */
 SbBool
-cc_glglue_has_polygon_offset(const cc_glglue * w)
+SoGLContext_has_polygon_offset(const SoGLContext * w)
 {
   if (!glglue_allow_newer_opengl(w)) return FALSE;
 
@@ -2682,7 +2682,7 @@ cc_glglue_has_polygon_offset(const cc_glglue * w)
 
 /* Returns the glPolygonOffset() we're actually going to use. */
 static COIN_PFNGLPOLYGONOFFSETPROC
-glglue_glPolygonOffset(const cc_glglue * w)
+glglue_glPolygonOffset(const SoGLContext * w)
 {
   COIN_PFNGLPOLYGONOFFSETPROC poff = NULL;
 
@@ -2696,8 +2696,8 @@ glglue_glPolygonOffset(const cc_glglue * w)
      glPolygonOffsetEXT() actually seems to work better, so we prefer
      that if available. */
   if (w->vendor_is_SGI && w->glPolygonOffsetEXT &&
-      cc_glglue_glversion_matches_at_least(w, 1, 1, 0) &&
-      !cc_glglue_glversion_matches_at_least(w, 1, 2, 0)) {
+      SoGLContext_glversion_matches_at_least(w, 1, 1, 0) &&
+      !SoGLContext_glversion_matches_at_least(w, 1, 2, 0)) {
     poff = w->glPolygonOffsetEXT;
   }
 
@@ -2721,30 +2721,30 @@ glglue_glPolygonOffset(const cc_glglue * w)
   Enable or disable z-buffer offsetting for the given primitive types.
 */
 void
-cc_glglue_glPolygonOffsetEnable(const cc_glglue * w,
+SoGLContext_glPolygonOffsetEnable(const SoGLContext * w,
                                 SbBool enable, int m)
 {
   COIN_PFNGLPOLYGONOFFSETPROC poff = glglue_glPolygonOffset(w);
 
   if (enable) {
     if (poff == w->glPolygonOffset) {
-      if (m & cc_glglue_FILLED) glEnable(GL_POLYGON_OFFSET_FILL);
+      if (m & SoGLContext_FILLED) glEnable(GL_POLYGON_OFFSET_FILL);
       else glDisable(GL_POLYGON_OFFSET_FILL);
-      if (m & cc_glglue_LINES) glEnable(GL_POLYGON_OFFSET_LINE);
+      if (m & SoGLContext_LINES) glEnable(GL_POLYGON_OFFSET_LINE);
       else glDisable(GL_POLYGON_OFFSET_LINE);
-      if (m & cc_glglue_POINTS) glEnable(GL_POLYGON_OFFSET_POINT);
+      if (m & SoGLContext_POINTS) glEnable(GL_POLYGON_OFFSET_POINT);
       else glDisable(GL_POLYGON_OFFSET_POINT);
     }
     else { /* using glPolygonOffsetEXT() */
       /* The old pre-1.1 extension only supports filled polygon
          offsetting. */
-      if (m & cc_glglue_FILLED) glEnable(GL_POLYGON_OFFSET_EXT);
+      if (m & SoGLContext_FILLED) glEnable(GL_POLYGON_OFFSET_EXT);
       else glDisable(GL_POLYGON_OFFSET_EXT);
 
-      if (coin_glglue_debug() && (m != cc_glglue_FILLED)) {
+      if (SoGLContext_debug() && (m != SoGLContext_FILLED)) {
         static SbBool first = TRUE;
         if (first) {
-          cc_debugerror_postwarning("cc_glglue_glPolygonOffsetEnable",
+          cc_debugerror_postwarning("SoGLContext_glPolygonOffsetEnable",
                                     "using EXT_polygon_offset, which only "
                                     "supports filled-polygon offsetting");
           first = FALSE;
@@ -2754,19 +2754,19 @@ cc_glglue_glPolygonOffsetEnable(const cc_glglue * w,
   }
   else { /* disable */
     if (poff == w->glPolygonOffset) {
-      if (m & cc_glglue_FILLED) glDisable(GL_POLYGON_OFFSET_FILL);
-      if (m & cc_glglue_LINES) glDisable(GL_POLYGON_OFFSET_LINE);
-      if (m & cc_glglue_POINTS) glDisable(GL_POLYGON_OFFSET_POINT);
+      if (m & SoGLContext_FILLED) glDisable(GL_POLYGON_OFFSET_FILL);
+      if (m & SoGLContext_LINES) glDisable(GL_POLYGON_OFFSET_LINE);
+      if (m & SoGLContext_POINTS) glDisable(GL_POLYGON_OFFSET_POINT);
     }
     else { /* using glPolygonOffsetEXT() */
-      if (m & cc_glglue_FILLED) glDisable(GL_POLYGON_OFFSET_EXT);
+      if (m & SoGLContext_FILLED) glDisable(GL_POLYGON_OFFSET_EXT);
       /* Pre-1.1 glPolygonOffset extension only supported filled primitives.*/
     }
   }
 }
 
 void
-cc_glglue_glPolygonOffset(const cc_glglue * w,
+SoGLContext_glPolygonOffset(const SoGLContext * w,
                           GLfloat factor,
                           GLfloat units)
 {
@@ -2796,12 +2796,12 @@ cc_glglue_glPolygonOffset(const cc_glglue * w,
 
   Methods then available for use:
 
-  \li cc_glglue_glGenTextures
-  \li cc_glglue_glBindTexture
-  \li cc_glglue_glDeleteTextures
+  \li SoGLContext_glGenTextures
+  \li SoGLContext_glBindTexture
+  \li SoGLContext_glDeleteTextures
 */
 SbBool
-cc_glglue_has_texture_objects(const cc_glglue * w)
+SoGLContext_has_texture_objects(const SoGLContext * w)
 {
   if (!glglue_allow_newer_opengl(w)) return FALSE;
 
@@ -2809,7 +2809,7 @@ cc_glglue_has_texture_objects(const cc_glglue * w)
 }
 
 void
-cc_glglue_glGenTextures(const cc_glglue * w, GLsizei n, GLuint * textures)
+SoGLContext_glGenTextures(const SoGLContext * w, GLsizei n, GLuint * textures)
 {
   assert(w->glGenTextures);
   w->glGenTextures(n, textures);
@@ -2817,7 +2817,7 @@ cc_glglue_glGenTextures(const cc_glglue * w, GLsizei n, GLuint * textures)
 }
 
 void
-cc_glglue_glBindTexture(const cc_glglue * w, GLenum target, GLuint texture)
+SoGLContext_glBindTexture(const SoGLContext * w, GLenum target, GLuint texture)
 {
   assert(w->glBindTexture);
   w->glBindTexture(target, texture);
@@ -2825,7 +2825,7 @@ cc_glglue_glBindTexture(const cc_glglue * w, GLenum target, GLuint texture)
 }
 
 void
-cc_glglue_glDeleteTextures(const cc_glglue * w, GLsizei n, const GLuint * textures)
+SoGLContext_glDeleteTextures(const SoGLContext * w, GLsizei n, const GLuint * textures)
 {
   assert(w->glDeleteTextures);
   w->glDeleteTextures(n, textures);
@@ -2838,12 +2838,12 @@ cc_glglue_glDeleteTextures(const cc_glglue * w, GLsizei n, const GLuint * textur
 
   Methods then available for use:
 
-  \li cc_glglue_glTexImage3D
-  \li cc_glglue_glTexSubImage3D
-  \li cc_glglue_glCopyTexSubImage3D
+  \li SoGLContext_glTexImage3D
+  \li SoGLContext_glTexSubImage3D
+  \li SoGLContext_glCopyTexSubImage3D
 */
 SbBool
-cc_glglue_has_texsubimage(const cc_glglue * w)
+SoGLContext_has_texsubimage(const SoGLContext * w)
 {
   if (!glglue_allow_newer_opengl(w)) return FALSE;
 
@@ -2851,7 +2851,7 @@ cc_glglue_has_texsubimage(const cc_glglue * w)
 }
 
 void
-cc_glglue_glTexSubImage2D(const cc_glglue * w,
+SoGLContext_glTexSubImage2D(const SoGLContext * w,
                           GLenum target,
                           GLint level,
                           GLint xoffset,
@@ -2873,12 +2873,12 @@ cc_glglue_glTexSubImage2D(const cc_glglue * w,
 
   Methods then available for use:
 
-  \li cc_glglue_glTexImage3D
-  \li cc_glglue_glTexSubImage3D
-  \li cc_glglue_glCopyTexSubImage3D
+  \li SoGLContext_glTexImage3D
+  \li SoGLContext_glTexSubImage3D
+  \li SoGLContext_glCopyTexSubImage3D
 */
 SbBool
-cc_glglue_has_3d_textures(const cc_glglue * w)
+SoGLContext_has_3d_textures(const SoGLContext * w)
 {
   if (!glglue_allow_newer_opengl(w)) return FALSE;
 
@@ -2889,7 +2889,7 @@ cc_glglue_has_3d_textures(const cc_glglue * w)
 }
 
 SbBool
-cc_glglue_has_2d_proxy_textures(const cc_glglue * w)
+SoGLContext_has_2d_proxy_textures(const SoGLContext * w)
 {
   if (!glglue_allow_newer_opengl(w)) return FALSE;
 
@@ -2903,12 +2903,12 @@ cc_glglue_has_2d_proxy_textures(const cc_glglue * w)
      correct, we can't really use them interchangeable versus each
      other like we now do in Coin code. 20030121 mortene. */
   return
-    cc_glglue_glversion_matches_at_least(w, 1, 1, 0) ||
-    cc_glglue_glext_supported(w, "GL_EXT_texture");
+    SoGLContext_glversion_matches_at_least(w, 1, 1, 0) ||
+    SoGLContext_glext_supported(w, "GL_EXT_texture");
 }
 
 SbBool
-cc_glglue_has_texture_edge_clamp(const cc_glglue * w)
+SoGLContext_has_texture_edge_clamp(const SoGLContext * w)
 {
   static int buggytrident = -1;
 
@@ -2922,13 +2922,13 @@ cc_glglue_has_texture_edge_clamp(const cc_glglue * w)
   if (buggytrident) { return FALSE; }
 
   return
-    cc_glglue_glversion_matches_at_least(w, 1, 2, 0) ||
-    cc_glglue_glext_supported(w, "GL_EXT_texture_edge_clamp") ||
-    cc_glglue_glext_supported(w, "GL_SGIS_texture_edge_clamp");
+    SoGLContext_glversion_matches_at_least(w, 1, 2, 0) ||
+    SoGLContext_glext_supported(w, "GL_EXT_texture_edge_clamp") ||
+    SoGLContext_glext_supported(w, "GL_SGIS_texture_edge_clamp");
 }
 
 void
-cc_glglue_glPushClientAttrib(const cc_glglue * w, GLbitfield mask)
+SoGLContext_glPushClientAttrib(const SoGLContext * w, GLbitfield mask)
 {
   if (!glglue_allow_newer_opengl(w)) return;
   assert(w->glPushClientAttrib);
@@ -2936,7 +2936,7 @@ cc_glglue_glPushClientAttrib(const cc_glglue * w, GLbitfield mask)
 }
 
 void
-cc_glglue_glPopClientAttrib(const cc_glglue * w)
+SoGLContext_glPopClientAttrib(const SoGLContext * w)
 {
   if (!glglue_allow_newer_opengl(w)) return;
   assert(w->glPopClientAttrib);
@@ -2945,14 +2945,14 @@ cc_glglue_glPopClientAttrib(const cc_glglue * w)
 
 
 SbBool
-cc_glglue_has_multitexture(const cc_glglue * w)
+SoGLContext_has_multitexture(const SoGLContext * w)
 {
   if (!glglue_allow_newer_opengl(w)) return FALSE;
   return w->glActiveTexture != NULL;
 }
 
 int
-cc_glglue_max_texture_units(const cc_glglue * w)
+SoGLContext_max_texture_units(const SoGLContext * w)
 {
   if (!glglue_allow_newer_opengl(w)) return 1;
   return w->maxtextureunits; /* will be 1 when multitexturing is not available */
@@ -2960,7 +2960,7 @@ cc_glglue_max_texture_units(const cc_glglue * w)
 
 
 void
-cc_glglue_glTexImage3D(const cc_glglue * w,
+SoGLContext_glTexImage3D(const SoGLContext * w,
                        GLenum target,
                        GLint level,
                        GLenum internalformat,
@@ -2979,7 +2979,7 @@ cc_glglue_glTexImage3D(const cc_glglue * w,
 }
 
 void
-cc_glglue_glTexSubImage3D(const cc_glglue * w,
+SoGLContext_glTexSubImage3D(const SoGLContext * w,
                           GLenum target,
                           GLint level,
                           GLint xoffset,
@@ -2999,7 +2999,7 @@ cc_glglue_glTexSubImage3D(const cc_glglue * w,
 }
 
 void
-cc_glglue_glCopyTexSubImage3D(const cc_glglue * w,
+SoGLContext_glCopyTexSubImage3D(const SoGLContext * w,
                               GLenum target,
                               GLint level,
                               GLint xoffset,
@@ -3023,7 +3023,7 @@ cc_glglue_glCopyTexSubImage3D(const cc_glglue * w,
 }
 
 void
-cc_glglue_glActiveTexture(const cc_glglue * w,
+SoGLContext_glActiveTexture(const SoGLContext * w,
                           GLenum texture)
 {
   assert(w->glActiveTexture);
@@ -3031,7 +3031,7 @@ cc_glglue_glActiveTexture(const cc_glglue * w,
 }
 
 void
-cc_glglue_glClientActiveTexture(const cc_glglue * w,
+SoGLContext_glClientActiveTexture(const SoGLContext * w,
                                 GLenum texture)
 {
   if (!w->glClientActiveTexture && texture == GL_TEXTURE0)
@@ -3040,7 +3040,7 @@ cc_glglue_glClientActiveTexture(const cc_glglue * w,
   w->glClientActiveTexture(texture);
 }
 void
-cc_glglue_glMultiTexCoord2f(const cc_glglue * w,
+SoGLContext_glMultiTexCoord2f(const SoGLContext * w,
                             GLenum target,
                             GLfloat s,
                             GLfloat t)
@@ -3050,7 +3050,7 @@ cc_glglue_glMultiTexCoord2f(const cc_glglue * w,
 }
 
 void
-cc_glglue_glMultiTexCoord2fv(const cc_glglue * w,
+SoGLContext_glMultiTexCoord2fv(const SoGLContext * w,
                              GLenum target,
                              const GLfloat * v)
 {
@@ -3059,7 +3059,7 @@ cc_glglue_glMultiTexCoord2fv(const cc_glglue * w,
 }
 
 void
-cc_glglue_glMultiTexCoord3fv(const cc_glglue * w,
+SoGLContext_glMultiTexCoord3fv(const SoGLContext * w,
                              GLenum target,
                              const GLfloat * v)
 {
@@ -3068,7 +3068,7 @@ cc_glglue_glMultiTexCoord3fv(const cc_glglue * w,
 }
 
 void
-cc_glglue_glMultiTexCoord4fv(const cc_glglue * w,
+SoGLContext_glMultiTexCoord4fv(const SoGLContext * w,
                              GLenum target,
                              const GLfloat * v)
 {
@@ -3077,7 +3077,7 @@ cc_glglue_glMultiTexCoord4fv(const cc_glglue * w,
 }
 
 SbBool
-cc_glue_has_texture_compression(const cc_glglue * glue)
+cc_glue_has_texture_compression(const SoGLContext * glue)
 {
   if (!glglue_allow_newer_opengl(glue)) return FALSE;
 
@@ -3089,21 +3089,21 @@ cc_glue_has_texture_compression(const cc_glglue * glue)
 }
 
 SbBool
-cc_glue_has_texture_compression_2d(const cc_glglue * glue)
+cc_glue_has_texture_compression_2d(const SoGLContext * glue)
 {
   if (!glglue_allow_newer_opengl(glue)) return FALSE;
   return glue->glCompressedTexImage2D && glue->glGetCompressedTexImage;
 }
 
 SbBool
-cc_glue_has_texture_compression_3d(const cc_glglue * glue)
+cc_glue_has_texture_compression_3d(const SoGLContext * glue)
 {
   if (!glglue_allow_newer_opengl(glue)) return FALSE;
   return glue->glCompressedTexImage3D && glue->glGetCompressedTexImage;
 }
 
 void
-cc_glglue_glCompressedTexImage3D(const cc_glglue * glue,
+SoGLContext_glCompressedTexImage3D(const SoGLContext * glue,
                                  GLenum target,
                                  GLint level,
                                  GLenum internalformat,
@@ -3127,7 +3127,7 @@ cc_glglue_glCompressedTexImage3D(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glCompressedTexImage2D(const cc_glglue * glue,
+SoGLContext_glCompressedTexImage2D(const SoGLContext * glue,
                                  GLenum target,
                                  GLint level,
                                  GLenum internalformat,
@@ -3149,7 +3149,7 @@ cc_glglue_glCompressedTexImage2D(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glCompressedTexImage1D(const cc_glglue * glue,
+SoGLContext_glCompressedTexImage1D(const SoGLContext * glue,
                                  GLenum target,
                                  GLint level,
                                  GLenum internalformat,
@@ -3169,7 +3169,7 @@ cc_glglue_glCompressedTexImage1D(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glCompressedTexSubImage3D(const cc_glglue * glue,
+SoGLContext_glCompressedTexSubImage3D(const SoGLContext * glue,
                                     GLenum target,
                                     GLint level,
                                     GLint xoffset,
@@ -3197,7 +3197,7 @@ cc_glglue_glCompressedTexSubImage3D(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glCompressedTexSubImage2D(const cc_glglue * glue,
+SoGLContext_glCompressedTexSubImage2D(const SoGLContext * glue,
                                     GLenum target,
                                     GLint level,
                                     GLint xoffset,
@@ -3221,7 +3221,7 @@ cc_glglue_glCompressedTexSubImage2D(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glCompressedTexSubImage1D(const cc_glglue * glue,
+SoGLContext_glCompressedTexSubImage1D(const SoGLContext * glue,
                                     GLenum target,
                                     GLint level,
                                     GLint xoffset,
@@ -3241,7 +3241,7 @@ cc_glglue_glCompressedTexSubImage1D(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glGetCompressedTexImage(const cc_glglue * glue,
+SoGLContext_glGetCompressedTexImage(const SoGLContext * glue,
                                   GLenum target,
                                   GLint level,
                                   void * img)
@@ -3253,7 +3253,7 @@ cc_glglue_glGetCompressedTexImage(const cc_glglue * glue,
 }
 
 SbBool
-cc_glglue_has_paletted_textures(const cc_glglue * glue)
+SoGLContext_has_paletted_textures(const SoGLContext * glue)
 {
   static int disable = -1;
   if (disable == -1) {
@@ -3266,21 +3266,21 @@ cc_glglue_has_paletted_textures(const cc_glglue * glue)
 }
 
 SbBool
-cc_glglue_has_color_tables(const cc_glglue * glue)
+SoGLContext_has_color_tables(const SoGLContext * glue)
 {
   if (!glglue_allow_newer_opengl(glue)) return FALSE;
   return glue->glColorTable != NULL;
 }
 
 SbBool
-cc_glglue_has_color_subtables(const cc_glglue * glue)
+SoGLContext_has_color_subtables(const SoGLContext * glue)
 {
   if (!glglue_allow_newer_opengl(glue)) return FALSE;
   return glue->glColorSubTable != NULL;
 }
 
 void
-cc_glglue_glColorTable(const cc_glglue * glue,
+SoGLContext_glColorTable(const SoGLContext * glue,
                        GLenum target,
                        GLenum internalFormat,
                        GLsizei width,
@@ -3298,7 +3298,7 @@ cc_glglue_glColorTable(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glColorSubTable(const cc_glglue * glue,
+SoGLContext_glColorSubTable(const SoGLContext * glue,
                           GLenum target,
                           GLsizei start,
                           GLsizei count,
@@ -3316,7 +3316,7 @@ cc_glglue_glColorSubTable(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glGetColorTable(const cc_glglue * glue,
+SoGLContext_glGetColorTable(const SoGLContext * glue,
                           GLenum target,
                           GLenum format,
                           GLenum type,
@@ -3330,7 +3330,7 @@ cc_glglue_glGetColorTable(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glGetColorTableParameteriv(const cc_glglue * glue,
+SoGLContext_glGetColorTableParameteriv(const SoGLContext * glue,
                                      GLenum target,
                                      GLenum pname,
                                      GLint *params)
@@ -3342,7 +3342,7 @@ cc_glglue_glGetColorTableParameteriv(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glGetColorTableParameterfv(const cc_glglue * glue,
+SoGLContext_glGetColorTableParameterfv(const SoGLContext * glue,
                                      GLenum target,
                                      GLenum pname,
                                      GLfloat *params)
@@ -3354,7 +3354,7 @@ cc_glglue_glGetColorTableParameterfv(const cc_glglue * glue,
 }
 
 SbBool
-cc_glglue_has_blendequation(const cc_glglue * glue)
+SoGLContext_has_blendequation(const SoGLContext * glue)
 {
   if (!glglue_allow_newer_opengl(glue)) return FALSE;
 
@@ -3362,7 +3362,7 @@ cc_glglue_has_blendequation(const cc_glglue * glue)
 }
 
 void
-cc_glglue_glBlendEquation(const cc_glglue * glue, GLenum mode)
+SoGLContext_glBlendEquation(const SoGLContext * glue, GLenum mode)
 {
   assert(glue->glBlendEquation || glue->glBlendEquationEXT);
 
@@ -3371,7 +3371,7 @@ cc_glglue_glBlendEquation(const cc_glglue * glue, GLenum mode)
 }
 
 SbBool
-cc_glglue_has_blendfuncseparate(const cc_glglue * glue)
+SoGLContext_has_blendfuncseparate(const SoGLContext * glue)
 {
   if (!glglue_allow_newer_opengl(glue)) return FALSE;
 
@@ -3379,7 +3379,7 @@ cc_glglue_has_blendfuncseparate(const cc_glglue * glue)
 }
 
 void
-cc_glglue_glBlendFuncSeparate(const cc_glglue * glue,
+SoGLContext_glBlendFuncSeparate(const SoGLContext * glue,
                               GLenum rgbsrc, GLenum rgbdst,
                               GLenum alphasrc, GLenum alphadst)
 {
@@ -3388,14 +3388,14 @@ cc_glglue_glBlendFuncSeparate(const cc_glglue * glue,
 }
 
 SbBool
-cc_glglue_has_vertex_array(const cc_glglue * glue)
+SoGLContext_has_vertex_array(const SoGLContext * glue)
 {
   if (!glglue_allow_newer_opengl(glue)) return FALSE;
   return glue->glVertexPointer != NULL;
 }
 
 void
-cc_glglue_glVertexPointer(const cc_glglue * glue,
+SoGLContext_glVertexPointer(const SoGLContext * glue,
                           GLint size, GLenum type, GLsizei stride, const GLvoid * pointer)
 {
   assert(glue->glVertexPointer);
@@ -3403,7 +3403,7 @@ cc_glglue_glVertexPointer(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glTexCoordPointer(const cc_glglue * glue,
+SoGLContext_glTexCoordPointer(const SoGLContext * glue,
                             GLint size, GLenum type,
                             GLsizei stride, const GLvoid * pointer)
 {
@@ -3412,7 +3412,7 @@ cc_glglue_glTexCoordPointer(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glNormalPointer(const cc_glglue * glue,
+SoGLContext_glNormalPointer(const SoGLContext * glue,
                           GLenum type, GLsizei stride, const GLvoid *pointer)
 {
   assert(glue->glNormalPointer);
@@ -3420,7 +3420,7 @@ cc_glglue_glNormalPointer(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glColorPointer(const cc_glglue * glue,
+SoGLContext_glColorPointer(const SoGLContext * glue,
                          GLint size, GLenum type,
                          GLsizei stride, const GLvoid * pointer)
 {
@@ -3429,7 +3429,7 @@ cc_glglue_glColorPointer(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glIndexPointer(const cc_glglue * glue,
+SoGLContext_glIndexPointer(const SoGLContext * glue,
                          GLenum type, GLsizei stride, const GLvoid * pointer)
 {
   assert(glue->glIndexPointer);
@@ -3437,21 +3437,21 @@ cc_glglue_glIndexPointer(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glEnableClientState(const cc_glglue * glue, GLenum array)
+SoGLContext_glEnableClientState(const SoGLContext * glue, GLenum array)
 {
   assert(glue->glEnableClientState);
   glue->glEnableClientState(array);
 }
 
 void
-cc_glglue_glDisableClientState(const cc_glglue * glue, GLenum array)
+SoGLContext_glDisableClientState(const SoGLContext * glue, GLenum array)
 {
   assert(glue->glDisableClientState);
   glue->glDisableClientState(array);
 }
 
 void
-cc_glglue_glInterleavedArrays(const cc_glglue * glue,
+SoGLContext_glInterleavedArrays(const SoGLContext * glue,
                               GLenum format, GLsizei stride, const GLvoid * pointer)
 {
   assert(glue->glInterleavedArrays);
@@ -3459,7 +3459,7 @@ cc_glglue_glInterleavedArrays(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glDrawArrays(const cc_glglue * glue,
+SoGLContext_glDrawArrays(const SoGLContext * glue,
                        GLenum mode, GLint first, GLsizei count)
 {
   assert(glue->glDrawArrays);
@@ -3467,7 +3467,7 @@ cc_glglue_glDrawArrays(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glDrawElements(const cc_glglue * glue,
+SoGLContext_glDrawElements(const SoGLContext * glue,
                          GLenum mode, GLsizei count, GLenum type,
                          const GLvoid * indices)
 {
@@ -3476,7 +3476,7 @@ cc_glglue_glDrawElements(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glDrawRangeElements(const cc_glglue * glue,
+SoGLContext_glDrawRangeElements(const SoGLContext * glue,
                               GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type,
                               const GLvoid * indices)
 {
@@ -3485,21 +3485,21 @@ cc_glglue_glDrawRangeElements(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glArrayElement(const cc_glglue * glue, GLint i)
+SoGLContext_glArrayElement(const SoGLContext * glue, GLint i)
 {
   assert(glue->glArrayElement);
   glue->glArrayElement(i);
 }
 
 SbBool
-cc_glglue_has_multidraw_vertex_arrays(const cc_glglue * glue)
+SoGLContext_has_multidraw_vertex_arrays(const SoGLContext * glue)
 {
   if (!glglue_allow_newer_opengl(glue)) return FALSE;
   return glue->glMultiDrawArrays && glue->glMultiDrawElements;
 }
 
 void
-cc_glglue_glMultiDrawArrays(const cc_glglue * glue, GLenum mode, const GLint * first,
+SoGLContext_glMultiDrawArrays(const SoGLContext * glue, GLenum mode, const GLint * first,
                             const GLsizei * count, GLsizei primcount)
 {
   assert(glue->glMultiDrawArrays);
@@ -3507,7 +3507,7 @@ cc_glglue_glMultiDrawArrays(const cc_glglue * glue, GLenum mode, const GLint * f
 }
 
 void
-cc_glglue_glMultiDrawElements(const cc_glglue * glue, GLenum mode, const GLsizei * count,
+SoGLContext_glMultiDrawElements(const SoGLContext * glue, GLenum mode, const GLsizei * count,
                               GLenum type, const GLvoid ** indices, GLsizei primcount)
 {
   assert(glue->glMultiDrawElements);
@@ -3515,28 +3515,28 @@ cc_glglue_glMultiDrawElements(const cc_glglue * glue, GLenum mode, const GLsizei
 }
 
 SbBool
-cc_glglue_has_nv_vertex_array_range(const cc_glglue * glue)
+SoGLContext_has_nv_vertex_array_range(const SoGLContext * glue)
 {
   if (!glglue_allow_newer_opengl(glue)) return FALSE;
   return glue->glVertexArrayRangeNV != NULL;
 }
 
 void
-cc_glglue_glFlushVertexArrayRangeNV(const cc_glglue * glue)
+SoGLContext_glFlushVertexArrayRangeNV(const SoGLContext * glue)
 {
   assert(glue->glFlushVertexArrayRangeNV);
   glue->glFlushVertexArrayRangeNV();
 }
 
 void
-cc_glglue_glVertexArrayRangeNV(const cc_glglue * glue, GLsizei size, const GLvoid * pointer)
+SoGLContext_glVertexArrayRangeNV(const SoGLContext * glue, GLsizei size, const GLvoid * pointer)
 {
   assert(glue->glVertexArrayRangeNV);
   glue->glVertexArrayRangeNV(size, pointer);
 }
 
 void *
-cc_glglue_glAllocateMemoryNV(const cc_glglue * glue,
+SoGLContext_glAllocateMemoryNV(const SoGLContext * glue,
                              GLsizei size, GLfloat readfreq,
                              GLfloat writefreq, GLfloat priority)
 {
@@ -3545,14 +3545,14 @@ cc_glglue_glAllocateMemoryNV(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glFreeMemoryNV(const cc_glglue * glue, GLvoid * buffer)
+SoGLContext_glFreeMemoryNV(const SoGLContext * glue, GLvoid * buffer)
 {
   assert(glue->glFreeMemoryNV);
   glue->glFreeMemoryNV(buffer);
 }
 
 SbBool
-cc_glglue_has_vertex_buffer_object(const cc_glglue * glue)
+SoGLContext_has_vertex_buffer_object(const SoGLContext * glue)
 {
   if (!glglue_allow_newer_opengl(glue)) return FALSE;
 
@@ -3562,35 +3562,35 @@ cc_glglue_has_vertex_buffer_object(const cc_glglue * glue)
 }
 
 void
-cc_glglue_glBindBuffer(const cc_glglue * glue, GLenum target, GLuint buffer)
+SoGLContext_glBindBuffer(const SoGLContext * glue, GLenum target, GLuint buffer)
 {
   assert(glue->glBindBuffer);
   glue->glBindBuffer(target, buffer);
 }
 
 void
-cc_glglue_glDeleteBuffers(const cc_glglue * glue, GLsizei n, const GLuint *buffers)
+SoGLContext_glDeleteBuffers(const SoGLContext * glue, GLsizei n, const GLuint *buffers)
 {
   assert(glue->glDeleteBuffers);
   glue->glDeleteBuffers(n, buffers);
 }
 
 void
-cc_glglue_glGenBuffers(const cc_glglue * glue, GLsizei n, GLuint *buffers)
+SoGLContext_glGenBuffers(const SoGLContext * glue, GLsizei n, GLuint *buffers)
 {
   assert(glue->glGenBuffers);
   glue->glGenBuffers(n, buffers);
 }
 
 GLboolean
-cc_glglue_glIsBuffer(const cc_glglue * glue, GLuint buffer)
+SoGLContext_glIsBuffer(const SoGLContext * glue, GLuint buffer)
 {
   assert(glue->glIsBuffer);
   return glue->glIsBuffer(buffer);
 }
 
 void
-cc_glglue_glBufferData(const cc_glglue * glue,
+SoGLContext_glBufferData(const SoGLContext * glue,
                        GLenum target,
                        intptr_t size, /* 64 bit on 64 bit systems */
                        const GLvoid *data,
@@ -3601,7 +3601,7 @@ cc_glglue_glBufferData(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glBufferSubData(const cc_glglue * glue,
+SoGLContext_glBufferSubData(const SoGLContext * glue,
                           GLenum target,
                           intptr_t offset, /* 64 bit */
                           intptr_t size, /* 64 bit */
@@ -3612,7 +3612,7 @@ cc_glglue_glBufferSubData(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glGetBufferSubData(const cc_glglue * glue,
+SoGLContext_glGetBufferSubData(const SoGLContext * glue,
                              GLenum target,
                              intptr_t offset, /* 64 bit */
                              intptr_t size, /* 64 bit */
@@ -3623,7 +3623,7 @@ cc_glglue_glGetBufferSubData(const cc_glglue * glue,
 }
 
 GLvoid *
-cc_glglue_glMapBuffer(const cc_glglue * glue,
+SoGLContext_glMapBuffer(const SoGLContext * glue,
                       GLenum target, GLenum access)
 {
   assert(glue->glMapBuffer);
@@ -3631,7 +3631,7 @@ cc_glglue_glMapBuffer(const cc_glglue * glue,
 }
 
 GLboolean
-cc_glglue_glUnmapBuffer(const cc_glglue * glue,
+SoGLContext_glUnmapBuffer(const SoGLContext * glue,
                         GLenum target)
 {
   assert(glue->glUnmapBuffer);
@@ -3639,7 +3639,7 @@ cc_glglue_glUnmapBuffer(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glGetBufferParameteriv(const cc_glglue * glue,
+SoGLContext_glGetBufferParameteriv(const SoGLContext * glue,
                                  GLenum target,
                                  GLenum pname,
                                  GLint * params)
@@ -3649,7 +3649,7 @@ cc_glglue_glGetBufferParameteriv(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glGetBufferPointerv(const cc_glglue * glue,
+SoGLContext_glGetBufferPointerv(const SoGLContext * glue,
                               GLenum target,
                               GLenum pname,
                               GLvoid ** params)
@@ -3660,47 +3660,47 @@ cc_glglue_glGetBufferPointerv(const cc_glglue * glue,
 
 
 SbBool
-cc_glglue_can_do_bumpmapping(const cc_glglue * glue)
+SoGLContext_can_do_bumpmapping(const SoGLContext * glue)
 {
   if (!glglue_allow_newer_opengl(glue)) return FALSE;
   return glue->can_do_bumpmapping;
 }
 
 SbBool
-cc_glglue_can_do_sortedlayersblend(const cc_glglue * glue)
+SoGLContext_can_do_sortedlayersblend(const SoGLContext * glue)
 {
   if (!glglue_allow_newer_opengl(glue)) return FALSE;
   return glue->can_do_sortedlayersblend;
 }
 
 int
-cc_glglue_get_max_lights(const cc_glglue * glue)
+SoGLContext_get_max_lights(const SoGLContext * glue)
 {
   return glue->max_lights;
 }
 
 const float *
-cc_glglue_get_line_width_range(const cc_glglue * glue)
+SoGLContext_get_line_width_range(const SoGLContext * glue)
 {
   return glue->line_width_range;
 }
 
 const float *
-cc_glglue_get_point_size_range(const cc_glglue * glue)
+SoGLContext_get_point_size_range(const SoGLContext * glue)
 {
   return glue->point_size_range;
 }
 
 /* GL_NV_register_combiners functions */
 SbBool
-cc_glglue_has_nv_register_combiners(const cc_glglue * glue)
+SoGLContext_has_nv_register_combiners(const SoGLContext * glue)
 {
   if (!glglue_allow_newer_opengl(glue)) return FALSE;
   return glue->has_nv_register_combiners;
 }
 
 void
-cc_glglue_glCombinerParameterfvNV(const cc_glglue * glue,
+SoGLContext_glCombinerParameterfvNV(const SoGLContext * glue,
                                   GLenum pname,
                                   const GLfloat *params)
 {
@@ -3708,7 +3708,7 @@ cc_glglue_glCombinerParameterfvNV(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glCombinerParameterivNV(const cc_glglue * glue,
+SoGLContext_glCombinerParameterivNV(const SoGLContext * glue,
                                   GLenum pname,
                                   const GLint *params)
 {
@@ -3716,7 +3716,7 @@ cc_glglue_glCombinerParameterivNV(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glCombinerParameterfNV(const cc_glglue * glue,
+SoGLContext_glCombinerParameterfNV(const SoGLContext * glue,
                                  GLenum pname,
                                  GLfloat param)
 {
@@ -3724,7 +3724,7 @@ cc_glglue_glCombinerParameterfNV(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glCombinerParameteriNV(const cc_glglue * glue,
+SoGLContext_glCombinerParameteriNV(const SoGLContext * glue,
                                  GLenum pname,
                                  GLint param)
 {
@@ -3732,7 +3732,7 @@ cc_glglue_glCombinerParameteriNV(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glCombinerInputNV(const cc_glglue * glue,
+SoGLContext_glCombinerInputNV(const SoGLContext * glue,
                             GLenum stage,
                             GLenum portion,
                             GLenum variable,
@@ -3744,7 +3744,7 @@ cc_glglue_glCombinerInputNV(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glCombinerOutputNV(const cc_glglue * glue,
+SoGLContext_glCombinerOutputNV(const SoGLContext * glue,
                              GLenum stage,
                              GLenum portion,
                              GLenum abOutput,
@@ -3761,7 +3761,7 @@ cc_glglue_glCombinerOutputNV(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glFinalCombinerInputNV(const cc_glglue * glue,
+SoGLContext_glFinalCombinerInputNV(const SoGLContext * glue,
                                  GLenum variable,
                                  GLenum input,
                                  GLenum mapping,
@@ -3771,7 +3771,7 @@ cc_glglue_glFinalCombinerInputNV(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glGetCombinerInputParameterfvNV(const cc_glglue * glue,
+SoGLContext_glGetCombinerInputParameterfvNV(const SoGLContext * glue,
                                           GLenum stage,
                                           GLenum portion,
                                           GLenum variable,
@@ -3782,7 +3782,7 @@ cc_glglue_glGetCombinerInputParameterfvNV(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glGetCombinerInputParameterivNV(const cc_glglue * glue,
+SoGLContext_glGetCombinerInputParameterivNV(const SoGLContext * glue,
                                           GLenum stage,
                                           GLenum portion,
                                           GLenum variable,
@@ -3793,7 +3793,7 @@ cc_glglue_glGetCombinerInputParameterivNV(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glGetCombinerOutputParameterfvNV(const cc_glglue * glue,
+SoGLContext_glGetCombinerOutputParameterfvNV(const SoGLContext * glue,
                                            GLenum stage,
                                            GLenum portion,
                                            GLenum pname,
@@ -3803,7 +3803,7 @@ cc_glglue_glGetCombinerOutputParameterfvNV(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glGetCombinerOutputParameterivNV(const cc_glglue * glue,
+SoGLContext_glGetCombinerOutputParameterivNV(const SoGLContext * glue,
                                            GLenum stage,
                                            GLenum portion,
                                            GLenum pname,
@@ -3813,7 +3813,7 @@ cc_glglue_glGetCombinerOutputParameterivNV(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glGetFinalCombinerInputParameterfvNV(const cc_glglue * glue,
+SoGLContext_glGetFinalCombinerInputParameterfvNV(const SoGLContext * glue,
                                                GLenum variable,
                                                GLenum pname,
                                                GLfloat *params)
@@ -3822,7 +3822,7 @@ cc_glglue_glGetFinalCombinerInputParameterfvNV(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glGetFinalCombinerInputParameterivNV(const cc_glglue * glue,
+SoGLContext_glGetFinalCombinerInputParameterivNV(const SoGLContext * glue,
                                                GLenum variable,
                                                GLenum pname,
                                                GLint *params)
@@ -3832,7 +3832,7 @@ cc_glglue_glGetFinalCombinerInputParameterivNV(const cc_glglue * glue,
 
 /* ARB_shader_objects */
 SbBool
-cc_glglue_has_arb_shader_objects(const cc_glglue * glue)
+SoGLContext_has_arb_shader_objects(const SoGLContext * glue)
 {
   if (!glglue_allow_newer_opengl(glue)) return FALSE;
   return glue->has_arb_shader_objects;
@@ -3841,14 +3841,14 @@ cc_glglue_has_arb_shader_objects(const cc_glglue * glue)
 
 /* ARB_fragment_program functions */
 SbBool
-cc_glglue_has_arb_fragment_program(const cc_glglue * glue)
+SoGLContext_has_arb_fragment_program(const SoGLContext * glue)
 {
   if (!glglue_allow_newer_opengl(glue)) return FALSE;
   return glue->has_arb_fragment_program;
 }
 
 void
-cc_glglue_glProgramString(const cc_glglue * glue,
+SoGLContext_glProgramString(const SoGLContext * glue,
                           GLenum target,
                           GLenum format,
                           GLsizei len,
@@ -3858,7 +3858,7 @@ cc_glglue_glProgramString(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glBindProgram(const cc_glglue * glue,
+SoGLContext_glBindProgram(const SoGLContext * glue,
                         GLenum target,
                         GLuint program)
 {
@@ -3866,7 +3866,7 @@ cc_glglue_glBindProgram(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glDeletePrograms(const cc_glglue * glue,
+SoGLContext_glDeletePrograms(const SoGLContext * glue,
                            GLsizei n,
                            const GLuint *programs)
 {
@@ -3874,7 +3874,7 @@ cc_glglue_glDeletePrograms(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glGenPrograms(const cc_glglue * glue,
+SoGLContext_glGenPrograms(const SoGLContext * glue,
                         GLsizei n,
                         GLuint *programs)
 {
@@ -3882,7 +3882,7 @@ cc_glglue_glGenPrograms(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glProgramEnvParameter4d(const cc_glglue * glue,
+SoGLContext_glProgramEnvParameter4d(const SoGLContext * glue,
                                   GLenum target,
                                   GLuint index,
                                   GLdouble x,
@@ -3894,7 +3894,7 @@ cc_glglue_glProgramEnvParameter4d(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glProgramEnvParameter4dv(const cc_glglue * glue,
+SoGLContext_glProgramEnvParameter4dv(const SoGLContext * glue,
                                    GLenum target,
                                    GLuint index,
                                    const GLdouble *params)
@@ -3903,7 +3903,7 @@ cc_glglue_glProgramEnvParameter4dv(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glProgramEnvParameter4f(const cc_glglue * glue,
+SoGLContext_glProgramEnvParameter4f(const SoGLContext * glue,
                                   GLenum target,
                                   GLuint index,
                                   GLfloat x,
@@ -3915,7 +3915,7 @@ cc_glglue_glProgramEnvParameter4f(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glProgramEnvParameter4fv(const cc_glglue * glue,
+SoGLContext_glProgramEnvParameter4fv(const SoGLContext * glue,
                                    GLenum target,
                                    GLuint index,
                                    const GLfloat *params)
@@ -3924,7 +3924,7 @@ cc_glglue_glProgramEnvParameter4fv(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glProgramLocalParameter4d(const cc_glglue * glue,
+SoGLContext_glProgramLocalParameter4d(const SoGLContext * glue,
                                     GLenum target,
                                     GLuint index,
                                     GLdouble x,
@@ -3936,7 +3936,7 @@ cc_glglue_glProgramLocalParameter4d(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glProgramLocalParameter4dv(const cc_glglue * glue,
+SoGLContext_glProgramLocalParameter4dv(const SoGLContext * glue,
                                      GLenum target,
                                      GLuint index,
                                      const GLdouble *params)
@@ -3945,7 +3945,7 @@ cc_glglue_glProgramLocalParameter4dv(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glProgramLocalParameter4f(const cc_glglue * glue,
+SoGLContext_glProgramLocalParameter4f(const SoGLContext * glue,
                                     GLenum target,
                                     GLuint index,
                                     GLfloat x,
@@ -3957,7 +3957,7 @@ cc_glglue_glProgramLocalParameter4f(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glProgramLocalParameter4fv(const cc_glglue * glue,
+SoGLContext_glProgramLocalParameter4fv(const SoGLContext * glue,
                                      GLenum target,
                                      GLuint index,
                                      const GLfloat *params)
@@ -3966,7 +3966,7 @@ cc_glglue_glProgramLocalParameter4fv(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glGetProgramEnvParameterdv(const cc_glglue * glue,
+SoGLContext_glGetProgramEnvParameterdv(const SoGLContext * glue,
                                      GLenum target,
                                      GLuint index,
                                      GLdouble *params)
@@ -3975,7 +3975,7 @@ cc_glglue_glGetProgramEnvParameterdv(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glGetProgramEnvParameterfv(const cc_glglue * glue,
+SoGLContext_glGetProgramEnvParameterfv(const SoGLContext * glue,
                                      GLenum target,
                                      GLuint index,
                                      GLfloat *params)
@@ -3984,7 +3984,7 @@ cc_glglue_glGetProgramEnvParameterfv(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glGetProgramLocalParameterdv(const cc_glglue * glue,
+SoGLContext_glGetProgramLocalParameterdv(const SoGLContext * glue,
                                        GLenum target,
                                        GLuint index,
                                        GLdouble *params)
@@ -3993,7 +3993,7 @@ cc_glglue_glGetProgramLocalParameterdv(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glGetProgramLocalParameterfv(const cc_glglue * glue,
+SoGLContext_glGetProgramLocalParameterfv(const SoGLContext * glue,
                                        GLenum target,
                                        GLuint index,
                                        GLfloat *params)
@@ -4002,7 +4002,7 @@ cc_glglue_glGetProgramLocalParameterfv(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glGetProgramiv(const cc_glglue * glue,
+SoGLContext_glGetProgramiv(const SoGLContext * glue,
                          GLenum target,
                          GLenum pname,
                          GLint *params)
@@ -4011,7 +4011,7 @@ cc_glglue_glGetProgramiv(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glGetProgramString(const cc_glglue * glue,
+SoGLContext_glGetProgramString(const SoGLContext * glue,
                              GLenum target,
                              GLenum pname,
                              GLvoid *string)
@@ -4020,7 +4020,7 @@ cc_glglue_glGetProgramString(const cc_glglue * glue,
 }
 
 SbBool
-cc_glglue_glIsProgram(const cc_glglue * glue,
+SoGLContext_glIsProgram(const SoGLContext * glue,
                       GLuint program)
 {
   return glue->glIsProgramARB(program);
@@ -4029,7 +4029,7 @@ cc_glglue_glIsProgram(const cc_glglue * glue,
 
 /* ARB_vertex_program functions */
 SbBool
-cc_glglue_has_arb_vertex_program(const cc_glglue * glue)
+SoGLContext_has_arb_vertex_program(const SoGLContext * glue)
 {
   if (!glglue_allow_newer_opengl(glue)) return FALSE;
   return glue->has_arb_vertex_program;
@@ -4037,56 +4037,56 @@ cc_glglue_has_arb_vertex_program(const cc_glglue * glue)
 
 /* ARB_vertex_shaders functions */
 SbBool
-cc_glglue_has_arb_vertex_shader(const cc_glglue * glue)
+SoGLContext_has_arb_vertex_shader(const SoGLContext * glue)
 {
   if (!glglue_allow_newer_opengl(glue)) return FALSE;
   return glue->has_arb_vertex_shader;
 }
 
 void
-cc_glglue_glVertexAttrib1s(const cc_glglue * glue,
+SoGLContext_glVertexAttrib1s(const SoGLContext * glue,
                            GLuint index, GLshort x)
 {
   glue->glVertexAttrib1sARB(index, x);
 }
 
 void
-cc_glglue_glVertexAttrib1f(const cc_glglue * glue,
+SoGLContext_glVertexAttrib1f(const SoGLContext * glue,
                            GLuint index, GLfloat x)
 {
   glue->glVertexAttrib1fARB(index, x);
 }
 
 void
-cc_glglue_glVertexAttrib1d(const cc_glglue * glue,
+SoGLContext_glVertexAttrib1d(const SoGLContext * glue,
                            GLuint index, GLdouble x)
 {
   glue->glVertexAttrib1dARB(index, x);
 }
 
 void
-cc_glglue_glVertexAttrib2s(const cc_glglue * glue,
+SoGLContext_glVertexAttrib2s(const SoGLContext * glue,
                            GLuint index, GLshort x, GLshort y)
 {
   glue->glVertexAttrib2sARB(index, x, y);
 }
 
 void
-cc_glglue_glVertexAttrib2f(const cc_glglue * glue,
+SoGLContext_glVertexAttrib2f(const SoGLContext * glue,
                            GLuint index, GLfloat x, GLfloat y)
 {
   glue->glVertexAttrib2fARB(index, x, y);
 }
 
 void
-cc_glglue_glVertexAttrib2d(const cc_glglue * glue,
+SoGLContext_glVertexAttrib2d(const SoGLContext * glue,
                            GLuint index, GLdouble x, GLdouble y)
 {
   glue->glVertexAttrib2dARB(index, x, y);
 }
 
 void
-cc_glglue_glVertexAttrib3s(const cc_glglue * glue,
+SoGLContext_glVertexAttrib3s(const SoGLContext * glue,
                            GLuint index, GLshort x,
                            GLshort y, GLshort z)
 {
@@ -4094,7 +4094,7 @@ cc_glglue_glVertexAttrib3s(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glVertexAttrib3f(const cc_glglue * glue,
+SoGLContext_glVertexAttrib3f(const SoGLContext * glue,
                            GLuint index, GLfloat x,
                            GLfloat y, GLfloat z)
 {
@@ -4102,7 +4102,7 @@ cc_glglue_glVertexAttrib3f(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glVertexAttrib3d(const cc_glglue * glue,
+SoGLContext_glVertexAttrib3d(const SoGLContext * glue,
                            GLuint index, GLdouble x,
                            GLdouble y, GLdouble z)
 {
@@ -4110,7 +4110,7 @@ cc_glglue_glVertexAttrib3d(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glVertexAttrib4s(const cc_glglue * glue,
+SoGLContext_glVertexAttrib4s(const SoGLContext * glue,
                            GLuint index, GLshort x,
                            GLshort y, GLshort z, GLshort w)
 {
@@ -4118,7 +4118,7 @@ cc_glglue_glVertexAttrib4s(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glVertexAttrib4f(const cc_glglue * glue,
+SoGLContext_glVertexAttrib4f(const SoGLContext * glue,
                            GLuint index, GLfloat x,
                            GLfloat y, GLfloat z, GLfloat w)
 {
@@ -4126,7 +4126,7 @@ cc_glglue_glVertexAttrib4f(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glVertexAttrib4d(const cc_glglue * glue,
+SoGLContext_glVertexAttrib4d(const SoGLContext * glue,
                            GLuint index, GLdouble x,
                            GLdouble y, GLdouble z, GLdouble w)
 {
@@ -4134,7 +4134,7 @@ cc_glglue_glVertexAttrib4d(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glVertexAttrib4Nub(const cc_glglue * glue,
+SoGLContext_glVertexAttrib4Nub(const SoGLContext * glue,
                              GLuint index, GLubyte x,
                              GLubyte y, GLubyte z, GLubyte w)
 {
@@ -4142,168 +4142,168 @@ cc_glglue_glVertexAttrib4Nub(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glVertexAttrib1sv(const cc_glglue * glue,
+SoGLContext_glVertexAttrib1sv(const SoGLContext * glue,
                             GLuint index, const GLshort *v)
 {
   glue->glVertexAttrib1svARB(index, v);
 }
 
 void
-cc_glglue_glVertexAttrib1fv(const cc_glglue * glue,
+SoGLContext_glVertexAttrib1fv(const SoGLContext * glue,
                             GLuint index, const GLfloat *v)
 {
   glue->glVertexAttrib1fvARB(index, v);
 }
 
 void
-cc_glglue_glVertexAttrib1dv(const cc_glglue * glue,
+SoGLContext_glVertexAttrib1dv(const SoGLContext * glue,
                             GLuint index, const GLdouble *v)
 {
   glue->glVertexAttrib1dvARB(index, v);
 }
 
 void
-cc_glglue_glVertexAttrib2sv(const cc_glglue * glue,
+SoGLContext_glVertexAttrib2sv(const SoGLContext * glue,
                             GLuint index, const GLshort *v)
 {
   glue->glVertexAttrib2svARB(index, v);
 }
 
 void
-cc_glglue_glVertexAttrib2fv(const cc_glglue * glue,
+SoGLContext_glVertexAttrib2fv(const SoGLContext * glue,
                             GLuint index, const GLfloat *v)
 {
   glue->glVertexAttrib2fvARB(index, v);
 }
 
 void
-cc_glglue_glVertexAttrib2dv(const cc_glglue * glue,
+SoGLContext_glVertexAttrib2dv(const SoGLContext * glue,
                             GLuint index, const GLdouble *v)
 {
   glue->glVertexAttrib2dvARB(index, v);
 }
 
 void
-cc_glglue_glVertexAttrib3sv(const cc_glglue * glue,
+SoGLContext_glVertexAttrib3sv(const SoGLContext * glue,
                             GLuint index, const GLshort *v)
 {
   glue->glVertexAttrib3svARB(index, v);
 }
 
 void
-cc_glglue_glVertexAttrib3fv(const cc_glglue * glue,
+SoGLContext_glVertexAttrib3fv(const SoGLContext * glue,
                             GLuint index, const GLfloat *v)
 {
   glue->glVertexAttrib3fvARB(index, v);
 }
 
 void
-cc_glglue_glVertexAttrib3dv(const cc_glglue * glue,
+SoGLContext_glVertexAttrib3dv(const SoGLContext * glue,
                             GLuint index, const GLdouble *v)
 {
   glue->glVertexAttrib3dvARB(index, v);
 }
 
 void
-cc_glglue_glVertexAttrib4bv(const cc_glglue * glue,
+SoGLContext_glVertexAttrib4bv(const SoGLContext * glue,
                             GLuint index, const GLbyte *v)
 {
   glue->glVertexAttrib4bvARB(index, v);
 }
 
 void
-cc_glglue_glVertexAttrib4sv(const cc_glglue * glue,
+SoGLContext_glVertexAttrib4sv(const SoGLContext * glue,
                             GLuint index, const GLshort *v)
 {
   glue->glVertexAttrib4svARB(index, v);
 }
 
 void
-cc_glglue_glVertexAttrib4iv(const cc_glglue * glue,
+SoGLContext_glVertexAttrib4iv(const SoGLContext * glue,
                             GLuint index, const GLint *v)
 {
   glue->glVertexAttrib4ivARB(index, v);
 }
 
 void
-cc_glglue_glVertexAttrib4ubv(const cc_glglue * glue,
+SoGLContext_glVertexAttrib4ubv(const SoGLContext * glue,
                              GLuint index, const GLubyte *v)
 {
   glue->glVertexAttrib4ubvARB(index, v);
 }
 
 void
-cc_glglue_glVertexAttrib4usv(const cc_glglue * glue,
+SoGLContext_glVertexAttrib4usv(const SoGLContext * glue,
                              GLuint index, const GLushort *v)
 {
   glue->glVertexAttrib4usvARB(index, v);
 }
 
 void
-cc_glglue_glVertexAttrib4uiv(const cc_glglue * glue,
+SoGLContext_glVertexAttrib4uiv(const SoGLContext * glue,
                              GLuint index, const GLuint *v)
 {
   glue->glVertexAttrib4uivARB(index, v);
 }
 
 void
-cc_glglue_glVertexAttrib4fv(const cc_glglue * glue,
+SoGLContext_glVertexAttrib4fv(const SoGLContext * glue,
                             GLuint index, const GLfloat *v)
 {
   glue->glVertexAttrib4fvARB(index, v);
 }
 
 void
-cc_glglue_glVertexAttrib4dv(const cc_glglue * glue,
+SoGLContext_glVertexAttrib4dv(const SoGLContext * glue,
                             GLuint index, const GLdouble *v)
 {
   glue->glVertexAttrib4dvARB(index, v);
 }
 
 void
-cc_glglue_glVertexAttrib4Nbv(const cc_glglue * glue,
+SoGLContext_glVertexAttrib4Nbv(const SoGLContext * glue,
                              GLuint index, const GLbyte *v)
 {
   glue->glVertexAttrib4NbvARB(index, v);
 }
 
 void
-cc_glglue_glVertexAttrib4Nsv(const cc_glglue * glue,
+SoGLContext_glVertexAttrib4Nsv(const SoGLContext * glue,
                              GLuint index, const GLshort *v)
 {
   glue->glVertexAttrib4NsvARB(index, v);
 }
 
 void
-cc_glglue_glVertexAttrib4Niv(const cc_glglue * glue,
+SoGLContext_glVertexAttrib4Niv(const SoGLContext * glue,
                              GLuint index, const GLint *v)
 {
   glue->glVertexAttrib4NivARB(index, v);
 }
 
 void
-cc_glglue_glVertexAttrib4Nubv(const cc_glglue * glue,
+SoGLContext_glVertexAttrib4Nubv(const SoGLContext * glue,
                               GLuint index, const GLubyte *v)
 {
   glue->glVertexAttrib4NubvARB(index, v);
 }
 
 void
-cc_glglue_glVertexAttrib4Nusv(const cc_glglue * glue,
+SoGLContext_glVertexAttrib4Nusv(const SoGLContext * glue,
                               GLuint index, const GLushort *v)
 {
   glue->glVertexAttrib4NusvARB(index, v);
 }
 
 void
-cc_glglue_glVertexAttrib4Nuiv(const cc_glglue * glue,
+SoGLContext_glVertexAttrib4Nuiv(const SoGLContext * glue,
                               GLuint index, const GLuint *v)
 {
   glue->glVertexAttrib4NuivARB(index, v);
 }
 
 void
-cc_glglue_glVertexAttribPointer(const cc_glglue * glue,
+SoGLContext_glVertexAttribPointer(const SoGLContext * glue,
                                 GLuint index, GLint size,
                                 GLenum type, GLboolean normalized,
                                 GLsizei stride,
@@ -4313,21 +4313,21 @@ cc_glglue_glVertexAttribPointer(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glEnableVertexAttribArray(const cc_glglue * glue,
+SoGLContext_glEnableVertexAttribArray(const SoGLContext * glue,
                                     GLuint index)
 {
   glue->glEnableVertexAttribArrayARB(index);
 }
 
 void
-cc_glglue_glDisableVertexAttribArray(const cc_glglue * glue,
+SoGLContext_glDisableVertexAttribArray(const SoGLContext * glue,
                                      GLuint index)
 {
   glue->glDisableVertexAttribArrayARB(index);
 }
 
 void
-cc_glglue_glGetVertexAttribdv(const cc_glglue * glue,
+SoGLContext_glGetVertexAttribdv(const SoGLContext * glue,
                               GLuint index, GLenum pname,
                               GLdouble *params)
 {
@@ -4335,7 +4335,7 @@ cc_glglue_glGetVertexAttribdv(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glGetVertexAttribfv(const cc_glglue * glue,
+SoGLContext_glGetVertexAttribfv(const SoGLContext * glue,
                               GLuint index, GLenum pname,
                               GLfloat *params)
 {
@@ -4343,7 +4343,7 @@ cc_glglue_glGetVertexAttribfv(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glGetVertexAttribiv(const cc_glglue * glue,
+SoGLContext_glGetVertexAttribiv(const SoGLContext * glue,
                               GLuint index, GLenum pname,
                               GLint *params)
 {
@@ -4351,7 +4351,7 @@ cc_glglue_glGetVertexAttribiv(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glGetVertexAttribPointerv(const cc_glglue * glue,
+SoGLContext_glGetVertexAttribPointerv(const SoGLContext * glue,
                                     GLuint index, GLenum pname,
                                     GLvoid **pointer)
 {
@@ -4361,7 +4361,7 @@ cc_glglue_glGetVertexAttribPointerv(const cc_glglue * glue,
 /* GL_ARB_occlusion_query */
 
 SbBool
-cc_glglue_has_occlusion_query(const cc_glglue * glue)
+SoGLContext_has_occlusion_query(const SoGLContext * glue)
 {
   if (!glglue_allow_newer_opengl(glue)) return FALSE;
 
@@ -4371,42 +4371,42 @@ cc_glglue_has_occlusion_query(const cc_glglue * glue)
 }
 
 void
-cc_glglue_glGenQueries(const cc_glglue * glue,
+SoGLContext_glGenQueries(const SoGLContext * glue,
                        GLsizei n, GLuint * ids)
 {
   glue->glGenQueries(n, ids);
 }
 
 void
-cc_glglue_glDeleteQueries(const cc_glglue * glue,
+SoGLContext_glDeleteQueries(const SoGLContext * glue,
                           GLsizei n, const GLuint *ids)
 {
   glue->glDeleteQueries(n, ids);
 }
 
 GLboolean
-cc_glglue_glIsQuery(const cc_glglue * glue,
+SoGLContext_glIsQuery(const SoGLContext * glue,
                     GLuint id)
 {
   return glue->glIsQuery(id);
 }
 
 void
-cc_glglue_glBeginQuery(const cc_glglue * glue,
+SoGLContext_glBeginQuery(const SoGLContext * glue,
                        GLenum target, GLuint id)
 {
   glue->glBeginQuery(target, id);
 }
 
 void
-cc_glglue_glEndQuery(const cc_glglue * glue,
+SoGLContext_glEndQuery(const SoGLContext * glue,
                      GLenum target)
 {
   glue->glEndQuery(target);
 }
 
 void
-cc_glglue_glGetQueryiv(const cc_glglue * glue,
+SoGLContext_glGetQueryiv(const SoGLContext * glue,
                        GLenum target, GLenum pname,
                        GLint * params)
 {
@@ -4414,7 +4414,7 @@ cc_glglue_glGetQueryiv(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glGetQueryObjectiv(const cc_glglue * glue,
+SoGLContext_glGetQueryObjectiv(const SoGLContext * glue,
                              GLuint id, GLenum pname,
                              GLint * params)
 {
@@ -4422,7 +4422,7 @@ cc_glglue_glGetQueryObjectiv(const cc_glglue * glue,
 }
 
 void
-cc_glglue_glGetQueryObjectuiv(const cc_glglue * glue,
+SoGLContext_glGetQueryObjectuiv(const SoGLContext * glue,
                               GLuint id, GLenum pname,
                               GLuint * params)
 {
@@ -4431,7 +4431,7 @@ cc_glglue_glGetQueryObjectuiv(const cc_glglue * glue,
 
 /* GL_NV_texture_rectangle (identical to GL_EXT_texture_rectangle) */
 SbBool
-cc_glglue_has_nv_texture_rectangle(const cc_glglue * glue)
+SoGLContext_has_nv_texture_rectangle(const SoGLContext * glue)
 {
   if (!glglue_allow_newer_opengl(glue)) return FALSE;
   return glue->has_ext_texture_rectangle;
@@ -4439,7 +4439,7 @@ cc_glglue_has_nv_texture_rectangle(const cc_glglue * glue)
 
 /* GL_EXT_texture_rectangle */
 SbBool
-cc_glglue_has_ext_texture_rectangle(const cc_glglue * glue)
+SoGLContext_has_ext_texture_rectangle(const SoGLContext * glue)
 {
   if (!glglue_allow_newer_opengl(glue)) return FALSE;
   return glue->has_ext_texture_rectangle;
@@ -4447,7 +4447,7 @@ cc_glglue_has_ext_texture_rectangle(const cc_glglue * glue)
 
 /* GL_NV_texture_shader */
 SbBool
-cc_glglue_has_nv_texture_shader(const cc_glglue * glue)
+SoGLContext_has_nv_texture_shader(const SoGLContext * glue)
 {
   if (!glglue_allow_newer_opengl(glue)) return FALSE;
   return glue->has_nv_texture_shader;
@@ -4455,7 +4455,7 @@ cc_glglue_has_nv_texture_shader(const cc_glglue * glue)
 
 /* GL_ARB_shadow */
 SbBool
-cc_glglue_has_arb_shadow(const cc_glglue * glue)
+SoGLContext_has_arb_shadow(const SoGLContext * glue)
 {
   if (!glglue_allow_newer_opengl(glue)) return FALSE;
   return glue->has_shadow;
@@ -4463,7 +4463,7 @@ cc_glglue_has_arb_shadow(const cc_glglue * glue)
 
 /* GL_ARB_depth_texture */
 SbBool
-cc_glglue_has_arb_depth_texture(const cc_glglue * glue)
+SoGLContext_has_arb_depth_texture(const SoGLContext * glue)
 {
   if (!glglue_allow_newer_opengl(glue)) return FALSE;
   return glue->has_depth_texture;
@@ -4471,7 +4471,7 @@ cc_glglue_has_arb_depth_texture(const cc_glglue * glue)
 
 /* GL_EXT_texture_env_combine || GL_ARB_texture_env_combine || OGL 1.4 */
 SbBool
-cc_glglue_has_texture_env_combine(const cc_glglue * glue)
+SoGLContext_has_texture_env_combine(const SoGLContext * glue)
 {
   if (!glglue_allow_newer_opengl(glue)) return FALSE;
   return glue->has_texture_env_combine;
@@ -4483,7 +4483,7 @@ cc_glglue_has_texture_env_combine(const cc_glglue * glue)
   introduced with GLX 1.3), returns \c NULL.
 */
 void *
-cc_glglue_glXGetCurrentDisplay(const cc_glglue * w)
+SoGLContext_glXGetCurrentDisplay(const SoGLContext * w)
 {
   return w->glx.glXGetCurrentDisplay ? w->glx.glXGetCurrentDisplay() : NULL;
 }
@@ -4506,9 +4506,9 @@ cc_glglue_glXGetCurrentDisplay(const cc_glglue * w)
   main(void)
   {
     SoDB::init();
-    void * ctx = cc_glglue_context_create_offscreen(128, 128);
+    void * ctx = SoGLContext_context_create_offscreen(128, 128);
     assert(ctx);
-    SbBool ok = cc_glglue_context_make_current(ctx);
+    SbBool ok = SoGLContext_context_make_current(ctx);
     assert(ok);
 
     const GLubyte * str = glGetString(GL_VERSION);
@@ -4520,15 +4520,15 @@ cc_glglue_glXGetCurrentDisplay(const cc_glglue * w)
     (void)fprintf(stdout, "glGetString(GL_RENDERER)=='%s'\n", glGetString(GL_RENDERER));
 
     uint32_t contextid = SoGLCacheContextElement::getUniqueCacheContext();
-    const cc_glglue * glue = cc_glglue_instance(contextid);
+    const SoGLContext * glue = SoGLContext_instance(contextid);
     (void)fprintf(stdout, "glGenTextures=='%p'\n",
-                  cc_glglue_getprocaddress(glue, "glGenTextures"));
+                  SoGLContext_getprocaddress(glue, "glGenTextures"));
 
     (void)fprintf(stdout, "glGenTexturesEXT=='%p'\n",
-                  cc_glglue_getprocaddress(glue, "glGenTexturesEXT"));
+                  SoGLContext_getprocaddress(glue, "glGenTexturesEXT"));
 
-    cc_glglue_context_reinstate_previous(ctx);
-    cc_glglue_context_destruct(ctx);
+    SoGLContext_context_reinstate_previous(ctx);
+    SoGLContext_context_destruct(ctx);
     return 0;
   }
 */
@@ -4543,7 +4543,7 @@ extern "C" {
 /* offscreen rendering - now uses SoDB::ContextManager directly */
 
 void *
-cc_glglue_context_create_offscreen(unsigned int width, unsigned int height)
+SoGLContext_context_create_offscreen(unsigned int width, unsigned int height)
 {
   SoDB::ContextManager* manager = getSoDBContextManager();
   if (manager) {
@@ -4564,7 +4564,7 @@ cc_glglue_context_create_offscreen(unsigned int width, unsigned int height)
 }
 
 SbBool
-cc_glglue_context_make_current(void * ctx)
+SoGLContext_context_make_current(void * ctx)
 {
   SoDB::ContextManager* manager = getSoDBContextManager();
   if (manager) {
@@ -4583,9 +4583,9 @@ cc_glglue_context_make_current(void * ctx)
 }
 
 void
-cc_glglue_context_reinstate_previous(void * ctx)
+SoGLContext_context_reinstate_previous(void * ctx)
 {
-  /* FIXME: I believe two cc_glglue_context_make_current() invocations
+  /* FIXME: I believe two SoGLContext_context_make_current() invocations
      before invoking this function would make this function behave
      erroneously, as previous contexts are not stacked (at least not
      in the GLX implementation, which I have checked), but only the
@@ -4603,7 +4603,7 @@ cc_glglue_context_reinstate_previous(void * ctx)
 }
 
 void
-cc_glglue_context_destruct(void * ctx)
+SoGLContext_context_destruct(void * ctx)
 {
   SoDB::ContextManager* manager = getSoDBContextManager();
   if (manager) {
@@ -4632,12 +4632,12 @@ cc_glglue_context_destruct(void * ctx)
   time of an application.
 
   So the values returned from this function should be taken as hints,
-  and client code of cc_glglue_context_create_offscreen() and
-  cc_glglue_context_make_current() should re-request offscreen
+  and client code of SoGLContext_context_create_offscreen() and
+  SoGLContext_context_make_current() should re-request offscreen
   contexts with lower dimensions if any of those fails.
 */
 void
-cc_glglue_context_max_dimensions(unsigned int * width, unsigned int * height)
+SoGLContext_context_max_dimensions(unsigned int * width, unsigned int * height)
 {
   void * ctx;
   SbBool ok;
@@ -4651,8 +4651,8 @@ cc_glglue_context_max_dimensions(unsigned int * width, unsigned int * height)
 
   if (cached) { /* value cached */ return; }
 
-  if (coin_glglue_debug()) {
-    cc_debugerror_postinfo("cc_glglue_context_max_dimensions",
+  if (SoGLContext_debug()) {
+    cc_debugerror_postinfo("SoGLContext_context_max_dimensions",
                            "query by making a dummy offscreen context");
   }
 
@@ -4666,14 +4666,14 @@ cc_glglue_context_max_dimensions(unsigned int * width, unsigned int * height)
      of <0,0>, but note that we also need to handle the exception in
      the callers. */
 
-  ctx = cc_glglue_context_create_offscreen(32, 32);
+  ctx = SoGLContext_context_create_offscreen(32, 32);
   if (!ctx) { return; }
-  ok = cc_glglue_context_make_current(ctx);
-  if (!ok) { cc_glglue_context_destruct(ctx); return; }
+  ok = SoGLContext_context_make_current(ctx);
+  if (!ok) { SoGLContext_context_destruct(ctx); return; }
 
   glGetIntegerv(GL_MAX_VIEWPORT_DIMS, size);
-  if (coin_glglue_debug()) {
-    cc_debugerror_postinfo("cc_glglue_context_max_dimensions",
+  if (SoGLContext_debug()) {
+    cc_debugerror_postinfo("SoGLContext_context_max_dimensions",
                            "GL_MAX_VIEWPORT_DIMS==<%d, %d>",
                            size[0], size[1]);
   }
@@ -4721,8 +4721,8 @@ cc_glglue_context_max_dimensions(unsigned int * width, unsigned int * height)
      do not apply. The maximum dimensions are determined by OpenGL texture
      size limits and the standard 4096x4096 clamp below. */
 
-  cc_glglue_context_reinstate_previous(ctx);
-  cc_glglue_context_destruct(ctx);
+  SoGLContext_context_reinstate_previous(ctx);
+  SoGLContext_context_destruct(ctx);
 
   /* Force an additional limit to the maximum tilesize to 4096x4096
      pixels.
@@ -4754,8 +4754,8 @@ cc_glglue_context_max_dimensions(unsigned int * width, unsigned int * height)
   *width = std::min(*width, 4096u);
   *height = std::min(*height, 4096u);
 
-  if (coin_glglue_debug()) {
-    cc_debugerror_postinfo("cc_glglue_context_max_dimensions",
+  if (SoGLContext_debug()) {
+    cc_debugerror_postinfo("SoGLContext_context_max_dimensions",
                            "clamped max dimensions==<%u, %u>",
                            *width, *height);
   }
@@ -4767,7 +4767,7 @@ cc_glglue_context_max_dimensions(unsigned int * width, unsigned int * height)
 }
 
 SbBool
-cc_glglue_context_can_render_to_texture(void * COIN_UNUSED_ARG(ctx))
+SoGLContext_context_can_render_to_texture(void * COIN_UNUSED_ARG(ctx))
 {
   /* Render-to-texture is not supported with the current FBO+callback architecture.
      This functionality has been superseded by the portable FBO-based offscreen rendering. */
@@ -4776,21 +4776,21 @@ cc_glglue_context_can_render_to_texture(void * COIN_UNUSED_ARG(ctx))
 
 
 void
-cc_glglue_context_bind_pbuffer(void * COIN_UNUSED_ARG(ctx))
+SoGLContext_context_bind_pbuffer(void * COIN_UNUSED_ARG(ctx))
 {
   /* PBuffer functionality is not needed with FBO-based offscreen rendering.
      This is a no-op in the current architecture. */
 }
 
 void
-cc_glglue_context_release_pbuffer(void * COIN_UNUSED_ARG(ctx))
+SoGLContext_context_release_pbuffer(void * COIN_UNUSED_ARG(ctx))
 {
   /* PBuffer functionality is not needed with FBO-based offscreen rendering.
      This is a no-op in the current architecture. */
 }
 
 SbBool
-cc_glglue_context_pbuffer_is_bound(void * COIN_UNUSED_ARG(ctx))
+SoGLContext_context_pbuffer_is_bound(void * COIN_UNUSED_ARG(ctx))
 {
   /* PBuffer functionality is not needed with FBO-based offscreen rendering.
      Always return FALSE as PBuffers are not used. */
@@ -4800,12 +4800,12 @@ cc_glglue_context_pbuffer_is_bound(void * COIN_UNUSED_ARG(ctx))
 /* Win32 HDC support has been removed as it was platform-specific
    and is not needed with the callback-based context architecture. */
 const void *
-cc_glglue_win32_HDC(void * COIN_UNUSED_ARG(ctx))
+SoGLContext_win32_HDC(void * COIN_UNUSED_ARG(ctx))
 {
   return NULL;
 }
 
-void cc_glglue_win32_updateHDCBitmap(void * COIN_UNUSED_ARG(ctx))
+void SoGLContext_win32_updateHDCBitmap(void * COIN_UNUSED_ARG(ctx))
 {
   /* No-op: HDC functionality has been removed */
 }
@@ -4857,7 +4857,7 @@ proxy_mipmap_2d(int width, int height,
 
 /* proxy mipmap creation. 3D version. */
 static SbBool
-proxy_mipmap_3d(const cc_glglue * glw, int width, int height, int depth,
+proxy_mipmap_3d(const SoGLContext * glw, int width, int height, int depth,
                 GLenum internalFormat,
                 GLenum format,
                 GLenum type,
@@ -4867,7 +4867,7 @@ proxy_mipmap_3d(const cc_glglue * glw, int width, int height, int depth,
   int level;
   int levels = compute_log(std::max({width, height, depth}));
 
-  cc_glglue_glTexImage3D(glw, GL_PROXY_TEXTURE_3D, 0, internalFormat,
+  SoGLContext_glTexImage3D(glw, GL_PROXY_TEXTURE_3D, 0, internalFormat,
                          width, height, depth, 0, format, type,
                          NULL);
   glGetTexLevelParameteriv(GL_PROXY_TEXTURE_3D, 0,
@@ -4879,7 +4879,7 @@ proxy_mipmap_3d(const cc_glglue * glw, int width, int height, int depth,
     if (width > 1) width >>= 1;
     if (height > 1) height >>= 1;
     if (depth > 1) depth >>= 1;
-    cc_glglue_glTexImage3D(glw, GL_PROXY_TEXTURE_3D, level, internalFormat,
+    SoGLContext_glTexImage3D(glw, GL_PROXY_TEXTURE_3D, level, internalFormat,
                            width, height, depth, 0, format, type,
                            NULL);
     glGetTexLevelParameteriv(GL_PROXY_TEXTURE_3D, 0,
@@ -4889,42 +4889,13 @@ proxy_mipmap_3d(const cc_glglue * glw, int width, int height, int depth,
   return TRUE;
 }
 
-SbBool
-cc_glglue_is_texture_size_legal(const cc_glglue * glw,
-                                int xsize, int ysize, int zsize,
-                                int bytespertexel, SbBool mipmap)
-{
-  GLenum internalformat;
-  GLenum format;
-  GLenum type = GL_UNSIGNED_BYTE;
-
-  switch (bytespertexel) {
-  default:
-  case 1:
-    format = internalformat = GL_LUMINANCE;
-    break;
-  case 2:
-    format = internalformat = GL_LUMINANCE_ALPHA;
-    break;
-  case 3:
-    format = internalformat = GL_RGB8;
-    break;
-  case 4:
-    format = internalformat = GL_RGBA8;
-    break;
-  }
-
-  return coin_glglue_is_texture_size_legal(glw, xsize, ysize, zsize,
-                                           internalformat, format, type, mipmap);
-}
-
 /*!
   Note that the \e internalformat parameter corresponds to the \e
   internalFormat parameter to glTexImage2D; either the number of
   components per texel or a constant specifying the internal texture format.
  */
 SbBool
-coin_glglue_is_texture_size_legal(const cc_glglue * glw,
+SoGLContext_is_texture_size_legal(const SoGLContext * glw,
                                   int xsize, int ysize, int zsize,
                                   GLenum internalformat,
                                   GLenum format,
@@ -4937,7 +4908,7 @@ coin_glglue_is_texture_size_legal(const cc_glglue * glw,
       if (ysize > COIN_MAXIMUM_TEXTURE2_SIZE) return FALSE;
       return TRUE;
     }
-    if (cc_glglue_has_2d_proxy_textures(glw)) {
+    if (SoGLContext_has_2d_proxy_textures(glw)) {
       return proxy_mipmap_2d(xsize, ysize, internalformat, format, type, mipmap);
     }
     else {
@@ -4947,7 +4918,7 @@ coin_glglue_is_texture_size_legal(const cc_glglue * glw,
     }
   }
   else { /*  3D textures */
-    if (cc_glglue_has_3d_textures(glw)) {
+    if (SoGLContext_has_3d_textures(glw)) {
       if (COIN_MAXIMUM_TEXTURE3_SIZE > 0) {
         if (xsize > COIN_MAXIMUM_TEXTURE3_SIZE) return FALSE;
         if (ysize > COIN_MAXIMUM_TEXTURE3_SIZE) return FALSE;
@@ -4974,7 +4945,7 @@ coin_glglue_is_texture_size_legal(const cc_glglue * glw,
   Convert from num components to internal texture format for use
   in glTexImage*D's internalFormat parameter.
 */
-GLint coin_glglue_get_internal_texture_format(const cc_glglue * glw,
+GLint SoGLContext_get_internal_texture_format(const SoGLContext * glw,
                                               int numcomponents,
                                               SbBool compress)
 {
@@ -4997,7 +4968,7 @@ GLint coin_glglue_get_internal_texture_format(const cc_glglue * glw,
     }
   }
   else {
-    SbBool usenewenums = glglue_allow_newer_opengl(glw) && cc_glglue_glversion_matches_at_least(glw,1,1,0);
+    SbBool usenewenums = glglue_allow_newer_opengl(glw) && SoGLContext_glversion_matches_at_least(glw,1,1,0);
     switch (numcomponents) {
     case 1:
       format = usenewenums ? GL_LUMINANCE8 : GL_LUMINANCE;
@@ -5021,7 +4992,7 @@ GLint coin_glglue_get_internal_texture_format(const cc_glglue * glw,
   Convert from num components to client texture format for use
   in glTexImage*D's format parameter.
 */
-GLenum coin_glglue_get_texture_format(const cc_glglue * COIN_UNUSED_ARG(glw), int numcomponents)
+GLenum SoGLContext_get_texture_format(const SoGLContext * COIN_UNUSED_ARG(glw), int numcomponents)
 {
   GLenum format;
   switch (numcomponents) {
@@ -5046,13 +5017,13 @@ GLenum coin_glglue_get_texture_format(const cc_glglue * COIN_UNUSED_ARG(glw), in
 
 /*** <Anisotropic filtering> *************************************************/
 
-float cc_glglue_get_max_anisotropy(const cc_glglue * glue)
+float SoGLContext_get_max_anisotropy(const SoGLContext * glue)
 {
   return glue->max_anisotropy;
 }
 
 SbBool
-cc_glglue_can_do_anisotropic_filtering(const cc_glglue * glue)
+SoGLContext_can_do_anisotropic_filtering(const SoGLContext * glue)
 {
   if (!glglue_allow_newer_opengl(glue)) return FALSE;
   return glue->can_do_anisotropic_filtering;
@@ -5132,7 +5103,7 @@ coin_gl_current_context(void)
 /* ********************************************************************** */
 
 SbBool
-coin_glglue_vbo_in_displaylist_supported(const cc_glglue * COIN_UNUSED_ARG(glue))
+SoGLContext_vbo_in_displaylist_supported(const SoGLContext * COIN_UNUSED_ARG(glue))
 {
   // Older ATI Windows/Linux drivers had a nasty bug which caused a crash
   // in OpenGL whenever a VBO render call was added to a display list.
@@ -5149,7 +5120,7 @@ coin_glglue_vbo_in_displaylist_supported(const cc_glglue * COIN_UNUSED_ARG(glue)
 /* ********************************************************************** */
 
 SbBool
-coin_glglue_non_power_of_two_textures(const cc_glglue * glue)
+SoGLContext_non_power_of_two_textures(const SoGLContext * glue)
 {
   // ATi and Intel both have had problems with this feature, especially
   // on old drivers.  Newer drivers are known to work.
@@ -5166,7 +5137,7 @@ coin_glglue_non_power_of_two_textures(const cc_glglue * glue)
 /* ********************************************************************** */
 
 uint32_t
-coin_glglue_get_contextid(const cc_glglue * glue)
+SoGLContext_get_contextid(const SoGLContext * glue)
 {
   return glue->contextid;
 }
@@ -5180,7 +5151,7 @@ static void cleanup_instance_created_list(void)
 }
 
 void
-coin_glglue_add_instance_created_callback(coin_glglue_instance_created_cb * cb,
+SoGLContext_add_instance_created_callback(SoGLContext_instance_created_cb * cb,
                                           void * closure)
 {
   if (gl_instance_created_cblist == NULL) {
@@ -5194,119 +5165,119 @@ coin_glglue_add_instance_created_callback(coin_glglue_instance_created_cb * cb,
 /* ********************************************************************** */
 
 void
-cc_glglue_glIsRenderbuffer(const cc_glglue * glue, GLuint renderbuffer)
+SoGLContext_glIsRenderbuffer(const SoGLContext * glue, GLuint renderbuffer)
 {
   assert(glue->has_fbo);
   glue->glIsRenderbuffer(renderbuffer);
 }
 
 void
-cc_glglue_glBindRenderbuffer(const cc_glglue * glue, GLenum target, GLuint renderbuffer)
+SoGLContext_glBindRenderbuffer(const SoGLContext * glue, GLenum target, GLuint renderbuffer)
 {
   assert(glue->has_fbo);
   glue->glBindRenderbuffer(target, renderbuffer);
 }
 
 void
-cc_glglue_glDeleteRenderbuffers(const cc_glglue * glue, GLsizei n, const GLuint *renderbuffers)
+SoGLContext_glDeleteRenderbuffers(const SoGLContext * glue, GLsizei n, const GLuint *renderbuffers)
 {
   assert(glue->has_fbo);
   glue->glDeleteRenderbuffers(n, renderbuffers);
 }
 
 void
-cc_glglue_glGenRenderbuffers(const cc_glglue * glue, GLsizei n, GLuint *renderbuffers)
+SoGLContext_glGenRenderbuffers(const SoGLContext * glue, GLsizei n, GLuint *renderbuffers)
 {
   assert(glue->has_fbo);
   glue->glGenRenderbuffers(n, renderbuffers);
 }
 
 void
-cc_glglue_glRenderbufferStorage(const cc_glglue * glue, GLenum target, GLenum internalformat, GLsizei width, GLsizei height)
+SoGLContext_glRenderbufferStorage(const SoGLContext * glue, GLenum target, GLenum internalformat, GLsizei width, GLsizei height)
 {
   assert(glue->has_fbo);
   glue->glRenderbufferStorage(target, internalformat, width, height);
 }
 
 void
-cc_glglue_glGetRenderbufferParameteriv(const cc_glglue * glue, GLenum target, GLenum pname, GLint * params)
+SoGLContext_glGetRenderbufferParameteriv(const SoGLContext * glue, GLenum target, GLenum pname, GLint * params)
 {
   assert(glue->has_fbo);
   glue->glGetRenderbufferParameteriv(target, pname, params);
 }
 
 GLboolean
-cc_glglue_glIsFramebuffer(const cc_glglue * glue, GLuint framebuffer)
+SoGLContext_glIsFramebuffer(const SoGLContext * glue, GLuint framebuffer)
 {
   assert(glue->has_fbo);
   return glue->glIsFramebuffer(framebuffer);
 }
 
 void
-cc_glglue_glBindFramebuffer(const cc_glglue * glue, GLenum target, GLuint framebuffer)
+SoGLContext_glBindFramebuffer(const SoGLContext * glue, GLenum target, GLuint framebuffer)
 {
   assert(glue->has_fbo);
   glue->glBindFramebuffer(target, framebuffer);
 }
 
 void
-cc_glglue_glDeleteFramebuffers(const cc_glglue * glue, GLsizei n, const GLuint * framebuffers)
+SoGLContext_glDeleteFramebuffers(const SoGLContext * glue, GLsizei n, const GLuint * framebuffers)
 {
   assert(glue->has_fbo);
   glue->glDeleteFramebuffers(n, framebuffers);
 }
 
 void
-cc_glglue_glGenFramebuffers(const cc_glglue * glue, GLsizei n, GLuint * framebuffers)
+SoGLContext_glGenFramebuffers(const SoGLContext * glue, GLsizei n, GLuint * framebuffers)
 {
   assert(glue->has_fbo);
   glue->glGenFramebuffers(n, framebuffers);
 }
 
 GLenum
-cc_glglue_glCheckFramebufferStatus(const cc_glglue * glue, GLenum target)
+SoGLContext_glCheckFramebufferStatus(const SoGLContext * glue, GLenum target)
 {
   assert(glue->has_fbo);
   return glue->glCheckFramebufferStatus(target);
 }
 
 void
-cc_glglue_glFramebufferTexture1D(const cc_glglue * glue, GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level)
+SoGLContext_glFramebufferTexture1D(const SoGLContext * glue, GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level)
 {
   assert(glue->has_fbo);
   glue->glFramebufferTexture1D(target, attachment, textarget, texture, level);
 }
 
 void
-cc_glglue_glFramebufferTexture2D(const cc_glglue * glue, GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level)
+SoGLContext_glFramebufferTexture2D(const SoGLContext * glue, GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level)
 {
   assert(glue->has_fbo);
   glue->glFramebufferTexture2D(target, attachment, textarget, texture, level);
 }
 
 void
-cc_glglue_glFramebufferTexture3D(const cc_glglue * glue, GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level, GLint zoffset)
+SoGLContext_glFramebufferTexture3D(const SoGLContext * glue, GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level, GLint zoffset)
 {
   assert(glue->has_fbo);
   glue->glFramebufferTexture3D(target, attachment, textarget, texture, level,zoffset);
 }
 
 void
-cc_glglue_glFramebufferRenderbuffer(const cc_glglue * glue, GLenum target, GLenum attachment, GLenum renderbuffertarget, GLuint renderbuffer)
+SoGLContext_glFramebufferRenderbuffer(const SoGLContext * glue, GLenum target, GLenum attachment, GLenum renderbuffertarget, GLuint renderbuffer)
 {
   assert(glue->has_fbo);
   glue->glFramebufferRenderbuffer(target, attachment, renderbuffertarget, renderbuffer);
 }
 
 void
-cc_glglue_glGetFramebufferAttachmentParameteriv(const cc_glglue * glue, GLenum target, GLenum attachment, GLenum pname, GLint * params)
+SoGLContext_glGetFramebufferAttachmentParameteriv(const SoGLContext * glue, GLenum target, GLenum attachment, GLenum pname, GLint * params)
 {
   assert(glue->has_fbo);
   glue->glGetFramebufferAttachmentParameteriv(target, attachment, pname, params);
 }
 
 SbBool
-coin_glglue_has_generate_mipmap(const cc_glglue * glue)
+SoGLContext_has_generate_mipmap(const SoGLContext * glue)
 {
   if (!glglue_allow_newer_opengl(glue)) return FALSE; 
   // ATi's handling of this function is very buggy. It's possible to
@@ -5320,13 +5291,13 @@ coin_glglue_has_generate_mipmap(const cc_glglue * glue)
 }
 
 void
-cc_glglue_glGenerateMipmap(const cc_glglue * glue, GLenum target)
+SoGLContext_glGenerateMipmap(const SoGLContext * glue, GLenum target)
 {
   glue->glGenerateMipmap(target);
 }
 
 SbBool
-cc_glglue_has_framebuffer_objects(const cc_glglue * glue)
+SoGLContext_has_framebuffer_objects(const SoGLContext * glue)
 {
   if (!glglue_allow_newer_opengl(glue)) return FALSE;
   return glue->has_fbo;

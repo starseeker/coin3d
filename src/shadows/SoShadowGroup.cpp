@@ -354,7 +354,7 @@ public:
                      const int gausskernelsize,
                      const float gaussstandarddeviation)
   {
-    const cc_glglue * glue = cc_glglue_instance(SoGLCacheContextElement::get(state));
+    const SoGLContext * glue = SoGLContext_instance(SoGLCacheContextElement::get(state));
 
     GLint maxsize = 2048;
     GLint maxtexsize = 2048;
@@ -372,7 +372,7 @@ public:
     GLenum format = GL_RGBA;
     GLenum type = GL_FLOAT;
 
-    while (!coin_glglue_is_texture_size_legal(glue, maxsize, maxsize, 0, internalformat, format, type, TRUE) && (maxsize != 0)) {
+    while (!SoGLContext_is_texture_size_legal(glue, maxsize, maxsize, 0, internalformat, format, type, TRUE) && (maxsize != 0)) {
       maxsize >>= 1;
     }
     if (maxsize == 0) { // Can happen on CentOS 7 in VirtualBox
@@ -706,7 +706,7 @@ public:
     this->shadowlights.truncate(0);
   }
 
-  static bool supported(const cc_glglue * glctx, SbString& reason);
+  static bool supported(const SoGLContext * glctx, SbString& reason);
 
   static void shader_enable_cb(void * closure,
                                SoState * state,
@@ -852,22 +852,22 @@ SoShadowGroup::isSupported(void)
   static int supp = -1;
   if (supp != -1) { return supp ? true : false; }
 
-  void * glctx = cc_glglue_context_create_offscreen(256, 256);
-  SbBool ok = cc_glglue_context_make_current(glctx);
+  void * glctx = SoGLContext_context_create_offscreen(256, 256);
+  SbBool ok = SoGLContext_context_make_current(glctx);
   if (!ok) {
     SoDebugError::postWarning("SoShadowGroupP::isSupported",
                               "Could not open an OpenGL context.");
     return false;
   }
 
-  const cc_glglue * glue = cc_glglue_instance_from_context_ptr(glctx);
+  const SoGLContext * glue = SoGLContext_instance_from_context_ptr(glctx);
 
   SbString unused;
   const bool supported = SoShadowGroupP::supported(glue, unused);
   supp = supported ? 1 : 0;
 
-  cc_glglue_context_reinstate_previous(glctx);
-  cc_glglue_context_destruct(glctx);
+  SoGLContext_context_reinstate_previous(glctx);
+  SoGLContext_context_destruct(glctx);
 
   return supported;
 }
@@ -967,7 +967,7 @@ SoShadowGroupP::updateShadowLights(SoGLRenderAction * action)
     //else if (smoothing > 0.5) gaussmatrixsize = 5;
     //else if (smoothing > 0.01) gaussmatrixsize = 3;
 
-    const cc_glglue * glue = cc_glglue_instance(SoGLCacheContextElement::get(state));
+    const SoGLContext * glue = SoGLContext_instance(SoGLCacheContextElement::get(state));
 
     if (this->needscenesearch) {
       this->hasclipplanes = SoClipPlaneElement::getInstance(state)->getNum() > 0;
@@ -1010,7 +1010,7 @@ SoShadowGroupP::updateShadowLights(SoGLRenderAction * action)
       this->searchaction.reset();
       this->needscenesearch = FALSE;
     }
-    int maxunits = cc_glglue_max_texture_units(glue);
+    int maxunits = SoGLContext_max_texture_units(glue);
 
     int maxlights = maxunits - this->numtexunitsinscene;
     SbList <SoTempPath*> & pl = this->lightpaths;
@@ -1419,7 +1419,7 @@ SoShadowGroupP::setVertexShader(SoState * state)
   this->vertexshadercache = new SoShaderProgramCache(state);
   this->vertexshadercache->ref();
 
-  const cc_glglue * glue = cc_glglue_instance(SoGLCacheContextElement::get(state));
+  const SoGLContext * glue = SoGLContext_instance(SoGLCacheContextElement::get(state));
 
   // set active cache to record cache dependencies
   SoCacheElement::set(state, this->vertexshadercache);
@@ -1595,7 +1595,7 @@ SoShadowGroupP::setFragmentShader(SoState * state)
   SbBool perpixelother = FALSE;
   this->getQuality(state, perpixelspot, perpixelother);
 
-  const cc_glglue * glue = cc_glglue_instance(SoGLCacheContextElement::get(state));
+  const SoGLContext * glue = SoGLContext_instance(SoGLCacheContextElement::get(state));
   SbBool storedinvalid = SoCacheElement::setInvalid(FALSE);
   state->push();
 
@@ -2087,7 +2087,7 @@ SoShadowGroupP::shader_enable_cb(void * closure,
 {
   SoShadowGroupP * thisp = (SoShadowGroupP*) closure;
 
-  const cc_glglue * glue = cc_glglue_instance(SoGLCacheContextElement::get(state));
+  const SoGLContext * glue = SoGLContext_instance(SoGLCacheContextElement::get(state));
 
   for (int i = 0; i < thisp->shadowlights.getLength(); i++) {
     SoShadowLightCache * cache = thisp->shadowlights[i];
@@ -2097,10 +2097,10 @@ SoShadowGroupP::shader_enable_cb(void * closure,
       else glDisable(GL_TEXTURE_2D);
     }
     else {
-      cc_glglue_glActiveTexture(glue, (GLenum) (int(GL_TEXTURE0) + unit));
+      SoGLContext_glActiveTexture(glue, (GLenum) (int(GL_TEXTURE0) + unit));
       if (enable) glEnable(GL_TEXTURE_2D);
       else glDisable(GL_TEXTURE_2D);
-      cc_glglue_glActiveTexture(glue, GL_TEXTURE0);
+      SoGLContext_glActiveTexture(glue, GL_TEXTURE0);
 
       GLenum glerror = sogl_glerror_debugging() ? glGetError() : GL_NO_ERROR;
       while (glerror) {
@@ -2113,13 +2113,13 @@ SoShadowGroupP::shader_enable_cb(void * closure,
 }
 
 bool
-SoShadowGroupP::supported(const cc_glglue * glue, SbString& reason)
+SoShadowGroupP::supported(const SoGLContext * glue, SbString& reason)
 {
   const bool has_texfloat =
     SoGLDriverDatabase::isSupported(glue, "GL_ARB_texture_float");
 
   const bool supported =
-    cc_glglue_glversion_matches_at_least(glue, 2, 0, 0) &&
+    SoGLContext_glversion_matches_at_least(glue, 2, 0, 0) &&
     SoGLDriverDatabase::isSupported(glue, SO_GL_FRAMEBUFFER_OBJECT) &&
     has_texfloat;
 
@@ -2127,7 +2127,7 @@ SoShadowGroupP::supported(const cc_glglue * glue, SbString& reason)
 
   reason = "Unable to render shadows.";
   if (!SoGLDriverDatabase::isSupported(glue, SO_GL_FRAMEBUFFER_OBJECT)) reason += " Frame buffer objects not supported.";
-  if (!cc_glglue_glversion_matches_at_least(glue, 2, 0, 0)) reason += " OpenGL version < 2.0.";
+  if (!SoGLContext_glversion_matches_at_least(glue, 2, 0, 0)) reason += " OpenGL version < 2.0.";
   if (!has_texfloat) reason += " Floating point textures not supported.";
 
   return false;
@@ -2137,7 +2137,7 @@ void
 SoShadowGroupP::GLRender(SoGLRenderAction * action, const SbBool inpath)
 {
   SoState * state = action->getState();
-  const cc_glglue * glue = cc_glglue_instance(SoGLCacheContextElement::get(state));
+  const SoGLContext * glue = SoGLContext_instance(SoGLCacheContextElement::get(state));
 
   // FIXME: should store results in a "context -> supported" map.  -mortene.
   SbString reason;

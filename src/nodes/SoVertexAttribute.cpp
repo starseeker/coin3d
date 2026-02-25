@@ -250,11 +250,11 @@ void
 SoVertexAttribute::GLRender(SoGLRenderAction * action)
 {
   SoState * state = action->getState();
-  const cc_glglue * glue = cc_glglue_instance(SoGLCacheContextElement::get(state));
+  const SoGLContext * glue = SoGLContext_instance(SoGLCacheContextElement::get(state));
 
   // check for gl vertex attribute support
   SbBool vertex_shader_supported = SoGLDriverDatabase::isSupported(glue, SO_GL_ARB_VERTEX_SHADER);
-  SbBool opengl_version_match = cc_glglue_glversion_matches_at_least(glue, 2, 0, 0);
+  SbBool opengl_version_match = SoGLContext_glversion_matches_at_least(glue, 2, 0, 0);
 
   if (!vertex_shader_supported || !opengl_version_match) {
     static SbBool first = TRUE;

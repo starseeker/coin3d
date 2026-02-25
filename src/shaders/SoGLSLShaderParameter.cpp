@@ -279,7 +279,7 @@ SoGLSLShaderParameter::isValid(const SoGLShaderObject * shader,
     return TRUE;
   }
 
-  const cc_glglue * g = shader->GLContext();
+  const SoGLContext * g = shader->GLContext();
 
   this->cacheSize = 0;
   this->location = g->glGetUniformLocationARB(pHandle,

@@ -10,7 +10,6 @@ set(COIN_BASE_FILES
 	heap.cpp
 	list.cpp
 	memalloc.cpp
-	string.cpp
 	dynarray.cpp
 	namemap.cpp
 	SbBSPTree.cpp
@@ -79,7 +78,6 @@ set(COIN_BASE_FILES
 	SbXfBox3f.cpp
 	SbXfBox3d.cpp
 	utf8/casecvt.cpp
-	utf8/ini.cpp
 	utf8/utf8.cpp
 )
 

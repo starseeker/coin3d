@@ -1,6 +1,3 @@
-#ifndef COIN_FONTS_COMMON_H
-#define COIN_FONTS_COMMON_H
-
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
  * All rights reserved.
@@ -33,32 +30,52 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_INTERNAL
-#error this is a private header file
-#endif /* ! COIN_INTERNAL */
+/*!
+  \class SbStorage SbStorage.h Inventor/threads/SbStorage.h
+  \brief The SbStorage class manages thread-local memory.
 
-/* ********************************************************************** */
+  \ingroup coin_threads
 
-#include "Inventor/basic.h"
+  This class manages thread-local memory. When different threads access
+  the memory an SbStorage object manages, they will receive different
+  memory blocks back.
 
-struct cc_font_bitmap {
-  unsigned char * buffer; /* bitmap data */
-  int bearingX; /* left side of bitmap relative to pen */
-  int bearingY; /* top of bitmap relative to pen */
-  unsigned int rows; /* height of bitmap */
-  unsigned int width; /* width of bitmap */
-  unsigned int pitch; /* number of bytes occupied by each row (rows are padded to nearest byte) */
-  int advanceX; /* where to position pen for next glyph */
-  int advanceY;
-  SbBool mono; /* monochrome or antialiased gray level bitmap */
-};
+  This provides a mechanism for sharing read/write static data.
+*/
 
-struct cc_font_vector_glyph {
-  float * vertices;
-  int * faceindices;
-  int * edgeindices;
-};
+#define COIN_INTERNAL
 
-SbBool cc_font_debug(void);
+#include <Inventor/threads/SbStorage.h>
+#include "threads/threads.h"
+#include "threads/storagep.h"
 
-#endif /* !COIN_FONTS_COMMON_H */
+SbStorage::SbStorage(unsigned int size)
+{
+  this->impl = cc_storage_construct(size);
+}
+
+SbStorage::SbStorage(unsigned int size, SbStorageConstructFunc * constr,
+                     SbStorageConstructFunc * destr)
+{
+  this->impl = cc_storage_construct_etc(size,
+    reinterpret_cast<cc_storage_f *>(constr),
+    reinterpret_cast<cc_storage_f *>(destr));
+}
+
+SbStorage::~SbStorage(void)
+{
+  cc_storage_destruct(reinterpret_cast<cc_storage *>(this->impl));
+}
+
+void *
+SbStorage::get(void)
+{
+  return cc_storage_get(reinterpret_cast<cc_storage *>(this->impl));
+}
+
+void
+SbStorage::applyToAll(SbStorageApplyFunc * func, void * closure)
+{
+  cc_storage_apply_to_all(reinterpret_cast<cc_storage *>(this->impl),
+    reinterpret_cast<cc_storage_apply_func *>(func), closure);
+}

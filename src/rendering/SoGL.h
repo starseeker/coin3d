@@ -66,7 +66,7 @@ class SbVec2f;
 
 // Convenience function for access to OpenGL wrapper from an SoState
 // pointer.
-const cc_glglue * sogl_glue_instance(const SoState * state);
+const SoGLContext * sogl_glue_instance(const SoState * state);
 
 
 // render
