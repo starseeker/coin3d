@@ -552,9 +552,6 @@ SoVectorizeActionP::pre_text2_cb(void * userdata,
   if (nilpoint[2] < 0.0f || nilpoint[2] > 1.0f) 
     return SoCallbackAction::CONTINUE;;
 
-  const SbViewportRegion & vp = SoViewportRegionElement::get(state);
-  SbVec2s vpsize = vp.getViewportSizePixels();
-
   SbName fontname = SoFontNameElement::get(state);
   float fontsize = SoFontSizeElement::get(state); // in pixels
 
@@ -820,7 +817,8 @@ SoVectorizeActionP::shade_vertex(SoState * state,
                                  const SbColor4f & vcolor,
                                  const SbVec3f & vnormal)
 {
-  float R,G,B,A;
+  float R,G,B;
+  [[maybe_unused]] float A;
   SbVec3f n, s, d;
   float dist, tmp, att, dot, dot_spot, dot_spec;
   float lR, lB, lG;

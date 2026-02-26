@@ -603,7 +603,7 @@ int main()
             static_cast<SoProceduralBBoxCB>(tetraBbox),
             static_cast<SoProceduralGeomCB>(tetraGeom));
 
-        static SbBool sCBCalled = FALSE;
+        [[maybe_unused]] static SbBool sCBCalled = FALSE;
         static const auto objCB = [](const char*, void*) -> SbBool {
             sCBCalled = TRUE;
             return TRUE;
@@ -955,7 +955,7 @@ int main()
             ]
         })";
 
-        static bool sEditCubeValidateCalled = false;
+        [[maybe_unused]] static bool sEditCubeValidateCalled = false;
         static bool sEditCubeValidateResult = true;
         static std::string sEditCubeLastJSON;
 

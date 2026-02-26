@@ -69,8 +69,6 @@
 #if COIN_DEBUG
 #include <Inventor/errors/SoDebugError.h>
 #endif // COIN_DEBUG
-#include "threads/threadsutilp.h"
-
 #ifndef DOXYGEN_SKIP_THIS // Don't document internal classes.
 
 class SoOutputDataEntry {
@@ -154,11 +152,9 @@ void
 SoEngineOutputData::addOutput(const SoEngine *base, const char *name,
                               const SoEngineOutput *output, SoType type)
 {
-  CC_GLOBAL_LOCK;
   if (!this->hasOutput(name)) {
     this->addOutputInternal(coin_assert_cast<const SoFieldContainer *>(base), name, output, type);
   }
-  CC_GLOBAL_UNLOCK;
 }
 
 /*!
@@ -237,11 +233,9 @@ void
 SoEngineOutputData::addOutput(const SoNodeEngine * base, const char *name,
                               const SoEngineOutput * output, SoType type)
 {
-  CC_GLOBAL_LOCK;
   if (!this->hasOutput(name)) {
     this->addOutputInternal(coin_assert_cast<const SoFieldContainer *>(base), name, output, type);
   }
-  CC_GLOBAL_UNLOCK;
 }
 
 /*!

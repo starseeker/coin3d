@@ -120,20 +120,106 @@ public:
   static void removeRoute(SoNode * from, const char * eventout,
                           SoNode * to, const char * eventin);
 
-  // OpenGL Context Management API
-  // These methods allow applications to provide OpenGL context management
-  // callbacks BEFORE calling SoDB::init(), which is required for proper
-  // initialization ordering when using custom rendering backends like OSMesa.
+  // Context Management API
+  //
+  // The ContextManager provides two complementary rendering paths:
+  //
+  // GL path (pure-virtual, must be implemented):
+  //   createOffscreenContext / makeContextCurrent / restorePreviousContext /
+  //   destroyContext – lifecycle management of an OpenGL offscreen context.
+  //   SoOffscreenRenderer uses these when GL rendering is active.
+  //
+  // Alternative render path (optional override, default returns FALSE):
+  //   renderScene() – fill a pre-allocated pixel buffer with rendered output
+  //   without using OpenGL.  When this returns TRUE, SoOffscreenRenderer
+  //   uses the resulting pixels directly and skips the entire GL pipeline.
+  //   SoNanoRTContextManager (tests/utils/nanort_context_manager.h) is a
+  //   reference implementation that uses nanort for ray-triangle intersection.
+  //
+  // The two paths are independent: a subclass may implement only the GL path
+  // (existing OSMesa / GLX managers), only the alternative path (a pure
+  // software raytracer with no-op GL methods), or both.
   class ContextManager {
   public:
     virtual ~ContextManager() {}
+
+    // --- GL context lifecycle (required) -----------------------------------
     virtual void * createOffscreenContext(unsigned int width, unsigned int height) = 0;
     virtual SbBool makeContextCurrent(void * context) = 0;
     virtual void restorePreviousContext(void * context) = 0;
     virtual void destroyContext(void * context) = 0;
+
+    /**
+     * Return TRUE if the given context handle was created against the OSMesa
+     * backend rather than the system OpenGL/GLX/WGL backend.
+     *
+     * The default implementation returns FALSE, which is appropriate for
+     * applications that only use one backend.  Dual-backend implementations
+     * (COIN3D_BUILD_DUAL_GL) should override this and return TRUE for
+     * contexts created via OSMesa so that the GL-glue dispatch layer can
+     * route SoGLContext_instance() to the correct (osmesa_*) implementation.
+     */
+    virtual SbBool isOSMesaContext(void * /*context*/) { return FALSE; }
+
+    /**
+     * Report the maximum offscreen rendering dimensions supported by this
+     * backend.  CoinOffscreenGLCanvas calls this instead of probing the
+     * global GL pipeline so that per-instance managers (e.g. an OSMesa
+     * renderer living alongside a system-GL renderer) can declare the right
+     * limits for their backend.
+     *
+     * The default implementation returns {0,0}, which causes CoinOffscreenGLCanvas
+     * to fall back to its global GL-probing logic (the traditional behaviour for
+     * the global context manager).  An OSMesa implementation should return a
+     * large value (e.g. 16384 × 16384) since OSMesa is only RAM-limited.
+     */
+    virtual void maxOffscreenDimensions(unsigned int & width,
+                                        unsigned int & height) const
+    { width = 0; height = 0; }
+
+    // --- Optional alternative rendering path -------------------------------
+    // If this returns TRUE, SoOffscreenRenderer uses 'pixels' directly and
+    // skips the GL pipeline.  'pixels' is a pre-allocated row-major buffer of
+    // width*height*nrcomponents bytes (RGB or RGBA, values 0-255, top-to-bottom
+    // row order matching SoOffscreenRenderer::getBuffer()).
+    // 'background_rgb' is a 3-element float array [R,G,B] in [0,1].
+    // Default implementation returns FALSE (GL path is used).
+    virtual SbBool renderScene(SoNode * scene,
+                               unsigned int width, unsigned int height,
+                               unsigned char * pixels,
+                               unsigned int nrcomponents,
+                               const float background_rgb[3]) { (void)scene; (void)width; (void)height; (void)pixels; (void)nrcomponents; (void)background_rgb; return FALSE; }
   };
 
   static ContextManager * getContextManager(void);
+
+  /**
+   * Replace the active context manager at runtime without re-running
+   * SoDB initialisation.  Useful for temporarily switching to a different
+   * rendering backend (e.g. swapping between system GL and OSMesa) within
+   * the same process.  The caller is responsible for ensuring that no
+   * render is in progress when this is called.  Passing NULL is a no-op.
+   */
+  static void setContextManager(ContextManager * manager);
+
+  /**
+   * Create a new OSMesa-backed context manager.  Returns NULL when the
+   * library was not built with OSMesa support (i.e. COIN3D_OSMESA_BUILD
+   * and COIN3D_BUILD_DUAL_GL are both absent).
+   *
+   * The caller owns the returned object and is responsible for deleting it
+   * after all SoOffscreenRenderer instances that reference it have been
+   * destroyed.  A typical use is to store it in a std::unique_ptr:
+   *
+   *   auto mgr = std::unique_ptr<SoDB::ContextManager>(
+   *                   SoDB::createOSMesaContextManager());
+   *   if (mgr) renderer->setContextManager(mgr.get());
+   *
+   * This API lets applications use a dedicated OSMesa rendering backend
+   * per SoOffscreenRenderer instance without needing to include any
+   * OSMesa headers or link directly against the OSMesa library.
+   */
+  static ContextManager * createOSMesaContextManager();
 
 private:
   static SoGroup * readAllWrapper(SoInput * input, const SoType & grouptype);

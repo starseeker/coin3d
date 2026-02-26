@@ -352,9 +352,8 @@ class SbHash {
   Type & operator[](const Key & key) {
     Type * obj = NULL;
     if (!getP(key,obj)) {
-      Type dummy;
-      SbBool ok;
-      ok = put(key,dummy);
+      Type dummy{};
+      [[maybe_unused]] SbBool ok = put(key,dummy);
       assert(ok);
       ok = getP(key,obj);
       assert(ok);

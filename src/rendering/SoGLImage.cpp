@@ -184,7 +184,6 @@
 #include "glue/glp.h"
 #include "base/SbImageFormatHandler.h"
 #include "base/SbJpegImageHandler.h"
-#include "threads/threadsutilp.h"
 #include "misc/SoEnvironment.h"
 
 /* Legacy MSVC6 workaround removed - not needed for C++17 */

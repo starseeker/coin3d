@@ -21,6 +21,8 @@ if(DEFINED COIN3D_USE_OSMESA)
 else()
     set(RENDERING_USE_OSMESA OFF CACHE BOOL "Use OSMesa for rendering tests")
 endif()
+# Note: COIN3D_BUILD_DUAL_GL builds use system GL (GLX+Xvfb) for rendering
+# tests; the OSMesa layer is in the library but scene traversal uses system GL.
 
 if(RENDERING_USE_OSMESA)
     set(OSMESA_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/external/osmesa/include")
@@ -87,6 +89,7 @@ add_rendering_test(render_text2)
 add_rendering_test(render_text3)
 # Moved from top-level SIMPLE_TESTS: these need a rendering context to run
 add_rendering_test(render_gradient)
+add_rendering_test(render_background_gradient)
 add_rendering_test(render_colored_cube)
 add_rendering_test(render_coordinates)
 add_rendering_test(render_scene)
@@ -173,6 +176,92 @@ add_rendering_test(render_quad_mesh_deep)
 add_rendering_test(render_field_connections)
 add_rendering_test(render_sogl_bindings)
 
+# ---- NanoRT raytracing backend -------------------------------------------
+#
+# add_nanort_rendering_test(name)
+#
+# Compiles <name>.cpp with:
+#   - COIN3D_NANORT_BUILD defined  →  headless_utils.h uses SoNanoRTContextManager
+#   - nanort.h and stb_image_write.h on the include path
+#
+# Tests built this way work without a display server and without OpenGL.
+# They still use the standard renderToFile() + writeToRGB() path from
+# headless_utils.h; SoOffscreenRenderer dispatches to the nanort renderer
+# via the generalized ContextManager::renderScene() hook.
+macro(add_nanort_rendering_test name)
+    add_executable(nrt_${name} ${name}.cpp)
+    target_include_directories(nrt_${name} PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_SOURCE_DIR}/tests/utils
+        ${PROJECT_SOURCE_DIR}/include
+        ${PROJECT_SOURCE_DIR}/include/Inventor/annex
+        ${PROJECT_BINARY_DIR}/include
+        ${COIN_TARGET_INCLUDE_DIRECTORIES}
+        ${PROJECT_SOURCE_DIR}/external/nanort
+        ${PROJECT_SOURCE_DIR}/external/nanort/examples/common
+    )
+    target_compile_definitions(nrt_${name} PRIVATE COIN3D_NANORT_BUILD)
+    target_link_libraries(nrt_${name} Coin ${COIN_TARGET_LINK_LIBRARIES})
+    set_target_properties(nrt_${name} PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin"
+    )
+    add_test(
+        NAME nrt_${name}
+        COMMAND "${CMAKE_COMMAND}"
+            -DEXECUTABLE=$<TARGET_FILE:nrt_${name}>
+            -DTEST_TIMEOUT=${IMAGE_COMPARISON_TEST_TIMEOUT}
+            -P "${CMAKE_CURRENT_SOURCE_DIR}/run_rendering_test.cmake"
+    )
+    set_tests_properties(nrt_${name} PROPERTIES
+        TIMEOUT ${IMAGE_COMPARISON_TEST_TIMEOUT}
+    )
+endmacro()
+
+# ---- NanoRT versions of standard rendering tests ----------------------------
+# These tests use SoOffscreenRenderer + the generalized ContextManager hook to
+# produce pixel output via nanort.  They operate on triangle-based geometry;
+# tests that rely on text, lines, or OpenGL-specific features are omitted.
+add_nanort_rendering_test(render_primitives)
+add_nanort_rendering_test(render_materials)
+add_nanort_rendering_test(render_transforms)
+add_nanort_rendering_test(render_colored_cube)
+add_nanort_rendering_test(render_scene)
+add_nanort_rendering_test(render_rt_proxy_shapes)
+add_nanort_rendering_test(render_background_gradient)
+
+# ---- Standalone nanort demo (original, uses its own context manager) --------
+# render_nanort.cpp is the original proof-of-concept demo that builds its own
+# NullContextManager internally (before the generalized hook was added).
+# It is kept as a standalone self-contained test.
+add_executable(render_nanort render_nanort.cpp)
+target_include_directories(render_nanort PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/tests/utils
+    ${PROJECT_SOURCE_DIR}/include
+    ${PROJECT_SOURCE_DIR}/include/Inventor/annex
+    ${PROJECT_BINARY_DIR}/include
+    ${COIN_TARGET_INCLUDE_DIRECTORIES}
+    ${PROJECT_SOURCE_DIR}/external/nanort
+    ${PROJECT_SOURCE_DIR}/external/nanort/examples/common
+)
+target_link_libraries(render_nanort Coin ${COIN_TARGET_LINK_LIBRARIES})
+set_target_properties(render_nanort PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin"
+)
+# The nanort test does its own pixel analysis and returns 0/1.
+# It does not need xvfb-run because it never calls OpenGL, but
+# run_rendering_test.cmake is still used for consistent test reporting.
+add_test(
+    NAME render_nanort
+    COMMAND "${CMAKE_COMMAND}"
+        -DEXECUTABLE=$<TARGET_FILE:render_nanort>
+        -DTEST_TIMEOUT=${IMAGE_COMPARISON_TEST_TIMEOUT}
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/run_rendering_test.cmake"
+)
+set_tests_properties(render_nanort PROPERTIES
+    TIMEOUT ${IMAGE_COMPARISON_TEST_TIMEOUT}
+)
+
 # ---- CTest image-comparison integration --------------------------------------
 # Control images live in the shared tests/control_images/ directory.
 # The run_image_test.cmake driver handles Xvfb wrapping for GLX builds.
@@ -220,6 +309,69 @@ macro(add_rendering_image_test test_name)
                 -P ${CMAKE_SOURCE_DIR}/tests/run_image_test.cmake
         )
         set_tests_properties(${test_name}_image_test PROPERTIES
+            TIMEOUT ${IMAGE_COMPARISON_TEST_TIMEOUT}
+        )
+    endif()
+endmacro()
+
+# ---- NanoRT image-comparison macro -------------------------------------------
+#
+# add_nanort_image_test(name [HASH_THRESHOLD n] [RMSE_THRESHOLD f])
+#
+# Runs nrt_<name> to produce an SGI RGB image, then compares it against the
+# OSMesa control image (<name>_control.png) using image_comparator.
+#
+# NanoRT uses Phong ray-tracing rather than OpenGL rasterization, so the renders
+# will differ in shading detail (specular highlights, ambient fill) while still
+# depicting the same scene geometry and colours.  The thresholds are therefore
+# set higher than the OSMesa regression tests to accommodate these algorithm
+# differences, while still catching major regressions such as missing geometry,
+# wrong colours, or a completely black image.
+#
+# Default thresholds:
+#   HASH_THRESHOLD 15   – perceptual hash (0-64 range; 5 is near-identical)
+#   RMSE_THRESHOLD 60.0 – per-channel RMSE (0-255 range)
+macro(add_nanort_image_test name)
+    set(_ctrl "${CONTROL_IMAGES_DIR}/${name}_control.png")
+    set(_base "${CMAKE_CURRENT_BINARY_DIR}/test_output/nrt_${name}_test")
+
+    # Default thresholds – more lenient than the OSMesa tests because NanoRT
+    # uses a different shading model (Phong ray-tracing vs GL rasterization).
+    set(_hash_thresh 15)
+    set(_rmse_thresh 60.0)
+
+    set(_next_is_hash FALSE)
+    set(_next_is_rmse FALSE)
+    foreach(_arg ${ARGN})
+        if(_arg STREQUAL "HASH_THRESHOLD")
+            set(_next_is_hash TRUE)
+            set(_next_is_rmse FALSE)
+        elseif(_arg STREQUAL "RMSE_THRESHOLD")
+            set(_next_is_rmse TRUE)
+            set(_next_is_hash FALSE)
+        elseif(_next_is_hash)
+            set(_hash_thresh ${_arg})
+            set(_next_is_hash FALSE)
+        elseif(_next_is_rmse)
+            set(_rmse_thresh ${_arg})
+            set(_next_is_rmse FALSE)
+        endif()
+    endforeach()
+
+    if(EXISTS "${_ctrl}")
+        add_test(
+            NAME nrt_${name}_image_test
+            COMMAND ${CMAKE_COMMAND}
+                -DEXECUTABLE=$<TARGET_FILE:nrt_${name}>
+                -DTEST_BASE=${_base}
+                -DCONTROL_IMAGE=${_ctrl}
+                -DCOMPARATOR=$<TARGET_FILE:image_comparator>
+                -DHASH_THRESHOLD=${_hash_thresh}
+                -DRMSE_THRESHOLD=${_rmse_thresh}
+                -DTEST_TIMEOUT=${IMAGE_COMPARISON_TEST_TIMEOUT}
+                -P ${CMAKE_SOURCE_DIR}/tests/run_image_test.cmake
+        )
+        set_tests_properties(nrt_${name}_image_test PROPERTIES
             TIMEOUT ${IMAGE_COMPARISON_TEST_TIMEOUT}
         )
     endif()
@@ -283,6 +435,17 @@ add_rendering_image_test(render_procedural_shape RMSE_THRESHOLD 15.0)
 # Text labels increase subpixel variance so a higher RMSE threshold is used.
 add_rendering_image_test(render_arb8_edit_cycle RMSE_THRESHOLD 25.0)
 
+# ---- NanoRT image-comparison tests -------------------------------------------
+# Compare NanoRT (CPU ray-tracing) output against the OSMesa control images.
+# These use the same scenes as the OSMesa tests and should produce substantially
+# similar results despite the different rendering algorithms.
+# render_rt_proxy_shapes has no control image and is omitted here.
+add_nanort_image_test(render_primitives  RMSE_THRESHOLD 60.0)
+add_nanort_image_test(render_materials   RMSE_THRESHOLD 60.0)
+add_nanort_image_test(render_transforms  RMSE_THRESHOLD 60.0)
+add_nanort_image_test(render_colored_cube RMSE_THRESHOLD 60.0)
+add_nanort_image_test(render_scene        RMSE_THRESHOLD 60.0)
+
 # ---- Validation tests: run unconditionally, check exit code only -------------
 # These tests perform their own pixel analysis and return 0/1 directly.
 # run_rendering_test.cmake wraps with xvfb-run when DISPLAY is not set.
@@ -297,6 +460,7 @@ foreach(_vtest render_sphere_position render_checker_texture
                render_vertex_colors render_clip_plane
                render_indexed_face_set render_quad_mesh render_indexed_line_set
                render_lod render_point_set
+               render_background_gradient
                render_scene_texture render_array_multiple_copy
                render_shape_hints render_environment render_texture3
                render_bump_map render_texture_transform

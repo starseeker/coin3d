@@ -129,9 +129,6 @@ SbFontP::SbFontP()
     fontname(""), size(12.0f), scale(1.0f), cacheindex(0)
 {
   memset(&fontinfo, 0, sizeof(fontinfo));
-  // Zero-initialise cache[] before clearCache() so that the NULL-pointer
-  // checks inside clearCache() are safe on a freshly constructed object.
-  memset(cache, 0, sizeof(cache));
   clearCache();
 }
 

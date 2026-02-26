@@ -54,7 +54,6 @@
 #include <Inventor/misc/SoGLDriverDatabase.h>
 
 #include "rendering/SoGL.h"
-#include "threads/threadsutilp.h"
 #include "CoinTidbits.h"
 
 // *************************************************************************
@@ -87,7 +86,6 @@ typedef struct {
 static SbList <so_glext_info *> * extsupportlist;
 static SbList <SoGLDisplayList*> * scheduledeletelist;
 static SbList <so_scheduledeletecb_info*> * scheduledeletecblist;
-static void * glcache_mutex;
 
 // needed to be able to remove the callback in the cleanup function
 // (SoGLCacheContextElement::cleanupContext() is private)
@@ -108,7 +106,6 @@ static void soglcachecontext_cleanup(void)
   delete extsupportlist;
   delete scheduledeletelist;
   delete scheduledeletecblist;
-  CC_MUTEX_DESTRUCT(glcache_mutex);
 
   if (soglcache_contextdestructioncb) {
     SoContextHandler::removeContextDestructionCallback(soglcache_contextdestructioncb, NULL);
@@ -126,8 +123,6 @@ void
 SoGLCacheContextElement::cleanupContext(uint32_t contextid, void * COIN_UNUSED_ARG(userdata))
 {
   int context = (int) contextid;
-
-  CC_MUTEX_LOCK(glcache_mutex);
 
   int i = 0;
   int n = scheduledeletelist->getLength();
@@ -155,8 +150,6 @@ SoGLCacheContextElement::cleanupContext(uint32_t contextid, void * COIN_UNUSED_A
     else i++;
   }
 
-  CC_MUTEX_UNLOCK(glcache_mutex);
-
 }
 
 // *************************************************************************
@@ -173,7 +166,6 @@ SoGLCacheContextElement::initClass(void)
   extsupportlist = new SbList <so_glext_info *>;
   scheduledeletelist = new SbList <SoGLDisplayList*>;
   scheduledeletecblist = new SbList <so_scheduledeletecb_info*>;
-  CC_MUTEX_CONSTRUCT(glcache_mutex);
   coin_atexit((coin_atexit_f *)soglcachecontext_cleanup, CC_ATEXIT_NORMAL);
 
   // add a callback which is called every time a GL-context is
@@ -279,8 +271,6 @@ SoGLCacheContextElement::get(SoState * state)
 int
 SoGLCacheContextElement::getExtID(const char * str)
 {
-  CC_MUTEX_LOCK(glcache_mutex);
-
   SbName extname(str);
   int i, n = extsupportlist->getLength();
   for (i = 0; i < n; i++) {
@@ -291,8 +281,6 @@ SoGLCacheContextElement::getExtID(const char * str)
     info->extname = extname;
     extsupportlist->append(info);
   }
-
-  CC_MUTEX_UNLOCK(glcache_mutex);
 
   return i;
 }
@@ -305,8 +293,6 @@ SoGLCacheContextElement::getExtID(const char * str)
 SbBool
 SoGLCacheContextElement::extSupported(SoState * state, int extid)
 {
-  CC_MUTEX_LOCK(glcache_mutex);
-
   assert(extid >= 0 && extid < extsupportlist->getLength());
 
   so_glext_info * info = (*extsupportlist)[extid];
@@ -315,7 +301,6 @@ SoGLCacheContextElement::extSupported(SoState * state, int extid)
   int n = info->context.getLength();
   for (int i = 0; i < n; i++) {
     if (info->context[i] == currcontext) {
-      CC_MUTEX_UNLOCK(glcache_mutex);
       return info->supported[i];
     }
   }
@@ -323,8 +308,6 @@ SoGLCacheContextElement::extSupported(SoState * state, int extid)
   SbBool supported = SoGLDriverDatabase::isSupported(w, info->extname.getString());
   info->context.append(currcontext);
   info->supported.append(supported);
-
-  CC_MUTEX_UNLOCK(glcache_mutex);
 
   return supported;
 }
@@ -489,9 +472,7 @@ SoGLCacheContextElement::scheduleDelete(SoState * state, class SoGLDisplayList *
     delete dl;
   }
   else {
-    CC_MUTEX_LOCK(glcache_mutex);
     scheduledeletelist->append(dl);
-    CC_MUTEX_UNLOCK(glcache_mutex);
   }
 }
 
@@ -516,9 +497,7 @@ SoGLCacheContextElement::scheduleDeleteCallback(const uint32_t contextid,
   info->cb = cb;
   info->closure = closure;
 
-  CC_MUTEX_LOCK(glcache_mutex);
   scheduledeletecblist->append(info);
-  CC_MUTEX_UNLOCK(glcache_mutex);
 }
 
 /*!
@@ -536,8 +515,6 @@ SoGLCacheContextElement::scheduleDeleteCallback(const uint32_t contextid,
 uint32_t
 SoGLCacheContextElement::getUniqueCacheContext(void)
 {
-  CC_MUTEX_LOCK(glcache_mutex);
   uint32_t id = ++biggest_cache_context_id;
-  CC_MUTEX_UNLOCK(glcache_mutex);
   return id;
 }

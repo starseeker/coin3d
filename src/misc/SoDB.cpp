@@ -1182,7 +1182,9 @@ SoDB::readAllWrapper(SoInput * in, const SoType & grouptype)
     return NULL;
   }
 
+#ifndef NDEBUG
   const int stackdepth = in->filestack.getLength();
+#endif
 
   SoGroup * root = (SoGroup *)grouptype.createInstance();
   SoNode * topnode;
@@ -1235,8 +1237,10 @@ SoDB::readAllWrapper(SoInput * in, const SoType & grouptype)
                  // the stack
 
   // Detect problems with missing pops from the SoInput file stack.
+#ifndef NDEBUG
   assert((stackdepth == 1 && in->filestack.getLength() == 1) ||
          (stackdepth - 1 == in->filestack.getLength()));
+#endif
 
   // Strip off extra root group node if it was unnecessary (i.e. if
   // the file only had a single top-level root, and it was of the same
@@ -1556,7 +1560,7 @@ SoDB::createRoute(SoNode * fromnode, const char * eventout,
       }
     }
 
-    SbBool ok;
+    [[maybe_unused]] SbBool ok;
     if (from) ok = to->connectFrom(from, notnotify, append);
     else ok = to->connectFrom(output, notnotify, append);
     // Both known possible failure points are caught above.
@@ -1641,12 +1645,49 @@ SoDB::getContextManager(void)
   return global_context_manager;
 }
 
+/*!
+  Replace the active context manager at runtime without triggering a full
+  re-initialisation of the library.  The caller is responsible for ensuring
+  that no render is in progress when this is called.  Passing NULL is a no-op.
+
+  \since Coin 4.0
+*/
+void
+SoDB::setContextManager(ContextManager * manager)
+{
+  if (manager) {
+    global_context_manager = manager;
+  }
+}
+
 // C-style helper function for glue layer to access context manager
 // This avoids circular dependencies between glue and SoDB
 extern "C" {
   void* coin_get_context_manager(void) {
     return SoDB::getContextManager();
   }
+}
+
+/* -----------------------------------------------------------------------
+ * SoDB::createOSMesaContextManager() factory
+ *
+ * The actual implementation lives in SoDBOSMesa.cpp which is compiled with
+ * the OSMesa include paths.  In OSMesa-capable builds that TU exports the
+ * C helper coin_create_osmesa_context_manager_impl(); we forward to it.
+ * In builds without OSMesa support the function returns nullptr.
+ * --------------------------------------------------------------------- */
+#if defined(COIN3D_OSMESA_BUILD) || defined(COIN3D_BUILD_DUAL_GL)
+extern "C" SoDB::ContextManager * coin_create_osmesa_context_manager_impl();
+#endif
+
+SoDB::ContextManager *
+SoDB::createOSMesaContextManager()
+{
+#if defined(COIN3D_OSMESA_BUILD) || defined(COIN3D_BUILD_DUAL_GL)
+  return coin_create_osmesa_context_manager_impl();
+#else
+  return nullptr;
+#endif
 }
 
 /* *********************************************************************** */

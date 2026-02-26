@@ -38,7 +38,6 @@
 #include <string>
 #include <functional>
 
-#include "threads/threadsutilp.h"
 #include "CoinTidbits.h"
 #include "config.h"
 
@@ -90,7 +89,6 @@ struct NamemapBucketEntry {
   struct NamemapBucketEntry * next;
 };
 
-static void * access_mutex = NULL;
 static struct NamemapBucketEntry ** nametable = NULL;
 static struct NamemapMemChunk * headchunk = NULL;
 
@@ -121,8 +119,6 @@ namemap_cleanup(void)
   }
   free(nametable);
   nametable = static_cast<struct NamemapBucketEntry **>(NULL);
-
-  CC_MUTEX_DESTRUCT(access_mutex);
 }
 
 } // extern "C"
@@ -177,9 +173,6 @@ namemap_find_or_add_string(const char * str, SbBool addifnotfound)
   unsigned long h, i;
   struct NamemapBucketEntry * entry;
 
-  if (access_mutex == NULL) { CC_MUTEX_CONSTRUCT(access_mutex); }
-  CC_MUTEX_LOCK(access_mutex);
-
   if (nametable == NULL) { namemap_init(); }
   assert(nametable != static_cast<struct NamemapBucketEntry **>(NULL) && "name hash dead");
 
@@ -201,7 +194,6 @@ namemap_find_or_add_string(const char * str, SbBool addifnotfound)
     nametable[i] = entry;
   }
 
-  CC_MUTEX_UNLOCK(access_mutex);
   return entry ? entry->str : NULL;
 }
 

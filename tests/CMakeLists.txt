@@ -1,5 +1,5 @@
 # =============================================================================
-# Coin3D Test Suite
+# Obol Test Suite
 #
 # Directory structure:
 #   tests/
@@ -14,28 +14,19 @@
 #   │   ├── headless_utils.h     headless rendering helpers
 #   │   ├── scene_graph_utils.h/.cpp  scene-graph test helpers
 #   │   └── stb_image.h          public-domain PNG loader (fallback)
-#   ├── threads/                 threading API tests
+#   ├── testlib/                 unified test registry (obol_testlib)
 #   ├── rendering/               visual regression tests (OSMesa / GLX)
-#   ├── actions/                 SoAction sub-class tests (non-visual)
-#   ├── base/                    SbXxx base-type tests
-#   ├── engines/                 SoEngine tests
-#   ├── fields/                  SoField tests
-#   ├── io/                      I/O (SoDB read/write) tests
-#   ├── nodes/                   SoNode tests
-#   └── sensors/                 SoSensor tests
+#   └── obol_test.cpp            unified CLI test runner
 #
 # Adding new tests
 # ----------------
 # Non-visual unit tests:
-#   1. Create tests/<category>/test_<name>.cpp using the SimpleTest framework
-#      (see test_utils.h for the API).
-#   2. Either append to the SIMPLE_TESTS list below (for top-level tests) or
-#      add a CMakeLists.txt in the category subdirectory and call
-#      add_subdirectory() below.
+#   1. Add a REGISTER_TEST entry in tests/testlib/unit_test_wrappers.cpp
+#      (see test_registry.h for the API).
 #
 # Visual regression tests:
-#   1. Write a test executable that renders a scene and writes an SGI RGB
-#      file to argv[1]+".rgb".
+#   1. Write a test executable in tests/rendering/ that renders a scene and
+#      writes an SGI RGB file to argv[1]+".rgb".
 #   2. Build it and run generate_control_images.sh to create the control PNG.
 #   3. Call add_image_test() in this file to register it with CTest.
 #
@@ -56,74 +47,62 @@ target_include_directories(simple_test_utils PUBLIC
     ${PROJECT_BINARY_DIR}/include
     ${COIN_TARGET_INCLUDE_DIRECTORIES}
 )
-
-# -----------------------------------------------------------------------
-# Existing top-level unit tests (SimpleTest framework)
-# -----------------------------------------------------------------------
-set(SIMPLE_TESTS
-    test_actions
-    test_nodes
-    test_fields
-    test_events
-    test_base
-    test_engines
-    test_sensors
-    test_comprehensive
-    test_legacy_integration
-    test_hud
-    test_hardcopy
-)
-
-foreach(test_name ${SIMPLE_TESTS})
-    add_executable(${test_name} ${test_name}.cpp)
-    target_link_libraries(${test_name} simple_test_utils Coin ${COIN_TARGET_LINK_LIBRARIES})
-    target_include_directories(${test_name} PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}
-        ${PROJECT_SOURCE_DIR}/include
-        ${PROJECT_SOURCE_DIR}/include/Inventor/annex
-        ${PROJECT_BINARY_DIR}/include
-        ${COIN_TARGET_INCLUDE_DIRECTORIES}
-    )
-    if(USE_PTHREAD)
-        target_link_libraries(${test_name} pthread)
-    endif()
-    add_test(NAME ${test_name} COMMAND ${test_name})
-endforeach()
+# headless_utils.h needs the OSMesa submodule headers for pure osmesa builds
+if(COIN3D_USE_OSMESA)
+    target_include_directories(simple_test_utils PUBLIC
+        "${PROJECT_SOURCE_DIR}/external/osmesa/include")
+endif()
 
 # -----------------------------------------------------------------------
 # Image comparison thresholds (defined before subdirectories so that
-# tests/rendering/ and other subdirectories can reference them during
-# the first configure pass before the definitions below are reached)
+# tests/rendering/ can reference them during the first configure pass)
 # -----------------------------------------------------------------------
 set(IMAGE_COMPARISON_HASH_THRESHOLD "5"   CACHE STRING "Perceptual hash threshold (0-64)")
 set(IMAGE_COMPARISON_RMSE_THRESHOLD "5.0" CACHE STRING "RMSE threshold (0-255)")
 set(IMAGE_COMPARISON_TEST_TIMEOUT   "30"  CACHE STRING "Per-test timeout in seconds")
 
 # -----------------------------------------------------------------------
-# Subdirectory tests
+# Test library (shared registry, scene factories, unit-test wrappers)
+# Must come before any target that links obol_testlib, but after
+# simple_test_utils is defined above.
 # -----------------------------------------------------------------------
-add_subdirectory(threads)
-add_subdirectory(base)
-add_subdirectory(fields)
-add_subdirectory(actions)
-add_subdirectory(nodes)
-add_subdirectory(io)
-add_subdirectory(sensors)
-add_subdirectory(engines)
+add_subdirectory(testlib)
+
+# -----------------------------------------------------------------------
+# Unified CLI runner
+# -----------------------------------------------------------------------
+add_executable(obol_test obol_test.cpp)
+# --whole-archive ensures the static-initialiser REGISTER_TEST blocks in
+# unit_test_wrappers.cpp (and test_scenes.cpp) are not discarded by the
+# linker even though obol_test.cpp has no direct symbol references to them.
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    target_link_libraries(obol_test
+        -Wl,--whole-archive obol_testlib -Wl,--no-whole-archive
+        Coin ${COIN_TARGET_LINK_LIBRARIES}
+    )
+else()
+    target_link_libraries(obol_test obol_testlib Coin ${COIN_TARGET_LINK_LIBRARIES})
+endif()
+target_include_directories(obol_test PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/testlib
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils
+    ${PROJECT_SOURCE_DIR}/include
+    ${PROJECT_SOURCE_DIR}/include/Inventor/annex
+    ${PROJECT_BINARY_DIR}/include
+    ${COIN_TARGET_INCLUDE_DIRECTORIES}
+)
+if(USE_PTHREAD)
+    target_link_libraries(obol_test pthread)
+endif()
+add_test(NAME obol_test_all COMMAND obol_test)
+
+# -----------------------------------------------------------------------
+# Visual regression tests (rendering/ subdirectory)
+# These require standalone executables as each renders a scene to an image
+# file that is then compared against a control PNG.
+# -----------------------------------------------------------------------
 add_subdirectory(rendering)
-add_subdirectory(draggers)
-add_subdirectory(manips)
-add_subdirectory(events)
-add_subdirectory(projectors)
-add_subdirectory(errors)
-add_subdirectory(caches)
-add_subdirectory(elements)
-add_subdirectory(misc)
-add_subdirectory(details)
-add_subdirectory(bundles)
-add_subdirectory(tools)
-add_subdirectory(profiler)
-add_subdirectory(lists)
 
 # -----------------------------------------------------------------------
 # Image comparison utilities
@@ -244,15 +223,4 @@ if(PNG_FOUND)
         COMMENT "Generating PNG control images for visual regression tests"
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
-endif()
-
-# -----------------------------------------------------------------------
-# Compiler-warning suppression
-# -----------------------------------------------------------------------
-include(CheckCXXCompilerFlag)
-CHECK_CXX_COMPILER_FLAG(-Wtautological-compare DISABLE_WARNING_TAUTOLOGCOMPARE)
-if(DISABLE_WARNING_TAUTOLOGCOMPARE)
-    foreach(test_name ${SIMPLE_TESTS})
-        target_compile_options(${test_name} PUBLIC -Wno-tautological-compare)
-    endforeach()
 endif()

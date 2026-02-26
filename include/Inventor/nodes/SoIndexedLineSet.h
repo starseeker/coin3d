@@ -40,6 +40,8 @@
 #define SO_END_LINE_INDEX (-1)
 #endif // !SO_END_LINE_INDEX
 
+class SoCoordinateElement;
+class SoSeparator;
 class SoIndexedLineSetP;
 
 class COIN_DLL_API SoIndexedLineSet : public SoIndexedShape {
@@ -54,6 +56,9 @@ public:
   virtual void GLRender(SoGLRenderAction * action);
   virtual void getBoundingBox(SoGetBoundingBoxAction * action);
   virtual void getPrimitiveCount(SoGetPrimitiveCountAction * action);
+
+  SoSeparator * createCylinderProxy(const SoCoordinateElement * coords,
+                                    float cylRadius) const;
 
 protected:
   virtual ~SoIndexedLineSet();

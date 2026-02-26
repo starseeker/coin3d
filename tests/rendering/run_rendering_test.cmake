@@ -22,6 +22,9 @@ endif()
 # Build the command, wrapping with xvfb-run when no display is available
 set(_exec_cmd "${EXECUTABLE}")
 if(UNIX AND NOT APPLE)
+    # Wrap with xvfb-run when no display is available.
+    # Do NOT set COIN_FULL_INDIRECT_RENDERING: it disables FBO support in
+    # SoGLContext_has_framebuffer_objects() which breaks CoinOffscreenGLCanvas.
     if(NOT DEFINED ENV{DISPLAY} OR "$ENV{DISPLAY}" STREQUAL "")
         find_program(_xvfb_run NAMES xvfb-run)
         if(_xvfb_run)
@@ -32,10 +35,6 @@ if(UNIX AND NOT APPLE)
                 "${EXECUTABLE}")
         endif()
     endif()
-    # Standard GLX-headless environment hints
-    set(ENV{COIN_GLX_PIXMAP_DIRECT_RENDERING} "1")
-    set(ENV{COIN_FULL_INDIRECT_RENDERING}      "1")
-    set(ENV{COIN_GLXGLUE_NO_PBUFFERS}          "1")
 endif()
 
 message("Running: ${EXECUTABLE}")

@@ -56,8 +56,6 @@
 #include <Inventor/errors/SoDebugError.h>
 #endif // COIN_DEBUG
 
-#include "threads/threadsutilp.h"
-
 // Private container class.
 class CatalogItem {
 public:
@@ -513,7 +511,7 @@ SoNodekitCatalog::addEntry(const SbName & name, SoType type,
                          "new entry: \"%s\"", name.getString());
 #endif
 
-  CC_GLOBAL_LOCK;
+
   if (!this->hasEntry(name)) {
     assert((name != "") && "Empty name not allowed");
     assert((this->getPartNumber( this->items, name ) == SO_CATALOG_NAME_NOT_FOUND ) && "partname already in use" );
@@ -581,7 +579,7 @@ SoNodekitCatalog::addEntry(const SbName & name, SoType type,
     if( this->delayeditems.getLength() == 0 )
       SoNodekitCatalogPropagateDefaultInit( this );
   }
-  CC_GLOBAL_UNLOCK;
+
   return TRUE;
 }
 
@@ -643,7 +641,7 @@ SoNodekitCatalog::addListItemType(int part, SoType type)
 void
 SoNodekitCatalog::addListItemType(const SbName & name, SoType type)
 {
-  CC_GLOBAL_LOCK;
+
   if (!this->hasListItemType(name, type)) {
     // FIXME: If a part name is invalid, this procedure bails out
     // elsewhere on an assert. The check and debug comment should be
@@ -659,7 +657,7 @@ SoNodekitCatalog::addListItemType(const SbName & name, SoType type)
 #endif
     }
   }
-  CC_GLOBAL_UNLOCK;
+
 }
 
 /*!
@@ -671,7 +669,7 @@ void
 SoNodekitCatalog::narrowTypes(const SbName & name,
                               SoType newtype, SoType newdefaulttype)
 {
-  CC_GLOBAL_LOCK;
+
 
   assert(this->delayeditems.getLength() == 0);
 
@@ -687,7 +685,7 @@ SoNodekitCatalog::narrowTypes(const SbName & name,
   this->items[part]->type = newtype;
   this->items[part]->defaulttype = newdefaulttype;
 
-  CC_GLOBAL_UNLOCK;
+
 }
 
 /*!

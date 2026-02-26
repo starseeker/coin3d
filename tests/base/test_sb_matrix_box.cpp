@@ -265,7 +265,7 @@ int main()
         SbRotation so = SbRotation::identity();
 
         SbMatrix m;
-        m.setTransform(t, r, s);
+        m.setTransform(t, r, s, so);
 
         SbVec3f outT;
         SbRotation outR, outSO;

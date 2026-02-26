@@ -105,13 +105,9 @@ bool testInventorFileIO() {
  * @brief Test memory error tracking (simplified from testsuite)
  */
 bool testMemoryManagement() {
-    // Test reference counting
-    int initialRefCount = 0;
-    
     {
         SoSeparator* root = new SoSeparator;
         root->ref();
-        initialRefCount = root->getRefCount();
         
         // Add a child
         SoCube* cube = new SoCube;

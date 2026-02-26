@@ -83,8 +83,6 @@
 #include "nodes/SoUnknownNode.h"
 #include "fields/SoGlobalField.h"
 #include "misc/SbHash.h"
-#include "threads/threadsutilp.h"
-
 #include "io/SoInputP.h"
 #include "io/SoWriterefCounter.h"
 #include "config.h"
@@ -206,11 +204,9 @@ SoBase::SoBase(void)
   // For debugging, store a pointer to all SoBase-instances.
 #if COIN_DEBUG
   if (SoBase::PImpl::trackbaseobjects) {
-    CC_MUTEX_LOCK(SoBase::PImpl::allbaseobj_mutex);
     //void * dummy;
     assert(SoBase::PImpl::allbaseobj->find(this)==SoBase::PImpl::allbaseobj->const_end());
     (*SoBase::PImpl::allbaseobj)[this]=NULL;
-    CC_MUTEX_UNLOCK(SoBase::PImpl::allbaseobj_mutex);
   }
 #endif // COIN_DEBUG
 }
@@ -243,10 +239,8 @@ SoBase::~SoBase()
 
 #if COIN_DEBUG
   if (SoBase::PImpl::trackbaseobjects) {
-    CC_MUTEX_LOCK(SoBase::PImpl::allbaseobj_mutex);
     const size_t ok = SoBase::PImpl::allbaseobj->erase(this);
     assert(ok && "something fishy going on in debug object tracking");
-    CC_MUTEX_UNLOCK(SoBase::PImpl::allbaseobj_mutex);
   }
 #endif // COIN_DEBUG
 }
@@ -369,13 +363,6 @@ SoBase::initClass(void)
   SoBase::PImpl::refwriteprefix = new SbString("+");
   SoBase::PImpl::allbaseobj = new SoBaseSet;
 
-  CC_MUTEX_CONSTRUCT(SoBase::PImpl::mutex);
-  CC_MUTEX_CONSTRUCT(SoBase::PImpl::obj2name_mutex);
-  CC_MUTEX_CONSTRUCT(SoBase::PImpl::name2obj_mutex);
-  CC_MUTEX_CONSTRUCT(SoBase::PImpl::allbaseobj_mutex);
-  CC_MUTEX_CONSTRUCT(SoBase::PImpl::auditor_mutex);
-  CC_MUTEX_CONSTRUCT(SoBase::PImpl::global_mutex);
-
   // debug
   auto str = CoinInternal::getEnvironmentVariable("COIN_DEBUG_TRACK_SOBASE_INSTANCES");
   SoBase::PImpl::trackbaseobjects = str.has_value() && std::atoi(str->c_str()) > 0;
@@ -409,13 +396,6 @@ SoBase::cleanClass(void)
   delete SoBase::PImpl::refwriteprefix; SoBase::PImpl::refwriteprefix = NULL;
 
   SoBase::classTypeId STATIC_SOTYPE_INIT;
-
-  CC_MUTEX_DESTRUCT(SoBase::PImpl::mutex);
-  CC_MUTEX_DESTRUCT(SoBase::PImpl::obj2name_mutex);
-  CC_MUTEX_DESTRUCT(SoBase::PImpl::allbaseobj_mutex);
-  CC_MUTEX_DESTRUCT(SoBase::PImpl::name2obj_mutex);
-  CC_MUTEX_DESTRUCT(SoBase::PImpl::auditor_mutex);
-  CC_MUTEX_DESTRUCT(SoBase::PImpl::global_mutex);
 
   SoBase::PImpl::tracerefs = FALSE;
   SoBase::PImpl::writecounter = 0;
@@ -477,12 +457,10 @@ SoBase::ref(void) const
 
   if (COIN_DEBUG) this->assertAlive();
 
-  CC_MUTEX_LOCK(SoBase::PImpl::mutex);
 #if COIN_DEBUG
   int32_t currentrefcount = this->objdata.referencecount;
 #endif // COIN_DEBUG
   this->objdata.referencecount++;
-  CC_MUTEX_UNLOCK(SoBase::PImpl::mutex);
 
 #if COIN_DEBUG
   if (this->objdata.referencecount < currentrefcount) {
@@ -529,11 +507,8 @@ SoBase::unref(void) const
 
   if (COIN_DEBUG) this->assertAlive();
 
-  CC_MUTEX_LOCK(SoBase::PImpl::mutex);
   this->objdata.referencecount--;
   int refcount = this->objdata.referencecount;
-
-  CC_MUTEX_UNLOCK(SoBase::PImpl::mutex);
 
 #if COIN_DEBUG
   if (SoBase::PImpl::tracerefs) {
@@ -652,10 +627,8 @@ SoBase::getName(void) const
   assert(SoBase::PImpl::obj2name);
 
   //const char * value = NULL;
-  CC_MUTEX_LOCK(SoBase::PImpl::obj2name_mutex);
   SbHash<const SoBase *, const char *>::const_iterator tmp = SoBase::PImpl::obj2name->find(this);
   SbBool found = (tmp != SoBase::PImpl::obj2name->const_end());
-  CC_MUTEX_UNLOCK(SoBase::PImpl::obj2name_mutex);
   return SbName(found ? tmp->obj : "");
 }
 
@@ -736,7 +709,6 @@ SoBase::addName(SoBase * const b, const char * const name)
   assert(name);
 
   SbPList * l;
-  CC_MUTEX_LOCK(SoBase::PImpl::name2obj_mutex);
   SbHash<const char*, SbPList*>::const_iterator tmp = SoBase::PImpl::name2obj->find(name);
   if (tmp==SoBase::PImpl::name2obj->const_end()) {
     // name not used before, create new list
@@ -749,12 +721,9 @@ SoBase::addName(SoBase * const b, const char * const name)
 
   // append this to the list
   l->append(b);
-  CC_MUTEX_UNLOCK(SoBase::PImpl::name2obj_mutex);
 
-  CC_MUTEX_LOCK(SoBase::PImpl::obj2name_mutex);
   // set name of object. SbHash::put() will overwrite old name
   (*SoBase::PImpl::obj2name)[b] = name;
-  CC_MUTEX_UNLOCK(SoBase::PImpl::obj2name_mutex);
 }
 
 /*!
@@ -857,8 +826,6 @@ sobase_audlist_add(void * pointer, void * type, void * closure)
 const SoAuditorList &
 SoBase::getAuditors(void) const
 {
-  CC_MUTEX_LOCK(SoBase::PImpl::auditor_mutex);
-
   if (SoBase::PImpl::auditordict == NULL) {
     SoBase::PImpl::auditordict = new SbHash<const SoBase *, SoAuditorList *>();
     coin_atexit((coin_atexit_f*)SoBase::PImpl::cleanup_auditordict, CC_ATEXIT_NORMAL);
@@ -883,8 +850,6 @@ SoBase::getAuditors(void) const
   for (const auto& pair : this->auditortree) {
     sobase_audlist_add(pair.first, pair.second, l);
   }
-
-  CC_MUTEX_UNLOCK(SoBase::PImpl::auditor_mutex);
 
   return *l;
 }
@@ -966,7 +931,6 @@ SoBase::decrementCurrentWriteCounter(void)
 SoBase *
 SoBase::getNamedBase(const SbName & name, SoType type)
 {
-  CC_MUTEX_LOCK(SoBase::PImpl::name2obj_mutex);
   SbHash<const char*, SbPList*>::const_iterator iter = 
     SoBase::PImpl::name2obj->find((const char *)name);
   if (iter!=SoBase::PImpl::name2obj->const_end()) {
@@ -974,12 +938,10 @@ SoBase::getNamedBase(const SbName & name, SoType type)
     if (l->getLength()) {
       SoBase * b = (SoBase *)((*l)[l->getLength() - 1]);
       if (b->isOfType(type)) {
-        CC_MUTEX_UNLOCK(SoBase::PImpl::name2obj_mutex);
         return b;
       }
     }
   }
-  CC_MUTEX_UNLOCK(SoBase::PImpl::name2obj_mutex);
   return NULL;
 }
 
@@ -992,8 +954,6 @@ SoBase::getNamedBase(const SbName & name, SoType type)
 int
 SoBase::getNamedBases(const SbName & name, SoBaseList & baselist, SoType type)
 {
-  CC_MUTEX_LOCK(SoBase::PImpl::name2obj_mutex);
-
   int matches = 0;
 
   SbHash<const char*, SbPList*>::const_iterator iter = 
@@ -1009,7 +969,6 @@ SoBase::getNamedBases(const SbName & name, SoBaseList & baselist, SoType type)
       }
     }
   }
-  CC_MUTEX_UNLOCK(SoBase::PImpl::name2obj_mutex);
 
   return matches;
 }
@@ -1503,7 +1462,6 @@ SoBase::doNotify(SoNotList * l, const void * auditor, const SoNotRec::Type type)
 void
 SoBase::staticDataLock(void)
 {
-  CC_MUTEX_LOCK(SoBase::PImpl::global_mutex);
 }
 
 /*!
@@ -1514,7 +1472,6 @@ SoBase::staticDataLock(void)
 void
 SoBase::staticDataUnlock(void)
 {
-  CC_MUTEX_UNLOCK(SoBase::PImpl::global_mutex);
 }
 
 /*!

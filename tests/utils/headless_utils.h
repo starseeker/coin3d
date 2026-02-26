@@ -73,9 +73,84 @@
 #define DEFAULT_WIDTH 800
 #define DEFAULT_HEIGHT 600
 
-#ifdef COIN3D_OSMESA_BUILD
+#ifdef COIN3D_NANORT_BUILD
 // ============================================================================
-// OSMesa Backend: For offscreen/headless rendering without display server
+// NanoRT Backend: CPU raytracing, no OpenGL context required
+// ============================================================================
+// Uses SoNanoRTContextManager which overrides SoDB::ContextManager::renderScene()
+// so that SoOffscreenRenderer::render() calls the nanort raytracing pipeline
+// instead of the GL pipeline.  All existing test code (renderToFile,
+// writeToRGB, etc.) works unchanged with this backend.
+#include "nanort_context_manager.h"
+
+/**
+ * Initialize Coin database for headless operation (NanoRT backend).
+ * No OpenGL context is required.
+ */
+inline void initCoinHeadless() {
+    static SoNanoRTContextManager nrt_mgr;
+    SoDB::init(&nrt_mgr);
+    SoNodeKit::init();
+    SoInteraction::init();
+}
+
+/**
+ * Return the single persistent offscreen renderer shared by all headless
+ * examples (NanoRT backend).
+ */
+inline SoOffscreenRenderer* getSharedRenderer() {
+    static SoOffscreenRenderer *s_renderer = nullptr;
+    if (!s_renderer) {
+        SbViewportRegion vp(DEFAULT_WIDTH, DEFAULT_HEIGHT);
+        s_renderer = new SoOffscreenRenderer(vp);
+    }
+    return s_renderer;
+}
+
+/**
+ * Render a scene to an SGI RGB file (NanoRT backend).
+ * Uses SoOffscreenRenderer which dispatches to SoNanoRTContextManager::renderScene().
+ */
+inline bool renderToFile(
+    SoNode *root,
+    const char *filename,
+    int width = DEFAULT_WIDTH,
+    int height = DEFAULT_HEIGHT,
+    const SbColor &backgroundColor = SbColor(0.0f, 0.0f, 0.0f))
+{
+    if (!root || !filename) {
+        fprintf(stderr, "Error: Invalid parameters to renderToFile\n");
+        return false;
+    }
+
+    SoOffscreenRenderer *renderer = getSharedRenderer();
+    SbViewportRegion viewport(width, height);
+    renderer->setViewportRegion(viewport);
+    renderer->setComponents(SoOffscreenRenderer::RGB);
+    renderer->setBackgroundColor(backgroundColor);
+
+    if (!renderer->render(root)) {
+        fprintf(stderr, "Error: Failed to render scene (NanoRT)\n");
+        return false;
+    }
+
+    if (!renderer->writeToRGB(filename)) {
+        fprintf(stderr, "Error: Failed to write to RGB file %s\n", filename);
+        return false;
+    }
+
+    printf("Successfully rendered to %s (%dx%d) [NanoRT]\n",
+           filename, width, height);
+    return true;
+}
+
+#elif defined(COIN3D_OSMESA_BUILD)
+// ============================================================================
+// OSMesa Backend: For offscreen/headless rendering without display server.
+// Used for pure-OSMesa builds only.  In COIN3D_BUILD_DUAL_GL builds the
+// Coin scene traversal still uses system GL symbols, so tests for that build
+// fall through to the system-GL / GLX path below (requires Xvfb).
+// Headers come from the project's own submodule (external/osmesa/include/OSMesa/)
 // ============================================================================
 #include <OSMesa/osmesa.h>
 #include <OSMesa/gl.h>
@@ -135,6 +210,15 @@ public:
     virtual void* createOffscreenContext(unsigned int width, unsigned int height) override {
         auto* ctx = new CoinOSMesaContext(width, height);
         return ctx->isValid() ? ctx : (delete ctx, nullptr);
+    }
+
+    virtual SbBool isOSMesaContext(void* /*context*/) override {
+        /* All contexts created by this manager are OSMesa contexts.
+         * Returning TRUE lets CoinOffscreenGLCanvas call
+         * coingl_register_osmesa_context() so that SoGLContext_instance()
+         * routes to the osmesa_ GL dispatch path instead of the system GL path
+         * (which would crash on NULL glGetString results). */
+        return TRUE;
     }
     
     virtual SbBool makeContextCurrent(void* context) override {

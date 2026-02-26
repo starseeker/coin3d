@@ -43,8 +43,6 @@
   This provides a mechanism for sharing read/write static data.
 */
 
-#define COIN_INTERNAL
-
 #include <Inventor/threads/SbStorage.h>
 #include "threads/threads.h"
 #include "threads/storagep.h"

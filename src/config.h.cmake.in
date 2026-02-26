@@ -8,6 +8,9 @@
 #ifndef COIN_CONFIG_H
 #define COIN_CONFIG_H
 
+// Backend toggle for OSMesa
+#cmakedefine HAVE_OSMESA
+
 /* =========================================================================
  * Feature toggles (previously in setup.h)
  * These control which optional subsystems are compiled into the library.

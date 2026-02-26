@@ -1,15 +1,12 @@
 cmake_minimum_required(VERSION 3.16)
 
 # Modern CMake project definition with metadata
-project(Coin
-  VERSION 4.0.5
-  DESCRIPTION "A high-level 3D visualization library with Open Inventor 2.1 API"
-  HOMEPAGE_URL "https://github.com/coin3d/coin"
+project(Obol
+  VERSION 1.0.0
+  DESCRIPTION "A 3D visualization library implementing a subset of the Open Inventor 2.1 API (with some variations)"
+  HOMEPAGE_URL "https://github.com/starseeker/obol"
   LANGUAGES C CXX
   )
-
-add_definitions(-Wall)
-add_definitions(-g)
 
 # Set modern CMake policies
 cmake_policy(SET CMP0054 NEW)  # Only interpret if() arguments as variables or keywords when unquoted
@@ -81,33 +78,39 @@ endif()
 
 # Core build options
 option(BUILD_SHARED_LIBS "Build shared library when ON, static when OFF" ON)
-option(COIN_BUILD_TESTS "Build unit tests" ON)
-option(COIN_BUILD_EXAMPLES "Build examples" OFF)
+option(OBOL_BUILD_TESTS "Build unit tests" ON)
+option(OBOL_BUILD_VIEWER "Build the FLTK scene viewer (obol_viewer); requires FLTK" OFF)
 
-# Compatibility alias for legacy code
+# Internal alias used throughout src/ for Windows shared/static detection
 set(COIN_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
 
 # Documentation options removed - not needed for minimal library build
 
 # Feature options
-option(COIN3D_USE_OSMESA "Build against OSMesa for offscreen/headless rendering" ON)
+# Backend selection:
+#   COIN3D_USE_OSMESA=ON          → OSMesa-only (headless, no system GL)
+#   COIN3D_USE_SYSTEM_ONLY=ON     → system OpenGL only (no OSMesa)
+#   default (both OFF)            → auto-detect; dual mode when both are available
+option(COIN3D_USE_OSMESA "Build against OSMesa only for offscreen/headless rendering" OFF)
+option(COIN3D_USE_SYSTEM_ONLY "Build against system OpenGL only (no OSMesa fallback)" OFF)
+option(COIN3D_BUILD_DUAL_GL "Build with both system-OpenGL and OSMesa backends in a single library" OFF)
 option(COIN_THREADSAFE "Enable thread safe render traversals" ON)
 
 # Component options
 option(HAVE_NODEKITS "Enable NodeKit support" ON)
 option(HAVE_DRAGGERS "Enable Dragger support" ON)
 option(HAVE_MANIPULATORS "Enable Manipulator support" ON)
-option(COIN_PROFILING "Enable profiling subsystem" OFF)
+option(OBOL_PROFILING "Enable profiling subsystem" OFF)
 
 # External dependencies
 option(USE_EXCEPTIONS "Compile with exceptions (g++ only)" ON)
 
 # Code coverage (GCC/Clang only; builds with --coverage flags and provides a
 # 'coverage' target that runs CTest then generates an lcov HTML report)
-option(COIN_COVERAGE "Enable code coverage instrumentation (GCC/Clang)" OFF)
+option(OBOL_COVERAGE "Enable code coverage instrumentation (GCC/Clang)" OFF)
 
 # Build optimization options
-option(COIN_USE_PRECOMPILED_HEADERS "Use precompiled headers to speed up compilation" ON)
+option(OBOL_USE_PRECOMPILED_HEADERS "Use precompiled headers to speed up compilation" ON)
 
 # Thread debugging (requires C++11 thread support)
 check_include_file_cxx(thread HAVE_STD_THREAD)
@@ -129,6 +132,44 @@ set(COIN_TARGET_INCLUDE_DIRECTORIES)
 set(COIN_TARGET_LINK_LIBRARIES_GL)
 
 # OpenGL backend selection
+# -----------------------------------------------------------------------
+# Auto-detection when neither OSMESA-only nor SYSTEM-only is forced:
+#   1. Check for system OpenGL and for the OSMesa submodule
+#   2. If both are available → enable DUAL GL (one library, both backends)
+#   3. If only OSMesa submodule is available → OSMesa-only mode
+#   4. If only system GL is available → system-only mode
+# The user can override by setting COIN3D_USE_OSMESA=ON (osmesa only)
+# or COIN3D_USE_SYSTEM_ONLY=ON (system GL only) before configuring.
+#
+# NOTE: system libosmesa6-dev is intentionally NOT used for auto-detection.
+# The project requires its own name-mangled OSMesa build (external/osmesa
+# submodule with USE_MGL_NAMESPACE).  The submodule include path
+# <OSMesa/osmesa.h> was chosen specifically to avoid pulling in the
+# system header at <GL/osmesa.h>, which uses un-mangled gl* symbols
+# incompatible with a dual system-GL+OSMesa build.
+# -----------------------------------------------------------------------
+if(NOT COIN3D_USE_OSMESA AND NOT COIN3D_USE_SYSTEM_ONLY AND NOT COIN3D_BUILD_DUAL_GL)
+  find_package(OpenGL QUIET)
+  # "OSMesa available" means our submodule is present (not system osmesa)
+  if(EXISTS "${PROJECT_SOURCE_DIR}/external/osmesa/CMakeLists.txt")
+    set(_have_osmesa_submodule TRUE)
+  else()
+    set(_have_osmesa_submodule FALSE)
+  endif()
+  if(OpenGL_FOUND AND _have_osmesa_submodule)
+    set(COIN3D_BUILD_DUAL_GL ON CACHE BOOL
+        "Build with both system-OpenGL and OSMesa backends in a single library" FORCE)
+    message(STATUS "Auto-detected system OpenGL + OSMesa submodule: enabling DUAL GL mode")
+  elseif(_have_osmesa_submodule)
+    set(COIN3D_USE_OSMESA ON CACHE BOOL
+        "Build against OSMesa only for offscreen/headless rendering" FORCE)
+    message(STATUS "Auto-detected OSMesa submodule only: enabling OSMesa-only mode")
+  else()
+    # System-only (OpenGL required below will error if not present)
+    message(STATUS "Auto-detected: system OpenGL only (no OSMesa submodule found)")
+  endif()
+endif()
+
 if(COIN3D_USE_OSMESA)
   # OSMesa backend for offscreen/headless rendering
   find_package(OSMesa REQUIRED)
@@ -150,7 +191,7 @@ if(COIN3D_USE_OSMESA)
     message(STATUS "Using OSMesa for offscreen/headless rendering")
   endif()
 else()
-  # System OpenGL backend (default)
+  # System OpenGL backend (default or SYSTEM_ONLY)
   find_package(OpenGL REQUIRED)
   set(HAVE_OPENGL 1)
 
@@ -183,6 +224,36 @@ else()
 endif()
 
 list(APPEND COIN_TARGET_LINK_LIBRARIES ${COIN_TARGET_LINK_LIBRARIES_GL})
+
+# Dual-GL build: also find and store OSMesa libraries separately so
+# gl_osmesa.cpp can be compiled against them alongside system GL.
+# Our FindOSMesa.cmake only looks at the external/osmesa submodule, which
+# provides the name-mangled (mgl*) build required by dual GL.
+if(COIN3D_BUILD_DUAL_GL)
+  if(COIN3D_USE_OSMESA)
+    message(FATAL_ERROR "COIN3D_BUILD_DUAL_GL and COIN3D_USE_OSMESA are mutually exclusive. "
+            "DUAL GL uses system OpenGL as primary with OSMesa as a secondary backend.")
+  endif()
+  find_package(OSMesa REQUIRED)
+  if(NOT OSMesa_FOUND)
+    message(FATAL_ERROR "COIN3D_BUILD_DUAL_GL requires the external/osmesa submodule.\n"
+            "Run: git submodule update --init --recursive")
+  endif()
+  # Collect OSMesa include dirs and link libraries for the per-file target
+  if(TARGET OSMesa::OSMesa)
+    get_target_property(_osmesa_inc OSMesa::OSMesa INTERFACE_INCLUDE_DIRECTORIES)
+    set(COIN_OSMESA_INCLUDE_DIRS "${_osmesa_inc}")
+    set(COIN_OSMESA_LIBRARIES OSMesa::OSMesa)
+  elseif(TARGET osmesa_interface)
+    set(COIN_OSMESA_INCLUDE_DIRS "${OSMesa_INCLUDE_DIRS}")
+    set(COIN_OSMESA_LIBRARIES osmesa_interface)
+  else()
+    set(COIN_OSMESA_INCLUDE_DIRS "${OSMesa_INCLUDE_DIRS}")
+    set(COIN_OSMESA_LIBRARIES "${OSMesa_LIBRARIES}")
+  endif()
+  add_definitions(-DCOIN3D_BUILD_DUAL_GL)
+  message(STATUS "Dual-GL build enabled: system OpenGL + OSMesa in one library")
+endif()
 
 # Set library output name based on backend selection
 if(COIN3D_USE_OSMESA)
@@ -421,7 +492,7 @@ endif()
 # ============================================================================
 # Code coverage instrumentation flags
 #
-# When COIN_COVERAGE=ON (and the compiler is GCC or Clang), add --coverage
+# When OBOL_COVERAGE=ON (and the compiler is GCC or Clang), add --coverage
 # to the compile and link flags for the entire project.  This must be done
 # BEFORE the source subdirectories are added so that the Coin library and all
 # test executables are instrumented.
@@ -430,7 +501,7 @@ endif()
 #   cmake --build <dir> --target coverage
 # to execute the test suite and generate an lcov HTML report.
 # ============================================================================
-if(COIN_COVERAGE)
+if(OBOL_COVERAGE)
   if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang" OR
      CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     find_program(LCOV_EXECUTABLE    lcov    DOC "lcov coverage tool")
@@ -443,14 +514,14 @@ if(COIN_COVERAGE)
       add_link_options(--coverage)
     else()
       message(WARNING
-        "COIN_COVERAGE=ON but lcov/genhtml not found – coverage disabled. "
+        "OBOL_COVERAGE=ON but lcov/genhtml not found – coverage disabled. "
         "Install with: sudo apt-get install lcov")
-      set(COIN_COVERAGE OFF CACHE BOOL "" FORCE)
+      set(OBOL_COVERAGE OFF CACHE BOOL "" FORCE)
     endif()
   else()
     message(WARNING
-      "COIN_COVERAGE=ON but compiler is not GCC/Clang – coverage disabled.")
-    set(COIN_COVERAGE OFF CACHE BOOL "" FORCE)
+      "OBOL_COVERAGE=ON but compiler is not GCC/Clang – coverage disabled.")
+    set(OBOL_COVERAGE OFF CACHE BOOL "" FORCE)
   endif()
 endif()
 
@@ -461,11 +532,72 @@ endif()
 add_subdirectory(include)
 add_subdirectory(src)
 
-if(COIN_BUILD_EXAMPLES)
-  add_subdirectory(examples)
-endif()
+if(OBOL_BUILD_VIEWER)
+  # ---- FLTK ----------------------------------------------------------------
+  find_package(FLTK REQUIRED)
 
-if(COIN_BUILD_TESTS)
+  # ---- Viewer executable ---------------------------------------------------
+  add_executable(obol_viewer tests/obol_viewer.cpp)
+
+  target_include_directories(obol_viewer PRIVATE
+    ${PROJECT_SOURCE_DIR}/include
+    ${PROJECT_SOURCE_DIR}/include/Inventor/annex
+    ${PROJECT_BINARY_DIR}/include
+    ${PROJECT_SOURCE_DIR}/tests/utils     # headless_utils.h
+    ${COIN_TARGET_INCLUDE_DIRECTORIES}
+    ${FLTK_INCLUDE_DIRS}
+  )
+
+  # Compile definitions matching the Coin library build
+  if(COIN3D_BUILD_DUAL_GL)
+    target_compile_definitions(obol_viewer PRIVATE COIN3D_BUILD_DUAL_GL)
+    # Dual-GL builds enable the OSMesa panel (OBOL_VIEWER_OSMESA_PANEL defined
+    # in obol_viewer.cpp when COIN3D_BUILD_DUAL_GL is set).  The panel uses
+    # SoDB::createOSMesaContextManager() – no direct OSMesa dependency needed.
+  elseif(COIN3D_USE_OSMESA)
+    # Pure-OSMesa build: headless_utils.h uses OSMesa context manager
+    target_compile_definitions(obol_viewer PRIVATE COIN3D_OSMESA_BUILD)
+    target_include_directories(obol_viewer PRIVATE
+      "${PROJECT_SOURCE_DIR}/external/osmesa/include")
+  endif()
+
+  # Optional NanoRT panel: enabled when nanort.h is found in external/nanort/
+  if(EXISTS "${PROJECT_SOURCE_DIR}/external/nanort/nanort.h")
+    target_compile_definitions(obol_viewer PRIVATE OBOL_VIEWER_NANORT)
+    target_include_directories(obol_viewer PRIVATE
+      "${PROJECT_SOURCE_DIR}/external/nanort"
+      "${PROJECT_SOURCE_DIR}/tests/utils"   # nanort_context_manager.h
+    )
+    message(STATUS "obol_viewer: NanoRT panel enabled (external/nanort/nanort.h found)")
+  else()
+    message(STATUS "obol_viewer: NanoRT panel disabled (external/nanort/nanort.h not found)")
+  endif()
+
+  target_link_libraries(obol_viewer
+    PRIVATE
+      Coin
+      ${COIN_TARGET_LINK_LIBRARIES}
+      ${FLTK_LIBRARIES}
+  )
+  # On Linux the viewer includes headless_utils.h which uses GLX symbols for
+  # the system-GL path; link the X/GL libs explicitly when available.
+  if(UNIX AND NOT APPLE)
+    find_package(X11 QUIET)
+    find_package(OpenGL QUIET)
+    if(X11_FOUND)
+      target_link_libraries(obol_viewer PRIVATE ${X11_X11_LIB})
+    endif()
+    if(TARGET OpenGL::GL)
+      target_link_libraries(obol_viewer PRIVATE OpenGL::GL)
+    elseif(OPENGL_gl_LIBRARY)
+      target_link_libraries(obol_viewer PRIVATE ${OPENGL_gl_LIBRARY})
+    endif()
+  endif()
+
+  install(TARGETS obol_viewer RUNTIME DESTINATION bin)
+endif() # OBOL_BUILD_VIEWER
+
+if(OBOL_BUILD_TESTS)
   # Build libpng from the bundled submodule so that rgb_to_png and
   # image_comparator can write / compare PNG control images without
   # requiring a system-installed libpng-dev package.
@@ -495,10 +627,10 @@ endif()
 
 # ============================================================================
 # Code coverage report target (lcov + genhtml)
-# Enabled when -DCOIN_COVERAGE=ON (see flags block above, before add_subdirectory).
+# Enabled when -DOBOL_COVERAGE=ON (see flags block above, before add_subdirectory).
 #
 # Usage:
-#   cmake -DCOIN_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug ...
+#   cmake -DOBOL_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug ...
 #   cmake --build <build_dir>
 #   cmake --build <build_dir> --target coverage
 #
@@ -509,7 +641,7 @@ endif()
 #      third-party code (external/, upstream/).
 #   4. Generates an HTML report in <build>/coverage_report/.
 # ============================================================================
-if(COIN_COVERAGE AND LCOV_EXECUTABLE AND GENHTML_EXECUTABLE)
+if(OBOL_COVERAGE AND LCOV_EXECUTABLE AND GENHTML_EXECUTABLE)
   set(COVERAGE_OUTPUT_DIR "${CMAKE_BINARY_DIR}/coverage_report")
   set(COVERAGE_INFO_FILE  "${CMAKE_BINARY_DIR}/coverage.info")
 

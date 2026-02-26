@@ -16,7 +16,7 @@ file(GENERATE
 
 add_compile_options(-DHAVE_CONFIG_H -DCOIN_INTERNAL -DCOIN_DEBUG=$<CONFIG:Debug>)
 
-if(COIN_PROFILING)
+if(OBOL_PROFILING)
   add_compile_options(-DCOIN_PROFILING)
 endif()
 
@@ -67,7 +67,7 @@ add_subdirectory(doc)
 # ============================================================================
 
 # Enable precompiled headers for all object libraries if requested and supported
-if(COIN_USE_PRECOMPILED_HEADERS AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.16")
+if(OBOL_USE_PRECOMPILED_HEADERS AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.16")
     message(STATUS "Applying precompiled headers to object libraries")
     foreach(_subdir ${COIN_SUBDIRS})
         if(TARGET ${_subdir})
@@ -97,6 +97,17 @@ set(COIN_ADDITIONAL_HDRS
 
 # Create the main library target
 if(COIN_BUILD_SINGLE_LIB)
+    # In single-lib dual-GL builds, both gl_osmesa.cpp and SoDBOSMesa.cpp need
+    # the OSMesa include directories.  Apply them per-file so they don't pollute
+    # the rest of the build (system GL headers and OSMesa headers can conflict).
+    if(COIN3D_BUILD_DUAL_GL AND COIN_OSMESA_INCLUDE_DIRS)
+        foreach(_osmesa_src
+                "${CMAKE_CURRENT_SOURCE_DIR}/glue/gl_osmesa.cpp"
+                "${CMAKE_CURRENT_SOURCE_DIR}/misc/SoDBOSMesa.cpp")
+            set_source_files_properties(${_osmesa_src} PROPERTIES
+                INCLUDE_DIRECTORIES "${COIN_OSMESA_INCLUDE_DIRS}")
+        endforeach()
+    endif()
     add_library(${PROJECT_NAME} ${COIN_SOURCE} ${COIN_ADDITIONAL_HDRS})
 else()
     set(_coin_objects
@@ -132,8 +143,16 @@ else()
         $<TARGET_OBJECTS:tools>
         $<TARGET_OBJECTS:hardcopy>
     )
+    if(COIN3D_BUILD_DUAL_GL)
+        list(APPEND _coin_objects $<TARGET_OBJECTS:glue_osmesa>)
+        list(APPEND _coin_objects $<TARGET_OBJECTS:misc_osmesa>)
+    endif()
     add_library(${PROJECT_NAME} ${COIN_SOURCE} ${COIN_ADDITIONAL_HDRS} ${_coin_objects})
 endif()
+
+# Provide a "Coin" alias so that tests and downstream code can link against
+# the Coin target by its traditional name regardless of the Obol project name.
+add_library(Coin ALIAS ${PROJECT_NAME})
 
 # Set target properties
 set_target_properties(${PROJECT_NAME} PROPERTIES
@@ -152,12 +171,12 @@ endif()
 # ============================================================================
 
 # Enable precompiled headers if requested and supported (CMake 3.16+)
-if(COIN_USE_PRECOMPILED_HEADERS AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.16")
+if(OBOL_USE_PRECOMPILED_HEADERS AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.16")
     message(STATUS "Enabling precompiled headers for faster compilation")
     target_precompile_headers(${PROJECT_NAME} PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}/misc/CoinPCH.h"
     )
-elseif(COIN_USE_PRECOMPILED_HEADERS)
+elseif(OBOL_USE_PRECOMPILED_HEADERS)
     message(WARNING "Precompiled headers requested but require CMake 3.16+. Current version: ${CMAKE_VERSION}")
 endif()
 
@@ -191,6 +210,12 @@ target_include_directories(${PROJECT_NAME}
 
 # Target-specific linking (modern approach)  
 target_link_libraries(${PROJECT_NAME} PRIVATE ${COIN_TARGET_LINK_LIBRARIES})
+
+# For dual-GL builds, also link OSMesa so that osmesa_SoGLContext_* functions
+# can resolve mgl* symbols at runtime.
+if(COIN3D_BUILD_DUAL_GL)
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${COIN_OSMESA_LIBRARIES})
+endif()
 
 if(WIN32)
   if(COIN_BUILD_SHARED_LIBS)

@@ -70,6 +70,10 @@ public:
   virtual void rayPick(SoRayPickAction * action);
   virtual void getPrimitiveCount(SoGetPrimitiveCountAction * action);
 
+  SbBool getTextQuad(SoState * state,
+                     SbVec3f & v0, SbVec3f & v1,
+                     SbVec3f & v2, SbVec3f & v3) const;
+
 protected:
   virtual ~SoText2();
 

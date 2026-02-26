@@ -50,8 +50,8 @@ static void arb8_bbox_r(const float* p,int n,SbVec3f& mn,SbVec3f& mx,void*)
   if(n<24){mn.setValue(-1,-1,-1);mx.setValue(1,1,1);return;}
   float ax=p[0],ay=p[1],az=p[2],bx=p[0],by=p[1],bz=p[2];
   for(int i=1;i<8;++i){
-    if(p[3*i  ]<ax)ax=p[3*i  ];if(p[3*i+1]<ay)ay=p[3*i+1];if(p[3*i+2]<az)az=p[3*i+2];
-    if(p[3*i  ]>bx)bx=p[3*i  ];if(p[3*i+1]>by)by=p[3*i+1];if(p[3*i+2]>bz)bz=p[3*i+2];
+    if(p[3*i  ]<ax){ax=p[3*i  ];} if(p[3*i+1]<ay){ay=p[3*i+1];} if(p[3*i+2]<az){az=p[3*i+2];}
+    if(p[3*i  ]>bx){bx=p[3*i  ];} if(p[3*i+1]>by){by=p[3*i+1];} if(p[3*i+2]>bz){bz=p[3*i+2];}
   }
   mn.setValue(ax,ay,az); mx.setValue(bx,by,bz);
 }

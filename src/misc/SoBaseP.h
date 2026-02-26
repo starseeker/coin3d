@@ -62,18 +62,11 @@ public:
   static const char PROTO_KEYWORD[];
   static const char EXTERNPROTO_KEYWORD[];
 
-  static void * mutex;
-  static void * name2obj_mutex;
-  static void * obj2name_mutex;
-  static void * auditor_mutex;
-  static void * global_mutex;
-
   static SbHash<const SoBase *, SoAuditorList *> * auditordict;
   static SbHash<const char *, SbPList *> * name2obj;
   static SbHash<const SoBase *, const char *> * obj2name;
 
   static SbBool trackbaseobjects;
-  static void * allbaseobj_mutex;
   static SoBaseSet * allbaseobj; // maps from SoBase * to NULL
 
   static SbString * refwriteprefix;

@@ -61,7 +61,7 @@ static const int H = 256;
 // ---------------------------------------------------------------------------
 // Helper: pick via setPoint()
 // ---------------------------------------------------------------------------
-static bool pickPoint(SoNode *root, const SbVec2s &pt,
+[[maybe_unused]] static bool pickPoint(SoNode *root, const SbVec2s &pt,
                       const SbViewportRegion &vp, float radius = 3.0f)
 {
     SoRayPickAction pa(vp);
@@ -87,7 +87,7 @@ static bool pickNormalized(SoNode *root, const SbVec2f &npt,
 // ---------------------------------------------------------------------------
 // Helper: get world-space center of node's bounding box
 // ---------------------------------------------------------------------------
-static SbVec3f getCenter(SoNode *node, const SbViewportRegion &vp)
+[[maybe_unused]] static SbVec3f getCenter(SoNode *node, const SbViewportRegion &vp)
 {
     SoGetBoundingBoxAction bba(vp);
     bba.apply(node);
@@ -97,7 +97,7 @@ static SbVec3f getCenter(SoNode *node, const SbViewportRegion &vp)
 // ---------------------------------------------------------------------------
 // Helper: project 3D world point to viewport pixel
 // ---------------------------------------------------------------------------
-static SbVec2s worldToPixel(const SbVec3f &pt, SoCamera *cam,
+[[maybe_unused]] static SbVec2s worldToPixel(const SbVec3f &pt, SoCamera *cam,
                              const SbViewportRegion &vp)
 {
     SbViewVolume vv = cam->getViewVolume(vp.getViewportAspectRatio());

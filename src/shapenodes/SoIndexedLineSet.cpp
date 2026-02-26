@@ -89,6 +89,11 @@
 #include <Inventor/details/SoLineDetail.h>
 #include <Inventor/caches/SoBoundingBoxCache.h>
 #include <Inventor/misc/SoGLDriverDatabase.h>
+#include <Inventor/elements/SoCoordinateElement.h>
+#include <Inventor/nodes/SoSeparator.h>
+#include <Inventor/nodes/SoTransform.h>
+#include <Inventor/nodes/SoCylinder.h>
+#include <Inventor/SbRotation.h>
 
 #if COIN_DEBUG
 #include <Inventor/errors/SoDebugError.h>
@@ -761,3 +766,62 @@ SoIndexedLineSet::notify(SoNotList * list)
 #undef LOCK_VAINDEXER
 #undef PRIVATE
 #undef UNLOCK_VAINDEXER
+
+/*!
+  Creates a scene graph of SoCylinder nodes that approximate this indexed line
+  set for use in ray-tracing backends that cannot render line geometry directly.
+
+  Each line segment encoded in the coordIndex field is represented by a
+  cylinder of radius \a cylRadius aligned along the segment and positioned at
+  its midpoint.  The caller owns the returned separator and must unref it when
+  done.
+
+  \a coords must be the coordinate element obtained from the traversal state.
+
+  Use SoLineSet::lineWidthToWorldRadius() to convert a pixel-space line width
+  to an appropriate world-space cylinder radius for a given view.
+
+  \sa SoLineSet::createCylinderProxy(), SoLineSet::lineWidthToWorldRadius()
+*/
+SoSeparator *
+SoIndexedLineSet::createCylinderProxy(const SoCoordinateElement * coords,
+                                      float cylRadius) const
+{
+  SoSeparator * proxy = new SoSeparator;
+  proxy->ref();
+
+  const int32_t * cidx = this->coordIndex.getValues(0);
+  const int n = this->coordIndex.getNum();
+
+  int32_t prev = -1;
+  for (int i = 0; i <= n; ++i) {
+    const int32_t ci = (i < n) ? cidx[i] : -1;
+    if (ci < 0) {
+      prev = -1;
+      continue;
+    }
+    if (prev >= 0) {
+      const SbVec3f a = coords->get3(prev);
+      const SbVec3f b = coords->get3(ci);
+      const SbVec3f diff = b - a;
+      const float segLen = diff.length();
+      if (segLen >= 1e-6f) {
+        SoSeparator * segSep = new SoSeparator;
+        SoTransform * xf = new SoTransform;
+        xf->translation.setValue((a + b) * 0.5f);
+        xf->rotation.setValue(SbRotation(SbVec3f(0.0f, 1.0f, 0.0f),
+                                         diff / segLen));
+        segSep->addChild(xf);
+        SoCylinder * cyl = new SoCylinder;
+        cyl->radius.setValue(cylRadius);
+        cyl->height.setValue(segLen);
+        segSep->addChild(cyl);
+        proxy->addChild(segSep);
+      }
+    }
+    prev = ci;
+  }
+
+  proxy->unrefNoDelete();
+  return proxy;
+}

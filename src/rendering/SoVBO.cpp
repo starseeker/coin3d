@@ -54,7 +54,6 @@
 #include <Inventor/errors/SoDebugError.h>
 
 #include "rendering/SoVertexArrayIndexer.h"
-#include "threads/threadsutilp.h"
 #include "glue/glp.h"
 
 #include "../misc/SoEnvironment.h"

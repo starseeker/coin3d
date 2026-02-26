@@ -71,7 +71,6 @@
 #include <Inventor/nodes/SoGroup.h>
 #include <Inventor/nodes/SoSeparator.h>
 
-#include "threads/threadsutilp.h"
 #include "io/SoWriterefCounter.h"
 #include "misc/SbHash.h"
 
@@ -83,7 +82,6 @@ static SoType soproto_type;
 static SbList <SoProto*> * protolist;
 static SoFetchExternProtoCB * soproto_fetchextern_cb = NULL;
 static void * soproto_fetchextern_closure = NULL;
-static void * soproto_mutex __attribute__((unused));
 
 // atexit callback
 static void
@@ -91,7 +89,6 @@ soproto_cleanup(void)
 {
   delete protolist;
   protolist = NULL;
-  CC_MUTEX_DESTRUCT(soproto_mutex);
 }
 
 static SoProto *
@@ -218,7 +215,6 @@ SoProto::getClassTypeId(void)
 void
 SoProto::initClass(void)
 {
-  CC_MUTEX_CONSTRUCT(soproto_mutex);
   soproto_type = SoType::createType(SoNode::getClassTypeId(),
                                     SbName("SoProto"), NULL,
                                     SoNode::nextActionMethodIndex++);
@@ -246,9 +242,7 @@ SoProto::SoProto(const SbBool externproto)
   PRIVATE(this)->defroot->ref();
   PRIVATE(this)->extprotonode = NULL;
 
-  CC_MUTEX_LOCK(soproto_mutex);
   protolist->insert(this, 0);
-  CC_MUTEX_UNLOCK(soproto_mutex);
 }
 
 /*!
@@ -291,7 +285,6 @@ SoProto *
 SoProto::findProto(const SbName & name)
 {
   SoProto * ret = NULL;
-  CC_MUTEX_LOCK(soproto_mutex);
   if (protolist) {
     const int n = protolist->getLength();
     SoProto * const * ptr = protolist->getArrayPtr();
@@ -299,7 +292,6 @@ SoProto::findProto(const SbName & name)
       if (ptr[i]->getProtoName() == name) ret = ptr[i];
     }
   }
-  CC_MUTEX_UNLOCK(soproto_mutex);
   return ret;
 }
 
@@ -369,11 +361,9 @@ SoProto::readInstance(SoInput * in, unsigned short COIN_UNUSED_ARG(flags))
 void
 SoProto::destroy(void)
 {
-  CC_MUTEX_LOCK(soproto_mutex);
   int idx = protolist->find(this);
   assert(idx >= 0);
   protolist->remove(idx);
-  CC_MUTEX_UNLOCK(soproto_mutex);
   SoBase::destroy();
 }
 
@@ -864,7 +854,7 @@ SoProto::createInstanceRoot(SoProtoInstance * inst) const
           }
         }
 
-        SbBool ok;
+        [[maybe_unused]] SbBool ok;
         if (from) ok = to->connectFrom(from, notnotify, append);
         else ok = to->connectFrom(output, notnotify, append);
         // Both known possible failure points are caught above.

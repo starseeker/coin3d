@@ -61,7 +61,7 @@ static unsigned short read_be_u16(FILE *fp) {
 }
 
 /* Read a 32-bit big-endian unsigned int */
-static unsigned int read_be_u32(FILE *fp) {
+static unsigned int __attribute__((unused)) read_be_u32(FILE *fp) {
     unsigned char buf[4];
     if (fread(buf, 1, 4, fp) != 4) return 0;
     return (buf[0] << 24) | (buf[1] << 16) | (buf[2] << 8) | buf[3];
@@ -84,7 +84,7 @@ int main(int argc, char **argv) {
     unsigned short magic   = read_be_u16(fp_in);
     unsigned char  storage = (unsigned char)fgetc(fp_in); /* 0=verbatim, 1=RLE */
     unsigned char  bpc     = (unsigned char)fgetc(fp_in); /* bytes per channel */
-    unsigned short dim     = read_be_u16(fp_in);
+    read_be_u16(fp_in); /* dimension field - not used */
     unsigned short xsize   = read_be_u16(fp_in);          /* width */
     unsigned short ysize   = read_be_u16(fp_in);          /* height */
     unsigned short zsize   = read_be_u16(fp_in);          /* channels */

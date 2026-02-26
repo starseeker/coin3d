@@ -191,20 +191,20 @@
 // *************************************************************************
 
 /* The configure script should protect against more than one of
-   (HAVE_WGL), (HAVE_EGL or HAVE_GLX) and (HAVE_AGL or HAVE_CGL) being defined at the same time, but
+   (HAVE_WGL), (HAVE_EGL) and (HAVE_AGL or HAVE_CGL) being defined at the same time, but
    we set up this little trip-wire in addition, just in case someone
    is either fiddling manually with config.h, or in case a change is
    made which breaks this protection in the configure script. */
 
 #define GRAPHICS_API_COUNT (((defined(HAVE_WGL) ? 1 : 0) + \
-                            ((defined(HAVE_EGL) || defined(HAVE_GLX)) ? 1 : 0) + \
+                            (defined(HAVE_EGL) ? 1 : 0) + \
                             ((defined(HAVE_AGL) || defined(HAVE_CGL)) ? 1 : 0)))
 
 #if GRAPHICS_API_COUNT == 0
 // Define HAVE_NOGL if no platform GL binding exists
 #define HAVE_NOGL 1
 #elif GRAPHICS_API_COUNT > 1
-#error More than one of HAVE_WGL, HAVE_EGL|HAVE_GLX, and HAVE_AGL|HAVE_CGL set simultaneously!
+#error More than one of HAVE_WGL, HAVE_EGL, and HAVE_AGL|HAVE_CGL set simultaneously!
 #endif
 
 #undef GRAPHICS_API_COUNT
@@ -229,14 +229,10 @@
 #include <OpenGL/OpenGL.h>
 #endif
 
-#ifdef HAVE_GLX
-#include <GL/glx.h>
-#endif /* HAVE_GLX */
-
-#ifdef HAVE_EGL
-#include <EGL/egl.h>
-#include <EGL/eglext.h>
-#endif /* HAVE_EGL */
+/* -----------------------------------------------------------------------
+ * Note: EGL headers were previously conditionally included here but are
+ * no longer used since context management moved to SoDB::ContextManager.
+ * --------------------------------------------------------------------- */
 
 #include "errors/CoinInternalError.h"
 #include "CoinTidbits.h"
@@ -248,7 +244,6 @@
 #include "glue/glp.h"
 #include "glue/dlp.h"
 /* Platform-specific glue headers are no longer needed with callback-based contexts */
-#include "threads/threadsutilp.h"
 #include "misc/SoEnvironment.h"
 
 // Include for SoDB context manager - minimal include to avoid circular dependencies
@@ -261,6 +256,7 @@ public:
     virtual SbBool makeContextCurrent(void * context) = 0;
     virtual void restorePreviousContext(void * context) = 0;
     virtual void destroyContext(void * context) = 0;
+    virtual SbBool isOSMesaContext(void * /*context*/) { return FALSE; }
   }; 
   static ContextManager* getContextManager(); 
 };
@@ -285,6 +281,83 @@ static cc_list * gl_instance_created_cblist = NULL;
 static int COIN_MAXIMUM_TEXTURE2_SIZE = -1;
 static int COIN_MAXIMUM_TEXTURE3_SIZE = -1;
 /* Removed old C-style callback system - now uses SoDB::ContextManager directly */
+
+/* -----------------------------------------------------------------------
+ * Dual-GL backend registry
+ *
+ * When COIN3D_BUILD_DUAL_GL is defined and this is the primary (system-GL)
+ * compilation unit (SOGL_PREFIX_SET is NOT set), we maintain a small set of
+ * context IDs that were created against the OSMesa backend.
+ *
+ * The entire block below (registry + coingl_register_osmesa_context) is
+ * excluded from the osmesa compilation unit (gl_osmesa.cpp) via
+ * SOGL_PREFIX_SET so there is exactly ONE definition of each symbol.
+ * --------------------------------------------------------------------- */
+#ifndef SOGL_PREFIX_SET
+
+/* These C++ STL includes must live OUTSIDE any extern "C" block. */
+#ifdef __cplusplus
+}  /* temporarily close the extern "C" block opened in glp.h */
+#endif
+
+#include <unordered_set>
+#include <mutex>
+
+#ifdef __cplusplus
+extern "C" {  /* reopen extern "C" */
+#endif
+
+#if defined(COIN3D_BUILD_DUAL_GL)
+static std::unordered_set<int> * coingl_osmesa_context_ids = NULL;
+static std::mutex coingl_osmesa_context_mutex;
+
+static void coingl_osmesa_registry_cleanup(void)
+{
+  std::lock_guard<std::mutex> lock(coingl_osmesa_context_mutex);
+  delete coingl_osmesa_context_ids;
+  coingl_osmesa_context_ids = NULL;
+}
+
+/* Forward declaration of the osmesa-prefixed implementation compiled in
+   gl_osmesa.cpp.  The linker resolves this from the glue_osmesa object. */
+const SoGLContext * osmesa_SoGLContext_instance(int contextid);
+#endif /* COIN3D_BUILD_DUAL_GL */
+
+/* Public C API: register an OSMesa-backed render-context ID.
+   Must be called (once, at context-ID assignment time) by the application
+   or CoinOffscreenGLCanvas before the first SoGLContext_instance() call
+   for that ID when COIN3D_BUILD_DUAL_GL is enabled.
+   Safe to call even when COIN3D_BUILD_DUAL_GL is not defined (no-op). */
+void
+coingl_register_osmesa_context(int contextid)
+{
+#if defined(COIN3D_BUILD_DUAL_GL)
+  std::lock_guard<std::mutex> lock(coingl_osmesa_context_mutex);
+  if (!coingl_osmesa_context_ids) {
+    coingl_osmesa_context_ids = new std::unordered_set<int>();
+    coin_atexit((coin_atexit_f *)coingl_osmesa_registry_cleanup, CC_ATEXIT_NORMAL);
+  }
+  coingl_osmesa_context_ids->insert(contextid);
+#else
+  (void)contextid;
+#endif
+}
+
+/* Query whether a context ID was registered as an OSMesa context. */
+static int
+coingl_context_backend_is_osmesa(int contextid)
+{
+#if defined(COIN3D_BUILD_DUAL_GL)
+  std::lock_guard<std::mutex> lock(coingl_osmesa_context_mutex);
+  return (coingl_osmesa_context_ids &&
+          coingl_osmesa_context_ids->count(contextid) > 0) ? 1 : 0;
+#else
+  (void)contextid;
+  return 0;
+#endif
+}
+
+#endif /* !SOGL_PREFIX_SET */
 
 /* ********************************************************************** */
 
@@ -436,37 +509,20 @@ glglue_allow_newer_opengl(const SoGLContext * w)
   static int fullindirect_initialized = 0;
   static SbBool fullindirect = FALSE;
   static const char * COIN_FULL_INDIRECT_RENDERING = "COIN_FULL_INDIRECT_RENDERING";
-  static const char * COIN_DONT_INFORM_INDIRECT_RENDERING = "COIN_DONT_INFORM_INDIRECT_RENDERING";
 
   if (!fullindirect_initialized) {
     fullindirect = (glglue_resolve_envvar(COIN_FULL_INDIRECT_RENDERING) > 0);
     fullindirect_initialized = 1;
   }
 
-  if (!w->glx.isdirect && !fullindirect) {
-    /* We give out a warning, once, when the full OpenGL feature set is not
-       used, in case the end user uses an application with a remote display,
-       and that was not expected by the application programmer. */
-    static int inform = -1;
-    if (inform == -1) { inform = glglue_resolve_envvar(COIN_DONT_INFORM_INDIRECT_RENDERING); }
-    if (inform == 0) {
-      // Use safe string formatting to avoid potential crashes with format specifiers
-      // The original debug message was causing segfaults due to string formatting issues
-      cc_debugerror_postinfo("glglue_allow_newer_opengl",
-                             "\n\nFeatures of OpenGL version > 1.0 has been\n"
-                             "disabled, due to the use of a remote display.\n\n"
-                             "This is so because many common OpenGL drivers\n"
-                             "have problems in this regard.\n\n"
-                             "To force full OpenGL use, set the environment\n"
-                             "variable COIN_FULL_INDIRECT_RENDERING=1 and re-run the application.\n\n"
-                             "If you don't want this message displayed again,\n"
-                             "set the environment variable COIN_DONT_INFORM_INDIRECT_RENDERING=1.\n");
-      inform = 1;
-    }
-    return FALSE;
+  /* GLX direct-rendering detection was removed when context management
+     was moved to SoDB::ContextManager callbacks.  Assume direct rendering
+     unless the user explicitly requests indirect via the env var. */
+  if (!fullindirect) {
+    return TRUE;
   }
 
-  return TRUE;
+  return FALSE;
 #endif
 }
 
@@ -615,7 +671,7 @@ SoGLContext_getprocaddress(const SoGLContext * glue, const char * symname)
      find the function through the shared library. */
   ptr = cc_dl_sym(SoGLContext_dl_handle(glue), symname);
 
-#ifdef COIN3D_OSMESA_BUILD
+#if defined(COIN3D_OSMESA_BUILD) || defined(SOGL_PREFIX_SET)
   /* OSMesa uses MGL name mangling, so if the standard name lookup fails,
      try the MGL-mangled version by prefixing with "mgl" instead of "gl" */
   if (ptr == NULL && strncmp(symname, "gl", 2) == 0) {
@@ -794,10 +850,10 @@ SoGLContext_glxversion_matches_at_least(const SoGLContext * w,
                                       int major,
                                       int minor)
 {
-  if (w->glx.version.major < major) return FALSE;
-  else if (w->glx.version.major > major) return TRUE;
-  if (w->glx.version.minor < minor) return FALSE;
-  return TRUE;
+  /* GLX version detection was removed when context management was moved to
+     SoDB::ContextManager callbacks.  Always returns FALSE. */
+  (void)w; (void)major; (void)minor;
+  return FALSE;
 }
 
 int
@@ -1302,15 +1358,6 @@ glglue_resolve_symbols(SoGLContext * w)
     if (!SoGLContext_glversion_matches_at_least(w, 1, 4, 1)) {
       w->glBindBuffer = NULL;
     }
-    /* VBOs seems really slow on the GeForce4 Go GPUs, but this test
-       is disabled for now until we know for sure that VBOs will
-       always be slow for this GPU */
-    /*     else if (strstr(w->rendererstr, "GeForce4 420 Go")) { */
-    /*       w->glBindBuffer = NULL; */
-    /*     } */
-    /* FIXME: I guess the above has been made obsolete by the VBO
-       performance testing we now do..? pederb should confirm.
-       20061027 mortene. */
   }
 #endif
 
@@ -1843,14 +1890,10 @@ glglue_resolve_symbols(SoGLContext * w)
   }
 
   w->glVertexArrayRangeNV = NULL;
-#if defined(GL_NV_vertex_array_range) && (defined(HAVE_GLX) || defined(HAVE_WGL))
+#if defined(GL_NV_vertex_array_range) && defined(HAVE_WGL)
   if (SoGLContext_glext_supported(w, "GL_NV_vertex_array_range")) {
     w->glVertexArrayRangeNV = (COIN_PFNGLVERTEXARRAYRANGENVPROC) PROC(w, glVertexArrayRangeNV);
     w->glFlushVertexArrayRangeNV = (COIN_PFNGLFLUSHVERTEXARRAYRANGENVPROC) PROC(w, glFlushVertexArrayRangeNV);
-#ifdef HAVE_GLX
-    w->glAllocateMemoryNV = (COIN_PFNGLALLOCATEMEMORYNVPROC) PROC(w, glXAllocateMemoryNV);
-    w->glFreeMemoryNV = (COIN_PFNGLFREEMEMORYNVPROC) PROC(w, glXFreeMemoryNV);
-#endif /* HAVE_GLX */
 #ifdef HAVE_WGL
     w->glAllocateMemoryNV = (COIN_PFNGLALLOCATEMEMORYNVPROC) PROC(w, wglAllocateMemoryNV);
     w->glFreeMemoryNV = (COIN_PFNGLFREEMEMORYNVPROC) PROC(w, wglFreeMemoryNV);
@@ -1868,7 +1911,7 @@ glglue_resolve_symbols(SoGLContext * w)
       }
     }
   }
-#endif /* HAVE_GLX || HAVE_WGL */
+#endif /* HAVE_WGL */
 
   w->can_do_bumpmapping = FALSE;
   if (w->glActiveTexture &&
@@ -2197,6 +2240,14 @@ glglue_check_driver(const char * vendor, const char * renderer,
 const SoGLContext *
 SoGLContext_instance(int contextid)
 {
+#if defined(COIN3D_BUILD_DUAL_GL) && !defined(SOGL_PREFIX_SET)
+  /* Dual-GL dispatch: if this context ID was registered as an OSMesa
+     context, forward to the osmesa_ variant compiled in gl_osmesa.cpp. */
+  if (coingl_context_backend_is_osmesa(contextid)) {
+    return osmesa_SoGLContext_instance(contextid);
+  }
+#endif
+
   // Add debugging for OSMesa builds at function entry
 #ifdef COIN3D_OSMESA_BUILD
   if (SoGLContext_debug()) {
@@ -2216,7 +2267,6 @@ SoGLContext_instance(int contextid)
   }
 #endif
 
-  CC_SYNC_BEGIN(SoGLContext_instance);
 
   /* check environment variables */
 #ifdef COIN3D_OSMESA_BUILD
@@ -2558,8 +2608,7 @@ SoGLContext_instance(int contextid)
                              gi->extensionsstr);
 
       cc_debugerror_postinfo("SoGLContext_instance",
-                             "Rendering is %sdirect.",
-                             gi->glx.isdirect ? "" : "in");
+                             "Rendering is direct (GLX context info no longer tracked).");
     }
 
     /* anisotropic test */
@@ -2589,7 +2638,6 @@ SoGLContext_instance(int contextid)
     gi = (SoGLContext *)ptr;
   }
 
-  CC_SYNC_END(SoGLContext_instance);
 
 #ifdef COIN3D_OSMESA_BUILD
   if (SoGLContext_debug()) {
@@ -2637,7 +2685,6 @@ SoGLContext_destruct(uint32_t contextid)
 {
   SbBool found;
   void * ptr;
-  CC_SYNC_BEGIN(SoGLContext_instance);
   if (gldict) { // might happen if a context is destructed without using the SoGLContext interface
     found = cc_dict_get(gldict, (uintptr_t)contextid, &ptr);
     if (found) {
@@ -2652,13 +2699,15 @@ SoGLContext_destruct(uint32_t contextid)
       }
     }
   }
-  CC_SYNC_END(SoGLContext_instance);
 }
 
 SbBool
 SoGLContext_isdirect(const SoGLContext * w)
 {
-  return w->glx.isdirect;
+  /* GLX direct-rendering detection was removed when context management was
+     moved to SoDB::ContextManager callbacks.  Always returns TRUE (direct). */
+  (void)w;
+  return TRUE;
 }
 
 
@@ -4475,14 +4524,15 @@ SoGLContext_has_texture_env_combine(const SoGLContext * glue)
 }
 
 /*!
-  Returns current X11 display the OpenGL context is in. If none, or if
-  the glXGetCurrentDisplay() method is not available (it was
-  introduced with GLX 1.3), returns \c NULL.
+  Returns current X11 display the OpenGL context is in.  Always returns
+  NULL since GLX context management was removed; context management is
+  now handled via SoDB::ContextManager callbacks.
 */
 void *
 SoGLContext_glXGetCurrentDisplay(const SoGLContext * w)
 {
-  return w->glx.glXGetCurrentDisplay ? w->glx.glXGetCurrentDisplay() : NULL;
+  (void)w;
+  return NULL;
 }
 
 /*** Offscreen buffer handling. *********************************************/
@@ -4676,6 +4726,21 @@ SoGLContext_context_max_dimensions(unsigned int * width, unsigned int * height)
   }
 
   vendor = (const char *)glGetString(GL_VENDOR);
+  if (!vendor) {
+    /* glGetString(GL_VENDOR) returns NULL when no system GL context is current
+     * (e.g. an OSMesa context was made current but system GL has a separate
+     * context slot).  System glGetIntegerv(GL_MAX_VIEWPORT_DIMS) also has no
+     * current context in this scenario so size[] is unreliable.
+     * Provide a large default: OSMesa's size limit is RAM-only, so 16384 is
+     * safe and covers any reasonable offscreen rendering request. */
+    *width  = 16384;
+    *height = 16384;
+    dim[0]  = *width;
+    dim[1]  = *height;
+    SoGLContext_context_reinstate_previous(ctx);
+    SoGLContext_context_destruct(ctx);
+    return;
+  }
   if (strcmp(vendor, "NVIDIA Corporation") == 0) {
 
     /* NVIDIA seems to have a bug where max render size is limited

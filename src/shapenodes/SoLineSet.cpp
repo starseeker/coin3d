@@ -102,6 +102,11 @@
 #include <Inventor/elements/SoDrawStyleElement.h>
 #include <Inventor/elements/SoLazyElement.h>
 #include <Inventor/details/SoLineDetail.h>
+#include <Inventor/elements/SoCoordinateElement.h>
+#include <Inventor/nodes/SoSeparator.h>
+#include <Inventor/nodes/SoTransform.h>
+#include <Inventor/nodes/SoCylinder.h>
+#include <Inventor/SbRotation.h>
 
 #include "rendering/SoGL.h"
 #include "nodes/SoSubNodeP.h"
@@ -748,4 +753,82 @@ SoLineSet::generatePrimitives(SoAction *action)
   }
   if (this->vertexProperty.getValue())
     state->pop();
+}
+
+/*!
+  Creates a scene graph of SoCylinder nodes that approximate this line set for
+  use in ray-tracing backends that cannot render line geometry directly.
+
+  Each line segment is represented by a cylinder of radius \a cylRadius
+  aligned along the segment and positioned at its midpoint.  The caller
+  owns the returned separator and must unref it when done.
+
+  \a coords must be the coordinate element obtained from the traversal
+  state (e.g. SoCoordinateElement::getInstance(state)).
+
+  Use lineWidthToWorldRadius() to convert a pixel-space line width to an
+  appropriate world-space cylinder radius for a given view.
+
+  \sa lineWidthToWorldRadius()
+*/
+SoSeparator *
+SoLineSet::createCylinderProxy(const SoCoordinateElement * coords,
+                               float cylRadius) const
+{
+  SoSeparator * proxy = new SoSeparator;
+  proxy->ref();
+
+  int32_t idx = this->startIndex.getValue();
+  const int32_t * ptr = this->numVertices.getValues(0);
+  const int32_t numStrips = this->numVertices.getNum();
+
+  for (int32_t s = 0; s < numStrips; ++s) {
+    int32_t nv = ptr[s];
+    if (nv < 0) nv = coords->getNum() - idx;
+    for (int32_t i = 0; i < nv - 1; ++i) {
+      const SbVec3f a = coords->get3(idx + i);
+      const SbVec3f b = coords->get3(idx + i + 1);
+      const SbVec3f diff = b - a;
+      const float segLen = diff.length();
+      if (segLen < 1e-6f) continue;
+
+      SoSeparator * segSep = new SoSeparator;
+      SoTransform * xf = new SoTransform;
+      xf->translation.setValue((a + b) * 0.5f);
+      xf->rotation.setValue(SbRotation(SbVec3f(0.0f, 1.0f, 0.0f),
+                                       diff / segLen));
+      segSep->addChild(xf);
+      SoCylinder * cyl = new SoCylinder;
+      cyl->radius.setValue(cylRadius);
+      cyl->height.setValue(segLen);
+      segSep->addChild(cyl);
+      proxy->addChild(segSep);
+    }
+    idx += (nv < 0 ? (coords->getNum() - this->startIndex.getValue()) : nv);
+  }
+
+  proxy->unrefNoDelete();
+  return proxy;
+}
+
+/*!
+  Converts an OpenGL line width in pixels to a world-space cylinder radius
+  that produces approximately the same visual width.
+
+  For orthographic projections this formula is exact.  For perspective
+  projections it gives the correct size at the near plane; objects further
+  away will appear slightly smaller than \a lineWidthPx pixels but the
+  cylinder will still be visible.
+
+  \a viewWorldHeight is the world-space height of the view (SbViewVolume::getHeight()).
+  \a viewportHeightPx is the viewport height in pixels.
+
+  \sa createCylinderProxy()
+*/
+float
+SoLineSet::lineWidthToWorldRadius(float lineWidthPx,
+                                  float viewWorldHeight,
+                                  float viewportHeightPx)
+{
+  return lineWidthPx * viewWorldHeight / viewportHeightPx * 0.5f;
 }

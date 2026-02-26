@@ -41,7 +41,6 @@
 #include <Inventor/nodes/SoNode.h>
 
 
-#include "threads/threadsutilp.h"
 #include "misc/SbHash.h"
 #include "../misc/SoEnvironment.h"
 
@@ -169,7 +168,6 @@ public:
   SoBase2Id * sobase2id;
   int nextreferenceid;
 
-  static void * mutex;
   static SoOutput2SoWriterefCounterMap * outputdict;
   static SoWriterefCounter * current; // used to be backwards compatible
   static SbString * refwriteprefix;
@@ -180,12 +178,10 @@ public:
     refwriteprefix = NULL;
     delete outputdict;
     outputdict = NULL;
-    CC_MUTEX_DESTRUCT(mutex);
   }
 
 };
 
-void * SoWriterefCounterP::mutex;
 SoOutput2SoWriterefCounterMap *  SoWriterefCounterP::outputdict;
 SoWriterefCounter *  SoWriterefCounterP::current = NULL; // used to be backwards compatible
 SbString *  SoWriterefCounterP::refwriteprefix;
@@ -213,11 +209,9 @@ void
 SoWriterefCounter::create(SoOutput * out, SoOutput * copyfrom)
 {
   SoWriterefCounter * inst = new SoWriterefCounter(out, copyfrom);
-  CC_MUTEX_LOCK(SoWriterefCounterP::mutex);
   SbBool ret = SoWriterefCounterP::outputdict->put(out, inst);
   assert(ret && "writeref instance already exists!");
   (void)ret; /* avoid unused variable warning in release builds */
-  CC_MUTEX_UNLOCK(SoWriterefCounterP::mutex);
 }
 
 void
@@ -226,16 +220,13 @@ SoWriterefCounter::destruct(SoOutput * out)
   SoWriterefCounter * inst = SoWriterefCounter::instance(out);
   assert(inst && "instance not found!");
 
-  CC_MUTEX_LOCK(SoWriterefCounterP::mutex);
   (void) SoWriterefCounterP::outputdict->erase(out);
   delete inst;
-  CC_MUTEX_UNLOCK(SoWriterefCounterP::mutex);
 }
 
 void
 SoWriterefCounter::initClass(void)
 {
-  CC_MUTEX_CONSTRUCT(SoWriterefCounterP::mutex);
   SoWriterefCounterP::outputdict = new SoOutput2SoWriterefCounterMap;
   SoWriterefCounterP::refwriteprefix = new SbString("+");
   coin_atexit((coin_atexit_f*) SoWriterefCounterP::atexit_cleanup, CC_ATEXIT_NORMAL);
@@ -262,8 +253,6 @@ SoWriterefCounter::instance(SoOutput * out)
     return SoWriterefCounterP::current;
   }
 
-  CC_MUTEX_LOCK(SoWriterefCounterP::mutex);
-
   SoWriterefCounter * inst = NULL;
 
   const SbBool ok = SoWriterefCounterP::outputdict->get(out, inst);
@@ -271,7 +260,6 @@ SoWriterefCounter::instance(SoOutput * out)
   (void)ok; /* avoid unused variable warning in release builds */
 
   SoWriterefCounterP::current = inst;
-  CC_MUTEX_UNLOCK(SoWriterefCounterP::mutex);
   return inst;
 }
 

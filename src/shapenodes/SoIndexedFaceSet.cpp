@@ -223,7 +223,6 @@
 
 #include "nodes/SoSubNodeP.h"
 #include "CoinTidbits.h"
-#include "threads/threadsutilp.h"
 #include "rendering/SoVertexArrayIndexer.h"
 #include "rendering/SoVBO.h"
 #include "rendering/SoGL.h"

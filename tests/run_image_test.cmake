@@ -81,15 +81,17 @@ endif()
 # On Unix systems with no display available, wrap with xvfb-run for GLX backend
 set(_exec_cmd "${EXECUTABLE}" "${TEST_BASE}")
 if(UNIX AND NOT APPLE)
-    if(NOT DEFINED ENV{DISPLAY} OR "$ENV{DISPLAY}" STREQUAL "")
-        find_program(_xvfb_run NAMES xvfb-run)
-        if(_xvfb_run)
-            set(_exec_cmd "${_xvfb_run}" "--auto-servernum" "--server-args=-screen 0 1024x768x24 +extension GLX" "${EXECUTABLE}" "${TEST_BASE}")
+    if(NOT OSMESA_BACKEND)
+        # GLX path: wrap with xvfb-run when no display is available.
+        # Do NOT set COIN_FULL_INDIRECT_RENDERING: it disables FBO support in
+        # SoGLContext_has_framebuffer_objects() which breaks CoinOffscreenGLCanvas.
+        if(NOT DEFINED ENV{DISPLAY} OR "$ENV{DISPLAY}" STREQUAL "")
+            find_program(_xvfb_run NAMES xvfb-run)
+            if(_xvfb_run)
+                set(_exec_cmd "${_xvfb_run}" "--auto-servernum" "--server-args=-screen 0 1024x768x24 +extension GLX" "${EXECUTABLE}" "${TEST_BASE}")
+            endif()
         endif()
     endif()
-    set(ENV{COIN_GLX_PIXMAP_DIRECT_RENDERING} "1")
-    set(ENV{COIN_FULL_INDIRECT_RENDERING} "1")
-    set(ENV{COIN_GLXGLUE_NO_PBUFFERS} "1")
 endif()
 
 # Set data directory for tests that load .iv files

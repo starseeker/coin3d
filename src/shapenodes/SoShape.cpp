@@ -109,7 +109,6 @@
 #include "nodes/SoSubNodeP.h"
 #include "rendering/SoGL.h"
 #include "glue/glp.h"
-#include "threads/threadsutilp.h"
 
 #include "rendering/SoVBO.h"
 

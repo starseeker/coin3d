@@ -66,7 +66,6 @@
 #include <Inventor/lists/SbList.h>
 
 #include "misc/SbHash.h"
-#include "threads/threadsutilp.h"
 #include "CoinTidbits.h"
 #include "glue/glp.h"
 
@@ -123,7 +122,6 @@ socontexthandler_qsortcb(const void * p0, const void * p1)
 
 static SbHash<socontexthandler_cbitem, uint32_t> * socontexthandler_hashlist;
 static uint32_t socontexthandler_idx = 0;
-static void * socontexthandler_mutex;
 
 // *************************************************************************
 
@@ -143,7 +141,6 @@ socontexthandler_cleanup(void)
   delete socontexthandler_hashlist;
   socontexthandler_hashlist = NULL;
   socontexthandler_idx = 0;
-  CC_MUTEX_DESTRUCT(socontexthandler_mutex);
 }
 
 // *************************************************************************
@@ -165,10 +162,7 @@ socontexthandler_cleanup(void)
 void
 SoContextHandler::destructingContext(uint32_t contextid)
 {
-  CC_MUTEX_CONSTRUCT(socontexthandler_mutex);
-  CC_MUTEX_LOCK(socontexthandler_mutex);
   if (socontexthandler_hashlist == NULL) {
-    CC_MUTEX_UNLOCK(socontexthandler_mutex);
     return;
   }
 
@@ -181,8 +175,6 @@ SoContextHandler::destructingContext(uint32_t contextid)
       ) {
     listcopy.append(iter->key);
   }
-
-  CC_MUTEX_UNLOCK(socontexthandler_mutex);
 
   qsort((void*) listcopy.getArrayPtr(),
         listcopy.getLength(),
@@ -227,8 +219,6 @@ void
 SoContextHandler::addContextDestructionCallback(ContextDestructionCB * func,
                                                 void * closure)
 {
-  CC_MUTEX_CONSTRUCT(socontexthandler_mutex);
-  CC_MUTEX_LOCK(socontexthandler_mutex);
   if (socontexthandler_hashlist == NULL) {
     socontexthandler_hashlist = new SbHash<socontexthandler_cbitem, uint32_t> (64);
     // make this callback trigger after the SoGLCacheContext cleanup function
@@ -240,7 +230,6 @@ SoContextHandler::addContextDestructionCallback(ContextDestructionCB * func,
   item.closure = closure;
   item.idx = socontexthandler_idx++;
   (*socontexthandler_hashlist)[item] = item.idx;
-  CC_MUTEX_UNLOCK(socontexthandler_mutex);
 }
 
 /*!
@@ -257,10 +246,8 @@ SoContextHandler::removeContextDestructionCallback(ContextDestructionCB * func, 
   item.func = func;
   item.closure = closure;
 
-  CC_MUTEX_LOCK(socontexthandler_mutex);
-  size_t didremove = socontexthandler_hashlist->erase(item);
+  [[maybe_unused]] size_t didremove = socontexthandler_hashlist->erase(item);
   assert(didremove);
-  CC_MUTEX_UNLOCK(socontexthandler_mutex);
 }
 
 // *************************************************************************

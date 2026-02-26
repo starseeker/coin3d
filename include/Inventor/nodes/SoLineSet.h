@@ -37,6 +37,9 @@
 #include <Inventor/nodes/SoNonIndexedShape.h>
 #include <Inventor/fields/SoMFInt32.h>
 
+class SoCoordinateElement;
+class SoSeparator;
+
 class COIN_DLL_API SoLineSet : public SoNonIndexedShape {
   typedef SoNonIndexedShape inherited;
 
@@ -52,6 +55,12 @@ public:
   virtual void GLRender(SoGLRenderAction * action);
   virtual void getBoundingBox(SoGetBoundingBoxAction * action);
   virtual void getPrimitiveCount(SoGetPrimitiveCountAction * action);
+
+  SoSeparator * createCylinderProxy(const SoCoordinateElement * coords,
+                                    float cylRadius) const;
+  static float lineWidthToWorldRadius(float lineWidthPx,
+                                      float viewWorldHeight,
+                                      float viewportHeightPx);
 
 protected:
   virtual ~SoLineSet();

@@ -75,8 +75,6 @@
 #include <Inventor/elements/SoFontSizeElement.h>
 #include <Inventor/SbFont.h>
 
-#include "threads/threadsutilp.h"
-
 class SoGlyphP {
 public:
   SoGlyphP(SoGlyph * master) : master(master), font(NULL) { }
@@ -445,14 +443,13 @@ public:
 };
 
 static SbList <coin_glyph_info> * activeGlyphs = NULL;
-static void * SoGlyph_mutex = NULL;
 
 static void
 SoGlyph_cleanup(void)
 {
   delete activeGlyphs;
   activeGlyphs = NULL;
-  CC_MUTEX_DESTRUCT(SoGlyph_mutex);
+}
 }
 
 /*!
@@ -471,17 +468,12 @@ SoGlyph::getGlyph(const char character, const SbName & font)
   // 20030611 mortene.
   
   // Similar code in start of getGlyph(..., state) - keep in sync.
-  if (SoGlyph_mutex == NULL) {
-    CC_MUTEX_CONSTRUCT(SoGlyph_mutex);
-  }
 
   // FIXME: it would probably be a good idea to have a small LRU-type
   // glyph cache to avoid freeing glyphs too early. If for instance
   // the user creates a single SoText3 node which is used several
   // times in a graph with different fonts, glyphs will be freed and
   // recreated all the time. pederb, 20000324
-
-  CC_MUTEX_LOCK(SoGlyph_mutex);
 
   if (activeGlyphs == NULL) {
     activeGlyphs = new SbList <coin_glyph_info>;
@@ -496,7 +488,6 @@ SoGlyph::getGlyph(const char character, const SbName & font)
   if (i < n) {
     SoGlyph *glyph = (*activeGlyphs)[i].glyph;
     PRIVATE(glyph)->refcount++;
-    CC_MUTEX_UNLOCK(SoGlyph_mutex);
     return glyph;
   }
 
@@ -544,7 +535,6 @@ SoGlyph::getGlyph(const char character, const SbName & font)
   coin_glyph_info info(character, -1.0, font, glyph, 0.0);
   PRIVATE(glyph)->refcount++;
   activeGlyphs->append(info);
-  CC_MUTEX_UNLOCK(SoGlyph_mutex);
   return glyph;
 
 }
@@ -553,7 +543,6 @@ SoGlyph::getGlyph(const char character, const SbName & font)
 void
 SoGlyph::unrefGlyph(SoGlyph *glyph)
 {
-  CC_MUTEX_LOCK(SoGlyph_mutex);
   assert(activeGlyphs);
   assert(PRIVATE(glyph)->refcount > 0);
   PRIVATE(glyph)->refcount--;
@@ -567,7 +556,6 @@ SoGlyph::unrefGlyph(SoGlyph *glyph)
     // No need to unref font with SbFont - handled by destructor
     delete glyph;
   }
-  CC_MUTEX_UNLOCK(SoGlyph_mutex);
 }
 
 /*!
@@ -595,12 +583,7 @@ SoGlyph::getGlyph(SoState * state,
   if (size != SbVec2s(0,0)) { fontsize = size; }
   
   // Similar code in start of getGlyph(..., fontname) - keep in sync.
-  if (SoGlyph_mutex == NULL) {
-    CC_MUTEX_CONSTRUCT(SoGlyph_mutex);
-  }
 
-  CC_MUTEX_LOCK(SoGlyph_mutex);
-  
   if (activeGlyphs == NULL) {
     activeGlyphs = new SbList <coin_glyph_info>;
     coin_atexit((coin_atexit_f *)SoGlyph_cleanup, CC_ATEXIT_NORMAL);
@@ -611,7 +594,6 @@ SoGlyph::getGlyph(SoState * state,
     if ((*activeGlyphs)[i].matches(character, fontsize[0], state_name, angle)) {
       SoGlyph *glyph = (*activeGlyphs)[i].glyph;
       PRIVATE(glyph)->refcount++;
-      CC_MUTEX_UNLOCK(SoGlyph_mutex);
       return glyph;
     }
   }
@@ -629,7 +611,6 @@ SoGlyph::getGlyph(SoState * state,
   PRIVATE(g)->refcount++;
   activeGlyphs->append(info);
 
-  CC_MUTEX_UNLOCK(SoGlyph_mutex);
   return g;
 }
 

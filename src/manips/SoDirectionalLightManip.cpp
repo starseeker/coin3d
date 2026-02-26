@@ -195,7 +195,6 @@ SoDirectionalLightManip::replaceNode(SoPath * path)
 #endif // debug
     return FALSE;
   }
-  SoNode * tail = path->getTail();
   // NodeKit functionality removed - handle direct node manipulation only
   if (fullpath->getLength() < 2) {
 #if COIN_DEBUG

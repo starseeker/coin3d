@@ -37,6 +37,9 @@
 #include <Inventor/nodes/SoNonIndexedShape.h>
 #include <Inventor/fields/SoSFInt32.h>
 
+class SoCoordinateElement;
+class SoSeparator;
+
 class COIN_DLL_API SoPointSet : public SoNonIndexedShape {
   typedef SoNonIndexedShape inherited;
 
@@ -51,6 +54,12 @@ public:
   virtual void GLRender(SoGLRenderAction * action);
   virtual void getBoundingBox(SoGetBoundingBoxAction * action);
   virtual void getPrimitiveCount(SoGetPrimitiveCountAction * action);
+
+  SoSeparator * createSphereProxy(const SoCoordinateElement * coords,
+                                  float sphRadius) const;
+  static float pointSizeToWorldRadius(float pointSizePx,
+                                      float viewWorldHeight,
+                                      float viewportHeightPx);
 
 protected:
   virtual ~SoPointSet();

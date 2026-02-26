@@ -18,7 +18,6 @@ set(COIN_THREADS_FILES
 set(COIN_THREADS_INTERNAL_FILES
 	storagep.h
 	storage_cxx17.h
-	threadsutilp.h
 	recmutexp.h
 	recmutex_global_cxx17.h
 	mutexp.h

@@ -186,7 +186,6 @@ SbBool myAppEventHandler(void *userData, void *eventPtr)
         }
     } else if (event->isOfType(SoLocation2Event::getClassTypeId())) {
         const SoLocation2Event *motionEvent = (const SoLocation2Event*)event;
-        SbVec2s pos = motionEvent->getPosition();
         
         // Check if button 1 is held during motion (dragging)
         // Note: In real implementation, would check button state from event

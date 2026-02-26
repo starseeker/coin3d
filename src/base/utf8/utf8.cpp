@@ -726,24 +726,24 @@ void encode (char32_t c, std::string& s)
     s.push_back ((char)c);
   else if (c <= 0x7ff)
   {
-    s.push_back (0xC0 | c >> 6);
-    s.push_back (0x80 | c & 0x3f);
+    s.push_back (0xC0 | (c >> 6));
+    s.push_back (0x80 | (c & 0x3f));
   }
   else if (c <= 0xFFFF)
   {
     if (c >= 0xD800 && c <= 0xdfff)
       c= throw_or_replace(exception::cause::invalid_char32);
 
-    s.push_back (0xE0 | c >> 12);
-    s.push_back (0x80 | c >> 6 & 0x3f);
-    s.push_back (0x80 | c & 0x3f);
+    s.push_back (0xE0 | (c >> 12));
+    s.push_back (0x80 | ((c >> 6) & 0x3f));
+    s.push_back (0x80 | (c & 0x3f));
   }
   else if (c <= 0x10ffff)
   {
-    s.push_back (0xF0 | c >> 18);
-    s.push_back (0x80 | c >> 12 & 0x3f);
-    s.push_back (0x80 | c >> 6 & 0x3f);
-    s.push_back (0x80 | c & 0x3f);
+    s.push_back (0xF0 | (c >> 18));
+    s.push_back (0x80 | ((c >> 12) & 0x3f));
+    s.push_back (0x80 | ((c >> 6) & 0x3f));
+    s.push_back (0x80 | (c & 0x3f));
   }
   else if (ermode == action::except)
     throw exception (exception::cause::invalid_char32);

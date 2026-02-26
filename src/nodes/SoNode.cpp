@@ -219,8 +219,6 @@ SbUniqueId is not really a class, just a \c typedef.
 #include "rendering/SoGL.h"
 #include "nodes/SoSubNodeP.h"
 #include "nodes/SoUnknownNode.h"
-#include "threads/threadsutilp.h"
-#include "glue/glp.h"
 #include "misc/SoDBP.h" // for global envvar COIN_PROFILER
 
 // *************************************************************************
@@ -333,7 +331,6 @@ SbUniqueId is not really a class, just a \c typedef.
 SbUniqueId SoNode::nextUniqueId = 1;
 int SoNode::nextActionMethodIndex = 0;
 SoType SoNode::classTypeId STATIC_SOTYPE_INIT;
-static void * sonode_mutex __attribute__((unused)) = NULL;
 
 typedef SbHash<int16_t, uint32_t> Int16ToUInt32Map;
 static Int16ToUInt32Map * compatibility_dict = NULL;
@@ -391,12 +388,10 @@ SoNode::getState(const unsigned int bits) const
 // nodeid == 0 (making it possible for VBO caches to set the current
 // dataid to 0 to mark the data as invalid / not set).
 #define SET_UNIQUE_NODE_ID(obj) \
-  CC_MUTEX_LOCK(sonode_mutex); \
   (obj)->uniqueId = SoNode::nextUniqueId++;   \
   if (obj->uniqueId == 0) {                 \
     obj->uniqueId = SoNode::nextUniqueId++; \
-  } \
-  CC_MUTEX_UNLOCK(sonode_mutex)
+  }
 
 // *************************************************************************
 
@@ -566,7 +561,6 @@ SoNode::initClass(void)
   // Make sure parent class has been initialized.
   assert(inherited::getClassTypeId() != SoType::badType());
 
-  CC_MUTEX_CONSTRUCT(sonode_mutex);
   SoNode::classTypeId =
     SoType::createType(inherited::getClassTypeId(), "Node", NULL,
                        SoNode::nextActionMethodIndex++);
@@ -1544,7 +1538,6 @@ SoNode::cleanupClass(void)
 {
   delete compatibility_dict;
   SoNode::classTypeId STATIC_SOTYPE_INIT;
-  CC_MUTEX_DESTRUCT(sonode_mutex);
 }
 
 // just undef flags here

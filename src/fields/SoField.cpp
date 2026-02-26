@@ -133,7 +133,6 @@
 #include "fields/SoGlobalField.h"
 #include "io/SoWriterefCounter.h"
 #include "misc/SoConfigSettings.h"
-#include "threads/threadsutilp.h"
 #include "CoinTidbits.h"
 inline unsigned int SbHashFunc(const void * key);
 #include "misc/SbHash.h"
@@ -156,7 +155,6 @@ inline unsigned int SbHashFunc(const void * key)
 
 static const int SOFIELD_GET_STACKBUFFER_SIZE = 1024;
 // need one static mutex for field_buffer in SoField::get(SbString &)
-static void * sofield_mutex __attribute__((unused)) = NULL;
 
 // flags for this->statusbits
 
@@ -315,7 +313,6 @@ extern "C" {
 // atexit callbacks
 static void SoField_cleanupClass(void);
 static void hashExitCleanup(void);
-static void field_mutex_cleanup(void);
 }
 
 SbHash<char *, char **> *
@@ -340,8 +337,6 @@ hashExitCleanup(void)
 void *
 SoFieldP::hashRealloc(void * bufptr, size_t size)
 {
-  CC_MUTEX_LOCK(sofield_mutex);
-
   char ** bufptrptr = NULL;
   SbBool ok = SoFieldP::ptrhash->get(static_cast<char *>(bufptr), bufptrptr);
   assert(ok);
@@ -366,8 +361,6 @@ SoFieldP::hashRealloc(void * bufptr, size_t size)
     *bufptrptr = newbuf;
     SoFieldP::ptrhash->put(newbuf, bufptrptr);
   }
-
-  CC_MUTEX_UNLOCK(sofield_mutex);
 
   return newbuf;
 }
@@ -546,13 +539,6 @@ SoField::~SoField()
   this->clearStatusBits(FLAG_ALIVE_PATTERN);
 }
 
-// atexit
-void
-field_mutex_cleanup(void)
-{
-  CC_MUTEX_DESTRUCT(sofield_mutex);
-}
-
 /*!
   Internal method called upon initialization of the library (from
   SoDB::init()) to set up the type system.
@@ -562,9 +548,6 @@ SoField::initClass(void)
 {
   // Make sure we only initialize once.
   assert(SoField::classTypeId == SoType::badType());
-
-  CC_MUTEX_CONSTRUCT(sofield_mutex);
-  coin_atexit(field_mutex_cleanup, CC_ATEXIT_NORMAL);
 
   SoField::classTypeId = SoType::createType(SoType::badType(), "Field");
   SoField::initClasses();
@@ -1312,11 +1295,9 @@ SoField::get(SbString & valuestring)
   char initbuffer[SOFIELD_GET_STACKBUFFER_SIZE];
   char * bufferptr = NULL; // indicates that initial buffer is on the stack
 
-  CC_MUTEX_LOCK(sofield_mutex);
   SbBool ok = SoFieldP::getReallocHash()->put(initbuffer, &bufferptr);
   assert(ok);
   (void)ok; /* avoid unused variable warning in release builds */
-  CC_MUTEX_UNLOCK(sofield_mutex);
 
   out.setBuffer(initbuffer, sizeof(initbuffer), SoFieldP::hashRealloc);
 
@@ -1340,11 +1321,9 @@ SoField::get(SbString & valuestring)
   // dealloc tmp memory buffer
   free(bufferptr);
 
-  CC_MUTEX_LOCK(sofield_mutex);
   size_t isok = SoFieldP::getReallocHash()->erase(bufferptr ? bufferptr : initbuffer);
   assert(isok);
   (void)isok; /* avoid unused variable warning in release builds */
-  CC_MUTEX_UNLOCK(sofield_mutex);
 }
 
 /*!

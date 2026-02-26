@@ -10,7 +10,6 @@ set(COIN_BASE_FILES
 	heap.cpp
 	list.cpp
 	memalloc.cpp
-	dynarray.cpp
 	namemap.cpp
 	SbBSPTree.cpp
 	SbByteBuffer.cpp
@@ -94,8 +93,6 @@ set(COIN_BASE_INTERNAL_FILES
 	dict.h
 	dict.cpp
 	dictp.h
-	dynarray.h
-	dynarray.cpp
 	heapp.h
 	namemap.h
 	namemap.cpp

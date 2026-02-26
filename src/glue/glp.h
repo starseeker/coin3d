@@ -62,6 +62,14 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/* Apply the optional function-name prefix (for dual-GL builds where both
+   system-OpenGL and OSMesa variants are compiled into the same library).
+   When SOGL_PREFIX_SET is defined (e.g. in gl_osmesa.cpp), each SoGLContext_*
+   declaration below is #define-redirected to its prefixed counterpart
+   (e.g. osmesa_SoGLContext_*) so the declarations match the definitions.
+   In normal single-backend builds this header is a no-op. */
+#include <Inventor/system/sogl_prefix.h>
+
 #if 0 /* to get proper auto-indentation in emacs */
 }
 #endif /* emacs indentation */
@@ -546,11 +554,6 @@ typedef void (APIENTRY * COIN_PFNGLGETQUERYIVPROC)(GLenum target, GLenum pname, 
 typedef void (APIENTRY * COIN_PFNGLGETQUERYOBJECTIVPROC)(GLuint id, GLenum pname, GLint * params);
 typedef void (APIENTRY * COIN_PFNGLGETQUERYOBJECTUIVPROC)(GLuint id, GLenum pname, GLuint * params);
 
-/* Typedefs for GLX functions. */
-typedef void *(APIENTRY * COIN_PFNGLXGETCURRENTDISPLAYPROC)(void);
-typedef void *(APIENTRY * COIN_PFNGLXGETPROCADDRESSPROC)(const GLubyte *);
-
-
 /* Typedefs for Framebuffer objects */
 
 typedef void (APIENTRY * COIN_PFNGLISRENDERBUFFERPROC)(GLuint renderbuffer);
@@ -580,28 +583,6 @@ typedef GLubyte* (APIENTRY * COIN_PFNGLGETSTRINGIPROC) (GLenum target, GLuint id
 
 /* Type specification for GLX info storage structure, embedded within
    the main GL info structure below. */
-struct cc_glxglue {
-  struct {
-    int major, minor;
-  } version;
-
-  SbBool isdirect;
-
-  const char * serverversion;
-  const char * servervendor;
-  const char * serverextensions;
-
-  const char * clientversion;
-  const char * clientvendor;
-  const char * clientextensions;
-
-  const char * glxextensions;
-
-  COIN_PFNGLXGETCURRENTDISPLAYPROC glXGetCurrentDisplay;
-  COIN_PFNGLXGETPROCADDRESSPROC glXGetProcAddress;
-  SbBool tried_bind_glXGetProcAddress;
-};
-
 /* ********************************************************************** */
 
 /* GL info storage structure. An instance will be allocated and
@@ -854,7 +835,6 @@ struct SoGLContext {
   const char * rendererstr;
   const char * extensionsstr;
   int maxtextureunits;
-  struct cc_glxglue glx;
   float max_anisotropy;
 
   /* normalization cube map */
@@ -921,7 +901,6 @@ const char * coin_glerror_string(GLenum errorcode);
 
 /* ********************************************************************** */
 
-/* Exported internally to gl_glx.c / gl_wgl.c / gl_agl.c. */
 int SoGLContext_debug(void);
 int SoGLContext_extension_available(const char * extensions, const char * ext);
 
@@ -1453,6 +1432,21 @@ void SoGLContext_win32_updateHDCBitmap(void * ctx);
 
 /* Offscreen context creation now uses SoDB::ContextManager directly */
 /* Legacy function declarations maintained for compatibility */
+
+/* -----------------------------------------------------------------------
+ * Dual-GL backend registration
+ *
+ * When building with COIN3D_BUILD_DUAL_GL=ON, both system-OpenGL and OSMesa
+ * variants of the GL glue layer are compiled into the same library.
+ * Applications (or CoinOffscreenGLCanvas) must call this function after
+ * assigning a render-context ID to a context that was created via the OSMesa
+ * backend.  This allows SoGLContext_instance() to dispatch the context
+ * initialisation to the osmesa_SoGLContext_instance() implementation.
+ *
+ * This function is always declared and safe to call; it is a no-op in
+ * non-dual-GL builds.
+ * --------------------------------------------------------------------- */
+void coingl_register_osmesa_context(int contextid);
 
 #ifdef __cplusplus
 }

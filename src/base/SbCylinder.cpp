@@ -44,6 +44,7 @@
   \sa SbLine, SbSphere */
 
 #include <cassert>
+#include <cfloat>
 #include <Inventor/SbCylinder.h>
 #if COIN_DEBUG
 #include <Inventor/errors/SoDebugError.h>
@@ -217,7 +218,7 @@ SbCylinder::intersect(const SbLine& l, SbVec3f& enter, SbVec3f& exit) const
       // We're inside the cylinder, set enter and exit points to be
       // very large values (the cylinder is conceptually of infinite
       // length).
-      float offset = 14530000; // TODO: find out what define OI uses
+      float offset = FLT_MAX / 2.0f;
       enter = l.getPosition() + -offset*l.getDirection();
       exit = l.getPosition() + offset*l.getDirection();
       return TRUE;

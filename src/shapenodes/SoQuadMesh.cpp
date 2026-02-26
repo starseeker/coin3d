@@ -471,7 +471,7 @@ namespace { namespace SoGL { namespace QuadMesh {
       SbVec4f ccd4;
       SbVec4f sum234d4,sum134d4,sum124d4,sum123d4;
       SbVec4f vec1d4,vec2d4,vec3d4,vec4d4;
-      float s1,s2,s3,s4;
+      float s1 = 0.0f, s2 = 0.0f, s3 = 0.0f, s4 = 0.0f;
       float w1,w2,w3,w4;
       const SbVec3f *n1,*n2,*n3,*n4;
       SbVec3f nc;
@@ -564,7 +564,7 @@ namespace { namespace SoGL { namespace QuadMesh {
                 SbPlane p1(*c1d3,*c2d3,*c4d3);
                 SbPlane p2(*c1d3,*c4d3,*c3d3);
                 SbVec3f n = p1.getNormal() + p2.getNormal();
-                SbBool quadok = qmeshNormalize(n, n1->sqrLength() + n2->sqrLength() +
+                [[maybe_unused]] SbBool quadok = qmeshNormalize(n, n1->sqrLength() + n2->sqrLength() +
                                                n3->sqrLength() + n4->sqrLength());
 #if COIN_DEBUG
                 if ( !quadok )

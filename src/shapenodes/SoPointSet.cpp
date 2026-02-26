@@ -101,6 +101,10 @@
 #include <Inventor/caches/SoNormalCache.h>
 #include <Inventor/details/SoPointDetail.h>
 #include <Inventor/misc/SoGLDriverDatabase.h>
+#include <Inventor/elements/SoCoordinateElement.h>
+#include <Inventor/nodes/SoSeparator.h>
+#include <Inventor/nodes/SoTransform.h>
+#include <Inventor/nodes/SoSphere.h>
 #if COIN_DEBUG
 #include <Inventor/errors/SoDebugError.h>
 #endif // COIN_DEBUG
@@ -423,4 +427,66 @@ SoPointSet::generatePrimitives(SoAction *action)
 
   if (this->vertexProperty.getValue())
     state->pop();
+}
+
+/*!
+  Creates a scene graph of SoSphere nodes that approximate this point set for
+  use in ray-tracing backends that cannot render point geometry directly.
+
+  Each point is represented by a sphere of radius \a sphRadius centred at the
+  point's world-space position.  The caller owns the returned separator and
+  must unref it when done.
+
+  \a coords must be the coordinate element obtained from the traversal state
+  (e.g. SoCoordinateElement::getInstance(state)).
+
+  Use pointSizeToWorldRadius() to convert a pixel-space point size to an
+  appropriate world-space sphere radius for a given view.
+
+  \sa pointSizeToWorldRadius()
+*/
+SoSeparator *
+SoPointSet::createSphereProxy(const SoCoordinateElement * coords,
+                              float sphRadius) const
+{
+  SoSeparator * proxy = new SoSeparator;
+  proxy->ref();
+
+  const int32_t idx = this->startIndex.getValue();
+  int32_t num = this->numPoints.getValue();
+  if (num < 0) num = coords->getNum() - idx;
+
+  for (int32_t i = 0; i < num; ++i) {
+    SoSeparator * ptSep = new SoSeparator;
+    SoTransform * xf = new SoTransform;
+    xf->translation.setValue(coords->get3(idx + i));
+    ptSep->addChild(xf);
+    SoSphere * sph = new SoSphere;
+    sph->radius.setValue(sphRadius);
+    ptSep->addChild(sph);
+    proxy->addChild(ptSep);
+  }
+
+  proxy->unrefNoDelete();
+  return proxy;
+}
+
+/*!
+  Converts an OpenGL point size in pixels to a world-space sphere radius that
+  produces approximately the same visual diameter.
+
+  For orthographic projections this formula is exact.  For perspective
+  projections it gives the correct size at the near plane.
+
+  \a viewWorldHeight is the world-space height of the view (SbViewVolume::getHeight()).
+  \a viewportHeightPx is the viewport height in pixels.
+
+  \sa createSphereProxy()
+*/
+float
+SoPointSet::pointSizeToWorldRadius(float pointSizePx,
+                                   float viewWorldHeight,
+                                   float viewportHeightPx)
+{
+  return pointSizePx * viewWorldHeight / viewportHeightPx * 0.5f;
 }

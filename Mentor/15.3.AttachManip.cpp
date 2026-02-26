@@ -130,7 +130,6 @@ SoPath *createTransformPath(SoPath *inputPath)
 
     SoTransform *editXf = NULL;
     SoGroup     *parent;
-    SbBool      existedBefore = FALSE;
 
     // CASE 2: The tail is not a group.
     SbBool isTailGroup;
@@ -150,12 +149,9 @@ SoPath *createTransformPath(SoPath *inputPath)
                 break;
         }
         if (editXf == NULL) {
-            existedBefore = FALSE;
             editXf = new SoTransform;
             parent->insertChild(editXf, tailIndx);
         }
-        else
-            existedBefore = TRUE;
     }
     // CASE 3: The tail is a group.
     else {
@@ -174,12 +170,9 @@ SoPath *createTransformPath(SoPath *inputPath)
                 break;
         }
         if (editXf == NULL) {
-            existedBefore = FALSE;
             editXf = new SoTransform;
             parent->insertChild(editXf, i);
         }
-        else 
-            existedBefore = TRUE;
     }
 
     // Create 'pathToXform.' Copy inputPath, then make last

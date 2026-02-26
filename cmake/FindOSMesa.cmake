@@ -1,41 +1,60 @@
 # FindOSMesa.cmake
-# Builds the starseeker/osmesa library (Off-Screen Mesa) from submodule
+# Locates or builds the project's OSMesa library.
+#
+# The project builds its own OSMesa from the external/osmesa submodule
+# (starseeker/osmesa).  This version is compiled with OSMESA_NAME_MANGLING
+# so all GL symbols are prefixed with "mgl" rather than "gl", which is
+# required for COIN3D_BUILD_DUAL_GL to coexist with system OpenGL in the
+# same shared library without symbol conflicts.
+#
+# NOTE: The system libosmesa6-dev package is intentionally NOT used here.
+# Its symbols are NOT name-mangled and would collide with system libGL
+# in a dual build.
+#
+# If osmesa is not found (submodule missing / not initialised), the caller
+# can still configure a system-OpenGL-only build by setting
+# COIN3D_USE_SYSTEM_ONLY=ON (or by not enabling OSMesa support at all).
 #
 # This will define the following variables:
 #
-#   OSMesa_FOUND         - True if OSMesa is found
-#   OSMesa_LIBRARIES     - List of libraries when using OSMesa  
-#   OSMesa_INCLUDE_DIRS  - The directories containing OSMesa headers
+#   OSMesa_FOUND         - True if OSMesa submodule is available
+#   OSMesa_LIBRARIES     - Library target(s)
+#   OSMesa_INCLUDE_DIRS  - Directories containing OSMesa headers
 #
-# This will define the following imported targets:
-#
-#   OSMesa::OSMesa
+# Interface target:
+#   osmesa_interface     - INTERFACE library wrapping the built osmesa
 
-# Always use the starseeker/osmesa submodule
 if(EXISTS "${PROJECT_SOURCE_DIR}/external/osmesa/CMakeLists.txt")
-    message(STATUS "Using starseeker/osmesa submodule")
-    
-    # Set OSMesa options for coin3d compatibility 
+    message(STATUS "Building OSMesa from external/osmesa submodule")
+
+    # Name-mangling is required for dual-GL builds (mgl* instead of gl*)
     set(OSMESA_NAME_MANGLING ON CACHE BOOL "Enable MGL name mangling for OSMesa")
     set(OSMESA_BUILD_EXAMPLES OFF CACHE BOOL "Don't build OSMesa examples")
-    
+
     # Add the osmesa subproject
     add_subdirectory("${PROJECT_SOURCE_DIR}/external/osmesa" osmesa_build EXCLUDE_FROM_ALL)
-    
+
     # Create an interface wrapper to avoid export issues
-    add_library(osmesa_interface INTERFACE)
-    target_link_libraries(osmesa_interface INTERFACE osmesa)
-    
-    # Set up the variables for the submodule build
-    set(OSMesa_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/external/osmesa/include")
-    set(OSMesa_LIBRARY osmesa_interface)  # Use the interface wrapper
-    set(OSMesa_FOUND TRUE)
-    set(OSMesa_LIBRARIES ${OSMesa_LIBRARY})
+    if(NOT TARGET osmesa_interface)
+        add_library(osmesa_interface INTERFACE)
+        target_link_libraries(osmesa_interface INTERFACE osmesa)
+    endif()
+
+    set(OSMesa_INCLUDE_DIR  "${PROJECT_SOURCE_DIR}/external/osmesa/include")
+    set(OSMesa_LIBRARY      osmesa_interface)
+    set(OSMesa_FOUND        TRUE)
+    set(OSMesa_LIBRARIES    ${OSMesa_LIBRARY})
     set(OSMesa_INCLUDE_DIRS ${OSMesa_INCLUDE_DIR})
-    
-    # Don't create an alias since we'll use the osmesa target directly
-    # The main CMakeLists.txt will handle the target vs libraries case
+
 else()
-    # Submodule is required when OSMesa is enabled
-    message(FATAL_ERROR "starseeker/osmesa submodule not found at external/osmesa. Please run 'git submodule update --init --recursive'")
+    set(OSMesa_FOUND FALSE)
+    if(OSMesa_FIND_REQUIRED)
+        message(FATAL_ERROR
+            "OSMesa submodule not found at external/osmesa.\n"
+            "Please run: git submodule update --init --recursive\n"
+            "The project requires its own name-mangled OSMesa build; "
+            "the system libosmesa6-dev package is not compatible.")
+    else()
+        message(STATUS "OSMesa submodule not found at external/osmesa – OSMesa support disabled")
+    endif()
 endif()

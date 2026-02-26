@@ -45,7 +45,6 @@
 #include <Inventor/SoDB.h>
 #include <Inventor/fields/SoField.h>
 
-#include "threads/threadsutilp.h"
 #include "nodes/SoUnknownNode.h"
 #include "fields/SoGlobalField.h"
 #include "io/SoInputP.h"
@@ -65,12 +64,6 @@ const char SoBase::PImpl::ROUTE_KEYWORD[] = "ROUTE";
 const char SoBase::PImpl::PROTO_KEYWORD[] = "PROTO";
 const char SoBase::PImpl::EXTERNPROTO_KEYWORD[] = "EXTERNPROTO";
 
-void * SoBase::PImpl::mutex = NULL;
-void * SoBase::PImpl::name2obj_mutex = NULL;
-void * SoBase::PImpl::obj2name_mutex = NULL;
-void * SoBase::PImpl::auditor_mutex = NULL;
-void * SoBase::PImpl::global_mutex = NULL;
-
 SbHash<const SoBase *, SoAuditorList *> * SoBase::PImpl::auditordict = NULL;
 
 // Only a small number of SoBase derived objects will under usual
@@ -86,7 +79,6 @@ SbHash<const SoBase *, const char *> * SoBase::PImpl::obj2name = NULL;
 // SoBase-derived objects that have been allocated and not
 // deallocated.
 SbBool SoBase::PImpl::trackbaseobjects = FALSE;
-void * SoBase::PImpl::allbaseobj_mutex = NULL;
 SoBaseSet * SoBase::PImpl::allbaseobj = NULL; // maps from SoBase * to NULL
 
 SbString * SoBase::PImpl::refwriteprefix = NULL;
@@ -112,7 +104,6 @@ SoBase::PImpl::readNode(SoInput * in)
 void
 SoBase::PImpl::removeName2Obj(SoBase * const base, const char * const name)
 {
-  CC_MUTEX_LOCK(SoBase::PImpl::name2obj_mutex);
   SbHash<const char*, SbPList*>::const_iterator iter = SoBase::PImpl::name2obj->find(name);
   SbBool found = (iter != SoBase::PImpl::name2obj->const_end());
   assert(found);
@@ -123,17 +114,13 @@ SoBase::PImpl::removeName2Obj(SoBase * const base, const char * const name)
   const int i = l->find(base);
   assert(i >= 0);
   l->remove(i);
-
-  CC_MUTEX_UNLOCK(SoBase::PImpl::name2obj_mutex);
 }
 
 // Remove a reference from an instance pointer to its associated name.
 void
 SoBase::PImpl::removeObj2Name(SoBase * const base, const char * const COIN_UNUSED_ARG(name))
 {
-  CC_MUTEX_LOCK(SoBase::PImpl::obj2name_mutex);
   SoBase::PImpl::obj2name->erase(base);
-  CC_MUTEX_UNLOCK(SoBase::PImpl::obj2name_mutex);
 }
 
 void

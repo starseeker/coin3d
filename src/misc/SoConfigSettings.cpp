@@ -21,12 +21,14 @@ namespace {
   }
   const char COIN [] = "COIN";
 
+#if COIN_DEBUG
   SbBool isValidOption(const SbString & option)
   {
     size_t i;
     for (i = 0; i<options_size() && option != VALID_OPTIONS[i]; ++i) {}
     return (i!=options_size());
   }
+#endif // COIN_DEBUG
 
   const SbString INVALID_SETTING("");
 };

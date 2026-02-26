@@ -219,7 +219,7 @@ static bool test3_eventDrivenMaterialChange(const char *basepath)
 static int g_t4_press = 0, g_t4_move = 0, g_t4_release = 0;
 static void t4_pressCB  (void *, SoEventCallback *) { ++g_t4_press;   }
 static void t4_moveCB   (void *, SoEventCallback *) { ++g_t4_move;    }
-static void t4_releaseCB(void *, SoEventCallback *) { ++g_t4_release; }
+[[maybe_unused]] static void t4_releaseCB(void *, SoEventCallback *) { ++g_t4_release; }
 
 static bool test4_pressMoveDragRelease(const char *basepath)
 {

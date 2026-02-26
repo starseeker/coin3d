@@ -783,6 +783,33 @@ SoText2::generatePrimitives(SoAction * COIN_UNUSED_ARG(action))
   // This is supposed to be empty. There are no primitives.
 }
 
+/*!
+  Returns the four world-space corner vertices of the screen-aligned bounding
+  quad for this text string.
+
+  The quad is computed using the current model matrix and view volume stored
+  in \a state, so this method must be called during scene-graph traversal
+  (e.g. from a SoCallbackAction pre-callback or a custom traversal action).
+
+  The returned vertices v0..v3 are in counter-clockwise order:
+    v0 = top-left, v1 = top-right, v2 = bottom-right, v3 = bottom-left.
+
+  Returns FALSE if the quad is empty (e.g. empty string or font not loaded).
+
+  This method is intended to provide a path forward for ray-tracing backends
+  that cannot rasterise SoText2 directly.  The caller can construct a
+  billboarded quad or bounding-box placeholder from the returned vertices.
+
+  \sa SoText3::generatePrimitives()
+*/
+SbBool
+SoText2::getTextQuad(SoState * state,
+                     SbVec3f & v0, SbVec3f & v1,
+                     SbVec3f & v2, SbVec3f & v3) const
+{
+  return PRIVATE(this)->getQuad(state, v0, v1, v2, v3);
+}
+
 // SoText2P methods below
 
 void

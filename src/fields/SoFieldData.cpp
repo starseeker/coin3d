@@ -76,7 +76,6 @@
 #include <Inventor/lists/SoFieldList.h>
 #include <Inventor/misc/SoProto.h>
 
-#include "threads/threadsutilp.h"
 #include "io/SoInputP.h"
 #include "config.h" // COIN_STUB()
 
@@ -212,8 +211,6 @@ SoFieldData::addField(SoFieldContainer * base, const char * name,
   // FIXME: and another peculiar thing. Why is the SoInfo::string
   // field added upon SoDB::init()? 20050708 mortene.
 
-  CC_GLOBAL_LOCK;
-
   // Will be called many times, from each node constructor, for every
   // field of the node. We're only interested in in getting this
   // information /once/, however.
@@ -252,7 +249,6 @@ SoFieldData::addField(SoFieldContainer * base, const char * name,
 
     this->fields.append(new SoFieldEntry(name, offs));
   }
-  CC_GLOBAL_UNLOCK;
 }
 
 /*!
@@ -358,7 +354,6 @@ void
 SoFieldData::addEnumValue(const char * enumname, const char * valuename,
                           int value)
 {
-  CC_GLOBAL_LOCK;
   if (!this->hasEnumValue(enumname, valuename)) {
     SoEnumEntry * e = NULL;
 
@@ -383,7 +378,6 @@ SoFieldData::addEnumValue(const char * enumname, const char * valuename,
     // value. 20000101 mortene.
     e->values.append(value);
   }
-  CC_GLOBAL_UNLOCK;
 }
 
 /*!

@@ -68,7 +68,7 @@ static void myErrorCb(const SoError * err, void * data)
 }
 
 // Silent sink — used to suppress error output during negative tests
-static void silentCb(const SoError * /*err*/, void * /*data*/) {}
+[[maybe_unused]] static void silentCb(const SoError * /*err*/, void * /*data*/) {}
 
 int main()
 {

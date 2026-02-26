@@ -39,6 +39,7 @@
 #include <Inventor/lists/SbPList.h>
 #include <Inventor/SbString.h>
 #include <Inventor/SbName.h>
+#include <Inventor/SoDB.h>
 
 #include <cstdio>
 
@@ -74,6 +75,9 @@ public:
   const SbViewportRegion & getViewportRegion(void) const;
   void setBackgroundColor(const SbColor & color);
   const SbColor & getBackgroundColor(void) const;
+  void setBackgroundGradient(const SbColor & bottom, const SbColor & top);
+  void clearBackgroundGradient(void);
+  SbBool hasBackgroundGradient(void) const;
   void setGLRenderAction(SoGLRenderAction * action);
   SoGLRenderAction * getGLRenderAction(void) const;
   SbBool render(SoNode * scene);
@@ -105,6 +109,15 @@ public:
   static SbBool isOpenGLExtensionSupported(const char * extension);
   static SbBool hasFramebufferObjectSupport(void);
   static SbBool isVersionAtLeast(int major, int minor, int release = 0);
+
+  // Per-instance context manager.  When set via setContextManager(), this
+  // renderer uses the provided manager for all GL context lifecycle calls
+  // instead of the global singleton (SoDB::getContextManager()).  This
+  // allows multiple renderers to use different backends simultaneously
+  // (e.g. system GL and OSMesa in the same process) without touching any
+  // global state.  Pass NULL to revert to the global manager.
+  void setContextManager(SoDB::ContextManager * manager);
+  SoDB::ContextManager * getContextManager(void) const;
 
 
 

@@ -1457,7 +1457,6 @@ static int stt_InitFont_internal(stt_fontinfo *info, unsigned char *data, int da
 
 STT_DEF int stt_FindGlyphIndex(const stt_fontinfo *info, int unicode_codepoint)
 {
-   stt_uint8 *data = info->data;
    stt_uint32 index_map = info->index_map;
 
    stt_uint16 format = stt__safe_read16(info, index_map + 0);

@@ -39,6 +39,7 @@
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/misc/SoContextHandler.h>
 #include <Inventor/elements/SoGLCacheContextElement.h>
+#include <Inventor/SoDB.h>
 
 #include "CoinTidbits.h"
 #include "misc/SoEnvironment.h"
@@ -60,6 +61,7 @@ CoinOffscreenGLCanvas::CoinOffscreenGLCanvas(void)
   this->color_rb = 0;
   this->depth_rb = 0;
   this->fbo_initialized = FALSE;
+  this->instance_mgr = NULL;
 }
 
 CoinOffscreenGLCanvas::~CoinOffscreenGLCanvas()
@@ -69,16 +71,55 @@ CoinOffscreenGLCanvas::~CoinOffscreenGLCanvas()
 
 // *************************************************************************
 
+// Set a per-instance context manager.  When non-NULL this manager is used
+// for all context lifecycle calls, overriding the global singleton.
+void
+CoinOffscreenGLCanvas::setContextManager(SoDB::ContextManager * mgr)
+{
+  // If there's already an active context that was created with a different
+  // manager, destroy it first so the new manager starts fresh.
+  if (this->context && this->instance_mgr != mgr) {
+    this->destructContext();
+  }
+  this->instance_mgr = mgr;
+}
+
+// Returns the effective context manager to use: per-instance if set,
+// otherwise the global singleton.
+SoDB::ContextManager *
+CoinOffscreenGLCanvas::effectiveMgr(void) const
+{
+  return this->instance_mgr ? this->instance_mgr : SoDB::getContextManager();
+}
+
+// *************************************************************************
+
 SbBool
-CoinOffscreenGLCanvas::clampSize(SbVec2s & reqsize)
+CoinOffscreenGLCanvas::clampSize(SbVec2s & reqsize) const
 {
   // getMaxTileSize() returns the theoretical maximum gathered from
   // various GL driver information. We're not guaranteed that we'll be
   // able to allocate a buffer of this size -- e.g. due to memory
   // constraints on the gfx card.
 
-  const SbVec2s maxsize = CoinOffscreenGLCanvas::getMaxTileSize();
-  if (maxsize == SbVec2s(0, 0)) { return FALSE; }
+  SbVec2s maxsize = CoinOffscreenGLCanvas::getMaxTileSize();
+  if (maxsize == SbVec2s(0, 0)) {
+    // The global GL probe returned nothing usable (e.g. no system-GL context
+    // could be created because we are headless or there is no display).
+    // Ask the per-instance manager for its own limits -- this allows an
+    // OSMesa-backed renderer to report its RAM-only limits independently of
+    // the system-GL state.
+    SoDB::ContextManager * mgr = this->effectiveMgr();
+    if (mgr) {
+      unsigned int mw = 0, mh = 0;
+      mgr->maxOffscreenDimensions(mw, mh);
+      if (mw > 0 && mh > 0) {
+        maxsize[0] = (short)SbMin(mw, (unsigned int)SHRT_MAX);
+        maxsize[1] = (short)SbMin(mh, (unsigned int)SHRT_MAX);
+      }
+    }
+    if (maxsize == SbVec2s(0, 0)) { return FALSE; }
+  }
 
   reqsize[0] = SbMin(reqsize[0], maxsize[0]);
   reqsize[1] = SbMin(reqsize[1], maxsize[1]);
@@ -107,7 +148,7 @@ CoinOffscreenGLCanvas::setWantedSize(SbVec2s reqsize)
 {
   assert((reqsize[0] > 0) && (reqsize[1] > 0) && "invalid dimensions attempted set");
 
-  const SbBool ok = CoinOffscreenGLCanvas::clampSize(reqsize);
+  const SbBool ok = this->clampSize(reqsize);
   if (!ok) {
     if (this->context) { this->destructContext(); }
     this->size = SbVec2s(0, 0);
@@ -168,9 +209,10 @@ CoinOffscreenGLCanvas::setWantedSize(SbVec2s reqsize)
 
   // Clean up FBO if size is changing - it will be recreated with new size
   if (this->context && this->fbo_initialized) {
-    if (SoGLContext_context_make_current(this->context)) {
+    SoDB::ContextManager * mgr = this->effectiveMgr();
+    if (mgr && mgr->makeContextCurrent(this->context)) {
       this->cleanupFBO();
-      SoGLContext_context_reinstate_previous(this->context);
+      mgr->restorePreviousContext(this->context);
     }
   }
 
@@ -190,11 +232,16 @@ CoinOffscreenGLCanvas::tryActivateGLContext(void)
 {
   if (this->size == SbVec2s(0, 0)) { return 0; }
 
+  SoDB::ContextManager * mgr = this->effectiveMgr();
+
   if (this->context == NULL) {
-    // Always use the callback-based context creation system
-    // Applications must provide context creation callbacks
-    this->context = SoGLContext_context_create_offscreen(this->size[0],
-                                                       this->size[1]);
+    if (!mgr) {
+      SoDebugError::post("CoinOffscreenGLCanvas::tryActivateGLContext",
+                         "No context manager available. Applications must provide "
+                         "a context manager via SoDB::init() before rendering.");
+      return 0;
+    }
+    this->context = mgr->createOffscreenContext(this->size[0], this->size[1]);
     
     if (CoinOffscreenGLCanvas::debug()) {
       SoDebugError::postInfo("CoinOffscreenGLCanvas::tryActivateGLContext",
@@ -214,12 +261,21 @@ CoinOffscreenGLCanvas::tryActivateGLContext(void)
     // Set up mapping from GL context to SoGLRenderAction context id.
     this->renderid = SoGLCacheContextElement::getUniqueCacheContext();
 
+#ifdef COIN3D_BUILD_DUAL_GL
+    /* In dual-GL builds, tell the GL dispatch layer which backend this
+       context was created with so SoGLContext_instance() can route to
+       the correct (osmesa_ or sysgl) implementation. */
+    if (mgr->isOSMesaContext(this->context)) {
+      coingl_register_osmesa_context(static_cast<int>(this->renderid));
+    }
+#endif
+
     // Note: HDC handling is Windows-specific and should be handled by 
     // the callback implementation if needed
     this->current_hdc = NULL;
   }
 
-  if (SoGLContext_context_make_current(this->context) == FALSE) {
+  if (!mgr || mgr->makeContextCurrent(this->context) == FALSE) {
     if (CoinOffscreenGLCanvas::debug()) {
       SoDebugError::post("CoinOffscreenGLCanvas::tryActivateGLContext",
                          "Couldn't make context current.");
@@ -302,7 +358,8 @@ CoinOffscreenGLCanvas::deactivateGLContext(void)
   // Unbind FBO before deactivating context
   this->unbindFBO();
   
-  SoGLContext_context_reinstate_previous(this->context);
+  SoDB::ContextManager * mgr = this->effectiveMgr();
+  if (mgr) mgr->restorePreviousContext(this->context);
 }
 
 // *************************************************************************
@@ -312,7 +369,8 @@ CoinOffscreenGLCanvas::destructContext(void)
 {
   assert(this->context);
 
-  if (SoGLContext_context_make_current(this->context)) {
+  SoDB::ContextManager * mgr = this->effectiveMgr();
+  if (mgr && mgr->makeContextCurrent(this->context)) {
     // Clean up FBO resources before destroying context
     this->cleanupFBO();
     
@@ -327,7 +385,7 @@ CoinOffscreenGLCanvas::destructContext(void)
     }
   }
 
-  SoGLContext_context_destruct(this->context);
+  if (mgr) mgr->destroyContext(this->context);
 
   this->context = NULL;
   this->renderid = 0;
@@ -364,10 +422,15 @@ CoinOffscreenGLCanvas::readPixels(uint8_t * dst,
                                   unsigned int dstrowsize,
                                   unsigned int nrcomponents) const
 {
-  // Ensure FBO is bound for reading pixels from offscreen render target
-  const SoGLContext * glue = SoGLContext_instance(static_cast<int>(this->renderid));
-  if (glue && this->fbo_initialized && this->fbo != 0) {
-    SoGLContext_glBindFramebuffer(glue, GL_FRAMEBUFFER_EXT, this->fbo);
+  // For OSMesa contexts, glReadPixels reads directly from the OSMesa buffer
+  // (no FBO involved).  For system-GL contexts, ensure the FBO is bound.
+  SoDB::ContextManager * mgr = this->effectiveMgr();
+  const bool isOSMesa = mgr && this->context && mgr->isOSMesaContext(this->context);
+  if (!isOSMesa) {
+    const SoGLContext * glue = SoGLContext_instance(static_cast<int>(this->renderid));
+    if (glue && this->fbo_initialized && this->fbo != 0) {
+      SoGLContext_glBindFramebuffer(glue, GL_FRAMEBUFFER_EXT, this->fbo);
+    }
   }
   
   glPushAttrib(GL_ALL_ATTRIB_BITS);
@@ -569,7 +632,8 @@ CoinOffscreenGLCanvas::initializeFBO(void)
   if (this->fbo_initialized) { return TRUE; }
   
   // Ensure the context is current before calling SoGLContext_instance
-  if (this->context && !SoGLContext_context_make_current(this->context)) {
+  SoDB::ContextManager * mgr = this->effectiveMgr();
+  if (this->context && (!mgr || mgr->makeContextCurrent(this->context) == FALSE)) {
     if (CoinOffscreenGLCanvas::debug()) {
       SoDebugError::post("CoinOffscreenGLCanvas::initializeFBO",
                          "Failed to make context current before FBO initialization");
@@ -708,6 +772,17 @@ CoinOffscreenGLCanvas::cleanupFBO(void)
 SbBool
 CoinOffscreenGLCanvas::bindFBO(void)
 {
+  // OSMesa renders directly to the buffer supplied at context creation time
+  // (via OSMesaMakeCurrent) – there is no separate framebuffer object needed.
+  // Attempting to create one would require GL_EXT_framebuffer_object support
+  // from the OSMesa implementation, which the bundled OSMesa may not provide.
+  // glReadPixels() will read from the OSMesa buffer directly when an OSMesa
+  // context is current, so we can skip FBO entirely for these contexts.
+  SoDB::ContextManager * mgr = this->effectiveMgr();
+  if (mgr && this->context && mgr->isOSMesaContext(this->context)) {
+    return TRUE;  // use OSMesa's own buffer – no FBO needed
+  }
+
   if (!this->fbo_initialized) {
     if (!this->initializeFBO()) {
       return FALSE;
@@ -728,6 +803,12 @@ CoinOffscreenGLCanvas::bindFBO(void)
 void
 CoinOffscreenGLCanvas::unbindFBO(void)
 {
+  // No FBO to unbind for OSMesa contexts (see bindFBO comment).
+  SoDB::ContextManager * mgr = this->effectiveMgr();
+  if (mgr && this->context && mgr->isOSMesaContext(this->context)) {
+    return;
+  }
+
   const SoGLContext * glue = SoGLContext_instance(static_cast<int>(this->renderid));
   if (!glue) { return; }
   

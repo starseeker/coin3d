@@ -265,8 +265,6 @@ private:
 
 };
 
-static SbList <SbName> * SoOutput_compmethods = NULL;
-
 // *************************************************************************
 
 #define PRIVATE(obj) (obj->pimpl)

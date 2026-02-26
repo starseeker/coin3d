@@ -1067,7 +1067,6 @@ SoRenderManager::initStencilBufferForInterleavedStereo(void)
   const SbVec2s neworigin = currentvp.getViewportOriginPixels();
   const SbVec2s newsize = currentvp.getViewportSizePixels();
 
-  const SbVec2s oldorigin = PRIVATE(this)->stereostencilmaskvp.getViewportOriginPixels();
   const SbVec2s oldsize = PRIVATE(this)->stereostencilmaskvp.getViewportSizePixels();
 
   allocnewmask = allocnewmask ||
@@ -1674,8 +1673,6 @@ SoRenderManager::getRedrawPriority(void) const
   return PRIVATE(this)->redrawpri;
 }
 
-/*!
-  Set the \a action to use for rendering audio. Overrides the default action
 /*!
   Returns the default priority of the redraw sensor.
 
