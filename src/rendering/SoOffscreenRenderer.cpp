@@ -834,9 +834,11 @@ SoOffscreenRendererP::renderFromBase(SoBase * base)
           this->backgroundcolor[1],
           this->backgroundcolor[2]
         };
-        // Fill buffer with background colour or vertical gradient
-        // (handles both RGB and RGBA).  Row 0 is the screen-bottom (GL/getBuffer
-        // convention), so y=0 → gradient_bottom and y=height-1 → gradient_top.
+        // Fill buffer with background colour or vertical gradient.
+        // Row 0 is the screen-bottom (GL/getBuffer convention), so
+        // y=0 → gradient_bottom and y=height-1 → gradient_top.
+        // The number of bytes written per pixel must match nrcomp:
+        //   1 = LUMINANCE, 2 = LUMINANCE_TRANSPARENCY, 3 = RGB, 4 = RGBA.
         unsigned char * p = this->buffer;
         if (this->has_gradient) {
           const int H = fullsize[1];
@@ -849,18 +851,30 @@ SoOffscreenRendererP::renderFromBase(SoBase * base)
             const unsigned char rB = (unsigned char)(r * 255.0f);
             const unsigned char gB = (unsigned char)(g * 255.0f);
             const unsigned char bB = (unsigned char)(b * 255.0f);
+            const unsigned char lumB = (unsigned char)SbMin(r * 76.0f + g * 150.0f + b * 29.0f, 255.0f);
             for (int x = 0; x < W; ++x) {
-              *p++ = rB; *p++ = gB; *p++ = bB;
-              if (nrcomp == 4) *p++ = 255;
+              if (nrcomp <= 2) {
+                *p++ = lumB;
+                if (nrcomp == 2) *p++ = 255;
+              } else {
+                *p++ = rB; *p++ = gB; *p++ = bB;
+                if (nrcomp == 4) *p++ = 255;
+              }
             }
           }
         } else {
           const unsigned char bgR = (unsigned char)(bg[0] * 255.0f);
           const unsigned char bgG = (unsigned char)(bg[1] * 255.0f);
           const unsigned char bgB = (unsigned char)(bg[2] * 255.0f);
+          const unsigned char bgL = (unsigned char)SbMin(bg[0] * 76.0f + bg[1] * 150.0f + bg[2] * 29.0f, 255.0f);
           for (size_t i = 0; i < (size_t)fullsize[0] * fullsize[1]; ++i) {
-            *p++ = bgR; *p++ = bgG; *p++ = bgB;
-            if (nrcomp == 4) *p++ = 255;
+            if (nrcomp <= 2) {
+              *p++ = bgL;
+              if (nrcomp == 2) *p++ = 255;
+            } else {
+              *p++ = bgR; *p++ = bgG; *p++ = bgB;
+              if (nrcomp == 4) *p++ = 255;
+            }
           }
         }
 

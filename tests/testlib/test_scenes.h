@@ -93,6 +93,15 @@ SoSeparator* createLOD(int width = 800, int height = 600);
 /** Transparent spheres demonstrating alpha blending. */
 SoSeparator* createTransparency(int width = 800, int height = 600);
 
+/** Filled, wireframe, and points draw style comparison. */
+SoSeparator* createDrawStyle(int width = 800, int height = 600);
+
+/** SoIndexedFaceSet tetrahedron. */
+SoSeparator* createIndexedFaceSet(int width = 800, int height = 600);
+
+/** Manipulators demo: SoTrackballManip and SoTabBoxManip on geometry. */
+SoSeparator* createManips(int width = 800, int height = 600);
+
 } // namespace Scenes
 } // namespace ObolTest
 

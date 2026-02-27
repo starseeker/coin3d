@@ -95,6 +95,7 @@ struct TestEntry {
     std::string   description;
     bool          has_visual;       /**< Can produce a rendered image */
     bool          has_interactive;  /**< Scene supports camera/event interaction */
+    bool          nanort_ok;        /**< NanoRT raytracer can render this scene (false = GL-only) */
 
     /**
      * Unit-test runner.
@@ -182,6 +183,7 @@ private:
         e.description = (desc);                                           \
         e.has_visual      = false;                                        \
         e.has_interactive = false;                                        \
+        e.nanort_ok       = true;                                         \
         __VA_ARGS__;                                                      \
         ObolTest::TestRegistry::instance().registerTest(e);               \
         return true;                                                      \

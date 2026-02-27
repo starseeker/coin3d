@@ -544,7 +544,9 @@ if(OBOL_BUILD_VIEWER)
     ${PROJECT_SOURCE_DIR}/include
     ${PROJECT_SOURCE_DIR}/include/Inventor/annex
     ${PROJECT_BINARY_DIR}/include
+    ${PROJECT_SOURCE_DIR}/tests           # testlib/test_registry.h
     ${PROJECT_SOURCE_DIR}/tests/utils     # headless_utils.h
+    ${PROJECT_SOURCE_DIR}/tests/testlib   # test_registry.h (direct)
     ${OBOL_TARGET_INCLUDE_DIRECTORIES}
     ${FLTK_INCLUDE_DIRS}
   )
@@ -574,12 +576,25 @@ if(OBOL_BUILD_VIEWER)
     message(STATUS "obol_viewer: NanoRT panel disabled (external/nanort/nanort.h not found)")
   endif()
 
-  target_link_libraries(obol_viewer
-    PRIVATE
-      ${PROJECT_NAME}
-      ${OBOL_TARGET_LINK_LIBRARIES}
-      ${FLTK_LIBRARIES}
-  )
+  # Link against obol_testlib (with --whole-archive so REGISTER_TEST static
+  # initialisers are not discarded) as well as the main Obol library.
+  if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    target_link_libraries(obol_viewer
+      PRIVATE
+        -Wl,--whole-archive obol_testlib -Wl,--no-whole-archive
+        ${PROJECT_NAME}
+        ${OBOL_TARGET_LINK_LIBRARIES}
+        ${FLTK_LIBRARIES}
+    )
+  else()
+    target_link_libraries(obol_viewer
+      PRIVATE
+        obol_testlib
+        ${PROJECT_NAME}
+        ${OBOL_TARGET_LINK_LIBRARIES}
+        ${FLTK_LIBRARIES}
+    )
+  endif()
   # On Linux the viewer includes headless_utils.h which uses GLX symbols for
   # the system-GL path; link the X/GL libs explicitly when available.
   if(UNIX AND NOT APPLE)

@@ -1,32 +1,31 @@
-# Testing Guide for Coin3D
+# Testing Guide for Obol
 
-This guide explains how to run and write tests for the Coin3D library, which has been fully migrated to a modern explicit testing system.
+This guide explains how to run and write tests for the Obol library.
 
 ## Testing System
 
-The Coin3D library uses **explicit Catch2-based tests** as the primary testing system:
+Obol uses **Catch2-based tests** as the primary testing system:
 
 ### Primary Tests
-- **Executable**: `CoinTests` 
-- **Location**: `tests/` directory 
-- **Type**: Modern Catch2-based explicit test files
-- **Test Count**: 7 core tests (representative of full test coverage)
-- **Status**: **Primary testing system**
+- **Executable**: `CoinTests`
+- **Location**: `tests/` directory
+- **Type**: Catch2-based test files
+- **Status**: Primary testing system
 
-### Legacy Tests  
+### Legacy Tests
 - **Executable**: `CoinLegacyTests`
 - **Location**: `testsuite/` directory
 - **Type**: Threading and miscellaneous utility tests
-- **Test Count**: 9 specialized tests 
-- **Status**: Minimal legacy components for threading validation
+- **Status**: Retained for threading validation
 
 ## Running Tests
 
 ### Build Requirements
 
-**Important**: The new API requires that all applications (including tests) provide a `ContextManager*` to `SoDB::init()`. The test framework automatically handles this:
+All tests (and all applications) must provide a `ContextManager*` to `SoDB::init()`.
+The test framework handles this automatically:
 
-- **OSMesa builds**: Uses `OSMesaContextManager` for real offscreen rendering  
+- **OSMesa builds**: Uses `OSMesaContextManager` for real offscreen rendering
 - **Non-OSMesa builds**: Uses `NullContextManager` for API testing without rendering
 
 ### Run All Tests
@@ -79,43 +78,28 @@ ctest -C Release -V
 ./bin/CoinTests "[SoType]"      # Run SoType tests only
 ```
 
-## Migration Complete ✅
+## Test Structure
 
-The project has **successfully migrated** from the legacy comment-driven system to explicit Catch2 tests:
-
-### Completed ✅
-- [x] **Complete test migration**: All 138+ embedded tests migrated to explicit format
-- [x] **Embedded system removal**: All `#ifdef COIN_TEST_SUITE` blocks removed from source files
-- [x] **Test generation elimination**: CMake regex parsing and generation scripts removed
-- [x] **Primary system**: Explicit tests are now the main testing system
-- [x] **Legacy preservation**: Threading tests preserved in separate executable
-- [x] **Documentation**: Updated guides and migration summary
-- [x] **Build system**: Simplified CMake configuration
-- [x] **Catch2 framework**: Full integration with modern C++ testing
-
-### Current Structure 🎯
 ```
 tests/
-├── base/test_base.cpp           # Base types (SbBox3s, SbBox3f, SbBSPTree)
-├── fields/test_fields.cpp       # Field types (SoSFVec4b, SoSFBool, SoSFFloat)  
-├── misc/test_misc.cpp           # Utilities (SoType functionality)
+├── base/test_base.cpp           # Base types (SbBox3s, SbBox3f, SbBSPTree, …)
+├── fields/test_fields.cpp       # Field types (SoSFVec4b, SoSFBool, SoSFFloat, …)
+├── misc/test_misc.cpp           # Utilities (SoType, …)
 ├── main.cpp                     # Test runner entry point
 └── utils/
     ├── test_common.h            # Test utilities and macros
-    └── test_common.cpp          # Coin initialization fixtures
+    └── test_common.cpp          # Obol initialization fixtures
 
 testsuite/                       # Legacy components only
 ├── TestSuiteMain.cpp            # Threading test runner
-├── TestSuiteUtils.cpp           # Threading utilities  
+├── TestSuiteUtils.cpp           # Threading utilities
 ├── TestSuiteMisc.cpp            # Misc test utilities
 └── threadsTest.cpp              # Threading validation tests
 ```
 
 ## Writing New Tests
 
-### Explicit Test Structure
-
-All new tests should be written using the explicit Catch2 format:
+All new tests should be written using the Catch2 format:
 
 ```cpp
 #include "utils/test_common.h" 
@@ -184,14 +168,12 @@ COIN_REQUIRE(condition);             // Equivalent to REQUIRE
 
 ## Architecture Benefits
 
-The migration to explicit tests provides:
+The Catch2-based test suite provides:
 
-1. **Clarity**: Tests in dedicated files, easier to find and modify
-2. **Organization**: Logical grouping by module/functionality  
+1. **Clarity**: Tests in dedicated files, easy to find and modify
+2. **Organization**: Logical grouping by module/functionality
 3. **Maintainability**: No code generation, direct compilation
-4. **Modern Framework**: Catch2 sections, tags, filtering, better output
-5. **CI Integration**: Better test reporting and selective execution
-6. **Zero Dependencies**: Self-contained test executable, no external test framework required
+4. **CI Integration**: Test reporting and selective execution via tags
 
 ## Troubleshooting
 
@@ -200,26 +182,12 @@ The migration to explicit tests provides:
 - **Link errors**: Check that `COIN_BUILD_TESTS=ON` in CMake configuration
 
 ### Test Failures
-- **Coin not initialized**: Ensure `CoinTestFixture` is used in tests
+- **Obol not initialized**: Ensure `CoinTestFixture` is used in tests
 - **Platform differences**: Some tests may be platform-specific (documented in test comments)
 
 ### Adding New Tests
-- **Module selection**: Add to appropriate existing test file or create new one
+- **Module selection**: Add to appropriate existing test file or create a new one
 - **Include paths**: Verify all necessary headers are included
 - **Namespace**: Use `using namespace CoinTestUtils;` for utilities
 
-## Migration Summary
-
-The complete migration removed:
-- **138+ embedded test blocks** from source files
-- **Complex CMake generation** system (regex parsing, template files)
-- **Build complexity** from test code generation
-- **Maintenance overhead** of dual systems
-
-The migration preserved:
-- **Full test coverage** through explicit test conversion
-- **Threading validation** in separate legacy executable  
-- **Build compatibility** and CI integration
-- **Developer workflow** with improved test experience
-
-For questions or issues with testing, please refer to the project's issue tracker or contributor documentation.
+For questions or issues with testing, refer to the project's issue tracker.

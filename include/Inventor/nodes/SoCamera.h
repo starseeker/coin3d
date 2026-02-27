@@ -91,6 +91,7 @@ public:
   
   void pointAt(const SbVec3f & targetpoint);
   void pointAt(const SbVec3f & targetpoint, const SbVec3f & upvector);
+  void orbitCamera(const SbVec3f & center, float dx, float dy, float sensitivity = 0.25f);
   virtual void scaleHeight(float scalefactor) = 0;
   virtual SbViewVolume getViewVolume(float useaspectratio = 0.0f) const = 0;
   void viewAll(SoNode * const sceneroot, const SbViewportRegion & vpregion,

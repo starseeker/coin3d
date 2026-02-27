@@ -1,7 +1,9 @@
-# Coin3D Platform-Specific Code Cleanup Summary
+# Obol Platform-Specific Code Cleanup Summary
 
 ## Overview
-This document summarizes the major cleanup of platform-specific code completed to achieve a clean, simplified codebase using only portable FBO-based offscreen rendering and callback-based context management.
+This document summarizes the removal of platform-specific code from Obol,
+achieving a clean, portable codebase using only FBO-based offscreen rendering
+and callback-based context management.
 
 ## Files Removed (18 files, ~8000+ lines)
 
@@ -86,24 +88,24 @@ SbVec2f pixmmres(72.0f / 25.4f, 72.0f / 25.4f);
 - FreeType (`cc_flwft_*`) for other platforms
 
 ### After (portable)
-- FreeType only (`cc_flwft_*`) for all platforms
+- Embedded `struetype` TrueType rasterizer on all platforms; `libfreetype` is not required
 
 ## Current Architecture (100% Portable)
 
 ### Context Management
-- **Method**: Callback-based only
-- **Files**: `src/glue/gl.cpp` (callback functions)
-- **Application Responsibility**: Provide context creation callbacks via `cc_glglue_context_set_offscreen_cb_functions()`
+- **Method**: Callback-based only via `SoDB::ContextManager`
+- **Files**: `src/glue/gl.cpp` (callback dispatch)
+- **Application Responsibility**: Implement `SoDB::ContextManager` and pass it to `SoDB::init()`
 
-### Offscreen Rendering  
+### Offscreen Rendering
 - **Method**: FBO-based only
 - **Files**: `src/rendering/CoinOffscreenGLCanvas.cpp`
 - **Features**: Portable OpenGL framebuffer objects
 
 ### Font Handling
-- **Method**: FreeType-only
+- **Method**: Embedded `struetype` TrueType rasterizer (no external dependency)
 - **Files**: `src/fonts/fontlib_wrapper.cpp`
-- **Platforms**: All platforms use FreeType
+- **Platforms**: All platforms use the bundled `struetype` rasterizer; `libfreetype` is not required
 
 ### Resolution Detection
 - **Method**: Fixed 72 DPI default
@@ -118,21 +120,13 @@ SbVec2f pixmmres(72.0f / 25.4f, 72.0f / 25.4f);
 ## Migration Guide for Applications
 
 ### Required Changes
-1. **Provide Context Callbacks**: All applications must now provide context management callbacks:
-   ```cpp
-   cc_glglue_offscreen_cb_functions callbacks = {
-       my_create_offscreen,
-       my_make_current,
-       my_reinstate_previous,
-       my_destruct
-   };
-   cc_glglue_context_set_offscreen_cb_functions(&callbacks);
-   ```
+1. **Implement `SoDB::ContextManager`**: Replace any platform-specific context
+   creation with a `ContextManager` subclass passed to `SoDB::init()`.  See
+   `docs/CONTEXT_MANAGEMENT_API.md` for examples.
 
-2. **Handle Function Loading**: Applications are responsible for complete OpenGL function loading in their context creation.
-
-### Optional Changes
-1. **DPI Handling**: If applications need specific DPI, they should scale their rendering rather than relying on system DPI detection.
+2. **DPI Handling**: Obol returns a fixed 72 DPI from the offscreen renderer.
+   Applications that need device-specific DPI should scale their rendering
+   independently.
 
 ## Benefits Achieved
 
@@ -152,15 +146,9 @@ SbVec2f pixmmres(72.0f / 25.4f, 72.0f / 25.4f);
 - **Future-proof**: No dependency on legacy platform APIs
 
 ## Testing Status
-- ✅ All 327+ tests passing
-- ✅ FBO demo functional
-- ✅ Context callback architecture working
-- ✅ Font rendering working (FreeType-only)
+- ✅ All tests passing (see `docs/TESTING.md`)
 - ✅ Offscreen rendering working (FBO-based)
+- ✅ Font rendering working (embedded `struetype` rasterizer)
+- ✅ Context management working via `SoDB::ContextManager`
 
-## Documentation Updated
-- `docs/CONTEXT_REFACTORING.md` - Context callback documentation
-- `examples/osmesa_example.h` - Reference implementation
-- `tests/fbo_demo.cpp` - Working example
-
-This cleanup represents a major milestone in achieving a clean, portable, and maintainable Coin3D codebase.
+This cleanup represents a major milestone in achieving a clean, portable, and maintainable Obol codebase.

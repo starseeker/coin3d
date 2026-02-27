@@ -1,97 +1,97 @@
-# Build Options and Performance Features
+# Build Options
 
-This document describes CMake build options and performance features available in the Coin3D library.
+This document describes CMake build options available in Obol.
 
-## Precompiled Headers Support
+## Core Options
 
-### Overview
+| Option | Default | Description |
+|--------|---------|-------------|
+| `BUILD_SHARED_LIBS` | `ON` | Build shared library when ON, static library when OFF |
+| `OBOL_BUILD_TESTS` | `ON` | Build unit tests |
+| `OBOL_BUILD_VIEWER` | auto | Build the FLTK scene viewer (`obol_viewer`); auto-enabled if FLTK is found |
 
-Coin3D supports precompiled headers (PCH) to significantly speed up compilation. This feature uses CMake's `target_precompile_headers()` functionality (available in CMake 3.16+) to precompile commonly used standard library headers.
+## OpenGL Backend Options
 
-### Usage
+Obol supports three OpenGL backend configurations:
 
-**Enable precompiled headers (default):**
+| Option | Default | Description |
+|--------|---------|-------------|
+| `OBOL_USE_OSMESA` | `OFF` | Build against OSMesa only (headless/offscreen rendering, no system GL) |
+| `OBOL_USE_SYSTEM_ONLY` | `OFF` | Build against system OpenGL only (no OSMesa fallback) |
+| `OBOL_BUILD_DUAL_GL` | `OFF` | Build with both system OpenGL and OSMesa backends in a single library |
+
+When all three are `OFF` (the default), CMake auto-detects available backends: dual mode if both system OpenGL and OSMesa are present, otherwise whichever is available.
+
+`OBOL_USE_OSMESA` and `OBOL_BUILD_DUAL_GL` are mutually exclusive.
+
+## Feature Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `OBOL_THREADSAFE` | `ON` | Enable thread-safe render traversals |
+| `USE_EXCEPTIONS` | `ON` | Compile with C++ exceptions |
+
+## Component Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `HAVE_NODEKITS` | `ON` | Enable NodeKit support |
+| `HAVE_DRAGGERS` | `ON` | Enable Dragger support |
+| `HAVE_MANIPULATORS` | `ON` | Enable Manipulator support |
+| `OBOL_PROFILING` | `OFF` | Enable profiling subsystem |
+
+## Build Optimization Options
+
+### Precompiled Headers
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `OBOL_USE_PRECOMPILED_HEADERS` | `ON` | Use precompiled headers to speed up compilation (requires CMake 3.16+) |
+
+The precompiled header (`src/misc/CoinPCH.h`) includes commonly used standard C++ library headers and is applied to the main `Obol` library target and all object library subdirectories. On CMake versions older than 3.16 this option is automatically disabled with a warning.
+
+**Performance impact** (GCC 13.3.0, Ubuntu, `-j4`):
+- Without PCH: ~3m30s
+- With PCH: ~2m53s (~18% faster, ~37 seconds saved)
+
+### Code Coverage
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `OBOL_COVERAGE` | `OFF` | Enable code coverage instrumentation (GCC/Clang only); provides a `coverage` target that runs CTest and generates an lcov HTML report |
+
+## Build Types
+
+Set via `CMAKE_BUILD_TYPE`: `Release` (default), `Debug`, `MinSizeRel`, `RelWithDebInfo`.
+
+## Example Build Commands
+
+**Standard release build:**
 ```bash
-cmake -S . -B build_dir -DCOIN_USE_PRECOMPILED_HEADERS=ON
-```
-
-**Disable precompiled headers:**
-```bash
-cmake -S . -B build_dir -DCOIN_USE_PRECOMPILED_HEADERS=OFF
-```
-
-### Performance Impact
-
-Based on testing with GCC 13.3.0 on Ubuntu with 4 parallel build jobs (`-j4`):
-
-- **Without PCH**: ~3m30s build time
-- **With PCH**: ~2m53s build time  
-- **Performance improvement**: ~18% faster build (37+ seconds saved)
-- **User CPU time savings**: ~20% reduction (2m33s saved)
-
-### Technical Details
-
-The precompiled header (`src/CoinPCH.h`) includes:
-- Commonly used standard C++ library headers (`<cassert>`, `<cstring>`, `<cstdlib>`, `<cstdio>`)
-- Additional standard library headers (`<cmath>`, `<iostream>`, `<algorithm>`, `<memory>`, `<vector>`, `<string>`)
-
-The PCH is applied to:
-- Main library target (`Coin`)
-- All object library subdirectories (actions, base, elements, etc.)
-
-### Compatibility
-
-- **Requires**: CMake 3.16 or later
-- **Tested with**: GCC 13.3.0, modern compilers
-- **Platform support**: Linux, Windows (MSVC), macOS (Clang)
-- **Backward compatible**: Can be disabled without affecting functionality
-
-### Notes
-
-- PCH only includes safe standard library headers to avoid include order dependencies
-- Inventor-specific headers are not precompiled to prevent type conflicts
-- The feature is automatically disabled on CMake versions < 3.16 with a warning
-- No source code changes are required - PCH is applied automatically during build
-
-## Other Build Options
-
-### Core Options
-- `BUILD_SHARED_LIBS`: Build shared library (ON) or static library (OFF) - default: ON
-- `COIN_BUILD_TESTS`: Build unit tests - default: ON  
-- `COIN_BUILD_EXAMPLES`: Build example applications - default: OFF
-
-### Feature Options
-- `COIN3D_USE_OSMESA`: Use OSMesa for offscreen/headless rendering - default: ON
-- `COIN_THREADSAFE`: Enable thread-safe render traversals - default: ON
-- `USE_EXCEPTIONS`: Compile with C++ exceptions - default: ON
-
-### Component Options
-- `HAVE_NODEKITS`: Enable NodeKit support - default: ON
-- `HAVE_DRAGGERS`: Enable Dragger support - default: ON  
-- `HAVE_MANIPULATORS`: Enable Manipulator support - default: ON
-
-### Build Types
-- `CMAKE_BUILD_TYPE`: Release, Debug, MinSizeRel, RelWithDebInfo - default: Release
-
-### Example Build Commands
-
-**Fast development build with PCH:**
-```bash
-cmake -S . -B build_dir -DCMAKE_BUILD_TYPE=Debug -DCOIN_USE_PRECOMPILED_HEADERS=ON
+cmake -S . -B build_dir -DCMAKE_BUILD_TYPE=Release
 cmake --build build_dir -- -j4
 ```
 
-**Minimal release build:**
+**Development build with debug info:**
 ```bash
-cmake -S . -B build_dir -DCMAKE_BUILD_TYPE=Release \
-  -DCOIN_BUILD_TESTS=OFF -DCOIN_BUILD_EXAMPLES=OFF \
-  -DCOIN_USE_PRECOMPILED_HEADERS=ON
+cmake -S . -B build_dir -DCMAKE_BUILD_TYPE=Debug
+cmake --build build_dir -- -j4
+```
+
+**Minimal release build (no tests):**
+```bash
+cmake -S . -B build_dir -DCMAKE_BUILD_TYPE=Release -DOBOL_BUILD_TESTS=OFF
 cmake --build build_dir -- -j4
 ```
 
 **Static library build:**
 ```bash
-cmake -S . -B build_dir -DBUILD_SHARED_LIBS=OFF \
-  -DCOIN_USE_PRECOMPILED_HEADERS=ON  
+cmake -S . -B build_dir -DBUILD_SHARED_LIBS=OFF
+cmake --build build_dir -- -j4
+```
+
+**Headless/offscreen-only build:**
+```bash
+cmake -S . -B build_dir -DOBOL_USE_OSMESA=ON
 cmake --build build_dir -- -j4
 ```

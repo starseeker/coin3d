@@ -1,184 +1,134 @@
-# Coin3D Context Management API
+# Obol Context Management API
 
 ## Overview
 
-Coin3D now provides a public API for OpenGL context management that allows applications to provide custom context creation and management before library initialization. This addresses initialization ordering issues and provides a clean, idiomatic C++ interface.
+Obol requires applications to supply an OpenGL context manager before library
+initialization.  This cleanly separates all platform-specific context logic
+from the library itself and allows any context back end — OSMesa, EGL, WGL,
+GLX, or a no-op stub for non-rendering scenarios — to be substituted without
+touching Obol code.
 
-## Problem Solved
+## The ContextManager Interface
 
-Previously, applications needed to use internal `cc_glglue_context_*` functions to provide context management callbacks. This had several issues:
-
-1. **Private API**: These functions were internal-only and not part of the public interface
-2. **Initialization Ordering**: Context callbacks needed to be set before `SoDB::init()` but this wasn't clear
-3. **Non-deterministic Behavior**: Improper ordering could cause hanging or infinite loops, especially with OSMesa FBO support
-4. **C-style Interface**: Required C-style callbacks instead of clean C++ interfaces
-
-## New Public API
-
-### SoDB::ContextManager
-
-A new abstract base class in the `SoDB` class provides the public interface:
+`SoDB::ContextManager` is an abstract base class declared inside `SoDB`
+(`include/Inventor/SoDB.h`):
 
 ```cpp
 class SoDB::ContextManager {
 public:
     virtual ~ContextManager() {}
-    virtual void * createOffscreenContext(unsigned int width, unsigned int height) = 0;
+    virtual void * createOffscreenContext(unsigned int width,
+                                          unsigned int height) = 0;
     virtual SbBool makeContextCurrent(void * context) = 0;
     virtual void restorePreviousContext(void * context) = 0;
     virtual void destroyContext(void * context) = 0;
 };
 ```
 
-### Registration Methods
+Pass an instance to `SoDB::init()`:
 
 ```cpp
-// Set the global context manager (must be called BEFORE SoDB::init())
-static void SoDB::setContextManager(ContextManager * manager);
-
-// Get the currently registered context manager
-static SoDB::ContextManager * SoDB::getContextManager(void);
+MyContextManager cm;
+SoDB::init(&cm);          // preferred: pass manager directly to init()
 ```
 
-## Usage Example: OSMesa
+`SoDB::getContextManager()` returns the registered instance at any time after
+initialization.
+
+## NullContextManager — Non-rendering / Testing
+
+For unit tests or applications that never call `SoOffscreenRenderer`, a no-op
+implementation is sufficient:
+
+```cpp
+class NullContextManager : public SoDB::ContextManager {
+public:
+    void * createOffscreenContext(unsigned int, unsigned int) override
+        { return nullptr; }
+    SbBool makeContextCurrent(void *) override { return FALSE; }
+    void restorePreviousContext(void *) override {}
+    void destroyContext(void *) override {}
+};
+
+int main() {
+    NullContextManager cm;
+    SoDB::init(&cm);
+    // ...
+}
+```
+
+## OSMesa Example — Full Offscreen Rendering
 
 ```cpp
 #include <Inventor/SoDB.h>
-#include <OSMesa/osmesa.h>
+#include <GL/osmesa.h>
 
 class OSMesaContextManager : public SoDB::ContextManager {
-private:
-    struct OSMesaContext {
-        OSMesaContext context;
-        std::unique_ptr<unsigned char[]> buffer;
-        int width, height;
-        // ... implementation details
+    struct Ctx {
+        OSMesaContext ctx;
+        std::unique_ptr<unsigned char[]> buf;
+        unsigned int w, h;
+
+        Ctx(unsigned int width, unsigned int height)
+            : ctx(OSMesaCreateContext(OSMESA_RGBA, nullptr))
+            , buf(new unsigned char[width * height * 4])
+            , w(width), h(height)
+        {}
+
+        ~Ctx() { if (ctx) OSMesaDestroyContext(ctx); }
+
+        bool makeCurrent() {
+            return OSMesaMakeCurrent(ctx, buf.get(),
+                                     GL_UNSIGNED_BYTE, w, h) == GL_TRUE;
+        }
     };
 
 public:
-    virtual void* createOffscreenContext(unsigned int width, unsigned int height) override {
-        // Create OSMesa context
-        return new OSMesaContext(width, height);
+    void * createOffscreenContext(unsigned int w, unsigned int h) override {
+        return new Ctx(w, h);
     }
-    
-    virtual SbBool makeContextCurrent(void* context) override {
-        // Make OSMesa context current
-        auto* ctx = static_cast<OSMesaContext*>(context);
-        return ctx->makeCurrent() ? TRUE : FALSE;
+
+    SbBool makeContextCurrent(void * context) override {
+        return static_cast<Ctx *>(context)->makeCurrent() ? TRUE : FALSE;
     }
-    
-    virtual void restorePreviousContext(void* context) override {
-        // Restore previous context (OSMesa may not need this)
-    }
-    
-    virtual void destroyContext(void* context) override {
-        // Clean up context
-        delete static_cast<OSMesaContext*>(context);
+
+    void restorePreviousContext(void *) override {}
+
+    void destroyContext(void * context) override {
+        delete static_cast<Ctx *>(context);
     }
 };
 
 int main() {
-    // Create context manager
-    OSMesaContextManager contextManager;
-    
-    // CRITICAL: Set context manager BEFORE SoDB::init()
-    SoDB::setContextManager(&contextManager);
-    
-    // Now initialize Coin3D
-    SoDB::init();
-    
-    // ... rest of application code ...
-    
-    return 0;
+    OSMesaContextManager cm;
+    SoDB::init(&cm);
+    // Use SoOffscreenRenderer, SoRenderManager, etc. normally.
 }
 ```
 
-## Migration from Old API
+See the test suite (e.g. `tests/rendering/`) for complete worked examples
+used in CI.
 
-### Before (Internal API - Not Recommended)
+## Platform-Specific Managers
 
-```cpp
-#include "glue/glp.h"  // Internal header
+| Platform | Context API | Notes |
+|----------|-------------|-------|
+| Linux    | GLX or EGL  | Create a Pbuffer or FBO-only context |
+| Windows  | WGL         | Use `wglCreateContext` / `wglMakeCurrent` |
+| macOS    | CGL         | Use `CGLCreateContext` / `CGLSetCurrentContext` |
+| Headless | OSMesa      | Works everywhere; software rasterizer |
 
-// C-style callbacks
-static void* create_context(unsigned int w, unsigned int h) { /* ... */ }
-static SbBool make_current(void* ctx) { /* ... */ }
-static void reinstate_previous(void* ctx) { /* ... */ }
-static void destruct_context(void* ctx) { /* ... */ }
+Implement all four methods, then pass an instance to `SoDB::init()`.
 
-int main() {
-    // Register C-style callbacks
-    cc_glglue_offscreen_cb_functions callbacks = {
-        create_context, make_current, reinstate_previous, destruct_context
-    };
-    cc_glglue_context_set_offscreen_cb_functions(&callbacks);
-    
-    SoDB::init();
-    // ...
-}
-```
+## Key Points
 
-### After (Public API - Recommended)
-
-```cpp
-#include <Inventor/SoDB.h>  // Public header
-
-class MyContextManager : public SoDB::ContextManager {
-    virtual void* createOffscreenContext(unsigned int w, unsigned int h) override { /* ... */ }
-    virtual SbBool makeContextCurrent(void* ctx) override { /* ... */ }
-    virtual void restorePreviousContext(void* ctx) override { /* ... */ }
-    virtual void destroyContext(void* ctx) override { /* ... */ }
-};
-
-int main() {
-    MyContextManager manager;
-    SoDB::setContextManager(&manager);  // BEFORE SoDB::init()
-    
-    SoDB::init();
-    // ...
-}
-```
-
-## Key Benefits
-
-1. **Public API**: No longer need to include internal headers
-2. **Clear Ordering**: Explicit requirement to set manager before `SoDB::init()`
-3. **C++ Interface**: Clean object-oriented design instead of C callbacks
-4. **Type Safety**: Better type checking and RAII support
-5. **Documentation**: Proper API documentation and examples
-
-## Initialization Ordering
-
-The key requirement is that `SoDB::setContextManager()` **must** be called before `SoDB::init()`:
-
-```cpp
-// ✓ CORRECT ORDER
-SoDB::setContextManager(&myManager);
-SoDB::init();
-
-// ✗ WRONG ORDER - May cause issues
-SoDB::init();
-SoDB::setContextManager(&myManager);  // Too late!
-```
-
-## Backwards Compatibility
-
-The old internal callback API still works but is not recommended. The new public API is the preferred approach for all new code.
-
-## Platform Support
-
-- **OSMesa**: Full support with included examples
-- **GLX**: Implement context manager for X11/Linux platforms
-- **WGL**: Implement context manager for Windows platforms  
-- **Custom**: Any OpenGL context management can be supported
-
-## Testing
-
-The new API includes comprehensive tests demonstrating:
-
-- Context manager registration before initialization
-- Successful rendering with custom contexts
-- Proper cleanup and lifecycle management
-- Integration with existing Coin3D rendering pipeline
-
-See `tests/osmesa_context_test_new.cpp` for a complete working example.
+* The manager must remain valid for the entire lifetime of the Obol library
+  (i.e., until `SoDB::finish()` is called or the program exits).
+* `createOffscreenContext` is called by `SoOffscreenRenderer` when it needs
+  an offscreen buffer; for on-screen rendering only a `NullContextManager` is
+  acceptable.
+* The `restorePreviousContext` hook exists for context-sharing scenarios where
+  a previous context must be reinstated after offscreen work; it is a no-op in
+  most single-context setups.
+* Obol itself has **no** WGL, GLX, AGL, CGL, or EGL code.  All
+  platform-specific context logic lives in the application-supplied manager.

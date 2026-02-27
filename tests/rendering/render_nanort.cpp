@@ -54,6 +54,7 @@
 #include <Inventor/nodes/SoCamera.h>
 #include <Inventor/nodes/SoPerspectiveCamera.h>
 #include <Inventor/nodes/SoDirectionalLight.h>
+#include <Inventor/nodes/SoPointLight.h>
 #include <Inventor/nodes/SoMaterial.h>
 #include <Inventor/nodes/SoTranslation.h>
 #include <Inventor/nodes/SoShape.h>
@@ -61,6 +62,9 @@
 #include <Inventor/nodes/SoCube.h>
 #include <Inventor/nodes/SoCone.h>
 #include <Inventor/nodes/SoCylinder.h>
+#include <Inventor/nodes/SoCoordinate3.h>
+#include <Inventor/nodes/SoIndexedFaceSet.h>
+#include <Inventor/nodes/SoRaytracingParams.h>
 #include <Inventor/SoPrimitiveVertex.h>
 
 // ---- nanort ------------------------------------------------------------------
@@ -255,14 +259,24 @@ static void phongContrib(const float* N, const float* V, const float* L,
 }
 
 // =============================================================================
+// Light descriptor (directional or point)
+// =============================================================================
+struct RtLightInfo {
+    bool  isPoint;       // true = point light, false = directional
+    float dir[3];        // world-space direction (directional lights; away from source)
+    float pos[3];        // world-space position (point lights)
+    float rgb[3];
+    float intensity;
+};
+
+// =============================================================================
 // Main render loop
 // =============================================================================
 
 static bool renderToPNG(const RtScene& scene,
                         const SbViewVolume& vv,
-                        const std::vector<SbVec3f>& lightDirs,
-                        const std::vector<SbColor>& lightColors,
-                        const std::vector<float>&   lightIntensities,
+                        const std::vector<RtLightInfo>& lights,
+                        bool shadowsEnabled,
                         int W, int H,
                         const char* outpath,
                         const float* bgBottom = nullptr,
@@ -349,6 +363,13 @@ static bool renderToPNG(const RtScene& scene,
             float V[3] = { -d[0], -d[1], -d[2] };
             if (dot3(N, V) < 0.0f) { N[0] = -N[0]; N[1] = -N[1]; N[2] = -N[2]; }
 
+            // World-space hit position
+            float hitPt[3] = {
+                p0[0] + d[0] * isect.t,
+                p0[1] + d[1] * isect.t,
+                p0[2] + d[2] * isect.t
+            };
+
             const RtMaterial& mat = scene.tris[fid].mat;
 
             // Emission + ambient fill
@@ -358,25 +379,54 @@ static bool renderToPNG(const RtScene& scene,
                 mat.emission[2] + kAmbientFill * mat.ambient[2]
             };
 
-            // Accumulate contribution from each directional light
-            for (size_t li = 0; li < lightDirs.size(); ++li) {
-                // lightDirs[li] points FROM the light source; negate to get
-                // the unit vector pointing TOWARD the light.
-                SbVec3f ldir = -lightDirs[li];
-                ldir.normalize();
-                float L[3] = { ldir[0], ldir[1], ldir[2] };
-                float lc[3] = { lightColors[li][0],
-                                lightColors[li][1],
-                                lightColors[li][2] };
-                float contrib[3];
-                phongContrib(N, V, L, mat, lc, lightIntensities[li], contrib);
+            // Accumulate contribution from each light
+            for (const RtLightInfo& li : lights) {
+                float L[3];
+                float attenuation = li.intensity;
+                float shadowMaxT  = 1.0e30f;
+
+                if (li.isPoint) {
+                    // Vector from hit point to light position
+                    L[0] = li.pos[0] - hitPt[0];
+                    L[1] = li.pos[1] - hitPt[1];
+                    L[2] = li.pos[2] - hitPt[2];
+                    float dist = sqrtf(L[0]*L[0] + L[1]*L[1] + L[2]*L[2]);
+                    if (dist < 1e-6f) continue;
+                    L[0] /= dist; L[1] /= dist; L[2] /= dist;
+                    // Inverse-square attenuation
+                    attenuation = li.intensity / (1.0f + dist * dist);
+                    shadowMaxT  = dist;
+                } else {
+                    // Directional light: negate direction to get "toward light"
+                    L[0] = -li.dir[0]; L[1] = -li.dir[1]; L[2] = -li.dir[2];
+                    float llen = sqrtf(L[0]*L[0] + L[1]*L[1] + L[2]*L[2]);
+                    if (llen > 1e-6f) { L[0] /= llen; L[1] /= llen; L[2] /= llen; }
+                }
+
+                // Optional shadow ray
+                if (shadowsEnabled) {
+                    const float kShadowEps = 1e-3f;
+                    nanort::Ray<float> shadowRay;
+                    shadowRay.org[0] = hitPt[0] + N[0] * kShadowEps;
+                    shadowRay.org[1] = hitPt[1] + N[1] * kShadowEps;
+                    shadowRay.org[2] = hitPt[2] + N[2] * kShadowEps;
+                    shadowRay.dir[0] = L[0]; shadowRay.dir[1] = L[1]; shadowRay.dir[2] = L[2];
+                    shadowRay.min_t  = kShadowEps;
+                    shadowRay.max_t  = shadowMaxT - kShadowEps;
+                    nanort::TriangleIntersection<float> si;
+                    if (scene.accel.Traverse(shadowRay, intersector, &si))
+                        continue;  // point is in shadow: skip this light
+                }
+
+                float contrib[3] = { 0.0f, 0.0f, 0.0f };
+                phongContrib(N, V, L, mat, li.rgb, attenuation, contrib);
                 px[0] += contrib[0];
                 px[1] += contrib[1];
                 px[2] += contrib[2];
             }
 
             // Fallback: if no lights, use a simple diffuse-from-eye shading
-            if (lightDirs.empty()) {
+            if (lights.empty()) {
                 float NdotV = clamp01(dot3(N, V));
                 px[0] = mat.diffuse[0] * (kAmbientFill + (1.0f - kAmbientFill) * NdotV);
                 px[1] = mat.diffuse[1] * (kAmbientFill + (1.0f - kAmbientFill) * NdotV);
@@ -429,14 +479,55 @@ int main(int argc, char** argv)
     SoSeparator* root = new SoSeparator;
     root->ref();
 
+    // Raytracing hints (SoRaytracingParams library node): enable hard shadows.
+    // Adding this node to the scene graph is the canonical way for any scene to
+    // request raytracing-backend features; the hints are backend-agnostic.
+    SoRaytracingParams* rtParams = new SoRaytracingParams;
+    rtParams->shadowsEnabled.setValue(TRUE);
+    rtParams->ambientIntensity.setValue(0.12f);
+    root->addChild(rtParams);
+
     // Camera (perspective)
     SoPerspectiveCamera* cam = new SoPerspectiveCamera;
     root->addChild(cam);
 
-    // Directional light (same direction as render_primitives)
-    SoDirectionalLight* light = new SoDirectionalLight;
-    light->direction.setValue(-0.5f, -0.8f, -0.6f);
-    root->addChild(light);
+    // Directional light (key light from upper-left)
+    SoDirectionalLight* dirLight = new SoDirectionalLight;
+    dirLight->direction.setValue(-0.5f, -0.8f, -0.6f);
+    root->addChild(dirLight);
+
+    // Point light (fill light positioned above and in front of scene)
+    // Demonstrates SoPointLight support in the nanort render pipeline.
+    SoPointLight* ptLight = new SoPointLight;
+    ptLight->location.setValue(0.0f, 5.0f, 4.0f);
+    ptLight->color.setValue(0.9f, 0.8f, 0.7f);  // warm white
+    ptLight->intensity.setValue(8.0f);            // bright enough to matter at distance
+    root->addChild(ptLight);
+
+    // Ground plane (flat quad, light grey – casts shadows visible on it)
+    {
+        SoSeparator* ground = new SoSeparator;
+        SoMaterial* gmat = new SoMaterial;
+        gmat->diffuseColor.setValue(0.7f, 0.7f, 0.7f);
+        gmat->specularColor.setValue(0.1f, 0.1f, 0.1f);
+        gmat->shininess.setValue(0.1f);
+        ground->addChild(gmat);
+
+        SoCoordinate3* coords = new SoCoordinate3;
+        const float gY = -2.0f;  // slightly below the primitives
+        coords->point.set1Value(0, SbVec3f(-6.0f, gY, -6.0f));
+        coords->point.set1Value(1, SbVec3f( 6.0f, gY, -6.0f));
+        coords->point.set1Value(2, SbVec3f( 6.0f, gY,  6.0f));
+        coords->point.set1Value(3, SbVec3f(-6.0f, gY,  6.0f));
+        ground->addChild(coords);
+
+        SoIndexedFaceSet* ifs = new SoIndexedFaceSet;
+        static const int32_t idx[] = { 0, 1, 2, 3, SO_END_FACE_INDEX };
+        ifs->coordIndex.setValues(0, 5, idx);
+        ground->addChild(ifs);
+
+        root->addChild(ground);
+    }
 
     // 2×2 grid of coloured primitives at spacing s
     const float s = 2.5f;
@@ -462,12 +553,18 @@ int main(int argc, char** argv)
     addPrimitive(0.15f, 0.35f, 0.90f, -s * 0.5f, -s * 0.5f, new SoCone);     // blue  cone   BL
     addPrimitive(0.90f, 0.75f, 0.15f,  s * 0.5f, -s * 0.5f, new SoCylinder); // gold  cyl    BR
 
-    // Position camera to see the whole scene
+    // Position camera to see the whole scene (slightly pulled back to show ground)
     SbViewportRegion vp(W, H);
     cam->viewAll(root, vp);
-    cam->position.setValue(cam->position.getValue() * 1.1f);
+    cam->position.setValue(cam->position.getValue() * 1.2f);
 
-    // --- 3. Extract geometry via SoCallbackAction ----------------------------
+    // --- 3. Read rendering hints from SoRaytracingParams ---------------------
+    // In a full application the caller would read these from the scene; here we
+    // query the node directly since we created it above.
+    const bool shadowsEnabled = rtParams->shadowsEnabled.getValue() != FALSE;
+    printf("Shadows: %s\n", shadowsEnabled ? "enabled" : "disabled");
+
+    // --- 4. Extract geometry via SoCallbackAction ----------------------------
     printf("Extracting scene geometry...\n");
     SceneCollector collector;
     {
@@ -482,11 +579,10 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    // --- 4. Extract lights from scene ----------------------------------------
-    std::vector<SbVec3f> lightDirs;
-    std::vector<SbColor> lightColors;
-    std::vector<float>   lightIntensities;
+    // --- 5. Extract lights from scene (all types) ----------------------------
+    std::vector<RtLightInfo> rtLights;
     {
+        // Directional lights
         SoSearchAction sa;
         sa.setType(SoDirectionalLight::getClassTypeId());
         sa.setInterest(SoSearchAction::ALL);
@@ -495,17 +591,43 @@ int main(int argc, char** argv)
         for (int i = 0; i < paths.getLength(); ++i) {
             SoDirectionalLight* dl =
                 static_cast<SoDirectionalLight*>(paths[i]->getTail());
-            if (dl->on.getValue()) {
-                lightDirs.push_back(dl->direction.getValue());
-                lightColors.push_back(dl->color.getValue());
-                lightIntensities.push_back(dl->intensity.getValue());
-            }
+            if (!dl->on.getValue()) continue;
+            RtLightInfo li;
+            li.isPoint = false;
+            const SbVec3f& dv = dl->direction.getValue();
+            li.dir[0] = dv[0]; li.dir[1] = dv[1]; li.dir[2] = dv[2];
+            li.pos[0] = li.pos[1] = li.pos[2] = 0.0f;
+            const SbColor& c = dl->color.getValue();
+            li.rgb[0] = c[0]; li.rgb[1] = c[1]; li.rgb[2] = c[2];
+            li.intensity = dl->intensity.getValue();
+            rtLights.push_back(li);
         }
     }
-    printf("  Found %d directional light(s)\n",
-           static_cast<int>(lightDirs.size()));
+    {
+        // Point lights
+        SoSearchAction sa;
+        sa.setType(SoPointLight::getClassTypeId());
+        sa.setInterest(SoSearchAction::ALL);
+        sa.apply(root);
+        const SoPathList& paths = sa.getPaths();
+        for (int i = 0; i < paths.getLength(); ++i) {
+            SoPointLight* pl =
+                static_cast<SoPointLight*>(paths[i]->getTail());
+            if (!pl->on.getValue()) continue;
+            RtLightInfo li;
+            li.isPoint = true;
+            li.dir[0] = li.dir[1] = li.dir[2] = 0.0f;
+            const SbVec3f& pv = pl->location.getValue();
+            li.pos[0] = pv[0]; li.pos[1] = pv[1]; li.pos[2] = pv[2];
+            const SbColor& c = pl->color.getValue();
+            li.rgb[0] = c[0]; li.rgb[1] = c[1]; li.rgb[2] = c[2];
+            li.intensity = pl->intensity.getValue();
+            rtLights.push_back(li);
+        }
+    }
+    printf("  Found %d light(s)\n", static_cast<int>(rtLights.size()));
 
-    // --- 5. Build nanort BVH -------------------------------------------------
+    // --- 6. Build nanort BVH -------------------------------------------------
     printf("Building BVH...\n");
     RtScene scene;
     scene.tris = collector.tris;
@@ -522,27 +644,21 @@ int main(int argc, char** argv)
                bmin[0], bmin[1], bmin[2], bmax[0], bmax[1], bmax[2]);
     }
 
-    // --- 6. Render via nanort (no OpenGL) ------------------------------------
-    // Obtain the view volume from Obol's camera; this encapsulates all
-    // camera-space to world-space math and is used for ray generation.
+    // --- 7. Render via nanort (no OpenGL) ------------------------------------
     printf("Rendering %d×%d image with nanort...\n", W, H);
     SbViewVolume vv = cam->getViewVolume(static_cast<float>(W) / H);
 
-    // --- 6a. Solid background render (default black) -----------------------
-    if (!renderToPNG(scene, vv, lightDirs, lightColors, lightIntensities,
-                     W, H, outpath))
+    // --- 7a. Solid background render -----------------------------------------
+    if (!renderToPNG(scene, vv, rtLights, shadowsEnabled, W, H, outpath))
     {
         root->unref();
         return 1;
     }
     printf("  Written to: %s\n", outpath);
 
-    // --- 6b. Gradient background render ------------------------------------
-    // Demonstrate that the nanort backend supports gradient backgrounds by
-    // rendering the same scene with a dark-blue → steel-blue sky gradient.
-    // The gradient output file is written alongside the primary output.
+    // --- 7b. Gradient background render --------------------------------------
+    // Demonstrate gradient backgrounds alongside the shadow/point-light render.
     {
-        // Build gradient output path: replace ".png" suffix with "_gradient.png"
         std::string gradpath(outpath);
         const std::string suffix(".png");
         if (gradpath.size() >= suffix.size() &&
@@ -554,12 +670,11 @@ int main(int argc, char** argv)
             gradpath += "_gradient.png";
         }
 
-        // Dark navy at the screen-bottom, steel-blue at the screen-top
         const float bgBottom[3] = { 0.05f, 0.05f, 0.25f };  // dark navy
-        const float bgTop[3] = { 0.40f, 0.60f, 0.85f };  // steel blue
+        const float bgTop[3]    = { 0.40f, 0.60f, 0.85f };  // steel blue
 
         printf("Rendering gradient background variant...\n");
-        if (!renderToPNG(scene, vv, lightDirs, lightColors, lightIntensities,
+        if (!renderToPNG(scene, vv, rtLights, shadowsEnabled,
                          W, H, gradpath.c_str(), bgBottom, bgTop))
         {
             root->unref();
@@ -567,7 +682,6 @@ int main(int argc, char** argv)
         }
         printf("  Written to: %s\n", gradpath.c_str());
     }
-
 
     root->unref();
     return 0;

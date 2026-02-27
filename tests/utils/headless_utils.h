@@ -694,66 +694,6 @@ inline void rotateCamera(SoCamera *camera, float azimuth, float elevation) {
 }
 
 /**
- * Smoothly orbit the camera around a center point driven by mouse pixel deltas.
- *
- * This implements the rotation math from BRL-CAD's _bv_rot(), translated to
- * Open Inventor camera conventions.  Unlike rotateCamera(), which works from
- * absolute azimuth/elevation angles and re-derives a right-axis from world-Y
- * on every call, this function accumulates rotation entirely in camera-local
- * space:
- *
- *   - Horizontal mouse movement (dx) rotates about the camera's local Y axis (yaw).
- *   - Vertical mouse movement (dy) rotates about the camera's local X axis (pitch).
- *   - World-up is never referenced, so there is no snapping or gimbal lock near
- *     the poles and no discontinuity when the view crosses vertical.
- *
- * Math summary (matching BRL-CAD _bv_rot with its 0.25 deg/pixel default):
- *   BRL-CAD: new_m2v = Rx(dy*s) * Ry(dx*s) * old_m2v   (view-space left-multiply)
- *   Obol:    new_orient = old_orient * Ry(-dx*s) * Rx(-dy*s)  (camera-local right-multiply)
- *   where s = sensitivity * pi/180.
- *
- * After updating the camera orientation, the camera position is repositioned
- * along the new view direction so that the orbit radius from @p center is
- * preserved and the camera continues to look directly at @p center.
- *
- * @param camera      Camera to reposition and reorient.
- * @param center      World-space point to orbit around.
- * @param dx          Horizontal mouse delta in screen pixels (right is positive).
- * @param dy          Vertical mouse delta in screen pixels (down is positive).
- * @param sensitivity Degrees of rotation per pixel (default 0.25, matching BRL-CAD).
- */
-inline void orbitCamera(SoCamera *camera, const SbVec3f &center,
-                        float dx, float dy, float sensitivity = 0.25f)
-{
-    if (!camera) return;
-
-    /* Convert pixel deltas to radians */
-    const float deg2rad = static_cast<float>(M_PI) / 180.0f;
-    float yawRad   = dx * sensitivity * deg2rad;   /* screen X  → yaw  (view Y axis) */
-    float pitchRad = dy * sensitivity * deg2rad;   /* screen Y  → pitch (view X axis) */
-
-    /* BRL-CAD builds newrot = Rx(pitch) * Ry(yaw) and left-multiplies the
-     * model2view matrix.  The equivalent for the camera orientation (which
-     * is the inverse rotation, camera→world) is:
-     *   new_orient = old_orient * newrot^(-1) = old_orient * Ry(-yaw) * Rx(-pitch)
-     * In SbRotation, q1*q2 applies q2 first then q1, so "rotY * rotX" below
-     * produces Ry(-yaw) composed with Rx(-pitch) where Rx is applied first. */
-    SbRotation rotY(SbVec3f(0.0f, 1.0f, 0.0f), -yawRad);
-    SbRotation rotX(SbVec3f(1.0f, 0.0f, 0.0f), -pitchRad);
-    SbRotation delta = rotY * rotX;
-
-    SbRotation newOrient = camera->orientation.getValue() * delta;
-    camera->orientation.setValue(newOrient);
-
-    /* Reposition camera so it stays at the same orbit radius from center and
-     * looks directly at center along the new view direction. */
-    float radius = (camera->position.getValue() - center).length();
-    SbVec3f viewDir;
-    newOrient.multVec(SbVec3f(0.0f, 0.0f, -1.0f), viewDir);
-    camera->position.setValue(center - viewDir * radius);
-}
-
-/**
  * Simulate a mouse button press event
  */
 inline void simulateMousePress(

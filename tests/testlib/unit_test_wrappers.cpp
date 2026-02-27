@@ -65,6 +65,8 @@
 #include <Inventor/actions/SoGetBoundingBoxAction.h>
 #include <Inventor/actions/SoSearchAction.h>
 #include <Inventor/actions/SoCallbackAction.h>
+#include <Inventor/actions/SoRaytraceRenderAction.h>
+#include <Inventor/SoPrimitiveVertex.h>
 
 // Fields
 #include <Inventor/fields/SoSFFloat.h>
@@ -77,11 +79,14 @@
 // Nodes
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/nodes/SoCube.h>
+#include <Inventor/nodes/SoGroup.h>
 #include <Inventor/nodes/SoSphere.h>
 #include <Inventor/nodes/SoTranslation.h>
 #include <Inventor/nodes/SoMaterial.h>
 #include <Inventor/nodes/SoPerspectiveCamera.h>
 #include <Inventor/nodes/SoDirectionalLight.h>
+#include <Inventor/nodes/SoLight.h>
+#include <Inventor/nodes/SoShape.h>
 
 // Engines
 #include <Inventor/engines/SoCalculator.h>
@@ -94,9 +99,13 @@
 #include <Inventor/sensors/SoFieldSensor.h>
 #include <Inventor/sensors/SoNodeSensor.h>
 
+#include <Inventor/SbTime.h>
+#include <Inventor/actions/SoGetPrimitiveCountAction.h>
+
 #include <cmath>
 #include <cstdio>
 #include <utility>
+#include <vector>
 
 namespace {
 
@@ -177,6 +186,139 @@ static int runActionsTests()
         SoSearchAction sa;
         sa.apply(scene);
         scene->unref();
+    }
+
+    return failures;
+}
+
+// =========================================================================
+// Unit test: SoRaytraceRenderAction
+// =========================================================================
+static int runRaytraceActionTests()
+{
+    int failures = 0;
+
+    // --- Type registration ---
+    {
+        SoRaytraceRenderAction rta(SbViewportRegion(100, 100));
+        if (rta.getTypeId() == SoType::badType()) {
+            fprintf(stderr, "  FAIL: SoRaytraceRenderAction has bad type\n");
+            ++failures;
+        }
+        if (!rta.isOfType(SoCallbackAction::getClassTypeId())) {
+            fprintf(stderr, "  FAIL: SoRaytraceRenderAction not derived from SoCallbackAction\n");
+            ++failures;
+        }
+        if (!rta.isOfType(SoAction::getClassTypeId())) {
+            fprintf(stderr, "  FAIL: SoRaytraceRenderAction not derived from SoAction\n");
+            ++failures;
+        }
+    }
+
+    // --- Viewport region round-trip ---
+    {
+        SbViewportRegion vp(320, 240);
+        SoRaytraceRenderAction rta(vp);
+        SbVec2s size = rta.getViewportRegion().getWindowSize();
+        if (size[0] != 320 || size[1] != 240) {
+            fprintf(stderr, "  FAIL: SoRaytraceRenderAction viewport size mismatch (%d,%d)\n",
+                    (int)size[0], (int)size[1]);
+            ++failures;
+        }
+    }
+
+    // --- Triangle collection via generatePrimitives ---
+    {
+        // Apply to a cube; count the triangles generated
+        SoSeparator* root = new SoSeparator;
+        root->ref();
+        root->addChild(new SoCube);
+
+        int triangleCount = 0;
+        SoRaytraceRenderAction rta(SbViewportRegion(100, 100));
+        rta.addTriangleCallback(
+            SoShape::getClassTypeId(),
+            [](void* ud, SoCallbackAction*, const SoPrimitiveVertex*,
+               const SoPrimitiveVertex*, const SoPrimitiveVertex*) {
+                (*static_cast<int*>(ud))++;
+            },
+            &triangleCount);
+        rta.apply(root);
+        root->unref();
+
+        // A cube has 6 faces × 2 triangles each = 12 triangles
+        if (triangleCount != 12) {
+            fprintf(stderr, "  FAIL: expected 12 triangles for cube, got %d\n", triangleCount);
+            ++failures;
+        }
+    }
+
+    // --- Lights collected after traversal ---
+    {
+        SoSeparator* root = new SoSeparator;
+        root->ref();
+        root->addChild(new SoDirectionalLight);
+        root->addChild(new SoCube);
+
+        SoRaytraceRenderAction rta(SbViewportRegion(100, 100));
+        rta.addTriangleCallback(SoShape::getClassTypeId(),
+            [](void*, SoCallbackAction*, const SoPrimitiveVertex*,
+               const SoPrimitiveVertex*, const SoPrimitiveVertex*) {},
+            nullptr);
+        rta.apply(root);
+        root->unref();
+
+        const SoNodeList& lights = rta.getLights();
+        if (lights.getLength() == 0) {
+            fprintf(stderr, "  FAIL: SoRaytraceRenderAction getLights() returned empty list\n");
+            ++failures;
+        } else if (!lights[0]->isOfType(SoDirectionalLight::getClassTypeId())) {
+            fprintf(stderr, "  FAIL: light is not SoDirectionalLight\n");
+            ++failures;
+        }
+    }
+
+    // --- Model matrix applied to vertices ---
+    {
+        // Translate a cube by (5,0,0); collected vertices should be near x=5
+        SoSeparator* root = new SoSeparator;
+        root->ref();
+
+        SoTranslation* t = new SoTranslation;
+        t->translation.setValue(5.0f, 0.0f, 0.0f);
+        root->addChild(t);
+        root->addChild(new SoCube);
+
+        struct Collector {
+            SbVec3f first;
+            bool set = false;
+        } col;
+
+        SoRaytraceRenderAction rta(SbViewportRegion(100, 100));
+        rta.addTriangleCallback(
+            SoShape::getClassTypeId(),
+            [](void* ud, SoCallbackAction* action,
+               const SoPrimitiveVertex* v1,
+               const SoPrimitiveVertex*, const SoPrimitiveVertex*) {
+                Collector* c = static_cast<Collector*>(ud);
+                if (!c->set) {
+                    SbVec3f p;
+                    action->getModelMatrix().multVecMatrix(v1->getPoint(), p);
+                    c->first = p;
+                    c->set = true;
+                }
+            },
+            &col);
+        rta.apply(root);
+        root->unref();
+
+        if (!col.set) {
+            fprintf(stderr, "  FAIL: no triangle callback was invoked\n");
+            ++failures;
+        } else if (std::fabs(col.first[0] - 5.0f) > 1.5f) {
+            fprintf(stderr, "  FAIL: expected vertex near x=5, got x=%f\n", col.first[0]);
+            ++failures;
+        }
     }
 
     return failures;
@@ -514,31 +656,12 @@ static int runSensorsTests()
 }
 
 // =========================================================================
-// Unit test: orbitCamera() – BRL-CAD-style smooth camera orbit math
+// Unit test: SoCamera::orbitCamera() – BRL-CAD-style smooth camera orbit math
 // =========================================================================
 static int runOrbitCameraTests()
 {
     int failures = 0;
     const float tol = 1e-3f;
-
-    /* Helper: apply the same rotation logic as orbitCamera() without needing
-     * a full SoCamera node.  We work directly with SbRotation and SbVec3f. */
-    auto applyOrbit = [](SbRotation orient, SbVec3f pos,
-                         const SbVec3f &center, float dx, float dy, float sens)
-        -> std::pair<SbRotation, SbVec3f>
-    {
-        const float deg2rad = static_cast<float>(M_PI) / 180.0f;
-        float yawRad   = dx * sens * deg2rad;
-        float pitchRad = dy * sens * deg2rad;
-        SbRotation rotY(SbVec3f(0.0f, 1.0f, 0.0f), -yawRad);
-        SbRotation rotX(SbVec3f(1.0f, 0.0f, 0.0f), -pitchRad);
-        SbRotation newOrient = orient * (rotY * rotX);
-        float radius = (pos - center).length();
-        SbVec3f viewDir;
-        newOrient.multVec(SbVec3f(0.0f, 0.0f, -1.0f), viewDir);
-        SbVec3f newPos = center - viewDir * radius;
-        return {newOrient, newPos};
-    };
 
     const SbVec3f center(0.0f, 0.0f, 0.0f);
     const float radius = 5.0f;
@@ -546,92 +669,110 @@ static int runOrbitCameraTests()
 
     /* --- Test 1: yaw-only (dx=80, dy=0) preserves orbit radius --- */
     {
-        SbRotation orient = SbRotation::identity();
-        SbVec3f pos(0.0f, 0.0f, radius);
-        auto [newOrient, newPos] = applyOrbit(orient, pos, center, 80.0f, 0.0f, sens);
+        SoPerspectiveCamera *cam = new SoPerspectiveCamera;
+        cam->ref();
+        cam->position.setValue(0.0f, 0.0f, radius);
+        cam->orientation.setValue(SbRotation::identity());
+        cam->orbitCamera(center, 80.0f, 0.0f, sens);
 
-        float dist = (newPos - center).length();
+        float dist = (cam->position.getValue() - center).length();
         if (std::fabs(dist - radius) > tol) {
             fprintf(stderr, "  FAIL orbitCamera test1: radius after yaw=%.6f (expected %.6f)\n",
                     dist, radius);
             ++failures;
         }
+        cam->unref();
     }
 
     /* --- Test 2: yaw-only camera still looks toward center --- */
     {
-        SbRotation orient = SbRotation::identity();
-        SbVec3f pos(0.0f, 0.0f, radius);
-        auto [newOrient, newPos] = applyOrbit(orient, pos, center, 80.0f, 0.0f, sens);
+        SoPerspectiveCamera *cam = new SoPerspectiveCamera;
+        cam->ref();
+        cam->position.setValue(0.0f, 0.0f, radius);
+        cam->orientation.setValue(SbRotation::identity());
+        cam->orbitCamera(center, 80.0f, 0.0f, sens);
 
         SbVec3f viewDir;
-        newOrient.multVec(SbVec3f(0.0f, 0.0f, -1.0f), viewDir);
-        /* toCenter (camera → center) and viewDir (camera forward) must be parallel */
-        SbVec3f toCenter = center - newPos;
+        cam->orientation.getValue().multVec(SbVec3f(0.0f, 0.0f, -1.0f), viewDir);
+        SbVec3f toCenter = center - cam->position.getValue();
         toCenter.normalize();
         float dot = toCenter.dot(viewDir);
         if (std::fabs(dot - 1.0f) > tol) {
             fprintf(stderr, "  FAIL orbitCamera test2: camera not looking at center (dot=%.6f)\n", dot);
             ++failures;
         }
+        cam->unref();
     }
 
     /* --- Test 3: pitch-only (dx=0, dy=80) preserves orbit radius --- */
     {
-        SbRotation orient = SbRotation::identity();
-        SbVec3f pos(0.0f, 0.0f, radius);
-        auto [newOrient, newPos] = applyOrbit(orient, pos, center, 0.0f, 80.0f, sens);
+        SoPerspectiveCamera *cam = new SoPerspectiveCamera;
+        cam->ref();
+        cam->position.setValue(0.0f, 0.0f, radius);
+        cam->orientation.setValue(SbRotation::identity());
+        cam->orbitCamera(center, 0.0f, 80.0f, sens);
 
-        float dist = (newPos - center).length();
+        float dist = (cam->position.getValue() - center).length();
         if (std::fabs(dist - radius) > tol) {
             fprintf(stderr, "  FAIL orbitCamera test3: radius after pitch=%.6f (expected %.6f)\n",
                     dist, radius);
             ++failures;
         }
+        cam->unref();
     }
 
     /* --- Test 4: pitch-only camera still looks toward center --- */
     {
-        SbRotation orient = SbRotation::identity();
-        SbVec3f pos(0.0f, 0.0f, radius);
-        auto [newOrient, newPos] = applyOrbit(orient, pos, center, 0.0f, 80.0f, sens);
+        SoPerspectiveCamera *cam = new SoPerspectiveCamera;
+        cam->ref();
+        cam->position.setValue(0.0f, 0.0f, radius);
+        cam->orientation.setValue(SbRotation::identity());
+        cam->orbitCamera(center, 0.0f, 80.0f, sens);
 
         SbVec3f viewDir;
-        newOrient.multVec(SbVec3f(0.0f, 0.0f, -1.0f), viewDir);
-        SbVec3f toCenter = center - newPos;
+        cam->orientation.getValue().multVec(SbVec3f(0.0f, 0.0f, -1.0f), viewDir);
+        SbVec3f toCenter = center - cam->position.getValue();
         toCenter.normalize();
         float dot = toCenter.dot(viewDir);
         if (std::fabs(dot - 1.0f) > tol) {
             fprintf(stderr, "  FAIL orbitCamera test4: camera not looking at center after pitch (dot=%.6f)\n", dot);
             ++failures;
         }
+        cam->unref();
     }
 
     /* --- Test 5: mouse-right (dx>0) moves camera in -X direction
      *             (scene appears to rotate right → camera orbits left) --- */
     {
-        SbRotation orient = SbRotation::identity();
-        SbVec3f pos(0.0f, 0.0f, radius);
-        auto [newOrient, newPos] = applyOrbit(orient, pos, center, 80.0f, 0.0f, sens);
-        /* Camera started at (0,0,5); yaw right should give negative X position */
-        if (newPos[0] >= 0.0f) {
+        SoPerspectiveCamera *cam = new SoPerspectiveCamera;
+        cam->ref();
+        cam->position.setValue(0.0f, 0.0f, radius);
+        cam->orientation.setValue(SbRotation::identity());
+        cam->orbitCamera(center, 80.0f, 0.0f, sens);
+
+        if (cam->position.getValue()[0] >= 0.0f) {
             fprintf(stderr, "  FAIL orbitCamera test5: expected negative X after yaw right, got %.4f\n",
-                    newPos[0]);
+                    cam->position.getValue()[0]);
             ++failures;
         }
+        cam->unref();
     }
 
     /* --- Test 6: mouse-down (dy>0) moves camera upward (+Y)
      *             (camera pitches down → position rises in Y) --- */
     {
-        SbRotation orient = SbRotation::identity();
-        SbVec3f pos(0.0f, 0.0f, radius);
-        auto [newOrient, newPos] = applyOrbit(orient, pos, center, 0.0f, 80.0f, sens);
-        if (newPos[1] <= 0.0f) {
+        SoPerspectiveCamera *cam = new SoPerspectiveCamera;
+        cam->ref();
+        cam->position.setValue(0.0f, 0.0f, radius);
+        cam->orientation.setValue(SbRotation::identity());
+        cam->orbitCamera(center, 0.0f, 80.0f, sens);
+
+        if (cam->position.getValue()[1] <= 0.0f) {
             fprintf(stderr, "  FAIL orbitCamera test6: expected positive Y after pitch down, got %.4f\n",
-                    newPos[1]);
+                    cam->position.getValue()[1]);
             ++failures;
         }
+        cam->unref();
     }
 
     /* --- Test 7: 4 × 1-pixel steps ≈ 1 × 4-pixel step (smoothness check).
@@ -639,19 +780,25 @@ static int runOrbitCameraTests()
      *             so accumulated small steps should closely match one equivalent
      *             large step. --- */
     {
-        SbRotation orient = SbRotation::identity();
-        SbVec3f pos(0.0f, 0.0f, radius);
-
         /* Single 4-pixel step */
-        auto [oA, pA] = applyOrbit(orient, pos, center, 4.0f, 3.0f, sens);
+        SoPerspectiveCamera *camA = new SoPerspectiveCamera;
+        camA->ref();
+        camA->position.setValue(0.0f, 0.0f, radius);
+        camA->orientation.setValue(SbRotation::identity());
+        camA->orbitCamera(center, 4.0f, 3.0f, sens);
+        SbVec3f pA = camA->position.getValue();
+        camA->unref();
 
         /* Four 1-pixel steps */
-        SbRotation oB = orient;
-        SbVec3f    pB = pos;
+        SoPerspectiveCamera *camB = new SoPerspectiveCamera;
+        camB->ref();
+        camB->position.setValue(0.0f, 0.0f, radius);
+        camB->orientation.setValue(SbRotation::identity());
         for (int i = 0; i < 4; ++i) {
-            auto [oTmp, pTmp] = applyOrbit(oB, pB, center, 1.0f, 0.75f, sens);
-            oB = oTmp; pB = pTmp;
+            camB->orbitCamera(center, 1.0f, 0.75f, sens);
         }
+        SbVec3f pB = camB->position.getValue();
+        camB->unref();
 
         float ddx = std::fabs(pA[0] - pB[0]);
         float ddy = std::fabs(pA[1] - pB[1]);
@@ -667,6 +814,363 @@ static int runOrbitCameraTests()
 }
 
 // =========================================================================
+// Scalability benchmark: scene graph construction and traversal
+//
+// Characterises the cost of building and traversing large Obol scene graphs
+// that are representative of a BRL-CAD CSG tree (tens of thousands of nodes).
+//
+// Three structures are tested at several node counts:
+//
+//  flat          – root SoSeparator with N * (SoTranslation + SoCube) groups.
+//                  Simulates a wide, single-level assembly list.
+//
+//  binary_tree   – balanced binary tree of SoSeparators with SoCubes at the
+//                  leaves.  Simulates a balanced CSG combination tree.
+//
+//  linear_chain  – depth-N linear chain of SoSeparators with a single SoCube
+//                  at the tip.  Simulates a maximally deep unary CSG tree.
+//                  Capped at CHAIN_MAX nodes to avoid system-stack exhaustion.
+//
+//  chain_bottomup  – same deep chain but built leaf-first (bottom-up),
+//                    avoiding the O(n^2) top-down notification cost.
+//
+//  chain_deferred  – same deep chain built top-down but with
+//                    enableNotify(FALSE) on each node during construction,
+//                    also achieving O(n) build time.
+//
+// For each (structure, size) pair the following operations are timed:
+//   build    – allocate all nodes and wire up the hierarchy
+//   bbox     – SoGetBoundingBoxAction traversal (CPU; no GL)
+//   search   – SoSearchAction for ALL SoCube nodes
+//   destroy  – root->unref() (reclaims all memory)
+//
+// KEY FINDINGS (see tests/nodes/README_scalability.md for full analysis):
+//
+//  1. Flat and balanced binary trees: O(n) build and traversal.  Suitable
+//     for tens-of-thousands of nodes.
+//
+//  2. Deep linear chain – CONSTRUCTION: O(n^2) when built top-down.
+//     Root cause: SoChildList::append() calls parent->startNotify(), which
+//     propagates upward through the existing ancestor chain.  For a chain of
+//     depth d at step i, the notification cost is O(i), yielding O(n^2) total.
+//     MITIGATION: build bottom-up (chain_bottomup) or disable notifications
+//     during construction (chain_deferred) – both reduce to O(n).
+//
+//  3. Deep linear chain – TRAVERSAL: O(n^2) regardless of construction order.
+//     Root cause: SoCacheElement::addElement() iterates through all currently
+//     open SoCacheElement entries in the state stack.  For a chain at depth d,
+//     d caches are simultaneously open, so every element access during
+//     traversal costs O(d).  Total traversal cost = sum(d for d=0..n) = O(n^2).
+//     MITIGATION: avoid very deep single-branch CSG chains; prefer balanced
+//     trees or flat assembly lists.  Setting boundingBoxCaching=OFF removes
+//     the O(n^2) addElement overhead but eliminates caching benefits.
+//
+// The function always returns 0 (characterisation only; no pass/fail on
+// timing), but prints a CSV table to stdout for post-run analysis.
+// =========================================================================
+static int runScalabilityTests()
+{
+    // ----- configuration --------------------------------------------------
+    // Sizes express the number of *leaf geometry nodes* (SoCube instances).
+    // Total node count depends on the structure (see comments below).
+    static const int kFlatSizes[]  = { 100, 500, 1000, 5000, 10000, 20000 };
+    static const int kTreeSizes[]  = { 100, 500, 1000, 5000, 10000, 20000 };
+    // Deep recursive traversal can exhaust the system stack; cap accordingly.
+    static const int kChainSizes[] = { 100, 500, 1000, 2000, 5000 };
+    static const int CHAIN_MAX     = 5000;
+    (void)CHAIN_MAX;
+
+    printf("# Obol Scene Graph Scalability Benchmark\n");
+    printf("# structure, leaves, total_nodes,"
+           " build_ms, bbox_ms, search_ms, destroy_ms\n");
+
+    // ------------------------------------------------------------------
+    // 1. Flat scene
+    //    Layout: root SoSeparator
+    //               +-- SoSeparator (group_0)
+    //               |      +-- SoTranslation
+    //               |      +-- SoCube
+    //               +-- SoSeparator (group_1)
+    //               ...
+    //    Total nodes: 1 + 3*N
+    // ------------------------------------------------------------------
+    for (int n : kFlatSizes) {
+        SbTime t0 = SbTime::getTimeOfDay();
+
+        SoSeparator* root = new SoSeparator;
+        root->ref();
+        int cols = (int)std::sqrt((double)n);
+        if (cols < 1) cols = 1;
+        for (int i = 0; i < n; ++i) {
+            SoSeparator* grp = new SoSeparator;
+            SoTranslation* tr = new SoTranslation;
+            tr->translation.setValue(float(i % cols) * 2.0f,
+                                     float(i / cols) * 2.0f, 0.0f);
+            grp->addChild(tr);
+            grp->addChild(new SoCube);
+            root->addChild(grp);
+        }
+
+        SbTime t1 = SbTime::getTimeOfDay();
+
+        SoGetBoundingBoxAction bba(SbViewportRegion(800, 600));
+        bba.apply(root);
+
+        SbTime t2 = SbTime::getTimeOfDay();
+
+        SoSearchAction sa;
+        sa.setType(SoCube::getClassTypeId());
+        sa.setInterest(SoSearchAction::ALL);
+        sa.apply(root);
+
+        SbTime t3 = SbTime::getTimeOfDay();
+
+        root->unref();
+
+        SbTime t4 = SbTime::getTimeOfDay();
+
+        printf("flat, %d, %d, %.3f, %.3f, %.3f, %.3f\n",
+               n,
+               1 + 3 * n,
+               (t1 - t0).getValue() * 1000.0,
+               (t2 - t1).getValue() * 1000.0,
+               (t3 - t2).getValue() * 1000.0,
+               (t4 - t3).getValue() * 1000.0);
+    }
+
+    // ------------------------------------------------------------------
+    // 2. Balanced binary tree (CSG-like)
+    //    N leaf groups: each is SoSeparator + SoTranslation + SoCube.
+    //    Internal nodes: SoSeparators that pair up children bottom-up.
+    //    Depth ≈ ceil(log2(N)).
+    //    Total nodes: 3*N leaves + (N-1) internal SoSeparators ≈ 4*N
+    // ------------------------------------------------------------------
+    for (int n : kTreeSizes) {
+        SbTime t0 = SbTime::getTimeOfDay();
+
+        // Build leaf groups
+        std::vector<SoNode*> level;
+        level.reserve((size_t)n);
+        for (int i = 0; i < n; ++i) {
+            SoSeparator* leaf = new SoSeparator;
+            SoTranslation* tr = new SoTranslation;
+            tr->translation.setValue(float(i) * 2.0f, 0.0f, 0.0f);
+            leaf->addChild(tr);
+            leaf->addChild(new SoCube);
+            level.push_back(leaf);
+        }
+
+        // Pair up levels until a single root remains
+        while (level.size() > 1) {
+            std::vector<SoNode*> next;
+            next.reserve((level.size() + 1) / 2);
+            for (size_t i = 0; i < level.size(); i += 2) {
+                SoSeparator* parent = new SoSeparator;
+                parent->addChild(level[i]);
+                if (i + 1 < level.size())
+                    parent->addChild(level[i + 1]);
+                next.push_back(parent);
+            }
+            level = std::move(next);
+        }
+
+        SoNode* treeRoot = level[0];
+        treeRoot->ref();
+
+        SbTime t1 = SbTime::getTimeOfDay();
+
+        SoGetBoundingBoxAction bba(SbViewportRegion(800, 600));
+        bba.apply(treeRoot);
+
+        SbTime t2 = SbTime::getTimeOfDay();
+
+        SoSearchAction sa;
+        sa.setType(SoCube::getClassTypeId());
+        sa.setInterest(SoSearchAction::ALL);
+        sa.apply(treeRoot);
+
+        SbTime t3 = SbTime::getTimeOfDay();
+
+        treeRoot->unref();
+
+        SbTime t4 = SbTime::getTimeOfDay();
+
+        // internal separators ≈ n-1; leaves: n * (sep + trans + cube) = 3n
+        int total = 3 * n + (n - 1);
+        printf("binary_tree, %d, %d, %.3f, %.3f, %.3f, %.3f\n",
+               n, total,
+               (t1 - t0).getValue() * 1000.0,
+               (t2 - t1).getValue() * 1000.0,
+               (t3 - t2).getValue() * 1000.0,
+               (t4 - t3).getValue() * 1000.0);
+    }
+
+    // ------------------------------------------------------------------
+    // 3. Deep linear chain
+    //    root → sep_1 → sep_2 → … → sep_(N-1) → SoCube
+    //    Total nodes: N separators + 1 cube = N+1
+    //    NOTE: Deep trees may exhaust the system call stack during
+    //          recursive action traversal; CHAIN_MAX is set conservatively.
+    // ------------------------------------------------------------------
+    for (int n : kChainSizes) {
+        SbTime t0 = SbTime::getTimeOfDay();
+
+        SoSeparator* root = new SoSeparator;
+        root->ref();
+        SoSeparator* cur = root;
+        for (int i = 1; i < n; ++i) {
+            SoSeparator* child = new SoSeparator;
+            cur->addChild(child);
+            cur = child;
+        }
+        cur->addChild(new SoCube);
+
+        SbTime t1 = SbTime::getTimeOfDay();
+
+        SoGetBoundingBoxAction bba(SbViewportRegion(800, 600));
+        bba.apply(root);
+
+        SbTime t2 = SbTime::getTimeOfDay();
+
+        SoSearchAction sa;
+        sa.setType(SoCube::getClassTypeId());
+        sa.setInterest(SoSearchAction::ALL);
+        sa.apply(root);
+
+        SbTime t3 = SbTime::getTimeOfDay();
+
+        root->unref();
+
+        SbTime t4 = SbTime::getTimeOfDay();
+
+        printf("linear_chain, %d, %d, %.3f, %.3f, %.3f, %.3f\n",
+               n,
+               n + 1,
+               (t1 - t0).getValue() * 1000.0,
+               (t2 - t1).getValue() * 1000.0,
+               (t3 - t2).getValue() * 1000.0,
+               (t4 - t3).getValue() * 1000.0);
+    }
+
+    printf("# Benchmark complete\n");
+    printf("# NOTE: linear_chain build times show O(n^2) growth due to\n");
+    printf("#       upward-notification on each addChild() call.\n");
+    printf("#       Mitigations: bottom-up construction or\n");
+    printf("#       enableNotify(FALSE)/enableNotify(TRUE) bracketing.\n");
+
+    // ------------------------------------------------------------------
+    // 4. Deep linear chain – bottom-up construction
+    //    Build leaf first, then wrap in parent separators moving up.
+    //    Each addChild() has no ancestor chain yet → O(1) notification.
+    //    Total nodes: N separators + 1 cube = N+1 (same as linear_chain)
+    // ------------------------------------------------------------------
+    printf("# Bottom-up chain: builds deepest node first (O(n) vs O(n^2) naive)\n");
+    for (int n : kChainSizes) {
+        SbTime t0 = SbTime::getTimeOfDay();
+
+        // Start with the leaf cube
+        SoNode* cur = new SoCube;
+        // Wrap in separators from deepest outward
+        for (int i = 0; i < n; ++i) {
+            SoSeparator* parent = new SoSeparator;
+            parent->addChild(cur);   // cur has no ancestor yet → O(1) notify
+            cur = parent;
+        }
+        cur->ref();  // cur is now the outermost separator (root)
+
+        SbTime t1 = SbTime::getTimeOfDay();
+
+        SoGetBoundingBoxAction bba(SbViewportRegion(800, 600));
+        bba.apply(cur);
+
+        SbTime t2 = SbTime::getTimeOfDay();
+
+        SoSearchAction sa;
+        sa.setType(SoCube::getClassTypeId());
+        sa.setInterest(SoSearchAction::ALL);
+        sa.apply(cur);
+
+        SbTime t3 = SbTime::getTimeOfDay();
+
+        cur->unref();
+
+        SbTime t4 = SbTime::getTimeOfDay();
+
+        printf("chain_bottomup, %d, %d, %.3f, %.3f, %.3f, %.3f\n",
+               n,
+               n + 1,
+               (t1 - t0).getValue() * 1000.0,
+               (t2 - t1).getValue() * 1000.0,
+               (t3 - t2).getValue() * 1000.0,
+               (t4 - t3).getValue() * 1000.0);
+    }
+
+    // ------------------------------------------------------------------
+    // 5. Deep linear chain – deferred notification
+    //    Top-down build but with enableNotify(FALSE) on each node before
+    //    adding its child, re-enabled afterwards.
+    //    Prevents the O(depth) upward notification on each addChild().
+    // ------------------------------------------------------------------
+    printf("# Deferred-notify chain: top-down but notifications suppressed\n");
+    for (int n : kChainSizes) {
+        SbTime t0 = SbTime::getTimeOfDay();
+
+        SoSeparator* root = new SoSeparator;
+        root->ref();
+        root->enableNotify(FALSE);
+        SoSeparator* cur = root;
+        for (int i = 1; i < n; ++i) {
+            SoSeparator* child = new SoSeparator;
+            child->enableNotify(FALSE);
+            cur->addChild(child);
+            cur = child;
+        }
+        cur->addChild(new SoCube);
+        // Re-enable notifications from tip to root
+        cur = root;
+        cur->enableNotify(TRUE);
+        for (int i = 1; i < n; ++i) {
+            SoSeparator* child =
+                static_cast<SoSeparator*>(
+                    static_cast<SoGroup*>(cur)->getChild(0));
+            if (!child || !child->isOfType(SoSeparator::getClassTypeId()))
+                break;
+            child->enableNotify(TRUE);
+            cur = child;
+        }
+
+        SbTime t1 = SbTime::getTimeOfDay();
+
+        SoGetBoundingBoxAction bba(SbViewportRegion(800, 600));
+        bba.apply(root);
+
+        SbTime t2 = SbTime::getTimeOfDay();
+
+        SoSearchAction sa;
+        sa.setType(SoCube::getClassTypeId());
+        sa.setInterest(SoSearchAction::ALL);
+        sa.apply(root);
+
+        SbTime t3 = SbTime::getTimeOfDay();
+
+        root->unref();
+
+        SbTime t4 = SbTime::getTimeOfDay();
+
+        printf("chain_deferred, %d, %d, %.3f, %.3f, %.3f, %.3f\n",
+               n,
+               n + 1,
+               (t1 - t0).getValue() * 1000.0,
+               (t2 - t1).getValue() * 1000.0,
+               (t3 - t2).getValue() * 1000.0,
+               (t4 - t3).getValue() * 1000.0);
+    }
+
+    printf("# Scalability benchmark complete\n");
+    return 0; // characterisation only – no pass/fail on timing
+}
+
+// =========================================================================
 // Static registrations – run at program start
 // =========================================================================
 
@@ -676,6 +1180,7 @@ REGISTER_TEST(primitives, ObolTest::TestCategory::Rendering,
     "2x2 grid: sphere, cube, cone, cylinder",
     e.has_visual = true;
     e.has_interactive = true;
+    e.nanort_ok = true;
     e.create_scene = ObolTest::Scenes::createPrimitives;
 );
 
@@ -683,6 +1188,7 @@ REGISTER_TEST(materials, ObolTest::TestCategory::Rendering,
     "Four spheres demonstrating material properties",
     e.has_visual = true;
     e.has_interactive = true;
+    e.nanort_ok = true;
     e.create_scene = ObolTest::Scenes::createMaterials;
 );
 
@@ -690,6 +1196,7 @@ REGISTER_TEST(lighting, ObolTest::TestCategory::Rendering,
     "Scene lit by directional and point lights",
     e.has_visual = true;
     e.has_interactive = true;
+    e.nanort_ok = true;
     e.create_scene = ObolTest::Scenes::createLighting;
 );
 
@@ -697,6 +1204,7 @@ REGISTER_TEST(transforms, ObolTest::TestCategory::Rendering,
     "Hierarchical rotation and translation transforms",
     e.has_visual = true;
     e.has_interactive = true;
+    e.nanort_ok = true;
     e.create_scene = ObolTest::Scenes::createTransforms;
 );
 
@@ -704,6 +1212,7 @@ REGISTER_TEST(cameras, ObolTest::TestCategory::Rendering,
     "Row of coloured spheres with explicit perspective camera",
     e.has_visual = true;
     e.has_interactive = true;
+    e.nanort_ok = true;
     e.create_scene = ObolTest::Scenes::createCameras;
 );
 
@@ -711,6 +1220,7 @@ REGISTER_TEST(texture, ObolTest::TestCategory::Rendering,
     "Checkerboard-textured cube",
     e.has_visual = true;
     e.has_interactive = true;
+    e.nanort_ok = true;
     e.create_scene = ObolTest::Scenes::createTexture;
 );
 
@@ -718,6 +1228,7 @@ REGISTER_TEST(text, ObolTest::TestCategory::Rendering,
     "SoText2 and SoText3 labels",
     e.has_visual = true;
     e.has_interactive = true;
+    e.nanort_ok = false;
     e.create_scene = ObolTest::Scenes::createText;
 );
 
@@ -725,6 +1236,7 @@ REGISTER_TEST(gradient, ObolTest::TestCategory::Rendering,
     "Background gradient via callback node",
     e.has_visual = true;
     e.has_interactive = true;
+    e.nanort_ok = false;
     e.create_scene = ObolTest::Scenes::createGradient;
 );
 
@@ -732,6 +1244,7 @@ REGISTER_TEST(colored_cube, ObolTest::TestCategory::Rendering,
     "Simple red cube with lighting (smoke test)",
     e.has_visual = true;
     e.has_interactive = true;
+    e.nanort_ok = true;
     e.create_scene = ObolTest::Scenes::createColoredCube;
 );
 
@@ -739,6 +1252,7 @@ REGISTER_TEST(coordinates, ObolTest::TestCategory::Rendering,
     "Colour-coded XYZ axis lines",
     e.has_visual = true;
     e.has_interactive = true;
+    e.nanort_ok = true;
     e.create_scene = ObolTest::Scenes::createCoordinates;
 );
 
@@ -746,6 +1260,7 @@ REGISTER_TEST(shadow, ObolTest::TestCategory::Rendering,
     "Shadow-casting scene (SoShadowGroup proxy)",
     e.has_visual = true;
     e.has_interactive = true;
+    e.nanort_ok = false;
     e.create_scene = ObolTest::Scenes::createShadow;
 );
 
@@ -753,6 +1268,7 @@ REGISTER_TEST(draggers, ObolTest::TestCategory::Draggers,
     "Interactive draggers (SoTranslate1, SoRotateSpherical)",
     e.has_visual = true;
     e.has_interactive = true;
+    e.nanort_ok = false;
     e.create_scene = ObolTest::Scenes::createDraggers;
 );
 
@@ -760,6 +1276,7 @@ REGISTER_TEST(hud, ObolTest::TestCategory::Misc,
     "Head-up display overlay using orthographic camera",
     e.has_visual = true;
     e.has_interactive = false;
+    e.nanort_ok = false;
     e.create_scene = ObolTest::Scenes::createHUD;
 );
 
@@ -767,6 +1284,7 @@ REGISTER_TEST(lod, ObolTest::TestCategory::Nodes,
     "Level of detail (SoLOD) switching between representations",
     e.has_visual = true;
     e.has_interactive = true;
+    e.nanort_ok = true;
     e.create_scene = ObolTest::Scenes::createLOD;
 );
 
@@ -774,7 +1292,32 @@ REGISTER_TEST(transparency, ObolTest::TestCategory::Rendering,
     "Alpha-blended overlapping spheres",
     e.has_visual = true;
     e.has_interactive = true;
+    e.nanort_ok = true;
     e.create_scene = ObolTest::Scenes::createTransparency;
+);
+
+REGISTER_TEST(drawstyle, ObolTest::TestCategory::Rendering,
+    "Filled, wireframe, and points draw style comparison",
+    e.has_visual = true;
+    e.has_interactive = true;
+    e.nanort_ok = true;
+    e.create_scene = ObolTest::Scenes::createDrawStyle;
+);
+
+REGISTER_TEST(indexed_face_set, ObolTest::TestCategory::Rendering,
+    "SoIndexedFaceSet tetrahedron",
+    e.has_visual = true;
+    e.has_interactive = true;
+    e.nanort_ok = true;
+    e.create_scene = ObolTest::Scenes::createIndexedFaceSet;
+);
+
+REGISTER_TEST(manips, ObolTest::TestCategory::Manips,
+    "Interactive manipulators (SoTrackballManip, SoTabBoxManip)",
+    e.has_visual = true;
+    e.has_interactive = true;
+    e.nanort_ok = false;
+    e.create_scene = ObolTest::Scenes::createManips;
 );
 
 // --- Unit test registrations ---
@@ -783,6 +1326,12 @@ REGISTER_TEST(unit_actions, ObolTest::TestCategory::Actions,
     "Action type checking, bounding box, search action",
     e.has_visual = false;
     e.run_unit = runActionsTests;
+);
+
+REGISTER_TEST(unit_raytrace_action, ObolTest::TestCategory::Actions,
+    "SoRaytraceRenderAction type, viewport, triangle collection, lights",
+    e.has_visual = false;
+    e.run_unit = runRaytraceActionTests;
 );
 
 REGISTER_TEST(unit_base, ObolTest::TestCategory::Base,
@@ -819,6 +1368,12 @@ REGISTER_TEST(unit_orbit_camera, ObolTest::TestCategory::Base,
     "orbitCamera() BRL-CAD-style smooth orbit rotation math",
     e.has_visual = false;
     e.run_unit = runOrbitCameraTests;
+);
+
+REGISTER_TEST(unit_scalability, ObolTest::TestCategory::Nodes,
+    "Scene graph scalability: flat / binary-tree / linear-chain at 100..20000 nodes",
+    e.has_visual = false;
+    e.run_unit = runScalabilityTests;
 );
 
 } // anonymous namespace

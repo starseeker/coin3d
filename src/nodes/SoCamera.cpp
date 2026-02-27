@@ -511,6 +511,55 @@ SoCamera::pointAt(const SbVec3f & targetpoint, const SbVec3f & upvector)
   this->lookAt(dir, upvector);
 }
 
+/*!
+  Smoothly orbit the camera around \a center driven by mouse pixel deltas
+  \a dx (horizontal, right positive) and \a dy (vertical, down positive).
+
+  The rotation accumulates entirely in camera-local space -- horizontal motion
+  yaws about the camera's local Y axis and vertical motion pitches about the
+  camera's local X axis -- so world-up is never referenced.  This eliminates
+  gimbal lock and the discontinuity that world-Y-based orbit schemes exhibit
+  when the view direction crosses vertical.
+
+  The math matches BRL-CAD's _bv_rot() with its default sensitivity of
+  0.25 degrees per pixel.  After updating the orientation the camera is
+  repositioned along the new view direction so that the orbit radius from
+  \a center is preserved and the camera continues to look directly at \a center.
+
+  \param center      World-space point to orbit around.
+  \param dx          Horizontal mouse delta in screen pixels (right is positive).
+  \param dy          Vertical mouse delta in screen pixels (down is positive).
+  \param sensitivity Degrees of rotation per pixel (default 0.25, matching BRL-CAD).
+
+  \OBOL_FUNCTION_EXTENSION
+*/
+void
+SoCamera::orbitCamera(const SbVec3f & center, float dx, float dy,
+                      float sensitivity)
+{
+  const float deg2rad = static_cast<float>(M_PI) / 180.0f;
+  const float yawRad   = dx * sensitivity * deg2rad;
+  const float pitchRad = dy * sensitivity * deg2rad;
+
+  /* BRL-CAD builds newrot = Rx(pitch) * Ry(yaw) and left-multiplies the
+   * model2view matrix.  The equivalent for the camera orientation (which
+   * is the inverse rotation, camera→world) is:
+   *   new_orient = old_orient * newrot^(-1) = old_orient * Ry(-yaw) * Rx(-pitch)
+   * In SbRotation, q1*q2 applies q2 first then q1, so rotY*rotX below
+   * produces Ry(-yaw) composed with Rx(-pitch) where Rx is applied first. */
+  const SbRotation rotY(SbVec3f(0.0f, 1.0f, 0.0f), -yawRad);
+  const SbRotation rotX(SbVec3f(1.0f, 0.0f, 0.0f), -pitchRad);
+  const SbRotation newOrient = this->orientation.getValue() * (rotY * rotX);
+  this->orientation.setValue(newOrient);
+
+  /* Reposition camera so it stays at the same orbit radius from center and
+   * looks directly at center along the new view direction. */
+  const float radius = (this->position.getValue() - center).length();
+  SbVec3f viewDir;
+  newOrient.multVec(SbVec3f(0.0f, 0.0f, -1.0f), viewDir);
+  this->position.setValue(center - viewDir * radius);
+}
+
 // FIXME: should collect common code from the two viewAll() methods
 // below. 20010824 mortene.
 

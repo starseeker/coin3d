@@ -99,10 +99,9 @@ Key achievements:
 
 - **`docs/API_DIFFERENCES.md`** — comprehensive 22-section migration guide covering every behavioral difference from upstream Coin3D.
 - **`docs/CONTEXT_MANAGEMENT_API.md`** — `SoDB::ContextManager` public API reference with OSMesa worked example.
-- **`docs/CONTEXT_REFACTORING.md`** — documents the callback-only context refactoring and migration path.
 - **`docs/PLATFORM_CLEANUP_SUMMARY.md`** — lists the 18 platform-specific files (~8,000 lines) removed and the portable replacements.
 - **`docs/THREADING_MIGRATION.md`** — C++17 threading migration summary.
-- **`docs/STORAGE_MIGRATION_PROGRESS.md`** and **`docs/STORAGE_MIGRATION_ANALYSIS.md`** — storage migration status and analysis.
+- **`docs/STORAGE_MIGRATION.md`** — storage migration status and analysis.
 - **169 test files** covering core, actions, nodes, rendering, draggers, manipulators, selection, picking, threading, sensors, engines, fields, and more.
 - CI runs all tests headlessly via OSMesa; image-comparison tests validate rendering output.
 
@@ -148,7 +147,7 @@ All Coin3D C-wrapper threading primitives replaced with C++17 standard-library e
 
 ### Storage: Thread Cleanup FIXME Resolved ✅ Complete
 
-`cc_storage_thread_cleanup()` was a multi-year unimplemented stub.  Addressed with a C++17 RAII `ThreadCleanupTrigger` + `StorageRegistry` system that automatically cleans up per-thread data when threads exit.  Full `SbStorage`/`SbTypedStorage` API compatibility preserved.  See `docs/STORAGE_MIGRATION_PROGRESS.md`.
+`cc_storage_thread_cleanup()` was a multi-year unimplemented stub.  Addressed with a C++17 RAII `ThreadCleanupTrigger` + `StorageRegistry` system that automatically cleans up per-thread data when threads exit.  Full `SbStorage`/`SbTypedStorage` API compatibility preserved.  See `docs/STORAGE_MIGRATION.md`.
 
 ### New Nodes and APIs
 
@@ -194,9 +193,7 @@ The FLTK viewer demonstrates Obol integration end-to-end.  Similar examples for 
 
 - `docs/API_DIFFERENCES.md` — complete API migration guide (Obol vs. Coin3D)
 - `docs/CONTEXT_MANAGEMENT_API.md` — `SoDB::ContextManager` API reference
-- `docs/CONTEXT_REFACTORING.md` — context callback refactoring details
 - `docs/PLATFORM_CLEANUP_SUMMARY.md` — platform code removal summary
 - `docs/THREADING_MIGRATION.md` — C++17 threading migration details
-- `docs/STORAGE_MIGRATION_PROGRESS.md` — storage migration status
-- `docs/STORAGE_MIGRATION_ANALYSIS.md` — storage migration analysis
+- `docs/STORAGE_MIGRATION.md` — storage migration status and analysis
 - [Coin3D upstream](https://github.com/coin3d/coin) — reference for recovered/reviewed APIs

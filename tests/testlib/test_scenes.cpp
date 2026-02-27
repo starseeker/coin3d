@@ -79,6 +79,11 @@
 #include <Inventor/actions/SoGLRenderAction.h>
 #include <Inventor/draggers/SoTranslate1Dragger.h>
 #include <Inventor/draggers/SoRotateSphericalDragger.h>
+#include <Inventor/nodes/SoIndexedFaceSet.h>
+#include <Inventor/nodes/SoShapeHints.h>
+#include <Inventor/nodes/SoIndexedLineSet.h>
+#include <Inventor/manips/SoTrackballManip.h>
+#include <Inventor/manips/SoTabBoxManip.h>
 
 #ifdef OBOL_OSMESA_BUILD
 #  include <OSMesa/gl.h>
@@ -838,6 +843,134 @@ SoSeparator* createTransparency(int width, int height)
     msphere->radius.setValue(0.4f);
     mid->addChild(msphere);
     root->addChild(mid);
+
+    SbViewportRegion vp(width, height);
+    cam->viewAll(root, vp);
+    return root;
+}
+
+// =========================================================================
+// 16. DrawStyle
+// =========================================================================
+SoSeparator* createDrawStyle(int width, int height)
+{
+    SoSeparator* root = new SoSeparator;
+    root->ref();
+
+    SoPerspectiveCamera* cam = addCameraAndLight(root);
+
+    SoMaterial* mat = new SoMaterial;
+    mat->diffuseColor.setValue(0.5f, 0.7f, 0.3f);
+    mat->specularColor.setValue(0.7f, 0.7f, 0.7f);
+    mat->shininess.setValue(0.4f);
+    root->addChild(mat);
+
+    const struct { SoDrawStyle::Style s; float tx; const char* label; } styles[] = {
+        { SoDrawStyle::FILLED, -3.0f, "Filled" },
+        { SoDrawStyle::LINES,   0.0f, "Lines"  },
+        { SoDrawStyle::POINTS,  3.0f, "Points" },
+    };
+    for (const auto& st : styles) {
+        SoSeparator* sep = new SoSeparator;
+        SoTranslation* t = new SoTranslation;
+        t->translation.setValue(st.tx, 0.0f, 0.0f);
+        sep->addChild(t);
+        SoDrawStyle* ds = new SoDrawStyle;
+        ds->style.setValue(st.s);
+        ds->lineWidth.setValue(2.0f);
+        ds->pointSize.setValue(4.0f);
+        sep->addChild(ds);
+        sep->addChild(new SoCube);
+        root->addChild(sep);
+    }
+
+    SbViewportRegion vp(width, height);
+    cam->viewAll(root, vp);
+    return root;
+}
+
+// =========================================================================
+// 17. IndexedFaceSet (tetrahedron)
+// =========================================================================
+SoSeparator* createIndexedFaceSet(int width, int height)
+{
+    SoSeparator* root = new SoSeparator;
+    root->ref();
+
+    SoPerspectiveCamera* cam = addCameraAndLight(root);
+
+    SoMaterial* mat = new SoMaterial;
+    mat->diffuseColor.setValue(0.9f, 0.5f, 0.1f);
+    mat->specularColor.setValue(0.8f, 0.8f, 0.8f);
+    mat->shininess.setValue(0.5f);
+    root->addChild(mat);
+
+    static const float pts[4][3] = {
+        { 0.0f,  1.2f,  0.0f },
+        {-1.0f, -0.8f,  0.9f },
+        { 1.0f, -0.8f,  0.9f },
+        { 0.0f, -0.8f, -1.2f }
+    };
+    static const int32_t idx[] = {
+        0, 1, 2, -1,
+        0, 2, 3, -1,
+        0, 3, 1, -1,
+        1, 3, 2, -1
+    };
+
+    SoCoordinate3* co = new SoCoordinate3;
+    co->point.setValues(0, 4, pts);
+    root->addChild(co);
+
+    SoShapeHints* sh = new SoShapeHints;
+    sh->vertexOrdering.setValue(SoShapeHints::COUNTERCLOCKWISE);
+    sh->shapeType.setValue(SoShapeHints::SOLID);
+    root->addChild(sh);
+
+    SoIndexedFaceSet* ifs = new SoIndexedFaceSet;
+    ifs->coordIndex.setValues(0, 16, idx);
+    root->addChild(ifs);
+
+    SbViewportRegion vp(width, height);
+    cam->viewAll(root, vp);
+    return root;
+}
+
+// =========================================================================
+// 18. Manipulators demo
+// =========================================================================
+SoSeparator* createManips(int width, int height)
+{
+    SoSeparator* root = new SoSeparator;
+    root->ref();
+
+    SoPerspectiveCamera* cam = addCameraAndLight(root);
+
+    // Left side: SoTrackballManip on a sphere
+    SoSeparator* left = new SoSeparator;
+    SoTranslation* lt = new SoTranslation;
+    lt->translation.setValue(-2.5f, 0.0f, 0.0f);
+    left->addChild(lt);
+    SoTrackballManip* tbm = new SoTrackballManip;
+    left->addChild(tbm);
+    SoMaterial* lmat = new SoMaterial;
+    lmat->diffuseColor.setValue(0.8f, 0.2f, 0.2f);
+    left->addChild(lmat);
+    left->addChild(new SoSphere);
+    root->addChild(left);
+
+    // Right side: SoTabBoxManip on a cube
+    SoSeparator* right = new SoSeparator;
+    SoTranslation* rt = new SoTranslation;
+    rt->translation.setValue(2.5f, 0.0f, 0.0f);
+    right->addChild(rt);
+    SoTabBoxManip* tabm = new SoTabBoxManip;
+    right->addChild(tabm);
+    SoMaterial* rmat = new SoMaterial;
+    rmat->diffuseColor.setValue(0.2f, 0.6f, 0.9f);
+    right->addChild(rmat);
+    right->addChild(new SoCube);
+    root->addChild(right);
 
     SbViewportRegion vp(width, height);
     cam->viewAll(root, vp);

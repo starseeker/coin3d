@@ -73,42 +73,15 @@
 #include <Inventor/SbVec3f.h>
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/nodes/SoPerspectiveCamera.h>
-#include <Inventor/nodes/SoOrthographicCamera.h>
-#include <Inventor/nodes/SoDirectionalLight.h>
-#include <Inventor/nodes/SoPointLight.h>
-#include <Inventor/nodes/SoMaterial.h>
-#include <Inventor/nodes/SoTransform.h>
-#include <Inventor/nodes/SoTranslation.h>
-#include <Inventor/nodes/SoRotation.h>
-#include <Inventor/nodes/SoSphere.h>
-#include <Inventor/nodes/SoCube.h>
-#include <Inventor/nodes/SoCone.h>
-#include <Inventor/nodes/SoCylinder.h>
-#include <Inventor/nodes/SoText2.h>
-#include <Inventor/nodes/SoText3.h>
-#include <Inventor/nodes/SoFont.h>
-#include <Inventor/nodes/SoBaseColor.h>
-#include <Inventor/nodes/SoCoordinate3.h>
-#include <Inventor/nodes/SoIndexedFaceSet.h>
-#include <Inventor/nodes/SoIndexedLineSet.h>
-#include <Inventor/nodes/SoDrawStyle.h>
-#include <Inventor/nodes/SoLightModel.h>
-#include <Inventor/nodes/SoComplexity.h>
-#include <Inventor/nodes/SoShapeHints.h>
-#include <Inventor/nodes/SoTexture2.h>
-#include <Inventor/nodes/SoTextureCoordinate2.h>
-#include <Inventor/nodes/SoNormal.h>
-#include <Inventor/nodes/SoNormalBinding.h>
-#include <Inventor/nodes/SoMaterialBinding.h>
-#include <Inventor/actions/SoGLRenderAction.h>
 #include <Inventor/actions/SoGetBoundingBoxAction.h>
 #include <Inventor/actions/SoHandleEventAction.h>
 #include <Inventor/actions/SoSearchAction.h>
 #include <Inventor/events/SoMouseButtonEvent.h>
 #include <Inventor/events/SoLocation2Event.h>
 #include <Inventor/events/SoKeyboardEvent.h>
-#include <Inventor/annex/FXViz/nodes/SoShadowGroup.h>
-#include <Inventor/annex/FXViz/nodes/SoShadowDirectionalLight.h>
+
+/* ---- Unified test registry (scene factories + nanort_ok flags) ---- */
+#include "testlib/test_registry.h"
 
 /* ---- Context manager (OSMesa for dual/headless, GLX for sys-only) ---- */
 #include "headless_utils.h"
@@ -152,296 +125,71 @@ static SoNanoRTContextManager s_nanort_mgr;
 #include <memory>
 
 /* =========================================================================
- * Scene factories
+ * Scene catalogue
+ *
+ * All visual scenes are sourced from the unified test registry (testlib).
+ * ObolTest::TestRegistry::instance() provides every scene that has
+ * e.has_visual = true, including its nanort_ok flag.
  * ======================================================================= */
 
-typedef SoSeparator* (*SceneFactory)(int w, int h);
+/* Helper: return only visual tests from the registry in registration order. */
+static std::vector<const ObolTest::TestEntry*> getVisualTests()
+{
+    std::vector<const ObolTest::TestEntry*> out;
+    for (const auto& e : ObolTest::TestRegistry::instance().allTests())
+        if (e.has_visual && e.create_scene)
+            out.push_back(&e);
+    return out;
+}
 
-static SoSeparator* scene_primitives(int w, int h) {
-    SoSeparator* root = new SoSeparator; root->ref();
-    SoPerspectiveCamera* cam = new SoPerspectiveCamera; root->addChild(cam);
-    SoDirectionalLight* li = new SoDirectionalLight;
-    li->direction.setValue(-0.5f,-0.8f,-0.6f); root->addChild(li);
-    const float s = 2.5f;
-    struct { float r,g,b,tx,ty; SoNode* shape; } prims[] = {
-        {0.85f,0.15f,0.15f,-s*.5f, s*.5f,new SoSphere},
-        {0.15f,0.75f,0.15f, s*.5f, s*.5f,new SoCube},
-        {0.15f,0.35f,0.90f,-s*.5f,-s*.5f,new SoCone},
-        {0.90f,0.75f,0.15f, s*.5f,-s*.5f,new SoCylinder},
-    };
-    for (auto& p : prims) {
-        SoSeparator* sep = new SoSeparator;
-        SoTranslation* t = new SoTranslation; t->translation.setValue(p.tx,p.ty,0);
-        sep->addChild(t);
-        SoMaterial* m = new SoMaterial;
-        m->diffuseColor.setValue(p.r,p.g,p.b);
-        m->ambientColor.setValue(p.r,p.g,p.b);
-        m->specularColor.setValue(0.6f,0.6f,0.6f);
-        m->shininess.setValue(0.5f);
-        sep->addChild(m); sep->addChild(p.shape); root->addChild(sep);
+/* =========================================================================
+ * FLTK → SoKeyboardEvent::Key translation
+ *
+ * FLTK key codes for printable ASCII characters (0x20–0x7e) happen to match
+ * the SoKeyboardEvent::Key values exactly.  Special keys need mapping.
+ * ======================================================================= */
+static SoKeyboardEvent::Key fltkKeyToSo(int fltk_key)
+{
+    /* Printable ASCII: FLTK and Coin share the same values */
+    if (fltk_key >= 0x20 && fltk_key <= 0x7e)
+        return static_cast<SoKeyboardEvent::Key>(fltk_key);
+
+    /* Special keys */
+    switch (fltk_key) {
+    case FL_BackSpace: return SoKeyboardEvent::BACKSPACE;
+    case FL_Tab:       return SoKeyboardEvent::TAB;
+    case FL_Enter:     return SoKeyboardEvent::RETURN;
+    case FL_Escape:    return SoKeyboardEvent::ESCAPE;
+    case FL_Delete:    return SoKeyboardEvent::KEY_DELETE;
+    case FL_Home:      return SoKeyboardEvent::HOME;
+    case FL_End:       return SoKeyboardEvent::END;
+    case FL_Page_Up:   return SoKeyboardEvent::PAGE_UP;
+    case FL_Page_Down: return SoKeyboardEvent::PAGE_DOWN;
+    case FL_Left:      return SoKeyboardEvent::LEFT_ARROW;
+    case FL_Right:     return SoKeyboardEvent::RIGHT_ARROW;
+    case FL_Up:        return SoKeyboardEvent::UP_ARROW;
+    case FL_Down:      return SoKeyboardEvent::DOWN_ARROW;
+    case FL_Shift_L:   return SoKeyboardEvent::LEFT_SHIFT;
+    case FL_Shift_R:   return SoKeyboardEvent::RIGHT_SHIFT;
+    case FL_Control_L: return SoKeyboardEvent::LEFT_CONTROL;
+    case FL_Control_R: return SoKeyboardEvent::RIGHT_CONTROL;
+    case FL_Alt_L:     return SoKeyboardEvent::LEFT_ALT;
+    case FL_Alt_R:     return SoKeyboardEvent::RIGHT_ALT;
+    case FL_F + 1:     return SoKeyboardEvent::F1;
+    case FL_F + 2:     return SoKeyboardEvent::F2;
+    case FL_F + 3:     return SoKeyboardEvent::F3;
+    case FL_F + 4:     return SoKeyboardEvent::F4;
+    case FL_F + 5:     return SoKeyboardEvent::F5;
+    case FL_F + 6:     return SoKeyboardEvent::F6;
+    case FL_F + 7:     return SoKeyboardEvent::F7;
+    case FL_F + 8:     return SoKeyboardEvent::F8;
+    case FL_F + 9:     return SoKeyboardEvent::F9;
+    case FL_F + 10:    return SoKeyboardEvent::F10;
+    case FL_F + 11:    return SoKeyboardEvent::F11;
+    case FL_F + 12:    return SoKeyboardEvent::F12;
+    default:           return SoKeyboardEvent::ANY;
     }
-    SbViewportRegion vp(w,h); cam->viewAll(root,vp);
-    cam->position.setValue(cam->position.getValue()*1.1f);
-    cam->focalDistance.setValue(cam->focalDistance.getValue()*1.1f);
-    return root;
 }
-
-static SoSeparator* scene_materials(int w, int h) {
-    SoSeparator* root = new SoSeparator; root->ref();
-    SoPerspectiveCamera* cam = new SoPerspectiveCamera; root->addChild(cam);
-    SoDirectionalLight* li = new SoDirectionalLight;
-    li->direction.setValue(-1,-1,-1); root->addChild(li);
-    struct MatDesc { float dr,dg,db,sr,sg,sb,sh,tx; };
-    MatDesc mats[] = {
-        {0.8f,0.1f,0.1f,0.9f,0.9f,0.9f,0.9f,-3.0f},
-        {0.1f,0.7f,0.1f,0.0f,0.0f,0.0f,0.0f,-1.0f},
-        {0.1f,0.1f,0.8f,0.5f,0.5f,0.8f,0.5f, 1.0f},
-        {0.8f,0.7f,0.0f,1.0f,1.0f,0.8f,0.8f, 3.0f},
-    };
-    for (auto& m : mats) {
-        SoSeparator* sep = new SoSeparator;
-        SoTranslation* t = new SoTranslation; t->translation.setValue(m.tx,0,0);
-        sep->addChild(t);
-        SoMaterial* mat = new SoMaterial;
-        mat->diffuseColor.setValue(m.dr,m.dg,m.db);
-        mat->ambientColor.setValue(m.dr,m.dg,m.db);
-        mat->specularColor.setValue(m.sr,m.sg,m.sb);
-        mat->shininess.setValue(m.sh);
-        sep->addChild(mat); sep->addChild(new SoSphere); root->addChild(sep);
-    }
-    SbViewportRegion vp(w,h); cam->viewAll(root,vp);
-    return root;
-}
-
-static SoSeparator* scene_lighting(int w, int h) {
-    SoSeparator* root = new SoSeparator; root->ref();
-    SoPerspectiveCamera* cam = new SoPerspectiveCamera; root->addChild(cam);
-    SoDirectionalLight* li = new SoDirectionalLight;
-    li->direction.setValue(0,-1,-1); li->color.setValue(1,0.9f,0.8f);
-    root->addChild(li);
-    SoPointLight* pl = new SoPointLight;
-    pl->location.setValue(-3,2,2); pl->color.setValue(0.2f,0.4f,1.0f);
-    root->addChild(pl);
-    SoMaterial* mat = new SoMaterial;
-    mat->diffuseColor.setValue(0.7f,0.7f,0.7f);
-    mat->ambientColor.setValue(0.7f,0.7f,0.7f);
-    mat->specularColor.setValue(1,1,1); mat->shininess.setValue(0.7f);
-    root->addChild(mat); root->addChild(new SoSphere);
-    SbViewportRegion vp(w,h); cam->viewAll(root,vp);
-    return root;
-}
-
-static SoSeparator* scene_transforms(int w, int h) {
-    SoSeparator* root = new SoSeparator; root->ref();
-    SoPerspectiveCamera* cam = new SoPerspectiveCamera; root->addChild(cam);
-    SoDirectionalLight* li = new SoDirectionalLight;
-    li->direction.setValue(-1,-1,-1); root->addChild(li);
-    SoMaterial* mat = new SoMaterial;
-    mat->diffuseColor.setValue(0.5f,0.7f,0.9f);
-    mat->ambientColor.setValue(0.5f,0.7f,0.9f);
-    mat->specularColor.setValue(0.8f,0.8f,0.8f); mat->shininess.setValue(0.6f);
-    root->addChild(mat);
-    for (int i = 0; i < 5; ++i) {
-        SoSeparator* sep = new SoSeparator;
-        SoTransform* xf = new SoTransform;
-        xf->translation.setValue((i-2)*2.0f, 0, 0);
-        xf->rotation.setValue(SbVec3f(0,1,0), (float)i * 0.5f);
-        xf->scaleFactor.setValue(0.6f+i*0.1f, 0.6f+i*0.1f, 0.6f+i*0.1f);
-        sep->addChild(xf); sep->addChild(new SoCube); root->addChild(sep);
-    }
-    SbViewportRegion vp(w,h); cam->viewAll(root,vp);
-    return root;
-}
-
-static SoSeparator* scene_colored_cube(int w, int h) {
-    SoSeparator* root = new SoSeparator; root->ref();
-    SoPerspectiveCamera* cam = new SoPerspectiveCamera; root->addChild(cam);
-    SoDirectionalLight* li = new SoDirectionalLight;
-    li->direction.setValue(-1,-1,-1); root->addChild(li);
-    SoMaterial* mat = new SoMaterial;
-    mat->diffuseColor.setValue(0.85f,0.10f,0.10f);
-    mat->ambientColor.setValue(0.85f,0.10f,0.10f);
-    mat->specularColor.setValue(0.50f,0.50f,0.50f); mat->shininess.setValue(0.40f);
-    root->addChild(mat); root->addChild(new SoCube);
-    SbViewportRegion vp(w,h); cam->viewAll(root,vp);
-    return root;
-}
-
-static SoSeparator* scene_coordinates(int w, int h) {
-    SoSeparator* root = new SoSeparator; root->ref();
-    SoPerspectiveCamera* cam = new SoPerspectiveCamera; root->addChild(cam);
-    root->addChild(new SoDirectionalLight);
-    static const float axverts[6][3] = {
-        {0,0,0},{2,0,0}, {0,0,0},{0,2,0}, {0,0,0},{0,0,2}
-    };
-    static const float axcols[3][3] = {{1,0,0},{0,1,0},{0,0,1}};
-    SoLightModel* lm = new SoLightModel;
-    lm->model = SoLightModel::BASE_COLOR; root->addChild(lm);
-    for (int a = 0; a < 3; ++a) {
-        SoSeparator* sep = new SoSeparator;
-        SoBaseColor* bc = new SoBaseColor;
-        bc->rgb.setValue(axcols[a][0], axcols[a][1], axcols[a][2]);
-        sep->addChild(bc);
-        SoCoordinate3* co = new SoCoordinate3;
-        co->point.setValues(0, 2, reinterpret_cast<const float(*)[3]>(axverts + a*2));
-        sep->addChild(co);
-        SoIndexedLineSet* ils = new SoIndexedLineSet;
-        static const int32_t idx[] = {0,1,-1};
-        ils->coordIndex.setValues(0, 3, idx); sep->addChild(ils);
-        root->addChild(sep);
-    }
-    root->addChild(new SoSphere);
-    SbViewportRegion vp(w,h); cam->viewAll(root,vp);
-    return root;
-}
-
-static SoSeparator* scene_shadow(int w, int h) {
-    SoSeparator* outer = new SoSeparator; outer->ref();
-    SoPerspectiveCamera* cam = new SoPerspectiveCamera;
-    cam->position.setValue(0, 8, 10);
-    cam->pointAt(SbVec3f(0,0,0), SbVec3f(0,1,0));
-    outer->addChild(cam);
-    SoShadowGroup* sg = new SoShadowGroup;
-    sg->isActive = TRUE; sg->intensity = 0.7f;
-    SoShadowDirectionalLight* sdl = new SoShadowDirectionalLight;
-    sdl->direction.setValue(-1,-2,-1); sg->addChild(sdl);
-    SoMaterial* floor_mat = new SoMaterial;
-    floor_mat->diffuseColor.setValue(0.7f,0.6f,0.5f);
-    floor_mat->ambientColor.setValue(0.7f,0.6f,0.5f);
-    sg->addChild(floor_mat);
-    SoTransform* floor_xf = new SoTransform;
-    floor_xf->scaleFactor.setValue(8,0.1f,8);
-    floor_xf->translation.setValue(0,-0.5f,0); sg->addChild(floor_xf);
-    sg->addChild(new SoCube);
-    SoMaterial* sphere_mat = new SoMaterial;
-    sphere_mat->diffuseColor.setValue(0.2f,0.4f,0.9f);
-    sphere_mat->ambientColor.setValue(0.2f,0.4f,0.9f);
-    sg->addChild(sphere_mat);
-    SoTranslation* sph_t = new SoTranslation;
-    sph_t->translation.setValue(0,1,0); sg->addChild(sph_t);
-    sg->addChild(new SoSphere); outer->addChild(sg);
-    return outer;
-}
-
-static SoSeparator* scene_transparency(int w, int h) {
-    SoSeparator* root = new SoSeparator; root->ref();
-    SoPerspectiveCamera* cam = new SoPerspectiveCamera; root->addChild(cam);
-    SoDirectionalLight* li = new SoDirectionalLight;
-    li->direction.setValue(-1,-1,-1); root->addChild(li);
-    struct { float r,g,b,a,x; } spheres[] = {
-        {0.8f,0.1f,0.1f,0.3f,-2.0f},
-        {0.1f,0.8f,0.1f,0.5f, 0.0f},
-        {0.1f,0.1f,0.8f,0.7f, 2.0f},
-        {0.8f,0.8f,0.1f,0.9f, 4.0f},
-    };
-    for (auto& s : spheres) {
-        SoSeparator* sep = new SoSeparator;
-        SoTranslation* t = new SoTranslation; t->translation.setValue(s.x,0,0);
-        sep->addChild(t);
-        SoMaterial* mat = new SoMaterial;
-        mat->diffuseColor.setValue(s.r,s.g,s.b);
-        mat->ambientColor.setValue(s.r,s.g,s.b);
-        mat->transparency.setValue(1.0f-s.a);
-        sep->addChild(mat); sep->addChild(new SoSphere); root->addChild(sep);
-    }
-    SbViewportRegion vp(w,h); cam->viewAll(root,vp);
-    return root;
-}
-
-static SoSeparator* scene_lod(int w, int h) {
-    SoSeparator* root = new SoSeparator; root->ref();
-    SoPerspectiveCamera* cam = new SoPerspectiveCamera; root->addChild(cam);
-    SoDirectionalLight* li = new SoDirectionalLight;
-    li->direction.setValue(-1,-1,-1); root->addChild(li);
-    SoMaterial* mat = new SoMaterial;
-    mat->diffuseColor.setValue(0.3f,0.6f,1.0f);
-    mat->ambientColor.setValue(0.3f,0.6f,1.0f);
-    mat->specularColor.setValue(0.9f,0.9f,0.9f); mat->shininess.setValue(0.8f);
-    root->addChild(mat);
-    for (int i = 0; i < 3; ++i) {
-        SoSeparator* sep = new SoSeparator;
-        SoTranslation* t = new SoTranslation; t->translation.setValue((i-1)*3.0f,0,0);
-        sep->addChild(t);
-        SoComplexity* cx = new SoComplexity; cx->value = 0.1f + 0.4f * i;
-        sep->addChild(cx); sep->addChild(new SoSphere); root->addChild(sep);
-    }
-    SbViewportRegion vp(w,h); cam->viewAll(root,vp);
-    return root;
-}
-
-static SoSeparator* scene_drawstyle(int w, int h) {
-    SoSeparator* root = new SoSeparator; root->ref();
-    SoPerspectiveCamera* cam = new SoPerspectiveCamera; root->addChild(cam);
-    SoDirectionalLight* li = new SoDirectionalLight;
-    li->direction.setValue(-1,-1,-1); root->addChild(li);
-    const struct { SoDrawStyle::Style s; float tx; } styles[] = {
-        {SoDrawStyle::FILLED, -3.0f},
-        {SoDrawStyle::LINES,   0.0f},
-        {SoDrawStyle::POINTS,  3.0f},
-    };
-    SoMaterial* mat = new SoMaterial;
-    mat->diffuseColor.setValue(0.5f,0.7f,0.3f);
-    mat->ambientColor.setValue(0.5f,0.7f,0.3f);
-    root->addChild(mat);
-    for (auto& st : styles) {
-        SoSeparator* sep = new SoSeparator;
-        SoTranslation* t = new SoTranslation; t->translation.setValue(st.tx,0,0);
-        sep->addChild(t);
-        SoDrawStyle* ds = new SoDrawStyle; ds->style = st.s; sep->addChild(ds);
-        sep->addChild(new SoCube); root->addChild(sep);
-    }
-    SbViewportRegion vp(w,h); cam->viewAll(root,vp);
-    return root;
-}
-
-static SoSeparator* scene_indexed_face_set(int w, int h) {
-    SoSeparator* root = new SoSeparator; root->ref();
-    SoPerspectiveCamera* cam = new SoPerspectiveCamera; root->addChild(cam);
-    SoDirectionalLight* li = new SoDirectionalLight;
-    li->direction.setValue(-1,-1,-1); root->addChild(li);
-    SoMaterial* mat = new SoMaterial;
-    mat->diffuseColor.setValue(0.9f,0.5f,0.1f);
-    mat->ambientColor.setValue(0.9f,0.5f,0.1f);
-    root->addChild(mat);
-    static const float pts[4][3] = {
-        {0,1,0},{-1,-1,1},{1,-1,1},{0,-1,-1}
-    };
-    static const int32_t idx[] = {
-        0,1,2,-1,  0,2,3,-1,  0,3,1,-1,  1,3,2,-1
-    };
-    SoCoordinate3* co = new SoCoordinate3;
-    co->point.setValues(0, 4, pts); root->addChild(co);
-    SoShapeHints* sh = new SoShapeHints;
-    sh->vertexOrdering = SoShapeHints::COUNTERCLOCKWISE;
-    sh->shapeType = SoShapeHints::SOLID; root->addChild(sh);
-    SoIndexedFaceSet* ifs = new SoIndexedFaceSet;
-    ifs->coordIndex.setValues(0, 16, idx); root->addChild(ifs);
-    SbViewportRegion vp(w,h); cam->viewAll(root,vp);
-    return root;
-}
-
-/* ---- Scene catalogue ---- */
-struct SceneEntry {
-    const char* name;
-    const char* category;
-    const char* description;
-    SceneFactory factory;
-    bool nanort_ok; /* false = NanoRT shows "not supported" instead of rendering */
-};
-static const SceneEntry s_scenes[] = {
-    {"primitives",       "Rendering", "Basic primitives: sphere, cube, cone, cylinder", scene_primitives,       true},
-    {"materials",        "Rendering", "Material property showcase",                      scene_materials,        true},
-    {"lighting",         "Rendering", "Multiple light sources",                          scene_lighting,         true},
-    {"transforms",       "Rendering", "Hierarchical transform chain",                    scene_transforms,       true},
-    {"colored_cube",     "Rendering", "Simple red cube (smoke test)",                    scene_colored_cube,     true},
-    {"coordinates",      "Rendering", "XYZ coordinate axis visualization",               scene_coordinates,      true},
-    {"shadow",           "Rendering", "SoShadowGroup shadow casting (GL only)",          scene_shadow,           false},
-    {"transparency",     "Rendering", "Alpha-blended transparent spheres",               scene_transparency,     true},
-    {"lod",              "Rendering", "Level-of-detail SoComplexity comparison",         scene_lod,              true},
-    {"drawstyle",        "Rendering", "Filled / wireframe / points draw styles",         scene_drawstyle,        true},
-    {"indexed_face_set", "Rendering", "SoIndexedFaceSet tetrahedron",                    scene_indexed_face_set, true},
-};
-static const int s_scene_count = (int)(sizeof(s_scenes)/sizeof(s_scenes[0]));
 
 /* =========================================================================
  * Scene state
@@ -526,16 +274,18 @@ public:
     ~CoinPanel() { delete fltk_img; }
 
     void loadScene(const char* name) {
-        /* find scene factory */
-        const SceneEntry* entry = nullptr;
-        for (int i = 0; i < s_scene_count; ++i)
-            if (strcmp(s_scenes[i].name, name) == 0) { entry = &s_scenes[i]; break; }
-        if (!entry) { status_text = std::string("Unknown scene: ") + name; redraw(); return; }
+        /* Look up scene in the unified test registry. */
+        const ObolTest::TestEntry* entry =
+            ObolTest::TestRegistry::instance().findTest(name);
+        if (!entry || !entry->create_scene) {
+            status_text = std::string("Unknown scene: ") + name;
+            redraw(); return;
+        }
 
         state.reset(new SceneState);
         state->width  = std::max(w(), 1);
         state->height = std::max(h(), 1);
-        state->root   = entry->factory(state->width, state->height);
+        state->root   = entry->create_scene(state->width, state->height);
         state->cam    = state->root ? SceneState::findCamera(state->root) : nullptr;
         state->computeCenter();
         state->updateClipping();
@@ -667,9 +417,9 @@ public:
                 if (state->drag_btn == 1) {
                     /* orbit – incremental rotation in camera-local space (BRL-CAD style):
                      * no world-up reference → smooth at all orientations, no gimbal lock */
-                    orbitCamera(state->cam, state->scene_center,
-                                (float)dx, (float)dy,
-                                0.01f * (180.0f / static_cast<float>(M_PI)));
+                    state->cam->orbitCamera(state->scene_center,
+                                            (float)dx, (float)dy,
+                                            0.01f * (180.0f / static_cast<float>(M_PI)));
                 } else if (state->drag_btn == 3) {
                     /* dolly toward/away from scene centre */
                     float dist = state->cam->focalDistance.getValue();
@@ -709,7 +459,7 @@ public:
         case FL_KEYDOWN:
             if (state && state->root) {
                 SoKeyboardEvent ev;
-                ev.setKey((SoKeyboardEvent::Key)Fl::event_key());
+                ev.setKey(fltkKeyToSo(Fl::event_key()));
                 ev.setState(SoButtonEvent::DOWN);
                 ev.setTime(SbTime::getTimeOfDay());
                 SbViewportRegion vp(state->width, state->height);
@@ -720,7 +470,7 @@ public:
         case FL_KEYUP:
             if (state && state->root) {
                 SoKeyboardEvent ev;
-                ev.setKey((SoKeyboardEvent::Key)Fl::event_key());
+                ev.setKey(fltkKeyToSo(Fl::event_key()));
                 ev.setState(SoButtonEvent::UP);
                 ev.setTime(SbTime::getTimeOfDay());
                 SbViewportRegion vp(state->width, state->height);
@@ -905,7 +655,7 @@ public:
             if (drag_btn_ == 1) {
                 /* orbit – incremental rotation in camera-local space (BRL-CAD style):
                  * no world-up reference → smooth at all orientations, no gimbal lock */
-                orbitCamera(cam, scene_center_,
+                cam->orbitCamera(scene_center_,
                             (float)dx, (float)dy,
                             0.01f * (180.0f / static_cast<float>(M_PI)));
             } else if (drag_btn_ == 3) {
@@ -1122,7 +872,7 @@ public:
             if (drag_btn_ == 1) {
                 /* orbit – incremental rotation in camera-local space (BRL-CAD style):
                  * no world-up reference → smooth at all orientations, no gimbal lock */
-                orbitCamera(cam, scene_center_,
+                cam->orbitCamera(scene_center_,
                             (float)dx, (float)dy,
                             0.01f * (180.0f / static_cast<float>(M_PI)));
             } else if (drag_btn_ == 3) {
@@ -1247,10 +997,9 @@ public:
     void loadScene(const char* name) {
         coin_panel_->loadScene(name);
 
-        /* Find the SceneEntry to know which renderers support this scene. */
-        const SceneEntry* entry = nullptr;
-        for (int i = 0; i < s_scene_count; ++i)
-            if (strcmp(s_scenes[i].name, name) == 0) { entry = &s_scenes[i]; break; }
+        /* Look up nanort_ok from the unified test registry. */
+        const ObolTest::TestEntry* entry =
+            ObolTest::TestRegistry::instance().findTest(name);
         const bool nanort_ok = entry ? entry->nanort_ok : true;
 
 #ifdef OBOL_VIEWER_OSMESA_PANEL
@@ -1344,9 +1093,13 @@ private:
         browser_ = new Fl_Hold_Browser(0, 0, BROWSER_W, content_h);
         browser_->textsize(12);
         browser_->callback(browserCB, this);
-        for (int i = 0; i < s_scene_count; ++i) {
-            std::string e = std::string(s_scenes[i].category) + "/" + s_scenes[i].name;
-            browser_->add(e.c_str());
+        {
+            auto tests = getVisualTests();
+            for (const auto* e : tests) {
+                std::string label =
+                    ObolTest::categoryToString(e->category) + "/" + e->name;
+                browser_->add(label.c_str());
+            }
         }
 
         /* Render area: EqualTile so panels resize uniformly.
@@ -1573,9 +1326,12 @@ int main(int argc, char** argv)
     ObolViewerWindow* win = new ObolViewerWindow(1100, 700);
     win->show(argc, argv);
 
-    /* Load the first scene automatically */
-    if (s_scene_count > 0)
-        win->loadScene(s_scenes[0].name);
+    /* Load the first visual scene automatically */
+    {
+        auto tests = getVisualTests();
+        if (!tests.empty())
+            win->loadScene(tests[0]->name.c_str());
+    }
 
     return Fl::run();
 }

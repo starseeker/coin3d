@@ -29,21 +29,26 @@
  *
  * Obol APIs used internally:
  *   - SoCallbackAction  – extract triangles, normals, materials from scene graph
- *   - SoSearchAction    – find camera and directional lights in scene graph
+ *   - SoSearchAction    – find camera, lights, SoRaytracingParams in scene graph
  *   - SbViewportRegion  – viewport for camera setup
  *   - SoCamera          – get view volume for ray generation
  *   - SbViewVolume      – projectPointToLine() for per-pixel ray directions
- *   - SbMatrix          – transform vertices/normals to world space
+ *   - SbMatrix          – transform vertices/normals/positions to world space
+ *   - SoRaytracingParams – rendering hints (shadows, reflections, AA, ambient)
  *
  * Rendering features implemented:
  *   - Perspective and orthographic cameras (via SoCamera / SbViewVolume)
  *   - Directional lights (SoDirectionalLight) – Phong diffuse + specular
+ *   - Point lights (SoPointLight) – positional with inverse-square attenuation
+ *   - Spot lights (SoSpotLight) – cone-limited positional lights
  *   - SoMaterial: diffuse, specular, emissive, ambient, shininess
  *   - All triangle-generating shapes (SoSphere, SoCube, SoCone, SoCylinder,
  *     SoFaceSet, SoIndexedFaceSet, SoVertexProperty, …)
  *   - Any shape-local or per-face material bindings
  *   - All rigid-body transforms (SoTranslation, SoRotation, SoScale, …)
  *   - SoSeparator / SoGroup scene-graph structure
+ *   - SoRaytracingParams: hard shadows, specular reflections, AA super-sampling,
+ *     configurable ambient fill intensity
  *
  * Rendering features NOT supported (fall back to rendering nothing extra):
  *   - SoText2 (screen-aligned 2D text; requires rasterisation;
@@ -83,6 +88,8 @@
 #include <Inventor/nodes/SoPerspectiveCamera.h>
 #include <Inventor/nodes/SoOrthographicCamera.h>
 #include <Inventor/nodes/SoDirectionalLight.h>
+#include <Inventor/nodes/SoPointLight.h>
+#include <Inventor/nodes/SoSpotLight.h>
 #include <Inventor/nodes/SoShape.h>
 #include <Inventor/nodes/SoLineSet.h>
 #include <Inventor/nodes/SoIndexedLineSet.h>
@@ -90,6 +97,7 @@
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/nodes/SoMaterial.h>
 #include <Inventor/nodes/SoMatrixTransform.h>
+#include <Inventor/nodes/SoRaytracingParams.h>
 #include <Inventor/elements/SoCoordinateElement.h>
 #include <Inventor/elements/SoLineWidthElement.h>
 #include <Inventor/elements/SoPointSizeElement.h>
@@ -105,6 +113,7 @@
 #include <vector>
 #include <cmath>
 #include <cstring>
+#include <cstdint>
 #include <algorithm>
 
 // ==========================================================================
@@ -328,8 +337,120 @@ nrtPointSetPreCB(void * ud, SoCallbackAction * action, const SoNode * node)
 }
 
 // ==========================================================================
-// Flat nanort scene (built from NrtSceneCollector)
+// Light data structures (all light types)
 // ==========================================================================
+
+// Discriminator for the supported light types.
+enum NrtLightType { NRT_DIRECTIONAL, NRT_POINT, NRT_SPOT };
+
+struct NrtLightInfo {
+    NrtLightType type;
+    float rgb[3];       // light colour
+    float intensity;    // intensity scale
+    // Directional lights use dir only (points away from light source).
+    // Point lights use pos only.
+    // Spot lights use both pos and dir (dir = cone axis direction).
+    float dir[3];       // world-space direction (DIRECTIONAL: away from light; SPOT: cone axis)
+    float pos[3];       // world-space position (POINT, SPOT)
+    float cutOffAngle;  // spot cone half-angle in radians (SPOT only)
+    float dropOffRate;  // spot intensity drop-off exponent (SPOT only)
+};
+
+// ==========================================================================
+// Light collection pre-callbacks (registered on the main SoCallbackAction)
+// ==========================================================================
+
+static SoCallbackAction::Response
+nrtDirectionalLightCB(void * ud, SoCallbackAction * action, const SoNode * node)
+{
+    std::vector<NrtLightInfo> * lights =
+        static_cast<std::vector<NrtLightInfo> *>(ud);
+    const SoDirectionalLight * dl =
+        static_cast<const SoDirectionalLight *>(node);
+    if (!dl->on.getValue())
+        return SoCallbackAction::CONTINUE;
+
+    // Transform direction to world space using the model matrix at
+    // the time of traversal.
+    const SbMatrix & mm = action->getModelMatrix();
+    SbVec3f wDir;
+    mm.multDirMatrix(dl->direction.getValue(), wDir);
+    // Normalize defensively; the world may have a scaling transform.
+    float wlen = wDir.length();
+    if (wlen > 1e-6f) wDir /= wlen;
+
+    NrtLightInfo li;
+    li.type = NRT_DIRECTIONAL;
+    li.dir[0] = wDir[0]; li.dir[1] = wDir[1]; li.dir[2] = wDir[2];
+    li.pos[0] = li.pos[1] = li.pos[2] = 0.0f;
+    const SbColor & c = dl->color.getValue();
+    li.rgb[0] = c[0]; li.rgb[1] = c[1]; li.rgb[2] = c[2];
+    li.intensity    = dl->intensity.getValue();
+    li.cutOffAngle  = 0.0f;
+    li.dropOffRate  = 0.0f;
+    lights->push_back(li);
+    return SoCallbackAction::CONTINUE;
+}
+
+static SoCallbackAction::Response
+nrtPointLightCB(void * ud, SoCallbackAction * action, const SoNode * node)
+{
+    std::vector<NrtLightInfo> * lights =
+        static_cast<std::vector<NrtLightInfo> *>(ud);
+    const SoPointLight * pl =
+        static_cast<const SoPointLight *>(node);
+    if (!pl->on.getValue())
+        return SoCallbackAction::CONTINUE;
+
+    // Transform position to world space.
+    const SbMatrix & mm = action->getModelMatrix();
+    SbVec3f wPos;
+    mm.multVecMatrix(pl->location.getValue(), wPos);
+
+    NrtLightInfo li;
+    li.type = NRT_POINT;
+    li.dir[0] = li.dir[1] = li.dir[2] = 0.0f;
+    li.pos[0] = wPos[0]; li.pos[1] = wPos[1]; li.pos[2] = wPos[2];
+    const SbColor & c = pl->color.getValue();
+    li.rgb[0] = c[0]; li.rgb[1] = c[1]; li.rgb[2] = c[2];
+    li.intensity   = pl->intensity.getValue();
+    li.cutOffAngle = 0.0f;
+    li.dropOffRate = 0.0f;
+    lights->push_back(li);
+    return SoCallbackAction::CONTINUE;
+}
+
+static SoCallbackAction::Response
+nrtSpotLightCB(void * ud, SoCallbackAction * action, const SoNode * node)
+{
+    std::vector<NrtLightInfo> * lights =
+        static_cast<std::vector<NrtLightInfo> *>(ud);
+    const SoSpotLight * sl =
+        static_cast<const SoSpotLight *>(node);
+    if (!sl->on.getValue())
+        return SoCallbackAction::CONTINUE;
+
+    const SbMatrix & mm = action->getModelMatrix();
+    SbVec3f wPos, wDir;
+    mm.multVecMatrix(sl->location.getValue(),  wPos);
+    mm.multDirMatrix(sl->direction.getValue(), wDir);
+    float wlen = wDir.length();
+    if (wlen > 1e-6f) wDir /= wlen;
+
+    NrtLightInfo li;
+    li.type = NRT_SPOT;
+    li.dir[0] = wDir[0]; li.dir[1] = wDir[1]; li.dir[2] = wDir[2];
+    li.pos[0] = wPos[0]; li.pos[1] = wPos[1]; li.pos[2] = wPos[2];
+    const SbColor & c = sl->color.getValue();
+    li.rgb[0] = c[0]; li.rgb[1] = c[1]; li.rgb[2] = c[2];
+    li.intensity   = sl->intensity.getValue();
+    li.cutOffAngle = sl->cutOffAngle.getValue();
+    li.dropOffRate = sl->dropOffRate.getValue();
+    lights->push_back(li);
+    return SoCallbackAction::CONTINUE;
+}
+
+
 
 struct NrtScene {
     std::vector<float>        vertices; // 9 floats/triangle (3 verts × xyz)
@@ -380,10 +501,23 @@ static inline float nrt_clamp01(float v) {
 static inline float nrt_dot3(const float * a, const float * b) {
     return a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
 }
+static inline void nrt_normalize3(float v[3]) {
+    const float len = std::sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
+    if (len > 1e-6f) { v[0] /= len; v[1] /= len; v[2] /= len; }
+}
 
-// Phong shading contribution from one directional light.
+// Minimal xorshift32 PRNG for AA jitter (no allocations, no state setup).
+static inline uint32_t nrt_xorshift32(uint32_t s) {
+    s ^= s << 13; s ^= s >> 17; s ^= s << 5; return s;
+}
+static inline float nrt_rand01(uint32_t & s) {
+    s = nrt_xorshift32(s);
+    return static_cast<float>(s) * (1.0f / 4294967296.0f);
+}
+
+// Phong shading contribution from one light.
 // N, V, L are unit vectors.  lightIntensity scales the light colour.
-// out[3] is accumulated (caller adds contribution).
+// out[3] is accumulated in-place (caller initializes and adds contribution).
 static void nrt_phong(const float * N, const float * V, const float * L,
                       const NrtMaterial & mat,
                       const float * lightRGB, float lightIntensity,
@@ -407,6 +541,214 @@ static void nrt_phong(const float * N, const float * V, const float * L,
         out[0] += mat.specular[0] * lightRGB[0] * lightIntensity * spec;
         out[1] += mat.specular[1] * lightRGB[1] * lightIntensity * spec;
         out[2] += mat.specular[2] * lightRGB[2] * lightIntensity * spec;
+    }
+}
+
+// Test whether a shadow ray from hitPt (offset along N) toward direction L
+// is blocked before reaching maxT.
+// N      : surface normal at hitPt (used to offset origin away from surface)
+// L      : unit vector toward the light
+// maxT   : maximum intersection distance (1e30 for directional, finite for positional)
+static bool nrt_is_shadowed(const NrtScene & scene,
+                             const nanort::TriangleIntersector<float> & isect,
+                             const float hitPt[3],
+                             const float N[3],
+                             const float L[3],
+                             float maxT)
+{
+    nanort::Ray<float> shadowRay;
+    // Offset origin along normal to avoid self-intersection.
+    const float kEps = 1e-3f;
+    shadowRay.org[0] = hitPt[0] + N[0] * kEps;
+    shadowRay.org[1] = hitPt[1] + N[1] * kEps;
+    shadowRay.org[2] = hitPt[2] + N[2] * kEps;
+    shadowRay.dir[0] = L[0];
+    shadowRay.dir[1] = L[1];
+    shadowRay.dir[2] = L[2];
+    shadowRay.min_t  = kEps;
+    shadowRay.max_t  = maxT - kEps;
+
+    nanort::TriangleIntersection<float> si;
+    return scene.accel.Traverse(shadowRay, isect, &si);
+}
+
+// Shade a hit point given surface data and scene lights.
+// hitPt  : world-space hit position
+// N      : surface normal (unit, facing viewer)
+// V      : unit view direction (camera → hit point, negated)
+// mat    : surface material
+// Returns the RGB contribution for this point (emission + ambient + lights).
+static void nrt_shade(const NrtScene & scene,
+                       const nanort::TriangleIntersector<float> & isect,
+                       const float hitPt[3],
+                       const float N[3],
+                       const float V[3],
+                       const NrtMaterial & mat,
+                       const std::vector<NrtLightInfo> & lights,
+                       float ambientFill,
+                       bool shadowsEnabled,
+                       float out[3])
+{
+    // Emission + ambient fill
+    out[0] = mat.emission[0] + ambientFill * mat.ambient[0];
+    out[1] = mat.emission[1] + ambientFill * mat.ambient[1];
+    out[2] = mat.emission[2] + ambientFill * mat.ambient[2];
+
+    for (const NrtLightInfo & li : lights) {
+        float L[3];
+        float attenuation = li.intensity;
+        float shadowMaxT  = 1.0e30f;
+
+        if (li.type == NRT_DIRECTIONAL) {
+            // Direction points away from the light source; negate for 'toward light'.
+            // Re-normalize: a scaling transform could have stretched the direction
+            // before it was captured in nrtDirectionalLightCB.
+            L[0] = -li.dir[0]; L[1] = -li.dir[1]; L[2] = -li.dir[2];
+            nrt_normalize3(L);
+            // Directional lights are infinitely far; no distance attenuation.
+
+        } else if (li.type == NRT_POINT) {
+            // Vector from hit point to light position.
+            L[0] = li.pos[0] - hitPt[0];
+            L[1] = li.pos[1] - hitPt[1];
+            L[2] = li.pos[2] - hitPt[2];
+            const float dist = std::sqrt(L[0]*L[0] + L[1]*L[1] + L[2]*L[2]);
+            if (dist < 1e-6f) continue;
+            L[0] /= dist; L[1] /= dist; L[2] /= dist;
+            // Inverse-square attenuation (avoid div-by-zero for very close lights).
+            const float d2 = dist * dist;
+            attenuation = li.intensity / (1.0f + d2);
+            shadowMaxT  = dist;
+
+        } else { // NRT_SPOT
+            L[0] = li.pos[0] - hitPt[0];
+            L[1] = li.pos[1] - hitPt[1];
+            L[2] = li.pos[2] - hitPt[2];
+            const float dist = std::sqrt(L[0]*L[0] + L[1]*L[1] + L[2]*L[2]);
+            if (dist < 1e-6f) continue;
+            L[0] /= dist; L[1] /= dist; L[2] /= dist;
+
+            // Spot cone check: dot product of cone axis (li.dir) with direction from
+            // surface toward light (-L).  li.dir points from the light outward.
+            const float cosHalfCone = std::cos(li.cutOffAngle);
+            const float cosSurface  = -nrt_dot3(li.dir, L); // cos of angle to cone axis
+            if (cosSurface < cosHalfCone)
+                continue;  // outside the cone: no contribution
+
+            // Smooth edge with drop-off
+            const float spotFactor = (li.dropOffRate > 0.0f)
+                ? std::pow(cosSurface, li.dropOffRate)
+                : 1.0f;
+            const float d2  = dist * dist;
+            attenuation = li.intensity * spotFactor / (1.0f + d2);
+            shadowMaxT  = dist;
+        }
+
+        // Shadow test (skip if shadowsEnabled is false)
+        if (shadowsEnabled && nrt_is_shadowed(scene, isect, hitPt, N, L, shadowMaxT))
+            continue;
+
+        nrt_phong(N, V, L, mat, li.rgb, attenuation, out);
+    }
+
+    // Fallback if no lights: simple diffuse-from-eye
+    if (lights.empty()) {
+        const float NdotV = nrt_clamp01(nrt_dot3(N, V));
+        out[0] = mat.diffuse[0] * (ambientFill + (1.0f - ambientFill) * NdotV);
+        out[1] = mat.diffuse[1] * (ambientFill + (1.0f - ambientFill) * NdotV);
+        out[2] = mat.diffuse[2] * (ambientFill + (1.0f - ambientFill) * NdotV);
+    }
+}
+
+// Trace a ray through the scene and return the RGB colour (background or shaded hit).
+// depth: number of additional reflection bounces allowed (0 = no reflections).
+// bgColor: background colour to use for misses.
+static void nrt_trace(const NrtScene & scene,
+                       const nanort::TriangleIntersector<float> & intersector,
+                       const float org[3], const float dir[3],
+                       const std::vector<NrtLightInfo> & lights,
+                       float ambientFill,
+                       bool shadowsEnabled,
+                       int depth,
+                       const float bgColor[3],
+                       float out[3])
+{
+    nanort::Ray<float> ray;
+    ray.org[0] = org[0]; ray.org[1] = org[1]; ray.org[2] = org[2];
+    ray.dir[0] = dir[0]; ray.dir[1] = dir[1]; ray.dir[2] = dir[2];
+    ray.min_t  = 0.001f;
+    ray.max_t  = 1.0e30f;
+
+    nanort::TriangleIntersection<float> isect;
+    if (!scene.accel.Traverse(ray, intersector, &isect)) {
+        out[0] = bgColor[0]; out[1] = bgColor[1]; out[2] = bgColor[2];
+        return;
+    }
+
+    const unsigned int fid = isect.prim_id;
+    const float w0 = 1.0f - isect.u - isect.v;
+    const float w1 = isect.u;
+    const float w2 = isect.v;
+
+    // Interpolated normal
+    const float * n0 = scene.normals.data() + 9 * fid + 0;
+    const float * n1 = scene.normals.data() + 9 * fid + 3;
+    const float * n2 = scene.normals.data() + 9 * fid + 6;
+    float N[3] = {
+        w0*n0[0] + w1*n1[0] + w2*n2[0],
+        w0*n0[1] + w1*n1[1] + w2*n2[1],
+        w0*n0[2] + w1*n1[2] + w2*n2[2]
+    };
+    nrt_normalize3(N);
+
+    // View direction (from hit toward camera)
+    const float V[3] = { -dir[0], -dir[1], -dir[2] };
+    // Flip normal if it faces away from the viewer (back-face)
+    if (nrt_dot3(N, V) < 0.0f) { N[0] = -N[0]; N[1] = -N[1]; N[2] = -N[2]; }
+
+    // World-space hit position: p0 + t * dir
+    const float hitPt[3] = {
+        org[0] + dir[0] * isect.t,
+        org[1] + dir[1] * isect.t,
+        org[2] + dir[2] * isect.t
+    };
+
+    const NrtMaterial & mat = scene.tris[fid].mat;
+
+    // Shade the direct illumination component
+    nrt_shade(scene, intersector, hitPt, N, V, mat, lights,
+              ambientFill, shadowsEnabled, out);
+
+    // Reflection bounce (only when depth > 0 and surface is specular)
+    if (depth > 0) {
+        // Specular reflectance proxy: use the luminance of the specular colour
+        // scaled by shininess.  Only trace if there is a meaningful contribution.
+        const float specLum = (mat.specular[0] * 0.2126f +
+                               mat.specular[1] * 0.7152f +
+                               mat.specular[2] * 0.0722f) * mat.shininess;
+        if (specLum > 0.01f) {
+            // Reflection direction R = dir - 2*(N·dir)*N
+            const float NdotI = nrt_dot3(N, dir);
+            const float Rdir[3] = {
+                dir[0] - 2.0f * NdotI * N[0],
+                dir[1] - 2.0f * NdotI * N[1],
+                dir[2] - 2.0f * NdotI * N[2]
+            };
+            // Offset origin along normal to avoid self-intersection
+            const float kEps = 1e-3f;
+            const float Rorg[3] = {
+                hitPt[0] + N[0] * kEps,
+                hitPt[1] + N[1] * kEps,
+                hitPt[2] + N[2] * kEps
+            };
+            float reflColor[3];
+            nrt_trace(scene, intersector, Rorg, Rdir, lights,
+                      ambientFill, shadowsEnabled, depth - 1, bgColor,
+                      reflColor);
+            out[0] += mat.specular[0] * specLum * reflColor[0];
+            out[1] += mat.specular[1] * specLum * reflColor[1];
+            out[2] += mat.specular[2] * specLum * reflColor[2];
+        }
     }
 }
 
@@ -443,22 +785,32 @@ public:
         const SbViewportRegion vp(static_cast<short>(width),
                                   static_cast<short>(height));
 
-        // --- 1. Extract triangles via SoCallbackAction ----------------------
+        // --- 1. Extract triangles and all light types in one traversal ------
         NrtSceneCollector collector;
+        std::vector<NrtLightInfo> lights;
         {
             NrtProxyData proxyData;
             proxyData.collector = &collector;
             proxyData.vp        = vp;
 
             SoCallbackAction cba(vp);
+            // Geometry
             cba.addTriangleCallback(SoShape::getClassTypeId(),
                                     nrtTriangleCB, &collector);
+            // Proxy geometry for lines/points
             cba.addPreCallback(SoLineSet::getClassTypeId(),
                                nrtLineSetPreCB, &proxyData);
             cba.addPreCallback(SoIndexedLineSet::getClassTypeId(),
                                nrtIndexedLineSetPreCB, &proxyData);
             cba.addPreCallback(SoPointSet::getClassTypeId(),
                                nrtPointSetPreCB, &proxyData);
+            // All supported light types (with world-space transforms)
+            cba.addPreCallback(SoDirectionalLight::getClassTypeId(),
+                               nrtDirectionalLightCB, &lights);
+            cba.addPreCallback(SoPointLight::getClassTypeId(),
+                               nrtPointLightCB, &lights);
+            cba.addPreCallback(SoSpotLight::getClassTypeId(),
+                               nrtSpotLightCB, &lights);
             cba.apply(scene);
         }
         if (collector.tris.empty()) {
@@ -472,32 +824,32 @@ public:
         nrtScene.tris = collector.tris;
         if (!nrtScene.build()) return FALSE;
 
-        // --- 3. Extract directional lights from scene -----------------------
-        struct LightInfo { float dir[3]; float rgb[3]; float intensity; };
-        std::vector<LightInfo> lights;
+        // --- 3. Read SoRaytracingParams hints from scene --------------------
+        bool  shadowsEnabled     = false;
+        int   maxBouncesAllowed  = 0;
+        int   samplesPerPixel    = 1;
+        float ambientFill        = 0.20f;
         {
             SoSearchAction sa;
-            sa.setType(SoDirectionalLight::getClassTypeId());
-            sa.setInterest(SoSearchAction::ALL);
+            sa.setType(SoRaytracingParams::getClassTypeId());
+            sa.setInterest(SoSearchAction::FIRST);
             sa.apply(scene);
-            const SoPathList & paths = sa.getPaths();
-            for (int i = 0; i < paths.getLength(); ++i) {
-                const SoDirectionalLight * dl =
-                    static_cast<const SoDirectionalLight *>(
-                        paths[i]->getTail());
-                if (!dl->on.getValue()) continue;
-                LightInfo li;
-                const SbVec3f & d = dl->direction.getValue();
-                li.dir[0] = d[0]; li.dir[1] = d[1]; li.dir[2] = d[2];
-                const SbColor & c = dl->color.getValue();
-                li.rgb[0] = c[0]; li.rgb[1] = c[1]; li.rgb[2] = c[2];
-                li.intensity = dl->intensity.getValue();
-                lights.push_back(li);
+            if (sa.getPath()) {
+                const SoRaytracingParams * rp =
+                    static_cast<const SoRaytracingParams *>(
+                        sa.getPath()->getTail());
+                shadowsEnabled    = rp->shadowsEnabled.getValue() != FALSE;
+                maxBouncesAllowed = rp->maxReflectionBounces.getValue();
+                samplesPerPixel   = rp->samplesPerPixel.getValue();
+                ambientFill       = rp->ambientIntensity.getValue();
+                // Clamp to sane values
+                if (samplesPerPixel  < 1)  samplesPerPixel  = 1;
+                if (maxBouncesAllowed < 0) maxBouncesAllowed = 0;
+                ambientFill = nrt_clamp01(ambientFill);
             }
         }
 
         // --- 4. Extract view volume from camera in scene --------------------
-        // Prefer an SoPerspectiveCamera; fall back to any SoCamera.
         SoCamera * cam = nullptr;
         {
             SoSearchAction sa;
@@ -509,10 +861,6 @@ public:
         }
         if (!cam) return FALSE;  // no camera: fall through to GL
 
-        // Get the view volume and apply the same aspect-ratio correction that
-        // Coin's SoCamera::GLRender() applies: scale(1/aspect) for portrait
-        // viewports (aspect < 1).  Without this, NanoRT renders the scene at a
-        // different zoom level than the GL and OSMesa panels.
         const float aspect_ratio =
             static_cast<float>(width) / static_cast<float>(height);
         SbViewVolume vv = cam->getViewVolume(aspect_ratio);
@@ -523,96 +871,129 @@ public:
             nrtScene.vertices.data(), nrtScene.faces.data(),
             sizeof(float) * 3);
 
-        const float kAmbientFill = 0.20f;
+        // Per-pixel state for jitter PRNG seed (deterministic for reproducibility)
+        uint32_t rngState = 0xDEADBEEFu;
 
         for (unsigned int y = 0; y < height; ++y) {
             for (unsigned int x = 0; x < width; ++x) {
-                // Map pixel (x, y) to normalised view coordinates.
-                // GL convention: row 0 of the buffer is the BOTTOM of the
-                // screen (matching glReadPixels), so ny increases upward.
-                // SbViewVolume::projectPointToLine() uses (0,0)=bottom-left,
-                // (1,1)=top-right, which matches this convention directly.
-                const float nx = (x + 0.5f) / static_cast<float>(width);
-                const float ny = (y + 0.5f) / static_cast<float>(height);
+                // GL convention: row 0 is the BOTTOM of the screen.
+                const float fx = static_cast<float>(x);
+                const float fy = static_cast<float>(y);
+                const float fw = static_cast<float>(width);
+                const float fh = static_cast<float>(height);
 
-                // Camera ray via Obol's view-volume math
-                SbVec3f p0, p1;
-                vv.projectPointToLine(SbVec2f(nx, ny), p0, p1);
-                SbVec3f d = p1 - p0;
-                d.normalize();
+                // Accumulate colour across AA samples.
+                float accum[3] = { 0.0f, 0.0f, 0.0f };
+                int hitSamples = 0;
 
-                nanort::Ray<float> ray;
-                ray.org[0] = p0[0]; ray.org[1] = p0[1]; ray.org[2] = p0[2];
-                ray.dir[0] = d[0];  ray.dir[1] = d[1];  ray.dir[2] = d[2];
-                ray.min_t  = 0.001f;
-                ray.max_t  = 1.0e30f;
-
-                nanort::TriangleIntersection<float> isect;
-                const bool hit =
-                    nrtScene.accel.Traverse(ray, intersector, &isect);
-
-                const size_t idx = (y * width + x) * nrcomponents;
-                if (!hit) {
-                    // Already filled with background colour before this call
-                    continue;
-                }
-
-                // Barycentric interpolation: (1-u-v)*v0 + u*v1 + v*v2
-                const unsigned int fid = isect.prim_id;
-                const float w0 = 1.0f - isect.u - isect.v;
-                const float w1 = isect.u;
-                const float w2 = isect.v;
-
-                const float * n0 = nrtScene.normals.data() + 9 * fid + 0;
-                const float * n1 = nrtScene.normals.data() + 9 * fid + 3;
-                const float * n2 = nrtScene.normals.data() + 9 * fid + 6;
-                float N[3] = {
-                    w0*n0[0] + w1*n1[0] + w2*n2[0],
-                    w0*n0[1] + w1*n1[1] + w2*n2[1],
-                    w0*n0[2] + w1*n1[2] + w2*n2[2]
-                };
-                {
-                    const float nlen = std::sqrt(N[0]*N[0]+N[1]*N[1]+N[2]*N[2]);
-                    if (nlen > 1e-6f) {
-                        N[0] /= nlen; N[1] /= nlen; N[2] /= nlen;
+                for (int s = 0; s < samplesPerPixel; ++s) {
+                    // Jitter offset within pixel (stratified sub-pixel sampling).
+                    float jx = 0.5f, jy = 0.5f;
+                    if (samplesPerPixel > 1) {
+                        jx = nrt_rand01(rngState);
+                        jy = nrt_rand01(rngState);
                     }
-                }
-                // Face towards the viewer
-                const float V[3] = { -d[0], -d[1], -d[2] };
-                if (nrt_dot3(N, V) < 0.0f) {
-                    N[0] = -N[0]; N[1] = -N[1]; N[2] = -N[2];
-                }
+                    const float nx = (fx + jx) / fw;
+                    const float ny = (fy + jy) / fh;
 
-                const NrtMaterial & mat = nrtScene.tris[fid].mat;
+                    SbVec3f p0, p1;
+                    vv.projectPointToLine(SbVec2f(nx, ny), p0, p1);
+                    SbVec3f d = p1 - p0;
+                    d.normalize();
 
-                // Emission + ambient fill
-                float px[3] = {
-                    mat.emission[0] + kAmbientFill * mat.ambient[0],
-                    mat.emission[1] + kAmbientFill * mat.ambient[1],
-                    mat.emission[2] + kAmbientFill * mat.ambient[2]
-                };
+                    // Primary ray
+                    nanort::Ray<float> ray;
+                    ray.org[0] = p0[0]; ray.org[1] = p0[1]; ray.org[2] = p0[2];
+                    ray.dir[0] = d[0];  ray.dir[1] = d[1];  ray.dir[2] = d[2];
+                    ray.min_t  = 0.001f;
+                    ray.max_t  = 1.0e30f;
 
-                // Accumulate directional lights
-                for (const LightInfo & li : lights) {
-                    float L[3] = { -li.dir[0], -li.dir[1], -li.dir[2] };
-                    const float llen = std::sqrt(L[0]*L[0]+L[1]*L[1]+L[2]*L[2]);
-                    if (llen > 1e-6f) {
-                        L[0] /= llen; L[1] /= llen; L[2] /= llen;
+                    nanort::TriangleIntersection<float> isect;
+                    if (!nrtScene.accel.Traverse(ray, intersector, &isect))
+                        continue;  // primary miss: leave pre-filled background pixel
+                    ++hitSamples;
+
+                    const unsigned int fid = isect.prim_id;
+                    const float w0 = 1.0f - isect.u - isect.v;
+                    const float w1 = isect.u;
+                    const float w2 = isect.v;
+
+                    const float * n0 = nrtScene.normals.data() + 9 * fid + 0;
+                    const float * n1 = nrtScene.normals.data() + 9 * fid + 3;
+                    const float * n2 = nrtScene.normals.data() + 9 * fid + 6;
+                    float N[3] = {
+                        w0*n0[0] + w1*n1[0] + w2*n2[0],
+                        w0*n0[1] + w1*n1[1] + w2*n2[1],
+                        w0*n0[2] + w1*n1[2] + w2*n2[2]
+                    };
+                    nrt_normalize3(N);
+
+                    const float dir[3] = { d[0], d[1], d[2] };
+                    const float V[3]   = { -dir[0], -dir[1], -dir[2] };
+                    if (nrt_dot3(N, V) < 0.0f) { N[0] = -N[0]; N[1] = -N[1]; N[2] = -N[2]; }
+
+                    const float hitPt[3] = {
+                        p0[0] + dir[0] * isect.t,
+                        p0[1] + dir[1] * isect.t,
+                        p0[2] + dir[2] * isect.t
+                    };
+
+                    const NrtMaterial & mat = nrtScene.tris[fid].mat;
+
+                    // Direct illumination
+                    float px[3] = { 0.0f, 0.0f, 0.0f };
+                    nrt_shade(nrtScene, intersector, hitPt, N, V, mat,
+                              lights, ambientFill, shadowsEnabled, px);
+
+                    // Reflection bounce (uses nrt_trace for secondary rays;
+                    // background_rgb is used for missed secondary rays).
+                    if (maxBouncesAllowed > 0) {
+                        const float specLum =
+                            (mat.specular[0] * 0.2126f +
+                             mat.specular[1] * 0.7152f +
+                             mat.specular[2] * 0.0722f) * mat.shininess;
+                        if (specLum > 0.01f) {
+                            const float NdotI = nrt_dot3(N, dir);
+                            const float Rdir[3] = {
+                                dir[0] - 2.0f * NdotI * N[0],
+                                dir[1] - 2.0f * NdotI * N[1],
+                                dir[2] - 2.0f * NdotI * N[2]
+                            };
+                            const float kEps = 1e-3f;
+                            const float Rorg[3] = {
+                                hitPt[0] + N[0] * kEps,
+                                hitPt[1] + N[1] * kEps,
+                                hitPt[2] + N[2] * kEps
+                            };
+                            float reflColor[3];
+                            nrt_trace(nrtScene, intersector, Rorg, Rdir,
+                                      lights, ambientFill, shadowsEnabled,
+                                      maxBouncesAllowed - 1,
+                                      background_rgb, reflColor);
+                            px[0] += mat.specular[0] * specLum * reflColor[0];
+                            px[1] += mat.specular[1] * specLum * reflColor[1];
+                            px[2] += mat.specular[2] * specLum * reflColor[2];
+                        }
                     }
-                    nrt_phong(N, V, L, mat, li.rgb, li.intensity, px);
+
+                    accum[0] += px[0];
+                    accum[1] += px[1];
+                    accum[2] += px[2];
                 }
 
-                // Fallback: if no lights, simple diffuse-from-eye
-                if (lights.empty()) {
-                    const float NdotV = nrt_clamp01(nrt_dot3(N, V));
-                    px[0] = mat.diffuse[0] * (kAmbientFill + (1.0f - kAmbientFill) * NdotV);
-                    px[1] = mat.diffuse[1] * (kAmbientFill + (1.0f - kAmbientFill) * NdotV);
-                    px[2] = mat.diffuse[2] * (kAmbientFill + (1.0f - kAmbientFill) * NdotV);
-                }
+                // Only write pixel if at least one sample hit geometry.
+                // Pixels with no hits keep the pre-filled background colour
+                // (which may be a gradient set by the caller).
+                if (hitSamples == 0) continue;
 
-                pixels[idx + 0] = static_cast<unsigned char>(nrt_clamp01(px[0]) * 255.0f);
-                pixels[idx + 1] = static_cast<unsigned char>(nrt_clamp01(px[1]) * 255.0f);
-                pixels[idx + 2] = static_cast<unsigned char>(nrt_clamp01(px[2]) * 255.0f);
+                const float inv_s = 1.0f / static_cast<float>(hitSamples);
+                const size_t idx  = (y * width + x) * nrcomponents;
+                pixels[idx + 0] = static_cast<unsigned char>(
+                    nrt_clamp01(accum[0] * inv_s) * 255.0f);
+                pixels[idx + 1] = static_cast<unsigned char>(
+                    nrt_clamp01(accum[1] * inv_s) * 255.0f);
+                pixels[idx + 2] = static_cast<unsigned char>(
+                    nrt_clamp01(accum[2] * inv_s) * 255.0f);
                 if (nrcomponents == 4) pixels[idx + 3] = 255;
             }
         }
