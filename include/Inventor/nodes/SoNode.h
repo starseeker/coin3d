@@ -1,5 +1,5 @@
-#ifndef COIN_SONODE_H
-#define COIN_SONODE_H
+#ifndef OBOL_SONODE_H
+#define OBOL_SONODE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -52,7 +52,7 @@ class SoSearchAction;
 class SoWriteAction;
 class SbDict;
 
-class COIN_DLL_API SoNode : public SoFieldContainer {
+class OBOL_DLL_API SoNode : public SoFieldContainer {
   typedef SoFieldContainer inherited;
 
 public:
@@ -71,17 +71,17 @@ public:
     INVENTOR_2_1 = 0x0010,
     INVENTOR_2_5 = 0x0020,
     INVENTOR_2_6 = 0x0040,
-    COIN_1_0     = 0x0080,
-    COIN_2_0     = 0x0100,
+    OBOL_1_0     = 0x0080,
+    OBOL_2_0     = 0x0100,
     EXTENSION    = 0x0200,
-    COIN_2_2     = 0x0400,
-    COIN_2_3     = 0x0800,
-    COIN_2_4     = 0x1000,
+    OBOL_2_2     = 0x0400,
+    OBOL_2_3     = 0x0800,
+    OBOL_2_4     = 0x1000,
     INVENTOR_5_0 = 0x2000,
-    COIN_2_5     = 0x4000,
-    COIN_3_0     = 0x8000,
+    OBOL_2_5     = 0x4000,
+    OBOL_3_0     = 0x8000,
     INVENTOR_6_0 = 0x10000,
-    COIN_4_0     = 0x20000
+    OBOL_4_0     = 0x20000
   };
 
   static uint32_t getCompatibilityTypes(const SoType & nodetype);
@@ -174,9 +174,9 @@ private:
   static void cleanupClass(void);
 };
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 // For SGI / TGS Open Inventor compile-time compatibility.
 #include <Inventor/SoLists.h>
-#endif // COIN_INTERNAL
+#endif // OBOL_INTERNAL
 
-#endif // !COIN_SONODE_H
+#endif // !OBOL_SONODE_H

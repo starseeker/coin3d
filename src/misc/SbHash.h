@@ -1,5 +1,5 @@
-#ifndef COIN_SBHASH_H
-#define COIN_SBHASH_H
+#ifndef OBOL_SBHASH_H
+#define OBOL_SBHASH_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -42,9 +42,9 @@
    It is a goal to be as similar as possible to our STL counterpart.
 */
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #error this is a private header file
-#endif /* ! COIN_INTERNAL */
+#endif /* ! OBOL_INTERNAL */
 
 // *************************************************************************
 
@@ -87,10 +87,10 @@ inline unsigned int toUint(T in) {
 }
 
 #if !defined(_MSC_VER) || (_MSC_VER >= 1300) // 'long long' not in vc6
-#ifndef COIN_INTERNAL //Not available for internal use, as this is not
+#ifndef OBOL_INTERNAL //Not available for internal use, as this is not
                     //available on all platforms.
 inline unsigned int SbHashFunc(unsigned long long key) { return toUint<unsigned long long>(key); }
-#endif //COIN_INTERNAL
+#endif //OBOL_INTERNAL
 #endif
 
 /* Windows 64-bit uses the LLP64 type model, where int and long
@@ -131,7 +131,7 @@ class SbHash {
   class SbHashEntry {
   public:
 
-    void * operator new(size_t COIN_UNUSED_ARG(size), cc_memalloc * memhandler) {
+    void * operator new(size_t OBOL_UNUSED_ARG(size), cc_memalloc * memhandler) {
       SbHashEntry * entry = static_cast<SbHashEntry *>(cc_memalloc_allocate(memhandler));
       entry->memhandler = memhandler;
       return static_cast<void *>(entry);
@@ -551,4 +551,4 @@ public:
   cc_memalloc * memhandler;
 };
 
-#endif // !COIN_SBHASH_H
+#endif // !OBOL_SBHASH_H

@@ -1,5 +1,5 @@
-#ifndef COIN_SOSHININESSELEMENT_H
-#define COIN_SOSHININESSELEMENT_H
+#ifndef OBOL_SOSHININESSELEMENT_H
+#define OBOL_SOSHININESSELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/elements/SoReplacedElement.h>
 
-class COIN_DLL_API SoShininessElement : public SoReplacedElement {
+class OBOL_DLL_API SoShininessElement : public SoReplacedElement {
   typedef SoReplacedElement inherited;
 
   SO_ELEMENT_HEADER(SoShininessElement);
@@ -60,4 +60,4 @@ private:
   float dummyvalue;
 };
 
-#endif // !COIN_SOSHININESSELEMENT_H
+#endif // !OBOL_SOSHININESSELEMENT_H

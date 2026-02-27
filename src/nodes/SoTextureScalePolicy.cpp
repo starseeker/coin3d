@@ -89,7 +89,7 @@
   the CPU) against subtextures. It's therefore usually not a good idea
   to use the FRACTURE mode on large triangle meshes.
 
-  \COIN_CLASS_EXTENSION
+  \OBOL_CLASS_EXTENSION
 
   <b>FILE FORMAT/DEFAULTS:</b>
   \code
@@ -208,7 +208,7 @@ SoTextureScalePolicy::~SoTextureScalePolicy()
 void
 SoTextureScalePolicy::initClass(void)
 {
-  SO_NODE_INTERNAL_INIT_CLASS(SoTextureScalePolicy, SO_FROM_COIN_2_0);
+  SO_NODE_INTERNAL_INIT_CLASS(SoTextureScalePolicy, SO_FROM_OBOL_2_0);
   SO_ENABLE(SoGLRenderAction, SoTextureScalePolicyElement);
   SO_ENABLE(SoGLRenderAction, SoTextureScaleQualityElement);
 }

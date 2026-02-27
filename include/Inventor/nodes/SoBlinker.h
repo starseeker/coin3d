@@ -1,5 +1,5 @@
-#ifndef COIN_SOBLINKER_H
-#define COIN_SOBLINKER_H
+#ifndef OBOL_SOBLINKER_H
+#define OBOL_SOBLINKER_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -40,7 +40,7 @@
 
 class SoBlinkerP;
 
-class COIN_DLL_API SoBlinker : public SoSwitch {
+class OBOL_DLL_API SoBlinker : public SoSwitch {
   typedef SoSwitch inherited;
 
   SO_NODE_HEADER(SoBlinker);
@@ -67,4 +67,4 @@ private:
   SoBlinkerP * pimpl;
 };
 
-#endif // !COIN_SOBLINKER_H
+#endif // !OBOL_SOBLINKER_H

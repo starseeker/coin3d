@@ -74,9 +74,9 @@
 #include <Inventor/actions/SoGetBoundingBoxAction.h>
 #include <Inventor/actions/SoGetMatrixAction.h>
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 #include "CoinTidbits.h"
 #include "nodes/SoSubNodeP.h"
@@ -158,14 +158,14 @@ void
 SoNodeKitListPart::setContainerType(SoType newContainerType)
 {
   if (this->typelistlocked) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::post("SoNodeKitListPart::setContainerType",
                        "type list has been locked");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     return;
   }
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (!newContainerType.isDerivedFrom(SoGroup::getClassTypeId())) {
     SoDebugError::postInfo("SoNodeKitListPart::setContainerType",
                            "'%s' is not a group node class type",
@@ -220,20 +220,20 @@ void
 SoNodeKitListPart::addChildType(SoType typeToAdd)
 {
   if (this->typelistlocked) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::post("SoNodeKitListPart::addChildType",
                        "type list has been locked");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     return;
   }
 
   for (int i=0; i < this->allowedtypes.getLength(); i++) {
     if (this->allowedtypes[i] == typeToAdd) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
       SoDebugError::post("SoNodeKitListPart::addChildType",
                          "type '%s' already present in the list",
                          typeToAdd.getName().getString());
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
       return;
     }
   }
@@ -309,11 +309,11 @@ void
 SoNodeKitListPart::addChild(SoNode * child)
 {
   if (!this->isChildPermitted(child)) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::post("SoNodeKitListPart::addChild",
                        "can't add child of type '%s'",
                        child->getTypeId().getName().getString());
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     return;
   }
 
@@ -328,11 +328,11 @@ void
 SoNodeKitListPart::insertChild(SoNode * child, int childIndex)
 {
   if (!this->isChildPermitted(child)) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::post("SoNodeKitListPart::insertChild",
                        "can't insert child of type '%s'",
                        child->getTypeId().getName().getString());
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     return;
   }
 
@@ -392,11 +392,11 @@ void
 SoNodeKitListPart::replaceChild(int index, SoNode * newChild)
 {
   if (!this->isChildPermitted(newChild)) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::post("SoNodeKitListPart::replaceChild",
                        "can't replace with child of type '%s'",
                        newChild->getTypeId().getName().getString());
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     return;
   }
 
@@ -411,11 +411,11 @@ void
 SoNodeKitListPart::replaceChild(SoNode * oldChild, SoNode * newChild)
 {
   if (!this->isChildPermitted(newChild)) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::post("SoNodeKitListPart::replaceChild",
                        "can't replace with child of type '%s'",
                        newChild->getTypeId().getName().getString());
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     return;
   }
 

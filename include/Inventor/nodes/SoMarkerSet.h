@@ -1,5 +1,5 @@
-#ifndef COIN_SOMARKERSET_H
-#define COIN_SOMARKERSET_H
+#ifndef OBOL_SOMARKERSET_H
+#define OBOL_SOMARKERSET_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/nodes/SoPointSet.h>
 #include <Inventor/fields/SoMFInt32.h>
 
-class COIN_DLL_API SoMarkerSet : public SoPointSet {
+class OBOL_DLL_API SoMarkerSet : public SoPointSet {
   typedef SoPointSet inherited;
 
   SO_NODE_HEADER(SoMarkerSet);
@@ -111,4 +111,4 @@ private:
   Binding findMaterialBinding(SoState * const state) const;
 };
 
-#endif // !COIN_SOMARKERSET_H
+#endif // !OBOL_SOMARKERSET_H

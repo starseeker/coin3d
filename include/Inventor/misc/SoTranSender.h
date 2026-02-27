@@ -1,5 +1,5 @@
-#ifndef COIN_SOTRANSENDER_H
-#define COIN_SOTRANSENDER_H
+#ifndef OBOL_SOTRANSENDER_H
+#define OBOL_SOTRANSENDER_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -39,7 +39,7 @@ class SoOutput;
 class SoNode;
 
 
-class COIN_DLL_API SoTranSender {
+class OBOL_DLL_API SoTranSender {
 
 public:
   SoTranSender(SoOutput * output);
@@ -60,4 +60,4 @@ private:
   void * pimpl;
 };
 
-#endif // !COIN_SOTRANSENDER_H
+#endif // !OBOL_SOTRANSENDER_H

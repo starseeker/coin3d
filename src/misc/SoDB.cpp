@@ -115,10 +115,10 @@
 // Threading support
 #include "threads/threadp.h"
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
 #include <Inventor/threads/SbRWMutex.h>
 #include "threads/recmutexp.h"
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 
 #ifdef HAVE_3DS_IMPORT_CAPABILITIES
 #include "3ds/3dsLoader.h"
@@ -141,8 +141,8 @@ namespace {
 // Coin-global envvars:
 
 #ifndef DOXYGEN_SKIP_THIS
-const char * SoDBP::EnvVars::COIN_PROFILER = "COIN_PROFILER";
-const char * SoDBP::EnvVars::COIN_PROFILER_OVERLAY = "COIN_PROFILER_OVERLAY";
+const char * SoDBP::EnvVars::OBOL_PROFILER = "OBOL_PROFILER";
+const char * SoDBP::EnvVars::OBOL_PROFILER_OVERLAY = "OBOL_PROFILER_OVERLAY";
 #endif // DOXYGEN_SKIP_THIS
 
 // *************************************************************************
@@ -214,7 +214,7 @@ static uint32_t a_static_variable = 0xdeadbeef;
 void
 SoDB::init(ContextManager * context_manager)
 {
-  COIN_INIT_CHECK_THREAD();
+  OBOL_INIT_CHECK_THREAD();
 
   // Require a valid context manager
   if (!context_manager) {
@@ -278,9 +278,9 @@ SoDB::init(ContextManager * context_manager)
 
 #ifdef HAVE_THREADS
   // Modern C++17 threading doesn't require explicit initialization
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   SoDBP::globalmutex = new SbRWMutex(SbRWMutex::READ_PRECEDENCE);
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 #endif // HAVE_THREADS
 
   coin_init_tidbits();
@@ -323,7 +323,7 @@ SoDB::init(ContextManager * context_manager)
 
   // The profiler-elements must also be initialized before actions, of
   // course. (Note that at least the first one *must* be initialized
-  // even if COIN_PROFILER is not set, as we use its classStackIndex
+  // even if OBOL_PROFILER is not set, as we use its classStackIndex
   // when checking if its present on the state stack.)
   SoProfilerElement::initClass();
 
@@ -426,7 +426,7 @@ SoDB::init(ContextManager * context_manager)
   // Note that this is done late in the init()-process, to make sure
   // all Coin-features used in SoDB::listWin32ProcessModules() have
   // been initialized.
-  auto env = CoinInternal::getEnvironmentVariable("COIN_DEBUG_LISTMODULES");
+  auto env = CoinInternal::getEnvironmentVariable("OBOL_DEBUG_LISTMODULES");
   if (env.has_value() && (std::atoi(env->c_str()) > 0)) { SoDBP::listWin32ProcessModules(); }
 
   SoDBP::isinitialized = TRUE;
@@ -497,7 +497,7 @@ const char *
 SoDB::getVersion(void)
 {
   if (coin_versionstring == NULL) {
-    coin_versionstring = new SbString("SIM Coin " COIN_VERSION);
+    coin_versionstring = new SbString("SIM Coin " OBOL_VERSION);
     coin_atexit((coin_atexit_f *)cleanup_func, CC_ATEXIT_NORMAL);
   }
   return coin_versionstring->getString();
@@ -669,13 +669,13 @@ SoDB::isValidHeader(const char * teststring)
   SoDBHeaderCB * preload_cb, * postload_cb;
   void * userdata;
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (!teststring) {
     SoDebugError::postWarning("SoDB::isValidHeader",
                               "Passed a NULL string pointer.");
     return FALSE;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   return SoDB::getHeaderData(SbString(teststring), isbinary, ivversion,
                              preload_cb, postload_cb, userdata, TRUE);
@@ -708,22 +708,22 @@ SoDB::registerHeader(const SbString & headerstring,
   // Must start with '#'.
   if ((headerstring.getLength() == 0) ||
       (headerstring.getString()[0] != '#')) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SoDB::registerHeader",
                               "File header string must begin with '#', '%s'"
                               " invalid.", headerstring.getString());
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     return FALSE;
   }
 
   // No more than 80 characters.
   if (headerstring.getLength() > 80) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SoDB::registerHeader",
                               "File header string must be 80 characters "
                               "or less, so '%s' is invalid.",
                               headerstring.getString());
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     return FALSE;
   }
 
@@ -813,12 +813,12 @@ SoDB::getNumHeaders(void)
 SbString
 SoDB::getHeaderString(const int i)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if ((i < 0) || (i >= SoDBP::headerlist->getLength())) {
     SoDebugError::post("SoDB::getHeaderString", "Index %d out of range.", i);
     return SbString("");
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   return (*SoDBP::headerlist)[i]->headerstring;
 }
@@ -847,14 +847,14 @@ SoDB::createGlobalField(const SbName & name, SoType type)
     else return NULL;
   }
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (!type.canCreateInstance()) {
     SoDebugError::postWarning("SoDB::createGlobalField",
                               "Can't create instance of field type \"%s\".",
                               type.getName().getString());
     return NULL;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   // (Deallocation of the field happens in the SoGlobalField
   // destructor.)
@@ -899,14 +899,14 @@ SoDB::renameGlobalField(const SbName & from, const SbName & to)
 {
   SoGlobalField * gf = SoGlobalField::getGlobalFieldContainer(from);
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (gf == NULL) {
     SoDebugError::postWarning("SoDB::renameGlobalField",
                               "Couldn't find global field '%s' to rename.",
                               from.getString());
     return;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   if (to == "") { // Empty string is a special case, remove field.
     assert(gf->getRefCount() == 1);
@@ -939,13 +939,13 @@ SoDB::renameGlobalField(const SbName & from, const SbName & to)
 void
 SoDB::setRealTimeInterval(const SbTime & interval)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (interval < SbTime::zero()) {
     SoDebugError::postWarning("SoDB::setRealTimeInterval",
                               "Tried to set negative interval.");
     return;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   SbBool isscheduled = SoDBP::globaltimersensor->isScheduled();
   if (isscheduled) SoDBP::globaltimersensor->unschedule();
@@ -1015,8 +1015,8 @@ SoDB::getSensorManager(void)
   NOTE: THIS METHOD IS OBSOLETED. DON'T USE IT.
 */
 int
-SoDB::doSelect(int COIN_UNUSED_ARG(nfds), void * COIN_UNUSED_ARG(readfds), void * COIN_UNUSED_ARG(writefds),
-               void * COIN_UNUSED_ARG(exceptfds), struct timeval * COIN_UNUSED_ARG(usertimeout))
+SoDB::doSelect(int OBOL_UNUSED_ARG(nfds), void * OBOL_UNUSED_ARG(readfds), void * OBOL_UNUSED_ARG(writefds),
+               void * OBOL_UNUSED_ARG(exceptfds), struct timeval * OBOL_UNUSED_ARG(usertimeout))
 {
   assert(FALSE && "obsoleted method");
   return 0;
@@ -1045,14 +1045,14 @@ SoDB::addConverter(SoType from, SoType to, SoType converter)
   const uint32_t linkid = (((uint32_t)from.getKey()) << 16) + to.getKey();
   SbBool nonexist = SoDBP::converters->put(linkid, converter.getKey());
   if (!nonexist) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SoDB::addConverter",
                               "Conversion from \"%s\" to \"%s\" is already "
                               "handled by instances of \"%s\"",
                               from.getName().getString(),
                               to.getName().getString(),
                               converter.getName().getString());
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   }
 }
 
@@ -1092,9 +1092,9 @@ SoDB::isInitialized(void)
 void
 SoDB::startNotify(void)
 {
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   (void) cc_recmutex_internal_notify_lock();
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
   SoDBP::notificationcounter++;
 }
 
@@ -1119,9 +1119,9 @@ SoDB::endNotify(void)
     SoSensorManager * sm = SoDB::getSensorManager();
     if (sm->isDelaySensorPending()) sm->processImmediateQueue();
   }
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   (void) cc_recmutex_internal_notify_unlock();
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 
 }
 
@@ -1146,11 +1146,11 @@ SoDB::enableRealTimeSensor(SbBool on)
   else if (!isscheduled && on &&
            SoDBP::globaltimersensor->getInterval() != SbTime::zero())
     SoDBP::globaltimersensor->schedule();
-#if COIN_DEBUG
+#if OBOL_DEBUG
   else SoDebugError::postWarning("SoDB::enableRealTimeSensor",
                                  "realtime sensor already %s",
                                  on ? "on" : "off");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }
 
 // private wrapper for readAll() and readAllVRML()
@@ -1318,7 +1318,7 @@ SoDB::readAllWrapper(SoInput * in, const SoType & grouptype)
   will then have to be considered to be "stacked", and client code
   must be aware of and treat this properly.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.2
 */
@@ -1355,11 +1355,11 @@ SoDB::removeProgressCallback(ProgressCallbackType * func, void * userdata)
 SbBool
 SoDB::isMultiThread(void)
 {
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   return TRUE;
-#else // COIN_THREADSAFE
+#else // OBOL_THREADSAFE
   return FALSE;
-#endif // !COIN_THREADSAFE
+#endif // !OBOL_THREADSAFE
 }
 
 // Note that the function names of the next four functions below are
@@ -1387,9 +1387,9 @@ SoDB::isMultiThread(void)
 void
 SoDB::readlock(void)
 {
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   SoDBP::globalmutex->readLock();
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 }
 
 /*!
@@ -1402,9 +1402,9 @@ SoDB::readlock(void)
 void
 SoDB::readunlock(void)
 {
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   SoDBP::globalmutex->readUnlock();
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 }
 
 /*!
@@ -1423,9 +1423,9 @@ SoDB::readunlock(void)
 void
 SoDB::writelock(void)
 {
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   SoDBP::globalmutex->writeLock();
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 }
 
 /*!
@@ -1438,9 +1438,9 @@ SoDB::writelock(void)
 void
 SoDB::writeunlock(void)
 {
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   SoDBP::globalmutex->writeUnlock();
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 }
 
 // *************************************************************************
@@ -1529,13 +1529,13 @@ SoDB::createRoute(SoNode * fromnode, const char * eventout,
     else output->getForwardConnections(fl);
     int idx = fl.find(to);
     if (idx != -1) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
       SoDebugError::postWarning("SoDB::createRoute",
                                 "Tried to connect a ROUTE multiple times "
                                 "(from %s.%s to %s.%s)",
                                 fromnodename.getString(), fromfieldname.getString(),
                                 tonodename.getString(), tofieldname.getString());
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
       return;
     }
 
@@ -1545,7 +1545,7 @@ SoDB::createRoute(SoNode * fromnode, const char * eventout,
     if (totype != fromtype) {
       SoType convtype = SoDB::getConverter(fromtype, totype);
       if (convtype == SoType::badType()) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
         SoDebugError::postWarning("SoDB::createRoute",
                                   "Tried to connect a ROUTE between entities "
                                   "that cannot be connected (due to lack of "
@@ -1555,7 +1555,7 @@ SoDB::createRoute(SoNode * fromnode, const char * eventout,
                                   fromtype.getName().getString(),
                                   tonodename.getString(), tofieldname.getString(),
                                   totype.getName().getString());
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
         return;
       }
     }
@@ -1566,14 +1566,14 @@ SoDB::createRoute(SoNode * fromnode, const char * eventout,
     // Both known possible failure points are caught above.
     assert(ok && "unexpected connection error");
   }
-#if COIN_DEBUG
+#if OBOL_DEBUG
   else {
     SoDebugError::postWarning("SoDB::createRoute",
                               "Unable to create route: %s.%s TO %s.%s",
                               fromnodename.getString(), eventout,
                               tonodename.getString(), eventin);
   }
-#endif  // COIN_DEBUG
+#endif  // OBOL_DEBUG
 }
 
 /*!
@@ -1615,14 +1615,14 @@ SoDB::removeRoute(SoNode * fromnode, const char * eventout,
     if (from) to->disconnect(from);
     else to->disconnect(output);
   }
-#if COIN_DEBUG
+#if OBOL_DEBUG
   else { // some error occurred
     SoDebugError::postWarning("SoDB::removeRoute",
                               "Unable to remove route: %s.%s TO %s.%s",
                               fromnodename.getString(), eventout,
                               tonodename.getString(), eventin);
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }
 
 // *************************************************************************
@@ -1676,14 +1676,14 @@ extern "C" {
  * C helper coin_create_osmesa_context_manager_impl(); we forward to it.
  * In builds without OSMesa support the function returns nullptr.
  * --------------------------------------------------------------------- */
-#if defined(COIN3D_OSMESA_BUILD) || defined(COIN3D_BUILD_DUAL_GL)
+#if defined(OBOL_OSMESA_BUILD) || defined(OBOL_BUILD_DUAL_GL)
 extern "C" SoDB::ContextManager * coin_create_osmesa_context_manager_impl();
 #endif
 
 SoDB::ContextManager *
 SoDB::createOSMesaContextManager()
 {
-#if defined(COIN3D_OSMESA_BUILD) || defined(COIN3D_BUILD_DUAL_GL)
+#if defined(OBOL_OSMESA_BUILD) || defined(OBOL_BUILD_DUAL_GL)
   return coin_create_osmesa_context_manager_impl();
 #else
   return nullptr;

@@ -1,5 +1,5 @@
-#ifndef COIN_SOTIMERSENSOR_H
-#define COIN_SOTIMERSENSOR_H
+#ifndef OBOL_SOTIMERSENSOR_H
+#define OBOL_SOTIMERSENSOR_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/sensors/SoTimerQueueSensor.h>
 
-class COIN_DLL_API SoTimerSensor : public SoTimerQueueSensor {
+class OBOL_DLL_API SoTimerSensor : public SoTimerQueueSensor {
   typedef SoTimerQueueSensor inherited;
 
 public:
@@ -60,4 +60,4 @@ private:
   SbBool istriggering;
 };
 
-#endif // !COIN_SOTIMERSENSOR_H
+#endif // !OBOL_SOTIMERSENSOR_H

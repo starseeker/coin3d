@@ -34,7 +34,7 @@
   \class SoGLCubeMapImage include/Inventor/misc/SoGLCubeMapImage.h
   \brief The SoGLCubeMapImage class is used to handle cube map textures.
 
-  \COIN_CLASS_EXTENSION
+  \OBOL_CLASS_EXTENSION
 
   \since Coin 3.0
 */
@@ -60,9 +60,9 @@
 #include "glue/glp.h"
 #include <Inventor/misc/SoContextHandler.h>
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
 #include <Inventor/threads/SbMutex.h>
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 
 #include "CoinTidbits.h"
 #include "glue/glp.h"
@@ -134,19 +134,19 @@ public:
   static SoType classTypeId;
   SbImage image[6];
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   static SbMutex * mutex;
-#endif // !COIN_THREADSAFE
+#endif // !OBOL_THREADSAFE
 
   inline void lock(void) {
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
     SoGLCubeMapImageP::mutex->lock();
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
   }
   inline void unlock(void) {
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
     SoGLCubeMapImageP::mutex->unlock();
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
   }
 
   static void contextCleanup(uint32_t context, void * closure)
@@ -169,9 +169,9 @@ public:
 };
 
 SoType SoGLCubeMapImageP::classTypeId STATIC_SOTYPE_INIT;
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
 SbMutex * SoGLCubeMapImageP::mutex = NULL;
-#endif // !COIN_THREADSAFE
+#endif // !OBOL_THREADSAFE
 
 #define PRIVATE(obj) (obj->pimpl)
 
@@ -216,9 +216,9 @@ SoGLCubeMapImage::initClass(void)
   assert(SoGLCubeMapImageP::classTypeId.isBad());
   SoGLCubeMapImageP::classTypeId =
     SoType::createType(SoGLImage::getClassTypeId(), SbName("GLCubeMapImage"));
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   SoGLCubeMapImageP::mutex = new SbMutex;
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
   coin_atexit((coin_atexit_f*)SoGLCubeMapImage::cleanupClass, CC_ATEXIT_NORMAL);
 }
 
@@ -228,10 +228,10 @@ SoGLCubeMapImage::initClass(void)
 void
 SoGLCubeMapImage::cleanupClass(void)
 {
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   delete SoGLCubeMapImageP::mutex;
   SoGLCubeMapImageP::mutex = NULL;
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
   SoGLCubeMapImageP::classTypeId STATIC_SOTYPE_INIT;
 }
 

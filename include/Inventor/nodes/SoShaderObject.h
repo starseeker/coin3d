@@ -1,5 +1,5 @@
-#ifndef COIN_SOSHADEROBJECT_H
-#define COIN_SOSHADEROBJECT_H
+#ifndef OBOL_SOSHADEROBJECT_H
+#define OBOL_SOSHADEROBJECT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -46,7 +46,7 @@ class SoState;
 
 // *************************************************************************
 
-class COIN_DLL_API SoShaderObject : public SoNode {
+class OBOL_DLL_API SoShaderObject : public SoNode {
   typedef SoNode inherited;
   SO_NODE_ABSTRACT_HEADER(SoShaderObject);
 
@@ -84,4 +84,4 @@ private:
   class SoShaderObjectP * pimpl;
 };
 
-#endif /* ! COIN_SOSHADEROBJECT_H*/
+#endif /* ! OBOL_SOSHADEROBJECT_H*/

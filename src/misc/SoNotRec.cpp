@@ -58,10 +58,10 @@
 #include <Inventor/errors/SoDebugError.h>
 #include <cassert>
 
-#if COIN_DEBUG  // for SoNotRec::print() method
+#if OBOL_DEBUG  // for SoNotRec::print() method
 #include <Inventor/misc/SoBase.h>
 #include <Inventor/SbName.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 
 /*!
@@ -125,7 +125,7 @@ SoNotRec::setPrevious(const SoNotRec * const prevptr)
 void
 SoNotRec::print(FILE * const file) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   (void)fprintf(file, "\tSoNotRec %p: type ", this);
   switch (this->type) {
   case CONTAINER:  (void)fprintf(file, "CONTAINER"); break;
@@ -143,7 +143,7 @@ SoNotRec::print(FILE * const file) const
   else {
     (void)fprintf(file," base is NULL\n");
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }
 
 SoNotRec::OperationType

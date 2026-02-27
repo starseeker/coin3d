@@ -1,5 +1,5 @@
-#ifndef COIN_SONORMAL_H
-#define COIN_SONORMAL_H
+#ifndef OBOL_SONORMAL_H
+#define OBOL_SONORMAL_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -39,7 +39,7 @@
 class SbVec3f;
 class SoNormalP;
 
-class COIN_DLL_API SoNormal : public SoNode {
+class OBOL_DLL_API SoNormal : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_HEADER(SoNormal);
@@ -63,4 +63,4 @@ protected:
   SoNormalP * pimpl;
 };
 
-#endif // !COIN_SONORMAL_H
+#endif // !OBOL_SONORMAL_H

@@ -1,5 +1,5 @@
-#ifndef COIN_SOSUBDETAIL_H
-#define COIN_SOSUBDETAIL_H
+#ifndef OBOL_SOSUBDETAIL_H
+#define OBOL_SOSUBDETAIL_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -88,4 +88,4 @@ SoType _class_::getClassTypeId(void) { return _class_::classTypeId; }
 
 // *************************************************************************
 
-#endif // !COIN_SOSUBDETAIL_H
+#endif // !OBOL_SOSUBDETAIL_H

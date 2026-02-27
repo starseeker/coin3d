@@ -1,5 +1,5 @@
-#ifndef COIN_SOFRUSTUM_CAMERA_H
-#define COIN_SOFRUSTUM_CAMERA_H
+#ifndef OBOL_SOFRUSTUM_CAMERA_H
+#define OBOL_SOFRUSTUM_CAMERA_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/nodes/SoCamera.h>
 #include <Inventor/fields/SoSFFloat.h>
 
-class COIN_DLL_API SoFrustumCamera : public SoCamera {
+class OBOL_DLL_API SoFrustumCamera : public SoCamera {
   typedef SoCamera inherited;
 
   SO_NODE_HEADER(SoFrustumCamera);
@@ -59,4 +59,4 @@ protected:
   virtual void viewBoundingBox(const SbBox3f & box, float aspect, float slack);  
 };
 
-#endif // COIN_SOFRUSTUM_CAMERA_H
+#endif // OBOL_SOFRUSTUM_CAMERA_H

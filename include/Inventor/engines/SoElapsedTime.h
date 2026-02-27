@@ -30,8 +30,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_SOELAPSEDTIME_H
-#define COIN_SOELAPSEDTIME_H
+#ifndef OBOL_SOELAPSEDTIME_H
+#define OBOL_SOELAPSEDTIME_H
 
 #include <Inventor/engines/SoSubEngine.h>
 #include <Inventor/engines/SoEngineOutput.h>
@@ -41,7 +41,7 @@
 #include <Inventor/fields/SoSFTrigger.h>
 
 
-class COIN_DLL_API SoElapsedTime : public SoEngine {
+class OBOL_DLL_API SoElapsedTime : public SoEngine {
   typedef SoEngine inherited;
 
   SO_ENGINE_HEADER(SoElapsedTime);
@@ -71,4 +71,4 @@ private:
   enum {RUNNING, STOPPED, PAUSED} status;
 };
 
-#endif // !COIN_SOELAPSEDTIME_H
+#endif // !OBOL_SOELAPSEDTIME_H

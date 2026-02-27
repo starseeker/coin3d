@@ -30,13 +30,13 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_SOINTERPOLATEVEC4F_H
-#define COIN_SOINTERPOLATEVEC4F_H
+#ifndef OBOL_SOINTERPOLATEVEC4F_H
+#define OBOL_SOINTERPOLATEVEC4F_H
 
 #include <Inventor/engines/SoInterpolate.h>
 #include <Inventor/fields/SoMFVec4f.h>
 
-class COIN_DLL_API SoInterpolateVec4f : public SoInterpolate {
+class OBOL_DLL_API SoInterpolateVec4f : public SoInterpolate {
   typedef SoInterpolate inherited;
   SO_INTERPOLATE_HEADER(SoInterpolateVec4f);
 
@@ -45,4 +45,4 @@ public:
   SoMFVec4f input1;
 };
 
-#endif // !COIN_SOINTERPOLATEVEC4F_H
+#endif // !OBOL_SOINTERPOLATEVEC4F_H

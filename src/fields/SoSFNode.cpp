@@ -59,7 +59,7 @@
 // Type-specific define to be able to do #ifdef tests on type.  (Note:
 // used to check the header file wrapper define, but that doesn't work
 // with --enable-compact build.)
-#define COIN_INTERNAL_SOSFNODE
+#define OBOL_INTERNAL_SOSFNODE
 
 #include <Inventor/fields/SoSFNode.h>
 
@@ -72,9 +72,9 @@
 #include <Inventor/nodes/SoNode.h>
 #include <Inventor/engines/SoEngine.h>
 #include <Inventor/SoOutput.h>
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 #include "fields/SoSubFieldP.h"
 
@@ -100,9 +100,9 @@ SoSFNode::initClass(void)
 SoSFNode::SoSFNode(void)
 {
   this->value = NULL;
-#ifdef COIN_INTERNAL_SOSFPATH
+#ifdef OBOL_INTERNAL_SOSFPATH
   this->head = NULL;
-#endif // COIN_INTERNAL_SOSFPATH
+#endif // OBOL_INTERNAL_SOSFPATH
 }
 
 /* Destructor, dereferences the current node pointer if necessary. */
@@ -131,7 +131,7 @@ SoSFNode::setValue(SoNode * newval)
   if (oldptr == newval) return;
 
   if (oldptr) {
-#ifdef COIN_INTERNAL_SOSFPATH
+#ifdef OBOL_INTERNAL_SOSFPATH
     SoNode * h = oldptr->getHead();
     // The path should be audited by us at all times. So don't use
     // SoSFPath to wrap SoTempPath or SoLightPath, for instance.
@@ -140,7 +140,7 @@ SoSFNode::setValue(SoNode * newval)
       h->removeAuditor(this, SoNotRec::FIELD);
       h->unref();
     }
-#endif // COIN_INTERNAL_SOSFPATH
+#endif // OBOL_INTERNAL_SOSFPATH
     oldptr->removeAuditor(this, SoNotRec::FIELD);
     oldptr->unref();
   }
@@ -148,13 +148,13 @@ SoSFNode::setValue(SoNode * newval)
   if (newval) {
     newval->addAuditor(this, SoNotRec::FIELD);
     newval->ref();
-#ifdef COIN_INTERNAL_SOSFPATH
+#ifdef OBOL_INTERNAL_SOSFPATH
     this->head = newval->getHead();
     if (this->head) {
       this->head->addAuditor(this, SoNotRec::FIELD);
       this->head->ref();
     }
-#endif // COIN_INTERNAL_SOSFPATH
+#endif // OBOL_INTERNAL_SOSFPATH
   }
 
   this->value = newval;
@@ -275,25 +275,25 @@ SoSFNode::fixCopy(SbBool copyconnections)
   SoNode * n = this->getValue();
   if (!n) return;
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   n->assertAlive();
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   // The setValue() call below will automatically de-audit and un-ref
   // the old pointer-value reference we have, *before* re-inserting a
   // copy.
 
-#if defined(COIN_INTERNAL_SOSFNODE) || defined(COIN_INTERNAL_SOSFENGINE)
+#if defined(OBOL_INTERNAL_SOSFNODE) || defined(OBOL_INTERNAL_SOSFENGINE)
   SoFieldContainer * fc = SoFieldContainer::findCopy(n, copyconnections);
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (fc) fc->assertAlive();
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   if (fc) this->setValue(coin_assert_cast<SoNode *>(fc));
-#endif // COIN_INTERNAL_SOSFNODE || COIN_INTERNAL_SOSFENGINE
+#endif // OBOL_INTERNAL_SOSFNODE || OBOL_INTERNAL_SOSFENGINE
 
-#ifdef COIN_INTERNAL_SOSFPATH
+#ifdef OBOL_INTERNAL_SOSFPATH
   this->setValue(n->copy());
-#endif // COIN_INTERNAL_SOSFPATH
+#endif // OBOL_INTERNAL_SOSFPATH
 }
 
 // Override from SoField to check node pointer.
@@ -322,6 +322,6 @@ SoSFNode::referencesCopy(void) const
 }
 
 // Kill the type-specific define.
-#undef COIN_INTERNAL_SOSFNODE
+#undef OBOL_INTERNAL_SOSFNODE
 //$ END TEMPLATE SFNodeEnginePath
 

@@ -1,5 +1,5 @@
-#ifndef COIN_SOACTION_H
-#define COIN_SOACTION_H
+#ifndef OBOL_SOACTION_H
+#define OBOL_SOACTION_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -45,14 +45,14 @@
 #include <Inventor/lists/SoEnabledElementsList.h>
 
 // defined in Inventor/SbBasic.h
-#ifdef COIN_UNDEF_IN_PATH_HACK
+#ifdef OBOL_UNDEF_IN_PATH_HACK
 #include <sys/unistd.h>
 #undef IN_PATH
 // Avoid problem with HPUX 10.20 C library API headers, which defines IN_PATH
 // in <sys/unistd.h>.  That define destroys the SoAction::PathCode enum, and
 // the preprocessor is so broken that we can't store/restore the define for
 // the duration of this header file.
-#endif // COIN_UNDEF_IN_PATH_HACK
+#endif // OBOL_UNDEF_IN_PATH_HACK
 
 
 /*!
@@ -74,7 +74,7 @@ class SoPathList;
 class SoState;
 class SoActionP;
 
-class COIN_DLL_API SoAction {
+class OBOL_DLL_API SoAction {
 public:
   static void initClass(void);
   static void initClasses(void);
@@ -174,4 +174,4 @@ SoAction::getCurPathCode(void) const
   return this->currentpathcode;
 }
 
-#endif // !COIN_SOACTION_H
+#endif // !OBOL_SOACTION_H

@@ -49,9 +49,9 @@
   \sa SbVec3f, SbColor4f */
 
 #include <Inventor/SbColor.h>
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 /*!
   Default constructor. The color value will be uninitialized.
@@ -140,7 +140,7 @@ SbColor&
 SbColor::setHSVValue(float hue, float saturation,
                      float value)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (!(hue>=0.0f && hue<=1.0f) ||
       !(saturation>=0.0f && saturation<=1.0f) ||
       !(value>=0.0f && value<=1.0f)) {
@@ -150,7 +150,7 @@ SbColor::setHSVValue(float hue, float saturation,
     saturation = SbClamp(saturation, 0.f, 1.f);
     value = SbClamp(value, 0.f, 1.f);
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   // HSV to RGB conversion routine based on the one presented in
   // "Computer Graphics: Principles and Practice", 2nd ed., by Foley et

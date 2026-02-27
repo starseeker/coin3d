@@ -30,8 +30,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_SOGATE_H
-#define COIN_SOGATE_H
+#ifndef OBOL_SOGATE_H
+#define OBOL_SOGATE_H
 
 #include <Inventor/engines/SoSubEngine.h>
 #include <Inventor/fields/SoMField.h>
@@ -41,7 +41,7 @@
 class SoEngineOutput;
 
 
-class COIN_DLL_API SoGate : public SoEngine {
+class OBOL_DLL_API SoGate : public SoEngine {
   typedef SoEngine inherited;
 
   SO_ENGINE_HEADER(SoGate);
@@ -83,4 +83,4 @@ private:
   friend class dummy;
 };
 
-#endif // !COIN_SOGATE_H
+#endif // !OBOL_SOGATE_H

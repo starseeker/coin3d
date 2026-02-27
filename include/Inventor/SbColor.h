@@ -1,5 +1,5 @@
-#ifndef COIN_SBCOLOR_H
-#define COIN_SBCOLOR_H
+#ifndef OBOL_SBCOLOR_H
+#define OBOL_SBCOLOR_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -36,7 +36,7 @@
 #include <cstdint>
 #include <Inventor/SbVec3f.h>
 
-class COIN_DLL_API SbColor : public SbVec3f {
+class OBOL_DLL_API SbColor : public SbVec3f {
 public:
   SbColor(void);
   SbColor(const SbVec3f& v);
@@ -57,4 +57,4 @@ private:
   uint32_t convertToUInt(const float val) { return static_cast<uint32_t>(val*255.0f);}
 };
 
-#endif // !COIN_SBCOLOR_H
+#endif // !OBOL_SBCOLOR_H

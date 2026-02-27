@@ -35,8 +35,8 @@
   ProFont is licensed under MIT License - see profont_license.txt
 */
 
-#ifndef COIN_PROFONT_DATA_H
-#define COIN_PROFONT_DATA_H
+#ifndef OBOL_PROFONT_DATA_H
+#define OBOL_PROFONT_DATA_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -50,4 +50,4 @@ extern const int profont_ttf_data_size;
 }
 #endif
 
-#endif /* COIN_PROFONT_DATA_H */
+#endif /* OBOL_PROFONT_DATA_H */

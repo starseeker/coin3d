@@ -30,8 +30,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_SOENGINE_H
-#define COIN_SOENGINE_H
+#ifndef OBOL_SOENGINE_H
+#define OBOL_SOENGINE_H
 
 #include <Inventor/fields/SoFieldContainer.h>
 
@@ -40,7 +40,7 @@ class SoEngineOutput;
 class SoEngineOutputList;
 class SoEngineOutputData;
 
-class COIN_DLL_API SoEngine : public SoFieldContainer {
+class OBOL_DLL_API SoEngine : public SoFieldContainer {
   typedef SoFieldContainer inherited;
 
 public:
@@ -97,8 +97,8 @@ private:
   void setDirty(void);
 };
 
-#if !defined(COIN_INTERNAL)
+#if !defined(OBOL_INTERNAL)
 #include <Inventor/engines/SoEngineOutput.h>
-#endif // COIN_INTERNAL
+#endif // OBOL_INTERNAL
 
-#endif // !COIN_SOENGINE_H
+#endif // !OBOL_SOENGINE_H

@@ -48,9 +48,9 @@
 #include <cassert>
 
 #include <Inventor/fields/SoSFBitMask.h>
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 #include "fields/SoSubFieldP.h"
 

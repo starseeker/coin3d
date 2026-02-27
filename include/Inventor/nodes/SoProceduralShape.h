@@ -1,5 +1,5 @@
-#ifndef COIN_SOPROCEDURALSHAPE_H
-#define COIN_SOPROCEDURALSHAPE_H
+#ifndef OBOL_SOPROCEDURALSHAPE_H
+#define OBOL_SOPROCEDURALSHAPE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -441,7 +441,7 @@ typedef int (*SoProceduralSelectCB)(const SbVec3f& rayOrigin,
 
 class SoSeparator;
 
-class COIN_DLL_API SoProceduralShape : public SoShape {
+class OBOL_DLL_API SoProceduralShape : public SoShape {
   typedef SoShape inherited;
 
   SO_NODE_HEADER(SoProceduralShape);
@@ -673,4 +673,4 @@ private:
   void*                d_selectUserdata;
 };
 
-#endif // !COIN_SOPROCEDURALSHAPE_H
+#endif // !OBOL_SOPROCEDURALSHAPE_H

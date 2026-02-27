@@ -151,9 +151,9 @@
 
 #include "config.h"
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
 #include <Inventor/threads/SbStorage.h>
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 
 #include "rendering/SoVBO.h"
 #include "nodes/SoSubNodeP.h"
@@ -193,7 +193,7 @@
   Traditional Open Inventor uses the same override bit for both
   diffuse color and transparency.  To get around this problem if you
   need to override one without the other, set the environment
-  variable "COIN_SEPARATE_DIFFUSE_TRANSPARENCY_OVERRIDE".  This is
+  variable "OBOL_SEPARATE_DIFFUSE_TRANSPARENCY_OVERRIDE".  This is
   a Coin extension, and will not work on other Open Inventor
   implementations.
 */
@@ -244,7 +244,7 @@
   Traditional Open Inventor uses the same override bit for both
   transparency and diffuse color.  To get around this problem if you
   need to override one without the other, set the environment
-  variable "COIN_SEPARATE_DIFFUSE_TRANSPARENCY_OVERRIDE".  This is
+  variable "OBOL_SEPARATE_DIFFUSE_TRANSPARENCY_OVERRIDE".  This is
   a Coin extension, and  will not work on other Open Inventor
   implementations.
 */
@@ -260,33 +260,33 @@
 class SoMaterialP {
 public:
   SoMaterialP() :
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
     colorpacker_storage(sizeof(void*), alloc_colorpacker, free_colorpacker),
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
     vbo(NULL) { }
   ~SoMaterialP() { delete this->vbo; }
 
   int materialtype;
   int transparencyflag;
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   SbStorage colorpacker_storage;
-#else // COIN_THREADSAFE
+#else // OBOL_THREADSAFE
   SoColorPacker single_colorpacker;
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 
   SoColorPacker * getColorPacker(void) {
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
     SoColorPacker ** cptr = (SoColorPacker**) this->colorpacker_storage.get();
     return * cptr;
-#else // COIN_THREADSAFE
+#else // OBOL_THREADSAFE
     return &this->single_colorpacker;
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
   }
 
   SoVBO * vbo;
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
 private:
   static void alloc_colorpacker(void * data) {
     SoColorPacker ** cptr = (SoColorPacker**) data;
@@ -296,7 +296,7 @@ private:
     SoColorPacker ** cptr = (SoColorPacker**) data;
     delete *cptr;
   }
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 };
 
 #endif // DOXYGEN_SKIP_THIS
@@ -467,7 +467,7 @@ SoMaterial::doAction(SoAction * action)
     const SbColor * diffuseptr = this->diffuseColor.getValues(0);
     int numdiffuse = this->diffuseColor.getNum();
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
     if (bitmask & SoLazyElement::SHININESS_MASK) {
       static int didwarn = 0;
       if (!didwarn && (this->shininess[0] < 0.0f || this->shininess[0] > 1.0f)) {
@@ -480,7 +480,7 @@ SoMaterial::doAction(SoAction * action)
         didwarn = 1;
       }
     }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
     const int numtransp = this->transparency.getNum();
     SoLazyElement::setMaterials(state, this, bitmask,

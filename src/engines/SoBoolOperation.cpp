@@ -142,9 +142,9 @@
 #include <Inventor/engines/SoBoolOperation.h>
 #include <Inventor/lists/SoEngineOutputList.h>
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 #include "engines/SoSubEngineP.h"
 
@@ -271,10 +271,10 @@ SoBoolOperation::evaluate(void)
       val = (tmp_a != tmp_b);
       break;
     default:
-#if COIN_DEBUG
+#if OBOL_DEBUG
       SoDebugError::postInfo("SoBoolOperation::evaluate",
                              "unknown bool operation");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
       val = TRUE; // avoid compiler warning
       break;
     }

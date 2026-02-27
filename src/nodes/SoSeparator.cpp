@@ -84,9 +84,9 @@
 #include "CoinTidbits.h"
 #include <Inventor/threads/SbStorage.h>
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
 #include <Inventor/threads/SbMutex.h>
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 
 #include "nodes/SoSubNodeP.h"
 #include "glue/glp.h"
@@ -101,14 +101,14 @@
 
 // *************************************************************************
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #define GLCACHE_DEBUG 0 // set to 1 to debug caching
 #endif
 
 // *************************************************************************
 
 // environment variable
-static int COIN_RANDOMIZE_RENDER_CACHING = -1;
+static int OBOL_RANDOMIZE_RENDER_CACHING = -1;
 
 // Maximum number of caches available for allocation for the
 // rendercaching.
@@ -231,13 +231,13 @@ int SoSeparator::numrendercaches = 2;
 
   <ul>
 
-    <li>\c COIN_AUTOCACHE_LOCAL_MIN can be used to change the
-        enable-caching limit, while \c COIN_AUTOCACHE_LOCAL_MAX
+    <li>\c OBOL_AUTOCACHE_LOCAL_MIN can be used to change the
+        enable-caching limit, while \c OBOL_AUTOCACHE_LOCAL_MAX
         controls the disable-caching limit.</li>
 
     <li>The corresponding variables for remote rendering are \c
-        COIN_AUTOCACHE_REMOTE_MIN and \c
-        COIN_AUTOCACHE_REMOTE_MAX.</li>
+        OBOL_AUTOCACHE_REMOTE_MIN and \c
+        OBOL_AUTOCACHE_REMOTE_MAX.</li>
 
   </ul>
 */
@@ -316,14 +316,14 @@ public:
   uint32_t bboxcache_usecount;
   uint32_t bboxcache_destroycount;
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   // FIXME: a mutex for every SoSeparator instance seems a bit
   // excessive, especially since Microsoft Windows might have rather strict
   // limits on the total amount of mutex resources a process (or even
   // a user) can allocate. so consider making this a class-wide
   // instance instead.  -mortene.
   SbMutex mutex;
-#endif // !COIN_THREADSAFE
+#endif // !OBOL_THREADSAFE
   SbStorage * glcachestorage;
   static void invalidate_gl_cache(void * tls, void *) {
     soseparator_storage * ptr = (soseparator_storage*) tls;
@@ -341,14 +341,14 @@ public:
   }
 
   void lock(void) {
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
     this->mutex.lock();
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
   }
   void unlock(void) {
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
     this->mutex.unlock();
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
   }
 
   static SbBool doCull(SoSeparatorP * thisp, SoState * state,
@@ -444,12 +444,12 @@ SoSeparator::commonConstructor(void)
   // correctness testing of the render caching. If set >= 1,
   // renderCaching will be set to "ON" with a probability of 0.5 for
   // every SoSeparator instantiated.
-  if (COIN_RANDOMIZE_RENDER_CACHING < 0) {
-    const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_RANDOMIZE_RENDER_CACHING");
-    if (env) COIN_RANDOMIZE_RENDER_CACHING = atoi(env);
-    else COIN_RANDOMIZE_RENDER_CACHING = 0;
+  if (OBOL_RANDOMIZE_RENDER_CACHING < 0) {
+    const char * env = CoinInternal::getEnvironmentVariableRaw("OBOL_RANDOMIZE_RENDER_CACHING");
+    if (env) OBOL_RANDOMIZE_RENDER_CACHING = atoi(env);
+    else OBOL_RANDOMIZE_RENDER_CACHING = 0;
   }
-  if (COIN_RANDOMIZE_RENDER_CACHING > 0) {
+  if (OBOL_RANDOMIZE_RENDER_CACHING > 0) {
     if (rand() > (RAND_MAX/2)) { this->renderCaching = SoSeparator::ON; }
   }
 
@@ -723,11 +723,11 @@ SoSeparator::GLRenderBelowPath(SoGLRenderAction * action)
 #endif
       }
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
       // The GL error test is default disabled for this optimized
       // path.  If you get a GL error reporting an error in the
       // Separator node, enable this code by setting the environment
-      // variable COIN_GLERROR_DEBUGGING to "1" to see exactly which
+      // variable OBOL_GLERROR_DEBUGGING to "1" to see exactly which
       // node caused the error.
       static SbBool chkglerr = sogl_glerror_debugging();
       if (chkglerr) {
@@ -740,7 +740,7 @@ SoSeparator::GLRenderBelowPath(SoGLRenderAction * action)
                              (*this->children)[i]->getTypeId().getName().getString());
         }
       }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     }
     action->popCurPath();
   }
@@ -946,9 +946,9 @@ SoSeparator::notify(SoNotList * nl)
   you need this function, and we'll consider implementing it.
 */
 SbBool
-SoSeparator::cullTest(SoGLRenderAction * COIN_UNUSED_ARG(action), int & COIN_UNUSED_ARG(cullresults))
+SoSeparator::cullTest(SoGLRenderAction * OBOL_UNUSED_ARG(action), int & OBOL_UNUSED_ARG(cullresults))
 {
-  COIN_OBSOLETED();
+  OBOL_OBSOLETED();
   return FALSE;
 }
 

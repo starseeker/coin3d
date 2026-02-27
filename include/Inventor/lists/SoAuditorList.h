@@ -1,5 +1,5 @@
-#ifndef COIN_SOAUDITORLIST_H
-#define COIN_SOAUDITORLIST_H
+#ifndef OBOL_SOAUDITORLIST_H
+#define OBOL_SOAUDITORLIST_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -49,7 +49,7 @@
 //  -mortene
 
 
-class COIN_DLL_API SoAuditorList : private SbPList {
+class OBOL_DLL_API SoAuditorList : private SbPList {
   typedef SbPList inherited;
 
 public:
@@ -97,4 +97,4 @@ private:
 
 };
 
-#endif // !COIN_SOAUDITORLIST_H
+#endif // !OBOL_SOAUDITORLIST_H

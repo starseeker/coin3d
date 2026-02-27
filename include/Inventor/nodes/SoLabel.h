@@ -1,5 +1,5 @@
-#ifndef COIN_SOLABEL_H
-#define COIN_SOLABEL_H
+#ifndef OBOL_SOLABEL_H
+#define OBOL_SOLABEL_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -36,7 +36,7 @@
 #include <Inventor/nodes/SoSubNode.h>
 #include <Inventor/fields/SoSFName.h>
 
-class COIN_DLL_API SoLabel : public SoNode {
+class OBOL_DLL_API SoLabel : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_HEADER(SoLabel);
@@ -51,4 +51,4 @@ protected:
   virtual ~SoLabel();
 };
 
-#endif // !COIN_SOLABEL_H
+#endif // !OBOL_SOLABEL_H

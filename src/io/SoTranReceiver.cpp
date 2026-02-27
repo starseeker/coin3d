@@ -33,22 +33,22 @@
 // FIXME: this class has not been implemented yet. 20000627 mortene.
 
 #include <Inventor/misc/SoTranReceiver.h>
-#include "config.h" // COIN_STUB
+#include "config.h" // OBOL_STUB
 
 
-SoTranReceiver::SoTranReceiver(SoGroup * COIN_UNUSED_ARG(root))
+SoTranReceiver::SoTranReceiver(SoGroup * OBOL_UNUSED_ARG(root))
 {
-  COIN_STUB();
+  OBOL_STUB();
 }
 
 SoTranReceiver::~SoTranReceiver()
 {
-  COIN_STUB();
+  OBOL_STUB();
 }
 
 SbBool
-SoTranReceiver::interpret(SoInput * COIN_UNUSED_ARG(in))
+SoTranReceiver::interpret(SoInput * OBOL_UNUSED_ARG(in))
 {
-  COIN_STUB();
+  OBOL_STUB();
   return FALSE;
 }

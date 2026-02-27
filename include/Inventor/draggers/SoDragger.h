@@ -1,5 +1,5 @@
-#ifndef COIN_SODRAGGER_H
-#define COIN_SODRAGGER_H
+#ifndef OBOL_SODRAGGER_H
+#define OBOL_SODRAGGER_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -42,10 +42,10 @@
 #include <Inventor/SbVec2s.h>
 #include <Inventor/SbViewVolume.h>
 #include <Inventor/SbViewportRegion.h>
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 // For Open Inventor compatibility.
 #include <Inventor/nodes/SoScale.h>
-#endif // !COIN_INTERNAL
+#endif // !OBOL_INTERNAL
 
 class SbRotation;
 class SbVec2f;
@@ -59,7 +59,7 @@ class SoDraggerP;
 
 typedef void SoDraggerCB(void * data, SoDragger * dragger);
 
-class COIN_DLL_API SoDragger : public SoInteractionKit {
+class OBOL_DLL_API SoDragger : public SoInteractionKit {
   typedef SoInteractionKit inherited;
 
   SO_KIT_HEADER(SoDragger);
@@ -192,4 +192,4 @@ private:
   SoDragger & operator = (const SoDragger & rhs);
 }; // SoDragger
 
-#endif // !COIN_SODRAGGER_H
+#endif // !OBOL_SODRAGGER_H

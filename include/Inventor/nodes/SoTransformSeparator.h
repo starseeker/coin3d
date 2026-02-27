@@ -1,5 +1,5 @@
-#ifndef COIN_SOTRANSFORMSEPARATOR_H
-#define COIN_SOTRANSFORMSEPARATOR_H
+#ifndef OBOL_SOTRANSFORMSEPARATOR_H
+#define OBOL_SOTRANSFORMSEPARATOR_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -36,7 +36,7 @@
 #include <Inventor/nodes/SoSubNode.h>
 #include <Inventor/nodes/SoGroup.h>
 
-class COIN_DLL_API SoTransformSeparator : public SoGroup {
+class OBOL_DLL_API SoTransformSeparator : public SoGroup {
   typedef SoGroup inherited;
 
   SO_NODE_HEADER(SoTransformSeparator);
@@ -59,4 +59,4 @@ protected:
   virtual ~SoTransformSeparator();
 };
 
-#endif // !COIN_SOTRANSFORMSEPARATOR_H
+#endif // !OBOL_SOTRANSFORMSEPARATOR_H

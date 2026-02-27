@@ -40,7 +40,7 @@
   representing a plane, specified by a plane normal vector and a
   distance from the origin of the coordinate system.
 
-  \COIN_CLASS_EXTENSION
+  \OBOL_CLASS_EXTENSION
 
   \since Coin 2.0
 */
@@ -52,9 +52,9 @@
 #include <Inventor/SbDPMatrix.h>
 #include <cfloat>
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 
 /*!
@@ -74,11 +74,11 @@ SbDPPlane::SbDPPlane(void)
 */
 SbDPPlane::SbDPPlane(const SbVec3d & normalref, const double D)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if(!(normalref.length() != 0.0f))
     SoDebugError::postWarning("SbDPPlane::SbDPPlane",
                               "Plane normal vector is a null vector.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   this->normal = normalref;
   // we test for a null vector above, just normalize
@@ -93,12 +93,12 @@ SbDPPlane::SbDPPlane(const SbVec3d & normalref, const double D)
 */
 SbDPPlane::SbDPPlane(const SbVec3d & p0, const SbVec3d & p1, const SbVec3d & p2)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if(!(p0 != p1 && p1 != p2 && p0 != p2))
     SoDebugError::postWarning("SbDPPlane::SbDPPlane",
                               "The three points defining the plane cannot "
                               "be coincident.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   this->normal = (p1 - p0).cross(p2 - p0);
 
@@ -119,11 +119,11 @@ SbDPPlane::SbDPPlane(const SbVec3d & p0, const SbVec3d & p1, const SbVec3d & p2)
 */
 SbDPPlane::SbDPPlane(const SbVec3d & normalref, const SbVec3d & point)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if(!(normalref.length() != 0.0f))
     SoDebugError::postWarning("SbDPPlane::SbDPPlane",
                               "Plane normal vector is a null vector.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   this->normal = normalref;
   // we test and warn about a null vector above
@@ -157,11 +157,11 @@ SbDPPlane::offset(const double d)
 SbBool
 SbDPPlane::intersect(const SbDPLine & l, SbVec3d & intersection) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if(!(normal.length() != 0.0f))
     SoDebugError::postWarning("SbDPPlane::intersect",
                               "Intersecting line doesn't have a direction.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   // Check if the line is parallel to the plane.
   if(fabs(l.getDirection().dot(this->normal)) < DBL_EPSILON) return FALSE;
@@ -213,10 +213,10 @@ SbDPPlane::transform(const SbDPMatrix & matrix)
   matrix.multVecMatrix(ptInPlane, ptInPlane);
 
   if (this->normal.normalize() == 0.0f) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SbDPPlane::transform",
                               "The transformation invalidated the plane.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   }
   this->distance = this->normal.dot(ptInPlane);
 }
@@ -279,7 +279,7 @@ SbDPPlane::getDistanceFromOrigin(void) const
   line. Returns \c TRUE if an intersection line can be found, and \c
   FALSE if the planes are parallel.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */
@@ -365,9 +365,9 @@ operator !=(const SbDPPlane & p1, const SbDPPlane & p2)
 void
 SbDPPlane::print(FILE * fp) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   this->getNormal().print(fp);
   (void)fprintf(fp, "  %f", this->getDistanceFromOrigin());
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }
 

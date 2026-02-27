@@ -212,8 +212,8 @@ SoWriteAction::continueToApply(SoPath * path)
   this->continuing = wascontinuing;
 }
 
-#if COIN_DEBUG
-static void sensorCB(void * COIN_UNUSED_ARG(data), SoSensor * COIN_UNUSED_ARG(sensor))
+#if OBOL_DEBUG
+static void sensorCB(void * OBOL_UNUSED_ARG(data), SoSensor * OBOL_UNUSED_ARG(sensor))
 {
   SoDebugError::postWarning("SoWriteAction::SoWriteAction",
                             "Scenegraph changed during SoWriteAction().");
@@ -231,7 +231,7 @@ static void sensorCB(void * COIN_UNUSED_ARG(data), SoSensor * COIN_UNUSED_ARG(se
 void
 SoWriteAction::beginTraversal(SoNode * node)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   SoNodeSensor *sensor = NULL;
 #endif
   if (this->continuing == FALSE) { // Run through both stages.
@@ -240,7 +240,7 @@ SoWriteAction::beginTraversal(SoNode * node)
     // backwards compatible with old code that uses the writeref
     // system in SoBase.
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
     if (SoWriterefCounter::debugWriterefs()) {
       sensor = new SoNodeSensor(sensorCB, NULL);
       sensor->setPriority(0);
@@ -260,7 +260,7 @@ SoWriteAction::beginTraversal(SoNode * node)
   }
   if (!this->continuing) {
     SoWriterefCounter::instance(this->getOutput())->debugCleanup();
-#if COIN_DEBUG
+#if OBOL_DEBUG
     delete sensor;
 #endif
   }

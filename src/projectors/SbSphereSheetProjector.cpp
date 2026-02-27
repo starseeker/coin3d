@@ -95,9 +95,9 @@
  */
 
 #include <Inventor/projectors/SbSphereSheetProjector.h>
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 #include <cassert>
 
 /*!
@@ -178,10 +178,10 @@ SbSphereSheetProjector::project(const SbVec2f & point)
   float planardist, meetdist;
 
   if (!atsphere && !atplane) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SbSphereSectionProjector::project",
                               "line is perpendicular to plane direction.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     // set to <0, 0, 0> to avoid crazy rotations. lastPoint will then
     // never change, and there will be no rotation from getRotation()
     projpt = SbVec3f(0.0f, 0.0f, 0.0f);
@@ -241,10 +241,10 @@ SbSphereSheetProjector::setupPlane(void)
     this->planeDir = -this->viewVol.getProjectionDirection();
     this->worldToWorking.multDirMatrix(this->planeDir, this->planeDir);
     if (this->planeDir.normalize() == 0.0f) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
       SoDebugError::postWarning("SbSphereSectionProjector::setupPlane",
                                 "worldToWorking matrix seems to be invalid.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
       this->planeDir.setValue(0.0f, 0.0f, 1.0f);
     }
   }

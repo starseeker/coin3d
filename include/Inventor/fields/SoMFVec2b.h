@@ -1,5 +1,5 @@
-#ifndef COIN_SOMFVEC2B_H
-#define COIN_SOMFVEC2B_H
+#ifndef OBOL_SOMFVEC2B_H
+#define OBOL_SOMFVEC2B_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/fields/SoSubField.h>
 #include <Inventor/SbVec2b.h>
 
-class COIN_DLL_API SoMFVec2b : public SoMField {
+class OBOL_DLL_API SoMFVec2b : public SoMField {
   typedef SoMField inherited;
 
   SO_MFIELD_HEADER(SoMFVec2b, SbVec2b, SbVec2b);
@@ -55,4 +55,4 @@ public:
 
 }; // SoMFVec2b
 
-#endif // !COIN_SOMFVEC2B_H
+#endif // !OBOL_SOMFVEC2B_H

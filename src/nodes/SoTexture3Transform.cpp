@@ -43,7 +43,7 @@
   The default settings of this node's fields equals a "null
   transform", i.e. no transformation.
 
-  \COIN_CLASS_EXTENSION
+  \OBOL_CLASS_EXTENSION
 
   <b>FILE FORMAT/DEFAULTS:</b>
   \code

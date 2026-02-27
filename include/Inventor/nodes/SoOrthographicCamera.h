@@ -1,5 +1,5 @@
-#ifndef COIN_SOORTHOGRAPHICCAMERA_H
-#define COIN_SOORTHOGRAPHICCAMERA_H
+#ifndef OBOL_SOORTHOGRAPHICCAMERA_H
+#define OBOL_SOORTHOGRAPHICCAMERA_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -36,7 +36,7 @@
 #include <Inventor/nodes/SoSubNode.h>
 #include <Inventor/nodes/SoCamera.h>
 
-class COIN_DLL_API SoOrthographicCamera : public SoCamera {
+class OBOL_DLL_API SoOrthographicCamera : public SoCamera {
   typedef SoCamera inherited;
 
   SO_NODE_HEADER(SoOrthographicCamera);
@@ -56,4 +56,4 @@ protected:
 
 };
 
-#endif // !COIN_SOORTHOGRAPHICCAMERA_H
+#endif // !OBOL_SOORTHOGRAPHICCAMERA_H

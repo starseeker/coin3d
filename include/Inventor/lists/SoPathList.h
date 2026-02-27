@@ -1,5 +1,5 @@
-#ifndef COIN_SOPATHLIST_H
-#define COIN_SOPATHLIST_H
+#ifndef OBOL_SOPATHLIST_H
+#define OBOL_SOPATHLIST_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 
 class SoPath;
 
-class COIN_DLL_API SoPathList : public SoBaseList {
+class OBOL_DLL_API SoPathList : public SoBaseList {
   typedef SoBaseList inherited;
 
 public:
@@ -54,4 +54,4 @@ public:
   void uniquify(void);
 };
 
-#endif // !COIN_SOPATHLIST_H
+#endif // !OBOL_SOPATHLIST_H

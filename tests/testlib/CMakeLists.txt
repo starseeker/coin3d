@@ -12,14 +12,14 @@
 # =============================================================================
 
 # ---- Backend detection (mirrors tests/rendering/CMakeLists.txt) --------
-if(DEFINED COIN3D_USE_OSMESA)
-    set(TESTLIB_USE_OSMESA ${COIN3D_USE_OSMESA})
+if(DEFINED OBOL_USE_OSMESA)
+    set(TESTLIB_USE_OSMESA ${OBOL_USE_OSMESA})
 else()
     set(TESTLIB_USE_OSMESA OFF)
 endif()
-# Note: COIN3D_BUILD_DUAL_GL builds use system GL (GLX+Xvfb) for rendering
-# tests, not OSMesa, because the Coin scene traversal uses system GL symbols.
-# Only pure COIN3D_USE_OSMESA builds use the OSMesa context path here.
+# Note: OBOL_BUILD_DUAL_GL builds use system GL (GLX+Xvfb) for rendering
+# tests, not OSMesa, because the Obol scene traversal uses system GL symbols.
+# Only pure OBOL_USE_OSMESA builds use the OSMesa context path here.
 
 # ---- Library target -------------------------------------------------------
 add_library(obol_testlib STATIC
@@ -35,19 +35,19 @@ target_include_directories(obol_testlib PUBLIC
     ${PROJECT_SOURCE_DIR}/include
     ${PROJECT_SOURCE_DIR}/include/Inventor/annex
     ${PROJECT_BINARY_DIR}/include
-    ${COIN_TARGET_INCLUDE_DIRECTORIES}
+    ${OBOL_TARGET_INCLUDE_DIRECTORIES}
 )
 
 target_link_libraries(obol_testlib
     simple_test_utils
-    Coin
-    ${COIN_TARGET_LINK_LIBRARIES}
+    ${PROJECT_NAME}
+    ${OBOL_TARGET_LINK_LIBRARIES}
 )
 
-# OSMesa backend (pure COIN3D_USE_OSMESA builds only)
+# OSMesa backend (pure OBOL_USE_OSMESA builds only)
 if(TESTLIB_USE_OSMESA)
     set(OSMESA_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/external/osmesa/include")
-    target_compile_definitions(obol_testlib PUBLIC COIN3D_OSMESA_BUILD)
+    target_compile_definitions(obol_testlib PUBLIC OBOL_OSMESA_BUILD)
     if(EXISTS "${OSMESA_INCLUDE_DIR}")
         target_include_directories(obol_testlib PUBLIC "${OSMESA_INCLUDE_DIR}")
     endif()

@@ -128,17 +128,17 @@
 #include <Inventor/SbRotation.h>
 #include <Inventor/SbLine.h>
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
-#include "config.h" // COIN_STUB()
+#include "config.h" // OBOL_STUB()
 
-#ifndef COIN_WORKAROUND_NO_USING_STD_FUNCS
+#ifndef OBOL_WORKAROUND_NO_USING_STD_FUNCS
 using std::memmove;
 using std::memcmp;
 using std::memcpy;
-#endif // !COIN_WORKAROUND_NO_USING_STD_FUNCS
+#endif // !OBOL_WORKAROUND_NO_USING_STD_FUNCS
 
 class SbMatrixP {
 public:
@@ -386,11 +386,11 @@ SbMatrix::operator*=(const float v)
 void
 SbMatrix::operator/=(const float v)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (v==0.0f)
     SoDebugError::postWarning("SbMatrix::operator/=",
                               "Division by zero.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   this->operator*=(1.0f/v);
 }
@@ -403,7 +403,7 @@ float
 SbMatrix::det3(int r1, int r2, int r3,
                int c1, int c2, int c3) const
 {
-#if COIN_EXTRA_DEBUG
+#if OBOL_EXTRA_DEBUG
   // Check indices.
   if (r1<0 || r1>3 || r2<0 || r2>3 || r3<0 || r3>3 ||
       c1<0 || c1>3 || c2<0 || c2>3 || c3<0 || c3>3) {
@@ -413,7 +413,7 @@ SbMatrix::det3(int r1, int r2, int r3,
   if (r1==r2 || r1==r3 || r2==r3 ||
       c1==c2 || c1==c3 || c2==c3)
     SoDebugError::post("SbMatrix::det3", "Indices should be distinct.");
-#endif // COIN_EXTRA_DEBUG
+#endif // OBOL_EXTRA_DEBUG
 
   // More or less directly from "Advanced Engineering Mathematics"
   // (E. Kreyszig), 6th edition.
@@ -521,10 +521,10 @@ SbMatrix::inverse(void) const
     /* Is the submatrix A singular? */
     if ((det_1 == 0.0f) || (SbAbs(det_1 / (pos - neg)) < FLT_EPSILON)) {
       /* Matrix M has no inverse */
-#if COIN_DEBUG
+#if OBOL_DEBUG
       SoDebugError::postWarning("SbMatrix::inverse",
                                 "Matrix is singular.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
       return *this;
     }
     else {
@@ -591,10 +591,10 @@ SbMatrix::inverse(void) const
       }
 
       if (max == 0.0f) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
         SoDebugError::postWarning("SbMatrix::inverse",
                                   "Matrix is singular.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
         return *this;
       }
 
@@ -635,13 +635,13 @@ SbMatrix::inverse(void) const
 #else  // old unoptimized version
 
   float det = this->det4();
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (fabs(det) < FLT_EPSILON) {
     SoDebugError::postWarning("SbMatrix::inverse",
                               "Determinant of matrix is zero.");
     return *this;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   SbMatrix result;
 
@@ -681,11 +681,11 @@ SbMatrix::inverse(void) const
 SbBool
 SbMatrix::equals(const SbMatrix & m, float tolerance) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (tolerance<0.0f)
     SoDebugError::postWarning("SbMatrix::equals",
                               "tolerance should be >=0.0f.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   for (int i=0; i < 4; i++) {
     for (int j=0;  j< 4; j++) {
@@ -723,11 +723,11 @@ SbMatrix::operator SbMat&(void)
 float *
 SbMatrix::operator [](int i)
 {
-#if COIN_EXTRA_DEBUG
+#if OBOL_EXTRA_DEBUG
   if (i<0 || i>3) {
     SoDebugError::post("SbMatrix::operator[]", "Index out of bounds. ");
   }
-#endif // COIN_EXTRA_DEBUG
+#endif // OBOL_EXTRA_DEBUG
 
    return this->matrix[i];
 }
@@ -741,11 +741,11 @@ SbMatrix::operator [](int i)
 const float *
 SbMatrix::operator [](int i) const
 {
-#if COIN_EXTRA_DEBUG
+#if OBOL_EXTRA_DEBUG
   if (i<0 || i>3) {
     SoDebugError::postWarning("SbMatrix::operator[]", "Index out of bounds. ");
   }
-#endif // COIN_EXTRA_DEBUG
+#endif // OBOL_EXTRA_DEBUG
 
    return this->matrix[i];
 }
@@ -1167,11 +1167,11 @@ SbMatrix::getTransform(SbVec3f & translation,
   \sa getTransform()
  */
 SbBool
-SbMatrix::factor(SbMatrix & COIN_UNUSED_ARG(r), SbVec3f & COIN_UNUSED_ARG(s), SbMatrix & COIN_UNUSED_ARG(u), SbVec3f & COIN_UNUSED_ARG(t),
-                 SbMatrix & COIN_UNUSED_ARG(proj)) const
+SbMatrix::factor(SbMatrix & OBOL_UNUSED_ARG(r), SbVec3f & OBOL_UNUSED_ARG(s), SbMatrix & OBOL_UNUSED_ARG(u), SbVec3f & OBOL_UNUSED_ARG(t),
+                 SbMatrix & OBOL_UNUSED_ARG(proj)) const
 {
   // FIXME: not implemented, not documented. 1998MMDD mortene.
-  COIN_STUB();
+  OBOL_STUB();
   return FALSE;
 }
 

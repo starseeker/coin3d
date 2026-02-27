@@ -1,5 +1,5 @@
-#ifndef COIN_SOWRITEACTION_H
-#define COIN_SOWRITEACTION_H
+#ifndef OBOL_SOWRITEACTION_H
+#define OBOL_SOWRITEACTION_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -39,7 +39,7 @@
 
 class SoWriteActionP;
 
-class COIN_DLL_API SoWriteAction : public SoAction {
+class OBOL_DLL_API SoWriteAction : public SoAction {
   typedef SoAction inherited;
 
   SO_ACTION_HEADER(SoWriteAction);
@@ -75,4 +75,4 @@ private:
   SoWriteAction & operator = (const SoWriteAction & rhs);
 }; // SoWriteAction
 
-#endif // !COIN_SOWRITEACTION_H
+#endif // !OBOL_SOWRITEACTION_H

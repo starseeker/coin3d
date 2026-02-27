@@ -89,9 +89,9 @@
 #include <Inventor/misc/SoState.h>
 #include <Inventor/nodes/SoNode.h>
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 #include "actions/SoSubActionP.h"
 #include "SbBasicP.h"
@@ -501,9 +501,9 @@ void
 SoGetBoundingBoxAction::extendBy(const SbBox3f & box)
 {
   if (box.isEmpty()) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SoGetBoundingBoxAction::extendBy", "empty box");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     return;
   }
 
@@ -522,9 +522,9 @@ void
 SoGetBoundingBoxAction::extendBy(const SbXfBox3f & box)
 {
   if (box.isEmpty()) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SoGetBoundingBoxAction::extendBy", "empty box");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     return;
   }
 
@@ -559,7 +559,7 @@ SoGetBoundingBoxAction::setCenter(const SbVec3f & centerarg,
     this->center = centerarg;
   }
 
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoGetBoundingBoxAction::setCenter",
                          "center: <%f, %f, %f>, transformcenter: %s, "
                          "this->center: <%f, %f, %f>",

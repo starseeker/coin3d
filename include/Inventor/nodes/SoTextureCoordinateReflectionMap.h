@@ -1,6 +1,6 @@
 
-#ifndef COIN_SOTEXTURECOORDINATEREFLECTION_MAP_H
-#define COIN_SOTEXTURECOORDINATEREFLECTION_MAP_H
+#ifndef OBOL_SOTEXTURECOORDINATEREFLECTION_MAP_H
+#define OBOL_SOTEXTURECOORDINATEREFLECTION_MAP_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -40,7 +40,7 @@
 #include <Inventor/SbVec4f.h>
 #include <Inventor/SbVec3f.h>
 
-class COIN_DLL_API SoTextureCoordinateReflectionMap : public SoTextureCoordinateFunction {
+class OBOL_DLL_API SoTextureCoordinateReflectionMap : public SoTextureCoordinateFunction {
   typedef SoTextureCoordinateFunction inherited;
 
   SO_NODE_HEADER(SoTextureCoordinateReflectionMap);
@@ -65,4 +65,4 @@ private:
 
 };
 
-#endif // !COIN_SOTEXTURECOORDINATEREFLECTION_MAP_H
+#endif // !OBOL_SOTEXTURECOORDINATEREFLECTION_MAP_H

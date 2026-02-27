@@ -1,5 +1,5 @@
-#ifndef COIN_SOMFTIME_H
-#define COIN_SOMFTIME_H
+#ifndef OBOL_SOMFTIME_H
+#define OBOL_SOMFTIME_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/fields/SoSubField.h>
 #include <Inventor/SbTime.h>
 
-class COIN_DLL_API SoMFTime : public SoMField {
+class OBOL_DLL_API SoMFTime : public SoMField {
   typedef SoMField inherited;
 
   SO_MFIELD_HEADER(SoMFTime, SbTime, const SbTime &);
@@ -46,4 +46,4 @@ public:
   static void initClass(void);
 };
 
-#endif // !COIN_SOMFTIME_H
+#endif // !OBOL_SOMFTIME_H

@@ -1,5 +1,5 @@
-#ifndef COIN_SOGLARBSHADEROBJECT_H
-#define COIN_SOGLARBSHADEROBJECT_H
+#ifndef OBOL_SOGLARBSHADEROBJECT_H
+#define OBOL_SOGLARBSHADEROBJECT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,7 +33,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #error this is a private header file
 #endif
 
@@ -66,4 +66,4 @@ private:
   GLenum target; // either GL_FRAGMENT_PROGRAM_ARB or GL_VERTEX_PROGRAM_ARB
 };
 
-#endif /* ! COIN_SOGLARBSHADEROBJECT_H */
+#endif /* ! OBOL_SOGLARBSHADEROBJECT_H */

@@ -95,9 +95,9 @@
 #include <Inventor/nodes/SoCylinder.h>
 #include <Inventor/SbRotation.h>
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 #include "nodes/SoSubNodeP.h"
 #include "rendering/SoGL.h"
@@ -179,10 +179,10 @@ SoIndexedLineSet::findMaterialBinding(SoState * state)
     binding = PER_LINE_INDEXED;
     break;
   default:
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SoIndexedLineSet::findMaterialBinding",
                               "unknown material binding setting");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     break;
   }
   return binding;
@@ -222,10 +222,10 @@ SoIndexedLineSet::findNormalBinding(SoState* state)
     binding = PER_LINE_INDEXED;
     break;
   default:
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SoIndexedLineSet::findNormalBinding",
                               "unknown normal binding setting");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     break;
   }
   return binding;
@@ -410,7 +410,7 @@ SoIndexedLineSet::generateDefaultNormals(SoState *, SoNormalBundle *)
 
 // Documented in superclass.
 SbBool
-SoIndexedLineSet::generateDefaultNormals(SoState * COIN_UNUSED_ARG(state), SoNormalCache * nc)
+SoIndexedLineSet::generateDefaultNormals(SoState * OBOL_UNUSED_ARG(state), SoNormalCache * nc)
 {
   // not possible to generate normals for IndexedLineSet
   nc->set(0, NULL);

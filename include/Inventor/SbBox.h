@@ -1,5 +1,5 @@
-#ifndef COIN_SBBOX_H
-#define COIN_SBBOX_H
+#ifndef OBOL_SBBOX_H
+#define OBOL_SBBOX_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,9 +33,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#if defined(COIN_INTERNAL)
+#if defined(OBOL_INTERNAL)
 #error Do not include SbBox.h internally.
-#endif // COIN_INTERNAL
+#endif // OBOL_INTERNAL
 
 // These are here for compile-time compatibility with SGI / TGS
 // Inventor.
@@ -55,4 +55,4 @@
 #include <Inventor/SbXfBox3f.h>
 //#include <Inventor/SbXfBox3d.h>
 
-#endif // !COIN_SBBOX_H
+#endif // !OBOL_SBBOX_H

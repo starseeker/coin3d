@@ -64,7 +64,7 @@ SoGlyphCache::SoGlyphCache(SoState * state)
   PRIVATE(this) = new SoGlyphCacheP;
   PRIVATE(this)->fontspec = NULL;
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (coin_debug_caching_level() > 0) {
     SoDebugError::postInfo("SoGlyphCache::SoGlyphCache",
                            "Cache constructed: %p", this);
@@ -75,7 +75,7 @@ SoGlyphCache::SoGlyphCache(SoState * state)
 
 SoGlyphCache::~SoGlyphCache()
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (coin_debug_caching_level() > 0) {
     SoDebugError::postInfo("SoGlyphCache::~SoGlyphCache",
                            "Cache destructed: %p", this);

@@ -41,7 +41,7 @@
 */
 
 #include <Inventor/elements/SoBumpMapMatrixElement.h>
-#include "config.h" // COIN_OBSOLETED()
+#include "config.h" // OBOL_OBSOLETED()
 #include "SbBasicP.h"
 
 /*!

@@ -64,9 +64,9 @@
 #include <Inventor/actions/SoGLRenderAction.h>
 #include <Inventor/actions/SoGetMatrixAction.h>
 #include <Inventor/elements/SoModelMatrixElement.h>
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 #include "nodes/SoSubNodeP.h"
 
@@ -166,13 +166,13 @@ SoTransform::pointAt(const SbVec3f & frompoint, const SbVec3f & topoint)
     SbRotation rot(SbVec3f(0.0f, 0.0f, -1.0f), dir);
     this->rotation = rot;
   }
-#if COIN_DEBUG
+#if OBOL_DEBUG
   else {
     SoDebugError::postWarning("SoTransform::pointAt",
                               "frompoint == topoint");
 
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }
 
 /*!

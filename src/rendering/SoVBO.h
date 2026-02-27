@@ -1,5 +1,5 @@
-#ifndef COIN_VBO_H
-#define COIN_VBO_H
+#ifndef OBOL_VBO_H
+#define OBOL_VBO_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,9 +33,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #error this is a private header file
-#endif /* !COIN_INTERNAL */
+#endif /* !OBOL_INTERNAL */
 
 #include <Inventor/system/gl.h>
 #include "glue/glp.h"
@@ -85,4 +85,4 @@ class SoVBO {
   SbHash<uint32_t, GLuint> vbohash;
 };
 
-#endif // COIN_VERTEXARRAYINDEXER_H
+#endif // OBOL_VERTEXARRAYINDEXER_H

@@ -1,5 +1,5 @@
-#ifndef COIN_SOPROFILER_H
-#define COIN_SOPROFILER_H
+#ifndef OBOL_SOPROFILER_H
+#define OBOL_SOPROFILER_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/SbBasic.h>
 
-class COIN_DLL_API SoProfiler {
+class OBOL_DLL_API SoProfiler {
 public:
   static void init(void);
 
@@ -47,4 +47,4 @@ public:
 
 }; // SoProfiler
 
-#endif // !COIN_SOPROFILER_H
+#endif // !OBOL_SOPROFILER_H

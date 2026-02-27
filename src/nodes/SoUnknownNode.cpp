@@ -169,7 +169,7 @@ SoUnknownNode::readInstance(SoInput * in, unsigned short flags)
     if (this->classfielddata->getFieldName(i) == "alternateRep") {
       SoSFNode * f = (SoSFNode *)this->classfielddata->getField(this, i);
       if (f->isOfType(SoSFNode::getClassTypeId())) {
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
         SoDebugError::postInfo("SoUnknownNode::readInstance",
                                "found alternate representation");
 #endif // debug
@@ -190,7 +190,7 @@ SoUnknownNode::readInstance(SoInput * in, unsigned short flags)
       return FALSE;
     }
 
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
     SoDebugError::postInfo("SoUnknownNode::readInstance",
                            "read %d children successfully",
                            g->getNumChildren());
@@ -303,7 +303,7 @@ SoUnknownNode::addToCopyDict(void) const
   // This function is copied from SoNode::addToCopyDict() and
   // modified to handle the private children.
 
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoUnknownNode::addToCopyDict",
                          "Name: %s", PRIVATE(this)->classname.getString());
 #endif // debug

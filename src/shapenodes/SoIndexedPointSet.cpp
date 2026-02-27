@@ -112,9 +112,9 @@
 #include <Inventor/caches/SoNormalCache.h>
 #include <Inventor/details/SoPointDetail.h>
 #include <Inventor/misc/SoGLDriverDatabase.h>
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 #include "nodes/SoSubNodeP.h"
 #include "rendering/SoGL.h"
@@ -423,7 +423,7 @@ SoIndexedPointSet::generateDefaultNormals(SoState *, SoNormalCache * nc)
 
 // Documented in superclass.
 SbBool
-SoIndexedPointSet::generateDefaultNormals(SoState * COIN_UNUSED_ARG(state), SoNormalBundle * COIN_UNUSED_ARG(bundle))
+SoIndexedPointSet::generateDefaultNormals(SoState * OBOL_UNUSED_ARG(state), SoNormalBundle * OBOL_UNUSED_ARG(bundle))
 {
   // Overridden to avoid (faulty) compiler warnings with some version
   // of g++.

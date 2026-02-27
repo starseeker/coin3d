@@ -82,7 +82,7 @@ int main(int argc, char **argv)
     root->addChild(new SoDirectionalLight);
 
     // Locate data directory (same search order as other file-reading examples)
-    const char *dataDir = getenv("COIN_DATA_DIR");
+    const char *dataDir = getenv("OBOL_DATA_DIR");
     if (!dataDir) dataDir = getenv("IVEXAMPLES_DATA_DIR");
     if (!dataDir) dataDir = "../../data";
 

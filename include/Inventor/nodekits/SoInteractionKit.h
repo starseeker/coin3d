@@ -1,5 +1,5 @@
-#ifndef COIN_SOINTERACTIONKIT_H
-#define COIN_SOINTERACTIONKIT_H
+#ifndef OBOL_SOINTERACTIONKIT_H
+#define OBOL_SOINTERACTIONKIT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,17 +37,17 @@
 #include <Inventor/nodekits/SoBaseKit.h>
 #include <Inventor/fields/SoSFEnum.h>
 
-#ifdef COIN_INTERNAL
+#ifdef OBOL_INTERNAL
 class SoFieldSensor;
-#else // !COIN_INTERNAL
+#else // !OBOL_INTERNAL
 // Include this header file for better Open Inventor compatibility.
 #include <Inventor/sensors/SoFieldSensor.h>
-#endif // !COIN_INTERNAL
+#endif // !OBOL_INTERNAL
 
 class SoSensor;
 class SoSeparator;
 
-class COIN_DLL_API SoInteractionKit : public SoBaseKit {
+class OBOL_DLL_API SoInteractionKit : public SoBaseKit {
   typedef SoBaseKit inherited;
 
   SO_KIT_HEADER(SoInteractionKit);
@@ -120,4 +120,4 @@ private:
   friend class SoInteractionKitP;
 };
 
-#endif // !COIN_SOINTERACTIONKIT_H
+#endif // !OBOL_SOINTERACTIONKIT_H

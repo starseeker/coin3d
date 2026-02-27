@@ -725,9 +725,9 @@ SoVectorizeActionP::pre_shape_cb(void * userdata,
 // use it to pop the state (we push in the pre callback).
 //
 SoCallbackAction::Response
-SoVectorizeActionP::post_shape_cb(void * COIN_UNUSED_ARG(userdata),
+SoVectorizeActionP::post_shape_cb(void * OBOL_UNUSED_ARG(userdata),
                                   SoCallbackAction * action,
-                                  const SoNode * COIN_UNUSED_ARG(node))
+                                  const SoNode * OBOL_UNUSED_ARG(node))
 {
   SoState * state = action->getState();
   state->pop();
@@ -741,8 +741,8 @@ SoVectorizeActionP::post_shape_cb(void * COIN_UNUSED_ARG(userdata),
 //
 SoCallbackAction::Response
 SoVectorizeActionP::pre_anno_cb(void * userdata,
-                                SoCallbackAction * COIN_UNUSED_ARG(action),
-                                const SoNode * COIN_UNUSED_ARG(node))
+                                SoCallbackAction * OBOL_UNUSED_ARG(action),
+                                const SoNode * OBOL_UNUSED_ARG(node))
 {
   SoVectorizeActionP * thisp = (SoVectorizeActionP*) userdata;
   thisp->annotationidx++;
@@ -754,8 +754,8 @@ SoVectorizeActionP::pre_anno_cb(void * userdata,
 //
 SoCallbackAction::Response
 SoVectorizeActionP::post_anno_cb(void * userdata,
-                                 SoCallbackAction * COIN_UNUSED_ARG(action),
-                                 const SoNode * COIN_UNUSED_ARG(node))
+                                 SoCallbackAction * OBOL_UNUSED_ARG(action),
+                                 const SoNode * OBOL_UNUSED_ARG(node))
 {
   SoVectorizeActionP * thisp = (SoVectorizeActionP*) userdata;
   thisp->annotationidx--;
@@ -1045,8 +1045,8 @@ SoVectorizeActionP::calc_new_vertexdata(vertexdata * vd,
 // Callback from SbClip. Will calculate and create a new vertexdata.
 //
 void * 
-SoVectorizeActionP::clip_cb(const SbVec3f & COIN_UNUSED_ARG(v0), void * vdata0, 
-                            const SbVec3f & COIN_UNUSED_ARG(v1), void * vdata1,
+SoVectorizeActionP::clip_cb(const SbVec3f & OBOL_UNUSED_ARG(v0), void * vdata0, 
+                            const SbVec3f & OBOL_UNUSED_ARG(v1), void * vdata1,
                             const SbVec3f & newvertex,
                             void * userdata)
 {
@@ -1065,7 +1065,7 @@ SoVectorizeActionP::clip_cb(const SbVec3f & COIN_UNUSED_ARG(v0), void * vdata0,
 // SoCamera pre callback. Needed to set up culling.
 //
 SoCallbackAction::Response 
-SoVectorizeActionP::camera_cb(void * COIN_UNUSED_ARG(data), SoCallbackAction * action, const SoNode * node)
+SoVectorizeActionP::camera_cb(void * OBOL_UNUSED_ARG(data), SoCallbackAction * action, const SoNode * node)
 {
   assert(node->isOfType(SoCamera::getClassTypeId()));
   SoState * state = action->getState();

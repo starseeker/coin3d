@@ -1,5 +1,5 @@
-#ifndef COIN_SODIRECTIONALLIGHTMANIP_H
-#define COIN_SODIRECTIONALLIGHTMANIP_H
+#ifndef OBOL_SODIRECTIONALLIGHTMANIP_H
+#define OBOL_SODIRECTIONALLIGHTMANIP_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/nodes/SoDirectionalLight.h>
 #include <Inventor/tools/SbLazyPimplPtr.h>
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #include <Inventor/draggers/SoDragger.h>
 #endif
 
@@ -48,7 +48,7 @@ class SbVec3f;
 class SbMatrix;
 class SoDirectionalLightManipP;
 
-class COIN_DLL_API SoDirectionalLightManip : public SoDirectionalLight {
+class OBOL_DLL_API SoDirectionalLightManip : public SoDirectionalLight {
   typedef SoDirectionalLight inherited;
 
   SO_NODE_HEADER(SoDirectionalLightManip);
@@ -97,4 +97,4 @@ private:
   SoDirectionalLightManip & operator = (const SoDirectionalLightManip & rhs);
 }; // SoDirectionalLightManip
 
-#endif // !COIN_SODIRECTIONALLIGHTMANIP_H
+#endif // !OBOL_SODIRECTIONALLIGHTMANIP_H

@@ -265,7 +265,7 @@ sogl_render_cone(const float radius,
     }
 
     glBegin(GL_TRIANGLE_FAN);
-    glNormal3f(0.0f, -1.0f, 0.0f);
+    if (flags & SOGL_NEED_NORMALS) glNormal3f(0.0f, -1.0f, 0.0f);
     for (i = slices-1; i >= 0; i--) {
       if (flags & SOGL_NEED_TEXCOORDS) {
         glTexCoord2f(texcoords[i][0]+0.5f, texcoords[i][1]+0.5f);
@@ -411,7 +411,7 @@ sogl_render_cylinder(const float radius,
       material->send(matnr, TRUE);
     }
     glBegin(GL_TRIANGLE_FAN);
-    glNormal3f(0.0f, 1.0f, 0.0f);
+    if (flags & SOGL_NEED_NORMALS) glNormal3f(0.0f, 1.0f, 0.0f);
 
     for (i = 0; i < slices; i++) {
       if (flags & SOGL_NEED_TEXCOORDS) {
@@ -439,7 +439,7 @@ sogl_render_cylinder(const float radius,
       material->send(matnr, TRUE);
     }
     glBegin(GL_TRIANGLE_FAN);
-    glNormal3f(0.0f, -1.0f, 0.0f);
+    if (flags & SOGL_NEED_NORMALS) glNormal3f(0.0f, -1.0f, 0.0f);
 
     for (i = slices-1; i >= 0; i--) {
       if (flags & SOGL_NEED_TEXCOORDS) {
@@ -540,7 +540,7 @@ sogl_render_sphere(const float radius,
   glBegin(GL_TRIANGLES);
 
   for (j = 1; j <= slices; j++) {
-    glNormal3f(0.0f, 1.0f, 0.0f);
+    if (flags & SOGL_NEED_NORMALS) glNormal3f(0.0f, 1.0f, 0.0f);
     if (flags & SOGL_NEED_TEXCOORDS) {
       glTexCoord2f(currs + 0.5f * incs, 1.0f);
     }
@@ -557,7 +557,7 @@ sogl_render_sphere(const float radius,
     }
     glVertex3f(0.0f, radius, 0.0f);
 
-    glNormal3fv((const GLfloat*) &normals[j-1]);
+    if (flags & SOGL_NEED_NORMALS) glNormal3fv((const GLfloat*) &normals[j-1]);
     if (flags & SOGL_NEED_TEXCOORDS) {
       glTexCoord2f(currs, T);
     }
@@ -582,7 +582,7 @@ sogl_render_sphere(const float radius,
                  float(cos(theta))*ts);
 
     normals[j] = tmp;
-    glNormal3fv((const GLfloat*)&normals[j]);
+    if (flags & SOGL_NEED_NORMALS) glNormal3fv((const GLfloat*)&normals[j]);
     if (flags & SOGL_NEED_TEXCOORDS) {
       S[j] = currs;
       glTexCoord2f(currs, T);
@@ -627,7 +627,7 @@ sogl_render_sphere(const float radius,
           }
         }
       }
-      glNormal3fv((const GLfloat*)&normals[j]);
+      if (flags & SOGL_NEED_NORMALS) glNormal3fv((const GLfloat*)&normals[j]);
       glVertex3fv((const GLfloat*)&coords[j]);
 
       tmp.setValue(float(sin(theta))*ts,
@@ -649,7 +649,7 @@ sogl_render_sphere(const float radius,
         }
       }
       normals[j] = tmp;
-      glNormal3f(tmp[0], tmp[1], tmp[2]);
+      if (flags & SOGL_NEED_NORMALS) glNormal3f(tmp[0], tmp[1], tmp[2]);
       tmp *= radius;
       glVertex3f(tmp[0], tmp[1], tmp[2]);
       coords[j] = tmp;
@@ -676,7 +676,7 @@ sogl_render_sphere(const float radius,
         }
       }
     }
-    glNormal3fv((const GLfloat*)&normals[j]);
+    if (flags & SOGL_NEED_NORMALS) glNormal3fv((const GLfloat*)&normals[j]);
     glVertex3fv((const GLfloat*)&coords[j]);
 
     if (flags & SOGL_NEED_TEXCOORDS) {
@@ -693,7 +693,7 @@ sogl_render_sphere(const float radius,
         }
       }
     }
-    glNormal3f(0.0f, -1.0f, 0.0f);
+    if (flags & SOGL_NEED_NORMALS) glNormal3f(0.0f, -1.0f, 0.0f);
     glVertex3f(0.0f, -radius, 0.0f);
 
     if (flags & SOGL_NEED_TEXCOORDS) {
@@ -710,7 +710,7 @@ sogl_render_sphere(const float radius,
         }
       }
     }
-    glNormal3fv((const GLfloat*)&normals[j+1]);
+    if (flags & SOGL_NEED_NORMALS) glNormal3fv((const GLfloat*)&normals[j+1]);
     glVertex3fv((const GLfloat*)&coords[j+1]);
   }
   glEnd(); // GL_TRIANGLES
@@ -1413,7 +1413,7 @@ namespace { namespace SoGL { namespace FaceSet {
         materials->send(*matindices++, TRUE);
       }
 
-      // nvidia color-per-face-bug workaround
+      // re-send per-face material for each vertex to ensure correct colour on all drivers
       if ((AttributeBinding)MaterialBinding == PER_FACE) {
         materials->send(matnr-1, TRUE);
       } else if ((AttributeBinding)MaterialBinding == PER_FACE_INDEXED) {
@@ -1449,7 +1449,7 @@ namespace { namespace SoGL { namespace FaceSet {
         materials->send(*matindices++, TRUE);
       }
 
-      // nvidia color-per-face-bug workaround
+      // re-send per-face material for each vertex to ensure correct colour on all drivers
       if ((AttributeBinding)MaterialBinding == PER_FACE) {
         materials->send(matnr-1, TRUE);
       } else if ((AttributeBinding)MaterialBinding == PER_FACE_INDEXED) {
@@ -1486,7 +1486,7 @@ namespace { namespace SoGL { namespace FaceSet {
           materials->send(*matindices++, TRUE);
         }
 
-        // nvidia color-per-face-bug workaround
+        // re-send per-face material for each vertex to ensure correct colour on all drivers
         if ((AttributeBinding)MaterialBinding == PER_FACE) {
           materials->send(matnr-1, TRUE);
         } else if ((AttributeBinding)MaterialBinding == PER_FACE_INDEXED) {
@@ -1523,7 +1523,7 @@ namespace { namespace SoGL { namespace FaceSet {
             materials->send(*matindices++, TRUE);
           }
 
-          // nvidia color-per-face-bug workaround
+          // re-send per-face material for each vertex to ensure correct colour on all drivers
           if ((AttributeBinding)MaterialBinding == PER_FACE) {
             materials->send(matnr-1, TRUE);
           } else if ((AttributeBinding)MaterialBinding == PER_FACE_INDEXED) {
@@ -1575,7 +1575,7 @@ namespace { namespace SoGL { namespace FaceSet {
               materials->send(*matindices++, TRUE);
             }
 
-            // nvidia color-per-face-bug workaround
+            // re-send per-face material for each vertex to ensure correct colour on all drivers
             if ((AttributeBinding)MaterialBinding == PER_FACE) {
               materials->send(matnr-1, TRUE);
             } else if ((AttributeBinding)MaterialBinding == PER_FACE_INDEXED) {
@@ -1889,7 +1889,7 @@ namespace { namespace SoGL { namespace TriStripSet {
         materials->send(*matindices++, TRUE);
       }
 
-      // needed for nvidia color-per-face-bug workaround
+      // re-send per-strip/triangle material for each vertex to ensure correct colour on all drivers
       if ((AttributeBinding)MaterialBinding == PER_TRIANGLE ||
           (AttributeBinding)MaterialBinding == PER_STRIP) {
         materials->send(matnr-1, TRUE);
@@ -1897,7 +1897,6 @@ namespace { namespace SoGL { namespace TriStripSet {
                  (AttributeBinding)MaterialBinding == PER_STRIP_INDEXED) {
         materials->send(matindices[-1], TRUE);
       }
-      // end of nvidia workaround
 
       if ((AttributeBinding)NormalBinding == PER_VERTEX) {
         currnormal = normals++;
@@ -1920,7 +1919,7 @@ namespace { namespace SoGL { namespace TriStripSet {
         materials->send(*matindices++, TRUE);
       }
 
-      // needed for nvidia color-per-face-bug workaround
+      // re-send per-strip/triangle material for each vertex to ensure correct colour on all drivers
       if ((AttributeBinding)MaterialBinding == PER_STRIP ||
           (AttributeBinding)MaterialBinding == PER_TRIANGLE) {
         materials->send(matnr-1, TRUE);
@@ -1928,7 +1927,6 @@ namespace { namespace SoGL { namespace TriStripSet {
                  (AttributeBinding)MaterialBinding == PER_STRIP_INDEXED) {
         materials->send(matindices[-1], TRUE);
       }
-      // end of nvidia workaround
 
       if ((AttributeBinding)NormalBinding == PER_VERTEX) {
         currnormal = normals++;
@@ -1954,14 +1952,13 @@ namespace { namespace SoGL { namespace TriStripSet {
           materials->send(*matindices++, TRUE);
         }
 
-        // needed for nvidia color-per-face-bug workaround
+        // re-send per-strip/triangle material for each vertex to ensure correct colour on all drivers
         if ((AttributeBinding)MaterialBinding == PER_STRIP) {
           materials->send(matnr-1, TRUE);
         } else if ((AttributeBinding)MaterialBinding == PER_STRIP_INDEXED) {
           materials->send(matindices[-1], TRUE);
         }
-        // end of nvidia workaround
-
+  
         if ((AttributeBinding)NormalBinding == PER_VERTEX ||
             (AttributeBinding)NormalBinding == PER_TRIANGLE) {
           currnormal = normals++;
@@ -2102,9 +2099,9 @@ sogl_render_tristrip(const SoGLCoordinateElement * const vertexlist,
 
 static void
 sogl_render_pointset_m0n0t0(const SoGLCoordinateElement * coords,
-                            const SbVec3f * COIN_UNUSED_ARG(normals),
-                            SoMaterialBundle * COIN_UNUSED_ARG(mb),
-                            const SoTextureCoordinateBundle * COIN_UNUSED_ARG(tb),
+                            const SbVec3f * OBOL_UNUSED_ARG(normals),
+                            SoMaterialBundle * OBOL_UNUSED_ARG(mb),
+                            const SoTextureCoordinateBundle * OBOL_UNUSED_ARG(tb),
                             int32_t numpts,
                             int32_t idx)
 {
@@ -2129,8 +2126,8 @@ sogl_render_pointset_m0n0t0(const SoGLCoordinateElement * coords,
 
 static void
 sogl_render_pointset_m0n0t1(const SoGLCoordinateElement * coords,
-                            const SbVec3f * COIN_UNUSED_ARG(normals),
-                            SoMaterialBundle * COIN_UNUSED_ARG(mb),
+                            const SbVec3f * OBOL_UNUSED_ARG(normals),
+                            SoMaterialBundle * OBOL_UNUSED_ARG(mb),
                             const SoTextureCoordinateBundle * tb,
                             int32_t numpts,
                             int32_t idx)
@@ -2149,8 +2146,8 @@ sogl_render_pointset_m0n0t1(const SoGLCoordinateElement * coords,
 static void
 sogl_render_pointset_m0n1t0(const SoGLCoordinateElement * coords,
                             const SbVec3f * normals,
-                            SoMaterialBundle * COIN_UNUSED_ARG(mb),
-                            const SoTextureCoordinateBundle * COIN_UNUSED_ARG(tb),
+                            SoMaterialBundle * OBOL_UNUSED_ARG(mb),
+                            const SoTextureCoordinateBundle * OBOL_UNUSED_ARG(tb),
                             int32_t numpts,
                             int32_t idx)
 {
@@ -2165,7 +2162,7 @@ sogl_render_pointset_m0n1t0(const SoGLCoordinateElement * coords,
 static void
 sogl_render_pointset_m0n1t1(const SoGLCoordinateElement * coords,
                             const SbVec3f * normals,
-                            SoMaterialBundle * COIN_UNUSED_ARG(mb),
+                            SoMaterialBundle * OBOL_UNUSED_ARG(mb),
                             const SoTextureCoordinateBundle * tb,
                             int32_t numpts,
                             int32_t idx)
@@ -2184,9 +2181,9 @@ sogl_render_pointset_m0n1t1(const SoGLCoordinateElement * coords,
 
 static void
 sogl_render_pointset_m1n0t0(const SoGLCoordinateElement * coords,
-                            const SbVec3f * COIN_UNUSED_ARG(normals),
+                            const SbVec3f * OBOL_UNUSED_ARG(normals),
                             SoMaterialBundle * mb,
-                            const SoTextureCoordinateBundle * COIN_UNUSED_ARG(tb),
+                            const SoTextureCoordinateBundle * OBOL_UNUSED_ARG(tb),
                             int32_t numpts,
                             int32_t idx)
 {
@@ -2217,7 +2214,7 @@ sogl_render_pointset_m1n0t0(const SoGLCoordinateElement * coords,
 
 static void
 sogl_render_pointset_m1n0t1(const SoGLCoordinateElement * coords,
-                            const SbVec3f * COIN_UNUSED_ARG(normals),
+                            const SbVec3f * OBOL_UNUSED_ARG(normals),
                             SoMaterialBundle * mb,
                             const SoTextureCoordinateBundle * tb,
                             int32_t numpts,
@@ -2240,7 +2237,7 @@ static void
 sogl_render_pointset_m1n1t0(const SoGLCoordinateElement * coords,
                             const SbVec3f * normals,
                             SoMaterialBundle * mb,
-                            const SoTextureCoordinateBundle * COIN_UNUSED_ARG(tb),
+                            const SoTextureCoordinateBundle * OBOL_UNUSED_ARG(tb),
                             int32_t numpts,
                             int32_t idx)
 {
@@ -2326,12 +2323,12 @@ sogl_render_pointset(const SoGLCoordinateElement * coords,
 SbBool
 sogl_glerror_debugging(void)
 {
-  static int COIN_GLERROR_DEBUGGING = -1;
-  if (COIN_GLERROR_DEBUGGING == -1) {
-    const char * str = CoinInternal::getEnvironmentVariableRaw("COIN_GLERROR_DEBUGGING");
-    COIN_GLERROR_DEBUGGING = str ? atoi(str) : 0;
+  static int OBOL_GLERROR_DEBUGGING = -1;
+  if (OBOL_GLERROR_DEBUGGING == -1) {
+    const char * str = CoinInternal::getEnvironmentVariableRaw("OBOL_GLERROR_DEBUGGING");
+    OBOL_GLERROR_DEBUGGING = str ? atoi(str) : 0;
   }
-  return (COIN_GLERROR_DEBUGGING == 0) ? FALSE : TRUE;
+  return (OBOL_GLERROR_DEBUGGING == 0) ? FALSE : TRUE;
 }
 
 static int SOGL_AUTOCACHE_REMOTE_MIN = 500000;
@@ -2350,23 +2347,23 @@ sogl_autocache_update(SoState * state, const int numprimitives, SbBool didusevbo
   static SbBool didtestenv = FALSE;
   if (!didtestenv) {
     const char * env;
-    env = CoinInternal::getEnvironmentVariableRaw("COIN_AUTOCACHE_REMOTE_MIN");
+    env = CoinInternal::getEnvironmentVariableRaw("OBOL_AUTOCACHE_REMOTE_MIN");
     if (env) {
       SOGL_AUTOCACHE_REMOTE_MIN = atoi(env);
     }
-    env = CoinInternal::getEnvironmentVariableRaw("COIN_AUTOCACHE_REMOTE_MAX");
+    env = CoinInternal::getEnvironmentVariableRaw("OBOL_AUTOCACHE_REMOTE_MAX");
     if (env) {
       SOGL_AUTOCACHE_REMOTE_MAX = atoi(env);
     }
-    env = CoinInternal::getEnvironmentVariableRaw("COIN_AUTOCACHE_LOCAL_MIN");
+    env = CoinInternal::getEnvironmentVariableRaw("OBOL_AUTOCACHE_LOCAL_MIN");
     if (env) {
       SOGL_AUTOCACHE_LOCAL_MIN = atoi(env);
     }
-    env = CoinInternal::getEnvironmentVariableRaw("COIN_AUTOCACHE_LOCAL_MAX");
+    env = CoinInternal::getEnvironmentVariableRaw("OBOL_AUTOCACHE_LOCAL_MAX");
     if (env) {
       SOGL_AUTOCACHE_LOCAL_MAX = atoi(env);
     }
-    env = CoinInternal::getEnvironmentVariableRaw("COIN_AUTOCACHE_VBO_LIMIT");
+    env = CoinInternal::getEnvironmentVariableRaw("OBOL_AUTOCACHE_VBO_LIMIT");
     if (env) {
       SOGL_AUTOCACHE_VBO_LIMIT = atoi(env);
     }

@@ -311,7 +311,7 @@ coin_bspnode::split()
 //   }
 
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (!this->left->indices.getLength() ||
       !this->right->indices.getLength()) {
     fprintf(stderr,"Left:\n");
@@ -521,7 +521,7 @@ SbBSPTree::findPoint(const SbVec3f &pos) const
   Will empty all points from the BSP tree.
 */
 void
-SbBSPTree::clear(const int COIN_UNUSED_ARG(initsize))
+SbBSPTree::clear(const int OBOL_UNUSED_ARG(initsize))
 {
   delete this->topnode;
   this->topnode = NULL;

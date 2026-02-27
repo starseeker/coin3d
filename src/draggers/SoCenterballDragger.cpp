@@ -616,7 +616,7 @@ SoCenterballDragger::kidStartCB(void * d , SoDragger * child)
   Needed to deactivate some feedback.
 */
 void
-SoCenterballDragger::kidFinishCB(void * d, SoDragger * COIN_UNUSED_ARG(child))
+SoCenterballDragger::kidFinishCB(void * d, SoDragger * OBOL_UNUSED_ARG(child))
 {
   SoCenterballDragger * thisp = static_cast<SoCenterballDragger *>(d);
   thisp->setSwitches(NULL);

@@ -1,5 +1,5 @@
-#ifndef COIN_SOSHADOWSTYLE_H
-#define COIN_SOSHADOWSTYLE_H
+#ifndef OBOL_SOSHADOWSTYLE_H
+#define OBOL_SOSHADOWSTYLE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/fields/SoSFEnum.h>
 #include <Inventor/annex/FXViz/elements/SoShadowStyleElement.h>
 
-class COIN_DLL_API SoShadowStyle : public SoNode {
+class OBOL_DLL_API SoShadowStyle : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_HEADER(SoShadowStyle);
@@ -61,4 +61,4 @@ protected:
   virtual ~SoShadowStyle();
 };
 
-#endif // !COIN_SOSHADOWSTYLE_H
+#endif // !OBOL_SOSHADOWSTYLE_H

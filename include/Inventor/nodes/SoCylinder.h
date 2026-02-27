@@ -1,5 +1,5 @@
-#ifndef COIN_SOCYLINDER_H
-#define COIN_SOCYLINDER_H
+#ifndef OBOL_SOCYLINDER_H
+#define OBOL_SOCYLINDER_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -38,7 +38,7 @@
 #include <Inventor/fields/SoSFFloat.h>
 #include <Inventor/fields/SoSFBitMask.h>
 
-class COIN_DLL_API SoCylinder : public SoShape {
+class OBOL_DLL_API SoCylinder : public SoShape {
   typedef SoShape inherited;
 
   SO_NODE_HEADER(SoCylinder);
@@ -73,4 +73,4 @@ protected:
   virtual void computeBBox(SoAction * action, SbBox3f & box, SbVec3f & center);
 };
 
-#endif // !COIN_SOCYLINDER_H
+#endif // !OBOL_SOCYLINDER_H

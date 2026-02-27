@@ -145,12 +145,12 @@ SoEventCallback::setPath(SoPath * pathptr)
     this->path = NULL;
   }
   if (pathptr) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     if (pathptr->getRefCount() == 0) {
       SoDebugError::postWarning("SoEventCallback::setPath",
                                 "input path has reference count equal to zero");
     }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     this->path = pathptr->copy();
     this->path->ref();
   }
@@ -201,10 +201,10 @@ SoEventCallback::removeEventCallback(SoType eventtype, SoEventCallbackCB * f,
     }
   }
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   SoDebugError::postWarning("SoEventCallback::removeEventCallback",
                             "tried to remove non-existent callback function");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }
 
 
@@ -263,13 +263,13 @@ SoEventCallback::getPickedPoint(void) const
 void
 SoEventCallback::setHandled(void)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (!this->heaction) {
     SoDebugError::postWarning("SoEventCallback::setHandled",
                               "should only be called from event callbacks");
     return;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   this->heaction->setHandled();
 }
@@ -281,13 +281,13 @@ SoEventCallback::setHandled(void)
 SbBool
 SoEventCallback::isHandled(void) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (!this->heaction) {
     SoDebugError::postWarning("SoEventCallback::isHandled",
                               "should only be called from event callbacks");
     return TRUE;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   return this->heaction->isHandled();
 }
@@ -300,13 +300,13 @@ SoEventCallback::isHandled(void) const
 void
 SoEventCallback::grabEvents(void)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (!this->heaction) {
     SoDebugError::postWarning("SoEventCallback::grabEvents",
                               "should only be called from event callbacks");
     return;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   this->heaction->setGrabber(this);
 }
@@ -319,13 +319,13 @@ SoEventCallback::grabEvents(void)
 void
 SoEventCallback::releaseEvents(void)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (!this->heaction) {
     SoDebugError::postWarning("SoEventCallback::releaseEvents",
                               "should only be called from event callbacks");
     return;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   this->heaction->releaseGrabber();
 }

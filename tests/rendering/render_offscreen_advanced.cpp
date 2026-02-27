@@ -252,6 +252,25 @@ static bool test6_staticQueries(const char * /*basepath*/)
     ok = ok && (ppi > 0.0f);
     ok = ok && (ver12 == TRUE);    // GL 1.2 guaranteed in modern environments
     ok = ok && (ver99 == FALSE);   // GL 99.0 not expected
+
+    // Test setScreenPixelsPerInch / getScreenPixelsPerInch round-trip
+    const float savedPpi = SoOffscreenRenderer::getScreenPixelsPerInch();
+    SoOffscreenRenderer::setScreenPixelsPerInch(96.0f);
+    float got96 = SoOffscreenRenderer::getScreenPixelsPerInch();
+    bool ppiSet = (fabsf(got96 - 96.0f) < 0.01f);
+    printf("  test6: setScreenPixelsPerInch(96) -> got=%.1f ok=%d\n", got96, (int)ppiSet);
+    ok = ok && ppiSet;
+
+    // Negative / zero value should be ignored (value unchanged)
+    SoOffscreenRenderer::setScreenPixelsPerInch(-1.0f);
+    float gotNeg = SoOffscreenRenderer::getScreenPixelsPerInch();
+    bool negIgnored = (fabsf(gotNeg - 96.0f) < 0.01f);
+    printf("  test6: setScreenPixelsPerInch(-1) -> got=%.1f ignored=%d\n", gotNeg, (int)negIgnored);
+    ok = ok && negIgnored;
+
+    // Restore original value
+    SoOffscreenRenderer::setScreenPixelsPerInch(savedPpi);
+
     return ok;
 }
 

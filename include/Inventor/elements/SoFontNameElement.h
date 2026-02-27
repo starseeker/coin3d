@@ -1,5 +1,5 @@
-#ifndef COIN_SOFONTNAMEELEMENT_H
-#define COIN_SOFONTNAMEELEMENT_H
+#ifndef OBOL_SOFONTNAMEELEMENT_H
+#define OBOL_SOFONTNAMEELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -36,7 +36,7 @@
 #include <Inventor/SbName.h>
 #include <Inventor/elements/SoReplacedElement.h>
 
-class COIN_DLL_API SoFontNameElement : public SoReplacedElement {
+class OBOL_DLL_API SoFontNameElement : public SoReplacedElement {
   typedef SoReplacedElement inherited;
 
   SO_ELEMENT_HEADER(SoFontNameElement);
@@ -66,4 +66,4 @@ private:
   static SbName * defaultfontname;
 };
 
-#endif // !COIN_SOFONTNAMEELEMENT_H
+#endif // !OBOL_SOFONTNAMEELEMENT_H

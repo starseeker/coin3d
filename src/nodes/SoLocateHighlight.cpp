@@ -70,9 +70,9 @@
 #include <Inventor/events/SoLocation2Event.h>
 #include <Inventor/SoPickedPoint.h>
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
 #include <Inventor/threads/SbStorage.h>
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 
 #include "CoinTidbits.h"
 #include "nodes/SoSubNodeP.h"
@@ -131,24 +131,24 @@
 class SoLocateHighlightP {
 public:
   SoLocateHighlightP() 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
     : colorpacker_storage(sizeof(void*), alloc_colorpacker, free_colorpacker)
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
   {}
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   SbStorage colorpacker_storage;
-#else // COIN_THREADSAFE
+#else // OBOL_THREADSAFE
   SoColorPacker single_colorpacker;
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
   
   SoColorPacker * getColorPacker(void) {
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
     SoColorPacker ** cptr = (SoColorPacker**) this->colorpacker_storage.get();
     return * cptr;
-#else // COIN_THREADSAFE
+#else // OBOL_THREADSAFE
     return &this->single_colorpacker;
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
   }
   SbBool highlighted;
   static SoFullPath * currenthighlight;
@@ -159,7 +159,7 @@ public:
       SoLocateHighlightP::currenthighlight = NULL;
     }
   }
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
 private:
   static void alloc_colorpacker(void * data) {
     SoColorPacker ** cptr = (SoColorPacker**) data;
@@ -169,7 +169,7 @@ private:
     SoColorPacker ** cptr = (SoColorPacker**) data;
     delete *cptr;
   }
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 
 };
 

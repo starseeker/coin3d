@@ -1,5 +1,5 @@
-#ifndef COIN_SOTRANSPARENCYELEMENT_H
-#define COIN_SOTRANSPARENCYELEMENT_H
+#ifndef OBOL_SOTRANSPARENCYELEMENT_H
+#define OBOL_SOTRANSPARENCYELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -36,7 +36,7 @@
 #include <Inventor/elements/SoReplacedElement.h>
 #include <Inventor/elements/SoLazyElement.h>
 
-class COIN_DLL_API SoTransparencyElement : public SoReplacedElement {
+class OBOL_DLL_API SoTransparencyElement : public SoReplacedElement {
   typedef SoReplacedElement inherited;
 
   SO_ELEMENT_HEADER(SoTransparencyElement);
@@ -61,4 +61,4 @@ private:
   SoColorPacker colorpacker;
 };
 
-#endif // !COIN_SOTRANSPARENCYELEMENT_H
+#endif // !OBOL_SOTRANSPARENCYELEMENT_H

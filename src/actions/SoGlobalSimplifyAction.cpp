@@ -42,7 +42,7 @@
 
 #include <Inventor/SbName.h>
 #include <Inventor/actions/SoGlobalSimplifyAction.h>
-#include "config.h" // COIN_STUB()
+#include "config.h" // OBOL_STUB()
 
 
 SO_ACTION_SOURCE(SoGlobalSimplifyAction);
@@ -63,7 +63,7 @@ SoGlobalSimplifyAction::initClass(void)
 
 SoGlobalSimplifyAction::SoGlobalSimplifyAction(void)
 {
-  COIN_STUB();
+  OBOL_STUB();
 }
 
 /*!
@@ -72,12 +72,12 @@ SoGlobalSimplifyAction::SoGlobalSimplifyAction(void)
 
 SoGlobalSimplifyAction::~SoGlobalSimplifyAction(void)
 {
-  COIN_STUB();
+  OBOL_STUB();
 }
 
 // Documented in superclass.
 void
 SoGlobalSimplifyAction::beginTraversal(SoNode * /* node */)
 {
-  COIN_STUB();
+  OBOL_STUB();
 }

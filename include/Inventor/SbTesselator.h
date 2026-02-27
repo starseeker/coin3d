@@ -1,5 +1,5 @@
-#ifndef COIN_SBTESSELATOR_H
-#define COIN_SBTESSELATOR_H
+#ifndef OBOL_SBTESSELATOR_H
+#define OBOL_SBTESSELATOR_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -40,7 +40,7 @@
 
 typedef void SbTesselatorCB(void * v0, void * v1, void * v2, void * data);
 
-class COIN_DLL_API SbTesselator {
+class OBOL_DLL_API SbTesselator {
 public:
   SbTesselator(SbTesselatorCB * func = NULL, void * data = NULL);
   ~SbTesselator(void);
@@ -60,4 +60,4 @@ private:
 
 }; // SbTessellator
 
-#endif // !COIN_SBTESSELATOR_H
+#endif // !OBOL_SBTESSELATOR_H

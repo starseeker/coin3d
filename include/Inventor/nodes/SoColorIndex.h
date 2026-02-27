@@ -1,5 +1,5 @@
-#ifndef COIN_SOCOLORINDEX_H
-#define COIN_SOCOLORINDEX_H
+#ifndef OBOL_SOCOLORINDEX_H
+#define OBOL_SOCOLORINDEX_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -36,7 +36,7 @@
 #include <Inventor/nodes/SoSubNode.h>
 #include <Inventor/fields/SoMFInt32.h>
 
-class COIN_DLL_API SoColorIndex : public SoNode {
+class OBOL_DLL_API SoColorIndex : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_HEADER(SoColorIndex);
@@ -53,4 +53,4 @@ protected:
   virtual ~SoColorIndex();
 };
 
-#endif // !COIN_SOCOLORINDEX_H
+#endif // !OBOL_SOCOLORINDEX_H

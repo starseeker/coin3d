@@ -212,9 +212,9 @@
 
 #include <Inventor/lists/SoEngineOutputList.h>
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 #include "engines/evaluator.h"
 #include "engines/SoSubEngineP.h"
@@ -415,12 +415,12 @@ SoCalculator::evaluate(void)
       const SbString &s = this->expression[i];
       if (s.getLength()) {
         PRIVATE(this)->evaluatorList.append(so_eval_parse(s.getString()));
-#if COIN_DEBUG
+#if OBOL_DEBUG
         if (so_eval_error()) {
           SoDebugError::postWarning("SoCalculator::evaluateExpression",
                                     "%s", so_eval_error());
         }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
       }
       else PRIVATE(this)->evaluatorList.append(NULL);
     }

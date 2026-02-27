@@ -34,7 +34,7 @@
  * @file test_sb_types.cpp
  * @brief Tests for Coin3D base types (SbVec*, SbBox*, SbMatrix, etc.)
  *
- * Tests are baselined against upstream COIN_TEST_SUITE blocks to verify
+ * Tests are baselined against upstream OBOL_TEST_SUITE blocks to verify
  * that behavior is consistent between vanilla Coin and this implementation.
  *
  * Vanilla sources covering these tests:
@@ -108,7 +108,7 @@ int main()
 
     // -----------------------------------------------------------------------
     // SbVec3f: fromString valid/invalid
-    // Baseline: src/base/SbVec3f.cpp COIN_TEST_SUITE
+    // Baseline: src/base/SbVec3f.cpp OBOL_TEST_SUITE
     // Note: toString() uses SoSFVec3f internally which requires full DB init.
     //       Round-trip test is in tests that have full context.
     // -----------------------------------------------------------------------
@@ -137,7 +137,7 @@ int main()
 
     // -----------------------------------------------------------------------
     // SbBox2f: getSize / getClosestPoint
-    // Baseline: src/base/SbBox2f.cpp COIN_TEST_SUITE
+    // Baseline: src/base/SbBox2f.cpp OBOL_TEST_SUITE
     // -----------------------------------------------------------------------
     runner.startTest("SbBox2f getSize");
     {
@@ -173,7 +173,7 @@ int main()
 
     // -----------------------------------------------------------------------
     // SbBox3f: getClosestPoint
-    // Baseline: src/base/SbBox3f.cpp COIN_TEST_SUITE
+    // Baseline: src/base/SbBox3f.cpp OBOL_TEST_SUITE
     // -----------------------------------------------------------------------
     runner.startTest("SbBox3f getClosestPoint (outside)");
     {
@@ -199,7 +199,7 @@ int main()
 
     // -----------------------------------------------------------------------
     // SbBox3i32: getSize / getClosestPoint
-    // Baseline: src/base/SbBox3i32.cpp COIN_TEST_SUITE
+    // Baseline: src/base/SbBox3i32.cpp OBOL_TEST_SUITE
     // -----------------------------------------------------------------------
     runner.startTest("SbBox3i32 getSize");
     {
@@ -224,7 +224,7 @@ int main()
 
     // -----------------------------------------------------------------------
     // SbByteBuffer: push operations
-    // Baseline: src/base/SbByteBuffer.cpp COIN_TEST_SUITE
+    // Baseline: src/base/SbByteBuffer.cpp OBOL_TEST_SUITE
     // -----------------------------------------------------------------------
     runner.startTest("SbByteBuffer pushUnique");
     {
@@ -258,7 +258,7 @@ int main()
 
     // -----------------------------------------------------------------------
     // SbBSPTree: add / find / remove points
-    // Baseline: src/base/SbBSPTree.cpp COIN_TEST_SUITE
+    // Baseline: src/base/SbBSPTree.cpp OBOL_TEST_SUITE
     // -----------------------------------------------------------------------
     runner.startTest("SbBSPTree add/find/remove");
     {
@@ -295,7 +295,7 @@ int main()
 
     // -----------------------------------------------------------------------
     // SbMatrix: construct from SbDPMatrix
-    // Baseline: src/base/SbMatrix.cpp COIN_TEST_SUITE
+    // Baseline: src/base/SbMatrix.cpp OBOL_TEST_SUITE
     // -----------------------------------------------------------------------
     runner.startTest("SbMatrix construct from SbDPMatrix");
     {
@@ -310,7 +310,7 @@ int main()
 
     // -----------------------------------------------------------------------
     // SbDPMatrix: construct from SbMatrix
-    // Baseline: src/base/SbDPMatrix.cpp COIN_TEST_SUITE
+    // Baseline: src/base/SbDPMatrix.cpp OBOL_TEST_SUITE
     // -----------------------------------------------------------------------
     runner.startTest("SbDPMatrix construct from SbMatrix");
     {
@@ -325,7 +325,7 @@ int main()
 
     // -----------------------------------------------------------------------
     // SbRotation: toString / fromString / fromInvalidString
-    // Baseline: src/base/SbRotation.cpp COIN_TEST_SUITE
+    // Baseline: src/base/SbRotation.cpp OBOL_TEST_SUITE
     // -----------------------------------------------------------------------
     runner.startTest("SbRotation fromString valid");
     {
@@ -351,7 +351,7 @@ int main()
 
     // -----------------------------------------------------------------------
     // SbString: operator+
-    // Baseline: src/base/SbString.cpp COIN_TEST_SUITE
+    // Baseline: src/base/SbString.cpp OBOL_TEST_SUITE
     // -----------------------------------------------------------------------
     runner.startTest("SbString operator+ (str+str)");
     {
@@ -388,7 +388,7 @@ int main()
 
     // -----------------------------------------------------------------------
     // SbPlane: plane-plane intersection sign
-    // Baseline: src/base/SbPlane.cpp COIN_TEST_SUITE
+    // Baseline: src/base/SbPlane.cpp OBOL_TEST_SUITE
     // -----------------------------------------------------------------------
     runner.startTest("SbPlane intersect sign correct");
     {
@@ -409,7 +409,7 @@ int main()
 
     // -----------------------------------------------------------------------
     // SbViewVolume: intersectionBox for ortho/perspective
-    // Baseline: src/base/SbViewVolume.cpp COIN_TEST_SUITE
+    // Baseline: src/base/SbViewVolume.cpp OBOL_TEST_SUITE
     // -----------------------------------------------------------------------
     runner.startTest("SbViewVolume ortho intersect (partial overlap)");
     {
@@ -474,7 +474,7 @@ int main()
 
     // -----------------------------------------------------------------------
     // SbVec3d: fromString
-    // Baseline: src/base/SbVec3d.cpp COIN_TEST_SUITE
+    // Baseline: src/base/SbVec3d.cpp OBOL_TEST_SUITE
     // -----------------------------------------------------------------------
     runner.startTest("SbVec3d fromString");
     {
@@ -488,7 +488,7 @@ int main()
 
     // -----------------------------------------------------------------------
     // SbVec4f: normalize already-normalized vector
-    // Baseline: src/base/SbVec4f.cpp COIN_TEST_SUITE
+    // Baseline: src/base/SbVec4f.cpp OBOL_TEST_SUITE
     // -----------------------------------------------------------------------
     runner.startTest("SbVec4f normalize already-normalized vector");
     {
@@ -504,7 +504,7 @@ int main()
 
     // -----------------------------------------------------------------------
     // SbVec3s: fromString / fromInvalidString
-    // Baseline: src/base/SbVec3s.cpp COIN_TEST_SUITE
+    // Baseline: src/base/SbVec3s.cpp OBOL_TEST_SUITE
     // -----------------------------------------------------------------------
     runner.startTest("SbVec3s fromString");
     {
@@ -527,7 +527,7 @@ int main()
 
     // -----------------------------------------------------------------------
     // SbBox2d: getSize / getClosestPoint
-    // Baseline: src/base/SbBox2d.cpp COIN_TEST_SUITE
+    // Baseline: src/base/SbBox2d.cpp OBOL_TEST_SUITE
     // -----------------------------------------------------------------------
     runner.startTest("SbBox2d getSize");
     {
@@ -549,7 +549,7 @@ int main()
 
     // -----------------------------------------------------------------------
     // SbBox3d: getClosestPoint
-    // Baseline: src/base/SbBox3d.cpp COIN_TEST_SUITE
+    // Baseline: src/base/SbBox3d.cpp OBOL_TEST_SUITE
     // -----------------------------------------------------------------------
     runner.startTest("SbBox3d getClosestPoint outside");
     {
@@ -562,7 +562,7 @@ int main()
 
     // -----------------------------------------------------------------------
     // SbBox2s: getSize
-    // Baseline: src/base/SbBox2s.cpp COIN_TEST_SUITE
+    // Baseline: src/base/SbBox2s.cpp OBOL_TEST_SUITE
     // -----------------------------------------------------------------------
     runner.startTest("SbBox2s getSize");
     {
@@ -575,7 +575,7 @@ int main()
 
     // -----------------------------------------------------------------------
     // SbBox3s: getSize / getClosestPoint
-    // Baseline: src/base/SbBox3s.cpp COIN_TEST_SUITE
+    // Baseline: src/base/SbBox3s.cpp OBOL_TEST_SUITE
     // -----------------------------------------------------------------------
     runner.startTest("SbBox3s getSize");
     {
@@ -597,7 +597,7 @@ int main()
 
     // -----------------------------------------------------------------------
     // SbDPRotation: construction (TGS compliance)
-    // Baseline: src/base/SbDPRotation.cpp COIN_TEST_SUITE (tgsCompliance)
+    // Baseline: src/base/SbDPRotation.cpp OBOL_TEST_SUITE (tgsCompliance)
     // -----------------------------------------------------------------------
     runner.startTest("SbDPRotation construct from axis/angle");
     {
@@ -611,7 +611,7 @@ int main()
 
     // -----------------------------------------------------------------------
     // SbDPPlane: intersect two planes and verify sign of result
-    // Baseline: src/base/SbDPPlane.cpp COIN_TEST_SUITE (signCorrect)
+    // Baseline: src/base/SbDPPlane.cpp OBOL_TEST_SUITE (signCorrect)
     // -----------------------------------------------------------------------
     runner.startTest("SbDPPlane plane-plane intersection sign correct");
     {
@@ -626,7 +626,7 @@ int main()
 
     // -----------------------------------------------------------------------
     // SbImage: copy construction
-    // Baseline: src/base/SbImage.cpp COIN_TEST_SUITE (copyConstruct)
+    // Baseline: src/base/SbImage.cpp OBOL_TEST_SUITE (copyConstruct)
     // -----------------------------------------------------------------------
     runner.startTest("SbImage copy construct");
     {
@@ -717,7 +717,7 @@ int main()
 
     // -----------------------------------------------------------------------
     // SbBox2i32: getSize
-    // Baseline: src/base/SbBox2i32.cpp COIN_TEST_SUITE (checkSize)
+    // Baseline: src/base/SbBox2i32.cpp OBOL_TEST_SUITE (checkSize)
     // -----------------------------------------------------------------------
     runner.startTest("SbBox2i32 getSize");
     {
@@ -730,7 +730,7 @@ int main()
 
     // -----------------------------------------------------------------------
     // SbVec3us: construction and get/setValue round-trip
-    // Baseline: src/base/SbVec3us.cpp (COIN_TEST_SUITE block is empty;
+    // Baseline: src/base/SbVec3us.cpp (OBOL_TEST_SUITE block is empty;
     //           API behavior test)
     // -----------------------------------------------------------------------
     runner.startTest("SbVec3us construction and getValue");
@@ -753,7 +753,7 @@ int main()
 
     // -----------------------------------------------------------------------
     // SbHeap (cc_heap): min-heap and max-heap ordering
-    // Baseline: src/base/heap.cpp COIN_TEST_SUITE
+    // Baseline: src/base/heap.cpp OBOL_TEST_SUITE
     // -----------------------------------------------------------------------
     {
         struct MockVal { double x; };

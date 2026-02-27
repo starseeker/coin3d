@@ -1,5 +1,5 @@
-#ifndef COIN_SOMFENGINE_H
-#define COIN_SOMFENGINE_H
+#ifndef OBOL_SOMFENGINE_H
+#define OBOL_SOMFENGINE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -38,7 +38,7 @@
 
 class SoEngine;
 
-class COIN_DLL_API SoMFEngine : public SoMField {
+class OBOL_DLL_API SoMFEngine : public SoMField {
   typedef SoMField inherited;
 
   SO_MFIELD_HEADER(SoMFEngine, SoEngine *, SoEngine *);
@@ -56,4 +56,4 @@ private:
   virtual void countWriteRefs(SoOutput * out) const;
 };
 
-#endif // !COIN_SOMFENGINE_H
+#endif // !OBOL_SOMFENGINE_H

@@ -1,5 +1,5 @@
-#ifndef COIN_SOREPLACEDELEMENT_H
-#define COIN_SOREPLACEDELEMENT_H
+#ifndef OBOL_SOREPLACEDELEMENT_H
+#define OBOL_SOREPLACEDELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -36,7 +36,7 @@
 #include <Inventor/elements/SoSubElement.h>
 #include <cstdint>
 
-class COIN_DLL_API SoReplacedElement : public SoElement {
+class OBOL_DLL_API SoReplacedElement : public SoElement {
   typedef SoElement inherited;
 
   SO_ELEMENT_ABSTRACT_HEADER(SoReplacedElement);
@@ -62,4 +62,4 @@ protected:
   SbUniqueId nodeId;
 };
 
-#endif // !COIN_SOREPLACEDELEMENT_H
+#endif // !OBOL_SOREPLACEDELEMENT_H

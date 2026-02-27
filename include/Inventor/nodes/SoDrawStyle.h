@@ -1,5 +1,5 @@
-#ifndef COIN_SODRAWSTYLE_H
-#define COIN_SODRAWSTYLE_H
+#ifndef OBOL_SODRAWSTYLE_H
+#define OBOL_SODRAWSTYLE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -40,7 +40,7 @@
 #include <Inventor/fields/SoSFInt32.h>
 #include <Inventor/nodes/SoSubNode.h>
 
-class COIN_DLL_API SoDrawStyle : public SoNode {
+class OBOL_DLL_API SoDrawStyle : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_HEADER(SoDrawStyle);
@@ -70,4 +70,4 @@ protected:
   virtual ~SoDrawStyle();
 };
 
-#endif // !COIN_SODRAWSTYLE_H
+#endif // !OBOL_SODRAWSTYLE_H

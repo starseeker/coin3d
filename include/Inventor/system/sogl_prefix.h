@@ -4,15 +4,15 @@
  *
  * Motivation
  * ----------
- * When building with COIN3D_BUILD_DUAL_GL=ON, both the system-OpenGL variant
+ * When building with OBOL_BUILD_DUAL_GL=ON, both the system-OpenGL variant
  * and the OSMesa variant of the Obol GL glue layer (src/glue/gl.cpp) are
  * compiled into the same shared library.  Without name decoration the two
  * sets of C linkage functions would collide at link time.
  *
  * The pattern mirrors BRL-CAD's approach for embedding a private zlib:
  *
- *   #define COIN3D_OSMESA_PREFIX 1
- *   #define COIN3D_OSMESA_PREFIX_STR osmesa_
+ *   #define OBOL_OSMESA_PREFIX 1
+ *   #define OBOL_OSMESA_PREFIX_STR osmesa_
  *   ...
  *   #define SoGLContext_instance  SOGL_ADD_PREFIX(SoGLContext_instance)
  *   ...
@@ -27,7 +27,7 @@
  * define is seen when any caller includes glp.h inside that translation
  * unit, so declarations and definitions match automatically.
  *
- * A thin COIN3D_BUILD_DUAL_GL dispatch wrapper (also in gl.cpp) keeps the
+ * A thin OBOL_BUILD_DUAL_GL dispatch wrapper (also in gl.cpp) keeps the
  * undecorated API working at runtime by checking the context backend type
  * and forwarding to either the sysgl_ or osmesa_ implementation.
  */

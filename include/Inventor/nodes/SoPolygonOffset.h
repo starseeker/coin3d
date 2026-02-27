@@ -1,5 +1,5 @@
-#ifndef COIN_SOPOLYGONOFFSET_H
-#define COIN_SOPOLYGONOFFSET_H
+#ifndef OBOL_SOPOLYGONOFFSET_H
+#define OBOL_SOPOLYGONOFFSET_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -39,7 +39,7 @@
 #include <Inventor/fields/SoSFBool.h>
 #include <Inventor/elements/SoPolygonOffsetElement.h>
 
-class COIN_DLL_API SoPolygonOffset : public SoNode {
+class OBOL_DLL_API SoPolygonOffset : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_HEADER(SoPolygonOffset);
@@ -67,4 +67,4 @@ protected:
   virtual ~SoPolygonOffset();
 };
 
-#endif // !COIN_SOPOLYGONOFFSET_H
+#endif // !OBOL_SOPOLYGONOFFSET_H

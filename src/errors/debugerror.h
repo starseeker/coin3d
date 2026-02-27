@@ -61,25 +61,25 @@ typedef void cc_debugerror_cb(const cc_debugerror * err, void * data);
 /* ********************************************************************** */
 
 /* FIXME: missing stuff from SoDebugError: type-system,
-   COIN_DEBUG_BREAK handling, ... 20020524 mortene. */
+   OBOL_DEBUG_BREAK handling, ... 20020524 mortene. */
 
 /* ********************************************************************** */
 
-COIN_DLL_API void cc_debugerror_post(const char * source, const char * format, ...);
-COIN_DLL_API void cc_debugerror_postwarning(const char * source, const char * format, ...);
-COIN_DLL_API void cc_debugerror_postinfo(const char * source, const char * format, ...);
+OBOL_DLL_API void cc_debugerror_post(const char * source, const char * format, ...);
+OBOL_DLL_API void cc_debugerror_postwarning(const char * source, const char * format, ...);
+OBOL_DLL_API void cc_debugerror_postinfo(const char * source, const char * format, ...);
 
 
-COIN_DLL_API void cc_debugerror_init(cc_debugerror * me);
-COIN_DLL_API void cc_debugerror_clean(cc_debugerror * me);
+OBOL_DLL_API void cc_debugerror_init(cc_debugerror * me);
+OBOL_DLL_API void cc_debugerror_clean(cc_debugerror * me);
 
-COIN_DLL_API CC_DEBUGERROR_SEVERITY cc_debugerror_get_severity(const cc_debugerror * me);
+OBOL_DLL_API CC_DEBUGERROR_SEVERITY cc_debugerror_get_severity(const cc_debugerror * me);
 
-COIN_DLL_API void cc_debugerror_set_handler_callback(cc_debugerror_cb * function, void * data);
-COIN_DLL_API cc_debugerror_cb * cc_debugerror_get_handler_callback(void);
-COIN_DLL_API void * cc_debugerror_get_handler_data(void);
+OBOL_DLL_API void cc_debugerror_set_handler_callback(cc_debugerror_cb * function, void * data);
+OBOL_DLL_API cc_debugerror_cb * cc_debugerror_get_handler_callback(void);
+OBOL_DLL_API void * cc_debugerror_get_handler_data(void);
 
-COIN_DLL_API cc_debugerror_cb * cc_debugerror_get_handler(void ** data);
+OBOL_DLL_API cc_debugerror_cb * cc_debugerror_get_handler(void ** data);
 
 /* ********************************************************************** */
 

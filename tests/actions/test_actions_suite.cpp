@@ -34,7 +34,7 @@
  * @file test_actions_suite.cpp
  * @brief Tests for Coin3D action classes.
  *
- * Baselined against upstream COIN_TEST_SUITE blocks.
+ * Baselined against upstream OBOL_TEST_SUITE blocks.
  *
  * Vanilla sources:
  *   src/actions/SoCallbackAction.cpp - callbackall (SoCallbackAction::setCallbackAll)
@@ -111,7 +111,7 @@ int main()
 
     // -----------------------------------------------------------------------
     // SoCallbackAction: default traversal skips switch children
-    // Baseline: src/actions/SoCallbackAction.cpp COIN_TEST_SUITE (callbackall)
+    // Baseline: src/actions/SoCallbackAction.cpp OBOL_TEST_SUITE (callbackall)
     // -----------------------------------------------------------------------
     runner.startTest("SoCallbackAction default skips switch children");
     {
@@ -158,7 +158,7 @@ int main()
 
     // -----------------------------------------------------------------------
     // SoWriteAction: scene graph with multiply-referenced node
-    // Baseline: src/actions/SoWriteAction.cpp COIN_TEST_SUITE (checkWriteWithMultiref)
+    // Baseline: src/actions/SoWriteAction.cpp OBOL_TEST_SUITE (checkWriteWithMultiref)
     // The test verifies that multi-ref nodes are written with DEF/USE.
     // -----------------------------------------------------------------------
     runner.startTest("SoWriteAction writes multi-ref node with DEF/USE");

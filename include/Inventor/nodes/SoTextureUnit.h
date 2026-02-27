@@ -1,5 +1,5 @@
-#ifndef COIN_SOTEXTUREUNIT_H
-#define COIN_SOTEXTUREUNIT_H
+#ifndef OBOL_SOTEXTUREUNIT_H
+#define OBOL_SOTEXTUREUNIT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/fields/SoSFInt32.h>
 #include <Inventor/fields/SoSFEnum.h>
 
-class COIN_DLL_API SoTextureUnit : public SoNode {
+class OBOL_DLL_API SoTextureUnit : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_HEADER(SoTextureUnit);
@@ -66,4 +66,4 @@ protected:
   virtual ~SoTextureUnit();
 };
 
-#endif // !COIN_SOTEXTUREUNIT_H
+#endif // !OBOL_SOTEXTUREUNIT_H

@@ -1,5 +1,5 @@
-#ifndef COIN_SOGLCACHECONTEXTELEMENT_H
-#define COIN_SOGLCACHECONTEXTELEMENT_H
+#ifndef OBOL_SOGLCACHECONTEXTELEMENT_H
+#define OBOL_SOGLCACHECONTEXTELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -44,7 +44,7 @@ typedef void SoScheduleDeleteCB(void * closure, uint32_t contextid);
 
 // *************************************************************************
 
-class COIN_DLL_API SoGLCacheContextElement : public SoElement {
+class OBOL_DLL_API SoGLCacheContextElement : public SoElement {
   typedef SoElement inherited;
 
   SO_ELEMENT_HEADER(SoGLCacheContextElement);
@@ -108,8 +108,8 @@ private:
 
 // For compatibility with client code originally written with SGI/TGS
 // Inventor:
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #include <Inventor/elements/SoGLDisplayList.h>
-#endif // ! COIN_INTERNAL
+#endif // ! OBOL_INTERNAL
 
-#endif // !COIN_SOGLCACHECONTEXTELEMENT_H
+#endif // !OBOL_SOGLCACHECONTEXTELEMENT_H

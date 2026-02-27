@@ -1,5 +1,5 @@
-#ifndef COIN_SOPROTOINSTANCE_H
-#define COIN_SOPROTOINSTANCE_H
+#ifndef OBOL_SOPROTOINSTANCE_H
+#define OBOL_SOPROTOINSTANCE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -43,7 +43,7 @@
 class SoProto;
 class SoSensor;
 
-class COIN_DLL_API SoProtoInstance : public SoNode {
+class OBOL_DLL_API SoProtoInstance : public SoNode {
   typedef SoNode inherited;
 
   // The following definitions are used instead of SO_NODE_HEADER() to
@@ -84,4 +84,4 @@ private:
   class SoProtoInstanceP * pimpl;
 };
 
-#endif // !COIN_SOPROTOINSTANCE_H
+#endif // !OBOL_SOPROTOINSTANCE_H

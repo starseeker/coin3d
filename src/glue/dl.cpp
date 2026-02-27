@@ -145,10 +145,10 @@
 #include "glue/win32api.h"
 #endif /* HAVE_WIN32_API */
 
-#ifdef COIN_MACOS_10
+#ifdef OBOL_MACOS_10
 #include <CoreFoundation/CFBundle.h>
 #include <CoreFoundation/CFURL.h>
-#endif // COIN_MACOS_10
+#endif // OBOL_MACOS_10
 
 #include "errors/CoinInternalError.h"
 #include "CoinTidbits.h"
@@ -338,13 +338,13 @@ struct cc_libhandle_struct {
 
 /* ********************************************************************** */
 
-/* Return value of COIN_DEBUG_DL environment variable. */
+/* Return value of OBOL_DEBUG_DL environment variable. */
 static int
 cc_dl_debugging(void)
 {
   static int d = -1;
   if (d == -1) {
-    auto val = CoinInternal::getEnvironmentVariable("COIN_DEBUG_DL");
+    auto val = CoinInternal::getEnvironmentVariable("OBOL_DEBUG_DL");
     d = val.has_value() ? std::atoi(val->c_str()) : 0;
   }
   return (d > 0) ? 1 : 0;
@@ -420,10 +420,10 @@ cc_build_search_list(const char * libname)
 {
 /* We search for libraries in several locations:
 
-   for COIN_MACOS_10 && COIN_MACOSX_FRAMEWORK
+   for OBOL_MACOS_10 && OBOL_MACOSX_FRAMEWORK
    (1) Bundled with Coin framework
 
-   for COIN_MACOS_10
+   for OBOL_MACOS_10
    (2) Bundled on the application level, if application is bundled
        Application.app/Contents/MacOS/lib/
        Application.app/Contents/MacOS/
@@ -431,7 +431,7 @@ cc_build_search_list(const char * libname)
    for *
    (3) the default search paths for libraries
 
-   for COIN_MACOS_10
+   for OBOL_MACOS_10
    (4) We check if the library exists as a framework in
        /Library/Frameworks/$libname.framework/$libname.
        (This is actually quite an ugly hack, since frameworks
@@ -444,7 +444,7 @@ cc_build_search_list(const char * libname)
   int i, image_count = _dyld_image_count();
   std::string res_path, framework_path, dyld_path;
 
-#if defined(COIN_MACOS_10) && defined(COIN_MACOSX_FRAMEWORK)
+#if defined(OBOL_MACOS_10) && defined(OBOL_MACOSX_FRAMEWORK)
   /* (1) Bundled with Coin framework, inside Libraries/ */
   do {
     char buf[MAXPATHLEN];
@@ -452,7 +452,7 @@ cc_build_search_list(const char * libname)
 
     CFStringRef identifier =
       CFStringCreateWithCString(kCFAllocatorDefault,
-                                COIN_MAC_FRAMEWORK_IDENTIFIER_CSTRING,
+                                OBOL_MAC_FRAMEWORK_IDENTIFIER_CSTRING,
                                 kCFStringEncodingASCII);
     CFBundleRef coinbundle = CFBundleGetBundleWithIdentifier(identifier);
     CFRelease(identifier);
@@ -468,9 +468,9 @@ cc_build_search_list(const char * libname)
     strcat(buf, "/Libraries:");
     path->append(buf);
   } while (FALSE);
-#endif // COIN_MACOSX_FRAMEWORK
+#endif // OBOL_MACOSX_FRAMEWORK
 
-#ifdef COIN_MACOS_10
+#ifdef OBOL_MACOS_10
   /* (2) Bundled on the application level, if application is bundled */
   do {
     char buf[MAXPATHLEN];
@@ -487,7 +487,7 @@ cc_build_search_list(const char * libname)
     strcat(buf, "/Contents/MacOS:");
     path->append(buf);
   } while (FALSE);
-#endif // COIN_MACOS_10
+#endif // OBOL_MACOS_10
 
   /* (3) default library search path  */
   char * dyld_library_path = getenv("DYLD_LIBRARY_PATH"); 
@@ -508,7 +508,7 @@ cc_build_search_list(const char * libname)
   }
   path->append(dyld_path);
 
-#ifdef COIN_MACOS_10
+#ifdef OBOL_MACOS_10
   /* (4) Check if library exists as framework (as in OS Xs 'OpenAL') */
   if ((libname != NULL) &&
       (strstr(libname, ".dylib") == NULL) &&
@@ -519,7 +519,7 @@ cc_build_search_list(const char * libname)
     framework_path = framework_prefix + std::string(libname) + framework_ext + ":";
     path->append(framework_path);
   }
-#endif // COIN_MACOS_10
+#endif // OBOL_MACOS_10
 
   return path;
 }
@@ -965,14 +965,14 @@ cc_dl_process_handle(void)
 cc_libhandle
 cc_dl_coin_handle(void)
 {
-#ifndef COIN_SYSTEM_LIBRARY_NAME /* should usually be available in config.h */
-#define COIN_SYSTEM_LIBRARY_NAME "libCoin.so"
+#ifndef OBOL_SYSTEM_LIBRARY_NAME /* should usually be available in config.h */
+#define OBOL_SYSTEM_LIBRARY_NAME "libObol.so"
 #endif
 #ifndef DYNAMIC_LIBRARY_EXTENSION /* should usually be available in config.h */
 #define DYNAMIC_LIBRARY_EXTENSION ".so"
 #endif
 
-  cc_libhandle hnd = cc_dl_open(COIN_SYSTEM_LIBRARY_NAME);
+  cc_libhandle hnd = cc_dl_open(OBOL_SYSTEM_LIBRARY_NAME);
 
   if (hnd) {
     /* For comparing with the known value, to make sure we e.g. don't
@@ -1008,7 +1008,7 @@ cc_dl_coin_handle(void)
   else if (cc_dl_debugging()) {
     cc_debugerror_post("cc_dl_coin_handle",
                        "was not able to open Coin image as '%s'",
-                       COIN_SYSTEM_LIBRARY_NAME);
+                       OBOL_SYSTEM_LIBRARY_NAME);
   }
 
   /* In case of errors when checking if we got a valid image, make

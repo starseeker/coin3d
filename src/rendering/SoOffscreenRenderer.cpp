@@ -362,7 +362,10 @@ static void init_format_handlers(void) {
 
 // Note: Platform-specific resolution detection has been removed.
 // The system now uses a standard 72 DPI default, which is appropriate
-// for most offscreen rendering use cases.
+// for most offscreen rendering use cases.  Applications can override
+// this value via SoOffscreenRenderer::setScreenPixelsPerInch().
+
+static float s_screen_pixels_per_inch = 72.0f;
 
 // *************************************************************************
 
@@ -476,14 +479,14 @@ private:
 // Set the environment variable below to get the individual tiles
 // written out for debugging purposes. E.g.
 //
-//   $ export COIN_DEBUG_SOOFFSCREENRENDERER_TILEPREFIX="/tmp/offscreentile_"
+//   $ export OBOL_DEBUG_SOOFFSCREENRENDERER_TILEPREFIX="/tmp/offscreentile_"
 //
 // Tile X and Y position, plus the ".rgb" suffix, will be added when
 // writing.
 const char *
 SoOffscreenRendererP::debugTileOutputPrefix(void)
 {
-  return CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_SOOFFSCREENRENDERER_TILEPREFIX");
+  return CoinInternal::getEnvironmentVariableRaw("OBOL_DEBUG_SOOFFSCREENRENDERER_TILEPREFIX");
 }
 
 // *************************************************************************
@@ -518,22 +521,27 @@ SoOffscreenRenderer::~SoOffscreenRenderer()
 }
 
 /*!
-  Returns the screen pixels per inch resolution of your monitor.
+  Returns the screen pixels per inch resolution used for offscreen rendering.
+  The default value is 72 DPI.  Use setScreenPixelsPerInch() to change it.
 */
 float
 SoOffscreenRenderer::getScreenPixelsPerInch(void)
 {
-  // Use standard 72 DPI for offscreen rendering. This is appropriate
-  // for most use cases and eliminates platform-specific dependencies.
-  // Applications requiring specific DPI can scale their rendering accordingly.
-  SbVec2f pixmmres(72.0f / 25.4f, 72.0f / 25.4f);
+  return s_screen_pixels_per_inch;
+}
 
-  // The API-signature of this method is not what it should be: it
-  // assumes the same resolution in the vertical and horizontal
-  // directions.
-  float pixprmm = (pixmmres[0] + pixmmres[1]) / 2.0f; // find average
-
-  return pixprmm * 25.4f; // an inch is 25.4 mm.
+/*!
+  Sets the screen pixels per inch resolution used for offscreen rendering.
+  This affects PostScript output scaling and any other calculations that
+  depend on the assumed display DPI.  The value must be greater than zero.
+  The default is 72 DPI.
+*/
+void
+SoOffscreenRenderer::setScreenPixelsPerInch(float dpi)
+{
+  if (dpi > 0.0f) {
+    s_screen_pixels_per_inch = dpi;
+  }
 }
 
 /*!
@@ -988,7 +996,7 @@ SoOffscreenRendererP::renderFromBase(SoBase * base)
   // the reason noted below.)
   static int forcetiled = -1;
   if (forcetiled == -1) {
-    const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_FORCE_TILED_OFFSCREENRENDERING");
+    const char * env = CoinInternal::getEnvironmentVariableRaw("OBOL_FORCE_TILED_OFFSCREENRENDERING");
     forcetiled = (env && (atoi(env) > 0)) ? 1 : 0;
     if (forcetiled) {
       SoDebugError::postInfo("SoOffscreenRendererP::renderFromBase",
@@ -1788,7 +1796,7 @@ SoOffscreenRenderer::writeToFile(const SbString & filename, const SbName & filet
   \since Coin 3.1
 */
 void
-SoOffscreenRenderer::setPbufferEnable(SbBool COIN_UNUSED_ARG(enable))
+SoOffscreenRenderer::setPbufferEnable(SbBool OBOL_UNUSED_ARG(enable))
 {
   // FIXME: change the semantics of this function from just ignoring
   // the input argument, to using it for shutting off pbuffers if
@@ -2152,7 +2160,7 @@ SoOffscreenRendererP::offscreenContextsNotSupported(void)
   return FALSE;
 #elif defined(HAVE_WGL)
   return FALSE;
-#elif defined(COIN_MACOS_10)
+#elif defined(OBOL_MACOS_10)
   return FALSE;
 #elif defined(HAVE_OSMESA)
   // OSMesa provides offscreen rendering via software Mesa implementation

@@ -14,7 +14,7 @@
  *     top row, confirming that the gradient was actually applied.
  *
  * This test is backend-agnostic: it uses headless_utils.h so it works under
- * GLX/OSMesa (system GL) or, when compiled with COIN3D_NANORT_BUILD, the
+ * GLX/OSMesa (system GL) or, when compiled with OBOL_NANORT_BUILD, the
  * SoNanoRTContextManager raytracing path.
  */
 

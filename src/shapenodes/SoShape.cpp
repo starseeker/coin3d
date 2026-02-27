@@ -215,13 +215,13 @@ public:
   // -mortene.
   static SbMutex * mutex;
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   void lock(void) { SoShapeP::mutex->lock(); }
   void unlock(void) { SoShapeP::mutex->unlock(); }
-#else // ! COIN_THREADSAFE
+#else // ! OBOL_THREADSAFE
   void lock(void) { }
   void unlock(void) { }
-#endif // ! COIN_THREADSAFE
+#endif // ! OBOL_THREADSAFE
 
   static void cleanup(void);
 };
@@ -345,9 +345,9 @@ SoShape::initClass(void)
 {
   SO_NODE_INTERNAL_INIT_ABSTRACT_CLASS(SoShape, SO_FROM_INVENTOR_1);
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   SoShapeP::mutex = new SbMutex;
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 
   soshape_staticstorage =
     new SbStorage(sizeof(soshape_staticdata),
@@ -783,7 +783,7 @@ SoShape::shouldGLRender(SoGLRenderAction * action)
     return FALSE;
   }
 
-#if COIN_DEBUG && 0 // enable this to test generatePrimitives() rendering
+#if OBOL_DEBUG && 0 // enable this to test generatePrimitives() rendering
   SoMaterialBundle mb(action);
   mb.sendFirst();
   soshape_get_staticdata()->currentbundle = &mb;  // needed in the primitive callbacks
@@ -879,11 +879,11 @@ SoShape::computeObjectSpaceRay(SoRayPickAction * const action,
   SoShape::beginShape(), you'll have to override this method.
 */
 SoDetail *
-SoShape::createTriangleDetail(SoRayPickAction * COIN_UNUSED_ARG(action),
-                              const SoPrimitiveVertex * COIN_UNUSED_ARG(v1),
-                              const SoPrimitiveVertex * COIN_UNUSED_ARG(v2),
-                              const SoPrimitiveVertex * COIN_UNUSED_ARG(v3),
-                              SoPickedPoint * COIN_UNUSED_ARG(pp))
+SoShape::createTriangleDetail(SoRayPickAction * OBOL_UNUSED_ARG(action),
+                              const SoPrimitiveVertex * OBOL_UNUSED_ARG(v1),
+                              const SoPrimitiveVertex * OBOL_UNUSED_ARG(v2),
+                              const SoPrimitiveVertex * OBOL_UNUSED_ARG(v3),
+                              SoPickedPoint * OBOL_UNUSED_ARG(pp))
 {
   soshape_staticdata * shapedata = soshape_get_staticdata();
 
@@ -891,10 +891,10 @@ SoShape::createTriangleDetail(SoRayPickAction * COIN_UNUSED_ARG(action),
     return shapedata->primdata->createPickDetail();
   }
   // don't warn here. SoDetail instances are optional for extension nodes.
-#if COIN_DEBUG && 0
+#if OBOL_DEBUG && 0
   SoDebugError::postInfo("SoShape::createTriangleDetail",
                          "Unable to create triangle detail.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   return NULL;
 }
 
@@ -914,10 +914,10 @@ SoShape::createTriangleDetail(SoRayPickAction * COIN_UNUSED_ARG(action),
   SoShape::beginShape(), you'll have to override this method.
 */
 SoDetail *
-SoShape::createLineSegmentDetail(SoRayPickAction * COIN_UNUSED_ARG(action),
-                                 const SoPrimitiveVertex * COIN_UNUSED_ARG(v1),
-                                 const SoPrimitiveVertex * COIN_UNUSED_ARG(v2),
-                                 SoPickedPoint * COIN_UNUSED_ARG(pp))
+SoShape::createLineSegmentDetail(SoRayPickAction * OBOL_UNUSED_ARG(action),
+                                 const SoPrimitiveVertex * OBOL_UNUSED_ARG(v1),
+                                 const SoPrimitiveVertex * OBOL_UNUSED_ARG(v2),
+                                 SoPickedPoint * OBOL_UNUSED_ARG(pp))
 {
   soshape_staticdata * shapedata = soshape_get_staticdata();
 
@@ -925,10 +925,10 @@ SoShape::createLineSegmentDetail(SoRayPickAction * COIN_UNUSED_ARG(action),
     return shapedata->primdata->createPickDetail();
   }
   // don't warn here. SoDetail instances are optional for extension nodes.
-#if COIN_DEBUG && 0
+#if OBOL_DEBUG && 0
   SoDebugError::postInfo("SoShape::createLineSegmentDetail",
                          "Unable to create line segment detail.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   return NULL;
 }
 
@@ -1287,7 +1287,7 @@ SoShape::generateVertex(SoPrimitiveVertex * const pv,
   Convenience function which sets up an SoPrimitiveVertex, and sends
   it using the SoShape::shapeVertex() function. 3D version.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */
@@ -1334,9 +1334,9 @@ SoShape::getPrimitiveCount(SoGetPrimitiveCountAction * action)
   Inventor API.
  */
 float
-SoShape::getDecimatedComplexity(SoState * COIN_UNUSED_ARG(state), float complexity)
+SoShape::getDecimatedComplexity(SoState * OBOL_UNUSED_ARG(state), float complexity)
 {
-  COIN_OBSOLETED();
+  OBOL_OBSOLETED();
   return 1.0f * complexity;
 }
 
@@ -1370,7 +1370,7 @@ SoShape::GLRenderBoundingBox(SoGLRenderAction * action)
   \COININTERNAL
  */
 SbBool
-SoShape::shouldPrimitiveCount(SoGetPrimitiveCountAction * COIN_UNUSED_ARG(action))
+SoShape::shouldPrimitiveCount(SoGetPrimitiveCountAction * OBOL_UNUSED_ARG(action))
 {
   return TRUE; // FIXME: what to do here? pederb 1999-11-25
 }
@@ -1417,7 +1417,7 @@ SoShape::notify(SoNotList * nl)
   caller must check if the cache is valid before using it. This
   can be done using SoCache::isValid().
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */

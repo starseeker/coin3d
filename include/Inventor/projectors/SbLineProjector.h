@@ -1,5 +1,5 @@
-#ifndef COIN_SBLINEPROJECTOR_H
-#define COIN_SBLINEPROJECTOR_H
+#ifndef OBOL_SBLINEPROJECTOR_H
+#define OBOL_SBLINEPROJECTOR_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -38,7 +38,7 @@
 #include <Inventor/SbVec3f.h>
 #include <Inventor/SbLine.h>
 
-class COIN_DLL_API SbLineProjector : public SbProjector {
+class OBOL_DLL_API SbLineProjector : public SbProjector {
   typedef SbProjector inherited;
 
 public:
@@ -61,4 +61,4 @@ protected:
   SbVec3f lastPoint;
 };
 
-#endif // !COIN_SBLINEPROJECTOR_H
+#endif // !OBOL_SBLINEPROJECTOR_H

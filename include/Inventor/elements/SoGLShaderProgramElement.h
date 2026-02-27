@@ -1,5 +1,5 @@
-#ifndef  COIN_SOSHADERPROGRAMELEMENT_H
-#define  COIN_SOSHADERPROGRAMELEMENT_H
+#ifndef  OBOL_SOSHADERPROGRAMELEMENT_H
+#define  OBOL_SOSHADERPROGRAMELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -40,7 +40,7 @@ class SoGLShaderProgram;
 
 // *************************************************************************
 
-class COIN_DLL_API SoGLShaderProgramElement : public SoReplacedElement {
+class OBOL_DLL_API SoGLShaderProgramElement : public SoReplacedElement {
   typedef SoReplacedElement inherited;
   SO_ELEMENT_HEADER(SoGLShaderProgramElement);
 
@@ -68,4 +68,4 @@ private:
   SbBool enabled;
 };
 
-#endif /* ! COIN_SOSHADERPROGRAMELEMENT_H */
+#endif /* ! OBOL_SOSHADERPROGRAMELEMENT_H */

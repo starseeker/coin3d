@@ -105,14 +105,14 @@ SbLine::setValue(const SbVec3f& origin, const SbVec3f& point)
   this->pos = origin;
   this->dir = point - origin;
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if(origin == point) {
     SoDebugError::postWarning("SbLine::setValue",
                               "The two points defining the line is "
                               "equal => line is invalid.");
     return;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   // we test for a null vector above, just normalize
   (void) this->dir.normalize();
@@ -208,14 +208,14 @@ SbLine::getClosestPoints(const SbLine& line2,
   return TRUE;
 #else // old version
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if(this->getDirection().length() == 0.0)
     SoDebugError::postWarning("SbLine::getClosestPoints",
                               "This line has no direction (zero vector).");
   if(line2.getDirection().length() == 0.0)
     SoDebugError::postWarning("SbLine::getClosestPoints",
                               "argument line has no direction (zero vector).");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   // Check if the lines are parallel.
   // FIXME: should probably use equals() here.
@@ -411,10 +411,10 @@ SbLine::getDirection(void) const
 void
 SbLine::print(FILE * fp) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   fprintf( fp, "p: " );
   this->getPosition().print(fp);
   fprintf( fp, "d: " );
   this->getDirection().print(fp);
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }

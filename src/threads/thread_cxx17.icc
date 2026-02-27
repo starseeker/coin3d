@@ -63,7 +63,7 @@ internal_init(cc_thread * thread)
     return CC_OK;
   }
   catch (const std::exception& e) {
-    if (COIN_DEBUG)
+    if (OBOL_DEBUG)
       cc_debugerror_post("internal_init", "std::thread creation error: %s\n", e.what());
     return CC_ERROR;
   }
@@ -87,7 +87,7 @@ internal_clean(cc_thread * thread)
     return CC_OK;
   }
   catch (const std::exception& e) {
-    if (COIN_DEBUG)
+    if (OBOL_DEBUG)
       cc_debugerror_post("internal_clean", "std::thread cleanup error: %s\n", e.what());
     return CC_ERROR;
   }
@@ -98,7 +98,7 @@ internal_join(cc_thread * thread, void ** retvalptr)
 {
   try {
     if (!thread->cxx17.thread_ptr) {
-      if (COIN_DEBUG)
+      if (OBOL_DEBUG)
         cc_debugerror_post("internal_join", "thread pointer is null\n");
       return CC_ERROR;
     }
@@ -106,7 +106,7 @@ internal_join(cc_thread * thread, void ** retvalptr)
     std::thread* std_thread = static_cast<std::thread*>(thread->cxx17.thread_ptr);
     
     if (!std_thread->joinable()) {
-      if (COIN_DEBUG)
+      if (OBOL_DEBUG)
         cc_debugerror_post("internal_join", "thread is not joinable\n");
       return CC_ERROR;
     }
@@ -124,7 +124,7 @@ internal_join(cc_thread * thread, void ** retvalptr)
     return CC_OK;
   }
   catch (const std::exception& e) {
-    if (COIN_DEBUG)
+    if (OBOL_DEBUG)
       cc_debugerror_post("internal_join", "std::thread join error: %s\n", e.what());
     return CC_ERROR;
   }

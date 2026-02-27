@@ -1,5 +1,5 @@
-#ifndef COIN_SONORMALGENERATOR_H
-#define COIN_SONORMALGENERATOR_H
+#ifndef OBOL_SONORMALGENERATOR_H
+#define OBOL_SONORMALGENERATOR_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -38,7 +38,7 @@
 #include <Inventor/lists/SbList.h>
 #include <cstdint>
 
-class COIN_DLL_API SoNormalGenerator {
+class OBOL_DLL_API SoNormalGenerator {
 public:
   SoNormalGenerator(const SbBool ccw, const int approxVertices = 64);
   ~SoNormalGenerator();
@@ -87,4 +87,4 @@ private:
   SbVec3f calcFaceNormal();
 };
 
-#endif // !COIN_SONORMALGENERATOR_H
+#endif // !OBOL_SONORMALGENERATOR_H

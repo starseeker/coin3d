@@ -1,5 +1,5 @@
-#ifndef COIN_SODATASENSOR_H
-#define COIN_SODATASENSOR_H
+#ifndef OBOL_SODATASENSOR_H
+#define OBOL_SODATASENSOR_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -42,7 +42,7 @@ class SoField;
 class SoPath;
 class SoNotList;
 
-class COIN_DLL_API SoDataSensor : public SoDelayQueueSensor {
+class OBOL_DLL_API SoDataSensor : public SoDelayQueueSensor {
   typedef SoDelayQueueSensor inherited;
 
 public:
@@ -82,4 +82,4 @@ private:
   SoNode * triggergroupprevchild;
 };
 
-#endif // !COIN_SODATASENSOR_H
+#endif // !OBOL_SODATASENSOR_H

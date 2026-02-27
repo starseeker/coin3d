@@ -1,5 +1,5 @@
-#ifndef COIN_SOSCENETEXTURE2_H
-#define COIN_SOSCENETEXTURE2_H
+#ifndef OBOL_SOSCENETEXTURE2_H
+#define OBOL_SOSCENETEXTURE2_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -44,7 +44,7 @@
 
 class SoSceneTexture2P;
 
-class COIN_DLL_API SoSceneTexture2 : public SoNode {
+class OBOL_DLL_API SoSceneTexture2 : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_HEADER(SoSceneTexture2);
@@ -126,4 +126,4 @@ private:
   SoSceneTexture2P * pimpl;
 };
 
-#endif // !COIN_SOSCENETEXTURE2_H
+#endif // !OBOL_SOSCENETEXTURE2_H

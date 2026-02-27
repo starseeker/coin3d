@@ -30,8 +30,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_SOENGINEOUTPUT_H
-#define COIN_SOENGINEOUTPUT_H
+#ifndef OBOL_SOENGINEOUTPUT_H
+#define OBOL_SOENGINEOUTPUT_H
 
 #include <Inventor/SoType.h>
 #include <Inventor/lists/SoFieldList.h>
@@ -42,7 +42,7 @@ class SoFieldContainer;
 class SoEngine;
 class SoNodeEngine;
 
-class COIN_DLL_API SoEngineOutput {
+class OBOL_DLL_API SoEngineOutput {
 public:
   SoEngineOutput(void);
   virtual ~SoEngineOutput(void);
@@ -76,4 +76,4 @@ private:
   SbList<SbBool> fieldnotiflist;
 };
 
-#endif // !COIN_SOENGINEOUTPUT_H
+#endif // !OBOL_SOENGINEOUTPUT_H

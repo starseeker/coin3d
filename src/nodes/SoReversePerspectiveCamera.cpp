@@ -118,5 +118,5 @@ SoReversePerspectiveCamera::~SoReversePerspectiveCamera()
 void
 SoReversePerspectiveCamera::initClass(void)
 {
-  SO_NODE_INTERNAL_INIT_CLASS(SoReversePerspectiveCamera, SO_FROM_COIN_4_0|SoNode::COIN_4_0);
+  SO_NODE_INTERNAL_INIT_CLASS(SoReversePerspectiveCamera, SO_FROM_OBOL_4_0|SoNode::OBOL_4_0);
 }

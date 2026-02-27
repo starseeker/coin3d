@@ -1,5 +1,5 @@
-#ifndef COIN_SOENVIRONMENTELEMENT_H
-#define COIN_SOENVIRONMENTELEMENT_H
+#ifndef OBOL_SOENVIRONMENTELEMENT_H
+#define OBOL_SOENVIRONMENTELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -36,7 +36,7 @@
 #include <Inventor/elements/SoReplacedElement.h>
 #include <Inventor/SbColor.h>
 
-class COIN_DLL_API SoEnvironmentElement : public SoReplacedElement {
+class OBOL_DLL_API SoEnvironmentElement : public SoReplacedElement {
   typedef SoReplacedElement inherited;
 
   SO_ELEMENT_HEADER(SoEnvironmentElement);
@@ -101,4 +101,4 @@ protected:
   float fogStart;
 };
 
-#endif // !COIN_SOENVIRONMENTELEMENT_H
+#endif // !OBOL_SOENVIRONMENTELEMENT_H

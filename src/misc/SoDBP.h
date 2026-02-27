@@ -1,5 +1,5 @@
-#ifndef COIN_SODBP_H
-#define COIN_SODBP_H
+#ifndef OBOL_SODBP_H
+#define OBOL_SODBP_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,9 +35,9 @@
 
 #include "config.h"
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #error this is a private header file
-#endif /* !COIN_INTERNAL */
+#endif /* !OBOL_INTERNAL */
 
 #include <Inventor/SoDB.h>
 #include <Inventor/SbString.h>
@@ -71,8 +71,8 @@ typedef SbHash<uint32_t, int16_t> UInt32ToInt16Map;
 class SoDBP {
 public:
   struct EnvVars {
-    static const char * COIN_PROFILER;
-    static const char * COIN_PROFILER_OVERLAY;
+    static const char * OBOL_PROFILER;
+    static const char * OBOL_PROFILER_OVERLAY;
   };
 
   static void clean(void);
@@ -80,9 +80,9 @@ public:
   static void updateRealTimeFieldCB(void * data, SoSensor * sensor);
   static void listWin32ProcessModules(void);
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   static SbRWMutex * globalmutex;
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
   static SbList<SoDB_HeaderInfo *> * headerlist;
   static SoSensorManager * sensormanager;
   static SoTimerSensor * globaltimersensor;
@@ -108,4 +108,4 @@ public:
   static SbList<struct ProgressCallbackInfo> * progresscblist;
 };
 
-#endif // !COIN_SODBP_H
+#endif // !OBOL_SODBP_H

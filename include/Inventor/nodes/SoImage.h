@@ -1,5 +1,5 @@
-#ifndef COIN_SOIMAGE_H
-#define COIN_SOIMAGE_H
+#ifndef OBOL_SOIMAGE_H
+#define OBOL_SOIMAGE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -44,7 +44,7 @@ class SoSensor;
 class SoFieldSensor;
 class SbImage;
 
-class COIN_DLL_API SoImage : public SoShape {
+class OBOL_DLL_API SoImage : public SoShape {
   typedef SoShape inherited;
 
   SO_NODE_HEADER(SoImage);
@@ -105,4 +105,4 @@ private:
   static void filenameSensorCB(void *, SoSensor *);
 };
 
-#endif // !COIN_SOIMAGE_H
+#endif // !OBOL_SOIMAGE_H

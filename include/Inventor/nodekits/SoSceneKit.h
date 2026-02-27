@@ -1,5 +1,5 @@
-#ifndef COIN_SOSCENEKIT_H
-#define COIN_SOSCENEKIT_H
+#ifndef OBOL_SOSCENEKIT_H
+#define OBOL_SOSCENEKIT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -36,7 +36,7 @@
 #include <Inventor/nodekits/SoSubKit.h>
 #include <Inventor/nodekits/SoBaseKit.h>
 
-class COIN_DLL_API SoSceneKit : public SoBaseKit {
+class OBOL_DLL_API SoSceneKit : public SoBaseKit {
   typedef SoBaseKit inherited;
 
   SO_KIT_HEADER(SoSceneKit);
@@ -58,4 +58,4 @@ protected:
   virtual ~SoSceneKit();
 };
 
-#endif // !COIN_SOSCENEKIT_H
+#endif // !OBOL_SOSCENEKIT_H

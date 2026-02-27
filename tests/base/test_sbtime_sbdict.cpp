@@ -45,7 +45,7 @@
  *   applyToAll(with data), makePList(), copy constructor, operator=
  */
 
-#define COIN_ALLOW_SBDICT
+#define OBOL_ALLOW_SBDICT
 #include "../test_utils.h"
 
 #include <Inventor/SbTime.h>

@@ -1,12 +1,12 @@
 /* src/config.h.  Generated from config.h.cmake.in by CMake. */
 
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #error this is a private header file
 #endif
 
-#ifndef COIN_CONFIG_H
-#define COIN_CONFIG_H
+#ifndef OBOL_CONFIG_H
+#define OBOL_CONFIG_H
 
 // Backend toggle for OSMesa
 #cmakedefine HAVE_OSMESA
@@ -20,34 +20,34 @@
 #cmakedefine HAVE_DRAGGERS
 #cmakedefine HAVE_MANIPULATORS
 #cmakedefine HAVE_SOUND
-#cmakedefine COIN_THREADSAFE
+#cmakedefine OBOL_THREADSAFE
 #cmakedefine HAVE_3DS_IMPORT_CAPABILITIES
-#cmakedefine COIN_HAVE_JAVASCRIPT
+#cmakedefine OBOL_HAVE_JAVASCRIPT
 
 /* =========================================================================
  * Auto-detected platform / compiler settings
  * ========================================================================= */
 
-/* define this to the libCoin beta version letter */
-#define COIN_BETA_VERSION @COIN_BETA_VERSION@
+/* define this to the libObol beta version letter */
+#define OBOL_BETA_VERSION @OBOL_BETA_VERSION@
 
-/* define this to the libCoin major version number */
-#define COIN_MAJOR_VERSION @COIN_MAJOR_VERSION@
+/* define this to the libObol major version number */
+#define OBOL_MAJOR_VERSION @OBOL_MAJOR_VERSION@
 
-/* define this to the libCoin release version number */
-#define COIN_MICRO_VERSION @COIN_MICRO_VERSION@
+/* define this to the libObol release version number */
+#define OBOL_MICRO_VERSION @OBOL_MICRO_VERSION@
 
-/* define this to the libCoin minor version number */
-#define COIN_MINOR_VERSION @COIN_MINOR_VERSION@
+/* define this to the libObol minor version number */
+#define OBOL_MINOR_VERSION @OBOL_MINOR_VERSION@
 
-/* define this to the full libCoin major.minor.micro version number */
-#define COIN_VERSION "@COIN_VERSION@"
+/* define this to the full libObol major.minor.micro version number */
+#define OBOL_VERSION "@OBOL_VERSION@"
 
-/* define this to the dynamic library name of Coin */
+/* define this to the dynamic library name of Obol */
 #ifdef _DEBUG
-#define COIN_SYSTEM_LIBRARY_NAME "@COIN_DEBUG_SYSTEM_LIBRARY_NAME@"
+#define OBOL_SYSTEM_LIBRARY_NAME "@OBOL_DEBUG_SYSTEM_LIBRARY_NAME@"
 #else
-#define COIN_SYSTEM_LIBRARY_NAME "@COIN_RELEASE_SYSTEM_LIBRARY_NAME@"
+#define OBOL_SYSTEM_LIBRARY_NAME "@OBOL_RELEASE_SYSTEM_LIBRARY_NAME@"
 #endif
 
 /* The CPP compiler has a variable containing the current function name */
@@ -81,10 +81,10 @@
 #cmakedefine HAVE_OPENGL_CGLCURRENT_H 1
 
 /* Define for Mac OS X builds */
-#cmakedefine COIN_MACOS_10
+#cmakedefine OBOL_MACOS_10
 
 /* Define when building Mac OS X framework */
-#cmakedefine COIN_MACOSX_FRAMEWORK
+#cmakedefine OBOL_MACOSX_FRAMEWORK
 
 /* Define to 1 if you have the <direct.h> header file. */
 #cmakedefine HAVE_DIRECT_H 1
@@ -176,14 +176,14 @@
 /* Define if compiler has __builtin_expect() macro */
 #cmakedefine HAVE___BUILTIN_EXPECT
 
-/* Define to make Coin use/catch exceptions at some particular places. */
+/* Define to make Obol use/catch exceptions at some particular places. */
 #cmakedefine USE_EXCEPTIONS 1
 
-/* define Coin DATADIR for resource access */
-#define COIN_DATADIR    "@CMAKE_INSTALL_DATADIR@"
+/* define Obol DATADIR for resource access */
+#define OBOL_DATADIR    "@CMAKE_INSTALL_DATADIR@"
 
-/* Enable thread check in several central Coin functions. */
-#cmakedefine COIN_DEBUG_CHECK_THREAD
+/* Enable thread check in several central Obol functions. */
+#cmakedefine OBOL_DEBUG_CHECK_THREAD
 
 /* =========================================================================
  * Definitions merged from coindefs.h
@@ -193,103 +193,103 @@
 #include "Inventor/basic.h"
 
 #ifdef __FILE__
-#define COIN_STUB_FILE __FILE__
+#define OBOL_STUB_FILE __FILE__
 #else
-#define COIN_STUB_FILE ((const char *)0L)
+#define OBOL_STUB_FILE ((const char *)0L)
 #endif
 
 #ifdef __LINE__
-#define COIN_STUB_LINE __LINE__
+#define OBOL_STUB_LINE __LINE__
 #else
-#define COIN_STUB_LINE 0
+#define OBOL_STUB_LINE 0
 #endif
 
 #ifdef __cplusplus
 #ifdef HAVE_CPP_COMPILER_FUNCTION_NAME_VAR
-#define COIN_STUB_FUNC HAVE_CPP_COMPILER_FUNCTION_NAME_VAR
-#define COIN_STUB_FUNC_STRING  COIN_STUB_FUNC
+#define OBOL_STUB_FUNC HAVE_CPP_COMPILER_FUNCTION_NAME_VAR
+#define OBOL_STUB_FUNC_STRING  OBOL_STUB_FUNC
 #else
-#define COIN_STUB_FUNC ((const char *)0L)
-#define COIN_STUB_FUNC_STRING  "<>"
+#define OBOL_STUB_FUNC ((const char *)0L)
+#define OBOL_STUB_FUNC_STRING  "<>"
 #endif
 #else /* !__cplusplus */
 #ifdef HAVE_C_COMPILER_FUNCTION_NAME_VAR
-#define COIN_STUB_FUNC HAVE_C_COMPILER_FUNCTION_NAME_VAR
+#define OBOL_STUB_FUNC HAVE_C_COMPILER_FUNCTION_NAME_VAR
 #else
-#define COIN_STUB_FUNC ((const char *)0L)
+#define OBOL_STUB_FUNC ((const char *)0L)
 #endif
 #endif /* !__cplusplus */
 
 
 /*
-  COIN_STUB(): this is the method which prints out stub
+  OBOL_STUB(): this is the method which prints out stub
   information. Used where there is functionality missing.
 
-  COIN_OBSOLETED: this is the method which prints out obsoleted
+  OBOL_OBSOLETED: this is the method which prints out obsoleted
   information. Used where there is an obsoleted or unsupported
   function. Typically a function that we feel should have been private
   in Open Inventor.
 */
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 
 #include <Inventor/errors/SoDebugError.h>
 
-#define COIN_STUB() \
+#define OBOL_STUB() \
   do { \
     SbString s; \
     s.sprintf("%s:%u:%s", \
-              COIN_STUB_FILE ? COIN_STUB_FILE : "<>", \
-              COIN_STUB_LINE, \
-              COIN_STUB_FUNC_STRING); \
+              OBOL_STUB_FILE ? OBOL_STUB_FILE : "<>", \
+              OBOL_STUB_LINE, \
+              OBOL_STUB_FUNC_STRING); \
     SoDebugError::postWarning(s.getString(), \
                               "STUB: functionality not yet completed"); \
   } while (0)
 
-#define COIN_STUB_ONCE() \
+#define OBOL_STUB_ONCE() \
   do { \
     static int first = 1; \
     if (first) { \
       SbString s; \
       s.sprintf("%s:%u:%s", \
-                COIN_STUB_FILE ? COIN_STUB_FILE : "<>", \
-                COIN_STUB_LINE, \
-                COIN_STUB_FUNC_STRING); \
+                OBOL_STUB_FILE ? OBOL_STUB_FILE : "<>", \
+                OBOL_STUB_LINE, \
+                OBOL_STUB_FUNC_STRING); \
       SoDebugError::postWarning(s.getString(), \
                                 "STUB: functionality not yet completed"); \
       first = 0; \
     } \
   } while (0)
 
-#define COIN_OBSOLETED() \
+#define OBOL_OBSOLETED() \
   do { \
     SbString s; \
     s.sprintf("%s:%u:%s", \
-              COIN_STUB_FILE ? COIN_STUB_FILE : "<>", \
-              COIN_STUB_LINE, \
-              COIN_STUB_FUNC_STRING); \
+              OBOL_STUB_FILE ? OBOL_STUB_FILE : "<>", \
+              OBOL_STUB_LINE, \
+              OBOL_STUB_FUNC_STRING); \
     SoDebugError::post(s.getString(), \
                        "OBSOLETED: functionality not supported (any more)"); \
   } while (0)
 
-#else /* !COIN_DEBUG */
+#else /* !OBOL_DEBUG */
 
-#define COIN_STUB()       do { } while (0)
-#define COIN_OBSOLETED()  do { } while (0)
-#define COIN_STUB_ONCE()  do { } while (0)
+#define OBOL_STUB()       do { } while (0)
+#define OBOL_OBSOLETED()  do { } while (0)
+#define OBOL_STUB_ONCE()  do { } while (0)
 
-#endif /* !COIN_DEBUG */
+#endif /* !OBOL_DEBUG */
 
 #ifdef __GNUC__
-#define COIN_UNUSED_ARG(x) x __attribute__((__unused__))
+#define OBOL_UNUSED_ARG(x) x __attribute__((__unused__))
 #else
-#define COIN_UNUSED_ARG(x) x
+#define OBOL_UNUSED_ARG(x) x
 #endif
 
 
 /* COMPILE_ONLY_BEFORE() - C++17 static_assert-based compile-time version guard */
 #define COMPILE_ONLY_BEFORE(MAJOR,MINOR,MICRO,REASON) \
-  static_assert( (COIN_MAJOR_VERSION < MAJOR) || (COIN_MAJOR_VERSION == MAJOR && ((COIN_MINOR_VERSION < MINOR) || (COIN_MINOR_VERSION == MINOR && (COIN_MICRO_VERSION < MICRO)))), REASON )
+  static_assert( (OBOL_MAJOR_VERSION < MAJOR) || (OBOL_MAJOR_VERSION == MAJOR && ((OBOL_MINOR_VERSION < MINOR) || (OBOL_MINOR_VERSION == MINOR && (OBOL_MICRO_VERSION < MICRO)))), REASON )
 
 #define COMPILE_ONLY_BEFORE_NOFUNCTION(MAJOR,MINOR,MICRO,REASON) \
   COMPILE_ONLY_BEFORE(MAJOR,MINOR,MICRO,REASON)
@@ -320,7 +320,7 @@
 #endif /* !unlikely */
 #endif /* !HAVE___BUILTIN_EXPECT */
 
-#ifdef COIN_DEBUG_CHECK_THREAD
+#ifdef OBOL_DEBUG_CHECK_THREAD
 
 #include <thread>
 
@@ -330,27 +330,27 @@ inline std::thread::id& coin_get_thread()
   return tid;
 }
 
-#define COIN_INIT_CHECK_THREAD() \
+#define OBOL_INIT_CHECK_THREAD() \
   do { \
     coin_get_thread() = std::this_thread::get_id(); \
   } while (0)
 
-#define COIN_CHECK_THREAD() \
+#define OBOL_CHECK_THREAD() \
   do { \
     if (coin_get_thread() != std::this_thread::get_id()) { \
       SbString s; \
       s.sprintf("%s:%u:%s", \
-                COIN_STUB_FILE ? COIN_STUB_FILE : "<>", \
-                COIN_STUB_LINE, \
-                COIN_STUB_FUNC_STRING); \
+                OBOL_STUB_FILE ? OBOL_STUB_FILE : "<>", \
+                OBOL_STUB_LINE, \
+                OBOL_STUB_FUNC_STRING); \
       SoDebugError::post(s.getString(), \
                          "Inventor access from wrong thread."); \
     } \
   } while (0)
 
-#else /* COIN_DEBUG_CHECK_THREAD */
-#define COIN_INIT_CHECK_THREAD() do { } while (0)
-#define COIN_CHECK_THREAD()      do { } while (0)
-#endif /* COIN_DEBUG_CHECK_THREAD */
+#else /* OBOL_DEBUG_CHECK_THREAD */
+#define OBOL_INIT_CHECK_THREAD() do { } while (0)
+#define OBOL_CHECK_THREAD()      do { } while (0)
+#endif /* OBOL_DEBUG_CHECK_THREAD */
 
-#endif /* COIN_CONFIG_H */
+#endif /* OBOL_CONFIG_H */

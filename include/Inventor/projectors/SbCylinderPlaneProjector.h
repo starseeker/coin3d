@@ -1,5 +1,5 @@
-#ifndef COIN_SBCYLINDERPLANEPROJECTOR_H
-#define COIN_SBCYLINDERPLANEPROJECTOR_H
+#ifndef OBOL_SBCYLINDERPLANEPROJECTOR_H
+#define OBOL_SBCYLINDERPLANEPROJECTOR_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/projectors/SbCylinderSectionProjector.h>
 
-class COIN_DLL_API SbCylinderPlaneProjector : public SbCylinderSectionProjector {
+class OBOL_DLL_API SbCylinderPlaneProjector : public SbCylinderSectionProjector {
   typedef SbCylinderSectionProjector inherited;
 
 public:
@@ -55,4 +55,4 @@ protected:
                          const SbVec3f & point2, const SbBool tol2);
 };
 
-#endif // !COIN_SBCYLINDERPLANEPROJECTOR_H
+#endif // !OBOL_SBCYLINDERPLANEPROJECTOR_H

@@ -72,7 +72,7 @@
 #include <Inventor/errors/SoDebugError.h>
 
 #include "nodes/SoSubNodeP.h"
-#include "config.h" // COIN_OBSOLETED()
+#include "config.h" // OBOL_OBSOLETED()
 #include "io/SoWriterefCounter.h"
 
 // *************************************************************************
@@ -290,7 +290,7 @@ SoSwitch::doAction(SoAction * action)
       else { // off, below or no path traversal
         // be robust for index out of range
         if (idx >= this->getNumChildren()) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
           static SbBool first = TRUE;
           if (first) {
             first = FALSE;
@@ -308,7 +308,7 @@ SoSwitch::doAction(SoAction * action)
                                  idx, s.getString());
             }
           }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
         }
         else {
           this->children->traverse(action, idx);
@@ -416,9 +416,9 @@ SoSwitch::getPrimitiveCount(SoGetPrimitiveCountAction *action)
   private in Inventor.
 */
 void
-SoSwitch::traverseChildren(SoAction * COIN_UNUSED_ARG(action))
+SoSwitch::traverseChildren(SoAction * OBOL_UNUSED_ARG(action))
 {
-  COIN_OBSOLETED();
+  OBOL_OBSOLETED();
 }
 
 // Doc from superclass.

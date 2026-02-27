@@ -1,5 +1,5 @@
-#ifndef COIN_UTILITIES_H
-#define COIN_UTILITIES_H
+#ifndef OBOL_UTILITIES_H
+#define OBOL_UTILITIES_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -314,4 +314,4 @@ inline bool isNaN(double value) noexcept {
 
 } // namespace CoinInternal
 
-#endif // COIN_UTILITIES_H
+#endif // OBOL_UTILITIES_H

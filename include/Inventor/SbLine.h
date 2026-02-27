@@ -30,15 +30,15 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_SBLINE_H
-#define COIN_SBLINE_H
+#ifndef OBOL_SBLINE_H
+#define OBOL_SBLINE_H
 
 #include <cstdio>
 
 #include <Inventor/SbBasic.h>
 #include <Inventor/SbVec3f.h>
 
-class COIN_DLL_API SbLine {
+class OBOL_DLL_API SbLine {
 public:
   SbLine(void);
   SbLine(const SbVec3f & origin, const SbVec3f & point);
@@ -56,4 +56,4 @@ private:
   SbVec3f pos, dir;
 };
 
-#endif // !COIN_SBLINE_H
+#endif // !OBOL_SBLINE_H

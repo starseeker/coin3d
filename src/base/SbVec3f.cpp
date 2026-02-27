@@ -57,9 +57,9 @@
 
 #include <Inventor/fields/SoSFVec3f.h>
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 #include "CoinTidbits.h" // coin_debug_normalize()
 #include "coinString.h"
@@ -128,14 +128,14 @@ SbVec3f::SbVec3f(const SbPlane & p0, const SbPlane & p1, const SbPlane & p2)
   SbVec3f n1 = p1.getNormal();
   SbVec3f n2 = p2.getNormal();
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (!((fabs(n0.dot(n1)) != 1.0f) &&
        (fabs(n0.dot(n2)) != 1.0f) &&
        (fabs(n1.dot(n2)) != 1.0f)))
     SoDebugError::postWarning("SbVec3f::SbVec3f",
                               "Two or more of the given planes are parallel"
                               " => Can't create intersection point.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   // The equation for a point in a plane can be:
   //
@@ -241,11 +241,11 @@ SbVec3f::cross(const SbVec3f & v) const
 SbBool
 SbVec3f::equals(const SbVec3f & v, float tolerance) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (!(tolerance >= 0.0f))
     SoDebugError::postWarning("SbVec3f::equals",
                               "Tolerance should be >= 0.0f");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   float xdist = this->vec[0] - v[0];
   float ydist = this->vec[1] - v[1];
@@ -316,7 +316,7 @@ SbVec3f::length(void) const
 
   If the vector is the null vector, no attempt at normalization will
   be done. If the Coin library was built in a debug version, and
-  the COIN_DEBUG_NORMALIZE environment variable is set, this error
+  the OBOL_DEBUG_NORMALIZE environment variable is set, this error
   message will then be shown:
 
   \verbatim
@@ -332,7 +332,7 @@ SbVec3f::length(void) const
   invalid polygon specifications).
 
   If you run into bugs/problems with your application or with Coin, it could be a
-  good idea to set COIN_DEBUG_NORMALIZE=1, and then restart the
+  good idea to set OBOL_DEBUG_NORMALIZE=1, and then restart the
   application to see if you get any warnings from normalize().
 
   If this happens, you should run the application in a debugger and see
@@ -341,7 +341,7 @@ SbVec3f::length(void) const
   debugging environment variable which will make the code assert:
 
   \verbatim
-    COIN_DEBUG_BREAK="SbVec3f::normalize"
+    OBOL_DEBUG_BREAK="SbVec3f::normalize"
   \endverbatim
 
   If you from the backtrace analysis strongly suspects an internal Coin
@@ -368,13 +368,13 @@ SbVec3f::normalize(void)
   if (len > 0.0f) {
     operator/=(len);
   }
-#if COIN_DEBUG
+#if OBOL_DEBUG
   else if (coin_debug_normalize()) {
     SoDebugError::postWarning("SbVec3f::normalize",
                               "The length of the vector should be > 0.0f "
                               "to be able to normalize.");
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   return len;
 }
@@ -424,7 +424,7 @@ SbVec3f::setValue(const SbVec3f & barycentric,
 SbVec3f &
 SbVec3f::setValue(const SbVec3d & v)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (v[0] > std::numeric_limits<float>::max() || v[0] < -std::numeric_limits<float>::max() ||
       v[1] > std::numeric_limits<float>::max() || v[1] < -std::numeric_limits<float>::max() ||
       v[2] > std::numeric_limits<float>::max() || v[2] < -std::numeric_limits<float>::max()) {
@@ -432,7 +432,7 @@ SbVec3f::setValue(const SbVec3d & v)
                               "The double precision vector will not fit into a "
                               "single precision vector.");
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   vec[0] = static_cast<float>(v[0]);
   vec[1] = static_cast<float>(v[1]);
@@ -618,8 +618,8 @@ SbVec3f::fromString(const SbString & str)
 void
 SbVec3f::print(FILE * fp) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   fputs(this->toString().getString(),fp);
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }
 

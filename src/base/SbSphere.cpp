@@ -45,9 +45,9 @@
 #include <Inventor/SbSphere.h>
 #include <Inventor/SbBox3f.h>
 #include <Inventor/SbLine.h>
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 /*!
   The default constructor does nothing. The center point and the radius
@@ -62,11 +62,11 @@ SbSphere::SbSphere(void)
  */
 SbSphere::SbSphere(const SbVec3f &centerarg, const float radiusarg)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (radiusarg<0.0f)
     SoDebugError::postWarning("SbSphere::SbSphere",
                               "Radius should be >= 0.0f.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   this->setValue(centerarg, radiusarg);
 }
@@ -79,11 +79,11 @@ SbSphere::SbSphere(const SbVec3f &centerarg, const float radiusarg)
 void
 SbSphere::setValue(const SbVec3f &centerarg, const float radiusarg)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (radiusarg<0.0f)
     SoDebugError::postWarning("SbSphere::setValue",
                               "Radius should be >= 0.0f.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   this->setCenter(centerarg);
   this->setRadius(radiusarg);
 }
@@ -107,11 +107,11 @@ SbSphere::setCenter(const SbVec3f &centerarg)
 void
 SbSphere::setRadius(const float radiusarg)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (radiusarg<0.0f)
     SoDebugError::postWarning("SbSphere::setRadius",
                               "Radius should be >= 0.0f.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   this->radius = radiusarg;
 }
 
@@ -145,13 +145,13 @@ SbSphere::getRadius(void) const
 void
 SbSphere::circumscribe(const SbBox3f &box)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (box.isEmpty()) {
     SoDebugError::postWarning("SbSphere::circumscribe",
                               "The box is empty.");
     return;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   this->setCenter(box.getCenter());
 
@@ -185,11 +185,11 @@ SbSphere::intersect(const SbLine &l, SbVec3f &intersection) const
 SbBool
 SbSphere::intersect(const SbLine &l, SbVec3f &enter, SbVec3f &exit) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (!(l.getDirection().length()>0.0f))
     SoDebugError::postWarning("SbSphere::intersect",
                               "The line 'l' has no direction.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   // Compute point on the line that is closest to the sphere center.
   SbVec3f closestpt = l.getClosestPoint(this->getCenter());
@@ -229,9 +229,9 @@ SbSphere::pointInside(const SbVec3f &p) const
 void
 SbSphere::print(FILE * fp) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   fprintf( fp, "center: " );
   this->getCenter().print(fp);
   fprintf( fp, "  radius: %f ", this->getRadius() );
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }

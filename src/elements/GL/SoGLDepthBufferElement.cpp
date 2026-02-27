@@ -35,7 +35,7 @@
   \brief The SoGLDepthBufferElement controls the OpenGL depth buffer.
 
   \ingroup coin_elements
-  \COIN_CLASS_EXTENSION
+  \OBOL_CLASS_EXTENSION
   \since Coin 3.0
 */
 #include <Inventor/elements/SoGLDepthBufferElement.h>
@@ -89,7 +89,7 @@ SoGLDepthBufferElement::push(SoState * state)
   Internal Coin method.
 */
 void
-SoGLDepthBufferElement::pop(SoState * COIN_UNUSED_ARG(state),
+SoGLDepthBufferElement::pop(SoState * OBOL_UNUSED_ARG(state),
                             const SoElement * prevTopElement)
 {
   const SoGLDepthBufferElement * prev =

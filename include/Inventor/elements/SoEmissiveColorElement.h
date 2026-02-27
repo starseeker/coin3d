@@ -1,5 +1,5 @@
-#ifndef COIN_SOEMISSIVECOLORELEMENT_H
-#define COIN_SOEMISSIVECOLORELEMENT_H
+#ifndef OBOL_SOEMISSIVECOLORELEMENT_H
+#define OBOL_SOEMISSIVECOLORELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 
 class SbColor;
 
-class COIN_DLL_API SoEmissiveColorElement : public SoReplacedElement {
+class OBOL_DLL_API SoEmissiveColorElement : public SoReplacedElement {
   typedef SoReplacedElement inherited;
 
   SO_ELEMENT_HEADER(SoEmissiveColorElement);
@@ -62,4 +62,4 @@ private:
 
 };
 
-#endif // !COIN_SOEMISSIVECOLORELEMENT_H
+#endif // !OBOL_SOEMISSIVECOLORELEMENT_H

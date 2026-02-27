@@ -1,5 +1,5 @@
-#ifndef COIN_SBROTATION_H
-#define COIN_SBROTATION_H
+#ifndef OBOL_SBROTATION_H
+#define OBOL_SBROTATION_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -41,7 +41,7 @@
 class SbMatrix;
 class SbVec3f;
 
-class COIN_DLL_API SbRotation {
+class OBOL_DLL_API SbRotation {
 public:
   SbRotation(void);
   SbRotation(const SbVec3f & axis, const float radians);
@@ -63,12 +63,12 @@ public:
   SbRotation & setValue(const SbVec3f & rotateFrom, const SbVec3f & rotateTo);
   SbRotation & operator*=(const SbRotation & q);
   SbRotation & operator*=(const float s);
-  friend COIN_DLL_API int operator==(const SbRotation & q1, const SbRotation & q2);
-  friend COIN_DLL_API int operator!=(const SbRotation & q1, const SbRotation & q2);
+  friend OBOL_DLL_API int operator==(const SbRotation & q1, const SbRotation & q2);
+  friend OBOL_DLL_API int operator!=(const SbRotation & q1, const SbRotation & q2);
   float operator[] (int n) const;
 
   SbBool equals(const SbRotation & r, float tolerance) const;
-  friend COIN_DLL_API SbRotation operator *(const SbRotation & q1, const SbRotation & q2);
+  friend OBOL_DLL_API SbRotation operator *(const SbRotation & q1, const SbRotation & q2);
   void multVec(const SbVec3f & src, SbVec3f & dst) const;
 
   void scaleAngle(const float scaleFactor);
@@ -85,9 +85,9 @@ private:
   SbVec4f quat;
 };
 
-COIN_DLL_API int operator ==(const SbRotation & q1, const SbRotation & q2);
-COIN_DLL_API int operator !=(const SbRotation & q1, const SbRotation & q2);
-COIN_DLL_API SbRotation operator *(const SbRotation & q1, const SbRotation & q2);
+OBOL_DLL_API int operator ==(const SbRotation & q1, const SbRotation & q2);
+OBOL_DLL_API int operator !=(const SbRotation & q1, const SbRotation & q2);
+OBOL_DLL_API SbRotation operator *(const SbRotation & q1, const SbRotation & q2);
 
 inline float SbRotation::operator[](int n) const
 {
@@ -95,4 +95,4 @@ inline float SbRotation::operator[](int n) const
   return quat[n];
 }
 
-#endif // !COIN_SBROTATION_H
+#endif // !OBOL_SBROTATION_H

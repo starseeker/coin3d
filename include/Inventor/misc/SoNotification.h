@@ -1,5 +1,5 @@
-#ifndef COIN_SONOTIFICATION_H
-#define COIN_SONOTIFICATION_H
+#ifndef OBOL_SONOTIFICATION_H
+#define OBOL_SONOTIFICATION_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -40,7 +40,7 @@ class SoEngineOutput;
 class SoField;
 
 
-class COIN_DLL_API SoNotList {
+class OBOL_DLL_API SoNotList {
 public:
   SoNotList(void);
   SoNotList(const SoNotList * nl);
@@ -67,4 +67,4 @@ private:
   SbUniqueId stamp;
 };
 
-#endif // !COIN_SONOTIFICATION_H
+#endif // !OBOL_SONOTIFICATION_H

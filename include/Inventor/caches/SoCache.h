@@ -1,5 +1,5 @@
-#ifndef COIN_SOCACHE_H
-#define COIN_SOCACHE_H
+#ifndef OBOL_SOCACHE_H
+#define OBOL_SOCACHE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -40,7 +40,7 @@ class SoCacheP;
 #include <Inventor/SbBasic.h>
 #include <cstddef> // for NULL
 
-class COIN_DLL_API SoCache {
+class OBOL_DLL_API SoCache {
 public:
   SoCache(SoState * const state);
 
@@ -63,4 +63,4 @@ private:
   SoCacheP * pimpl;
 };
 
-#endif // !COIN_SOCACHE_H
+#endif // !OBOL_SOCACHE_H

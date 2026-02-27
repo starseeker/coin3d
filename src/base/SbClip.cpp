@@ -53,7 +53,7 @@
   vertex structure, calculate your data (e.g. a new texture
   coordinate) and return a pointer to this structure.  
 
-  \COIN_CLASS_EXTENSION
+  \OBOL_CLASS_EXTENSION
 
   \since Coin 2.0
 */

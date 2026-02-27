@@ -274,7 +274,7 @@ SoClipPlaneManip::getDragger(void)
     if (node->isOfType(SoDragger::getClassTypeId()))
       return (SoDragger*)node;
     else {
-#if COIN_DEBUG
+#if OBOL_DEBUG
       SoDebugError::post("SoClipPlaneManip::getDragger",
                          "Child is not a dragger!");
 #endif // debug
@@ -337,7 +337,7 @@ SoClipPlaneManip::replaceNode(SoPath * path)
   SoFullPath *fullpath = (SoFullPath*)path;
   SoNode *fulltail = fullpath->getTail();
   if (!fulltail->isOfType(SoClipPlane::getClassTypeId())) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::post("SoClipPlaneManip::replaceNode",
                        "End of path is not a SoClipPlane");
 #endif // debug
@@ -363,7 +363,7 @@ SoClipPlaneManip::replaceNode(SoPath * path)
     }
   }
   if (fullpath->getLength() < 2) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::post("SoClipPlaneManip::replaceNode",
                        "Path is too short");
 #endif // debug
@@ -371,7 +371,7 @@ SoClipPlaneManip::replaceNode(SoPath * path)
   }
   SoNode *parent = fullpath->getNodeFromTail(1);
   if (!parent->isOfType(SoGroup::getClassTypeId())) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::post("SoClipPlaneManip::replaceNode",
                        "Parent node is not a group");
 #endif // debug

@@ -46,9 +46,9 @@
 #include <Inventor/projectors/SbCylinderSectionProjector.h>
 #include <cfloat>
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 /*! \var SbCylinderSectionProjector::tolerance
   Tolerance value, deciding how much of the half-cylinder to do
@@ -117,10 +117,10 @@ SbCylinderSectionProjector::project(const SbVec2f & point)
   SbBool tst = this->intersectCylinderFront(projline, projpt);
   if (!tst || !this->isWithinTolerance(projpt)) {
     if (!this->tolPlane.intersect(projline, projpt)) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
       SoDebugError::postWarning("SbCylinderSectionProjector::project",
                                 "working line is parallel to cylinder axis.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
       // set to 0, 0, 0 to avoid crazy rotations. lastPoint will then
       // never change, and there will be no rotation in getRotation()
       projpt = SbVec3f(0.0f, 0.0f, 0.0f);
@@ -168,12 +168,12 @@ SbCylinderSectionProjector::getRotation(const SbVec3f & point1,
 void
 SbCylinderSectionProjector::setTolerance(const float edgetol)
 {
-#if COIN_DEBUG // COIN_DEBUG
+#if OBOL_DEBUG // OBOL_DEBUG
   if (edgetol <= 0.0f || edgetol > 1.0f) {
     SoDebugError::postWarning("SbCylinderSectionProjector::setTolerance",
                               "edge tolerance should be within <0, 1].");
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   this->tolerance = edgetol;
   this->needSetup = TRUE;
 }

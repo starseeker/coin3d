@@ -112,7 +112,7 @@ debug(void)
 {
   static int dbg = -1;
   if (dbg == -1) {
-    const char * env = getenv("COIN_DEBUG_STATICOBJECT");
+    const char * env = getenv("OBOL_DEBUG_STATICOBJECT");
     dbg = (env && (atoi(env) > 0)) ? 1 : 0;
   }
   return dbg;
@@ -123,7 +123,7 @@ runtime_disabled(void)
 {
   static int val = -1;
   if (val == -1) {
-    const char * env = getenv("COIN_INSTANCEMUTEX_DISABLE");
+    const char * env = getenv("OBOL_INSTANCEMUTEX_DISABLE");
     val = (env && (atoi(env) > 0)) ? 1 : 0;
   }
   return val;
@@ -291,7 +291,7 @@ SbString
 CoinStaticObjectInDLL::mutexName(void)
 {
   SbString s;
-  s.sprintf("COIN_LIBRARY_PROCESS_%d", GetCurrentProcessId());
+  s.sprintf("OBOL_LIBRARY_PROCESS_%d", GetCurrentProcessId());
   return s;
 }
 

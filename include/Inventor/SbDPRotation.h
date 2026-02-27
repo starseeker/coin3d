@@ -1,5 +1,5 @@
-#ifndef COIN_SBDPROTATION_H
-#define COIN_SBDPROTATION_H
+#ifndef OBOL_SBDPROTATION_H
+#define OBOL_SBDPROTATION_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -39,7 +39,7 @@
 class SbDPMatrix;
 class SbVec3d;
 
-class COIN_DLL_API SbDPRotation {
+class OBOL_DLL_API SbDPRotation {
 public:
   SbDPRotation(void);
   SbDPRotation(const SbVec3d & axis, const double radians);
@@ -71,9 +71,9 @@ public:
 
   SbDPRotation & operator*=(const SbDPRotation & q);
   SbDPRotation & operator*=(const double s);
-  friend COIN_DLL_API int operator==(const SbDPRotation & q1, const SbDPRotation & q2);
-  friend COIN_DLL_API int operator!=(const SbDPRotation & q1, const SbDPRotation & q2);
-  friend COIN_DLL_API SbDPRotation operator *(const SbDPRotation & q1, const SbDPRotation & q2);
+  friend OBOL_DLL_API int operator==(const SbDPRotation & q1, const SbDPRotation & q2);
+  friend OBOL_DLL_API int operator!=(const SbDPRotation & q1, const SbDPRotation & q2);
+  friend OBOL_DLL_API SbDPRotation operator *(const SbDPRotation & q1, const SbDPRotation & q2);
 private:
   SbVec4d quat;
 };
@@ -81,8 +81,8 @@ private:
 typedef SbDPRotation SbRotationd;
 
 
-COIN_DLL_API int operator ==(const SbDPRotation & q1, const SbDPRotation & q2);
-COIN_DLL_API int operator !=(const SbDPRotation & q1, const SbDPRotation & q2);
-COIN_DLL_API SbDPRotation operator *(const SbDPRotation & q1, const SbDPRotation & q2);
+OBOL_DLL_API int operator ==(const SbDPRotation & q1, const SbDPRotation & q2);
+OBOL_DLL_API int operator !=(const SbDPRotation & q1, const SbDPRotation & q2);
+OBOL_DLL_API SbDPRotation operator *(const SbDPRotation & q1, const SbDPRotation & q2);
 
-#endif // !COIN_SBDPROTATION_H
+#endif // !OBOL_SBDPROTATION_H

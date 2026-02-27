@@ -42,7 +42,7 @@
 
 #include <Inventor/SbName.h>
 #include <Inventor/actions/SoShapeSimplifyAction.h>
-#include "config.h" // COIN_STUB()
+#include "config.h" // OBOL_STUB()
 
 
 SO_ACTION_SOURCE(SoShapeSimplifyAction);
@@ -63,7 +63,7 @@ SoShapeSimplifyAction::initClass(void)
 
 SoShapeSimplifyAction::SoShapeSimplifyAction(void)
 {
-  COIN_STUB();
+  OBOL_STUB();
 }
 
 /*!
@@ -72,12 +72,12 @@ SoShapeSimplifyAction::SoShapeSimplifyAction(void)
 
 SoShapeSimplifyAction::~SoShapeSimplifyAction(void)
 {
-  COIN_STUB();
+  OBOL_STUB();
 }
 
 // Documented in superclass.
 void
 SoShapeSimplifyAction::beginTraversal(SoNode * /* node */)
 {
-  COIN_STUB();
+  OBOL_STUB();
 }

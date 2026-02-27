@@ -368,7 +368,7 @@
   control in fragment programs. Doing so may lead to loss of precision
   around the edges and 'jaggedness' of the transparent geometry.
 
-  Setting the environment variable COIN_SORTED_LAYERS_USE_NVIDIA_RC to
+  Setting the environment variable OBOL_SORTED_LAYERS_USE_NVIDIA_RC to
   '1' will force the use of former code path instead of the latter,
   even if it is available.
 
@@ -397,7 +397,7 @@
   higher quality for scenes with a lot of transparent surfaces. The
   default number of passes is '4'. This number can be specified using
   the SoGLRenderAction::setSortedLayersNumPasses() or by letting the
-  environment variable \c COIN_NUM_SORTED_LAYERS_PASSES or \c
+  environment variable \c OBOL_NUM_SORTED_LAYERS_PASSES or \c
   OIV_NUM_SORTED_LAYERS_PASSES specify the number of passes.
 
   A more detailed presentation of the algorithm is written by Cass
@@ -625,7 +625,7 @@ public:
 
 SO_ACTION_SOURCE(SoGLRenderAction);
 
-static int COIN_GLBBOX = 0;
+static int OBOL_GLBBOX = 0;
 
 // *************************************************************************
 
@@ -649,12 +649,12 @@ SoGLRenderAction::initClass(void)
   SO_ENABLE(SoGLRenderAction, SoGLViewportRegionElement);
   SO_ENABLE(SoGLRenderAction, SoGLCacheContextElement);
 
-  const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_GLBBOX");
+  const char * env = CoinInternal::getEnvironmentVariableRaw("OBOL_GLBBOX");
   if (env) {
-    COIN_GLBBOX = atoi(env);
+    OBOL_GLBBOX = atoi(env);
   }
   else {
-    COIN_GLBBOX = 0;
+    OBOL_GLBBOX = 0;
   }
 }
 
@@ -995,7 +995,7 @@ SoGLRenderAction::getCacheContext(void) const
 /*!
   Sets the number of passes to render in SoGLRenderAction::SORTED_LAYERS_BLEND
   mode. Default number of passes is 4. This number can also be
-  adjusted by setting the \c COIN_NUM_SORTED_LAYERS_PASSES or
+  adjusted by setting the \c OBOL_NUM_SORTED_LAYERS_PASSES or
   \c OIV_NUM_SORTED_LAYERS_PASSES environment variable.
 */
 void
@@ -1059,12 +1059,12 @@ SoGLRenderAction::beginTraversal(SoNode * node)
     return;
   }
 
-  // If the environment variable COIN_GLBBOX is set to 1, apply a bbox
+  // If the environment variable OBOL_GLBBOX is set to 1, apply a bbox
   // action before rendering.  This will make sure bounding box caches
   // are updated (needed for view frustum culling). The default
   // SoQt/SoWin/SoXt viewers will also apply a SoGetBoundingBoxAction
   // so we don't do this by default yet.
-  if (COIN_GLBBOX) {
+  if (OBOL_GLBBOX) {
     PRIVATE(this)->bboxaction->apply(node);
   }
   int err_before_init = GL_NO_ERROR;
@@ -1104,7 +1104,7 @@ SoGLRenderAction::beginTraversal(SoNode * node)
     err_after_init = glGetError();
   }
 
-  if (COIN_DEBUG && ((err_before_init != GL_NO_ERROR) || (err_after_init != GL_NO_ERROR))) {
+  if (OBOL_DEBUG && ((err_before_init != GL_NO_ERROR) || (err_after_init != GL_NO_ERROR))) {
     int err = (err_before_init != GL_NO_ERROR) ? err_before_init : err_after_init;
     SoDebugError::postWarning("SoGLRenderAction::beginTraversal",
                               "GL error %s initialization: %s",
@@ -1151,7 +1151,7 @@ SoGLRenderAction::endTraversal(SoNode * node)
   scene graph profiling subsystem.
 */
 void
-SoGLRenderActionP::redrawSensorCB(void * userdata, SoSensor * COIN_UNUSED_ARG(sensor))
+SoGLRenderActionP::redrawSensorCB(void * userdata, SoSensor * OBOL_UNUSED_ARG(sensor))
 {
   // FIXME: the node needs to be referenced to avoid touching a deleted node here.
   // or use a delete-callback at least to abort the sensor.
@@ -1166,7 +1166,7 @@ SoGLRenderActionP::redrawSensorCB(void * userdata, SoSensor * COIN_UNUSED_ARG(se
   disabled automatically when the node in question is deleted.
 */
 void
-SoGLRenderActionP::deleteNodeCB(void * userdata, SoSensor * COIN_UNUSED_ARG(sensor))
+SoGLRenderActionP::deleteNodeCB(void * userdata, SoSensor * OBOL_UNUSED_ARG(sensor))
 {
   assert(userdata);
   SoGLRenderActionP * thisp = static_cast<SoGLRenderActionP *>(userdata);
@@ -1345,10 +1345,10 @@ SoGLRenderAction::abortNow(void)
 {
   if (this->hasTerminated()) return TRUE;
 
-#if COIN_DEBUG && 0 // for dumping the scene graph during GLRender traversals
+#if OBOL_DEBUG && 0 // for dumping the scene graph during GLRender traversals
   static int debug = -1;
   if (debug == -1) {
-    const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_GLRENDER_TRAVERSAL");
+    const char * env = CoinInternal::getEnvironmentVariableRaw("OBOL_DEBUG_GLRENDER_TRAVERSAL");
     debug = env && (atoi(env) > 0);
   }
   if (debug) {
@@ -2206,11 +2206,11 @@ SoGLRenderActionP::initSortedLayersBlendRendering(const SoState * state)
   if (envtgs && (atoi(envtgs) > 0))
     this->sortedlayersblendpasses = atoi(envtgs);
 
-  const char * envcoin = CoinInternal::getEnvironmentVariableRaw("COIN_NUM_SORTED_LAYERS_PASSES");
+  const char * envcoin = CoinInternal::getEnvironmentVariableRaw("OBOL_NUM_SORTED_LAYERS_PASSES");
   if (envcoin && (atoi(envcoin) > 0))
     this->sortedlayersblendpasses = atoi(envcoin);
 
-  const char * envusenvidiarc = CoinInternal::getEnvironmentVariableRaw("COIN_SORTED_LAYERS_USE_NVIDIA_RC");
+  const char * envusenvidiarc = CoinInternal::getEnvironmentVariableRaw("OBOL_SORTED_LAYERS_USE_NVIDIA_RC");
   if (envusenvidiarc && (atoi(envusenvidiarc) > 0))
     this->usenvidiaregistercombiners = TRUE;
 

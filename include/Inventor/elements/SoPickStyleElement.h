@@ -1,5 +1,5 @@
-#ifndef COIN_SOPICKSTYLEELEMENT_H
-#define COIN_SOPICKSTYLEELEMENT_H
+#ifndef OBOL_SOPICKSTYLEELEMENT_H
+#define OBOL_SOPICKSTYLEELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/elements/SoInt32Element.h>
 
-class COIN_DLL_API SoPickStyleElement : public SoInt32Element {
+class OBOL_DLL_API SoPickStyleElement : public SoInt32Element {
   typedef SoInt32Element inherited;
 
   SO_ELEMENT_HEADER(SoPickStyleElement);
@@ -62,4 +62,4 @@ public:
   static Style getDefault();
 };
 
-#endif // !COIN_SOPICKSTYLEELEMENT_H
+#endif // !OBOL_SOPICKSTYLEELEMENT_H

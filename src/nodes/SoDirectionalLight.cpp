@@ -159,10 +159,10 @@ SoDirectionalLight::GLRender(SoGLRenderAction * action)
   int idx = SoGLLightIdElement::increment(state);
 
   if (idx < 0) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SoDirectionalLight::GLRender",
                               "Max # of OpenGL lights exceeded :(");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     return;
   }
 
@@ -185,10 +185,10 @@ SoDirectionalLight::GLRender(SoGLRenderAction * action)
   // GL directional light is specified towards light source
   SbVec3f dir = - this->direction.getValue();
   if (dir.normalize() == 0.0f) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SoDirectionalLight::GLRender",
                               "Direction is a null vector.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   }
   // directional when w = 0.0
   SbVec4f dirvec(dir[0], dir[1], dir[2], 0.0f);

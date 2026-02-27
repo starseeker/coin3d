@@ -1,5 +1,5 @@
-#ifndef COIN_GL_H
-#define COIN_GL_H
+#ifndef OBOL_GL_H
+#define OBOL_GL_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -2406,4 +2406,4 @@ Therefore we define the value for GL_NUM_EXTENSIONS here
 /*** WGL enums, end ***************************************************/
 /**********************************************************************/
 
-#endif /* ! COIN_GL_H */
+#endif /* ! OBOL_GL_H */

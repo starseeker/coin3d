@@ -1,5 +1,5 @@
-#ifndef COIN_SBSPHERESHEETPROJECTOR_H
-#define COIN_SBSPHERESHEETPROJECTOR_H
+#ifndef OBOL_SBSPHERESHEETPROJECTOR_H
+#define OBOL_SBSPHERESHEETPROJECTOR_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -36,7 +36,7 @@
 #include <Inventor/projectors/SbSphereProjector.h>
 #include <Inventor/SbPlane.h>
 
-class COIN_DLL_API SbSphereSheetProjector : public SbSphereProjector {
+class OBOL_DLL_API SbSphereSheetProjector : public SbSphereProjector {
   typedef SbSphereProjector inherited;
 
 public:
@@ -58,4 +58,4 @@ protected:
   SbPlane tolPlane;
 };
 
-#endif // !COIN_SBSPHERESHEETPROJECTOR_H
+#endif // !OBOL_SBSPHERESHEETPROJECTOR_H

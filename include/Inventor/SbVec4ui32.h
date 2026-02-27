@@ -1,5 +1,5 @@
-#ifndef COIN_SBVEC4UI32_H
-#define COIN_SBVEC4UI32_H
+#ifndef OBOL_SBVEC4UI32_H
+#define OBOL_SBVEC4UI32_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -43,7 +43,7 @@ class SbVec4i32;
 class SbVec4ub;
 class SbVec4us;
 
-class COIN_DLL_API SbVec4ui32 {
+class OBOL_DLL_API SbVec4ui32 {
 public:
   SbVec4ui32(void) { }
   SbVec4ui32(const uint32_t v[4]) { vec[0] = v[0]; vec[1] = v[1]; vec[2] = v[2]; vec[3] = v[3]; }
@@ -80,46 +80,46 @@ protected:
 
 }; // SbVec4ui32
 
-COIN_DLL_API inline SbVec4ui32 operator * (const SbVec4ui32 & v, int d) {
+OBOL_DLL_API inline SbVec4ui32 operator * (const SbVec4ui32 & v, int d) {
   SbVec4ui32 val(v); val *= d; return val;
 }
 
-COIN_DLL_API inline SbVec4ui32 operator * (const SbVec4ui32 & v, double d) {
+OBOL_DLL_API inline SbVec4ui32 operator * (const SbVec4ui32 & v, double d) {
   SbVec4ui32 val(v); val *= d; return val;
 }
 
-COIN_DLL_API inline SbVec4ui32 operator * (int d, const SbVec4ui32 & v) {
+OBOL_DLL_API inline SbVec4ui32 operator * (int d, const SbVec4ui32 & v) {
   SbVec4ui32 val(v); val *= d; return val;
 }
 
-COIN_DLL_API inline SbVec4ui32 operator * (double d, const SbVec4ui32 & v) {
+OBOL_DLL_API inline SbVec4ui32 operator * (double d, const SbVec4ui32 & v) {
   SbVec4ui32 val(v); val *= d; return val;
 }
 
-COIN_DLL_API inline SbVec4ui32 operator / (const SbVec4ui32 & v, int d) {
+OBOL_DLL_API inline SbVec4ui32 operator / (const SbVec4ui32 & v, int d) {
   SbDividerChk("operator/(SbVec4ui32,int)", d);
   SbVec4ui32 val(v); val /= d; return val;
 }
 
-COIN_DLL_API inline SbVec4ui32 operator / (const SbVec4ui32 & v, double d) {
+OBOL_DLL_API inline SbVec4ui32 operator / (const SbVec4ui32 & v, double d) {
   SbDividerChk("operator/(SbVec4ui32,double)", d);
   SbVec4ui32 val(v); val /= d; return val;
 }
 
-COIN_DLL_API inline SbVec4ui32 operator + (const SbVec4ui32 & v1, const SbVec4ui32 & v2) {
+OBOL_DLL_API inline SbVec4ui32 operator + (const SbVec4ui32 & v1, const SbVec4ui32 & v2) {
   SbVec4ui32 v(v1); v += v2; return v;
 }
 
-COIN_DLL_API inline SbVec4ui32 operator - (const SbVec4ui32 & v1, const SbVec4ui32 & v2) {
+OBOL_DLL_API inline SbVec4ui32 operator - (const SbVec4ui32 & v1, const SbVec4ui32 & v2) {
   SbVec4ui32 v(v1); v -= v2; return v;
 }
 
-COIN_DLL_API inline int operator == (const SbVec4ui32 & v1, const SbVec4ui32 & v2) {
+OBOL_DLL_API inline int operator == (const SbVec4ui32 & v1, const SbVec4ui32 & v2) {
   return ((v1[0] == v2[0]) && (v1[1] == v2[1]) && (v1[2] == v2[2]) && (v1[3] == v2[3]));
 }
 
-COIN_DLL_API inline int operator != (const SbVec4ui32 & v1, const SbVec4ui32 & v2) {
+OBOL_DLL_API inline int operator != (const SbVec4ui32 & v1, const SbVec4ui32 & v2) {
   return !(v1 == v2);
 }
 
-#endif // !COIN_SBVEC4UI32_H
+#endif // !OBOL_SBVEC4UI32_H

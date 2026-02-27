@@ -49,9 +49,9 @@
 
 
 #include <Inventor/elements/SoModelMatrixElement.h>
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 
 #include <Inventor/system/gl.h>
@@ -97,7 +97,7 @@ SoGLViewingMatrixElement::push(SoState * stateptr)
 // doc in parent
 void
 SoGLViewingMatrixElement::pop(SoState * stateptr,
-                              const SoElement * COIN_UNUSED_ARG(prevTopElement))
+                              const SoElement * OBOL_UNUSED_ARG(prevTopElement))
 {
   this->capture(stateptr);
   this->updategl();
@@ -154,7 +154,7 @@ SoGLViewingMatrixElement::updategl(void)
   simply load the viewing matrix, since the transformations that were
   applied before the camera needs to be accounted for.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */

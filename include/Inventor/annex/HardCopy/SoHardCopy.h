@@ -1,5 +1,5 @@
-#ifndef COIN_SOHARDCOPY_H
-#define COIN_SOHARDCOPY_H
+#ifndef OBOL_SOHARDCOPY_H
+#define OBOL_SOHARDCOPY_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/SbBasic.h>
 
-class COIN_DLL_API SoHardCopy {
+class OBOL_DLL_API SoHardCopy {
 
 public:
   static void init(void);
@@ -45,4 +45,4 @@ public:
 
 // *************************************************************************
 
-#endif //!COIN_SOHARDCOPY_H
+#endif //!OBOL_SOHARDCOPY_H

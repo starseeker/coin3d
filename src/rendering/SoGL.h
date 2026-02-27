@@ -1,5 +1,5 @@
-#ifndef COIN_SOGL_H
-#define COIN_SOGL_H
+#ifndef OBOL_SOGL_H
+#define OBOL_SOGL_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,9 +33,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #error this is a private header file
-#endif /* !COIN_INTERNAL */
+#endif /* !OBOL_INTERNAL */
 
 // This file contains GL code which is shared internally. It contains
 // mostly rendering code shared between several node types.
@@ -174,4 +174,4 @@ SbBool sogl_glerror_debugging(void);
 void sogl_autocache_update(SoState * state, const int numprimitives, 
                            SbBool didusevbo);
 
-#endif // !COIN_SOGL_H
+#endif // !OBOL_SOGL_H

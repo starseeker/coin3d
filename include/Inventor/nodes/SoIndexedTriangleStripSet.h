@@ -1,5 +1,5 @@
-#ifndef COIN_SOINDEXEDTRIANGLESTRIPSET_H
-#define COIN_SOINDEXEDTRIANGLESTRIPSET_H
+#ifndef OBOL_SOINDEXEDTRIANGLESTRIPSET_H
+#define OBOL_SOINDEXEDTRIANGLESTRIPSET_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,14 +35,14 @@
 
 #include <Inventor/nodes/SoSubNode.h>
 #include <Inventor/nodes/SoIndexedShape.h>
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
  // For Open Inventor compatibility.
  #include <Inventor/nodes/SoVertexProperty.h>
-#endif // !COIN_INTERNAL
+#endif // !OBOL_INTERNAL
 
 #define SO_END_STRIP_INDEX (-1)
 
-class COIN_DLL_API SoIndexedTriangleStripSet : public SoIndexedShape {
+class OBOL_DLL_API SoIndexedTriangleStripSet : public SoIndexedShape {
   typedef SoIndexedShape inherited;
 
   SO_NODE_HEADER(SoIndexedTriangleStripSet);
@@ -77,4 +77,4 @@ private:
   Binding findNormalBinding(SoState * const state) const;
 };
 
-#endif // !COIN_SOINDEXEDTRIANGLESTRIPSET_H
+#endif // !OBOL_SOINDEXEDTRIANGLESTRIPSET_H

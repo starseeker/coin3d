@@ -1,5 +1,5 @@
-#ifndef COIN_SONONINDEXEDSHAPE_H
-#define COIN_SONONINDEXEDSHAPE_H
+#ifndef OBOL_SONONINDEXEDSHAPE_H
+#define OBOL_SONONINDEXEDSHAPE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -38,7 +38,7 @@
 #include <Inventor/fields/SoSFInt32.h>
 
 
-class COIN_DLL_API SoNonIndexedShape : public SoVertexShape {
+class OBOL_DLL_API SoNonIndexedShape : public SoVertexShape {
   typedef SoVertexShape inherited;
 
   SO_NODE_ABSTRACT_HEADER(SoNonIndexedShape);
@@ -60,4 +60,4 @@ protected:
 
 };
 
-#endif // !COIN_SONONINDEXEDSHAPE_H
+#endif // !OBOL_SONONINDEXEDSHAPE_H

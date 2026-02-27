@@ -1,5 +1,5 @@
-#ifndef COIN_SBBARRIERIMPL_H
-#define COIN_SBBARRIERIMPL_H
+#ifndef OBOL_SBBARRIERIMPL_H
+#define OBOL_SBBARRIERIMPL_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -78,4 +78,4 @@ private:
   std::condition_variable condvar;
 };
 
-#endif // !COIN_SBBARRIERIMPL_H
+#endif // !OBOL_SBBARRIERIMPL_H

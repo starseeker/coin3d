@@ -1,5 +1,5 @@
-#ifndef COIN_SOGLDISPLAYLIST_H
-#define COIN_SOGLDISPLAYLIST_H
+#ifndef OBOL_SOGLDISPLAYLIST_H
+#define OBOL_SOGLDISPLAYLIST_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -40,7 +40,7 @@ class SoGLDisplayListP;
 
 // *************************************************************************
 
-class COIN_DLL_API SoGLDisplayList {
+class OBOL_DLL_API SoGLDisplayList {
 public:
   enum Type {
     DISPLAY_LIST,
@@ -76,4 +76,4 @@ private:
   friend class SoGLCacheContextElement;
 };
 
-#endif // !COIN_SOGLDISPLAYLIST_H
+#endif // !OBOL_SOGLDISPLAYLIST_H

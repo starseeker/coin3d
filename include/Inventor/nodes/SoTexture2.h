@@ -1,5 +1,5 @@
-#ifndef COIN_SOTEXTURE2_H
-#define COIN_SOTEXTURE2_H
+#ifndef OBOL_SOTEXTURE2_H
+#define OBOL_SOTEXTURE2_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -46,7 +46,7 @@ class SoFieldSensor;
 class SoSensor;
 class SoTexture2P;
 
-class COIN_DLL_API SoTexture2 : public SoTexture {
+class OBOL_DLL_API SoTexture2 : public SoTexture {
   typedef SoTexture inherited;
 
   SO_NODE_HEADER(SoTexture2);
@@ -105,4 +105,4 @@ private:
   SoTexture2P * pimpl;
 };
 
-#endif // !COIN_SOTEXTURE2_H
+#endif // !OBOL_SOTEXTURE2_H

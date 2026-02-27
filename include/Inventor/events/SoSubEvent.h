@@ -1,5 +1,5 @@
-#ifndef COIN_SOSUBEVENT_H
-#define COIN_SOSUBEVENT_H
+#ifndef OBOL_SOSUBEVENT_H
+#define OBOL_SOSUBEVENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -127,4 +127,4 @@ SoType _class_::classTypeId STATIC_SOTYPE_INIT
 
 // *************************************************************************
 
-#endif // !COIN_SOSUBEVENT_H
+#endif // !OBOL_SOSUBEVENT_H

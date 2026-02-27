@@ -1,5 +1,5 @@
-#ifndef COIN_SOGLCLIPPLANEELEMENT_H
-#define COIN_SOGLCLIPPLANEELEMENT_H
+#ifndef OBOL_SOGLCLIPPLANEELEMENT_H
+#define OBOL_SOGLCLIPPLANEELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/elements/SoClipPlaneElement.h>
 
-class COIN_DLL_API SoGLClipPlaneElement : public SoClipPlaneElement {
+class OBOL_DLL_API SoGLClipPlaneElement : public SoClipPlaneElement {
   typedef SoClipPlaneElement inherited;
 
   SO_ELEMENT_HEADER(SoGLClipPlaneElement);
@@ -57,4 +57,4 @@ protected:
 private:
 };
 
-#endif // !COIN_SOGLCLIPPLANEELEMENT_H
+#endif // !OBOL_SOGLCLIPPLANEELEMENT_H

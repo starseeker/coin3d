@@ -189,13 +189,13 @@ SbXfBox3d::extendBy(const SbVec3d & pt)
 void
 SbXfBox3d::extendBy(const SbBox3d & bb)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (bb.isEmpty()) {
     SoDebugError::postWarning("SbXfBox3f::extendBy",
                               "Extending box is empty.");
     return;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   if (this->isEmpty()) {
     *this = bb;
@@ -284,13 +284,13 @@ SbXfBox3d::extendBy(const SbBox3d & bb)
 void
 SbXfBox3d::extendBy(const SbXfBox3d & bb)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (bb.isEmpty()) {
     SoDebugError::postWarning("SbXfBox3f::extendBy",
                               "Extending box is empty.");
     return;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   if (this->isEmpty()) {
     *this = bb;
@@ -512,11 +512,11 @@ SbBool
 SbXfBox3d::intersect(const SbBox3d & bb) const
 {
   if (this->isEmpty() || bb.isEmpty()) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SbXfBox3d::intersect",
                               "%s is an empty / uninitialized box",
                               this->isEmpty() ? "this" : "input argument");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     return FALSE;
   }
 
@@ -544,7 +544,7 @@ SbXfBox3d::intersect(const SbBox3d & bb) const
 /*!
   Check if two transformed boxes intersect.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */
@@ -690,7 +690,7 @@ SbXfBox3d::calcInverse(void) const
       this->invertedmatrix = this->matrix.inverse();
     }
     else {
-#if COIN_DEBUG && 0 // disabled
+#if OBOL_DEBUG && 0 // disabled
       const SbDPMatrix & m = this->matrix;
       SoDebugError::postWarning("SbXfBox3d::setTransform",
                                 "invalid matrix (can't be inverted)");
@@ -706,7 +706,7 @@ SbXfBox3d::calcInverse(void) const
       SoDebugError::postWarning("SbXfBox3d::setTransform",
                                 "%f %f %f %f",
                                 m[3][0], m[3][1], m[3][2], m[3][3]);
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
       // Degenerate transforms are fixed by projecting box. This will
       // transform the min and max points (using the normal matrix,

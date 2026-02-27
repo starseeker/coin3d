@@ -1,5 +1,5 @@
-#ifndef COIN_SOLIGHTPATH_H
-#define COIN_SOLIGHTPATH_H
+#ifndef OBOL_SOLIGHTPATH_H
+#define OBOL_SOLIGHTPATH_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -39,7 +39,7 @@
 class SoNode;
 class SoTempPath;
 
-class COIN_DLL_API SoLightPath {
+class OBOL_DLL_API SoLightPath {
 public:
   SoLightPath(SoNode *node, const int approxlength);
   SoLightPath(const int approxlength);
@@ -63,4 +63,4 @@ private:
   SbList <int> indices;
 };
 
-#endif // !COIN_SOLIGHTPATH_H
+#endif // !OBOL_SOLIGHTPATH_H

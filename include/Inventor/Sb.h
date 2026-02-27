@@ -1,5 +1,5 @@
-#ifndef COIN_SB_H
-#define COIN_SB_H
+#ifndef OBOL_SB_H
+#define OBOL_SB_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,9 +33,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#if defined(COIN_INTERNAL)
+#if defined(OBOL_INTERNAL)
 #error Do not include Sb.h internally.
-#endif // COIN_INTERNAL
+#endif // OBOL_INTERNAL
 
 // Include all header files for the basic classes.
 
@@ -76,4 +76,4 @@
 #include <Inventor/projectors/SbSphereProjector.h>
 #include <Inventor/projectors/SbSphereSheetProjector.h>
 
-#endif // !COIN_SB_H
+#endif // !OBOL_SB_H

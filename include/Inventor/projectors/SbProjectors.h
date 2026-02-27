@@ -1,5 +1,5 @@
-#ifndef COIN_SBPROJECTORS_H
-#define COIN_SBPROJECTORS_H
+#ifndef OBOL_SBPROJECTORS_H
+#define OBOL_SBPROJECTORS_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -42,4 +42,4 @@
 #include <Inventor/projectors/SbCylinderSectionProjector.h>
 #include <Inventor/projectors/SbCylinderPlaneProjector.h>
 
-#endif // !COIN_SBPROJECTORS_H
+#endif // !OBOL_SBPROJECTORS_H

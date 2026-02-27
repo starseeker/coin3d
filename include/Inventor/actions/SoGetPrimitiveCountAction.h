@@ -1,5 +1,5 @@
-#ifndef COIN_SOGETPRIMITIVECOUNTACTION_H
-#define COIN_SOGETPRIMITIVECOUNTACTION_H
+#ifndef OBOL_SOGETPRIMITIVECOUNTACTION_H
+#define OBOL_SOGETPRIMITIVECOUNTACTION_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -41,7 +41,7 @@
 class SoGetPrimitiveCountActionP;
 class SbViewportRegion;
 
-class COIN_DLL_API SoGetPrimitiveCountAction : public SoAction {
+class OBOL_DLL_API SoGetPrimitiveCountAction : public SoAction {
   typedef SoAction inherited;
 
   SO_ACTION_HEADER(SoGetPrimitiveCountAction);
@@ -109,4 +109,4 @@ private:
   SoGetPrimitiveCountAction & operator = (const SoGetPrimitiveCountAction & rhs);
 }; // SoGetPrimitiveCountAction
 
-#endif // !COIN_SOGETPRIMITIVECOUNTACTION_H
+#endif // !OBOL_SOGETPRIMITIVECOUNTACTION_H

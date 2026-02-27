@@ -1,5 +1,5 @@
-#ifndef COIN_SODEBUG_H
-#define COIN_SODEBUG_H
+#ifndef OBOL_SODEBUG_H
+#define OBOL_SODEBUG_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -41,7 +41,7 @@ class SoField;
 
 // *************************************************************************
 
-class COIN_DLL_API SoDebug {
+class OBOL_DLL_API SoDebug {
 public:
   static const char * GetEnv(const char * var);
   static void RTPrintf(const char * formatstr, ...);
@@ -55,4 +55,4 @@ public:
 
 // *************************************************************************
 
-#endif // !COIN_SODEBUG_H
+#endif // !OBOL_SODEBUG_H

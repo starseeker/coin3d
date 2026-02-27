@@ -30,15 +30,15 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_SOINTERPOLATE_H
-#define COIN_SOINTERPOLATE_H
+#ifndef OBOL_SOINTERPOLATE_H
+#define OBOL_SOINTERPOLATE_H
 
 
 #include <Inventor/engines/SoSubEngine.h>
 #include <Inventor/engines/SoEngineOutput.h>
 #include <Inventor/fields/SoSFFloat.h>
 
-class COIN_DLL_API SoInterpolate : public SoEngine {
+class OBOL_DLL_API SoInterpolate : public SoEngine {
   typedef SoEngine inherited;
   SO_ENGINE_ABSTRACT_HEADER(SoInterpolate);
 
@@ -137,14 +137,14 @@ _class_::initClass(void) \
 //// End macros //////////////////////////////////////////////////////////
 
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 // Include these header files for better Open Inventor compatibility.
 #include <Inventor/engines/SoInterpolateFloat.h>
 #include <Inventor/engines/SoInterpolateVec2f.h>
 #include <Inventor/engines/SoInterpolateVec3f.h>
 #include <Inventor/engines/SoInterpolateVec4f.h>
 #include <Inventor/engines/SoInterpolateRotation.h>
-#endif // !COIN_INTERNAL
+#endif // !OBOL_INTERNAL
 
 
-#endif // !COIN_SOINTERPOLATE_H
+#endif // !OBOL_SOINTERPOLATE_H

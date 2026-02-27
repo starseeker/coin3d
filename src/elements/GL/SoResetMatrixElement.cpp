@@ -54,7 +54,7 @@ SoResetMatrixElement::~SoResetMatrixElement(void)
 
 // doc in parent
 void
-SoResetMatrixElement::init(SoState * COIN_UNUSED_ARG(stateptr))
+SoResetMatrixElement::init(SoState * OBOL_UNUSED_ARG(stateptr))
 {
   this->matrix = SbMatrix::identity();
 }

@@ -53,9 +53,9 @@
 #include <Inventor/fields/SoField.h>
 #include <Inventor/misc/SoProtoInstance.h>
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 /*!
   Constructor. The SoEngineOutput will initially not be contained
@@ -74,7 +74,7 @@ SoEngineOutput::SoEngineOutput(void)
 */
 SoEngineOutput::~SoEngineOutput()
 {
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoEngineOutput::~SoEngineOutput", "start %p", this);
 #endif // debug
 
@@ -89,7 +89,7 @@ SoEngineOutput::~SoEngineOutput()
   int nr = this->getForwardConnections(fl);
   for (int i=0; i < nr; i++) fl[i]->disconnect(this);
 
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoEngineOutput::~SoEngineOutput", "done %p", this);
 #endif // debug
 }
@@ -173,10 +173,10 @@ SoEngine *
 SoEngineOutput::getContainer(void) const
 {
   if (this->isNodeEngineOutput()) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SoEngineOutput::getContainer",
                               "Container is not an Engine");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     return NULL;
   }
   return this->container;
@@ -187,7 +187,7 @@ SoEngineOutput::getContainer(void) const
   Returns the node engine containing this output. If the engine
   containing this output is not a NodeEgine, this method returns NULL.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \sa setNodeContainer(), getContainer()
   \since Coin 2.0
@@ -197,10 +197,10 @@ SoNodeEngine *
 SoEngineOutput::getNodeContainer(void) const
 {
   if (!this->isNodeEngineOutput()) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SoEngineOutput::getContainer",
                               "Container is not a NodeEngine");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     return NULL;
   }
   return coin_assert_cast<SoNodeEngine*>(this->container);
@@ -209,7 +209,7 @@ SoEngineOutput::getNodeContainer(void) const
 /*!
   Returns \e TRUE if the container is a NodeEngine.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \sa getNodeContainer(), getContainer()
   \since Coin 2.0
@@ -236,7 +236,7 @@ SoEngineOutput::setContainer(SoEngine * engine)
 /*!
   Sets the NodeEngine containing this output.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \sa getNodeContainer()
   \since Coin 2.0
@@ -260,13 +260,13 @@ SoEngineOutput::setNodeContainer(SoNodeEngine * nodeengine)
 void
 SoEngineOutput::addConnection(SoField * f)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (this->slaves.find(f) != -1) {
     SoDebugError::postWarning("SoEngineOutput::addConnection",
                               "connection from %p already made", f);
     return;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   this->slaves.append(f);
 
@@ -304,13 +304,13 @@ void
 SoEngineOutput::removeConnection(SoField * f)
 {
   int i = this->slaves.find(f);
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (i == -1) {
     SoDebugError::postWarning("SoEngineOutput::removeConnection",
                               "no connection from %p present", f);
     return;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   this->slaves.remove(i);
 
   // SoProtoInstance has some special memory handling. Don't ref
@@ -431,7 +431,7 @@ SoEngineOutput::touchSlaves(SoNotList * nl, SbBool donotify)
   Convenience method that returns a field container. This method can
   be used both for NodeEngine and Engine outputs.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */

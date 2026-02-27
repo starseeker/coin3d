@@ -53,7 +53,7 @@ internal_mutex_struct_init(cc_mutex * mutex_struct)
     return CC_OK;
   }
   catch (const std::exception& e) {
-    if (COIN_DEBUG)
+    if (OBOL_DEBUG)
       cc_debugerror_post("internal_mutex_struct_init", "std::mutex creation error: %s\n", e.what());
     return CC_ERROR;
   }
@@ -71,7 +71,7 @@ internal_mutex_struct_clean(cc_mutex * mutex_struct)
     return CC_OK;
   }
   catch (const std::exception& e) {
-    if (COIN_DEBUG)
+    if (OBOL_DEBUG)
       cc_debugerror_post("internal_mutex_struct_clean", "std::mutex cleanup error: %s\n", e.what());
     return CC_ERROR;
   }
@@ -82,7 +82,7 @@ internal_mutex_lock(cc_mutex * mutex)
 {
   try {
     if (!mutex->cxx17.mutex_ptr) {
-      if (COIN_DEBUG)
+      if (OBOL_DEBUG)
         cc_debugerror_post("internal_mutex_lock", "mutex pointer is null\n");
       return CC_ERROR;
     }
@@ -92,7 +92,7 @@ internal_mutex_lock(cc_mutex * mutex)
     return CC_OK;
   }
   catch (const std::exception& e) {
-    if (COIN_DEBUG)
+    if (OBOL_DEBUG)
       cc_debugerror_post("internal_mutex_lock", "std::mutex lock error: %s\n", e.what());
     return CC_ERROR;
   }
@@ -103,7 +103,7 @@ internal_mutex_try_lock(cc_mutex * mutex)
 {
   try {
     if (!mutex->cxx17.mutex_ptr) {
-      if (COIN_DEBUG)
+      if (OBOL_DEBUG)
         cc_debugerror_post("internal_mutex_try_lock", "mutex pointer is null\n");
       return CC_ERROR;
     }
@@ -116,7 +116,7 @@ internal_mutex_try_lock(cc_mutex * mutex)
     }
   }
   catch (const std::exception& e) {
-    if (COIN_DEBUG)
+    if (OBOL_DEBUG)
       cc_debugerror_post("internal_mutex_try_lock", "std::mutex try_lock error: %s\n", e.what());
     return CC_ERROR;
   }
@@ -127,7 +127,7 @@ internal_mutex_unlock(cc_mutex * mutex)
 {
   try {
     if (!mutex->cxx17.mutex_ptr) {
-      if (COIN_DEBUG)
+      if (OBOL_DEBUG)
         cc_debugerror_post("internal_mutex_unlock", "mutex pointer is null\n");
       return CC_ERROR;
     }
@@ -137,7 +137,7 @@ internal_mutex_unlock(cc_mutex * mutex)
     return CC_OK;
   }
   catch (const std::exception& e) {
-    if (COIN_DEBUG)
+    if (OBOL_DEBUG)
       cc_debugerror_post("internal_mutex_unlock", "std::mutex unlock error: %s\n", e.what());
     return CC_ERROR;
   }

@@ -76,10 +76,10 @@
 
 #include "config.h"
 
-#if defined(COIN_MACOS_10) && defined(COIN_MACOSX_FRAMEWORK)
+#if defined(OBOL_MACOS_10) && defined(OBOL_MACOSX_FRAMEWORK)
 #include <CoreFoundation/CFBundle.h>
 #include <CoreFoundation/CFURL.h>
-#endif // COIN_MACOS_10 && COIN_MACOSX_FRAMEWORK
+#endif // OBOL_MACOS_10 && OBOL_MACOSX_FRAMEWORK
 
 
 #include "SoEnvironment.h"
@@ -185,11 +185,11 @@ CoinResources::get(const char * resloc)
     // try loading file from COINDIR/...
     do { // to 'break' out of this try-file-loading sequence
       SbString filename;
-#if defined(COIN_MACOS_10) && defined(COIN_MACOSX_FRAMEWORK)
+#if defined(OBOL_MACOS_10) && defined(OBOL_MACOSX_FRAMEWORK)
       // CFBundleIdentifier in Info.plist
       CFStringRef identifier =
         CFStringCreateWithCString(kCFAllocatorDefault,
-                                  COIN_MAC_FRAMEWORK_IDENTIFIER_CSTRING,
+                                  OBOL_MAC_FRAMEWORK_IDENTIFIER_CSTRING,
                                   kCFStringEncodingASCII);
       CFBundleRef coinbundle = CFBundleGetBundleWithIdentifier(identifier);
       CFRelease(identifier);
@@ -211,15 +211,15 @@ CoinResources::get(const char * resloc)
       }
       filename.sprintf("%s/%s", buf, resloc + 5);
       CFRelease(url);
-#else // !COIN_MACOSX_FRAMEWORK
+#else // !OBOL_MACOSX_FRAMEWORK
       static auto coindirenv = CoinInternal::getEnvironmentVariable("COINDIR");
       if (!coindirenv.has_value()) {
         handle->filenotfound = TRUE;
         break;
       }
-      filename.sprintf("%s/%s/%s", coindirenv->c_str(), COIN_DATADIR, resloc + 5);
-#endif // !COIN_MACOSX_FRAMEWORK
-      if (COIN_DEBUG && 0) {
+      filename.sprintf("%s/%s/%s", coindirenv->c_str(), OBOL_DATADIR, resloc + 5);
+#endif // !OBOL_MACOSX_FRAMEWORK
+      if (OBOL_DEBUG && 0) {
         SoDebugError::postInfo("CoinResources::get", "trying to load '%s'.",
                                filename.getString());
       }
@@ -252,7 +252,7 @@ CoinResources::get(const char * resloc)
         // hook up something that clears out everything instead.
         handle->loadedbuf = buffer;
 
-        if (COIN_DEBUG && 0) {
+        if (OBOL_DEBUG && 0) {
           SoDebugError::postInfo("CoinResources::get", "load '%s' ok.",
                                  filename.getString());
         }
@@ -279,7 +279,7 @@ CoinResources::get(const char * resloc)
   environment variable points.  The relative path should use / for directory
   separation, and not \ if on Microsoft Windows.
 
-  If you put COIN_RESOURCE_NOT_A_FILE in the \a flags argument, then the
+  If you put OBOL_RESOURCE_NOT_A_FILE in the \a flags argument, then the
   automatic file searching will not be performed.
 
   \returns TRUE if the resource was set, and FALSE if something went wrong.
@@ -300,7 +300,7 @@ CoinResources::set(const char * resloc, const SbByteBuffer & buffer, ResourceFla
   handle = CoinResources::createResourceHandle(resloc);
   assert(handle);
   handle->internalbuf = buffer;
-  if (flags & COIN_RESOURCE_NOT_A_FILE) {
+  if (flags & OBOL_RESOURCE_NOT_A_FILE) {
     handle->canbefile = FALSE;
   } else {
     handle->canbefile = TRUE;

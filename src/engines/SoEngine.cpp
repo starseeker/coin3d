@@ -70,9 +70,9 @@
 #include <Inventor/lists/SoEngineOutputList.h>
 
 #include "config.h"
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
 #include "threads/recmutexp.h"
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 
 // *************************************************************************
 
@@ -105,7 +105,7 @@ SoEngine::SoEngine(void)
 */
 SoEngine::~SoEngine()
 {
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoEngine::~SoEngine", "%p", this);
 #endif // debug
 }
@@ -114,7 +114,7 @@ SoEngine::~SoEngine()
 void
 SoEngine::destroy(void)
 {
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SbName n = this->getName();
   SoType t = this->getTypeId();
   SoDebugError::postInfo("SoEngine::destroy", "start -- '%s' (%s)",
@@ -134,18 +134,18 @@ SoEngine::destroy(void)
 
   // need to lock to avoid that evaluateWrapper() is called
   // simultaneously from more than one thread
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   cc_recmutex_internal_field_lock();
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
   this->evaluateWrapper();
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   cc_recmutex_internal_field_unlock();
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 
   // SoBase destroy().
   inherited::destroy();
 
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoEngine::destroy", "done -- '%s' (%s)",
                          n.getString(),
                          t.getName().getString());
@@ -298,7 +298,7 @@ SoEngine::getByName(const SbName & name, SoEngineList & el)
   when a specific field is changed.
 */
 void
-SoEngine::inputChanged(SoField * COIN_UNUSED_ARG(which))
+SoEngine::inputChanged(SoField * OBOL_UNUSED_ARG(which))
 {
 }
 
@@ -306,7 +306,7 @@ SoEngine::inputChanged(SoField * COIN_UNUSED_ARG(which))
 void
 SoEngine::notify(SoNotList * nl)
 {
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoEngine::notify", "%p - %s, start",
                          this, this->getTypeId().getName().getString());
 #endif // debug
@@ -344,7 +344,7 @@ SoEngine::notify(SoNotList * nl)
 
   this->flags &= ~FLAG_ISNOTIFYING;
 
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoEngine::notify", "%p - %s, done",
                          this, this->getTypeId().getName().getString());
 #endif // debug
@@ -425,9 +425,9 @@ SoEngine::writeInstance(SoOutput * out)
   (i.e. engines not built in to Coin).
 */
 void
-SoEngine::writeOutputTypes(SoOutput * COIN_UNUSED_ARG(out))
+SoEngine::writeOutputTypes(SoOutput * OBOL_UNUSED_ARG(out))
 {
-  COIN_STUB();
+  OBOL_STUB();
 }
 
 /*!
@@ -525,7 +525,7 @@ SoEngine::shouldCopy(void) const
     }
   }
 
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoEngine::shouldCopy", "%p - %s, result==%s",
                          this, this->getTypeId().getName().getString(),
                          result ? "TRUE" : "FALSE");

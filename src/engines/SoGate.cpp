@@ -73,9 +73,9 @@
 #include <Inventor/engines/SoEngineOutput.h>
 #include <Inventor/errors/SoReadError.h>
 #include <Inventor/lists/SoEngineOutputList.h>
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 #include "engines/SoSubEngineP.h"
 
@@ -139,7 +139,7 @@ SoGate::SoGate(SoType type)
   this->input = NULL;
   this->output = NULL;
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (!SoGate_valid_type(type)) {
     SoDebugError::post("SoGate::SoGate",
                        "invalid type '%s' for input field, "
@@ -147,7 +147,7 @@ SoGate::SoGate(SoType type)
                        type == SoType::badType() ? "badType" :
                        type.getName().getString());
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   this->initialize(type);
 }

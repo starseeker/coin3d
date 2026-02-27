@@ -56,12 +56,12 @@
 #include "nodekits/SoSubKitP.h"
 
 namespace {
-  void enableDepthTest(void * COIN_UNUSED_ARG(userdata), SoAction * COIN_UNUSED_ARG(action))
+  void enableDepthTest(void * OBOL_UNUSED_ARG(userdata), SoAction * OBOL_UNUSED_ARG(action))
   {
     glEnable(GL_DEPTH_TEST);
   }
 
-  void disableDepthTest(void * COIN_UNUSED_ARG(userdata), SoAction * COIN_UNUSED_ARG(action))
+  void disableDepthTest(void * OBOL_UNUSED_ARG(userdata), SoAction * OBOL_UNUSED_ARG(action))
   {
     glDisable(GL_DEPTH_TEST);
   }
@@ -91,7 +91,7 @@ SO_KIT_SOURCE(SoProfilerOverlayKit);
 void
 SoProfilerOverlayKit::initClass(void)
 {
-  SO_KIT_INTERNAL_INIT_CLASS(SoProfilerOverlayKit, SO_FROM_COIN_3_0);
+  SO_KIT_INTERNAL_INIT_CLASS(SoProfilerOverlayKit, SO_FROM_OBOL_3_0);
 }
 
 /*!

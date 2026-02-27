@@ -1,5 +1,5 @@
-#ifndef COIN_SOBUMPMAPCOORDINATEELEMENT_H
-#define COIN_SOBUMPMAPCOORDINATEELEMENT_H
+#ifndef OBOL_SOBUMPMAPCOORDINATEELEMENT_H
+#define OBOL_SOBUMPMAPCOORDINATEELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -36,7 +36,7 @@
 #include <Inventor/elements/SoReplacedElement.h>
 #include <Inventor/SbVec2f.h>
 
-class COIN_DLL_API SoBumpMapCoordinateElement : public SoReplacedElement {
+class OBOL_DLL_API SoBumpMapCoordinateElement : public SoReplacedElement {
   typedef SoReplacedElement inherited;
 
   SO_ELEMENT_HEADER(SoBumpMapCoordinateElement);
@@ -61,4 +61,4 @@ protected:
 
 };
 
-#endif // !COIN_SOBUMPMAPCOORDINATEELEMENT_H
+#endif // !OBOL_SOBUMPMAPCOORDINATEELEMENT_H

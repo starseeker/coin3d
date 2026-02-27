@@ -1,5 +1,5 @@
-#ifndef COIN_SOASCIITEXT_H
-#define COIN_SOASCIITEXT_H
+#ifndef OBOL_SOASCIITEXT_H
+#define OBOL_SOASCIITEXT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -41,7 +41,7 @@
 #include <Inventor/fields/SoMFFloat.h>
 #include <Inventor/lists/SbList.h>
 
-class COIN_DLL_API SoAsciiText : public SoShape {
+class OBOL_DLL_API SoAsciiText : public SoShape {
   typedef SoShape inherited;
 
   SO_NODE_HEADER(SoAsciiText);
@@ -84,4 +84,4 @@ private:
   float getWidth(const int idx, const float fontsize);
 };
 
-#endif // !COIN_SOASCIITEXT_H
+#endif // !OBOL_SOASCIITEXT_H

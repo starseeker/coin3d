@@ -1,5 +1,5 @@
-#ifndef COIN_SOBYTESTREAM_H
-#define COIN_SOBYTESTREAM_H
+#ifndef OBOL_SOBYTESTREAM_H
+#define OBOL_SOBYTESTREAM_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -41,7 +41,7 @@ class SoPath;
 class SoPathList;
 
 
-class COIN_DLL_API SoByteStream {
+class OBOL_DLL_API SoByteStream {
 
 public:
   SoByteStream(void);
@@ -67,4 +67,4 @@ private:
   void * pimpl;
 };
 
-#endif // !COIN_SOBYTESTREAM_H
+#endif // !OBOL_SOBYTESTREAM_H

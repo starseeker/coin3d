@@ -647,7 +647,7 @@ static void mftime_to_mfstring(SoField * from, SoField * to)
 
 // Function for "converting" SoField -> SoSFTrigger _and_
 // SoSFTrigger -> SoField.
-static void to_and_from_sftrigger(SoField * COIN_UNUSED_ARG(from), SoField * to)
+static void to_and_from_sftrigger(SoField * OBOL_UNUSED_ARG(from), SoField * to)
 {
   to->setDirty(FALSE);
 }
@@ -1099,7 +1099,7 @@ SoConvertAll::initClass(void)
 
 SoConvertAll::SoConvertAll(const SoType from, const SoType to)
 {
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoConvertAll::SoConvertAll",
                          "from: %s, to: %s",
                          from.getName().getString(),
@@ -1143,7 +1143,7 @@ SoConvertAll::SoConvertAll(const SoType from, const SoType to)
 
 SoConvertAll::~SoConvertAll()
 {
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoConvertAll::~SoConvertAll", "%p", this);
 #endif // debug
   delete this->input;
@@ -1155,7 +1155,7 @@ SoConvertAll::~SoConvertAll()
 SoField *
 SoConvertAll::getInput(SoType type)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   SoType inputtype = this->input->getTypeId();
   if (type != inputtype && type != SoType::badType()) {
     SoDebugError::postWarning("SoConvertAll::getInput",
@@ -1163,7 +1163,7 @@ SoConvertAll::getInput(SoType type)
                               inputtype.getName().getString(),
                               type.getName().getString());
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   // ignore type, as we have only a single input field
 
@@ -1173,7 +1173,7 @@ SoConvertAll::getInput(SoType type)
 SoEngineOutput *
 SoConvertAll::getOutput(SoType type)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   SoType outputtype = this->output.getConnectionType();
   if (type != outputtype && type != SoType::badType()) {
     SoDebugError::postWarning("SoConvertAll::getOutput",
@@ -1181,7 +1181,7 @@ SoConvertAll::getOutput(SoType type)
                               outputtype.getName().getString(),
                               type.getName().getString());
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   // ignore type, as we have only a single engineoutput
 

@@ -256,23 +256,23 @@ public:
   SoGlyphCache * cache;
   SbFont * font;
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   void lock(void) { this->mutex.lock(); }
   void unlock(void) { this->mutex.unlock(); }
-#else  // ! COIN_THREADSAFE
+#else  // ! OBOL_THREADSAFE
   void lock(void) { }
   void unlock(void) { }
-#endif // ! COIN_THREADSAFE
+#endif // ! OBOL_THREADSAFE
 
 private:
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   // FIXME: a mutex for every instance seems a bit excessive,
   // especially since Microsoft Windows might have rather strict limits on the
   // total amount of mutex resources a process (or even a user) can
   // allocate. so consider making this a class-wide instance instead.
   // -mortene.
   SbMutex mutex;
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 };
 
 #define PRIVATE(p) ((p)->pimpl)
@@ -823,11 +823,11 @@ SoAsciiText::generatePrimitives(SoAction * action)
 
 // doc in parent
 SoDetail *
-SoAsciiText::createTriangleDetail(SoRayPickAction * COIN_UNUSED_ARG(action),
+SoAsciiText::createTriangleDetail(SoRayPickAction * OBOL_UNUSED_ARG(action),
                               const SoPrimitiveVertex * v1,
-                              const SoPrimitiveVertex * COIN_UNUSED_ARG(v2),
-                              const SoPrimitiveVertex * COIN_UNUSED_ARG(v3),
-                              SoPickedPoint * COIN_UNUSED_ARG(pp))
+                              const SoPrimitiveVertex * OBOL_UNUSED_ARG(v2),
+                              const SoPrimitiveVertex * OBOL_UNUSED_ARG(v3),
+                              SoPickedPoint * OBOL_UNUSED_ARG(pp))
 {
   // generatePrimitives() places text details inside each primitive vertex
   assert(v1->getDetail());

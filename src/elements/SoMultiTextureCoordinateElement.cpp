@@ -38,7 +38,7 @@
 
   FIXME: write doc.
 
-  \COIN_CLASS_EXTENSION
+  \OBOL_CLASS_EXTENSION
 
   \since Coin 2.2
 */
@@ -128,7 +128,7 @@ SoMultiTextureCoordinateElement::~SoMultiTextureCoordinateElement()
 
 void
 SoMultiTextureCoordinateElement::setDefault(SoState * const state,
-                                            SoNode * const COIN_UNUSED_ARG(node),
+                                            SoNode * const OBOL_UNUSED_ARG(node),
                                             const int unit)
 {
   if (state->isElementEnabled(SoGLVBOElement::getClassStackIndex())) {
@@ -504,7 +504,7 @@ SoMultiTextureCoordinateElement::getArrayPtr4(const int unit) const
 }
 
 void
-SoMultiTextureCoordinateElement::push(SoState * COIN_UNUSED_ARG(state))
+SoMultiTextureCoordinateElement::push(SoState * OBOL_UNUSED_ARG(state))
 {
   SoMultiTextureCoordinateElement * prev =
     coin_assert_cast<SoMultiTextureCoordinateElement *>

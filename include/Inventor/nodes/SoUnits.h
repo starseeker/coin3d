@@ -1,5 +1,5 @@
-#ifndef COIN_SOUNITS_H
-#define COIN_SOUNITS_H
+#ifndef OBOL_SOUNITS_H
+#define OBOL_SOUNITS_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/nodes/SoTransformation.h>
 #include <Inventor/fields/SoSFEnum.h>
 
-class COIN_DLL_API SoUnits : public SoTransformation {
+class OBOL_DLL_API SoUnits : public SoTransformation {
   typedef SoTransformation inherited;
 
   SO_NODE_HEADER(SoUnits);
@@ -79,4 +79,4 @@ protected:
   virtual ~SoUnits();
 };
 
-#endif // !COIN_SOUNITS_H
+#endif // !OBOL_SOUNITS_H

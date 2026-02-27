@@ -1,5 +1,5 @@
-#ifndef COIN_SOEXTSELECTION_H
-#define COIN_SOEXTSELECTION_H
+#ifndef OBOL_SOEXTSELECTION_H
+#define OBOL_SOEXTSELECTION_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -38,9 +38,9 @@
 #include <Inventor/fields/SoSFEnum.h>
 #include <cstddef> // NULL
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #include <Inventor/actions/SoCallbackAction.h>
-#endif // !COIN_INTERNAL
+#endif // !OBOL_INTERNAL
 
 class SbColor;
 class SbVec3f;
@@ -73,7 +73,7 @@ typedef SbBool SoExtSelectionPointCB(void * userdata,
 typedef SoPath * SoLassoSelectionFilterCB(void * userdata, const SoPath * path);
 
 
-class COIN_DLL_API SoExtSelection : public SoSelection {
+class OBOL_DLL_API SoExtSelection : public SoSelection {
   typedef SoSelection inherited;
 
   SO_NODE_HEADER(SoExtSelection);
@@ -145,4 +145,4 @@ private:
   class SoExtSelectionP * pimpl;
 };
 
-#endif // !COIN_SOEXTSELECTION_H
+#endif // !OBOL_SOEXTSELECTION_H

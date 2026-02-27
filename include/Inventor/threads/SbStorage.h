@@ -1,5 +1,5 @@
-#ifndef COIN_SBSTORAGE_H
-#define COIN_SBSTORAGE_H
+#ifndef OBOL_SBSTORAGE_H
+#define OBOL_SBSTORAGE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -38,7 +38,7 @@
 typedef void SbStorageApplyFunc(void * tls, void * closure);
 typedef void SbStorageConstructFunc(void * closure);
 
-class COIN_DLL_API SbStorage {
+class OBOL_DLL_API SbStorage {
 public:
   SbStorage(unsigned int size);
   SbStorage(unsigned int size, SbStorageConstructFunc * constr, SbStorageConstructFunc * destr);
@@ -51,4 +51,4 @@ private:
   void * impl;
 };
 
-#endif // !COIN_SBSTORAGE_H
+#endif // !OBOL_SBSTORAGE_H

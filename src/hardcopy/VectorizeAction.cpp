@@ -508,7 +508,7 @@ SoVectorizeAction::printViewport(void) const
   Should be overridden by subclasses to print an item.
 */
 void
-SoVectorizeAction::printItem(const SoVectorizeItem * COIN_UNUSED_ARG(item)) const
+SoVectorizeAction::printItem(const SoVectorizeItem * OBOL_UNUSED_ARG(item)) const
 {
 }
 
@@ -663,7 +663,7 @@ SoVectorizeAction::getStartPosition(DimensionUnit u) const
   Not implemented yet. Provided for TGS OIV compatibility.
 */
 void
-SoVectorizeAction::setColorTranslationMethod(ColorTranslationMethod COIN_UNUSED_ARG(method))
+SoVectorizeAction::setColorTranslationMethod(ColorTranslationMethod OBOL_UNUSED_ARG(method))
 {
 }
 
@@ -680,7 +680,7 @@ SoVectorizeAction::getColorTranslationMethod(void) const
   Not implemented yet. Provided for TGS OIV compatibility.
 */
 void
-SoVectorizeAction::setLineEndStyle(EndLineStyle COIN_UNUSED_ARG(style))
+SoVectorizeAction::setLineEndStyle(EndLineStyle OBOL_UNUSED_ARG(style))
 {
 }
 
@@ -697,7 +697,7 @@ SoVectorizeAction::getLineEndStyle(void) const
   Not implemented yet. Provided for TGS OIV compatibility.
 */
 void
-SoVectorizeAction::setLineJoinsStyle(JoinLineStyle COIN_UNUSED_ARG(style))
+SoVectorizeAction::setLineJoinsStyle(JoinLineStyle OBOL_UNUSED_ARG(style))
 {
 }
 
@@ -714,7 +714,7 @@ SoVectorizeAction::getLineJoinsStyle(void) const
   Not implemented yet. Provided for TGS OIV compatibility.
 */
 void
-SoVectorizeAction::setHLHSRMode(HLHSRMode COIN_UNUSED_ARG(mode))
+SoVectorizeAction::setHLHSRMode(HLHSRMode OBOL_UNUSED_ARG(mode))
 {
 }
 
@@ -731,7 +731,7 @@ SoVectorizeAction::getHLHSRMode(void) const
   Not implemented yet. Provided for TGS OIV compatibility.
 */
 void
-SoVectorizeAction::setBorder(float COIN_UNUSED_ARG(width))
+SoVectorizeAction::setBorder(float OBOL_UNUSED_ARG(width))
 {
 }
 
@@ -739,7 +739,7 @@ SoVectorizeAction::setBorder(float COIN_UNUSED_ARG(width))
   Not implemented yet. Provided for TGS OIV compatibility.
 */
 void
-SoVectorizeAction::setBorder(float COIN_UNUSED_ARG(width), SbColor COIN_UNUSED_ARG(color))
+SoVectorizeAction::setBorder(float OBOL_UNUSED_ARG(width), SbColor OBOL_UNUSED_ARG(color))
 {
 }
 
@@ -747,7 +747,7 @@ SoVectorizeAction::setBorder(float COIN_UNUSED_ARG(width), SbColor COIN_UNUSED_A
   Not implemented yet. Provided for TGS OIV compatibility.
 */
 void
-SoVectorizeAction::setMiterLimit(float COIN_UNUSED_ARG(limit))
+SoVectorizeAction::setMiterLimit(float OBOL_UNUSED_ARG(limit))
 {
 }
 
@@ -761,10 +761,10 @@ SoVectorizeAction::getMiterLimit(void) const
   Not implemented yet. Provided for TGS OIV compatibility.
 */
 void
-SoVectorizeAction::setPenDescription(int COIN_UNUSED_ARG(num_pens),
-                                     const SbColor * COIN_UNUSED_ARG(colors),
-                                     const float * COIN_UNUSED_ARG(widths),
-                                     DimensionUnit COIN_UNUSED_ARG(u))
+SoVectorizeAction::setPenDescription(int OBOL_UNUSED_ARG(num_pens),
+                                     const SbColor * OBOL_UNUSED_ARG(colors),
+                                     const float * OBOL_UNUSED_ARG(widths),
+                                     DimensionUnit OBOL_UNUSED_ARG(u))
 {
 }
 
@@ -772,9 +772,9 @@ SoVectorizeAction::setPenDescription(int COIN_UNUSED_ARG(num_pens),
   Not implemented yet. Provided for TGS OIV compatibility.
 */
 void
-SoVectorizeAction::getPenDescription(SbColor * COIN_UNUSED_ARG(colors),
-                                     float * COIN_UNUSED_ARG(widths),
-                                     DimensionUnit COIN_UNUSED_ARG(u)) const
+SoVectorizeAction::getPenDescription(SbColor * OBOL_UNUSED_ARG(colors),
+                                     float * OBOL_UNUSED_ARG(widths),
+                                     DimensionUnit OBOL_UNUSED_ARG(u)) const
 {
 }
 
@@ -791,7 +791,7 @@ SoVectorizeAction::getPenNum(void) const
   Not implemented yet. Provided for TGS OIV compatibility.
 */
 void
-SoVectorizeAction::setColorPriority(SbBool COIN_UNUSED_ARG(priority))
+SoVectorizeAction::setColorPriority(SbBool OBOL_UNUSED_ARG(priority))
 {
 }
 
@@ -808,7 +808,7 @@ SoVectorizeAction::getColorPriority(void) const
   Not implemented yet. Provided for TGS OIV compatibility.
 */
 void
-SoVectorizeAction::enableLighting(SbBool COIN_UNUSED_ARG(flag))
+SoVectorizeAction::enableLighting(SbBool OBOL_UNUSED_ARG(flag))
 {
 }
 /*!

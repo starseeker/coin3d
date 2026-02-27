@@ -1,5 +1,5 @@
-#ifndef COIN_UTF8_H
-#define COIN_UTF8_H
+#ifndef OBOL_UTF8_H
+#define OBOL_UTF8_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -73,4 +73,4 @@ size_t coin_utf8_encode(char* buffer, size_t buflen, uint32_t value);
 }
 #endif
 
-#endif /* COIN_UTF8_H */
+#endif /* OBOL_UTF8_H */

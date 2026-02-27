@@ -1,5 +1,5 @@
-#ifndef COIN_SOBASELIST_H
-#define COIN_SOBASELIST_H
+#ifndef OBOL_SOBASELIST_H
+#define OBOL_SOBASELIST_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -38,7 +38,7 @@ class SoBase;
 #include <Inventor/SbBasic.h>
 #include <Inventor/lists/SbPList.h>
 
-class COIN_DLL_API SoBaseList : public SbPList {
+class OBOL_DLL_API SoBaseList : public SbPList {
 public:
   SoBaseList(void);
   SoBaseList(const int size);
@@ -61,4 +61,4 @@ private:
   SbBool referencing;
 };
 
-#endif // !COIN_SOBASELIST_H
+#endif // !OBOL_SOBASELIST_H

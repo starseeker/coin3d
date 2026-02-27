@@ -1,5 +1,5 @@
-#ifndef COIN_SOTEXTDETAIL_H
-#define COIN_SOTEXTDETAIL_H
+#ifndef OBOL_SOTEXTDETAIL_H
+#define OBOL_SOTEXTDETAIL_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/details/SoSubDetail.h>
 
-class COIN_DLL_API SoTextDetail : public SoDetail {
+class OBOL_DLL_API SoTextDetail : public SoDetail {
   typedef SoDetail inherited;
 
   SO_DETAIL_HEADER(SoTextDetail);
@@ -61,4 +61,4 @@ private:
   int part;
 };
 
-#endif // !COIN_SOTEXTDETAIL_H
+#endif // !OBOL_SOTEXTDETAIL_H

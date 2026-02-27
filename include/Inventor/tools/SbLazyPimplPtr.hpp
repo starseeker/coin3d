@@ -1,5 +1,5 @@
-#ifndef COIN_SBLAZYPIMPLPTR_HPP
-#define COIN_SBLAZYPIMPLPTR_HPP
+#ifndef OBOL_SBLAZYPIMPLPTR_HPP
+#define OBOL_SBLAZYPIMPLPTR_HPP
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,9 +33,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_SBLAZYPIMPLPTR_H
+#ifndef OBOL_SBLAZYPIMPLPTR_H
 #error do not include Inventor/tools/SbLazyPimplPtr.hpp directly, use Inventor/tools/SbLazyPimplPtr.h
-#endif // !COIN_SBLAZYPIMPLPTR_H
+#endif // !OBOL_SBLAZYPIMPLPTR_H
 
 /* ********************************************************************** */
 
@@ -139,4 +139,4 @@ SbLazyPimplPtr<T>::operator -> (void)
 
 /* ********************************************************************** */
 
-#endif // !COIN_SBPIMPLPTR_HPP
+#endif // !OBOL_SBPIMPLPTR_HPP

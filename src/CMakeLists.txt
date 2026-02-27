@@ -14,10 +14,10 @@ file(GENERATE
     INPUT "${CMAKE_CURRENT_BINARY_DIR}/config.h_at_configured"
 )
 
-add_compile_options(-DHAVE_CONFIG_H -DCOIN_INTERNAL -DCOIN_DEBUG=$<CONFIG:Debug>)
+add_compile_options(-DHAVE_CONFIG_H -DOBOL_INTERNAL -DOBOL_DEBUG=$<CONFIG:Debug>)
 
 if(OBOL_PROFILING)
-  add_compile_options(-DCOIN_PROFILING)
+  add_compile_options(-DOBOL_PROFILING)
 endif()
 
 include_directories(BEFORE
@@ -33,31 +33,31 @@ include_directories(BEFORE
 )
 
 # add include dirs for non targets
-if(NOT "${COIN_TARGET_INCLUDE_DIRECTORIES}" STREQUAL "")
-  include_directories(${COIN_TARGET_INCLUDE_DIRECTORIES})
+if(NOT "${OBOL_TARGET_INCLUDE_DIRECTORIES}" STREQUAL "")
+  include_directories(${OBOL_TARGET_INCLUDE_DIRECTORIES})
 endif()
 # add include dirs for targets
-foreach(_tgt ${COIN_TARGET_LINK_LIBRARIES})
+foreach(_tgt ${OBOL_TARGET_LINK_LIBRARIES})
   if(TARGET ${_tgt} )
     include_directories($<TARGET_PROPERTY:${_tgt},INTERFACE_INCLUDE_DIRECTORIES>)
   endif()
 endforeach()
 
-set(COIN_SOURCE misc/CoinTidbits.cpp CACHE INTERNAL "COIN_SOURCE")
+set(OBOL_SOURCE misc/CoinTidbits.cpp CACHE INTERNAL "OBOL_SOURCE")
 # Minimal core subdirectories - removed GUI/toolkit but keeping minimal dependencies
-set(COIN_SUBDIRS
+set(OBOL_SUBDIRS
   actions base bundles caches details draggers elements
   engines errors events fields fonts glue io manips misc rendering lists
   nodes shapenodes projectors sensors
   shadows threads shaders tools
 )
 
-list(APPEND COIN_SUBDIRS hardcopy)
+list(APPEND OBOL_SUBDIRS hardcopy)
 
 # Add nodekits and related components if enabled
-list(APPEND COIN_SUBDIRS nodekits profiler hud)
+list(APPEND OBOL_SUBDIRS nodekits profiler hud)
 
-foreach(_subdir ${COIN_SUBDIRS})
+foreach(_subdir ${OBOL_SUBDIRS})
   add_subdirectory(${_subdir})
 endforeach()
 add_subdirectory(doc)
@@ -69,7 +69,7 @@ add_subdirectory(doc)
 # Enable precompiled headers for all object libraries if requested and supported
 if(OBOL_USE_PRECOMPILED_HEADERS AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.16")
     message(STATUS "Applying precompiled headers to object libraries")
-    foreach(_subdir ${COIN_SUBDIRS})
+    foreach(_subdir ${OBOL_SUBDIRS})
         if(TARGET ${_subdir})
             target_precompile_headers(${_subdir} PRIVATE
                 "${CMAKE_CURRENT_SOURCE_DIR}/misc/CoinPCH.h"
@@ -88,27 +88,27 @@ endif()
 # ============================================================================
 
 # Determine library type
-set(COIN_LIBRARY_TYPE $<IF:$<BOOL:${BUILD_SHARED_LIBS}>,SHARED,STATIC>)
+set(OBOL_LIBRARY_TYPE $<IF:$<BOOL:${BUILD_SHARED_LIBS}>,SHARED,STATIC>)
 
 # Additional headers to include in target
-set(COIN_ADDITIONAL_HDRS 
+set(OBOL_ADDITIONAL_HDRS 
     ${PROJECT_BINARY_DIR}/src/config.h
 )
 
 # Create the main library target
-if(COIN_BUILD_SINGLE_LIB)
+if(OBOL_BUILD_SINGLE_LIB)
     # In single-lib dual-GL builds, both gl_osmesa.cpp and SoDBOSMesa.cpp need
     # the OSMesa include directories.  Apply them per-file so they don't pollute
     # the rest of the build (system GL headers and OSMesa headers can conflict).
-    if(COIN3D_BUILD_DUAL_GL AND COIN_OSMESA_INCLUDE_DIRS)
+    if(OBOL_BUILD_DUAL_GL AND OBOL_OSMESA_INCLUDE_DIRS)
         foreach(_osmesa_src
                 "${CMAKE_CURRENT_SOURCE_DIR}/glue/gl_osmesa.cpp"
                 "${CMAKE_CURRENT_SOURCE_DIR}/misc/SoDBOSMesa.cpp")
             set_source_files_properties(${_osmesa_src} PROPERTIES
-                INCLUDE_DIRECTORIES "${COIN_OSMESA_INCLUDE_DIRS}")
+                INCLUDE_DIRECTORIES "${OBOL_OSMESA_INCLUDE_DIRS}")
         endforeach()
     endif()
-    add_library(${PROJECT_NAME} ${COIN_SOURCE} ${COIN_ADDITIONAL_HDRS})
+    add_library(${PROJECT_NAME} ${OBOL_SOURCE} ${OBOL_ADDITIONAL_HDRS})
 else()
     set(_coin_objects
         $<TARGET_OBJECTS:actions>
@@ -143,16 +143,12 @@ else()
         $<TARGET_OBJECTS:tools>
         $<TARGET_OBJECTS:hardcopy>
     )
-    if(COIN3D_BUILD_DUAL_GL)
+    if(OBOL_BUILD_DUAL_GL)
         list(APPEND _coin_objects $<TARGET_OBJECTS:glue_osmesa>)
         list(APPEND _coin_objects $<TARGET_OBJECTS:misc_osmesa>)
     endif()
-    add_library(${PROJECT_NAME} ${COIN_SOURCE} ${COIN_ADDITIONAL_HDRS} ${_coin_objects})
+    add_library(${PROJECT_NAME} ${OBOL_SOURCE} ${OBOL_ADDITIONAL_HDRS} ${_coin_objects})
 endif()
-
-# Provide a "Coin" alias so that tests and downstream code can link against
-# the Coin target by its traditional name regardless of the Obol project name.
-add_library(Coin ALIAS ${PROJECT_NAME})
 
 # Set target properties
 set_target_properties(${PROJECT_NAME} PROPERTIES
@@ -162,8 +158,8 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 )
 
 # Set library output name based on backend selection
-if(DEFINED COIN3D_OUTPUT_NAME)
-    set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME ${COIN3D_OUTPUT_NAME})
+if(DEFINED OBOL_OUTPUT_NAME)
+    set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME ${OBOL_OUTPUT_NAME})
 endif()
 
 # ============================================================================
@@ -186,8 +182,8 @@ endif()
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
     HAVE_CONFIG_H
-    COIN_INTERNAL
-    COIN_DEBUG=$<CONFIG:Debug>
+    OBOL_INTERNAL
+    OBOL_DEBUG=$<CONFIG:Debug>
 )
 
 # Target-specific include directories (modern approach)
@@ -200,7 +196,7 @@ target_include_directories(${PROJECT_NAME}
         "${CMAKE_CURRENT_SOURCE_DIR}/misc"
         "${PROJECT_SOURCE_DIR}/include/Inventor/annex"
         "${PROJECT_BINARY_DIR}/src/shadows"
-        ${COIN_TARGET_INCLUDE_DIRECTORIES}
+        ${OBOL_TARGET_INCLUDE_DIRECTORIES}
     PUBLIC
         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
         $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
@@ -209,45 +205,45 @@ target_include_directories(${PROJECT_NAME}
 )
 
 # Target-specific linking (modern approach)  
-target_link_libraries(${PROJECT_NAME} PRIVATE ${COIN_TARGET_LINK_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} PRIVATE ${OBOL_TARGET_LINK_LIBRARIES})
 
 # For dual-GL builds, also link OSMesa so that osmesa_SoGLContext_* functions
 # can resolve mgl* symbols at runtime.
-if(COIN3D_BUILD_DUAL_GL)
-    target_link_libraries(${PROJECT_NAME} PRIVATE ${COIN_OSMESA_LIBRARIES})
+if(OBOL_BUILD_DUAL_GL)
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${OBOL_OSMESA_LIBRARIES})
 endif()
 
 if(WIN32)
-  if(COIN_BUILD_SHARED_LIBS)
+  if(OBOL_BUILD_SHARED_LIBS)
     configure_file(${PROJECT_NAME}.rc.cmake.in ${PROJECT_NAME}.rc)
     target_sources(${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.rc")
-    target_compile_definitions(${PROJECT_NAME} INTERFACE COIN_DLL)
+    target_compile_definitions(${PROJECT_NAME} INTERFACE OBOL_DLL)
     if(MINGW)
-      set_target_properties(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_NAME ${PROJECT_NAME}-${COIN_SO_VERSION})
+      set_target_properties(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_NAME ${PROJECT_NAME}-${OBOL_SO_VERSION})
     endif()
   else()
-    target_compile_definitions(${PROJECT_NAME} INTERFACE COIN_NOT_DLL)
+    target_compile_definitions(${PROJECT_NAME} INTERFACE OBOL_NOT_DLL)
     if(MSVC)
       set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /Z7")                       # Override default /Zi to embed
       set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} /Z7")     # debugging info in the .lib.
     endif()
   endif()
 elseif(APPLE)
-  if(COIN_BUILD_MAC_FRAMEWORK)
+  if(OBOL_BUILD_MAC_FRAMEWORK)
     # Set the framework target properties just to make sure the relevant links inside the framework 
     # are created.  Because the default framework name differs from the project name we change the
     # output name property.
     set_target_properties(${PROJECT_NAME} PROPERTIES
       FRAMEWORK TRUE
-      FRAMEWORK_VERSION ${COIN_MAC_FRAMEWORK_VERSION}
-      #PUBLIC_HEADER "${COIN_PUBLIC_HEADERS}" # does not work recursively
-      #PRIVATE_HEADER "${COIN_PRIVATE_HEADERS}" # does not work recursively
+      FRAMEWORK_VERSION ${OBOL_MAC_FRAMEWORK_VERSION}
+      #PUBLIC_HEADER "${OBOL_PUBLIC_HEADERS}" # does not work recursively
+      #PRIVATE_HEADER "${OBOL_PRIVATE_HEADERS}" # does not work recursively
       RESOURCE "${CMAKE_BINARY_DIR}/version.plist" # does not work recursively
       MACOSX_FRAMEWORK_IDENTIFIER org.coin3d.Coin.framework
       MACOSX_FRAMEWORK_SHORT_VERSION_STRING ${PROJECT_VERSION}
       MACOSX_FRAMEWORK_BUNDLE_VERSION ${PROJECT_VERSION}
       MACOSX_FRAMEWORK_INFO_PLIST "${CMAKE_BINARY_DIR}/Info.plist"
-      OUTPUT_NAME ${COIN_MAC_FRAMEWORK_NAME}
+      OUTPUT_NAME ${OBOL_MAC_FRAMEWORK_NAME}
     )
     # adapt install directory to allow distribution of dylibs/frameworks in users
     # framework/application bundle
@@ -270,25 +266,25 @@ endif()
 if(WIN32 AND NOT MINGW)
     set_target_properties(${PROJECT_NAME} PROPERTIES 
         VERSION ${PROJECT_VERSION} 
-        SOVERSION ${COIN_SO_VERSION}
+        SOVERSION ${OBOL_SO_VERSION}
     )
 else()
     set_target_properties(${PROJECT_NAME} PROPERTIES 
-        VERSION "${COIN_SO_VERSION}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}" 
-        SOVERSION ${COIN_SO_VERSION}
+        VERSION "${OBOL_SO_VERSION}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}" 
+        SOVERSION ${OBOL_SO_VERSION}
     )
 endif()
 
 # Setting up a framework means adding all the files and links under a framework
 # directory. A single install command then moves the entire contents of the
-# framework directory to the COIN_MAC_FRAMEWORK_PREFIX directory (/Library/Frameworks
+# framework directory to the OBOL_MAC_FRAMEWORK_PREFIX directory (/Library/Frameworks
 # by default)
 # As the PUBLIC_HEADER and RESOURCE options of install target do not support
 # directory structure creation when building a framework we set the MACOSX_PACKAGE_LOCATION
 # property on the source files and add them to the target. This does however not work
 # for the generated documentation files.
 # All non standard links must be created manually.
-if(COIN_BUILD_MAC_FRAMEWORK)
+if(OBOL_BUILD_MAC_FRAMEWORK)
 
 # ############################################################################
 # Add framework headers
@@ -303,17 +299,17 @@ if(COIN_BUILD_MAC_FRAMEWORK)
 # Add framework documentation files
 # ############################################################################
 
-  if(COIN_BUILD_DOCUMENTATION)
+  if(OBOL_BUILD_DOCUMENTATION)
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD 
       COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${PROJECT_NAME}>/Documentation
       COMMAND ${CMAKE_COMMAND} -E create_symlink ./Versions/Current/Documentation $<TARGET_FILE_DIR:${PROJECT_NAME}>/../../Documentation
       COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/html $<TARGET_FILE_DIR:${PROJECT_NAME}>/Documentation/html)
-    if(COIN_BUILD_DOCUMENTATION_QTHELP)
+    if(OBOL_BUILD_DOCUMENTATION_QTHELP)
       add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD 
       COMMAND ${CMAKE_COMMAND} -E remove $<TARGET_FILE_DIR:${PROJECT_NAME}>/Documentation/html/${PROJECT_NAME}-${PROJECT_VERSION_MAJOR}.qch
         COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/html/${PROJECT_NAME}-${PROJECT_VERSION_MAJOR}.qch $<TARGET_FILE_DIR:${PROJECT_NAME}>/Documentation)
     endif()
-    if(COIN_BUILD_DOCUMENTATION_MAN)
+    if(OBOL_BUILD_DOCUMENTATION_MAN)
       add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD 
         COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/man/man3 $<TARGET_FILE_DIR:${PROJECT_NAME}>/Documentation/man)
     endif()
@@ -326,9 +322,9 @@ if(COIN_BUILD_MAC_FRAMEWORK)
   add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD 
     COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${PROJECT_NAME}>/Libraries
     COMMAND ${CMAKE_COMMAND} -E create_symlink ./Versions/Current/Libraries $<TARGET_FILE_DIR:${PROJECT_NAME}>/../../Libraries
-    COMMAND ${CMAKE_COMMAND} -E create_symlink ../${COIN_MAC_FRAMEWORK_NAME} $<TARGET_FILE_DIR:${PROJECT_NAME}>/Libraries/${CMAKE_SHARED_LIBRARY_PREFIX}${PROJECT_NAME}${COIN_SO_VERSION}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}${CMAKE_SHARED_LIBRARY_SUFFIX}
-    COMMAND ${CMAKE_COMMAND} -E create_symlink ../${COIN_MAC_FRAMEWORK_NAME} $<TARGET_FILE_DIR:${PROJECT_NAME}>/Libraries/${CMAKE_SHARED_LIBRARY_PREFIX}${PROJECT_NAME}${COIN_SO_VERSION}${CMAKE_SHARED_LIBRARY_SUFFIX}
-    COMMAND ${CMAKE_COMMAND} -E create_symlink ../${COIN_MAC_FRAMEWORK_NAME} $<TARGET_FILE_DIR:${PROJECT_NAME}>/Libraries/${CMAKE_SHARED_LIBRARY_PREFIX}${PROJECT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX}
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ../${OBOL_MAC_FRAMEWORK_NAME} $<TARGET_FILE_DIR:${PROJECT_NAME}>/Libraries/${CMAKE_SHARED_LIBRARY_PREFIX}${PROJECT_NAME}${OBOL_SO_VERSION}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}${CMAKE_SHARED_LIBRARY_SUFFIX}
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ../${OBOL_MAC_FRAMEWORK_NAME} $<TARGET_FILE_DIR:${PROJECT_NAME}>/Libraries/${CMAKE_SHARED_LIBRARY_PREFIX}${PROJECT_NAME}${OBOL_SO_VERSION}${CMAKE_SHARED_LIBRARY_SUFFIX}
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ../${OBOL_MAC_FRAMEWORK_NAME} $<TARGET_FILE_DIR:${PROJECT_NAME}>/Libraries/${CMAKE_SHARED_LIBRARY_PREFIX}${PROJECT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX}
     COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${PROJECT_NAME}>/Resources/include
     COMMAND ${CMAKE_COMMAND} -E create_symlink ../../Headers $<TARGET_FILE_DIR:${PROJECT_NAME}>/Resources/include/Inventor
     COMMAND ${CMAKE_COMMAND} -E create_symlink ../../../../SoQt.framework/Headers $<TARGET_FILE_DIR:${PROJECT_NAME}>/Headers/Qt
@@ -376,7 +372,7 @@ else()
       ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT development
       RESOURCE DESTINATION ${CMAKE_INSTALL_DATADIR} COMPONENT development
     )
-    if(COIN_BUILD_SHARED_LIBS)
+    if(OBOL_BUILD_SHARED_LIBS)
       if(MSVC)
         install(FILES $<TARGET_PDB_FILE:${PROJECT_NAME}> DESTINATION ${CMAKE_INSTALL_BINDIR} CONFIGURATIONS Debug RelWithDebInfo COMPONENT debug)
       endif()
@@ -388,7 +384,7 @@ else()
       ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT development
       RESOURCE DESTINATION ${CMAKE_INSTALL_DATADIR} COMPONENT development
     )
-    if(COIN_BUILD_SHARED_LIBS)
+    if(OBOL_BUILD_SHARED_LIBS)
       install(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME} LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT development NAMELINK_ONLY)
       if(MSVC)
         install(FILES $<TARGET_PDB_FILE:${PROJECT_NAME}> DESTINATION ${CMAKE_INSTALL_BINDIR} CONFIGURATIONS Debug RelWithDebInfo COMPONENT debug)
@@ -401,31 +397,31 @@ endif()
 # Install config package
 # ############################################################################
 
-if(COIN_BUILD_MAC_FRAMEWORK)
-  set(COIN_CONFIG_PACKAGE_LOCATION ${COIN_MAC_FRAMEWORK_NAME}.framework/Resources/CMake)
-  string(TOLOWER ${COIN_MAC_FRAMEWORK_NAME} COIN_CONFIG_PACKAGE_BASENAME)
+if(OBOL_BUILD_MAC_FRAMEWORK)
+  set(OBOL_CONFIG_PACKAGE_LOCATION ${OBOL_MAC_FRAMEWORK_NAME}.framework/Resources/CMake)
+  string(TOLOWER ${OBOL_MAC_FRAMEWORK_NAME} OBOL_CONFIG_PACKAGE_BASENAME)
 else()
-  set(COIN_CONFIG_PACKAGE_LOCATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}-${PROJECT_VERSION})
-  string(TOLOWER ${PROJECT_NAME} COIN_CONFIG_PACKAGE_BASENAME)
+  set(OBOL_CONFIG_PACKAGE_LOCATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}-${PROJECT_VERSION})
+  string(TOLOWER ${PROJECT_NAME} OBOL_CONFIG_PACKAGE_BASENAME)
   if(UNIX OR MINGW)
-    install(FILES "${CMAKE_BINARY_DIR}/${PROJECT_NAME_LOWER}-default.cfg" DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/Coin/conf)
+    install(FILES "${CMAKE_BINARY_DIR}/${PROJECT_NAME_LOWER}-default.cfg" DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/Obol/conf)
   endif()
 endif()
 
-# Support find_package(Coin NO_MODULE).
-set(COIN_DOC_DIR ${CMAKE_INSTALL_DOCDIR})
-set(COIN_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR})
-set(COIN_LIB_DIR ${CMAKE_INSTALL_LIBDIR})
-set(COINDIR ${CMAKE_INSTALL_PREFIX})
+# Support find_package(Obol NO_MODULE).
+set(OBOL_DOC_DIR ${CMAKE_INSTALL_DOCDIR})
+set(OBOL_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR})
+set(OBOL_LIB_DIR ${CMAKE_INSTALL_LIBDIR})
+set(OBOLDIR ${CMAKE_INSTALL_PREFIX})
 
 include(CMakePackageConfigHelpers)
 
-configure_package_config_file(${PROJECT_SOURCE_DIR}/cmake/${PROJECT_NAME_LOWER}-config.cmake.in "${CMAKE_CURRENT_BINARY_DIR}/${COIN_CONFIG_PACKAGE_BASENAME}-config.cmake"
-  INSTALL_DESTINATION ${COIN_CONFIG_PACKAGE_LOCATION}
-  PATH_VARS COINDIR COIN_INCLUDE_DIR COIN_LIB_DIR COIN_DOC_DIR
+configure_package_config_file(${PROJECT_SOURCE_DIR}/cmake/${PROJECT_NAME_LOWER}-config.cmake.in "${CMAKE_CURRENT_BINARY_DIR}/${OBOL_CONFIG_PACKAGE_BASENAME}-config.cmake"
+  INSTALL_DESTINATION ${OBOL_CONFIG_PACKAGE_LOCATION}
+  PATH_VARS OBOLDIR OBOL_INCLUDE_DIR OBOL_LIB_DIR OBOL_DOC_DIR
 )
 
-write_basic_package_version_file("${CMAKE_CURRENT_BINARY_DIR}/${COIN_CONFIG_PACKAGE_BASENAME}-config-version.cmake"
+write_basic_package_version_file("${CMAKE_CURRENT_BINARY_DIR}/${OBOL_CONFIG_PACKAGE_BASENAME}-config-version.cmake"
   VERSION ${PROJECT_VERSION}
   COMPATIBILITY SameMajorVersion
 )
@@ -433,17 +429,17 @@ write_basic_package_version_file("${CMAKE_CURRENT_BINARY_DIR}/${COIN_CONFIG_PACK
 # To make the component usable not only from the install directory but also from the build directory
 export(
   TARGETS ${PROJECT_NAME}
-  FILE ${COIN_CONFIG_PACKAGE_BASENAME}-export.cmake
+  FILE ${OBOL_CONFIG_PACKAGE_BASENAME}-export.cmake
 )
 
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${COIN_CONFIG_PACKAGE_BASENAME}-config.cmake" "${CMAKE_CURRENT_BINARY_DIR}/${COIN_CONFIG_PACKAGE_BASENAME}-config-version.cmake"
-  DESTINATION ${COIN_CONFIG_PACKAGE_LOCATION}
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${OBOL_CONFIG_PACKAGE_BASENAME}-config.cmake" "${CMAKE_CURRENT_BINARY_DIR}/${OBOL_CONFIG_PACKAGE_BASENAME}-config-version.cmake"
+  DESTINATION ${OBOL_CONFIG_PACKAGE_LOCATION}
   COMPONENT development
 )
 
 install(EXPORT ${PROJECT_NAME}
-  DESTINATION ${COIN_CONFIG_PACKAGE_LOCATION}
+  DESTINATION ${OBOL_CONFIG_PACKAGE_LOCATION}
   NAMESPACE ${PROJECT_NAME}::
-  FILE ${COIN_CONFIG_PACKAGE_BASENAME}-export.cmake
+  FILE ${OBOL_CONFIG_PACKAGE_BASENAME}-export.cmake
   COMPONENT development
 )

@@ -1,5 +1,5 @@
-#ifndef COIN_SONODEPROFILING_H
-#define COIN_SONODEPROFILING_H
+#ifndef OBOL_SONODEPROFILING_H
+#define OBOL_SONODEPROFILING_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -40,7 +40,7 @@
 #include <Inventor/annex/Profiler/SoProfiler.h>
 #include <Inventor/annex/Profiler/elements/SoProfilerElement.h>
 
-#include "misc/SoDBP.h" // for global envvar COIN_PROFILER
+#include "misc/SoDBP.h" // for global envvar OBOL_PROFILER
 #include "profiler/SoProfilerP.h"
 
 /*
@@ -128,4 +128,4 @@ private:
 
 };
 
-#endif // !COIN_SONODEPROFILING_H
+#endif // !OBOL_SONODEPROFILING_H

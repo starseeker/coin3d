@@ -1,5 +1,5 @@
-#ifndef COIN_SBVEC3F_H
-#define COIN_SBVEC3F_H
+#ifndef OBOL_SBVEC3F_H
+#define OBOL_SBVEC3F_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -48,7 +48,7 @@ class SbVec3b;
 class SbVec3s;
 class SbVec3i32;
 
-class COIN_DLL_API SbVec3f {
+class OBOL_DLL_API SbVec3f {
 public:
   SbVec3f(void) { }
   SbVec3f(const float v[3]) { vec[0] = v[0]; vec[1] = v[1]; vec[2] = v[2]; }
@@ -101,33 +101,33 @@ protected:
 
 }; // SbVec3f
 
-[[nodiscard]] COIN_DLL_API inline SbVec3f operator * (const SbVec3f & v, float d) {
+[[nodiscard]] OBOL_DLL_API inline SbVec3f operator * (const SbVec3f & v, float d) {
   SbVec3f val(v); val *= d; return val;
 }
 
-[[nodiscard]] COIN_DLL_API inline SbVec3f operator * (float d, const SbVec3f & v) {
+[[nodiscard]] OBOL_DLL_API inline SbVec3f operator * (float d, const SbVec3f & v) {
   SbVec3f val(v); val *= d; return val;
 }
 
-[[nodiscard]] COIN_DLL_API inline SbVec3f operator / (const SbVec3f & v, float d) {
+[[nodiscard]] OBOL_DLL_API inline SbVec3f operator / (const SbVec3f & v, float d) {
   SbDividerChk("operator/(SbVec3f,float)", d);
   SbVec3f val(v); val /= d; return val;
 }
 
-[[nodiscard]] COIN_DLL_API inline SbVec3f operator + (const SbVec3f & v1, const SbVec3f & v2) {
+[[nodiscard]] OBOL_DLL_API inline SbVec3f operator + (const SbVec3f & v1, const SbVec3f & v2) {
   SbVec3f v(v1); v += v2; return v;
 }
 
-[[nodiscard]] COIN_DLL_API inline SbVec3f operator - (const SbVec3f & v1, const SbVec3f & v2) {
+[[nodiscard]] OBOL_DLL_API inline SbVec3f operator - (const SbVec3f & v1, const SbVec3f & v2) {
   SbVec3f v(v1); v -= v2; return v;
 }
 
-[[nodiscard]] COIN_DLL_API inline int operator == (const SbVec3f & v1, const SbVec3f & v2) {
+[[nodiscard]] OBOL_DLL_API inline int operator == (const SbVec3f & v1, const SbVec3f & v2) {
   return ((v1[0] == v2[0]) && (v1[1] == v2[1]) && (v1[2] == v2[2]));
 }
 
-[[nodiscard]] COIN_DLL_API inline int operator != (const SbVec3f & v1, const SbVec3f & v2) {
+[[nodiscard]] OBOL_DLL_API inline int operator != (const SbVec3f & v1, const SbVec3f & v2) {
   return !(v1 == v2);
 }
 
-#endif // !COIN_SBVEC3F_H
+#endif // !OBOL_SBVEC3F_H

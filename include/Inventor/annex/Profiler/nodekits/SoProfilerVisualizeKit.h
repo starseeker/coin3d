@@ -1,5 +1,5 @@
-#ifndef COIN_SOPROFILERVISUALIZEKIT
-#define COIN_SOPROFILERVISUALIZEKIT
+#ifndef OBOL_SOPROFILERVISUALIZEKIT
+#define OBOL_SOPROFILERVISUALIZEKIT
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -42,7 +42,7 @@
 
 struct SoProfilerVisualizeKitP;
 
-class COIN_DLL_API SoProfilerVisualizeKit : public SoBaseKit {
+class OBOL_DLL_API SoProfilerVisualizeKit : public SoBaseKit {
   typedef SoBaseKit inherited;
   SO_KIT_HEADER(SoProfilerVisualizeKit);
   SO_KIT_CATALOG_ENTRY_HEADER(top);
@@ -74,4 +74,4 @@ private:
   SbPimplPtr<SoProfilerVisualizeKitP> pimpl;
 };
 
-#endif //!COIN_SOPROFILERVISUALIZEKIT
+#endif //!OBOL_SOPROFILERVISUALIZEKIT

@@ -1,5 +1,5 @@
-#ifndef COIN_SOCOMPLEXITY_H
-#define COIN_SOCOMPLEXITY_H
+#ifndef OBOL_SOCOMPLEXITY_H
+#define OBOL_SOCOMPLEXITY_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -38,7 +38,7 @@
 #include <Inventor/fields/SoSFFloat.h>
 #include <Inventor/elements/SoComplexityTypeElement.h>
 
-class COIN_DLL_API SoComplexity : public SoNode {
+class OBOL_DLL_API SoComplexity : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_HEADER(SoComplexity);
@@ -68,4 +68,4 @@ protected:
   virtual ~SoComplexity();
 };
 
-#endif // !COIN_SOCOMPLEXITY_H
+#endif // !OBOL_SOCOMPLEXITY_H

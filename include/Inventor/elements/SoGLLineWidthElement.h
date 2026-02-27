@@ -1,5 +1,5 @@
-#ifndef COIN_SOGLLINEWIDTHELEMENT_H
-#define COIN_SOGLLINEWIDTHELEMENT_H
+#ifndef OBOL_SOGLLINEWIDTHELEMENT_H
+#define OBOL_SOGLLINEWIDTHELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/elements/SoLineWidthElement.h>
 
-class COIN_DLL_API SoGLLineWidthElement : public SoLineWidthElement {
+class OBOL_DLL_API SoGLLineWidthElement : public SoLineWidthElement {
   typedef SoLineWidthElement inherited;
 
   SO_ELEMENT_HEADER(SoGLLineWidthElement);
@@ -60,4 +60,4 @@ private:
   void updategl(void);
 };
 
-#endif // !COIN_SOGLLINEWIDTHELEMENT_H
+#endif // !OBOL_SOGLLINEWIDTHELEMENT_H

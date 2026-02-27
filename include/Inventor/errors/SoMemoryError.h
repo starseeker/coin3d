@@ -1,5 +1,5 @@
-#ifndef COIN_SOMEMORYERROR_H
-#define COIN_SOMEMORYERROR_H
+#ifndef OBOL_SOMEMORYERROR_H
+#define OBOL_SOMEMORYERROR_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/errors/SoError.h>
 
-class COIN_DLL_API SoMemoryError : public SoError {
+class OBOL_DLL_API SoMemoryError : public SoError {
   typedef SoError inherited;
 
 public:
@@ -60,4 +60,4 @@ private:
   static void * callbackData;
 };
 
-#endif // !COIN_SOMEMORYERROR_H
+#endif // !OBOL_SOMEMORYERROR_H

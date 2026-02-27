@@ -118,16 +118,16 @@ cc_mutex_struct_clean(cc_mutex * mutex_struct)
 /* don't hide 'static' these to hide them in file-scope, as they are
    used from rwmutex.cpp and recmutex.cpp as well. */
 unsigned int cc_debug_mtxcount = 0;
-const char * COIN_DEBUG_MUTEX_COUNT = "COIN_DEBUG_MUTEX_COUNT";
+const char * OBOL_DEBUG_MUTEX_COUNT = "OBOL_DEBUG_MUTEX_COUNT";
 
 /**************************************************************************/
 
-/* Return value of COIN_DEBUG_MUTEX_COUNT environment variable. */
+/* Return value of OBOL_DEBUG_MUTEX_COUNT environment variable. */
 static int coin_debug_mutex_count(void)
 {
   static int d = -1;
   if (d == -1) {
-    const char* val = CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_MUTEX_COUNT");
+    const char* val = CoinInternal::getEnvironmentVariableRaw("OBOL_DEBUG_MUTEX_COUNT");
     d = val ? atoi(val) : 0;
   }
   return d;
@@ -252,7 +252,7 @@ cc_mutex_cleanup(void)
 void
 cc_mutex_init(void)
 {
-  const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_MUTEXLOCK_MAXTIME");
+  const char * env = CoinInternal::getEnvironmentVariableRaw("OBOL_DEBUG_MUTEXLOCK_MAXTIME");
 
   if (cc_global_mutex == NULL) {
     cc_global_mutex = cc_mutex_construct();
@@ -267,7 +267,7 @@ cc_mutex_init(void)
 
   if (env) { maxmutexlocktime = atof(env); }
 
-  env = CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_MUTEXLOCK_TIMING");
+  env = CoinInternal::getEnvironmentVariableRaw("OBOL_DEBUG_MUTEXLOCK_TIMING");
   if (env) { reportmutexlocktiming = atof(env); }
 }
 

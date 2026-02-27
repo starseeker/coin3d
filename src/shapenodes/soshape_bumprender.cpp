@@ -813,7 +813,7 @@ soshape_bumprender::calcTangentSpace(const SoPrimitiveVertexCache * cache)
 }
 
 void
-soshape_bumprender::calcTSBCoords(const SoPrimitiveVertexCache * cache, SoLight * COIN_UNUSED_ARG(light))
+soshape_bumprender::calcTSBCoords(const SoPrimitiveVertexCache * cache, SoLight * OBOL_UNUSED_ARG(light))
 {
   SbVec3f thelightvec;
   SbVec3f tlightvec;

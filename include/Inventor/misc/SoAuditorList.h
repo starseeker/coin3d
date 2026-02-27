@@ -1,5 +1,5 @@
-#ifndef COIN_MISC_SOAUDITORLIST_H
-#define COIN_MISC_SOAUDITORLIST_H
+#ifndef OBOL_MISC_SOAUDITORLIST_H
+#define OBOL_MISC_SOAUDITORLIST_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -42,9 +42,9 @@
 
 // The real class definition include file has been moved to the lists
 // directory.
-#if defined(COIN_INTERNAL)
+#if defined(OBOL_INTERNAL)
 #error Do not include Inventor/misc/SoAuditorList.h internally (use Inventor/lists/SoAuditorList.h).
-#endif // COIN_INTERNAL
+#endif // OBOL_INTERNAL
 #include <Inventor/lists/SoAuditorList.h>
 
-#endif // !COIN_MISC_SOAUDITORLIST_H
+#endif // !OBOL_MISC_SOAUDITORLIST_H

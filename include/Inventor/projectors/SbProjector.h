@@ -1,5 +1,5 @@
-#ifndef COIN_SBPROJECTOR_H
-#define COIN_SBPROJECTOR_H
+#ifndef OBOL_SBPROJECTOR_H
+#define OBOL_SBPROJECTOR_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -40,7 +40,7 @@
 
 class SbVec2f;
 
-class COIN_DLL_API SbProjector {
+class OBOL_DLL_API SbProjector {
 public:
   virtual SbVec3f project(const SbVec2f & point) = 0;
   virtual void setViewVolume(const SbViewVolume & vol);
@@ -64,4 +64,4 @@ protected:
   SbBool verifyProjection(const SbVec3f & projpt) const;
 };
 
-#endif // !COIN_SBPROJECTOR_H
+#endif // !OBOL_SBPROJECTOR_H

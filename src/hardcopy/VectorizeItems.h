@@ -1,5 +1,5 @@
-#ifndef COIN_SOVECTORIZEITEMS_H
-#define COIN_SOVECTORIZEITEMS_H
+#ifndef OBOL_SOVECTORIZEITEMS_H
+#define OBOL_SOVECTORIZEITEMS_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -129,4 +129,4 @@ public:
   } image;
 };
 
-#endif // COIN_SOVECTORIZEITEMS_H
+#endif // OBOL_SOVECTORIZEITEMS_H

@@ -1,5 +1,5 @@
-#ifndef COIN_SBBASICP_H
-#define COIN_SBBASICP_H
+#ifndef OBOL_SBBASICP_H
+#define OBOL_SBBASICP_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -109,9 +109,9 @@ coin_internal_assert_cast(From * ptr) {
   //not here. Although it will be prudent to disable this assert in
   //any release before we have tested the calling code well enough. -
   //BFG 20080916
-#ifdef COIN_BETA_VERSION // COIN_BETA_VERSION is not defined in release versions
+#ifdef OBOL_BETA_VERSION // OBOL_BETA_VERSION is not defined in release versions
   assert(retVal && "ptr was not of correct type");
-#endif // COIN_BETA_VERSION
+#endif // OBOL_BETA_VERSION
   return retVal;
 }
 
@@ -138,4 +138,4 @@ To coin_assert_cast(ScXMLObject * ptr) { return coin_internal_assert_cast<To>(pt
 template<typename To>
 To coin_assert_cast(const ScXMLObject * ptr) { return coin_internal_assert_cast<To>(ptr); }
 
-#endif // !COIN_SBBASICP_H
+#endif // !OBOL_SBBASICP_H

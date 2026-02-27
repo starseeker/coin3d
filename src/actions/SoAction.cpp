@@ -223,7 +223,7 @@
 
 #include "CoinTidbits.h"
 #include "actions/SoActionP.h"
-#include "misc/SoDBP.h" // for global envvar COIN_PROFILER
+#include "misc/SoDBP.h" // for global envvar OBOL_PROFILER
 #include "misc/SoCompactPathList.h"
 #include "profiler/SoNodeProfiling.h"
 
@@ -472,7 +472,7 @@ SoAction::apply(SoNode * root)
   PRIVATE(this)->appliedcode = SoAction::NODE;
 
   if (root) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     static SbBool first = TRUE;
     if ((root->getRefCount() == 0) && first) {
 
@@ -507,7 +507,7 @@ SoAction::apply(SoNode * root)
                                 this->getTypeId().getName().getString());
       first = FALSE;
     }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     // So the graph is not deallocated during traversal.
     root->ref();
     this->currentpath.setHead(root);
@@ -614,12 +614,12 @@ SoAction::apply(SoPath * path)
 
   PRIVATE(this)->terminated = FALSE;
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (path->getRefCount() == 0) {
     SoDebugError::postWarning("SoAction::apply",
                               "path has reference count equal to zero");
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   // So the path is not deallocated during traversal.
   path->ref();
@@ -768,7 +768,7 @@ SoAction::apply(const SoPathList & pathlist, SbBool obeysrules)
   Applies this action object to the same as \a beingApplied is being
   applied to.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.1
 */
@@ -898,7 +898,7 @@ SoAction::getOriginalPathListAppliedTo(void) const
 SbBool
 SoAction::isLastPathListAppliedTo(void) const
 {
-  COIN_OBSOLETED();
+  OBOL_OBSOLETED();
   return TRUE;
 }
 
@@ -1260,7 +1260,7 @@ SoAction::beginTraversal(SoNode * node)
   scene graph traversal.  Default method does nothing.
 */
 void
-SoAction::endTraversal(SoNode * COIN_UNUSED_ARG(node))
+SoAction::endTraversal(SoNode * OBOL_UNUSED_ARG(node))
 {
 }
 

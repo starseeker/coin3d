@@ -50,9 +50,9 @@
 
 #include "config.h"
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
 #include <Inventor/threads/SbTypedStorage.h>
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 
 #include "CoinTidbits.h"
 #include "SbBasicP.h"
@@ -63,7 +63,7 @@ SbBool SoCacheElement::invalidated = FALSE;
 
 // *************************************************************************
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
 
 static SbTypedStorage <SbBool*> * invalidated_storage = NULL;
 
@@ -73,7 +73,7 @@ cacheelement_cleanup(void)
   delete invalidated_storage;
 }
 
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 
 // *************************************************************************
 
@@ -91,11 +91,11 @@ SoCacheElement::initClass(void)
   SO_ELEMENT_INIT_CLASS(SoCacheElement, inherited);
   SoCacheElement::invalidated = FALSE;
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   invalidated_storage = new SbTypedStorage <SbBool*> (sizeof(SbBool));
   *(invalidated_storage->get()) = FALSE;
   coin_atexit((coin_atexit_f*) cacheelement_cleanup, CC_ATEXIT_NORMAL);
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 }
 
 /*!
@@ -200,16 +200,16 @@ SoCacheElement::anyOpen(SoState * const state)
 void
 SoCacheElement::invalidate(SoState * const state)
 {
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoCacheElement::invalidate",
                          "Invalidate all caches");
 #endif // debug
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   *(invalidated_storage->get()) = TRUE;
-#else // COIN_THREADSAFE
+#else // OBOL_THREADSAFE
   SoCacheElement::invalidated = TRUE;
-#endif // ! COIN_THREADSAFE
+#endif // ! OBOL_THREADSAFE
 
   const SoCacheElement * elem =
     coin_assert_cast<const SoCacheElement *>
@@ -228,7 +228,7 @@ SoCacheElement::invalidate(SoState * const state)
   cache them in the cache.
 */
 SbBool
-SoCacheElement::matches(const SoElement * COIN_UNUSED_ARG(element)) const
+SoCacheElement::matches(const SoElement * OBOL_UNUSED_ARG(element)) const
 {
   assert(FALSE && "this method should not be called for this element");
   return FALSE;
@@ -308,14 +308,14 @@ SoCacheElement::addCacheDependency(SoState * const state,
 SbBool
 SoCacheElement::setInvalid(const SbBool newvalue)
 {
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   SbBool * ptr = invalidated_storage->get();
   SbBool oldval = *ptr;
   *ptr = newvalue;
-#else // COIN_THREADSAFE
+#else // OBOL_THREADSAFE
   SbBool oldval = SoCacheElement::invalidated;
   SoCacheElement::invalidated = newvalue;
-#endif // ! COIN_THREADSAFE
+#endif // ! OBOL_THREADSAFE
   return oldval;
 }
 

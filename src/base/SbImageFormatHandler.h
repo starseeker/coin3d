@@ -30,8 +30,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_SBIMAGEFORMATHANDLER_H
-#define COIN_SBIMAGEFORMATHANDLER_H
+#ifndef OBOL_SBIMAGEFORMATHANDLER_H
+#define OBOL_SBIMAGEFORMATHANDLER_H
 
 #include <string>
 #include <vector>
@@ -135,4 +135,4 @@ private:
   void setError(const std::string& error) const;
 };
 
-#endif // COIN_SBIMAGEFORMATHANDLER_H
+#endif // OBOL_SBIMAGEFORMATHANDLER_H

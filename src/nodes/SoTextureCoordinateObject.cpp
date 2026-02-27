@@ -123,7 +123,7 @@ SoTextureCoordinateObject::initClass(void)
 const SbVec4f &
 SoTextureCoordinateObject::generate(void * userdata,
                                     const SbVec3f & p,
-                                    const SbVec3f & COIN_UNUSED_ARG(n))
+                                    const SbVec3f & OBOL_UNUSED_ARG(n))
 {
   SoTextureCoordinateObject *thisp =
     (SoTextureCoordinateObject*) userdata;

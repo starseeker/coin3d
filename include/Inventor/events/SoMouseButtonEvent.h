@@ -1,5 +1,5 @@
-#ifndef COIN_SOMOUSEBUTTONEVENT_H
-#define COIN_SOMOUSEBUTTONEVENT_H
+#ifndef OBOL_SOMOUSEBUTTONEVENT_H
+#define OBOL_SOMOUSEBUTTONEVENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -41,7 +41,7 @@
 #define SO_MOUSE_RELEASE_EVENT(EVENT, BUTTON) \
  (SoMouseButtonEvent::isButtonReleaseEvent(EVENT, SoMouseButtonEvent::BUTTON))
 
-class COIN_DLL_API SoMouseButtonEvent : public SoButtonEvent {
+class OBOL_DLL_API SoMouseButtonEvent : public SoButtonEvent {
   typedef SoButtonEvent inherited;
 
   SO_EVENT_HEADER();
@@ -69,4 +69,4 @@ private:
 
 }; // SoMouseButtonEvent
 
-#endif // !COIN_SOMOUSEBUTTONEVENT_H
+#endif // !OBOL_SOMOUSEBUTTONEVENT_H

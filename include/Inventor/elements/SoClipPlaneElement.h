@@ -1,5 +1,5 @@
-#ifndef COIN_SOCLIPPLANEELEMENT_H
-#define COIN_SOCLIPPLANEELEMENT_H
+#ifndef OBOL_SOCLIPPLANEELEMENT_H
+#define OBOL_SOCLIPPLANEELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/lists/SbList.h>
 #include <Inventor/SbPlane.h>
 
-class COIN_DLL_API SoClipPlaneElement : public SoAccumulatedElement {
+class OBOL_DLL_API SoClipPlaneElement : public SoAccumulatedElement {
   typedef SoAccumulatedElement inherited;
 
   SO_ELEMENT_HEADER(SoClipPlaneElement);
@@ -81,4 +81,4 @@ protected:
   virtual void addToElt(const SbPlane & plane, const SbMatrix & modelmatrix);
 };
 
-#endif // !COIN_SOCLIPPLANEELEMENT_H
+#endif // !OBOL_SOCLIPPLANEELEMENT_H

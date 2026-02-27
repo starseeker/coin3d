@@ -584,9 +584,9 @@ SoWWWInline::doAction(SoAction * action)
   obsoleted in Coin. Let us know if you need it.
 */
 void
-SoWWWInline::doActionOnKidsOrBox(SoAction * COIN_UNUSED_ARG(action))
+SoWWWInline::doActionOnKidsOrBox(SoAction * OBOL_UNUSED_ARG(action))
 {
-  COIN_OBSOLETED();
+  OBOL_OBSOLETED();
 }
 
 // doc in super

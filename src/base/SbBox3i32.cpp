@@ -284,13 +284,13 @@ SbBox3i32::extendBy(const SbVec3f & point)
 void
 SbBox3i32::transform(const SbMatrix & matrix)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (this->isEmpty()) {
     SoDebugError::postWarning("SbBox3i32::transform",
                               "The box is not valid!");
     return;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   SbVec3f dst;
   SbVec3f points[2] = {SbVec3f(this->minpt), SbVec3f(this->maxpt)};
@@ -555,10 +555,10 @@ SbBox3i32::getSpan(const SbVec3f & dir, float & dmin, float & dmax) const
   SbVec3f corner;
   SbVec3f normdir(dir);
   if (normdir.normalize() == 0.0f) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SbBox3f::getSpan",
                               "The direction is a null vector.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
     dmin = dmax = 0.0f;
     return;

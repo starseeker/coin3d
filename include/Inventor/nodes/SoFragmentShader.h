@@ -1,5 +1,5 @@
-#ifndef COIN_SOFRAGMENTSHADER_H
-#define COIN_SOFRAGMENTSHADER_H
+#ifndef OBOL_SOFRAGMENTSHADER_H
+#define OBOL_SOFRAGMENTSHADER_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 
 // *************************************************************************
 
-class COIN_DLL_API SoFragmentShader : public SoShaderObject {
+class OBOL_DLL_API SoFragmentShader : public SoShaderObject {
   typedef SoShaderObject inherited;
   SO_NODE_HEADER(SoFragmentShader);
 
@@ -49,4 +49,4 @@ public:
   static SbBool isSupported(SourceType sourceType);
 };
 
-#endif /* ! COIN_SOFRAGMENTSHADER_H */
+#endif /* ! OBOL_SOFRAGMENTSHADER_H */

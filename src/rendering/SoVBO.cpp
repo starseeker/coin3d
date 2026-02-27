@@ -141,9 +141,9 @@ SoVBO::init(void)
   vbo_isfast_hash = new SbHash<uint32_t, SbBool> (3);
   coin_atexit(vbo_atexit_cleanup, CC_ATEXIT_NORMAL);
 
-  // use COIN_VBO_MAX_LIMIT to set the largest VBO we create
+  // use OBOL_VBO_MAX_LIMIT to set the largest VBO we create
   if (vbo_vertex_count_max_limit < 0) {
-    auto env = CoinInternal::getEnvironmentVariable("COIN_VBO_MAX_LIMIT");
+    auto env = CoinInternal::getEnvironmentVariable("OBOL_VBO_MAX_LIMIT");
     if (env.has_value()) {
       vbo_vertex_count_max_limit = std::atoi(env->c_str());
     }
@@ -152,9 +152,9 @@ SoVBO::init(void)
     }
   }
 
-  // use COIN_VBO_MIN_LIMIT to set the smallest VBO we create
+  // use OBOL_VBO_MIN_LIMIT to set the smallest VBO we create
   if (vbo_vertex_count_min_limit < 0) {
-    auto env = CoinInternal::getEnvironmentVariable("COIN_VBO_MIN_LIMIT");
+    auto env = CoinInternal::getEnvironmentVariable("OBOL_VBO_MIN_LIMIT");
     if (env.has_value()) {
       vbo_vertex_count_min_limit = std::atoi(env->c_str());
     }
@@ -163,9 +163,9 @@ SoVBO::init(void)
     }
   }
 
-  // use COIN_VERTEX_ARRAYS to globally disable vertex array rendering
+  // use OBOL_VERTEX_ARRAYS to globally disable vertex array rendering
   if (vbo_render_as_vertex_arrays < 0) {
-    auto env = CoinInternal::getEnvironmentVariable("COIN_VERTEX_ARRAYS");
+    auto env = CoinInternal::getEnvironmentVariable("OBOL_VERTEX_ARRAYS");
     if (env.has_value()) {
       vbo_render_as_vertex_arrays = std::atoi(env->c_str());
     }
@@ -174,9 +174,9 @@ SoVBO::init(void)
     }
   }
 
-  // use COIN_VBO to globally disable VBOs when doing vertex array rendering
+  // use OBOL_VBO to globally disable VBOs when doing vertex array rendering
   if (vbo_enabled < 0) {
-    auto env = CoinInternal::getEnvironmentVariable("COIN_VBO");
+    auto env = CoinInternal::getEnvironmentVariable("OBOL_VBO");
     if (env.has_value()) {
       vbo_enabled = std::atoi(env->c_str());
     }
@@ -185,7 +185,7 @@ SoVBO::init(void)
     }
   }
   if (vbo_debug < 0) {
-    auto env = CoinInternal::getEnvironmentVariable("COIN_DEBUG_VBO");
+    auto env = CoinInternal::getEnvironmentVariable("OBOL_DEBUG_VBO");
     if (env.has_value()) {
       vbo_debug = std::atoi(env->c_str());
     }
@@ -321,7 +321,7 @@ SoVBO::bindBuffer(uint32_t contextid)
     SoGLContext_glBindBuffer(glue, this->target, buffer);
   }
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (vbo_debug) {
     if (this->target == GL_ELEMENT_ARRAY_BUFFER) {
       SoDebugError::postInfo("SoVBO::bindBuffer",
@@ -334,7 +334,7 @@ SoVBO::bindBuffer(uint32_t contextid)
                              this->datasize);
     }
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }
 
 
@@ -404,8 +404,8 @@ SoVBO::shouldCreateVBO(SoState * state, const uint32_t contextid, const int numd
 }
 
 SbBool
-SoVBO::shouldRenderAsVertexArrays(SoState * COIN_UNUSED_ARG(state),
-                                  const uint32_t COIN_UNUSED_ARG(contextid),
+SoVBO::shouldRenderAsVertexArrays(SoState * OBOL_UNUSED_ARG(state),
+                                  const uint32_t OBOL_UNUSED_ARG(contextid),
                                   const int numdata)
 {
   // FIXME: consider also using results from the performance tests
@@ -429,7 +429,7 @@ SoVBO::isVBOFast(const uint32_t contextid)
 // callback from glglue (when a new glglue instance is created)
 //
 void
-SoVBO::context_created(const uint32_t contextid, void * COIN_UNUSED_ARG(closure))
+SoVBO::context_created(const uint32_t contextid, void * OBOL_UNUSED_ARG(closure))
 {
   SoVBO::testGLPerformance(contextid);
 }

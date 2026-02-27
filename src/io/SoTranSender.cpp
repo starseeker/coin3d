@@ -33,58 +33,58 @@
 // FIXME: this class has not been implemented yet. 20000627 mortene.
 
 #include <Inventor/misc/SoTranSender.h>
-#include "config.h" // COIN_STUB
+#include "config.h" // OBOL_STUB
 #include <cstdlib>
 
-SoTranSender::SoTranSender(SoOutput * COIN_UNUSED_ARG(output))
+SoTranSender::SoTranSender(SoOutput * OBOL_UNUSED_ARG(output))
 {
-  COIN_STUB();
+  OBOL_STUB();
 }
 
 SoTranSender::~SoTranSender()
 {
-  COIN_STUB();
+  OBOL_STUB();
 }
 
 SoOutput *
 SoTranSender::getOutput(void) const
 {
-  COIN_STUB();
+  OBOL_STUB();
   return NULL;
 }
 
 void
-SoTranSender::insert(SoNode * COIN_UNUSED_ARG(node))
+SoTranSender::insert(SoNode * OBOL_UNUSED_ARG(node))
 {
-  COIN_STUB();
+  OBOL_STUB();
 }
 
 void
-SoTranSender::insert(SoNode * COIN_UNUSED_ARG(node), SoNode * COIN_UNUSED_ARG(parent), int COIN_UNUSED_ARG(n))
+SoTranSender::insert(SoNode * OBOL_UNUSED_ARG(node), SoNode * OBOL_UNUSED_ARG(parent), int OBOL_UNUSED_ARG(n))
 {
-  COIN_STUB();
+  OBOL_STUB();
 }
 
 void
-SoTranSender::remove(SoNode * COIN_UNUSED_ARG(parent), int COIN_UNUSED_ARG(n))
+SoTranSender::remove(SoNode * OBOL_UNUSED_ARG(parent), int OBOL_UNUSED_ARG(n))
 {
-  COIN_STUB();
+  OBOL_STUB();
 }
 
 void
-SoTranSender::replace(SoNode * COIN_UNUSED_ARG(parent), int COIN_UNUSED_ARG(n), SoNode * COIN_UNUSED_ARG(newnode))
+SoTranSender::replace(SoNode * OBOL_UNUSED_ARG(parent), int OBOL_UNUSED_ARG(n), SoNode * OBOL_UNUSED_ARG(newnode))
 {
-  COIN_STUB();
+  OBOL_STUB();
 }
 
 void
-SoTranSender::modify(SoNode * COIN_UNUSED_ARG(node))
+SoTranSender::modify(SoNode * OBOL_UNUSED_ARG(node))
 {
-  COIN_STUB();
+  OBOL_STUB();
 }
 
 void
 SoTranSender::prepareToSend(void)
 {
-  COIN_STUB();
+  OBOL_STUB();
 }

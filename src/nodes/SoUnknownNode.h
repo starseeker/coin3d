@@ -1,5 +1,5 @@
-#ifndef COIN_SOUNKNOWNNODE_H
-#define COIN_SOUNKNOWNNODE_H
+#ifndef OBOL_SOUNKNOWNNODE_H
+#define OBOL_SOUNKNOWNNODE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,7 +33,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #error this is a private header file
 #endif /* !CoiN_INTERNAL */
 
@@ -42,7 +42,7 @@
 class SoUnknownNodeP;
 
 /*
-  This class is internal, but since the incorrect COIN_DLL_API tag wasn't
+  This class is internal, but since the incorrect OBOL_DLL_API tag wasn't
   discovered before the 2.0.0 release, it has to stay for the 2.x branch.
 */
 
@@ -89,4 +89,4 @@ private:
   SoUnknownNodeP * pimpl;
 };
 
-#endif // !COIN_SOUNKNOWNNODE_H
+#endif // !OBOL_SOUNKNOWNNODE_H

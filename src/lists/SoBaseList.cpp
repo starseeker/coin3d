@@ -247,7 +247,7 @@ SoBaseList::addReferences(const SbBool flag)
   Return whether the SoBase instances are automatically referenced
   and dereferenced when they are added and removed from the list.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \sa addReferences()
   \since Coin 2.0

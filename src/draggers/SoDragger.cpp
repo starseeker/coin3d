@@ -1176,7 +1176,7 @@ SoDragger::setHandleEventAction(SoHandleEventAction * action)
 void
 SoDragger::setTempPathToThis(const SoPath *)
 {
-  COIN_OBSOLETED();
+  OBOL_OBSOLETED();
 }
 
 /*!
@@ -1499,7 +1499,7 @@ SoDragger::getNormalizedLocaterPosition(void)
   if (PRIVATE(this)->currentevent) {
     return PRIVATE(this)->currentevent->getNormalizedPosition(PRIVATE(this)->viewport);
   }
-#if COIN_DEBUG && 1 // debug
+#if OBOL_DEBUG && 1 // debug
   SoDebugError::postInfo("SoDragger::getLocaterPosition",
                          "current event is not set");
 #endif // debug
@@ -1515,7 +1515,7 @@ SoDragger::getLocaterPosition(void)
   if (PRIVATE(this)->currentevent) {
     return PRIVATE(this)->currentevent->getPosition();
   }
-#if COIN_DEBUG && 1 // debug
+#if OBOL_DEBUG && 1 // debug
   SoDebugError::postInfo("SoDragger::getLocaterPosition",
                          "current event is not set");
 #endif // debug
@@ -1863,7 +1863,7 @@ SoDragger::childTransferMotionAndValueChangedCB(void * data, SoDragger * child)
   \COININTERNAL
 */
 void
-SoDragger::childValueChangedCB(void * data, SoDragger * COIN_UNUSED_ARG(child))
+SoDragger::childValueChangedCB(void * data, SoDragger * OBOL_UNUSED_ARG(child))
 {
   SoDragger * thisp = static_cast<SoDragger *>(data);
   thisp->valueChanged();
@@ -1889,7 +1889,7 @@ SoDragger::childStartCB(void * data, SoDragger * child)
   \COININTERNAL
 */
 void
-SoDragger::childMotionCB(void * data, SoDragger * COIN_UNUSED_ARG(child))
+SoDragger::childMotionCB(void * data, SoDragger * OBOL_UNUSED_ARG(child))
 {
   SoDragger * thisp = static_cast<SoDragger *>(data);
   PRIVATE(thisp)->motionCB.invokeCallbacks(thisp);
@@ -1899,7 +1899,7 @@ SoDragger::childMotionCB(void * data, SoDragger * COIN_UNUSED_ARG(child))
   \COININTERNAL
 */
 void
-SoDragger::childFinishCB(void * data, SoDragger * COIN_UNUSED_ARG(child))
+SoDragger::childFinishCB(void * data, SoDragger * OBOL_UNUSED_ARG(child))
 {
   SoDragger * thisp = static_cast<SoDragger *>(data);
 

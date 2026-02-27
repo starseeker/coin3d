@@ -1,5 +1,5 @@
-#ifndef COIN_SOFILE_H
-#define COIN_SOFILE_H
+#ifndef OBOL_SOFILE_H
+#define OBOL_SOFILE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -40,7 +40,7 @@ class SoFieldSensor;
 class SoGroup;
 class SoSensor;
 
-class COIN_DLL_API SoFile : public SoNode {
+class OBOL_DLL_API SoFile : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_HEADER(SoFile);
@@ -85,4 +85,4 @@ private:
   SbString fullname;
 };
 
-#endif // !COIN_SOFILE_H
+#endif // !OBOL_SOFILE_H

@@ -1,5 +1,5 @@
-#ifndef COIN_SOTEXTURECOORDINATEOBJECT_H
-#define COIN_SOTEXTURECOORDINATEOBJECT_H
+#ifndef OBOL_SOTEXTURECOORDINATEOBJECT_H
+#define OBOL_SOTEXTURECOORDINATEOBJECT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/nodes/SoTextureCoordinateFunction.h>
 #include <Inventor/fields/SoSFVec4f.h>
 
-class COIN_DLL_API SoTextureCoordinateObject : public SoTextureCoordinateFunction {
+class OBOL_DLL_API SoTextureCoordinateObject : public SoTextureCoordinateFunction {
   typedef SoTextureCoordinateFunction inherited;
 
   SO_NODE_HEADER(SoTextureCoordinateObject);
@@ -68,4 +68,4 @@ private:
   SbVec4f dummy_object;
 };
 
-#endif // !COIN_SOTEXTURECOORDINATEOBJECT_H
+#endif // !OBOL_SOTEXTURECOORDINATEOBJECT_H

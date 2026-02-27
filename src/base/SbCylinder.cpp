@@ -46,9 +46,9 @@
 #include <cassert>
 #include <cfloat>
 #include <Inventor/SbCylinder.h>
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 /*!
   The default constructor will make a cylinder of radius 1, center axis
@@ -89,11 +89,11 @@ SbCylinder::setValue(const SbLine& a, const float r)
 void
 SbCylinder::setAxis(const SbLine& a)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (!(a.getDirection().length() > 0.0f))
     SoDebugError::postWarning("SbCylinder::setAxis",
                               "Axis has zero length => undefined");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   this->axis = a;
 }
@@ -106,11 +106,11 @@ SbCylinder::setAxis(const SbLine& a)
 void
 SbCylinder::setRadius(const float r)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (!(r>=0.0f))
     SoDebugError::postWarning("SbCylinder::setRadius",
                               "Radius (%f) should be positive.",r);
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   this->radius = r;
 }
@@ -162,11 +162,11 @@ SbCylinder::intersect(const SbLine& l, SbVec3f& intersection) const
 SbBool
 SbCylinder::intersect(const SbLine& l, SbVec3f& enter, SbVec3f& exit) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (!(l.getDirection().length()>0.0f))
     SoDebugError::postWarning("SbCylinder::intersect",
                               "The ray 'l' has zero length => undefined");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   //
   // What seems to be the immediately most simple, gung-ho method of
   // solving this - solving for   |Qr - Qc| = r    - won't work because
@@ -261,9 +261,9 @@ SbCylinder::intersect(const SbLine& l, SbVec3f& enter, SbVec3f& exit) const
 void
 SbCylinder::print(FILE * fp) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   fprintf( fp, "axis: " );
   this->getAxis().print(fp);
   fprintf( fp, "  radius: %f ", this->getRadius() );
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }

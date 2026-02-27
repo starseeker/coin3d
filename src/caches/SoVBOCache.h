@@ -1,5 +1,5 @@
-#ifndef COIN_VBO_CACHE_H
-#define COIN_VBO_CACHE_H
+#ifndef OBOL_VBO_CACHE_H
+#define OBOL_VBO_CACHE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -57,4 +57,4 @@ private:
 
 
 
-#endif // COIN_VBO_CACHE_H
+#endif // OBOL_VBO_CACHE_H

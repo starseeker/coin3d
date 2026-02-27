@@ -1,5 +1,5 @@
-#ifndef COIN_SOFONT_H
-#define COIN_SOFONT_H
+#ifndef OBOL_SOFONT_H
+#define OBOL_SOFONT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/fields/SoSFName.h>
 #include <Inventor/fields/SoSFFloat.h>
 
-class COIN_DLL_API SoFont : public SoNode {
+class OBOL_DLL_API SoFont : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_HEADER(SoFont);
@@ -60,4 +60,4 @@ protected:
   virtual ~SoFont();
 };
 
-#endif // !COIN_SOFONT_H
+#endif // !OBOL_SOFONT_H

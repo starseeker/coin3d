@@ -1,5 +1,5 @@
-#ifndef COIN_SBBASIC_H
-#define COIN_SBBASIC_H
+#ifndef OBOL_SBBASIC_H
+#define OBOL_SBBASIC_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 
 // Debug error posting - Inventor-style API for debug builds
 #ifndef NDEBUG
-COIN_DLL_API void SbDebugError_post(const char * source, const char * format, ...);
+OBOL_DLL_API void SbDebugError_post(const char * source, const char * format, ...);
 #endif // !NDEBUG
 
 /* ********************************************************************** */
@@ -120,4 +120,4 @@ constexpr void SbDividerChk(const char *, Type) noexcept {}
 // Modern do-while wrapper - C++17 compilers handle this correctly
 #define WHILE_0 while (0)
 
-#endif /* !COIN_SBBASIC_H */
+#endif /* !OBOL_SBBASIC_H */

@@ -80,7 +80,7 @@ public:
     }
   }
   void debugCleanup(void) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     for(
        SoBase2SoWriterefCounterBaseDataMap::const_iterator iter =
          writerefdict.const_begin();
@@ -97,7 +97,7 @@ public:
                                 base, base->getTypeId().getName().getString(), name.getString());
 
     }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     this->cleanup();
   }
 
@@ -388,14 +388,14 @@ SoWriterefCounter::removeWriteref(const SoBase * base)
 static SbBool
 dont_mangle_output_names(const SoBase * /*base*/)
 {
-  static int COIN_DONT_MANGLE_OUTPUT_NAMES = -1;
+  static int OBOL_DONT_MANGLE_OUTPUT_NAMES = -1;
 
-  if (COIN_DONT_MANGLE_OUTPUT_NAMES < 0) {
-    COIN_DONT_MANGLE_OUTPUT_NAMES = 0;
-    auto env = CoinInternal::getEnvironmentVariable("COIN_DONT_MANGLE_OUTPUT_NAMES");
-    if (env.has_value()) COIN_DONT_MANGLE_OUTPUT_NAMES = std::atoi(env->c_str());
+  if (OBOL_DONT_MANGLE_OUTPUT_NAMES < 0) {
+    OBOL_DONT_MANGLE_OUTPUT_NAMES = 0;
+    auto env = CoinInternal::getEnvironmentVariable("OBOL_DONT_MANGLE_OUTPUT_NAMES");
+    if (env.has_value()) OBOL_DONT_MANGLE_OUTPUT_NAMES = std::atoi(env->c_str());
   }
-  return COIN_DONT_MANGLE_OUTPUT_NAMES ? TRUE : FALSE;
+  return OBOL_DONT_MANGLE_OUTPUT_NAMES ? TRUE : FALSE;
 }
 
 SbName
@@ -492,14 +492,14 @@ SoWriterefCounter::removeSoBase2IdRef(const SoBase * base)
 
 /*!
   Returns TRUE if the user wants extra debugging information regarding
-  writerefs (COIN_DEBUG_WRITEREFS=1)
+  writerefs (OBOL_DEBUG_WRITEREFS=1)
 */
 SbBool
 SoWriterefCounter::debugWriterefs(void)
 {
   static int dbg = -1;
   if (dbg == -1) {
-    auto env = CoinInternal::getEnvironmentVariable("COIN_DEBUG_WRITEREFS");
+    auto env = CoinInternal::getEnvironmentVariable("OBOL_DEBUG_WRITEREFS");
     dbg = (env.has_value() && (std::atoi(env->c_str()) > 0)) ? 1 : 0;
   }
   return dbg;

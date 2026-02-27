@@ -1,5 +1,5 @@
-#ifndef COIN_SOGROUP_H
-#define COIN_SOGROUP_H
+#ifndef OBOL_SOGROUP_H
+#define OBOL_SOGROUP_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 
 class SoGroupP;
 
-class COIN_DLL_API SoGroup : public SoNode {
+class OBOL_DLL_API SoGroup : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_HEADER(SoGroup);
@@ -100,4 +100,4 @@ private:
   SoNotRec::OperationType operationType;
 };
 
-#endif // !COIN_SOGROUP_H
+#endif // !OBOL_SOGROUP_H

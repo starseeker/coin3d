@@ -1,5 +1,5 @@
-#ifndef COIN_SOSHAPEHINTS_H
-#define COIN_SOSHAPEHINTS_H
+#ifndef OBOL_SOSHAPEHINTS_H
+#define OBOL_SOSHAPEHINTS_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -39,7 +39,7 @@
 #include <Inventor/fields/SoSFBool.h>
 #include <Inventor/nodes/SoSubNode.h>
 
-class COIN_DLL_API SoShapeHints : public SoNode {
+class OBOL_DLL_API SoShapeHints : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_HEADER(SoShapeHints);
@@ -85,4 +85,4 @@ protected:
   virtual ~SoShapeHints();
 };
 
-#endif // !COIN_SOSHAPEHINTS_H
+#endif // !OBOL_SOSHAPEHINTS_H

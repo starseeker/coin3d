@@ -110,7 +110,7 @@ SoGLShadowCullingElement::getDefault(void)
 }
 
 void 
-SoGLShadowCullingElement::push(SoState * COIN_UNUSED_ARG(state))
+SoGLShadowCullingElement::push(SoState * OBOL_UNUSED_ARG(state))
 {
   SoGLShadowCullingElement * prev = (SoGLShadowCullingElement*) this->getNextInStack();
 
@@ -118,7 +118,7 @@ SoGLShadowCullingElement::push(SoState * COIN_UNUSED_ARG(state))
 }
 
 void 
-SoGLShadowCullingElement::pop(SoState * COIN_UNUSED_ARG(state), const SoElement * prevTopElement)
+SoGLShadowCullingElement::pop(SoState * OBOL_UNUSED_ARG(state), const SoElement * prevTopElement)
 {
   SoGLShadowCullingElement * prev = (SoGLShadowCullingElement*) prevTopElement;
   if (prev->data != this->data) {
@@ -136,7 +136,7 @@ SoGLShadowCullingElement::setElt(int32_t value)
 }
 
 void 
-SoGLShadowCullingElement::updateGL(int32_t COIN_UNUSED_ARG(oldvalue), int32_t COIN_UNUSED_ARG(value))
+SoGLShadowCullingElement::updateGL(int32_t OBOL_UNUSED_ARG(oldvalue), int32_t OBOL_UNUSED_ARG(value))
 {
   // nothing to do yet. We might support more culling modes in the future though
 }

@@ -95,7 +95,7 @@ SoNormalCache::SoNormalCache(SoState * const state)
   PRIVATE(this)->normalData.normals = NULL;
   PRIVATE(this)->numNormals = 0;
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (coin_debug_caching_level() > 0) {
     SoDebugError::postInfo("SoNormalCache::SoNormalCache",
                            "Cache created: %p", this);
@@ -109,7 +109,7 @@ SoNormalCache::SoNormalCache(SoState * const state)
 */
 SoNormalCache::~SoNormalCache()
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (coin_debug_caching_level() > 0) {
     SoDebugError::postInfo("SoNormalCache::~SoNormalCache",
                            "Cache destructed: %p", this);
@@ -252,7 +252,7 @@ SoNormalCache::generatePerVertex(const SbVec3f * const coords,
                                  const SbBool ccw,
                                  const SbBool tristrip)
 {
-#if NORMALCACHE_DEBUG && COIN_DEBUG
+#if NORMALCACHE_DEBUG && OBOL_DEBUG
   SoDebugError::postInfo("SoNormalCache::generatePerVertex", "generating normals");
 #endif
 
@@ -261,7 +261,7 @@ SoNormalCache::generatePerVertex(const SbVec3f * const coords,
   PRIVATE(this)->normalArray.truncate(0);
 
 
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoNormalCache::generatePerVertex", "%d", numvi);
   for (int vrtidx=0; vrtidx < numvi; vrtidx++)
     fprintf(stdout, "%d ", vindex[vrtidx]);
@@ -382,14 +382,14 @@ SoNormalCache::generatePerVertex(const SbVec3f * const coords,
 
       // Be robust when it comes to erroneously specified triangles.
       if ((tmpvec.normalize() == 0.0f) && coin_debug_extra()) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
         static uint32_t normgenerrors_vertex = 0;
         if (normgenerrors_vertex < 1) {
           SoDebugError::postWarning("SoNormalCache::generatePerVertex","Unable to "
                                     "generate valid normal for face %d", facenum);
         }
         normgenerrors_vertex++;
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
       }
       // it's really ok to have a null vector for a face/vertex, and we
       // should not set it to some dummy vector. A null vector just
@@ -436,7 +436,7 @@ SoNormalCache::generatePerVertex(const SbVec3f * const coords,
     PRIVATE(this)->normalData.normals = PRIVATE(this)->normalArray.getArrayPtr();
     PRIVATE(this)->numNormals = PRIVATE(this)->normalArray.getLength();
   }
-#if NORMALCACHE_DEBUG && COIN_DEBUG
+#if NORMALCACHE_DEBUG && OBOL_DEBUG
   SoDebugError::postInfo("SoNormalCache::generatePerVertex",
                          "generated normals per vertex: %p %d %d\n",
                          PRIVATE(this)->normalData.normals, PRIVATE(this)->numNormals, PRIVATE(this)->indices.getLength());
@@ -456,7 +456,7 @@ SoNormalCache::generatePerFace(const SbVec3f * const coords,
                                const int nv,
                                const SbBool ccw)
 {
-#if NORMALCACHE_DEBUG && COIN_DEBUG
+#if NORMALCACHE_DEBUG && OBOL_DEBUG
     SoDebugError::postInfo("SoNormalCache::generatePerFace", "generating normals");
 #endif
 
@@ -464,9 +464,9 @@ SoNormalCache::generatePerFace(const SbVec3f * const coords,
   PRIVATE(this)->indices.truncate(0);
   PRIVATE(this)->normalArray.truncate(0, TRUE);
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   const int32_t * cstart = cind;
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   const int32_t * endptr = cind + nv;
 
   SbVec3f tmpvec;
@@ -480,13 +480,13 @@ SoNormalCache::generatePerFace(const SbVec3f * const coords,
 
     if (v0 < 0 || v1 < 0 || v2 < 0 ||
         v0 > maxcoordidx || v1 > maxcoordidx || v2 > maxcoordidx) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
       SoDebugError::postWarning("SoNormalCache::generatePerFace",
                                 "Polygon with less than three valid "
                                 "vertices detected. (offset: %d, [%d %d %d]). "
                                 "Should be within [0, %d].",
                                 cind - cstart, v0, v1, v2, maxcoordidx);
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
        // Insert dummy normal for robustness
       SbVec3f dummynormal;
@@ -581,11 +581,11 @@ SoNormalCache::generatePerFace(const SbVec3f * const coords,
   }
 
   if (endptr - cind > 0) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SoNormalCache::generatePerFace", "Face "
                               "specification did not end with a valid "
                               "polygon. Too few points");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     SbVec3f dummynormal;
     dummynormal.setValue(0.0f, 0.0f, 0.0f);
     PRIVATE(this)->normalArray.append(dummynormal);
@@ -596,7 +596,7 @@ SoNormalCache::generatePerFace(const SbVec3f * const coords,
     PRIVATE(this)->numNormals = PRIVATE(this)->normalArray.getLength();
   }
 
-#if NORMALCACHE_DEBUG && COIN_DEBUG // debug
+#if NORMALCACHE_DEBUG && OBOL_DEBUG // debug
   SoDebugError::postInfo("SoNormalCache::generatePerFace",
                          "generated normals per face: %p %d",
                          PRIVATE(this)->normalData.normals, PRIVATE(this)->numNormals);
@@ -613,7 +613,7 @@ SoNormalCache::generatePerFaceStrip(const SbVec3f * const coords,
                                     const int nv,
                                     const SbBool ccw)
 {
-#if NORMALCACHE_DEBUG && COIN_DEBUG
+#if NORMALCACHE_DEBUG && OBOL_DEBUG
   SoDebugError::postInfo("SoNormalCache::generatePerFaceStrip", "generating normals");
 #endif
 
@@ -621,9 +621,9 @@ SoNormalCache::generatePerFaceStrip(const SbVec3f * const coords,
   PRIVATE(this)->indices.truncate(0);
   PRIVATE(this)->normalArray.truncate(0, TRUE);
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   const int32_t * cstart = cind;
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   const int32_t * endptr = cind + nv;
 
   const SbVec3f * c0, * c1, * c2;
@@ -636,12 +636,12 @@ SoNormalCache::generatePerFaceStrip(const SbVec3f * const coords,
   while (cind + 2 < endptr) {
     if (cind[0] < 0 || cind[1] < 0 || cind[2] < 0 ||
         cind[0] > maxcoordidx || cind[1] > maxcoordidx || cind[2] > maxcoordidx) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
       SoDebugError::postWarning("SoNormalCache::generatePerFaceStrip", "Erroneous "
                                 "coordinate index detected (offset: %d, [%d %d %d]). Should be "
                                 "within [0, %d].",
                                 cind - cstart, *(cind), *(cind+1), *(cind+2), maxcoordidx);
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
       // Insert dummy normal for robustness
       SbVec3f dummynormal;
@@ -724,7 +724,7 @@ SoNormalCache::generatePerFaceStrip(const SbVec3f * const coords,
       PRIVATE(this)->normalArray.append(n);
       idx = cind < endptr ? *cind++ : -1;
     }
-#if COIN_DEBUG
+#if OBOL_DEBUG
     if (idx > maxcoordidx) {
       static uint32_t normgenerrors_facestrip = 0;
       if (normgenerrors_facestrip < 1) {
@@ -737,15 +737,15 @@ SoNormalCache::generatePerFaceStrip(const SbVec3f * const coords,
       }
       normgenerrors_facestrip++;
     }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   }
 
   if (endptr - cind > 0) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SoNormalCache::generatePerFaceStrip", "Strip "
                               "did not end with a valid polygon. Too few "
                               "points");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     SbVec3f dummynormal;
     dummynormal.setValue(0.0, 0.0, 0.0);
     PRIVATE(this)->normalArray.append(dummynormal);
@@ -756,7 +756,7 @@ SoNormalCache::generatePerFaceStrip(const SbVec3f * const coords,
     PRIVATE(this)->numNormals = PRIVATE(this)->normalArray.getLength();
   }
 
-#if NORMALCACHE_DEBUG && COIN_DEBUG
+#if NORMALCACHE_DEBUG && OBOL_DEBUG
   SoDebugError::postInfo("SoNormalCache::generatePerFaceStrip",
                          "generated tristrip normals per face: %p %d",
                          PRIVATE(this)->normalData.normals, PRIVATE(this)->numNormals);
@@ -774,7 +774,7 @@ SoNormalCache::generatePerStrip(const SbVec3f * const coords,
                                 const int nv,
                                 const SbBool ccw)
 {
-#if NORMALCACHE_DEBUG && COIN_DEBUG
+#if NORMALCACHE_DEBUG && OBOL_DEBUG
   SoDebugError::postInfo("SoNormalCache::generatePerStrip", "generating normals");
 #endif
 
@@ -782,9 +782,9 @@ SoNormalCache::generatePerStrip(const SbVec3f * const coords,
   PRIVATE(this)->indices.truncate(0);
   PRIVATE(this)->normalArray.truncate(0, TRUE);
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   const int32_t * cstart = cind;
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   const int32_t * endptr = cind + nv;
 
   const SbVec3f * c0, * c1, * c2;
@@ -797,12 +797,12 @@ SoNormalCache::generatePerStrip(const SbVec3f * const coords,
   while (cind + 2 < endptr) {
     if (cind[0] < 0 || cind[1] < 0 || cind[2] < 0 ||
         cind[0] > maxcoordidx || cind[1] > maxcoordidx || cind[2] > maxcoordidx) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
       SoDebugError::postWarning("SoNormalCache::generatePerStrip", "Erroneous "
                                 "coordinate index detected (offset: %d, [%d %d %d]). Should be "
                                 "within [0, %d].",
                                 cind - cstart, *(cind), *(cind+1), *(cind+2), maxcoordidx);
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
       // Insert dummy normal for robustness
       SbVec3f dummynormal;
       dummynormal.setValue(0.0f, 0.0f, 0.0f);
@@ -849,7 +849,7 @@ SoNormalCache::generatePerStrip(const SbVec3f * const coords,
       idx = cind < endptr ? *cind++ : -1;
     }
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
     if (idx > maxcoordidx) {
       static uint32_t normgenerrors_strip = 0;
       if (normgenerrors_strip < 1) {
@@ -862,7 +862,7 @@ SoNormalCache::generatePerStrip(const SbVec3f * const coords,
       }
       normgenerrors_strip++;
     }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
     if ((n.normalize() == 0.0f) && coin_debug_extra()) {
       static uint32_t normgenerrors_strip = 0;
@@ -881,10 +881,10 @@ SoNormalCache::generatePerStrip(const SbVec3f * const coords,
   }
 
   if (endptr - cind > 0) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SoNormalCache::generatePerStrip", "Strip did "
                               "not end with a valid polygon. Too few points");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     SbVec3f dummynormal;
     dummynormal.setValue(0.0, 0.0, 0.0);
     PRIVATE(this)->normalArray.append(dummynormal);
@@ -895,7 +895,7 @@ SoNormalCache::generatePerStrip(const SbVec3f * const coords,
     PRIVATE(this)->numNormals = PRIVATE(this)->normalArray.getLength();
   }
 
-#if NORMALCACHE_DEBUG && COIN_DEBUG
+#if NORMALCACHE_DEBUG && OBOL_DEBUG
   SoDebugError::postInfo("SoNormalCache::generatePerStrip",
                          "generated normals per strip: %p %d\n",
                          PRIVATE(this)->normalData.normals, PRIVATE(this)->numNormals);
@@ -913,7 +913,7 @@ SoNormalCache::generatePerVertexQuad(const SbVec3f * const coords,
                                      const int vPerColumn,
                                      const SbBool ccw)
 {
-#if NORMALCACHE_DEBUG && COIN_DEBUG
+#if NORMALCACHE_DEBUG && OBOL_DEBUG
   SoDebugError::postInfo("SoNormalCache::generatePerVertexQuad", "generating normals");
 #endif
 
@@ -963,7 +963,7 @@ SoNormalCache::generatePerVertexQuad(const SbVec3f * const coords,
   PRIVATE(this)->normalData.normals = PRIVATE(this)->normalArray.getArrayPtr();
   PRIVATE(this)->numNormals = PRIVATE(this)->normalArray.getLength();
 
-#if NORMALCACHE_DEBUG && COIN_DEBUG
+#if NORMALCACHE_DEBUG && OBOL_DEBUG
   SoDebugError::postInfo("SoNormalCache::generatePerVertexQuad",
                          "generated normals per vertex quad: %p %d\n",
                          PRIVATE(this)->normalData.normals, PRIVATE(this)->numNormals);
@@ -980,7 +980,7 @@ SoNormalCache::generatePerFaceQuad(const SbVec3f * const coords,
                                    const int vPerColumn,
                                    const SbBool ccw)
 {
-#if NORMALCACHE_DEBUG && COIN_DEBUG
+#if NORMALCACHE_DEBUG && OBOL_DEBUG
   SoDebugError::postInfo("SoNormalCache::generatePerFaceQuad", "generating normals");
 #endif
 
@@ -989,7 +989,7 @@ SoNormalCache::generatePerFaceQuad(const SbVec3f * const coords,
   // avoid reallocations in growable array by setting the buffer size first
   PRIVATE(this)->normalArray.ensureCapacity((vPerRow-1)*(vPerColumn-1));
   
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (vPerRow <= 1 || vPerColumn <= 1 || 
       static_cast<unsigned int>(vPerRow * vPerColumn) > numcoords) {
 
@@ -1000,7 +1000,7 @@ SoNormalCache::generatePerFaceQuad(const SbVec3f * const coords,
                               "<= number of coordinates available.", 
                               vPerRow, vPerColumn, numcoords);
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 #define IDX(r, c) ((r)*(vPerRow)+(c))
 
@@ -1048,7 +1048,7 @@ SoNormalCache::generatePerFaceQuad(const SbVec3f * const coords,
     PRIVATE(this)->numNormals = PRIVATE(this)->normalArray.getLength();
   }
 
-#if NORMALCACHE_DEBUG && COIN_DEBUG
+#if NORMALCACHE_DEBUG && OBOL_DEBUG
   SoDebugError::postInfo("SoNormalCache::generatePerFaceQuad",
                          "generated normals per face quad: %p %d\n",
                          PRIVATE(this)->normalData.normals, PRIVATE(this)->numNormals);
@@ -1066,7 +1066,7 @@ SoNormalCache::generatePerRowQuad(const SbVec3f * const coords,
                                   const int vPerColumn,
                                   const SbBool ccw)
 {
-#if NORMALCACHE_DEBUG && COIN_DEBUG
+#if NORMALCACHE_DEBUG && OBOL_DEBUG
   SoDebugError::postInfo("SoNormalCache::generatePerRowQuad", "generating normals");
 #endif
 
@@ -1074,7 +1074,7 @@ SoNormalCache::generatePerRowQuad(const SbVec3f * const coords,
   PRIVATE(this)->normalArray.truncate(0, TRUE);
   SbVec3f n;
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (vPerRow <= 1 || vPerColumn <= 1 || 
       static_cast<unsigned int>(vPerRow * vPerColumn) > numcoords) {
     SoDebugError::postWarning("SoNormalCache::generatePerRowQuad", "Illegal "
@@ -1084,7 +1084,7 @@ SoNormalCache::generatePerRowQuad(const SbVec3f * const coords,
                               "<= number of coordinates available.", 
                               vPerRow, vPerColumn, numcoords);
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 #define IDX(r, c) ((r)*(vPerRow)+(c))
 
@@ -1122,7 +1122,7 @@ SoNormalCache::generatePerRowQuad(const SbVec3f * const coords,
     PRIVATE(this)->numNormals = PRIVATE(this)->normalArray.getLength();
   }
 
-#if NORMALCACHE_DEBUG && COIN_DEBUG
+#if NORMALCACHE_DEBUG && OBOL_DEBUG
   SoDebugError::postInfo("SoNormalCache::generatePerRowQuad",
                          "generated normals per row quad: %p %d\n",
                          PRIVATE(this)->normalData.normals, PRIVATE(this)->numNormals);

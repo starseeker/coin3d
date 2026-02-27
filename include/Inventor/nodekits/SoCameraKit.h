@@ -1,5 +1,5 @@
-#ifndef COIN_SOCAMERAKIT_H
-#define COIN_SOCAMERAKIT_H
+#ifndef OBOL_SOCAMERAKIT_H
+#define OBOL_SOCAMERAKIT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -36,7 +36,7 @@
 #include <Inventor/nodekits/SoSubKit.h>
 #include <Inventor/nodekits/SoBaseKit.h>
 
-class COIN_DLL_API SoCameraKit : public SoBaseKit {
+class OBOL_DLL_API SoCameraKit : public SoBaseKit {
   typedef SoBaseKit inherited;
 
   SO_KIT_HEADER(SoCameraKit);
@@ -54,4 +54,4 @@ protected:
   virtual ~SoCameraKit();
 };
 
-#endif // !COIN_SOCAMERAKIT_H
+#endif // !OBOL_SOCAMERAKIT_H

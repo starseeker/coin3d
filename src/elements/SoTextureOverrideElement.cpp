@@ -87,7 +87,7 @@ SoTextureOverrideElement::copyMatchInfo() const
 //!
 
 void
-SoTextureOverrideElement::init(SoState * COIN_UNUSED_ARG(state))
+SoTextureOverrideElement::init(SoState * OBOL_UNUSED_ARG(state))
 {
   this->flags = 0;
 }

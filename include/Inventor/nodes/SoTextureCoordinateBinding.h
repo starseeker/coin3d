@@ -1,5 +1,5 @@
-#ifndef COIN_SOTEXTURECOORDINATEBINDING_H
-#define COIN_SOTEXTURECOORDINATEBINDING_H
+#ifndef OBOL_SOTEXTURECOORDINATEBINDING_H
+#define OBOL_SOTEXTURECOORDINATEBINDING_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/fields/SoSFEnum.h>
 #include <Inventor/elements/SoTextureCoordinateBindingElement.h>
 
-class COIN_DLL_API SoTextureCoordinateBinding : public SoNode {
+class OBOL_DLL_API SoTextureCoordinateBinding : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_HEADER(SoTextureCoordinateBinding);
@@ -69,4 +69,4 @@ protected:
   virtual SbBool readInstance(SoInput * in, unsigned short flags);
 };
 
-#endif // !COIN_SOTEXTURECOORDINATEBINDING_H
+#endif // !OBOL_SOTEXTURECOORDINATEBINDING_H

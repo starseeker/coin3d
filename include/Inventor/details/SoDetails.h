@@ -1,5 +1,5 @@
-#ifndef COIN_SODETAILS_H
-#define COIN_SODETAILS_H
+#ifndef OBOL_SODETAILS_H
+#define OBOL_SODETAILS_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -42,4 +42,4 @@
 #include <Inventor/details/SoPointDetail.h>
 #include <Inventor/details/SoTextDetail.h>
 
-#endif // !COIN_SODETAILS_H
+#endif // !OBOL_SODETAILS_H

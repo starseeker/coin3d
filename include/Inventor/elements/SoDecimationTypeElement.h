@@ -1,5 +1,5 @@
-#ifndef COIN_SODECIMATIONTYPEELEMENT_H
-#define COIN_SODECIMATIONTYPEELEMENT_H
+#ifndef OBOL_SODECIMATIONTYPEELEMENT_H
+#define OBOL_SODECIMATIONTYPEELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/elements/SoInt32Element.h>
 
-class COIN_DLL_API SoDecimationTypeElement : public SoInt32Element {
+class OBOL_DLL_API SoDecimationTypeElement : public SoInt32Element {
   typedef SoInt32Element inherited;
 
   SO_ELEMENT_HEADER(SoDecimationTypeElement);
@@ -57,4 +57,4 @@ public:
 
 };
 
-#endif // !COIN_SODECIMATIONTYPEELEMENT_H
+#endif // !OBOL_SODECIMATIONTYPEELEMENT_H

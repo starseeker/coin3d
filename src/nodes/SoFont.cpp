@@ -123,7 +123,7 @@
   application on systems where the \e Fontconfig library is expected
   to be not installed you should not make use of \e Fontconfig's font
   pattern syntax. \e Fontconfig usage can be prevented by setting the
-  "COIN_FORCE_FONTCONFIG_OFF" environment variable to 1.
+  "OBOL_FORCE_FONTCONFIG_OFF" environment variable to 1.
 
   Here is an example on how to print a string using the \e Fontconfig
   pattern matching syntax using a bold & italic font where Times New
@@ -149,7 +149,7 @@
   Fontconfig are dynamically loaded on demand by Coin if font support
   is requested by a node. When font support is loaded on Windows,
   FreeType will have precedence over Win32 if located. This can be
-  prevented by setting the "COIN_FORCE_FREETYPE_OFF" environment
+  prevented by setting the "OBOL_FORCE_FREETYPE_OFF" environment
   variable to 1. When using FreeType, you need FreeType version 2.1 or
   later. On Mac OS X, version 2.1.7 or later is required.
 
@@ -160,7 +160,7 @@
   FreeType is used as the font engine. This is done by including the
   ".ttf" in the filename, i.e. "Comic_Sans_MS.ttf". Coin will then
   search the local path for the running program and then the path
-  specified by the "COIN_FONT_PATH" environment variable. If the
+  specified by the "OBOL_FONT_PATH" environment variable. If the
   program is using \e FreeType on a Windows platform, the
   "$WINDIR/Fonts" directory will also be searched.
 
@@ -181,7 +181,7 @@
   include a TrueType font in your distribution, or you must avoid
   using styles and stick to the standard Windows fonts.
 
-  If the "COIN_DEBUG_FONTSUPPORT" environment variable is set to 1, an
+  If the "OBOL_DEBUG_FONTSUPPORT" environment variable is set to 1, an
   extensive amount of information about loading, initializing and
   using fonts will be output. Issues like missing fonts and other
   related problems will then be reported, so we advice you to first

@@ -123,7 +123,7 @@ int main(int argc, char **argv)
     SoSeparator *starObject = NULL;
     
     // Try to load the actual star.iv file
-    const char *dataDir = getenv("COIN_DATA_DIR");
+    const char *dataDir = getenv("OBOL_DATA_DIR");
     if (!dataDir) dataDir = "../../data";
     
     char starPath[512];

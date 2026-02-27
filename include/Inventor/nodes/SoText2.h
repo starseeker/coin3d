@@ -1,5 +1,5 @@
-#ifndef COIN_SOTEXT2_H
-#define COIN_SOTEXT2_H
+#ifndef OBOL_SOTEXT2_H
+#define OBOL_SOTEXT2_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -40,7 +40,7 @@
 #include <Inventor/fields/SoSFFloat.h>
 #include <Inventor/fields/SoSFEnum.h>
 
-class COIN_DLL_API SoText2 : public SoShape {
+class OBOL_DLL_API SoText2 : public SoShape {
   typedef SoShape inherited;
 
   SO_NODE_HEADER(SoText2);
@@ -85,4 +85,4 @@ private:
   friend class SoText2P;                     
 };
 
-#endif // !COIN_SOTEXT2_H
+#endif // !OBOL_SOTEXT2_H

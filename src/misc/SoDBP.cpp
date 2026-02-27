@@ -15,12 +15,12 @@
 
 #include "fields/SoGlobalField.h"
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
 // need to include SbRWMutex.h to make C++ call the actual destructor,
 // and not just default destructor
 #include <Inventor/threads/SbRWMutex.h>
 SbRWMutex * SoDBP::globalmutex = NULL;
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 SbList<SoDB_HeaderInfo *> * SoDBP::headerlist = NULL;
 SoSensorManager * SoDBP::sensormanager = NULL;
 SoTimerSensor * SoDBP::globaltimersensor = NULL;
@@ -65,10 +65,10 @@ SoDBP::clean(void)
   delete SoDBP::headerlist;
   SoDBP::headerlist = NULL;
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   delete SoDBP::globalmutex;
   SoDBP::globalmutex = NULL;
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 }
 
 void
@@ -90,7 +90,7 @@ SoDBP::removeRealTimeFieldCB(void)
 // This is the timer sensor callback which updates the realTime global
 // field.
 void
-SoDBP::updateRealTimeFieldCB(void * COIN_UNUSED_ARG(data), SoSensor * COIN_UNUSED_ARG(sensor))
+SoDBP::updateRealTimeFieldCB(void * OBOL_UNUSED_ARG(data), SoSensor * OBOL_UNUSED_ARG(sensor))
 {
   SoField * f = SoDB::getGlobalField("realTime");
   if (f && (f->getTypeId() == SoSFTime::getClassTypeId())) {

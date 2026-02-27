@@ -1,5 +1,5 @@
-#ifndef COIN_SOGLTEXTURECOORDINATEELEMENT_H
-#define COIN_SOGLTEXTURECOORDINATEELEMENT_H
+#ifndef OBOL_SOGLTEXTURECOORDINATEELEMENT_H
+#define OBOL_SOGLTEXTURECOORDINATEELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,7 +33,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifdef COIN_INTERNAL
+#ifdef OBOL_INTERNAL
 #error Do not use this typedef internally
 #endif
 
@@ -42,4 +42,4 @@
 
 typedef SoGLMultiTextureCoordinateElement SoGLTextureCoordinateElement;
 
-#endif // !COIN_SOGLTEXTURECOORDINATEELEMENT_H
+#endif // !OBOL_SOGLTEXTURECOORDINATEELEMENT_H

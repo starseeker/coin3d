@@ -1,5 +1,5 @@
-#ifndef COIN_RESOURCES_H
-#define COIN_RESOURCES_H
+#ifndef OBOL_RESOURCES_H
+#define OBOL_RESOURCES_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/SbByteBuffer.h>
 
 namespace CoinResources {
-  enum ResourceFlags { NONE = 0, COIN_RESOURCE_NOT_A_FILE=0x0001 };
+  enum ResourceFlags { NONE = 0, OBOL_RESOURCE_NOT_A_FILE=0x0001 };
 
   void init(void);
   SbByteBuffer get(const char * resloc);
@@ -49,4 +49,4 @@ namespace CoinResources {
   void freeLoadedExternals(void);
 };
 
-#endif // !COIN_RESOURCES_H
+#endif // !OBOL_RESOURCES_H

@@ -47,9 +47,9 @@
 
 #include <Inventor/system/gl.h>
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 SO_ELEMENT_SOURCE(SoGLViewportRegionElement);
 
@@ -125,7 +125,7 @@ SoGLViewportRegionElement::updategl() const
     SbVec2s size = this->viewportRegion.getViewportSizePixels();
     glViewport(origin[0], origin[1], size[0], size[1]);
 
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
     SoDebugError::postInfo("SoGLViewportRegionElement::updategl",
                            "glViewport: %d %d %d %d",
                            origin[0], origin[1], size[0], size[1]);

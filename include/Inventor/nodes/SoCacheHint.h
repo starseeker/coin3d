@@ -1,5 +1,5 @@
-#ifndef COIN_SOCACHEHINT_H
-#define COIN_SOCACHEHINT_H
+#ifndef OBOL_SOCACHEHINT_H
+#define OBOL_SOCACHEHINT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -42,7 +42,7 @@
 // Please note that this is an experimental class. The API might
 // change a lot before/if it's included in any official Coin
 // release. pederb, 2004-07-02
-class COIN_DLL_API SoCacheHint : public SoNode {
+class OBOL_DLL_API SoCacheHint : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_HEADER(SoCacheHint);
@@ -64,4 +64,4 @@ protected:
   virtual ~SoCacheHint();
 };
 
-#endif // !COIN_SOCACHEHINT_H
+#endif // !OBOL_SOCACHEHINT_H

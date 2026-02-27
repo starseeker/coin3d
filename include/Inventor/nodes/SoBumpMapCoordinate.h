@@ -1,5 +1,5 @@
-#ifndef COIN_SOBUMPMAPCOORDINATE_H
-#define COIN_SOBUMPMAPCOORDINATE_H
+#ifndef OBOL_SOBUMPMAPCOORDINATE_H
+#define OBOL_SOBUMPMAPCOORDINATE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -36,7 +36,7 @@
 #include <Inventor/nodes/SoSubNode.h>
 #include <Inventor/fields/SoMFVec2f.h>
 
-class COIN_DLL_API SoBumpMapCoordinate : public SoNode {
+class OBOL_DLL_API SoBumpMapCoordinate : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_HEADER(SoBumpMapCoordinate);
@@ -56,4 +56,4 @@ protected:
   virtual ~SoBumpMapCoordinate();
 };
 
-#endif // !COIN_SOBUMPMAPCOORDINATE_H
+#endif // !OBOL_SOBUMPMAPCOORDINATE_H

@@ -102,7 +102,7 @@ typedef SoVertexAttributeData * Type;
 //
 // send attributes to gl
 //
-static void send_attribs(const Key & COIN_UNUSED_ARG(key),
+static void send_attribs(const Key & OBOL_UNUSED_ARG(key),
                          const Type & attribdata,
                          void * closure)
 {
@@ -117,7 +117,7 @@ static void send_attribs(const Key & COIN_UNUSED_ARG(key),
   const int dataindex = *((const int *) closure);
   const SoGLContext * glue = sogl_glue_instance(data->state);
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (dataindex >= data->data->getNum()) {
     static SbBool first = TRUE;
     if (first) {
@@ -167,7 +167,7 @@ static void send_attribs(const Key & COIN_UNUSED_ARG(key),
 //
 static void query_attribs(const Key & key,
                           const Type & attribdata,
-                          void * COIN_UNUSED_ARG(closure))
+                          void * OBOL_UNUSED_ARG(closure))
 {
   SoVertexAttributeData * data = (SoVertexAttributeData *) attribdata;
   const SoGLContext * glue = sogl_glue_instance(data->state);
@@ -178,21 +178,21 @@ static void query_attribs(const Key & key,
   if (shaderprogram && shaderprogram->glslShaderProgramLinked()) {
     uint32_t shaderobj = shaderprogram->getGLSLShaderProgramHandle(data->state);
 
-    data->index = glue->glGetAttribLocationARB((COIN_GLhandle) shaderobj,
-                                               (COIN_GLchar *) key);
-#if COIN_DEBUG
+    data->index = glue->glGetAttribLocationARB((OBOL_GLhandle) shaderobj,
+                                               (OBOL_GLchar *) key);
+#if OBOL_DEBUG
     if (data->index < 0) {
       SoDebugError::postWarning("SoGLVertexAttributeElement::addElt",
                                 "vertex attribute '%s' not used in vertex shader", key);
     }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   }
 }
 
 //
 // enable vertex array rendering, with or without vbo
 //
-static void enable_vbo(const Key & COIN_UNUSED_ARG(key),
+static void enable_vbo(const Key & OBOL_UNUSED_ARG(key),
                        const Type & attribdata,
                        void * closure)
 {
@@ -228,7 +228,7 @@ static void enable_vbo(const Key & COIN_UNUSED_ARG(key),
 //
 // disable vertex array rendering, with or without vbo
 //
-static void disable_vbo(const Key & COIN_UNUSED_ARG(key),
+static void disable_vbo(const Key & OBOL_UNUSED_ARG(key),
                         const Type & attribdata,
                         void * closure)
 {

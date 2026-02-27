@@ -1,5 +1,5 @@
-#ifndef COIN_SOSFIMAGE3_H
-#define COIN_SOSFIMAGE3_H
+#ifndef OBOL_SOSFIMAGE3_H
+#define OBOL_SOSFIMAGE3_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/fields/SoSubField.h>
 #include <Inventor/SbVec3s.h>
 
-class COIN_DLL_API SoSFImage3 : public SoSField {
+class OBOL_DLL_API SoSFImage3 : public SoSField {
   typedef SoSField inherited;
 
   SO_SFIELD_CONSTRUCTOR_HEADER(SoSFImage3);
@@ -65,4 +65,4 @@ private:
   class SbImage *image;
 };
 
-#endif // !COIN_SOSFIMAGE3_H
+#endif // !OBOL_SOSFIMAGE3_H

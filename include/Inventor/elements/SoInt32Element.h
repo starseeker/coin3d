@@ -1,5 +1,5 @@
-#ifndef COIN_SOINT32ELEMENT_H
-#define COIN_SOINT32ELEMENT_H
+#ifndef OBOL_SOINT32ELEMENT_H
+#define OBOL_SOINT32ELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -36,7 +36,7 @@
 #include <Inventor/elements/SoSubElement.h>
 #include <cstdint>
 
-class COIN_DLL_API SoInt32Element : public SoElement {
+class OBOL_DLL_API SoInt32Element : public SoElement {
   typedef SoElement inherited;
 
   SO_ELEMENT_ABSTRACT_HEADER(SoInt32Element);
@@ -65,4 +65,4 @@ protected:
 
 };
 
-#endif // !COIN_SOINT32ELEMENT_H
+#endif // !OBOL_SOINT32ELEMENT_H

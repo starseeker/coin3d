@@ -72,9 +72,9 @@
 #include <Inventor/projectors/SbLineProjector.h>
 #include <Inventor/sensors/SoFieldSensor.h>
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 #include <defaults/translate1Dragger.h>
 

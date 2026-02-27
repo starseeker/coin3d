@@ -139,7 +139,7 @@
 
   There is a work around solution for the above mentioned problem that
   can be applied with Coin: by setting the global environment variable
-  \c COIN_QUADMESH_PRECISE_LIGHTING to "1", the quads will be broken
+  \c OBOL_QUADMESH_PRECISE_LIGHTING to "1", the quads will be broken
   up into triangles before rendered, and shading will likely look much
   better. Be aware that this technique causes rendering of the
   SoQuadMesh to slow down by an approximate factor of 6.
@@ -259,10 +259,10 @@ SoQuadMesh::findMaterialBinding(SoState * const state) const
     break;
   default:
     binding = OVERALL;
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SoQuadMesh::findMaterialBinding",
                               "unknown material binding setting");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     break;
   }
   return binding;
@@ -297,10 +297,10 @@ SoQuadMesh::findNormalBinding(SoState * const state) const
     break;
   default:
     binding = PER_VERTEX;
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SoQuadMesh::findNormalBinding",
                               "unknown normal binding setting");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     break;
   }
   return binding;
@@ -566,12 +566,12 @@ namespace { namespace SoGL { namespace QuadMesh {
                 SbVec3f n = p1.getNormal() + p2.getNormal();
                 [[maybe_unused]] SbBool quadok = qmeshNormalize(n, n1->sqrLength() + n2->sqrLength() +
                                                n3->sqrLength() + n4->sqrLength());
-#if COIN_DEBUG
+#if OBOL_DEBUG
                 if ( !quadok )
                   SoDebugError::postWarning("SoQuadMesh::GLRender",
                                             "Can not compute normal because of "
                                             "wrong quad coordinates.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
               } else {
                 // FIXME
               }
@@ -903,7 +903,7 @@ SoQuadMesh::GLRender(SoGLRenderAction * action)
   // Check if precise lighting rendering is requested.
   static int preciselighting = -1;
   if (preciselighting == -1) {
-    const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_QUADMESH_PRECISE_LIGHTING");
+    const char * env = CoinInternal::getEnvironmentVariableRaw("OBOL_QUADMESH_PRECISE_LIGHTING");
     preciselighting = env && (atoi(env) > 0);
   }
 

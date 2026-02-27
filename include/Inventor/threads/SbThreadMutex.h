@@ -1,5 +1,5 @@
-#ifndef COIN_SBTHREADMUTEX_H
-#define COIN_SBTHREADMUTEX_H
+#ifndef OBOL_SBTHREADMUTEX_H
+#define OBOL_SBTHREADMUTEX_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -67,9 +67,9 @@ private:
 };
 
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 // For TGS Inventor compile-time compatibility.
 #include <Inventor/threads/SbThreadAutoLock.h>
-#endif // COIN_INTERNAL
+#endif // OBOL_INTERNAL
 
-#endif // !COIN_SBTHREADMUTEX_H
+#endif // !OBOL_SBTHREADMUTEX_H

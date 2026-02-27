@@ -84,7 +84,7 @@
   such node type has been initialized yet - scan the file system for a
   dynamically loadable extension node with that given name.  This can
   be completely disabled by setting the environment variable
-  COIN_NO_SOTYPE_DYNLOAD to a positive integer value, new from Coin
+  OBOL_NO_SOTYPE_DYNLOAD to a positive integer value, new from Coin
   v2.5.0.
 
   On UNIX, extensions nodes are regular .so files.
@@ -152,9 +152,9 @@
 
 #include "config.h"
 
-#ifndef COIN_WORKAROUND_NO_USING_STD_FUNCS
+#ifndef OBOL_WORKAROUND_NO_USING_STD_FUNCS
 using std::toupper;
-#endif // !COIN_WORKAROUND_NO_USING_STD_FUNCS
+#endif // !OBOL_WORKAROUND_NO_USING_STD_FUNCS
 
 #include "cppmangle.icc"
 
@@ -266,7 +266,7 @@ SoType::createType(const SoType parent, const SbName name,
                    const instantiationMethod method,
                    const uint16_t data)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   // We don't use SoType::fromName() to test if a type with this name
   // already exists to avoid loading extension nodes in this context.
   // You should be able to "override" dynamically loadable nodes in program
@@ -281,9 +281,9 @@ SoType::createType(const SoType parent, const SbName name,
                        name.getString());
     return SoType::fromName(name.getString());
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoType::createType", "%s", name.getString());
 #endif // debug
 
@@ -320,7 +320,7 @@ SoType::removeType(const SbName & name)
   (*SoType::typedatalist)[index] = NULL;
   delete typedata;
 
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoType::removeType", "%s", name.getString());
 #endif // debug
 
@@ -503,7 +503,7 @@ SoType::fromName(const SbName name)
   static int enable_dynload = -1;
   if (enable_dynload == -1) {
     enable_dynload = TRUE; // the default setting
-    auto env = CoinInternal::getEnvironmentVariable("COIN_NO_SOTYPE_DYNLOAD");
+    auto env = CoinInternal::getEnvironmentVariable("OBOL_NO_SOTYPE_DYNLOAD");
     if (env.has_value() && std::atoi(env->c_str()) > 0) enable_dynload = FALSE;
   }
 
@@ -568,7 +568,7 @@ SoType::fromName(const SbName name)
         // dynamic loading is not yet supported for this compiler suite
         static long first = 1;
         if ( first ) {
-          auto env = CoinInternal::getEnvironmentVariable("COIN_DEBUG_DL");
+          auto env = CoinInternal::getEnvironmentVariable("OBOL_DEBUG_DL");
           if (env.has_value() && (std::atoi(env->c_str()) > 0)) {
             SoDebugError::post("SoType::fromName",
                                "unable to figure out the C++ name mangling scheme");
@@ -711,7 +711,7 @@ SoType::fromName(const SbName name)
         // FIXME: if a module is found and opened and initialization
         // fails, the remaining module name patterns are not tried.
         // might trigger as a problem one day...  2030224 larsa
-#if COIN_DEBUG
+#if OBOL_DEBUG
         SoDebugError::postWarning("SoType::fromName",
                                   "Mangled symbol %s not found in module %s. "
                                   "It might be compiled with the wrong compiler / "
@@ -732,7 +732,7 @@ SoType::fromName(const SbName name)
         initClass();
       } catch (...) {
         // If initClass() throws an exception, cleanup and return failure
-#if COIN_DEBUG
+#if OBOL_DEBUG
         SoDebugError::postWarning("SoType::fromName",
                                   "initClass() function threw an exception for type %s",
                                   name.getString());
@@ -859,17 +859,17 @@ SoType::isDerivedFrom(const SoType parent) const
   assert(!this->isBad());
 
   if (parent.isBad()) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SoType::isDerivedFrom",
                               "can't compare type '%s' against an invalid type",
                               this->getName().getString());
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     return FALSE;
   }
 
   SoType type = *this;
   do {
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
     SoDebugError::postInfo("SoType::isDerivedFrom",
                            "this: '%s' parent: '%s'",
                            type.getName().getString(),
@@ -978,12 +978,12 @@ SoType::createInstance(void) const
     return (*((*SoType::typedatalist)[(int)this->getKey()]->method))();
   }
   else {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SoType::createInstance",
                               "can't create instance of class type '%s', "
                               " use SoType::canCreateInstance()",
                               this->getName().getString());
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     return NULL;
   }
 }
@@ -1005,7 +1005,7 @@ SoType::getNumTypes(void)
   Returns a pointer to the method used to instantiate objects of the given
   type.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */

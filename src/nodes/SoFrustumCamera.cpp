@@ -110,7 +110,7 @@ SoFrustumCamera::~SoFrustumCamera(void)
 void
 SoFrustumCamera::initClass(void)
 {
-  SO_NODE_INTERNAL_INIT_CLASS(SoFrustumCamera, SoNode::COIN_2_5);
+  SO_NODE_INTERNAL_INIT_CLASS(SoFrustumCamera, SoNode::OBOL_2_5);
 }
 
 // Doc in superclass.
@@ -157,7 +157,7 @@ void
 SoFrustumCamera::viewBoundingBox(const SbBox3f & box, float aspect, float slack)
 {
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   // Only check for "flagged" emptiness, and don't use
   // SbBox3f::hasVolume(), as we *can* handle flat boxes.
   if (box.isEmpty()) {
@@ -165,7 +165,7 @@ SoFrustumCamera::viewBoundingBox(const SbBox3f & box, float aspect, float slack)
                               "bounding box is empty");
     return;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   // First, we want to move the camera in such a way that it is
   // pointing straight at the center of the scene bounding box -- but

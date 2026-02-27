@@ -207,7 +207,7 @@ SoSpaceballButtonEvent::isButtonReleaseEvent(const SoEvent * e,
   Converts from an enum value of type SoMouseButtonEvent::Button to a
   string containing the enum symbol.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
   \since Coin 3.0
 */
 // Should we add stringToEnum as well perhaps?

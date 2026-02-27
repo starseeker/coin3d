@@ -1,5 +1,5 @@
-#ifndef COIN_SOPROFILECOORDINATE3_H
-#define COIN_SOPROFILECOORDINATE3_H
+#ifndef OBOL_SOPROFILECOORDINATE3_H
+#define OBOL_SOPROFILECOORDINATE3_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -36,7 +36,7 @@
 #include <Inventor/nodes/SoSubNode.h>
 #include <Inventor/fields/SoMFVec3f.h>
 
-class COIN_DLL_API SoProfileCoordinate3 : public SoNode {
+class OBOL_DLL_API SoProfileCoordinate3 : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_HEADER(SoProfileCoordinate3);
@@ -58,4 +58,4 @@ protected:
   virtual ~SoProfileCoordinate3();
 };
 
-#endif // !COIN_SOPROFILECOORDINATE3_H
+#endif // !OBOL_SOPROFILECOORDINATE3_H

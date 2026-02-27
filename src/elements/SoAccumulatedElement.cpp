@@ -150,7 +150,7 @@ SoAccumulatedElement::copyMatchInfo(void) const
   Convenience method which copies the node ids from \a copyfrom to
   this element.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 */
 void
 SoAccumulatedElement::copyNodeIds(const SoAccumulatedElement * copyfrom)

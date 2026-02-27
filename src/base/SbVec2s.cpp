@@ -57,9 +57,9 @@
 #include <Inventor/fields/SoSFVec2s.h>
 
 #include "coinString.h"
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 /*!
   \fn SbVec2s::SbVec2s(void)
@@ -199,12 +199,12 @@ SbVec2s::setValue(const SbVec2b & v)
 SbVec2s &
 SbVec2s::setValue(const SbVec2i32 & v)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (v[0] > std::numeric_limits<short>::max() || v[0] < -std::numeric_limits<short>::max() ||
       v[1] > std::numeric_limits<short>::max() || v[1] < -std::numeric_limits<short>::max()) {
     SoDebugError::post("SbVec2s::setValue", "SbVec2i32 argument out of range for SbVec2s");
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   vec[0] = static_cast<short>(v[0]);
   vec[1] = static_cast<short>(v[1]);
   return *this;
@@ -217,12 +217,12 @@ SbVec2s::setValue(const SbVec2i32 & v)
 SbVec2s &
 SbVec2s::setValue(const SbVec2f & v)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (v[0] > std::numeric_limits<short>::max() || v[0] < -std::numeric_limits<short>::max() ||
       v[1] > std::numeric_limits<short>::max() || v[1] < -std::numeric_limits<short>::max()) {
     SoDebugError::post("SbVec2s::setValue", "SbVec2f argument out of range for SbVec2s");
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   vec[0] = static_cast<short>(v[0]);
   vec[1] = static_cast<short>(v[1]);
   return *this;
@@ -235,12 +235,12 @@ SbVec2s::setValue(const SbVec2f & v)
 SbVec2s &
 SbVec2s::setValue(const SbVec2d & v)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (v[0] > std::numeric_limits<short>::max() || v[0] < -std::numeric_limits<short>::max() ||
       v[1] > std::numeric_limits<short>::max() || v[1] < -std::numeric_limits<short>::max()) {
     SoDebugError::post("SbVec2s::setValue", "SbVec2d argument out of range for SbVec2s");
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   vec[0] = static_cast<short>(v[0]);
   vec[1] = static_cast<short>(v[1]);
   return *this;
@@ -418,7 +418,7 @@ SbVec2s::fromString(const SbString & str)
 void
 SbVec2s::print(FILE * fp) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   fputs(this->toString().getString(),fp);
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }

@@ -1,5 +1,5 @@
-#ifndef COIN_SODB_H
-#define COIN_SODB_H
+#ifndef OBOL_SODB_H
+#define OBOL_SODB_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -51,7 +51,7 @@ class SoGroup;
 typedef void SoDBHeaderCB(void * data, SoInput * input);
 
 
-class COIN_DLL_API SoDB {
+class OBOL_DLL_API SoDB {
 public:
   // Forward declaration of ContextManager for init function
   class ContextManager;
@@ -155,7 +155,7 @@ public:
      *
      * The default implementation returns FALSE, which is appropriate for
      * applications that only use one backend.  Dual-backend implementations
-     * (COIN3D_BUILD_DUAL_GL) should override this and return TRUE for
+     * (OBOL_BUILD_DUAL_GL) should override this and return TRUE for
      * contexts created via OSMesa so that the GL-glue dispatch layer can
      * route SoGLContext_instance() to the correct (osmesa_*) implementation.
      */
@@ -204,8 +204,8 @@ public:
 
   /**
    * Create a new OSMesa-backed context manager.  Returns NULL when the
-   * library was not built with OSMesa support (i.e. COIN3D_OSMESA_BUILD
-   * and COIN3D_BUILD_DUAL_GL are both absent).
+   * library was not built with OSMesa support (i.e. OBOL_OSMESA_BUILD
+   * and OBOL_BUILD_DUAL_GL are both absent).
    *
    * The caller owns the returned object and is responsible for deleting it
    * after all SoOffscreenRenderer instances that reference it have been
@@ -225,4 +225,4 @@ private:
   static SoGroup * readAllWrapper(SoInput * input, const SoType & grouptype);
 };
 
-#endif // !COIN_SODB_H
+#endif // !OBOL_SODB_H

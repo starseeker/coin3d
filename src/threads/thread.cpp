@@ -244,7 +244,7 @@ cc_thread_init(void)
   on Microsoft Windows) this is done with the option
   "--enable-threadsafe" to Autoconf configure. To change the
   configuration and rebuild with Visual Studio, you will need to
-  change the preprocessor directive COIN_THREADSAFE to defined in the
+  change the preprocessor directive OBOL_THREADSAFE to defined in the
   file src/setup.h located in the same folder as you found your
   solution file.</li>
 

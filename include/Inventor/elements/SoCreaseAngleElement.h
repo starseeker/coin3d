@@ -1,5 +1,5 @@
-#ifndef COIN_SOCREASEANGLEELEMENT_H
-#define COIN_SOCREASEANGLEELEMENT_H
+#ifndef OBOL_SOCREASEANGLEELEMENT_H
+#define OBOL_SOCREASEANGLEELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/elements/SoFloatElement.h>
 
-class COIN_DLL_API SoCreaseAngleElement : public SoFloatElement {
+class OBOL_DLL_API SoCreaseAngleElement : public SoFloatElement {
   typedef SoFloatElement inherited;
 
   SO_ELEMENT_HEADER(SoCreaseAngleElement);
@@ -54,4 +54,4 @@ public:
   static float getDefault(void);
 };
 
-#endif // !COIN_SOCREASEANGLEELEMENT_H
+#endif // !OBOL_SOCREASEANGLEELEMENT_H

@@ -1,5 +1,5 @@
-#ifndef COIN_SOGLMULTITEXTURECOORDINATEELEMENT_H
-#define COIN_SOGLMULTITEXTURECOORDINATEELEMENT_H
+#ifndef OBOL_SOGLMULTITEXTURECOORDINATEELEMENT_H
+#define OBOL_SOGLMULTITEXTURECOORDINATEELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -38,7 +38,7 @@
 class SoGLMultiTextureCoordinateElementP;
 typedef void SoTexCoordTexgenCB(void * data);
 
-class COIN_DLL_API SoGLMultiTextureCoordinateElement : public SoMultiTextureCoordinateElement {
+class OBOL_DLL_API SoGLMultiTextureCoordinateElement : public SoMultiTextureCoordinateElement {
   typedef SoMultiTextureCoordinateElement inherited;
 
   SO_ELEMENT_HEADER(SoGLMultiTextureCoordinateElement);
@@ -113,4 +113,4 @@ private:
   mutable int multimax;
 };
 
-#endif // !COIN_SOGLMULTITEXTURECOORDINATEELEMENT_H
+#endif // !OBOL_SOGLMULTITEXTURECOORDINATEELEMENT_H

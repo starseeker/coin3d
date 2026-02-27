@@ -1,5 +1,5 @@
-#ifndef COIN_SOPROFILERSTATS_H
-#define COIN_SOPROFILERSTATS_H
+#ifndef OBOL_SOPROFILERSTATS_H
+#define OBOL_SOPROFILERSTATS_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -44,7 +44,7 @@
 class SbProfilingData;
 class SoSeparator;
 
-class COIN_DLL_API SoProfilerStats : public SoNode {
+class OBOL_DLL_API SoProfilerStats : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_HEADER(SoProfilerStats);
@@ -104,4 +104,4 @@ private:
 
 }; // SoProfilerStats
 
-#endif // !COIN_SOPROFILERSTATS_H
+#endif // !OBOL_SOPROFILERSTATS_H

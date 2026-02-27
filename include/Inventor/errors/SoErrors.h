@@ -1,5 +1,5 @@
-#ifndef COIN_SOERRORS_H
-#define COIN_SOERRORS_H
+#ifndef OBOL_SOERRORS_H
+#define OBOL_SOERRORS_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -39,4 +39,4 @@
 #include <Inventor/errors/SoMemoryError.h>
 #include <Inventor/errors/SoReadError.h>
 
-#endif // !COIN_SOERRORS_H
+#endif // !OBOL_SOERRORS_H

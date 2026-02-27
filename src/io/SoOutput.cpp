@@ -1096,13 +1096,13 @@ void
 SoOutput::decrementIndent(const int levels)
 {
   PRIVATE(this)->indentlevel -= levels;
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (PRIVATE(this)->indentlevel < 0) {
     SoDebugError::postInfo("SoOutput::decrementIndent",
                            "indentation level < 0!");
     PRIVATE(this)->indentlevel = 0;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }
 
 /*!
@@ -1114,20 +1114,20 @@ SoOutput::decrementIndent(const int levels)
 void
 SoOutput::indent(void)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (this->isBinary()) {
     SoDebugError::postWarning("SoOutput::indent",
                               "Don't try to indent when you're doing binary "
                               "format output.");
     return;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   if (PRIVATE(this)->writecompact) return;
 
   static int oldstyle = -1;
   if (oldstyle == -1) {
-    oldstyle = CoinInternal::getEnvironmentVariableRaw("COIN_OLDSTYLE_FORMATTING") ? 1 : 0;
+    oldstyle = CoinInternal::getEnvironmentVariableRaw("OBOL_OLDSTYLE_FORMATTING") ? 1 : 0;
   }
 
   // Keep the old ugly-bugly formatting style around, in case someone,
@@ -1181,12 +1181,12 @@ SoOutput::setCompact(SbBool flag)
 {
   // FIXME: go through output code and make the output more
   // compact. 19990623 morten.
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (!PRIVATE(this)->writecompact && flag) {
     SoDebugError::postWarning("SoOutput::setCompact",
                               "compact export is not implemented in Coin yet");
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   PRIVATE(this)->writecompact = flag;
 }
@@ -1213,13 +1213,13 @@ SoOutput::setAnnotation(uint32_t bits)
 {
   // FIXME: go through output code and insert annotations where applicable.
   // 19990623 morten.
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (PRIVATE(this)->annotationbits != bits) {
     SoDebugError::postWarning("SoOutput::setAnnotation",
                               "annotated export is not implemented in Coin "
                               "yet");
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   PRIVATE(this)->annotationbits = bits;
 }
@@ -1398,7 +1398,7 @@ SoOutput::removeDEFNode(SbName name)
 {
   BogusSet * defnames = PRIVATE(this)->getCurrentDefNames(FALSE);
   assert(defnames);
-#if COIN_DEBUG
+#if OBOL_DEBUG
   size_t ret = defnames->erase(name.getString());
   assert(ret && "Tried to remove nonexisting DEFnode");
 #else
@@ -1409,7 +1409,7 @@ SoOutput::removeDEFNode(SbName name)
 /*!
   \COININTERNAL
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */
@@ -1428,7 +1428,7 @@ SoOutput::pushProto(SoProto * proto)
 /*!
   \COININTERNAL
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */
@@ -1448,7 +1448,7 @@ SoOutput::getCurrentProto(void) const
 /*!
   \COININTERNAL
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */
@@ -1468,7 +1468,7 @@ SoOutput::popProto(void)
 /*!
   \COININTERNAL
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */
@@ -1490,7 +1490,7 @@ SoOutput::addRoute(SoFieldContainer * from, const SbName & fromfield,
 /*!
   \COININTERNAL
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */
@@ -1524,7 +1524,7 @@ SoOutput::resolveRoutes(void)
       this->write(toname.getString());
       this->write("\n");
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
       if (SoWriterefCounter::debugWriterefs()) {
         int writerefcount = PRIVATE(this)->counter->getWriteref(fromc);
         SoDebugError::postInfo("SoOutput::resolveRoutes",
@@ -1534,9 +1534,9 @@ SoOutput::resolveRoutes(void)
                                fromc->getName().getString(),
                                writerefcount, writerefcount - 1);
       }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
       if (SoWriterefCounter::debugWriterefs()) {
         int writerefcount = PRIVATE(this)->counter->getWriteref(toc);
         SoDebugError::postInfo("SoOutput::resolveRoutes",
@@ -1546,7 +1546,7 @@ SoOutput::resolveRoutes(void)
                                toc->getName().getString(),
                                writerefcount, writerefcount - 1);
       }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
       // remove write references again
       PRIVATE(this)->counter->decrementWriteref(fromc);

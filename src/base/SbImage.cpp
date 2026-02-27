@@ -36,7 +36,7 @@
 
   \ingroup coin_base
 
-  \COIN_CLASS_EXTENSION
+  \OBOL_CLASS_EXTENSION
   \since Coin 1.0
 */
 
@@ -75,17 +75,17 @@
 
 #include "config.h"
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
 #include <Inventor/threads/SbRWMutex.h>
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 
 #include "SbImageFormatHandler.h"
 #include "SbJpegImageHandler.h"
 
-#ifndef COIN_WORKAROUND_NO_USING_STD_FUNCS
+#ifndef OBOL_WORKAROUND_NO_USING_STD_FUNCS
 using std::memcmp;
 using std::memcpy;
-#endif // !COIN_WORKAROUND_NO_USING_STD_FUNCS
+#endif // !OBOL_WORKAROUND_NO_USING_STD_FUNCS
 
 class SbImageP {
 public:
@@ -107,9 +107,9 @@ public:
       bpp(0),
       schedulecb(NULL),
       scheduleclosure(NULL)
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
     , rwmutex(SbRWMutex::READ_PRECEDENCE)
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
   { }
   void freeData(void) {
     if (this->bytes) {
@@ -143,7 +143,7 @@ public:
 
   static SbList <ReadImageCBData> * readimagecallbacks;
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   SbRWMutex rwmutex;
   void readLock(void) {
     //    fprintf(stderr,"readlock: %p\n", this);
@@ -163,12 +163,12 @@ public:
     //fprintf(stderr,"writeUnlock: %p\n", this);
     this->rwmutex.writeUnlock();
   }
-#else // COIN_THREADSAFE
+#else // OBOL_THREADSAFE
   void readLock(void) { }
   void readUnlock(void) { }
   void writeLock(void) { }
   void writeUnlock(void) { }
-#endif // ! COIN_THREADSAFE
+#endif // ! OBOL_THREADSAFE
 
 };
 
@@ -218,7 +218,7 @@ SbImage::SbImage(const unsigned char * bytes,
 /*!
   Constructor which sets 3D data using setValue().
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \sa setValue()
   \since Coin 2.0
@@ -519,13 +519,13 @@ SbImage::readFile(const SbString & filename,
     PRIVATE(this)->datatype = SbImageP::FORMAT_HANDLER_DATA;
     return TRUE;
   }
-#if COIN_DEBUG
+#if OBOL_DEBUG
   else {
     SoDebugError::post("SbImage::readFile", "(%s) %s",
                        filename.getString(),
                        registry.getLastError());
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     
   this->setValue(SbVec3s(0,0,0), 0, NULL);
   return FALSE;

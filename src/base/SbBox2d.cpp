@@ -57,9 +57,9 @@
 #include <Inventor/SbBox2f.h>
 #include <Inventor/SbBox2s.h>
 #include <Inventor/SbBox2i32.h>
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 /*!
   \fn SbBox2d::SbBox2d(void)

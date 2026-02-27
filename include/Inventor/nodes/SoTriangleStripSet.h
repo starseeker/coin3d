@@ -1,5 +1,5 @@
-#ifndef COIN_SOTRIANGLESTRIPSET_H
-#define COIN_SOTRIANGLESTRIPSET_H
+#ifndef OBOL_SOTRIANGLESTRIPSET_H
+#define OBOL_SOTRIANGLESTRIPSET_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/nodes/SoNonIndexedShape.h>
 #include <Inventor/fields/SoMFInt32.h>
 
-class COIN_DLL_API SoTriangleStripSet : public SoNonIndexedShape {
+class OBOL_DLL_API SoTriangleStripSet : public SoNonIndexedShape {
   typedef SoNonIndexedShape inherited;
 
   SO_NODE_HEADER(SoTriangleStripSet);
@@ -72,4 +72,4 @@ private:
   Binding findNormalBinding(SoState * const state) const;
 };
 
-#endif // !COIN_SOTRIANGLESTRIPSET_H
+#endif // !OBOL_SOTRIANGLESTRIPSET_H

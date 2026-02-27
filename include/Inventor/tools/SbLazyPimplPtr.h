@@ -1,5 +1,5 @@
-#ifndef COIN_SBLAZYPIMPLPTR_H
-#define COIN_SBLAZYPIMPLPTR_H
+#ifndef OBOL_SBLAZYPIMPLPTR_H
+#define OBOL_SBLAZYPIMPLPTR_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -54,7 +54,7 @@
 #endif /* MSVC <8 */
 
 template <typename T>
-class COIN_DLL_API SbLazyPimplPtr {
+class OBOL_DLL_API SbLazyPimplPtr {
 public:
   SbLazyPimplPtr(void);
   SbLazyPimplPtr(T * initial);
@@ -80,10 +80,10 @@ protected:
 
 }; // SbLazyPimplPtr
 
-#ifdef COIN_INTERNAL
+#ifdef OBOL_INTERNAL
 // the implementation is in the .hpp class
 #include <Inventor/tools/SbLazyPimplPtr.hpp>
-#endif // COIN_INTERNAL
+#endif // OBOL_INTERNAL
 
 #if defined(_MSC_VER) && (_MSC_VER < 1400) /* MSVC <8 */
 #pragma warning(pop)
@@ -91,4 +91,4 @@ protected:
 
 /* ********************************************************************** */
 
-#endif // !COIN_SBLAZYPIMPLPTR_H
+#endif // !OBOL_SBLAZYPIMPLPTR_H

@@ -67,13 +67,13 @@
 #include <Inventor/engines/SoOutputData.h>
 #include <Inventor/lists/SoTypeList.h>
 #include <Inventor/lists/SoEngineOutputList.h>
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 #include "engines/SoConvertAll.h"
 #include "engines/SoSubEngineP.h"
-#include "config.h" // COIN_OBSOLETED
+#include "config.h" // OBOL_OBSOLETED
 
 /*!
   \fn SoField * SoFieldConverter::getInput(SoType type)
@@ -97,7 +97,7 @@ SO_ENGINE_ABSTRACT_SOURCE(SoFieldConverter);
 */
 SoFieldConverter::SoFieldConverter(void)
 {
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoFieldConverter::SoFieldConverter", "%p", this);
 #endif // debug
 }
@@ -136,7 +136,7 @@ SoFieldConverter::initClasses(void)
 SoField *
 SoFieldConverter::getConnectedInput(void)
 {
-  COIN_OBSOLETED();
+  OBOL_OBSOLETED();
   return NULL;
 }
 

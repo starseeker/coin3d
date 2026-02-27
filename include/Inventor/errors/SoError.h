@@ -1,5 +1,5 @@
-#ifndef COIN_SOERROR_H
-#define COIN_SOERROR_H
+#ifndef OBOL_SOERROR_H
+#define OBOL_SOERROR_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -46,7 +46,7 @@ typedef void SoErrorCB(const class SoError * error, void * data);
 typedef SoErrorCB * SoErrorCBPtr;
 
 
-class COIN_DLL_API SoError {
+class OBOL_DLL_API SoError {
 public:
   SoError(void);
   virtual ~SoError();
@@ -94,4 +94,4 @@ private:
   void * impl;
 };
 
-#endif // !COIN_SOERROR_H
+#endif // !OBOL_SOERROR_H

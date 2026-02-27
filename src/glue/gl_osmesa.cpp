@@ -3,7 +3,7 @@
  *
  * Architecture
  * ------------
- * This file is part of the COIN3D_BUILD_DUAL_GL support, which allows both
+ * This file is part of the OBOL_BUILD_DUAL_GL support, which allows both
  * the system-OpenGL and the OSMesa GL backends to be compiled into a single
  * shared library so that applications can switch between them at runtime.
  *
@@ -16,7 +16,7 @@
  *      (glGetString, glGenTextures, …).
  *
  *   2. This file (gl_osmesa.cpp) recompiles the same source with:
- *        a. COIN_GLHEADERS_OSMESA_OVERRIDE  – makes gl-headers.h pull in
+ *        a. OBOL_GLHEADERS_OSMESA_OVERRIDE  – makes gl-headers.h pull in
  *           OSMesa headers (<OSMesa/osmesa.h>, <OSMesa/gl.h>) instead of
  *           the system <GL/gl.h>.
  *        b. USE_MGL_NAMESPACE              – activates <OSMesa/gl_mangle.h>
@@ -32,7 +32,7 @@
  *
  * Dispatch
  * --------
- * A thin dispatch layer in gl.cpp (compiled with COIN3D_BUILD_DUAL_GL
+ * A thin dispatch layer in gl.cpp (compiled with OBOL_BUILD_DUAL_GL
  * defined) keeps the stable SoGLContext_* API working at runtime: it
  * checks a per-context backend flag set at context-creation time and
  * forwards to either osmesa_SoGLContext_* or the system-GL implementation.
@@ -41,7 +41,7 @@
  * -------------------
  * The OSMesa headers live in external/osmesa/include/OSMesa/ (submodule).
  * src/glue/CMakeLists.txt adds that path to the include directories for
- * this translation unit when COIN3D_BUILD_DUAL_GL is ON.
+ * this translation unit when OBOL_BUILD_DUAL_GL is ON.
  */
 
 /* -----------------------------------------------------------------------
@@ -50,7 +50,7 @@
  *           OSMesa headers rather than the system <GL/gl.h>.
  *           This define is tested in include/Inventor/system/gl-headers.h.
  * --------------------------------------------------------------------- */
-#define COIN_GLHEADERS_OSMESA_OVERRIDE 1
+#define OBOL_GLHEADERS_OSMESA_OVERRIDE 1
 
 /* -----------------------------------------------------------------------
  * Step 2 – enable MGL name mangling: after <OSMesa/gl_mangle.h> is

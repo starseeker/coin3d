@@ -1,5 +1,5 @@
-#ifndef COIN_SOMFENUM_H
-#define COIN_SOMFENUM_H
+#ifndef OBOL_SOMFENUM_H
+#define OBOL_SOMFENUM_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -36,7 +36,7 @@
 #include <Inventor/fields/SoMField.h>
 #include <Inventor/fields/SoSubField.h>
 
-class COIN_DLL_API SoMFEnum : public SoMField {
+class OBOL_DLL_API SoMFEnum : public SoMField {
   typedef SoMField inherited;
 
   SO_MFIELD_HEADER(SoMFEnum, int, int);
@@ -72,4 +72,4 @@ protected:
 #define SO_NODE_SET_MF_ENUM_TYPE(_fieldname_, _enumtype_) \
   PRIVATE_SOENUM_SET_TYPE(_fieldname_, _enumtype_, fieldData)
 
-#endif // !COIN_SOMFENUM_H
+#endif // !OBOL_SOMFENUM_H

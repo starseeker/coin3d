@@ -136,9 +136,9 @@ SoTextureCoordinateNormalMap::initClass(void)
 
 // generates texture coordinates for GLRender, callback and pick actions
 const SbVec4f &
-SoTextureCoordinateNormalMap::generate(void * COIN_UNUSED_ARG(userdata),
-                                         const SbVec3f & COIN_UNUSED_ARG(p),
-                                         const SbVec3f & COIN_UNUSED_ARG(n))
+SoTextureCoordinateNormalMap::generate(void * OBOL_UNUSED_ARG(userdata),
+                                         const SbVec3f & OBOL_UNUSED_ARG(p),
+                                         const SbVec3f & OBOL_UNUSED_ARG(n))
 {
   return *SoTextureCoordinateNormalMapP::dummy_texcoords;
 }

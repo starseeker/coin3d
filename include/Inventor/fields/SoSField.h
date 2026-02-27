@@ -1,5 +1,5 @@
-#ifndef COIN_SOSFIELD_H
-#define COIN_SOSFIELD_H
+#ifndef OBOL_SOSFIELD_H
+#define OBOL_SOSFIELD_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/fields/SoField.h>
 
-class COIN_DLL_API SoSField : public SoField {
+class OBOL_DLL_API SoSField : public SoField {
   typedef SoField inherited;
 
 public:
@@ -51,4 +51,4 @@ private:
   static SoType classTypeId;
 };
 
-#endif // !COIN_SOSFIELD_H
+#endif // !OBOL_SOSFIELD_H

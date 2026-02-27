@@ -63,7 +63,7 @@
 
 #include <Inventor/sensors/SoSensor.h>
 #include <cstdlib> // NULL
-#include "config.h" // COIN_OBSOLETED()
+#include "config.h" // OBOL_OBSOLETED()
 #include "misc/SbHash.h"
 
 /*!
@@ -202,9 +202,9 @@ SoSensor::trigger(void)
   Open Inventor function not implemented in Coin.
  */
 void
-SoSensor::setNextInQueue(SoSensor * COIN_UNUSED_ARG(next))
+SoSensor::setNextInQueue(SoSensor * OBOL_UNUSED_ARG(next))
 {
-  COIN_OBSOLETED();
+  OBOL_OBSOLETED();
 }
 
 /*!
@@ -214,7 +214,7 @@ SoSensor::setNextInQueue(SoSensor * COIN_UNUSED_ARG(next))
 SoSensor *
 SoSensor::getNextInQueue(void) const
 {
-  COIN_OBSOLETED();
+  OBOL_OBSOLETED();
   return NULL;
 }
 

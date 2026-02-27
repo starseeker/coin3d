@@ -1,5 +1,5 @@
-#ifndef COIN_SOPATHSWITCH_H
-#define COIN_SOPATHSWITCH_H
+#ifndef OBOL_SOPATHSWITCH_H
+#define OBOL_SOPATHSWITCH_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/nodes/SoGroup.h>
 #include <Inventor/fields/SoSFPath.h>
 
-class COIN_DLL_API SoPathSwitch : public SoGroup {
+class OBOL_DLL_API SoPathSwitch : public SoGroup {
   typedef SoGroup inherited;
 
   SO_NODE_HEADER(SoPathSwitch);
@@ -67,4 +67,4 @@ private:
   void commonConstructor(void);
 };
 
-#endif // !COIN_SOPATHSWITCH_H
+#endif // !OBOL_SOPATHSWITCH_H

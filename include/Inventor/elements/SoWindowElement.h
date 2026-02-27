@@ -1,5 +1,5 @@
-#ifndef COIN_SOWINDOWELEMENT_H
-#define COIN_SOWINDOWELEMENT_H
+#ifndef OBOL_SOWINDOWELEMENT_H
+#define OBOL_SOWINDOWELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -41,7 +41,7 @@
 
 class SoGLRenderAction;
 
-class COIN_DLL_API SoWindowElement : public SoElement {
+class OBOL_DLL_API SoWindowElement : public SoElement {
   typedef SoElement inherited;
 
   SO_ELEMENT_HEADER(SoWindowElement);
@@ -73,4 +73,4 @@ protected:
   SoGLRenderAction * glRenderAction;
 };
 
-#endif // !COIN_SOWINDOWELEMENT_H
+#endif // !OBOL_SOWINDOWELEMENT_H

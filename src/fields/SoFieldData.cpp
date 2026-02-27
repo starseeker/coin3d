@@ -77,7 +77,7 @@
 #include <Inventor/misc/SoProto.h>
 
 #include "io/SoInputP.h"
-#include "config.h" // COIN_STUB()
+#include "config.h" // OBOL_STUB()
 
 // *************************************************************************
 
@@ -216,7 +216,7 @@ SoFieldData::addField(SoFieldContainer * base, const char * name,
   // information /once/, however.
   if (!this->hasField(name)) {
 
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
     SoDebugError::postInfo("SoFieldData::addField",
                            "class==%s, fieldname==%s, field==%p, index==%d",
                            base->getTypeId().getName().getString(),
@@ -366,7 +366,7 @@ SoFieldData::addEnumValue(const char * enumname, const char * valuename,
       this->enums.append(e);
     }
 
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
     SoDebugError::postInfo("SoFieldData::addEnumValue",
                            "enumname: %s, valuename: %s, value: %d",
                            enumname, valuename, value);
@@ -530,7 +530,7 @@ SoFieldData::read(SoInput * in, SoFieldContainer * object,
           notbuiltin = TRUE;
           // FIXME: read input defs and inputs (and output
           // defs?). 20000102 mortene.
-          COIN_STUB();
+          OBOL_STUB();
           return FALSE;
         }
         else if (erroronunknownfield) {
@@ -811,7 +811,7 @@ SoFieldData::readFieldDescriptions(SoInput * in, SoFieldContainer * object,
     }
 
 
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
     SoDebugError::postInfo("SoFieldData::readFieldDescriptions",
                            "type: \"%s\", name: \"%s\"",
                            fieldtypename.getString(), fieldname.getString());

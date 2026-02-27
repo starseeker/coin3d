@@ -96,7 +96,7 @@
   one, that can be forced by setting an environment variable:
 
   \code
-  (void) coin_setenv("COIN_PREFER_GLU_TESSELLATOR", "1", 1);
+  (void) coin_setenv("OBOL_PREFER_GLU_TESSELLATOR", "1", 1);
   \endcode
 */
 
@@ -696,10 +696,10 @@ SbTesselator::PImpl::calcPolygonNormal()
   polyNormal[2] += (vert1[0] - vert2[0]) * (vert1[1] + vert2[1]);
 
   if (polyNormal.normalize() == 0.0f) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SbTesselator::calcPolygonNormal",
                               "Polygon has no normal.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   }
 }
 

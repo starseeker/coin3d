@@ -31,8 +31,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_BASIC_H
-#define COIN_BASIC_H
+#ifndef OBOL_BASIC_H
+#define OBOL_BASIC_H
 
 /*
   NOTE: basic.h is automatically generated from basic.h.cmake.in, so don't
@@ -142,29 +142,29 @@ static const SbBool TRUE = true;
 /* *********************************************************************** */
 
 /* SbUniqueId type for node identification */
-#ifndef COIN_UNIQUE_ID_UINT32
+#ifndef OBOL_UNIQUE_ID_UINT32
 typedef uint64_t SbUniqueId;
 #else
 typedef uint32_t SbUniqueId;
-#endif /* COIN_UNIQUE_ID_UINT32 */
+#endif /* OBOL_UNIQUE_ID_UINT32 */
 
 /* *********************************************************************** */
 
 /* Coin library identification */
-#define __COIN__
+#define __OBOL__
 
 /* Version information */
-#ifndef COIN_VERSION
-#define COIN_MAJOR_VERSION @COIN_MAJOR_VERSION@
-#define COIN_MINOR_VERSION @COIN_MINOR_VERSION@
-#define COIN_MICRO_VERSION @COIN_MICRO_VERSION@
-#define COIN_BETA_VERSION @COIN_BETA_VERSION@
-#define COIN_VERSION "@COIN_VERSION@"
+#ifndef OBOL_VERSION
+#define OBOL_MAJOR_VERSION @OBOL_MAJOR_VERSION@
+#define OBOL_MINOR_VERSION @OBOL_MINOR_VERSION@
+#define OBOL_MICRO_VERSION @OBOL_MICRO_VERSION@
+#define OBOL_BETA_VERSION @OBOL_BETA_VERSION@
+#define OBOL_VERSION "@OBOL_VERSION@"
 
 // Macro utilities for string handling - keep these as-is for compatibility
 // Most compilers should have "hash quoting", as it is part of the ANSI standard.
 #define HAVE_HASH_QUOTING 1
-#endif /* !COIN_VERSION */
+#endif /* !OBOL_VERSION */
 
 /* *********************************************************************** */
 
@@ -175,64 +175,64 @@ typedef uint32_t SbUniqueId;
 /* *********************************************************************** */
 
 /* Windows DLL support - still needed for compatibility */
-#if !defined(COIN_INTERNAL) && defined(_MSC_VER)
-# if !defined(COIN_NOT_DLL) && !defined(COIN_DLL)
-#  define COIN_DLL
+#if !defined(OBOL_INTERNAL) && defined(_MSC_VER)
+# if !defined(OBOL_NOT_DLL) && !defined(OBOL_DLL)
+#  define OBOL_DLL
 # endif
-# define COIN_STRINGIFY(str) SO__QUOTE(str)
-# ifdef COIN_DLL
+# define OBOL_STRINGIFY(str) SO__QUOTE(str)
+# ifdef OBOL_DLL
 #  ifdef _DEBUG
-#   pragma comment(lib, "Coin" COIN_STRINGIFY(COIN_MAJOR_VERSION) "d.lib")
+#   pragma comment(lib, "Obol" OBOL_STRINGIFY(OBOL_MAJOR_VERSION) "d.lib")
 #  else
-#   pragma comment(lib, "Coin" COIN_STRINGIFY(COIN_MAJOR_VERSION) ".lib")
+#   pragma comment(lib, "Obol" OBOL_STRINGIFY(OBOL_MAJOR_VERSION) ".lib")
 #  endif
 # else
 #  ifdef _DEBUG
-#   pragma comment(lib, "Coin" COIN_STRINGIFY(COIN_MAJOR_VERSION) "sd.lib")
+#   pragma comment(lib, "Obol" OBOL_STRINGIFY(OBOL_MAJOR_VERSION) "sd.lib")
 #  else
-#   pragma comment(lib, "Coin" COIN_STRINGIFY(COIN_MAJOR_VERSION) "s.lib")
+#   pragma comment(lib, "Obol" OBOL_STRINGIFY(OBOL_MAJOR_VERSION) "s.lib")
 #  endif
 # endif
-# undef COIN_STRINGIFY
+# undef OBOL_STRINGIFY
 #endif
 
 /* DLL API declarations */
-#ifdef COIN_DLL_API
-# error Leave the internal COIN_DLL_API define alone.
-#endif /* COIN_DLL_API */
+#ifdef OBOL_DLL_API
+# error Leave the internal OBOL_DLL_API define alone.
+#endif /* OBOL_DLL_API */
 
-#ifdef COIN_INTERNAL
-# ifdef COIN_NOT_DLL
-#  error The COIN_NOT_DLL define is not supposed to be used when building the library, only when building Win32 applications.
-# endif /* COIN_INTERNAL && COIN_NOT_DLL */
-# ifdef COIN_DLL
-#  error The COIN_DLL define is not supposed to be used when building the library, only when building Win32 applications.
-# endif /* COIN_INTERNAL && COIN_DLL */
-#endif /* COIN_INTERNAL */
+#ifdef OBOL_INTERNAL
+# ifdef OBOL_NOT_DLL
+#  error The OBOL_NOT_DLL define is not supposed to be used when building the library, only when building Win32 applications.
+# endif /* OBOL_INTERNAL && OBOL_NOT_DLL */
+# ifdef OBOL_DLL
+#  error The OBOL_DLL define is not supposed to be used when building the library, only when building Win32 applications.
+# endif /* OBOL_INTERNAL && OBOL_DLL */
+#endif /* OBOL_INTERNAL */
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
-# ifdef COIN_INTERNAL
-#  ifdef COIN_MAKE_DLL
-#   define COIN_DLL_API __declspec(dllexport)
-#  endif /* COIN_MAKE_DLL */
-# else /* !COIN_INTERNAL */
-#  ifdef COIN_DLL
-#   ifdef COIN_NOT_DLL
-#     error Define _either_ COIN_DLL _or_ COIN_NOT_DLL as appropriate for your linkage -- not both at the same time! See Inventor/C/basic.h for further instructions.
-#   endif /* COIN_NOT_DLL */
-#   define COIN_DLL_API __declspec(dllimport)
-#  else /* !COIN_DLL */
-#   ifndef COIN_NOT_DLL
-#    error Define either COIN_DLL or COIN_NOT_DLL as appropriate for your linkage! See Inventor/C/basic.h for further instructions.
-#   endif /* !COIN_NOT_DLL */
-#  endif /* !COIN_DLL */
-# endif /* !COIN_INTERNAL */
+# ifdef OBOL_INTERNAL
+#  ifdef OBOL_MAKE_DLL
+#   define OBOL_DLL_API __declspec(dllexport)
+#  endif /* OBOL_MAKE_DLL */
+# else /* !OBOL_INTERNAL */
+#  ifdef OBOL_DLL
+#   ifdef OBOL_NOT_DLL
+#     error Define _either_ OBOL_DLL _or_ OBOL_NOT_DLL as appropriate for your linkage -- not both at the same time! See Inventor/C/basic.h for further instructions.
+#   endif /* OBOL_NOT_DLL */
+#   define OBOL_DLL_API __declspec(dllimport)
+#  else /* !OBOL_DLL */
+#   ifndef OBOL_NOT_DLL
+#    error Define either OBOL_DLL or OBOL_NOT_DLL as appropriate for your linkage! See Inventor/C/basic.h for further instructions.
+#   endif /* !OBOL_NOT_DLL */
+#  endif /* !OBOL_DLL */
+# endif /* !OBOL_INTERNAL */
 #endif /* Microsoft Windows */
 
 /* Empty define to avoid errors when _not_ compiling an MSWindows DLL. */
-#ifndef COIN_DLL_API
-# define COIN_DLL_API
-#endif /* !COIN_DLL_API */
+#ifndef OBOL_DLL_API
+# define OBOL_DLL_API
+#endif /* !OBOL_DLL_API */
 
 // ===== UTILITY MATH FUNCTIONS =====
 
@@ -275,4 +275,4 @@ constexpr std::uint32_t geqPowerOfTwo(std::uint32_t x) noexcept {
 } // namespace CoinInternal
 
 
-#endif /* !COIN_BASIC_H */
+#endif /* !OBOL_BASIC_H */

@@ -34,7 +34,7 @@
  * @file test_sensors_suite.cpp
  * @brief Tests for Coin3D sensor classes.
  *
- * Note: upstream has no COIN_TEST_SUITE blocks for sensors.
+ * Note: upstream has no OBOL_TEST_SUITE blocks for sensors.
  * These tests verify documented API behavior.
  *
  * Sensors covered:

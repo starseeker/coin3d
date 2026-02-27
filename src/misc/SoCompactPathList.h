@@ -1,5 +1,5 @@
-#ifndef COIN_SOCOMPACTPATHLIST_H
-#define COIN_SOCOMPACTPATHLIST_H
+#ifndef OBOL_SOCOMPACTPATHLIST_H
+#define OBOL_SOCOMPACTPATHLIST_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -38,9 +38,9 @@
 
 class SoPathList;
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #error this is a private header file
-#endif // !COIN_INTERNAL
+#endif // !OBOL_INTERNAL
 
 // SoCompactPathList is an internal class in Coin and should not be
 // used by external applications. It's used only to optimize
@@ -76,4 +76,4 @@ private:
                         int firstpath, int numpaths);
 };
 
-#endif /* COIN_SOCOMPACTPATHLIST_H */
+#endif /* OBOL_SOCOMPACTPATHLIST_H */

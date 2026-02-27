@@ -1,5 +1,5 @@
-#ifndef COIN_SOFOCALDISTANCEELEMENT_H
-#define COIN_SOFOCALDISTANCEELEMENT_H
+#ifndef OBOL_SOFOCALDISTANCEELEMENT_H
+#define OBOL_SOFOCALDISTANCEELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/elements/SoFloatElement.h>
 
-class COIN_DLL_API SoFocalDistanceElement : public SoFloatElement {
+class OBOL_DLL_API SoFocalDistanceElement : public SoFloatElement {
   typedef SoFloatElement inherited;
 
   SO_ELEMENT_HEADER(SoFocalDistanceElement);
@@ -55,4 +55,4 @@ public:
 
 };
 
-#endif // !COIN_SOFOCALDISTANCEELEMENT_H
+#endif // !OBOL_SOFOCALDISTANCEELEMENT_H

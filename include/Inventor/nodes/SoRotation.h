@@ -1,5 +1,5 @@
-#ifndef COIN_SOROTATION_H
-#define COIN_SOROTATION_H
+#ifndef OBOL_SOROTATION_H
+#define OBOL_SOROTATION_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/fields/SoSFRotation.h>
 #include <Inventor/nodes/SoTransformation.h>
 
-class COIN_DLL_API SoRotation : public SoTransformation {
+class OBOL_DLL_API SoRotation : public SoTransformation {
   typedef SoTransformation inherited;
 
   SO_NODE_HEADER(SoRotation);
@@ -60,4 +60,4 @@ protected:
   virtual ~SoRotation();
 };
 
-#endif // !COIN_SOROTATION_H
+#endif // !OBOL_SOROTATION_H

@@ -1,5 +1,5 @@
-#ifndef COIN_SOTEXTUREMATRIXTRANSFORM_H
-#define COIN_SOTEXTUREMATRIXTRANSFORM_H
+#ifndef OBOL_SOTEXTUREMATRIXTRANSFORM_H
+#define OBOL_SOTEXTUREMATRIXTRANSFORM_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -36,7 +36,7 @@
 #include <Inventor/nodes/SoSubNode.h>
 #include <Inventor/fields/SoSFMatrix.h>
 
-class COIN_DLL_API SoTextureMatrixTransform : public SoNode {
+class OBOL_DLL_API SoTextureMatrixTransform : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_HEADER(SoTextureMatrixTransform);
@@ -57,4 +57,4 @@ protected:
   virtual ~SoTextureMatrixTransform();
 };
 
-#endif // !COIN_SOTEXTUREMATRIXTRANSFORM_H
+#endif // !OBOL_SOTEXTUREMATRIXTRANSFORM_H

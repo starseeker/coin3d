@@ -1,5 +1,5 @@
-#ifndef COIN_SOTEMPPATH_H
-#define COIN_SOTEMPPATH_H
+#ifndef OBOL_SOTEMPPATH_H
+#define OBOL_SOTEMPPATH_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/SoFullPath.h>
 
-class COIN_DLL_API SoTempPath : public SoFullPath {
+class OBOL_DLL_API SoTempPath : public SoFullPath {
 public:
   SoTempPath(const int approxlength);
   
@@ -44,4 +44,4 @@ public:
   void replaceTail(SoNode * const node, const int index);
 };
 
-#endif // !COIN_SOTEMPPATH_H
+#endif // !OBOL_SOTEMPPATH_H

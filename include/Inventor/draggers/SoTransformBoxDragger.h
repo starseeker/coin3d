@@ -1,5 +1,5 @@
-#ifndef COIN_SOTRANSFORMBOXDRAGGER_H
-#define COIN_SOTRANSFORMBOXDRAGGER_H
+#ifndef OBOL_SOTRANSFORMBOXDRAGGER_H
+#define OBOL_SOTRANSFORMBOXDRAGGER_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -42,7 +42,7 @@ class SoSensor;
 class SoFieldSensor;
 class SoTransformBoxDraggerP;
 
-class COIN_DLL_API SoTransformBoxDragger : public SoDragger {
+class OBOL_DLL_API SoTransformBoxDragger : public SoDragger {
   typedef SoDragger inherited;
 
   SO_KIT_HEADER(SoTransformBoxDragger);
@@ -110,4 +110,4 @@ private:
   SoTransformBoxDragger & operator = (const SoTransformBoxDragger & rhs);
 }; // SoTransformBoxDragger
 
-#endif // !COIN_SOTRANSFORMBOXDRAGGER_H
+#endif // !OBOL_SOTRANSFORMBOXDRAGGER_H

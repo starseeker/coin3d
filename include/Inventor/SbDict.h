@@ -1,5 +1,5 @@
-#ifndef COIN_SBDICT_H
-#define COIN_SBDICT_H
+#ifndef OBOL_SBDICT_H
+#define OBOL_SBDICT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -40,9 +40,9 @@
 // SbDict has issues on 64-bit platforms when keeping strict
 // compatibility with the original SbDict of SGI Inventor.
 
-#if defined(COIN_INTERNAL) && !defined(COIN_ALLOW_SBDICT)
+#if defined(OBOL_INTERNAL) && !defined(OBOL_ALLOW_SBDICT)
 #error prefer SbHash over SbDict for internal code
-#endif // COIN_INTERNAL
+#endif // OBOL_INTERNAL
 
 // *************************************************************************
 
@@ -60,7 +60,7 @@ typedef void SbDictApplyDataFunc(SbDictKeyType key, void * value, void * data);
 typedef SbDictKeyType SbDictHashingFunc(const SbDictKeyType key);
 }
 
-class COIN_DLL_API SbDict {
+class OBOL_DLL_API SbDict {
 public:
   SbDict(const int entries = 251);
   SbDict(const SbDict & from);
@@ -88,4 +88,4 @@ private:
 
 // *************************************************************************
 
-#endif // !COIN_SBDICT_H
+#endif // !OBOL_SBDICT_H

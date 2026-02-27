@@ -1,5 +1,5 @@
-#ifndef COIN_SOINDEXEDMARKERSET_H
-#define COIN_SOINDEXEDMARKERSET_H
+#ifndef OBOL_SOINDEXEDMARKERSET_H
+#define OBOL_SOINDEXEDMARKERSET_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -39,7 +39,7 @@
 class SoGLCoordinateElement;
 class SoTextureCoordinateBundle;
 
-class COIN_DLL_API SoIndexedMarkerSet : public SoIndexedPointSet {
+class OBOL_DLL_API SoIndexedMarkerSet : public SoIndexedPointSet {
   typedef SoIndexedPointSet inherited;
 
   SO_NODE_HEADER(SoIndexedMarkerSet);
@@ -59,4 +59,4 @@ private:
 
 };
 
-#endif // !COIN_SOINDEXEDMARKERSET_H
+#endif // !OBOL_SOINDEXEDMARKERSET_H

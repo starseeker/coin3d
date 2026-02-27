@@ -1,5 +1,5 @@
-#ifndef COIN_SOTRANSFORM_H
-#define COIN_SOTRANSFORM_H
+#ifndef OBOL_SOTRANSFORM_H
+#define OBOL_SOTRANSFORM_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -40,7 +40,7 @@
 #include <Inventor/SbMatrix.h>
 #include <Inventor/SbVec3f.h>
 
-class COIN_DLL_API SoTransform : public SoTransformation {
+class OBOL_DLL_API SoTransform : public SoTransformation {
   typedef SoTransformation inherited;
 
   SO_NODE_HEADER(SoTransform);
@@ -78,4 +78,4 @@ protected:
   virtual ~SoTransform();
 };
 
-#endif // !COIN_SOTRANSFORM_H
+#endif // !OBOL_SOTRANSFORM_H

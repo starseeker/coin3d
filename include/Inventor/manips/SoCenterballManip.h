@@ -1,5 +1,5 @@
-#ifndef COIN_SOCENTERBALLMANIP_H
-#define COIN_SOCENTERBALLMANIP_H
+#ifndef OBOL_SOCENTERBALLMANIP_H
+#define OBOL_SOCENTERBALLMANIP_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -38,7 +38,7 @@
 
 class SoCenterballManipP;
 
-class COIN_DLL_API SoCenterballManip : public SoTransformManip {
+class OBOL_DLL_API SoCenterballManip : public SoTransformManip {
   typedef SoTransformManip inherited;
 
   SO_NODE_HEADER(SoCenterballManip);
@@ -63,4 +63,4 @@ private:
   SoCenterballManip & operator = (const SoCenterballManip & rhs);
 }; // SoCenterBallManip
 
-#endif // !COIN_SOCENTERBALLMANIP_H
+#endif // !OBOL_SOCENTERBALLMANIP_H

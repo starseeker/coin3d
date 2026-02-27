@@ -47,9 +47,9 @@
 #include <Inventor/engines/SoInterpolate.h>
 #include <Inventor/lists/SoEngineOutputList.h>
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 #include "engines/SoSubEngineP.h"
 
@@ -120,7 +120,7 @@ SoInterpolate::initClasses(void)
 */
 SoInterpolate::~SoInterpolate()
 {
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoInterpolate::~SoInterpolate", "%p", this);
 #endif // debug
   delete this->inputdata; this->inputdata = NULL;

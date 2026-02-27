@@ -1,5 +1,5 @@
-#ifndef COIN_SOPACKEDCOLOR_H
-#define COIN_SOPACKEDCOLOR_H
+#ifndef OBOL_SOPACKEDCOLOR_H
+#define OBOL_SOPACKEDCOLOR_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -38,7 +38,7 @@
 
 class SoPackedColorP;
 
-class COIN_DLL_API SoPackedColor : public SoNode {
+class OBOL_DLL_API SoPackedColor : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_HEADER(SoPackedColor);
@@ -63,4 +63,4 @@ private:
   SoPackedColorP * pimpl;
 };
 
-#endif // !COIN_SOPACKEDCOLOR_H
+#endif // !OBOL_SOPACKEDCOLOR_H

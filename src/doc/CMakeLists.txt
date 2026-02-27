@@ -1,5 +1,5 @@
 # Add a target to generate API documentation with Doxygen
-if(COIN_BUILD_DOCUMENTATION)
+if(OBOL_BUILD_DOCUMENTATION)
   find_package(Doxygen)
   if(NOT DOXYGEN_FOUND)
     message(FATAL_ERROR "Doxygen is needed to build the documentation.")
@@ -16,7 +16,7 @@ if(COIN_BUILD_DOCUMENTATION)
   set(GENERATE_TREEVIEW YES)
   set(HHC_PROGRAM)
   if(WIN32)
-    if(COIN_BUILD_DOCUMENTATION_CHM)
+    if(OBOL_BUILD_DOCUMENTATION_CHM)
       find_program(HHC_PROGRAM NAMES hhc.exe PATHS "C:/Program Files/HTML Help Workshop" "C:/Program Files (x86)/HTML Help Workshop" DOC "HTML Help Compiler program")
       if(NOT HHC_PROGRAM)
         message(FATAL_ERROR "Missing program HTML Help Compiler")
@@ -27,11 +27,11 @@ if(COIN_BUILD_DOCUMENTATION)
       endif()
     endif()
   else()
-    if(COIN_BUILD_DOCUMENTATION_MAN)
+    if(OBOL_BUILD_DOCUMENTATION_MAN)
       set(DOXYGEN_GENERATE_MAN YES)
     endif()
   endif()
-  if(COIN_BUILD_DOCUMENTATION_QTHELP)
+  if(OBOL_BUILD_DOCUMENTATION_QTHELP)
     find_program(QHG_LOCATION NAMES qhelpgenerator qhelpgenerator-qt5 DOC "Qt qhelpgenerator")
     if(NOT QHG_LOCATION)
       message(FATAL_ERROR "Missing program Qt qhelpgenerator")
@@ -43,40 +43,40 @@ if(COIN_BUILD_DOCUMENTATION)
 
   # Add default files
   file(GLOB_RECURSE DOX *.dox*)
-  set(COIN_DOCUMENTATION_FILES
-    ${COIN_DOCUMENTATION_FILES}
+  set(OBOL_DOCUMENTATION_FILES
+    ${OBOL_DOCUMENTATION_FILES}
     "${PROJECT_SOURCE_DIR}/docs/releases.dox"
     ${DOX}
-    CACHE INTERNAL "COIN_DOCUMENTATION_FILES"
+    CACHE INTERNAL "OBOL_DOCUMENTATION_FILES"
   )
 
   set(DOXYGEN_INTERNAL_DOCS NO)
   set(DOXYGEN_EXTRACT_PRIVATE NO)
   set(DOXYGEN_WARN_IF_UNDOCUMENTED YES)
   set(DOXYGEN_EXCLUDE)
-  if(COIN_BUILD_INTERNAL_DOCUMENTATION)
+  if(OBOL_BUILD_INTERNAL_DOCUMENTATION)
     set(DOXYGEN_INTERNAL_DOCS YES)
     set(DOXYGEN_EXTRACT_PRIVATE YES)
     set(DOXYGEN_WARN_IF_UNDOCUMENTED NO)
-    set(COIN_DOCUMENTATION_FILES
-      ${COIN_DOCUMENTATION_FILES}
-      ${COIN_INTERNAL_DOCUMENTATION_FILES}
-      CACHE INTERNAL "COIN_DOCUMENTATION_FILES"
+    set(OBOL_DOCUMENTATION_FILES
+      ${OBOL_DOCUMENTATION_FILES}
+      ${OBOL_INTERNAL_DOCUMENTATION_FILES}
+      CACHE INTERNAL "OBOL_DOCUMENTATION_FILES"
     )
   else()
-    set(COIN_DOCUMENTATION_EXCLUDE_SYMBOLS SoProfilerP)
-    foreach(XF ${COIN_INTERNAL_DOCUMENTATION_FILES})
+    set(OBOL_DOCUMENTATION_EXCLUDE_SYMBOLS SoProfilerP)
+    foreach(XF ${OBOL_INTERNAL_DOCUMENTATION_FILES})
       set(DOXYGEN_EXCLUDE "${DOXYGEN_EXCLUDE}                         ${XF} \\\n")
     endforeach()
   endif()
   set(DOXYGEN_INPUT)
-  list(REMOVE_DUPLICATES COIN_DOCUMENTATION_FILES)
-  foreach(XF ${COIN_DOCUMENTATION_FILES})
+  list(REMOVE_DUPLICATES OBOL_DOCUMENTATION_FILES)
+  foreach(XF ${OBOL_DOCUMENTATION_FILES})
     set(DOXYGEN_INPUT "${DOXYGEN_INPUT}                         ${XF} \\\n")
   endforeach()
   set(DOXYGEN_INPUT "${DOXYGEN_INPUT}                         ${PROJECT_SOURCE_DIR}/src/C/CoinTidbits.cpp")
   set(DOXYGEN_EXCLUDE_SYMBOLS)
-  foreach(XF ${COIN_DOCUMENTATION_EXCLUDE_SYMBOLS})
+  foreach(XF ${OBOL_DOCUMENTATION_EXCLUDE_SYMBOLS})
     set(DOXYGEN_EXCLUDE_SYMBOLS "${DOXYGEN_EXCLUDE_SYMBOLS}                         ${XF} \\\n")
   endforeach()
 
@@ -100,15 +100,15 @@ if(COIN_BUILD_DOCUMENTATION)
 # ############################################################################
 # Install built documentation files
 # ############################################################################
-  if(NOT COIN_BUILD_MAC_FRAMEWORK)
+  if(NOT OBOL_BUILD_MAC_FRAMEWORK)
     install(DIRECTORY "${CMAKE_BINARY_DIR}/html" DESTINATION ${CMAKE_INSTALL_DOCDIR} COMPONENT documentation REGEX ".*\\.(chm|qch)" EXCLUDE)
-    if(COIN_BUILD_DOCUMENTATION_CHM)
+    if(OBOL_BUILD_DOCUMENTATION_CHM)
       install(FILES "${CMAKE_BINARY_DIR}/html/${PROJECT_NAME}.chm" DESTINATION ${CMAKE_INSTALL_DOCDIR} COMPONENT documentation)
     endif()
-    if(COIN_BUILD_DOCUMENTATION_QTHELP)
+    if(OBOL_BUILD_DOCUMENTATION_QTHELP)
       install(FILES "${CMAKE_BINARY_DIR}/html/${PROJECT_NAME}.qch" DESTINATION ${CMAKE_INSTALL_DOCDIR} COMPONENT documentation)
     endif()
-    if(COIN_BUILD_DOCUMENTATION_MAN)
+    if(OBOL_BUILD_DOCUMENTATION_MAN)
       install(DIRECTORY "${CMAKE_BINARY_DIR}/man/man3" DESTINATION ${CMAKE_INSTALL_MANDIR} COMPONENT documentation)
     endif()
   endif()
@@ -120,7 +120,7 @@ endif()
 # Add a target to generate new modern API documentation with Doxygen
 # ############################################################################
 
-if(COIN_BUILD_AWESOME_DOCUMENTATION)
+if(OBOL_BUILD_AWESOME_DOCUMENTATION)
   find_package(Doxygen)
   if(NOT DOXYGEN_FOUND)
     message(FATAL_ERROR "Doxygen is needed to build the documentation.")
@@ -153,40 +153,40 @@ if(COIN_BUILD_AWESOME_DOCUMENTATION)
 
   # Add default files
   file(GLOB_RECURSE DOX *.dox*)
-  set(COIN_DOCUMENTATION_FILES
-    ${COIN_DOCUMENTATION_FILES}
+  set(OBOL_DOCUMENTATION_FILES
+    ${OBOL_DOCUMENTATION_FILES}
     "${PROJECT_SOURCE_DIR}/docs/releases.dox"
     ${DOX}
-    CACHE INTERNAL "COIN_DOCUMENTATION_FILES"
+    CACHE INTERNAL "OBOL_DOCUMENTATION_FILES"
   )
 
   set(DOXYGEN_INTERNAL_DOCS NO)
   set(DOXYGEN_EXTRACT_PRIVATE NO)
   set(DOXYGEN_WARN_IF_UNDOCUMENTED YES)
   set(DOXYGEN_EXCLUDE)
-  if(COIN_BUILD_INTERNAL_DOCUMENTATION)
+  if(OBOL_BUILD_INTERNAL_DOCUMENTATION)
     set(DOXYGEN_INTERNAL_DOCS YES)
     set(DOXYGEN_EXTRACT_PRIVATE YES)
     set(DOXYGEN_WARN_IF_UNDOCUMENTED NO)
-    set(COIN_DOCUMENTATION_FILES
-      ${COIN_DOCUMENTATION_FILES}
-      ${COIN_INTERNAL_DOCUMENTATION_FILES}
-      CACHE INTERNAL "COIN_DOCUMENTATION_FILES"
+    set(OBOL_DOCUMENTATION_FILES
+      ${OBOL_DOCUMENTATION_FILES}
+      ${OBOL_INTERNAL_DOCUMENTATION_FILES}
+      CACHE INTERNAL "OBOL_DOCUMENTATION_FILES"
     )
   else()
-    set(COIN_DOCUMENTATION_EXCLUDE_SYMBOLS SoProfilerP)
-    foreach(XF ${COIN_INTERNAL_DOCUMENTATION_FILES})
+    set(OBOL_DOCUMENTATION_EXCLUDE_SYMBOLS SoProfilerP)
+    foreach(XF ${OBOL_INTERNAL_DOCUMENTATION_FILES})
       set(DOXYGEN_EXCLUDE "${DOXYGEN_EXCLUDE}                         ${XF} \\\n")
     endforeach()
   endif()
   set(DOXYGEN_INPUT)
-  list(REMOVE_DUPLICATES COIN_DOCUMENTATION_FILES)
-  foreach(XF ${COIN_DOCUMENTATION_FILES})
+  list(REMOVE_DUPLICATES OBOL_DOCUMENTATION_FILES)
+  foreach(XF ${OBOL_DOCUMENTATION_FILES})
     set(DOXYGEN_INPUT "${DOXYGEN_INPUT}                         ${XF} \\\n")
   endforeach()
   set(DOXYGEN_INPUT "${DOXYGEN_INPUT}                         ${PROJECT_SOURCE_DIR}/src/C/CoinTidbits.cpp")
   set(DOXYGEN_EXCLUDE_SYMBOLS)
-  foreach(XF ${COIN_DOCUMENTATION_EXCLUDE_SYMBOLS})
+  foreach(XF ${OBOL_DOCUMENTATION_EXCLUDE_SYMBOLS})
     set(DOXYGEN_EXCLUDE_SYMBOLS "${DOXYGEN_EXCLUDE_SYMBOLS}                         ${XF} \\\n")
   endforeach()
 
@@ -213,7 +213,7 @@ if(COIN_BUILD_AWESOME_DOCUMENTATION)
 # ############################################################################
 # Install built documentation files
 # ############################################################################
-  if(NOT COIN_BUILD_MAC_FRAMEWORK)
+  if(NOT OBOL_BUILD_MAC_FRAMEWORK)
     install(DIRECTORY "${CMAKE_BINARY_DIR}/html_awesome" DESTINATION ${CMAKE_INSTALL_DOCDIR} COMPONENT documentation REGEX ".*\\.(chm|qch)" EXCLUDE)
   endif()
 endif()

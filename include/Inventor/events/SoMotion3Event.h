@@ -1,5 +1,5 @@
-#ifndef COIN_SOMOTION3EVENT_H
-#define COIN_SOMOTION3EVENT_H
+#ifndef OBOL_SOMOTION3EVENT_H
+#define OBOL_SOMOTION3EVENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/SbVec3f.h>
 #include <Inventor/SbRotation.h>
 
-class COIN_DLL_API SoMotion3Event : public SoEvent {
+class OBOL_DLL_API SoMotion3Event : public SoEvent {
   typedef SoEvent inherited;
 
   SO_EVENT_HEADER();
@@ -59,4 +59,4 @@ private:
   SbRotation rotation;
 };
 
-#endif // !COIN_SOMOTION3EVENT_H
+#endif // !OBOL_SOMOTION3EVENT_H

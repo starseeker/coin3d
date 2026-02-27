@@ -1,5 +1,5 @@
-#ifndef COIN_SOBUMPMAPTRANSFORM_H
-#define COIN_SOBUMPMAPTRANSFORM_H
+#ifndef OBOL_SOBUMPMAPTRANSFORM_H
+#define OBOL_SOBUMPMAPTRANSFORM_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -39,7 +39,7 @@
 
 class SbMatrix;
 
-class COIN_DLL_API SoBumpMapTransform : public SoNode {
+class OBOL_DLL_API SoBumpMapTransform : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_HEADER(SoBumpMapTransform);
@@ -66,4 +66,4 @@ private:
   void makeMatrix(SbMatrix & mat);
 };
 
-#endif // !COIN_SOBUMPMAPTRANSFORM_H
+#endif // !OBOL_SOBUMPMAPTRANSFORM_H

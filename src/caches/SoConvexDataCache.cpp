@@ -89,7 +89,7 @@ SoConvexDataCache::SoConvexDataCache(SoState * const state)
   : SoCache(state)
 {
   PRIVATE(this) = new SoConvexDataCacheP;
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (coin_debug_caching_level() > 0) {
     SoDebugError::postInfo("SoConvexDataCache::SoConvexDataCache",
                            "Cache created: %p", this);
@@ -103,7 +103,7 @@ SoConvexDataCache::SoConvexDataCache(SoState * const state)
 */
 SoConvexDataCache::~SoConvexDataCache()
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (coin_debug_caching_level() > 0) {
     SoDebugError::postInfo("SoConvexDataCache::~SoConvexDataCache",
                            "Cache destructed: %p", this);
@@ -242,7 +242,7 @@ SoConvexDataCache::generate(const SoCoordinateElement * const coords,
                             const Binding matbind, const Binding normbind,
                             const Binding texbind)
 {
-#if COIN_DEBUG && 0
+#if OBOL_DEBUG && 0
   SoDebugError::postInfo("SoConvexDataCache::generate",
                          "generating convex data");
 #endif

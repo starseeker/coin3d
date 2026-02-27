@@ -14,8 +14,8 @@
   SbBool invalid; \
   static SbByteBuffer invalidBuffer_;
 
-#ifndef COIN_SBBYTEBUFFER_H
-#define COIN_SBBYTEBUFFER_H
+#ifndef OBOL_SBBYTEBUFFER_H
+#define OBOL_SBBYTEBUFFER_H
 
 #include <cstring>
 #include <memory>
@@ -30,7 +30,7 @@ class SbByteBufferP;
 //Consider making a general Buffer class for non bytes;
 //Implements as a minimum the Buffer concept as defined by
 //http://www.boost.org/doc/libs/1_37_0/libs/graph/doc/Buffer.html
-class COIN_DLL_API SbByteBuffer {
+class OBOL_DLL_API SbByteBuffer {
  public:
   SbByteBuffer(const char * buffer);
   SbByteBuffer(const SbByteBuffer & buffer);
@@ -70,9 +70,9 @@ class COIN_DLL_API SbByteBuffer {
 #include "SbByteBufferP.icc"
 #endif //ABI_BREAKING_OPTIMIZE
 
-#endif // !COIN_SBBYTEBUFFER_H
+#endif // !OBOL_SBBYTEBUFFER_H
 
 //The SBBYTEBUFFER_PRIVATE_VARIABLES must survive an inclusion from the .icc file
-#ifndef COIN_ICC_INCLUDE
+#ifndef OBOL_ICC_INCLUDE
 #undef SBBYTEBUFFER_PRIVATE_VARIABLES
-#endif //COIN_ICC_INCLUDE
+#endif //OBOL_ICC_INCLUDE

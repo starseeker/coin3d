@@ -1,5 +1,5 @@
-#ifndef COIN_SOGLCUBEMAPIMAGE_H
-#define COIN_SOGLCUBEMAPIMAGE_H
+#ifndef OBOL_SOGLCUBEMAPIMAGE_H
+#define OBOL_SOGLCUBEMAPIMAGE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -36,7 +36,7 @@
 #include <Inventor/SbBasic.h>
 #include <Inventor/misc/SoGLImage.h>
 
-class COIN_DLL_API SoGLCubeMapImage : public SoGLImage {
+class OBOL_DLL_API SoGLCubeMapImage : public SoGLImage {
   typedef SoGLImage inherited;
 
 public:
@@ -90,4 +90,4 @@ public:
   static void cleanupClass(void);
 };
 
-#endif // !COIN_SOGLCUBEMAPIMAGE_H
+#endif // !OBOL_SOGLCUBEMAPIMAGE_H

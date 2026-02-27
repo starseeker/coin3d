@@ -1,5 +1,5 @@
-#ifndef COIN_SOVIEWVOLUMEELEMENT_H
-#define COIN_SOVIEWVOLUMEELEMENT_H
+#ifndef OBOL_SOVIEWVOLUMEELEMENT_H
+#define OBOL_SOVIEWVOLUMEELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -36,7 +36,7 @@
 #include <Inventor/elements/SoReplacedElement.h>
 #include <Inventor/SbViewVolume.h>
 
-class COIN_DLL_API SoViewVolumeElement : public SoReplacedElement {
+class OBOL_DLL_API SoViewVolumeElement : public SoReplacedElement {
   typedef SoReplacedElement inherited;
 
   SO_ELEMENT_HEADER(SoViewVolumeElement);
@@ -57,4 +57,4 @@ protected:
 
 };
 
-#endif // !COIN_SOVIEWVOLUMEELEMENT_H
+#endif // !OBOL_SOVIEWVOLUMEELEMENT_H

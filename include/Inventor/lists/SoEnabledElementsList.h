@@ -1,5 +1,5 @@
-#ifndef COIN_SOENABLEDELEMENTSLIST_H
-#define COIN_SOENABLEDELEMENTSLIST_H
+#ifndef OBOL_SOENABLEDELEMENTSLIST_H
+#define OBOL_SOENABLEDELEMENTSLIST_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/lists/SoTypeList.h>
 
-class COIN_DLL_API SoEnabledElementsList {
+class OBOL_DLL_API SoEnabledElementsList {
 public:
   SoEnabledElementsList(SoEnabledElementsList * const parentlist);
   ~SoEnabledElementsList();
@@ -50,4 +50,4 @@ private:
   class SoEnabledElementsListP * pimpl;
 };
 
-#endif // !COIN_SOENABLEDELEMENTSLIST_H
+#endif // !OBOL_SOENABLEDELEMENTSLIST_H

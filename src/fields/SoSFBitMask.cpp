@@ -220,14 +220,14 @@ SoSFBitMask::writeValue(SoOutput * out) const
 
   if (out->isBinary()) out->write(0x00000000);
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (restval) {
     SoDebugError::post("SoSFBitMask::writeValue",
                        "invalid bitmask -- some bits \"lost\" (0x%x) "
                        "upon export",
                        restval);
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }
 
 #endif // DOXYGEN_SKIP_THIS

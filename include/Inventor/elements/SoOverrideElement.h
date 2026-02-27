@@ -1,5 +1,5 @@
-#ifndef COIN_SOOVERRIDEELEMENT_H
-#define COIN_SOOVERRIDEELEMENT_H
+#ifndef OBOL_SOOVERRIDEELEMENT_H
+#define OBOL_SOOVERRIDEELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -38,7 +38,7 @@
 
 class SoType; // lame doxygen "fix"
 
-class COIN_DLL_API SoOverrideElement : public SoElement {
+class OBOL_DLL_API SoOverrideElement : public SoElement {
   typedef SoElement inherited;
 
   SO_ELEMENT_HEADER(SoOverrideElement);
@@ -191,4 +191,4 @@ private:
   uint32_t flags;
 };
 
-#endif // !COIN_SOOVERRIDEELEMENT_H
+#endif // !OBOL_SOOVERRIDEELEMENT_H

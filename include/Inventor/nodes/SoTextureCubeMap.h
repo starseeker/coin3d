@@ -1,5 +1,5 @@
-#ifndef COIN_SOTEXTURECUBEMAP_H
-#define COIN_SOTEXTURECUBEMAP_H
+#ifndef OBOL_SOTEXTURECUBEMAP_H
+#define OBOL_SOTEXTURECUBEMAP_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -45,7 +45,7 @@ class SoFieldSensor;
 class SoSensor;
 class SoTextureCubeMapP;
 
-class COIN_DLL_API SoTextureCubeMap : public SoTexture {
+class OBOL_DLL_API SoTextureCubeMap : public SoTexture {
   typedef SoTexture inherited;
 
   SO_NODE_HEADER(SoTextureCubeMap);
@@ -103,4 +103,4 @@ private:
   SoTextureCubeMapP * pimpl;
 };
 
-#endif // !COIN_SOTEXTURECUBEMAP_H
+#endif // !OBOL_SOTEXTURECUBEMAP_H

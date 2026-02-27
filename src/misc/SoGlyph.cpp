@@ -49,7 +49,7 @@
   extruded like any other 3D geometry. Bitmaps are used by SoText2,
   while the other text nodes uses outlines.
   
-  \COIN_CLASS_EXTENSION
+  \OBOL_CLASS_EXTENSION
 
   \since Coin 2.0
 
@@ -645,7 +645,7 @@ SoGlyph::getKerning(const SoGlyph & rightglyph) const
   The returned buffer should \e not be deallocated by the caller.
 */
 unsigned char *
-SoGlyph::getBitmap(SbVec2s & size, SbVec2s & pos, const SbBool COIN_UNUSED_ARG(antialiased)) const
+SoGlyph::getBitmap(SbVec2s & size, SbVec2s & pos, const SbBool OBOL_UNUSED_ARG(antialiased)) const
 {
   if (!PRIVATE(this)->font) {
     size.setValue(0, 0);
@@ -743,7 +743,7 @@ SoGlyphP::setup3DFontData(void)
 
 // should handle platform-specific font loading
 SoGlyph *
-SoGlyphP::createSystemGlyph(const char character, int COIN_UNUSED_ARG(fontid))
+SoGlyphP::createSystemGlyph(const char character, int OBOL_UNUSED_ARG(fontid))
 { 
   // Create a glyph using default font
   SoGlyph * glyph = new SoGlyph();

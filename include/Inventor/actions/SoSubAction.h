@@ -1,5 +1,5 @@
-#ifndef COIN_SOSUBACTION_H
-#define COIN_SOSUBACTION_H
+#ifndef OBOL_SOSUBACTION_H
+#define OBOL_SOSUBACTION_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,11 +33,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 // Added to be Inventor compliant.
 #include <Inventor/SbString.h>
 #include <Inventor/actions/SoAction.h>
-#endif // COIN_INTERNAL
+#endif // OBOL_INTERNAL
 #include <Inventor/SuUtils.h>
 
 // *************************************************************************
@@ -95,7 +95,7 @@ SoActionMethodList * _classname_::methods = NULL; \
   the original OIV API. This is not such a good idea, since \
   exposed static class member variables is a major grievance \
   with regard to Win32 DLLs. \
-  \COIN_FUNCTION_EXTENSION \
+  \OBOL_FUNCTION_EXTENSION \
 */ \
 SoEnabledElementsList * _classname_::getClassEnabledElements(void) { return _classname_::enabledElements; } \
 /*! \
@@ -105,7 +105,7 @@ SoEnabledElementsList * _classname_::getClassEnabledElements(void) { return _cla
   the original OIV API. This is not such a good idea, since \
   exposed static class member variables is a major grievance \
   with regard to Win32 DLLs. \
-  \COIN_FUNCTION_EXTENSION \
+  \OBOL_FUNCTION_EXTENSION \
 */ \
 SoActionMethodList * _classname_::getClassActionMethods(void) { return _classname_::methods; } \
 SoType _classname_::classTypeId STATIC_SOTYPE_INIT; \
@@ -166,4 +166,4 @@ _classname_::atexit_cleanup(void) \
 
 // *************************************************************************
 
-#endif // !COIN_SOSUBACTION_H
+#endif // !OBOL_SOSUBACTION_H

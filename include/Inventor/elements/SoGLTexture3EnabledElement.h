@@ -1,5 +1,5 @@
-#ifndef COIN_SOGLTEXTURE3ENABLEDELEMENT_H
-#define COIN_SOGLTEXTURE3ENABLEDELEMENT_H
+#ifndef OBOL_SOGLTEXTURE3ENABLEDELEMENT_H
+#define OBOL_SOGLTEXTURE3ENABLEDELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,4 +35,4 @@
 
 #error Deprecated: use SoMultiTextureEnabledElement instead
 
-#endif // !COIN_SOGLTEXTURE3ENABLEDELEMENT_H
+#endif // !OBOL_SOGLTEXTURE3ENABLEDELEMENT_H

@@ -1,5 +1,5 @@
-#ifndef COIN_SOSTATE_H
-#define COIN_SOSTATE_H
+#ifndef OBOL_SOSTATE_H
+#define OBOL_SOSTATE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -41,7 +41,7 @@ class SoAction;
 class SoTypeList;
 class SoElement;
 
-class COIN_DLL_API SoState {
+class OBOL_DLL_API SoState {
 public:
   SoState(SoAction * action,
           const SoTypeList & enabledelements);
@@ -102,4 +102,4 @@ SoState::getElementNoPush(const int stackindex) const
 }
 
 
-#endif // !COIN_SOSTATE_H
+#endif // !OBOL_SOSTATE_H

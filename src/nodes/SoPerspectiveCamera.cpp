@@ -136,7 +136,7 @@ void
 SoPerspectiveCamera::viewBoundingBox(const SbBox3f & box, float aspect,
                                      float slack)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   // Only check for "flagged" emptiness, and don't use
   // SbBox3f::hasVolume(), as we *can* handle flat boxes.
   if (box.isEmpty()) {
@@ -144,7 +144,7 @@ SoPerspectiveCamera::viewBoundingBox(const SbBox3f & box, float aspect,
                               "bounding box is empty");
     return;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   // First, we want to move the camera in such a way that it is
   // pointing straight at the center of the scene bounding box -- but

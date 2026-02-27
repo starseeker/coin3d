@@ -1,5 +1,5 @@
-#ifndef COIN_SOFONTSIZEELEMENT_H
-#define COIN_SOFONTSIZEELEMENT_H
+#ifndef OBOL_SOFONTSIZEELEMENT_H
+#define OBOL_SOFONTSIZEELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/elements/SoFloatElement.h>
 
-class COIN_DLL_API SoFontSizeElement : public SoFloatElement {
+class OBOL_DLL_API SoFontSizeElement : public SoFloatElement {
   typedef SoFloatElement inherited;
 
   SO_ELEMENT_HEADER(SoFontSizeElement);
@@ -55,4 +55,4 @@ public:
 
 };
 
-#endif // !COIN_SOFONTSIZEELEMENT_H
+#endif // !OBOL_SOFONTSIZEELEMENT_H

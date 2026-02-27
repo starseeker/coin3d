@@ -1,5 +1,5 @@
-#ifndef COIN_SOHUDKIT_H
-#define COIN_SOHUDKIT_H
+#ifndef OBOL_SOHUDKIT_H
+#define OBOL_SOHUDKIT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -70,7 +70,7 @@
 #include <Inventor/nodekits/SoSubKit.h>
 #include <Inventor/fields/SoSFVec2f.h>
 
-class COIN_DLL_API SoHUDKit : public SoBaseKit {
+class OBOL_DLL_API SoHUDKit : public SoBaseKit {
   typedef SoBaseKit inherited;
   SO_KIT_HEADER(SoHUDKit);
   SO_KIT_CATALOG_ENTRY_HEADER(topSeparator);
@@ -99,4 +99,4 @@ private:
   static void grabViewportInfo(void * userdata, SoAction * action);
 };
 
-#endif // !COIN_SOHUDKIT_H
+#endif // !OBOL_SOHUDKIT_H

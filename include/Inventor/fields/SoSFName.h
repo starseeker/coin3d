@@ -1,5 +1,5 @@
-#ifndef COIN_SOSFNAME_H
-#define COIN_SOSFNAME_H
+#ifndef OBOL_SOSFNAME_H
+#define OBOL_SOSFNAME_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/fields/SoSubField.h>
 #include <Inventor/SbName.h>
 
-class COIN_DLL_API SoSFName : public SoSField {
+class OBOL_DLL_API SoSFName : public SoSField {
   typedef SoSField inherited;
 
   SO_SFIELD_HEADER(SoSFName, SbName, const SbName &);
@@ -48,4 +48,4 @@ public:
   void setValue(const char * const name);
 };
 
-#endif // !COIN_SOSFNAME_H
+#endif // !OBOL_SOSFNAME_H

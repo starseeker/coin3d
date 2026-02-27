@@ -1,5 +1,5 @@
-#ifndef COIN_SOBASEP_H
-#define COIN_SOBASEP_H
+#ifndef OBOL_SOBASEP_H
+#define OBOL_SOBASEP_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -41,9 +41,9 @@ class SoAuditorList;
 class SbPList;
 class SoInput;
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #error this is a private header file
-#endif /* !COIN_INTERNAL */
+#endif /* !OBOL_INTERNAL */
 
 // FIXME: should implement and use a proper set-abstraction
 // datatype. 20050524 mortene.
@@ -102,4 +102,4 @@ public:
 
 }; // SoBase::PImpl
 
-#endif // !COIN_SOBASEP_H
+#endif // !OBOL_SOBASEP_H

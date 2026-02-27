@@ -1,5 +1,5 @@
-#ifndef COIN_SBDPLINE_H
-#define COIN_SBDPLINE_H
+#ifndef OBOL_SBDPLINE_H
+#define OBOL_SBDPLINE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -38,7 +38,7 @@
 #include <Inventor/SbBasic.h>
 #include <Inventor/SbVec3d.h>
 
-class COIN_DLL_API SbDPLine {
+class OBOL_DLL_API SbDPLine {
 public:
   SbDPLine(void);
   SbDPLine(const SbVec3d& p0, const SbVec3d& p1);
@@ -56,4 +56,4 @@ private:
   SbVec3d pos, dir;
 };
 
-#endif // !COIN_SBDPLINE_H
+#endif // !OBOL_SBDPLINE_H

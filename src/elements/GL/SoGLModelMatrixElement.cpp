@@ -51,13 +51,13 @@
 
 #include "misc/SoEnvironment.h"
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 SO_ELEMENT_SOURCE(SoGLModelMatrixElement);
 
-static int COIN_HANDLE_STACK_OVERFLOW = 0;
+static int OBOL_HANDLE_STACK_OVERFLOW = 0;
 
 /*!
   \copydetails SoElement::initClass(void)
@@ -68,9 +68,9 @@ SoGLModelMatrixElement::initClass(void)
 {
   SO_ELEMENT_INIT_CLASS(SoGLModelMatrixElement, inherited);
 
-  const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_HANDLE_STACK_OVERFLOW");
-  if (env && atoi(env) > 0) COIN_HANDLE_STACK_OVERFLOW = 1;
-  else COIN_HANDLE_STACK_OVERFLOW = 0;
+  const char * env = CoinInternal::getEnvironmentVariableRaw("OBOL_HANDLE_STACK_OVERFLOW");
+  if (env && atoi(env) > 0) OBOL_HANDLE_STACK_OVERFLOW = 1;
+  else OBOL_HANDLE_STACK_OVERFLOW = 0;
 }
 
 /*!
@@ -110,7 +110,7 @@ SoGLModelMatrixElement::push(SoState * stateptr)
   this->state = prev->state;
   this->viewEltNodeId = prev->viewEltNodeId;
 
-  if (COIN_HANDLE_STACK_OVERFLOW > 0) {
+  if (OBOL_HANDLE_STACK_OVERFLOW > 0) {
     if (!this->stackoverflow) {
       glPushMatrix();
       if (glGetError() == GL_STACK_OVERFLOW) {

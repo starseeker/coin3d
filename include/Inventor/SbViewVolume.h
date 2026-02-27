@@ -1,5 +1,5 @@
-#ifndef COIN_SBVIEWVOLUME_H
-#define COIN_SBVIEWVOLUME_H
+#ifndef OBOL_SBVIEWVOLUME_H
+#define OBOL_SBVIEWVOLUME_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -47,7 +47,7 @@ class SbRotation;
 class SbVec2f;
 class SbVec3f;
 
-class COIN_DLL_API SbViewVolume {
+class OBOL_DLL_API SbViewVolume {
 public:
   enum ProjectionType { ORTHOGRAPHIC = 0, PERSPECTIVE = 1 };
 
@@ -134,4 +134,4 @@ private:
   SbDPViewVolume dpvv;
 };
 
-#endif // !COIN_SBVIEWVOLUME_H
+#endif // !OBOL_SBVIEWVOLUME_H

@@ -1,5 +1,5 @@
-#ifndef COIN_SONODELIST_H
-#define COIN_SONODELIST_H
+#ifndef OBOL_SONODELIST_H
+#define OBOL_SONODELIST_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 
 class SoNode;
 
-class COIN_DLL_API SoNodeList : public SoBaseList {
+class OBOL_DLL_API SoNodeList : public SoBaseList {
   typedef SoBaseList inherited;
 
 public:
@@ -51,4 +51,4 @@ public:
   SoNodeList & operator=(const SoNodeList & nl);
 };
 
-#endif // !COIN_SONODELIST_H
+#endif // !OBOL_SONODELIST_H

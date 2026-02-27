@@ -1,5 +1,5 @@
-#ifndef COIN_SOPROFILEELEMENT_H
-#define COIN_SOPROFILEELEMENT_H
+#ifndef OBOL_SOPROFILEELEMENT_H
+#define OBOL_SOPROFILEELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -38,7 +38,7 @@
 
 class SoProfile;
 
-class COIN_DLL_API SoProfileElement : public SoAccumulatedElement {
+class OBOL_DLL_API SoProfileElement : public SoAccumulatedElement {
   typedef SoAccumulatedElement inherited;
 
   SO_ELEMENT_HEADER(SoProfileElement);
@@ -63,4 +63,4 @@ protected:
   SoNodeList profiles;
 };
 
-#endif // !COIN_SOPROFILEELEMENT_H
+#endif // !OBOL_SOPROFILEELEMENT_H

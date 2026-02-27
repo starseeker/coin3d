@@ -1,5 +1,5 @@
-#ifndef COIN_TIDBITS_INTERNAL_H
-#define COIN_TIDBITS_INTERNAL_H
+#ifndef OBOL_TIDBITS_INTERNAL_H
+#define OBOL_TIDBITS_INTERNAL_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -50,18 +50,18 @@
 #include <cstdarg>
 #include <cstdio>
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #error this is a private header file
 #endif
 
 // Forward declare SbBool to avoid header dependencies
 #ifndef SBBOOL_HEADER_FILE
 typedef bool SbBool;
-#define COIN_TRUE true
-#define COIN_FALSE false
+#define OBOL_TRUE true
+#define OBOL_FALSE false
 #else
-#define COIN_TRUE TRUE
-#define COIN_FALSE FALSE
+#define OBOL_TRUE TRUE
+#define OBOL_FALSE FALSE
 #endif
 
 #ifdef __cplusplus
@@ -72,16 +72,16 @@ extern "C" {
 
 /* Endianness constants */
 enum CoinEndiannessValues {
-    COIN_HOST_IS_UNKNOWNENDIAN = -1,
-    COIN_HOST_IS_LITTLEENDIAN = 0,
-    COIN_HOST_IS_BIGENDIAN = 1
+    OBOL_HOST_IS_UNKNOWNENDIAN = -1,
+    OBOL_HOST_IS_LITTLEENDIAN = 0,
+    OBOL_HOST_IS_BIGENDIAN = 1
 };
 
 /* OS detection constants */
 enum CoinOSType {
-    COIN_UNIX,
-    COIN_OS_X,
-    COIN_MSWINDOWS
+    OBOL_UNIX,
+    OBOL_OS_X,
+    OBOL_MSWINDOWS
 };
 
 /* Atexit priorities enum */
@@ -213,7 +213,7 @@ unsigned long coin_geq_prime_number(unsigned long num);
 
 int coin_runtime_os(void);
 
-#define COIN_MAC_FRAMEWORK_IDENTIFIER_CSTRING ("org.coin3d.Coin.framework")
+#define OBOL_MAC_FRAMEWORK_IDENTIFIER_CSTRING ("org.coin3d.Coin.framework")
 
 /* ********************************************************************** */
 /* Debug functions */
@@ -228,4 +228,4 @@ int coin_debug_normalize(void);
 } /* extern "C" */
 #endif /* __cplusplus */
 
-#endif /* !COIN_TIDBITS_INTERNAL_H */
+#endif /* !OBOL_TIDBITS_INTERNAL_H */

@@ -1,5 +1,5 @@
-#ifndef COIN_SOSCROLLINGGRAPHKIT_H
-#define COIN_SOSCROLLINGGRAPHKIT_H
+#ifndef OBOL_SOSCROLLINGGRAPHKIT_H
+#define OBOL_SOSCROLLINGGRAPHKIT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -100,4 +100,4 @@ private:
 
 }; // SoScrollingGraphKit
 
-#endif // !COIN_SOSCROLLINGGRAPHKIT_H
+#endif // !OBOL_SOSCROLLINGGRAPHKIT_H

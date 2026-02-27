@@ -1,5 +1,5 @@
-#ifndef COIN_SOMFBOOL_H
-#define COIN_SOMFBOOL_H
+#ifndef OBOL_SOMFBOOL_H
+#define OBOL_SOMFBOOL_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -36,7 +36,7 @@
 #include <Inventor/fields/SoMField.h>
 #include <Inventor/fields/SoSubField.h>
 
-class COIN_DLL_API SoMFBool : public SoMField {
+class OBOL_DLL_API SoMFBool : public SoMField {
   typedef SoMField inherited;
 
   SO_MFIELD_HEADER(SoMFBool, SbBool, SbBool);
@@ -50,4 +50,4 @@ private:
   virtual int getNumValuesPerLine(void) const;
 };
 
-#endif // !COIN_SOMFBOOL_H
+#endif // !OBOL_SOMFBOOL_H

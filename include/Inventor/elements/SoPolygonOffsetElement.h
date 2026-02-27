@@ -1,5 +1,5 @@
-#ifndef COIN_SOPOLYGONOFFSETELEMENT_H
-#define COIN_SOPOLYGONOFFSETELEMENT_H
+#ifndef OBOL_SOPOLYGONOFFSETELEMENT_H
+#define OBOL_SOPOLYGONOFFSETELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/elements/SoReplacedElement.h>
 
-class COIN_DLL_API SoPolygonOffsetElement : public SoReplacedElement {
+class OBOL_DLL_API SoPolygonOffsetElement : public SoReplacedElement {
   typedef SoReplacedElement inherited;
 
   SO_ELEMENT_HEADER(SoPolygonOffsetElement);
@@ -68,4 +68,4 @@ protected:
   virtual void setElt(float factor, float units, Style styles, SbBool on);
 };
 
-#endif // !COIN_SOPOLYGONOFFSETELEMENT_H
+#endif // !OBOL_SOPOLYGONOFFSETELEMENT_H

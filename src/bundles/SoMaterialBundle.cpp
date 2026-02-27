@@ -51,11 +51,8 @@
 
 #include "SbBasicP.h"
 
-#include "glue/glp.h"
-#include "rendering/SoGL.h"
 
 #define FLAG_COLORONLY  0x01
-#define FLAG_NVIDIA_BUG 0x02
 
 /*!
   Constructor with \a action being the action applied to the
@@ -73,11 +70,6 @@ SoMaterialBundle::SoMaterialBundle(SoAction *action)
   
   if (SoLazyElement::getLightModel(this->state) == SoLazyElement::BASE_COLOR) 
     this->coloronly |= FLAG_COLORONLY;
-
-  const SoGLContext * glue = sogl_glue_instance(this->state);
-  if (glue->nvidia_color_per_face_bug) {
-    this->coloronly |= FLAG_NVIDIA_BUG;
-  }
 }
 
 /*!
@@ -178,4 +170,3 @@ SoMaterialBundle::setupElements(const SbBool isbetweenbeginend)
 }
 
 #undef FLAG_COLORONLY
-#undef FLAG_NVIDIA_BUG

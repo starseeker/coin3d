@@ -47,9 +47,9 @@
 #include <Inventor/nodes/SoNode.h>
 #include <Inventor/SbName.h>
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 
 
@@ -254,7 +254,7 @@ SoChildList::set(const int index, SoNode * const node)
 {
   // Overridden from superclass to handle notification.
 
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoChildList::set",
                          "(%p) index=%d, node=%p, oldnode=%p",
                          this, index, node, (*this)[index]);
@@ -342,7 +342,7 @@ SoChildList::traverse(SoAction * const action, const int first, const int last)
   assert((last >= 0) && (last < this->getLength()) && "index out of bounds");
   assert((last >= first) && "erroneous indices");
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   // Calculate a checksum over the children node pointers, to later
   // catch attempts at changing the scene graph layout mid-traversal
   // with an assert. (chksum reversed to initial value and controlled
@@ -359,7 +359,7 @@ SoChildList::traverse(SoAction * const action, const int first, const int last)
   uintptr_t chksum = 0xdeadbeef;
   for (i = first; i <= last; i++) { chksum ^= (uintptr_t)(*this)[i]; }
   SbBool changedetected = FALSE;
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   SoAction::PathCode pathcode = action->getCurPathCode();
 
@@ -369,12 +369,12 @@ SoChildList::traverse(SoAction * const action, const int first, const int last)
     // always traverse all nodes.
     action->pushCurPath();
     for (i = first; (i <= last) && !action->hasTerminated(); i++) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
       if (i >= this->getLength()) {
         changedetected = TRUE;
         break;
       }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
       node = (*this)[i];
       action->popPushCurPath(i, node);
       action->traverse(node);
@@ -383,12 +383,12 @@ SoChildList::traverse(SoAction * const action, const int first, const int last)
     break;
   case SoAction::OFF_PATH:
     for (i = first; (i <= last) && !action->hasTerminated(); i++) {      
-#if COIN_DEBUG
+#if OBOL_DEBUG
       if (i >= this->getLength()) {
         changedetected = TRUE;
         break;
       }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
       node = (*this)[i];
       // only traverse nodes that affects state
       if (node->affectsState()) {
@@ -400,12 +400,12 @@ SoChildList::traverse(SoAction * const action, const int first, const int last)
     break;
   case SoAction::IN_PATH:
     for (i = first; (i <= last) && !action->hasTerminated(); i++) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
       if (i >= this->getLength()) {
         changedetected = TRUE;
         break;
       }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
       node = (*this)[i];
       action->pushCurPath(i, node);
       // if we're OFF_PATH after pushing, we only traverse if the node
@@ -422,7 +422,7 @@ SoChildList::traverse(SoAction * const action, const int first, const int last)
     break;
   }
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (!changedetected) {
     for (i = last; i >= first; i--) { chksum ^= (uintptr_t)(*this)[i]; }
     if (chksum != 0xdeadbeef) changedetected = TRUE;
@@ -436,7 +436,7 @@ SoChildList::traverse(SoAction * const action, const int first, const int last)
                               "and/or reorganize your scene graph so that "
                               "this is not necessary.");
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }
 
 /*!
@@ -479,7 +479,7 @@ SoChildList::traverse(SoAction * const action, SoNode * node)
 void
 SoChildList::addPathAuditor(SoPath * const path)
 {
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoChildList::addPathAuditor",
                          "add SoPath auditor %p to list %p", path, this);
 #endif // debug
@@ -493,13 +493,13 @@ SoChildList::addPathAuditor(SoPath * const path)
 void
 SoChildList::removePathAuditor(SoPath * const path)
 {
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoChildList::removePathAuditor",
                          "remove SoPath auditor %p from list %p", path, this);
 #endif // debug
 
   const int index = this->auditors.find(path);
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (index == -1) {
     SoDebugError::post("SoChildList::removePathAuditor",
                        "no SoPath %p is auditing list %p! (of parent %p (%s))",
@@ -509,6 +509,6 @@ SoChildList::removePathAuditor(SoPath * const path)
                        this->parent ? this->parent->getTypeId().getName().getString() : "<no type>");
     return;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   this->auditors.remove(index);
 }

@@ -44,9 +44,9 @@
 #include <Inventor/elements/SoLocalBBoxMatrixElement.h>
 #include <Inventor/misc/SoState.h>
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 /*!
   \fn SoLocalBBoxMatrixElement::localMatrix
@@ -113,10 +113,10 @@ SoLocalBBoxMatrixElement::push(SoState * state)
 SbBool
 SoLocalBBoxMatrixElement::matches(const SoElement * /* element */) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   SoDebugError::postInfo("SoLocalBBoxMatrixElement::matches",
                          "This method should never be called for this element.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   return TRUE;
 }
 
@@ -125,10 +125,10 @@ SoLocalBBoxMatrixElement::matches(const SoElement * /* element */) const
 SoElement *
 SoLocalBBoxMatrixElement::copyMatchInfo(void) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   SoDebugError::postInfo("SoLocalBBoxMatrixElement::copyMatchInfo",
                          "This method should never be called for this element.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   return NULL;
 }
 

@@ -1,5 +1,5 @@
-#ifndef COIN_SOPROFILERTOPKIT
-#define COIN_SOPROFILERTOPKIT
+#ifndef OBOL_SOPROFILERTOPKIT
+#define OBOL_SOPROFILERTOPKIT
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -42,7 +42,7 @@
 
 class SoProfilerTopKitP;
 
-class COIN_DLL_API SoProfilerTopKit : public SoProfilerOverlayKit {
+class OBOL_DLL_API SoProfilerTopKit : public SoProfilerOverlayKit {
   typedef SoProfilerOverlayKit inherited;
   SO_KIT_HEADER(SoProfilerTopKit);
   SO_KIT_CATALOG_ENTRY_HEADER(textSep);
@@ -73,4 +73,4 @@ private:
 
 }; // SoProfilerTopKit
 
-#endif //!COIN_SOPROFILERTOPKIT
+#endif //!OBOL_SOPROFILERTOPKIT

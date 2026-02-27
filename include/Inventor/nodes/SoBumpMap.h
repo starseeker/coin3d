@@ -1,5 +1,5 @@
-#ifndef COIN_SOBUMPMAP_H
-#define COIN_SOBUMPMAP_H
+#ifndef OBOL_SOBUMPMAP_H
+#define OBOL_SOBUMPMAP_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -43,7 +43,7 @@ class SoFieldSensor;
 class SoSensor;
 class SoBumpMapP;
 
-class COIN_DLL_API SoBumpMap : public SoNode {
+class OBOL_DLL_API SoBumpMap : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_HEADER(SoBumpMap);
@@ -80,4 +80,4 @@ private:
   SoBumpMapP * pimpl;
 };
 
-#endif // !COIN_SOBUMPMAP_H
+#endif // !OBOL_SOBUMPMAP_H

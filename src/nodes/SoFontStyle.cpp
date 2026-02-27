@@ -181,7 +181,7 @@ SoFontStyle::getFontName(void) const
 
   SbString fontname(this->name.getValue().getString());
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   static SbBool messageflag = TRUE;
   if (messageflag && (fontname != "defaultFont")) {
     SoDebugError::postWarning("SoFontStyle::getFontName",
@@ -203,13 +203,13 @@ SoFontStyle::getFontName(void) const
   case SoFontStyle::TYPEWRITER:
     fontname = "Courier New";
     break;
-#if COIN_DEBUG
+#if OBOL_DEBUG
   default:
     SoDebugError::postWarning("SoFontStyle::getFontName",
                               "value of family field is invalid, setting to SERIF");
     fontname = "Times New Roman";
     break;
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   }
   
 
@@ -229,12 +229,12 @@ SoFontStyle::getFontName(void) const
   case (SoFontStyle::BOLD | SoFontStyle::ITALIC):
     fontname += ":Bold Italic";
     break;
-#if COIN_DEBUG
+#if OBOL_DEBUG
   default:
     SoDebugError::postWarning("SoFontStyle::getFontName",
                               "value of style field is invalid");
     break;
-#endif // COIN_DEUG
+#endif // OBOL_DEUG
   }
 
   return fontname;

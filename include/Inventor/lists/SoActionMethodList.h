@@ -1,5 +1,5 @@
-#ifndef COIN_SOACTIONMETHODLIST_H
-#define COIN_SOACTIONMETHODLIST_H
+#ifndef OBOL_SOACTIONMETHODLIST_H
+#define OBOL_SOACTIONMETHODLIST_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -41,7 +41,7 @@ class SoNode;
 
 typedef void (* SoActionMethod)(SoAction *, SoNode *);
 
-class COIN_DLL_API SoActionMethodList : public SbPList {
+class OBOL_DLL_API SoActionMethodList : public SbPList {
   typedef SbPList inherited;
 
 public:
@@ -57,4 +57,4 @@ private:
   class SoActionMethodListP * pimpl;
 };
 
-#endif // !COIN_SOACTIONMETHODLIST_H
+#endif // !OBOL_SOACTIONMETHODLIST_H

@@ -63,7 +63,7 @@
 namespace {
   // anonymous namespace for trigger functions, to change how
   // visualization occur.
-  void cacheSensorCB(void * data, SoSensor * COIN_UNUSED_ARG(sense)){
+  void cacheSensorCB(void * data, SoSensor * OBOL_UNUSED_ARG(sense)){
     SoProfilerVisualizeKit * kit = (SoProfilerVisualizeKit*)data;
     /*SoNode * root = */kit->root.getValue();
     if(!kit->root.getValue())
@@ -79,7 +79,7 @@ namespace {
     }
   }
 
-  void rootChangedCB(void * data, SoSensor * COIN_UNUSED_ARG(sense)){
+  void rootChangedCB(void * data, SoSensor * OBOL_UNUSED_ARG(sense)){
     // FIXME 20071109 rolvs: Is it possible to automatically detect structural changes
     // in the scene graph? Perhaps from Inventor/misc/SoNotRec.h or something. Now
     // we build the SoNodeVisualize-tree on every root-change
@@ -89,7 +89,7 @@ namespace {
         kit->setPart("visualtree", SoNodeVisualize::visualizeTree(kit->root.getValue(), 1));
   }
 
-  void statsCB(void * data, SoSensor * COIN_UNUSED_ARG(s)) {
+  void statsCB(void * data, SoSensor * OBOL_UNUSED_ARG(s)) {
     SoProfilerVisualizeKit * kit = (SoProfilerVisualizeKit*)data;
     kit->statsTrigger.disconnect();
     SoNode * node = kit->stats.getValue();
@@ -98,7 +98,7 @@ namespace {
         SoProfilerStats * statsnode = (SoProfilerStats *)node;
         kit->statsTrigger.connectFrom(&statsnode->profilingUpdate);
       } else {
-#if COIN_DEBUG
+#if OBOL_DEBUG
         static SbBool first = TRUE;
         if (first) {
           SoDebugError::postWarning("SoProfilerVisualizeKit.cpp rootChangedCB",
@@ -107,7 +107,7 @@ namespace {
                                     kit->getTypeId().getName().getString());
           first = FALSE;
         }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
       }
     }
   }
@@ -136,7 +136,7 @@ SO_KIT_SOURCE(SoProfilerVisualizeKit);
 // Docs from parent
 void SoProfilerVisualizeKit::initClass()
 {
-  SO_KIT_INTERNAL_INIT_CLASS(SoProfilerVisualizeKit, SO_FROM_COIN_3_0);
+  SO_KIT_INTERNAL_INIT_CLASS(SoProfilerVisualizeKit, SO_FROM_OBOL_3_0);
 }
 
 

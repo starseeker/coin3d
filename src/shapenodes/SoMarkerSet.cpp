@@ -92,9 +92,9 @@
 #include <Inventor/elements/SoGLCacheContextElement.h>
 
 #include <Inventor/system/gl.h>
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 #include "CoinTidbits.h"
 #include "nodes/SoSubNodeP.h"
@@ -166,7 +166,7 @@ free_marker_images(void)
 void
 SoMarkerSet::initClass(void)
 {
-  SO_NODE_INTERNAL_INIT_CLASS(SoMarkerSet, SO_FROM_INVENTOR_2_5|SO_FROM_COIN_1_0);
+  SO_NODE_INTERNAL_INIT_CLASS(SoMarkerSet, SO_FROM_INVENTOR_2_5|SO_FROM_OBOL_1_0);
   markerimages = new GLubyte[NUM_MARKERS*9*4]; // hardcoded markers, 32x9 bitmaps (9x9 used), dword alignment
   markerlist = new SbList<so_marker>;
   coin_atexit((coin_atexit_f *)free_marker_images, CC_ATEXIT_NORMAL);
@@ -1207,7 +1207,7 @@ SoMarkerSet::GLRender(SoGLRenderAction * action)
 
   for (int i = 0; i < numpts; i++) {
     int midx = SbMin(i, this->markerIndex.getNum() - 1);
-#if COIN_DEBUG
+#if OBOL_DEBUG
       if (midx < 0 || (this->markerIndex[midx] >= markerlist->getLength())) {
         static SbBool firsterror = TRUE;
         if (firsterror) {
@@ -1220,7 +1220,7 @@ SoMarkerSet::GLRender(SoGLRenderAction * action)
         // next index.
         continue;
       }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
     if (mbind == PER_VERTEX) mb.send(matnr++, TRUE);
 
@@ -1501,9 +1501,9 @@ SoMarkerSet::removeMarker(int idx)
   public Open Inventor API.
 */
 SbBool
-SoMarkerSet::isMarkerBitSet(int COIN_UNUSED_ARG(idx), int COIN_UNUSED_ARG(bitNumber))
+SoMarkerSet::isMarkerBitSet(int OBOL_UNUSED_ARG(idx), int OBOL_UNUSED_ARG(bitNumber))
 {
   // FIXME: seems simple enough to support.. 20010815 mortene.
-  COIN_OBSOLETED();
+  OBOL_OBSOLETED();
   return FALSE;
 }

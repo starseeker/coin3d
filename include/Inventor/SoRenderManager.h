@@ -1,5 +1,5 @@
-#ifndef COIN_SORENDERMANAGER_H
-#define COIN_SORENDERMANAGER_H
+#ifndef OBOL_SORENDERMANAGER_H
+#define OBOL_SORENDERMANAGER_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -49,10 +49,10 @@ class SoRenderManagerP;
 
 typedef void SoRenderManagerRenderCB(void * userdata, class SoRenderManager * mgr);
 
-class COIN_DLL_API SoRenderManager {
+class OBOL_DLL_API SoRenderManager {
 public:
 
-  class COIN_DLL_API Superimposition {
+  class OBOL_DLL_API Superimposition {
   public:
     enum StateFlags {
       ZBUFFERON    = 0x0001,
@@ -231,4 +231,4 @@ private:
 
 }; // SoRenderManager
 
-#endif // !COIN_SORENDERMANAGER_H
+#endif // !OBOL_SORENDERMANAGER_H

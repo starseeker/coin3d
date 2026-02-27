@@ -1,5 +1,5 @@
-#ifndef COIN_SOGLRENDERPASSELEMENT_H
-#define COIN_SOGLRENDERPASSELEMENT_H
+#ifndef OBOL_SOGLRENDERPASSELEMENT_H
+#define OBOL_SOGLRENDERPASSELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/elements/SoSubElement.h>
 
-class COIN_DLL_API SoGLRenderPassElement : public SoElement {
+class OBOL_DLL_API SoGLRenderPassElement : public SoElement {
   typedef SoElement inherited;
 
   SO_ELEMENT_HEADER(SoGLRenderPassElement);
@@ -57,4 +57,4 @@ protected:
 
 };
 
-#endif // !COIN_SOGLRENDERPASSELEMENT_H
+#endif // !OBOL_SOGLRENDERPASSELEMENT_H

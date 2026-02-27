@@ -1,5 +1,5 @@
-#ifndef COIN_SOPROFILECOORDINATEELEMENT_H
-#define COIN_SOPROFILECOORDINATEELEMENT_H
+#ifndef OBOL_SOPROFILECOORDINATEELEMENT_H
+#define OBOL_SOPROFILECOORDINATEELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -43,7 +43,7 @@
  * - conversion between coord2 and coord3 (done in Inventor)
  */
 
-class COIN_DLL_API SoProfileCoordinateElement : public SoReplacedElement {
+class OBOL_DLL_API SoProfileCoordinateElement : public SoReplacedElement {
   typedef SoReplacedElement inherited;
 
   SO_ELEMENT_HEADER(SoProfileCoordinateElement);
@@ -82,4 +82,4 @@ private:
   static SbVec2f * initdefaultcoords;
 };
 
-#endif // !COIN_SOPROFILECOORDINATEELEMENT_H
+#endif // !OBOL_SOPROFILECOORDINATEELEMENT_H

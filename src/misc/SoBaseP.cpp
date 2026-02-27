@@ -118,7 +118,7 @@ SoBase::PImpl::removeName2Obj(SoBase * const base, const char * const name)
 
 // Remove a reference from an instance pointer to its associated name.
 void
-SoBase::PImpl::removeObj2Name(SoBase * const base, const char * const COIN_UNUSED_ARG(name))
+SoBase::PImpl::removeObj2Name(SoBase * const base, const char * const OBOL_UNUSED_ARG(name))
 {
   SoBase::PImpl::obj2name->erase(base);
 }
@@ -144,7 +144,7 @@ SoBase::PImpl::cleanup_auditordict(void)
 void
 SoBase::PImpl::check_for_leaks(void)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (SoBase::PImpl::trackbaseobjects) {
     SbList<const SoBase *> keys;
     SoBase::PImpl::allbaseobj->makeKeyList(keys);
@@ -169,7 +169,7 @@ SoBase::PImpl::check_for_leaks(void)
       (void)printf("\n");
     }
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }
 
 //
@@ -241,7 +241,7 @@ SoBase::PImpl::readReference(SoInput * in, SoBase *& base)
     base = ((SoProtoInstance*) base)->getRootNode();
   }
 
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoBase::readReference",
                          "USE: '%s'", refname.getString());
 #endif // debug
@@ -255,7 +255,7 @@ SoBase::PImpl::readBase(SoInput * in, SbName & classname, SoBase *& base)
 {
   assert(classname != "");
 
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoBase::readBase", "classname: '%s'",
                          classname.getString());
 #endif // debug
@@ -468,7 +468,7 @@ SoBase::PImpl::createInstance(SoInput * in, const SbName & classname)
     SoUnknownNode * unknownnode = new SoUnknownNode;
     unknownnode->setNodeClassName(classname);
     instance = unknownnode;
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
     if (SoInputP::debug()) {
       SoDebugError::postInfo("SoBase::createInstance",
                              "created SoUnknownNode for '%s'",

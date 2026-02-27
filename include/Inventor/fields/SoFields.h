@@ -1,5 +1,5 @@
-#ifndef COIN_SOFIELDS_H
-#define COIN_SOFIELDS_H
+#ifndef OBOL_SOFIELDS_H
+#define OBOL_SOFIELDS_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -125,4 +125,4 @@
 #include <Inventor/fields/SoMFVec4f.h>
 #include <Inventor/fields/SoMFVec4d.h>
 
-#endif // !COIN_SOFIELDS_H
+#endif // !OBOL_SOFIELDS_H

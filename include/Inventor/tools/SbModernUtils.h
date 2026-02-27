@@ -1,5 +1,5 @@
-#ifndef COIN_SBMODERNUTILS_H
-#define COIN_SBMODERNUTILS_H
+#ifndef OBOL_SBMODERNUTILS_H
+#define OBOL_SBMODERNUTILS_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -47,7 +47,7 @@ namespace SbModernUtils {
  * }
  * \endcode
  */
-COIN_DLL_API std::optional<SoNode*> findNodeByName(const SbName & name);
+OBOL_DLL_API std::optional<SoNode*> findNodeByName(const SbName & name);
 
 /*!
  * \brief String view-based name comparison for efficient string operations
@@ -66,7 +66,7 @@ COIN_DLL_API std::optional<SoNode*> findNodeByName(const SbName & name);
  * }
  * \endcode
  */
-COIN_DLL_API bool nameEquals(const SbName & name, std::string_view str);
+OBOL_DLL_API bool nameEquals(const SbName & name, std::string_view str);
 
 /*!
  * \brief Enhanced RAII wrapper for SoNode reference counting
@@ -81,7 +81,7 @@ COIN_DLL_API bool nameEquals(const SbName & name, std::string_view str);
  * // Node is automatically unreferenced when nodeRef goes out of scope
  * \endcode
  */
-class COIN_DLL_API SoNodeRef {
+class OBOL_DLL_API SoNodeRef {
 public:
     explicit SoNodeRef(SoNode* node);
     ~SoNodeRef();
@@ -111,7 +111,7 @@ private:
  * \param node The node to manage (must not be NULL)
  * \return SoNodeRef object managing the node's reference count
  */
-COIN_DLL_API SoNodeRef makeNodeRef(SoNode* node);
+OBOL_DLL_API SoNodeRef makeNodeRef(SoNode* node);
 
 /*!
  * \brief Create a unique_ptr-like wrapper for any object with ref/unref
@@ -185,4 +185,4 @@ RefCountedPtr<T> makeRefCountedPtr(T* ptr) {
 
 } // namespace SbModernUtils
 
-#endif // !COIN_SBMODERNUTILS_H
+#endif // !OBOL_SBMODERNUTILS_H

@@ -1,5 +1,5 @@
-#ifndef COIN_SBINTLIST_H
-#define COIN_SBINTLIST_H
+#ifndef OBOL_SBINTLIST_H
+#define OBOL_SBINTLIST_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 
 // *************************************************************************
 
-class  COIN_DLL_API SbIntList : public SbPList {
+class  OBOL_DLL_API SbIntList : public SbPList {
 public:
   SbIntList(void) : SbPList () { }
   SbIntList(const int sizehint) : SbPList(sizehint) { }
@@ -67,10 +67,10 @@ public:
 // it is used (these are all our own doing, not from the original SGI
 // Inventor, and could be taken out for any new major release).
 
-#if defined(COIN_INTERNAL) && !defined(COIN_ALLOW_SBINTLIST)
+#if defined(OBOL_INTERNAL) && !defined(OBOL_ALLOW_SBINTLIST)
 #error prefer SbList over SbIntList for internal code
-#endif // COIN_INTERNAL
+#endif // OBOL_INTERNAL
 
 // *************************************************************************
 
-#endif // !COIN_SBINTLIST_H
+#endif // !OBOL_SBINTLIST_H

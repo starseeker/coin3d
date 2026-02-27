@@ -38,7 +38,7 @@
 
   FIXME: write doc.
 
-  \COIN_CLASS_EXTENSION
+  \OBOL_CLASS_EXTENSION
 
   \since Coin 2.2
 */
@@ -109,7 +109,7 @@ SoMultiTextureImageElement::init(SoState * state)
   Resets this element to its original values.
 */
 void
-SoMultiTextureImageElement::setDefault(SoState * const state, SoNode * const COIN_UNUSED_ARG(node), const int unit)
+SoMultiTextureImageElement::setDefault(SoState * const state, SoNode * const OBOL_UNUSED_ARG(node), const int unit)
 {
   SoMultiTextureImageElement * elem =
     coin_safe_cast<SoMultiTextureImageElement *>
@@ -141,7 +141,7 @@ SoMultiTextureImageElement::set(SoState * const state, SoNode * const node,
 /*!
   FIXME: write doc.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 */
 void
 SoMultiTextureImageElement::set(SoState * const state, SoNode * const node,
@@ -192,7 +192,7 @@ SoMultiTextureImageElement::get(SoState * const state,
 /*!
   FIXME: write doc.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
 */
 const unsigned char *
@@ -337,7 +337,7 @@ SoMultiTextureImageElement::getDefault(SbVec3s & size, int & numComponents)
 }
 
 void
-SoMultiTextureImageElement::push(SoState * COIN_UNUSED_ARG(state))
+SoMultiTextureImageElement::push(SoState * OBOL_UNUSED_ARG(state))
 {
   const SoMultiTextureImageElement * prev =
     coin_assert_cast<SoMultiTextureImageElement *>

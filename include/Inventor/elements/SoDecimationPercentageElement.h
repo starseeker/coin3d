@@ -1,5 +1,5 @@
-#ifndef COIN_SODECIMATIONPERCENTAGEELEMENT_H
-#define COIN_SODECIMATIONPERCENTAGEELEMENT_H
+#ifndef OBOL_SODECIMATIONPERCENTAGEELEMENT_H
+#define OBOL_SODECIMATIONPERCENTAGEELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/elements/SoFloatElement.h>
 
-class COIN_DLL_API SoDecimationPercentageElement : public SoFloatElement {
+class OBOL_DLL_API SoDecimationPercentageElement : public SoFloatElement {
   typedef SoFloatElement inherited;
 
   SO_ELEMENT_HEADER(SoDecimationPercentageElement);
@@ -54,4 +54,4 @@ public:
 
 };
 
-#endif // !COIN_SODECIMATIONPERCENTAGEELEMENT_H
+#endif // !OBOL_SODECIMATIONPERCENTAGEELEMENT_H

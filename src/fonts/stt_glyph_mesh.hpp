@@ -57,7 +57,7 @@
 #include "earcut.hpp"
 
 // Forward declaration for fallback tessellation
-#ifdef COIN_DLL_API
+#ifdef OBOL_DLL_API
 #include <Inventor/SbTesselator.h>
 #define HAVE_SBTESSELATOR
 #endif

@@ -386,10 +386,10 @@ SbBox3d::getSpan(const SbVec3d & dir, double & dmin, double & dmax) const
   SbVec3d corner;
   SbVec3d normdir(dir);
   if (normdir.normalize() == 0.0) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SbBox3d::getSpan",
                               "The direction is a null vector.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
     dmin = dmax = 0.0;
     return;
@@ -429,13 +429,13 @@ SbBox3d::getSpan(const SbVec3d & dir, double & dmin, double & dmax) const
 void
 SbBox3d::transform(const SbDPMatrix & matrix)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (this->isEmpty()) {
     SoDebugError::postWarning("SbBox3d::transform",
                               "The box is not valid!");
     return;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   SbVec3d dst;
   SbVec3d points[2]={this->minpt, this->maxpt};
@@ -459,13 +459,13 @@ SbBox3d::transform(const SbDPMatrix & matrix)
 void
 SbBox3d::print(FILE * fp) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   SbVec3d minv, maxv;
   this->getBounds(minv, maxv);
   minv.print(fp);
   fprintf(fp, " ");
   maxv.print(fp);
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }
 
 /*!

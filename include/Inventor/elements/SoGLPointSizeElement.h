@@ -1,5 +1,5 @@
-#ifndef COIN_SOGLPOINTSIZEELEMENT_H
-#define COIN_SOGLPOINTSIZEELEMENT_H
+#ifndef OBOL_SOGLPOINTSIZEELEMENT_H
+#define OBOL_SOGLPOINTSIZEELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -36,7 +36,7 @@
 #include <Inventor/SbVec2f.h>
 #include <Inventor/elements/SoPointSizeElement.h>
 
-class COIN_DLL_API SoGLPointSizeElement : public SoPointSizeElement {
+class OBOL_DLL_API SoGLPointSizeElement : public SoPointSizeElement {
   typedef SoPointSizeElement inherited;
 
   SO_ELEMENT_HEADER(SoGLPointSizeElement);
@@ -60,4 +60,4 @@ private:
   void updategl();
 };
 
-#endif // !COIN_SOGLPOINTSIZEELEMENT_H
+#endif // !OBOL_SOGLPOINTSIZEELEMENT_H

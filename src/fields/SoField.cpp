@@ -141,17 +141,17 @@ inline unsigned int SbHashFunc(const void * key)
   return SbHashFunc(reinterpret_cast<size_t>(key));
 }
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
 #include "threads/recmutexp.h"
 #define SOFIELD_RECLOCK (void) cc_recmutex_internal_field_lock()
 #define SOFIELD_RECUNLOCK (void) cc_recmutex_internal_field_unlock()
 
-#else // COIN_THREADSAFE
+#else // OBOL_THREADSAFE
 
 #define SOFIELD_RECLOCK
 #define SOFIELD_RECUNLOCK
 
-#endif // !COIN_THREADSAFE
+#endif // !OBOL_THREADSAFE
 
 static const int SOFIELD_GET_STACKBUFFER_SIZE = 1024;
 // need one static mutex for field_buffer in SoField::get(SbString &)
@@ -181,7 +181,7 @@ public:
     {
     }
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   // Check that everything has been emptied.
   ~SoConnectStorage()
   {
@@ -193,7 +193,7 @@ public:
     assert(slaves.getLength() == 0);
     assert(auditors.getLength() == 0);
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   // The container this field is part of.
   SoFieldContainer * container;
@@ -483,12 +483,12 @@ SoField::~SoField()
   // disconnecting connections.
   this->setStatusBits(FLAG_ISDESTRUCTING);
 
-#if COIN_DEBUG_EXTRA
+#if OBOL_DEBUG_EXTRA
   int wLevel =
-    SoConfigSettings::getInstance()->settingAsInt("COIN_WARNING_LEVEL");
+    SoConfigSettings::getInstance()->settingAsInt("OBOL_WARNING_LEVEL");
   if (wLevel>=3)
     SoDebugError::postInfo("SoField::~SoField", "destructing %p", this);
-#endif //COIN_DEBUG_EXTRA
+#endif //OBOL_DEBUG_EXTRA
 
   // Disconnect ourself from all connections where this field is the
   // slave.
@@ -531,10 +531,10 @@ SoField::~SoField()
 
     delete this->storage;
   }
-#if COIN_DEBUG_EXTRA
+#if OBOL_DEBUG_EXTRA
   if (wLevel>=3)
     SoDebugError::postInfo("SoField::~SoField", "%p done", this);
-#endif //COIN_DEBUG_EXTRA
+#endif //OBOL_DEBUG_EXTRA
 
   this->clearStatusBits(FLAG_ALIVE_PATTERN);
 }
@@ -609,15 +609,15 @@ SoField::isIgnored(void) const
 void
 SoField::setDefault(SbBool def)
 {
-#if COIN_DEBUG_EXTRA
+#if OBOL_DEBUG_EXTRA
   int wLevel =
-    SoConfigSettings::getInstance()->settingAsInt("COIN_WARNING_LEVEL");
+    SoConfigSettings::getInstance()->settingAsInt("OBOL_WARNING_LEVEL");
   if (wLevel>=3) {
     SbString finfo = SoFieldP::getDebugIdString(this);
     SoDebugError::postInfo("SoField::setDefault", "%s, setDefault(%s)",
                            finfo.getString(), def ? "TRUE" : "FALSE");
   }
-#endif //COIN_DEBUG_EXTRA
+#endif //OBOL_DEBUG_EXTRA
 
   (void) this->changeStatusBits(FLAG_ISDEFAULT, def);
 }
@@ -737,7 +737,7 @@ SoField::connectFrom(SoField * master, SbBool notnotify, SbBool append)
     else if (this->storage->masterfields.find(master) >= 0) {
       // detect and avoid multiple connections between the same fields
       // (a common bug in VRML files created by 3ds max).
-#if COIN_DEBUG
+#if OBOL_DEBUG
       SoFieldContainer * fc = master->getContainer();
       SbName fcname = fc ? fc->getName() : SbName::empty();
       if (fcname != SbName::empty()) {
@@ -754,7 +754,7 @@ SoField::connectFrom(SoField * master, SbBool notnotify, SbBool append)
         SoDebugError::postWarning("SoField::connectFrom",
                                   "connection from %p already made", master);
       }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
       return FALSE;
     }
     // Set up the auditor link from the master to the slave field.
@@ -775,7 +775,7 @@ SoField::connectFrom(SoField * master, SbBool notnotify, SbBool append)
     SoField * converterinput = conv->getInput(mastertype);
     SoEngineOutput * converteroutput = conv->getOutput(thistype);
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
     if (converterinput == NULL) {
       SoDebugError::post("SoField::connectFrom",
                          "input field returned from field converter is NULL");
@@ -785,7 +785,7 @@ SoField::connectFrom(SoField * master, SbBool notnotify, SbBool append)
                          "output returned from field converter is NULL");
       return FALSE;
     }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
     // Link up the input SoField of the SoFieldConverter to the master
     // field by recursively calling connectFrom().
@@ -870,10 +870,10 @@ SoField::connectFrom(SoEngineOutput * master, SbBool notnotify, SbBool append)
         // detect and avoid multiple connections between the same
         // field and engine output (a common bug in VRML files
         // created by 3ds max).
-#if COIN_DEBUG
+#if OBOL_DEBUG
         SoDebugError::postWarning("SoField::connectFrom",
                                   "connection from %p already made", master);
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
         // Match the ref() invocation.
         if (masterengine) masterengine->unref();
         return FALSE;
@@ -902,7 +902,7 @@ SoField::connectFrom(SoEngineOutput * master, SbBool notnotify, SbBool append)
     SoField * converterinput = conv->getInput(mastertype);
     SoEngineOutput * converteroutput = conv->getOutput(thistype);
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
     if (converterinput == NULL) {
       SoDebugError::post("SoField::connectFrom",
                          "input field returned from field converter is NULL");
@@ -912,7 +912,7 @@ SoField::connectFrom(SoEngineOutput * master, SbBool notnotify, SbBool append)
                          "output returned from field converter is NULL");
       return FALSE;
     }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
     // Link up the input SoField of the SoFieldConverter to the master
     // SoEngineOutput by recursively calling connectFrom().
@@ -952,14 +952,14 @@ SoField::connectFrom(SoEngineOutput * master, SbBool notnotify, SbBool append)
 void
 SoField::disconnect(SoField * master)
 {
-#if COIN_DEBUG_EXTRA
+#if OBOL_DEBUG_EXTRA
   int wLevel =
-    SoConfigSettings::getInstance()->settingAsInt("COIN_WARNING_LEVEL");
+    SoConfigSettings::getInstance()->settingAsInt("OBOL_WARNING_LEVEL");
   if (wLevel>=3)
     SoDebugError::postInfo("SoField::disconnect",
                          "removing slave field %p from master field %p",
                          this, master);
-#endif //COIN_DEBUG_EXTRA
+#endif //OBOL_DEBUG_EXTRA
 
   const int idx = this->storage->masterfields.find(master);
   if (idx == -1) {
@@ -1032,9 +1032,9 @@ SoField::disconnect(SoEngineOutput * master)
   }
 
 
-#if COIN_DEBUG_EXTRA
+#if OBOL_DEBUG_EXTRA
   int wLevel =
-    SoConfigSettings::getInstance()->settingAsInt("COIN_WARNING_LEVEL");
+    SoConfigSettings::getInstance()->settingAsInt("OBOL_WARNING_LEVEL");
   if (wLevel>=3)
     SoDebugError::postInfo("SoField::disconnect",
                            "removing slave field %p (%s.%s) from master "
@@ -1043,7 +1043,7 @@ SoField::disconnect(SoEngineOutput * master)
                            this->storage->container->getTypeId().getName().getString(),
                            this->storage->fieldtype.getName().getString(),
                            master);
-#endif //COIN_DEBUG_EXTRA
+#endif //OBOL_DEBUG_EXTRA
 
 
   // Check the enabled flag to avoid evaluating from engines which are
@@ -1354,22 +1354,22 @@ void
 SoField::startNotify(void)
 {
   SoNotList l;
-#if COIN_DEBUG_EXTRA
+#if OBOL_DEBUG_EXTRA
   int wLevel =
-    SoConfigSettings::getInstance()->settingAsInt("COIN_WARNING_LEVEL");
+    SoConfigSettings::getInstance()->settingAsInt("OBOL_WARNING_LEVEL");
   if (wLevel>=3)
     SoDebugError::postInfo("SoField::startNotify", "field %p (%s), list %p",
                          this, this->getTypeId().getName().getString(), &l);
-#endif //COIN_DEBUG_EXTRA
+#endif //OBOL_DEBUG_EXTRA
 
   SoDB::startNotify();
   this->notify(&l);
   SoDB::endNotify();
 
-#if COIN_DEBUG_EXTRA
+#if OBOL_DEBUG_EXTRA
   if (wLevel>=3)
     SoDebugError::postInfo("SoField::startNotify", "DONE\n\n");
-#endif //COIN_DEBUG_EXTRA
+#endif //OBOL_DEBUG_EXTRA
 }
 
 /*!
@@ -1379,11 +1379,11 @@ void
 SoField::notify(SoNotList * nlist)
 {
   assert((this->statusbits & FLAG_ALIVE_PATTERN) == FLAG_ALIVE_PATTERN);
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (this->getContainer()) {
     this->getContainer()->assertAlive();
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   // check NotRec type to find if the notification was from a
   // connection. If someone changes the field directly we should
@@ -1417,9 +1417,9 @@ SoField::notify(SoNotList * nlist)
   // an engine output or from another field.
   this->setDefault(FALSE);
 
-#if COIN_DEBUG_EXTRA
+#if OBOL_DEBUG_EXTRA
   int wLevel =
-    SoConfigSettings::getInstance()->settingAsInt("COIN_WARNING_LEVEL");
+    SoConfigSettings::getInstance()->settingAsInt("OBOL_WARNING_LEVEL");
   if (wLevel>=3)
     if (this != SoDB::getGlobalField("realTime")) {
       SoDebugError::postInfo("SoField::notify", "%p (%s (%s '%s')) -- start",
@@ -1428,7 +1428,7 @@ SoField::notify(SoNotList * nlist)
                              this->getContainer() ? this->getContainer()->getTypeId().getName().getString() : "*none*",
                              this->getContainer() ? this->getContainer()->getName().getString() : "*none*");
     }
-#endif //COIN_DEBUG_EXTRA
+#endif //OBOL_DEBUG_EXTRA
 
   // If we're not the originator of the notification process, we need
   // to be marked dirty, as it means something we're connected to as a
@@ -1447,13 +1447,13 @@ SoField::notify(SoNotList * nlist)
     nlist->append(&rec, this);
     nlist->setLastType(SoNotRec::CONTAINER); // FIXME: Not sure about this. 20000304 mortene.
 
-#if COIN_DEBUG_EXTRA
+#if OBOL_DEBUG_EXTRA
   int wLevel =
-    SoConfigSettings::getInstance()->settingAsInt("COIN_WARNING_LEVEL");
+    SoConfigSettings::getInstance()->settingAsInt("OBOL_WARNING_LEVEL");
   if (wLevel>=3)
     SoDebugError::postInfo("SoField::notify",
                            "field %p, list %p", this, nlist);
-#endif //COIN_DEBUG_EXTRA
+#endif //OBOL_DEBUG_EXTRA
 
     if (this->hasExtendedStorage() && this->storage->auditors.getLength()) {
       // need to copy list first if we're going to notify the auditors
@@ -1467,7 +1467,7 @@ SoField::notify(SoNotList * nlist)
     this->clearStatusBits(FLAG_ISNOTIFIED);
   }
 
-#if COIN_DEBUG_EXTRA
+#if OBOL_DEBUG_EXTRA
   if (wLevel>=3)
     if (this != SoDB::getGlobalField("realTime")) {
       SoDebugError::postInfo("SoField::notify", "%p (%s (%s '%s')) -- done",
@@ -1476,7 +1476,7 @@ SoField::notify(SoNotList * nlist)
                              this->getContainer() ? this->getContainer()->getTypeId().getName().getString() : "*none*",
                              this->getContainer() ? this->getContainer()->getName().getString() : "*none*");
     }
-#endif //COIN_DEBUG_EXTRA
+#endif //OBOL_DEBUG_EXTRA
 }
 
 /*!
@@ -1533,13 +1533,13 @@ SoField::addAuditor(void * f, SoNotRec::Type type)
 void
 SoField::removeAuditor(void * f, SoNotRec::Type type)
 {
-#if COIN_DEBUG_EXTRA
+#if OBOL_DEBUG_EXTRA
   int wLevel =
-    SoConfigSettings::getInstance()->settingAsInt("COIN_WARNING_LEVEL");
+    SoConfigSettings::getInstance()->settingAsInt("OBOL_WARNING_LEVEL");
   if (wLevel>=3)
     SoDebugError::postInfo("SoField::removeAuditor",
                            "%p removing %p", this, f);
-#endif //COIN_DEBUG_EXTRA
+#endif //OBOL_DEBUG_EXTRA
 
   assert(this->hasExtendedStorage());
   this->storage->auditors.remove(f, type);
@@ -1575,9 +1575,9 @@ SoField::operator !=(const SoField & f) const
 SbBool
 SoField::shouldWrite(void) const
 {
-#if COIN_DEBUG_EXTRA
+#if OBOL_DEBUG_EXTRA
   int wLevel =
-    SoConfigSettings::getInstance()->settingAsInt("COIN_WARNING_LEVEL");
+    SoConfigSettings::getInstance()->settingAsInt("OBOL_WARNING_LEVEL");
   if (wLevel>=3) {
     SbString finfo = SoFieldP::getDebugIdString(this);
     SoDebugError::postInfo("SoField::shouldWrite",
@@ -1585,7 +1585,7 @@ SoField::shouldWrite(void) const
                            finfo.getString(), this->isDefault(),
                            this->isIgnored(), this->isConnected());
   }
-#endif //COIN_DEBUG_EXTRA
+#endif //OBOL_DEBUG_EXTRA
 
   if (!this->isDefault()) return TRUE;
   if (this->isIgnored()) return TRUE;
@@ -1626,7 +1626,7 @@ SoField::shouldWrite(void) const
   something special on connections/disconnections.
 */
 void
-SoField::connectionStatusChanged(int COIN_UNUSED_ARG(numconnections))
+SoField::connectionStatusChanged(int OBOL_UNUSED_ARG(numconnections))
 {
 }
 
@@ -1659,7 +1659,7 @@ SoField::isReadOnly(void) const
   copy operation.
 */
 void
-SoField::fixCopy(SbBool COIN_UNUSED_ARG(copyconnections))
+SoField::fixCopy(SbBool OBOL_UNUSED_ARG(copyconnections))
 {
 }
 
@@ -1896,14 +1896,14 @@ SoField::read(SoInput * in, const SbName & name)
     if (flags & SoField::CONNECTED) { if (!this->readConnection(in)) { readok = FALSE; goto sofield_read_return; }}
     if (flags & SoField::DEFAULT) this->setDefault(TRUE);
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
     if (flags & ~SoField::ALLFILEFLAGS) {
       SoDebugError::postWarning("SoField::read",
                                 "unknown field flags (0x%x) -- "
                                 "please report to <coin-support@coin3d.org>",
                                 flags);
     }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   }
 
  sofield_read_return:
@@ -2035,14 +2035,14 @@ SoField::evaluateField(void) const
   // if we're destructing, don't continue as this would cause
   // a call to the virtual evaluateConnection()
   if (this->getStatus(FLAG_ISDESTRUCTING)) {
-#if COIN_DEBUG_EXTRA
+#if OBOL_DEBUG_EXTRA
   int wLevel =
-    SoConfigSettings::getInstance()->settingAsInt("COIN_WARNING_LEVEL");
+    SoConfigSettings::getInstance()->settingAsInt("OBOL_WARNING_LEVEL");
   if (wLevel>=3) {
     SoDebugError::postInfo("SoField::evaluate",
                            "Stopped evaluate while destructing.");
   }
-#endif //COIN_DEBUG_EXTRA
+#endif //OBOL_DEBUG_EXTRA
     return;
   }
 
@@ -2062,7 +2062,7 @@ SoField::evaluateField(void) const
   // programmer frustrations than necessary.
 
   if (this->getStatus(FLAG_ISEVALUATING)) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::post("SoField::evaluate",
                        "Detected indirectly recursive call to "
                        "SoField::evaluate() -- which is a *bad* thing."
@@ -2071,7 +2071,7 @@ SoField::evaluateField(void) const
                        "or the library code itself (less likely). "
                        "We strongly advise you to investigate and resolve "
                        "this issue before moving on.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     SOFIELD_RECUNLOCK;
     return;
   }
@@ -2111,7 +2111,7 @@ SoField::getDirty(void) const
 void
 SoField::setDirty(SbBool dirty)
 {
-  COIN_CHECK_THREAD();
+  OBOL_CHECK_THREAD();
   (void) this->changeStatusBits(FLAG_NEEDEVALUATION, dirty);
 }
 
@@ -2149,12 +2149,12 @@ SoField::createConverter(SoType from) const
   assert(from != thistype);
   SoType convtype = SoDB::getConverter(from, thistype);
   if (convtype == SoType::badType()) {
-#if COIN_DEBUG // COIN_DEBUG
+#if OBOL_DEBUG // OBOL_DEBUG
     SoDebugError::postWarning("SoField::createConverter",
                               "no converter for %s to %s",
                               from.getName().getString(),
                               thistype.getName().getString());
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     return NULL;
   }
 
@@ -2435,13 +2435,13 @@ SoField::valueChanged(SbBool resetdefault)
 void
 SoField::notifyAuditors(SoNotList * l)
 {
-#if COIN_DEBUG_EXTRA
+#if OBOL_DEBUG_EXTRA
   int wLevel =
-    SoConfigSettings::getInstance()->settingAsInt("COIN_WARNING_LEVEL");
+    SoConfigSettings::getInstance()->settingAsInt("OBOL_WARNING_LEVEL");
   if (wLevel>=3)
     SoDebugError::postInfo("SoField::notifyAuditors",
                            "field %p, list %p", this, l);
-#endif //COIN_DEBUG_EXTRA
+#endif //OBOL_DEBUG_EXTRA
   if (this->hasExtendedStorage() && this->storage->auditors.getLength())
     this->storage->auditors.notify(l);
 }

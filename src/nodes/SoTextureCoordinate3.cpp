@@ -49,7 +49,7 @@
   Note that an SoTextureCoordinate3 node will \e replace the
   coordinates already present in the state (if any).
 
-  \COIN_CLASS_EXTENSION
+  \OBOL_CLASS_EXTENSION
 
   <b>FILE FORMAT/DEFAULTS:</b>
   \code
@@ -132,7 +132,7 @@ SoTextureCoordinate3::~SoTextureCoordinate3()
 void
 SoTextureCoordinate3::initClass(void)
 {
-  SO_NODE_INTERNAL_INIT_CLASS(SoTextureCoordinate3, SO_FROM_INVENTOR_2_6|SO_FROM_COIN_2_0);
+  SO_NODE_INTERNAL_INIT_CLASS(SoTextureCoordinate3, SO_FROM_INVENTOR_2_6|SO_FROM_OBOL_2_0);
 
   SO_ENABLE(SoGLRenderAction, SoGLMultiTextureCoordinateElement);
   SO_ENABLE(SoCallbackAction, SoMultiTextureCoordinateElement);

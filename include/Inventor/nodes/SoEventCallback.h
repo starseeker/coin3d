@@ -1,5 +1,5 @@
-#ifndef COIN_SOEVENTCALLBACK_H
-#define COIN_SOEVENTCALLBACK_H
+#ifndef OBOL_SOEVENTCALLBACK_H
+#define OBOL_SOEVENTCALLBACK_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -36,10 +36,10 @@
 #include <Inventor/nodes/SoSubNode.h>
 #include <Inventor/lists/SbList.h>
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 // Added for Inventor compliance
 #include <Inventor/actions/SoHandleEventAction.h>
-#endif // !COIN_INTERNAL
+#endif // !OBOL_INTERNAL
 
 class SoEventCallback;
 class SoPath;
@@ -49,7 +49,7 @@ class SoHandleEventAction;
 
 typedef void SoEventCallbackCB(void * userdata, SoEventCallback * node);
 
-class COIN_DLL_API SoEventCallback : public SoNode {
+class OBOL_DLL_API SoEventCallback : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_HEADER(SoEventCallback);
@@ -106,4 +106,4 @@ private:
 
 };
 
-#endif // !COIN_SOEVENTCALLBACK_H
+#endif // !OBOL_SOEVENTCALLBACK_H

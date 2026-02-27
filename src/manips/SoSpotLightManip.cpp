@@ -91,9 +91,9 @@
 #include <Inventor/sensors/SoFieldSensor.h>
 #include <Inventor/SoNodeKitPath.h>
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 #include "nodes/SoSubNodeP.h"
 
@@ -188,7 +188,7 @@ SoSpotLightManip::getDragger(void)
     if (node->isOfType(SoDragger::getClassTypeId()))
       return (SoDragger*)node;
     else {
-#if COIN_DEBUG
+#if OBOL_DEBUG
       SoDebugError::post("SoSpotLightManip::getDragger",
                          "Child is not a dragger!");
 #endif // debug
@@ -208,7 +208,7 @@ SoSpotLightManip::replaceNode(SoPath * path)
   SoFullPath *fullpath = (SoFullPath*)path;
   SoNode *fulltail = fullpath->getTail();
   if (!fulltail->isOfType(SoSpotLight::getClassTypeId())) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::post("SoSpotLightManip::replaceNode",
                        "End of path is not an SoSpotLight");
 #endif // debug
@@ -234,7 +234,7 @@ SoSpotLightManip::replaceNode(SoPath * path)
     }
   }
   if (fullpath->getLength() < 2) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::post("SoSpotLightManip::replaceNode",
                        "Path is too short");
 #endif // debug
@@ -242,7 +242,7 @@ SoSpotLightManip::replaceNode(SoPath * path)
   }
   SoNode *parent = fullpath->getNodeFromTail(1);
   if (!parent->isOfType(SoGroup::getClassTypeId())) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::post("SoSpotLightManip::replaceNode",
                        "Parent node is not a group");
 #endif // debug
@@ -399,7 +399,7 @@ SoSpotLightManip::valueChangedCB(void * m, SoDragger * dragger)
   SbVec3f direction(0.0f, 0.0f, -1.0f);
   matrix.multDirMatrix(direction, direction);
   if (direction.normalize() == 0.0f) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::post("SoSpotLightManip::valueChangedCB",
                        "Invalid motion matrix.");
 #endif // debug

@@ -1,5 +1,5 @@
-#ifndef COIN_NAMEMAP_H
-#define COIN_NAMEMAP_H
+#ifndef OBOL_NAMEMAP_H
+#define OBOL_NAMEMAP_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,9 +37,9 @@
 
 /*************************************************************************/
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #error Only for internal use.
-#endif /* COIN_INTERNAL */
+#endif /* OBOL_INTERNAL */
 
 /*************************************************************************/
 
@@ -60,4 +60,4 @@ extern "C" {
 } /* extern "C" */
 #endif /* __cplusplus */
 
-#endif /* ! COIN_NAMEMAP_H */
+#endif /* ! OBOL_NAMEMAP_H */

@@ -1,5 +1,5 @@
-#ifndef COIN_SOBUTTONEVENT_H
-#define COIN_SOBUTTONEVENT_H
+#ifndef OBOL_SOBUTTONEVENT_H
+#define OBOL_SOBUTTONEVENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 
 class SbString;
 
-class COIN_DLL_API SoButtonEvent : public SoEvent {
+class OBOL_DLL_API SoButtonEvent : public SoEvent {
   typedef SoEvent inherited;
 
   SO_EVENT_HEADER();
@@ -62,4 +62,4 @@ private:
 
 }; // SoButtonEvent
 
-#endif // !COIN_SOBUTTONEVENT_H
+#endif // !OBOL_SOBUTTONEVENT_H

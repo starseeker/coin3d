@@ -1,5 +1,5 @@
-#ifndef COIN_SBVEC3FLIST_H
-#define COIN_SBVEC3FLIST_H
+#ifndef OBOL_SBVEC3FLIST_H
+#define OBOL_SBVEC3FLIST_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -36,7 +36,7 @@
 #include <Inventor/lists/SbPList.h>
 #include <Inventor/SbVec3f.h>
 
-class COIN_DLL_API SbVec3fList : public SbPList {
+class OBOL_DLL_API SbVec3fList : public SbPList {
 public:
   SbVec3fList(void) { }
   ~SbVec3fList();
@@ -56,4 +56,4 @@ public:
   }
 };
 
-#endif // !COIN_SBVEC3FLIST_H
+#endif // !OBOL_SBVEC3FLIST_H

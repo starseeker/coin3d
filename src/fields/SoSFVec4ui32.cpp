@@ -40,7 +40,7 @@
   need to store a single vector with four elements.
 
   \sa SbVec4ui32, SoMFVec4ui32
-  \COIN_CLASS_EXTENSION
+  \OBOL_CLASS_EXTENSION
   \since Coin 2.5
 */
 

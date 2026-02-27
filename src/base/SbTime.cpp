@@ -70,9 +70,9 @@
 #include <chrono>
 
 
-#ifndef COIN_WORKAROUND_NO_USING_STD_FUNCS
+#ifndef OBOL_WORKAROUND_NO_USING_STD_FUNCS
 using std::strlen;
-#endif // !COIN_WORKAROUND_NO_USING_STD_FUNCS
+#endif // !OBOL_WORKAROUND_NO_USING_STD_FUNCS
 
 // *************************************************************************
 
@@ -318,7 +318,7 @@ SbTime::getMsecValue(void) const
 
   // Check for overflow in the double->ulong cast at return.
   if (d > static_cast<double>(ULONG_MAX)) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     static SbBool first = TRUE;
     if (first) {
       SoDebugError::postWarning("SbTime::getMsecValue",
@@ -326,7 +326,7 @@ SbTime::getMsecValue(void) const
                                 "SbTime::getValue() instead");
       first = FALSE;
     }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
     // Wrap the value. This actually happens automatically on x86
     // Linux, MIPS IRIX, x86 MSWin etc when casting from a too large
@@ -378,13 +378,13 @@ SbTime::getMsecValue(void) const
 SbString
 SbTime::format(const char * const fmt) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (fmt==NULL) {
     SoDebugError::postWarning("SbTime::format",
                               "Format string is NULL.");
     return SbString("");
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   SbString str("");
   double dtmp;
@@ -472,10 +472,10 @@ SbTime::format(const char * const fmt) const
         break;
 
       default:
-#if COIN_DEBUG
+#if OBOL_DEBUG
         SoDebugError::postWarning("SbTime::format",
                                   "Unknown formatting char '%c'.", m);
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
         break;
       }
     }
@@ -581,13 +581,13 @@ SbTime::parsedate(const char * const date)
 
   // FIXME: accept datestrings conforming to ISO 8601. 20000331 mortene.
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (!date) {
     SoDebugError::postWarning("SbTime::parsedate",
                               "date string is NULL.");
     return FALSE;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   struct tm time;
   char months[12][4] = {
@@ -603,14 +603,14 @@ SbTime::parsedate(const char * const date)
   if ( dateptr < date ) return FALSE;
   if (dateptr[0] != 'y' && dateptr[1] == ',') { // RFC 822 / RFC 1123 format
     // FORMAT: Wkd, DD Mnth YYYY HH:MM:SS GMT
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
     SoDebugError::postInfo("SbTime::parseDate", "date format: RFC 822");
 #endif // debug
 
     dateptr += 2;
     while (*dateptr == ' ' || *dateptr == '\t') dateptr++;
     time.tm_mday = atoi(dateptr);
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
     SoDebugError::postInfo("SbTime::parseDate", "Day of month: %d",
                            time.tm_mday);
 #endif // debug
@@ -626,14 +626,14 @@ SbTime::parsedate(const char * const date)
       }
     }
     if (i==12) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
       SoDebugError::post("SbTime::parsedate", "Can't grok month name '%s'.",
                          SbString(dateptr).getSubString(0, 2).getString());
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
       return FALSE;
     }
 
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
     SoDebugError::postInfo("SbTime::parseDate", "Month: %d", time.tm_mon);
 #endif // debug
     while (*dateptr != ' ' && *dateptr != '\t' && *dateptr != '\0') dateptr++;
@@ -657,7 +657,7 @@ SbTime::parsedate(const char * const date)
     time.tm_isdst = 0;
   } else if (dateptr[1] == ',') { // RFC 850 / RFC 1036 format
     // FORMAT: Weekday, DD-Mnth-YY HH:MM:SS GMT
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
     SoDebugError::postInfo("SbTime::parseDate", "date format: RFC 850");
 #endif // debug
 
@@ -675,10 +675,10 @@ SbTime::parsedate(const char * const date)
       }
     }
     if (i==12) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
       SoDebugError::post("SbTime::parsedate", "Can't grok month name '%s'.",
                          SbString(dateptr).getSubString(0, 2).getString());
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
       return FALSE;
     }
 
@@ -706,7 +706,7 @@ SbTime::parsedate(const char * const date)
     time.tm_isdst = 0;
   } else { // assumed to be ANSI C's asctime() format
     // format: Wkdy Mnth  D HH:MM:SS YYYY
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
     SoDebugError::postInfo("SbTime::parseDate", "date format: asctime()");
 #endif // debug
 
@@ -722,10 +722,10 @@ SbTime::parsedate(const char * const date)
       }
     }
     if (i==12) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
       SoDebugError::post("SbTime::parsedate", "Can't grok month name '%s'.",
                          SbString(dateptr).getSubString(0, 2).getString());
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
       return FALSE;
     }
 
@@ -870,14 +870,14 @@ SbTime::operator *=(const double s)
 SbTime&
 SbTime::operator /=(const double s)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (s==0.0) {
     SoDebugError::postWarning("SbTime::operator/=",
                               "Argument is zero => Division by zero.");
     this->dtime /= s + SMALLEST_DOUBLE_TIMEUNIT;
     return *this;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   this->dtime /= s;
   return *this;
@@ -892,13 +892,13 @@ SbTime::operator /=(const double s)
 double
 SbTime::operator /(const SbTime & tm) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (tm.getValue()==0.0) {
     SoDebugError::postWarning("SbTime::operator/",
                               "Argument tm is zero => Division by zero.");
     return 1.0/SMALLEST_DOUBLE_TIMEUNIT;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   return this->getValue()/tm.getValue();
 }
@@ -909,13 +909,13 @@ SbTime::operator /(const SbTime & tm) const
 SbTime
 SbTime::operator %(const SbTime & tm) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (tm.getValue()==0.0) {
     SoDebugError::postWarning("SbTime::operator%",
                               "Argument tm is zero => Division by zero.");
     return SbTime(1.0/SMALLEST_DOUBLE_TIMEUNIT);
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   return SbTime(fmod(this->getValue(), tm.getValue()));
 }

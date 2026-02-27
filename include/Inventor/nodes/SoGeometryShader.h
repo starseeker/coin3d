@@ -1,5 +1,5 @@
-#ifndef COIN_SOGEOMETRYSHADER_H
-#define COIN_SOGEOMETRYSHADER_H
+#ifndef OBOL_SOGEOMETRYSHADER_H
+#define OBOL_SOGEOMETRYSHADER_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -39,7 +39,7 @@
 
 // *************************************************************************
 
-class COIN_DLL_API SoGeometryShader : public SoShaderObject {
+class OBOL_DLL_API SoGeometryShader : public SoShaderObject {
   typedef SoShaderObject inherited;
   SO_NODE_HEADER(SoGeometryShader);
 
@@ -70,4 +70,4 @@ public:
 
 };
 
-#endif /* ! COIN_SOGEOMETRYSHADER_H */
+#endif /* ! OBOL_SOGEOMETRYSHADER_H */

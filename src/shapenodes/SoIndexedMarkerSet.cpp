@@ -110,9 +110,9 @@
 #include <Inventor/bundles/SoMaterialBundle.h>
 #include <Inventor/SbViewVolume.h>
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 #include "nodes/SoSubNodeP.h"
 #include "rendering/SoGL.h"
@@ -234,7 +234,7 @@ SoIndexedMarkerSet::GLRender(SoGLRenderAction * action)
     int32_t idx = cindices[i];
 
     int midx = i;
-#if COIN_DEBUG
+#if OBOL_DEBUG
       if (midx < 0 || midx > this->markerIndex.getNum() - 1) {
         static SbBool firsterror = TRUE;
         if (firsterror) {
@@ -247,7 +247,7 @@ SoIndexedMarkerSet::GLRender(SoGLRenderAction * action)
         // next index.
         midx = this->markerIndex.getNum() - 1;
       }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
     int marker = this->markerIndex[midx];
     if (marker == SoMarkerSet::NONE) { continue; }//no marker to render

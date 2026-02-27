@@ -48,7 +48,7 @@
   \image html transparencytype.png "Rendering of Different Transparency Modes"
   </center>
 
-  \COIN_CLASS_EXTENSION
+  \OBOL_CLASS_EXTENSION
 
   <b>FILE FORMAT/DEFAULTS:</b>
   \code

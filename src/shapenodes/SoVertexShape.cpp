@@ -135,9 +135,9 @@ SoVertexShape::initClass(void)
 {
   SO_NODE_INTERNAL_INIT_ABSTRACT_CLASS(SoVertexShape, SO_FROM_INVENTOR_1);
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   SoVertexShapeP::normalcachemutex = new SbRWMutex(SbRWMutex::READ_PRECEDENCE);
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 
   coin_atexit((coin_atexit_f *)SoVertexShapeP::cleanup, CC_ATEXIT_NORMAL);
 }
@@ -186,7 +186,7 @@ SoVertexShape::notify(SoNotList * nl)
 
   Default method returns \c FALSE.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 */
 SbBool
 SoVertexShape::generateDefaultNormals(SoState *, SoNormalBundle *)
@@ -205,7 +205,7 @@ SoVertexShape::generateDefaultNormals(SoState *, SoNormalBundle *)
 
   Default method just returns \c FALSE.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 */
 SbBool
 SoVertexShape::generateDefaultNormals(SoState * /* state */,
@@ -265,7 +265,7 @@ SoVertexShape::getNormalCache(void) const
   read locked, and the caller should call readUnlockNormalCache()
   when the normals in the cache are no longer needed.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */
@@ -338,7 +338,7 @@ SoVertexShape::write(SoWriteAction * action)
   
   It is also possible to use generateAndReadLockNormalCache().
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \sa readUnlockNormalCache()
   \since Coin 2.0

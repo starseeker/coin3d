@@ -1,5 +1,5 @@
-#ifndef COIN_SOLOCALBBOXMATRIXELEMENT_H
-#define COIN_SOLOCALBBOXMATRIXELEMENT_H
+#ifndef OBOL_SOLOCALBBOXMATRIXELEMENT_H
+#define OBOL_SOLOCALBBOXMATRIXELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/elements/SoModelMatrixElement.h>
 
-class COIN_DLL_API SoLocalBBoxMatrixElement : public SoElement {
+class OBOL_DLL_API SoLocalBBoxMatrixElement : public SoElement {
   typedef SoElement inherited;
 
   SO_ELEMENT_HEADER(SoLocalBBoxMatrixElement);
@@ -77,4 +77,4 @@ private:
 
 };
 
-#endif // !COIN_SOLOCALBBOXMATRIXELEMENT_H
+#endif // !OBOL_SOLOCALBBOXMATRIXELEMENT_H

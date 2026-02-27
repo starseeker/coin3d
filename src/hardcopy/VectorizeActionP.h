@@ -1,5 +1,5 @@
-#ifndef COIN_SOVECTORIZEACTIONP_H
-#define COIN_SOVECTORIZEACTIONP_H
+#ifndef OBOL_SOVECTORIZEACTIONP_H
+#define OBOL_SOVECTORIZEACTIONP_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -269,4 +269,4 @@ from_mm(const float val, const SoVectorizeAction::DimensionUnit unit)
   }
 }
 
-#endif // COIN_SOVECTORIZEACTIONP_H
+#endif // OBOL_SOVECTORIZEACTIONP_H

@@ -1,5 +1,5 @@
-#ifndef COIN_SBHEAP_H
-#define COIN_SBHEAP_H
+#ifndef OBOL_SBHEAP_H
+#define OBOL_SBHEAP_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -44,7 +44,7 @@ typedef struct
   void (*set_index_func)(void*, int);
 } SbHeapFuncs;
 
-class COIN_DLL_API SbHeap {
+class OBOL_DLL_API SbHeap {
 public:
   SbHeap(const SbHeapFuncs &SbHeapFuncs,
          const int initsize = 1024);
@@ -74,4 +74,4 @@ private:
   void heapify(const int idx);
 };
 
-#endif // !COIN_SBHEAP_H
+#endif // !OBOL_SBHEAP_H

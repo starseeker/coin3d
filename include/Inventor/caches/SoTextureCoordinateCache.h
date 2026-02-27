@@ -1,5 +1,5 @@
-#ifndef COIN_SOTEXTURECOORDINATECACHE_H
-#define COIN_SOTEXTURECOORDINATECACHE_H
+#ifndef OBOL_SOTEXTURECOORDINATECACHE_H
+#define OBOL_SOTEXTURECOORDINATECACHE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -40,7 +40,7 @@ class SbVec3f;
 class SbVec2f;
 class SoTextureCoordinateCacheP;
 
-class COIN_DLL_API SoTextureCoordinateCache : public SoCache {
+class OBOL_DLL_API SoTextureCoordinateCache : public SoCache {
   typedef SoCache inherited;
 
 public:
@@ -58,4 +58,4 @@ private:
   SoTextureCoordinateCacheP * pimpl;
 };
 
-#endif // !COIN_SOTEXTURECOORDINATECACHE_H
+#endif // !OBOL_SOTEXTURECOORDINATECACHE_H

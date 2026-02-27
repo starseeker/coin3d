@@ -1,5 +1,5 @@
-#ifndef COIN_SOROTATESPHERICALDRAGGER_H
-#define COIN_SOROTATESPHERICALDRAGGER_H
+#ifndef OBOL_SOROTATESPHERICALDRAGGER_H
+#define OBOL_SOROTATESPHERICALDRAGGER_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -44,7 +44,7 @@ class SoFieldSensor;
 class SbSphereProjector;
 class SoRotateSphericalDraggerP;
 
-class COIN_DLL_API SoRotateSphericalDragger : public SoDragger {
+class OBOL_DLL_API SoRotateSphericalDragger : public SoDragger {
   typedef SoDragger inherited;
 
   SO_KIT_HEADER(SoRotateSphericalDragger);
@@ -95,4 +95,4 @@ private:
   SoRotateSphericalDragger & operator = (const SoRotateSphericalDragger & rhs);
 }; // SoRotateSphericalDragger
 
-#endif // !COIN_SOROTATESPHERICALDRAGGER_H
+#endif // !OBOL_SOROTATESPHERICALDRAGGER_H

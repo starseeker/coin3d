@@ -44,22 +44,22 @@
 #include <Inventor/fields/SoField.h>
 #include <Inventor/fields/SoFieldContainer.h>
 #include <Inventor/sensors/SoDataSensor.h>
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 #include "config.h"
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
 #include "threads/recmutexp.h"
 // we need this lock to avoid that auditors are added/removed by one
 // thread while another thread is notifying
 #define NOTIFY_LOCK (void) cc_recmutex_internal_notify_lock()
 #define NOTIFY_UNLOCK (void) cc_recmutex_internal_notify_unlock()
-#else // COIN_THREADSAFE
+#else // OBOL_THREADSAFE
 #define NOTIFY_LOCK
 #define NOTIFY_UNLOCK
-#endif // !COIN_THREADSAFE
+#endif // !OBOL_THREADSAFE
 
 /*!
   Default constructor.
@@ -228,7 +228,7 @@ SoAuditorList::doNotify(SoNotList * l, const void * auditor, const SoNotRec::Typ
   case SoNotRec::SENSOR:
     {
       SoDataSensor * obj = (SoDataSensor *)auditor;
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
       SoDebugError::postInfo("SoAuditorList::notify",
                              "notify and schedule sensor: %p", obj);
 #endif // debug

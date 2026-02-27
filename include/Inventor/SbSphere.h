@@ -1,5 +1,5 @@
-#ifndef COIN_SBSPHERE_H
-#define COIN_SBSPHERE_H
+#ifndef OBOL_SBSPHERE_H
+#define OBOL_SBSPHERE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -39,7 +39,7 @@
 class SbLine;
 class SbBox3f;
 
-class COIN_DLL_API SbSphere {
+class OBOL_DLL_API SbSphere {
 public:
   SbSphere(void);
   SbSphere(const SbVec3f & center, const float radius);
@@ -60,4 +60,4 @@ private:
   float radius;
 };
 
-#endif // !COIN_SBSPHERE_H
+#endif // !OBOL_SBSPHERE_H

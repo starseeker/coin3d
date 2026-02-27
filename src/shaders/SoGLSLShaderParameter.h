@@ -1,5 +1,5 @@
-#ifndef COIN_SOGLSLSHADERPARAMETER_H
-#define COIN_SOGLSLSHADERPARAMETER_H
+#ifndef OBOL_SOGLSLSHADERPARAMETER_H
+#define OBOL_SOGLSLSHADERPARAMETER_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,7 +33,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #error this is a private header file
 #endif
 
@@ -93,4 +93,4 @@ private:
                  GLenum type, int * num = NULL);
 };
 
-#endif /* ! COIN_SOGLSLSHADERPARAMETER_H */
+#endif /* ! OBOL_SOGLSLSHADERPARAMETER_H */

@@ -160,13 +160,13 @@
 #include <Inventor/elements/SoCacheElement.h>
 #include <Inventor/system/gl.h>
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
 #include <Inventor/threads/SbMutex.h>
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 #include "nodes/SoSubNodeP.h"
 #include "caches/SoGlyphCache.h"
@@ -277,24 +277,24 @@ public:
   SbFont * font;
 
   void lock(void) {
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
     this->mutex.lock();
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
   }
   void unlock(void) {
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
     this->mutex.unlock();
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
   }
 private:
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   // FIXME: a mutex for every instance seems a bit excessive,
   // especially since Microsoft Windows might have rather strict limits on the
   // total amount of mutex resources a process (or even a user) can
   // allocate. so consider making this a class-wide instance instead.
   // -mortene.
   SbMutex mutex;
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
   SoText3 * master;
 };
 
@@ -451,9 +451,9 @@ SoText3::computeBBox(SoAction * action, SbBox3f & box, SbVec3f & center)
   know if you need this method for anything, and we'll implement it.
 */
 SbBox3f
-SoText3::getCharacterBounds(SoState * COIN_UNUSED_ARG(state), int COIN_UNUSED_ARG(stringindex), int COIN_UNUSED_ARG(charindex))
+SoText3::getCharacterBounds(SoState * OBOL_UNUSED_ARG(state), int OBOL_UNUSED_ARG(stringindex), int OBOL_UNUSED_ARG(charindex))
 {
-  COIN_OBSOLETED();
+  OBOL_OBSOLETED();
   return SbBox3f();
 }
 
@@ -475,12 +475,12 @@ SoText3::GLRender(SoGLRenderAction * action)
     const SbBool outlinepresence = state->isElementEnabled(stackidx);
 
     if (outlinepresence && SoTextOutlineEnabledElement::get(state)) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
       SoDebugError::postWarning("SoText3::GLRender",
                                 "Support for rendering SoText3 nodes in outline "
                                 "(i.e. heeding the SoTextOutlineEnabledElement) "
                                 "not yet implemented.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
       warned = TRUE;
     }
   }
@@ -564,11 +564,11 @@ SoText3::generatePrimitives(SoAction * action)
 
 // doc in parent
 SoDetail *
-SoText3::createTriangleDetail(SoRayPickAction * COIN_UNUSED_ARG(action),
+SoText3::createTriangleDetail(SoRayPickAction * OBOL_UNUSED_ARG(action),
                               const SoPrimitiveVertex * v1,
-                              const SoPrimitiveVertex * COIN_UNUSED_ARG(v2),
-                              const SoPrimitiveVertex * COIN_UNUSED_ARG(v3),
-                              SoPickedPoint * COIN_UNUSED_ARG(pp))
+                              const SoPrimitiveVertex * OBOL_UNUSED_ARG(v2),
+                              const SoPrimitiveVertex * OBOL_UNUSED_ARG(v3),
+                              SoPickedPoint * OBOL_UNUSED_ARG(pp))
 {
   // generatePrimitives() places text details inside each primitive vertex
   assert(v1->getDetail());
@@ -608,10 +608,10 @@ SoText3P::render(SoState * state, const cc_font_specification * fontspec,
     static SbBool first = TRUE;
     if (first) {
       first = FALSE;
-#if COIN_DEBUG
+#if OBOL_DEBUG
       SoDebugError::postWarning("SoText3::GLRender",
                                 "3D-textures not supported for this node type yet.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     }
   }
 
@@ -989,13 +989,13 @@ SoText3P::render(SoState * state, const cc_font_specification * fontspec,
 
 // render text geometry
 void
-SoText3::render(SoState * COIN_UNUSED_ARG(state), unsigned int COIN_UNUSED_ARG(part))
+SoText3::render(SoState * OBOL_UNUSED_ARG(state), unsigned int OBOL_UNUSED_ARG(part))
 {
   assert(FALSE && "obsoleted");
 }
 
 void
-SoText3::generate(SoAction * COIN_UNUSED_ARG(action), unsigned int COIN_UNUSED_ARG(part))
+SoText3::generate(SoAction * OBOL_UNUSED_ARG(action), unsigned int OBOL_UNUSED_ARG(part))
 {
   assert(FALSE && "obsoleted");
 }
@@ -1051,10 +1051,10 @@ SoText3P::generate(SoAction * action, const cc_font_specification * fontspec,
     static SbBool first = TRUE;
     if (first) {
       first = FALSE;
-#if COIN_DEBUG
+#if OBOL_DEBUG
       SoDebugError::postWarning("SoText3::GLRender",
                                 "3D-textures not supported for this node type yet.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     }
   }
 

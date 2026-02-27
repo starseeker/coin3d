@@ -55,7 +55,7 @@
 
 #include <Inventor/engines/SoOutputData.h>
 
-#include "config.h" // COIN_STUB()
+#include "config.h" // OBOL_STUB()
 #include "SbBasicP.h"
 
 #include <Inventor/engines/SoEngine.h>
@@ -66,9 +66,9 @@
 #include <Inventor/SoOutput.h>
 #include <Inventor/SoType.h>
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 #ifndef DOXYGEN_SKIP_THIS // Don't document internal classes.
 
 class SoOutputDataEntry {
@@ -209,9 +209,9 @@ SoEngineOutputData::getType(int index) const
   FIXME: doc
 */
 SbBool
-SoEngineOutputData::readDescriptions(SoInput * COIN_UNUSED_ARG(in), SoEngine * COIN_UNUSED_ARG(engine)) const
+SoEngineOutputData::readDescriptions(SoInput * OBOL_UNUSED_ARG(in), SoEngine * OBOL_UNUSED_ARG(engine)) const
 {
-  COIN_STUB();
+  OBOL_STUB();
   return FALSE;
 }
 
@@ -219,11 +219,11 @@ SoEngineOutputData::readDescriptions(SoInput * COIN_UNUSED_ARG(in), SoEngine * C
   FIXME: doc.
 */
 void
-SoEngineOutputData::writeDescriptions(SoOutput * COIN_UNUSED_ARG(out),
-                                  SoEngine *COIN_UNUSED_ARG(engine)
+SoEngineOutputData::writeDescriptions(SoOutput * OBOL_UNUSED_ARG(out),
+                                  SoEngine *OBOL_UNUSED_ARG(engine)
                                   ) const
 {
-  COIN_STUB();
+  OBOL_STUB();
 }
 
 /*!
@@ -266,7 +266,7 @@ SoEngineOutputData::addOutputInternal(const SoFieldContainer * base, const char 
     reinterpret_cast<const char *>(base);
   this->outputlist.append(new SoOutputDataEntry(name, type, range));
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   // FIXME: this is an ugly design flaw, which doesn't seem easily
   // resolvable while still keeping compatibility. 20000915 mortene.
   if (type.isDerivedFrom(SoType::fromName("SFEnum")) ||
@@ -283,7 +283,7 @@ SoEngineOutputData::addOutputInternal(const SoFieldContainer * base, const char 
                                 "This is a design flaw.");
     }
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }
 
 // does the actual job of returning an engine output

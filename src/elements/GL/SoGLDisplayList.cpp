@@ -63,9 +63,9 @@
 #include "rendering/SoGL.h"
 #include "config.h"
 
-#ifndef COIN_WORKAROUND_NO_USING_STD_FUNCS
+#ifndef OBOL_WORKAROUND_NO_USING_STD_FUNCS
 using std::strcmp;
-#endif // !COIN_WORKAROUND_NO_USING_STD_FUNCS
+#endif // !OBOL_WORKAROUND_NO_USING_STD_FUNCS
 
 class SoGLDisplayListP {
  public:
@@ -97,63 +97,9 @@ SoGLDisplayList::SoGLDisplayList(SoState * state, Type type, int allocnum,
   PRIVATE(this)->mipmap = mipmaptexobj;
   PRIVATE(this)->texturetarget = 0;
 
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoGLDisplayList::SoGLDisplayList", "%p", this);
 #endif // debug
-
-  // Check for known buggy OpenGL driver.
-  const char * versionstr = (const char *)glGetString(GL_VERSION);
-  assert(versionstr && "glGetString() returned 0 -- no valid GL context?");
-  if (strcmp(versionstr, "1.3.1 NVIDIA 28.02") == 0) {
-    // (From NVidia's changelog, it looks like the problem we've been
-    // seeing with the 28.02 driver and displaylists *might* have been
-    // fixed for the next version (28.80)).
-
-    // Here's an Inventor file which can be used to reproduce the bug:
-    // -----8<----- [snip] ----------8<----- [snip] ----------8<------
-    // #Inventor V2.1 ascii
-    //
-    // # This dead simple scene graph causes the examiner viewer to go blank
-    // # on a Linux box with GeForce2 card and version 1.3.1 28.02 of the
-    // # NVidia OpenGL drivers. The problem is gone for version 1.3.1 29.60
-    // # of the drivers, so this seems _very_ much like a driver bug with
-    // # OpenGL display lists.
-    // #
-    // # The bug is also present for SGI Inventor.
-    // #
-    // # <mortene@sim.no>.
-    //
-    // Separator {
-    //    renderCaching ON
-    //    ShapeHints {
-    //       vertexOrdering COUNTERCLOCKWISE
-    //       faceType UNKNOWN_FACE_TYPE
-    //    }
-    //    Cube { }
-    // }
-    // -----8<----- [snip] ----------8<----- [snip] ----------8<------
-
-
-    // FIXME: should be more robust, and rather just disable the use
-    // of GL displaylists (but still issuing an
-    // SoDebugError::postWarning()). This should be straightforward to
-    // do when the FIXME below on better handling of the case where we
-    // are not able to allocate displaylist indices is taken care
-    // of. 20020911 mortene.
-
-    static SbBool first = TRUE;
-    if (first) {
-      SoDebugError::post("SoGLDisplayList::SoGLDisplayList",
-                         "This OpenGL driver ('%s') is known to contain serious "
-                         "bugs in GL displaylist handling, and we strongly urge "
-                         "you to upgrade! As long as you are using this driver, "
-                         "GL rendering is likely to cause all sorts of nasty "
-                         "problems.",
-                         versionstr);
-      first = FALSE;
-    }
-  }
-
 
   // Reserve displaylist IDs.
 
@@ -182,7 +128,7 @@ SoGLDisplayList::SoGLDisplayList(SoState * state, Type type, int allocnum,
       // FIXME: be more robust in handling this -- the rendering will
       // gradually go bonkers after we hit this problem. 20020619 mortene.
     }
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
     SoDebugError::postInfo("SoGLDisplayList::SoGLDisplayList",
                            "firstindex==%d", PRIVATE(this)->firstindex);
 #endif // debug
@@ -192,7 +138,7 @@ SoGLDisplayList::SoGLDisplayList(SoState * state, Type type, int allocnum,
 // private destructor. Use ref()/unref()
 SoGLDisplayList::~SoGLDisplayList()
 {
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoGLDisplayList::~SoGLDisplayList", "%p", this);
 #endif // debug
 
@@ -261,7 +207,7 @@ SoGLDisplayList::open(SoState * state, int index)
   Close this display list/texture object.
 */
 void
-SoGLDisplayList::close(SoState * COIN_UNUSED_ARG(state))
+SoGLDisplayList::close(SoState * OBOL_UNUSED_ARG(state))
 {
   if (PRIVATE(this)->type == DISPLAY_LIST) {
     glEndList();
@@ -389,12 +335,12 @@ SoGLDisplayList::getTextureTarget(void) const
 /*!
   \COININTERNAL
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */
 void
-SoGLDisplayList::bindTexture(SoState * COIN_UNUSED_ARG(state))
+SoGLDisplayList::bindTexture(SoState * OBOL_UNUSED_ARG(state))
 {
   const SoGLContext * glw = SoGLContext_instance(PRIVATE(this)->context);
   assert(SoGLContext_has_texture_objects(glw));

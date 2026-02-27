@@ -1,5 +1,5 @@
-#ifndef COIN_SOCAMERA_H
-#define COIN_SOCAMERA_H
+#ifndef OBOL_SOCAMERA_H
+#define OBOL_SOCAMERA_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -61,7 +61,7 @@ class SoPath;
 
 class SoCameraP;
 
-class COIN_DLL_API SoCamera : public SoNode {
+class OBOL_DLL_API SoCamera : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_ABSTRACT_HEADER(SoCamera);
@@ -151,4 +151,4 @@ private:
   friend class SoCameraP;
 };
 
-#endif // !COIN_SOCAMERA_H
+#endif // !OBOL_SOCAMERA_H

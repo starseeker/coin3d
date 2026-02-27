@@ -1,5 +1,5 @@
-#ifndef COIN_SOSFMATRIX_H
-#define COIN_SOSFMATRIX_H
+#ifndef OBOL_SOSFMATRIX_H
+#define OBOL_SOSFMATRIX_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/fields/SoSubField.h>
 #include <Inventor/SbMatrix.h>
 
-class COIN_DLL_API SoSFMatrix : public SoSField {
+class OBOL_DLL_API SoSFMatrix : public SoSField {
   typedef SoSField inherited;
 
   SO_SFIELD_HEADER(SoSFMatrix, SbMatrix, const SbMatrix &);
@@ -55,4 +55,4 @@ public:
                 const float a43, const float a44);
 };
 
-#endif // !COIN_SOSFMATRIX_H
+#endif // !OBOL_SOSFMATRIX_H

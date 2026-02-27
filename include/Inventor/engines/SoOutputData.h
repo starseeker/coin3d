@@ -30,8 +30,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_OUTPUTDATA_H
-#define COIN_OUTPUTDATA_H
+#ifndef OBOL_OUTPUTDATA_H
+#define OBOL_OUTPUTDATA_H
 
 #include <Inventor/SbBasic.h>
 #include <Inventor/lists/SbList.h>
@@ -46,7 +46,7 @@ class SoOutput;
 class SoOutputDataEntry;
 class SoType;
 
-class COIN_DLL_API SoEngineOutputData {
+class OBOL_DLL_API SoEngineOutputData {
 public:
   SoEngineOutputData(void);
   SoEngineOutputData(const SoEngineOutputData * data);
@@ -78,4 +78,4 @@ private:
   SbList <SoOutputDataEntry*> outputlist;
 };
 
-#endif // !COIN_OUTPUTDATA_H
+#endif // !OBOL_OUTPUTDATA_H

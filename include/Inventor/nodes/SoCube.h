@@ -1,5 +1,5 @@
-#ifndef COIN_SOCUBE_H
-#define COIN_SOCUBE_H
+#ifndef OBOL_SOCUBE_H
+#define OBOL_SOCUBE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -39,7 +39,7 @@
 
 class SoIndexedFaceSet;
 
-class COIN_DLL_API SoCube : public SoShape {
+class OBOL_DLL_API SoCube : public SoShape {
   typedef SoShape inherited;
 
   SO_NODE_HEADER(SoCube);
@@ -66,4 +66,4 @@ private:
   void getHalfSize(float & w, float & h, float & d);
 };
 
-#endif // !COIN_SOCUBE_H
+#endif // !OBOL_SOCUBE_H

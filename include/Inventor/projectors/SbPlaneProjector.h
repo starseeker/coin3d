@@ -1,5 +1,5 @@
-#ifndef COIN_SBPLANEPROJECTOR_H
-#define COIN_SBPLANEPROJECTOR_H
+#ifndef OBOL_SBPLANEPROJECTOR_H
+#define OBOL_SBPLANEPROJECTOR_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/SbVec3f.h>
 #include <Inventor/SbPlane.h>
 
-class COIN_DLL_API SbPlaneProjector : public SbProjector {
+class OBOL_DLL_API SbPlaneProjector : public SbProjector {
   typedef SbProjector inherited;
 
 public:
@@ -68,4 +68,4 @@ protected:
   SbVec3f lastPoint;
 };
 
-#endif // !COIN_SBPLANEPROJECTOR_H
+#endif // !OBOL_SBPLANEPROJECTOR_H

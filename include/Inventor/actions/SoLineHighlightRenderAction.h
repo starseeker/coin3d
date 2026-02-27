@@ -1,5 +1,5 @@
-#ifndef COIN_SOLINEHIGHLIGHTRENDERACTION_H
-#define COIN_SOLINEHIGHLIGHTRENDERACTION_H
+#ifndef OBOL_SOLINEHIGHLIGHTRENDERACTION_H
+#define OBOL_SOLINEHIGHLIGHTRENDERACTION_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -38,7 +38,7 @@
 
 class SoLineHighlightRenderActionP;
 
-class COIN_DLL_API SoLineHighlightRenderAction : public SoGLRenderAction {
+class OBOL_DLL_API SoLineHighlightRenderAction : public SoGLRenderAction {
   typedef SoGLRenderAction inherited;
 
   SO_ACTION_HEADER(SoLineHighlightRenderAction);
@@ -80,4 +80,4 @@ private:
   SoLineHighlightRenderAction & operator = (const SoLineHighlightRenderAction & rhs);
 }; // SoLineHighlightRenderAction
 
-#endif // !COIN_SOLINEHIGHLIGHTRENDERACTION_H
+#endif // !OBOL_SOLINEHIGHLIGHTRENDERACTION_H

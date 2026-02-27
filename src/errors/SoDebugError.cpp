@@ -57,7 +57,7 @@
 
 
   Coin supports an environment variable to set conditional
-  breakpoints.  The COIN_DEBUG_BREAK environment variable can be set
+  breakpoints.  The OBOL_DEBUG_BREAK environment variable can be set
   to any number of functions in the form of a list separated by commas
   or spaces.  The function names must be given as
   "classname::functionname" (i.e. without return type, parenthesis or
@@ -89,13 +89,13 @@
 #include "config.h"
 #include "CoinTidbits.h"
 
-#ifndef COIN_WORKAROUND_NO_USING_STD_FUNCS
+#ifndef OBOL_WORKAROUND_NO_USING_STD_FUNCS
 using std::strcmp;
 using std::strlen;
 using std::strcpy;
 using std::strchr;
 using std::memcpy;
-#endif // !COIN_WORKAROUND_NO_USING_STD_FUNCS
+#endif // !OBOL_WORKAROUND_NO_USING_STD_FUNCS
 
 #ifdef HAVE_UNISTD_H
   #include <sys/types.h>
@@ -105,17 +105,17 @@ using std::memcpy;
 #if defined(_MSC_VER)
   /* C++17 requires MSVC 2017+, which has both <intrin.h> and __debugbreak() */
   #include <intrin.h>
-  #define COIN_DEBUGGER_BREAK(x) __debugbreak()
+  #define OBOL_DEBUGGER_BREAK(x) __debugbreak()
 #else
   #if defined (MINGW32) || defined (CYGWIN)
     #include <windows.h>
-    #define COIN_DEBUGGER_BREAK(x) ::DebugBreak()
+    #define OBOL_DEBUGGER_BREAK(x) ::DebugBreak()
   #else
     #if defined (_POSIX_VERSION)
       #include <signal.h>
-      #define COIN_DEBUGGER_BREAK(x) ::raise(SIGINT)
+      #define OBOL_DEBUGGER_BREAK(x) ::raise(SIGINT)
     #else
-      #define COIN_DEBUGGER_BREAK(x) assert(0 && (x))
+      #define OBOL_DEBUGGER_BREAK(x) assert(0 && (x))
     #endif
   #endif
 #endif
@@ -128,7 +128,7 @@ void * SoDebugError::callbackData = NULL;
 
 // *************************************************************************
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 
 // variables for runtime breakpoints
 static int num_breakpoints = 0;
@@ -149,7 +149,7 @@ debug_break_cleanup(void)
 
 } // extern "C"
 
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 /*!
   \enum SoDebugError::Severity
@@ -184,8 +184,8 @@ SoDebugError::initClass(void)
   // FIXME: the following "tokenizer" code could perhaps be factored
   // out and moved to e.g. SbStringList? 20030820 mortene.
 
-#if COIN_DEBUG
-  auto env = CoinInternal::getEnvironmentVariable("COIN_DEBUG_BREAK");
+#if OBOL_DEBUG
+  auto env = CoinInternal::getEnvironmentVariable("OBOL_DEBUG_BREAK");
   if (env.has_value()) {
     num_breakpoints = 1;
     const char * ptr = env->c_str();
@@ -221,12 +221,12 @@ SoDebugError::initClass(void)
     num_breakpoints = i; // just in case parsing failed for some reason
     delete[] cpy;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }
 
 void
 SoDebugError::callbackForwarder(const void * error_ptr,
-                            void * COIN_UNUSED_ARG(data)
+                            void * OBOL_UNUSED_ARG(data)
                             )
 {
   SoDebugError wrappederr;
@@ -324,19 +324,19 @@ SoDebugError::getSeverity(void) const
   return this->severity;
 }
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 
 static inline void
 check_breakpoints(const char * source)
 {
   for (int i = 0; i < num_breakpoints; i++) {
     if (strcmp(breakpoints[i], source) == 0) {
-      COIN_DEBUGGER_BREAK("Coin debug break");
+      OBOL_DEBUGGER_BREAK("Coin debug break");
     }
   }
 }
 
-#else // COIN_DEBUG
+#else // OBOL_DEBUG
 
 static inline void
 check_breakpoints(const char *)
@@ -344,7 +344,7 @@ check_breakpoints(const char *)
   // should be empty
 }
 
-#endif // ! COIN_DEBUG
+#endif // ! OBOL_DEBUG
 
 
 void
@@ -422,10 +422,10 @@ SoDebugError::getHandler(void * & data) const
 }
 
 #undef SODEBUGERROR_POST
-#undef COIN_DEBUGGER_BREAK
+#undef OBOL_DEBUGGER_BREAK
 
 // Provide the Inventor-style API for external builds (wraps SoDebugError::post)
-// This implements SbDebugError_post declared in SbBasic.h for non-COIN_INTERNAL builds.
+// This implements SbDebugError_post declared in SbBasic.h for non-OBOL_INTERNAL builds.
 void
 SbDebugError_post(const char * source, const char * format, ...)
 {

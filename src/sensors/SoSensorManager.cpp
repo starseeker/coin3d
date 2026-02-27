@@ -101,9 +101,9 @@
 #include <Inventor/SbTime.h>
 #include <Inventor/errors/SoDebugError.h>
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
 #include <Inventor/threads/SbMutex.h>
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 
 #include "misc/SbHash.h"
 
@@ -166,12 +166,12 @@ public:
   uint32_t alive;
   static void assertAlive(SoSensorManagerP * that);
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   SbMutex timermutex;
   SbMutex delaymutex;
   SbMutex immediatemutex;
   SbMutex reschedulemutex;
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 };
 
 // The reason this is useful to keep around is that it is good for
@@ -193,7 +193,7 @@ SoSensorManagerP::assertAlive(SoSensorManagerP * that)
   }
 }
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
 
 #define LOCK_TIMER_QUEUE(_mgr_) \
   _mgr_->pimpl->timermutex.lock();
@@ -219,7 +219,7 @@ SoSensorManagerP::assertAlive(SoSensorManagerP * that)
 #define UNLOCK_RESCHEDULE_LIST(_mgr_) \
   _mgr_->pimpl->immediatemutex.unlock();
 
-#else // COIN_THREADSAFE
+#else // OBOL_THREADSAFE
 
 #define LOCK_TIMER_QUEUE(_mgr_)
 #define UNLOCK_TIMER_QUEUE(_mgr_)
@@ -230,7 +230,7 @@ SoSensorManagerP::assertAlive(SoSensorManagerP * that)
 #define LOCK_RESCHEDULE_LIST(_mgr_)
 #define UNLOCK_RESCHEDULE_LIST(_mgr_)
 
-#endif // ! COIN_THREADSAFE
+#endif // ! OBOL_THREADSAFE
 
 #define PRIVATE(obj) ((obj)->pimpl)
 
@@ -407,12 +407,12 @@ SoSensorManager::removeDelaySensor(SoDelayQueueSensor * entry)
 
   if (idx != -1) this->notifyChanged();
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (idx == -1) {
     SoDebugError::postWarning("SoSensorManager::removeDelaySensor",
                               "trying to remove element not in list");
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }
 
 /*!
@@ -432,10 +432,10 @@ SoSensorManager::removeTimerSensor(SoTimerQueueSensor * entry)
   }
   else {
     UNLOCK_TIMER_QUEUE(this);
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SoSensorManager::removeTimerSensor",
                               "trying to remove element not in list");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   }
 }
 
@@ -703,10 +703,10 @@ SoSensorManager::processImmediateQueue(void)
     if (triggercnt > 10000) break;
   }
   if (PRIVATE(this)->immediatequeue.getLength()) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SoSensorManager::processImmediateQueue",
                               "Infinite loop detected. Breaking out.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   }
   UNLOCK_IMMEDIATE_QUEUE(this);
 
@@ -803,13 +803,13 @@ SoSensorManager::setDelaySensorTimeout(const SbTime & t)
 {
   SoSensorManagerP::assertAlive(PRIVATE(this));
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if(t < SbTime::zero()) {
     SoDebugError::postWarning("SoDB::setDelaySensorTimeout",
                               "Tried to set negative interval.");
     return;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   PRIVATE(this)->delaysensortimeout = t;
 
@@ -878,8 +878,8 @@ SoSensorManager::notifyChanged(void)
   NOTE: THIS METHOD IS OBSOLETED. DON'T USE IT.
 */
 int
-SoSensorManager::doSelect(int COIN_UNUSED_ARG(nfds), void * COIN_UNUSED_ARG(readfds), void * COIN_UNUSED_ARG(writefds),
-                          void * COIN_UNUSED_ARG(exceptfds), struct timeval * COIN_UNUSED_ARG(usertimeout))
+SoSensorManager::doSelect(int OBOL_UNUSED_ARG(nfds), void * OBOL_UNUSED_ARG(readfds), void * OBOL_UNUSED_ARG(writefds),
+                          void * OBOL_UNUSED_ARG(exceptfds), struct timeval * OBOL_UNUSED_ARG(usertimeout))
 {
   assert(FALSE && "obsoleted method");
   return 0;

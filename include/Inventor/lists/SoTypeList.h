@@ -1,5 +1,5 @@
-#ifndef COIN_SOTYPELIST_H
-#define COIN_SOTYPELIST_H
+#ifndef OBOL_SOTYPELIST_H
+#define OBOL_SOTYPELIST_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -36,7 +36,7 @@
 #include <Inventor/lists/SbPList.h>
 #include <Inventor/SoType.h>
 
-class COIN_DLL_API SoTypeList : public SbPList {
+class OBOL_DLL_API SoTypeList : public SbPList {
 public:
   SoTypeList(void) : SbPList() { }
   SoTypeList(const int sizehint) : SbPList(sizehint) { }
@@ -49,4 +49,4 @@ public:
   void set(const int index, const SoType item);
 };
 
-#endif // !COIN_SOTYPELIST_H
+#endif // !OBOL_SOTYPELIST_H

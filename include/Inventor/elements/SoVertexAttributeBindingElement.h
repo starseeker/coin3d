@@ -1,5 +1,5 @@
-#ifndef COIN_SOVERTEXATTRIBUTEBINDINGELEMENT_H
-#define COIN_SOVERTEXATTRIBUTEBINDINGELEMENT_H
+#ifndef OBOL_SOVERTEXATTRIBUTEBINDINGELEMENT_H
+#define OBOL_SOVERTEXATTRIBUTEBINDINGELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/elements/SoInt32Element.h>
 
-class COIN_DLL_API SoVertexAttributeBindingElement : public SoInt32Element {
+class OBOL_DLL_API SoVertexAttributeBindingElement : public SoInt32Element {
   typedef SoInt32Element inherited;
 
   SO_ELEMENT_HEADER(SoVertexAttributeBindingElement);
@@ -64,4 +64,4 @@ public:
 
 };
 
-#endif // !COIN_SOVERTEXATTRIBUTEBINDINGELEMENT_H
+#endif // !OBOL_SOVERTEXATTRIBUTEBINDINGELEMENT_H

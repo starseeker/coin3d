@@ -1,5 +1,5 @@
-#ifndef COIN_SOREADERROR_H
-#define COIN_SOREADERROR_H
+#ifndef OBOL_SOREADERROR_H
+#define OBOL_SOREADERROR_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -38,7 +38,7 @@
 class SoInput;
 
 
-class COIN_DLL_API SoReadError : public SoError {
+class OBOL_DLL_API SoReadError : public SoError {
   typedef SoError inherited;
 
 public:
@@ -63,4 +63,4 @@ private:
   static void * callbackData;
 };
 
-#endif // !COIN_SOREADERROR_H
+#endif // !OBOL_SOREADERROR_H

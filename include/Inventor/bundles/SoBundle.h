@@ -1,5 +1,5 @@
-#ifndef COIN_SOBUNDLE_H
-#define COIN_SOBUNDLE_H
+#ifndef OBOL_SOBUNDLE_H
+#define OBOL_SOBUNDLE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -39,7 +39,7 @@ class SoAction;
 class SoState;
 
 
-class COIN_DLL_API SoBundle {
+class OBOL_DLL_API SoBundle {
 protected:
   SoBundle(SoAction *action);
   ~SoBundle();
@@ -47,4 +47,4 @@ protected:
   SoState *state;
 };
 
-#endif // !COIN_SOBUNDLE_H
+#endif // !OBOL_SOBUNDLE_H

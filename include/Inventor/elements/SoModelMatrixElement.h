@@ -1,5 +1,5 @@
-#ifndef COIN_SOMODELMATRIXELEMENT_H
-#define COIN_SOMODELMATRIXELEMENT_H
+#ifndef OBOL_SOMODELMATRIXELEMENT_H
+#define OBOL_SOMODELMATRIXELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/SbMatrix.h>
 #include <Inventor/lists/SbPList.h>
 
-class COIN_DLL_API SoModelMatrixElement : public SoAccumulatedElement {
+class OBOL_DLL_API SoModelMatrixElement : public SoAccumulatedElement {
   typedef SoAccumulatedElement inherited;
 
   SO_ELEMENT_HEADER(SoModelMatrixElement);
@@ -91,4 +91,4 @@ protected:
 
 };
 
-#endif // !COIN_SOMODELMATRIXELEMENT_H
+#endif // !OBOL_SOMODELMATRIXELEMENT_H

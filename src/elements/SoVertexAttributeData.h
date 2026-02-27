@@ -1,5 +1,5 @@
-#ifndef COIN_SOVERTEXATTRIBUTEDATA_H
-#define COIN_SOVERTEXATTRIBUTEDATA_H
+#ifndef OBOL_SOVERTEXATTRIBUTEDATA_H
+#define OBOL_SOVERTEXATTRIBUTEDATA_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -56,4 +56,4 @@ public:
   SoVBO * vbo;
 };
 
-#endif // COIN_SOVERTEXATTRIBUTEDATA_H
+#endif // OBOL_SOVERTEXATTRIBUTEDATA_H

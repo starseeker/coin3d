@@ -135,7 +135,7 @@ SoTextureUnit::~SoTextureUnit()
 void
 SoTextureUnit::initClass(void)
 {
-  SO_NODE_INTERNAL_INIT_CLASS(SoTextureUnit, SO_FROM_COIN_2_2);
+  SO_NODE_INTERNAL_INIT_CLASS(SoTextureUnit, SO_FROM_OBOL_2_2);
 
   SO_ENABLE(SoGLRenderAction, SoTextureUnitElement);
   SO_ENABLE(SoCallbackAction, SoTextureUnitElement);

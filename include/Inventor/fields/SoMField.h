@@ -1,5 +1,5 @@
-#ifndef COIN_SOMFIELD_H
-#define COIN_SOMFIELD_H
+#ifndef OBOL_SOMFIELD_H
+#define OBOL_SOMFIELD_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -38,7 +38,7 @@
 class SoInput;
 class SoOutput;
 
-class COIN_DLL_API SoMField : public SoField {
+class OBOL_DLL_API SoMField : public SoField {
   typedef SoField inherited;
 
 public:
@@ -105,4 +105,4 @@ SoMField::getNum(void) const
   return this->num;
 }
 
-#endif // !COIN_SOMFIELD_H
+#endif // !OBOL_SOMFIELD_H

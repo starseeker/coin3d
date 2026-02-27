@@ -117,7 +117,7 @@ SoOutput_FileWriter::getType(void) const
 }
 
 size_t
-SoOutput_FileWriter::write(const char * buf, size_t numbytes, const SbBool COIN_UNUSED_ARG(binary))
+SoOutput_FileWriter::write(const char * buf, size_t numbytes, const SbBool OBOL_UNUSED_ARG(binary))
 {
   assert(this->fp);
   return fwrite(buf, 1, numbytes, this->fp);

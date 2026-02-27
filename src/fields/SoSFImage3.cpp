@@ -103,7 +103,7 @@
   plane is colored black+blue on the first line and green+cyan on the
   second line.
 
-  \COIN_CLASS_EXTENSION
+  \OBOL_CLASS_EXTENSION
 
   \sa SoTexture3, SoSFImage
   \since Coin 2.0
@@ -196,7 +196,7 @@ SoSFImage3::readValue(SoInput * in)
     return FALSE;
   }
 
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoSFImage3::readValue",
                          "image dimensions: %dx%dx%dx%d",
                          size[0], size[1], size[2], nc);

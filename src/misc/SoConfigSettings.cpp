@@ -11,8 +11,8 @@
 namespace {
   SoConfigSettings * singleton = NULL;
   const char * VALID_OPTIONS[] = {
-    "COIN_VBO",
-    "COIN_WARNING_LEVEL"
+    "OBOL_VBO",
+    "OBOL_WARNING_LEVEL"
   };
 
   inline size_t options_size()
@@ -21,14 +21,14 @@ namespace {
   }
   const char COIN [] = "COIN";
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   SbBool isValidOption(const SbString & option)
   {
     size_t i;
     for (i = 0; i<options_size() && option != VALID_OPTIONS[i]; ++i) {}
     return (i!=options_size());
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   const SbString INVALID_SETTING("");
 };
@@ -81,7 +81,7 @@ SoConfigSettings::reinitialize()
   //FIXME: environ is not available on non-unix platforms, so
   //disabling this for now. Write a configure test for this in the
   //future. BFG 20091013
-#if COIN_DEBUG && 0
+#if OBOL_DEBUG && 0
   for (char ** test = environ; *test != NULL; ++test) {
     char * first = strchr(*test,'=');
     if (first) {
@@ -97,7 +97,7 @@ SoConfigSettings::reinitialize()
       }
     }
   }
-#endif //COIN_DEBUG
+#endif //OBOL_DEBUG
 }
 
 

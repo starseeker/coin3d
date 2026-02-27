@@ -1,5 +1,5 @@
-#ifndef COIN_SOWWWANCHOR_H
-#define COIN_SOWWWANCHOR_H
+#ifndef OBOL_SOWWWANCHOR_H
+#define OBOL_SOWWWANCHOR_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -46,7 +46,7 @@ typedef void SoWWWAnchorCB(const SbString & url, void * data,
 
 // *************************************************************************
 
-class COIN_DLL_API SoWWWAnchor : public SoLocateHighlight {
+class OBOL_DLL_API SoWWWAnchor : public SoLocateHighlight {
   typedef SoLocateHighlight inherited;
 
   SO_NODE_HEADER(SoWWWAnchor);
@@ -79,4 +79,4 @@ private:
   SoWWWAnchorP * pimpl;
 };
 
-#endif // !COIN_SOWWWANCHOR_H
+#endif // !OBOL_SOWWWANCHOR_H

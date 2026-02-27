@@ -49,7 +49,7 @@
 #include <Inventor/elements/SoDrawStyleElement.h>
 #include <Inventor/elements/SoComplexityTypeElement.h>
 
-#include "config.h" // COIN_OBSOLETED()
+#include "config.h" // OBOL_OBSOLETED()
 #include <cassert>
 
 
@@ -98,7 +98,7 @@ SoShapeStyleElement::init(SoState * state)
 //! FIXME: write doc.
 
 void
-SoShapeStyleElement::push(SoState * COIN_UNUSED_ARG(state))
+SoShapeStyleElement::push(SoState * OBOL_UNUSED_ARG(state))
 {
   SoShapeStyleElement * prev = coin_assert_cast<SoShapeStyleElement *>(this->getNextInStack());
   this->flags = prev->flags;
@@ -213,7 +213,7 @@ SoShapeStyleElement::setTextureEnabled(SoState * const state,
 /*!
   FIXME: write doc.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */
@@ -287,7 +287,7 @@ SoShapeStyleElement::isScreenDoor(SoState * const state)
 /*!
   Returns the current transparency type.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */
@@ -335,7 +335,7 @@ SoShapeStyleElement::needTexCoords(void) const
 int
 SoShapeStyleElement::getRenderCaseMask(void) const
 {
-  COIN_OBSOLETED();
+  OBOL_OBSOLETED();
   return 0;
 }
 

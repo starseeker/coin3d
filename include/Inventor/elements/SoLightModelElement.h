@@ -1,5 +1,5 @@
-#ifndef COIN_SOLIGHTMODELELEMENT_H
-#define COIN_SOLIGHTMODELELEMENT_H
+#ifndef OBOL_SOLIGHTMODELELEMENT_H
+#define OBOL_SOLIGHTMODELELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/elements/SoInt32Element.h>
 
-class COIN_DLL_API SoLightModelElement : public SoInt32Element {
+class OBOL_DLL_API SoLightModelElement : public SoInt32Element {
   typedef SoInt32Element inherited;
 
   SO_ELEMENT_HEADER(SoLightModelElement);
@@ -60,4 +60,4 @@ public:
   static const SoLightModelElement * getInstance(SoState *state);
 };
 
-#endif // !COIN_SOLIGHTMODELELEMENT_H
+#endif // !OBOL_SOLIGHTMODELELEMENT_H

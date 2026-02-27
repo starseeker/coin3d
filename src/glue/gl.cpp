@@ -116,17 +116,17 @@
   For the library/API doc, here's the environment variables
   influencing the OpenGL binding:
 
-  - COIN_DEBUG_GLGLUE: set equal to "1" to make the wrapper
+  - OBOL_DEBUG_GLGLUE: set equal to "1" to make the wrapper
     initialization spit out lots of info about the underlying OpenGL
     implementation.
 
-  - COIN_PREFER_GLPOLYGONOFFSET_EXT: when set to "1" and both
+  - OBOL_PREFER_GLPOLYGONOFFSET_EXT: when set to "1" and both
     glPolygonOffset() and glPolygonOffsetEXT() are available, the
     latter will be used. This can be useful to work around a
     problematic glPolygonOffset() implementation for certain SGI
     platforms.
 
-  - COIN_FULL_INDIRECT_RENDERING: set to "1" to let Coin take
+  - OBOL_FULL_INDIRECT_RENDERING: set to "1" to let Coin take
     advantage of OpenGL1.1+ and extensions even when doing
     remote/indirect rendering.
 
@@ -139,10 +139,10 @@
     we can get confirmation that the assumed NVidia driver bug is
     indeed NVidia's problem.
 
-  - COIN_FORCE_GL1_0_ONLY: set to "1" to disallow use of OpenGL1.1+
+  - OBOL_FORCE_GL1_0_ONLY: set to "1" to disallow use of OpenGL1.1+
     and extensions under all circumstances.
 
-  - COIN_FORCE_AGL: set to "1" to prefer using the old AGL bindings over CGL.
+  - OBOL_FORCE_AGL: set to "1" to prefer using the old AGL bindings over CGL.
     Note that AGL is not available on 64-bit systems. The AGL code is not
     compiled into Coin by default, but must be enabled at configure-time using
     --enable-agl in addition to using the environment variable.
@@ -278,14 +278,14 @@ extern "C" {
 #endif
 
 static cc_list * gl_instance_created_cblist = NULL;
-static int COIN_MAXIMUM_TEXTURE2_SIZE = -1;
-static int COIN_MAXIMUM_TEXTURE3_SIZE = -1;
+static int OBOL_MAXIMUM_TEXTURE2_SIZE = -1;
+static int OBOL_MAXIMUM_TEXTURE3_SIZE = -1;
 /* Removed old C-style callback system - now uses SoDB::ContextManager directly */
 
 /* -----------------------------------------------------------------------
  * Dual-GL backend registry
  *
- * When COIN3D_BUILD_DUAL_GL is defined and this is the primary (system-GL)
+ * When OBOL_BUILD_DUAL_GL is defined and this is the primary (system-GL)
  * compilation unit (SOGL_PREFIX_SET is NOT set), we maintain a small set of
  * context IDs that were created against the OSMesa backend.
  *
@@ -307,7 +307,7 @@ static int COIN_MAXIMUM_TEXTURE3_SIZE = -1;
 extern "C" {  /* reopen extern "C" */
 #endif
 
-#if defined(COIN3D_BUILD_DUAL_GL)
+#if defined(OBOL_BUILD_DUAL_GL)
 static std::unordered_set<int> * coingl_osmesa_context_ids = NULL;
 static std::mutex coingl_osmesa_context_mutex;
 
@@ -321,17 +321,17 @@ static void coingl_osmesa_registry_cleanup(void)
 /* Forward declaration of the osmesa-prefixed implementation compiled in
    gl_osmesa.cpp.  The linker resolves this from the glue_osmesa object. */
 const SoGLContext * osmesa_SoGLContext_instance(int contextid);
-#endif /* COIN3D_BUILD_DUAL_GL */
+#endif /* OBOL_BUILD_DUAL_GL */
 
 /* Public C API: register an OSMesa-backed render-context ID.
    Must be called (once, at context-ID assignment time) by the application
    or CoinOffscreenGLCanvas before the first SoGLContext_instance() call
-   for that ID when COIN3D_BUILD_DUAL_GL is enabled.
-   Safe to call even when COIN3D_BUILD_DUAL_GL is not defined (no-op). */
+   for that ID when OBOL_BUILD_DUAL_GL is enabled.
+   Safe to call even when OBOL_BUILD_DUAL_GL is not defined (no-op). */
 void
 coingl_register_osmesa_context(int contextid)
 {
-#if defined(COIN3D_BUILD_DUAL_GL)
+#if defined(OBOL_BUILD_DUAL_GL)
   std::lock_guard<std::mutex> lock(coingl_osmesa_context_mutex);
   if (!coingl_osmesa_context_ids) {
     coingl_osmesa_context_ids = new std::unordered_set<int>();
@@ -347,7 +347,7 @@ coingl_register_osmesa_context(int contextid)
 static int
 coingl_context_backend_is_osmesa(int contextid)
 {
-#if defined(COIN3D_BUILD_DUAL_GL)
+#if defined(OBOL_BUILD_DUAL_GL)
   std::lock_guard<std::mutex> lock(coingl_osmesa_context_mutex);
   return (coingl_osmesa_context_ids &&
           coingl_osmesa_context_ids->count(contextid) > 0) ? 1 : 0;
@@ -495,23 +495,23 @@ glglue_allow_newer_opengl(const SoGLContext * w)
   static SbBool force1_0 = FALSE;
 
   if (!force1_0_initialized) {
-    force1_0 = (glglue_resolve_envvar("COIN_FORCE_GL1_0_ONLY") > 0);
+    force1_0 = (glglue_resolve_envvar("OBOL_FORCE_GL1_0_ONLY") > 0);
     force1_0_initialized = 1;
   }
 
   if (force1_0) return FALSE;
 
-#ifdef COIN3D_OSMESA_BUILD
+#ifdef OBOL_OSMESA_BUILD
   /* For OSMesa builds, always allow newer OpenGL features.
      OSMesa provides OpenGL 2.0 capabilities which is our minimum target. */
   return TRUE;
 #else
   static int fullindirect_initialized = 0;
   static SbBool fullindirect = FALSE;
-  static const char * COIN_FULL_INDIRECT_RENDERING = "COIN_FULL_INDIRECT_RENDERING";
+  static const char * OBOL_FULL_INDIRECT_RENDERING = "OBOL_FULL_INDIRECT_RENDERING";
 
   if (!fullindirect_initialized) {
-    fullindirect = (glglue_resolve_envvar(COIN_FULL_INDIRECT_RENDERING) > 0);
+    fullindirect = (glglue_resolve_envvar(OBOL_FULL_INDIRECT_RENDERING) > 0);
     fullindirect_initialized = 1;
   }
 
@@ -527,19 +527,19 @@ glglue_allow_newer_opengl(const SoGLContext * w)
 }
 
 
-/* Returns whether or not COIN_GLGLUE_SILENCE_DRIVER_WARNINGS is set
+/* Returns whether or not OBOL_GLGLUE_SILENCE_DRIVER_WARNINGS is set
    to a value > 0. If so, all known driver bugs will just be silently
    accepted and attempted worked around. */
 static int
 SoGLContext_silence_all_driver_warnings(void)
 {
   static int d = -1;
-  if (d == -1) { d = glglue_resolve_envvar("COIN_GLGLUE_SILENCE_DRIVER_WARNINGS"); }
+  if (d == -1) { d = glglue_resolve_envvar("OBOL_GLGLUE_SILENCE_DRIVER_WARNINGS"); }
   /* Note the inversion of the envvar value versus the return value. */
   return (d > 0) ? 0 : 1;
 }
 
-/* Return value of COIN_GLGLUE_NO_RADEON_WARNING environment variable. */
+/* Return value of OBOL_GLGLUE_NO_RADEON_WARNING environment variable. */
 static int
 SoGLContext_radeon_warning(void)
 {
@@ -547,12 +547,12 @@ SoGLContext_radeon_warning(void)
 
   if (SoGLContext_silence_all_driver_warnings()) { return 0; }
 
-  if (d == -1) { d = glglue_resolve_envvar("COIN_GLGLUE_NO_RADEON_WARNING"); }
+  if (d == -1) { d = glglue_resolve_envvar("OBOL_GLGLUE_NO_RADEON_WARNING"); }
   /* Note the inversion of the envvar value versus the return value. */
   return (d > 0) ? 0 : 1;
 }
 
-/* Return value of COIN_GLGLUE_NO_G400_WARNING environment variable. */
+/* Return value of OBOL_GLGLUE_NO_G400_WARNING environment variable. */
 static int
 SoGLContext_old_matrox_warning(void)
 {
@@ -560,12 +560,12 @@ SoGLContext_old_matrox_warning(void)
 
   if (SoGLContext_silence_all_driver_warnings()) { return 0; }
 
-  if (d == -1) { d = glglue_resolve_envvar("COIN_GLGLUE_NO_G400_WARNING"); }
+  if (d == -1) { d = glglue_resolve_envvar("OBOL_GLGLUE_NO_G400_WARNING"); }
   /* Note the inversion of the envvar value versus the return value. */
   return (d > 0) ? 0 : 1;
 }
 
-/* Return value of COIN_GLGLUE_NO_ELSA_WARNING environment variable. */
+/* Return value of OBOL_GLGLUE_NO_ELSA_WARNING environment variable. */
 static int
 SoGLContext_old_elsa_warning(void)
 {
@@ -573,12 +573,12 @@ SoGLContext_old_elsa_warning(void)
 
   if (SoGLContext_silence_all_driver_warnings()) { return 0; }
 
-  if (d == -1) { d = glglue_resolve_envvar("COIN_GLGLUE_NO_ELSA_WARNING"); }
+  if (d == -1) { d = glglue_resolve_envvar("OBOL_GLGLUE_NO_ELSA_WARNING"); }
   /* Note the inversion of the envvar value versus the return value. */
   return (d > 0) ? 0 : 1;
 }
 
-/* Return value of COIN_GLGLUE_NO_SUN_EXPERT3D_WARNING environment variable. */
+/* Return value of OBOL_GLGLUE_NO_SUN_EXPERT3D_WARNING environment variable. */
 static int
 SoGLContext_sun_expert3d_warning(void)
 {
@@ -586,12 +586,12 @@ SoGLContext_sun_expert3d_warning(void)
 
   if (SoGLContext_silence_all_driver_warnings()) { return 0; }
 
-  if (d == -1) { d = glglue_resolve_envvar("COIN_GLGLUE_NO_SUN_EXPERT3D_WARNING"); }
+  if (d == -1) { d = glglue_resolve_envvar("OBOL_GLGLUE_NO_SUN_EXPERT3D_WARNING"); }
   /* Note the inversion of the envvar value versus the return value. */
   return (d > 0) ? 0 : 1;
 }
 
-/* Return value of COIN_GLGLUE_NO_TRIDENT_WARNING environment variable. */
+/* Return value of OBOL_GLGLUE_NO_TRIDENT_WARNING environment variable. */
 static int
 SoGLContext_trident_warning(void)
 {
@@ -599,26 +599,26 @@ SoGLContext_trident_warning(void)
 
   if (SoGLContext_silence_all_driver_warnings()) { return 0; }
 
-  if (d == -1) { d = glglue_resolve_envvar("COIN_GLGLUE_NO_TRIDENT_WARNING"); }
+  if (d == -1) { d = glglue_resolve_envvar("OBOL_GLGLUE_NO_TRIDENT_WARNING"); }
   /* Note the inversion of the envvar value versus the return value. */
   return (d > 0) ? 0 : 1;
 }
 
-/* Return value of COIN_DEBUG_GLGLUE environment variable. */
+/* Return value of OBOL_DEBUG_GLGLUE environment variable. */
 int
 SoGLContext_debug(void)
 {
   static int d = -1;
-  if (d == -1) { d = glglue_resolve_envvar("COIN_DEBUG_GLGLUE"); }
+  if (d == -1) { d = glglue_resolve_envvar("OBOL_DEBUG_GLGLUE"); }
   return (d > 0) ? 1 : 0;
 }
 
-/* Return value of COIN_PREFER_GLPOLYGONOFFSET_EXT environment variable. */
+/* Return value of OBOL_PREFER_GLPOLYGONOFFSET_EXT environment variable. */
 static int
 glglue_prefer_glPolygonOffsetEXT(void)
 {
   static int d = -1;
-  if (d == -1) { d = glglue_resolve_envvar("COIN_PREFER_GLPOLYGONOFFSET_EXT"); }
+  if (d == -1) { d = glglue_resolve_envvar("OBOL_PREFER_GLPOLYGONOFFSET_EXT"); }
   return (d > 0) ? 1 : 0;
 }
 
@@ -646,7 +646,7 @@ glglue_prefer_glPolygonOffsetEXT(void)
 int
 SoGLContext_stencil_bits_hack(void)
 {
-  auto env = CoinInternal::getEnvironmentVariable("COIN_OFFSCREEN_STENCIL_BITS");
+  auto env = CoinInternal::getEnvironmentVariable("OBOL_OFFSCREEN_STENCIL_BITS");
   if (!env.has_value()) { return -1; }
   return std::atoi(env->c_str());
 }
@@ -671,7 +671,7 @@ SoGLContext_getprocaddress(const SoGLContext * glue, const char * symname)
      find the function through the shared library. */
   ptr = cc_dl_sym(SoGLContext_dl_handle(glue), symname);
 
-#if defined(COIN3D_OSMESA_BUILD) || defined(SOGL_PREFIX_SET)
+#if defined(OBOL_OSMESA_BUILD) || defined(SOGL_PREFIX_SET)
   /* OSMesa uses MGL name mangling, so if the standard name lookup fails,
      try the MGL-mangled version by prefixing with "mgl" instead of "gl" */
   if (ptr == NULL && strncmp(symname, "gl", 2) == 0) {
@@ -711,7 +711,7 @@ SoGLContext_getprocaddress(const SoGLContext * glue, const char * symname)
 static cc_dict * gldict = NULL;
 
 static void
-free_glglue_instance(uintptr_t COIN_UNUSED_ARG(key), void * value, void * COIN_UNUSED_ARG(closure))
+free_glglue_instance(uintptr_t OBOL_UNUSED_ARG(key), void * value, void * OBOL_UNUSED_ARG(closure))
 {
   SoGLContext * glue = (SoGLContext*) value;
   cc_dict_destruct(glue->glextdict);
@@ -732,11 +732,6 @@ glglue_cleanup(void)
   /* Platform-specific cleanup is no longer needed with callback-based contexts */
 }
 
-static SbBool
-glglue_has_nvidia_framebuffer_object_bug(int major, int minor, int release)
-{
-  return (major == 2) && (minor == 0) && (release == 0);
-}
 
 /*
   Set the OpenGL version variables in the given SoGLContext struct
@@ -976,12 +971,12 @@ glglue_resolve_symbols(SoGLContext * w)
   w->glPolygonOffsetEXT = NULL;
 #ifdef GL_VERSION_1_1
   if (SoGLContext_glversion_matches_at_least(w, 1, 1, 0)) {
-    w->glPolygonOffset = (COIN_PFNGLPOLYGONOFFSETPROC)PROC(w, glPolygonOffset);
+    w->glPolygonOffset = (OBOL_PFNGLPOLYGONOFFSETPROC)PROC(w, glPolygonOffset);
   }
 #endif /* GL_VERSION_1_1 */
 #ifdef GL_EXT_polygon_offset
   if (SoGLContext_glext_supported(w, "GL_EXT_polygon_offset")) {
-    w->glPolygonOffsetEXT = (COIN_PFNGLPOLYGONOFFSETPROC)PROC(w, glPolygonOffsetEXT);
+    w->glPolygonOffsetEXT = (OBOL_PFNGLPOLYGONOFFSETPROC)PROC(w, glPolygonOffsetEXT);
   }
 #endif /* GL_EXT_polygon_offset */
 
@@ -993,16 +988,16 @@ glglue_resolve_symbols(SoGLContext * w)
   w->glDeleteTextures = NULL;
 #ifdef GL_VERSION_1_1
   if (SoGLContext_glversion_matches_at_least(w, 1, 1, 0)) {
-    w->glGenTextures = (COIN_PFNGLGENTEXTURESPROC)PROC(w, glGenTextures);
-    w->glBindTexture = (COIN_PFNGLBINDTEXTUREPROC)PROC(w, glBindTexture);
-    w->glDeleteTextures = (COIN_PFNGLDELETETEXTURESPROC)PROC(w, glDeleteTextures);
+    w->glGenTextures = (OBOL_PFNGLGENTEXTURESPROC)PROC(w, glGenTextures);
+    w->glBindTexture = (OBOL_PFNGLBINDTEXTUREPROC)PROC(w, glBindTexture);
+    w->glDeleteTextures = (OBOL_PFNGLDELETETEXTURESPROC)PROC(w, glDeleteTextures);
   }
 #endif /* GL_VERSION_1_1 */
 #ifdef GL_EXT_texture_object
   if (!w->glGenTextures && SoGLContext_glext_supported(w, "GL_EXT_texture_object")) {
-    w->glGenTextures = (COIN_PFNGLGENTEXTURESPROC)PROC(w, glGenTexturesEXT);
-    w->glBindTexture = (COIN_PFNGLBINDTEXTUREPROC)PROC(w, glBindTextureEXT);
-    w->glDeleteTextures = (COIN_PFNGLDELETETEXTURESPROC)PROC(w, glDeleteTexturesEXT);
+    w->glGenTextures = (OBOL_PFNGLGENTEXTURESPROC)PROC(w, glGenTexturesEXT);
+    w->glBindTexture = (OBOL_PFNGLBINDTEXTUREPROC)PROC(w, glBindTextureEXT);
+    w->glDeleteTextures = (OBOL_PFNGLDELETETEXTURESPROC)PROC(w, glDeleteTexturesEXT);
   }
 #endif /* GL_EXT_texture_object */
 
@@ -1010,12 +1005,12 @@ glglue_resolve_symbols(SoGLContext * w)
   w->glTexSubImage2D = NULL;
 #ifdef GL_VERSION_1_1
   if (SoGLContext_glversion_matches_at_least(w, 1, 1, 0)) {
-    w->glTexSubImage2D = (COIN_PFNGLTEXSUBIMAGE2DPROC)PROC(w, glTexSubImage2D);
+    w->glTexSubImage2D = (OBOL_PFNGLTEXSUBIMAGE2DPROC)PROC(w, glTexSubImage2D);
   }
 #endif /* GL_VERSION_1_1 */
 #ifdef GL_EXT_subtexture
   if (!w->glTexSubImage2D && SoGLContext_glext_supported(w, "GL_EXT_subtexture")) {
-    w->glTexSubImage2D = (COIN_PFNGLTEXSUBIMAGE2DPROC)PROC(w, glTexSubImage2DEXT);
+    w->glTexSubImage2D = (OBOL_PFNGLTEXSUBIMAGE2DPROC)PROC(w, glTexSubImage2DEXT);
   }
 #endif /* GL_EXT_subtexture */
 
@@ -1024,8 +1019,8 @@ glglue_resolve_symbols(SoGLContext * w)
   w->glPopClientAttrib = NULL;
 #ifdef GL_VERSION_1_1
   if (SoGLContext_glversion_matches_at_least(w, 1, 1, 0)) {
-    w->glPushClientAttrib = (COIN_PFNGLPUSHCLIENTATTRIBPROC) PROC(w, glPushClientAttrib);
-    w->glPopClientAttrib = (COIN_PFNGLPOPCLIENTATTRIBPROC) PROC(w, glPopClientAttrib);
+    w->glPushClientAttrib = (OBOL_PFNGLPUSHCLIENTATTRIBPROC) PROC(w, glPushClientAttrib);
+    w->glPopClientAttrib = (OBOL_PFNGLPOPCLIENTATTRIBPROC) PROC(w, glPopClientAttrib);
   }
 #endif /* GL_VERSION_1_1 */
 
@@ -1035,17 +1030,17 @@ glglue_resolve_symbols(SoGLContext * w)
   w->glTexSubImage3D = NULL;
 #ifdef GL_VERSION_1_2
   if (SoGLContext_glversion_matches_at_least(w, 1, 2, 0)) {
-    w->glTexImage3D = (COIN_PFNGLTEXIMAGE3DPROC)PROC(w, glTexImage3D);
-    w->glCopyTexSubImage3D = (COIN_PFNGLCOPYTEXSUBIMAGE3DPROC)PROC(w, glCopyTexSubImage3D);
-    w->glTexSubImage3D = (COIN_PFNGLTEXSUBIMAGE3DPROC)PROC(w, glTexSubImage3D);
+    w->glTexImage3D = (OBOL_PFNGLTEXIMAGE3DPROC)PROC(w, glTexImage3D);
+    w->glCopyTexSubImage3D = (OBOL_PFNGLCOPYTEXSUBIMAGE3DPROC)PROC(w, glCopyTexSubImage3D);
+    w->glTexSubImage3D = (OBOL_PFNGLTEXSUBIMAGE3DPROC)PROC(w, glTexSubImage3D);
   }
 #endif /* GL_VERSION_1_2 */
 #ifdef GL_EXT_texture3D
   if (!w->glTexImage3D && SoGLContext_glext_supported(w, "GL_EXT_texture3D")) {
-    w->glTexImage3D = (COIN_PFNGLTEXIMAGE3DPROC)PROC(w, glTexImage3DEXT);
+    w->glTexImage3D = (OBOL_PFNGLTEXIMAGE3DPROC)PROC(w, glTexImage3DEXT);
     /* These are implicitly given if GL_EXT_texture3D is defined. */
-    w->glCopyTexSubImage3D = (COIN_PFNGLCOPYTEXSUBIMAGE3DPROC)PROC(w, glCopyTexSubImage3DEXT);
-    w->glTexSubImage3D = (COIN_PFNGLTEXSUBIMAGE3DPROC)PROC(w, glTexSubImage3DEXT);
+    w->glCopyTexSubImage3D = (OBOL_PFNGLCOPYTEXSUBIMAGE3DPROC)PROC(w, glCopyTexSubImage3DEXT);
+    w->glTexSubImage3D = (OBOL_PFNGLTEXSUBIMAGE3DPROC)PROC(w, glTexSubImage3DEXT);
   }
 #endif /* GL_EXT_texture3D */
 
@@ -1087,22 +1082,22 @@ glglue_resolve_symbols(SoGLContext * w)
   w->glMultiTexCoord4fv = NULL;
 #ifdef GL_VERSION_1_3
   if (SoGLContext_glversion_matches_at_least(w, 1, 3, 0)) {
-    w->glActiveTexture = (COIN_PFNGLACTIVETEXTUREPROC)PROC(w, glActiveTexture);
-    w->glClientActiveTexture = (COIN_PFNGLCLIENTACTIVETEXTUREPROC)PROC(w, glClientActiveTexture);
-    w->glMultiTexCoord2f = (COIN_PFNGLMULTITEXCOORD2FPROC)PROC(w, glMultiTexCoord2f);
-    w->glMultiTexCoord2fv = (COIN_PFNGLMULTITEXCOORD2FVPROC)PROC(w, glMultiTexCoord2fv);
-    w->glMultiTexCoord3fv = (COIN_PFNGLMULTITEXCOORD3FVPROC)PROC(w, glMultiTexCoord3fv);
-    w->glMultiTexCoord4fv = (COIN_PFNGLMULTITEXCOORD4FVPROC)PROC(w, glMultiTexCoord4fv);
+    w->glActiveTexture = (OBOL_PFNGLACTIVETEXTUREPROC)PROC(w, glActiveTexture);
+    w->glClientActiveTexture = (OBOL_PFNGLCLIENTACTIVETEXTUREPROC)PROC(w, glClientActiveTexture);
+    w->glMultiTexCoord2f = (OBOL_PFNGLMULTITEXCOORD2FPROC)PROC(w, glMultiTexCoord2f);
+    w->glMultiTexCoord2fv = (OBOL_PFNGLMULTITEXCOORD2FVPROC)PROC(w, glMultiTexCoord2fv);
+    w->glMultiTexCoord3fv = (OBOL_PFNGLMULTITEXCOORD3FVPROC)PROC(w, glMultiTexCoord3fv);
+    w->glMultiTexCoord4fv = (OBOL_PFNGLMULTITEXCOORD4FVPROC)PROC(w, glMultiTexCoord4fv);
   }
 #endif /* GL_VERSION_1_3 */
 #ifdef GL_ARB_multitexture
   if (!w->glActiveTexture && SoGLContext_glext_supported(w, "GL_ARB_multitexture")) {
-    w->glActiveTexture = (COIN_PFNGLACTIVETEXTUREPROC)PROC(w, glActiveTextureARB);
-    w->glClientActiveTexture = (COIN_PFNGLACTIVETEXTUREPROC)PROC(w, glClientActiveTextureARB);
-    w->glMultiTexCoord2f = (COIN_PFNGLMULTITEXCOORD2FPROC)PROC(w, glMultiTexCoord2fARB);
-    w->glMultiTexCoord2fv = (COIN_PFNGLMULTITEXCOORD2FVPROC)PROC(w, glMultiTexCoord2fvARB);
-    w->glMultiTexCoord3fv = (COIN_PFNGLMULTITEXCOORD3FVPROC)PROC(w, glMultiTexCoord3fvARB);
-    w->glMultiTexCoord4fv = (COIN_PFNGLMULTITEXCOORD4FVPROC)PROC(w, glMultiTexCoord4fvARB);
+    w->glActiveTexture = (OBOL_PFNGLACTIVETEXTUREPROC)PROC(w, glActiveTextureARB);
+    w->glClientActiveTexture = (OBOL_PFNGLACTIVETEXTUREPROC)PROC(w, glClientActiveTextureARB);
+    w->glMultiTexCoord2f = (OBOL_PFNGLMULTITEXCOORD2FPROC)PROC(w, glMultiTexCoord2fARB);
+    w->glMultiTexCoord2fv = (OBOL_PFNGLMULTITEXCOORD2FVPROC)PROC(w, glMultiTexCoord2fvARB);
+    w->glMultiTexCoord3fv = (OBOL_PFNGLMULTITEXCOORD3FVPROC)PROC(w, glMultiTexCoord3fvARB);
+    w->glMultiTexCoord4fv = (OBOL_PFNGLMULTITEXCOORD4FVPROC)PROC(w, glMultiTexCoord4fvARB);
   }
 #endif /* GL_ARB_multitexture */
 
@@ -1113,7 +1108,7 @@ glglue_resolve_symbols(SoGLContext * w)
         !w->glMultiTexCoord3fv ||
         !w->glMultiTexCoord4fv) {
       w->glActiveTexture = NULL; /* SoGLContext_has_multitexture() will return FALSE */
-      if (COIN_DEBUG || SoGLContext_debug()) {
+      if (OBOL_DEBUG || SoGLContext_debug()) {
         cc_debugerror_postwarning("glglue_init",
                                   "glActiveTexture found, but one or more of the other "
                                   "multitexture functions were not found");
@@ -1137,26 +1132,26 @@ glglue_resolve_symbols(SoGLContext * w)
 
 #ifdef GL_VERSION_1_3
   if (SoGLContext_glversion_matches_at_least(w, 1, 3, 0)) {
-    w->glCompressedTexImage1D = (COIN_PFNGLCOMPRESSEDTEXIMAGE1DPROC)PROC(w, glCompressedTexImage1D);
-    w->glCompressedTexImage2D = (COIN_PFNGLCOMPRESSEDTEXIMAGE2DPROC)PROC(w, glCompressedTexImage2D);
-    w->glCompressedTexImage3D = (COIN_PFNGLCOMPRESSEDTEXIMAGE3DPROC)PROC(w, glCompressedTexImage3D);
-    w->glCompressedTexSubImage1D = (COIN_PFNGLCOMPRESSEDTEXSUBIMAGE1DPROC)PROC(w, glCompressedTexSubImage1D);
-    w->glCompressedTexSubImage2D = (COIN_PFNGLCOMPRESSEDTEXSUBIMAGE2DPROC)PROC(w, glCompressedTexSubImage2D);
-    w->glCompressedTexSubImage3D = (COIN_PFNGLCOMPRESSEDTEXSUBIMAGE3DPROC)PROC(w, glCompressedTexSubImage3D);
-    w->glGetCompressedTexImage = (COIN_PFNGLGETCOMPRESSEDTEXIMAGEPROC)PROC(w, glGetCompressedTexImage);
+    w->glCompressedTexImage1D = (OBOL_PFNGLCOMPRESSEDTEXIMAGE1DPROC)PROC(w, glCompressedTexImage1D);
+    w->glCompressedTexImage2D = (OBOL_PFNGLCOMPRESSEDTEXIMAGE2DPROC)PROC(w, glCompressedTexImage2D);
+    w->glCompressedTexImage3D = (OBOL_PFNGLCOMPRESSEDTEXIMAGE3DPROC)PROC(w, glCompressedTexImage3D);
+    w->glCompressedTexSubImage1D = (OBOL_PFNGLCOMPRESSEDTEXSUBIMAGE1DPROC)PROC(w, glCompressedTexSubImage1D);
+    w->glCompressedTexSubImage2D = (OBOL_PFNGLCOMPRESSEDTEXSUBIMAGE2DPROC)PROC(w, glCompressedTexSubImage2D);
+    w->glCompressedTexSubImage3D = (OBOL_PFNGLCOMPRESSEDTEXSUBIMAGE3DPROC)PROC(w, glCompressedTexSubImage3D);
+    w->glGetCompressedTexImage = (OBOL_PFNGLGETCOMPRESSEDTEXIMAGEPROC)PROC(w, glGetCompressedTexImage);
   }
 #endif /* GL_VERSION_1_3 */
 
 #ifdef GL_ARB_texture_compression
   if ((w->glCompressedTexImage1D == NULL) &&
       SoGLContext_glext_supported(w, "GL_ARB_texture_compression")) {
-    w->glCompressedTexImage1D = (COIN_PFNGLCOMPRESSEDTEXIMAGE1DPROC)PROC(w, glCompressedTexImage1DARB);
-    w->glCompressedTexImage2D = (COIN_PFNGLCOMPRESSEDTEXIMAGE2DPROC)PROC(w, glCompressedTexImage2DARB);
-    w->glCompressedTexImage3D = (COIN_PFNGLCOMPRESSEDTEXIMAGE3DPROC)PROC(w, glCompressedTexImage3DARB);
-    w->glCompressedTexSubImage1D = (COIN_PFNGLCOMPRESSEDTEXSUBIMAGE1DPROC)PROC(w, glCompressedTexSubImage1DARB);
-    w->glCompressedTexSubImage2D = (COIN_PFNGLCOMPRESSEDTEXSUBIMAGE2DPROC)PROC(w, glCompressedTexSubImage2DARB);
-    w->glCompressedTexSubImage3D = (COIN_PFNGLCOMPRESSEDTEXSUBIMAGE3DPROC)PROC(w, glCompressedTexSubImage3DARB);
-    w->glGetCompressedTexImage = (COIN_PFNGLGETCOMPRESSEDTEXIMAGEPROC)PROC(w, glGetCompressedTexImageARB);
+    w->glCompressedTexImage1D = (OBOL_PFNGLCOMPRESSEDTEXIMAGE1DPROC)PROC(w, glCompressedTexImage1DARB);
+    w->glCompressedTexImage2D = (OBOL_PFNGLCOMPRESSEDTEXIMAGE2DPROC)PROC(w, glCompressedTexImage2DARB);
+    w->glCompressedTexImage3D = (OBOL_PFNGLCOMPRESSEDTEXIMAGE3DPROC)PROC(w, glCompressedTexImage3DARB);
+    w->glCompressedTexSubImage1D = (OBOL_PFNGLCOMPRESSEDTEXSUBIMAGE1DPROC)PROC(w, glCompressedTexSubImage1DARB);
+    w->glCompressedTexSubImage2D = (OBOL_PFNGLCOMPRESSEDTEXSUBIMAGE2DPROC)PROC(w, glCompressedTexSubImage2DARB);
+    w->glCompressedTexSubImage3D = (OBOL_PFNGLCOMPRESSEDTEXSUBIMAGE3DPROC)PROC(w, glCompressedTexSubImage3DARB);
+    w->glGetCompressedTexImage = (OBOL_PFNGLGETCOMPRESSEDTEXIMAGEPROC)PROC(w, glGetCompressedTexImageARB);
   }
 #endif /* GL_ARB_texture_compression */
 
@@ -1169,38 +1164,38 @@ glglue_resolve_symbols(SoGLContext * w)
 #if defined(GL_VERSION_1_2) && defined(GL_ARB_imaging)
   if (SoGLContext_glversion_matches_at_least(w, 1, 2, 0) &&
       SoGLContext_glext_supported(w, "GL_ARB_imaging")) {
-    w->glColorTable = (COIN_PFNGLCOLORTABLEPROC)PROC(w, glColorTable);
-    w->glColorSubTable = (COIN_PFNGLCOLORSUBTABLEPROC)PROC(w, glColorSubTable);
-    w->glGetColorTable = (COIN_PFNGLGETCOLORTABLEPROC)PROC(w, glGetColorTable);
-    w->glGetColorTableParameteriv = (COIN_PFNGLGETCOLORTABLEPARAMETERIVPROC)PROC(w, glGetColorTableParameteriv);
-    w->glGetColorTableParameterfv = (COIN_PFNGLGETCOLORTABLEPARAMETERFVPROC)PROC(w, glGetColorTableParameterfv);
+    w->glColorTable = (OBOL_PFNGLCOLORTABLEPROC)PROC(w, glColorTable);
+    w->glColorSubTable = (OBOL_PFNGLCOLORSUBTABLEPROC)PROC(w, glColorSubTable);
+    w->glGetColorTable = (OBOL_PFNGLGETCOLORTABLEPROC)PROC(w, glGetColorTable);
+    w->glGetColorTableParameteriv = (OBOL_PFNGLGETCOLORTABLEPARAMETERIVPROC)PROC(w, glGetColorTableParameteriv);
+    w->glGetColorTableParameterfv = (OBOL_PFNGLGETCOLORTABLEPARAMETERFVPROC)PROC(w, glGetColorTableParameterfv);
   }
 #endif /* GL_VERSION_1_2 && GL_ARB_imaging */
 
 #if defined(GL_EXT_color_table)
   if ((w->glColorTable == NULL) &&
       SoGLContext_glext_supported(w, "GL_EXT_color_table")) {
-    w->glColorTable = (COIN_PFNGLCOLORTABLEPROC)PROC(w, glColorTableEXT);
-    w->glGetColorTable = (COIN_PFNGLGETCOLORTABLEPROC)PROC(w, glGetColorTableEXT);
-    w->glGetColorTableParameteriv = (COIN_PFNGLGETCOLORTABLEPARAMETERIVPROC)PROC(w, glGetColorTableParameterivEXT);
-    w->glGetColorTableParameterfv = (COIN_PFNGLGETCOLORTABLEPARAMETERFVPROC)PROC(w, glGetColorTableParameterfvEXT);
+    w->glColorTable = (OBOL_PFNGLCOLORTABLEPROC)PROC(w, glColorTableEXT);
+    w->glGetColorTable = (OBOL_PFNGLGETCOLORTABLEPROC)PROC(w, glGetColorTableEXT);
+    w->glGetColorTableParameteriv = (OBOL_PFNGLGETCOLORTABLEPARAMETERIVPROC)PROC(w, glGetColorTableParameterivEXT);
+    w->glGetColorTableParameterfv = (OBOL_PFNGLGETCOLORTABLEPARAMETERFVPROC)PROC(w, glGetColorTableParameterfvEXT);
   }
 #endif /* GL_EXT_color_table */
 
 #if defined(GL_SGI_color_table)
   if ((w->glColorTable == NULL) &&
       SoGLContext_glext_supported(w, "GL_SGI_color_table")) {
-    w->glColorTable = (COIN_PFNGLCOLORTABLEPROC)PROC(w, glColorTableSGI);
-    w->glGetColorTable = (COIN_PFNGLGETCOLORTABLEPROC)PROC(w, glGetColorTableSGI);
-    w->glGetColorTableParameteriv = (COIN_PFNGLGETCOLORTABLEPARAMETERIVPROC)PROC(w, glGetColorTableParameterivSGI);
-    w->glGetColorTableParameterfv = (COIN_PFNGLGETCOLORTABLEPARAMETERFVPROC)PROC(w, glGetColorTableParameterfvSGI);
+    w->glColorTable = (OBOL_PFNGLCOLORTABLEPROC)PROC(w, glColorTableSGI);
+    w->glGetColorTable = (OBOL_PFNGLGETCOLORTABLEPROC)PROC(w, glGetColorTableSGI);
+    w->glGetColorTableParameteriv = (OBOL_PFNGLGETCOLORTABLEPARAMETERIVPROC)PROC(w, glGetColorTableParameterivSGI);
+    w->glGetColorTableParameterfv = (OBOL_PFNGLGETCOLORTABLEPARAMETERFVPROC)PROC(w, glGetColorTableParameterfvSGI);
   }
 #endif /* GL_SGI_color_table */
 
 #if defined(GL_EXT_color_subtable)
   if ((w->glColorSubTable == NULL) &&
       SoGLContext_glext_supported(w, "GL_EXT_color_subtable")) {
-    w->glColorSubTable = (COIN_PFNGLCOLORSUBTABLEPROC)PROC(w, glColorSubTableEXT);
+    w->glColorSubTable = (OBOL_PFNGLCOLORSUBTABLEPROC)PROC(w, glColorSubTableEXT);
   }
 #endif /* GL_EXT_color_subtable */
 
@@ -1218,11 +1213,11 @@ glglue_resolve_symbols(SoGLContext * w)
      though. */
   if ((w->glColorTable == NULL) &&
       SoGLContext_glext_supported(w, "GL_EXT_paletted_texture")) {
-    w->glColorTable = (COIN_PFNGLCOLORTABLEPROC)PROC(w, glColorTableEXT);
-    w->glColorSubTable = (COIN_PFNGLCOLORSUBTABLEPROC)PROC(w, glColorSubTableEXT);
-    w->glGetColorTable = (COIN_PFNGLGETCOLORTABLEPROC)PROC(w, glGetColorTableEXT);
-    w->glGetColorTableParameteriv = (COIN_PFNGLGETCOLORTABLEPARAMETERIVPROC)PROC(w, glGetColorTableParameterivEXT);
-    w->glGetColorTableParameterfv = (COIN_PFNGLGETCOLORTABLEPARAMETERFVPROC)PROC(w, glGetColorTableParameterfvEXT);
+    w->glColorTable = (OBOL_PFNGLCOLORTABLEPROC)PROC(w, glColorTableEXT);
+    w->glColorSubTable = (OBOL_PFNGLCOLORSUBTABLEPROC)PROC(w, glColorSubTableEXT);
+    w->glGetColorTable = (OBOL_PFNGLGETCOLORTABLEPROC)PROC(w, glGetColorTableEXT);
+    w->glGetColorTableParameteriv = (OBOL_PFNGLGETCOLORTABLEPARAMETERIVPROC)PROC(w, glGetColorTableParameterivEXT);
+    w->glGetColorTableParameterfv = (OBOL_PFNGLGETCOLORTABLEPARAMETERFVPROC)PROC(w, glGetColorTableParameterfvEXT);
   }
 #endif /* GL_EXT_paletted_texture */
 
@@ -1231,7 +1226,7 @@ glglue_resolve_symbols(SoGLContext * w)
 
 #if defined(GL_VERSION_1_4)
   if (SoGLContext_glversion_matches_at_least(w, 1, 4, 0)) {
-    w->glBlendEquation = (COIN_PFNGLBLENDEQUATIONPROC)PROC(w, glBlendEquation);
+    w->glBlendEquation = (OBOL_PFNGLBLENDEQUATIONPROC)PROC(w, glBlendEquation);
   }
 #endif /* GL_VERSION_1_4 */
 
@@ -1239,38 +1234,38 @@ glglue_resolve_symbols(SoGLContext * w)
 #if defined(GL_VERSION_1_2) && defined(GL_ARB_imaging)
     if (SoGLContext_glversion_matches_at_least(w, 1, 2, 0) &&
         SoGLContext_glext_supported(w, "GL_ARB_imaging")) {
-      w->glBlendEquation = (COIN_PFNGLBLENDEQUATIONPROC)PROC(w, glBlendEquation);
+      w->glBlendEquation = (OBOL_PFNGLBLENDEQUATIONPROC)PROC(w, glBlendEquation);
     }
 #endif /* GL_VERSION_1_2 && GL_ARB_imaging */
   }
 
 #ifdef GL_EXT_blend_minmax
   if (SoGLContext_glext_supported(w, "GL_EXT_blend_minmax")) {
-    w->glBlendEquationEXT = (COIN_PFNGLBLENDEQUATIONPROC)PROC(w, glBlendEquationEXT);
+    w->glBlendEquationEXT = (OBOL_PFNGLBLENDEQUATIONPROC)PROC(w, glBlendEquationEXT);
   }
 #endif /* GL_EXT_blend_minmax */
 
   w->glBlendFuncSeparate = NULL;
 #if defined(GL_VERSION_1_4)
   if (SoGLContext_glversion_matches_at_least(w, 1, 4, 0)) {
-    w->glBlendFuncSeparate = (COIN_PFNGLBLENDFUNCSEPARATEPROC)PROC(w, glBlendFuncSeparate);
+    w->glBlendFuncSeparate = (OBOL_PFNGLBLENDFUNCSEPARATEPROC)PROC(w, glBlendFuncSeparate);
   }
 #endif /* GL_VERSION_1_4 */
 
   w->glVertexPointer = NULL; /* for SoGLContext_has_vertex_array() */
 #if defined(GL_VERSION_1_1)
   if (SoGLContext_glversion_matches_at_least(w, 1, 1, 0)) {
-    w->glVertexPointer = (COIN_PFNGLVERTEXPOINTERPROC) PROC(w, glVertexPointer);
-    w->glTexCoordPointer = (COIN_PFNGLTEXCOORDPOINTERPROC) PROC(w, glTexCoordPointer);
-    w->glNormalPointer = (COIN_PFNGLNORMALPOINTERPROC) PROC(w, glNormalPointer);
-    w->glColorPointer = (COIN_PNFGLCOLORPOINTERPROC) PROC(w, glColorPointer);
-    w->glIndexPointer = (COIN_PFNGLINDEXPOINTERPROC) PROC(w, glIndexPointer);
-    w->glEnableClientState = (COIN_PFNGLENABLECLIENTSTATEPROC) PROC(w, glEnableClientState);
-    w->glDisableClientState = (COIN_PFNGLDISABLECLIENTSTATEPROC) PROC(w, glDisableClientState);
-    w->glInterleavedArrays = (COIN_PFNGLINTERLEAVEDARRAYSPROC) PROC(w, glInterleavedArrays);
-    w->glDrawArrays = (COIN_PFNGLDRAWARRAYSPROC) PROC(w, glDrawArrays);
-    w->glDrawElements = (COIN_PFNGLDRAWELEMENTSPROC) PROC(w, glDrawElements);
-    w->glArrayElement = (COIN_PFNGLARRAYELEMENTPROC) PROC(w, glArrayElement);
+    w->glVertexPointer = (OBOL_PFNGLVERTEXPOINTERPROC) PROC(w, glVertexPointer);
+    w->glTexCoordPointer = (OBOL_PFNGLTEXCOORDPOINTERPROC) PROC(w, glTexCoordPointer);
+    w->glNormalPointer = (OBOL_PFNGLNORMALPOINTERPROC) PROC(w, glNormalPointer);
+    w->glColorPointer = (OBOL_PNFGLCOLORPOINTERPROC) PROC(w, glColorPointer);
+    w->glIndexPointer = (OBOL_PFNGLINDEXPOINTERPROC) PROC(w, glIndexPointer);
+    w->glEnableClientState = (OBOL_PFNGLENABLECLIENTSTATEPROC) PROC(w, glEnableClientState);
+    w->glDisableClientState = (OBOL_PFNGLDISABLECLIENTSTATEPROC) PROC(w, glDisableClientState);
+    w->glInterleavedArrays = (OBOL_PFNGLINTERLEAVEDARRAYSPROC) PROC(w, glInterleavedArrays);
+    w->glDrawArrays = (OBOL_PFNGLDRAWARRAYSPROC) PROC(w, glDrawArrays);
+    w->glDrawElements = (OBOL_PFNGLDRAWELEMENTSPROC) PROC(w, glDrawElements);
+    w->glArrayElement = (OBOL_PFNGLARRAYELEMENTPROC) PROC(w, glArrayElement);
   }
   if (w->glVertexPointer) {
     if (!w->glTexCoordPointer ||
@@ -1284,7 +1279,7 @@ glglue_resolve_symbols(SoGLContext * w)
         !w->glDrawElements ||
         !w->glArrayElement) {
       w->glVertexPointer = NULL; /* SoGLContext_has_vertex_array() will return FALSE */
-      if (COIN_DEBUG || SoGLContext_debug()) {
+      if (OBOL_DEBUG || SoGLContext_debug()) {
         cc_debugerror_postwarning("glglue_init",
                                   "glVertexPointer found, but one or more of the other "
                                   "vertex array functions were not found");
@@ -1297,7 +1292,7 @@ glglue_resolve_symbols(SoGLContext * w)
 #if defined(GL_VERSION_1_2)
   w->glDrawRangeElements = NULL;
   if (SoGLContext_glversion_matches_at_least(w, 1, 2, 0))
-    w->glDrawRangeElements = (COIN_PFNGLDRAWRANGEELEMENTSPROC) PROC(w, glDrawRangeElements);
+    w->glDrawRangeElements = (OBOL_PFNGLDRAWRANGEELEMENTSPROC) PROC(w, glDrawRangeElements);
 #endif /* GL_VERSION_1_2 */
 
 
@@ -1306,60 +1301,48 @@ glglue_resolve_symbols(SoGLContext * w)
   w->glMultiDrawElements = NULL;
 #if defined(GL_VERSION_1_4)
   if (SoGLContext_glversion_matches_at_least(w, 1, 4, 0)) {
-    w->glMultiDrawArrays = (COIN_PFNGLMULTIDRAWARRAYSPROC) PROC(w, glMultiDrawArrays);
-    w->glMultiDrawElements = (COIN_PFNGLMULTIDRAWELEMENTSPROC) PROC(w, glMultiDrawElements);
+    w->glMultiDrawArrays = (OBOL_PFNGLMULTIDRAWARRAYSPROC) PROC(w, glMultiDrawArrays);
+    w->glMultiDrawElements = (OBOL_PFNGLMULTIDRAWELEMENTSPROC) PROC(w, glMultiDrawElements);
   }
 #endif /* GL_VERSION_1_4 */
 #if defined(GL_EXT_multi_draw_arrays)
   if ((w->glMultiDrawArrays == NULL) && SoGLContext_glext_supported(w, "GL_EXT_multi_draw_arrays")) {
-    w->glMultiDrawArrays = (COIN_PFNGLMULTIDRAWARRAYSPROC) PROC(w, glMultiDrawArraysEXT);
-    w->glMultiDrawElements = (COIN_PFNGLMULTIDRAWELEMENTSPROC) PROC(w, glMultiDrawElementsEXT);
+    w->glMultiDrawArrays = (OBOL_PFNGLMULTIDRAWARRAYSPROC) PROC(w, glMultiDrawArraysEXT);
+    w->glMultiDrawElements = (OBOL_PFNGLMULTIDRAWELEMENTSPROC) PROC(w, glMultiDrawElementsEXT);
   }
 #endif /* GL_EXT_multi_draw_arrays */
 
   w->glBindBuffer = NULL; /* so that SoGLContext_has_vertex_buffer_objects() works  */
 #if defined(GL_VERSION_1_5)
   if (SoGLContext_glversion_matches_at_least(w, 1, 5, 0)) {
-    w->glBindBuffer = (COIN_PFNGLBINDBUFFERPROC) PROC(w, glBindBuffer);
-    w->glDeleteBuffers = (COIN_PFNGLDELETEBUFFERSPROC) PROC(w, glDeleteBuffers);
-    w->glGenBuffers = (COIN_PFNGLGENBUFFERSPROC) PROC(w, glGenBuffers);
-    w->glIsBuffer = (COIN_PFNGLISBUFFERPROC) PROC(w, glIsBuffer);
-    w->glBufferData = (COIN_PFNGLBUFFERDATAPROC) PROC(w, glBufferData);
-    w->glBufferSubData = (COIN_PFNGLBUFFERSUBDATAPROC) PROC(w, glBufferSubData);
-    w->glGetBufferSubData = (COIN_PFNGLGETBUFFERSUBDATAPROC) PROC(w, glGetBufferSubData);
-    w->glMapBuffer = (COIN_PNFGLMAPBUFFERPROC) PROC(w, glMapBuffer);
-    w->glUnmapBuffer = (COIN_PFNGLUNMAPBUFFERPROC) PROC(w, glUnmapBuffer);
-    w->glGetBufferParameteriv = (COIN_PFNGLGETBUFFERPARAMETERIVPROC) PROC(w, glGetBufferParameteriv);
-    w->glGetBufferPointerv = (COIN_PFNGLGETBUFFERPOINTERVPROC) PROC(w, glGetBufferPointerv);
+    w->glBindBuffer = (OBOL_PFNGLBINDBUFFERPROC) PROC(w, glBindBuffer);
+    w->glDeleteBuffers = (OBOL_PFNGLDELETEBUFFERSPROC) PROC(w, glDeleteBuffers);
+    w->glGenBuffers = (OBOL_PFNGLGENBUFFERSPROC) PROC(w, glGenBuffers);
+    w->glIsBuffer = (OBOL_PFNGLISBUFFERPROC) PROC(w, glIsBuffer);
+    w->glBufferData = (OBOL_PFNGLBUFFERDATAPROC) PROC(w, glBufferData);
+    w->glBufferSubData = (OBOL_PFNGLBUFFERSUBDATAPROC) PROC(w, glBufferSubData);
+    w->glGetBufferSubData = (OBOL_PFNGLGETBUFFERSUBDATAPROC) PROC(w, glGetBufferSubData);
+    w->glMapBuffer = (OBOL_PNFGLMAPBUFFERPROC) PROC(w, glMapBuffer);
+    w->glUnmapBuffer = (OBOL_PFNGLUNMAPBUFFERPROC) PROC(w, glUnmapBuffer);
+    w->glGetBufferParameteriv = (OBOL_PFNGLGETBUFFERPARAMETERIVPROC) PROC(w, glGetBufferParameteriv);
+    w->glGetBufferPointerv = (OBOL_PFNGLGETBUFFERPOINTERVPROC) PROC(w, glGetBufferPointerv);
   }
 #endif /* GL_VERSION_1_5 */
 
 #if defined(GL_ARB_vertex_buffer_object)
   if ((w->glBindBuffer == NULL) && SoGLContext_glext_supported(w, "GL_ARB_vertex_buffer_object")) {
-    w->glBindBuffer = (COIN_PFNGLBINDBUFFERPROC) PROC(w, glBindBufferARB);
-    w->glDeleteBuffers = (COIN_PFNGLDELETEBUFFERSPROC) PROC(w, glDeleteBuffersARB);
-    w->glGenBuffers = (COIN_PFNGLGENBUFFERSPROC) PROC(w, glGenBuffersARB);
-    w->glIsBuffer = (COIN_PFNGLISBUFFERPROC) PROC(w, glIsBufferARB);
-    w->glBufferData = (COIN_PFNGLBUFFERDATAPROC) PROC(w, glBufferDataARB);
-    w->glBufferSubData = (COIN_PFNGLBUFFERSUBDATAPROC) PROC(w, glBufferSubDataARB);
-    w->glGetBufferSubData = (COIN_PFNGLGETBUFFERSUBDATAPROC) PROC(w, glGetBufferSubDataARB);
-    w->glMapBuffer = (COIN_PNFGLMAPBUFFERPROC) PROC(w, glMapBufferARB);
-    w->glUnmapBuffer = (COIN_PFNGLUNMAPBUFFERPROC) PROC(w, glUnmapBufferARB);
-    w->glGetBufferParameteriv = (COIN_PFNGLGETBUFFERPARAMETERIVPROC) PROC(w, glGetBufferParameterivARB);
-    w->glGetBufferPointerv = (COIN_PFNGLGETBUFFERPOINTERVPROC) PROC(w, glGetBufferPointervARB);
+    w->glBindBuffer = (OBOL_PFNGLBINDBUFFERPROC) PROC(w, glBindBufferARB);
+    w->glDeleteBuffers = (OBOL_PFNGLDELETEBUFFERSPROC) PROC(w, glDeleteBuffersARB);
+    w->glGenBuffers = (OBOL_PFNGLGENBUFFERSPROC) PROC(w, glGenBuffersARB);
+    w->glIsBuffer = (OBOL_PFNGLISBUFFERPROC) PROC(w, glIsBufferARB);
+    w->glBufferData = (OBOL_PFNGLBUFFERDATAPROC) PROC(w, glBufferDataARB);
+    w->glBufferSubData = (OBOL_PFNGLBUFFERSUBDATAPROC) PROC(w, glBufferSubDataARB);
+    w->glGetBufferSubData = (OBOL_PFNGLGETBUFFERSUBDATAPROC) PROC(w, glGetBufferSubDataARB);
+    w->glMapBuffer = (OBOL_PNFGLMAPBUFFERPROC) PROC(w, glMapBufferARB);
+    w->glUnmapBuffer = (OBOL_PFNGLUNMAPBUFFERPROC) PROC(w, glUnmapBufferARB);
+    w->glGetBufferParameteriv = (OBOL_PFNGLGETBUFFERPARAMETERIVPROC) PROC(w, glGetBufferParameterivARB);
+    w->glGetBufferPointerv = (OBOL_PFNGLGETBUFFERPOINTERVPROC) PROC(w, glGetBufferPointervARB);
   }
-
-#if defined(HAVE_GLX)
-  /* ARB_vertex_buffer_object does not work properly on Linux when
-     using the Nvidia 44.96 driver (version 1.4.0). The VBO extension
-     is therefore disabled for this driver. The issue was solved for
-     the 53.28 driver (version 1.4.1). */
-  if (!strcmp(w->vendorstr, "NVIDIA Corporation")) {
-    if (!SoGLContext_glversion_matches_at_least(w, 1, 4, 1)) {
-      w->glBindBuffer = NULL;
-    }
-  }
-#endif
 
   /* VBO support has been found to often trigger bugs in OpenGL
      drivers, so we make it possible to selectively disable that
@@ -1372,7 +1355,7 @@ glglue_resolve_symbols(SoGLContext * w)
      machine. -mortene.)
   */
   if (w->glBindBuffer) {
-    auto env = CoinInternal::getEnvironmentVariable("COIN_GL_DISABLE_VBO");
+    auto env = CoinInternal::getEnvironmentVariable("OBOL_GL_DISABLE_VBO");
     if (env.has_value() && (std::atoi(env->c_str()) > 0)) { w->glBindBuffer = NULL; }
   }
 
@@ -1383,8 +1366,8 @@ glglue_resolve_symbols(SoGLContext * w)
    */
   if (w->glBindBuffer && w->vendor_is_3dlabs
       && !SoGLContext_glversion_matches_at_least(w, 2,0,1)) {
-    /* Enable users to override this workaround by setting COIN_VBO=1 */
-    auto env = CoinInternal::getEnvironmentVariable("COIN_VBO");
+    /* Enable users to override this workaround by setting OBOL_VBO=1 */
+    auto env = CoinInternal::getEnvironmentVariable("OBOL_VBO");
     if (!env.has_value() || (std::atoi(env->c_str()) > 0)) {
       w->glBindBuffer = NULL;
     }
@@ -1404,7 +1387,7 @@ glglue_resolve_symbols(SoGLContext * w)
         !w->glGetBufferParameteriv ||
         !w->glGetBufferPointerv) {
       w->glBindBuffer = NULL; /* so that SoGLContext_has_vertex_buffer_object() will return FALSE */
-      if (COIN_DEBUG || SoGLContext_debug()) {
+      if (OBOL_DEBUG || SoGLContext_debug()) {
         cc_debugerror_postwarning("glglue_init",
                                   "glBindBuffer found, but one or more of the other "
                                   "vertex buffer object functions were not found");
@@ -1437,7 +1420,7 @@ glglue_resolve_symbols(SoGLContext * w)
    do { \
      if (!w->_func_) { \
        w->has_nv_register_combiners = FALSE; \
-       if (COIN_DEBUG || SoGLContext_debug()) { \
+       if (OBOL_DEBUG || SoGLContext_debug()) { \
          static SbBool error_reported = FALSE; \
          if (!error_reported) { \
            cc_debugerror_postwarning("glglue_init", \
@@ -1450,19 +1433,19 @@ glglue_resolve_symbols(SoGLContext * w)
    } while (0)
 
     w->has_nv_register_combiners = TRUE;
-    BIND_FUNCTION_WITH_WARN(glCombinerParameterfvNV, COIN_PFNGLCOMBINERPARAMETERFVNVPROC);
-    BIND_FUNCTION_WITH_WARN(glCombinerParameterivNV, COIN_PFNGLCOMBINERPARAMETERIVNVPROC);
-    BIND_FUNCTION_WITH_WARN(glCombinerParameterfNV, COIN_PFNGLCOMBINERPARAMETERFNVPROC);
-    BIND_FUNCTION_WITH_WARN(glCombinerParameteriNV, COIN_PFNGLCOMBINERPARAMETERINVPROC);
-    BIND_FUNCTION_WITH_WARN(glCombinerInputNV, COIN_PFNGLCOMBINERINPUTNVPROC);
-    BIND_FUNCTION_WITH_WARN(glCombinerOutputNV, COIN_PFNGLCOMBINEROUTPUTNVPROC);
-    BIND_FUNCTION_WITH_WARN(glFinalCombinerInputNV, COIN_PFNGLFINALCOMBINERINPUTNVPROC);
-    BIND_FUNCTION_WITH_WARN(glGetCombinerInputParameterfvNV, COIN_PFNGLGETCOMBINERINPUTPARAMETERFVNVPROC);
-    BIND_FUNCTION_WITH_WARN(glGetCombinerInputParameterivNV, COIN_PFNGLGETCOMBINERINPUTPARAMETERIVNVPROC);
-    BIND_FUNCTION_WITH_WARN(glGetCombinerOutputParameterfvNV, COIN_PFNGLGETCOMBINEROUTPUTPARAMETERFVNVPROC);
-    BIND_FUNCTION_WITH_WARN(glGetCombinerOutputParameterivNV, COIN_PFNGLGETCOMBINEROUTPUTPARAMETERIVNVPROC);
-    BIND_FUNCTION_WITH_WARN(glGetFinalCombinerInputParameterfvNV, COIN_PFNGLGETFINALCOMBINERINPUTPARAMETERFVNVPROC);
-    BIND_FUNCTION_WITH_WARN(glGetFinalCombinerInputParameterivNV, COIN_PFNGLGETFINALCOMBINERINPUTPARAMETERIVNVPROC);
+    BIND_FUNCTION_WITH_WARN(glCombinerParameterfvNV, OBOL_PFNGLCOMBINERPARAMETERFVNVPROC);
+    BIND_FUNCTION_WITH_WARN(glCombinerParameterivNV, OBOL_PFNGLCOMBINERPARAMETERIVNVPROC);
+    BIND_FUNCTION_WITH_WARN(glCombinerParameterfNV, OBOL_PFNGLCOMBINERPARAMETERFNVPROC);
+    BIND_FUNCTION_WITH_WARN(glCombinerParameteriNV, OBOL_PFNGLCOMBINERPARAMETERINVPROC);
+    BIND_FUNCTION_WITH_WARN(glCombinerInputNV, OBOL_PFNGLCOMBINERINPUTNVPROC);
+    BIND_FUNCTION_WITH_WARN(glCombinerOutputNV, OBOL_PFNGLCOMBINEROUTPUTNVPROC);
+    BIND_FUNCTION_WITH_WARN(glFinalCombinerInputNV, OBOL_PFNGLFINALCOMBINERINPUTNVPROC);
+    BIND_FUNCTION_WITH_WARN(glGetCombinerInputParameterfvNV, OBOL_PFNGLGETCOMBINERINPUTPARAMETERFVNVPROC);
+    BIND_FUNCTION_WITH_WARN(glGetCombinerInputParameterivNV, OBOL_PFNGLGETCOMBINERINPUTPARAMETERIVNVPROC);
+    BIND_FUNCTION_WITH_WARN(glGetCombinerOutputParameterfvNV, OBOL_PFNGLGETCOMBINEROUTPUTPARAMETERFVNVPROC);
+    BIND_FUNCTION_WITH_WARN(glGetCombinerOutputParameterivNV, OBOL_PFNGLGETCOMBINEROUTPUTPARAMETERIVNVPROC);
+    BIND_FUNCTION_WITH_WARN(glGetFinalCombinerInputParameterfvNV, OBOL_PFNGLGETFINALCOMBINERINPUTPARAMETERFVNVPROC);
+    BIND_FUNCTION_WITH_WARN(glGetFinalCombinerInputParameterivNV, OBOL_PFNGLGETFINALCOMBINERINPUTPARAMETERIVNVPROC);
 
 #undef BIND_FUNCTION_WITH_WARN
   }
@@ -1519,7 +1502,7 @@ glglue_resolve_symbols(SoGLContext * w)
    do { \
      if (!w->_func_) { \
        w->has_arb_fragment_program = FALSE; \
-       if (COIN_DEBUG || SoGLContext_debug()) { \
+       if (OBOL_DEBUG || SoGLContext_debug()) { \
          static SbBool error_reported = FALSE; \
          if (!error_reported) { \
            cc_debugerror_postwarning("glglue_init", \
@@ -1532,25 +1515,25 @@ glglue_resolve_symbols(SoGLContext * w)
    } while (0)
 
     w->has_arb_fragment_program = TRUE;
-    BIND_FUNCTION_WITH_WARN(glProgramStringARB, COIN_PFNGLPROGRAMSTRINGARBPROC);
-    BIND_FUNCTION_WITH_WARN(glBindProgramARB, COIN_PFNGLBINDPROGRAMARBPROC);
-    BIND_FUNCTION_WITH_WARN(glDeleteProgramsARB, COIN_PFNGLDELETEPROGRAMSARBPROC);
-    BIND_FUNCTION_WITH_WARN(glGenProgramsARB, COIN_PFNGLGENPROGRAMSARBPROC);
-    BIND_FUNCTION_WITH_WARN(glProgramEnvParameter4dARB, COIN_PFNGLPROGRAMENVPARAMETER4DARBPROC);
-    BIND_FUNCTION_WITH_WARN(glProgramEnvParameter4dvARB, COIN_PFNGLPROGRAMENVPARAMETER4DVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glProgramEnvParameter4fARB, COIN_PFNGLPROGRAMENVPARAMETER4FARBPROC);
-    BIND_FUNCTION_WITH_WARN(glProgramEnvParameter4fvARB, COIN_PFNGLPROGRAMENVPARAMETER4FVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glProgramLocalParameter4dARB, COIN_PFNGLPROGRAMLOCALPARAMETER4DARBPROC);
-    BIND_FUNCTION_WITH_WARN(glProgramLocalParameter4dvARB, COIN_PFNGLPROGRAMLOCALPARAMETER4DVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glProgramLocalParameter4fARB, COIN_PFNGLPROGRAMLOCALPARAMETER4FARBPROC);
-    BIND_FUNCTION_WITH_WARN(glProgramLocalParameter4fvARB, COIN_PFNGLPROGRAMLOCALPARAMETER4FVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glGetProgramEnvParameterdvARB, COIN_PFNGLGETPROGRAMENVPARAMETERDVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glGetProgramEnvParameterfvARB, COIN_PFNGLGETPROGRAMENVPARAMETERFVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glGetProgramLocalParameterdvARB, COIN_PFNGLGETPROGRAMLOCALPARAMETERDVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glGetProgramLocalParameterfvARB, COIN_PFNGLGETPROGRAMLOCALPARAMETERFVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glGetProgramivARB, COIN_PFNGLGETPROGRAMIVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glGetProgramStringARB, COIN_PFNGLGETPROGRAMSTRINGARBPROC);
-    BIND_FUNCTION_WITH_WARN(glIsProgramARB, COIN_PFNGLISPROGRAMARBPROC);
+    BIND_FUNCTION_WITH_WARN(glProgramStringARB, OBOL_PFNGLPROGRAMSTRINGARBPROC);
+    BIND_FUNCTION_WITH_WARN(glBindProgramARB, OBOL_PFNGLBINDPROGRAMARBPROC);
+    BIND_FUNCTION_WITH_WARN(glDeleteProgramsARB, OBOL_PFNGLDELETEPROGRAMSARBPROC);
+    BIND_FUNCTION_WITH_WARN(glGenProgramsARB, OBOL_PFNGLGENPROGRAMSARBPROC);
+    BIND_FUNCTION_WITH_WARN(glProgramEnvParameter4dARB, OBOL_PFNGLPROGRAMENVPARAMETER4DARBPROC);
+    BIND_FUNCTION_WITH_WARN(glProgramEnvParameter4dvARB, OBOL_PFNGLPROGRAMENVPARAMETER4DVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glProgramEnvParameter4fARB, OBOL_PFNGLPROGRAMENVPARAMETER4FARBPROC);
+    BIND_FUNCTION_WITH_WARN(glProgramEnvParameter4fvARB, OBOL_PFNGLPROGRAMENVPARAMETER4FVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glProgramLocalParameter4dARB, OBOL_PFNGLPROGRAMLOCALPARAMETER4DARBPROC);
+    BIND_FUNCTION_WITH_WARN(glProgramLocalParameter4dvARB, OBOL_PFNGLPROGRAMLOCALPARAMETER4DVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glProgramLocalParameter4fARB, OBOL_PFNGLPROGRAMLOCALPARAMETER4FARBPROC);
+    BIND_FUNCTION_WITH_WARN(glProgramLocalParameter4fvARB, OBOL_PFNGLPROGRAMLOCALPARAMETER4FVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glGetProgramEnvParameterdvARB, OBOL_PFNGLGETPROGRAMENVPARAMETERDVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glGetProgramEnvParameterfvARB, OBOL_PFNGLGETPROGRAMENVPARAMETERFVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glGetProgramLocalParameterdvARB, OBOL_PFNGLGETPROGRAMLOCALPARAMETERDVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glGetProgramLocalParameterfvARB, OBOL_PFNGLGETPROGRAMLOCALPARAMETERFVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glGetProgramivARB, OBOL_PFNGLGETPROGRAMIVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glGetProgramStringARB, OBOL_PFNGLGETPROGRAMSTRINGARBPROC);
+    BIND_FUNCTION_WITH_WARN(glIsProgramARB, OBOL_PFNGLISPROGRAMARBPROC);
 
 #undef BIND_FUNCTION_WITH_WARN
  }
@@ -1630,7 +1613,7 @@ glglue_resolve_symbols(SoGLContext * w)
    do { \
      if (!w->_func_) { \
        w->has_arb_vertex_program = FALSE; \
-       if (COIN_DEBUG || SoGLContext_debug()) { \
+       if (OBOL_DEBUG || SoGLContext_debug()) { \
          static SbBool error_reported = FALSE; \
          if (!error_reported) { \
            cc_debugerror_postwarning("glglue_init", \
@@ -1643,68 +1626,68 @@ glglue_resolve_symbols(SoGLContext * w)
    } while (0)
 
     w->has_arb_vertex_program = TRUE;
-    BIND_FUNCTION_WITH_WARN(glVertexAttrib1sARB, COIN_PFNGLVERTEXATTRIB1SARBPROC);
-    BIND_FUNCTION_WITH_WARN(glVertexAttrib1fARB, COIN_PFNGLVERTEXATTRIB1FARBPROC);
-    BIND_FUNCTION_WITH_WARN(glVertexAttrib1dARB, COIN_PFNGLVERTEXATTRIB1DARBPROC);
-    BIND_FUNCTION_WITH_WARN(glVertexAttrib2sARB, COIN_PFNGLVERTEXATTRIB2SARBPROC);
-    BIND_FUNCTION_WITH_WARN(glVertexAttrib2fARB, COIN_PFNGLVERTEXATTRIB2FARBPROC);
-    BIND_FUNCTION_WITH_WARN(glVertexAttrib2dARB, COIN_PFNGLVERTEXATTRIB2DARBPROC);
-    BIND_FUNCTION_WITH_WARN(glVertexAttrib3sARB, COIN_PFNGLVERTEXATTRIB3SARBPROC);
-    BIND_FUNCTION_WITH_WARN(glVertexAttrib3fARB, COIN_PFNGLVERTEXATTRIB3FARBPROC);
-    BIND_FUNCTION_WITH_WARN(glVertexAttrib3dARB, COIN_PFNGLVERTEXATTRIB3DARBPROC);
-    BIND_FUNCTION_WITH_WARN(glVertexAttrib4sARB, COIN_PFNGLVERTEXATTRIB4SARBPROC);
-    BIND_FUNCTION_WITH_WARN(glVertexAttrib4fARB, COIN_PFNGLVERTEXATTRIB4FARBPROC);
-    BIND_FUNCTION_WITH_WARN(glVertexAttrib4dARB, COIN_PFNGLVERTEXATTRIB4DARBPROC);
-    BIND_FUNCTION_WITH_WARN(glVertexAttrib4NubARB, COIN_PFNGLVERTEXATTRIB4NUBARBPROC);
-    BIND_FUNCTION_WITH_WARN(glVertexAttrib1svARB, COIN_PFNGLVERTEXATTRIB1SVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glVertexAttrib1fvARB, COIN_PFNGLVERTEXATTRIB1FVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glVertexAttrib1dvARB, COIN_PFNGLVERTEXATTRIB1DVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glVertexAttrib2svARB, COIN_PFNGLVERTEXATTRIB2SVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glVertexAttrib2fvARB, COIN_PFNGLVERTEXATTRIB2FVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glVertexAttrib2dvARB, COIN_PFNGLVERTEXATTRIB2DVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glVertexAttrib3svARB, COIN_PFNGLVERTEXATTRIB3SVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glVertexAttrib3fvARB, COIN_PFNGLVERTEXATTRIB3FVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glVertexAttrib3dvARB, COIN_PFNGLVERTEXATTRIB3DVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glVertexAttrib4bvARB, COIN_PFNGLVERTEXATTRIB4BVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glVertexAttrib4svARB, COIN_PFNGLVERTEXATTRIB4SVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glVertexAttrib4ivARB, COIN_PFNGLVERTEXATTRIB4IVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glVertexAttrib4ubvARB, COIN_PFNGLVERTEXATTRIB4UBVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glVertexAttrib4usvARB, COIN_PFNGLVERTEXATTRIB4USVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glVertexAttrib4uivARB, COIN_PFNGLVERTEXATTRIB4UIVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glVertexAttrib4fvARB, COIN_PFNGLVERTEXATTRIB4FVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glVertexAttrib4dvARB, COIN_PFNGLVERTEXATTRIB4DVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glVertexAttrib4NbvARB, COIN_PFNGLVERTEXATTRIB4NBVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glVertexAttrib4NsvARB, COIN_PFNGLVERTEXATTRIB4NSVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glVertexAttrib4NivARB, COIN_PFNGLVERTEXATTRIB4NIVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glVertexAttrib4NubvARB, COIN_PFNGLVERTEXATTRIB4NUBVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glVertexAttrib4NusvARB, COIN_PFNGLVERTEXATTRIB4NUSVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glVertexAttrib4NuivARB, COIN_PFNGLVERTEXATTRIB4NUIVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glVertexAttribPointerARB, COIN_PFNGLVERTEXATTRIBPOINTERARBPROC);
-    BIND_FUNCTION_WITH_WARN(glEnableVertexAttribArrayARB, COIN_PFNGLENABLEVERTEXATTRIBARRAYARBPROC);
-    BIND_FUNCTION_WITH_WARN(glDisableVertexAttribArrayARB, COIN_PFNGLDISABLEVERTEXATTRIBARRAYARBPROC);
-    BIND_FUNCTION_WITH_WARN(glProgramStringARB, COIN_PFNGLPROGRAMSTRINGARBPROC);
-    BIND_FUNCTION_WITH_WARN(glBindProgramARB, COIN_PFNGLBINDPROGRAMARBPROC);
-    BIND_FUNCTION_WITH_WARN(glDeleteProgramsARB, COIN_PFNGLDELETEPROGRAMSARBPROC);
-    BIND_FUNCTION_WITH_WARN(glGenProgramsARB, COIN_PFNGLGENPROGRAMSARBPROC);
-    BIND_FUNCTION_WITH_WARN(glProgramEnvParameter4dARB, COIN_PFNGLPROGRAMENVPARAMETER4DARBPROC);
-    BIND_FUNCTION_WITH_WARN(glProgramEnvParameter4dvARB, COIN_PFNGLPROGRAMENVPARAMETER4DVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glProgramEnvParameter4fARB, COIN_PFNGLPROGRAMENVPARAMETER4FARBPROC);
-    BIND_FUNCTION_WITH_WARN(glProgramEnvParameter4fvARB, COIN_PFNGLPROGRAMENVPARAMETER4FVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glProgramLocalParameter4dARB, COIN_PFNGLPROGRAMLOCALPARAMETER4DARBPROC);
-    BIND_FUNCTION_WITH_WARN(glProgramLocalParameter4dvARB, COIN_PFNGLPROGRAMLOCALPARAMETER4DVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glProgramLocalParameter4fARB, COIN_PFNGLPROGRAMLOCALPARAMETER4FARBPROC);
-    BIND_FUNCTION_WITH_WARN(glProgramLocalParameter4fvARB, COIN_PFNGLPROGRAMLOCALPARAMETER4FVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glGetProgramEnvParameterdvARB, COIN_PFNGLGETPROGRAMENVPARAMETERDVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glGetProgramEnvParameterfvARB, COIN_PFNGLGETPROGRAMENVPARAMETERFVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glGetProgramLocalParameterdvARB, COIN_PFNGLGETPROGRAMLOCALPARAMETERDVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glGetProgramLocalParameterfvARB, COIN_PFNGLGETPROGRAMLOCALPARAMETERFVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glGetProgramivARB, COIN_PFNGLGETPROGRAMIVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glGetProgramStringARB, COIN_PFNGLGETPROGRAMSTRINGARBPROC);
-    BIND_FUNCTION_WITH_WARN(glGetVertexAttribdvARB, COIN_PFNGLGETVERTEXATTRIBDVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glGetVertexAttribfvARB, COIN_PFNGLGETVERTEXATTRIBFVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glGetVertexAttribivARB, COIN_PFNGLGETVERTEXATTRIBIVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glGetVertexAttribPointervARB, COIN_PFNGLGETVERTEXATTRIBPOINTERVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glIsProgramARB, COIN_PFNGLISPROGRAMARBPROC);
+    BIND_FUNCTION_WITH_WARN(glVertexAttrib1sARB, OBOL_PFNGLVERTEXATTRIB1SARBPROC);
+    BIND_FUNCTION_WITH_WARN(glVertexAttrib1fARB, OBOL_PFNGLVERTEXATTRIB1FARBPROC);
+    BIND_FUNCTION_WITH_WARN(glVertexAttrib1dARB, OBOL_PFNGLVERTEXATTRIB1DARBPROC);
+    BIND_FUNCTION_WITH_WARN(glVertexAttrib2sARB, OBOL_PFNGLVERTEXATTRIB2SARBPROC);
+    BIND_FUNCTION_WITH_WARN(glVertexAttrib2fARB, OBOL_PFNGLVERTEXATTRIB2FARBPROC);
+    BIND_FUNCTION_WITH_WARN(glVertexAttrib2dARB, OBOL_PFNGLVERTEXATTRIB2DARBPROC);
+    BIND_FUNCTION_WITH_WARN(glVertexAttrib3sARB, OBOL_PFNGLVERTEXATTRIB3SARBPROC);
+    BIND_FUNCTION_WITH_WARN(glVertexAttrib3fARB, OBOL_PFNGLVERTEXATTRIB3FARBPROC);
+    BIND_FUNCTION_WITH_WARN(glVertexAttrib3dARB, OBOL_PFNGLVERTEXATTRIB3DARBPROC);
+    BIND_FUNCTION_WITH_WARN(glVertexAttrib4sARB, OBOL_PFNGLVERTEXATTRIB4SARBPROC);
+    BIND_FUNCTION_WITH_WARN(glVertexAttrib4fARB, OBOL_PFNGLVERTEXATTRIB4FARBPROC);
+    BIND_FUNCTION_WITH_WARN(glVertexAttrib4dARB, OBOL_PFNGLVERTEXATTRIB4DARBPROC);
+    BIND_FUNCTION_WITH_WARN(glVertexAttrib4NubARB, OBOL_PFNGLVERTEXATTRIB4NUBARBPROC);
+    BIND_FUNCTION_WITH_WARN(glVertexAttrib1svARB, OBOL_PFNGLVERTEXATTRIB1SVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glVertexAttrib1fvARB, OBOL_PFNGLVERTEXATTRIB1FVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glVertexAttrib1dvARB, OBOL_PFNGLVERTEXATTRIB1DVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glVertexAttrib2svARB, OBOL_PFNGLVERTEXATTRIB2SVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glVertexAttrib2fvARB, OBOL_PFNGLVERTEXATTRIB2FVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glVertexAttrib2dvARB, OBOL_PFNGLVERTEXATTRIB2DVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glVertexAttrib3svARB, OBOL_PFNGLVERTEXATTRIB3SVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glVertexAttrib3fvARB, OBOL_PFNGLVERTEXATTRIB3FVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glVertexAttrib3dvARB, OBOL_PFNGLVERTEXATTRIB3DVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glVertexAttrib4bvARB, OBOL_PFNGLVERTEXATTRIB4BVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glVertexAttrib4svARB, OBOL_PFNGLVERTEXATTRIB4SVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glVertexAttrib4ivARB, OBOL_PFNGLVERTEXATTRIB4IVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glVertexAttrib4ubvARB, OBOL_PFNGLVERTEXATTRIB4UBVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glVertexAttrib4usvARB, OBOL_PFNGLVERTEXATTRIB4USVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glVertexAttrib4uivARB, OBOL_PFNGLVERTEXATTRIB4UIVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glVertexAttrib4fvARB, OBOL_PFNGLVERTEXATTRIB4FVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glVertexAttrib4dvARB, OBOL_PFNGLVERTEXATTRIB4DVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glVertexAttrib4NbvARB, OBOL_PFNGLVERTEXATTRIB4NBVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glVertexAttrib4NsvARB, OBOL_PFNGLVERTEXATTRIB4NSVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glVertexAttrib4NivARB, OBOL_PFNGLVERTEXATTRIB4NIVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glVertexAttrib4NubvARB, OBOL_PFNGLVERTEXATTRIB4NUBVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glVertexAttrib4NusvARB, OBOL_PFNGLVERTEXATTRIB4NUSVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glVertexAttrib4NuivARB, OBOL_PFNGLVERTEXATTRIB4NUIVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glVertexAttribPointerARB, OBOL_PFNGLVERTEXATTRIBPOINTERARBPROC);
+    BIND_FUNCTION_WITH_WARN(glEnableVertexAttribArrayARB, OBOL_PFNGLENABLEVERTEXATTRIBARRAYARBPROC);
+    BIND_FUNCTION_WITH_WARN(glDisableVertexAttribArrayARB, OBOL_PFNGLDISABLEVERTEXATTRIBARRAYARBPROC);
+    BIND_FUNCTION_WITH_WARN(glProgramStringARB, OBOL_PFNGLPROGRAMSTRINGARBPROC);
+    BIND_FUNCTION_WITH_WARN(glBindProgramARB, OBOL_PFNGLBINDPROGRAMARBPROC);
+    BIND_FUNCTION_WITH_WARN(glDeleteProgramsARB, OBOL_PFNGLDELETEPROGRAMSARBPROC);
+    BIND_FUNCTION_WITH_WARN(glGenProgramsARB, OBOL_PFNGLGENPROGRAMSARBPROC);
+    BIND_FUNCTION_WITH_WARN(glProgramEnvParameter4dARB, OBOL_PFNGLPROGRAMENVPARAMETER4DARBPROC);
+    BIND_FUNCTION_WITH_WARN(glProgramEnvParameter4dvARB, OBOL_PFNGLPROGRAMENVPARAMETER4DVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glProgramEnvParameter4fARB, OBOL_PFNGLPROGRAMENVPARAMETER4FARBPROC);
+    BIND_FUNCTION_WITH_WARN(glProgramEnvParameter4fvARB, OBOL_PFNGLPROGRAMENVPARAMETER4FVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glProgramLocalParameter4dARB, OBOL_PFNGLPROGRAMLOCALPARAMETER4DARBPROC);
+    BIND_FUNCTION_WITH_WARN(glProgramLocalParameter4dvARB, OBOL_PFNGLPROGRAMLOCALPARAMETER4DVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glProgramLocalParameter4fARB, OBOL_PFNGLPROGRAMLOCALPARAMETER4FARBPROC);
+    BIND_FUNCTION_WITH_WARN(glProgramLocalParameter4fvARB, OBOL_PFNGLPROGRAMLOCALPARAMETER4FVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glGetProgramEnvParameterdvARB, OBOL_PFNGLGETPROGRAMENVPARAMETERDVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glGetProgramEnvParameterfvARB, OBOL_PFNGLGETPROGRAMENVPARAMETERFVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glGetProgramLocalParameterdvARB, OBOL_PFNGLGETPROGRAMLOCALPARAMETERDVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glGetProgramLocalParameterfvARB, OBOL_PFNGLGETPROGRAMLOCALPARAMETERFVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glGetProgramivARB, OBOL_PFNGLGETPROGRAMIVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glGetProgramStringARB, OBOL_PFNGLGETPROGRAMSTRINGARBPROC);
+    BIND_FUNCTION_WITH_WARN(glGetVertexAttribdvARB, OBOL_PFNGLGETVERTEXATTRIBDVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glGetVertexAttribfvARB, OBOL_PFNGLGETVERTEXATTRIBFVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glGetVertexAttribivARB, OBOL_PFNGLGETVERTEXATTRIBIVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glGetVertexAttribPointervARB, OBOL_PFNGLGETVERTEXATTRIBPOINTERVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glIsProgramARB, OBOL_PFNGLISPROGRAMARBPROC);
 
 #undef BIND_FUNCTION_WITH_WARN
   }
@@ -1724,7 +1707,7 @@ glglue_resolve_symbols(SoGLContext * w)
    do { \
      if (!w->_func_) { \
        w->has_arb_vertex_shader = FALSE; \
-       if (COIN_DEBUG || SoGLContext_debug()) { \
+       if (OBOL_DEBUG || SoGLContext_debug()) { \
          static SbBool error_reported = FALSE; \
          if (!error_reported) { \
            cc_debugerror_postwarning("glglue_init", \
@@ -1737,9 +1720,9 @@ glglue_resolve_symbols(SoGLContext * w)
    } while (0)
 
     w->has_arb_vertex_shader = TRUE;
-    BIND_FUNCTION_WITH_WARN(glBindAttribLocationARB, COIN_PFNGLBINDATTRIBLOCATIONARBPROC);
-    BIND_FUNCTION_WITH_WARN(glGetActiveAttribARB, COIN_PFNGLGETACTIVEATTRIBARBPROC);
-    BIND_FUNCTION_WITH_WARN(glGetAttribLocationARB, COIN_PFNGLGETATTRIBLOCATIONARBPROC);
+    BIND_FUNCTION_WITH_WARN(glBindAttribLocationARB, OBOL_PFNGLBINDATTRIBLOCATIONARBPROC);
+    BIND_FUNCTION_WITH_WARN(glGetActiveAttribARB, OBOL_PFNGLGETACTIVEATTRIBARBPROC);
+    BIND_FUNCTION_WITH_WARN(glGetAttribLocationARB, OBOL_PFNGLGETATTRIBLOCATIONARBPROC);
 
 #undef BIND_FUNCTION_WITH_WARN
   }
@@ -1790,7 +1773,7 @@ glglue_resolve_symbols(SoGLContext * w)
    do { \
      if (!w->_func_) { \
        w->has_arb_shader_objects = FALSE; \
-       if (COIN_DEBUG || SoGLContext_debug()) { \
+       if (OBOL_DEBUG || SoGLContext_debug()) { \
          static SbBool error_reported = FALSE; \
          if (!error_reported) { \
            cc_debugerror_postwarning("glglue_init", \
@@ -1803,43 +1786,43 @@ glglue_resolve_symbols(SoGLContext * w)
    } while (0)
 
     w->has_arb_shader_objects = TRUE;
-    BIND_FUNCTION_WITH_WARN(glGetUniformLocationARB, COIN_PFNGLGETUNIFORMLOCATIONARBPROC);
-    BIND_FUNCTION_WITH_WARN(glGetActiveUniformARB, COIN_PFNGLGETACTIVEUNIFORMARBPROC);
-    BIND_FUNCTION_WITH_WARN(glUniform1fARB, COIN_PFNGLUNIFORM1FARBPROC);
-    BIND_FUNCTION_WITH_WARN(glUniform2fARB, COIN_PFNGLUNIFORM2FARBPROC);
-    BIND_FUNCTION_WITH_WARN(glUniform3fARB, COIN_PFNGLUNIFORM3FARBPROC);
-    BIND_FUNCTION_WITH_WARN(glUniform4fARB, COIN_PFNGLUNIFORM4FARBPROC);
-    BIND_FUNCTION_WITH_WARN(glCreateShaderObjectARB, COIN_PFNGLCREATESHADEROBJECTARBPROC);
-    BIND_FUNCTION_WITH_WARN(glShaderSourceARB, COIN_PFNGLSHADERSOURCEARBPROC);
-    BIND_FUNCTION_WITH_WARN(glCompileShaderARB, COIN_PFNGLCOMPILESHADERARBPROC);
-    BIND_FUNCTION_WITH_WARN(glGetObjectParameterivARB, COIN_PFNGLGETOBJECTPARAMETERIVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glDeleteObjectARB, COIN_PFNGLDELETEOBJECTARBPROC);
-    BIND_FUNCTION_WITH_WARN(glAttachObjectARB, COIN_PFNGLATTACHOBJECTARBPROC);
-    BIND_FUNCTION_WITH_WARN(glDetachObjectARB, COIN_PFNGLDETACHOBJECTARBPROC);
-    BIND_FUNCTION_WITH_WARN(glGetInfoLogARB, COIN_PFNGLGETINFOLOGARBPROC);
-    BIND_FUNCTION_WITH_WARN(glLinkProgramARB, COIN_PFNGLLINKPROGRAMARBPROC);
-    BIND_FUNCTION_WITH_WARN(glUseProgramObjectARB, COIN_PFNGLUSEPROGRAMOBJECTARBPROC);
-    BIND_FUNCTION_WITH_WARN(glCreateProgramObjectARB, COIN_PFNGLCREATEPROGRAMOBJECTARBPROC);
-    BIND_FUNCTION_WITH_WARN(glUniform1fvARB, COIN_PFNGLUNIFORM1FVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glUniform2fvARB, COIN_PFNGLUNIFORM2FVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glUniform3fvARB, COIN_PFNGLUNIFORM3FVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glUniform4fvARB, COIN_PFNGLUNIFORM4FVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glUniform1iARB, COIN_PFNGLUNIFORM1IARBPROC);
-    BIND_FUNCTION_WITH_WARN(glUniform2iARB, COIN_PFNGLUNIFORM2IARBPROC);
-    BIND_FUNCTION_WITH_WARN(glUniform3iARB, COIN_PFNGLUNIFORM3IARBPROC);
-    BIND_FUNCTION_WITH_WARN(glUniform4iARB, COIN_PFNGLUNIFORM4IARBPROC);
-    BIND_FUNCTION_WITH_WARN(glUniform1ivARB, COIN_PFNGLUNIFORM1IVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glUniform2ivARB, COIN_PFNGLUNIFORM2IVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glUniform3ivARB, COIN_PFNGLUNIFORM3IVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glUniform4ivARB, COIN_PFNGLUNIFORM4IVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glUniformMatrix2fvARB, COIN_PFNGLUNIFORMMATRIX2FVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glUniformMatrix3fvARB, COIN_PFNGLUNIFORMMATRIX3FVARBPROC);
-    BIND_FUNCTION_WITH_WARN(glUniformMatrix4fvARB, COIN_PFNGLUNIFORMMATRIX4FVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glGetUniformLocationARB, OBOL_PFNGLGETUNIFORMLOCATIONARBPROC);
+    BIND_FUNCTION_WITH_WARN(glGetActiveUniformARB, OBOL_PFNGLGETACTIVEUNIFORMARBPROC);
+    BIND_FUNCTION_WITH_WARN(glUniform1fARB, OBOL_PFNGLUNIFORM1FARBPROC);
+    BIND_FUNCTION_WITH_WARN(glUniform2fARB, OBOL_PFNGLUNIFORM2FARBPROC);
+    BIND_FUNCTION_WITH_WARN(glUniform3fARB, OBOL_PFNGLUNIFORM3FARBPROC);
+    BIND_FUNCTION_WITH_WARN(glUniform4fARB, OBOL_PFNGLUNIFORM4FARBPROC);
+    BIND_FUNCTION_WITH_WARN(glCreateShaderObjectARB, OBOL_PFNGLCREATESHADEROBJECTARBPROC);
+    BIND_FUNCTION_WITH_WARN(glShaderSourceARB, OBOL_PFNGLSHADERSOURCEARBPROC);
+    BIND_FUNCTION_WITH_WARN(glCompileShaderARB, OBOL_PFNGLCOMPILESHADERARBPROC);
+    BIND_FUNCTION_WITH_WARN(glGetObjectParameterivARB, OBOL_PFNGLGETOBJECTPARAMETERIVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glDeleteObjectARB, OBOL_PFNGLDELETEOBJECTARBPROC);
+    BIND_FUNCTION_WITH_WARN(glAttachObjectARB, OBOL_PFNGLATTACHOBJECTARBPROC);
+    BIND_FUNCTION_WITH_WARN(glDetachObjectARB, OBOL_PFNGLDETACHOBJECTARBPROC);
+    BIND_FUNCTION_WITH_WARN(glGetInfoLogARB, OBOL_PFNGLGETINFOLOGARBPROC);
+    BIND_FUNCTION_WITH_WARN(glLinkProgramARB, OBOL_PFNGLLINKPROGRAMARBPROC);
+    BIND_FUNCTION_WITH_WARN(glUseProgramObjectARB, OBOL_PFNGLUSEPROGRAMOBJECTARBPROC);
+    BIND_FUNCTION_WITH_WARN(glCreateProgramObjectARB, OBOL_PFNGLCREATEPROGRAMOBJECTARBPROC);
+    BIND_FUNCTION_WITH_WARN(glUniform1fvARB, OBOL_PFNGLUNIFORM1FVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glUniform2fvARB, OBOL_PFNGLUNIFORM2FVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glUniform3fvARB, OBOL_PFNGLUNIFORM3FVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glUniform4fvARB, OBOL_PFNGLUNIFORM4FVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glUniform1iARB, OBOL_PFNGLUNIFORM1IARBPROC);
+    BIND_FUNCTION_WITH_WARN(glUniform2iARB, OBOL_PFNGLUNIFORM2IARBPROC);
+    BIND_FUNCTION_WITH_WARN(glUniform3iARB, OBOL_PFNGLUNIFORM3IARBPROC);
+    BIND_FUNCTION_WITH_WARN(glUniform4iARB, OBOL_PFNGLUNIFORM4IARBPROC);
+    BIND_FUNCTION_WITH_WARN(glUniform1ivARB, OBOL_PFNGLUNIFORM1IVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glUniform2ivARB, OBOL_PFNGLUNIFORM2IVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glUniform3ivARB, OBOL_PFNGLUNIFORM3IVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glUniform4ivARB, OBOL_PFNGLUNIFORM4IVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glUniformMatrix2fvARB, OBOL_PFNGLUNIFORMMATRIX2FVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glUniformMatrix3fvARB, OBOL_PFNGLUNIFORMMATRIX3FVARBPROC);
+    BIND_FUNCTION_WITH_WARN(glUniformMatrix4fvARB, OBOL_PFNGLUNIFORMMATRIX4FVARBPROC);
 
 
     w->glProgramParameteriEXT = NULL;
     if (SoGLContext_glext_supported(w, "GL_EXT_geometry_shader4")) {
-      BIND_FUNCTION_WITH_WARN(glProgramParameteriEXT, COIN_PFNGLPROGRAMPARAMETERIEXT);
+      BIND_FUNCTION_WITH_WARN(glProgramParameteriEXT, OBOL_PFNGLPROGRAMPARAMETERIEXT);
     }
 #undef BIND_FUNCTION_WITH_WARN
   }
@@ -1848,27 +1831,27 @@ glglue_resolve_symbols(SoGLContext * w)
   w->glGenQueries = NULL; /* so that SoGLContext_has_occlusion_query() works  */
 #if defined(GL_VERSION_1_5)
   if (SoGLContext_glversion_matches_at_least(w, 1, 5, 0)) {
-    w->glGenQueries = (COIN_PFNGLGENQUERIESPROC)PROC(w, glGenQueries);
-    w->glDeleteQueries = (COIN_PFNGLDELETEQUERIESPROC)PROC(w, glDeleteQueries);
-    w->glIsQuery = (COIN_PFNGLISQUERYPROC)PROC(w, glIsQuery);
-    w->glBeginQuery = (COIN_PFNGLBEGINQUERYPROC)PROC(w, glBeginQuery);
-    w->glEndQuery = (COIN_PFNGLENDQUERYPROC)PROC(w, glEndQuery);
-    w->glGetQueryiv = (COIN_PFNGLGETQUERYIVPROC)PROC(w, glGetQueryiv);
-    w->glGetQueryObjectiv = (COIN_PFNGLGETQUERYOBJECTIVPROC)PROC(w, glGetQueryObjectiv);
-    w->glGetQueryObjectuiv = (COIN_PFNGLGETQUERYOBJECTUIVPROC)PROC(w, glGetQueryObjectuiv);
+    w->glGenQueries = (OBOL_PFNGLGENQUERIESPROC)PROC(w, glGenQueries);
+    w->glDeleteQueries = (OBOL_PFNGLDELETEQUERIESPROC)PROC(w, glDeleteQueries);
+    w->glIsQuery = (OBOL_PFNGLISQUERYPROC)PROC(w, glIsQuery);
+    w->glBeginQuery = (OBOL_PFNGLBEGINQUERYPROC)PROC(w, glBeginQuery);
+    w->glEndQuery = (OBOL_PFNGLENDQUERYPROC)PROC(w, glEndQuery);
+    w->glGetQueryiv = (OBOL_PFNGLGETQUERYIVPROC)PROC(w, glGetQueryiv);
+    w->glGetQueryObjectiv = (OBOL_PFNGLGETQUERYOBJECTIVPROC)PROC(w, glGetQueryObjectiv);
+    w->glGetQueryObjectuiv = (OBOL_PFNGLGETQUERYOBJECTUIVPROC)PROC(w, glGetQueryObjectuiv);
   }
 #endif /* GL_VERSION_1_5 */
 
 #if defined(GL_ARB_occlusion_query)
   if ((w->glGenQueries == NULL) && SoGLContext_glext_supported(w, "GL_ARB_occlusion_query")) {
-    w->glGenQueries = (COIN_PFNGLGENQUERIESPROC)PROC(w, glGenQueriesARB);
-    w->glDeleteQueries = (COIN_PFNGLDELETEQUERIESPROC)PROC(w, glDeleteQueriesARB);
-    w->glIsQuery = (COIN_PFNGLISQUERYPROC)PROC(w, glIsQueryARB);
-    w->glBeginQuery = (COIN_PFNGLBEGINQUERYPROC)PROC(w, glBeginQueryARB);
-    w->glEndQuery = (COIN_PFNGLENDQUERYPROC)PROC(w, glEndQueryARB);
-    w->glGetQueryiv = (COIN_PFNGLGETQUERYIVPROC)PROC(w, glGetQueryivARB);
-    w->glGetQueryObjectiv = (COIN_PFNGLGETQUERYOBJECTIVPROC)PROC(w, glGetQueryObjectivARB);
-    w->glGetQueryObjectuiv = (COIN_PFNGLGETQUERYOBJECTUIVPROC)PROC(w, glGetQueryObjectuivARB);
+    w->glGenQueries = (OBOL_PFNGLGENQUERIESPROC)PROC(w, glGenQueriesARB);
+    w->glDeleteQueries = (OBOL_PFNGLDELETEQUERIESPROC)PROC(w, glDeleteQueriesARB);
+    w->glIsQuery = (OBOL_PFNGLISQUERYPROC)PROC(w, glIsQueryARB);
+    w->glBeginQuery = (OBOL_PFNGLBEGINQUERYPROC)PROC(w, glBeginQueryARB);
+    w->glEndQuery = (OBOL_PFNGLENDQUERYPROC)PROC(w, glEndQueryARB);
+    w->glGetQueryiv = (OBOL_PFNGLGETQUERYIVPROC)PROC(w, glGetQueryivARB);
+    w->glGetQueryObjectiv = (OBOL_PFNGLGETQUERYOBJECTIVPROC)PROC(w, glGetQueryObjectivARB);
+    w->glGetQueryObjectuiv = (OBOL_PFNGLGETQUERYOBJECTUIVPROC)PROC(w, glGetQueryObjectuivARB);
   }
 #endif /* GL_ARB_occlusion_query */
 
@@ -1881,7 +1864,7 @@ glglue_resolve_symbols(SoGLContext * w)
         !w->glGetQueryObjectiv ||
         !w->glGetQueryObjectuiv) {
       w->glGenQueries = NULL; /* so that SoGLContext_has_occlusion_query() will return FALSE */
-      if (COIN_DEBUG || SoGLContext_debug()) {
+      if (OBOL_DEBUG || SoGLContext_debug()) {
         cc_debugerror_postwarning("glglue_init",
                                   "glGenQueries found, but one or more of the other "
                                   "occlusion query functions were not found");
@@ -1892,18 +1875,18 @@ glglue_resolve_symbols(SoGLContext * w)
   w->glVertexArrayRangeNV = NULL;
 #if defined(GL_NV_vertex_array_range) && defined(HAVE_WGL)
   if (SoGLContext_glext_supported(w, "GL_NV_vertex_array_range")) {
-    w->glVertexArrayRangeNV = (COIN_PFNGLVERTEXARRAYRANGENVPROC) PROC(w, glVertexArrayRangeNV);
-    w->glFlushVertexArrayRangeNV = (COIN_PFNGLFLUSHVERTEXARRAYRANGENVPROC) PROC(w, glFlushVertexArrayRangeNV);
+    w->glVertexArrayRangeNV = (OBOL_PFNGLVERTEXARRAYRANGENVPROC) PROC(w, glVertexArrayRangeNV);
+    w->glFlushVertexArrayRangeNV = (OBOL_PFNGLFLUSHVERTEXARRAYRANGENVPROC) PROC(w, glFlushVertexArrayRangeNV);
 #ifdef HAVE_WGL
-    w->glAllocateMemoryNV = (COIN_PFNGLALLOCATEMEMORYNVPROC) PROC(w, wglAllocateMemoryNV);
-    w->glFreeMemoryNV = (COIN_PFNGLFREEMEMORYNVPROC) PROC(w, wglFreeMemoryNV);
+    w->glAllocateMemoryNV = (OBOL_PFNGLALLOCATEMEMORYNVPROC) PROC(w, wglAllocateMemoryNV);
+    w->glFreeMemoryNV = (OBOL_PFNGLFREEMEMORYNVPROC) PROC(w, wglFreeMemoryNV);
 #endif /* HAVE_WGL */
     if (w->glVertexArrayRangeNV) {
       if (!w->glFlushVertexArrayRangeNV ||
           !w->glAllocateMemoryNV ||
           !w->glFreeMemoryNV) {
         w->glVertexArrayRangeNV = NULL;
-        if (COIN_DEBUG || SoGLContext_debug()) {
+        if (OBOL_DEBUG || SoGLContext_debug()) {
           cc_debugerror_postwarning("glglue_init",
                                     "glVertexArrayRangeNV found, but one or more of the other "
                                     "vertex array functions were not found");
@@ -1940,27 +1923,27 @@ glglue_resolve_symbols(SoGLContext * w)
       SoGLContext_glversion_matches_at_least(w, 3, 0, 0)) {
     
     /* Load ARB/Core framebuffer functions */
-    w->glIsRenderbuffer = (COIN_PFNGLISRENDERBUFFERPROC) SoGLContext_getprocaddress(w, "glIsRenderbuffer");
-    w->glBindRenderbuffer = (COIN_PFNGLBINDRENDERBUFFERPROC) SoGLContext_getprocaddress(w, "glBindRenderbuffer");
-    w->glDeleteRenderbuffers = (COIN_PFNGLDELETERENDERBUFFERSPROC)SoGLContext_getprocaddress(w, "glDeleteRenderbuffers");
-    w->glGenRenderbuffers = (COIN_PFNGLGENRENDERBUFFERSPROC)SoGLContext_getprocaddress(w, "glGenRenderbuffers");
-    w->glRenderbufferStorage = (COIN_PFNGLRENDERBUFFERSTORAGEPROC)SoGLContext_getprocaddress(w, "glRenderbufferStorage");
-    w->glGetRenderbufferParameteriv = (COIN_PFNGLGETRENDERBUFFERPARAMETERIVPROC)SoGLContext_getprocaddress(w, "glGetRenderbufferParameteriv");
-    w->glIsFramebuffer = (COIN_PFNGLISFRAMEBUFFERPROC)SoGLContext_getprocaddress(w, "glIsFramebuffer");
-    w->glBindFramebuffer = (COIN_PFNGLBINDFRAMEBUFFERPROC)SoGLContext_getprocaddress(w, "glBindFramebuffer");
-    w->glDeleteFramebuffers = (COIN_PFNGLDELETEFRAMEBUFFERSPROC)SoGLContext_getprocaddress(w, "glDeleteFramebuffers");
-    w->glGenFramebuffers = (COIN_PFNGLGENFRAMEBUFFERSPROC)SoGLContext_getprocaddress(w, "glGenFramebuffers");
-    w->glCheckFramebufferStatus = (COIN_PFNGLCHECKFRAMEBUFFERSTATUSPROC)SoGLContext_getprocaddress(w, "glCheckFramebufferStatus");
-    w->glFramebufferTexture1D = (COIN_PFNGLFRAMEBUFFERTEXTURE1DPROC)SoGLContext_getprocaddress(w, "glFramebufferTexture1D");
-    w->glFramebufferTexture2D = (COIN_PFNGLFRAMEBUFFERTEXTURE2DPROC)SoGLContext_getprocaddress(w, "glFramebufferTexture2D");
-    w->glFramebufferTexture3D = (COIN_PFNGLFRAMEBUFFERTEXTURE3DPROC)SoGLContext_getprocaddress(w, "glFramebufferTexture3D");
-    w->glFramebufferRenderbuffer = (COIN_PFNGLFRAMEBUFFERRENDERBUFFERPROC)SoGLContext_getprocaddress(w, "glFramebufferRenderbuffer");
-    w->glGetFramebufferAttachmentParameteriv = (COIN_PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC)
+    w->glIsRenderbuffer = (OBOL_PFNGLISRENDERBUFFERPROC) SoGLContext_getprocaddress(w, "glIsRenderbuffer");
+    w->glBindRenderbuffer = (OBOL_PFNGLBINDRENDERBUFFERPROC) SoGLContext_getprocaddress(w, "glBindRenderbuffer");
+    w->glDeleteRenderbuffers = (OBOL_PFNGLDELETERENDERBUFFERSPROC)SoGLContext_getprocaddress(w, "glDeleteRenderbuffers");
+    w->glGenRenderbuffers = (OBOL_PFNGLGENRENDERBUFFERSPROC)SoGLContext_getprocaddress(w, "glGenRenderbuffers");
+    w->glRenderbufferStorage = (OBOL_PFNGLRENDERBUFFERSTORAGEPROC)SoGLContext_getprocaddress(w, "glRenderbufferStorage");
+    w->glGetRenderbufferParameteriv = (OBOL_PFNGLGETRENDERBUFFERPARAMETERIVPROC)SoGLContext_getprocaddress(w, "glGetRenderbufferParameteriv");
+    w->glIsFramebuffer = (OBOL_PFNGLISFRAMEBUFFERPROC)SoGLContext_getprocaddress(w, "glIsFramebuffer");
+    w->glBindFramebuffer = (OBOL_PFNGLBINDFRAMEBUFFERPROC)SoGLContext_getprocaddress(w, "glBindFramebuffer");
+    w->glDeleteFramebuffers = (OBOL_PFNGLDELETEFRAMEBUFFERSPROC)SoGLContext_getprocaddress(w, "glDeleteFramebuffers");
+    w->glGenFramebuffers = (OBOL_PFNGLGENFRAMEBUFFERSPROC)SoGLContext_getprocaddress(w, "glGenFramebuffers");
+    w->glCheckFramebufferStatus = (OBOL_PFNGLCHECKFRAMEBUFFERSTATUSPROC)SoGLContext_getprocaddress(w, "glCheckFramebufferStatus");
+    w->glFramebufferTexture1D = (OBOL_PFNGLFRAMEBUFFERTEXTURE1DPROC)SoGLContext_getprocaddress(w, "glFramebufferTexture1D");
+    w->glFramebufferTexture2D = (OBOL_PFNGLFRAMEBUFFERTEXTURE2DPROC)SoGLContext_getprocaddress(w, "glFramebufferTexture2D");
+    w->glFramebufferTexture3D = (OBOL_PFNGLFRAMEBUFFERTEXTURE3DPROC)SoGLContext_getprocaddress(w, "glFramebufferTexture3D");
+    w->glFramebufferRenderbuffer = (OBOL_PFNGLFRAMEBUFFERRENDERBUFFERPROC)SoGLContext_getprocaddress(w, "glFramebufferRenderbuffer");
+    w->glGetFramebufferAttachmentParameteriv = (OBOL_PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC)
       SoGLContext_getprocaddress(w, "glGetFramebufferAttachmentParameteriv");
-    w->glGenerateMipmap = (COIN_PFNGLGENERATEMIPMAPPROC)
+    w->glGenerateMipmap = (OBOL_PFNGLGENERATEMIPMAPPROC)
       SoGLContext_getprocaddress(w, "glGenerateMipmap");
     if (!w->glGenerateMipmap) {
-      w->glGenerateMipmap = (COIN_PFNGLGENERATEMIPMAPPROC)
+      w->glGenerateMipmap = (OBOL_PFNGLGENERATEMIPMAPPROC)
         SoGLContext_getprocaddress(w, "glGenerateMipmapARB");
     }
     
@@ -1979,27 +1962,27 @@ glglue_resolve_symbols(SoGLContext * w)
   if (!w->has_fbo && SoGLContext_glext_supported(w, "GL_EXT_framebuffer_object")) {
     
     /* Load EXT framebuffer functions */
-    w->glIsRenderbuffer = (COIN_PFNGLISRENDERBUFFERPROC) SoGLContext_getprocaddress(w, "glIsRenderbufferEXT");
-    w->glBindRenderbuffer = (COIN_PFNGLBINDRENDERBUFFERPROC) SoGLContext_getprocaddress(w, "glBindRenderbufferEXT");
-    w->glDeleteRenderbuffers = (COIN_PFNGLDELETERENDERBUFFERSPROC)SoGLContext_getprocaddress(w, "glDeleteRenderbuffersEXT");
-    w->glGenRenderbuffers = (COIN_PFNGLGENRENDERBUFFERSPROC)SoGLContext_getprocaddress(w, "glGenRenderbuffersEXT");
-    w->glRenderbufferStorage = (COIN_PFNGLRENDERBUFFERSTORAGEPROC)SoGLContext_getprocaddress(w, "glRenderbufferStorageEXT");
-    w->glGetRenderbufferParameteriv = (COIN_PFNGLGETRENDERBUFFERPARAMETERIVPROC)SoGLContext_getprocaddress(w, "glGetRenderbufferParameterivEXT");
-    w->glIsFramebuffer = (COIN_PFNGLISFRAMEBUFFERPROC)SoGLContext_getprocaddress(w, "glIsFramebufferEXT");
-    w->glBindFramebuffer = (COIN_PFNGLBINDFRAMEBUFFERPROC)SoGLContext_getprocaddress(w, "glBindFramebufferEXT");
-    w->glDeleteFramebuffers = (COIN_PFNGLDELETEFRAMEBUFFERSPROC)SoGLContext_getprocaddress(w, "glDeleteFramebuffersEXT");
-    w->glGenFramebuffers = (COIN_PFNGLGENFRAMEBUFFERSPROC)SoGLContext_getprocaddress(w, "glGenFramebuffersEXT");
-    w->glCheckFramebufferStatus = (COIN_PFNGLCHECKFRAMEBUFFERSTATUSPROC)SoGLContext_getprocaddress(w, "glCheckFramebufferStatusEXT");
-    w->glFramebufferTexture1D = (COIN_PFNGLFRAMEBUFFERTEXTURE1DPROC)SoGLContext_getprocaddress(w, "glFramebufferTexture1DEXT");
-    w->glFramebufferTexture2D = (COIN_PFNGLFRAMEBUFFERTEXTURE2DPROC)SoGLContext_getprocaddress(w, "glFramebufferTexture2DEXT");
-    w->glFramebufferTexture3D = (COIN_PFNGLFRAMEBUFFERTEXTURE3DPROC)SoGLContext_getprocaddress(w, "glFramebufferTexture3DEXT");
-    w->glFramebufferRenderbuffer = (COIN_PFNGLFRAMEBUFFERRENDERBUFFERPROC)SoGLContext_getprocaddress(w, "glFramebufferRenderbufferEXT");
-    w->glGetFramebufferAttachmentParameteriv = (COIN_PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC)
+    w->glIsRenderbuffer = (OBOL_PFNGLISRENDERBUFFERPROC) SoGLContext_getprocaddress(w, "glIsRenderbufferEXT");
+    w->glBindRenderbuffer = (OBOL_PFNGLBINDRENDERBUFFERPROC) SoGLContext_getprocaddress(w, "glBindRenderbufferEXT");
+    w->glDeleteRenderbuffers = (OBOL_PFNGLDELETERENDERBUFFERSPROC)SoGLContext_getprocaddress(w, "glDeleteRenderbuffersEXT");
+    w->glGenRenderbuffers = (OBOL_PFNGLGENRENDERBUFFERSPROC)SoGLContext_getprocaddress(w, "glGenRenderbuffersEXT");
+    w->glRenderbufferStorage = (OBOL_PFNGLRENDERBUFFERSTORAGEPROC)SoGLContext_getprocaddress(w, "glRenderbufferStorageEXT");
+    w->glGetRenderbufferParameteriv = (OBOL_PFNGLGETRENDERBUFFERPARAMETERIVPROC)SoGLContext_getprocaddress(w, "glGetRenderbufferParameterivEXT");
+    w->glIsFramebuffer = (OBOL_PFNGLISFRAMEBUFFERPROC)SoGLContext_getprocaddress(w, "glIsFramebufferEXT");
+    w->glBindFramebuffer = (OBOL_PFNGLBINDFRAMEBUFFERPROC)SoGLContext_getprocaddress(w, "glBindFramebufferEXT");
+    w->glDeleteFramebuffers = (OBOL_PFNGLDELETEFRAMEBUFFERSPROC)SoGLContext_getprocaddress(w, "glDeleteFramebuffersEXT");
+    w->glGenFramebuffers = (OBOL_PFNGLGENFRAMEBUFFERSPROC)SoGLContext_getprocaddress(w, "glGenFramebuffersEXT");
+    w->glCheckFramebufferStatus = (OBOL_PFNGLCHECKFRAMEBUFFERSTATUSPROC)SoGLContext_getprocaddress(w, "glCheckFramebufferStatusEXT");
+    w->glFramebufferTexture1D = (OBOL_PFNGLFRAMEBUFFERTEXTURE1DPROC)SoGLContext_getprocaddress(w, "glFramebufferTexture1DEXT");
+    w->glFramebufferTexture2D = (OBOL_PFNGLFRAMEBUFFERTEXTURE2DPROC)SoGLContext_getprocaddress(w, "glFramebufferTexture2DEXT");
+    w->glFramebufferTexture3D = (OBOL_PFNGLFRAMEBUFFERTEXTURE3DPROC)SoGLContext_getprocaddress(w, "glFramebufferTexture3DEXT");
+    w->glFramebufferRenderbuffer = (OBOL_PFNGLFRAMEBUFFERRENDERBUFFERPROC)SoGLContext_getprocaddress(w, "glFramebufferRenderbufferEXT");
+    w->glGetFramebufferAttachmentParameteriv = (OBOL_PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC)
       SoGLContext_getprocaddress(w, "glGetFramebufferAttachmentParameterivEXT");
     
     /* Load glGenerateMipmap for EXT version if not already loaded */
     if (!w->glGenerateMipmap) {
-      w->glGenerateMipmap = (COIN_PFNGLGENERATEMIPMAPPROC)
+      w->glGenerateMipmap = (OBOL_PFNGLGENERATEMIPMAPPROC)
         SoGLContext_getprocaddress(w, "glGenerateMipmapEXT");
     }
 
@@ -2019,18 +2002,13 @@ glglue_resolve_symbols(SoGLContext * w)
      FIXME: move the driver workarounds to some other module. pederb, 2007-07-04
   */
 
-  if (coin_runtime_os() == COIN_MSWINDOWS) {
-    if (w->vendor_is_nvidia && w->has_fbo) {
-      w->has_fbo = !glglue_has_nvidia_framebuffer_object_bug(w->version.major, w->version.minor, w->version.release);
-    }
-  }
 
   /*
      Option to disable FBO feature even if it is available.
      FIXME: FBO rendering fails in at least one application. To fix it properly
      we need to reproduce this bug in a minimal testcase. jkg, 2007-09-28
   */
-  if ((glglue_resolve_envvar("COIN_DONT_USE_FBO") == 1) && w->has_fbo) {
+  if ((glglue_resolve_envvar("OBOL_DONT_USE_FBO") == 1) && w->has_fbo) {
     w->has_fbo = FALSE;
   }
 
@@ -2054,7 +2032,7 @@ static void
 glglue_check_driver(const char * vendor, const char * renderer,
                     const char * version)
 {
-#ifdef COIN_DEBUG
+#ifdef OBOL_DEBUG
   /* Only spit out this in debug builds, as the bug was never properly
      confirmed. */
   if (SoGLContext_radeon_warning()) {
@@ -2069,7 +2047,7 @@ glglue_check_driver(const char * vendor, const char * renderer,
                                 "<coin-support@coin3d.org>. "
                                 "This debug message can be turned off "
                                 "permanently by setting the environment "
-                                "variable COIN_GLGLUE_NO_RADEON_WARNING=1.",
+                                "variable OBOL_GLGLUE_NO_RADEON_WARNING=1.",
                                 renderer);
 
       /*
@@ -2094,7 +2072,7 @@ glglue_check_driver(const char * vendor, const char * renderer,
       */
     }
   }
-#endif /* COIN_DEBUG */
+#endif /* OBOL_DEBUG */
 
   if (SoGLContext_old_matrox_warning() &&
       (strcmp(renderer, "Matrox G400") == 0) &&
@@ -2104,7 +2082,7 @@ glglue_check_driver(const char * vendor, const char * renderer,
                               "known bugs, please upgrade.  "
                               "(This debug message can be turned off "
                               "permanently by setting the environment "
-                              "variable COIN_GLGLUE_NO_G400_WARNING=1).",
+                              "variable OBOL_GLGLUE_NO_G400_WARNING=1).",
                               renderer, version);
   }
 
@@ -2116,7 +2094,7 @@ glglue_check_driver(const char * vendor, const char * renderer,
                               "known bugs, please upgrade.  "
                               "(This debug message can be turned off "
                               "permanently by setting the environment "
-                              "variable COIN_GLGLUE_NO_ELSA_WARNING=1).",
+                              "variable OBOL_GLGLUE_NO_ELSA_WARNING=1).",
                               renderer, version);
   }
 
@@ -2179,7 +2157,7 @@ glglue_check_driver(const char * vendor, const char * renderer,
                               "please upgrade.  "
                               "(This debug message can be turned off "
                               "permanently by setting the environment variable"
-                              " COIN_GLGLUE_NO_SUN_EXPERT3D_WARNING=1).",
+                              " OBOL_GLGLUE_NO_SUN_EXPERT3D_WARNING=1).",
                               renderer, version);
   /*
     The full driver information for the driver where this was reported
@@ -2219,7 +2197,7 @@ glglue_check_driver(const char * vendor, const char * renderer,
                               "GL_CLAMP_TO_EDGE texture wrapping mode. "
                               "(This debug message can be turned off "
                               "permanently by setting the environment variable"
-                              " COIN_GLGLUE_NO_TRIDENT_WARNING=1).",
+                              " OBOL_GLGLUE_NO_TRIDENT_WARNING=1).",
                               vendor, renderer, version);
     /*
       This problem manifests itself in the form of a glGetError()
@@ -2240,7 +2218,7 @@ glglue_check_driver(const char * vendor, const char * renderer,
 const SoGLContext *
 SoGLContext_instance(int contextid)
 {
-#if defined(COIN3D_BUILD_DUAL_GL) && !defined(SOGL_PREFIX_SET)
+#if defined(OBOL_BUILD_DUAL_GL) && !defined(SOGL_PREFIX_SET)
   /* Dual-GL dispatch: if this context ID was registered as an OSMesa
      context, forward to the osmesa_ variant compiled in gl_osmesa.cpp. */
   if (coingl_context_backend_is_osmesa(contextid)) {
@@ -2249,7 +2227,7 @@ SoGLContext_instance(int contextid)
 #endif
 
   // Add debugging for OSMesa builds at function entry
-#ifdef COIN3D_OSMESA_BUILD
+#ifdef OBOL_OSMESA_BUILD
   if (SoGLContext_debug()) {
     cc_debugerror_postinfo("SoGLContext_instance", "ENTRY: contextid=%d", contextid);
   }
@@ -2261,7 +2239,7 @@ SoGLContext_instance(int contextid)
 
   SoGLContext * gi = NULL;
 
-#ifdef COIN3D_OSMESA_BUILD
+#ifdef OBOL_OSMESA_BUILD
   if (SoGLContext_debug()) {
     cc_debugerror_postinfo("SoGLContext_instance", "About to begin sync");
   }
@@ -2269,24 +2247,24 @@ SoGLContext_instance(int contextid)
 
 
   /* check environment variables */
-#ifdef COIN3D_OSMESA_BUILD
+#ifdef OBOL_OSMESA_BUILD
   if (SoGLContext_debug()) {
     cc_debugerror_postinfo("SoGLContext_instance", "Checking environment variables");
   }
 #endif
-  if (COIN_MAXIMUM_TEXTURE2_SIZE == 0) {
-    auto env = CoinInternal::getEnvironmentVariable("COIN_MAXIMUM_TEXTURE2_SIZE");
-    if (env.has_value()) COIN_MAXIMUM_TEXTURE2_SIZE = std::atoi(env->c_str());
-    else COIN_MAXIMUM_TEXTURE2_SIZE = -1;
+  if (OBOL_MAXIMUM_TEXTURE2_SIZE == 0) {
+    auto env = CoinInternal::getEnvironmentVariable("OBOL_MAXIMUM_TEXTURE2_SIZE");
+    if (env.has_value()) OBOL_MAXIMUM_TEXTURE2_SIZE = std::atoi(env->c_str());
+    else OBOL_MAXIMUM_TEXTURE2_SIZE = -1;
   }
-  if (COIN_MAXIMUM_TEXTURE3_SIZE == 0) {
-    auto env = CoinInternal::getEnvironmentVariable("COIN_MAXIMUM_TEXTURE3_SIZE");
-    if (env.has_value()) COIN_MAXIMUM_TEXTURE3_SIZE = std::atoi(env->c_str());
-    else COIN_MAXIMUM_TEXTURE3_SIZE = -1;
+  if (OBOL_MAXIMUM_TEXTURE3_SIZE == 0) {
+    auto env = CoinInternal::getEnvironmentVariable("OBOL_MAXIMUM_TEXTURE3_SIZE");
+    if (env.has_value()) OBOL_MAXIMUM_TEXTURE3_SIZE = std::atoi(env->c_str());
+    else OBOL_MAXIMUM_TEXTURE3_SIZE = -1;
   }
   /* Platform detection calls removed */
 
-#ifdef COIN3D_OSMESA_BUILD
+#ifdef OBOL_OSMESA_BUILD
   if (SoGLContext_debug()) {
     cc_debugerror_postinfo("SoGLContext_instance", "Checking global dict");
   }
@@ -2296,7 +2274,7 @@ SoGLContext_instance(int contextid)
     coin_atexit((coin_atexit_f *)glglue_cleanup, CC_ATEXIT_NORMAL);
   }
 
-#ifdef COIN3D_OSMESA_BUILD
+#ifdef OBOL_OSMESA_BUILD
   if (SoGLContext_debug()) {
     cc_debugerror_postinfo("SoGLContext_instance", "Looking up context %d in dict", contextid);
   }
@@ -2304,7 +2282,7 @@ SoGLContext_instance(int contextid)
   found = cc_dict_get(gldict, (uintptr_t)contextid, &ptr);
 
   if (!found) {
-#ifdef COIN3D_OSMESA_BUILD
+#ifdef OBOL_OSMESA_BUILD
     if (SoGLContext_debug()) {
       cc_debugerror_postinfo("SoGLContext_instance", "Context not found, creating new glglue instance");
     }
@@ -2323,21 +2301,21 @@ SoGLContext_instance(int contextid)
     if (chk == -1) {
       /* Note: don't change envvar name without updating the assert
          text below. */
-      chk = CoinInternal::getEnvironmentVariable("COIN_GL_NO_CURRENT_CONTEXT_CHECK").has_value() ? 0 : 1;
+      chk = CoinInternal::getEnvironmentVariable("OBOL_GL_NO_CURRENT_CONTEXT_CHECK").has_value() ? 0 : 1;
     }
-#ifdef COIN3D_OSMESA_BUILD
+#ifdef OBOL_OSMESA_BUILD
     if (SoGLContext_debug()) {
       cc_debugerror_postinfo("SoGLContext_instance", "Context check flag: %d", chk);
     }
 #endif
     if (chk) {
-#ifdef COIN3D_OSMESA_BUILD
+#ifdef OBOL_OSMESA_BUILD
       if (SoGLContext_debug()) {
         cc_debugerror_postinfo("SoGLContext_instance", "About to call coin_gl_current_context()");
       }
 #endif
       const void * current_ctx = coin_gl_current_context();
-#ifdef COIN3D_OSMESA_BUILD
+#ifdef OBOL_OSMESA_BUILD
       if (SoGLContext_debug()) {
         cc_debugerror_postinfo("SoGLContext_instance", "coin_gl_current_context() returned: %p", current_ctx);
         SoDB::ContextManager* manager = getSoDBContextManager();
@@ -2348,9 +2326,9 @@ SoGLContext_instance(int contextid)
       // This is expected behavior, so we skip the assertion in that case
       SoDB::ContextManager* manager = getSoDBContextManager();
       if (!manager) {
-        assert(current_ctx && "Must have a current GL context when instantiating SoGLContext!! (Note: if you are using an old Mesa GL version, set the environment variable COIN_GL_NO_CURRENT_CONTEXT_CHECK to get around what may be a Mesa bug.)");
+        assert(current_ctx && "Must have a current GL context when instantiating SoGLContext!! (Note: if you are using an old Mesa GL version, set the environment variable OBOL_GL_NO_CURRENT_CONTEXT_CHECK to get around what may be a Mesa bug.)");
       }
-#ifdef COIN3D_OSMESA_BUILD
+#ifdef OBOL_OSMESA_BUILD
       else {
         if (SoGLContext_debug()) {
           cc_debugerror_postinfo("SoGLContext_instance", "Skipping context check for callback-based contexts");
@@ -2421,7 +2399,7 @@ SoGLContext_instance(int contextid)
 
     glglue_set_glVersion(gi);
 
-#ifdef COIN3D_OSMESA_BUILD
+#ifdef OBOL_OSMESA_BUILD
     if (SoGLContext_debug()) {
       cc_debugerror_postinfo("SoGLContext_instance", "About to call glGetString(GL_VENDOR)");
     }
@@ -2432,7 +2410,7 @@ SoGLContext_instance(int contextid)
 
     gi->vendorstr = (const char *)glGetString(GL_VENDOR);
 
-#ifdef COIN3D_OSMESA_BUILD
+#ifdef OBOL_OSMESA_BUILD
     if (SoGLContext_debug()) {
       cc_debugerror_postinfo("SoGLContext_instance", "glGetString(GL_VENDOR)=='%s' (=> vendor_is_SGI==%s)", 
                             gi->vendorstr ? gi->vendorstr : "(null)",
@@ -2440,27 +2418,13 @@ SoGLContext_instance(int contextid)
     }
 #endif
     gi->vendor_is_SGI = strcmp((const char *)gi->vendorstr, "SGI") == 0;
-    gi->vendor_is_nvidia = strcmp((const char*)gi->vendorstr, "NVIDIA Corporation") == 0;
     gi->vendor_is_intel =
       strstr((const char *)gi->vendorstr, "Tungsten") ||
       strstr((const char *)gi->vendorstr, "Intel");
     gi->vendor_is_ati = (strcmp((const char *) gi->vendorstr, "ATI Technologies Inc.") == 0);
     gi->vendor_is_3dlabs = strcmp((const char *) gi->vendorstr, "3Dlabs") == 0;
-    
-#ifdef COIN3D_OSMESA_BUILD
-    if (SoGLContext_debug()) {
-      cc_debugerror_postinfo("SoGLContext_instance", "Vendor flags set, about to process nvidia bug workaround");
-    }
-#endif
-    
-    /* FIXME: update when nVidia fixes their driver. pederb, 2004-09-01 */
-    gi->nvidia_color_per_face_bug = gi->vendor_is_nvidia;
-    if (gi->nvidia_color_per_face_bug) {
-      auto env = CoinInternal::getEnvironmentVariable("COIN_NO_NVIDIA_COLOR_PER_FACE_BUG_WORKAROUND");
-      if (env.has_value()) gi->nvidia_color_per_face_bug = 0;
-    }
 
-#ifdef COIN3D_OSMESA_BUILD
+#ifdef OBOL_OSMESA_BUILD
     if (SoGLContext_debug()) {
       cc_debugerror_postinfo("SoGLContext_instance", "About to call glGetString(GL_RENDERER)");
     }
@@ -2479,7 +2443,7 @@ SoGLContext_instance(int contextid)
       cc_debugerror_postinfo("SoGLContext_instance", "OpenGL error after GL_RENDERER: 0x%x", error_after_renderer);
     }
     
-#ifdef COIN3D_OSMESA_BUILD
+#ifdef OBOL_OSMESA_BUILD
     if (SoGLContext_debug()) {
       cc_debugerror_postinfo("SoGLContext_instance", "GL_RENDERER call completed, rendererstr = %p", gi->rendererstr);
       if (gi->rendererstr) {
@@ -2490,7 +2454,7 @@ SoGLContext_instance(int contextid)
     
     gi->extensionsstr = (const char *)glGetString(GL_EXTENSIONS);
 
-#ifdef COIN3D_OSMESA_BUILD
+#ifdef OBOL_OSMESA_BUILD
     if (SoGLContext_debug()) {
       cc_debugerror_postinfo("SoGLContext_instance", "Extensions string: %s", 
                             gi->extensionsstr ? gi->extensionsstr : "(null)");
@@ -2505,14 +2469,14 @@ SoGLContext_instance(int contextid)
        same result as the old method.
     */
     if (gi->extensionsstr == NULL) {
-#ifdef COIN3D_OSMESA_BUILD
+#ifdef OBOL_OSMESA_BUILD
       if (SoGLContext_debug()) {
         cc_debugerror_postinfo("SoGLContext_instance", "Extensions string is NULL, trying glGetStringi fallback");
       }
 #endif
-      COIN_PFNGLGETSTRINGIPROC glGetStringi = NULL;
-      glGetStringi = (COIN_PFNGLGETSTRINGIPROC)SoGLContext_getprocaddress(gi, "glGetStringi");
-#ifdef COIN3D_OSMESA_BUILD
+      OBOL_PFNGLGETSTRINGIPROC glGetStringi = NULL;
+      glGetStringi = (OBOL_PFNGLGETSTRINGIPROC)SoGLContext_getprocaddress(gi, "glGetStringi");
+#ifdef OBOL_OSMESA_BUILD
       if (SoGLContext_debug()) {
         cc_debugerror_postinfo("SoGLContext_instance", "glGetStringi = %p", glGetStringi);
       }
@@ -2639,7 +2603,7 @@ SoGLContext_instance(int contextid)
   }
 
 
-#ifdef COIN3D_OSMESA_BUILD
+#ifdef OBOL_OSMESA_BUILD
   if (SoGLContext_debug()) {
     cc_debugerror_postinfo("SoGLContext_instance", "About to execute instance created callbacks");
   }
@@ -2654,7 +2618,7 @@ SoGLContext_instance(int contextid)
     }
   }
 
-#ifdef COIN3D_OSMESA_BUILD
+#ifdef OBOL_OSMESA_BUILD
   if (SoGLContext_debug()) {
     cc_debugerror_postinfo("SoGLContext_instance", "RETURN: SoGLContext_instance returning successfully");
   }
@@ -2727,10 +2691,10 @@ SoGLContext_has_polygon_offset(const SoGLContext * w)
 }
 
 /* Returns the glPolygonOffset() we're actually going to use. */
-static COIN_PFNGLPOLYGONOFFSETPROC
+static OBOL_PFNGLPOLYGONOFFSETPROC
 glglue_glPolygonOffset(const SoGLContext * w)
 {
-  COIN_PFNGLPOLYGONOFFSETPROC poff = NULL;
+  OBOL_PFNGLPOLYGONOFFSETPROC poff = NULL;
 
   assert(w->glPolygonOffset ||  w->glPolygonOffsetEXT);
 
@@ -2749,7 +2713,7 @@ glglue_glPolygonOffset(const SoGLContext * w)
 
   /* Since we know glPolygonOffset() can be problematic, we also
      provide a way to prefer the EXT function instead through an
-     environment variable "COIN_PREFER_GLPOLYGONOFFSET_EXT" (which
+     environment variable "OBOL_PREFER_GLPOLYGONOFFSET_EXT" (which
      could be handy for help debugging remote systems, at least). */
   if (w->glPolygonOffsetEXT && glglue_prefer_glPolygonOffsetEXT()) {
     poff = w->glPolygonOffsetEXT;
@@ -2770,7 +2734,7 @@ void
 SoGLContext_glPolygonOffsetEnable(const SoGLContext * w,
                                 SbBool enable, int m)
 {
-  COIN_PFNGLPOLYGONOFFSETPROC poff = glglue_glPolygonOffset(w);
+  OBOL_PFNGLPOLYGONOFFSETPROC poff = glglue_glPolygonOffset(w);
 
   if (enable) {
     if (poff == w->glPolygonOffset) {
@@ -2816,7 +2780,7 @@ SoGLContext_glPolygonOffset(const SoGLContext * w,
                           GLfloat factor,
                           GLfloat units)
 {
-  COIN_PFNGLPOLYGONOFFSETPROC poff = glglue_glPolygonOffset(w);
+  OBOL_PFNGLPOLYGONOFFSETPROC poff = glglue_glPolygonOffset(w);
 
   if (poff == w->glPolygonOffsetEXT) {
     /* Try to detect if user actually attempted to specify a valid
@@ -3303,7 +3267,7 @@ SoGLContext_has_paletted_textures(const SoGLContext * glue)
 {
   static int disable = -1;
   if (disable == -1) {
-    disable = glglue_resolve_envvar("COIN_GLGLUE_DISABLE_PALETTED_TEXTURE");
+    disable = glglue_resolve_envvar("OBOL_GLGLUE_DISABLE_PALETTED_TEXTURE");
   }
   if (disable) { return FALSE; }
 
@@ -4741,40 +4705,6 @@ SoGLContext_context_max_dimensions(unsigned int * width, unsigned int * height)
     SoGLContext_context_destruct(ctx);
     return;
   }
-  if (strcmp(vendor, "NVIDIA Corporation") == 0) {
-
-    /* NVIDIA seems to have a bug where max render size is limited
-       by desktop resolution (at least for their Linux X11
-       drivers), not the texture maxsize returned by OpenGL. So we
-       use a workaround by limiting max size to the lowend
-       resolution for desktop monitors.
-
-       According to pederb, there are versions of the NVidia
-       drivers where the offscreen buffer also has to have
-       dimensions that are 2^x, so we limit further down to these
-       dimension settings to be sure.
-    */
-
-    /* FIXME: should make a standalone test-case (not dependent
-       on Coin, only GL, GLX & X11) that demonstrates this problem
-       for a) submitting to <linux-bugs@nvidia.com>, and b) to
-       test which versions of the NVidia drivers are affected --
-       as it is now, we shrink the max to <512,512> on all
-       versions (even if we're under MSWin). 20030812 mortene.
-    */
-
-    /* UPDATE 20050712 mortene: this clamping should no longer be
-       necessary, as we now re-request a new, lower size for offscreen
-       buffers from SoOffscreenRenderer (i.e. the values returned from
-       this function is considered just a hint).
-
-       I'm keeping the code comments and the commented out code below,
-       in case there have been issues with NVidia drivers hidden by
-       this clamping, which will surface now...
-
-       Eventually, this special case check should be removed, though.
-    */
-  }
 
   *width = (unsigned int) size[0];
   *height = (unsigned int) size[1];
@@ -4829,7 +4759,7 @@ SoGLContext_context_max_dimensions(unsigned int * width, unsigned int * height)
 }
 
 SbBool
-SoGLContext_context_can_render_to_texture(void * COIN_UNUSED_ARG(ctx))
+SoGLContext_context_can_render_to_texture(void * OBOL_UNUSED_ARG(ctx))
 {
   /* Render-to-texture is not supported with the current FBO+callback architecture.
      This functionality has been superseded by the portable FBO-based offscreen rendering. */
@@ -4838,21 +4768,21 @@ SoGLContext_context_can_render_to_texture(void * COIN_UNUSED_ARG(ctx))
 
 
 void
-SoGLContext_context_bind_pbuffer(void * COIN_UNUSED_ARG(ctx))
+SoGLContext_context_bind_pbuffer(void * OBOL_UNUSED_ARG(ctx))
 {
   /* PBuffer functionality is not needed with FBO-based offscreen rendering.
      This is a no-op in the current architecture. */
 }
 
 void
-SoGLContext_context_release_pbuffer(void * COIN_UNUSED_ARG(ctx))
+SoGLContext_context_release_pbuffer(void * OBOL_UNUSED_ARG(ctx))
 {
   /* PBuffer functionality is not needed with FBO-based offscreen rendering.
      This is a no-op in the current architecture. */
 }
 
 SbBool
-SoGLContext_context_pbuffer_is_bound(void * COIN_UNUSED_ARG(ctx))
+SoGLContext_context_pbuffer_is_bound(void * OBOL_UNUSED_ARG(ctx))
 {
   /* PBuffer functionality is not needed with FBO-based offscreen rendering.
      Always return FALSE as PBuffers are not used. */
@@ -4862,12 +4792,12 @@ SoGLContext_context_pbuffer_is_bound(void * COIN_UNUSED_ARG(ctx))
 /* Win32 HDC support has been removed as it was platform-specific
    and is not needed with the callback-based context architecture. */
 const void *
-SoGLContext_win32_HDC(void * COIN_UNUSED_ARG(ctx))
+SoGLContext_win32_HDC(void * OBOL_UNUSED_ARG(ctx))
 {
   return NULL;
 }
 
-void SoGLContext_win32_updateHDCBitmap(void * COIN_UNUSED_ARG(ctx))
+void SoGLContext_win32_updateHDCBitmap(void * OBOL_UNUSED_ARG(ctx))
 {
   /* No-op: HDC functionality has been removed */
 }
@@ -4965,9 +4895,9 @@ SoGLContext_is_texture_size_legal(const SoGLContext * glw,
                                   SbBool mipmap)
  {
   if (zsize == 0) { /* 2D textures */
-    if (COIN_MAXIMUM_TEXTURE2_SIZE > 0) {
-      if (xsize > COIN_MAXIMUM_TEXTURE2_SIZE) return FALSE;
-      if (ysize > COIN_MAXIMUM_TEXTURE2_SIZE) return FALSE;
+    if (OBOL_MAXIMUM_TEXTURE2_SIZE > 0) {
+      if (xsize > OBOL_MAXIMUM_TEXTURE2_SIZE) return FALSE;
+      if (ysize > OBOL_MAXIMUM_TEXTURE2_SIZE) return FALSE;
       return TRUE;
     }
     if (SoGLContext_has_2d_proxy_textures(glw)) {
@@ -4981,23 +4911,23 @@ SoGLContext_is_texture_size_legal(const SoGLContext * glw,
   }
   else { /*  3D textures */
     if (SoGLContext_has_3d_textures(glw)) {
-      if (COIN_MAXIMUM_TEXTURE3_SIZE > 0) {
-        if (xsize > COIN_MAXIMUM_TEXTURE3_SIZE) return FALSE;
-        if (ysize > COIN_MAXIMUM_TEXTURE3_SIZE) return FALSE;
-        if (zsize > COIN_MAXIMUM_TEXTURE3_SIZE) return FALSE;
+      if (OBOL_MAXIMUM_TEXTURE3_SIZE > 0) {
+        if (xsize > OBOL_MAXIMUM_TEXTURE3_SIZE) return FALSE;
+        if (ysize > OBOL_MAXIMUM_TEXTURE3_SIZE) return FALSE;
+        if (zsize > OBOL_MAXIMUM_TEXTURE3_SIZE) return FALSE;
         return TRUE;
       }
       return proxy_mipmap_3d(glw, xsize, ysize, zsize, internalformat, format, type, mipmap);
     }
     else {
-#if COIN_DEBUG
+#if OBOL_DEBUG
       static SbBool first = TRUE;
       if (first) {
         cc_debugerror_post("glglue_is_texture_size_legal",
                            "3D not supported with this OpenGL driver");
         first = FALSE;
       }
-#endif /*  COIN_DEBUG */
+#endif /*  OBOL_DEBUG */
       return FALSE;
     }
   }
@@ -5054,7 +4984,7 @@ GLint SoGLContext_get_internal_texture_format(const SoGLContext * glw,
   Convert from num components to client texture format for use
   in glTexImage*D's format parameter.
 */
-GLenum SoGLContext_get_texture_format(const SoGLContext * COIN_UNUSED_ARG(glw), int numcomponents)
+GLenum SoGLContext_get_texture_format(const SoGLContext * OBOL_UNUSED_ARG(glw), int numcomponents)
 {
   GLenum format;
   switch (numcomponents) {
@@ -5165,14 +5095,14 @@ coin_gl_current_context(void)
 /* ********************************************************************** */
 
 SbBool
-SoGLContext_vbo_in_displaylist_supported(const SoGLContext * COIN_UNUSED_ARG(glue))
+SoGLContext_vbo_in_displaylist_supported(const SoGLContext * OBOL_UNUSED_ARG(glue))
 {
   // Older ATI Windows/Linux drivers had a nasty bug which caused a crash
   // in OpenGL whenever a VBO render call was added to a display list.
   // Newer drivers are known to work.
   static int disable = -1;
   if (disable == -1) {
-    disable = glglue_resolve_envvar("COIN_GLGLUE_DISABLE_VBO_IN_DISPLAYLIST");
+    disable = glglue_resolve_envvar("OBOL_GLGLUE_DISABLE_VBO_IN_DISPLAYLIST");
   }
   if (disable) { return FALSE; }
 
@@ -5188,7 +5118,7 @@ SoGLContext_non_power_of_two_textures(const SoGLContext * glue)
   // on old drivers.  Newer drivers are known to work.
   static int disable = -1;
   if (disable == -1) {
-    disable = glglue_resolve_envvar("COIN_GLGLUE_DISABLE_NON_POWER_OF_TWO_TEXTURES");
+    disable = glglue_resolve_envvar("OBOL_GLGLUE_DISABLE_NON_POWER_OF_TWO_TEXTURES");
   }
   if (disable) { return FALSE; }
 
@@ -5346,7 +5276,7 @@ SoGLContext_has_generate_mipmap(const SoGLContext * glue)
   // work around these quirks, but we just disable it for now since we
   // have other ways to generate mipmaps. Only disable on Windows. The
   // OS X and Linux drivers are probably ok.
-  if ((coin_runtime_os() == COIN_MSWINDOWS) && glue->vendor_is_ati) {
+  if ((coin_runtime_os() == OBOL_MSWINDOWS) && glue->vendor_is_ati) {
     return FALSE;
   }
   return (glue->glGenerateMipmap != NULL);

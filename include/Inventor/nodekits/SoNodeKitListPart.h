@@ -1,5 +1,5 @@
-#ifndef COIN_SONODEKITLISTPART_H
-#define COIN_SONODEKITLISTPART_H
+#ifndef OBOL_SONODEKITLISTPART_H
+#define OBOL_SONODEKITLISTPART_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -42,7 +42,7 @@
 class SoGroup;
 
 
-class COIN_DLL_API SoNodeKitListPart : public SoNode {
+class OBOL_DLL_API SoNodeKitListPart : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_HEADER(SoNodeKitListPart);
@@ -107,4 +107,4 @@ private:
   friend class SoBaseKit;
 };
 
-#endif // !COIN_SONODEKITLISTPART_H
+#endif // !OBOL_SONODEKITLISTPART_H

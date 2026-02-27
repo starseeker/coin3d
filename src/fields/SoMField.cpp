@@ -254,13 +254,13 @@
 #include <Inventor/fields/SoSubField.h>
 
 #include "CoinTidbits.h"
-#include "config.h" // COIN_WORKAROUND_*
+#include "config.h" // OBOL_WORKAROUND_*
 
-#ifndef COIN_WORKAROUND_NO_USING_STD_FUNCS
+#ifndef OBOL_WORKAROUND_NO_USING_STD_FUNCS
 using std::memcpy;
 using std::memset;
 using std::strlen;
-#endif // !COIN_WORKAROUND_NO_USING_STD_FUNCS
+#endif // !OBOL_WORKAROUND_NO_USING_STD_FUNCS
 
 // *************************************************************************
 
@@ -674,18 +674,18 @@ SoMField::deleteValues(int start, int numarg)
 
   if (numarg == -1) numarg = oldnum - start;
   if (numarg == 0) return;
-#if COIN_DEBUG
+#if OBOL_DEBUG
   int end = start + numarg; // First element behind the delete block.
 #endif
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (start < 0 || start >= oldnum || end > oldnum || numarg < -1) {
     SoDebugError::post("SoMField::deleteValues",
                        "invalid indices [%d, %d] for array of size %d",
                        start, end - 1, oldnum);
     return;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   // Move elements downward to fill the gap.
   for (int i = 0; i < oldnum-(start+numarg); i++)
@@ -746,14 +746,14 @@ SoMField::insertSpace(int start, int numarg)
 
   // Don't use getNum(), so we avoid recursive evaluate() calls.
   int oldnum = this->num;
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (start < 0 || start > oldnum || numarg < 0) {
     SoDebugError::post("SoMField::insertSpace",
                        "invalid indices [%d, %d] for array of size %d",
                        start, start + numarg, oldnum);
     return;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   // Expand array.
   this->allocValues(oldnum + numarg);
@@ -804,7 +804,7 @@ SoMField::allocValues(int newnum)
       while (newnum > this->maxNum) this->maxNum *= 2;
       while ((this->maxNum / 2) >= newnum) this->maxNum /= 2;
 
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
       SoDebugError::postInfo("SoMField::allocValues",
                              "'%s' newnum==%d, old/new %p->maxNum==%d/%d",
                              this->getTypeId().getName().getString(),

@@ -1,5 +1,5 @@
-#ifndef COIN_SODIFFUSECOLORELEMENT_H
-#define COIN_SODIFFUSECOLORELEMENT_H
+#ifndef OBOL_SODIFFUSECOLORELEMENT_H
+#define OBOL_SODIFFUSECOLORELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -38,7 +38,7 @@
 
 class SoColorPacker;
 
-class COIN_DLL_API SoDiffuseColorElement : public SoReplacedElement {
+class OBOL_DLL_API SoDiffuseColorElement : public SoReplacedElement {
   typedef SoReplacedElement inherited;
 
   SO_ELEMENT_HEADER(SoDiffuseColorElement);
@@ -73,4 +73,4 @@ private:
   SoColorPacker colorpacker;
 };
 
-#endif // !COIN_SODIFFUSECOLORELEMENT_H
+#endif // !OBOL_SODIFFUSECOLORELEMENT_H

@@ -193,7 +193,7 @@ SoPrimitiveVertex::~SoPrimitiveVertex()
 
   Convenience function. Will fill in 1 in the last coordinate.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */
@@ -203,7 +203,7 @@ SoPrimitiveVertex::~SoPrimitiveVertex()
 
   Convenience function. Will fill in 1 in the last coordinate.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
   \since Coin 2.5
 */
 
@@ -220,7 +220,7 @@ SoPrimitiveVertex::~SoPrimitiveVertex()
   Used internally from library client code setting up an
   SoPrimitiveVertex instance.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
   \since Coin 2.5
 */
 

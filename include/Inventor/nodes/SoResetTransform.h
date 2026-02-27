@@ -1,5 +1,5 @@
-#ifndef COIN_SORESETTRANSFORM_H
-#define COIN_SORESETTRANSFORM_H
+#ifndef OBOL_SORESETTRANSFORM_H
+#define OBOL_SORESETTRANSFORM_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/nodes/SoTransformation.h>
 #include <Inventor/fields/SoSFBitMask.h>
 
-class COIN_DLL_API SoResetTransform : public SoTransformation {
+class OBOL_DLL_API SoResetTransform : public SoTransformation {
   typedef SoTransformation inherited;
 
   SO_NODE_HEADER(SoResetTransform);
@@ -66,4 +66,4 @@ protected:
   virtual ~SoResetTransform();
 };
 
-#endif // !COIN_SORESETTRANSFORM_H
+#endif // !OBOL_SORESETTRANSFORM_H

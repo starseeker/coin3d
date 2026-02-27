@@ -1,5 +1,5 @@
-#ifndef COIN_SOGLARBSHADERPROGRAM_H
-#define COIN_SOGLARBSHADERPROGRAM_H
+#ifndef OBOL_SOGLARBSHADERPROGRAM_H
+#define OBOL_SOGLARBSHADERPROGRAM_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,7 +33,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #error this is a private header file
 #endif
 
@@ -64,4 +64,4 @@ protected:
   SoGLARBShaderObject * vertexShader;
 };
 
-#endif /* ! COIN_SOGLARBSHADERPROGRAM_H */
+#endif /* ! OBOL_SOGLARBSHADERPROGRAM_H */

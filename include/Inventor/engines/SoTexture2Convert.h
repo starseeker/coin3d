@@ -30,15 +30,15 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_SOTEXTURE2CONVERT_H
-#define COIN_SOTEXTURE2CONVERT_H
+#ifndef OBOL_SOTEXTURE2CONVERT_H
+#define OBOL_SOTEXTURE2CONVERT_H
 
 #include <Inventor/engines/SoEngine.h>
 #include <Inventor/engines/SoSubEngine.h>
 #include <Inventor/engines/SoEngineOutput.h>
 #include <Inventor/fields/SoSFImage.h>
 
-class COIN_DLL_API SoTexture2Convert : public SoEngine {
+class OBOL_DLL_API SoTexture2Convert : public SoEngine {
   typedef SoEngine inherited;
   SO_ENGINE_ABSTRACT_HEADER(SoTexture2Convert);
 public:
@@ -50,4 +50,4 @@ public:
 
 }; // SoTexture2Convert
 
-#endif // !COIN_SOTEXTURE2CONVERT_H
+#endif // !OBOL_SOTEXTURE2CONVERT_H

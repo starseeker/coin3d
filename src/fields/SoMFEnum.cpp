@@ -196,9 +196,9 @@ SoMFEnum::write1Value(SoOutput * out, int idx) const
     return;
   }
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   SoDebugError::post("SoMFEnum::writeValue", "Illegal value (%d) in field", val);
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }
 
 #endif // DOXYGEN_SKIP_THIS
@@ -215,12 +215,12 @@ SoMFEnum::setValue(const SbName name)
   if (this->findEnumValue(name, val)) {
     this->setValue(val);
   }
-#if COIN_DEBUG
+#if OBOL_DEBUG
   else {
     SoDebugError::post("SoMFEnum::setValue",
                        "Unknown enum '%s'", name.getString());
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }
 
 /*!
@@ -234,12 +234,12 @@ SoMFEnum::set1Value(const int idx, const SbName name)
   if(this->findEnumValue(name, val)) {
     this->set1Value(idx, val);
   }
-#if COIN_DEBUG
+#if OBOL_DEBUG
   else {
     SoDebugError::post("SoMFEnum::setValue",
                        "Unknown enum '%s'", name.getString());
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }
 
 /*!
@@ -306,7 +306,7 @@ SoMFEnum::findEnumName(int value, const SbName * & name) const
 /*!
   Returns the number of enum names the SoSFEnum object understands.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */
@@ -320,14 +320,14 @@ SoMFEnum::getNumEnums(void) const
   Returns the value of the Nth enum this SoSFEnum object understands,
   and mutates \a name to contain the Nth enum's name.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */
 int
 SoMFEnum::getEnum(const int idx, SbName & name) const
 {
-  if ( COIN_DEBUG && (idx < 0 || idx >= this->numEnums) ) {
+  if ( OBOL_DEBUG && (idx < 0 || idx >= this->numEnums) ) {
     SoDebugError::post("SoSFEnum::getEnum", "idx (%d) out of range", idx);
     return -1;
   }

@@ -1,5 +1,5 @@
-#ifndef COIN_SOGLLIGHTIDELEMENT_H
-#define COIN_SOGLLIGHTIDELEMENT_H
+#ifndef OBOL_SOGLLIGHTIDELEMENT_H
+#define OBOL_SOGLLIGHTIDELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/elements/SoInt32Element.h>
 
-class COIN_DLL_API SoGLLightIdElement : public SoInt32Element {
+class OBOL_DLL_API SoGLLightIdElement : public SoInt32Element {
   typedef SoInt32Element inherited;
 
   SO_ELEMENT_HEADER(SoGLLightIdElement);
@@ -61,4 +61,4 @@ public:
 protected:
 };
 
-#endif // !COIN_SOGLLIGHTIDELEMENT_H
+#endif // !OBOL_SOGLLIGHTIDELEMENT_H

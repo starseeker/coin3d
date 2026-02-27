@@ -1,5 +1,5 @@
-#ifndef COIN_SOBASIC_H
-#define COIN_SOBASIC_H
+#ifndef OBOL_SOBASIC_H
+#define OBOL_SOBASIC_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,9 +33,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifdef COIN_INTERNAL
+#ifdef OBOL_INTERNAL
 #error Do not include Inventor/misc/SoBasic.h internally.
-#endif // COIN_INTERNAL
+#endif // OBOL_INTERNAL
 
 // This file is present just for compatibility with Open Inventor. The
 // macros originally provided here (SO__QUOTE and SO__CONCAT), has
@@ -44,4 +44,4 @@
 
 #include <Inventor/SbBasic.h>
 
-#endif // !COIN_SOBASIC_H
+#endif // !OBOL_SOBASIC_H

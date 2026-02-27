@@ -543,7 +543,7 @@ SoElement::~SoElement()
   SoState objects.
 */
 void
-SoElement::init(SoState * COIN_UNUSED_ARG(state))
+SoElement::init(SoState * OBOL_UNUSED_ARG(state))
 {
   // virtual method
 }
@@ -560,7 +560,7 @@ SoElement::init(SoState * COIN_UNUSED_ARG(state))
   SoElement::getNextInStack().
 */
 void
-SoElement::push(SoState * COIN_UNUSED_ARG(state))
+SoElement::push(SoState * OBOL_UNUSED_ARG(state))
 {
   // virtual method
 }
@@ -575,7 +575,7 @@ SoElement::push(SoState * COIN_UNUSED_ARG(state))
   the previous top of stack.
 */
 void
-SoElement::pop(SoState * COIN_UNUSED_ARG(state), const SoElement * COIN_UNUSED_ARG(prevTopElement))
+SoElement::pop(SoState * OBOL_UNUSED_ARG(state), const SoElement * OBOL_UNUSED_ARG(prevTopElement))
 {
   // virtual method
 }
@@ -599,7 +599,7 @@ SoElement::print(FILE * file) const
   function, it should also have a copyMatchInfo() function.
 */
 SbBool
-SoElement::matches(const SoElement * COIN_UNUSED_ARG(element)) const
+SoElement::matches(const SoElement * OBOL_UNUSED_ARG(element)) const
 {
   return FALSE;
 }

@@ -1,5 +1,5 @@
-#ifndef COIN_SOONESHOTSENSOR_H
-#define COIN_SOONESHOTSENSOR_H
+#ifndef OBOL_SOONESHOTSENSOR_H
+#define OBOL_SOONESHOTSENSOR_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/sensors/SoDelayQueueSensor.h>
 
-class COIN_DLL_API SoOneShotSensor : public SoDelayQueueSensor {
+class OBOL_DLL_API SoOneShotSensor : public SoDelayQueueSensor {
   typedef SoDelayQueueSensor inherited;
 
 public:
@@ -44,4 +44,4 @@ public:
   virtual ~SoOneShotSensor(void);
 };
 
-#endif // !COIN_SOONESHOTSENSOR_H
+#endif // !OBOL_SOONESHOTSENSOR_H

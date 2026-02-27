@@ -1,5 +1,5 @@
-#ifndef COIN_SOCONTEXTHANDLER_H
-#define COIN_SOCONTEXTHANDLER_H
+#ifndef OBOL_SOCONTEXTHANDLER_H
+#define OBOL_SOCONTEXTHANDLER_H
 
 #include <Inventor/SbBasic.h>
 
@@ -37,7 +37,7 @@
 
 #include <Inventor/SbBasic.h>
 
-class COIN_DLL_API SoContextHandler {
+class OBOL_DLL_API SoContextHandler {
 public:
   static void destructingContext(uint32_t contextid);
 
@@ -46,4 +46,4 @@ public:
   static void removeContextDestructionCallback(ContextDestructionCB * func, void * closure);
 };
 
-#endif // !COIN_SOCONTEXTHANDLER_H
+#endif // !OBOL_SOCONTEXTHANDLER_H

@@ -51,7 +51,7 @@
   \image html texture3.png "Rendering of an Example Texture3"
   </center>
 
-  \COIN_CLASS_EXTENSION
+  \OBOL_CLASS_EXTENSION
 
   <b>FILE FORMAT/DEFAULTS:</b>
   \code
@@ -239,7 +239,7 @@ SoTexture3::~SoTexture3()
 void
 SoTexture3::initClass(void)
 {
-  SO_NODE_INTERNAL_INIT_CLASS(SoTexture3, SO_FROM_INVENTOR_2_6|SO_FROM_COIN_2_0);
+  SO_NODE_INTERNAL_INIT_CLASS(SoTexture3, SO_FROM_INVENTOR_2_6|SO_FROM_OBOL_2_0);
 
   SO_ENABLE(SoGLRenderAction, SoGLMultiTextureImageElement);
   SO_ENABLE(SoCallbackAction, SoMultiTextureImageElement);

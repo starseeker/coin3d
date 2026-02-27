@@ -502,14 +502,14 @@ SoTabPlaneDragger::reallyAdjustScaleTabSize(SoGLRenderAction *action)
   Not implemented.
 */
 void
-SoTabPlaneDragger::getXYScreenLengths(SbVec2f & COIN_UNUSED_ARG(lengths),
-                                      const SbMatrix & COIN_UNUSED_ARG(localtoscreen),
-                                      const SbVec2s & COIN_UNUSED_ARG(winsize))
+SoTabPlaneDragger::getXYScreenLengths(SbVec2f & OBOL_UNUSED_ARG(lengths),
+                                      const SbMatrix & OBOL_UNUSED_ARG(localtoscreen),
+                                      const SbVec2s & OBOL_UNUSED_ARG(winsize))
 {
   // FIXME: I found this method just defined in the header file, but
   // not implemented (!). We should obviously implement it if it is
   // useful. 20011127 mortene.
-  COIN_STUB();
+  OBOL_STUB();
 }
 
 /*! \COININTERNAL

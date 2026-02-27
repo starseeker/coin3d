@@ -1,5 +1,5 @@
-#ifndef COIN_SOANTISQUISH_H
-#define COIN_SOANTISQUISH_H
+#ifndef OBOL_SOANTISQUISH_H
+#define OBOL_SOANTISQUISH_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -39,7 +39,7 @@
 #include <Inventor/fields/SoSFBool.h>
 #include <Inventor/SbMatrix.h>
 
-class COIN_DLL_API SoAntiSquish : public SoTransformation {
+class OBOL_DLL_API SoAntiSquish : public SoTransformation {
   typedef SoTransformation inherited;
 
   SO_NODE_HEADER(SoAntiSquish);
@@ -76,4 +76,4 @@ private:
   SbBool matrixvalid, inversevalid;
 };
 
-#endif // !COIN_SOANTISQUISH_H
+#endif // !OBOL_SOANTISQUISH_H

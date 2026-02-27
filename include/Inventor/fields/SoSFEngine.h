@@ -35,8 +35,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_SOSFENGINE_H
-#define COIN_SOSFENGINE_H
+#ifndef OBOL_SOSFENGINE_H
+#define OBOL_SOSFENGINE_H
 
 #include <Inventor/fields/SoSField.h>
 #include <Inventor/fields/SoSubField.h>
@@ -44,7 +44,7 @@
 class SoEngine;
 
 
-class COIN_DLL_API SoSFEngine : public SoSField {
+class OBOL_DLL_API SoSFEngine : public SoSField {
   typedef SoSField inherited;
 
   SO_SFIELD_HEADER(SoSFEngine, SoEngine *, SoEngine *);
@@ -62,5 +62,5 @@ private:
   friend class SoMFEngine;
 };
 
-#endif // !COIN_SOSFENGINE_H
+#endif // !OBOL_SOSFENGINE_H
 //$ END TEMPLATE SFNodeAndEngine

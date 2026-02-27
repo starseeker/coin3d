@@ -83,7 +83,7 @@ public:
 };
 
 void
-SoProfilerTopKitP::statsNodeChanged(void * userdata, SoSensor * COIN_UNUSED_ARG(sensor))
+SoProfilerTopKitP::statsNodeChanged(void * userdata, SoSensor * OBOL_UNUSED_ARG(sensor))
 {
   SoProfilerTopKit * thisp = (SoProfilerTopKit *)userdata;
 
@@ -140,7 +140,7 @@ SO_KIT_SOURCE(SoProfilerTopKit);
 
 void SoProfilerTopKit::initClass()
 {
-  SO_KIT_INTERNAL_INIT_CLASS(SoProfilerTopKit, SO_FROM_COIN_3_0);
+  SO_KIT_INTERNAL_INIT_CLASS(SoProfilerTopKit, SO_FROM_OBOL_3_0);
 }
 
 SoProfilerTopKit::SoProfilerTopKit(void)

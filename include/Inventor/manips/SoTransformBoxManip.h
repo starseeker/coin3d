@@ -1,5 +1,5 @@
-#ifndef COIN_SOTRANSFORMBOXMANIP_H
-#define COIN_SOTRANSFORMBOXMANIP_H
+#ifndef OBOL_SOTRANSFORMBOXMANIP_H
+#define OBOL_SOTRANSFORMBOXMANIP_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -38,7 +38,7 @@
 
 class SoTransformBoxManipP;
 
-class COIN_DLL_API SoTransformBoxManip : public SoTransformManip {
+class OBOL_DLL_API SoTransformBoxManip : public SoTransformManip {
   typedef SoTransformManip inherited;
 
   SO_NODE_HEADER(SoTransformBoxManip);
@@ -58,4 +58,4 @@ private:
   SoTransformBoxManip & operator = (const SoTransformBoxManip & rhs);
 }; // SoTransformBoxManip
 
-#endif // !COIN_SOTRANSFORMBOXMANIP_H
+#endif // !OBOL_SOTRANSFORMBOXMANIP_H

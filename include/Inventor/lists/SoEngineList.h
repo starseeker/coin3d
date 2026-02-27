@@ -1,5 +1,5 @@
-#ifndef COIN_SOENGINELIST_H
-#define COIN_SOENGINELIST_H
+#ifndef OBOL_SOENGINELIST_H
+#define OBOL_SOENGINELIST_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 
 class SoEngine;
 
-class COIN_DLL_API SoEngineList : public SoBaseList {
+class OBOL_DLL_API SoEngineList : public SoBaseList {
   typedef SoBaseList inherited;
 
 public:
@@ -51,4 +51,4 @@ public:
   SoEngineList & operator=(const SoEngineList & el);
 };
 
-#endif // !COIN_SOENGINELIST_H
+#endif // !OBOL_SOENGINELIST_H

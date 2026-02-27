@@ -1,5 +1,5 @@
-#ifndef COIN_SOCONVEXDATACACHE_EARCUT_TESSELLATOR_H
-#define COIN_SOCONVEXDATACACHE_EARCUT_TESSELLATOR_H
+#ifndef OBOL_SOCONVEXDATACACHE_EARCUT_TESSELLATOR_H
+#define OBOL_SOCONVEXDATACACHE_EARCUT_TESSELLATOR_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -45,9 +45,9 @@
   Based on earcut.hpp from Mapbox: https://github.com/mapbox/earcut.hpp
 */
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #error this is a private header file
-#endif /* ! COIN_INTERNAL */
+#endif /* ! OBOL_INTERNAL */
 
 #include <Inventor/SbVec3f.h>
 #include <Inventor/lists/SbList.h>
@@ -160,4 +160,4 @@ private:
     std::vector<void*> vertexdata_;
 };
 
-#endif // !COIN_SOCONVEXDATACACHE_EARCUT_TESSELLATOR_H
+#endif // !OBOL_SOCONVEXDATACACHE_EARCUT_TESSELLATOR_H

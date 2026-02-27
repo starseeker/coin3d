@@ -393,7 +393,7 @@ void
 SoShaderParameter::initClass(void)
 {
   SO_NODE_INTERNAL_INIT_ABSTRACT_CLASS(SoShaderParameter,
-                                       SO_FROM_COIN_2_5|SO_FROM_INVENTOR_5_0);
+                                       SO_FROM_OBOL_2_5|SO_FROM_INVENTOR_5_0);
 }
 
 /*!
@@ -432,7 +432,7 @@ public:
       deleteGLParameter(param);
     }
   }
-  static void deleteGLParameter(SoGLShaderParameter * COIN_UNUSED_ARG(param)) {
+  static void deleteGLParameter(SoGLShaderParameter * OBOL_UNUSED_ARG(param)) {
     // FIXME: schedule for delete, pederb 2005-11-30
   }
   // FIXME: add a cache context destruction callback, pederb 2005-11-30
@@ -448,7 +448,7 @@ void
 SoUniformShaderParameter::initClass(void)
 {
   SO_NODE_INTERNAL_INIT_ABSTRACT_CLASS(SoUniformShaderParameter,
-                                       SO_FROM_COIN_2_5|SO_FROM_INVENTOR_5_0);
+                                       SO_FROM_OBOL_2_5|SO_FROM_INVENTOR_5_0);
 }
 
 SoUniformShaderParameter::SoUniformShaderParameter(void)
@@ -502,7 +502,7 @@ SO_NODE_SOURCE(SoShaderParameter1f);
 void SoShaderParameter1f::initClass(void)
 {
   SO_NODE_INTERNAL_INIT_CLASS(SoShaderParameter1f,
-                              SO_FROM_COIN_2_5|SO_FROM_INVENTOR_5_0);
+                              SO_FROM_OBOL_2_5|SO_FROM_INVENTOR_5_0);
 }
 
 SoShaderParameter1f::SoShaderParameter1f(void)
@@ -538,7 +538,7 @@ SO_NODE_SOURCE(SoShaderParameter2f);
 void SoShaderParameter2f::initClass(void)
 {
   SO_NODE_INTERNAL_INIT_CLASS(SoShaderParameter2f,
-                              SO_FROM_COIN_2_5|SO_FROM_INVENTOR_5_0);
+                              SO_FROM_OBOL_2_5|SO_FROM_INVENTOR_5_0);
 }
 
 SoShaderParameter2f::SoShaderParameter2f(void)
@@ -573,7 +573,7 @@ SO_NODE_SOURCE(SoShaderParameter3f);
 void SoShaderParameter3f::initClass(void)
 {
   SO_NODE_INTERNAL_INIT_CLASS(SoShaderParameter3f,
-                              SO_FROM_COIN_2_5|SO_FROM_INVENTOR_5_0);
+                              SO_FROM_OBOL_2_5|SO_FROM_INVENTOR_5_0);
 }
 
 SoShaderParameter3f::SoShaderParameter3f(void)
@@ -608,7 +608,7 @@ SO_NODE_SOURCE(SoShaderParameter4f);
 void SoShaderParameter4f::initClass(void)
 {
   SO_NODE_INTERNAL_INIT_CLASS(SoShaderParameter4f,
-                              SO_FROM_COIN_2_5|SO_FROM_INVENTOR_5_0);
+                              SO_FROM_OBOL_2_5|SO_FROM_INVENTOR_5_0);
 }
 
 SoShaderParameter4f::SoShaderParameter4f(void)
@@ -642,7 +642,7 @@ SO_NODE_SOURCE(SoShaderStateMatrixParameter);
 void SoShaderStateMatrixParameter::initClass(void)
 {
   SO_NODE_INTERNAL_INIT_CLASS(SoShaderStateMatrixParameter,
-                              SO_FROM_COIN_2_5|SO_FROM_INVENTOR_5_0);
+                              SO_FROM_OBOL_2_5|SO_FROM_INVENTOR_5_0);
 
   SO_ENABLE(SoGLRenderAction, SoModelMatrixElement);
   SO_ENABLE(SoGLRenderAction, SoViewingMatrixElement);
@@ -782,7 +782,7 @@ SO_NODE_SOURCE(SoShaderParameterArray1f);
 void SoShaderParameterArray1f::initClass(void)
 {
   SO_NODE_INTERNAL_INIT_CLASS(SoShaderParameterArray1f,
-                              SO_FROM_COIN_2_5|SO_FROM_INVENTOR_5_0);
+                              SO_FROM_OBOL_2_5|SO_FROM_INVENTOR_5_0);
 }
 
 SoShaderParameterArray1f::SoShaderParameterArray1f(void)
@@ -817,7 +817,7 @@ SO_NODE_SOURCE(SoShaderParameterArray2f);
 void SoShaderParameterArray2f::initClass(void)
 {
   SO_NODE_INTERNAL_INIT_CLASS(SoShaderParameterArray2f,
-                              SO_FROM_COIN_2_5|SO_FROM_INVENTOR_5_0);
+                              SO_FROM_OBOL_2_5|SO_FROM_INVENTOR_5_0);
 }
 
 SoShaderParameterArray2f::SoShaderParameterArray2f(void)
@@ -864,7 +864,7 @@ SO_NODE_SOURCE(SoShaderParameterArray3f);
 void SoShaderParameterArray3f::initClass(void)
 {
   SO_NODE_INTERNAL_INIT_CLASS(SoShaderParameterArray3f,
-                              SO_FROM_COIN_2_5|SO_FROM_INVENTOR_5_0);
+                              SO_FROM_OBOL_2_5|SO_FROM_INVENTOR_5_0);
 }
 
 SoShaderParameterArray3f::SoShaderParameterArray3f(void)
@@ -911,7 +911,7 @@ SO_NODE_SOURCE(SoShaderParameterArray4f);
 void SoShaderParameterArray4f::initClass(void)
 {
   SO_NODE_INTERNAL_INIT_CLASS(SoShaderParameterArray4f,
-                              SO_FROM_COIN_2_5|SO_FROM_INVENTOR_5_0);
+                              SO_FROM_OBOL_2_5|SO_FROM_INVENTOR_5_0);
 }
 
 SoShaderParameterArray4f::SoShaderParameterArray4f(void)
@@ -960,7 +960,7 @@ SO_NODE_SOURCE(SoShaderParameterMatrix);
 void SoShaderParameterMatrix::initClass(void)
 {
   SO_NODE_INTERNAL_INIT_CLASS(SoShaderParameterMatrix,
-                              SO_FROM_COIN_2_5|SO_FROM_INVENTOR_5_0);
+                              SO_FROM_OBOL_2_5|SO_FROM_INVENTOR_5_0);
 }
 
 SoShaderParameterMatrix::SoShaderParameterMatrix(void)
@@ -997,7 +997,7 @@ SO_NODE_SOURCE(SoShaderParameterMatrixArray);
 void SoShaderParameterMatrixArray::initClass(void)
 {
   SO_NODE_INTERNAL_INIT_CLASS(SoShaderParameterMatrixArray,
-                              SO_FROM_COIN_2_5|SO_FROM_INVENTOR_5_0);
+                              SO_FROM_OBOL_2_5|SO_FROM_INVENTOR_5_0);
 }
 
 SoShaderParameterMatrixArray::SoShaderParameterMatrixArray(void)
@@ -1051,7 +1051,7 @@ SO_NODE_SOURCE(SoShaderParameter1i);
 void SoShaderParameter1i::initClass(void)
 {
   SO_NODE_INTERNAL_INIT_CLASS(SoShaderParameter1i,
-                              SO_FROM_COIN_2_5|SO_FROM_INVENTOR_5_0);
+                              SO_FROM_OBOL_2_5|SO_FROM_INVENTOR_5_0);
 }
 
 SoShaderParameter1i::SoShaderParameter1i(void)
@@ -1097,7 +1097,7 @@ void
 SoShaderParameter2i::initClass()
 {
   SO_NODE_INTERNAL_INIT_CLASS(SoShaderParameter2i,
-                              SO_FROM_COIN_2_5|SO_FROM_INVENTOR_5_0);
+                              SO_FROM_OBOL_2_5|SO_FROM_INVENTOR_5_0);
 }
 
 void
@@ -1133,7 +1133,7 @@ void
 SoShaderParameter3i::initClass()
 {
   SO_NODE_INTERNAL_INIT_CLASS(SoShaderParameter3i,
-                              SO_FROM_COIN_2_5|SO_FROM_INVENTOR_5_0);
+                              SO_FROM_OBOL_2_5|SO_FROM_INVENTOR_5_0);
 }
 
 void
@@ -1169,7 +1169,7 @@ void
 SoShaderParameter4i::initClass()
 {
   SO_NODE_INTERNAL_INIT_CLASS(SoShaderParameter4i,
-                              SO_FROM_COIN_2_5|SO_FROM_INVENTOR_5_0);
+                              SO_FROM_OBOL_2_5|SO_FROM_INVENTOR_5_0);
 }
 
 void
@@ -1205,7 +1205,7 @@ void
 SoShaderParameterArray1i::initClass()
 {
   SO_NODE_INTERNAL_INIT_CLASS(SoShaderParameterArray1i,
-                              SO_FROM_COIN_2_5|SO_FROM_INVENTOR_5_0);
+                              SO_FROM_OBOL_2_5|SO_FROM_INVENTOR_5_0);
 }
 
 void
@@ -1242,7 +1242,7 @@ void
 SoShaderParameterArray2i::initClass()
 {
   SO_NODE_INTERNAL_INIT_CLASS(SoShaderParameterArray2i,
-                              SO_FROM_COIN_2_5|SO_FROM_INVENTOR_5_0);
+                              SO_FROM_OBOL_2_5|SO_FROM_INVENTOR_5_0);
 }
 
 void
@@ -1279,7 +1279,7 @@ void
 SoShaderParameterArray3i::initClass()
 {
   SO_NODE_INTERNAL_INIT_CLASS(SoShaderParameterArray3i,
-                              SO_FROM_COIN_2_5|SO_FROM_INVENTOR_5_0);
+                              SO_FROM_OBOL_2_5|SO_FROM_INVENTOR_5_0);
 }
 
 void
@@ -1316,7 +1316,7 @@ void
 SoShaderParameterArray4i::initClass()
 {
   SO_NODE_INTERNAL_INIT_CLASS(SoShaderParameterArray4i,
-                              SO_FROM_COIN_2_5|SO_FROM_INVENTOR_5_0);
+                              SO_FROM_OBOL_2_5|SO_FROM_INVENTOR_5_0);
 }
 
 void

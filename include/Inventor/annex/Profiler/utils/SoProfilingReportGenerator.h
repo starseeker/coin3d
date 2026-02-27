@@ -1,5 +1,5 @@
-#ifndef COIN_SOPROFILINGREPORTGENERATOR_H
-#define COIN_SOPROFILINGREPORTGENERATOR_H
+#ifndef OBOL_SOPROFILINGREPORTGENERATOR_H
+#define OBOL_SOPROFILINGREPORTGENERATOR_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -40,7 +40,7 @@ class SbProfilingData;
 class SbProfilingReportSortCriteria;   // opaque internal
 class SbProfilingReportPrintCriteria;  // opaque internal
 
-class COIN_DLL_API SoProfilingReportGenerator {
+class OBOL_DLL_API SoProfilingReportGenerator {
 public:
   static void init(void);
 
@@ -115,4 +115,4 @@ public:
 
 }; // SoProfilingReportGenerator
 
-#endif // !COIN_SOPROFILINGREPORTGENERATOR_H
+#endif // !OBOL_SOPROFILINGREPORTGENERATOR_H

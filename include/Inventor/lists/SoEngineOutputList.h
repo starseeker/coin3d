@@ -1,5 +1,5 @@
-#ifndef COIN_SOENGINEOUTPUTLIST_H
-#define COIN_SOENGINEOUTPUTLIST_H
+#ifndef OBOL_SOENGINEOUTPUTLIST_H
+#define OBOL_SOENGINEOUTPUTLIST_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 
 class SoEngineOutput;
 
-class COIN_DLL_API SoEngineOutputList : public SbPList {
+class OBOL_DLL_API SoEngineOutputList : public SbPList {
 public:
   SoEngineOutputList(void) : SbPList() { }
   SoEngineOutputList(const int sizehint) : SbPList(sizehint) { }
@@ -57,4 +57,4 @@ public:
   }
 };
 
-#endif // !COIN_SOENGINEOUTPUTLIST_H
+#endif // !OBOL_SOENGINEOUTPUTLIST_H

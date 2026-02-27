@@ -1,5 +1,5 @@
-#ifndef COIN_SOVECTORIZEPSACTION_H
-#define COIN_SOVECTORIZEPSACTION_H
+#ifndef OBOL_SOVECTORIZEPSACTION_H
+#define OBOL_SOVECTORIZEPSACTION_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -42,7 +42,7 @@ class SoVectorizePSActionP;
 
 // *************************************************************************
 
-class COIN_DLL_API SoVectorizePSAction : public SoVectorizeAction {
+class OBOL_DLL_API SoVectorizePSAction : public SoVectorizeAction {
 
   SO_ACTION_HEADER(SoVectorizePSAction);
 
@@ -82,4 +82,4 @@ private:
 
 // *************************************************************************
 
-#endif //!COIN_SOVECTORIZEPSACTION_H
+#endif //!OBOL_SOVECTORIZEPSACTION_H

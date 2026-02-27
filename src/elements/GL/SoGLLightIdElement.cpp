@@ -130,7 +130,7 @@ SoGLLightIdElement::increment(SoState * const state,
 
     if (element->data >= maxl) {
       element->data--;
-#if COIN_DEBUG
+#if OBOL_DEBUG
       static SbBool warn = TRUE;
 
       if (warn) { // warn only once

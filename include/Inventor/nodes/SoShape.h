@@ -1,5 +1,5 @@
-#ifndef COIN_SOSHAPE_H
-#define COIN_SOSHAPE_H
+#ifndef OBOL_SOSHAPE_H
+#define OBOL_SOSHAPE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -49,7 +49,7 @@ class SbVec2f;
 class SoMaterialBundle;
 class SoBoundingBoxCache;
 
-class COIN_DLL_API SoShape : public SoNode {
+class OBOL_DLL_API SoShape : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_ABSTRACT_HEADER(SoShape);
@@ -158,4 +158,4 @@ private:
   friend class so_generate_prim_private;   // a very private class
 };
 
-#endif // !COIN_SOSHAPE_H
+#endif // !OBOL_SOSHAPE_H

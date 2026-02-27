@@ -1,5 +1,5 @@
-#ifndef COIN_SOSCENEMANAGERP_H
-#define COIN_SOSCENEMANAGERP_H
+#ifndef OBOL_SOSCENEMANAGERP_H
+#define OBOL_SOSCENEMANAGERP_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -60,4 +60,4 @@ public:
   SbColor backgroundcolor;
 };
 
-#endif // COIN_SOSCENEMANAGERP_H
+#endif // OBOL_SOSCENEMANAGERP_H

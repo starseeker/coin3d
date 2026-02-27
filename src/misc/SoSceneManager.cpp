@@ -155,7 +155,7 @@ SoSceneManager::render(const SbBool clearwindow, const SbBool clearzbuffer)
   drawing. If \a clearzbuffer is \c TRUE, clear the depth buffer
   values before rendering.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
   
   \since Coin 2.0
  */
@@ -313,7 +313,7 @@ SoSceneManager::getWindowSize(void) const
 void
 SoSceneManager::setSize(const SbVec2s & newsize)
 {
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoSceneManager::setSize",
                          "(%d, %d)", newsize[0], newsize[1]);
 #endif // debug
@@ -340,7 +340,7 @@ SoSceneManager::getSize(void) const
 void
 SoSceneManager::setOrigin(const SbVec2s & newOrigin)
 {
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoSceneManager::setOrigin",
                          "(%d, %d)", newOrigin[0], newOrigin[1]);
 #endif // debug
@@ -371,7 +371,7 @@ SoSceneManager::getOrigin(void) const
 void
 SoSceneManager::setViewportRegion(const SbViewportRegion & newregion)
 {
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   const SbVec2s & ws = newregion.getWindowSize();
   const SbVec2s & vpop = newregion.getViewportOriginPixels();
   const SbVec2s & vpsp = newregion.getViewportSizePixels();

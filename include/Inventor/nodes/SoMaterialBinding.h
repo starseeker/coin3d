@@ -1,5 +1,5 @@
-#ifndef COIN_SOMATERIALBINDING_H
-#define COIN_SOMATERIALBINDING_H
+#ifndef OBOL_SOMATERIALBINDING_H
+#define OBOL_SOMATERIALBINDING_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/fields/SoSFEnum.h>
 #include <Inventor/nodes/SoSubNode.h>
 
-class COIN_DLL_API SoMaterialBinding : public SoNode {
+class OBOL_DLL_API SoMaterialBinding : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_HEADER(SoMaterialBinding);
@@ -73,4 +73,4 @@ protected:
   virtual ~SoMaterialBinding();
 };
 
-#endif // !COIN_SOMATERIALBINDING_H
+#endif // !OBOL_SOMATERIALBINDING_H

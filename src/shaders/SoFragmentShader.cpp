@@ -73,7 +73,7 @@ void
 SoFragmentShader::initClass(void)
 {
   SO_NODE_INTERNAL_INIT_CLASS(SoFragmentShader,
-                              SO_FROM_COIN_2_5|SO_FROM_INVENTOR_5_0);
+                              SO_FROM_OBOL_2_5|SO_FROM_INVENTOR_5_0);
 }
 
 /*!

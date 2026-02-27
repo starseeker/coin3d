@@ -44,9 +44,9 @@
 
 #include <Inventor/projectors/SbSphereSectionProjector.h>
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 /*! \var SbSphereSectionProjector::tolerance
   Tolerance value, deciding how much of the half-sphere to do
@@ -122,10 +122,10 @@ SbSphereSectionProjector::project(const SbVec2f & point)
   SbBool tst = this->intersectSphereFront(projline, projpt);
   if (!tst || !this->isWithinTolerance(projpt)) {
     if (!this->tolPlane.intersect(projline, projpt)) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
       SoDebugError::postWarning("SbSphereSectionProjector::project",
                                 "working line is perpendicular to plane direction.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
       // set to 0, 0, 0 to avoid crazy rotations. lastPoint will then
       // never change, and there will be no rotation in getRotation()
       projpt = SbVec3f(0.0f, 0.0f, 0.0f);

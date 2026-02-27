@@ -69,7 +69,7 @@
 #include "CoinTidbits.h"
 #include "misc/CoinUtilities.h"
 #include "rendering/SoVBO.h"
-#include "config.h" // COIN_OBSOLETED
+#include "config.h" // OBOL_OBSOLETED
 
 #include "shaders/SoGLShaderProgram.h"
 
@@ -78,8 +78,8 @@
 #define FLAG_FORCE_DIFFUSE      0x0001
 #define FLAG_DIFFUSE_DEPENDENCY 0x0002
 
-#if COIN_DEBUG
-// #define GLLAZY_DEBUG(_x_) (SoDebugError::postInfo(COIN_STUB_FUNC, _x_))
+#if OBOL_DEBUG
+// #define GLLAZY_DEBUG(_x_) (SoDebugError::postInfo(OBOL_STUB_FUNC, _x_))
 #define GLLAZY_DEBUG(x)
 #else
 #define GLLAZY_DEBUG(x)
@@ -495,7 +495,7 @@ void
 SoGLLazyElement::sendDiffuseByIndex(const int index) const
 {
   int safeindex = index;
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (index < 0 || index >= this->coinstate.numdiffuse) {
     static int first = 1;
     if (first) {
@@ -514,7 +514,7 @@ SoGLLazyElement::sendDiffuseByIndex(const int index) const
 
     safeindex = SbClamp((long) index, (long) 0, (long) (this->coinstate.numdiffuse-1));
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   if (this->colorindex) {
     glIndexi((GLint)this->coinstate.colorindexarray[safeindex]);
@@ -682,7 +682,7 @@ SoGLLazyElement::send(const SoState * stateptr, uint32_t mask) const
 //! FIXME: write doc
 
 void
-SoGLLazyElement::sendVPPacked(SoState* COIN_UNUSED_ARG(stateptr), const unsigned char* COIN_UNUSED_ARG(pcolor))
+SoGLLazyElement::sendVPPacked(SoState* OBOL_UNUSED_ARG(stateptr), const unsigned char* OBOL_UNUSED_ARG(pcolor))
 {
   assert(0 && "Not implemented yet. Provided for API compatibility.");
 }

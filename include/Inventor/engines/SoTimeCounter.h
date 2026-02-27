@@ -30,8 +30,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_SOTIMECOUNTER_H
-#define COIN_SOTIMECOUNTER_H
+#ifndef OBOL_SOTIMECOUNTER_H
+#define OBOL_SOTIMECOUNTER_H
 
 #include <Inventor/engines/SoSubEngine.h>
 #include <Inventor/engines/SoEngineOutput.h>
@@ -42,7 +42,7 @@
 #include <Inventor/fields/SoSFTrigger.h>
 #include <Inventor/fields/SoSFShort.h>
 
-class COIN_DLL_API SoTimeCounter : public SoEngine {
+class OBOL_DLL_API SoTimeCounter : public SoEngine {
   typedef SoEngine inherited;
   SO_ENGINE_HEADER(SoTimeCounter);
 
@@ -88,4 +88,4 @@ private:
   SbList <double> dutylimits;
 };
 
-#endif // !COIN_SOTIMECOUNTER_H
+#endif // !OBOL_SOTIMECOUNTER_H

@@ -1,5 +1,5 @@
-#ifndef COIN_SOBASE_H
-#define COIN_SOBASE_H
+#ifndef OBOL_SOBASE_H
+#define OBOL_SOBASE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -42,7 +42,7 @@ class SoBaseList;
 class SoInput;
 class SoOutput;
 
-class COIN_DLL_API SoBase {
+class OBOL_DLL_API SoBase {
 public:
   static void initClass(void);
 
@@ -132,4 +132,4 @@ private:
   friend class PImpl; // MSVC6
 };
 
-#endif // !COIN_SOBASE_H
+#endif // !OBOL_SOBASE_H

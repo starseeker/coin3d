@@ -203,10 +203,10 @@ SoTriangleStripSet::findMaterialBinding(SoState * const state) const
     break;
   default:
     binding = OVERALL;
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SoTriangleStripSet::findMaterialBinding",
                               "unknown material binding setting");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     break;
   }
   return binding;
@@ -240,10 +240,10 @@ SoTriangleStripSet::findNormalBinding(SoState * const state) const
     break;
   default:
     binding = PER_VERTEX;
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SoTriangleStripSet::findNormalBinding",
                               "unknown normal binding setting");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     break;
   }
   return binding;
@@ -265,9 +265,9 @@ namespace { namespace SoGL { namespace TriStripSet {
                        const SbVec3f *normals,
                        SoMaterialBundle * mb,
                        const SoTextureCoordinateBundle * tb,
-                       int COIN_UNUSED_ARG(nbind),
-                       int COIN_UNUSED_ARG(mbind),
-                       int COIN_UNUSED_ARG(doTextures),
+                       int OBOL_UNUSED_ARG(nbind),
+                       int OBOL_UNUSED_ARG(mbind),
+                       int OBOL_UNUSED_ARG(doTextures),
                        int32_t idx,
                        const int32_t *ptr,
                        const int32_t *end,
@@ -332,12 +332,11 @@ namespace { namespace SoGL { namespace TriStripSet {
         mb->send(matnr++, TRUE);
       }
 
-      // workaround for nvidia color-per-face-bug
+      // re-send per-face material for each vertex to ensure correct colour on all drivers
       if ((AttributeBinding)MaterialBinding == PER_FACE ||
           (AttributeBinding)MaterialBinding == PER_STRIP) {
         mb->send(matnr-1, TRUE);
       }
-      // end of nvidia workaround
 
       if (TexturingEnabled == TRUE) {
         tb->send(texnr++, coords->get3(idx), *currnormal);
@@ -356,12 +355,11 @@ namespace { namespace SoGL { namespace TriStripSet {
           mb->send(matnr++, TRUE);
         }
 
-        // workaround for nvidia color-per-face-bug
+        // re-send per-face material for each vertex to ensure correct colour on all drivers
         if ((AttributeBinding)MaterialBinding == PER_STRIP) {
           mb->send(matnr-1, TRUE);
         }
-        // end of nvidia workaround
-
+  
         if (TexturingEnabled == TRUE) {
           tb->send(texnr++, coords->get3(idx), *currnormal);
         }

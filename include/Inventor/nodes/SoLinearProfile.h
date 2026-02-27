@@ -1,5 +1,5 @@
-#ifndef COIN_SOLINEARPROFILE_H
-#define COIN_SOLINEARPROFILE_H
+#ifndef OBOL_SOLINEARPROFILE_H
+#define OBOL_SOLINEARPROFILE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -36,7 +36,7 @@
 #include <Inventor/nodes/SoSubNode.h>
 #include <Inventor/nodes/SoProfile.h>
 
-class COIN_DLL_API SoLinearProfile : public SoProfile {
+class OBOL_DLL_API SoLinearProfile : public SoProfile {
   typedef SoProfile inherited;
 
   SO_NODE_HEADER(SoLinearProfile);
@@ -55,4 +55,4 @@ protected:
   virtual ~SoLinearProfile();
 };
 
-#endif // !COIN_SOLINEARPROFILE_H
+#endif // !OBOL_SOLINEARPROFILE_H

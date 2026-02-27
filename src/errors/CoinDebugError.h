@@ -1,5 +1,5 @@
-#ifndef COIN_DEBUG_ERROR_INTERNAL_H
-#define COIN_DEBUG_ERROR_INTERNAL_H
+#ifndef OBOL_DEBUG_ERROR_INTERNAL_H
+#define OBOL_DEBUG_ERROR_INTERNAL_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -195,20 +195,20 @@ struct cc_debugerror {
 using cc_debugerror_cb = void (*)(const cc_debugerror*, void*);
 
 // C API functions that wrap the C++ implementation
-COIN_DLL_API void cc_debugerror_post(const char* source, const char* format, ...);
-COIN_DLL_API void cc_debugerror_postwarning(const char* source, const char* format, ...);
-COIN_DLL_API void cc_debugerror_postinfo(const char* source, const char* format, ...);
+OBOL_DLL_API void cc_debugerror_post(const char* source, const char* format, ...);
+OBOL_DLL_API void cc_debugerror_postwarning(const char* source, const char* format, ...);
+OBOL_DLL_API void cc_debugerror_postinfo(const char* source, const char* format, ...);
 
-COIN_DLL_API void cc_debugerror_init(cc_debugerror* me);
-COIN_DLL_API void cc_debugerror_clean(cc_debugerror* me);
+OBOL_DLL_API void cc_debugerror_init(cc_debugerror* me);
+OBOL_DLL_API void cc_debugerror_clean(cc_debugerror* me);
 
-COIN_DLL_API int cc_debugerror_get_severity(const cc_debugerror* me);
+OBOL_DLL_API int cc_debugerror_get_severity(const cc_debugerror* me);
 
-COIN_DLL_API void cc_debugerror_set_handler_callback(cc_debugerror_cb function, void* data);
-COIN_DLL_API cc_debugerror_cb cc_debugerror_get_handler_callback(void);
-COIN_DLL_API void* cc_debugerror_get_handler_data(void);
-COIN_DLL_API cc_debugerror_cb cc_debugerror_get_handler(void** data);
+OBOL_DLL_API void cc_debugerror_set_handler_callback(cc_debugerror_cb function, void* data);
+OBOL_DLL_API cc_debugerror_cb cc_debugerror_get_handler_callback(void);
+OBOL_DLL_API void* cc_debugerror_get_handler_data(void);
+OBOL_DLL_API cc_debugerror_cb cc_debugerror_get_handler(void** data);
 
 } // extern "C"
 
-#endif // COIN_DEBUG_ERROR_INTERNAL_H
+#endif // OBOL_DEBUG_ERROR_INTERNAL_H

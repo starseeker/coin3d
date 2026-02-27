@@ -1,5 +1,5 @@
-#ifndef COIN_SOSUBFIELDP_H
-#define COIN_SOSUBFIELDP_H
+#ifndef OBOL_SOSUBFIELDP_H
+#define OBOL_SOSUBFIELDP_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -41,9 +41,9 @@
 // The macros in this file are not made visible for use by the
 // application programmer.
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #error this is a private header file
-#endif // !COIN_INTERNAL
+#endif // !OBOL_INTERNAL
 
 #define SO_SFIELD_INTERNAL_INIT_CLASS(_class_) \
   do { \
@@ -55,4 +55,4 @@
 #define SO_MFIELD_INTERNAL_INIT_CLASS(_class_) \
   SO_SFIELD_INTERNAL_INIT_CLASS(_class_)
 
-#endif // !COIN_SOSUBFIELDP_H
+#endif // !OBOL_SOSUBFIELDP_H

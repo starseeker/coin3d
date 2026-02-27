@@ -1,5 +1,5 @@
-#ifndef COIN_SOBASECOLOR_H
-#define COIN_SOBASECOLOR_H
+#ifndef OBOL_SOBASECOLOR_H
+#define OBOL_SOBASECOLOR_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -38,7 +38,7 @@
 
 class SoBaseColorP;
 
-class COIN_DLL_API SoBaseColor : public SoNode {
+class OBOL_DLL_API SoBaseColor : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_HEADER(SoBaseColor);
@@ -60,4 +60,4 @@ private:
   SoBaseColorP * pimpl;
 };
 
-#endif // !COIN_SOBASECOLOR_H
+#endif // !OBOL_SOBASECOLOR_H

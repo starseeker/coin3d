@@ -120,7 +120,7 @@ static void soglcachecontext_cleanup(void)
 // from inside this class every time ::set() is called.
 //
 void
-SoGLCacheContextElement::cleanupContext(uint32_t contextid, void * COIN_UNUSED_ARG(userdata))
+SoGLCacheContextElement::cleanupContext(uint32_t contextid, void * OBOL_UNUSED_ARG(userdata))
 {
   int context = (int) contextid;
 
@@ -186,7 +186,7 @@ SoGLCacheContextElement::~SoGLCacheContextElement()
 
 // doc from parent
 void
-SoGLCacheContextElement::init(SoState * COIN_UNUSED_ARG(state))
+SoGLCacheContextElement::init(SoState * OBOL_UNUSED_ARG(state))
 {
   // these values will be set up in set(), but initialize them anyway
   this->context = 0;
@@ -333,7 +333,7 @@ SoGLCacheContextElement::getOpenGLVersion(SoState * state,
   In Coin, we just return TRUE for the moment.
 */
 SbBool
-SoGLCacheContextElement::areMipMapsFast(SoState * COIN_UNUSED_ARG(state))
+SoGLCacheContextElement::areMipMapsFast(SoState * OBOL_UNUSED_ARG(state))
 {
   return TRUE; // FIXME: how do we test this? pederb 20001003
 }
@@ -508,7 +508,7 @@ SoGLCacheContextElement::scheduleDeleteCallback(const uint32_t contextid,
   sharing among contexts, the cache context id need to be unique for
   rendering to work.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \sa SoGLRenderAction::setCacheContext()
 */

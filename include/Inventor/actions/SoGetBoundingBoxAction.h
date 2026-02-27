@@ -1,5 +1,5 @@
-#ifndef COIN_SOGETBOUNDINGBOXACTION_H
-#define COIN_SOGETBOUNDINGBOXACTION_H
+#ifndef OBOL_SOGETBOUNDINGBOXACTION_H
+#define OBOL_SOGETBOUNDINGBOXACTION_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -42,7 +42,7 @@
 
 class SoGetBoundingBoxActionP;
 
-class COIN_DLL_API SoGetBoundingBoxAction : public SoAction {
+class OBOL_DLL_API SoGetBoundingBoxAction : public SoAction {
   typedef SoAction inherited;
 
   SO_ACTION_HEADER(SoGetBoundingBoxAction);
@@ -104,4 +104,4 @@ private:
   SoGetBoundingBoxAction & operator = (const SoGetBoundingBoxAction & rhs);
 }; // SoGetBoundingBoxAction
 
-#endif // !COIN_SOGETBOUNDINGBOXACTION_H
+#endif // !OBOL_SOGETBOUNDINGBOXACTION_H

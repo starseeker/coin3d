@@ -561,7 +561,7 @@ SoHandleBoxDragger::fieldSensorCB(void * d, SoSensor *)
 
 /*! \COININTERNAL */
 void
-SoHandleBoxDragger::valueChangedCB(void * COIN_UNUSED_ARG(f), SoDragger * d)
+SoHandleBoxDragger::valueChangedCB(void * OBOL_UNUSED_ARG(f), SoDragger * d)
 {
   SoHandleBoxDragger * thisp = static_cast<SoHandleBoxDragger *>(d);
   SbMatrix matrix = thisp->getMotionMatrix();

@@ -1,5 +1,5 @@
-#ifndef COIN_SOPICKEDPOINTLIST_H
-#define COIN_SOPICKEDPOINTLIST_H
+#ifndef OBOL_SOPICKEDPOINTLIST_H
+#define OBOL_SOPICKEDPOINTLIST_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 
 class SoPickedPoint;
 
-class COIN_DLL_API SoPickedPointList : public SbPList {
+class OBOL_DLL_API SoPickedPointList : public SbPList {
 public:
   SoPickedPointList(void) : SbPList() { }
   SoPickedPointList(const int sizehint) : SbPList(sizehint) { }
@@ -59,4 +59,4 @@ public:
 
 };
 
-#endif // !COIN_SOPICKEDPOINTLIST_H
+#endif // !OBOL_SOPICKEDPOINTLIST_H

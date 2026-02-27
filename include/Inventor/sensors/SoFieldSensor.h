@@ -1,5 +1,5 @@
-#ifndef COIN_SOFIELDSENSOR_H
-#define COIN_SOFIELDSENSOR_H
+#ifndef OBOL_SOFIELDSENSOR_H
+#define OBOL_SOFIELDSENSOR_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/sensors/SoDataSensor.h>
 
-class COIN_DLL_API SoFieldSensor : public SoDataSensor {
+class OBOL_DLL_API SoFieldSensor : public SoDataSensor {
   typedef SoDataSensor inherited;
 
 public:
@@ -56,4 +56,4 @@ private:
   SoField * convict;
 };
 
-#endif // !COIN_SOFIELDSENSOR_H
+#endif // !OBOL_SOFIELDSENSOR_H

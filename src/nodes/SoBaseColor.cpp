@@ -60,9 +60,9 @@
 #include <Inventor/elements/SoDiffuseColorElement.h>
 #include <Inventor/elements/SoOverrideElement.h>
 #include <Inventor/elements/SoGLVBOElement.h>
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
 #include <Inventor/threads/SbStorage.h>
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 
 #include "rendering/SoVBO.h"
 #include "nodes/SoSubNodeP.h"
@@ -78,28 +78,28 @@
 class SoBaseColorP {
  public:
   SoBaseColorP() : 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
     colorpacker_storage(sizeof(void*), alloc_colorpacker, free_colorpacker),
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
     vbo(NULL) { }
   ~SoBaseColorP() { delete this->vbo; }
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   SbStorage colorpacker_storage;
-#else // COIN_THREADSAFE
+#else // OBOL_THREADSAFE
   SoColorPacker single_colorpacker;
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
   
   SoColorPacker * getColorPacker(void) {
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
     SoColorPacker ** cptr = (SoColorPacker**) this->colorpacker_storage.get();
     return * cptr;
-#else // COIN_THREADSAFE
+#else // OBOL_THREADSAFE
     return &this->single_colorpacker;
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
   }
   SoVBO * vbo;
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
 private:
   static void alloc_colorpacker(void * data) {
     SoColorPacker ** cptr = (SoColorPacker**) data;
@@ -109,7 +109,7 @@ private:
     SoColorPacker ** cptr = (SoColorPacker**) data;
     delete *cptr;
   }
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 };
 
 #endif // DOXYGEN_SKIP_THIS

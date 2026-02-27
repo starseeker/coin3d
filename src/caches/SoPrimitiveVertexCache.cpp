@@ -298,7 +298,7 @@ SoPrimitiveVertexCache::SoPrimitiveVertexCache(SoState * state)
     // triangle callback. SoTextureCoordinateBundle might push a new
     // element.
   }
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (coin_debug_caching_level() > 0) {
     SoDebugError::postInfo("SoPrimitiveVertexCache::SoPrimitiveVertexCache",
                            "Cache constructed: %p", this);
@@ -316,7 +316,7 @@ SoPrimitiveVertexCache::SoPrimitiveVertexCache(SoState * state)
 */
 SoPrimitiveVertexCache::~SoPrimitiveVertexCache()
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (coin_debug_caching_level() > 0) {
     SoDebugError::postInfo("SoPrimitiveVertexCache::~SoPrimitiveVertexCache",
                            "Cache destructed: %p", this);

@@ -1,5 +1,5 @@
-#ifndef COIN_SBBOX2S_H
-#define COIN_SBBOX2S_H
+#ifndef OBOL_SBBOX2S_H
+#define OBOL_SBBOX2S_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -40,7 +40,7 @@ class SbBox2i32;
 class SbBox2f;
 class SbBox2d;
 
-class COIN_DLL_API SbBox2s {
+class OBOL_DLL_API SbBox2s {
 public:
   SbBox2s(void) { makeEmpty(); }
   SbBox2s(short xmin, short ymin, short xmax, short ymax)
@@ -99,12 +99,12 @@ private:
 
 }; // SbBox2s
 
-COIN_DLL_API inline int operator == (const SbBox2s & b1, const SbBox2s & b2) {
+OBOL_DLL_API inline int operator == (const SbBox2s & b1, const SbBox2s & b2) {
   return ((b1.getMin() == b2.getMin()) && (b1.getMax() == b2.getMax()));
 }
 
-COIN_DLL_API inline int operator != (const SbBox2s & b1, const SbBox2s & b2) {
+OBOL_DLL_API inline int operator != (const SbBox2s & b1, const SbBox2s & b2) {
   return !(b1 == b2);
 }
 
-#endif // !COIN_SBBOX2S_H
+#endif // !OBOL_SBBOX2S_H

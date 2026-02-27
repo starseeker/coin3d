@@ -67,9 +67,9 @@
 
 // *************************************************************************
 
-#define COIN_ALLOW_SBDICT
+#define OBOL_ALLOW_SBDICT
 #include <Inventor/SbDict.h>
-#undef COIN_ALLOW_SBDICT
+#undef OBOL_ALLOW_SBDICT
 
 #include <cassert>
 

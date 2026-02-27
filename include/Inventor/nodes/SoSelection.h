@@ -1,5 +1,5 @@
-#ifndef COIN_SOSELECTION_H
-#define COIN_SOSELECTION_H
+#ifndef OBOL_SOSELECTION_H
+#define OBOL_SOSELECTION_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -47,7 +47,7 @@ typedef void SoSelectionPathCB(void * data, SoPath * path);
 typedef void SoSelectionClassCB(void * data, SoSelection * sel);
 typedef SoPath * SoSelectionPickCB(void * data, const SoPickedPoint * pick);
 
-class COIN_DLL_API SoSelection : public SoSeparator {
+class OBOL_DLL_API SoSelection : public SoSeparator {
   typedef SoSeparator inherited;
 
   SO_NODE_HEADER(SoSelection);
@@ -133,4 +133,4 @@ private:
                            SbBool &ignorepick, SbBool &haltaction);
 };
 
-#endif // !COIN_SOSELECTION_H
+#endif // !OBOL_SOSELECTION_H

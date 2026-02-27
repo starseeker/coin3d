@@ -1,5 +1,5 @@
-#ifndef COIN_SBPLIST_H
-#define COIN_SBPLIST_H
+#ifndef OBOL_SBPLIST_H
+#define OBOL_SBPLIST_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,7 +33,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 // The next includes are for Open Inventor compatibility.
 #include <Inventor/SbBasic.h>
 #include <Inventor/SbLinear.h>
@@ -43,8 +43,8 @@
 #include <Inventor/lists/SbVec3fList.h>
 // Here's the class definition of SbPList in Coin.
 #include <Inventor/lists/SbPList.h>
-#else // COIN_INTERNAL
+#else // OBOL_INTERNAL
 #error Do not include Inventor/SbPList.h internally (use Inventor/lists/SbPList.h).
-#endif // COIN_INTERNAL
+#endif // OBOL_INTERNAL
 
-#endif // !COIN_SBPLIST_H
+#endif // !OBOL_SBPLIST_H

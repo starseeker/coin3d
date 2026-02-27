@@ -44,9 +44,9 @@
 
 #include <Inventor/projectors/SbPlaneProjector.h>
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 
 /*!
@@ -165,7 +165,7 @@ SbPlaneProjector::tryProject(const SbVec2f & point, const float epsilon, SbVec3f
   if (!valid && ok && (epsilon == 0.0f)) {
     // this can happen for instance with orthographic view volumes,
     // when the plane is perpendicular to the view.
-#if COIN_DEBUG
+#if OBOL_DEBUG
     static int first = 1;
     if (first) {
       SoDebugError::post("SbPlaneProjector::project",
@@ -173,7 +173,7 @@ SbPlaneProjector::tryProject(const SbVec2f & point, const float epsilon, SbVec3f
                          "Setting result to middle of view volume.");
       first = 0;
     }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     float depth = this->viewVol.getNearDist() + this->viewVol.getDepth() * 0.5f;
     SbLine worldline;
     this->workingToWorld.multLineMatrix(projline, worldline);

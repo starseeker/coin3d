@@ -1,5 +1,5 @@
-#ifndef COIN_SOSHADERPARAMETER_H
-#define COIN_SOSHADERPARAMETER_H
+#ifndef OBOL_SOSHADERPARAMETER_H
+#define OBOL_SOSHADERPARAMETER_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -71,7 +71,7 @@ class SoState;
  * *** SoShaderParameter ***
  * **************************************************************************/
 
-class COIN_DLL_API SoShaderParameter : public SoNode {
+class OBOL_DLL_API SoShaderParameter : public SoNode {
   typedef SoNode inherited;
   SO_NODE_ABSTRACT_HEADER(SoShaderParameter);
 
@@ -92,7 +92,7 @@ protected:
  * **************************************************************************/
 class SoUniformShaderParameterP;
 
-class COIN_DLL_API SoUniformShaderParameter : public SoShaderParameter {
+class OBOL_DLL_API SoUniformShaderParameter : public SoShaderParameter {
   typedef SoShaderParameter inherited;
   SO_NODE_ABSTRACT_HEADER(SoUniformShaderParameter);
 
@@ -115,7 +115,7 @@ private:
  * *** SoShaderParameter1f ***
  * **************************************************************************/
 
-class COIN_DLL_API SoShaderParameter1f : public SoUniformShaderParameter {
+class OBOL_DLL_API SoShaderParameter1f : public SoUniformShaderParameter {
   typedef SoUniformShaderParameter inherited;
   SO_NODE_HEADER(SoShaderParameter1f);
 
@@ -135,7 +135,7 @@ protected:
  * *** SoShaderParameter1i ***
  * **************************************************************************/
 
-class COIN_DLL_API SoShaderParameter1i : public SoUniformShaderParameter {
+class OBOL_DLL_API SoShaderParameter1i : public SoUniformShaderParameter {
   typedef SoUniformShaderParameter inherited;
   SO_NODE_HEADER(SoShaderParameter1i);
 
@@ -155,7 +155,7 @@ protected:
  * *** SoShaderParameter2f ***
  * **************************************************************************/
 
-class COIN_DLL_API SoShaderParameter2f : public SoUniformShaderParameter {
+class OBOL_DLL_API SoShaderParameter2f : public SoUniformShaderParameter {
   typedef SoUniformShaderParameter inherited;
   SO_NODE_HEADER(SoShaderParameter2f);
 
@@ -175,7 +175,7 @@ protected:
  * *** SoShaderParameter2i ***
  * **************************************************************************/
 
-class COIN_DLL_API SoShaderParameter2i : public SoUniformShaderParameter {
+class OBOL_DLL_API SoShaderParameter2i : public SoUniformShaderParameter {
   typedef SoUniformShaderParameter inherited;
   SO_NODE_HEADER(SoShaderParameter2i);
 
@@ -195,7 +195,7 @@ protected:
  * *** SoShaderParameter3f ***
  * **************************************************************************/
 
-class COIN_DLL_API SoShaderParameter3f : public SoUniformShaderParameter {
+class OBOL_DLL_API SoShaderParameter3f : public SoUniformShaderParameter {
   typedef SoUniformShaderParameter inherited;
   SO_NODE_HEADER(SoShaderParameter3f);
 
@@ -216,7 +216,7 @@ protected:
  * *** SoShaderParameter3i ***
  * **************************************************************************/
 
-class COIN_DLL_API SoShaderParameter3i : public SoUniformShaderParameter {
+class OBOL_DLL_API SoShaderParameter3i : public SoUniformShaderParameter {
   typedef SoUniformShaderParameter inherited;
   SO_NODE_HEADER(SoShaderParameter3i);
 
@@ -237,7 +237,7 @@ protected:
  * *** SoShaderParameter4f ***
  * **************************************************************************/
 
-class COIN_DLL_API SoShaderParameter4f : public SoUniformShaderParameter {
+class OBOL_DLL_API SoShaderParameter4f : public SoUniformShaderParameter {
   typedef SoUniformShaderParameter inherited;
   SO_NODE_HEADER(SoShaderParameter4f);
 
@@ -258,7 +258,7 @@ protected:
  * *** SoShaderParameter4i ***
  * **************************************************************************/
 
-class COIN_DLL_API SoShaderParameter4i : public SoUniformShaderParameter {
+class OBOL_DLL_API SoShaderParameter4i : public SoUniformShaderParameter {
   typedef SoUniformShaderParameter inherited;
   SO_NODE_HEADER(SoShaderParameter4i);
 
@@ -279,7 +279,7 @@ protected:
  * *** SoShaderParameterArray1f ***
  * **************************************************************************/
 
-class COIN_DLL_API SoShaderParameterArray1f : public SoUniformShaderParameter {
+class OBOL_DLL_API SoShaderParameterArray1f : public SoUniformShaderParameter {
   typedef SoUniformShaderParameter inherited;
   SO_NODE_HEADER(SoShaderParameterArray1f);
 
@@ -300,7 +300,7 @@ protected:
  * *** SoShaderParameterArray1i ***
  * **************************************************************************/
 
-class COIN_DLL_API SoShaderParameterArray1i : public SoUniformShaderParameter {
+class OBOL_DLL_API SoShaderParameterArray1i : public SoUniformShaderParameter {
   typedef SoUniformShaderParameter inherited;
   SO_NODE_HEADER(SoShaderParameterArray1i);
 
@@ -321,7 +321,7 @@ protected:
  * *** SoShaderParameterArray2f ***
  * **************************************************************************/
 
-class COIN_DLL_API SoShaderParameterArray2f : public SoUniformShaderParameter {
+class OBOL_DLL_API SoShaderParameterArray2f : public SoUniformShaderParameter {
   typedef SoUniformShaderParameter inherited;
   SO_NODE_HEADER(SoShaderParameterArray2f);
 
@@ -341,7 +341,7 @@ protected:
 /* **************************************************************************
  * *** SoShaderParameterArray2i ***
  * **************************************************************************/
-class COIN_DLL_API SoShaderParameterArray2i : public SoUniformShaderParameter {
+class OBOL_DLL_API SoShaderParameterArray2i : public SoUniformShaderParameter {
   typedef SoUniformShaderParameter inherited;
   SO_NODE_HEADER(SoShaderParameterArray2i);
 
@@ -362,7 +362,7 @@ protected:
  * *** SoShaderParameterArray3f ***
  * **************************************************************************/
 
-class COIN_DLL_API SoShaderParameterArray3f : public SoUniformShaderParameter {
+class OBOL_DLL_API SoShaderParameterArray3f : public SoUniformShaderParameter {
   typedef SoUniformShaderParameter inherited;
   SO_NODE_HEADER(SoShaderParameterArray3f);
 
@@ -383,7 +383,7 @@ protected:
  * *** SoShaderParameterArray3i ***
  * **************************************************************************/
 
-class COIN_DLL_API SoShaderParameterArray3i : public SoUniformShaderParameter {
+class OBOL_DLL_API SoShaderParameterArray3i : public SoUniformShaderParameter {
   typedef SoUniformShaderParameter inherited;
   SO_NODE_HEADER(SoShaderParameterArray3i);
 
@@ -404,7 +404,7 @@ protected:
  * *** SoShaderParameterArray4f ***
  * **************************************************************************/
 
-class COIN_DLL_API SoShaderParameterArray4f : public SoUniformShaderParameter {
+class OBOL_DLL_API SoShaderParameterArray4f : public SoUniformShaderParameter {
   typedef SoUniformShaderParameter inherited;
   SO_NODE_HEADER(SoShaderParameterArray4f);
 
@@ -426,7 +426,7 @@ protected:
  * *** SoShaderParameterArray4i ***
  * **************************************************************************/
 
-class COIN_DLL_API SoShaderParameterArray4i : public SoUniformShaderParameter {
+class OBOL_DLL_API SoShaderParameterArray4i : public SoUniformShaderParameter {
   typedef SoUniformShaderParameter inherited;
   SO_NODE_HEADER(SoShaderParameterArray4i);
 
@@ -447,7 +447,7 @@ protected:
  * *** SoShaderParameterMatrix ***
  * **************************************************************************/
 
-class COIN_DLL_API SoShaderParameterMatrix : public SoUniformShaderParameter {
+class OBOL_DLL_API SoShaderParameterMatrix : public SoUniformShaderParameter {
   typedef SoUniformShaderParameter inherited;
   SO_NODE_HEADER(SoShaderParameterMatrix);
 
@@ -468,7 +468,7 @@ protected:
  * *** SoShaderParameterMatrixArray ***
  * **************************************************************************/
 
-class COIN_DLL_API SoShaderParameterMatrixArray : public SoUniformShaderParameter {
+class OBOL_DLL_API SoShaderParameterMatrixArray : public SoUniformShaderParameter {
   typedef SoUniformShaderParameter inherited;
   SO_NODE_HEADER(SoShaderParameterMatrixArray);
 
@@ -489,7 +489,7 @@ protected:
  * *** SoShaderStateMatrixParameter ***
  * **************************************************************************/
 
-class COIN_DLL_API SoShaderStateMatrixParameter : public SoUniformShaderParameter {
+class OBOL_DLL_API SoShaderStateMatrixParameter : public SoUniformShaderParameter {
   typedef SoUniformShaderParameter inherited;
   SO_NODE_HEADER(SoShaderStateMatrixParameter);
 
@@ -525,4 +525,4 @@ protected:
   SbMatrix value;
 };
 
-#endif /* ! COIN_SOSHADERPARAMETER_H */
+#endif /* ! OBOL_SOSHADERPARAMETER_H */

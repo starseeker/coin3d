@@ -1,5 +1,5 @@
-#ifndef COIN_SOMATERIAL_H
-#define COIN_SOMATERIAL_H
+#ifndef OBOL_SOMATERIAL_H
+#define OBOL_SOMATERIAL_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -41,7 +41,7 @@
 
 class SoMaterialP;
 
-class COIN_DLL_API SoMaterial : public SoNode {
+class OBOL_DLL_API SoMaterial : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_HEADER(SoMaterial);
@@ -76,4 +76,4 @@ private:
 
 }; // SoMaterial
 
-#endif // !COIN_SOMATERIAL_H
+#endif // !OBOL_SOMATERIAL_H

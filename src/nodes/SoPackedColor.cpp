@@ -171,7 +171,7 @@ SoPackedColor::doAction(SoAction * action)
           dirty = TRUE;
         }
         if (dirty) {
-          if (coin_host_get_endianness() == COIN_HOST_IS_BIGENDIAN) {
+          if (coin_host_get_endianness() == OBOL_HOST_IS_BIGENDIAN) {
             PRIVATE(this)->vbo->setBufferData(this->orderedRGBA.getValues(0),
                                               num*sizeof(uint32_t),
                                               this->getNodeId());

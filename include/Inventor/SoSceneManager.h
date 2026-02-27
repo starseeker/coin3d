@@ -1,5 +1,5 @@
-#ifndef COIN_SOSCENEMANAGER_H
-#define COIN_SOSCENEMANAGER_H
+#ifndef OBOL_SOSCENEMANAGER_H
+#define OBOL_SOSCENEMANAGER_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -49,7 +49,7 @@ class SbColor;
 
 typedef void SoSceneManagerRenderCB(void * userdata, class SoSceneManager * mgr);
 
-class COIN_DLL_API SoSceneManager {
+class OBOL_DLL_API SoSceneManager {
 public:
   SoSceneManager(void);
   virtual ~SoSceneManager();
@@ -110,4 +110,4 @@ private:
 
 }; // SoSceneManager
 
-#endif // !COIN_SOSCENEMANAGER_H
+#endif // !OBOL_SOSCENEMANAGER_H

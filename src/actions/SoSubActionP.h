@@ -1,5 +1,5 @@
-#ifndef COIN_SOSUBACTIONP_H
-#define COIN_SOSUBACTIONP_H
+#ifndef OBOL_SOSUBACTIONP_H
+#define OBOL_SOSUBACTIONP_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,9 +33,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #error this is a private header file
-#endif /* !COIN_INTERNAL */
+#endif /* !OBOL_INTERNAL */
 
 // This file contains macros which are private to the
 // implementation. The header file is not installed for the Coin
@@ -59,4 +59,4 @@
      SO_ACTION_INIT_CLASS(_classname_, _parentclassname_); \
    } while (0)
 
-#endif // !COIN_SOSUBACTIONP_H
+#endif // !OBOL_SOSUBACTIONP_H

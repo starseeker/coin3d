@@ -1,5 +1,5 @@
-#ifndef COIN_SOMFCOLOR_H
-#define COIN_SOMFCOLOR_H
+#ifndef OBOL_SOMFCOLOR_H
+#define OBOL_SOMFCOLOR_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/fields/SoSubField.h>
 #include <Inventor/SbColor.h>
 
-class COIN_DLL_API SoMFColor : public SoMField {
+class OBOL_DLL_API SoMFColor : public SoMField {
   typedef SoMField inherited;
 
   SO_MFIELD_HEADER(SoMFColor, SbColor, const SbColor &);
@@ -67,4 +67,4 @@ public:
 
 }; // SoMFColor
 
-#endif // !COIN_SOMFCOLOR_H
+#endif // !OBOL_SOMFCOLOR_H

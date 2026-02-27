@@ -1,5 +1,5 @@
-#ifndef COIN_SOGLVBOELEMENT_H
-#define COIN_SOGLVBOELEMENT_H
+#ifndef OBOL_SOGLVBOELEMENT_H
+#define OBOL_SOGLVBOELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -38,7 +38,7 @@
 class SoVBO;
 class SoGLVBOElementP;
 
-class COIN_DLL_API SoGLVBOElement : public SoElement {
+class OBOL_DLL_API SoGLVBOElement : public SoElement {
   typedef SoElement inherited;
 
   SO_ELEMENT_HEADER(SoGLVBOElement);
@@ -78,4 +78,4 @@ class COIN_DLL_API SoGLVBOElement : public SoElement {
   SoGLVBOElementP * pimpl;
 };
 
-#endif // COIN_SOGLVBOELEMENT_H
+#endif // OBOL_SOGLVBOELEMENT_H

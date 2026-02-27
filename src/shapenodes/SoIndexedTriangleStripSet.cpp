@@ -169,10 +169,10 @@ SoIndexedTriangleStripSet::findMaterialBinding(SoState * const state) const
     binding = PER_TRIANGLE_INDEXED;
     break;
   default:
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SoIndexedTriangleStripSet::findMaterialBinding",
                               "unknown material binding setting");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     break;
   }
   return binding;
@@ -209,10 +209,10 @@ SoIndexedTriangleStripSet::findNormalBinding(SoState * const state) const
     binding = PER_TRIANGLE_INDEXED;
     break;
   default:
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SoIndexedTriangleStripSet::findNormalBinding",
                               "unknown normal binding setting");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     break;
   }
   return binding;

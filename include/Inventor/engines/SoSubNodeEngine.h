@@ -30,8 +30,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_SOSUBNODEENGINE_H
-#define COIN_SOSUBNODEENGINE_H
+#ifndef OBOL_SOSUBNODEENGINE_H
+#define OBOL_SOSUBNODEENGINE_H
 
 #include <Inventor/nodes/SoSubNode.h>
 #include <Inventor/engines/SoSubEngine.h>
@@ -151,4 +151,4 @@ _class_::createInstance(void) \
     this->_output_.setNodeContainer(this); \
   } WHILE_0
 
-#endif // COIN_SOSUBNODEENGINE_H
+#endif // OBOL_SOSUBNODEENGINE_H

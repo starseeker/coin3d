@@ -1,5 +1,5 @@
-#ifndef COIN_SOOUTPUT_H
-#define COIN_SOOUTPUT_H
+#ifndef OBOL_SOOUTPUT_H
+#define OBOL_SOOUTPUT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -49,7 +49,7 @@ class SoFieldContainer;
 
 typedef void * SoOutputReallocCB(void * ptr, size_t newSize);
 
-class COIN_DLL_API SoOutput {
+class OBOL_DLL_API SoOutput {
 public:
   enum Stage { COUNT_REFS, WRITE };
   // Bitwise flags for the annotations.
@@ -162,4 +162,4 @@ private:
   void removeSoBase2IdRef(const SoBase * base);
 };
 
-#endif // !COIN_SOOUTPUT_H
+#endif // !OBOL_SOOUTPUT_H

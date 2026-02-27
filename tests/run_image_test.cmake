@@ -46,7 +46,7 @@ cmake_policy(SET CMP0057 NEW)  # Enable IN_LIST operator in if()
 #   HASH_THRESHOLD - perceptual hash threshold (default 5, range 0-64)
 #   RMSE_THRESHOLD - RMSE threshold (default 5.0, range 0-255)
 #   TEST_TIMEOUT   - execution timeout in seconds (default 30)
-#   COIN_DATA_DIR  - directory containing Coin data files
+#   OBOL_DATA_DIR  - directory containing Coin data files
 
 if(NOT DEFINED EXECUTABLE)
     message(FATAL_ERROR "EXECUTABLE not defined")
@@ -83,7 +83,7 @@ set(_exec_cmd "${EXECUTABLE}" "${TEST_BASE}")
 if(UNIX AND NOT APPLE)
     if(NOT OSMESA_BACKEND)
         # GLX path: wrap with xvfb-run when no display is available.
-        # Do NOT set COIN_FULL_INDIRECT_RENDERING: it disables FBO support in
+        # Do NOT set OBOL_FULL_INDIRECT_RENDERING: it disables FBO support in
         # SoGLContext_has_framebuffer_objects() which breaks CoinOffscreenGLCanvas.
         if(NOT DEFINED ENV{DISPLAY} OR "$ENV{DISPLAY}" STREQUAL "")
             find_program(_xvfb_run NAMES xvfb-run)
@@ -95,8 +95,8 @@ if(UNIX AND NOT APPLE)
 endif()
 
 # Set data directory for tests that load .iv files
-if(DEFINED COIN_DATA_DIR)
-    set(ENV{COIN_DATA_DIR} "${COIN_DATA_DIR}")
+if(DEFINED OBOL_DATA_DIR)
+    set(ENV{OBOL_DATA_DIR} "${OBOL_DATA_DIR}")
 endif()
 
 # Run the test executable

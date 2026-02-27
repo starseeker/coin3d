@@ -30,8 +30,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_SBJPEGIMAGEHANDLER_H
-#define COIN_SBJPEGIMAGEHANDLER_H
+#ifndef OBOL_SBJPEGIMAGEHANDLER_H
+#define OBOL_SBJPEGIMAGEHANDLER_H
 
 #include "SbImageFormatHandler.h"
 #include <cstdio>
@@ -77,4 +77,4 @@ private:
   static JpegWriteContext* currentContext;
 };
 
-#endif // COIN_SBJPEGIMAGEHANDLER_H
+#endif // OBOL_SBJPEGIMAGEHANDLER_H

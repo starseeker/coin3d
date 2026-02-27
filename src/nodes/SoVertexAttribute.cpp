@@ -105,7 +105,7 @@ The vertex shader (vertex.glsl)
 
   \sa SoVertexAttributeBinding
   \ingroup coin_shaders
-  \COIN_CLASS_EXTENSION
+  \OBOL_CLASS_EXTENSION
   \since Coin 3.0
 */
 
@@ -166,7 +166,7 @@ SoVertexAttribute::initClass(void)
                        SoVertexAttribute::createInstance,
                        SoNode::nextActionMethodIndex++);
 
-  SoNode::setCompatibilityTypes(SoVertexAttribute::getClassTypeId(), SO_FROM_COIN_3_0);
+  SoNode::setCompatibilityTypes(SoVertexAttribute::getClassTypeId(), SO_FROM_OBOL_3_0);
   SO_ENABLE(SoGLRenderAction, SoGLVertexAttributeElement);
 }
 
@@ -178,7 +178,7 @@ SoVertexAttribute::SoVertexAttribute(void)
   // We don't use SO_NODE_INTERNAL_CONSTRUCTOR(SoVertexAttribute) here because
   // the fieldData setup has to be overridden in custom ways for this node...
 
-  this->setNodeType(SoNode::COIN_3_0);
+  this->setNodeType(SoNode::OBOL_3_0);
   this->isBuiltIn = TRUE;
   assert(SoVertexAttribute::classTypeId != SoType::badType());
 
@@ -339,7 +339,7 @@ SoVertexAttribute::write(SoWriteAction * action)
 }
 
 SbBool
-SoVertexAttribute::readInstance(SoInput * in, unsigned short COIN_UNUSED_ARG(flags))
+SoVertexAttribute::readInstance(SoInput * in, unsigned short OBOL_UNUSED_ARG(flags))
 {
   PRIVATE(this)->isreading = TRUE;
   // avoid triggering in the notify()-function while reading the file.

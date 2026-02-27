@@ -80,7 +80,7 @@
 #include <Inventor/draggers/SoTranslate1Dragger.h>
 #include <Inventor/draggers/SoRotateSphericalDragger.h>
 
-#ifdef COIN3D_OSMESA_BUILD
+#ifdef OBOL_OSMESA_BUILD
 #  include <OSMesa/gl.h>
 #else
 #  ifdef __unix__
@@ -601,7 +601,7 @@ SoSeparator* createShadow(int width, int height)
     // SoShadowGroup is an annex extension; include it only if available.
     // We build a simpler proxy scene when not compiled in (cast a warning
     // and produce a lit scene instead).
-#ifdef COIN3D_SHADOWGROUP_AVAILABLE
+#ifdef OBOL_SHADOWGROUP_AVAILABLE
     // Full shadow scene (requires annex/FXViz).
     // Fall-through to simple scene for now.
 #endif

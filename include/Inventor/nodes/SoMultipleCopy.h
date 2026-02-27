@@ -1,5 +1,5 @@
-#ifndef COIN_SOMULTIPLECOPY_H
-#define COIN_SOMULTIPLECOPY_H
+#ifndef OBOL_SOMULTIPLECOPY_H
+#define OBOL_SOMULTIPLECOPY_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/nodes/SoGroup.h>
 #include <Inventor/fields/SoMFMatrix.h>
 
-class COIN_DLL_API SoMultipleCopy : public SoGroup {
+class OBOL_DLL_API SoMultipleCopy : public SoGroup {
   typedef SoGroup inherited;
 
   SO_NODE_HEADER(SoMultipleCopy);
@@ -64,4 +64,4 @@ protected:
   virtual ~SoMultipleCopy();
 };
 
-#endif // !COIN_SOMULTIPLECOPY_H
+#endif // !OBOL_SOMULTIPLECOPY_H

@@ -1,5 +1,5 @@
-#ifndef COIN_SOSUBELEMENT_H
-#define COIN_SOSUBELEMENT_H
+#ifndef OBOL_SOSUBELEMENT_H
+#define OBOL_SOSUBELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -142,4 +142,4 @@ void * _class_::createInstance(void) { return new _class_; }
 
 // *************************************************************************
 
-#endif // !COIN_SOSUBELEMENT_H
+#endif // !OBOL_SOSUBELEMENT_H

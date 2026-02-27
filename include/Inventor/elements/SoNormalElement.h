@@ -1,5 +1,5 @@
-#ifndef COIN_SONORMALELEMENT_H
-#define COIN_SONORMALELEMENT_H
+#ifndef OBOL_SONORMALELEMENT_H
+#define OBOL_SONORMALELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/SbVec3f.h>
 #include <cassert>
 
-class COIN_DLL_API SoNormalElement : public SoReplacedElement {
+class OBOL_DLL_API SoNormalElement : public SoReplacedElement {
   typedef SoReplacedElement inherited;
 
   SO_ELEMENT_HEADER(SoNormalElement);
@@ -66,4 +66,4 @@ protected:
   SbBool unitLength;
 };
 
-#endif // !COIN_SONORMALELEMENT_H
+#endif // !OBOL_SONORMALELEMENT_H

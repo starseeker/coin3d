@@ -39,9 +39,9 @@
 #include <Inventor/SbVec4s.h>
 #include <Inventor/SbVec4f.h>
 #include <Inventor/SbVec4d.h>
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 /*!
   \class SbVec4i32 SbVec4i32.h Inventor/SbVec4i32.h
@@ -82,13 +82,13 @@ SbVec4i32::setValue(const SbVec4s & v)
 SbVec4i32 &
 SbVec4i32::setValue(const SbVec4f & v)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (v[0] > std::numeric_limits<int32_t>::max() || v[0] < -std::numeric_limits<int32_t>::max() || 
       v[1] > std::numeric_limits<int32_t>::max() || v[1] < -std::numeric_limits<int32_t>::max() || 
       v[2] > std::numeric_limits<int32_t>::max() || v[2] < -std::numeric_limits<int32_t>::max()) {
     SoDebugError::post("SbVec4i32::setValue", "SbVec4f argument out of range to store in an SbVec4i32");
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   vec[0] = static_cast<int32_t>(v[0]);
   vec[1] = static_cast<int32_t>(v[1]);
   vec[2] = static_cast<int32_t>(v[2]);
@@ -99,13 +99,13 @@ SbVec4i32::setValue(const SbVec4f & v)
 SbVec4i32 &
 SbVec4i32::setValue(const SbVec4d & v)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (v[0] > std::numeric_limits<int32_t>::max() || v[0] < -std::numeric_limits<int32_t>::max() || 
       v[1] > std::numeric_limits<int32_t>::max() || v[1] < -std::numeric_limits<int32_t>::max() || 
       v[2] > std::numeric_limits<int32_t>::max() || v[2] < -std::numeric_limits<int32_t>::max()) {
     SoDebugError::post("SbVec4i32::setValue", "SbVec4d argument out of range to store in an SbVec4i32");
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   vec[0] = static_cast<int32_t>(v[0]);
   vec[1] = static_cast<int32_t>(v[1]);
   vec[2] = static_cast<int32_t>(v[2]);

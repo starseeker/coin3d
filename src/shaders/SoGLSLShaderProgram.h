@@ -1,5 +1,5 @@
-#ifndef COIN_SOGLSLSHADERPROGRAM_H
-#define COIN_SOGLSLSHADERPROGRAM_H
+#ifndef OBOL_SOGLSLSHADERPROGRAM_H
+#define OBOL_SOGLSLSHADERPROGRAM_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,7 +33,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #error this is a private header file
 #endif
 
@@ -71,13 +71,13 @@ public:
   SoGLSLShaderProgram(void);
   ~SoGLSLShaderProgram();
 
-  COIN_GLhandle getProgramHandle(const SoGLContext * g, const SbBool create = FALSE);
+  OBOL_GLhandle getProgramHandle(const SoGLContext * g, const SbBool create = FALSE);
   SbBool neededLinking(void) const;
 
 protected:
   SbList <int> programParameters;
   SbList <SoGLSLShaderObject *> shaderObjects;
-  SbHash<uint32_t, COIN_GLhandle> programHandles;
+  SbHash<uint32_t, OBOL_GLhandle> programHandles;
 
   SbBool isExecutable;
   SbBool neededlinking;
@@ -95,4 +95,4 @@ private:
 
 };
 
-#endif /* ! COIN_SOGLSLSHADERPROGRAM_H */
+#endif /* ! OBOL_SOGLSLSHADERPROGRAM_H */

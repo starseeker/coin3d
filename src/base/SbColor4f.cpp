@@ -58,9 +58,9 @@
 #include <cassert>
 #include <Inventor/SbColor4f.h>
 #include <Inventor/SbVec4f.h>
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 /*!
   Default constructor. The color value will be uninitialized until
@@ -236,7 +236,7 @@ SbColor4f&
 SbColor4f::setHSVValue(float hue, float saturation,
                       float value, float alpha)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (!(hue>=0.0f && hue<=1.0f)) {
     SoDebugError::postWarning("SbColor4f::setHSVValue",
                               "'hue' (%f) not within [0.0,1.0]; clamping.",
@@ -267,7 +267,7 @@ SbColor4f::setHSVValue(float hue, float saturation,
     alpha = SbClamp(alpha, 0.0f, 1.0f);
   }
 
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   SbColor col;
   col.setHSVValue(hue, saturation, value);

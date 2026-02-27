@@ -5,10 +5,10 @@
  *   1. SoGLDriverDatabase::init() called explicitly (idempotent after SoDB::init).
  *   2. Rendering with multiple texture types exercises the GL feature detection
  *      code in SoGLDriverDatabase::isSupported internally for:
- *        - COIN_texture_object       (SoTexture2 path)
- *        - COIN_multitexture         (SoMultiTextureImageElement)
- *        - COIN_texsubimage          (texture upload path)
- *        - COIN_non_power_of_two_textures (when NPOT texture is used)
+ *        - OBOL_texture_object       (SoTexture2 path)
+ *        - OBOL_multitexture         (SoMultiTextureImageElement)
+ *        - OBOL_texsubimage          (texture upload path)
+ *        - OBOL_non_power_of_two_textures (when NPOT texture is used)
  *   3. SoGLImage: construct, setData, getImage, getQuality, getTypeId (pre-GL,
  *      no state required), unref.
  *   4. SoGLBigImage: getClassTypeId, setChangeLimit round-trip.

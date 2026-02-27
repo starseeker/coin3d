@@ -49,9 +49,9 @@
 
 #include "config.h"
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
 #include <Inventor/threads/SbMutex.h>
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 
 #ifndef DOXYGEN_SKIP_THIS
 
@@ -60,16 +60,16 @@ public:
   int prevmerge;
   SoTypeList elements;
   SoEnabledElementsList * parent;
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   SbMutex mutex;
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
   void lock(void) {
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
     this->mutex.lock();
 #endif
   }
   void unlock(void) {
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
     this->mutex.unlock();
 #endif
   }

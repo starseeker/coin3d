@@ -1,5 +1,5 @@
-#ifndef COIN_SBBOX_H
-#define COIN_SBBOX_H
+#ifndef OBOL_SBBOX_H
+#define OBOL_SBBOX_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,9 +33,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#if defined(COIN_INTERNAL)
+#if defined(OBOL_INTERNAL)
 #error Do not include Inventor/SbVec.h internally.
-#endif // COIN_INTERNAL
+#endif // OBOL_INTERNAL
 
 #include <Inventor/SbVec2b.h>
 #include <Inventor/SbVec2ub.h>
@@ -64,4 +64,4 @@
 #include <Inventor/SbVec4f.h>
 #include <Inventor/SbVec4d.h>
 
-#endif // !COIN_SBBOX_H
+#endif // !OBOL_SBBOX_H

@@ -1,5 +1,5 @@
-#ifndef COIN_SOGLMULTITEXTUREENABLEDELEMENT_H
-#define COIN_SOGLMULTITEXTUREENABLEDELEMENT_H
+#ifndef OBOL_SOGLMULTITEXTUREENABLEDELEMENT_H
+#define OBOL_SOGLMULTITEXTUREENABLEDELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/elements/SoMultiTextureEnabledElement.h>
 
-class COIN_DLL_API SoGLMultiTextureEnabledElement : public SoMultiTextureEnabledElement {
+class OBOL_DLL_API SoGLMultiTextureEnabledElement : public SoMultiTextureEnabledElement {
   typedef SoMultiTextureEnabledElement inherited;
 
   SO_ELEMENT_HEADER(SoGLMultiTextureEnabledElement);
@@ -59,4 +59,4 @@ private:
   uint32_t cachecontext;
 };
 
-#endif // !COIN_SOGLMULTITEXTUREENABLEDELEMENT_H
+#endif // !OBOL_SOGLMULTITEXTUREENABLEDELEMENT_H

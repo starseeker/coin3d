@@ -63,9 +63,9 @@ SoCompactPathList::SoCompactPathList(const SoPathList & list)
   : stack(256)
 {
   assert(list.getLength());
-#if COIN_DEBUG
+#if OBOL_DEBUG
   SoNode * head = FULL_PATH(list, 0)->getHead();
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   int numnodes = 0;
 
   for (int i = 0; i < list.getLength(); i++) {

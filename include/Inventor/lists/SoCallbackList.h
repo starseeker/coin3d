@@ -1,5 +1,5 @@
-#ifndef COIN_LISTS_SOCALLBACKLIST_H
-#define COIN_LISTS_SOCALLBACKLIST_H
+#ifndef OBOL_LISTS_SOCALLBACKLIST_H
+#define OBOL_LISTS_SOCALLBACKLIST_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -41,7 +41,7 @@
 
 typedef void SoCallbackListCB(void * userdata, void * callbackdata);
 
-class COIN_DLL_API SoCallbackList {
+class OBOL_DLL_API SoCallbackList {
 public:
   SoCallbackList(void);
   ~SoCallbackList();
@@ -59,4 +59,4 @@ private:
   SbPList datalist;
 };
 
-#endif // !COIN_LISTS_SOCALLBACKLIST_H
+#endif // !OBOL_LISTS_SOCALLBACKLIST_H

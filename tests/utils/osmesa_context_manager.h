@@ -24,8 +24,8 @@
  *   - Link against the OSMesa library (or a Coin built with OSMesa)
  */
 
-#ifndef COIN_OSMESA_CONTEXT_MANAGER_H
-#define COIN_OSMESA_CONTEXT_MANAGER_H
+#ifndef OBOL_OSMESA_CONTEXT_MANAGER_H
+#define OBOL_OSMESA_CONTEXT_MANAGER_H
 
 #include <Inventor/SoDB.h>
 #include <OSMesa/osmesa.h>
@@ -127,4 +127,4 @@ public:
     }
 };
 
-#endif // COIN_OSMESA_CONTEXT_MANAGER_H
+#endif // OBOL_OSMESA_CONTEXT_MANAGER_H

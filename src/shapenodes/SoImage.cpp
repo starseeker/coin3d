@@ -301,7 +301,7 @@ SoImage::~SoImage()
 void
 SoImage::initClass(void)
 {
-  SO_NODE_INTERNAL_INIT_CLASS(SoImage, SO_FROM_INVENTOR_2_5|SO_FROM_COIN_1_0);
+  SO_NODE_INTERNAL_INIT_CLASS(SoImage, SO_FROM_INVENTOR_2_5|SO_FROM_OBOL_1_0);
 }
 
 // doc from parent
@@ -364,12 +364,12 @@ SoImage::GLRender(SoGLRenderAction * action)
   case SoImage::CENTER:
     xpos = (int)nilpoint[0] - (size[0]>>1);
     break;
-#if COIN_DEBUG
+#if OBOL_DEBUG
   default:
     SoDebugError::post("SoImage::GLRender",
                        "value of horAlign field is invalid");
     break;
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   }
 
   int ypos = 0;
@@ -383,12 +383,12 @@ SoImage::GLRender(SoGLRenderAction * action)
   case SoImage::HALF:
     ypos = (int)nilpoint[1] - (size[1]>>1);
     break;
-#if COIN_DEBUG
+#if OBOL_DEBUG
   default:
     SoDebugError::post("SoImage::GLRender",
                        "value of vertAlign field is invalid");
     break;
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   }
 
   GLenum format = GL_LUMINANCE; // init unnecessary, but kills a compiler warning.
@@ -405,7 +405,7 @@ SoImage::GLRender(SoGLRenderAction * action)
   case 4:
     format = GL_RGBA;
     break;
-#if COIN_DEBUG
+#if OBOL_DEBUG
   default:
     assert(0 && "illegal numComponents");
     break;

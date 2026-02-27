@@ -109,7 +109,7 @@ SoGLSLShaderObject::load(const char* srcStr)
   if (this->shaderHandle == 0) return;
   this->programid = soglshaderobject_idcounter++;
 
-  this->glctx->glShaderSourceARB(this->shaderHandle, 1, (const COIN_GLchar **)&srcStr, NULL);
+  this->glctx->glShaderSourceARB(this->shaderHandle, 1, (const OBOL_GLchar **)&srcStr, NULL);
   this->glctx->glCompileShaderARB(this->shaderHandle);
 
   if (SoGLSLShaderObject::didOpenGLErrorOccur("SoGLSLShaderObject::load()")) {
@@ -145,7 +145,7 @@ SoGLSLShaderObject::getNewParameter(void) const
 // *************************************************************************
 
 void
-SoGLSLShaderObject::attach(COIN_GLhandle programHandle)
+SoGLSLShaderObject::attach(OBOL_GLhandle programHandle)
 {
   if (programHandle <= 0 || this->programHandle == programHandle) return;
 
@@ -175,14 +175,14 @@ SoGLSLShaderObject::isAttached(void) const
 }
 
 void
-SoGLSLShaderObject::printInfoLog(const SoGLContext * g, COIN_GLhandle handle, int objType)
+SoGLSLShaderObject::printInfoLog(const SoGLContext * g, OBOL_GLhandle handle, int objType)
 {
   GLint length = 0;
 
   g->glGetObjectParameterivARB(handle, GL_OBJECT_INFO_LOG_LENGTH_ARB, &length);
 
   if (length > 1) {
-    COIN_GLchar *infoLog = new COIN_GLchar[length];
+    OBOL_GLchar *infoLog = new OBOL_GLchar[length];
     GLsizei charsWritten = 0;
     g->glGetInfoLogARB(handle, length, &charsWritten, infoLog);
     SbString s("GLSL");
@@ -205,7 +205,7 @@ SoGLSLShaderObject::didOpenGLErrorOccur(const SbString & source)
   SbBool retCode = FALSE;
   SbBool glerror_debug = sogl_glerror_debugging();
 
-  // only do a glFlush if COIN_GLERROR_DEBUGGING is set since it can
+  // only do a glFlush if OBOL_GLERROR_DEBUGGING is set since it can
   // degrade performance a lot. If glFlush is not executed here, gl
   // errors from the shaders might not get caught until after the
   // geometry is rendered, which makes debugging really confusing.
@@ -218,7 +218,7 @@ SoGLSLShaderObject::didOpenGLErrorOccur(const SbString & source)
     SoDebugError::post(source.getString(), "error: '%s' %s",
                        coin_glerror_string(glErr),
                        glerror_debug ? "":
-                       "(set envvar COIN_GLERROR_DEBUGGING=1 "
+                       "(set envvar OBOL_GLERROR_DEBUGGING=1 "
                        "and re-run to get more information)");
 
     retCode = TRUE;
@@ -236,9 +236,9 @@ SoGLSLShaderObject::didOpenGLErrorOccur(const SbString & source)
 #include <cstdio>
 
 void
-SoGLSLShaderObject::updateCoinParameter(SoState * COIN_UNUSED_ARG(state), const SbName & name, SoShaderParameter * param, const int value)
+SoGLSLShaderObject::updateCoinParameter(SoState * OBOL_UNUSED_ARG(state), const SbName & name, SoShaderParameter * param, const int value)
 {
-  COIN_GLhandle pHandle = this->programHandle;
+  OBOL_GLhandle pHandle = this->programHandle;
   if (pHandle) {
     const SoGLContext * glue = this->GLContext();
 
@@ -250,7 +250,7 @@ SoGLSLShaderObject::updateCoinParameter(SoState * COIN_UNUSED_ARG(state), const 
     }
     else {
       GLint location = glue->glGetUniformLocationARB(pHandle,
-                                                     (const COIN_GLchar *)name.getString());
+                                                     (const OBOL_GLchar *)name.getString());
 
       if (location >= 0) {
         glue->glUniform1iARB(location, value);

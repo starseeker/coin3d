@@ -1,5 +1,5 @@
-#ifndef COIN_SOINFO_H
-#define COIN_SOINFO_H
+#ifndef OBOL_SOINFO_H
+#define OBOL_SOINFO_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -36,7 +36,7 @@
 #include <Inventor/nodes/SoSubNode.h>
 #include <Inventor/fields/SoSFString.h>
 
-class COIN_DLL_API SoInfo : public SoNode {
+class OBOL_DLL_API SoInfo : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_HEADER(SoInfo);
@@ -51,4 +51,4 @@ protected:
   virtual ~SoInfo();
 };
 
-#endif // !COIN_SOINFO_H
+#endif // !OBOL_SOINFO_H

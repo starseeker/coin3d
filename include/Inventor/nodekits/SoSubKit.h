@@ -1,5 +1,5 @@
-#ifndef COIN_SOSUBKIT_H
-#define COIN_SOSUBKIT_H
+#ifndef OBOL_SOSUBKIT_H
+#define OBOL_SOSUBKIT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,10 +37,10 @@
 #include <Inventor/fields/SoSFNode.h>
 #include <Inventor/nodekits/SoNodekitCatalog.h>
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 // Include this header file for better Open Inventor compatibility.
 #include <Inventor/nodekits/SoNodeKitListPart.h>
-#endif // !COIN_INTERNAL
+#endif // !OBOL_INTERNAL
 
 
 // FIXME: document all the macros, as they are part of the public
@@ -242,4 +242,4 @@ PRIVATE_KIT_SOURCE(_class_)
     classcatalog->setNullByDefault(SO__QUOTE(_part_), _newnullbydefault_); \
   } WHILE_0
 
-#endif // !COIN_SOSUBKIT_H
+#endif // !OBOL_SOSUBKIT_H

@@ -1,5 +1,5 @@
-#ifndef COIN_LISTS_SBPLIST_H
-#define COIN_LISTS_SBPLIST_H
+#ifndef OBOL_LISTS_SBPLIST_H
+#define OBOL_LISTS_SBPLIST_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <cassert>
 #include <cstddef> // NULL definition
 
-class COIN_DLL_API SbPList {
+class OBOL_DLL_API SbPList {
   enum { DEFAULTSIZE = 4 };
 
 public:
@@ -93,9 +93,9 @@ SbPList::append(void * item)
 inline void 
 SbPList::removeFast(const int index) 
 {
-#ifdef COIN_EXTRA_DEBUG
+#ifdef OBOL_EXTRA_DEBUG
   assert(index >= 0 && index < this->numitems);
-#endif // COIN_EXTRA_DEBUG
+#endif // OBOL_EXTRA_DEBUG
   this->itembuffer[index] = this->itembuffer[--this->numitems];
 }
 
@@ -108,9 +108,9 @@ SbPList::getLength(void) const
 inline void 
 SbPList::truncate(const int length, const int dofit) 
 {
-#ifdef COIN_EXTRA_DEBUG
+#ifdef OBOL_EXTRA_DEBUG
   assert(length <= this->numitems);
-#endif // COIN_EXTRA_DEBUG
+#endif // OBOL_EXTRA_DEBUG
   this->numitems = length;
   if (dofit) this->fit();
 }
@@ -118,18 +118,18 @@ SbPList::truncate(const int length, const int dofit)
 inline void ** 
 SbPList::getArrayPtr(const int start) const 
 {
-#ifdef COIN_EXTRA_DEBUG
+#ifdef OBOL_EXTRA_DEBUG
   assert(start >= 0 && start < this->numitems);
-#endif // COIN_EXTRA_DEBUG
+#endif // OBOL_EXTRA_DEBUG
   return &this->itembuffer[start];
 }
 
 inline void *& 
 SbPList::operator[](const int index) const 
 {
-#ifdef COIN_EXTRA_DEBUG
+#ifdef OBOL_EXTRA_DEBUG
   assert(index >= 0);
-#endif // COIN_EXTRA_DEBUG
+#endif // OBOL_EXTRA_DEBUG
   if (index >= this->getLength()) this->expandlist(index + 1);
   return this->itembuffer[index];
 }
@@ -166,4 +166,4 @@ SbPList::getArraySize(void) const
 }
 
 
-#endif // !COIN_LISTS_SBPLIST_H
+#endif // !OBOL_LISTS_SBPLIST_H

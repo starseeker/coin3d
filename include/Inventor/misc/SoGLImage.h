@@ -1,5 +1,5 @@
-#ifndef COIN_SOGLIMAGE_H
-#define COIN_SOGLIMAGE_H
+#ifndef OBOL_SOGLIMAGE_H
+#define OBOL_SOGLIMAGE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -50,7 +50,7 @@ class SoGLDisplayList;
 class SoState;
 class SbImage;
 
-class COIN_DLL_API SoGLImage {
+class OBOL_DLL_API SoGLImage {
 public:
 
   SoGLImage();
@@ -181,4 +181,4 @@ private:
   static void unregisterImage(SoGLImage * image);
 };
 
-#endif // !COIN_SOGLIMAGE_H
+#endif // !OBOL_SOGLIMAGE_H

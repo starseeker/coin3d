@@ -35,7 +35,7 @@
   \brief The SoDepthBufferElement controls the depth buffer settings.
 
   \ingroup coin_elements
-  \COIN_CLASS_EXTENSION
+  \OBOL_CLASS_EXTENSION
   \since Coin 3.0
 */
 
@@ -111,8 +111,8 @@ SoDepthBufferElement::push(SoState * state)
   Internal Coin method.
 */
 void
-SoDepthBufferElement::pop(SoState * COIN_UNUSED_ARG(state),
-                          const SoElement * COIN_UNUSED_ARG(prevTopElement))
+SoDepthBufferElement::pop(SoState * OBOL_UNUSED_ARG(state),
+                          const SoElement * OBOL_UNUSED_ARG(prevTopElement))
 {
 }
 

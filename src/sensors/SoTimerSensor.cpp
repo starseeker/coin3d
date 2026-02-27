@@ -49,9 +49,9 @@
 #include <Inventor/SoDB.h>
 #include <cassert>
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 #define DEBUG_TIMERSENSOR_TRACE 0
 
@@ -195,13 +195,13 @@ SoTimerSensor::schedule(void)
   SoDebugError::postInfo("SoTimerSensor::schedule", "");
 #endif // debug
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (this->isScheduled()) {
     SoDebugError::postWarning("SoTimerSensor::schedule",
                               "was already scheduled!");
     return;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   // need to handle the case where the callback has unscheduled
   // the timer, and then scheduled it again. Since we are
@@ -229,14 +229,14 @@ SoTimerSensor::unschedule(void)
   SoDebugError::postInfo("SoTimerSensor::unschedule", "%p start", this);
 #endif // debug
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (!this->isScheduled()) {
     SoDebugError::postWarning("SoTimerSensor::unschedule",
                               "%p not scheduled (istriggering=%s)",
                               this, this->istriggering ? "TRUE" : "FALSE");
     return;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   if (this->istriggering) {
     SoDB::getSensorManager()->removeRescheduledTimer(this);

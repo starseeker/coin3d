@@ -1,5 +1,5 @@
-#ifndef COIN_SOMULTITEXTURECOORDINATEELEMENT_H
-#define COIN_SOMULTITEXTURECOORDINATEELEMENT_H
+#ifndef OBOL_SOMULTITEXTURECOORDINATEELEMENT_H
+#define OBOL_SOMULTITEXTURECOORDINATEELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -45,7 +45,7 @@ typedef const SbVec4f & SoTextureCoordinateFunctionCB(void * userdata,
 
 class SoMultiTextureCoordinateElementP;
 
-class COIN_DLL_API SoMultiTextureCoordinateElement : public SoElement {
+class OBOL_DLL_API SoMultiTextureCoordinateElement : public SoElement {
   typedef SoElement inherited;
 
   SO_ELEMENT_HEADER(SoMultiTextureCoordinateElement);
@@ -171,4 +171,4 @@ private:
   SoMultiTextureCoordinateElementP * pimpl;
 };
 
-#endif // !COIN_SOMULTITEXTURECOORDINATEELEMENT_H
+#endif // !OBOL_SOMULTITEXTURECOORDINATEELEMENT_H

@@ -30,15 +30,15 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_SOTRIGGERANY_H
-#define COIN_SOTRIGGERANY_H
+#ifndef OBOL_SOTRIGGERANY_H
+#define OBOL_SOTRIGGERANY_H
 
 #include <Inventor/engines/SoSubEngine.h>
 #include <Inventor/engines/SoEngineOutput.h>
 #include <Inventor/fields/SoSFTrigger.h>
 
 
-class COIN_DLL_API SoTriggerAny : public SoEngine {
+class OBOL_DLL_API SoTriggerAny : public SoEngine {
   typedef SoEngine inherited;
 
   SO_ENGINE_HEADER(SoTriggerAny);
@@ -67,4 +67,4 @@ private:
   virtual void evaluate(void);
 };
 
-#endif // !COIN_SOTRIGGERANY_H
+#endif // !OBOL_SOTRIGGERANY_H

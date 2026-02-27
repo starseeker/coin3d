@@ -99,12 +99,12 @@ extern "C" {
 /* ********************************************************************** */
 /* Global state variables */
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
 static std::mutex atexit_list_monitor;
-#endif /* COIN_THREADSAFE */
+#endif /* OBOL_THREADSAFE */
 
-static int COIN_DEBUG_EXTRA = -1;
-static int COIN_DEBUG_NORMALIZE = -1;
+static int OBOL_DEBUG_EXTRA = -1;
+static int OBOL_DEBUG_NORMALIZE = -1;
 
 /* ********************************************************************** */
 /* Initialization function */
@@ -113,18 +113,18 @@ void coin_init_tidbits(void)
 {
     const char* env;
     
-    env = CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_EXTRA");
+    env = CoinInternal::getEnvironmentVariableRaw("OBOL_DEBUG_EXTRA");
     if (env && atoi(env) == 1) {
-        COIN_DEBUG_EXTRA = 1;
+        OBOL_DEBUG_EXTRA = 1;
     } else {
-        COIN_DEBUG_EXTRA = 0;
+        OBOL_DEBUG_EXTRA = 0;
     }
     
-    env = CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_NORMALIZE");
+    env = CoinInternal::getEnvironmentVariableRaw("OBOL_DEBUG_NORMALIZE");
     if (env && atoi(env) == 1) {
-        COIN_DEBUG_NORMALIZE = 1;
+        OBOL_DEBUG_NORMALIZE = 1;
     } else {
-        COIN_DEBUG_NORMALIZE = 0;
+        OBOL_DEBUG_NORMALIZE = 0;
     }
 }
 
@@ -238,9 +238,9 @@ SbBool coin_setenv(const char* name, const char* value, int overwrite)
     }
     
     if (overwrite || (GetEnvironmentVariable(name, NULL, 0) == 0))
-        return SetEnvironmentVariable(name, value) ? COIN_TRUE : COIN_FALSE;
+        return SetEnvironmentVariable(name, value) ? OBOL_TRUE : OBOL_FALSE;
     else
-        return COIN_TRUE;
+        return OBOL_TRUE;
 #else
     return (setenv(name, value, overwrite) == 0);
 #endif
@@ -273,12 +273,12 @@ void coin_unsetenv(const char* name)
 /* ********************************************************************** */
 /* Endianness and byte order functions */
 
-#define COIN_BSWAP_8(x)  ((x) & 0xff)
-#define COIN_BSWAP_16(x) ((COIN_BSWAP_8(x)  << 8)  | COIN_BSWAP_8((x)  >> 8))
-#define COIN_BSWAP_32(x) ((COIN_BSWAP_16(x) << 16) | COIN_BSWAP_16((x) >> 16))
-#define COIN_BSWAP_64(x) ((COIN_BSWAP_32(x) << 32) | COIN_BSWAP_32((x) >> 32))
+#define OBOL_BSWAP_8(x)  ((x) & 0xff)
+#define OBOL_BSWAP_16(x) ((OBOL_BSWAP_8(x)  << 8)  | OBOL_BSWAP_8((x)  >> 8))
+#define OBOL_BSWAP_32(x) ((OBOL_BSWAP_16(x) << 16) | OBOL_BSWAP_16((x) >> 16))
+#define OBOL_BSWAP_64(x) ((OBOL_BSWAP_32(x) << 32) | OBOL_BSWAP_32((x) >> 32))
 
-static int coin_endianness = COIN_HOST_IS_UNKNOWNENDIAN;
+static int coin_endianness = OBOL_HOST_IS_UNKNOWNENDIAN;
 
 int coin_host_get_endianness(void)
 {
@@ -287,7 +287,7 @@ int coin_host_get_endianness(void)
         uint8_t  bytes[4];
     } temp;
     
-    if (coin_endianness != COIN_HOST_IS_UNKNOWNENDIAN) {
+    if (coin_endianness != OBOL_HOST_IS_UNKNOWNENDIAN) {
         return coin_endianness;
     }
     
@@ -296,20 +296,20 @@ int coin_host_get_endianness(void)
     temp.bytes[2] = 0x02;
     temp.bytes[3] = 0x03;
     switch (temp.value) {
-        case 0x03020100: return coin_endianness = COIN_HOST_IS_LITTLEENDIAN;
-        case 0x00010203: return coin_endianness = COIN_HOST_IS_BIGENDIAN;
+        case 0x03020100: return coin_endianness = OBOL_HOST_IS_LITTLEENDIAN;
+        case 0x00010203: return coin_endianness = OBOL_HOST_IS_BIGENDIAN;
     }
     assert(0 && "system has unknown endianness");
-    return COIN_HOST_IS_UNKNOWNENDIAN;
+    return OBOL_HOST_IS_UNKNOWNENDIAN;
 }
 
 std::uint16_t coin_hton_uint16(std::uint16_t value)
 {
     switch (coin_host_get_endianness()) {
-    case COIN_HOST_IS_BIGENDIAN:
+    case OBOL_HOST_IS_BIGENDIAN:
         break;
-    case COIN_HOST_IS_LITTLEENDIAN:
-        value = COIN_BSWAP_16(value);
+    case OBOL_HOST_IS_LITTLEENDIAN:
+        value = OBOL_BSWAP_16(value);
         break;
     default:
         assert(0 && "system has unknown endianness");
@@ -325,10 +325,10 @@ std::uint16_t coin_ntoh_uint16(std::uint16_t value)
 std::uint32_t coin_hton_uint32(std::uint32_t value)
 {
     switch (coin_host_get_endianness()) {
-    case COIN_HOST_IS_BIGENDIAN:
+    case OBOL_HOST_IS_BIGENDIAN:
         break;
-    case COIN_HOST_IS_LITTLEENDIAN:
-        value = COIN_BSWAP_32(value);
+    case OBOL_HOST_IS_LITTLEENDIAN:
+        value = OBOL_BSWAP_32(value);
         break;
     default:
         assert(0 && "system has unknown endianness");
@@ -344,10 +344,10 @@ std::uint32_t coin_ntoh_uint32(std::uint32_t value)
 std::uint64_t coin_hton_uint64(std::uint64_t value)
 {
     switch (coin_host_get_endianness()) {
-    case COIN_HOST_IS_BIGENDIAN:
+    case OBOL_HOST_IS_BIGENDIAN:
         break;
-    case COIN_HOST_IS_LITTLEENDIAN:
-        value = COIN_BSWAP_64(value);
+    case OBOL_HOST_IS_LITTLEENDIAN:
+        value = OBOL_BSWAP_64(value);
         break;
     default:
         assert(0 && "system has unknown endianness");
@@ -578,7 +578,7 @@ typedef struct {
 } tb_atexit_data;
 
 static cc_list* atexit_list = NULL;
-static SbBool isexiting = COIN_FALSE;
+static SbBool isexiting = OBOL_FALSE;
 
 static int atexit_qsort_cb(const void* q0, const void* q1)
 {
@@ -599,13 +599,13 @@ void coin_atexit_cleanup(void)
     int i, n;
     tb_atexit_data* data;
     const char* debugstr;
-    SbBool debug = COIN_FALSE;
+    SbBool debug = OBOL_FALSE;
     
     if (!atexit_list) return;
     
-    isexiting = COIN_TRUE;
+    isexiting = OBOL_TRUE;
     
-    debugstr = CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_CLEANUP");
+    debugstr = CoinInternal::getEnvironmentVariableRaw("OBOL_DEBUG_CLEANUP");
     debug = debugstr && (atoi(debugstr) > 0);
     
     n = cc_list_get_length(atexit_list);
@@ -625,7 +625,7 @@ void coin_atexit_cleanup(void)
     
     cc_list_destruct(atexit_list);
     atexit_list = NULL;
-    isexiting = COIN_FALSE;
+    isexiting = OBOL_FALSE;
     
     if (debug) {
         fprintf(stdout, "coin_atexit_cleanup: fini\n");
@@ -634,9 +634,9 @@ void coin_atexit_cleanup(void)
 
 void coin_atexit_func(const char* name, coin_atexit_f* f, coin_atexit_priorities priority)
 {
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
     atexit_list_monitor.lock();
-#endif /* COIN_THREADSAFE */
+#endif /* OBOL_THREADSAFE */
     
     assert(!isexiting && "tried to attach an atexit function while exiting");
     
@@ -656,9 +656,9 @@ void coin_atexit_func(const char* name, coin_atexit_f* f, coin_atexit_priorities
         cc_list_append(atexit_list, data);
     }
     
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
     atexit_list_monitor.unlock();
-#endif /* COIN_THREADSAFE */
+#endif /* OBOL_THREADSAFE */
 }
 
 void cc_coin_atexit(coin_atexit_f* f)
@@ -760,7 +760,7 @@ SbBool coin_locale_set_portable(std::string* storeold)
     
     const char* deflocale = setlocale(LC_NUMERIC, NULL);
     if (strcmp(deflocale, "C") == 0) {
-        return COIN_FALSE;
+        return OBOL_FALSE;
     }
     
     *storeold = deflocale;
@@ -768,7 +768,7 @@ SbBool coin_locale_set_portable(std::string* storeold)
     loc = setlocale(LC_NUMERIC, "C");
     assert(loc != NULL && "could not set locale to supposed portable C locale");
     (void)loc; // suppress unused variable warning in release builds
-    return COIN_TRUE;
+    return OBOL_TRUE;
 }
 
 void coin_locale_reset(std::string* storedold)
@@ -868,7 +868,7 @@ void coin_flush_ascii85(FILE* fp,
                        int* tuplecnt, int* linecnt,
                        const int rowlen)
 {
-    coin_output_ascii85(fp, 0, tuple, linebuf, tuplecnt, linecnt, rowlen, COIN_TRUE);
+    coin_output_ascii85(fp, 0, tuple, linebuf, tuplecnt, linecnt, rowlen, OBOL_TRUE);
 }
 
 /* ********************************************************************** */
@@ -885,7 +885,7 @@ SbBool coin_parse_versionstring(const char* versionstr,
     *major = 0;
     if (minor) *minor = 0;
     if (patch) *patch = 0;
-    if (versionstr == NULL) return COIN_FALSE;
+    if (versionstr == NULL) return OBOL_FALSE;
     
     (void)strncpy(buffer, versionstr, 255);
     buffer[255] = '\0';
@@ -895,7 +895,7 @@ SbBool coin_parse_versionstring(const char* versionstr,
         char* start = buffer;
         *dotptr = '\0';
         *major = atoi(start);
-        if (minor == NULL) return COIN_TRUE;
+        if (minor == NULL) return OBOL_TRUE;
         start = ++dotptr;
         
         dotptr = strchr(start, '.');
@@ -906,7 +906,7 @@ SbBool coin_parse_versionstring(const char* versionstr,
             int terminate = *dotptr == ' ';
             *dotptr = '\0';
             *minor = atoi(start);
-            if (patch == NULL) return COIN_TRUE;
+            if (patch == NULL) return OBOL_TRUE;
             if (!terminate) {
                 start = ++dotptr;
                 dotptr = strchr(start, ' ');
@@ -919,9 +919,9 @@ SbBool coin_parse_versionstring(const char* versionstr,
     } else {
         cc_debugerror_post("coin_parse_versionstring",
                           "Invalid versionstring: \"%s\"\n", versionstr);
-        return COIN_FALSE;
+        return OBOL_FALSE;
     }
-    return COIN_TRUE;
+    return OBOL_TRUE;
 }
 
 /* ********************************************************************** */
@@ -954,7 +954,7 @@ SbBool coin_getcwd(std::string* str)
     }
     
     free(dynbuf);
-    return cwd ? COIN_TRUE : COIN_FALSE;
+    return cwd ? OBOL_TRUE : OBOL_FALSE;
 }
 
 /* ********************************************************************** */
@@ -1030,11 +1030,11 @@ unsigned long coin_geq_prime_number(unsigned long num)
 int coin_runtime_os(void)
 {
 #if defined(__APPLE__)
-    return COIN_OS_X;
+    return OBOL_OS_X;
 #elif defined(HAVE_WIN32_API)
-    return COIN_MSWINDOWS;
+    return OBOL_MSWINDOWS;
 #else
-    return COIN_UNIX;
+    return OBOL_UNIX;
 #endif
 }
 
@@ -1043,8 +1043,8 @@ int coin_runtime_os(void)
 
 int coin_debug_extra(void)
 {
-#if COIN_DEBUG
-    return COIN_DEBUG_EXTRA;
+#if OBOL_DEBUG
+    return OBOL_DEBUG_EXTRA;
 #else
     return 0;
 #endif
@@ -1052,8 +1052,8 @@ int coin_debug_extra(void)
 
 int coin_debug_normalize(void)
 {
-#if COIN_DEBUG
-    return COIN_DEBUG_NORMALIZE;
+#if OBOL_DEBUG
+    return OBOL_DEBUG_NORMALIZE;
 #else
     return 0;
 #endif
@@ -1061,14 +1061,14 @@ int coin_debug_normalize(void)
 
 int coin_debug_caching_level(void)
 {
-#if COIN_DEBUG
-    static int COIN_DEBUG_CACHING = -1;
-    if (COIN_DEBUG_CACHING < 0) {
-        const char* env = CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_CACHING");
-        if (env) COIN_DEBUG_CACHING = atoi(env);
-        else COIN_DEBUG_CACHING = 0;
+#if OBOL_DEBUG
+    static int OBOL_DEBUG_CACHING = -1;
+    if (OBOL_DEBUG_CACHING < 0) {
+        const char* env = CoinInternal::getEnvironmentVariableRaw("OBOL_DEBUG_CACHING");
+        if (env) OBOL_DEBUG_CACHING = atoi(env);
+        else OBOL_DEBUG_CACHING = 0;
     }
-    return COIN_DEBUG_CACHING;
+    return OBOL_DEBUG_CACHING;
 #else
     return 0;
 #endif

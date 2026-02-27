@@ -57,9 +57,9 @@
 #include <Inventor/nodes/SoSurroundScale.h>
 #include <Inventor/draggers/SoTransformerDragger.h>
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 #include "nodes/SoSubNodeP.h"
 
@@ -115,7 +115,7 @@ SoTransformerManip::isLocateHighlighting(void)
   if (dragger && dragger->isOfType(SoTransformerDragger::getClassTypeId())) {
     return ((SoTransformerDragger*)dragger)->isLocateHighlighting();
   }
-#if COIN_DEBUG
+#if OBOL_DEBUG
   SoDebugError::postWarning("SoTransformerManip::isLocateHighlighting",
                             "Not a valid dragger in manipulator");
 #endif // debug
@@ -135,7 +135,7 @@ SoTransformerManip::setLocateHighlighting(SbBool onoff)
     ((SoTransformerDragger*)dragger)->setLocateHighlighting(onoff);
   }
   else {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SoTransformerManip::setLocateHighlighting",
                               "Not a valid dragger in manipulator");
 #endif // debug
@@ -154,7 +154,7 @@ SoTransformerManip::unsquishKnobs(void)
     ((SoTransformerDragger*)dragger)->unsquishKnobs();
   }
   else {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SoTransformerManip::setLocateHighlighting",
                               "Not a valid dragger in manipulator");
 #endif // debug

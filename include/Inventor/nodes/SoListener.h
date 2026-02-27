@@ -1,5 +1,5 @@
-#ifndef COIN_SOLISTENER_H
-#define COIN_SOLISTENER_H
+#ifndef OBOL_SOLISTENER_H
+#define OBOL_SOLISTENER_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -40,7 +40,7 @@
 
 class SoListenerP;
 
-class COIN_DLL_API SoListener : public SoNode {
+class OBOL_DLL_API SoListener : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_HEADER(SoListener);
@@ -63,4 +63,4 @@ private:
   friend class SoListenerP;
 };
 
-#endif // COIN_SOLISTENER_H
+#endif // OBOL_SOLISTENER_H

@@ -1,5 +1,5 @@
-#ifndef COIN_SBDPPLANE_H
-#define COIN_SBDPPLANE_H
+#ifndef OBOL_SBDPPLANE_H
+#define OBOL_SBDPPLANE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -40,7 +40,7 @@
 class SbDPLine;
 class SbDPMatrix;
 
-class COIN_DLL_API SbDPPlane {
+class OBOL_DLL_API SbDPPlane {
 public:
   SbDPPlane(void);
   SbDPPlane(const SbVec3d & normal, const double D);
@@ -54,8 +54,8 @@ public:
   double getDistance(const SbVec3d & point) const;
   const SbVec3d & getNormal(void) const;
   double getDistanceFromOrigin(void) const;
-  friend COIN_DLL_API int operator ==(const SbDPPlane & p1, const SbDPPlane & p2);
-  friend COIN_DLL_API int operator !=(const SbDPPlane & p1, const SbDPPlane & p2);
+  friend OBOL_DLL_API int operator ==(const SbDPPlane & p1, const SbDPPlane & p2);
+  friend OBOL_DLL_API int operator !=(const SbDPPlane & p1, const SbDPPlane & p2);
 
   void print(FILE * file) const;
 
@@ -66,7 +66,7 @@ private:
   double distance;
 };
 
-COIN_DLL_API int operator ==(const SbDPPlane & p1, const SbDPPlane & p2);
-COIN_DLL_API int operator !=(const SbDPPlane & p1, const SbDPPlane & p2);
+OBOL_DLL_API int operator ==(const SbDPPlane & p1, const SbDPPlane & p2);
+OBOL_DLL_API int operator !=(const SbDPPlane & p1, const SbDPPlane & p2);
 
-#endif // !COIN_SBPLANE_H
+#endif // !OBOL_SBPLANE_H

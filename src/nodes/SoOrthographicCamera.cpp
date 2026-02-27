@@ -164,13 +164,13 @@ void
 SoOrthographicCamera::viewBoundingBox(const SbBox3f & box,
                                       float aspect, float slack)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (box.isEmpty()) {
     SoDebugError::postWarning("SoOrthographicCamera::viewBoundingBox",
                               "bounding box empty");
     return;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   // Get the radius of the bounding sphere.
   SbSphere bs;

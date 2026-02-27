@@ -1,5 +1,5 @@
-#ifndef COIN_SOCALLBACKLIST_H
-#define COIN_SOCALLBACKLIST_H
+#ifndef OBOL_SOCALLBACKLIST_H
+#define OBOL_SOCALLBACKLIST_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,10 +33,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#if defined(COIN_INTERNAL)
+#if defined(OBOL_INTERNAL)
 #error Do not include Inventor/misc/SoCallbackList.h internally (use Inventor/lists/SoCallbackList.h).
-#endif // COIN_INTERNAL
+#endif // OBOL_INTERNAL
 
 #include <Inventor/lists/SoCallbackList.h>
 
-#endif // !COIN_SOCALLBACKLIST_H
+#endif // !OBOL_SOCALLBACKLIST_H

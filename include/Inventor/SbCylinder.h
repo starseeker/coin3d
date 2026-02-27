@@ -1,5 +1,5 @@
-#ifndef COIN_SBCYLINDER_H
-#define COIN_SBCYLINDER_H
+#ifndef OBOL_SBCYLINDER_H
+#define OBOL_SBCYLINDER_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -38,7 +38,7 @@
 #include <Inventor/SbBasic.h>
 #include <Inventor/SbLine.h>
 
-class COIN_DLL_API SbCylinder {
+class OBOL_DLL_API SbCylinder {
 public:
   SbCylinder(void);
   SbCylinder(const SbLine& a, const float r);
@@ -57,4 +57,4 @@ private:
   float radius;
 };
 
-#endif // !COIN_SBCYLINDER_H
+#endif // !OBOL_SBCYLINDER_H

@@ -1,5 +1,5 @@
-#ifndef COIN_SOSPHERE_H
-#define COIN_SOSPHERE_H
+#ifndef OBOL_SOSPHERE_H
+#define OBOL_SOSPHERE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/nodes/SoShape.h>
 #include <Inventor/fields/SoSFFloat.h>
 
-class COIN_DLL_API SoSphere : public SoShape {
+class OBOL_DLL_API SoSphere : public SoShape {
   typedef SoShape inherited;
 
   SO_NODE_HEADER(SoSphere);
@@ -59,4 +59,4 @@ protected:
   virtual void computeBBox(SoAction * action, SbBox3f & box, SbVec3f & center);
 };
 
-#endif // !COIN_SOSPHERE_H
+#endif // !OBOL_SOSPHERE_H

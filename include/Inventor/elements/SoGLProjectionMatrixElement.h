@@ -1,5 +1,5 @@
-#ifndef COIN_SOGLPROJECTIONMATRIXELEMENT_H
-#define COIN_SOGLPROJECTIONMATRIXELEMENT_H
+#ifndef OBOL_SOGLPROJECTIONMATRIXELEMENT_H
+#define OBOL_SOGLPROJECTIONMATRIXELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/elements/SoProjectionMatrixElement.h>
 
-class COIN_DLL_API SoGLProjectionMatrixElement : public SoProjectionMatrixElement {
+class OBOL_DLL_API SoGLProjectionMatrixElement : public SoProjectionMatrixElement {
   typedef SoProjectionMatrixElement inherited;
 
   SO_ELEMENT_HEADER(SoGLProjectionMatrixElement);
@@ -55,4 +55,4 @@ private:
   void updategl();
 };
 
-#endif // !COIN_SOGLPROJECTIONMATRIXELEMENT_H
+#endif // !OBOL_SOGLPROJECTIONMATRIXELEMENT_H

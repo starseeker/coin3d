@@ -1,5 +1,5 @@
-#ifndef COIN_SBPIMPLPTR_HPP
-#define COIN_SBPIMPLPTR_HPP
+#ifndef OBOL_SBPIMPLPTR_HPP
+#define OBOL_SBPIMPLPTR_HPP
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,9 +33,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_SBPIMPLPTR_H
+#ifndef OBOL_SBPIMPLPTR_H
 #error do not include Inventor/tools/SbPimplPtr.hpp directly, use Inventor/tools/SbPimplPtr.h
-#endif // !COIN_SBPIMPLPTR_H
+#endif // !OBOL_SBPIMPLPTR_H
 
 /* ********************************************************************** */
 
@@ -130,4 +130,4 @@ SbPimplPtr<T>::operator -> (void)
 
 /* ********************************************************************** */
 
-#endif // !COIN_SBPIMPLPTR_HPP
+#endif // !OBOL_SBPIMPLPTR_HPP

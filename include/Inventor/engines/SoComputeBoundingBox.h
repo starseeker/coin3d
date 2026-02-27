@@ -30,8 +30,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_SOCOMPUTEBOUNDINGBOX_H
-#define COIN_SOCOMPUTEBOUNDINGBOX_H
+#ifndef OBOL_SOCOMPUTEBOUNDINGBOX_H
+#define OBOL_SOCOMPUTEBOUNDINGBOX_H
 
 #include <Inventor/engines/SoSubEngine.h>
 #include <Inventor/engines/SoEngineOutput.h>
@@ -42,7 +42,7 @@
 class SoGetBoundingBoxAction;
 
 
-class COIN_DLL_API SoComputeBoundingBox : public SoEngine {
+class OBOL_DLL_API SoComputeBoundingBox : public SoEngine {
   typedef SoEngine inherited;
 
   SO_ENGINE_HEADER(SoComputeBoundingBox);
@@ -70,4 +70,4 @@ private:
   SoGetBoundingBoxAction * bboxaction;
 };
 
-#endif // !COIN_SOCOMPUTEBOUNDINGBOX_H
+#endif // !OBOL_SOCOMPUTEBOUNDINGBOX_H

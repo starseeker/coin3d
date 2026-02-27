@@ -1,5 +1,5 @@
-#ifndef COIN_SOGLCOLORINDEXELEMENT_H
-#define COIN_SOGLCOLORINDEXELEMENT_H
+#ifndef OBOL_SOGLCOLORINDEXELEMENT_H
+#define OBOL_SOGLCOLORINDEXELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/elements/SoReplacedElement.h>
 
-class COIN_DLL_API SoGLColorIndexElement : public SoReplacedElement {
+class OBOL_DLL_API SoGLColorIndexElement : public SoReplacedElement {
   typedef SoReplacedElement inherited;
 
   SO_ELEMENT_HEADER(SoGLColorIndexElement);
@@ -62,4 +62,4 @@ private:
   SoState * state;
 };
 
-#endif // !COIN_SOGLCOLORINDEXELEMENT_H
+#endif // !OBOL_SOGLCOLORINDEXELEMENT_H

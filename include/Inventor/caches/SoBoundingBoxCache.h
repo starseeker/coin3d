@@ -1,5 +1,5 @@
-#ifndef COIN_SOBOUNDINGBOXCACHE_H
-#define COIN_SOBOUNDINGBOXCACHE_H
+#ifndef OBOL_SOBOUNDINGBOXCACHE_H
+#define OBOL_SOBOUNDINGBOXCACHE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -38,7 +38,7 @@
 
 class SoBoundingBoxCacheP;
 
-class COIN_DLL_API SoBoundingBoxCache : public SoCache {
+class OBOL_DLL_API SoBoundingBoxCache : public SoCache {
   typedef SoCache inherited;
 public:
   SoBoundingBoxCache(SoState *state);
@@ -61,4 +61,4 @@ private:
   SoBoundingBoxCacheP * pimpl;
 };
 
-#endif // !COIN_SOBOUNDINGBOXCACHE_H
+#endif // !OBOL_SOBOUNDINGBOXCACHE_H

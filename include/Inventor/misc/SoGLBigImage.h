@@ -1,5 +1,5 @@
-#ifndef COIN_SOGLBIGIMAGE_H
-#define COIN_SOGLBIGIMAGE_H
+#ifndef OBOL_SOGLBIGIMAGE_H
+#define OBOL_SOGLBIGIMAGE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -38,7 +38,7 @@
 #include <Inventor/SbVec2f.h>
 #include <Inventor/misc/SoGLImage.h>
 
-class COIN_DLL_API SoGLBigImage : public SoGLImage {
+class OBOL_DLL_API SoGLBigImage : public SoGLImage {
   typedef SoGLImage inherited;
 
 public:
@@ -90,4 +90,4 @@ private:
   friend class SoGLBigImageP;
 };
 
-#endif // !COIN_SOGLBIGIMAGE_H
+#endif // !OBOL_SOGLBIGIMAGE_H

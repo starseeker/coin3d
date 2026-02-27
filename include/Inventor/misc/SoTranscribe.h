@@ -1,5 +1,5 @@
-#ifndef COIN_SOTRANSCRIBE_H
-#define COIN_SOTRANSCRIBE_H
+#ifndef OBOL_SOTRANSCRIBE_H
+#define OBOL_SOTRANSCRIBE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,9 +33,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifdef COIN_INTERNAL
+#ifdef OBOL_INTERNAL
 #error Do not include this file in internal code.
-#endif // COIN_INTERNAL
+#endif // OBOL_INTERNAL
 
 // This file is only present for "compile-time" Inventor
 // compatibility, the class definitions are found in the following
@@ -44,4 +44,4 @@
 #include <Inventor/misc/SoTranSender.h>
 #include <Inventor/misc/SoTranReceiver.h>
 
-#endif // !COIN_SOTRANSCRIBE_H
+#endif // !OBOL_SOTRANSCRIBE_H

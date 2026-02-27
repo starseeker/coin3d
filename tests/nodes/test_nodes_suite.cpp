@@ -34,7 +34,7 @@
  * @file test_nodes_suite.cpp
  * @brief Tests for Coin3D SoNode subclasses.
  *
- * Baselined against upstream COIN_TEST_SUITE blocks.
+ * Baselined against upstream OBOL_TEST_SUITE blocks.
  *
  * Vanilla sources:
  *   src/nodes/SoAnnotation.cpp - initialized (getTypeId, ref/unref)
@@ -138,7 +138,7 @@ int main()
 
     // -----------------------------------------------------------------------
     // SoAnnotation: class initialized (ref/unref, getTypeId)
-    // Baseline: src/nodes/SoAnnotation.cpp COIN_TEST_SUITE (initialized)
+    // Baseline: src/nodes/SoAnnotation.cpp OBOL_TEST_SUITE (initialized)
     // -----------------------------------------------------------------------
     runner.startTest("SoAnnotation class initialized");
     {
@@ -151,7 +151,7 @@ int main()
 
     // -----------------------------------------------------------------------
     // SoType: createType / removeType
-    // Baseline: src/misc/SoType.cpp COIN_TEST_SUITE (testRemoveType)
+    // Baseline: src/misc/SoType.cpp OBOL_TEST_SUITE (testRemoveType)
     // -----------------------------------------------------------------------
     runner.startTest("SoType createType and removeType");
     {
@@ -527,7 +527,7 @@ int main()
 
     // -----------------------------------------------------------------------
     // Shadow nodes: class initialized
-    // Baseline: src/shadows/SoShadowGroup.cpp, SoShadowStyle.cpp COIN_TEST_SUITE
+    // Baseline: src/shadows/SoShadowGroup.cpp, SoShadowStyle.cpp OBOL_TEST_SUITE
     // -----------------------------------------------------------------------
     runner.startTest("SoShadowGroup class initialized");
     {
@@ -792,7 +792,7 @@ int main()
 
     // -----------------------------------------------------------------------
     // Shader parameter nodes
-    // Baseline: src/shaders/SoShaderParameter.cpp COIN_TEST_SUITE (initialized)
+    // Baseline: src/shaders/SoShaderParameter.cpp OBOL_TEST_SUITE (initialized)
     // -----------------------------------------------------------------------
     runner.startTest("SoShaderParameter1f class initialized");
     {
@@ -913,7 +913,7 @@ int main()
 
     // -----------------------------------------------------------------------
     // Dragger class types: all dragger classes registered in the type system
-    // Baseline: src/draggers/SoXxxDragger.cpp COIN_TEST_SUITE blocks
+    // Baseline: src/draggers/SoXxxDragger.cpp OBOL_TEST_SUITE blocks
     // -----------------------------------------------------------------------
     runner.startTest("All dragger class types registered");
     {
@@ -944,7 +944,7 @@ int main()
 
     // -----------------------------------------------------------------------
     // Dragger deep-copy: construction and copy() for single-piece draggers
-    // Baseline: src/draggers/SoTransformerDragger.cpp COIN_TEST_SUITE
+    // Baseline: src/draggers/SoTransformerDragger.cpp OBOL_TEST_SUITE
     //           dragger_deep_copy test
     //
     // Compound draggers (SoCenterballDragger, SoHandleBoxDragger,

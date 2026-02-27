@@ -85,7 +85,7 @@ SoGLDrawStyleElement::push(SoState * state)
 
 // doc in superclass
 void
-SoGLDrawStyleElement::pop(SoState * COIN_UNUSED_ARG(state),
+SoGLDrawStyleElement::pop(SoState * OBOL_UNUSED_ARG(state),
                           const SoElement * prevTopElement)
 {
   SoGLDrawStyleElement * prev = (SoGLDrawStyleElement*) prevTopElement;

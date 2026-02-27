@@ -68,11 +68,11 @@
 #include <Inventor/SbBox3f.h>
 #include <Inventor/SbClip.h>
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
-#include "config.h" // COIN_OBSOLETED()
+#include "config.h" // OBOL_OBSOLETED()
 #include <cassert>
 
 /*!
@@ -471,7 +471,7 @@ SbViewVolume::perspective(float fovy, float aspect,
   volumes (e.g. off center volumes). It has the same arguments and
   functionality as the corresponding OpenGL glFrustum() function.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 
@@ -676,7 +676,7 @@ SbViewVolume::getDepth(void) const
 void
 SbViewVolume::print(FILE * fp) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   fprintf( fp, "  projtype: %d\n", static_cast<int>(this->getProjectionType()) );
   fprintf( fp, "  projpt:   " );
   this->getProjectionPoint().print(fp);
@@ -697,7 +697,7 @@ SbViewVolume::print(FILE * fp) const
   fprintf( fp, "    ulf:    " );
   this->ulf.print(fp);
   fprintf( fp, "\n" );
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }
 
 /*!
@@ -951,7 +951,7 @@ SbViewVolume::getPlaneRectangle(const float distance, SbVec3f & lowerleft,
 {
   SbVec3f near_ur = this->ulf + (this->lrf - this->llf);
   
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (this->llf == SbVec3f(0.0, 0.0, 0.0) ||
       this->lrf == SbVec3f(0.0, 0.0, 0.0) ||
       this->ulf == SbVec3f(0.0, 0.0, 0.0) ||
@@ -960,7 +960,7 @@ SbViewVolume::getPlaneRectangle(const float distance, SbVec3f & lowerleft,
                               "Invalid frustum.");
 
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   if (this->type == PERSPECTIVE) {
     SbVec3f dir;

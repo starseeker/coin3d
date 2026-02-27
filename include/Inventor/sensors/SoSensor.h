@@ -1,5 +1,5 @@
-#ifndef COIN_SOSENSOR_H
-#define COIN_SOSENSOR_H
+#ifndef OBOL_SOSENSOR_H
+#define OBOL_SOSENSOR_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -40,7 +40,7 @@ class SoSensor;
 typedef void SoSensorCB(void * data, SoSensor * sensor);
 typedef SoSensorCB * SoSensorCBPtr;
 
-class COIN_DLL_API SoSensor {
+class OBOL_DLL_API SoSensor {
 public:
   SoSensor(void);
   SoSensor(SoSensorCB * func, void * data);
@@ -68,4 +68,4 @@ protected:
   void * funcData;
 };
 
-#endif // !COIN_SOSENSOR_H
+#endif // !OBOL_SOSENSOR_H

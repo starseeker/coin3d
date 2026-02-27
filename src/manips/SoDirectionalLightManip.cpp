@@ -68,9 +68,9 @@
 #include <Inventor/sensors/SoFieldSensor.h>
 
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 #include "nodes/SoSubNodeP.h"
 
@@ -169,7 +169,7 @@ SoDirectionalLightManip::getDragger(void)
     if (node->isOfType(SoDragger::getClassTypeId()))
       return (SoDragger *)node;
     else {
-#if COIN_DEBUG
+#if OBOL_DEBUG
       SoDebugError::post("SoDirectionalLightManip::getDragger",
                          "Child is not a dragger!");
 #endif // debug
@@ -189,7 +189,7 @@ SoDirectionalLightManip::replaceNode(SoPath * path)
   SoFullPath * fullpath = (SoFullPath *)path;
   SoNode * fulltail = fullpath->getTail();
   if (!fulltail->isOfType(SoDirectionalLight::getClassTypeId())) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::post("SoDirectionalLightManip::replaceNode",
                        "End of path is not a SoDirectionalLight");
 #endif // debug
@@ -197,7 +197,7 @@ SoDirectionalLightManip::replaceNode(SoPath * path)
   }
   // NodeKit functionality removed - handle direct node manipulation only
   if (fullpath->getLength() < 2) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::post("SoDirectionalLightManip::replaceNode",
                        "Path is too short");
 #endif // debug
@@ -205,7 +205,7 @@ SoDirectionalLightManip::replaceNode(SoPath * path)
   }
   SoNode * parent = fullpath->getNodeFromTail(1);
   if (!parent->isOfType(SoGroup::getClassTypeId())) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::post("SoDirectionalLightManip::replaceNode",
                        "Parent node is not a group");
 #endif // debug
@@ -357,7 +357,7 @@ SoDirectionalLightManip::valueChangedCB(void * m, SoDragger * dragger)
   SbVec3f direction(0.0f, 0.0f, -1.0f);
   matrix.multDirMatrix(direction, direction);
   if (direction.normalize() == 0.0f) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::post("SoDirectionalLightManip::valueChangedCB",
                        "Invalid motion matrix.");
 #endif // debug

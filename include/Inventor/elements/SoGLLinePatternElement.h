@@ -1,5 +1,5 @@
-#ifndef COIN_SOGLLINEPATTERNELEMENT_H
-#define COIN_SOGLLINEPATTERNELEMENT_H
+#ifndef OBOL_SOGLLINEPATTERNELEMENT_H
+#define OBOL_SOGLLINEPATTERNELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/elements/SoLinePatternElement.h>
 
-class COIN_DLL_API SoGLLinePatternElement : public SoLinePatternElement {
+class OBOL_DLL_API SoGLLinePatternElement : public SoLinePatternElement {
   typedef SoLinePatternElement inherited;
 
   SO_ELEMENT_HEADER(SoGLLinePatternElement);
@@ -59,4 +59,4 @@ private:
 
 };
 
-#endif // !COIN_SOGLLINEPATTERNELEMENT_H
+#endif // !OBOL_SOGLLINEPATTERNELEMENT_H

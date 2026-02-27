@@ -244,7 +244,7 @@ SoInput_FileInfo::putBack(const char * const str)
   for (int c = n - 1; c >= 0; --c) {
     if (this->readbufidx > 0) {
       --this->readbufidx;
-#if COIN_DEBUG
+#if OBOL_DEBUG
       assert(this->readbuf[this->readbufidx] == str[c]);
 #endif
     }

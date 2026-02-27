@@ -1,5 +1,5 @@
-#ifndef COIN_SOGETMATRIXACTION_H
-#define COIN_SOGETMATRIXACTION_H
+#ifndef OBOL_SOGETMATRIXACTION_H
+#define OBOL_SOGETMATRIXACTION_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -43,7 +43,7 @@
 
 class SoGetMatrixActionP;
 
-class COIN_DLL_API SoGetMatrixAction : public SoAction {
+class OBOL_DLL_API SoGetMatrixAction : public SoAction {
   typedef SoAction inherited;
 
   SO_ACTION_HEADER(SoGetMatrixAction);
@@ -78,4 +78,4 @@ private:
   SoGetMatrixAction & operator = (const SoGetMatrixAction & rhs);
 }; // SoGetMatrixAction
 
-#endif // !COIN_SOGETMATRIXACTION_H
+#endif // !OBOL_SOGETMATRIXACTION_H

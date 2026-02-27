@@ -85,7 +85,7 @@ SoSceneManagerP::searchForCamera(SoNode * root,
 }
 
 void 
-SoSceneManagerP::renderCB(void * userdata, class SoRenderManager * COIN_UNUSED_ARG(mgr))
+SoSceneManagerP::renderCB(void * userdata, class SoRenderManager * OBOL_UNUSED_ARG(mgr))
 {
   SoSceneManagerP * thisp = (SoSceneManagerP *) userdata;
   assert(thisp);

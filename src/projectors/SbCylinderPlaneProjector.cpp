@@ -45,9 +45,9 @@
  */
 
 #include <Inventor/projectors/SbCylinderPlaneProjector.h>
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 #include <cfloat>
 
 /*!
@@ -89,10 +89,10 @@ SbCylinderPlaneProjector::project(const SbVec2f & point)
   SbBool tst = this->intersectCylinderFront(projline, projpt);
   if (!tst || !this->isWithinTolerance(projpt)) {
     if (!this->tolPlane.intersect(projline, projpt)) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
       SoDebugError::postWarning("SbCylinderSectionProjector::project",
                                 "working line is parallel to cylinder axis.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
       return SbVec3f(0.0f, 0.0f, 0.0f);
     }
   }

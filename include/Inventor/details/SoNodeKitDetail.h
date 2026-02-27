@@ -1,5 +1,5 @@
-#ifndef COIN_SONODEKITDETAIL_H
-#define COIN_SONODEKITDETAIL_H
+#ifndef OBOL_SONODEKITDETAIL_H
+#define OBOL_SONODEKITDETAIL_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -40,7 +40,7 @@ class SoBaseKit;
 class SoNode;
 
 
-class COIN_DLL_API SoNodeKitDetail : public SoDetail {
+class OBOL_DLL_API SoNodeKitDetail : public SoDetail {
   typedef SoDetail inherited;
 
   SO_DETAIL_HEADER(SoNodeKitDetail);
@@ -67,4 +67,4 @@ protected:
   SbName myPartName;
 };
 
-#endif // !COIN_SONODEKITDETAIL_H
+#endif // !OBOL_SONODEKITDETAIL_H

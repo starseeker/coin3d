@@ -56,9 +56,9 @@
 
 #include "coinString.h"
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 #include "CoinTidbits.h" // coin_debug_normalize()
 
@@ -132,11 +132,11 @@
 SbBool
 SbVec2f::equals(const SbVec2f& v, float tolerance) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if(!(tolerance >= 0.0f))
     SoDebugError::postWarning("SbVec2f::equals",
                               "Tolerance should be >= 0.0f");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   float xdist = this->vec[0] - v[0];
   float ydist = this->vec[1] - v[1];
@@ -199,13 +199,13 @@ SbVec2f::normalize(void)
   if (len > 0.0f) {
     operator/=(len);
   }
-#if COIN_DEBUG
+#if OBOL_DEBUG
   else if (coin_debug_normalize()) {
     SoDebugError::postWarning("SbVec2f::normalize",
                               "The length of the vector should be > 0.0f "
                               "to be able to normalize.");
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   return len;
 }
 
@@ -417,7 +417,7 @@ SbVec2f::fromString(const SbString & str)
 void
 SbVec2f::print(FILE * fp) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   fputs(this->toString().getString(),fp);
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }

@@ -1,5 +1,5 @@
-#ifndef COIN_SOTEXT3_H
-#define COIN_SOTEXT3_H
+#ifndef OBOL_SOTEXT3_H
+#define OBOL_SOTEXT3_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -44,7 +44,7 @@
 class SoSensor;
 class SoFieldSensor;
 
-class COIN_DLL_API SoText3 : public SoShape {
+class OBOL_DLL_API SoText3 : public SoShape {
   typedef SoShape inherited;
 
   SO_NODE_HEADER(SoText3);
@@ -96,4 +96,4 @@ private:
   void generate(SoAction * action, unsigned int part);
 };
 
-#endif // !COIN_SOTEXT3_H
+#endif // !OBOL_SOTEXT3_H

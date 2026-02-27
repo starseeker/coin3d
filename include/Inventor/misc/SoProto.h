@@ -1,5 +1,5 @@
-#ifndef COIN_SOPROTO_H
-#define COIN_SOPROTO_H
+#ifndef OBOL_SOPROTO_H
+#define OBOL_SOPROTO_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -47,7 +47,7 @@ typedef SoProto * SoFetchExternProtoCB(SoInput * in,
 
 // We need to inherit SoNode to be able to insert the PROTO definition
 // into the scene graph.
-class COIN_DLL_API SoProto : public SoNode {
+class OBOL_DLL_API SoProto : public SoNode {
 public:
   SoProto(const SbBool externproto = FALSE);
 
@@ -101,4 +101,4 @@ private:
   void connectISRefs(SoProtoInstance * inst, SoNode * src, SoNode * dst) const;
 };
 
-#endif // !COIN_SOPROTO_H
+#endif // !OBOL_SOPROTO_H

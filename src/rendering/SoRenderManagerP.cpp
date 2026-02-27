@@ -74,7 +74,7 @@ SoRenderManagerP::~SoRenderManagerP()
 void
 SoRenderManagerP::redrawshotTriggeredCB(void * data, SoSensor * /* sensor */)
 {
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoRenderManager::redrawshotTriggeredCB", "start");
 #endif // debug
 
@@ -84,7 +84,7 @@ SoRenderManagerP::redrawshotTriggeredCB(void * data, SoSensor * /* sensor */)
   // it was tested in the SoRenderManager::scheduleRedraw() call.
   if (PRIVATE(thisp)->isactive) { thisp->redraw(); }
 
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoRenderManager::redrawshotTriggeredCB", "done\n\n");
 #endif // debug
 }
@@ -97,7 +97,7 @@ SoRenderManagerP::cleanup(void)
 }
 
 void
-SoRenderManagerP::updateClippingPlanesCB(void * COIN_UNUSED_ARG(closure), SoSensor * COIN_UNUSED_ARG(sensor))
+SoRenderManagerP::updateClippingPlanesCB(void * OBOL_UNUSED_ARG(closure), SoSensor * OBOL_UNUSED_ARG(sensor))
 {
   //SoRenderManagerP * thisp = (SoRenderManagerP *) closure;
   //if (thisp->autoclipping != SoRenderManager::NO_AUTO_CLIPPING) {
@@ -313,7 +313,7 @@ SoRenderManager::Superimposition::setEnabled(SbBool yes)
 }
 
 void
-SoRenderManager::Superimposition::changeCB(void * data, SoSensor * COIN_UNUSED_ARG(sensor))
+SoRenderManager::Superimposition::changeCB(void * data, SoSensor * OBOL_UNUSED_ARG(sensor))
 {
   Superimposition * thisp = (Superimposition *) data;
   assert(thisp && PRIVATE(thisp)->manager);
@@ -367,7 +367,7 @@ SbBool
 SoRenderManagerRootSensor::debug(void)
 {
   if (SoRenderManagerRootSensor::debugrootnotifications == -1) {
-    const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_ROOT_NOTIFICATIONS");
+    const char * env = CoinInternal::getEnvironmentVariableRaw("OBOL_DEBUG_ROOT_NOTIFICATIONS");
     SoRenderManagerRootSensor::debugrootnotifications = env && (atoi(env) > 0);
   }
   return SoRenderManagerRootSensor::debugrootnotifications ? TRUE : FALSE;

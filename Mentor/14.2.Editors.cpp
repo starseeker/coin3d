@@ -100,9 +100,9 @@ int main(int argc, char **argv)
     // Read an object from file
     printf("Reading desk.iv...\n");
     SoInput myInput;
-    // Search data dir: prefer COIN_DATA_DIR env var, then relative paths that
+    // Search data dir: prefer OBOL_DATA_DIR env var, then relative paths that
     // work both when run from source directory and from the build test_output dir.
-    const char *dataDir = getenv("COIN_DATA_DIR");
+    const char *dataDir = getenv("OBOL_DATA_DIR");
     if (dataDir) {
         SoInput::addDirectoryFirst(dataDir);
     } else {

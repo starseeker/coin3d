@@ -1,5 +1,5 @@
-#ifndef COIN_SOCLIPPLANEMANIP_H
-#define COIN_SOCLIPPLANEMANIP_H
+#ifndef OBOL_SOCLIPPLANEMANIP_H
+#define OBOL_SOCLIPPLANEMANIP_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -46,7 +46,7 @@ class SoSensor;
 
 class SoClipPlaneManipP;
 
-class COIN_DLL_API SoClipPlaneManip : public SoClipPlane {
+class OBOL_DLL_API SoClipPlaneManip : public SoClipPlane {
   typedef SoClipPlane inherited;
 
   SO_NODE_HEADER(SoClipPlaneManip);
@@ -101,4 +101,4 @@ private:
   SoClipPlaneManip & operator = (const SoClipPlaneManip & rhs);
 }; // SoClipPlaneManip
 
-#endif // !COIN_SOCLIPPLANEMANIP_H
+#endif // !OBOL_SOCLIPPLANEMANIP_H

@@ -1,5 +1,5 @@
-#ifndef COIN_SOINPUT_FILEINFO_H
-#define COIN_SOINPUT_FILEINFO_H
+#ifndef OBOL_SOINPUT_FILEINFO_H
+#define OBOL_SOINPUT_FILEINFO_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,9 +33,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #error this is a private header file
-#endif /* ! COIN_INTERNAL */
+#endif /* ! OBOL_INTERNAL */
 
 // *************************************************************************
 
@@ -213,4 +213,4 @@ private:
   // Async I/O support removed with C threading API cleanup
 };
 
-#endif // COIN_SOINPUT_FILEINFO_H
+#endif // OBOL_SOINPUT_FILEINFO_H

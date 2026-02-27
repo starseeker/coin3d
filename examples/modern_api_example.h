@@ -3,7 +3,7 @@
 // NOTE: The ContextProvider API has been removed from SoOffscreenRenderer
 // Context management should now be done via SoDB::init(context_manager) before library initialization
 
-#ifdef COIN3D_OSMESA_BUILD
+#ifdef OBOL_OSMESA_BUILD
 /* OSMesa-specific code - Context management now handled globally */
 #include <OSMesa/osmesa.h>
 #include <OSMesa/gl.h>
@@ -83,4 +83,4 @@ inline void demonstrateModernStandardUsage() {
  * SoOffscreenRenderer::isVersionAtLeast(3, 0);
  */
 
-#endif // COIN3D_OSMESA_BUILD
+#endif // OBOL_OSMESA_BUILD

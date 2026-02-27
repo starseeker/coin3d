@@ -1,5 +1,5 @@
-#ifndef COIN_SOPROFILERP_H
-#define COIN_SOPROFILERP_H
+#ifndef OBOL_SOPROFILERP_H
+#define OBOL_SOPROFILERP_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -56,4 +56,4 @@ public:
   static void dumpToConsole(const SbProfilingData & data);
 };
 
-#endif // !COIN_SOPROFILERP_H
+#endif // !OBOL_SOPROFILERP_H

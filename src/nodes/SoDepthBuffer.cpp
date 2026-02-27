@@ -62,7 +62,7 @@
     }
   \endcode
 
-  \COIN_CLASS_EXTENSION
+  \OBOL_CLASS_EXTENSION
   \since Coin 3.0
 */
 
@@ -151,7 +151,7 @@ SO_NODE_SOURCE(SoDepthBuffer);
 void
 SoDepthBuffer::initClass(void)
 {
-  SO_NODE_INTERNAL_INIT_CLASS(SoDepthBuffer, SO_FROM_COIN_3_0);
+  SO_NODE_INTERNAL_INIT_CLASS(SoDepthBuffer, SO_FROM_OBOL_3_0);
 
   SO_ENABLE(SoGLRenderAction, SoGLDepthBufferElement);
 }

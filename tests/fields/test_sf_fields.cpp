@@ -34,7 +34,7 @@
  * @file test_sf_fields.cpp
  * @brief Tests for Coin3D single-value (SoSF*) field types.
  *
- * Baselined against upstream COIN_TEST_SUITE blocks.
+ * Baselined against upstream OBOL_TEST_SUITE blocks.
  *
  * Vanilla sources:
  *   src/fields/SoSFBool.cpp   - initialized, textinput
@@ -111,7 +111,7 @@
 using namespace SimpleTest;
 
 // Macro to reduce boilerplate for "class initialized" tests that mirror
-// the vanilla COIN_TEST_SUITE pattern.
+// the vanilla OBOL_TEST_SUITE pattern.
 #define TEST_SF_INITIALIZED(TestName, FieldType) \
     runner.startTest(TestName " class initialized"); \
     { \
@@ -129,13 +129,13 @@ int main()
 
     // -----------------------------------------------------------------------
     // SoSFBool: class initialized
-    // Baseline: src/fields/SoSFBool.cpp COIN_TEST_SUITE (initialized)
+    // Baseline: src/fields/SoSFBool.cpp OBOL_TEST_SUITE (initialized)
     // -----------------------------------------------------------------------
     TEST_SF_INITIALIZED("SoSFBool", SoSFBool)
 
     // -----------------------------------------------------------------------
     // SoSFBool: text input via set()
-    // Baseline: src/fields/SoSFBool.cpp COIN_TEST_SUITE (textinput)
+    // Baseline: src/fields/SoSFBool.cpp OBOL_TEST_SUITE (textinput)
     // -----------------------------------------------------------------------
     runner.startTest("SoSFBool set TRUE/FALSE");
     {
@@ -161,7 +161,7 @@ int main()
 
     // -----------------------------------------------------------------------
     // Remaining SoSF* types: just verify class initialization
-    // Baseline: individual COIN_TEST_SUITE (initialized) blocks
+    // Baseline: individual OBOL_TEST_SUITE (initialized) blocks
     // -----------------------------------------------------------------------
     TEST_SF_INITIALIZED("SoSFFloat",    SoSFFloat)
     TEST_SF_INITIALIZED("SoSFDouble",   SoSFDouble)
@@ -238,7 +238,7 @@ int main()
 
     // -----------------------------------------------------------------------
     // Remaining SoSF* types: class initialized
-    // Baseline: individual COIN_TEST_SUITE (initialized) blocks
+    // Baseline: individual OBOL_TEST_SUITE (initialized) blocks
     // -----------------------------------------------------------------------
     TEST_SF_INITIALIZED("SoSFColorRGBA", SoSFColorRGBA)
     TEST_SF_INITIALIZED("SoSFEnum",      SoSFEnum)
@@ -249,7 +249,7 @@ int main()
 
     // -----------------------------------------------------------------------
     // SoSFImage / SoSFImage3: class initialized
-    // Baseline: src/fields/SoSFImage.cpp, SoSFImage3.cpp COIN_TEST_SUITE
+    // Baseline: src/fields/SoSFImage.cpp, SoSFImage3.cpp OBOL_TEST_SUITE
     // -----------------------------------------------------------------------
     TEST_SF_INITIALIZED("SoSFImage",     SoSFImage)
     TEST_SF_INITIALIZED("SoSFImage3",    SoSFImage3)

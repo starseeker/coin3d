@@ -1,5 +1,5 @@
-#ifndef COIN_SOALPHATEST_H
-#define COIN_SOALPHATEST_H
+#ifndef OBOL_SOALPHATEST_H
+#define OBOL_SOALPHATEST_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/fields/SoSFFloat.h>
 #include <Inventor/nodes/SoSubNode.h>
 
-class COIN_DLL_API SoAlphaTest : public SoNode {
+class OBOL_DLL_API SoAlphaTest : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_HEADER(SoAlphaTest);
@@ -68,4 +68,4 @@ protected:
 
 }; // SoAlphaTest
 
-#endif // !COIN_SOALPHATEST_H
+#endif // !OBOL_SOALPHATEST_H

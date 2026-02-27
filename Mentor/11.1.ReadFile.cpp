@@ -80,7 +80,7 @@ int main(int argc, char **argv)
     SoSeparator *scene = NULL;
     
     // Try to read from data directory
-    const char *dataDir = getenv("COIN_DATA_DIR");
+    const char *dataDir = getenv("OBOL_DATA_DIR");
     if (!dataDir) dataDir = getenv("IVEXAMPLES_DATA_DIR");
     if (!dataDir) dataDir = "../../data";
     char filepath[512];

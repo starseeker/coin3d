@@ -1,5 +1,5 @@
-#ifndef COIN_SOTRANSPARENCYTYPE_H
-#define COIN_SOTRANSPARENCYTYPE_H
+#ifndef OBOL_SOTRANSPARENCYTYPE_H
+#define OBOL_SOTRANSPARENCYTYPE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/nodes/SoSubNode.h>
 #include <Inventor/actions/SoGLRenderAction.h>
 
-class COIN_DLL_API SoTransparencyType : public SoNode {
+class OBOL_DLL_API SoTransparencyType : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_HEADER(SoTransparencyType);
@@ -71,4 +71,4 @@ protected:
   virtual ~SoTransparencyType();
 };
 
-#endif // !COIN_SOTRANSPARENCYTYPE_H
+#endif // !OBOL_SOTRANSPARENCYTYPE_H

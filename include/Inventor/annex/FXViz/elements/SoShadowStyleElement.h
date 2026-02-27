@@ -1,5 +1,5 @@
-#ifndef COIN_SOSHADOWSTYLEELEMENT_H
-#define COIN_SOSHADOWSTYLEELEMENT_H
+#ifndef OBOL_SOSHADOWSTYLEELEMENT_H
+#define OBOL_SOSHADOWSTYLEELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/elements/SoInt32Element.h>
 
-class COIN_DLL_API SoShadowStyleElement : public SoInt32Element {
+class OBOL_DLL_API SoShadowStyleElement : public SoInt32Element {
   typedef SoInt32Element inherited;
 
   SO_ELEMENT_HEADER(SoShadowStyleElement);
@@ -62,4 +62,4 @@ public:
 
 };
 
-#endif // !COIN_SOSHADOWSTYLEELEMENT_H
+#endif // !OBOL_SOSHADOWSTYLEELEMENT_H

@@ -105,7 +105,7 @@ SoGLShaderObject::getParametersDirty(void) const
 }
 
 void
-SoGLShaderObject::updateCoinParameter(SoState * COIN_UNUSED_ARG(state), const SbName & COIN_UNUSED_ARG(name), SoShaderParameter * COIN_UNUSED_ARG(param), const int COIN_UNUSED_ARG(val))
+SoGLShaderObject::updateCoinParameter(SoState * OBOL_UNUSED_ARG(state), const SbName & OBOL_UNUSED_ARG(name), SoShaderParameter * OBOL_UNUSED_ARG(param), const int OBOL_UNUSED_ARG(val))
 {
 }
 

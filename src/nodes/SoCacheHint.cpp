@@ -107,7 +107,7 @@ SoCacheHint::~SoCacheHint()
 void
 SoCacheHint::initClass(void)
 {
-  SO_NODE_INTERNAL_INIT_CLASS(SoCacheHint, SO_FROM_COIN_2_4);
+  SO_NODE_INTERNAL_INIT_CLASS(SoCacheHint, SO_FROM_OBOL_2_4);
   
   SO_ENABLE(SoGLRenderAction, SoCacheHintElement);
 }

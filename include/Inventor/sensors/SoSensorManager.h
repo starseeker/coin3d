@@ -1,5 +1,5 @@
-#ifndef COIN_SOSENSORMANAGER_H
-#define COIN_SOSENSORMANAGER_H
+#ifndef OBOL_SOSENSORMANAGER_H
+#define OBOL_SOSENSORMANAGER_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -40,7 +40,7 @@ class SoTimerQueueSensor;
 class SoTimerSensor;
 class SbTime;
 
-class COIN_DLL_API SoSensorManager {
+class OBOL_DLL_API SoSensorManager {
 public:
   SoSensorManager(void);
   ~SoSensorManager();
@@ -78,4 +78,4 @@ private:
   friend class SoSensorManagerP;
 };
 
-#endif // !COIN_SOSENSORMANAGER_H
+#endif // !OBOL_SOSENSORMANAGER_H

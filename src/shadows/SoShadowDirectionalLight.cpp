@@ -170,7 +170,7 @@ SoShadowDirectionalLight::~SoShadowDirectionalLight()
 void
 SoShadowDirectionalLight::initClass(void)
 {
-  SO_NODE_INTERNAL_INIT_CLASS(SoShadowDirectionalLight, SO_FROM_COIN_4_0);
+  SO_NODE_INTERNAL_INIT_CLASS(SoShadowDirectionalLight, SO_FROM_OBOL_4_0);
 }
 
 // Doc from superclass.

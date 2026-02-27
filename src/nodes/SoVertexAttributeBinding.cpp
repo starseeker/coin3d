@@ -105,7 +105,7 @@
   \endcode
 
   \sa SoVertexAttribute
-  \COIN_CLASS_EXTENSION
+  \OBOL_CLASS_EXTENSION
   \since Coin 3.0
 */
 

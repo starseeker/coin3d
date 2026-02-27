@@ -1,5 +1,5 @@
-#ifndef COIN_SOEVENTMANAGER_H
-#define COIN_SOEVENTMANAGER_H
+#ifndef OBOL_SOEVENTMANAGER_H
+#define OBOL_SOEVENTMANAGER_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -44,7 +44,7 @@ class SbViewportRegion;
 class SoHandleEventAction;
 // class SoScXMLStateMachine; // DEPRECATED: SCXML support removed
 
-class COIN_DLL_API SoEventManager {
+class OBOL_DLL_API SoEventManager {
 public:
   SoEventManager(void);
   virtual ~SoEventManager();
@@ -92,4 +92,4 @@ private:
 
 }; // SoEventManager
 
-#endif // !COIN_SOEVENTMANAGER_H
+#endif // !OBOL_SOEVENTMANAGER_H

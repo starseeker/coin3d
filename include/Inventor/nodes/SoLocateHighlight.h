@@ -1,5 +1,5 @@
-#ifndef COIN_SOLOCATEHIGHLIGHT_H
-#define COIN_SOLOCATEHIGHLIGHT_H
+#ifndef OBOL_SOLOCATEHIGHLIGHT_H
+#define OBOL_SOLOCATEHIGHLIGHT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -41,7 +41,7 @@
 class SoFullPath;
 class SoLocateHighlightP;
 
-class COIN_DLL_API SoLocateHighlight : public SoSeparator {
+class OBOL_DLL_API SoLocateHighlight : public SoSeparator {
   typedef SoSeparator inherited;
 
   SO_NODE_HEADER(SoLocateHighlight);
@@ -79,4 +79,4 @@ private:
   SoLocateHighlightP * pimpl;
 };
 
-#endif // !COIN_SOLOCATEHIGHLIGHT_H
+#endif // !OBOL_SOLOCATEHIGHLIGHT_H

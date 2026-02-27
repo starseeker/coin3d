@@ -157,7 +157,7 @@ SbViewportRegion::SbViewportRegion(short width, short height)
     vporigin(0,0),
     vpsize(1.0f, 1.0f)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (width<0) {
     SoDebugError::postWarning("SbViewportRegion::SbViewportRegion",
                               "width (%d) should be >=0. Clamped to 0.",
@@ -170,7 +170,7 @@ SbViewportRegion::SbViewportRegion(short width, short height)
                               height);
     winsize[1]=0;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   this->pixperinch = 72.0f;
 }
@@ -185,7 +185,7 @@ SbViewportRegion::SbViewportRegion(SbVec2s winsizearg)
     vporigin(0,0),
     vpsize(1.0f, 1.0f)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (winsizearg[0]<0) {
     SoDebugError::postWarning("SbViewportRegion::SbViewportRegion",
                               "winsize[0] (%d) should be >=0. Clamped to 0.",
@@ -198,7 +198,7 @@ SbViewportRegion::SbViewportRegion(SbVec2s winsizearg)
                               winsizearg[1]);
     this->winsize[1]=0;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   this->pixperinch = 72.0f;
 }
@@ -220,7 +220,7 @@ SbViewportRegion::SbViewportRegion(const SbViewportRegion & vpReg)
 void
 SbViewportRegion::setWindowSize(short width, short height)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (width<0) {
     SoDebugError::postWarning("SbViewportRegion::setWindowSize",
                               "width (%d) should be >=0. Clamped to 0.",width);
@@ -232,7 +232,7 @@ SbViewportRegion::setWindowSize(short width, short height)
                               height);
     height=0;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   this->winsize.setValue(width, height);
 }
@@ -243,7 +243,7 @@ SbViewportRegion::setWindowSize(short width, short height)
 void
 SbViewportRegion::setWindowSize(SbVec2s winsizearg)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (winsizearg[0]<0) {
     SoDebugError::postWarning("SbViewportRegion::setWindowSize",
                               "winsize[0] (%d) should be >=0. Clamped to 0.",
@@ -256,7 +256,7 @@ SbViewportRegion::setWindowSize(SbVec2s winsizearg)
                               winsizearg[1]);
     winsizearg[1]=0;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   this->setWindowSize(winsizearg[0], winsizearg[1]);
 }
@@ -271,7 +271,7 @@ void
 SbViewportRegion::setViewport(float left, float bottom,
                               float width, float height)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (width<0) {
     SoDebugError::postWarning("SbViewportRegion::setViewport",
                               "width (%d) should be >=0. Clamped to 0.",width);
@@ -283,7 +283,7 @@ SbViewportRegion::setViewport(float left, float bottom,
                               height);
     height=0;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   this->vporigin.setValue(left, bottom);
   this->vpsize.setValue(width, height);
@@ -295,7 +295,7 @@ SbViewportRegion::setViewport(float left, float bottom,
 void
 SbViewportRegion::setViewport(SbVec2f origin, SbVec2f size)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (size[0]<0) {
     SoDebugError::postWarning("SbViewportRegion::setViewport",
                               "size[0] (%d) should be >=0. Clamped to 0.",
@@ -308,7 +308,7 @@ SbViewportRegion::setViewport(SbVec2f origin, SbVec2f size)
                               size[1]);
     size[1]=0;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   this->setViewport(origin[0], origin[1], size[0], size[1]);
 }
@@ -323,7 +323,7 @@ void
 SbViewportRegion::setViewportPixels(short left, short bottom,
                                     short width, short height)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (width<0) {
     SoDebugError::postWarning("SbViewportRegion::setViewportPixels",
                               "width (%d) should be >=0. Clamped to 0.",width);
@@ -335,7 +335,7 @@ SbViewportRegion::setViewportPixels(short left, short bottom,
                               height);
     height=0;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   this->vporigin.setValue(static_cast<float>(left)/static_cast<float>(this->winsize[0]),
                           static_cast<float>(bottom)/static_cast<float>(this->winsize[1]));
@@ -349,7 +349,7 @@ SbViewportRegion::setViewportPixels(short left, short bottom,
 void
 SbViewportRegion::setViewportPixels(SbVec2s origin, SbVec2s size)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (size[0]<0) {
     SoDebugError::postWarning("SbViewportRegion::setViewportPixels",
                               "size[0] (%d) should be >=0. Clamped to 0.",
@@ -362,7 +362,7 @@ SbViewportRegion::setViewportPixels(SbVec2s origin, SbVec2s size)
                               size[1]);
     size[1]=0;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   this->setViewportPixels(origin[0], origin[1], size[0], size[1]);
 }
 
@@ -469,14 +469,14 @@ SbViewportRegion::getViewportAspectRatio(void) const
 void
 SbViewportRegion::scaleWidth(float ratio)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (ratio<0.0f) {
     SoDebugError::postWarning("SbViewportRegion::scaleWidth",
                               "ratio (%f) should be >=0.0f. Clamped to 0.0f.",
                               ratio);
     ratio=0.0f;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   float oldw = this->vpsize[0];
   this->vpsize[0] *= ratio;
@@ -500,14 +500,14 @@ SbViewportRegion::scaleWidth(float ratio)
 void
 SbViewportRegion::scaleHeight(float ratio)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (ratio<0.0f) {
     SoDebugError::postWarning("SbViewportRegion::scaleheight",
                               "ratio (%f) should be >=0.0f. Clamped to 0.0f.",
                               ratio);
     ratio=0.0f;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   float oldh = this->vpsize[1];
   this->vpsize[1] *= ratio;
@@ -525,14 +525,14 @@ SbViewportRegion::scaleHeight(float ratio)
 void
 SbViewportRegion::setPixelsPerInch(float ppi)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (ppi<0.0f) {
     SoDebugError::postWarning("SbViewportRegion::setPixelsPerInch",
                               "ppi value (%f) should be >=0.0f. "
                               "Clamped to 0.0f.",ppi);
     ppi=0.0f;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   this->pixperinch = ppi;
 }
@@ -593,7 +593,7 @@ operator!=(const SbViewportRegion & reg1, const SbViewportRegion & reg2)
 void
 SbViewportRegion::print(FILE * fp) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   (void)fprintf( fp, "  winsize:     " );
   this->getWindowSize().print(fp);
   (void)fprintf( fp, "\n" );
@@ -612,5 +612,5 @@ SbViewportRegion::print(FILE * fp) const
   (void)fprintf( fp, "  aspectratio: %f\n", this->getViewportAspectRatio() );
   (void)fprintf( fp, "  ppi:         %f\n", this->getPixelsPerInch() );
   (void)fprintf( fp, "  ppp:         %f\n", this->getPixelsPerPoint() );
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }

@@ -271,7 +271,7 @@ SoSFEnum::writeValue(SoOutput * out) const
     return;
   }
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   // An unknown enumeration value will usually be an indication of a
   // more serious bug, so we elaborate a bit on the error to aid early
   // debugging.  mortene.
@@ -285,7 +285,7 @@ SoSFEnum::writeValue(SoOutput * out) const
   SoDebugError::post("SoSFEnum::writeValue",
                      "Illegal enumeration value %d in field%s",
                      this->getValue(), s.getString());
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }
 
 /*!
@@ -331,10 +331,10 @@ SoSFEnum::setValue(const SbName name)
     this->setValue(val);
   }
   else {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::post("SoSFEnum::setValue",
                        "Unknown enum '%s'", name.getString());
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   }
 }
 
@@ -344,7 +344,7 @@ SoSFEnum::setValue(const SbName name)
   Note that this API method is not part of the original SGI Inventor
   2.1 API, and is an extension specific to Coin.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */
@@ -361,14 +361,14 @@ SoSFEnum::getNumEnums(void) const
   Note that this API method is not part of the original SGI Inventor
   2.1 API, and is an extension specific to Coin.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */
 int
 SoSFEnum::getEnum(const int idx, SbName & name) const
 {
-  if ( COIN_DEBUG && (idx < 0 || idx >= this->numEnums) ) {
+  if ( OBOL_DEBUG && (idx < 0 || idx >= this->numEnums) ) {
     SoDebugError::post("SoSFEnum::getEnum", "idx (%d) out of range", idx);
     return -1;
   }

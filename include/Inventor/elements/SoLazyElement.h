@@ -1,5 +1,5 @@
-#ifndef COIN_SOLAZYELEMENT_H
-#define COIN_SOLAZYELEMENT_H
+#ifndef OBOL_SOLAZYELEMENT_H
+#define OBOL_SOLAZYELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -45,7 +45,7 @@ class SoLazyElementP;
 #define SO_LAZY_SHINY_THRESHOLD 0.005f
 
 
-class COIN_DLL_API SoLazyElement : public SoElement {
+class OBOL_DLL_API SoLazyElement : public SoElement {
   typedef SoElement inherited;
 
   SO_ELEMENT_HEADER(SoLazyElement);
@@ -207,7 +207,7 @@ public:
 
 protected:
 
-  struct COIN_DLL_API CoinState {
+  struct OBOL_DLL_API CoinState {
     SbColor ambient;
     SbColor specular;
     SbColor emissive;
@@ -280,7 +280,7 @@ private:
 
 };
 
-class COIN_DLL_API SoColorPacker {
+class OBOL_DLL_API SoColorPacker {
 public:
   SoColorPacker(void);
   ~SoColorPacker();
@@ -316,4 +316,4 @@ private:
   int32_t arraysize;
 };
 
-#endif // !COIN_SOLAZYELEMENT_H
+#endif // !OBOL_SOLAZYELEMENT_H

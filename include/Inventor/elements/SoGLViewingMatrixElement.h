@@ -1,5 +1,5 @@
-#ifndef COIN_SOGLVIEWINGMATRIXELEMENT_H
-#define COIN_SOGLVIEWINGMATRIXELEMENT_H
+#ifndef OBOL_SOGLVIEWINGMATRIXELEMENT_H
+#define OBOL_SOGLVIEWINGMATRIXELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/elements/SoViewingMatrixElement.h>
 
-class COIN_DLL_API SoGLViewingMatrixElement : public SoViewingMatrixElement {
+class OBOL_DLL_API SoGLViewingMatrixElement : public SoViewingMatrixElement {
   typedef SoViewingMatrixElement inherited;
 
   SO_ELEMENT_HEADER(SoGLViewingMatrixElement);
@@ -64,4 +64,4 @@ private:
   void updategl(void);
 };
 
-#endif // !COIN_SOGLVIEWINGMATRIXELEMENT_H
+#endif // !OBOL_SOGLVIEWINGMATRIXELEMENT_H

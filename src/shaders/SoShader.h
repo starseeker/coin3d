@@ -1,5 +1,5 @@
-#ifndef COIN_SOSHADER_H
-#define COIN_SOSHADER_H
+#ifndef OBOL_SOSHADER_H
+#define OBOL_SOSHADER_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,7 +33,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #error this is a private header file
 #endif
 
@@ -58,4 +58,4 @@ public:
 
 // *************************************************************************
 
-#endif /* ! COIN_SOSHADER_H */
+#endif /* ! OBOL_SOSHADER_H */

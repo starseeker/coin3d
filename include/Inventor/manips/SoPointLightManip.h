@@ -1,5 +1,5 @@
-#ifndef COIN_SOPOINTLIGHTMANIP_H
-#define COIN_SOPOINTLIGHTMANIP_H
+#ifndef OBOL_SOPOINTLIGHTMANIP_H
+#define OBOL_SOPOINTLIGHTMANIP_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,9 +35,9 @@
 
 #include <Inventor/nodes/SoPointLight.h>
 #include <Inventor/tools/SbLazyPimplPtr.h>
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #include <Inventor/draggers/SoDragger.h>
-#endif // !COIN_INTERNAL
+#endif // !OBOL_INTERNAL
 
 class SoChildList;
 class SoDragger;
@@ -46,7 +46,7 @@ class SoPath;
 class SoSensor;
 class SoPointLightManipP;
 
-class COIN_DLL_API SoPointLightManip : public SoPointLight {
+class OBOL_DLL_API SoPointLightManip : public SoPointLight {
   typedef SoPointLight inherited;
 
   SO_NODE_HEADER(SoPointLightManip);
@@ -96,4 +96,4 @@ private:
   SoPointLightManip & operator = (const SoPointLightManip & rhs);
 }; // SoPointLightManip
 
-#endif // !COIN_SOPOINTLIGHTMANIP_H
+#endif // !OBOL_SOPOINTLIGHTMANIP_H

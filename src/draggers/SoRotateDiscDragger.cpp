@@ -295,7 +295,7 @@ SoRotateDiscDragger::motionCB(void *, SoDragger * d)
 
 /*! \COININTERNAL */
 void
-SoRotateDiscDragger::doneCB(void * COIN_UNUSED_ARG(f), SoDragger * d)
+SoRotateDiscDragger::doneCB(void * OBOL_UNUSED_ARG(f), SoDragger * d)
 {
   SoRotateDiscDragger * thisp = THISP(d);
   thisp->dragFinish();

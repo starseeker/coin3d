@@ -128,14 +128,14 @@ SoGLRenderCache::call(SoState * state)
 {
   assert(PRIVATE(this)->displaylist != NULL);
 
-  static int COIN_NESTED_CACHING = -1;
-  if (COIN_NESTED_CACHING < 0) {
-    auto env = CoinInternal::getEnvironmentVariable("COIN_NESTED_CACHING");
-    if (env.has_value()) COIN_NESTED_CACHING = std::atoi(env->c_str());
-    else COIN_NESTED_CACHING = 0;
+  static int OBOL_NESTED_CACHING = -1;
+  if (OBOL_NESTED_CACHING < 0) {
+    auto env = CoinInternal::getEnvironmentVariable("OBOL_NESTED_CACHING");
+    if (env.has_value()) OBOL_NESTED_CACHING = std::atoi(env->c_str());
+    else OBOL_NESTED_CACHING = 0;
   }
   
-  if (COIN_NESTED_CACHING) {
+  if (OBOL_NESTED_CACHING) {
     if (state->isCacheOpen()) {
       SoCacheElement::addCacheDependency(state, this);  
       

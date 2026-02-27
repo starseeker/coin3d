@@ -40,9 +40,9 @@
 #include <Inventor/SbVec4s.h>
 #include <Inventor/SbVec4i32.h>
 #include <Inventor/SbVec3d.h>
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 #include "CoinTidbits.h" // coin_debug_normalize()
 
@@ -129,10 +129,10 @@
 SbBool
 SbVec4d::equals(const SbVec4d & v, double tolerance) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if(!(tolerance >= 0.0f))
     SoDebugError::postWarning("SbVec4d::equals","Tolerance should be >= 0.0f");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   double xdist = this->vec[0] - v[0];
   double ydist = this->vec[1] - v[1];
@@ -151,12 +151,12 @@ SbVec4d::equals(const SbVec4d & v, double tolerance) const
 void
 SbVec4d::getReal(SbVec3d & v) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if(!(this->vec[3] != 0.0f))
     SoDebugError::postWarning("SbVec4d::getReal",
                               "The 4th vector component is zero => "
                               "division by zero");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   v.setValue(vec[0]/vec[3], vec[1]/vec[3], vec[2]/vec[3]);
 }
@@ -211,13 +211,13 @@ SbVec4d::normalize(void)
   if (len > 0.0) {
     operator/=(len);
   }
-#if COIN_DEBUG
+#if OBOL_DEBUG
   else if (coin_debug_normalize()) {
     SoDebugError::postWarning("SbVec4d::normalize",
                               "The length of the vector should be > 0.0 "
                               "to be able to normalize.");
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   return len;
 }
 
@@ -406,8 +406,8 @@ SbVec4d::setValue(const SbVec4i32 & v)
 void
 SbVec4d::print(FILE * fp) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   fprintf( fp, "<%f, %f, %f, %f>", this->vec[0], this->vec[1], this->vec[2],
     this->vec[3] );
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }

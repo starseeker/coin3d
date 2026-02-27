@@ -1,5 +1,5 @@
-#ifndef COIN_SOENVIRONMENT_H
-#define COIN_SOENVIRONMENT_H
+#ifndef OBOL_SOENVIRONMENT_H
+#define OBOL_SOENVIRONMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -40,7 +40,7 @@
 #include <Inventor/fields/SoSFEnum.h>
 #include <Inventor/elements/SoEnvironmentElement.h>
 
-class COIN_DLL_API SoEnvironment : public SoNode {
+class OBOL_DLL_API SoEnvironment : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_HEADER(SoEnvironment);
@@ -70,4 +70,4 @@ protected:
   virtual ~SoEnvironment();
 };
 
-#endif // !COIN_SOENVIRONMENT_H
+#endif // !OBOL_SOENVIRONMENT_H

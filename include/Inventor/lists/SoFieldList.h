@@ -1,5 +1,5 @@
-#ifndef COIN_SOFIELDLIST_H
-#define COIN_SOFIELDLIST_H
+#ifndef OBOL_SOFIELDLIST_H
+#define OBOL_SOFIELDLIST_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 
 class SoField;
 
-class COIN_DLL_API SoFieldList : public SbPList {
+class OBOL_DLL_API SoFieldList : public SbPList {
 public:
   SoFieldList(void) : SbPList() { }
   SoFieldList(const int sizehint) : SbPList(sizehint) { }
@@ -61,4 +61,4 @@ public:
   }
 };
 
-#endif // !COIN_SOFIELDLIST_H
+#endif // !OBOL_SOFIELDLIST_H

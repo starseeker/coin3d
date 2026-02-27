@@ -1,5 +1,5 @@
-#ifndef COIN_SOREVERSEPERSPECTIVECAMERA_H
-#define COIN_SOREVERSEPERSPECTIVECAMERA_H
+#ifndef OBOL_SOREVERSEPERSPECTIVECAMERA_H
+#define OBOL_SOREVERSEPERSPECTIVECAMERA_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -36,7 +36,7 @@
 #include <Inventor/nodes/SoSubNode.h>
 #include <Inventor/nodes/SoPerspectiveCamera.h>
 
-class COIN_DLL_API SoReversePerspectiveCamera : public SoPerspectiveCamera {
+class OBOL_DLL_API SoReversePerspectiveCamera : public SoPerspectiveCamera {
   typedef SoPerspectiveCamera inherited;
 
   SO_NODE_HEADER(SoReversePerspectiveCamera);
@@ -50,4 +50,4 @@ protected:
 
 };
 
-#endif // !COIN_SOREVERSEPERSPECTIVECAMERA_H
+#endif // !OBOL_SOREVERSEPERSPECTIVECAMERA_H

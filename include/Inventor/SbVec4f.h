@@ -1,5 +1,5 @@
-#ifndef COIN_SBVEC4F_H
-#define COIN_SBVEC4F_H
+#ifndef OBOL_SBVEC4F_H
+#define OBOL_SBVEC4F_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -46,7 +46,7 @@ class SbVec4s;
 class SbVec4i32;
 class SbVec3f;
 
-class COIN_DLL_API SbVec4f {
+class OBOL_DLL_API SbVec4f {
 public:
   SbVec4f(void) { }
   SbVec4f(const float v[4]) { vec[0] = v[0]; vec[1] = v[1]; vec[2] = v[2]; vec[3] = v[3]; }
@@ -90,33 +90,33 @@ protected:
 
 }; // SbVec4f
 
-COIN_DLL_API inline SbVec4f operator * (const SbVec4f & v, float d) {
+OBOL_DLL_API inline SbVec4f operator * (const SbVec4f & v, float d) {
   SbVec4f val(v); val *= d; return val;
 }
 
-COIN_DLL_API inline SbVec4f operator * (float d, const SbVec4f & v) {
+OBOL_DLL_API inline SbVec4f operator * (float d, const SbVec4f & v) {
   SbVec4f val(v); val *= d; return val;
 }
 
-COIN_DLL_API inline SbVec4f operator / (const SbVec4f & v, float d) {
+OBOL_DLL_API inline SbVec4f operator / (const SbVec4f & v, float d) {
   SbDividerChk("operator/(SbVec4f,float)", d);
   SbVec4f val(v); val /= d; return val;
 }
 
-COIN_DLL_API inline SbVec4f operator + (const SbVec4f & v1, const SbVec4f & v2) {
+OBOL_DLL_API inline SbVec4f operator + (const SbVec4f & v1, const SbVec4f & v2) {
   SbVec4f v(v1); v += v2; return v;
 }
 
-COIN_DLL_API inline SbVec4f operator - (const SbVec4f & v1, const SbVec4f & v2) {
+OBOL_DLL_API inline SbVec4f operator - (const SbVec4f & v1, const SbVec4f & v2) {
   SbVec4f v(v1); v -= v2; return v;
 }
 
-COIN_DLL_API inline int operator == (const SbVec4f & v1, const SbVec4f & v2) {
+OBOL_DLL_API inline int operator == (const SbVec4f & v1, const SbVec4f & v2) {
   return ((v1[0] == v2[0]) && (v1[1] == v2[1]) && (v1[2] == v2[2]) && (v1[3] == v2[3]));
 }
 
-COIN_DLL_API inline int operator != (const SbVec4f & v1, const SbVec4f & v2) {
+OBOL_DLL_API inline int operator != (const SbVec4f & v1, const SbVec4f & v2) {
   return !(v1 == v2);
 }
 
-#endif // !COIN_SBVEC4F_H
+#endif // !OBOL_SBVEC4F_H

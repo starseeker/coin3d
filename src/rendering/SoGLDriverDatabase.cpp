@@ -32,27 +32,20 @@
 
 /*!
   \class SoGLDriverDatabase SoGLDriverDatabase.h Inventor/misc/SoGLDriverDatabase.h
-  \brief The SoGLDriverDatabase class is used for looking up broken/slow features in OpenGL drivers.
+  \brief The SoGLDriverDatabase class is used for looking up broken/disabled features in OpenGL drivers.
 
-  This implementation uses runtime feature detection (GLEW-style) with a minimal
-  embedded database for critical driver workarounds that cannot be detected at runtime.
-  
-  The embedded database contains known issues from legacy and current OpenGL drivers
-  that require manual workarounds, including:
-  - VBO performance and crash issues on Intel, ATI, and NVIDIA hardware
-  - Multitexture problems on older integrated graphics
-  - Shader compilation failures on legacy drivers  
-  - Framebuffer object limitations on older hardware
-  - Texture format support issues across various vendors
-  
-  These entries represent accumulated knowledge of OpenGL driver quirks that
-  cannot be reliably detected through extension queries alone.
+  This implementation uses runtime feature detection with a feature function map.
+  Each named feature is mapped to a test function that queries the active GL context.
+  For GL extension names (starting with "GL_"), the extension string is queried directly.
+
+  A driver workaround database (isBroken/isDisabled) is also available for cases
+  that cannot be reliably detected through extension queries alone.  As of 2026
+  there are no active entries: the pre-2010 hardware workarounds that were
+  previously maintained here have been removed because that hardware is no longer
+  in any realistic use.
 */
 
 #include <Inventor/misc/SoGLDriverDatabase.h>
-
-#include <cstring>
-#include <string>
 
 #include "CoinTidbits.h"
 #include <Inventor/SbName.h>
@@ -76,84 +69,6 @@ extern "C" {
   SbBool SoGLContext_has_generate_mipmap(const SoGLContext * glue);
 }
 
-// Driver identification structure for embedded workarounds
-struct DriverInfo {
-  const char* vendor_pattern;
-  const char* renderer_pattern;
-  const char* version_pattern;
-};
-
-// Feature override structure
-struct FeatureOverride {
-  const char* feature_name;
-  DriverInfo driver;
-  enum { BROKEN, SLOW, FAST, DISABLED } status;
-  const char* comment;
-};
-
-// Embedded database of critical driver workarounds
-// This replaces the XML database with minimal hard-coded data for known issues
-// 
-// Each entry contains:
-// - feature_name: Coin3D feature identifier (e.g., "COIN_vertex_buffer_object")
-// - driver: Vendor/renderer/version pattern matching (supports wildcards with '*')
-// - status: BROKEN (crashes/fails), SLOW (performance issues), FAST (optimized), DISABLED (force off)
-// - comment: Human-readable description of the issue
-//
-// Patterns support simple wildcards:
-// - "*" matches any string
-// - "prefix*" matches strings starting with "prefix"
-// - Exact string matches work as expected
-//
-// Based on documented issues in gl.cpp and 2025 OpenGL best practices
-static const FeatureOverride EMBEDDED_OVERRIDES[] = {
-  // Intel integrated graphics issues
-  {"COIN_vertex_buffer_object", {"Intel", "GMA 950", "*"}, FeatureOverride::SLOW, "VBO performance is poor on GMA 950"},
-  {"COIN_vertex_buffer_object", {"Intel", "GMA 3150", "*"}, FeatureOverride::SLOW, "VBO performance is poor on GMA 3150"},
-  {"COIN_multitexture", {"Intel", "GMA 950", "*"}, FeatureOverride::SLOW, "Multitexture performance is poor on GMA 950"},
-  {"COIN_multitexture", {"Intel", "Solano", "*"}, FeatureOverride::BROKEN, "Visual artifacts with multitexture on Intel Solano"},
-  {"COIN_2d_proxy_textures", {"Intel", "*", "*"}, FeatureOverride::BROKEN, "Proxy texture implementation incompatible"},
-  {"COIN_non_power_of_two_textures", {"Intel", "GMA*", "*"}, FeatureOverride::SLOW, "NPOT textures slow on older Intel integrated"},
-  
-  // AMD/ATI legacy driver issues  
-  {"COIN_vertex_buffer_object", {"ATI Technologies Inc.", "Radeon 9*", "1.*"}, FeatureOverride::BROKEN, "VBO crashes on old ATI Radeon 9xxx drivers"},
-  {"COIN_vertex_buffer_object", {"ATI Technologies Inc.", "Radeon 7*", "*"}, FeatureOverride::BROKEN, "VBO implementation broken on Radeon 7xxx series"},
-  {"COIN_vbo_in_displaylist", {"ATI Technologies Inc.", "Radeon*", "1.*"}, FeatureOverride::BROKEN, "VBO in display lists crashes on old ATI drivers"},
-  {"COIN_vbo_in_displaylist", {"ATI Technologies Inc.", "Radeon*", "2.0*"}, FeatureOverride::BROKEN, "VBO in display lists crashes on ATI Radeon 2.0 drivers"},
-  {"COIN_3d_textures", {"ATI Technologies Inc.", "Radeon 7500*", "*"}, FeatureOverride::BROKEN, "3D textures crash on Radeon 7500"},
-  {"COIN_arb_vertex_shader", {"ATI Technologies Inc.", "Radeon 9*", "1.*"}, FeatureOverride::BROKEN, "Vertex shader compilation issues on old ATI"},
-  {"COIN_GLSL_clip_vertex_hw", {"ATI Technologies Inc.", "Radeon*", "1.*"}, FeatureOverride::BROKEN, "Hardware clip vertex broken on old ATI drivers"},
-  {"COIN_non_power_of_two_textures", {"ATI Technologies Inc.", "Radeon 9*", "*"}, FeatureOverride::SLOW, "NPOT textures slow on Radeon 9xxx"},
-  
-  // NVIDIA driver issues
-  {"COIN_vertex_buffer_object", {"NVIDIA Corporation", "*", "1.4.0*"}, FeatureOverride::BROKEN, "VBO broken on NVIDIA 44.96 Linux driver"},
-  {"COIN_vertex_buffer_object", {"NVIDIA Corporation", "GeForce4 Go*", "*"}, FeatureOverride::SLOW, "VBO performance poor on GeForce4 Go mobile"},
-  {"COIN_vertex_buffer_object", {"NVIDIA Corporation", "GeForce 7950 GX2*", "2.0.2*"}, FeatureOverride::BROKEN, "VBO crashes in offscreen contexts on GeForce 7950 GX2"},
-  {"COIN_framebuffer_object", {"NVIDIA Corporation", "GeForce2*", "*"}, FeatureOverride::BROKEN, "FBO not properly supported on GeForce2"},
-  {"COIN_framebuffer_object", {"NVIDIA Corporation", "GeForce 256*", "*"}, FeatureOverride::BROKEN, "FBO not supported on GeForce 256"},
-  
-  // 3Dlabs issues
-  {"COIN_vertex_buffer_object", {"3Dlabs", "*", "*"}, FeatureOverride::BROKEN, "VBO implementation fundamentally broken on 3Dlabs hardware"},
-  
-  // Legacy vendor issues
-  {"COIN_texture_edge_clamp", {"Trident*", "*", "*"}, FeatureOverride::BROKEN, "GL_CLAMP_TO_EDGE not supported on Trident cards"},
-  {"COIN_multitexture", {"Matrox", "G400", "1.1.3*"}, FeatureOverride::BROKEN, "Multitexture broken on old Matrox G400 drivers"},
-  {"COIN_polygon_offset", {"ELSA", "TNT2 Vanta*", "1.1.4*"}, FeatureOverride::BROKEN, "Polygon offset broken on old ELSA TNT2 Vanta"},
-  
-  // Sun/Oracle graphics issues
-  {"COIN_multitexture", {"Sun*", "Expert3D*", "1.2*"}, FeatureOverride::BROKEN, "Dual screen artifacts with multitexture on Sun Expert3D"},
-  
-  // Mesa software renderer performance issues
-  {"COIN_vertex_buffer_object", {"*", "*Mesa*", "*"}, FeatureOverride::SLOW, "VBO slower than vertex arrays in Mesa software renderer"},
-  {"COIN_framebuffer_object", {"*", "*Mesa*", "7.*"}, FeatureOverride::SLOW, "FBO performance poor in Mesa 7.x software renderer"},
-  {"COIN_multitexture", {"*", "*Mesa*", "6.*"}, FeatureOverride::SLOW, "Multitexture slow in Mesa 6.x software renderer"},
-  
-  // Generic integrated graphics performance
-  {"COIN_vertex_buffer_object", {"*", "*Mobile*", "*"}, FeatureOverride::SLOW, "VBO generally slower on mobile/integrated graphics"},
-  {"COIN_anisotropic_filtering", {"Intel", "*", "*"}, FeatureOverride::SLOW, "Anisotropic filtering very slow on Intel integrated"},
-  {"COIN_generate_mipmap", {"Intel", "GMA*", "*"}, FeatureOverride::SLOW, "Hardware mipmap generation slow on Intel GMA"}
-};
-
 class SoGLDriverDatabaseP {
 public:
   SoGLDriverDatabaseP();
@@ -166,12 +81,6 @@ public:
 
   // Runtime feature detection function map
   SbHash<const char*, glglue_feature_test_f *> featuremap;
-
-private:
-  // Helper methods for driver pattern matching
-  SbBool matchesPattern(const char* text, const char* pattern);
-  SbBool matchesDriver(const SoGLContext * context, const DriverInfo& driver);
-  const FeatureOverride* findOverride(const SoGLContext * context, const SbName & feature);
 };
 
 static SoGLDriverDatabaseP * sogldriverdatabase_instance = NULL;
@@ -180,19 +89,13 @@ static SoGLDriverDatabaseP * sogldriverdatabase_instance = NULL;
 SbBool 
 multidraw_elements_wrapper(const SoGLContext * glue)
 {
-  // Implement multidraw elements test - check for GL_EXT_multi_draw_arrays
-  return SoGLContext_glext_supported(glue, "GL_EXT_multi_draw_arrays");
+  return SoGLContext_has_multidraw_vertex_arrays(glue);
 }
 
 SbBool 
 glsl_clip_vertex_hw_wrapper(const SoGLContext * glue) 
 {
-  // GLSL clip vertex hardware support test
-  if (!SoGLContext_has_arb_vertex_shader(glue)) return FALSE;
-  // Additional vendor-specific checks for proper clip vertex support
-  // ATI drivers before a certain version had broken clip vertex support
-  if (glue->vendor_is_ati) return FALSE;
-  return TRUE;
+  return SoGLContext_has_arb_vertex_shader(glue);
 }
 
 SoGLDriverDatabaseP::SoGLDriverDatabaseP()
@@ -294,71 +197,17 @@ SoGLDriverDatabaseP::isSupported(const SoGLContext * context, const SbName & fea
 }
 
 SbBool
-SoGLDriverDatabaseP::isBroken(const SoGLContext * context, const SbName & feature)
+SoGLDriverDatabaseP::isBroken(const SoGLContext * /*context*/, const SbName & /*feature*/)
 {
-  const FeatureOverride* override = findOverride(context, feature);
-  return override && (override->status == FeatureOverride::BROKEN);
-}
-
-SbBool
-SoGLDriverDatabaseP::isDisabled(const SoGLContext * context, const SbName & feature)
-{
-  const FeatureOverride* override = findOverride(context, feature);
-  return override && (override->status == FeatureOverride::DISABLED);
-}
-
-// Helper function to match simple wildcard patterns
-SbBool
-SoGLDriverDatabaseP::matchesPattern(const char* text, const char* pattern)
-{
-  if (!text || !pattern) return FALSE;
-  
-  // Simple wildcard matching - "*" matches anything
-  if (strcmp(pattern, "*") == 0) return TRUE;
-  
-  // Exact match
-  if (strcmp(text, pattern) == 0) return TRUE;
-  
-  // Pattern ending with "*" - prefix match
-  size_t patlen = strlen(pattern);
-  if (patlen > 0 && pattern[patlen-1] == '*') {
-    return strncmp(text, pattern, patlen-1) == 0;
-  }
-  
+  // No active driver workarounds as of 2026.
+  // Pre-2010 hardware workarounds have been removed as obsolete.
   return FALSE;
 }
 
-// Check if the current driver matches the given driver info
 SbBool
-SoGLDriverDatabaseP::matchesDriver(const SoGLContext * context, const DriverInfo& driver)
+SoGLDriverDatabaseP::isDisabled(const SoGLContext * /*context*/, const SbName & /*feature*/)
 {
-  const char* vendor = (const char*)glGetString(GL_VENDOR);
-  const char* renderer = (const char*)glGetString(GL_RENDERER);
-  const char* version = (const char*)glGetString(GL_VERSION);
-  
-  if (!vendor || !renderer || !version) return FALSE;
-  
-  return matchesPattern(vendor, driver.vendor_pattern) &&
-         matchesPattern(renderer, driver.renderer_pattern) &&
-         matchesPattern(version, driver.version_pattern);
-}
-
-// Find an override for the given feature and driver context
-const FeatureOverride*
-SoGLDriverDatabaseP::findOverride(const SoGLContext * context, const SbName & feature)
-{
-  const char* feature_str = feature.getString();
-  
-  for (size_t i = 0; i < sizeof(EMBEDDED_OVERRIDES)/sizeof(EMBEDDED_OVERRIDES[0]); i++) {
-    const FeatureOverride& override = EMBEDDED_OVERRIDES[i];
-    if (strcmp(feature_str, override.feature_name) == 0) {
-      if (matchesDriver(context, override.driver)) {
-        return &override;
-      }
-    }
-  }
-  
-  return NULL;
+  return FALSE;
 }
 
 static SoGLDriverDatabaseP *

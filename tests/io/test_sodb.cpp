@@ -34,7 +34,7 @@
  * @file test_sodb.cpp
  * @brief Tests for SoDB, SoInput/SoOutput, and related I/O APIs.
  *
- * Baselined against upstream COIN_TEST_SUITE blocks.
+ * Baselined against upstream OBOL_TEST_SUITE blocks.
  *
  * Vanilla sources:
  *   src/misc/SoDB.cpp  - globalRealTimeField, readChildList (IV 2.1),
@@ -117,7 +117,7 @@ int main()
 
     // -----------------------------------------------------------------------
     // SoDB: realTime global field is set and close to wall-clock time
-    // Baseline: src/misc/SoDB.cpp COIN_TEST_SUITE (globalRealTimeField)
+    // Baseline: src/misc/SoDB.cpp OBOL_TEST_SUITE (globalRealTimeField)
     // -----------------------------------------------------------------------
     runner.startTest("SoDB realTime global field initialised");
     {
@@ -251,7 +251,7 @@ int main()
 
     // -----------------------------------------------------------------------
     // SoBase write/read: name disambiguation for multiply-referenced nodes
-    // Baseline: src/misc/SoBase.cpp COIN_TEST_SUITE (checkWriteWithMultiref)
+    // Baseline: src/misc/SoBase.cpp OBOL_TEST_SUITE (checkWriteWithMultiref)
     //
     // When multiple nodes share the same name and are referenced more than
     // once, the writer must append "+N" suffixes so that DEF labels are

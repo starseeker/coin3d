@@ -1,5 +1,5 @@
-#ifndef COIN_SORENDERMANAGERP_H
-#define COIN_SORENDERMANAGERP_H
+#ifndef OBOL_SORENDERMANAGERP_H
+#define OBOL_SORENDERMANAGERP_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,9 +37,9 @@
 
 #include <vector>
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
 #include <Inventor/threads/SbMutex.h>
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 
 #include <Inventor/system/gl.h>
 #include <Inventor/SbColor4f.h>
@@ -71,14 +71,14 @@ public:
   static void cleanup(void);
 
   void lock(void) {
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
     this->mutex.lock();
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
   }
   void unlock(void) {
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
     this->mutex.unlock();
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
   }
 
   SoRenderManager * publ;
@@ -128,9 +128,9 @@ public:
   static SbBool touchtimer;
   static SbBool cleanupfunctionset;
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   SbMutex mutex;
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 };
 
 // *************************************************************************
@@ -161,4 +161,4 @@ private:
 // *************************************************************************
 
 
-#endif // COIN_SORENDERMANAGERP_H
+#endif // OBOL_SORENDERMANAGERP_H

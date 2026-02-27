@@ -1,5 +1,5 @@
-#ifndef COIN_SOBOXHIGHLIGHTRENDERACTION_H
-#define COIN_SOBOXHIGHLIGHTRENDERACTION_H
+#ifndef OBOL_SOBOXHIGHLIGHTRENDERACTION_H
+#define OBOL_SOBOXHIGHLIGHTRENDERACTION_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -38,7 +38,7 @@
 
 class SoBoxHighlightRenderActionP;
 
-class COIN_DLL_API SoBoxHighlightRenderAction : public SoGLRenderAction {
+class OBOL_DLL_API SoBoxHighlightRenderAction : public SoGLRenderAction {
   typedef SoGLRenderAction inherited;
 
   SO_ACTION_HEADER(SoBoxHighlightRenderAction);
@@ -84,4 +84,4 @@ private:
   SoBoxHighlightRenderAction & operator = (const SoBoxHighlightRenderAction & rhs);
 }; // SoBoxHighlightRenderAction
 
-#endif // !COIN_SOBOXHIGHLIGHTRENDERACTION_H
+#endif // !OBOL_SOBOXHIGHLIGHTRENDERACTION_H

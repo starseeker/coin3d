@@ -1,5 +1,5 @@
-#ifndef COIN_SBCONDVAR_H
-#define COIN_SBCONDVAR_H
+#ifndef OBOL_SBCONDVAR_H
+#define OBOL_SBCONDVAR_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -69,4 +69,4 @@ private:
   std::condition_variable condvar;
 };
 
-#endif // !COIN_SBCONDVAR_H
+#endif // !OBOL_SBCONDVAR_H

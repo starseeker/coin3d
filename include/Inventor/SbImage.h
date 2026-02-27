@@ -1,5 +1,5 @@
-#ifndef COIN_SBIMAGE_H
-#define COIN_SBIMAGE_H
+#ifndef OBOL_SBIMAGE_H
+#define OBOL_SBIMAGE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -43,7 +43,7 @@ class SbImage;
 typedef SbBool SbImageScheduleReadCB(const SbString &, SbImage *, void *);
 typedef SbBool SbImageReadImageCB(const SbString &, SbImage *, void *);
 
-class COIN_DLL_API SbImage {
+class OBOL_DLL_API SbImage {
 public:
   SbImage(void);
   SbImage(const unsigned char * bytes,
@@ -101,4 +101,4 @@ public:
                           const int numdirectories = 0);
 };
 
-#endif // !COIN_SBIMAGE_H
+#endif // !OBOL_SBIMAGE_H

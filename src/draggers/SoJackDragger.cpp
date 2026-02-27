@@ -382,7 +382,7 @@ SoJackDragger::valueChangedCB(void *, SoDragger * d)
   a child dragger starts or finishes dragging.
 */
 void
-SoJackDragger::invalidateSurroundScaleCB(void * f, SoDragger * COIN_UNUSED_ARG(d))
+SoJackDragger::invalidateSurroundScaleCB(void * f, SoDragger * OBOL_UNUSED_ARG(d))
 {
   SoJackDragger * thisp = static_cast<SoJackDragger *>(f);
   SoSurroundScale * surround = SO_CHECK_PART(thisp, "surroundScale", SoSurroundScale);

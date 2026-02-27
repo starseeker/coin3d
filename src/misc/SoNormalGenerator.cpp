@@ -46,7 +46,7 @@
 #include <Inventor/errors/SoDebugError.h>
 
 #include "CoinTidbits.h"
-#include "config.h" // COIN_OBSOLETED()
+#include "config.h" // OBOL_OBSOLETED()
 
 /*!
   Constructor with \a isccw indicating if polygons are specified
@@ -76,7 +76,7 @@ SoNormalGenerator::~SoNormalGenerator()
   Resets the normal generator, making it possible to reuse it without
   allocating a new one.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */
@@ -354,7 +354,7 @@ SoNormalGenerator::getNumNormals(void) const
 void
 SoNormalGenerator::setNumNormals(const int /* num */)
 {
-  COIN_OBSOLETED();
+  OBOL_OBSOLETED();
 }
 
 /*!
@@ -392,7 +392,7 @@ void
 SoNormalGenerator::setNormal(const int32_t /* index */,
                              const SbVec3f & /* normal */)
 {
-  COIN_OBSOLETED();
+  OBOL_OBSOLETED();
 }
 
 //
@@ -430,7 +430,7 @@ SoNormalGenerator::calcFaceNormal(void)
   }
 
   if (ret.normalize() == 0.0f) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     // make this an optional warning since it's really ok (in most
     // cases) to have empty triangles. pederb, 2005-12-21
     if (coin_debug_extra()) {
@@ -446,7 +446,7 @@ SoNormalGenerator::calcFaceNormal(void)
                                 "for face with vertex coordinates:%s",
                                 s.getString());
     }
-#endif // COIN_DEBUG      
+#endif // OBOL_DEBUG      
     // set to (0,0,0) so that this face will not influence normal smoothing
     ret.setValue(0.0f, 0.0f, 0.0f);
   }

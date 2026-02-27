@@ -83,18 +83,18 @@ SoShininessElement::init(SoState * stateptr)
 //! FIXME: write doc.
 
 void
-SoShininessElement::set(SoState * const state, SoNode * const COIN_UNUSED_ARG(node),
+SoShininessElement::set(SoState * const state, SoNode * const OBOL_UNUSED_ARG(node),
                            const int32_t numvalues,
                            const float * const values)
 {
   SoLazyElement::setShininess(state, values[0]);
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (numvalues > 1) {
     SoDebugError::postWarning("SoShininessElement::set",
                               "Multiple shininess values not supported. "
                               "All values except the first will be ignored.");
   }
-#endif // COIN_DEBIG
+#endif // OBOL_DEBIG
 
 }
 

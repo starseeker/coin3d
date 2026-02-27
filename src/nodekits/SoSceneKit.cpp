@@ -78,9 +78,9 @@
 #include <Inventor/nodekits/SoNodeKitListPart.h>
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/nodes/SoSwitch.h>
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 #include  "nodekits/SoSubKitP.h"
 
@@ -136,7 +136,7 @@ void
 SoSceneKit::setCameraNumber(int camnum)
 {
   SoSwitch *sw = (SoSwitch*)this->getContainerNode(SbName("cameraList"));
-#if COIN_DEBUG && 1 // debug
+#if OBOL_DEBUG && 1 // debug
   if (camnum >= sw->getNumChildren()) {
     SoDebugError::postInfo("SoSceneKit::setCameraNumber",
                            "camera number %d is too large", camnum);

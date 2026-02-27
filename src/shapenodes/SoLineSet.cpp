@@ -177,10 +177,10 @@ SoLineSet::findMaterialBinding(SoState * const state) const
     break;
   default:
     binding = OVERALL;
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SoLineSet::findMaterialBinding",
                               "unknown material binding setting");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     break;
   }
   return binding;
@@ -216,10 +216,10 @@ SoLineSet::findNormalBinding(SoState * const state) const
     break;
   default:
     binding = PER_VERTEX;
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SoLineSet::findNormalBinding",
                               "unknown normal binding setting");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     break;
   }
   return binding;

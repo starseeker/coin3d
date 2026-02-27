@@ -1,5 +1,5 @@
-#ifndef COIN_SOSHAPEKIT_H
-#define COIN_SOSHAPEKIT_H
+#ifndef OBOL_SOSHAPEKIT_H
+#define OBOL_SOSHAPEKIT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/nodekits/SoSeparatorKit.h>
 
-class COIN_DLL_API SoShapeKit : public SoSeparatorKit {
+class OBOL_DLL_API SoShapeKit : public SoSeparatorKit {
   typedef SoSeparatorKit inherited;
 
   SO_KIT_HEADER(SoShapeKit);
@@ -67,4 +67,4 @@ protected:
   virtual void setDefaultOnNonWritingFields(void);
 };
 
-#endif // !COIN_SOSHAPEKIT_H
+#endif // !OBOL_SOSHAPEKIT_H

@@ -1,5 +1,5 @@
-#ifndef COIN_SOGLTEXTUREIMAGEELEMENT_H
-#define COIN_SOGLTEXTUREIMAGEELEMENT_H
+#ifndef OBOL_SOGLTEXTUREIMAGEELEMENT_H
+#define OBOL_SOGLTEXTUREIMAGEELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,7 +33,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifdef COIN_INTERNAL
+#ifdef OBOL_INTERNAL
 #error Do not use this typedef internally
 #endif
 
@@ -42,4 +42,4 @@
 
 typedef SoGLMultiTextureImageElement SoGLTextureImageElement;
 
-#endif // !COIN_SOGLTEXTUREIMAGEELEMENT_H
+#endif // !OBOL_SOGLTEXTUREIMAGEELEMENT_H

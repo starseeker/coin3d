@@ -179,7 +179,7 @@ int main(int argc, char **argv)
         snprintf(outpath, sizeof(outpath), "render_rt_proxy_shapes.rgb");
 
     bool ok = false;
-#ifdef COIN3D_NANORT_BUILD
+#ifdef OBOL_NANORT_BUILD
     // For the NanoRT path we can validate pixels directly.
     SoOffscreenRenderer renderer(vp);
     renderer.setComponents(SoOffscreenRenderer::RGB);

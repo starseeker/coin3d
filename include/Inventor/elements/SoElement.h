@@ -1,5 +1,5 @@
-#ifndef COIN_SOELEMENT_H
-#define COIN_SOELEMENT_H
+#ifndef OBOL_SOELEMENT_H
+#define OBOL_SOELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -40,7 +40,7 @@
 
 class SoNode;
 
-class COIN_DLL_API SoElement {
+class OBOL_DLL_API SoElement {
 public:
   static void initClass(void);
 
@@ -128,4 +128,4 @@ SoElement::getConstElement(SoState * const state,
   return element;
 }
 
-#endif // !COIN_SOELEMENT_H
+#endif // !OBOL_SOELEMENT_H

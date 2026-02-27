@@ -1,5 +1,5 @@
-#ifndef COIN_SBBSPTREE_H
-#define COIN_SBBSPTREE_H
+#ifndef OBOL_SBBSPTREE_H
+#define OBOL_SBBSPTREE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -38,20 +38,20 @@
 #include <Inventor/SbVec3f.h>
 #include <Inventor/SbBox3f.h>
 
-#ifdef COIN_INTERNAL
- #define COIN_ALLOW_SBINTLIST
+#ifdef OBOL_INTERNAL
+ #define OBOL_ALLOW_SBINTLIST
  #include <Inventor/lists/SbIntList.h>
- #undef COIN_ALLOW_SBINTLIST
+ #undef OBOL_ALLOW_SBINTLIST
 #else
  #include <Inventor/lists/SbIntList.h>
-#endif // COIN_INTERNAL
+#endif // OBOL_INTERNAL
 
 class SbSphere;
 class coin_bspnode;
 
 // *************************************************************************
 
-class COIN_DLL_API SbBSPTree {
+class OBOL_DLL_API SbBSPTree {
 public:
   SbBSPTree(const int maxnodepts = 64, const int initsize = 4);
   ~SbBSPTree();
@@ -88,4 +88,4 @@ private:
   SbBox3f boundingBox;
 };
 
-#endif // !COIN_SBBSPTREE_H
+#endif // !OBOL_SBBSPTREE_H

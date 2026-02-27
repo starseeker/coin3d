@@ -1,5 +1,5 @@
-#ifndef COIN_SOHUDBUTTON_H
-#define COIN_SOHUDBUTTON_H
+#ifndef OBOL_SOHUDBUTTON_H
+#define OBOL_SOHUDBUTTON_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -74,7 +74,7 @@ class SoHUDButton;
 /*! Callback type for SoHUDButton click notifications. */
 typedef void SoHUDButtonCB(void * userdata, SoHUDButton * button);
 
-class COIN_DLL_API SoHUDButton : public SoNode {
+class OBOL_DLL_API SoHUDButton : public SoNode {
   typedef SoNode inherited;
   SO_NODE_HEADER(SoHUDButton);
 
@@ -108,4 +108,4 @@ private:
   struct SoHUDButtonP * pimpl;
 };
 
-#endif // !COIN_SOHUDBUTTON_H
+#endif // !OBOL_SOHUDBUTTON_H

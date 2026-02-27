@@ -1,5 +1,5 @@
-#ifndef COIN_SBSTRING_H
-#define COIN_SBSTRING_H
+#ifndef OBOL_SBSTRING_H
+#define OBOL_SBSTRING_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -39,17 +39,17 @@
 #include <string>
 #include <cstring>
 
-#ifdef COIN_INTERNAL
- #define COIN_ALLOW_SBINTLIST
+#ifdef OBOL_INTERNAL
+ #define OBOL_ALLOW_SBINTLIST
  #include <Inventor/lists/SbIntList.h>
- #undef COIN_ALLOW_SBINTLIST
+ #undef OBOL_ALLOW_SBINTLIST
 #else
  #include <Inventor/lists/SbIntList.h>
-#endif // COIN_INTERNAL
+#endif // OBOL_INTERNAL
 
 // *************************************************************************
 
-class COIN_DLL_API SbString {
+class OBOL_DLL_API SbString {
 public:
   SbString(void) = default;
 
@@ -274,4 +274,4 @@ inline const SbString operator+(const char * s, const SbString & sbstr)
   return newstr;
 }
 
-#endif // !COIN_SBSTRING_H
+#endif // !OBOL_SBSTRING_H

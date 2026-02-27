@@ -45,21 +45,21 @@ extern "C" {
 
   typedef struct cc_heap cc_heap;
 
-  COIN_DLL_API cc_heap * cc_heap_construct(unsigned int size,
+  OBOL_DLL_API cc_heap * cc_heap_construct(unsigned int size,
                                            cc_heap_compare_cb * comparecb,
                                            SbBool support_remove);
   
-  COIN_DLL_API void cc_heap_destruct(cc_heap * h);
-  COIN_DLL_API void cc_heap_clear(cc_heap * h);
+  OBOL_DLL_API void cc_heap_destruct(cc_heap * h);
+  OBOL_DLL_API void cc_heap_clear(cc_heap * h);
   
-  COIN_DLL_API void cc_heap_add(cc_heap * h, void * o);
-  COIN_DLL_API void * cc_heap_get_top(cc_heap * h);
-  COIN_DLL_API void * cc_heap_extract_top(cc_heap * h);
-  COIN_DLL_API int cc_heap_remove(cc_heap * h, void * o);
-  COIN_DLL_API int cc_heap_update(cc_heap * h, void * o);
-  COIN_DLL_API unsigned int cc_heap_elements(cc_heap * h);
-  COIN_DLL_API SbBool cc_heap_empty(cc_heap * h);
-  COIN_DLL_API void cc_heap_print(cc_heap * h, cc_heap_print_cb * printcb, SbString& str, SbBool printLeveled = FALSE);
+  OBOL_DLL_API void cc_heap_add(cc_heap * h, void * o);
+  OBOL_DLL_API void * cc_heap_get_top(cc_heap * h);
+  OBOL_DLL_API void * cc_heap_extract_top(cc_heap * h);
+  OBOL_DLL_API int cc_heap_remove(cc_heap * h, void * o);
+  OBOL_DLL_API int cc_heap_update(cc_heap * h, void * o);
+  OBOL_DLL_API unsigned int cc_heap_elements(cc_heap * h);
+  OBOL_DLL_API SbBool cc_heap_empty(cc_heap * h);
+  OBOL_DLL_API void cc_heap_print(cc_heap * h, cc_heap_print_cb * printcb, SbString& str, SbBool printLeveled = FALSE);
 
 /* ********************************************************************** */
 

@@ -1,5 +1,5 @@
-#ifndef COIN_SBTYPEDSTORAGE_H
-#define COIN_SBTYPEDSTORAGE_H
+#ifndef OBOL_SBTYPEDSTORAGE_H
+#define OBOL_SBTYPEDSTORAGE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -52,4 +52,4 @@ private:
   SbStorage storage;
 };
 
-#endif // !COIN_SBTYPEDSTORAGE_H
+#endif // !OBOL_SBTYPEDSTORAGE_H

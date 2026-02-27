@@ -1,5 +1,5 @@
-#ifndef COIN_SOPROFILE_H
-#define COIN_SOPROFILE_H
+#ifndef OBOL_SOPROFILE_H
+#define OBOL_SOPROFILE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -41,7 +41,7 @@
 class SbVec2f;
 class SoState;
 
-class COIN_DLL_API SoProfile : public SoNode {
+class OBOL_DLL_API SoProfile : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_ABSTRACT_HEADER(SoProfile);
@@ -76,4 +76,4 @@ protected:
   virtual ~SoProfile();
 };
 
-#endif // !COIN_SOPROFILE_H
+#endif // !OBOL_SOPROFILE_H

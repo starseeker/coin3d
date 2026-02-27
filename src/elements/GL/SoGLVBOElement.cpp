@@ -38,7 +38,7 @@
 
   FIXME: write doc.
 
-  \COIN_CLASS_EXTENSION
+  \OBOL_CLASS_EXTENSION
 
   \since Coin 2.5
 */
@@ -147,7 +147,7 @@ SoGLVBOElement::setTexCoordVBO(SoState * state, const int unit, SoVBO * vbo)
 
 // doc in parent
 void
-SoGLVBOElement::init(SoState * COIN_UNUSED_ARG(state))
+SoGLVBOElement::init(SoState * OBOL_UNUSED_ARG(state))
 {
   PRIVATE(this)->vertexvbo = NULL;
   PRIVATE(this)->normalvbo = NULL;
@@ -157,7 +157,7 @@ SoGLVBOElement::init(SoState * COIN_UNUSED_ARG(state))
 
 // doc in parent
 void
-SoGLVBOElement::push(SoState * COIN_UNUSED_ARG(state))
+SoGLVBOElement::push(SoState * OBOL_UNUSED_ARG(state))
 {
   SoGLVBOElement * prev = (SoGLVBOElement *)
     this->getNextInStack();
@@ -174,14 +174,14 @@ SoGLVBOElement::push(SoState * COIN_UNUSED_ARG(state))
 
 // doc in parent
 void
-SoGLVBOElement::pop(SoState * COIN_UNUSED_ARG(state), const SoElement * COIN_UNUSED_ARG(prevtopelement))
+SoGLVBOElement::pop(SoState * OBOL_UNUSED_ARG(state), const SoElement * OBOL_UNUSED_ARG(prevtopelement))
 {
   // nothing to do
 }
 
 // doc in parent
 SbBool
-SoGLVBOElement::matches(const SoElement * COIN_UNUSED_ARG(elt)) const
+SoGLVBOElement::matches(const SoElement * OBOL_UNUSED_ARG(elt)) const
 {
   assert(0 && "should never get here");
   return TRUE;

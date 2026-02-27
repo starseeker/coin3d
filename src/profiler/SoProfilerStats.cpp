@@ -312,7 +312,7 @@ SoProfilerStatsP::updateNodeTypeTimingFields()
 } // updateNodeTypeTimingFields
 
 void
-SoProfilerStatsP::updateActionTimingFields(SoProfilerElement * COIN_UNUSED_ARG(e))
+SoProfilerStatsP::updateActionTimingFields(SoProfilerElement * OBOL_UNUSED_ARG(e))
 {
   SbList<int16_t> actions;
   this->action_timings.makeKeyList(actions);
@@ -355,7 +355,7 @@ SO_NODE_SOURCE(SoProfilerStats);
 void
 SoProfilerStats::initClass(void)
 {
-  SO_NODE_INTERNAL_INIT_CLASS(SoProfilerStats, SO_FROM_COIN_3_0);
+  SO_NODE_INTERNAL_INIT_CLASS(SoProfilerStats, SO_FROM_OBOL_3_0);
 
   SO_ENABLE(SoGLRenderAction, SoProfilerElement);
   SO_ENABLE(SoHandleEventAction, SoProfilerElement);
@@ -474,7 +474,7 @@ SoProfilerStats::getPrimitiveCount(SoGetPrimitiveCountAction * action)
 
 // Doc from superclass.
 void
-SoProfilerStats::notify(SoNotList * COIN_UNUSED_ARG(l))
+SoProfilerStats::notify(SoNotList * OBOL_UNUSED_ARG(l))
 {
   // we disable notifications from this node, to avoid constant
   // redraws of the scene graph.

@@ -1,5 +1,5 @@
-#ifndef COIN_SOSCRIPTENGINE_H
-#define COIN_SOSCRIPTENGINE_H
+#ifndef OBOL_SOSCRIPTENGINE_H
+#define OBOL_SOSCRIPTENGINE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/SbName.h>
 #include <Inventor/fields/SoField.h>
 
-class COIN_DLL_API SoScriptEngine {
+class OBOL_DLL_API SoScriptEngine {
 
 public:
   // FIXME: should all these functions be const? 20050719 erikgors.
@@ -59,4 +59,4 @@ public:
   virtual SbBool hasScriptField(const SbName & name) const = 0;
 };
 
-#endif // !COIN_SOSCRIPTENGINE_H
+#endif // !OBOL_SOSCRIPTENGINE_H

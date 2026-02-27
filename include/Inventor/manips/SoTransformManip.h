@@ -1,5 +1,5 @@
-#ifndef COIN_SOTRANSFORMMANIP_H
-#define COIN_SOTRANSFORMMANIP_H
+#ifndef OBOL_SOTRANSFORMMANIP_H
+#define OBOL_SOTRANSFORMMANIP_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,9 +35,9 @@
 
 #include <Inventor/nodes/SoTransform.h>
 #include <Inventor/tools/SbLazyPimplPtr.h>
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #include <Inventor/draggers/SoDragger.h>
-#endif // !COIN_INTERNAL
+#endif // !OBOL_INTERNAL
 
 class SoChildList;
 class SoDragger;
@@ -46,7 +46,7 @@ class SoPath;
 class SoSensor;
 class SoTransformManipP;
 
-class COIN_DLL_API SoTransformManip : public SoTransform {
+class OBOL_DLL_API SoTransformManip : public SoTransform {
   typedef SoTransform inherited;
 
   SO_NODE_HEADER(SoTransformManip);
@@ -99,4 +99,4 @@ private:
   SoTransformManip & operator = (const SoTransformManip & rhs);
 }; // SoTransformManip
 
-#endif // !COIN_SOTRANSFORMMANIP_H
+#endif // !OBOL_SOTRANSFORMMANIP_H

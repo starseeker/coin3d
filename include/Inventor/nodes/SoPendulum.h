@@ -1,5 +1,5 @@
-#ifndef COIN_SOPENDULUM_H
-#define COIN_SOPENDULUM_H
+#ifndef OBOL_SOPENDULUM_H
+#define OBOL_SOPENDULUM_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -43,7 +43,7 @@ class SoElapsedTime;
 class SoCalculator;
 class SoInterpolateRotation;
 
-class COIN_DLL_API SoPendulum : public SoRotation {
+class OBOL_DLL_API SoPendulum : public SoRotation {
   typedef SoRotation inherited;
 
   SO_NODE_HEADER(SoPendulum);
@@ -72,4 +72,4 @@ private:
   SoElapsedTime * timer;
 };
 
-#endif // !COIN_SOPENDULUM_H
+#endif // !OBOL_SOPENDULUM_H

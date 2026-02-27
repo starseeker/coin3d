@@ -1,5 +1,5 @@
-#ifndef COIN_SOGLSHAPEHINTSELEMENT_H
-#define COIN_SOGLSHAPEHINTSELEMENT_H
+#ifndef OBOL_SOGLSHAPEHINTSELEMENT_H
+#define OBOL_SOGLSHAPEHINTSELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/elements/SoShapeHintsElement.h>
 
-class COIN_DLL_API SoGLShapeHintsElement : public SoShapeHintsElement {
+class OBOL_DLL_API SoGLShapeHintsElement : public SoShapeHintsElement {
   typedef SoShapeHintsElement inherited;
 
   SO_ELEMENT_HEADER(SoGLShapeHintsElement);
@@ -64,4 +64,4 @@ private:
   SoState * state;
 };
 
-#endif // !COIN_SOGLSHAPEHINTSELEMENT_H
+#endif // !OBOL_SOGLSHAPEHINTSELEMENT_H

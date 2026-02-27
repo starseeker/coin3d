@@ -1,5 +1,5 @@
-#ifndef COIN_SODELAYQUEUESENSOR_H
-#define COIN_SODELAYQUEUESENSOR_H
+#ifndef OBOL_SODELAYQUEUESENSOR_H
+#define OBOL_SODELAYQUEUESENSOR_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/SbBasic.h>
 #include <cstdint>
 
-class COIN_DLL_API SoDelayQueueSensor : public SoSensor {
+class OBOL_DLL_API SoDelayQueueSensor : public SoSensor {
   typedef SoSensor inherited;
 
 public:
@@ -63,4 +63,4 @@ private:
   uint32_t priority;
 };
 
-#endif // !COIN_SODELAYQUEUESENSOR_H
+#endif // !OBOL_SODELAYQUEUESENSOR_H

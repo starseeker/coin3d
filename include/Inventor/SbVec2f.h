@@ -1,5 +1,5 @@
-#ifndef COIN_SBVEC2F_H
-#define COIN_SBVEC2F_H
+#ifndef OBOL_SBVEC2F_H
+#define OBOL_SBVEC2F_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -46,7 +46,7 @@ class SbVec2b;
 class SbVec2s;
 class SbVec2i32;
 
-class COIN_DLL_API SbVec2f {
+class OBOL_DLL_API SbVec2f {
 public:
   SbVec2f(void) { }
   SbVec2f(const float v[2]) { vec[0] = v[0]; vec[1] = v[1]; }
@@ -92,35 +92,35 @@ protected:
 
 }; // SbVec2f
 
-COIN_DLL_API inline SbVec2f operator * (const SbVec2f & v, float d) {
+OBOL_DLL_API inline SbVec2f operator * (const SbVec2f & v, float d) {
   SbVec2f val(v); val *= d; return val;
 }
 
-COIN_DLL_API inline SbVec2f operator * (float d, const SbVec2f & v) {
+OBOL_DLL_API inline SbVec2f operator * (float d, const SbVec2f & v) {
   SbVec2f val(v); val *= d; return val;
 }
 
-COIN_DLL_API inline SbVec2f operator / (const SbVec2f & v, float d) {
+OBOL_DLL_API inline SbVec2f operator / (const SbVec2f & v, float d) {
   SbDividerChk("operator/(SbVec2f,float)", d);
   SbVec2f val(v); val /= d; return val;
 }
 
-COIN_DLL_API inline SbVec2f operator + (const SbVec2f & v1, const SbVec2f & v2) {
+OBOL_DLL_API inline SbVec2f operator + (const SbVec2f & v1, const SbVec2f & v2) {
   SbVec2f v(v1); v += v2; return v;
 }
 
-COIN_DLL_API inline SbVec2f operator - (const SbVec2f & v1, const SbVec2f & v2) {
+OBOL_DLL_API inline SbVec2f operator - (const SbVec2f & v1, const SbVec2f & v2) {
   SbVec2f v(v1); v -= v2; return v;
 }
 
-COIN_DLL_API inline int operator == (const SbVec2f & v1, const SbVec2f & v2) {
+OBOL_DLL_API inline int operator == (const SbVec2f & v1, const SbVec2f & v2) {
   return ((v1[0] == v2[0]) && (v1[1] == v2[1]));
 }
 
-COIN_DLL_API inline int operator != (const SbVec2f & v1, const SbVec2f & v2) {
+OBOL_DLL_API inline int operator != (const SbVec2f & v1, const SbVec2f & v2) {
   return !(v1 == v2);
 }
 
 // *************************************************************************
 
-#endif // !COIN_SBVEC2F_H
+#endif // !OBOL_SBVEC2F_H

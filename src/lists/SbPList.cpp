@@ -234,9 +234,9 @@ SbPList::find(const void * item) const
 */
 void
 SbPList::insert(void * item, const int insertbefore) {
-#ifdef COIN_EXTRA_DEBUG
+#ifdef OBOL_EXTRA_DEBUG
   assert(insertbefore >= 0 && insertbefore <= this->numitems);
-#endif // COIN_EXTRA_DEBUG
+#endif // OBOL_EXTRA_DEBUG
   if (this->numitems == this->itembuffersize) this->grow();
 
   for (int i = this->numitems; i > insertbefore; i--)
@@ -253,9 +253,9 @@ void
 SbPList::removeItem(void * item)
 {
   int idx = this->find(item);
-#ifdef COIN_EXTRA_DEBUG
+#ifdef OBOL_EXTRA_DEBUG
   assert(idx != -1);
-#endif // COIN_EXTRA_DEBUG
+#endif // OBOL_EXTRA_DEBUG
   if (idx >= 0) {
     this->remove(idx);
   }
@@ -268,9 +268,9 @@ SbPList::removeItem(void * item)
 void
 SbPList::remove(const int index)
 {
-#ifdef COIN_EXTRA_DEBUG
+#ifdef OBOL_EXTRA_DEBUG
   assert(index >= 0 && index < this->numitems);
-#endif // COIN_EXTRA_DEBUG
+#endif // OBOL_EXTRA_DEBUG
   this->numitems--;
   for (int i = index; i < this->numitems; i++)
     this->itembuffer[i] = this->itembuffer[i + 1];

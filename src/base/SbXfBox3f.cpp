@@ -201,13 +201,13 @@ SbXfBox3f::extendBy(const SbVec3f & pt)
 void
 SbXfBox3f::extendBy(const SbBox3f & bb)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (bb.isEmpty()) {
     SoDebugError::postWarning("SbXfBox3f::extendBy",
                               "Extending box is empty.");
     return;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   if (this->isEmpty()) {
     *this = bb;
@@ -296,13 +296,13 @@ SbXfBox3f::extendBy(const SbBox3f & bb)
 void
 SbXfBox3f::extendBy(const SbXfBox3f & bb)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (bb.isEmpty()) {
     SoDebugError::postWarning("SbXfBox3f::extendBy",
                               "Extending box is empty.");
     return;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   if (this->isEmpty()) {
     *this = bb;
@@ -524,11 +524,11 @@ SbBool
 SbXfBox3f::intersect(const SbBox3f & bb) const
 {
   if (this->isEmpty() || bb.isEmpty()) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SbXfBox3f::intersect",
                               "%s is an empty / uninitialized box",
                               this->isEmpty() ? "this" : "input argument");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     return FALSE;
   }
 
@@ -556,7 +556,7 @@ SbXfBox3f::intersect(const SbBox3f & bb) const
 /*!
   Check if two transformed boxes intersect.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */
@@ -696,7 +696,7 @@ SbXfBox3f::getVolume(void) const
 void
 SbXfBox3f::print(FILE * fp) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   SbVec3f minv, maxv;
   this->getBounds(minv, maxv);
   fprintf( fp, "  bounds " );
@@ -724,7 +724,7 @@ SbXfBox3f::print(FILE * fp) const
   fprintf( fp, "  project " );
   this->project().print(fp);
   fprintf( fp, "\n" );
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }
 
 void
@@ -739,7 +739,7 @@ SbXfBox3f::calcInverse(void) const
       const_cast<SbXfBox3f *>(this)->invertedmatrix = this->matrix.inverse();
     }
     else {
-#if COIN_DEBUG && 0 // disabled
+#if OBOL_DEBUG && 0 // disabled
       const SbMatrix & m = this->matrix;
       SoDebugError::postWarning("SbXfBox3f::setTransform",
                                 "invalid matrix (can't be inverted)");
@@ -755,7 +755,7 @@ SbXfBox3f::calcInverse(void) const
       SoDebugError::postWarning("SbXfBox3f::setTransform",
                                 "%f %f %f %f",
                                 m[3][0], m[3][1], m[3][2], m[3][3]);
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
       // Degenerate transforms are fixed by projecting box. This will
       // transform the min and max points (using the normal matrix,

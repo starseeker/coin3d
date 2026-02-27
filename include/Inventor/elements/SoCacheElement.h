@@ -1,5 +1,5 @@
-#ifndef COIN_SOCACHEELEMENT_H
-#define COIN_SOCACHEELEMENT_H
+#ifndef OBOL_SOCACHEELEMENT_H
+#define OBOL_SOCACHEELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 
 class SoCache;
 
-class COIN_DLL_API SoCacheElement : public SoElement {
+class OBOL_DLL_API SoCacheElement : public SoElement {
   typedef SoElement inherited;
 
   SO_ELEMENT_HEADER(SoCacheElement);
@@ -71,4 +71,4 @@ private:
   static SbBool invalidated;
 };
 
-#endif // !COIN_SOCACHEELEMENT_H
+#endif // !OBOL_SOCACHEELEMENT_H

@@ -1,5 +1,5 @@
-#ifndef COIN_GLUE_GLP_H
-#define COIN_GLUE_GLP_H
+#ifndef OBOL_GLUE_GLP_H
+#define OBOL_GLUE_GLP_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -45,9 +45,9 @@
 
 #include <string>
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #error this is a private header file
-#endif /* ! COIN_INTERNAL */
+#endif /* ! OBOL_INTERNAL */
 
 #include "config.h"
 
@@ -85,9 +85,9 @@ typedef struct cc_libhandle_struct * cc_libhandle;
 #define APIENTRY
 #endif /* !APIENTRY */
 
-/* Our own typedefs for OpenGL functions. Prefixed with COIN_ to avoid
+/* Our own typedefs for OpenGL functions. Prefixed with OBOL_ to avoid
    namespace collisions. */
-typedef void (APIENTRY * COIN_PFNGLTEXIMAGE3DPROC)(GLenum target,
+typedef void (APIENTRY * OBOL_PFNGLTEXIMAGE3DPROC)(GLenum target,
                                                    GLint level,
                                                    GLenum internalformat,
                                                    GLsizei width,
@@ -98,7 +98,7 @@ typedef void (APIENTRY * COIN_PFNGLTEXIMAGE3DPROC)(GLenum target,
                                                    GLenum type,
                                                    const GLvoid * pixels);
 
-typedef void (APIENTRY * COIN_PFNGLTEXSUBIMAGE3DPROC)(GLenum target,
+typedef void (APIENTRY * OBOL_PFNGLTEXSUBIMAGE3DPROC)(GLenum target,
                                                       GLint level,
                                                       GLint xoffset,
                                                       GLint yoffset,
@@ -110,7 +110,7 @@ typedef void (APIENTRY * COIN_PFNGLTEXSUBIMAGE3DPROC)(GLenum target,
                                                       GLenum type,
                                                       const GLvoid * pixels);
 
-typedef void (APIENTRY * COIN_PFNGLCOPYTEXSUBIMAGE3DPROC)(GLenum target,
+typedef void (APIENTRY * OBOL_PFNGLCOPYTEXSUBIMAGE3DPROC)(GLenum target,
                                                           GLint level,
                                                           GLint xoffset,
                                                           GLint yoffset,
@@ -120,19 +120,19 @@ typedef void (APIENTRY * COIN_PFNGLCOPYTEXSUBIMAGE3DPROC)(GLenum target,
                                                           GLsizei width,
                                                           GLsizei height);
 
-typedef void (APIENTRY * COIN_PFNGLPOLYGONOFFSETPROC)(GLfloat factor,
+typedef void (APIENTRY * OBOL_PFNGLPOLYGONOFFSETPROC)(GLfloat factor,
                                                       GLfloat bias);
 
-typedef void (APIENTRY * COIN_PFNGLBINDTEXTUREPROC)(GLenum target,
+typedef void (APIENTRY * OBOL_PFNGLBINDTEXTUREPROC)(GLenum target,
                                                     GLuint texture);
 
-typedef void (APIENTRY * COIN_PFNGLDELETETEXTURESPROC)(GLsizei n,
+typedef void (APIENTRY * OBOL_PFNGLDELETETEXTURESPROC)(GLsizei n,
                                                        const GLuint * textures);
 
-typedef void (APIENTRY * COIN_PFNGLGENTEXTURESPROC)(GLsizei n,
+typedef void (APIENTRY * OBOL_PFNGLGENTEXTURESPROC)(GLsizei n,
                                                     GLuint *textures);
 
-typedef void (APIENTRY * COIN_PFNGLTEXSUBIMAGE2DPROC)(GLenum target,
+typedef void (APIENTRY * OBOL_PFNGLTEXSUBIMAGE2DPROC)(GLenum target,
                                                       GLint level,
                                                       GLint xoffset,
                                                       GLint yoffset,
@@ -142,23 +142,23 @@ typedef void (APIENTRY * COIN_PFNGLTEXSUBIMAGE2DPROC)(GLenum target,
                                                       GLenum type,
                                                       const GLvoid * pixels);
 
-typedef void (APIENTRY * COIN_PFNGLACTIVETEXTUREPROC)(GLenum texture);
-typedef void (APIENTRY * COIN_PFNGLCLIENTACTIVETEXTUREPROC)(GLenum texture);
-typedef void (APIENTRY * COIN_PFNGLMULTITEXCOORD2FPROC)(GLenum target,
+typedef void (APIENTRY * OBOL_PFNGLACTIVETEXTUREPROC)(GLenum texture);
+typedef void (APIENTRY * OBOL_PFNGLCLIENTACTIVETEXTUREPROC)(GLenum texture);
+typedef void (APIENTRY * OBOL_PFNGLMULTITEXCOORD2FPROC)(GLenum target,
                                                         GLfloat s,
                                                         GLfloat t);
-typedef void (APIENTRY * COIN_PFNGLMULTITEXCOORD2FVPROC)(GLenum target,
+typedef void (APIENTRY * OBOL_PFNGLMULTITEXCOORD2FVPROC)(GLenum target,
                                                          const GLfloat * v);
-typedef void (APIENTRY * COIN_PFNGLMULTITEXCOORD3FVPROC)(GLenum target,
+typedef void (APIENTRY * OBOL_PFNGLMULTITEXCOORD3FVPROC)(GLenum target,
                                                          const GLfloat * v);
-typedef void (APIENTRY * COIN_PFNGLMULTITEXCOORD4FVPROC)(GLenum target,
+typedef void (APIENTRY * OBOL_PFNGLMULTITEXCOORD4FVPROC)(GLenum target,
                                                          const GLfloat * v);
 
-typedef void (APIENTRY * COIN_PFNGLPUSHCLIENTATTRIBPROC)(GLbitfield mask);
-typedef void (APIENTRY * COIN_PFNGLPOPCLIENTATTRIBPROC)(void);
+typedef void (APIENTRY * OBOL_PFNGLPUSHCLIENTATTRIBPROC)(GLbitfield mask);
+typedef void (APIENTRY * OBOL_PFNGLPOPCLIENTATTRIBPROC)(void);
 
 /* typedefs for texture compression */
-typedef void (APIENTRY * COIN_PFNGLCOMPRESSEDTEXIMAGE3DPROC)(GLenum target,
+typedef void (APIENTRY * OBOL_PFNGLCOMPRESSEDTEXIMAGE3DPROC)(GLenum target,
                                                              GLint level,
                                                              GLenum internalformat,
                                                              GLsizei width,
@@ -167,7 +167,7 @@ typedef void (APIENTRY * COIN_PFNGLCOMPRESSEDTEXIMAGE3DPROC)(GLenum target,
                                                              GLint border,
                                                              GLsizei imageSize,
                                                              const GLvoid * data);
-typedef void (APIENTRY * COIN_PFNGLCOMPRESSEDTEXIMAGE2DPROC)(GLenum target,
+typedef void (APIENTRY * OBOL_PFNGLCOMPRESSEDTEXIMAGE2DPROC)(GLenum target,
                                                              GLint level,
                                                              GLenum internalformat,
                                                              GLsizei width,
@@ -175,14 +175,14 @@ typedef void (APIENTRY * COIN_PFNGLCOMPRESSEDTEXIMAGE2DPROC)(GLenum target,
                                                              GLint border,
                                                              GLsizei imageSize,
                                                              const GLvoid * data);
-typedef void (APIENTRY * COIN_PFNGLCOMPRESSEDTEXIMAGE1DPROC)(GLenum target,
+typedef void (APIENTRY * OBOL_PFNGLCOMPRESSEDTEXIMAGE1DPROC)(GLenum target,
                                                              GLint level,
                                                              GLenum internalformat,
                                                              GLsizei width,
                                                              GLint border,
                                                              GLsizei imageSize,
                                                              const GLvoid * data);
-typedef void (APIENTRY * COIN_PFNGLCOMPRESSEDTEXSUBIMAGE3DPROC)(GLenum target,
+typedef void (APIENTRY * OBOL_PFNGLCOMPRESSEDTEXSUBIMAGE3DPROC)(GLenum target,
                                                                 GLint level,
                                                                 GLint xoffset,
                                                                 GLint yoffset,
@@ -193,7 +193,7 @@ typedef void (APIENTRY * COIN_PFNGLCOMPRESSEDTEXSUBIMAGE3DPROC)(GLenum target,
                                                                 GLenum format,
                                                                 GLsizei imageSize,
                                                                 const GLvoid * data);
-typedef void (APIENTRY * COIN_PFNGLCOMPRESSEDTEXSUBIMAGE2DPROC)(GLenum target,
+typedef void (APIENTRY * OBOL_PFNGLCOMPRESSEDTEXSUBIMAGE2DPROC)(GLenum target,
                                                                 GLint level,
                                                                 GLint xoffset,
                                                                 GLint yoffset,
@@ -202,117 +202,117 @@ typedef void (APIENTRY * COIN_PFNGLCOMPRESSEDTEXSUBIMAGE2DPROC)(GLenum target,
                                                                 GLenum format,
                                                                 GLsizei imageSize,
                                                                 const GLvoid * data);
-typedef void (APIENTRY * COIN_PFNGLCOMPRESSEDTEXSUBIMAGE1DPROC)(GLenum target,
+typedef void (APIENTRY * OBOL_PFNGLCOMPRESSEDTEXSUBIMAGE1DPROC)(GLenum target,
                                                                 GLint level,
                                                                 GLint xoffset,
                                                                 GLsizei width,
                                                                 GLenum format,
                                                                 GLsizei imageSize,
                                                                 const GLvoid *data);
-typedef void (APIENTRY * COIN_PFNGLGETCOMPRESSEDTEXIMAGEPROC)(GLenum target,
+typedef void (APIENTRY * OBOL_PFNGLGETCOMPRESSEDTEXIMAGEPROC)(GLenum target,
                                                               GLint level,
                                                               void * img);
 
 
 /* typedefs for palette tetures */
-typedef void (APIENTRY * COIN_PFNGLCOLORTABLEPROC)(GLenum target,
+typedef void (APIENTRY * OBOL_PFNGLCOLORTABLEPROC)(GLenum target,
                                                    GLenum internalFormat,
                                                    GLsizei width,
                                                    GLenum format,
                                                    GLenum type,
                                                    const GLvoid * table);
-typedef void (APIENTRY * COIN_PFNGLCOLORSUBTABLEPROC)(GLenum target,
+typedef void (APIENTRY * OBOL_PFNGLCOLORSUBTABLEPROC)(GLenum target,
                                                       GLsizei start,
                                                       GLsizei count,
                                                       GLenum format,
                                                       GLenum type,
                                                       const GLvoid * data);
-typedef void (APIENTRY * COIN_PFNGLGETCOLORTABLEPROC)(GLenum target,
+typedef void (APIENTRY * OBOL_PFNGLGETCOLORTABLEPROC)(GLenum target,
                                                       GLenum format,
                                                       GLenum type,
                                                       GLvoid * data);
-typedef void (APIENTRY * COIN_PFNGLGETCOLORTABLEPARAMETERIVPROC)(GLenum target,
+typedef void (APIENTRY * OBOL_PFNGLGETCOLORTABLEPARAMETERIVPROC)(GLenum target,
                                                                  GLenum pname,
                                                                  GLint *params);
-typedef void (APIENTRY * COIN_PFNGLGETCOLORTABLEPARAMETERFVPROC)(GLenum target,
+typedef void (APIENTRY * OBOL_PFNGLGETCOLORTABLEPARAMETERFVPROC)(GLenum target,
                                                                  GLenum pname,
                                                                  GLfloat * params);
 
 /* Typedefs for glBlendEquation[EXT]. */
-typedef void *(APIENTRY * COIN_PFNGLBLENDEQUATIONPROC)(GLenum);
+typedef void *(APIENTRY * OBOL_PFNGLBLENDEQUATIONPROC)(GLenum);
 
 /* Typedef for glBlendFuncSeparate */
-typedef void *(APIENTRY * COIN_PFNGLBLENDFUNCSEPARATEPROC)(GLenum, GLenum, GLenum, GLenum);
+typedef void *(APIENTRY * OBOL_PFNGLBLENDFUNCSEPARATEPROC)(GLenum, GLenum, GLenum, GLenum);
 
 /* typedefs for OpenGL vertex arrays */
-typedef void (APIENTRY * COIN_PFNGLVERTEXPOINTERPROC)(GLint size, GLenum type, GLsizei stride, const GLvoid * pointer);
-typedef void (APIENTRY * COIN_PFNGLTEXCOORDPOINTERPROC)(GLint size, GLenum type, GLsizei stride, const GLvoid * pointer);
-typedef void (APIENTRY * COIN_PFNGLNORMALPOINTERPROC)(GLenum type, GLsizei stride, const GLvoid *pointer);
-typedef void (APIENTRY * COIN_PNFGLCOLORPOINTERPROC)(GLint size, GLenum type, GLsizei stride, const GLvoid * pointer);
-typedef void (APIENTRY * COIN_PFNGLINDEXPOINTERPROC)(GLenum type, GLsizei stride, const GLvoid * pointer);
-typedef void (APIENTRY * COIN_PFNGLENABLECLIENTSTATEPROC)(GLenum array);
-typedef void (APIENTRY * COIN_PFNGLDISABLECLIENTSTATEPROC)(GLenum array);
-typedef void (APIENTRY * COIN_PFNGLINTERLEAVEDARRAYSPROC)(GLenum format, GLsizei stride, const GLvoid * pointer);
-typedef void (APIENTRY * COIN_PFNGLDRAWARRAYSPROC)(GLenum mode, GLint first, GLsizei count);
-typedef void (APIENTRY * COIN_PFNGLDRAWELEMENTSPROC)(GLenum mode, GLsizei count, GLenum type, const GLvoid * indices);
-typedef void (APIENTRY * COIN_PFNGLDRAWRANGEELEMENTSPROC)(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, const GLvoid * indices);
-typedef void (APIENTRY * COIN_PFNGLARRAYELEMENTPROC)(GLint i);
+typedef void (APIENTRY * OBOL_PFNGLVERTEXPOINTERPROC)(GLint size, GLenum type, GLsizei stride, const GLvoid * pointer);
+typedef void (APIENTRY * OBOL_PFNGLTEXCOORDPOINTERPROC)(GLint size, GLenum type, GLsizei stride, const GLvoid * pointer);
+typedef void (APIENTRY * OBOL_PFNGLNORMALPOINTERPROC)(GLenum type, GLsizei stride, const GLvoid *pointer);
+typedef void (APIENTRY * OBOL_PNFGLCOLORPOINTERPROC)(GLint size, GLenum type, GLsizei stride, const GLvoid * pointer);
+typedef void (APIENTRY * OBOL_PFNGLINDEXPOINTERPROC)(GLenum type, GLsizei stride, const GLvoid * pointer);
+typedef void (APIENTRY * OBOL_PFNGLENABLECLIENTSTATEPROC)(GLenum array);
+typedef void (APIENTRY * OBOL_PFNGLDISABLECLIENTSTATEPROC)(GLenum array);
+typedef void (APIENTRY * OBOL_PFNGLINTERLEAVEDARRAYSPROC)(GLenum format, GLsizei stride, const GLvoid * pointer);
+typedef void (APIENTRY * OBOL_PFNGLDRAWARRAYSPROC)(GLenum mode, GLint first, GLsizei count);
+typedef void (APIENTRY * OBOL_PFNGLDRAWELEMENTSPROC)(GLenum mode, GLsizei count, GLenum type, const GLvoid * indices);
+typedef void (APIENTRY * OBOL_PFNGLDRAWRANGEELEMENTSPROC)(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, const GLvoid * indices);
+typedef void (APIENTRY * OBOL_PFNGLARRAYELEMENTPROC)(GLint i);
 
-typedef void (APIENTRY * COIN_PFNGLMULTIDRAWARRAYSPROC)(GLenum mode, const GLint * first,
+typedef void (APIENTRY * OBOL_PFNGLMULTIDRAWARRAYSPROC)(GLenum mode, const GLint * first,
                                                         const GLsizei * count, GLsizei primcount);
-typedef void (APIENTRY * COIN_PFNGLMULTIDRAWELEMENTSPROC)(GLenum mode, const GLsizei * count,
+typedef void (APIENTRY * OBOL_PFNGLMULTIDRAWELEMENTSPROC)(GLenum mode, const GLsizei * count,
                                                           GLenum type, const GLvoid ** indices, GLsizei primcount);
 
 /* Typedefs for NV_vertex_array_range */
-typedef void (APIENTRY * COIN_PFNGLFLUSHVERTEXARRAYRANGENVPROC)(void);
-typedef void (APIENTRY * COIN_PFNGLVERTEXARRAYRANGENVPROC)(GLsizei size, const GLvoid * pointer);
-typedef void * (APIENTRY * COIN_PFNGLALLOCATEMEMORYNVPROC)(GLsizei size, GLfloat readfreq,
+typedef void (APIENTRY * OBOL_PFNGLFLUSHVERTEXARRAYRANGENVPROC)(void);
+typedef void (APIENTRY * OBOL_PFNGLVERTEXARRAYRANGENVPROC)(GLsizei size, const GLvoid * pointer);
+typedef void * (APIENTRY * OBOL_PFNGLALLOCATEMEMORYNVPROC)(GLsizei size, GLfloat readfreq,
                                                            GLfloat writefreq, GLfloat priority);
-typedef void (APIENTRY * COIN_PFNGLFREEMEMORYNVPROC)(GLvoid * buffer);
+typedef void (APIENTRY * OBOL_PFNGLFREEMEMORYNVPROC)(GLvoid * buffer);
 
 
 /* typedefs for GL_ARB_vertex_buffer_object */
-typedef void (APIENTRY * COIN_PFNGLBINDBUFFERPROC)(GLenum target, GLuint buffer);
-typedef void (APIENTRY * COIN_PFNGLDELETEBUFFERSPROC)(GLsizei n, const GLuint * buffers);
-typedef void (APIENTRY * COIN_PFNGLGENBUFFERSPROC)(GLsizei n, GLuint *buffers);
-typedef GLboolean (APIENTRY * COIN_PFNGLISBUFFERPROC)(GLuint buffer);
-typedef void (APIENTRY * COIN_PFNGLBUFFERDATAPROC)(GLenum target,
+typedef void (APIENTRY * OBOL_PFNGLBINDBUFFERPROC)(GLenum target, GLuint buffer);
+typedef void (APIENTRY * OBOL_PFNGLDELETEBUFFERSPROC)(GLsizei n, const GLuint * buffers);
+typedef void (APIENTRY * OBOL_PFNGLGENBUFFERSPROC)(GLsizei n, GLuint *buffers);
+typedef GLboolean (APIENTRY * OBOL_PFNGLISBUFFERPROC)(GLuint buffer);
+typedef void (APIENTRY * OBOL_PFNGLBUFFERDATAPROC)(GLenum target,
                                                    intptr_t size, /* 64 bit on 64 bit systems */
                                                    const GLvoid *data,
                                                    GLenum usage);
-typedef void (APIENTRY * COIN_PFNGLBUFFERSUBDATAPROC)(GLenum target,
+typedef void (APIENTRY * OBOL_PFNGLBUFFERSUBDATAPROC)(GLenum target,
                                                       intptr_t offset, /* 64 bit */
                                                       intptr_t size, /* 64 bit */
                                                       const GLvoid * data);
-typedef void (APIENTRY * COIN_PFNGLGETBUFFERSUBDATAPROC)(GLenum target,
+typedef void (APIENTRY * OBOL_PFNGLGETBUFFERSUBDATAPROC)(GLenum target,
                                                          intptr_t offset, /* 64 bit */
                                                          intptr_t size, /* 64 bit */
                                                          GLvoid *data);
-typedef GLvoid * (APIENTRY * COIN_PNFGLMAPBUFFERPROC)(GLenum target, GLenum access);
-typedef GLboolean (APIENTRY * COIN_PFNGLUNMAPBUFFERPROC)(GLenum target);
-typedef void (APIENTRY * COIN_PFNGLGETBUFFERPARAMETERIVPROC)(GLenum target,
+typedef GLvoid * (APIENTRY * OBOL_PNFGLMAPBUFFERPROC)(GLenum target, GLenum access);
+typedef GLboolean (APIENTRY * OBOL_PFNGLUNMAPBUFFERPROC)(GLenum target);
+typedef void (APIENTRY * OBOL_PFNGLGETBUFFERPARAMETERIVPROC)(GLenum target,
                                                              GLenum pname,
                                                              GLint * params);
-typedef void (APIENTRY * COIN_PFNGLGETBUFFERPOINTERVPROC)(GLenum target,
+typedef void (APIENTRY * OBOL_PFNGLGETBUFFERPOINTERVPROC)(GLenum target,
                                                           GLenum pname,
                                                           GLvoid ** params);
 
 /* Typedefs for GL_NV_register_combiners */
-typedef void (APIENTRY * COIN_PFNGLCOMBINERPARAMETERFVNVPROC)(GLenum pname,
+typedef void (APIENTRY * OBOL_PFNGLCOMBINERPARAMETERFVNVPROC)(GLenum pname,
                                                               const GLfloat *params);
-typedef void (APIENTRY * COIN_PFNGLCOMBINERPARAMETERIVNVPROC)(GLenum pname,
+typedef void (APIENTRY * OBOL_PFNGLCOMBINERPARAMETERIVNVPROC)(GLenum pname,
                                                               const GLint *params);
-typedef void (APIENTRY * COIN_PFNGLCOMBINERPARAMETERFNVPROC)(GLenum pname,
+typedef void (APIENTRY * OBOL_PFNGLCOMBINERPARAMETERFNVPROC)(GLenum pname,
                                                              GLfloat param);
-typedef void (APIENTRY * COIN_PFNGLCOMBINERPARAMETERINVPROC)(GLenum pname,
+typedef void (APIENTRY * OBOL_PFNGLCOMBINERPARAMETERINVPROC)(GLenum pname,
                                                             GLint param);
-typedef void (APIENTRY * COIN_PFNGLCOMBINERINPUTNVPROC)(GLenum stage,
+typedef void (APIENTRY * OBOL_PFNGLCOMBINERINPUTNVPROC)(GLenum stage,
                                                         GLenum portion,
                                                         GLenum variable,
                                                         GLenum input,
                                                         GLenum mapping,
                                                         GLenum componentUsage);
-typedef void (APIENTRY * COIN_PFNGLCOMBINEROUTPUTNVPROC)(GLenum stage,
+typedef void (APIENTRY * OBOL_PFNGLCOMBINEROUTPUTNVPROC)(GLenum stage,
                                                          GLenum portion,
                                                          GLenum abOutput,
                                                          GLenum cdOutput,
@@ -322,163 +322,163 @@ typedef void (APIENTRY * COIN_PFNGLCOMBINEROUTPUTNVPROC)(GLenum stage,
                                                          GLboolean abDotProduct,
                                                          GLboolean cdDotProduct,
                                                          GLboolean muxSum);
-typedef void (APIENTRY * COIN_PFNGLFINALCOMBINERINPUTNVPROC)(GLenum variable,
+typedef void (APIENTRY * OBOL_PFNGLFINALCOMBINERINPUTNVPROC)(GLenum variable,
                                                              GLenum input,
                                                              GLenum mapping,
                                                              GLenum componentUsage);
-typedef void (APIENTRY * COIN_PFNGLGETCOMBINERINPUTPARAMETERFVNVPROC)(GLenum stage,
+typedef void (APIENTRY * OBOL_PFNGLGETCOMBINERINPUTPARAMETERFVNVPROC)(GLenum stage,
                                                                       GLenum portion,
                                                                       GLenum variable,
                                                                       GLenum pname,
                                                                       GLfloat *params);
-typedef void (APIENTRY * COIN_PFNGLGETCOMBINERINPUTPARAMETERIVNVPROC)(GLenum stage,
+typedef void (APIENTRY * OBOL_PFNGLGETCOMBINERINPUTPARAMETERIVNVPROC)(GLenum stage,
                                                                       GLenum portion,
                                                                       GLenum variable,
                                                                       GLenum pname,
                                                                       GLint *params);
-typedef void (APIENTRY * COIN_PFNGLGETCOMBINEROUTPUTPARAMETERFVNVPROC)(GLenum stage,
+typedef void (APIENTRY * OBOL_PFNGLGETCOMBINEROUTPUTPARAMETERFVNVPROC)(GLenum stage,
                                                                        GLenum portion,
                                                                        GLenum pname,
                                                                        GLfloat *params);
-typedef void (APIENTRY * COIN_PFNGLGETCOMBINEROUTPUTPARAMETERIVNVPROC)(GLenum stage,
+typedef void (APIENTRY * OBOL_PFNGLGETCOMBINEROUTPUTPARAMETERIVNVPROC)(GLenum stage,
                                                                        GLenum portion,
                                                                        GLenum pname,
                                                                        GLint *params);
-typedef void (APIENTRY * COIN_PFNGLGETFINALCOMBINERINPUTPARAMETERFVNVPROC)(GLenum variable,
+typedef void (APIENTRY * OBOL_PFNGLGETFINALCOMBINERINPUTPARAMETERFVNVPROC)(GLenum variable,
                                                                            GLenum pname,
                                                                            GLfloat *params);
-typedef void (APIENTRY * COIN_PFNGLGETFINALCOMBINERINPUTPARAMETERIVNVPROC)(GLenum variable,
+typedef void (APIENTRY * OBOL_PFNGLGETFINALCOMBINERINPUTPARAMETERIVNVPROC)(GLenum variable,
                                                                            GLenum pname,
                                                                            GLint *params);
 /* Typedefs for GL_ARB_fragment_program */
-typedef void (APIENTRY * COIN_PFNGLPROGRAMSTRINGARBPROC)(GLenum target,
+typedef void (APIENTRY * OBOL_PFNGLPROGRAMSTRINGARBPROC)(GLenum target,
                                                          GLenum format,
                                                          GLsizei len,
                                                          const GLvoid *string);
 
-typedef void (APIENTRY * COIN_PFNGLBINDPROGRAMARBPROC)(GLenum target,
+typedef void (APIENTRY * OBOL_PFNGLBINDPROGRAMARBPROC)(GLenum target,
                                                        GLuint program);
 
-typedef void (APIENTRY * COIN_PFNGLDELETEPROGRAMSARBPROC)(GLsizei n,
+typedef void (APIENTRY * OBOL_PFNGLDELETEPROGRAMSARBPROC)(GLsizei n,
                                                           const GLuint *programs);
 
-typedef void (APIENTRY * COIN_PFNGLGENPROGRAMSARBPROC)(GLsizei n,
+typedef void (APIENTRY * OBOL_PFNGLGENPROGRAMSARBPROC)(GLsizei n,
                                                        GLuint *programs);
 
-typedef void (APIENTRY * COIN_PFNGLPROGRAMENVPARAMETER4DARBPROC)(GLenum target,
+typedef void (APIENTRY * OBOL_PFNGLPROGRAMENVPARAMETER4DARBPROC)(GLenum target,
                                                                  GLuint index,
                                                                  GLdouble x,
                                                                  GLdouble y,
                                                                  GLdouble z,
                                                                  GLdouble w);
-typedef void (APIENTRY * COIN_PFNGLPROGRAMENVPARAMETER4DVARBPROC)(GLenum target,
+typedef void (APIENTRY * OBOL_PFNGLPROGRAMENVPARAMETER4DVARBPROC)(GLenum target,
                                                                   GLuint index,
                                                                   const GLdouble *params);
-typedef void (APIENTRY * COIN_PFNGLPROGRAMENVPARAMETER4FARBPROC)(GLenum target,
+typedef void (APIENTRY * OBOL_PFNGLPROGRAMENVPARAMETER4FARBPROC)(GLenum target,
                                                                  GLuint index,
                                                                  GLfloat x,
                                                                  GLfloat y,
                                                                  GLfloat z,
                                                                  GLfloat w);
-typedef void (APIENTRY * COIN_PFNGLPROGRAMENVPARAMETER4FVARBPROC)(GLenum target,
+typedef void (APIENTRY * OBOL_PFNGLPROGRAMENVPARAMETER4FVARBPROC)(GLenum target,
                                                                   GLuint index,
                                                                   const GLfloat *params);
-typedef void (APIENTRY * COIN_PFNGLPROGRAMLOCALPARAMETER4DARBPROC)(GLenum target,
+typedef void (APIENTRY * OBOL_PFNGLPROGRAMLOCALPARAMETER4DARBPROC)(GLenum target,
                                                                    GLuint index,
                                                                    GLdouble x,
                                                                    GLdouble y,
                                                                    GLdouble z,
                                                                    GLdouble w);
-typedef void (APIENTRY * COIN_PFNGLPROGRAMLOCALPARAMETER4DVARBPROC)(GLenum target,
+typedef void (APIENTRY * OBOL_PFNGLPROGRAMLOCALPARAMETER4DVARBPROC)(GLenum target,
                                                                     GLuint index,
                                                                     const GLdouble *params);
-typedef void (APIENTRY * COIN_PFNGLPROGRAMLOCALPARAMETER4FARBPROC)(GLenum target,
+typedef void (APIENTRY * OBOL_PFNGLPROGRAMLOCALPARAMETER4FARBPROC)(GLenum target,
                                                                    GLuint index,
                                                                    GLfloat x,
                                                                    GLfloat y,
                                                                    GLfloat z,
                                                                    GLfloat w);
-typedef void (APIENTRY * COIN_PFNGLPROGRAMLOCALPARAMETER4FVARBPROC)(GLenum target,
+typedef void (APIENTRY * OBOL_PFNGLPROGRAMLOCALPARAMETER4FVARBPROC)(GLenum target,
                                                                     GLuint index,
                                                                     const GLfloat *params);
-typedef void (APIENTRY * COIN_PFNGLGETPROGRAMENVPARAMETERDVARBPROC)(GLenum target,
+typedef void (APIENTRY * OBOL_PFNGLGETPROGRAMENVPARAMETERDVARBPROC)(GLenum target,
                                                                     GLuint index,
                                                                     GLdouble *params);
-typedef void (APIENTRY * COIN_PFNGLGETPROGRAMENVPARAMETERFVARBPROC)(GLenum target,
+typedef void (APIENTRY * OBOL_PFNGLGETPROGRAMENVPARAMETERFVARBPROC)(GLenum target,
                                                                     GLuint index,
                                                                     GLfloat *params);
-typedef void (APIENTRY * COIN_PFNGLGETPROGRAMLOCALPARAMETERDVARBPROC)(GLenum target,
+typedef void (APIENTRY * OBOL_PFNGLGETPROGRAMLOCALPARAMETERDVARBPROC)(GLenum target,
                                                                       GLuint index,
                                                                       GLdouble *params);
-typedef void (APIENTRY * COIN_PFNGLGETPROGRAMLOCALPARAMETERFVARBPROC)(GLenum target,
+typedef void (APIENTRY * OBOL_PFNGLGETPROGRAMLOCALPARAMETERFVARBPROC)(GLenum target,
                                                                       GLuint index,
                                                                       GLfloat *params);
-typedef void (APIENTRY * COIN_PFNGLGETPROGRAMIVARBPROC)(GLenum target,
+typedef void (APIENTRY * OBOL_PFNGLGETPROGRAMIVARBPROC)(GLenum target,
                                                         GLenum pname,
                                                         GLint *params);
-typedef void (APIENTRY * COIN_PFNGLGETPROGRAMSTRINGARBPROC)(GLenum target,
+typedef void (APIENTRY * OBOL_PFNGLGETPROGRAMSTRINGARBPROC)(GLenum target,
                                                             GLenum pname,
                                                             GLvoid *string);
-typedef GLboolean (APIENTRY * COIN_PFNGLISPROGRAMARBPROC)(GLuint program);
+typedef GLboolean (APIENTRY * OBOL_PFNGLISPROGRAMARBPROC)(GLuint program);
 
 
 /* Typedefs for GL_ARB_vertex_program */
-typedef void (APIENTRY * COIN_PFNGLVERTEXATTRIB1SARBPROC)(GLuint index, GLshort x);
-typedef void (APIENTRY * COIN_PFNGLVERTEXATTRIB1FARBPROC)(GLuint index, GLfloat x);
-typedef void (APIENTRY * COIN_PFNGLVERTEXATTRIB1DARBPROC)(GLuint index, GLdouble x);
-typedef void (APIENTRY * COIN_PFNGLVERTEXATTRIB2SARBPROC)(GLuint index, GLshort x, GLshort y);
-typedef void (APIENTRY * COIN_PFNGLVERTEXATTRIB2FARBPROC)(GLuint index, GLfloat x, GLfloat y);
-typedef void (APIENTRY * COIN_PFNGLVERTEXATTRIB2DARBPROC)(GLuint index, GLdouble x, GLdouble y);
-typedef void (APIENTRY * COIN_PFNGLVERTEXATTRIB3SARBPROC)(GLuint index, GLshort x,
+typedef void (APIENTRY * OBOL_PFNGLVERTEXATTRIB1SARBPROC)(GLuint index, GLshort x);
+typedef void (APIENTRY * OBOL_PFNGLVERTEXATTRIB1FARBPROC)(GLuint index, GLfloat x);
+typedef void (APIENTRY * OBOL_PFNGLVERTEXATTRIB1DARBPROC)(GLuint index, GLdouble x);
+typedef void (APIENTRY * OBOL_PFNGLVERTEXATTRIB2SARBPROC)(GLuint index, GLshort x, GLshort y);
+typedef void (APIENTRY * OBOL_PFNGLVERTEXATTRIB2FARBPROC)(GLuint index, GLfloat x, GLfloat y);
+typedef void (APIENTRY * OBOL_PFNGLVERTEXATTRIB2DARBPROC)(GLuint index, GLdouble x, GLdouble y);
+typedef void (APIENTRY * OBOL_PFNGLVERTEXATTRIB3SARBPROC)(GLuint index, GLshort x,
                                                           GLshort y, GLshort z);
-typedef void (APIENTRY * COIN_PFNGLVERTEXATTRIB3FARBPROC)(GLuint index, GLfloat x,
+typedef void (APIENTRY * OBOL_PFNGLVERTEXATTRIB3FARBPROC)(GLuint index, GLfloat x,
                                                           GLfloat y, GLfloat z);
-typedef void (APIENTRY * COIN_PFNGLVERTEXATTRIB3DARBPROC)(GLuint index, GLdouble x,
+typedef void (APIENTRY * OBOL_PFNGLVERTEXATTRIB3DARBPROC)(GLuint index, GLdouble x,
                                                           GLdouble y, GLdouble z);
-typedef void (APIENTRY * COIN_PFNGLVERTEXATTRIB4SARBPROC)(GLuint index, GLshort x,
+typedef void (APIENTRY * OBOL_PFNGLVERTEXATTRIB4SARBPROC)(GLuint index, GLshort x,
                                                           GLshort y, GLshort z, GLshort w);
-typedef void (APIENTRY * COIN_PFNGLVERTEXATTRIB4FARBPROC)(GLuint index, GLfloat x,
+typedef void (APIENTRY * OBOL_PFNGLVERTEXATTRIB4FARBPROC)(GLuint index, GLfloat x,
                                                           GLfloat y, GLfloat z, GLfloat w);
-typedef void (APIENTRY * COIN_PFNGLVERTEXATTRIB4DARBPROC)(GLuint index, GLdouble x,
+typedef void (APIENTRY * OBOL_PFNGLVERTEXATTRIB4DARBPROC)(GLuint index, GLdouble x,
                                                           GLdouble y, GLdouble z, GLdouble w);
-typedef void (APIENTRY * COIN_PFNGLVERTEXATTRIB4NUBARBPROC)(GLuint index, GLubyte x,
+typedef void (APIENTRY * OBOL_PFNGLVERTEXATTRIB4NUBARBPROC)(GLuint index, GLubyte x,
                                                             GLubyte y, GLubyte z, GLubyte w);
-typedef void (APIENTRY * COIN_PFNGLVERTEXATTRIB1SVARBPROC)(GLuint index, const GLshort *v);
-typedef void (APIENTRY * COIN_PFNGLVERTEXATTRIB1FVARBPROC)(GLuint index, const GLfloat *v);
-typedef void (APIENTRY * COIN_PFNGLVERTEXATTRIB1DVARBPROC)(GLuint index, const GLdouble *v);
-typedef void (APIENTRY * COIN_PFNGLVERTEXATTRIB2SVARBPROC)(GLuint index, const GLshort *v);
-typedef void (APIENTRY * COIN_PFNGLVERTEXATTRIB2FVARBPROC)(GLuint index, const GLfloat *v);
-typedef void (APIENTRY * COIN_PFNGLVERTEXATTRIB2DVARBPROC)(GLuint index, const GLdouble *v);
-typedef void (APIENTRY * COIN_PFNGLVERTEXATTRIB3SVARBPROC)(GLuint index, const GLshort *v);
-typedef void (APIENTRY * COIN_PFNGLVERTEXATTRIB3FVARBPROC)(GLuint index, const GLfloat *v);
-typedef void (APIENTRY * COIN_PFNGLVERTEXATTRIB3DVARBPROC)(GLuint index, const GLdouble *v);
-typedef void (APIENTRY * COIN_PFNGLVERTEXATTRIB4BVARBPROC)(GLuint index, const GLbyte *v);
-typedef void (APIENTRY * COIN_PFNGLVERTEXATTRIB4SVARBPROC)(GLuint index, const GLshort *v);
-typedef void (APIENTRY * COIN_PFNGLVERTEXATTRIB4IVARBPROC)(GLuint index, const GLint *v);
-typedef void (APIENTRY * COIN_PFNGLVERTEXATTRIB4UBVARBPROC)(GLuint index, const GLubyte *v);
-typedef void (APIENTRY * COIN_PFNGLVERTEXATTRIB4USVARBPROC)(GLuint index, const GLushort *v);
-typedef void (APIENTRY * COIN_PFNGLVERTEXATTRIB4UIVARBPROC)(GLuint index, const GLuint *v);
-typedef void (APIENTRY * COIN_PFNGLVERTEXATTRIB4FVARBPROC)(GLuint index, const GLfloat *v);
-typedef void (APIENTRY * COIN_PFNGLVERTEXATTRIB4DVARBPROC)(GLuint index, const GLdouble *v);
-typedef void (APIENTRY * COIN_PFNGLVERTEXATTRIB4NBVARBPROC)(GLuint index, const GLbyte *v);
-typedef void (APIENTRY * COIN_PFNGLVERTEXATTRIB4NSVARBPROC)(GLuint index, const GLshort *v);
-typedef void (APIENTRY * COIN_PFNGLVERTEXATTRIB4NIVARBPROC)(GLuint index, const GLint *v);
-typedef void (APIENTRY * COIN_PFNGLVERTEXATTRIB4NUBVARBPROC)(GLuint index, const GLubyte *v);
-typedef void (APIENTRY * COIN_PFNGLVERTEXATTRIB4NUSVARBPROC)(GLuint index, const GLushort *v);
-typedef void (APIENTRY * COIN_PFNGLVERTEXATTRIB4NUIVARBPROC)(GLuint index, const GLuint *v);
-typedef void (APIENTRY * COIN_PFNGLVERTEXATTRIBPOINTERARBPROC)(GLuint index, GLint size,
+typedef void (APIENTRY * OBOL_PFNGLVERTEXATTRIB1SVARBPROC)(GLuint index, const GLshort *v);
+typedef void (APIENTRY * OBOL_PFNGLVERTEXATTRIB1FVARBPROC)(GLuint index, const GLfloat *v);
+typedef void (APIENTRY * OBOL_PFNGLVERTEXATTRIB1DVARBPROC)(GLuint index, const GLdouble *v);
+typedef void (APIENTRY * OBOL_PFNGLVERTEXATTRIB2SVARBPROC)(GLuint index, const GLshort *v);
+typedef void (APIENTRY * OBOL_PFNGLVERTEXATTRIB2FVARBPROC)(GLuint index, const GLfloat *v);
+typedef void (APIENTRY * OBOL_PFNGLVERTEXATTRIB2DVARBPROC)(GLuint index, const GLdouble *v);
+typedef void (APIENTRY * OBOL_PFNGLVERTEXATTRIB3SVARBPROC)(GLuint index, const GLshort *v);
+typedef void (APIENTRY * OBOL_PFNGLVERTEXATTRIB3FVARBPROC)(GLuint index, const GLfloat *v);
+typedef void (APIENTRY * OBOL_PFNGLVERTEXATTRIB3DVARBPROC)(GLuint index, const GLdouble *v);
+typedef void (APIENTRY * OBOL_PFNGLVERTEXATTRIB4BVARBPROC)(GLuint index, const GLbyte *v);
+typedef void (APIENTRY * OBOL_PFNGLVERTEXATTRIB4SVARBPROC)(GLuint index, const GLshort *v);
+typedef void (APIENTRY * OBOL_PFNGLVERTEXATTRIB4IVARBPROC)(GLuint index, const GLint *v);
+typedef void (APIENTRY * OBOL_PFNGLVERTEXATTRIB4UBVARBPROC)(GLuint index, const GLubyte *v);
+typedef void (APIENTRY * OBOL_PFNGLVERTEXATTRIB4USVARBPROC)(GLuint index, const GLushort *v);
+typedef void (APIENTRY * OBOL_PFNGLVERTEXATTRIB4UIVARBPROC)(GLuint index, const GLuint *v);
+typedef void (APIENTRY * OBOL_PFNGLVERTEXATTRIB4FVARBPROC)(GLuint index, const GLfloat *v);
+typedef void (APIENTRY * OBOL_PFNGLVERTEXATTRIB4DVARBPROC)(GLuint index, const GLdouble *v);
+typedef void (APIENTRY * OBOL_PFNGLVERTEXATTRIB4NBVARBPROC)(GLuint index, const GLbyte *v);
+typedef void (APIENTRY * OBOL_PFNGLVERTEXATTRIB4NSVARBPROC)(GLuint index, const GLshort *v);
+typedef void (APIENTRY * OBOL_PFNGLVERTEXATTRIB4NIVARBPROC)(GLuint index, const GLint *v);
+typedef void (APIENTRY * OBOL_PFNGLVERTEXATTRIB4NUBVARBPROC)(GLuint index, const GLubyte *v);
+typedef void (APIENTRY * OBOL_PFNGLVERTEXATTRIB4NUSVARBPROC)(GLuint index, const GLushort *v);
+typedef void (APIENTRY * OBOL_PFNGLVERTEXATTRIB4NUIVARBPROC)(GLuint index, const GLuint *v);
+typedef void (APIENTRY * OBOL_PFNGLVERTEXATTRIBPOINTERARBPROC)(GLuint index, GLint size,
                                                                GLenum type, GLboolean normalized,
                                                                GLsizei stride,
                                                                const GLvoid *pointer);
-typedef void (APIENTRY * COIN_PFNGLENABLEVERTEXATTRIBARRAYARBPROC)(GLuint index);
-typedef void (APIENTRY * COIN_PFNGLDISABLEVERTEXATTRIBARRAYARBPROC)(GLuint index);
-typedef void (APIENTRY * COIN_PFNGLGETVERTEXATTRIBDVARBPROC)(GLuint index, GLenum pname,
+typedef void (APIENTRY * OBOL_PFNGLENABLEVERTEXATTRIBARRAYARBPROC)(GLuint index);
+typedef void (APIENTRY * OBOL_PFNGLDISABLEVERTEXATTRIBARRAYARBPROC)(GLuint index);
+typedef void (APIENTRY * OBOL_PFNGLGETVERTEXATTRIBDVARBPROC)(GLuint index, GLenum pname,
                                                              GLdouble *params);
-typedef void (APIENTRY * COIN_PFNGLGETVERTEXATTRIBFVARBPROC)(GLuint index, GLenum pname,
+typedef void (APIENTRY * OBOL_PFNGLGETVERTEXATTRIBFVARBPROC)(GLuint index, GLenum pname,
                                                              GLfloat *params);
-typedef void (APIENTRY * COIN_PFNGLGETVERTEXATTRIBIVARBPROC)(GLuint index, GLenum pname,
+typedef void (APIENTRY * OBOL_PFNGLGETVERTEXATTRIBIVARBPROC)(GLuint index, GLenum pname,
                                                              GLint *params);
-typedef void (APIENTRY * COIN_PFNGLGETVERTEXATTRIBPOINTERVARBPROC)(GLuint index, GLenum pname,
+typedef void (APIENTRY * OBOL_PFNGLGETVERTEXATTRIBPOINTERVARBPROC)(GLuint index, GLenum pname,
                                                                    GLvoid **pointer);
 
 /* FIXME: according to the GL_ARB_shader_objects doc, these types must
@@ -489,94 +489,94 @@ typedef void (APIENTRY * COIN_PFNGLGETVERTEXATTRIBPOINTERVARBPROC)(GLuint index,
    drivers). How should this be properly handled? Is there any way at
    all one could possibly pick up these at the correct size in a
    dynamic manner? 20050124 mortene. */
-typedef char COIN_GLchar;
-typedef unsigned long COIN_GLhandle;
+typedef char OBOL_GLchar;
+typedef unsigned long OBOL_GLhandle;
 
 /* Typedefs for GL_ARB_vertex_shader */
-typedef void (APIENTRY * COIN_PFNGLBINDATTRIBLOCATIONARBPROC)(COIN_GLhandle programobj, GLuint index, COIN_GLchar * name);
-typedef int (APIENTRY * COIN_PFNGLGETATTRIBLOCATIONARBPROC)(COIN_GLhandle programobj, const COIN_GLchar * name);
-typedef void (APIENTRY * COIN_PFNGLGETACTIVEATTRIBARBPROC)(COIN_GLhandle programobj, GLuint index, GLsizei bufSize, GLsizei * length, GLint * size, GLenum * type, COIN_GLchar * name);
+typedef void (APIENTRY * OBOL_PFNGLBINDATTRIBLOCATIONARBPROC)(OBOL_GLhandle programobj, GLuint index, OBOL_GLchar * name);
+typedef int (APIENTRY * OBOL_PFNGLGETATTRIBLOCATIONARBPROC)(OBOL_GLhandle programobj, const OBOL_GLchar * name);
+typedef void (APIENTRY * OBOL_PFNGLGETACTIVEATTRIBARBPROC)(OBOL_GLhandle programobj, GLuint index, GLsizei bufSize, GLsizei * length, GLint * size, GLenum * type, OBOL_GLchar * name);
 
 
 /* Typedefs for shader objects -- GL_ARB_shader_objects */
-typedef void (APIENTRY * COIN_PFNGLPROGRAMPARAMETERIEXT)(COIN_GLhandle, GLenum, GLenum);
+typedef void (APIENTRY * OBOL_PFNGLPROGRAMPARAMETERIEXT)(OBOL_GLhandle, GLenum, GLenum);
 
-typedef int (APIENTRY * COIN_PFNGLGETUNIFORMLOCATIONARBPROC)(COIN_GLhandle,
-                                                             const COIN_GLchar *);
-typedef void (APIENTRY * COIN_PFNGLGETACTIVEUNIFORMARBPROC)(COIN_GLhandle,
+typedef int (APIENTRY * OBOL_PFNGLGETUNIFORMLOCATIONARBPROC)(OBOL_GLhandle,
+                                                             const OBOL_GLchar *);
+typedef void (APIENTRY * OBOL_PFNGLGETACTIVEUNIFORMARBPROC)(OBOL_GLhandle,
                                                             GLuint index,
                                                             GLsizei maxLength,
                                                             GLsizei * length,
                                                             GLint * size,
                                                             GLenum * type,
-                                                            COIN_GLchar * name);
-typedef void (APIENTRY * COIN_PFNGLUNIFORM1FARBPROC)(GLint location, GLfloat v0);
-typedef void (APIENTRY * COIN_PFNGLUNIFORM2FARBPROC)(GLint location, GLfloat v0, GLfloat v1);
-typedef void (APIENTRY * COIN_PFNGLUNIFORM3FARBPROC)(GLint location, GLfloat v0, GLfloat v1, GLfloat v2);
-typedef void (APIENTRY * COIN_PFNGLUNIFORM4FARBPROC)(GLint location, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3);
-typedef COIN_GLhandle (APIENTRY * COIN_PFNGLCREATESHADEROBJECTARBPROC)(GLenum);
-typedef void (APIENTRY * COIN_PFNGLSHADERSOURCEARBPROC)(COIN_GLhandle, GLsizei, const COIN_GLchar **, const GLint *);
-typedef void (APIENTRY * COIN_PFNGLCOMPILESHADERARBPROC)(COIN_GLhandle);
-typedef void (APIENTRY * COIN_PFNGLGETOBJECTPARAMETERIVARBPROC)(COIN_GLhandle, GLenum, GLint *);
-typedef void (APIENTRY * COIN_PFNGLDELETEOBJECTARBPROC)(COIN_GLhandle);
-typedef void (APIENTRY * COIN_PFNGLATTACHOBJECTARBPROC)(COIN_GLhandle, COIN_GLhandle);
-typedef void (APIENTRY * COIN_PFNGLDETACHOBJECTARBPROC)(COIN_GLhandle, COIN_GLhandle);
-typedef void (APIENTRY * COIN_PFNGLGETINFOLOGARBPROC)(COIN_GLhandle, GLsizei, GLsizei *, COIN_GLchar *);
-typedef void (APIENTRY * COIN_PFNGLLINKPROGRAMARBPROC)(COIN_GLhandle);
-typedef void (APIENTRY * COIN_PFNGLUSEPROGRAMOBJECTARBPROC)(COIN_GLhandle);
-typedef COIN_GLhandle (APIENTRY * COIN_PFNGLCREATEPROGRAMOBJECTARBPROC)(void);
-typedef void (APIENTRY * COIN_PFNGLUNIFORM1FVARBPROC)(COIN_GLhandle, GLsizei, const GLfloat *);
-typedef void (APIENTRY * COIN_PFNGLUNIFORM2FVARBPROC)(COIN_GLhandle, GLsizei, const GLfloat *);
-typedef void (APIENTRY * COIN_PFNGLUNIFORM3FVARBPROC)(COIN_GLhandle, GLsizei, const GLfloat *);
-typedef void (APIENTRY * COIN_PFNGLUNIFORM4FVARBPROC)(COIN_GLhandle, GLsizei, const GLfloat *);
-typedef void (APIENTRY * COIN_PFNGLUNIFORM1IARBPROC)(COIN_GLhandle, const GLint);
-typedef void (APIENTRY * COIN_PFNGLUNIFORM2IARBPROC)(COIN_GLhandle, const GLint, GLint);
-typedef void (APIENTRY * COIN_PFNGLUNIFORM3IARBPROC)(COIN_GLhandle, const GLint, GLint, GLint);
-typedef void (APIENTRY * COIN_PFNGLUNIFORM4IARBPROC)(COIN_GLhandle, const GLint, GLint, GLint, GLint);
-typedef void (APIENTRY * COIN_PFNGLUNIFORM1IVARBPROC)(COIN_GLhandle, GLsizei, const GLint *);
-typedef void (APIENTRY * COIN_PFNGLUNIFORM2IVARBPROC)(COIN_GLhandle, GLsizei, const GLint *);
-typedef void (APIENTRY * COIN_PFNGLUNIFORM3IVARBPROC)(COIN_GLhandle, GLsizei, const GLint *);
-typedef void (APIENTRY * COIN_PFNGLUNIFORM4IVARBPROC)(COIN_GLhandle, GLsizei, const GLint *);
+                                                            OBOL_GLchar * name);
+typedef void (APIENTRY * OBOL_PFNGLUNIFORM1FARBPROC)(GLint location, GLfloat v0);
+typedef void (APIENTRY * OBOL_PFNGLUNIFORM2FARBPROC)(GLint location, GLfloat v0, GLfloat v1);
+typedef void (APIENTRY * OBOL_PFNGLUNIFORM3FARBPROC)(GLint location, GLfloat v0, GLfloat v1, GLfloat v2);
+typedef void (APIENTRY * OBOL_PFNGLUNIFORM4FARBPROC)(GLint location, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3);
+typedef OBOL_GLhandle (APIENTRY * OBOL_PFNGLCREATESHADEROBJECTARBPROC)(GLenum);
+typedef void (APIENTRY * OBOL_PFNGLSHADERSOURCEARBPROC)(OBOL_GLhandle, GLsizei, const OBOL_GLchar **, const GLint *);
+typedef void (APIENTRY * OBOL_PFNGLCOMPILESHADERARBPROC)(OBOL_GLhandle);
+typedef void (APIENTRY * OBOL_PFNGLGETOBJECTPARAMETERIVARBPROC)(OBOL_GLhandle, GLenum, GLint *);
+typedef void (APIENTRY * OBOL_PFNGLDELETEOBJECTARBPROC)(OBOL_GLhandle);
+typedef void (APIENTRY * OBOL_PFNGLATTACHOBJECTARBPROC)(OBOL_GLhandle, OBOL_GLhandle);
+typedef void (APIENTRY * OBOL_PFNGLDETACHOBJECTARBPROC)(OBOL_GLhandle, OBOL_GLhandle);
+typedef void (APIENTRY * OBOL_PFNGLGETINFOLOGARBPROC)(OBOL_GLhandle, GLsizei, GLsizei *, OBOL_GLchar *);
+typedef void (APIENTRY * OBOL_PFNGLLINKPROGRAMARBPROC)(OBOL_GLhandle);
+typedef void (APIENTRY * OBOL_PFNGLUSEPROGRAMOBJECTARBPROC)(OBOL_GLhandle);
+typedef OBOL_GLhandle (APIENTRY * OBOL_PFNGLCREATEPROGRAMOBJECTARBPROC)(void);
+typedef void (APIENTRY * OBOL_PFNGLUNIFORM1FVARBPROC)(OBOL_GLhandle, GLsizei, const GLfloat *);
+typedef void (APIENTRY * OBOL_PFNGLUNIFORM2FVARBPROC)(OBOL_GLhandle, GLsizei, const GLfloat *);
+typedef void (APIENTRY * OBOL_PFNGLUNIFORM3FVARBPROC)(OBOL_GLhandle, GLsizei, const GLfloat *);
+typedef void (APIENTRY * OBOL_PFNGLUNIFORM4FVARBPROC)(OBOL_GLhandle, GLsizei, const GLfloat *);
+typedef void (APIENTRY * OBOL_PFNGLUNIFORM1IARBPROC)(OBOL_GLhandle, const GLint);
+typedef void (APIENTRY * OBOL_PFNGLUNIFORM2IARBPROC)(OBOL_GLhandle, const GLint, GLint);
+typedef void (APIENTRY * OBOL_PFNGLUNIFORM3IARBPROC)(OBOL_GLhandle, const GLint, GLint, GLint);
+typedef void (APIENTRY * OBOL_PFNGLUNIFORM4IARBPROC)(OBOL_GLhandle, const GLint, GLint, GLint, GLint);
+typedef void (APIENTRY * OBOL_PFNGLUNIFORM1IVARBPROC)(OBOL_GLhandle, GLsizei, const GLint *);
+typedef void (APIENTRY * OBOL_PFNGLUNIFORM2IVARBPROC)(OBOL_GLhandle, GLsizei, const GLint *);
+typedef void (APIENTRY * OBOL_PFNGLUNIFORM3IVARBPROC)(OBOL_GLhandle, GLsizei, const GLint *);
+typedef void (APIENTRY * OBOL_PFNGLUNIFORM4IVARBPROC)(OBOL_GLhandle, GLsizei, const GLint *);
 
-typedef void (APIENTRY * COIN_PFNGLUNIFORMMATRIX2FVARBPROC)(COIN_GLhandle, GLsizei, GLboolean, const GLfloat *);
-typedef void (APIENTRY * COIN_PFNGLUNIFORMMATRIX3FVARBPROC)(COIN_GLhandle, GLsizei, GLboolean, const GLfloat *);
-typedef void (APIENTRY * COIN_PFNGLUNIFORMMATRIX4FVARBPROC)(COIN_GLhandle, GLsizei, GLboolean, const GLfloat *);
+typedef void (APIENTRY * OBOL_PFNGLUNIFORMMATRIX2FVARBPROC)(OBOL_GLhandle, GLsizei, GLboolean, const GLfloat *);
+typedef void (APIENTRY * OBOL_PFNGLUNIFORMMATRIX3FVARBPROC)(OBOL_GLhandle, GLsizei, GLboolean, const GLfloat *);
+typedef void (APIENTRY * OBOL_PFNGLUNIFORMMATRIX4FVARBPROC)(OBOL_GLhandle, GLsizei, GLboolean, const GLfloat *);
 
 
 /* Typedefs for occlusion queries -- GL_ARB_occlusion_query */
 
-typedef void (APIENTRY * COIN_PFNGLGENQUERIESPROC)(GLsizei n, GLuint * ids);
-typedef void (APIENTRY * COIN_PFNGLDELETEQUERIESPROC)(GLsizei n, const GLuint *ids);
-typedef GLboolean (APIENTRY * COIN_PFNGLISQUERYPROC)(GLuint id);
-typedef void (APIENTRY * COIN_PFNGLBEGINQUERYPROC)(GLenum target, GLuint id);
-typedef void (APIENTRY * COIN_PFNGLENDQUERYPROC)(GLenum target);
-typedef void (APIENTRY * COIN_PFNGLGETQUERYIVPROC)(GLenum target, GLenum pname, GLint * params);
-typedef void (APIENTRY * COIN_PFNGLGETQUERYOBJECTIVPROC)(GLuint id, GLenum pname, GLint * params);
-typedef void (APIENTRY * COIN_PFNGLGETQUERYOBJECTUIVPROC)(GLuint id, GLenum pname, GLuint * params);
+typedef void (APIENTRY * OBOL_PFNGLGENQUERIESPROC)(GLsizei n, GLuint * ids);
+typedef void (APIENTRY * OBOL_PFNGLDELETEQUERIESPROC)(GLsizei n, const GLuint *ids);
+typedef GLboolean (APIENTRY * OBOL_PFNGLISQUERYPROC)(GLuint id);
+typedef void (APIENTRY * OBOL_PFNGLBEGINQUERYPROC)(GLenum target, GLuint id);
+typedef void (APIENTRY * OBOL_PFNGLENDQUERYPROC)(GLenum target);
+typedef void (APIENTRY * OBOL_PFNGLGETQUERYIVPROC)(GLenum target, GLenum pname, GLint * params);
+typedef void (APIENTRY * OBOL_PFNGLGETQUERYOBJECTIVPROC)(GLuint id, GLenum pname, GLint * params);
+typedef void (APIENTRY * OBOL_PFNGLGETQUERYOBJECTUIVPROC)(GLuint id, GLenum pname, GLuint * params);
 
 /* Typedefs for Framebuffer objects */
 
-typedef void (APIENTRY * COIN_PFNGLISRENDERBUFFERPROC)(GLuint renderbuffer);
-typedef void (APIENTRY * COIN_PFNGLBINDRENDERBUFFERPROC)(GLenum target, GLuint renderbuffer);
-typedef void (APIENTRY * COIN_PFNGLDELETERENDERBUFFERSPROC)(GLsizei n, const GLuint *renderbuffers);
-typedef void (APIENTRY * COIN_PFNGLGENRENDERBUFFERSPROC)(GLsizei n, GLuint *renderbuffers);
-typedef void (APIENTRY * COIN_PFNGLRENDERBUFFERSTORAGEPROC)(GLenum target, GLenum internalformat, GLsizei width, GLsizei height);
-typedef void (APIENTRY * COIN_PFNGLGETRENDERBUFFERPARAMETERIVPROC)(GLenum target, GLenum pname, GLint *params);
-typedef GLboolean (APIENTRY * COIN_PFNGLISFRAMEBUFFERPROC)(GLuint framebuffer);
-typedef void (APIENTRY * COIN_PFNGLBINDFRAMEBUFFERPROC)(GLenum target, GLuint framebuffer);
-typedef void (APIENTRY * COIN_PFNGLDELETEFRAMEBUFFERSPROC)(GLsizei n, const GLuint *framebuffers);
-typedef void (APIENTRY * COIN_PFNGLGENFRAMEBUFFERSPROC)(GLsizei n, GLuint *framebuffers);
-typedef GLenum (APIENTRY * COIN_PFNGLCHECKFRAMEBUFFERSTATUSPROC)(GLenum target);
-typedef void (APIENTRY * COIN_PFNGLFRAMEBUFFERTEXTURE1DPROC)(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
-typedef void (APIENTRY * COIN_PFNGLFRAMEBUFFERTEXTURE2DPROC)(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
-typedef void (APIENTRY * COIN_PFNGLFRAMEBUFFERTEXTURE3DPROC)(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level, GLint zoffset);
-typedef void (APIENTRY * COIN_PFNGLFRAMEBUFFERRENDERBUFFERPROC)(GLenum target, GLenum attachment, GLenum renderbuffertarget, GLuint renderbuffer);
-typedef void (APIENTRY * COIN_PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC)(GLenum target, GLenum attachment, GLenum pname, GLint *params);
-typedef void (APIENTRY * COIN_PFNGLGENERATEMIPMAPPROC)(GLenum target);
+typedef void (APIENTRY * OBOL_PFNGLISRENDERBUFFERPROC)(GLuint renderbuffer);
+typedef void (APIENTRY * OBOL_PFNGLBINDRENDERBUFFERPROC)(GLenum target, GLuint renderbuffer);
+typedef void (APIENTRY * OBOL_PFNGLDELETERENDERBUFFERSPROC)(GLsizei n, const GLuint *renderbuffers);
+typedef void (APIENTRY * OBOL_PFNGLGENRENDERBUFFERSPROC)(GLsizei n, GLuint *renderbuffers);
+typedef void (APIENTRY * OBOL_PFNGLRENDERBUFFERSTORAGEPROC)(GLenum target, GLenum internalformat, GLsizei width, GLsizei height);
+typedef void (APIENTRY * OBOL_PFNGLGETRENDERBUFFERPARAMETERIVPROC)(GLenum target, GLenum pname, GLint *params);
+typedef GLboolean (APIENTRY * OBOL_PFNGLISFRAMEBUFFERPROC)(GLuint framebuffer);
+typedef void (APIENTRY * OBOL_PFNGLBINDFRAMEBUFFERPROC)(GLenum target, GLuint framebuffer);
+typedef void (APIENTRY * OBOL_PFNGLDELETEFRAMEBUFFERSPROC)(GLsizei n, const GLuint *framebuffers);
+typedef void (APIENTRY * OBOL_PFNGLGENFRAMEBUFFERSPROC)(GLsizei n, GLuint *framebuffers);
+typedef GLenum (APIENTRY * OBOL_PFNGLCHECKFRAMEBUFFERSTATUSPROC)(GLenum target);
+typedef void (APIENTRY * OBOL_PFNGLFRAMEBUFFERTEXTURE1DPROC)(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
+typedef void (APIENTRY * OBOL_PFNGLFRAMEBUFFERTEXTURE2DPROC)(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
+typedef void (APIENTRY * OBOL_PFNGLFRAMEBUFFERTEXTURE3DPROC)(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level, GLint zoffset);
+typedef void (APIENTRY * OBOL_PFNGLFRAMEBUFFERRENDERBUFFERPROC)(GLenum target, GLenum attachment, GLenum renderbuffertarget, GLuint renderbuffer);
+typedef void (APIENTRY * OBOL_PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC)(GLenum target, GLenum attachment, GLenum pname, GLint *params);
+typedef void (APIENTRY * OBOL_PFNGLGENERATEMIPMAPPROC)(GLenum target);
 
 /* Typedef for new extension string method */
 
-typedef GLubyte* (APIENTRY * COIN_PFNGLGETSTRINGIPROC) (GLenum target, GLuint idx);
+typedef GLubyte* (APIENTRY * OBOL_PFNGLGETSTRINGIPROC) (GLenum target, GLuint idx);
 
 
 /* ********************************************************************** */
@@ -596,242 +596,240 @@ struct SoGLContext {
 
   /* OpenGL calls. Will be NULL if not available, otherwise they
      contain a valid function pointer into the OpenGL library. */
-  COIN_PFNGLPOLYGONOFFSETPROC glPolygonOffset;
-  COIN_PFNGLPOLYGONOFFSETPROC glPolygonOffsetEXT;
+  OBOL_PFNGLPOLYGONOFFSETPROC glPolygonOffset;
+  OBOL_PFNGLPOLYGONOFFSETPROC glPolygonOffsetEXT;
 
-  COIN_PFNGLGENTEXTURESPROC glGenTextures;
-  COIN_PFNGLBINDTEXTUREPROC glBindTexture;
-  COIN_PFNGLDELETETEXTURESPROC glDeleteTextures;
+  OBOL_PFNGLGENTEXTURESPROC glGenTextures;
+  OBOL_PFNGLBINDTEXTUREPROC glBindTexture;
+  OBOL_PFNGLDELETETEXTURESPROC glDeleteTextures;
 
-  COIN_PFNGLTEXIMAGE3DPROC glTexImage3D;
-  COIN_PFNGLCOPYTEXSUBIMAGE3DPROC glCopyTexSubImage3D;
-  COIN_PFNGLTEXSUBIMAGE3DPROC glTexSubImage3D;
-  COIN_PFNGLTEXSUBIMAGE2DPROC glTexSubImage2D;
+  OBOL_PFNGLTEXIMAGE3DPROC glTexImage3D;
+  OBOL_PFNGLCOPYTEXSUBIMAGE3DPROC glCopyTexSubImage3D;
+  OBOL_PFNGLTEXSUBIMAGE3DPROC glTexSubImage3D;
+  OBOL_PFNGLTEXSUBIMAGE2DPROC glTexSubImage2D;
 
-  COIN_PFNGLACTIVETEXTUREPROC glActiveTexture;
-  COIN_PFNGLCLIENTACTIVETEXTUREPROC glClientActiveTexture;
-  COIN_PFNGLMULTITEXCOORD2FPROC glMultiTexCoord2f;
-  COIN_PFNGLMULTITEXCOORD2FVPROC glMultiTexCoord2fv;
-  COIN_PFNGLMULTITEXCOORD3FVPROC glMultiTexCoord3fv;
-  COIN_PFNGLMULTITEXCOORD4FVPROC glMultiTexCoord4fv;
+  OBOL_PFNGLACTIVETEXTUREPROC glActiveTexture;
+  OBOL_PFNGLCLIENTACTIVETEXTUREPROC glClientActiveTexture;
+  OBOL_PFNGLMULTITEXCOORD2FPROC glMultiTexCoord2f;
+  OBOL_PFNGLMULTITEXCOORD2FVPROC glMultiTexCoord2fv;
+  OBOL_PFNGLMULTITEXCOORD3FVPROC glMultiTexCoord3fv;
+  OBOL_PFNGLMULTITEXCOORD4FVPROC glMultiTexCoord4fv;
 
-  COIN_PFNGLCOLORTABLEPROC glColorTable;
-  COIN_PFNGLCOLORSUBTABLEPROC glColorSubTable;
-  COIN_PFNGLGETCOLORTABLEPROC glGetColorTable;
-  COIN_PFNGLGETCOLORTABLEPARAMETERIVPROC glGetColorTableParameteriv;
-  COIN_PFNGLGETCOLORTABLEPARAMETERFVPROC glGetColorTableParameterfv;
+  OBOL_PFNGLCOLORTABLEPROC glColorTable;
+  OBOL_PFNGLCOLORSUBTABLEPROC glColorSubTable;
+  OBOL_PFNGLGETCOLORTABLEPROC glGetColorTable;
+  OBOL_PFNGLGETCOLORTABLEPARAMETERIVPROC glGetColorTableParameteriv;
+  OBOL_PFNGLGETCOLORTABLEPARAMETERFVPROC glGetColorTableParameterfv;
 
   SbBool supportsPalettedTextures;
 
-  COIN_PFNGLCOMPRESSEDTEXIMAGE3DPROC glCompressedTexImage3D;
-  COIN_PFNGLCOMPRESSEDTEXIMAGE2DPROC glCompressedTexImage2D;
-  COIN_PFNGLCOMPRESSEDTEXIMAGE1DPROC glCompressedTexImage1D;
-  COIN_PFNGLCOMPRESSEDTEXSUBIMAGE3DPROC glCompressedTexSubImage3D;
-  COIN_PFNGLCOMPRESSEDTEXSUBIMAGE2DPROC glCompressedTexSubImage2D;
-  COIN_PFNGLCOMPRESSEDTEXSUBIMAGE1DPROC glCompressedTexSubImage1D;
-  COIN_PFNGLGETCOMPRESSEDTEXIMAGEPROC glGetCompressedTexImage;
+  OBOL_PFNGLCOMPRESSEDTEXIMAGE3DPROC glCompressedTexImage3D;
+  OBOL_PFNGLCOMPRESSEDTEXIMAGE2DPROC glCompressedTexImage2D;
+  OBOL_PFNGLCOMPRESSEDTEXIMAGE1DPROC glCompressedTexImage1D;
+  OBOL_PFNGLCOMPRESSEDTEXSUBIMAGE3DPROC glCompressedTexSubImage3D;
+  OBOL_PFNGLCOMPRESSEDTEXSUBIMAGE2DPROC glCompressedTexSubImage2D;
+  OBOL_PFNGLCOMPRESSEDTEXSUBIMAGE1DPROC glCompressedTexSubImage1D;
+  OBOL_PFNGLGETCOMPRESSEDTEXIMAGEPROC glGetCompressedTexImage;
 
-  COIN_PFNGLBLENDEQUATIONPROC glBlendEquation;
-  COIN_PFNGLBLENDEQUATIONPROC glBlendEquationEXT;
+  OBOL_PFNGLBLENDEQUATIONPROC glBlendEquation;
+  OBOL_PFNGLBLENDEQUATIONPROC glBlendEquationEXT;
 
-  COIN_PFNGLBLENDFUNCSEPARATEPROC glBlendFuncSeparate;
+  OBOL_PFNGLBLENDFUNCSEPARATEPROC glBlendFuncSeparate;
 
-  COIN_PFNGLVERTEXPOINTERPROC glVertexPointer;
-  COIN_PFNGLTEXCOORDPOINTERPROC glTexCoordPointer;
-  COIN_PFNGLNORMALPOINTERPROC glNormalPointer;
-  COIN_PNFGLCOLORPOINTERPROC glColorPointer;
-  COIN_PFNGLINDEXPOINTERPROC glIndexPointer;
-  COIN_PFNGLENABLECLIENTSTATEPROC glEnableClientState;
-  COIN_PFNGLDISABLECLIENTSTATEPROC glDisableClientState;
-  COIN_PFNGLINTERLEAVEDARRAYSPROC glInterleavedArrays;
-  COIN_PFNGLDRAWARRAYSPROC glDrawArrays;
-  COIN_PFNGLDRAWELEMENTSPROC glDrawElements;
-  COIN_PFNGLDRAWRANGEELEMENTSPROC glDrawRangeElements;
-  COIN_PFNGLARRAYELEMENTPROC glArrayElement;
+  OBOL_PFNGLVERTEXPOINTERPROC glVertexPointer;
+  OBOL_PFNGLTEXCOORDPOINTERPROC glTexCoordPointer;
+  OBOL_PFNGLNORMALPOINTERPROC glNormalPointer;
+  OBOL_PNFGLCOLORPOINTERPROC glColorPointer;
+  OBOL_PFNGLINDEXPOINTERPROC glIndexPointer;
+  OBOL_PFNGLENABLECLIENTSTATEPROC glEnableClientState;
+  OBOL_PFNGLDISABLECLIENTSTATEPROC glDisableClientState;
+  OBOL_PFNGLINTERLEAVEDARRAYSPROC glInterleavedArrays;
+  OBOL_PFNGLDRAWARRAYSPROC glDrawArrays;
+  OBOL_PFNGLDRAWELEMENTSPROC glDrawElements;
+  OBOL_PFNGLDRAWRANGEELEMENTSPROC glDrawRangeElements;
+  OBOL_PFNGLARRAYELEMENTPROC glArrayElement;
 
-  COIN_PFNGLMULTIDRAWARRAYSPROC glMultiDrawArrays;
-  COIN_PFNGLMULTIDRAWELEMENTSPROC glMultiDrawElements;
+  OBOL_PFNGLMULTIDRAWARRAYSPROC glMultiDrawArrays;
+  OBOL_PFNGLMULTIDRAWELEMENTSPROC glMultiDrawElements;
 
-  COIN_PFNGLVERTEXARRAYRANGENVPROC glVertexArrayRangeNV;
-  COIN_PFNGLFLUSHVERTEXARRAYRANGENVPROC glFlushVertexArrayRangeNV;
-  COIN_PFNGLALLOCATEMEMORYNVPROC glAllocateMemoryNV;
-  COIN_PFNGLFREEMEMORYNVPROC glFreeMemoryNV;
+  OBOL_PFNGLVERTEXARRAYRANGENVPROC glVertexArrayRangeNV;
+  OBOL_PFNGLFLUSHVERTEXARRAYRANGENVPROC glFlushVertexArrayRangeNV;
+  OBOL_PFNGLALLOCATEMEMORYNVPROC glAllocateMemoryNV;
+  OBOL_PFNGLFREEMEMORYNVPROC glFreeMemoryNV;
 
-  COIN_PFNGLBINDBUFFERPROC glBindBuffer;
-  COIN_PFNGLDELETEBUFFERSPROC glDeleteBuffers;
-  COIN_PFNGLGENBUFFERSPROC glGenBuffers;
-  COIN_PFNGLISBUFFERPROC glIsBuffer;
-  COIN_PFNGLBUFFERDATAPROC glBufferData;
-  COIN_PFNGLBUFFERSUBDATAPROC glBufferSubData;
-  COIN_PFNGLGETBUFFERSUBDATAPROC glGetBufferSubData;
-  COIN_PNFGLMAPBUFFERPROC glMapBuffer;
-  COIN_PFNGLUNMAPBUFFERPROC glUnmapBuffer;
-  COIN_PFNGLGETBUFFERPARAMETERIVPROC glGetBufferParameteriv;
-  COIN_PFNGLGETBUFFERPOINTERVPROC glGetBufferPointerv;
+  OBOL_PFNGLBINDBUFFERPROC glBindBuffer;
+  OBOL_PFNGLDELETEBUFFERSPROC glDeleteBuffers;
+  OBOL_PFNGLGENBUFFERSPROC glGenBuffers;
+  OBOL_PFNGLISBUFFERPROC glIsBuffer;
+  OBOL_PFNGLBUFFERDATAPROC glBufferData;
+  OBOL_PFNGLBUFFERSUBDATAPROC glBufferSubData;
+  OBOL_PFNGLGETBUFFERSUBDATAPROC glGetBufferSubData;
+  OBOL_PNFGLMAPBUFFERPROC glMapBuffer;
+  OBOL_PFNGLUNMAPBUFFERPROC glUnmapBuffer;
+  OBOL_PFNGLGETBUFFERPARAMETERIVPROC glGetBufferParameteriv;
+  OBOL_PFNGLGETBUFFERPOINTERVPROC glGetBufferPointerv;
 
   /* NV register combiners */
-  COIN_PFNGLCOMBINERPARAMETERFVNVPROC glCombinerParameterfvNV;
-  COIN_PFNGLCOMBINERPARAMETERIVNVPROC glCombinerParameterivNV;
-  COIN_PFNGLCOMBINERPARAMETERFNVPROC glCombinerParameterfNV;
-  COIN_PFNGLCOMBINERPARAMETERINVPROC glCombinerParameteriNV;
-  COIN_PFNGLCOMBINERINPUTNVPROC glCombinerInputNV;
-  COIN_PFNGLCOMBINEROUTPUTNVPROC glCombinerOutputNV;
-  COIN_PFNGLFINALCOMBINERINPUTNVPROC glFinalCombinerInputNV;
-  COIN_PFNGLGETCOMBINERINPUTPARAMETERFVNVPROC glGetCombinerInputParameterfvNV;
-  COIN_PFNGLGETCOMBINERINPUTPARAMETERIVNVPROC glGetCombinerInputParameterivNV;
-  COIN_PFNGLGETCOMBINEROUTPUTPARAMETERFVNVPROC glGetCombinerOutputParameterfvNV;
-  COIN_PFNGLGETCOMBINEROUTPUTPARAMETERIVNVPROC glGetCombinerOutputParameterivNV;
-  COIN_PFNGLGETFINALCOMBINERINPUTPARAMETERFVNVPROC glGetFinalCombinerInputParameterfvNV;
-  COIN_PFNGLGETFINALCOMBINERINPUTPARAMETERIVNVPROC glGetFinalCombinerInputParameterivNV;
+  OBOL_PFNGLCOMBINERPARAMETERFVNVPROC glCombinerParameterfvNV;
+  OBOL_PFNGLCOMBINERPARAMETERIVNVPROC glCombinerParameterivNV;
+  OBOL_PFNGLCOMBINERPARAMETERFNVPROC glCombinerParameterfNV;
+  OBOL_PFNGLCOMBINERPARAMETERINVPROC glCombinerParameteriNV;
+  OBOL_PFNGLCOMBINERINPUTNVPROC glCombinerInputNV;
+  OBOL_PFNGLCOMBINEROUTPUTNVPROC glCombinerOutputNV;
+  OBOL_PFNGLFINALCOMBINERINPUTNVPROC glFinalCombinerInputNV;
+  OBOL_PFNGLGETCOMBINERINPUTPARAMETERFVNVPROC glGetCombinerInputParameterfvNV;
+  OBOL_PFNGLGETCOMBINERINPUTPARAMETERIVNVPROC glGetCombinerInputParameterivNV;
+  OBOL_PFNGLGETCOMBINEROUTPUTPARAMETERFVNVPROC glGetCombinerOutputParameterfvNV;
+  OBOL_PFNGLGETCOMBINEROUTPUTPARAMETERIVNVPROC glGetCombinerOutputParameterivNV;
+  OBOL_PFNGLGETFINALCOMBINERINPUTPARAMETERFVNVPROC glGetFinalCombinerInputParameterfvNV;
+  OBOL_PFNGLGETFINALCOMBINERINPUTPARAMETERIVNVPROC glGetFinalCombinerInputParameterivNV;
 
   /* fragment program */
-  COIN_PFNGLPROGRAMSTRINGARBPROC glProgramStringARB;
-  COIN_PFNGLBINDPROGRAMARBPROC glBindProgramARB;
-  COIN_PFNGLDELETEPROGRAMSARBPROC glDeleteProgramsARB;
-  COIN_PFNGLGENPROGRAMSARBPROC glGenProgramsARB;
-  COIN_PFNGLPROGRAMENVPARAMETER4DARBPROC glProgramEnvParameter4dARB;
-  COIN_PFNGLPROGRAMENVPARAMETER4DVARBPROC glProgramEnvParameter4dvARB;
-  COIN_PFNGLPROGRAMENVPARAMETER4FARBPROC glProgramEnvParameter4fARB;
-  COIN_PFNGLPROGRAMENVPARAMETER4FVARBPROC glProgramEnvParameter4fvARB;
-  COIN_PFNGLPROGRAMLOCALPARAMETER4DARBPROC glProgramLocalParameter4dARB;
-  COIN_PFNGLPROGRAMLOCALPARAMETER4DVARBPROC glProgramLocalParameter4dvARB;
-  COIN_PFNGLPROGRAMLOCALPARAMETER4FARBPROC glProgramLocalParameter4fARB;
-  COIN_PFNGLPROGRAMLOCALPARAMETER4FVARBPROC glProgramLocalParameter4fvARB;
-  COIN_PFNGLGETPROGRAMENVPARAMETERDVARBPROC glGetProgramEnvParameterdvARB;
-  COIN_PFNGLGETPROGRAMENVPARAMETERFVARBPROC glGetProgramEnvParameterfvARB;
-  COIN_PFNGLGETPROGRAMLOCALPARAMETERDVARBPROC glGetProgramLocalParameterdvARB;
-  COIN_PFNGLGETPROGRAMLOCALPARAMETERFVARBPROC glGetProgramLocalParameterfvARB;
-  COIN_PFNGLGETPROGRAMIVARBPROC glGetProgramivARB;
-  COIN_PFNGLGETPROGRAMSTRINGARBPROC glGetProgramStringARB;
-  COIN_PFNGLISPROGRAMARBPROC glIsProgramARB;
+  OBOL_PFNGLPROGRAMSTRINGARBPROC glProgramStringARB;
+  OBOL_PFNGLBINDPROGRAMARBPROC glBindProgramARB;
+  OBOL_PFNGLDELETEPROGRAMSARBPROC glDeleteProgramsARB;
+  OBOL_PFNGLGENPROGRAMSARBPROC glGenProgramsARB;
+  OBOL_PFNGLPROGRAMENVPARAMETER4DARBPROC glProgramEnvParameter4dARB;
+  OBOL_PFNGLPROGRAMENVPARAMETER4DVARBPROC glProgramEnvParameter4dvARB;
+  OBOL_PFNGLPROGRAMENVPARAMETER4FARBPROC glProgramEnvParameter4fARB;
+  OBOL_PFNGLPROGRAMENVPARAMETER4FVARBPROC glProgramEnvParameter4fvARB;
+  OBOL_PFNGLPROGRAMLOCALPARAMETER4DARBPROC glProgramLocalParameter4dARB;
+  OBOL_PFNGLPROGRAMLOCALPARAMETER4DVARBPROC glProgramLocalParameter4dvARB;
+  OBOL_PFNGLPROGRAMLOCALPARAMETER4FARBPROC glProgramLocalParameter4fARB;
+  OBOL_PFNGLPROGRAMLOCALPARAMETER4FVARBPROC glProgramLocalParameter4fvARB;
+  OBOL_PFNGLGETPROGRAMENVPARAMETERDVARBPROC glGetProgramEnvParameterdvARB;
+  OBOL_PFNGLGETPROGRAMENVPARAMETERFVARBPROC glGetProgramEnvParameterfvARB;
+  OBOL_PFNGLGETPROGRAMLOCALPARAMETERDVARBPROC glGetProgramLocalParameterdvARB;
+  OBOL_PFNGLGETPROGRAMLOCALPARAMETERFVARBPROC glGetProgramLocalParameterfvARB;
+  OBOL_PFNGLGETPROGRAMIVARBPROC glGetProgramivARB;
+  OBOL_PFNGLGETPROGRAMSTRINGARBPROC glGetProgramStringARB;
+  OBOL_PFNGLISPROGRAMARBPROC glIsProgramARB;
 
   /* vertex program */
-  COIN_PFNGLVERTEXATTRIB1SARBPROC glVertexAttrib1sARB;
-  COIN_PFNGLVERTEXATTRIB1FARBPROC glVertexAttrib1fARB;
-  COIN_PFNGLVERTEXATTRIB1DARBPROC glVertexAttrib1dARB;
-  COIN_PFNGLVERTEXATTRIB2SARBPROC glVertexAttrib2sARB;
-  COIN_PFNGLVERTEXATTRIB2FARBPROC glVertexAttrib2fARB;
-  COIN_PFNGLVERTEXATTRIB2DARBPROC glVertexAttrib2dARB;
-  COIN_PFNGLVERTEXATTRIB3SARBPROC glVertexAttrib3sARB;
-  COIN_PFNGLVERTEXATTRIB3FARBPROC glVertexAttrib3fARB;
-  COIN_PFNGLVERTEXATTRIB3DARBPROC glVertexAttrib3dARB;
-  COIN_PFNGLVERTEXATTRIB4SARBPROC glVertexAttrib4sARB;
-  COIN_PFNGLVERTEXATTRIB4FARBPROC glVertexAttrib4fARB;
-  COIN_PFNGLVERTEXATTRIB4DARBPROC glVertexAttrib4dARB;
-  COIN_PFNGLVERTEXATTRIB4NUBARBPROC glVertexAttrib4NubARB;
-  COIN_PFNGLVERTEXATTRIB1SVARBPROC glVertexAttrib1svARB;
-  COIN_PFNGLVERTEXATTRIB1FVARBPROC glVertexAttrib1fvARB;
-  COIN_PFNGLVERTEXATTRIB1DVARBPROC glVertexAttrib1dvARB;
-  COIN_PFNGLVERTEXATTRIB2SVARBPROC glVertexAttrib2svARB;
-  COIN_PFNGLVERTEXATTRIB2FVARBPROC glVertexAttrib2fvARB;
-  COIN_PFNGLVERTEXATTRIB2DVARBPROC glVertexAttrib2dvARB;
-  COIN_PFNGLVERTEXATTRIB3SVARBPROC glVertexAttrib3svARB;
-  COIN_PFNGLVERTEXATTRIB3FVARBPROC glVertexAttrib3fvARB;
-  COIN_PFNGLVERTEXATTRIB3DVARBPROC glVertexAttrib3dvARB;
-  COIN_PFNGLVERTEXATTRIB4BVARBPROC glVertexAttrib4bvARB;
-  COIN_PFNGLVERTEXATTRIB4SVARBPROC glVertexAttrib4svARB;
-  COIN_PFNGLVERTEXATTRIB4IVARBPROC glVertexAttrib4ivARB;
-  COIN_PFNGLVERTEXATTRIB4UBVARBPROC glVertexAttrib4ubvARB;
-  COIN_PFNGLVERTEXATTRIB4USVARBPROC glVertexAttrib4usvARB;
-  COIN_PFNGLVERTEXATTRIB4UIVARBPROC glVertexAttrib4uivARB;
-  COIN_PFNGLVERTEXATTRIB4FVARBPROC glVertexAttrib4fvARB;
-  COIN_PFNGLVERTEXATTRIB4DVARBPROC glVertexAttrib4dvARB;
-  COIN_PFNGLVERTEXATTRIB4NBVARBPROC glVertexAttrib4NbvARB;
-  COIN_PFNGLVERTEXATTRIB4NSVARBPROC glVertexAttrib4NsvARB;
-  COIN_PFNGLVERTEXATTRIB4NIVARBPROC glVertexAttrib4NivARB;
-  COIN_PFNGLVERTEXATTRIB4NUBVARBPROC glVertexAttrib4NubvARB;
-  COIN_PFNGLVERTEXATTRIB4NUSVARBPROC glVertexAttrib4NusvARB;
-  COIN_PFNGLVERTEXATTRIB4NUIVARBPROC glVertexAttrib4NuivARB;
-  COIN_PFNGLVERTEXATTRIBPOINTERARBPROC glVertexAttribPointerARB;
-  COIN_PFNGLENABLEVERTEXATTRIBARRAYARBPROC glEnableVertexAttribArrayARB;
-  COIN_PFNGLDISABLEVERTEXATTRIBARRAYARBPROC glDisableVertexAttribArrayARB;
-  COIN_PFNGLGETVERTEXATTRIBDVARBPROC glGetVertexAttribdvARB;
-  COIN_PFNGLGETVERTEXATTRIBFVARBPROC glGetVertexAttribfvARB;
-  COIN_PFNGLGETVERTEXATTRIBIVARBPROC glGetVertexAttribivARB;
-  COIN_PFNGLGETVERTEXATTRIBPOINTERVARBPROC glGetVertexAttribPointervARB;
+  OBOL_PFNGLVERTEXATTRIB1SARBPROC glVertexAttrib1sARB;
+  OBOL_PFNGLVERTEXATTRIB1FARBPROC glVertexAttrib1fARB;
+  OBOL_PFNGLVERTEXATTRIB1DARBPROC glVertexAttrib1dARB;
+  OBOL_PFNGLVERTEXATTRIB2SARBPROC glVertexAttrib2sARB;
+  OBOL_PFNGLVERTEXATTRIB2FARBPROC glVertexAttrib2fARB;
+  OBOL_PFNGLVERTEXATTRIB2DARBPROC glVertexAttrib2dARB;
+  OBOL_PFNGLVERTEXATTRIB3SARBPROC glVertexAttrib3sARB;
+  OBOL_PFNGLVERTEXATTRIB3FARBPROC glVertexAttrib3fARB;
+  OBOL_PFNGLVERTEXATTRIB3DARBPROC glVertexAttrib3dARB;
+  OBOL_PFNGLVERTEXATTRIB4SARBPROC glVertexAttrib4sARB;
+  OBOL_PFNGLVERTEXATTRIB4FARBPROC glVertexAttrib4fARB;
+  OBOL_PFNGLVERTEXATTRIB4DARBPROC glVertexAttrib4dARB;
+  OBOL_PFNGLVERTEXATTRIB4NUBARBPROC glVertexAttrib4NubARB;
+  OBOL_PFNGLVERTEXATTRIB1SVARBPROC glVertexAttrib1svARB;
+  OBOL_PFNGLVERTEXATTRIB1FVARBPROC glVertexAttrib1fvARB;
+  OBOL_PFNGLVERTEXATTRIB1DVARBPROC glVertexAttrib1dvARB;
+  OBOL_PFNGLVERTEXATTRIB2SVARBPROC glVertexAttrib2svARB;
+  OBOL_PFNGLVERTEXATTRIB2FVARBPROC glVertexAttrib2fvARB;
+  OBOL_PFNGLVERTEXATTRIB2DVARBPROC glVertexAttrib2dvARB;
+  OBOL_PFNGLVERTEXATTRIB3SVARBPROC glVertexAttrib3svARB;
+  OBOL_PFNGLVERTEXATTRIB3FVARBPROC glVertexAttrib3fvARB;
+  OBOL_PFNGLVERTEXATTRIB3DVARBPROC glVertexAttrib3dvARB;
+  OBOL_PFNGLVERTEXATTRIB4BVARBPROC glVertexAttrib4bvARB;
+  OBOL_PFNGLVERTEXATTRIB4SVARBPROC glVertexAttrib4svARB;
+  OBOL_PFNGLVERTEXATTRIB4IVARBPROC glVertexAttrib4ivARB;
+  OBOL_PFNGLVERTEXATTRIB4UBVARBPROC glVertexAttrib4ubvARB;
+  OBOL_PFNGLVERTEXATTRIB4USVARBPROC glVertexAttrib4usvARB;
+  OBOL_PFNGLVERTEXATTRIB4UIVARBPROC glVertexAttrib4uivARB;
+  OBOL_PFNGLVERTEXATTRIB4FVARBPROC glVertexAttrib4fvARB;
+  OBOL_PFNGLVERTEXATTRIB4DVARBPROC glVertexAttrib4dvARB;
+  OBOL_PFNGLVERTEXATTRIB4NBVARBPROC glVertexAttrib4NbvARB;
+  OBOL_PFNGLVERTEXATTRIB4NSVARBPROC glVertexAttrib4NsvARB;
+  OBOL_PFNGLVERTEXATTRIB4NIVARBPROC glVertexAttrib4NivARB;
+  OBOL_PFNGLVERTEXATTRIB4NUBVARBPROC glVertexAttrib4NubvARB;
+  OBOL_PFNGLVERTEXATTRIB4NUSVARBPROC glVertexAttrib4NusvARB;
+  OBOL_PFNGLVERTEXATTRIB4NUIVARBPROC glVertexAttrib4NuivARB;
+  OBOL_PFNGLVERTEXATTRIBPOINTERARBPROC glVertexAttribPointerARB;
+  OBOL_PFNGLENABLEVERTEXATTRIBARRAYARBPROC glEnableVertexAttribArrayARB;
+  OBOL_PFNGLDISABLEVERTEXATTRIBARRAYARBPROC glDisableVertexAttribArrayARB;
+  OBOL_PFNGLGETVERTEXATTRIBDVARBPROC glGetVertexAttribdvARB;
+  OBOL_PFNGLGETVERTEXATTRIBFVARBPROC glGetVertexAttribfvARB;
+  OBOL_PFNGLGETVERTEXATTRIBIVARBPROC glGetVertexAttribivARB;
+  OBOL_PFNGLGETVERTEXATTRIBPOINTERVARBPROC glGetVertexAttribPointervARB;
 
   /* vertex shader */
-  COIN_PFNGLBINDATTRIBLOCATIONARBPROC glBindAttribLocationARB;
-  COIN_PFNGLGETACTIVEATTRIBARBPROC glGetActiveAttribARB;
-  COIN_PFNGLGETATTRIBLOCATIONARBPROC glGetAttribLocationARB;
+  OBOL_PFNGLBINDATTRIBLOCATIONARBPROC glBindAttribLocationARB;
+  OBOL_PFNGLGETACTIVEATTRIBARBPROC glGetActiveAttribARB;
+  OBOL_PFNGLGETATTRIBLOCATIONARBPROC glGetAttribLocationARB;
 
   /* shader objects */
-  COIN_PFNGLPROGRAMPARAMETERIEXT glProgramParameteriEXT;
-  COIN_PFNGLGETUNIFORMLOCATIONARBPROC glGetUniformLocationARB;
-  COIN_PFNGLGETACTIVEUNIFORMARBPROC glGetActiveUniformARB;
-  COIN_PFNGLUNIFORM1FARBPROC glUniform1fARB;
-  COIN_PFNGLUNIFORM2FARBPROC glUniform2fARB;
-  COIN_PFNGLUNIFORM3FARBPROC glUniform3fARB;
-  COIN_PFNGLUNIFORM4FARBPROC glUniform4fARB;
-  COIN_PFNGLCREATESHADEROBJECTARBPROC glCreateShaderObjectARB;
-  COIN_PFNGLSHADERSOURCEARBPROC glShaderSourceARB;
-  COIN_PFNGLCOMPILESHADERARBPROC glCompileShaderARB;
-  COIN_PFNGLGETOBJECTPARAMETERIVARBPROC glGetObjectParameterivARB;
-  COIN_PFNGLDELETEOBJECTARBPROC glDeleteObjectARB;
-  COIN_PFNGLATTACHOBJECTARBPROC glAttachObjectARB;
-  COIN_PFNGLDETACHOBJECTARBPROC glDetachObjectARB;
-  COIN_PFNGLGETINFOLOGARBPROC glGetInfoLogARB;
-  COIN_PFNGLLINKPROGRAMARBPROC glLinkProgramARB;
-  COIN_PFNGLUSEPROGRAMOBJECTARBPROC glUseProgramObjectARB;
-  COIN_PFNGLCREATEPROGRAMOBJECTARBPROC glCreateProgramObjectARB;
-  COIN_PFNGLUNIFORM1FVARBPROC glUniform1fvARB;
-  COIN_PFNGLUNIFORM2FVARBPROC glUniform2fvARB;
-  COIN_PFNGLUNIFORM3FVARBPROC glUniform3fvARB;
-  COIN_PFNGLUNIFORM4FVARBPROC glUniform4fvARB;
-  COIN_PFNGLUNIFORM1IARBPROC glUniform1iARB;
-  COIN_PFNGLUNIFORM2IARBPROC glUniform2iARB;
-  COIN_PFNGLUNIFORM3IARBPROC glUniform3iARB;
-  COIN_PFNGLUNIFORM4IARBPROC glUniform4iARB;
-  COIN_PFNGLUNIFORM1IVARBPROC glUniform1ivARB;
-  COIN_PFNGLUNIFORM2IVARBPROC glUniform2ivARB;
-  COIN_PFNGLUNIFORM3IVARBPROC glUniform3ivARB;
-  COIN_PFNGLUNIFORM4IVARBPROC glUniform4ivARB;
-  COIN_PFNGLUNIFORMMATRIX2FVARBPROC glUniformMatrix2fvARB;
-  COIN_PFNGLUNIFORMMATRIX3FVARBPROC glUniformMatrix3fvARB;
-  COIN_PFNGLUNIFORMMATRIX4FVARBPROC glUniformMatrix4fvARB;
+  OBOL_PFNGLPROGRAMPARAMETERIEXT glProgramParameteriEXT;
+  OBOL_PFNGLGETUNIFORMLOCATIONARBPROC glGetUniformLocationARB;
+  OBOL_PFNGLGETACTIVEUNIFORMARBPROC glGetActiveUniformARB;
+  OBOL_PFNGLUNIFORM1FARBPROC glUniform1fARB;
+  OBOL_PFNGLUNIFORM2FARBPROC glUniform2fARB;
+  OBOL_PFNGLUNIFORM3FARBPROC glUniform3fARB;
+  OBOL_PFNGLUNIFORM4FARBPROC glUniform4fARB;
+  OBOL_PFNGLCREATESHADEROBJECTARBPROC glCreateShaderObjectARB;
+  OBOL_PFNGLSHADERSOURCEARBPROC glShaderSourceARB;
+  OBOL_PFNGLCOMPILESHADERARBPROC glCompileShaderARB;
+  OBOL_PFNGLGETOBJECTPARAMETERIVARBPROC glGetObjectParameterivARB;
+  OBOL_PFNGLDELETEOBJECTARBPROC glDeleteObjectARB;
+  OBOL_PFNGLATTACHOBJECTARBPROC glAttachObjectARB;
+  OBOL_PFNGLDETACHOBJECTARBPROC glDetachObjectARB;
+  OBOL_PFNGLGETINFOLOGARBPROC glGetInfoLogARB;
+  OBOL_PFNGLLINKPROGRAMARBPROC glLinkProgramARB;
+  OBOL_PFNGLUSEPROGRAMOBJECTARBPROC glUseProgramObjectARB;
+  OBOL_PFNGLCREATEPROGRAMOBJECTARBPROC glCreateProgramObjectARB;
+  OBOL_PFNGLUNIFORM1FVARBPROC glUniform1fvARB;
+  OBOL_PFNGLUNIFORM2FVARBPROC glUniform2fvARB;
+  OBOL_PFNGLUNIFORM3FVARBPROC glUniform3fvARB;
+  OBOL_PFNGLUNIFORM4FVARBPROC glUniform4fvARB;
+  OBOL_PFNGLUNIFORM1IARBPROC glUniform1iARB;
+  OBOL_PFNGLUNIFORM2IARBPROC glUniform2iARB;
+  OBOL_PFNGLUNIFORM3IARBPROC glUniform3iARB;
+  OBOL_PFNGLUNIFORM4IARBPROC glUniform4iARB;
+  OBOL_PFNGLUNIFORM1IVARBPROC glUniform1ivARB;
+  OBOL_PFNGLUNIFORM2IVARBPROC glUniform2ivARB;
+  OBOL_PFNGLUNIFORM3IVARBPROC glUniform3ivARB;
+  OBOL_PFNGLUNIFORM4IVARBPROC glUniform4ivARB;
+  OBOL_PFNGLUNIFORMMATRIX2FVARBPROC glUniformMatrix2fvARB;
+  OBOL_PFNGLUNIFORMMATRIX3FVARBPROC glUniformMatrix3fvARB;
+  OBOL_PFNGLUNIFORMMATRIX4FVARBPROC glUniformMatrix4fvARB;
 
-  COIN_PFNGLPUSHCLIENTATTRIBPROC glPushClientAttrib;
-  COIN_PFNGLPOPCLIENTATTRIBPROC glPopClientAttrib;
+  OBOL_PFNGLPUSHCLIENTATTRIBPROC glPushClientAttrib;
+  OBOL_PFNGLPOPCLIENTATTRIBPROC glPopClientAttrib;
 
-  COIN_PFNGLGENQUERIESPROC glGenQueries;
-  COIN_PFNGLDELETEQUERIESPROC glDeleteQueries;
-  COIN_PFNGLISQUERYPROC glIsQuery;
-  COIN_PFNGLBEGINQUERYPROC glBeginQuery;
-  COIN_PFNGLENDQUERYPROC glEndQuery;
-  COIN_PFNGLGETQUERYIVPROC glGetQueryiv;
-  COIN_PFNGLGETQUERYOBJECTIVPROC glGetQueryObjectiv;
-  COIN_PFNGLGETQUERYOBJECTUIVPROC glGetQueryObjectuiv;
+  OBOL_PFNGLGENQUERIESPROC glGenQueries;
+  OBOL_PFNGLDELETEQUERIESPROC glDeleteQueries;
+  OBOL_PFNGLISQUERYPROC glIsQuery;
+  OBOL_PFNGLBEGINQUERYPROC glBeginQuery;
+  OBOL_PFNGLENDQUERYPROC glEndQuery;
+  OBOL_PFNGLGETQUERYIVPROC glGetQueryiv;
+  OBOL_PFNGLGETQUERYOBJECTIVPROC glGetQueryObjectiv;
+  OBOL_PFNGLGETQUERYOBJECTUIVPROC glGetQueryObjectuiv;
 
   /* FBO */
-  COIN_PFNGLISRENDERBUFFERPROC glIsRenderbuffer;
-  COIN_PFNGLBINDRENDERBUFFERPROC glBindRenderbuffer;
-  COIN_PFNGLDELETERENDERBUFFERSPROC glDeleteRenderbuffers;
-  COIN_PFNGLGENRENDERBUFFERSPROC glGenRenderbuffers;
-  COIN_PFNGLRENDERBUFFERSTORAGEPROC glRenderbufferStorage;
-  COIN_PFNGLGETRENDERBUFFERPARAMETERIVPROC glGetRenderbufferParameteriv;
-  COIN_PFNGLISFRAMEBUFFERPROC glIsFramebuffer;
-  COIN_PFNGLBINDFRAMEBUFFERPROC glBindFramebuffer;
-  COIN_PFNGLDELETEFRAMEBUFFERSPROC glDeleteFramebuffers;
-  COIN_PFNGLGENFRAMEBUFFERSPROC glGenFramebuffers;
-  COIN_PFNGLCHECKFRAMEBUFFERSTATUSPROC glCheckFramebufferStatus;
-  COIN_PFNGLFRAMEBUFFERTEXTURE1DPROC glFramebufferTexture1D;
-  COIN_PFNGLFRAMEBUFFERTEXTURE2DPROC glFramebufferTexture2D;
-  COIN_PFNGLFRAMEBUFFERTEXTURE3DPROC glFramebufferTexture3D;
-  COIN_PFNGLFRAMEBUFFERRENDERBUFFERPROC glFramebufferRenderbuffer;
-  COIN_PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC glGetFramebufferAttachmentParameteriv;
-  COIN_PFNGLGENERATEMIPMAPPROC glGenerateMipmap;
+  OBOL_PFNGLISRENDERBUFFERPROC glIsRenderbuffer;
+  OBOL_PFNGLBINDRENDERBUFFERPROC glBindRenderbuffer;
+  OBOL_PFNGLDELETERENDERBUFFERSPROC glDeleteRenderbuffers;
+  OBOL_PFNGLGENRENDERBUFFERSPROC glGenRenderbuffers;
+  OBOL_PFNGLRENDERBUFFERSTORAGEPROC glRenderbufferStorage;
+  OBOL_PFNGLGETRENDERBUFFERPARAMETERIVPROC glGetRenderbufferParameteriv;
+  OBOL_PFNGLISFRAMEBUFFERPROC glIsFramebuffer;
+  OBOL_PFNGLBINDFRAMEBUFFERPROC glBindFramebuffer;
+  OBOL_PFNGLDELETEFRAMEBUFFERSPROC glDeleteFramebuffers;
+  OBOL_PFNGLGENFRAMEBUFFERSPROC glGenFramebuffers;
+  OBOL_PFNGLCHECKFRAMEBUFFERSTATUSPROC glCheckFramebufferStatus;
+  OBOL_PFNGLFRAMEBUFFERTEXTURE1DPROC glFramebufferTexture1D;
+  OBOL_PFNGLFRAMEBUFFERTEXTURE2DPROC glFramebufferTexture2D;
+  OBOL_PFNGLFRAMEBUFFERTEXTURE3DPROC glFramebufferTexture3D;
+  OBOL_PFNGLFRAMEBUFFERRENDERBUFFERPROC glFramebufferRenderbuffer;
+  OBOL_PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC glGetFramebufferAttachmentParameteriv;
+  OBOL_PFNGLGENERATEMIPMAPPROC glGenerateMipmap;
 
   /* glGetStringi - part of replacement for obsolete glGetString(GL_EXTENSIONS) in OpenGL 3.0 */
-  COIN_PFNGLGETSTRINGIPROC glGetStringi;
+  OBOL_PFNGLGETSTRINGIPROC glGetStringi;
 
   const char * versionstr;
   const char * vendorstr;
   SbBool vendor_is_SGI;
-  SbBool vendor_is_nvidia;
   SbBool vendor_is_intel;
   SbBool vendor_is_ati;
   SbBool vendor_is_3dlabs;
-  SbBool nvidia_color_per_face_bug;
   const char * rendererstr;
   const char * extensionsstr;
   int maxtextureunits;
@@ -1436,7 +1434,7 @@ void SoGLContext_win32_updateHDCBitmap(void * ctx);
 /* -----------------------------------------------------------------------
  * Dual-GL backend registration
  *
- * When building with COIN3D_BUILD_DUAL_GL=ON, both system-OpenGL and OSMesa
+ * When building with OBOL_BUILD_DUAL_GL=ON, both system-OpenGL and OSMesa
  * variants of the GL glue layer are compiled into the same library.
  * Applications (or CoinOffscreenGLCanvas) must call this function after
  * assigning a render-context ID to a context that was created via the OSMesa
@@ -1452,4 +1450,4 @@ void coingl_register_osmesa_context(int contextid);
 }
 #endif /* __cplusplus */
 
-#endif /* !COIN_GLUE_GLP_H */
+#endif /* !OBOL_GLUE_GLP_H */

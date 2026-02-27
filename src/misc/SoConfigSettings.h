@@ -1,5 +1,5 @@
-#ifndef COIN_SOCONFIGSETTINGS_H
-#define COIN_SOCONFIGSETTINGS_H
+#ifndef OBOL_SOCONFIGSETTINGS_H
+#define OBOL_SOCONFIGSETTINGS_H
 
 class SbString;
 
@@ -21,4 +21,4 @@ class SoConfigSettings
   class SoConfigSettingsP * pimpl;
 };
 
-#endif //COIN_SOCONFIGSETTINGS_H
+#endif //OBOL_SOCONFIGSETTINGS_H

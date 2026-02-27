@@ -56,9 +56,9 @@
 
 #include "CoinTidbits.h"
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 SoSearchAction * SoNodeKitPath::searchAction;
 
@@ -68,7 +68,7 @@ SoSearchAction * SoNodeKitPath::searchAction;
 SoNodeKitPath::SoNodeKitPath(const int approxLength)
   : SoPath(approxLength)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   int n = this->nodes.getLength();
   for (int i = 0; i < n; i++) {
     if (this->nodes[i]->isOfType(SoBaseKit::getClassTypeId()))
@@ -76,7 +76,7 @@ SoNodeKitPath::SoNodeKitPath(const int approxLength)
   }
   SoDebugError::postInfo("SoNodeKitPath::SoNodeKitPath",
                          "no nodekits in path");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }
 
 /*!
@@ -110,7 +110,7 @@ SoNodeKitPath::getTail(void) const
     if (this->nodes[i]->isOfType(SoBaseKit::getClassTypeId()))
       return this->nodes[i];
   }
-#if COIN_DEBUG && 1 // debug
+#if OBOL_DEBUG && 1 // debug
   SoDebugError::postInfo("SoNodeKitPath::getTail",
                          "no nodekit in path");
 #endif // debug
@@ -130,10 +130,10 @@ SoNodeKitPath::getNode(const int idx) const
       if (cnt++ == idx) return this->nodes[i];
     }
   }
-#if COIN_DEBUG
+#if OBOL_DEBUG
   SoDebugError::postInfo("SoNodeKitPath::getNode",
                          "index %d out of bounds", idx);
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   return NULL;
 }
@@ -150,10 +150,10 @@ SoNodeKitPath::getNodeFromTail(const int idx) const
       if (cnt++ == idx) return this->nodes[i];
     }
   }
-#if COIN_DEBUG
+#if OBOL_DEBUG
   SoDebugError::postInfo("SoNodeKitPath::getNodeFromTail",
                          "index %d out of bounds", idx);
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   return NULL;
 }
 
@@ -171,12 +171,12 @@ SoNodeKitPath::truncate(const int length)
     }
   }
   if (i < n) SoPath::truncate(i);
-#if COIN_DEBUG
+#if OBOL_DEBUG
   else {
     SoDebugError::postInfo("SoNodeKitPath::truncate",
                            "illegal length: %d", length);
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }
 
 /*!
@@ -190,10 +190,10 @@ SoNodeKitPath::pop(void)
     if (this->nodes[i]->isOfType(SoBaseKit::getClassTypeId())) break;
   }
   if (i < 0) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postInfo("SoNodeKitPath::pop",
                            "no nodekits in path");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     return;
   }
   SoPath::truncate(i);
@@ -220,10 +220,10 @@ SoNodeKitPath::append(SoBaseKit * childKit)
     SoPath * path = sa->getPath();
     if (path) SoPath::append(path);
     else {
-#if COIN_DEBUG
+#if OBOL_DEBUG
       SoDebugError::postInfo("SoNodeKitPath::append",
                              "childKit not found as part of tail");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     }
   }
 }

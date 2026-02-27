@@ -1,5 +1,5 @@
-#ifndef COIN_SOKEYBOARDEVENT_H
-#define COIN_SOKEYBOARDEVENT_H
+#ifndef OBOL_SOKEYBOARDEVENT_H
+#define OBOL_SOKEYBOARDEVENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -50,7 +50,7 @@
  (SoKeyboardEvent::isKeyReleaseEvent(EVENT, SoKeyboardEvent::KEY))
 
 
-class COIN_DLL_API SoKeyboardEvent : public SoButtonEvent {
+class OBOL_DLL_API SoKeyboardEvent : public SoButtonEvent {
   typedef SoButtonEvent inherited;
   SO_EVENT_HEADER();
 
@@ -136,4 +136,4 @@ private:
 #undef SOKEYBOARDEVENT_UNDEF_DELETE
 #endif // SOKEYBOARDEVENT_UNDEF_DELETE
 
-#endif // !COIN_SOKEYBOARDEVENT_H
+#endif // !OBOL_SOKEYBOARDEVENT_H

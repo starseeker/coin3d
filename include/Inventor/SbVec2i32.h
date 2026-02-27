@@ -1,5 +1,5 @@
-#ifndef COIN_SBVEC2I32_H
-#define COIN_SBVEC2I32_H
+#ifndef OBOL_SBVEC2I32_H
+#define OBOL_SBVEC2I32_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -47,7 +47,7 @@ class SbVec2s;
 class SbVec2f;
 class SbVec2d;
 
-class COIN_DLL_API SbVec2i32 {
+class OBOL_DLL_API SbVec2i32 {
 public:
   SbVec2i32(void) { }
   SbVec2i32(const int32_t v[2]) { vec[0] = v[0]; vec[1] = v[1]; }
@@ -90,46 +90,46 @@ protected:
 
 }; // SbVec2i32
 
-COIN_DLL_API inline SbVec2i32 operator * (const SbVec2i32 & v, int d) {
+OBOL_DLL_API inline SbVec2i32 operator * (const SbVec2i32 & v, int d) {
   SbVec2i32 val(v); val *= d; return val;
 }
 
-COIN_DLL_API inline SbVec2i32 operator * (const SbVec2i32 & v, double d) {
+OBOL_DLL_API inline SbVec2i32 operator * (const SbVec2i32 & v, double d) {
   SbVec2i32 val(v); val *= d; return val;
 }
 
-COIN_DLL_API inline SbVec2i32 operator * (int d, const SbVec2i32 & v) {
+OBOL_DLL_API inline SbVec2i32 operator * (int d, const SbVec2i32 & v) {
   SbVec2i32 val(v); val *= d; return val;
 }
 
-COIN_DLL_API inline SbVec2i32 operator * (double d, const SbVec2i32 & v) {
+OBOL_DLL_API inline SbVec2i32 operator * (double d, const SbVec2i32 & v) {
   SbVec2i32 val(v); val *= d; return val;
 }
 
-COIN_DLL_API inline SbVec2i32 operator / (const SbVec2i32 & v, int d) {
+OBOL_DLL_API inline SbVec2i32 operator / (const SbVec2i32 & v, int d) {
   SbDividerChk("operator/(SbVec2i32,int)", d);
   SbVec2i32 val(v); val /= d; return val;
 }
 
-COIN_DLL_API inline SbVec2i32 operator / (const SbVec2i32 & v, double d) {
+OBOL_DLL_API inline SbVec2i32 operator / (const SbVec2i32 & v, double d) {
   SbDividerChk("operator/(SbVec2i32,double)", d);
   SbVec2i32 val(v); val /= d; return val;
 }
 
-COIN_DLL_API inline SbVec2i32 operator + (const SbVec2i32 & v1, const SbVec2i32 & v2) {
+OBOL_DLL_API inline SbVec2i32 operator + (const SbVec2i32 & v1, const SbVec2i32 & v2) {
   SbVec2i32 v(v1); v += v2; return v;
 }
 
-COIN_DLL_API inline SbVec2i32 operator - (const SbVec2i32 & v1, const SbVec2i32 & v2) {
+OBOL_DLL_API inline SbVec2i32 operator - (const SbVec2i32 & v1, const SbVec2i32 & v2) {
   SbVec2i32 v(v1); v -= v2; return v;
 }
 
-COIN_DLL_API inline int operator == (const SbVec2i32 & v1, const SbVec2i32 & v2) {
+OBOL_DLL_API inline int operator == (const SbVec2i32 & v1, const SbVec2i32 & v2) {
   return ((v1[0] == v2[0]) && (v1[1] == v2[1]));
 }
 
-COIN_DLL_API inline int operator != (const SbVec2i32& v1, const SbVec2i32& v2) {
+OBOL_DLL_API inline int operator != (const SbVec2i32& v1, const SbVec2i32& v2) {
   return !(v1 == v2);
 }
 
-#endif // !COIN_SBVEC2I32_H
+#endif // !OBOL_SBVEC2I32_H

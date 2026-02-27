@@ -1,5 +1,5 @@
-#ifndef COIN_SOTEXTUREQUALITYELEMENT_H
-#define COIN_SOTEXTUREQUALITYELEMENT_H
+#ifndef OBOL_SOTEXTUREQUALITYELEMENT_H
+#define OBOL_SOTEXTUREQUALITYELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/elements/SoFloatElement.h>
 
-class COIN_DLL_API SoTextureQualityElement : public SoFloatElement {
+class OBOL_DLL_API SoTextureQualityElement : public SoFloatElement {
   typedef SoFloatElement inherited;
 
   SO_ELEMENT_HEADER(SoTextureQualityElement);
@@ -53,8 +53,8 @@ public:
   static float getDefault(void);
 };
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #include <Inventor/elements/SoTextureOverrideElement.h>
-#endif // !COIN_INTERNAL
+#endif // !OBOL_INTERNAL
 
-#endif // !COIN_SOTEXTUREQUALITYELEMENT_H
+#endif // !OBOL_SOTEXTUREQUALITYELEMENT_H

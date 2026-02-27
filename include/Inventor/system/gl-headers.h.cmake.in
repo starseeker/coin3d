@@ -1,6 +1,6 @@
 /* include/Inventor/system/gl-headers.h. Generated from gl-headers.h.cmake.in by CMake. */
-#ifndef COIN_GLHEADERS_H
-#define COIN_GLHEADERS_H
+#ifndef OBOL_GLHEADERS_H
+#define OBOL_GLHEADERS_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -46,18 +46,18 @@
 
 @SIM_INCLUDE_WINDOWS_H@
 
-/* When COIN_GLHEADERS_OSMESA_OVERRIDE is defined (set by _osmesa.cpp
+/* When OBOL_GLHEADERS_OSMESA_OVERRIDE is defined (set by _osmesa.cpp
    compilation units in dual-GL builds), we use OSMesa headers regardless
    of the default backend configured at CMake time.  This is the mechanism
    that allows src/glue/gl_osmesa.cpp to compile the same source with
    OSMesa GL symbols while the primary build uses system OpenGL. */
-#ifdef COIN_GLHEADERS_OSMESA_OVERRIDE
+#ifdef OBOL_GLHEADERS_OSMESA_OVERRIDE
 #  include <OSMesa/osmesa.h>
 #  include <OSMesa/gl.h>
 /* OSMesa/gl.h already includes OSMesa/glext.h */
 #else
 @SIM_INCLUDE_GL_H@
 @SIM_INCLUDE_GLEXT_H@
-#endif /* COIN_GLHEADERS_OSMESA_OVERRIDE */
+#endif /* OBOL_GLHEADERS_OSMESA_OVERRIDE */
 
-#endif /* ! COIN_GLHEADERS_H */
+#endif /* ! OBOL_GLHEADERS_H */

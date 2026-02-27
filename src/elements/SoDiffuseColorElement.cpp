@@ -144,13 +144,13 @@ SoDiffuseColorElement::getColorArrayPtr(void) const
 {
   SoLazyElement * lazy = SoLazyElement::getInstance(this->state);
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (lazy->isPacked()) {
     SoDebugError::postWarning("SoDiffuseColorElement::getColorArrayPtr",
                               "colors are packed -- use getPackedArrayPtr() "
                               "instead");
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   return lazy->getDiffusePointer();
 }
 
@@ -167,13 +167,13 @@ SoDiffuseColorElement::getPackedArrayPtr(void) const
 {
   SoLazyElement * lazy = SoLazyElement::getInstance(this->state);
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (!lazy->isPacked()) {
     SoDebugError::postWarning("SoDiffuseColorElement::getPackedArrayPtr",
                               "colors are *not* packed -- use "
                               "getColorArrayPtr() instead");
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   return lazy->getPackedPointer();
 }
 

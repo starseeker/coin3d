@@ -155,9 +155,9 @@
 #include <Inventor/SbDPLine.h>
 #include <Inventor/SbDPPlane.h>
 #include <Inventor/SbDPMatrix.h>
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 #include "actions/SoSubActionP.h"
 
@@ -350,13 +350,13 @@ void
 SoRayPickAction::setRay(const SbVec3f & start, const SbVec3f & direction,
                         float neardistance, float fardistance)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (direction == SbVec3f(0.0f, 0.0f, 0.0f)) {
     SoDebugError::postWarning("SoRayPickAction::setRay",
                               "Ray has no direction");
 
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   if (neardistance >= 0.0f) PRIVATE(this)->setFlag(SoRayPickActionP::CLIP_NEAR);
   else {
     PRIVATE(this)->clearFlag(SoRayPickActionP::CLIP_NEAR);
@@ -509,14 +509,14 @@ SoRayPickAction::computeWorldSpaceRay(void)
                                  float(pt[1]) / float(size[1]));
     }
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
     if (vv.getDepth() == 0.0f || vv.getWidth() == 0.0f || vv.getHeight() == 0.0f) {
       SoDebugError::postWarning("SoRayPickAction::computeWorldSpaceRay",
                                 "invalid frustum: <%f, %f, %f>",
                                 vv.getWidth(), vv.getHeight(), vv.getDepth());
       return;
     }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
     SbDPLine templine;
     SbVec2d tmppt;

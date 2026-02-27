@@ -1,5 +1,5 @@
-#ifndef COIN_SBVEC4B_H
-#define COIN_SBVEC4B_H
+#ifndef OBOL_SBVEC4B_H
+#define OBOL_SBVEC4B_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -45,7 +45,7 @@ class SbVec4i32;
 class SbVec4f;
 class SbVec4d;
 
-class COIN_DLL_API SbVec4b {
+class OBOL_DLL_API SbVec4b {
 public:
   SbVec4b(void) { }
   SbVec4b(const int8_t v[4]) { vec[0] = v[0]; vec[1] = v[1]; vec[2] = v[2]; vec[3] = v[3]; }
@@ -86,46 +86,46 @@ protected:
 
 }; // SbVec4b
 
-COIN_DLL_API inline SbVec4b operator * (SbVec4b v, int d) {
+OBOL_DLL_API inline SbVec4b operator * (SbVec4b v, int d) {
   SbVec4b val(v); val *= d; return val;
 }
 
-COIN_DLL_API inline SbVec4b operator * (SbVec4b v, double d) {
+OBOL_DLL_API inline SbVec4b operator * (SbVec4b v, double d) {
   SbVec4b val(v); val *= d; return val;
 }
 
-COIN_DLL_API inline SbVec4b operator * (int d, SbVec4b v) {
+OBOL_DLL_API inline SbVec4b operator * (int d, SbVec4b v) {
   SbVec4b val(v); val *= d; return val;
 }
 
-COIN_DLL_API inline SbVec4b operator * (double d, SbVec4b v) {
+OBOL_DLL_API inline SbVec4b operator * (double d, SbVec4b v) {
   SbVec4b val(v); val *= d; return val;
 }
 
-COIN_DLL_API inline SbVec4b operator / (SbVec4b v, int d) {
+OBOL_DLL_API inline SbVec4b operator / (SbVec4b v, int d) {
   SbDividerChk("operator/(SbVec4b,int)", d);
   SbVec4b val(v); val /= d; return val;
 }
 
-COIN_DLL_API inline SbVec4b operator / (SbVec4b v, double d) {
+OBOL_DLL_API inline SbVec4b operator / (SbVec4b v, double d) {
   SbDividerChk("operator/(SbVec4b,double)", d);
   SbVec4b val(v); val /= d; return val;
 }
 
-COIN_DLL_API inline SbVec4b operator + (SbVec4b v1, SbVec4b v2) {
+OBOL_DLL_API inline SbVec4b operator + (SbVec4b v1, SbVec4b v2) {
   SbVec4b v(v1); v += v2; return v;
 }
 
-COIN_DLL_API inline SbVec4b operator - (SbVec4b v1, SbVec4b v2) {
+OBOL_DLL_API inline SbVec4b operator - (SbVec4b v1, SbVec4b v2) {
   SbVec4b v(v1); v -= v2; return v;
 }
 
-COIN_DLL_API inline int operator == (SbVec4b v1, SbVec4b v2) {
+OBOL_DLL_API inline int operator == (SbVec4b v1, SbVec4b v2) {
   return ((v1[0] == v2[0]) && (v1[1] == v2[1]) && (v1[2] == v2[2]) && (v1[3] == v2[3]));
 }
 
-COIN_DLL_API inline int operator != (SbVec4b v1, SbVec4b v2) {
+OBOL_DLL_API inline int operator != (SbVec4b v1, SbVec4b v2) {
   return !(v1 == v2);
 }
 
-#endif // !COIN_SBVEC4B_H
+#endif // !OBOL_SBVEC4B_H

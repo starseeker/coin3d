@@ -1,5 +1,5 @@
-#ifndef COIN_SOLINEPATTERNELEMENT_H
-#define COIN_SOLINEPATTERNELEMENT_H
+#ifndef OBOL_SOLINEPATTERNELEMENT_H
+#define OBOL_SOLINEPATTERNELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/elements/SoInt32Element.h>
 
-class COIN_DLL_API SoLinePatternElement : public SoInt32Element {
+class OBOL_DLL_API SoLinePatternElement : public SoInt32Element {
   typedef SoInt32Element inherited;
 
   SO_ELEMENT_HEADER(SoLinePatternElement);
@@ -63,4 +63,4 @@ public:
   static  int32_t getDefaultScaleFactor();
 };
 
-#endif // !COIN_SOLINEPATTERNELEMENT_H
+#endif // !OBOL_SOLINEPATTERNELEMENT_H

@@ -39,7 +39,7 @@
   FIXME: write doc.
 
   \ingroup coin_elements
-  \COIN_CLASS_EXTENSION
+  \OBOL_CLASS_EXTENSION
   \since Coin 2.2
 */
 

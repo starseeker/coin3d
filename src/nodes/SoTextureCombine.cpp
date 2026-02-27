@@ -481,7 +481,7 @@ SoTextureCombine::~SoTextureCombine()
 void
 SoTextureCombine::initClass(void)
 {
-  SO_NODE_INTERNAL_INIT_CLASS(SoTextureCombine, SO_FROM_COIN_2_2);
+  SO_NODE_INTERNAL_INIT_CLASS(SoTextureCombine, SO_FROM_OBOL_2_2);
 
   SO_ENABLE(SoGLRenderAction, SoTextureCombineElement);
 }

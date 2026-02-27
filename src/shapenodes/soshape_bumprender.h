@@ -1,5 +1,5 @@
-#ifndef COIN_SOSHAPE_BUMPRENDER_H
-#define COIN_SOSHAPE_BUMPRENDER_H
+#ifndef OBOL_SOSHAPE_BUMPRENDER_H
+#define OBOL_SOSHAPE_BUMPRENDER_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -115,4 +115,4 @@ private:
   SbBool diffuseprogramsinitialized;
 };
 
-#endif // COIN_SOSHAPE_BUMPRENDER
+#endif // OBOL_SOSHAPE_BUMPRENDER

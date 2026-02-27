@@ -1,5 +1,5 @@
-#ifndef COIN_SOCHILDLIST_H
-#define COIN_SOCHILDLIST_H
+#ifndef OBOL_SOCHILDLIST_H
+#define OBOL_SOCHILDLIST_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -39,7 +39,7 @@
 class SoPath;
 class SoAction;
 
-class COIN_DLL_API SoChildList : public SoNodeList {
+class OBOL_DLL_API SoChildList : public SoNodeList {
   typedef SoNodeList inherited;
 
 public:
@@ -71,4 +71,4 @@ private:
   SbList<SoPath *> auditors;
 };
 
-#endif // !COIN_SOCHILDLIST_H
+#endif // !OBOL_SOCHILDLIST_H

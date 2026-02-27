@@ -55,7 +55,7 @@ internal_condvar_struct_init(cc_condvar * condvar_struct)
     return CC_OK;
   }
   catch (const std::exception& e) {
-    if (COIN_DEBUG)
+    if (OBOL_DEBUG)
       cc_debugerror_post("internal_condvar_struct_init", "std::condition_variable creation error: %s\n", e.what());
     return CC_ERROR;
   }
@@ -73,7 +73,7 @@ internal_condvar_struct_clean(cc_condvar * condvar_struct)
     return CC_OK;
   }
   catch (const std::exception& e) {
-    if (COIN_DEBUG)
+    if (OBOL_DEBUG)
       cc_debugerror_post("internal_condvar_struct_clean", "std::condition_variable cleanup error: %s\n", e.what());
     return CC_ERROR;
   }
@@ -84,13 +84,13 @@ internal_condvar_wait(cc_condvar * condvar, cc_mutex * mutex)
 {
   try {
     if (!condvar->cxx17.condvar_ptr) {
-      if (COIN_DEBUG)
+      if (OBOL_DEBUG)
         cc_debugerror_post("internal_condvar_wait", "condvar pointer is null\n");
       return CC_ERROR;
     }
     
     if (!mutex->cxx17.mutex_ptr) {
-      if (COIN_DEBUG)
+      if (OBOL_DEBUG)
         cc_debugerror_post("internal_condvar_wait", "mutex pointer is null\n");
       return CC_ERROR;
     }
@@ -108,7 +108,7 @@ internal_condvar_wait(cc_condvar * condvar, cc_mutex * mutex)
     return CC_OK;
   }
   catch (const std::exception& e) {
-    if (COIN_DEBUG)
+    if (OBOL_DEBUG)
       cc_debugerror_post("internal_condvar_wait", "std::condition_variable wait error: %s\n", e.what());
     return CC_ERROR;
   }
@@ -119,13 +119,13 @@ internal_condvar_timed_wait(cc_condvar * condvar, cc_mutex * mutex, double perio
 {
   try {
     if (!condvar->cxx17.condvar_ptr) {
-      if (COIN_DEBUG)
+      if (OBOL_DEBUG)
         cc_debugerror_post("internal_condvar_timed_wait", "condvar pointer is null\n");
       return CC_ERROR;
     }
     
     if (!mutex->cxx17.mutex_ptr) {
-      if (COIN_DEBUG)
+      if (OBOL_DEBUG)
         cc_debugerror_post("internal_condvar_timed_wait", "mutex pointer is null\n");
       return CC_ERROR;
     }
@@ -152,7 +152,7 @@ internal_condvar_timed_wait(cc_condvar * condvar, cc_mutex * mutex, double perio
     }
   }
   catch (const std::exception& e) {
-    if (COIN_DEBUG)
+    if (OBOL_DEBUG)
       cc_debugerror_post("internal_condvar_timed_wait", "std::condition_variable timed_wait error: %s\n", e.what());
     return CC_ERROR;
   }
@@ -163,7 +163,7 @@ internal_condvar_wake_one(cc_condvar * condvar)
 {
   try {
     if (!condvar->cxx17.condvar_ptr) {
-      if (COIN_DEBUG)
+      if (OBOL_DEBUG)
         cc_debugerror_post("internal_condvar_wake_one", "condvar pointer is null\n");
       return CC_ERROR;
     }
@@ -173,7 +173,7 @@ internal_condvar_wake_one(cc_condvar * condvar)
     return CC_OK;
   }
   catch (const std::exception& e) {
-    if (COIN_DEBUG)
+    if (OBOL_DEBUG)
       cc_debugerror_post("internal_condvar_wake_one", "std::condition_variable notify_one error: %s\n", e.what());
     return CC_ERROR;
   }
@@ -184,7 +184,7 @@ internal_condvar_wake_all(cc_condvar * condvar)
 {
   try {
     if (!condvar->cxx17.condvar_ptr) {
-      if (COIN_DEBUG)
+      if (OBOL_DEBUG)
         cc_debugerror_post("internal_condvar_wake_all", "condvar pointer is null\n");
       return CC_ERROR;
     }
@@ -194,7 +194,7 @@ internal_condvar_wake_all(cc_condvar * condvar)
     return CC_OK;
   }
   catch (const std::exception& e) {
-    if (COIN_DEBUG)
+    if (OBOL_DEBUG)
       cc_debugerror_post("internal_condvar_wake_all", "std::condition_variable notify_all error: %s\n", e.what());
     return CC_ERROR;
   }

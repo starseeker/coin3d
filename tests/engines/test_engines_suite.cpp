@@ -34,7 +34,7 @@
  * @file test_engines_suite.cpp
  * @brief Tests for Coin3D engine classes.
  *
- * Note: upstream has no COIN_TEST_SUITE blocks for engines.
+ * Note: upstream has no OBOL_TEST_SUITE blocks for engines.
  * These tests verify documented API behavior.
  *
  * Engines covered:

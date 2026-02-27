@@ -1,5 +1,5 @@
-#ifndef COIN_VERTEXARRAYINDEXER_H
-#define COIN_VERTEXARRAYINDEXER_H
+#ifndef OBOL_VERTEXARRAYINDEXER_H
+#define OBOL_VERTEXARRAYINDEXER_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,9 +33,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #error this is a private header file
-#endif /* !COIN_INTERNAL */
+#endif /* !OBOL_INTERNAL */
 
 #include <Inventor/lists/SbList.h>
 #include <Inventor/system/gl.h>
@@ -91,4 +91,4 @@ private:
   SbBool use_shorts;
 };
 
-#endif // COIN_VERTEXARRAYINDEXER_H
+#endif // OBOL_VERTEXARRAYINDEXER_H

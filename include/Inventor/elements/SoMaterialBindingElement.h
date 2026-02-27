@@ -1,5 +1,5 @@
-#ifndef COIN_SOMATERIALBINDINGELEMENT_H
-#define COIN_SOMATERIALBINDINGELEMENT_H
+#ifndef OBOL_SOMATERIALBINDINGELEMENT_H
+#define OBOL_SOMATERIALBINDINGELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/elements/SoInt32Element.h>
 
-class COIN_DLL_API SoMaterialBindingElement : public SoInt32Element {
+class OBOL_DLL_API SoMaterialBindingElement : public SoInt32Element {
   typedef SoInt32Element inherited;
 
   SO_ELEMENT_HEADER(SoMaterialBindingElement);
@@ -68,4 +68,4 @@ public:
 
 };
 
-#endif // !COIN_SOMATERIALBINDINGELEMENT_H
+#endif // !OBOL_SOMATERIALBINDINGELEMENT_H

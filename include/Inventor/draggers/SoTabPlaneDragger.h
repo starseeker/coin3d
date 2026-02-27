@@ -1,5 +1,5 @@
-#ifndef COIN_SOTABPLANEDRAGGER_H
-#define COIN_SOTABPLANEDRAGGER_H
+#ifndef OBOL_SOTABPLANEDRAGGER_H
+#define OBOL_SOTABPLANEDRAGGER_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -43,7 +43,7 @@ class SbLineProjector;
 class SbPlaneProjector;
 class SoTabPlaneDraggerP;
 
-class COIN_DLL_API SoTabPlaneDragger : public SoDragger {
+class OBOL_DLL_API SoTabPlaneDragger : public SoDragger {
   typedef SoDragger inherited;
 
   SO_KIT_HEADER(SoTabPlaneDragger);
@@ -130,4 +130,4 @@ private:
   SoTabPlaneDragger & operator = (const SoTabPlaneDragger & rhs);
 }; // SoTabPlaneDragger
 
-#endif // !COIN_SOTABPLANEDRAGGER_H
+#endif // !OBOL_SOTABPLANEDRAGGER_H

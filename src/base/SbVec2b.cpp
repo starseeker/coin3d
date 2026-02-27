@@ -39,9 +39,9 @@
 #include <Inventor/SbVec2i32.h>
 #include <Inventor/SbVec2f.h>
 #include <Inventor/SbVec2d.h>
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 /*!
   \class SbVec2b SbVec2b.h Inventor/SbVec2b.h
@@ -62,12 +62,12 @@ SbVec2b::setValue(const SbVec2ub & v)
 SbVec2b &
 SbVec2b::setValue(const SbVec2s & v)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (v[0] > std::numeric_limits<int8_t>::max() || v[0] < -std::numeric_limits<int8_t>::max() ||
       v[1] > std::numeric_limits<int8_t>::max() || v[1] < -std::numeric_limits<int8_t>::max()) {
     SoDebugError::post("SbVec2b::setValue", "SbVec2s argument out of range for SbVec2b");
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   vec[0] = static_cast<int8_t>(v[0]);
   vec[1] = static_cast<int8_t>(v[1]);
   return *this;
@@ -76,12 +76,12 @@ SbVec2b::setValue(const SbVec2s & v)
 SbVec2b &
 SbVec2b::setValue(const SbVec2i32 & v)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (v[0] > std::numeric_limits<int8_t>::max() || v[0] < -std::numeric_limits<int8_t>::max() ||
       v[1] > std::numeric_limits<int8_t>::max() || v[1] < -std::numeric_limits<int8_t>::max()) {
     SoDebugError::post("SbVec2b::setValue", "SbVec2i32 argument out of range for SbVec2b");
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   vec[0] = static_cast<int8_t>(v[0]);
   vec[1] = static_cast<int8_t>(v[1]);
   return *this;
@@ -90,12 +90,12 @@ SbVec2b::setValue(const SbVec2i32 & v)
 SbVec2b &
 SbVec2b::setValue(const SbVec2f & v)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (v[0] > std::numeric_limits<int8_t>::max() || v[0] < -std::numeric_limits<int8_t>::max() ||
       v[1] > std::numeric_limits<int8_t>::max() || v[1] < -std::numeric_limits<int8_t>::max()) {
     SoDebugError::post("SbVec2b::setValue", "SbVec2f argument out of range for SbVec2b");
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   vec[0] = static_cast<int8_t>(v[0]);
   vec[1] = static_cast<int8_t>(v[1]);
   return *this;
@@ -104,12 +104,12 @@ SbVec2b::setValue(const SbVec2f & v)
 SbVec2b &
 SbVec2b::setValue(const SbVec2d & v)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (v[0] > std::numeric_limits<int8_t>::max() || v[0] < -std::numeric_limits<int8_t>::max() ||
       v[1] > std::numeric_limits<int8_t>::max() || v[1] < -std::numeric_limits<int8_t>::max()) {
     SoDebugError::post("SbVec2b::setValue", "SbVec2d argument out of range for SbVec2b");
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   vec[0] = static_cast<int8_t>(v[0]);
   vec[1] = static_cast<int8_t>(v[1]);
   return *this;

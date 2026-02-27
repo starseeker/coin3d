@@ -1,5 +1,5 @@
-#ifndef COIN_SOPICKACTION_H
-#define COIN_SOPICKACTION_H
+#ifndef OBOL_SOPICKACTION_H
+#define OBOL_SOPICKACTION_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -40,7 +40,7 @@
 
 class SoPickActionP;
 
-class COIN_DLL_API SoPickAction : public SoAction {
+class OBOL_DLL_API SoPickAction : public SoAction {
   typedef SoAction inherited;
 
   SO_ACTION_HEADER(SoPickAction);
@@ -73,4 +73,4 @@ private:
   SoPickAction & operator = (const SoPickAction & rhs);
 }; // SoPickAction
 
-#endif // !COIN_SOPICKACTION_H
+#endif // !OBOL_SOPICKACTION_H

@@ -1,5 +1,5 @@
-#ifndef COIN_SOLIGHTKIT_H
-#define COIN_SOLIGHTKIT_H
+#ifndef OBOL_SOLIGHTKIT_H
+#define OBOL_SOLIGHTKIT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -36,7 +36,7 @@
 #include <Inventor/nodekits/SoSubKit.h>
 #include <Inventor/nodekits/SoBaseKit.h>
 
-class COIN_DLL_API SoLightKit : public SoBaseKit {
+class OBOL_DLL_API SoLightKit : public SoBaseKit {
   typedef SoBaseKit inherited;
 
   SO_KIT_HEADER(SoLightKit);
@@ -56,4 +56,4 @@ protected:
   virtual ~SoLightKit();
 };
 
-#endif // !COIN_SOLIGHTKIT_H
+#endif // !OBOL_SOLIGHTKIT_H

@@ -1,5 +1,5 @@
-#ifndef COIN_SBFONT_H
-#define COIN_SBFONT_H
+#ifndef OBOL_SBFONT_H
+#define OBOL_SBFONT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -52,11 +52,11 @@ class SbFontP;
   then get glyph information for text rendering. All system font detection and
   multiple format support has been removed for simplicity.
 
-  \COIN_CLASS_EXTENSION
+  \OBOL_CLASS_EXTENSION
 
   \since Coin 4.1
 */
-class COIN_DLL_API SbFont {
+class OBOL_DLL_API SbFont {
 public:
   SbFont(void);
   SbFont(const char * fontpath);
@@ -101,4 +101,4 @@ private:
   SbFontP * pimpl;
 };
 
-#endif // !COIN_SBFONT_H
+#endif // !OBOL_SBFONT_H

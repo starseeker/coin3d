@@ -30,14 +30,14 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_SOCOMPOSE_H
-#define COIN_SOCOMPOSE_H
+#ifndef OBOL_SOCOMPOSE_H
+#define OBOL_SOCOMPOSE_H
 
-#ifdef COIN_INTERNAL
+#ifdef OBOL_INTERNAL
 /* Detect erroneous include statements in library code. Application
    programmers can ignore this. */
 #error Do not include SbCompose.h in internal library code.
-#endif // COIN_INTERNAL
+#endif // OBOL_INTERNAL
 
 /*
  * Note to application programmers: include this header file instead
@@ -62,4 +62,4 @@
 #include <Inventor/engines/SoDecomposeMatrix.h>
 #include <Inventor/engines/SoComposeRotationFromTo.h>
 
-#endif // !COIN_SOCOMPOSE_H
+#endif // !OBOL_SOCOMPOSE_H

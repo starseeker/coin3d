@@ -1,5 +1,5 @@
-#ifndef COIN_SO_H
-#define COIN_SO_H
+#ifndef OBOL_SO_H
+#define OBOL_SO_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -66,4 +66,4 @@
 // we'll eventually make their inclusion a configure/build
 // option. That goes for nodekits, draggers, and manips.
 
-#endif // !COIN_SO_H
+#endif // !OBOL_SO_H

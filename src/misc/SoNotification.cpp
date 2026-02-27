@@ -72,7 +72,7 @@ SoNotList::SoNotList(const SoNotList * nl)
 void
 SoNotList::append(SoNotRec * const rec)
 {
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   if (rec->getBase()) {
     SoDebugError::postInfo("SoNotList::append", "%p - %p (base: %p %s \"%s\")",
                            this, rec, rec->getBase(),
@@ -101,7 +101,7 @@ SoNotList::append(SoNotRec * const rec)
 void
 SoNotList::append(SoNotRec * const rec, SoField * const field)
 {
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoNotList::append", "field %p", field);
 #endif // debug
   assert(field);
@@ -201,7 +201,7 @@ SoNotList::getTimeStamp(void) const
 void
 SoNotList::print(FILE * const file) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   (void)fprintf(file, "SoNotList: %p\n", this);
   const SoNotRec * ptr = this->tail;
   while (ptr) {
@@ -219,5 +219,5 @@ SoNotList::print(FILE * const file) const
   (void)fprintf(file, "\tfirstAtNode = %p, lastField = %p (\"%s\")\n",
                 this->getFirstRecAtNode(),
                 this->getLastField(), fname.getString());
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }

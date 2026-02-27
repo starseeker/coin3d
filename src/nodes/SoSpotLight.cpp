@@ -155,10 +155,10 @@ SoSpotLight::GLRender(SoGLRenderAction * action)
   int idx = SoGLLightIdElement::increment(state);
 
   if (idx < 0) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::post("SoSpotLight::GLRender()",
                        "Max # lights exceeded :(\n");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     return;
   }
 
@@ -192,7 +192,7 @@ SoSpotLight::GLRender(SoGLRenderAction * action)
   float cutoff = this->cutOffAngle.getValue() * 180.0f / float(M_PI);
   float dropoff = SbClamp(this->dropOffRate.getValue(), 0.0f, 1.0f) * 128.0f;
   
-#ifdef COIN_EXTRA_DEBUG // output a warning if the cutoff is invalid
+#ifdef OBOL_EXTRA_DEBUG // output a warning if the cutoff is invalid
                         // since we now clamp it (someone might have
                         // been setting it to 180.0, which would make
                         // this a PointLight)
@@ -200,7 +200,7 @@ SoSpotLight::GLRender(SoGLRenderAction * action)
     SoDebugError::postWarning("SoSpotLight::GLRender",
                               "invalid cutOffAngle for SpotLight: %f, clamping to [0.0f, 90.0f]", cutoff);
   }
-#endif // COIN_EXTRA_DEBUG
+#endif // OBOL_EXTRA_DEBUG
 
   cutoff = SbClamp(cutoff, 0.0f, 90.0f);
 

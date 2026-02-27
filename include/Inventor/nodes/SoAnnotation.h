@@ -1,5 +1,5 @@
-#ifndef COIN_SOANNOTATION_H
-#define COIN_SOANNOTATION_H
+#ifndef OBOL_SOANNOTATION_H
+#define OBOL_SOANNOTATION_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -36,7 +36,7 @@
 #include <Inventor/nodes/SoSubNode.h>
 #include <Inventor/nodes/SoSeparator.h>
 
-class COIN_DLL_API SoAnnotation : public SoSeparator {
+class OBOL_DLL_API SoAnnotation : public SoSeparator {
   typedef SoSeparator inherited;
 
   SO_NODE_HEADER(SoAnnotation);
@@ -54,4 +54,4 @@ protected:
   virtual ~SoAnnotation();
 };
 
-#endif // !COIN_SOANNOTATION_H
+#endif // !OBOL_SOANNOTATION_H

@@ -100,7 +100,7 @@ SoGLPolygonOffsetElement::push(SoState * stateptr)
 //! FIXME: write doc.
 
 void
-SoGLPolygonOffsetElement::pop(SoState * COIN_UNUSED_ARG(stateptr), const SoElement * prevTopElement)
+SoGLPolygonOffsetElement::pop(SoState * OBOL_UNUSED_ARG(stateptr), const SoElement * prevTopElement)
 {
   const SoGLPolygonOffsetElement * prev =
     (const SoGLPolygonOffsetElement*)prevTopElement;

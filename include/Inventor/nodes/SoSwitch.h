@@ -1,5 +1,5 @@
-#ifndef COIN_SOSWITCH_H
-#define COIN_SOSWITCH_H
+#ifndef OBOL_SOSWITCH_H
+#define OBOL_SOSWITCH_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -43,7 +43,7 @@
 
 class SoSwitchP;
 
-class COIN_DLL_API SoSwitch : public SoGroup {
+class OBOL_DLL_API SoSwitch : public SoGroup {
   typedef SoGroup inherited;
 
   SO_NODE_HEADER(SoSwitch);
@@ -81,4 +81,4 @@ private:
   void commonConstructor(void);
 };
 
-#endif // !COIN_SOSWITCH_H
+#endif // !OBOL_SOSWITCH_H

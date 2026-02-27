@@ -1,5 +1,5 @@
-#ifndef COIN_SOCULLELEMENT_H
-#define COIN_SOCULLELEMENT_H
+#ifndef OBOL_SOCULLELEMENT_H
+#define OBOL_SOCULLELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -39,7 +39,7 @@
 class SbBox3f;
 class SbViewVolume;
 
-class COIN_DLL_API SoCullElement : public SoElement {
+class OBOL_DLL_API SoCullElement : public SoElement {
   typedef SoElement inherited;
 
   SO_ELEMENT_HEADER(SoCullElement);
@@ -75,4 +75,4 @@ private:
   int vvindex;
 };
 
-#endif // !COIN_SOCULLELEMENT_H
+#endif // !OBOL_SOCULLELEMENT_H

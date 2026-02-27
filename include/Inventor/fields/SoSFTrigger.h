@@ -1,5 +1,5 @@
-#ifndef COIN_SOSFTRIGGER_H
-#define COIN_SOSFTRIGGER_H
+#ifndef OBOL_SOSFTRIGGER_H
+#define OBOL_SOSFTRIGGER_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -38,7 +38,7 @@
 
 class SoNotList;
 
-class COIN_DLL_API SoSFTrigger : public SoSField {
+class OBOL_DLL_API SoSFTrigger : public SoSField {
   typedef SoSField inherited;
 
   SO_SFIELD_CONSTRUCTOR_HEADER(SoSFTrigger);
@@ -62,4 +62,4 @@ private:
   virtual void writeValue(SoOutput * out) const;
 };
 
-#endif // !COIN_SOSFTRIGGER_H
+#endif // !OBOL_SOSFTRIGGER_H

@@ -34,7 +34,7 @@
  * @file test_mf_fields.cpp
  * @brief Tests for Coin3D multi-value (SoMF*) field types.
  *
- * Baselined against upstream COIN_TEST_SUITE blocks.
+ * Baselined against upstream OBOL_TEST_SUITE blocks.
  *
  * Vanilla sources (all have "initialized" test verifying getTypeId + getNum == 0):
  *   src/fields/SoMFFloat.cpp, SoMFInt32.cpp, SoMFVec3f.cpp, SoMFString.cpp,
@@ -109,7 +109,7 @@ int main()
 
     // -----------------------------------------------------------------------
     // All SoMF* types: class initialized with zero elements
-    // Baseline: individual COIN_TEST_SUITE (initialized) blocks
+    // Baseline: individual OBOL_TEST_SUITE (initialized) blocks
     // -----------------------------------------------------------------------
     TEST_MF_INITIALIZED("SoMFFloat",    SoMFFloat)
     TEST_MF_INITIALIZED("SoMFDouble",   SoMFDouble)
@@ -205,7 +205,7 @@ int main()
 
     // -----------------------------------------------------------------------
     // Remaining SoMF* types: class initialized with zero elements
-    // Baseline: individual COIN_TEST_SUITE (initialized) blocks
+    // Baseline: individual OBOL_TEST_SUITE (initialized) blocks
     // -----------------------------------------------------------------------
     TEST_MF_INITIALIZED("SoMFColorRGBA", SoMFColorRGBA)
     TEST_MF_INITIALIZED("SoMFEnum",      SoMFEnum)

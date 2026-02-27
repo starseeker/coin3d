@@ -122,7 +122,7 @@ void
 SoMFString::deleteText(const int fromline, const int fromchar,
                        const int toline, const int tochar)
 {
-#if COIN_DEBUG && 1 // debug
+#if OBOL_DEBUG && 1 // debug
   if (fromline < 0 || toline >= this->getNum() || fromline > toline ||
       (fromline == toline && fromchar >= tochar) ||
       fromchar < 0 || fromchar >= (*this)[fromline].getLength() ||

@@ -1,5 +1,5 @@
-#ifndef COIN_SOSUBNODE_H
-#define COIN_SOSUBNODE_H
+#ifndef OBOL_SOSUBNODE_H
+#define OBOL_SOSUBNODE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -272,4 +272,4 @@ _class_::createInstance(void) \
 
 // *************************************************************************
 
-#endif // !COIN_SOSUBNODE_H
+#endif // !OBOL_SOSUBNODE_H

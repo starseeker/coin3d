@@ -128,7 +128,7 @@ static uint32_t socontexthandler_idx = 0;
 static void
 socontexthandler_cleanup(void)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   const int len = socontexthandler_hashlist ?
     socontexthandler_hashlist->getNumElements() : 0;
   if (len > 0) {
@@ -137,7 +137,7 @@ socontexthandler_cleanup(void)
     (void)printf("Coin debug: socontexthandler_cleanup(): %d context-bound "
                  "resources not free'd before exit.\n", len);
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   delete socontexthandler_hashlist;
   socontexthandler_hashlist = NULL;
   socontexthandler_idx = 0;

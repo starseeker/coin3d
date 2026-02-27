@@ -1,5 +1,5 @@
-#ifndef COIN_SOGLSHADERPARAMETER_H
-#define COIN_SOGLSHADERPARAMETER_H
+#ifndef OBOL_SOGLSHADERPARAMETER_H
+#define OBOL_SOGLSHADERPARAMETER_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,7 +33,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #error this is a private header file
 #endif
 
@@ -79,4 +79,4 @@ public:
   virtual ~SoGLShaderParameter();
 };
 
-#endif /* ! COIN_SOGLSHADERPARAMETER_H */
+#endif /* ! OBOL_SOGLSHADERPARAMETER_H */

@@ -1,5 +1,5 @@
-#ifndef COIN_SOGLLAZYELEMENT_H
-#define COIN_SOGLLAZYELEMENT_H
+#ifndef OBOL_SOGLLAZYELEMENT_H
+#define OBOL_SOGLLAZYELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -42,7 +42,7 @@ class SoGLRenderCache;
 class SoGLLazyElementP;
 class SoVBO;
 
-class COIN_DLL_API SoGLLazyElement : public SoLazyElement {
+class OBOL_DLL_API SoGLLazyElement : public SoLazyElement {
   typedef SoLazyElement inherited;
 
   SO_ELEMENT_HEADER(SoGLLazyElement);
@@ -76,7 +76,7 @@ public:
 
   void reset(SoState* state, uint32_t bitmask) const;
 
-  struct COIN_DLL_API GLState {
+  struct OBOL_DLL_API GLState {
     uint32_t cachebitmask;
     uint32_t diffuse;
     SbColor ambient;
@@ -190,4 +190,4 @@ private:
   SoGLLazyElementP * pimpl; // for future use
 };
 
-#endif // !COIN_SOGLLAZYELEMENT_H
+#endif // !OBOL_SOGLLAZYELEMENT_H

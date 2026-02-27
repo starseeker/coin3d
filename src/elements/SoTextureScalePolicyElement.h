@@ -1,5 +1,5 @@
-#ifndef COIN_SOTEXTURESCALEPOLICYELEMENT_H
-#define COIN_SOTEXTURESCALEPOLICYELEMENT_H
+#ifndef OBOL_SOTEXTURESCALEPOLICYELEMENT_H
+#define OBOL_SOTEXTURESCALEPOLICYELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,9 +33,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #error this is a private header file
-#endif // !COIN_INTERNAL
+#endif // !OBOL_INTERNAL
 
 #include <Inventor/elements/SoInt32Element.h>
 
@@ -67,4 +67,4 @@ public:
 
 };
 
-#endif // !COIN_SOTEXTURESCALEPOLICYELEMENT_H
+#endif // !OBOL_SOTEXTURESCALEPOLICYELEMENT_H

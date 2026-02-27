@@ -167,7 +167,7 @@ public:
   //
   // Callback from SoGLCacheContextElement
   //
-  static void really_delete_object(void * closure, uint32_t COIN_UNUSED_ARG(contextid)) {
+  static void really_delete_object(void * closure, uint32_t OBOL_UNUSED_ARG(contextid)) {
     SoGLShaderObject * obj = (SoGLShaderObject*) closure;
     delete obj;
   }
@@ -239,7 +239,7 @@ SO_NODE_ABSTRACT_SOURCE(SoShaderObject);
 void SoShaderObject::initClass(void)
 {
   SO_NODE_INTERNAL_INIT_ABSTRACT_CLASS(SoShaderObject,
-                                       SO_FROM_COIN_2_5|SO_FROM_INVENTOR_5_0);
+                                       SO_FROM_OBOL_2_5|SO_FROM_INVENTOR_5_0);
 }
 
 /*!

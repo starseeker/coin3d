@@ -30,8 +30,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_SOSELECTONE_H
-#define COIN_SOSELECTONE_H
+#ifndef OBOL_SOSELECTONE_H
+#define OBOL_SOSELECTONE_H
 
 #include <Inventor/engines/SoSubEngine.h>
 #include <Inventor/fields/SoMField.h>
@@ -40,7 +40,7 @@
 class SoEngineOutput;
 
 
-class COIN_DLL_API SoSelectOne : public SoEngine {
+class OBOL_DLL_API SoSelectOne : public SoEngine {
   typedef SoEngine inherited;
 
   SO_ENGINE_HEADER(SoSelectOne);
@@ -78,4 +78,4 @@ private:
   friend class dummy;
 };
 
-#endif // !COIN_SOSELECTONE_H
+#endif // !OBOL_SOSELECTONE_H

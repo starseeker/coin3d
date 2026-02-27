@@ -371,7 +371,7 @@ SoGroup::readChildren(SoInput * in)
 	    return FALSE;
 	  }
 
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
 	  char m;
 	  if (in->read(m)) {
 	    SoDebugError::postInfo("SoGroup::readChildren",
@@ -470,14 +470,14 @@ SoGroup::addChild(SoNode * node)
 void
 SoGroup::insertChild(SoNode * child, int newchildindex)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (newchildindex < 0 || newchildindex > this->getNumChildren()) {
     SoDebugError::post("SoGroup::insertChild",
 		       "idx %d is out of bounds (groupnode # children == %d)",
 		       newchildindex, this->getNumChildren());
     return;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   this->setOperation(SoNotRec::GROUP_INSERTCHILD, child, NULL, newchildindex);
   this->getChildren()->insert(child, newchildindex);
   this->setOperation();
@@ -492,14 +492,14 @@ SoGroup::insertChild(SoNode * child, int newchildindex)
 void
 SoGroup::removeChild(int childindex)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (childindex < 0 || childindex >= this->getNumChildren()) {
     SoDebugError::post("SoGroup::removeChild",
 		       "idx %d is out of bounds (groupnode # children == %d)",
 		       childindex, this->getNumChildren());
     return;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   this->setOperation(SoNotRec::GROUP_REMOVECHILD,
 		     this->getChild(childindex),
 		     NULL, childindex);
@@ -663,11 +663,11 @@ SoGroup::GLRender(SoGLRenderAction * action)
 
       (*SoGroupP::glrenderfunc)(this, childarray[i], action);
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
       // The GL error test is default disabled for this optimized
       // path.  If you get a GL error reporting an error in the
       // Separator node, enable this code by setting the environment
-      // variable COIN_GLERROR_DEBUGGING to "1" to see exactly which
+      // variable OBOL_GLERROR_DEBUGGING to "1" to see exactly which
       // node caused the error.
       static SbBool chkglerr = sogl_glerror_debugging();
       if (chkglerr) {
@@ -680,7 +680,7 @@ SoGroup::GLRender(SoGLRenderAction * action)
 			     (*this->getChildren())[i]->getTypeId().getName().getString());
 	}
       }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
     }
     action->popCurPath();
@@ -805,12 +805,12 @@ SoGroup::removeChild(SoNode * child)
   int idx = this->findChild(child);
 
   if (idx < 0) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::post("SoGroup::removeChild",
 		       "tried to remove non-existent child %p (%s)",
 		       child,
 		       child ? child->getTypeId().getName().getString() : "");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     return;
   }
 
@@ -871,7 +871,7 @@ SoGroup::replaceChild(int index, SoNode * newchild)
 void
 SoGroup::replaceChild(SoNode * oldchild, SoNode * newchild)
 {
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoGroup::replaceChild",
 			 "(%p) from %p (%s) to %p (%s)",
 			 this,
@@ -883,7 +883,7 @@ SoGroup::replaceChild(SoNode * oldchild, SoNode * newchild)
 
   int idx = this->findChild(oldchild);
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (idx < 0 || idx > this->getNumChildren()) {
     SoDebugError::post("SoGroup::replaceChild",
 		       "(%p) Tried to remove non-existent child %p (%s)",
@@ -892,7 +892,7 @@ SoGroup::replaceChild(SoNode * oldchild, SoNode * newchild)
 		       oldchild->getTypeId().getName().getString());
     return;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   this->replaceChild(idx, newchild);
 }

@@ -38,7 +38,7 @@
 
   FIXME: write doc.
 
-  \COIN_CLASS_EXTENSION
+  \OBOL_CLASS_EXTENSION
 
   \since Coin 2.3
 */
@@ -56,9 +56,9 @@
 #include "config.h"
 #include "SbBasicP.h"
 
-#ifndef COIN_WORKAROUND_NO_USING_STD_FUNCS
+#ifndef OBOL_WORKAROUND_NO_USING_STD_FUNCS
 using std::memcpy;
-#endif // !COIN_WORKAROUND_NO_USING_STD_FUNCS
+#endif // !OBOL_WORKAROUND_NO_USING_STD_FUNCS
 
 class SoTextureCombineElementP {
 public:
@@ -196,7 +196,7 @@ SoTextureCombineElement::getUnitData(const int unit) const
 }
 
 void
-SoTextureCombineElement::push(SoState * COIN_UNUSED_ARG(state))
+SoTextureCombineElement::push(SoState * OBOL_UNUSED_ARG(state))
 {
   const SoTextureCombineElement * prev = coin_assert_cast<SoTextureCombineElement *>
     (this->getNextInStack());

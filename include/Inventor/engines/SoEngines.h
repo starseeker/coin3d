@@ -30,8 +30,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_SOENGINES_H
-#define COIN_SOENGINES_H
+#ifndef OBOL_SOENGINES_H
+#define OBOL_SOENGINES_H
 
 #include <Inventor/engines/SoBoolOperation.h>
 #include <Inventor/engines/SoCalculator.h>
@@ -67,4 +67,4 @@
 #include <Inventor/engines/SoTexture2Convert.h>
 #include <Inventor/engines/SoHeightMapToNormalMap.h>
 
-#endif // !COIN_SOENGINES_H
+#endif // !OBOL_SOENGINES_H

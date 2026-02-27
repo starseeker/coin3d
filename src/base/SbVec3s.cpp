@@ -41,9 +41,9 @@
 #include <Inventor/SbVec3f.h>
 #include <Inventor/SbVec3d.h>
 #include <Inventor/fields/SoSFVec3s.h>
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 #include "coinString.h"
 
@@ -57,7 +57,7 @@
   This vector class provides storage for a 3 dimensional vector
   as well as simple integer arithmetic operations.
 
-  \COIN_CLASS_EXTENSION
+  \OBOL_CLASS_EXTENSION
 
   \sa SbVec2s, SbVec2f, SbVec2d, SbVec3f, SbVec3d, SbVec4f, SbVec4d.
   \since Coin 2.0
@@ -200,13 +200,13 @@ SbVec3s::setValue(const SbVec3b & v)
 SbVec3s &
 SbVec3s::setValue(const SbVec3i32 & v)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (v[0] > std::numeric_limits<short>::max() || v[0] < -std::numeric_limits<short>::max() ||
       v[1] > std::numeric_limits<short>::max() || v[1] < -std::numeric_limits<short>::max() ||
       v[2] > std::numeric_limits<short>::max() || v[2] < -std::numeric_limits<short>::max()) {
     SoDebugError::post("SbVec3s::setValue", "SbVec3i32 argument out of range for SbVec3s");
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   vec[0] = static_cast<short>(v[0]);
   vec[1] = static_cast<short>(v[1]);
   vec[2] = static_cast<short>(v[2]);
@@ -222,13 +222,13 @@ SbVec3s::setValue(const SbVec3i32 & v)
 SbVec3s &
 SbVec3s::setValue(const SbVec3f & v)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (v[0] > std::numeric_limits<short>::max() || v[0] < -std::numeric_limits<short>::max() ||
       v[1] > std::numeric_limits<short>::max() || v[1] < -std::numeric_limits<short>::max() ||
       v[2] > std::numeric_limits<short>::max() || v[2] < -std::numeric_limits<short>::max()) {
     SoDebugError::post("SbVec3s::setValue", "SbVec3f argument out of range for SbVec3s");
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   vec[0] = static_cast<short>(v[0]);
   vec[1] = static_cast<short>(v[1]);
   vec[2] = static_cast<short>(v[2]);
@@ -244,13 +244,13 @@ SbVec3s::setValue(const SbVec3f & v)
 SbVec3s &
 SbVec3s::setValue(const SbVec3d & v)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (v[0] > std::numeric_limits<short>::max() || v[0] < -std::numeric_limits<short>::max() ||
       v[1] > std::numeric_limits<short>::max() || v[1] < -std::numeric_limits<short>::max() ||
       v[2] > std::numeric_limits<short>::max() || v[2] < -std::numeric_limits<short>::max()) {
     SoDebugError::post("SbVec3s::setValue", "SbVec3d argument out of range for SbVec3s");
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   vec[0] = static_cast<short>(v[0]);
   vec[1] = static_cast<short>(v[1]);
   vec[2] = static_cast<short>(v[2]);
@@ -426,11 +426,11 @@ SbVec3s::fromString(const SbString & str)
 void
 SbVec3s::print(FILE * fp) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   SbString str = "<";
   str+=this->toString();
   str += ">";
   fputs(str.getString(),fp);
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }
 

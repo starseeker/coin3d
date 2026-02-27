@@ -30,8 +30,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_SONODEENGINE_H
-#define COIN_SONODEENGINE_H
+#ifndef OBOL_SONODEENGINE_H
+#define OBOL_SONODEENGINE_H
 
 #include <Inventor/nodes/SoNode.h>
 
@@ -39,7 +39,7 @@ class SoEngineOutput;
 class SoEngineOutputList;
 class SoEngineOutputData;
 
-class COIN_DLL_API SoNodeEngine : public SoNode {
+class OBOL_DLL_API SoNodeEngine : public SoNode {
   typedef SoNode inherited;
 
 public:
@@ -78,4 +78,4 @@ private:
   unsigned int flags;
 };
 
-#endif // !COIN_SONODEENGINE_H
+#endif // !OBOL_SONODEENGINE_H

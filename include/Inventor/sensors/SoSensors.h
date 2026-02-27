@@ -1,5 +1,5 @@
-#ifndef COIN_SOSENSORS_H
-#define COIN_SOSENSORS_H
+#ifndef OBOL_SOSENSORS_H
+#define OBOL_SOSENSORS_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -49,4 +49,4 @@
 #include <Inventor/sensors/SoPathSensor.h>
 #include <Inventor/sensors/SoTimerSensor.h>
 
-#endif // !COIN_SOSENSORS_H
+#endif // !OBOL_SOSENSORS_H

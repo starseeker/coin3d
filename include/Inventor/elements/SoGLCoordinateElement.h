@@ -1,5 +1,5 @@
-#ifndef COIN_SOGLCOORDINATEELEMENT_H
-#define COIN_SOGLCOORDINATEELEMENT_H
+#ifndef OBOL_SOGLCOORDINATEELEMENT_H
+#define OBOL_SOGLCOORDINATEELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/elements/SoCoordinateElement.h>
 
-class COIN_DLL_API SoGLCoordinateElement : public SoCoordinateElement {
+class OBOL_DLL_API SoGLCoordinateElement : public SoCoordinateElement {
   typedef SoCoordinateElement inherited;
 
   SO_ELEMENT_HEADER(SoGLCoordinateElement);
@@ -51,4 +51,4 @@ public:
 
 };
 
-#endif // !COIN_SOGLCOORDINATEELEMENT_H
+#endif // !OBOL_SOGLCOORDINATEELEMENT_H

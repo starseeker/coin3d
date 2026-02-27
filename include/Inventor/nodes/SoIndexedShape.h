@@ -1,5 +1,5 @@
-#ifndef COIN_SOINDEXEDSHAPE_H
-#define COIN_SOINDEXEDSHAPE_H
+#ifndef OBOL_SOINDEXEDSHAPE_H
+#define OBOL_SOINDEXEDSHAPE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -39,7 +39,7 @@
 
 class SoCoordinateElement;
 
-class COIN_DLL_API SoIndexedShape : public SoVertexShape {
+class OBOL_DLL_API SoIndexedShape : public SoVertexShape {
   typedef SoVertexShape inherited;
 
   SO_NODE_ABSTRACT_HEADER(SoIndexedShape);
@@ -79,4 +79,4 @@ protected:
                        SbBool & normalCacheUsed);
 };
 
-#endif // !COIN_SOINDEXEDSHAPE_H
+#endif // !OBOL_SOINDEXEDSHAPE_H

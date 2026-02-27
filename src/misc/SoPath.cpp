@@ -83,11 +83,11 @@
 
 #include "io/SoWriterefCounter.h"
 #include "CoinTidbits.h"
-#include "config.h" // COIN_STUB()
+#include "config.h" // OBOL_STUB()
 
 // *************************************************************************
 
-#if COIN_DEBUG && 0 // Convenience function for dumping the SoPath during debugging.
+#if OBOL_DEBUG && 0 // Convenience function for dumping the SoPath during debugging.
 #include <Inventor/SoFullPath.h>
 
 static void
@@ -103,7 +103,7 @@ sopath_dump(SoPath * p)
   }
   (void)fprintf(stderr, "\n");
 }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 // *************************************************************************
 
@@ -210,21 +210,21 @@ SoPath::getHead(void) const
 void
 SoPath::append(const int childindex)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (this->getFullLength() == 0) {
     SoDebugError::post("SoPath::append",
                        "SoPath was empty.\n");
     return;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   SoChildList * children =
     this->nodes[this->getFullLength() - 1]->getChildren();
-#ifdef COIN_EXTRA_DEBUG
+#ifdef OBOL_EXTRA_DEBUG
   assert(children);
-#endif // COIN_EXTRA_DEBUG
+#endif // OBOL_EXTRA_DEBUG
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (childindex >= children->getLength()) {
     SoDebugError::post("SoPath::append", "childindex (%d) out of bounds",
                        childindex);
@@ -254,7 +254,7 @@ SoPath::append(SoNode * const node)
   SoNode * tail = this->nodes[full_length - 1];
   const SoChildList * children = tail->getChildren();
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (!children) {
     SoDebugError::post("SoPath::append",
                        "The current tail of the SoPath, of type %s, does "
@@ -263,10 +263,10 @@ SoPath::append(SoNode * const node)
                        tail->getTypeId().getName().getString());
     return;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   const int idx = children->find(node);
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (idx < 0) {
     SoDebugError::post("SoPath::append",
                        "The current tail of the SoPath does not have the "
@@ -274,7 +274,7 @@ SoPath::append(SoNode * const node)
                        "it is bogus!");
     return;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   this->append(node, idx);
 }
@@ -314,14 +314,14 @@ SoPath::append(const SoPath * const frompath)
 
   SoChildList * tailchildren = tail->getChildren();
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (tailchildren == NULL) {
     SoDebugError::post("SoPath::append",
                        "The tail of this SoPath has no children node ('%s').\n",
                        tail->getTypeId().getName().getString());
     return;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   const int kids = tailchildren->getLength();
   for (int kid = 0; kid < kids; kid++) {
@@ -340,9 +340,9 @@ SoPath::append(const SoPath * const frompath)
     }
   }
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   SoDebugError::post("SoPath::append", "Could not join paths.\n");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   return;
 }
 
@@ -405,13 +405,13 @@ SoNode *
 SoPath::getTail(void) const
 {
   if (this->getLength() == 0) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SoPath::getTail", "empty path!");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     return NULL;
   }
 
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   int len = this->nodes.getLength();
   (void)fprintf(stderr, "** getTail() **\n\tNODES(len=%d): ", len);
   for (int i=0; i < len; i++)
@@ -433,13 +433,13 @@ SoPath::getTail(void) const
 SoNode *
 SoPath::getNode(const int index) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (index < 0 || index >= this->getFullLength()) {
     SoDebugError::post("SoPath::getNode", "index %d is out of bounds.",
                        index);
     return NULL;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   return this->nodes[index];
 }
 
@@ -450,13 +450,13 @@ SoPath::getNode(const int index) const
 SoNode *
 SoPath::getNodeFromTail(const int index) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (index < 0 || index >= this->getLength()) {
     SoDebugError::post("SoPath::getNodeFromTail",
                        "index %d is out of bounds.", index);
     return NULL;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   return this->nodes[this->getLength() - index - 1];
 }
 
@@ -467,13 +467,13 @@ SoPath::getNodeFromTail(const int index) const
 int
 SoPath::getIndex(const int index) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (index < 0 || index >= this->getFullLength()) {
     SoDebugError::post("SoPath::getIndex", "index %d is out of bounds.",
                        index);
     return -1;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   return this->indices[index];
 }
@@ -486,13 +486,13 @@ SoPath::getIndex(const int index) const
 int
 SoPath::getIndexFromTail(const int index) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (index < 0 || index >= this->getLength()) {
     SoDebugError::post("SoPath::getIndexFromTail",
                        "index %d is out of bounds.", index);
     return -1;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   return this->indices[this->getLength() - index - 1];
 }
 
@@ -511,9 +511,9 @@ SoPath::getLength(void) const
     ((SoPath*)this)->setFirstHidden();
   }
   if (this->firsthidden >= 0) {
-#ifdef COIN_EXTRA_DEBUG
+#ifdef OBOL_EXTRA_DEBUG
     assert(this->firsthidden < this->nodes.getLength());
-#endif // COIN_EXTRA_DEBUG
+#endif // OBOL_EXTRA_DEBUG
     return this->firsthidden + 1;
   }
   return this->nodes.getLength();
@@ -537,7 +537,7 @@ SoPath::truncate(const int length, const SbBool donotify)
   assert((length >= 0) && (length <= this->getFullLength()) &&
          "invalid truncation length");
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   // Don't run this alive test if the node list is not referencing.
   // SoTempPath (used by actions to minimize overhead while
   // traversing) does not reference count the node pointers, so it
@@ -562,14 +562,14 @@ SoPath::truncate(const int length, const SbBool donotify)
       if (n) { n->assertAlive(); }
     }
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 
   // Remove ourself as an auditor to the nodes' children lists.
   if (this->isauditing) {
     for (int i = length; i < this->getFullLength(); i++) {
       SoChildList * cl = this->nodes[i]->getChildren();
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
       if (cl) {
         SoDebugError::postInfo("SoPath::truncate",
                                "nodes[%d]=%p childlist=%p "
@@ -707,7 +707,7 @@ operator!=(const SoPath & lhs, const SoPath & rhs)
 SoPath *
 SoPath::copy(const int startfromnodeindex, int numnodes) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (startfromnodeindex < 0 ||
       startfromnodeindex >= this->getFullLength()) {
     SoDebugError::post("SoPath::copy",
@@ -715,17 +715,17 @@ SoPath::copy(const int startfromnodeindex, int numnodes) const
                        startfromnodeindex);
     return NULL;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   if (numnodes == 0) numnodes = this->getFullLength() - startfromnodeindex;
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (numnodes <= 0 ||
       (startfromnodeindex + numnodes) > this->getFullLength()) {
     SoDebugError::post("SoPath::copy", "numnodes has invalid value %d",
                        numnodes);
     return NULL;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   SoPath * newpath = new SoPath(numnodes);
   // Note: it is not by oversight that we're not copying the
@@ -784,7 +784,7 @@ SoPath::getByName(const SbName name, SoPathList & l)
 void
 SoPath::insertIndex(SoNode * const parent, const int newindex)
 {
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoPath::insertIndex",
                          "(%p)  parent=%p, newindex=%d",
                          this, parent, newindex);
@@ -794,9 +794,9 @@ SoPath::insertIndex(SoNode * const parent, const int newindex)
   if (parent == this->nodes[this->getFullLength() - 1]) return;
 
   int pos = this->findNode(parent);
-#ifdef COIN_EXTRA_DEBUG
+#ifdef OBOL_EXTRA_DEBUG
   assert(pos != -1); // shouldn't be notified if parent is not in path
-#endif // COIN_EXTRA_DEBUG
+#endif // OBOL_EXTRA_DEBUG
   pos++;
 
   if (newindex <= this->indices[pos]) this->indices[pos]++;
@@ -813,7 +813,7 @@ SoPath::insertIndex(SoNode * const parent, const int newindex)
 void
 SoPath::removeIndex(SoNode * const parent, const int oldindex)
 {
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoPath::removeIndex",
                          "(%p)  parent=%p (%s), oldindex=%d",
                          this,
@@ -826,7 +826,7 @@ SoPath::removeIndex(SoNode * const parent, const int oldindex)
   if (parent == this->nodes[this->getFullLength() - 1]) return;
 
   int pos = this->findNode(parent);
-#if COIN_DEBUG
+#if OBOL_DEBUG
   // shouldn't be notified if parent is not in path
   if (!(pos >= 0 && pos < this->getFullLength()-1)) {
     SoDebugError::post("SoPath::removeIndex",
@@ -836,7 +836,7 @@ SoPath::removeIndex(SoNode * const parent, const int oldindex)
                        parent->getTypeId().getName().getString());
     return;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   pos++;
 
   if (oldindex < this->indices[pos]) this->indices[pos]--;
@@ -852,7 +852,7 @@ void
 SoPath::replaceIndex(SoNode * const parent, const int index,
                      SoNode * const newchild)
 {
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoPath::replaceIndex",
                          "(%p)  parent=%p (%s), newchild=%p (%s)",
                          this,
@@ -864,9 +864,9 @@ SoPath::replaceIndex(SoNode * const parent, const int index,
   if (parent == this->nodes[this->getFullLength() - 1]) return;
 
   int pos = this->findNode(parent);
-#ifdef COIN_EXTRA_DEBUG
+#ifdef OBOL_EXTRA_DEBUG
   assert(pos != -1); // shouldn't be notified if parent is not in path
-#endif // COIN_EXTRA_DEBUG
+#endif // OBOL_EXTRA_DEBUG
   pos++;
 
   if (index == this->indices[pos]) {
@@ -881,7 +881,7 @@ SoPath::replaceIndex(SoNode * const parent, const int index,
     this->append(newchild, index);
   }
 
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   sopath_dump(this);
 #endif // debug
 }
@@ -1128,7 +1128,7 @@ SoPath::cleanupClass(void)
 // stream. See the documentation on write() for an explanation of the
 // file format.
 SbBool
-SoPath::readInstance(SoInput * in, unsigned short COIN_UNUSED_ARG(flags))
+SoPath::readInstance(SoInput * in, unsigned short OBOL_UNUSED_ARG(flags))
 {
   SoBase * baseptr;
   if (!SoBase::read(in, baseptr, SoNode::getClassTypeId())) return FALSE;

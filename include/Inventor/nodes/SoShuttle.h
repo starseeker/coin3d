@@ -1,5 +1,5 @@
-#ifndef COIN_SOSHUTTLE_H
-#define COIN_SOSHUTTLE_H
+#ifndef OBOL_SOSHUTTLE_H
+#define OBOL_SOSHUTTLE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -43,7 +43,7 @@ class SoElapsedTime;
 class SoCalculator;
 class SoInterpolateVec3f;
 
-class COIN_DLL_API SoShuttle : public SoTranslation {
+class OBOL_DLL_API SoShuttle : public SoTranslation {
   typedef SoTranslation inherited;
 
   SO_NODE_HEADER(SoShuttle);
@@ -72,4 +72,4 @@ private:
   SoElapsedTime * timer;
 };
 
-#endif // !COIN_SOSHUTTLE_H
+#endif // !OBOL_SOSHUTTLE_H

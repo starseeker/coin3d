@@ -907,7 +907,7 @@ SoCallbackAction::getTextureCoordinate2(const int index) const
   Returns SbVec3f texture coordinate at \a index from the texture
   coordinate pool of the traversal state.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */
@@ -959,7 +959,7 @@ SoCallbackAction::getTextureImage(SbVec2s & size, int & numcomps) const
 /*!
   Returns current 3D texture image settings.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */
@@ -1008,7 +1008,7 @@ SoCallbackAction::getTextureWrapT(void) const
 /*!
   Returns current texture wrapping setting for the \c R coordinate.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */

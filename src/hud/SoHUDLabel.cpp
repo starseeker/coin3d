@@ -62,7 +62,7 @@ SO_NODE_SOURCE(SoHUDLabel);
 void
 SoHUDLabel::initClass(void)
 {
-  SO_NODE_INTERNAL_INIT_CLASS(SoHUDLabel, SO_FROM_COIN_3_0);
+  SO_NODE_INTERNAL_INIT_CLASS(SoHUDLabel, SO_FROM_OBOL_3_0);
 }
 
 /*!

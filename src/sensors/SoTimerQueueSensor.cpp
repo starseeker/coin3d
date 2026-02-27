@@ -99,9 +99,9 @@
 #include <Inventor/SoDB.h>
 #include <cassert>
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 /*!
   \var SbBool SoTimerQueueSensor::scheduled
@@ -184,14 +184,14 @@ SoTimerQueueSensor::trigger(void)
 void
 SoTimerQueueSensor::schedule(void)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   assert(this->scheduled == TRUE || this->scheduled == FALSE);
   if (this->isScheduled()) {
     SoDebugError::postWarning("SoTimerQueueSensor::schedule",
                               "already scheduled!");
     return;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   SoDB::getSensorManager()->insertTimerSensor(this);
   this->scheduled = TRUE;
@@ -205,14 +205,14 @@ SoTimerQueueSensor::schedule(void)
 void
 SoTimerQueueSensor::unschedule(void)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   assert(this->scheduled == TRUE || this->scheduled == FALSE);
   if (!this->isScheduled()) {
     SoDebugError::postWarning("SoTimerQueueSensor::unschedule",
                               "not scheduled!");
     return;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   SoDB::getSensorManager()->removeTimerSensor(this);
   this->scheduled = FALSE;
 }

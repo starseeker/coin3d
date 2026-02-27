@@ -89,7 +89,7 @@ so_texcoordsphere_construct_data(void * closure)
 }
 
 static void
-so_texcoordsphere_destruct_data(void * COIN_UNUSED_ARG(closure))
+so_texcoordsphere_destruct_data(void * OBOL_UNUSED_ARG(closure))
 {
 }
 
@@ -154,7 +154,7 @@ SoTextureCoordinateSphere::~SoTextureCoordinateSphere()
 void
 SoTextureCoordinateSphere::initClass(void)
 {
-  SO_NODE_INTERNAL_INIT_CLASS(SoTextureCoordinateSphere, SO_FROM_COIN_2_3);
+  SO_NODE_INTERNAL_INIT_CLASS(SoTextureCoordinateSphere, SO_FROM_OBOL_2_3);
 
   SO_ENABLE(SoGLRenderAction, SoGLMultiTextureCoordinateElement);
   SO_ENABLE(SoCallbackAction, SoMultiTextureCoordinateElement);
@@ -206,7 +206,7 @@ textureCoordinateSphereCallback(void * userdata,
 }
 
 SbVec4f
-SoTextureCoordinateSphereP::calculateTextureCoordinate(const SbVec3f & point, const SbVec3f & COIN_UNUSED_ARG(n))
+SoTextureCoordinateSphereP::calculateTextureCoordinate(const SbVec3f & point, const SbVec3f & OBOL_UNUSED_ARG(n))
 {
 
   // FIXME: This way of mapping will always lead to artifacts in the

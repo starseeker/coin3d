@@ -225,7 +225,7 @@ SoSFImage::readValue(SoInput * in)
     return FALSE;
   }
 
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoSFImage::readValue", "image dimensions: %dx%dx%d",
                          size[0], size[1], nc);
 #endif // debug
@@ -471,9 +471,9 @@ SoSFImage::finishEditing(void)
  */
 void
 SoSFImage::setSubValue(
-                     const SbVec2s & COIN_UNUSED_ARG(dims),
-                     const SbVec2s & COIN_UNUSED_ARG(offset),
-                     unsigned char * COIN_UNUSED_ARG(pixels)
+                     const SbVec2s & OBOL_UNUSED_ARG(dims),
+                     const SbVec2s & OBOL_UNUSED_ARG(offset),
+                     unsigned char * OBOL_UNUSED_ARG(pixels)
                      )
 {
   // FIXME: unimplemented yet. 20030226 mortene.
@@ -490,10 +490,10 @@ SoSFImage::setSubValue(
  */
 void
 SoSFImage::setSubValues(
-                     const SbVec2s * COIN_UNUSED_ARG(dims),
-                     const SbVec2s * COIN_UNUSED_ARG(offsets),
-                     int COIN_UNUSED_ARG(num),
-                     unsigned char ** COIN_UNUSED_ARG(pixelblocks)
+                     const SbVec2s * OBOL_UNUSED_ARG(dims),
+                     const SbVec2s * OBOL_UNUSED_ARG(offsets),
+                     int OBOL_UNUSED_ARG(num),
+                     unsigned char ** OBOL_UNUSED_ARG(pixelblocks)
                      )
 {
   // FIXME: unimplemented yet. 20030226 mortene.
@@ -510,9 +510,9 @@ SoSFImage::setSubValues(
  */
 unsigned char *
 SoSFImage::getSubTexture(
-                      int COIN_UNUSED_ARG(idx),
-                      SbVec2s & COIN_UNUSED_ARG(dims),
-                      SbVec2s & COIN_UNUSED_ARG(offset)
+                      int OBOL_UNUSED_ARG(idx),
+                      SbVec2s & OBOL_UNUSED_ARG(dims),
+                      SbVec2s & OBOL_UNUSED_ARG(offset)
                       ) const
 {
   // FIXME: unimplemented yet. 20030226 mortene.
@@ -553,7 +553,7 @@ SoSFImage::hasSubTextures(int & numsubtextures)
   \since TGS Inventor ?.?
  */
 void
-SoSFImage::setNeverWrite(SbBool COIN_UNUSED_ARG(flag))
+SoSFImage::setNeverWrite(SbBool OBOL_UNUSED_ARG(flag))
 {
   // FIXME: unimplemented yet. 20030226 mortene.
   SoDebugError::postWarning("SoSFImage::setNeverWrite",

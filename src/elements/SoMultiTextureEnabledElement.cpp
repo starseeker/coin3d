@@ -36,7 +36,7 @@
 
   \ingroup coin_elements
 
-  \COIN_CLASS_EXTENSION
+  \OBOL_CLASS_EXTENSION
 
   \since Coin 2.2
 */
@@ -104,7 +104,7 @@ SoMultiTextureEnabledElement::~SoMultiTextureEnabledElement(void)
 */
 void
 SoMultiTextureEnabledElement::set(SoState * state,
-                                  SoNode * COIN_UNUSED_ARG(node),
+                                  SoNode * OBOL_UNUSED_ARG(node),
                                   const int unit,
                                   const SbBool enabled)
 {
@@ -125,7 +125,7 @@ SoMultiTextureEnabledElement::set(SoState * state,
 
 // doc from parent
 void
-SoMultiTextureEnabledElement::init(SoState * COIN_UNUSED_ARG(state))
+SoMultiTextureEnabledElement::init(SoState * OBOL_UNUSED_ARG(state))
 {
   PRIVATE(this)->mode.truncate(0);
   PRIVATE(this)->enabled.truncate(0);
@@ -203,7 +203,7 @@ SoMultiTextureEnabledElement::isEnabled(const int unit) const
 
 // doc in parent
 void
-SoMultiTextureEnabledElement::push(SoState * COIN_UNUSED_ARG(state))
+SoMultiTextureEnabledElement::push(SoState * OBOL_UNUSED_ARG(state))
 {
   SoMultiTextureEnabledElement * prev = coin_assert_cast<SoMultiTextureEnabledElement *>
     (this->getNextInStack());
@@ -271,7 +271,7 @@ SoMultiTextureEnabledElement::getActiveUnits(SoState * state, int & lastenabled)
 */
 void
 SoMultiTextureEnabledElement::enableRectangle(SoState * state,
-                                              SoNode * COIN_UNUSED_ARG(node),
+                                              SoNode * OBOL_UNUSED_ARG(node),
                                               const int unit)
 {
   SoMultiTextureEnabledElement * elem =
@@ -287,7 +287,7 @@ SoMultiTextureEnabledElement::enableRectangle(SoState * state,
 */
 void
 SoMultiTextureEnabledElement::enableCubeMap(SoState * state,
-                                            SoNode * COIN_UNUSED_ARG(node),
+                                            SoNode * OBOL_UNUSED_ARG(node),
                                             const int unit)
 {
   SoMultiTextureEnabledElement * elem = coin_assert_cast<SoMultiTextureEnabledElement *>
@@ -303,7 +303,7 @@ SoMultiTextureEnabledElement::enableCubeMap(SoState * state,
 */
 void
 SoMultiTextureEnabledElement::enableTexture3(SoState * state,
-                                             SoNode * COIN_UNUSED_ARG(node),
+                                             SoNode * OBOL_UNUSED_ARG(node),
                                              const int unit)
 {
   SoMultiTextureEnabledElement * elem = coin_assert_cast<SoMultiTextureEnabledElement *>

@@ -1,5 +1,5 @@
-#ifndef COIN_SBSTRINGLIST_H
-#define COIN_SBSTRINGLIST_H
+#ifndef OBOL_SBSTRINGLIST_H
+#define OBOL_SBSTRINGLIST_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 
 class SbString;
 
-class COIN_DLL_API SbStringList : public SbPList {
+class OBOL_DLL_API SbStringList : public SbPList {
 public:
   SbStringList(void) { }
   SbStringList(const int sizehint) : SbPList(sizehint) { }
@@ -59,4 +59,4 @@ public:
   }
 };
 
-#endif // !COIN_SBSTRINGLIST_H
+#endif // !OBOL_SBSTRINGLIST_H

@@ -1,5 +1,5 @@
-#ifndef COIN_SOMFSTRING_H
-#define COIN_SOMFSTRING_H
+#ifndef OBOL_SOMFSTRING_H
+#define OBOL_SOMFSTRING_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/fields/SoSubField.h>
 #include <Inventor/SbString.h>
 
-class COIN_DLL_API SoMFString : public SoMField {
+class OBOL_DLL_API SoMFString : public SoMField {
   typedef SoMField inherited;
 
   SO_MFIELD_HEADER(SoMFString, SbString, const SbString &);
@@ -51,4 +51,4 @@ public:
                   const int toline, const int tochar);
 };
 
-#endif // !COIN_SOMFSTRING_H
+#endif // !OBOL_SOMFSTRING_H

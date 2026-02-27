@@ -187,14 +187,14 @@ SoDelayQueueSensor::schedule(void)
 void
 SoDelayQueueSensor::unschedule(void)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (!this->isScheduled()) {
     SoDebugError::postWarning("SoDelayQueueSensor::unschedule",
                               "tried to unschedule a sensor which is "
                               "not scheduled");
     return;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   SoDB::getSensorManager()->removeDelaySensor(this);
   this->scheduled = FALSE;

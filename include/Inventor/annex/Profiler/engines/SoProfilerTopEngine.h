@@ -1,5 +1,5 @@
-#ifndef COIN_SOPROFILERTOPENGINE_H
-#define COIN_SOPROFILERTOPENGINE_H
+#ifndef OBOL_SOPROFILERTOPENGINE_H
+#define OBOL_SOPROFILERTOPENGINE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -47,7 +47,7 @@
 
 class SoProfilerTopEngineP;
 
-class COIN_DLL_API SoProfilerTopEngine : public SoEngine {
+class OBOL_DLL_API SoProfilerTopEngine : public SoEngine {
   typedef SoEngine inherited;
   SO_ENGINE_HEADER(SoProfilerTopEngine);
 
@@ -107,4 +107,4 @@ private:
 
 }; // SoProfilerTopEngine
 
-#endif // !COIN_SOPROFILERTOPENGINE_H
+#endif // !OBOL_SOPROFILERTOPENGINE_H

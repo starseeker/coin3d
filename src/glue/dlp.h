@@ -1,5 +1,5 @@
-#ifndef COIN_GLUE_DLP_H
-#define COIN_GLUE_DLP_H
+#ifndef OBOL_GLUE_DLP_H
+#define OBOL_GLUE_DLP_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -42,9 +42,9 @@
 
 /* ********************************************************************** */
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #error this is a private header file
-#endif /* ! COIN_INTERNAL */
+#endif /* ! OBOL_INTERNAL */
 
 #include "Inventor/basic.h"
 
@@ -85,4 +85,4 @@ void cc_dl_close(cc_libhandle handle);
 }
 #endif /* __cplusplus */
 
-#endif /* !COIN_GLUE_DLP_H */
+#endif /* !OBOL_GLUE_DLP_H */

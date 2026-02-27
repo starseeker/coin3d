@@ -76,7 +76,7 @@
 
 
   This class supports one environment variable called
-  COIN_SOINPUT_SEARCH_GLOBAL_DICT.  When set to "1", the global
+  OBOL_SOINPUT_SEARCH_GLOBAL_DICT.  When set to "1", the global
   dictionary is searched after the current file dictionary when
   resolving USE keywords. This makes it possible to reference nodes in
   other files. The reason for introducing this feature is that the
@@ -278,7 +278,7 @@ SoInput::~SoInput(void)
   \a tofield. This makes it possible to define ROUTEs in files
   before the \a fromnode or \a tonode is parsed.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */
@@ -312,7 +312,7 @@ SoInput::findProto(const SbName & name)
 /*!
   Adds a PROTO \a proto which should be active in the current scope.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */
@@ -329,7 +329,7 @@ SoInput::addProto(SoProto * proto)
   Pushed a PROTO \a proto onto the PROTO stack. The PROTO stack is used during
   file parsing.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \sa popProto()
   \since Coin 2.0
@@ -345,7 +345,7 @@ SoInput::pushProto(SoProto * proto)
 /*!
   Pops a PROTO off the PROTO stack.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \sa pushProto()
   \since Coin 2.0
@@ -361,7 +361,7 @@ SoInput::popProto(void)
 /*!
   Returns the PROTO at the top of the PROTO stack.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \sa pushProto()
   \since Coin 2.0
@@ -379,7 +379,7 @@ SoInput::getCurrentProto(void) const
   if the IS keyword was found, \a readok will be set to \c FALSE if
   some error occurred while searching for the IS keyword.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */
@@ -701,7 +701,7 @@ SoInput::getCurFileName(void) const
 
   \sa setBuffer()
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.1
 */
@@ -1556,7 +1556,7 @@ SoInput::removeReference(const SbName & name)
 
   The Coin library will by default only search through the previously
   loaded nodes from the \e same file. By setting the environment
-  variable \c COIN_SOINPUT_SEARCH_GLOBAL_DICT to "1", you can force
+  variable \c OBOL_SOINPUT_SEARCH_GLOBAL_DICT to "1", you can force
   the import process to search for USE-references through \e all nodes
   that have been loaded or otherwise instantiated.
 
@@ -1573,14 +1573,14 @@ SoInput::findReference(const SbName & name) const
     SoBase * base = this->getTopOfStack()->findReference(name);
     if (base) return base;
 
-    static int COIN_SOINPUT_SEARCH_GLOBAL_DICT = -1;
-    if (COIN_SOINPUT_SEARCH_GLOBAL_DICT < 0) {
-      const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_SOINPUT_SEARCH_GLOBAL_DICT");
-      if (env) COIN_SOINPUT_SEARCH_GLOBAL_DICT = atoi(env);
-      else COIN_SOINPUT_SEARCH_GLOBAL_DICT = 0;
+    static int OBOL_SOINPUT_SEARCH_GLOBAL_DICT = -1;
+    if (OBOL_SOINPUT_SEARCH_GLOBAL_DICT < 0) {
+      const char * env = CoinInternal::getEnvironmentVariableRaw("OBOL_SOINPUT_SEARCH_GLOBAL_DICT");
+      if (env) OBOL_SOINPUT_SEARCH_GLOBAL_DICT = atoi(env);
+      else OBOL_SOINPUT_SEARCH_GLOBAL_DICT = 0;
     }
 
-    if (COIN_SOINPUT_SEARCH_GLOBAL_DICT) {
+    if (OBOL_SOINPUT_SEARCH_GLOBAL_DICT) {
       return SoBase::getNamedBase(name, SoNode::getClassTypeId());
     }
   }
@@ -1691,12 +1691,12 @@ SoInput::addEnvDirectoriesIdx(int startidx,
 {
   const char * p = CoinInternal::getEnvironmentVariableRaw(envVarName);
   if (!p) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SoInput::addEnvDirectoriesFirst",
                               "Tried to add directories from nonexistent "
                               "environment variable '%s'.",
                               envVarName);
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     return;
   }
 
@@ -1760,13 +1760,13 @@ SoInput::removeDirectory(const char * dirName)
       delete (*dirs)[idx]; // Dealloc SbString object
       dirs->remove(idx);
     }
-#if COIN_DEBUG
+#if OBOL_DEBUG
     else {
       SoDebugError::postWarning("SoInput::removeDirectory",
                                 "Tried to remove nonexistent directory '%s'"
                                 " in directory search list.", dirName);
     }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   }
 }
 
@@ -1926,10 +1926,10 @@ static SbBool
 test_filename(const SbString & filename)
 {
   FILE * fp = fopen(filename.getString(), "rb");
-#if COIN_DEBUG && 0 // flip 1<->0 to turn texture search trace on or off
+#if OBOL_DEBUG && 0 // flip 1<->0 to turn texture search trace on or off
   SoDebugError::postInfo("test_filename", "file search: %s (%s)\n",
                          filename.getString(), fp ? "hit" : "miss");
-#endif // !COIN_DEBUG
+#endif // !OBOL_DEBUG
 
   if (fp != NULL) {
     fclose(fp);
@@ -2042,7 +2042,7 @@ SoInput::initFile(FILE * /* newFP */, const char * /* fileName */,
                   SbString * /* fullName */,
                   SbBool /* openedHere */, SbDict * /* refDict */)
 {
-  COIN_OBSOLETED();
+  OBOL_OBSOLETED();
 }
 
 /*!
@@ -2142,7 +2142,7 @@ SoInput::popFile(void)
 size_t
 SoInput::freeBytesInBuf(void) const
 {
-  COIN_OBSOLETED();
+  OBOL_OBSOLETED();
   return 0;
 }
 
@@ -2242,7 +2242,7 @@ SoInput::readChar(char * s, char charToRead)
 SbBool
 SoInput::makeRoomInBuf(size_t /* nBytes */)
 {
-  COIN_OBSOLETED();
+  OBOL_OBSOLETED();
   return FALSE;
 }
 
@@ -2358,7 +2358,7 @@ SoInput::convertDoubleArray(char * from, double * to, int len)
 void
 SoInput::resetFilePointer(FILE * /* fptr */)
 {
-  COIN_OBSOLETED();
+  OBOL_OBSOLETED();
 }
 
 /*!
@@ -2368,7 +2368,7 @@ SoInput::resetFilePointer(FILE * /* fptr */)
 SbBool
 SoInput::isFileURL(const char * /* url */)
 {
-  COIN_STUB();
+  OBOL_STUB();
   return FALSE;
 }
 
@@ -2379,7 +2379,7 @@ SoInput::isFileURL(const char * /* url */)
 char *
 SoInput::URLToFile(char * /* out_buf */, const char * /* in_buf */)
 {
-  COIN_STUB();
+  OBOL_STUB();
   return NULL;
 }
 
@@ -2390,7 +2390,7 @@ SoInput::URLToFile(char * /* out_buf */, const char * /* in_buf */)
 SbBool
 SoInput::IsURL(const char * /* c_strng */)
 {
-  COIN_STUB();
+  OBOL_STUB();
   return FALSE;
 }
 
@@ -2439,7 +2439,7 @@ SoInput::findFile(const char * basename, SbString & fullname)
     return NULL;
   }
 
-  const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_SOINPUT_FINDFILE");
+  const char * env = CoinInternal::getEnvironmentVariableRaw("OBOL_DEBUG_SOINPUT_FINDFILE");
   const SbBool DEBUG_FILE_SEARCHING = env && (atoi(env) > 0);
   if (DEBUG_FILE_SEARCHING) {
     std::string cwd;

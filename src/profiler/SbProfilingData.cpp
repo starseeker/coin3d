@@ -546,7 +546,7 @@ SbProfilingData::getParentIndex(int idx) const
  */
 
 int
-SbProfilingData::getIndexCreate(const SoFullPath * fullpath, int COIN_UNUSED_ARG(pathlen))
+SbProfilingData::getIndexCreate(const SoFullPath * fullpath, int OBOL_UNUSED_ARG(pathlen))
 {
 
   std::vector<int> lastentrypathindexes;
@@ -606,7 +606,7 @@ SbProfilingData::getIndexCreate(const SoFullPath * fullpath, int COIN_UNUSED_ARG
  */
 
 int
-SbProfilingData::getIndexNoCreate(const SoPath * path, int COIN_UNUSED_ARG(pathlen)) const
+SbProfilingData::getIndexNoCreate(const SoPath * path, int OBOL_UNUSED_ARG(pathlen)) const
 {
   const SoFullPath * fullpath = static_cast<const SoFullPath *>(path);
 

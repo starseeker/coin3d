@@ -1,5 +1,5 @@
-#ifndef COIN_SOHUDLABEL_H
-#define COIN_SOHUDLABEL_H
+#ifndef OBOL_SOHUDLABEL_H
+#define OBOL_SOHUDLABEL_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -64,7 +64,7 @@
 
 class SoText2;
 
-class COIN_DLL_API SoHUDLabel : public SoNode {
+class OBOL_DLL_API SoHUDLabel : public SoNode {
   typedef SoNode inherited;
   SO_NODE_HEADER(SoHUDLabel);
 
@@ -98,4 +98,4 @@ private:
   SoText2 * textNode; // lazy-initialised on first GLRender, ref-counted
 };
 
-#endif // !COIN_SOHUDLABEL_H
+#endif // !OBOL_SOHUDLABEL_H

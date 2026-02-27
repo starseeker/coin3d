@@ -1,5 +1,5 @@
-#ifndef COIN_SOVERTEXATTRIBUTE_H
-#define COIN_SOVERTEXATTRIBUTE_H
+#ifndef OBOL_SOVERTEXATTRIBUTE_H
+#define OBOL_SOVERTEXATTRIBUTE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -44,7 +44,7 @@
 class SoMField;
 class SoVertexAttributeP;
 
-class COIN_DLL_API SoVertexAttribute : public SoNode {
+class OBOL_DLL_API SoVertexAttribute : public SoNode {
   typedef SoNode inherited;
 
 public:
@@ -98,4 +98,4 @@ private:
 
 // *************************************************************************
 
-#endif // !COIN_SOVERTEXATTRIBUTE_H
+#endif // !OBOL_SOVERTEXATTRIBUTE_H

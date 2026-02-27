@@ -94,9 +94,9 @@
 #include <Inventor/elements/SoGLLazyElement.h>
 #include <Inventor/elements/SoGLVBOElement.h>
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
 #include <Inventor/threads/SbRWMutex.h>
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 
 #include "nodes/SoSubNodeP.h"
 #include "rendering/SoVBO.h"
@@ -127,42 +127,42 @@
 class SoFaceSetP {
 public:
   SoFaceSetP(void)
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
     : convexmutex(SbRWMutex::READ_PRECEDENCE)
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
   { }
   SoConvexDataCache * convexCache;
   int concavestatus;
   int primitivetype;
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   // FIXME: a mutex for every instance seems a bit excessive,
   // especially since Microsoft Windows might have rather strict limits on the
   // total amount of mutex resources a process (or even a user) can
   // allocate. so consider making this a class-wide instance instead.
   // -mortene.
   SbRWMutex convexmutex;
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 
   void readLockConvexCache(void) {
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
     this->convexmutex.readLock();
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
   }
   void readUnlockConvexCache(void) {
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
     this->convexmutex.readUnlock();
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
   }
   void writeLockConvexCache(void) {
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
     this->convexmutex.writeLock();
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
   }
   void writeUnlockConvexCache(void) {
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
     this->convexmutex.writeUnlock();
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
   }
 };
 #endif // DOXYGEN_SKIP_THIS
@@ -234,10 +234,10 @@ SoFaceSet::findMaterialBinding(SoState * const state) const
     break;
   default:
     binding = OVERALL;
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SoFaceSet::findMaterialBinding",
                               "unknown material binding setting");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     break;
   }
   return binding;
@@ -270,10 +270,10 @@ SoFaceSet::findNormalBinding(SoState * const state) const
     break;
   default:
     binding = PER_VERTEX;
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SoFaceSet::findNormalBinding",
                               "unknown normal binding setting");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     break;
   }
   return binding;
@@ -294,9 +294,9 @@ namespace { namespace SoGL { namespace FaceSet {
                        const SbVec3f *normals,
                        SoMaterialBundle * mb,
                        const SoTextureCoordinateBundle * tb,
-                       int COIN_UNUSED_ARG(nbind),
-                       int COIN_UNUSED_ARG(mbind),
-                       int COIN_UNUSED_ARG(doTextures),
+                       int OBOL_UNUSED_ARG(nbind),
+                       int OBOL_UNUSED_ARG(mbind),
+                       int OBOL_UNUSED_ARG(doTextures),
                        int32_t idx,
                        const int32_t *ptr,
                        const int32_t *end,
@@ -383,7 +383,7 @@ namespace { namespace SoGL { namespace FaceSet {
         if ((AttributeBinding)MaterialBinding == PER_VERTEX) {
           mb->send(matnr++, TRUE);
         } else if ((AttributeBinding)MaterialBinding != OVERALL) {
-          // only needed for nvidia color-per-face bug workaround
+          // re-send per-face material for each vertex to ensure correct colour on all drivers
           mb->send(matnr-1, TRUE);
         }
 

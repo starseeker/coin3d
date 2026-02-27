@@ -303,7 +303,7 @@ SoTranslate2Dragger::setUpConnections(SbBool onoff, SbBool doitalways)
 
 /*! \COININTERNAL */
 void
-SoTranslate2Dragger::fieldSensorCB(void * d, SoSensor * COIN_UNUSED_ARG(s))
+SoTranslate2Dragger::fieldSensorCB(void * d, SoSensor * OBOL_UNUSED_ARG(s))
 {
   assert(d);
   SoTranslate2Dragger * thisp = THISP(d);

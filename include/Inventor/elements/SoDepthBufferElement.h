@@ -1,5 +1,5 @@
-#ifndef COIN_SODEPTHBUFFERELEMENT_H
-#define COIN_SODEPTHBUFFERELEMENT_H
+#ifndef OBOL_SODEPTHBUFFERELEMENT_H
+#define OBOL_SODEPTHBUFFERELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/elements/SoSubElement.h>
 #include <Inventor/SbVec2f.h>
 
-class COIN_DLL_API SoDepthBufferElement : public SoElement {
+class OBOL_DLL_API SoDepthBufferElement : public SoElement {
   typedef SoElement inherited;
   SO_ELEMENT_HEADER(SoDepthBufferElement);
 
@@ -87,4 +87,4 @@ protected:
 
 }; // SoDepthBufferElement
 
-#endif // !COIN_SODEPTHBUFFERELEMENT_H
+#endif // !OBOL_SODEPTHBUFFERELEMENT_H

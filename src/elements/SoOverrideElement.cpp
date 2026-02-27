@@ -55,7 +55,7 @@
   In Coin, we have added in a little hack to overcome this problem,
   since it is such a common request for functionality: to have
   separate transparency override settings, set the environment
-  variable \c COIN_SEPARATE_DIFFUSE_TRANSPARENCY_OVERRIDE to "1" to
+  variable \c OBOL_SEPARATE_DIFFUSE_TRANSPARENCY_OVERRIDE to "1" to
   enable this hack.
 
   (Do however note that this will not work when the SoPackedColor or
@@ -94,7 +94,7 @@
   {
     QWidget * window = SoQt::init(argv[0]);
 
-    (void)CoinInternal::setEnvironmentVariable("COIN_SEPARATE_DIFFUSE_TRANSPARENCY_OVERRIDE", "1", true);
+    (void)CoinInternal::setEnvironmentVariable("OBOL_SEPARATE_DIFFUSE_TRANSPARENCY_OVERRIDE", "1", true);
 
     SoInput * in = new SoInput;
     in->setBuffer(scene, strlen(scene));
@@ -159,23 +159,23 @@ else if (element) \
 
 // *************************************************************************
 
-static int COIN_SEPARATE_DIFFUSE_TRANSPARENCY_OVERRIDE = -1;
+static int OBOL_SEPARATE_DIFFUSE_TRANSPARENCY_OVERRIDE = -1;
 
 // *************************************************************************
 
 static SbBool
 use_separate_transp_diffuse(void)
 {
-  if (COIN_SEPARATE_DIFFUSE_TRANSPARENCY_OVERRIDE < 0) {
-    COIN_SEPARATE_DIFFUSE_TRANSPARENCY_OVERRIDE = 0;
+  if (OBOL_SEPARATE_DIFFUSE_TRANSPARENCY_OVERRIDE < 0) {
+    OBOL_SEPARATE_DIFFUSE_TRANSPARENCY_OVERRIDE = 0;
 
     const char * env =
-      CoinInternal::getEnvironmentVariableRaw("COIN_SEPARATE_DIFFUSE_TRANSPARENCY_OVERRIDE");
+      CoinInternal::getEnvironmentVariableRaw("OBOL_SEPARATE_DIFFUSE_TRANSPARENCY_OVERRIDE");
     if (env) {
-      COIN_SEPARATE_DIFFUSE_TRANSPARENCY_OVERRIDE = atoi(env);
+      OBOL_SEPARATE_DIFFUSE_TRANSPARENCY_OVERRIDE = atoi(env);
     }
   }
-  return COIN_SEPARATE_DIFFUSE_TRANSPARENCY_OVERRIDE ?
+  return OBOL_SEPARATE_DIFFUSE_TRANSPARENCY_OVERRIDE ?
     TRUE : FALSE;
 }
 
@@ -483,7 +483,7 @@ SoOverrideElement::getPolygonOffsetOverride(SoState * const state)
 /*!
   Returns normal vector override value.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */
@@ -496,7 +496,7 @@ SoOverrideElement::getNormalVectorOverride(SoState * const state)
 /*!
   Returns normal binding override value.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */
@@ -570,7 +570,7 @@ SoOverrideElement::setCreaseAngleOverride(SoState * const state,
   Can be used to set diffuse color override. This will also set the
   transparency override. Since we feel this is a design flaw,
   it is possible to override this behaviour by setting an environment
-  value called COIN_SEPARATE_DIFFUSE_TRANSPARENCY_OVERRIDE to 1.
+  value called OBOL_SEPARATE_DIFFUSE_TRANSPARENCY_OVERRIDE to 1.
 
   Please note that separate override will not work for the PackedColor
   or SoVertexProperty nodes.
@@ -785,7 +785,7 @@ SoOverrideElement::setTransparencyTypeOverride(SoState * const state,
 /*!
   Can be used to set normal vector override.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */
@@ -800,7 +800,7 @@ SoOverrideElement::setNormalVectorOverride(SoState * const state,
 /*!
   Can be used to set normal binding override.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */

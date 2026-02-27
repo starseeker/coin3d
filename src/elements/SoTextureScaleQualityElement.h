@@ -1,5 +1,5 @@
-#ifndef COIN_SOTEXTURESCALEQUALITYELEMENT_H
-#define COIN_SOTEXTURESCALEQUALITYELEMENT_H
+#ifndef OBOL_SOTEXTURESCALEQUALITYELEMENT_H
+#define OBOL_SOTEXTURESCALEQUALITYELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,9 +33,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #error this is a private header file
-#endif // !COIN_INTERNAL
+#endif // !OBOL_INTERNAL
 
 #include <Inventor/elements/SoFloatElement.h>
 
@@ -56,4 +56,4 @@ public:
   static float getDefault(void);
 };
 
-#endif // !COIN_SOTEXTURESCALEQUALITYELEMENT_H
+#endif // !OBOL_SOTEXTURESCALEQUALITYELEMENT_H

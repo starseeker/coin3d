@@ -1,5 +1,5 @@
-#ifndef COIN_SONORMALBINDING_H
-#define COIN_SONORMALBINDING_H
+#ifndef OBOL_SONORMALBINDING_H
+#define OBOL_SONORMALBINDING_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/fields/SoSFEnum.h>
 #include <Inventor/nodes/SoSubNode.h>
 
-class COIN_DLL_API SoNormalBinding : public SoNode {
+class OBOL_DLL_API SoNormalBinding : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_HEADER(SoNormalBinding);
@@ -75,4 +75,4 @@ protected:
   virtual SbBool readInstance(SoInput * in, unsigned short flags);
 };
 
-#endif // !COIN_SONORMALBINDING_H
+#endif // !OBOL_SONORMALBINDING_H

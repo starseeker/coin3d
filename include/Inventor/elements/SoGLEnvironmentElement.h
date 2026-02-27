@@ -1,5 +1,5 @@
-#ifndef COIN_SOGLENVIRONMENTELEMENT_H
-#define COIN_SOGLENVIRONMENTELEMENT_H
+#ifndef OBOL_SOGLENVIRONMENTELEMENT_H
+#define OBOL_SOGLENVIRONMENTELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/elements/SoEnvironmentElement.h>
 
-class COIN_DLL_API SoGLEnvironmentElement : public SoEnvironmentElement {
+class OBOL_DLL_API SoGLEnvironmentElement : public SoEnvironmentElement {
   typedef SoEnvironmentElement inherited;
 
   SO_ELEMENT_HEADER(SoGLEnvironmentElement);
@@ -63,4 +63,4 @@ private:
   void updategl(SoState * const state);
 };
 
-#endif // !COIN_SOGLENVIRONMENTELEMENT_H
+#endif // !OBOL_SOGLENVIRONMENTELEMENT_H

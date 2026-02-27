@@ -1,5 +1,5 @@
-#ifndef COIN_SBXFBOX3D_H
-#define COIN_SBXFBOX3D_H
+#ifndef OBOL_SBXFBOX3D_H
+#define OBOL_SBXFBOX3D_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -36,7 +36,7 @@
 #include <Inventor/SbBox3d.h>
 #include <Inventor/SbDPMatrix.h>
 
-class COIN_DLL_API SbXfBox3d : public SbBox3d {
+class OBOL_DLL_API SbXfBox3d : public SbBox3d {
   typedef SbBox3d inherited;
 
 public:
@@ -80,7 +80,7 @@ private:
 
 }; // SbXfBox3d
 
-COIN_DLL_API int operator == (const SbXfBox3d & b1, const SbXfBox3d & b2);
-COIN_DLL_API int operator != (const SbXfBox3d & b1, const SbXfBox3d & b2);
+OBOL_DLL_API int operator == (const SbXfBox3d & b1, const SbXfBox3d & b2);
+OBOL_DLL_API int operator != (const SbXfBox3d & b1, const SbXfBox3d & b2);
 
-#endif // !COIN_SBXFBOX3D_H
+#endif // !OBOL_SBXFBOX3D_H

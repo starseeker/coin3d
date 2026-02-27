@@ -1,5 +1,5 @@
-#ifndef COIN_SOWRITEREFCOUNTER_H
-#define COIN_SOWRITEREFCOUNTER_H
+#ifndef OBOL_SOWRITEREFCOUNTER_H
+#define OBOL_SOWRITEREFCOUNTER_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -38,7 +38,7 @@ class SoOutput;
 class SoBase;
 class SbString;
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #error this is a private header file
 #endif
 
@@ -93,4 +93,4 @@ private:
 
 };
 
-#endif // COIN_SOWRITERREFCOUNTER_H
+#endif // OBOL_SOWRITERREFCOUNTER_H

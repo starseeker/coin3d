@@ -1,5 +1,5 @@
-#ifndef COIN_SOGLVERTEXATTRIBUTEELEMENT_H
-#define COIN_SOGLVERTEXATTRIBUTEELEMENT_H
+#ifndef OBOL_SOGLVERTEXATTRIBUTEELEMENT_H
+#define OBOL_SOGLVERTEXATTRIBUTEELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -39,7 +39,7 @@
 class SoGLRenderAction;
 class SoVertexAttributeData;
 
-class COIN_DLL_API SoGLVertexAttributeElement : public SoVertexAttributeElement {
+class OBOL_DLL_API SoGLVertexAttributeElement : public SoVertexAttributeElement {
   typedef SoVertexAttributeElement inherited;
   SO_ELEMENT_HEADER(SoGLVertexAttributeElement);
 
@@ -57,4 +57,4 @@ protected:
   virtual void addElt(SoVertexAttributeData * attribdata);
 };
 
-#endif // COIN_SOGLVERTEXATTRIBUTEELEMENT_H
+#endif // OBOL_SOGLVERTEXATTRIBUTEELEMENT_H

@@ -1,5 +1,5 @@
-#ifndef COIN_SONORMALCACHE_H
-#define COIN_SONORMALCACHE_H
+#ifndef OBOL_SONORMALCACHE_H
+#define OBOL_SONORMALCACHE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -40,7 +40,7 @@
 class SoNormalGenerator;
 class SoNormalCacheP;
 
-class COIN_DLL_API SoNormalCache : public SoCache {
+class OBOL_DLL_API SoNormalCache : public SoCache {
   typedef SoCache inherited;
 
 public:
@@ -108,4 +108,4 @@ private:
   void clearGenerator(void);
 };
 
-#endif // !COIN_SONORMALCACHE_H
+#endif // !OBOL_SONORMALCACHE_H

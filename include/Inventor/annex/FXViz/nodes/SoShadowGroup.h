@@ -1,5 +1,5 @@
-#ifndef COIN_SOSHADOWGROUP_H
-#define COIN_SOSHADOWGROUP_H
+#ifndef OBOL_SOSHADOWGROUP_H
+#define OBOL_SOSHADOWGROUP_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -42,7 +42,7 @@
 
 class SoShadowGroupP;
 
-class COIN_DLL_API SoShadowGroup : public SoSeparator {
+class OBOL_DLL_API SoShadowGroup : public SoSeparator {
   typedef SoSeparator inherited;
 
   SO_NODE_HEADER(SoShadowGroup);
@@ -89,4 +89,4 @@ private:
 
 };
 
-#endif // COIN_SOSHADOWGROUP_H
+#endif // OBOL_SOSHADOWGROUP_H

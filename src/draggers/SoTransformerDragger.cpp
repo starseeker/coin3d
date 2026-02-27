@@ -1808,7 +1808,7 @@ SoTransformerDragger::dragFinish(void)
   this->setSwitchValue("yAxisFeedbackSwitch", SO_SWITCH_NONE);
   this->setSwitchValue("zAxisFeedbackSwitch", SO_SWITCH_NONE);
 
-#if COIN_DEBUG && 0 // used to debug motion matrix (pederb, 20000225)
+#if OBOL_DEBUG && 0 // used to debug motion matrix (pederb, 20000225)
   SbMatrix m = this->getMotionMatrix();
   SbRotation r,so;
   SbVec3f t,s;
@@ -1894,9 +1894,9 @@ SoTransformerDragger::setAllPartSwitches(int scalewhich, int rotatewhich, int tr
   Open Inventor API.  We'll consider to implement it if requested.
 */
 int
-SoTransformerDragger::getMouseGestureDirection(SbBool COIN_UNUSED_ARG(x_ok), SbBool COIN_UNUSED_ARG(y_ok), SbBool COIN_UNUSED_ARG(z_ok))
+SoTransformerDragger::getMouseGestureDirection(SbBool OBOL_UNUSED_ARG(x_ok), SbBool OBOL_UNUSED_ARG(y_ok), SbBool OBOL_UNUSED_ARG(z_ok))
 {
-  COIN_OBSOLETED();
+  OBOL_OBSOLETED();
   return -1;
 }
 
@@ -1905,9 +1905,9 @@ SoTransformerDragger::getMouseGestureDirection(SbBool COIN_UNUSED_ARG(x_ok), SbB
   Open Inventor API.  We'll consider to implement it if requested.
 */
 int
-SoTransformerDragger::getIgnoreAxis(SbVec2f COIN_UNUSED_ARG(axis[3][2]), SbBool COIN_UNUSED_ARG(x_ok), SbBool COIN_UNUSED_ARG(y_ok), SbBool COIN_UNUSED_ARG(z_ok))
+SoTransformerDragger::getIgnoreAxis(SbVec2f OBOL_UNUSED_ARG(axis[3][2]), SbBool OBOL_UNUSED_ARG(x_ok), SbBool OBOL_UNUSED_ARG(y_ok), SbBool OBOL_UNUSED_ARG(z_ok))
 {
-  COIN_OBSOLETED();
+  OBOL_OBSOLETED();
   return -1;
 }
 
@@ -1916,9 +1916,9 @@ SoTransformerDragger::getIgnoreAxis(SbVec2f COIN_UNUSED_ARG(axis[3][2]), SbBool 
   Open Inventor API.  We'll consider to implement it if requested.
 */
 void
-SoTransformerDragger::makeMinorAxisPerpendicularIfColinear(SbVec2f COIN_UNUSED_ARG(origin), SbVec2f COIN_UNUSED_ARG(axisends[3][2]), int COIN_UNUSED_ARG(index_a), int COIN_UNUSED_ARG(index_b))
+SoTransformerDragger::makeMinorAxisPerpendicularIfColinear(SbVec2f OBOL_UNUSED_ARG(origin), SbVec2f OBOL_UNUSED_ARG(axisends[3][2]), int OBOL_UNUSED_ARG(index_a), int OBOL_UNUSED_ARG(index_b))
 {
-  COIN_OBSOLETED();
+  OBOL_OBSOLETED();
 }
 
 /*!
@@ -1926,9 +1926,9 @@ SoTransformerDragger::makeMinorAxisPerpendicularIfColinear(SbVec2f COIN_UNUSED_A
   Open Inventor API.  We'll consider to implement it if requested.
 */
 SbBool
-SoTransformerDragger::isColinear(SbVec2f COIN_UNUSED_ARG(a1[2]), SbVec2f COIN_UNUSED_ARG(a2[2]), int COIN_UNUSED_ARG(pixels))
+SoTransformerDragger::isColinear(SbVec2f OBOL_UNUSED_ARG(a1[2]), SbVec2f OBOL_UNUSED_ARG(a2[2]), int OBOL_UNUSED_ARG(pixels))
 {
-  COIN_OBSOLETED();
+  OBOL_OBSOLETED();
   return FALSE;
 }
 

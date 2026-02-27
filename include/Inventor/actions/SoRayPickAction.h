@@ -1,5 +1,5 @@
-#ifndef COIN_SORAYPICKACTION_H
-#define COIN_SORAYPICKACTION_H
+#ifndef OBOL_SORAYPICKACTION_H
+#define OBOL_SORAYPICKACTION_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -47,7 +47,7 @@ class SoPickedPoint;
 class SoPickedPointList;
 class SoRayPickActionP;
 
-class COIN_DLL_API SoRayPickAction : public SoPickAction {
+class OBOL_DLL_API SoRayPickAction : public SoPickAction {
   typedef SoPickAction inherited;
 
   SO_ACTION_HEADER(SoRayPickAction);
@@ -101,4 +101,4 @@ private:
   SoRayPickAction & operator = (const SoRayPickAction & rhs);
 }; // SoRayPickAction
 
-#endif // !COIN_SORAYPICKACTION_H
+#endif // !OBOL_SORAYPICKACTION_H

@@ -64,10 +64,10 @@
 #include <unistd.h> /* STDERR_FILENO */
 #endif /* HAVE_UNISTD_H */
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
 #include <mutex>
 #include "threads/mutexp.h"
-#endif /* COIN_THREADSAFE */
+#endif /* OBOL_THREADSAFE */
 
 #include "CoinTidbits.h"
 
@@ -77,9 +77,9 @@
 extern "C" {
 #endif /* __cplusplus */
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
 static std::mutex error_mutex;
-#endif /* COIN_THREADSAFE */
+#endif /* OBOL_THREADSAFE */
 
 /* FIXME: should be hidden from public API, and only visible to
    subclasses. 20020526 mortene. */
@@ -88,7 +88,7 @@ static std::mutex error_mutex;
 */
 
 void
-cc_error_default_handler_cb(const cc_error * err, void * COIN_UNUSED_ARG(data))
+cc_error_default_handler_cb(const cc_error * err, void * OBOL_UNUSED_ARG(data))
 {
   /* It is not possible to "pass" C library data from the application
      to a MSWin .DLL, so this is necessary to get hold of the stderr
@@ -186,15 +186,15 @@ cc_error_handle(cc_error * me)
   cc_error_cb * function = cc_error_get_handler(&arg);
   assert(function != NULL);
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   error_mutex.lock();
-#endif /* COIN_THREADSAFE */
+#endif /* OBOL_THREADSAFE */
 
   (*function)(me, arg);
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   error_mutex.unlock();
-#endif /* COIN_THREADSAFE */
+#endif /* OBOL_THREADSAFE */
 }
 
 /*!

@@ -1,5 +1,5 @@
-#ifndef COIN_SONORMALBUNDLE_H
-#define COIN_SONORMALBUNDLE_H
+#ifndef OBOL_SONORMALBUNDLE_H
+#define OBOL_SONORMALBUNDLE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -39,7 +39,7 @@
 
 class SoNormalBundleP;
 
-class COIN_DLL_API SoNormalBundle : public SoBundle {
+class OBOL_DLL_API SoNormalBundle : public SoBundle {
 public:
   SoNormalBundle(SoAction * action, SbBool forrendering);
   ~SoNormalBundle();
@@ -71,4 +71,4 @@ private:
 };
 
 
-#endif // !COIN_SONORMALBUNDLE_H
+#endif // !OBOL_SONORMALBUNDLE_H

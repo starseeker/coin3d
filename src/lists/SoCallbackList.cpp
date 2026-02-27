@@ -43,9 +43,9 @@
 
 #include <Inventor/lists/SoCallbackList.h>
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 /*!
   \typedef void SoCallbackListCB(void * userdata, void * callbackdata)
@@ -103,7 +103,7 @@ SoCallbackList::removeCallback(SoCallbackListCB * f, void * userdata)
     idx--;
   }
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   // FIXME: Is this warning really necessary? Shouldn't it be possible
   // to do the equivalent of setCallback(NULL,NULL) -- i.e. "remove if
   // already exists, else do nothing"? 20050723 kyrah.
@@ -112,7 +112,7 @@ SoCallbackList::removeCallback(SoCallbackListCB * f, void * userdata)
                        "Tried to remove non-existent callback function.");
     return;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }
 
 /*!

@@ -1,5 +1,5 @@
-#ifndef COIN_SONODEKIT_H
-#define COIN_SONODEKIT_H
+#ifndef OBOL_SONODEKIT_H
+#define OBOL_SONODEKIT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,9 +35,9 @@
 
 #include <Inventor/SbBasic.h>
 
-class COIN_DLL_API SoNodeKit {
+class OBOL_DLL_API SoNodeKit {
 public:
   static void init(void);
 };
 
-#endif // !COIN_SONODEKIT_H
+#endif // !OBOL_SONODEKIT_H

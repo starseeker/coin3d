@@ -1,5 +1,5 @@
-#ifndef COIN_SOVERTEXSHADER_H
-#define COIN_SOVERTEXSHADER_H
+#ifndef OBOL_SOVERTEXSHADER_H
+#define OBOL_SOVERTEXSHADER_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/nodes/SoShaderObject.h>
 
-class COIN_DLL_API SoVertexShader : public SoShaderObject {
+class OBOL_DLL_API SoVertexShader : public SoShaderObject {
   typedef SoShaderObject inherited;
   SO_NODE_HEADER(SoVertexShader);
 
@@ -47,4 +47,4 @@ public:
   static SbBool isSupported(SourceType sourceType);
 };
 
-#endif /* ! COIN_SOVERTEXSHADER_H */
+#endif /* ! OBOL_SOVERTEXSHADER_H */

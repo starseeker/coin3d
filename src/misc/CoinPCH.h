@@ -1,5 +1,5 @@
-#ifndef COIN_PCH_H
-#define COIN_PCH_H
+#ifndef OBOL_PCH_H
+#define OBOL_PCH_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -42,7 +42,7 @@
   with internal types and order-dependent includes.
 */
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #error this is a private header file
 #endif
 
@@ -63,4 +63,4 @@
 // Coin3D headers
 #include "Inventor/errors/SoDebugError.h"
 
-#endif /* !COIN_PCH_H */
+#endif /* !OBOL_PCH_H */

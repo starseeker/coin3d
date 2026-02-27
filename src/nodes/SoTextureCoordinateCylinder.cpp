@@ -89,7 +89,7 @@ so_texcoordcylinder_construct_data(void * closure)
 }
 
 static void
-so_texcoordcylinder_destruct_data(void * COIN_UNUSED_ARG(closure))
+so_texcoordcylinder_destruct_data(void * OBOL_UNUSED_ARG(closure))
 { 
 }
 
@@ -158,7 +158,7 @@ SoTextureCoordinateCylinder::~SoTextureCoordinateCylinder()
 void
 SoTextureCoordinateCylinder::initClass(void)
 {
-  SO_NODE_INTERNAL_INIT_CLASS(SoTextureCoordinateCylinder, SO_FROM_COIN_2_3);
+  SO_NODE_INTERNAL_INIT_CLASS(SoTextureCoordinateCylinder, SO_FROM_OBOL_2_3);
   
   SO_ENABLE(SoGLRenderAction, SoGLMultiTextureCoordinateElement);
   SO_ENABLE(SoCallbackAction, SoMultiTextureCoordinateElement);

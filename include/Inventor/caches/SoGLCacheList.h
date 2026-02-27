@@ -1,5 +1,5 @@
-#ifndef COIN_SOGLCACHELIST_H
-#define COIN_SOGLCACHELIST_H
+#ifndef OBOL_SOGLCACHELIST_H
+#define OBOL_SOGLCACHELIST_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -41,7 +41,7 @@ class SoGLRenderCache;
 class SoGLCacheListP;
 
 
-class COIN_DLL_API SoGLCacheList {
+class OBOL_DLL_API SoGLCacheList {
 public:
   SoGLCacheList(int numcaches = 2);
   ~SoGLCacheList();
@@ -57,4 +57,4 @@ private:
   SoGLCacheListP * pimpl;
 };
 
-#endif // !COIN_SOGLCACHELIST_H
+#endif // !OBOL_SOGLCACHELIST_H

@@ -1,5 +1,5 @@
-#ifndef COIN_SBRWMUTEX_H
-#define COIN_SBRWMUTEX_H
+#ifndef OBOL_SBRWMUTEX_H
+#define OBOL_SBRWMUTEX_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -159,4 +159,4 @@ private:
   // For C++20 migration: Consider std::jthread and std::barrier for further modernization.
 };
 
-#endif // !COIN_SBRWMUTEX_H
+#endif // !OBOL_SBRWMUTEX_H

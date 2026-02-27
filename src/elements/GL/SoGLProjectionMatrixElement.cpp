@@ -71,7 +71,7 @@ SoGLProjectionMatrixElement::~SoGLProjectionMatrixElement(void)
 //! FIXME: write doc.
 
 void
-SoGLProjectionMatrixElement::pop(SoState * COIN_UNUSED_ARG(state),
+SoGLProjectionMatrixElement::pop(SoState * OBOL_UNUSED_ARG(state),
                                  const SoElement * prevTopElement)
 {
   this->capture(state);

@@ -1,5 +1,5 @@
-#ifndef COIN_SOHUD_H
-#define COIN_SOHUD_H
+#ifndef OBOL_SOHUD_H
+#define OBOL_SOHUD_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -54,9 +54,9 @@
 
 #include <Inventor/SbBasic.h>
 
-class COIN_DLL_API SoHUD {
+class OBOL_DLL_API SoHUD {
 public:
   static void init(void);
 };
 
-#endif // !COIN_SOHUD_H
+#endif // !OBOL_SOHUD_H

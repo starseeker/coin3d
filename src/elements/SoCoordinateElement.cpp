@@ -97,9 +97,9 @@ SoCoordinateElement::initClass(void)
 void
 SoCoordinateElement::clean(void)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   delete SoCoordinateElement::initialdefaultcoords;
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }
 
 /*!
@@ -246,13 +246,13 @@ SoCoordinateElement::is3D() const
 const SbVec3f *
 SoCoordinateElement::getArrayPtr3() const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (!this->is3D()) {
     SoDebugError::postWarning("SoDiffuseColorElement::getArrayPtr3",
                               "coordinates are *not* 3D -- use "
                               "getArrayPtr4() instead");
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   return this->coords3D;
 }
@@ -268,13 +268,13 @@ SoCoordinateElement::getArrayPtr3() const
 const SbVec4f *
 SoCoordinateElement::getArrayPtr4() const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (this->is3D()) {
     SoDebugError::postWarning("SoDiffuseColorElement::getArrayPtr4",
                               "coordinates are *not* 4D -- use "
                               "getArrayPtr3() instead");
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   return this->coords4D;
 }

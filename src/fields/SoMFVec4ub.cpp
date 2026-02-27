@@ -44,7 +44,7 @@
   information on how to use this function.
 
   \sa SbVec4ub, SoSFVec4ub
-  \COIN_CLASS_EXTENSION
+  \OBOL_CLASS_EXTENSION
   \since Coin 2.5
 */
 

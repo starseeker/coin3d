@@ -1,5 +1,5 @@
-#ifndef COIN_SOGLARBSHADERPARAMETER_H
-#define COIN_SOGLARBSHADERPARAMETER_H
+#ifndef OBOL_SOGLARBSHADERPARAMETER_H
+#define OBOL_SOGLARBSHADERPARAMETER_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,7 +33,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #error this is a private header file
 #endif
 
@@ -82,4 +82,4 @@ private:
   SbBool isValid(const SoGLShaderObject * shader, const int idx);
 };
 
-#endif /* ! COIN_SOGLARBSHADERPARAMETER_H */
+#endif /* ! OBOL_SOGLARBSHADERPARAMETER_H */

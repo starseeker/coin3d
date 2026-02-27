@@ -49,9 +49,9 @@
 #include <Inventor/SbMatrix.h>
 #include <cfloat>
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 
 /*!
@@ -71,12 +71,12 @@ SbPlane::SbPlane(void)
 */
 SbPlane::SbPlane(const SbVec3f& normalref, const float D)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (normalref.sqrLength() == 0.0f) {
     SoDebugError::postWarning("SbPlane::SbPlane",
                               "Plane normal vector is a null vector.");
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   this->normal = normalref;
   // we test for a null vector above, just normalize
@@ -91,21 +91,21 @@ SbPlane::SbPlane(const SbVec3f& normalref, const float D)
 */
 SbPlane::SbPlane(const SbVec3f& p0, const SbVec3f& p1, const SbVec3f& p2)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if(!(p0 != p1 && p1 != p2 && p0 != p2))
     SoDebugError::postWarning("SbPlane::SbPlane",
                               "The three points defining the plane cannot "
                               "be coincident.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   this->normal = (p1 - p0).cross(p2 - p0);
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (this->normal.sqrLength() == 0.0f) {
     SoDebugError::postWarning("SbPlane::SbPlane",
                               "The three points defining the plane cannot "
                               "be on line.");
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   // we test and warn about a null vector above
   (void) this->normal.normalize();
@@ -123,11 +123,11 @@ SbPlane::SbPlane(const SbVec3f& p0, const SbVec3f& p1, const SbVec3f& p2)
 */
 SbPlane::SbPlane(const SbVec3f& normalref, const SbVec3f& point)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if(normalref.sqrLength() == 0.0f)
     SoDebugError::postWarning("SbPlane::SbPlane",
                               "Plane normal vector is a null vector.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   this->normal = normalref;
 
@@ -162,7 +162,7 @@ SbPlane::offset(const float d)
 SbBool
 SbPlane::intersect(const SbLine& l, SbVec3f& intersection) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (this->normal.sqrLength() == 0.0f) {
     SoDebugError::postWarning("SbPlane::intersect",
                               "Normal vector for plane is null vector");
@@ -172,7 +172,7 @@ SbPlane::intersect(const SbLine& l, SbVec3f& intersection) const
     SoDebugError::postWarning("SbPlane::intersect",
                               "Intersecting line doesn't have a direction.");
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   // Check if the line is parallel to the plane.
   if(fabs(l.getDirection().dot(this->normal)) < FLT_EPSILON) return FALSE;
@@ -224,10 +224,10 @@ SbPlane::transform(const SbMatrix& matrix)
   matrix.multVecMatrix(ptInPlane, ptInPlane);
 
   if (this->normal.normalize() == 0.0f) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SbPlane::transform",
                               "The transformation invalidated the plane.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   }
   this->distance = this->normal.dot(ptInPlane);
 }
@@ -291,7 +291,7 @@ SbPlane::getDistanceFromOrigin(void) const
   \e line intersecting the SbLine's origin, extending infinitely in both
   directions.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */
@@ -377,9 +377,9 @@ operator !=(const SbPlane& p1, const SbPlane& p2)
 void
 SbPlane::print(FILE * fp) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   this->getNormal().print(fp);
   (void)fprintf(fp, "  %f", this->getDistanceFromOrigin());
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }
 

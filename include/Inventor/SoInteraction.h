@@ -1,5 +1,5 @@
-#ifndef COIN_SOINTERACTION_H
-#define COIN_SOINTERACTION_H
+#ifndef OBOL_SOINTERACTION_H
+#define OBOL_SOINTERACTION_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,9 +35,9 @@
 
 #include <Inventor/SbBasic.h> // for SbBool type
 
-class COIN_DLL_API SoInteraction {
+class OBOL_DLL_API SoInteraction {
 public:
   static void init(void);
 };
 
-#endif // !COIN_SOINTERACTION_H
+#endif // !OBOL_SOINTERACTION_H

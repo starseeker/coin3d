@@ -149,7 +149,7 @@ SoCacheHintElement::copyMatchInfo() const
 
 void
 SoCacheHintElement::set(SoState * state,
-                        SoNode * COIN_UNUSED_ARG(node),
+                        SoNode * OBOL_UNUSED_ARG(node),
                         const float memvalue,
                         const float gfxvalue)
 {

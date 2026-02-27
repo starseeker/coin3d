@@ -1,5 +1,5 @@
-#ifndef COIN_SOVECTORIZEACTION_H
-#define COIN_SOVECTORIZEACTION_H
+#ifndef OBOL_SOVECTORIZEACTION_H
+#define OBOL_SOVECTORIZEACTION_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -46,7 +46,7 @@ class SbBSPTree;
 
 // *************************************************************************
 
-class COIN_DLL_API SoVectorizeAction : public SoCallbackAction {
+class OBOL_DLL_API SoVectorizeAction : public SoCallbackAction {
   typedef SoCallbackAction inherited;
   
   SO_ACTION_HEADER(SoVectorizeAction);
@@ -190,11 +190,11 @@ private:
 
 // *************************************************************************
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 // For SGI / TGS Open Inventor compile-time compatibility.
 #include <Inventor/nodes/SoImage.h>
-#endif // COIN_INTERNAL
+#endif // OBOL_INTERNAL
 
 // *************************************************************************
 
-#endif // !COIN_SOVECTORIZEACTION_H
+#endif // !OBOL_SOVECTORIZEACTION_H

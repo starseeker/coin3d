@@ -1,5 +1,5 @@
-#ifndef COIN_SOMULTITEXTUREENABLEDELEMENT_H
-#define COIN_SOMULTITEXTUREENABLEDELEMENT_H
+#ifndef OBOL_SOMULTITEXTUREENABLEDELEMENT_H
+#define OBOL_SOMULTITEXTUREENABLEDELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -38,7 +38,7 @@
 
 class SoMultiTextureEnabledElementP;
 
-class COIN_DLL_API SoMultiTextureEnabledElement : public SoElement {
+class OBOL_DLL_API SoMultiTextureEnabledElement : public SoElement {
   typedef SoElement inherited;
 
   SO_ELEMENT_HEADER(SoMultiTextureEnabledElement);
@@ -100,4 +100,4 @@ private:
   SoMultiTextureEnabledElementP * pimpl;
 };
 
-#endif // !COIN_SOMULTITEXTUREENABLEDELEMENT_H
+#endif // !OBOL_SOMULTITEXTUREENABLEDELEMENT_H

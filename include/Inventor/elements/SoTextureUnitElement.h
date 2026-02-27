@@ -1,5 +1,5 @@
-#ifndef COIN_SOTEXTUREUNITELEMENT_H
-#define COIN_SOTEXTUREUNITELEMENT_H
+#ifndef OBOL_SOTEXTUREUNITELEMENT_H
+#define OBOL_SOTEXTUREUNITELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 
 class SoTextureUnitElementP;
 
-class COIN_DLL_API SoTextureUnitElement : public SoInt32Element {
+class OBOL_DLL_API SoTextureUnitElement : public SoInt32Element {
   typedef SoInt32Element inherited;
 
   SO_ELEMENT_HEADER(SoTextureUnitElement);
@@ -58,4 +58,4 @@ private:
   SoTextureUnitElementP * pimpl;
 };
 
-#endif // !COIN_SOTEXTUREUNITELEMENT_H
+#endif // !OBOL_SOTEXTUREUNITELEMENT_H

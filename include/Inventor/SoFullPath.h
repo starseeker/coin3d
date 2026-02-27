@@ -1,5 +1,5 @@
-#ifndef COIN_SOFULLPATH_H
-#define COIN_SOFULLPATH_H
+#ifndef OBOL_SOFULLPATH_H
+#define OBOL_SOFULLPATH_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/SoPath.h>
 
-class COIN_DLL_API SoFullPath : public SoPath {
+class OBOL_DLL_API SoFullPath : public SoPath {
   typedef SoPath inherited;
   friend class SoTempPath;
 
@@ -59,4 +59,4 @@ SoFullPath::pop(void)
   this->truncate(this->nodes.getLength() - 1);
 }
 
-#endif // !COIN_SOFULLPATH_H
+#endif // !OBOL_SOFULLPATH_H

@@ -1,5 +1,5 @@
-#ifndef COIN_SOGENERATE_H
-#define COIN_SOGENERATE_H
+#ifndef OBOL_SOGENERATE_H
+#define OBOL_SOGENERATE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,9 +33,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #error this is a private header file
-#endif /* !COIN_INTERNAL */
+#endif /* !OBOL_INTERNAL */
 
 //
 // reusable code for generatePrimitives (OpenInventor, VRML and VRML2)
@@ -82,4 +82,4 @@ void sogen_generate_cube(const float width,
                          SoShape * const shape,
                          SoAction * const action);
 
-#endif // !COIN_SOGENERATE_H
+#endif // !OBOL_SOGENERATE_H

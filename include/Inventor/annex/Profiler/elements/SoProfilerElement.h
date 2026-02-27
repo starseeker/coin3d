@@ -1,5 +1,5 @@
-#ifndef COIN_SOPROFILERELEMENT_H
-#define COIN_SOPROFILERELEMENT_H
+#ifndef OBOL_SOPROFILERELEMENT_H
+#define OBOL_SOPROFILERELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -40,7 +40,7 @@
 
 // *************************************************************************
 
-class COIN_DLL_API SoProfilerElement : public SoElement {
+class OBOL_DLL_API SoProfilerElement : public SoElement {
   typedef SoElement inherited;
   SO_ELEMENT_HEADER(SoProfilerElement);
 
@@ -66,4 +66,4 @@ private:
 
 }; // SoProfilerElement
 
-#endif // !COIN_SOPROFILERELEMENT_H
+#endif // !OBOL_SOPROFILERELEMENT_H

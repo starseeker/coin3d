@@ -30,8 +30,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_SUUTILS_H
-#define COIN_SUUTILS_H
+#ifndef OBOL_SUUTILS_H
+#define OBOL_SUUTILS_H
 
 #include <Inventor/basic.h>
 
@@ -46,7 +46,7 @@ typedef void coin_atexit_f(void);
 
 /* Internal function used for cleaning up static data.
    Used by Inventor macros like SO_NODE_INIT_CLASS, SO_SUB_NODE_INIT_CLASS, etc. */
-COIN_DLL_API void SbAtexitStaticInternal(coin_atexit_f * fp);
+OBOL_DLL_API void SbAtexitStaticInternal(coin_atexit_f * fp);
 
 /* ********************************************************************** */
 
@@ -54,4 +54,4 @@ COIN_DLL_API void SbAtexitStaticInternal(coin_atexit_f * fp);
 } /* extern "C" */
 #endif /* __cplusplus */
 
-#endif /* !COIN_SUUTILS_H */
+#endif /* !OBOL_SUUTILS_H */

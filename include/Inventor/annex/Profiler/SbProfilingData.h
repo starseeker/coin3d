@@ -1,5 +1,5 @@
-#ifndef COIN_SBPROFILINGDATA_H
-#define COIN_SBPROFILINGDATA_H
+#ifndef OBOL_SBPROFILINGDATA_H
+#define OBOL_SBPROFILINGDATA_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -49,7 +49,7 @@ typedef void * SbProfilingNodeKey; // void since it should not be dereferenced
 typedef int16_t SbProfilingNodeTypeKey;
 typedef const char * SbProfilingNodeNameKey;
 
-class COIN_DLL_API SbProfilingData {
+class OBOL_DLL_API SbProfilingData {
 public:
   SbProfilingData(void);
   SbProfilingData(const SbProfilingData & rhs);
@@ -155,4 +155,4 @@ private:
 
 }; // SbProfilingData
 
-#endif // !COIN_SBPROFILINGDATA_H
+#endif // !OBOL_SBPROFILINGDATA_H

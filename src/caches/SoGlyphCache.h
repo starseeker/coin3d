@@ -1,5 +1,5 @@
-#ifndef COIN_SOGLYPHCACHE_H
-#define COIN_SOGLYPHCACHE_H
+#ifndef OBOL_SOGLYPHCACHE_H
+#define OBOL_SOGLYPHCACHE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,9 +33,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #error this is a private header file
-#endif /* !COIN_INTERNAL */
+#endif /* !OBOL_INTERNAL */
 
 // *************************************************************************
 
@@ -120,4 +120,4 @@ private:
 
 // *************************************************************************
 
-#endif // !COIN_SOGLYPHCACHE_H
+#endif // !OBOL_SOGLYPHCACHE_H

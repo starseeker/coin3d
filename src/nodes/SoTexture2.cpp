@@ -391,13 +391,13 @@ SbMutex * SoTexture2P::mutex = NULL;
 
 // *************************************************************************
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
 #define LOCK_GLIMAGE(_thisp_) (PRIVATE(_thisp_)->mutex->lock())
 #define UNLOCK_GLIMAGE(_thisp_) (PRIVATE(_thisp_)->mutex->unlock())
-#else // COIN_THREADSAFE
+#else // OBOL_THREADSAFE
 #define LOCK_GLIMAGE(_thisp_)
 #define UNLOCK_GLIMAGE(_thisp_)
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 
 // *************************************************************************
 
@@ -473,9 +473,9 @@ SoTexture2::initClass(void)
   SO_ENABLE(SoRayPickAction, SoMultiTextureEnabledElement);
   SO_ENABLE(SoRayPickAction, SoMultiTextureImageElement);
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   SoTexture2P::mutex = new SbMutex;
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 
   coin_atexit(SoTexture2P::cleanup, CC_ATEXIT_NORMAL);
 }
@@ -672,10 +672,10 @@ SoTexture2::rayPick(SoRayPickAction * action)
   requested.
 */
 SbBool
-SoTexture2::readImage(const SbString & COIN_UNUSED_ARG(fname), int & COIN_UNUSED_ARG(w), int & COIN_UNUSED_ARG(h), int & COIN_UNUSED_ARG(nc),
-                      unsigned char *& COIN_UNUSED_ARG(bytes))
+SoTexture2::readImage(const SbString & OBOL_UNUSED_ARG(fname), int & OBOL_UNUSED_ARG(w), int & OBOL_UNUSED_ARG(h), int & OBOL_UNUSED_ARG(nc),
+                      unsigned char *& OBOL_UNUSED_ARG(bytes))
 {
-  COIN_OBSOLETED();
+  OBOL_OBSOLETED();
   return FALSE;
 }
 

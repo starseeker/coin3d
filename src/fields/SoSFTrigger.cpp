@@ -63,7 +63,7 @@ PRIVATE_EQUALITY_SOURCE(SoSFTrigger);
 // so don't use Doxygen commenting.)
 #ifndef DOXYGEN_SKIP_THIS
 const SoSFTrigger &
-SoSFTrigger::operator=(const SoSFTrigger & COIN_UNUSED_ARG(field))
+SoSFTrigger::operator=(const SoSFTrigger & OBOL_UNUSED_ARG(field))
 {
   this->setValue();
   return *this;
@@ -110,7 +110,7 @@ SoSFTrigger::touch(void)
   equal. So this method always returns \c TRUE.
  */
 int
-SoSFTrigger::operator==(const SoSFTrigger & COIN_UNUSED_ARG(trigger)) const
+SoSFTrigger::operator==(const SoSFTrigger & OBOL_UNUSED_ARG(trigger)) const
 {
   return 1;
 }
@@ -120,7 +120,7 @@ SoSFTrigger::operator==(const SoSFTrigger & COIN_UNUSED_ARG(trigger)) const
   equal. So this method always returns \c FALSE.
 */
 int
-SoSFTrigger::operator!=(const SoSFTrigger & COIN_UNUSED_ARG(trigger)) const
+SoSFTrigger::operator!=(const SoSFTrigger & OBOL_UNUSED_ARG(trigger)) const
 {
   return 0;
 }
@@ -143,14 +143,14 @@ SoSFTrigger::notify(SoNotList * l)
 
 // No value to read, so just return TRUE.
 SbBool
-SoSFTrigger::readValue(SoInput * COIN_UNUSED_ARG(in))
+SoSFTrigger::readValue(SoInput * OBOL_UNUSED_ARG(in))
 {
   return TRUE;
 }
 
 // No value to write, just return.
 void
-SoSFTrigger::writeValue(SoOutput * COIN_UNUSED_ARG(out)) const
+SoSFTrigger::writeValue(SoOutput * OBOL_UNUSED_ARG(out)) const
 {
   return;
 }

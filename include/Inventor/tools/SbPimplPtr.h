@@ -1,5 +1,5 @@
-#ifndef COIN_SBPIMPLPTR_H
-#define COIN_SBPIMPLPTR_H
+#ifndef OBOL_SBPIMPLPTR_H
+#define OBOL_SBPIMPLPTR_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -53,7 +53,7 @@
 #endif /* MSVC <8 */
 
 template <typename T>
-class COIN_DLL_API SbPimplPtr {
+class OBOL_DLL_API SbPimplPtr {
 public:
   SbPimplPtr(void);
   SbPimplPtr(T * initial);
@@ -79,10 +79,10 @@ protected:
 
 }; // SbPimplPtr
 
-#ifdef COIN_INTERNAL
+#ifdef OBOL_INTERNAL
 // the implementation is in the .hpp class
 #include <Inventor/tools/SbPimplPtr.hpp>
-#endif // COIN_INTERNAL
+#endif // OBOL_INTERNAL
 
 #if defined(_MSC_VER) && (_MSC_VER < 1400) /* MSVC <8 */
 #pragma warning(pop)
@@ -90,4 +90,4 @@ protected:
 
 /* ********************************************************************** */
 
-#endif // !COIN_SBPIMPLPTR_H
+#endif // !OBOL_SBPIMPLPTR_H

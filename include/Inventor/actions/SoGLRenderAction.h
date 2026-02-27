@@ -1,5 +1,5 @@
-#ifndef COIN_SOGLRENDERACTION_H
-#define COIN_SOGLRENDERACTION_H
+#ifndef OBOL_SOGLRENDERACTION_H
+#define OBOL_SOGLRENDERACTION_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -47,7 +47,7 @@ typedef float SoGLSortedObjectOrderCB(void * userdata, SoGLRenderAction * action
 
 class SoGLRenderActionP;
 
-class COIN_DLL_API SoGLRenderAction : public SoAction {
+class OBOL_DLL_API SoGLRenderAction : public SoAction {
   typedef SoAction inherited;
 
   SO_ACTION_HEADER(SoGLRenderAction);
@@ -148,4 +148,4 @@ private:
 
 }; // SoGLRenderAction
 
-#endif // !COIN_SOGLRENDERACTION_H
+#endif // !OBOL_SOGLRENDERACTION_H

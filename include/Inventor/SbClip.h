@@ -1,5 +1,5 @@
-#ifndef COIN_SBCLIP_H
-#define COIN_SBCLIP_H
+#ifndef OBOL_SBCLIP_H
+#define OBOL_SBCLIP_H
  
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -45,7 +45,7 @@ typedef void * SbClipCallback(const SbVec3f & v0, void * vdata0,
                               const SbVec3f & newvertex,
                               void * userdata);
 
-class COIN_DLL_API SbClip {
+class OBOL_DLL_API SbClip {
 public:
   SbClip(SbClipCallback * callback = nullptr, void * userdata = nullptr);
   
@@ -83,4 +83,4 @@ private:
 };
 
 
-#endif // !COIN_SBCLIP_H
+#endif // !OBOL_SBCLIP_H

@@ -1,5 +1,5 @@
-#ifndef COIN_SOGLUPDATEAREAELEMENT_H
-#define COIN_SOGLUPDATEAREAELEMENT_H
+#ifndef OBOL_SOGLUPDATEAREAELEMENT_H
+#define OBOL_SOGLUPDATEAREAELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/SbVec2f.h>
 #include <Inventor/SbVec2s.h>
 
-class COIN_DLL_API SoGLUpdateAreaElement : public SoElement {
+class OBOL_DLL_API SoGLUpdateAreaElement : public SoElement {
   typedef SoElement inherited;
 
   SO_ELEMENT_HEADER(SoGLUpdateAreaElement);
@@ -75,4 +75,4 @@ private:
   SbVec2s screenorigin, screensize;  
 };
 
-#endif // !COIN_SOGLUPDATEAREAELEMENT_H
+#endif // !OBOL_SOGLUPDATEAREAELEMENT_H

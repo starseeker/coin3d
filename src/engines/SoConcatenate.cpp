@@ -71,9 +71,9 @@
 #include <Inventor/lists/SoEngineOutputList.h>
 #include <Inventor/fields/SoFields.h>
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 #include "engines/SoSubEngineP.h"
 
@@ -130,7 +130,7 @@ SoConcatenate::SoConcatenate(SoType type)
   for (int i=0; i < SoConcatenate::NUMINPUTS; i++) this->input[i] = NULL;
   this->output = NULL;
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (!SoConcatenate_valid_type(type)) {
     SoDebugError::post("SoConcatenate::SoConcatenate",
                        "invalid type '%s' for input field, "
@@ -138,7 +138,7 @@ SoConcatenate::SoConcatenate(SoType type)
                        type == SoType::badType() ? "badType" :
                        type.getName().getString());
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   this->initialize(type);
 }

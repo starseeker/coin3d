@@ -1,5 +1,5 @@
-#ifndef COIN_SOLIGHTELEMENT_H
-#define COIN_SOLIGHTELEMENT_H
+#ifndef OBOL_SOLIGHTELEMENT_H
+#define OBOL_SOLIGHTELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -40,7 +40,7 @@
 
 class SoLight;
 
-class COIN_DLL_API SoLightElement : public SoAccumulatedElement {
+class OBOL_DLL_API SoLightElement : public SoAccumulatedElement {
   typedef SoAccumulatedElement inherited;
 
   SO_ELEMENT_HEADER(SoLightElement);
@@ -75,4 +75,4 @@ private:
   so_light_elem_flag didalloc;
 };
 
-#endif // !COIN_SOLIGHTELEMENT_H
+#endif // !OBOL_SOLIGHTELEMENT_H

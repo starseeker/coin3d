@@ -241,7 +241,7 @@ SoFile::readNamedFile(SoInput * in)
 
   static int debugreading = -1;
   if (debugreading == -1) {
-    const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_SOFILE_READ");
+    const char * env = CoinInternal::getEnvironmentVariableRaw("OBOL_DEBUG_SOFILE_READ");
     debugreading = env && (atoi(env) > 0);
   }
 
@@ -328,7 +328,7 @@ SoFile::readNamedFile(SoInput * in)
 
 // Callback for the field sensor.
 void
-SoFile::nameFieldModified(void * userdata, SoSensor * COIN_UNUSED_ARG(sensor))
+SoFile::nameFieldModified(void * userdata, SoSensor * OBOL_UNUSED_ARG(sensor))
 {
   SoFile * that = (SoFile *)userdata;
   SoInput in;

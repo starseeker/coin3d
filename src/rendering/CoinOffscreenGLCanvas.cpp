@@ -261,7 +261,7 @@ CoinOffscreenGLCanvas::tryActivateGLContext(void)
     // Set up mapping from GL context to SoGLRenderAction context id.
     this->renderid = SoGLCacheContextElement::getUniqueCacheContext();
 
-#ifdef COIN3D_BUILD_DUAL_GL
+#ifdef OBOL_BUILD_DUAL_GL
     /* In dual-GL builds, tell the GL dispatch layer which backend this
        context was created with so SoGLContext_instance() can route to
        the correct (osmesa_ or sysgl) implementation. */
@@ -573,16 +573,16 @@ CoinOffscreenGLCanvas::getMaxTileSize(void)
 
   // Makes it possible to override the default tilesizes. Should prove
   // useful for debugging problems on remote sites.
-  const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_OFFSCREENRENDERER_TILEWIDTH");
+  const char * env = CoinInternal::getEnvironmentVariableRaw("OBOL_OFFSCREENRENDERER_TILEWIDTH");
   const unsigned int forcedtilewidth = env ? atoi(env) : 0;
-  env = CoinInternal::getEnvironmentVariableRaw("COIN_OFFSCREENRENDERER_TILEHEIGHT");
+  env = CoinInternal::getEnvironmentVariableRaw("OBOL_OFFSCREENRENDERER_TILEHEIGHT");
   const unsigned int forcedtileheight = env ? atoi(env) : 0;
 
   if (forcedtilewidth != 0) { width = forcedtilewidth; }
   if (forcedtileheight != 0) { height = forcedtileheight; }
 
   // Also make it possible to force a maximum tilesize.
-  env = CoinInternal::getEnvironmentVariableRaw("COIN_OFFSCREENRENDERER_MAX_TILESIZE");
+  env = CoinInternal::getEnvironmentVariableRaw("OBOL_OFFSCREENRENDERER_MAX_TILESIZE");
   const unsigned int maxtilesize = env ? atoi(env) : 0;
   if (maxtilesize != 0) {
     width = SbMin(width, maxtilesize);
@@ -604,7 +604,7 @@ CoinOffscreenGLCanvas::debug(void)
 {
   static int flag = -1; // -1 means "not initialized" in this context
   if (flag == -1) {
-    const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_SOOFFSCREENRENDERER");
+    const char * env = CoinInternal::getEnvironmentVariableRaw("OBOL_DEBUG_SOOFFSCREENRENDERER");
     flag = env && (atoi(env) > 0);
   }
   return flag;
@@ -615,10 +615,10 @@ CoinOffscreenGLCanvas::allowResourcehog(void)
 {
   static int resourcehog_flag = -1; // -1 means "not initialized" in this context
   if (resourcehog_flag == -1) {
-    const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_SOOFFSCREENRENDERER_ALLOW_RESOURCEHOG");
+    const char * env = CoinInternal::getEnvironmentVariableRaw("OBOL_SOOFFSCREENRENDERER_ALLOW_RESOURCEHOG");
     resourcehog_flag = env && (atoi(env) > 0);
     SoDebugError::postInfo("CoinOffscreenGLCanvas",
-                           "Ignoring resource hogging due to set COIN_SOOFFSCREENRENDERER_ALLOW_RESOURCEHOG environment variable.");
+                           "Ignoring resource hogging due to set OBOL_SOOFFSCREENRENDERER_ALLOW_RESOURCEHOG environment variable.");
   }
   return resourcehog_flag;
 }

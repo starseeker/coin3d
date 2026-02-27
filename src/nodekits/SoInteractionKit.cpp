@@ -482,7 +482,7 @@ SoInteractionKit::readDefaultParts(const char * fileName,
     if (input.openFile(fullname.getString(), TRUE)) {
       root = (SoNode *)SoDB::readAll(&input);
     }
-    else if (COIN_DEBUG) {
+    else if (OBOL_DEBUG) {
       SoDebugError::post("SoInteractionKit::readDefaultParts",
                          "Could not find file '%s' for the dragger "
                          "default parts.",
@@ -521,7 +521,7 @@ SoInteractionKit::readDefaultParts(const char * fileName,
 SbBool
 SoInteractionKit::setAnyPartAsDefault(const SbName & partname,
                                       SoNode * node,
-                                      SbBool COIN_UNUSED_ARG(anypart),
+                                      SbBool OBOL_UNUSED_ARG(anypart),
                                       SbBool onlyifdefault)
 {
   SoBaseKit * kit = this;
@@ -537,13 +537,13 @@ SoInteractionKit::setAnyPartAsDefault(const SbName & partname,
       field->setDefault(TRUE);
     }
     else {
-      if (COIN_DEBUG) {
+      if (OBOL_DEBUG) {
         SoDebugError::postInfo("SoInteractionKit::setAnyPartAsDefault",
                                "no permission to set");
       }
     }
   }
-  else if (COIN_DEBUG) {
+  else if (OBOL_DEBUG) {
     SoDebugError::postInfo("SoInteractionKit::setAnyPartAsDefault",
                            "part %s not found", partname.getString());
   }
@@ -576,7 +576,7 @@ SoInteractionKit::setAnyPartAsDefault(const SbName & partname,
   if (node) {
     return this->setAnyPartAsDefault(partname, node, anypart, onlyifdefault);
   }
-  else if (COIN_DEBUG && 1) { // debug
+  else if (OBOL_DEBUG && 1) { // debug
     SoDebugError::postInfo("SoInteractionKit::setAnyPartAsDefault",
                            "nodename %s not found", nodename.getString());
 
@@ -618,14 +618,14 @@ SoInteractionKit::setAnySurrogatePath(const SbName & partname,
     assert(kit->isOfType(SoInteractionKit::getClassTypeId()));
     const SoNodekitCatalog * catalog = kit->getNodekitCatalog();
     if (leafcheck && !catalog->isLeaf(partNum)) {
-      if (COIN_DEBUG) {
+      if (OBOL_DEBUG) {
         SoDebugError::postInfo("SoInteractionKit::setAnySurrogatePath",
                                "part %s is not leaf", partname.getString());
       }
       return FALSE;
     }
     if (publiccheck && !catalog->isPublic(partNum)) {
-      if (COIN_DEBUG) {
+      if (OBOL_DEBUG) {
         SoDebugError::postInfo("SoInteractionKit::setAnySurrogatePath",
                                "part %s is not public", partname.getString());
       }
@@ -662,7 +662,7 @@ SoInteractionKit::setAnySurrogatePath(const SbName & partname,
     ((SoInteractionKit *)kit)->pimpl->addSurrogatePath(path, catalog->getName(partNum));
     return TRUE;
   }
-  else if (COIN_DEBUG) {
+  else if (OBOL_DEBUG) {
     SoDebugError::postInfo("SoInteractionKit::setAnyPartAsDefault",
                            "part %s not found", partname.getString());
   }
@@ -757,9 +757,9 @@ SoInteractionKit::fieldSensorCB(void * d, SoSensor * s)
   Obsoleted in Coin.
 */
 void
-SoInteractionKit::connectSeparatorFields(SoSeparator * COIN_UNUSED_ARG(dest), SbBool onOff)
+SoInteractionKit::connectSeparatorFields(SoSeparator * OBOL_UNUSED_ARG(dest), SbBool onOff)
 {
-  COIN_OBSOLETED();
+  OBOL_OBSOLETED();
   SoDebugError::postWarning("SoInteractionKit::connectSeparatorFields",
                             "SoSeparator* input argument ignored, "
                             "using topSeparator");

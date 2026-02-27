@@ -83,18 +83,18 @@ SoSpecularColorElement::init(SoState * stateptr)
 //! FIXME: write doc.
 
 void
-SoSpecularColorElement::set(SoState * const state, SoNode * const COIN_UNUSED_ARG(node),
+SoSpecularColorElement::set(SoState * const state, SoNode * const OBOL_UNUSED_ARG(node),
                             const int32_t numcolors,
                             const SbColor * const colors)
 {
   SoLazyElement::setSpecular(state, colors);
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (numcolors > 1) {
     SoDebugError::postWarning("SoSpecularColorElement::set",
                               "Multiple specular colors not supported. "
                               "All color except the first will be ignored.");
   }
-#endif // COIN_DEBIG
+#endif // OBOL_DEBIG
 }
 
 //! FIXME: write doc.

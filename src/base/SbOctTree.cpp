@@ -36,7 +36,7 @@
 
   \ingroup coin_base
 
-  \COIN_CLASS_EXTENSION
+  \OBOL_CLASS_EXTENSION
 */
 
 // *************************************************************************
@@ -530,7 +530,7 @@ SbOctTree::addItem(void * const item)
   // new octree structure build itself.
   //
   // 20050512 mortene.
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   const SbBox3f & b = this->topnode->getBBox();
   if (!this->itemfuncs.insideboxfunc(item, b)) {
     const SbVec3f & bmin = b.getMin();

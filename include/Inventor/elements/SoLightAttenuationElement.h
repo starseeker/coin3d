@@ -1,5 +1,5 @@
-#ifndef COIN_SOLIGHTATTENUATIONELEMENT_H
-#define COIN_SOLIGHTATTENUATIONELEMENT_H
+#ifndef OBOL_SOLIGHTATTENUATIONELEMENT_H
+#define OBOL_SOLIGHTATTENUATIONELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -36,7 +36,7 @@
 #include <Inventor/elements/SoReplacedElement.h>
 #include <Inventor/SbVec3f.h>
 
-class COIN_DLL_API SoLightAttenuationElement : public SoReplacedElement {
+class OBOL_DLL_API SoLightAttenuationElement : public SoReplacedElement {
   typedef SoReplacedElement inherited;
 
   SO_ELEMENT_HEADER(SoLightAttenuationElement);
@@ -62,4 +62,4 @@ protected:
   SbVec3f lightAttenuation;
 };
 
-#endif // !COIN_SOLIGHTATTENUATIONELEMENT_H
+#endif // !OBOL_SOLIGHTATTENUATIONELEMENT_H

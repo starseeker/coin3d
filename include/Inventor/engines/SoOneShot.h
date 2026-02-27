@@ -30,8 +30,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_SOONESHOT_H
-#define COIN_SOONESHOT_H
+#ifndef OBOL_SOONESHOT_H
+#define OBOL_SOONESHOT_H
 
 #include <Inventor/engines/SoSubEngine.h>
 #include <Inventor/engines/SoEngineOutput.h>
@@ -41,7 +41,7 @@
 #include <Inventor/fields/SoSFBitMask.h>
 
 
-class COIN_DLL_API SoOneShot : public SoEngine {
+class OBOL_DLL_API SoOneShot : public SoEngine {
   typedef SoEngine inherited;
 
   SO_ENGINE_HEADER(SoOneShot);
@@ -76,4 +76,4 @@ private:
   SbBool running;
 };
 
-#endif // !COIN_SOONESHOT_H
+#endif // !OBOL_SOONESHOT_H

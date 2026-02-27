@@ -30,15 +30,15 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_SOFIELDCONVERTER_H
-#define COIN_SOFIELDCONVERTER_H
+#ifndef OBOL_SOFIELDCONVERTER_H
+#define OBOL_SOFIELDCONVERTER_H
 
 #include <Inventor/engines/SoSubEngine.h>
 
 class SoEngineOutput;
 
 
-class COIN_DLL_API SoFieldConverter : public SoEngine {
+class OBOL_DLL_API SoFieldConverter : public SoEngine {
   typedef SoEngine inherited;
   SO_ENGINE_ABSTRACT_HEADER(SoFieldConverter);
 
@@ -55,4 +55,4 @@ protected:
   virtual ~SoFieldConverter(void);
 };
 
-#endif // !COIN_SOFIELDCONVERTER_H
+#endif // !OBOL_SOFIELDCONVERTER_H

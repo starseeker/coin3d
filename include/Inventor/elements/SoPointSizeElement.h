@@ -1,5 +1,5 @@
-#ifndef COIN_SOPOINTSIZEELEMENT_H
-#define COIN_SOPOINTSIZEELEMENT_H
+#ifndef OBOL_SOPOINTSIZEELEMENT_H
+#define OBOL_SOPOINTSIZEELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/elements/SoFloatElement.h>
 
-class COIN_DLL_API SoPointSizeElement : public SoFloatElement {
+class OBOL_DLL_API SoPointSizeElement : public SoFloatElement {
   typedef SoFloatElement inherited;
 
   SO_ELEMENT_HEADER(SoPointSizeElement);
@@ -54,4 +54,4 @@ public:
   static  float getDefault();
 };
 
-#endif // !COIN_SOPOINTSIZEELEMENT_H
+#endif // !OBOL_SOPOINTSIZEELEMENT_H

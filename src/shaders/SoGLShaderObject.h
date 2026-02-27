@@ -1,5 +1,5 @@
-#ifndef COIN_SOGLSHADEROBJECT_H
-#define COIN_SOGLSHADEROBJECT_H
+#ifndef OBOL_SOGLSHADEROBJECT_H
+#define OBOL_SOGLSHADEROBJECT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,7 +33,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #error this is a private header file
 #endif
 
@@ -100,4 +100,4 @@ private:
   uint32_t id;
 };
 
-#endif /* ! COIN_SOGLSHADEROBJECT_H */
+#endif /* ! OBOL_SOGLSHADEROBJECT_H */

@@ -23,7 +23,7 @@ endif()
 set(_exec_cmd "${EXECUTABLE}")
 if(UNIX AND NOT APPLE)
     # Wrap with xvfb-run when no display is available.
-    # Do NOT set COIN_FULL_INDIRECT_RENDERING: it disables FBO support in
+    # Do NOT set OBOL_FULL_INDIRECT_RENDERING: it disables FBO support in
     # SoGLContext_has_framebuffer_objects() which breaks CoinOffscreenGLCanvas.
     if(NOT DEFINED ENV{DISPLAY} OR "$ENV{DISPLAY}" STREQUAL "")
         find_program(_xvfb_run NAMES xvfb-run)

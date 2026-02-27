@@ -1,5 +1,5 @@
-#ifndef COIN_SBFIFO_H
-#define COIN_SBFIFO_H
+#ifndef OBOL_SBFIFO_H
+#define OBOL_SBFIFO_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -126,4 +126,4 @@ private:
   // or lockfree queues for better performance.
 };
 
-#endif // !COIN_SBFIFO_H
+#endif // !OBOL_SBFIFO_H

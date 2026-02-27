@@ -38,7 +38,7 @@
   \brief Abstract base class for texture filtering engines.
 
   \ingroup coin_engines
-  \COIN_CLASS_EXTENSION
+  \OBOL_CLASS_EXTENSION
   \since Coin 3.0
 */
 

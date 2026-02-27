@@ -53,7 +53,7 @@
 #include <Inventor/nodes/SoVertexProperty.h>
 
 #include "nodes/SoSubNodeP.h"
-#include "config.h" // COIN_OBSOLETED()
+#include "config.h" // OBOL_OBSOLETED()
 
 /*!
   \var SoMFInt32 SoIndexedShape::coordIndex
@@ -106,7 +106,7 @@ SoIndexedShape::initClass(void)
 
 // Collects common error msg code for computeBBox() for both
 // Coordinate3 and Coordinate4 loops.
-#if COIN_DEBUG
+#if OBOL_DEBUG
 static void
 error_idx_out_of_bounds(const SoIndexedShape * node, int idxidx, int upper)
 {
@@ -137,7 +137,7 @@ error_idx_out_of_bounds(const SoIndexedShape * node, int idxidx, int upper)
                      node->coordIndex[idxidx],
                      bounds.getString());
 }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 // Documented in superclass. Overridden to calculate bounding box of
 // all indexed coordinates, using the coordIndex field.
@@ -177,7 +177,7 @@ SoIndexedShape::computeBBox(SoAction * action, SbBox3f & box, SbVec3f & center)
           numacc++;
         }
       }
-#if COIN_DEBUG
+#if OBOL_DEBUG
       else {
         const ptrdiff_t faultyidxpos = (ptr - this->coordIndex.getValues(0)) - 1;
         error_idx_out_of_bounds(this, (int)faultyidxpos, numcoords - 1);
@@ -186,7 +186,7 @@ SoIndexedShape::computeBBox(SoAction * action, SbBox3f & box, SbVec3f & center)
         // SoCoordinateElement element with a single default
         // coordinate point setup)
       }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     }
   }
   else {
@@ -205,7 +205,7 @@ SoIndexedShape::computeBBox(SoAction * action, SbBox3f & box, SbVec3f & center)
           numacc++;
         }
       }
-#if COIN_DEBUG
+#if OBOL_DEBUG
       else {
         const ptrdiff_t faultyidxpos = (ptr - this->coordIndex.getValues(0)) - 1;
         error_idx_out_of_bounds(this, (int)faultyidxpos, numcoords - 1);
@@ -214,7 +214,7 @@ SoIndexedShape::computeBBox(SoAction * action, SbBox3f & box, SbVec3f & center)
         // SoCoordinateElement element with a single default
         // coordinate point setup)
       }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     }
   }
   if (numacc) center /= (float) numacc;
@@ -260,7 +260,7 @@ SoIndexedShape::setupIndices(const int /* numParts */,
                              const SbBool /* needNormals */,
                              const SbBool /* needTexCoords */)
 {
-  COIN_OBSOLETED();
+  OBOL_OBSOLETED();
 }
 
 /*!
@@ -273,7 +273,7 @@ SoIndexedShape::setupIndices(const int /* numParts */,
 const int32_t *
 SoIndexedShape::getNormalIndices()
 {
-  COIN_OBSOLETED();
+  OBOL_OBSOLETED();
   return NULL;
 }
 
@@ -287,7 +287,7 @@ SoIndexedShape::getNormalIndices()
 const int32_t *
 SoIndexedShape::getColorIndices()
 {
-  COIN_OBSOLETED();
+  OBOL_OBSOLETED();
   return NULL;
 }
 
@@ -301,7 +301,7 @@ SoIndexedShape::getColorIndices()
 const int32_t *
 SoIndexedShape::getTexCoordIndices()
 {
-  COIN_OBSOLETED();
+  OBOL_OBSOLETED();
   return NULL;
 }
 

@@ -40,7 +40,7 @@
   volume.  It has methods for projection of primitives from or into
   the 3D volume, doing camera transforms, view volume transforms etc.
 
-  \COIN_CLASS_EXTENSION
+  \OBOL_CLASS_EXTENSION
 
   \sa SbViewportRegion
   \since Coin 2.0
@@ -58,11 +58,11 @@
 #include <Inventor/SbVec2d.h>
 #include <Inventor/SbVec3d.h>
 #include <Inventor/SbDPPlane.h>
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
-#include "config.h" // COIN_OBSOLETED()
+#include "config.h" // OBOL_OBSOLETED()
 #include <cassert>
 
 /*!
@@ -164,12 +164,12 @@ get_perspective_projection(const double rightminusleft, const double rightplusle
                            const double topminusbottom, const double topplusbottom,
                            const double nearval, const double farval)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (nearval * farval <= 0.0) {
     SoDebugError::postWarning("SbDPViewVolume::get_perspective_projection",
                               "Projection frustum crosses zero. Rendering is unpredictable.");
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   SbDPMatrix proj;
 
   proj[0][0] = 2.0*nearval/rightminusleft;
@@ -248,7 +248,7 @@ void
 SbDPViewVolume::getMatrices(SbDPMatrix& affine, SbDPMatrix& proj) const
 {
   SbVec3d upvec = this->ulf - this->llf;
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (upvec == SbVec3d(0.0, 0.0, 0.0)) {
     SoDebugError::postWarning("SbDPViewVolume::getMatrices",
                               "empty frustum!");
@@ -256,10 +256,10 @@ SbDPViewVolume::getMatrices(SbDPMatrix& affine, SbDPMatrix& proj) const
     proj = SbDPMatrix::identity();
     return;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   SbVec3d rightvec = this->lrf - this->llf;
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (rightvec == SbVec3d(0.0, 0.0, 0.0)) {
     SoDebugError::postWarning("SbDPViewVolume::getMatrices",
                               "empty frustum!");
@@ -267,7 +267,7 @@ SbDPViewVolume::getMatrices(SbDPMatrix& affine, SbDPMatrix& proj) const
     proj = SbDPMatrix::identity();
     return;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   // we test vectors above, just normalize
   (void) upvec.normalize();
@@ -313,14 +313,14 @@ SbDPViewVolume::getMatrices(SbDPMatrix& affine, SbDPMatrix& proj) const
   double n = this->getNearDist();
   double f = n + this->getDepth();
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (rml <= 0.0f || tmb <= 0.0f || n >= f) {
     SoDebugError::postWarning("SbDPViewVolume::getMatrices",
                               "invalid frustum");
     proj = SbDPMatrix::identity();
     return;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 
   if(this->type == SbDPViewVolume::ORTHOGRAPHIC)
@@ -394,13 +394,13 @@ SbDPViewVolume::projectPointToLine(const SbVec2d& pt,
   SbVec3d dx = this->lrf - this->llf;
   SbVec3d dy = this->ulf - this->llf;
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (dx.sqrLength() == 0.0f || dy.sqrLength() == 0.0f) {
     SoDebugError::postWarning("SbDPViewVolume::projectPointToLine",
                               "invalid frustum");
     return;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   line0 = this->projPoint + this->llf + dx*pt[0] + dy*pt[1];
   SbVec3d dir;
@@ -503,10 +503,10 @@ SbDPViewVolume::getPlanePoint(const double distFromEye,
       (this->ulf - this->llf) * normPoint[1];
 
     if (dvec.normalize() == 0.0) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
       SoDebugError::postWarning("SbDPViewVolume::getPlanePoint",
                                 "Frustum is invalid, point set to the projection point.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
       // just set volpt to the projection point
       volpt = this->getProjectionPoint();
     }
@@ -576,7 +576,7 @@ double
 SbDPViewVolume::getWorldToScreenScale(const SbVec3d& worldCenter,
                                     double normRadius) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (normRadius < 0.0f) {
     SoDebugError::postWarning("SbDPViewVolume::getWorldToScreenScale",
                               "normRadius (%f) should be >=0.0f.", normRadius);
@@ -588,7 +588,7 @@ SbDPViewVolume::getWorldToScreenScale(const SbVec3d& worldCenter,
                               this->getWidth(), this->getHeight());
     return 1.0f;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   if(this->getProjectionType() == SbDPViewVolume::ORTHOGRAPHIC) {
     SbVec3d rightvec = this->lrf - this->llf;
@@ -635,12 +635,12 @@ SbDPViewVolume::getWorldToScreenScale(const SbVec3d& worldCenter,
 SbVec2d
 SbDPViewVolume::projectBox(const SbBox3f& box) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (box.isEmpty()) {
     SoDebugError::postWarning("SbDPViewVolume::projectBox",
                               "Box is empty.");
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   SbVec3d mincorner = dp_to_sbvec3d(box.getMin());
   SbVec3d maxcorner = dp_to_sbvec3d(box.getMax());
@@ -682,7 +682,7 @@ SbDPViewVolume
 SbDPViewVolume::narrow(double left, double bottom,
                      double right, double top) const
 {
-#if COIN_DEBUG && 0 // debug test disabled, 2001-02-16, pederb
+#if OBOL_DEBUG && 0 // debug test disabled, 2001-02-16, pederb
   if (left<0.0f) {
     SoDebugError::postWarning("SbDPViewVolume::narrow",
                               "left coordinate (%f) should be >=0.0f. "
@@ -725,7 +725,7 @@ SbDPViewVolume::narrow(double left, double bottom,
     top=bottom;
     bottom=tmp;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   SbDPViewVolume nvw = *this;
 
@@ -736,11 +736,11 @@ SbDPViewVolume::narrow(double left, double bottom,
   SbVec3d yvec = this->ulf - this->llf;
   
   if (yvec.normalize() == 0.0 || xvec.normalize() == 0.0) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SbDPViewVolume::narrow",
                               "View volume was empty before narrowing.");
     
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   }
 
   nvw.ulf = nvw.llf + (xvec * left * w + yvec * top * h);
@@ -784,7 +784,7 @@ SbDPViewVolume::ortho(double left, double right,
                     double bottom, double top,
                     double nearval, double farval)
 {
-#if defined(COIN_DEBUG) && 0 // disabled 2002-08-30 pederb
+#if defined(OBOL_DEBUG) && 0 // disabled 2002-08-30 pederb
 
   // These parameter tests are probably incorrect. It is possible to
   // set left > right etc. in SGI/TGS Inventor, and it should be
@@ -846,7 +846,7 @@ void
 SbDPViewVolume::perspective(double fovy, double aspect,
                             double nearval, double farval)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (fovy<0.0f || fovy > M_PI) {
     SoDebugError::postWarning("SbDPViewVolume::perspective",
                               "Field of View 'fovy' (%f) is out of bounds "
@@ -864,7 +864,7 @@ SbDPViewVolume::perspective(double fovy, double aspect,
     farval=nearval;
     nearval=tmp;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   this->type = SbDPViewVolume::PERSPECTIVE;
   this->projPoint.setValue(0.0f, 0.0f, 0.0f);
@@ -983,14 +983,14 @@ SbDPViewVolume::zNarrow(double nearval, double farval) const
 void
 SbDPViewVolume::scale(double factor)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (factor<0.0f) {
     SoDebugError::postWarning("SbDPViewVolume::scale",
                               "Scale factor (%f) should be >=0.0f. Clamping "
                               "to 0.0f.",factor);
     factor=0.0f;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   this->scaleWidth(factor);
   this->scaleHeight(factor);
@@ -1005,14 +1005,14 @@ SbDPViewVolume::scale(double factor)
 void
 SbDPViewVolume::scaleWidth(double ratio)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (ratio<0.0f) {
     SoDebugError::postWarning("SbDPViewVolume::scaleWidth",
                               "Scale factor (%f) should be >=0.0f. "
                               "Clamping to 0.0f.",ratio);
     ratio=0.0f;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   double w = this->getWidth();
   double neww = w * ratio;
@@ -1020,10 +1020,10 @@ SbDPViewVolume::scaleWidth(double ratio)
 
   SbVec3d xvec = this->lrf - this->llf;
   if (xvec.normalize() == 0.0) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SbDPViewVolume::scaleWidth",
                               "View volume had no width before scaling.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   }
   SbVec3d diffvec = xvec * wdiff;
 
@@ -1041,14 +1041,14 @@ SbDPViewVolume::scaleWidth(double ratio)
 void
 SbDPViewVolume::scaleHeight(double ratio)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (ratio<0.0f) {
     SoDebugError::postWarning("SbDPViewVolume::scaleHeight",
                               "Scale factor (%f) should be >=0.0f. "
                               "Clamping to 0.0f.",ratio);
     ratio=0.0f;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   double h = this->getHeight();
   double newh = h * ratio;
@@ -1056,10 +1056,10 @@ SbDPViewVolume::scaleHeight(double ratio)
 
   SbVec3d upvec = this->ulf - this->llf;
   if (upvec.normalize() == 0.0) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SbDPViewVolume::scaleHeight",
                               "View volume had no height before scaling.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   }
   SbVec3d diffvec = upvec * hdiff;
 
@@ -1153,7 +1153,7 @@ SbDPViewVolume::getDepth(void) const
 void
 SbDPViewVolume::print(FILE * fp) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   fprintf( fp, "  projtype: %d\n", static_cast<int>(this->getProjectionType()) );
   fprintf( fp, "  projpt:   " );
   this->getProjectionPoint().print(fp);
@@ -1174,7 +1174,7 @@ SbDPViewVolume::print(FILE * fp) const
   fprintf( fp, "    ulf:    " );
   this->ulf.print(fp);
   fprintf( fp, "\n" );
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }
 
 /*!
@@ -1311,10 +1311,10 @@ SbDPViewVolume::getViewUp(void) const
 {
   SbVec3d v = this->ulf - this->llf;
   if (v.normalize() == 0.0) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SbDPViewVolume::getViewUp",
                               "View volume is empty.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   }
   return v;
 }
@@ -1332,7 +1332,7 @@ SbDPViewVolume::getPlaneRectangle(const double distance, SbVec3d & lowerleft,
 {
   SbVec3d near_ur = this->ulf + (this->lrf-this->llf);
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (this->llf == SbVec3d(0.0, 0.0, 0.0) ||
       this->lrf == SbVec3d(0.0, 0.0, 0.0) ||
       this->ulf == SbVec3d(0.0, 0.0, 0.0) ||
@@ -1341,7 +1341,7 @@ SbDPViewVolume::getPlaneRectangle(const double distance, SbVec3d & lowerleft,
                               "Invalid frustum.");
     
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   if (this->type == PERSPECTIVE) {
     double depth = this->nearDist + distance;

@@ -30,8 +30,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_SOSUBNODEENGINEP_H
-#define COIN_SOSUBNODEENGINEP_H
+#ifndef OBOL_SOSUBNODEENGINEP_H
+#define OBOL_SOSUBNODEENGINEP_H
 
 // The macro definitions in this file are used internally by Coin
 // classes, and mirrors some of the public macros available in
@@ -41,9 +41,9 @@
 // The macros in this file are not made visible for use by the
 // application programmer.
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #error this is a private header file
-#endif // !COIN_INTERNAL
+#endif // !OBOL_INTERNAL
 
 #include <Inventor/engines/SoSubNodeEngine.h>
 
@@ -81,4 +81,4 @@
   } while (0)
 
 
-#endif // COIN_SOSUBNODEENGINEP_H
+#endif // OBOL_SOSUBNODEENGINEP_H

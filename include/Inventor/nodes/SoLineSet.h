@@ -1,5 +1,5 @@
-#ifndef COIN_SOLINESET_H
-#define COIN_SOLINESET_H
+#ifndef OBOL_SOLINESET_H
+#define OBOL_SOLINESET_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -40,7 +40,7 @@
 class SoCoordinateElement;
 class SoSeparator;
 
-class COIN_DLL_API SoLineSet : public SoNonIndexedShape {
+class OBOL_DLL_API SoLineSet : public SoNonIndexedShape {
   typedef SoNonIndexedShape inherited;
 
   SO_NODE_HEADER(SoLineSet);
@@ -84,4 +84,4 @@ private:
   Binding findMaterialBinding(SoState * const state) const;
 };
 
-#endif // !COIN_SOLINESET_H
+#endif // !OBOL_SOLINESET_H

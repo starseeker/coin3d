@@ -1,5 +1,5 @@
-#ifndef COIN_SBBARRIER_H
-#define COIN_SBBARRIER_H
+#ifndef OBOL_SBBARRIER_H
+#define OBOL_SBBARRIER_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -74,4 +74,4 @@ private:
   // and potentially better performance.
 };
 
-#endif // !COIN_SBBARRIER_H
+#endif // !OBOL_SBBARRIER_H

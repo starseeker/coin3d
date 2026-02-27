@@ -1,5 +1,5 @@
-#ifndef COIN_SONODEVISUALIZE_H
-#define COIN_SONODEVISUALIZE_H
+#ifndef OBOL_SONODEVISUALIZE_H
+#define OBOL_SONODEVISUALIZE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -47,7 +47,7 @@
 
 class SoProfilerStats;
 
-class COIN_DLL_API SoNodeVisualize : public SoBaseKit
+class OBOL_DLL_API SoNodeVisualize : public SoBaseKit
 {
   typedef SoBaseKit inherited;
 
@@ -109,4 +109,4 @@ protected:
   SoNode *node;
 };
 
-#endif // !COIN_SONODEVISUALIZE_H
+#endif // !OBOL_SONODEVISUALIZE_H

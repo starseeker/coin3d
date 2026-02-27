@@ -52,9 +52,9 @@
 #include <cstdio> // fprintf()
 
 #include <Inventor/lists/SoTypeList.h>
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 // Private container class.
 class CatalogItem {
@@ -463,7 +463,7 @@ SoNodekitCatalog::clone(SoType type) const
 static void SoNodekitCatalogPropagateDefaultInit( SoNodekitCatalog * pthis )
 {
 
-#if COIN_DEBUG && 0
+#if OBOL_DEBUG && 0
   SoDebugError::postInfo("SoNodekitCatalogPropagateDefaultInit",
                          "sanitizing catalog" );
 #endif
@@ -506,7 +506,7 @@ SoNodekitCatalog::addEntry(const SbName & name, SoType type,
   if (rightsibling[0] == '\"' && rightsibling[1] == '\"') rightsibling = "";
 
 
-#if COIN_DEBUG && 0
+#if OBOL_DEBUG && 0
   SoDebugError::postInfo("SoNodekitCatalog::addEntry",
                          "new entry: \"%s\"", name.getString());
 #endif
@@ -567,7 +567,7 @@ SoNodekitCatalog::addEntry(const SbName & name, SoType type,
         this->delayeditems.remove(i);
         i = -1; // restart scan
         
-#if COIN_DEBUG && 0
+#if OBOL_DEBUG && 0
         SoDebugError::postInfo("SoNodekitCatalog::addEntry",
                                "fixed delayed item, %d item%s left",
                                this->delayeditems.getLength(),
@@ -651,7 +651,7 @@ SoNodekitCatalog::addListItemType(const SbName & name, SoType type)
     
     if (!this->addListItemType(this->items, name, type) &&
         !this->addListItemType(this->delayeditems, name, type)) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
       SoDebugError::post("SoNodekitCatalog::addListItemType",
                          "invalid part name, \"%s\"", name.getString());
 #endif

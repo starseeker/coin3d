@@ -400,7 +400,7 @@ SoSurroundScale::updateMySurroundParams(SoAction * action,
   const int curpathlen = curpath->getLength();
 
   if ((numtocontainer <= 0) || (numtocontainer >= curpathlen)) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SoSurroundScale::updateMySurroundParams",
                               "illegal field value, numNodesUpToContainer (==%d)"
                               "should always be > 0 and < path length\n",

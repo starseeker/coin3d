@@ -33,75 +33,75 @@
 // FIXME: this class has not been implemented yet. 20000627 mortene.
 
 #include <Inventor/misc/SoByteStream.h>
-#include "config.h" // COIN_STUB
+#include "config.h" // OBOL_STUB
 #include <cstdlib>
 
 
 SoByteStream::SoByteStream(void)
 {
-  COIN_STUB();
+  OBOL_STUB();
 }
 
 SoByteStream::~SoByteStream()
 {
-  COIN_STUB();
+  OBOL_STUB();
 }
 
 void
-SoByteStream::convert(SoNode * COIN_UNUSED_ARG(node), SbBool COIN_UNUSED_ARG(binary))
+SoByteStream::convert(SoNode * OBOL_UNUSED_ARG(node), SbBool OBOL_UNUSED_ARG(binary))
 {
-  COIN_STUB();
+  OBOL_STUB();
 }
 
 void
-SoByteStream::convert(SoPath * COIN_UNUSED_ARG(path), SbBool COIN_UNUSED_ARG(binary))
+SoByteStream::convert(SoPath * OBOL_UNUSED_ARG(path), SbBool OBOL_UNUSED_ARG(binary))
 {
-  COIN_STUB();
+  OBOL_STUB();
 }
 
 void
-SoByteStream::convert(SoPathList * COIN_UNUSED_ARG(pl), SbBool COIN_UNUSED_ARG(binary))
+SoByteStream::convert(SoPathList * OBOL_UNUSED_ARG(pl), SbBool OBOL_UNUSED_ARG(binary))
 {
-  COIN_STUB();
+  OBOL_STUB();
 }
 
 void *
 SoByteStream::getData(void)
 {
-  COIN_STUB();
+  OBOL_STUB();
   return NULL;
 }
 
 uint32_t
 SoByteStream::getNumBytes(void)
 {
-  COIN_STUB();
+  OBOL_STUB();
   return 0;
 }
 
 SoPathList *
-SoByteStream::unconvert(SoByteStream * COIN_UNUSED_ARG(stream))
+SoByteStream::unconvert(SoByteStream * OBOL_UNUSED_ARG(stream))
 {
-  COIN_STUB();
+  OBOL_STUB();
   return NULL;
 }
 
 SoPathList *
-SoByteStream::unconvert(void * COIN_UNUSED_ARG(data), uint32_t COIN_UNUSED_ARG(bytesinstream))
+SoByteStream::unconvert(void * OBOL_UNUSED_ARG(data), uint32_t OBOL_UNUSED_ARG(bytesinstream))
 {
-  COIN_STUB();
+  OBOL_STUB();
   return NULL;
 }
 
 void
-SoByteStream::copy(void * COIN_UNUSED_ARG(d), size_t COIN_UNUSED_ARG(len))
+SoByteStream::copy(void * OBOL_UNUSED_ARG(d), size_t OBOL_UNUSED_ARG(len))
 {
-  COIN_STUB();
+  OBOL_STUB();
 }
 
 SbBool
 SoByteStream::isRawData(void) const
 {
-  COIN_STUB();
+  OBOL_STUB();
   return FALSE;
 }

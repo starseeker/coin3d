@@ -242,43 +242,43 @@
 class SoIndexedFaceSetP {
 public:
   SoIndexedFaceSetP(void) 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
     : convexmutex(SbRWMutex::READ_PRECEDENCE)
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
   { }
 
   SoVertexArrayIndexer * vaindexer;
   SoConvexDataCache * convexCache;
   int concavestatus;
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   // FIXME: a mutex for every instance seems a bit excessive,
   // especially since Microsoft Windows might have rather strict limits on the
   // total amount of mutex resources a process (or even a user) can
   // allocate. so consider making this a class-wide instance instead.
   // -mortene.
   SbRWMutex convexmutex;
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 
   void readLockConvexCache(void) {
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
     this->convexmutex.readLock();
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
   }
   void readUnlockConvexCache(void) {
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
     this->convexmutex.readUnlock();
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
   }
   void writeLockConvexCache(void) {
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
     this->convexmutex.writeLock();
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
   }
   void writeUnlockConvexCache(void) {
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
     this->convexmutex.writeUnlock();
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
   }
 };
 
@@ -350,10 +350,10 @@ SoIndexedFaceSet::findMaterialBinding(SoState * const state) const
     binding = PER_FACE_INDEXED;
     break;
   default:
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SoIndexedFaceSet::findMaterialBinding",
                               "unknown material binding setting");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     break;
   }
   return binding;
@@ -389,10 +389,10 @@ SoIndexedFaceSet::findNormalBinding(SoState * const state) const
     binding = PER_FACE_INDEXED;
     break;
   default:
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SoIndexedFaceSet::findNormalBinding",
                               "unknown normal binding setting");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     break;
   }
   return binding;
@@ -784,11 +784,11 @@ SoIndexedFaceSet::generatePrimitives(SoAction *action)
     v2 = *viptr++;
     v3 = *viptr++;
     if (v1 < 0 || v2 < 0 || v3 < 0) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
       SoDebugError::postInfo("SoIndexedFaceSet::generatePrimitives",
                              "Polygon with less than three vertices detected. "
                              "Aborting current shape.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
       
       break;
     } 
@@ -916,7 +916,7 @@ SoIndexedFaceSet::getPrimitiveCount(SoGetPrimitiveCountAction *action)
 //
 SbBool
 SoIndexedFaceSet::useConvexCache(SoAction * action,
-                                 const SbVec3f * COIN_UNUSED_ARG(normals),
+                                 const SbVec3f * OBOL_UNUSED_ARG(normals),
                                  const int32_t * nindices,
                                  const SbBool normalsfromcache)
 {

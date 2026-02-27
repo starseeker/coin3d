@@ -56,7 +56,7 @@
   is doubled, and creating the texture object is much slower, so we
   avoid this for SoGLBigImage.
 
-  \COIN_CLASS_EXTENSION
+  \OBOL_CLASS_EXTENSION
 
   \since Coin 2.0
 */
@@ -79,9 +79,9 @@
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/system/gl.h>
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
 #include <Inventor/threads/SbMutex.h>
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 
 #include "CoinTidbits.h"
 #include "rendering/SoGL.h"
@@ -122,9 +122,9 @@ public:
   static SoType classTypeId;
 
   cc_storage * storage;
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   SbMutex mutex;
-#endif // !COIN_THREADSAFE
+#endif // !OBOL_THREADSAFE
   unsigned char ** cache;
   SbVec2s * cachesize;
   int numcachelevels;
@@ -135,14 +135,14 @@ public:
   }
 
   inline void lock(void) {
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
     this->mutex.lock();
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
   }
   inline void unlock(void) {
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
     this->mutex.unlock();
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
   }
 
   void copySubImage(SoGLBigImageTls * tls,
@@ -299,7 +299,7 @@ SoGLBigImage::setData(const SbImage * image,
 
 
 SoGLDisplayList *
-SoGLBigImage::getGLDisplayList(SoState * COIN_UNUSED_ARG(state))
+SoGLBigImage::getGLDisplayList(SoState * OBOL_UNUSED_ARG(state))
 {
   return NULL;
 }
@@ -910,7 +910,7 @@ SoGLBigImageP::unrefOldDL(SoGLBigImageTls * tls, SoState * state, const uint32_t
   for (int i = 0; i < numimages; i++) {
     if (tls->glimagearray[i]) {
       if (tls->glimageage[i] >= maxage) {
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
         SoDebugError::postInfo("SoGLBigImageP::unrefOldDL",
                                "Killed image because of old age.");
 #endif // debug

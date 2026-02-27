@@ -57,7 +57,7 @@
 // Type-specific define to be able to do #ifdef tests on type.  (Note:
 // used to check the header file wrapper define, but that doesn't work
 // with --enable-compact build.)
-#define COIN_INTERNAL_SOMFNODE
+#define OBOL_INTERNAL_SOMFNODE
 
 #include <Inventor/fields/SoMFNode.h>
 
@@ -70,9 +70,9 @@
 #include <Inventor/engines/SoEngine.h>
 #include <Inventor/nodes/SoNode.h>
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 #include "fields/SoSubFieldP.h"
 #include "misc/SoBaseP.h"
@@ -184,16 +184,16 @@ SoMFNode::set1Value(const int idx, SoNode * newval)
 
   // Expand array if necessary.
   if (idx >= this->num) {
-#ifdef COIN_INTERNAL_SOMFPATH
+#ifdef OBOL_INTERNAL_SOMFPATH
     for (int i = this->num; i <= idx; i++) this->pathheads.append(NULL);
-#endif // COIN_INTERNAL_SOMFPATH
+#endif // OBOL_INTERNAL_SOMFPATH
     this->setNum(idx + 1);
   }
 
   SoNode * oldptr = this->values[idx];
   if (oldptr != newval) {
     if (oldptr) {
-#ifdef COIN_INTERNAL_SOMFPATH
+#ifdef OBOL_INTERNAL_SOMFPATH
       SoNode * h = oldptr->getHead();
       // The path should be audited by us at all times. So don't use
       // SoMFPath to wrap SoTempPath or SoLightPath, for instance.
@@ -203,7 +203,7 @@ SoMFNode::set1Value(const int idx, SoNode * newval)
         h->removeAuditor(this, SoNotRec::FIELD);
         h->unref();
       }
-#endif // COIN_INTERNAL_SOMFPATH
+#endif // OBOL_INTERNAL_SOMFPATH
       oldptr->removeAuditor(this, SoNotRec::FIELD);
       oldptr->unref();
     }
@@ -211,20 +211,20 @@ SoMFNode::set1Value(const int idx, SoNode * newval)
     if (newval) {
       newval->addAuditor(this, SoNotRec::FIELD);
       newval->ref();
-#ifdef COIN_INTERNAL_SOMFPATH
+#ifdef OBOL_INTERNAL_SOMFPATH
       SoNode * h = newval->getHead();
       if (h) {
         h->addAuditor(this, SoNotRec::FIELD);
         h->ref();
       }
-#endif // COIN_INTERNAL_SOMFPATH
+#endif // OBOL_INTERNAL_SOMFPATH
     }
 
     this->setChangedIndex(idx);
     this->values[idx] = newval;
-#ifdef COIN_INTERNAL_SOMFPATH
+#ifdef OBOL_INTERNAL_SOMFPATH
     this->pathheads[idx] = newval ? newval->getHead() : NULL;
-#endif // COIN_INTERNAL_SOMFPATH
+#endif // OBOL_INTERNAL_SOMFPATH
   }
 
   // Finally, send notification.
@@ -279,14 +279,14 @@ SoMFNode::deleteValues(int start, int numarg)
       n->removeAuditor(this, SoNotRec::FIELD);
       n->unref();
     }
-#ifdef COIN_INTERNAL_SOMFPATH
+#ifdef OBOL_INTERNAL_SOMFPATH
     SoNode * h = this->pathheads[start];
     this->pathheads.remove(start);
     if (h) {
       h->removeAuditor(this, SoNotRec::FIELD);
       h->unref();
     }
-#endif // COIN_INTERNAL_SOMFPATH
+#endif // OBOL_INTERNAL_SOMFPATH
   }
 
   inherited::deleteValues(start, numarg);
@@ -304,9 +304,9 @@ SoMFNode::insertSpace(int start, int numarg)
 
   inherited::insertSpace(start, numarg);
   for (int i=start; i < start+numarg; i++) {
-#ifdef COIN_INTERNAL_SOMFPATH
+#ifdef OBOL_INTERNAL_SOMFPATH
     this->pathheads.insert(NULL, start);
-#endif // COIN_INTERNAL_SOMFPATH
+#endif // OBOL_INTERNAL_SOMFPATH
     this->values[i] = NULL;
   }
 
@@ -436,24 +436,24 @@ SoMFNode::fixCopy(SbBool copyconnections)
   for (int i=0; i < this->getNum(); i++) {
     SoNode * n = (*this)[i];
     if (n) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
       n->assertAlive();
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
       // The set1Value() call below will automatically de-audit and
       // un-ref the old pointer value node reference we have in the
       // array, *before* re-inserting a copy.
 
-#if defined(COIN_INTERNAL_SOMFNODE) || defined(COIN_INTERNAL_SOMFENGINE)
+#if defined(OBOL_INTERNAL_SOMFNODE) || defined(OBOL_INTERNAL_SOMFENGINE)
       SoFieldContainer * fc = SoFieldContainer::findCopy(n, copyconnections);
-#if COIN_DEBUG
+#if OBOL_DEBUG
       if (fc) fc->assertAlive();
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
       if (fc) this->set1Value(i, coin_assert_cast<SoNode *>(fc));
-#endif // COIN_INTERNAL_SOMFNODE || COIN_INTERNAL_SOMFENGINE
+#endif // OBOL_INTERNAL_SOMFNODE || OBOL_INTERNAL_SOMFENGINE
 
-#ifdef COIN_INTERNAL_SOMFPATH
+#ifdef OBOL_INTERNAL_SOMFPATH
       this->set1Value(i, n->copy());
-#endif // COIN_INTERNAL_SOMFPATH
+#endif // OBOL_INTERNAL_SOMFPATH
     }
   }
 
@@ -471,12 +471,12 @@ SoMFNode::referencesCopy(void) const
   for (int i=0; i < this->getNum(); i++) {
     SoNode * item = (*this)[i];
     if (item) {
-#if defined(COIN_INTERNAL_SOMFNODE) || defined(COIN_INTERNAL_SOMFENGINE)
+#if defined(OBOL_INTERNAL_SOMFNODE) || defined(OBOL_INTERNAL_SOMFENGINE)
       if (SoFieldContainer::checkCopy(coin_assert_cast<SoFieldContainer *>(item))) return TRUE;
-#endif // COIN_INTERNAL_SOMFNODE || COIN_INTERNAL_SOMFENGINE
-#ifdef COIN_INTERNAL_SOMFPATH
+#endif // OBOL_INTERNAL_SOMFNODE || OBOL_INTERNAL_SOMFENGINE
+#ifdef OBOL_INTERNAL_SOMFPATH
       if (item->getHead() && SoFieldContainer::checkCopy(item->getHead())) return TRUE;
-#endif // COIN_INTERNAL_SOMFPATH
+#endif // OBOL_INTERNAL_SOMFPATH
     }
   }
 
@@ -484,7 +484,7 @@ SoMFNode::referencesCopy(void) const
 }
 
 // Kill the type-specific define.
-#undef COIN_INTERNAL_SOMFNODE
+#undef OBOL_INTERNAL_SOMFNODE
 //$ END TEMPLATE MFNodeEnginePath
 
 
@@ -492,7 +492,7 @@ SoMFNode::referencesCopy(void) const
 /*!
   Adds a node at the end of the array.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */
@@ -505,7 +505,7 @@ SoMFNode::addNode(SoNode * node)
 /*!
   Inserts a node at index \a idx.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */
@@ -520,7 +520,7 @@ SoMFNode::insertNode(SoNode * node, int idx)
 /*!
   Returns the node at index \a idx.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */
@@ -535,7 +535,7 @@ SoMFNode::getNode(int idx) const
   Returns the index for the first instance of \a node in the field,
   or -1 if not found.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */
@@ -553,7 +553,7 @@ SoMFNode::findNode(const SoNode * node) const
 /*!
   Returns the number of nodes in this field.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */
@@ -566,7 +566,7 @@ SoMFNode::getNumNodes(void) const
 /*!
   Removes the node at index \a idx.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */
@@ -580,7 +580,7 @@ SoMFNode::removeNode(int idx)
 /*!
   Removes the first instance of \a node in the field.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */
@@ -594,7 +594,7 @@ SoMFNode::removeNode(SoNode * node)
 /*!
   Removes all nodes from the field.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */
@@ -606,7 +606,7 @@ SoMFNode::removeAllNodes(void)
 /*!
   Replaces the node at index \a idx with \a newnode.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */
@@ -620,7 +620,7 @@ SoMFNode::replaceNode(int idx, SoNode * newnode)
 /*!
   Replaces the first instance of \a oldnode with \a newnode.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */

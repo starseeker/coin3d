@@ -1,5 +1,5 @@
-#ifndef COIN_SOTEXTURECOORDINATE3_H
-#define COIN_SOTEXTURECOORDINATE3_H
+#ifndef OBOL_SOTEXTURECOORDINATE3_H
+#define OBOL_SOTEXTURECOORDINATE3_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -38,7 +38,7 @@
 
 class SoTextureCoordinate3P;
 
-class COIN_DLL_API SoTextureCoordinate3 : public SoNode {
+class OBOL_DLL_API SoTextureCoordinate3 : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_HEADER(SoTextureCoordinate3);
@@ -61,4 +61,4 @@ protected:
   SoTextureCoordinate3P * pimpl;
 };
 
-#endif // !COIN_SOTEXTURECOORDINATE3_H
+#endif // !OBOL_SOTEXTURECOORDINATE3_H

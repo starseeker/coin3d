@@ -1,5 +1,5 @@
-#ifndef COIN_INTERNAL_ERROR_H
-#define COIN_INTERNAL_ERROR_H
+#ifndef OBOL_INTERNAL_ERROR_H
+#define OBOL_INTERNAL_ERROR_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -71,27 +71,27 @@ typedef void cc_error_cb(const cc_error * err, void * data);
 #endif /* CC_ERROR_STRUCT_DEFINED */
 
 /* Basic error functions */
-COIN_DLL_API void cc_error_init(cc_error * me);
-COIN_DLL_API void cc_error_clean(cc_error * me);
-COIN_DLL_API void cc_error_copy(const cc_error * src, cc_error * dst);
+OBOL_DLL_API void cc_error_init(cc_error * me);
+OBOL_DLL_API void cc_error_clean(cc_error * me);
+OBOL_DLL_API void cc_error_copy(const cc_error * src, cc_error * dst);
 
   /*   const SbString & getDebugString(void) const; */
-COIN_DLL_API const std::string cc_error_get_debug_string(const cc_error * me);
-COIN_DLL_API void cc_error_set_debug_string(cc_error * me, const char * str);
-COIN_DLL_API void cc_error_append_to_debug_string(cc_error * me, const char * str);
+OBOL_DLL_API const std::string cc_error_get_debug_string(const cc_error * me);
+OBOL_DLL_API void cc_error_set_debug_string(cc_error * me, const char * str);
+OBOL_DLL_API void cc_error_append_to_debug_string(cc_error * me, const char * str);
 
 /*   static void setHandlerCallback(SoErrorCB * const func, void * const data); */
 
-COIN_DLL_API void cc_error_set_handler_callback(cc_error_cb * func, void * data);
-COIN_DLL_API cc_error_cb * cc_error_get_handler_callback(void);
-COIN_DLL_API void * cc_error_get_handler_data(void);
+OBOL_DLL_API void cc_error_set_handler_callback(cc_error_cb * func, void * data);
+OBOL_DLL_API cc_error_cb * cc_error_get_handler_callback(void);
+OBOL_DLL_API void * cc_error_get_handler_data(void);
 
-COIN_DLL_API void cc_error_post(const char * format, ...);
-COIN_DLL_API void cc_error_post_arglist(const char * format, va_list args);
+OBOL_DLL_API void cc_error_post(const char * format, ...);
+OBOL_DLL_API void cc_error_post_arglist(const char * format, va_list args);
 
-COIN_DLL_API void cc_error_handle(cc_error * me);
-COIN_DLL_API cc_error_cb * cc_error_get_handler(void ** data);
-COIN_DLL_API void cc_error_default_handler_cb(const cc_error * err, void * data);
+OBOL_DLL_API void cc_error_handle(cc_error * me);
+OBOL_DLL_API cc_error_cb * cc_error_get_handler(void ** data);
+OBOL_DLL_API void cc_error_default_handler_cb(const cc_error * err, void * data);
 
 /* ********************************************************************** */
 /* Debug error structures and functions */
@@ -116,22 +116,22 @@ typedef struct cc_debugerror {
 typedef void cc_debugerror_cb(const cc_debugerror * err, void * data);
 
 /* Debug error functions */
-COIN_DLL_API void cc_debugerror_post(const char * source, const char * format, ...);
-COIN_DLL_API void cc_debugerror_postwarning(const char * source, const char * format, ...);
-COIN_DLL_API void cc_debugerror_postinfo(const char * source, const char * format, ...);
+OBOL_DLL_API void cc_debugerror_post(const char * source, const char * format, ...);
+OBOL_DLL_API void cc_debugerror_postwarning(const char * source, const char * format, ...);
+OBOL_DLL_API void cc_debugerror_postinfo(const char * source, const char * format, ...);
 
-COIN_DLL_API void cc_debugerror_init(cc_debugerror * me);
-COIN_DLL_API void cc_debugerror_clean(cc_debugerror * me);
+OBOL_DLL_API void cc_debugerror_init(cc_debugerror * me);
+OBOL_DLL_API void cc_debugerror_clean(cc_debugerror * me);
 
-COIN_DLL_API CC_DEBUGERROR_SEVERITY cc_debugerror_get_severity(const cc_debugerror * me);
+OBOL_DLL_API CC_DEBUGERROR_SEVERITY cc_debugerror_get_severity(const cc_debugerror * me);
 
-COIN_DLL_API void cc_debugerror_set_handler_callback(cc_debugerror_cb * function, void * data);
-COIN_DLL_API cc_debugerror_cb * cc_debugerror_get_handler_callback(void);
-COIN_DLL_API void * cc_debugerror_get_handler_data(void);
-COIN_DLL_API cc_debugerror_cb * cc_debugerror_get_handler(void ** data);
+OBOL_DLL_API void cc_debugerror_set_handler_callback(cc_debugerror_cb * function, void * data);
+OBOL_DLL_API cc_debugerror_cb * cc_debugerror_get_handler_callback(void);
+OBOL_DLL_API void * cc_debugerror_get_handler_data(void);
+OBOL_DLL_API cc_debugerror_cb * cc_debugerror_get_handler(void ** data);
 
 #ifdef __cplusplus
 } /* extern "C" */
 #endif /* __cplusplus */
 
-#endif /* ! COIN_INTERNAL_ERROR_H */
+#endif /* ! OBOL_INTERNAL_ERROR_H */

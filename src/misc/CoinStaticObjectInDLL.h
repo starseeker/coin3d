@@ -1,5 +1,5 @@
-#ifndef COIN_COINSTATICOBJECTINDLL_H
-#define COIN_COINSTATICOBJECTINDLL_H
+#ifndef OBOL_COINSTATICOBJECTINDLL_H
+#define OBOL_COINSTATICOBJECTINDLL_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,9 +37,9 @@
 
 // *************************************************************************
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #error this is a private header file
-#endif /* ! COIN_INTERNAL */
+#endif /* ! OBOL_INTERNAL */
 
 // *************************************************************************
 
@@ -64,4 +64,4 @@ private:
 
 // *************************************************************************
 
-#endif // !COIN_COINSTATICOBJECTINDLL_H
+#endif // !OBOL_COINSTATICOBJECTINDLL_H

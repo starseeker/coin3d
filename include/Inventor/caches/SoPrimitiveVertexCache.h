@@ -1,5 +1,5 @@
-#ifndef COIN_SOPRIMITIVEVERTEXCACHE_H
-#define COIN_SOPRIMITIVEVERTEXCACHE_H
+#ifndef OBOL_SOPRIMITIVEVERTEXCACHE_H
+#define OBOL_SOPRIMITIVEVERTEXCACHE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -45,7 +45,7 @@ class SoPrimitiveVertex;
 class SoPointDetail;
 class SoState;
 
-class COIN_DLL_API SoPrimitiveVertexCache : public SoCache {
+class OBOL_DLL_API SoPrimitiveVertexCache : public SoCache {
   typedef SoCache inherited;
 public:
   SoPrimitiveVertexCache(SoState * state);
@@ -104,4 +104,4 @@ private:
 
 };
 
-#endif // COIN_SOPRIMITIVEVERTEXCACHE_H
+#endif // OBOL_SOPRIMITIVEVERTEXCACHE_H

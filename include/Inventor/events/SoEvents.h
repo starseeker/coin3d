@@ -1,5 +1,5 @@
-#ifndef COIN_SOEVENTS_H
-#define COIN_SOEVENTS_H
+#ifndef OBOL_SOEVENTS_H
+#define OBOL_SOEVENTS_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -47,4 +47,4 @@
 #include <Inventor/events/SoMouseButtonEvent.h>
 #include <Inventor/events/SoSpaceballButtonEvent.h>
 
-#endif // !COIN_SOEVENTS_H
+#endif // !OBOL_SOEVENTS_H

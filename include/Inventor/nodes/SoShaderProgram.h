@@ -1,5 +1,5 @@
-#ifndef COIN_SOSHADERPROGRAM_H
-#define COIN_SOSHADERPROGRAM_H
+#ifndef OBOL_SOSHADERPROGRAM_H
+#define OBOL_SOSHADERPROGRAM_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -47,7 +47,7 @@ typedef void SoShaderProgramEnableCB(void * closure,
 
 // *************************************************************************
 
-class COIN_DLL_API SoShaderProgram : public SoNode {
+class OBOL_DLL_API SoShaderProgram : public SoNode {
   typedef SoNode inherited;
   SO_NODE_HEADER(SoShaderProgram);
 
@@ -73,4 +73,4 @@ private:
   class SoShaderProgramP * pimpl;
 };
 
-#endif /* ! COIN_SOSHADERPROGRAM_H */
+#endif /* ! OBOL_SOSHADERPROGRAM_H */

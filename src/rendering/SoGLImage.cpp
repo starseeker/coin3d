@@ -69,18 +69,18 @@
   are running on a laptop, it might be a good idea to disable linear
   filtering and mipmaps.
 
-  \li COIN_TEX2_LINEAR_LIMIT: Linear filtering is enabled if
+  \li OBOL_TEX2_LINEAR_LIMIT: Linear filtering is enabled if
   Complexity::textureQuality is greater or equal to this
   value. Default value is 0.2.
 
-  \li COIN_TEX2_MIPMAP_LIMIT: Mipmaps are created if textureQuality is
+  \li OBOL_TEX2_MIPMAP_LIMIT: Mipmaps are created if textureQuality is
   greater or equal to this value. Default value is 0.5.
 
-  \li COIN_TEX2_LINEAR_MIPMAP_LIMIT: Linear filtering between mipmap
+  \li OBOL_TEX2_LINEAR_MIPMAP_LIMIT: Linear filtering between mipmap
   levels is enabled if textureQuality is greater or equal to this
   value. Default value is 0.8.
 
-  \li COIN_TEX2_SCALEUP_LIMIT: Textures with width or height not equal
+  \li OBOL_TEX2_SCALEUP_LIMIT: Textures with width or height not equal
   to a power of two will always be scaled up if textureQuality is
   greater or equal to this value.  Default value is 0.7. If
   textureQuality is lower than this value, and the width or height is
@@ -88,7 +88,7 @@
   relatively close to the next power of two size. This could save a
   lot of texture memory.
 
-  \li COIN_TEX2_USE_GLTEXSUBIMAGE: When set, and when the new texture
+  \li OBOL_TEX2_USE_GLTEXSUBIMAGE: When set, and when the new texture
   data have the same attributes as the old data, glTexSubImage() will
   be used to copy new data into the texture instead of recreating the
   texture.  This is not enabled by default, since it seems to trigger
@@ -96,24 +96,24 @@
   unreproduceable cases.  It could be a bug in our glTexSubImage()
   code, of course. :)
 
-  \li COIN_TEX2_USE_SGIS_GENERATE_MIPMAP: When set, use the
+  \li OBOL_TEX2_USE_SGIS_GENERATE_MIPMAP: When set, use the
   GL_SGIS_generate_mipmap extension (if available) to generate mipmaps,
   otherwise use a fast internal routine to generate them. Use of
   GL_SGIS_generate_mipmap is not enabled by default since we suspect some
   ATi drivers have problems with this extension.
 
-  \li COIN_ENABLE_CONFORMANT_GL_CLAMP: When set, GL_CLAMP will be used
+  \li OBOL_ENABLE_CONFORMANT_GL_CLAMP: When set, GL_CLAMP will be used
   when SoGLImage::CLAMP is specified as the texture wrap mode. By
   default GL_CLAMP_TO_EDGE is used, since this is usually what people
   want.  See
   http://www.opengl.org/discussion_boards/ubb/Forum3/HTML/007306.html
   for a discussion regarding GL_CLAMP and GL_CLAMP_TO_EDGE.
 
-  \li COIN_TEX2_ANISOTROPIC_LIMIT: Anisotropic filtering is enabled
+  \li OBOL_TEX2_ANISOTROPIC_LIMIT: Anisotropic filtering is enabled
   for textures when the texture quality is higher than this value.
   Default value is 0.85
 
-  \COIN_CLASS_EXTENSION
+  \OBOL_CLASS_EXTENSION
 
   \since Coin 2.0
 */
@@ -127,7 +127,7 @@
   It can either be repeated (REPEAT), clamped (CLAMP) or clamped to edge
   (CLAMP_TO_EDGE), which is useful when tiling textures. Since 2002-11-18,
   CLAMP will be treated as CLAMP_TO_EDGE. The environment variable
-  COIN_ENABLE_CONFORMANT_GL_CLAMP can be used to override this behaviour.
+  OBOL_ENABLE_CONFORMANT_GL_CLAMP can be used to override this behaviour.
 */
 
 /*!
@@ -174,9 +174,9 @@
 #include <Inventor/misc/SoGLCubeMapImage.h>
 #include <Inventor/misc/SoGLDriverDatabase.h>
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
 #include <Inventor/threads/SbMutex.h>
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 
 
 #include "rendering/SoGL.h"
@@ -196,14 +196,14 @@ static float DEFAULT_LINEAR_MIPMAP_LIMIT = 0.8f;
 static float DEFAULT_SCALEUP_LIMIT = 0.7f;
 static float DEFAULT_ANISOTROPIC_LIMIT = 0.85f;
 
-static float COIN_TEX2_LINEAR_LIMIT = -1.0f;
-static float COIN_TEX2_MIPMAP_LIMIT = -1.0f;
-static float COIN_TEX2_LINEAR_MIPMAP_LIMIT = -1.0f;
-static float COIN_TEX2_SCALEUP_LIMIT = -1.0f;
-static float COIN_TEX2_ANISOTROPIC_LIMIT = -1.0f;
-static int COIN_TEX2_USE_GLTEXSUBIMAGE = -1;
-static int COIN_TEX2_USE_SGIS_GENERATE_MIPMAP = -1;
-static int COIN_ENABLE_CONFORMANT_GL_CLAMP = -1;
+static float OBOL_TEX2_LINEAR_LIMIT = -1.0f;
+static float OBOL_TEX2_MIPMAP_LIMIT = -1.0f;
+static float OBOL_TEX2_LINEAR_MIPMAP_LIMIT = -1.0f;
+static float OBOL_TEX2_SCALEUP_LIMIT = -1.0f;
+static float OBOL_TEX2_ANISOTROPIC_LIMIT = -1.0f;
+static int OBOL_TEX2_USE_GLTEXSUBIMAGE = -1;
+static int OBOL_TEX2_USE_SGIS_GENERATE_MIPMAP = -1;
+static int OBOL_ENABLE_CONFORMANT_GL_CLAMP = -1;
 
 // *************************************************************************
 
@@ -576,9 +576,9 @@ fast_image_resize3d(const unsigned char * src,
 
 class SoGLImageP {
 public:
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   static SbMutex * mutex;
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 
   static SoType classTypeId;
   static uint32_t current_glimageid;
@@ -645,9 +645,9 @@ public:
 
 SoType SoGLImageP::classTypeId STATIC_SOTYPE_INIT;
 uint32_t SoGLImageP::current_glimageid = 1;
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
 SbMutex * SoGLImageP::mutex;
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 
 #undef PRIVATE
 #define PRIVATE(p) ((p)->pimpl)
@@ -669,13 +669,13 @@ SbMutex * SoGLImageP::mutex;
 
 // we now share one mutex among all glimages to avoid allocating too
 // many mutexes.
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
 #define LOCK_GLIMAGE SoGLImageP::mutex->lock()
 #define UNLOCK_GLIMAGE SoGLImageP::mutex->unlock()
-#else // COIN_THREADSAFE
+#else // OBOL_THREADSAFE
 #define LOCK_GLIMAGE
 #define UNLOCK_GLIMAGE
-#endif // !COIN_THREADSAFE
+#endif // !OBOL_THREADSAFE
 
 // *************************************************************************
 
@@ -691,62 +691,62 @@ SoGLImage::SoGLImage(void)
   PRIVATE(this)->owner = this;
 
   // check environment variables
-  if (COIN_TEX2_LINEAR_LIMIT < 0.0f) {
-    const char *env = CoinInternal::getEnvironmentVariableRaw("COIN_TEX2_LINEAR_LIMIT");
-    if (env) COIN_TEX2_LINEAR_LIMIT = (float) atof(env);
-    if (COIN_TEX2_LINEAR_LIMIT < 0.0f || COIN_TEX2_LINEAR_LIMIT > 1.0f) {
-      COIN_TEX2_LINEAR_LIMIT = DEFAULT_LINEAR_LIMIT;
+  if (OBOL_TEX2_LINEAR_LIMIT < 0.0f) {
+    const char *env = CoinInternal::getEnvironmentVariableRaw("OBOL_TEX2_LINEAR_LIMIT");
+    if (env) OBOL_TEX2_LINEAR_LIMIT = (float) atof(env);
+    if (OBOL_TEX2_LINEAR_LIMIT < 0.0f || OBOL_TEX2_LINEAR_LIMIT > 1.0f) {
+      OBOL_TEX2_LINEAR_LIMIT = DEFAULT_LINEAR_LIMIT;
     }
   }
-  if (COIN_TEX2_MIPMAP_LIMIT < 0.0f) {
-    const char *env = CoinInternal::getEnvironmentVariableRaw("COIN_TEX2_MIPMAP_LIMIT");
-    if (env) COIN_TEX2_MIPMAP_LIMIT = (float) atof(env);
-    if (COIN_TEX2_MIPMAP_LIMIT < 0.0f || COIN_TEX2_MIPMAP_LIMIT > 1.0f) {
-      COIN_TEX2_MIPMAP_LIMIT = DEFAULT_MIPMAP_LIMIT;
+  if (OBOL_TEX2_MIPMAP_LIMIT < 0.0f) {
+    const char *env = CoinInternal::getEnvironmentVariableRaw("OBOL_TEX2_MIPMAP_LIMIT");
+    if (env) OBOL_TEX2_MIPMAP_LIMIT = (float) atof(env);
+    if (OBOL_TEX2_MIPMAP_LIMIT < 0.0f || OBOL_TEX2_MIPMAP_LIMIT > 1.0f) {
+      OBOL_TEX2_MIPMAP_LIMIT = DEFAULT_MIPMAP_LIMIT;
     }
   }
-  if (COIN_TEX2_LINEAR_MIPMAP_LIMIT < 0.0f) {
-    const char *env = CoinInternal::getEnvironmentVariableRaw("COIN_TEX2_LINEAR_MIPMAP_LIMIT");
-    if (env) COIN_TEX2_LINEAR_MIPMAP_LIMIT = (float) atof(env);
-    if (COIN_TEX2_LINEAR_MIPMAP_LIMIT < 0.0f || COIN_TEX2_LINEAR_MIPMAP_LIMIT > 1.0f) {
-      COIN_TEX2_LINEAR_MIPMAP_LIMIT = DEFAULT_LINEAR_MIPMAP_LIMIT;
-    }
-  }
-
-  if (COIN_TEX2_SCALEUP_LIMIT < 0.0f) {
-    const char *env = CoinInternal::getEnvironmentVariableRaw("COIN_TEX2_SCALEUP_LIMIT");
-    if (env) COIN_TEX2_SCALEUP_LIMIT = (float) atof(env);
-    if (COIN_TEX2_SCALEUP_LIMIT < 0.0f || COIN_TEX2_SCALEUP_LIMIT > 1.0f) {
-      COIN_TEX2_SCALEUP_LIMIT = DEFAULT_SCALEUP_LIMIT;
+  if (OBOL_TEX2_LINEAR_MIPMAP_LIMIT < 0.0f) {
+    const char *env = CoinInternal::getEnvironmentVariableRaw("OBOL_TEX2_LINEAR_MIPMAP_LIMIT");
+    if (env) OBOL_TEX2_LINEAR_MIPMAP_LIMIT = (float) atof(env);
+    if (OBOL_TEX2_LINEAR_MIPMAP_LIMIT < 0.0f || OBOL_TEX2_LINEAR_MIPMAP_LIMIT > 1.0f) {
+      OBOL_TEX2_LINEAR_MIPMAP_LIMIT = DEFAULT_LINEAR_MIPMAP_LIMIT;
     }
   }
 
-  if (COIN_TEX2_USE_GLTEXSUBIMAGE < 0) {
-    const char *env = CoinInternal::getEnvironmentVariableRaw("COIN_TEX2_USE_GLTEXSUBIMAGE");
-    if (env && atoi(env) == 1) {
-      COIN_TEX2_USE_GLTEXSUBIMAGE = 1;
+  if (OBOL_TEX2_SCALEUP_LIMIT < 0.0f) {
+    const char *env = CoinInternal::getEnvironmentVariableRaw("OBOL_TEX2_SCALEUP_LIMIT");
+    if (env) OBOL_TEX2_SCALEUP_LIMIT = (float) atof(env);
+    if (OBOL_TEX2_SCALEUP_LIMIT < 0.0f || OBOL_TEX2_SCALEUP_LIMIT > 1.0f) {
+      OBOL_TEX2_SCALEUP_LIMIT = DEFAULT_SCALEUP_LIMIT;
     }
-    else COIN_TEX2_USE_GLTEXSUBIMAGE = 0;
-  }
-  if (COIN_TEX2_USE_SGIS_GENERATE_MIPMAP < 0) {
-    const char *env = CoinInternal::getEnvironmentVariableRaw("COIN_TEX2_USE_SGIS_GENERATE_MIPMAP");
-    if (env && atoi(env) == 1) {
-      COIN_TEX2_USE_SGIS_GENERATE_MIPMAP = 1;
-    }
-    else COIN_TEX2_USE_SGIS_GENERATE_MIPMAP = 0;
   }
 
-  if (COIN_ENABLE_CONFORMANT_GL_CLAMP < 0) {
-    const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_ENABLE_CONFORMANT_GL_CLAMP");
+  if (OBOL_TEX2_USE_GLTEXSUBIMAGE < 0) {
+    const char *env = CoinInternal::getEnvironmentVariableRaw("OBOL_TEX2_USE_GLTEXSUBIMAGE");
     if (env && atoi(env) == 1) {
-      COIN_ENABLE_CONFORMANT_GL_CLAMP = 1;
+      OBOL_TEX2_USE_GLTEXSUBIMAGE = 1;
     }
-    else COIN_ENABLE_CONFORMANT_GL_CLAMP = 0;
+    else OBOL_TEX2_USE_GLTEXSUBIMAGE = 0;
   }
-  if (COIN_TEX2_ANISOTROPIC_LIMIT < 0.0f) {
-    const char *env = CoinInternal::getEnvironmentVariableRaw("COIN_TEX2_ANISOTROPIC_LIMIT");
-    if (env) COIN_TEX2_ANISOTROPIC_LIMIT = (float) atof(env);
-    else COIN_TEX2_ANISOTROPIC_LIMIT = DEFAULT_ANISOTROPIC_LIMIT;
+  if (OBOL_TEX2_USE_SGIS_GENERATE_MIPMAP < 0) {
+    const char *env = CoinInternal::getEnvironmentVariableRaw("OBOL_TEX2_USE_SGIS_GENERATE_MIPMAP");
+    if (env && atoi(env) == 1) {
+      OBOL_TEX2_USE_SGIS_GENERATE_MIPMAP = 1;
+    }
+    else OBOL_TEX2_USE_SGIS_GENERATE_MIPMAP = 0;
+  }
+
+  if (OBOL_ENABLE_CONFORMANT_GL_CLAMP < 0) {
+    const char * env = CoinInternal::getEnvironmentVariableRaw("OBOL_ENABLE_CONFORMANT_GL_CLAMP");
+    if (env && atoi(env) == 1) {
+      OBOL_ENABLE_CONFORMANT_GL_CLAMP = 1;
+    }
+    else OBOL_ENABLE_CONFORMANT_GL_CLAMP = 0;
+  }
+  if (OBOL_TEX2_ANISOTROPIC_LIMIT < 0.0f) {
+    const char *env = CoinInternal::getEnvironmentVariableRaw("OBOL_TEX2_ANISOTROPIC_LIMIT");
+    if (env) OBOL_TEX2_ANISOTROPIC_LIMIT = (float) atof(env);
+    else OBOL_TEX2_ANISOTROPIC_LIMIT = DEFAULT_ANISOTROPIC_LIMIT;
   }
 }
 
@@ -760,9 +760,9 @@ SoGLImage::initClass(void)
   assert(SoGLImageP::classTypeId.isBad());
   SoGLImageP::classTypeId = SoType::createType(SoType::badType(),
                                                SbName("GLImage"));
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   SoGLImageP::mutex = new SbMutex;
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
   glimage_bufferstorage = new SbStorage(sizeof(soglimage_buffer),
                                         glimage_buffer_construct, glimage_buffer_destruct);
 
@@ -779,10 +779,10 @@ SoGLImage::cleanupClass(void)
 {
   delete glimage_bufferstorage;
   glimage_bufferstorage = NULL;
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   delete SoGLImageP::mutex;
   SoGLImageP::mutex = NULL;
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
   SoGLImageP::classTypeId STATIC_SOTYPE_INIT;
 
   SoGLImageP::current_glimageid = 1;
@@ -1013,7 +1013,7 @@ SoGLImage::setData(const SbImage *image,
     copyok = copyok && bytes && (size == PRIVATE(this)->glsize) && (nc == PRIVATE(this)->glcomp);
 
     SbBool is3D = (size[2]==0)?FALSE:TRUE;
-    SbBool usesubimage = COIN_TEX2_USE_GLTEXSUBIMAGE &&
+    SbBool usesubimage = OBOL_TEX2_USE_GLTEXSUBIMAGE &&
       ((is3D && SoGLDriverDatabase::isSupported(glw, SO_GL_3D_TEXTURES)) ||
        (!is3D && SoGLDriverDatabase::isSupported(glw, SO_GL_TEXSUBIMAGE)));
 
@@ -1346,7 +1346,7 @@ SoGLImageP::resizeImage(SoState * state, unsigned char *& imageptr,
       if (newz > zsize && newz > 16) newz >>= 1;
     }
     else if (this->flags & SoGLImage::USE_QUALITY_VALUE) {
-      if (this->quality < COIN_TEX2_SCALEUP_LIMIT) {
+      if (this->quality < OBOL_TEX2_SCALEUP_LIMIT) {
         if ((newx >= 256) && ((newx - (xsize-2*this->border)) > (newx>>3)))
           newx >>= 1;
         if ((newy >= 256) && ((newy - (ysize-2*this->border)) > (newy>>3)))
@@ -1366,9 +1366,9 @@ SoGLImageP::resizeImage(SoState * state, unsigned char *& imageptr,
   // downscale to legal GL size (implementation dependent)
   const SoGLContext * glw = sogl_glue_instance(state);
   SbBool sizeok = FALSE;
-#if COIN_DEBUG
+#if OBOL_DEBUG
   uint32_t orgsize[3] = { newx, newy, newz };
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   while (!sizeok) {
     SbBool compressed =
       (this->flags & SoGLImage::COMPRESSED) ? TRUE : FALSE &&
@@ -1404,7 +1404,7 @@ SoGLImageP::resizeImage(SoState * state, unsigned char *& imageptr,
     }
   }
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (orgsize[0] != newx || orgsize[1] != newy || orgsize[2] != newz) {
     if (orgsize[2] != 0) {
       SoDebugError::postWarning("SoGLImageP::resizeImage",
@@ -1424,7 +1424,7 @@ SoGLImageP::resizeImage(SoState * state, unsigned char *& imageptr,
                                 orgsize[0], orgsize[1], newx, newy);
     }
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   newx += 2 * this->border;
   newy += 2 * this->border;
@@ -1619,7 +1619,7 @@ translate_wrap(SoState *state, const SoGLImage::Wrap wrap)
 {
   if (wrap == SoGLImage::REPEAT) return (GLenum) GL_REPEAT;
   if (wrap == SoGLImage::CLAMP_TO_BORDER) return (GLenum) GL_CLAMP_TO_BORDER;
-  if (COIN_ENABLE_CONFORMANT_GL_CLAMP) {
+  if (OBOL_ENABLE_CONFORMANT_GL_CLAMP) {
     if (wrap == SoGLImage::CLAMP_TO_EDGE) {
       const SoGLContext * glw = sogl_glue_instance(state);
       if (SoGLDriverDatabase::isSupported(glw, SO_GL_TEXTURE_EDGE_CLAMP)) return (GLenum) GL_CLAMP_TO_EDGE;
@@ -1663,7 +1663,7 @@ SoGLImageP::reallyCreateTexture(SoState *state,
                                 const unsigned char *const texture,
                                 const int numComponents,
                                 const int w, const int h, const int d,
-                                const SbBool COIN_UNUSED_ARG(dlist), //FIXME: Not in use (kintel 20011129)
+                                const SbBool OBOL_UNUSED_ARG(dlist), //FIXME: Not in use (kintel 20011129)
                                 const SbBool mipmap,
                                 const int border)
 {
@@ -1729,7 +1729,7 @@ SoGLImageP::reallyCreateTexture(SoState *state,
 
     if (mipmap && (this->flags & SoGLImage::RECTANGLE)) {
       mipmapimage = FALSE;
-#ifdef COIN3D_OSMESA_BUILD
+#ifdef OBOL_OSMESA_BUILD
       // WORKAROUND: Disable automatic mipmap generation for OSMesa to avoid memory bug
       if (SoGLContext_debug()) {
         SoDebugError::postInfo("SoGLImageP::reallyCreateTexture",
@@ -1746,7 +1746,7 @@ SoGLImageP::reallyCreateTexture(SoState *state,
     // prefer GL_SGIS_generate_mipmap to glGenerateMipmap. It seems to
     // be better supported in drivers.
     else if (mipmap && SoGLDriverDatabase::isSupported(glw, "GL_SGIS_generate_mipmap")) {
-#ifdef COIN3D_OSMESA_BUILD
+#ifdef OBOL_OSMESA_BUILD
       // WORKAROUND: Disable automatic mipmap generation for OSMesa to avoid memory bug
       if (SoGLContext_debug()) {
         SoDebugError::postInfo("SoGLImageP::reallyCreateTexture",
@@ -1767,7 +1767,7 @@ SoGLImageP::reallyCreateTexture(SoState *state,
       mipmapimage = FALSE;
       generatemipmap = TRUE; // delay until after the texture image is set up
     }
-    if ((this->quality > COIN_TEX2_ANISOTROPIC_LIMIT) &&
+    if ((this->quality > OBOL_TEX2_ANISOTROPIC_LIMIT) &&
         SoGLDriverDatabase::isSupported(glw, SO_GL_ANISOTROPIC_FILTERING)) {
       glTexParameterf(target, GL_TEXTURE_MAX_ANISOTROPY_EXT,
                       SoGLContext_get_max_anisotropy(glw));
@@ -1778,7 +1778,7 @@ SoGLImageP::reallyCreateTexture(SoState *state,
                    border, dataFormat, GL_UNSIGNED_BYTE, texture);
 
       if (generatemipmap) {
-#ifdef COIN3D_OSMESA_BUILD
+#ifdef OBOL_OSMESA_BUILD
         // WORKAROUND: Disable mipmap generation for OSMesa to avoid memory corruption bug
         // OSMesa's _mesa_generate_mipmap() in mipmap.c:971 calls free() on non-malloc'd memory
         // This causes crashes when texture data is allocated by Coin3D's memory management.
@@ -1803,7 +1803,7 @@ SoGLImageP::reallyCreateTexture(SoState *state,
         }
         SoGLContext_glGenerateMipmap(glw, target);
         if (!wasenabled) glDisable(GL_TEXTURE_2D);
-#endif // COIN3D_OSMESA_BUILD
+#endif // OBOL_OSMESA_BUILD
       }
     }
     else { // mipmaps
@@ -1885,7 +1885,7 @@ SoGLImageP::unrefOldDL(SoState *state, const uint32_t maxage)
   while (i < n) {
     dldata & data = this->dlists[i];
     if (data.age >= maxage) {
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
       SoDebugError::postInfo("SoGLImageP::unrefOldDL",
                              "DL killed because of old age: %p",
                              this->owner);
@@ -1906,7 +1906,7 @@ SbBool
 SoGLImageP::shouldCreateMipmap(void)
 {
   if (this->flags & SoGLImage::USE_QUALITY_VALUE) {
-    return this->quality >= COIN_TEX2_MIPMAP_LIMIT;
+    return this->quality >= OBOL_TEX2_MIPMAP_LIMIT;
   }
   else {
     return (this->flags & SoGLImage::NO_MIPMAP) == 0;
@@ -1930,15 +1930,15 @@ SoGLImageP::applyFilter(const SbBool ismipmap)
       GL_TEXTURE_RECTANGLE_EXT : GL_TEXTURE_2D;
   }
   if (this->flags & SoGLImage::USE_QUALITY_VALUE) {
-    if (this->quality < COIN_TEX2_LINEAR_LIMIT) {
+    if (this->quality < OBOL_TEX2_LINEAR_LIMIT) {
       glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
       glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     }
-    else if ((this->quality < COIN_TEX2_MIPMAP_LIMIT) || !ismipmap) {
+    else if ((this->quality < OBOL_TEX2_MIPMAP_LIMIT) || !ismipmap) {
       glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
       glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     }
-    else if (this->quality < COIN_TEX2_LINEAR_MIPMAP_LIMIT) {
+    else if (this->quality < OBOL_TEX2_LINEAR_MIPMAP_LIMIT) {
       glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
       glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
     }
@@ -2059,9 +2059,9 @@ void
 SoGLImageP::contextCleanup(uint32_t context, void * closure)
 {
   SoGLImageP * thisp = (SoGLImageP *) closure;
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   SoGLImageP::mutex->lock();
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 
   int n = thisp->dlists.getLength();
   int i = 0;
@@ -2074,9 +2074,9 @@ SoGLImageP::contextCleanup(uint32_t context, void * closure)
     }
     else i++;
   }
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   SoGLImageP::mutex->unlock();
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 }
 
 // *************************************************************************

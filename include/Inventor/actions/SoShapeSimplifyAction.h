@@ -1,5 +1,5 @@
-#ifndef COIN_SOSHAPESIMPLIFYACTION_H
-#define COIN_SOSHAPESIMPLIFYACTION_H
+#ifndef OBOL_SOSHAPESIMPLIFYACTION_H
+#define OBOL_SOSHAPESIMPLIFYACTION_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -42,7 +42,7 @@
 
 class SoShapeSimplifyActionP;
 
-class COIN_DLL_API SoShapeSimplifyAction : public SoSimplifyAction {
+class OBOL_DLL_API SoShapeSimplifyAction : public SoSimplifyAction {
   typedef SoSimplifyAction inherited;
 
   SO_ACTION_HEADER(SoShapeSimplifyAction);
@@ -64,4 +64,4 @@ private:
   SoShapeSimplifyAction & operator = (const SoShapeSimplifyAction & rhs);
 }; // SoShapeSimplifyAction
 
-#endif // !COIN_SOSHAPESIMPLIFYACTION_H
+#endif // !OBOL_SOSHAPESIMPLIFYACTION_H

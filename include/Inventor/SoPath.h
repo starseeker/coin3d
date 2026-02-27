@@ -1,5 +1,5 @@
-#ifndef COIN_SOPATH_H
-#define COIN_SOPATH_H
+#ifndef OBOL_SOPATH_H
+#define OBOL_SOPATH_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,10 +37,10 @@
 #include <Inventor/lists/SbList.h>
 #include <Inventor/lists/SoNodeList.h>
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 // For SGI / TGS Open Inventor compile-time compatibility.
 #include <Inventor/SoLists.h>
-#endif // !COIN_INTERNAL
+#endif // !OBOL_INTERNAL
 
 
 class SoWriteAction;
@@ -49,7 +49,7 @@ class SoInput;
 class SoPathList;
 
 
-class COIN_DLL_API SoPath : public SoBase {
+class OBOL_DLL_API SoPath : public SoBase {
   typedef SoBase inherited;
 
 public:
@@ -85,8 +85,8 @@ public:
   SbBool containsNode(const SoNode * const node) const;
   SbBool containsPath(const SoPath * const path) const;
   SoPath * copy(const int startfromnodeindex = 0, int numnodes = 0) const;
-  friend COIN_DLL_API SbBool operator==(const SoPath & lhs, const SoPath & rhs);
-  friend COIN_DLL_API SbBool operator!=(const SoPath & lhs, const SoPath & rhs);
+  friend OBOL_DLL_API SbBool operator==(const SoPath & lhs, const SoPath & rhs);
+  friend OBOL_DLL_API SbBool operator!=(const SoPath & lhs, const SoPath & rhs);
 
   static SoPath * getByName(const SbName name);
   static int getByName(const SbName name, SoPathList & l);
@@ -148,10 +148,10 @@ SoPath::pop(void)
 /// inlined methods, block end ////////////////////////////////////////////
 
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 // For SGI / TGS Open Inventor compile-time compatibility.
 #include <Inventor/SoFullPath.h>
 #include <Inventor/misc/SoLightPath.h>
-#endif // COIN_INTERNAL
+#endif // OBOL_INTERNAL
 
-#endif // !COIN_SOPATH_H
+#endif // !OBOL_SOPATH_H

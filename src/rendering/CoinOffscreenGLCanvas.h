@@ -1,5 +1,5 @@
-#ifndef COIN_COINOFFSCREENGLCANVAS_H
-#define COIN_COINOFFSCREENGLCANVAS_H
+#ifndef OBOL_COINOFFSCREENGLCANVAS_H
+#define OBOL_COINOFFSCREENGLCANVAS_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,9 +33,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #error this is a private header file
-#endif /* ! COIN_INTERNAL */
+#endif /* ! OBOL_INTERNAL */
 
 // *************************************************************************
 
@@ -106,4 +106,4 @@ private:
 
 // *************************************************************************
 
-#endif // !COIN_COINOFFSCREENGLCANVAS_H
+#endif // !OBOL_COINOFFSCREENGLCANVAS_H

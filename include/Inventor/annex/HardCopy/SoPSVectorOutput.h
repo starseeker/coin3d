@@ -1,5 +1,5 @@
-#ifndef COIN_SOPSVECTOROUTPUT_H
-#define COIN_SOPSVECTOROUTPUT_H
+#ifndef OBOL_SOPSVECTOROUTPUT_H
+#define OBOL_SOPSVECTOROUTPUT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -38,7 +38,7 @@
 
 class SoPSVectorOutputP;
 
-class COIN_DLL_API SoPSVectorOutput : public SoVectorOutput {
+class OBOL_DLL_API SoPSVectorOutput : public SoVectorOutput {
 public:
   SoPSVectorOutput();
   virtual ~SoPSVectorOutput();
@@ -50,4 +50,4 @@ private:
   SoPSVectorOutputP * pimpl;
 };
 
-#endif // COIN_SOPSVECTOROUTPUT_H
+#endif // OBOL_SOPSVECTOROUTPUT_H

@@ -1,5 +1,5 @@
-#ifndef COIN_SOTEXTUREOVERRIDEELEMENT_H
-#define COIN_SOTEXTUREOVERRIDEELEMENT_H
+#ifndef OBOL_SOTEXTUREOVERRIDEELEMENT_H
+#define OBOL_SOTEXTUREOVERRIDEELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/elements/SoSubElement.h>
 
-class COIN_DLL_API SoTextureOverrideElement : public SoElement {
+class OBOL_DLL_API SoTextureOverrideElement : public SoElement {
   typedef SoElement inherited;
 
   SO_ELEMENT_HEADER(SoTextureOverrideElement);
@@ -70,4 +70,4 @@ private:
   uint32_t flags;
 };
 
-#endif // !COIN_SOTEXTUREOVERRIDEELEMENT_H
+#endif // !OBOL_SOTEXTUREOVERRIDEELEMENT_H

@@ -1,5 +1,5 @@
-#ifndef COIN_SOFACESET_H
-#define COIN_SOFACESET_H
+#ifndef OBOL_SOFACESET_H
+#define OBOL_SOFACESET_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -39,7 +39,7 @@
 
 class SoFaceSetP;
 
-class COIN_DLL_API SoFaceSet : public SoNonIndexedShape {
+class OBOL_DLL_API SoFaceSet : public SoNonIndexedShape {
   typedef SoNonIndexedShape inherited;
 
   SO_NODE_HEADER(SoFaceSet);
@@ -76,4 +76,4 @@ private:
   SoFaceSetP * pimpl;
 };
 
-#endif // !COIN_SOFACESET_H
+#endif // !OBOL_SOFACESET_H

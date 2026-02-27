@@ -1,5 +1,5 @@
-#ifndef COIN_SOEVENT_H
-#define COIN_SOEVENT_H
+#ifndef OBOL_SOEVENT_H
+#define OBOL_SOEVENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -42,7 +42,7 @@
 class SbViewportRegion;
 class SbVec2f;
 
-class COIN_DLL_API SoEvent {
+class OBOL_DLL_API SoEvent {
   SO_EVENT_ABSTRACT_HEADER();
 public:
   static void initClass(void);
@@ -82,4 +82,4 @@ private:
   } modifiers;
 };
 
-#endif // !COIN_SOEVENT_H
+#endif // !OBOL_SOEVENT_H

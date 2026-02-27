@@ -1,5 +1,5 @@
-#ifndef COIN_SOSPACEBALLBUTTONEVENT_H
-#define COIN_SOSPACEBALLBUTTONEVENT_H
+#ifndef OBOL_SOSPACEBALLBUTTONEVENT_H
+#define OBOL_SOSPACEBALLBUTTONEVENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -42,7 +42,7 @@
  (SoSpaceballButtonEvent::isButtonReleaseEvent(EVENT, SoSpaceballButtonEvent::BUTTON))
 
 
-class COIN_DLL_API SoSpaceballButtonEvent : public SoButtonEvent {
+class OBOL_DLL_API SoSpaceballButtonEvent : public SoButtonEvent {
   typedef SoButtonEvent inherited;
 
   SO_EVENT_HEADER();
@@ -71,4 +71,4 @@ private:
 
 }; // SoSpaceballButtonEvent
 
-#endif // !COIN_SOSPACEBALLBUTTONEVENT_H
+#endif // !OBOL_SOSPACEBALLBUTTONEVENT_H

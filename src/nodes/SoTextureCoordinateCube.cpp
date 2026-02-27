@@ -91,7 +91,7 @@ so_texcoordcube_construct_data(void * closure)
 }
 
 static void
-so_texcoordcube_destruct_data(void * COIN_UNUSED_ARG(closure))
+so_texcoordcube_destruct_data(void * OBOL_UNUSED_ARG(closure))
 {
 }
 
@@ -159,7 +159,7 @@ SoTextureCoordinateCube::~SoTextureCoordinateCube()
 void
 SoTextureCoordinateCube::initClass(void)
 {
-  SO_NODE_INTERNAL_INIT_CLASS(SoTextureCoordinateCube, SO_FROM_COIN_2_3);
+  SO_NODE_INTERNAL_INIT_CLASS(SoTextureCoordinateCube, SO_FROM_OBOL_2_3);
 
   SO_ENABLE(SoGLRenderAction, SoGLMultiTextureCoordinateElement);
   SO_ENABLE(SoCallbackAction, SoMultiTextureCoordinateElement);

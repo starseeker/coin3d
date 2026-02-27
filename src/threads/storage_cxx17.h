@@ -47,9 +47,9 @@
  * - Global storage registry for comprehensive thread cleanup
  */
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #error this is a private header file
-#endif /* ! COIN_INTERNAL */
+#endif /* ! OBOL_INTERNAL */
 
 #include "threads/threads.h"
 #include "threads/storagep.h"

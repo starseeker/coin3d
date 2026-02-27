@@ -1,5 +1,5 @@
-#ifndef COIN_SOACTIONS_H
-#define COIN_SOACTIONS_H
+#ifndef OBOL_SOACTIONS_H
+#define OBOL_SOACTIONS_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -49,4 +49,4 @@
 #include <Inventor/actions/SoSimplifyAction.h>
 #include <Inventor/actions/SoReorganizeAction.h>
 
-#endif // !COIN_SOACTIONS_H
+#endif // !OBOL_SOACTIONS_H

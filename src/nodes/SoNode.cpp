@@ -219,7 +219,7 @@ SbUniqueId is not really a class, just a \c typedef.
 #include "rendering/SoGL.h"
 #include "nodes/SoSubNodeP.h"
 #include "nodes/SoUnknownNode.h"
-#include "misc/SoDBP.h" // for global envvar COIN_PROFILER
+#include "misc/SoDBP.h" // for global envvar OBOL_PROFILER
 
 // *************************************************************************
 
@@ -272,27 +272,27 @@ SbUniqueId is not really a class, just a \c typedef.
 */
 
 /*!
-  \var SoNode::NodeType SoNode::COIN_1_0
+  \var SoNode::NodeType SoNode::OBOL_1_0
   Node was part of Coin version 1.0.
 */
 
 /*!
-  \var SoNode::NodeType SoNode::COIN_2_0
+  \var SoNode::NodeType SoNode::OBOL_2_0
   Node was introduced with Coin 2.0.
 */
 
 /*!
-  \var SoNode::NodeType SoNode::COIN_2_2
+  \var SoNode::NodeType SoNode::OBOL_2_2
   Node was introduced with Coin 2.2.
 */
 
 /*!
-  \var SoNode::NodeType SoNode::COIN_2_3
+  \var SoNode::NodeType SoNode::OBOL_2_3
   Node was introduced with Coin 2.3.
 */
 
 /*!
-  \var SoNode::NodeType SoNode::COIN_2_4
+  \var SoNode::NodeType SoNode::OBOL_2_4
   Node was introduced with Coin 2.4.
 */
 
@@ -302,12 +302,12 @@ SbUniqueId is not really a class, just a \c typedef.
 */
 
 /*!
-  \var SoNode::NodeType SoNode::COIN_2_5
+  \var SoNode::NodeType SoNode::OBOL_2_5
   Node was introduced with Coin 2.5.
 */
 
 /*!
-  \var SoNode::NodeType SoNode::COIN_3_0
+  \var SoNode::NodeType SoNode::OBOL_3_0
   Node was introduced with Coin 3.0.
 */
 
@@ -317,7 +317,7 @@ SbUniqueId is not really a class, just a \c typedef.
 */
 
 /*!
-  \var SoNode::NodeType SoNode::COIN_4_0
+  \var SoNode::NodeType SoNode::OBOL_4_0
   Node was introduced with Coin 4.0.
 */
 
@@ -418,7 +418,7 @@ SoNode::~SoNode()
     // unref the instance
     inst->unref();
   }
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoNode::~SoNode", "%p", this);
 #endif // debug
 }
@@ -465,10 +465,10 @@ SoNode::copy(SbBool copyconnections) const
   // ref() to make sure the copy is not destructed while copying
   cp->ref();
   // Call findCopy() to have copyContents() run only once.
-#if COIN_DEBUG
+#if OBOL_DEBUG
   SoNode * cp2 = (SoNode *)SoFieldContainer::findCopy(this, copyconnections);
   assert(cp == cp2);
-#else // COIN_DEBUG
+#else // OBOL_DEBUG
   (void) SoFieldContainer::findCopy(this, copyconnections);
 #endif
   SoFieldContainer::copyDone();
@@ -489,9 +489,9 @@ SoNode::startNotify(void)
 void
 SoNode::notify(SoNotList * l)
 {
-  COIN_CHECK_THREAD();
+  OBOL_CHECK_THREAD();
 
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoNode::notify", "node %p (%s \"%s\"), list %p",
                          this, this->getTypeId().getName().getString(),
                          this->getName().getString(), l);
@@ -832,7 +832,7 @@ SoNode::getByName(const SbName & name, SoNodeList & l)
   action.
 */
 void
-SoNode::doAction(SoAction * COIN_UNUSED_ARG(action))
+SoNode::doAction(SoAction * OBOL_UNUSED_ARG(action))
 {
 }
 
@@ -888,7 +888,7 @@ SoNode::getBoundingBoxS(SoAction * action, SoNode * node)
   also override this method to change the relevant state variables.
 */
 void
-SoNode::getBoundingBox(SoGetBoundingBoxAction * COIN_UNUSED_ARG(action))
+SoNode::getBoundingBox(SoGetBoundingBoxAction * OBOL_UNUSED_ARG(action))
 {
 }
 
@@ -917,7 +917,7 @@ SoNode::getPrimitiveCountS(SoAction * action, SoNode * node)
   variables.
 */
 void
-SoNode::getPrimitiveCount(SoGetPrimitiveCountAction * COIN_UNUSED_ARG(action))
+SoNode::getPrimitiveCount(SoGetPrimitiveCountAction * OBOL_UNUSED_ARG(action))
 {
 }
 
@@ -941,15 +941,15 @@ SoNode::GLRenderS(SoAction * action, SoNode * node)
     }
   }
 
-  if (COIN_DEBUG) {
+  if (OBOL_DEBUG) {
     // Note: debugging code like this is also present in
     // SoSeparator::GLRenderBelowPath() and SoState::lazyEvaluate(),
-    // but they are default disabled -- even when COIN_DEBUG=1 (due to
+    // but they are default disabled -- even when OBOL_DEBUG=1 (due to
     // performance reasons).
     //
     // If you're seeing notifications about GL-errors from this place,
     // the first thing to do is to enable those debugging checks too
-    // by setting COIN_GLERROR_DEBUGGING to "1".
+    // by setting OBOL_GLERROR_DEBUGGING to "1".
     std::string str;
     const unsigned int errs = coin_catch_gl_errors(&str);
     if (errs > 0) {
@@ -959,7 +959,7 @@ SoNode::GLRenderS(SoAction * action, SoNode * node)
                          str.c_str(),
                          node->getTypeId().getName().getString(),
                          extradebug ? "" :
-                         "(set envvar COIN_GLERROR_DEBUGGING=1 "
+                         "(set envvar OBOL_GLERROR_DEBUGGING=1 "
                          "and re-run to get more information)");
     }
   }
@@ -975,7 +975,7 @@ SoNode::GLRenderS(SoAction * action, SoNode * node)
   at OpenGL override this method.
 */
 void
-SoNode::GLRender(SoGLRenderAction * COIN_UNUSED_ARG(action))
+SoNode::GLRender(SoGLRenderAction * OBOL_UNUSED_ARG(action))
 {
 }
 
@@ -1047,7 +1047,7 @@ SoNode::callbackS(SoAction * action, SoNode * node)
   SoCallbackAction for extracting information about the scene graph.
 */
 void
-SoNode::callback(SoCallbackAction * COIN_UNUSED_ARG(action))
+SoNode::callback(SoCallbackAction * OBOL_UNUSED_ARG(action))
 {
 }
 
@@ -1074,7 +1074,7 @@ SoNode::getMatrixS(SoAction * action, SoNode * node)
   this node (if any).
 */
 void
-SoNode::getMatrix(SoGetMatrixAction * COIN_UNUSED_ARG(action))
+SoNode::getMatrix(SoGetMatrixAction * OBOL_UNUSED_ARG(action))
 {
 }
 
@@ -1104,7 +1104,7 @@ SoNode::handleEventS(SoAction * action, SoNode * node)
   done also override this method.
 */
 void
-SoNode::handleEvent(SoHandleEventAction * COIN_UNUSED_ARG(action))
+SoNode::handleEvent(SoHandleEventAction * OBOL_UNUSED_ARG(action))
 {
 }
 
@@ -1130,7 +1130,7 @@ SoNode::pickS(SoAction * action, SoNode * node)
   Does common processing for SoPickAction \a action instances.
 */
 void
-SoNode::pick(SoPickAction * COIN_UNUSED_ARG(action))
+SoNode::pick(SoPickAction * OBOL_UNUSED_ARG(action))
 {
 }
 
@@ -1383,7 +1383,7 @@ SoNode::writeInstance(SoOutput * out)
 SoNode *
 SoNode::addToCopyDict(void) const
 {
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoNode::addToCopyDict",
                          "%s node", this->getTypeId().getName().getString());
 #endif // debug
@@ -1498,7 +1498,7 @@ SoNode::readInstance(SoInput * in, unsigned short flags)
   return value will be a bit mask of SoNode::NodeType flags,
   containing one or several flags.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */
@@ -1517,7 +1517,7 @@ SoNode::getCompatibilityTypes(const SoType & nodetype)
   Set the node compatibility mask for node type \a nodetype.  The mask
   specifies for which file formats the node is supported.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \sa getCompatibilityMode()
   \since Coin 2.0

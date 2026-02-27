@@ -1,5 +1,5 @@
-#ifndef COIN_SOMFNODE_H
-#define COIN_SOMFNODE_H
+#ifndef OBOL_SOMFNODE_H
+#define OBOL_SOMFNODE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -38,7 +38,7 @@
 
 class SoNode;
 
-class COIN_DLL_API SoMFNode : public SoMField {
+class OBOL_DLL_API SoMFNode : public SoMField {
   typedef SoMField inherited;
 
   SO_MFIELD_HEADER(SoMFNode, SoNode *, SoNode *);
@@ -67,4 +67,4 @@ private:
   virtual void countWriteRefs(SoOutput * out) const;
 };
 
-#endif // !COIN_SOMFNODE_H
+#endif // !OBOL_SOMFNODE_H

@@ -93,9 +93,9 @@
 
 #include <defaults/trackballDragger.h>
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 #include "nodekits/SoSubKitP.h"
 #include "SbBasicP.h"
@@ -564,11 +564,11 @@ SoTrackballDragger::dragStart(void)
 
     if (PRIVATE(this)->whatkind == WHATKIND_USERAXIS) {
       if (hitPt.normalize() == 0.0f) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
         SoDebugError::postWarning("SoTrackballDragger::dragStart",
                                   "Unable to find hitpoint direction.");
         
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
       }
       SO_GET_ANY_PART(this, "userAxisRotation", SoRotation)->rotation =
         SbRotation(SbVec3f(0.0f, 1.0f, 0.0f), hitPt);
@@ -632,10 +632,10 @@ SoTrackballDragger::drag(void)
     PRIVATE(this)->sphereProj->setWorkingSpace(wk2ws);
     SbVec3f vec = PRIVATE(this)->sphereProj->project(this->getNormalizedLocaterPosition());
     if (vec.normalize() == 0.0f) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
       SoDebugError::postWarning("SoTrackballDragger::drag",
                                 "Unable to find drag direction.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     }
     SO_GET_ANY_PART(this, "userAxisRotation", SoRotation)->rotation =
       SbRotation(SbVec3f(0.0f, 1.0f, 0.0f), vec);
@@ -836,10 +836,10 @@ SoTrackballDragger::updateUserAxisSwitches(const SbBool setactive)
       SO_GET_ANY_PART(this, "userAxisRotation", SoRotation)->rotation.getValue();
     rot.multVec(vec, vec);
     if (vec.normalize() == 0.0f) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
       SoDebugError::postWarning("SoTrackballDragger::updateUseAxisSwitches",
                                 "Invalid use axis rotation.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     }
     if (vec[0] >= USER_AXIS_DISAPPEAR_LIMIT) val = SO_SWITCH_NONE;
     else if (vec[1] >= USER_AXIS_DISAPPEAR_LIMIT) val = SO_SWITCH_NONE;

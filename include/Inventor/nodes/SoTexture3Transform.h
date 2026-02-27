@@ -1,5 +1,5 @@
-#ifndef COIN_SOTEXTURE3TRANSFORM_H
-#define COIN_SOTEXTURE3TRANSFORM_H
+#ifndef OBOL_SOTEXTURE3TRANSFORM_H
+#define OBOL_SOTEXTURE3TRANSFORM_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -41,7 +41,7 @@
 class SbMatrix;
 
 
-class COIN_DLL_API SoTexture3Transform : public SoNode {
+class OBOL_DLL_API SoTexture3Transform : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_HEADER(SoTexture3Transform);
@@ -66,4 +66,4 @@ protected:
   virtual ~SoTexture3Transform();
 };
 
-#endif // !COIN_SOTEXTURE3TRANSFORM_H
+#endif // !OBOL_SOTEXTURE3TRANSFORM_H

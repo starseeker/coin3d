@@ -1,5 +1,5 @@
-#ifndef COIN_SOTEXTURESCALEPOLICY_H
-#define COIN_SOTEXTURESCALEPOLICY_H
+#ifndef OBOL_SOTEXTURESCALEPOLICY_H
+#define OBOL_SOTEXTURESCALEPOLICY_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/fields/SoSFEnum.h>
 #include <Inventor/fields/SoSFFloat.h>
 
-class COIN_DLL_API SoTextureScalePolicy : public SoNode {
+class OBOL_DLL_API SoTextureScalePolicy : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_HEADER(SoTextureScalePolicy);
@@ -62,4 +62,4 @@ protected:
   virtual ~SoTextureScalePolicy();
 };
 
-#endif // !COIN_SOTEXTURESCALEPOLICY_H
+#endif // !OBOL_SOTEXTURESCALEPOLICY_H

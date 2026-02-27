@@ -174,9 +174,9 @@
 
 #include "config.h"
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
 #include <Inventor/threads/SbMutex.h>
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 
 #include "CoinTidbits.h"
 #include "nodes/SoSubNodeP.h"
@@ -244,24 +244,24 @@ so_lod_get_bbox_action(void)
 class SoLevelOfDetailP {
 public:
   SoBoundingBoxCache * bboxcache;
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   // FIXME: a mutex for every instance seems a bit excessive,
   // especially since Microsoft Windows might have rather strict limits on the
   // total amount of mutex resources a process (or even a user) can
   // allocate. so consider making this a class-wide instance instead.
   // -mortene.
   SbMutex mutex;
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 
   void lock(void) {
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
     this->mutex.lock();
-#endif // COIN_THREADSAFE 
+#endif // OBOL_THREADSAFE 
  }
   void unlock(void) {
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
     this->mutex.unlock();
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
   }
 };
 

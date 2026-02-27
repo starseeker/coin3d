@@ -30,8 +30,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_SOBOOLOPERATION_H
-#define COIN_SOBOOLOPERATION_H
+#ifndef OBOL_SOBOOLOPERATION_H
+#define OBOL_SOBOOLOPERATION_H
 
 #include <Inventor/engines/SoSubEngine.h>
 #include <Inventor/engines/SoEngineOutput.h>
@@ -39,7 +39,7 @@
 #include <Inventor/fields/SoMFEnum.h>
 
 
-class COIN_DLL_API SoBoolOperation : public SoEngine {
+class OBOL_DLL_API SoBoolOperation : public SoEngine {
   typedef SoEngine inherited;
 
   SO_ENGINE_HEADER(SoBoolOperation);
@@ -72,4 +72,4 @@ private:
   virtual void evaluate();
 };
 
-#endif // !COIN_SOBOOLOPERATION_H
+#endif // !OBOL_SOBOOLOPERATION_H

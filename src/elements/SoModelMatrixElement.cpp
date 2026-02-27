@@ -154,7 +154,7 @@ SoModelMatrixElement::set(SoState * const state,
   Sets the current cull matrix.
 */
 void
-SoModelMatrixElement::setCullMatrix(SoState * state, SoNode * COIN_UNUSED_ARG(node),
+SoModelMatrixElement::setCullMatrix(SoState * state, SoNode * OBOL_UNUSED_ARG(node),
                                     const SbMatrix & matrix)
 {
   SoModelMatrixElement * elem =

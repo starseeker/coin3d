@@ -64,7 +64,7 @@ SoGLSLShaderProgram::~SoGLSLShaderProgram()
 void
 SoGLSLShaderProgram::deleteProgram(const SoGLContext * g)
 {
-  COIN_GLhandle glhandle = 0;
+  OBOL_GLhandle glhandle = 0;
   if (this->programHandles.get(g->contextid, glhandle)) {
     uintptr_t tmp = (uintptr_t) glhandle;
     SoGLCacheContextElement::scheduleDeleteCallback(g->contextid,
@@ -79,7 +79,7 @@ SoGLSLShaderProgram::deletePrograms(void)
   SbList <uint32_t> keylist;
   this->programHandles.makeKeyList(keylist);
   for (int i = 0; i < keylist.getLength(); i++) {
-    COIN_GLhandle glhandle = 0;
+    OBOL_GLhandle glhandle = 0;
     (void) this->programHandles.get(keylist[i], glhandle);
     uintptr_t tmp = (uintptr_t) glhandle;
     SoGLCacheContextElement::scheduleDeleteCallback(keylist[i],
@@ -112,7 +112,7 @@ SoGLSLShaderProgram::enable(const SoGLContext * g)
   this->ensureLinking(g);
 
   if (this->isExecutable) {
-    COIN_GLhandle programhandle = this->getProgramHandle(g, TRUE);
+    OBOL_GLhandle programhandle = this->getProgramHandle(g, TRUE);
     g->glUseProgramObjectARB(programhandle);
 
     if (SoGLSLShaderObject::didOpenGLErrorOccur("SoGLSLShaderProgram::enable")) {
@@ -161,7 +161,7 @@ SoGLSLShaderProgram::ensureLinking(const SoGLContext * g)
 
   this->isExecutable = FALSE;
 
-  COIN_GLhandle programHandle = this->getProgramHandle(g, TRUE);
+  OBOL_GLhandle programHandle = this->getProgramHandle(g, TRUE);
 
   int cnt = this->shaderObjects.getLength();
 
@@ -211,10 +211,10 @@ SoGLSLShaderProgram::ensureProgramHandle(const SoGLContext * g)
   (void) this->getProgramHandle(g, TRUE);
 }
 
-COIN_GLhandle
+OBOL_GLhandle
 SoGLSLShaderProgram::getProgramHandle(const SoGLContext * g, const SbBool create)
 {
-  COIN_GLhandle handle = 0;
+  OBOL_GLhandle handle = 0;
   if (!this->programHandles.get(g->contextid, handle) && create) {
     handle = g->glCreateProgramObjectARB();
     this->programHandles.put(g->contextid, handle);
@@ -233,7 +233,7 @@ SoGLSLShaderProgram::context_destruction_cb(uint32_t cachecontext, void * userda
 {
   SoGLSLShaderProgram * thisp = (SoGLSLShaderProgram*) userdata;
 
-  COIN_GLhandle glhandle = 0;
+  OBOL_GLhandle glhandle = 0;
   if (thisp->programHandles.get(cachecontext, glhandle)) {
     // just delete immediately. The context is current
     const SoGLContext * glue = SoGLContext_instance(cachecontext);
@@ -247,7 +247,7 @@ SoGLSLShaderProgram::really_delete_object(void * closure, uint32_t contextid)
 {
   uintptr_t tmp = (uintptr_t) closure;
 
-  COIN_GLhandle glhandle = (COIN_GLhandle) tmp;
+  OBOL_GLhandle glhandle = (OBOL_GLhandle) tmp;
 
   const SoGLContext * glue = SoGLContext_instance(contextid);
   glue->glDeleteObjectARB(glhandle);

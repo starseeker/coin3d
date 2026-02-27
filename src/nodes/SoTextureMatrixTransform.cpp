@@ -39,7 +39,7 @@
   Textures applied to shapes in the scene can be transformed by
   "prefixing" in the state with instances of this node type.
 
-  \COIN_CLASS_EXTENSION
+  \OBOL_CLASS_EXTENSION
 
   <b>FILE FORMAT/DEFAULTS:</b>
   \code

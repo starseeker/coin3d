@@ -1,5 +1,5 @@
-#ifndef COIN_SOSUBNODEP_H
-#define COIN_SOSUBNODEP_H
+#ifndef OBOL_SOSUBNODEP_H
+#define OBOL_SOSUBNODEP_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -43,9 +43,9 @@
 // The macros in this file are not made visible for use by the
 // application programmer.
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #error this is a private header file
-#endif // !COIN_INTERNAL
+#endif // !OBOL_INTERNAL
 
 // only internal nodes can use this macro and pass "inherited" as arg #4
 #define PRIVATE_INTERNAL_COMMON_INIT_CODE(_class_, _classname_, _createfunc_, _parentclass_) \
@@ -105,29 +105,29 @@
 // instead of having to update all node source files on each new Coin
 // major release.
 
-#define SO_FROM_COIN_4_0 \
-  (SoNode::COIN_4_0)
+#define SO_FROM_OBOL_4_0 \
+  (SoNode::OBOL_4_0)
 
-#define SO_FROM_COIN_3_0 \
-  (SoNode::COIN_3_0|SO_FROM_COIN_4_0)
+#define SO_FROM_OBOL_3_0 \
+  (SoNode::OBOL_3_0|SO_FROM_OBOL_4_0)
 
-#define SO_FROM_COIN_2_5 \
-  (SoNode::COIN_2_5|SO_FROM_COIN_3_0)
+#define SO_FROM_OBOL_2_5 \
+  (SoNode::OBOL_2_5|SO_FROM_OBOL_3_0)
 
-#define SO_FROM_COIN_2_4 \
-  (SoNode::COIN_2_4|SO_FROM_COIN_2_5)
+#define SO_FROM_OBOL_2_4 \
+  (SoNode::OBOL_2_4|SO_FROM_OBOL_2_5)
 
-#define SO_FROM_COIN_2_3 \
-  (SoNode::COIN_2_3|SO_FROM_COIN_2_4)
+#define SO_FROM_OBOL_2_3 \
+  (SoNode::OBOL_2_3|SO_FROM_OBOL_2_4)
 
-#define SO_FROM_COIN_2_2 \
-  (SoNode::COIN_2_2|SO_FROM_COIN_2_3)
+#define SO_FROM_OBOL_2_2 \
+  (SoNode::OBOL_2_2|SO_FROM_OBOL_2_3)
 
-#define SO_FROM_COIN_2_0 \
-  (SoNode::COIN_2_0|SO_FROM_COIN_2_2)
+#define SO_FROM_OBOL_2_0 \
+  (SoNode::OBOL_2_0|SO_FROM_OBOL_2_2)
 
-#define SO_FROM_COIN_1_0 \
-  (SoNode::COIN_1_0|SO_FROM_COIN_2_0)
+#define SO_FROM_OBOL_1_0 \
+  (SoNode::OBOL_1_0|SO_FROM_OBOL_2_0)
 
 // *************************************************************************
 
@@ -147,7 +147,7 @@
   (SoNode::INVENTOR_2_5|SO_FROM_INVENTOR_2_6)
 
 #define SO_FROM_INVENTOR_2_1 \
-  (SoNode::INVENTOR_2_1|SO_FROM_INVENTOR_2_5|SO_FROM_COIN_1_0)
+  (SoNode::INVENTOR_2_1|SO_FROM_INVENTOR_2_5|SO_FROM_OBOL_1_0)
 
 #define SO_FROM_INVENTOR_2_0 \
   (SoNode::INVENTOR_2_0|SO_FROM_INVENTOR_2_1)
@@ -157,4 +157,4 @@
 
 // *************************************************************************
 
-#endif // !COIN_SOSUBNODEP_H
+#endif // !OBOL_SOSUBNODEP_H

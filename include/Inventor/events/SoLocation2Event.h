@@ -1,5 +1,5 @@
-#ifndef COIN_SOLOCATION2EVENT_H
-#define COIN_SOLOCATION2EVENT_H
+#ifndef OBOL_SOLOCATION2EVENT_H
+#define OBOL_SOLOCATION2EVENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/events/SoEvent.h>
 
-class COIN_DLL_API SoLocation2Event : public SoEvent {
+class OBOL_DLL_API SoLocation2Event : public SoEvent {
   typedef SoEvent inherited;
 
   SO_EVENT_HEADER();
@@ -48,4 +48,4 @@ public:
   
 };
 
-#endif // !COIN_SOLOCATION2EVENT_H
+#endif // !OBOL_SOLOCATION2EVENT_H

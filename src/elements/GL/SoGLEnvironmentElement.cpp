@@ -75,7 +75,7 @@ SoGLEnvironmentElement::init(SoState * state)
 
 // doc in superclass
 void
-SoGLEnvironmentElement::pop(SoState * COIN_UNUSED_ARG(state),
+SoGLEnvironmentElement::pop(SoState * OBOL_UNUSED_ARG(state),
                            const SoElement * prevTopElement)
 {
   this->capture(state);

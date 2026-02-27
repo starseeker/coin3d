@@ -1,5 +1,5 @@
-#ifndef COIN_SOTRANSLATE2DRAGGER_H
-#define COIN_SOTRANSLATE2DRAGGER_H
+#ifndef OBOL_SOTRANSLATE2DRAGGER_H
+#define OBOL_SOTRANSLATE2DRAGGER_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -43,7 +43,7 @@ class SoFieldSensor;
 class SbPlaneProjector;
 class SoTranslate2DraggerP;
 
-class COIN_DLL_API SoTranslate2Dragger : public SoDragger {
+class OBOL_DLL_API SoTranslate2Dragger : public SoDragger {
   typedef SoDragger inherited;
 
   SO_KIT_HEADER(SoTranslate2Dragger);
@@ -98,4 +98,4 @@ private:
   SoTranslate2Dragger & operator = (const SoTranslate2Dragger & rhs);
 }; // SoTranslate2Dragger
 
-#endif // !COIN_SOTRANSLATE2DRAGGER_H
+#endif // !OBOL_SOTRANSLATE2DRAGGER_H

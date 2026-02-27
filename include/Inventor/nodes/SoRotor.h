@@ -1,5 +1,5 @@
-#ifndef COIN_SOROTOR_H
-#define COIN_SOROTOR_H
+#ifndef OBOL_SOROTOR_H
+#define OBOL_SOROTOR_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -43,7 +43,7 @@
 class SoSensor;
 class SoRotorP;
 
-class COIN_DLL_API SoRotor : public SoRotation {
+class OBOL_DLL_API SoRotor : public SoRotation {
   typedef SoRotation inherited;
 
   SO_NODE_HEADER(SoRotor);
@@ -63,4 +63,4 @@ private:
   friend class SoRotorP;
 };
 
-#endif // !COIN_SOROTOR_H
+#endif // !OBOL_SOROTOR_H

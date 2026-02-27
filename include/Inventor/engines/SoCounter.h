@@ -30,8 +30,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_SOCOUNTER_H
-#define COIN_SOCOUNTER_H
+#ifndef OBOL_SOCOUNTER_H
+#define OBOL_SOCOUNTER_H
 
 #include <Inventor/engines/SoSubEngine.h>
 #include <Inventor/engines/SoEngineOutput.h>
@@ -39,7 +39,7 @@
 #include <Inventor/fields/SoSFShort.h>
 
 
-class COIN_DLL_API SoCounter : public SoEngine {
+class OBOL_DLL_API SoCounter : public SoEngine {
   typedef SoEngine inherited;
 
   SO_ENGINE_HEADER(SoCounter);
@@ -68,4 +68,4 @@ private:
   short value;
 };
 
-#endif // !COIN_SOCOUNTER_H
+#endif // !OBOL_SOCOUNTER_H

@@ -171,7 +171,7 @@ SoHardCopy::getProductName(void)
 const char *
 SoHardCopy::getVersion(void)
 {
-  return COIN_VERSION;
+  return OBOL_VERSION;
 }
 
 // *************************************************************************

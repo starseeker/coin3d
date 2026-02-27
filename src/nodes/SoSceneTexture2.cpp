@@ -308,9 +308,9 @@
 #include <Inventor/misc/SoGLDriverDatabase.h>
 
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
 #include <Inventor/threads/SbMutex.h>
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 
 #include "nodes/SoSubNodeP.h"
 #include "elements/SoTextureScalePolicyElement.h"
@@ -402,9 +402,9 @@ public:
     return q > 0.5f;
   }
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   SbMutex mutex;
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
   SbBool canrendertotexture;
   unsigned char * offscreenbuffer;
   int offscreenbuffersize;
@@ -415,13 +415,13 @@ public:
 #define PRIVATE(obj) obj->pimpl
 
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
 #define LOCK_GLIMAGE(_thisp_) (PRIVATE(_thisp_)->mutex.lock())
 #define UNLOCK_GLIMAGE(_thisp_) (PRIVATE(_thisp_)->mutex.unlock())
-#else // COIN_THREADSAFE
+#else // OBOL_THREADSAFE
 #define LOCK_GLIMAGE(_thisp_)
 #define UNLOCK_GLIMAGE(_thisp_)
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 
 SO_NODE_SOURCE(SoSceneTexture2);
 
@@ -432,7 +432,7 @@ SO_NODE_SOURCE(SoSceneTexture2);
 void
 SoSceneTexture2::initClass(void)
 {
-  SO_NODE_INTERNAL_INIT_CLASS(SoSceneTexture2, SO_FROM_COIN_2_2);
+  SO_NODE_INTERNAL_INIT_CLASS(SoSceneTexture2, SO_FROM_OBOL_2_2);
 
   SO_ENABLE(SoGLRenderAction, SoGLMultiTextureImageElement);
   SO_ENABLE(SoGLRenderAction, SoGLMultiTextureEnabledElement);
@@ -599,7 +599,7 @@ SoSceneTexture2::GLRender(SoGLRenderAction * action)
 
 // Documented in superclass.
 void
-SoSceneTexture2::doAction(SoAction * COIN_UNUSED_ARG(action))
+SoSceneTexture2::doAction(SoAction * OBOL_UNUSED_ARG(action))
 {
 #if 0 // disabled until we figure out what to do here, pederb 2003-11-27
   SoState * state = action->getState();
@@ -739,7 +739,7 @@ SoSceneTexture2P::updateBuffer(SoState * state, const float quality)
 }
 
 void
-SoSceneTexture2P::updateFrameBuffer(SoState * state, const float COIN_UNUSED_ARG(quality))
+SoSceneTexture2P::updateFrameBuffer(SoState * state, const float OBOL_UNUSED_ARG(quality))
 {
   int i;
   SbVec2s size = PUBLIC(this)->size.getValue();
@@ -1060,7 +1060,7 @@ SoSceneTexture2P::updatePBuffer(SoState * state, const float quality)
 }
 
 void
-SoSceneTexture2P::prerendercb(void * userdata, SoGLRenderAction * COIN_UNUSED_ARG(action))
+SoSceneTexture2P::prerendercb(void * userdata, SoGLRenderAction * OBOL_UNUSED_ARG(action))
 {
   SoSceneTexture2 * thisp = (SoSceneTexture2*) userdata;
   SbVec4f col = thisp->backgroundColor.getValue();

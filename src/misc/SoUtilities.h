@@ -30,8 +30,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_SOUTILITIES_H
-#define COIN_SOUTILITIES_H
+#ifndef OBOL_SOUTILITIES_H
+#define OBOL_SOUTILITIES_H
 
 /*!
  * \file SoUtilities.h
@@ -115,4 +115,4 @@ inline int stringCompareIgnoreCase(const std::string& s1, const std::string& s2,
 
 } // namespace CoinInternal
 
-#endif // COIN_SOUTILITIES_H
+#endif // OBOL_SOUTILITIES_H

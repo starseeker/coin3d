@@ -1,5 +1,5 @@
-#ifndef COIN_SOSUBFIELD_H
-#define COIN_SOSUBFIELD_H
+#ifndef OBOL_SOSUBFIELD_H
+#define OBOL_SOSUBFIELD_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -38,12 +38,12 @@
 #include <Inventor/SuUtils.h>
 #include <cassert>
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 // Added to be Inventor compliant.
 #include <Inventor/fields/SoField.h>
 #include <Inventor/SoInput.h>
 #include <Inventor/SoOutput.h>
-#endif // !COIN_INTERNAL
+#endif // !OBOL_INTERNAL
 
 /**************************************************************************
  *
@@ -535,4 +535,4 @@ _class_::setValuesPointer(const int numarg, const _usertype_ * userdata) \
   this->setValuesPointer(numarg, const_cast<_usertype_*>(userdata)); \
 }
 
-#endif // !COIN_SOSUBFIELD_H
+#endif // !OBOL_SOSUBFIELD_H

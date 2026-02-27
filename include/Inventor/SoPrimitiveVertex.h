@@ -1,5 +1,5 @@
-#ifndef COIN_SOPRIMITIVEVERTEX_H
-#define COIN_SOPRIMITIVEVERTEX_H
+#ifndef OBOL_SOPRIMITIVEVERTEX_H
+#define OBOL_SOPRIMITIVEVERTEX_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -40,7 +40,7 @@
 
 class SoDetail;
 
-class COIN_DLL_API SoPrimitiveVertex {
+class OBOL_DLL_API SoPrimitiveVertex {
 public:
   SoPrimitiveVertex(void);
   SoPrimitiveVertex(const SoPrimitiveVertex & pv);
@@ -80,4 +80,4 @@ private:
 
 }; // SoPrimitiveVertex
 
-#endif // !COIN_SOPRIMITIVEVERTEX_H
+#endif // !OBOL_SOPRIMITIVEVERTEX_H

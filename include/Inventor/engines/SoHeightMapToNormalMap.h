@@ -30,8 +30,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_SOHEIGHTMAPTONORMALMAP_H
-#define COIN_SOHEIGHTMAPTONORMALMAP_H
+#ifndef OBOL_SOHEIGHTMAPTONORMALMAP_H
+#define OBOL_SOHEIGHTMAPTONORMALMAP_H
 
 #include <Inventor/SbVec2s.h>
 #include <Inventor/engines/SoTexture2Convert.h>
@@ -39,7 +39,7 @@
 
 class SbImage;
 
-class COIN_DLL_API SoHeightMapToNormalMap : public SoTexture2Convert {
+class OBOL_DLL_API SoHeightMapToNormalMap : public SoTexture2Convert {
   typedef SoTexture2Convert inherited;
   SO_ENGINE_HEADER(SoHeightMapToNormalMap);
 
@@ -61,4 +61,4 @@ protected:
 
 }; // SoHeightMapToNormalMap
 
-#endif // !COIN_SOHEIGHTMAPTONORMALMAP_H
+#endif // !OBOL_SOHEIGHTMAPTONORMALMAP_H

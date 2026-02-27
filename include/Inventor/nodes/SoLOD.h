@@ -1,5 +1,5 @@
-#ifndef COIN_SOLOD_H
-#define COIN_SOLOD_H
+#ifndef OBOL_SOLOD_H
+#define OBOL_SOLOD_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -40,7 +40,7 @@
 
 class SoLODP;
 
-class COIN_DLL_API SoLOD : public SoGroup {
+class OBOL_DLL_API SoLOD : public SoGroup {
   typedef SoGroup inherited;
 
   SO_NODE_HEADER(SoLOD);
@@ -78,4 +78,4 @@ private:
   friend class SoLODP;
 };
 
-#endif // !COIN_SOLOD_H
+#endif // !OBOL_SOLOD_H

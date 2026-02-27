@@ -1,5 +1,5 @@
-#ifndef COIN_SOFIELD_H
-#define COIN_SOFIELD_H
+#ifndef OBOL_SOFIELD_H
+#define OBOL_SOFIELD_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -44,7 +44,7 @@ class SoFieldList;
 class SoInput;
 class SoOutput;
 
-class COIN_DLL_API SoField {
+class OBOL_DLL_API SoField {
 
 public:
   virtual ~SoField();
@@ -203,10 +203,10 @@ private:
 };
 
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 // Added to be Inventor compliant.
 #include <Inventor/fields/SoSField.h>
 #include <Inventor/fields/SoMField.h>
-#endif // !COIN_INTERNAL
+#endif // !OBOL_INTERNAL
 
-#endif // !COIN_SOFIELD_H
+#endif // !OBOL_SOFIELD_H

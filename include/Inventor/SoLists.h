@@ -1,5 +1,5 @@
-#ifndef COIN_SOLISTS_H
-#define COIN_SOLISTS_H
+#ifndef OBOL_SOLISTS_H
+#define OBOL_SOLISTS_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,9 +33,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#if defined(COIN_INTERNAL)
+#if defined(OBOL_INTERNAL)
 #error Do not include SoLists.h internally.
-#endif // COIN_INTERNAL
+#endif // OBOL_INTERNAL
 
 // This file's sole purpose is to provide compatibility with the way
 // Open Inventor lays out its header files for the list classes.
@@ -53,4 +53,4 @@
 #include <Inventor/lists/SoPickedPointList.h>
 #include <Inventor/lists/SoTypeList.h>
 
-#endif // !COIN_SOLISTS_H
+#endif // !OBOL_SOLISTS_H

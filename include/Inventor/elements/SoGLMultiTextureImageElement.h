@@ -1,5 +1,5 @@
-#ifndef COIN_SOGLMULTITEXTUREIMAGEELEMENT_H
-#define COIN_SOGLMULTITEXTUREIMAGEELEMENT_H
+#ifndef OBOL_SOGLMULTITEXTUREIMAGEELEMENT_H
+#define OBOL_SOGLMULTITEXTUREIMAGEELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -40,7 +40,7 @@ class SoGLImage;
 class SoGLDisplayList;
 class SoGLMultiTextureImageElementP;
 
-class COIN_DLL_API SoGLMultiTextureImageElement : public SoMultiTextureImageElement {
+class OBOL_DLL_API SoGLMultiTextureImageElement : public SoMultiTextureImageElement {
   typedef SoMultiTextureImageElement inherited;
 
   SO_ELEMENT_HEADER(SoGLMultiTextureImageElement);
@@ -98,4 +98,4 @@ private:
   static int32_t getMaxGLTextureSize(void);
 };
 
-#endif // !COIN_SOGLMULTITEXTUREIMAGEELEMENT_H
+#endif // !OBOL_SOGLMULTITEXTUREIMAGEELEMENT_H

@@ -37,13 +37,13 @@
   <h2>Enabling profiling in Coin</h2>
 
   To enable profiling in Coin, use the environment variable \ref
-  COIN_PROFILER.  When profiling is enabled, Coin will gather
+  OBOL_PROFILER.  When profiling is enabled, Coin will gather
   profiling data during every scene graph traversal by any action.
 
   <h2>Enabling the default profiling display</h2>
 
   To get some profiling data shown on the screen, you also need to use
-  the \ref COIN_PROFILER_OVERLAY environment variable.
+  the \ref OBOL_PROFILER_OVERLAY environment variable.
 
   This will give you the default profiling graphics, which
   shows a top list of node timings categorized by node types, a
@@ -224,7 +224,7 @@ SoProfiler::enable(SbBool enable)
 SbBool
 SoProfiler::isEnabled(void)
 {
-#ifdef COIN_PROFILING
+#ifdef OBOL_PROFILING
   return profiler::enabled;
 #else
   return FALSE;
@@ -298,12 +298,12 @@ SoProfilerP::getActionType(void)
 void
 SoProfilerP::parseCoinProfilerVariable(void)
 {
-  // variable COIN_PROFILER
+  // variable OBOL_PROFILER
   // - on
   // - syncgl - implies on
   // - [nocaching - implies on] // todo
 
-  const char * env = CoinInternal::getEnvironmentVariableRaw(SoDBP::EnvVars::COIN_PROFILER);
+  const char * env = CoinInternal::getEnvironmentVariableRaw(SoDBP::EnvVars::OBOL_PROFILER);
   if (env == NULL) return;
   std::vector<std::string> parameters;
   tokenize(env, ":", parameters);
@@ -337,7 +337,7 @@ SoProfilerP::parseCoinProfilerVariable(void)
 void
 SoProfilerP::parseCoinProfilerOverlayVariable(void)
 {
-  const char * env = CoinInternal::getEnvironmentVariableRaw(SoDBP::EnvVars::COIN_PROFILER_OVERLAY);
+  const char * env = CoinInternal::getEnvironmentVariableRaw(SoDBP::EnvVars::OBOL_PROFILER_OVERLAY);
   if (env == NULL) return;
   std::vector<std::string> parameters;
   tokenize(env, ":", parameters);
@@ -527,7 +527,7 @@ SoProfilerP::parseCoinProfilerOverlayVariable(void)
       // fallthrough
       else {
         SoDebugError::postWarning("SoProfiler::initialize",
-                                  "Unknown COIN_PROFILER_OVERLAY parameter '%s'.",
+                                  "Unknown OBOL_PROFILER_OVERLAY parameter '%s'.",
                                   param[0].data());
       }
     }

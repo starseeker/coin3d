@@ -1,5 +1,5 @@
-#ifndef COIN_SOBUMPMAPELEMENT_H
-#define COIN_SOBUMPMAPELEMENT_H
+#ifndef OBOL_SOBUMPMAPELEMENT_H
+#define OBOL_SOBUMPMAPELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -39,7 +39,7 @@
 class SoState;
 class SoGLImage;
 
-class COIN_DLL_API SoBumpMapElement : public SoReplacedElement {
+class OBOL_DLL_API SoBumpMapElement : public SoReplacedElement {
   typedef SoReplacedElement inherited;
 
   SO_ELEMENT_HEADER(SoBumpMapElement);
@@ -62,4 +62,4 @@ protected:
 
 };
 
-#endif // !COIN_SOBUMPMAPELEMENT_H
+#endif // !OBOL_SOBUMPMAPELEMENT_H

@@ -33,7 +33,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#include "Inventor/basic.h" /* COIN_DLL_API */
+#include "Inventor/basic.h" /* OBOL_DLL_API */
 
 #include <stdarg.h>
 
@@ -46,12 +46,12 @@ extern "C" {
 
 /* ********************************************************************** */
   
-  COIN_DLL_API cc_memalloc * cc_memalloc_construct(const unsigned int unitsize);
-  COIN_DLL_API void cc_memalloc_destruct(cc_memalloc * allocator);
-  COIN_DLL_API void * cc_memalloc_allocate(cc_memalloc * allocator);
-  COIN_DLL_API void cc_memalloc_deallocate(cc_memalloc * allocator, void * ptr);
-  COIN_DLL_API void cc_memalloc_clear(cc_memalloc * allocator);
-  COIN_DLL_API void cc_memalloc_set_strategy(cc_memalloc * allocator, cc_memalloc_strategy_cb * cb);
+  OBOL_DLL_API cc_memalloc * cc_memalloc_construct(const unsigned int unitsize);
+  OBOL_DLL_API void cc_memalloc_destruct(cc_memalloc * allocator);
+  OBOL_DLL_API void * cc_memalloc_allocate(cc_memalloc * allocator);
+  OBOL_DLL_API void cc_memalloc_deallocate(cc_memalloc * allocator, void * ptr);
+  OBOL_DLL_API void cc_memalloc_clear(cc_memalloc * allocator);
+  OBOL_DLL_API void cc_memalloc_set_strategy(cc_memalloc * allocator, cc_memalloc_strategy_cb * cb);
 
 /* ********************************************************************** */
 

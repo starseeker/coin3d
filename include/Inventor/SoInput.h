@@ -1,5 +1,5 @@
-#ifndef COIN_SOINPUT_H
-#define COIN_SOINPUT_H
+#ifndef OBOL_SOINPUT_H
+#define OBOL_SOINPUT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -38,10 +38,10 @@
 #include <Inventor/SbBasic.h>
 #include <Inventor/lists/SbList.h>
 #include <cstdio> // FILE
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
  // For Open Inventor compatibility.
  #include <Inventor/SoDB.h>
-#endif // COIN_INTERNAL
+#endif // OBOL_INTERNAL
 
 // *************************************************************************
 
@@ -59,7 +59,7 @@ class SoInputP;
 
 // *************************************************************************
 
-class COIN_DLL_API SoInput {
+class OBOL_DLL_API SoInput {
 public:
   SoInput(void);
   SoInput(SoInput * dictIn);
@@ -205,4 +205,4 @@ private:
   SoInputP * pimpl;
 };
 
-#endif // !COIN_SOINPUT_H
+#endif // !OBOL_SOINPUT_H

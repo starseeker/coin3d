@@ -100,7 +100,7 @@ int main(int argc, char **argv)
 
     // Read the geometry from a file and add to the scene
     SoInput myInput;
-    const char *dataDir = getenv("COIN_DATA_DIR");
+    const char *dataDir = getenv("OBOL_DATA_DIR");
     if (dataDir) {
         SoInput::addDirectoryFirst(dataDir);
     } else {

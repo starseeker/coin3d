@@ -1,5 +1,5 @@
-#ifndef COIN_SOHANDLEBOXDRAGGER_H
-#define COIN_SOHANDLEBOXDRAGGER_H
+#ifndef OBOL_SOHANDLEBOXDRAGGER_H
+#define OBOL_SOHANDLEBOXDRAGGER_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -43,7 +43,7 @@ class SbPlaneProjector;
 class SbLineProjector;
 class SoHandleBoxDraggerP;
 
-class COIN_DLL_API SoHandleBoxDragger : public SoDragger {
+class OBOL_DLL_API SoHandleBoxDragger : public SoDragger {
   typedef SoDragger inherited;
 
   SO_KIT_HEADER(SoHandleBoxDragger);
@@ -175,4 +175,4 @@ private:
   SoHandleBoxDragger & operator = (const SoHandleBoxDragger & rhs);
 }; // SoHandleBoxDragger
 
-#endif // !COIN_SOHANDLEBOXDRAGGER_H
+#endif // !OBOL_SOHANDLEBOXDRAGGER_H

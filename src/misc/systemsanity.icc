@@ -93,7 +93,7 @@ SoDB_checkGCCBuiltinExpectSanity(void)
     // Should we warn about this problem nevertheless?
 
 #else // HAVE_ASSERT_WITH_BUILTIN_EXPECT
-    printf("Coin " COIN_VERSION ": Sanity Check Report\n\n");
+    printf("Coin " OBOL_VERSION ": Sanity Check Report\n\n");
     DUMP("GNU GCC bug 13239 (bugzilla number) was detected.");
     DUMP("");
     DUMP("Short explanation:  __builtin_expect() misbehaves with optimized");

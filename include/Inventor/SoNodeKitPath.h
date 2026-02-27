@@ -1,5 +1,5 @@
-#ifndef COIN_SONODEKITPATH_H
-#define COIN_SONODEKITPATH_H
+#ifndef OBOL_SONODEKITPATH_H
+#define OBOL_SONODEKITPATH_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -39,7 +39,7 @@ class SoNode;
 class SoSearchAction;
 class SoBaseKit;
 
-class COIN_DLL_API SoNodeKitPath : public SoPath {
+class OBOL_DLL_API SoNodeKitPath : public SoPath {
   typedef SoPath inherited;
 
 public:
@@ -79,4 +79,4 @@ private:
   friend class SoBaseKit;
 };
 
-#endif // !COIN_SONODEKITPATH_H
+#endif // !OBOL_SONODEKITPATH_H

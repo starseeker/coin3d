@@ -1,5 +1,5 @@
-#ifndef COIN_SODETAILLIST_H
-#define COIN_SODETAILLIST_H
+#ifndef OBOL_SODETAILLIST_H
+#define OBOL_SODETAILLIST_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 
 class SoDetail;
 
-class COIN_DLL_API SoDetailList : public SbPList {
+class OBOL_DLL_API SoDetailList : public SbPList {
 public:
   SoDetailList(void) : SbPList() { }
   SoDetailList(const int sizehint) : SbPList (sizehint) { }
@@ -62,4 +62,4 @@ public:
   void set(const int index, SoDetail * item);
 };
 
-#endif // !COIN_SODETAILLIST_H
+#endif // !OBOL_SODETAILLIST_H

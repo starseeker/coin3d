@@ -1,5 +1,5 @@
-#ifndef COIN_SBCYLINDERSECTIONPROJECTOR_H
-#define COIN_SBCYLINDERSECTIONPROJECTOR_H
+#ifndef OBOL_SBCYLINDERSECTIONPROJECTOR_H
+#define OBOL_SBCYLINDERSECTIONPROJECTOR_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/SbPlane.h>
 #include <Inventor/SbRotation.h>
 
-class COIN_DLL_API SbCylinderSectionProjector : public SbCylinderProjector {
+class OBOL_DLL_API SbCylinderSectionProjector : public SbCylinderProjector {
   typedef SbCylinderProjector inherited;
 
 public:
@@ -68,4 +68,4 @@ private:
   float sqrtoldist;
 };
 
-#endif // !COIN_SBCYLINDERSECTIONPROJECTOR_H
+#endif // !OBOL_SBCYLINDERSECTIONPROJECTOR_H

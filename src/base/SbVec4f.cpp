@@ -40,9 +40,9 @@
 #include <Inventor/SbVec4s.h>
 #include <Inventor/SbVec4i32.h>
 #include <Inventor/SbVec3f.h>
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 #include "CoinTidbits.h" // coin_debug_normalize()
 
@@ -128,10 +128,10 @@
 SbBool
 SbVec4f::equals(const SbVec4f& v, float tolerance) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if(!(tolerance >= 0.0f))
     SoDebugError::postWarning("SbVec4f::equals","Tolerance should be >= 0.0f");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   float xdist = this->vec[0] - v[0];
   float ydist = this->vec[1] - v[1];
@@ -150,12 +150,12 @@ SbVec4f::equals(const SbVec4f& v, float tolerance) const
 void
 SbVec4f::getReal(SbVec3f & v) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if(!(this->vec[3] != 0.0f))
     SoDebugError::postWarning("SbVec4f::getReal",
                               "The 4th vector component is zero => "
                               "division by zero");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   v.setValue(vec[0]/vec[3], vec[1]/vec[3], vec[2]/vec[3]);
 }
@@ -213,13 +213,13 @@ SbVec4f::normalize(void)
       operator/=(len);
     }
   }
-#if COIN_DEBUG
+#if OBOL_DEBUG
   else if (coin_debug_normalize()) {
     SoDebugError::postWarning("SbVec4f::normalize",
                               "The length of the vector should be > 0.0f "
                               "to be able to normalize.");
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   return len;
 }
@@ -247,13 +247,13 @@ SbVec4f::normalize(void)
 SbVec4f &
 SbVec4f::setValue(const SbVec4d & v)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (v[0] > std::numeric_limits<float>::max() || v[0] < -std::numeric_limits<float>::max() || 
       v[1] > std::numeric_limits<float>::max() || v[1] < -std::numeric_limits<float>::max() || 
       v[2] > std::numeric_limits<float>::max() || v[2] < -std::numeric_limits<float>::max()) {
     SoDebugError::post("SbVec4f::setValue", "SbVec4d argument out of range for SbVec4f storage");
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   vec[0] = static_cast<float>(v[0]);
   vec[1] = static_cast<float>(v[1]);
   vec[2] = static_cast<float>(v[2]);
@@ -415,9 +415,9 @@ SbVec4f::setValue(const SbVec4i32 & v)
 void
 SbVec4f::print(FILE * fp) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   fprintf( fp, "<%f, %f, %f, %f>", this->vec[0], this->vec[1], this->vec[2],
     this->vec[3] );
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }
 

@@ -41,7 +41,7 @@
   point (origin) and a direction in 3D space. Note that the line is
   infinite in both directions from its definition point.
 
-  \COIN_CLASS_EXTENSION
+  \OBOL_CLASS_EXTENSION
 
   \sa SbVec3d
   \since Coin 2.0
@@ -49,9 +49,9 @@
 
 #include <cassert>
 #include <Inventor/SbDPLine.h>
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 /*!
   The empty constructor does nothing. The line will be uninitialized until
@@ -85,14 +85,14 @@ SbDPLine::setValue(const SbVec3d& p0, const SbVec3d& p1)
   this->pos = p0;
   this->dir = p1 - p0;
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if(!(p0 != p1)) {
     SoDebugError::postWarning("SbDPLine::setValue",
                               "The two points defining the line is "
                               "equal => line is invalid.");
     return;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   // we test for a null vector above, just normalize
   (void) this->dir.normalize();
@@ -185,14 +185,14 @@ SbDPLine::getClosestPoints(const SbDPLine& line2,
 
 #else // end of new, optimized version
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if(!(this->getDirection().length() != 0.0))
     SoDebugError::postWarning("SbDPLine::getClosestPoints",
                               "This line has no direction (zero vector).");
   if(!(line2.getDirection().length() != 0.0))
     SoDebugError::postWarning("SbDPLine::getClosestPoints",
                               "argument line has no direction (zero vector).");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   // Check if the lines are parallel.
   // FIXME: should probably use equals() here.
@@ -358,10 +358,10 @@ SbDPLine::getDirection(void) const
 void
 SbDPLine::print(FILE * fp) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   fprintf( fp, "p: " );
   this->getPosition().print(fp);
   fprintf( fp, "d: " );
   this->getDirection().print(fp);
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }

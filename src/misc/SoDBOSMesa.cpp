@@ -13,8 +13,8 @@
  * headers.
  *
  * This file is compiled in two scenarios:
- *   COIN3D_OSMESA_BUILD      – the whole library uses OSMesa headers.
- *   COIN3D_BUILD_DUAL_GL     – only special TUs (gl_osmesa.cpp, this file)
+ *   OBOL_OSMESA_BUILD      – the whole library uses OSMesa headers.
+ *   OBOL_BUILD_DUAL_GL     – only special TUs (gl_osmesa.cpp, this file)
  *                              get the OSMesa include path.
  */
 

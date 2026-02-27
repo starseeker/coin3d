@@ -1,5 +1,5 @@
-#ifndef COIN_SOSWITCHELEMENT_H
-#define COIN_SOSWITCHELEMENT_H
+#ifndef OBOL_SOSWITCHELEMENT_H
+#define OBOL_SOSWITCHELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/elements/SoInt32Element.h>
 
-class COIN_DLL_API SoSwitchElement : public SoInt32Element {
+class OBOL_DLL_API SoSwitchElement : public SoInt32Element {
   typedef SoInt32Element inherited;
 
   SO_ELEMENT_HEADER(SoSwitchElement);
@@ -54,4 +54,4 @@ public:
   static int32_t getDefault();
 };
 
-#endif // !COIN_SOSWITCHELEMENT_H
+#endif // !OBOL_SOSWITCHELEMENT_H

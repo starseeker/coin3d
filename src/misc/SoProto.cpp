@@ -95,7 +95,7 @@ static SoProto *
 soproto_fetchextern_default_cb(SoInput * in,
                                const SbString * urls,
                                const int numurls,
-                               void * COIN_UNUSED_ARG(closure))
+                               void * OBOL_UNUSED_ARG(closure))
 {
   if (numurls == 0) return NULL;
   SbString filename(urls[0]);
@@ -321,7 +321,7 @@ SoProto::getProtoName(void) const
 
 // Documented in superclass. Overridden to read Proto definition.
 SbBool
-SoProto::readInstance(SoInput * in, unsigned short COIN_UNUSED_ARG(flags))
+SoProto::readInstance(SoInput * in, unsigned short OBOL_UNUSED_ARG(flags))
 {
   SbName protoname;
 
@@ -419,7 +419,7 @@ SoProto::write(SoWriteAction * action)
       out->write("}");
     }
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
     if (SoWriterefCounter::debugWriterefs()) {
       int writerefcount = SoWriterefCounter::instance(out)->getWriteref(this);
       SoDebugError::postInfo("SoProto::write",
@@ -429,7 +429,7 @@ SoProto::write(SoWriteAction * action)
                              this->getName().getString(),
                              writerefcount, writerefcount - 1);
     }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
     writerefcount--;
     SoWriterefCounter::instance(out)->setWriteref(this, writerefcount);
@@ -953,12 +953,12 @@ SoProto::connectISRefs(SoProtoInstance * inst, SoNode * src, SoNode * dst) const
         eventout = ((SoNodeEngine*)node)->getOutput(fieldname);
       }
       if (!eventout) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
         SoDebugError::postWarning("SoProto::connectISRefs",
                                   "Destination field '%s' is not found in node type '%s'. "
                                   "Unable to resolve IS reference.",
                                   fieldname.getString(), node->getTypeId().getName().getString());
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
         continue; // skip to next field
       }
     }
@@ -1042,20 +1042,20 @@ SoProto::connectISRefs(SoProtoInstance * inst, SoNode * src, SoNode * dst) const
       if (output) {
         dstfield->connectFrom(output);
       }
-#if COIN_DEBUG
+#if OBOL_DEBUG
       else {
         SoDebugError::postWarning("SoProto::connectISRefs",
                                   "Source field or engine output '%s' is not found in node type '%s'. "
                                   "Unable to resolve IS reference.",
                                   iname.getString(), node->getTypeId().getName().getString());
       }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     }
   }
 }
 
 SbBool
-SoProto::setupExtern(SoInput * COIN_UNUSED_ARG(in), SoProto * externproto)
+SoProto::setupExtern(SoInput * OBOL_UNUSED_ARG(in), SoProto * externproto)
 {
   assert(externproto);
   PRIVATE(this)->extprotonode = externproto;

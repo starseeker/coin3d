@@ -1,5 +1,5 @@
-#ifndef COIN_SOGLNORMALELEMENT_H
-#define COIN_SOGLNORMALELEMENT_H
+#ifndef OBOL_SOGLNORMALELEMENT_H
+#define OBOL_SOGLNORMALELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/elements/SoNormalElement.h>
 
-class COIN_DLL_API SoGLNormalElement : public SoNormalElement {
+class OBOL_DLL_API SoGLNormalElement : public SoNormalElement {
   typedef SoNormalElement inherited;
 
   SO_ELEMENT_HEADER(SoGLNormalElement);
@@ -50,4 +50,4 @@ public:
 
 };
 
-#endif // !COIN_SOGLNORMALELEMENT_H
+#endif // !OBOL_SOGLNORMALELEMENT_H

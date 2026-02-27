@@ -1,5 +1,5 @@
-#ifndef COIN_SOCLIPPLANE_H
-#define COIN_SOCLIPPLANE_H
+#ifndef OBOL_SOCLIPPLANE_H
+#define OBOL_SOCLIPPLANE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/fields/SoSFPlane.h>
 #include <Inventor/fields/SoSFBool.h>
 
-class COIN_DLL_API SoClipPlane : public SoNode {
+class OBOL_DLL_API SoClipPlane : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_HEADER(SoClipPlane);
@@ -58,4 +58,4 @@ protected:
   virtual ~SoClipPlane();
 };
 
-#endif // !COIN_SOCLIPPLANE_H
+#endif // !OBOL_SOCLIPPLANE_H

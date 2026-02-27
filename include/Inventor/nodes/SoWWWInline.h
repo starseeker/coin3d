@@ -1,5 +1,5 @@
-#ifndef COIN_SOWWWINLINE_H
-#define COIN_SOWWWINLINE_H
+#ifndef OBOL_SOWWWINLINE_H
+#define OBOL_SOWWWINLINE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -38,9 +38,9 @@
 #include <Inventor/fields/SoSFVec3f.h>
 #include <Inventor/fields/SoSFNode.h>
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #include <Inventor/actions/SoCallbackAction.h>
-#endif // !COIN_INTERNAL
+#endif // !OBOL_INTERNAL
 
 class SbColor;
 class SoGroup;
@@ -54,7 +54,7 @@ typedef void SoWWWInlineFetchURLCB(const SbString & url, void * userData,
 
 // *************************************************************************
 
-class COIN_DLL_API SoWWWInline : public SoNode {
+class OBOL_DLL_API SoWWWInline : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_HEADER(SoWWWInline);
@@ -132,4 +132,4 @@ private:
   SoWWWInlineP * pimpl;
 };
 
-#endif // !COIN_SOWWWINLINE_H
+#endif // !OBOL_SOWWWINLINE_H

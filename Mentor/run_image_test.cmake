@@ -61,14 +61,14 @@ if(UNIX AND NOT APPLE)
     endif()
     # Enable full indirect rendering for Xvfb compatibility
     # Enable direct rendering for GLX pixmaps (required on modern X servers)
-    set(ENV{COIN_FULL_INDIRECT_RENDERING} "1")
-    set(ENV{COIN_GLX_PIXMAP_DIRECT_RENDERING} "1")
+    set(ENV{OBOL_FULL_INDIRECT_RENDERING} "1")
+    set(ENV{OBOL_GLX_PIXMAP_DIRECT_RENDERING} "1")
 endif()
 
 # Set data directory for examples that load .iv files
-if(DEFINED COIN_DATA_DIR)
-    set(ENV{COIN_DATA_DIR} "${COIN_DATA_DIR}")
-    set(ENV{IVEXAMPLES_DATA_DIR} "${COIN_DATA_DIR}")
+if(DEFINED OBOL_DATA_DIR)
+    set(ENV{OBOL_DATA_DIR} "${OBOL_DATA_DIR}")
+    set(ENV{IVEXAMPLES_DATA_DIR} "${OBOL_DATA_DIR}")
 endif()
 
 # Run the example with the base name as argv[1]

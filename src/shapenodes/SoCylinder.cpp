@@ -95,9 +95,9 @@
 
 #include <cmath>
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 #include <Inventor/SbCylinder.h>
 #include <Inventor/SbPlane.h>
 #include <Inventor/SoPickedPoint.h>
@@ -197,7 +197,7 @@ SoCylinder::initClass(void)
 
 // Doc in parent.
 void
-SoCylinder::computeBBox(SoAction * COIN_UNUSED_ARG(action), SbBox3f & box, SbVec3f & center)
+SoCylinder::computeBBox(SoAction * OBOL_UNUSED_ARG(action), SbBox3f & box, SbVec3f & center)
 {
 
   float r = this->radius.getValue();
@@ -245,12 +245,7 @@ SoCylinder::GLRender(SoGLRenderAction * action)
   SoMaterialBundle mb(action);
   mb.sendFirst();
 
-  SbBool sendNormals = !mb.isColorOnly() ||
-    (SoMultiTextureCoordinateElement::getType(state) == SoMultiTextureCoordinateElement::FUNCTION);
-
-  unsigned int flags = 0;
-  if (sendNormals)
-    flags |= SOGL_NEED_NORMALS;
+  unsigned int flags = SOGL_NEED_NORMALS;
   if (SoGLMultiTextureEnabledElement::get(state, 0)) {
     if (SoGLMultiTextureEnabledElement::getMode(state, 0) ==
         SoMultiTextureEnabledElement::TEXTURE3D) {
@@ -288,9 +283,9 @@ void
 SoCylinder::addPart(SoCylinder::Part part)
 {
   if (this->hasPart(part)) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SoCylinder::addPart", "part already set");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     return;
   }
 
@@ -306,9 +301,9 @@ void
 SoCylinder::removePart(SoCylinder::Part part)
 {
   if (!this->hasPart(part)) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SoCylinder::removePart", "part was not set");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     return;
   }
 

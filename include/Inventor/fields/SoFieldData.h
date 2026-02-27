@@ -1,5 +1,5 @@
-#ifndef COIN_SOFIELDDATA_H
-#define COIN_SOFIELDDATA_H
+#ifndef OBOL_SOFIELDDATA_H
+#define OBOL_SOFIELDDATA_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -45,7 +45,7 @@ class SoOutput;
 class SoEnumEntry;
 class SoFieldEntry;
 
-class COIN_DLL_API SoFieldData {
+class OBOL_DLL_API SoFieldData {
 public:
   SoFieldData(void);
   SoFieldData(const SoFieldData & fd);
@@ -103,4 +103,4 @@ private:
   SbList<SoEnumEntry *> enums;
 };
 
-#endif // !COIN_SOFIELDDATA_H
+#endif // !OBOL_SOFIELDDATA_H

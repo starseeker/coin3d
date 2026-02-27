@@ -1,11 +1,11 @@
-#ifndef COIN_SOPROFILEROVERLAYKIT_H
-#define COIN_SOPROFILEROVERLAYKIT_H
+#ifndef OBOL_SOPROFILEROVERLAYKIT_H
+#define OBOL_SOPROFILEROVERLAYKIT_H
 
 #include <Inventor/nodekits/SoBaseKit.h>
 #include <Inventor/nodekits/SoSubKit.h>
 #include <Inventor/fields/SoSFVec3f.h>
 
-class COIN_DLL_API SoProfilerOverlayKit : public SoBaseKit {
+class OBOL_DLL_API SoProfilerOverlayKit : public SoBaseKit {
   typedef SoBaseKit inherited;
   SO_KIT_HEADER(SoProfilerOverlayKit);
   SO_KIT_CATALOG_ENTRY_HEADER(topSeparator);
@@ -31,4 +31,4 @@ private:
   struct SoProfilerOverlayKitP * pimpl;
 };
 
-#endif // !COIN_SOPROFILEROVERLAYKIT_H
+#endif // !OBOL_SOPROFILEROVERLAYKIT_H

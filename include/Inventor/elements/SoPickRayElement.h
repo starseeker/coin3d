@@ -1,5 +1,5 @@
-#ifndef COIN_SOPICKRAYELEMENT_H
-#define COIN_SOPICKRAYELEMENT_H
+#ifndef OBOL_SOPICKRAYELEMENT_H
+#define OBOL_SOPICKRAYELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -36,7 +36,7 @@
 #include <Inventor/elements/SoSubElement.h>
 #include <Inventor/SbViewVolume.h>
 
-class COIN_DLL_API SoPickRayElement : public SoElement {
+class OBOL_DLL_API SoPickRayElement : public SoElement {
   typedef SoElement inherited;
 
   SO_ELEMENT_HEADER(SoPickRayElement);
@@ -58,4 +58,4 @@ protected:
   SbViewVolume volume;
 };
 
-#endif // !COIN_SOPICKRAYELEMENT_H
+#endif // !OBOL_SOPICKRAYELEMENT_H

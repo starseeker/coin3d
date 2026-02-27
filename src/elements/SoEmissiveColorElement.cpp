@@ -80,18 +80,18 @@ SoEmissiveColorElement::init(SoState * stateptr)
 //! FIXME: write doc.
 
 void
-SoEmissiveColorElement::set(SoState * const state, SoNode * const COIN_UNUSED_ARG(node),
+SoEmissiveColorElement::set(SoState * const state, SoNode * const OBOL_UNUSED_ARG(node),
                             const int32_t numcolors,
                             const SbColor * const colors)
 {
   SoLazyElement::setEmissive(state, colors);
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (numcolors > 1) {
     SoDebugError::postWarning("SoEmissiveColorElement::set",
                               "Multiple emissive colors not supported. "
                               "All color except the first will be ignored.");
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }
 
 

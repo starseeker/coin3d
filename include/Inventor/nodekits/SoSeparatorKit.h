@@ -1,5 +1,5 @@
-#ifndef COIN_SOSEPARATORKIT_H
-#define COIN_SOSEPARATORKIT_H
+#ifndef OBOL_SOSEPARATORKIT_H
+#define OBOL_SOSEPARATORKIT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/nodekits/SoBaseKit.h>
 #include <Inventor/fields/SoSFEnum.h>
 
-class COIN_DLL_API SoSeparatorKit : public SoBaseKit {
+class OBOL_DLL_API SoSeparatorKit : public SoBaseKit {
   typedef SoBaseKit inherited;
 
   SO_KIT_HEADER(SoSeparatorKit);
@@ -76,4 +76,4 @@ private:
   friend class SoSeparatorKitP;
 };
 
-#endif // !COIN_SOSEPARATORKIT_H
+#endif // !OBOL_SOSEPARATORKIT_H

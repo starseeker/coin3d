@@ -1,5 +1,5 @@
-#ifndef COIN_SOCALLBACKACTION_H
-#define COIN_SOCALLBACKACTION_H
+#ifndef OBOL_SOCALLBACKACTION_H
+#define OBOL_SOCALLBACKACTION_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -77,7 +77,7 @@ typedef void SoPointCB(void * userdata, SoCallbackAction * action,
                        const SoPrimitiveVertex * v);
 
 
-class COIN_DLL_API SoCallbackAction : public SoAction {
+class OBOL_DLL_API SoCallbackAction : public SoAction {
   typedef SoAction inherited;
 
   SO_ACTION_HEADER(SoCallbackAction);
@@ -196,4 +196,4 @@ private:
   SoCallbackAction & operator = (const SoCallbackAction & rhs);
 }; // SoCallbackAction
 
-#endif // !COIN_SOCALLBACKACTION_H
+#endif // !OBOL_SOCALLBACKACTION_H

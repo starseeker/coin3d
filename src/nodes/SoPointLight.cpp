@@ -120,10 +120,10 @@ SoPointLight::GLRender(SoGLRenderAction * action)
   int idx = SoGLLightIdElement::increment(action->getState());
 
   if (idx < 0) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::post("SoPointLight::GLRender()",
                        "Max # lights exceeded :(\n");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     return;
   }
 

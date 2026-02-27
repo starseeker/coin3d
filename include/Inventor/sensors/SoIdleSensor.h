@@ -1,5 +1,5 @@
-#ifndef COIN_SOIDLESENSOR_H
-#define COIN_SOIDLESENSOR_H
+#ifndef OBOL_SOIDLESENSOR_H
+#define OBOL_SOIDLESENSOR_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/sensors/SoDelayQueueSensor.h>
 
-class COIN_DLL_API SoIdleSensor : public SoDelayQueueSensor {
+class OBOL_DLL_API SoIdleSensor : public SoDelayQueueSensor {
   typedef SoDelayQueueSensor inherited;
 
 public:
@@ -47,4 +47,4 @@ private:
   virtual SbBool isIdleOnly(void) const;
 };
 
-#endif // !COIN_SOIDLESENSOR_H
+#endif // !OBOL_SOIDLESENSOR_H

@@ -30,8 +30,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_SOCALCULATOR_H
-#define COIN_SOCALCULATOR_H
+#ifndef OBOL_SOCALCULATOR_H
+#define OBOL_SOCALCULATOR_H
 
 #include <Inventor/engines/SoSubEngine.h>
 #include <Inventor/engines/SoEngineOutput.h>
@@ -42,7 +42,7 @@
 
 class SoCalculatorP;
 
-class COIN_DLL_API SoCalculator : public SoEngine {
+class OBOL_DLL_API SoCalculator : public SoEngine {
   typedef SoEngine inherited;
 
   SO_ENGINE_HEADER(SoCalculator);
@@ -78,4 +78,4 @@ private:
   SoCalculatorP * pimpl;
 };
 
-#endif // !COIN_SOCALCULATOR_H
+#endif // !OBOL_SOCALCULATOR_H

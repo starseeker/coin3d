@@ -1,5 +1,5 @@
-#ifndef COIN_SOANNOTEXT3CHARORIENTELEMENT_H
-#define COIN_SOANNOTEXT3CHARORIENTELEMENT_H
+#ifndef OBOL_SOANNOTEXT3CHARORIENTELEMENT_H
+#define OBOL_SOANNOTEXT3CHARORIENTELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/elements/SoInt32Element.h>
 
-class COIN_DLL_API SoAnnoText3CharOrientElement : public SoInt32Element {
+class OBOL_DLL_API SoAnnoText3CharOrientElement : public SoInt32Element {
   typedef SoInt32Element inherited;
 
   SO_ELEMENT_HEADER(SoAnnoText3CharOrientElement);
@@ -51,4 +51,4 @@ public:
   static SbBool getDefault(void);
 };
 
-#endif // !COIN_SOANNOTEXT3CHARORIENTELEMENT_H
+#endif // !OBOL_SOANNOTEXT3CHARORIENTELEMENT_H

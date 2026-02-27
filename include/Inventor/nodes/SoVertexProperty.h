@@ -1,5 +1,5 @@
-#ifndef COIN_SOVERTEXPROPERTY_H
-#define COIN_SOVERTEXPROPERTY_H
+#ifndef OBOL_SOVERTEXPROPERTY_H
+#define OBOL_SOVERTEXPROPERTY_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -43,7 +43,7 @@
 class SoVertexPropertyP;
 class SoState;
 
-class COIN_DLL_API SoVertexProperty : public SoNode {
+class OBOL_DLL_API SoVertexProperty : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_HEADER(SoVertexProperty);
@@ -91,11 +91,11 @@ private:
   SoVertexPropertyP * pimpl;
 };
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 // For SGI / TGS Open Inventor compile-time compatibility.
 #include <Inventor/nodes/SoNormalBinding.h>
 #include <Inventor/nodes/SoMaterialBinding.h>
 #include <Inventor/nodes/SoTextureCoordinateBinding.h>
-#endif // COIN_INTERNAL
+#endif // OBOL_INTERNAL
 
-#endif // !COIN_SOVERTEXPROPERTY_H
+#endif // !OBOL_SOVERTEXPROPERTY_H

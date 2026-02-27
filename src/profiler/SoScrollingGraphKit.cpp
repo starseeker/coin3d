@@ -205,7 +205,7 @@ SoScrollingGraphKit::~SoScrollingGraphKit(void)
 }
 
 void
-SoScrollingGraphKit::addValuesCB(void * closure, SoSensor * COIN_UNUSED_ARG(sensor))
+SoScrollingGraphKit::addValuesCB(void * closure, SoSensor * OBOL_UNUSED_ARG(sensor))
 {
   SoScrollingGraphKit * kit = static_cast<SoScrollingGraphKit *>(closure);
 

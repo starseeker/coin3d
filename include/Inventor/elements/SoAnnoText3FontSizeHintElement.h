@@ -1,5 +1,5 @@
-#ifndef COIN_SOANNOTEXT3FONTSIZEHINTELEMENT_H
-#define COIN_SOANNOTEXT3FONTSIZEHINTELEMENT_H
+#ifndef OBOL_SOANNOTEXT3FONTSIZEHINTELEMENT_H
+#define OBOL_SOANNOTEXT3FONTSIZEHINTELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/elements/SoInt32Element.h>
 
-class COIN_DLL_API SoAnnoText3FontSizeHintElement : public SoInt32Element {
+class OBOL_DLL_API SoAnnoText3FontSizeHintElement : public SoInt32Element {
   typedef SoInt32Element inherited;
 
   SO_ELEMENT_HEADER(SoAnnoText3FontSizeHintElement);
@@ -58,4 +58,4 @@ public:
                   const FontSizeHint hint);
 };
 
-#endif // !COIN_SOANNOTEXT3FONTSIZEHINTELEMENT_H
+#endif // !OBOL_SOANNOTEXT3FONTSIZEHINTELEMENT_H

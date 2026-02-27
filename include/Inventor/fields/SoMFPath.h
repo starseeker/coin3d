@@ -1,5 +1,5 @@
-#ifndef COIN_SOMFPATH_H
-#define COIN_SOMFPATH_H
+#ifndef OBOL_SOMFPATH_H
+#define OBOL_SOMFPATH_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -41,7 +41,7 @@ class SoPath;
 class SoNotList;
 class SoNode;
 
-class COIN_DLL_API SoMFPath : public SoMField {
+class OBOL_DLL_API SoMFPath : public SoMField {
   typedef SoMField inherited;
 
   SO_MFIELD_HEADER(SoMFPath, SoPath *, SoPath *);
@@ -62,4 +62,4 @@ private:
   SbList<SoNode *> pathheads;
 };
 
-#endif // !COIN_SOMFPATH_H
+#endif // !OBOL_SOMFPATH_H

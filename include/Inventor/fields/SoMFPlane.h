@@ -1,5 +1,5 @@
-#ifndef COIN_SOMFPLANE_H
-#define COIN_SOMFPLANE_H
+#ifndef OBOL_SOMFPLANE_H
+#define OBOL_SOMFPLANE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/fields/SoSubField.h>
 #include <Inventor/SbPlane.h>
 
-class COIN_DLL_API SoMFPlane : public SoMField {
+class OBOL_DLL_API SoMFPlane : public SoMField {
   typedef SoMField inherited;
 
   SO_MFIELD_HEADER(SoMFPlane, SbPlane, const SbPlane &);
@@ -49,4 +49,4 @@ private:
   virtual int getNumValuesPerLine(void) const;
 };
 
-#endif // !COIN_SOMFPLANE_H
+#endif // !OBOL_SOMFPLANE_H

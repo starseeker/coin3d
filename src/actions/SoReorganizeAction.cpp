@@ -353,7 +353,7 @@ SoReorganizeAction::initClass(void)
   A constructor.
 */
 
-SoReorganizeAction::SoReorganizeAction(SoSimplifier * COIN_UNUSED_ARG(simplifier))
+SoReorganizeAction::SoReorganizeAction(SoSimplifier * OBOL_UNUSED_ARG(simplifier))
 {
   PRIVATE(this)->master = this;
   SO_ACTION_CONSTRUCTOR(SoReorganizeAction);
@@ -464,7 +464,7 @@ SoReorganizeAction::apply(SoPath * path)
 }
 
 void
-SoReorganizeAction::apply(const SoPathList & pathlist, SbBool COIN_UNUSED_ARG(obeysrules))
+SoReorganizeAction::apply(const SoPathList & pathlist, SbBool OBOL_UNUSED_ARG(obeysrules))
 {
   for (int i = 0; i < pathlist.getLength(); i++) {
     this->apply(pathlist[i]);
@@ -472,15 +472,15 @@ SoReorganizeAction::apply(const SoPathList & pathlist, SbBool COIN_UNUSED_ARG(ob
 }
 
 void
-SoReorganizeAction::startReport(const char * COIN_UNUSED_ARG(msg))
+SoReorganizeAction::startReport(const char * OBOL_UNUSED_ARG(msg))
 {
-  COIN_STUB();
+  OBOL_STUB();
 }
 
 void
 SoReorganizeAction::finishReport(void)
 {
-  COIN_STUB();
+  OBOL_STUB();
 }
 
 // Documented in superclass.
@@ -492,7 +492,7 @@ SoReorganizeAction::beginTraversal(SoNode * /* node */)
 
 
 SoCallbackAction::Response
-SoReorganizeActionP::pre_shape_cb(void * userdata, SoCallbackAction * COIN_UNUSED_ARG(action), const SoNode * COIN_UNUSED_ARG(node))
+SoReorganizeActionP::pre_shape_cb(void * userdata, SoCallbackAction * OBOL_UNUSED_ARG(action), const SoNode * OBOL_UNUSED_ARG(node))
 {
   SoReorganizeActionP * thisp = static_cast<SoReorganizeActionP *>(userdata);
   thisp->didinit = FALSE;
@@ -503,7 +503,7 @@ SoReorganizeActionP::pre_shape_cb(void * userdata, SoCallbackAction * COIN_UNUSE
 }
 
 SoCallbackAction::Response
-SoReorganizeActionP::post_shape_cb(void * COIN_UNUSED_ARG(userdata), SoCallbackAction * COIN_UNUSED_ARG(action), const SoNode * COIN_UNUSED_ARG(node))
+SoReorganizeActionP::post_shape_cb(void * OBOL_UNUSED_ARG(userdata), SoCallbackAction * OBOL_UNUSED_ARG(action), const SoNode * OBOL_UNUSED_ARG(node))
 {
   return SoCallbackAction::CONTINUE;
 }

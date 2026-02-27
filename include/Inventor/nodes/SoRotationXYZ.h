@@ -1,5 +1,5 @@
-#ifndef COIN_SOROTATIONXYZ_H
-#define COIN_SOROTATIONXYZ_H
+#ifndef OBOL_SOROTATIONXYZ_H
+#define OBOL_SOROTATIONXYZ_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -41,7 +41,7 @@
 #include <Inventor/SbRotation.h>
 
 
-class COIN_DLL_API SoRotationXYZ : public SoTransformation {
+class OBOL_DLL_API SoRotationXYZ : public SoTransformation {
   typedef SoTransformation inherited;
 
   SO_NODE_HEADER(SoRotationXYZ);
@@ -74,4 +74,4 @@ private:
   SbBool getVector(SbVec3f & rotvec) const;
 };
 
-#endif // !COIN_SOROTATIONXYZ_H
+#endif // !OBOL_SOROTATIONXYZ_H

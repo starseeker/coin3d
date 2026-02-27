@@ -1,5 +1,5 @@
-#ifndef COIN_SOVECTOROUTPUT_H
-#define COIN_SOVECTOROUTPUT_H
+#ifndef OBOL_SOVECTOROUTPUT_H
+#define OBOL_SOVECTOROUTPUT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -40,7 +40,7 @@
 
 class SoVectorOutputP;
 
-class COIN_DLL_API SoVectorOutput {
+class OBOL_DLL_API SoVectorOutput {
 
 public:
   SoVectorOutput(void);
@@ -58,4 +58,4 @@ private:
 
 // *************************************************************************
 
-#endif //!COIN_SOVECTOROUTPUT_H
+#endif //!OBOL_SOVECTOROUTPUT_H

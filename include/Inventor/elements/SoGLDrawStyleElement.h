@@ -1,5 +1,5 @@
-#ifndef COIN_SOGLDRAWSTYLEELEMENT_H
-#define COIN_SOGLDRAWSTYLEELEMENT_H
+#ifndef OBOL_SOGLDRAWSTYLEELEMENT_H
+#define OBOL_SOGLDRAWSTYLEELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/elements/SoDrawStyleElement.h>
 
-class COIN_DLL_API SoGLDrawStyleElement : public SoDrawStyleElement {
+class OBOL_DLL_API SoGLDrawStyleElement : public SoDrawStyleElement {
   typedef SoDrawStyleElement inherited;
 
   SO_ELEMENT_HEADER(SoGLDrawStyleElement);
@@ -59,4 +59,4 @@ private:
 
 };
 
-#endif // !COIN_SOGLDRAWSTYLEELEMENT_H
+#endif // !OBOL_SOGLDRAWSTYLEELEMENT_H

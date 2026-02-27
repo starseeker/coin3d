@@ -256,7 +256,7 @@ SoGLSLShaderParameter::isValid(const SoGLShaderObject * shader,
   assert(shader);
   assert(shader->shaderType() == SoShader::GLSL_SHADER);
 
-  COIN_GLhandle pHandle = ((SoGLSLShaderObject*)shader)->programHandle;
+  OBOL_GLhandle pHandle = ((SoGLSLShaderObject*)shader)->programHandle;
   int32_t pId = ((SoGLSLShaderObject*)shader)->programid;
 
   // return TRUE if uniform isn't active. We warned the user about
@@ -283,15 +283,15 @@ SoGLSLShaderParameter::isValid(const SoGLShaderObject * shader,
 
   this->cacheSize = 0;
   this->location = g->glGetUniformLocationARB(pHandle,
-                                              (const COIN_GLchar *)name);
+                                              (const OBOL_GLchar *)name);
   this->programid = pId;
 
   if (this->location == -1)  {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SoGLSLShaderParameter::isValid",
                               "parameter '%s' not found in program.",
                               name);
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     return FALSE;
   }
   GLint activeUniforms = 0;
@@ -301,7 +301,7 @@ SoGLSLShaderParameter::isValid(const SoGLShaderObject * shader,
   GLint tmpSize = 0;
   GLenum tmpType;
   GLsizei length;
-  COIN_GLchar myName[256];
+  OBOL_GLchar myName[256];
 
   this->cacheName = name;
   this->isActive = FALSE; // set uniform to inactive while searching
@@ -320,11 +320,11 @@ SoGLSLShaderParameter::isValid(const SoGLShaderObject * shader,
   }
   if (!this->isActive) {
     // not critical, but warn user so they can remove the unused parameter
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SoGLSLShaderParameter::isValid",
                               "parameter '%s' not active.",
                               this->cacheName.getString());
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     // return here since cacheSize and cacheType will not be properly initialized
     return TRUE;
   }

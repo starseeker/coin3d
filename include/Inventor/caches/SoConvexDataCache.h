@@ -1,5 +1,5 @@
-#ifndef COIN_SOCONVEXDATACACHE_H
-#define COIN_SOCONVEXDATACACHE_H
+#ifndef OBOL_SOCONVEXDATACACHE_H
+#define OBOL_SOCONVEXDATACACHE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -41,7 +41,7 @@ class SoCoordinateElement;
 class SbMatrix;
 class SoConvexDataCacheP;
 
-class COIN_DLL_API SoConvexDataCache : public SoCache {
+class OBOL_DLL_API SoConvexDataCache : public SoCache {
   typedef SoCache inherited;
 public:
   SoConvexDataCache(SoState * const state);
@@ -79,4 +79,4 @@ private:
   SoConvexDataCacheP * pimpl;
 };
 
-#endif // !COIN_SOCONVEXDATACACHE_H
+#endif // !OBOL_SOCONVEXDATACACHE_H

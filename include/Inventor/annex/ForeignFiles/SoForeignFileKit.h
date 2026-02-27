@@ -1,5 +1,5 @@
-#ifndef COIN_SOFOREIGNFILEKIT_H
-#define COIN_SOFOREIGNFILEKIT_H
+#ifndef OBOL_SOFOREIGNFILEKIT_H
+#define OBOL_SOFOREIGNFILEKIT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -42,7 +42,7 @@ typedef SbBool SoForeignFileIdentifyFunc(const char *);
 
 class SoForeignFileKitP;
 
-class COIN_DLL_API SoForeignFileKit : public SoBaseKit {
+class OBOL_DLL_API SoForeignFileKit : public SoBaseKit {
   typedef SoBaseKit inherited;
 
   SO_KIT_ABSTRACT_HEADER(SoForeignFileKit);
@@ -83,4 +83,4 @@ private:
 
 }; // SoForeignFileKit
 
-#endif // !COIN_SOFOREIGNFILEKIT_H
+#endif // !OBOL_SOFOREIGNFILEKIT_H

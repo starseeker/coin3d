@@ -1,5 +1,5 @@
-#ifndef COIN_SOLIGHTMODEL_H
-#define COIN_SOLIGHTMODEL_H
+#ifndef OBOL_SOLIGHTMODEL_H
+#define OBOL_SOLIGHTMODEL_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/fields/SoSFEnum.h>
 #include <Inventor/elements/SoLazyElement.h>
 
-class COIN_DLL_API SoLightModel : public SoNode {
+class OBOL_DLL_API SoLightModel : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_HEADER(SoLightModel);
@@ -61,4 +61,4 @@ protected:
   virtual ~SoLightModel();
 };
 
-#endif // !COIN_SOLIGHTMODEL_H
+#endif // !OBOL_SOLIGHTMODEL_H

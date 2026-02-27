@@ -143,9 +143,9 @@
 #include "glue/glp.h"
 #include "CoinTidbits.h"
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 #include "elements/GL/SoResetMatrixElement.h"
 #include "nodes/SoSubNodeP.h"
@@ -477,7 +477,7 @@ SoCamera::pointAt(const SbVec3f & targetpoint)
 {
   SbVec3f dir = targetpoint - this->position.getValue();
   if (dir.normalize() == 0.0f) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postInfo("SoCamera::pointAt",
                            "targetpoint == camera position.");
 #endif // debug
@@ -495,14 +495,14 @@ SoCamera::pointAt(const SbVec3f & targetpoint)
   Reorients the camera so that it points towards \a targetpoint, using
   \a upvector as the camera up vector.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 */
 void
 SoCamera::pointAt(const SbVec3f & targetpoint, const SbVec3f & upvector)
 {
   SbVec3f dir = targetpoint - this->position.getValue();
   if (dir.normalize() == 0.0f) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postInfo("SoCamera::pointAt",
                            "targetpoint == camera position.");
 #endif // debug
@@ -540,7 +540,7 @@ SoCamera::viewAll(SoNode * const sceneroot, const SbViewportRegion & vpregion,
   SoGetBoundingBoxAction action(vpregion);
   action.apply(sceneroot);
   SbBox3f box = action.getBoundingBox();
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoCamera::viewAll",
                          "bbox: <%f %f %f>, <%f %f %f>\n",
                          box.getMin()[0], box.getMin()[1], box.getMin()[2],
@@ -1093,7 +1093,7 @@ SoCamera::lookAt(const SbVec3f & dir, const SbVec3f & up)
   // normalize x and y to create an orthonormal coord system
   if ((y.normalize() == 0.0f) ||
       (x.normalize() == 0.0f)) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postInfo("SoCamera::lookAt",
                            "Unable to create a rotation matrix "
                            "(dir = %g %g %g, up = %g %g %g)\n",

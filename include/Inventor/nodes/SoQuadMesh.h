@@ -1,5 +1,5 @@
-#ifndef COIN_SOQUADMESH_H
-#define COIN_SOQUADMESH_H
+#ifndef OBOL_SOQUADMESH_H
+#define OBOL_SOQUADMESH_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/nodes/SoNonIndexedShape.h>
 #include <Inventor/fields/SoSFInt32.h>
 
-class COIN_DLL_API SoQuadMesh : public SoNonIndexedShape {
+class OBOL_DLL_API SoQuadMesh : public SoNonIndexedShape {
   typedef SoNonIndexedShape inherited;
 
   SO_NODE_HEADER(SoQuadMesh);
@@ -75,4 +75,4 @@ private:
   Binding findNormalBinding(SoState * const state) const;
 };
 
-#endif // !COIN_SOQUADMESH_H
+#endif // !OBOL_SOQUADMESH_H

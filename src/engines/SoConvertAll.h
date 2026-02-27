@@ -1,5 +1,5 @@
-#ifndef COIN_SOCONVERTALL_H
-#define COIN_SOCONVERTALL_H
+#ifndef OBOL_SOCONVERTALL_H
+#define OBOL_SOCONVERTALL_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,9 +33,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #error this is a private header file
-#endif /* !COIN_INTERNAL */
+#endif /* !OBOL_INTERNAL */
 
 #include <Inventor/engines/SoFieldConverter.h>
 #include <Inventor/engines/SoEngineOutput.h>
@@ -70,4 +70,4 @@ private:
   SoEngineOutputData * outputdata_instance;
 };
 
-#endif // !COIN_SOCONVERTALL_H
+#endif // !OBOL_SOCONVERTALL_H

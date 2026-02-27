@@ -1,5 +1,5 @@
-#ifndef COIN_SONODEKITCATALOG_H
-#define COIN_SONODEKITCATALOG_H
+#ifndef OBOL_SONODEKITCATALOG_H
+#define OBOL_SONODEKITCATALOG_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -42,7 +42,7 @@ class SbName;
 #define SO_CATALOG_NAME_NOT_FOUND -1
 
 
-class COIN_DLL_API SoNodekitCatalog {
+class OBOL_DLL_API SoNodekitCatalog {
 public:
   static void initClass(void);
 
@@ -115,4 +115,4 @@ private:
   SbList<class CatalogItem *> delayeditems;
 };
 
-#endif // !COIN_SONODEKITCATALOG_H
+#endif // !OBOL_SONODEKITCATALOG_H

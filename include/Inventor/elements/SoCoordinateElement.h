@@ -1,5 +1,5 @@
-#ifndef COIN_SOCOORDINATEELEMENT_H
-#define COIN_SOCOORDINATEELEMENT_H
+#ifndef OBOL_SOCOORDINATEELEMENT_H
+#define OBOL_SOCOORDINATEELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/SbVec3f.h>
 #include <Inventor/SbVec4f.h>
 
-class COIN_DLL_API SoCoordinateElement : public SoReplacedElement {
+class OBOL_DLL_API SoCoordinateElement : public SoReplacedElement {
   typedef SoReplacedElement inherited;
 
   SO_ELEMENT_HEADER(SoCoordinateElement);
@@ -81,4 +81,4 @@ private:
   static SbVec3f * initialdefaultcoords;
 };
 
-#endif // !COIN_SOCOORDINATEELEMENT_H
+#endif // !OBOL_SOCOORDINATEELEMENT_H

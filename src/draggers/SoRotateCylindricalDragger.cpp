@@ -331,7 +331,7 @@ SoRotateCylindricalDragger::copyContents(const SoFieldContainer * fromfc,
 
 /*! \COININTERNAL */
 void
-SoRotateCylindricalDragger::startCB(void * COIN_UNUSED_ARG(f), SoDragger * d)
+SoRotateCylindricalDragger::startCB(void * OBOL_UNUSED_ARG(f), SoDragger * d)
 {
   SoRotateCylindricalDragger * thisp = THISP(d);
   thisp->dragStart();
@@ -339,7 +339,7 @@ SoRotateCylindricalDragger::startCB(void * COIN_UNUSED_ARG(f), SoDragger * d)
 
 /*! \COININTERNAL */
 void
-SoRotateCylindricalDragger::motionCB(void * COIN_UNUSED_ARG(f), SoDragger * d)
+SoRotateCylindricalDragger::motionCB(void * OBOL_UNUSED_ARG(f), SoDragger * d)
 {
   SoRotateCylindricalDragger * thisp = THISP(d);
   thisp->drag();
@@ -347,7 +347,7 @@ SoRotateCylindricalDragger::motionCB(void * COIN_UNUSED_ARG(f), SoDragger * d)
 
 /*! \COININTERNAL */
 void
-SoRotateCylindricalDragger::doneCB(void * COIN_UNUSED_ARG(f), SoDragger * d)
+SoRotateCylindricalDragger::doneCB(void * OBOL_UNUSED_ARG(f), SoDragger * d)
 {
   SoRotateCylindricalDragger * thisp = THISP(d);
   thisp->dragFinish();

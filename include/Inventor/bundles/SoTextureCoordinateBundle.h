@@ -1,5 +1,5 @@
-#ifndef COIN_SOTEXTURECOORDINATEBUNDLE_H
-#define COIN_SOTEXTURECOORDINATEBUNDLE_H
+#ifndef OBOL_SOTEXTURECOORDINATEBUNDLE_H
+#define OBOL_SOTEXTURECOORDINATEBUNDLE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -44,7 +44,7 @@ class SoTextureCoordinateCache;
 class SoShape;
 
 
-class COIN_DLL_API SoTextureCoordinateBundle : public SoBundle {
+class OBOL_DLL_API SoTextureCoordinateBundle : public SoBundle {
   typedef SoBundle inherited;
 public:
   SoTextureCoordinateBundle(SoAction * const action,
@@ -90,4 +90,4 @@ private:
 };
 
 
-#endif // !COIN_SOTEXTURECOORDINATEBUNDLE_H
+#endif // !OBOL_SOTEXTURECOORDINATEBUNDLE_H

@@ -462,7 +462,7 @@ SoExtSelectionP::debug(void)
 {
   static int dbg = -1;
   if (dbg == -1) {
-    auto env = CoinInternal::getEnvironmentVariable("COIN_DEBUG_SOEXTSELECTION");
+    auto env = CoinInternal::getEnvironmentVariable("OBOL_DEBUG_SOEXTSELECTION");
     dbg = env.has_value() && (std::atoi(env->c_str()) > 0);
   }
   return dbg ? TRUE : FALSE;
@@ -839,9 +839,9 @@ SoExtSelection::initClass(void)
   else has been rendered -- and this is the strategy we apply in Coin.
 */
 void
-SoExtSelection::useOverlay(SbBool COIN_UNUSED_ARG(overlay))
+SoExtSelection::useOverlay(SbBool OBOL_UNUSED_ARG(overlay))
 {
-  COIN_OBSOLETED();
+  OBOL_OBSOLETED();
 }
 
 /*!
@@ -852,7 +852,7 @@ SoExtSelection::useOverlay(SbBool COIN_UNUSED_ARG(overlay))
 SbBool
 SoExtSelection::isUsingOverlay(void)
 {
-  COIN_OBSOLETED();
+  OBOL_OBSOLETED();
   return FALSE;
 }
 
@@ -867,7 +867,7 @@ SoExtSelection::isUsingOverlay(void)
 SoSeparator *
 SoExtSelection::getOverlaySceneGraph(void)
 {
-  COIN_OBSOLETED();
+  OBOL_OBSOLETED();
   return NULL;
 }
 
@@ -877,9 +877,9 @@ SoExtSelection::getOverlaySceneGraph(void)
   Obsoleted in Coin, use SoExtSelection::setLassoColor() instead.
 */
 void
-SoExtSelection::setOverlayLassoColorIndex(const int COIN_UNUSED_ARG(index))
+SoExtSelection::setOverlayLassoColorIndex(const int OBOL_UNUSED_ARG(index))
 {
-  COIN_OBSOLETED();
+  OBOL_OBSOLETED();
 }
 
 /*!
@@ -890,7 +890,7 @@ SoExtSelection::setOverlayLassoColorIndex(const int COIN_UNUSED_ARG(index))
 int
 SoExtSelection::getOverlayLassoColorIndex(void)
 {
-  COIN_OBSOLETED();
+  OBOL_OBSOLETED();
   return 0;
 }
 
@@ -1249,10 +1249,10 @@ SoExtSelection::GLRenderBelowPath(SoGLRenderAction * action)
 */
 
 void
-SoExtSelection::select(SoNode * COIN_UNUSED_ARG(root), int COIN_UNUSED_ARG(numcoords), SbVec3f * COIN_UNUSED_ARG(lasso), const SbViewportRegion & COIN_UNUSED_ARG(vp), SbBool COIN_UNUSED_ARG(shiftpolicy))
+SoExtSelection::select(SoNode * OBOL_UNUSED_ARG(root), int OBOL_UNUSED_ARG(numcoords), SbVec3f * OBOL_UNUSED_ARG(lasso), const SbViewportRegion & OBOL_UNUSED_ARG(vp), SbBool OBOL_UNUSED_ARG(shiftpolicy))
 {
   // FIXME: Implement this for TGS compatibility...
-  COIN_STUB_ONCE();
+  OBOL_STUB_ONCE();
 }
 
 /*!
@@ -1262,10 +1262,10 @@ SoExtSelection::select(SoNode * COIN_UNUSED_ARG(root), int COIN_UNUSED_ARG(numco
 */
 
 void
-SoExtSelection::select(SoNode * COIN_UNUSED_ARG(root), int COIN_UNUSED_ARG(numcoords), SbVec2f * COIN_UNUSED_ARG(lasso), const SbViewportRegion & COIN_UNUSED_ARG(vp), SbBool COIN_UNUSED_ARG(shiftpolicy))
+SoExtSelection::select(SoNode * OBOL_UNUSED_ARG(root), int OBOL_UNUSED_ARG(numcoords), SbVec2f * OBOL_UNUSED_ARG(lasso), const SbViewportRegion & OBOL_UNUSED_ARG(vp), SbBool OBOL_UNUSED_ARG(shiftpolicy))
 {
   // FIXME: Implement this for TGS compatibility...
-  COIN_STUB_ONCE();
+  OBOL_STUB_ONCE();
 }
 
 /*!
@@ -1274,10 +1274,10 @@ SoExtSelection::select(SoNode * COIN_UNUSED_ARG(root), int COIN_UNUSED_ARG(numco
   This function is currently just stubbed.
 */
 const SbVec2s *
-SoExtSelection::getLassoCoordsDC (int &COIN_UNUSED_ARG(numCoords))
+SoExtSelection::getLassoCoordsDC (int &OBOL_UNUSED_ARG(numCoords))
 {
   // FIXME: Implement this for TGS compatibility...
-  COIN_STUB_ONCE();
+  OBOL_STUB_ONCE();
   return NULL;
 }
 
@@ -1287,10 +1287,10 @@ SoExtSelection::getLassoCoordsDC (int &COIN_UNUSED_ARG(numCoords))
   This function is currently just stubbed.
 */
 const SbVec3f *
-SoExtSelection::getLassoCoordsWC (int &COIN_UNUSED_ARG(numCoords))
+SoExtSelection::getLassoCoordsWC (int &OBOL_UNUSED_ARG(numCoords))
 {
   // FIXME: Implement this for TGS compatibility...
-  COIN_STUB_ONCE();
+  OBOL_STUB_ONCE();
   return NULL;
 }
 
@@ -1303,7 +1303,7 @@ const SoPathList &
 SoExtSelection::getSelectionPathList () const
 {
   // FIXME: Implement this for TGS compatibility...
-  COIN_STUB_ONCE();
+  OBOL_STUB_ONCE();
   return PRIVATE(this)->dummypathlist;
 }
 
@@ -1401,7 +1401,7 @@ SoExtSelection::wasShiftDown(void) const
 
 // timer callback for rendering lasso animation.
 void
-SoExtSelectionP::timercallback(void * data, SoSensor * COIN_UNUSED_ARG(sensor))
+SoExtSelectionP::timercallback(void * data, SoSensor * OBOL_UNUSED_ARG(sensor))
 {
   SoExtSelection * ext = (SoExtSelection *)data;
   if (ext == NULL) return;
@@ -1434,7 +1434,7 @@ SoExtSelectionP::preShapeCallback(void *data, SoCallbackAction *action, const So
 
 // callback that is called for a shape after all primitives have been processed
 SoCallbackAction::Response
-SoExtSelectionP::postShapeCallback(void * data, SoCallbackAction * action, const SoNode * COIN_UNUSED_ARG(node))
+SoExtSelectionP::postShapeCallback(void * data, SoCallbackAction * action, const SoNode * OBOL_UNUSED_ARG(node))
 {
   SoExtSelection * ext = (SoExtSelection*)data;
 
@@ -1476,7 +1476,7 @@ SoExtSelectionP::postShapeCallback(void * data, SoCallbackAction * action, const
 SoCallbackAction::Response
 SoExtSelectionP::cameraCB(void * data,
                           SoCallbackAction * action,
-                          const SoNode * COIN_UNUSED_ARG(node))
+                          const SoNode * OBOL_UNUSED_ARG(node))
 {
   SoExtSelection * thisp = (SoExtSelection*) data;
 
@@ -2249,7 +2249,7 @@ SoExtSelectionP::doSelect(const SoPath * path)
 
   if (newpath == NULL) { return; }
 
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoExtSelectionP::doSelect",
                          "selected path with %s at tail",
                          newpath->getTail()->getTypeId().getName().getString());
@@ -2379,7 +2379,7 @@ SoExtSelectionP::offscreenRenderCallback(void * userdata, SoAction * action)
     buffer than the onscreen buffer to increase the precision.
 
     The scale-value could be controlled by an environment variable
-    COIN_EXTSELECTION_SCALE_PRECISION, or something like that.
+    OBOL_EXTSELECTION_SCALE_PRECISION, or something like that.
 
     The downside of this is that the buffer scanning takes quite a lot
     of time already.
@@ -2480,7 +2480,7 @@ SoExtSelectionP::checkOffscreenRendererCapabilities()
 
 
 SbBool
-SoExtSelectionP::scanOffscreenBuffer(SoNode * COIN_UNUSED_ARG(sceneRoot))
+SoExtSelectionP::scanOffscreenBuffer(SoNode * OBOL_UNUSED_ARG(sceneRoot))
 {
 
   const SbViewportRegion vpr = renderer->getViewportRegion();
@@ -2704,7 +2704,7 @@ SoExtSelectionP::performSelection(SoHandleEventAction * action)
       static SbBool chkenv = FALSE;
       static auto dumpfilename = std::optional<std::string>{};
       if (chkenv == FALSE) {
-        dumpfilename = CoinInternal::getEnvironmentVariable("COIN_EXTSELECTION_SAVE_OFFSCREENBUFFER");
+        dumpfilename = CoinInternal::getEnvironmentVariable("OBOL_EXTSELECTION_SAVE_OFFSCREENBUFFER");
         chkenv = TRUE;
       }
       if (dumpfilename.has_value()) { this->renderer->writeToRGB(dumpfilename->c_str()); }

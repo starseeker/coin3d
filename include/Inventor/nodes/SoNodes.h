@@ -1,5 +1,5 @@
-#ifndef COIN_SONODES_H
-#define COIN_SONODES_H
+#ifndef OBOL_SONODES_H
+#define OBOL_SONODES_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -167,4 +167,4 @@
 #include <Inventor/nodes/SoDepthBuffer.h>
 #include <Inventor/nodes/SoAlphaTest.h>
 
-#endif // !COIN_SONODES_H
+#endif // !OBOL_SONODES_H

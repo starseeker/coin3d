@@ -30,8 +30,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_SBIMAGERESIZE_H
-#define COIN_SBIMAGERESIZE_H
+#ifndef OBOL_SBIMAGERESIZE_H
+#define OBOL_SBIMAGERESIZE_H
 
 /*!
   \file SbImageResize.h
@@ -130,4 +130,4 @@ bool SbImageResize_resize2D_inplace(const unsigned char* src, unsigned char* des
                                    int newwidth, int newheight,
                                    SbImageResizeFilter filter = SB_IMAGE_RESIZE_HIGH);
 
-#endif // COIN_SBIMAGERESIZE_H
+#endif // OBOL_SBIMAGERESIZE_H

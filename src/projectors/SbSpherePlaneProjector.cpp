@@ -46,9 +46,9 @@
 
 #include <Inventor/projectors/SbSpherePlaneProjector.h>
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 
 /*!
@@ -90,10 +90,10 @@ SbSpherePlaneProjector::project(const SbVec2f & point)
   SbBool tst = this->intersectSphereFront(projline, projpt);
   if (!tst || !this->isWithinTolerance(projpt)) {
     if (!this->tolPlane.intersect(projline, projpt)) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
       SoDebugError::postWarning("SbSphereSectionProjector::project",
                                 "working line is perpendicular to plane direction.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
       // set to 0, 0, 0 to avoid crazy rotations. lastPoint will then
       // never change, and there will be no rotation in getRotation()
       projpt = SbVec3f(0.0f, 0.0f, 0.0f);
@@ -124,10 +124,10 @@ SbSpherePlaneProjector::getRotation(const SbVec3f & point1, const SbBool tol1,
   SbVec3f vec = point2 - point1;
   SbVec3f axis = vec.cross(this->planeDir);
   if (axis.normalize() == 0.0f) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SbSpherePlaneProjector::getRotation",
                               "Unable to find rotation axis.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     return SbRotation::identity();
   }
 
@@ -159,10 +159,10 @@ SbSpherePlaneProjector::getRotation(const SbVec3f & point1, const SbBool tol1,
     SbVec3f vec1 = tolpt - this->sphere.getCenter();
     SbVec3f vec2 = spherePt - this->sphere.getCenter();
     if (vec1.normalize() == 0.0f || vec2.normalize() == 0.0f) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
       SoDebugError::postWarning("SbSpherePlaneProjector::getRotation",
                                 "Unable to find angle on projection sphere.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
       return SbRotation::identity();
     }
     float cosval = vec1.dot(vec2);

@@ -91,9 +91,9 @@
 #include <Inventor/SbImage.h>
 #include "glue/glp.h"
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
 #include <Inventor/threads/SbMutex.h>
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 
 #include "nodes/SoSubNodeP.h"
 #include "elements/SoTextureScalePolicyElement.h"
@@ -236,9 +236,9 @@
 
 class SoTextureCubeMapP {
 public:
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   SbMutex mutex;
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
   SoGLCubeMapImage * glimage;
   SoFieldSensor * filenames_sensor;
   int readstatus;
@@ -248,13 +248,13 @@ public:
 
 #define PRIVATE(p) (p->pimpl)
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
 #define LOCK_GLIMAGE(_thisp_) (PRIVATE(_thisp_)->mutex.lock())
 #define UNLOCK_GLIMAGE(_thisp_) (PRIVATE(_thisp_)->mutex.unlock())
-#else // COIN_THREADSAFE
+#else // OBOL_THREADSAFE
 #define LOCK_GLIMAGE(_thisp_)
 #define UNLOCK_GLIMAGE(_thisp_)
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 
 
 SO_NODE_SOURCE(SoTextureCubeMap);
@@ -326,7 +326,7 @@ SoTextureCubeMap::~SoTextureCubeMap()
 void
 SoTextureCubeMap::initClass(void)
 {
-  SO_NODE_INTERNAL_INIT_CLASS(SoTextureCubeMap, SO_FROM_COIN_2_4);
+  SO_NODE_INTERNAL_INIT_CLASS(SoTextureCubeMap, SO_FROM_OBOL_2_4);
 
   SO_ENABLE(SoGLRenderAction, SoGLMultiTextureImageElement);
   SO_ENABLE(SoGLRenderAction, SoGLMultiTextureEnabledElement);
@@ -460,7 +460,7 @@ SoTextureCubeMap::GLRender(SoGLRenderAction * action)
 
 // Documented in superclass.
 void
-SoTextureCubeMap::doAction(SoAction * COIN_UNUSED_ARG(action))
+SoTextureCubeMap::doAction(SoAction * OBOL_UNUSED_ARG(action))
 {
 #if 0 // not implemented yet
   SoState * state = action->getState();
@@ -523,10 +523,10 @@ SoTextureCubeMap::rayPick(SoRayPickAction * action)
   requested.
 */
 SbBool
-SoTextureCubeMap::readImage(const SbString & COIN_UNUSED_ARG(fname), int & COIN_UNUSED_ARG(w), int & COIN_UNUSED_ARG(h), int & COIN_UNUSED_ARG(nc),
-                      unsigned char *& COIN_UNUSED_ARG(bytes))
+SoTextureCubeMap::readImage(const SbString & OBOL_UNUSED_ARG(fname), int & OBOL_UNUSED_ARG(w), int & OBOL_UNUSED_ARG(h), int & OBOL_UNUSED_ARG(nc),
+                      unsigned char *& OBOL_UNUSED_ARG(bytes))
 {
-  COIN_OBSOLETED();
+  OBOL_OBSOLETED();
   return FALSE;
 }
 
@@ -620,7 +620,7 @@ SoTextureCubeMap::loadFilename(const SbString & filename, SoSFImage * image)
 // called when filename changes
 //
 void
-SoTextureCubeMap::filenameSensorCB(void * data, SoSensor * COIN_UNUSED_ARG(s))
+SoTextureCubeMap::filenameSensorCB(void * data, SoSensor * OBOL_UNUSED_ARG(s))
 {
   SoTextureCubeMap * thisp = (SoTextureCubeMap*) data;
 

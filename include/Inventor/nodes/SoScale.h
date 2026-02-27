@@ -1,5 +1,5 @@
-#ifndef COIN_SOSCALE_H
-#define COIN_SOSCALE_H
+#ifndef OBOL_SOSCALE_H
+#define OBOL_SOSCALE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/fields/SoSFVec3f.h>
 #include <Inventor/nodes/SoTransformation.h>
 
-class COIN_DLL_API SoScale : public SoTransformation {
+class OBOL_DLL_API SoScale : public SoTransformation {
   typedef SoTransformation inherited;
 
   SO_NODE_HEADER(SoScale);
@@ -60,4 +60,4 @@ protected:
   virtual ~SoScale();
 };
 
-#endif // !COIN_SOSCALE_H
+#endif // !OBOL_SOSCALE_H

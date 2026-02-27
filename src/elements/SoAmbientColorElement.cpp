@@ -80,18 +80,18 @@ SoAmbientColorElement::~SoAmbientColorElement()
 //! FIXME: write doc.
 
 void
-SoAmbientColorElement::set(SoState * const state, SoNode * const COIN_UNUSED_ARG(node),
+SoAmbientColorElement::set(SoState * const state, SoNode * const OBOL_UNUSED_ARG(node),
                            const int32_t numcolors,
                            const SbColor * const colors)
 {
   SoLazyElement::setAmbient(state, colors);
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (numcolors > 1) {
     SoDebugError::postWarning("SoAmbientColorElement::set",
                               "Multiple ambient colors not supported. "
                               "All color except the first will be ignored.");
   }
-#endif // COIN_DEBIG
+#endif // OBOL_DEBIG
 }
 
 //! FIXME: write doc.

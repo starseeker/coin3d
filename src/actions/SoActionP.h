@@ -1,5 +1,5 @@
-#ifndef COIN_SOACTIONP_H
-#define COIN_SOACTIONP_H
+#ifndef OBOL_SOACTIONP_H
+#define OBOL_SOACTIONP_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,9 +33,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #error this is a private header file
-#endif /* !COIN_INTERNAL */
+#endif /* !OBOL_INTERNAL */
 
 #include "config.h"
 
@@ -71,4 +71,4 @@ public:
   static SoProfilerStats * getProfilerStatsNode(void);
 }; // SoActionP
 
-#endif // !COIN_SOACTIONP_H
+#endif // !OBOL_SOACTIONP_H

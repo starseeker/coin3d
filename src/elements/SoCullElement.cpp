@@ -91,9 +91,9 @@
 #include "config.h"
 #include "SbBasicP.h"
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 SO_ELEMENT_SOURCE(SoCullElement);
 
@@ -128,7 +128,7 @@ SoCullElement::~SoCullElement()
 
 // doc from parent
 void
-SoCullElement::init(SoState * COIN_UNUSED_ARG(state))
+SoCullElement::init(SoState * OBOL_UNUSED_ARG(state))
 {
   this->numplanes = 0;
   this->flags = 0;
@@ -137,7 +137,7 @@ SoCullElement::init(SoState * COIN_UNUSED_ARG(state))
 
 // doc from parent
 void
-SoCullElement::push(SoState * COIN_UNUSED_ARG(state))
+SoCullElement::push(SoState * OBOL_UNUSED_ARG(state))
 {
   const SoCullElement * prev = coin_assert_cast<const SoCullElement *>
     (
@@ -165,9 +165,9 @@ SoCullElement::setViewVolume(SoState * state, const SbViewVolume & vv)
      );
   if (elem) {
     if (elem->numplanes + 6 > SoCullElement::MAXPLANES) { // _very_ unlikely
-#if COIN_DEBUG
+#if OBOL_DEBUG
       SoDebugError::postWarning("SoCullElement::setViewVolume",  "too many planes");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
       return;
     }
     int i;
@@ -200,9 +200,9 @@ SoCullElement::addPlane(SoState * state, const SbPlane &newplane)
      );
   if (elem) {
     if (elem->numplanes >= SoCullElement::MAXPLANES) {  // _very_ unlikely
-#if COIN_DEBUG
+#if OBOL_DEBUG
       SoDebugError::postWarning("SoCullElement::addPlane",  "too many planes");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
       return;
     }
     elem->plane[elem->numplanes++] = newplane;

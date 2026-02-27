@@ -30,8 +30,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_SOCOMPOSEMATRIX_H
-#define COIN_SOCOMPOSEMATRIX_H
+#ifndef OBOL_SOCOMPOSEMATRIX_H
+#define OBOL_SOCOMPOSEMATRIX_H
 
 // Warning for application programmers: do not include this header
 // file in your application code if you want to stay sourcecode
@@ -46,7 +46,7 @@
 #include <Inventor/fields/SoMFRotation.h>
 
 
-class COIN_DLL_API SoComposeMatrix : public SoEngine {
+class OBOL_DLL_API SoComposeMatrix : public SoEngine {
   typedef SoEngine inherited;
 
   SO_COMPOSE__HEADER(SoComposeMatrix);
@@ -62,4 +62,4 @@ public:
 
 };
 
-#endif // !COIN_SOCOMPOSEMATRIX_H
+#endif // !OBOL_SOCOMPOSEMATRIX_H

@@ -1,5 +1,5 @@
-#ifndef COIN_SOACCUMULATEDELEMENT_H
-#define COIN_SOACCUMULATEDELEMENT_H
+#ifndef OBOL_SOACCUMULATEDELEMENT_H
+#define OBOL_SOACCUMULATEDELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -36,7 +36,7 @@
 #include <Inventor/elements/SoSubElement.h>
 #include <Inventor/lists/SbList.h>
 
-class COIN_DLL_API SoAccumulatedElement : public SoElement {
+class OBOL_DLL_API SoAccumulatedElement : public SoElement {
   typedef SoElement inherited;
 
   SO_ELEMENT_ABSTRACT_HEADER(SoAccumulatedElement);
@@ -65,4 +65,4 @@ private:
   SbBool recursecapture;
 };
 
-#endif // !COIN_SOACCUMULATEDELEMENT_H
+#endif // !OBOL_SOACCUMULATEDELEMENT_H

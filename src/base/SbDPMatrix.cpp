@@ -69,17 +69,17 @@
 #include <Inventor/SbDPLine.h>
 #include <Inventor/SbMatrix.h>
 
-#include "config.h" // COIN_STUB()
+#include "config.h" // OBOL_STUB()
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
-#ifndef COIN_WORKAROUND_NO_USING_STD_FUNCS
+#ifndef OBOL_WORKAROUND_NO_USING_STD_FUNCS
 using std::memmove;
 using std::memcmp;
 using std::memcpy;
-#endif // !COIN_WORKAROUND_NO_USING_STD_FUNCS
+#endif // !OBOL_WORKAROUND_NO_USING_STD_FUNCS
 
 // FIXME: should merge all the PD code we're using from GGIV into
 // SbDPMatrix, SbDPRotation and SbVec3d proper (for two reasons: 1)
@@ -308,11 +308,11 @@ SbDPMatrix::operator*=(const double v)
 void
 SbDPMatrix::operator/=(const double v)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (v == 0.0)
     SoDebugError::postWarning("SbDPMatrix::operator/=",
                               "Division by zero.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   this->operator*=(1.0/v);
 }
@@ -325,7 +325,7 @@ double
 SbDPMatrix::det3(int r1, int r2, int r3,
                int c1, int c2, int c3) const
 {
-#if COIN_EXTRA_DEBUG
+#if OBOL_EXTRA_DEBUG
   // Check indices.
   if (r1<0 || r1>3 || r2<0 || r2>3 || r3<0 || r3>3 ||
       c1<0 || c1>3 || c2<0 || c2>3 || c3<0 || c3>3) {
@@ -335,7 +335,7 @@ SbDPMatrix::det3(int r1, int r2, int r3,
   if (r1==r2 || r1==r3 || r2==r3 ||
       c1==c2 || c1==c3 || c2==c3)
     SoDebugError::post("SbDPMatrix::det3", "Indices should be distinct.");
-#endif // COIN_EXTRA_DEBUG
+#endif // OBOL_EXTRA_DEBUG
 
   // More or less directly from "Advanced Engineering Mathematics"
   // (E. Kreyszig), 6th edition.
@@ -441,10 +441,10 @@ SbDPMatrix::inverse(void) const
     /* Is the submatrix A singular? */
     if ((det_1 == 0.0) || (SbAbs(det_1 / (pos - neg)) < DBL_EPSILON)) {
       /* Matrix M has no inverse */
-#if COIN_DEBUG
+#if OBOL_DEBUG
       SoDebugError::postWarning("SbMatrix::inverse",
                                 "Matrix is singular.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
       return *this;
     }
     else {
@@ -511,10 +511,10 @@ SbDPMatrix::inverse(void) const
       }
 
       if (max == 0.0) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
         SoDebugError::postWarning("SbMatrix::inverse",
                                   "Matrix is singular.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
         return *this;
       }
 
@@ -561,11 +561,11 @@ SbDPMatrix::inverse(void) const
 SbBool
 SbDPMatrix::equals(const SbDPMatrix & m, double tolerance) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (tolerance < 0.0)
     SoDebugError::postWarning("SbDPMatrix::equals",
                               "tolerance should be >=0.0.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   for (int i=0; i < 4; i++) {
     for (int j=0;  j< 4; j++) {
@@ -603,11 +603,11 @@ SbDPMatrix::operator SbDPMat&(void)
 double *
 SbDPMatrix::operator [](int i)
 {
-#if COIN_EXTRA_DEBUG
+#if OBOL_EXTRA_DEBUG
   if (i<0 || i>3) {
     SoDebugError::post("SbDPMatrix::operator[]", "Index out of bounds. ");
   }
-#endif // COIN_EXTRA_DEBUG
+#endif // OBOL_EXTRA_DEBUG
 
    return this->matrix[i];
 }
@@ -621,11 +621,11 @@ SbDPMatrix::operator [](int i)
 const double *
 SbDPMatrix::operator [](int i) const
 {
-#if COIN_EXTRA_DEBUG
+#if OBOL_EXTRA_DEBUG
   if (i<0 || i>3) {
     SoDebugError::postWarning("SbDPMatrix::operator[]", "Index out of bounds. ");
   }
-#endif // COIN_EXTRA_DEBUG
+#endif // OBOL_EXTRA_DEBUG
 
    return this->matrix[i];
 }
@@ -960,11 +960,11 @@ SbDPMatrix::getTransform(SbVec3d & translation,
   \sa getTransform()
  */
 SbBool
-SbDPMatrix::factor(SbDPMatrix & COIN_UNUSED_ARG(r), SbVec3d & COIN_UNUSED_ARG(s), SbDPMatrix & COIN_UNUSED_ARG(u), SbVec3d & COIN_UNUSED_ARG(t),
-                 SbDPMatrix & COIN_UNUSED_ARG(proj))
+SbDPMatrix::factor(SbDPMatrix & OBOL_UNUSED_ARG(r), SbVec3d & OBOL_UNUSED_ARG(s), SbDPMatrix & OBOL_UNUSED_ARG(u), SbVec3d & OBOL_UNUSED_ARG(t),
+                 SbDPMatrix & OBOL_UNUSED_ARG(proj))
 {
   // FIXME: not implemented, not documented. 1998MMDD mortene.
-  COIN_STUB();
+  OBOL_STUB();
   return FALSE;
 }
 

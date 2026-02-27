@@ -1,5 +1,5 @@
-#ifndef COIN_FIELDS_SHARED_H
-#define COIN_FIELDS_SHARED_H
+#ifndef OBOL_FIELDS_SHARED_H
+#define OBOL_FIELDS_SHARED_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -113,4 +113,4 @@ void sosfvec4d_write_value(SoOutput * out, const SbVec4d & v);
 
 // *************************************************************************
 
-#endif // ! COIN_FIELDS_SHARED_H
+#endif // ! OBOL_FIELDS_SHARED_H

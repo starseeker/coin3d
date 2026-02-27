@@ -139,7 +139,7 @@ int main(int argc, char **argv)
     // Load or create scene
     SoSeparator *scene = NULL;
     SoInput in;
-    const char *dataDir = getenv("COIN_DATA_DIR");
+    const char *dataDir = getenv("OBOL_DATA_DIR");
     if (!dataDir) dataDir = "../../data";
     
     char benchPath[512];

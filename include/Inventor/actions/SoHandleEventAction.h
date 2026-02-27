@@ -1,5 +1,5 @@
-#ifndef COIN_SOHANDLEEVENTACTION_H
-#define COIN_SOHANDLEEVENTACTION_H
+#ifndef OBOL_SOHANDLEEVENTACTION_H
+#define OBOL_SOHANDLEEVENTACTION_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -43,7 +43,7 @@ class SoPickedPointList;
 
 class SoHandleEventActionP;
 
-class COIN_DLL_API SoHandleEventAction : public SoAction {
+class OBOL_DLL_API SoHandleEventAction : public SoAction {
   typedef SoAction inherited;
 
   SO_ACTION_HEADER(SoHandleEventAction);
@@ -81,9 +81,9 @@ private:
   SoHandleEventAction & operator = (const SoHandleEventAction & rhs);
 }; // SoHandleEventAction
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 // For SGI / TGS Open Inventor compile-time compatibility.
 #include <Inventor/actions/SoRayPickAction.h>
-#endif // COIN_INTERNAL
+#endif // OBOL_INTERNAL
 
-#endif // !COIN_SOHANDLEEVENTACTION_H
+#endif // !OBOL_SOHANDLEEVENTACTION_H

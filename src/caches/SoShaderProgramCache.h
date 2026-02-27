@@ -1,5 +1,5 @@
-#ifndef COIN_SOSHADERPROGRAMCACHE_H
-#define COIN_SOSHADERPROGRAMCACHE_H
+#ifndef OBOL_SOSHADERPROGRAMCACHE_H
+#define OBOL_SOSHADERPROGRAMCACHE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -38,7 +38,7 @@
 class SoShaderProgramCacheP;
 class SbString;
 
-class COIN_DLL_API SoShaderProgramCache : public SoCache {
+class OBOL_DLL_API SoShaderProgramCache : public SoCache {
   typedef SoCache inherited;
 public:
   SoShaderProgramCache(SoState *state);
@@ -52,4 +52,4 @@ private:
   SoShaderProgramCacheP * pimpl;
 };
 
-#endif // !COIN_SOSHADERPROGRAMCACHE_H
+#endif // !OBOL_SOSHADERPROGRAMCACHE_H

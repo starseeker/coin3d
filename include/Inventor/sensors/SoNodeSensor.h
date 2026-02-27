@@ -1,5 +1,5 @@
-#ifndef COIN_SONODESENSOR_H
-#define COIN_SONODESENSOR_H
+#ifndef OBOL_SONODESENSOR_H
+#define OBOL_SONODESENSOR_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/sensors/SoDataSensor.h>
 
-class COIN_DLL_API SoNodeSensor : public SoDataSensor {
+class OBOL_DLL_API SoNodeSensor : public SoDataSensor {
   typedef SoDataSensor inherited;
 
 public:
@@ -52,4 +52,4 @@ private:
   SoNode * convict;
 };
 
-#endif // !COIN_SONODESENSOR_H
+#endif // !OBOL_SONODESENSOR_H

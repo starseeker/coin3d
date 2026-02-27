@@ -30,8 +30,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_SODECOMPOSEVEC4F_H
-#define COIN_SODECOMPOSEVEC4F_H
+#ifndef OBOL_SODECOMPOSEVEC4F_H
+#define OBOL_SODECOMPOSEVEC4F_H
 
 // Warning for application programmers: do not include this header
 // file in your application code if you want to stay sourcecode
@@ -45,7 +45,7 @@
 #include <Inventor/fields/SoMFVec4f.h>
 
 
-class COIN_DLL_API SoDecomposeVec4f : public SoEngine {
+class OBOL_DLL_API SoDecomposeVec4f : public SoEngine {
   typedef SoEngine inherited;
   SO_COMPOSE__HEADER(SoDecomposeVec4f);
 
@@ -58,4 +58,4 @@ public:
   SoEngineOutput w; // SoMFFloat
 };
 
-#endif // !COIN_SODECOMPOSEVEC4F_H
+#endif // !OBOL_SODECOMPOSEVEC4F_H

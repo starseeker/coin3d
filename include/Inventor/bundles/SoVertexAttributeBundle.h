@@ -1,5 +1,5 @@
-#ifndef COIN_VERTEXATTRIBUTEBUNDLE_H
-#define COIN_VERTEXATTRIBUTEBUNDLE_H
+#ifndef OBOL_VERTEXATTRIBUTEBUNDLE_H
+#define OBOL_VERTEXATTRIBUTEBUNDLE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -38,7 +38,7 @@
 
 class SoVertexAttributeBundleP;
 
-class COIN_DLL_API SoVertexAttributeBundle : public SoBundle {
+class OBOL_DLL_API SoVertexAttributeBundle : public SoBundle {
 public:
   SoVertexAttributeBundle(SoAction * action, SbBool forrendering);
   ~SoVertexAttributeBundle();
@@ -52,4 +52,4 @@ private:
 };
 
 
-#endif // !COIN_VERTEXATTRIBUTEBUNDLE_H
+#endif // !OBOL_VERTEXATTRIBUTEBUNDLE_H

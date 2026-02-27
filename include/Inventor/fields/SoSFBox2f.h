@@ -1,5 +1,5 @@
-#ifndef COIN_SOSFBOX2F_H
-#define COIN_SOSFBOX2F_H
+#ifndef OBOL_SOSFBOX2F_H
+#define OBOL_SOSFBOX2F_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/fields/SoSubField.h>
 #include <Inventor/SbBox2f.h>
 
-class COIN_DLL_API SoSFBox2f : public SoSField {
+class OBOL_DLL_API SoSFBox2f : public SoSField {
   typedef SoSField inherited;
 
   SO_SFIELD_HEADER(SoSFBox2f, SbBox2f, const SbBox2f &);
@@ -51,4 +51,4 @@ public:
 
 }; // SoSFBox2f
 
-#endif // !COIN_SOSFBOX2F_H
+#endif // !OBOL_SOSFBOX2F_H

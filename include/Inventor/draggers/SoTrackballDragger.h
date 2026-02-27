@@ -1,5 +1,5 @@
-#ifndef COIN_SOTRACKBALLDRAGGER_H
-#define COIN_SOTRACKBALLDRAGGER_H
+#ifndef OBOL_SOTRACKBALLDRAGGER_H
+#define OBOL_SOTRACKBALLDRAGGER_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -48,7 +48,7 @@ class SbLineProjector;
 class SoTimerSensor;
 class SoTrackballDraggerP;
 
-class COIN_DLL_API SoTrackballDragger : public SoDragger {
+class OBOL_DLL_API SoTrackballDragger : public SoDragger {
   typedef SoDragger inherited;
 
   SO_KIT_HEADER(SoTrackballDragger);
@@ -118,4 +118,4 @@ private:
   SoTrackballDragger & operator = (const SoTrackballDragger & rhs);
 }; // SoTrackballDragger
 
-#endif // !COIN_SOTRACKBALLDRAGGER_H
+#endif // !OBOL_SOTRACKBALLDRAGGER_H

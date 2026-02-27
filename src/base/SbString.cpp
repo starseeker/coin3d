@@ -208,9 +208,9 @@ SbString::upper() const
 void
 SbString::print(std::FILE * fp) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   std::fputs(this->getString(),fp);
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }
 
 

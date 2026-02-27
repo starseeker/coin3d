@@ -1,5 +1,5 @@
-#ifndef COIN_SORESETMATRIXELEMENT_H
-#define COIN_SORESETMATRIXELEMENT_H
+#ifndef OBOL_SORESETMATRIXELEMENT_H
+#define OBOL_SORESETMATRIXELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -61,4 +61,4 @@ private:
   SbMatrix matrix;
 };
 
-#endif // COIN_SORESETMATRIXELEMENT_H
+#endif // OBOL_SORESETMATRIXELEMENT_H

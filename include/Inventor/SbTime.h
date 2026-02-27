@@ -1,5 +1,5 @@
-#ifndef COIN_SBTIME_H
-#define COIN_SBTIME_H
+#ifndef OBOL_SBTIME_H
+#define OBOL_SBTIME_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -47,7 +47,7 @@
 #endif // max
 
 
-class COIN_DLL_API SbTime {
+class OBOL_DLL_API SbTime {
 public:
   SbTime(void);
   SbTime(const double sec);
@@ -70,14 +70,14 @@ public:
   SbString format(const char * const fmt = "%S.%i") const;
   SbString formatDate(const char * const fmt = NULL) const;
   SbBool parsedate(const char * const date);
-  friend COIN_DLL_API SbTime operator +(const SbTime & t0, const SbTime & t1);
-  friend COIN_DLL_API SbTime operator -(const SbTime & t0, const SbTime & t1);
+  friend OBOL_DLL_API SbTime operator +(const SbTime & t0, const SbTime & t1);
+  friend OBOL_DLL_API SbTime operator -(const SbTime & t0, const SbTime & t1);
   SbTime & operator +=(const SbTime & tm);
   SbTime & operator -=(const SbTime & tm);
   SbTime operator-(void) const;
-  friend COIN_DLL_API SbTime operator *(const double s, const SbTime & tm);
-  friend COIN_DLL_API SbTime operator *(const SbTime & tm, const double s);
-  friend COIN_DLL_API SbTime operator /(const SbTime & tm, const double s);
+  friend OBOL_DLL_API SbTime operator *(const double s, const SbTime & tm);
+  friend OBOL_DLL_API SbTime operator *(const SbTime & tm, const double s);
+  friend OBOL_DLL_API SbTime operator /(const SbTime & tm, const double s);
   SbTime & operator *=(const double s);
   SbTime & operator /=(const double s);
   double operator /(const SbTime & tm) const;
@@ -96,11 +96,11 @@ private:
   void addToString(SbString & str, const double val) const;
 };
 
-COIN_DLL_API SbTime operator +(const SbTime & t0, const SbTime & t1);
-COIN_DLL_API SbTime operator -(const SbTime & t0, const SbTime & t1);
-COIN_DLL_API SbTime operator *(const double s, const SbTime & tm);
-COIN_DLL_API SbTime operator *(const SbTime & tm, const double s);
-COIN_DLL_API SbTime operator /(const SbTime & tm, const double s);
+OBOL_DLL_API SbTime operator +(const SbTime & t0, const SbTime & t1);
+OBOL_DLL_API SbTime operator -(const SbTime & t0, const SbTime & t1);
+OBOL_DLL_API SbTime operator *(const double s, const SbTime & tm);
+OBOL_DLL_API SbTime operator *(const SbTime & tm, const double s);
+OBOL_DLL_API SbTime operator /(const SbTime & tm, const double s);
 
 // Avoid problem with Microsoft Win32 API headers (see above).
 // Redefine macro max() back to a definition compatible with what it
@@ -110,4 +110,4 @@ COIN_DLL_API SbTime operator /(const SbTime & tm, const double s);
 #undef SBTIME_UNDEF_MAX
 #endif // SBTIME_UNDEF_MAX
 
-#endif // !COIN_SBTIME_H
+#endif // !OBOL_SBTIME_H

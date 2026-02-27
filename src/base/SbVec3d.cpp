@@ -41,9 +41,9 @@
 #include <Inventor/SbVec3i32.h>
 #include <Inventor/SbDPPlane.h>
 #include <Inventor/fields/SoSFVec3d.h>
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 #include "CoinTidbits.h" // coin_debug_normalize()
 #include "coinString.h"
@@ -125,14 +125,14 @@ SbVec3d::SbVec3d(const SbDPPlane & p0, const SbDPPlane & p1, const SbDPPlane & p
   SbVec3d n1 = p1.getNormal();
   SbVec3d n2 = p2.getNormal();
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (!((fabs(n0.dot(n1)) != 1.0) &&
        (fabs(n0.dot(n2)) != 1.0) &&
        (fabs(n1.dot(n2)) != 1.0)))
     SoDebugError::postWarning("SbVec3d::SbVec3d",
                               "Two or more of the given planes are parallel"
                               " => Can't create intersection point.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   // The equation for a point in a plane can be:
   //
@@ -238,11 +238,11 @@ SbVec3d::cross(const SbVec3d & v) const
 SbBool
 SbVec3d::equals(const SbVec3d & v, double tolerance) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (!(tolerance >= 0.0))
     SoDebugError::postWarning("SbVec3d::equals",
                               "Tolerance should be >= 0.0");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   double xdist = this->vec[0] - v[0];
   double ydist = this->vec[1] - v[1];
@@ -323,13 +323,13 @@ SbVec3d::normalize(void)
   if (len > 0.0) {
     operator/=(len);
   }
-#if COIN_DEBUG
+#if OBOL_DEBUG
   else if (coin_debug_normalize()) {
     SoDebugError::postWarning("SbVec3d::normalize",
                               "The length of the vector should be > 0.0 "
                               "to be able to normalize.");
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   return len;
 }
 
@@ -555,8 +555,8 @@ SbVec3d::fromString(const SbString & str)
 void
 SbVec3d::print(FILE * fp) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   fputs(this->toString().getString(),fp);
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }
 

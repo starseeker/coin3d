@@ -1,5 +1,5 @@
-#ifndef COIN_SOVIEWPORTREGIONELEMENT_H
-#define COIN_SOVIEWPORTREGIONELEMENT_H
+#ifndef OBOL_SOVIEWPORTREGIONELEMENT_H
+#define OBOL_SOVIEWPORTREGIONELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -36,7 +36,7 @@
 #include <Inventor/elements/SoSubElement.h>
 #include <Inventor/SbViewportRegion.h>
 
-class COIN_DLL_API SoViewportRegionElement : public SoElement {
+class OBOL_DLL_API SoViewportRegionElement : public SoElement {
   typedef SoElement inherited;
 
   SO_ELEMENT_HEADER(SoViewportRegionElement);
@@ -63,4 +63,4 @@ protected:
 private:
 };
 
-#endif // !COIN_SOVIEWPORTREGIONELEMENT_H
+#endif // !OBOL_SOVIEWPORTREGIONELEMENT_H

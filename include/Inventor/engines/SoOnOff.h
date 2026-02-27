@@ -30,15 +30,15 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_SOONOFF_H
-#define COIN_SOONOFF_H
+#ifndef OBOL_SOONOFF_H
+#define OBOL_SOONOFF_H
 
 #include <Inventor/engines/SoSubEngine.h>
 #include <Inventor/engines/SoEngineOutput.h>
 #include <Inventor/fields/SoSFTrigger.h>
 
 
-class COIN_DLL_API SoOnOff : public SoEngine {
+class OBOL_DLL_API SoOnOff : public SoEngine {
   typedef SoEngine inherited;
 
   SO_ENGINE_HEADER(SoOnOff);
@@ -64,4 +64,4 @@ private:
   SbBool state;
 };
 
-#endif // !COIN_SOONOFF_H
+#endif // !OBOL_SOONOFF_H

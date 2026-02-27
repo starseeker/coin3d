@@ -1,5 +1,5 @@
-#ifndef COIN_SOTYPE_H
-#define COIN_SOTYPE_H
+#ifndef OBOL_SOTYPE_H
+#define OBOL_SOTYPE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -36,13 +36,13 @@
 #include <Inventor/SbBasic.h>
 #include <cstdlib> // For NULL definition.
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 // The next include for Open Inventor compatibility.
 //
 // FIXME: I haven't checked that this is actually required -- test vs
 // SGI Inventor. 20050524 mortene.
 #include <Inventor/SbDict.h>
-#endif // COIN_INTERNAL
+#endif // OBOL_INTERNAL
 
 // *************************************************************************
 
@@ -56,7 +56,7 @@ template <typename Type> class SbList;
 
 // *************************************************************************
 
-class COIN_DLL_API SoType {
+class OBOL_DLL_API SoType {
 public:
   typedef void * (*instantiationMethod)(void);
 
@@ -161,4 +161,4 @@ SoType::isBad(void) const
   return (this->index == 0);
 }
 
-#endif // !COIN_SOTYPE_H
+#endif // !OBOL_SOTYPE_H

@@ -1,5 +1,5 @@
-#ifndef COIN_SBTHREAD_H
-#define COIN_SBTHREAD_H
+#ifndef OBOL_SBTHREAD_H
+#define OBOL_SBTHREAD_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -80,4 +80,4 @@ private:
   void * return_value; // Store return value for compatibility
 };
 
-#endif // !COIN_SBTHREAD_H
+#endif // !OBOL_SBTHREAD_H

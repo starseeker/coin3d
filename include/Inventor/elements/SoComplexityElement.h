@@ -1,5 +1,5 @@
-#ifndef COIN_SOCOMPLEXITYELEMENT_H
-#define COIN_SOCOMPLEXITYELEMENT_H
+#ifndef OBOL_SOCOMPLEXITYELEMENT_H
+#define OBOL_SOCOMPLEXITYELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/elements/SoFloatElement.h>
 
-class COIN_DLL_API SoComplexityElement : public SoFloatElement {
+class OBOL_DLL_API SoComplexityElement : public SoFloatElement {
   typedef SoFloatElement inherited;
 
   SO_ELEMENT_HEADER(SoComplexityElement);
@@ -57,4 +57,4 @@ public:
 
 };
 
-#endif // !COIN_SOCOMPLEXITYELEMENT_H
+#endif // !OBOL_SOCOMPLEXITYELEMENT_H

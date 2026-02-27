@@ -1,5 +1,5 @@
-#ifndef COIN_SOTRACKBALLMANIP_H
-#define COIN_SOTRACKBALLMANIP_H
+#ifndef OBOL_SOTRACKBALLMANIP_H
+#define OBOL_SOTRACKBALLMANIP_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -38,7 +38,7 @@
 
 class SoTrackballManipP;
 
-class COIN_DLL_API SoTrackballManip : public SoTransformManip {
+class OBOL_DLL_API SoTrackballManip : public SoTransformManip {
   typedef SoTransformManip inherited;
 
   SO_NODE_HEADER(SoTrackballManip);
@@ -58,4 +58,4 @@ private:
   SoTrackballManip & operator = (const SoTrackballManip & rhs);
 }; // SoTrackballManip
 
-#endif // !COIN_SOTRACKBALLMANIP_H
+#endif // !OBOL_SOTRACKBALLMANIP_H

@@ -47,9 +47,9 @@
 #include <Inventor/nodes/SoNode.h>
 #include <Inventor/fields/SoSFNode.h>
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 
 /*!

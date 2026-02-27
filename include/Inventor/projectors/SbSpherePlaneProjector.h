@@ -1,5 +1,5 @@
-#ifndef COIN_SBSPHEREPLANEPROJECTOR_H
-#define COIN_SBSPHEREPLANEPROJECTOR_H
+#ifndef OBOL_SBSPHEREPLANEPROJECTOR_H
+#define OBOL_SBSPHEREPLANEPROJECTOR_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/projectors/SbSphereSectionProjector.h>
 
-class COIN_DLL_API SbSpherePlaneProjector : public SbSphereSectionProjector {
+class OBOL_DLL_API SbSpherePlaneProjector : public SbSphereSectionProjector {
   typedef SbSphereSectionProjector inherited;
 
 public:
@@ -55,4 +55,4 @@ protected:
                          const SbVec3f & point2, const SbBool tol2);
 };
 
-#endif // !COIN_SBSPHEREPLANEPROJECTOR_H
+#endif // !OBOL_SBSPHEREPLANEPROJECTOR_H

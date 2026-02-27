@@ -52,9 +52,9 @@
 #include <Inventor/SbBox3s.h>
 #include <Inventor/SbBox3i32.h>
 #include <Inventor/SbMatrix.h>
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 /*!
   \fn SbBox3f::SbBox3f(void)
@@ -386,10 +386,10 @@ SbBox3f::getSpan(const SbVec3f & dir, float & dmin, float & dmax) const
   SbVec3f corner;
   SbVec3f normdir(dir);
   if (normdir.normalize() == 0.0f) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SbBox3f::getSpan",
                               "The direction is a null vector.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
     dmin = dmax = 0.0f;
     return;
@@ -429,13 +429,13 @@ SbBox3f::getSpan(const SbVec3f & dir, float & dmin, float & dmax) const
 void
 SbBox3f::transform(const SbMatrix & matrix)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (this->isEmpty()) {
     SoDebugError::postWarning("SbBox3f::transform",
                               "The box is not valid!");
     return;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   SbVec3f dst;
   SbVec3f points[2] = {this->minpt, this->maxpt};
@@ -459,13 +459,13 @@ SbBox3f::transform(const SbMatrix & matrix)
 void
 SbBox3f::print(FILE * fp) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   SbVec3f minv, maxv;
   this->getBounds(minv, maxv);
   minv.print(fp);
   fprintf(fp, " ");
   maxv.print(fp);
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }
 
 /*!

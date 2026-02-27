@@ -55,7 +55,7 @@
 #include <windows.h>
 #endif
 
-#ifdef COIN3D_OSMESA_BUILD
+#ifdef OBOL_OSMESA_BUILD
 #include <OSMesa/gl.h>
 #elif defined(__APPLE__)
 #include <OpenGL/gl.h>

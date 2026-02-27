@@ -40,7 +40,7 @@
   need to store a single vector with three elements.
 
   \sa SbVec3b, SoMFVec3b
-  \COIN_CLASS_EXTENSION
+  \OBOL_CLASS_EXTENSION
   \since Coin 2.5
 */
 

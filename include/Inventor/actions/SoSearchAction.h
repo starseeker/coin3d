@@ -1,5 +1,5 @@
-#ifndef COIN_SOSEARCHACTION_H
-#define COIN_SOSEARCHACTION_H
+#ifndef OBOL_SOSEARCHACTION_H
+#define OBOL_SOSEARCHACTION_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -41,7 +41,7 @@
 
 class SoSearchActionP;
 
-class COIN_DLL_API SoSearchAction : public SoAction {
+class OBOL_DLL_API SoSearchAction : public SoAction {
   typedef SoAction inherited;
 
   SO_ACTION_HEADER(SoSearchAction);
@@ -100,4 +100,4 @@ private:
   SoSearchAction & operator = (const SoSearchAction & rhs);
 }; // SoSearchAction
 
-#endif // !COIN_SOSEARCHACTION_H
+#endif // !OBOL_SOSEARCHACTION_H

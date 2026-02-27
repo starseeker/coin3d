@@ -1,5 +1,5 @@
-#ifndef COIN_SOPICKEDPOINT_H
-#define COIN_SOPICKEDPOINT_H
+#ifndef OBOL_SOPICKEDPOINT_H
+#define OBOL_SOPICKEDPOINT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -45,7 +45,7 @@ class SoNode;
 class SoState;
 class SbMatrix;
 
-class COIN_DLL_API SoPickedPoint {
+class OBOL_DLL_API SoPickedPoint {
 public:
   SoPickedPoint(const SoPickedPoint & pp);
   SoPickedPoint(const SoPath * const path, SoState * const state,
@@ -88,4 +88,4 @@ private:
   void applyMatrixAction(const SoNode * const node) const;
 };
 
-#endif // !COIN_SOPICKEDPOINT_H
+#endif // !OBOL_SOPICKEDPOINT_H

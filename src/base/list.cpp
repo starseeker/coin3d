@@ -116,9 +116,9 @@ cc_list_insert(cc_list * list, void * item, int insertbefore)
 {
   if (!list) return;
   
-#ifdef COIN_EXTRA_DEBUG
+#ifdef OBOL_EXTRA_DEBUG
   assert(insertbefore >= 0 && insertbefore <= static_cast<int>(list->items.size()));
-#endif /* COIN_EXTRA_DEBUG */
+#endif /* OBOL_EXTRA_DEBUG */
   
   if (insertbefore >= 0 && insertbefore <= static_cast<int>(list->items.size())) {
     list->items.insert(list->items.begin() + insertbefore, item);
@@ -130,9 +130,9 @@ cc_list_remove(cc_list * list, int index)
 {
   if (!list) return;
   
-#ifdef COIN_EXTRA_DEBUG
+#ifdef OBOL_EXTRA_DEBUG
   assert(index >= 0 && index < static_cast<int>(list->items.size()));
-#endif /* COIN_EXTRA_DEBUG */
+#endif /* OBOL_EXTRA_DEBUG */
   
   if (index >= 0 && index < static_cast<int>(list->items.size())) {
     list->items.erase(list->items.begin() + index);
@@ -145,9 +145,9 @@ cc_list_remove_item(cc_list * list, void * item)
   if (!list) return;
   
   int idx = cc_list_find(list, item);
-#ifdef COIN_EXTRA_DEBUG
+#ifdef OBOL_EXTRA_DEBUG
   assert(idx != -1);
-#endif /* COIN_EXTRA_DEBUG */
+#endif /* OBOL_EXTRA_DEBUG */
   if (idx != -1) {
     cc_list_remove(list, idx);
   }
@@ -158,9 +158,9 @@ cc_list_remove_fast(cc_list * list, int index)
 {
   if (!list) return;
   
-#ifdef COIN_EXTRA_DEBUG
+#ifdef OBOL_EXTRA_DEBUG
   assert(index >= 0 && index < static_cast<int>(list->items.size()));
-#endif /* COIN_EXTRA_DEBUG */
+#endif /* OBOL_EXTRA_DEBUG */
   
   if (index >= 0 && index < static_cast<int>(list->items.size())) {
     // Fast removal: swap with last element and pop
@@ -185,9 +185,9 @@ cc_list_truncate(cc_list * list, int length)
 {
   if (!list) return;
   
-#ifdef COIN_EXTRA_DEBUG
+#ifdef OBOL_EXTRA_DEBUG
   assert(length <= static_cast<int>(list->items.size()));
-#endif /* COIN_EXTRA_DEBUG */
+#endif /* OBOL_EXTRA_DEBUG */
   
   if (length >= 0 && length <= static_cast<int>(list->items.size())) {
     list->items.resize(length);
@@ -199,9 +199,9 @@ cc_list_truncate_fit(cc_list * list, int length)
 {
   if (!list) return;
   
-#ifdef COIN_EXTRA_DEBUG
+#ifdef OBOL_EXTRA_DEBUG
   assert(length <= static_cast<int>(list->items.size()));
-#endif /* COIN_EXTRA_DEBUG */
+#endif /* OBOL_EXTRA_DEBUG */
   
   cc_list_truncate(list, length);
   cc_list_fit(list);
@@ -226,9 +226,9 @@ cc_list_get(cc_list * list, int itempos)
 {
   if (!list) return nullptr;
   
-#ifdef COIN_EXTRA_DEBUG
+#ifdef OBOL_EXTRA_DEBUG
   assert(itempos < static_cast<int>(list->items.size()));
-#endif /* COIN_EXTRA_DEBUG */
+#endif /* OBOL_EXTRA_DEBUG */
   
   if (itempos >= 0 && itempos < static_cast<int>(list->items.size())) {
     return list->items[itempos];
@@ -247,9 +247,9 @@ cc_list_pop(cc_list * list)
 {
   if (!list || list->items.empty()) return nullptr;
   
-#ifdef COIN_EXTRA_DEBUG
+#ifdef OBOL_EXTRA_DEBUG
   assert(!list->items.empty());
-#endif /* COIN_EXTRA_DEBUG */
+#endif /* OBOL_EXTRA_DEBUG */
   
   void * item = list->items.back();
   list->items.pop_back();

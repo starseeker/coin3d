@@ -1,5 +1,5 @@
-#ifndef COIN_SOTEXTOUTLINEENABLEDELEMENT_H
-#define COIN_SOTEXTOUTLINEENABLEDELEMENT_H
+#ifndef OBOL_SOTEXTOUTLINEENABLEDELEMENT_H
+#define OBOL_SOTEXTOUTLINEENABLEDELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/elements/SoInt32Element.h>
 
-class COIN_DLL_API SoTextOutlineEnabledElement : public SoInt32Element {
+class OBOL_DLL_API SoTextOutlineEnabledElement : public SoInt32Element {
   typedef SoInt32Element inherited;
 
   SO_ELEMENT_HEADER(SoTextOutlineEnabledElement);
@@ -57,4 +57,4 @@ public:
   static SbBool getDefault(void);
 };
 
-#endif // !COIN_SOTEXTOUTLINEENABLEDELEMENT_H
+#endif // !OBOL_SOTEXTOUTLINEENABLEDELEMENT_H

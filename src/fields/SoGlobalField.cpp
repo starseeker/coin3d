@@ -79,7 +79,7 @@ SoBaseList * SoGlobalField::allcontainers = NULL;
 // SoGlobalField instance.
 SoGlobalField::SoGlobalField(const SbName & name, SoField * field)
 {
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoGlobalField::SoGlobalField",
                          "name=='%s', field==%p(%s)",
                          name.getString(), field,
@@ -107,7 +107,7 @@ SoGlobalField::SoGlobalField(const SbName & name, SoField * field)
 SoGlobalField::~SoGlobalField()
 {
   SoGlobalField::allcontainers->removeItem(this);
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoField * field = this->classfielddata->getField(this, 0);
   SoDebugError::postInfo("SoGlobalField::~SoGlobalField",
                          "name=='%s', field==%p(%s)",
@@ -152,7 +152,7 @@ SoGlobalField::initClass(void)
 void
 SoGlobalField::clean(void)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
 
   // Warn about all global fields still alive, as they have the
   // potential to cause harm if there for instance are SoFieldSensor
@@ -170,7 +170,7 @@ SoGlobalField::clean(void)
            gf->getName().getString(), gf->getRefCount());
   }
 
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   delete SoGlobalField::allcontainers;
   SoGlobalField::allcontainers = NULL;
@@ -264,7 +264,7 @@ SoGlobalField::setName(const SbName & newname)
 
 // Read data for this SoGlobalField instance.
 SbBool
-SoGlobalField::readInstance(SoInput * in, unsigned short COIN_UNUSED_ARG(flags))
+SoGlobalField::readInstance(SoInput * in, unsigned short OBOL_UNUSED_ARG(flags))
 {
   // A bit more coding and we could let the readInstance() method be
   // called on already initialized SoGlobalField instances, but I
@@ -337,7 +337,7 @@ SoGlobalField::readInstance(SoInput * in, unsigned short COIN_UNUSED_ARG(flags))
 // though we -- as a container for a global field -- only exists
 // through a field-to-field connection.
 void
-SoGlobalField::addWriteReference(SoOutput * out, SbBool COIN_UNUSED_ARG(isfromfield))
+SoGlobalField::addWriteReference(SoOutput * out, SbBool OBOL_UNUSED_ARG(isfromfield))
 {
   assert(this->classfielddata);
   inherited::addWriteReference(out, FALSE);

@@ -1,5 +1,5 @@
-#ifndef COIN_LOCKMGR_H
-#define COIN_LOCKMGR_H
+#ifndef OBOL_LOCKMGR_H
+#define OBOL_LOCKMGR_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,10 +35,10 @@
 
 #include <Inventor/SbBasic.h>
 
-class COIN_DLL_API SoLockManager {
+class OBOL_DLL_API SoLockManager {
 public:
   static void SetUnlockString(char * unlockstr);
   static char * GetUnlockString(void);
 };
 
-#endif // !COIN_LOCKMGR_H
+#endif // !OBOL_LOCKMGR_H

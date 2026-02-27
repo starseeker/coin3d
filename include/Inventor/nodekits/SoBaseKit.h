@@ -1,5 +1,5 @@
-#ifndef COIN_SOBASEKIT_H
-#define COIN_SOBASEKIT_H
+#ifndef OBOL_SOBASEKIT_H
+#define OBOL_SOBASEKIT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,13 +35,13 @@
 
 #include <Inventor/nodekits/SoSubKit.h>
 #include <Inventor/nodes/SoNode.h>
-#ifdef COIN_INTERNAL
+#ifdef OBOL_INTERNAL
 class SoNodeKitPath;
-#else // !COIN_INTERNAL
+#else // !OBOL_INTERNAL
 // Include these header files for better Open Inventor compatibility.
 #include <Inventor/SoNodeKitPath.h>
 #include <Inventor/misc/SoChildList.h>
-#endif // !COIN_INTERNAL
+#endif // !OBOL_INTERNAL
 
 class SoGroup;
 class SoNodekitParts;
@@ -63,7 +63,7 @@ class SoPath;
  (static_cast<_classname_ *>(_kit_->getAnyPart(_name_, FALSE, FALSE, FALSE)))
 
 
-class COIN_DLL_API SoBaseKit : public SoNode {
+class OBOL_DLL_API SoBaseKit : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_HEADER(SoBaseKit);
@@ -167,4 +167,4 @@ private:
   friend class SoBaseKitP;
 };
 
-#endif // !COIN_SOBASEKIT_H
+#endif // !OBOL_SOBASEKIT_H

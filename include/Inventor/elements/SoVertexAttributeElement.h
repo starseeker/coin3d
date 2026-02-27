@@ -1,5 +1,5 @@
-#ifndef COIN_SOVERTEXATTRIBUTEELEMENT_H
-#define COIN_SOVERTEXATTRIBUTEELEMENT_H
+#ifndef OBOL_SOVERTEXATTRIBUTEELEMENT_H
+#define OBOL_SOVERTEXATTRIBUTEELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -42,7 +42,7 @@ class SoMField;
 class SoVertexAttributeData;
 class SoVertexAttributeElementP;
 
-class COIN_DLL_API SoVertexAttributeElement : public SoAccumulatedElement {
+class OBOL_DLL_API SoVertexAttributeElement : public SoAccumulatedElement {
   typedef SoAccumulatedElement inherited;
   SO_ELEMENT_HEADER(SoVertexAttributeElement);
 
@@ -74,4 +74,4 @@ private:
   SbPimplPtr<SoVertexAttributeElementP> pimpl;
 };
 
-#endif // COIN_SOVERTEXATTRIBUTEELEMENT_H
+#endif // OBOL_SOVERTEXATTRIBUTEELEMENT_H

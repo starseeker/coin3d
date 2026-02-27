@@ -1,5 +1,5 @@
 # source files
-set(COIN_HUD_FILES
+set(OBOL_HUD_FILES
     SoHUD.cpp
     SoHUDKit.cpp
     SoHUDLabel.cpp
@@ -7,19 +7,19 @@ set(COIN_HUD_FILES
 )
 
 # build library
-if(COIN_BUILD_SINGLE_LIB)
-    foreach(SRCFILE ${COIN_HUD_FILES})
-        set(COIN_SOURCE ${COIN_SOURCE} hud/${SRCFILE} CACHE INTERNAL "COIN_SOURCE")
+if(OBOL_BUILD_SINGLE_LIB)
+    foreach(SRCFILE ${OBOL_HUD_FILES})
+        set(OBOL_SOURCE ${OBOL_SOURCE} hud/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
     endforeach(SRCFILE)
 else()
-    add_library(hud OBJECT ${COIN_HUD_FILES})
+    add_library(hud OBJECT ${OBOL_HUD_FILES})
 endif()
 
 # define documentation
-foreach(SRCFILE ${COIN_HUD_FILES})
-    set(COIN_DOCUMENTATION_FILES
-        ${COIN_DOCUMENTATION_FILES}
+foreach(SRCFILE ${OBOL_HUD_FILES})
+    set(OBOL_DOCUMENTATION_FILES
+        ${OBOL_DOCUMENTATION_FILES}
         ${PROJECT_SOURCE_DIR}/src/hud/${SRCFILE}
-        CACHE INTERNAL "COIN_DOCUMENTATION_FILES"
+        CACHE INTERNAL "OBOL_DOCUMENTATION_FILES"
     )
 endforeach(SRCFILE)

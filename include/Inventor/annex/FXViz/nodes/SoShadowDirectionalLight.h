@@ -1,5 +1,5 @@
-#ifndef COIN_SOSHADOWDIRECTIONALLIGHT_H
-#define COIN_SOSHADOWDIRECTIONALLIGHT_H
+#ifndef OBOL_SOSHADOWDIRECTIONALLIGHT_H
+#define OBOL_SOSHADOWDIRECTIONALLIGHT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -39,7 +39,7 @@
 #include <Inventor/fields/SoSFFloat.h>
 #include <Inventor/fields/SoSFVec3f.h>
 
-class COIN_DLL_API SoShadowDirectionalLight : public SoDirectionalLight {
+class OBOL_DLL_API SoShadowDirectionalLight : public SoDirectionalLight {
   typedef SoDirectionalLight inherited;
 
   SO_NODE_HEADER(SoShadowDirectionalLight);
@@ -59,4 +59,4 @@ protected:
   virtual ~SoShadowDirectionalLight();
 };
 
-#endif // !COIN_SOSHADOWDIRECTIONALLIGHT_H
+#endif // !OBOL_SOSHADOWDIRECTIONALLIGHT_H

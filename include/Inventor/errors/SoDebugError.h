@@ -1,5 +1,5 @@
-#ifndef COIN_SODEBUGERROR_H
-#define COIN_SODEBUGERROR_H
+#ifndef OBOL_SODEBUGERROR_H
+#define OBOL_SODEBUGERROR_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -46,7 +46,7 @@
 #endif /* ERROR */
 
 
-class COIN_DLL_API SoDebugError : public SoError {
+class OBOL_DLL_API SoDebugError : public SoError {
   typedef SoError inherited;
 
 public:
@@ -88,4 +88,4 @@ private:
 #undef SODEBUGERROR_STORE_ERROR_DEF
 #endif /* SODEBUGERROR_STORE_ERROR_DEF */
 
-#endif // !COIN_SODEBUGERROR_H
+#endif // !OBOL_SODEBUGERROR_H

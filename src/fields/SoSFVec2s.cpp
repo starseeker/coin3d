@@ -40,7 +40,7 @@
   need to store a single vector with two elements.
 
   \sa SoMFVec2s
-  \COIN_CLASS_EXTENSION
+  \OBOL_CLASS_EXTENSION
   \since Coin 2.0
 */
 

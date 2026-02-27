@@ -1,5 +1,5 @@
-#ifndef COIN_SOMFBITMASK_H
-#define COIN_SOMFBITMASK_H
+#ifndef OBOL_SOMFBITMASK_H
+#define OBOL_SOMFBITMASK_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/fields/SoMFEnum.h>
 
-class COIN_DLL_API SoMFBitMask : public SoMFEnum {
+class OBOL_DLL_API SoMFBitMask : public SoMFEnum {
   typedef SoMFEnum inherited;
 
   SO_MFIELD_DERIVED_HEADER(SoMFBitMask, not_used, int);
@@ -44,4 +44,4 @@ public:
   static void initClass(void);
 };
 
-#endif // !COIN_SOMFBITMASK_H
+#endif // !OBOL_SOMFBITMASK_H

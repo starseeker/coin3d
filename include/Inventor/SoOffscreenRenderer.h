@@ -1,5 +1,5 @@
-#ifndef COIN_SOOFFSCREENRENDERER_H
-#define COIN_SOOFFSCREENRENDERER_H
+#ifndef OBOL_SOOFFSCREENRENDERER_H
+#define OBOL_SOOFFSCREENRENDERER_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -54,7 +54,7 @@ class SoPath;
 class SoOffscreenRendererP;
 
 
-class COIN_DLL_API SoOffscreenRenderer {
+class OBOL_DLL_API SoOffscreenRenderer {
 public:
   enum Components {
     LUMINANCE = 1,
@@ -68,6 +68,7 @@ public:
   ~SoOffscreenRenderer();
 
   static float getScreenPixelsPerInch(void);
+  static void setScreenPixelsPerInch(float dpi);
   static SbVec2s getMaximumResolution(void);
   void setComponents(const Components components);
   Components getComponents(void) const;
@@ -126,4 +127,4 @@ private:
   class SoOffscreenRendererP * pimpl;
 };
 
-#endif // !COIN_SOOFFSCREENRENDERER_H
+#endif // !OBOL_SOOFFSCREENRENDERER_H

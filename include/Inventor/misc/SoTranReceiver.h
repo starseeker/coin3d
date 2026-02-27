@@ -1,5 +1,5 @@
-#ifndef COIN_SOTRANRECEIVER_H
-#define COIN_SOTRANRECEIVER_H
+#ifndef OBOL_SOTRANRECEIVER_H
+#define OBOL_SOTRANRECEIVER_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -38,7 +38,7 @@
 class SoGroup;
 class SoInput;
 
-class COIN_DLL_API SoTranReceiver {
+class OBOL_DLL_API SoTranReceiver {
 
 public:
   SoTranReceiver(SoGroup * root);
@@ -53,4 +53,4 @@ private:
   void * pimpl;
 };
 
-#endif // !COIN_SOTRANRECEIVER_H
+#endif // !OBOL_SOTRANRECEIVER_H

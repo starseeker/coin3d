@@ -1,5 +1,5 @@
-#ifndef COIN_SOLEVELOFDETAIL_H
-#define COIN_SOLEVELOFDETAIL_H
+#ifndef OBOL_SOLEVELOFDETAIL_H
+#define OBOL_SOLEVELOFDETAIL_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -39,7 +39,7 @@
 
 class SoLevelOfDetailP;
 
-class COIN_DLL_API SoLevelOfDetail : public SoGroup {
+class OBOL_DLL_API SoLevelOfDetail : public SoGroup {
   typedef SoGroup inherited;
 
   SO_NODE_HEADER(SoLevelOfDetail);
@@ -70,4 +70,4 @@ private:
   friend class SoLevelOfDetailP;
 };
 
-#endif // !COIN_SOLEVELOFDETAIL_H
+#endif // !OBOL_SOLEVELOFDETAIL_H

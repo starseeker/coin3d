@@ -1,5 +1,5 @@
-#ifndef COIN_VERTEXATTRIBUTEBINDING_H
-#define COIN_VERTEXATTRIBUTEBINDING_H
+#ifndef OBOL_VERTEXATTRIBUTEBINDING_H
+#define OBOL_VERTEXATTRIBUTEBINDING_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/fields/SoSFEnum.h>
 #include <Inventor/nodes/SoSubNode.h>
 
-class COIN_DLL_API SoVertexAttributeBinding : public SoNode {
+class OBOL_DLL_API SoVertexAttributeBinding : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_HEADER(SoVertexAttributeBinding);
@@ -65,4 +65,4 @@ protected:
   virtual ~SoVertexAttributeBinding();
 };
 
-#endif // !COIN_VERTEXATTRIBUTEBINDING_H
+#endif // !OBOL_VERTEXATTRIBUTEBINDING_H

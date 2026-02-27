@@ -1,5 +1,5 @@
-#ifndef COIN_SBTHREADAUTOLOCK_H
-#define COIN_SBTHREADAUTOLOCK_H
+#ifndef OBOL_SBTHREADAUTOLOCK_H
+#define OBOL_SBTHREADAUTOLOCK_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -63,4 +63,4 @@ public:
   }
 };
 
-#endif // !COIN_SBTHREADAUTOLOCK_H
+#endif // !OBOL_SBTHREADAUTOLOCK_H

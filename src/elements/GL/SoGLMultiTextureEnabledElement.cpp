@@ -95,7 +95,7 @@ SoGLMultiTextureEnabledElement::push(SoState * state)
 
 // Documented in superclass. Overridden to track GL state.
 void
-SoGLMultiTextureEnabledElement::pop(SoState * COIN_UNUSED_ARG(state),
+SoGLMultiTextureEnabledElement::pop(SoState * OBOL_UNUSED_ARG(state),
                                     const SoElement * prevTopElement)
 {
   SoGLMultiTextureEnabledElement * prev = (SoGLMultiTextureEnabledElement*) prevTopElement;

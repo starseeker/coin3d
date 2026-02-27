@@ -71,17 +71,17 @@
 #include <Inventor/fields/SoFields.h>
 #include <Inventor/lists/SoEngineOutputList.h>
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 #include "engines/SoSubEngineP.h"
 #include "SbBasicP.h"
 #include "config.h"
 
-#ifndef COIN_WORKAROUND_NO_USING_STD_FUNCS
+#ifndef OBOL_WORKAROUND_NO_USING_STD_FUNCS
 using std::strstr;
-#endif // !COIN_WORKAROUND_NO_USING_STD_FUNCS
+#endif // !OBOL_WORKAROUND_NO_USING_STD_FUNCS
 
 /*!
   \var SoMField * SoSelectOne::input
@@ -128,7 +128,7 @@ SoSelectOne::SoSelectOne(SoType inputtype)
   this->input = NULL;
   this->output = NULL;
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (!SoSelectOne_valid_type(inputtype)) {
     SoDebugError::post("SoSelectOne::SoSelectOne",
                        "invalid type '%s' for input field, "
@@ -136,7 +136,7 @@ SoSelectOne::SoSelectOne(SoType inputtype)
                        inputtype == SoType::badType() ? "badType" :
                        inputtype.getName().getString());
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   this->initialize(inputtype);
 }
@@ -261,11 +261,11 @@ SoSelectOne::evaluate(void)
     }
 #undef IF_TYPE
   }
-#if COIN_DEBUG
+#if OBOL_DEBUG
   else {
     SoDebugError::post("SoSelectOne::evaluate", "invalid index %d", idx);
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }
 
 // Documented in superclass.

@@ -83,9 +83,9 @@
 #include <cfloat>
 #include "coinString.h"
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 /*!
   \fn float SbRotation::operator[](size_t n) const
@@ -109,12 +109,12 @@ SbRotation::SbRotation(void)
  */
 SbRotation::SbRotation(const SbVec3f & axis, const float radians)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (axis.length()==0.0f)
     SoDebugError::postWarning("SbRotation::SbRotation",
                               "axis parameter has zero length => "
                               "undefined axis.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   this->setValue(axis, radians);
 }
 
@@ -227,11 +227,11 @@ SbRotation::setValue(const float q0, const float q1,
   this->quat[2] = q2;
   this->quat[3] = q3;
   if (this->quat.normalize() == 0.0f) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SbRotation::setValue",
                               "Quarternion has zero length => "
                               "undefined rotation.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   }
   return *this;
 }
@@ -319,12 +319,12 @@ SbRotation &
 SbRotation::invert(void)
 {
   float length = this->quat.length();
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (length==0.0f)
     SoDebugError::postWarning("SbRotation::invert",
                               "Quarternion has zero length => "
                               "undefined rotation.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   // Optimize by doing 1 div and 4 muls instead of 4 divs.
   float inv = 1.0f / length;
@@ -345,12 +345,12 @@ SbRotation
 SbRotation::inverse(void) const
 {
   float length = this->quat.length();
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (length==0.0f)
     SoDebugError::postWarning("SbRotation::inverse",
                               "Quaternion has zero length => "
                               "undefined rotation.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   // Optimize by doing 1 div and 4 muls instead of 4 divs.
   float inv = 1.0f / length;
@@ -377,11 +377,11 @@ SbRotation::setValue(const float q[4])
   this->quat[2] = q[2];
   this->quat[3] = q[3];
   if (this->quat.normalize() == 0.0f) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SbRotation::setValue",
                               "Quarternion has zero length => "
                               "undefined rotation.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   }
   return *this;
 }
@@ -439,11 +439,11 @@ SbRotation::setValue(const SbMatrix & m)
 SbRotation &
 SbRotation::setValue(const SbVec3f & axis, const float radians)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (axis.length()==0.0f)
     SoDebugError::postWarning("SbRotation::setValue",
                               "axis parameter has zero length.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   // From <http://www.automation.hut.fi/~jaro/thesis/hyper/node9.html>.
 
@@ -473,7 +473,7 @@ SbRotation::setValue(const SbVec3f & axis, const float radians)
 SbRotation &
 SbRotation::setValue(const SbVec3f & rotateFrom, const SbVec3f & rotateTo)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   // Check if the vectors are valid.
   if (rotateFrom.length()==0.0f) {
     SoDebugError::postWarning("SbRotation::setValue",
@@ -483,7 +483,7 @@ SbRotation::setValue(const SbVec3f & rotateFrom, const SbVec3f & rotateTo)
     SoDebugError::postWarning("SbRotation::setValue",
                               "rotateTo argument has zero length.");
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   SbVec3f from(rotateFrom);
   // we test for a null vector above
   (void) from.normalize();
@@ -657,7 +657,7 @@ SbRotation::scaleAngle(const float scaleFactor)
 SbRotation
 SbRotation::slerp(const SbRotation & rot0, const SbRotation & rot1, float t)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (t<0.0f || t>1.0f) {
     SoDebugError::postWarning("SbRotation::slerp",
                               "The t parameter (%f) is out of bounds [0,1]. "
@@ -665,7 +665,7 @@ SbRotation::slerp(const SbRotation & rot0, const SbRotation & rot1, float t)
     if (t<0.0f) t=0.0f;
     else if (t>1.0f) t=1.0f;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   SbRotation from = rot0;
   SbRotation to = rot1;
@@ -732,8 +732,8 @@ SbRotation::fromString(const SbString & str)
 void
 SbRotation::print(FILE * fp) const
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   this->quat.print(fp);
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }
 

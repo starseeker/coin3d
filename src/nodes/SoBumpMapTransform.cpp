@@ -120,7 +120,7 @@ SoBumpMapTransform::~SoBumpMapTransform()
 void
 SoBumpMapTransform::initClass(void)
 {
-  SO_NODE_INTERNAL_INIT_CLASS(SoBumpMapTransform, SO_FROM_COIN_2_2);
+  SO_NODE_INTERNAL_INIT_CLASS(SoBumpMapTransform, SO_FROM_OBOL_2_2);
 
   SO_ENABLE(SoGLRenderAction, SoBumpMapMatrixElement);
   SO_ENABLE(SoCallbackAction, SoBumpMapMatrixElement);
@@ -153,7 +153,7 @@ SoBumpMapTransform::callback(SoCallbackAction *action)
 
 // Documented in superclass.
 void
-SoBumpMapTransform::getMatrix(SoGetMatrixAction * COIN_UNUSED_ARG(action))
+SoBumpMapTransform::getMatrix(SoGetMatrixAction * OBOL_UNUSED_ARG(action))
 {
   // do nothing
 }

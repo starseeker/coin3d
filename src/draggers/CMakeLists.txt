@@ -4,20 +4,20 @@ macro(strfy _input _postfix)
   get_filename_component(_suffix "${_input}" EXT)
   get_filename_component(_path "${_input}" PATH)
   string(SUBSTRING ${_suffix} 1 -1 _suffix)
-  string(TOUPPER "SO_${_basename}_${_suffix}_H" COIN_HEADER_DEF)
-  string(TOUPPER ${_basename} COIN_TEXTVAR_NAME)
-  set(COIN_TEXTVAR_NAME "${COIN_TEXTVAR_NAME}${_postfix}")
+  string(TOUPPER "SO_${_basename}_${_suffix}_H" OBOL_HEADER_DEF)
+  string(TOUPPER ${_basename} OBOL_TEXTVAR_NAME)
+  set(OBOL_TEXTVAR_NAME "${OBOL_TEXTVAR_NAME}${_postfix}")
   #message(STATUS "Parse: ${CMAKE_CURRENT_SOURCE_DIR}/${_input}")
   FILE(READ ${CMAKE_CURRENT_SOURCE_DIR}/${_input} f0)
   STRING(REGEX REPLACE "\\\\" "\\\\\\\\" f1 "${f0}")
   STRING(REGEX REPLACE "\"" "\\\\\"" f2 "${f1}")
-  STRING(REGEX REPLACE "\r?\n" "\\\\n\"\n  \"" COIN_STR_SOURCE_CODE "${f2}")
+  STRING(REGEX REPLACE "\r?\n" "\\\\n\"\n  \"" OBOL_STR_SOURCE_CODE "${f2}")
   configure_file(${PROJECT_SOURCE_DIR}/cmake/strfytemplate.cmake.in "${CMAKE_CURRENT_BINARY_DIR}/${_path}/${_basename}.h")
 endmacro()
 
 # Process dragger .iv files to generate header files
-file(GLOB_RECURSE COIN_DRAGGER_IV_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} defaults/*.iv)
-foreach(_input_file ${COIN_DRAGGER_IV_FILES})
+file(GLOB_RECURSE OBOL_DRAGGER_IV_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} defaults/*.iv)
+foreach(_input_file ${OBOL_DRAGGER_IV_FILES})
   strfy(${_input_file} "_draggergeometry")
 endforeach()
 
@@ -29,7 +29,7 @@ set(COMMON_RESOURCES ${COMMON_DRAGGER_RESOURCES} PARENT_SCOPE)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 # source files
-set(COIN_DRAGGERS_FILES
+set(OBOL_DRAGGERS_FILES
 	SoDragger.cpp
 	SoCenterballDragger.cpp
 	SoDirectionalLightDragger.cpp
@@ -55,15 +55,15 @@ set(COIN_DRAGGERS_FILES
 )
 
 # build library
-if(COIN_BUILD_SINGLE_LIB)
-	foreach(SRCFILE ${COIN_DRAGGERS_FILES})
-		set(COIN_SOURCE ${COIN_SOURCE} draggers/${SRCFILE} CACHE INTERNAL "COIN_SOURCE")
+if(OBOL_BUILD_SINGLE_LIB)
+	foreach(SRCFILE ${OBOL_DRAGGERS_FILES})
+		set(OBOL_SOURCE ${OBOL_SOURCE} draggers/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
 	endforeach(SRCFILE)
 else()
-	add_library(draggers OBJECT ${COIN_DRAGGERS_FILES})
+	add_library(draggers OBJECT ${OBOL_DRAGGERS_FILES})
 endif()
 
 # define documentation
-foreach(SRCFILE ${COIN_DRAGGERS_FILES})
-	set(COIN_DOCUMENTATION_FILES ${COIN_DOCUMENTATION_FILES} ${PROJECT_SOURCE_DIR}/src/draggers/${SRCFILE} CACHE INTERNAL "COIN_DOCUMENTATION_FILES")
+foreach(SRCFILE ${OBOL_DRAGGERS_FILES})
+	set(OBOL_DOCUMENTATION_FILES ${OBOL_DOCUMENTATION_FILES} ${PROJECT_SOURCE_DIR}/src/draggers/${SRCFILE} CACHE INTERNAL "OBOL_DOCUMENTATION_FILES")
 endforeach(SRCFILE)

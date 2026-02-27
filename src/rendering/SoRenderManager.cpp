@@ -385,7 +385,7 @@ SoRenderManager::getCamera(void) const
 void
 SoRenderManager::nodesensorCB(void * data, SoSensor * /* sensor */)
 {
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoRenderManager::nodesensorCB",
                          "detected change in scene graph");
 #endif // debug
@@ -495,7 +495,7 @@ SoRenderManager::prerendercb(void * userdata, SoGLRenderAction * action)
   const uintptr_t bitfield = (uintptr_t)userdata;
   GLbitfield mask = (GLbitfield)bitfield;
 
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   GLint view[4];
   glGetIntegerv(GL_VIEWPORT, view);
   SoDebugError::postInfo("SoRenderManager::prerendercb",
@@ -554,10 +554,10 @@ SoRenderManager::removeSuperimposition(Superimposition * s)
   return;
 
  error:
-#if COIN_DEBUG
+#if OBOL_DEBUG
   SoDebugError::post("SoRenderManager::removeSuperimposition",
                      "no such superimposition");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   return;
 }
 
@@ -720,7 +720,7 @@ SoRenderManager::actuallyRender(SoGLRenderAction * action,
   // will also help us avoid "double redraws" at expose events.
   PRIVATE(this)->lock();
   if (PRIVATE(this)->rootsensor && PRIVATE(this)->rootsensor->isScheduled()) {
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
     SoDebugError::postInfo("SoRenderManager::render",
                            "rootsensor unschedule");
 #endif // debug
@@ -1167,7 +1167,7 @@ SoRenderManager::scheduleRedraw(void)
 {
   PRIVATE(this)->lock();
   if (this->isActive() && PRIVATE(this)->rendercb) {
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
     SoDebugError::postInfo("SoRenderManager::scheduleRedraw",
                            "scheduling redrawshot (oneshotsensor) %p",
                            PRIVATE(this)->redrawshot);
@@ -1189,7 +1189,7 @@ SoRenderManager::scheduleRedraw(void)
 void
 SoRenderManager::setWindowSize(const SbVec2s & newsize)
 {
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoRenderManager::setWindowSize",
                          "(%d, %d)", newsize[0], newsize[1]);
 #endif // debug
@@ -1217,7 +1217,7 @@ SoRenderManager::getWindowSize(void) const
 void
 SoRenderManager::setSize(const SbVec2s & newsize)
 {
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoRenderManager::setSize",
                          "(%d, %d)", newsize[0], newsize[1]);
 #endif // debug
@@ -1246,7 +1246,7 @@ SoRenderManager::getSize(void) const
 void
 SoRenderManager::setOrigin(const SbVec2s & newOrigin)
 {
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoRenderManager::setOrigin",
                          "(%d, %d)", newOrigin[0], newOrigin[1]);
 #endif // debug

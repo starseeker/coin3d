@@ -1,5 +1,5 @@
-#ifndef COIN_SBOCTTREE_H
-#define COIN_SBOCTTREE_H
+#ifndef OBOL_SBOCTTREE_H
+#define OBOL_SBOCTTREE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -56,7 +56,7 @@ typedef struct
 
 // *************************************************************************
 
-class COIN_DLL_API SbOctTree {
+class OBOL_DLL_API SbOctTree {
 public:
   SbOctTree(const SbBox3f & bbox,
             const SbOctTreeFuncs & itemfuncs,
@@ -91,4 +91,4 @@ private:
 
 // *************************************************************************
 
-#endif // !COIN_SBOCTTREE_H
+#endif // !OBOL_SBOCTTREE_H

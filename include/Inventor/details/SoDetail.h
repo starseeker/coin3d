@@ -1,5 +1,5 @@
-#ifndef COIN_SODETAIL_H
-#define COIN_SODETAIL_H
+#ifndef OBOL_SODETAIL_H
+#define OBOL_SODETAIL_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -36,7 +36,7 @@
 #include <Inventor/SoType.h>
 
 
-class COIN_DLL_API SoDetail {
+class OBOL_DLL_API SoDetail {
 
 public:
   virtual ~SoDetail();
@@ -58,4 +58,4 @@ private:
   static SoType classTypeId;
 };
 
-#endif // !COIN_SODETAIL_H
+#endif // !OBOL_SODETAIL_H

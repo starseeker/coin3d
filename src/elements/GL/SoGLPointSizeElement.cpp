@@ -116,7 +116,7 @@ SoGLPointSizeElement::push(SoState * state)
 
 // Doc in super.
 void
-SoGLPointSizeElement::pop(SoState * COIN_UNUSED_ARG(state),
+SoGLPointSizeElement::pop(SoState * OBOL_UNUSED_ARG(state),
                           const SoElement * prevTopElement)
 {
   SoGLPointSizeElement * prev = (SoGLPointSizeElement*)prevTopElement;
@@ -176,7 +176,7 @@ SoGLPointSizeElement::updategl(void)
     useval = SoGLPointSizeElement::sizerange[1];
   }
 
-  if (COIN_DEBUG) {
+  if (OBOL_DEBUG) {
     // Detect invalid values and warn the application programmer.
     // (0.0f is used as a "dummy" default value by our superclass and
     // by SoDrawStyle::pointSize, so ignore that case.)

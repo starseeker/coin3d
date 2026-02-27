@@ -1,5 +1,5 @@
-#ifndef COIN_SOBBOXMODELMATRIXELEMENT_H
-#define COIN_SOBBOXMODELMATRIXELEMENT_H
+#ifndef OBOL_SOBBOXMODELMATRIXELEMENT_H
+#define OBOL_SOBBOXMODELMATRIXELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 
 class SoLocalBBoxMatrixElement;
 
-class COIN_DLL_API SoBBoxModelMatrixElement : public SoModelMatrixElement {
+class OBOL_DLL_API SoBBoxModelMatrixElement : public SoModelMatrixElement {
   typedef SoModelMatrixElement inherited;
 
   SO_ELEMENT_HEADER(SoBBoxModelMatrixElement);
@@ -75,4 +75,4 @@ private:
   SoState *state;
 };
 
-#endif // !COIN_SOBBOXMODELMATRIXELEMENT_H
+#endif // !OBOL_SOBBOXMODELMATRIXELEMENT_H

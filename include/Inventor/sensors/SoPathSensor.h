@@ -1,5 +1,5 @@
-#ifndef COIN_SOPATHSENSOR_H
-#define COIN_SOPATHSENSOR_H
+#ifndef OBOL_SOPATHSENSOR_H
+#define OBOL_SOPATHSENSOR_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 
 class SoPathSensorP;
 
-class COIN_DLL_API SoPathSensor : public SoDataSensor {
+class OBOL_DLL_API SoPathSensor : public SoDataSensor {
   typedef SoDataSensor inherited;
 
 public:
@@ -68,4 +68,4 @@ private:
   SoPathSensorP * pimpl;
 };
 
-#endif // !COIN_SOPATHSENSOR_H
+#endif // !OBOL_SOPATHSENSOR_H

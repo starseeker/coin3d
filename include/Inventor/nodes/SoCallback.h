@@ -1,5 +1,5 @@
-#ifndef COIN_SOCALLBACK_H
-#define COIN_SOCALLBACK_H
+#ifndef OBOL_SOCALLBACK_H
+#define OBOL_SOCALLBACK_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 
 typedef void SoCallbackCB(void * userdata, SoAction * action);
 
-class COIN_DLL_API SoCallback : public SoNode {
+class OBOL_DLL_API SoCallback : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_HEADER(SoCallback);
@@ -70,4 +70,4 @@ private:
   void * cbdata;
 };
 
-#endif // !COIN_SOCALLBACK_H
+#endif // !OBOL_SOCALLBACK_H

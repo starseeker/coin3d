@@ -245,7 +245,7 @@ SoBumpMap::~SoBumpMap()
 void
 SoBumpMap::initClass(void)
 {
-  SO_NODE_INTERNAL_INIT_CLASS(SoBumpMap, SO_FROM_COIN_2_2);
+  SO_NODE_INTERNAL_INIT_CLASS(SoBumpMap, SO_FROM_OBOL_2_2);
 
   SO_ENABLE(SoGLRenderAction, SoBumpMapElement);
   SO_ENABLE(SoCallbackAction, SoBumpMapElement);
@@ -349,7 +349,7 @@ SoBumpMap::doAction(SoAction * action)
 
 // doc from parent
 void
-SoBumpMap::callback(SoCallbackAction * COIN_UNUSED_ARG(action))
+SoBumpMap::callback(SoCallbackAction * OBOL_UNUSED_ARG(action))
 {
   // not supported for SoCallbackAction yet
   // SoBumpMap::doAction(action);

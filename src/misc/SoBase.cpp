@@ -179,7 +179,7 @@ unsigned int SbHashFunc(const SoBase * key) {
  */
 SoBase::SoBase(void)
 {
-  COIN_CHECK_THREAD();
+  OBOL_CHECK_THREAD();
 
   // It is a common mistake to place e.g. nodes as static member
   // variables, or on the main()-function's stack-frame. This catches
@@ -202,13 +202,13 @@ SoBase::SoBase(void)
   this->objdata.alive = ALIVE_PATTERN;
 
   // For debugging, store a pointer to all SoBase-instances.
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (SoBase::PImpl::trackbaseobjects) {
     //void * dummy;
     assert(SoBase::PImpl::allbaseobj->find(this)==SoBase::PImpl::allbaseobj->const_end());
     (*SoBase::PImpl::allbaseobj)[this]=NULL;
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }
 
 /*!
@@ -220,7 +220,7 @@ SoBase::SoBase(void)
  */
 SoBase::~SoBase()
 {
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoBase::~SoBase", "%p", this);
 #endif // debug
 
@@ -237,12 +237,12 @@ SoBase::~SoBase()
   }
   this->auditortree.clear(); // std::map cleanup
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (SoBase::PImpl::trackbaseobjects) {
     const size_t ok = SoBase::PImpl::allbaseobj->erase(this);
     assert(ok && "something fishy going on in debug object tracking");
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }
 
 //
@@ -285,20 +285,20 @@ void
 SoBase::destroy(void)
 {
   SbName name = this->getName();
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoType t = this->getTypeId();
   SoDebugError::postInfo("SoBase::destroy", "start -- %p '%s' ('%s')",
                          this, t.getName().getString(), name.getString());
 #endif // debug
 
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (SoBase::PImpl::tracerefs) {
     SoDebugError::postInfo("SoBase::destroy",
                            "%p ('%s')",
                            this, this->getTypeId().getName().getString());
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   // Find all auditors that they need to cut off their link to this
   // object. I believe this is necessary only for sensors.
@@ -316,7 +316,7 @@ SoBase::destroy(void)
   // Link out instance name from the list of all SoBase instances.
   if (name != SbName::empty()) SoBase::PImpl::removeName2Obj(this, name.getString());
 
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoBase::destroy", "delete this %p", this);
 #endif // debug
 
@@ -326,7 +326,7 @@ SoBase::destroy(void)
   // Link out obj-pointer to name reference now that object is dead.
   if (name != SbName::empty()) SoBase::PImpl::removeObj2Name(this, name.getString());
 
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoBase::destroy", "done -- %p '%s' ('%s')",
                          this, t.getName().getString(), name.getString());
 #endif // debug
@@ -364,7 +364,7 @@ SoBase::initClass(void)
   SoBase::PImpl::allbaseobj = new SoBaseSet;
 
   // debug
-  auto str = CoinInternal::getEnvironmentVariable("COIN_DEBUG_TRACK_SOBASE_INSTANCES");
+  auto str = CoinInternal::getEnvironmentVariable("OBOL_DEBUG_TRACK_SOBASE_INSTANCES");
   SoBase::PImpl::trackbaseobjects = str.has_value() && std::atoi(str->c_str()) > 0;
 
   SoWriterefCounter::initClass();
@@ -418,7 +418,7 @@ SoBase::cleanClass(void)
   with subsequent memory corruption and mysterious crashes, should be
   a Good Thing.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */
@@ -453,16 +453,16 @@ SoBase::assertAlive(void) const
 void
 SoBase::ref(void) const
 {
-  COIN_CHECK_THREAD();
+  OBOL_CHECK_THREAD();
 
-  if (COIN_DEBUG) this->assertAlive();
+  if (OBOL_DEBUG) this->assertAlive();
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   int32_t currentrefcount = this->objdata.referencecount;
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   this->objdata.referencecount++;
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (this->objdata.referencecount < currentrefcount) {
     SoDebugError::post("SoBase::ref",
                        "%p ('%s') - referencecount overflow!: %d -> %d",
@@ -479,16 +479,16 @@ SoBase::ref(void) const
     // to handle overflows graciously.
     assert(FALSE && "reference count overflow");
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (SoBase::PImpl::tracerefs) {
     SoDebugError::postInfo("SoBase::ref",
                            "%p ('%s') - referencecount: %d",
                            this, this->getTypeId().getName().getString(),
                            this->objdata.referencecount);
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }
 
 /*!
@@ -503,14 +503,14 @@ SoBase::ref(void) const
 void
 SoBase::unref(void) const
 {
-  COIN_CHECK_THREAD();
+  OBOL_CHECK_THREAD();
 
-  if (COIN_DEBUG) this->assertAlive();
+  if (OBOL_DEBUG) this->assertAlive();
 
   this->objdata.referencecount--;
   int refcount = this->objdata.referencecount;
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (SoBase::PImpl::tracerefs) {
     SoDebugError::postInfo("SoBase::unref",
                            "%p ('%s') - referencecount: %d",
@@ -525,7 +525,7 @@ SoBase::unref(void) const
     SoDebugError::postWarning("SoBase::unref", "...for %s instance at %p",
                               this->getTypeId().getName().getString(), this);
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   if (refcount == 0) {
     SoBase * base = const_cast<SoBase *>(this);
     base->destroy();
@@ -541,19 +541,19 @@ SoBase::unref(void) const
 void
 SoBase::unrefNoDelete(void) const
 {
-  COIN_CHECK_THREAD();
+  OBOL_CHECK_THREAD();
 
-  if (COIN_DEBUG) this->assertAlive();
+  if (OBOL_DEBUG) this->assertAlive();
 
   this->objdata.referencecount--;
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (SoBase::PImpl::tracerefs) {
     SoDebugError::postInfo("SoBase::unrefNoDelete",
                            "%p ('%s') - referencecount: %d",
                            this, this->getTypeId().getName().getString(),
                            this->objdata.referencecount);
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 }
 
 /*!
@@ -655,7 +655,7 @@ SoBase::setName(const SbName & newname)
 {
 
   // This may look peculiar, but it is useful in combination with the
-  // COIN_DEBUG_TRACK_SOBASE_INSTANCES envvar to track down where
+  // OBOL_DEBUG_TRACK_SOBASE_INSTANCES envvar to track down where
   // un-deallocated SoBase-instances were allocated from. (I.e., run it
   // in a debugger and check the backtrace.)  -mortene.
 
@@ -687,11 +687,11 @@ SoBase::setName(const SbName & newname)
       goodstring += SbName::isBaseNameChar(str[i]) ? str[i] : '_';
     }
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SoBase::setName", "Bad characters in "
                               "name '%s'. Replacing with name '%s'",
                               str, goodstring.getString());
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
     SoBase::addName(this, SbName(goodstring.getString()));
   }
@@ -762,9 +762,9 @@ SoBase::startNotify(void)
 void
 SoBase::notify(SoNotList * l)
 {
-  if (COIN_DEBUG) this->assertAlive();
+  if (OBOL_DEBUG) this->assertAlive();
 
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoBase::notify", "base %p, list %p", this, l);
 #endif // debug
 
@@ -802,7 +802,7 @@ SoBase::addAuditor(void * const auditor, const SoNotRec::Type type)
   \sa addAuditor()
 */
 void
-SoBase::removeAuditor(void * const auditor, const SoNotRec::Type COIN_UNUSED_ARG(type))
+SoBase::removeAuditor(void * const auditor, const SoNotRec::Type OBOL_UNUSED_ARG(type))
 {
   this->auditortree.erase(auditor);
 }
@@ -865,7 +865,7 @@ SoBase::addWriteReference(SoOutput * out, SbBool isfromfield)
 
   int refcount = SoWriterefCounter::instance(out)->getWriteref(this);
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (SoWriterefCounter::debugWriterefs()) {
     SoDebugError::postInfo("SoBase::addWriteReference",
                            "%p/%s/'%s': %d -> %d",
@@ -873,7 +873,7 @@ SoBase::addWriteReference(SoOutput * out, SbBool isfromfield)
                            this->getName().getString(),
                            refcount, refcount + 1);
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   refcount++;
 
@@ -1032,14 +1032,14 @@ SoBase::read(SoInput * in, SoBase *& base, SoType expectedtype)
   SbName name;
   SbBool result = in->read(name, TRUE);
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (SoInputP::debug()) {
     // This output is extremely useful when debugging the import code.
     SoDebugError::postInfo("SoBase::read",
                            "SoInput::read(&name, TRUE) => returns %s, name=='%s'",
                            result ? "TRUE" : "FALSE", name.getString());
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   // read all routes. Do this also for regular files,
   // since in Coin we can have routes in any file.
@@ -1083,12 +1083,12 @@ SoBase::read(SoInput * in, SoBase *& base, SoType expectedtype)
     base->unref();
   }
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (SoInputP::debug()) {
     SoDebugError::postInfo("SoBase::read", "done, name=='%s' baseptr==%p, result==%s",
                            name.getString(), base, result ? "TRUE" : "FALSE");
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   return result;
 }
@@ -1226,7 +1226,7 @@ SoBase::writeHeader(SoOutput * out, SbBool isgroup, SbBool isengine) const
 
   int writerefcount = SoWriterefCounter::instance(out)->getWriteref(this);
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (SoWriterefCounter::debugWriterefs()) {
     SoDebugError::postInfo("SoBase::writeHeader",
                            "%p/%s/'%s': %d -> %d",
@@ -1235,7 +1235,7 @@ SoBase::writeHeader(SoOutput * out, SbBool isgroup, SbBool isengine) const
                            this->getName().getString(),
                            writerefcount, writerefcount - 1);
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
   writerefcount--;
   SoWriterefCounter::instance(out)->setWriteref(this, writerefcount);
@@ -1258,7 +1258,7 @@ SoBase::writeFooter(SoOutput * out) const
     // someone, for some obscure reason, needs it.
     static int oldstyle = -1;
     if (oldstyle == -1) {
-      oldstyle = CoinInternal::getEnvironmentVariable("COIN_OLDSTYLE_FORMATTING").has_value() ? 1 : 0;
+      oldstyle = CoinInternal::getEnvironmentVariable("OBOL_OLDSTYLE_FORMATTING").has_value() ? 1 : 0;
     }
 
     // FIXME: if we last wrote a field, this EOF is superfluous -- so
@@ -1300,12 +1300,12 @@ SoBase::getCurrentWriteCounter(void)
   tofieldname. This method will consider the fields types (event in,
   event out, etc) when connecting.
 
-  \COIN_FUNCTION_EXTENSION
+  \OBOL_FUNCTION_EXTENSION
 
   \since Coin 2.0
 */
 SbBool
-SoBase::connectRoute(SoInput * COIN_UNUSED_ARG(in),
+SoBase::connectRoute(SoInput * OBOL_UNUSED_ARG(in),
                      const SbName & fromnodename, const SbName & fromfieldname,
                      const SbName & tonodename, const SbName & tofieldname)
 {
@@ -1370,7 +1370,7 @@ SoBase::readRoute(SoInput * in)
     }
   }
 
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoBase::readRoute",
                          "%s.%s %s %s.%s",
                          fromnodename.getString(),
@@ -1425,7 +1425,7 @@ SoBase::doNotify(SoNotList * l, const void * auditor, const SoNotRec::Type type)
   case SoNotRec::SENSOR:
     {
       SoDataSensor * obj = (SoDataSensor *)auditor;
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
       SoDebugError::postInfo("SoAuditorList::notify",
                              "notify and schedule sensor: %p", obj);
 #endif // debug

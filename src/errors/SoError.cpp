@@ -104,7 +104,7 @@ SoError::SoError(const void * error)
 }
 
 void
-SoError::callbackForwarder(const void * error_ptr, void * COIN_UNUSED_ARG(data))
+SoError::callbackForwarder(const void * error_ptr, void * OBOL_UNUSED_ARG(data))
 {
   SoError wrappederr(error_ptr);
 

@@ -45,9 +45,9 @@
 #include <Inventor/projectors/SbCylinderSheetProjector.h>
 #include <cfloat> // FLT_EPSILON
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 /*! \var SbCylinderSheetProjector::workingProjPoint
   Last projected point, in the working space coordinate system.
@@ -154,10 +154,10 @@ SbCylinderSheetProjector::project(const SbVec2f & point)
   SbBool tst = this->intersectCylinderFront(projline, projpt);
   if (!tst) {
     if (!this->tolPlane.intersect(projline, projpt)) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
       SoDebugError::postWarning("SbCylinderSheetProjector::project",
                                 "working line is parallel to cylinder axis.");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
       return SbVec3f(0.0f, 0.0f, 0.0f);
     }
   }

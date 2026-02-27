@@ -1,5 +1,5 @@
-#ifndef COIN_SBCOLOR4F_H
-#define COIN_SBCOLOR4F_H
+#ifndef OBOL_SBCOLOR4F_H
+#define OBOL_SBCOLOR4F_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -39,7 +39,7 @@
 
 class SbVec4f;
 
-class COIN_DLL_API SbColor4f : public SbVec4f {
+class OBOL_DLL_API SbColor4f : public SbVec4f {
 public:
   SbColor4f(void);
   SbColor4f(const SbColor &rgb, const float alpha = 1.0f);
@@ -70,13 +70,13 @@ public:
   SbColor4f &operator+=(const SbColor4f &c);
   SbColor4f &operator-=(const SbColor4f &c);
 
-  friend COIN_DLL_API SbColor4f operator *(const SbColor4f &c, const float d);
-  friend COIN_DLL_API SbColor4f operator *(const float d, const SbColor4f &c);
-  friend COIN_DLL_API SbColor4f operator /(const SbColor4f &c, const float d);
-  friend COIN_DLL_API SbColor4f operator +(const SbColor4f &v1, const SbColor4f &v2);
-  friend COIN_DLL_API SbColor4f operator -(const SbColor4f &v1, const SbColor4f &v2);
-  friend COIN_DLL_API int operator ==(const SbColor4f &v1, const SbColor4f &v2);
-  friend COIN_DLL_API int operator !=(const SbColor4f &v1, const SbColor4f &v2);
+  friend OBOL_DLL_API SbColor4f operator *(const SbColor4f &c, const float d);
+  friend OBOL_DLL_API SbColor4f operator *(const float d, const SbColor4f &c);
+  friend OBOL_DLL_API SbColor4f operator /(const SbColor4f &c, const float d);
+  friend OBOL_DLL_API SbColor4f operator +(const SbColor4f &v1, const SbColor4f &v2);
+  friend OBOL_DLL_API SbColor4f operator -(const SbColor4f &v1, const SbColor4f &v2);
+  friend OBOL_DLL_API int operator ==(const SbColor4f &v1, const SbColor4f &v2);
+  friend OBOL_DLL_API int operator !=(const SbColor4f &v1, const SbColor4f &v2);
 
 private:
   float red() const { return this->vec[0]; }
@@ -85,14 +85,14 @@ private:
   float alpha() const { return this->vec[3]; }
 };
 
-COIN_DLL_API SbColor4f operator *(const SbColor4f &c, const float d);
-COIN_DLL_API SbColor4f operator *(const float d, const SbColor4f &c);
-COIN_DLL_API SbColor4f operator /(const SbColor4f &c, const float d);
-COIN_DLL_API SbColor4f operator +(const SbColor4f &v1, const SbColor4f &v2);
-COIN_DLL_API SbColor4f operator -(const SbColor4f &v1, const SbColor4f &v2);
-COIN_DLL_API int operator ==(const SbColor4f &v1, const SbColor4f &v2);
-COIN_DLL_API int operator !=(const SbColor4f &v1, const SbColor4f &v2);
+OBOL_DLL_API SbColor4f operator *(const SbColor4f &c, const float d);
+OBOL_DLL_API SbColor4f operator *(const float d, const SbColor4f &c);
+OBOL_DLL_API SbColor4f operator /(const SbColor4f &c, const float d);
+OBOL_DLL_API SbColor4f operator +(const SbColor4f &v1, const SbColor4f &v2);
+OBOL_DLL_API SbColor4f operator -(const SbColor4f &v1, const SbColor4f &v2);
+OBOL_DLL_API int operator ==(const SbColor4f &v1, const SbColor4f &v2);
+OBOL_DLL_API int operator !=(const SbColor4f &v1, const SbColor4f &v2);
 
 typedef class SbColor4f SbColorRGBA; // TGS compatibility
 
-#endif // !COIN_SBCOLOR4F_H
+#endif // !OBOL_SBCOLOR4F_H

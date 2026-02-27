@@ -1,5 +1,5 @@
-#ifndef COIN_SONOTREC_H
-#define COIN_SONOTREC_H
+#ifndef OBOL_SONOTREC_H
+#define OBOL_SONOTREC_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -39,7 +39,7 @@
 class SoBase;
 
 
-class COIN_DLL_API SoNotRec {
+class OBOL_DLL_API SoNotRec {
 public:
   enum Type {
     CONTAINER,
@@ -87,4 +87,4 @@ private:
   const SoBase * groupPrevChild;
 };
 
-#endif // !COIN_SONOTREC_H
+#endif // !OBOL_SONOTREC_H

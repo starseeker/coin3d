@@ -1,5 +1,5 @@
-#ifndef COIN_SBLINEAR_H
-#define COIN_SBLINEAR_H
+#ifndef OBOL_SBLINEAR_H
+#define OBOL_SBLINEAR_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,11 +33,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifdef COIN_INTERNAL
+#ifdef OBOL_INTERNAL
 /* Detect erroneous include statements in library code. Application
    programmers can ignore this. */
 #error Do not include SbLinear.h in internal library code.
-#endif // COIN_INTERNAL
+#endif // OBOL_INTERNAL
 
 /*
  * Note to application programmers: include this header file in your
@@ -65,4 +65,4 @@
 #include <Inventor/SbPlane.h>
 #include <Inventor/SbViewVolume.h>
 
-#endif // !COIN_SBLINEAR_H
+#endif // !OBOL_SBLINEAR_H

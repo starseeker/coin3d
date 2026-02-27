@@ -607,7 +607,7 @@ SoVertexProperty::updateMaterial(SoState * state, uint32_t overrideflags, SbBool
           dirty = TRUE;
         }
         if (dirty) {
-          if (coin_host_get_endianness() == COIN_HOST_IS_BIGENDIAN) {
+          if (coin_host_get_endianness() == OBOL_HOST_IS_BIGENDIAN) {
             PRIVATE(this)->colorvbo->setBufferData(this->orderedRGBA.getValues(0),
                                                    num*sizeof(uint32_t),
                                                    this->getNodeId());

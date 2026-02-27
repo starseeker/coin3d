@@ -296,7 +296,7 @@ SoTextureCoordinateBundle::defaultCB(void * userdata,
 const SbVec4f &
 SoTextureCoordinateBundle:: defaultCBMulti(void * userdata,
                                            const SbVec3f & point,
-                                           const SbVec3f & COIN_UNUSED_ARG(normal))
+                                           const SbVec3f & OBOL_UNUSED_ARG(normal))
 {
   SoTextureCoordinateBundle * thisp = static_cast<SoTextureCoordinateBundle *>(userdata);
 

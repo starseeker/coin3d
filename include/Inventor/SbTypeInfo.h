@@ -1,5 +1,5 @@
-#ifndef COIN_SBTYPEINFO_H
-#define COIN_SBTYPEINFO_H
+#ifndef OBOL_SBTYPEINFO_H
+#define OBOL_SBTYPEINFO_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -63,7 +63,7 @@
 
 #include <cstdint>
 // Modern C++17 basic types instead of legacy C API
-#ifdef COIN_INTERNAL
+#ifdef OBOL_INTERNAL
 #include "Inventor/basic.h"
 #else
 // For external users, provide essential type definitions inline
@@ -1419,4 +1419,4 @@ struct SbTypeInfo<SoMFVec4us> {
 
 #endif // !DOXYGEN_SKIP_THIS
 
-#endif // !COIN_SBTYPEINFO_H
+#endif // !OBOL_SBTYPEINFO_H

@@ -1,5 +1,5 @@
-#ifndef COIN_SOLINEWIDTHELEMENT_H
-#define COIN_SOLINEWIDTHELEMENT_H
+#ifndef OBOL_SOLINEWIDTHELEMENT_H
+#define OBOL_SOLINEWIDTHELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/elements/SoFloatElement.h>
 
-class COIN_DLL_API SoLineWidthElement : public SoFloatElement {
+class OBOL_DLL_API SoLineWidthElement : public SoFloatElement {
   typedef SoFloatElement inherited;
 
   SO_ELEMENT_HEADER(SoLineWidthElement);
@@ -54,4 +54,4 @@ public:
   static float getDefault();
 };
 
-#endif // !COIN_SOLINEWIDTHELEMENT_H
+#endif // !OBOL_SOLINEWIDTHELEMENT_H

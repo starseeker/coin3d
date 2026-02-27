@@ -199,10 +199,10 @@ SoTransformManip::getDragger(void)
     if (node->isOfType(SoDragger::getClassTypeId()))
       return (SoDragger*)node;
     else {
-#if COIN_DEBUG
+#if OBOL_DEBUG
       SoDebugError::post("SoTransformManip::getDragger",
                          "Child is not a dragger!");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     }
   }
   return NULL;
@@ -231,11 +231,11 @@ SoTransformManip::replaceNode(SoPath * path)
   SoFullPath *fullpath = (SoFullPath*)path;
   SoNode *fulltail = fullpath->getTail();
   if (!fulltail->isOfType(SoTransform::getClassTypeId())) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::post("SoTransformManip::replaceNode",
                        "end of path (%p) is not an SoTransform, but an %s",
                        fulltail, fulltail->getTypeId().getName().getString());
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     return FALSE;
   }
   SoNode *tail = path->getTail();
@@ -262,9 +262,9 @@ SoTransformManip::replaceNode(SoPath * path)
   // SoTransform node (i.e., the node is root, head and tail of the
   // path).
   if (fullpath->getLength() < 2) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::post("SoTransformManip::replaceNode", "Path is too short");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     return FALSE;
   }
 
@@ -277,11 +277,11 @@ SoTransformManip::replaceNode(SoPath * path)
   // FIXME: are there any other conditions where this could hit?
   // Please elaborate in a code comment.  20010909 mortene.
   if (!parent->isOfType(SoGroup::getClassTypeId())) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::post("SoTransformManip::replaceNode",
                        "Parent node %p is not an SoGroup, but %s",
                        parent, parent->getTypeId().getName().getString());
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     return FALSE;
   }
   this->ref();

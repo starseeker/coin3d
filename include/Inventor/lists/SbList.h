@@ -1,5 +1,5 @@
-#ifndef COIN_SBLIST_H
-#define COIN_SBLIST_H
+#ifndef OBOL_SBLIST_H
+#define OBOL_SBLIST_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -130,9 +130,9 @@ public:
   }
 
   void insert(const Type item, const int insertbefore) {
-#ifdef COIN_EXTRA_DEBUG
+#ifdef OBOL_EXTRA_DEBUG
     assert(insertbefore >= 0 && insertbefore <= this->numitems);
-#endif // COIN_EXTRA_DEBUG
+#endif // OBOL_EXTRA_DEBUG
     if (this->numitems == this->itembuffersize) this->grow();
 
     for (int i = this->numitems; i > insertbefore; i--)
@@ -143,25 +143,25 @@ public:
 
   void removeItem(const Type item) {
     int idx = this->find(item);
-#ifdef COIN_EXTRA_DEBUG
+#ifdef OBOL_EXTRA_DEBUG
     assert(idx != -1);
-#endif // COIN_EXTRA_DEBUG
+#endif // OBOL_EXTRA_DEBUG
     this->remove(idx);
   }
 
   void remove(const int index) {
-#ifdef COIN_EXTRA_DEBUG
+#ifdef OBOL_EXTRA_DEBUG
     assert(index >= 0 && index < this->numitems);
-#endif // COIN_EXTRA_DEBUG
+#endif // OBOL_EXTRA_DEBUG
     this->numitems--;
     for (int i = index; i < this->numitems; i++)
       this->itembuffer[i] = this->itembuffer[i + 1];
   }
 
   void removeFast(const int index) {
-#ifdef COIN_EXTRA_DEBUG
+#ifdef OBOL_EXTRA_DEBUG
     assert(index >= 0 && index < this->numitems);
-#endif // COIN_EXTRA_DEBUG
+#endif // OBOL_EXTRA_DEBUG
     this->itembuffer[index] = this->itembuffer[--this->numitems];
   }
 
@@ -170,9 +170,9 @@ public:
   }
 
   void truncate(const int length, const int dofit = 0) {
-#ifdef COIN_EXTRA_DEBUG
+#ifdef OBOL_EXTRA_DEBUG
     assert(length <= this->numitems);
-#endif // COIN_EXTRA_DEBUG
+#endif // OBOL_EXTRA_DEBUG
     this->numitems = length;
     if (dofit) this->fit();
   }
@@ -182,9 +182,9 @@ public:
   }
 
   Type pop(void) {
-#ifdef COIN_EXTRA_DEBUG
+#ifdef OBOL_EXTRA_DEBUG
     assert(this->numitems > 0);
-#endif // COIN_EXTRA_DEBUG
+#endif // OBOL_EXTRA_DEBUG
     return this->itembuffer[--this->numitems];
   }
 
@@ -193,16 +193,16 @@ public:
   }
 
   Type operator[](const int index) const {
-#ifdef COIN_EXTRA_DEBUG
+#ifdef OBOL_EXTRA_DEBUG
     assert(index >= 0 && index < this->numitems);
-#endif // COIN_EXTRA_DEBUG
+#endif // OBOL_EXTRA_DEBUG
     return this->itembuffer[index];
   }
 
   Type & operator[](const int index) {
-#ifdef COIN_EXTRA_DEBUG
+#ifdef OBOL_EXTRA_DEBUG
     assert(index >= 0 && index < this->numitems);
-#endif // COIN_EXTRA_DEBUG
+#endif // OBOL_EXTRA_DEBUG
     return this->itembuffer[index];
   }
 
@@ -261,4 +261,4 @@ private:
   Type builtinbuffer[DEFAULTSIZE];
 };
 
-#endif // !COIN_SBLIST_H
+#endif // !OBOL_SBLIST_H

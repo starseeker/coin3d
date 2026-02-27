@@ -118,7 +118,7 @@ SoGLLineWidthElement::push(SoState * stateptr)
 
 // doc in superclass
 void
-SoGLLineWidthElement::pop(SoState * COIN_UNUSED_ARG(stateptr), const SoElement * prevTopElement)
+SoGLLineWidthElement::pop(SoState * OBOL_UNUSED_ARG(stateptr), const SoElement * prevTopElement)
 {
   SoGLLineWidthElement * prev = (SoGLLineWidthElement*)prevTopElement;
   if (this->data != prev->data) {
@@ -174,7 +174,7 @@ SoGLLineWidthElement::updategl(void)
   }
 
 
-  if (COIN_DEBUG) {
+  if (OBOL_DEBUG) {
     // Detect invalid values and warn the application programmer.
     // (0.0f is used as a "dummy" default value by our superclass and
     // by SoDrawStyle::lineWidth, so ignore that case.)

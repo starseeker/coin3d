@@ -131,7 +131,7 @@ SO_NODE_SOURCE(SoListener);
 */
 void SoListener::initClass()
 {
-  SO_NODE_INTERNAL_INIT_CLASS(SoListener, SO_FROM_COIN_2_0);
+  SO_NODE_INTERNAL_INIT_CLASS(SoListener, SO_FROM_OBOL_2_0);
 }
 
 /*!

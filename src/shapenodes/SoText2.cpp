@@ -134,9 +134,9 @@
 #include <Inventor/elements/SoMultiTextureEnabledElement.h>
 #include <Inventor/elements/SoGLMultiTextureEnabledElement.h>
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
 #include <Inventor/threads/SbMutex.h>
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 
 #include "nodes/SoSubNodeP.h"
 #include "caches/SoGlyphCache.h"
@@ -260,31 +260,31 @@ public:
   unsigned char * pixel_buffer;
   int pixel_buffer_size;
 
-  static void sensor_cb(void * userdata, SoSensor * COIN_UNUSED_ARG(s)) {
+  static void sensor_cb(void * userdata, SoSensor * OBOL_UNUSED_ARG(s)) {
     SoText2P * thisp = (SoText2P*) userdata;
     thisp->lock();
     if (thisp->cache) thisp->cache->invalidate();
     thisp->unlock();
   }
   void lock(void) {
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
     this->mutex.lock();
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
   }
   void unlock(void) {
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
     this->mutex.unlock();
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
   }
 private:
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   // FIXME: a mutex for every instance seems a bit excessive,
   // especially since Microsoft Windows might have rather strict limits on the
   // total amount of mutex resources a process (or even a user) can
   // allocate. so consider making this a class-wide instance instead.
   // -mortene.
   SbMutex mutex;
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
   SoText2 * master;
 };
 
@@ -778,7 +778,7 @@ SoText2::getPrimitiveCount(SoGetPrimitiveCountAction *action)
 
 // doc in super
 void
-SoText2::generatePrimitives(SoAction * COIN_UNUSED_ARG(action))
+SoText2::generatePrimitives(SoAction * OBOL_UNUSED_ARG(action))
 {
   // This is supposed to be empty. There are no primitives.
 }
@@ -985,7 +985,7 @@ SoText2P::buildGlyphCache(SoState * state)
   this->bbox.makeEmpty();
 
   // Debug: Add bounding box debugging to verify the fix
-  auto env_debug = CoinInternal::getEnvironmentVariable("COIN_DEBUG_BBOX");
+  auto env_debug = CoinInternal::getEnvironmentVariable("OBOL_DEBUG_BBOX");
   SbBool debug_bbox = env_debug.has_value() && (std::atoi(env_debug->c_str()) > 0);
 
   for (int i=0; i < nrlines; i++) {

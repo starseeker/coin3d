@@ -47,7 +47,7 @@
   This abstract superclass will likely be of no interest to the Coin
   application programmer, and you can safely ignore it.
 
-  \COIN_CLASS_EXTENSION
+  \OBOL_CLASS_EXTENSION
 */
 
 // FIXME: currently most of the code in this class is simply copied
@@ -63,9 +63,9 @@
 #include <Inventor/errors/SoDebugError.h>
 
 #include "config.h"
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
 #include "threads/recmutexp.h"
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 
 // *************************************************************************
 
@@ -100,7 +100,7 @@ SoNodeEngine::SoNodeEngine(void)
 */
 SoNodeEngine::~SoNodeEngine()
 {
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoNodeEngine::~SoNodeEngine", "%p", this);
 #endif // debug
 }
@@ -109,7 +109,7 @@ SoNodeEngine::~SoNodeEngine()
 void
 SoNodeEngine::destroy(void)
 {
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SbName n = this->getName();
   SoType t = this->getTypeId();
   SoDebugError::postInfo("SoNodeEngine::destroy", "start -- '%s' (%s)",
@@ -117,17 +117,17 @@ SoNodeEngine::destroy(void)
                          t.getName().getString());
 #endif // debug
 
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   cc_recmutex_internal_field_lock();
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
   this->evaluateWrapper();
-#ifdef COIN_THREADSAFE
+#ifdef OBOL_THREADSAFE
   cc_recmutex_internal_field_unlock();
-#endif // COIN_THREADSAFE
+#endif // OBOL_THREADSAFE
 
   inherited::destroy();
 
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoNodeEngine::destroy", "done -- '%s' (%s)",
                          n.getString(),
                          t.getName().getString());
@@ -214,7 +214,7 @@ SoNodeEngine::getOutputName(const SoEngineOutput * output,
   when a specific field is changed.
 */
 void
-SoNodeEngine::inputChanged(SoField * COIN_UNUSED_ARG(which))
+SoNodeEngine::inputChanged(SoField * OBOL_UNUSED_ARG(which))
 {
 }
 
@@ -222,7 +222,7 @@ SoNodeEngine::inputChanged(SoField * COIN_UNUSED_ARG(which))
 void
 SoNodeEngine::notify(SoNotList * nl)
 {
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoNodeEngine::notify", "%p - %s, start",
                          this, this->getTypeId().getName().getString());
 #endif // debug
@@ -255,7 +255,7 @@ SoNodeEngine::notify(SoNotList * nl)
 
   this->flags &= ~FLAG_ISNOTIFYING;
 
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoNodeEngine::notify", "%p - %s, done",
                          this, this->getTypeId().getName().getString());
 #endif // debug
@@ -319,9 +319,9 @@ SoNodeEngine::writeInstance(SoOutput * out)
   (i.e. engines not built in to Coin).
 */
 void
-SoNodeEngine::writeOutputTypes(SoOutput * COIN_UNUSED_ARG(out))
+SoNodeEngine::writeOutputTypes(SoOutput * OBOL_UNUSED_ARG(out))
 {
-  COIN_STUB();
+  OBOL_STUB();
 }
 
 /*!

@@ -1,5 +1,5 @@
-#ifndef COIN_SOSHADOWCULLING_H
-#define COIN_SOSHADOWCULLING_H
+#ifndef OBOL_SOSHADOWCULLING_H
+#define OBOL_SOSHADOWCULLING_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/fields/SoSFEnum.h>
 #include <Inventor/annex/FXViz/elements/SoGLShadowCullingElement.h>
 
-class COIN_DLL_API SoShadowCulling : public SoNode {
+class OBOL_DLL_API SoShadowCulling : public SoNode {
   typedef SoNode inherited;
 
   SO_NODE_HEADER(SoShadowCulling);
@@ -59,4 +59,4 @@ protected:
   virtual ~SoShadowCulling();
 };
 
-#endif // !COIN_SOSHADOWCULLING_H
+#endif // !OBOL_SOSHADOWCULLING_H

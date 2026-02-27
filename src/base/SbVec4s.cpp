@@ -39,9 +39,9 @@
 #include <Inventor/SbVec4i32.h>
 #include <Inventor/SbVec4f.h>
 #include <Inventor/SbVec4d.h>
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 /*!
   \class SbVec4s SbVec4s.h Inventor/SbVec4s.h
@@ -72,13 +72,13 @@ SbVec4s::setValue(const SbVec4b & v)
 SbVec4s &
 SbVec4s::setValue(const SbVec4i32 & v)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (v[0] > std::numeric_limits<short>::max() || v[0] < -std::numeric_limits<short>::max() || 
       v[1] > std::numeric_limits<short>::max() || v[1] < -std::numeric_limits<short>::max() || 
       v[2] > std::numeric_limits<short>::max() || v[2] < -std::numeric_limits<short>::max()) {
     SoDebugError::post("SbVec4s::setValue", "SbVec4i32 argument out of range to store in an SbVec4s");
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   vec[0] = static_cast<short>(v[0]);
   vec[1] = static_cast<short>(v[1]);
   vec[2] = static_cast<short>(v[2]);
@@ -89,13 +89,13 @@ SbVec4s::setValue(const SbVec4i32 & v)
 SbVec4s &
 SbVec4s::setValue(const SbVec4f & v)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (v[0] > std::numeric_limits<short>::max() || v[0] < -std::numeric_limits<short>::max() || 
       v[1] > std::numeric_limits<short>::max() || v[1] < -std::numeric_limits<short>::max() || 
       v[2] > std::numeric_limits<short>::max() || v[2] < -std::numeric_limits<short>::max()) {
     SoDebugError::post("SbVec4s::setValue", "SbVec4f argument out of range to store in an SbVec4s");
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   vec[0] = static_cast<short>(v[0]);
   vec[1] = static_cast<short>(v[1]);
   vec[2] = static_cast<short>(v[2]);
@@ -106,13 +106,13 @@ SbVec4s::setValue(const SbVec4f & v)
 SbVec4s &
 SbVec4s::setValue(const SbVec4d & v)
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (v[0] > std::numeric_limits<short>::max() || v[0] < -std::numeric_limits<short>::max() || 
       v[1] > std::numeric_limits<short>::max() || v[1] < -std::numeric_limits<short>::max() || 
       v[2] > std::numeric_limits<short>::max() || v[2] < -std::numeric_limits<short>::max()) {
     SoDebugError::post("SbVec4s::setValue", "SbVec4d argument out of range to store in an SbVec4s");
   }
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   vec[0] = static_cast<short>(v[0]);
   vec[1] = static_cast<short>(v[1]);
   vec[2] = static_cast<short>(v[2]);

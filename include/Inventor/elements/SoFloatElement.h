@@ -1,5 +1,5 @@
-#ifndef COIN_SOFLOATELEMENT_H
-#define COIN_SOFLOATELEMENT_H
+#ifndef OBOL_SOFLOATELEMENT_H
+#define OBOL_SOFLOATELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -35,7 +35,7 @@
 
 #include <Inventor/elements/SoSubElement.h>
 
-class COIN_DLL_API SoFloatElement : public SoElement {
+class OBOL_DLL_API SoFloatElement : public SoElement {
   typedef SoElement inherited;
 
   SO_ELEMENT_ABSTRACT_HEADER(SoFloatElement);
@@ -65,4 +65,4 @@ protected:
   float data;
 };
 
-#endif // !COIN_SOFLOATELEMENT_H
+#endif // !OBOL_SOFLOATELEMENT_H

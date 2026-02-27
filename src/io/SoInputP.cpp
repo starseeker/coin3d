@@ -46,7 +46,7 @@ SoInputP::debug(void)
 {
   static int dbg = -1;
   if (dbg == -1) {
-    const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_IMPORT");
+    const char * env = CoinInternal::getEnvironmentVariableRaw("OBOL_DEBUG_IMPORT");
     dbg = (env && (atoi(env) > 0)) ? 1 : 0;
   }
   return dbg;
@@ -57,7 +57,7 @@ SoInputP::debugBinary(void)
 {
   static int debug = -1;
   if (debug == -1) {
-    const char * env = CoinInternal::getEnvironmentVariableRaw("COIN_DEBUG_BINARY_INPUT");
+    const char * env = CoinInternal::getEnvironmentVariableRaw("OBOL_DEBUG_BINARY_INPUT");
     debug = (env && (atoi(env) > 0)) ? 1 : 0;
   }
   return debug ? TRUE : FALSE;

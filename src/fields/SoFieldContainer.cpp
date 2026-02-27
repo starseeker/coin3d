@@ -73,10 +73,10 @@
 #include <Inventor/SbColor.h>
 #include <Inventor/SbColor4f.h>
 #include <Inventor/SbTime.h>
-#undef COIN_INTERNAL
+#undef OBOL_INTERNAL
 #include <Inventor/SbLinear.h>
 #include <Inventor/SbVec.h>
-#define COIN_INTERNAL
+#define OBOL_INTERNAL
 
 #include "CoinTidbits.h"
 #include "misc/SbHash.h"
@@ -150,7 +150,7 @@ SoFieldContainer::~SoFieldContainer()
 
 // typedef SbHash<const SoFieldContainer *, const SoFieldContainer *> SoFieldContainerCopyMap;
 
-#define SOFIELDCONTAINER_COPYDICT_DEBUG (COIN_DEBUG && 0)
+#define SOFIELDCONTAINER_COPYDICT_DEBUG (OBOL_DEBUG && 0)
 
 class SoFieldContainerCopyMap : public SbHash<const SoFieldContainer *, const SoFieldContainer *> {
   typedef SbHash<const SoFieldContainer *, const SoFieldContainer *> inherited;
@@ -356,11 +356,11 @@ SoFieldContainer::copyFieldValues(const SoFieldContainer * container,
 
   if (fd0 == NULL) {
     if (container->getFieldData() == NULL) return;
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postInfo("SoFieldContainer::copyFieldValues",
                            "tried to copy from fieldcontainer of wrong type");
     return;
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
   }
 
   fd0->overlay(this, container, copyconnections);
@@ -568,10 +568,10 @@ SoFieldContainer::set(const char * fielddata, SoInput * in)
 {
   const SoFieldData * fields = this->getFieldData();
   if (!fields) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postInfo("SoFieldContainer::set",
                            "tried to set values of non-existent fields");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     // Return TRUE here might seem strange, but I think its correct to
     // do it like this -- we're just supposed to read field values until
     // we can't do that anymore. mortene.
@@ -650,7 +650,7 @@ SoFieldContainer::get(SbString & fielddata, SoOutput * out)
 void
 SoFieldContainer::notify(SoNotList * l)
 {
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   char c;
   SoDebugError::postInfo("SoFieldContainer::notify", "fc %p, list %p, stack %p", this, l, &c);
 #endif // debug
@@ -671,7 +671,7 @@ SoFieldContainer::notify(SoNotList * l)
       inherited::notify(l);
     }
   }
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoFieldContainer::notify", "DONE");
 #endif // debug
 }
@@ -682,10 +682,10 @@ SoFieldContainer::notify(SoNotList * l)
   no matter what the arguments are.
  */
 SbBool
-SoFieldContainer::validateNewFieldValue(SoField * COIN_UNUSED_ARG(field),
-                                   void * COIN_UNUSED_ARG(newval))
+SoFieldContainer::validateNewFieldValue(SoField * OBOL_UNUSED_ARG(field),
+                                   void * OBOL_UNUSED_ARG(newval))
 {
-  COIN_STUB();
+  OBOL_STUB();
   return TRUE;
 }
 

@@ -1,5 +1,5 @@
-#ifndef COIN_SBNAME_H
-#define COIN_SBNAME_H
+#ifndef OBOL_SBNAME_H
+#define OBOL_SBNAME_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 
 class SbString;
 
-class COIN_DLL_API SbName {
+class OBOL_DLL_API SbName {
 public:
   SbName(void);
   SbName(const char * namestring);
@@ -49,12 +49,12 @@ public:
   int getLength(void) const;
 
   int operator!(void) const;
-  friend COIN_DLL_API int operator==(const SbName & lhs, const char * rhs);
-  friend COIN_DLL_API int operator==(const char * lhs, const SbName & rhs);
-  friend COIN_DLL_API int operator==(const SbName & lhs, const SbName & rhs);
-  friend COIN_DLL_API int operator!=(const SbName & lhs, const char * rhs);
-  friend COIN_DLL_API int operator!=(const char * lhs, const SbName & rhs);
-  friend COIN_DLL_API int operator!=(const SbName & lhs, const SbName & rhs);
+  friend OBOL_DLL_API int operator==(const SbName & lhs, const char * rhs);
+  friend OBOL_DLL_API int operator==(const char * lhs, const SbName & rhs);
+  friend OBOL_DLL_API int operator==(const SbName & lhs, const SbName & rhs);
+  friend OBOL_DLL_API int operator!=(const SbName & lhs, const char * rhs);
+  friend OBOL_DLL_API int operator!=(const char * lhs, const SbName & rhs);
+  friend OBOL_DLL_API int operator!=(const SbName & lhs, const SbName & rhs);
 
   operator const char * (void) const;
 
@@ -74,11 +74,11 @@ private:
   const char * permaaddress;
 };
 
-COIN_DLL_API int operator==(const SbName & lhs, const char * rhs);
-COIN_DLL_API int operator==(const char * lhs, const SbName & rhs);
-COIN_DLL_API int operator==(const SbName & lhs, const SbName & rhs);
-COIN_DLL_API int operator!=(const SbName & lhs, const char * rhs);
-COIN_DLL_API int operator!=(const char * lhs, const SbName & rhs);
-COIN_DLL_API int operator!=(const SbName & lhs, const SbName & rhs);
+OBOL_DLL_API int operator==(const SbName & lhs, const char * rhs);
+OBOL_DLL_API int operator==(const char * lhs, const SbName & rhs);
+OBOL_DLL_API int operator==(const SbName & lhs, const SbName & rhs);
+OBOL_DLL_API int operator!=(const SbName & lhs, const char * rhs);
+OBOL_DLL_API int operator!=(const char * lhs, const SbName & rhs);
+OBOL_DLL_API int operator!=(const SbName & lhs, const SbName & rhs);
 
-#endif // !COIN_SBNAME_H
+#endif // !OBOL_SBNAME_H

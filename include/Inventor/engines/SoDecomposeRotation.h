@@ -30,8 +30,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_SODECOMPOSEROTATION_H
-#define COIN_SODECOMPOSEROTATION_H
+#ifndef OBOL_SODECOMPOSEROTATION_H
+#define OBOL_SODECOMPOSEROTATION_H
 
 // Warning for application programmers: do not include this header
 // file in your application code if you want to stay sourcecode
@@ -44,7 +44,7 @@
 #include <Inventor/fields/SoMFRotation.h>
 
 
-class COIN_DLL_API SoDecomposeRotation : public SoEngine {
+class OBOL_DLL_API SoDecomposeRotation : public SoEngine {
   typedef SoEngine inherited;
   SO_COMPOSE__HEADER(SoDecomposeRotation);
 
@@ -55,4 +55,4 @@ public:
   SoEngineOutput angle; // SoMFFloat
 };
 
-#endif // !COIN_SODECOMPOSEROTATION_H
+#endif // !OBOL_SODECOMPOSEROTATION_H

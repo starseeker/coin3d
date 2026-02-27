@@ -1,5 +1,5 @@
-#ifndef COIN_SOGLSLSHADEROBJECT_H
-#define COIN_SOGLSLSHADEROBJECT_H
+#ifndef OBOL_SOGLSLSHADEROBJECT_H
+#define OBOL_SOGLSLSHADEROBJECT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,7 +33,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #error this is a private header file
 #endif
 
@@ -62,21 +62,21 @@ public:
   virtual void load(const char * sourceString);
   virtual void unload(void);
 
-  void attach(COIN_GLhandle programHandle);
+  void attach(OBOL_GLhandle programHandle);
   void detach(void);
   SbBool isAttached(void) const;
 
   // source should be the name of the calling function
   static SbBool didOpenGLErrorOccur(const SbString & source);
-  static void printInfoLog(const SoGLContext * g, COIN_GLhandle handle, int objType);
+  static void printInfoLog(const SoGLContext * g, OBOL_GLhandle handle, int objType);
 
   virtual void updateCoinParameter(SoState * state, const SbName & name, SoShaderParameter * param, const int value);
 
 private:
-  COIN_GLhandle programHandle;
-  COIN_GLhandle shaderHandle;
+  OBOL_GLhandle programHandle;
+  OBOL_GLhandle shaderHandle;
   SbBool isattached;
   int32_t programid;
 };
 
-#endif /* ! COIN_SOGLSLSHADEROBJECT_H */
+#endif /* ! OBOL_SOGLSLSHADEROBJECT_H */

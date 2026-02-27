@@ -1,5 +1,5 @@
-#ifndef COIN_SOSUBKITP_H
-#define COIN_SOSUBKITP_H
+#ifndef OBOL_SOSUBKITP_H
+#define OBOL_SOSUBKITP_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -42,9 +42,9 @@
 // application programmer.
 
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #error this is a private header file
-#endif // !COIN_INTERNAL
+#endif // !OBOL_INTERNAL
 
 #include "nodes/SoSubNodeP.h"
 
@@ -72,4 +72,4 @@
     SoBase::staticDataUnlock(); \
   } while (0)
 
-#endif // !COIN_SOSUBKITP_H
+#endif // !OBOL_SOSUBKITP_H

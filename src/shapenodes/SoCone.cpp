@@ -92,9 +92,9 @@
 #include <Inventor/elements/SoMultiTextureCoordinateElement.h>
 #include <Inventor/misc/SoState.h>
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 #include "nodes/SoSubNodeP.h"
 #include "rendering/SoGL.h"
@@ -174,7 +174,7 @@ SoCone::initClass(void)
 
 // Doc from parent.
 void
-SoCone::computeBBox(SoAction * COIN_UNUSED_ARG(action), SbBox3f & box, SbVec3f & center)
+SoCone::computeBBox(SoAction * OBOL_UNUSED_ARG(action), SbBox3f & box, SbVec3f & center)
 {
   float r = this->bottomRadius.getValue();
   float h = this->height.getValue();
@@ -223,13 +223,10 @@ SoCone::GLRender(SoGLRenderAction * action)
   SoCone::Part p = (SoCone::Part) this->parts.getValue();
 
   SoMaterialBundle mb(action);
-  SbBool sendNormals = !mb.isColorOnly() || 
-    (SoMultiTextureCoordinateElement::getType(state, 0) == SoMultiTextureCoordinateElement::FUNCTION);
 
-  unsigned int flags = 0;
+  unsigned int flags = SOGL_NEED_NORMALS;
   if (doTextures) flags |= SOGL_NEED_TEXCOORDS;
   else if (do3DTextures) flags |= SOGL_NEED_3DTEXCOORDS;
-  if (sendNormals) flags |= SOGL_NEED_NORMALS;
   if (p & SoCone::SIDES) flags |= SOGL_RENDER_SIDE;
   if (p & SoCone::BOTTOM) flags |= SOGL_RENDER_BOTTOM;
 
@@ -249,7 +246,7 @@ SoCone::GLRender(SoGLRenderAction * action)
                    &mb,
                    flags, state);
 
-#if COIN_DEBUG && 0 // debug
+#if OBOL_DEBUG && 0 // debug
   SoDebugError::postInfo("SoCone::GLRender", "end");
 #endif // debug
 }
@@ -263,9 +260,9 @@ void
 SoCone::addPart(SoCone::Part part)
 {
   if (this->hasPart(part)) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SoCone::addPart", "part already set");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     return;
   }
 
@@ -281,9 +278,9 @@ void
 SoCone::removePart(SoCone::Part part)
 {
   if (!this->hasPart(part)) {
-#if COIN_DEBUG
+#if OBOL_DEBUG
     SoDebugError::postWarning("SoCone::removePart", "part was not set");
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
     return;
   }
 

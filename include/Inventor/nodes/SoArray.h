@@ -1,5 +1,5 @@
-#ifndef COIN_SOARRAY_H
-#define COIN_SOARRAY_H
+#ifndef OBOL_SOARRAY_H
+#define OBOL_SOARRAY_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -39,7 +39,7 @@
 #include <Inventor/fields/SoSFShort.h>
 #include <Inventor/fields/SoSFVec3f.h>
 
-class COIN_DLL_API SoArray : public SoGroup {
+class OBOL_DLL_API SoArray : public SoGroup {
     typedef SoGroup inherited;
 
   SO_NODE_HEADER(SoArray);
@@ -76,4 +76,4 @@ protected:
   virtual ~SoArray();
 };
 
-#endif // !COIN_SOARRAY_H
+#endif // !OBOL_SOARRAY_H

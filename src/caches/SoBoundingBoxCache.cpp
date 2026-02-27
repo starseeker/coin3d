@@ -70,7 +70,7 @@ SoBoundingBoxCache::SoBoundingBoxCache(SoState *state)
   PRIVATE(this)->centerset = 0;
   PRIVATE(this)->linesorpoints = 0;
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (coin_debug_caching_level() > 0) {
     SoDebugError::postInfo("SoBoundingBoxCache::SoBoundingBoxCache",
                            "Cache created: %p", this);
@@ -84,7 +84,7 @@ SoBoundingBoxCache::SoBoundingBoxCache(SoState *state)
 */
 SoBoundingBoxCache::~SoBoundingBoxCache()
 {
-#if COIN_DEBUG
+#if OBOL_DEBUG
   if (coin_debug_caching_level() > 0) {
     SoDebugError::postInfo("SoBoundingBoxCache::~SoBoundingBoxCache",
                            "Cache destructed: %p", this);

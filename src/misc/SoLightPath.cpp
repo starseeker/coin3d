@@ -48,9 +48,9 @@
 #include <Inventor/nodes/SoNode.h>
 #include <Inventor/misc/SoTempPath.h>
 
-#if COIN_DEBUG
+#if OBOL_DEBUG
 #include <Inventor/errors/SoDebugError.h>
-#endif // COIN_DEBUG
+#endif // OBOL_DEBUG
 
 /*!
   A constructor. Supply the head node and the approximate length of
@@ -118,7 +118,7 @@ SoLightPath::push(const int childindex)
 void
 SoLightPath::pop(void)
 {
-#if COIN_DEBUG && 1 // debug
+#if OBOL_DEBUG && 1 // debug
   if (this->indices.getLength() <= 1) {
     SoDebugError::postInfo("SoLightPath::pop",
                            "You shouldn't pop off the head node.");
@@ -161,7 +161,7 @@ SoLightPath::getHead(void) const
 SoNode *
 SoLightPath::getNode(const int index) const
 {
-#if COIN_DEBUG && 1 // debug
+#if OBOL_DEBUG && 1 // debug
   if (index < 0 || index >= this->indices.getLength()) {
     SoDebugError::postInfo("SoLightPath::getNode",
                            "index %d out of bounds", index);
@@ -185,7 +185,7 @@ SoLightPath::getNode(const int index) const
 int
 SoLightPath::getIndex(const int index) const
 {
-#if COIN_DEBUG && 1 // debug
+#if OBOL_DEBUG && 1 // debug
   if (index < 0 || index >= this->indices.getLength()) {
     SoDebugError::postInfo("SoLightPath::getNode",
                            "index %d out of bounds", index);

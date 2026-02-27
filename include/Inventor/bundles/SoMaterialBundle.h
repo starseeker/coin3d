@@ -1,5 +1,5 @@
-#ifndef COIN_SOMATERIALBUNDLE_H
-#define COIN_SOMATERIALBUNDLE_H
+#ifndef OBOL_SOMATERIALBUNDLE_H
+#define OBOL_SOMATERIALBUNDLE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -39,7 +39,7 @@
 
 class SoGLLazyElement;
 
-class COIN_DLL_API SoMaterialBundle : public SoBundle {
+class OBOL_DLL_API SoMaterialBundle : public SoBundle {
   typedef SoBundle inherited;
 public:
   SoMaterialBundle(SoAction *action);
@@ -63,4 +63,4 @@ private:
   const SoGLLazyElement * lazyelem;
 };
 
-#endif // !COIN_SOMATERIALBUNDLE_H
+#endif // !OBOL_SOMATERIALBUNDLE_H

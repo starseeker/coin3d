@@ -1,5 +1,5 @@
-#ifndef COIN_SOBUMPMAPMATRIXELEMENT_H
-#define COIN_SOBUMPMAPMATRIXELEMENT_H
+#ifndef OBOL_SOBUMPMAPMATRIXELEMENT_H
+#define OBOL_SOBUMPMAPMATRIXELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -36,7 +36,7 @@
 #include <Inventor/elements/SoAccumulatedElement.h>
 #include <Inventor/SbMatrix.h>
 
-class COIN_DLL_API SoBumpMapMatrixElement : public SoAccumulatedElement {
+class OBOL_DLL_API SoBumpMapMatrixElement : public SoAccumulatedElement {
   typedef SoAccumulatedElement inherited;
 
   SO_ELEMENT_HEADER(SoBumpMapMatrixElement);
@@ -76,4 +76,4 @@ protected:
   SbMatrix bumpMapMatrix;
 };
 
-#endif // !COIN_SOBUMPMAPMATRIXELEMENT_H
+#endif // !OBOL_SOBUMPMAPMATRIXELEMENT_H

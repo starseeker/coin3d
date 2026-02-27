@@ -1,5 +1,5 @@
-#ifndef COIN_SOMFROTATION_H
-#define COIN_SOMFROTATION_H
+#ifndef OBOL_SOMFROTATION_H
+#define OBOL_SOMFROTATION_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/fields/SoSubField.h>
 #include <Inventor/SbRotation.h>
 
-class COIN_DLL_API SoMFRotation : public SoMField {
+class OBOL_DLL_API SoMFRotation : public SoMField {
   typedef SoMField inherited;
 
   SO_MFIELD_HEADER(SoMFRotation, SbRotation, const SbRotation &);
@@ -54,4 +54,4 @@ public:
   void setValue(const SbVec3f & axis, const float angle);
 };
 
-#endif // !COIN_SOMFROTATION_H
+#endif // !OBOL_SOMFROTATION_H

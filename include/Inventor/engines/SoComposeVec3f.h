@@ -30,8 +30,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_SOCOMPOSEVEC3F_H
-#define COIN_SOCOMPOSEVEC3F_H
+#ifndef OBOL_SOCOMPOSEVEC3F_H
+#define OBOL_SOCOMPOSEVEC3F_H
 
 // Warning for application programmers: do not include this header
 // file in your application code if you want to stay sourcecode
@@ -45,7 +45,7 @@
 #include <Inventor/fields/SoMFVec3f.h>
 
 
-class COIN_DLL_API SoComposeVec3f : public SoEngine {
+class OBOL_DLL_API SoComposeVec3f : public SoEngine {
   typedef SoEngine inherited;
 
   SO_COMPOSE__HEADER(SoComposeVec3f);
@@ -58,4 +58,4 @@ public:
   SoEngineOutput vector; // SoMFVec3f
 };
 
-#endif // !COIN_SOCOMPOSEVEC3F_H
+#endif // !OBOL_SOCOMPOSEVEC3F_H

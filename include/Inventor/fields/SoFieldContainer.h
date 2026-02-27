@@ -1,5 +1,5 @@
-#ifndef COIN_SOFIELDCONTAINER_H
-#define COIN_SOFIELDCONTAINER_H
+#ifndef OBOL_SOFIELDCONTAINER_H
+#define OBOL_SOFIELDCONTAINER_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -40,7 +40,7 @@ class SoFieldData;
 class SoFieldList;
 class SoOutput;
 
-class COIN_DLL_API SoFieldContainer : public SoBase {
+class OBOL_DLL_API SoFieldContainer : public SoBase {
   typedef SoBase inherited;
 
 public:
@@ -112,4 +112,4 @@ private:
 
 }; // SoFieldContainer
 
-#endif // !COIN_SOFIELDCONTAINER_H
+#endif // !OBOL_SOFIELDCONTAINER_H

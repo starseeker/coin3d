@@ -96,6 +96,7 @@
 
 #include <cmath>
 #include <cstdio>
+#include <utility>
 
 namespace {
 
@@ -513,6 +514,159 @@ static int runSensorsTests()
 }
 
 // =========================================================================
+// Unit test: orbitCamera() – BRL-CAD-style smooth camera orbit math
+// =========================================================================
+static int runOrbitCameraTests()
+{
+    int failures = 0;
+    const float tol = 1e-3f;
+
+    /* Helper: apply the same rotation logic as orbitCamera() without needing
+     * a full SoCamera node.  We work directly with SbRotation and SbVec3f. */
+    auto applyOrbit = [](SbRotation orient, SbVec3f pos,
+                         const SbVec3f &center, float dx, float dy, float sens)
+        -> std::pair<SbRotation, SbVec3f>
+    {
+        const float deg2rad = static_cast<float>(M_PI) / 180.0f;
+        float yawRad   = dx * sens * deg2rad;
+        float pitchRad = dy * sens * deg2rad;
+        SbRotation rotY(SbVec3f(0.0f, 1.0f, 0.0f), -yawRad);
+        SbRotation rotX(SbVec3f(1.0f, 0.0f, 0.0f), -pitchRad);
+        SbRotation newOrient = orient * (rotY * rotX);
+        float radius = (pos - center).length();
+        SbVec3f viewDir;
+        newOrient.multVec(SbVec3f(0.0f, 0.0f, -1.0f), viewDir);
+        SbVec3f newPos = center - viewDir * radius;
+        return {newOrient, newPos};
+    };
+
+    const SbVec3f center(0.0f, 0.0f, 0.0f);
+    const float radius = 5.0f;
+    const float sens = 0.25f;   /* BRL-CAD default: 0.25 deg/pixel */
+
+    /* --- Test 1: yaw-only (dx=80, dy=0) preserves orbit radius --- */
+    {
+        SbRotation orient = SbRotation::identity();
+        SbVec3f pos(0.0f, 0.0f, radius);
+        auto [newOrient, newPos] = applyOrbit(orient, pos, center, 80.0f, 0.0f, sens);
+
+        float dist = (newPos - center).length();
+        if (std::fabs(dist - radius) > tol) {
+            fprintf(stderr, "  FAIL orbitCamera test1: radius after yaw=%.6f (expected %.6f)\n",
+                    dist, radius);
+            ++failures;
+        }
+    }
+
+    /* --- Test 2: yaw-only camera still looks toward center --- */
+    {
+        SbRotation orient = SbRotation::identity();
+        SbVec3f pos(0.0f, 0.0f, radius);
+        auto [newOrient, newPos] = applyOrbit(orient, pos, center, 80.0f, 0.0f, sens);
+
+        SbVec3f viewDir;
+        newOrient.multVec(SbVec3f(0.0f, 0.0f, -1.0f), viewDir);
+        /* toCenter (camera → center) and viewDir (camera forward) must be parallel */
+        SbVec3f toCenter = center - newPos;
+        toCenter.normalize();
+        float dot = toCenter.dot(viewDir);
+        if (std::fabs(dot - 1.0f) > tol) {
+            fprintf(stderr, "  FAIL orbitCamera test2: camera not looking at center (dot=%.6f)\n", dot);
+            ++failures;
+        }
+    }
+
+    /* --- Test 3: pitch-only (dx=0, dy=80) preserves orbit radius --- */
+    {
+        SbRotation orient = SbRotation::identity();
+        SbVec3f pos(0.0f, 0.0f, radius);
+        auto [newOrient, newPos] = applyOrbit(orient, pos, center, 0.0f, 80.0f, sens);
+
+        float dist = (newPos - center).length();
+        if (std::fabs(dist - radius) > tol) {
+            fprintf(stderr, "  FAIL orbitCamera test3: radius after pitch=%.6f (expected %.6f)\n",
+                    dist, radius);
+            ++failures;
+        }
+    }
+
+    /* --- Test 4: pitch-only camera still looks toward center --- */
+    {
+        SbRotation orient = SbRotation::identity();
+        SbVec3f pos(0.0f, 0.0f, radius);
+        auto [newOrient, newPos] = applyOrbit(orient, pos, center, 0.0f, 80.0f, sens);
+
+        SbVec3f viewDir;
+        newOrient.multVec(SbVec3f(0.0f, 0.0f, -1.0f), viewDir);
+        SbVec3f toCenter = center - newPos;
+        toCenter.normalize();
+        float dot = toCenter.dot(viewDir);
+        if (std::fabs(dot - 1.0f) > tol) {
+            fprintf(stderr, "  FAIL orbitCamera test4: camera not looking at center after pitch (dot=%.6f)\n", dot);
+            ++failures;
+        }
+    }
+
+    /* --- Test 5: mouse-right (dx>0) moves camera in -X direction
+     *             (scene appears to rotate right → camera orbits left) --- */
+    {
+        SbRotation orient = SbRotation::identity();
+        SbVec3f pos(0.0f, 0.0f, radius);
+        auto [newOrient, newPos] = applyOrbit(orient, pos, center, 80.0f, 0.0f, sens);
+        /* Camera started at (0,0,5); yaw right should give negative X position */
+        if (newPos[0] >= 0.0f) {
+            fprintf(stderr, "  FAIL orbitCamera test5: expected negative X after yaw right, got %.4f\n",
+                    newPos[0]);
+            ++failures;
+        }
+    }
+
+    /* --- Test 6: mouse-down (dy>0) moves camera upward (+Y)
+     *             (camera pitches down → position rises in Y) --- */
+    {
+        SbRotation orient = SbRotation::identity();
+        SbVec3f pos(0.0f, 0.0f, radius);
+        auto [newOrient, newPos] = applyOrbit(orient, pos, center, 0.0f, 80.0f, sens);
+        if (newPos[1] <= 0.0f) {
+            fprintf(stderr, "  FAIL orbitCamera test6: expected positive Y after pitch down, got %.4f\n",
+                    newPos[1]);
+            ++failures;
+        }
+    }
+
+    /* --- Test 7: 4 × 1-pixel steps ≈ 1 × 4-pixel step (smoothness check).
+     *             For small angles, rotation non-commutativity is negligible,
+     *             so accumulated small steps should closely match one equivalent
+     *             large step. --- */
+    {
+        SbRotation orient = SbRotation::identity();
+        SbVec3f pos(0.0f, 0.0f, radius);
+
+        /* Single 4-pixel step */
+        auto [oA, pA] = applyOrbit(orient, pos, center, 4.0f, 3.0f, sens);
+
+        /* Four 1-pixel steps */
+        SbRotation oB = orient;
+        SbVec3f    pB = pos;
+        for (int i = 0; i < 4; ++i) {
+            auto [oTmp, pTmp] = applyOrbit(oB, pB, center, 1.0f, 0.75f, sens);
+            oB = oTmp; pB = pTmp;
+        }
+
+        float ddx = std::fabs(pA[0] - pB[0]);
+        float ddy = std::fabs(pA[1] - pB[1]);
+        float ddz = std::fabs(pA[2] - pB[2]);
+        if (ddx > 0.001f || ddy > 0.001f || ddz > 0.001f) {
+            fprintf(stderr, "  FAIL orbitCamera test7: step accumulation mismatch "
+                    "dx=%.5f dy=%.5f dz=%.5f\n", ddx, ddy, ddz);
+            ++failures;
+        }
+    }
+
+    return failures;
+}
+
+// =========================================================================
 // Static registrations – run at program start
 // =========================================================================
 
@@ -659,6 +813,12 @@ REGISTER_TEST(unit_sensors, ObolTest::TestCategory::Sensors,
     "SoFieldSensor, SoNodeSensor, SoTimerSensor",
     e.has_visual = false;
     e.run_unit = runSensorsTests;
+);
+
+REGISTER_TEST(unit_orbit_camera, ObolTest::TestCategory::Base,
+    "orbitCamera() BRL-CAD-style smooth orbit rotation math",
+    e.has_visual = false;
+    e.run_unit = runOrbitCameraTests;
 );
 
 } // anonymous namespace

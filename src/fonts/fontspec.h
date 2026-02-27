@@ -1,5 +1,5 @@
-#ifndef COIN_FONTSPEC_H
-#define COIN_FONTSPEC_H
+#ifndef OBOL_FONTSPEC_H
+#define OBOL_FONTSPEC_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -33,9 +33,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 #error this is a private header file
-#endif /* ! COIN_INTERNAL */
+#endif /* ! OBOL_INTERNAL */
 
 /* ********************************************************************** */
 
@@ -73,4 +73,4 @@ extern "C" {
 }
 #endif
 
-#endif /* !COIN_FONTSPEC_H */
+#endif /* !OBOL_FONTSPEC_H */

@@ -348,7 +348,7 @@ SoRotateSphericalDragger::motionCB(void *, SoDragger * d)
 
 /*! \COININTERNAL */
 void
-SoRotateSphericalDragger::doneCB(void * COIN_UNUSED_ARG(f), SoDragger * d)
+SoRotateSphericalDragger::doneCB(void * OBOL_UNUSED_ARG(f), SoDragger * d)
 {
   SoRotateSphericalDragger * thisp = THISP(d);
   thisp->dragFinish();

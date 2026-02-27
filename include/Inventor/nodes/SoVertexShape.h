@@ -1,5 +1,5 @@
-#ifndef COIN_SOVERTEXSHAPE_H
-#define COIN_SOVERTEXSHAPE_H
+#ifndef OBOL_SOVERTEXSHAPE_H
+#define OBOL_SOVERTEXSHAPE_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -36,10 +36,10 @@
 #include <Inventor/nodes/SoSubNode.h>
 #include <Inventor/nodes/SoShape.h>
 #include <Inventor/fields/SoSFNode.h>
-#ifndef COIN_INTERNAL
+#ifndef OBOL_INTERNAL
 // For Open Inventor compatibility.
 #include <Inventor/nodes/SoVertexProperty.h>
-#endif // !COIN_INTERNAL
+#endif // !OBOL_INTERNAL
 
 class SoNormalBundle;
 class SoNormalCache;
@@ -47,7 +47,7 @@ class SbVec3f;
 class SoCoordinateElement;
 class SoVertexShapeP;
 
-class COIN_DLL_API SoVertexShape : public SoShape {
+class OBOL_DLL_API SoVertexShape : public SoShape {
   typedef SoShape inherited;
 
   SO_NODE_ABSTRACT_HEADER(SoVertexShape);
@@ -89,4 +89,4 @@ private:
   SoVertexShapeP * pimpl;
 };
 
-#endif // !COIN_SOVERTEXSHAPE_H
+#endif // !OBOL_SOVERTEXSHAPE_H

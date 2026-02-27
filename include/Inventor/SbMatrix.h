@@ -1,5 +1,5 @@
-#ifndef COIN_SBMATRIX_H
-#define COIN_SBMATRIX_H
+#ifndef OBOL_SBMATRIX_H
+#define OBOL_SBMATRIX_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -44,7 +44,7 @@ class SbDPMatrix;
 
 typedef float SbMat[4][4];
 
-class COIN_DLL_API SbMatrix {
+class OBOL_DLL_API SbMatrix {
 public:
   SbMatrix(void);
   SbMatrix(const float a11, const float a12, const float a13, const float a14,
@@ -114,9 +114,9 @@ public:
   SbMatrix & operator =(const SbRotation & q);
   SbMatrix & operator *=(const SbMatrix & m);
 
-  friend COIN_DLL_API SbMatrix operator *(const SbMatrix & m1, const SbMatrix & m2);
-  friend COIN_DLL_API int operator ==(const SbMatrix & m1, const SbMatrix & m2);
-  friend COIN_DLL_API int operator !=(const SbMatrix & m1, const SbMatrix & m2);
+  friend OBOL_DLL_API SbMatrix operator *(const SbMatrix & m1, const SbMatrix & m2);
+  friend OBOL_DLL_API int operator ==(const SbMatrix & m1, const SbMatrix & m2);
+  friend OBOL_DLL_API int operator !=(const SbMatrix & m1, const SbMatrix & m2);
 
 private:
   float matrix[4][4];
@@ -125,8 +125,8 @@ private:
   void operator *=(const float v);
 };
 
-COIN_DLL_API SbMatrix operator *(const SbMatrix & m1, const SbMatrix & m2);
-COIN_DLL_API int operator ==(const SbMatrix & m1, const SbMatrix & m2);
-COIN_DLL_API int operator !=(const SbMatrix & m1, const SbMatrix & m2);
+OBOL_DLL_API SbMatrix operator *(const SbMatrix & m1, const SbMatrix & m2);
+OBOL_DLL_API int operator ==(const SbMatrix & m1, const SbMatrix & m2);
+OBOL_DLL_API int operator !=(const SbMatrix & m1, const SbMatrix & m2);
 
-#endif // !COIN_SBMATRIX_H
+#endif // !OBOL_SBMATRIX_H

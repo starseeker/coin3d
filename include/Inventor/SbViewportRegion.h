@@ -1,5 +1,5 @@
-#ifndef COIN_SBVIEWPORTREGION_H
-#define COIN_SBVIEWPORTREGION_H
+#ifndef OBOL_SBVIEWPORTREGION_H
+#define OBOL_SBVIEWPORTREGION_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -37,7 +37,7 @@
 #include <Inventor/SbVec2s.h>
 #include <Inventor/SbVec2f.h>
 
-class COIN_DLL_API SbViewportRegion {
+class OBOL_DLL_API SbViewportRegion {
 public:
   SbViewportRegion(void);
   SbViewportRegion(short width, short height);
@@ -63,10 +63,10 @@ public:
   void setPixelsPerInch(float ppi);
   float getPixelsPerInch(void) const;
   float getPixelsPerPoint(void) const;
-  friend COIN_DLL_API int operator ==(const SbViewportRegion & reg1,
+  friend OBOL_DLL_API int operator ==(const SbViewportRegion & reg1,
                                       const SbViewportRegion & reg2);
 
-  friend COIN_DLL_API int operator !=(const SbViewportRegion & reg1,
+  friend OBOL_DLL_API int operator !=(const SbViewportRegion & reg1,
                                       const SbViewportRegion & reg2);
 
   void print(FILE * file) const;
@@ -80,7 +80,7 @@ private:
   float pixperinch;
 };
 
-COIN_DLL_API int operator ==(const SbViewportRegion & reg1, const SbViewportRegion & reg2);
-COIN_DLL_API int operator !=(const SbViewportRegion & reg1, const SbViewportRegion & reg2);
+OBOL_DLL_API int operator ==(const SbViewportRegion & reg1, const SbViewportRegion & reg2);
+OBOL_DLL_API int operator !=(const SbViewportRegion & reg1, const SbViewportRegion & reg2);
 
-#endif // !COIN_SBVIEWPORTREGION_H
+#endif // !OBOL_SBVIEWPORTREGION_H
