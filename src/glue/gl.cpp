@@ -763,6 +763,8 @@ glglue_set_glVersion(SoGLContext * w)
   w->version.minor = 0;
   w->version.release = 0;
 
+  if (!w->versionstr) { return; }
+
   (void)strncpy(buffer, (const char *)w->versionstr, 255);
   buffer[255] = '\0'; /* strncpy() will not null-terminate if strlen > 255 */
   dotptr = strchr(buffer, '.');
@@ -2396,6 +2398,15 @@ SoGLContext_instance(int contextid)
     
     assert(gi->versionstr && "could not call glGetString() -- no current GL context?");
     assert(glGetError() == GL_NO_ERROR && "GL error when calling glGetString() -- no current GL context?");
+
+    if (!gi->versionstr) {
+      cc_debugerror_postwarning("SoGLContext_instance",
+                                "glGetString(GL_VERSION) returned NULL -- no current GL context?");
+      (void)cc_dict_remove(gldict, (uintptr_t)contextid);
+      if (gi->glextdict) { cc_dict_destruct(gi->glextdict); }
+      free(gi);
+      return NULL;
+    }
 
     glglue_set_glVersion(gi);
 

@@ -541,15 +541,19 @@ SoCamera::orbitCamera(const SbVec3f & center, float dx, float dy,
   const float yawRad   = dx * sensitivity * deg2rad;
   const float pitchRad = dy * sensitivity * deg2rad;
 
-  /* BRL-CAD builds newrot = Rx(pitch) * Ry(yaw) and left-multiplies the
-   * model2view matrix.  The equivalent for the camera orientation (which
-   * is the inverse rotation, camera→world) is:
-   *   new_orient = old_orient * newrot^(-1) = old_orient * Ry(-yaw) * Rx(-pitch)
-   * In SbRotation, q1*q2 applies q2 first then q1, so rotY*rotX below
-   * produces Ry(-yaw) composed with Rx(-pitch) where Rx is applied first. */
-  const SbRotation rotY(SbVec3f(0.0f, 1.0f, 0.0f), -yawRad);
-  const SbRotation rotX(SbVec3f(1.0f, 0.0f, 0.0f), -pitchRad);
-  const SbRotation newOrient = this->orientation.getValue() * (rotY * rotX);
+  /* Use the camera's current local axes (expressed in world space) as the
+   * rotation axes so that dragging always moves the scene in the direction
+   * the user sees on screen regardless of the camera's current orientation.
+   * Left-multiplying the orientation quaternion applies the rotation in
+   * world space using the camera-local axes, matching BRL-CAD _bv_rot(). */
+  const SbRotation & q = this->orientation.getValue();
+  SbVec3f camRight, camUp;
+  q.multVec(SbVec3f(1.0f, 0.0f, 0.0f), camRight);
+  q.multVec(SbVec3f(0.0f, 1.0f, 0.0f), camUp);
+
+  const SbRotation rotYaw  (camUp,    -yawRad);
+  const SbRotation rotPitch(camRight, -pitchRad);
+  const SbRotation newOrient = (rotYaw * rotPitch) * q;
   this->orientation.setValue(newOrient);
 
   /* Reposition camera so it stays at the same orbit radius from center and

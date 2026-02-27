@@ -34,7 +34,9 @@
  *  │Scene │ System GL │ OSMesa │ NanoRT │    │Scene │  System GL  │  OSMesa │
  *  │brows.│  panel    │ panel  │ panel  │    │brows.│   panel     │  panel  │
  *  ├──────┴───────────┴────────┴────────┤    ├──────┴─────────────┴─────────┤
- *  │[Reload][Save]      [×] Sync All   │    │[Reload][Save]  [×]Sync All   │
+ *  │[Reload][Save]       [×] Sync All  │    │[Reload][Save]  [×]Sync All   │
+ *  ├────────────────────────────────────┤    ├──────────────────────────────┤
+ *  │ GL vs OSMesa: max_diff=1 RMSE=... │    │ GL vs OSMesa: max_diff=1 ... │
  *  └────────────────────────────────────┘    └──────────────────────────────┘
  *
  * Panels resize uniformly (EqualTile distributes width equally on resize).
@@ -201,7 +203,8 @@ struct SceneState {
     int width  = 800;
     int height = 600;
     /* drag state */
-    bool dragging  = false;
+    bool dragging       = false;
+    bool dragger_active = false;   /* true when a scene dragger consumed FL_PUSH */
     int  drag_btn  = 0;
     int  last_x    = 0;
     int  last_y    = 0;
@@ -263,9 +266,11 @@ public:
     Fl_RGB_Image*        fltk_img = nullptr;
 
     std::function<void(CoinPanel*)> on_camera_changed;
+    std::function<void()>           on_rendered;
 
     explicit CoinPanel(int X, int Y, int W, int H, const char* lbl = "")
-        : Fl_Box(X, Y, W, H, ""), label_text(lbl ? lbl : "")
+        : Fl_Box(X, Y, W, H, ""), label_text(lbl ? lbl : ""),
+          gl_context_failed_(false)
     {
         box(FL_FLAT_BOX);
         color(FL_BLACK);
@@ -297,6 +302,11 @@ public:
 
     void refreshRender() {
         if (!state || !state->root) { redraw(); return; }
+        /* If GL context creation has already failed permanently, skip the
+         * render attempt and just redisplay the error message.  This avoids
+         * repeated failed GLX operations on every user interaction (resize,
+         * camera drag, scene reload) after the initial context failure. */
+        if (gl_context_failed_) { redraw(); return; }
         int pw = std::max(w(), 1);
         int ph = std::max(h(), 1);
         SoOffscreenRenderer* r = getRenderer(pw, ph);
@@ -305,7 +315,11 @@ public:
         r->setComponents(SoOffscreenRenderer::RGB_TRANSPARENCY);
         r->setBackgroundColor(SbColor(0.15f, 0.15f, 0.2f));
         if (!r->render(state->root)) {
-            status_text = "Render failed"; redraw(); return;
+            /* Mark GL as permanently failed so we do not keep retrying.
+             * This also prevents the CoinOffscreenGLCanvas::tilesizeroof
+             * static from being reduced further on every interaction. */
+            gl_context_failed_ = true;
+            status_text = "System GL context unavailable"; redraw(); return;
         }
         const unsigned char* src = r->getBuffer();
         if (!src) { status_text = "No buffer"; redraw(); return; }
@@ -321,6 +335,7 @@ public:
         delete fltk_img;
         fltk_img = new Fl_RGB_Image(display_buf.data(), pw, ph, 3);
         redraw();
+        if (on_rendered) on_rendered();
     }
 
     void getCamera(float pos[3], float orient[4], float& dist) const {
@@ -390,11 +405,13 @@ public:
                 ev.setTime(SbTime::getTimeOfDay());
                 SbViewportRegion vp(state->width, state->height);
                 SoHandleEventAction ha(vp); ha.setEvent(&ev); ha.apply(state->root);
+                state->dragger_active = ha.isHandled();
             }
             return 1;
         case FL_RELEASE:
             if (state) {
                 state->dragging = false;
+                state->dragger_active = false;
                 SoMouseButtonEvent ev;
                 ev.setButton(Fl::event_button()==1 ? SoMouseButtonEvent::BUTTON1 :
                              Fl::event_button()==2 ? SoMouseButtonEvent::BUTTON2 :
@@ -414,28 +431,30 @@ public:
                 int ex = Fl::event_x()-x(), ey = Fl::event_y()-y();
                 int dx = ex - state->last_x, dy = ey - state->last_y;
                 state->last_x = ex; state->last_y = ey;
-                if (state->drag_btn == 1) {
-                    /* orbit – incremental rotation in camera-local space (BRL-CAD style):
-                     * no world-up reference → smooth at all orientations, no gimbal lock */
-                    state->cam->orbitCamera(state->scene_center,
-                                            (float)dx, (float)dy,
-                                            0.01f * (180.0f / static_cast<float>(M_PI)));
-                } else if (state->drag_btn == 3) {
-                    /* dolly toward/away from scene centre */
-                    float dist = state->cam->focalDistance.getValue();
-                    dist *= (1.0f + dy * 0.01f);
-                    if (dist < 0.1f) dist = 0.1f;
-                    SbVec3f dir = state->cam->position.getValue() - state->scene_center;
-                    dir.normalize();
-                    state->cam->position.setValue(state->scene_center + dir * dist);
-                    state->cam->focalDistance.setValue(dist);
-                    state->updateClipping();
-                }
                 SoLocation2Event ev;
                 ev.setPosition(SbVec2s((short)ex,(short)(h_-ey)));
                 ev.setTime(SbTime::getTimeOfDay());
                 SbViewportRegion vp(state->width, state->height);
                 SoHandleEventAction ha(vp); ha.setEvent(&ev); ha.apply(state->root);
+                if (!state->dragger_active) {
+                    if (state->drag_btn == 1) {
+                        /* orbit – incremental rotation in camera-local space (BRL-CAD style):
+                         * no world-up reference → smooth at all orientations, no gimbal lock */
+                        state->cam->orbitCamera(state->scene_center,
+                                                (float)dx, (float)dy,
+                                                0.01f * (180.0f / static_cast<float>(M_PI)));
+                    } else if (state->drag_btn == 3) {
+                        /* dolly toward/away from scene centre */
+                        float dist = state->cam->focalDistance.getValue();
+                        dist *= (1.0f + dy * 0.01f);
+                        if (dist < 0.1f) dist = 0.1f;
+                        SbVec3f dir = state->cam->position.getValue() - state->scene_center;
+                        dir.normalize();
+                        state->cam->position.setValue(state->scene_center + dir * dist);
+                        state->cam->focalDistance.setValue(dist);
+                        state->updateClipping();
+                    }
+                }
                 notifyCameraChanged();
                 refreshRender();
             }
@@ -490,6 +509,11 @@ public:
     }
 
 private:
+    /* Set to true after the first GL context creation failure.  Prevents
+     * repeated failed GLX operations (and their side effects on the static
+     * CoinOffscreenGLCanvas::tilesizeroof) on every subsequent user
+     * interaction such as resize, camera drag, or scene reload. */
+    bool gl_context_failed_;
     void notifyCameraChanged() { if (on_camera_changed) on_camera_changed(this); }
 };
 
@@ -517,6 +541,7 @@ public:
     Fl_RGB_Image*        fltk_img  = nullptr;
 
     std::function<void(NanoRTPanel*)> on_camera_changed;
+    std::function<void()>             on_rendered;
 
     explicit NanoRTPanel(int X, int Y, int W, int H, const char* lbl = "")
         : Fl_Box(X, Y, W, H, ""), label_text(lbl ? lbl : "")
@@ -525,7 +550,10 @@ public:
         color(FL_BLACK);
     }
 
-    ~NanoRTPanel() { delete fltk_img; }
+    ~NanoRTPanel() {
+        Fl::remove_timeout(doRefine, this);
+        delete fltk_img;
+    }
 
     void setScene(SoSeparator* r, SoPerspectiveCamera* c, bool nanort_supported = true) {
         root = r; cam = c; nanort_ok_ = nanort_supported; status_text.clear();
@@ -550,14 +578,20 @@ public:
         if (!root || !nanort_ok_) { redraw(); return; }
         int pw = std::max(w(), 1);
         int ph = std::max(h(), 1);
+        /* During active camera motion render at 1/4 resolution (coarse_=true) for
+         * interactive speed, then a refinement timer fires to re-render at full
+         * resolution once the view is stable. */
+        const int scale = coarse_ ? 4 : 1;
+        const int rw = std::max(pw / scale, 1);
+        const int rh = std::max(ph / scale, 1);
         /* Pre-fill pixel buffer with background color (renderScene() leaves
          * miss pixels untouched, so the buffer must already contain the bg). */
         const float bg[3] = { 0.15f, 0.15f, 0.2f };
         const uint8_t bg_r = static_cast<uint8_t>(bg[0] * 255.0f + 0.5f);
         const uint8_t bg_g = static_cast<uint8_t>(bg[1] * 255.0f + 0.5f);
         const uint8_t bg_b = static_cast<uint8_t>(bg[2] * 255.0f + 0.5f);
-        pixel_buf.resize((size_t)pw * ph * 4);
-        for (size_t i = 0; i < (size_t)pw * ph; ++i) {
+        pixel_buf.resize((size_t)rw * rh * 4);
+        for (size_t i = 0; i < (size_t)rw * rh; ++i) {
             pixel_buf[i*4+0] = bg_r;
             pixel_buf[i*4+1] = bg_g;
             pixel_buf[i*4+2] = bg_b;
@@ -567,25 +601,30 @@ public:
          * We never registered it with SoDB::init(), so the GL context
          * manager singleton is completely untouched. */
         SbBool ok = s_nanort_mgr.renderScene(root,
-                                             (unsigned int)pw,
-                                             (unsigned int)ph,
+                                             (unsigned int)rw,
+                                             (unsigned int)rh,
                                              pixel_buf.data(),
                                              4u, bg);
         if (!ok) {
             status_text = "NanoRT render failed"; redraw(); return;
         }
-        /* Convert bottom-up RGBA → top-down RGB for FLTK. */
+        /* Convert bottom-up RGBA (possibly coarse) → top-down full-res RGB for FLTK.
+         * Nearest-neighbour upscale handles the coarse case; when scale==1 it is a
+         * straight flip-and-pack. */
         display_buf.resize((size_t)pw * ph * 3);
         for (int row = 0; row < ph; ++row) {
-            const uint8_t* s = pixel_buf.data() + (size_t)(ph-1-row) * pw * 4;
-            uint8_t*       d = display_buf.data() + (size_t)row * pw * 3;
+            int src_row = (rh - 1) - (row * rh / ph);   /* flip + nearest-neighbour */
+            const uint8_t* s_base = pixel_buf.data() + (size_t)src_row * rw * 4;
+            uint8_t* d = display_buf.data() + (size_t)row * pw * 3;
             for (int col = 0; col < pw; ++col) {
-                d[0]=s[0]; d[1]=s[1]; d[2]=s[2]; s+=4; d+=3;
+                const uint8_t* s = s_base + (col * rw / pw) * 4;
+                d[0]=s[0]; d[1]=s[1]; d[2]=s[2]; d+=3;
             }
         }
         delete fltk_img;
         fltk_img = new Fl_RGB_Image(display_buf.data(), pw, ph, 3);
         redraw();
+        if (on_rendered) on_rendered();
     }
 
     void getCamera(float pos[3], float orient[4], float& dist) const {
@@ -611,6 +650,12 @@ public:
         if (ax.length() < 1e-6f) { ax=SbVec3f(0,1,0); angle=0; } else ax.normalize();
         cam->orientation.setValue(SbRotation(ax, angle));
         if (dist > 0.0f) cam->focalDistance.setValue(dist);
+        /* Camera is being moved (driven by sync from another panel or own drag):
+         * switch to coarse mode for this render and schedule a full-resolution
+         * refinement pass once the view has been stable for kRefineDelaySec. */
+        coarse_ = true;
+        Fl::remove_timeout(doRefine, this);
+        Fl::add_timeout(kRefineDelaySec, doRefine, this);
         refreshRender();
     }
 
@@ -644,9 +689,13 @@ public:
             last_x_   = Fl::event_x() - x();
             last_y_   = Fl::event_y() - y();
             return 1;
-        case FL_RELEASE:
-            dragging_ = false;
-            notifyCameraChanged(); refreshRender(); return 1;
+            case FL_RELEASE:
+                dragging_ = false;
+                /* View is now stable: cancel any pending coarse timer and render
+                 * at full resolution immediately. */
+                Fl::remove_timeout(doRefine, this);
+                coarse_ = false;
+                notifyCameraChanged(); refreshRender(); return 1;
         case FL_DRAG: {
             if (!dragging_) return 1;
             int ex = Fl::event_x()-x(), ey = Fl::event_y()-y();
@@ -667,6 +716,11 @@ public:
                 cam->focalDistance.setValue(dist);
                 updateClipping_();
             }
+            /* Render coarse during drag for speed; reset timer so refine
+             * fires kRefineDelaySec after the last drag event. */
+            coarse_ = true;
+            Fl::remove_timeout(doRefine, this);
+            Fl::add_timeout(kRefineDelaySec, doRefine, this);
             notifyCameraChanged(); refreshRender(); return 1;
         }
         case FL_MOUSEWHEEL: {
@@ -694,9 +748,21 @@ private:
     SbVec3f scene_center_ = SbVec3f(0,0,0);
     bool nanort_ok_ = true;
     bool dragging_  = false;
+    bool coarse_    = false;  /* true → render at reduced resolution for speed */
     int  drag_btn_  = 0;
     int  last_x_    = 0;
     int  last_y_    = 0;
+
+    /* Delay (seconds) after the last camera change before doing a full-res
+     * refinement render.  250 ms feels snappy without firing during fast drags. */
+    static constexpr double kRefineDelaySec = 0.25;
+
+    /* FLTK timer callback: view is stable — re-render at full resolution. */
+    static void doRefine(void* data) {
+        NanoRTPanel* p = static_cast<NanoRTPanel*>(data);
+        p->coarse_ = false;
+        p->refreshRender();
+    }
 
     void updateClipping_() {
         if (!cam) return;
@@ -735,6 +801,7 @@ public:
     Fl_RGB_Image*        fltk_img  = nullptr;
 
     std::function<void(OSMesaPanel*)> on_camera_changed;
+    std::function<void()>             on_rendered;
 
     explicit OSMesaPanel(int X, int Y, int W, int H, const char* lbl = "")
         : Fl_Box(X, Y, W, H, ""), label_text(lbl ? lbl : "")
@@ -803,6 +870,7 @@ public:
         fltk_img = new Fl_RGB_Image(display_buf.data(), pw, ph, 3);
         status_text.clear();
         redraw();
+        if (on_rendered) on_rendered();
     }
 
     void getCamera(float pos[3], float orient[4], float& dist) const {
@@ -964,10 +1032,8 @@ class ObolViewerWindow : public Fl_Double_Window {
     CoinPanel*        coin_panel_;
     Fl_Button*        reload_btn_;
     Fl_Button*        save_btn_;
-#if defined(OBOL_VIEWER_OSMESA_PANEL) || defined(OBOL_VIEWER_NANORT)
-    Fl_Button*        compare_btn_ = nullptr;
-#endif
-    Fl_Box*           status_bar_;
+    Fl_Box*           status_bar_;        /* toolbar: shows current scene name */
+    Fl_Box*           diff_bar_ = nullptr; /* bottom bar: shows live diff metrics */
     EqualTile*        tile_ = nullptr;
 #ifdef OBOL_VIEWER_OSMESA_PANEL
     OSMesaPanel*      osmesa_panel_ = nullptr;
@@ -982,7 +1048,7 @@ class ObolViewerWindow : public Fl_Double_Window {
 
     static const int BROWSER_W = 220;
     static const int TOOLBAR_H = 32;
-    static const int STATUS_H  = 22;
+    static const int STATUS_H  = 48; /* tall enough for up to 3 comparison lines */
 
 public:
     ObolViewerWindow(int W, int H)
@@ -1071,8 +1137,22 @@ public:
 #  endif /* OBOL_VIEWER_NANORT */
 #endif /* OBOL_VIEWER_OSMESA_PANEL || OBOL_VIEWER_NANORT */
 
+#if defined(OBOL_VIEWER_OSMESA_PANEL) || defined(OBOL_VIEWER_NANORT)
+        /* Wire post-render callbacks so the diff bar updates automatically. */
+        coin_panel_->on_rendered = [this]() { updateDiffBar(); };
+#  ifdef OBOL_VIEWER_OSMESA_PANEL
+        if (osmesa_panel_)
+            osmesa_panel_->on_rendered = [this]() { updateDiffBar(); };
+#  endif
+#  ifdef OBOL_VIEWER_NANORT
+        if (nrt_panel_)
+            nrt_panel_->on_rendered = [this]() { updateDiffBar(); };
+#  endif
+#endif
+
         std::string s = "Scene: "; s += name;
         status_bar_->copy_label(s.c_str());
+        updateDiffBar();
     }
 
 private:
@@ -1152,10 +1232,6 @@ private:
             reload_btn_->callback(reloadCB, this); bx += 76;
             save_btn_ = new Fl_Button(bx, by, 80, bh, "Save RGB...");
             save_btn_->callback(saveCB, this); bx += 86;
-#if defined(OBOL_VIEWER_OSMESA_PANEL) || defined(OBOL_VIEWER_NANORT)
-            compare_btn_ = new Fl_Button(bx, by, 80, bh, "Compare");
-            compare_btn_->callback(compareCB, this); bx += 86;
-#endif
 #if defined(OBOL_VIEWER_OSMESA_PANEL) && defined(OBOL_VIEWER_NANORT)
             sync_btn_ = new Fl_Check_Button(bx, by, 80, bh, "Sync All");
             sync_btn_->value(1); bx += 86;
@@ -1172,10 +1248,14 @@ private:
         }
         tb->end();
 
-        Fl_Box* sbar = new Fl_Box(0, content_h+TOOLBAR_H, W, STATUS_H, "");
-        sbar->box(FL_ENGRAVED_BOX);
-        sbar->align(FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
-        sbar->labelsize(11);
+        diff_bar_ = new Fl_Box(0, content_h+TOOLBAR_H, W, STATUS_H, "");
+        diff_bar_->box(FL_ENGRAVED_BOX);
+        diff_bar_->align(FL_ALIGN_TOP|FL_ALIGN_LEFT|FL_ALIGN_INSIDE);
+        diff_bar_->labelsize(11);
+        diff_bar_->tooltip(
+            "max_diff: maximum per-channel difference (0-255)\n"
+            "RMSE: root mean square error across all channels\n"
+            "rows_with_diff: % of rows containing any channel diff > 1");
     }
 
     static void browserCB(Fl_Widget*, void* data) {
@@ -1190,44 +1270,50 @@ private:
     static void reloadCB(Fl_Widget*, void* data) { browserCB(nullptr, data); }
 
 #if defined(OBOL_VIEWER_OSMESA_PANEL) || defined(OBOL_VIEWER_NANORT)
-    /* Compare rendered images across all panels and report pixel statistics. */
-    static void compareCB(Fl_Widget*, void* data) {
-        auto* self = static_cast<ObolViewerWindow*>(data);
-        if (!self->coin_panel_->state || !self->coin_panel_->state->root) {
-            fl_message("No scene loaded."); return;
-        }
+    /* Compute pixel-difference metrics across all rendered panels and display
+     * them on the diff_bar_ status line at the bottom of the window. */
+    void updateDiffBar() {
+        if (!diff_bar_) return;
 
-        /* Collect (label, buf, w, h) for every panel that has a rendered image */
         struct PanelImg {
-            const char*        label;
-            const uint8_t*     buf;   /* RGB top-down */
-            int                pw, ph;
+            const char*    label;
+            const uint8_t* buf;   /* RGB top-down */
+            int            pw, ph;
         };
         std::vector<PanelImg> panels;
 
-        if (!self->coin_panel_->display_buf.empty())
-            panels.push_back({self->coin_panel_->label_text.c_str(),
-                              self->coin_panel_->display_buf.data(),
-                              self->coin_panel_->w(), self->coin_panel_->h()});
+        if (!coin_panel_->display_buf.empty())
+            panels.push_back({coin_panel_->label_text.c_str(),
+                              coin_panel_->display_buf.data(),
+                              coin_panel_->w(), coin_panel_->h()});
 #  ifdef OBOL_VIEWER_OSMESA_PANEL
-        if (self->osmesa_panel_ && !self->osmesa_panel_->display_buf.empty())
-            panels.push_back({self->osmesa_panel_->label_text.c_str(),
-                              self->osmesa_panel_->display_buf.data(),
-                              self->osmesa_panel_->w(), self->osmesa_panel_->h()});
+        if (osmesa_panel_ && !osmesa_panel_->display_buf.empty())
+            panels.push_back({osmesa_panel_->label_text.c_str(),
+                              osmesa_panel_->display_buf.data(),
+                              osmesa_panel_->w(), osmesa_panel_->h()});
 #  endif
 #  ifdef OBOL_VIEWER_NANORT
-        if (self->nrt_panel_ && !self->nrt_panel_->display_buf.empty())
-            panels.push_back({self->nrt_panel_->label_text.c_str(),
-                              self->nrt_panel_->display_buf.data(),
-                              self->nrt_panel_->w(), self->nrt_panel_->h()});
+        if (nrt_panel_ && !nrt_panel_->display_buf.empty())
+            panels.push_back({nrt_panel_->label_text.c_str(),
+                              nrt_panel_->display_buf.data(),
+                              nrt_panel_->w(), nrt_panel_->h()});
 #  endif
 
         if (panels.size() < 2) {
-            fl_message("Need at least 2 rendered panels to compare."); return;
+            diff_bar_->copy_label("");
+            diff_bar_->redraw();
+            return;
         }
 
-        /* Compare each pair and accumulate results */
-        std::string report;
+        /* Compare each pair and build a multi-line report (one pair per line).
+         * Strip the parenthetical suffix from verbose label_text strings so
+         * each line stays short enough to be read without truncation. */
+        auto shortLabel = [](const std::string& lbl) -> std::string {
+            size_t p = lbl.find(" (");
+            return p != std::string::npos ? lbl.substr(0, p) : lbl;
+        };
+
+        std::string msg;
         for (size_t a = 0; a < panels.size(); ++a) {
             for (size_t b = a+1; b < panels.size(); ++b) {
                 const PanelImg& pa = panels[a];
@@ -1261,19 +1347,24 @@ private:
                 double pct_diff = 100.0 * diff_rows / (double)ch;
 
                 char line[256];
+                if (!msg.empty()) msg += '\n';
                 std::snprintf(line, sizeof(line),
-                    "%s vs %s:\n"
-                    "  size %dx%d  max_diff=%d  RMSE=%.2f  "
-                    "rows_with_diff=%.1f%%\n",
-                    pa.label, pb.label,
-                    cw, ch, max_diff, rmse, pct_diff);
-                report += line;
+                    "%s vs %s:  max_diff=%d  RMSE=%.2f  rows_with_diff=%.1f%%",
+                    shortLabel(pa.label).c_str(), shortLabel(pb.label).c_str(),
+                    max_diff, rmse, pct_diff);
+                msg += line;
             }
         }
 
-        fl_message("%s", report.c_str());
+        diff_bar_->copy_label(msg.c_str());
+        diff_bar_->redraw();
     }
 #endif /* OBOL_VIEWER_OSMESA_PANEL || OBOL_VIEWER_NANORT */
+
+#if !defined(OBOL_VIEWER_OSMESA_PANEL) && !defined(OBOL_VIEWER_NANORT)
+    /* No-op when comparison panels are not compiled in (single-panel builds). */
+    void updateDiffBar() {}
+#endif
 
     static void saveCB(Fl_Widget*, void* data) {
         auto* self = static_cast<ObolViewerWindow*>(data);
@@ -1321,7 +1412,12 @@ int main(int argc, char** argv)
     initCoinHeadless();
 
     Fl::scheme("gtk+");
-    Fl::visual(FL_RGB | FL_DOUBLE);
+    /* Request a double-buffered RGB visual.  Fall back to single-buffer if
+     * the display does not support a double-buffered OpenGL visual so that
+     * the viewer still opens and functions (rendering uses SoOffscreenRenderer,
+     * not a FLTK GL window). */
+    if (!Fl::visual(FL_RGB | FL_DOUBLE))
+        Fl::visual(FL_RGB);
 
     ObolViewerWindow* win = new ObolViewerWindow(1100, 700);
     win->show(argc, argv);

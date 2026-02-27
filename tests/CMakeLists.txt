@@ -69,6 +69,89 @@ set(IMAGE_COMPARISON_TEST_TIMEOUT   "30"  CACHE STRING "Per-test timeout in seco
 add_subdirectory(testlib)
 
 # -----------------------------------------------------------------------
+# FLTK scene viewer  (obol_viewer)
+# Placed here so that obol_testlib (scene catalogue) is already defined.
+# Enabled by -DOBOL_BUILD_VIEWER=ON at CMake configure time (auto-detected
+# when FLTK is found; requires OBOL_BUILD_TESTS=ON).
+# -----------------------------------------------------------------------
+if(OBOL_BUILD_VIEWER)
+    # FLTK was detected (system or bundled external/fltk) in the top-level
+    # CMakeLists.txt.  FLTK_INCLUDE_DIRS and FLTK_LIBRARIES are already set.
+
+    add_executable(obol_viewer obol_viewer.cpp)
+
+    target_include_directories(obol_viewer PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}           # testlib/test_registry.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/utils     # headless_utils.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/testlib   # test_registry.h (direct)
+        ${PROJECT_SOURCE_DIR}/include
+        ${PROJECT_SOURCE_DIR}/include/Inventor/annex
+        ${PROJECT_BINARY_DIR}/include
+        ${OBOL_TARGET_INCLUDE_DIRECTORIES}
+        ${FLTK_INCLUDE_DIRS}
+    )
+
+    # Compile definitions matching the Obol library build
+    if(OBOL_BUILD_DUAL_GL)
+        target_compile_definitions(obol_viewer PRIVATE OBOL_BUILD_DUAL_GL)
+        # Dual-GL builds enable the OSMesa panel (OBOL_VIEWER_OSMESA_PANEL defined
+        # in obol_viewer.cpp when OBOL_BUILD_DUAL_GL is set).  The panel uses
+        # SoDB::createOSMesaContextManager() – no direct OSMesa dependency needed.
+    elseif(OBOL_USE_OSMESA)
+        # Pure-OSMesa build: headless_utils.h uses OSMesa context manager
+        target_compile_definitions(obol_viewer PRIVATE OBOL_OSMESA_BUILD)
+        target_include_directories(obol_viewer PRIVATE
+            "${PROJECT_SOURCE_DIR}/external/osmesa/include")
+    endif()
+
+    # Optional NanoRT panel: enabled when nanort.h is found in external/nanort/
+    if(EXISTS "${PROJECT_SOURCE_DIR}/external/nanort/nanort.h")
+        target_compile_definitions(obol_viewer PRIVATE OBOL_VIEWER_NANORT)
+        target_include_directories(obol_viewer PRIVATE
+            "${PROJECT_SOURCE_DIR}/external/nanort"
+            "${CMAKE_CURRENT_SOURCE_DIR}/utils"   # nanort_context_manager.h
+        )
+        message(STATUS "obol_viewer: NanoRT panel enabled (external/nanort/nanort.h found)")
+    else()
+        message(STATUS "obol_viewer: NanoRT panel disabled (external/nanort/nanort.h not found)")
+    endif()
+
+    # Link against obol_testlib (with --whole-archive so REGISTER_TEST static
+    # initialisers are not discarded) as well as the main Obol library.
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_link_libraries(obol_viewer
+            PRIVATE
+                -Wl,--whole-archive obol_testlib -Wl,--no-whole-archive
+                ${PROJECT_NAME}
+                ${OBOL_TARGET_LINK_LIBRARIES}
+                ${FLTK_LIBRARIES}
+        )
+    else()
+        target_link_libraries(obol_viewer
+            PRIVATE
+                obol_testlib
+                ${PROJECT_NAME}
+                ${OBOL_TARGET_LINK_LIBRARIES}
+                ${FLTK_LIBRARIES}
+        )
+    endif()
+    # On Linux the viewer includes headless_utils.h which uses GLX symbols for
+    # the system-GL path; link the X/GL libs explicitly when available.
+    if(UNIX AND NOT APPLE)
+        if(X11_FOUND)
+            target_link_libraries(obol_viewer PRIVATE ${X11_X11_LIB})
+        endif()
+        if(TARGET OpenGL::GL)
+            target_link_libraries(obol_viewer PRIVATE OpenGL::GL)
+        elseif(OPENGL_gl_LIBRARY)
+            target_link_libraries(obol_viewer PRIVATE ${OPENGL_gl_LIBRARY})
+        endif()
+    endif()
+
+    install(TARGETS obol_viewer RUNTIME DESTINATION bin)
+endif() # OBOL_BUILD_VIEWER
+
+# -----------------------------------------------------------------------
 # Unified CLI runner
 # -----------------------------------------------------------------------
 add_executable(obol_test obol_test.cpp)

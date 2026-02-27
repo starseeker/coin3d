@@ -80,7 +80,33 @@ endif()
 option(BUILD_SHARED_LIBS "Build shared library when ON, static when OFF" ON)
 option(OBOL_BUILD_TESTS "Build unit tests" ON)
 find_package(FLTK QUIET)
-option(OBOL_BUILD_VIEWER "Build the FLTK scene viewer (obol_viewer); requires FLTK" ${FLTK_FOUND})
+if(NOT FLTK_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/external/fltk/CMakeLists.txt")
+  message(STATUS "System FLTK not found; building bundled FLTK from external/fltk")
+  set(FLTK_BUILD_FLUID        OFF CACHE BOOL "Build FLTK fluid tool"         FORCE)
+  set(FLTK_BUILD_FLTK_OPTIONS OFF CACHE BOOL "Build FLTK fltk-options tool"  FORCE)
+  set(FLTK_BUILD_TEST         OFF CACHE BOOL "Build FLTK test/demo programs"  FORCE)
+  set(FLTK_BUILD_EXAMPLES     OFF CACHE BOOL "Build FLTK example programs"    FORCE)
+  set(FLTK_BUILD_FORMS        OFF CACHE BOOL "Build FLTK forms library"       FORCE)
+  set(FLTK_BUILD_GL           OFF CACHE BOOL "Build FLTK OpenGL library"      FORCE)
+  set(FLTK_BUILD_SHARED_LIBS  OFF CACHE BOOL "Build FLTK shared libraries"    FORCE)
+  add_subdirectory("${PROJECT_SOURCE_DIR}/external/fltk" fltk_build EXCLUDE_FROM_ALL)
+  set(FLTK_FOUND TRUE)
+  set(FLTK_LIBRARIES fltk::fltk)
+  set(FLTK_INCLUDE_DIRS
+      "${PROJECT_SOURCE_DIR}/external/fltk"
+      "${CMAKE_BINARY_DIR}/fltk_build")
+  message(STATUS "Using bundled FLTK from external/fltk")
+elseif(NOT FLTK_FOUND)
+  message(STATUS "FLTK not found and external/fltk not present – obol_viewer disabled")
+endif()
+# obol_viewer uses obol_testlib for its scene catalogue, so it can only be
+# built when OBOL_BUILD_TESTS is also ON.  cmake_dependent_option enforces
+# this: the viewer is silently disabled if FLTK is absent or tests are off.
+cmake_dependent_option(OBOL_BUILD_VIEWER
+  "Build the FLTK scene viewer (obol_viewer); requires FLTK and OBOL_BUILD_TESTS"
+  "${FLTK_FOUND}"
+  "OBOL_BUILD_TESTS;FLTK_FOUND"
+  OFF)
 
 # Internal alias used throughout src/ for Windows shared/static detection
 set(OBOL_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
@@ -532,86 +558,6 @@ endif()
 
 add_subdirectory(include)
 add_subdirectory(src)
-
-if(OBOL_BUILD_VIEWER)
-  # ---- FLTK ----------------------------------------------------------------
-  find_package(FLTK REQUIRED)
-
-  # ---- Viewer executable ---------------------------------------------------
-  add_executable(obol_viewer tests/obol_viewer.cpp)
-
-  target_include_directories(obol_viewer PRIVATE
-    ${PROJECT_SOURCE_DIR}/include
-    ${PROJECT_SOURCE_DIR}/include/Inventor/annex
-    ${PROJECT_BINARY_DIR}/include
-    ${PROJECT_SOURCE_DIR}/tests           # testlib/test_registry.h
-    ${PROJECT_SOURCE_DIR}/tests/utils     # headless_utils.h
-    ${PROJECT_SOURCE_DIR}/tests/testlib   # test_registry.h (direct)
-    ${OBOL_TARGET_INCLUDE_DIRECTORIES}
-    ${FLTK_INCLUDE_DIRS}
-  )
-
-  # Compile definitions matching the Obol library build
-  if(OBOL_BUILD_DUAL_GL)
-    target_compile_definitions(obol_viewer PRIVATE OBOL_BUILD_DUAL_GL)
-    # Dual-GL builds enable the OSMesa panel (OBOL_VIEWER_OSMESA_PANEL defined
-    # in obol_viewer.cpp when OBOL_BUILD_DUAL_GL is set).  The panel uses
-    # SoDB::createOSMesaContextManager() – no direct OSMesa dependency needed.
-  elseif(OBOL_USE_OSMESA)
-    # Pure-OSMesa build: headless_utils.h uses OSMesa context manager
-    target_compile_definitions(obol_viewer PRIVATE OBOL_OSMESA_BUILD)
-    target_include_directories(obol_viewer PRIVATE
-      "${PROJECT_SOURCE_DIR}/external/osmesa/include")
-  endif()
-
-  # Optional NanoRT panel: enabled when nanort.h is found in external/nanort/
-  if(EXISTS "${PROJECT_SOURCE_DIR}/external/nanort/nanort.h")
-    target_compile_definitions(obol_viewer PRIVATE OBOL_VIEWER_NANORT)
-    target_include_directories(obol_viewer PRIVATE
-      "${PROJECT_SOURCE_DIR}/external/nanort"
-      "${PROJECT_SOURCE_DIR}/tests/utils"   # nanort_context_manager.h
-    )
-    message(STATUS "obol_viewer: NanoRT panel enabled (external/nanort/nanort.h found)")
-  else()
-    message(STATUS "obol_viewer: NanoRT panel disabled (external/nanort/nanort.h not found)")
-  endif()
-
-  # Link against obol_testlib (with --whole-archive so REGISTER_TEST static
-  # initialisers are not discarded) as well as the main Obol library.
-  if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    target_link_libraries(obol_viewer
-      PRIVATE
-        -Wl,--whole-archive obol_testlib -Wl,--no-whole-archive
-        ${PROJECT_NAME}
-        ${OBOL_TARGET_LINK_LIBRARIES}
-        ${FLTK_LIBRARIES}
-    )
-  else()
-    target_link_libraries(obol_viewer
-      PRIVATE
-        obol_testlib
-        ${PROJECT_NAME}
-        ${OBOL_TARGET_LINK_LIBRARIES}
-        ${FLTK_LIBRARIES}
-    )
-  endif()
-  # On Linux the viewer includes headless_utils.h which uses GLX symbols for
-  # the system-GL path; link the X/GL libs explicitly when available.
-  if(UNIX AND NOT APPLE)
-    find_package(X11 QUIET)
-    find_package(OpenGL QUIET)
-    if(X11_FOUND)
-      target_link_libraries(obol_viewer PRIVATE ${X11_X11_LIB})
-    endif()
-    if(TARGET OpenGL::GL)
-      target_link_libraries(obol_viewer PRIVATE OpenGL::GL)
-    elseif(OPENGL_gl_LIBRARY)
-      target_link_libraries(obol_viewer PRIVATE ${OPENGL_gl_LIBRARY})
-    endif()
-  endif()
-
-  install(TARGETS obol_viewer RUNTIME DESTINATION bin)
-endif() # OBOL_BUILD_VIEWER
 
 if(OBOL_BUILD_TESTS)
   # Build libpng from the bundled submodule so that rgb_to_png and
