@@ -240,9 +240,8 @@ endmacro()
 # line geometry is rendered via cylinder proxies (createCylinderProxy /
 # createSphereProxy), so dragger/manipulator tests whose parts include
 # SoIndexedLineSet feedback geometry are fully supported.
-# Tests that rely on text or OpenGL-specific effects (GLSL shaders, FBOs,
-# OpenGL shadow maps via SoShadowGroup) are omitted; nanort shadow support
-# uses SoRaytracingParams + shadow rays (see render_nanort_shadow below).
+# SoText2 screen-space text is rendered via buildPixelBuffer() + framebuffer
+# compositing so letter shapes appear correctly (not bounding-box blocks).
 add_nanort_rendering_test(render_primitives)
 add_nanort_rendering_test(render_materials)
 add_nanort_rendering_test(render_transforms)
@@ -256,6 +255,39 @@ add_nanort_rendering_test(render_background_gradient)
 # shadow validation (lit vs shadow regions on the ground plane) is only run
 # under the NanoRT build; the GL backend does a basic non-blank geometry check.
 add_nanort_rendering_test(render_nanort_shadow)
+
+# NanoRT text demo: validates that SoText2 glyph pixels are composited
+# correctly onto the NanoRT framebuffer (letter shapes, not solid blocks).
+if(TARGET obol_testlib)
+    add_executable(nrt_render_text_demo render_text_demo.cpp)
+    target_include_directories(nrt_render_text_demo PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_SOURCE_DIR}/tests/utils
+        ${CMAKE_SOURCE_DIR}/tests/testlib
+        ${PROJECT_SOURCE_DIR}/include
+        ${PROJECT_SOURCE_DIR}/include/Inventor/annex
+        ${PROJECT_BINARY_DIR}/include
+        ${OBOL_TARGET_INCLUDE_DIRECTORIES}
+        ${PROJECT_SOURCE_DIR}/external/nanort
+        ${PROJECT_SOURCE_DIR}/external/nanort/examples/common
+    )
+    target_compile_definitions(nrt_render_text_demo PRIVATE OBOL_NANORT_BUILD)
+    target_link_libraries(nrt_render_text_demo ${PROJECT_NAME} obol_testlib
+                          ${OBOL_TARGET_LINK_LIBRARIES})
+    set_target_properties(nrt_render_text_demo PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin"
+    )
+    add_test(
+        NAME nrt_render_text_demo
+        COMMAND "${CMAKE_COMMAND}"
+            -DEXECUTABLE=$<TARGET_FILE:nrt_render_text_demo>
+            -DTEST_TIMEOUT=${IMAGE_COMPARISON_TEST_TIMEOUT}
+            -P "${CMAKE_CURRENT_SOURCE_DIR}/run_rendering_test.cmake"
+    )
+    set_tests_properties(nrt_render_text_demo PROPERTIES
+        TIMEOUT ${IMAGE_COMPARISON_TEST_TIMEOUT}
+    )
+endif()
 
 # ---- NanoRT dragger and manipulator tests ------------------------------------
 # Dragger/manipulator parts use SoCube, SoCone, SoCylinder, SoSphere,
@@ -302,6 +334,37 @@ add_test(
         -P "${CMAKE_CURRENT_SOURCE_DIR}/run_rendering_test.cmake"
 )
 set_tests_properties(render_nanort PROPERTIES
+    TIMEOUT ${IMAGE_COMPARISON_TEST_TIMEOUT}
+)
+
+# ---- stb_truetype direct-render reference tool -------------------------------
+# stt_reference renders the same text strings as render_text2 and
+# render_text_demo directly via SbFont/stb_truetype without OpenGL.
+# The output PNG serves as a ground-truth reference for evaluating the
+# fidelity of the GL and NanoRT text rendering paths.
+# It does not require a display server.
+add_executable(stt_reference stt_reference.cpp)
+target_include_directories(stt_reference PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/tests/utils
+    ${PROJECT_SOURCE_DIR}/include
+    ${PROJECT_SOURCE_DIR}/include/Inventor/annex
+    ${PROJECT_BINARY_DIR}/include
+    ${OBOL_TARGET_INCLUDE_DIRECTORIES}
+    ${PROJECT_SOURCE_DIR}/external/nanort
+)
+target_link_libraries(stt_reference ${PROJECT_NAME} ${OBOL_TARGET_LINK_LIBRARIES})
+set_target_properties(stt_reference PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin"
+)
+add_test(
+    NAME stt_reference
+    COMMAND "${CMAKE_COMMAND}"
+        -DEXECUTABLE=$<TARGET_FILE:stt_reference>
+        -DTEST_TIMEOUT=${IMAGE_COMPARISON_TEST_TIMEOUT}
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/run_rendering_test.cmake"
+)
+set_tests_properties(stt_reference PROPERTIES
     TIMEOUT ${IMAGE_COMPARISON_TEST_TIMEOUT}
 )
 
@@ -435,6 +498,8 @@ add_rendering_image_test(render_transforms RMSE_THRESHOLD 10.0)
 add_rendering_image_test(render_cameras    RMSE_THRESHOLD 10.0)
 add_rendering_image_test(render_drawstyle  RMSE_THRESHOLD 15.0)
 add_rendering_image_test(render_texture    RMSE_THRESHOLD 15.0)
+add_rendering_test(render_stt_gl)
+add_rendering_image_test(render_stt_gl     RMSE_THRESHOLD 15.0)
 # Text rendering: control images generated with Obol's ProFont baseline.
 # Higher RMSE threshold to accommodate subpixel differences between platforms.
 add_rendering_image_test(render_text2      RMSE_THRESHOLD 20.0)

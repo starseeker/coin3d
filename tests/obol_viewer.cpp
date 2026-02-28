@@ -585,12 +585,15 @@ public:
         int ph = std::max(h(), 1);
         if (!coarse_) {
             /* Full-resolution render; next coarse render must re-calibrate. */
-            coarseRW_ = 0; coarseRH_ = 0;
+            coarseRW_ = 0; coarseRH_ = 0; stepInComplete_ = true;
             if (!doRender_(pw, ph, pw, ph)) { redraw(); return; }
-        } else if (coarseRW_ == 0 || calPanelW_ != pw || calPanelH_ != ph) {
-            /* First coarse render at this panel size: find optimal resolution
-             * via timed step-in (starts at 4×4, doubles until near budget). */
-            timedStepIn_(pw, ph);
+        } else if (coarseRW_ == 0 || calPanelW_ != pw || calPanelH_ != ph ||
+                   !stepInComplete_) {
+            /* Step-in calibration needed or still in progress: run one round.
+             * timedStepIn_ returns true when the optimal level has been found,
+             * false when it ran out of per-call search budget and should be
+             * resumed next time. */
+            stepInComplete_ = timedStepIn_(pw, ph);
         } else {
             /* Subsequent coarse renders: reuse calibrated size. */
             if (!doRender_(pw, ph, coarseRW_, coarseRH_)) { redraw(); return; }
@@ -758,15 +761,18 @@ private:
     int  last_y_    = 0;
 
     /* Calibrated coarse render size (0 = uncalibrated / needs step-in). */
-    int coarseRW_  = 0;
-    int coarseRH_  = 0;
+    int  coarseRW_       = 0;
+    int  coarseRH_       = 0;
     /* Panel dimensions at which coarseRW_/RH_ were measured. */
-    int calPanelW_ = 0;
-    int calPanelH_ = 0;
+    int  calPanelW_      = 0;
+    int  calPanelH_      = 0;
+    /* True once timedStepIn_ has converged to the optimal coarse level.
+     * False while incremental refinement is still in progress. */
+    bool stepInComplete_ = true;
 
     /* Maximum render time (ms) per coarse frame; targets ~10 fps for
      * interactive feel.  Step-in stops when a level reaches 75% of this. */
-    static constexpr double kCoarseBudgetMs = 100.0;
+    static constexpr double kCoarseBudgetMs = 40.0;
     /* Fraction of kCoarseBudgetMs at which step-in stops doubling resolution.
      * 0.75 gives headroom so the chosen level reliably stays within budget. */
     static constexpr double kBudgetThreshold = 0.75;
@@ -821,19 +827,38 @@ private:
         return true;
     }
 
-    /* Timed step-in calibration: shoot 4 pixels total (2×2) first, then
-     * double resolution each step while measuring render time, stopping
-     * once a level approaches kCoarseBudgetMs.  The final rendered level
-     * is left in fltk_img so the caller only needs to call redraw().
-     * Sets coarseRW_, coarseRH_, calPanelW_, calPanelH_. */
-    void timedStepIn_(int pw, int ph) {
+    /* Timed step-in calibration: find the coarsest render resolution that
+     * approaches kCoarseBudgetMs.  On the first call (coarseRW_==0 or panel
+     * size changed) search starts at 2 px wide; on subsequent calls it
+     * resumes from the next level beyond the stored best answer so the
+     * initial coarse frame appears immediately and quality improves each
+     * time refreshRender is called.
+     *
+     * The per-call search budget mirrors kCoarseBudgetMs so that a single
+     * call never blocks for longer than one frame.  Returns true when the
+     * optimal level has been found, false if the per-call budget was
+     * exhausted before convergence (caller should invoke again next frame).
+     *
+     * Sets coarseRW_, coarseRH_, calPanelW_, calPanelH_ on every return. */
+    bool timedStepIn_(int pw, int ph) {
         using clock = std::chrono::steady_clock;
-        int bestRW = 2, bestRH = 2;
-        int crw = 2, crh = 2;
-        bool done = false;
-        while (!done) {
+        auto tStart = clock::now();
+
+        /* Determine starting point:
+         *   fresh  – panel size changed or no prior calibration: begin at 2 px.
+         *   resume – continue from the level above the previous best answer. */
+        bool fresh = (coarseRW_ == 0 || calPanelW_ != pw || calPanelH_ != ph);
+        int crw    = fresh ? 2 : coarseRW_ * 2;
+        int bestRW = fresh ? 2 : coarseRW_;
+        int bestRH = fresh ? std::max(1, (2 * ph + pw / 2) / pw) : coarseRH_;
+
+        bool optimal = false;
+        while (true) {
             const int rw = crw < pw ? crw : pw;
-            const int rh = crh < ph ? crh : ph;
+            /* Derive rh from rw to preserve the panel aspect ratio, so the
+             * raytracing view frustum matches the display dimensions and the
+             * upscaled coarse image is not distorted. */
+            const int rh = rw < pw ? std::max(1, (rw * ph + pw / 2) / pw) : ph;
             auto t0 = clock::now();
             bool ok = doRender_(pw, ph, rw, rh);
             double ms = std::chrono::duration<double, std::milli>(
@@ -841,16 +866,26 @@ private:
             if (!ok) break;
             bestRW = rw;
             bestRH = rh;
-            /* Stop when approaching budget or reached full panel size. */
-            done = (ms >= kCoarseBudgetMs * kBudgetThreshold ||
-                    rw >= pw || rh >= ph);
+            /* Stop when this level is approaching the per-frame budget or the
+             * full panel size has been reached: optimal level found. */
+            if (ms >= kCoarseBudgetMs * kBudgetThreshold ||
+                    rw >= pw || rh >= ph) {
+                optimal = true;
+                break;
+            }
+            /* Stop if cumulative search time this call is approaching the
+             * budget: return false so caller retries next frame from bestRW. */
+            double searchMs = std::chrono::duration<double, std::milli>(
+                                  clock::now() - tStart).count();
+            if (searchMs >= kCoarseBudgetMs * kBudgetThreshold)
+                break;
             crw *= 2;
-            crh *= 2;
         }
         coarseRW_  = bestRW;
         coarseRH_  = bestRH;
         calPanelW_ = pw;
         calPanelH_ = ph;
+        return optimal;
     }
 
     void updateClipping_() {
@@ -1010,36 +1045,67 @@ public:
 
     int handle(int event) override {
         if (!root || !cam) return Fl_Box::handle(event);
+        int h_ = h();
         switch (event) {
-        case FL_PUSH:
+        case FL_PUSH: {
             take_focus();
             dragging_ = true;
             drag_btn_ = Fl::event_button();
             last_x_   = Fl::event_x() - x();
             last_y_   = Fl::event_y() - y();
+            SoMouseButtonEvent ev;
+            ev.setButton(drag_btn_==1 ? SoMouseButtonEvent::BUTTON1 :
+                         drag_btn_==2 ? SoMouseButtonEvent::BUTTON2 :
+                                        SoMouseButtonEvent::BUTTON3);
+            ev.setState(SoButtonEvent::DOWN);
+            ev.setPosition(SbVec2s((short)last_x_, (short)(h_-last_y_)));
+            ev.setTime(SbTime::getTimeOfDay());
+            SbViewportRegion vp(std::max(w(),1), std::max(h(),1));
+            SoHandleEventAction ha(vp); ha.setEvent(&ev); ha.apply(root);
+            dragger_active_ = ha.isHandled();
             return 1;
-        case FL_RELEASE:
+        }
+        case FL_RELEASE: {
             dragging_ = false;
+            dragger_active_ = false;
+            int rx = Fl::event_x()-x(), ry = Fl::event_y()-y();
+            SoMouseButtonEvent ev;
+            ev.setButton(Fl::event_button()==1 ? SoMouseButtonEvent::BUTTON1 :
+                         Fl::event_button()==2 ? SoMouseButtonEvent::BUTTON2 :
+                                                 SoMouseButtonEvent::BUTTON3);
+            ev.setState(SoButtonEvent::UP);
+            ev.setPosition(SbVec2s((short)rx, (short)(h_-ry)));
+            ev.setTime(SbTime::getTimeOfDay());
+            SbViewportRegion vp(std::max(w(),1), std::max(h(),1));
+            SoHandleEventAction ha(vp); ha.setEvent(&ev); ha.apply(root);
             notifyCameraChanged(); refreshRender(); return 1;
+        }
         case FL_DRAG: {
             if (!dragging_) return 1;
             int ex = Fl::event_x()-x(), ey = Fl::event_y()-y();
             int dx = ex - last_x_, dy = ey - last_y_;
             last_x_ = ex; last_y_ = ey;
-            if (drag_btn_ == 1) {
-                /* orbit – camera-local yaw and pitch (BRL-CAD style):
-                 * symmetric axes, no world-up reference, no gimbal lock */
-                cam->orbitCamera(scene_center_,
-                            (float)dx, (float)dy,
-                            0.01f * (180.0f / static_cast<float>(M_PI)));
-            } else if (drag_btn_ == 3) {
-                float dist = cam->focalDistance.getValue() * (1.0f + dy*0.01f);
-                if (dist < 0.1f) dist = 0.1f;
-                SbVec3f dir = cam->position.getValue() - scene_center_;
-                dir.normalize();
-                cam->position.setValue(scene_center_ + dir * dist);
-                cam->focalDistance.setValue(dist);
-                updateClipping_();
+            SoLocation2Event ev;
+            ev.setPosition(SbVec2s((short)ex, (short)(h_-ey)));
+            ev.setTime(SbTime::getTimeOfDay());
+            SbViewportRegion vp(std::max(w(),1), std::max(h(),1));
+            SoHandleEventAction ha(vp); ha.setEvent(&ev); ha.apply(root);
+            if (!dragger_active_) {
+                if (drag_btn_ == 1) {
+                    /* orbit – camera-local yaw and pitch (BRL-CAD style):
+                     * symmetric axes, no world-up reference, no gimbal lock */
+                    cam->orbitCamera(scene_center_,
+                                (float)dx, (float)dy,
+                                0.01f * (180.0f / static_cast<float>(M_PI)));
+                } else if (drag_btn_ == 3) {
+                    float dist = cam->focalDistance.getValue() * (1.0f + dy*0.01f);
+                    if (dist < 0.1f) dist = 0.1f;
+                    SbVec3f dir = cam->position.getValue() - scene_center_;
+                    dir.normalize();
+                    cam->position.setValue(scene_center_ + dir * dist);
+                    cam->focalDistance.setValue(dist);
+                    updateClipping_();
+                }
             }
             notifyCameraChanged(); refreshRender(); return 1;
         }
@@ -1071,7 +1137,8 @@ private:
     std::unique_ptr<SoOffscreenRenderer>   renderer_;
 
     SbVec3f scene_center_ = SbVec3f(0,0,0);
-    bool dragging_ = false;
+    bool dragging_        = false;
+    bool dragger_active_  = false;  /* true when a scene dragger consumed FL_PUSH */
     int  drag_btn_ = 0;
     int  last_x_   = 0;
     int  last_y_   = 0;

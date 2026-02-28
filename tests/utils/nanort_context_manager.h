@@ -190,9 +190,17 @@ static void nrtTriangleCB(void * userdata,
 // geometry (cylinders for lines, spheres for points) so that ray-tracing
 // backends can visualise them.
 
+// Per-SoText2-node pixel overlay collected during scene traversal.
+// After ray-tracing, these are composited directly onto the framebuffer.
+struct NrtTextOverlay {
+    std::vector<unsigned char> pixbuf; // RGBA, bottom-to-top rows
+    int x, y, w, h;                   // viewport-space bottom-left + size
+};
+
 struct NrtProxyData {
-    NrtSceneCollector * collector;
-    SbViewportRegion    vp;
+    NrtSceneCollector *          collector;
+    SbViewportRegion             vp;
+    std::vector<NrtTextOverlay>  textOverlays; // collected SoText2 bitmaps
 };
 
 // Helper: wrap \a proxy in a separator that injects the current material and
@@ -344,10 +352,10 @@ nrtPointSetPreCB(void * ud, SoCallbackAction * action, const SoNode * node)
 // ==========================================================================
 // SoText2 renders screen-aligned text via GL rasterisation, so its
 // generatePrimitives() emits nothing for ray-tracing backends.  This
-// pre-callback intercepts each SoText2 node and calls buildGlyphQuads() to
-// obtain one screen-aligned quad per visible glyph, sized to the pixel extent
-// of that glyph's bitmap.  Each quad is emitted as two triangles with the
-// current diffuse material colour.  Whitespace characters produce no geometry.
+// pre-callback intercepts each SoText2 node and builds a crisp RGBA pixel
+// buffer via SoText2::buildPixelBuffer().  The overlay is stored for
+// compositing directly onto the framebuffer after the ray-trace pass,
+// which gives letter-accurate glyph shapes (not bounding-box blocks).
 static SoCallbackAction::Response
 nrtText2PreCB(void * ud, SoCallbackAction * action, const SoNode * node)
 {
@@ -355,69 +363,11 @@ nrtText2PreCB(void * ud, SoCallbackAction * action, const SoNode * node)
     const SoText2 * text = static_cast<const SoText2 *>(node);
     SoState * state = action->getState();
 
-    // Collect per-glyph object-space quads (4 × SbVec3f per glyph).
-    std::vector<SbVec3f> glyphQuads;
-    const int nquads = text->buildGlyphQuads(state, glyphQuads);
-    if (nquads == 0)
+    NrtTextOverlay ov;
+    if (!text->buildPixelBuffer(state, ov.pixbuf, ov.x, ov.y, ov.w, ov.h))
         return SoCallbackAction::PRUNE;
 
-    // Read the current material once for all glyphs.
-    SbColor ambient, diffuse, specular, emission;
-    float   shininess, transparency;
-    action->getMaterial(ambient, diffuse, specular, emission,
-                        shininess, transparency, 0);
-
-    NrtMaterial mat;
-    mat.diffuse[0]  = diffuse[0];  mat.diffuse[1]  = diffuse[1];  mat.diffuse[2]  = diffuse[2];
-    mat.specular[0] = specular[0]; mat.specular[1] = specular[1]; mat.specular[2] = specular[2];
-    mat.ambient[0]  = ambient[0];  mat.ambient[1]  = ambient[1];  mat.ambient[2]  = ambient[2];
-    mat.emission[0] = emission[0]; mat.emission[1] = emission[1]; mat.emission[2] = emission[2];
-    mat.shininess   = shininess;
-
-    // Model matrix: object space → world space (undoes the inverse in buildGlyphQuads).
-    const SbMatrix & mm = action->getModelMatrix();
-
-    for (int q = 0; q < nquads; ++q) {
-        // Retrieve the four object-space corners for this glyph quad.
-        const size_t base = static_cast<size_t>(q) * 4;
-        SbVec3f v0 = glyphQuads[base + 0]; // top-left
-        SbVec3f v1 = glyphQuads[base + 1]; // top-right
-        SbVec3f v2 = glyphQuads[base + 2]; // bottom-right
-        SbVec3f v3 = glyphQuads[base + 3]; // bottom-left
-
-        // Transform to world space.
-        mm.multVecMatrix(v0, v0);
-        mm.multVecMatrix(v1, v1);
-        mm.multVecMatrix(v2, v2);
-        mm.multVecMatrix(v3, v3);
-
-        // Face normal from the two leading edges of the quad.
-        SbVec3f norm = (v1 - v0).cross(v3 - v0);
-        const float nlen = norm.length();
-        if (nlen < 1e-6f) continue;
-        norm /= nlen;
-
-        const float n[3] = { norm[0], norm[1], norm[2] };
-
-        // Emit two triangles that form the quad.
-        auto addTri = [&](const SbVec3f & a, const SbVec3f & b, const SbVec3f & c) {
-            NrtTriangle tri;
-            tri.pos[0][0] = a[0]; tri.pos[0][1] = a[1]; tri.pos[0][2] = a[2];
-            tri.pos[1][0] = b[0]; tri.pos[1][1] = b[1]; tri.pos[1][2] = b[2];
-            tri.pos[2][0] = c[0]; tri.pos[2][1] = c[1]; tri.pos[2][2] = c[2];
-            for (int i = 0; i < 3; ++i) {
-                tri.norm[i][0] = n[0];
-                tri.norm[i][1] = n[1];
-                tri.norm[i][2] = n[2];
-            }
-            tri.mat = mat;
-            data->collector->tris.push_back(tri);
-        };
-
-        addTri(v0, v1, v2);
-        addTri(v0, v2, v3);
-    }
-
+    data->textOverlays.push_back(std::move(ov));
     return SoCallbackAction::PRUNE;  // generatePrimitives() produces nothing
 }
 
@@ -873,8 +823,11 @@ public:
         // --- 1. Extract triangles and all light types in one traversal ------
         NrtSceneCollector collector;
         std::vector<NrtLightInfo> lights;
+        // proxyData is declared outside the inner scope so that textOverlays
+        // (filled during SoCallbackAction traversal) remain accessible for
+        // the compositing step in --- 6 below.
+        NrtProxyData proxyData;
         {
-            NrtProxyData proxyData;
             proxyData.collector = &collector;
             proxyData.vp        = vp;
 
@@ -901,11 +854,17 @@ public:
             cba.apply(scene);
         }
         if (collector.tris.empty()) {
-            // No triangles: return TRUE so the caller uses the
+            // No ray-traceable triangles: return TRUE so the caller uses the
             // background-filled buffer rather than falling through to GL.
-            return TRUE;
+            // Note: SoText2 overlays need geometry in the scene to get here;
+            // a text-only NanoRT scene would also have no triangle hits, so we
+            // skip the ray-trace but still composite any collected overlays.
+            if (proxyData.textOverlays.empty())
+                return TRUE;
         }
 
+        // --- 2-5. BVH build and ray-trace (skipped if scene has no triangles) ---
+        if (!collector.tris.empty()) {
         // --- 2. Build nanort BVH --------------------------------------------
         NrtScene nrtScene;
         nrtScene.tris = collector.tris;
@@ -1082,6 +1041,58 @@ public:
                 pixels[idx + 2] = static_cast<unsigned char>(
                     nrt_clamp01(accum[2] * inv_s) * 255.0f);
                 if (nrcomponents == 4) pixels[idx + 3] = 255;
+            }
+        }
+        } // end BVH/raytrace block (skipped when no triangles)
+
+        // --- 6. Composite SoText2 overlays directly onto the framebuffer ----
+        // Text overlays were collected during the scene traversal above.
+        // They contain crisp (binary-threshold) RGBA pixel buffers stored in
+        // GL convention (row 0 = bottom of viewport).  We composite them here
+        // so each glyph shows its actual letter shape rather than a solid block.
+        for (const NrtTextOverlay & ov : proxyData.textOverlays) {
+            // Clamp the overlay rectangle to the framebuffer.
+            const int src_x0 = std::max(0, -ov.x);
+            const int src_y0 = std::max(0, -ov.y);
+            const int dst_x0 = std::max(0,  ov.x);
+            const int dst_y0 = std::max(0,  ov.y);
+            const int draw_w = std::min(ov.w - src_x0,
+                                        static_cast<int>(width)  - dst_x0);
+            const int draw_h = std::min(ov.h - src_y0,
+                                        static_cast<int>(height) - dst_y0);
+            if (draw_w <= 0 || draw_h <= 0) continue;
+
+            for (int row = 0; row < draw_h; ++row) {
+                // Source: ov.pixbuf row (src_y0 + row) counted from bottom.
+                const int src_row = src_y0 + row;
+                const unsigned char * src =
+                    ov.pixbuf.data() + (src_row * ov.w + src_x0) * 4;
+
+                // Destination: pixels row (dst_y0 + row) counted from bottom
+                // (same GL convention the ray-tracer uses).
+                const int dst_row = dst_y0 + row;
+                const size_t dst_base =
+                    static_cast<size_t>(dst_row) * width + dst_x0;
+
+                for (int col = 0; col < draw_w; ++col) {
+                    const unsigned char r_src = src[0];
+                    const unsigned char g_src = src[1];
+                    const unsigned char b_src = src[2];
+                    const unsigned char a_src = src[3];
+                    src += 4;
+
+                    if (a_src == 0) continue; // fully transparent – skip
+
+                    // Alpha-composite (src over dst) using the full stb_truetype
+                    // grayscale alpha value for smooth anti-aliased text edges.
+                    const float fa = a_src * (1.0f / 255.0f);
+                    const float fb = 1.0f - fa;
+                    const size_t idx = (dst_base + col) * nrcomponents;
+                    pixels[idx + 0] = static_cast<unsigned char>(r_src * fa + pixels[idx + 0] * fb);
+                    pixels[idx + 1] = static_cast<unsigned char>(g_src * fa + pixels[idx + 1] * fb);
+                    pixels[idx + 2] = static_cast<unsigned char>(b_src * fa + pixels[idx + 2] * fb);
+                    if (nrcomponents == 4) pixels[idx + 3] = 255;
+                }
             }
         }
 

@@ -97,6 +97,27 @@ public:
   int buildGlyphQuads(SoState * state,
                       std::vector<SbVec3f> & quads) const;
 
+  /*!
+   * Build a ready-to-composite RGBA pixel buffer for non-GL rendering backends
+   * (e.g. CPU ray-tracers) that cannot call glDrawPixels directly.
+   *
+   * The returned buffer uses the same binary-threshold alpha that GLRender uses:
+   * each pixel is either fully opaque (stb coverage >= 50%) or transparent.
+   * Rows are stored bottom-to-top (GL convention).
+   *
+   * \param state   Current traversal state (view volume, viewport, font, material).
+   * \param pixbuf  Filled with width × height × 4 RGBA bytes (bottom-to-top rows).
+   * \param out_x   Left edge of the buffer in viewport coordinates (pixels).
+   * \param out_y   Bottom edge of the buffer in viewport coordinates (pixels).
+   * \param out_w   Width of the buffer in pixels.
+   * \param out_h   Height of the buffer in pixels.
+   * \return        TRUE if any text was written; FALSE if nothing to render.
+   */
+  SbBool buildPixelBuffer(SoState * state,
+                          std::vector<unsigned char> & pixbuf,
+                          int & out_x, int & out_y,
+                          int & out_w, int & out_h) const;
+
 protected:
   virtual ~SoText2();
 

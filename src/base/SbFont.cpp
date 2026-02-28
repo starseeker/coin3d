@@ -505,11 +505,11 @@ SbFont::getSize(void) const
 void
 SbFont::setSize(float size)
 {
-  if (size > 0.0f) {
+  if (size > 0.0f && size != pimpl->size) {
     pimpl->size = size;
     if (pimpl->valid) {
       pimpl->scale = stt_ScaleForPixelHeight(&pimpl->fontinfo, size);
-      pimpl->clearCache(); // Clear cache when size changes
+      pimpl->clearCache(); // Clear glyph cache when size actually changes
     }
   }
 }
