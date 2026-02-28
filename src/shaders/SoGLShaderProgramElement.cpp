@@ -89,10 +89,10 @@ SoGLShaderProgramElement::enable(SoState * const state, const SbBool onoff)
   
   if (element->shaderProgram) {
     if (onoff) {
-      if (!element->shaderProgram->isEnabled()) element->shaderProgram->enable(state);
+      if (!element->shaderProgram->isEnabled(state)) element->shaderProgram->enable(state);
     }
     else {
-      if (element->shaderProgram->isEnabled()) element->shaderProgram->disable(state);
+      if (element->shaderProgram->isEnabled(state)) element->shaderProgram->disable(state);
     }
     element->shaderProgram->getShaderObjectIds(element->objectids);
   }

@@ -19,8 +19,17 @@ if(NOT DEFINED TEST_TIMEOUT)
     set(TEST_TIMEOUT 30)
 endif()
 
-# Build the command, wrapping with xvfb-run when no display is available
-set(_exec_cmd "${EXECUTABLE}")
+# Optional: test name for the consolidated obol_test invocation.
+# When TEST_NAME is set, the executable is obol_test and receives:
+#   obol_test render_test <TEST_NAME>
+# When TEST_NAME is not set (legacy / NanoRT standalone), the executable is
+# called with no arguments (it runs its own main()).
+if(DEFINED TEST_NAME AND NOT TEST_NAME STREQUAL "")
+    set(_exec_args "${EXECUTABLE}" "render_test" "${TEST_NAME}")
+else()
+    set(_exec_args "${EXECUTABLE}")
+endif()
+set(_exec_cmd ${_exec_args})
 if(UNIX AND NOT APPLE)
     # Wrap with xvfb-run when no display is available.
     # Do NOT set OBOL_FULL_INDIRECT_RENDERING: it disables FBO support in
@@ -32,7 +41,7 @@ if(UNIX AND NOT APPLE)
                 "${_xvfb_run}"
                 "--auto-servernum"
                 "--server-args=-screen 0 1024x768x24 +extension GLX"
-                "${EXECUTABLE}")
+                ${_exec_args})
         endif()
     endif()
 endif()

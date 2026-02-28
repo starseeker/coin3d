@@ -1,16 +1,14 @@
 /*
  * render_ascii_text.cpp - Integration test: SoAsciiText rendering
  *
- * Renders SoAsciiText with string "HELLO" using an emissive white material
- * and verifies that non-black pixels appear in the rendered output.
- *
- * SoAsciiText is a 3D shape node (extruded text) so it needs a proper camera
- * setup and material.  A perspective camera with viewAll() centres the text.
+ * Renders SoAsciiText with string "HELLO".
+ * The scene is built by the shared testlib factory (createAsciiText).
  *
  * Writes argv[1]+".rgb" and returns 0 on pass, 1 on fail.
  */
 
 #include "headless_utils.h"
+#include "testlib/test_scenes.h"
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/nodes/SoPerspectiveCamera.h>
 #include <Inventor/nodes/SoDirectionalLight.h>
@@ -49,32 +47,9 @@ int main(int argc, char ** argv)
 {
     initCoinHeadless();
 
-    SoSeparator * root = new SoSeparator;
-    root->ref();
+    SoSeparator * root = ObolTest::Scenes::createAsciiText(W, H);
 
-    // Perspective camera; viewAll() will be called after the scene is built
-    SoPerspectiveCamera * cam = new SoPerspectiveCamera;
-    root->addChild(cam);
-
-    // Frontal directional light
-    SoDirectionalLight * light = new SoDirectionalLight;
-    light->direction.setValue(-0.3f, -0.5f, -0.8f);
-    root->addChild(light);
-
-    // Bright emissive + diffuse white material
-    SoMaterial * mat = new SoMaterial;
-    mat->diffuseColor .setValue(0.9f, 0.9f, 0.9f);
-    mat->emissiveColor.setValue(0.5f, 0.5f, 0.5f);
-    root->addChild(mat);
-
-    SoAsciiText * text = new SoAsciiText;
-    text->string.setValue("HELLO");
-    text->justification.setValue(SoAsciiText::CENTER);
-    root->addChild(text);
-
-    // Auto-fit the camera to the scene bounding box
     SbViewportRegion vp(W, H);
-    cam->viewAll(root, vp);
 
     SoOffscreenRenderer renderer(vp);
     renderer.setComponents(SoOffscreenRenderer::RGB);

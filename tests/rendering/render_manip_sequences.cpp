@@ -13,10 +13,14 @@
  *   5. SoJackManip: attach, drag, render pre/post.
  *   6. Sequential manip swap: replace one manip type with another on same path.
  *
+ * Scene setup uses ObolTest::Scenes::buildManipTestBase() so the viewer
+ * (obol_viewer) and this test start from the same base scene layout.
+ *
  * Returns 0 on pass, non-0 on failure.
  */
 
 #include "headless_utils.h"
+#include "testlib/test_scenes.h"
 
 #include <Inventor/SoDB.h>
 #include <Inventor/nodes/SoSeparator.h>
@@ -24,9 +28,6 @@
 #include <Inventor/nodes/SoDirectionalLight.h>
 #include <Inventor/nodes/SoMaterial.h>
 #include <Inventor/nodes/SoTransform.h>
-#include <Inventor/nodes/SoSphere.h>
-#include <Inventor/nodes/SoCube.h>
-#include <Inventor/nodes/SoCone.h>
 
 #include <Inventor/manips/SoCenterballManip.h>
 #include <Inventor/manips/SoHandleBoxManip.h>
@@ -39,40 +40,6 @@
 #include <cstdio>
 #include <cstring>
 #include <cmath>
-
-// ---------------------------------------------------------------------------
-// Build a minimal scene with camera, light, transform, material, shape
-// Returns the root; *xfOut receives the SoTransform (before manip attachment)
-// ---------------------------------------------------------------------------
-static SoSeparator *buildManipScene(SoSeparator **shapeSepOut = nullptr)
-{
-    SoSeparator *root = new SoSeparator;
-    root->ref();
-
-    SoPerspectiveCamera *cam = new SoPerspectiveCamera;
-    cam->position.setValue(0.0f, 0.0f, 8.0f);
-    root->addChild(cam);
-
-    SoDirectionalLight *lt = new SoDirectionalLight;
-    lt->direction.setValue(-0.5f,-1.0f,-0.5f);
-    root->addChild(lt);
-
-    SoSeparator *shapeSep = new SoSeparator;
-    SoTransform *xf = new SoTransform;
-    shapeSep->addChild(xf);
-    SoMaterial *mat = new SoMaterial;
-    mat->diffuseColor.setValue(0.6f,0.4f,0.8f);
-    shapeSep->addChild(mat);
-    shapeSep->addChild(new SoSphere);
-    root->addChild(shapeSep);
-
-    SbViewportRegion vp(DEFAULT_WIDTH, DEFAULT_HEIGHT);
-    cam->viewAll(root, vp);
-
-    if (shapeSepOut) *shapeSepOut = shapeSep;
-    root->unrefNoDelete();
-    return root;
-}
 
 // ---------------------------------------------------------------------------
 // Attach a manip to the first SoTransform found in the scene
@@ -130,7 +97,7 @@ static bool renderDragRender(SoSeparator *root, const char *basepath,
 // ---------------------------------------------------------------------------
 static bool test1_centerballManip(const char *basepath)
 {
-    SoSeparator *root = buildManipScene();
+    SoSeparator *root = ObolTest::Scenes::buildManipTestBase(DEFAULT_WIDTH, DEFAULT_HEIGHT);
     root->ref();
 
     SoCenterballManip *manip = new SoCenterballManip;
@@ -161,7 +128,7 @@ static bool test1_centerballManip(const char *basepath)
 // ---------------------------------------------------------------------------
 static bool test2_handleBoxManip(const char *basepath)
 {
-    SoSeparator *root = buildManipScene();
+    SoSeparator *root = ObolTest::Scenes::buildManipTestBase(DEFAULT_WIDTH, DEFAULT_HEIGHT);
     root->ref();
 
     SoHandleBoxManip *manip = new SoHandleBoxManip;
@@ -187,7 +154,7 @@ static bool test2_handleBoxManip(const char *basepath)
 // ---------------------------------------------------------------------------
 static bool test3_tabBoxManip(const char *basepath)
 {
-    SoSeparator *root = buildManipScene();
+    SoSeparator *root = ObolTest::Scenes::buildManipTestBase(DEFAULT_WIDTH, DEFAULT_HEIGHT);
     root->ref();
 
     SoTabBoxManip *manip = new SoTabBoxManip;
@@ -212,7 +179,7 @@ static bool test3_tabBoxManip(const char *basepath)
 // ---------------------------------------------------------------------------
 static bool test4_transformBoxManip(const char *basepath)
 {
-    SoSeparator *root = buildManipScene();
+    SoSeparator *root = ObolTest::Scenes::buildManipTestBase(DEFAULT_WIDTH, DEFAULT_HEIGHT);
     root->ref();
 
     SoTransformBoxManip *manip = new SoTransformBoxManip;
@@ -237,7 +204,7 @@ static bool test4_transformBoxManip(const char *basepath)
 // ---------------------------------------------------------------------------
 static bool test5_jackManip(const char *basepath)
 {
-    SoSeparator *root = buildManipScene();
+    SoSeparator *root = ObolTest::Scenes::buildManipTestBase(DEFAULT_WIDTH, DEFAULT_HEIGHT);
     root->ref();
 
     SoJackManip *manip = new SoJackManip;
@@ -262,7 +229,7 @@ static bool test5_jackManip(const char *basepath)
 // ---------------------------------------------------------------------------
 static bool test6_manipSwap(const char *basepath)
 {
-    SoSeparator *root = buildManipScene();
+    SoSeparator *root = ObolTest::Scenes::buildManipTestBase(DEFAULT_WIDTH, DEFAULT_HEIGHT);
     root->ref();
 
     SbViewportRegion vp(DEFAULT_WIDTH, DEFAULT_HEIGHT);

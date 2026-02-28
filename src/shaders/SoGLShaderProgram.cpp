@@ -50,7 +50,6 @@ SoGLShaderProgram::SoGLShaderProgram(void)
   this->cgShaderProgram = NULL;
   this->glslShaderProgram = new SoGLSLShaderProgram;
 
-  this->isenabled = FALSE;
   this->enablecb = NULL;
   this->enablecbclosure = NULL;
 }
@@ -105,7 +104,7 @@ SoGLShaderProgram::enable(SoState * state)
   // this->cgShaderProgram->enable();
   this->glslShaderProgram->enable(glctx);
 
-  this->isenabled = TRUE;
+  this->isenabledHandles.put(cachecontext, TRUE);
   if (this->enablecb) {
     this->enablecb(this->enablecbclosure, state, TRUE);
   }
@@ -122,16 +121,19 @@ SoGLShaderProgram::disable(SoState * state)
   // this->cgShaderProgram->disable();
   this->glslShaderProgram->disable(glctx);
 
-  this->isenabled = FALSE;
+  this->isenabledHandles.put(cachecontext, FALSE);
   if (this->enablecb) {
     this->enablecb(this->enablecbclosure, state, FALSE);
   }
 }
 
 SbBool
-SoGLShaderProgram::isEnabled(void) const
+SoGLShaderProgram::isEnabled(SoState * state) const
 {
-  return this->isenabled;
+  const uint32_t cachecontext = SoGLCacheContextElement::get(state);
+  SbBool result = FALSE;
+  this->isenabledHandles.get(cachecontext, result);
+  return result;
 }
 
 void
@@ -146,7 +148,7 @@ void
 SoGLShaderProgram::updateCoinParameter(SoState * state, const SbName & name, const int value)
 {
   if (this->glslShaderProgram) {
-    SbBool enabled = this->isenabled;
+    SbBool enabled = this->isEnabled(state);
     if (!enabled) this->enable(state);
     this->glslShaderProgram->updateCoinParameter(state, name, value);
     if (!enabled) this->disable(state);
@@ -177,10 +179,12 @@ SoGLShaderProgram::getGLSLShaderProgramHandle(SoState * state) const
 }
 
 SbBool
-SoGLShaderProgram::glslShaderProgramLinked(void) const
+SoGLShaderProgram::glslShaderProgramLinked(SoState * state) const
 {
   if (this->glslShaderProgram) {
-    return this->glslShaderProgram->neededLinking();
+    const uint32_t cachecontext = SoGLCacheContextElement::get(state);
+    const SoGLContext * glctx = SoGLContext_instance(cachecontext);
+    return this->glslShaderProgram->neededLinking(glctx);
   }
   return FALSE;
 }

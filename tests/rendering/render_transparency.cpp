@@ -1,25 +1,18 @@
 /*
- * render_transparency.cpp - Integration test: SoTransparencyType node rendering
+ * render_transparency.cpp - Integration test: SoTransparencyType rendering
  *
- * Renders two spheres: an opaque blue sphere in the background and a
- * semi-transparent red sphere in the foreground.  The test verifies that
- * the red sphere renders as a non-black object (i.e., it is visible).
+ * Scene built by ObolTest::Scenes::createTransparency.
  *
- * Exercises SoTransparencyType, SoMaterial, SoSphere, SoOrthographicCamera,
- * SoDirectionalLight and the transparency rendering path.
+ * Pixel validation confirms that the semi-transparent sphere is visible
+ * (non-background pixels are present in the viewport centre).
  *
  * Writes argv[1]+".rgb" and returns 0 on pass, 1 on fail.
  */
 
 #include "headless_utils.h"
-#include <Inventor/nodes/SoSeparator.h>
-#include <Inventor/nodes/SoTransparencyType.h>
-#include <Inventor/nodes/SoOrthographicCamera.h>
-#include <Inventor/nodes/SoMaterial.h>
-#include <Inventor/nodes/SoSphere.h>
-#include <Inventor/nodes/SoTranslation.h>
-#include <Inventor/nodes/SoDirectionalLight.h>
+#include "testlib/test_scenes.h"
 #include <Inventor/SbViewportRegion.h>
+#include <Inventor/SoOffscreenRenderer.h>
 #include <cstdio>
 
 static const int W = 256;
@@ -27,8 +20,6 @@ static const int H = 256;
 
 static bool validateTransparency(const unsigned char *buf)
 {
-    // Look for non-black pixels in the centre — the semi-transparent sphere
-    // must produce visible output.
     int visiblePixels = 0;
 
     int cx = W / 2, cy = H / 2;
@@ -56,52 +47,7 @@ int main(int argc, char **argv)
 {
     initCoinHeadless();
 
-    SoSeparator *root = new SoSeparator;
-    root->ref();
-
-    // Camera
-    SoOrthographicCamera *cam = new SoOrthographicCamera;
-    cam->position.setValue(0, 0, 5);
-    cam->nearDistance = 0.1f;
-    cam->farDistance  = 20.0f;
-    cam->height       = 4.0f;
-    root->addChild(cam);
-
-    root->addChild(new SoDirectionalLight);
-
-    // Set transparency type to BLEND
-    SoTransparencyType *tt = new SoTransparencyType;
-    tt->value.setValue(SoTransparencyType::BLEND);
-    root->addChild(tt);
-
-    // Opaque blue sphere at z=-2 (background)
-    {
-        SoSeparator *grp = new SoSeparator;
-        SoTranslation *tr = new SoTranslation;
-        tr->translation.setValue(0, 0, -2.0f);
-        grp->addChild(tr);
-        SoMaterial *mat = new SoMaterial;
-        mat->diffuseColor.setValue(0.0f, 0.3f, 1.0f);
-        mat->transparency.setValue(0.0f);
-        grp->addChild(mat);
-        SoSphere *sph = new SoSphere;
-        sph->radius = 0.8f;
-        grp->addChild(sph);
-        root->addChild(grp);
-    }
-
-    // Semi-transparent red sphere at origin (foreground)
-    {
-        SoSeparator *grp = new SoSeparator;
-        SoMaterial *mat = new SoMaterial;
-        mat->diffuseColor.setValue(1.0f, 0.1f, 0.1f);
-        mat->transparency.setValue(0.5f); // 50% transparent
-        grp->addChild(mat);
-        SoSphere *sph = new SoSphere;
-        sph->radius = 0.6f;
-        grp->addChild(sph);
-        root->addChild(grp);
-    }
+    SoSeparator *root = ObolTest::Scenes::createTransparency(W, H);
 
     SbViewportRegion vp(W, H);
     SoOffscreenRenderer renderer(vp);

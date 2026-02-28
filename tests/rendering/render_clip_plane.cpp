@@ -1,19 +1,14 @@
 /*
  * render_clip_plane.cpp - Integration test: SoClipPlane geometry clipping
  *
- * Renders a large red sphere that fills most of the viewport, then adds a
- * SoClipPlane that cuts the sphere exactly in half horizontally (along the
- * equator plane Y=0, clipping everything below).  The result should have:
- *   - The upper half of the image populated with sphere pixels.
- *   - The lower half of the image completely clipped (background colour).
- *
- * This validates that SoClipPlane correctly restricts rendering to the
- * specified half-space.
+ * Renders a large red sphere clipped in half by SoClipPlane.
+ * The scene is built by the shared testlib factory (createClipPlane).
  *
  * Writes argv[1]+".rgb" and returns 0 on pass, 1 on fail.
  */
 
 #include "headless_utils.h"
+#include "testlib/test_scenes.h"
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/nodes/SoOrthographicCamera.h>
 #include <Inventor/nodes/SoDirectionalLight.h>
@@ -79,38 +74,7 @@ int main(int argc, char **argv)
 {
     initCoinHeadless();
 
-    SoSeparator *root = new SoSeparator;
-    root->ref();
-
-    // Orthographic camera looking along -Z, world height = 2.4
-    SoOrthographicCamera *cam = new SoOrthographicCamera;
-    cam->position    .setValue(0, 0, 5);
-    cam->nearDistance = 1.0f;
-    cam->farDistance  = 20.0f;
-    cam->height       = 2.4f;
-    root->addChild(cam);
-
-    // Dim directional light from above
-    SoDirectionalLight *light = new SoDirectionalLight;
-    light->direction.setValue(0.0f, -1.0f, -1.0f);
-    root->addChild(light);
-
-    // Clip plane: keep everything with Y >= 0 (clip away the lower half-space)
-    // SoClipPlane is defined by a plane; geometry on the side the normal points
-    // toward is KEPT.  Normal pointing up (+Y) keeps Y >= 0.
-    SoClipPlane *cp = new SoClipPlane;
-    cp->plane.setValue(SbPlane(SbVec3f(0.0f, 1.0f, 0.0f), 0.0f));
-    root->addChild(cp);
-
-    // Large emissive red sphere centred at origin
-    SoMaterial *mat = new SoMaterial;
-    mat->emissiveColor.setValue(0.9f, 0.1f, 0.1f);
-    mat->diffuseColor .setValue(0.0f, 0.0f, 0.0f);
-    root->addChild(mat);
-
-    SoSphere *sph = new SoSphere;
-    sph->radius = 1.0f;
-    root->addChild(sph);
+    SoSeparator *root = ObolTest::Scenes::createClipPlane(W, H);
 
     SbViewportRegion vp(W, H);
     SoOffscreenRenderer renderer(vp);

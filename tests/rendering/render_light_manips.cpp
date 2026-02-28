@@ -13,14 +13,15 @@
  *   - Simulate a mouse drag on the manip geometry.
  *   - Render the post-interaction state.
  *
- * Uses SoSearchAction to locate the manip in the scene after construction.
+ * Test 1 (SoDirectionalLightManip) uses ObolTest::Scenes::createLightManips()
+ * for scene setup so the viewer and the test start from the same scene.
  *
  * Returns 0 on pass, non-0 on failure.
  */
 
 #include "headless_utils.h"
+#include "testlib/test_scenes.h"
 
-#include <Inventor/SoDB.h>
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/nodes/SoPerspectiveCamera.h>
 #include <Inventor/nodes/SoDirectionalLight.h>
@@ -28,12 +29,10 @@
 #include <Inventor/nodes/SoSpotLight.h>
 #include <Inventor/nodes/SoMaterial.h>
 #include <Inventor/nodes/SoCube.h>
-#include <Inventor/nodes/SoCylinder.h>
 #include <Inventor/nodes/SoSphere.h>
 #include <Inventor/nodes/SoTransform.h>
 #include <Inventor/nodes/SoClipPlane.h>
 
-#include <Inventor/manips/SoDirectionalLightManip.h>
 #include <Inventor/manips/SoPointLightManip.h>
 #include <Inventor/manips/SoSpotLightManip.h>
 #include <Inventor/manips/SoClipPlaneManip.h>
@@ -93,23 +92,14 @@ static SoSeparator *buildLitScene()
 // ---------------------------------------------------------------------------
 static bool testDirectionalLightManip(const char *basepath)
 {
-    SoSeparator *root = new SoSeparator;
-    root->ref();
+    // createLightManips() builds the exact same scene (camera, directional
+    // light manip, 3 coloured spheres, floor) that this test exercises.
+    // Using the shared factory ensures the viewer and the test start from
+    // identical scene setup.
+    SoSeparator *root = ObolTest::Scenes::createLightManips(DEFAULT_WIDTH, DEFAULT_HEIGHT);
 
-    SoPerspectiveCamera *cam = new SoPerspectiveCamera;
-    cam->position.setValue(0.0f, 3.0f, 8.0f);
-    cam->pointAt(SbVec3f(0, 0, 0), SbVec3f(0, 1, 0));
-    root->addChild(cam);
-
-    SoDirectionalLightManip *manip = new SoDirectionalLightManip;
-    manip->direction.setValue(-0.5f, -1.0f, -0.5f);
-    manip->color.setValue(1.0f, 1.0f, 0.9f);
-    root->addChild(manip);
-
-    root->addChild(buildLitScene());
-
+    // Viewport needed for simulateMouseDrag event coordinate mapping.
     SbViewportRegion vp(DEFAULT_WIDTH, DEFAULT_HEIGHT);
-    cam->viewAll(root, vp);
 
     char fname[1024];
     snprintf(fname, sizeof(fname), "%s_dirlight_pre.rgb", basepath);

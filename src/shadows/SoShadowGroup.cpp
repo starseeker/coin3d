@@ -1763,8 +1763,8 @@ SoShadowGroupP::setFragmentShader(SoState * state)
       gen.addMainStatement("color += ambient.rgb * gl_FrontMaterial.ambient.rgb;\n");
     }
 
+    SbBool pointlight = FALSE;
     if (perpixelother) {
-      SbBool pointlight = FALSE;
       for (i = 0; i < lights.getLength(); i++) {
         SoLight * l = (SoLight*) lights[i];
         if (l->isOfType(SoDirectionalLight::getClassTypeId())) {
@@ -1788,10 +1788,9 @@ SoShadowGroupP::setFragmentShader(SoState * state)
                              "diffuse.rgb * mydiffuse.rgb;\n");
         gen.addMainStatement("scolor += specular.rgb * gl_FrontMaterial.specular.rgb;\n");
       }
-
-      if (dirlight) gen.addNamedFunction(SbName("lights/DirectionalLight"), FALSE);
-      if (pointlight) gen.addNamedFunction(SbName("lights/PointLight"), FALSE);
     }
+    if (dirlight) gen.addNamedFunction(SbName("lights/DirectionalLight"), FALSE);
+    if (pointlight) gen.addNamedFunction(SbName("lights/PointLight"), FALSE);
     if (spotlight) gen.addNamedFunction(SbName("lights/SpotLight"), FALSE);
   }
 

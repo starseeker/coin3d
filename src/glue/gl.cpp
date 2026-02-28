@@ -1119,8 +1119,22 @@ glglue_resolve_symbols(SoGLContext * w)
   }
   w->maxtextureunits = 1; /* when multitexturing is not available */
   if (w->glActiveTexture) {
-    GLint tmp;
+    /* GL_MAX_TEXTURE_COORDS_ARB (== GL_MAX_TEXTURE_COORDS, 0x8871) reports
+       the number of texture coordinate units available for glMultiTexCoord*.
+       Some implementations (including older Mesa/OSMesa builds) only accept
+       this query when GL_ARB_fragment_program or GL_NV_fragment_program is
+       present, even though it is a core GL 2.0 token.  Initialise tmp to 0
+       so that we can detect a silent failure (GL_INVALID_ENUM without the
+       extension) and fall back to GL_MAX_TEXTURE_UNITS_ARB which is always
+       available whenever ARB_multitexture is supported. */
+    GLint tmp = 0;
     glGetIntegerv(GL_MAX_TEXTURE_COORDS_ARB, &tmp);
+    if (tmp < 1) {
+      /* Clear any GL_INVALID_ENUM error raised by the failed query, then
+         fall back to GL_MAX_TEXTURE_UNITS_ARB (requires ARB_multitexture). */
+      while (glGetError() != GL_NO_ERROR) { }
+      glGetIntegerv(GL_MAX_TEXTURE_UNITS_ARB, &tmp);
+    }
     w->maxtextureunits = (int) tmp;
   }
 

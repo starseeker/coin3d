@@ -43,6 +43,7 @@
 #include "glue/glp.h"
 #include <Inventor/nodes/SoShaderProgram.h>
 #include <Inventor/lists/SbList.h>
+#include "misc/SbHash.h"
 
 class SoGLShaderObject;
 class SoState;
@@ -59,7 +60,7 @@ public:
   void removeShaderObjects(void);
   void enable(SoState * state);
   void disable(SoState * state);
-  SbBool isEnabled(void) const;
+  SbBool isEnabled(SoState * state) const;
 
   void setEnableCallback(SoShaderProgramEnableCB * cb,
                          void * closure);
@@ -74,14 +75,14 @@ public:
 
   void getShaderObjectIds(SbList <uint32_t> & ids) const;
   uint32_t getGLSLShaderProgramHandle(SoState * state) const;
-  SbBool glslShaderProgramLinked(void) const;
+  SbBool glslShaderProgramLinked(SoState * state) const;
 private:
 
   class SoGLARBShaderProgram * arbShaderProgram;
   class SoGLCgShaderProgram  * cgShaderProgram;
   class SoGLSLShaderProgram  * glslShaderProgram;
 
-  SbBool isenabled;
+  SbHash<uint32_t, SbBool> isenabledHandles;
   SoShaderProgramEnableCB * enablecb;
   void * enablecbclosure;
   SbList <uint32_t> objectids;

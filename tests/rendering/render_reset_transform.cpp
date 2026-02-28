@@ -1,22 +1,15 @@
 /*
  * render_reset_transform.cpp - Integration test: SoResetTransform node
  *
- * Renders two spheres:
- *   1. A blue sphere translated to the right via SoTranslation
- *   2. A red sphere that uses SoResetTransform to clear the transform,
- *      rendering at the origin.
- *
- * Pixel validation checks that:
- *   - There are red pixels near centre (reset sphere at origin)
- *   - There are blue pixels in the right half of the image (translated sphere)
- *
- * Exercises SoResetTransform, SoTranslation, SoMaterial, SoSphere,
- * SoOrthographicCamera, and the transform-reset rendering path.
+ * Renders a blue sphere translated right and a red sphere that uses
+ * SoResetTransform to render at the origin.
+ * The scene is built by the shared testlib factory (createResetTransform).
  *
  * Writes argv[1]+".rgb" and returns 0 on pass, 1 on fail.
  */
 
 #include "headless_utils.h"
+#include "testlib/test_scenes.h"
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/nodes/SoResetTransform.h>
 #include <Inventor/nodes/SoOrthographicCamera.h>
@@ -75,60 +68,7 @@ int main(int argc, char **argv)
 {
     initCoinHeadless();
 
-    SoSeparator *root = new SoSeparator;
-    root->ref();
-
-    // Wide orthographic camera: world width = 8, height = 4
-    SoOrthographicCamera *cam = new SoOrthographicCamera;
-    cam->position.setValue(0, 0, 5);
-    cam->nearDistance = 0.1f;
-    cam->farDistance  = 20.0f;
-    cam->height       = 4.0f;
-    cam->aspectRatio  = (float)W / (float)H;
-    root->addChild(cam);
-
-    root->addChild(new SoDirectionalLight);
-
-    // Translate right by 1.5 world units, then draw a blue sphere
-    {
-        SoSeparator *grp = new SoSeparator;
-        SoTranslation *tr = new SoTranslation;
-        tr->translation.setValue(1.5f, 0.0f, 0.0f);
-        grp->addChild(tr);
-
-        SoMaterial *mat = new SoMaterial;
-        mat->diffuseColor.setValue(0.0f, 0.3f, 1.0f);
-        grp->addChild(mat);
-
-        SoSphere *sph = new SoSphere;
-        sph->radius = 0.5f;
-        grp->addChild(sph);
-
-        root->addChild(grp);
-    }
-
-    // Same translation context, then RESET transform, draw a red sphere at origin
-    {
-        SoSeparator *grp = new SoSeparator;
-        SoTranslation *tr = new SoTranslation;
-        tr->translation.setValue(1.5f, 0.0f, 0.0f); // this will be cleared
-        grp->addChild(tr);
-
-        SoResetTransform *rst = new SoResetTransform;
-        rst->whatToReset.setValue(SoResetTransform::TRANSFORM);
-        grp->addChild(rst);
-
-        SoMaterial *mat = new SoMaterial;
-        mat->emissiveColor.setValue(1.0f, 0.1f, 0.1f);
-        mat->diffuseColor.setValue(0.0f, 0.0f, 0.0f);
-        grp->addChild(mat);
-
-        SoSphere *sph = new SoSphere;
-        sph->radius = 0.5f;
-        grp->addChild(sph);
-
-        root->addChild(grp);
-    }
+    SoSeparator *root = ObolTest::Scenes::createResetTransform(W, H);
 
     SbViewportRegion vp(W, H);
     SoOffscreenRenderer renderer(vp);

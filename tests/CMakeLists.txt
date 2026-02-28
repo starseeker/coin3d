@@ -187,6 +187,51 @@ add_test(NAME obol_test_all COMMAND obol_test)
 # -----------------------------------------------------------------------
 add_subdirectory(rendering)
 
+# ---- Generate render test dispatch table for obol_test ----------------------
+# This file is written at configure time; it declares extern references to all
+# renamed main() functions and provides dispatchRenderTest().
+set(_dispatch "${CMAKE_CURRENT_BINARY_DIR}/render_test_dispatch.cpp")
+set(_dc "// Auto-generated render test dispatch - DO NOT EDIT.\n")
+string(APPEND _dc "#include <string>\n#include <cstring>\n\n")
+foreach(_t ${OBOL_GL_RENDER_TESTS})
+    string(APPEND _dc "extern int run_render_test_${_t}(int, char**);\n")
+endforeach()
+string(APPEND _dc "\nint dispatchRenderTest(const std::string& name, const std::string& basepath) {\n")
+string(APPEND _dc "    static const struct { const char* name; int(*fn)(int, char**); } k[] = {\n")
+foreach(_t ${OBOL_GL_RENDER_TESTS})
+    string(APPEND _dc "        {\"${_t}\", run_render_test_${_t}},\n")
+endforeach()
+string(APPEND _dc "        {nullptr, nullptr}\n    };\n")
+string(APPEND _dc "    for (int i = 0; k[i].name; ++i) {\n")
+string(APPEND _dc "        if (name == k[i].name) {\n")
+string(APPEND _dc "            char prog[] = {\"obol_test\"};\n")
+string(APPEND _dc "            // PATH_MAX on Linux is 4096; reject longer paths to keep the\n")
+string(APPEND _dc "            // fixed-size buffer safe.  Return -2 to distinguish from 'not\n")
+string(APPEND _dc "            // found' (-1) vs 'path too long' (-2).\n")
+string(APPEND _dc "            if (basepath.size() >= 4096) { return -2; }\n")
+string(APPEND _dc "            if (basepath.empty()) {\n")
+string(APPEND _dc "                // No basepath: call with argc=1 so the test uses its default output path\n")
+string(APPEND _dc "                char* argv1[2] = {prog, nullptr};\n")
+string(APPEND _dc "                return k[i].fn(1, argv1);\n")
+string(APPEND _dc "            }\n")
+string(APPEND _dc "            char base[4096];\n")
+string(APPEND _dc "            strncpy(base, basepath.c_str(), sizeof(base)-1);\n")
+string(APPEND _dc "            base[sizeof(base)-1] = '\\0';\n")
+string(APPEND _dc "            // argv[2] == nullptr satisfies the POSIX argv[argc] == nullptr rule\n")
+string(APPEND _dc "            char* argv[3] = {prog, base, nullptr};\n")
+string(APPEND _dc "            return k[i].fn(2, argv);\n")
+string(APPEND _dc "        }\n    }\n")
+string(APPEND _dc "    return -1;\n}\n")
+file(WRITE "${_dispatch}" "${_dc}")
+
+# Link the render tests library + dispatch table into obol_test.
+# The dispatch table's direct function references pull in all needed objects
+# from obol_render_tests_gl without requiring --whole-archive.
+target_sources(obol_test PRIVATE "${_dispatch}")
+if(TARGET obol_render_tests_gl)
+    target_link_libraries(obol_test obol_render_tests_gl)
+endif()
+
 # -----------------------------------------------------------------------
 # Image comparison utilities
 # -----------------------------------------------------------------------

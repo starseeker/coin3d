@@ -1,17 +1,15 @@
 /*
  * render_marker_set.cpp - Integration test: SoMarkerSet rendering
  *
- * Renders a scene with a SoMarkerSet containing several markers at distinct
- * positions.  Validates:
- *   1. SoMarkerSet class type id is registered.
- *   2. Static API: getNumDefinedMarkers() returns > 0.
- *   3. Static API: isMarkerBitSet does not crash.
- *   4. The rendered buffer contains non-background pixels (markers visible).
+ * Validates SoMarkerSet API (type id, getNumDefinedMarkers, isMarkerBitSet)
+ * and renders a scene with several markers.
+ * The scene is built by the shared testlib factory (createMarkerSet).
  *
  * Writes argv[1]+".rgb" (SGI RGB format) and returns 0 on pass, 1 on fail.
  */
 
 #include "headless_utils.h"
+#include "testlib/test_scenes.h"
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/nodes/SoPerspectiveCamera.h>
 #include <Inventor/nodes/SoCoordinate3.h>
@@ -76,37 +74,9 @@ int main(int argc, char ** argv)
     // -----------------------------------------------------------------------
     // Build and render a scene with a SoMarkerSet
     // -----------------------------------------------------------------------
-    SoSeparator * root = new SoSeparator;
-    root->ref();
-
-    SoPerspectiveCamera * cam = new SoPerspectiveCamera;
-    root->addChild(cam);
-
-    // White material for markers
-    SoMaterial * mat = new SoMaterial;
-    mat->emissiveColor.setValue(1.0f, 1.0f, 1.0f);
-    root->addChild(mat);
-
-    // Coordinates: 5 markers arranged in a cross pattern
-    SoCoordinate3 * coords = new SoCoordinate3;
-    coords->point.set1Value(0, SbVec3f( 0.0f,  0.0f, 0.0f));
-    coords->point.set1Value(1, SbVec3f( 0.5f,  0.0f, 0.0f));
-    coords->point.set1Value(2, SbVec3f(-0.5f,  0.0f, 0.0f));
-    coords->point.set1Value(3, SbVec3f( 0.0f,  0.5f, 0.0f));
-    coords->point.set1Value(4, SbVec3f( 0.0f, -0.5f, 0.0f));
-    root->addChild(coords);
-
-    SoMarkerSet * markers = new SoMarkerSet;
-    // Use a simple filled circle marker (5×5)
-    markers->markerIndex.set1Value(0, SoMarkerSet::CIRCLE_FILLED_5_5);
-    markers->markerIndex.set1Value(1, SoMarkerSet::SQUARE_FILLED_5_5);
-    markers->markerIndex.set1Value(2, SoMarkerSet::DIAMOND_FILLED_5_5);
-    markers->markerIndex.set1Value(3, SoMarkerSet::CIRCLE_FILLED_7_7);
-    markers->markerIndex.set1Value(4, SoMarkerSet::SQUARE_FILLED_7_7);
-    root->addChild(markers);
+    SoSeparator * root = ObolTest::Scenes::createMarkerSet(W, H);
 
     SbViewportRegion vp(W, H);
-    cam->viewAll(root, vp);
 
     SoOffscreenRenderer renderer(vp);
     renderer.setComponents(SoOffscreenRenderer::RGB);

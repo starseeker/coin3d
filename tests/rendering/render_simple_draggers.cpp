@@ -21,20 +21,17 @@
  *   3. Simulate a mouse drag across the dragger geometry.
  *   4. Render after interaction (post-drag state).
  *
+ * Scene setup uses ObolTest::Scenes::buildDraggerTestScene() so the
+ * viewer (obol_viewer) and this test start from the same base scene.
+ *
  * Returns 0 if all succeed, non-0 on failure.
  */
 
 #include "headless_utils.h"
+#include "testlib/test_scenes.h"
 
 #include <Inventor/SoDB.h>
 #include <Inventor/nodes/SoSeparator.h>
-#include <Inventor/nodes/SoPerspectiveCamera.h>
-#include <Inventor/nodes/SoDirectionalLight.h>
-#include <Inventor/nodes/SoMaterial.h>
-#include <Inventor/nodes/SoCube.h>
-#include <Inventor/nodes/SoCylinder.h>
-#include <Inventor/nodes/SoSphere.h>
-#include <Inventor/nodes/SoTransform.h>
 
 #include <Inventor/draggers/SoTranslate1Dragger.h>
 #include <Inventor/draggers/SoTranslate2Dragger.h>
@@ -53,38 +50,6 @@
 #include <cstring>
 
 // ---------------------------------------------------------------------------
-// Build a minimal scene containing a dragger
-// ---------------------------------------------------------------------------
-static SoSeparator *buildDraggerScene(SoDragger *dragger)
-{
-    SoSeparator *root = new SoSeparator;
-    root->ref();
-
-    SoPerspectiveCamera *cam = new SoPerspectiveCamera;
-    root->addChild(cam);
-
-    SoDirectionalLight *lt = new SoDirectionalLight;
-    lt->direction.setValue(-1.0f, -1.5f, -1.0f);
-    root->addChild(lt);
-
-    // Small reference geometry so SoSurroundScale has something to measure
-    SoSeparator *geom = new SoSeparator;
-    SoMaterial *mat = new SoMaterial;
-    mat->diffuseColor.setValue(0.5f, 0.7f, 0.5f);
-    geom->addChild(mat);
-    geom->addChild(new SoCube);
-    root->addChild(geom);
-
-    root->addChild(dragger);
-
-    SbViewportRegion vp(DEFAULT_WIDTH, DEFAULT_HEIGHT);
-    cam->viewAll(root, vp);
-
-    root->unrefNoDelete();
-    return root;
-}
-
-// ---------------------------------------------------------------------------
 // Test one dragger: render pre-drag, simulate drag, render post-drag
 // ---------------------------------------------------------------------------
 static bool testDragger(SoDragger *dragger,
@@ -92,7 +57,7 @@ static bool testDragger(SoDragger *dragger,
                         const char *name)
 {
     dragger->ref();
-    SoSeparator *root = buildDraggerScene(dragger);
+    SoSeparator *root = ObolTest::Scenes::buildDraggerTestScene(dragger, DEFAULT_WIDTH, DEFAULT_HEIGHT);
     root->ref();
 
     SbViewportRegion vp(DEFAULT_WIDTH, DEFAULT_HEIGHT);

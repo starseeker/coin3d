@@ -42,39 +42,7 @@ endif()
 # Compile one rendering-test executable; links against Obol and the chosen
 # OpenGL backend.  The headless_utils.h lives in tests/utils/.
 macro(add_rendering_test name)
-    add_executable(${name} ${name}.cpp)
-    target_include_directories(${name} PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}
-        ${CMAKE_SOURCE_DIR}/tests/utils
-        ${PROJECT_SOURCE_DIR}/include
-        ${PROJECT_SOURCE_DIR}/include/Inventor/annex
-        ${PROJECT_BINARY_DIR}/include
-        ${OBOL_TARGET_INCLUDE_DIRECTORIES}
-    )
-    target_link_libraries(${name} ${PROJECT_NAME} ${OBOL_TARGET_LINK_LIBRARIES})
-    if(RENDERING_USE_OSMESA)
-        target_compile_definitions(${name} PRIVATE OBOL_OSMESA_BUILD)
-        if(OSMESA_INCLUDE_DIR)
-            target_include_directories(${name} PRIVATE ${OSMESA_INCLUDE_DIR})
-        endif()
-        if(OSMESA_LINK_TARGET)
-            target_link_libraries(${name} ${OSMESA_LINK_TARGET})
-        endif()
-    elseif(X11_FOUND)
-        # When building as a subdirectory of the main Obol project, Obol already
-        # brings in OpenGL transitively via OBOL_TARGET_LINK_LIBRARIES.
-        # We only need X11 explicitly for the GLX headless_utils.h context manager.
-        target_link_libraries(${name} ${X11_X11_LIB})
-        if(OpenGL_FOUND AND TARGET OpenGL::GL)
-            target_link_libraries(${name} OpenGL::GL)
-        elseif(OPENGL_gl_LIBRARY)
-            target_link_libraries(${name} ${OPENGL_gl_LIBRARY})
-        endif()
-        target_include_directories(${name} PRIVATE ${X11_INCLUDE_DIR})
-    endif()
-    set_target_properties(${name} PROPERTIES
-        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin"
-    )
+    list(APPEND OBOL_GL_RENDER_TESTS ${name})
 endmacro()
 
 # Variant of add_rendering_test for tests that use the shared testlib scene
@@ -82,46 +50,41 @@ endmacro()
 # interactive obol_viewer render identical scenes from the same source.
 macro(add_testlib_rendering_test name)
     add_rendering_test(${name})
-    if(TARGET obol_testlib)
-        target_link_libraries(${name} obol_testlib)
-        target_include_directories(${name} PRIVATE
-            ${CMAKE_SOURCE_DIR}/tests/testlib
-        )
-    endif()
+    list(APPEND OBOL_GL_TESTLIB_RENDER_TESTS ${name})
 endmacro()
 
 # ---- Test executables --------------------------------------------------------
-add_rendering_test(render_primitives)
-add_rendering_test(render_materials)
-add_rendering_test(render_lighting)
-add_rendering_test(render_transforms)
-add_rendering_test(render_cameras)
-add_rendering_test(render_drawstyle)
-add_rendering_test(render_texture)
-add_rendering_test(render_text2)
-add_rendering_test(render_text3)
+add_testlib_rendering_test(render_primitives)
+add_testlib_rendering_test(render_materials)
+add_testlib_rendering_test(render_lighting)
+add_testlib_rendering_test(render_transforms)
+add_testlib_rendering_test(render_cameras)
+add_testlib_rendering_test(render_drawstyle)
+add_testlib_rendering_test(render_texture)
+add_testlib_rendering_test(render_text2)
+add_testlib_rendering_test(render_text3)
 # Moved from top-level SIMPLE_TESTS: these need a rendering context to run
-add_rendering_test(render_gradient)
+add_testlib_rendering_test(render_gradient)
 add_rendering_test(render_background_gradient)
-add_rendering_test(render_colored_cube)
-add_rendering_test(render_coordinates)
-add_rendering_test(render_scene)
+add_testlib_rendering_test(render_colored_cube)
+add_testlib_rendering_test(render_coordinates)
+add_testlib_rendering_test(render_scene)
 # Validation tests: do their own pixel analysis; registered directly with CTest
-add_rendering_test(render_sphere_position)
-add_rendering_test(render_checker_texture)
-add_rendering_test(render_face_set)
-add_rendering_test(render_line_set)
+add_testlib_rendering_test(render_sphere_position)
+add_testlib_rendering_test(render_checker_texture)
+add_testlib_rendering_test(render_face_set)
+add_testlib_rendering_test(render_line_set)
 add_rendering_test(render_switch_visibility)
-add_rendering_test(render_vertex_colors)
-add_rendering_test(render_clip_plane)
-add_rendering_test(render_indexed_face_set)
-add_rendering_test(render_quad_mesh)
-add_rendering_test(render_indexed_line_set)
-add_rendering_test(render_lod)
-add_rendering_test(render_point_set)
+add_testlib_rendering_test(render_vertex_colors)
+add_testlib_rendering_test(render_clip_plane)
+add_testlib_rendering_test(render_indexed_face_set)
+add_testlib_rendering_test(render_quad_mesh)
+add_testlib_rendering_test(render_indexed_line_set)
+add_testlib_rendering_test(render_lod)
+add_testlib_rendering_test(render_point_set)
 add_rendering_test(render_scene_texture)
-add_rendering_test(render_shadow)
-add_rendering_test(render_array_multiple_copy)
+add_testlib_rendering_test(render_shadow)
+add_testlib_rendering_test(render_array_multiple_copy)
 add_rendering_test(render_shape_hints)
 add_rendering_test(render_environment)
 add_rendering_test(render_texture3)
@@ -129,22 +92,22 @@ add_rendering_test(render_bump_map)
 add_rendering_test(render_texture_transform)
 add_rendering_test(render_depth_buffer)
 add_rendering_test(render_alpha_test)
-add_rendering_test(render_draggers)
+add_testlib_rendering_test(render_draggers)
 add_rendering_test(render_offscreen)
-add_rendering_test(render_triangle_strip_set)
-add_rendering_test(render_ascii_text)
-add_rendering_test(render_image_node)
+add_testlib_rendering_test(render_triangle_strip_set)
+add_testlib_rendering_test(render_ascii_text)
+add_testlib_rendering_test(render_image_node)
 add_rendering_test(render_sorender_manager)
 add_rendering_test(render_gl_big_image)
 add_rendering_test(render_cubemap)
 add_rendering_test(render_gl_features)
 add_rendering_test(render_multi_texture)
-add_rendering_test(render_annotation)
-add_rendering_test(render_reset_transform)
-add_rendering_test(render_transparency)
-add_rendering_test(render_marker_set)
-add_rendering_test(render_hud_overlay)
-add_rendering_test(render_hud_no3d)
+add_testlib_rendering_test(render_annotation)
+add_testlib_rendering_test(render_reset_transform)
+add_testlib_rendering_test(render_transparency)
+add_testlib_rendering_test(render_marker_set)
+add_testlib_rendering_test(render_hud_overlay)
+add_testlib_rendering_test(render_hud_no3d)
 add_rendering_test(render_hud_interaction)
 # Testlib demo scenes: these use the shared scene factories so CLI and
 # obol_viewer render identical output.
@@ -154,8 +117,8 @@ add_rendering_test(render_procedural_shape)
 add_rendering_test(render_arb8_draggers)
 add_rendering_test(render_arb8_edit_cycle)
 add_rendering_test(render_pick_interaction)
-add_rendering_test(render_simple_draggers)
-add_rendering_test(render_light_manips)
+add_testlib_rendering_test(render_simple_draggers)
+add_testlib_rendering_test(render_light_manips)
 add_rendering_test(render_event_callback_interaction)
 add_rendering_test(render_selection_interaction)
 add_rendering_test(render_sensor_interaction)
@@ -163,7 +126,7 @@ add_rendering_test(render_pick_filter)
 add_rendering_test(render_scene_interaction)
 add_rendering_test(render_callback_node)
 add_rendering_test(render_camera_interaction)
-add_rendering_test(render_manip_sequences)
+add_testlib_rendering_test(render_manip_sequences)
 add_rendering_test(render_nodekit_interaction)
 add_rendering_test(render_path_operations)
 add_rendering_test(render_lod_picking)
@@ -192,6 +155,7 @@ add_rendering_test(render_image_deep)
 add_rendering_test(render_quad_mesh_deep)
 add_rendering_test(render_field_connections)
 add_rendering_test(render_sogl_bindings)
+add_rendering_test(render_rt_proxy_shapes)
 
 # ---- NanoRT raytracing backend -------------------------------------------
 #
@@ -234,6 +198,17 @@ macro(add_nanort_rendering_test name)
     )
 endmacro()
 
+# Variant for NanoRT tests whose source includes testlib/test_scenes.h
+macro(add_nanort_testlib_rendering_test name)
+    add_nanort_rendering_test(${name})
+    if(TARGET obol_testlib)
+        target_link_libraries(nrt_${name} obol_testlib)
+        target_include_directories(nrt_${name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/tests
+        )
+    endif()
+endmacro()
+
 # ---- NanoRT versions of standard rendering tests ----------------------------
 # These tests use SoOffscreenRenderer + the generalized ContextManager hook to
 # produce pixel output via nanort.  They operate on triangle-based geometry;
@@ -242,11 +217,11 @@ endmacro()
 # SoIndexedLineSet feedback geometry are fully supported.
 # SoText2 screen-space text is rendered via buildPixelBuffer() + framebuffer
 # compositing so letter shapes appear correctly (not bounding-box blocks).
-add_nanort_rendering_test(render_primitives)
-add_nanort_rendering_test(render_materials)
-add_nanort_rendering_test(render_transforms)
-add_nanort_rendering_test(render_colored_cube)
-add_nanort_rendering_test(render_scene)
+add_nanort_testlib_rendering_test(render_primitives)
+add_nanort_testlib_rendering_test(render_materials)
+add_nanort_testlib_rendering_test(render_transforms)
+add_nanort_testlib_rendering_test(render_colored_cube)
+add_nanort_testlib_rendering_test(render_scene)
 add_nanort_rendering_test(render_rt_proxy_shapes)
 add_nanort_rendering_test(render_background_gradient)
 # NanoRT shadow test: validates shadow-ray casting via SoRaytracingParams.
@@ -263,7 +238,7 @@ if(TARGET obol_testlib)
     target_include_directories(nrt_render_text_demo PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${CMAKE_SOURCE_DIR}/tests/utils
-        ${CMAKE_SOURCE_DIR}/tests/testlib
+        ${CMAKE_SOURCE_DIR}/tests
         ${PROJECT_SOURCE_DIR}/include
         ${PROJECT_SOURCE_DIR}/include/Inventor/annex
         ${PROJECT_BINARY_DIR}/include
@@ -299,15 +274,15 @@ endif()
 # apply the correct world-space transforms to the collected geometry.
 # Note: SoClipPlane (used by SoClipPlaneManip) has no nanort equivalent;
 # geometry renders without clipping, which is a cosmetic difference only.
-add_nanort_rendering_test(render_simple_draggers)
-add_nanort_rendering_test(render_draggers)
-add_nanort_rendering_test(render_light_manips)
-add_nanort_rendering_test(render_manip_sequences)
+add_nanort_testlib_rendering_test(render_simple_draggers)
+add_nanort_testlib_rendering_test(render_draggers)
+add_nanort_testlib_rendering_test(render_light_manips)
+add_nanort_testlib_rendering_test(render_manip_sequences)
 
 # ---- Standalone nanort demo (original, uses its own context manager) --------
 # render_nanort.cpp is the original proof-of-concept demo that builds its own
-# NullContextManager internally (before the generalized hook was added).
-# It is kept as a standalone self-contained test.
+# BVH and does ray-tracing without the SoNanoRTContextManager; it does NOT
+# define OBOL_NANORT_BUILD and does NOT link obol_testlib.
 add_executable(render_nanort render_nanort.cpp)
 target_include_directories(render_nanort PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
@@ -322,19 +297,6 @@ target_include_directories(render_nanort PRIVATE
 target_link_libraries(render_nanort ${PROJECT_NAME} ${OBOL_TARGET_LINK_LIBRARIES})
 set_target_properties(render_nanort PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin"
-)
-# The nanort test does its own pixel analysis and returns 0/1.
-# It does not need xvfb-run because it never calls OpenGL, but
-# run_rendering_test.cmake is still used for consistent test reporting.
-add_test(
-    NAME render_nanort
-    COMMAND "${CMAKE_COMMAND}"
-        -DEXECUTABLE=$<TARGET_FILE:render_nanort>
-        -DTEST_TIMEOUT=${IMAGE_COMPARISON_TEST_TIMEOUT}
-        -P "${CMAKE_CURRENT_SOURCE_DIR}/run_rendering_test.cmake"
-)
-set_tests_properties(render_nanort PROPERTIES
-    TIMEOUT ${IMAGE_COMPARISON_TEST_TIMEOUT}
 )
 
 # ---- stb_truetype direct-render reference tool -------------------------------
@@ -405,7 +367,8 @@ macro(add_rendering_image_test test_name)
         add_test(
             NAME ${test_name}_image_test
             COMMAND ${CMAKE_COMMAND}
-                -DEXECUTABLE=$<TARGET_FILE:${test_name}>
+                -DEXECUTABLE=$<TARGET_FILE:obol_test>
+                -DTEST_NAME=${test_name}
                 -DTEST_BASE=${TEST_BASE}
                 -DCONTROL_IMAGE=${CONTROL_IMAGE}
                 -DCOMPARATOR=$<TARGET_FILE:image_comparator>
@@ -499,11 +462,68 @@ add_rendering_image_test(render_cameras    RMSE_THRESHOLD 10.0)
 add_rendering_image_test(render_drawstyle  RMSE_THRESHOLD 15.0)
 add_rendering_image_test(render_texture    RMSE_THRESHOLD 15.0)
 add_rendering_test(render_stt_gl)
+
+# ---- Build GL render test objects into one library ---------------------------
+# Each source's main() is renamed by compiling a small per-test wrapper that
+# #define-s main before #include-ing the real source.  The wrapper files live
+# in the binary directory so they never affect NanoRT (or other) targets that
+# compile the same sources without the define.
+file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/gl_wrappers")
+set(_gl_wrapper_sources "")
+foreach(_t ${OBOL_GL_RENDER_TESTS})
+    set(_wrapper "${CMAKE_CURRENT_BINARY_DIR}/gl_wrappers/${_t}_gl.cpp")
+    file(WRITE "${_wrapper}"
+        "#define main run_render_test_${_t}\n"
+        "#include \"${CMAKE_CURRENT_SOURCE_DIR}/${_t}.cpp\"\n"
+    )
+    list(APPEND _gl_wrapper_sources "${_wrapper}")
+endforeach()
+
+add_library(obol_render_tests_gl STATIC ${_gl_wrapper_sources})
+
+target_include_directories(obol_render_tests_gl PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/tests
+    ${CMAKE_SOURCE_DIR}/tests/utils
+    ${PROJECT_SOURCE_DIR}/include
+    ${PROJECT_SOURCE_DIR}/include/Inventor/annex
+    ${PROJECT_BINARY_DIR}/include
+    ${OBOL_TARGET_INCLUDE_DIRECTORIES}
+)
+target_link_libraries(obol_render_tests_gl
+    PUBLIC ${PROJECT_NAME} ${OBOL_TARGET_LINK_LIBRARIES}
+)
+if(RENDERING_USE_OSMESA)
+    target_compile_definitions(obol_render_tests_gl PRIVATE OBOL_OSMESA_BUILD)
+    if(OSMESA_INCLUDE_DIR)
+        target_include_directories(obol_render_tests_gl PRIVATE ${OSMESA_INCLUDE_DIR})
+    endif()
+    if(OSMESA_LINK_TARGET)
+        target_link_libraries(obol_render_tests_gl PUBLIC ${OSMESA_LINK_TARGET})
+    endif()
+elseif(X11_FOUND)
+    target_link_libraries(obol_render_tests_gl PUBLIC ${X11_X11_LIB})
+    if(OpenGL_FOUND AND TARGET OpenGL::GL)
+        target_link_libraries(obol_render_tests_gl PUBLIC OpenGL::GL)
+    elseif(OPENGL_gl_LIBRARY)
+        target_link_libraries(obol_render_tests_gl PUBLIC ${OPENGL_gl_LIBRARY})
+    endif()
+    target_include_directories(obol_render_tests_gl PRIVATE ${X11_INCLUDE_DIR})
+endif()
+if(TARGET obol_testlib)
+    target_link_libraries(obol_render_tests_gl PUBLIC obol_testlib)
+    target_include_directories(obol_render_tests_gl PRIVATE ${CMAKE_SOURCE_DIR}/tests)
+endif()
+
+# Export the list to parent scope so tests/CMakeLists.txt can link obol_test
+set(OBOL_GL_RENDER_TESTS "${OBOL_GL_RENDER_TESTS}" PARENT_SCOPE)
+
 add_rendering_image_test(render_stt_gl     RMSE_THRESHOLD 15.0)
 # Text rendering: control images generated with Obol's ProFont baseline.
 # Higher RMSE threshold to accommodate subpixel differences between platforms.
 add_rendering_image_test(render_text2      RMSE_THRESHOLD 20.0)
 add_rendering_image_test(render_text3      RMSE_THRESHOLD 20.0)
+add_rendering_image_test(render_ascii_text RMSE_THRESHOLD 20.0)
 add_rendering_image_test(render_gradient    RMSE_THRESHOLD 15.0)
 add_rendering_image_test(render_colored_cube RMSE_THRESHOLD 15.0)
 add_rendering_image_test(render_coordinates RMSE_THRESHOLD 10.0)
@@ -610,11 +630,13 @@ foreach(_vtest render_sphere_position render_checker_texture
                render_image_deep
                render_quad_mesh_deep
                render_field_connections
-               render_sogl_bindings)
+               render_sogl_bindings
+               render_rt_proxy_shapes)
     add_test(
         NAME ${_vtest}
         COMMAND "${CMAKE_COMMAND}"
-            -DEXECUTABLE=$<TARGET_FILE:${_vtest}>
+            -DEXECUTABLE=$<TARGET_FILE:obol_test>
+            -DTEST_NAME=${_vtest}
             -DTEST_TIMEOUT=${IMAGE_COMPARISON_TEST_TIMEOUT}
             -P "${CMAKE_CURRENT_SOURCE_DIR}/run_rendering_test.cmake"
     )
@@ -623,13 +645,26 @@ foreach(_vtest render_sphere_position render_checker_texture
     )
 endforeach()
 
+# render_nanort is still a standalone executable
+add_test(
+    NAME render_nanort
+    COMMAND "${CMAKE_COMMAND}"
+        -DEXECUTABLE=$<TARGET_FILE:render_nanort>
+        -DTEST_TIMEOUT=${IMAGE_COMPARISON_TEST_TIMEOUT}
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/run_rendering_test.cmake"
+)
+set_tests_properties(render_nanort PROPERTIES
+    TIMEOUT ${IMAGE_COMPARISON_TEST_TIMEOUT}
+)
+
 # Shadow rendering validation test: only safe to run with OSMesa (SoShadowGroup
 # GLSL shader compilation crashes on headless GLX pixmap contexts).
 if(RENDERING_USE_OSMESA)
     add_test(
         NAME render_shadow
         COMMAND "${CMAKE_COMMAND}"
-            -DEXECUTABLE=$<TARGET_FILE:render_shadow>
+            -DEXECUTABLE=$<TARGET_FILE:obol_test>
+            -DTEST_NAME=render_shadow
             -DTEST_TIMEOUT=${IMAGE_COMPARISON_TEST_TIMEOUT}
             -P "${CMAKE_CURRENT_SOURCE_DIR}/run_rendering_test.cmake"
     )
@@ -650,20 +685,7 @@ if(PNG_FOUND)
             ${CMAKE_CURRENT_SOURCE_DIR}/generate_controls.sh
         DEPENDS
             image_comparator rgb_to_png
-            render_primitives render_materials render_lighting
-            render_transforms render_cameras render_drawstyle
-            render_texture render_text2 render_text3
-            render_gradient render_colored_cube render_coordinates render_scene
-            render_shape_hints render_environment render_texture3
-            render_bump_map render_texture_transform
-            render_depth_buffer render_alpha_test
-            render_indexed_face_set render_quad_mesh render_indexed_line_set
-            render_point_set render_lod render_scene_texture
-            render_array_multiple_copy
-            render_shadow
-            render_hud_overlay render_hud_no3d
-            render_procedural_shape
-            render_arb8_edit_cycle
+            obol_test
         COMMENT "Generating PNG control images for rendering regression tests"
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )

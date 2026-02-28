@@ -12,10 +12,14 @@
  *   2. Event simulation (press + drag + release) does not crash.
  *   3. The manip replaceNode / replaceManip lifecycle works under a GL context.
  *
+ * Scene setup uses ObolTest::Scenes::buildDraggerTestScene() so the
+ * viewer (obol_viewer) and this test start from the same base scene.
+ *
  * Writes one RGB image per dragger/manip to argv[1]_<name>.rgb.
  */
 
 #include "headless_utils.h"
+#include "testlib/test_scenes.h"
 
 #include <Inventor/SoDB.h>
 #include <Inventor/nodes/SoSeparator.h>
@@ -46,33 +50,6 @@
 // Helpers
 // ---------------------------------------------------------------------------
 
-// Build a minimal scene: camera + light + cube (for dragger to surround) + dragger
-static SoSeparator *buildDraggerScene(SoDragger *dragger)
-{
-    SoSeparator *root = new SoSeparator;
-    root->ref();
-    SoPerspectiveCamera *cam = new SoPerspectiveCamera;
-    root->addChild(cam);
-    SoDirectionalLight *light = new SoDirectionalLight;
-    light->direction.setValue(-1.0f, -1.5f, -1.0f);
-    root->addChild(light);
-    // Add a cube so the dragger's SoSurroundScale has geometry to measure
-    SoSeparator *objSep = new SoSeparator;
-    SoMaterial *mat = new SoMaterial;
-    mat->diffuseColor.setValue(0.5f, 0.7f, 0.5f);
-    objSep->addChild(mat);
-    objSep->addChild(new SoCube);
-    root->addChild(objSep);
-    root->addChild(dragger);
-    SbViewportRegion vp(DEFAULT_WIDTH, DEFAULT_HEIGHT);
-    // viewAll positions camera and sets near/far; leave as-is to keep the
-    // scene in the view frustum (multiplying position afterwards pushes
-    // objects outside the far clip plane)
-    cam->viewAll(root, vp);
-    root->unrefNoDelete(); // caller takes ownership; ref only needed for viewAll
-    return root;
-}
-
 // Render a scene and write an RGB file, returning true on success
 static bool renderScene(SoNode *root, const char *basepath, const char *suffix)
 {
@@ -93,7 +70,7 @@ static bool testDraggerInteraction(SoDragger *dragger,
                                    const char *name)
 {
     dragger->ref();
-    SoSeparator *root = buildDraggerScene(dragger);
+    SoSeparator *root = ObolTest::Scenes::buildDraggerTestScene(dragger, DEFAULT_WIDTH, DEFAULT_HEIGHT);
     root->ref();
 
     SbViewportRegion viewport(DEFAULT_WIDTH, DEFAULT_HEIGHT);

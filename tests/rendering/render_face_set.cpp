@@ -7,13 +7,13 @@
  *   - The lower-left region of the buffer contains green pixels.
  *   - The upper-right region contains only background (black) pixels.
  *
- * This exercises SoFaceSet, SoCoordinate3, SoMaterial, SoOrthographicCamera
- * and the fixed-function per-face rendering pipeline.
+ * The scene is built by the shared testlib factory (createFaceSet).
  *
  * Writes argv[1]+".rgb" and returns 0 on pass, 1 on fail.
  */
 
 #include "headless_utils.h"
+#include "testlib/test_scenes.h"
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/nodes/SoOrthographicCamera.h>
 #include <Inventor/nodes/SoMaterial.h>
@@ -69,39 +69,7 @@ int main(int argc, char **argv)
 {
     initCoinHeadless();
 
-    SoSeparator *root = new SoSeparator;
-    root->ref();
-
-    // Orthographic camera, world coords: -1..+1 in both axes
-    SoOrthographicCamera *cam = new SoOrthographicCamera;
-    cam->position    .setValue(0, 0, 1);
-    cam->nearDistance = 0.1f;
-    cam->farDistance  = 10.0f;
-    cam->height       = 2.0f;
-    root->addChild(cam);
-
-    SoSeparator *faceGrp = new SoSeparator;
-
-    // Bright emissive green material
-    SoMaterial *mat = new SoMaterial;
-    mat->emissiveColor.setValue(0.0f, 1.0f, 0.0f);
-    mat->diffuseColor .setValue(0.0f, 0.0f, 0.0f);
-    faceGrp->addChild(mat);
-
-    // A quad in the lower-left quadrant: x in [-1, 0], y in [-1, 0]
-    SoCoordinate3 *coords = new SoCoordinate3;
-    coords->point.set1Value(0, SbVec3f(-1.0f, -1.0f, 0.0f));
-    coords->point.set1Value(1, SbVec3f( 0.0f, -1.0f, 0.0f));
-    coords->point.set1Value(2, SbVec3f( 0.0f,  0.0f, 0.0f));
-    coords->point.set1Value(3, SbVec3f(-1.0f,  0.0f, 0.0f));
-    faceGrp->addChild(coords);
-
-    // SoFaceSet: one face with 4 vertices
-    SoFaceSet *faces = new SoFaceSet;
-    faces->numVertices.set1Value(0, 4);
-    faceGrp->addChild(faces);
-
-    root->addChild(faceGrp);
+    SoSeparator *root = ObolTest::Scenes::createFaceSet(W, H);
 
     SbViewportRegion vp(W, H);
 

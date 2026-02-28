@@ -426,21 +426,21 @@ SoAsciiText::GLRender(SoGLRenderAction * action)
       // Get geometry from SbFont
       int numvertices, numfaceindices;
       const float * vertices = PRIVATE(this)->font->getGlyphVertices(glyphidx, numvertices);
+      const SbVec2f * coords = (const SbVec2f *) vertices;
       const int * faceindices = PRIVATE(this)->font->getGlyphFaceIndices(glyphidx, numfaceindices);
       
       if (vertices && faceindices) {
         const int * ptr = faceindices;
         while (*ptr >= 0) {
           SbVec2f v0, v1, v2;
-          // Convert 3D vertices to 2D (Z coordinate should be 0)
           int idx2 = *ptr++;
           int idx1 = *ptr++;
           int idx0 = *ptr++;
           
           if (idx0 < numvertices && idx1 < numvertices && idx2 < numvertices) {
-            v2.setValue(vertices[idx2 * 3], vertices[idx2 * 3 + 1]);
-            v1.setValue(vertices[idx1 * 3], vertices[idx1 * 3 + 1]);
-            v0.setValue(vertices[idx0 * 3], vertices[idx0 * 3 + 1]);
+            v2 = coords[idx2];
+            v1 = coords[idx1];
+            v0 = coords[idx0];
 
             // FIXME: Is the text textured correctly when stretching is
             // applied (when width values have been given that are
@@ -771,21 +771,21 @@ SoAsciiText::generatePrimitives(SoAction * action)
       // Get geometry from SbFont
       int numvertices, numfaceindices;
       const float * vertices = PRIVATE(this)->font->getGlyphVertices(glyphidx, numvertices);
+      const SbVec2f * coords = (const SbVec2f *) vertices;
       const int * faceindices = PRIVATE(this)->font->getGlyphFaceIndices(glyphidx, numfaceindices);
       
       if (vertices && faceindices) {
         const int * ptr = faceindices;
         while (*ptr >= 0) {
           SbVec2f v0, v1, v2;
-          // Convert 3D vertices to 2D (Z coordinate should be 0)
           int idx2 = *ptr++;
           int idx1 = *ptr++;
           int idx0 = *ptr++;
           
           if (idx0 < numvertices && idx1 < numvertices && idx2 < numvertices) {
-            v2.setValue(vertices[idx2 * 3], vertices[idx2 * 3 + 1]);
-            v1.setValue(vertices[idx1 * 3], vertices[idx1 * 3 + 1]);
-            v0.setValue(vertices[idx0 * 3], vertices[idx0 * 3 + 1]);
+            v2 = coords[idx2];
+            v1 = coords[idx1];
+            v0 = coords[idx0];
 
             // FIXME: Is the text textured correctly when stretching is
             // applied (when width values have been given that are

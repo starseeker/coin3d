@@ -7,17 +7,13 @@
  *   - Pixels near the horizontal centre of the buffer contain red pixels.
  *   - Pixels well above and below the centre line are black.
  *
- * SoBaseColor is used instead of SoMaterial::emissiveColor because the
- * emissive path does not colour line/point primitives under the default
- * Phong lighting model; SoBaseColor sets the GL current colour directly.
- *
- * This exercises SoLineSet, SoCoordinate3, SoDrawStyle, SoBaseColor and the
- * line rendering path in the GL renderer.
+ * The scene is built by the shared testlib factory (createLineSet).
  *
  * Writes argv[1]+".rgb" and returns 0 on pass, 1 on fail.
  */
 
 #include "headless_utils.h"
+#include "testlib/test_scenes.h"
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/nodes/SoOrthographicCamera.h>
 #include <Inventor/nodes/SoBaseColor.h>
@@ -81,43 +77,7 @@ int main(int argc, char **argv)
 {
     initCoinHeadless();
 
-    SoSeparator *root = new SoSeparator;
-    root->ref();
-
-    // Orthographic camera, world -1..+1 in both axes
-    SoOrthographicCamera *cam = new SoOrthographicCamera;
-    cam->position    .setValue(0, 0, 1);
-    cam->nearDistance = 0.1f;
-    cam->farDistance  = 10.0f;
-    cam->height       = 2.0f;
-    root->addChild(cam);
-
-    SoSeparator *lineGrp = new SoSeparator;
-
-    // Thick line for easy detection
-    SoDrawStyle *ds = new SoDrawStyle;
-    ds->lineWidth.setValue(3.0f);
-    lineGrp->addChild(ds);
-
-    // SoBaseColor sets the current OpenGL colour directly, bypassing the
-    // lighting pipeline – the only reliable way to colour primitive-type
-    // geometry (lines, points) that ignores material emissive settings.
-    SoBaseColor *bc = new SoBaseColor;
-    bc->rgb.setValue(SbColor(1.0f, 0.0f, 0.0f));
-    lineGrp->addChild(bc);
-
-    // Horizontal line from left to right at Y=0
-    SoCoordinate3 *coords = new SoCoordinate3;
-    coords->point.set1Value(0, SbVec3f(-0.9f, 0.0f, 0.0f));
-    coords->point.set1Value(1, SbVec3f( 0.9f, 0.0f, 0.0f));
-    lineGrp->addChild(coords);
-
-    // SoLineSet: one line strip with 2 vertices
-    SoLineSet *ls = new SoLineSet;
-    ls->numVertices.set1Value(0, 2);
-    lineGrp->addChild(ls);
-
-    root->addChild(lineGrp);
+    SoSeparator *root = ObolTest::Scenes::createLineSet(W, H);
 
     SbViewportRegion vp(W, H);
 

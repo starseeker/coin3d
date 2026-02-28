@@ -175,7 +175,7 @@ static void query_attribs(const Key & key,
   SoGLShaderProgram * shaderprogram =
     static_cast<SoGLShaderProgram *>(SoGLShaderProgramElement::get(data->state));
 
-  if (shaderprogram && shaderprogram->glslShaderProgramLinked()) {
+  if (shaderprogram && shaderprogram->glslShaderProgramLinked(data->state)) {
     uint32_t shaderobj = shaderprogram->getGLSLShaderProgramHandle(data->state);
 
     data->index = glue->glGetAttribLocationARB((OBOL_GLhandle) shaderobj,

@@ -634,6 +634,7 @@ SoShaderObjectP::updateCoinParameters(const uint32_t cachecontext, SoState * sta
   int i, cnt = this->owner->parameter.getNum();
 
   SoGLShaderObject * shaderobject = this->getGLShaderObject(cachecontext);
+  if (shaderobject == NULL) return;
 
   for (i = 0; i < cnt; i++) {
     SoUniformShaderParameter * param =

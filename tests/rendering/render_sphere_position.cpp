@@ -1,20 +1,17 @@
 /*
  * render_sphere_position.cpp - Validates pixel-accurate sphere positioning
  *
- * Creates a scene with an orthographic camera and a small emissive red sphere
- * offset from centre by a known world-space amount.  After rendering, the pixel
- * buffer is scanned to locate the sphere and its centre is compared against the
- * analytically predicted pixel coordinate.
+ * Renders an emissive red sphere offset from centre and verifies that the
+ * sphere centre in the rendered image is within tolerance of the analytically
+ * predicted pixel coordinate.
  *
- * Coordinate mapping (OpenGL convention):
- *   Camera height = CAM_H   →  world Y ∈ [-CAM_H/2, +CAM_H/2]
- *   Buffer row y=0 is the BOTTOM row of the image.
- *   Pixel row from bottom = (worldY + CAM_H/2) / CAM_H * IMG_H
+ * The scene is built by the shared testlib factory (createSpherePosition).
  *
  * Writes argv[1]+".rgb" (SGI RGB format) and returns 0 on pass, 1 on fail.
  */
 
 #include "headless_utils.h"
+#include "testlib/test_scenes.h"
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/nodes/SoOrthographicCamera.h>
 #include <Inventor/nodes/SoDirectionalLight.h>
@@ -45,42 +42,6 @@ static const int EXP_PX_R = (int)(SPH_R / CAM_H * IMG_H);
 // Sphere emissive colour (reddish; must differ enough from the grey background)
 static const unsigned char SPH_CH_R = 255, SPH_CH_G = 100, SPH_CH_B = 100;
 static const unsigned char BG_CH    = 50;   // grey background channel value
-
-static SoSeparator *buildScene()
-{
-    SoSeparator *root = new SoSeparator;
-
-    SoOrthographicCamera *cam = new SoOrthographicCamera;
-    cam->position    .setValue(0, 0, 3);
-    cam->nearDistance = 1.0f;
-    cam->farDistance  = 10.0f;
-    cam->height       = CAM_H;
-    root->addChild(cam);
-
-    SoDirectionalLight *light = new SoDirectionalLight;
-    light->direction.setValue(0, 0, -1);
-    root->addChild(light);
-
-    SoSeparator *sphGrp = new SoSeparator;
-
-    SoMaterial *mat = new SoMaterial;
-    mat->emissiveColor.setValue(SPH_CH_R / 255.0f,
-                                SPH_CH_G / 255.0f,
-                                SPH_CH_B / 255.0f);
-    mat->diffuseColor.setValue(0, 0, 0);
-    sphGrp->addChild(mat);
-
-    SoTransform *xf = new SoTransform;
-    xf->translation.setValue(SPH_X, SPH_Y, 0);
-    sphGrp->addChild(xf);
-
-    SoSphere *sph = new SoSphere;
-    sph->radius = SPH_R;
-    sphGrp->addChild(sph);
-
-    root->addChild(sphGrp);
-    return root;
-}
 
 static bool validateSpherePosition(const unsigned char *buf)
 {
@@ -125,8 +86,7 @@ int main(int argc, char **argv)
 {
     initCoinHeadless();
 
-    SoSeparator *root = buildScene();
-    root->ref();
+    SoSeparator *root = ObolTest::Scenes::createSpherePosition(IMG_W, IMG_H);
 
     char outpath[1024];
     if (argc > 1)

@@ -1,18 +1,14 @@
 /*
  * render_annotation.cpp - Integration test: SoAnnotation node rendering
  *
- * Renders a scene where a SoAnnotation contains a small sphere.
- * The annotation renders on top regardless of depth; this test just
- * verifies the SoAnnotation code path executes without crash and
- * produces non-black pixels in the output.
- *
- * Exercises SoAnnotation, SoSeparator, SoMaterial, SoSphere,
- * SoOrthographicCamera, and the annotation rendering path.
+ * Renders a scene where a SoAnnotation contains a small sphere on top.
+ * The scene is built by the shared testlib factory (createAnnotation).
  *
  * Writes argv[1]+".rgb" and returns 0 on pass, 1 on fail.
  */
 
 #include "headless_utils.h"
+#include "testlib/test_scenes.h"
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/nodes/SoAnnotation.h>
 #include <Inventor/nodes/SoOrthographicCamera.h>
@@ -55,46 +51,7 @@ int main(int argc, char **argv)
 {
     initCoinHeadless();
 
-    SoSeparator *root = new SoSeparator;
-    root->ref();
-
-    // Camera
-    SoOrthographicCamera *cam = new SoOrthographicCamera;
-    cam->position.setValue(0, 0, 5);
-    cam->nearDistance = 0.1f;
-    cam->farDistance  = 20.0f;
-    cam->height       = 4.0f;
-    root->addChild(cam);
-
-    // Light
-    root->addChild(new SoDirectionalLight);
-
-    // Background sphere (far back)
-    {
-        SoSeparator *grp = new SoSeparator;
-        SoMaterial *mat = new SoMaterial;
-        mat->diffuseColor.setValue(0.3f, 0.3f, 0.8f);
-        grp->addChild(mat);
-        SoTranslation *tr = new SoTranslation;
-        tr->translation.setValue(0, 0, -2.0f);
-        grp->addChild(tr);
-        SoSphere *sph = new SoSphere;
-        sph->radius = 0.5f;
-        grp->addChild(sph);
-        root->addChild(grp);
-    }
-
-    // Annotation node with a red sphere at origin (should render on top)
-    {
-        SoAnnotation *ann = new SoAnnotation;
-        SoMaterial *mat = new SoMaterial;
-        mat->emissiveColor.setValue(1.0f, 0.2f, 0.2f);
-        ann->addChild(mat);
-        SoSphere *sph = new SoSphere;
-        sph->radius = 0.4f;
-        ann->addChild(sph);
-        root->addChild(ann);
-    }
+    SoSeparator *root = ObolTest::Scenes::createAnnotation(W, H);
 
     SbViewportRegion vp(W, H);
     SoOffscreenRenderer renderer(vp);

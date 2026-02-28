@@ -793,14 +793,23 @@ SoSceneTexture2P::updateFrameBuffer(SoState * state, const float OBOL_UNUSED_ARG
     while (!finished) {
       this->deleteFrameBufferObjects(glue, state);
       finished = TRUE;
-      SbBool warn = type == SoSceneTexture2::RGBA32F ? FALSE : TRUE;
+      SbBool warn = (type == SoSceneTexture2::RGBA32F || type == SoSceneTexture2::RGBA16F) ? FALSE : TRUE;
 
       if (!this->createFramebufferObjects(glue, state, type, warn)) {
-        if (type == SoSceneTexture2::RGBA32F) { // common case. Fall back to 16 bit floating point textures
+        if (type == SoSceneTexture2::RGBA32F) { // Fall back to 16-bit floating point
           type = SoSceneTexture2::RGBA16F;
           finished = FALSE;
         }
+        else if (type == SoSceneTexture2::RGBA16F) { // Fall back to 8-bit RGBA (e.g. OSMesa without float textures)
+          type = SoSceneTexture2::RGBA8;
+          finished = FALSE;
+        }
       }
+    }
+
+    if (fbodata->fbo_frameBuffer == GL_INVALID_VALUE) {
+      // FBO creation failed for all attempted formats; skip shadow-map rendering.
+      return;
     }
 
     // FIXME: for some reason we need to do this every frame. Investigate why.

@@ -72,19 +72,20 @@ public:
   ~SoGLSLShaderProgram();
 
   OBOL_GLhandle getProgramHandle(const SoGLContext * g, const SbBool create = FALSE);
-  SbBool neededLinking(void) const;
+  SbBool neededLinking(const SoGLContext * g) const;
 
 protected:
   SbList <int> programParameters;
   SbList <SoGLSLShaderObject *> shaderObjects;
   SbHash<uint32_t, OBOL_GLhandle> programHandles;
 
-  SbBool isExecutable;
-  SbBool neededlinking;
+  SbHash<uint32_t, SbBool> executableHandles;
+  SbHash<uint32_t, SbBool> neededlinkingHandles;
 
   int indexOfShaderObject(SoGLSLShaderObject * shaderObject);
   void ensureLinking(const SoGLContext * g);
   void ensureProgramHandle(const SoGLContext * g);
+  SbBool isContextExecutable(const SoGLContext * g) const;
 
 private:
   void deletePrograms(void);

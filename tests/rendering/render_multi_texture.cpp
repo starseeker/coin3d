@@ -166,8 +166,50 @@ int main(int argc, char ** argv)
                         "(%d < %d)\n", nonBlack, W * H / 10);
                 ok = false;
             } else {
-                printf("render_multi_texture: pixel validation OK\n");
-                renderer.writeToRGB(outpath);
+                /* Verify that BOTH texture units are actually applied.
+                 *
+                 * Unit 0 is a red/white checkerboard (MODULATE).
+                 * Unit 1 is a solid blue fill (MODULATE).
+                 *
+                 * When both units are active the red checker cells produce
+                 * pixels where R >> G (e.g. R~26, G~3 at full brightness),
+                 * while the white cells produce R~G with dominant B.
+                 * If only unit 1 is applied all pixels have R~G (no red
+                 * cells), so the count of "red-cell" pixels is a reliable
+                 * indicator that unit 0 is also being used.
+                 *
+                 * The sphere covers ~13% of the 256x256 frame; roughly half
+                 * of those pixels correspond to red checker cells, giving
+                 * ~4000 qualifying pixels.  We require at least W*H/30 to
+                 * give comfortable headroom while still being strict.
+                 */
+                /* Pixels below this value in all channels are considered black
+                 * (unlit sphere background). */
+                const int BLACK_THRESHOLD = 5;
+                /* A pixel is "red-cell" when its R channel is more than this
+                 * many times its G channel (reflects the (220,30) ratio after
+                 * MODULATE with the blue unit-1 texture). */
+                const int RED_GREEN_RATIO = 3;
+                int varPixels = 0;
+                for (int i = 0; i < W * H; ++i) {
+                    const unsigned char * p = buf + i * 3;
+                    if (p[0] < BLACK_THRESHOLD && p[1] < BLACK_THRESHOLD &&
+                        p[2] < BLACK_THRESHOLD) continue;
+                    if ((int)p[0] > (int)p[1] * RED_GREEN_RATIO)
+                        ++varPixels;
+                }
+                printf("render_multi_texture: checker-variation pixels = %d / %d\n",
+                       varPixels, W * H);
+                if (varPixels < (W * H / 30)) {
+                    fprintf(stderr,
+                            "render_multi_texture: FAIL - both texture units not applied "
+                            "(checker variation pixels: %d < %d)\n",
+                            varPixels, W * H / 30);
+                    ok = false;
+                } else {
+                    printf("render_multi_texture: multi-texture validation OK\n");
+                    renderer.writeToRGB(outpath);
+                }
             }
         }
     }
