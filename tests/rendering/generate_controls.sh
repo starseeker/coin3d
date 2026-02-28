@@ -149,6 +149,10 @@ gen_control render_shadow             render_shadow
 gen_control render_hud_overlay        render_hud_overlay
 gen_control render_hud_no3d           render_hud_no3d
 
+# Testlib demo scenes (shared scene factories; match obol_viewer output)
+gen_control render_text_demo          render_text_demo
+gen_control render_hud_demo           render_hud_demo
+
 # SoProceduralShape visual regression test
 gen_control render_procedural_shape   render_procedural_shape
 

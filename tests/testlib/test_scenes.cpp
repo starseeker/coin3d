@@ -84,6 +84,12 @@
 #include <Inventor/nodes/SoIndexedLineSet.h>
 #include <Inventor/manips/SoTrackballManip.h>
 #include <Inventor/manips/SoTabBoxManip.h>
+#include <Inventor/annex/HUD/nodekits/SoHUDKit.h>
+#include <Inventor/annex/HUD/nodes/SoHUDLabel.h>
+#include <Inventor/nodes/SoRaytracingParams.h>
+#include <Inventor/annex/FXViz/nodes/SoShadowGroup.h>
+#include <Inventor/annex/FXViz/nodes/SoShadowStyle.h>
+#include <Inventor/annex/FXViz/nodes/SoShadowDirectionalLight.h>
 
 #ifdef OBOL_OSMESA_BUILD
 #  include <OSMesa/gl.h>
@@ -258,22 +264,39 @@ SoSeparator* createLighting(int width, int height)
     SoSeparator* root = new SoSeparator;
     root->ref();
 
+    // NanoRT hint: enable shadow rays so the NanoRT panel shows the sphere's
+    // shadow on the floor.  Ignored by GL renderers.
+    SoRaytracingParams* rtParams = new SoRaytracingParams;
+    rtParams->shadowsEnabled.setValue(TRUE);
+    rtParams->ambientIntensity.setValue(0.15f);
+    root->addChild(rtParams);
+
     SoPerspectiveCamera* cam = new SoPerspectiveCamera;
     root->addChild(cam);
 
-    // Directional light from upper-left
+    // Directional light from upper-left (warm white)
     SoDirectionalLight* dlight = new SoDirectionalLight;
     dlight->direction.setValue(-1.0f, -1.0f, -0.5f);
     dlight->color.setValue(1.0f, 0.9f, 0.8f);
     dlight->intensity.setValue(0.7f);
     root->addChild(dlight);
 
-    // Point light from the right
+    // Point light from the right (cool blue accent)
     SoPointLight* plight = new SoPointLight;
     plight->location.setValue(5.0f, 2.0f, 5.0f);
     plight->color.setValue(0.3f, 0.6f, 1.0f);
     plight->intensity.setValue(0.8f);
     root->addChild(plight);
+
+    // Spot light with a tight cone aimed at the sphere (white)
+    SoSpotLight* slight = new SoSpotLight;
+    slight->location.setValue(-4.0f, 4.0f, 3.0f);
+    slight->direction.setValue(0.6f, -0.7f, -0.5f);
+    slight->cutOffAngle.setValue(0.4f);
+    slight->dropOffRate.setValue(0.5f);
+    slight->color.setValue(1.0f, 1.0f, 0.9f);
+    slight->intensity.setValue(0.9f);
+    root->addChild(slight);
 
     // Central white sphere
     SoMaterial* mat = new SoMaterial;
@@ -283,16 +306,16 @@ SoSeparator* createLighting(int width, int height)
     root->addChild(mat);
     root->addChild(new SoSphere);
 
-    // Floor plane (cube, flat)
+    // Floor plane (cube, flat) to receive shadows in the NanoRT panel
     SoSeparator* floor = new SoSeparator;
     SoTranslation* ft = new SoTranslation;
     ft->translation.setValue(0.0f, -1.5f, 0.0f);
     floor->addChild(ft);
     SoScale* fs = new SoScale;
-    fs->scaleFactor.setValue(4.0f, 0.1f, 4.0f);
+    fs->scaleFactor.setValue(6.0f, 0.1f, 6.0f);
     floor->addChild(fs);
     SoMaterial* fm = new SoMaterial;
-    fm->diffuseColor.setValue(0.5f, 0.5f, 0.5f);
+    fm->diffuseColor.setValue(0.55f, 0.55f, 0.55f);
     floor->addChild(fm);
     floor->addChild(new SoCube);
     root->addChild(floor);
@@ -442,9 +465,10 @@ SoSeparator* createText(int width, int height)
     root->addChild(t3sep);
 
     // SoText2 label (2-D billboard, screen-space)
+    // Anchor placed within the camera frustum that viewAll sets for SoText3.
     SoSeparator* t2sep = new SoSeparator;
     SoTranslation* t2pos = new SoTranslation;
-    t2pos->translation.setValue(-1.0f, -1.0f, 0.0f);
+    t2pos->translation.setValue(0.0f, 0.5f, 0.0f);
     t2sep->addChild(t2pos);
     SoMaterial* t2mat = new SoMaterial;
     t2mat->diffuseColor.setValue(0.2f, 0.8f, 0.3f);
@@ -459,6 +483,9 @@ SoSeparator* createText(int width, int height)
 
     SbViewportRegion vp(width, height);
     cam->viewAll(root, vp);
+    // Pull back along Z so the SoText2 anchor (below SoText3) stays visible.
+    SbVec3f pos = cam->position.getValue();
+    cam->position.setValue(pos[0], pos[1], pos[2] * 1.8f);
     return root;
 }
 
@@ -603,44 +630,116 @@ SoSeparator* createCoordinates(int width, int height)
 // =========================================================================
 SoSeparator* createShadow(int width, int height)
 {
-    // SoShadowGroup is an annex extension; include it only if available.
-    // We build a simpler proxy scene when not compiled in (cast a warning
-    // and produce a lit scene instead).
-#ifdef OBOL_SHADOWGROUP_AVAILABLE
-    // Full shadow scene (requires annex/FXViz).
-    // Fall-through to simple scene for now.
-#endif
-
-    // Simple lit scene that demonstrates geometry suitable for shadow casting.
     SoSeparator* root = new SoSeparator;
     root->ref();
 
-    SoPerspectiveCamera* cam = addCameraAndLight(root);
+    // NanoRT hint: enable shadow rays.  SoRaytracingParams is a no-op for
+    // GL renderers; the SoShadowGroup below handles GL shadow maps.
+    SoRaytracingParams* rtParams = new SoRaytracingParams;
+    rtParams->shadowsEnabled.setValue(TRUE);
+    rtParams->ambientIntensity.setValue(0.2f);
+    root->addChild(rtParams);
 
-    // A raised sphere casting a "shadow" suggestion
-    SoSeparator* sphere_sep = new SoSeparator;
-    SoTranslation* st = new SoTranslation;
-    st->translation.setValue(0.0f, 1.0f, 0.0f);
-    sphere_sep->addChild(st);
-    SoMaterial* smat = new SoMaterial;
-    smat->diffuseColor.setValue(0.7f, 0.2f, 0.2f);
-    sphere_sep->addChild(smat);
-    sphere_sep->addChild(new SoSphere);
-    root->addChild(sphere_sep);
+    SoPerspectiveCamera* cam = new SoPerspectiveCamera;
+    cam->position.setValue(0.0f, 4.0f, 8.0f);
+    cam->orientation.setValue(SbVec3f(1.0f, 0.0f, 0.0f), -0.45f);
+    root->addChild(cam);
 
-    // Floor
-    SoSeparator* floor = new SoSeparator;
-    SoTranslation* ft = new SoTranslation;
-    ft->translation.setValue(0.0f, -1.0f, 0.0f);
-    floor->addChild(ft);
-    SoScale* fs = new SoScale;
-    fs->scaleFactor.setValue(6.0f, 0.05f, 6.0f);
-    floor->addChild(fs);
-    SoMaterial* fmat = new SoMaterial;
-    fmat->diffuseColor.setValue(0.6f, 0.6f, 0.6f);
-    floor->addChild(fmat);
-    floor->addChild(new SoCube);
-    root->addChild(floor);
+    // SoShadowGroup wraps the shadow-casting geometry and activates
+    // OpenGL variance shadow maps for GL renderers.
+    // NanoRT traverses SoShadowGroup as a plain separator and picks up
+    // SoShadowDirectionalLight (a subclass of SoDirectionalLight) as a
+    // normal directional light; shadow rays are controlled by SoRaytracingParams.
+    SoShadowGroup* sg = new SoShadowGroup;
+    sg->isActive.setValue(TRUE);
+    sg->intensity.setValue(0.7f);
+    sg->precision.setValue(0.5f);
+    sg->quality.setValue(1.0f);
+    root->addChild(sg);
+
+    // Shadow-casting directional light (works for both GL shadow maps and
+    // nanort shadow rays)
+    SoShadowDirectionalLight* slight = new SoShadowDirectionalLight;
+    slight->direction.setValue(-0.4f, -1.0f, -0.5f);
+    slight->intensity.setValue(1.0f);
+    slight->color.setValue(SbColor(1.0f, 0.95f, 0.85f));
+    sg->addChild(slight);
+
+    // Floor plane – receives shadows
+    {
+        SoSeparator* planeSep = new SoSeparator;
+
+        SoShadowStyle* ss = new SoShadowStyle;
+        ss->style.setValue(SoShadowStyle::SHADOWED);
+        planeSep->addChild(ss);
+
+        SoTranslation* pt = new SoTranslation;
+        pt->translation.setValue(0.0f, -1.2f, 0.0f);
+        planeSep->addChild(pt);
+
+        SoScale* ps = new SoScale;
+        ps->scaleFactor.setValue(8.0f, 0.08f, 8.0f);
+        planeSep->addChild(ps);
+
+        SoMaterial* pmat = new SoMaterial;
+        pmat->diffuseColor.setValue(0.65f, 0.65f, 0.65f);
+        planeSep->addChild(pmat);
+
+        planeSep->addChild(new SoCube);
+        sg->addChild(planeSep);
+    }
+
+    // Sphere – casts a shadow onto the floor
+    {
+        SoSeparator* sphSep = new SoSeparator;
+
+        SoShadowStyle* ss = new SoShadowStyle;
+        ss->style.setValue(SoShadowStyle::CASTS_SHADOW_AND_SHADOWED);
+        sphSep->addChild(ss);
+
+        SoTranslation* st = new SoTranslation;
+        st->translation.setValue(0.0f, 0.2f, 0.0f);
+        sphSep->addChild(st);
+
+        SoMaterial* smat = new SoMaterial;
+        smat->diffuseColor.setValue(0.7f, 0.2f, 0.2f);
+        smat->specularColor.setValue(0.8f, 0.8f, 0.8f);
+        smat->shininess.setValue(0.6f);
+        sphSep->addChild(smat);
+
+        SoSphere* sphere = new SoSphere;
+        sphere->radius.setValue(0.9f);
+        sphSep->addChild(sphere);
+
+        sg->addChild(sphSep);
+    }
+
+    // Small cube off to the side – also casts a shadow
+    {
+        SoSeparator* cubeSep = new SoSeparator;
+
+        SoShadowStyle* ss = new SoShadowStyle;
+        ss->style.setValue(SoShadowStyle::CASTS_SHADOW_AND_SHADOWED);
+        cubeSep->addChild(ss);
+
+        SoTranslation* ct = new SoTranslation;
+        ct->translation.setValue(2.0f, -0.4f, -0.5f);
+        cubeSep->addChild(ct);
+
+        SoMaterial* cmat = new SoMaterial;
+        cmat->diffuseColor.setValue(0.2f, 0.4f, 0.8f);
+        cmat->specularColor.setValue(0.6f, 0.6f, 0.6f);
+        cmat->shininess.setValue(0.4f);
+        cubeSep->addChild(cmat);
+
+        SoCube* cube = new SoCube;
+        cube->width.setValue(0.9f);
+        cube->height.setValue(0.9f);
+        cube->depth.setValue(0.9f);
+        cubeSep->addChild(cube);
+
+        sg->addChild(cubeSep);
+    }
 
     SbViewportRegion vp(width, height);
     cam->viewAll(root, vp);
@@ -693,8 +792,7 @@ SoSeparator* createDraggers(int width, int height)
 // =========================================================================
 SoSeparator* createHUD(int width, int height)
 {
-    // Root with two sub-cameras: perspective for the 3-D scene,
-    // orthographic for the 2-D HUD overlay drawn on top.
+    // Root: perspective 3-D scene + SoHUDKit pixel-space overlay.
     SoSeparator* root = new SoSeparator;
     root->ref();
 
@@ -709,33 +807,16 @@ SoSeparator* createHUD(int width, int height)
     cam3d->viewAll(scene3d, vp);
     root->addChild(scene3d);
 
-    // --- 2-D HUD overlay ---
-    SoSeparator* hud = new SoSeparator;
+    // --- 2-D HUD overlay (pixel-space, 1 unit = 1 pixel, origin = lower-left) ---
+    SoHUDKit* hud = new SoHUDKit;
 
-    SoOrthographicCamera* hudcam = new SoOrthographicCamera;
-    hudcam->position.setValue(0.0f, 0.0f, 1.0f);
-    hudcam->viewportMapping.setValue(SoCamera::LEAVE_ALONE);
-    hudcam->height.setValue(2.0f);
-    hud->addChild(hudcam);
-
-    SoLightModel* lm = new SoLightModel;
-    lm->model.setValue(SoLightModel::BASE_COLOR);
-    hud->addChild(lm);
-
-    SoSeparator* label_sep = new SoSeparator;
-    SoTranslation* label_pos = new SoTranslation;
-    label_pos->translation.setValue(-0.9f, 0.85f, 0.0f);
-    label_sep->addChild(label_pos);
-    SoBaseColor* label_col = new SoBaseColor;
-    label_col->rgb.setValue(1.0f, 1.0f, 0.2f);
-    label_sep->addChild(label_col);
-    SoFont* label_font = new SoFont;
-    label_font->size.setValue(14.0f);
-    label_sep->addChild(label_font);
-    SoText2* label = new SoText2;
+    SoHUDLabel* label = new SoHUDLabel;
+    label->position.setValue(10.0f, (float)height - 30.0f);
     label->string.setValue("HUD Overlay");
-    label_sep->addChild(label);
-    hud->addChild(label_sep);
+    label->color.setValue(SbColor(1.0f, 1.0f, 0.2f));
+    label->fontSize.setValue(14.0f);
+    label->justification.setValue(SoHUDLabel::LEFT);
+    hud->addWidget(label);
 
     root->addChild(hud);
     return root;

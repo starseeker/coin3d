@@ -39,6 +39,7 @@
 #include <Inventor/fields/SoSFBool.h>
 #include <Inventor/fields/SoSFFloat.h>
 #include <Inventor/fields/SoSFEnum.h>
+#include <vector>
 
 class OBOL_DLL_API SoText2 : public SoShape {
   typedef SoShape inherited;
@@ -73,6 +74,28 @@ public:
   SbBool getTextQuad(SoState * state,
                      SbVec3f & v0, SbVec3f & v1,
                      SbVec3f & v2, SbVec3f & v3) const;
+
+  /*!
+   * Generate per-glyph billboard quads for non-GL rendering backends
+   * (e.g. ray-tracers).
+   *
+   * For each visible glyph in the text, four vertices are appended to
+   * \a quads in object space, counter-clockwise:
+   *   v[4*i+0] = top-left,    v[4*i+1] = top-right,
+   *   v[4*i+2] = bottom-right, v[4*i+3] = bottom-left.
+   * The quads are screen-aligned at the anchor-point depth and sized to
+   * exactly match the pixel extent of each glyph bitmap.  Whitespace
+   * characters (zero-bitmap-size glyphs) are silently skipped.
+   *
+   * \param state  Current traversal state.  Must contain valid view volume,
+   *               model matrix, viewport region, and font elements.
+   * \param quads  Output vector: 4 × SbVec3f per glyph in groups of four.
+   * \return       Number of quads written (0 = nothing renderable).
+   *
+   * \sa getTextQuad()
+   */
+  int buildGlyphQuads(SoState * state,
+                      std::vector<SbVec3f> & quads) const;
 
 protected:
   virtual ~SoText2();

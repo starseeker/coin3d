@@ -810,6 +810,42 @@ static int runOrbitCameraTests()
         }
     }
 
+    /* --- Test 8: camera-local yaw leaves the camera's world-up direction
+     *             unchanged.  orbitCamera() yaws around the camera's own Y
+     *             axis (camera-local space), so the camera's world-up vector
+     *             q*(0,1,0) is invariant under pure yaw – rotating a vector
+     *             around itself cannot change it.  After accumulating 45° of
+     *             pitch the world-up is no longer (0,1,0); 720 subsequent
+     *             yaw-only steps (720 pixels × 0.25 deg/pixel = 180° total)
+     *             must leave it the same. --- */
+    {
+        SoPerspectiveCamera *cam = new SoPerspectiveCamera;
+        cam->ref();
+        cam->position.setValue(0.0f, 0.0f, radius);
+        cam->orientation.setValue(SbRotation::identity());
+
+        /* Pitch 45° first (180 pixels × 0.25 deg/pixel) */
+        cam->orbitCamera(center, 0.0f, 180.0f, sens);
+
+        SbVec3f upAfterPitch;
+        cam->orientation.getValue().multVec(SbVec3f(0.0f, 1.0f, 0.0f), upAfterPitch);
+
+        /* 720 yaw-only steps (720 pixels × 0.25 deg/pixel = 180° total) */
+        for (int i = 0; i < 720; ++i)
+            cam->orbitCamera(center, 1.0f, 0.0f, sens);
+
+        SbVec3f upAfterYaw;
+        cam->orientation.getValue().multVec(SbVec3f(0.0f, 1.0f, 0.0f), upAfterYaw);
+
+        float drift = (upAfterYaw - upAfterPitch).length();
+        if (drift > tol) {
+            fprintf(stderr, "  FAIL orbitCamera test8: camera-local yaw changed world-up "
+                    "by %.6f (expected < %.6f)\n", drift, tol);
+            ++failures;
+        }
+        cam->unref();
+    }
+
     return failures;
 }
 
@@ -1193,7 +1229,7 @@ REGISTER_TEST(materials, ObolTest::TestCategory::Rendering,
 );
 
 REGISTER_TEST(lighting, ObolTest::TestCategory::Rendering,
-    "Scene lit by directional and point lights",
+    "Scene lit by directional, point and spot lights (NanoRT: shadows via SoRaytracingParams)",
     e.has_visual = true;
     e.has_interactive = true;
     e.nanort_ok = true;
@@ -1228,7 +1264,7 @@ REGISTER_TEST(text, ObolTest::TestCategory::Rendering,
     "SoText2 and SoText3 labels",
     e.has_visual = true;
     e.has_interactive = true;
-    e.nanort_ok = false;
+    e.nanort_ok = true;
     e.create_scene = ObolTest::Scenes::createText;
 );
 
@@ -1236,7 +1272,7 @@ REGISTER_TEST(gradient, ObolTest::TestCategory::Rendering,
     "Background gradient via callback node",
     e.has_visual = true;
     e.has_interactive = true;
-    e.nanort_ok = false;
+    e.nanort_ok = true;
     e.create_scene = ObolTest::Scenes::createGradient;
 );
 
@@ -1257,10 +1293,10 @@ REGISTER_TEST(coordinates, ObolTest::TestCategory::Rendering,
 );
 
 REGISTER_TEST(shadow, ObolTest::TestCategory::Rendering,
-    "Shadow-casting scene (SoShadowGroup proxy)",
+    "Shadow-casting scene: SoShadowGroup (GL) + SoRaytracingParams (NanoRT)",
     e.has_visual = true;
     e.has_interactive = true;
-    e.nanort_ok = false;
+    e.nanort_ok = true;
     e.create_scene = ObolTest::Scenes::createShadow;
 );
 
@@ -1268,7 +1304,7 @@ REGISTER_TEST(draggers, ObolTest::TestCategory::Draggers,
     "Interactive draggers (SoTranslate1, SoRotateSpherical)",
     e.has_visual = true;
     e.has_interactive = true;
-    e.nanort_ok = false;
+    e.nanort_ok = true;
     e.create_scene = ObolTest::Scenes::createDraggers;
 );
 
@@ -1276,7 +1312,7 @@ REGISTER_TEST(hud, ObolTest::TestCategory::Misc,
     "Head-up display overlay using orthographic camera",
     e.has_visual = true;
     e.has_interactive = false;
-    e.nanort_ok = false;
+    e.nanort_ok = true;
     e.create_scene = ObolTest::Scenes::createHUD;
 );
 
@@ -1316,7 +1352,7 @@ REGISTER_TEST(manips, ObolTest::TestCategory::Manips,
     "Interactive manipulators (SoTrackballManip, SoTabBoxManip)",
     e.has_visual = true;
     e.has_interactive = true;
-    e.nanort_ok = false;
+    e.nanort_ok = true;
     e.create_scene = ObolTest::Scenes::createManips;
 );
 

@@ -77,6 +77,19 @@ macro(add_rendering_test name)
     )
 endmacro()
 
+# Variant of add_rendering_test for tests that use the shared testlib scene
+# factories.  These link against obol_testlib so the CLI test and the
+# interactive obol_viewer render identical scenes from the same source.
+macro(add_testlib_rendering_test name)
+    add_rendering_test(${name})
+    if(TARGET obol_testlib)
+        target_link_libraries(${name} obol_testlib)
+        target_include_directories(${name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/tests/testlib
+        )
+    endif()
+endmacro()
+
 # ---- Test executables --------------------------------------------------------
 add_rendering_test(render_primitives)
 add_rendering_test(render_materials)
@@ -133,6 +146,10 @@ add_rendering_test(render_marker_set)
 add_rendering_test(render_hud_overlay)
 add_rendering_test(render_hud_no3d)
 add_rendering_test(render_hud_interaction)
+# Testlib demo scenes: these use the shared scene factories so CLI and
+# obol_viewer render identical output.
+add_testlib_rendering_test(render_text_demo)
+add_testlib_rendering_test(render_hud_demo)
 add_rendering_test(render_procedural_shape)
 add_rendering_test(render_arb8_draggers)
 add_rendering_test(render_arb8_edit_cycle)
@@ -220,7 +237,12 @@ endmacro()
 # ---- NanoRT versions of standard rendering tests ----------------------------
 # These tests use SoOffscreenRenderer + the generalized ContextManager hook to
 # produce pixel output via nanort.  They operate on triangle-based geometry;
-# tests that rely on text, lines, or OpenGL-specific features are omitted.
+# line geometry is rendered via cylinder proxies (createCylinderProxy /
+# createSphereProxy), so dragger/manipulator tests whose parts include
+# SoIndexedLineSet feedback geometry are fully supported.
+# Tests that rely on text or OpenGL-specific effects (GLSL shaders, FBOs,
+# OpenGL shadow maps via SoShadowGroup) are omitted; nanort shadow support
+# uses SoRaytracingParams + shadow rays (see render_nanort_shadow below).
 add_nanort_rendering_test(render_primitives)
 add_nanort_rendering_test(render_materials)
 add_nanort_rendering_test(render_transforms)
@@ -228,6 +250,27 @@ add_nanort_rendering_test(render_colored_cube)
 add_nanort_rendering_test(render_scene)
 add_nanort_rendering_test(render_rt_proxy_shapes)
 add_nanort_rendering_test(render_background_gradient)
+# NanoRT shadow test: validates shadow-ray casting via SoRaytracingParams.
+# Uses SoDirectionalLight + SoRaytracingParams(shadowsEnabled=TRUE); does NOT
+# use SoShadowGroup (which requires OpenGL GLSL shaders).  The pixel-level
+# shadow validation (lit vs shadow regions on the ground plane) is only run
+# under the NanoRT build; the GL backend does a basic non-blank geometry check.
+add_nanort_rendering_test(render_nanort_shadow)
+
+# ---- NanoRT dragger and manipulator tests ------------------------------------
+# Dragger/manipulator parts use SoCube, SoCone, SoCylinder, SoSphere,
+# SoIndexedLineSet, and SoIndexedFaceSet — all of which are fully supported
+# by the nanort context manager (line/point geometry via cylinder/sphere
+# proxies).  SoCallbackAction traverses SoNodeKit (the dragger base class)
+# normally, collecting triangles from whichever SoSwitch branch is active.
+# SoSurroundScale and SoAntiSquish execute correctly during traversal and
+# apply the correct world-space transforms to the collected geometry.
+# Note: SoClipPlane (used by SoClipPlaneManip) has no nanort equivalent;
+# geometry renders without clipping, which is a cosmetic difference only.
+add_nanort_rendering_test(render_simple_draggers)
+add_nanort_rendering_test(render_draggers)
+add_nanort_rendering_test(render_light_manips)
+add_nanort_rendering_test(render_manip_sequences)
 
 # ---- Standalone nanort demo (original, uses its own context manager) --------
 # render_nanort.cpp is the original proof-of-concept demo that builds its own
@@ -426,6 +469,10 @@ endif()
 # subpixel font differences between platforms / backends).
 add_rendering_image_test(render_hud_overlay  RMSE_THRESHOLD 25.0)
 add_rendering_image_test(render_hud_no3d     RMSE_THRESHOLD 25.0)
+
+# Testlib demo scenes (shared scene factories; match obol_viewer output).
+add_rendering_image_test(render_text_demo    RMSE_THRESHOLD 25.0)
+add_rendering_image_test(render_hud_demo     RMSE_THRESHOLD 25.0)
 
 # SoProceduralShape visual regression test: solid filled + wireframe cone.
 add_rendering_image_test(render_procedural_shape RMSE_THRESHOLD 15.0)

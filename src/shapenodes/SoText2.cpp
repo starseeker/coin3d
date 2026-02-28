@@ -102,6 +102,7 @@
 
 #include <climits>
 #include <cstring>
+#include <vector>
 
 
 #include "../base/SbUtf8.h" // Modern UTF-8 support
@@ -246,6 +247,7 @@ public:
   void computeBBox(SoAction * action, SbBox3f & box, SbVec3f & center);
   void updateFont(SoState * state);  // Update SbFont from state elements
   static void setRasterPos3f(GLfloat x, GLfloat y, GLfloat z);
+  int buildGlyphQuads(SoState * state, std::vector<SbVec3f> & quads);
 
 
   SbList <int> stringwidth;
@@ -538,12 +540,16 @@ SoText2::GLRender(SoGLRenderAction * action)
             if (memx >= 0 && memx + bitmapsize[0] <= bbsize[0] &&
                 memy >= 0 && memy + bitmapsize[1] <= bbsize[1]) {
 
-              unsigned char * dst = PRIVATE(this)->pixel_buffer + (memy * bbsize[0] + memx) * 4;
               const unsigned char * src = buffer;
-              int nextlineoffset = (bbsize[0] - bitmapsize[0]) * 4;
+              int rowstride = bbsize[0] * 4;
 
-              // Ouch. This must lead to pretty slow rendering
+              // stb_truetype bitmaps are stored top-to-bottom (row 0 = top of glyph).
+              // glDrawPixels reads the pixel buffer bottom-to-top (row 0 = bottom of image).
+              // Fill in reverse row order so the glyph appears right-side up.
               for (int y = 0; y < iy; y++) {
+                // src row y (from top) → pixel buffer row (memy + iy - 1 - y)
+                unsigned char * dst = PRIVATE(this)->pixel_buffer +
+                  ((memy + iy - 1 - y) * bbsize[0] + memx) * 4;
                 for (int x = 0; x < ix; x++) {
                   *dst++ = red; *dst++ = green; *dst++ = blue;
                   // alpha from the gray level pixel value, blended with current value (because glyph bitmaps can overlap)
@@ -552,7 +558,6 @@ SoText2::GLRender(SoGLRenderAction * action)
                   *dst = ((oldval * (256 - srcval) + alpha * srcval) >> 8);
                   src++; dst++;
                 }
-                dst += nextlineoffset;
               }
             } else {
               static SbBool once = TRUE;
@@ -810,6 +815,31 @@ SoText2::getTextQuad(SoState * state,
   return PRIVATE(this)->getQuad(state, v0, v1, v2, v3);
 }
 
+/*!
+  Generate per-glyph billboard quads for non-GL rendering backends.
+
+  For each visible glyph, four vertices in object space (counter-clockwise:
+  top-left, top-right, bottom-right, bottom-left) are appended to \a quads.
+  The quads are screen-aligned at the text anchor depth and sized to the
+  pixel extent of each glyph bitmap.  Whitespace characters are skipped.
+
+  \param state  Current traversal state (view volume, model matrix, viewport,
+                and font elements must be set up).
+  \param quads  Output: 4 × SbVec3f per glyph appended in groups of four.
+  \return       Number of quads appended (0 = nothing renderable).
+
+  \sa getTextQuad()
+*/
+int
+SoText2::buildGlyphQuads(SoState * state,
+                         std::vector<SbVec3f> & quads) const
+{
+  PRIVATE(this)->lock();
+  int n = PRIVATE(this)->buildGlyphQuads(state, quads);
+  PRIVATE(this)->unlock();
+  return n;
+}
+
 // SoText2P methods below
 
 void
@@ -909,7 +939,106 @@ SoText2P::getQuad(SoState * state, SbVec3f & v0, SbVec3f & v1,
   return TRUE;
 }
 
-// Debug convenience method.
+// Generate per-glyph billboard quads for non-GL rendering backends.
+// Returns the number of quads added to \a quads.
+int
+SoText2P::buildGlyphQuads(SoState * state, std::vector<SbVec3f> & quads)
+{
+  this->buildGlyphCache(state);
+
+  const int nrlines = PUBLIC(this)->string.getNum();
+  if (nrlines == 0 || this->positions.getLength() != nrlines)
+    return 0;
+
+  // View setup: same as getQuad().
+  SbVec3f nilpoint(0.0f, 0.0f, 0.0f);
+  const SbMatrix & mat = SoModelMatrixElement::get(state);
+  mat.multVecMatrix(nilpoint, nilpoint);
+
+  const SbViewVolume & vv = SoViewVolumeElement::get(state);
+
+  SbVec3f screenpoint;
+  vv.projectToScreen(nilpoint, screenpoint);
+
+  const SbViewportRegion & vp = SoViewportRegionElement::get(state);
+  SbVec2s vpsize = vp.getViewportSizePixels();
+  if (vpsize[0] <= 0 || vpsize[1] <= 0) return 0;
+
+  const SbVec2s sp((short)(screenpoint[0] * vpsize[0]),
+                   (short)(screenpoint[1] * vpsize[1]));
+  const float dist = -vv.getPlane(0.0f).getDistance(nilpoint);
+  const SbMatrix inv = mat.inverse();
+  const float vpW = static_cast<float>(vpsize[0]);
+  const float vpH = static_cast<float>(vpsize[1]);
+
+  int quadsAdded = 0;
+
+  for (int i = 0; i < nrlines; i++) {
+    // Apply the same per-line justification offset as GLRender().
+    // positions[] is built with xpos=0 (LEFT); adjust here for other modes.
+    int xjust = 0;
+    switch (PUBLIC(this)->justification.getValue()) {
+    case SoText2::RIGHT:
+      xjust = this->maxwidth - this->stringwidth[i];
+      break;
+    case SoText2::CENTER:
+      xjust = (this->maxwidth - this->stringwidth[i]) / 2;
+      break;
+    default: // LEFT
+      break;
+    }
+
+    const SbList<SbVec2s> & charpos = this->positions[i];
+    const SbString str = PUBLIC(this)->string[i];
+    const char * p = str.getString();
+    const size_t length = coin_utf8_validate_length(p);
+    const int nchars = charpos.getLength();
+    if (static_cast<int>(length) != nchars) continue;
+
+    for (int j = 0; j < nchars; j++) {
+      const uint32_t glyphidx = coin_utf8_get_char(p);
+      p = coin_utf8_next_char(p);
+
+      SbGlyph2D * glyph = this->cache->getGlyph2D(glyphidx, this->font);
+      if (!glyph || glyph->size[0] <= 0 || glyph->size[1] <= 0)
+        continue;  // whitespace or missing glyph bitmap
+
+      // Pixel-space rectangle for this glyph: bottom-left origin + size.
+      const SbVec2s & pos = charpos[j];
+      const int pxl = sp[0] + pos[0] + xjust;
+      const int pyb = sp[1] + pos[1];
+      const int pxr = pxl + glyph->size[0];
+      const int pyt = pyb + glyph->size[1];
+
+      // Convert to normalized screen coords and unproject to world space.
+      const SbVec2f nTL(static_cast<float>(pxl) / vpW, static_cast<float>(pyt) / vpH);
+      const SbVec2f nTR(static_cast<float>(pxr) / vpW, static_cast<float>(pyt) / vpH);
+      const SbVec2f nBR(static_cast<float>(pxr) / vpW, static_cast<float>(pyb) / vpH);
+      const SbVec2f nBL(static_cast<float>(pxl) / vpW, static_cast<float>(pyb) / vpH);
+
+      SbVec3f v0 = vv.getPlanePoint(dist, nTL);
+      SbVec3f v1 = vv.getPlanePoint(dist, nTR);
+      SbVec3f v2 = vv.getPlanePoint(dist, nBR);
+      SbVec3f v3 = vv.getPlanePoint(dist, nBL);
+
+      // Transform back to object space (mirrors getQuad()).
+      inv.multVecMatrix(v0, v0);
+      inv.multVecMatrix(v1, v1);
+      inv.multVecMatrix(v2, v2);
+      inv.multVecMatrix(v3, v3);
+
+      quads.push_back(v0);
+      quads.push_back(v1);
+      quads.push_back(v2);
+      quads.push_back(v3);
+      ++quadsAdded;
+    }
+  }
+
+  return quadsAdded;
+}
+
+
 void
 SoText2P::dumpBuffer(unsigned char * buffer, SbVec2s size, SbVec2s pos, SbBool mono)
 {

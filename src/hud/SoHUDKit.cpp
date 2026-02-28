@@ -109,7 +109,9 @@ SoHUDKit::grabViewportInfo(void * userdata, SoAction * action)
       float h = float(pixels[1]);
       cam->position.setValue(w * 0.5f, h * 0.5f, 1.0f);
       cam->height.setValue(h);
-      // Aspect ratio is set by LEAVE_ALONE so the viewport handles it.
+      // Set aspect ratio explicitly so 1 unit == 1 pixel across full viewport.
+      if (h > 0.0f)
+        cam->aspectRatio.setValue(w / h);
     }
   }
 }

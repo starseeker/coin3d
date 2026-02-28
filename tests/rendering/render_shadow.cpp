@@ -13,8 +13,17 @@
  * GL contexts in the same process).  OSMesa handles multiple in-memory
  * contexts without these limitations.
  *
- * Pixel validation only requires that lit geometry is visible; it does
- * not check for actual shadow regions.
+ * Pixel validation:
+ *   - Primary check: lit geometry is visible (nonbg >= 100 pixels).
+ *   - Shadow contrast check (informational): when SoShadowGroup::isSupported()
+ *     returns TRUE the rendered image should contain both bright neutral
+ *     ("lit ground") pixels and darker neutral ("shadow region") pixels.
+ *     The shadow-contrast count is printed for diagnostic purposes; it does
+ *     not gate the pass/fail result because GLSL variance shadow maps may
+ *     produce subtly different results across headless GL drivers.
+ *
+ * For a GL-independent shadow test that performs strict shadow-region
+ * validation, see render_nanort_shadow.cpp (NanoRT backend).
  *
  * Writes argv[1]+".rgb" and returns 0 on pass, 1 on fail.
  */
@@ -34,11 +43,13 @@
 #include <Inventor/annex/FXViz/nodes/SoShadowStyle.h>
 #include <Inventor/annex/FXViz/nodes/SoShadowDirectionalLight.h>
 #include <Inventor/SbViewportRegion.h>
+#include <algorithm>
 #include <cstdio>
 
 static const int W = 256;
 static const int H = 256;
 
+// Primary validation: scene must have at least some non-background pixels.
 static bool validateScene(const unsigned char *buf)
 {
     int nonbg = 0;
@@ -56,6 +67,35 @@ static bool validateScene(const unsigned char *buf)
     }
     printf("render_shadow: PASS\n");
     return true;
+}
+
+// Shadow-contrast check (informational): counts lit-ground and shadow-region
+// pixels.  A neutral pixel (R ≈ G ≈ B) that is bright belongs to the lit
+// ground; one that is dark but above background belongs to the shadow region.
+// This does not gate pass/fail because GLSL shadow map rendering quality
+// varies across headless GL drivers.  Use render_nanort_shadow for strict
+// shadow-region validation.
+static void reportShadowContrast(const unsigned char *buf)
+{
+    int litGround    = 0;
+    int shadowGround = 0;
+    for (int i = 0; i < W * H; ++i) {
+        const unsigned char *p = buf + i * 3;
+        int r = p[0], g = p[1], b = p[2];
+        int hi = std::max({r, g, b});
+        int lo = std::min({r, g, b});
+        if (hi - lo > 40) continue;          // colored object – skip
+        int luma = (r + g + b) / 3;
+        if      (luma > 140) ++litGround;
+        else if (luma >  10) ++shadowGround;
+    }
+    printf("render_shadow: shadow contrast – litGround=%d shadowGround=%d\n",
+           litGround, shadowGround);
+    if (litGround > 50 && shadowGround > 10)
+        printf("render_shadow: shadow regions detected (shadows appear active)\n");
+    else
+        printf("render_shadow: shadow regions not detected "
+               "(GLSL shadow maps may not be active on this driver)\n");
 }
 
 int main(int argc, char **argv)
@@ -166,6 +206,8 @@ int main(int argc, char **argv)
     if (renderer.render(root)) {
         const unsigned char *buf = renderer.getBuffer();
         bool pixOk = (buf != nullptr) && validateScene(buf);
+        // Report shadow contrast (informational; does not gate pass/fail).
+        if (buf && shadSupported) reportShadowContrast(buf);
         ok = pixOk && renderer.writeToRGB(outpath);
     } else {
         fprintf(stderr, "render_shadow: render() failed\n");

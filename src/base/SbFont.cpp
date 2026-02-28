@@ -306,28 +306,28 @@ SbFontP::findOrCreateGlyph(int character)
     sttmesh::GlyphMesh mesh = sttmesh::build_codepoint_mesh(fontinfo, character, cfg);
     
     if (!mesh.positions.empty() && !mesh.indices.empty()) {
-      // Copy vertex positions (convert Vec2 to 3D coordinates with z=0)
+      // Copy vertex positions as 2D (x, y) pairs so SoText3 can cast them to SbVec2f*
       entry->numvertices = (int)mesh.positions.size();
-      entry->vertices = (float*)malloc(entry->numvertices * 3 * sizeof(float));
+      entry->vertices = (float*)malloc(entry->numvertices * 2 * sizeof(float));
       if (entry->vertices) {
         for (int i = 0; i < entry->numvertices; i++) {
-          entry->vertices[i * 3 + 0] = mesh.positions[i].x;
-          entry->vertices[i * 3 + 1] = mesh.positions[i].y;
-          entry->vertices[i * 3 + 2] = 0.0f;  // Z coordinate is 0 for flat glyphs
+          entry->vertices[i * 2 + 0] = mesh.positions[i].x;
+          entry->vertices[i * 2 + 1] = mesh.positions[i].y;
         }
       }
       
-      // Copy face indices (convert triangles to Coin3D format with -1 terminators)
+      // Copy face indices as a flat list terminated by a single -1.
+      // SoText3 render loop reads 3 indices at a time and stops at the first -1.
       int numTriangles = (int)mesh.indices.size() / 3;
-      entry->numfaceindices = numTriangles * 4; // 3 indices + 1 terminator per triangle
+      entry->numfaceindices = numTriangles * 3 + 1; // flat list + one -1 sentinel
       entry->faceindices = (int*)malloc(entry->numfaceindices * sizeof(int));
       if (entry->faceindices) {
         for (int i = 0; i < numTriangles; i++) {
-          entry->faceindices[i * 4 + 0] = (int)mesh.indices[i * 3 + 0];
-          entry->faceindices[i * 4 + 1] = (int)mesh.indices[i * 3 + 1];
-          entry->faceindices[i * 4 + 2] = (int)mesh.indices[i * 3 + 2];
-          entry->faceindices[i * 4 + 3] = -1;  // Coin3D triangle terminator
+          entry->faceindices[i * 3 + 0] = (int)mesh.indices[i * 3 + 0];
+          entry->faceindices[i * 3 + 1] = (int)mesh.indices[i * 3 + 1];
+          entry->faceindices[i * 3 + 2] = (int)mesh.indices[i * 3 + 2];
         }
+        entry->faceindices[numTriangles * 3] = -1; // single end-of-list sentinel
       }
       
       // Generate edge indices from outline contours for wireframe rendering
@@ -338,7 +338,9 @@ SbFontP::findOrCreateGlyph(int character)
           totalEdges += contour.count; // Each contour creates count edge segments  
         }
         
-        entry->numedgeindices = totalEdges * 3; // 2 indices + 1 terminator per edge
+        // Edge indices are a flat list of (current, next) pairs terminated by a single -1.
+        // SoText3 render loop reads 2 indices at a time and stops at the first -1.
+        entry->numedgeindices = totalEdges * 2 + 1; // flat list + one -1 sentinel
         entry->edgeindices = (int*)malloc(entry->numedgeindices * sizeof(int));
         if (entry->edgeindices) {
           int edgeIdx = 0;
@@ -348,26 +350,32 @@ SbFontP::findOrCreateGlyph(int character)
               int next = contour.start + ((i + 1) % contour.count);
               entry->edgeindices[edgeIdx++] = current;
               entry->edgeindices[edgeIdx++] = next;
-              entry->edgeindices[edgeIdx++] = -1; // Coin3D edge terminator
             }
           }
+          entry->edgeindices[edgeIdx] = -1; // single end-of-list sentinel
         }
         
-        // Build edge connectivity for 3D extrusion
+        // Build edge connectivity for smooth normal calculation in 3D extrusion.
+        // For edge i (from A=current to B=next):
+        //   edgeconnectivity[i*3+0] = current (A)
+        //   edgeconnectivity[i*3+1] = prev    (P = vertex before A)
+        //   edgeconnectivity[i*3+2] = nextnext (C = vertex after B)
+        // SoText3 accesses *(ccw+1) = element[1] = P for smooth normal at A,
+        // and *cw = element[2] = C for smooth normal at B.
         entry->numedges = totalEdges;
         entry->edgeconnectivity = (int*)malloc(entry->numedges * 3 * sizeof(int));
         if (entry->edgeconnectivity) {
           int edgeIdx = 0;
           for (const auto& contour : mesh.outlineContours) {
-            for (int i = 0; i < contour.count; i++) {
-              int current = contour.start + i;
-              int next = contour.start + ((i + 1) % contour.count);
-              int prev = contour.start + ((i - 1 + contour.count) % contour.count);
+            int count = contour.count;
+            for (int i = 0; i < count; i++) {
+              int current  = contour.start + i;
+              int prev     = contour.start + ((i - 1 + count) % count);
+              int nextnext = contour.start + ((i + 2) % count);
               
-              // For each edge, store [prev_vertex, current_vertex, next_vertex]
-              entry->edgeconnectivity[edgeIdx * 3 + 0] = prev;
-              entry->edgeconnectivity[edgeIdx * 3 + 1] = current;
-              entry->edgeconnectivity[edgeIdx * 3 + 2] = next;
+              entry->edgeconnectivity[edgeIdx * 3 + 0] = current;
+              entry->edgeconnectivity[edgeIdx * 3 + 1] = prev;
+              entry->edgeconnectivity[edgeIdx * 3 + 2] = nextnext;
               edgeIdx++;
             }
           }
@@ -570,7 +578,10 @@ SbFont::getGlyphBitmap(int character, SbVec2s & size, SbVec2s & bearing) const
                                            character, &width, &height, &xoff, &yoff);
     if (glyph->bitmap) {
       glyph->bitmapsize.setValue(width, height);
-      glyph->bearing.setValue(xoff, yoff);
+      // stt_GetCodepointBitmap returns yoff as a negative screen-Y offset
+      // (positive = down in screen space, so above-baseline chars have yoff < 0).
+      // SoText2 expects bearing.y in FreeType convention: positive = above baseline.
+      glyph->bearing.setValue(xoff, -yoff);
     } else {
       glyph->bitmapsize.setValue(0, 0);
       glyph->bearing.setValue(0, 0);
