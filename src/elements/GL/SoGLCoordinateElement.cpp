@@ -40,6 +40,7 @@
 */
 
 #include <Inventor/elements/SoGLCoordinateElement.h>
+#include "glue/glp.h"
 
 #include "config.h"
 
@@ -71,8 +72,8 @@ SoGLCoordinateElement::~SoGLCoordinateElement(void)
 void
 SoGLCoordinateElement::send(const int index) const
 {
-  if (this->areCoords3D) glVertex3fv((const GLfloat*)(this->coords3D + index));
-  else glVertex4fv((const GLfloat*)(this->coords4D + index));
+  if (this->areCoords3D) SoGLContext_glVertex3fv(sogl_current_render_glue(), (const GLfloat*)(this->coords3D + index));
+  else SoGLContext_glVertex4fv(sogl_current_render_glue(), (const GLfloat*)(this->coords4D + index));
 }
 
 //! FIXME: write doc.

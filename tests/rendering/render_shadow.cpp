@@ -51,7 +51,7 @@ static void reportShadowContrast(const unsigned char *buf)
         int lo = std::min({r, g, b});
         if (hi - lo > 40) continue;
         int luma = (r + g + b) / 3;
-        if      (luma > 140) ++litGround;
+        if      (luma >= 140) ++litGround;
         else if (luma >  10) ++shadowGround;
     }
     printf("render_shadow: shadow contrast – litGround=%d shadowGround=%d\n",

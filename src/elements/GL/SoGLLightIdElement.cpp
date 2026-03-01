@@ -109,7 +109,7 @@ SoGLLightIdElement::pop(SoState * state,
   int prevdata = ((SoGLLightIdElement*)prevTopElement)->data;
   // disable used light sources
   while (idx <= prevdata) {
-    glDisable((GLenum)((int32_t)GL_LIGHT0 + idx));
+    SoGLContext_glDisable(sogl_current_render_glue(), (GLenum)((int32_t)GL_LIGHT0 + idx));
     idx++;
   }
 }
@@ -153,7 +153,7 @@ SoGLLightIdElement::increment(SoState * const state,
 #endif
       return -1;
     }
-    glEnable((GLenum)((int32_t)GL_LIGHT0 + element->data));
+    SoGLContext_glEnable(sogl_current_render_glue(), (GLenum)((int32_t)GL_LIGHT0 + element->data));
 
     return element->data;
   }
@@ -177,7 +177,7 @@ SoGLLightIdElement::getMaxGLSources(void)
                             "information is requested for.");
 
   GLint val;
-  glGetIntegerv(GL_MAX_LIGHTS, &val);
+  SoGLContext_glGetIntegerv(sogl_current_render_glue(), GL_MAX_LIGHTS, &val);
 
   assert((!sogl_glerror_debugging() || glGetError() == GL_NO_ERROR) &&
          "GL error when calling glGetInteger() -- no current GL context?");

@@ -40,6 +40,7 @@
 */
 
 #include <Inventor/elements/SoGLProjectionMatrixElement.h>
+#include "glue/glp.h"
 #include "config.h"
 
 
@@ -92,7 +93,7 @@ SoGLProjectionMatrixElement::setElt(const SbMatrix & matrix)
 void
 SoGLProjectionMatrixElement::updategl(void)
 {
-  glMatrixMode(GL_PROJECTION);
-  glLoadMatrixf((float*)this->projectionMatrix);
-  glMatrixMode(GL_MODELVIEW);
+  SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_PROJECTION);
+  SoGLContext_glLoadMatrixf(sogl_current_render_glue(), (float*)this->projectionMatrix);
+  SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_MODELVIEW);
 }

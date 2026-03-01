@@ -333,14 +333,14 @@ SoGLMultiTextureImageElement::updateGL(const int unit)
     if (SoTextureCombineElement::isDefault(state, unit)) {
       switch (ud.model) {
       case DECAL:
-        glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
+        SoGLContext_glTexEnvi(sogl_current_render_glue(), GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
         break;
       case MODULATE:
-        glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+        SoGLContext_glTexEnvi(sogl_current_render_glue(), GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
         break;
       case BLEND:
-        glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_BLEND);
-        glTexEnvfv(GL_TEXTURE_ENV, GL_TEXTURE_ENV_COLOR, ud.blendColor.getValue());
+        SoGLContext_glTexEnvi(sogl_current_render_glue(), GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_BLEND);
+        SoGLContext_glTexEnvfv(sogl_current_render_glue(), GL_TEXTURE_ENV, GL_TEXTURE_ENV_COLOR, ud.blendColor.getValue());
         break;
       case REPLACE:
         // GL_REPLACE mode was introduced with OpenGL 1.1. It is
@@ -349,7 +349,7 @@ SoGLMultiTextureImageElement::updateGL(const int unit)
         //
         // FIXME: ..but we should do a sanity check anyway.
         // 20030901 mortene.
-        glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+        SoGLContext_glTexEnvi(sogl_current_render_glue(), GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
         break;
       default:
         assert(0 && "unknown model");
@@ -376,7 +376,7 @@ SoGLMultiTextureImageElement::updateGL(const int unit)
 /*!
   The size returned by this function will just be a very coarse
   estimate as it only uses the more or less obsoleted technique of
-  calling glGetIntegerv(GL_MAX_TEXTURE_SIZE).
+  calling SoGLContext_glGetIntegerv(sogl_current_render_glue(), GL_MAX_TEXTURE_SIZE).
   
   For a better estimate, use
   SoGLTextureImageElement::isTextureSizeLegal().
@@ -397,7 +397,7 @@ SoGLMultiTextureImageElement::getMaxGLTextureSize(void)
                             "information is requested for.");
 
   GLint val;
-  glGetIntegerv(GL_MAX_TEXTURE_SIZE, &val);
+  SoGLContext_glGetIntegerv(sogl_current_render_glue(), GL_MAX_TEXTURE_SIZE, &val);
   return (int32_t)val;
 }
 

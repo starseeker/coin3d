@@ -210,7 +210,7 @@ SoGLSLShaderObject::didOpenGLErrorOccur(const SbString & source)
   // errors from the shaders might not get caught until after the
   // geometry is rendered, which makes debugging really confusing.
   if (glerror_debug) {
-    glFlush();
+    SoGLContext_glFlush(sogl_current_render_glue());
   }
 
   GLenum glErr = glGetError();

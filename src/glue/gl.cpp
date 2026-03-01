@@ -1070,6 +1070,112 @@ glglue_resolve_symbols(SoGLContext * w)
 
 
 
+  /* Core GL 1.0/1.1 functions — always available, stored as function
+     pointers so dual-GL builds (OBOL_BUILD_DUAL_GL) dispatch through
+     the correct backend rather than always calling system GL. */
+  w->glTexImage2D      = (OBOL_PFNGLTEXIMAGE2DPROC)PROC(w, glTexImage2D);
+  w->glTexParameteri   = (OBOL_PFNGLTEXPARAMETERIPROC)PROC(w, glTexParameteri);
+  w->glTexParameterf   = (OBOL_PFNGLTEXPARAMETERFPROC)PROC(w, glTexParameterf);
+  w->glGetIntegerv     = (OBOL_PFNGLGETINTEGERVPROC)PROC(w, glGetIntegerv);
+  w->glGetFloatv       = (OBOL_PFNGLGETFLOATVPROC)PROC(w, glGetFloatv);
+  w->glClearColor      = (OBOL_PFNGLCLEARCOLORPROC)PROC(w, glClearColor);
+  w->glClear           = (OBOL_PFNGLCLEARPROC)PROC(w, glClear);
+  w->glFlush           = (OBOL_PFNGLFLUSHPROC)PROC(w, glFlush);
+  w->glEnable          = (OBOL_PFNGLENABLEPROC)PROC(w, glEnable);
+  w->glDisable         = (OBOL_PFNGLDISABLEPROC)PROC(w, glDisable);
+  w->glPixelStorei     = (OBOL_PFNGLPIXELSTOREIPROC)PROC(w, glPixelStorei);
+  w->glReadPixels      = (OBOL_PFNGLREADPIXELSPROC)PROC(w, glReadPixels);
+  w->glCopyTexSubImage2D = (OBOL_PFNGLCOPYTEXSUBIMAGE2DPROC)PROC(w, glCopyTexSubImage2D);
+
+  /* Additional core GL 1.0/1.1 dispatch pointers. */
+  w->glBegin          = (OBOL_PFNGLBEGINPROC)PROC(w, glBegin);
+  w->glEnd            = (OBOL_PFNGLENDPROC)PROC(w, glEnd);
+  w->glVertex2f       = (OBOL_PFNGLVERTEX2FPROC)PROC(w, glVertex2f);
+  w->glVertex2s       = (OBOL_PFNGLVERTEX2SPROC)PROC(w, glVertex2s);
+  w->glVertex3f       = (OBOL_PFNGLVERTEX3FPROC)PROC(w, glVertex3f);
+  w->glVertex3fv      = (OBOL_PFNGLVERTEX3FVPROC)PROC(w, glVertex3fv);
+  w->glVertex4fv      = (OBOL_PFNGLVERTEX4FVPROC)PROC(w, glVertex4fv);
+  w->glNormal3f       = (OBOL_PFNGLNORMAL3FPROC)PROC(w, glNormal3f);
+  w->glNormal3fv      = (OBOL_PFNGLNORMAL3FVPROC)PROC(w, glNormal3fv);
+  w->glColor3f        = (OBOL_PFNGLCOLOR3FPROC)PROC(w, glColor3f);
+  w->glColor3fv       = (OBOL_PFNGLCOLOR3FVPROC)PROC(w, glColor3fv);
+  w->glColor3ub       = (OBOL_PFNGLCOLOR3UBPROC)PROC(w, glColor3ub);
+  w->glColor3ubv      = (OBOL_PFNGLCOLOR3UBVPROC)PROC(w, glColor3ubv);
+  w->glColor4ub       = (OBOL_PFNGLCOLOR4UBPROC)PROC(w, glColor4ub);
+  w->glTexCoord2f     = (OBOL_PFNGLTEXCOORD2FPROC)PROC(w, glTexCoord2f);
+  w->glTexCoord2fv    = (OBOL_PFNGLTEXCOORD2FVPROC)PROC(w, glTexCoord2fv);
+  w->glTexCoord3f     = (OBOL_PFNGLTEXCOORD3FPROC)PROC(w, glTexCoord3f);
+  w->glTexCoord3fv    = (OBOL_PFNGLTEXCOORD3FVPROC)PROC(w, glTexCoord3fv);
+  w->glTexCoord4fv    = (OBOL_PFNGLTEXCOORD4FVPROC)PROC(w, glTexCoord4fv);
+  w->glIndexi         = (OBOL_PFNGLINDEXIPROC)PROC(w, glIndexi);
+  w->glMatrixMode     = (OBOL_PFNGLMATRIXMODEPROC)PROC(w, glMatrixMode);
+  w->glLoadIdentity   = (OBOL_PFNGLLOADIDENTITYPROC)PROC(w, glLoadIdentity);
+  w->glLoadMatrixf    = (OBOL_PFNGLLOADMATRIXFPROC)PROC(w, glLoadMatrixf);
+  w->glLoadMatrixd    = (OBOL_PFNGLLOADMATRIXDPROC)PROC(w, glLoadMatrixd);
+  w->glMultMatrixf    = (OBOL_PFNGLMULTMATRIXFPROC)PROC(w, glMultMatrixf);
+  w->glPushMatrix     = (OBOL_PFNGLPUSHMATRIXPROC)PROC(w, glPushMatrix);
+  w->glPopMatrix      = (OBOL_PFNGLPOPMATRIXPROC)PROC(w, glPopMatrix);
+  w->glOrtho          = (OBOL_PFNGLORTHOPROC)PROC(w, glOrtho);
+  w->glFrustum        = (OBOL_PFNGLFRUSTUMPROC)PROC(w, glFrustum);
+  w->glTranslatef     = (OBOL_PFNGLTRANSLATEFPROC)PROC(w, glTranslatef);
+  w->glRotatef        = (OBOL_PFNGLROTATEFPROC)PROC(w, glRotatef);
+  w->glScalef         = (OBOL_PFNGLSCALEFPROC)PROC(w, glScalef);
+  w->glLightf         = (OBOL_PFNGLLIGHTFPROC)PROC(w, glLightf);
+  w->glLightfv        = (OBOL_PFNGLLIGHTFVPROC)PROC(w, glLightfv);
+  w->glLightModeli    = (OBOL_PFNGLLIGHTMODELIPROC)PROC(w, glLightModeli);
+  w->glLightModelfv   = (OBOL_PFNGLLIGHTMODELFVPROC)PROC(w, glLightModelfv);
+  w->glMaterialf      = (OBOL_PFNGLMATERIALFPROC)PROC(w, glMaterialf);
+  w->glMaterialfv     = (OBOL_PFNGLMATERIALFVPROC)PROC(w, glMaterialfv);
+  w->glColorMaterial  = (OBOL_PFNGLCOLORMATERIALPROC)PROC(w, glColorMaterial);
+  w->glFogi           = (OBOL_PFNGLFOGLPROC)PROC(w, glFogi);
+  w->glFogf           = (OBOL_PFNGLFOGFPROC)PROC(w, glFogf);
+  w->glFogfv          = (OBOL_PFNGLFOGFVPROC)PROC(w, glFogfv);
+  w->glTexEnvi        = (OBOL_PFNGLTEXENVIPROC)PROC(w, glTexEnvi);
+  w->glTexEnvf        = (OBOL_PFNGLTEXENVFPROC)PROC(w, glTexEnvf);
+  w->glTexEnvfv       = (OBOL_PFNGLTEXENVFVPROC)PROC(w, glTexEnvfv);
+  w->glTexGeni        = (OBOL_PFNGLTEXGENIPROC)PROC(w, glTexGeni);
+  w->glTexGenf        = (OBOL_PFNGLTEXGENFPROC)PROC(w, glTexGenf);
+  w->glTexGenfv       = (OBOL_PFNGLTEXGENFVPROC)PROC(w, glTexGenfv);
+  w->glCopyTexImage2D = (OBOL_PFNGLCOPYTEXIMAGE2DPROC)PROC(w, glCopyTexImage2D);
+  w->glRasterPos2f    = (OBOL_PFNGLRASTERPOS2FPROC)PROC(w, glRasterPos2f);
+  w->glRasterPos3f    = (OBOL_PFNGLRASTERPOS3FPROC)PROC(w, glRasterPos3f);
+  w->glBitmap         = (OBOL_PFNGLBITMAPPROC)PROC(w, glBitmap);
+  w->glDrawPixels     = (OBOL_PFNGLDRAWPIXELSPROC)PROC(w, glDrawPixels);
+  w->glPixelTransferf = (OBOL_PFNGLPIXELTRANSFERFPROC)PROC(w, glPixelTransferf);
+  w->glPixelTransferi = (OBOL_PFNGLPIXELTRANSFERIPROC)PROC(w, glPixelTransferi);
+  w->glPixelMapfv     = (OBOL_PFNGLPIXELMAPFVPROC)PROC(w, glPixelMapfv);
+  w->glPixelMapuiv    = (OBOL_PFNGLPIXELMAPUIVPROC)PROC(w, glPixelMapuiv);
+  w->glPixelZoom      = (OBOL_PFNGLPIXELZOOMPROC)PROC(w, glPixelZoom);
+  w->glViewport       = (OBOL_PFNGLVIEWPORTPROC)PROC(w, glViewport);
+  w->glScissor        = (OBOL_PFNGLSCISSORPROC)PROC(w, glScissor);
+  w->glDepthMask      = (OBOL_PFNGLDEPTHMASKPROC)PROC(w, glDepthMask);
+  w->glDepthFunc      = (OBOL_PFNGLDEPTHFUNCPROC)PROC(w, glDepthFunc);
+  w->glDepthRange     = (OBOL_PFNGLDEPTHRANGEPROC)PROC(w, glDepthRange);
+  w->glStencilFunc    = (OBOL_PFNGLSTENCILFUNCPROC)PROC(w, glStencilFunc);
+  w->glStencilOp      = (OBOL_PFNGLSTENCILOPPROC)PROC(w, glStencilOp);
+  w->glBlendFunc      = (OBOL_PFNGLBLENDFUNCPROC)PROC(w, glBlendFunc);
+  w->glAlphaFunc      = (OBOL_PFNGLALPHAFUNCPROC)PROC(w, glAlphaFunc);
+  w->glFrontFace      = (OBOL_PFNGLFRONTFACEPROC)PROC(w, glFrontFace);
+  w->glCullFace       = (OBOL_PFNGLCULLFACEPROC)PROC(w, glCullFace);
+  w->glPolygonMode    = (OBOL_PFNGLPOLYGONMODEPROC)PROC(w, glPolygonMode);
+  w->glPolygonStipple = (OBOL_PFNGLPOLYGONSTIPPLEPROC)PROC(w, glPolygonStipple);
+  w->glLineWidth      = (OBOL_PFNGLLINEWIDTHPROC)PROC(w, glLineWidth);
+  w->glLineStipple    = (OBOL_PFNGLLINESTIPPLEPROC)PROC(w, glLineStipple);
+  w->glPointSize      = (OBOL_PFNGLPOINTSIZEPROC)PROC(w, glPointSize);
+  w->glColorMask      = (OBOL_PFNGLCOLORMASKPROC)PROC(w, glColorMask);
+  w->glClipPlane      = (OBOL_PFNGLCLIPPLANEPROC)PROC(w, glClipPlane);
+  w->glDrawBuffer     = (OBOL_PFNGLDRAWBUFFERPROC)PROC(w, glDrawBuffer);
+  w->glClearIndex     = (OBOL_PFNGLCLEARINDEXPROC)PROC(w, glClearIndex);
+  w->glClearStencil   = (OBOL_PFNGLCLEARSTENCILPROC)PROC(w, glClearStencil);
+  w->glAccum          = (OBOL_PFNGLACCUMPROC)PROC(w, glAccum);
+  w->glGetBooleanv    = (OBOL_PFNGLGETBOOLEANVPROC)PROC(w, glGetBooleanv);
+  w->glNewList        = (OBOL_PFNGLNEWLISTPROC)PROC(w, glNewList);
+  w->glEndList        = (OBOL_PFNGLENDLISTPROC)PROC(w, glEndList);
+  w->glCallList       = (OBOL_PFNGLCALLLISTPROC)PROC(w, glCallList);
+  w->glDeleteLists    = (OBOL_PFNGLDELETELISTSPROC)PROC(w, glDeleteLists);
+  w->glPushAttrib     = (OBOL_PFNGLPUSHATTRIBPROC)PROC(w, glPushAttrib);
+  w->glPopAttrib      = (OBOL_PFNGLPOPATTRIBPROC)PROC(w, glPopAttrib);
+
   /* Appeared in OpenGL v1.1. */
   w->glGenTextures = NULL;
   w->glBindTexture = NULL;
@@ -5154,6 +5260,27 @@ coin_gl_current_context(void)
 
 /* ********************************************************************** */
 
+/* Thread-local pointer to the SoGLContext for the render pass that is
+   currently in progress on this thread.  Set by SoGLRenderAction before
+   each traversal pass so that GL element updategl() methods (which do not
+   receive a state pointer) can still dispatch through the correct GL
+   backend in dual-GL builds. */
+static thread_local const SoGLContext * sogl_tls_render_glue = NULL;
+
+const SoGLContext *
+sogl_current_render_glue(void)
+{
+  return sogl_tls_render_glue;
+}
+
+void
+sogl_set_current_render_glue(const SoGLContext * glue)
+{
+  sogl_tls_render_glue = glue;
+}
+
+/* ********************************************************************** */
+
 SbBool
 SoGLContext_vbo_in_displaylist_supported(const SoGLContext * OBOL_UNUSED_ARG(glue))
 {
@@ -5353,6 +5480,765 @@ SoGLContext_has_framebuffer_objects(const SoGLContext * glue)
 {
   if (!glglue_allow_newer_opengl(glue)) return FALSE;
   return glue->has_fbo;
+}
+
+/* Core GL 1.0/1.1 wrappers.
+ *
+ * These must be used instead of bare gl* calls anywhere the active
+ * backend (system GL vs. OSMesa) is not known at compile time — in
+ * particular inside SoSceneTexture2 and any other node that runs in
+ * both a system-GL context and an OSMesa context within the same
+ * process (OBOL_BUILD_DUAL_GL).  The function pointers were filled in
+ * by glglue_resolve_symbols() from the correct backend. */
+
+void
+SoGLContext_glTexImage2D(const SoGLContext * glue,
+                         GLenum target, GLint level, GLint internalformat,
+                         GLsizei width, GLsizei height, GLint border,
+                         GLenum format, GLenum type, const GLvoid * pixels)
+{
+  assert(glue->glTexImage2D);
+  glue->glTexImage2D(target, level, internalformat, width, height,
+                     border, format, type, pixels);
+}
+
+void
+SoGLContext_glTexParameteri(const SoGLContext * glue,
+                            GLenum target, GLenum pname, GLint param)
+{
+  assert(glue->glTexParameteri);
+  glue->glTexParameteri(target, pname, param);
+}
+
+void
+SoGLContext_glTexParameterf(const SoGLContext * glue,
+                            GLenum target, GLenum pname, GLfloat param)
+{
+  assert(glue->glTexParameterf);
+  glue->glTexParameterf(target, pname, param);
+}
+
+void
+SoGLContext_glGetIntegerv(const SoGLContext * glue,
+                          GLenum pname, GLint * params)
+{
+  assert(glue->glGetIntegerv);
+  glue->glGetIntegerv(pname, params);
+}
+
+void
+SoGLContext_glGetFloatv(const SoGLContext * glue,
+                        GLenum pname, GLfloat * params)
+{
+  assert(glue->glGetFloatv);
+  glue->glGetFloatv(pname, params);
+}
+
+void
+SoGLContext_glClearColor(const SoGLContext * glue,
+                         GLclampf red, GLclampf green,
+                         GLclampf blue, GLclampf alpha)
+{
+  assert(glue->glClearColor);
+  glue->glClearColor(red, green, blue, alpha);
+}
+
+void
+SoGLContext_glClear(const SoGLContext * glue, GLbitfield mask)
+{
+  assert(glue->glClear);
+  glue->glClear(mask);
+}
+
+void
+SoGLContext_glFlush(const SoGLContext * glue)
+{
+  assert(glue->glFlush);
+  glue->glFlush();
+}
+
+void
+SoGLContext_glEnable(const SoGLContext * glue, GLenum cap)
+{
+  assert(glue->glEnable);
+  glue->glEnable(cap);
+}
+
+void
+SoGLContext_glDisable(const SoGLContext * glue, GLenum cap)
+{
+  assert(glue->glDisable);
+  glue->glDisable(cap);
+}
+
+void
+SoGLContext_glPixelStorei(const SoGLContext * glue,
+                          GLenum pname, GLint param)
+{
+  assert(glue->glPixelStorei);
+  glue->glPixelStorei(pname, param);
+}
+
+void
+SoGLContext_glReadPixels(const SoGLContext * glue,
+                         GLint x, GLint y, GLsizei width, GLsizei height,
+                         GLenum format, GLenum type, GLvoid * pixels)
+{
+  assert(glue->glReadPixels);
+  glue->glReadPixels(x, y, width, height, format, type, pixels);
+}
+
+void
+SoGLContext_glCopyTexSubImage2D(const SoGLContext * glue,
+                                GLenum target, GLint level,
+                                GLint xoffset, GLint yoffset,
+                                GLint x, GLint y,
+                                GLsizei width, GLsizei height)
+{
+  assert(glue->glCopyTexSubImage2D);
+  glue->glCopyTexSubImage2D(target, level, xoffset, yoffset,
+                            x, y, width, height);
+}
+
+/* -----------------------------------------------------------------------
+ * Additional core GL 1.0/1.1 dispatch wrappers.
+ *
+ * These functions dispatch through the SoGLContext function-pointer table
+ * so that dual-GL builds (OBOL_BUILD_DUAL_GL) correctly call either system
+ * OpenGL or OSMesa based on which backend owns the current context, without
+ * ever mixing backends within the same render pass.
+ * --------------------------------------------------------------------- */
+
+void
+SoGLContext_glBegin(const SoGLContext * glue, GLenum mode)
+{
+  assert(glue->glBegin);
+  glue->glBegin(mode);
+}
+
+void
+SoGLContext_glEnd(const SoGLContext * glue)
+{
+  assert(glue->glEnd);
+  glue->glEnd();
+}
+
+void
+SoGLContext_glVertex2f(const SoGLContext * glue, GLfloat x, GLfloat y)
+{
+  assert(glue->glVertex2f);
+  glue->glVertex2f(x, y);
+}
+
+void
+SoGLContext_glVertex2s(const SoGLContext * glue, GLshort x, GLshort y)
+{
+  assert(glue->glVertex2s);
+  glue->glVertex2s(x, y);
+}
+
+void
+SoGLContext_glVertex3f(const SoGLContext * glue, GLfloat x, GLfloat y, GLfloat z)
+{
+  assert(glue->glVertex3f);
+  glue->glVertex3f(x, y, z);
+}
+
+void
+SoGLContext_glVertex3fv(const SoGLContext * glue, const GLfloat * v)
+{
+  assert(glue->glVertex3fv);
+  glue->glVertex3fv(v);
+}
+
+void
+SoGLContext_glVertex4fv(const SoGLContext * glue, const GLfloat * v)
+{
+  assert(glue->glVertex4fv);
+  glue->glVertex4fv(v);
+}
+
+void
+SoGLContext_glNormal3f(const SoGLContext * glue, GLfloat nx, GLfloat ny, GLfloat nz)
+{
+  assert(glue->glNormal3f);
+  glue->glNormal3f(nx, ny, nz);
+}
+
+void
+SoGLContext_glNormal3fv(const SoGLContext * glue, const GLfloat * v)
+{
+  assert(glue->glNormal3fv);
+  glue->glNormal3fv(v);
+}
+
+void
+SoGLContext_glColor3f(const SoGLContext * glue, GLfloat r, GLfloat g, GLfloat b)
+{
+  assert(glue->glColor3f);
+  glue->glColor3f(r, g, b);
+}
+
+void
+SoGLContext_glColor3fv(const SoGLContext * glue, const GLfloat * v)
+{
+  assert(glue->glColor3fv);
+  glue->glColor3fv(v);
+}
+
+void
+SoGLContext_glColor3ub(const SoGLContext * glue, GLubyte r, GLubyte g, GLubyte b)
+{
+  assert(glue->glColor3ub);
+  glue->glColor3ub(r, g, b);
+}
+
+void
+SoGLContext_glColor3ubv(const SoGLContext * glue, const GLubyte * v)
+{
+  assert(glue->glColor3ubv);
+  glue->glColor3ubv(v);
+}
+
+void
+SoGLContext_glColor4ub(const SoGLContext * glue, GLubyte r, GLubyte g, GLubyte b, GLubyte a)
+{
+  assert(glue->glColor4ub);
+  glue->glColor4ub(r, g, b, a);
+}
+
+void
+SoGLContext_glTexCoord2f(const SoGLContext * glue, GLfloat s, GLfloat t)
+{
+  assert(glue->glTexCoord2f);
+  glue->glTexCoord2f(s, t);
+}
+
+void
+SoGLContext_glTexCoord2fv(const SoGLContext * glue, const GLfloat * v)
+{
+  assert(glue->glTexCoord2fv);
+  glue->glTexCoord2fv(v);
+}
+
+void
+SoGLContext_glTexCoord3f(const SoGLContext * glue, GLfloat s, GLfloat t, GLfloat r)
+{
+  assert(glue->glTexCoord3f);
+  glue->glTexCoord3f(s, t, r);
+}
+
+void
+SoGLContext_glTexCoord3fv(const SoGLContext * glue, const GLfloat * v)
+{
+  assert(glue->glTexCoord3fv);
+  glue->glTexCoord3fv(v);
+}
+
+void
+SoGLContext_glTexCoord4fv(const SoGLContext * glue, const GLfloat * v)
+{
+  assert(glue->glTexCoord4fv);
+  glue->glTexCoord4fv(v);
+}
+
+void
+SoGLContext_glIndexi(const SoGLContext * glue, GLint c)
+{
+  assert(glue->glIndexi);
+  glue->glIndexi(c);
+}
+
+void
+SoGLContext_glMatrixMode(const SoGLContext * glue, GLenum mode)
+{
+  assert(glue->glMatrixMode);
+  glue->glMatrixMode(mode);
+}
+
+void
+SoGLContext_glLoadIdentity(const SoGLContext * glue)
+{
+  assert(glue->glLoadIdentity);
+  glue->glLoadIdentity();
+}
+
+void
+SoGLContext_glLoadMatrixf(const SoGLContext * glue, const GLfloat * m)
+{
+  assert(glue->glLoadMatrixf);
+  glue->glLoadMatrixf(m);
+}
+
+void
+SoGLContext_glLoadMatrixd(const SoGLContext * glue, const GLdouble * m)
+{
+  assert(glue->glLoadMatrixd);
+  glue->glLoadMatrixd(m);
+}
+
+void
+SoGLContext_glMultMatrixf(const SoGLContext * glue, const GLfloat * m)
+{
+  assert(glue->glMultMatrixf);
+  glue->glMultMatrixf(m);
+}
+
+void
+SoGLContext_glPushMatrix(const SoGLContext * glue)
+{
+  assert(glue->glPushMatrix);
+  glue->glPushMatrix();
+}
+
+void
+SoGLContext_glPopMatrix(const SoGLContext * glue)
+{
+  assert(glue->glPopMatrix);
+  glue->glPopMatrix();
+}
+
+void
+SoGLContext_glOrtho(const SoGLContext * glue,
+                    GLdouble left, GLdouble right,
+                    GLdouble bottom, GLdouble top,
+                    GLdouble near_val, GLdouble far_val)
+{
+  assert(glue->glOrtho);
+  glue->glOrtho(left, right, bottom, top, near_val, far_val);
+}
+
+void
+SoGLContext_glFrustum(const SoGLContext * glue,
+                      GLdouble left, GLdouble right,
+                      GLdouble bottom, GLdouble top,
+                      GLdouble near_val, GLdouble far_val)
+{
+  assert(glue->glFrustum);
+  glue->glFrustum(left, right, bottom, top, near_val, far_val);
+}
+
+void
+SoGLContext_glTranslatef(const SoGLContext * glue, GLfloat x, GLfloat y, GLfloat z)
+{
+  assert(glue->glTranslatef);
+  glue->glTranslatef(x, y, z);
+}
+
+void
+SoGLContext_glRotatef(const SoGLContext * glue, GLfloat angle, GLfloat x, GLfloat y, GLfloat z)
+{
+  assert(glue->glRotatef);
+  glue->glRotatef(angle, x, y, z);
+}
+
+void
+SoGLContext_glScalef(const SoGLContext * glue, GLfloat x, GLfloat y, GLfloat z)
+{
+  assert(glue->glScalef);
+  glue->glScalef(x, y, z);
+}
+
+void
+SoGLContext_glLightf(const SoGLContext * glue, GLenum light, GLenum pname, GLfloat param)
+{
+  assert(glue->glLightf);
+  glue->glLightf(light, pname, param);
+}
+
+void
+SoGLContext_glLightfv(const SoGLContext * glue, GLenum light, GLenum pname, const GLfloat * params)
+{
+  assert(glue->glLightfv);
+  glue->glLightfv(light, pname, params);
+}
+
+void
+SoGLContext_glLightModeli(const SoGLContext * glue, GLenum pname, GLint param)
+{
+  assert(glue->glLightModeli);
+  glue->glLightModeli(pname, param);
+}
+
+void
+SoGLContext_glLightModelfv(const SoGLContext * glue, GLenum pname, const GLfloat * params)
+{
+  assert(glue->glLightModelfv);
+  glue->glLightModelfv(pname, params);
+}
+
+void
+SoGLContext_glMaterialf(const SoGLContext * glue, GLenum face, GLenum pname, GLfloat param)
+{
+  assert(glue->glMaterialf);
+  glue->glMaterialf(face, pname, param);
+}
+
+void
+SoGLContext_glMaterialfv(const SoGLContext * glue, GLenum face, GLenum pname, const GLfloat * params)
+{
+  assert(glue->glMaterialfv);
+  glue->glMaterialfv(face, pname, params);
+}
+
+void
+SoGLContext_glColorMaterial(const SoGLContext * glue, GLenum face, GLenum mode)
+{
+  assert(glue->glColorMaterial);
+  glue->glColorMaterial(face, mode);
+}
+
+void
+SoGLContext_glFogi(const SoGLContext * glue, GLenum pname, GLint param)
+{
+  assert(glue->glFogi);
+  glue->glFogi(pname, param);
+}
+
+void
+SoGLContext_glFogf(const SoGLContext * glue, GLenum pname, GLfloat param)
+{
+  assert(glue->glFogf);
+  glue->glFogf(pname, param);
+}
+
+void
+SoGLContext_glFogfv(const SoGLContext * glue, GLenum pname, const GLfloat * params)
+{
+  assert(glue->glFogfv);
+  glue->glFogfv(pname, params);
+}
+
+void
+SoGLContext_glTexEnvi(const SoGLContext * glue, GLenum target, GLenum pname, GLint param)
+{
+  assert(glue->glTexEnvi);
+  glue->glTexEnvi(target, pname, param);
+}
+
+void
+SoGLContext_glTexEnvf(const SoGLContext * glue, GLenum target, GLenum pname, GLfloat param)
+{
+  assert(glue->glTexEnvf);
+  glue->glTexEnvf(target, pname, param);
+}
+
+void
+SoGLContext_glTexEnvfv(const SoGLContext * glue, GLenum target, GLenum pname, const GLfloat * params)
+{
+  assert(glue->glTexEnvfv);
+  glue->glTexEnvfv(target, pname, params);
+}
+
+void
+SoGLContext_glTexGeni(const SoGLContext * glue, GLenum coord, GLenum pname, GLint param)
+{
+  assert(glue->glTexGeni);
+  glue->glTexGeni(coord, pname, param);
+}
+
+void
+SoGLContext_glTexGenf(const SoGLContext * glue, GLenum coord, GLenum pname, GLfloat param)
+{
+  assert(glue->glTexGenf);
+  glue->glTexGenf(coord, pname, param);
+}
+
+void
+SoGLContext_glTexGenfv(const SoGLContext * glue, GLenum coord, GLenum pname, const GLfloat * params)
+{
+  assert(glue->glTexGenfv);
+  glue->glTexGenfv(coord, pname, params);
+}
+
+void
+SoGLContext_glCopyTexImage2D(const SoGLContext * glue,
+                             GLenum target, GLint level,
+                             GLenum internalformat,
+                             GLint x, GLint y,
+                             GLsizei width, GLsizei height, GLint border)
+{
+  assert(glue->glCopyTexImage2D);
+  glue->glCopyTexImage2D(target, level, internalformat, x, y, width, height, border);
+}
+
+void
+SoGLContext_glRasterPos2f(const SoGLContext * glue, GLfloat x, GLfloat y)
+{
+  assert(glue->glRasterPos2f);
+  glue->glRasterPos2f(x, y);
+}
+
+void
+SoGLContext_glRasterPos3f(const SoGLContext * glue, GLfloat x, GLfloat y, GLfloat z)
+{
+  assert(glue->glRasterPos3f);
+  glue->glRasterPos3f(x, y, z);
+}
+
+void
+SoGLContext_glBitmap(const SoGLContext * glue,
+                     GLsizei width, GLsizei height,
+                     GLfloat xorig, GLfloat yorig,
+                     GLfloat xmove, GLfloat ymove,
+                     const GLubyte * bitmap)
+{
+  assert(glue->glBitmap);
+  glue->glBitmap(width, height, xorig, yorig, xmove, ymove, bitmap);
+}
+
+void
+SoGLContext_glDrawPixels(const SoGLContext * glue,
+                         GLsizei width, GLsizei height,
+                         GLenum format, GLenum type, const GLvoid * pixels)
+{
+  assert(glue->glDrawPixels);
+  glue->glDrawPixels(width, height, format, type, pixels);
+}
+
+void
+SoGLContext_glPixelTransferf(const SoGLContext * glue, GLenum pname, GLfloat param)
+{
+  assert(glue->glPixelTransferf);
+  glue->glPixelTransferf(pname, param);
+}
+
+void
+SoGLContext_glPixelTransferi(const SoGLContext * glue, GLenum pname, GLint param)
+{
+  assert(glue->glPixelTransferi);
+  glue->glPixelTransferi(pname, param);
+}
+
+void
+SoGLContext_glPixelMapfv(const SoGLContext * glue,
+                         GLenum map, GLint mapsize, const GLfloat * values)
+{
+  assert(glue->glPixelMapfv);
+  glue->glPixelMapfv(map, mapsize, values);
+}
+
+void
+SoGLContext_glPixelMapuiv(const SoGLContext * glue,
+                          GLenum map, GLint mapsize, const GLuint * values)
+{
+  assert(glue->glPixelMapuiv);
+  glue->glPixelMapuiv(map, mapsize, values);
+}
+
+void
+SoGLContext_glPixelZoom(const SoGLContext * glue, GLfloat xfactor, GLfloat yfactor)
+{
+  assert(glue->glPixelZoom);
+  glue->glPixelZoom(xfactor, yfactor);
+}
+
+void
+SoGLContext_glViewport(const SoGLContext * glue,
+                       GLint x, GLint y, GLsizei width, GLsizei height)
+{
+  assert(glue->glViewport);
+  glue->glViewport(x, y, width, height);
+}
+
+void
+SoGLContext_glScissor(const SoGLContext * glue,
+                      GLint x, GLint y, GLsizei width, GLsizei height)
+{
+  assert(glue->glScissor);
+  glue->glScissor(x, y, width, height);
+}
+
+void
+SoGLContext_glDepthMask(const SoGLContext * glue, GLboolean flag)
+{
+  assert(glue->glDepthMask);
+  glue->glDepthMask(flag);
+}
+
+void
+SoGLContext_glDepthFunc(const SoGLContext * glue, GLenum func)
+{
+  assert(glue->glDepthFunc);
+  glue->glDepthFunc(func);
+}
+
+void
+SoGLContext_glDepthRange(const SoGLContext * glue, GLclampd near_val, GLclampd far_val)
+{
+  assert(glue->glDepthRange);
+  glue->glDepthRange(near_val, far_val);
+}
+
+void
+SoGLContext_glStencilFunc(const SoGLContext * glue, GLenum func, GLint ref, GLuint mask)
+{
+  assert(glue->glStencilFunc);
+  glue->glStencilFunc(func, ref, mask);
+}
+
+void
+SoGLContext_glStencilOp(const SoGLContext * glue, GLenum fail, GLenum zfail, GLenum zpass)
+{
+  assert(glue->glStencilOp);
+  glue->glStencilOp(fail, zfail, zpass);
+}
+
+void
+SoGLContext_glBlendFunc(const SoGLContext * glue, GLenum sfactor, GLenum dfactor)
+{
+  assert(glue->glBlendFunc);
+  glue->glBlendFunc(sfactor, dfactor);
+}
+
+void
+SoGLContext_glAlphaFunc(const SoGLContext * glue, GLenum func, GLclampf ref)
+{
+  assert(glue->glAlphaFunc);
+  glue->glAlphaFunc(func, ref);
+}
+
+void
+SoGLContext_glFrontFace(const SoGLContext * glue, GLenum mode)
+{
+  assert(glue->glFrontFace);
+  glue->glFrontFace(mode);
+}
+
+void
+SoGLContext_glCullFace(const SoGLContext * glue, GLenum mode)
+{
+  assert(glue->glCullFace);
+  glue->glCullFace(mode);
+}
+
+void
+SoGLContext_glPolygonMode(const SoGLContext * glue, GLenum face, GLenum mode)
+{
+  assert(glue->glPolygonMode);
+  glue->glPolygonMode(face, mode);
+}
+
+void
+SoGLContext_glPolygonStipple(const SoGLContext * glue, const GLubyte * mask)
+{
+  assert(glue->glPolygonStipple);
+  glue->glPolygonStipple(mask);
+}
+
+void
+SoGLContext_glLineWidth(const SoGLContext * glue, GLfloat width)
+{
+  assert(glue->glLineWidth);
+  glue->glLineWidth(width);
+}
+
+void
+SoGLContext_glLineStipple(const SoGLContext * glue, GLint factor, GLushort pattern)
+{
+  assert(glue->glLineStipple);
+  glue->glLineStipple(factor, pattern);
+}
+
+void
+SoGLContext_glPointSize(const SoGLContext * glue, GLfloat size)
+{
+  assert(glue->glPointSize);
+  glue->glPointSize(size);
+}
+
+void
+SoGLContext_glColorMask(const SoGLContext * glue,
+                        GLboolean red, GLboolean green,
+                        GLboolean blue, GLboolean alpha)
+{
+  assert(glue->glColorMask);
+  glue->glColorMask(red, green, blue, alpha);
+}
+
+void
+SoGLContext_glClipPlane(const SoGLContext * glue,
+                        GLenum plane, const GLdouble * equation)
+{
+  assert(glue->glClipPlane);
+  glue->glClipPlane(plane, equation);
+}
+
+void
+SoGLContext_glDrawBuffer(const SoGLContext * glue, GLenum mode)
+{
+  assert(glue->glDrawBuffer);
+  glue->glDrawBuffer(mode);
+}
+
+void
+SoGLContext_glClearIndex(const SoGLContext * glue, GLfloat c)
+{
+  assert(glue->glClearIndex);
+  glue->glClearIndex(c);
+}
+
+void
+SoGLContext_glClearStencil(const SoGLContext * glue, GLint s)
+{
+  assert(glue->glClearStencil);
+  glue->glClearStencil(s);
+}
+
+void
+SoGLContext_glAccum(const SoGLContext * glue, GLenum op, GLfloat value)
+{
+  assert(glue->glAccum);
+  glue->glAccum(op, value);
+}
+
+void
+SoGLContext_glGetBooleanv(const SoGLContext * glue, GLenum pname, GLboolean * params)
+{
+  assert(glue->glGetBooleanv);
+  glue->glGetBooleanv(pname, params);
+}
+
+void
+SoGLContext_glNewList(const SoGLContext * glue, GLuint list, GLenum mode)
+{
+  assert(glue->glNewList);
+  glue->glNewList(list, mode);
+}
+
+void
+SoGLContext_glEndList(const SoGLContext * glue)
+{
+  assert(glue->glEndList);
+  glue->glEndList();
+}
+
+void
+SoGLContext_glCallList(const SoGLContext * glue, GLuint list)
+{
+  assert(glue->glCallList);
+  glue->glCallList(list);
+}
+
+void
+SoGLContext_glDeleteLists(const SoGLContext * glue, GLuint list, GLsizei range)
+{
+  assert(glue->glDeleteLists);
+  glue->glDeleteLists(list, range);
+}
+
+void
+SoGLContext_glPushAttrib(const SoGLContext * glue, GLbitfield mask)
+{
+  assert(glue->glPushAttrib);
+  glue->glPushAttrib(mask);
+}
+
+void
+SoGLContext_glPopAttrib(const SoGLContext * glue)
+{
+  assert(glue->glPopAttrib);
+  glue->glPopAttrib();
 }
 
 /* ********************************************************************** */

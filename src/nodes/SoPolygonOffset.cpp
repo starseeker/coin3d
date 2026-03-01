@@ -149,6 +149,7 @@
 // *************************************************************************
 
 #include <Inventor/nodes/SoPolygonOffset.h>
+#include "glue/glp.h"
 
 #include <Inventor/actions/SoCallbackAction.h>
 #include <Inventor/actions/SoGLRenderAction.h>

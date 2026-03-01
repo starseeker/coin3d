@@ -299,7 +299,7 @@ SoIndexedLineSet::GLRender(SoGLRenderAction * action)
 
   if (!sendNormals) nbind = OVERALL;
   else if (nbind == OVERALL) {
-    glNormal3fv((const GLfloat *)normals);
+    SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat *)normals);
   }
 
   SbBool drawPoints =

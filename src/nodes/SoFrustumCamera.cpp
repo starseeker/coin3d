@@ -35,10 +35,10 @@
   \brief The SoFrustumCamera class defines a camera with a generic frustum..
 
   The SoFrustumCamera class makes it possible to specify a frustum in
-  the same manner as the OpenGL glFrustum() function. It has four new
+  the same manner as the OpenGL SoGLContext_glFrustum(sogl_current_render_glue()) function. It has four new
   fields (left, right, top, bottom), and will use
   SoCamera::nearDistance and SoCamera::farDistance for the two last
-  glFrustum() parameters.
+  SoGLContext_glFrustum(sogl_current_render_glue()) parameters.
 
   This camera can be useful in applications that require full control
   over the view frustum, such as in CAVE or other multipipe
@@ -73,6 +73,7 @@
 */
 
 #include <Inventor/nodes/SoFrustumCamera.h>
+#include "glue/glp.h"
 
 #include <cmath>
 

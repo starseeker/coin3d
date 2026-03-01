@@ -215,20 +215,20 @@ SoIndexedMarkerSet::GLRender(SoGLRenderAction * action)
   // markers are still clipped using SoCullElement::cullTest() below.
   // See https://github.com/coin3d/coin/pull-requests/52 for a test case.
   GLint numPlanes = 0;
-  glGetIntegerv(GL_MAX_CLIP_PLANES, &numPlanes);
+  SoGLContext_glGetIntegerv(sogl_current_render_glue(), GL_MAX_CLIP_PLANES, &numPlanes);
   SbList<SbBool> planesEnabled;
   for (GLint i = 0; i < numPlanes; ++i) {
     planesEnabled.append(glIsEnabled(GL_CLIP_PLANE0 + i));
-    glDisable(GL_CLIP_PLANE0 + i);
+    SoGLContext_glDisable(sogl_current_render_glue(), GL_CLIP_PLANE0 + i);
   }
 
-  glMatrixMode(GL_MODELVIEW);
-  glPushMatrix();
-  glLoadIdentity();
-  glMatrixMode(GL_PROJECTION);
-  glPushMatrix();
-  glLoadIdentity();
-  glOrtho(0, vpsize[0], 0, vpsize[1], -1.0f, 1.0f);
+  SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_MODELVIEW);
+  SoGLContext_glPushMatrix(sogl_current_render_glue());
+  SoGLContext_glLoadIdentity(sogl_current_render_glue());
+  SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_PROJECTION);
+  SoGLContext_glPushMatrix(sogl_current_render_glue());
+  SoGLContext_glLoadIdentity(sogl_current_render_glue());
+  SoGLContext_glOrtho(sogl_current_render_glue(), 0, vpsize[0], 0, vpsize[1], -1.0f, 1.0f);
 
   for (int i = 0; i < numindices; i++) {
     int32_t idx = cindices[i];
@@ -266,7 +266,7 @@ SoIndexedMarkerSet::GLRender(SoGLRenderAction * action)
 
     SbVec3f point = glcoords->get3(idx);
 
-    // OpenGL's glBitmap() will not be clipped against anything but
+    // OpenGL's SoGLContext_glBitmap(sogl_current_render_glue()) will not be clipped against anything but
     // the near and far planes. We want markers to also be clipped
     // against other clipping planes, to behave like the SoPointSet
     // superclass.
@@ -293,24 +293,24 @@ SoIndexedMarkerSet::GLRender(SoGLRenderAction * action)
     //built-in markers. Currently there is no way of fetching a marker's
     //alignment from outside the SoMarkerSet class though. 20090424 wiesener
     int align = (marker >= SoMarkerSet::NUM_MARKERS) ? 1 : 4;
-    glPixelStorei(GL_UNPACK_ALIGNMENT, align);
-    glRasterPos3f(point[0], point[1], -point[2]);
-    glBitmap(size[0], size[1], 0, 0, 0, 0, bytes);
+    SoGLContext_glPixelStorei(sogl_current_render_glue(), GL_UNPACK_ALIGNMENT, align);
+    SoGLContext_glRasterPos3f(sogl_current_render_glue(), point[0], point[1], -point[2]);
+    SoGLContext_glBitmap(sogl_current_render_glue(), size[0], size[1], 0, 0, 0, 0, bytes);
   }
 
   for (GLint i = 0; i < numPlanes; ++i) {
     if (planesEnabled[i]) {
-      glEnable(GL_CLIP_PLANE0 + i);
+      SoGLContext_glEnable(sogl_current_render_glue(), GL_CLIP_PLANE0 + i);
     }
   }
 
   // FIXME: this looks wrong, shouldn't we rather reset the alignment
   // value to what it was previously?  20010824 mortene.
-  glPixelStorei(GL_UNPACK_ALIGNMENT, 4); // restore default value
-  glMatrixMode(GL_PROJECTION);
-  glPopMatrix();
-  glMatrixMode(GL_MODELVIEW);
-  glPopMatrix();
+  SoGLContext_glPixelStorei(sogl_current_render_glue(), GL_UNPACK_ALIGNMENT, 4); // restore default value
+  SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_PROJECTION);
+  SoGLContext_glPopMatrix(sogl_current_render_glue());
+  SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_MODELVIEW);
+  SoGLContext_glPopMatrix(sogl_current_render_glue());
 
   state->pop();
 

@@ -366,8 +366,8 @@ public:
     // still use the proxy texture test in case the maximum size is
     // something smaller than 2048 though.  pederb, 2007-05-03
 
-    // glGetIntegerv(GL_MAX_RENDERBUFFER_SIZE_EXT, &maxsize);
-    // glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxtexsize);
+    // SoGLContext_glGetIntegerv(sogl_current_render_glue(), GL_MAX_RENDERBUFFER_SIZE_EXT, &maxsize);
+    // SoGLContext_glGetIntegerv(sogl_current_render_glue(), GL_MAX_TEXTURE_SIZE, &maxtexsize);
     // if (maxtexsize < maxsize) maxsize = maxtexsize;
 
     GLenum internalformat = GL_RGBA16F_ARB;
@@ -378,8 +378,8 @@ public:
       maxsize >>= 1;
     }
     if (maxsize == 0) { // Can happen on CentOS 7 in VirtualBox
-      glGetIntegerv(GL_MAX_RENDERBUFFER_SIZE, &maxsize);
-      glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxtexsize);
+      SoGLContext_glGetIntegerv(sogl_current_render_glue(), GL_MAX_RENDERBUFFER_SIZE, &maxsize);
+      SoGLContext_glGetIntegerv(sogl_current_render_glue(), GL_MAX_TEXTURE_SIZE, &maxtexsize);
       if (maxtexsize < maxsize) maxsize = maxtexsize;
     }
     const int TEXSIZE = coin_geq_power_of_two((int) (sg->precision.getValue() * SbMin(maxsize, maxtexsize)));
@@ -529,14 +529,14 @@ public:
 
   int dumpBitmap(const char * filename) const {
     GLint vp[4];
-    glGetIntegerv(GL_VIEWPORT, vp);
+    SoGLContext_glGetIntegerv(sogl_current_render_glue(), GL_VIEWPORT, vp);
     int width = vp[2];
     int height = vp[3];
     int comp = 1;
 
     unsigned char * bytes = new unsigned char[width*height*comp];
-    glFlush();
-    glReadPixels(0,0, width, height, GL_RED, GL_UNSIGNED_BYTE, bytes);
+    SoGLContext_glFlush(sogl_current_render_glue());
+    SoGLContext_glReadPixels(sogl_current_render_glue(), 0,0, width, height, GL_RED, GL_UNSIGNED_BYTE, bytes);
 
     FILE * fp = fopen(filename, "wb");
     if (!fp) {
@@ -2069,7 +2069,6 @@ SoShadowGroupP::setFragmentShader(SoState * state)
     this->cameratransform->value.touch();
     this->fragmentshader->sourceProgram = gen.getShaderProgram();
     this->fragmentshader->sourceType = SoShaderObject::GLSL_PROGRAM;
-
   }
 
   this->fragmentshadercache->set(gen.getShaderProgram());
@@ -2128,17 +2127,17 @@ SoShadowLightCache::createVSMProgram(void)
 #ifdef USE_NEGATIVE
                         "gl_FragColor.rg = (m - (f / DISTRIBUTE_FACTOR)) * 2.0 - vec2(1.0, 1.0);\n"
                         "gl_FragColor.ba = f * 2.0 - vec2(1.0, 1.0);\n"
-#else // USE_NEGATIVE
+#else
                         "gl_FragColor.rg = m - (f / DISTRIBUTE_FACTOR);\n"
                         "gl_FragColor.ba = f;\n"
-#endif // ! USE_NEGATIVE
-#else // DISTRIBUTE_FACTOR
+#endif
+#else
 #ifdef USE_NEGATIVE
                         "gl_FragColor = vec4(l*2.0 - 1.0, l*l*2.0 - 1.0, 0.0, 0.0);"
-#else // USE_NEGATIVE
+#else
                         "gl_FragColor = vec4(l, l*l, 0.0, 0.0);"
-#endif // !USE_NEGATIVE
-#endif // !DISTRIBUTE_FACTOR
+#endif
+#endif
                         );
   fshader->sourceProgram = fgen.getShaderProgram();
   fshader->sourceType = SoShaderObject::GLSL_PROGRAM;
@@ -2171,13 +2170,13 @@ SoShadowGroupP::shader_enable_cb(void * closure,
     SoShadowLightCache * cache = thisp->shadowlights[i];
     int unit = cache->texunit;
     if (unit == 0) {
-      if (enable) glEnable(GL_TEXTURE_2D);
-      else glDisable(GL_TEXTURE_2D);
+      if (enable) SoGLContext_glEnable(sogl_current_render_glue(), GL_TEXTURE_2D);
+      else SoGLContext_glDisable(sogl_current_render_glue(), GL_TEXTURE_2D);
     }
     else {
       SoGLContext_glActiveTexture(glue, (GLenum) (int(GL_TEXTURE0) + unit));
-      if (enable) glEnable(GL_TEXTURE_2D);
-      else glDisable(GL_TEXTURE_2D);
+      if (enable) SoGLContext_glEnable(sogl_current_render_glue(), GL_TEXTURE_2D);
+      else SoGLContext_glDisable(sogl_current_render_glue(), GL_TEXTURE_2D);
       SoGLContext_glActiveTexture(glue, GL_TEXTURE0);
 
       GLenum glerror = sogl_glerror_debugging() ? glGetError() : GL_NO_ERROR;

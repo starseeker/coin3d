@@ -47,6 +47,7 @@
 */
 
 #include <Inventor/SbDPViewVolume.h>
+#include "glue/glp.h"
 #include <Inventor/SbViewVolume.h>
 #include <Inventor/SbDPRotation.h>
 #include <Inventor/SbDPLine.h>
@@ -886,7 +887,7 @@ SbDPViewVolume::perspective(double fovy, double aspect,
   Set up the frustum for perspective projection. This is an
   alternative to perspective() that lets you specify any kind of view
   volumes (e.g. off center volumes). It has the same arguments and
-  functionality as the corresponding OpenGL glFrustum() function.
+  functionality as the corresponding OpenGL SoGLContext_glFrustum(sogl_current_render_glue()) function.
 
   \sa perspective() 
 */

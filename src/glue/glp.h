@@ -120,6 +120,134 @@ typedef void (APIENTRY * OBOL_PFNGLCOPYTEXSUBIMAGE3DPROC)(GLenum target,
                                                           GLsizei width,
                                                           GLsizei height);
 
+/* Core GL 1.0/1.1 functions needed for proper dual-GL dispatch in
+   SoSceneTexture2 and other nodes that must never mix backends. */
+typedef void (APIENTRY * OBOL_PFNGLTEXIMAGE2DPROC)(GLenum target, GLint level,
+                                                   GLint internalformat,
+                                                   GLsizei width, GLsizei height,
+                                                   GLint border, GLenum format,
+                                                   GLenum type,
+                                                   const GLvoid * pixels);
+typedef void (APIENTRY * OBOL_PFNGLTEXPARAMETERIPROC)(GLenum target,
+                                                      GLenum pname, GLint param);
+typedef void (APIENTRY * OBOL_PFNGLTEXPARAMETERFPROC)(GLenum target,
+                                                      GLenum pname,
+                                                      GLfloat param);
+typedef void (APIENTRY * OBOL_PFNGLGETINTEGERVPROC)(GLenum pname,
+                                                    GLint * params);
+typedef void (APIENTRY * OBOL_PFNGLGETFLOATVPROC)(GLenum pname,
+                                                   GLfloat * params);
+typedef void (APIENTRY * OBOL_PFNGLCLEARCOLORPROC)(GLclampf red,
+                                                   GLclampf green,
+                                                   GLclampf blue,
+                                                   GLclampf alpha);
+typedef void (APIENTRY * OBOL_PFNGLCLEARPROC)(GLbitfield mask);
+typedef void (APIENTRY * OBOL_PFNGLFLUSHPROC)(void);
+typedef void (APIENTRY * OBOL_PFNGLENABLEPROC)(GLenum cap);
+typedef void (APIENTRY * OBOL_PFNGLDISABLEPROC)(GLenum cap);
+typedef void (APIENTRY * OBOL_PFNGLPIXELSTOREIPROC)(GLenum pname, GLint param);
+typedef void (APIENTRY * OBOL_PFNGLREADPIXELSPROC)(GLint x, GLint y,
+                                                   GLsizei width, GLsizei height,
+                                                   GLenum format, GLenum type,
+                                                   GLvoid * pixels);
+typedef void (APIENTRY * OBOL_PFNGLCOPYTEXSUBIMAGE2DPROC)(GLenum target,
+                                                          GLint level,
+                                                          GLint xoffset,
+                                                          GLint yoffset,
+                                                          GLint x, GLint y,
+                                                          GLsizei width,
+                                                          GLsizei height);
+
+/* Additional core GL 1.0/1.1 dispatch function-pointer types needed
+   for full dual-GL dispatch across all rendering code. */
+typedef void (APIENTRY * OBOL_PFNGLBEGINPROC)(GLenum mode);
+typedef void (APIENTRY * OBOL_PFNGLENDPROC)(void);
+typedef void (APIENTRY * OBOL_PFNGLVERTEX2FPROC)(GLfloat x, GLfloat y);
+typedef void (APIENTRY * OBOL_PFNGLVERTEX2SPROC)(GLshort x, GLshort y);
+typedef void (APIENTRY * OBOL_PFNGLVERTEX3FPROC)(GLfloat x, GLfloat y, GLfloat z);
+typedef void (APIENTRY * OBOL_PFNGLVERTEX3FVPROC)(const GLfloat * v);
+typedef void (APIENTRY * OBOL_PFNGLVERTEX4FVPROC)(const GLfloat * v);
+typedef void (APIENTRY * OBOL_PFNGLNORMAL3FPROC)(GLfloat nx, GLfloat ny, GLfloat nz);
+typedef void (APIENTRY * OBOL_PFNGLNORMAL3FVPROC)(const GLfloat * v);
+typedef void (APIENTRY * OBOL_PFNGLCOLOR3FPROC)(GLfloat r, GLfloat g, GLfloat b);
+typedef void (APIENTRY * OBOL_PFNGLCOLOR3FVPROC)(const GLfloat * v);
+typedef void (APIENTRY * OBOL_PFNGLCOLOR3UBPROC)(GLubyte r, GLubyte g, GLubyte b);
+typedef void (APIENTRY * OBOL_PFNGLCOLOR3UBVPROC)(const GLubyte * v);
+typedef void (APIENTRY * OBOL_PFNGLCOLOR4UBPROC)(GLubyte r, GLubyte g, GLubyte b, GLubyte a);
+typedef void (APIENTRY * OBOL_PFNGLTEXCOORD2FPROC)(GLfloat s, GLfloat t);
+typedef void (APIENTRY * OBOL_PFNGLTEXCOORD2FVPROC)(const GLfloat * v);
+typedef void (APIENTRY * OBOL_PFNGLTEXCOORD3FPROC)(GLfloat s, GLfloat t, GLfloat r);
+typedef void (APIENTRY * OBOL_PFNGLTEXCOORD3FVPROC)(const GLfloat * v);
+typedef void (APIENTRY * OBOL_PFNGLTEXCOORD4FVPROC)(const GLfloat * v);
+typedef void (APIENTRY * OBOL_PFNGLINDEXIPROC)(GLint c);
+typedef void (APIENTRY * OBOL_PFNGLMATRIXMODEPROC)(GLenum mode);
+typedef void (APIENTRY * OBOL_PFNGLLOADIDENTITYPROC)(void);
+typedef void (APIENTRY * OBOL_PFNGLLOADMATRIXFPROC)(const GLfloat * m);
+typedef void (APIENTRY * OBOL_PFNGLLOADMATRIXDPROC)(const GLdouble * m);
+typedef void (APIENTRY * OBOL_PFNGLMULTMATRIXFPROC)(const GLfloat * m);
+typedef void (APIENTRY * OBOL_PFNGLPUSHMATRIXPROC)(void);
+typedef void (APIENTRY * OBOL_PFNGLPOPMATRIXPROC)(void);
+typedef void (APIENTRY * OBOL_PFNGLORTHOPROC)(GLdouble left, GLdouble right, GLdouble bottom, GLdouble top, GLdouble near_val, GLdouble far_val);
+typedef void (APIENTRY * OBOL_PFNGLFRUSTUMPROC)(GLdouble left, GLdouble right, GLdouble bottom, GLdouble top, GLdouble near_val, GLdouble far_val);
+typedef void (APIENTRY * OBOL_PFNGLTRANSLATEFPROC)(GLfloat x, GLfloat y, GLfloat z);
+typedef void (APIENTRY * OBOL_PFNGLROTATEFPROC)(GLfloat angle, GLfloat x, GLfloat y, GLfloat z);
+typedef void (APIENTRY * OBOL_PFNGLSCALEFPROC)(GLfloat x, GLfloat y, GLfloat z);
+typedef void (APIENTRY * OBOL_PFNGLLIGHTFPROC)(GLenum light, GLenum pname, GLfloat param);
+typedef void (APIENTRY * OBOL_PFNGLLIGHTFVPROC)(GLenum light, GLenum pname, const GLfloat * params);
+typedef void (APIENTRY * OBOL_PFNGLLIGHTMODELIPROC)(GLenum pname, GLint param);
+typedef void (APIENTRY * OBOL_PFNGLLIGHTMODELFVPROC)(GLenum pname, const GLfloat * params);
+typedef void (APIENTRY * OBOL_PFNGLMATERIALFPROC)(GLenum face, GLenum pname, GLfloat param);
+typedef void (APIENTRY * OBOL_PFNGLMATERIALFVPROC)(GLenum face, GLenum pname, const GLfloat * params);
+typedef void (APIENTRY * OBOL_PFNGLCOLORMATERIALPROC)(GLenum face, GLenum mode);
+typedef void (APIENTRY * OBOL_PFNGLFOGLPROC)(GLenum pname, GLint param);
+typedef void (APIENTRY * OBOL_PFNGLFOGFPROC)(GLenum pname, GLfloat param);
+typedef void (APIENTRY * OBOL_PFNGLFOGFVPROC)(GLenum pname, const GLfloat * params);
+typedef void (APIENTRY * OBOL_PFNGLTEXENVIPROC)(GLenum target, GLenum pname, GLint param);
+typedef void (APIENTRY * OBOL_PFNGLTEXENVFPROC)(GLenum target, GLenum pname, GLfloat param);
+typedef void (APIENTRY * OBOL_PFNGLTEXENVFVPROC)(GLenum target, GLenum pname, const GLfloat * params);
+typedef void (APIENTRY * OBOL_PFNGLTEXGENIPROC)(GLenum coord, GLenum pname, GLint param);
+typedef void (APIENTRY * OBOL_PFNGLTEXGENFPROC)(GLenum coord, GLenum pname, GLfloat param);
+typedef void (APIENTRY * OBOL_PFNGLTEXGENFVPROC)(GLenum coord, GLenum pname, const GLfloat * params);
+typedef void (APIENTRY * OBOL_PFNGLCOPYTEXIMAGE2DPROC)(GLenum target, GLint level, GLenum internalformat, GLint x, GLint y, GLsizei width, GLsizei height, GLint border);
+typedef void (APIENTRY * OBOL_PFNGLRASTERPOS2FPROC)(GLfloat x, GLfloat y);
+typedef void (APIENTRY * OBOL_PFNGLRASTERPOS3FPROC)(GLfloat x, GLfloat y, GLfloat z);
+typedef void (APIENTRY * OBOL_PFNGLBITMAPPROC)(GLsizei width, GLsizei height, GLfloat xorig, GLfloat yorig, GLfloat xmove, GLfloat ymove, const GLubyte * bitmap);
+typedef void (APIENTRY * OBOL_PFNGLDRAWPIXELSPROC)(GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid * pixels);
+typedef void (APIENTRY * OBOL_PFNGLPIXELTRANSFERFPROC)(GLenum pname, GLfloat param);
+typedef void (APIENTRY * OBOL_PFNGLPIXELTRANSFERIPROC)(GLenum pname, GLint param);
+typedef void (APIENTRY * OBOL_PFNGLPIXELMAPFVPROC)(GLenum map, GLint mapsize, const GLfloat * values);
+typedef void (APIENTRY * OBOL_PFNGLPIXELMAPUIVPROC)(GLenum map, GLint mapsize, const GLuint * values);
+typedef void (APIENTRY * OBOL_PFNGLPIXELZOOMPROC)(GLfloat xfactor, GLfloat yfactor);
+typedef void (APIENTRY * OBOL_PFNGLVIEWPORTPROC)(GLint x, GLint y, GLsizei width, GLsizei height);
+typedef void (APIENTRY * OBOL_PFNGLSCISSORPROC)(GLint x, GLint y, GLsizei width, GLsizei height);
+typedef void (APIENTRY * OBOL_PFNGLDEPTHMASKPROC)(GLboolean flag);
+typedef void (APIENTRY * OBOL_PFNGLDEPTHFUNCPROC)(GLenum func);
+typedef void (APIENTRY * OBOL_PFNGLDEPTHRANGEPROC)(GLclampd near_val, GLclampd far_val);
+typedef void (APIENTRY * OBOL_PFNGLSTENCILFUNCPROC)(GLenum func, GLint ref, GLuint mask);
+typedef void (APIENTRY * OBOL_PFNGLSTENCILOPPROC)(GLenum fail, GLenum zfail, GLenum zpass);
+typedef void (APIENTRY * OBOL_PFNGLBLENDFUNCPROC)(GLenum sfactor, GLenum dfactor);
+typedef void (APIENTRY * OBOL_PFNGLALPHAFUNCPROC)(GLenum func, GLclampf ref);
+typedef void (APIENTRY * OBOL_PFNGLFRONTFACEPROC)(GLenum mode);
+typedef void (APIENTRY * OBOL_PFNGLCULLFACEPROC)(GLenum mode);
+typedef void (APIENTRY * OBOL_PFNGLPOLYGONMODEPROC)(GLenum face, GLenum mode);
+typedef void (APIENTRY * OBOL_PFNGLPOLYGONSTIPPLEPROC)(const GLubyte * mask);
+typedef void (APIENTRY * OBOL_PFNGLLINEWIDTHPROC)(GLfloat width);
+typedef void (APIENTRY * OBOL_PFNGLLINESTIPPLEPROC)(GLint factor, GLushort pattern);
+typedef void (APIENTRY * OBOL_PFNGLPOINTSIZEPROC)(GLfloat size);
+typedef void (APIENTRY * OBOL_PFNGLCOLORMASKPROC)(GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha);
+typedef void (APIENTRY * OBOL_PFNGLCLIPPLANEPROC)(GLenum plane, const GLdouble * equation);
+typedef void (APIENTRY * OBOL_PFNGLDRAWBUFFERPROC)(GLenum mode);
+typedef void (APIENTRY * OBOL_PFNGLCLEARINDEXPROC)(GLfloat c);
+typedef void (APIENTRY * OBOL_PFNGLCLEARSTENCILPROC)(GLint s);
+typedef void (APIENTRY * OBOL_PFNGLACCUMPROC)(GLenum op, GLfloat value);
+typedef void (APIENTRY * OBOL_PFNGLGETBOOLEANVPROC)(GLenum pname, GLboolean * params);
+typedef void (APIENTRY * OBOL_PFNGLNEWLISTPROC)(GLuint list, GLenum mode);
+typedef void (APIENTRY * OBOL_PFNGLENDLISTPROC)(void);
+typedef void (APIENTRY * OBOL_PFNGLCALLLISTPROC)(GLuint list);
+typedef void (APIENTRY * OBOL_PFNGLDELETELISTSPROC)(GLuint list, GLsizei range);
+typedef void (APIENTRY * OBOL_PFNGLPUSHATTRIBPROC)(GLbitfield mask);
+typedef void (APIENTRY * OBOL_PFNGLPOPATTRIBPROC)(void);
+
 typedef void (APIENTRY * OBOL_PFNGLPOLYGONOFFSETPROC)(GLfloat factor,
                                                       GLfloat bias);
 
@@ -599,6 +727,112 @@ struct SoGLContext {
   OBOL_PFNGLPOLYGONOFFSETPROC glPolygonOffset;
   OBOL_PFNGLPOLYGONOFFSETPROC glPolygonOffsetEXT;
 
+  /* Core GL 1.0/1.1 dispatch pointers — always non-NULL after init.
+     Required so that dual-GL builds (OBOL_BUILD_DUAL_GL) never mix
+     system-GL and OSMesa calls within the same render pass. */
+  OBOL_PFNGLTEXIMAGE2DPROC      glTexImage2D;
+  OBOL_PFNGLTEXPARAMETERIPROC   glTexParameteri;
+  OBOL_PFNGLTEXPARAMETERFPROC   glTexParameterf;
+  OBOL_PFNGLGETINTEGERVPROC     glGetIntegerv;
+  OBOL_PFNGLGETFLOATVPROC       glGetFloatv;
+  OBOL_PFNGLCLEARCOLORPROC      glClearColor;
+  OBOL_PFNGLCLEARPROC           glClear;
+  OBOL_PFNGLFLUSHPROC           glFlush;
+  OBOL_PFNGLENABLEPROC          glEnable;
+  OBOL_PFNGLDISABLEPROC         glDisable;
+  OBOL_PFNGLPIXELSTOREIPROC     glPixelStorei;
+  OBOL_PFNGLREADPIXELSPROC      glReadPixels;
+  OBOL_PFNGLCOPYTEXSUBIMAGE2DPROC glCopyTexSubImage2D;
+
+  /* Additional core GL 1.0/1.1 dispatch pointers for full dual-GL support. */
+  OBOL_PFNGLBEGINPROC glBegin;
+  OBOL_PFNGLENDPROC glEnd;
+  OBOL_PFNGLVERTEX2FPROC glVertex2f;
+  OBOL_PFNGLVERTEX2SPROC glVertex2s;
+  OBOL_PFNGLVERTEX3FPROC glVertex3f;
+  OBOL_PFNGLVERTEX3FVPROC glVertex3fv;
+  OBOL_PFNGLVERTEX4FVPROC glVertex4fv;
+  OBOL_PFNGLNORMAL3FPROC glNormal3f;
+  OBOL_PFNGLNORMAL3FVPROC glNormal3fv;
+  OBOL_PFNGLCOLOR3FPROC glColor3f;
+  OBOL_PFNGLCOLOR3FVPROC glColor3fv;
+  OBOL_PFNGLCOLOR3UBPROC glColor3ub;
+  OBOL_PFNGLCOLOR3UBVPROC glColor3ubv;
+  OBOL_PFNGLCOLOR4UBPROC glColor4ub;
+  OBOL_PFNGLTEXCOORD2FPROC glTexCoord2f;
+  OBOL_PFNGLTEXCOORD2FVPROC glTexCoord2fv;
+  OBOL_PFNGLTEXCOORD3FPROC glTexCoord3f;
+  OBOL_PFNGLTEXCOORD3FVPROC glTexCoord3fv;
+  OBOL_PFNGLTEXCOORD4FVPROC glTexCoord4fv;
+  OBOL_PFNGLINDEXIPROC glIndexi;
+  OBOL_PFNGLMATRIXMODEPROC glMatrixMode;
+  OBOL_PFNGLLOADIDENTITYPROC glLoadIdentity;
+  OBOL_PFNGLLOADMATRIXFPROC glLoadMatrixf;
+  OBOL_PFNGLLOADMATRIXDPROC glLoadMatrixd;
+  OBOL_PFNGLMULTMATRIXFPROC glMultMatrixf;
+  OBOL_PFNGLPUSHMATRIXPROC glPushMatrix;
+  OBOL_PFNGLPOPMATRIXPROC glPopMatrix;
+  OBOL_PFNGLORTHOPROC glOrtho;
+  OBOL_PFNGLFRUSTUMPROC glFrustum;
+  OBOL_PFNGLTRANSLATEFPROC glTranslatef;
+  OBOL_PFNGLROTATEFPROC glRotatef;
+  OBOL_PFNGLSCALEFPROC glScalef;
+  OBOL_PFNGLLIGHTFPROC glLightf;
+  OBOL_PFNGLLIGHTFVPROC glLightfv;
+  OBOL_PFNGLLIGHTMODELIPROC glLightModeli;
+  OBOL_PFNGLLIGHTMODELFVPROC glLightModelfv;
+  OBOL_PFNGLMATERIALFPROC glMaterialf;
+  OBOL_PFNGLMATERIALFVPROC glMaterialfv;
+  OBOL_PFNGLCOLORMATERIALPROC glColorMaterial;
+  OBOL_PFNGLFOGLPROC glFogi;
+  OBOL_PFNGLFOGFPROC glFogf;
+  OBOL_PFNGLFOGFVPROC glFogfv;
+  OBOL_PFNGLTEXENVIPROC glTexEnvi;
+  OBOL_PFNGLTEXENVFPROC glTexEnvf;
+  OBOL_PFNGLTEXENVFVPROC glTexEnvfv;
+  OBOL_PFNGLTEXGENIPROC glTexGeni;
+  OBOL_PFNGLTEXGENFPROC glTexGenf;
+  OBOL_PFNGLTEXGENFVPROC glTexGenfv;
+  OBOL_PFNGLCOPYTEXIMAGE2DPROC glCopyTexImage2D;
+  OBOL_PFNGLRASTERPOS2FPROC glRasterPos2f;
+  OBOL_PFNGLRASTERPOS3FPROC glRasterPos3f;
+  OBOL_PFNGLBITMAPPROC glBitmap;
+  OBOL_PFNGLDRAWPIXELSPROC glDrawPixels;
+  OBOL_PFNGLPIXELTRANSFERFPROC glPixelTransferf;
+  OBOL_PFNGLPIXELTRANSFERIPROC glPixelTransferi;
+  OBOL_PFNGLPIXELMAPFVPROC glPixelMapfv;
+  OBOL_PFNGLPIXELMAPUIVPROC glPixelMapuiv;
+  OBOL_PFNGLPIXELZOOMPROC glPixelZoom;
+  OBOL_PFNGLVIEWPORTPROC glViewport;
+  OBOL_PFNGLSCISSORPROC glScissor;
+  OBOL_PFNGLDEPTHMASKPROC glDepthMask;
+  OBOL_PFNGLDEPTHFUNCPROC glDepthFunc;
+  OBOL_PFNGLDEPTHRANGEPROC glDepthRange;
+  OBOL_PFNGLSTENCILFUNCPROC glStencilFunc;
+  OBOL_PFNGLSTENCILOPPROC glStencilOp;
+  OBOL_PFNGLBLENDFUNCPROC glBlendFunc;
+  OBOL_PFNGLALPHAFUNCPROC glAlphaFunc;
+  OBOL_PFNGLFRONTFACEPROC glFrontFace;
+  OBOL_PFNGLCULLFACEPROC glCullFace;
+  OBOL_PFNGLPOLYGONMODEPROC glPolygonMode;
+  OBOL_PFNGLPOLYGONSTIPPLEPROC glPolygonStipple;
+  OBOL_PFNGLLINEWIDTHPROC glLineWidth;
+  OBOL_PFNGLLINESTIPPLEPROC glLineStipple;
+  OBOL_PFNGLPOINTSIZEPROC glPointSize;
+  OBOL_PFNGLCOLORMASKPROC glColorMask;
+  OBOL_PFNGLCLIPPLANEPROC glClipPlane;
+  OBOL_PFNGLDRAWBUFFERPROC glDrawBuffer;
+  OBOL_PFNGLCLEARINDEXPROC glClearIndex;
+  OBOL_PFNGLCLEARSTENCILPROC glClearStencil;
+  OBOL_PFNGLACCUMPROC glAccum;
+  OBOL_PFNGLGETBOOLEANVPROC glGetBooleanv;
+  OBOL_PFNGLNEWLISTPROC glNewList;
+  OBOL_PFNGLENDLISTPROC glEndList;
+  OBOL_PFNGLCALLLISTPROC glCallList;
+  OBOL_PFNGLDELETELISTSPROC glDeleteLists;
+  OBOL_PFNGLPUSHATTRIBPROC glPushAttrib;
+  OBOL_PFNGLPOPATTRIBPROC glPopAttrib;
+
   OBOL_PFNGLGENTEXTURESPROC glGenTextures;
   OBOL_PFNGLBINDTEXTUREPROC glBindTexture;
   OBOL_PFNGLDELETETEXTURESPROC glDeleteTextures;
@@ -888,6 +1122,12 @@ void SoGLContext_destruct(uint32_t contextid);
    Note: you should try to avoid using this function if possible! */
 
 void * coin_gl_current_context(void);
+
+/* Thread-local current render glue — set by SoGLRenderAction before each
+   traversal pass so that GL element updategl() methods (which lack a state
+   pointer) can still dispatch through the correct backend in dual-GL builds. */
+const SoGLContext * sogl_current_render_glue(void);
+void sogl_set_current_render_glue(const SoGLContext * glue);
 
 /* ********************************************************************** */
 
@@ -1403,6 +1643,129 @@ void SoGLContext_glFramebufferRenderbuffer(const SoGLContext * glue, GLenum targ
 void SoGLContext_glGetFramebufferAttachmentParameteriv(const SoGLContext * glue, GLenum target, GLenum attachment, GLenum pname, GLint *params);
 void SoGLContext_glGenerateMipmap(const SoGLContext * glue, GLenum target);
 SbBool SoGLContext_has_framebuffer_objects(const SoGLContext * glue);
+
+/* Core GL 1.0/1.1 wrappers — always dispatch through the correct backend.
+   Use these everywhere a bare gl* call would otherwise mix backends in
+   dual-GL (OBOL_BUILD_DUAL_GL) builds. */
+void SoGLContext_glTexImage2D(const SoGLContext * glue,
+                              GLenum target, GLint level, GLint internalformat,
+                              GLsizei width, GLsizei height, GLint border,
+                              GLenum format, GLenum type, const GLvoid * pixels);
+void SoGLContext_glTexParameteri(const SoGLContext * glue,
+                                 GLenum target, GLenum pname, GLint param);
+void SoGLContext_glTexParameterf(const SoGLContext * glue,
+                                 GLenum target, GLenum pname, GLfloat param);
+void SoGLContext_glGetIntegerv(const SoGLContext * glue,
+                               GLenum pname, GLint * params);
+void SoGLContext_glGetFloatv(const SoGLContext * glue,
+                             GLenum pname, GLfloat * params);
+void SoGLContext_glClearColor(const SoGLContext * glue,
+                              GLclampf red, GLclampf green,
+                              GLclampf blue, GLclampf alpha);
+void SoGLContext_glClear(const SoGLContext * glue, GLbitfield mask);
+void SoGLContext_glFlush(const SoGLContext * glue);
+void SoGLContext_glEnable(const SoGLContext * glue, GLenum cap);
+void SoGLContext_glDisable(const SoGLContext * glue, GLenum cap);
+void SoGLContext_glPixelStorei(const SoGLContext * glue,
+                               GLenum pname, GLint param);
+void SoGLContext_glReadPixels(const SoGLContext * glue,
+                              GLint x, GLint y,
+                              GLsizei width, GLsizei height,
+                              GLenum format, GLenum type, GLvoid * pixels);
+void SoGLContext_glCopyTexSubImage2D(const SoGLContext * glue,
+                                     GLenum target, GLint level,
+                                     GLint xoffset, GLint yoffset,
+                                     GLint x, GLint y,
+                                     GLsizei width, GLsizei height);
+
+/* Additional core GL 1.0/1.1 dispatch wrappers. */
+void SoGLContext_glBegin(const SoGLContext * glue, GLenum mode);
+void SoGLContext_glEnd(const SoGLContext * glue);
+void SoGLContext_glVertex2f(const SoGLContext * glue, GLfloat x, GLfloat y);
+void SoGLContext_glVertex2s(const SoGLContext * glue, GLshort x, GLshort y);
+void SoGLContext_glVertex3f(const SoGLContext * glue, GLfloat x, GLfloat y, GLfloat z);
+void SoGLContext_glVertex3fv(const SoGLContext * glue, const GLfloat * v);
+void SoGLContext_glVertex4fv(const SoGLContext * glue, const GLfloat * v);
+void SoGLContext_glNormal3f(const SoGLContext * glue, GLfloat nx, GLfloat ny, GLfloat nz);
+void SoGLContext_glNormal3fv(const SoGLContext * glue, const GLfloat * v);
+void SoGLContext_glColor3f(const SoGLContext * glue, GLfloat r, GLfloat g, GLfloat b);
+void SoGLContext_glColor3fv(const SoGLContext * glue, const GLfloat * v);
+void SoGLContext_glColor3ub(const SoGLContext * glue, GLubyte r, GLubyte g, GLubyte b);
+void SoGLContext_glColor3ubv(const SoGLContext * glue, const GLubyte * v);
+void SoGLContext_glColor4ub(const SoGLContext * glue, GLubyte r, GLubyte g, GLubyte b, GLubyte a);
+void SoGLContext_glTexCoord2f(const SoGLContext * glue, GLfloat s, GLfloat t);
+void SoGLContext_glTexCoord2fv(const SoGLContext * glue, const GLfloat * v);
+void SoGLContext_glTexCoord3f(const SoGLContext * glue, GLfloat s, GLfloat t, GLfloat r);
+void SoGLContext_glTexCoord3fv(const SoGLContext * glue, const GLfloat * v);
+void SoGLContext_glTexCoord4fv(const SoGLContext * glue, const GLfloat * v);
+void SoGLContext_glIndexi(const SoGLContext * glue, GLint c);
+void SoGLContext_glMatrixMode(const SoGLContext * glue, GLenum mode);
+void SoGLContext_glLoadIdentity(const SoGLContext * glue);
+void SoGLContext_glLoadMatrixf(const SoGLContext * glue, const GLfloat * m);
+void SoGLContext_glLoadMatrixd(const SoGLContext * glue, const GLdouble * m);
+void SoGLContext_glMultMatrixf(const SoGLContext * glue, const GLfloat * m);
+void SoGLContext_glPushMatrix(const SoGLContext * glue);
+void SoGLContext_glPopMatrix(const SoGLContext * glue);
+void SoGLContext_glOrtho(const SoGLContext * glue, GLdouble left, GLdouble right, GLdouble bottom, GLdouble top, GLdouble near_val, GLdouble far_val);
+void SoGLContext_glFrustum(const SoGLContext * glue, GLdouble left, GLdouble right, GLdouble bottom, GLdouble top, GLdouble near_val, GLdouble far_val);
+void SoGLContext_glTranslatef(const SoGLContext * glue, GLfloat x, GLfloat y, GLfloat z);
+void SoGLContext_glRotatef(const SoGLContext * glue, GLfloat angle, GLfloat x, GLfloat y, GLfloat z);
+void SoGLContext_glScalef(const SoGLContext * glue, GLfloat x, GLfloat y, GLfloat z);
+void SoGLContext_glLightf(const SoGLContext * glue, GLenum light, GLenum pname, GLfloat param);
+void SoGLContext_glLightfv(const SoGLContext * glue, GLenum light, GLenum pname, const GLfloat * params);
+void SoGLContext_glLightModeli(const SoGLContext * glue, GLenum pname, GLint param);
+void SoGLContext_glLightModelfv(const SoGLContext * glue, GLenum pname, const GLfloat * params);
+void SoGLContext_glMaterialf(const SoGLContext * glue, GLenum face, GLenum pname, GLfloat param);
+void SoGLContext_glMaterialfv(const SoGLContext * glue, GLenum face, GLenum pname, const GLfloat * params);
+void SoGLContext_glColorMaterial(const SoGLContext * glue, GLenum face, GLenum mode);
+void SoGLContext_glFogi(const SoGLContext * glue, GLenum pname, GLint param);
+void SoGLContext_glFogf(const SoGLContext * glue, GLenum pname, GLfloat param);
+void SoGLContext_glFogfv(const SoGLContext * glue, GLenum pname, const GLfloat * params);
+void SoGLContext_glTexEnvi(const SoGLContext * glue, GLenum target, GLenum pname, GLint param);
+void SoGLContext_glTexEnvf(const SoGLContext * glue, GLenum target, GLenum pname, GLfloat param);
+void SoGLContext_glTexEnvfv(const SoGLContext * glue, GLenum target, GLenum pname, const GLfloat * params);
+void SoGLContext_glTexGeni(const SoGLContext * glue, GLenum coord, GLenum pname, GLint param);
+void SoGLContext_glTexGenf(const SoGLContext * glue, GLenum coord, GLenum pname, GLfloat param);
+void SoGLContext_glTexGenfv(const SoGLContext * glue, GLenum coord, GLenum pname, const GLfloat * params);
+void SoGLContext_glCopyTexImage2D(const SoGLContext * glue, GLenum target, GLint level, GLenum internalformat, GLint x, GLint y, GLsizei width, GLsizei height, GLint border);
+void SoGLContext_glRasterPos2f(const SoGLContext * glue, GLfloat x, GLfloat y);
+void SoGLContext_glRasterPos3f(const SoGLContext * glue, GLfloat x, GLfloat y, GLfloat z);
+void SoGLContext_glBitmap(const SoGLContext * glue, GLsizei width, GLsizei height, GLfloat xorig, GLfloat yorig, GLfloat xmove, GLfloat ymove, const GLubyte * bitmap);
+void SoGLContext_glDrawPixels(const SoGLContext * glue, GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid * pixels);
+void SoGLContext_glPixelTransferf(const SoGLContext * glue, GLenum pname, GLfloat param);
+void SoGLContext_glPixelTransferi(const SoGLContext * glue, GLenum pname, GLint param);
+void SoGLContext_glPixelMapfv(const SoGLContext * glue, GLenum map, GLint mapsize, const GLfloat * values);
+void SoGLContext_glPixelMapuiv(const SoGLContext * glue, GLenum map, GLint mapsize, const GLuint * values);
+void SoGLContext_glPixelZoom(const SoGLContext * glue, GLfloat xfactor, GLfloat yfactor);
+void SoGLContext_glViewport(const SoGLContext * glue, GLint x, GLint y, GLsizei width, GLsizei height);
+void SoGLContext_glScissor(const SoGLContext * glue, GLint x, GLint y, GLsizei width, GLsizei height);
+void SoGLContext_glDepthMask(const SoGLContext * glue, GLboolean flag);
+void SoGLContext_glDepthFunc(const SoGLContext * glue, GLenum func);
+void SoGLContext_glDepthRange(const SoGLContext * glue, GLclampd near_val, GLclampd far_val);
+void SoGLContext_glStencilFunc(const SoGLContext * glue, GLenum func, GLint ref, GLuint mask);
+void SoGLContext_glStencilOp(const SoGLContext * glue, GLenum fail, GLenum zfail, GLenum zpass);
+void SoGLContext_glBlendFunc(const SoGLContext * glue, GLenum sfactor, GLenum dfactor);
+void SoGLContext_glAlphaFunc(const SoGLContext * glue, GLenum func, GLclampf ref);
+void SoGLContext_glFrontFace(const SoGLContext * glue, GLenum mode);
+void SoGLContext_glCullFace(const SoGLContext * glue, GLenum mode);
+void SoGLContext_glPolygonMode(const SoGLContext * glue, GLenum face, GLenum mode);
+void SoGLContext_glPolygonStipple(const SoGLContext * glue, const GLubyte * mask);
+void SoGLContext_glLineWidth(const SoGLContext * glue, GLfloat width);
+void SoGLContext_glLineStipple(const SoGLContext * glue, GLint factor, GLushort pattern);
+void SoGLContext_glPointSize(const SoGLContext * glue, GLfloat size);
+void SoGLContext_glColorMask(const SoGLContext * glue, GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha);
+void SoGLContext_glClipPlane(const SoGLContext * glue, GLenum plane, const GLdouble * equation);
+void SoGLContext_glDrawBuffer(const SoGLContext * glue, GLenum mode);
+void SoGLContext_glClearIndex(const SoGLContext * glue, GLfloat c);
+void SoGLContext_glClearStencil(const SoGLContext * glue, GLint s);
+void SoGLContext_glAccum(const SoGLContext * glue, GLenum op, GLfloat value);
+void SoGLContext_glGetBooleanv(const SoGLContext * glue, GLenum pname, GLboolean * params);
+void SoGLContext_glNewList(const SoGLContext * glue, GLuint list, GLenum mode);
+void SoGLContext_glEndList(const SoGLContext * glue);
+void SoGLContext_glCallList(const SoGLContext * glue, GLuint list);
+void SoGLContext_glDeleteLists(const SoGLContext * glue, GLuint list, GLsizei range);
+void SoGLContext_glPushAttrib(const SoGLContext * glue, GLbitfield mask);
+void SoGLContext_glPopAttrib(const SoGLContext * glue);
 
 /* GL feature queries */
 SbBool SoGLContext_can_do_bumpmapping(const SoGLContext * glue);

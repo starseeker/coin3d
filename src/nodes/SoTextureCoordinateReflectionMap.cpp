@@ -50,6 +50,7 @@
 // *************************************************************************
 
 #include <Inventor/nodes/SoTextureCoordinateReflectionMap.h>
+#include "glue/glp.h"
 #include "config.h"
 
 #include <cstdlib>
@@ -189,7 +190,7 @@ SoTextureCoordinateReflectionMap::pick(SoPickAction * action)
 void
 SoTextureCoordinateReflectionMap::handleTexgen(void * OBOL_UNUSED_ARG(data))
 {
-  glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_REFLECTION_MAP);
-  glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, GL_REFLECTION_MAP);  
-  glTexGeni(GL_R, GL_TEXTURE_GEN_MODE, GL_REFLECTION_MAP);
+  SoGLContext_glTexGeni(sogl_current_render_glue(), GL_S, GL_TEXTURE_GEN_MODE, GL_REFLECTION_MAP);
+  SoGLContext_glTexGeni(sogl_current_render_glue(), GL_T, GL_TEXTURE_GEN_MODE, GL_REFLECTION_MAP);  
+  SoGLContext_glTexGeni(sogl_current_render_glue(), GL_R, GL_TEXTURE_GEN_MODE, GL_REFLECTION_MAP);
 }

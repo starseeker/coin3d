@@ -34,6 +34,7 @@
 #include "headless_utils.h"
 
 #include <Inventor/SbViewportRegion.h>
+#include <Inventor/SoOffscreenRenderer.h>
 
 #include <algorithm>
 #include <cstdio>
@@ -192,8 +193,19 @@ bool TestRegistry::renderTestToFile(const std::string& name,
         return false;
     }
 
+    /* Apply any per-test renderer configuration (e.g. gradient background). */
+    if (entry->configure_renderer) {
+        SoOffscreenRenderer* r = getSharedRenderer();
+        r->clearBackgroundGradient();
+        entry->configure_renderer(r);
+    }
+
     bool ok = renderToFile(root, outpath.c_str(), width, height);
     root->unref();
+
+    /* Clear any renderer state set by configure_renderer so subsequent tests
+     * that do not call configure_renderer get a clean slate. */
+    getSharedRenderer()->clearBackgroundGradient();
     return ok;
 }
 

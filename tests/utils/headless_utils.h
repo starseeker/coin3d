@@ -195,7 +195,10 @@ struct CoinOSMesaContext {
     }
 
     ~CoinOSMesaContext() {
-        if (context) OSMesaDestroyContext(context);
+        if (context) {
+            OSMesaDestroyContext(context);
+            context = nullptr;  /* defensive: zero out so any stale-ptr check is safe */
+        }
     }
 
     bool makeCurrent() {
@@ -256,7 +259,13 @@ public:
     }
     
     virtual void destroyContext(void* context) override {
-        delete static_cast<CoinOSMesaContext*>(context);
+        CoinOSMesaContext *ctx = static_cast<CoinOSMesaContext*>(context);
+        if (!ctx) return;
+        /* Unbind before destroying to avoid corrupting Mesa internal state
+         * if the context is still current (see also CoinOSMesaContextManagerImpl). */
+        if (ctx->context && OSMesaGetCurrentContext() == ctx->context)
+            OSMesaMakeCurrent(nullptr, nullptr, 0, 0, 0);
+        delete ctx;
     }
 
     virtual void * getProcAddress(const char * funcName) override {

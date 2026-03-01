@@ -70,6 +70,7 @@
 // FIXME: Can this somehow relate to 3D textures? (kintel 20020203)
 
 #include <Inventor/nodes/SoTextureCoordinateNormalMap.h>
+#include "glue/glp.h"
 #include "config.h"
 
 #include <cstdlib>
@@ -189,7 +190,7 @@ SoTextureCoordinateNormalMap::pick(SoPickAction * action)
 void
 SoTextureCoordinateNormalMap::handleTexgen(void * /* data */)
 {
-  glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_NORMAL_MAP);
-  glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, GL_NORMAL_MAP);  
-  glTexGeni(GL_R, GL_TEXTURE_GEN_MODE, GL_NORMAL_MAP);
+  SoGLContext_glTexGeni(sogl_current_render_glue(), GL_S, GL_TEXTURE_GEN_MODE, GL_NORMAL_MAP);
+  SoGLContext_glTexGeni(sogl_current_render_glue(), GL_T, GL_TEXTURE_GEN_MODE, GL_NORMAL_MAP);  
+  SoGLContext_glTexGeni(sogl_current_render_glue(), GL_R, GL_TEXTURE_GEN_MODE, GL_NORMAL_MAP);
 }

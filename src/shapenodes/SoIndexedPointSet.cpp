@@ -312,7 +312,7 @@ SoIndexedPointSet::GLRender(SoGLRenderAction * action)
   assert(glcoords && "could not cast to SoGLCoordinateElement");
 
   if (nbind == OVERALL && needNormals) {
-    glNormal3fv((const GLfloat *)normals);
+    SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat *)normals);
   }
 
   mb.sendFirst(); // always do this, even if mbind != OVERALL
@@ -373,7 +373,7 @@ SoIndexedPointSet::GLRender(SoGLRenderAction * action)
                             mbind == PER_VERTEX_INDEXED);
   }
   else {//no vertex array rendering
-    glBegin(GL_POINTS);
+    SoGLContext_glBegin(sogl_current_render_glue(), GL_POINTS);
     SbVec3f currnormal = normals ? normals[0] : SbVec3f(0, 0, 1);
     for (int i = 0; i < numindices; i++) {
       int32_t idx = cindices[i];
@@ -387,7 +387,7 @@ SoIndexedPointSet::GLRender(SoGLRenderAction * action)
 
       if (needNormals && nbind != OVERALL){
         const GLfloat * ptr = reinterpret_cast<const GLfloat*>(&currnormal);
-        glNormal3fv(ptr);
+        SoGLContext_glNormal3fv(sogl_current_render_glue(), ptr);
       }
 
       if (doTextures){
@@ -401,7 +401,7 @@ SoIndexedPointSet::GLRender(SoGLRenderAction * action)
 
       glcoords->send(idx);
     }
-    glEnd();
+    SoGLContext_glEnd(sogl_current_render_glue());
   }
   if (didpush)
     state->pop();

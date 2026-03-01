@@ -46,6 +46,7 @@
 */
 
 #include "config.h"
+#include "glue/glp.h"
 
 #include <Inventor/annex/HUD/nodes/SoHUDButton.h>
 
@@ -180,13 +181,13 @@ SoHUDButton::GLRender(SoGLRenderAction * action)
 
   // Draw the border rectangle using immediate-mode GL.
   // Depth test has already been disabled by SoHUDKit.
-  glColor3f(bcol[0], bcol[1], bcol[2]);
-  glBegin(GL_LINE_LOOP);
-    glVertex3f(x0, y0, 0.0f);
-    glVertex3f(x1, y0, 0.0f);
-    glVertex3f(x1, y1, 0.0f);
-    glVertex3f(x0, y1, 0.0f);
-  glEnd();
+  SoGLContext_glColor3f(sogl_current_render_glue(), bcol[0], bcol[1], bcol[2]);
+  SoGLContext_glBegin(sogl_current_render_glue(), GL_LINE_LOOP);
+    SoGLContext_glVertex3f(sogl_current_render_glue(), x0, y0, 0.0f);
+    SoGLContext_glVertex3f(sogl_current_render_glue(), x1, y0, 0.0f);
+    SoGLContext_glVertex3f(sogl_current_render_glue(), x1, y1, 0.0f);
+    SoGLContext_glVertex3f(sogl_current_render_glue(), x0, y1, 0.0f);
+  SoGLContext_glEnd(sogl_current_render_glue());
 
   // Draw the centred text label.
   state->push();

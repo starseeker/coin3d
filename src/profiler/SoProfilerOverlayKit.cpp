@@ -38,6 +38,7 @@
 */
 
 #include "config.h"
+#include "glue/glp.h"
 
 #ifdef HAVE_NODEKITS
 
@@ -58,12 +59,12 @@
 namespace {
   void enableDepthTest(void * OBOL_UNUSED_ARG(userdata), SoAction * OBOL_UNUSED_ARG(action))
   {
-    glEnable(GL_DEPTH_TEST);
+    SoGLContext_glEnable(sogl_current_render_glue(), GL_DEPTH_TEST);
   }
 
   void disableDepthTest(void * OBOL_UNUSED_ARG(userdata), SoAction * OBOL_UNUSED_ARG(action))
   {
-    glDisable(GL_DEPTH_TEST);
+    SoGLContext_glDisable(sogl_current_render_glue(), GL_DEPTH_TEST);
   }
 
   void grabViewportInfo(void * userdata, SoAction * action)

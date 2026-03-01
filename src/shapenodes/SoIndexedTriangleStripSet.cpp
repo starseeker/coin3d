@@ -293,8 +293,8 @@ SoIndexedTriangleStripSet::GLRender(SoGLRenderAction * action)
 
   if (!sendnormals) nbind = OVERALL;
   else if (nbind == OVERALL) {
-    if (normals) glNormal3fv(normals[0].getValue());
-    else glNormal3f(0.0f, 0.0f, 1.0f);
+    if (normals) SoGLContext_glNormal3fv(sogl_current_render_glue(), normals[0].getValue());
+    else SoGLContext_glNormal3f(sogl_current_render_glue(), 0.0f, 0.0f, 1.0f);
   }
   else if (normalcacheused && nbind == PER_VERTEX) {
     nbind = PER_VERTEX_INDEXED;

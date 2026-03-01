@@ -48,6 +48,7 @@
 */
 
 #include <Inventor/SoRenderManager.h>
+#include "glue/glp.h"
 #include <Inventor/elements/SoLinePatternElement.h>
 #include <Inventor/elements/SoLineWidthElement.h>
 #include <Inventor/elements/SoDrawStyleElement.h>
@@ -474,8 +475,8 @@ SoRenderManager::clearBuffers(SbBool color, SbBool depth)
   if (color) mask |= GL_COLOR_BUFFER_BIT;
   if (depth) mask |= GL_DEPTH_BUFFER_BIT;
   const SbColor4f bgcol = PRIVATE(this)->backgroundcolor;
-  glClearColor(bgcol[0], bgcol[1], bgcol[2], bgcol[3]);
-  glClear(mask);
+  SoGLContext_glClearColor(sogl_current_render_glue(), bgcol[0], bgcol[1], bgcol[2], bgcol[3]);
+  SoGLContext_glClear(sogl_current_render_glue(), mask);
 }
 
 /*
@@ -497,14 +498,14 @@ SoRenderManager::prerendercb(void * userdata, SoGLRenderAction * action)
 
 #if OBOL_DEBUG && 0 // debug
   GLint view[4];
-  glGetIntegerv(GL_VIEWPORT, view);
+  SoGLContext_glGetIntegerv(sogl_current_render_glue(), GL_VIEWPORT, view);
   SoDebugError::postInfo("SoRenderManager::prerendercb",
                          "GL_VIEWPORT=<%d, %d, %d, %d>",
                          view[0], view[1], view[2], view[3]);
 #endif // debug
 
   // clear the viewport
-  glClear(mask);
+  SoGLContext_glClear(sogl_current_render_glue(), mask);
 }
 
 /*!
@@ -618,17 +619,17 @@ SoRenderManager::render(const SbBool clearwindow, const SbBool clearzbuffer)
 
     // check if we have an accumulation buffer, and render additional passes
     GLint accumbits;
-    glGetIntegerv(GL_ACCUM_RED_BITS, &accumbits);
+    SoGLContext_glGetIntegerv(sogl_current_render_glue(), GL_ACCUM_RED_BITS, &accumbits);
     if (!action->hasTerminated() && accumbits > 0) {
       const float fraction = 1.0f / float(numpasses);
-      glAccum(GL_LOAD, fraction);
+      SoGLContext_glAccum(sogl_current_render_glue(), GL_LOAD, fraction);
 
       for (int i = 1; (i < numpasses) && !action->hasTerminated(); i++) {
         action->setCurPass(i, numpasses);
         this->render(action, TRUE, TRUE, TRUE);
-        glAccum(GL_ACCUM, fraction);
+        SoGLContext_glAccum(sogl_current_render_glue(), GL_ACCUM, fraction);
       }
-      glAccum(GL_RETURN, 1.0f);
+      SoGLContext_glAccum(sogl_current_render_glue(), GL_RETURN, 1.0f);
     }
     action->setCurPass(0, 1);
     action->setNumPasses(numpasses);
@@ -706,10 +707,10 @@ SoRenderManager::actuallyRender(SoGLRenderAction * action,
   if (clearzbuffer) mask |= GL_DEPTH_BUFFER_BIT;
 
   if (initmatrices) {
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
+    SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_PROJECTION);
+    SoGLContext_glLoadIdentity(sogl_current_render_glue());
+    SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_MODELVIEW);
+    SoGLContext_glLoadIdentity(sogl_current_render_glue());
   }
 
   // If there have been changes in the scene graph leading to a node
@@ -765,10 +766,10 @@ SoRenderManager::renderScene( SoGLRenderAction * action,
     if (clearmask & GL_COLOR_BUFFER_BIT) {
       if (PRIVATE(this)->isrgbmode) {
         const SbColor4f bgcol = PRIVATE(this)->backgroundcolor;
-        glClearColor(bgcol[0], bgcol[1], bgcol[2], bgcol[3]);
+        SoGLContext_glClearColor(sogl_current_render_glue(), bgcol[0], bgcol[1], bgcol[2], bgcol[3]);
       }
       else {
-        glClearIndex((GLfloat) PRIVATE(this)->backgroundindex);
+        SoGLContext_glClearIndex(sogl_current_render_glue(), (GLfloat) PRIVATE(this)->backgroundindex);
       }
     }
     // Registering a callback is needed since the correct GL viewport
@@ -829,7 +830,7 @@ SoRenderManager::renderSingle(SoGLRenderAction * action,
       this->clearBuffers(TRUE, TRUE);
 
       // only draw into depth buffer
-      glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+      SoGLContext_glColorMask(sogl_current_render_glue(), GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
       SoMaterialBindingElement::set(state, node, SoMaterialBindingElement::OVERALL);
       SoLightModelElement::set(state, node, SoLightModelElement::BASE_COLOR);
       SoPolygonOffsetElement::set(state, node, 1.0f, 1.0f,
@@ -840,7 +841,7 @@ SoRenderManager::renderSingle(SoGLRenderAction * action,
       this->actuallyRender(action, initmatrices, FALSE, FALSE);
 
       // re-enable draw masks
-      glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE);
+      SoGLContext_glColorMask(sogl_current_render_glue(), GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE);
       SoPolygonOffsetElement::set(state, node, 0.0f, 0.0f,
                                   SoPolygonOffsetElement::FILLED, FALSE);
       SoDrawStyleElement::set(state, node, SoDrawStyleElement::LINES);
@@ -874,29 +875,29 @@ SoRenderManager::renderSingle(SoGLRenderAction * action,
       SoOverrideElement::setPolygonOffsetOverride(state, node, TRUE);
       
       // sanity checks
-      glDisable(GL_LINE_STIPPLE);
-      glDepthMask(GL_FALSE);
-      glDepthFunc(GL_LEQUAL);
+      SoGLContext_glDisable(sogl_current_render_glue(), GL_LINE_STIPPLE);
+      SoGLContext_glDepthMask(sogl_current_render_glue(), GL_FALSE);
+      SoGLContext_glDepthFunc(sogl_current_render_glue(), GL_LEQUAL);
 
       // render visible edges as solid ones
       this->actuallyRender(action, initmatrices, FALSE, FALSE);
       
       // pass 3
-      glDepthFunc(GL_GREATER);
+      SoGLContext_glDepthFunc(sogl_current_render_glue(), GL_GREATER);
       SoLineWidthElement::set(state, node, 1.0f);
       SoOverrideElement::setLineWidthOverride(state, node, TRUE);
-      glLineWidth(1.0f);
-      glEnable(GL_LINE_STIPPLE);
-      glLineStipple(2, 0xF0F0); // dashed line
+      SoGLContext_glLineWidth(sogl_current_render_glue(), 1.0f);
+      SoGLContext_glEnable(sogl_current_render_glue(), GL_LINE_STIPPLE);
+      SoGLContext_glLineStipple(sogl_current_render_glue(), 2, 0xF0F0); // dashed line
       
       // render hidden edges as dashed lines
       this->actuallyRender(action, initmatrices, FALSE, FALSE);
 
       // Restore OpenGL state
-      glDisable(GL_LINE_STIPPLE);
-      glDepthMask(GL_TRUE);
-      glDepthFunc(GL_LEQUAL);
-      glLineWidth(1.0f);
+      SoGLContext_glDisable(sogl_current_render_glue(), GL_LINE_STIPPLE);
+      SoGLContext_glDepthMask(sogl_current_render_glue(), GL_TRUE);
+      SoGLContext_glDepthFunc(sogl_current_render_glue(), GL_LEQUAL);
+      SoGLContext_glLineWidth(sogl_current_render_glue(), 1.0f);
     }
     break;
   case SoRenderManager::WIREFRAME_OVERLAY:
@@ -957,19 +958,19 @@ SoRenderManager::renderStereo(SoGLRenderAction * action,
 
   switch (PRIVATE(this)->stereomode) {
   case SoRenderManager::ANAGLYPH:
-    glColorMask(GL_TRUE, GL_FALSE, GL_FALSE, GL_TRUE);
+    SoGLContext_glColorMask(sogl_current_render_glue(), GL_TRUE, GL_FALSE, GL_FALSE, GL_TRUE);
     this->renderSingle(action, initmatrices, FALSE, FALSE);
     break;
   case SoRenderManager::QUAD_BUFFER:
-    glDrawBuffer(PRIVATE(this)->doublebuffer ? GL_BACK_LEFT : GL_FRONT_LEFT);
+    SoGLContext_glDrawBuffer(sogl_current_render_glue(), PRIVATE(this)->doublebuffer ? GL_BACK_LEFT : GL_FRONT_LEFT);
     this->renderSingle(action, initmatrices, clearwindow, clearzbuffer);
     break;
   case SoRenderManager::INTERLEAVED_ROWS:
   case SoRenderManager::INTERLEAVED_COLUMNS:
     this->initStencilBufferForInterleavedStereo();
-    glEnable(GL_STENCIL_TEST);
-    glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
-    glStencilFunc(GL_EQUAL, 0x1, 0x1);
+    SoGLContext_glEnable(sogl_current_render_glue(), GL_STENCIL_TEST);
+    SoGLContext_glStencilOp(sogl_current_render_glue(), GL_KEEP, GL_KEEP, GL_KEEP);
+    SoGLContext_glStencilFunc(sogl_current_render_glue(), GL_EQUAL, 0x1, 0x1);
     this->renderSingle(action, initmatrices, clearwindow, clearzbuffer);
     break;
   default:
@@ -982,17 +983,17 @@ SoRenderManager::renderStereo(SoGLRenderAction * action,
 
   switch (PRIVATE(this)->stereomode) {
   case SoRenderManager::ANAGLYPH:
-    glClear(GL_DEPTH_BUFFER_BIT);
-    glColorMask(GL_FALSE, GL_TRUE, GL_TRUE, GL_TRUE);
+    SoGLContext_glClear(sogl_current_render_glue(), GL_DEPTH_BUFFER_BIT);
+    SoGLContext_glColorMask(sogl_current_render_glue(), GL_FALSE, GL_TRUE, GL_TRUE, GL_TRUE);
     this->renderSingle(action, initmatrices, FALSE, TRUE);
     break;
   case SoRenderManager::QUAD_BUFFER:
-    glDrawBuffer(PRIVATE(this)->doublebuffer ? GL_BACK_RIGHT : GL_FRONT_RIGHT);
+    SoGLContext_glDrawBuffer(sogl_current_render_glue(), PRIVATE(this)->doublebuffer ? GL_BACK_RIGHT : GL_FRONT_RIGHT);
     this->renderSingle(action, initmatrices, clearwindow, clearzbuffer);
     break;
   case SoRenderManager::INTERLEAVED_ROWS:
   case SoRenderManager::INTERLEAVED_COLUMNS:
-    glStencilFunc(GL_NOTEQUAL, 0x1, 0x1);
+    SoGLContext_glStencilFunc(sogl_current_render_glue(), GL_NOTEQUAL, 0x1, 0x1);
     this->renderSingle(action, initmatrices, FALSE, FALSE);
     break;
   default:
@@ -1005,16 +1006,16 @@ SoRenderManager::renderStereo(SoGLRenderAction * action,
 
   switch (PRIVATE(this)->stereomode) {
   case SoRenderManager::ANAGLYPH:
-    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    SoGLContext_glColorMask(sogl_current_render_glue(), GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
     break;
   case SoRenderManager::QUAD_BUFFER:
-    glDrawBuffer(PRIVATE(this)->doublebuffer ? GL_BACK : GL_FRONT);
+    SoGLContext_glDrawBuffer(sogl_current_render_glue(), PRIVATE(this)->doublebuffer ? GL_BACK : GL_FRONT);
     break;
   case SoRenderManager::INTERLEAVED_ROWS:
   case SoRenderManager::INTERLEAVED_COLUMNS:
     stenciltestenabled ?
-      glEnable(GL_STENCIL_TEST) :
-      glDisable(GL_STENCIL_TEST);
+      SoGLContext_glEnable(sogl_current_render_glue(), GL_STENCIL_TEST) :
+      SoGLContext_glDisable(sogl_current_render_glue(), GL_STENCIL_TEST);
     break;
   default:
     assert(0 && "unknown stereo mode");
@@ -1105,23 +1106,23 @@ SoRenderManager::initStencilBufferForInterleavedStereo(void)
   }
 
   if (layoutchange) {
-    glClearStencil(0x0);
+    SoGLContext_glClearStencil(sogl_current_render_glue(), 0x0);
 
-    glClear(GL_STENCIL_BUFFER_BIT);
-    glStencilFunc(GL_ALWAYS, GL_REPLACE, GL_REPLACE);
+    SoGLContext_glClear(sogl_current_render_glue(), GL_STENCIL_BUFFER_BIT);
+    SoGLContext_glStencilFunc(sogl_current_render_glue(), GL_ALWAYS, GL_REPLACE, GL_REPLACE);
 
-    glMatrixMode(GL_MODELVIEW);
-    glPushMatrix();
-    glLoadIdentity();
-    glMatrixMode(GL_PROJECTION);
-    glPushMatrix();
-    glLoadIdentity();
+    SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_MODELVIEW);
+    SoGLContext_glPushMatrix(sogl_current_render_glue());
+    SoGLContext_glLoadIdentity(sogl_current_render_glue());
+    SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_PROJECTION);
+    SoGLContext_glPushMatrix(sogl_current_render_glue());
+    SoGLContext_glLoadIdentity(sogl_current_render_glue());
 
-    glViewport(neworigin[0], neworigin[1], newsize[0], newsize[1]);
+    SoGLContext_glViewport(sogl_current_render_glue(), neworigin[0], neworigin[1], newsize[0], newsize[1]);
 
-    glOrtho(0, newsize[0], 0, newsize[1], -1.0f, 1.0f);
+    SoGLContext_glOrtho(sogl_current_render_glue(), 0, newsize[0], 0, newsize[1], -1.0f, 1.0f);
 
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    SoGLContext_glPixelStorei(sogl_current_render_glue(), GL_UNPACK_ALIGNMENT, 1);
 
     // FIXME: I've noticed a problem with this approach. If there is
     // something in the window system obscuring part of the canvas
@@ -1135,14 +1136,14 @@ SoRenderManager::initStencilBufferForInterleavedStereo(void)
     // XFree86 v4.1.0.1). Should test on other systems to see if they
     // show the same artifact.
 
-    glRasterPos2f(0, 0);
-    glDrawPixels(newsize[0], newsize[1], GL_STENCIL_INDEX, GL_BITMAP,
+    SoGLContext_glRasterPos2f(sogl_current_render_glue(), 0, 0);
+    SoGLContext_glDrawPixels(sogl_current_render_glue(), newsize[0], newsize[1], GL_STENCIL_INDEX, GL_BITMAP,
                  PRIVATE(this)->stereostencilmask);
 
-    glMatrixMode(GL_PROJECTION);
-    glPopMatrix();
-    glMatrixMode(GL_MODELVIEW);
-    glPopMatrix();
+    SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_PROJECTION);
+    SoGLContext_glPopMatrix(sogl_current_render_glue());
+    SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_MODELVIEW);
+    SoGLContext_glPopMatrix(sogl_current_render_glue());
   }
 }
 

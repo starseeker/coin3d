@@ -172,7 +172,7 @@ CoinOffscreenGLCanvas::setWantedSize(SbVec2s reqsize)
   // the requested, don't destruct (and reconstruct).
   //
   // We can have a different sized internal GL canvas as to what
-  // SoOffscreenRenderer wants, because glViewport() is used from
+  // SoOffscreenRenderer wants, because SoGLContext_glViewport(sogl_current_render_glue()) is used from
   // SoOffscreenRenderer to render to the correct viewport dimensions.
   if (this->context &&
       (this->size[0] >= reqsize[0]) &&
@@ -439,63 +439,63 @@ CoinOffscreenGLCanvas::readPixels(uint8_t * dst,
     }
   }
   
-  glPushAttrib(GL_ALL_ATTRIB_BITS);
+  SoGLContext_glPushAttrib(sogl_current_render_glue(), GL_ALL_ATTRIB_BITS);
 
   // First reset all settings that can influence the result of a
-  // glReadPixels() call, to make sure we get the actual contents of
+  // SoGLContext_glReadPixels(sogl_current_render_glue()) call, to make sure we get the actual contents of
   // the buffer, unmodified.
   //
   // The values set up below matches the default settings of an
   // OpenGL driver.
 
-  glPixelStorei(GL_PACK_SWAP_BYTES, 0);
-  glPixelStorei(GL_PACK_LSB_FIRST, 0);
-  glPixelStorei(GL_PACK_ROW_LENGTH, (GLint)dstrowsize);
-  glPixelStorei(GL_PACK_SKIP_ROWS, 0);
-  glPixelStorei(GL_PACK_SKIP_PIXELS, 0);
+  SoGLContext_glPixelStorei(sogl_current_render_glue(), GL_PACK_SWAP_BYTES, 0);
+  SoGLContext_glPixelStorei(sogl_current_render_glue(), GL_PACK_LSB_FIRST, 0);
+  SoGLContext_glPixelStorei(sogl_current_render_glue(), GL_PACK_ROW_LENGTH, (GLint)dstrowsize);
+  SoGLContext_glPixelStorei(sogl_current_render_glue(), GL_PACK_SKIP_ROWS, 0);
+  SoGLContext_glPixelStorei(sogl_current_render_glue(), GL_PACK_SKIP_PIXELS, 0);
 
   // FIXME: should use best possible alignment, for speediest
   // operation. 20050617 mortene.
-//   glPixelStorei(GL_PACK_ALIGNMENT, 4);
-  glPixelStorei(GL_PACK_ALIGNMENT, 1);
+//   SoGLContext_glPixelStorei(sogl_current_render_glue(), GL_PACK_ALIGNMENT, 4);
+  SoGLContext_glPixelStorei(sogl_current_render_glue(), GL_PACK_ALIGNMENT, 1);
 
-  glPixelTransferi(GL_MAP_COLOR, 0);
-  glPixelTransferi(GL_MAP_STENCIL, 0);
-  glPixelTransferi(GL_INDEX_SHIFT, 0);
-  glPixelTransferi(GL_INDEX_OFFSET, 0);
-  glPixelTransferf(GL_RED_SCALE, 1);
-  glPixelTransferf(GL_RED_BIAS, 0);
-  glPixelTransferf(GL_GREEN_SCALE, 1);
-  glPixelTransferf(GL_GREEN_BIAS, 0);
-  glPixelTransferf(GL_BLUE_SCALE, 1);
-  glPixelTransferf(GL_BLUE_BIAS, 0);
-  glPixelTransferf(GL_ALPHA_SCALE, 1);
-  glPixelTransferf(GL_ALPHA_BIAS, 0);
-  glPixelTransferf(GL_DEPTH_SCALE, 1);
-  glPixelTransferf(GL_DEPTH_BIAS, 0);
+  SoGLContext_glPixelTransferi(sogl_current_render_glue(), GL_MAP_COLOR, 0);
+  SoGLContext_glPixelTransferi(sogl_current_render_glue(), GL_MAP_STENCIL, 0);
+  SoGLContext_glPixelTransferi(sogl_current_render_glue(), GL_INDEX_SHIFT, 0);
+  SoGLContext_glPixelTransferi(sogl_current_render_glue(), GL_INDEX_OFFSET, 0);
+  SoGLContext_glPixelTransferf(sogl_current_render_glue(), GL_RED_SCALE, 1);
+  SoGLContext_glPixelTransferf(sogl_current_render_glue(), GL_RED_BIAS, 0);
+  SoGLContext_glPixelTransferf(sogl_current_render_glue(), GL_GREEN_SCALE, 1);
+  SoGLContext_glPixelTransferf(sogl_current_render_glue(), GL_GREEN_BIAS, 0);
+  SoGLContext_glPixelTransferf(sogl_current_render_glue(), GL_BLUE_SCALE, 1);
+  SoGLContext_glPixelTransferf(sogl_current_render_glue(), GL_BLUE_BIAS, 0);
+  SoGLContext_glPixelTransferf(sogl_current_render_glue(), GL_ALPHA_SCALE, 1);
+  SoGLContext_glPixelTransferf(sogl_current_render_glue(), GL_ALPHA_BIAS, 0);
+  SoGLContext_glPixelTransferf(sogl_current_render_glue(), GL_DEPTH_SCALE, 1);
+  SoGLContext_glPixelTransferf(sogl_current_render_glue(), GL_DEPTH_BIAS, 0);
 
   GLuint i = 0;
   GLfloat f = 0.0f;
-  glPixelMapfv(GL_PIXEL_MAP_I_TO_I, 1, &f);
-  glPixelMapuiv(GL_PIXEL_MAP_S_TO_S, 1, &i);
-  glPixelMapfv(GL_PIXEL_MAP_I_TO_R, 1, &f);
-  glPixelMapfv(GL_PIXEL_MAP_I_TO_G, 1, &f);
-  glPixelMapfv(GL_PIXEL_MAP_I_TO_B, 1, &f);
-  glPixelMapfv(GL_PIXEL_MAP_I_TO_A, 1, &f);
-  glPixelMapfv(GL_PIXEL_MAP_R_TO_R, 1, &f);
-  glPixelMapfv(GL_PIXEL_MAP_G_TO_G, 1, &f);
-  glPixelMapfv(GL_PIXEL_MAP_B_TO_B, 1, &f);
-  glPixelMapfv(GL_PIXEL_MAP_A_TO_A, 1, &f);
+  SoGLContext_glPixelMapfv(sogl_current_render_glue(), GL_PIXEL_MAP_I_TO_I, 1, &f);
+  SoGLContext_glPixelMapuiv(sogl_current_render_glue(), GL_PIXEL_MAP_S_TO_S, 1, &i);
+  SoGLContext_glPixelMapfv(sogl_current_render_glue(), GL_PIXEL_MAP_I_TO_R, 1, &f);
+  SoGLContext_glPixelMapfv(sogl_current_render_glue(), GL_PIXEL_MAP_I_TO_G, 1, &f);
+  SoGLContext_glPixelMapfv(sogl_current_render_glue(), GL_PIXEL_MAP_I_TO_B, 1, &f);
+  SoGLContext_glPixelMapfv(sogl_current_render_glue(), GL_PIXEL_MAP_I_TO_A, 1, &f);
+  SoGLContext_glPixelMapfv(sogl_current_render_glue(), GL_PIXEL_MAP_R_TO_R, 1, &f);
+  SoGLContext_glPixelMapfv(sogl_current_render_glue(), GL_PIXEL_MAP_G_TO_G, 1, &f);
+  SoGLContext_glPixelMapfv(sogl_current_render_glue(), GL_PIXEL_MAP_B_TO_B, 1, &f);
+  SoGLContext_glPixelMapfv(sogl_current_render_glue(), GL_PIXEL_MAP_A_TO_A, 1, &f);
 
   // The flushing of the OpenGL pipeline before and after the
-  // glReadPixels() call is done as a work-around for a reported
+  // SoGLContext_glReadPixels(sogl_current_render_glue()) call is done as a work-around for a reported
   // OpenGL driver bug: on a Win2000 system with ATI Radeon graphics
   // card, the system would hang hard if the flushing was not done.
   //
   // This is obviously an OpenGL driver bug, but the workaround of
   // doing excessive flushing has no real ill effects, so we just do
   // it unconditionally for all drivers. Note that it might not be
-  // necessary to flush both before and after glReadPixels() to work
+  // necessary to flush both before and after SoGLContext_glReadPixels(sogl_current_render_glue()) to work
   // around the bug (this was not established with the external
   // reporter), but again it shouldn't matter if we do.
   //
@@ -508,7 +508,7 @@ CoinOffscreenGLCanvas::readPixels(uint8_t * dst,
   //
   // mortene.
 
-  glFlush(); glFinish();
+  SoGLContext_glFlush(sogl_current_render_glue()); glFinish();
 
   assert((nrcomponents >= 1) && (nrcomponents <= 4));
 
@@ -516,11 +516,11 @@ CoinOffscreenGLCanvas::readPixels(uint8_t * dst,
 
   if (nrcomponents < 3) {
     readbuffer = new unsigned char[vpdims[0]*vpdims[1]*4];
-    glReadPixels(0, 0, vpdims[0], vpdims[1],
+    SoGLContext_glReadPixels(sogl_current_render_glue(), 0, 0, vpdims[0], vpdims[1],
                  nrcomponents == 1 ? GL_RGB : GL_RGBA, GL_UNSIGNED_BYTE, readbuffer);
   }
   else {
-    glReadPixels(0, 0, vpdims[0], vpdims[1],
+    SoGLContext_glReadPixels(sogl_current_render_glue(), 0, 0, vpdims[0], vpdims[1],
                  nrcomponents == 3 ? GL_RGB : GL_RGBA, GL_UNSIGNED_BYTE, dst);
   }
 
@@ -539,9 +539,9 @@ CoinOffscreenGLCanvas::readPixels(uint8_t * dst,
     }
     delete[] readbuffer;
   }
-  glFlush(); glFinish();
+  SoGLContext_glFlush(sogl_current_render_glue()); glFinish();
 
-  glPopAttrib();
+  SoGLContext_glPopAttrib(sogl_current_render_glue());
 }
 
 // *************************************************************************
@@ -782,7 +782,7 @@ CoinOffscreenGLCanvas::bindFBO(void)
   // (via OSMesaMakeCurrent) – there is no separate framebuffer object needed.
   // Attempting to create one would require GL_EXT_framebuffer_object support
   // from the OSMesa implementation, which the bundled OSMesa may not provide.
-  // glReadPixels() will read from the OSMesa buffer directly when an OSMesa
+  // SoGLContext_glReadPixels(sogl_current_render_glue()) will read from the OSMesa buffer directly when an OSMesa
   // context is current, so we can skip FBO entirely for these contexts.
   SoDB::ContextManager * mgr = this->effectiveMgr();
   if (mgr && this->context && mgr->isOSMesaContext(this->context)) {
@@ -801,7 +801,7 @@ CoinOffscreenGLCanvas::bindFBO(void)
   SoGLContext_glBindFramebuffer(glue, GL_FRAMEBUFFER_EXT, this->fbo);
   
   // Set viewport to match FBO size
-  glViewport(0, 0, this->size[0], this->size[1]);
+  SoGLContext_glViewport(sogl_current_render_glue(), 0, 0, this->size[0], this->size[1]);
   
   return TRUE;
 }

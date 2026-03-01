@@ -98,6 +98,7 @@
 */
 
 #include <Inventor/nodes/SoText2.h>
+#include "glue/glp.h"
 #include "config.h"
 
 #include <climits>
@@ -406,14 +407,14 @@ SoText2::GLRender(SoGLRenderAction * action)
     }
 
     // Set new state.
-    glMatrixMode(GL_MODELVIEW);
-    glPushMatrix();
-    glLoadIdentity();
-    glMatrixMode(GL_PROJECTION);
-    glPushMatrix();
-    glLoadIdentity();
-    glOrtho(0, vpsize[0], 0, vpsize[1], -1.0f, 1.0f);
-    glPixelStorei(GL_UNPACK_ALIGNMENT,1);
+    SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_MODELVIEW);
+    SoGLContext_glPushMatrix(sogl_current_render_glue());
+    SoGLContext_glLoadIdentity(sogl_current_render_glue());
+    SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_PROJECTION);
+    SoGLContext_glPushMatrix(sogl_current_render_glue());
+    SoGLContext_glLoadIdentity(sogl_current_render_glue());
+    SoGLContext_glOrtho(sogl_current_render_glue(), 0, vpsize[0], 0, vpsize[1], -1.0f, 1.0f);
+    SoGLContext_glPixelStorei(sogl_current_render_glue(), GL_UNPACK_ALIGNMENT,1);
 
     float fontsize = SoFontSizeElement::get(state);
     int xpos = 0;
@@ -439,12 +440,12 @@ SoText2::GLRender(SoGLRenderAction * action)
     // disable textures for all units
     SoGLMultiTextureEnabledElement::disableAll(state);
 
-    glPushAttrib(GL_ENABLE_BIT | GL_PIXEL_MODE_BIT | GL_COLOR_BUFFER_BIT | GL_TEXTURE_BIT);
-    glPushClientAttrib(GL_CLIENT_PIXEL_STORE_BIT);
+    SoGLContext_glPushAttrib(sogl_current_render_glue(), GL_ENABLE_BIT | GL_PIXEL_MODE_BIT | GL_COLOR_BUFFER_BIT | GL_TEXTURE_BIT);
+    SoGLContext_glPushClientAttrib(sogl_current_render_glue(), GL_CLIENT_PIXEL_STORE_BIT);
 
     // Optionally draw on top of all geometry, regardless of depth.
-    // glPushAttrib(GL_ENABLE_BIT) above will restore GL_DEPTH_TEST on pop.
-    if (!this->depthTest.getValue()) glDisable(GL_DEPTH_TEST);
+    // SoGLContext_glPushAttrib(sogl_current_render_glue(), GL_ENABLE_BIT) above will restore GL_DEPTH_TEST on pop.
+    if (!this->depthTest.getValue()) SoGLContext_glDisable(sogl_current_render_glue(), GL_DEPTH_TEST);
 
     SbBool drawPixelBuffer = FALSE;
 
@@ -520,7 +521,7 @@ SoText2::GLRender(SoGLRenderAction * action)
           // SbFont uses grayscale rendering, not mono
           if (FALSE) { // Never mono with SbFont
             SoText2P::setRasterPos3f((float)rasterx + textscreenoffsetx, (float)rastery + (int)nilpoint[1], -nilpoint[2]);
-            glBitmap(ix,iy,0,0,0,0,(const GLubyte *)buffer);
+            SoGLContext_glBitmap(sogl_current_render_glue(), ix,iy,0,0,0,0,(const GLubyte *)buffer);
           }
           else {
             if (!drawPixelBuffer) {
@@ -598,8 +599,8 @@ SoText2::GLRender(SoGLRenderAction * action)
       // The ortho projection set above is Y-up (bottom=0, top=vpsize[1]), so
       // the quad vertex coordinates map directly to screen pixels without any
       // additional flipping.
-      glEnable(GL_BLEND);
-      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+      SoGLContext_glEnable(sogl_current_render_glue(), GL_BLEND);
+      SoGLContext_glBlendFunc(sogl_current_render_glue(), GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
       // Bottom-left of the bounding box in screen-space (Y=0 at viewport bottom).
       // Round to integer pixel boundaries so the ProFont bitmap glyphs stay
@@ -613,51 +614,51 @@ SoText2::GLRender(SoGLRenderAction * action)
       const float qz  = -nilpoint[2];
 
       GLuint texid = 0;
-      glGenTextures(1, &texid);
+      SoGLContext_glGenTextures(sogl_current_render_glue(), 1, &texid);
       if (texid) {
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texid);
+        SoGLContext_glActiveTexture(sogl_current_render_glue(), GL_TEXTURE0);
+        SoGLContext_glBindTexture(sogl_current_render_glue(), GL_TEXTURE_2D, texid);
         // Nearest filtering: glyphs are pixel-aligned so interpolation would
         // only blur edges.
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
+        SoGLContext_glTexParameteri(sogl_current_render_glue(), GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        SoGLContext_glTexParameteri(sogl_current_render_glue(), GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        SoGLContext_glTexParameteri(sogl_current_render_glue(), GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        SoGLContext_glTexParameteri(sogl_current_render_glue(), GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        SoGLContext_glPixelStorei(sogl_current_render_glue(), GL_UNPACK_ALIGNMENT, 1);
+        SoGLContext_glTexImage2D(sogl_current_render_glue(), GL_TEXTURE_2D, 0, GL_RGBA,
                      bbsize[0], bbsize[1], 0,
                      GL_RGBA, GL_UNSIGNED_BYTE, PRIVATE(this)->pixel_buffer);
 
         // GL_REPLACE: use the texture RGBA as-is so the pre-baked material
         // colour in the RGB channels and the struetype coverage in the alpha
         // channel pass straight through to the blending stage.
-        glEnable(GL_TEXTURE_2D);
-        glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+        SoGLContext_glEnable(sogl_current_render_glue(), GL_TEXTURE_2D);
+        SoGLContext_glTexEnvf(sogl_current_render_glue(), GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 
-        glBegin(GL_QUADS);
-        glTexCoord2f(0.0f, 0.0f); glVertex3f(qx,  qy,  qz); /* bottom-left  */
-        glTexCoord2f(1.0f, 0.0f); glVertex3f(qx1, qy,  qz); /* bottom-right */
-        glTexCoord2f(1.0f, 1.0f); glVertex3f(qx1, qy1, qz); /* top-right    */
-        glTexCoord2f(0.0f, 1.0f); glVertex3f(qx,  qy1, qz); /* top-left     */
-        glEnd();
+        SoGLContext_glBegin(sogl_current_render_glue(), GL_QUADS);
+        SoGLContext_glTexCoord2f(sogl_current_render_glue(), 0.0f, 0.0f); SoGLContext_glVertex3f(sogl_current_render_glue(), qx,  qy,  qz); /* bottom-left  */
+        SoGLContext_glTexCoord2f(sogl_current_render_glue(), 1.0f, 0.0f); SoGLContext_glVertex3f(sogl_current_render_glue(), qx1, qy,  qz); /* bottom-right */
+        SoGLContext_glTexCoord2f(sogl_current_render_glue(), 1.0f, 1.0f); SoGLContext_glVertex3f(sogl_current_render_glue(), qx1, qy1, qz); /* top-right    */
+        SoGLContext_glTexCoord2f(sogl_current_render_glue(), 0.0f, 1.0f); SoGLContext_glVertex3f(sogl_current_render_glue(), qx,  qy1, qz); /* top-left     */
+        SoGLContext_glEnd(sogl_current_render_glue());
 
-        glDisable(GL_TEXTURE_2D);
-        glBindTexture(GL_TEXTURE_2D, 0);
-        glDeleteTextures(1, &texid);
+        SoGLContext_glDisable(sogl_current_render_glue(), GL_TEXTURE_2D);
+        SoGLContext_glBindTexture(sogl_current_render_glue(), GL_TEXTURE_2D, 0);
+        SoGLContext_glDeleteTextures(sogl_current_render_glue(), 1, &texid);
       }
     }
 
     // pop old state
-    glPopClientAttrib();
-    glPopAttrib();
+    SoGLContext_glPopClientAttrib(sogl_current_render_glue());
+    SoGLContext_glPopAttrib(sogl_current_render_glue());
     state->pop();
 
-    glPixelStorei(GL_UNPACK_ALIGNMENT,4);
+    SoGLContext_glPixelStorei(sogl_current_render_glue(), GL_UNPACK_ALIGNMENT,4);
     // Pop old GL matrix state.
-    glMatrixMode(GL_PROJECTION);
-    glPopMatrix();
-    glMatrixMode(GL_MODELVIEW);
-    glPopMatrix();
+    SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_PROJECTION);
+    SoGLContext_glPopMatrix(sogl_current_render_glue());
+    SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_MODELVIEW);
+    SoGLContext_glPopMatrix(sogl_current_render_glue());
   }
 
   PRIVATE(this)->unlock();
@@ -1409,8 +1410,8 @@ SoText2P::setRasterPos3f(GLfloat x, GLfloat y, GLfloat z)
   offvp = (offvp || y < 0) ? 1 : 0;  // FIXED: Operator precedence bug
   float offsety = y >= 0 ? 0 : y;
 
-  glRasterPos3f(rpx,rpy,z);
-  if (offvp) { glBitmap(0, 0, 0, 0,offsetx,offsety, NULL); }
+  SoGLContext_glRasterPos3f(sogl_current_render_glue(), rpx,rpy,z);
+  if (offvp) { SoGLContext_glBitmap(sogl_current_render_glue(), 0, 0, 0, 0,offsetx,offsety, NULL); }
 }
 
 // Update SbFont with current font state elements

@@ -424,7 +424,7 @@ fast_mipmap(SoState * state, int width, int height, int nc,
     }
   }
   else {
-    glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, format,
+    SoGLContext_glTexImage2D(sogl_current_render_glue(), GL_TEXTURE_2D, 0, internalFormat, width, height, 0, format,
                  GL_UNSIGNED_BYTE, data);
   }
   unsigned char *src = (unsigned char *) data;
@@ -441,7 +441,7 @@ fast_mipmap(SoState * state, int width, int height, int nc,
       }
     }
     else {
-      glTexImage2D(GL_TEXTURE_2D, level, internalFormat, width,
+      SoGLContext_glTexImage2D(sogl_current_render_glue(), GL_TEXTURE_2D, level, internalFormat, width,
                    height, 0, format, GL_UNSIGNED_BYTE, src);
     }
   }
@@ -830,17 +830,17 @@ SoGLImage::isOfType(SoType type) const
   depthmap->ref();
   depthmap->open(state);
 
-  glTexImage2D(GL_TEXTURE_2D, 0,
+  SoGLContext_glTexImage2D(sogl_current_render_glue(), GL_TEXTURE_2D, 0,
                GL_DEPTH_COMPONENT, // GL_DEPTH_COMPONENT24
                size[0], size[1],
                0,
                GL_DEPTH_COMPONENT,
                GL_UNSIGNED_BYTE, NULL);
 
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  SoGLContext_glTexParameteri(sogl_current_render_glue(), GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  SoGLContext_glTexParameteri(sogl_current_render_glue(), GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  SoGLContext_glTexParameteri(sogl_current_render_glue(), GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  SoGLContext_glTexParameteri(sogl_current_render_glue(), GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
   depthmap->close(state);
 
@@ -1358,7 +1358,7 @@ SoGLImageP::resizeImage(SoState * state, unsigned char *& imageptr,
   }
   else {
     GLint maxr;
-    glGetIntegerv(GL_MAX_RECTANGLE_TEXTURE_SIZE_EXT, &maxr);
+    SoGLContext_glGetIntegerv(sogl_current_render_glue(), GL_MAX_RECTANGLE_TEXTURE_SIZE_EXT, &maxr);
     maxrectsize = (uint32_t) maxr;
   }
 
@@ -1637,9 +1637,9 @@ SoGLImageP::reallyBindPBuffer(SoState * state)
   GLenum target = this->flags & SoGLImage::RECTANGLE ?
     GL_TEXTURE_RECTANGLE_EXT : GL_TEXTURE_2D;
 
-  glTexParameteri(target, GL_TEXTURE_WRAP_S,
+  SoGLContext_glTexParameteri(sogl_current_render_glue(), target, GL_TEXTURE_WRAP_S,
                   translate_wrap(state, this->wraps));
-  glTexParameteri(target, GL_TEXTURE_WRAP_T,
+  SoGLContext_glTexParameteri(sogl_current_render_glue(), target, GL_TEXTURE_WRAP_T,
                   translate_wrap(state, this->wrapt));
 
   SbBool mipmap = FALSE;
@@ -1648,7 +1648,7 @@ SoGLImageP::reallyBindPBuffer(SoState * state)
   // disabled, we probably need to allocate space for the mipmaps in
   // the pbuffer pederb, 2003-11-27
   if (this->shouldCreateMipmap() && SoGLDriverDatabase::isSupported(glue, "GL_SGIS_generate_mipmap")) {
-    glTexParameteri(target, GL_GENERATE_MIPMAP_SGIS, GL_TRUE);
+    SoGLContext_glTexParameteri(sogl_current_render_glue(), target, GL_GENERATE_MIPMAP_SGIS, GL_TRUE);
     // glHint(GL_GENERATE_MIPMAP_HINT_SGIS, GL_NICEST);
     mipmap = TRUE;
   }
@@ -1678,16 +1678,16 @@ SoGLImageP::reallyCreateTexture(SoState *state,
     SoGLContext_get_internal_texture_format(glw, numComponents, compress);
   GLenum dataFormat = SoGLContext_get_texture_format(glw, numComponents);
 
-  glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+  SoGLContext_glPixelStorei(sogl_current_render_glue(), GL_UNPACK_ALIGNMENT, 1);
 
   //FIXME: Check SoGLContext capability as well? (kintel 20011129)
   if (SoMultiTextureEnabledElement::getMode(state) == 
       SoMultiTextureEnabledElement::TEXTURE3D) { // 3D textures
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S,
+    SoGLContext_glTexParameteri(sogl_current_render_glue(), GL_TEXTURE_3D, GL_TEXTURE_WRAP_S,
                     translate_wrap(state, this->wraps));
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T,
+    SoGLContext_glTexParameteri(sogl_current_render_glue(), GL_TEXTURE_3D, GL_TEXTURE_WRAP_T,
                     translate_wrap(state, this->wrapt));
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R,
+    SoGLContext_glTexParameteri(sogl_current_render_glue(), GL_TEXTURE_3D, GL_TEXTURE_WRAP_R,
                     translate_wrap(state, this->wrapr));
 
 
@@ -1702,7 +1702,7 @@ SoGLImageP::reallyCreateTexture(SoState *state,
     else { // mipmaps
       // We used to default to calling GLU's gluBuild3DMipmaps() here,
       // but that was axed, because the gluBuild[2|3]DMipmaps()
-      // functions implicitly uses glGenTextures() and other OpenGL
+      // functions implicitly uses SoGLContext_glGenTextures(sogl_current_render_glue()) and other OpenGL
       // 1.1+ functions -- which again can cause trouble when doing
       // remote rendering. (At least we've had lots of problems with
       // NVidia's GLX implementation for non-1.0 OpenGL stuff.)
@@ -1722,22 +1722,22 @@ SoGLImageP::reallyCreateTexture(SoState *state,
     GLenum target = this->flags & SoGLImage::RECTANGLE ?
       GL_TEXTURE_RECTANGLE_EXT : GL_TEXTURE_2D;
 
-    glTexParameteri(target, GL_TEXTURE_WRAP_S,
+    SoGLContext_glTexParameteri(sogl_current_render_glue(), target, GL_TEXTURE_WRAP_S,
                     translate_wrap(state, this->wraps));
-    glTexParameteri(target, GL_TEXTURE_WRAP_T,
+    SoGLContext_glTexParameteri(sogl_current_render_glue(), target, GL_TEXTURE_WRAP_T,
                     translate_wrap(state, this->wrapt));
 
     if (mipmap && (this->flags & SoGLImage::RECTANGLE)) {
       mipmapimage = FALSE;
       if (SoGLDriverDatabase::isSupported(glw, "GL_SGIS_generate_mipmap")) {
-        glTexParameteri(target, GL_GENERATE_MIPMAP_SGIS, GL_TRUE);
+        SoGLContext_glTexParameteri(sogl_current_render_glue(), target, GL_GENERATE_MIPMAP_SGIS, GL_TRUE);
       }
       else mipmapfilter = FALSE;
     }
     // prefer GL_SGIS_generate_mipmap to glGenerateMipmap. It seems to
     // be better supported in drivers.
     else if (mipmap && SoGLDriverDatabase::isSupported(glw, "GL_SGIS_generate_mipmap")) {
-      glTexParameteri(target, GL_GENERATE_MIPMAP_SGIS, GL_TRUE);
+      SoGLContext_glTexParameteri(sogl_current_render_glue(), target, GL_GENERATE_MIPMAP_SGIS, GL_TRUE);
       mipmapimage = FALSE;
     }
     // using glGenerateMipmap() while creating a display list is not
@@ -1750,12 +1750,12 @@ SoGLImageP::reallyCreateTexture(SoState *state,
     }
     if ((this->quality > OBOL_TEX2_ANISOTROPIC_LIMIT) &&
         SoGLDriverDatabase::isSupported(glw, SO_GL_ANISOTROPIC_FILTERING)) {
-      glTexParameterf(target, GL_TEXTURE_MAX_ANISOTROPY_EXT,
+      SoGLContext_glTexParameterf(sogl_current_render_glue(), target, GL_TEXTURE_MAX_ANISOTROPY_EXT,
                       SoGLContext_get_max_anisotropy(glw));
     }
     if (!mipmapimage) {
       // Create only level 0 texture. Mimpamps might be created by glGenerateMipmap
-      glTexImage2D(target, 0, internalFormat, w, h,
+      SoGLContext_glTexImage2D(sogl_current_render_glue(), target, 0, internalFormat, w, h,
                    border, dataFormat, GL_UNSIGNED_BYTE, texture);
 
       if (generatemipmap) {
@@ -1766,11 +1766,11 @@ SoGLImageP::reallyCreateTexture(SoState *state,
         if (glw->vendor_is_ati) {
           if (!glIsEnabled(GL_TEXTURE_2D)) {
             wasenabled = FALSE;
-            glEnable(GL_TEXTURE_2D);
+            SoGLContext_glEnable(sogl_current_render_glue(), GL_TEXTURE_2D);
           }
         }
         SoGLContext_glGenerateMipmap(glw, target);
-        if (!wasenabled) glDisable(GL_TEXTURE_2D);
+        if (!wasenabled) SoGLContext_glDisable(sogl_current_render_glue(), GL_TEXTURE_2D);
       }
     }
     else { // mipmaps
@@ -1786,7 +1786,7 @@ SoGLImageP::reallyCreateTexture(SoState *state,
     // apply the texture filters
     this->applyFilter(mipmapfilter);
   }
-  glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+  SoGLContext_glPixelStorei(sogl_current_render_glue(), GL_UNPACK_ALIGNMENT, 4);
 }
 
 //
@@ -1898,33 +1898,33 @@ SoGLImageP::applyFilter(const SbBool ismipmap)
   }
   if (this->flags & SoGLImage::USE_QUALITY_VALUE) {
     if (this->quality < OBOL_TEX2_LINEAR_LIMIT) {
-      glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-      glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+      SoGLContext_glTexParameteri(sogl_current_render_glue(), target, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+      SoGLContext_glTexParameteri(sogl_current_render_glue(), target, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     }
     else if ((this->quality < OBOL_TEX2_MIPMAP_LIMIT) || !ismipmap) {
-      glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-      glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+      SoGLContext_glTexParameteri(sogl_current_render_glue(), target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+      SoGLContext_glTexParameteri(sogl_current_render_glue(), target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     }
     else if (this->quality < OBOL_TEX2_LINEAR_MIPMAP_LIMIT) {
-      glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-      glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
+      SoGLContext_glTexParameteri(sogl_current_render_glue(), target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+      SoGLContext_glTexParameteri(sogl_current_render_glue(), target, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
     }
     else { // max quality
-      glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-      glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+      SoGLContext_glTexParameteri(sogl_current_render_glue(), target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+      SoGLContext_glTexParameteri(sogl_current_render_glue(), target, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     }
   }
   else {
     if ((this->flags & SoGLImage::NO_MIPMAP) || !ismipmap) {
-      glTexParameteri(target, GL_TEXTURE_MAG_FILTER,
+      SoGLContext_glTexParameteri(sogl_current_render_glue(), target, GL_TEXTURE_MAG_FILTER,
                       (this->flags & SoGLImage::LINEAR_MAG_FILTER) ?
                       GL_LINEAR : GL_NEAREST);
-      glTexParameteri(target, GL_TEXTURE_MIN_FILTER,
+      SoGLContext_glTexParameteri(sogl_current_render_glue(), target, GL_TEXTURE_MIN_FILTER,
                       (this->flags & SoGLImage::LINEAR_MIN_FILTER) ?
                       GL_LINEAR : GL_NEAREST);
     }
     else {
-      glTexParameteri(target, GL_TEXTURE_MAG_FILTER,
+      SoGLContext_glTexParameteri(sogl_current_render_glue(), target, GL_TEXTURE_MAG_FILTER,
                       (this->flags & SoGLImage::LINEAR_MAG_FILTER) ?
                       GL_LINEAR : GL_NEAREST);
       GLenum minfilter = GL_NEAREST_MIPMAP_NEAREST;
@@ -1937,7 +1937,7 @@ SoGLImageP::applyFilter(const SbBool ismipmap)
       else if (this->flags & SoGLImage::LINEAR_MIN_FILTER)
         minfilter = GL_NEAREST_MIPMAP_LINEAR;
 
-      glTexParameteri(target, GL_TEXTURE_MIN_FILTER,
+      SoGLContext_glTexParameteri(sogl_current_render_glue(), target, GL_TEXTURE_MIN_FILTER,
                       minfilter);
     }
   }

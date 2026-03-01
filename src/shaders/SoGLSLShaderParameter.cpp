@@ -31,6 +31,7 @@
 \**************************************************************************/
 
 #include "SoGLSLShaderParameter.h"
+#include "glue/glp.h"
 #include "SoGLSLShaderObject.h"
 
 #include <Inventor/errors/SoDebugError.h>

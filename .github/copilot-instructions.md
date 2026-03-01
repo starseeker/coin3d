@@ -14,7 +14,21 @@
 - **Doxygen** - for API documentation generation (required by default)
 
 ### Platform-Specific Requirements
-- **Linux**: `sudo apt-get install gdb libpng-dev xserver-xorg-dev libx11-dev libxi-dev libxext-dev libglu1-mesa-dev libfontconfig-dev`
+- **Linux**: Install the following packages before building. The full set is required to build the bundled FLTK viewer (`obol_viewer`) as well as the core library with GLX support:
+  ```bash
+  sudo apt-get install -y \
+    gdb cmake \
+    libpng-dev \
+    libx11-dev libxext-dev libxi-dev libxrandr-dev \
+    libxcursor-dev libxft-dev libxinerama-dev \
+    libgl-dev libglu1-mesa-dev \
+    libfontconfig-dev libfreetype-dev
+  ```
+  - `libx11-dev`, `libxext-dev`, `libxi-dev` – core X11 headers (required for GLX and FLTK)
+  - `libxrandr-dev`, `libxcursor-dev`, `libxft-dev`, `libxinerama-dev` – X11 extension headers required by the bundled FLTK
+  - `libgl-dev`, `libglu1-mesa-dev` – OpenGL and GLU headers (provides `GL/gl.h`, `GL/glx.h`, `GL/glu.h`)
+  - `libfontconfig-dev`, `libfreetype-dev` – font configuration headers (required by FLTK)
+  - **Note**: Without these packages the bundled FLTK in `external/fltk` cannot configure or compile, causing `obol_viewer` to be silently disabled and the FLTK-dependent build targets to fail.
 - **Windows**: Visual Studio 2022
 - **macOS**: XQuartz for X11 builds
 

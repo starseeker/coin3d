@@ -243,8 +243,8 @@ SoPointSet::GLRender(SoGLRenderAction * action)
   if (needNormals) nbind = this->findNormalBinding(action->getState());
 
   if (nbind == OVERALL && needNormals) {
-    if (normals) glNormal3fv((const GLfloat *)normals);
-    else glNormal3f(0.0f, 0.0f, 1.0f);
+    if (normals) SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat *)normals);
+    else SoGLContext_glNormal3f(sogl_current_render_glue(), 0.0f, 0.0f, 1.0f);
   }
 
   mb.sendFirst(); // make sure we have the correct material

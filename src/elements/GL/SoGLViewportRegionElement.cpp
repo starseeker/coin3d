@@ -40,6 +40,7 @@
 */
 
 #include <Inventor/elements/SoGLViewportRegionElement.h>
+#include "glue/glp.h"
 
 
 #include <cassert>
@@ -123,7 +124,7 @@ SoGLViewportRegionElement::updategl() const
   if (this->initialized) {
     SbVec2s origin = this->viewportRegion.getViewportOriginPixels();
     SbVec2s size = this->viewportRegion.getViewportSizePixels();
-    glViewport(origin[0], origin[1], size[0], size[1]);
+    SoGLContext_glViewport(sogl_current_render_glue(), origin[0], origin[1], size[0], size[1]);
 
 #if OBOL_DEBUG && 0 // debug
     SoDebugError::postInfo("SoGLViewportRegionElement::updategl",

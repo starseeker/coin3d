@@ -186,7 +186,7 @@ sogl_render_cone(const float radius,
   // "compressed". 20010926 mortene.
 
   if (flags & SOGL_RENDER_SIDE) {
-    glBegin(GL_TRIANGLES);
+    SoGLContext_glBegin(sogl_current_render_glue(), GL_TRIANGLES);
     i = 0;
 
     float t = 1.0;
@@ -194,14 +194,14 @@ sogl_render_cone(const float radius,
 
     while (i < slices) {
       if (flags & SOGL_NEED_TEXCOORDS) {
-        glTexCoord2f(t - delta*0.5f, 1.0f);
+        SoGLContext_glTexCoord2f(sogl_current_render_glue(), t - delta*0.5f, 1.0f);
       }
       else if (flags & SOGL_NEED_3DTEXCOORDS) {
-        glTexCoord3f(0.5f, 1.0f, 0.5f);
+        SoGLContext_glTexCoord3f(sogl_current_render_glue(), 0.5f, 1.0f, 0.5f);
       }
       if (flags & SOGL_NEED_NORMALS) {
         SbVec3f n = (normals[i] + normals[i+1])*0.5f;
-        glNormal3f(n[0], n[1], n[2]);
+        SoGLContext_glNormal3f(sogl_current_render_glue(), n[0], n[1], n[2]);
       }
       if (flags & SOGL_NEED_MULTITEXCOORDS) {
         for (u = 1; u <= maxunit; u++) {
@@ -212,15 +212,15 @@ sogl_render_cone(const float radius,
         }
       }
 
-      glVertex3f(0.0f, h2, 0.0f);
+      SoGLContext_glVertex3f(sogl_current_render_glue(), 0.0f, h2, 0.0f);
       if (flags & SOGL_NEED_TEXCOORDS) {
-        glTexCoord2f(t, 0.0f);
+        SoGLContext_glTexCoord2f(sogl_current_render_glue(), t, 0.0f);
       }
       else if (flags & SOGL_NEED_3DTEXCOORDS) {
-        glTexCoord3f(texcoords[i][0]+0.5f, 0.0f, texcoords[i][1]+0.5f);
+        SoGLContext_glTexCoord3f(sogl_current_render_glue(), texcoords[i][0]+0.5f, 0.0f, texcoords[i][1]+0.5f);
       }
       if (flags & SOGL_NEED_NORMALS) {
-        glNormal3fv((const GLfloat*)&normals[i]);
+        SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat*)&normals[i]);
       }
       if (flags & SOGL_NEED_MULTITEXCOORDS) {
         for (u = 1; u <= maxunit; u++) {
@@ -230,16 +230,16 @@ sogl_render_cone(const float radius,
           }
         }
       }
-      glVertex3fv((const GLfloat*)&coords[i]);
+      SoGLContext_glVertex3fv(sogl_current_render_glue(), (const GLfloat*)&coords[i]);
 
       if (flags & SOGL_NEED_TEXCOORDS) {
-        glTexCoord2f(t - delta, 0.0f);
+        SoGLContext_glTexCoord2f(sogl_current_render_glue(), t - delta, 0.0f);
       }
       else if (flags & SOGL_NEED_3DTEXCOORDS) {
-        glTexCoord3f(texcoords[i+1][0]+0.5f, 0.0f, texcoords[i+1][1]+0.5f);
+        SoGLContext_glTexCoord3f(sogl_current_render_glue(), texcoords[i+1][0]+0.5f, 0.0f, texcoords[i+1][1]+0.5f);
       }
       if (flags & SOGL_NEED_NORMALS) {
-        glNormal3fv((const GLfloat*)&normals[i+1]);
+        SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat*)&normals[i+1]);
       }
       if (flags & SOGL_NEED_MULTITEXCOORDS) {
         for (u = 1; u <= maxunit; u++) {
@@ -249,14 +249,14 @@ sogl_render_cone(const float radius,
           }
         }
       }
-      glVertex3fv((const GLfloat*)&coords[i+1]);
+      SoGLContext_glVertex3fv(sogl_current_render_glue(), (const GLfloat*)&coords[i+1]);
 
       i++;
       t -= delta;
     }
 
     matnr++;
-    glEnd();
+    SoGLContext_glEnd(sogl_current_render_glue());
   }
 
   if (flags & SOGL_RENDER_BOTTOM) {
@@ -264,14 +264,14 @@ sogl_render_cone(const float radius,
       material->send(matnr, TRUE);
     }
 
-    glBegin(GL_TRIANGLE_FAN);
-    if (flags & SOGL_NEED_NORMALS) glNormal3f(0.0f, -1.0f, 0.0f);
+    SoGLContext_glBegin(sogl_current_render_glue(), GL_TRIANGLE_FAN);
+    if (flags & SOGL_NEED_NORMALS) SoGLContext_glNormal3f(sogl_current_render_glue(), 0.0f, -1.0f, 0.0f);
     for (i = slices-1; i >= 0; i--) {
       if (flags & SOGL_NEED_TEXCOORDS) {
-        glTexCoord2f(texcoords[i][0]+0.5f, texcoords[i][1]+0.5f);
+        SoGLContext_glTexCoord2f(sogl_current_render_glue(), texcoords[i][0]+0.5f, texcoords[i][1]+0.5f);
       }
       else if (flags & SOGL_NEED_3DTEXCOORDS) {
-        glTexCoord3f(texcoords[i][0]+0.5f, 0.0f, texcoords[i][1]+0.5f);
+        SoGLContext_glTexCoord3f(sogl_current_render_glue(), texcoords[i][0]+0.5f, 0.0f, texcoords[i][1]+0.5f);
       }
       if (flags & SOGL_NEED_MULTITEXCOORDS) {
         for (u = 1; u <= maxunit; u++) {
@@ -282,9 +282,9 @@ sogl_render_cone(const float radius,
         }
       }
 
-      glVertex3fv((const GLfloat*)&coords[i]);
+      SoGLContext_glVertex3fv(sogl_current_render_glue(), (const GLfloat*)&coords[i]);
     }
-    glEnd();
+    SoGLContext_glEnd(sogl_current_render_glue());
   }
   if (state && (SoComplexityTypeElement::get(state) ==
                 SoComplexityTypeElement::OBJECT_SPACE)) {
@@ -350,7 +350,7 @@ sogl_render_cylinder(const float radius,
   int matnr = 0;
 
   if (flags & SOGL_RENDER_SIDE) {
-    glBegin(GL_QUAD_STRIP);
+    SoGLContext_glBegin(sogl_current_render_glue(), GL_QUAD_STRIP);
     i = 0;
 
     float t = 0.0;
@@ -358,13 +358,13 @@ sogl_render_cylinder(const float radius,
 
     while (i <= slices) {
       if (flags & SOGL_NEED_TEXCOORDS) {
-        glTexCoord2f(t, 1.0f);
+        SoGLContext_glTexCoord2f(sogl_current_render_glue(), t, 1.0f);
       }
       else if (flags & SOGL_NEED_3DTEXCOORDS) {
-        glTexCoord3f(texcoords[i][0]+0.5f, 1.0f, 1.0f - texcoords[i][1]-0.5f);
+        SoGLContext_glTexCoord3f(sogl_current_render_glue(), texcoords[i][0]+0.5f, 1.0f, 1.0f - texcoords[i][1]-0.5f);
       }
       if (flags & SOGL_NEED_NORMALS) {
-        glNormal3fv((const GLfloat*)&normals[i]);
+        SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat*)&normals[i]);
       }
       if (flags & SOGL_NEED_MULTITEXCOORDS) {
         for (u = 1; u <= maxunit; u++) {
@@ -376,12 +376,12 @@ sogl_render_cylinder(const float radius,
       }
 
       SbVec3f c = coords[i];
-      glVertex3f(c[0], h2, c[2]);
+      SoGLContext_glVertex3f(sogl_current_render_glue(), c[0], h2, c[2]);
       if (flags & SOGL_NEED_TEXCOORDS) {
-        glTexCoord2f(t, 0.0f);
+        SoGLContext_glTexCoord2f(sogl_current_render_glue(), t, 0.0f);
       }
       else if (flags & SOGL_NEED_3DTEXCOORDS) {
-        glTexCoord3f(texcoords[i][0]+0.5f, 0.0f, 1.0f - texcoords[i][1]-0.5f);
+        SoGLContext_glTexCoord3f(sogl_current_render_glue(), texcoords[i][0]+0.5f, 0.0f, 1.0f - texcoords[i][1]-0.5f);
       }
       if (flags & SOGL_NEED_MULTITEXCOORDS) {
         for (u = 1; u <= maxunit; u++) {
@@ -391,13 +391,13 @@ sogl_render_cylinder(const float radius,
           }
         }
       }
-      glVertex3f(c[0], c[1], c[2]);
+      SoGLContext_glVertex3f(sogl_current_render_glue(), c[0], c[1], c[2]);
       i++;
       t += inc;
     }
 
     matnr++;
-    glEnd();
+    SoGLContext_glEnd(sogl_current_render_glue());
   }
 
   if ((flags & (SOGL_NEED_TEXCOORDS|SOGL_NEED_3DTEXCOORDS|SOGL_NEED_MULTITEXCOORDS)) &&
@@ -410,15 +410,15 @@ sogl_render_cylinder(const float radius,
     if (flags & SOGL_MATERIAL_PER_PART) {
       material->send(matnr, TRUE);
     }
-    glBegin(GL_TRIANGLE_FAN);
-    if (flags & SOGL_NEED_NORMALS) glNormal3f(0.0f, 1.0f, 0.0f);
+    SoGLContext_glBegin(sogl_current_render_glue(), GL_TRIANGLE_FAN);
+    if (flags & SOGL_NEED_NORMALS) SoGLContext_glNormal3f(sogl_current_render_glue(), 0.0f, 1.0f, 0.0f);
 
     for (i = 0; i < slices; i++) {
       if (flags & SOGL_NEED_TEXCOORDS) {
-        glTexCoord2f(texcoords[i][0]+0.5f, 1.0f - texcoords[i][1]-0.5f);
+        SoGLContext_glTexCoord2f(sogl_current_render_glue(), texcoords[i][0]+0.5f, 1.0f - texcoords[i][1]-0.5f);
       }
       else if (flags & SOGL_NEED_3DTEXCOORDS) {
-        glTexCoord3f(texcoords[i][0]+0.5f, 1.0f, 1.0f - texcoords[i][1]-0.5f);
+        SoGLContext_glTexCoord3f(sogl_current_render_glue(), texcoords[i][0]+0.5f, 1.0f, 1.0f - texcoords[i][1]-0.5f);
       }
       if (flags & SOGL_NEED_MULTITEXCOORDS) {
         for (u = 1; u <= maxunit; u++) {
@@ -429,24 +429,24 @@ sogl_render_cylinder(const float radius,
         }
       }
       const SbVec3f &c = coords[i];
-      glVertex3f(c[0], h2, c[2]);
+      SoGLContext_glVertex3f(sogl_current_render_glue(), c[0], h2, c[2]);
     }
-    glEnd();
+    SoGLContext_glEnd(sogl_current_render_glue());
     matnr++;
   }
   if (flags & SOGL_RENDER_BOTTOM) {
     if (flags & SOGL_MATERIAL_PER_PART) {
       material->send(matnr, TRUE);
     }
-    glBegin(GL_TRIANGLE_FAN);
-    if (flags & SOGL_NEED_NORMALS) glNormal3f(0.0f, -1.0f, 0.0f);
+    SoGLContext_glBegin(sogl_current_render_glue(), GL_TRIANGLE_FAN);
+    if (flags & SOGL_NEED_NORMALS) SoGLContext_glNormal3f(sogl_current_render_glue(), 0.0f, -1.0f, 0.0f);
 
     for (i = slices-1; i >= 0; i--) {
       if (flags & SOGL_NEED_TEXCOORDS) {
-        glTexCoord2f(texcoords[i][0]+0.5f, texcoords[i][1]+0.5f);
+        SoGLContext_glTexCoord2f(sogl_current_render_glue(), texcoords[i][0]+0.5f, texcoords[i][1]+0.5f);
       }
       else if (flags & SOGL_NEED_3DTEXCOORDS) {
-        glTexCoord3f(texcoords[i][0]+0.5f, 0.0f, 1.0f - texcoords[i][1]-0.5f);
+        SoGLContext_glTexCoord3f(sogl_current_render_glue(), texcoords[i][0]+0.5f, 0.0f, 1.0f - texcoords[i][1]-0.5f);
       }
       if (flags & SOGL_NEED_MULTITEXCOORDS) {
         for (u = 1; u <= maxunit; u++) {
@@ -456,9 +456,9 @@ sogl_render_cylinder(const float radius,
           }
         }
       }
-      glVertex3fv((const GLfloat*)&coords[i]);
+      SoGLContext_glVertex3fv(sogl_current_render_glue(), (const GLfloat*)&coords[i]);
     }
-    glEnd();
+    SoGLContext_glEnd(sogl_current_render_glue());
   }
   if (state && (SoComplexityTypeElement::get(state) ==
                 SoComplexityTypeElement::OBJECT_SPACE)) {
@@ -537,15 +537,15 @@ sogl_render_sphere(const float radius,
   float dT = 1.0f / (float) (stacks-1);
   float T = 1.0f - dT;
 
-  glBegin(GL_TRIANGLES);
+  SoGLContext_glBegin(sogl_current_render_glue(), GL_TRIANGLES);
 
   for (j = 1; j <= slices; j++) {
-    if (flags & SOGL_NEED_NORMALS) glNormal3f(0.0f, 1.0f, 0.0f);
+    if (flags & SOGL_NEED_NORMALS) SoGLContext_glNormal3f(sogl_current_render_glue(), 0.0f, 1.0f, 0.0f);
     if (flags & SOGL_NEED_TEXCOORDS) {
-      glTexCoord2f(currs + 0.5f * incs, 1.0f);
+      SoGLContext_glTexCoord2f(sogl_current_render_glue(), currs + 0.5f * incs, 1.0f);
     }
     else if (flags & SOGL_NEED_3DTEXCOORDS) {
-      glTexCoord3f(0.5f, 1.0f, 0.5f);
+      SoGLContext_glTexCoord3f(sogl_current_render_glue(), 0.5f, 1.0f, 0.5f);
     }
     if (flags & SOGL_NEED_MULTITEXCOORDS) {
       for (u = 1; u <= maxunit; u++) {
@@ -555,14 +555,14 @@ sogl_render_sphere(const float radius,
         }
       }
     }
-    glVertex3f(0.0f, radius, 0.0f);
+    SoGLContext_glVertex3f(sogl_current_render_glue(), 0.0f, radius, 0.0f);
 
-    if (flags & SOGL_NEED_NORMALS) glNormal3fv((const GLfloat*) &normals[j-1]);
+    if (flags & SOGL_NEED_NORMALS) SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat*) &normals[j-1]);
     if (flags & SOGL_NEED_TEXCOORDS) {
-      glTexCoord2f(currs, T);
+      SoGLContext_glTexCoord2f(sogl_current_render_glue(), currs, T);
     }
     else if (flags & SOGL_NEED_3DTEXCOORDS) {
-      glTexCoord3fv((const GLfloat*) &texcoords[j-1]);
+      SoGLContext_glTexCoord3fv(sogl_current_render_glue(), (const GLfloat*) &texcoords[j-1]);
     }
     if (flags & SOGL_NEED_MULTITEXCOORDS) {
       for (u = 1; u <= maxunit; u++) {
@@ -573,7 +573,7 @@ sogl_render_sphere(const float radius,
       }
     }
 
-    glVertex3fv((const GLfloat*) &coords[j-1]);
+    SoGLContext_glVertex3fv(sogl_current_render_glue(), (const GLfloat*) &coords[j-1]);
 
     currs += incs;
     theta += dtheta;
@@ -582,14 +582,14 @@ sogl_render_sphere(const float radius,
                  float(cos(theta))*ts);
 
     normals[j] = tmp;
-    if (flags & SOGL_NEED_NORMALS) glNormal3fv((const GLfloat*)&normals[j]);
+    if (flags & SOGL_NEED_NORMALS) SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat*)&normals[j]);
     if (flags & SOGL_NEED_TEXCOORDS) {
       S[j] = currs;
-      glTexCoord2f(currs, T);
+      SoGLContext_glTexCoord2f(sogl_current_render_glue(), currs, T);
     }
     else if (flags & SOGL_NEED_3DTEXCOORDS) {
       texcoords[j] = tmp/2 + SbVec3f(0.5f,0.5f,0.5f);
-      glTexCoord3fv((const GLfloat*) &texcoords[j]);
+      SoGLContext_glTexCoord3fv(sogl_current_render_glue(), (const GLfloat*) &texcoords[j]);
     }
     if (flags & SOGL_NEED_MULTITEXCOORDS) {
       for (u = 1; u <= maxunit; u++) {
@@ -601,23 +601,23 @@ sogl_render_sphere(const float radius,
     }
     tmp *= radius;
     coords[j] = tmp;
-    glVertex3fv((const GLfloat*)&coords[j]);
+    SoGLContext_glVertex3fv(sogl_current_render_glue(), (const GLfloat*)&coords[j]);
   }
-  glEnd(); // GL_TRIANGLES
+  SoGLContext_glEnd(sogl_current_render_glue()); // GL_TRIANGLES
 
   rho += drho;
 
   for (i = 2; i < stacks-1; i++) {
     tc = (float)cos(rho);
     ts = - (float) sin(rho);
-    glBegin(GL_QUAD_STRIP);
+    SoGLContext_glBegin(sogl_current_render_glue(), GL_QUAD_STRIP);
     theta = 0.0f;
     for (j = 0; j <= slices; j++) {
       if (flags & SOGL_NEED_TEXCOORDS) {
-        glTexCoord2f(S[j], T);
+        SoGLContext_glTexCoord2f(sogl_current_render_glue(), S[j], T);
       }
       else if (flags & SOGL_NEED_3DTEXCOORDS) {
-        glTexCoord3fv((const GLfloat*) &texcoords[j]);
+        SoGLContext_glTexCoord3fv(sogl_current_render_glue(), (const GLfloat*) &texcoords[j]);
       }
       if (flags & SOGL_NEED_MULTITEXCOORDS) {
         for (u = 1; u <= maxunit; u++) {
@@ -627,18 +627,18 @@ sogl_render_sphere(const float radius,
           }
         }
       }
-      if (flags & SOGL_NEED_NORMALS) glNormal3fv((const GLfloat*)&normals[j]);
-      glVertex3fv((const GLfloat*)&coords[j]);
+      if (flags & SOGL_NEED_NORMALS) SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat*)&normals[j]);
+      SoGLContext_glVertex3fv(sogl_current_render_glue(), (const GLfloat*)&coords[j]);
 
       tmp.setValue(float(sin(theta))*ts,
                    tc,
                    float(cos(theta))*ts);
       if (flags & SOGL_NEED_TEXCOORDS) {
-        glTexCoord2f(S[j], T - dT);
+        SoGLContext_glTexCoord2f(sogl_current_render_glue(), S[j], T - dT);
       }
       else if (flags & SOGL_NEED_3DTEXCOORDS) {
         texcoords[j] = tmp/2 + SbVec3f(0.5f,0.5f,0.5f);
-        glTexCoord3fv((const GLfloat*) &texcoords[j]);
+        SoGLContext_glTexCoord3fv(sogl_current_render_glue(), (const GLfloat*) &texcoords[j]);
       }
       if (flags & SOGL_NEED_MULTITEXCOORDS) {
         for (u = 1; u <= maxunit; u++) {
@@ -649,24 +649,24 @@ sogl_render_sphere(const float radius,
         }
       }
       normals[j] = tmp;
-      if (flags & SOGL_NEED_NORMALS) glNormal3f(tmp[0], tmp[1], tmp[2]);
+      if (flags & SOGL_NEED_NORMALS) SoGLContext_glNormal3f(sogl_current_render_glue(), tmp[0], tmp[1], tmp[2]);
       tmp *= radius;
-      glVertex3f(tmp[0], tmp[1], tmp[2]);
+      SoGLContext_glVertex3f(sogl_current_render_glue(), tmp[0], tmp[1], tmp[2]);
       coords[j] = tmp;
       theta += dtheta;
     }
-    glEnd(); // GL_QUAD_STRIP
+    SoGLContext_glEnd(sogl_current_render_glue()); // GL_QUAD_STRIP
     rho += drho;
     T -= dT;
   }
 
-  glBegin(GL_TRIANGLES);
+  SoGLContext_glBegin(sogl_current_render_glue(), GL_TRIANGLES);
   for (j = 0; j < slices; j++) {
     if (flags & SOGL_NEED_TEXCOORDS) {
-      glTexCoord2f(S[j], T);
+      SoGLContext_glTexCoord2f(sogl_current_render_glue(), S[j], T);
     }
     else if (flags & SOGL_NEED_3DTEXCOORDS) {
-      glTexCoord3fv((const GLfloat*) &texcoords[j]);
+      SoGLContext_glTexCoord3fv(sogl_current_render_glue(), (const GLfloat*) &texcoords[j]);
     }
     if (flags & SOGL_NEED_MULTITEXCOORDS) {
       for (u = 1; u <= maxunit; u++) {
@@ -676,14 +676,14 @@ sogl_render_sphere(const float radius,
         }
       }
     }
-    if (flags & SOGL_NEED_NORMALS) glNormal3fv((const GLfloat*)&normals[j]);
-    glVertex3fv((const GLfloat*)&coords[j]);
+    if (flags & SOGL_NEED_NORMALS) SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat*)&normals[j]);
+    SoGLContext_glVertex3fv(sogl_current_render_glue(), (const GLfloat*)&coords[j]);
 
     if (flags & SOGL_NEED_TEXCOORDS) {
-      glTexCoord2f(S[j]+incs*0.5f, 0.0f);
+      SoGLContext_glTexCoord2f(sogl_current_render_glue(), S[j]+incs*0.5f, 0.0f);
     }
     else if (flags & SOGL_NEED_3DTEXCOORDS) {
-      glTexCoord3f(0.5f, 0.0f, 0.5f);
+      SoGLContext_glTexCoord3f(sogl_current_render_glue(), 0.5f, 0.0f, 0.5f);
     }
     if (flags & SOGL_NEED_MULTITEXCOORDS) {
       for (u = 1; u <= maxunit; u++) {
@@ -693,14 +693,14 @@ sogl_render_sphere(const float radius,
         }
       }
     }
-    if (flags & SOGL_NEED_NORMALS) glNormal3f(0.0f, -1.0f, 0.0f);
-    glVertex3f(0.0f, -radius, 0.0f);
+    if (flags & SOGL_NEED_NORMALS) SoGLContext_glNormal3f(sogl_current_render_glue(), 0.0f, -1.0f, 0.0f);
+    SoGLContext_glVertex3f(sogl_current_render_glue(), 0.0f, -radius, 0.0f);
 
     if (flags & SOGL_NEED_TEXCOORDS) {
-      glTexCoord2f(S[j+1], T);
+      SoGLContext_glTexCoord2f(sogl_current_render_glue(), S[j+1], T);
     }
     else if (flags & SOGL_NEED_3DTEXCOORDS) {
-      glTexCoord3fv((const GLfloat*) &texcoords[j+1]);
+      SoGLContext_glTexCoord3fv(sogl_current_render_glue(), (const GLfloat*) &texcoords[j+1]);
     }
     if (flags & SOGL_NEED_MULTITEXCOORDS) {
       for (u = 1; u <= maxunit; u++) {
@@ -710,10 +710,10 @@ sogl_render_sphere(const float radius,
         }
       }
     }
-    if (flags & SOGL_NEED_NORMALS) glNormal3fv((const GLfloat*)&normals[j+1]);
-    glVertex3fv((const GLfloat*)&coords[j+1]);
+    if (flags & SOGL_NEED_NORMALS) SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat*)&normals[j+1]);
+    SoGLContext_glVertex3fv(sogl_current_render_glue(), (const GLfloat*)&coords[j+1]);
   }
-  glEnd(); // GL_TRIANGLES
+  SoGLContext_glEnd(sogl_current_render_glue()); // GL_TRIANGLES
 
   if (state && (SoComplexityTypeElement::get(state) ==
                 SoComplexityTypeElement::OBJECT_SPACE)) {
@@ -813,21 +813,21 @@ sogl_render_cube(const float width,
                          width * 0.5f,
                          height * 0.5f,
                          depth * 0.5f);
-  glBegin(GL_QUADS);
+  SoGLContext_glBegin(sogl_current_render_glue(), GL_QUADS);
   int *iptr = sogl_cube_vindices;
   int u;
 
   for (int i = 0; i < 6; i++) { // 6 quads
     if (flags & SOGL_NEED_NORMALS)
-      glNormal3fv((const GLfloat*)&sogl_cube_normals[i*3]);
+      SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat*)&sogl_cube_normals[i*3]);
     if (flags & SOGL_MATERIAL_PER_PART)
       material->send(i, TRUE);
     for (int j = 0; j < 4; j++) {
       if (flags & SOGL_NEED_3DTEXCOORDS) {
-        glTexCoord3fv(sogl_cube_3dtexcoords[*iptr]);
+        SoGLContext_glTexCoord3fv(sogl_current_render_glue(), sogl_cube_3dtexcoords[*iptr]);
       }
       else if (flags & SOGL_NEED_TEXCOORDS) {
-        glTexCoord2fv(&sogl_cube_texcoords[j<<1]);
+        SoGLContext_glTexCoord2fv(sogl_current_render_glue(), &sogl_cube_texcoords[j<<1]);
       }
       if (flags & SOGL_NEED_MULTITEXCOORDS) {
         for (u = 1; u <= maxunit; u++) {
@@ -837,10 +837,10 @@ sogl_render_cube(const float width,
           }
         }
       }
-      glVertex3fv((const GLfloat*)&varray[*iptr++]);
+      SoGLContext_glVertex3fv(sogl_current_render_glue(), (const GLfloat*)&varray[*iptr++]);
     }
   }
-  glEnd();
+  SoGLContext_glEnd(sogl_current_render_glue());
 
   if (state) {
     // always encourage auto caching for cubes
@@ -893,8 +893,8 @@ namespace { namespace SoGL { namespace IndexedLineSet {
     // This is the same code as in SoGLCoordinateElement::send().
     // It is inlined here for speed (~15% speed increase).
 #define SEND_VERTEX(_idx_) \
-    if (is3d) glVertex3fv((const GLfloat*) (coords3d + _idx_)); \
-    else glVertex4fv((const GLfloat*) (coords4d + _idx_));
+    if (is3d) SoGLContext_glVertex3fv(sogl_current_render_glue(), (const GLfloat*) (coords3d + _idx_)); \
+    else SoGLContext_glVertex4fv(sogl_current_render_glue(), (const GLfloat*) (coords4d + _idx_));
 
     // just in case someone forgot
     if (matindices == NULL) matindices = indices;
@@ -909,7 +909,7 @@ namespace { namespace SoGL { namespace IndexedLineSet {
     const SbVec3f *currnormal = &dummynormal;
     if (normals) currnormal = normals;
     if ((AttributeBinding)NormalBinding == OVERALL) {
-      glNormal3fv((const GLfloat*)currnormal);
+      SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat*)currnormal);
     }
 
     if ((AttributeBinding)MaterialBinding == PER_SEGMENT ||
@@ -919,9 +919,9 @@ namespace { namespace SoGL { namespace IndexedLineSet {
       int previ;
 
       if (drawAsPoints)
-        glBegin(GL_POINTS);
+        SoGLContext_glBegin(sogl_current_render_glue(), GL_POINTS);
       else
-        glBegin(GL_LINES);
+        SoGLContext_glBegin(sogl_current_render_glue(), GL_LINES);
 
       while (indices < end) {
         previ = *indices++;
@@ -940,7 +940,7 @@ namespace { namespace SoGL { namespace IndexedLineSet {
           }
 
           current_errors++;
-          glEnd();
+          SoGLContext_glEnd(sogl_current_render_glue());
           return;
         }
 
@@ -955,11 +955,11 @@ namespace { namespace SoGL { namespace IndexedLineSet {
         if ((AttributeBinding)NormalBinding == PER_LINE ||
             (AttributeBinding)NormalBinding == PER_VERTEX) {
           currnormal = normals++;
-          glNormal3fv((const GLfloat*) currnormal);
+          SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat*) currnormal);
         } else if ((AttributeBinding)NormalBinding == PER_LINE_INDEXED ||
                    (AttributeBinding)NormalBinding == PER_VERTEX_INDEXED) {
           currnormal = &normals[*normindices++];
-          glNormal3fv((const GLfloat*) currnormal);
+          SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat*) currnormal);
         }
         if (TexturingEnabled == TRUE) {
           texcoords->send(texindices ? *texindices++ : texidx++,coords->get3(previ), *currnormal);
@@ -986,10 +986,10 @@ namespace { namespace SoGL { namespace IndexedLineSet {
 
           if ((AttributeBinding)NormalBinding == PER_SEGMENT) {
             currnormal = normals++;
-            glNormal3fv((const GLfloat*) currnormal);
+            SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat*) currnormal);
           } else if ((AttributeBinding)NormalBinding == PER_SEGMENT_INDEXED) {
             currnormal = &normals[*normindices++];
-            glNormal3fv((const GLfloat*)currnormal);
+            SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat*)currnormal);
           }
           SEND_VERTEX(previ);
 
@@ -1000,10 +1000,10 @@ namespace { namespace SoGL { namespace IndexedLineSet {
           }
           if ((AttributeBinding)NormalBinding == PER_VERTEX) {
             currnormal = normals++;
-            glNormal3fv((const GLfloat*)currnormal);
+            SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat*)currnormal);
           } else if ((AttributeBinding)NormalBinding == PER_VERTEX_INDEXED) {
             currnormal = &normals[*normindices++];
-            glNormal3fv((const GLfloat*)currnormal);
+            SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat*)currnormal);
           }
           if (TexturingEnabled == TRUE) {
             texcoords->send(texindices ? *texindices++ : texidx++, coords->get3(i), *currnormal);
@@ -1022,16 +1022,16 @@ namespace { namespace SoGL { namespace IndexedLineSet {
           if (texindices) texindices++;
         }
       }
-      glEnd();
+      SoGLContext_glEnd(sogl_current_render_glue());
 
     } else { // no per_segment binding code below
 
       if (drawAsPoints)
-        glBegin(GL_POINTS);
+        SoGLContext_glBegin(sogl_current_render_glue(), GL_POINTS);
 
       while (indices < end) {
         if (!drawAsPoints)
-          glBegin(GL_LINE_STRIP);
+          SoGLContext_glBegin(sogl_current_render_glue(), GL_LINE_STRIP);
 
         i = *indices++;
 
@@ -1049,7 +1049,7 @@ namespace { namespace SoGL { namespace IndexedLineSet {
           }
 
           current_errors++;
-          glEnd();
+          SoGLContext_glEnd(sogl_current_render_glue());
           return;
         }
 
@@ -1064,11 +1064,11 @@ namespace { namespace SoGL { namespace IndexedLineSet {
         if ((AttributeBinding)NormalBinding == PER_VERTEX_INDEXED ||
             (AttributeBinding)NormalBinding == PER_LINE_INDEXED) {
           currnormal = &normals[*normindices++];
-          glNormal3fv((const GLfloat*) currnormal);
+          SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat*) currnormal);
         } else if ((AttributeBinding)NormalBinding == PER_VERTEX ||
                    (AttributeBinding)NormalBinding == PER_LINE) {
           currnormal = normals++;
-          glNormal3fv((const GLfloat*) currnormal);
+          SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat*) currnormal);
         }
         if (TexturingEnabled == TRUE) {
           texcoords->send(texindices ? *texindices++ : texidx++, coords->get3(i), *currnormal);
@@ -1097,10 +1097,10 @@ namespace { namespace SoGL { namespace IndexedLineSet {
 
           if ((AttributeBinding)NormalBinding == PER_VERTEX) {
             currnormal = normals++;
-            glNormal3fv((const GLfloat*) currnormal);
+            SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat*) currnormal);
           } else if ((AttributeBinding)NormalBinding == PER_VERTEX_INDEXED) {
             currnormal = &normals[*normindices++];
-            glNormal3fv((const GLfloat*) currnormal);
+            SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat*) currnormal);
           }
           if (TexturingEnabled == TRUE) {
             texcoords->send(texindices ? *texindices++ : texidx++, coords->get3(i), *currnormal);
@@ -1110,7 +1110,7 @@ namespace { namespace SoGL { namespace IndexedLineSet {
           i = indices < end ? *indices++ : -1;
         }
         if (!drawAsPoints)
-          glEnd(); // end of line strip
+          SoGLContext_glEnd(sogl_current_render_glue()); // end of line strip
 
         if ((AttributeBinding)MaterialBinding == PER_VERTEX_INDEXED) {
           matindices++;
@@ -1123,7 +1123,7 @@ namespace { namespace SoGL { namespace IndexedLineSet {
         }
       }
       if (drawAsPoints)
-        glEnd();
+        SoGLContext_glEnd(sogl_current_render_glue());
     }
   }
 
@@ -1282,8 +1282,8 @@ namespace { namespace SoGL { namespace FaceSet {
     // This is the same code as in SoGLCoordinateElement::send().
     // It is inlined here for speed (~15% speed increase).
 #define SEND_VERTEX(_idx_)                                           \
-    if (is3d) glVertex3fv((const GLfloat*) (coords3d + _idx_));             \
-    else glVertex4fv((const GLfloat*) (coords4d + _idx_));
+    if (is3d) SoGLContext_glVertex3fv(sogl_current_render_glue(), (const GLfloat*) (coords3d + _idx_));             \
+    else SoGLContext_glVertex4fv(sogl_current_render_glue(), (const GLfloat*) (coords4d + _idx_));
 
     int mode = GL_POLYGON; // ...to save a test
     int newmode;
@@ -1367,11 +1367,11 @@ namespace { namespace SoGL { namespace FaceSet {
         else newmode = GL_POLYGON;
       }
       if (newmode != mode) {
-        if (mode != GL_POLYGON) glEnd();
+        if (mode != GL_POLYGON) SoGLContext_glEnd(sogl_current_render_glue());
         mode = newmode;
-        glBegin((GLenum) mode);
+        SoGLContext_glBegin(sogl_current_render_glue(), (GLenum) mode);
       }
-      else if (mode == GL_POLYGON) glBegin(GL_POLYGON);
+      else if (mode == GL_POLYGON) SoGLContext_glBegin(sogl_current_render_glue(), GL_POLYGON);
 
       /* vertex 1 *********************************************************/
       if ((AttributeBinding)MaterialBinding == PER_VERTEX ||
@@ -1385,11 +1385,11 @@ namespace { namespace SoGL { namespace FaceSet {
       if ((AttributeBinding)NormalBinding == PER_VERTEX ||
           (AttributeBinding)NormalBinding == PER_FACE) {
         currnormal = normals++;
-        glNormal3fv((const GLfloat*)currnormal);
+        SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat*)currnormal);
       } else if ((AttributeBinding)NormalBinding == PER_VERTEX_INDEXED ||
                  (AttributeBinding)NormalBinding == PER_FACE_INDEXED) {
         currnormal = &normals[*normalindices++];
-        glNormal3fv((const GLfloat*)currnormal);
+        SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat*)currnormal);
       }
 
       if ((AttributeBinding)VertexAttributeBinding == PER_VERTEX) {
@@ -1422,10 +1422,10 @@ namespace { namespace SoGL { namespace FaceSet {
 
       if ((AttributeBinding)NormalBinding == PER_VERTEX) {
         currnormal = normals++;
-        glNormal3fv((const GLfloat*)currnormal);
+        SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat*)currnormal);
       } else if ((AttributeBinding)NormalBinding == PER_VERTEX_INDEXED) {
         currnormal = &normals[*normalindices++];
-        glNormal3fv((const GLfloat*)currnormal);
+        SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat*)currnormal);
       }
 
       if ((AttributeBinding)VertexAttributeBinding == PER_VERTEX) {
@@ -1458,10 +1458,10 @@ namespace { namespace SoGL { namespace FaceSet {
 
       if ((AttributeBinding)NormalBinding == PER_VERTEX) {
         currnormal = normals++;
-        glNormal3fv((const GLfloat*)currnormal);
+        SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat*)currnormal);
       } else if ((AttributeBinding)NormalBinding == PER_VERTEX_INDEXED) {
         currnormal = &normals[*normalindices++];
-        glNormal3fv((const GLfloat*)currnormal);
+        SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat*)currnormal);
       }
 
       if ((AttributeBinding)VertexAttributeBinding == PER_VERTEX) {
@@ -1495,10 +1495,10 @@ namespace { namespace SoGL { namespace FaceSet {
 
         if ((AttributeBinding)NormalBinding == PER_VERTEX) {
           currnormal = normals++;
-          glNormal3fv((const GLfloat*)currnormal);
+          SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat*)currnormal);
         } else if ((AttributeBinding)NormalBinding == PER_VERTEX_INDEXED) {
           currnormal = &normals[*normalindices++];
-          glNormal3fv((const GLfloat*)currnormal);
+          SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat*)currnormal);
         }
 
         if (dotexture) {
@@ -1532,10 +1532,10 @@ namespace { namespace SoGL { namespace FaceSet {
 
           if ((AttributeBinding)NormalBinding == PER_VERTEX) {
             currnormal = normals++;
-            glNormal3fv((const GLfloat*)currnormal);
+            SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat*)currnormal);
           } else if ((AttributeBinding)NormalBinding == PER_VERTEX_INDEXED) {
             currnormal = &normals[*normalindices++];
-            glNormal3fv((const GLfloat*)currnormal);
+            SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat*)currnormal);
           }
 
           if ((AttributeBinding)VertexAttributeBinding == PER_VERTEX) {
@@ -1584,10 +1584,10 @@ namespace { namespace SoGL { namespace FaceSet {
 
             if ((AttributeBinding)NormalBinding == PER_VERTEX) {
               currnormal = normals++;
-              glNormal3fv((const GLfloat*)currnormal);
+              SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat*)currnormal);
             } else if ((AttributeBinding)NormalBinding == PER_VERTEX_INDEXED) {
               currnormal = &normals[*normalindices++];
-              glNormal3fv((const GLfloat*)currnormal);
+              SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat*)currnormal);
             }
 
             if (dotexture) {
@@ -1605,7 +1605,7 @@ namespace { namespace SoGL { namespace FaceSet {
 
             v1 = viptr < viendptr ? *viptr++ : -1;
           }
-          glEnd(); /* draw polygon */
+          SoGLContext_glEnd(sogl_current_render_glue()); /* draw polygon */
         }
       }
 
@@ -1624,7 +1624,7 @@ namespace { namespace SoGL { namespace FaceSet {
       }
     }
     // check if triangle or quad
-    if (mode != GL_POLYGON) glEnd();
+    if (mode != GL_POLYGON) SoGLContext_glEnd(sogl_current_render_glue());
   }
 
 } } } // namespace
@@ -1803,8 +1803,8 @@ namespace { namespace SoGL { namespace TriStripSet {
     // This is the same code as in SoGLCoordinateElement::send().
     // It is inlined here for speed (~15% speed increase).
 #define SEND_VERTEX_TRISTRIP(_idx_) \
-    if (is3d) glVertex3fv((const GLfloat*) (coords3d + _idx_)); \
-    else glVertex4fv((const GLfloat*) (coords4d + _idx_));
+    if (is3d) SoGLContext_glVertex3fv(sogl_current_render_glue(), (const GLfloat*) (coords3d + _idx_)); \
+    else SoGLContext_glVertex4fv(sogl_current_render_glue(), (const GLfloat*) (coords4d + _idx_));
 
     if ((AttributeBinding)NormalBinding == PER_VERTEX ||
         (AttributeBinding)NormalBinding == PER_TRIANGLE ||
@@ -1852,7 +1852,7 @@ namespace { namespace SoGL { namespace TriStripSet {
         break;
       }
 
-      glBegin(GL_TRIANGLE_STRIP);
+      SoGLContext_glBegin(sogl_current_render_glue(), GL_TRIANGLE_STRIP);
 
       /* vertex 1 *********************************************************/
       if ((AttributeBinding)MaterialBinding == PER_VERTEX ||
@@ -1868,12 +1868,12 @@ namespace { namespace SoGL { namespace TriStripSet {
           (AttributeBinding)NormalBinding == PER_STRIP ||
           (AttributeBinding)NormalBinding == PER_TRIANGLE) {
         currnormal = normals++;
-        glNormal3fv((const GLfloat*)currnormal);
+        SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat*)currnormal);
       } else if ((AttributeBinding)NormalBinding == PER_VERTEX_INDEXED ||
                  (AttributeBinding)NormalBinding == PER_TRIANGLE_INDEXED ||
                  (AttributeBinding)NormalBinding == PER_STRIP_INDEXED) {
         currnormal = &normals[*normalindices++];
-        glNormal3fv((const GLfloat*)currnormal);
+        SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat*)currnormal);
       }
       if (TexturingEnabled == TRUE) {
         texcoords->send(texindices ? *texindices++ : texidx++,
@@ -1900,10 +1900,10 @@ namespace { namespace SoGL { namespace TriStripSet {
 
       if ((AttributeBinding)NormalBinding == PER_VERTEX) {
         currnormal = normals++;
-        glNormal3fv((const GLfloat*)currnormal);
+        SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat*)currnormal);
       } else if ((AttributeBinding)NormalBinding == PER_VERTEX_INDEXED) {
         currnormal = &normals[*normalindices++];
-        glNormal3fv((const GLfloat*)currnormal);
+        SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat*)currnormal);
       }
       if (TexturingEnabled == TRUE) {
         texcoords->send(texindices ? *texindices++ : texidx++,
@@ -1930,10 +1930,10 @@ namespace { namespace SoGL { namespace TriStripSet {
 
       if ((AttributeBinding)NormalBinding == PER_VERTEX) {
         currnormal = normals++;
-        glNormal3fv((const GLfloat*)currnormal);
+        SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat*)currnormal);
       } else if ((AttributeBinding)NormalBinding == PER_VERTEX_INDEXED) {
         currnormal = &normals[*normalindices++];
-        glNormal3fv((const GLfloat*)currnormal);
+        SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat*)currnormal);
       }
       if (TexturingEnabled == TRUE) {
         texcoords->send(texindices ? *texindices++ : texidx++,
@@ -1962,11 +1962,11 @@ namespace { namespace SoGL { namespace TriStripSet {
         if ((AttributeBinding)NormalBinding == PER_VERTEX ||
             (AttributeBinding)NormalBinding == PER_TRIANGLE) {
           currnormal = normals++;
-          glNormal3fv((const GLfloat*)currnormal);
+          SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat*)currnormal);
         } else if ((AttributeBinding)NormalBinding == PER_VERTEX_INDEXED ||
                    (AttributeBinding)NormalBinding == PER_TRIANGLE_INDEXED) {
           currnormal = &normals[*normalindices++];
-          glNormal3fv((const GLfloat*)currnormal);
+          SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat*)currnormal);
         }
         if (TexturingEnabled == TRUE) {
           texcoords->send(texindices ? *texindices++ : texidx++,
@@ -1977,7 +1977,7 @@ namespace { namespace SoGL { namespace TriStripSet {
         SEND_VERTEX_TRISTRIP(v1);
         v1 = viptr < viendptr ? *viptr++ : -1;
       }
-      glEnd(); // end of tristrip
+      SoGLContext_glEnd(sogl_current_render_glue()); // end of tristrip
 
       if ((AttributeBinding)MaterialBinding == PER_VERTEX_INDEXED) {
         matindices++;
@@ -2111,7 +2111,7 @@ sogl_render_pointset_m0n0t0(const SoGLCoordinateElement * coords,
 
   // manually unroll this common loop
 
-  glBegin(GL_POINTS);
+  SoGLContext_glBegin(sogl_current_render_glue(), GL_POINTS);
   for (i = 0; i < unroll; i++) {
     coords->send(idx++);
     coords->send(idx++);
@@ -2121,7 +2121,7 @@ sogl_render_pointset_m0n0t0(const SoGLCoordinateElement * coords,
   for (i = 0; i < rest; i++) {
     coords->send(idx++);
   }
-  glEnd();
+  SoGLContext_glEnd(sogl_current_render_glue());
 }
 
 static void
@@ -2135,12 +2135,12 @@ sogl_render_pointset_m0n0t1(const SoGLCoordinateElement * coords,
   int texnr = 0;
   const SbVec3f currnormal(0.0f,0.0f,1.0f);
 
-  glBegin(GL_POINTS);
+  SoGLContext_glBegin(sogl_current_render_glue(), GL_POINTS);
   for (int i = 0; i < numpts; i++) {
     tb->send(texnr++, coords->get3(idx), currnormal);
     coords->send(idx++);
   }
-  glEnd();
+  SoGLContext_glEnd(sogl_current_render_glue());
 }
 
 static void
@@ -2151,12 +2151,12 @@ sogl_render_pointset_m0n1t0(const SoGLCoordinateElement * coords,
                             int32_t numpts,
                             int32_t idx)
 {
-  glBegin(GL_POINTS);
+  SoGLContext_glBegin(sogl_current_render_glue(), GL_POINTS);
   for (int i = 0; i < numpts; i++) {
-    glNormal3fv((const GLfloat*)normals++);
+    SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat*)normals++);
     coords->send(idx++);
   }
-  glEnd();
+  SoGLContext_glEnd(sogl_current_render_glue());
 }
 
 static void
@@ -2170,13 +2170,13 @@ sogl_render_pointset_m0n1t1(const SoGLCoordinateElement * coords,
   int texnr = 0;
   const SbVec3f currnormal(0.0f,0.0f,1.0f);
 
-  glBegin(GL_POINTS);
+  SoGLContext_glBegin(sogl_current_render_glue(), GL_POINTS);
   for (int i = 0; i < numpts; i++) {
-    glNormal3fv((const GLfloat*)normals++);
+    SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat*)normals++);
     tb->send(texnr++, coords->get3(idx), currnormal);
     coords->send(idx++);
   }
-  glEnd();
+  SoGLContext_glEnd(sogl_current_render_glue());
 }
 
 static void
@@ -2194,7 +2194,7 @@ sogl_render_pointset_m1n0t0(const SoGLCoordinateElement * coords,
 
   // manually unroll this common loop
 
-  glBegin(GL_POINTS);
+  SoGLContext_glBegin(sogl_current_render_glue(), GL_POINTS);
   for (i = 0; i < unroll; i++) {
     mb->send(matnr++, TRUE);
     coords->send(idx++);
@@ -2209,7 +2209,7 @@ sogl_render_pointset_m1n0t0(const SoGLCoordinateElement * coords,
     mb->send(matnr++, TRUE);
     coords->send(idx++);
   }
-  glEnd();
+  SoGLContext_glEnd(sogl_current_render_glue());
 }
 
 static void
@@ -2224,13 +2224,13 @@ sogl_render_pointset_m1n0t1(const SoGLCoordinateElement * coords,
   int texnr = 0;
   const SbVec3f currnormal(0.0f,0.0f,1.0f);
 
-  glBegin(GL_POINTS);
+  SoGLContext_glBegin(sogl_current_render_glue(), GL_POINTS);
   for (int i = 0; i < numpts; i++) {
     mb->send(matnr++, TRUE);
     tb->send(texnr++, coords->get3(idx), currnormal);
     coords->send(idx++);
   }
-  glEnd();
+  SoGLContext_glEnd(sogl_current_render_glue());
 }
 
 static void
@@ -2243,13 +2243,13 @@ sogl_render_pointset_m1n1t0(const SoGLCoordinateElement * coords,
 {
   int matnr = 0;
 
-  glBegin(GL_POINTS);
+  SoGLContext_glBegin(sogl_current_render_glue(), GL_POINTS);
   for (int i = 0; i < numpts; i++) {
     mb->send(matnr++, TRUE);
-    glNormal3fv((const GLfloat*)normals++);
+    SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat*)normals++);
     coords->send(idx++);
   }
-  glEnd();
+  SoGLContext_glEnd(sogl_current_render_glue());
 }
 
 static void
@@ -2263,14 +2263,14 @@ sogl_render_pointset_m1n1t1(const SoGLCoordinateElement * coords,
   int texnr = 0;
   int matnr = 0;
 
-  glBegin(GL_POINTS);
+  SoGLContext_glBegin(sogl_current_render_glue(), GL_POINTS);
   for (int i = 0; i < numpts; i++) {
     mb->send(matnr++, TRUE);
     tb->send(texnr++, coords->get3(idx), *normals);
-    glNormal3fv((const GLfloat*)normals++);
+    SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat*)normals++);
     coords->send(idx++);
   }
-  glEnd();
+  SoGLContext_glEnd(sogl_current_render_glue());
 }
 
 // ---

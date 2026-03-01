@@ -40,6 +40,7 @@
 */
 
 #include <Inventor/elements/SoGLModelMatrixElement.h>
+#include "glue/glp.h"
 #include <Inventor/elements/SoGLViewingMatrixElement.h>
 #include <Inventor/SbRotation.h>
 #include <Inventor/SbVec3f.h>
@@ -103,7 +104,7 @@ SoGLModelMatrixElement::push(SoState * stateptr)
   // the stackoverflow test makes it possible to have scene graphs
   // with virtually unlimited depth and with transformations inside
   // each separator. If a GL_STACK_OVERFLOW error is encountered,
-  // a glPopMatrix() will not be called in the pop() method, but
+  // a SoGLContext_glPopMatrix(sogl_current_render_glue()) will not be called in the pop() method, but
   // the GL matrix will be read from SoModelMatrixElement instead.
   //                                          pederb, 2000-12-20
   this->stackoverflow = prev->stackoverflow;
@@ -112,14 +113,14 @@ SoGLModelMatrixElement::push(SoState * stateptr)
 
   if (OBOL_HANDLE_STACK_OVERFLOW > 0) {
     if (!this->stackoverflow) {
-      glPushMatrix();
+      SoGLContext_glPushMatrix(sogl_current_render_glue());
       if (glGetError() == GL_STACK_OVERFLOW) {
         this->stackoverflow = TRUE;
       }
     }
   }
   else {
-    glPushMatrix();
+    SoGLContext_glPushMatrix(sogl_current_render_glue());
   }
   inherited::push(stateptr);
 }
@@ -138,10 +139,10 @@ SoGLModelMatrixElement::pop(SoState * stateptr,
   if (prev->stackoverflow) {
     SbMatrix mat = SoGLViewingMatrixElement::getResetMatrix(this->state);
     mat.multLeft(this->modelMatrix);
-    glLoadMatrixf(mat[0]);
+    SoGLContext_glLoadMatrixf(sogl_current_render_glue(), mat[0]);
   }
   else {
-    glPopMatrix();
+    SoGLContext_glPopMatrix(sogl_current_render_glue());
   }
 }
 
@@ -151,7 +152,7 @@ void
 SoGLModelMatrixElement::makeEltIdentity()
 {
   SbMatrix mat = SoGLViewingMatrixElement::getResetMatrix(this->state);
-  glLoadMatrixf(mat[0]);
+  SoGLContext_glLoadMatrixf(sogl_current_render_glue(), mat[0]);
   inherited::makeEltIdentity();
 }
 
@@ -162,7 +163,7 @@ SoGLModelMatrixElement::setElt(const SbMatrix & matrix)
 {
   SbMatrix mat = SoGLViewingMatrixElement::getResetMatrix(this->state);
   mat.multLeft(matrix);
-  glLoadMatrixf(mat[0]);
+  SoGLContext_glLoadMatrixf(sogl_current_render_glue(), mat[0]);
   inherited::setElt(matrix);
 }
 
@@ -171,7 +172,7 @@ SoGLModelMatrixElement::setElt(const SbMatrix & matrix)
 void
 SoGLModelMatrixElement::multElt(const SbMatrix &matrix)
 {
-  glMultMatrixf(matrix[0]);
+  SoGLContext_glMultMatrixf(sogl_current_render_glue(), matrix[0]);
   inherited::multElt(matrix);
 }
 
@@ -180,7 +181,7 @@ SoGLModelMatrixElement::multElt(const SbMatrix &matrix)
 void
 SoGLModelMatrixElement::translateEltBy(const SbVec3f &translation)
 {
-  glTranslatef(translation[0], translation[1], translation[2]);
+  SoGLContext_glTranslatef(sogl_current_render_glue(), translation[0], translation[1], translation[2]);
   inherited::translateEltBy(translation);
 }
 
@@ -192,7 +193,7 @@ SoGLModelMatrixElement::rotateEltBy(const SbRotation &rotation)
   SbVec3f axis;
   float angle;
   rotation.getValue(axis, angle);
-  glRotatef(angle*180.0f/float(M_PI), axis[0], axis[1], axis[2]);
+  SoGLContext_glRotatef(sogl_current_render_glue(), angle*180.0f/float(M_PI), axis[0], axis[1], axis[2]);
   inherited::rotateEltBy(rotation);
 }
 
@@ -201,7 +202,7 @@ SoGLModelMatrixElement::rotateEltBy(const SbRotation &rotation)
 void
 SoGLModelMatrixElement::scaleEltBy(const SbVec3f &scaleFactor)
 {
-  glScalef(scaleFactor[0], scaleFactor[1], scaleFactor[2]);
+  SoGLContext_glScalef(sogl_current_render_glue(), scaleFactor[0], scaleFactor[1], scaleFactor[2]);
   inherited::scaleEltBy(scaleFactor);
 }
 
@@ -211,7 +212,7 @@ SbMatrix
 SoGLModelMatrixElement::pushMatrixElt()
 {
   this->viewEltNodeId = SoGLViewingMatrixElement::getNodeId(this->state);
-  glPushMatrix();
+  SoGLContext_glPushMatrix(sogl_current_render_glue());
   return inherited::pushMatrixElt();
 }
 
@@ -220,7 +221,7 @@ SoGLModelMatrixElement::pushMatrixElt()
 void
 SoGLModelMatrixElement::popMatrixElt(const SbMatrix &matrix)
 {
-  glPopMatrix();
+  SoGLContext_glPopMatrix(sogl_current_render_glue());
   if (this->viewEltNodeId != SoGLViewingMatrixElement::getNodeId(this->state)) {
     this->setElt(matrix);
   }

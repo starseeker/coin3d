@@ -83,6 +83,7 @@ add_testlib_rendering_test(render_indexed_line_set)
 add_testlib_rendering_test(render_lod)
 add_testlib_rendering_test(render_point_set)
 add_rendering_test(render_scene_texture)
+add_rendering_test(render_scene_texture_multi_mgr)
 add_testlib_rendering_test(render_shadow)
 add_testlib_rendering_test(render_array_multiple_copy)
 add_rendering_test(render_shape_hints)
@@ -283,6 +284,10 @@ add_nanort_testlib_rendering_test(render_simple_draggers)
 add_nanort_testlib_rendering_test(render_draggers)
 add_nanort_testlib_rendering_test(render_light_manips)
 add_nanort_testlib_rendering_test(render_manip_sequences)
+
+# NanoRT HUD test: validates that SoHUDLabel text is rasterized via SbFont and
+# alpha-composited onto the NanoRT framebuffer by nrtHUDLabelPreCB.
+add_nanort_testlib_rendering_test(render_hud_nanort)
 
 # ---- Standalone nanort demo (original, uses its own context manager) --------
 # render_nanort.cpp is the original proof-of-concept demo that builds its own
@@ -598,7 +603,7 @@ foreach(_vtest render_sphere_position render_checker_texture
                render_indexed_face_set render_quad_mesh render_indexed_line_set
                render_lod render_point_set
                render_background_gradient
-               render_scene_texture render_array_multiple_copy
+               render_scene_texture render_scene_texture_multi_mgr render_array_multiple_copy
                render_shape_hints render_environment render_texture3
                render_bump_map render_texture_transform
                render_depth_buffer render_alpha_test

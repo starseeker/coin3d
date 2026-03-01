@@ -83,6 +83,7 @@
 // *************************************************************************
 
 #include <Inventor/nodes/SoWWWInline.h>
+#include "glue/glp.h"
 
 #include <cstddef>
 #include <cstdlib>
@@ -478,29 +479,29 @@ SoWWWInline::GLRender(SoGLRenderAction * action)
   y1 = y1/2.0f + cy;
   z1 = z1/2.0f + cz;
 
-  glBegin(GL_LINE_LOOP);
-  glVertex3f(x0, y0, z0);
-  glVertex3f(x1, y0, z0);
-  glVertex3f(x1, y1, z0);
-  glVertex3f(x0, y1, z0);
-  glEnd();
-  glBegin(GL_LINE_LOOP);
-  glVertex3f(x0, y0, z1);
-  glVertex3f(x1, y0, z1);
-  glVertex3f(x1, y1, z1);
-  glVertex3f(x0, y1, z1);
-  glEnd();
+  SoGLContext_glBegin(sogl_current_render_glue(), GL_LINE_LOOP);
+  SoGLContext_glVertex3f(sogl_current_render_glue(), x0, y0, z0);
+  SoGLContext_glVertex3f(sogl_current_render_glue(), x1, y0, z0);
+  SoGLContext_glVertex3f(sogl_current_render_glue(), x1, y1, z0);
+  SoGLContext_glVertex3f(sogl_current_render_glue(), x0, y1, z0);
+  SoGLContext_glEnd(sogl_current_render_glue());
+  SoGLContext_glBegin(sogl_current_render_glue(), GL_LINE_LOOP);
+  SoGLContext_glVertex3f(sogl_current_render_glue(), x0, y0, z1);
+  SoGLContext_glVertex3f(sogl_current_render_glue(), x1, y0, z1);
+  SoGLContext_glVertex3f(sogl_current_render_glue(), x1, y1, z1);
+  SoGLContext_glVertex3f(sogl_current_render_glue(), x0, y1, z1);
+  SoGLContext_glEnd(sogl_current_render_glue());
 
-  glBegin(GL_LINES);
-  glVertex3f(x0, y0, z0);
-  glVertex3f(x0, y0, z1);
-  glVertex3f(x0, y1, z0);
-  glVertex3f(x0, y1, z1);
-  glVertex3f(x1, y0, z0);
-  glVertex3f(x1, y0, z1);
-  glVertex3f(x1, y1, z0);
-  glVertex3f(x1, y1, z1);
-  glEnd();
+  SoGLContext_glBegin(sogl_current_render_glue(), GL_LINES);
+  SoGLContext_glVertex3f(sogl_current_render_glue(), x0, y0, z0);
+  SoGLContext_glVertex3f(sogl_current_render_glue(), x0, y0, z1);
+  SoGLContext_glVertex3f(sogl_current_render_glue(), x0, y1, z0);
+  SoGLContext_glVertex3f(sogl_current_render_glue(), x0, y1, z1);
+  SoGLContext_glVertex3f(sogl_current_render_glue(), x1, y0, z0);
+  SoGLContext_glVertex3f(sogl_current_render_glue(), x1, y0, z1);
+  SoGLContext_glVertex3f(sogl_current_render_glue(), x1, y1, z0);
+  SoGLContext_glVertex3f(sogl_current_render_glue(), x1, y1, z1);
+  SoGLContext_glEnd(sogl_current_render_glue());
 
   state->pop(); // restore state
 }

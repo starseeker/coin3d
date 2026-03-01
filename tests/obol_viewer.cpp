@@ -270,6 +270,7 @@ public:
 
     std::function<void(CoinPanel*)> on_camera_changed;
     std::function<void()>           on_rendered;
+    std::function<void(SoOffscreenRenderer*)> configure_renderer_fn;
 
     explicit CoinPanel(int X, int Y, int W, int H, const char* lbl = "")
         : Fl_Box(X, Y, W, H, ""), label_text(lbl ? lbl : ""),
@@ -297,11 +298,17 @@ public:
         state->cam    = state->root ? SceneState::findCamera(state->root) : nullptr;
         state->computeCenter();
         state->updateClipping();
+        configure_renderer_fn = entry->configure_renderer;
         status_text.clear();
         refreshRender();
     }
 
-    void clearScene() { state.reset(); delete fltk_img; fltk_img = nullptr; redraw(); }
+    void clearScene() {
+        state.reset();
+        configure_renderer_fn = nullptr;
+        delete fltk_img; fltk_img = nullptr;
+        redraw();
+    }
 
     void refreshRender() {
         if (!state || !state->root) { redraw(); return; }
@@ -317,6 +324,8 @@ public:
         r->setViewportRegion(vp);
         r->setComponents(SoOffscreenRenderer::RGB_TRANSPARENCY);
         r->setBackgroundColor(SbColor(0.15f, 0.15f, 0.2f));
+        r->clearBackgroundGradient();
+        if (configure_renderer_fn) configure_renderer_fn(r);
         if (!r->render(state->root)) {
             /* Mark GL as permanently failed so we do not keep retrying.
              * This also prevents the CoinOffscreenGLCanvas::tilesizeroof
@@ -926,6 +935,7 @@ public:
 
     std::function<void(OSMesaPanel*)> on_camera_changed;
     std::function<void()>             on_rendered;
+    std::function<void(SoOffscreenRenderer*)> configure_renderer_fn;
 
     explicit OSMesaPanel(int X, int Y, int W, int H, const char* lbl = "")
         : Fl_Box(X, Y, W, H, ""), label_text(lbl ? lbl : "")
@@ -952,8 +962,10 @@ public:
 
     ~OSMesaPanel() { delete fltk_img; }
 
-    void setScene(SoSeparator* r, SoPerspectiveCamera* c) {
+    void setScene(SoSeparator* r, SoPerspectiveCamera* c,
+                  const std::function<void(SoOffscreenRenderer*)>& cfg = {}) {
         root = r; cam = c; status_text.clear();
+        configure_renderer_fn = cfg;
         /* Compute scene bounding-box centre for orbit/dolly */
         scene_center_ = SbVec3f(0,0,0);
         if (root) {
@@ -973,6 +985,8 @@ public:
 
         SbViewportRegion vp(pw, ph);
         renderer_->setViewportRegion(vp);
+        renderer_->clearBackgroundGradient();
+        if (configure_renderer_fn) configure_renderer_fn(renderer_.get());
 
         if (!renderer_->render(root)) {
             status_text = "OSMesa render failed"; redraw(); return;
@@ -1228,7 +1242,8 @@ public:
         /* OSMesa panel shares the same scene root and camera as the Coin panel. */
         if (osmesa_panel_ && coin_panel_->state && coin_panel_->state->root) {
             osmesa_panel_->setScene(coin_panel_->state->root,
-                                    coin_panel_->state->cam);
+                                    coin_panel_->state->cam,
+                                    entry ? entry->configure_renderer : nullptr);
         }
 #endif /* OBOL_VIEWER_OSMESA_PANEL */
 
@@ -1535,6 +1550,9 @@ private:
         r->setViewportRegion(vp);
         r->setComponents(SoOffscreenRenderer::RGB_TRANSPARENCY);
         r->setBackgroundColor(SbColor(0.15f, 0.15f, 0.2f));
+        r->clearBackgroundGradient();
+        if (self->coin_panel_->configure_renderer_fn)
+            self->coin_panel_->configure_renderer_fn(r);
         if (!r->render(self->coin_panel_->state->root)) {
             fl_message("Render failed."); return;
         }

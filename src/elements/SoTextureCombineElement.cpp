@@ -270,30 +270,30 @@ SoTextureCombineElement::apply(SoState * state, const int unit)
   assert(unit < PRIVATE(elem)->unitdata.getLength());
   const UnitData & ud = PRIVATE(elem)->unitdata[unit];
   
-  glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE);
-  glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB, static_cast<GLenum>(ud.rgboperation));
-  glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA, static_cast<GLenum>(ud.alphaoperation));
+  SoGLContext_glTexEnvi(sogl_current_render_glue(), GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE);
+  SoGLContext_glTexEnvi(sogl_current_render_glue(), GL_TEXTURE_ENV, GL_COMBINE_RGB, static_cast<GLenum>(ud.rgboperation));
+  SoGLContext_glTexEnvi(sogl_current_render_glue(), GL_TEXTURE_ENV, GL_COMBINE_ALPHA, static_cast<GLenum>(ud.alphaoperation));
 
-  glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE0_RGB, static_cast<GLenum>(ud.rgbsource[0]));
-  glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE1_RGB, static_cast<GLenum>(ud.rgbsource[1]));
-  glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE2_RGB, static_cast<GLenum>(ud.rgbsource[2]));
+  SoGLContext_glTexEnvi(sogl_current_render_glue(), GL_TEXTURE_ENV, GL_SOURCE0_RGB, static_cast<GLenum>(ud.rgbsource[0]));
+  SoGLContext_glTexEnvi(sogl_current_render_glue(), GL_TEXTURE_ENV, GL_SOURCE1_RGB, static_cast<GLenum>(ud.rgbsource[1]));
+  SoGLContext_glTexEnvi(sogl_current_render_glue(), GL_TEXTURE_ENV, GL_SOURCE2_RGB, static_cast<GLenum>(ud.rgbsource[2]));
 
-  glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE0_ALPHA, static_cast<GLenum>(ud.alphasource[0]));
-  glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE1_ALPHA, static_cast<GLenum>(ud.alphasource[1]));
-  glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE2_ALPHA, static_cast<GLenum>(ud.alphasource[2]));
+  SoGLContext_glTexEnvi(sogl_current_render_glue(), GL_TEXTURE_ENV, GL_SOURCE0_ALPHA, static_cast<GLenum>(ud.alphasource[0]));
+  SoGLContext_glTexEnvi(sogl_current_render_glue(), GL_TEXTURE_ENV, GL_SOURCE1_ALPHA, static_cast<GLenum>(ud.alphasource[1]));
+  SoGLContext_glTexEnvi(sogl_current_render_glue(), GL_TEXTURE_ENV, GL_SOURCE2_ALPHA, static_cast<GLenum>(ud.alphasource[2]));
 
-  glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_RGB, static_cast<GLenum>(ud.rgboperand[0]));
-  glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_RGB, static_cast<GLenum>(ud.rgboperand[1]));
-  glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND2_RGB, static_cast<GLenum>(ud.rgboperand[2]));
+  SoGLContext_glTexEnvi(sogl_current_render_glue(), GL_TEXTURE_ENV, GL_OPERAND0_RGB, static_cast<GLenum>(ud.rgboperand[0]));
+  SoGLContext_glTexEnvi(sogl_current_render_glue(), GL_TEXTURE_ENV, GL_OPERAND1_RGB, static_cast<GLenum>(ud.rgboperand[1]));
+  SoGLContext_glTexEnvi(sogl_current_render_glue(), GL_TEXTURE_ENV, GL_OPERAND2_RGB, static_cast<GLenum>(ud.rgboperand[2]));
 
-  glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_ALPHA, static_cast<GLenum>(ud.alphaoperand[0]));
-  glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_ALPHA, static_cast<GLenum>(ud.alphaoperand[1]));
-  glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND2_ALPHA, static_cast<GLenum>(ud.alphaoperand[2]));
+  SoGLContext_glTexEnvi(sogl_current_render_glue(), GL_TEXTURE_ENV, GL_OPERAND0_ALPHA, static_cast<GLenum>(ud.alphaoperand[0]));
+  SoGLContext_glTexEnvi(sogl_current_render_glue(), GL_TEXTURE_ENV, GL_OPERAND1_ALPHA, static_cast<GLenum>(ud.alphaoperand[1]));
+  SoGLContext_glTexEnvi(sogl_current_render_glue(), GL_TEXTURE_ENV, GL_OPERAND2_ALPHA, static_cast<GLenum>(ud.alphaoperand[2]));
 
-  glTexEnvfv(GL_TEXTURE_ENV, GL_TEXTURE_ENV_COLOR,
+  SoGLContext_glTexEnvfv(sogl_current_render_glue(), GL_TEXTURE_ENV, GL_TEXTURE_ENV_COLOR,
              ud.constantcolor.getValue());
-  glTexEnvf(GL_TEXTURE_ENV, GL_RGB_SCALE, ud.rgbscale);
-  glTexEnvf(GL_TEXTURE_ENV, GL_ALPHA_SCALE, ud.alphascale);
+  SoGLContext_glTexEnvf(sogl_current_render_glue(), GL_TEXTURE_ENV, GL_RGB_SCALE, ud.rgbscale);
+  SoGLContext_glTexEnvf(sogl_current_render_glue(), GL_TEXTURE_ENV, GL_ALPHA_SCALE, ud.alphascale);
 }
 
 SoTextureCombineElement::UnitData::UnitData()

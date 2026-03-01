@@ -479,7 +479,7 @@ SoSceneTextureCubeMapP::updatePBuffer(SoState * state, const float quality)
     if (this->contextManager) this->contextManager->makeContextCurrent(this->glcontext);
 
 
-    glEnable(GL_DEPTH_TEST);
+    SoGLContext_glEnable(sogl_current_render_glue(), GL_DEPTH_TEST);
 
     if (!this->canrendertotexture) {
       SbVec2s size = this->glcontextsize;
@@ -495,11 +495,11 @@ SoSceneTextureCubeMapP::updatePBuffer(SoState * state, const float quality)
                   
       for (int i=0; i<6; i++) {
         this->glaction->apply(this->updateCamera((SoGLCubeMapImage::Target)i));
-        glFlush();
+        SoGLContext_glFlush(sogl_current_render_glue());
 
-        glPixelStorei(GL_PACK_ALIGNMENT, 1);
-        glReadPixels(0,0,size[0],size[1],GL_RGBA,GL_UNSIGNED_BYTE,cubeSidePtr);
-        glPixelStorei(GL_PACK_ALIGNMENT, 4);
+        SoGLContext_glPixelStorei(sogl_current_render_glue(), GL_PACK_ALIGNMENT, 1);
+        SoGLContext_glReadPixels(sogl_current_render_glue(), 0,0,size[0],size[1],GL_RGBA,GL_UNSIGNED_BYTE,cubeSidePtr);
+        SoGLContext_glPixelStorei(sogl_current_render_glue(), GL_PACK_ALIGNMENT, 4);
         cubeSidePtr += cubeSideSize;
       }
     }
@@ -696,8 +696,8 @@ SoSceneTextureCubeMapP::prerendercb(void * userdata, SoGLRenderAction * OBOL_UNU
 {
   SoSceneTextureCubeMap * thisp = (SoSceneTextureCubeMap*) userdata;
   SbColor col = thisp->backgroundColor.getValue();
-  glClearColor(col[0], col[1], col[2], 1.0f);
-  glClear(GL_DEPTH_BUFFER_BIT|GL_COLOR_BUFFER_BIT);
+  SoGLContext_glClearColor(sogl_current_render_glue(), col[0], col[1], col[2], 1.0f);
+  SoGLContext_glClear(sogl_current_render_glue(), GL_DEPTH_BUFFER_BIT|GL_COLOR_BUFFER_BIT);
 }
 
 #undef LOCK_GLIMAGE

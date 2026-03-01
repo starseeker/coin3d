@@ -31,6 +31,7 @@
 \**************************************************************************/
 
 #include "SoGLARBShaderObject.h"
+#include "glue/glp.h"
 
 #include <cstring>
 
@@ -67,7 +68,7 @@ SoGLARBShaderObject::load(const char * srcStr)
 
   if (len == 0) return;
 
-  glEnable(this->target);
+  SoGLContext_glEnable(sogl_current_render_glue(), this->target);
   SoGLContext_glGenPrograms(this->glctx, 1, &this->arbProgramID);
   SoGLContext_glBindProgram(this->glctx, this->target, this->arbProgramID);
   SoGLContext_glProgramString(this->glctx, this->target, GL_PROGRAM_FORMAT_ASCII_ARB, (GLsizei)len, srcStr);
@@ -76,14 +77,14 @@ SoGLARBShaderObject::load(const char * srcStr)
     GLint errorPos;
     const GLubyte *errorString;
 
-    glGetIntegerv(GL_PROGRAM_ERROR_POSITION_ARB, &errorPos);
+    SoGLContext_glGetIntegerv(sogl_current_render_glue(), GL_PROGRAM_ERROR_POSITION_ARB, &errorPos);
     errorString = glGetString(GL_PROGRAM_ERROR_STRING_ARB);
     SoDebugError::post("SoGLARBShaderObject::load",
                        "Error at position: %d (%s)",
                        errorPos, errorString);
   }
 
-  glDisable(this->target);
+  SoGLContext_glDisable(sogl_current_render_glue(), this->target);
 }
 
 void
@@ -114,12 +115,12 @@ SoGLARBShaderObject::enable(void)
 {
   if (this->isActive()) {
     SoGLContext_glBindProgram(this->glctx, this->target, this->arbProgramID);
-    glEnable(this->target);
+    SoGLContext_glEnable(sogl_current_render_glue(), this->target);
   }
 }
 
 void
 SoGLARBShaderObject::disable(void)
 {
-  if (this->isActive()) glDisable(this->target);
+  if (this->isActive()) SoGLContext_glDisable(sogl_current_render_glue(), this->target);
 }

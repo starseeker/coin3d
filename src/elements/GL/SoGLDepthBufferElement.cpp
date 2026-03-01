@@ -39,6 +39,7 @@
   \since Coin 3.0
 */
 #include <Inventor/elements/SoGLDepthBufferElement.h>
+#include "glue/glp.h"
 #include "config.h"
 
 #include <cassert>
@@ -126,28 +127,28 @@ void
 SoGLDepthBufferElement::updategl(void) const
 {
   if (this->test) {
-    glEnable(GL_DEPTH_TEST);
+    SoGLContext_glEnable(sogl_current_render_glue(), GL_DEPTH_TEST);
   } else {
-    glDisable(GL_DEPTH_TEST);
+    SoGLContext_glDisable(sogl_current_render_glue(), GL_DEPTH_TEST);
   }
 
   if (this->write) {
-    glDepthMask(GL_TRUE);
+    SoGLContext_glDepthMask(sogl_current_render_glue(), GL_TRUE);
   } else {
-    glDepthMask(GL_FALSE);
+    SoGLContext_glDepthMask(sogl_current_render_glue(), GL_FALSE);
   }
 
   switch (this->function) {
-  case NEVER:     glDepthFunc(GL_NEVER);     break;
-  case ALWAYS:    glDepthFunc(GL_ALWAYS);    break;
-  case LESS:      glDepthFunc(GL_LESS);      break;
-  case LEQUAL:    glDepthFunc(GL_LEQUAL);    break;
-  case EQUAL:     glDepthFunc(GL_EQUAL);     break;
-  case GEQUAL:    glDepthFunc(GL_GEQUAL);    break;
-  case GREATER:   glDepthFunc(GL_GREATER);   break;
-  case NOTEQUAL:  glDepthFunc(GL_NOTEQUAL);  break;
+  case NEVER:     SoGLContext_glDepthFunc(sogl_current_render_glue(), GL_NEVER);     break;
+  case ALWAYS:    SoGLContext_glDepthFunc(sogl_current_render_glue(), GL_ALWAYS);    break;
+  case LESS:      SoGLContext_glDepthFunc(sogl_current_render_glue(), GL_LESS);      break;
+  case LEQUAL:    SoGLContext_glDepthFunc(sogl_current_render_glue(), GL_LEQUAL);    break;
+  case EQUAL:     SoGLContext_glDepthFunc(sogl_current_render_glue(), GL_EQUAL);     break;
+  case GEQUAL:    SoGLContext_glDepthFunc(sogl_current_render_glue(), GL_GEQUAL);    break;
+  case GREATER:   SoGLContext_glDepthFunc(sogl_current_render_glue(), GL_GREATER);   break;
+  case NOTEQUAL:  SoGLContext_glDepthFunc(sogl_current_render_glue(), GL_NOTEQUAL);  break;
   default: assert(!"unknown depth function");
   }
 
-  glDepthRange(this->range[0], this->range[1]);
+  SoGLContext_glDepthRange(sogl_current_render_glue(), this->range[0], this->range[1]);
 }

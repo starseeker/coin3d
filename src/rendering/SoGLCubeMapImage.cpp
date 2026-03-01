@@ -334,7 +334,7 @@ SoGLCubeMapImage::getGLDisplayList(SoState * state)
           }
 
           // FIXME: resize image if not power of two
-          glTexImage2D(get_gltarget((Target) i),
+          SoGLContext_glTexImage2D(sogl_current_render_glue(), get_gltarget((Target) i),
                        0, numcomponents, size[0], size[1], 0,
                        format, GL_UNSIGNED_BYTE, bytes);
 
@@ -342,12 +342,12 @@ SoGLCubeMapImage::getGLDisplayList(SoState * state)
       }
 
       // FIXME: make it possible to configure filter and mipmap on/off
-      glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-      glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+      SoGLContext_glTexParameteri(sogl_current_render_glue(), GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+      SoGLContext_glTexParameteri(sogl_current_render_glue(), GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
       // FIXME: make it possible to configure wrap modes
-      glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-      glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-      glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+      SoGLContext_glTexParameteri(sogl_current_render_glue(), GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+      SoGLContext_glTexParameteri(sogl_current_render_glue(), GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+      SoGLContext_glTexParameteri(sogl_current_render_glue(), GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
       dl->close(state);
       PRIVATE(this)->dlists.append(SoGLCubeMapImageP::dldata(dl));
     }

@@ -58,6 +58,7 @@
 // FIXME: consider adding a lazy GL depth buffer element. 200YMMDD pederb.
 
 #include <Inventor/nodes/SoAnnotation.h>
+#include "glue/glp.h"
 
 #include <Inventor/elements/SoCacheElement.h>
 #include <Inventor/actions/SoGLRenderAction.h>
@@ -119,9 +120,9 @@ SoAnnotation::GLRenderBelowPath(SoGLRenderAction * action)
 {
   if (action->isRenderingDelayedPaths()) {
     SbBool zbenabled = glIsEnabled(GL_DEPTH_TEST);
-    if (zbenabled) glDisable(GL_DEPTH_TEST);
+    if (zbenabled) SoGLContext_glDisable(sogl_current_render_glue(), GL_DEPTH_TEST);
     inherited::GLRenderBelowPath(action);
-    if (zbenabled) glEnable(GL_DEPTH_TEST);
+    if (zbenabled) SoGLContext_glEnable(sogl_current_render_glue(), GL_DEPTH_TEST);
   }
   else {
     SoCacheElement::invalidate(action->getState());
@@ -135,9 +136,9 @@ SoAnnotation::GLRenderInPath(SoGLRenderAction * action)
 {
   if (action->isRenderingDelayedPaths()) {
     SbBool zbenabled = glIsEnabled(GL_DEPTH_TEST);
-    if (zbenabled) glDisable(GL_DEPTH_TEST);
+    if (zbenabled) SoGLContext_glDisable(sogl_current_render_glue(), GL_DEPTH_TEST);
     inherited::GLRenderInPath(action);
-    if (zbenabled) glEnable(GL_DEPTH_TEST);
+    if (zbenabled) SoGLContext_glEnable(sogl_current_render_glue(), GL_DEPTH_TEST);
   }
   else {
     SoCacheElement::invalidate(action->getState());

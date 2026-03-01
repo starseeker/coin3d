@@ -49,7 +49,10 @@ struct CoinOSMesaCtxData {
   }
 
   ~CoinOSMesaCtxData() {
-    if (ctx) OSMesaDestroyContext(ctx);
+    if (ctx) {
+      OSMesaDestroyContext(ctx);
+      ctx = nullptr;  /* defensive: zero out so any stale ptr check in this TU is safe */
+    }
   }
 
   bool isValid() const { return ctx != nullptr; }
@@ -112,7 +115,16 @@ public:
   }
 
   void destroyContext(void * context) override {
-    delete static_cast<CoinOSMesaCtxData *>(context);
+    auto * d = static_cast<CoinOSMesaCtxData *>(context);
+    if (!d) return;
+    /* Unbind the context before destroying it.  If it is still current (e.g.
+     * because restorePreviousContext could not unbind it on an earlier call),
+     * OSMesaDestroyContext on a live current context corrupts internal Mesa
+     * state.  After Fix-1 in osmesa.c, OSMesaMakeCurrent(NULL,NULL,0,0,0)
+     * now properly calls _mesa_make_current(NULL,NULL,NULL). */
+    if (d->ctx && OSMesaGetCurrentContext() == d->ctx)
+      OSMesaMakeCurrent(nullptr, nullptr, 0, 0, 0);
+    delete d;
   }
 
   void * getProcAddress(const char * funcName) override {

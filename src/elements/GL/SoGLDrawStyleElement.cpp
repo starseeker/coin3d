@@ -38,6 +38,7 @@
 */
 
 #include <Inventor/elements/SoGLDrawStyleElement.h>
+#include "glue/glp.h"
 #include "config.h"
 
 
@@ -107,13 +108,13 @@ SoGLDrawStyleElement::updategl(void)
 {
   switch ((Style)this->data) {
   case SoDrawStyleElement::FILLED:
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    SoGLContext_glPolygonMode(sogl_current_render_glue(), GL_FRONT_AND_BACK, GL_FILL);
     break;
   case SoDrawStyleElement::LINES:
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    SoGLContext_glPolygonMode(sogl_current_render_glue(), GL_FRONT_AND_BACK, GL_LINE);
     break;
   case SoDrawStyleElement::POINTS:
-    glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
+    SoGLContext_glPolygonMode(sogl_current_render_glue(), GL_FRONT_AND_BACK, GL_POINT);
     break;
   case SoDrawStyleElement::INVISIBLE:
     // handled in SoShape::shouldGLRender()

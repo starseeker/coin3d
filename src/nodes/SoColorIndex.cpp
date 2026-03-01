@@ -60,13 +60,14 @@
 // (color index mode, SoLightModel::BASE_COLOR) and assert() or
 // SoDebugError::post() if any of the two is not met?
 //
-// UPDATE: use glGetBooleanv(GL_RGBA_MODE, ...) or
+// UPDATE: use SoGLContext_glGetBooleanv(sogl_current_render_glue(), GL_RGBA_MODE, ...) or
 // SoGLColorIndexElement::isColorIndexMode() for the color-index
 // mode-check.
 //
 // 20010809 mortene.
 
 #include <Inventor/nodes/SoColorIndex.h>
+#include "glue/glp.h"
 
 #include <Inventor/elements/SoOverrideElement.h>
 #include <Inventor/elements/SoGLColorIndexElement.h>

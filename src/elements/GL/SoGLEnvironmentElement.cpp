@@ -39,6 +39,7 @@
 
 
 #include <Inventor/elements/SoGLEnvironmentElement.h>
+#include "glue/glp.h"
 #include <Inventor/elements/SoViewVolumeElement.h>
 #include <Inventor/SbColor4f.h>
 #include "config.h"
@@ -111,10 +112,10 @@ SoGLEnvironmentElement::updategl(SoState * const state)
   ambient[2] = ambientColor[2] * ambientIntensity;
   ambient[3] = 1.0f;
 
-  glLightModelfv(GL_LIGHT_MODEL_AMBIENT, ambient);
+  SoGLContext_glLightModelfv(sogl_current_render_glue(), GL_LIGHT_MODEL_AMBIENT, ambient);
 
   if (fogType == (int)NONE) {
-    glDisable(GL_FOG);
+    SoGLContext_glDisable(sogl_current_render_glue(), GL_FOG);
     return;
   }
 
@@ -130,12 +131,12 @@ SoGLEnvironmentElement::updategl(SoState * const state)
 
   switch (fogType) {
   case HAZE:
-    glFogi(GL_FOG_MODE, GL_LINEAR);
-    glFogf(GL_FOG_START, this->fogStart);
-    glFogf(GL_FOG_END, farval);
+    SoGLContext_glFogi(sogl_current_render_glue(), GL_FOG_MODE, GL_LINEAR);
+    SoGLContext_glFogf(sogl_current_render_glue(), GL_FOG_START, this->fogStart);
+    SoGLContext_glFogf(sogl_current_render_glue(), GL_FOG_END, farval);
     break;
   case FOG:
-    glFogi(GL_FOG_MODE, GL_EXP);
+    SoGLContext_glFogi(sogl_current_render_glue(), GL_FOG_MODE, GL_EXP);
 
     // formula used for finding density:
     //
@@ -147,10 +148,10 @@ SoGLEnvironmentElement::updategl(SoState * const state)
     //
     // density = 5.545 / farval;
 
-    glFogf(GL_FOG_DENSITY, 5.545f / farval);
+    SoGLContext_glFogf(sogl_current_render_glue(), GL_FOG_DENSITY, 5.545f / farval);
     break;
   case SMOKE:
-    glFogi(GL_FOG_MODE, GL_EXP2);
+    SoGLContext_glFogi(sogl_current_render_glue(), GL_FOG_MODE, GL_EXP2);
     // formula used for finding density:
     //
     // 1/256 = e ^ (-(density * farval)^2)
@@ -164,7 +165,7 @@ SoGLEnvironmentElement::updategl(SoState * const state)
     // density = 2.35 / farval
     //
 
-    glFogf(GL_FOG_DENSITY, 2.35f / farval);
+    SoGLContext_glFogf(sogl_current_render_glue(), GL_FOG_DENSITY, 2.35f / farval);
     break;
   default:
     assert(0 && "unknown fog type");
@@ -172,6 +173,6 @@ SoGLEnvironmentElement::updategl(SoState * const state)
   }
 
   SbColor4f color(fogColor, 1.0f);
-  glFogfv(GL_FOG_COLOR, color.getValue());
-  glEnable(GL_FOG);
+  SoGLContext_glFogfv(sogl_current_render_glue(), GL_FOG_COLOR, color.getValue());
+  SoGLContext_glEnable(sogl_current_render_glue(), GL_FOG);
 }

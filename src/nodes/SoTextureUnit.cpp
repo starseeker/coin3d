@@ -224,7 +224,7 @@ uint32_t
 SoTextureUnit::getMaxTextureUnit(void)
 {
   GLint tmp;
-  glGetIntegerv(GL_MAX_TEXTURE_UNITS, &tmp);
+  SoGLContext_glGetIntegerv(sogl_current_render_glue(), GL_MAX_TEXTURE_UNITS, &tmp);
 
   return (uint32_t) tmp;
 }

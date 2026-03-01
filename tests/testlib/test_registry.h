@@ -49,6 +49,8 @@
 
 #include <Inventor/nodes/SoSeparator.h>
 
+class SoOffscreenRenderer;
+
 namespace ObolTest {
 
 // -------------------------------------------------------------------------
@@ -113,6 +115,13 @@ struct TestEntry {
      * @param height Suggested viewport height.
      */
     std::function<SoSeparator*(int width, int height)> create_scene;
+
+    /**
+     * Optional renderer configurator for visual tests.
+     * Called just before rendering to apply any per-test renderer settings
+     * (e.g. background gradient).  May be empty.
+     */
+    std::function<void(SoOffscreenRenderer*)> configure_renderer;
 };
 
 // -------------------------------------------------------------------------

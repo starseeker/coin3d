@@ -58,6 +58,13 @@ static bool test1_allJustifications(const char *basepath)
     dl->direction.setValue(-0.3f, -0.5f, -0.8f);
     root->addChild(dl);
 
+    // Use a small font so all three rows fit without overlapping.
+    // Default font size is 10 units but the y-translations are only 3 units
+    // apart, so a font size of 2 keeps each row within ~1.5 units tall.
+    SoFont *fnt = new SoFont;
+    fnt->size.setValue(2.0f);
+    root->addChild(fnt);
+
     float ys[3] = { 3.0f, 0.0f, -3.0f };
     SoText3::Justification justs[3] = {
         SoText3::LEFT, SoText3::CENTER, SoText3::RIGHT
@@ -118,13 +125,31 @@ static bool test2_allParts(const char *basepath)
     root->addChild(cam);
     root->addChild(new SoDirectionalLight);
 
-    // Add text nodes with different parts
+    // Use a small font so the three rows don't overlap.
+    // Default font size (~10 units tall) exceeds the 3-unit y-spacing, causing
+    // the red/green/dark AB rows to blend into each other.
+    SoFont *fnt = new SoFont;
+    fnt->size.setValue(2.0f);
+    root->addChild(fnt);
+
+    // Three "AB" text nodes demonstrating SIDES, BACK and ALL parts.
+    // Red  = SIDES only  (extruded side faces; edge-on to viewer so NdotL≈0,
+    //                     appears as dark outline regardless of material colour).
+    // Green = BACK only  (back face normal points away from camera; NdotL=0
+    //                     from the front, so it appears as a dark ambient row).
+    // Blue  = ALL parts  (front + sides + back; front face is fully lit and
+    //                     clearly visible as a bright blue AB).
     const int partsValues[3] = {
         SoText3::SIDES,
         SoText3::BACK,
         SoText3::ALL
     };
     float ys[3] = { 3.0f, 0.0f, -3.0f };
+    float colors[3][3] = {
+        {0.9f, 0.3f, 0.3f},   // red   – SIDES (dark from front, edge-on normals)
+        {0.3f, 0.9f, 0.3f},   // green – BACK  (dark from front, back-facing normal)
+        {0.3f, 0.3f, 0.9f}    // blue  – ALL   (front face bright; sides+back dark)
+    };
 
     for (int i = 0; i < 3; ++i) {
         SoSeparator *sep = new SoSeparator;
@@ -132,7 +157,7 @@ static bool test2_allParts(const char *basepath)
         tr->translation.setValue(0.0f, ys[i], 0.0f);
         sep->addChild(tr);
         SoMaterial *m = new SoMaterial;
-        m->diffuseColor.setValue(0.6f + i*0.1f, 0.4f, 0.8f - i*0.2f);
+        m->diffuseColor.setValue(colors[i][0], colors[i][1], colors[i][2]);
         sep->addChild(m);
         SoText3 *t = new SoText3;
         t->string.setValue("AB");

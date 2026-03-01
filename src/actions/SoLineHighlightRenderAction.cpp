@@ -55,6 +55,7 @@
 // *************************************************************************
 
 #include <Inventor/actions/SoLineHighlightRenderAction.h>
+#include "glue/glp.h"
 
 #include <cassert>
 

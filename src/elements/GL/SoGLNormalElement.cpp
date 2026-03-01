@@ -40,6 +40,7 @@
 */
 
 #include <Inventor/elements/SoGLNormalElement.h>
+#include "glue/glp.h"
 
 
 #include "config.h"
@@ -82,5 +83,5 @@ void
 SoGLNormalElement::send(const int index) const
 {
   assert(index >= 0 && index < this->numNormals);
-  glNormal3fv(this->normals[index].getValue());
+  SoGLContext_glNormal3fv(sogl_current_render_glue(), this->normals[index].getValue());
 }

@@ -55,6 +55,7 @@
 
 
 #include <Inventor/elements/SoGLTextureEnabledElement.h>
+#include "glue/glp.h"
 #include <Inventor/elements/SoShapeStyleElement.h>
 
 #include "config.h"
@@ -205,15 +206,15 @@ void
 SoGLTextureEnabledElement::updategl(void)
 {
   assert(0 && "obsoleted");
-  if (this->data) glEnable(GL_TEXTURE_2D);
-  else glDisable(GL_TEXTURE_2D);
+  if (this->data) SoGLContext_glEnable(sogl_current_render_glue(), GL_TEXTURE_2D);
+  else SoGLContext_glDisable(sogl_current_render_glue(), GL_TEXTURE_2D);
 }
 
 void
 SoGLTextureEnabledElement::updategl(const Mode newvalue, const Mode oldvalue)
 {
   // FIXME: the code below looks fairly non-optimal. Should at least
-  // avoid doing glDisable() then glEnable(). 20040802 mortene.
+  // avoid doing SoGLContext_glDisable(sogl_current_render_glue()) then SoGLContext_glEnable(sogl_current_render_glue()). 20040802 mortene.
   //
   // We check for this before calling this method. 2005-01-27 pederb.
 
@@ -221,13 +222,13 @@ SoGLTextureEnabledElement::updategl(const Mode newvalue, const Mode oldvalue)
   case DISABLED:
     break;
   case TEXTURE2D:
-    glDisable(GL_TEXTURE_2D);
+    SoGLContext_glDisable(sogl_current_render_glue(), GL_TEXTURE_2D);
     break;
   case RECTANGLE:
-    glDisable(GL_TEXTURE_RECTANGLE_EXT);
+    SoGLContext_glDisable(sogl_current_render_glue(), GL_TEXTURE_RECTANGLE_EXT);
     break;
   case CUBEMAP:
-    glDisable(GL_TEXTURE_CUBE_MAP);
+    SoGLContext_glDisable(sogl_current_render_glue(), GL_TEXTURE_CUBE_MAP);
     break;
   default:
     assert(0 && "should not happen");
@@ -237,13 +238,13 @@ SoGLTextureEnabledElement::updategl(const Mode newvalue, const Mode oldvalue)
   case DISABLED:
     break;
   case TEXTURE2D:
-    glEnable(GL_TEXTURE_2D);
+    SoGLContext_glEnable(sogl_current_render_glue(), GL_TEXTURE_2D);
     break;
   case RECTANGLE:
-    glEnable(GL_TEXTURE_RECTANGLE_EXT);
+    SoGLContext_glEnable(sogl_current_render_glue(), GL_TEXTURE_RECTANGLE_EXT);
     break;
   case CUBEMAP:
-    glEnable(GL_TEXTURE_CUBE_MAP);
+    SoGLContext_glEnable(sogl_current_render_glue(), GL_TEXTURE_CUBE_MAP);
     break;
   default:
     assert(0 && "should not happen");

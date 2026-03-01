@@ -42,6 +42,7 @@
 */
 
 #include <Inventor/bundles/SoMaterialBundle.h>
+#include "glue/glp.h"
 #include <Inventor/elements/SoGLLazyElement.h>
 #include <Inventor/misc/SoState.h>
 
@@ -103,8 +104,8 @@ SoMaterialBundle::sendFirst(void)
   whether the current index equals \a index before sending.
 
   \a betweenbeginend should be \c TRUE if your program is
-  between a glBegin() and glEnd() (it is illegal to change the
-  polygon stipple between a glBegin() and glEnd()).
+  between a SoGLContext_glBegin(sogl_current_render_glue()) and SoGLContext_glEnd(sogl_current_render_glue()) (it is illegal to change the
+  polygon stipple between a SoGLContext_glBegin(sogl_current_render_glue()) and SoGLContext_glEnd(sogl_current_render_glue())).
 */
 void
 SoMaterialBundle::send(const int index, const SbBool betweenbeginend)

@@ -1161,13 +1161,13 @@ SoExtSelection::draw(SoGLRenderAction *action)
   SbVec2s vps = vp.getViewportSizePixels();
 
   // matrices
-  glMatrixMode(GL_MODELVIEW);
-  glPushMatrix();
-  glLoadIdentity();
-  glMatrixMode(GL_PROJECTION);
-  glPushMatrix();
-  glLoadIdentity();
-  glOrtho(vpo[0], vpo[0]+vps[0]-1,
+  SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_MODELVIEW);
+  SoGLContext_glPushMatrix(sogl_current_render_glue());
+  SoGLContext_glLoadIdentity(sogl_current_render_glue());
+  SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_PROJECTION);
+  SoGLContext_glPushMatrix(sogl_current_render_glue());
+  SoGLContext_glLoadIdentity(sogl_current_render_glue());
+  SoGLContext_glOrtho(sogl_current_render_glue(), vpo[0], vpo[0]+vps[0]-1,
           vpo[1], vpo[0]+vps[1]-1,
           -1, 1);
 
@@ -1175,29 +1175,29 @@ SoExtSelection::draw(SoGLRenderAction *action)
   // Because Mesa 3.4.2 can't properly push & pop GL_CURRENT_BIT, we have to
   // save the current color for later.
   GLfloat currentColor[4];
-  glGetFloatv(GL_CURRENT_COLOR,currentColor);
+  SoGLContext_glGetFloatv(sogl_current_render_glue(), GL_CURRENT_COLOR,currentColor);
 
   // attributes
-  glPushAttrib(GL_LIGHTING_BIT|
+  SoGLContext_glPushAttrib(sogl_current_render_glue(), GL_LIGHTING_BIT|
                GL_FOG_BIT|
                GL_DEPTH_BUFFER_BIT|
                GL_TEXTURE_BIT|
                GL_LINE_BIT|
                GL_CURRENT_BIT);
-  glDisable(GL_LIGHTING);
-  glDisable(GL_TEXTURE_2D);
+  SoGLContext_glDisable(sogl_current_render_glue(), GL_LIGHTING);
+  SoGLContext_glDisable(sogl_current_render_glue(), GL_TEXTURE_2D);
 
-  if(pimpl->has3DTextures) glDisable(GL_TEXTURE_3D);
-  glDisable(GL_FOG);
-  glDisable(GL_DEPTH_TEST);
+  if(pimpl->has3DTextures) SoGLContext_glDisable(sogl_current_render_glue(), GL_TEXTURE_3D);
+  SoGLContext_glDisable(sogl_current_render_glue(), GL_FOG);
+  SoGLContext_glDisable(sogl_current_render_glue(), GL_DEPTH_TEST);
 
   // line color & width
-  glColor3f(PRIVATE(this)->lassocolor[0],PRIVATE(this)->lassocolor[1],PRIVATE(this)->lassocolor[2]);
-  glLineWidth(PRIVATE(this)->lassowidth);
+  SoGLContext_glColor3f(sogl_current_render_glue(), PRIVATE(this)->lassocolor[0],PRIVATE(this)->lassocolor[1],PRIVATE(this)->lassocolor[2]);
+  SoGLContext_glLineWidth(sogl_current_render_glue(), PRIVATE(this)->lassowidth);
 
   // stipple pattern
-  glEnable(GL_LINE_STIPPLE);
-  glLineStipple(1, PRIVATE(this)->lassopattern);
+  SoGLContext_glEnable(sogl_current_render_glue(), GL_LINE_STIPPLE);
+  SoGLContext_glLineStipple(sogl_current_render_glue(), 1, PRIVATE(this)->lassopattern);
 
   // --- RECTANGLE ---
 
@@ -1205,35 +1205,35 @@ SoExtSelection::draw(SoGLRenderAction *action)
     assert(PRIVATE(this)->runningselection.coords.getLength() >= 2);
     SbVec2s c1 = PRIVATE(this)->runningselection.coords[0];
     SbVec2s c2 = PRIVATE(this)->runningselection.coords[1];
-    glBegin(GL_LINE_LOOP);
-    glVertex2s(c1[0], c1[1]);
-    glVertex2s(c2[0], c1[1]);
-    glVertex2s(c2[0], c2[1]);
-    glVertex2s(c1[0], c2[1]);
-    glEnd();
+    SoGLContext_glBegin(sogl_current_render_glue(), GL_LINE_LOOP);
+    SoGLContext_glVertex2s(sogl_current_render_glue(), c1[0], c1[1]);
+    SoGLContext_glVertex2s(sogl_current_render_glue(), c2[0], c1[1]);
+    SoGLContext_glVertex2s(sogl_current_render_glue(), c2[0], c2[1]);
+    SoGLContext_glVertex2s(sogl_current_render_glue(), c1[0], c2[1]);
+    SoGLContext_glEnd(sogl_current_render_glue());
   }
 
   // --- LASSO ---
 
   else if(PRIVATE(this)->runningselection.mode == SoExtSelectionP::SelectionState::LASSO) {
-    glBegin(GL_LINE_LOOP);
+    SoGLContext_glBegin(sogl_current_render_glue(), GL_LINE_LOOP);
     for (int i = 0; i < PRIVATE(this)->runningselection.coords.getLength(); i++) {
       SbVec2s temp = PRIVATE(this)->runningselection.coords[i];
-      glVertex2s(temp[0],temp[1]);
+      SoGLContext_glVertex2s(sogl_current_render_glue(), temp[0],temp[1]);
     }
-    glEnd();
+    SoGLContext_glEnd(sogl_current_render_glue());
   }
 
   // finish - restore state
-  glMatrixMode(GL_PROJECTION);
-  glPopMatrix();
-  glMatrixMode(GL_MODELVIEW);
-  glPopMatrix();
+  SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_PROJECTION);
+  SoGLContext_glPopMatrix(sogl_current_render_glue());
+  SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_MODELVIEW);
+  SoGLContext_glPopMatrix(sogl_current_render_glue());
 
-  glPopAttrib();
+  SoGLContext_glPopAttrib(sogl_current_render_glue());
 
   // Due to a Mesa 3.4.2 bug
-  glColor3fv(currentColor);
+  SoGLContext_glColor3fv(sogl_current_render_glue(), currentColor);
 }
 
 // Documented in superclass.
@@ -1890,12 +1890,12 @@ SoExtSelectionP::addTriangleToOffscreenBuffer(SoCallbackAction * action,
   offscreenviewvolume.getMatrices(affine, proj);
   affine.multLeft(mm);
 
-  glMatrixMode(GL_PROJECTION);
-  glLoadMatrixf((float *)proj);
-  glMatrixMode(GL_MODELVIEW);
-  glLoadMatrixf((float *)affine);
+  SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_PROJECTION);
+  SoGLContext_glLoadMatrixf(sogl_current_render_glue(), (float *)proj);
+  SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_MODELVIEW);
+  SoGLContext_glLoadMatrixf(sogl_current_render_glue(), (float *)affine);
 
-  glDepthFunc(GL_LEQUAL);
+  SoGLContext_glDepthFunc(sogl_current_render_glue(), GL_LEQUAL);
 
   // Check vertex ordrering
   SoShapeHintsElement::VertexOrdering vertexorder;
@@ -1906,33 +1906,33 @@ SoExtSelectionP::addTriangleToOffscreenBuffer(SoCallbackAction * action,
 
   if(shapetype == SoShapeHintsElement::SOLID){
     if(vertexorder == SoShapeHintsElement::CLOCKWISE){
-      glFrontFace(GL_CW);
-      glEnable(GL_CULL_FACE);
+      SoGLContext_glFrontFace(sogl_current_render_glue(), GL_CW);
+      SoGLContext_glEnable(sogl_current_render_glue(), GL_CULL_FACE);
     } else if(vertexorder == SoShapeHintsElement::COUNTERCLOCKWISE){
-      glFrontFace(GL_CCW);
-      glEnable(GL_CULL_FACE);
+      SoGLContext_glFrontFace(sogl_current_render_glue(), GL_CCW);
+      SoGLContext_glEnable(sogl_current_render_glue(), GL_CULL_FACE);
     } else {
-      glDisable(GL_CULL_FACE);
+      SoGLContext_glDisable(sogl_current_render_glue(), GL_CULL_FACE);
     }
   } else {
-    glDisable(GL_CULL_FACE);
+    SoGLContext_glDisable(sogl_current_render_glue(), GL_CULL_FACE);
   }
 
-  glBegin(GL_TRIANGLES);
+  SoGLContext_glBegin(sogl_current_render_glue(), GL_TRIANGLES);
 
   if(!renderAsBlack){
-    glColor3ub((unsigned char) (this->offscreencolorcounter>>(8+8)),
+    SoGLContext_glColor3ub(sogl_current_render_glue(), (unsigned char) (this->offscreencolorcounter>>(8+8)),
                (unsigned char) (this->offscreencolorcounter>>(8)),
                (unsigned char) (this->offscreencolorcounter));
     ++offscreencolorcounter;
   } else {
-    glColor3f(0,0,0);
+    SoGLContext_glColor3f(sogl_current_render_glue(), 0,0,0);
   }
 
-  glVertex3fv(v1->getPoint().getValue());
-  glVertex3fv(v2->getPoint().getValue());
-  glVertex3fv(v3->getPoint().getValue());
-  glEnd();
+  SoGLContext_glVertex3fv(sogl_current_render_glue(), v1->getPoint().getValue());
+  SoGLContext_glVertex3fv(sogl_current_render_glue(), v2->getPoint().getValue());
+  SoGLContext_glVertex3fv(sogl_current_render_glue(), v3->getPoint().getValue());
+  SoGLContext_glEnd(sogl_current_render_glue());
 
 }
 
@@ -2077,28 +2077,28 @@ SoExtSelectionP::addLineToOffscreenBuffer(SoCallbackAction * action,
   offscreenviewvolume.getMatrices(affine, proj);
   affine.multLeft(mm);
 
-  glMatrixMode(GL_PROJECTION);
-  glLoadMatrixf((float *)proj);
-  glMatrixMode(GL_MODELVIEW);
-  glLoadMatrixf((float *)affine);
+  SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_PROJECTION);
+  SoGLContext_glLoadMatrixf(sogl_current_render_glue(), (float *)proj);
+  SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_MODELVIEW);
+  SoGLContext_glLoadMatrixf(sogl_current_render_glue(), (float *)affine);
 
-  glDepthFunc(GL_LEQUAL);
+  SoGLContext_glDepthFunc(sogl_current_render_glue(), GL_LEQUAL);
 
 
-  glBegin(GL_LINES);
+  SoGLContext_glBegin(sogl_current_render_glue(), GL_LINES);
 
   if(!renderAsBlack){
-    glColor3ub((unsigned char) (this->offscreencolorcounter>>(8+8)),
+    SoGLContext_glColor3ub(sogl_current_render_glue(), (unsigned char) (this->offscreencolorcounter>>(8+8)),
                (unsigned char) (this->offscreencolorcounter>>(8)),
                (unsigned char) (this->offscreencolorcounter));
     ++offscreencolorcounter;
   } else {
-    glColor3f(0,0,0);
+    SoGLContext_glColor3f(sogl_current_render_glue(), 0,0,0);
   }
 
-  glVertex3fv(v1->getPoint().getValue());
-  glVertex3fv(v2->getPoint().getValue());
-  glEnd();
+  SoGLContext_glVertex3fv(sogl_current_render_glue(), v1->getPoint().getValue());
+  SoGLContext_glVertex3fv(sogl_current_render_glue(), v2->getPoint().getValue());
+  SoGLContext_glEnd(sogl_current_render_glue());
 
 }
 
@@ -2227,28 +2227,28 @@ SoExtSelectionP::addPointToOffscreenBuffer(SoCallbackAction * action,
   offscreenviewvolume.getMatrices(affine, proj);
   affine.multLeft(mm);
 
-  glMatrixMode(GL_PROJECTION);
-  glLoadMatrixf((float *)proj);
-  glMatrixMode(GL_MODELVIEW);
-  glLoadMatrixf((float *)affine);
+  SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_PROJECTION);
+  SoGLContext_glLoadMatrixf(sogl_current_render_glue(), (float *)proj);
+  SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_MODELVIEW);
+  SoGLContext_glLoadMatrixf(sogl_current_render_glue(), (float *)affine);
 
-  glDepthFunc(GL_LEQUAL);
-  glPointSize(SoPointSizeElement::get(action->getState()));
+  SoGLContext_glDepthFunc(sogl_current_render_glue(), GL_LEQUAL);
+  SoGLContext_glPointSize(sogl_current_render_glue(), SoPointSizeElement::get(action->getState()));
 
 
-  glBegin(GL_POINTS);
+  SoGLContext_glBegin(sogl_current_render_glue(), GL_POINTS);
 
   if(!renderAsBlack){
-    glColor3ub((unsigned char) (this->offscreencolorcounter>>(8+8)),
+    SoGLContext_glColor3ub(sogl_current_render_glue(), (unsigned char) (this->offscreencolorcounter>>(8+8)),
                (unsigned char) (this->offscreencolorcounter>>(8)),
                (unsigned char) (this->offscreencolorcounter));
     ++offscreencolorcounter;
   } else {
-    glColor3f(0,0,0);
+    SoGLContext_glColor3f(sogl_current_render_glue(), 0,0,0);
   }
 
-  glVertex3fv(v1->getPoint().getValue());
-  glEnd();
+  SoGLContext_glVertex3fv(sogl_current_render_glue(), v1->getPoint().getValue());
+  SoGLContext_glEnd(sogl_current_render_glue());
 
 }
 
@@ -2316,12 +2316,12 @@ SoExtSelectionP::offscreenLassoTesselatorCallback(void * v0, void * v1, void * v
   SbVec3f *vec1 = (SbVec3f *) v1;
   SbVec3f *vec2 = (SbVec3f *) v2;
 
-  glBegin(GL_TRIANGLES);
-   glColor3f(1,1,1);
-   glVertex2f(vec0->getValue()[0],vec0->getValue()[1]);
-   glVertex2f(vec1->getValue()[0],vec1->getValue()[1]);
-   glVertex2f(vec2->getValue()[0],vec2->getValue()[1]);
-  glEnd();
+  SoGLContext_glBegin(sogl_current_render_glue(), GL_TRIANGLES);
+   SoGLContext_glColor3f(sogl_current_render_glue(), 1,1,1);
+   SoGLContext_glVertex2f(sogl_current_render_glue(), vec0->getValue()[0],vec0->getValue()[1]);
+   SoGLContext_glVertex2f(sogl_current_render_glue(), vec1->getValue()[0],vec1->getValue()[1]);
+   SoGLContext_glVertex2f(sogl_current_render_glue(), vec2->getValue()[0],vec2->getValue()[1]);
+  SoGLContext_glEnd(sogl_current_render_glue());
 
 }
 
@@ -2339,18 +2339,18 @@ SoExtSelectionP::offscreenRenderLassoCallback(void * userdata, SoAction * action
   SbVec2s vpo = vp.getViewportOriginPixels();
   SbVec2s vps = vp.getViewportSizePixels();
 
-  glMatrixMode(GL_PROJECTION);
-  glPushMatrix();
-  glOrtho(vpo[0], vpo[0]+vps[0]-1,
+  SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_PROJECTION);
+  SoGLContext_glPushMatrix(sogl_current_render_glue());
+  SoGLContext_glOrtho(sogl_current_render_glue(), vpo[0], vpo[0]+vps[0]-1,
           vpo[1], vpo[0]+vps[1]-1,
           -1, 1);
-  glMatrixMode(GL_MODELVIEW);
-  glPushMatrix();
-  glLoadIdentity();
+  SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_MODELVIEW);
+  SoGLContext_glPushMatrix(sogl_current_render_glue());
+  SoGLContext_glLoadIdentity(sogl_current_render_glue());
   
-  glDisable(GL_LIGHTING);
-  glDisable(GL_DEPTH_TEST);
-  glDisable(GL_CULL_FACE);
+  SoGLContext_glDisable(sogl_current_render_glue(), GL_LIGHTING);
+  SoGLContext_glDisable(sogl_current_render_glue(), GL_DEPTH_TEST);
+  SoGLContext_glDisable(sogl_current_render_glue(), GL_CULL_FACE);
   
   // This flag will be set to TRUE if the tesselatorcallbacks was executed.
   pimpl->lassostencilisdrawed = FALSE;
@@ -2369,10 +2369,10 @@ SoExtSelectionP::offscreenRenderLassoCallback(void * userdata, SoAction * action
     tessellator.addVertex(tmparray[i],(void*)&tmparray[i]);
   tessellator.endPolygon();
 
-  glMatrixMode(GL_PROJECTION);
-  glPopMatrix();
-  glMatrixMode(GL_MODELVIEW);
-  glPopMatrix();
+  SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_PROJECTION);
+  SoGLContext_glPopMatrix(sogl_current_render_glue());
+  SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_MODELVIEW);
+  SoGLContext_glPopMatrix(sogl_current_render_glue());
 }
 
 void
@@ -2407,9 +2407,9 @@ SoExtSelectionP::offscreenRenderCallback(void * userdata, SoAction * action)
   // Because Mesa 3.4.2 can't properly push & pop GL_CURRENT_BIT, we have to
   // save the current color for later.
   GLfloat currentColor[4];
-  glGetFloatv(GL_CURRENT_COLOR,currentColor);
+  SoGLContext_glGetFloatv(sogl_current_render_glue(), GL_CURRENT_COLOR,currentColor);
 
-  glPushAttrib(GL_LIGHTING_BIT|
+  SoGLContext_glPushAttrib(sogl_current_render_glue(), GL_LIGHTING_BIT|
                GL_FOG_BIT|
                GL_DEPTH_BUFFER_BIT|
                GL_TEXTURE_BIT|
@@ -2417,13 +2417,13 @@ SoExtSelectionP::offscreenRenderCallback(void * userdata, SoAction * action)
                GL_CURRENT_BIT);
 
   // Setup GL-state for offscreen context
-  glDisable(GL_LIGHTING);
-  glDisable(GL_TEXTURE_2D);
+  SoGLContext_glDisable(sogl_current_render_glue(), GL_LIGHTING);
+  SoGLContext_glDisable(sogl_current_render_glue(), GL_TEXTURE_2D);
   if(pimpl->has3DTextures)
-    glDisable(GL_TEXTURE_3D);
-  glDisable(GL_FOG);
-  glDisable(GL_BLEND);
-  glEnable(GL_DEPTH_TEST);
+    SoGLContext_glDisable(sogl_current_render_glue(), GL_TEXTURE_3D);
+  SoGLContext_glDisable(sogl_current_render_glue(), GL_FOG);
+  SoGLContext_glDisable(sogl_current_render_glue(), GL_BLEND);
+  SoGLContext_glEnable(sogl_current_render_glue(), GL_DEPTH_TEST);
 
   // --- Render all tris to offscreen buffer.
   pimpl->cbaction->apply(pimpl->offscreenheadnode);
@@ -2431,17 +2431,17 @@ SoExtSelectionP::offscreenRenderCallback(void * userdata, SoAction * action)
 
 
   // Restore all OpenGL States
-  glPopAttrib();
+  SoGLContext_glPopAttrib(sogl_current_render_glue());
 
   // Due to a Mesa 3.4.2 bug
-  glColor3fv(currentColor);
+  SoGLContext_glColor3fv(sogl_current_render_glue(), currentColor);
 }
 
 SbBool
 SoExtSelectionP::checkOffscreenRendererCapabilities()
 {
   GLboolean rgbmode;
-  glGetBooleanv(GL_RGBA_MODE, &rgbmode);
+  SoGLContext_glGetBooleanv(sogl_current_render_glue(), GL_RGBA_MODE, &rgbmode);
   if (!rgbmode) {
     SoDebugError::post("SoExtSelectionP::checkOffscreenRendererCapabilities",
                        "Couldn't get an RGBA OpenGL context -- cannot "
@@ -2452,9 +2452,9 @@ SoExtSelectionP::checkOffscreenRendererCapabilities()
 
   // Check color-channel bitresolution
   GLint red, green, blue;
-  glGetIntegerv(GL_RED_BITS, &red);
-  glGetIntegerv(GL_GREEN_BITS, &green);
-  glGetIntegerv(GL_BLUE_BITS, &blue);
+  SoGLContext_glGetIntegerv(sogl_current_render_glue(), GL_RED_BITS, &red);
+  SoGLContext_glGetIntegerv(sogl_current_render_glue(), GL_GREEN_BITS, &green);
+  SoGLContext_glGetIntegerv(sogl_current_render_glue(), GL_BLUE_BITS, &blue);
 
   // Calculate maximum colorcounter from RGB bit depth.
 #ifndef COLORBITS

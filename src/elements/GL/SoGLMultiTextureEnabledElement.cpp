@@ -130,8 +130,8 @@ SoGLMultiTextureEnabledElement::updategl(const int unit)
 {
   const SoGLContext * glue = SoGLContext_instance(this->cachecontext);
   SoGLContext_glActiveTexture(glue, (GLenum) (int(GL_TEXTURE0) + unit));
-  if (this->isEnabled(unit)) glEnable(GL_TEXTURE_2D);
-  else glDisable(GL_TEXTURE_2D);
+  if (this->isEnabled(unit)) SoGLContext_glEnable(sogl_current_render_glue(), GL_TEXTURE_2D);
+  else SoGLContext_glDisable(sogl_current_render_glue(), GL_TEXTURE_2D);
   SoGLContext_glActiveTexture(glue, (GLenum) GL_TEXTURE0);
 
   GLenum glerror =  sogl_glerror_debugging() ? glGetError() : GL_NO_ERROR;
@@ -152,16 +152,16 @@ SoGLMultiTextureEnabledElement::updategl(const int unit, const Mode newvalue, co
   case DISABLED:
     break;
   case TEXTURE2D:
-    glDisable(GL_TEXTURE_2D);
+    SoGLContext_glDisable(sogl_current_render_glue(), GL_TEXTURE_2D);
     break;
   case RECTANGLE:
-    glDisable(GL_TEXTURE_RECTANGLE_EXT);
+    SoGLContext_glDisable(sogl_current_render_glue(), GL_TEXTURE_RECTANGLE_EXT);
     break;
   case CUBEMAP:
-    glDisable(GL_TEXTURE_CUBE_MAP);
+    SoGLContext_glDisable(sogl_current_render_glue(), GL_TEXTURE_CUBE_MAP);
     break;
   case TEXTURE3D:
-    glDisable(GL_TEXTURE_3D);
+    SoGLContext_glDisable(sogl_current_render_glue(), GL_TEXTURE_3D);
     break;
   default:
     assert(0 && "should not happen");
@@ -171,16 +171,16 @@ SoGLMultiTextureEnabledElement::updategl(const int unit, const Mode newvalue, co
   case DISABLED:
     break;
   case TEXTURE2D:
-    glEnable(GL_TEXTURE_2D);
+    SoGLContext_glEnable(sogl_current_render_glue(), GL_TEXTURE_2D);
     break;
   case RECTANGLE:
-    glEnable(GL_TEXTURE_RECTANGLE_EXT);
+    SoGLContext_glEnable(sogl_current_render_glue(), GL_TEXTURE_RECTANGLE_EXT);
     break;
   case CUBEMAP:
-    glEnable(GL_TEXTURE_CUBE_MAP);
+    SoGLContext_glEnable(sogl_current_render_glue(), GL_TEXTURE_CUBE_MAP);
     break;
   case TEXTURE3D:
-    glEnable(GL_TEXTURE_3D);
+    SoGLContext_glEnable(sogl_current_render_glue(), GL_TEXTURE_3D);
     break;
   default:
     assert(0 && "should not happen");

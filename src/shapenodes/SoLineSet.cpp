@@ -260,15 +260,15 @@ namespace { namespace SoGL { namespace LineSet {
     // This is the same code as in SoGLCoordinateElement::send().
     // It is inlined here for speed (~15% speed increase).
 #define SEND_VERTEX(_idx_)                                        \
-    if (is3d) glVertex3fv((const GLfloat*) (coords3d + _idx_)); \
-    else glVertex4fv((const GLfloat*) (coords4d + _idx_));
+    if (is3d) SoGLContext_glVertex3fv(sogl_current_render_glue(), (const GLfloat*) (coords3d + _idx_)); \
+    else SoGLContext_glVertex4fv(sogl_current_render_glue(), (const GLfloat*) (coords4d + _idx_));
 
     SbVec3f dummynormal(0.0f, 0.0f, 1.0f);
     const SbVec3f * currnormal = &dummynormal;
     if (normals) currnormal = normals;
     if ((AttributeBinding)NormalBinding == OVERALL) {
       if (needNormals)
-        glNormal3fv((const GLfloat *)currnormal);
+        SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat *)currnormal);
     }
 
     int matnr = 0;
@@ -277,8 +277,8 @@ namespace { namespace SoGL { namespace LineSet {
     if ((AttributeBinding)NormalBinding == PER_SEGMENT ||
         (AttributeBinding)MaterialBinding == PER_SEGMENT) {
 
-      if (drawPoints) glBegin(GL_POINTS);
-      else glBegin(GL_LINES);
+      if (drawPoints) SoGLContext_glBegin(sogl_current_render_glue(), GL_POINTS);
+      else SoGLContext_glBegin(sogl_current_render_glue(), GL_LINES);
 
       while (ptr < end) {
         int n = *ptr++;
@@ -293,7 +293,7 @@ namespace { namespace SoGL { namespace LineSet {
         if ((AttributeBinding)NormalBinding == PER_LINE ||
             (AttributeBinding)NormalBinding == PER_VERTEX) {
           currnormal = normals++;
-          glNormal3fv((const GLfloat*)currnormal);
+          SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat*)currnormal);
         }
         if (TexturingEnabled == TRUE) {
           tb->send(texnr++, coords->get3(idx), *currnormal);
@@ -305,14 +305,14 @@ namespace { namespace SoGL { namespace LineSet {
           }
           if ((AttributeBinding)NormalBinding == PER_SEGMENT) {
             currnormal = normals++;
-            glNormal3fv((const GLfloat*)currnormal);
+            SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat*)currnormal);
           }
           SEND_VERTEX(idx);
           idx++;
 
           if ((AttributeBinding)NormalBinding == PER_VERTEX) {
             currnormal = normals++;
-            glNormal3fv((const GLfloat *)currnormal);
+            SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat *)currnormal);
           }
           if ((AttributeBinding)MaterialBinding == PER_VERTEX) {
             mb->send(matnr++, TRUE);
@@ -324,11 +324,11 @@ namespace { namespace SoGL { namespace LineSet {
         }
         idx++;
       }
-      glEnd();
+      SoGLContext_glEnd(sogl_current_render_glue());
 
     } else { // NBINDING==PER_SEGMENT || MBINDING==PER_SEGMENT
 
-      if (drawPoints) glBegin(GL_POINTS);
+      if (drawPoints) SoGLContext_glBegin(sogl_current_render_glue(), GL_POINTS);
       while (ptr < end) {
         int n = *ptr++;
         if (n < 2) {
@@ -336,11 +336,11 @@ namespace { namespace SoGL { namespace LineSet {
           continue;
         }
         n -= 2;
-        if (!drawPoints) glBegin(GL_LINE_STRIP);
+        if (!drawPoints) SoGLContext_glBegin(sogl_current_render_glue(), GL_LINE_STRIP);
 
         if ((AttributeBinding)NormalBinding != OVERALL) {
           currnormal = normals++;
-          glNormal3fv((const GLfloat *)currnormal);
+          SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat *)currnormal);
         }
         if ((AttributeBinding)MaterialBinding != OVERALL) {
           mb->send(matnr++, TRUE);
@@ -353,7 +353,7 @@ namespace { namespace SoGL { namespace LineSet {
         do {
           if ((AttributeBinding)NormalBinding == PER_VERTEX) {
             currnormal = normals++;
-            glNormal3fv((const GLfloat *)currnormal);
+            SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat *)currnormal);
           }
           if ((AttributeBinding)MaterialBinding == PER_VERTEX) {
             mb->send(matnr++, TRUE);
@@ -364,10 +364,10 @@ namespace { namespace SoGL { namespace LineSet {
           SEND_VERTEX(idx);
           idx++;
         } while (n--);
-        if (!drawPoints) glEnd();
+        if (!drawPoints) SoGLContext_glEnd(sogl_current_render_glue());
       }
     }
-    if (drawPoints) glEnd();
+    if (drawPoints) SoGLContext_glEnd(sogl_current_render_glue());
 #undef SEND_VERTEX
   }
 

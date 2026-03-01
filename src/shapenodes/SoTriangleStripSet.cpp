@@ -286,8 +286,8 @@ namespace { namespace SoGL { namespace TriStripSet {
     // This is the same code as in SoGLCoordinateElement::send().
     // It is inlined here for speed (~15% speed increase).
 #define SEND_VERTEX(_idx_)                                      \
-    if (is3d) glVertex3fv((const GLfloat*) (coords3d + _idx_)); \
-    else glVertex4fv((const GLfloat*) (coords4d + _idx_));
+    if (is3d) SoGLContext_glVertex3fv(sogl_current_render_glue(), (const GLfloat*) (coords3d + _idx_)); \
+    else SoGLContext_glVertex4fv(sogl_current_render_glue(), (const GLfloat*) (coords4d + _idx_));
 
     int matnr = 0;
     int texnr = 0;
@@ -297,20 +297,20 @@ namespace { namespace SoGL { namespace TriStripSet {
     const SbVec3f * currnormal = &dummynormal;
     if (normals) currnormal = normals;
     if ((AttributeBinding)NormalBinding == OVERALL) {
-      if (needNormals) glNormal3fv((const GLfloat *)currnormal);
+      if (needNormals) SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat *)currnormal);
     }
 
     while (ptr < end) {
       n = *ptr++ - 2;
       assert(n > 0);
 
-      glBegin(GL_TRIANGLE_STRIP);
+      SoGLContext_glBegin(sogl_current_render_glue(), GL_TRIANGLE_STRIP);
 
       if ((AttributeBinding)NormalBinding == PER_VERTEX ||
           (AttributeBinding)NormalBinding == PER_FACE ||
           (AttributeBinding)NormalBinding == PER_STRIP) {
         currnormal = normals++;
-        glNormal3fv((const GLfloat *)currnormal);
+        SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat *)currnormal);
       }
       if ((AttributeBinding)MaterialBinding == PER_STRIP ||
           (AttributeBinding)MaterialBinding == PER_FACE ||
@@ -326,7 +326,7 @@ namespace { namespace SoGL { namespace TriStripSet {
 
       if ((AttributeBinding)NormalBinding == PER_VERTEX) {
         currnormal = normals++;
-        glNormal3fv((const GLfloat *)currnormal);
+        SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat *)currnormal);
       }
       if ((AttributeBinding)MaterialBinding == PER_VERTEX) {
         mb->send(matnr++, TRUE);
@@ -348,7 +348,7 @@ namespace { namespace SoGL { namespace TriStripSet {
         if ((AttributeBinding)NormalBinding == PER_FACE ||
             (AttributeBinding)NormalBinding == PER_VERTEX) {
           currnormal = normals++;
-          glNormal3fv((const GLfloat *)currnormal);
+          SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat *)currnormal);
         }
         if ((AttributeBinding)MaterialBinding == PER_FACE ||
             (AttributeBinding)MaterialBinding == PER_VERTEX) {
@@ -366,7 +366,7 @@ namespace { namespace SoGL { namespace TriStripSet {
         SEND_VERTEX(idx); // vertex 3-n
         idx++;
       }
-      glEnd();
+      SoGLContext_glEnd(sogl_current_render_glue());
     }
 #undef SEND_VERTEX
   }

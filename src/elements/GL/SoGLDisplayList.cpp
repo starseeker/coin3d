@@ -143,7 +143,7 @@ SoGLDisplayList::~SoGLDisplayList()
 #endif // debug
 
   if (PRIVATE(this)->type == DISPLAY_LIST) {
-    glDeleteLists((GLuint) PRIVATE(this)->firstindex, PRIVATE(this)->numalloc);
+    SoGLContext_glDeleteLists(sogl_current_render_glue(), (GLuint) PRIVATE(this)->firstindex, PRIVATE(this)->numalloc);
   }
   else {
     assert(PRIVATE(this)->type == TEXTURE_OBJECT);
@@ -194,7 +194,7 @@ SoGLDisplayList::open(SoState * state, int index)
     // using GL_COMPILE here instead of GL_COMPILE_AND_EXECUTE will
     // lead to much higher performance on nVidia cards, and doesn't
     // hurt performance for other vendors.
-    glNewList((GLuint) (PRIVATE(this)->firstindex+PRIVATE(this)->openindex), GL_COMPILE);
+    SoGLContext_glNewList(sogl_current_render_glue(), (GLuint) (PRIVATE(this)->firstindex+PRIVATE(this)->openindex), GL_COMPILE);
   }
   else {
     assert(PRIVATE(this)->type == TEXTURE_OBJECT);
@@ -210,7 +210,7 @@ void
 SoGLDisplayList::close(SoState * OBOL_UNUSED_ARG(state))
 {
   if (PRIVATE(this)->type == DISPLAY_LIST) {
-    glEndList();
+    SoGLContext_glEndList(sogl_current_render_glue());
     GLenum err = sogl_glerror_debugging() ? glGetError() : GL_NO_ERROR;
     if (err == GL_OUT_OF_MEMORY) {
       SoDebugError::post("SoGLDisplayList::close",
@@ -218,7 +218,7 @@ SoGLDisplayList::close(SoState * OBOL_UNUSED_ARG(state))
                          "to store full display list. Expect flaws in "
                          "rendering.");
     }
-    glCallList((GLuint) (PRIVATE(this)->firstindex + PRIVATE(this)->openindex));
+    SoGLContext_glCallList(sogl_current_render_glue(), (GLuint) (PRIVATE(this)->firstindex + PRIVATE(this)->openindex));
   }
   else {
     const SoGLContext * glw = SoGLContext_instance(PRIVATE(this)->context);
@@ -240,7 +240,7 @@ void
 SoGLDisplayList::call(SoState * state, int index)
 {
   if (PRIVATE(this)->type == DISPLAY_LIST) {
-    glCallList((GLuint) (PRIVATE(this)->firstindex + index));
+    SoGLContext_glCallList(sogl_current_render_glue(), (GLuint) (PRIVATE(this)->firstindex + index));
   }
   else {
     assert(PRIVATE(this)->type == TEXTURE_OBJECT);

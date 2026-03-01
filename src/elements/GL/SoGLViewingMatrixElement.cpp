@@ -44,6 +44,7 @@
 */
 
 #include "config.h"
+#include "glue/glp.h"
 #include <Inventor/elements/SoGLViewingMatrixElement.h>
 #include <Inventor/actions/SoGLRenderAction.h>
 
@@ -144,7 +145,7 @@ SoGLViewingMatrixElement::updategl(void)
   if (!this->mmidentity) {
     mat.multRight(this->modelmatrix);
   }
-  glLoadMatrixf((float*)mat);
+  SoGLContext_glLoadMatrixf(sogl_current_render_glue(), (float*)mat);
 }
 
 /*!

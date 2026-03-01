@@ -145,7 +145,7 @@
   If the OpenGL driver supports the pbuffer extension, it is detected
   and used to provide hardware accelerated offscreen rendering.
 
-  The pixel data is fetched from the OpenGL buffer with glReadPixels(),
+  The pixel data is fetched from the OpenGL buffer with SoGLContext_glReadPixels(sogl_current_render_glue()),
   with the format and type arguments set to GL_RGBA and
   GL_UNSIGNED_BYTE, respectively. This means that the maximum
   resolution is 32 bits, 8 bits for each of the R/G/B/A components.
@@ -738,7 +738,7 @@ SoOffscreenRenderer::getGLRenderAction(void) const
 static void
 pre_render_cb(void * userdata, SoGLRenderAction * action)
 {
-  glClear(GL_DEPTH_BUFFER_BIT|GL_COLOR_BUFFER_BIT);
+  SoGLContext_glClear(sogl_current_render_glue(), GL_DEPTH_BUFFER_BIT|GL_COLOR_BUFFER_BIT);
   action->setRenderingIsRemote(FALSE);
 
   // If a gradient background has been requested, paint it now over the
@@ -749,39 +749,39 @@ pre_render_cb(void * userdata, SoGLRenderAction * action)
     // Save enough GL state to restore afterwards.
     // glPushAttrib/glPopAttrib are deprecated in core-profile OpenGL 3.1+ but
     // are available in the compatibility profile used by this renderer.
-    glPushAttrib(GL_ENABLE_BIT | GL_DEPTH_BUFFER_BIT | GL_CURRENT_BIT);
-    glDisable(GL_DEPTH_TEST);
-    glDisable(GL_LIGHTING);
-    glDisable(GL_TEXTURE_2D);
-    glDepthMask(GL_FALSE);
+    SoGLContext_glPushAttrib(sogl_current_render_glue(), GL_ENABLE_BIT | GL_DEPTH_BUFFER_BIT | GL_CURRENT_BIT);
+    SoGLContext_glDisable(sogl_current_render_glue(), GL_DEPTH_TEST);
+    SoGLContext_glDisable(sogl_current_render_glue(), GL_LIGHTING);
+    SoGLContext_glDisable(sogl_current_render_glue(), GL_TEXTURE_2D);
+    SoGLContext_glDepthMask(sogl_current_render_glue(), GL_FALSE);
 
     // Switch to a simple orthographic 2-D projection
-    glMatrixMode(GL_PROJECTION);
-    glPushMatrix();
-    glLoadIdentity();
-    glOrtho(0.0, 1.0, 0.0, 1.0, -1.0, 1.0);
-    glMatrixMode(GL_MODELVIEW);
-    glPushMatrix();
-    glLoadIdentity();
+    SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_PROJECTION);
+    SoGLContext_glPushMatrix(sogl_current_render_glue());
+    SoGLContext_glLoadIdentity(sogl_current_render_glue());
+    SoGLContext_glOrtho(sogl_current_render_glue(), 0.0, 1.0, 0.0, 1.0, -1.0, 1.0);
+    SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_MODELVIEW);
+    SoGLContext_glPushMatrix(sogl_current_render_glue());
+    SoGLContext_glLoadIdentity(sogl_current_render_glue());
 
     // Draw a full-screen quad with per-vertex colours:
     //   y=0 (bottom) → gradient_bottom colour
     //   y=1 (top)    → gradient_top colour
     const SbColor & bot = thisp->gradient_bottom;
     const SbColor & top = thisp->gradient_top;
-    glBegin(GL_QUADS);
-      glColor3f(bot[0], bot[1], bot[2]);  glVertex2f(0.0f, 0.0f);
-      glColor3f(bot[0], bot[1], bot[2]);  glVertex2f(1.0f, 0.0f);
-      glColor3f(top[0], top[1], top[2]);  glVertex2f(1.0f, 1.0f);
-      glColor3f(top[0], top[1], top[2]);  glVertex2f(0.0f, 1.0f);
-    glEnd();
+    SoGLContext_glBegin(sogl_current_render_glue(), GL_QUADS);
+      SoGLContext_glColor3f(sogl_current_render_glue(), bot[0], bot[1], bot[2]);  SoGLContext_glVertex2f(sogl_current_render_glue(), 0.0f, 0.0f);
+      SoGLContext_glColor3f(sogl_current_render_glue(), bot[0], bot[1], bot[2]);  SoGLContext_glVertex2f(sogl_current_render_glue(), 1.0f, 0.0f);
+      SoGLContext_glColor3f(sogl_current_render_glue(), top[0], top[1], top[2]);  SoGLContext_glVertex2f(sogl_current_render_glue(), 1.0f, 1.0f);
+      SoGLContext_glColor3f(sogl_current_render_glue(), top[0], top[1], top[2]);  SoGLContext_glVertex2f(sogl_current_render_glue(), 0.0f, 1.0f);
+    SoGLContext_glEnd(sogl_current_render_glue());
 
     // Restore matrices and GL state
-    glMatrixMode(GL_PROJECTION);
-    glPopMatrix();
-    glMatrixMode(GL_MODELVIEW);
-    glPopMatrix();
-    glPopAttrib();
+    SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_PROJECTION);
+    SoGLContext_glPopMatrix(sogl_current_render_glue());
+    SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_MODELVIEW);
+    SoGLContext_glPopMatrix(sogl_current_render_glue());
+    SoGLContext_glPopAttrib(sogl_current_render_glue());
   }
 }
 
@@ -988,17 +988,17 @@ SoOffscreenRendererP::renderFromBase(SoBase * base)
 
   if (CoinOffscreenGLCanvas::debug()) {
     GLint colbits[4];
-    glGetIntegerv(GL_RED_BITS, &colbits[0]);
-    glGetIntegerv(GL_GREEN_BITS, &colbits[1]);
-    glGetIntegerv(GL_BLUE_BITS, &colbits[2]);
-    glGetIntegerv(GL_ALPHA_BITS, &colbits[3]);
+    SoGLContext_glGetIntegerv(sogl_current_render_glue(), GL_RED_BITS, &colbits[0]);
+    SoGLContext_glGetIntegerv(sogl_current_render_glue(), GL_GREEN_BITS, &colbits[1]);
+    SoGLContext_glGetIntegerv(sogl_current_render_glue(), GL_BLUE_BITS, &colbits[2]);
+    SoGLContext_glGetIntegerv(sogl_current_render_glue(), GL_ALPHA_BITS, &colbits[3]);
     SoDebugError::postInfo("SoOffscreenRenderer::renderFromBase",
                            "GL context GL_[RED|GREEN|BLUE|ALPHA]_BITS=="
                            "[%d, %d, %d, %d]",
                            colbits[0], colbits[1], colbits[2], colbits[3]);
   }
 
-  glEnable(GL_DEPTH_TEST);
+  SoGLContext_glEnable(sogl_current_render_glue(), GL_DEPTH_TEST);
   {
     // Use the bottom gradient colour (or the solid background colour) as the
     // GL clear colour.  When a gradient is active the pre_render_cb will
@@ -1007,7 +1007,7 @@ SoOffscreenRendererP::renderFromBase(SoBase * base)
     const SbColor & bgcol = this->has_gradient
                             ? this->gradient_bottom
                             : this->backgroundcolor;
-    glClearColor(bgcol[0], bgcol[1], bgcol[2], 0.0f);
+    SoGLContext_glClearColor(sogl_current_render_glue(), bgcol[0], bgcol[1], bgcol[2], 0.0f);
   }
 
   // Make this large to get best possible quality on any "big-image"
@@ -1044,7 +1044,7 @@ SoOffscreenRendererP::renderFromBase(SoBase * base)
     (void)memset(this->buffer, 0x00, bufsize);
   }
 
-  // needed to clear viewport after glViewport() is called from
+  // needed to clear viewport after SoGLContext_glViewport(sogl_current_render_glue()) is called from
   // SoGLRenderAction
   this->renderaction->addPreRenderCallback(pre_render_cb, this);
 

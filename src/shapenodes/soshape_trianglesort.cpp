@@ -31,6 +31,7 @@
 \**************************************************************************/
 
 #include "shapenodes/soshape_trianglesort.h"
+#include "glue/glp.h"
 
 #include <cstdlib>
 #include <cassert>
@@ -186,26 +187,26 @@ soshape_trianglesort::endShape(SoState * state, SoMaterialBundle & mb)
   // this rendering loop can be optimized a lot, of course, but speed
   // is not so important here, since it's slow to generate, copy and
   // sort the triangles anyway.
-  glBegin(GL_TRIANGLES);
+  SoGLContext_glBegin(sogl_current_render_glue(), GL_TRIANGLES);
   for (i = 0; i < n; i++) {
     idx = tarray[i].idx;
     v = varray + idx;
-    glTexCoord4fv(v->getTextureCoords().getValue());
-    glNormal3fv(v->getNormal().getValue());
+    SoGLContext_glTexCoord4fv(sogl_current_render_glue(), v->getTextureCoords().getValue());
+    SoGLContext_glNormal3fv(sogl_current_render_glue(), v->getNormal().getValue());
     mb.send(v->getMaterialIndex(), TRUE);
-    glVertex3fv(v->getPoint().getValue());
+    SoGLContext_glVertex3fv(sogl_current_render_glue(), v->getPoint().getValue());
 
     v = varray + idx+1;
-    glTexCoord4fv(v->getTextureCoords().getValue());
-    glNormal3fv(v->getNormal().getValue());
+    SoGLContext_glTexCoord4fv(sogl_current_render_glue(), v->getTextureCoords().getValue());
+    SoGLContext_glNormal3fv(sogl_current_render_glue(), v->getNormal().getValue());
     mb.send(v->getMaterialIndex(), TRUE);
-    glVertex3fv(v->getPoint().getValue());
+    SoGLContext_glVertex3fv(sogl_current_render_glue(), v->getPoint().getValue());
 
     v = varray + idx+2;
-    glTexCoord4fv(v->getTextureCoords().getValue());
-    glNormal3fv(v->getNormal().getValue());
+    SoGLContext_glTexCoord4fv(sogl_current_render_glue(), v->getTextureCoords().getValue());
+    SoGLContext_glNormal3fv(sogl_current_render_glue(), v->getNormal().getValue());
     mb.send(v->getMaterialIndex(), TRUE);
-    glVertex3fv(v->getPoint().getValue());
+    SoGLContext_glVertex3fv(sogl_current_render_glue(), v->getPoint().getValue());
   }
-  glEnd();
+  SoGLContext_glEnd(sogl_current_render_glue());
 }
