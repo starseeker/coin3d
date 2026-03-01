@@ -17,6 +17,7 @@ set(OBOL_ELEMENTS_FILES
 	SoClipPlaneElement.cpp
 	SoComplexityElement.cpp
 	SoComplexityTypeElement.cpp
+	SoContextManagerElement.cpp
 	SoCoordinateElement.cpp
 	SoCreaseAngleElement.cpp
 	SoCullElement.cpp
@@ -90,13 +91,9 @@ set(OBOL_ELEMENTS_INTERNAL_FILES
 )
 
 # build library
-if(OBOL_BUILD_SINGLE_LIB)
-	foreach(SRCFILE ${OBOL_ELEMENTS_FILES})
-		set(OBOL_SOURCE ${OBOL_SOURCE} elements/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
-	endforeach(SRCFILE)
-else()
-	add_library(elements OBJECT ${OBOL_ELEMENTS_FILES})
-endif()
+foreach(SRCFILE ${OBOL_ELEMENTS_FILES})
+	set(OBOL_SOURCE ${OBOL_SOURCE} elements/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
+endforeach(SRCFILE)
 
 # define documentation
 foreach(SRCFILE ${OBOL_ELEMENTS_FILES})

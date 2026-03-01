@@ -8,13 +8,9 @@ set(OBOL_BUNDLES_FILES
 )
 
 # build library
-if(OBOL_BUILD_SINGLE_LIB)
-	foreach(SRCFILE ${OBOL_BUNDLES_FILES})
-		set(OBOL_SOURCE ${OBOL_SOURCE} bundles/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
-	endforeach(SRCFILE)
-else()
-	add_library(bundles OBJECT ${OBOL_BUNDLES_FILES})
-endif()
+foreach(SRCFILE ${OBOL_BUNDLES_FILES})
+	set(OBOL_SOURCE ${OBOL_SOURCE} bundles/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
+endforeach(SRCFILE)
 
 # define documentation
 foreach(SRCFILE ${OBOL_BUNDLES_FILES})

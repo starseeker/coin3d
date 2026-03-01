@@ -32,13 +32,9 @@ set(OBOL_GLELEMENTS_FILES
 )
 
 # build library
-if(OBOL_BUILD_SINGLE_LIB)
-	foreach(SRCFILE ${OBOL_GLELEMENTS_FILES})
-		set(OBOL_SOURCE ${OBOL_SOURCE} elements/GL/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
-	endforeach(SRCFILE)
-else()
-	add_library(glelements OBJECT ${OBOL_GLELEMENTS_FILES})
-endif()
+foreach(SRCFILE ${OBOL_GLELEMENTS_FILES})
+	set(OBOL_SOURCE ${OBOL_SOURCE} elements/GL/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
+endforeach(SRCFILE)
 
 # define documentation
 foreach(SRCFILE ${OBOL_GLELEMENTS_FILES})

@@ -1094,7 +1094,7 @@ is_default_node(SoNode * node)
     SoField * field = fielddata->getField(node, i);
     if (field->isConnectionEnabled() && field->isConnected()) break;
     if (definstance == NULL) {
-      definstance = (SoNode *)node->getTypeId().createInstance();
+      definstance = (SoNode *)node->getTypeId().createInstance(node->getInstantiationContext());
       definstance->ref();
     }
     if (!field->isDefault() &&
@@ -1427,7 +1427,7 @@ SoBaseKit::printSubDiagram(const SbName & rootname, int level)
   const SoNodekitCatalog * parentcatalog = NULL;
   if (this->getTypeId() != SoBaseKit::getClassTypeId()) {
     SoType parenttype = this->getTypeId().getParent();
-    SoBaseKit * parentobj = (SoBaseKit *)parenttype.createInstance();
+    SoBaseKit * parentobj = (SoBaseKit *)parenttype.createInstance(this->getInstantiationContext());
     parentcatalog = parentobj->getNodekitCatalog();
     parentobj->ref();
     parentobj->unref();
@@ -1541,7 +1541,7 @@ SoBaseKit::addToCopyDict(void) const
 {
   SoNode * cp = (SoNode*) SoFieldContainer::checkCopy(this);
   if (cp == NULL) { // not copied?
-    cp = (SoNode*) this->getTypeId().createInstance();
+    cp = (SoNode*) this->getTypeId().createInstance(this->getInstantiationContext());
     assert(cp);
     cp->ref();
     SoFieldContainer::addCopy(this, cp);
@@ -2312,7 +2312,7 @@ SoBaseKit::makePart(const int partnum)
   const SoNodekitCatalog * catalog = this->getNodekitCatalog();
   assert(catalog);
 
-  SoNode * node = (SoNode *)catalog->getDefaultType(partnum).createInstance();
+  SoNode * node = (SoNode *)catalog->getDefaultType(partnum).createInstance(this->getInstantiationContext());
   if (catalog->isList(partnum)) {
     SoNodeKitListPart * list = (SoNodeKitListPart *) node;
     if (catalog->getListContainerType(partnum) != SoGroup::getClassTypeId()) {

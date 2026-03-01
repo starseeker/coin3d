@@ -325,6 +325,7 @@
 #include <Inventor/actions/SoGLRenderAction.h>
 #include <Inventor/elements/SoCullElement.h>
 #include <Inventor/elements/SoGLCacheContextElement.h>
+#include <Inventor/elements/SoContextManagerElement.h>
 #include <Inventor/elements/SoModelMatrixElement.h>
 #include <Inventor/elements/SoProjectionMatrixElement.h>
 #include <Inventor/elements/SoViewVolumeElement.h>
@@ -382,6 +383,7 @@ static float s_screen_pixels_per_inch = 72.0f;
 class SoOffscreenRendererP {
 public:
   SoOffscreenRendererP(SoOffscreenRenderer * masterptr,
+                       SoDB::ContextManager * mgr,
                        const SbViewportRegion & vpr,
                        SoGLRenderAction * glrenderaction = NULL)
   {
@@ -396,7 +398,7 @@ public:
     this->buffer = NULL;
     this->bufferbytesize = 0;
     this->lastnodewasacamera = FALSE;
-    this->instanceContextManager = NULL;
+    this->instanceContextManager = mgr;
 	
     if (glrenderaction) {
       this->renderaction = glrenderaction;
@@ -438,12 +440,13 @@ public:
   SoGLRenderAction * renderaction;
   SbBool didallocation;
 
-  // Per-instance context manager override (NULL → use global singleton).
+  // Per-instance context manager.  Initialized from the global singleton at
+  // construction time; may be overridden via SoOffscreenRenderer::setContextManager().
   SoDB::ContextManager * instanceContextManager;
 
-  // Returns the effective context manager for this renderer.
+  // Returns the context manager for this renderer.
   SoDB::ContextManager * effectiveMgr() const {
-    return instanceContextManager ? instanceContextManager : SoDB::getContextManager();
+    return instanceContextManager;
   }
 
   void updateDCBitmap();
@@ -494,21 +497,58 @@ SoOffscreenRendererP::debugTileOutputPrefix(void)
 /*!
   Constructor. Argument is the \a viewportregion we should use when
   rendering. An internal SoGLRenderAction will be constructed.
+
+  \deprecated  Use SoOffscreenRenderer(SoDB::ContextManager*, const SbViewportRegion&)
+  instead to avoid depending on the global context manager set by SoDB::init().
 */
 SoOffscreenRenderer::SoOffscreenRenderer(const SbViewportRegion & viewportregion)
 {
-  PRIVATE(this) = new SoOffscreenRendererP(this, viewportregion);
+  SoDB::ContextManager * mgr = SoDB::getContextManager();
+  assert(mgr && "SoOffscreenRenderer: no global context manager. "
+                "Call SoDB::init(manager) first or use the explicit-manager constructor.");
+  PRIVATE(this) = new SoOffscreenRendererP(this, mgr, viewportregion);
 }
 
 /*!
   Constructor. Argument is the \a action we should apply to the
   scene graph when rendering the scene. Information about the
   viewport is extracted from the \a action.
+
+  \deprecated  Use SoOffscreenRenderer(SoDB::ContextManager*, SoGLRenderAction*)
+  instead to avoid depending on the global context manager set by SoDB::init().
 */
 SoOffscreenRenderer::SoOffscreenRenderer(SoGLRenderAction * action)
 {
-  PRIVATE(this) = new SoOffscreenRendererP(this, action->getViewportRegion(),
-                                           action);
+  SoDB::ContextManager * mgr = SoDB::getContextManager();
+  assert(mgr && "SoOffscreenRenderer: no global context manager. "
+                "Call SoDB::init(manager) first or use the explicit-manager constructor.");
+  PRIVATE(this) = new SoOffscreenRendererP(this, mgr,
+                                           action->getViewportRegion(), action);
+}
+
+/*!
+  Constructor. The \a manager argument explicitly provides the context manager
+  to use, removing any dependency on the global singleton.  \a manager must
+  not be NULL; pass the non-manager constructor to fall back to the global.
+*/
+SoOffscreenRenderer::SoOffscreenRenderer(SoDB::ContextManager * manager,
+                                         const SbViewportRegion & viewportregion)
+{
+  assert(manager && "SoOffscreenRenderer: explicit manager constructor requires a non-NULL manager");
+  PRIVATE(this) = new SoOffscreenRendererP(this, manager, viewportregion);
+}
+
+/*!
+  Constructor. The \a manager argument explicitly provides the context manager
+  to use, removing any dependency on the global singleton.  \a manager must
+  not be NULL; pass the non-manager constructor to fall back to the global.
+*/
+SoOffscreenRenderer::SoOffscreenRenderer(SoDB::ContextManager * manager,
+                                         SoGLRenderAction * action)
+{
+  assert(manager && "SoOffscreenRenderer: explicit manager constructor requires a non-NULL manager");
+  PRIVATE(this) = new SoOffscreenRendererP(this, manager,
+                                           action->getViewportRegion(), action);
 }
 
 /*!
@@ -939,6 +979,12 @@ SoOffscreenRendererP::renderFromBase(SoBase * base)
   // the render action is not allocated by us.
   const uint32_t oldcontext = this->renderaction->getCacheContext();
   this->renderaction->setCacheContext(newcontext);
+  // Push the per-instance context manager into the render state so that
+  // any scene-graph node that needs to create its own offscreen GL context
+  // (SoSceneTexture2, SoSceneTextureCubeMap, SoShadowGroup, etc.) can
+  // retrieve it without calling SoDB::getContextManager() directly.
+  SoContextManagerElement::set(this->renderaction->getState(),
+                               this->instanceContextManager);
 
   if (CoinOffscreenGLCanvas::debug()) {
     GLint colbits[4];
@@ -1843,31 +1889,26 @@ SoOffscreenRenderer::getPbufferEnable(void) const
 }
 
 /*!
-  Set a per-instance context manager.  When non-NULL, this renderer uses the
-  provided \a manager for all OpenGL context lifecycle operations (create,
-  make-current, restore, destroy) instead of the global singleton returned by
-  SoDB::getContextManager().  This allows multiple SoOffscreenRenderer
-  instances to use independent backends simultaneously – for example one
-  instance backed by system GLX and another backed by OSMesa – without any
-  global state mutation.
-
-  The alternative rendering path (renderScene()) is also dispatched through
-  this manager when it is set.
-
-  Pass NULL to revert to the global singleton.
+  Set a per-instance context manager.  \a manager must not be NULL; passing a
+  non-NULL context manager is the only supported path now that the global
+  singleton is being eliminated.  Use the explicit-manager constructors instead
+  of calling this after construction wherever possible.
 
   \since Coin 4.0
 */
 void
 SoOffscreenRenderer::setContextManager(SoDB::ContextManager * manager)
 {
+  assert(manager && "SoOffscreenRenderer::setContextManager: manager must not be NULL");
   PRIVATE(this)->instanceContextManager = manager;
-  PRIVATE(this)->glcanvas.setContextManager(manager);
+  PRIVATE(this)->glcanvas.setContextManager(PRIVATE(this)->instanceContextManager);
 }
 
 /*!
-  Returns the per-instance context manager set via setContextManager(), or
-  NULL if none has been set (meaning the global singleton is used).
+  Returns the context manager in use for this renderer instance.  This is
+  either the manager explicitly set via setContextManager() or the
+  constructor-provided manager (which defaults to SoDB::getContextManager()
+  when using the standard constructors).
 
   \since Coin 4.0
 */
@@ -1881,7 +1922,8 @@ SoOffscreenRenderer::getContextManager(void) const
 // Context management and OpenGL capability detection methods
 
 /*!
-  Get the current OpenGL version.
+  Get the current OpenGL version using the context manager associated with
+  this renderer (per-instance manager if set, otherwise the global singleton).
   
   \param[out] major Major version number
   \param[out] minor Minor version number  
@@ -1890,24 +1932,30 @@ SoOffscreenRenderer::getContextManager(void) const
   \since Coin 4.0
 */
 void
-SoOffscreenRenderer::getOpenGLVersion(int & major, int & minor, int & release)
+SoOffscreenRenderer::getOpenGLVersion(int & major, int & minor, int & release) const
 {
-  // Use the global context manager for querying version information
-  // Context should have been set up during SoDB::init(context_manager)
-  SoDB::ContextManager* manager = SoDB::getContextManager();
+  // Use the effective context manager for this renderer instance.
+  SoDB::ContextManager* manager = PRIVATE(this)->effectiveMgr();
   void* temp_context = nullptr;
   SbBool context_created = FALSE;
-  
+
   if (manager) {
-    // Create a minimal temporary context for version querying
     temp_context = manager->createOffscreenContext(32, 32);
     if (temp_context) {
       context_created = manager->makeContextCurrent(temp_context);
     }
   }
-  
+
   if (context_created) {
-    const SoGLContext * glue = SoGLContext_instance(1);
+    // Use a unique ID so we never collide with an existing context that
+    // belongs to a different backend (e.g. system-GL vs OSMesa).
+    uint32_t unique_id = (uint32_t)SoGLCacheContextElement::getUniqueCacheContext();
+#ifdef OBOL_BUILD_DUAL_GL
+    if (manager->isOSMesaContext(temp_context)) {
+      coingl_register_osmesa_context(static_cast<int>(unique_id));
+    }
+#endif
+    const SoGLContext * glue = SoGLContext_instance(static_cast<int>(unique_id));
     if (glue) {
       unsigned int maj, min, rel;
       SoGLContext_glversion(glue, &maj, &min, &rel);
@@ -1917,20 +1965,21 @@ SoOffscreenRenderer::getOpenGLVersion(int & major, int & minor, int & release)
     } else {
       major = minor = release = 0;
     }
-    
-    // Clean up temporary context
-    if (manager && temp_context) {
-      manager->restorePreviousContext(temp_context);
-      manager->destroyContext(temp_context);
-    }
+
+    // Clean up: remove the temporary SoGLContext entry and destroy the GL context.
+    SoGLContext_destruct(unique_id);
+    manager->restorePreviousContext(temp_context);
+    manager->destroyContext(temp_context);
   } else {
-    // No context manager available or context creation failed
+    // No context manager available or context creation failed.
     major = minor = release = 0;
   }
 }
 
 /*!
-  Check if a specific OpenGL extension is supported.
+  Check if a specific OpenGL extension is supported using the context manager
+  associated with this renderer (per-instance manager if set, otherwise the
+  global singleton).
   
   \param extension The extension name to check (e.g., "GL_EXT_framebuffer_object")
   \return TRUE if the extension is supported, FALSE otherwise
@@ -1938,84 +1987,90 @@ SoOffscreenRenderer::getOpenGLVersion(int & major, int & minor, int & release)
   \since Coin 4.0
 */
 SbBool
-SoOffscreenRenderer::isOpenGLExtensionSupported(const char * extension)
+SoOffscreenRenderer::isOpenGLExtensionSupported(const char * extension) const
 {
   if (!extension) return FALSE;
-  
-  // Use the global context manager for querying extension support
-  // Context should have been set up during SoDB::init(context_manager)
-  SoDB::ContextManager* manager = SoDB::getContextManager();
+
+  SoDB::ContextManager* manager = PRIVATE(this)->effectiveMgr();
   void* temp_context = nullptr;
   SbBool context_created = FALSE;
   SbBool result = FALSE;
-  
+
   if (manager) {
-    // Create a minimal temporary context for extension querying
     temp_context = manager->createOffscreenContext(32, 32);
     if (temp_context) {
       context_created = manager->makeContextCurrent(temp_context);
     }
   }
-  
+
   if (context_created) {
-    const SoGLContext * glue = SoGLContext_instance(1);
+    uint32_t unique_id = (uint32_t)SoGLCacheContextElement::getUniqueCacheContext();
+#ifdef OBOL_BUILD_DUAL_GL
+    if (manager->isOSMesaContext(temp_context)) {
+      coingl_register_osmesa_context(static_cast<int>(unique_id));
+    }
+#endif
+    const SoGLContext * glue = SoGLContext_instance(static_cast<int>(unique_id));
     if (glue) {
       result = SoGLContext_glext_supported(glue, extension);
     }
-    
-    // Clean up temporary context
-    if (manager && temp_context) {
-      manager->restorePreviousContext(temp_context);
-      manager->destroyContext(temp_context);
-    }
+
+    SoGLContext_destruct(unique_id);
+    manager->restorePreviousContext(temp_context);
+    manager->destroyContext(temp_context);
   }
-  
+
   return result;
 }
 
 /*!
-  Check if framebuffer object (FBO) support is available.
+  Check if framebuffer object (FBO) support is available using the context
+  manager associated with this renderer (per-instance manager if set,
+  otherwise the global singleton).
   
   \return TRUE if FBO support is available, FALSE otherwise
   
   \since Coin 4.0
 */
 SbBool
-SoOffscreenRenderer::hasFramebufferObjectSupport(void)
+SoOffscreenRenderer::hasFramebufferObjectSupport(void) const
 {
-  // Use the global context manager for querying FBO support
-  // Context should have been set up during SoDB::init(context_manager)
-  SoDB::ContextManager* manager = SoDB::getContextManager();
+  SoDB::ContextManager* manager = PRIVATE(this)->effectiveMgr();
   void* temp_context = nullptr;
   SbBool context_created = FALSE;
   SbBool result = FALSE;
-  
+
   if (manager) {
-    // Create a minimal temporary context for FBO support querying
     temp_context = manager->createOffscreenContext(32, 32);
     if (temp_context) {
       context_created = manager->makeContextCurrent(temp_context);
     }
   }
-  
+
   if (context_created) {
-    const SoGLContext * glue = SoGLContext_instance(1);
+    uint32_t unique_id = (uint32_t)SoGLCacheContextElement::getUniqueCacheContext();
+#ifdef OBOL_BUILD_DUAL_GL
+    if (manager->isOSMesaContext(temp_context)) {
+      coingl_register_osmesa_context(static_cast<int>(unique_id));
+    }
+#endif
+    const SoGLContext * glue = SoGLContext_instance(static_cast<int>(unique_id));
     if (glue) {
       result = SoGLContext_has_framebuffer_objects(glue);
     }
-    
-    // Clean up temporary context
-    if (manager && temp_context) {
-      manager->restorePreviousContext(temp_context);
-      manager->destroyContext(temp_context);
-    }
+
+    SoGLContext_destruct(unique_id);
+    manager->restorePreviousContext(temp_context);
+    manager->destroyContext(temp_context);
   }
-  
+
   return result;
 }
 
 /*!
-  Check if the OpenGL version is at least the specified version.
+  Check if the OpenGL version is at least the specified version using the
+  context manager associated with this renderer (per-instance manager if set,
+  otherwise the global singleton).
   
   \param major Minimum major version required
   \param minor Minimum minor version required  
@@ -2025,39 +2080,40 @@ SoOffscreenRenderer::hasFramebufferObjectSupport(void)
   \since Coin 4.0
 */
 SbBool
-SoOffscreenRenderer::isVersionAtLeast(int major, int minor, int release)
+SoOffscreenRenderer::isVersionAtLeast(int major, int minor, int release) const
 {
-  // Use the global context manager for version comparison
-  // Context should have been set up during SoDB::init(context_manager)
-  SoDB::ContextManager* manager = SoDB::getContextManager();
+  SoDB::ContextManager* manager = PRIVATE(this)->effectiveMgr();
   void* temp_context = nullptr;
   SbBool context_created = FALSE;
   SbBool result = FALSE;
-  
+
   if (manager) {
-    // Create a minimal temporary context for version comparison
     temp_context = manager->createOffscreenContext(32, 32);
     if (temp_context) {
       context_created = manager->makeContextCurrent(temp_context);
     }
   }
-  
+
   if (context_created) {
-    const SoGLContext * glue = SoGLContext_instance(1);
+    uint32_t unique_id = (uint32_t)SoGLCacheContextElement::getUniqueCacheContext();
+#ifdef OBOL_BUILD_DUAL_GL
+    if (manager->isOSMesaContext(temp_context)) {
+      coingl_register_osmesa_context(static_cast<int>(unique_id));
+    }
+#endif
+    const SoGLContext * glue = SoGLContext_instance(static_cast<int>(unique_id));
     if (glue) {
-      result = SoGLContext_glversion_matches_at_least(glue, 
-                                                   static_cast<unsigned int>(major),
-                                                   static_cast<unsigned int>(minor), 
-                                                   static_cast<unsigned int>(release));
+      result = SoGLContext_glversion_matches_at_least(glue,
+                                                     static_cast<unsigned int>(major),
+                                                     static_cast<unsigned int>(minor),
+                                                     static_cast<unsigned int>(release));
     }
-    
-    // Clean up temporary context
-    if (manager && temp_context) {
-      manager->restorePreviousContext(temp_context);
-      manager->destroyContext(temp_context);
-    }
+
+    SoGLContext_destruct(unique_id);
+    manager->restorePreviousContext(temp_context);
+    manager->destroyContext(temp_context);
   }
-  
+
   return result;
 }
 

@@ -58,7 +58,7 @@ template <typename Type> class SbList;
 
 class OBOL_DLL_API SoType {
 public:
-  typedef void * (*instantiationMethod)(void);
+  typedef void * (*instantiationMethod)(void *);
 
   static SoType fromName(const SbName name);
   SbName getName(void) const;
@@ -68,7 +68,7 @@ public:
   static int getAllDerivedFrom(const SoType type, SoTypeList & list);
 
   SbBool canCreateInstance(void) const;
-  void * createInstance(void) const;
+  void * createInstance(void * ctx = nullptr) const;
 
   uint16_t getData(void) const;
   int16_t getKey(void) const;

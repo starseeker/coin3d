@@ -99,12 +99,6 @@ void sogl_render_cube(const float width,
                       const unsigned int flags,
                       SoState * state);
 
-// FIXME: must be kept around due to ABI & API compatibility reasons
-// for now, but should consider taking it out for the next major Coin
-// release. 20030519 mortene.
-void sogl_offscreencontext_callback(void (*cb)(void *, SoAction*),
-                                    void * closure);
-
 //
 // optimized faceset rendering functions.
 // the functions are automagically generated based on a template function.

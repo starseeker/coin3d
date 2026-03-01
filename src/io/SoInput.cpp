@@ -294,6 +294,30 @@ SoInput::addRoute(const SbName & fromnode, const SbName & fromfield,
 }
 
 /*!
+  Set the context manager that will be threaded through
+  SoType::createInstance() calls when nodes are constructed during
+  reading.  Must be set before calling SoDB::readAll() / SoDB::read() if
+  the scene graph contains nodes that require an OpenGL context at
+  construction time (e.g. SoShadowGroup).  Passing NULL is a hard error.
+*/
+void
+SoInput::setContextManager(SoDB::ContextManager * manager)
+{
+  assert(manager && "SoInput::setContextManager: manager must not be NULL");
+  PRIVATE(this)->contextManager = manager;
+}
+
+/*!
+  Returns the context manager associated with this input stream, or NULL if
+  none has been set.
+*/
+SoDB::ContextManager *
+SoInput::getContextManager(void) const
+{
+  return PRIVATE(this)->contextManager;
+}
+
+/*!
   Searches for PROTO named \a name. This function will only return
   PROTOs that have been read by the current SoInput instance.
 

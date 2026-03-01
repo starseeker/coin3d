@@ -294,7 +294,7 @@ SoFieldContainer::setToDefaults(void)
 
   // Allocate a fresh template to retrieve values from.
   const SoFieldContainer * from =
-    static_cast<const SoFieldContainer *>(this->getTypeId().createInstance());
+    static_cast<const SoFieldContainer *>(this->getTypeId().createInstance(this->getInstantiationContext()));
   from->ref();
   fd->overlay(this, from, FALSE);
   from->unref();
@@ -316,7 +316,7 @@ SoFieldContainer::hasDefaultValues(void) const
 
   // Allocate a fresh template to compare with.
   const SoFieldContainer * fc =
-    static_cast<const SoFieldContainer *>(this->getTypeId().createInstance());
+    static_cast<const SoFieldContainer *>(this->getTypeId().createInstance(this->getInstantiationContext()));
   fc->ref();
   SbBool hasdefaultvalues = fd->isSame(this, fc);
   fc->unref();
@@ -972,7 +972,7 @@ SoFieldContainer::findCopy(const SoFieldContainer * orig,
         ccp = orig;
       }
       else {
-        ccp = static_cast<const SoFieldContainer *>(orig->getTypeId().createInstance());
+        ccp = static_cast<const SoFieldContainer *>(orig->getTypeId().createInstance(orig->getInstantiationContext()));
       }
       assert(ccp);
       SoFieldContainer::addCopy(orig, ccp);

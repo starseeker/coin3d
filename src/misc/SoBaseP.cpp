@@ -480,7 +480,7 @@ SoBase::PImpl::createInstance(SoInput * in, const SbName & classname)
     SoReadError::post(in, "Class \"%s\" is abstract", classname.getString());
   }
   else {
-    instance = (SoBase *)type.createInstance();
+    instance = (SoBase *)type.createInstance(in ? in->getContextManager() : nullptr);
   }
 
   return instance;

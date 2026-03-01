@@ -57,7 +57,7 @@ protected:
   virtual const SoFieldData * getFieldData(void) const;
 private:
   SoFieldData * classfielddata;
-  static void * createInstance(void);
+  static void * createInstance(void *);
   static void atexit_cleanup(void);
 
   // Node definition starts "proper".

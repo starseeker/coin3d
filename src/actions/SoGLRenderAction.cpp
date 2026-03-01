@@ -94,6 +94,7 @@
 #include <Inventor/elements/SoViewVolumeElement.h>
 #include <Inventor/elements/SoViewingMatrixElement.h>
 #include <Inventor/elements/SoWindowElement.h>
+#include <Inventor/elements/SoContextManagerElement.h>
 #include <Inventor/elements/SoGLDepthBufferElement.h>
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/lists/SoCallbackList.h>
@@ -646,6 +647,7 @@ SoGLRenderAction::initClass(void)
   SO_ENABLE(SoGLRenderAction, SoOverrideElement);
   SO_ENABLE(SoGLRenderAction, SoTextureOverrideElement);
   SO_ENABLE(SoGLRenderAction, SoWindowElement);
+  SO_ENABLE(SoGLRenderAction, SoContextManagerElement);
   SO_ENABLE(SoGLRenderAction, SoGLViewportRegionElement);
   SO_ENABLE(SoGLRenderAction, SoGLCacheContextElement);
 

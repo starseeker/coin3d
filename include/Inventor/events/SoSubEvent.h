@@ -44,7 +44,7 @@ private: \
     This static method cleans up static data of the class. \
   */ \
   static void cleanupClass(void) { classTypeId STATIC_SOTYPE_INIT; }; \
-  static void * createInstance(void); \
+  static void * createInstance(void *); \
 public: \
   static SoType getClassTypeId(void); \
   virtual SoType getTypeId(void) const
@@ -96,7 +96,7 @@ SoType _class_::getTypeId(void) const { return _class_::classTypeId; } \
  \
   Creates a new instance of the class type corresponding to the SoType object. \
 */ \
-void * _class_::createInstance(void) { return new _class_; } \
+void * _class_::createInstance(void * /*ctx*/) { return new _class_; } \
 SoType _class_::classTypeId STATIC_SOTYPE_INIT
 
 // *************************************************************************

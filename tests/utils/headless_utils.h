@@ -83,13 +83,22 @@
 // writeToRGB, etc.) works unchanged with this backend.
 #include "nanort_context_manager.h"
 
+namespace {
+    /* Meyer's singleton for the NanoRT context manager.  Shared between
+       initCoinHeadless() and getSharedRenderer() so neither function needs
+       to consult SoDB::getContextManager(). */
+    inline SoNanoRTContextManager & nrt_context_manager_singleton() {
+        static SoNanoRTContextManager instance;
+        return instance;
+    }
+} // anonymous namespace
+
 /**
  * Initialize Coin database for headless operation (NanoRT backend).
  * No OpenGL context is required.
  */
 inline void initCoinHeadless() {
-    static SoNanoRTContextManager nrt_mgr;
-    SoDB::init(&nrt_mgr);
+    SoDB::init(&nrt_context_manager_singleton());
     SoNodeKit::init();
     SoInteraction::init();
 }
@@ -102,9 +111,16 @@ inline SoOffscreenRenderer* getSharedRenderer() {
     static SoOffscreenRenderer *s_renderer = nullptr;
     if (!s_renderer) {
         SbViewportRegion vp(DEFAULT_WIDTH, DEFAULT_HEIGHT);
-        s_renderer = new SoOffscreenRenderer(vp);
+        s_renderer = new SoOffscreenRenderer(&nrt_context_manager_singleton(), vp);
     }
     return s_renderer;
+}
+
+/**
+ * Return the context manager installed by initCoinHeadless() (NanoRT backend).
+ */
+inline SoDB::ContextManager * getCoinHeadlessContextManager() {
+    return &nrt_context_manager_singleton();
 }
 
 /**
@@ -242,16 +258,43 @@ public:
     virtual void destroyContext(void* context) override {
         delete static_cast<CoinOSMesaContext*>(context);
     }
+
+    virtual void * getProcAddress(const char * funcName) override {
+        return reinterpret_cast<void*>(OSMesaGetProcAddress(funcName));
+    }
 };
+
+namespace {
+    /* The single OSMesa context manager instance shared between initCoinHeadless()
+       and getCoinHeadlessContextManager().  Using a local-static (Meyer's singleton)
+       pattern ensures thread-safe initialisation (C++11 and later), a well-defined
+       construction order, and that the manager outlives every caller that holds a
+       pointer to it – all without touching SoDB::getContextManager(). */
+    inline CoinHeadlessContextManager & headless_context_manager_singleton() {
+        static CoinHeadlessContextManager instance;
+        return instance;
+    }
+} // anonymous namespace
 
 /**
  * Initialize Coin database for headless operation (OSMesa backend)
  */
 inline void initCoinHeadless() {
-    static CoinHeadlessContextManager context_manager;
-    SoDB::init(&context_manager);
+    SoDB::init(&headless_context_manager_singleton());
     SoNodeKit::init();
     SoInteraction::init();
+}
+
+/**
+ * Return the context manager installed by initCoinHeadless().
+ * Must be called after initCoinHeadless().
+ *
+ * Returns the same manager object passed to SoDB::init(), so that callers
+ * can create SoOffscreenRenderer instances with an explicit manager instead
+ * of relying on the global singleton.
+ */
+inline SoDB::ContextManager * getCoinHeadlessContextManager() {
+    return &headless_context_manager_singleton();
 }
 
 /**
@@ -264,7 +307,7 @@ inline SoOffscreenRenderer* getSharedRenderer() {
     static SoOffscreenRenderer *s_renderer = nullptr;
     if (!s_renderer) {
         SbViewportRegion vp(DEFAULT_WIDTH, DEFAULT_HEIGHT);
-        s_renderer = new SoOffscreenRenderer(vp);
+        s_renderer = new SoOffscreenRenderer(&headless_context_manager_singleton(), vp);
     }
     return s_renderer;
 }
@@ -490,6 +533,11 @@ public:
         delete ctx;
     }
 
+    virtual void * getProcAddress(const char * funcName) override {
+        return reinterpret_cast<void*>(
+            glXGetProcAddress(reinterpret_cast<const GLubyte*>(funcName)));
+    }
+
 private:
     Display *m_dpy;
 
@@ -514,6 +562,25 @@ private:
  * spurious BadMatch errors from Mesa/llvmpipe from aborting the process.
  * A GLXContextManager is provided so SoDB::init() gets a valid context manager.
  */
+
+namespace {
+    /* Storage for the system-GL context manager set by initCoinHeadless().
+       Accessed via a Meyer's singleton so the same pointer is shared between
+       the setter (called once from initCoinHeadless) and all readers. */
+    inline SoDB::ContextManager *& sysgl_mgr_storage() {
+        static SoDB::ContextManager * ptr = nullptr;
+        return ptr;
+    }
+    /* Setter: only called from initCoinHeadless(). */
+    inline void set_sysgl_context_manager(SoDB::ContextManager * mgr) {
+        sysgl_mgr_storage() = mgr;
+    }
+    /* Getter: returns the pointer set by initCoinHeadless(). */
+    inline SoDB::ContextManager * get_sysgl_context_manager() {
+        return sysgl_mgr_storage();
+    }
+} // anonymous namespace
+
 inline void initCoinHeadless() {
 #ifdef __unix__
     XSetErrorHandler([](Display *, XErrorEvent *err) -> int {
@@ -522,6 +589,7 @@ inline void initCoinHeadless() {
         return 0;
     });
     static GLXContextManager glx_context_manager;
+    set_sysgl_context_manager(&glx_context_manager);
     SoDB::init(&glx_context_manager);
 #else
     // Non-Unix: provide a stub context manager (rendering may not work)
@@ -533,10 +601,21 @@ inline void initCoinHeadless() {
         virtual void destroyContext(void*) override {}
     };
     static StubContextManager stub;
+    set_sysgl_context_manager(&stub);
     SoDB::init(&stub);
 #endif
     SoNodeKit::init();
     SoInteraction::init();
+}
+
+/**
+ * Return the context manager installed by initCoinHeadless() (system GL backend).
+ * Must be called after initCoinHeadless().
+ */
+inline SoDB::ContextManager * getCoinHeadlessContextManager() {
+    SoDB::ContextManager * mgr = get_sysgl_context_manager();
+    assert(mgr && "getCoinHeadlessContextManager: call initCoinHeadless() first");
+    return mgr;
 }
 
 /**
@@ -551,7 +630,7 @@ inline SoOffscreenRenderer* getSharedRenderer() {
     static SoOffscreenRenderer *s_renderer = nullptr;
     if (!s_renderer) {
         SbViewportRegion vp(DEFAULT_WIDTH, DEFAULT_HEIGHT);
-        s_renderer = new SoOffscreenRenderer(vp);
+        s_renderer = new SoOffscreenRenderer(get_sysgl_context_manager(), vp);
     }
     return s_renderer;
 }

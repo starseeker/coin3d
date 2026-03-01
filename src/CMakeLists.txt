@@ -30,6 +30,10 @@ include_directories(BEFORE
   "${PROJECT_BINARY_DIR}/src/shadows"
   "${PROJECT_SOURCE_DIR}"
   "${PROJECT_SOURCE_DIR}/external/utf8/include"
+  # Subdirectory-specific include paths (needed in single-lib mode where
+  # subdirectory include_directories() calls don't propagate to the parent)
+  "${PROJECT_SOURCE_DIR}/src/base/utf8/include"
+  "${PROJECT_BINARY_DIR}/src/draggers"
 )
 
 # add include dirs for non targets
@@ -44,39 +48,14 @@ foreach(_tgt ${OBOL_TARGET_LINK_LIBRARIES})
 endforeach()
 
 set(OBOL_SOURCE misc/CoinTidbits.cpp CACHE INTERNAL "OBOL_SOURCE")
-# Minimal core subdirectories - removed GUI/toolkit but keeping minimal dependencies
-set(OBOL_SUBDIRS
-  actions base bundles caches details draggers elements
-  engines errors events fields fonts glue io manips misc rendering lists
-  nodes shapenodes projectors sensors
-  shadows threads shaders tools
-)
 
-list(APPEND OBOL_SUBDIRS hardcopy)
-
-# Add nodekits and related components if enabled
-list(APPEND OBOL_SUBDIRS nodekits profiler hud)
-
-foreach(_subdir ${OBOL_SUBDIRS})
+foreach(_subdir actions base bundles caches details draggers elements
+                engines errors events fields fonts glue io manips misc rendering lists
+                nodes shapenodes projectors sensors shadows threads shaders tools
+                hardcopy nodekits profiler hud)
   add_subdirectory(${_subdir})
 endforeach()
 add_subdirectory(doc)
-
-# ============================================================================
-# Apply precompiled headers to all object libraries
-# ============================================================================
-
-# Enable precompiled headers for all object libraries if requested and supported
-if(OBOL_USE_PRECOMPILED_HEADERS AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.16")
-    message(STATUS "Applying precompiled headers to object libraries")
-    foreach(_subdir ${OBOL_SUBDIRS})
-        if(TARGET ${_subdir})
-            target_precompile_headers(${_subdir} PRIVATE
-                "${CMAKE_CURRENT_SOURCE_DIR}/misc/CoinPCH.h"
-            )
-        endif()
-    endforeach()
-endif()
 
 # As CMake does not support deep header hierarchies for framework generation we tweak the
 # installation paths for the install commands.  To make sure the symbolic links for versioned
@@ -95,60 +74,19 @@ set(OBOL_ADDITIONAL_HDRS
     ${PROJECT_BINARY_DIR}/src/config.h
 )
 
-# Create the main library target
-if(OBOL_BUILD_SINGLE_LIB)
-    # In single-lib dual-GL builds, both gl_osmesa.cpp and SoDBOSMesa.cpp need
-    # the OSMesa include directories.  Apply them per-file so they don't pollute
-    # the rest of the build (system GL headers and OSMesa headers can conflict).
-    if(OBOL_BUILD_DUAL_GL AND OBOL_OSMESA_INCLUDE_DIRS)
-        foreach(_osmesa_src
-                "${CMAKE_CURRENT_SOURCE_DIR}/glue/gl_osmesa.cpp"
-                "${CMAKE_CURRENT_SOURCE_DIR}/misc/SoDBOSMesa.cpp")
-            set_source_files_properties(${_osmesa_src} PROPERTIES
-                INCLUDE_DIRECTORIES "${OBOL_OSMESA_INCLUDE_DIRS}")
-        endforeach()
-    endif()
-    add_library(${PROJECT_NAME} ${OBOL_SOURCE} ${OBOL_ADDITIONAL_HDRS})
-else()
-    set(_coin_objects
-        $<TARGET_OBJECTS:actions>
-        $<TARGET_OBJECTS:base>
-        $<TARGET_OBJECTS:bundles>
-        $<TARGET_OBJECTS:caches>
-        $<TARGET_OBJECTS:details>
-        $<TARGET_OBJECTS:draggers>
-        $<TARGET_OBJECTS:elements>
-        $<TARGET_OBJECTS:engines>
-        $<TARGET_OBJECTS:errors>
-        $<TARGET_OBJECTS:events>
-        $<TARGET_OBJECTS:fields>
-        $<TARGET_OBJECTS:fonts>
-        $<TARGET_OBJECTS:glelements>
-        $<TARGET_OBJECTS:glue>
-        $<TARGET_OBJECTS:io>
-        $<TARGET_OBJECTS:lists>
-        $<TARGET_OBJECTS:manips>
-        $<TARGET_OBJECTS:misc>
-        $<TARGET_OBJECTS:nodekits>
-        $<TARGET_OBJECTS:nodes>
-        $<TARGET_OBJECTS:profiler>
-        $<TARGET_OBJECTS:hud>
-        $<TARGET_OBJECTS:projectors>
-        $<TARGET_OBJECTS:rendering>
-        $<TARGET_OBJECTS:sensors>
-        $<TARGET_OBJECTS:shaders>
-        $<TARGET_OBJECTS:shadows>
-        $<TARGET_OBJECTS:shapenodes>
-        $<TARGET_OBJECTS:threads>
-        $<TARGET_OBJECTS:tools>
-        $<TARGET_OBJECTS:hardcopy>
-    )
-    if(OBOL_BUILD_DUAL_GL)
-        list(APPEND _coin_objects $<TARGET_OBJECTS:glue_osmesa>)
-        list(APPEND _coin_objects $<TARGET_OBJECTS:misc_osmesa>)
-    endif()
-    add_library(${PROJECT_NAME} ${OBOL_SOURCE} ${OBOL_ADDITIONAL_HDRS} ${_coin_objects})
+# In dual-GL builds, gl_osmesa.cpp and SoDBOSMesa.cpp need the OSMesa
+# include directories.  Apply them per-file so they don't pollute the rest
+# of the build (system GL headers and OSMesa headers can conflict).
+if(OBOL_BUILD_DUAL_GL AND OBOL_OSMESA_INCLUDE_DIRS)
+    foreach(_osmesa_src
+            "${CMAKE_CURRENT_SOURCE_DIR}/glue/gl_osmesa.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/misc/SoDBOSMesa.cpp")
+        set_source_files_properties(${_osmesa_src} PROPERTIES
+            INCLUDE_DIRECTORIES "${OBOL_OSMESA_INCLUDE_DIRS}")
+    endforeach()
 endif()
+
+add_library(${PROJECT_NAME} ${OBOL_SOURCE} ${OBOL_ADDITIONAL_HDRS})
 
 # Set target properties
 set_target_properties(${PROJECT_NAME} PROPERTIES
@@ -163,17 +101,15 @@ if(DEFINED OBOL_OUTPUT_NAME)
 endif()
 
 # ============================================================================
-# Precompiled Headers Support
+# Unity Build Support
 # ============================================================================
 
-# Enable precompiled headers if requested and supported (CMake 3.16+)
-if(OBOL_USE_PRECOMPILED_HEADERS AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.16")
-    message(STATUS "Enabling precompiled headers for faster compilation")
-    target_precompile_headers(${PROJECT_NAME} PRIVATE
-        "${CMAKE_CURRENT_SOURCE_DIR}/misc/CoinPCH.h"
-    )
-elseif(OBOL_USE_PRECOMPILED_HEADERS)
-    message(WARNING "Precompiled headers requested but require CMake 3.16+. Current version: ${CMAKE_VERSION}")
+# Enable unity build if requested and supported (CMake 3.16+)
+if(OBOL_USE_UNITY_BUILD AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.16")
+    message(STATUS "Enabling unity build for faster compilation")
+    set_target_properties(${PROJECT_NAME} PROPERTIES UNITY_BUILD ON)
+elseif(OBOL_USE_UNITY_BUILD)
+    message(WARNING "Unity build requested but requires CMake 3.16+. Current version: ${CMAKE_VERSION}")
 endif()
 
 # ============================================================================
@@ -196,6 +132,9 @@ target_include_directories(${PROJECT_NAME}
         "${CMAKE_CURRENT_SOURCE_DIR}/misc"
         "${PROJECT_SOURCE_DIR}/include/Inventor/annex"
         "${PROJECT_BINARY_DIR}/src/shadows"
+        # Subdirectory-specific paths (needed in single-lib mode)
+        "${PROJECT_SOURCE_DIR}/src/base/utf8/include"
+        "${PROJECT_BINARY_DIR}/src/draggers"
         ${OBOL_TARGET_INCLUDE_DIRECTORIES}
     PUBLIC
         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>

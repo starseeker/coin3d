@@ -36,6 +36,7 @@
 #include <Inventor/nodes/SoSubNode.h>
 #include <Inventor/nodes/SoSelection.h>
 #include <Inventor/fields/SoSFEnum.h>
+#include <Inventor/SoDB.h>
 #include <cstddef> // NULL
 
 #ifndef OBOL_INTERNAL
@@ -81,6 +82,11 @@ class OBOL_DLL_API SoExtSelection : public SoSelection {
 public:
   static void initClass(void);
   SoExtSelection(void);
+
+  // Explicitly set the context manager used for offscreen rendering during
+  // lasso/rectangle selection.  Allows callers to avoid SoDB::getContextManager().
+  // Pass NULL to revert to the global fallback.
+  void setContextManager(SoDB::ContextManager * manager);
 
   enum LassoType {
     NOLASSO, LASSO, RECTANGLE

@@ -38,10 +38,7 @@
 #include <Inventor/SbBasic.h>
 #include <Inventor/lists/SbList.h>
 #include <cstdio> // FILE
-#ifndef OBOL_INTERNAL
- // For Open Inventor compatibility.
- #include <Inventor/SoDB.h>
-#endif // OBOL_INTERNAL
+#include <Inventor/SoDB.h>
 
 // *************************************************************************
 
@@ -63,6 +60,16 @@ class OBOL_DLL_API SoInput {
 public:
   SoInput(void);
   SoInput(SoInput * dictIn);
+
+  // Attach a context manager to this input stream.  Nodes that require an
+  // OpenGL context (e.g. SoShadowGroup) will be constructed with this manager
+  // when the scene is read via SoDB::readAll() or SoDB::read().  Passing NULL
+  // is a programming error.  If setContextManager() is never called,
+  // getContextManager() returns NULL and context-dependent nodes will
+  // fail with an assertion when the type system tries to construct them.
+  void setContextManager(SoDB::ContextManager * manager);
+  SoDB::ContextManager * getContextManager(void) const;
+
 
   SoProto * findProto(const SbName & name);
   void addProto(SoProto * proto);

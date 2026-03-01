@@ -932,7 +932,6 @@ _mesa_generate_mipmap(GLcontext *ctx, GLenum target,
 	_mesa_init_teximage_fields(ctx, target, dstImage, dstWidth, dstHeight,
 				   dstDepth, border, srcImage->InternalFormat);
 	if (!dstImage->ImageOffsets) {
-	    /* _mesa_init_teximage_fields failed to allocate ImageOffsets */
 	    _mesa_error(ctx, GL_OUT_OF_MEMORY, "generating mipmaps");
 	    if (srcImage->IsCompressed) {
 		if (srcData)

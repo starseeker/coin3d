@@ -68,7 +68,7 @@ protected:
   virtual SbBool readInstance(SoInput * in, unsigned short flags);
 
 private:
-  static void * createInstance(void);
+  static void * createInstance(void *);
   static void clean(void);
   static int getGlobalFieldIndex(const SbName & name);
 

@@ -43,6 +43,7 @@
 #include <Inventor/elements/SoGLLazyElement.h>
 #include <Inventor/elements/SoCacheElement.h>
 #include <Inventor/elements/SoGLCacheContextElement.h>
+#include <Inventor/elements/SoContextManagerElement.h>
 #include <Inventor/elements/SoTextureUnitElement.h>
 #include <Inventor/elements/SoGLMultiTextureImageElement.h>
 #include <Inventor/elements/SoGLMultiTextureEnabledElement.h>
@@ -58,6 +59,7 @@
 #include <Inventor/nodes/SoPerspectiveCamera.h>
 #include <Inventor/SbImage.h>
 #include "glue/glp.h"
+#include <Inventor/SoDB.h>
 #include "CoinTidbits.h"
 
 
@@ -92,6 +94,7 @@ class SoSceneTextureCubeMapP {
   ~SoSceneTextureCubeMapP();
 
   SoSceneTextureCubeMap * api;
+  SoDB::ContextManager * contextManager;
   void * glcontext;
   SbVec2s glcontextsize;
   int contextid;
@@ -351,6 +354,7 @@ SoSceneTextureCubeMap::notify(SoNotList * list)
 SoSceneTextureCubeMapP::SoSceneTextureCubeMapP(SoSceneTextureCubeMap * apiptr)
 {
   this->api = apiptr;
+  this->contextManager = NULL;
   this->glimage = NULL;
   this->glimagevalid = FALSE;
   this->glcontext = NULL;
@@ -373,7 +377,7 @@ SoSceneTextureCubeMapP::~SoSceneTextureCubeMapP()
   if (this->glimage) this->glimage->unref(NULL);
   this->destroyCamera();
   if (this->glcontext != NULL) {
-    SoGLContext_context_destruct(this->glcontext);
+    if (this->contextManager) this->contextManager->destroyContext(this->glcontext);
   }
   delete[] this->offscreenbuffer;
   delete this->glaction;
@@ -382,6 +386,10 @@ SoSceneTextureCubeMapP::~SoSceneTextureCubeMapP()
 void
 SoSceneTextureCubeMapP::updatePBuffer(SoState * state, const float quality)
 {
+  // Update the context manager from the state element pushed by SoOffscreenRenderer.
+  SoDB::ContextManager * stateMgr = SoContextManagerElement::get(state);
+  if (stateMgr) this->contextManager = stateMgr;
+
   SbVec2s size = PUBLIC(this)->size.getValue();
 
   assert(PUBLIC(this)->scene.getValue());
@@ -393,7 +401,7 @@ SoSceneTextureCubeMapP::updatePBuffer(SoState * state, const float quality)
       this->glimage = NULL;
     }
     if (this->glcontext) {
-      SoGLContext_context_destruct(this->glcontext);
+      if (this->contextManager) this->contextManager->destroyContext(this->glcontext);
       this->glcontextsize.setValue(-1,-1);
       this->glcontext = NULL;
     }
@@ -442,7 +450,7 @@ SoSceneTextureCubeMapP::updatePBuffer(SoState * state, const float quality)
     unsigned int x = this->glcontextsize[0];
     unsigned int y = this->glcontextsize[1];
     
-    this->glcontext = SoGLContext_context_create_offscreen(x, y);
+    this->glcontext = this->contextManager ? this->contextManager->createOffscreenContext(x, y) : nullptr;
     this->canrendertotexture = 
       SoGLContext_context_can_render_to_texture(this->glcontext);
 
@@ -468,7 +476,7 @@ SoSceneTextureCubeMapP::updatePBuffer(SoState * state, const float quality)
     this->glaction->setTransparencyType((SoGLRenderAction::TransparencyType)
                                         SoShapeStyleElement::getTransparencyType(state));
 
-    SoGLContext_context_make_current(this->glcontext);
+    if (this->contextManager) this->contextManager->makeContextCurrent(this->glcontext);
 
 
     glEnable(GL_DEPTH_TEST);
@@ -496,7 +504,7 @@ SoSceneTextureCubeMapP::updatePBuffer(SoState * state, const float quality)
       }
     }
 
-    SoGLContext_context_reinstate_previous(this->glcontext);
+    if (this->contextManager) this->contextManager->restorePreviousContext(this->glcontext);
   }
 
   if (!this->glimagevalid || (this->glimage == NULL)) {

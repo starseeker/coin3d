@@ -107,7 +107,7 @@ static bool test1_shadowSpotLight(const char *basepath)
     cam->farDistance  = 50.0f;
     root->addChild(cam);
 
-    SoShadowGroup *sg = new SoShadowGroup;
+    SoShadowGroup *sg = new SoShadowGroup(getCoinHeadlessContextManager());
     sg->isActive.setValue(TRUE);
     sg->intensity.setValue(0.8f);
     sg->precision.setValue(0.5f);
@@ -210,7 +210,7 @@ static bool test2_multiCasters(const char *basepath)
     cam->farDistance  = 60.0f;
     root->addChild(cam);
 
-    SoShadowGroup *sg = new SoShadowGroup;
+    SoShadowGroup *sg = new SoShadowGroup(getCoinHeadlessContextManager());
     sg->isActive.setValue(TRUE);
     sg->intensity.setValue(0.7f);
     sg->precision.setValue(0.3f);
@@ -296,7 +296,7 @@ static bool test3_shadowDisabled(const char *basepath)
     cam->farDistance  = 50.0f;
     root->addChild(cam);
 
-    SoShadowGroup *sg = new SoShadowGroup;
+    SoShadowGroup *sg = new SoShadowGroup(getCoinHeadlessContextManager());
     sg->isActive.setValue(FALSE); // disabled
     root->addChild(sg);
 
@@ -342,7 +342,7 @@ static bool test4_cachingToggle(const char *basepath)
     cam->farDistance  = 50.0f;
     root->addChild(cam);
 
-    SoShadowGroup *sg = new SoShadowGroup;
+    SoShadowGroup *sg = new SoShadowGroup(getCoinHeadlessContextManager());
     sg->isActive.setValue(TRUE);
     sg->intensity.setValue(0.6f);
     sg->precision.setValue(0.4f);
@@ -401,8 +401,11 @@ int main(int argc, char **argv)
 
     const char *basepath = (argc > 1) ? argv[1] : "render_shadow_advanced";
 
+    SoShadowGroup * sg = new SoShadowGroup(getCoinHeadlessContextManager());
+    sg->ref();
     printf("SoShadowGroup::isSupported() = %d\n",
-           (int)SoShadowGroup::isSupported());
+           (int)sg->isSupported());
+    sg->unref();
 
     int failures = 0;
 

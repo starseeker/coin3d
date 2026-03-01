@@ -732,7 +732,7 @@ SoNodekitCatalog::recursiveSearch(int part, const SbName & name,
     if (parttype.isDerivedFrom(SoBaseKit::getClassTypeId())) {
       if (checked->find(parttype) == -1) {
         checked->append(parttype);
-        SoBaseKit * kit = (SoBaseKit *)parttype.createInstance();
+        SoBaseKit * kit = (SoBaseKit *)parttype.createInstance(nullptr);
         kit->ref();
         const SoNodekitCatalog * cat = kit->getNodekitCatalog();
         SbBool result = cat->recursiveSearch(0, name, checked);

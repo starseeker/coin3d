@@ -84,12 +84,13 @@ CoinOffscreenGLCanvas::setContextManager(SoDB::ContextManager * mgr)
   this->instance_mgr = mgr;
 }
 
-// Returns the effective context manager to use: per-instance if set,
-// otherwise the global singleton.
+// Returns the per-instance context manager.  SoOffscreenRenderer always calls
+// setContextManager() before using the canvas, so this is never NULL in normal
+// operation (the renderer captures the global at construction time).
 SoDB::ContextManager *
 CoinOffscreenGLCanvas::effectiveMgr(void) const
 {
-  return this->instance_mgr ? this->instance_mgr : SoDB::getContextManager();
+  return this->instance_mgr;
 }
 
 // *************************************************************************
@@ -102,7 +103,7 @@ CoinOffscreenGLCanvas::clampSize(SbVec2s & reqsize) const
   // able to allocate a buffer of this size -- e.g. due to memory
   // constraints on the gfx card.
 
-  SbVec2s maxsize = CoinOffscreenGLCanvas::getMaxTileSize();
+  SbVec2s maxsize = CoinOffscreenGLCanvas::getMaxTileSize(this->effectiveMgr());
   if (maxsize == SbVec2s(0, 0)) {
     // The global GL probe returned nothing usable (e.g. no system-GL context
     // could be created because we are headless or there is no display).
@@ -260,6 +261,11 @@ CoinOffscreenGLCanvas::tryActivateGLContext(void)
 
     // Set up mapping from GL context to SoGLRenderAction context id.
     this->renderid = SoGLCacheContextElement::getUniqueCacheContext();
+
+    /* Register the context manager for this context ID so that
+       SoGLContext_getprocaddress() uses the correct backend resolver
+       without consulting the global singleton. */
+    coingl_register_context_manager(static_cast<int>(this->renderid), mgr);
 
 #ifdef OBOL_BUILD_DUAL_GL
     /* In dual-GL builds, tell the GL dispatch layer which backend this
@@ -552,7 +558,7 @@ static void tilesize_cleanup(void)
 // Return largest size of offscreen canvas system can handle. Will
 // cache result, so only the first look-up is expensive.
 SbVec2s
-CoinOffscreenGLCanvas::getMaxTileSize(void)
+CoinOffscreenGLCanvas::getMaxTileSize(SoDB::ContextManager * mgr)
 {
   // cache the values in static variables so that a new context is not
   // created every time render() is called in SoOffscreenRenderer
@@ -563,7 +569,7 @@ CoinOffscreenGLCanvas::getMaxTileSize(void)
   coin_atexit((coin_atexit_f*) tilesize_cleanup, CC_ATEXIT_NORMAL);
 
   unsigned int width, height;
-  SoGLContext_context_max_dimensions(&width, &height);
+  SoGLContext_context_max_dimensions(mgr, &width, &height);
 
   if (CoinOffscreenGLCanvas::debug()) {
     SoDebugError::postInfo("CoinOffscreenGLCanvas::getMaxTileSize",

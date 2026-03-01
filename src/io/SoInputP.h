@@ -40,6 +40,7 @@
 // *************************************************************************
 
 #include "misc/SbHash.h"
+#include <Inventor/SoDB.h>
 
 class SoInput;
 class SoInput_FileInfo;
@@ -51,6 +52,7 @@ public:
   SoInputP(SoInput * owner) {
     this->owner = owner;
     this->usingstdin = FALSE;
+    this->contextManager = nullptr;
   }
 
   static SbBool debug(void);
@@ -62,6 +64,7 @@ public:
   static SbBool isNameChar(unsigned char c, SbBool validIdent);
 
   SbBool usingstdin;
+  SoDB::ContextManager * contextManager;
 
   SbHash<const char *, SoBase *> copied_references;
 

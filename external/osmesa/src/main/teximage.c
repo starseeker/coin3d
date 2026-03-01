@@ -1179,7 +1179,7 @@ _mesa_init_teximage_fields(GLcontext *ctx, GLenum target,
      */
     img->ImageOffsets = (GLuint *) malloc(depth * sizeof(GLuint));
     if (!img->ImageOffsets) {
-	/* OOM: callers must check img->ImageOffsets == NULL after calling */
+	/* Caller must check for this failure */
 	return;
     }
     for (i = 0; i < depth; i++) {

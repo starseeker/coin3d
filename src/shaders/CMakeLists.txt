@@ -43,15 +43,9 @@ set(OBOL_SHADERS_INTERNAL_FILES
 )
 
 # build library
-if(OBOL_BUILD_SINGLE_LIB)
-	foreach(SRCFILE ${OBOL_SHADERS_FILES})
-		set(OBOL_SOURCE ${OBOL_SOURCE} shaders/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
-	endforeach(SRCFILE)
-else()
-	add_library(shaders OBJECT ${OBOL_SHADERS_FILES})
-	# Add dependency on shadows target to ensure shader headers are generated first
-	add_dependencies(shaders shadows)
-endif()
+foreach(SRCFILE ${OBOL_SHADERS_FILES})
+	set(OBOL_SOURCE ${OBOL_SOURCE} shaders/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
+endforeach(SRCFILE)
 
 # define documentation
 foreach(SRCFILE ${OBOL_SHADERS_FILES})

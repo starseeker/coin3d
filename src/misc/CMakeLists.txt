@@ -58,54 +58,13 @@ set(OBOL_MISC_INTERNAL_FILES
 )
 
 # build library
-if(OBOL_BUILD_SINGLE_LIB)
-	foreach(SRCFILE ${OBOL_MISC_FILES})
-		set(OBOL_SOURCE ${OBOL_SOURCE} misc/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
-	endforeach(SRCFILE)
-	if(OBOL_USE_OSMESA)
-		# Pure-OSMesa build: whole library uses OSMesa headers, compile normally.
-		set(OBOL_SOURCE ${OBOL_SOURCE} misc/SoDBOSMesa.cpp CACHE INTERNAL "OBOL_SOURCE")
-	elseif(OBOL_BUILD_DUAL_GL)
-		# Dual-GL build: SoDBOSMesa.cpp needs the OSMesa include paths.
-		# Use a separate object target (same pattern as glue_osmesa).
-		add_library(misc_osmesa OBJECT SoDBOSMesa.cpp)
-		target_compile_definitions(misc_osmesa PRIVATE
-			OBOL_INTERNAL
-			OBOL_BUILD_DUAL_GL
-		)
-		target_include_directories(misc_osmesa PRIVATE
-			${PROJECT_SOURCE_DIR}/include
-			${PROJECT_SOURCE_DIR}/include/Inventor/annex
-			${PROJECT_BINARY_DIR}/include
-			${OBOL_TARGET_INCLUDE_DIRECTORIES}
-		)
-		if(OBOL_OSMESA_INCLUDE_DIRS)
-			target_include_directories(misc_osmesa PRIVATE ${OBOL_OSMESA_INCLUDE_DIRS})
-		endif()
-	endif()
-else()
-	add_library(misc OBJECT ${OBOL_MISC_FILES})
-	if(OBOL_USE_OSMESA)
-		# Pure-OSMesa build: all sources already have OSMesa in their include
-		# path via the main build settings; add SoDBOSMesa.cpp to the same TU.
-		target_sources(misc PRIVATE SoDBOSMesa.cpp)
-	elseif(OBOL_BUILD_DUAL_GL)
-		# Dual-GL: separate object with OSMesa includes.
-		add_library(misc_osmesa OBJECT SoDBOSMesa.cpp)
-		target_compile_definitions(misc_osmesa PRIVATE
-			OBOL_INTERNAL
-			OBOL_BUILD_DUAL_GL
-		)
-		target_include_directories(misc_osmesa PRIVATE
-			${PROJECT_SOURCE_DIR}/include
-			${PROJECT_SOURCE_DIR}/include/Inventor/annex
-			${PROJECT_BINARY_DIR}/include
-			${OBOL_TARGET_INCLUDE_DIRECTORIES}
-		)
-		if(OBOL_OSMESA_INCLUDE_DIRS)
-			target_include_directories(misc_osmesa PRIVATE ${OBOL_OSMESA_INCLUDE_DIRS})
-		endif()
-	endif()
+foreach(SRCFILE ${OBOL_MISC_FILES})
+	set(OBOL_SOURCE ${OBOL_SOURCE} misc/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
+endforeach(SRCFILE)
+if(OBOL_USE_OSMESA)
+	set(OBOL_SOURCE ${OBOL_SOURCE} misc/SoDBOSMesa.cpp CACHE INTERNAL "OBOL_SOURCE")
+elseif(OBOL_BUILD_DUAL_GL)
+	set(OBOL_SOURCE ${OBOL_SOURCE} misc/SoDBOSMesa.cpp CACHE INTERNAL "OBOL_SOURCE")
 endif()
 
 # define documentation

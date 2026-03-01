@@ -86,6 +86,7 @@
 
 #include "glue/glp.h"
 #include "CoinTidbits.h"
+#include <Inventor/SoDB.h>
 #include <Inventor/SbBox2s.h>
 #include <Inventor/SbBox3f.h>
 #include <Inventor/SbMatrix.h>
@@ -256,7 +257,8 @@
 class SoExtSelectionP {
 public:
   SoExtSelectionP(SoExtSelection * masterptr)
-    : runningselection(masterptr)
+    : runningselection(masterptr),
+      contextManager(NULL)
   {
     PUBLIC(this) = masterptr;
   }
@@ -265,6 +267,8 @@ public:
   float lassowidth;
   SbBool lassopatternanimate;
   unsigned short lassopattern;
+
+  SoDB::ContextManager * contextManager;
 
   SbVec2s requestedsize;
 
@@ -813,6 +817,19 @@ SoExtSelection::~SoExtSelection()
   delete PRIVATE(this)->cbaction;
   delete PRIVATE(this)->visitedshapepaths;
   delete PRIVATE(this);
+}
+
+/*!
+  Set the context manager used for offscreen rendering during lasso/rectangle
+  selection.  Must be called before the node is used for selection; the context
+  is also populated automatically from the SoContextManagerElement on the first
+  render pass through this node.  Passing NULL is a programming error.
+*/
+void
+SoExtSelection::setContextManager(SoDB::ContextManager * manager)
+{
+  assert(manager && "SoExtSelection::setContextManager: manager must not be NULL");
+  PRIVATE(this)->contextManager = manager;
 }
 
 // *************************************************************************
@@ -2644,7 +2661,11 @@ SoExtSelectionP::performSelection(SoHandleEventAction * action)
       upon, if possible.
     */
     unsigned int maxsize[2];
-    SoGLContext_context_max_dimensions(&maxsize[0], &maxsize[1]);
+    // The context manager must have been set via setContextManager() or
+    // populated from the SoContextManagerElement during an earlier render pass.
+    SoDB::ContextManager * mgr = this->contextManager;
+    assert(mgr && "SoExtSelection: no context manager available -- call setContextManager() first");
+    SoGLContext_context_max_dimensions(mgr, &maxsize[0], &maxsize[1]);
 
     this->requestedsize = action->getViewportRegion().getViewportSizePixels();
 
@@ -2664,11 +2685,11 @@ SoExtSelectionP::performSelection(SoHandleEventAction * action)
     // only (re)allocate the renderers if the viewport has changed
     if (this->renderer == NULL || this->renderer->getViewportRegion() != vp) {
       delete this->renderer;
-      this->renderer = new SoOffscreenRenderer(vp);
+      this->renderer = new SoOffscreenRenderer(mgr, vp);
     }
     if (this->lassorenderer == NULL || this->lassorenderer->getViewportRegion() != vp) {
       delete this->lassorenderer;
-      this->lassorenderer = new SoOffscreenRenderer(vp);
+      this->lassorenderer = new SoOffscreenRenderer(mgr, vp);
     }
 
     SoCallback * cbnode = new SoCallback;

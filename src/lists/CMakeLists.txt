@@ -21,13 +21,9 @@ set(OBOL_LISTS_FILES
 )
 
 # build library
-if(OBOL_BUILD_SINGLE_LIB)
-	foreach(SRCFILE ${OBOL_LISTS_FILES})
-		set(OBOL_SOURCE ${OBOL_SOURCE} lists/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
-	endforeach(SRCFILE)
-else()
-	add_library(lists OBJECT ${OBOL_LISTS_FILES})
-endif()
+foreach(SRCFILE ${OBOL_LISTS_FILES})
+	set(OBOL_SOURCE ${OBOL_SOURCE} lists/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
+endforeach(SRCFILE)
 
 # define documentation
 foreach(SRCFILE ${OBOL_LISTS_FILES})

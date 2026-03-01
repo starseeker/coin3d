@@ -250,7 +250,7 @@ static SoOffscreenRenderer* s_renderer = nullptr;
 static SoOffscreenRenderer* getRenderer(int w, int h) {
     if (!s_renderer) {
         SbViewportRegion vp(w, h);
-        s_renderer = new SoOffscreenRenderer(vp);
+        s_renderer = new SoOffscreenRenderer(getCoinHeadlessContextManager(), vp);
     }
     return s_renderer;
 }
@@ -938,16 +938,16 @@ public:
         osmesa_mgr_.reset(SoDB::createOSMesaContextManager());
 
         SbViewportRegion vp(W, H);
-        renderer_.reset(new SoOffscreenRenderer(vp));
-        renderer_->setComponents(SoOffscreenRenderer::RGB_TRANSPARENCY);
-        renderer_->setBackgroundColor(SbColor(0.15f, 0.15f, 0.2f));
         if (osmesa_mgr_) {
-            /* Pin this renderer to the OSMesa backend – completely independent
-             * of the global context manager used by CoinPanel. */
-            renderer_->setContextManager(osmesa_mgr_.get());
+            /* Create renderer pinned to the OSMesa backend – completely
+             * independent of the global context manager used by CoinPanel. */
+            renderer_.reset(new SoOffscreenRenderer(osmesa_mgr_.get(), vp));
         } else {
             status_text = "OSMesa not available in this build";
+            return;
         }
+        renderer_->setComponents(SoOffscreenRenderer::RGB_TRANSPARENCY);
+        renderer_->setBackgroundColor(SbColor(0.15f, 0.15f, 0.2f));
     }
 
     ~OSMesaPanel() { delete fltk_img; }

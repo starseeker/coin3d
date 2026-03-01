@@ -43,13 +43,9 @@ set(OBOL_SHAPENODES_INTERNAL_FILES
 )
 
 # build library
-if(OBOL_BUILD_SINGLE_LIB)
-	foreach(SRCFILE ${OBOL_SHAPENODES_FILES})
-		set(OBOL_SOURCE ${OBOL_SOURCE} shapenodes/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
-	endforeach(SRCFILE)
-else()
-	add_library(shapenodes OBJECT ${OBOL_SHAPENODES_FILES})
-endif()
+foreach(SRCFILE ${OBOL_SHAPENODES_FILES})
+	set(OBOL_SOURCE ${OBOL_SOURCE} shapenodes/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
+endforeach(SRCFILE)
 
 # define documentation
 foreach(SRCFILE ${OBOL_SHAPENODES_FILES})

@@ -864,6 +864,13 @@ struct SoGLContext {
   cc_dict * glextdict;
 
   cc_libhandle dl_handle;
+
+  /* Per-context manager set at instance creation time by SoGLContext_instance().
+     Points to the SoDB::ContextManager that owns this GL context.  Used by
+     SoGLContext_getprocaddress() to call the correct backend proc-address
+     resolver without consulting the global singleton.  Stored as void* so
+     this C-compatible struct does not need to include SoDB.h. */
+  void * context_manager;
 };
 
 /* ********************************************************************** */
@@ -1413,12 +1420,7 @@ float SoGLContext_get_max_anisotropy(const SoGLContext * glue);
 void * SoGLContext_glXGetCurrentDisplay(const SoGLContext * w);
 
 /* Offscreen buffer creation */
-void SoGLContext_context_max_dimensions(unsigned int * width, unsigned int * height);
-
-void * SoGLContext_context_create_offscreen(unsigned int width, unsigned int height);
-SbBool SoGLContext_context_make_current(void * ctx);
-void SoGLContext_context_reinstate_previous(void * ctx);
-void SoGLContext_context_destruct(void * ctx);
+void SoGLContext_context_max_dimensions(void * mgr, unsigned int * width, unsigned int * height);
 
 void SoGLContext_context_bind_pbuffer(void * ctx);
 void SoGLContext_context_release_pbuffer(void * ctx);
@@ -1427,9 +1429,6 @@ SbBool SoGLContext_context_can_render_to_texture(void * ctx);
 
 const void * SoGLContext_win32_HDC(void * ctx);
 void SoGLContext_win32_updateHDCBitmap(void * ctx);
-
-/* Offscreen context creation now uses SoDB::ContextManager directly */
-/* Legacy function declarations maintained for compatibility */
 
 /* -----------------------------------------------------------------------
  * Dual-GL backend registration
@@ -1441,10 +1440,22 @@ void SoGLContext_win32_updateHDCBitmap(void * ctx);
  * backend.  This allows SoGLContext_instance() to dispatch the context
  * initialisation to the osmesa_SoGLContext_instance() implementation.
  *
- * This function is always declared and safe to call; it is a no-op in
+ * Both functions are always declared and safe to call; they are no-ops in
  * non-dual-GL builds.
  * --------------------------------------------------------------------- */
 void coingl_register_osmesa_context(int contextid);
+void coingl_unregister_osmesa_context(int contextid);
+
+/* Per-context-ID manager registry.  Call coingl_register_context_manager()
+   after assigning a render-context ID whenever the context was created via a
+   SoDB::ContextManager (e.g. inside CoinOffscreenGLCanvas::tryActivateGLContext()).
+   SoGLContext_instance() reads this registry to set gi->context_manager so that
+   SoGLContext_getprocaddress() can use the backend-specific resolver instead of
+   the global singleton.  Both functions are always safe to call.
+   The mgr parameter is typed void* here for C compatibility; callers must pass
+   a SoDB::ContextManager* (cast to void* if necessary). */
+void coingl_register_context_manager(int contextid, void * mgr);
+void coingl_unregister_context_manager(int contextid);
 
 #ifdef __cplusplus
 }

@@ -21,13 +21,9 @@ set(OBOL_NODEKITS_INTERNAL_FILES
 )
 
 # build library
-if(OBOL_BUILD_SINGLE_LIB)
-	foreach(SRCFILE ${OBOL_NODEKITS_FILES})
-		set(OBOL_SOURCE ${OBOL_SOURCE} nodekits/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
-	endforeach(SRCFILE)
-else()
-	add_library(nodekits OBJECT ${OBOL_NODEKITS_FILES})
-endif()
+foreach(SRCFILE ${OBOL_NODEKITS_FILES})
+	set(OBOL_SOURCE ${OBOL_SOURCE} nodekits/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
+endforeach(SRCFILE)
 
 # define documentation
 foreach(SRCFILE ${OBOL_NODEKITS_FILES})

@@ -10,14 +10,14 @@
  *
  *   #include "osmesa_context_manager.h"
  *
- *   // At application start – capture the original manager:
- *   SoDB::ContextManager * orig = SoDB::getContextManager();
- *
- *   // Per render call that must use OSMesa:
+ *   // Create a dedicated OSMesa manager per renderer:
  *   static CoinOSMesaContextManager osmesa_mgr;
- *   SoDB::setContextManager(&osmesa_mgr);
- *   renderer->render(root);
- *   SoDB::setContextManager(orig);   // restore
+ *   SoOffscreenRenderer renderer(&osmesa_mgr, viewport);
+ *   renderer.render(root);
+ *
+ *   // Each SoOffscreenRenderer holds its own context manager reference so
+ *   // multiple renderers with different backends (system GL, OSMesa, etc.)
+ *   // can coexist in the same process without swapping any global state.
  *
  * Requires:
  *   - OSMesa headers in <OSMesa/osmesa.h> and <OSMesa/gl.h>

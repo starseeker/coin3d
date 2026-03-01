@@ -80,7 +80,7 @@ const SoFieldData * SoUnknownNode::getFieldData(void) const
 }
 
 void *
-SoUnknownNode::createInstance(void)
+SoUnknownNode::createInstance(void * /*ctx*/)
 {
   return new SoUnknownNode;
 }

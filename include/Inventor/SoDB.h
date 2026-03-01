@@ -177,6 +177,26 @@ public:
                                         unsigned int & height) const
     { width = 0; height = 0; }
 
+    /**
+     * Look up a GL extension function pointer by name.
+     *
+     * Called by Obol's GL glue layer when dlsym() cannot locate a function
+     * (common for ARB/EXT extension entry points on modern split-GL systems
+     * where libOpenGL.so does not export them directly).
+     *
+     * Platform-specific implementations should delegate to the appropriate
+     * platform function-pointer resolver (e.g. glXGetProcAddress on X11,
+     * wglGetProcAddress on Windows, eglGetProcAddress on EGL systems).
+     * The OSMesa context manager built into Obol overrides this to call
+     * OSMesaGetProcAddress(), keeping all OSMesa symbol resolution within
+     * the OSMesa library and preventing cross-contamination with system GL
+     * function pointers.
+     *
+     * The default implementation returns nullptr; applications that do not
+     * override this will fall back to the existing dlsym-based lookup.
+     */
+    virtual void * getProcAddress(const char * /*funcName*/) { return nullptr; }
+
     // --- Optional alternative rendering path -------------------------------
     // If this returns TRUE, SoOffscreenRenderer uses 'pixels' directly and
     // skips the GL pipeline.  'pixels' is a pre-allocated row-major buffer of

@@ -97,11 +97,26 @@ public:
 /**
  * Initialize Coin database for headless operation (OSMesa backend)
  */
+
+namespace {
+    /* Meyer's singleton shared by initCoinHeadless() and getCoinHeadlessContextManager(). */
+    inline CoinHeadlessContextManager & mentor_osmesa_mgr_singleton() {
+        static CoinHeadlessContextManager instance;
+        return instance;
+    }
+} // anonymous namespace
+
 inline void initCoinHeadless() {
-    static CoinHeadlessContextManager context_manager;
-    SoDB::init(&context_manager);
+    SoDB::init(&mentor_osmesa_mgr_singleton());
     SoNodeKit::init();
     SoInteraction::init();
+}
+
+/**
+ * Return the context manager installed by initCoinHeadless() (OSMesa backend).
+ */
+inline SoDB::ContextManager * getCoinHeadlessContextManager() {
+    return &mentor_osmesa_mgr_singleton();
 }
 
 /**
@@ -120,7 +135,7 @@ inline bool renderToFile(
     }
 
     SbViewportRegion viewport(width, height);
-    SoOffscreenRenderer renderer(viewport);
+    SoOffscreenRenderer renderer(&mentor_osmesa_mgr_singleton(), viewport);
     renderer.setComponents(SoOffscreenRenderer::RGB);
     renderer.setBackgroundColor(backgroundColor);
 
@@ -148,7 +163,7 @@ inline SoOffscreenRenderer* getSharedRenderer() {
     static SoOffscreenRenderer *s_renderer = nullptr;
     if (!s_renderer) {
         SbViewportRegion vp(DEFAULT_WIDTH, DEFAULT_HEIGHT);
-        s_renderer = new SoOffscreenRenderer(vp);
+        s_renderer = new SoOffscreenRenderer(&mentor_osmesa_mgr_singleton(), vp);
     }
     return s_renderer;
 }
@@ -355,6 +370,20 @@ private:
  * spurious BadMatch errors from Mesa/llvmpipe from aborting the process.
  * A GLXContextManager is provided so SoDB::init() gets a valid context manager.
  */
+
+namespace {
+    inline SoDB::ContextManager *& mentor_sysgl_mgr_storage() {
+        static SoDB::ContextManager * ptr = nullptr;
+        return ptr;
+    }
+    inline void set_mentor_sysgl_mgr(SoDB::ContextManager * mgr) {
+        mentor_sysgl_mgr_storage() = mgr;
+    }
+    inline SoDB::ContextManager * get_mentor_sysgl_mgr() {
+        return mentor_sysgl_mgr_storage();
+    }
+} // anonymous namespace
+
 inline void initCoinHeadless() {
 #ifdef __unix__
     XSetErrorHandler([](Display *, XErrorEvent *err) -> int {
@@ -363,6 +392,7 @@ inline void initCoinHeadless() {
         return 0;
     });
     static GLXContextManager glx_context_manager;
+    set_mentor_sysgl_mgr(&glx_context_manager);
     SoDB::init(&glx_context_manager);
 #else
     // Non-Unix: provide a stub context manager (rendering may not work)
@@ -374,10 +404,20 @@ inline void initCoinHeadless() {
         virtual void destroyContext(void*) override {}
     };
     static StubContextManager stub;
+    set_mentor_sysgl_mgr(&stub);
     SoDB::init(&stub);
 #endif
     SoNodeKit::init();
     SoInteraction::init();
+}
+
+/**
+ * Return the context manager installed by initCoinHeadless() (system GL backend).
+ */
+inline SoDB::ContextManager * getCoinHeadlessContextManager() {
+    SoDB::ContextManager * mgr = get_mentor_sysgl_mgr();
+    assert(mgr && "getCoinHeadlessContextManager: call initCoinHeadless() first");
+    return mgr;
 }
 
 /**
@@ -392,7 +432,7 @@ inline SoOffscreenRenderer* getSharedRenderer() {
     static SoOffscreenRenderer *s_renderer = nullptr;
     if (!s_renderer) {
         SbViewportRegion vp(DEFAULT_WIDTH, DEFAULT_HEIGHT);
-        s_renderer = new SoOffscreenRenderer(vp);
+        s_renderer = new SoOffscreenRenderer(get_mentor_sysgl_mgr(), vp);
     }
     return s_renderer;
 }

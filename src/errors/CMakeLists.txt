@@ -15,13 +15,9 @@ set(OBOL_ERRORS_INTERNAL_FILES
 )
 
 # build library
-if(OBOL_BUILD_SINGLE_LIB)
-	foreach(SRCFILE ${OBOL_ERRORS_FILES})
-		set(OBOL_SOURCE ${OBOL_SOURCE} errors/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
-	endforeach(SRCFILE)
-else()
-	add_library(errors OBJECT ${OBOL_ERRORS_FILES})
-endif()
+foreach(SRCFILE ${OBOL_ERRORS_FILES})
+	set(OBOL_SOURCE ${OBOL_SOURCE} errors/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
+endforeach(SRCFILE)
 
 # define documentation
 foreach(SRCFILE ${OBOL_ERRORS_FILES})

@@ -174,7 +174,7 @@ SoNodeKitListPart::setContainerType(SoType newContainerType)
   }
 #endif // debug
 
-  SoGroup * newroot = (SoGroup *) newContainerType.createInstance();
+  SoGroup * newroot = (SoGroup *) newContainerType.createInstance(this->getInstantiationContext());
   SoChildList * kids = this->containerNode.getValue()->getChildren();
   for (int i=0; i < kids->getLength(); i++) {
     newroot->addChild((*kids)[i]);
@@ -609,7 +609,7 @@ SoNodeKitListPart::syncInternalData(void)
   // Set up container node, if necessary.
   if (this->containerNode.getValue() == NULL) {
     SoType containerType = SoType::fromName(this->containerTypeName.getValue());
-    this->containerNode.setValue((SoNode*)containerType.createInstance());
+    this->containerNode.setValue((SoNode*)containerType.createInstance(this->getInstantiationContext()));
     this->containerNode.setDefault(TRUE);
   }
 
@@ -636,7 +636,7 @@ SoNodeKitListPart::createAndAddDefaultChild(void)
 {
   SoType type = this->getDefaultChildType();
   assert(type != SoType::badType());
-  SoNode * newnode = (SoNode*) type.createInstance();
+  SoNode * newnode = (SoNode*) type.createInstance(this->getInstantiationContext());
   this->addChild(newnode);
   return newnode;
 }

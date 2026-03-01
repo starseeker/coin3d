@@ -73,7 +73,7 @@ protected:
 
 private:
   static SoType classTypeId;
-  static void * createInstance(void);
+  static void * createInstance(void *);
   virtual const SoFieldData * getFieldData(void) const;
 
   void initFieldData(void);

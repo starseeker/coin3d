@@ -639,7 +639,7 @@ SoInteractionKit::setAnySurrogatePath(const SbName & partname,
       if (type == SoGroup::getClassTypeId() ||
           type == SoSeparator::getClassTypeId()) {
         // replace with empty group to keep switch numbering
-        kit->setPart(partNum, (SoNode *)type.createInstance());
+        kit->setPart(partNum, (SoNode *)type.createInstance(kit->getInstantiationContext()));
       }
       else { // set to NULL and update switch numbering
         SoSwitch * sw = (SoSwitch *)parent;

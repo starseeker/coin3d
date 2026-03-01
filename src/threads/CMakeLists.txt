@@ -26,13 +26,9 @@ set(OBOL_THREADS_INTERNAL_FILES
 )
 
 # build library
-if(OBOL_BUILD_SINGLE_LIB)
-	foreach(SRCFILE ${OBOL_THREADS_FILES})
-		set(OBOL_SOURCE ${OBOL_SOURCE} threads/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
-	endforeach(SRCFILE)
-else()
-	add_library(threads OBJECT ${OBOL_THREADS_FILES})
-endif()
+foreach(SRCFILE ${OBOL_THREADS_FILES})
+	set(OBOL_SOURCE ${OBOL_SOURCE} threads/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
+endforeach(SRCFILE)
 
 # define documentation
 foreach(SRCFILE ${OBOL_THREADS_FILES})

@@ -14,13 +14,9 @@ set(OBOL_PROJECTORS_FILES
 )
 
 # build library
-if(OBOL_BUILD_SINGLE_LIB)
-	foreach(SRCFILE ${OBOL_PROJECTORS_FILES})
-		set(OBOL_SOURCE ${OBOL_SOURCE} projectors/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
-	endforeach(SRCFILE)
-else()
-	add_library(projectors OBJECT ${OBOL_PROJECTORS_FILES})
-endif()
+foreach(SRCFILE ${OBOL_PROJECTORS_FILES})
+	set(OBOL_SOURCE ${OBOL_SOURCE} projectors/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
+endforeach(SRCFILE)
 
 # define documentation
 foreach(SRCFILE ${OBOL_PROJECTORS_FILES})

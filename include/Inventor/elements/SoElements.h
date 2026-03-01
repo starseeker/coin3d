@@ -114,6 +114,7 @@
 #include <Inventor/elements/SoViewportRegionElement.h>
 #include <Inventor/elements/SoGLViewportRegionElement.h>
 #include <Inventor/elements/SoWindowElement.h>
+#include <Inventor/elements/SoContextManagerElement.h>
 #include <Inventor/elements/SoLazyElement.h>
 #include <Inventor/elements/SoGLCacheContextElement.h>
 #include <Inventor/elements/SoGLColorIndexElement.h>

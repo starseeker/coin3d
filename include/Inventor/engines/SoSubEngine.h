@@ -73,7 +73,7 @@ private: \
 #define SO_ENGINE_HEADER(_classname_) \
     SO_ENGINE_ABSTRACT_HEADER(_classname_); \
   public: \
-    static void * createInstance(void)
+    static void * createInstance(void *)
 
 // *************************************************************************
 
@@ -164,7 +164,7 @@ SO_ENGINE_ABSTRACT_SOURCE(_class_); \
   Creates a new instance of the class type corresponding to the SoType object. \
 */ \
 void * \
-_class_::createInstance(void) \
+_class_::createInstance(void * /*ctx*/) \
 { \
   return new _class_; \
 }

@@ -458,7 +458,7 @@ SoEngine::copy(void) const
   // This snippet is the same as SoNode::addToCopyDict().
   SoEngine * cp = coin_assert_cast<SoEngine *>(SoFieldContainer::checkCopy(this));
   if (!cp) {
-    cp = static_cast<SoEngine *>(this->getTypeId().createInstance());
+    cp = static_cast<SoEngine *>(this->getTypeId().createInstance(this->getInstantiationContext()));
     assert(cp);
     SoFieldContainer::addCopy(this, cp);
   }

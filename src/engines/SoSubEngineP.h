@@ -153,7 +153,7 @@ const SoEngineOutputData * _class_::getOutputData(void) const \
 /*! \
   Creates a new instance of the class type corresponding to the SoType object. \
 */ \
-void * _class_::createInstance(void) \
+void * _class_::createInstance(void * /*ctx*/) \
 { \
   return new _class_; \
 } \

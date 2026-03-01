@@ -27,13 +27,9 @@ set(OBOL_ACTIONS_INTERNAL_FILES
 )
 
 # build library
-if(OBOL_BUILD_SINGLE_LIB)
-	foreach(SRCFILE ${OBOL_ACTIONS_FILES})
-		set(OBOL_SOURCE ${OBOL_SOURCE} actions/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
-	endforeach(SRCFILE)
-else()
-	add_library(actions OBJECT ${OBOL_ACTIONS_FILES})
-endif()
+foreach(SRCFILE ${OBOL_ACTIONS_FILES})
+	set(OBOL_SOURCE ${OBOL_SOURCE} actions/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
+endforeach(SRCFILE)
 
 # define documentation
 foreach(SRCFILE ${OBOL_ACTIONS_FILES})

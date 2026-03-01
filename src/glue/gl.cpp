@@ -245,27 +245,9 @@
 #include "glue/dlp.h"
 /* Platform-specific glue headers are no longer needed with callback-based contexts */
 #include "misc/SoEnvironment.h"
+#include <Inventor/SoDB.h>
 
-// Include for SoDB context manager - minimal include to avoid circular dependencies
-class SoDB { 
-public: 
-  class ContextManager {
-  public:
-    virtual ~ContextManager() {}
-    virtual void * createOffscreenContext(unsigned int width, unsigned int height) = 0;
-    virtual SbBool makeContextCurrent(void * context) = 0;
-    virtual void restorePreviousContext(void * context) = 0;
-    virtual void destroyContext(void * context) = 0;
-    virtual SbBool isOSMesaContext(void * /*context*/) { return FALSE; }
-  }; 
-  static ContextManager* getContextManager(); 
-};
 
-namespace { 
-  SoDB::ContextManager * getSoDBContextManager() {
-    return SoDB::getContextManager();
-  }
-}
 
 /* ********************************************************************** */
 
@@ -318,9 +300,10 @@ static void coingl_osmesa_registry_cleanup(void)
   coingl_osmesa_context_ids = NULL;
 }
 
-/* Forward declaration of the osmesa-prefixed implementation compiled in
-   gl_osmesa.cpp.  The linker resolves this from the glue_osmesa object. */
+/* Forward declarations of the osmesa-prefixed implementations compiled in
+   gl_osmesa.cpp.  The linker resolves these from the glue_osmesa object. */
 const SoGLContext * osmesa_SoGLContext_instance(int contextid);
+void osmesa_SoGLContext_destruct(uint32_t contextid);
 #endif /* OBOL_BUILD_DUAL_GL */
 
 /* Public C API: register an OSMesa-backed render-context ID.
@@ -343,6 +326,22 @@ coingl_register_osmesa_context(int contextid)
 #endif
 }
 
+/* Remove an OSMesa context ID from the backend registry.
+   Called from SoGLContext_destruct() to keep the registry consistent.
+   Safe to call even when OBOL_BUILD_DUAL_GL is not defined (no-op). */
+void
+coingl_unregister_osmesa_context(int contextid)
+{
+#if defined(OBOL_BUILD_DUAL_GL)
+  std::lock_guard<std::mutex> lock(coingl_osmesa_context_mutex);
+  if (coingl_osmesa_context_ids) {
+    coingl_osmesa_context_ids->erase(contextid);
+  }
+#else
+  (void)contextid;
+#endif
+}
+
 /* Query whether a context ID was registered as an OSMesa context. */
 static int
 coingl_context_backend_is_osmesa(int contextid)
@@ -355,6 +354,68 @@ coingl_context_backend_is_osmesa(int contextid)
   (void)contextid;
   return 0;
 #endif
+}
+
+/* -----------------------------------------------------------------------
+ * Per-context-ID manager registry
+ *
+ * Maps each render context ID to the SoDB::ContextManager that created it.
+ * This allows SoGLContext_getprocaddress() and SoGLContext_instance() to
+ * use the correct backend-specific resolver without consulting the global
+ * singleton, enabling independent system-GL and OSMesa contexts to coexist
+ * in the same process.
+ *
+ * Kept in the same SOGL_PREFIX_SET-guarded block as the OSMesa registry so
+ * there is exactly ONE instance of the map regardless of how many GL
+ * compilation units are linked in.
+ * --------------------------------------------------------------------- */
+#ifdef __cplusplus
+} /* close extern "C" briefly for STL includes */
+#endif
+#include <unordered_map>
+#include <mutex>
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+static std::unordered_map<int, void*> * coingl_context_manager_map = NULL;
+static std::mutex coingl_context_manager_mutex;
+
+static void coingl_context_manager_map_cleanup(void)
+{
+  std::lock_guard<std::mutex> lock(coingl_context_manager_mutex);
+  delete coingl_context_manager_map;
+  coingl_context_manager_map = NULL;
+}
+
+void
+coingl_register_context_manager(int contextid, void * mgr)
+{
+  std::lock_guard<std::mutex> lock(coingl_context_manager_mutex);
+  if (!coingl_context_manager_map) {
+    coingl_context_manager_map = new std::unordered_map<int, void*>();
+    coin_atexit((coin_atexit_f *)coingl_context_manager_map_cleanup, CC_ATEXIT_NORMAL);
+  }
+  (*coingl_context_manager_map)[contextid] = mgr;
+}
+
+void
+coingl_unregister_context_manager(int contextid)
+{
+  std::lock_guard<std::mutex> lock(coingl_context_manager_mutex);
+  if (coingl_context_manager_map) {
+    coingl_context_manager_map->erase(contextid);
+  }
+}
+
+static SoDB::ContextManager *
+coingl_get_context_manager(int contextid)
+{
+  std::lock_guard<std::mutex> lock(coingl_context_manager_mutex);
+  if (!coingl_context_manager_map) return NULL;
+  auto it = coingl_context_manager_map->find(contextid);
+  return (it != coingl_context_manager_map->end())
+         ? static_cast<SoDB::ContextManager*>(it->second) : NULL;
 }
 
 #endif /* !SOGL_PREFIX_SET */
@@ -666,16 +727,22 @@ SoGLContext_getprocaddress(const SoGLContext * glue, const char * symname)
 {
   void * ptr = NULL;
 
-  /* With callback-based contexts, the application is responsible for
-     providing complete OpenGL function loading. We only attempt to
-     find the function through the shared library. */
-  ptr = cc_dl_sym(SoGLContext_dl_handle(glue), symname);
-
 #if defined(OBOL_OSMESA_BUILD) || defined(SOGL_PREFIX_SET)
-  /* OSMesa uses MGL name mangling, so if the standard name lookup fails,
-     try the MGL-mangled version by prefixing with "mgl" instead of "gl" */
+  /* OSMesa path: resolve via OSMesaGetProcAddress first to guarantee we
+     get an OSMesa function pointer and never accidentally pick up a system
+     GL symbol from the process handle (the two implementations have
+     different dispatch tables and mixing them causes subtle corruption). */
+  ptr = (void*)OSMesaGetProcAddress(symname);
+  if (SoGLContext_debug()) {
+    cc_debugerror_postinfo("SoGLContext_getprocaddress",
+                           "OSMesaGetProcAddress('%s') == %p", symname, ptr);
+  }
+
+  /* OSMesa uses MGL name mangling; if the standard name lookup failed,
+     try the MGL-mangled version ("gl" -> "mgl") via dlsym as a secondary
+     fallback (covers static builds where the mgl* symbol is directly in
+     the binary). */
   if (ptr == NULL && strncmp(symname, "gl", 2) == 0) {
-    /* Create MGL-mangled name: "gl" -> "mgl" */
     size_t namelen = strlen(symname);
     char * mgl_name = (char*)malloc(namelen + 2); /* +1 for 'm', +1 for '\0' */
     if (mgl_name) {
@@ -683,22 +750,41 @@ SoGLContext_getprocaddress(const SoGLContext * glue, const char * symname)
       strcat(mgl_name, symname + 2); /* Skip "gl" prefix */
       ptr = cc_dl_sym(SoGLContext_dl_handle(glue), mgl_name);
       if (SoGLContext_debug()) {
-        cc_debugerror_postinfo("SoGLContext_getprocaddress", "MGL fallback: %s -> %s == %p", symname, mgl_name, ptr);
+        cc_debugerror_postinfo("SoGLContext_getprocaddress",
+                               "MGL fallback: %s -> %s == %p",
+                               symname, mgl_name, ptr);
       }
       free(mgl_name);
     }
   }
-  
-  /* If shared library lookup failed, try OSMesaGetProcAddress for extensions.
-     This is the proper way to load OpenGL extensions in OSMesa according to
-     the OSMesa glew examples. */
+#else
+  /* System GL path: try dlsym first (works for core functions that are
+     directly exported by the GL library). */
+  ptr = cc_dl_sym(SoGLContext_dl_handle(glue), symname);
+#endif
+
+  /* Final fallback: ask the context manager.  For system-GL contexts (GLX,
+     WGL, EGL) the application provides a context manager that calls the
+     platform's proc-address resolver (e.g. glXGetProcAddress).  This keeps
+     all platform-specific code outside of Obol proper.
+     NOTE: This fallback is intentionally skipped in the OSMesa compilation
+     unit (SOGL_PREFIX_SET).  In a dual-GL build an OSMesa context's manager
+     uses OSMesaGetProcAddress() while the system-GL context's manager uses
+     the platform resolver; using the per-context manager here prevents
+     cross-backend contamination of function pointers. */
+#ifndef SOGL_PREFIX_SET
   if (ptr == NULL) {
-    ptr = (void*)OSMesaGetProcAddress(symname);
-    if (SoGLContext_debug()) {
-      cc_debugerror_postinfo("SoGLContext_getprocaddress", "OSMesaGetProcAddress('%s') == %p", symname, ptr);
+    SoDB::ContextManager * mgr = static_cast<SoDB::ContextManager*>(glue->context_manager);
+    if (mgr) {
+      ptr = mgr->getProcAddress(symname);
+      if (SoGLContext_debug()) {
+        cc_debugerror_postinfo("SoGLContext_getprocaddress",
+                               "context manager getProcAddress('%s') == %p",
+                               symname, ptr);
+      }
     }
   }
-#endif
+#endif /* !SOGL_PREFIX_SET */
 
   if (SoGLContext_debug()) {
     cc_debugerror_postinfo("SoGLContext_getprocaddress", "%s==%p", symname, ptr);
@@ -2334,13 +2420,17 @@ SoGLContext_instance(int contextid)
 #ifdef OBOL_OSMESA_BUILD
       if (SoGLContext_debug()) {
         cc_debugerror_postinfo("SoGLContext_instance", "coin_gl_current_context() returned: %p", current_ctx);
-        SoDB::ContextManager* manager = getSoDBContextManager();
+#ifndef SOGL_PREFIX_SET
+        SoDB::ContextManager* manager = coingl_get_context_manager(contextid);
         cc_debugerror_postinfo("SoGLContext_instance", "context_manager = %p", manager);
+#endif
       }
 #endif
-      // For callback-based contexts, coin_gl_current_context() always returns NULL
-      // This is expected behavior, so we skip the assertion in that case
-      SoDB::ContextManager* manager = getSoDBContextManager();
+      // For callback-based contexts, coin_gl_current_context() always returns NULL.
+      // Skip the assertion when a per-context manager is registered (system-GL build)
+      // or when we are in the OSMesa compilation unit (all contexts are managed there).
+#ifndef SOGL_PREFIX_SET
+      SoDB::ContextManager* manager = coingl_get_context_manager(contextid);
       if (!manager) {
         assert(current_ctx && "Must have a current GL context when instantiating SoGLContext!! (Note: if you are using an old Mesa GL version, set the environment variable OBOL_GL_NO_CURRENT_CONTEXT_CHECK to get around what may be a Mesa bug.)");
       }
@@ -2351,6 +2441,11 @@ SoGLContext_instance(int contextid)
         }
       }
 #endif
+#else /* SOGL_PREFIX_SET: osmesa build – all contexts are managed, skip assertion */
+      if (SoGLContext_debug()) {
+        cc_debugerror_postinfo("SoGLContext_instance", "Skipping context check (osmesa build)");
+      }
+#endif /* !SOGL_PREFIX_SET */
       (void)current_ctx; /* avoid unused variable warning */
     }
 
@@ -2366,6 +2461,14 @@ SoGLContext_instance(int contextid)
     /* FIXME: handle out-of-memory on malloc(). 20000928 mortene. */
 
     gi->contextid = (uint32_t) contextid;
+
+    /* Record the per-context manager so that SoGLContext_getprocaddress()
+       can use the correct backend resolver without consulting the global.
+       In the OSMesa compilation unit (SOGL_PREFIX_SET), the registry is not
+       available; proc-address lookup goes through OSMesaGetProcAddress instead. */
+#ifndef SOGL_PREFIX_SET
+    gi->context_manager = coingl_get_context_manager(contextid);
+#endif
 
     /* create dict that makes a quick lookup for GL extensions */
     gi->glextdict = cc_dict_construct(256, 0.75f);
@@ -2672,6 +2775,22 @@ SoGLContext_instance_from_context_ptr(void * ctx)
 void
 SoGLContext_destruct(uint32_t contextid)
 {
+#if defined(OBOL_BUILD_DUAL_GL) && !defined(SOGL_PREFIX_SET)
+  /* In dual-GL builds, OSMesa contexts are stored in the osmesa variant's
+     own dictionary.  Dispatch to the osmesa implementation and clean up the
+     backend registry entries so the context ID can be treated as system-GL in
+     the future if it were ever reused (monotonic IDs make reuse impossible
+     in practice, but correctness demands we keep the registries consistent). */
+  if (coingl_context_backend_is_osmesa(static_cast<int>(contextid))) {
+    osmesa_SoGLContext_destruct(contextid);
+    coingl_unregister_osmesa_context(static_cast<int>(contextid));
+    coingl_unregister_context_manager(static_cast<int>(contextid));
+    return;
+  }
+#endif
+#ifndef SOGL_PREFIX_SET
+  coingl_unregister_context_manager(static_cast<int>(contextid));
+#endif
   SbBool found;
   void * ptr;
   if (gldict) { // might happen if a context is destructed without using the SoGLContext interface
@@ -4569,94 +4688,8 @@ SoGLContext_glXGetCurrentDisplay(const SoGLContext * w)
   }
 */
 
-// Forward declaration and helper for SoDB context manager access
-// This allows the glue layer to access SoDB without circular dependencies
-extern "C" {
-  // Defined in SoDB.cpp - returns the current context manager
-  void* coin_get_context_manager(void);
-}
 
-/* offscreen rendering - now uses SoDB::ContextManager directly */
-
-void *
-SoGLContext_context_create_offscreen(unsigned int width, unsigned int height)
-{
-  SoDB::ContextManager* manager = getSoDBContextManager();
-  if (manager) {
-    return manager->createOffscreenContext(width, height);
-  } else {
-    // ERROR: No context manager provided
-    static int error_shown = 0;
-    if (!error_shown) {
-      error_shown = 1;
-      fprintf(stderr, "ERROR: No context manager provided. "
-                      "Applications must provide a context manager "
-                      "via SoDB::setContextManager() before SoDB::init(). "
-                      "See documentation for SoDB::ContextManager.\n");
-    }
-    
-    return NULL;
-  }
-}
-
-SbBool
-SoGLContext_context_make_current(void * ctx)
-{
-  SoDB::ContextManager* manager = getSoDBContextManager();
-  if (manager) {
-    return manager->makeContextCurrent(ctx);
-  } else {
-    // ERROR: No context manager provided
-    static int error_shown = 0;
-    if (!error_shown) {
-      error_shown = 1;
-      fprintf(stderr, "ERROR: No context manager provided. "
-                      "Applications must provide a context manager "
-                      "via SoDB::setContextManager() before SoDB::init().\n");
-    }
-    return FALSE;
-  }
-}
-
-void
-SoGLContext_context_reinstate_previous(void * ctx)
-{
-  /* FIXME: I believe two SoGLContext_context_make_current() invocations
-     before invoking this function would make this function behave
-     erroneously, as previous contexts are not stacked (at least not
-     in the GLX implementation, which I have checked), but only the
-     last context is kept track of.
-
-     FIXME: So, the API for this feature is fucked up. Should probably
-     redesign it by adding a stack concept. 20030717 mortene.
-   */
-
-  SoDB::ContextManager* manager = getSoDBContextManager();
-  if (manager) {
-    manager->restorePreviousContext(ctx);
-  }
-  // No error message here - this is optional functionality
-}
-
-void
-SoGLContext_context_destruct(void * ctx)
-{
-  SoDB::ContextManager* manager = getSoDBContextManager();
-  if (manager) {
-    manager->destroyContext(ctx);
-  } else {
-    // ERROR: No context manager provided for destruction
-    static int error_shown = 0;
-    if (!error_shown) {
-      error_shown = 1;
-      fprintf(stderr, "ERROR: No context manager provided. "
-                      "Context may not be properly cleaned up. "
-                      "Applications must provide a context manager "
-                      "via SoDB::setContextManager().\n");
-    }
-    // Cannot safely destroy context without manager
-  }
-}
+/* offscreen rendering - max dimensions probe */
 
 /*!
   Returns the \e theoretical maximum dimensions for an offscreen
@@ -4668,12 +4701,11 @@ SoGLContext_context_destruct(void * ctx)
   time of an application.
 
   So the values returned from this function should be taken as hints,
-  and client code of SoGLContext_context_create_offscreen() and
-  SoGLContext_context_make_current() should re-request offscreen
-  contexts with lower dimensions if any of those fails.
+  and callers should re-request offscreen contexts with lower dimensions
+  if creation or activation fails.
 */
 void
-SoGLContext_context_max_dimensions(unsigned int * width, unsigned int * height)
+SoGLContext_context_max_dimensions(void * mgr_ptr, unsigned int * width, unsigned int * height)
 {
   void * ctx;
   SbBool ok;
@@ -4696,16 +4728,19 @@ SoGLContext_context_max_dimensions(unsigned int * width, unsigned int * height)
                     that the detection below might fail -- as we
                     should report <0,0> on consecutive runs. */
 
+  SoDB::ContextManager * manager = static_cast<SoDB::ContextManager *>(mgr_ptr);
+  if (!manager) { return; }
+
   /* The below calls *can* fail, due to e.g. lack of resources, or no
      usable visual for the GL context. We try to handle gracefully.
      This is straightforward to do here, simply returning dimensions
      of <0,0>, but note that we also need to handle the exception in
      the callers. */
 
-  ctx = SoGLContext_context_create_offscreen(32, 32);
+  ctx = manager->createOffscreenContext(32, 32);
   if (!ctx) { return; }
-  ok = SoGLContext_context_make_current(ctx);
-  if (!ok) { SoGLContext_context_destruct(ctx); return; }
+  ok = manager->makeContextCurrent(ctx);
+  if (!ok) { manager->destroyContext(ctx); return; }
 
   glGetIntegerv(GL_MAX_VIEWPORT_DIMS, size);
   if (SoGLContext_debug()) {
@@ -4726,8 +4761,8 @@ SoGLContext_context_max_dimensions(unsigned int * width, unsigned int * height)
     *height = 16384;
     dim[0]  = *width;
     dim[1]  = *height;
-    SoGLContext_context_reinstate_previous(ctx);
-    SoGLContext_context_destruct(ctx);
+    manager->restorePreviousContext(ctx);
+    manager->destroyContext(ctx);
     return;
   }
 
@@ -4738,8 +4773,8 @@ SoGLContext_context_max_dimensions(unsigned int * width, unsigned int * height)
      do not apply. The maximum dimensions are determined by OpenGL texture
      size limits and the standard 4096x4096 clamp below. */
 
-  SoGLContext_context_reinstate_previous(ctx);
-  SoGLContext_context_destruct(ctx);
+  manager->restorePreviousContext(ctx);
+  manager->destroyContext(ctx);
 
   /* Force an additional limit to the maximum tilesize to 4096x4096
      pixels.

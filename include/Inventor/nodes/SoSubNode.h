@@ -90,7 +90,7 @@ private: \
 #define SO_NODE_HEADER(_class_) \
   SO_NODE_ABSTRACT_HEADER(_class_); \
 private: \
-  static void * createInstance(void)
+  static void * createInstance(void *)
 
 // *************************************************************************
 
@@ -156,7 +156,7 @@ SO_NODE_ABSTRACT_SOURCE(_class_) \
   Creates a new instance of the class type corresponding to the SoType object. \
 */ \
 void * \
-_class_::createInstance(void) \
+_class_::createInstance(void * /*ctx*/) \
 { \
   return new _class_; \
 }

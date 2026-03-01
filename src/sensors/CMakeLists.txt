@@ -15,13 +15,9 @@ set(OBOL_SENSORS_FILES
 )
 
 # build library
-if(OBOL_BUILD_SINGLE_LIB)
-	foreach(SRCFILE ${OBOL_SENSORS_FILES})
-		set(OBOL_SOURCE ${OBOL_SOURCE} sensors/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
-	endforeach(SRCFILE)
-else()
-	add_library(sensors OBJECT ${OBOL_SENSORS_FILES})
-endif()
+foreach(SRCFILE ${OBOL_SENSORS_FILES})
+	set(OBOL_SOURCE ${OBOL_SOURCE} sensors/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
+endforeach(SRCFILE)
 
 # define documentation
 foreach(SRCFILE ${OBOL_SENSORS_FILES})

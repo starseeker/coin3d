@@ -1,25 +1,25 @@
-#ifndef OBOL_PCH_H
-#define OBOL_PCH_H
+#ifndef OBOL_SOCONTEXTMANAGERELEMENT_H
+#define OBOL_SOCONTEXTMANAGERELEMENT_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
  * met:
- * 
+ *
  * Redistributions of source code must retain the above copyright notice,
  * this list of conditions and the following disclaimer.
- * 
+ *
  * Redistributions in binary form must reproduce the above copyright
  * notice, this list of conditions and the following disclaimer in the
  * documentation and/or other materials provided with the distribution.
- * 
+ *
  * Neither the name of the copyright holder nor the names of its
  * contributors may be used to endorse or promote products derived from
  * this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -33,34 +33,43 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-/*
-  Precompiled header for Coin3D library.
-  Contains the most commonly included standard library headers to speed up compilation.
-  This file is only used internally during library build.
-  
-  Note: We only include standard C++ library headers here to avoid conflicts
-  with internal types and order-dependent includes.
+#include <Inventor/elements/SoSubElement.h>
+#include <Inventor/SoDB.h>
+
+/*!
+  \class SoContextManagerElement SoContextManagerElement.h Inventor/elements/SoContextManagerElement.h
+  \brief Carries the active SoDB::ContextManager through the GL render state.
+
+  SoOffscreenRenderer pushes the per-instance context manager onto the
+  state before traversal.  Scene-graph nodes that need to create their
+  own offscreen GL contexts (SoSceneTexture2, SoSceneTextureCubeMap,
+  SoShadowGroup, etc.) read it from the state so that no node ever has
+  to call SoDB::getContextManager() directly.
+
+  \ingroup coin_elements
 */
 
-#ifndef OBOL_INTERNAL
-#error this is a private header file
-#endif
+class OBOL_DLL_API SoContextManagerElement : public SoElement {
+  typedef SoElement inherited;
 
-// Standard C++ library headers (commonly used and safe to precompile)
-#include <cassert>      // 279 occurrences
-#include <cstring>      // 93 occurrences  
-#include <cstdlib>      // 76 occurrences
-#include <cstdio>       // 54 occurrences
+  SO_ELEMENT_HEADER(SoContextManagerElement);
 
-// Additional safe standard library headers that are commonly used
-#include <cmath>
-#include <iostream>
-#include <algorithm>
-#include <memory>
-#include <vector>
-#include <string>
+public:
+  static void initClass(void);
+protected:
+  virtual ~SoContextManagerElement();
 
-// Coin3D headers
-#include "Inventor/errors/SoDebugError.h"
+public:
+  virtual void init(SoState * state);
 
-#endif /* !OBOL_PCH_H */
+  virtual SbBool matches(const SoElement * elt) const;
+  virtual SoElement * copyMatchInfo(void) const;
+
+  static void set(SoState * state, SoDB::ContextManager * manager);
+  static SoDB::ContextManager * get(SoState * state);
+
+protected:
+  SoDB::ContextManager * manager;
+};
+
+#endif // !OBOL_SOCONTEXTMANAGERELEMENT_H

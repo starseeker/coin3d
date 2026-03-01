@@ -370,6 +370,19 @@ SoBase::initClass(void)
   SoWriterefCounter::initClass();
 }
 
+/*!
+  Returns nullptr by default.  Subclasses that own a context manager
+  (e.g. SoShadowGroup) should override this to return their manager.
+  The returned pointer is used by SoNode::addToCopyDict(),
+  SoFieldContainer, and the NodeKit infrastructure to pass the correct
+  context through SoType::createInstance() when cloning objects.
+*/
+SoDB::ContextManager *
+SoBase::getInstantiationContext(void) const
+{
+  return nullptr;
+}
+
 // Clean up all commonly allocated resources before application
 // exit. Only for debugging purposes.
 void

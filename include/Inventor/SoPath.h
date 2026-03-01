@@ -105,7 +105,7 @@ protected:
 
 private:
   static void cleanupClass(void);
-  static void * createInstance(void);
+  static void * createInstance(void *);
   void append(SoNode * const node, const int index);
   int getFullLength(void) const;
   void truncate(const int length, const SbBool donotify);

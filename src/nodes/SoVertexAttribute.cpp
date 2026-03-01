@@ -145,7 +145,7 @@ SoVertexAttribute::getFieldData(void) const
   Creates a new instance of the class type corresponding to the SoType object.
 */
 void *
-SoVertexAttribute::createInstance(void)
+SoVertexAttribute::createInstance(void * /*ctx*/)
 {
   return new SoVertexAttribute;
 }

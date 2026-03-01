@@ -233,16 +233,20 @@ static bool test5_writeToRGB(const char *basepath)
 }
 
 // ---------------------------------------------------------------------------
-// Test 6: static queries — getMaximumResolution, getScreenPixelsPerInch,
+// Test 6: instance queries — getMaximumResolution, getScreenPixelsPerInch,
 //          hasFramebufferObjectSupport, isVersionAtLeast
 // ---------------------------------------------------------------------------
-static bool test6_staticQueries(const char * /*basepath*/)
+static bool test6_instanceQueries(const char * /*basepath*/)
 {
     SbVec2s maxRes = SoOffscreenRenderer::getMaximumResolution();
     float ppi      = SoOffscreenRenderer::getScreenPixelsPerInch();
-    SbBool hasFBO  = SoOffscreenRenderer::hasFramebufferObjectSupport();
-    SbBool ver12   = SoOffscreenRenderer::isVersionAtLeast(1, 2);
-    SbBool ver99   = SoOffscreenRenderer::isVersionAtLeast(99, 0);
+
+    SbViewportRegion vp((short)W, (short)H);
+    SoOffscreenRenderer ren(vp);
+
+    SbBool hasFBO  = ren.hasFramebufferObjectSupport();
+    SbBool ver12   = ren.isVersionAtLeast(1, 2);
+    SbBool ver99   = ren.isVersionAtLeast(99, 0);
 
     printf("  test6: maxRes=%dx%d ppi=%.1f hasFBO=%d ver12=%d ver99=%d\n",
            maxRes[0], maxRes[1], ppi, (int)hasFBO, (int)ver12, (int)ver99);
@@ -346,7 +350,7 @@ int main(int argc, char **argv)
     if (!test3_glRenderAction(basepath))  { printf("FAIL test3\n"); ++failures; }
     if (!test4_renderPath(basepath))      { printf("FAIL test4\n"); ++failures; }
     if (!test5_writeToRGB(basepath))      { printf("FAIL test5\n"); ++failures; }
-    if (!test6_staticQueries(basepath))   { printf("FAIL test6\n"); ++failures; }
+    if (!test6_instanceQueries(basepath))   { printf("FAIL test6\n"); ++failures; }
     if (!test7_filetypeInfo(basepath))    { printf("FAIL test7\n"); ++failures; }
     if (!test8_multipleRenders(basepath)) { printf("FAIL test8\n"); ++failures; }
 

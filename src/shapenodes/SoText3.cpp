@@ -1014,11 +1014,15 @@ void
 SoText3P::generate(SoAction * action, const cc_font_specification * fontspec,
                    unsigned int part)
 {
-  // Update font size to match the specification
-  if (fontspec && fontspec->size > 0) {
-    this->font->setSize(fontspec->size);
-  }
-  
+  // The font is already set to unit scale (size=1.0) by setUpGlyphs(), which is
+  // called just before generate().  Vertices from getGlyphVertices() are therefore
+  // unit-normalised; the render loop below scales them by fontspec->size.
+  // Do NOT call this->font->setSize(fontspec->size) here: that would pre-scale the
+  // cached glyph vertices and then the fontspec->size multiplier would double-scale
+  // every vertex coordinate, producing letters ~fontsize times too large and
+  // causing colour blending between rows (the root cause of the text3_parts
+  // nanort rendering bug).
+
   SoState * state = action->getState();
 
   // SoCreaseAngleElement is not enabled for SoGetPrimitiveCountAction.

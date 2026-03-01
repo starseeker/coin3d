@@ -44,6 +44,11 @@ target_link_libraries(obol_testlib
     ${OBOL_TARGET_LINK_LIBRARIES}
 )
 
+# Unity build support for faster testlib compilation
+if(OBOL_USE_UNITY_BUILD AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.16")
+    set_target_properties(obol_testlib PROPERTIES UNITY_BUILD ON)
+endif()
+
 # OSMesa backend (pure OBOL_USE_OSMESA builds only)
 if(TESTLIB_USE_OSMESA)
     set(OSMESA_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/external/osmesa/include")

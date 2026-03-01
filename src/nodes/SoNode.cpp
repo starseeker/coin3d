@@ -1415,7 +1415,7 @@ SoNode::addToCopyDict(void) const
         cp = (SoNode*) this;
       }
       else {
-        cp = (SoNode *)this->getTypeId().createInstance();
+        cp = (SoNode *)this->getTypeId().createInstance(this->getInstantiationContext());
       }
       assert(cp);
       SoFieldContainer::addCopy(this, cp);

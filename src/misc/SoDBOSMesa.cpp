@@ -114,6 +114,13 @@ public:
   void destroyContext(void * context) override {
     delete static_cast<CoinOSMesaCtxData *>(context);
   }
+
+  void * getProcAddress(const char * funcName) override {
+    /* Route all function-pointer lookups through OSMesaGetProcAddress so
+     * that OSMesa contexts always get OSMesa function pointers, never
+     * accidentally picking up system GL symbols from the process handle. */
+    return reinterpret_cast<void*>(OSMesaGetProcAddress(funcName));
+  }
 };
 
 /* -----------------------------------------------------------------------

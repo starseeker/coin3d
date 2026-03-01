@@ -972,10 +972,10 @@ SoType::canCreateInstance(void) const
   nodes, engines, paths, nodekits, draggers and manipulators.
 */
 void *
-SoType::createInstance(void) const
+SoType::createInstance(void * ctx) const
 {
   if (this->canCreateInstance()) {
-    return (*((*SoType::typedatalist)[(int)this->getKey()]->method))();
+    return (*((*SoType::typedatalist)[(int)this->getKey()]->method))(ctx);
   }
   else {
 #if OBOL_DEBUG

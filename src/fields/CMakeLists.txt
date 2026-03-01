@@ -106,13 +106,9 @@ set(OBOL_FIELDS_INTERNAL_FILES
 )
 
 # build library
-if(OBOL_BUILD_SINGLE_LIB)
-	foreach(SRCFILE ${OBOL_FIELDS_FILES})
-		set(OBOL_SOURCE ${OBOL_SOURCE} fields/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
-	endforeach(SRCFILE)
-else()
-	add_library(fields OBJECT ${OBOL_FIELDS_FILES})
-endif()
+foreach(SRCFILE ${OBOL_FIELDS_FILES})
+	set(OBOL_SOURCE ${OBOL_SOURCE} fields/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
+endforeach(SRCFILE)
 
 # define documentation
 foreach(SRCFILE ${OBOL_FIELDS_FILES})

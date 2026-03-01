@@ -124,6 +124,12 @@ unsigned int SbHashFunc(const SoBase * key);
 unsigned int SbHashFunc(const SoOutput * key);
 unsigned int SbHashFunc(const SoSensor * key);
 
+// Generic void* hash: reinterpret as size_t (used by SoDebug, SoField, etc.)
+inline unsigned int SbHashFunc(const void * key)
+{
+  return SbHashFunc(reinterpret_cast<size_t>(key));
+}
+
 template <class Key, class Type>
 class SbHash {
  public:

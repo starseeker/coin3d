@@ -300,6 +300,7 @@
 #include <Inventor/elements/SoViewVolumeElement.h>
 #include <Inventor/elements/SoViewportRegionElement.h>
 #include <Inventor/elements/SoGLCacheContextElement.h>
+#include <Inventor/elements/SoContextManagerElement.h>
 #include <Inventor/elements/SoLazyElement.h>
 #include <Inventor/elements/SoTextureQualityElement.h>
 #include <Inventor/elements/SoMaterialBindingElement.h>
@@ -333,6 +334,7 @@
 #include <Inventor/lists/SbList.h>
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/SbMatrix.h>
+#include <Inventor/SoDB.h>
 #include "glue/glp.h"
 
 #include "nodes/SoSubNodeP.h"
@@ -613,8 +615,9 @@ public:
 
 class SoShadowGroupP {
 public:
-  SoShadowGroupP(SoShadowGroup * master) :
+  SoShadowGroupP(SoShadowGroup * master, SoDB::ContextManager * mgr) :
     master(master),
+    contextManager(mgr),
     bboxaction(SbViewportRegion(SbVec2s(100,100))),
     matrixaction(SbViewportRegion(SbVec2s(100,100))),
     shadowlightsvalid(FALSE),
@@ -728,6 +731,7 @@ public:
   }
 
   SoShadowGroup * master;
+  SoDB::ContextManager * contextManager;
   SoSearchAction searchaction;
   SbList <SoTempPath*> lightpaths;
   SoGetBoundingBoxAction bboxaction;
@@ -762,15 +766,73 @@ public:
 #define PRIVATE(obj) ((obj)->pimpl)
 #define PUBLIC(obj) ((obj)->master)
 
-SO_NODE_SOURCE(SoShadowGroup);
+// Use the abstract variant so we can supply our own context-aware createInstance.
+SO_NODE_ABSTRACT_SOURCE(SoShadowGroup);
 
 /*!
-  Default constructor.
+  Context-aware factory called by the SoType reflection system.  \a ctx must be
+  a non-NULL \c SoDB::ContextManager* ; passing NULL is a hard error because
+  SoShadowGroup cannot function without a context.  This enables correct
+  behaviour when nodes are loaded from file (via SoInput::setContextManager) or
+  copied (via SoNode::addToCopyDict propagating getInstantiationContext()).
+*/
+void *
+SoShadowGroup::createInstance(void * ctx)
+{
+  SoDB::ContextManager * mgr = static_cast<SoDB::ContextManager *>(ctx);
+  assert(mgr && "SoShadowGroup::createInstance: context manager is NULL. "
+                "Set a context on SoInput before reading, or ensure the source "
+                "node has a context manager via getInstantiationContext().");
+  return new SoShadowGroup(mgr);
+}
+
+// doc in parent
+SoDB::ContextManager *
+SoShadowGroup::getInstantiationContext(void) const
+{
+  return PRIVATE(this)->contextManager;
+}
+
+/*!
+  Default constructor.  The SoType reflection machinery (createInstance(ctx))
+  calls this path via new SoShadowGroup(mgr) -- NOT this constructor -- so
+  file I/O and copy operations always arrive with a valid context.
+
+  This no-arg form is preserved for callers that construct SoShadowGroup
+  directly without an explicit manager.  In that case the node starts with a
+  NULL context manager; the caller MUST then call setContextManager() before
+  invoking isSupported() or triggering any GL render pass through the node.
+  Using the node without a context will trigger an assertion failure.
 */
 SoShadowGroup::SoShadowGroup(void)
 {
-  PRIVATE(this) = new SoShadowGroupP(this);
+  PRIVATE(this) = new SoShadowGroupP(this, nullptr);
+  initFields();
+}
 
+/*!
+  Explicit-manager constructor.  The \a manager is captured at construction
+  time and used by isSupported() without any call to SoDB::getContextManager().
+  Passing NULL is an error.
+
+  \param manager  The context manager to use for GL context operations.
+                  Must not be NULL.
+*/
+SoShadowGroup::SoShadowGroup(SoDB::ContextManager * manager)
+{
+  assert(manager && "SoShadowGroup requires a non-NULL SoDB::ContextManager");
+  PRIVATE(this) = new SoShadowGroupP(this, manager);
+  initFields();
+}
+
+/*!
+  Shared field-registration helper called by both public constructors.
+  Sets up all SO_NODE_ADD_FIELD entries and enum definitions so that
+  neither constructor duplicates this code.
+*/
+void
+SoShadowGroup::initFields(void)
+{
   SO_NODE_INTERNAL_CONSTRUCTOR(SoShadowGroup);
 
   SO_NODE_ADD_FIELD(isActive, (TRUE));
@@ -790,7 +852,6 @@ SoShadowGroup::SoShadowGroup(void)
   SO_NODE_DEFINE_ENUM_VALUE(VisibilityFlag, ABSOLUTE_RADIUS);
   SO_NODE_DEFINE_ENUM_VALUE(VisibilityFlag, PROJECTED_BBOX_DEPTH_FACTOR);
   SO_NODE_SET_SF_ENUM_TYPE(visibilityFlag, VisibilityFlag);
-
 }
 
 /*!
@@ -799,6 +860,19 @@ SoShadowGroup::SoShadowGroup(void)
 SoShadowGroup::~SoShadowGroup()
 {
   delete PRIVATE(this);
+}
+
+/*!
+  Explicitly set the context manager used by isSupported().  This allows
+  callers to avoid SoDB::getContextManager() entirely: set the manager
+  here before calling isSupported(), or simply call isSupported() after
+  the node has been rendered at least once (the manager is then captured
+  automatically from the render state).
+*/
+void
+SoShadowGroup::setContextManager(SoDB::ContextManager * manager)
+{
+  PRIVATE(this)->contextManager = manager;
 }
 
 /*!
@@ -831,32 +905,39 @@ SoShadowGroup::init(void)
   The result will depend on the specific qualities of the graphics
   card and OpenGL driver on the system.
 
-  An important note about this function:
-
-  The API design of this function has a serious shortcoming, as
-  features of OpenGL should be tested within an OpenGL context, and
-  this function does not provide any means of specifying the
-  context. It is implemented in this manner to match the function
-  signature in TGS Inventor, for compatibility reasons.
-
-  (A temporary offscreen OpenGL context is set up for the feature
+  A temporary offscreen OpenGL context is set up for the feature
   tests. This should usually be sufficient to decide whether or not
   the graphics driver / card supports the features needed for
-  rendering shadows.)
+  rendering shadows.  The context manager captured at construction
+  time (or set via setContextManager()) is used to create the probe
+  context.  Calling this method on a node with no context manager set
+  is a programming error and will abort.
 
   \since Coin 3.1
 */
 SbBool
-SoShadowGroup::isSupported(void)
+SoShadowGroup::isSupported(void) const
 {
+  // The result is hardware-level and does not depend on which manager is used,
+  // so a static cache is intentional -- it avoids redundant GL probes across
+  // all instances.  Thread-safety is not a concern here because the check is
+  // idempotent: a race between two threads writing the same value is benign.
   static int supp = -1;
   if (supp != -1) { return supp ? true : false; }
 
-  void * glctx = SoGLContext_context_create_offscreen(256, 256);
-  SbBool ok = SoGLContext_context_make_current(glctx);
+  // The context manager must be set -- either by the explicit constructor,
+  // via setContextManager(), or populated from the render state element
+  // during a prior render.  No silent global fallback.
+  SoDB::ContextManager * mgr = PRIVATE(this)->contextManager;
+  assert(mgr && "SoShadowGroup::isSupported() called without a context manager. "
+                "Use SoShadowGroup(manager) or call setContextManager() first.");
+
+  void * glctx = mgr->createOffscreenContext(256, 256);
+  SbBool ok = glctx ? mgr->makeContextCurrent(glctx) : FALSE;
   if (!ok) {
-    SoDebugError::postWarning("SoShadowGroupP::isSupported",
+    SoDebugError::postWarning("SoShadowGroup::isSupported",
                               "Could not open an OpenGL context.");
+    if (glctx) mgr->destroyContext(glctx);
     return false;
   }
 
@@ -866,8 +947,8 @@ SoShadowGroup::isSupported(void)
   const bool supported = SoShadowGroupP::supported(glue, unused);
   supp = supported ? 1 : 0;
 
-  SoGLContext_context_reinstate_previous(glctx);
-  SoGLContext_context_destruct(glctx);
+  mgr->restorePreviousContext(glctx);
+  mgr->destroyContext(glctx);
 
   return supported;
 }
@@ -2134,6 +2215,12 @@ void
 SoShadowGroupP::GLRender(SoGLRenderAction * action, const SbBool inpath)
 {
   SoState * state = action->getState();
+
+  // Update context manager from the state element pushed by SoOffscreenRenderer
+  // so isSupported() can be called after at least one render without going global.
+  SoDB::ContextManager * stateMgr = SoContextManagerElement::get(state);
+  if (stateMgr) this->contextManager = stateMgr;
+
   const SoGLContext * glue = SoGLContext_instance(SoGLCacheContextElement::get(state));
 
   // FIXME: should store results in a "context -> supported" map.  -mortene.

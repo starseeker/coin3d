@@ -60,8 +60,9 @@ public:
                   unsigned int nrcomponents) const;
 
   // Per-instance context manager override.  When set, this manager is used
-  // for all context lifecycle operations instead of the global singleton
-  // (SoDB::getContextManager()).  Pass NULL to revert to the global manager.
+  // for all context lifecycle operations.  SoOffscreenRenderer always calls
+  // setContextManager() before using the canvas (capturing the global at
+  // renderer construction time), so this is never NULL in normal operation.
   void setContextManager(SoDB::ContextManager * mgr);
 
   static SbBool debug(void);
@@ -73,7 +74,7 @@ public:
 private:
   SbBool clampSize(SbVec2s & s) const;
   static void clampToPixelSizeRoof(SbVec2s & s);
-  static SbVec2s getMaxTileSize(void);
+  static SbVec2s getMaxTileSize(SoDB::ContextManager * mgr);
   static unsigned int tilesizeroof;
   uint32_t tryActivateGLContext(void);
   void destructContext(void);
@@ -84,8 +85,8 @@ private:
   SbBool bindFBO(void);
   void unbindFBO(void);
 
-  // Returns the effective context manager: per-instance override if set,
-  // otherwise the global SoDB::getContextManager().
+  // Returns the per-instance context manager.  Set by SoOffscreenRenderer
+  // before each use so this is never NULL in normal operation.
   SoDB::ContextManager * effectiveMgr(void) const;
   
   SbVec2s size;

@@ -50,7 +50,7 @@ private: \
 #define SO_NODEENGINE_HEADER(_class_) \
   SO_NODEENGINE_ABSTRACT_HEADER(_class_); \
   public: \
-    static void * createInstance(void)
+    static void * createInstance(void *)
 
 #define SO_NODEENGINE_ABSTRACT_SOURCE(_class_) \
 SO_NODE_ABSTRACT_SOURCE(_class_); \
@@ -81,7 +81,7 @@ _class_::atexit_cleanupnodeengine(void) { \
 SO_NODEENGINE_ABSTRACT_SOURCE(_class_); \
  \
 void * \
-_class_::createInstance(void) \
+_class_::createInstance(void * /*ctx*/) \
 { \
   return new _class_; \
 }

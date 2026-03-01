@@ -16,13 +16,9 @@ set(OBOL_HARDCOPY_INTERNAL_FILES
 )
 
 # build library
-if(OBOL_BUILD_SINGLE_LIB)
-	foreach(SRCFILE ${OBOL_HARDCOPY_FILES})
-		set(OBOL_SOURCE ${OBOL_SOURCE} hardcopy/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
-	endforeach(SRCFILE)
-else()
-	add_library(hardcopy OBJECT ${OBOL_HARDCOPY_FILES})
-endif()
+foreach(SRCFILE ${OBOL_HARDCOPY_FILES})
+	set(OBOL_SOURCE ${OBOL_SOURCE} hardcopy/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
+endforeach(SRCFILE)
 
 # define documentation
 foreach(SRCFILE ${OBOL_HARDCOPY_FILES})

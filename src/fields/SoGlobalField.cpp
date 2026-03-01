@@ -122,7 +122,7 @@ SoGlobalField::~SoGlobalField()
 
 // Instantiates and returns a new SoGlobalField instance.
 void *
-SoGlobalField::createInstance(void)
+SoGlobalField::createInstance(void * /*ctx*/)
 {
   return new SoGlobalField(SbName::empty(), NULL);
 }

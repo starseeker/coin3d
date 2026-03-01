@@ -231,6 +231,11 @@ add_nanort_rendering_test(render_background_gradient)
 # under the NanoRT build; the GL backend does a basic non-blank geometry check.
 add_nanort_rendering_test(render_nanort_shadow)
 
+# NanoRT text3_parts test: validates that SoText3 geometry (FRONT/ALL/BACK parts,
+# multiple coloured rows) is correctly collected via SoCallbackAction and rendered
+# without the double-scaling bug in SoText3P::generate.
+add_nanort_rendering_test(render_text3_parts)
+
 # NanoRT text demo: validates that SoText2 glyph pixels are composited
 # correctly onto the NanoRT framebuffer (letter shapes, not solid blocks).
 if(TARGET obol_testlib)

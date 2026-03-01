@@ -1,11 +1,14 @@
-# Add modern C++17 utility functions
-add_library(tools OBJECT
-    SbModernUtils.cpp
+# source files
+set(OBOL_TOOLS_FILES
+	SbModernUtils.cpp
 )
 
-target_include_directories(tools PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${PROJECT_SOURCE_DIR}/include
-    ${PROJECT_BINARY_DIR}/include
-    ${OBOL_TARGET_INCLUDE_DIRECTORIES}
-)
+# build library
+foreach(SRCFILE ${OBOL_TOOLS_FILES})
+	set(OBOL_SOURCE ${OBOL_SOURCE} tools/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
+endforeach(SRCFILE)
+
+# define documentation
+foreach(SRCFILE ${OBOL_TOOLS_FILES})
+	set(OBOL_DOCUMENTATION_FILES ${OBOL_DOCUMENTATION_FILES} ${PROJECT_SOURCE_DIR}/src/tools/${SRCFILE} CACHE INTERNAL "OBOL_DOCUMENTATION_FILES")
+endforeach(SRCFILE)

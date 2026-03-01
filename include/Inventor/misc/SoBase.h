@@ -34,6 +34,7 @@
 \**************************************************************************/
 
 #include <Inventor/SoType.h>
+#include <Inventor/SoDB.h>
 #include <Inventor/lists/SoAuditorList.h>
 #include <map>
 
@@ -52,6 +53,13 @@ public:
   int32_t getRefCount(void) const;
 
   void touch(void);
+
+  // Returns the context manager that should be passed to
+  // SoType::createInstance() when this object is cloned or used as a
+  // template for creating peer objects (e.g. in copy(), NodeKit default
+  // parts, file I/O).  Returns nullptr by default; subclasses that own
+  // a context (e.g. SoShadowGroup) should override this.
+  virtual SoDB::ContextManager * getInstantiationContext(void) const;
 
   virtual SoType getTypeId(void) const = 0;
   SbBool isOfType(SoType type) const;

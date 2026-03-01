@@ -1091,7 +1091,7 @@ SoPath::getTypeId(void) const
   pointer to it. Used by the runtime type system.
 */
 void *
-SoPath::createInstance(void)
+SoPath::createInstance(void * /*ctx*/)
 {
   return new SoPath;
 }

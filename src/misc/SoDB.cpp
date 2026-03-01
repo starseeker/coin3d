@@ -1168,7 +1168,7 @@ SoDB::readAllWrapper(SoInput * in, const SoType & grouptype)
     if (root3ds == NULL) { return NULL; }
 
     if (!SoSeparator::getClassTypeId().isDerivedFrom(grouptype)) {
-      SoGroup * root = (SoGroup *)grouptype.createInstance();
+      SoGroup * root = (SoGroup *)grouptype.createInstance(in->getContextManager());
       root->addChild(root3ds);
       return root;
     }
@@ -1186,7 +1186,7 @@ SoDB::readAllWrapper(SoInput * in, const SoType & grouptype)
   const int stackdepth = in->filestack.getLength();
 #endif
 
-  SoGroup * root = (SoGroup *)grouptype.createInstance();
+  SoGroup * root = (SoGroup *)grouptype.createInstance(in->getContextManager());
   SoNode * topnode;
   do {
     if (!SoDB::read(in, topnode)) {
@@ -1657,14 +1657,6 @@ SoDB::setContextManager(ContextManager * manager)
 {
   if (manager) {
     global_context_manager = manager;
-  }
-}
-
-// C-style helper function for glue layer to access context manager
-// This avoids circular dependencies between glue and SoDB
-extern "C" {
-  void* coin_get_context_manager(void) {
-    return SoDB::getContextManager();
   }
 }
 

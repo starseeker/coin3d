@@ -1,5 +1,5 @@
-#ifndef OBOL_SOENVIRONMENT_H
-#define OBOL_SOENVIRONMENT_H
+#ifndef OBOL_SOENVIRONMENT_INTERNAL_H
+#define OBOL_SOENVIRONMENT_INTERNAL_H
 
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
@@ -117,4 +117,4 @@ inline bool setEnvironmentVariable(const std::string& name, const std::string& v
 
 } // namespace CoinInternal
 
-#endif // OBOL_SOENVIRONMENT_H
+#endif // OBOL_SOENVIRONMENT_INTERNAL_H

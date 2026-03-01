@@ -137,7 +137,7 @@ option(USE_EXCEPTIONS "Compile with exceptions (g++ only)" ON)
 option(OBOL_COVERAGE "Enable code coverage instrumentation (GCC/Clang)" OFF)
 
 # Build optimization options
-option(OBOL_USE_PRECOMPILED_HEADERS "Use precompiled headers to speed up compilation" ON)
+option(OBOL_USE_UNITY_BUILD "Batch source files into unity build units for faster compilation (CMake 3.16+)" ON)
 
 # Thread debugging (requires C++11 thread support)
 check_include_file_cxx(thread HAVE_STD_THREAD)
@@ -327,7 +327,6 @@ endforeach()
 if(MSVC)
   # MSVC-specific options
   option(OBOL_BUILD_MSVC_STATIC_RUNTIME "Build against the static Microsoft Visual C runtime library" OFF)
-  option(OBOL_BUILD_SINGLE_LIB "Build only one library when ON, multiple when OFF" ON)
 
   if(MSVC_VERSION GREATER_EQUAL 1500)
     option(OBOL_BUILD_MSVC_MP "Enable build with multiple processes in Visual Studio" ON)
@@ -358,7 +357,6 @@ else()
   if(APPLE)
     add_definitions(-DGL_SILENCE_DEPRECATION)
   endif()
-  option(OBOL_BUILD_SINGLE_LIB "Build only one library when ON, multiple when OFF" OFF)
 endif()
 
 set(HAVE_GZDOPEN 1)

@@ -55,13 +55,9 @@ set(OBOL_DRAGGERS_FILES
 )
 
 # build library
-if(OBOL_BUILD_SINGLE_LIB)
-	foreach(SRCFILE ${OBOL_DRAGGERS_FILES})
-		set(OBOL_SOURCE ${OBOL_SOURCE} draggers/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
-	endforeach(SRCFILE)
-else()
-	add_library(draggers OBJECT ${OBOL_DRAGGERS_FILES})
-endif()
+foreach(SRCFILE ${OBOL_DRAGGERS_FILES})
+	set(OBOL_SOURCE ${OBOL_SOURCE} draggers/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
+endforeach(SRCFILE)
 
 # define documentation
 foreach(SRCFILE ${OBOL_DRAGGERS_FILES})

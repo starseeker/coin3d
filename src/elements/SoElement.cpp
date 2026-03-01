@@ -299,6 +299,7 @@
 #include <Inventor/elements/SoBumpMapMatrixElement.h>
 #include <Inventor/elements/SoTextureCombineElement.h>
 #include <Inventor/elements/SoCacheHintElement.h>
+#include <Inventor/elements/SoContextManagerElement.h>
 
 #include <Inventor/elements/SoCullElement.h> // internal element
 #include <Inventor/elements/SoGLLazyElement.h> // internal element
@@ -479,6 +480,7 @@ SoElement::initElements(void)
 
   SoTextureCombineElement::initClass();
   SoCacheHintElement::initClass();
+  SoContextManagerElement::initClass();
 
   SoGLVBOElement::initClass();
 

@@ -62,7 +62,7 @@ private: \
   static SoType classTypeId; \
   static void atexit_cleanup(void) { SoType::removeType(_class_::classTypeId.getName()); _class_::classTypeId STATIC_SOTYPE_INIT; } \
 public: \
-  static void * createInstance(void); \
+  static void * createInstance(void *); \
   static SoType getClassTypeId(void); \
   virtual SoType getTypeId(void) const; \
  \
@@ -179,7 +179,7 @@ SoType _class_::getClassTypeId(void) { return _class_::classTypeId; } \
  \
   Creates a new instance of the class type corresponding to the SoType object. \
 */ \
-void * _class_::createInstance(void) { return new _class_; } \
+void * _class_::createInstance(void * /*ctx*/) { return new _class_; } \
 SoType _class_::classTypeId STATIC_SOTYPE_INIT
 
 

@@ -27,13 +27,9 @@ set(OBOL_IO_INTERNAL_FILES
 )
 
 # build library
-if(OBOL_BUILD_SINGLE_LIB)
-	foreach(SRCFILE ${OBOL_IO_FILES})
-		set(OBOL_SOURCE ${OBOL_SOURCE} io/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
-	endforeach(SRCFILE)
-else()
-	add_library(io OBJECT ${OBOL_IO_FILES})
-endif()
+foreach(SRCFILE ${OBOL_IO_FILES})
+	set(OBOL_SOURCE ${OBOL_SOURCE} io/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
+endforeach(SRCFILE)
 
 # define documentation
 foreach(SRCFILE ${OBOL_IO_FILES})
