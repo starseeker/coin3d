@@ -44,8 +44,8 @@
 
 #ifdef HAVE_OSMESA
 #include <OSMesa/osmesa.h>
-#include <OSMesa/gl.h>
 #endif
+#include <Inventor/gl.h>
 
 namespace SimpleTest {
 

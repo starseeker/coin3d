@@ -47,7 +47,7 @@
 // OSMesa Backend: For offscreen/headless rendering without display server
 // ============================================================================
 #include <OSMesa/osmesa.h>
-#include <OSMesa/gl.h>
+#include <Inventor/gl.h>
 #include <memory>
 
 // OSMesa context structure for offscreen rendering

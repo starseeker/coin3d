@@ -54,6 +54,10 @@
 #include <Inventor/actions/SoGLRenderAction.h>
 #include <Inventor/actions/SoGetPrimitiveCountAction.h>
 #include <Inventor/elements/SoDrawStyleElement.h>
+#include <Inventor/elements/SoLineWidthElement.h>
+#include <Inventor/elements/SoModelMatrixElement.h>
+#include <Inventor/elements/SoViewVolumeElement.h>
+#include <Inventor/elements/SoViewportRegionElement.h>
 #include <Inventor/fields/SoSFVec3f.h>
 #include <Inventor/misc/SoState.h>
 #include <Inventor/nodes/SoSeparator.h>
@@ -469,16 +473,66 @@ static std::string buildProposedParamsJSON(const ShapeTypeEntry&     e,
 struct HandleDragContext {
   SoProceduralShape*  shape;
   int                 handleIndex;
-  SbVec3f             initPos;
+  SbVec3f             initPos;         // handle world position at drag start
+  std::vector<float>  initParams;      // shape params snapshot at drag start
+  SbVec3f             dragStartTrans;  // dragger translation field at drag start
   SoDragger*          dragger;
   SoFieldSensor*      sensor;  // stored so we can detach/reattach on reset
   bool                isNoIntersect; // true → apply validate logic
 
   HandleDragContext(SoProceduralShape* s, int idx, const SbVec3f& pos,
                     SoDragger* d, bool noIntersect)
-    : shape(s), handleIndex(idx), initPos(pos), dragger(d),
-      sensor(nullptr), isNoIntersect(noIntersect) {}
+    : shape(s), handleIndex(idx), initPos(pos), dragStartTrans(0.f, 0.f, 0.f),
+      dragger(d), sensor(nullptr), isNoIntersect(noIntersect) {}
 };
+
+// ---------------------------------------------------------------------------
+// Drag-start callback: snapshot params and dragger translation so that
+// handleDragSensorCB always applies only the *current* drag's delta to a
+// known-good baseline instead of accumulating on top of already-updated params.
+// ---------------------------------------------------------------------------
+
+static void handleDragStartCB(void* userdata, SoDragger*)
+{
+  auto* ctx = static_cast<HandleDragContext*>(userdata);
+  if (!ctx || !ctx->shape || !ctx->dragger) return;
+
+  // Save current dragger translation (the accumulated offset since the
+  // dragger was built) so sensor CB can compute the delta for *this* drag.
+  SoField* tf = ctx->dragger->getField("translation");
+  if (tf && tf->isOfType(SoSFVec3f::getClassTypeId()))
+    ctx->dragStartTrans = static_cast<SoSFVec3f*>(tf)->getValue();
+  else
+    ctx->dragStartTrans.setValue(0.f, 0.f, 0.f);
+
+  // Snapshot shape params: these are the correct baseline for this drag.
+  int nparams = ctx->shape->params.getNum();
+  if (nparams > 0) {
+    const float* pv = ctx->shape->params.getValues(0);
+    ctx->initParams.assign(pv, pv + nparams);
+  } else {
+    ctx->initParams.clear();
+  }
+
+  // Update initPos to the handle's actual world position derived from the
+  // current params snapshot.  The constructor's initPos was set when the scene
+  // was first built; after one or more earlier drags have moved the handle,
+  // this recomputes the correct starting position for the new drag.
+  const ShapeTypeEntry* entry =
+    findEntry(ctx->shape->shapeType.getValue().getString());
+  if (entry && !ctx->initParams.empty() &&
+      ctx->handleIndex < (int)entry->parsedHandles.size()) {
+    const ParsedHandle& hdl = entry->parsedHandles[ctx->handleIndex];
+    SbVec3f pos(0.f, 0.f, 0.f);
+    int cnt = 0;
+    for (int vi : hdl.vertexIdxs) {
+      pos += vertexPos(*entry, vi, ctx->initParams);
+      ++cnt;
+    }
+    if (cnt > 0) pos /= static_cast<float>(cnt);
+    ctx->initPos = pos;
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Sensor callback
@@ -494,22 +548,31 @@ static void handleDragSensorCB(void* userdata, SoSensor*)
     findEntry(shape->shapeType.getValue().getString());
   if (!entry) return;
 
-  // Get current dragger translation delta
-  SbVec3f delta(0.f, 0.f, 0.f);
+  // Compute the delta for *this* drag only: subtract the translation that
+  // was already accumulated before this drag started.  This prevents the
+  // callback from re-applying all previous drags' offsets on every fire.
   SoField* tf = ctx->dragger->getField("translation");
+  SbVec3f curTrans(0.f, 0.f, 0.f);
   if (tf && tf->isOfType(SoSFVec3f::getClassTypeId()))
-    delta = static_cast<SoSFVec3f*>(tf)->getValue();
+    curTrans = static_cast<SoSFVec3f*>(tf)->getValue();
+
+  SbVec3f delta = curTrans - ctx->dragStartTrans;
 
   SbVec3f proposedNewPos = ctx->initPos + delta;
   SbVec3f acceptedPos    = proposedNewPos;
 
-  // Snapshot of current params
+  // Use the params snapshot taken at the start of this drag as the baseline.
+  // Applying only the current drag's delta to this snapshot ensures the
+  // result is correct regardless of how many times the sensor fires.
   int   nparams = shape->params.getNum();
-  std::vector<float> paramsCopy(static_cast<size_t>(nparams), 0.f);
-  if (nparams > 0) {
+  std::vector<float> paramsCopy;
+  if (!ctx->initParams.empty()) {
+    paramsCopy = ctx->initParams;
+  } else if (nparams > 0) {
     const float* pv = shape->params.getValues(0);
     paramsCopy.assign(pv, pv + nparams);
   }
+  paramsCopy.resize(static_cast<size_t>(nparams), 0.f);
 
   if (ctx->isNoIntersect) {
     // Build proposed params: apply the drag delta to the affected vertices.
@@ -531,11 +594,11 @@ static void handleDragSensorCB(void* userdata, SoSensor*)
       std::string json = buildProposedParamsJSON(*entry, proposed);
       SbBool ok = entry->objectValidateCB(json.c_str(), entry->userdata);
       if (!ok) {
-        // Rejected — snap dragger back to its start position.
+        // Rejected — snap dragger back to its position at the start of this drag.
         acceptedPos = ctx->initPos;
         if (ctx->sensor) ctx->sensor->detach();
         SoSFVec3f* tvf = static_cast<SoSFVec3f*>(tf);
-        if (tvf) tvf->setValue(SbVec3f(0.f, 0.f, 0.f));
+        if (tvf) tvf->setValue(ctx->dragStartTrans);
         if (ctx->sensor && tf) ctx->sensor->attach(tf);
         return; // params unchanged
       }
@@ -554,10 +617,11 @@ static void handleDragSensorCB(void* userdata, SoSensor*)
     // 1 micrometre squared threshold avoids spurious resets from float noise.
     static const float kDraggerResetThreshSq = 1e-6f * 1e-6f;
     if ((acceptedPos - proposedNewPos).sqrLength() > kDraggerResetThreshSq) {
-      SbVec3f acceptedDelta = acceptedPos - ctx->initPos;
+      // Compose new translation: drag-start offset + accepted delta for this drag.
+      SbVec3f newTrans = ctx->dragStartTrans + (acceptedPos - ctx->initPos);
       if (ctx->sensor) ctx->sensor->detach();
       SoSFVec3f* tvf = static_cast<SoSFVec3f*>(tf);
-      if (tvf) tvf->setValue(acceptedDelta);
+      if (tvf) tvf->setValue(newTrans);
       if (ctx->sensor && tf) ctx->sensor->attach(tf);
     }
   }
@@ -565,7 +629,7 @@ static void handleDragSensorCB(void* userdata, SoSensor*)
   // --- Apply drag via topology-based built-in OR application callback ---
   if (entry->topologyParsed && !entry->handleDragCB &&
       ctx->handleIndex < (int)entry->parsedHandles.size()) {
-    // Built-in: apply accepted delta to affected vertex params
+    // Built-in: apply accepted delta to initParams baseline
     const ParsedHandle& hdl = entry->parsedHandles[ctx->handleIndex];
 
     SbVec3f appliedDelta = acceptedPos - ctx->initPos;
@@ -579,7 +643,7 @@ static void handleDragSensorCB(void* userdata, SoSensor*)
     shape->params.setValues(0, nparams, paramsCopy.data());
 
   } else if (entry->handleDragCB) {
-    // Application-supplied callback
+    // Application-supplied callback: receives initParams baseline + drag positions
     entry->handleDragCB(paramsCopy.data(), nparams,
                         ctx->handleIndex,
                         ctx->initPos, acceptedPos,
@@ -879,6 +943,29 @@ SoProceduralShape::buildHandleDraggers()
 
   if (handles.empty()) return nullptr;
 
+  // Compute a scale factor for dragger widget geometry proportional to the
+  // shape's bounding-box extent.  Smaller shapes get smaller handle widgets
+  // so the controls don't dwarf the geometry.  The scale is applied via the
+  // dragger's initial motionMatrix, which affects only the visual size; the
+  // drag projections and reported translation deltas remain in parent-space
+  // (world) coordinates and are unaffected.
+  float handleScale = 1.0f;
+  if (entry->bboxCB && nparams > 0) {
+    SbVec3f mn, mx;
+    entry->bboxCB(pv, nparams, mn, mx, entry->userdata);
+    SbVec3f sz = mx - mn;
+    float maxDim = sz[0];
+    if (sz[1] > maxDim) maxDim = sz[1];
+    if (sz[2] > maxDim) maxDim = sz[2];
+    if (maxDim > 1e-6f) {
+      // Handle widget size = 20% of the largest bounding-box dimension,
+      // clamped to [0.04, 2.0] to avoid degenerate sizes.
+      handleScale = maxDim * 0.20f;
+      if (handleScale < 0.04f) handleScale = 0.04f;
+      if (handleScale > 2.0f)  handleScale = 2.0f;
+    }
+  }
+
   SoSeparator* sep = new SoSeparator;
 
   for (int i = 0; i < (int)handles.size(); ++i) {
@@ -922,11 +1009,25 @@ SoProceduralShape::buildHandleDraggers()
       break;
     }
 
+    // Scale the dragger widget to match the shape's bounding-box extent.
+    // Using the initial motionMatrix (not a parent SoScale) keeps the
+    // drag delta reported in parent-coordinate (world) space.
+    if (handleScale != 1.0f) {
+      SbMatrix scaleMtx;
+      scaleMtx.setScale(SbVec3f(handleScale, handleScale, handleScale));
+      dragger->setMotionMatrix(scaleMtx);
+    }
+
     hsep->addChild(dragger);
     sep->addChild(hsep);
 
     bool isNoIntersect = (h.dragType == SoProceduralHandle::DRAG_NO_INTERSECT);
     auto* ctx = new HandleDragContext(this, i, h.position, dragger, isNoIntersect);
+
+    // Register start callback to snapshot params and translation at the
+    // beginning of each drag so the sensor CB applies only the current
+    // drag's delta to a known-good baseline.
+    dragger->addStartCallback(handleDragStartCB, ctx);
 
     SoField* tf = dragger->getField("translation");
     if (tf) {
@@ -1204,17 +1305,56 @@ SoProceduralShape::generatePrimitives(SoAction* action)
   int         nparams = this->params.getNum();
   const float* pv     = nparams > 0 ? this->params.getValues(0) : nullptr;
 
-  // For GLRenderAction, respect the current draw style.
+  // Consult the current draw style for all action types that carry state.
+  // (For GLRenderAction the element is always present; for SoCallbackAction
+  // and SoRaytraceRenderAction it is set when a SoDrawStyle node is traversed.)
   bool wireframeMode = false;
-  if (action->getTypeId().isDerivedFrom(SoGLRenderAction::getClassTypeId())) {
-    SoState* state = static_cast<SoGLRenderAction*>(action)->getState();
-    wireframeMode  = (SoDrawStyleElement::get(state) == SoDrawStyleElement::LINES);
+  SoState* state = action->getState();
+  if (state) {
+    wireframeMode = (SoDrawStyleElement::get(state) == SoDrawStyleElement::LINES);
   }
 
   if (wireframeMode) {
     SoProceduralWireframe wire;
     entry->geomCB(pv, nparams, nullptr, &wire, entry->userdata);
-    emitWireframe(action, wire);
+    if (action->getTypeId().isDerivedFrom(SoGLRenderAction::getClassTypeId())) {
+      // GL path: emit line primitives as usual.
+      emitWireframe(action, wire);
+    } else {
+      // Non-GL path (e.g. SoCallbackAction for nanort): render each wireframe
+      // segment as a thin tessellated cylinder so that triangle callbacks pick
+      // it up correctly.  Compute the world-space radius from the current line
+      // width and view volume when available, otherwise fall back to a small
+      // fixed value.
+      float radius = 0.02f;
+      if (state) {
+        float lineW = SoLineWidthElement::get(state);
+        if (lineW <= 0.0f) lineW = 1.0f;
+        const SbViewVolume& vv = SoViewVolumeElement::get(state);
+        float wh = vv.getHeight();
+        if (wh > 1e-6f) {
+          // For perspective cameras vv.getHeight() is the frustum height at
+          // the near plane.  Scale to the object's viewing distance so that
+          // the cylinder radius corresponds to lineW pixels at object depth.
+          if (vv.getProjectionType() == SbViewVolume::PERSPECTIVE) {
+            const float nearDist = vv.getNearDist();
+            if (nearDist > 1e-6f) {
+              const SbMatrix& mm = SoModelMatrixElement::get(state);
+              const SbVec3f objPos(mm[3][0], mm[3][1], mm[3][2]);
+              const float dist =
+                (objPos - vv.getProjectionPoint()).length();
+              const float refDist = (dist > nearDist) ? dist : nearDist;
+              wh = wh * refDist / nearDist;
+            }
+          }
+          const SbViewportRegion& vpr = SoViewportRegionElement::get(state);
+          float vpH = static_cast<float>(vpr.getViewportSizePixels()[1]);
+          if (vpH > 0.0f)
+            radius = lineW * wh / vpH * 0.5f;
+        }
+      }
+      emitWireframeCylinders(action, wire, radius);
+    }
   } else {
     SoProceduralTriangles tris;
     entry->geomCB(pv, nparams, &tris, nullptr, entry->userdata);
@@ -1311,5 +1451,78 @@ SoProceduralShape::emitWireframe(SoAction*                    action,
     pv.setPoint(wire.vertices[static_cast<size_t>(b)]);
     this->shapeVertex(&pv);
   }
+  this->endShape();
+}
+
+void
+SoProceduralShape::emitWireframeCylinders(SoAction*                    action,
+                                          const SoProceduralWireframe& wire,
+                                          float                        radius)
+{
+  // Tessellate each wireframe segment as a 6-sided prism (cylinder) so that
+  // ray-tracing backends (e.g. nanort via SoCallbackAction) can pick up the
+  // geometry via their triangle callbacks.  This mirrors the cylinder-proxy
+  // mechanism used for SoLineSet / SoIndexedLineSet in nanort_context_manager.h.
+  if (wire.vertices.empty() || wire.segments.empty()) return;
+
+  const int    nv     = static_cast<int>(wire.vertices.size());
+  // 6-sided (hexagonal) cross-section: efficient for thin wires and still
+  // visually round enough for the wireframe-as-cylinders approximation.
+  const int    kSides = 6;
+  const float  twoPi  = 2.0f * static_cast<float>(M_PI);
+
+  SoPrimitiveVertex pv;
+  pv.setTextureCoords(SbVec4f(0.0f, 0.0f, 0.0f, 1.0f));
+
+  this->beginShape(action, SoShape::TRIANGLES);
+
+  for (size_t si = 0; si + 1 < wire.segments.size(); si += 2) {
+    const int32_t ia = wire.segments[si];
+    const int32_t ib = wire.segments[si + 1];
+    if (ia < 0 || ib < 0 || ia >= nv || ib >= nv) continue;
+
+    const SbVec3f& A = wire.vertices[static_cast<size_t>(ia)];
+    const SbVec3f& B = wire.vertices[static_cast<size_t>(ib)];
+
+    SbVec3f axis = B - A;
+    const float axisLen = axis.length();
+    if (axisLen < 1e-8f) continue;
+    axis /= axisLen;
+
+    // Build an orthonormal basis {u, v} perpendicular to axis.
+    // 0.9f ≈ cos(26°): switch reference vector when axis is nearly parallel
+    // to Y (within 26°) to avoid a degenerate cross-product.
+    SbVec3f ref(0.0f, 1.0f, 0.0f);
+    if (fabsf(axis.dot(ref)) > 0.9f)
+      ref = SbVec3f(1.0f, 0.0f, 0.0f);
+    SbVec3f u = ref.cross(axis);  u.normalize();
+    SbVec3f v = axis.cross(u);    // already unit length
+
+    // Precompute ring positions and outward normals for both ends.
+    SbVec3f posA[kSides], posB[kSides], norm[kSides];
+    for (int k = 0; k < kSides; ++k) {
+      const float angle = twoPi * k / kSides;
+      const SbVec3f n   = u * cosf(angle) + v * sinf(angle);
+      posA[k] = A + n * radius;
+      posB[k] = B + n * radius;
+      norm[k] = n;
+    }
+
+    // Emit two triangles per prism face (no end-caps needed for thin wires).
+    for (int k = 0; k < kSides; ++k) {
+      const int kn = (k + 1) % kSides;
+
+      // Triangle 1: A[k] → A[kn] → B[k]
+      pv.setNormal(norm[k]);  pv.setPoint(posA[k]);  this->shapeVertex(&pv);
+      pv.setNormal(norm[kn]); pv.setPoint(posA[kn]); this->shapeVertex(&pv);
+      pv.setNormal(norm[k]);  pv.setPoint(posB[k]);  this->shapeVertex(&pv);
+
+      // Triangle 2: A[kn] → B[kn] → B[k]
+      pv.setNormal(norm[kn]); pv.setPoint(posA[kn]); this->shapeVertex(&pv);
+      pv.setNormal(norm[kn]); pv.setPoint(posB[kn]); this->shapeVertex(&pv);
+      pv.setNormal(norm[k]);  pv.setPoint(posB[k]);  this->shapeVertex(&pv);
+    }
+  }
+
   this->endShape();
 }

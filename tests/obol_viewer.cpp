@@ -27,8 +27,7 @@
  * shown.  It uses SoNanoRTContextManager::renderScene() called directly.
  * Scenes that require GL-only features are flagged nanort_ok=false in the
  * scene catalogue and show "Not supported (NanoRT)".  SoText2 nodes are
- * rendered as coloured billboard quads (see SoNanoRTContextManager comments);
- * SoCallback gradient backgrounds are silently omitted but geometry renders.
+ * rendered as coloured billboard quads (see SoNanoRTContextManager comments).
  *
  * Layout (dual + nanort)                    Layout (dual only)
  * ──────────────────────────────────────    ─────────────────────────────────
@@ -878,6 +877,30 @@ private:
         int crw    = fresh ? 2 : coarseRW_ * 2;
         int bestRW = fresh ? 2 : coarseRW_;
         int bestRH = fresh ? std::max(1, (2 * ph + pw / 2) / pw) : coarseRH_;
+
+        /* On a fresh start the first renderScene() call may trigger a BVH
+         * cache rebuild (on initial scene load or after a geometry change)
+         * whose cost dominates the elapsed time and makes even the coarsest
+         * resolution appear to exceed the per-frame budget.
+         * Perform one uncounted warm-up render at the smallest level to
+         * absorb any rebuild latency before the timed search loop begins.
+         * The warm-up result is displayed immediately (doRender_ updates
+         * fltk_img), giving the user a first coarse frame right away; the
+         * timed loop then measures pure raytracing cost and converges to the
+         * correct level.  tStart is reset after the warm-up so the search
+         * budget is not consumed by cache-build latency.  crw is advanced so
+         * the timed loop starts from the next level rather than repeating the
+         * warm-up resolution. */
+        if (fresh) {
+            const int rw0 = crw < pw ? crw : pw;
+            const int rh0 = rw0 < pw ? std::max(1, (rw0 * ph + pw / 2) / pw) : ph;
+            if (doRender_(pw, ph, rw0, rh0)) {
+                bestRW = rw0;
+                bestRH = rh0;
+            }
+            tStart = clock::now();  /* reset search budget after cache warm-up */
+            crw *= 2;               /* warm-up covered this level; start timed loop one step up */
+        }
 
         bool optimal = false;
         while (true) {

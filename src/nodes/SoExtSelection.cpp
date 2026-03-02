@@ -109,6 +109,7 @@
 #include <Inventor/elements/SoProjectionMatrixElement.h>
 #include <Inventor/elements/SoViewVolumeElement.h>
 #include <Inventor/elements/SoViewingMatrixElement.h>
+#include <Inventor/elements/SoContextManagerElement.h>
 #include <Inventor/elements/SoViewportRegionElement.h>
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/events/SoEvent.h>
@@ -1255,6 +1256,13 @@ SoExtSelection::GLRenderBelowPath(SoGLRenderAction * action)
   }
   // render this path after all other (delayed)
   else {
+    // Cache the GL context and context manager on every render pass so they
+    // are available when a selection event fires (which may happen before any
+    // lasso draw, when draw() would otherwise be the only place they are set).
+    PRIVATE(this)->cachedGlue = SoGLContext_instance(action->getCacheContext());
+    SoDB::ContextManager * stateMgr = SoContextManagerElement::get(state);
+    if (stateMgr) PRIVATE(this)->contextManager = stateMgr;
+
     if (PRIVATE(this)->runningselection.mode != SoExtSelectionP::SelectionState::NONE) {
       action->addDelayedPath(action->getCurPath()->copy());
     }
@@ -2443,6 +2451,15 @@ SoExtSelectionP::offscreenRenderCallback(void * userdata, SoAction * action)
 SbBool
 SoExtSelectionP::checkOffscreenRendererCapabilities()
 {
+  if (!this->cachedGlue) {
+    SoDebugError::post("SoExtSelectionP::checkOffscreenRendererCapabilities",
+                       "No OpenGL context available (cachedGlue is NULL) -- "
+                       "cannot proceed with VISIBLE_SHAPES selection. Make "
+                       "sure the scene has been rendered before triggering "
+                       "a selection event.");
+    return FALSE;
+  }
+
   GLboolean rgbmode;
   SoGLContext_glGetBooleanv(this->cachedGlue, GL_RGBA_MODE, &rgbmode);
   if (!rgbmode) {

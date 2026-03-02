@@ -125,15 +125,7 @@
 
 #include <vector>
 
-#ifdef OBOL_OSMESA_BUILD
-#  include <OSMesa/gl.h>
-#else
-#  ifdef __unix__
-#    include <GL/gl.h>
-#  else
-#    include <OpenGL/gl.h>
-#  endif
-#endif
+#include <Inventor/gl.h>
 
 #include <cstring>
 
@@ -181,39 +173,6 @@ static void buildCheckerTexture(SoTexture2* tex, int tileSize = 8)
     delete[] buf;
 }
 
-// Gradient background rendered via a callback node.
-static void gradientCB(void* /*data*/, SoAction* action)
-{
-    if (!action->isOfType(SoGLRenderAction::getClassTypeId())) return;
-    SoGLRenderAction* ra = static_cast<SoGLRenderAction*>(action);
-    const SbViewportRegion& vp = ra->getViewportRegion();
-    int w = vp.getViewportSizePixels()[0];
-    int h = vp.getViewportSizePixels()[1];
-
-    glMatrixMode(GL_PROJECTION);
-    glPushMatrix(); glLoadIdentity();
-    glOrtho(0, w, 0, h, -1, 1);
-    glMatrixMode(GL_MODELVIEW);
-    glPushMatrix(); glLoadIdentity();
-
-    glDisable(GL_DEPTH_TEST);
-    glDisable(GL_LIGHTING);
-
-    glBegin(GL_QUADS);
-        // bottom: dark blue
-        glColor3f(0.05f, 0.05f, 0.20f); glVertex2i(0, 0);
-        glColor3f(0.05f, 0.05f, 0.20f); glVertex2i(w, 0);
-        // top: lighter blue
-        glColor3f(0.20f, 0.35f, 0.60f); glVertex2i(w, h);
-        glColor3f(0.20f, 0.35f, 0.60f); glVertex2i(0, h);
-    glEnd();
-
-    glEnable(GL_DEPTH_TEST);
-    glEnable(GL_LIGHTING);
-
-    glMatrixMode(GL_PROJECTION); glPopMatrix();
-    glMatrixMode(GL_MODELVIEW);  glPopMatrix();
-}
 
 // =========================================================================
 // 1. Primitives: 2×2 grid (sphere, cube, cone, cylinder)
@@ -645,12 +604,52 @@ SoSeparator* createText2(int width, int height)
 // =========================================================================
 // 8. Gradient background
 // =========================================================================
+
+// Background gradient drawn via a SoCallback node using Obol's dispatched
+// GL wrappers (via <Inventor/gl.h>).  The gl*() calls below are macros
+// that expand to SoGLContext_glXxx(sogl_current_render_glue(), ...) so
+// they route to the correct backend in both system-GL and OSMesa renders.
+static void gradientCB(void* /*data*/, SoAction* action)
+{
+    if (!action->isOfType(SoGLRenderAction::getClassTypeId())) return;
+    SoGLRenderAction* ra = static_cast<SoGLRenderAction*>(action);
+    const SbViewportRegion& vp = ra->getViewportRegion();
+    int w = vp.getViewportSizePixels()[0];
+    int h = vp.getViewportSizePixels()[1];
+
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix(); glLoadIdentity();
+    glOrtho(0, w, 0, h, -1, 1);
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix(); glLoadIdentity();
+
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_LIGHTING);
+
+    glBegin(GL_QUADS);
+        // bottom: dark blue
+        glColor3f(0.05f, 0.05f, 0.20f); glVertex2f(0.0f, 0.0f);
+        glColor3f(0.05f, 0.05f, 0.20f); glVertex2f((float)w, 0.0f);
+        // top: lighter blue
+        glColor3f(0.20f, 0.35f, 0.60f); glVertex2f((float)w, (float)h);
+        glColor3f(0.20f, 0.35f, 0.60f); glVertex2f(0.0f, (float)h);
+    glEnd();
+
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_LIGHTING);
+
+    glMatrixMode(GL_PROJECTION); glPopMatrix();
+    glMatrixMode(GL_MODELVIEW);  glPopMatrix();
+}
+
 SoSeparator* createGradient(int width, int height)
 {
     SoSeparator* root = new SoSeparator;
     root->ref();
 
-    // Gradient background drawn first (before depth-tested geometry)
+    // Gradient background drawn first (before depth-tested geometry).
+    // Uses SoCallback + dispatched gl*() calls via <Inventor/gl.h> so
+    // it works correctly with both System GL and OSMesa backends.
     SoCallback* bg = new SoCallback;
     bg->setCallback(gradientCB, nullptr);
     root->addChild(bg);
@@ -4815,93 +4814,265 @@ SoSeparator* createSimpleDraggers(int width, int height)
 }
 
 // =========================================================================
-// 92. createArb8Draggers — ARB8-style box: solid (semi-transparent) + wireframe
+// 92-93. ARB8 shared geometry callbacks + schemas
+// =========================================================================
+
+static const int kArb8SceneFaces[6][4] = {
+    {0,3,2,1},{4,5,6,7},{0,1,5,4},{1,2,6,5},{2,3,7,6},{3,0,4,7}
+};
+static const int kArb8SceneEdges[12][2] = {
+    {0,1},{1,2},{2,3},{3,0},{4,5},{5,6},{6,7},{7,4},{0,4},{1,5},{2,6},{3,7}
+};
+static const float kArb8SceneDefault[24] = {
+    -1,-1,-1, 1,-1,-1, 1,-1, 1,-1,-1, 1,
+    -1, 1,-1, 1, 1,-1, 1, 1, 1,-1, 1, 1
+};
+
+static void arb8SceneBBox(const float* p, int n,
+                           SbVec3f& mn, SbVec3f& mx, void*)
+{
+    if (n < 24) { mn.setValue(-1,-1,-1); mx.setValue(1,1,1); return; }
+    float ax=p[0],ay=p[1],az=p[2],bx=p[0],by=p[1],bz=p[2];
+    for (int i = 1; i < 8; ++i) {
+        if (p[3*i  ]<ax) ax=p[3*i  ]; if (p[3*i+1]<ay) ay=p[3*i+1]; if (p[3*i+2]<az) az=p[3*i+2];
+        if (p[3*i  ]>bx) bx=p[3*i  ]; if (p[3*i+1]>by) by=p[3*i+1]; if (p[3*i+2]>bz) bz=p[3*i+2];
+    }
+    mn.setValue(ax,ay,az); mx.setValue(bx,by,bz);
+}
+
+static void arb8SceneGeom(const float* pp, int n,
+                           SoProceduralTriangles* tris,
+                           SoProceduralWireframe* wire, void*)
+{
+    const float* p = (n >= 24) ? pp : kArb8SceneDefault;
+    if (tris) {
+        tris->vertices.clear(); tris->normals.clear(); tris->indices.clear();
+        for (int f = 0; f < 6; ++f) {
+            const int* fv = kArb8SceneFaces[f];
+            SbVec3f v0(p[3*fv[0]],p[3*fv[0]+1],p[3*fv[0]+2]);
+            SbVec3f v1(p[3*fv[1]],p[3*fv[1]+1],p[3*fv[1]+2]);
+            SbVec3f v2(p[3*fv[2]],p[3*fv[2]+1],p[3*fv[2]+2]);
+            SbVec3f v3(p[3*fv[3]],p[3*fv[3]+1],p[3*fv[3]+2]);
+            SbVec3f nm = (v1-v0).cross(v2-v0); nm.normalize();
+            int b = (int)tris->vertices.size();
+            tris->vertices.insert(tris->vertices.end(),{v0,v1,v2,v3});
+            tris->normals .insert(tris->normals .end(),{nm,nm,nm,nm});
+            tris->indices .insert(tris->indices .end(),{b,b+1,b+2,b,b+2,b+3});
+        }
+    }
+    if (wire) {
+        wire->vertices.clear(); wire->segments.clear();
+        for (int i = 0; i < 8; ++i)
+            wire->vertices.push_back(SbVec3f(p[3*i],p[3*i+1],p[3*i+2]));
+        for (int e = 0; e < 12; ++e) {
+            wire->segments.push_back(kArb8SceneEdges[e][0]);
+            wire->segments.push_back(kArb8SceneEdges[e][1]);
+        }
+    }
+}
+
+// Full ARB8 schema with vertex/edge/face handles for createArb8Draggers
+static const char* kArb8DaggersSchema = R"({
+  "type": "ARB8_viewer",
+  "label": "ARB8 Dragger Demo",
+  "params": [
+    {"name":"v0x","type":"float","default":-1.0},{"name":"v0y","type":"float","default":-1.0},{"name":"v0z","type":"float","default":-1.0},
+    {"name":"v1x","type":"float","default": 1.0},{"name":"v1y","type":"float","default":-1.0},{"name":"v1z","type":"float","default":-1.0},
+    {"name":"v2x","type":"float","default": 1.0},{"name":"v2y","type":"float","default":-1.0},{"name":"v2z","type":"float","default": 1.0},
+    {"name":"v3x","type":"float","default":-1.0},{"name":"v3y","type":"float","default":-1.0},{"name":"v3z","type":"float","default": 1.0},
+    {"name":"v4x","type":"float","default":-1.0},{"name":"v4y","type":"float","default": 1.0},{"name":"v4z","type":"float","default":-1.0},
+    {"name":"v5x","type":"float","default": 1.0},{"name":"v5y","type":"float","default": 1.0},{"name":"v5z","type":"float","default":-1.0},
+    {"name":"v6x","type":"float","default": 1.0},{"name":"v6y","type":"float","default": 1.0},{"name":"v6z","type":"float","default": 1.0},
+    {"name":"v7x","type":"float","default":-1.0},{"name":"v7y","type":"float","default": 1.0},{"name":"v7z","type":"float","default": 1.0}
+  ],
+  "vertices": [
+    {"name":"v0","x":"v0x","y":"v0y","z":"v0z"},{"name":"v1","x":"v1x","y":"v1y","z":"v1z"},
+    {"name":"v2","x":"v2x","y":"v2y","z":"v2z"},{"name":"v3","x":"v3x","y":"v3y","z":"v3z"},
+    {"name":"v4","x":"v4x","y":"v4y","z":"v4z"},{"name":"v5","x":"v5x","y":"v5y","z":"v5z"},
+    {"name":"v6","x":"v6x","y":"v6y","z":"v6z"},{"name":"v7","x":"v7x","y":"v7y","z":"v7z"}
+  ],
+  "faces": [
+    {"name":"bottom","verts":["v0","v3","v2","v1"],"opposite":"top"   },
+    {"name":"top",   "verts":["v4","v5","v6","v7"],"opposite":"bottom"},
+    {"name":"front", "verts":["v0","v1","v5","v4"],"opposite":"back"  },
+    {"name":"right", "verts":["v1","v2","v6","v5"],"opposite":"left"  },
+    {"name":"back",  "verts":["v2","v3","v7","v6"],"opposite":"front" },
+    {"name":"left",  "verts":["v3","v0","v4","v7"],"opposite":"right" }
+  ],
+  "handles": [
+    {"name":"v0_h","vertex":"v0","dragType":"DRAG_NO_INTERSECT"},
+    {"name":"v1_h","vertex":"v1","dragType":"DRAG_NO_INTERSECT"},
+    {"name":"v2_h","vertex":"v2","dragType":"DRAG_NO_INTERSECT"},
+    {"name":"v3_h","vertex":"v3","dragType":"DRAG_NO_INTERSECT"},
+    {"name":"v4_h","vertex":"v4","dragType":"DRAG_NO_INTERSECT"},
+    {"name":"v5_h","vertex":"v5","dragType":"DRAG_NO_INTERSECT"},
+    {"name":"v6_h","vertex":"v6","dragType":"DRAG_NO_INTERSECT"},
+    {"name":"v7_h","vertex":"v7","dragType":"DRAG_NO_INTERSECT"},
+    {"name":"e01_h","edge":["v0","v1"],"dragType":"DRAG_ON_PLANE"},
+    {"name":"e12_h","edge":["v1","v2"],"dragType":"DRAG_ON_PLANE"},
+    {"name":"e23_h","edge":["v2","v3"],"dragType":"DRAG_ON_PLANE"},
+    {"name":"e30_h","edge":["v3","v0"],"dragType":"DRAG_ON_PLANE"},
+    {"name":"e45_h","edge":["v4","v5"],"dragType":"DRAG_ON_PLANE"},
+    {"name":"e56_h","edge":["v5","v6"],"dragType":"DRAG_ON_PLANE"},
+    {"name":"e67_h","edge":["v6","v7"],"dragType":"DRAG_ON_PLANE"},
+    {"name":"e74_h","edge":["v7","v4"],"dragType":"DRAG_ON_PLANE"},
+    {"name":"e04_h","edge":["v0","v4"],"dragType":"DRAG_NO_INTERSECT"},
+    {"name":"e15_h","edge":["v1","v5"],"dragType":"DRAG_NO_INTERSECT"},
+    {"name":"e26_h","edge":["v2","v6"],"dragType":"DRAG_NO_INTERSECT"},
+    {"name":"e37_h","edge":["v3","v7"],"dragType":"DRAG_NO_INTERSECT"},
+    {"name":"f_bot_h","face":"bottom","dragType":"DRAG_NO_INTERSECT"},
+    {"name":"f_top_h","face":"top",   "dragType":"DRAG_NO_INTERSECT"},
+    {"name":"f_frt_h","face":"front", "dragType":"DRAG_NO_INTERSECT"},
+    {"name":"f_rgt_h","face":"right", "dragType":"DRAG_NO_INTERSECT"},
+    {"name":"f_bak_h","face":"back",  "dragType":"DRAG_NO_INTERSECT"},
+    {"name":"f_lft_h","face":"left",  "dragType":"DRAG_NO_INTERSECT"}
+  ]
+})";
+
+// Minimal ARB8 schema for createArb8EditCycle (vertex handles + face handle)
+static const char* kArb8EditCycleSchema = R"({
+  "type": "ARB8_viewer_ec",
+  "label": "ARB8 Edit Cycle Demo",
+  "params": [
+    {"name":"v0x","type":"float","default":-1.0},{"name":"v0y","type":"float","default":-1.0},{"name":"v0z","type":"float","default":-1.0},
+    {"name":"v1x","type":"float","default": 1.0},{"name":"v1y","type":"float","default":-1.0},{"name":"v1z","type":"float","default":-1.0},
+    {"name":"v2x","type":"float","default": 1.0},{"name":"v2y","type":"float","default":-1.0},{"name":"v2z","type":"float","default": 1.0},
+    {"name":"v3x","type":"float","default":-1.0},{"name":"v3y","type":"float","default":-1.0},{"name":"v3z","type":"float","default": 1.0},
+    {"name":"v4x","type":"float","default":-1.0},{"name":"v4y","type":"float","default": 1.0},{"name":"v4z","type":"float","default":-1.0},
+    {"name":"v5x","type":"float","default": 1.0},{"name":"v5y","type":"float","default": 1.0},{"name":"v5z","type":"float","default":-1.0},
+    {"name":"v6x","type":"float","default": 1.0},{"name":"v6y","type":"float","default": 1.0},{"name":"v6z","type":"float","default": 1.0},
+    {"name":"v7x","type":"float","default":-1.0},{"name":"v7y","type":"float","default": 1.0},{"name":"v7z","type":"float","default": 1.0}
+  ],
+  "vertices": [
+    {"name":"v0","x":"v0x","y":"v0y","z":"v0z"},{"name":"v1","x":"v1x","y":"v1y","z":"v1z"},
+    {"name":"v2","x":"v2x","y":"v2y","z":"v2z"},{"name":"v3","x":"v3x","y":"v3y","z":"v3z"},
+    {"name":"v4","x":"v4x","y":"v4y","z":"v4z"},{"name":"v5","x":"v5x","y":"v5y","z":"v5z"},
+    {"name":"v6","x":"v6x","y":"v6y","z":"v6z"},{"name":"v7","x":"v7x","y":"v7y","z":"v7z"}
+  ],
+  "faces": [
+    {"name":"bottom","verts":["v0","v3","v2","v1"],"opposite":"top"},
+    {"name":"top",   "verts":["v4","v5","v6","v7"],"opposite":"bottom"},
+    {"name":"front", "verts":["v0","v1","v5","v4"]},
+    {"name":"back",  "verts":["v3","v7","v6","v2"]},
+    {"name":"left",  "verts":["v0","v4","v7","v3"]},
+    {"name":"right", "verts":["v1","v2","v6","v5"]}
+  ],
+  "handles": [
+    {"name":"v0_h","vertex":"v0","dragType":"DRAG_NO_INTERSECT"},
+    {"name":"v1_h","vertex":"v1","dragType":"DRAG_NO_INTERSECT"},
+    {"name":"v4_h","vertex":"v4","dragType":"DRAG_NO_INTERSECT"},
+    {"name":"top_h","face":"top","dragType":"DRAG_ALONG_AXIS"}
+  ]
+})";
+
+static bool ts_arb8DaggersRegistered   = false;
+static bool ts_arb8EditCycleRegistered = false;
+
+// =========================================================================
+// 92. createArb8Draggers — ARB8 SoProceduralShape with interactive handles
 // =========================================================================
 SoSeparator* createArb8Draggers(int width, int height)
 {
+    if (!ts_arb8DaggersRegistered) {
+        SoProceduralShape::registerShapeType(
+            "ARB8_viewer", kArb8DaggersSchema,
+            arb8SceneBBox, arb8SceneGeom);
+        ts_arb8DaggersRegistered = true;
+    }
+
     SoSeparator *root = new SoSeparator;
     root->ref();
 
     SoPerspectiveCamera *cam = new SoPerspectiveCamera;
     cam->position.setValue(3.0f, 2.5f, 3.0f);
-    cam->pointAt(SbVec3f(0.0f, 0.0f, 0.0f), SbVec3f(0.0f, 1.0f, 0.0f));
     root->addChild(cam);
 
     SoDirectionalLight *lt = new SoDirectionalLight;
-    lt->direction.setValue(-0.5f, -1.0f, -0.5f);
+    lt->direction.setValue(-0.5f, -0.8f, -0.6f);
     root->addChild(lt);
 
-    // Solid face (semi-transparent gray-green)
-    SoSeparator *solid = new SoSeparator;
+    // Solid semi-transparent body
+    SoSeparator *solidSep = new SoSeparator;
     SoMaterial *matSolid = new SoMaterial;
-    matSolid->diffuseColor.setValue(0.6f, 0.7f, 0.6f);
-    matSolid->transparency.setValue(0.4f);
-    solid->addChild(matSolid);
-    solid->addChild(new SoCube);
-    root->addChild(solid);
+    matSolid->diffuseColor.setValue(0.3f, 0.5f, 0.9f);
+    matSolid->specularColor.setValue(0.4f, 0.4f, 0.4f);
+    matSolid->shininess.setValue(0.5f);
+    matSolid->transparency.setValue(0.3f);
+    solidSep->addChild(matSolid);
+    SoProceduralShape *shape = new SoProceduralShape;
+    shape->setShapeType("ARB8_viewer");
+    solidSep->addChild(shape);
 
-    // Wireframe overlay
-    SoSeparator *wire = new SoSeparator;
-    SoDrawStyle *ds = new SoDrawStyle;
-    ds->style.setValue(SoDrawStyle::LINES);
-    wire->addChild(ds);
-    SoMaterial *matWire = new SoMaterial;
-    matWire->diffuseColor.setValue(0.1f, 0.1f, 0.1f);
-    wire->addChild(matWire);
-    wire->addChild(new SoCube);
-    root->addChild(wire);
+    // Add interactive vertex/edge/face dragger handles
+    SoSeparator *handles = shape->buildHandleDraggers();
+    if (handles) solidSep->addChild(handles);
+
+    root->addChild(solidSep);
 
     SbViewportRegion vp(width, height);
     cam->viewAll(root, vp);
+    cam->position.setValue(cam->position.getValue() * 1.3f);
     return root;
 }
 
 // =========================================================================
-// 93. createArb8EditCycle — ARB8 box with golden corner-handle spheres
+// 93. createArb8EditCycle — ARB8 SoProceduralShape edit-cycle visualization
 // =========================================================================
 SoSeparator* createArb8EditCycle(int width, int height)
 {
+    if (!ts_arb8EditCycleRegistered) {
+        static const auto objCB = [](const char*, void*) -> SbBool {
+            return TRUE;
+        };
+        SoProceduralShape::registerShapeType(
+            "ARB8_viewer_ec", kArb8EditCycleSchema,
+            arb8SceneBBox, arb8SceneGeom,
+            nullptr, nullptr, nullptr,
+            static_cast<SoProceduralObjectValidateCB>(objCB));
+        ts_arb8EditCycleRegistered = true;
+    }
+
     SoSeparator *root = new SoSeparator;
     root->ref();
 
     SoPerspectiveCamera *cam = new SoPerspectiveCamera;
     cam->position.setValue(2.5f, 2.0f, 2.5f);
-    cam->pointAt(SbVec3f(0.0f, 0.0f, 0.0f), SbVec3f(0.0f, 1.0f, 0.0f));
     root->addChild(cam);
 
     SoDirectionalLight *lt = new SoDirectionalLight;
-    lt->direction.setValue(-0.5f, -1.0f, -0.5f);
+    lt->direction.setValue(-0.5f, -0.8f, -0.6f);
     root->addChild(lt);
 
-    // Main solid
+    // Solid body
+    SoSeparator *shapeSep = new SoSeparator;
     SoMaterial *matSolid = new SoMaterial;
-    matSolid->diffuseColor.setValue(0.6f, 0.7f, 0.6f);
-    root->addChild(matSolid);
-    root->addChild(new SoCube);
+    matSolid->diffuseColor.setValue(0.25f, 0.45f, 0.85f);
+    matSolid->specularColor.setValue(0.4f, 0.4f, 0.4f);
+    matSolid->shininess.setValue(0.5f);
+    shapeSep->addChild(matSolid);
+    SoProceduralShape *shape = new SoProceduralShape;
+    shape->setShapeType("ARB8_viewer_ec");
+    shapeSep->addChild(shape);
+    root->addChild(shapeSep);
 
-    // Golden handle spheres at the eight corners of the unit cube
-    static const float corners[8][3] = {
-        {-1.0f,-1.0f,-1.0f}, { 1.0f,-1.0f,-1.0f},
-        { 1.0f,-1.0f, 1.0f}, {-1.0f,-1.0f, 1.0f},
-        {-1.0f, 1.0f,-1.0f}, { 1.0f, 1.0f,-1.0f},
-        { 1.0f, 1.0f, 1.0f}, {-1.0f, 1.0f, 1.0f}
-    };
-    SoMaterial *matHandle = new SoMaterial;
-    matHandle->diffuseColor.setValue(1.0f, 0.8f, 0.0f);
-    root->addChild(matHandle);
-    for (int i = 0; i < 8; ++i) {
-        SoSeparator *sep = new SoSeparator;
-        SoTranslation *t = new SoTranslation;
-        t->translation.setValue(corners[i][0], corners[i][1], corners[i][2]);
-        sep->addChild(t);
-        SoSphere *sph = new SoSphere;
-        sph->radius = 0.1f;
-        sep->addChild(sph);
-        root->addChild(sep);
+    // Golden selection-display overlay (labelled handle spheres)
+    SoSeparator *selDisp = shape->buildSelectionDisplay();
+    if (selDisp) {
+        SoSeparator *selSep = new SoSeparator;
+        SoBaseColor *selCol = new SoBaseColor;
+        selCol->rgb.setValue(1.0f, 0.8f, 0.0f);
+        selSep->addChild(selCol);
+        selSep->addChild(selDisp);
+        root->addChild(selSep);
     }
+
+    // Add interactive dragger handles
+    SoSeparator *handles = shape->buildHandleDraggers();
+    if (handles) root->addChild(handles);
 
     SbViewportRegion vp(width, height);
     cam->viewAll(root, vp);
+    cam->position.setValue(cam->position.getValue() * 1.4f);
     return root;
 }
 
@@ -5301,6 +5472,22 @@ SoSeparator* createNanoRTShadow(int width, int height)
 }
 
 // =========================================================================
+// Motion callback: apply the dragger's accumulated transformation to the
+// paired SoTransform so the reference geometry moves with the dragger.
+static void draggerToGeomMotionCB(void* userData, SoDragger* dragger)
+{
+    SoTransform* xf = static_cast<SoTransform*>(userData);
+    SbMatrix m = dragger->getMotionMatrix();
+    SbVec3f t, s, center;
+    SbRotation r, so;
+    m.getTransform(t, r, s, so, center);
+    xf->translation.setValue(t);
+    xf->rotation.setValue(r);
+    xf->scaleFactor.setValue(s);
+    xf->scaleOrientation.setValue(so);
+    xf->center.setValue(center);
+}
+
 // buildDraggerTestScene — camera + light + reference cube + given dragger
 // =========================================================================
 SoSeparator* buildDraggerTestScene(SoDragger* dragger, int width, int height)
@@ -5310,15 +5497,20 @@ SoSeparator* buildDraggerTestScene(SoDragger* dragger, int width, int height)
 
     SoPerspectiveCamera *cam = addCameraAndLight(root);
 
-    // Reference geometry: green cube so SoSurroundScale has something to measure
+    // Reference geometry: green cube driven by the dragger's motion matrix.
     SoSeparator *geom = new SoSeparator;
+    SoTransform *cubeXform = new SoTransform;  // driven by dragger motion
     SoMaterial *mat = new SoMaterial;
     mat->diffuseColor.setValue(0.5f, 0.7f, 0.5f);
+    geom->addChild(cubeXform);
     geom->addChild(mat);
     geom->addChild(new SoCube);
     root->addChild(geom);
 
     root->addChild(dragger);
+
+    // Wire the dragger so every motion update also moves the cube.
+    dragger->addMotionCallback(draggerToGeomMotionCB, cubeXform);
 
     SbViewportRegion vp(width, height);
     cam->viewAll(root, vp);

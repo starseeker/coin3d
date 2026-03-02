@@ -7,6 +7,11 @@
  * Parameters for "TruncatedCone":
  *   [0] bottomRadius  [1] topRadius  [2] height  [3] sides
  *
+ * When compiled with OBOL_NANORT_BUILD the test additionally validates that
+ * the wireframe cone (rendered as thin cylinder proxies) produces orange-toned
+ * pixels in the right half of the image, confirming that the cylinder-proxy
+ * path in SoProceduralShape::generatePrimitives() is working correctly.
+ *
  * Output: argv[1]+".rgb"
  */
 
@@ -141,6 +146,15 @@ static void cone_geom(const float* p, int n,
   }
 }
 
+#ifdef OBOL_NANORT_BUILD
+// ---- colour-detection thresholds for the NanoRT wireframe validation -------
+// Matches the wireframe cone material: diffuseColor(0.9, 0.6, 0.1) → orange.
+// After Phong shading the channel values are scaled, so we use broad bounds.
+static const int ORANGE_MIN_RED   = 100;  // R dominant
+static const int ORANGE_MIN_GREEN =  30;  // G moderate
+static const int ORANGE_MAX_BLUE  =  80;  // B low
+#endif
+
 int main(int argc, char** argv)
 {
   initCoinHeadless();
@@ -206,6 +220,39 @@ int main(int argc, char** argv)
     snprintf(outpath, sizeof(outpath), "render_procedural_shape.rgb");
 
   bool ok = renderToFile(root, outpath);
+
+#ifdef OBOL_NANORT_BUILD
+  // Validate that the wireframe cone (orange, right half of image) produced
+  // visible cylinder-proxy geometry.  The orange diffuse material produces
+  // pixels with high R, medium G, and low B (after Phong shading).
+  if (ok) {
+    const unsigned char* buf = getSharedRenderer()->getBuffer();
+    if (buf) {
+      const int W = DEFAULT_WIDTH;
+      const int H = DEFAULT_HEIGHT;
+      int orangeCount = 0;
+      // Check the right half of the image for orange-toned pixels.
+      for (int y = 0; y < H; ++y) {
+        for (int x = W / 2; x < W; ++x) {
+          const unsigned char* p = buf + (y * W + x) * 3;
+          if (p[0] > ORANGE_MIN_RED && p[1] > ORANGE_MIN_GREEN &&
+              p[2] < ORANGE_MAX_BLUE && p[0] > p[1])
+            ++orangeCount;
+        }
+      }
+      printf("render_procedural_shape (nanort): wireframe orange pixels=%d\n",
+             orangeCount);
+      if (orangeCount == 0) {
+        fprintf(stderr, "render_procedural_shape: FAIL - no wireframe (orange) "
+                "cylinder-proxy pixels found in right half\n");
+        ok = false;
+      } else {
+        printf("render_procedural_shape: PASS - wireframe cylinder proxies visible\n");
+      }
+    }
+  }
+#endif
+
   root->unref();
   return ok ? 0 : 1;
 }

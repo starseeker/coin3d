@@ -1165,6 +1165,53 @@ static void nrt_trace(const NrtScene & scene,
 // ==========================================================================
 // SoNanoRTContextManager
 // ==========================================================================
+//
+// Geometry cache
+// ──────────────
+// Building the nanort BVH from scratch on every renderScene() call is
+// expensive for scenes that contain many triangles – most notably scenes
+// with manipulators/draggers whose ring proxies (nrtCylinderPreCB) each
+// spawn a sub-callback-action traversal to collect ~32 faceted cylinder
+// segments.  When the viewer calls renderScene() multiple times per frame
+// (e.g. during the timedStepIn_ coarse-resolution calibration loop), or
+// when only the camera changes between frames, rebuilding the BVH is
+// entirely unnecessary.
+//
+// The cache works as follows:
+//   • After a successful geometry traversal, the collected triangles,
+//     the built BVH, the lights, and the SoRaytracingParams settings are
+//     stored as the "cached scene".  The root node's getNodeId() value at
+//     the time of the build is stored as cachedRootId_.
+//   • Text/HUD overlays are always regenerated on every renderScene() call
+//     (both cache hits and misses) because their screen-space pixel positions
+//     depend on the current camera/viewport, which may change independently
+//     of the scene geometry.
+//   • On subsequent renderScene() calls with the same root node pointer:
+//       – If root->getNodeId() == cachedRootId_, no node in the scene has
+//         changed (Coin propagates field-change notifications up to the
+//         root, bumping uniqueId at every ancestor including the root).
+//         The full geometry traversal + BVH build are skipped; only a
+//         lightweight text/HUD-overlay traversal is run.
+//       – If root->getNodeId() != cachedRootId_, the scene has changed
+//         (geometry, material, transform, or a light moved).  The full
+//         traversal and BVH rebuild are performed and the cache is updated.
+//         Text/HUD overlays are also collected during this traversal.
+//   • Switching to a different root node pointer invalidates the cache.
+//
+// This gives a large speedup for the interactive viewer where:
+//   1. timedStepIn_() calls doRender_() N times at increasing resolutions;
+//      only the first call rebuilds the BVH; subsequent calls just raytrace.
+//   2. Camera-only orbits (no geometry change) reuse the BVH.
+//      Because the camera is a child of the scene root, any camera field
+//      change (position, orientation) also bumps root->getNodeId() via
+//      Coin's notification propagation.  A separate cachedCamPtr_ /
+//      cachedCamId_ pair tracks the camera node independently so that a
+//      root-nodeId change that is solely due to a camera move is not
+//      mistaken for a geometry change requiring a BVH rebuild.
+//   3. Static scenes (same root, no field changes) skip the traversal.
+//
+// Thread safety: SoNanoRTContextManager is not thread-safe; it is expected
+// to be used from a single thread (the FLTK UI thread or the test process).
 
 class SoNanoRTContextManager : public SoDB::ContextManager {
 public:
@@ -1195,93 +1242,20 @@ public:
         const SbViewportRegion vp(static_cast<short>(width),
                                   static_cast<short>(height));
 
-        // --- 1. Extract triangles and all light types in one traversal ------
-        NrtSceneCollector collector;
-        std::vector<NrtLightInfo> lights;
-        // proxyData is declared outside the inner scope so that textOverlays
-        // (filled during SoCallbackAction traversal) remain accessible for
-        // the compositing step in --- 6 below.
-        NrtProxyData proxyData;
-        {
-            proxyData.collector = &collector;
-            proxyData.vp        = vp;
-
-            SoCallbackAction cba(vp);
-            // Geometry
-            cba.addTriangleCallback(SoShape::getClassTypeId(),
-                                    nrtTriangleCB, &collector);
-            // Skip shapes with DrawStyle INVISIBLE (e.g. picking spheres in
-            // rotational draggers) so they don't appear as solid geometry.
-            cba.addPreCallback(SoShape::getClassTypeId(),
-                               nrtShapePreCB, nullptr);
-            // Proxy geometry for lines/points
-            cba.addPreCallback(SoLineSet::getClassTypeId(),
-                               nrtLineSetPreCB, &proxyData);
-            cba.addPreCallback(SoIndexedLineSet::getClassTypeId(),
-                               nrtIndexedLineSetPreCB, &proxyData);
-            cba.addPreCallback(SoPointSet::getClassTypeId(),
-                               nrtPointSetPreCB, &proxyData);
-            // Cylinders with DrawStyle LINES represent rotational dragger rings;
-            // replace them with thin facetized cylinder rings.
-            cba.addPreCallback(SoCylinder::getClassTypeId(),
-                               nrtCylinderPreCB, &proxyData);
-            cba.addPreCallback(SoText2::getClassTypeId(),
-                               nrtText2PreCB, &proxyData);
-            cba.addPreCallback(SoHUDLabel::getClassTypeId(),
-                               nrtHUDLabelPreCB, &proxyData);
-            cba.addPreCallback(SoHUDButton::getClassTypeId(),
-                               nrtHUDButtonPreCB, &proxyData);
-            // All supported light types (with world-space transforms)
-            cba.addPreCallback(SoDirectionalLight::getClassTypeId(),
-                               nrtDirectionalLightCB, &lights);
-            cba.addPreCallback(SoPointLight::getClassTypeId(),
-                               nrtPointLightCB, &lights);
-            cba.addPreCallback(SoSpotLight::getClassTypeId(),
-                               nrtSpotLightCB, &lights);
-            cba.apply(scene);
-        }
-        if (collector.tris.empty()) {
-            // No ray-traceable triangles: return TRUE so the caller uses the
-            // background-filled buffer rather than falling through to GL.
-            // Note: SoText2 and SoHUDLabel overlays can be present without
-            // geometry; we skip the ray-trace but still composite any overlays.
-            if (proxyData.textOverlays.empty())
-                return TRUE;
-        }
-
-        // --- 2-5. BVH build and ray-trace (skipped if scene has no triangles) ---
-        if (!collector.tris.empty()) {
-        // --- 2. Build nanort BVH --------------------------------------------
-        NrtScene nrtScene;
-        nrtScene.tris = collector.tris;
-        if (!nrtScene.build()) return FALSE;
-
-        // --- 3. Read SoRaytracingParams hints from scene --------------------
-        bool  shadowsEnabled     = false;
-        int   maxBouncesAllowed  = 0;
-        int   samplesPerPixel    = 1;
-        float ambientFill        = 0.20f;
-        {
-            SoSearchAction sa;
-            sa.setType(SoRaytracingParams::getClassTypeId());
-            sa.setInterest(SoSearchAction::FIRST);
-            sa.apply(scene);
-            if (sa.getPath()) {
-                const SoRaytracingParams * rp =
-                    static_cast<const SoRaytracingParams *>(
-                        sa.getPath()->getTail());
-                shadowsEnabled    = rp->shadowsEnabled.getValue() != FALSE;
-                maxBouncesAllowed = rp->maxReflectionBounces.getValue();
-                samplesPerPixel   = rp->samplesPerPixel.getValue();
-                ambientFill       = rp->ambientIntensity.getValue();
-                // Clamp to sane values
-                if (samplesPerPixel  < 1)  samplesPerPixel  = 1;
-                if (maxBouncesAllowed < 0) maxBouncesAllowed = 0;
-                ambientFill = nrt_clamp01(ambientFill);
-            }
-        }
-
-        // --- 4. Extract view volume from camera in scene --------------------
+        // --- 1. Find the camera and determine whether geometry needs rebuild. ---
+        // The camera is found early (before the rebuild check) so its nodeId
+        // can be used to distinguish camera-only moves from geometry changes.
+        // Coin propagates field-change notifications up through the scene
+        // graph so that any ancestor (including the root) has its uniqueId
+        // bumped whenever a descendant changes.  Because the camera is a
+        // child of the root, any camera orbit or dolly also bumps the root's
+        // nodeId.  To avoid a spurious BVH rebuild on every drag frame, we
+        // check whether the root-nodeId change is solely due to the camera
+        // moving (same camera node pointer, camera nodeId changed).  If so,
+        // we skip the rebuild and just re-read the view volume below.
+        // Proxy nodes created internally during traversal are standalone
+        // (never parented to the scene root) and do not perturb the root's
+        // nodeId between renders.
         SoCamera * cam = nullptr;
         {
             SoSearchAction sa;
@@ -1291,6 +1265,149 @@ public:
             if (sa.getPath())
                 cam = static_cast<SoCamera *>(sa.getPath()->getTail());
         }
+        const SbUniqueId camId = cam ? cam->getNodeId() : 0;
+
+        // A "camera-only move" is inferred when the same camera node (same
+        // pointer, and that pointer has been recorded from a prior BVH build)
+        // has a new nodeId but no other scene change is known.
+        const bool cameraOnlyMoved =
+            (cam != nullptr) &&
+            (cachedCamPtr_ != nullptr) &&
+            (cam == cachedCamPtr_) &&
+            (camId != cachedCamId_);
+        const bool needRebuild =
+            (scene != cachedScene_) ||
+            (scene->getNodeId() != cachedRootId_ && !cameraOnlyMoved);
+
+        // Text/HUD overlay data – always regenerated so that screen-space
+        // positions track the current camera even on cache hits.
+        NrtProxyData proxyData;
+        proxyData.vp = vp;
+
+        if (needRebuild) {
+            // --- 1a. Full traversal: geometry + lights + overlays -----------
+            NrtSceneCollector collector;
+            std::vector<NrtLightInfo> lights;
+            proxyData.collector = &collector;
+
+            {
+                SoCallbackAction cba(vp);
+                // Geometry
+                cba.addTriangleCallback(SoShape::getClassTypeId(),
+                                        nrtTriangleCB, &collector);
+                // Skip shapes with DrawStyle INVISIBLE (e.g. picking spheres
+                // in rotational draggers) so they don't appear as solid geo.
+                cba.addPreCallback(SoShape::getClassTypeId(),
+                                   nrtShapePreCB, nullptr);
+                // Proxy geometry for lines/points
+                cba.addPreCallback(SoLineSet::getClassTypeId(),
+                                   nrtLineSetPreCB, &proxyData);
+                cba.addPreCallback(SoIndexedLineSet::getClassTypeId(),
+                                   nrtIndexedLineSetPreCB, &proxyData);
+                cba.addPreCallback(SoPointSet::getClassTypeId(),
+                                   nrtPointSetPreCB, &proxyData);
+                // Cylinders with DrawStyle LINES represent rotational dragger
+                // rings; replace them with thin facetized cylinder rings.
+                cba.addPreCallback(SoCylinder::getClassTypeId(),
+                                   nrtCylinderPreCB, &proxyData);
+                cba.addPreCallback(SoText2::getClassTypeId(),
+                                   nrtText2PreCB, &proxyData);
+                cba.addPreCallback(SoHUDLabel::getClassTypeId(),
+                                   nrtHUDLabelPreCB, &proxyData);
+                cba.addPreCallback(SoHUDButton::getClassTypeId(),
+                                   nrtHUDButtonPreCB, &proxyData);
+                // All supported light types (with world-space transforms)
+                cba.addPreCallback(SoDirectionalLight::getClassTypeId(),
+                                   nrtDirectionalLightCB, &lights);
+                cba.addPreCallback(SoPointLight::getClassTypeId(),
+                                   nrtPointLightCB, &lights);
+                cba.addPreCallback(SoSpotLight::getClassTypeId(),
+                                   nrtSpotLightCB, &lights);
+                cba.apply(scene);
+            }
+
+            // --- 1b. Rebuild BVH and update cache ---------------------------
+            // Reset the cached scene to a clean default-constructed state
+            // before populating it with the new geometry.
+            cachedNrtScene_ = NrtScene();
+            cachedNrtScene_.tris = std::move(collector.tris);
+            if (!cachedNrtScene_.tris.empty()) {
+                if (!cachedNrtScene_.build()) return FALSE;
+            }
+            cachedLights_ = std::move(lights);
+
+            // Cache SoRaytracingParams (part of scene graph; any change
+            // bumps the root nodeId and triggers a rebuild anyway).
+            cachedShadowsEnabled_    = false;
+            cachedMaxBouncesAllowed_ = 0;
+            cachedSamplesPerPixel_   = 1;
+            cachedAmbientFill_       = 0.20f;
+            {
+                SoSearchAction sa;
+                sa.setType(SoRaytracingParams::getClassTypeId());
+                sa.setInterest(SoSearchAction::FIRST);
+                sa.apply(scene);
+                if (sa.getPath()) {
+                    const SoRaytracingParams * rp =
+                        static_cast<const SoRaytracingParams *>(
+                            sa.getPath()->getTail());
+                    cachedShadowsEnabled_    =
+                        rp->shadowsEnabled.getValue() != FALSE;
+                    cachedMaxBouncesAllowed_ =
+                        rp->maxReflectionBounces.getValue();
+                    cachedSamplesPerPixel_   =
+                        rp->samplesPerPixel.getValue();
+                    cachedAmbientFill_       =
+                        rp->ambientIntensity.getValue();
+                    if (cachedSamplesPerPixel_  < 1) cachedSamplesPerPixel_  = 1;
+                    if (cachedMaxBouncesAllowed_ < 0) cachedMaxBouncesAllowed_ = 0;
+                    cachedAmbientFill_ = nrt_clamp01(cachedAmbientFill_);
+                }
+            }
+
+            // Record the cache key so subsequent calls can detect hits.
+            cachedScene_  = scene;
+            cachedRootId_ = scene->getNodeId();
+            cachedCamPtr_ = cam;
+        } else {
+            // --- 1c. Cache hit: lightweight text/HUD-overlay traversal ------
+            // The geometry and lights are reused from the previous render.
+            // Only text/HUD overlays are regenerated because their screen-
+            // space positions depend on the current camera/viewport state.
+            NrtSceneCollector textOverlayCollector;
+            proxyData.collector = &textOverlayCollector;
+
+            {
+                SoCallbackAction cba(vp);
+                cba.addPreCallback(SoText2::getClassTypeId(),
+                                   nrtText2PreCB, &proxyData);
+                cba.addPreCallback(SoHUDLabel::getClassTypeId(),
+                                   nrtHUDLabelPreCB, &proxyData);
+                cba.addPreCallback(SoHUDButton::getClassTypeId(),
+                                   nrtHUDButtonPreCB, &proxyData);
+                cba.apply(scene);
+            }
+        }
+
+
+        // Local aliases for the cached rendering parameters.
+        const bool  shadowsEnabled    = cachedShadowsEnabled_;
+        const int   maxBouncesAllowed = cachedMaxBouncesAllowed_;
+        const int   samplesPerPixel   = cachedSamplesPerPixel_;
+        const float ambientFill       = cachedAmbientFill_;
+
+        // --- 2-5. BVH build and ray-trace (skipped if scene has no triangles) ---
+        if (!cachedNrtScene_.tris.empty()) {
+        // The BVH is already built (either freshly or from cache).
+        // Alias for readability in the sections below.
+        NrtScene & nrtScene = cachedNrtScene_;
+        const std::vector<NrtLightInfo> & lights = cachedLights_;
+
+        // --- 3. Read SoRaytracingParams hints from scene --------------------
+        // (Already cached above; local aliases used from here on.)
+
+        // --- 4. Extract view volume from camera in scene --------------------
+        // (cam was found at the top of renderScene, before the rebuild check)
         if (!cam) return FALSE;  // no camera: fall through to GL
 
         const float aspect_ratio =
@@ -1482,8 +1599,47 @@ public:
             }
         }
 
+        cachedCamId_ = camId;
         return TRUE;
     }
+
+private:
+    // -----------------------------------------------------------------------
+    // Geometry cache state
+    //
+    // cachedScene_  – pointer to the scene root that was last built.
+    //                 nullptr means the cache is empty.
+    // cachedRootId_ – SoNode::getNodeId() of cachedScene_ at BVH-build time.
+    //                 Any geometry/material/light change propagates a
+    //                 notification up to the root (bumping its uniqueId), so
+    //                 comparing this value is an O(1) "did geometry change?"
+    //                 check — provided camera-only changes are excluded (see
+    //                 cachedCamPtr_ / cachedCamId_ below).
+    // cachedCamPtr_ – the SoCamera node found in the scene at the last BVH
+    //                 build.  Used to detect whether a root-nodeId change is
+    //                 solely due to a camera move (same pointer, changed id)
+    //                 rather than a true geometry/material/light change.
+    // cachedCamId_  – SoNode::getNodeId() of the camera at the LAST render
+    //                 (updated after every successful render, not just after
+    //                 rebuilds).  Together with cachedCamPtr_ this lets us
+    //                 infer "camera-only moved → skip BVH rebuild".
+    // cachedNrtScene_ – the built BVH plus triangle/normal data.
+    // cachedLights_   – world-space light descriptors from the last build.
+    //
+    // Rendering parameters (SoRaytracingParams) are also cached because
+    // they live inside the scene graph; any change to them bumps the root
+    // nodeId and triggers a rebuild.
+    // -----------------------------------------------------------------------
+    SoNode *                  cachedScene_           = nullptr;
+    SbUniqueId                cachedRootId_          = 0;
+    SoCamera *                cachedCamPtr_          = nullptr;
+    SbUniqueId                cachedCamId_           = 0;
+    NrtScene                  cachedNrtScene_;
+    std::vector<NrtLightInfo> cachedLights_;
+    bool                      cachedShadowsEnabled_    = false;
+    int                       cachedMaxBouncesAllowed_ = 0;
+    int                       cachedSamplesPerPixel_   = 1;
+    float                     cachedAmbientFill_       = 0.20f;
 };
 
 #endif // OBOL_NANORT_CONTEXT_MANAGER_H

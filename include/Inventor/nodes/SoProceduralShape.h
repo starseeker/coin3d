@@ -666,6 +666,9 @@ private:
                      const SoProceduralTriangles& tris);
   void emitWireframe(SoAction* action,
                      const SoProceduralWireframe& wire);
+  void emitWireframeCylinders(SoAction* action,
+                               const SoProceduralWireframe& wire,
+                               float radius);
 
   // Per-instance selection callback state
   SoProceduralSelectCB d_selectCB;

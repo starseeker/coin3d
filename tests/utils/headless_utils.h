@@ -169,7 +169,7 @@ inline bool renderToFile(
 // Headers come from the project's own submodule (external/osmesa/include/OSMesa/)
 // ============================================================================
 #include <OSMesa/osmesa.h>
-#include <OSMesa/gl.h>
+#include <Inventor/gl.h>
 #include <memory>
 
 // OSMesa context structure for offscreen rendering

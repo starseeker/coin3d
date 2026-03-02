@@ -55,13 +55,11 @@
 #include <windows.h>
 #endif
 
-#ifdef OBOL_OSMESA_BUILD
-#include <OSMesa/gl.h>
-#elif defined(__APPLE__)
-#include <OpenGL/gl.h>
-#else
-#include <GL/gl.h>
-#endif
+/* Include Inventor's dispatch-aware GL header instead of the platform
+   <GL/gl.h>.  All gl*() calls in this file are transparently redirected
+   through Obol's GL dispatch layer, ensuring they route to the correct
+   backend (system GL, OSMesa, etc.) in dual-backend builds. */
+#include <Inventor/gl.h>
 
 #include <Inventor/SbLinear.h>
 #include <Inventor/nodes/SoCallback.h>

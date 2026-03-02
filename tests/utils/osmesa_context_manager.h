@@ -20,7 +20,7 @@
  *   // can coexist in the same process without swapping any global state.
  *
  * Requires:
- *   - OSMesa headers in <OSMesa/osmesa.h> and <OSMesa/gl.h>
+ *   - OSMesa headers in <OSMesa/osmesa.h> and <Inventor/gl.h>
  *   - Link against the OSMesa library (or a Coin built with OSMesa)
  */
 
@@ -29,7 +29,7 @@
 
 #include <Inventor/SoDB.h>
 #include <OSMesa/osmesa.h>
-#include <OSMesa/gl.h>
+#include <Inventor/gl.h>
 #include <memory>
 
 // ---------------------------------------------------------------------------
