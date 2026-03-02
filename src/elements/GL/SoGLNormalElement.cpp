@@ -75,6 +75,18 @@ void
 SoGLNormalElement::init(SoState * state)
 {
   inherited::init(state);
+  this->glue = sogl_glue_from_state(state);
+}
+
+//! FIXME: write doc.
+
+void
+SoGLNormalElement::push(SoState * state)
+{
+  inherited::push(state);
+  SoGLNormalElement * prev =
+    static_cast<SoGLNormalElement *>(this->getNextInStack());
+  this->glue = prev->glue;
 }
 
 //! FIXME: write doc.
@@ -83,5 +95,5 @@ void
 SoGLNormalElement::send(const int index) const
 {
   assert(index >= 0 && index < this->numNormals);
-  SoGLContext_glNormal3fv(sogl_current_render_glue(), this->normals[index].getValue());
+  SoGLContext_glNormal3fv(this->glue, this->normals[index].getValue());
 }

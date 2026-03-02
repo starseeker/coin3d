@@ -390,12 +390,12 @@ SoPrimitiveVertexCache::renderTriangles(SoState * state, const int arrays) const
   else {
     // fall back to immediate mode rendering
     SoPrimitiveVertexCacheP * thisp = const_cast<SoPrimitiveVertexCacheP *>(&PRIVATE(this).get());
-    SoGLContext_glBegin(sogl_current_render_glue(), GL_TRIANGLES);
+    SoGLContext_glBegin(sogl_glue_from_state(state), GL_TRIANGLES);
     thisp->renderImmediate(glue,
                            this->getTriangleIndices(),
                            this->getNumTriangleIndices(),
                            color, normal, texture, enabled, lastenabled);
-    SoGLContext_glEnd(sogl_current_render_glue());
+    SoGLContext_glEnd(sogl_glue_from_state(state));
   }
 
   // inform SoGLLazyElement that we might have changed the current color
@@ -431,12 +431,12 @@ SoPrimitiveVertexCache::renderLines(SoState * state, const int arrays) const
   else {
     // fall back to immediate mode rendering
     SoPrimitiveVertexCacheP * thisp = const_cast<SoPrimitiveVertexCacheP *>(&PRIVATE(this).get());
-    SoGLContext_glBegin(sogl_current_render_glue(), GL_LINES);
+    SoGLContext_glBegin(sogl_glue_from_state(state), GL_LINES);
     thisp->renderImmediate(glue,
                            this->getLineIndices(),
                            this->getNumLineIndices(),
                            color, normal, texture, enabled, lastenabled);
-    SoGLContext_glEnd(sogl_current_render_glue());
+    SoGLContext_glEnd(sogl_glue_from_state(state));
   }
   // inform SoGLLazyElement that we might have changed the current color
   if (color) {
@@ -471,12 +471,12 @@ SoPrimitiveVertexCache::renderPoints(SoState * state, const int arrays) const
   else {
     // fall back to immediate mode rendering
     SoPrimitiveVertexCacheP * thisp = const_cast<SoPrimitiveVertexCacheP *>(&PRIVATE(this).get());
-    SoGLContext_glBegin(sogl_current_render_glue(), GL_POINTS);
+    SoGLContext_glBegin(sogl_glue_from_state(state), GL_POINTS);
     thisp->renderImmediate(glue,
                            this->getPointIndices(),
                            this->getNumPointIndices(),
                            color, normal, texture, enabled, lastenabled);
-    SoGLContext_glEnd(sogl_current_render_glue());
+    SoGLContext_glEnd(sogl_glue_from_state(state));
   }
   // inform SoGLLazyElement that we might have changed the current color
   if (color) {
@@ -1112,13 +1112,13 @@ SoPrimitiveVertexCacheP::renderImmediate(const SoGLContext * glue,
   for (int i = 0; i < numindices; i++) {
     const int idx = indices[i];
     if (normal) {
-      SoGLContext_glNormal3fv(sogl_current_render_glue(), reinterpret_cast<const GLfloat *>(&normalptr[idx]));
+      SoGLContext_glNormal3fv(sogl_glue_from_state(state), reinterpret_cast<const GLfloat *>(&normalptr[idx]));
     }
     if (color) {
-      SoGLContext_glColor3ubv(sogl_current_render_glue(), reinterpret_cast<const GLubyte *>(&colorptr[idx*4]));
+      SoGLContext_glColor3ubv(sogl_glue_from_state(state), reinterpret_cast<const GLubyte *>(&colorptr[idx*4]));
     }
     if (texture) {
-      SoGLContext_glTexCoord4fv(sogl_current_render_glue(), reinterpret_cast<const GLfloat *>(&texcoordptr[idx]));
+      SoGLContext_glTexCoord4fv(sogl_glue_from_state(state), reinterpret_cast<const GLfloat *>(&texcoordptr[idx]));
 
       for (int j = 1; j <= lastenabled; j++) {
         if (enabled[j]) {
@@ -1129,7 +1129,7 @@ SoPrimitiveVertexCacheP::renderImmediate(const SoGLContext * glue,
         }
       }
       }
-    SoGLContext_glVertex3fv(sogl_current_render_glue(), reinterpret_cast<const GLfloat *>(&vertexptr[idx]));
+    SoGLContext_glVertex3fv(sogl_glue_from_state(state), reinterpret_cast<const GLfloat *>(&vertexptr[idx]));
   }
 }
 

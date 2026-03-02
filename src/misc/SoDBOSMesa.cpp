@@ -43,7 +43,7 @@ struct CoinOSMesaCtxData {
       prev_ctx(nullptr), prev_buf(nullptr),
       prev_w(0), prev_h(0), prev_bpr(0), prev_fmt(0)
   {
-    ctx = OSMesaCreateContextExt(OSMESA_RGBA, 16, 0, 0, nullptr);
+    ctx = OSMesaCreateContextExt(OSMESA_RGBA, 24, 0, 0, nullptr);
     if (ctx)
       buf = std::make_unique<unsigned char[]>((size_t)w * h * 4);
   }

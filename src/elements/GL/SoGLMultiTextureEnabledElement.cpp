@@ -72,6 +72,7 @@ void
 SoGLMultiTextureEnabledElement::init(SoState * state)
 {
   inherited::init(state);
+  this->glue = sogl_glue_from_state(state);
 
   SoAction * action = state->getAction();
   assert(action->isOfType(SoGLRenderAction::getClassTypeId()));
@@ -88,6 +89,7 @@ SoGLMultiTextureEnabledElement::push(SoState * state)
 
   // copy state from previous element
   inherited::push(state);
+  this->glue = sogl_glue_from_state(state);
   // capture previous element since we might or might not change the
   // GL state in set/pop
   prev->capture(state);
@@ -130,8 +132,8 @@ SoGLMultiTextureEnabledElement::updategl(const int unit)
 {
   const SoGLContext * glue = SoGLContext_instance(this->cachecontext);
   SoGLContext_glActiveTexture(glue, (GLenum) (int(GL_TEXTURE0) + unit));
-  if (this->isEnabled(unit)) SoGLContext_glEnable(sogl_current_render_glue(), GL_TEXTURE_2D);
-  else SoGLContext_glDisable(sogl_current_render_glue(), GL_TEXTURE_2D);
+  if (this->isEnabled(unit)) SoGLContext_glEnable(this->glue, GL_TEXTURE_2D);
+  else SoGLContext_glDisable(this->glue, GL_TEXTURE_2D);
   SoGLContext_glActiveTexture(glue, (GLenum) GL_TEXTURE0);
 
   GLenum glerror =  sogl_glerror_debugging() ? glGetError() : GL_NO_ERROR;
@@ -152,16 +154,16 @@ SoGLMultiTextureEnabledElement::updategl(const int unit, const Mode newvalue, co
   case DISABLED:
     break;
   case TEXTURE2D:
-    SoGLContext_glDisable(sogl_current_render_glue(), GL_TEXTURE_2D);
+    SoGLContext_glDisable(this->glue, GL_TEXTURE_2D);
     break;
   case RECTANGLE:
-    SoGLContext_glDisable(sogl_current_render_glue(), GL_TEXTURE_RECTANGLE_EXT);
+    SoGLContext_glDisable(this->glue, GL_TEXTURE_RECTANGLE_EXT);
     break;
   case CUBEMAP:
-    SoGLContext_glDisable(sogl_current_render_glue(), GL_TEXTURE_CUBE_MAP);
+    SoGLContext_glDisable(this->glue, GL_TEXTURE_CUBE_MAP);
     break;
   case TEXTURE3D:
-    SoGLContext_glDisable(sogl_current_render_glue(), GL_TEXTURE_3D);
+    SoGLContext_glDisable(this->glue, GL_TEXTURE_3D);
     break;
   default:
     assert(0 && "should not happen");
@@ -171,16 +173,16 @@ SoGLMultiTextureEnabledElement::updategl(const int unit, const Mode newvalue, co
   case DISABLED:
     break;
   case TEXTURE2D:
-    SoGLContext_glEnable(sogl_current_render_glue(), GL_TEXTURE_2D);
+    SoGLContext_glEnable(this->glue, GL_TEXTURE_2D);
     break;
   case RECTANGLE:
-    SoGLContext_glEnable(sogl_current_render_glue(), GL_TEXTURE_RECTANGLE_EXT);
+    SoGLContext_glEnable(this->glue, GL_TEXTURE_RECTANGLE_EXT);
     break;
   case CUBEMAP:
-    SoGLContext_glEnable(sogl_current_render_glue(), GL_TEXTURE_CUBE_MAP);
+    SoGLContext_glEnable(this->glue, GL_TEXTURE_CUBE_MAP);
     break;
   case TEXTURE3D:
-    SoGLContext_glEnable(sogl_current_render_glue(), GL_TEXTURE_3D);
+    SoGLContext_glEnable(this->glue, GL_TEXTURE_3D);
     break;
   default:
     assert(0 && "should not happen");

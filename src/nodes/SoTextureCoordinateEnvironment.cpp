@@ -189,6 +189,7 @@ SoTextureCoordinateEnvironment::GLRender(SoGLRenderAction * action)
   SoState * state = action->getState();
   int unit = SoTextureUnitElement::get(state);
   const SoGLContext * glue = SoGLContext_instance(SoGLCacheContextElement::get(state));
+  this->cachedGlue = glue;
   int maxunits = SoGLContext_max_texture_units(glue);
   if (unit < maxunits) {
     SoMultiTextureCoordinateElement::setFunction(action->getState(), this,
@@ -197,7 +198,7 @@ SoTextureCoordinateEnvironment::GLRender(SoGLRenderAction * action)
                                                  action->getState());
     SoGLMultiTextureCoordinateElement::setTexGen(action->getState(),
                                                  this, unit, handleTexgen, 
-                                                 NULL,
+                                                 this,
                                                  generate,
                                                  action->getState());
   }
@@ -218,26 +219,27 @@ SoTextureCoordinateEnvironment::pick(SoPickAction * action)
 }
 
 void
-SoTextureCoordinateEnvironment::handleTexgen(void * /* data */)
+SoTextureCoordinateEnvironment::handleTexgen(void * data)
 {
+  SoTextureCoordinateEnvironment * thisp = (SoTextureCoordinateEnvironment*)data;
   // Configure OpenGL hardware sphere-map texture coordinate generation
   // for the S and T coordinates.  GL_TEXTURE_GEN_MODE + GL_SPHERE_MAP is
-  // the correct API: SoGLContext_glTexGenf(sogl_current_render_glue(), coord, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP).
+  // the correct API: SoGLContext_glTexGenf(thisp->cachedGlue, coord, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP).
   // Using GL_SPHERE_MAP directly as the pname (as a naive reading of some
   // older documentation suggests) is invalid and produces GL_INVALID_ENUM.
-  SoGLContext_glTexGenf(sogl_current_render_glue(), GL_S, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
-  SoGLContext_glTexGenf(sogl_current_render_glue(), GL_T, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
+  SoGLContext_glTexGenf(thisp->cachedGlue, GL_S, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
+  SoGLContext_glTexGenf(thisp->cachedGlue, GL_T, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
 
   // supply dummy plane for R and Q so that texture generation works
   // properly
-  SoGLContext_glTexGeni(sogl_current_render_glue(), GL_R, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
-  SoGLContext_glTexGeni(sogl_current_render_glue(), GL_Q, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
+  SoGLContext_glTexGeni(thisp->cachedGlue, GL_R, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
+  SoGLContext_glTexGeni(thisp->cachedGlue, GL_Q, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
   
   float plane[4];
   plane[0] = 0.0f;
   plane[1] = 0.0f;
   plane[2] = 0.0f;
   plane[3] = 1.0f;
-  SoGLContext_glTexGenfv(sogl_current_render_glue(), GL_R, GL_OBJECT_PLANE, plane);
-  SoGLContext_glTexGenfv(sogl_current_render_glue(), GL_Q, GL_OBJECT_PLANE, plane);
+  SoGLContext_glTexGenfv(thisp->cachedGlue, GL_R, GL_OBJECT_PLANE, plane);
+  SoGLContext_glTexGenfv(thisp->cachedGlue, GL_Q, GL_OBJECT_PLANE, plane);
 }

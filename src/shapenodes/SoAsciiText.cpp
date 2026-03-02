@@ -377,8 +377,8 @@ SoAsciiText::GLRender(SoGLRenderAction * action)
   SoMaterialBundle mb(action);
   mb.sendFirst();
   
-  SoGLContext_glBegin(sogl_current_render_glue(), GL_TRIANGLES);
-  SoGLContext_glNormal3f(sogl_current_render_glue(), 0.0f, 0.0f, 1.0f);
+  SoGLContext_glBegin(sogl_glue_from_state(state), GL_TRIANGLES);
+  SoGLContext_glNormal3f(sogl_glue_from_state(state), 0.0f, 0.0f, 1.0f);
 
   float ypos = 0.0f;
   int i, n = this->string.getNum();
@@ -447,19 +447,19 @@ SoAsciiText::GLRender(SoGLRenderAction * action)
             // applied (when width values have been given that are
             // not the same as the length of the string)? jornskaa 20040716
             if (do2Dtextures) {
-              SoGLContext_glTexCoord2f(sogl_current_render_glue(), v0[0] + xpos/fontspec->size, v0[1] + ypos/fontspec->size);
+              SoGLContext_glTexCoord2f(sogl_glue_from_state(state), v0[0] + xpos/fontspec->size, v0[1] + ypos/fontspec->size);
             }
-            SoGLContext_glVertex3f(sogl_current_render_glue(), v0[0] * fontspec->size + xpos, v0[1] * fontspec->size + ypos, 0.0f);
+            SoGLContext_glVertex3f(sogl_glue_from_state(state), v0[0] * fontspec->size + xpos, v0[1] * fontspec->size + ypos, 0.0f);
             
             if (do2Dtextures) {
-              SoGLContext_glTexCoord2f(sogl_current_render_glue(), v1[0] + xpos/fontspec->size, v1[1] + ypos/fontspec->size);
+              SoGLContext_glTexCoord2f(sogl_glue_from_state(state), v1[0] + xpos/fontspec->size, v1[1] + ypos/fontspec->size);
             }
-            SoGLContext_glVertex3f(sogl_current_render_glue(), v1[0] * fontspec->size + xpos, v1[1] * fontspec->size + ypos, 0.0f);
+            SoGLContext_glVertex3f(sogl_glue_from_state(state), v1[0] * fontspec->size + xpos, v1[1] * fontspec->size + ypos, 0.0f);
             
             if (do2Dtextures) {
-              SoGLContext_glTexCoord2f(sogl_current_render_glue(), v2[0] + xpos/fontspec->size, v2[1] + ypos/fontspec->size);
+              SoGLContext_glTexCoord2f(sogl_glue_from_state(state), v2[0] + xpos/fontspec->size, v2[1] + ypos/fontspec->size);
             }
-            SoGLContext_glVertex3f(sogl_current_render_glue(), v2[0] * fontspec->size + xpos, v2[1] * fontspec->size + ypos, 0.0f);
+            SoGLContext_glVertex3f(sogl_glue_from_state(state), v2[0] * fontspec->size + xpos, v2[1] * fontspec->size + ypos, 0.0f);
           }
         }
       }
@@ -471,7 +471,7 @@ SoAsciiText::GLRender(SoGLRenderAction * action)
 
     ypos -= fontspec->size * this->spacing.getValue();
   }
-  SoGLContext_glEnd(sogl_current_render_glue());
+  SoGLContext_glEnd(sogl_glue_from_state(state));
 
   PRIVATE(this)->unlock();
 

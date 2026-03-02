@@ -262,12 +262,20 @@ SoSeparator* createMaterials(int width, int height)
 
     SoPerspectiveCamera* cam = addCameraAndLight(root);
 
-    struct MatSpec { float dr,dg,db; float sr,sg,sb; float shine; float ambient; };
+    // Four spheres with the same base diffuse color (silver-gray) but
+    // different material effect parameters to illustrate shininess,
+    // emissive glow, and ambient response independently.
+    struct MatSpec {
+        float sr,sg,sb;   // specularColor
+        float er,eg,eb;   // emissiveColor
+        float shine;      // shininess 0..1
+        float ambient;    // ambientColor (grey)
+    };
     const MatSpec specs[] = {
-        { 0.8f,0.1f,0.1f,  0.8f,0.8f,0.8f,  0.9f, 0.2f }, // shiny red
-        { 0.1f,0.7f,0.1f,  0.0f,0.0f,0.0f,  0.0f, 0.3f }, // matte green
-        { 0.1f,0.2f,0.9f,  0.9f,0.9f,0.9f,  0.5f, 0.1f }, // semi-shiny blue
-        { 0.8f,0.6f,0.1f,  0.3f,0.3f,0.1f,  0.2f, 0.4f }, // gold-ish
+        { 0.0f,0.0f,0.0f,  0.0f,0.0f,0.0f,  0.0f, 0.2f }, // flat/matte
+        { 1.0f,1.0f,1.0f,  0.0f,0.0f,0.0f,  0.9f, 0.2f }, // very shiny
+        { 0.0f,0.0f,0.0f,  0.4f,0.1f,0.5f,  0.0f, 0.2f }, // emissive glow
+        { 0.6f,0.6f,0.6f,  0.0f,0.0f,0.0f,  0.4f, 0.8f }, // high ambient
     };
     const float xs[] = {-4.5f, -1.5f, 1.5f, 4.5f};
     for (int i = 0; i < 4; ++i) {
@@ -276,8 +284,9 @@ SoSeparator* createMaterials(int width, int height)
         t->translation.setValue(xs[i], 0.0f, 0.0f);
         sep->addChild(t);
         SoMaterial* mat = new SoMaterial;
-        mat->diffuseColor.setValue(specs[i].dr, specs[i].dg, specs[i].db);
+        mat->diffuseColor.setValue(0.6f, 0.6f, 0.6f); // same grey for all
         mat->specularColor.setValue(specs[i].sr, specs[i].sg, specs[i].sb);
+        mat->emissiveColor.setValue(specs[i].er, specs[i].eg, specs[i].eb);
         mat->shininess.setValue(specs[i].shine);
         mat->ambientColor.setValue(specs[i].ambient, specs[i].ambient, specs[i].ambient);
         sep->addChild(mat);
@@ -298,61 +307,74 @@ SoSeparator* createLighting(int width, int height)
     SoSeparator* root = new SoSeparator;
     root->ref();
 
-    // NanoRT hint: enable shadow rays so the NanoRT panel shows the sphere's
-    // shadow on the floor.  Ignored by GL renderers.
-    SoRaytracingParams* rtParams = new SoRaytracingParams;
-    rtParams->shadowsEnabled.setValue(TRUE);
-    rtParams->ambientIntensity.setValue(0.15f);
-    root->addChild(rtParams);
-
     SoPerspectiveCamera* cam = new SoPerspectiveCamera;
     root->addChild(cam);
 
-    // Directional light from upper-left (warm white)
-    SoDirectionalLight* dlight = new SoDirectionalLight;
-    dlight->direction.setValue(-1.0f, -1.0f, -0.5f);
-    dlight->color.setValue(1.0f, 0.9f, 0.8f);
-    dlight->intensity.setValue(0.7f);
-    root->addChild(dlight);
+    // Three spheres in a row, each lit by a different light type so the
+    // difference in illumination is clearly visible.
+    const float xs[] = { -3.5f, 0.0f, 3.5f };
 
-    // Point light from the right (cool blue accent)
-    SoPointLight* plight = new SoPointLight;
-    plight->location.setValue(5.0f, 2.0f, 5.0f);
-    plight->color.setValue(0.3f, 0.6f, 1.0f);
-    plight->intensity.setValue(0.8f);
-    root->addChild(plight);
+    // Left sphere: directional light (warm white, from upper-left)
+    {
+        SoSeparator* lsep = new SoSeparator;
+        SoDirectionalLight* dl = new SoDirectionalLight;
+        dl->direction.setValue(-1.0f, -1.0f, -0.5f);
+        dl->color.setValue(1.0f, 0.9f, 0.7f);
+        lsep->addChild(dl);
+        SoTranslation* t = new SoTranslation;
+        t->translation.setValue(xs[0], 0.0f, 0.0f);
+        lsep->addChild(t);
+        SoMaterial* mat = new SoMaterial;
+        mat->diffuseColor.setValue(0.8f, 0.8f, 0.8f);
+        mat->specularColor.setValue(0.6f, 0.6f, 0.6f);
+        mat->shininess.setValue(0.3f);
+        lsep->addChild(mat);
+        lsep->addChild(new SoSphere);
+        root->addChild(lsep);
+    }
 
-    // Spot light with a tight cone aimed at the sphere (white)
-    SoSpotLight* slight = new SoSpotLight;
-    slight->location.setValue(-4.0f, 4.0f, 3.0f);
-    slight->direction.setValue(0.6f, -0.7f, -0.5f);
-    slight->cutOffAngle.setValue(0.4f);
-    slight->dropOffRate.setValue(0.5f);
-    slight->color.setValue(1.0f, 1.0f, 0.9f);
-    slight->intensity.setValue(0.9f);
-    root->addChild(slight);
+    // Middle sphere: point light (cool blue, close range)
+    {
+        SoSeparator* msep = new SoSeparator;
+        SoPointLight* pl = new SoPointLight;
+        pl->location.setValue(xs[1], 2.0f, 3.0f);
+        pl->color.setValue(0.4f, 0.6f, 1.0f);
+        pl->intensity.setValue(1.2f);
+        msep->addChild(pl);
+        SoTranslation* t = new SoTranslation;
+        t->translation.setValue(xs[1], 0.0f, 0.0f);
+        msep->addChild(t);
+        SoMaterial* mat = new SoMaterial;
+        mat->diffuseColor.setValue(0.8f, 0.8f, 0.8f);
+        mat->specularColor.setValue(0.9f, 0.9f, 0.9f);
+        mat->shininess.setValue(0.8f);
+        msep->addChild(mat);
+        msep->addChild(new SoSphere);
+        root->addChild(msep);
+    }
 
-    // Central white sphere
-    SoMaterial* mat = new SoMaterial;
-    mat->diffuseColor.setValue(0.9f, 0.9f, 0.9f);
-    mat->specularColor.setValue(1.0f, 1.0f, 1.0f);
-    mat->shininess.setValue(0.8f);
-    root->addChild(mat);
-    root->addChild(new SoSphere);
-
-    // Floor plane (cube, flat) to receive shadows in the NanoRT panel
-    SoSeparator* floor = new SoSeparator;
-    SoTranslation* ft = new SoTranslation;
-    ft->translation.setValue(0.0f, -1.5f, 0.0f);
-    floor->addChild(ft);
-    SoScale* fs = new SoScale;
-    fs->scaleFactor.setValue(6.0f, 0.1f, 6.0f);
-    floor->addChild(fs);
-    SoMaterial* fm = new SoMaterial;
-    fm->diffuseColor.setValue(0.55f, 0.55f, 0.55f);
-    floor->addChild(fm);
-    floor->addChild(new SoCube);
-    root->addChild(floor);
+    // Right sphere: spot light (tight cone, yellow-white)
+    {
+        SoSeparator* rsep = new SoSeparator;
+        SoSpotLight* sl = new SoSpotLight;
+        sl->location.setValue(xs[2], 4.0f, 4.0f);
+        sl->direction.setValue(0.0f, -0.7f, -0.7f);
+        sl->cutOffAngle.setValue(0.35f);
+        sl->dropOffRate.setValue(0.7f);
+        sl->color.setValue(1.0f, 1.0f, 0.8f);
+        sl->intensity.setValue(1.0f);
+        rsep->addChild(sl);
+        SoTranslation* t = new SoTranslation;
+        t->translation.setValue(xs[2], 0.0f, 0.0f);
+        rsep->addChild(t);
+        SoMaterial* mat = new SoMaterial;
+        mat->diffuseColor.setValue(0.8f, 0.8f, 0.8f);
+        mat->specularColor.setValue(1.0f, 1.0f, 0.9f);
+        mat->shininess.setValue(0.6f);
+        rsep->addChild(mat);
+        rsep->addChild(new SoSphere);
+        root->addChild(rsep);
+    }
 
     SbViewportRegion vp(width, height);
     cam->viewAll(root, vp);
@@ -369,17 +391,18 @@ SoSeparator* createTransforms(int width, int height)
 
     SoPerspectiveCamera* cam = addCameraAndLight(root);
 
-    const float colors[6][3] = {
+    const float colors[9][3] = {
         {0.9f,0.2f,0.2f}, {0.2f,0.8f,0.2f}, {0.2f,0.2f,0.9f},
         {0.9f,0.7f,0.1f}, {0.7f,0.2f,0.8f}, {0.1f,0.8f,0.8f},
+        {0.9f,0.5f,0.2f}, {0.5f,0.9f,0.2f}, {0.2f,0.5f,0.9f},
     };
 
-    // Row 1: Translations
+    // Row 1 (top): Translations along X
     float xpos[3] = {-4.0f, 0.0f, 4.0f};
     for (int i = 0; i < 3; ++i) {
         SoSeparator* sep = new SoSeparator;
         SoTranslation* t = new SoTranslation;
-        t->translation.setValue(xpos[i], 2.5f, 0.0f);
+        t->translation.setValue(xpos[i], 4.0f, 0.0f);
         sep->addChild(t);
         SoMaterial* mat = new SoMaterial;
         mat->diffuseColor.setValue(colors[i][0],colors[i][1],colors[i][2]);
@@ -387,16 +410,30 @@ SoSeparator* createTransforms(int width, int height)
         sep->addChild(new SoCube);
         root->addChild(sep);
     }
-    // Row 2: Rotations
+    // Row 2 (middle): Rotations around X, Y, Z axes
     SbVec3f rotAxes[3] = {{1,0,0},{0,1,0},{0,0,1}};
     for (int i = 0; i < 3; ++i) {
         SoSeparator* sep = new SoSeparator;
         SoTransform* xf = new SoTransform;
-        xf->translation.setValue(xpos[i], -2.5f, 0.0f);
+        xf->translation.setValue(xpos[i], 0.0f, 0.0f);
         xf->rotation.setValue(rotAxes[i], float(M_PI / 4.0));
         sep->addChild(xf);
         SoMaterial* mat = new SoMaterial;
         mat->diffuseColor.setValue(colors[i+3][0],colors[i+3][1],colors[i+3][2]);
+        sep->addChild(mat);
+        sep->addChild(new SoCube);
+        root->addChild(sep);
+    }
+    // Row 3 (bottom): Scaling (small, medium, large)
+    float scales[3] = {0.5f, 1.0f, 1.8f};
+    for (int i = 0; i < 3; ++i) {
+        SoSeparator* sep = new SoSeparator;
+        SoTransform* xf = new SoTransform;
+        xf->translation.setValue(xpos[i], -4.0f, 0.0f);
+        xf->scaleFactor.setValue(scales[i], scales[i], scales[i]);
+        sep->addChild(xf);
+        SoMaterial* mat = new SoMaterial;
+        mat->diffuseColor.setValue(colors[i+6][0],colors[i+6][1],colors[i+6][2]);
         sep->addChild(mat);
         sep->addChild(new SoCube);
         root->addChild(sep);
@@ -412,7 +449,9 @@ SoSeparator* createTransforms(int width, int height)
 // =========================================================================
 SoSeparator* createCameras(int width, int height)
 {
-    // A simple scene with perspective camera and a row of spheres.
+    // Three cubes receding along the Z axis to illustrate perspective
+    // foreshortening: equal-sized cubes appear progressively smaller as
+    // their depth increases.
     SoSeparator* root = new SoSeparator;
     root->ref();
 
@@ -424,21 +463,22 @@ SoSeparator* createCameras(int width, int height)
     light->direction.setValue(-0.5f, -1.0f, -0.7f);
     root->addChild(light);
 
-    const float colors[5][3] = {
-        {0.9f,0.1f,0.1f},{0.1f,0.9f,0.1f},{0.1f,0.1f,0.9f},
-        {0.9f,0.9f,0.1f},{0.1f,0.9f,0.9f}
+    const float colors[3][3] = {
+        {0.9f,0.2f,0.2f}, {0.2f,0.8f,0.2f}, {0.2f,0.3f,0.9f}
     };
-    for (int i = 0; i < 5; ++i) {
+    // Cubes placed at increasing Z depth: nearest (z=0), middle (z=-4), far (z=-8)
+    const float depths[3] = { 0.0f, -4.0f, -8.0f };
+    for (int i = 0; i < 3; ++i) {
         SoSeparator* sep = new SoSeparator;
         SoTranslation* t = new SoTranslation;
-        t->translation.setValue((i - 2) * 2.5f, 0.0f, 0.0f);
+        t->translation.setValue(0.0f, 0.0f, depths[i]);
         sep->addChild(t);
         SoMaterial* mat = new SoMaterial;
         mat->diffuseColor.setValue(colors[i][0],colors[i][1],colors[i][2]);
         mat->specularColor.setValue(0.6f,0.6f,0.6f);
         mat->shininess.setValue(0.5f);
         sep->addChild(mat);
-        sep->addChild(new SoSphere);
+        sep->addChild(new SoCube);
         root->addChild(sep);
     }
 
@@ -457,14 +497,37 @@ SoSeparator* createTexture(int width, int height)
 
     SoPerspectiveCamera* cam = addCameraAndLight(root);
 
-    SoTexture2* tex = new SoTexture2;
-    buildCheckerTexture(tex);
-    root->addChild(tex);
-
     SoMaterial* mat = new SoMaterial;
     mat->diffuseColor.setValue(1.0f, 1.0f, 1.0f);
     root->addChild(mat);
-    root->addChild(new SoCube);
+
+    // Left: sphere with checkerboard texture applied
+    {
+        SoSeparator* sep = new SoSeparator;
+        SoTranslation* t = new SoTranslation;
+        t->translation.setValue(-1.5f, 0.0f, 0.0f);
+        sep->addChild(t);
+        SoTexture2* tex = new SoTexture2;
+        buildCheckerTexture(tex);
+        sep->addChild(tex);
+        sep->addChild(new SoSphere);
+        root->addChild(sep);
+    }
+
+    // Right: sphere without texture (plain diffuse shading)
+    {
+        SoSeparator* sep = new SoSeparator;
+        SoTranslation* t = new SoTranslation;
+        t->translation.setValue(1.5f, 0.0f, 0.0f);
+        sep->addChild(t);
+        SoMaterial* smat = new SoMaterial;
+        smat->diffuseColor.setValue(0.6f, 0.6f, 0.9f);
+        smat->specularColor.setValue(0.6f, 0.6f, 0.6f);
+        smat->shininess.setValue(0.4f);
+        sep->addChild(smat);
+        sep->addChild(new SoSphere);
+        root->addChild(sep);
+    }
 
     SbViewportRegion vp(width, height);
     cam->viewAll(root, vp);
@@ -472,7 +535,7 @@ SoSeparator* createTexture(int width, int height)
 }
 
 // =========================================================================
-// 7. Text
+// 7. Text (SoText3 — extruded 3-D geometry text)
 // =========================================================================
 SoSeparator* createText(int width, int height)
 {
@@ -481,7 +544,7 @@ SoSeparator* createText(int width, int height)
 
     SoPerspectiveCamera* cam = addCameraAndLight(root);
 
-    // SoText3 label (3-D geometry)
+    // SoText3 label (3-D geometry) — front face
     SoSeparator* t3sep = new SoSeparator;
     SoTranslation* t3pos = new SoTranslation;
     t3pos->translation.setValue(-1.0f, 1.0f, 0.0f);
@@ -498,28 +561,84 @@ SoSeparator* createText(int width, int height)
     t3sep->addChild(text3);
     root->addChild(t3sep);
 
-    // SoText2 label (2-D billboard, screen-space)
-    // Anchor placed within the camera frustum that viewAll sets for SoText3.
-    SoSeparator* t2sep = new SoSeparator;
-    SoTranslation* t2pos = new SoTranslation;
-    t2pos->translation.setValue(0.0f, 0.5f, 0.0f);
-    t2sep->addChild(t2pos);
-    SoMaterial* t2mat = new SoMaterial;
-    t2mat->diffuseColor.setValue(0.2f, 0.8f, 0.3f);
-    t2sep->addChild(t2mat);
-    SoFont* t2font = new SoFont;
-    t2font->size.setValue(20.0f);
-    t2sep->addChild(t2font);
-    SoText2* text2 = new SoText2;
-    text2->string.setValue("3D Test");
-    t2sep->addChild(text2);
-    root->addChild(t2sep);
+    // Second SoText3 line below
+    SoSeparator* t3bsep = new SoSeparator;
+    SoTranslation* t3bpos = new SoTranslation;
+    t3bpos->translation.setValue(-1.0f, 0.0f, 0.0f);
+    t3bsep->addChild(t3bpos);
+    SoMaterial* t3bmat = new SoMaterial;
+    t3bmat->diffuseColor.setValue(0.2f, 0.5f, 0.9f);
+    t3bsep->addChild(t3bmat);
+    SoFont* t3bfont = new SoFont;
+    t3bfont->size.setValue(0.5f);
+    t3bsep->addChild(t3bfont);
+    SoText3* text3b = new SoText3;
+    text3b->string.setValue("3D Text");
+    text3b->parts.setValue(SoText3::ALL);
+    t3bsep->addChild(text3b);
+    root->addChild(t3bsep);
 
     SbViewportRegion vp(width, height);
     cam->viewAll(root, vp);
-    // Pull back along Z so the SoText2 anchor (below SoText3) stays visible.
     SbVec3f pos = cam->position.getValue();
-    cam->position.setValue(pos[0], pos[1], pos[2] * 1.8f);
+    cam->position.setValue(pos[0], pos[1], pos[2] * 1.5f);
+    return root;
+}
+
+// =========================================================================
+// 7b. Text2 (SoText2 — 2-D screen-space billboard text)
+// =========================================================================
+SoSeparator* createText2(int width, int height)
+{
+    SoSeparator* root = new SoSeparator;
+    root->ref();
+
+    SoPerspectiveCamera* cam = addCameraAndLight(root);
+
+    // A reference sphere so there is 3-D geometry for the camera to frame
+    SoSeparator* sphereSep = new SoSeparator;
+    SoTranslation* sphT = new SoTranslation;
+    sphT->translation.setValue(0.0f, 0.0f, 0.0f);
+    sphereSep->addChild(sphT);
+    SoMaterial* sphMat = new SoMaterial;
+    sphMat->diffuseColor.setValue(0.3f, 0.4f, 0.7f);
+    sphereSep->addChild(sphMat);
+    SoSphere* sph = new SoSphere;
+    sph->radius.setValue(0.5f);
+    sphereSep->addChild(sph);
+    root->addChild(sphereSep);
+
+    SbViewportRegion vp(width, height);
+    cam->viewAll(root, vp);
+    SbVec3f pos = cam->position.getValue();
+    cam->position.setValue(pos[0], pos[1], pos[2] * 1.4f);
+
+    // Multiple SoText2 labels anchored at world positions in the frustum
+    struct LabelSpec { float x, y, z; float r, g, b; float sz; const char* str; };
+    const LabelSpec labels[] = {
+        { -0.8f,  0.9f, 0.0f,  1.0f, 1.0f, 0.2f, 18.0f, "SoText2 Demo" },
+        { -0.6f,  0.3f, 0.0f,  0.3f, 1.0f, 0.4f, 14.0f, "Green label"  },
+        {  0.0f, -0.3f, 0.0f,  1.0f, 0.4f, 0.2f, 14.0f, "Orange label" },
+        { -0.4f, -0.8f, 0.0f,  0.7f, 0.7f, 1.0f, 12.0f, "Small blue"   },
+    };
+    for (const auto& l : labels) {
+        SoSeparator* sep = new SoSeparator;
+        SoTranslation* t = new SoTranslation;
+        t->translation.setValue(l.x, l.y, l.z);
+        sep->addChild(t);
+        SoFont* font = new SoFont;
+        font->size.setValue(l.sz);
+        sep->addChild(font);
+        SoMaterial* mat = new SoMaterial;
+        mat->diffuseColor.setValue(l.r, l.g, l.b);
+        mat->emissiveColor.setValue(l.r * 0.8f, l.g * 0.8f, l.b * 0.8f);
+        sep->addChild(mat);
+        SoText2* text2 = new SoText2;
+        text2->string.setValue(l.str);
+        sep->addChild(text2);
+        root->addChild(sep);
+    }
+
     return root;
 }
 
@@ -1014,27 +1133,37 @@ SoSeparator* createIndexedFaceSet(int width, int height)
 
     SoPerspectiveCamera* cam = addCameraAndLight(root);
 
-    SoMaterial* mat = new SoMaterial;
-    mat->diffuseColor.setValue(0.9f, 0.5f, 0.1f);
-    mat->specularColor.setValue(0.8f, 0.8f, 0.8f);
-    mat->shininess.setValue(0.5f);
-    root->addChild(mat);
-
-    static const float pts[4][3] = {
-        { 0.0f,  1.2f,  0.0f },
-        {-1.0f, -0.8f,  0.9f },
-        { 1.0f, -0.8f,  0.9f },
-        { 0.0f, -0.8f, -1.2f }
+    // Octahedron: 6 vertices, 8 triangular faces with per-face colouring so
+    // the distinct faces are immediately visible from any viewpoint.
+    static const float pts[6][3] = {
+        {  0.0f,  1.4f,  0.0f },  // top
+        {  1.0f,  0.0f,  0.0f },  // right
+        {  0.0f,  0.0f,  1.0f },  // front
+        { -1.0f,  0.0f,  0.0f },  // left
+        {  0.0f,  0.0f, -1.0f },  // back
+        {  0.0f, -1.4f,  0.0f },  // bottom
     };
+    // 8 CCW triangular faces (top half + bottom half)
     static const int32_t idx[] = {
-        0, 1, 2, -1,
-        0, 2, 3, -1,
-        0, 3, 1, -1,
-        1, 3, 2, -1
+        0, 1, 2, -1,   // top-right-front
+        0, 2, 3, -1,   // top-front-left
+        0, 3, 4, -1,   // top-left-back
+        0, 4, 1, -1,   // top-back-right
+        5, 2, 1, -1,   // bot-front-right
+        5, 3, 2, -1,   // bot-left-front
+        5, 4, 3, -1,   // bot-back-left
+        5, 1, 4, -1,   // bot-right-back
+    };
+    // Per-face material colours (one per triangle)
+    static const float faceColors[8][3] = {
+        {0.9f,0.2f,0.2f}, {0.2f,0.8f,0.2f},
+        {0.2f,0.3f,0.9f}, {0.9f,0.8f,0.1f},
+        {0.8f,0.3f,0.8f}, {0.1f,0.8f,0.8f},
+        {0.9f,0.5f,0.1f}, {0.4f,0.9f,0.5f},
     };
 
     SoCoordinate3* co = new SoCoordinate3;
-    co->point.setValues(0, 4, pts);
+    co->point.setValues(0, 6, pts);
     root->addChild(co);
 
     SoShapeHints* sh = new SoShapeHints;
@@ -1042,8 +1171,20 @@ SoSeparator* createIndexedFaceSet(int width, int height)
     sh->shapeType.setValue(SoShapeHints::SOLID);
     root->addChild(sh);
 
+    // Build SoMaterial with per-face diffuse colours
+    SoMaterial* mat = new SoMaterial;
+    for (int f = 0; f < 8; ++f)
+        mat->diffuseColor.set1Value(f, faceColors[f][0], faceColors[f][1], faceColors[f][2]);
+    mat->specularColor.setValue(0.5f, 0.5f, 0.5f);
+    mat->shininess.setValue(0.4f);
+    root->addChild(mat);
+
+    SoMaterialBinding* mb = new SoMaterialBinding;
+    mb->value.setValue(SoMaterialBinding::PER_FACE);
+    root->addChild(mb);
+
     SoIndexedFaceSet* ifs = new SoIndexedFaceSet;
-    ifs->coordIndex.setValues(0, 16, idx);
+    ifs->coordIndex.setValues(0, 32, idx);
     root->addChild(ifs);
 
     SbViewportRegion vp(width, height);
@@ -2926,6 +3067,15 @@ SoSeparator* createText3Parts(int width, int height)
     root->addChild(cam);
 
     root->addChild(new SoDirectionalLight);
+
+    // Use a small font so all three rows fit without overlapping.
+    // Default font size is 10 units but the y-translations are only 3 units
+    // apart, so a font size of 2 keeps each row within ~2 units tall and
+    // prevents the red FRONT row from bleeding into the green ALL row in
+    // the NanoRT panel (where overlapping coplanar triangles cause z-fighting).
+    SoFont *fnt = new SoFont;
+    fnt->size.setValue(2.0f);
+    root->addChild(fnt);
 
     const int partsValues[3] = {
         SoText3::FRONT,

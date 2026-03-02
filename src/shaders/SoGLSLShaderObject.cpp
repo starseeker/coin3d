@@ -101,7 +101,7 @@ SoGLSLShaderObject::load(const char* srcStr)
     break;
   }
 
-  SoGLSLShaderObject::didOpenGLErrorOccur("SoGLSLShaderObject::load() : previous errors");
+  SoGLSLShaderObject::didOpenGLErrorOccur("SoGLSLShaderObject::load() : previous errors", this->glctx);
 
   this->shaderHandle = this->glctx->glCreateShaderObjectARB(sType);
   this->programid = 0;
@@ -112,7 +112,7 @@ SoGLSLShaderObject::load(const char* srcStr)
   this->glctx->glShaderSourceARB(this->shaderHandle, 1, (const OBOL_GLchar **)&srcStr, NULL);
   this->glctx->glCompileShaderARB(this->shaderHandle);
 
-  if (SoGLSLShaderObject::didOpenGLErrorOccur("SoGLSLShaderObject::load()")) {
+  if (SoGLSLShaderObject::didOpenGLErrorOccur("SoGLSLShaderObject::load()", this->glctx)) {
     this->shaderHandle = 0;
     return;
   }
@@ -200,7 +200,7 @@ SoGLSLShaderObject::printInfoLog(const SoGLContext * g, OBOL_GLhandle handle, in
 }
 
 SbBool
-SoGLSLShaderObject::didOpenGLErrorOccur(const SbString & source)
+SoGLSLShaderObject::didOpenGLErrorOccur(const SbString & source, const SoGLContext * glue)
 {
   SbBool retCode = FALSE;
   SbBool glerror_debug = sogl_glerror_debugging();
@@ -209,8 +209,8 @@ SoGLSLShaderObject::didOpenGLErrorOccur(const SbString & source)
   // degrade performance a lot. If glFlush is not executed here, gl
   // errors from the shaders might not get caught until after the
   // geometry is rendered, which makes debugging really confusing.
-  if (glerror_debug) {
-    SoGLContext_glFlush(sogl_current_render_glue());
+  if (glerror_debug && glue) {
+    SoGLContext_glFlush(glue);
   }
 
   GLenum glErr = glGetError();

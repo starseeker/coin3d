@@ -303,7 +303,7 @@ soshape_bumprender::initDiffusePrograms(const SoGLContext * glue, SoState * stat
     GLenum err = glGetError();
 
     if (err != GL_NO_ERROR) {
-      SoGLContext_glGetIntegerv(sogl_current_render_glue(), GL_PROGRAM_ERROR_POSITION_ARB, &errorPos);
+      SoGLContext_glGetIntegerv(sogl_glue_from_state(state), GL_PROGRAM_ERROR_POSITION_ARB, &errorPos);
       SoDebugError::postWarning("soshape_bumpspecrender::initPrograms",
                                 "Error in diffuse dirlight vertex program! (byte pos: %d) '%s'.\n",
                                 errorPos, glGetString(GL_PROGRAM_ERROR_STRING_ARB));
@@ -318,7 +318,7 @@ soshape_bumprender::initDiffusePrograms(const SoGLContext * glue, SoState * stat
     err = glGetError();
 
     if (err != GL_NO_ERROR) {
-      SoGLContext_glGetIntegerv(sogl_current_render_glue(), GL_PROGRAM_ERROR_POSITION_ARB, &errorPos);
+      SoGLContext_glGetIntegerv(sogl_glue_from_state(state), GL_PROGRAM_ERROR_POSITION_ARB, &errorPos);
       SoDebugError::postWarning("soshape_bumpspecrender::initPrograms",
                                 "Error in normal rendering vertex program! (byte pos: %d) '%s'.\n",
                                 errorPos, glGetString(GL_PROGRAM_ERROR_STRING_ARB));
@@ -358,7 +358,7 @@ soshape_bumprender::initPrograms(const SoGLContext * glue, SoState * state)
     GLint errorPos;
     GLenum err = glGetError();
     if (err != GL_NO_ERROR) {
-      SoGLContext_glGetIntegerv(sogl_current_render_glue(), GL_PROGRAM_ERROR_POSITION_ARB, &errorPos);
+      SoGLContext_glGetIntegerv(sogl_glue_from_state(state), GL_PROGRAM_ERROR_POSITION_ARB, &errorPos);
       SoDebugError::postWarning("soshape_bumpspecrender::initPrograms",
                                 "Error in fragment program! (byte pos: %d) '%s'.\n",
                                 errorPos, glGetString(GL_PROGRAM_ERROR_STRING_ARB));
@@ -372,7 +372,7 @@ soshape_bumprender::initPrograms(const SoGLContext * glue, SoState * state)
 
     err = glGetError();
     if (err != GL_NO_ERROR) {
-      SoGLContext_glGetIntegerv(sogl_current_render_glue(), GL_PROGRAM_ERROR_POSITION_ARB, &errorPos);
+      SoGLContext_glGetIntegerv(sogl_glue_from_state(state), GL_PROGRAM_ERROR_POSITION_ARB, &errorPos);
       SoDebugError::postWarning("soshape_bumpspecrender::initPrograms",
                                 "Error in directional light vertex program! "
                                 "(byte pos: %d) '%s'.\n",
@@ -387,7 +387,7 @@ soshape_bumprender::initPrograms(const SoGLContext * glue, SoState * state)
 
     err = glGetError();
     if (err != GL_NO_ERROR) {
-      SoGLContext_glGetIntegerv(sogl_current_render_glue(), GL_PROGRAM_ERROR_POSITION_ARB, &errorPos);
+      SoGLContext_glGetIntegerv(sogl_glue_from_state(state), GL_PROGRAM_ERROR_POSITION_ARB, &errorPos);
       SoDebugError::postWarning("soshape_bumpspecrender::initPrograms",
                                 "Error in point light vertex program! (byte pos: %d) '%s'.\n",
                                 errorPos, glGetString(GL_PROGRAM_ERROR_STRING_ARB));
@@ -447,15 +447,15 @@ soshape_bumprender::renderBumpSpecular(SoState * state,
   SoGLContext_glActiveTexture(glue, GL_TEXTURE0);
 
   if (bumpmapmatrix != oldtexture0matrix) {
-    SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_TEXTURE);
-    SoGLContext_glLoadMatrixf(sogl_current_render_glue(), bumpmapmatrix[0]);
-    SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_MODELVIEW);
+    SoGLContext_glMatrixMode(sogl_glue_from_state(state), GL_TEXTURE);
+    SoGLContext_glLoadMatrixf(sogl_glue_from_state(state), bumpmapmatrix[0]);
+    SoGLContext_glMatrixMode(sogl_glue_from_state(state), GL_MODELVIEW);
   }
   
   bumpimage->getGLDisplayList(state)->call(state);
 
   // FRAGMENT: Setting up spec. colour and shininess for the fragment program
-  SoGLContext_glEnable(sogl_current_render_glue(), GL_FRAGMENT_PROGRAM_ARB);
+  SoGLContext_glEnable(sogl_glue_from_state(state), GL_FRAGMENT_PROGRAM_ARB);
   SoGLContext_glBindProgram(glue, GL_FRAGMENT_PROGRAM_ARB, fragmentprogramid);
   SoGLContext_glProgramEnvParameter4f(glue, GL_FRAGMENT_PROGRAM_ARB, 0,
                                     spec[0], spec[1], spec[2], 1.0f);
@@ -470,7 +470,7 @@ soshape_bumprender::renderBumpSpecular(SoState * state,
   SoModelMatrixElement::get(state).inverse().multVecMatrix(eyepos, eyepos);
 
   // VERTEX: Setting up lightprograms
-  SoGLContext_glEnable(sogl_current_render_glue(), GL_VERTEX_PROGRAM_ARB);
+  SoGLContext_glEnable(sogl_glue_from_state(state), GL_VERTEX_PROGRAM_ARB);
   if (!this->ispointlight) {
     SoGLContext_glBindProgram(glue, GL_VERTEX_PROGRAM_ARB, dirlightvertexprogramid);
   }
@@ -490,18 +490,18 @@ soshape_bumprender::renderBumpSpecular(SoState * state,
 
   if (oldtexture2matrix != SbMatrix::identity()) {
     SoGLContext_glActiveTexture(glue, GL_TEXTURE2);
-    SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_TEXTURE);
-    SoGLContext_glLoadIdentity(sogl_current_render_glue()); // load identity texture matrix
-    SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_MODELVIEW);
+    SoGLContext_glMatrixMode(sogl_glue_from_state(state), GL_TEXTURE);
+    SoGLContext_glLoadIdentity(sogl_glue_from_state(state)); // load identity texture matrix
+    SoGLContext_glMatrixMode(sogl_glue_from_state(state), GL_MODELVIEW);
   }
 
   SoGLContext_glActiveTexture(glue, GL_TEXTURE1);
   if (oldtexture1matrix != SbMatrix::identity()) {
-    SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_TEXTURE);
-    SoGLContext_glLoadIdentity(sogl_current_render_glue()); // load identity texture matrix
-    SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_MODELVIEW);
+    SoGLContext_glMatrixMode(sogl_glue_from_state(state), GL_TEXTURE);
+    SoGLContext_glLoadIdentity(sogl_glue_from_state(state)); // load identity texture matrix
+    SoGLContext_glMatrixMode(sogl_glue_from_state(state), GL_MODELVIEW);
   }
-  SoGLContext_glEnable(sogl_current_render_glue(), GL_TEXTURE_CUBE_MAP);
+  SoGLContext_glEnable(sogl_glue_from_state(state), GL_TEXTURE_CUBE_MAP);
 
   SoGLContext_glActiveTexture(glue, GL_TEXTURE0);
 
@@ -539,9 +539,9 @@ soshape_bumprender::renderBumpSpecular(SoState * state,
   SoGLContext_glDisableClientState(glue, GL_VERTEX_ARRAY);
   SoGLContext_glDisableClientState(glue, GL_NORMAL_ARRAY);
 
-  SoGLContext_glDisable(sogl_current_render_glue(), GL_FRAGMENT_PROGRAM_ARB);
-  SoGLContext_glDisable(sogl_current_render_glue(), GL_VERTEX_PROGRAM_ARB);
-  SoGLContext_glDisable(sogl_current_render_glue(), GL_TEXTURE_CUBE_MAP); // unit 1
+  SoGLContext_glDisable(sogl_glue_from_state(state), GL_FRAGMENT_PROGRAM_ARB);
+  SoGLContext_glDisable(sogl_glue_from_state(state), GL_VERTEX_PROGRAM_ARB);
+  SoGLContext_glDisable(sogl_glue_from_state(state), GL_TEXTURE_CUBE_MAP); // unit 1
 
   if (lastenabled >= 1 && enabled[1]) {
     // restore blend mode for texture unit 1
@@ -550,25 +550,25 @@ soshape_bumprender::renderBumpSpecular(SoState * state,
 
   if (oldtexture2matrix != SbMatrix::identity()) {
     SoGLContext_glActiveTexture(glue, GL_TEXTURE2);
-    SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_TEXTURE);
-    SoGLContext_glLoadMatrixf(sogl_current_render_glue(), oldtexture2matrix[0]);
-    SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_MODELVIEW);
+    SoGLContext_glMatrixMode(sogl_glue_from_state(state), GL_TEXTURE);
+    SoGLContext_glLoadMatrixf(sogl_glue_from_state(state), oldtexture2matrix[0]);
+    SoGLContext_glMatrixMode(sogl_glue_from_state(state), GL_MODELVIEW);
   }
 
   SoGLContext_glActiveTexture(glue, GL_TEXTURE1);
-  SoGLContext_glDisable(sogl_current_render_glue(), GL_TEXTURE_CUBE_MAP);
+  SoGLContext_glDisable(sogl_glue_from_state(state), GL_TEXTURE_CUBE_MAP);
   if (oldtexture1matrix != SbMatrix::identity()) {
-    SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_TEXTURE);
-    SoGLContext_glLoadMatrixf(sogl_current_render_glue(), oldtexture1matrix[0]);
-    SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_MODELVIEW);
+    SoGLContext_glMatrixMode(sogl_glue_from_state(state), GL_TEXTURE);
+    SoGLContext_glLoadMatrixf(sogl_glue_from_state(state), oldtexture1matrix[0]);
+    SoGLContext_glMatrixMode(sogl_glue_from_state(state), GL_MODELVIEW);
   }
 
   SoGLContext_glActiveTexture(glue, GL_TEXTURE0);
 
   if (bumpmapmatrix != oldtexture0matrix) {
-    SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_TEXTURE);
-    SoGLContext_glLoadMatrixf(sogl_current_render_glue(), oldtexture0matrix[0]);
-    SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_MODELVIEW);
+    SoGLContext_glMatrixMode(sogl_glue_from_state(state), GL_TEXTURE);
+    SoGLContext_glLoadMatrixf(sogl_glue_from_state(state), oldtexture0matrix[0]);
+    SoGLContext_glMatrixMode(sogl_glue_from_state(state), GL_MODELVIEW);
   }
 
   state->pop();
@@ -619,28 +619,28 @@ soshape_bumprender::renderBump(SoState * state,
   SoGLContext_glActiveTexture(glue, GL_TEXTURE0);
 
   if (bumpmapmatrix != oldtexture0matrix) {
-    SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_TEXTURE);
-    SoGLContext_glLoadMatrixf(sogl_current_render_glue(), bumpmapmatrix[0]);
-    SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_MODELVIEW);
+    SoGLContext_glMatrixMode(sogl_glue_from_state(state), GL_TEXTURE);
+    SoGLContext_glLoadMatrixf(sogl_glue_from_state(state), bumpmapmatrix[0]);
+    SoGLContext_glMatrixMode(sogl_glue_from_state(state), GL_MODELVIEW);
   }
 
   bumpimage->getGLDisplayList(state)->call(state);
-  SoGLContext_glTexEnvi(sogl_current_render_glue(), GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE);
-  SoGLContext_glTexEnvi(sogl_current_render_glue(), GL_TEXTURE_ENV, GL_SOURCE0_RGB, GL_TEXTURE);
-  SoGLContext_glTexEnvi(sogl_current_render_glue(), GL_TEXTURE_ENV, GL_COMBINE_RGB, GL_REPLACE);
+  SoGLContext_glTexEnvi(sogl_glue_from_state(state), GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE);
+  SoGLContext_glTexEnvi(sogl_glue_from_state(state), GL_TEXTURE_ENV, GL_SOURCE0_RGB, GL_TEXTURE);
+  SoGLContext_glTexEnvi(sogl_glue_from_state(state), GL_TEXTURE_ENV, GL_COMBINE_RGB, GL_REPLACE);
 
   SoGLContext_glActiveTexture(glue, GL_TEXTURE1);
 
   if (oldtexture1matrix != SbMatrix::identity()) {
-    SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_TEXTURE);
-    SoGLContext_glLoadIdentity(sogl_current_render_glue()); // load identity texture matrix
-    SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_MODELVIEW);
+    SoGLContext_glMatrixMode(sogl_glue_from_state(state), GL_TEXTURE);
+    SoGLContext_glLoadIdentity(sogl_glue_from_state(state)); // load identity texture matrix
+    SoGLContext_glMatrixMode(sogl_glue_from_state(state), GL_MODELVIEW);
   }
-  SoGLContext_glEnable(sogl_current_render_glue(), GL_TEXTURE_CUBE_MAP);
-  SoGLContext_glTexEnvi(sogl_current_render_glue(), GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE);
-  SoGLContext_glTexEnvi(sogl_current_render_glue(), GL_TEXTURE_ENV, GL_SOURCE0_RGB, GL_TEXTURE);
-  SoGLContext_glTexEnvi(sogl_current_render_glue(), GL_TEXTURE_ENV, GL_COMBINE_RGB, GL_DOT3_RGB);
-  SoGLContext_glTexEnvi(sogl_current_render_glue(), GL_TEXTURE_ENV, GL_SOURCE1_RGB, GL_PREVIOUS);
+  SoGLContext_glEnable(sogl_glue_from_state(state), GL_TEXTURE_CUBE_MAP);
+  SoGLContext_glTexEnvi(sogl_glue_from_state(state), GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE);
+  SoGLContext_glTexEnvi(sogl_glue_from_state(state), GL_TEXTURE_ENV, GL_SOURCE0_RGB, GL_TEXTURE);
+  SoGLContext_glTexEnvi(sogl_glue_from_state(state), GL_TEXTURE_ENV, GL_COMBINE_RGB, GL_DOT3_RGB);
+  SoGLContext_glTexEnvi(sogl_glue_from_state(state), GL_TEXTURE_ENV, GL_SOURCE1_RGB, GL_PREVIOUS);
 
   const SbVec3f * cmptr = this->cubemaplist.getArrayPtr();
   const SbVec3f * tsptr = this->tangentlist.getArrayPtr();
@@ -676,7 +676,7 @@ soshape_bumprender::renderBump(SoState * state,
   SoGLContext_glEnableClientState(glue, GL_TEXTURE_COORD_ARRAY);
 
   if (use_vertex_program) {
-    SoGLContext_glEnable(sogl_current_render_glue(), GL_VERTEX_PROGRAM_ARB);
+    SoGLContext_glEnable(sogl_glue_from_state(state), GL_VERTEX_PROGRAM_ARB);
     if (!this->ispointlight) {
       SoGLContext_glBindProgram(glue, GL_VERTEX_PROGRAM_ARB, diffusebumpdirlightvertexprogramid);
     }
@@ -695,14 +695,14 @@ soshape_bumprender::renderBump(SoState * state,
   if (use_vertex_program) {
     SoGLContext_glDisableClientState(glue, GL_NORMAL_ARRAY);
     SoGLContext_glDisableClientState(glue, GL_COLOR_ARRAY);
-    SoGLContext_glDisable(sogl_current_render_glue(), GL_VERTEX_PROGRAM_ARB);
+    SoGLContext_glDisable(sogl_glue_from_state(state), GL_VERTEX_PROGRAM_ARB);
   }
   SoGLContext_glDisableClientState(glue, GL_TEXTURE_COORD_ARRAY);
   SoGLContext_glClientActiveTexture(glue, GL_TEXTURE0);
   SoGLContext_glDisableClientState(glue, GL_TEXTURE_COORD_ARRAY);
   SoGLContext_glDisableClientState(glue, GL_VERTEX_ARRAY);
 
-  SoGLContext_glDisable(sogl_current_render_glue(), GL_TEXTURE_CUBE_MAP); // unit 1
+  SoGLContext_glDisable(sogl_glue_from_state(state), GL_TEXTURE_CUBE_MAP); // unit 1
 
   if (lastenabled >= 1 && enabled[1]) {
     // restore blend mode for texture unit 1
@@ -711,17 +711,17 @@ soshape_bumprender::renderBump(SoState * state,
 
   if (oldtexture1matrix != SbMatrix::identity()) {
     SoGLContext_glActiveTexture(glue, GL_TEXTURE1);
-    SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_TEXTURE);
-    SoGLContext_glLoadMatrixf(sogl_current_render_glue(), oldtexture1matrix[0]);
-    SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_MODELVIEW);
+    SoGLContext_glMatrixMode(sogl_glue_from_state(state), GL_TEXTURE);
+    SoGLContext_glLoadMatrixf(sogl_glue_from_state(state), oldtexture1matrix[0]);
+    SoGLContext_glMatrixMode(sogl_glue_from_state(state), GL_MODELVIEW);
   }
 
   SoGLContext_glActiveTexture(glue, GL_TEXTURE0);
 
   if (bumpmapmatrix != oldtexture0matrix) {
-    SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_TEXTURE);
-    SoGLContext_glLoadMatrixf(sogl_current_render_glue(), oldtexture0matrix[0]);
-    SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_MODELVIEW);
+    SoGLContext_glMatrixMode(sogl_glue_from_state(state), GL_TEXTURE);
+    SoGLContext_glLoadMatrixf(sogl_glue_from_state(state), oldtexture0matrix[0]);
+    SoGLContext_glMatrixMode(sogl_glue_from_state(state), GL_MODELVIEW);
   }
   state->pop();
 }
@@ -742,7 +742,7 @@ soshape_bumprender::renderNormal(SoState * state, const SoPrimitiveVertexCache *
     if (!this->diffuseprogramsinitialized) {
       this->initDiffusePrograms(glue, state);
     }
-    SoGLContext_glEnable(sogl_current_render_glue(), GL_VERTEX_PROGRAM_ARB);
+    SoGLContext_glEnable(sogl_glue_from_state(state), GL_VERTEX_PROGRAM_ARB);
     SoGLContext_glBindProgram(glue, GL_VERTEX_PROGRAM_ARB, normalrenderingvertexprogramid);
   }
 
@@ -752,7 +752,7 @@ soshape_bumprender::renderNormal(SoState * state, const SoPrimitiveVertexCache *
   cache->renderTriangles(state, arrays);
 
   if (use_vertex_program) {
-    SoGLContext_glDisable(sogl_current_render_glue(), GL_VERTEX_PROGRAM_ARB);
+    SoGLContext_glDisable(sogl_glue_from_state(state), GL_VERTEX_PROGRAM_ARB);
   }
 }
 

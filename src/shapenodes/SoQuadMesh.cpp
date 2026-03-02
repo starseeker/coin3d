@@ -352,7 +352,8 @@ namespace { namespace SoGL { namespace QuadMesh {
   template < int NormalBinding,
              int MaterialBinding,
              int TexturingEnabled >
-  static void GLRender(const SoGLCoordinateElement * coords,
+  static void GLRender(const SoGLContext * glue,
+                       const SoGLCoordinateElement * coords,
                        const SbVec3f *normals,
                        SoMaterialBundle * mb,
                        const SoTextureCoordinateBundle * tb,
@@ -374,8 +375,8 @@ namespace { namespace SoGL { namespace QuadMesh {
       // This is the same code as in SoGLCoordinateElement::send().
       // It is inlined here for speed (~15% speed increase).
 #define SEND_VERTEX(_idx_) \
-      if (is3d) SoGLContext_glVertex3fv(sogl_current_render_glue(), (const GLfloat*) (coords3d + (_idx_)));        \
-      else SoGLContext_glVertex4fv(sogl_current_render_glue(), (const GLfloat*) (coords4d + (_idx_)));
+      if (is3d) SoGLContext_glVertex3fv(glue, (const GLfloat*) (coords3d + (_idx_)));        \
+      else SoGLContext_glVertex4fv(glue, (const GLfloat*) (coords4d + (_idx_)));
 
       int midx = 0;
 
@@ -385,7 +386,7 @@ namespace { namespace SoGL { namespace QuadMesh {
 
       if ((AttributeBinding)NormalBinding == OVERALL) {
         if (needNormals) {
-          SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat *)currnormal);
+          SoGLContext_glNormal3fv(glue, (const GLfloat *)currnormal);
         }
       }
 
@@ -393,10 +394,10 @@ namespace { namespace SoGL { namespace QuadMesh {
 
       for (int i = 0; i < colsize-1; i++) {
         int j = 0;
-        SoGLContext_glBegin(sogl_current_render_glue(), GL_QUAD_STRIP);
+        SoGLContext_glBegin(glue, GL_QUAD_STRIP);
         if ((AttributeBinding)NormalBinding == PER_ROW) {
           currnormal = normals++;
-          SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat *)currnormal);
+          SoGLContext_glNormal3fv(glue, (const GLfloat *)currnormal);
         }
         if ((AttributeBinding)MaterialBinding == PER_ROW) {
           mb->send(midx++,TRUE);
@@ -406,14 +407,14 @@ namespace { namespace SoGL { namespace QuadMesh {
           curridx = IDX(i,j);
           if ((AttributeBinding)NormalBinding == PER_VERTEX) {
             currnormal = &normals[curridx];
-            SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat *)currnormal);
+            SoGLContext_glNormal3fv(glue, (const GLfloat *)currnormal);
           }
           if ((AttributeBinding)NormalBinding == PER_FACE) {
             // j != 1, since we send four vertices for the first quad, then two
             // vertices for all other quads
             if (j != 1) {
               currnormal = normals++;
-              SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat *)currnormal);
+              SoGLContext_glNormal3fv(glue, (const GLfloat *)currnormal);
             }
           }
           if ((AttributeBinding)MaterialBinding == PER_VERTEX) {
@@ -432,7 +433,7 @@ namespace { namespace SoGL { namespace QuadMesh {
           curridx = IDX(i+1,j);
           if ((AttributeBinding)NormalBinding == PER_VERTEX) {
             currnormal = &normals[curridx];
-            SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat *)currnormal);
+            SoGLContext_glNormal3fv(glue, (const GLfloat *)currnormal);
           }
           if ((AttributeBinding)MaterialBinding == PER_VERTEX) {
             mb->send(curridx, TRUE);
@@ -442,7 +443,7 @@ namespace { namespace SoGL { namespace QuadMesh {
           }
           SEND_VERTEX(start + curridx);
         }
-        SoGLContext_glEnd(sogl_current_render_glue()); // end of strip/row
+        SoGLContext_glEnd(glue); // end of strip/row
       }
 #undef SEND_VERTEX
 
@@ -461,7 +462,7 @@ namespace { namespace SoGL { namespace QuadMesh {
 
       if ((AttributeBinding)NormalBinding == OVERALL) {
         if (needNormals) {
-          SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat *)currnormal);
+          SoGLContext_glNormal3fv(glue, (const GLfloat *)currnormal);
         }
       }
 
@@ -484,7 +485,7 @@ namespace { namespace SoGL { namespace QuadMesh {
         int j = 0;
         if ((AttributeBinding)NormalBinding == PER_ROW) {
           currnormal = normals++;
-          SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat *)currnormal);
+          SoGLContext_glNormal3fv(glue, (const GLfloat *)currnormal);
         }
         if ((AttributeBinding)MaterialBinding == PER_ROW) {
           mb->send(midx++, TRUE);
@@ -594,11 +595,11 @@ namespace { namespace SoGL { namespace QuadMesh {
             tc = ((*t1)*w1 + (*t2)*w2 + (*t3)*w3 + (*t4)*w4);
           }
 
-          SoGLContext_glBegin(sogl_current_render_glue(), GL_TRIANGLE_FAN);
+          SoGLContext_glBegin(glue, GL_TRIANGLE_FAN);
 
           if ((AttributeBinding)NormalBinding == PER_FACE) {
             currnormal = normals++;
-            SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat *)currnormal);
+            SoGLContext_glNormal3fv(glue, (const GLfloat *)currnormal);
           }
           if ((AttributeBinding)MaterialBinding == PER_FACE) {
             mb->send(curridx1, TRUE);
@@ -606,7 +607,7 @@ namespace { namespace SoGL { namespace QuadMesh {
 
           // CENTER vertex
           if ((AttributeBinding)NormalBinding == PER_VERTEX) {
-            SoGLContext_glNormal3fv(sogl_current_render_glue(), nc.getValue());
+            SoGLContext_glNormal3fv(glue, nc.getValue());
           }
           if ((AttributeBinding)MaterialBinding == PER_VERTEX) {
             assert(FALSE && "unimplemented");
@@ -614,17 +615,17 @@ namespace { namespace SoGL { namespace QuadMesh {
           if (TexturingEnabled == TRUE) {
             // tb->send(?curridx?, cc, nc) was replaced by
             // glTexCoord for center vertex
-            SoGLContext_glTexCoord4fv(sogl_current_render_glue(), (const GLfloat*)&tc);
+            SoGLContext_glTexCoord4fv(glue, (const GLfloat*)&tc);
           }
           if (is3d) {
-            SoGLContext_glVertex3fv(sogl_current_render_glue(), (const GLfloat*)&ccd3);
+            SoGLContext_glVertex3fv(glue, (const GLfloat*)&ccd3);
           } else {
-            SoGLContext_glVertex4fv(sogl_current_render_glue(), (const GLfloat*)&ccd4);
+            SoGLContext_glVertex4fv(glue, (const GLfloat*)&ccd4);
           }
 
           // FIRST vertex
           if ((AttributeBinding)NormalBinding == PER_VERTEX) {
-            SoGLContext_glNormal3fv(sogl_current_render_glue(), n1->getValue());
+            SoGLContext_glNormal3fv(glue, n1->getValue());
           }
           if ((AttributeBinding)MaterialBinding == PER_VERTEX) {
             assert(FALSE && "unimplemented");
@@ -645,14 +646,14 @@ namespace { namespace SoGL { namespace QuadMesh {
             }
           }
           if (is3d) {
-            SoGLContext_glVertex3fv(sogl_current_render_glue(), (const GLfloat*)c1d3);
+            SoGLContext_glVertex3fv(glue, (const GLfloat*)c1d3);
           } else {
-            SoGLContext_glVertex4fv(sogl_current_render_glue(), (const GLfloat*)c1d4);
+            SoGLContext_glVertex4fv(glue, (const GLfloat*)c1d4);
           }
 
           // SECOND vertex
           if ((AttributeBinding)NormalBinding == PER_VERTEX) {
-            SoGLContext_glNormal3fv(sogl_current_render_glue(), n2->getValue());
+            SoGLContext_glNormal3fv(glue, n2->getValue());
           }
           if ((AttributeBinding)MaterialBinding == PER_VERTEX) {
             assert(!"unimplemented");
@@ -673,14 +674,14 @@ namespace { namespace SoGL { namespace QuadMesh {
             }
           }
           if (is3d) {
-            SoGLContext_glVertex3fv(sogl_current_render_glue(), (const GLfloat*)c2d3);
+            SoGLContext_glVertex3fv(glue, (const GLfloat*)c2d3);
           } else {
-            SoGLContext_glVertex4fv(sogl_current_render_glue(), (const GLfloat*)c2d4);
+            SoGLContext_glVertex4fv(glue, (const GLfloat*)c2d4);
           }
 
           // FOURTH vertex
           if ((AttributeBinding)NormalBinding == PER_VERTEX) {
-            SoGLContext_glNormal3fv(sogl_current_render_glue(), n4->getValue());
+            SoGLContext_glNormal3fv(glue, n4->getValue());
           }
           if ((AttributeBinding)MaterialBinding == PER_VERTEX) {
             assert(FALSE && "unimplemented");
@@ -701,14 +702,14 @@ namespace { namespace SoGL { namespace QuadMesh {
             }
           }
           if (is3d) {
-            SoGLContext_glVertex3fv(sogl_current_render_glue(), (const GLfloat*)c4d3);
+            SoGLContext_glVertex3fv(glue, (const GLfloat*)c4d3);
           } else {
-            SoGLContext_glVertex4fv(sogl_current_render_glue(), (const GLfloat*)c4d4);
+            SoGLContext_glVertex4fv(glue, (const GLfloat*)c4d4);
           }
 
           // THIRD vertex
           if ((AttributeBinding)NormalBinding == PER_VERTEX) {
-            SoGLContext_glNormal3fv(sogl_current_render_glue(), n3->getValue());
+            SoGLContext_glNormal3fv(glue, n3->getValue());
           }
           if ((AttributeBinding)MaterialBinding == PER_VERTEX) {
             assert(!"unimplemented");
@@ -729,14 +730,14 @@ namespace { namespace SoGL { namespace QuadMesh {
             }
           }
           if (is3d) {
-            SoGLContext_glVertex3fv(sogl_current_render_glue(), (const GLfloat*)c3d3);
+            SoGLContext_glVertex3fv(glue, (const GLfloat*)c3d3);
           } else {
-            SoGLContext_glVertex4fv(sogl_current_render_glue(), (const GLfloat*)c3d4);
+            SoGLContext_glVertex4fv(glue, (const GLfloat*)c3d4);
           }
 
           // again FIRST vertex
           if ((AttributeBinding)NormalBinding == PER_VERTEX) {
-            SoGLContext_glNormal3fv(sogl_current_render_glue(), n1->getValue());
+            SoGLContext_glNormal3fv(glue, n1->getValue());
           }
           if ((AttributeBinding)MaterialBinding == PER_VERTEX) {
             assert(!"unimplemented");
@@ -757,12 +758,12 @@ namespace { namespace SoGL { namespace QuadMesh {
             }
           }
           if (is3d) {
-            SoGLContext_glVertex3fv(sogl_current_render_glue(), (const GLfloat*)c1d3);
+            SoGLContext_glVertex3fv(glue, (const GLfloat*)c1d3);
           } else {
-            SoGLContext_glVertex4fv(sogl_current_render_glue(), (const GLfloat*)c1d4);
+            SoGLContext_glVertex4fv(glue, (const GLfloat*)c1d4);
           }
 
-          SoGLContext_glEnd(sogl_current_render_glue());
+          SoGLContext_glEnd(glue);
 
           curridx1++;
           curridx2++;
@@ -954,7 +955,8 @@ SoQuadMesh::GLRender(SoGLRenderAction * action)
     goto glrender_done;
   }
 
-  SOGL_QUADMESH_GLRENDER(nbind, mbind, doTextures, (coords,
+  SOGL_QUADMESH_GLRENDER(nbind, mbind, doTextures, (sogl_glue_from_state(state),
+                                                   coords,
                                                     normals,
                                                     &mb,
                                                     &tb,

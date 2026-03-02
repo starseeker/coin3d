@@ -33,6 +33,7 @@
 #include <Inventor/actions/SoGetBoundingBoxAction.h>
 #include <Inventor/actions/SoRayPickAction.h>
 #include <Inventor/SoPickedPoint.h>
+#include <Inventor/annex/HUD/nodekits/SoHUDKit.h>
 
 #include <cstdio>
 #include <cmath>
@@ -275,6 +276,39 @@ static bool test6_subgraphBBox()
 }
 
 // ---------------------------------------------------------------------------
+// Test 7: GetBoundingBox on scene containing SoHUDKit (SoCallback nodes with
+//         GL depth-test callbacks must not crash when glue is null).
+// ---------------------------------------------------------------------------
+static bool test7_hudKitBBox()
+{
+    SoSeparator *root = new SoSeparator;
+    root->ref();
+
+    root->addChild(new SoDirectionalLight);
+    root->addChild(new SoSphere);
+
+    // SoHUDKit contains SoCallback nodes that call
+    // SoGLContext_glDisable/Enable(sogl_current_render_glue(), GL_DEPTH_TEST).
+    // Applying SoGetBoundingBoxAction must not crash even though there is no
+    // active GL render context (sogl_current_render_glue() returns NULL).
+    SoHUDKit *hud = new SoHUDKit;
+    root->addChild(hud);
+
+    SbViewportRegion vp(DEFAULT_WIDTH, DEFAULT_HEIGHT);
+    SoGetBoundingBoxAction bba(vp);
+    // This must not crash (segfault before fix).
+    bba.apply(root);
+    SbBox3f box = bba.getBoundingBox();
+
+    bool ok = !box.isEmpty();
+    if (!ok) fprintf(stderr, "  FAIL test7: bbox is empty after HUD kit traversal\n");
+    else     printf("  PASS test7: SoGetBoundingBoxAction on SoHUDKit scene did not crash\n");
+
+    root->unref();
+    return ok;
+}
+
+// ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
 int main(int argc, char **argv)
@@ -292,6 +326,7 @@ int main(int argc, char **argv)
     if (!test4_progressiveGrowth())     ++failures;
     if (!test5_viewAllFromBBox(basepath)) ++failures;
     if (!test6_subgraphBBox())          ++failures;
+    if (!test7_hudKitBBox())            ++failures;
 
     printf("\n=== Summary: %d failure(s) ===\n", failures);
     return failures ? 1 : 0;

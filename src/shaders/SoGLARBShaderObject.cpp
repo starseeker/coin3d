@@ -68,23 +68,23 @@ SoGLARBShaderObject::load(const char * srcStr)
 
   if (len == 0) return;
 
-  SoGLContext_glEnable(sogl_current_render_glue(), this->target);
+  SoGLContext_glEnable(this->glctx, this->target);
   SoGLContext_glGenPrograms(this->glctx, 1, &this->arbProgramID);
   SoGLContext_glBindProgram(this->glctx, this->target, this->arbProgramID);
   SoGLContext_glProgramString(this->glctx, this->target, GL_PROGRAM_FORMAT_ASCII_ARB, (GLsizei)len, srcStr);
 
-  if (glGetError() == GL_INVALID_OPERATION) {
+  if (SoGLContext_glGetError(this->glctx) == GL_INVALID_OPERATION) {
     GLint errorPos;
     const GLubyte *errorString;
 
-    SoGLContext_glGetIntegerv(sogl_current_render_glue(), GL_PROGRAM_ERROR_POSITION_ARB, &errorPos);
-    errorString = glGetString(GL_PROGRAM_ERROR_STRING_ARB);
+    SoGLContext_glGetIntegerv(this->glctx, GL_PROGRAM_ERROR_POSITION_ARB, &errorPos);
+    errorString = SoGLContext_glGetString(this->glctx, GL_PROGRAM_ERROR_STRING_ARB);
     SoDebugError::post("SoGLARBShaderObject::load",
                        "Error at position: %d (%s)",
                        errorPos, errorString);
   }
 
-  SoGLContext_glDisable(sogl_current_render_glue(), this->target);
+  SoGLContext_glDisable(this->glctx, this->target);
 }
 
 void
@@ -115,12 +115,12 @@ SoGLARBShaderObject::enable(void)
 {
   if (this->isActive()) {
     SoGLContext_glBindProgram(this->glctx, this->target, this->arbProgramID);
-    SoGLContext_glEnable(sogl_current_render_glue(), this->target);
+    SoGLContext_glEnable(this->glctx, this->target);
   }
 }
 
 void
 SoGLARBShaderObject::disable(void)
 {
-  if (this->isActive()) SoGLContext_glDisable(sogl_current_render_glue(), this->target);
+  if (this->isActive()) SoGLContext_glDisable(this->glctx, this->target);
 }

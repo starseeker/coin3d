@@ -35,6 +35,8 @@
 
 #include <Inventor/elements/SoViewingMatrixElement.h>
 
+struct SoGLContext;
+
 class OBOL_DLL_API SoGLViewingMatrixElement : public SoViewingMatrixElement {
   typedef SoViewingMatrixElement inherited;
 
@@ -58,6 +60,7 @@ protected:
   virtual void setElt(const SbMatrix & matrix);
 
 private:
+  mutable const SoGLContext * glue = nullptr;
   SoState * state;
   SbMatrix modelmatrix;
   SbBool mmidentity;

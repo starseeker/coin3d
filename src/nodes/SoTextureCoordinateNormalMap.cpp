@@ -167,7 +167,7 @@ SoTextureCoordinateNormalMap::GLRender(SoGLRenderAction * action)
                                                action->getState());
   SoGLMultiTextureCoordinateElement::setTexGen(action->getState(),
                                                this, unit, handleTexgen, 
-                                               NULL,
+                                               this,
                                                generate,
                                                action->getState());
   
@@ -188,9 +188,10 @@ SoTextureCoordinateNormalMap::pick(SoPickAction * action)
 }
 
 void
-SoTextureCoordinateNormalMap::handleTexgen(void * /* data */)
+SoTextureCoordinateNormalMap::handleTexgen(void * data)
 {
-  SoGLContext_glTexGeni(sogl_current_render_glue(), GL_S, GL_TEXTURE_GEN_MODE, GL_NORMAL_MAP);
-  SoGLContext_glTexGeni(sogl_current_render_glue(), GL_T, GL_TEXTURE_GEN_MODE, GL_NORMAL_MAP);  
-  SoGLContext_glTexGeni(sogl_current_render_glue(), GL_R, GL_TEXTURE_GEN_MODE, GL_NORMAL_MAP);
+  SoTextureCoordinateNormalMap * thisp = (SoTextureCoordinateNormalMap*)data;
+  SoGLContext_glTexGeni(thisp->cachedGlue, GL_S, GL_TEXTURE_GEN_MODE, GL_NORMAL_MAP);
+  SoGLContext_glTexGeni(thisp->cachedGlue, GL_T, GL_TEXTURE_GEN_MODE, GL_NORMAL_MAP);  
+  SoGLContext_glTexGeni(thisp->cachedGlue, GL_R, GL_TEXTURE_GEN_MODE, GL_NORMAL_MAP);
 }

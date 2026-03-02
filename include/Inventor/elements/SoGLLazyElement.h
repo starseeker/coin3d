@@ -179,6 +179,7 @@ private:
   mutable uint32_t cachebitmask;
   mutable uint32_t opencacheflags;
 
+  mutable const SoGLContext * glue;
   mutable GLState glstate;
   GLState * postcachestate;
   GLState * precachestate;

@@ -34,6 +34,8 @@
 \**************************************************************************/
 
 #include <Inventor/elements/SoSubElement.h>
+
+struct SoGLContext;
 #include <Inventor/SbVec2f.h>
 #include <Inventor/SbVec2s.h>
 
@@ -69,6 +71,7 @@ protected:
   SbVec2f size;
 
 private:
+  mutable const SoGLContext * glue = nullptr;
   SbBool isDefault(void) const;
   void updategl(void);
   SbBool scissorstate;

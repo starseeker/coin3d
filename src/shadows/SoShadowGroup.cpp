@@ -366,8 +366,8 @@ public:
     // still use the proxy texture test in case the maximum size is
     // something smaller than 2048 though.  pederb, 2007-05-03
 
-    // SoGLContext_glGetIntegerv(sogl_current_render_glue(), GL_MAX_RENDERBUFFER_SIZE_EXT, &maxsize);
-    // SoGLContext_glGetIntegerv(sogl_current_render_glue(), GL_MAX_TEXTURE_SIZE, &maxtexsize);
+    // SoGLContext_glGetIntegerv(sogl_glue_from_state(state), GL_MAX_RENDERBUFFER_SIZE_EXT, &maxsize);
+    // SoGLContext_glGetIntegerv(sogl_glue_from_state(state), GL_MAX_TEXTURE_SIZE, &maxtexsize);
     // if (maxtexsize < maxsize) maxsize = maxtexsize;
 
     GLenum internalformat = GL_RGBA16F_ARB;
@@ -378,8 +378,8 @@ public:
       maxsize >>= 1;
     }
     if (maxsize == 0) { // Can happen on CentOS 7 in VirtualBox
-      SoGLContext_glGetIntegerv(sogl_current_render_glue(), GL_MAX_RENDERBUFFER_SIZE, &maxsize);
-      SoGLContext_glGetIntegerv(sogl_current_render_glue(), GL_MAX_TEXTURE_SIZE, &maxtexsize);
+      SoGLContext_glGetIntegerv(sogl_glue_from_state(state), GL_MAX_RENDERBUFFER_SIZE, &maxsize);
+      SoGLContext_glGetIntegerv(sogl_glue_from_state(state), GL_MAX_TEXTURE_SIZE, &maxtexsize);
       if (maxtexsize < maxsize) maxsize = maxtexsize;
     }
     const int TEXSIZE = coin_geq_power_of_two((int) (sg->precision.getValue() * SbMin(maxsize, maxtexsize)));
@@ -527,16 +527,16 @@ public:
     return (int)fwrite(&tmp, 2, 1, fp);
   }
 
-  int dumpBitmap(const char * filename) const {
+  int dumpBitmap(const char * filename, const SoGLContext * glue) const {
     GLint vp[4];
-    SoGLContext_glGetIntegerv(sogl_current_render_glue(), GL_VIEWPORT, vp);
+    SoGLContext_glGetIntegerv(glue, GL_VIEWPORT, vp);
     int width = vp[2];
     int height = vp[3];
     int comp = 1;
 
     unsigned char * bytes = new unsigned char[width*height*comp];
-    SoGLContext_glFlush(sogl_current_render_glue());
-    SoGLContext_glReadPixels(sogl_current_render_glue(), 0,0, width, height, GL_RED, GL_UNSIGNED_BYTE, bytes);
+    SoGLContext_glFlush(glue);
+    SoGLContext_glReadPixels(glue, 0,0, width, height, GL_RED, GL_UNSIGNED_BYTE, bytes);
 
     FILE * fp = fopen(filename, "wb");
     if (!fp) {
@@ -2170,20 +2170,20 @@ SoShadowGroupP::shader_enable_cb(void * closure,
     SoShadowLightCache * cache = thisp->shadowlights[i];
     int unit = cache->texunit;
     if (unit == 0) {
-      if (enable) SoGLContext_glEnable(sogl_current_render_glue(), GL_TEXTURE_2D);
-      else SoGLContext_glDisable(sogl_current_render_glue(), GL_TEXTURE_2D);
+      if (enable) SoGLContext_glEnable(glue, GL_TEXTURE_2D);
+      else SoGLContext_glDisable(glue, GL_TEXTURE_2D);
     }
     else {
       SoGLContext_glActiveTexture(glue, (GLenum) (int(GL_TEXTURE0) + unit));
-      if (enable) SoGLContext_glEnable(sogl_current_render_glue(), GL_TEXTURE_2D);
-      else SoGLContext_glDisable(sogl_current_render_glue(), GL_TEXTURE_2D);
+      if (enable) SoGLContext_glEnable(glue, GL_TEXTURE_2D);
+      else SoGLContext_glDisable(glue, GL_TEXTURE_2D);
       SoGLContext_glActiveTexture(glue, GL_TEXTURE0);
 
-      GLenum glerror = sogl_glerror_debugging() ? glGetError() : GL_NO_ERROR;
+      GLenum glerror = sogl_glerror_debugging() ? SoGLContext_glGetError(glue) : GL_NO_ERROR;
       while (glerror) {
           SoDebugError::postWarning("SoShadowGroupP::shader_enable_cb",
               "glError() = %d\n", glerror);
-          glerror = glGetError();
+          glerror = SoGLContext_glGetError(glue);
       }
     }
   }

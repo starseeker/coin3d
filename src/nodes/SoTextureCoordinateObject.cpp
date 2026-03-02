@@ -155,6 +155,7 @@ SoTextureCoordinateObject::GLRender(SoGLRenderAction * action)
   int unit = SoTextureUnitElement::get(state);
 
   const SoGLContext * glue = SoGLContext_instance(SoGLCacheContextElement::get(state));
+  this->cachedGlue = glue;
   int maxunits = SoGLContext_max_texture_units(glue);
   if (unit < maxunits) {        
     SoGLMultiTextureCoordinateElement::setTexGen(action->getState(),
@@ -185,20 +186,20 @@ void
 SoTextureCoordinateObject::handleTexgen(void * data)
 {
   SoTextureCoordinateObject *thisp = (SoTextureCoordinateObject*)data;
-  SoGLContext_glTexGeni(sogl_current_render_glue(), GL_S, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
-  SoGLContext_glTexGeni(sogl_current_render_glue(), GL_T, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
-  SoGLContext_glTexGeni(sogl_current_render_glue(), GL_R, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
-  SoGLContext_glTexGeni(sogl_current_render_glue(), GL_Q, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
+  SoGLContext_glTexGeni(thisp->cachedGlue, GL_S, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
+  SoGLContext_glTexGeni(thisp->cachedGlue, GL_T, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
+  SoGLContext_glTexGeni(thisp->cachedGlue, GL_R, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
+  SoGLContext_glTexGeni(thisp->cachedGlue, GL_Q, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
 
   const SbVec4f & s = thisp->factorS.getValue();
-  SoGLContext_glTexGenfv(sogl_current_render_glue(), GL_S, GL_OBJECT_PLANE, s.getValue());
+  SoGLContext_glTexGenfv(thisp->cachedGlue, GL_S, GL_OBJECT_PLANE, s.getValue());
 
   const SbVec4f & t = thisp->factorT.getValue();
-  SoGLContext_glTexGenfv(sogl_current_render_glue(), GL_T, GL_OBJECT_PLANE, t.getValue());
+  SoGLContext_glTexGenfv(thisp->cachedGlue, GL_T, GL_OBJECT_PLANE, t.getValue());
   
   const SbVec4f & r = thisp->factorR.getValue();
-  SoGLContext_glTexGenfv(sogl_current_render_glue(), GL_R, GL_OBJECT_PLANE, r.getValue());
+  SoGLContext_glTexGenfv(thisp->cachedGlue, GL_R, GL_OBJECT_PLANE, r.getValue());
 
   const SbVec4f & q = thisp->factorQ.getValue();
-  SoGLContext_glTexGenfv(sogl_current_render_glue(), GL_Q, GL_OBJECT_PLANE, q.getValue());
+  SoGLContext_glTexGenfv(thisp->cachedGlue, GL_Q, GL_OBJECT_PLANE, q.getValue());
 }

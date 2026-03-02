@@ -35,6 +35,8 @@
 
 #include <Inventor/elements/SoMultiTextureCoordinateElement.h>
 
+struct SoGLContext;
+
 class SoGLMultiTextureCoordinateElementP;
 typedef void SoTexCoordTexgenCB(void * data);
 
@@ -107,6 +109,7 @@ protected:
                       void *data = NULL);
 
 private:
+  mutable const SoGLContext * glue = nullptr;
   void doCallback(const int unit) const;
   SoGLMultiTextureCoordinateElementP * pimpl;
   mutable const SbBool * multienabled;

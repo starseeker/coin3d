@@ -119,7 +119,8 @@ SoGLDisplayList::SoGLDisplayList(SoState * state, Type type, int allocnum,
   }
 
   if (PRIVATE(this)->type == DISPLAY_LIST) {
-    PRIVATE(this)->firstindex = (unsigned int) glGenLists(allocnum);
+    const SoGLContext * glw = SoGLContext_instance(PRIVATE(this)->context);
+    PRIVATE(this)->firstindex = (unsigned int) SoGLContext_glGenLists(glw, allocnum);
     if (PRIVATE(this)->firstindex == 0) {
       SoDebugError::post("SoGLDisplayList::SoGLDisplayList",
                          "Could not reserve %d displaylist%s. "
@@ -143,7 +144,7 @@ SoGLDisplayList::~SoGLDisplayList()
 #endif // debug
 
   if (PRIVATE(this)->type == DISPLAY_LIST) {
-    SoGLContext_glDeleteLists(sogl_current_render_glue(), (GLuint) PRIVATE(this)->firstindex, PRIVATE(this)->numalloc);
+    SoGLContext_glDeleteLists(SoGLContext_instance(PRIVATE(this)->context), (GLuint) PRIVATE(this)->firstindex, PRIVATE(this)->numalloc);
   }
   else {
     assert(PRIVATE(this)->type == TEXTURE_OBJECT);
@@ -194,7 +195,7 @@ SoGLDisplayList::open(SoState * state, int index)
     // using GL_COMPILE here instead of GL_COMPILE_AND_EXECUTE will
     // lead to much higher performance on nVidia cards, and doesn't
     // hurt performance for other vendors.
-    SoGLContext_glNewList(sogl_current_render_glue(), (GLuint) (PRIVATE(this)->firstindex+PRIVATE(this)->openindex), GL_COMPILE);
+    SoGLContext_glNewList(SoGLContext_instance(PRIVATE(this)->context), (GLuint) (PRIVATE(this)->firstindex+PRIVATE(this)->openindex), GL_COMPILE);
   }
   else {
     assert(PRIVATE(this)->type == TEXTURE_OBJECT);
@@ -210,15 +211,15 @@ void
 SoGLDisplayList::close(SoState * OBOL_UNUSED_ARG(state))
 {
   if (PRIVATE(this)->type == DISPLAY_LIST) {
-    SoGLContext_glEndList(sogl_current_render_glue());
-    GLenum err = sogl_glerror_debugging() ? glGetError() : GL_NO_ERROR;
+    SoGLContext_glEndList(SoGLContext_instance(PRIVATE(this)->context));
+    GLenum err = sogl_glerror_debugging() ? SoGLContext_glGetError(SoGLContext_instance(PRIVATE(this)->context)) : GL_NO_ERROR;
     if (err == GL_OUT_OF_MEMORY) {
       SoDebugError::post("SoGLDisplayList::close",
                          "Not enough memory resources available on system "
                          "to store full display list. Expect flaws in "
                          "rendering.");
     }
-    SoGLContext_glCallList(sogl_current_render_glue(), (GLuint) (PRIVATE(this)->firstindex + PRIVATE(this)->openindex));
+    SoGLContext_glCallList(SoGLContext_instance(PRIVATE(this)->context), (GLuint) (PRIVATE(this)->firstindex + PRIVATE(this)->openindex));
   }
   else {
     const SoGLContext * glw = SoGLContext_instance(PRIVATE(this)->context);
@@ -240,7 +241,7 @@ void
 SoGLDisplayList::call(SoState * state, int index)
 {
   if (PRIVATE(this)->type == DISPLAY_LIST) {
-    SoGLContext_glCallList(sogl_current_render_glue(), (GLuint) (PRIVATE(this)->firstindex + index));
+    SoGLContext_glCallList(SoGLContext_instance(PRIVATE(this)->context), (GLuint) (PRIVATE(this)->firstindex + index));
   }
   else {
     assert(PRIVATE(this)->type == TEXTURE_OBJECT);

@@ -83,6 +83,7 @@ void
 SoGLViewingMatrixElement::init(SoState * stateptr)
 {
   inherited::init(stateptr);
+  this->glue = sogl_glue_from_state(stateptr);
   this->state = stateptr;
   this->mmidentity = TRUE;
 }
@@ -92,6 +93,7 @@ void
 SoGLViewingMatrixElement::push(SoState * stateptr)
 {
   inherited::push(stateptr);
+  this->glue = sogl_glue_from_state(stateptr);
   this->state = stateptr;
 }
 
@@ -145,7 +147,7 @@ SoGLViewingMatrixElement::updategl(void)
   if (!this->mmidentity) {
     mat.multRight(this->modelmatrix);
   }
-  SoGLContext_glLoadMatrixf(sogl_current_render_glue(), (float*)mat);
+  SoGLContext_glLoadMatrixf(this->glue, (float*)mat);
 }
 
 /*!

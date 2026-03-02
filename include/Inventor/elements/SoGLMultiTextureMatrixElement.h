@@ -35,6 +35,8 @@
 
 #include <Inventor/elements/SoMultiTextureMatrixElement.h>
 
+struct SoGLContext;
+
 class OBOL_DLL_API SoGLMultiTextureMatrixElement : public SoMultiTextureMatrixElement {
   typedef SoMultiTextureMatrixElement inherited;
 
@@ -54,6 +56,7 @@ public:
   virtual void setElt(const int unit, const SbMatrix & matrix);
 
 private:
+  mutable const SoGLContext * glue = nullptr;
   void updategl(const int unit) const;
   uint32_t cachecontext;
 };

@@ -69,6 +69,7 @@ void
 SoGLDepthBufferElement::init(SoState * state)
 {
   inherited::init(state);
+  this->glue = sogl_glue_from_state(state);
 }
 
 /*!
@@ -83,6 +84,7 @@ SoGLDepthBufferElement::push(SoState * state)
   this->write = prev->write;
   this->function = prev->function;
   this->range = prev->range;
+  this->glue = prev->glue;
   prev->capture(state);
 }
 
@@ -127,28 +129,28 @@ void
 SoGLDepthBufferElement::updategl(void) const
 {
   if (this->test) {
-    SoGLContext_glEnable(sogl_current_render_glue(), GL_DEPTH_TEST);
+    SoGLContext_glEnable(this->glue, GL_DEPTH_TEST);
   } else {
-    SoGLContext_glDisable(sogl_current_render_glue(), GL_DEPTH_TEST);
+    SoGLContext_glDisable(this->glue, GL_DEPTH_TEST);
   }
 
   if (this->write) {
-    SoGLContext_glDepthMask(sogl_current_render_glue(), GL_TRUE);
+    SoGLContext_glDepthMask(this->glue, GL_TRUE);
   } else {
-    SoGLContext_glDepthMask(sogl_current_render_glue(), GL_FALSE);
+    SoGLContext_glDepthMask(this->glue, GL_FALSE);
   }
 
   switch (this->function) {
-  case NEVER:     SoGLContext_glDepthFunc(sogl_current_render_glue(), GL_NEVER);     break;
-  case ALWAYS:    SoGLContext_glDepthFunc(sogl_current_render_glue(), GL_ALWAYS);    break;
-  case LESS:      SoGLContext_glDepthFunc(sogl_current_render_glue(), GL_LESS);      break;
-  case LEQUAL:    SoGLContext_glDepthFunc(sogl_current_render_glue(), GL_LEQUAL);    break;
-  case EQUAL:     SoGLContext_glDepthFunc(sogl_current_render_glue(), GL_EQUAL);     break;
-  case GEQUAL:    SoGLContext_glDepthFunc(sogl_current_render_glue(), GL_GEQUAL);    break;
-  case GREATER:   SoGLContext_glDepthFunc(sogl_current_render_glue(), GL_GREATER);   break;
-  case NOTEQUAL:  SoGLContext_glDepthFunc(sogl_current_render_glue(), GL_NOTEQUAL);  break;
+  case NEVER:     SoGLContext_glDepthFunc(this->glue, GL_NEVER);     break;
+  case ALWAYS:    SoGLContext_glDepthFunc(this->glue, GL_ALWAYS);    break;
+  case LESS:      SoGLContext_glDepthFunc(this->glue, GL_LESS);      break;
+  case LEQUAL:    SoGLContext_glDepthFunc(this->glue, GL_LEQUAL);    break;
+  case EQUAL:     SoGLContext_glDepthFunc(this->glue, GL_EQUAL);     break;
+  case GEQUAL:    SoGLContext_glDepthFunc(this->glue, GL_GEQUAL);    break;
+  case GREATER:   SoGLContext_glDepthFunc(this->glue, GL_GREATER);   break;
+  case NOTEQUAL:  SoGLContext_glDepthFunc(this->glue, GL_NOTEQUAL);  break;
   default: assert(!"unknown depth function");
   }
 
-  SoGLContext_glDepthRange(sogl_current_render_glue(), this->range[0], this->range[1]);
+  SoGLContext_glDepthRange(this->glue, this->range[0], this->range[1]);
 }

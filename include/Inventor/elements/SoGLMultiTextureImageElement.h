@@ -34,6 +34,8 @@
 \**************************************************************************/
 
 #include <Inventor/elements/SoMultiTextureImageElement.h>
+
+struct SoGLContext;
 #include <cstdlib>
 
 class SoGLImage;
@@ -80,6 +82,7 @@ public:
   virtual SbBool hasTransparency(const int unit = 0) const;
   
 private:
+  mutable const SoGLContext * glue = nullptr;
   void updateGL(const int unit);
   SoGLMultiTextureImageElementP * pimpl;
 

@@ -36,6 +36,8 @@
 #include <Inventor/SbVec2f.h>
 #include <Inventor/elements/SoPointSizeElement.h>
 
+struct SoGLContext;
+
 class OBOL_DLL_API SoGLPointSizeElement : public SoPointSizeElement {
   typedef SoPointSizeElement inherited;
 
@@ -56,6 +58,7 @@ protected:
   virtual void setElt(float size);
 
 private:
+  mutable const SoGLContext * glue = nullptr;
   static float sizerange[2];
   void updategl();
 };

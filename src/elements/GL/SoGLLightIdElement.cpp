@@ -104,12 +104,13 @@ SoGLLightIdElement::pop(SoState * state,
 {
   // capture element since we change the GL state here
   this->capture(state);
+  const SoGLContext * glue = sogl_glue_from_state(state);
 
   int idx = this->data + 1;
   int prevdata = ((SoGLLightIdElement*)prevTopElement)->data;
   // disable used light sources
   while (idx <= prevdata) {
-    SoGLContext_glDisable(sogl_current_render_glue(), (GLenum)((int32_t)GL_LIGHT0 + idx));
+    SoGLContext_glDisable(glue, (GLenum)((int32_t)GL_LIGHT0 + idx));
     idx++;
   }
 }
@@ -153,7 +154,7 @@ SoGLLightIdElement::increment(SoState * const state,
 #endif
       return -1;
     }
-    SoGLContext_glEnable(sogl_current_render_glue(), (GLenum)((int32_t)GL_LIGHT0 + element->data));
+    SoGLContext_glEnable(glue, (GLenum)((int32_t)GL_LIGHT0 + element->data));
 
     return element->data;
   }
@@ -179,7 +180,7 @@ SoGLLightIdElement::getMaxGLSources(void)
   GLint val;
   SoGLContext_glGetIntegerv(sogl_current_render_glue(), GL_MAX_LIGHTS, &val);
 
-  assert((!sogl_glerror_debugging() || glGetError() == GL_NO_ERROR) &&
+  assert((!sogl_glerror_debugging() || SoGLContext_glGetError(sogl_current_render_glue()) == GL_NO_ERROR) &&
          "GL error when calling glGetInteger() -- no current GL context?");
 
   return (int32_t)val;

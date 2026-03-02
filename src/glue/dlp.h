@@ -79,6 +79,11 @@ cc_libhandle cc_dl_open(const char * filename);
 void * cc_dl_sym(cc_libhandle handle, const char * symbolname);
 void cc_dl_close(cc_libhandle handle);
 
+/* Returns the function pointer for glGetString from the linked GL library.
+   Defined in gl.cpp.  dl.cpp uses this to verify cc_dl_opengl_handle()
+   opened the same library without needing raw OpenGL headers. */
+void * coin_gl_getstring_ptr(void);
+
 /* ********************************************************************** */
 
 #ifdef __cplusplus

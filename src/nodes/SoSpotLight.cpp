@@ -170,25 +170,25 @@ SoSpotLight::GLRender(SoGLRenderAction * action)
 
   SbVec3f attenuation = SoEnvironmentElement::getLightAttenuation(state);
 
-  SoGLContext_glLightf(sogl_current_render_glue(), light, GL_QUADRATIC_ATTENUATION, attenuation[0]);
-  SoGLContext_glLightf(sogl_current_render_glue(), light, GL_LINEAR_ATTENUATION, attenuation[1]);
-  SoGLContext_glLightf(sogl_current_render_glue(), light, GL_CONSTANT_ATTENUATION, attenuation[2]);
+  SoGLContext_glLightf(sogl_glue_from_state(state), light, GL_QUADRATIC_ATTENUATION, attenuation[0]);
+  SoGLContext_glLightf(sogl_glue_from_state(state), light, GL_LINEAR_ATTENUATION, attenuation[1]);
+  SoGLContext_glLightf(sogl_glue_from_state(state), light, GL_CONSTANT_ATTENUATION, attenuation[2]);
 
   SbColor4f lightcolor(0.0f, 0.0f, 0.0f, 1.0f);
   // disable ambient contribution from this light source
-  SoGLContext_glLightfv(sogl_current_render_glue(), light, GL_AMBIENT, lightcolor.getValue());
+  SoGLContext_glLightfv(sogl_glue_from_state(state), light, GL_AMBIENT, lightcolor.getValue());
   lightcolor.setRGB(this->color.getValue());
   lightcolor *= this->intensity.getValue();
 
-  SoGLContext_glLightfv(sogl_current_render_glue(), light, GL_DIFFUSE, lightcolor.getValue());
-  SoGLContext_glLightfv(sogl_current_render_glue(), light, GL_SPECULAR, lightcolor.getValue());
+  SoGLContext_glLightfv(sogl_glue_from_state(state), light, GL_DIFFUSE, lightcolor.getValue());
+  SoGLContext_glLightfv(sogl_glue_from_state(state), light, GL_SPECULAR, lightcolor.getValue());
 
   SbVec3f loc = this->location.getValue();
 
   // point (or spot) light when w = 1.0
   SbVec4f posvec(loc[0], loc[1], loc[2], 1.0f);
-  SoGLContext_glLightfv(sogl_current_render_glue(), light, GL_POSITION, posvec.getValue());
-  SoGLContext_glLightfv(sogl_current_render_glue(), light, GL_SPOT_DIRECTION, this->direction.getValue().getValue());
+  SoGLContext_glLightfv(sogl_glue_from_state(state), light, GL_POSITION, posvec.getValue());
+  SoGLContext_glLightfv(sogl_glue_from_state(state), light, GL_SPOT_DIRECTION, this->direction.getValue().getValue());
 
   float cutoff = this->cutOffAngle.getValue() * 180.0f / float(M_PI);
   float dropoff = SbClamp(this->dropOffRate.getValue(), 0.0f, 1.0f) * 128.0f;
@@ -205,6 +205,6 @@ SoSpotLight::GLRender(SoGLRenderAction * action)
 
   cutoff = SbClamp(cutoff, 0.0f, 90.0f);
 
-  SoGLContext_glLightf(sogl_current_render_glue(), light, GL_SPOT_EXPONENT, dropoff);
-  SoGLContext_glLightf(sogl_current_render_glue(), light, GL_SPOT_CUTOFF, cutoff);
+  SoGLContext_glLightf(sogl_glue_from_state(state), light, GL_SPOT_EXPONENT, dropoff);
+  SoGLContext_glLightf(sogl_glue_from_state(state), light, GL_SPOT_CUTOFF, cutoff);
 }

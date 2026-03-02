@@ -587,15 +587,15 @@ SoShape::shouldGLRender(SoGLRenderAction * action)
         PRIVATE(this)->pvcache->getNumPointIndices()) {
       const SoNormalElement * nelem = SoNormalElement::getInstance(state);
       if (nelem->getNum() == 0) {
-        SoGLContext_glPushAttrib(sogl_current_render_glue(), GL_LIGHTING_BIT);
-        SoGLContext_glDisable(sogl_current_render_glue(), GL_LIGHTING);
+        SoGLContext_glPushAttrib(sogl_glue_from_state(action->getState()), GL_LIGHTING_BIT);
+        SoGLContext_glDisable(sogl_glue_from_state(action->getState()), GL_LIGHTING);
         arrays &= SoPrimitiveVertexCache::NORMAL;
       }
       PRIVATE(this)->pvcache->renderLines(state, arrays);
       PRIVATE(this)->pvcache->renderPoints(state, arrays);
 
       if (nelem->getNum() == 0) {
-        SoGLContext_glPopAttrib(sogl_current_render_glue());
+        SoGLContext_glPopAttrib(sogl_glue_from_state(action->getState()));
       }
     }
     PRIVATE(this)->unlock();
@@ -661,11 +661,11 @@ SoShape::shouldGLRender(SoGLRenderAction * action)
       }
       SoGLLazyElement::getInstance(state)->send(state, SoLazyElement::ALL_MASK);
 
-      SoGLContext_glPushAttrib(sogl_current_render_glue(), GL_DEPTH_BUFFER_BIT);
-      SoGLContext_glDepthFunc(sogl_current_render_glue(), GL_LEQUAL);
-      SoGLContext_glDisable(sogl_current_render_glue(), GL_LIGHTING);
+      SoGLContext_glPushAttrib(sogl_glue_from_state(action->getState()), GL_DEPTH_BUFFER_BIT);
+      SoGLContext_glDepthFunc(sogl_glue_from_state(action->getState()), GL_LEQUAL);
+      SoGLContext_glDisable(sogl_glue_from_state(action->getState()), GL_LIGHTING);
 
-      SoGLContext_glColor3f(sogl_current_render_glue(), 1.0f, 1.0f, 1.0f);
+      SoGLContext_glColor3f(sogl_glue_from_state(action->getState()), 1.0f, 1.0f, 1.0f);
       PRIVATE(this)->setupShapeHints(this, state);
       const int numlights = lights.getLength();
       for (int i = 0; i < numlights; i++) {
@@ -689,12 +689,12 @@ SoShape::shouldGLRender(SoGLRenderAction * action)
         PRIVATE(this)->bumprender->renderBump(state, PRIVATE(this)->pvcache,
                                               (SoLight*) lights[i], m);
 
-        if (i == 0) SoGLContext_glEnable(sogl_current_render_glue(), GL_BLEND);
+        if (i == 0) SoGLContext_glEnable(sogl_glue_from_state(action->getState()), GL_BLEND);
         if (i == numlights-1) {
-          SoGLContext_glBlendFunc(sogl_current_render_glue(), GL_DST_COLOR, GL_ZERO);
+          SoGLContext_glBlendFunc(sogl_glue_from_state(action->getState()), GL_DST_COLOR, GL_ZERO);
         }
         else if (i == 0) {
-          SoGLContext_glBlendFunc(sogl_current_render_glue(), GL_ONE, GL_ONE);
+          SoGLContext_glBlendFunc(sogl_glue_from_state(action->getState()), GL_ONE, GL_ONE);
         }
       }
 
@@ -715,8 +715,8 @@ SoShape::shouldGLRender(SoGLRenderAction * action)
 
           SoGLLazyElement::getInstance(state)->reset(state,
                                                      SoLazyElement::DIFFUSE_MASK);
-          SoGLContext_glEnable(sogl_current_render_glue(), GL_BLEND);
-          SoGLContext_glBlendFunc(sogl_current_render_glue(), GL_ONE, GL_ONE);
+          SoGLContext_glEnable(sogl_glue_from_state(action->getState()), GL_BLEND);
+          SoGLContext_glBlendFunc(sogl_glue_from_state(action->getState()), GL_ONE, GL_ONE);
 
           for (int i = 0; i < numlights; i++) {
             SbMatrix lm = SoLightElement::getMatrix(state, i);
@@ -734,7 +734,7 @@ SoShape::shouldGLRender(SoGLRenderAction * action)
 
       PRIVATE(this)->unlock();
 
-      SoGLContext_glPopAttrib(sogl_current_render_glue());
+      SoGLContext_glPopAttrib(sogl_glue_from_state(action->getState()));
       // we used two units in the bumpmap code
       SoGLMultiTextureImageElement::restore(state, 0);
       SoGLMultiTextureImageElement::restore(state, 1);
@@ -768,15 +768,15 @@ SoShape::shouldGLRender(SoGLRenderAction * action)
         PRIVATE(this)->pvcache->getNumPointIndices()) {
       const SoNormalElement * nelem = SoNormalElement::getInstance(state);
       if (nelem->getNum() == 0) {
-        SoGLContext_glPushAttrib(sogl_current_render_glue(), GL_LIGHTING_BIT);
-        SoGLContext_glDisable(sogl_current_render_glue(), GL_LIGHTING);
+        SoGLContext_glPushAttrib(sogl_glue_from_state(action->getState()), GL_LIGHTING_BIT);
+        SoGLContext_glDisable(sogl_glue_from_state(action->getState()), GL_LIGHTING);
         arrays &= SoPrimitiveVertexCache::NORMAL;
       }
       PRIVATE(this)->pvcache->renderLines(state, arrays);
       PRIVATE(this)->pvcache->renderPoints(state, arrays);
 
       if (nelem->getNum() == 0) {
-        SoGLContext_glPopAttrib(sogl_current_render_glue());
+        SoGLContext_glPopAttrib(sogl_glue_from_state(action->getState()));
       }
     }
     // we have rendered, return FALSE
@@ -1046,22 +1046,22 @@ SoShape::invokeTriangleCallbacks(SoAction * const action,
       }
       break;
     default:
-      SoGLContext_glBegin(sogl_current_render_glue(), GL_TRIANGLES);
-      SoGLContext_glTexCoord4fv(sogl_current_render_glue(), v1->getTextureCoords().getValue());
-      SoGLContext_glNormal3fv(sogl_current_render_glue(), v1->getNormal().getValue());
+      SoGLContext_glBegin(sogl_glue_from_state(action->getState()), GL_TRIANGLES);
+      SoGLContext_glTexCoord4fv(sogl_glue_from_state(action->getState()), v1->getTextureCoords().getValue());
+      SoGLContext_glNormal3fv(sogl_glue_from_state(action->getState()), v1->getNormal().getValue());
       shapedata->currentbundle->send(v1->getMaterialIndex(), TRUE);
-      SoGLContext_glVertex3fv(sogl_current_render_glue(), v1->getPoint().getValue());
+      SoGLContext_glVertex3fv(sogl_glue_from_state(action->getState()), v1->getPoint().getValue());
 
-      SoGLContext_glTexCoord4fv(sogl_current_render_glue(), v2->getTextureCoords().getValue());
-      SoGLContext_glNormal3fv(sogl_current_render_glue(), v2->getNormal().getValue());
+      SoGLContext_glTexCoord4fv(sogl_glue_from_state(action->getState()), v2->getTextureCoords().getValue());
+      SoGLContext_glNormal3fv(sogl_glue_from_state(action->getState()), v2->getNormal().getValue());
       shapedata->currentbundle->send(v2->getMaterialIndex(), TRUE);
-      SoGLContext_glVertex3fv(sogl_current_render_glue(), v2->getPoint().getValue());
+      SoGLContext_glVertex3fv(sogl_glue_from_state(action->getState()), v2->getPoint().getValue());
 
-      SoGLContext_glTexCoord4fv(sogl_current_render_glue(), v3->getTextureCoords().getValue());
-      SoGLContext_glNormal3fv(sogl_current_render_glue(), v3->getNormal().getValue());
+      SoGLContext_glTexCoord4fv(sogl_glue_from_state(action->getState()), v3->getTextureCoords().getValue());
+      SoGLContext_glNormal3fv(sogl_glue_from_state(action->getState()), v3->getNormal().getValue());
       shapedata->currentbundle->send(v3->getMaterialIndex(), TRUE);
-      SoGLContext_glVertex3fv(sogl_current_render_glue(), v3->getPoint().getValue());
-      SoGLContext_glEnd(sogl_current_render_glue());
+      SoGLContext_glVertex3fv(sogl_glue_from_state(action->getState()), v3->getPoint().getValue());
+      SoGLContext_glEnd(sogl_glue_from_state(action->getState()));
       break;
     }
   }
@@ -1126,17 +1126,17 @@ SoShape::invokeLineSegmentCallbacks(SoAction * const action,
       PRIVATE(this)->pvcache->addLine(v1, v2);
       break;
     default:
-      SoGLContext_glBegin(sogl_current_render_glue(), GL_LINES);
-      SoGLContext_glTexCoord4fv(sogl_current_render_glue(), v1->getTextureCoords().getValue());
-      SoGLContext_glNormal3fv(sogl_current_render_glue(), v1->getNormal().getValue());
+      SoGLContext_glBegin(sogl_glue_from_state(action->getState()), GL_LINES);
+      SoGLContext_glTexCoord4fv(sogl_glue_from_state(action->getState()), v1->getTextureCoords().getValue());
+      SoGLContext_glNormal3fv(sogl_glue_from_state(action->getState()), v1->getNormal().getValue());
       shapedata->currentbundle->send(v1->getMaterialIndex(), TRUE);
-      SoGLContext_glVertex3fv(sogl_current_render_glue(), v1->getPoint().getValue());
+      SoGLContext_glVertex3fv(sogl_glue_from_state(action->getState()), v1->getPoint().getValue());
 
-      SoGLContext_glTexCoord4fv(sogl_current_render_glue(), v2->getTextureCoords().getValue());
-      SoGLContext_glNormal3fv(sogl_current_render_glue(), v2->getNormal().getValue());
+      SoGLContext_glTexCoord4fv(sogl_glue_from_state(action->getState()), v2->getTextureCoords().getValue());
+      SoGLContext_glNormal3fv(sogl_glue_from_state(action->getState()), v2->getNormal().getValue());
       shapedata->currentbundle->send(v2->getMaterialIndex(), TRUE);
-      SoGLContext_glVertex3fv(sogl_current_render_glue(), v2->getPoint().getValue());
-      SoGLContext_glEnd(sogl_current_render_glue());
+      SoGLContext_glVertex3fv(sogl_glue_from_state(action->getState()), v2->getPoint().getValue());
+      SoGLContext_glEnd(sogl_glue_from_state(action->getState()));
       break;
     }
   }
@@ -1181,12 +1181,12 @@ SoShape::invokePointCallbacks(SoAction * const action,
       PRIVATE(this)->pvcache->addPoint(v);
       break;
     default:
-      SoGLContext_glBegin(sogl_current_render_glue(), GL_POINTS);
-      SoGLContext_glTexCoord4fv(sogl_current_render_glue(), v->getTextureCoords().getValue());
-      SoGLContext_glNormal3fv(sogl_current_render_glue(), v->getNormal().getValue());
+      SoGLContext_glBegin(sogl_glue_from_state(action->getState()), GL_POINTS);
+      SoGLContext_glTexCoord4fv(sogl_glue_from_state(action->getState()), v->getTextureCoords().getValue());
+      SoGLContext_glNormal3fv(sogl_glue_from_state(action->getState()), v->getNormal().getValue());
       shapedata->currentbundle->send(v->getMaterialIndex(), TRUE);
-      SoGLContext_glVertex3fv(sogl_current_render_glue(), v->getPoint().getValue());
-      SoGLContext_glEnd(sogl_current_render_glue());
+      SoGLContext_glVertex3fv(sogl_glue_from_state(action->getState()), v->getPoint().getValue());
+      SoGLContext_glEnd(sogl_glue_from_state(action->getState()));
       break;
     }
   }
@@ -1359,11 +1359,11 @@ SoShape::GLRenderBoundingBox(SoGLRenderAction * action)
     SoGLShapeHintsElement::forceSend(action->getState(), TRUE, FALSE, FALSE);
   }
 
-  SoGLContext_glPushMatrix(sogl_current_render_glue());
-  SoGLContext_glTranslatef(sogl_current_render_glue(), center[0], center[1], center[2]);
+  SoGLContext_glPushMatrix(sogl_glue_from_state(action->getState()));
+  SoGLContext_glTranslatef(sogl_glue_from_state(action->getState()), center[0], center[1], center[2]);
   sogl_render_cube(size[0], size[1], size[2], &mb,
                    SOGL_NEED_NORMALS | SOGL_NEED_TEXCOORDS, NULL);
-  SoGLContext_glPopMatrix(sogl_current_render_glue());
+  SoGLContext_glPopMatrix(sogl_glue_from_state(action->getState()));
 }
 
 /*!

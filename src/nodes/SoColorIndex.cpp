@@ -60,7 +60,7 @@
 // (color index mode, SoLightModel::BASE_COLOR) and assert() or
 // SoDebugError::post() if any of the two is not met?
 //
-// UPDATE: use SoGLContext_glGetBooleanv(sogl_current_render_glue(), GL_RGBA_MODE, ...) or
+// UPDATE: use SoGLContext_glGetBooleanv(sogl_glue_from_state(state), GL_RGBA_MODE, ...) or
 // SoGLColorIndexElement::isColorIndexMode() for the color-index
 // mode-check.
 //

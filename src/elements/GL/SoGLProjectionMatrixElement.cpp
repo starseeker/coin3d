@@ -72,6 +72,24 @@ SoGLProjectionMatrixElement::~SoGLProjectionMatrixElement(void)
 //! FIXME: write doc.
 
 void
+SoGLProjectionMatrixElement::init(SoState * state)
+{
+  inherited::init(state);
+  this->glue = sogl_glue_from_state(state);
+}
+
+//! FIXME: write doc.
+
+void
+SoGLProjectionMatrixElement::push(SoState * state)
+{
+  inherited::push(state);
+  this->glue = sogl_glue_from_state(state);
+}
+
+//! FIXME: write doc.
+
+void
 SoGLProjectionMatrixElement::pop(SoState * OBOL_UNUSED_ARG(state),
                                  const SoElement * prevTopElement)
 {
@@ -93,7 +111,7 @@ SoGLProjectionMatrixElement::setElt(const SbMatrix & matrix)
 void
 SoGLProjectionMatrixElement::updategl(void)
 {
-  SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_PROJECTION);
-  SoGLContext_glLoadMatrixf(sogl_current_render_glue(), (float*)this->projectionMatrix);
-  SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_MODELVIEW);
+  SoGLContext_glMatrixMode(this->glue, GL_PROJECTION);
+  SoGLContext_glLoadMatrixf(this->glue, (float*)this->projectionMatrix);
+  SoGLContext_glMatrixMode(this->glue, GL_MODELVIEW);
 }

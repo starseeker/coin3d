@@ -152,7 +152,6 @@
 
 #include "errors/CoinInternalError.h"
 #include "CoinTidbits.h"
-#include <Inventor/system/gl.h> /* for glGetString */
 #include <Inventor/SbString.h>
 
 #include "glue/dlp.h"
@@ -1035,13 +1034,13 @@ cc_dl_opengl_handle(void)
     void * func = cc_dl_sym(hnd, "glGetString");
 
     if (func) {
-      if (func == glGetString) { return hnd; }
+      if (func == coin_gl_getstring_ptr()) { return hnd; }
 
       if (cc_dl_debugging()) {
         cc_debugerror_post("cc_dl_opengl_handle",
                            "function ptr from opened OpenGL image, %p, "
                            "does not match expected value from current "
-                           "image; %p", func, glGetString);
+                           "image; %p", func, coin_gl_getstring_ptr());
       }
     }
     else if (cc_dl_debugging()) {

@@ -285,11 +285,12 @@ SoRenderManager::Superimposition::render(SoGLRenderAction * action, SbBool clear
   if (PRIVATE(this)->transparencytype != INHERIT_TRANSPARENCY_TYPE) {
     action->setTransparencyType((SoGLRenderAction::TransparencyType) PRIVATE(this)->transparencytype);
   }
-  SbBool zbufferwason = glIsEnabled(GL_DEPTH_TEST) ? TRUE : FALSE;
+  const SoGLContext * glue = sogl_glue_from_state(action->getState());
+  SbBool zbufferwason = SoGLContext_glIsEnabled(glue, GL_DEPTH_TEST) ? TRUE : FALSE;
 
   PRIVATE(this)->stateflags & Superimposition::ZBUFFERON ?
-    SoGLContext_glEnable(sogl_current_render_glue(), GL_DEPTH_TEST):
-    SoGLContext_glDisable(sogl_current_render_glue(), GL_DEPTH_TEST);
+    SoGLContext_glEnable(glue, GL_DEPTH_TEST):
+    SoGLContext_glDisable(glue, GL_DEPTH_TEST);
 
   GLbitfield clearflags = clearcolorbuffer ? GL_COLOR_BUFFER_BIT : 0;
   if (PRIVATE(this)->stateflags & Superimposition::CLEARZBUFFER) {
@@ -299,8 +300,8 @@ SoRenderManager::Superimposition::render(SoGLRenderAction * action, SbBool clear
   PRIVATE(this)->manager->renderScene(action, PRIVATE(this)->scene, (uint32_t) clearflags);
 
   zbufferwason ?
-    SoGLContext_glEnable(sogl_current_render_glue(), GL_DEPTH_TEST):
-    SoGLContext_glDisable(sogl_current_render_glue(), GL_DEPTH_TEST);
+    SoGLContext_glEnable(glue, GL_DEPTH_TEST):
+    SoGLContext_glDisable(glue, GL_DEPTH_TEST);
 
   if (PRIVATE(this)->transparencytype != INHERIT_TRANSPARENCY_TYPE) {
     action->setTransparencyType(oldttype);

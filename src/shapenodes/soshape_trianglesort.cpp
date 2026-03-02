@@ -187,26 +187,26 @@ soshape_trianglesort::endShape(SoState * state, SoMaterialBundle & mb)
   // this rendering loop can be optimized a lot, of course, but speed
   // is not so important here, since it's slow to generate, copy and
   // sort the triangles anyway.
-  SoGLContext_glBegin(sogl_current_render_glue(), GL_TRIANGLES);
+  SoGLContext_glBegin(sogl_glue_from_state(state), GL_TRIANGLES);
   for (i = 0; i < n; i++) {
     idx = tarray[i].idx;
     v = varray + idx;
-    SoGLContext_glTexCoord4fv(sogl_current_render_glue(), v->getTextureCoords().getValue());
-    SoGLContext_glNormal3fv(sogl_current_render_glue(), v->getNormal().getValue());
+    SoGLContext_glTexCoord4fv(sogl_glue_from_state(state), v->getTextureCoords().getValue());
+    SoGLContext_glNormal3fv(sogl_glue_from_state(state), v->getNormal().getValue());
     mb.send(v->getMaterialIndex(), TRUE);
-    SoGLContext_glVertex3fv(sogl_current_render_glue(), v->getPoint().getValue());
+    SoGLContext_glVertex3fv(sogl_glue_from_state(state), v->getPoint().getValue());
 
     v = varray + idx+1;
-    SoGLContext_glTexCoord4fv(sogl_current_render_glue(), v->getTextureCoords().getValue());
-    SoGLContext_glNormal3fv(sogl_current_render_glue(), v->getNormal().getValue());
+    SoGLContext_glTexCoord4fv(sogl_glue_from_state(state), v->getTextureCoords().getValue());
+    SoGLContext_glNormal3fv(sogl_glue_from_state(state), v->getNormal().getValue());
     mb.send(v->getMaterialIndex(), TRUE);
-    SoGLContext_glVertex3fv(sogl_current_render_glue(), v->getPoint().getValue());
+    SoGLContext_glVertex3fv(sogl_glue_from_state(state), v->getPoint().getValue());
 
     v = varray + idx+2;
-    SoGLContext_glTexCoord4fv(sogl_current_render_glue(), v->getTextureCoords().getValue());
-    SoGLContext_glNormal3fv(sogl_current_render_glue(), v->getNormal().getValue());
+    SoGLContext_glTexCoord4fv(sogl_glue_from_state(state), v->getTextureCoords().getValue());
+    SoGLContext_glNormal3fv(sogl_glue_from_state(state), v->getNormal().getValue());
     mb.send(v->getMaterialIndex(), TRUE);
-    SoGLContext_glVertex3fv(sogl_current_render_glue(), v->getPoint().getValue());
+    SoGLContext_glVertex3fv(sogl_glue_from_state(state), v->getPoint().getValue());
   }
-  SoGLContext_glEnd(sogl_current_render_glue());
+  SoGLContext_glEnd(sogl_glue_from_state(state));
 }

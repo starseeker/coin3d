@@ -887,7 +887,7 @@ SbDPViewVolume::perspective(double fovy, double aspect,
   Set up the frustum for perspective projection. This is an
   alternative to perspective() that lets you specify any kind of view
   volumes (e.g. off center volumes). It has the same arguments and
-  functionality as the corresponding OpenGL SoGLContext_glFrustum(sogl_current_render_glue()) function.
+  functionality as the corresponding OpenGL SoGLContext_glFrustum(sogl_glue_from_state(state)) function.
 
   \sa perspective() 
 */

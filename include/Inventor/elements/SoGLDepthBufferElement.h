@@ -35,6 +35,8 @@
 
 #include <Inventor/elements/SoDepthBufferElement.h>
 
+struct SoGLContext;
+
 class OBOL_DLL_API SoGLDepthBufferElement : public SoDepthBufferElement {
   typedef SoDepthBufferElement inherited;
   SO_ELEMENT_HEADER(SoGLDepthBufferElement);
@@ -53,6 +55,7 @@ protected:
                       DepthWriteFunction function, SbVec2f range);
 
 private:
+  mutable const SoGLContext * glue = nullptr;
   void updategl(void) const;
 
 }; // SoGLDepthBufferElement

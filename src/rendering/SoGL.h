@@ -110,7 +110,8 @@ void sogl_render_cube(const float width,
 //
 //
 
-void sogl_render_faceset(const SoGLCoordinateElement * const coords,
+void sogl_render_faceset(const SoGLContext * glue,
+                         const SoGLCoordinateElement * const coords,
                          const int32_t *vertexindices,
                          int num_vertexindices,
                          const SbVec3f *normals,
@@ -127,7 +128,8 @@ void sogl_render_faceset(const SoGLCoordinateElement * const coords,
                          const int doattribs);
 
 void
-sogl_render_tristrip(const SoGLCoordinateElement * const coords,
+sogl_render_tristrip(const SoGLContext * glue,
+                     const SoGLCoordinateElement * const coords,
                      const int32_t *vertexindices,
                      int num_vertexindices,
                      const SbVec3f *normals,
@@ -141,7 +143,8 @@ sogl_render_tristrip(const SoGLCoordinateElement * const coords,
                      const int texture);
 
 void
-sogl_render_lineset(const SoGLCoordinateElement * const coords,
+sogl_render_lineset(const SoGLContext * glue,
+                    const SoGLCoordinateElement * const coords,
                     const int32_t *vertexindices,
                     int num_vertexindices,
                     const SbVec3f *normals,
@@ -156,7 +159,8 @@ sogl_render_lineset(const SoGLCoordinateElement * const coords,
                     const int drawAsPoints);
 
 void
-sogl_render_pointset(const SoGLCoordinateElement * coords,
+sogl_render_pointset(const SoGLContext * glue,
+                     const SoGLCoordinateElement * coords,
                      const SbVec3f * normals,
                      SoMaterialBundle * mb,
                      const SoTextureCoordinateBundle * tb,

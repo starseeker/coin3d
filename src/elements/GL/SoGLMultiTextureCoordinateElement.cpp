@@ -122,6 +122,7 @@ SoGLMultiTextureCoordinateElement::init(SoState * state)
   PRIVATE(this)->contextid = glaction->getCacheContext();
 
   inherited::init(state);
+  this->glue = sogl_glue_from_state(state);
   PRIVATE(this)->unitdata.truncate(0);
   PRIVATE(this)->sendlookup.truncate(0);
 }
@@ -132,6 +133,7 @@ void
 SoGLMultiTextureCoordinateElement::push(SoState * state)
 {
   inherited::push(state);
+  this->glue = sogl_glue_from_state(state);
   SoGLMultiTextureCoordinateElement * prev = (SoGLMultiTextureCoordinateElement*)this->getNextInStack();
   
   PRIVATE(this)->contextid = PRIVATE(prev)->contextid;
@@ -179,16 +181,16 @@ SoGLMultiTextureCoordinateElement::pop(SoState * state,
       SoGLContext_glActiveTexture(glue, (GLenum) (int(GL_TEXTURE0) + i));
     }
     if (enablegen) {
-      SoGLContext_glEnable(sogl_current_render_glue(), GL_TEXTURE_GEN_S);
-      SoGLContext_glEnable(sogl_current_render_glue(), GL_TEXTURE_GEN_T);
-      SoGLContext_glEnable(sogl_current_render_glue(), GL_TEXTURE_GEN_R);
-      SoGLContext_glEnable(sogl_current_render_glue(), GL_TEXTURE_GEN_Q);
+      SoGLContext_glEnable(this->glue, GL_TEXTURE_GEN_S);
+      SoGLContext_glEnable(this->glue, GL_TEXTURE_GEN_T);
+      SoGLContext_glEnable(this->glue, GL_TEXTURE_GEN_R);
+      SoGLContext_glEnable(this->glue, GL_TEXTURE_GEN_Q);
     }
     if (disablegen) {
-      SoGLContext_glDisable(sogl_current_render_glue(), GL_TEXTURE_GEN_S);
-      SoGLContext_glDisable(sogl_current_render_glue(), GL_TEXTURE_GEN_T);
-      SoGLContext_glDisable(sogl_current_render_glue(), GL_TEXTURE_GEN_R);
-      SoGLContext_glDisable(sogl_current_render_glue(), GL_TEXTURE_GEN_Q);
+      SoGLContext_glDisable(this->glue, GL_TEXTURE_GEN_S);
+      SoGLContext_glDisable(this->glue, GL_TEXTURE_GEN_T);
+      SoGLContext_glDisable(this->glue, GL_TEXTURE_GEN_R);
+      SoGLContext_glDisable(this->glue, GL_TEXTURE_GEN_Q);
     }
     if (docallback) {
       this->doCallback(i);
@@ -354,16 +356,16 @@ SoGLMultiTextureCoordinateElement::setElt(const int unit,
   }
 
   if (enablegen) {
-    SoGLContext_glEnable(sogl_current_render_glue(), GL_TEXTURE_GEN_S);
-    SoGLContext_glEnable(sogl_current_render_glue(), GL_TEXTURE_GEN_T);
-    SoGLContext_glEnable(sogl_current_render_glue(), GL_TEXTURE_GEN_R);
-    SoGLContext_glEnable(sogl_current_render_glue(), GL_TEXTURE_GEN_Q);
+    SoGLContext_glEnable(this->glue, GL_TEXTURE_GEN_S);
+    SoGLContext_glEnable(this->glue, GL_TEXTURE_GEN_T);
+    SoGLContext_glEnable(this->glue, GL_TEXTURE_GEN_R);
+    SoGLContext_glEnable(this->glue, GL_TEXTURE_GEN_Q);
   }
   if (disablegen) {
-    SoGLContext_glDisable(sogl_current_render_glue(), GL_TEXTURE_GEN_S);
-    SoGLContext_glDisable(sogl_current_render_glue(), GL_TEXTURE_GEN_T);
-    SoGLContext_glDisable(sogl_current_render_glue(), GL_TEXTURE_GEN_R);
-    SoGLContext_glDisable(sogl_current_render_glue(), GL_TEXTURE_GEN_Q);
+    SoGLContext_glDisable(this->glue, GL_TEXTURE_GEN_S);
+    SoGLContext_glDisable(this->glue, GL_TEXTURE_GEN_T);
+    SoGLContext_glDisable(this->glue, GL_TEXTURE_GEN_R);
+    SoGLContext_glDisable(this->glue, GL_TEXTURE_GEN_Q);
   }
   if (docallback) this->doCallback(unit);
 

@@ -124,6 +124,8 @@ int main(int argc, char **argv)
     
     // Try to load the actual star.iv file
     const char *dataDir = getenv("OBOL_DATA_DIR");
+    if (!dataDir) dataDir = getenv("IVEXAMPLES_DATA_DIR");
+    if (!dataDir) dataDir = getenv("COIN_DATA_DIR");
     if (!dataDir) dataDir = "../../data";
     
     char starPath[512];

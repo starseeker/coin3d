@@ -703,40 +703,40 @@ SoText3P::render(SoState * state, const cc_font_specification * fontspec,
       if (part != SoText3::SIDES) {  // FRONT & BACK
         int numfaceindices = 0;
         const int * ptr = this->font->getGlyphFaceIndices(glyphidx, numfaceindices);
-        SoGLContext_glBegin(sogl_current_render_glue(), GL_TRIANGLES);
+        SoGLContext_glBegin(sogl_glue_from_state(state), GL_TRIANGLES);
 
         while (ptr && *ptr >= 0) {
           SbVec2f v0, v1, v2;
           float zval;
           if (part == SoText3::FRONT) {
-            SoGLContext_glNormal3f(sogl_current_render_glue(), 0.0f, 0.0f, 1.0f);
+            SoGLContext_glNormal3f(sogl_glue_from_state(state), 0.0f, 0.0f, 1.0f);
             v2 = coords[*ptr++];
             v1 = coords[*ptr++];
             v0 = coords[*ptr++];
             zval = nearz;
           }
           else {  // BACK
-            SoGLContext_glNormal3f(sogl_current_render_glue(), 0.0f, 0.0f, -1.0f);
+            SoGLContext_glNormal3f(sogl_glue_from_state(state), 0.0f, 0.0f, -1.0f);
             v0 = coords[*ptr++];
             v1 = coords[*ptr++];
             v2 = coords[*ptr++];
             zval = farz;
           }
           if(do2Dtextures)
-            SoGLContext_glTexCoord2f(sogl_current_render_glue(), v0[0] + xpos/fontspec->size,
+            SoGLContext_glTexCoord2f(sogl_glue_from_state(state), v0[0] + xpos/fontspec->size,
                          v0[1] + ypos/fontspec->size);
-          SoGLContext_glVertex3f(sogl_current_render_glue(), v0[0] * fontspec->size + xpos, v0[1] * fontspec->size + ypos, zval);
+          SoGLContext_glVertex3f(sogl_glue_from_state(state), v0[0] * fontspec->size + xpos, v0[1] * fontspec->size + ypos, zval);
           if(do2Dtextures)
-            SoGLContext_glTexCoord2f(sogl_current_render_glue(), v1[0] + xpos/fontspec->size,
+            SoGLContext_glTexCoord2f(sogl_glue_from_state(state), v1[0] + xpos/fontspec->size,
                          v1[1] + ypos/fontspec->size);
-          SoGLContext_glVertex3f(sogl_current_render_glue(), v1[0] * fontspec->size + xpos, v1[1] * fontspec->size + ypos, zval);
+          SoGLContext_glVertex3f(sogl_glue_from_state(state), v1[0] * fontspec->size + xpos, v1[1] * fontspec->size + ypos, zval);
           if(do2Dtextures)
-            SoGLContext_glTexCoord2f(sogl_current_render_glue(), v2[0] + xpos/fontspec->size,
+            SoGLContext_glTexCoord2f(sogl_glue_from_state(state), v2[0] + xpos/fontspec->size,
                          v2[1] + ypos/fontspec->size);
-          SoGLContext_glVertex3f(sogl_current_render_glue(), v2[0] * fontspec->size + xpos, v2[1] * fontspec->size + ypos, zval);
+          SoGLContext_glVertex3f(sogl_glue_from_state(state), v2[0] * fontspec->size + xpos, v2[1] * fontspec->size + ypos, zval);
 
         }
-        SoGLContext_glEnd(sogl_current_render_glue());
+        SoGLContext_glEnd(sogl_glue_from_state(state));
       }
       else { // SIDES
 
@@ -746,7 +746,7 @@ SoText3P::render(SoState * state, const cc_font_specification * fontspec,
           SbVec2f v0, v1;
           int counter = 0;
 
-          SoGLContext_glBegin(sogl_current_render_glue(), GL_QUADS);
+          SoGLContext_glBegin(sogl_glue_from_state(state), GL_QUADS);
 
           while (ptr && *ptr >= 0) {
             v1 = coords[*ptr++];
@@ -793,54 +793,54 @@ SoText3P::render(SoState * state, const cc_font_specification * fontspec,
 
             if (!flatshading) {
               if(do2Dtextures)
-                 SoGLContext_glTexCoord2f(sogl_current_render_glue(), v1[0] + xpos/fontspec->size,
+                 SoGLContext_glTexCoord2f(sogl_glue_from_state(state), v1[0] + xpos/fontspec->size,
                               v1[1] + ypos/fontspec->size);
-              SoGLContext_glNormal3fv(sogl_current_render_glue(), normala.getValue());
-              SoGLContext_glVertex3f(sogl_current_render_glue(), v1[0]*fontspec->size + xpos, v1[1]*fontspec->size + ypos, 0.0f);
+              SoGLContext_glNormal3fv(sogl_glue_from_state(state), normala.getValue());
+              SoGLContext_glVertex3f(sogl_glue_from_state(state), v1[0]*fontspec->size + xpos, v1[1]*fontspec->size + ypos, 0.0f);
 
               if(do2Dtextures)
-                SoGLContext_glTexCoord2f(sogl_current_render_glue(), v0[0] + xpos/fontspec->size,
+                SoGLContext_glTexCoord2f(sogl_glue_from_state(state), v0[0] + xpos/fontspec->size,
                              v0[1] + ypos/fontspec->size);
-              SoGLContext_glNormal3fv(sogl_current_render_glue(), normalb.getValue());
-              SoGLContext_glVertex3f(sogl_current_render_glue(), v0[0]*fontspec->size + xpos, v0[1]*fontspec->size + ypos, 0.0f);
+              SoGLContext_glNormal3fv(sogl_glue_from_state(state), normalb.getValue());
+              SoGLContext_glVertex3f(sogl_glue_from_state(state), v0[0]*fontspec->size + xpos, v0[1]*fontspec->size + ypos, 0.0f);
 
               if(do2Dtextures)
-                SoGLContext_glTexCoord2f(sogl_current_render_glue(), v0[0] + xpos/fontspec->size,
+                SoGLContext_glTexCoord2f(sogl_glue_from_state(state), v0[0] + xpos/fontspec->size,
                              v0[1] + ypos/fontspec->size);
-              SoGLContext_glNormal3fv(sogl_current_render_glue(), normalb.getValue());
-              SoGLContext_glVertex3f(sogl_current_render_glue(), v0[0]*fontspec->size + xpos, v0[1]*fontspec->size + ypos, -1.0f);
+              SoGLContext_glNormal3fv(sogl_glue_from_state(state), normalb.getValue());
+              SoGLContext_glVertex3f(sogl_glue_from_state(state), v0[0]*fontspec->size + xpos, v0[1]*fontspec->size + ypos, -1.0f);
 
               if(do2Dtextures)
-                SoGLContext_glTexCoord2f(sogl_current_render_glue(), v1[0] + xpos/fontspec->size,
+                SoGLContext_glTexCoord2f(sogl_glue_from_state(state), v1[0] + xpos/fontspec->size,
                              v1[1] + ypos/fontspec->size);
-              SoGLContext_glNormal3fv(sogl_current_render_glue(), normala.getValue());
-              SoGLContext_glVertex3f(sogl_current_render_glue(), v1[0]*fontspec->size + xpos, v1[1]*fontspec->size + ypos, -1.0f);
+              SoGLContext_glNormal3fv(sogl_glue_from_state(state), normala.getValue());
+              SoGLContext_glVertex3f(sogl_glue_from_state(state), v1[0]*fontspec->size + xpos, v1[1]*fontspec->size + ypos, -1.0f);
 
             }
             else {
-              SoGLContext_glNormal3fv(sogl_current_render_glue(), normala.getValue());
+              SoGLContext_glNormal3fv(sogl_glue_from_state(state), normala.getValue());
               if(do2Dtextures)
-                SoGLContext_glTexCoord2f(sogl_current_render_glue(), v1[0] + xpos/fontspec->size,
+                SoGLContext_glTexCoord2f(sogl_glue_from_state(state), v1[0] + xpos/fontspec->size,
                              v1[1] + ypos/fontspec->size);
-              SoGLContext_glVertex3f(sogl_current_render_glue(), v1[0]*fontspec->size + xpos, v1[1]*fontspec->size + ypos, 0.0f);
+              SoGLContext_glVertex3f(sogl_glue_from_state(state), v1[0]*fontspec->size + xpos, v1[1]*fontspec->size + ypos, 0.0f);
 
               if(do2Dtextures)
-                SoGLContext_glTexCoord2f(sogl_current_render_glue(), v0[0] + xpos/fontspec->size,
+                SoGLContext_glTexCoord2f(sogl_glue_from_state(state), v0[0] + xpos/fontspec->size,
                              v0[1] + ypos/fontspec->size);
-              SoGLContext_glVertex3f(sogl_current_render_glue(), v0[0]*fontspec->size + xpos, v0[1]*fontspec->size + ypos, 0.0f);
+              SoGLContext_glVertex3f(sogl_glue_from_state(state), v0[0]*fontspec->size + xpos, v0[1]*fontspec->size + ypos, 0.0f);
 
               if(do2Dtextures)
-                SoGLContext_glTexCoord2f(sogl_current_render_glue(), v0[0] + xpos/fontspec->size,
+                SoGLContext_glTexCoord2f(sogl_glue_from_state(state), v0[0] + xpos/fontspec->size,
                              v0[1] + ypos/fontspec->size);
-              SoGLContext_glVertex3f(sogl_current_render_glue(), v0[0]*fontspec->size + xpos, v0[1]*fontspec->size + ypos, -1.0f);
+              SoGLContext_glVertex3f(sogl_glue_from_state(state), v0[0]*fontspec->size + xpos, v0[1]*fontspec->size + ypos, -1.0f);
 
               if(do2Dtextures)
-                SoGLContext_glTexCoord2f(sogl_current_render_glue(), v1[0] + xpos/fontspec->size,
+                SoGLContext_glTexCoord2f(sogl_glue_from_state(state), v1[0] + xpos/fontspec->size,
                              v1[1] + ypos/fontspec->size);
-              SoGLContext_glVertex3f(sogl_current_render_glue(), v1[0]*fontspec->size + xpos, v1[1]*fontspec->size + ypos, -1.0f);
+              SoGLContext_glVertex3f(sogl_glue_from_state(state), v1[0]*fontspec->size + xpos, v1[1]*fontspec->size + ypos, -1.0f);
             }
           }
-          SoGLContext_glEnd(sogl_current_render_glue());
+          SoGLContext_glEnd(sogl_glue_from_state(state));
 
         }
         else {  // profile
@@ -959,29 +959,29 @@ SoText3P::render(SoState * state, const cc_font_specification * fontspec,
           // compilator. (Tested on MSVC 6 and GCC 2.95.4) (20031010
           // handegar).
 
-          SoGLContext_glBegin(sogl_current_render_glue(), GL_TRIANGLES);
+          SoGLContext_glBegin(sogl_glue_from_state(state), GL_TRIANGLES);
 
           for (int z = 0;z < size;z += 3) {
 
             // FIXME: Add proper texturing for profile
             // coords. (20031010 handegar)
 
-            SoGLContext_glNormal3fv(sogl_current_render_glue(), normals[z+2].getValue());
-            SoGLContext_glVertex3fv(sogl_current_render_glue(), SbVec3f(vertexlist[z+2][0] + xpos,
+            SoGLContext_glNormal3fv(sogl_glue_from_state(state), normals[z+2].getValue());
+            SoGLContext_glVertex3fv(sogl_glue_from_state(state), SbVec3f(vertexlist[z+2][0] + xpos,
                                 vertexlist[z+2][1] + ypos,
                                 vertexlist[z+2][2]).getValue());
 
-            SoGLContext_glNormal3fv(sogl_current_render_glue(), normals[z+1].getValue());
-            SoGLContext_glVertex3fv(sogl_current_render_glue(), SbVec3f(vertexlist[z+1][0] + xpos,
+            SoGLContext_glNormal3fv(sogl_glue_from_state(state), normals[z+1].getValue());
+            SoGLContext_glVertex3fv(sogl_glue_from_state(state), SbVec3f(vertexlist[z+1][0] + xpos,
                                 vertexlist[z+1][1] + ypos,
                                 vertexlist[z+1][2]).getValue());
 
-            SoGLContext_glNormal3fv(sogl_current_render_glue(), normals[z].getValue());
-            SoGLContext_glVertex3fv(sogl_current_render_glue(), SbVec3f(vertexlist[z][0] + xpos,
+            SoGLContext_glNormal3fv(sogl_glue_from_state(state), normals[z].getValue());
+            SoGLContext_glVertex3fv(sogl_glue_from_state(state), SbVec3f(vertexlist[z][0] + xpos,
                                 vertexlist[z][1] + ypos,
                                 vertexlist[z][2]).getValue());
           }
-          SoGLContext_glEnd(sogl_current_render_glue());
+          SoGLContext_glEnd(sogl_glue_from_state(state));
 
           vertexlist.truncate(0);
 

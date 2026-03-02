@@ -293,8 +293,8 @@ SoIndexedTriangleStripSet::GLRender(SoGLRenderAction * action)
 
   if (!sendnormals) nbind = OVERALL;
   else if (nbind == OVERALL) {
-    if (normals) SoGLContext_glNormal3fv(sogl_current_render_glue(), normals[0].getValue());
-    else SoGLContext_glNormal3f(sogl_current_render_glue(), 0.0f, 0.0f, 1.0f);
+    if (normals) SoGLContext_glNormal3fv(sogl_glue_from_state(state), normals[0].getValue());
+    else SoGLContext_glNormal3f(sogl_glue_from_state(state), 0.0f, 0.0f, 1.0f);
   }
   else if (normalcacheused && nbind == PER_VERTEX) {
     nbind = PER_VERTEX_INDEXED;
@@ -308,7 +308,8 @@ SoIndexedTriangleStripSet::GLRender(SoGLRenderAction * action)
 
   mb.sendFirst(); // make sure we have the correct material
 
-  sogl_render_tristrip((SoGLCoordinateElement *)coords,
+  sogl_render_tristrip(sogl_glue_from_state(state),
+                       (SoGLCoordinateElement *)coords,
                        cindices,
                        numindices,
                        normals,

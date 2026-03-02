@@ -25,10 +25,15 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 BUILD_DIR="${BUILD_DIR:-$REPO_ROOT/build}"
 BUILD_DIR="$(cd "$BUILD_DIR" && pwd)"
 BIN_DIR="$BUILD_DIR/tests/rendering/bin"
+TESTS_BIN_DIR="$BUILD_DIR/tests/bin"
 
 CONTROL_DIR="${CONTROL_DIR:-$REPO_ROOT/tests/control_images}"
 mkdir -p "$CONTROL_DIR"
 CONTROL_DIR="$(cd "$CONTROL_DIR" && pwd)"
+
+# Prefer obol_test (unified dispatcher) for generating control images; the
+# individual render_* executables are no longer built as standalone binaries.
+OBOL_TEST="$TESTS_BIN_DIR/obol_test"
 
 RGB_TO_PNG="$BUILD_DIR/tests/bin/rgb_to_png"
 if [ ! -f "$RGB_TO_PNG" ]; then
@@ -81,12 +86,18 @@ gen_control() {
     local base="$TMPDIR_OUT/${name}_control"
 
     echo "  $name"
+    # Prefer standalone executable; fall back to obol_test render_test dispatcher
     if [ ! -f "$exe" ]; then
-        echo "    WARNING: $exe not found – skipping"
-        return 0
+        if [ -f "$OBOL_TEST" ]; then
+            exe="$OBOL_TEST"
+            "$exe" render_test "$name" "$base" 2>&1 || true
+        else
+            echo "    WARNING: neither $BIN_DIR/$exename nor $OBOL_TEST found – skipping"
+            return 0
+        fi
+    else
+        "$exe" "$base" 2>&1 || true
     fi
-
-    "$exe" "$base" 2>&1 || true
 
     # Convert primary output
     local rgb="$base.rgb"
@@ -148,6 +159,7 @@ gen_control render_shadow             render_shadow
 # HUD overlay tests
 gen_control render_hud_overlay        render_hud_overlay
 gen_control render_hud_no3d           render_hud_no3d
+gen_control render_stt_gl             render_stt_gl
 
 # Testlib demo scenes (shared scene factories; match obol_viewer output)
 gen_control render_text_demo          render_text_demo

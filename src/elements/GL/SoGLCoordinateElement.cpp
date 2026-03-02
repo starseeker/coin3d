@@ -67,13 +67,33 @@ SoGLCoordinateElement::~SoGLCoordinateElement(void)
 }
 
 /*!
+  Initialize element.
+*/
+void
+SoGLCoordinateElement::init(SoState * state)
+{
+  inherited::init(state);
+  this->glue = sogl_glue_from_state(state);
+}
+
+/*!
+  Update element glue context on push.
+*/
+void
+SoGLCoordinateElement::push(SoState * state)
+{
+  inherited::push(state);
+  this->glue = sogl_glue_from_state(state);
+}
+
+/*!
   Send coordinates \a index to GL. Handles both 3D and 4D coordinates.
 */
 void
 SoGLCoordinateElement::send(const int index) const
 {
-  if (this->areCoords3D) SoGLContext_glVertex3fv(sogl_current_render_glue(), (const GLfloat*)(this->coords3D + index));
-  else SoGLContext_glVertex4fv(sogl_current_render_glue(), (const GLfloat*)(this->coords4D + index));
+  if (this->areCoords3D) SoGLContext_glVertex3fv(this->glue, (const GLfloat*)(this->coords3D + index));
+  else SoGLContext_glVertex4fv(this->glue, (const GLfloat*)(this->coords4D + index));
 }
 
 //! FIXME: write doc.

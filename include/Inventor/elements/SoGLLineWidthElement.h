@@ -35,6 +35,8 @@
 
 #include <Inventor/elements/SoLineWidthElement.h>
 
+struct SoGLContext;
+
 class OBOL_DLL_API SoGLLineWidthElement : public SoLineWidthElement {
   typedef SoLineWidthElement inherited;
 
@@ -55,6 +57,7 @@ protected:
   virtual void setElt(float width);
 
 private:
+  mutable const SoGLContext * glue = nullptr;
   SoState * state;
   static float sizerange[2];
   void updategl(void);

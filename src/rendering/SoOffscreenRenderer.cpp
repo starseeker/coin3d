@@ -145,7 +145,7 @@
   If the OpenGL driver supports the pbuffer extension, it is detected
   and used to provide hardware accelerated offscreen rendering.
 
-  The pixel data is fetched from the OpenGL buffer with SoGLContext_glReadPixels(sogl_current_render_glue()),
+  The pixel data is fetched from the OpenGL buffer with SoGLContext_glReadPixels(sogl_glue_from_state(action->getState())),
   with the format and type arguments set to GL_RGBA and
   GL_UNSIGNED_BYTE, respectively. This means that the maximum
   resolution is 32 bits, 8 bits for each of the R/G/B/A components.
@@ -738,7 +738,7 @@ SoOffscreenRenderer::getGLRenderAction(void) const
 static void
 pre_render_cb(void * userdata, SoGLRenderAction * action)
 {
-  SoGLContext_glClear(sogl_current_render_glue(), GL_DEPTH_BUFFER_BIT|GL_COLOR_BUFFER_BIT);
+  SoGLContext_glClear(sogl_glue_from_state(action->getState()), GL_DEPTH_BUFFER_BIT|GL_COLOR_BUFFER_BIT);
   action->setRenderingIsRemote(FALSE);
 
   // If a gradient background has been requested, paint it now over the
@@ -749,39 +749,39 @@ pre_render_cb(void * userdata, SoGLRenderAction * action)
     // Save enough GL state to restore afterwards.
     // glPushAttrib/glPopAttrib are deprecated in core-profile OpenGL 3.1+ but
     // are available in the compatibility profile used by this renderer.
-    SoGLContext_glPushAttrib(sogl_current_render_glue(), GL_ENABLE_BIT | GL_DEPTH_BUFFER_BIT | GL_CURRENT_BIT);
-    SoGLContext_glDisable(sogl_current_render_glue(), GL_DEPTH_TEST);
-    SoGLContext_glDisable(sogl_current_render_glue(), GL_LIGHTING);
-    SoGLContext_glDisable(sogl_current_render_glue(), GL_TEXTURE_2D);
-    SoGLContext_glDepthMask(sogl_current_render_glue(), GL_FALSE);
+    SoGLContext_glPushAttrib(sogl_glue_from_state(action->getState()), GL_ENABLE_BIT | GL_DEPTH_BUFFER_BIT | GL_CURRENT_BIT);
+    SoGLContext_glDisable(sogl_glue_from_state(action->getState()), GL_DEPTH_TEST);
+    SoGLContext_glDisable(sogl_glue_from_state(action->getState()), GL_LIGHTING);
+    SoGLContext_glDisable(sogl_glue_from_state(action->getState()), GL_TEXTURE_2D);
+    SoGLContext_glDepthMask(sogl_glue_from_state(action->getState()), GL_FALSE);
 
     // Switch to a simple orthographic 2-D projection
-    SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_PROJECTION);
-    SoGLContext_glPushMatrix(sogl_current_render_glue());
-    SoGLContext_glLoadIdentity(sogl_current_render_glue());
-    SoGLContext_glOrtho(sogl_current_render_glue(), 0.0, 1.0, 0.0, 1.0, -1.0, 1.0);
-    SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_MODELVIEW);
-    SoGLContext_glPushMatrix(sogl_current_render_glue());
-    SoGLContext_glLoadIdentity(sogl_current_render_glue());
+    SoGLContext_glMatrixMode(sogl_glue_from_state(action->getState()), GL_PROJECTION);
+    SoGLContext_glPushMatrix(sogl_glue_from_state(action->getState()));
+    SoGLContext_glLoadIdentity(sogl_glue_from_state(action->getState()));
+    SoGLContext_glOrtho(sogl_glue_from_state(action->getState()), 0.0, 1.0, 0.0, 1.0, -1.0, 1.0);
+    SoGLContext_glMatrixMode(sogl_glue_from_state(action->getState()), GL_MODELVIEW);
+    SoGLContext_glPushMatrix(sogl_glue_from_state(action->getState()));
+    SoGLContext_glLoadIdentity(sogl_glue_from_state(action->getState()));
 
     // Draw a full-screen quad with per-vertex colours:
     //   y=0 (bottom) → gradient_bottom colour
     //   y=1 (top)    → gradient_top colour
     const SbColor & bot = thisp->gradient_bottom;
     const SbColor & top = thisp->gradient_top;
-    SoGLContext_glBegin(sogl_current_render_glue(), GL_QUADS);
-      SoGLContext_glColor3f(sogl_current_render_glue(), bot[0], bot[1], bot[2]);  SoGLContext_glVertex2f(sogl_current_render_glue(), 0.0f, 0.0f);
-      SoGLContext_glColor3f(sogl_current_render_glue(), bot[0], bot[1], bot[2]);  SoGLContext_glVertex2f(sogl_current_render_glue(), 1.0f, 0.0f);
-      SoGLContext_glColor3f(sogl_current_render_glue(), top[0], top[1], top[2]);  SoGLContext_glVertex2f(sogl_current_render_glue(), 1.0f, 1.0f);
-      SoGLContext_glColor3f(sogl_current_render_glue(), top[0], top[1], top[2]);  SoGLContext_glVertex2f(sogl_current_render_glue(), 0.0f, 1.0f);
-    SoGLContext_glEnd(sogl_current_render_glue());
+    SoGLContext_glBegin(sogl_glue_from_state(action->getState()), GL_QUADS);
+      SoGLContext_glColor3f(sogl_glue_from_state(action->getState()), bot[0], bot[1], bot[2]);  SoGLContext_glVertex2f(sogl_glue_from_state(action->getState()), 0.0f, 0.0f);
+      SoGLContext_glColor3f(sogl_glue_from_state(action->getState()), bot[0], bot[1], bot[2]);  SoGLContext_glVertex2f(sogl_glue_from_state(action->getState()), 1.0f, 0.0f);
+      SoGLContext_glColor3f(sogl_glue_from_state(action->getState()), top[0], top[1], top[2]);  SoGLContext_glVertex2f(sogl_glue_from_state(action->getState()), 1.0f, 1.0f);
+      SoGLContext_glColor3f(sogl_glue_from_state(action->getState()), top[0], top[1], top[2]);  SoGLContext_glVertex2f(sogl_glue_from_state(action->getState()), 0.0f, 1.0f);
+    SoGLContext_glEnd(sogl_glue_from_state(action->getState()));
 
     // Restore matrices and GL state
-    SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_PROJECTION);
-    SoGLContext_glPopMatrix(sogl_current_render_glue());
-    SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_MODELVIEW);
-    SoGLContext_glPopMatrix(sogl_current_render_glue());
-    SoGLContext_glPopAttrib(sogl_current_render_glue());
+    SoGLContext_glMatrixMode(sogl_glue_from_state(action->getState()), GL_PROJECTION);
+    SoGLContext_glPopMatrix(sogl_glue_from_state(action->getState()));
+    SoGLContext_glMatrixMode(sogl_glue_from_state(action->getState()), GL_MODELVIEW);
+    SoGLContext_glPopMatrix(sogl_glue_from_state(action->getState()));
+    SoGLContext_glPopAttrib(sogl_glue_from_state(action->getState()));
   }
 }
 
@@ -979,26 +979,31 @@ SoOffscreenRendererP::renderFromBase(SoBase * base)
   // the render action is not allocated by us.
   const uint32_t oldcontext = this->renderaction->getCacheContext();
   this->renderaction->setCacheContext(newcontext);
+
   // Push the per-instance context manager into the render state so that
   // any scene-graph node that needs to create its own offscreen GL context
   // (SoSceneTexture2, SoSceneTextureCubeMap, SoShadowGroup, etc.) can
   // retrieve it without calling SoDB::getContextManager() directly.
+  // sogl_glue_from_state() now derives the GL context from the action's
+  // cachecontext via sogl_glue_instance(), so it works correctly even
+  // during SoState construction (when SoGLCacheContextElement is not yet
+  // pushed), and no TLS pre-set is needed here.
   SoContextManagerElement::set(this->renderaction->getState(),
                                this->instanceContextManager);
 
   if (CoinOffscreenGLCanvas::debug()) {
     GLint colbits[4];
-    SoGLContext_glGetIntegerv(sogl_current_render_glue(), GL_RED_BITS, &colbits[0]);
-    SoGLContext_glGetIntegerv(sogl_current_render_glue(), GL_GREEN_BITS, &colbits[1]);
-    SoGLContext_glGetIntegerv(sogl_current_render_glue(), GL_BLUE_BITS, &colbits[2]);
-    SoGLContext_glGetIntegerv(sogl_current_render_glue(), GL_ALPHA_BITS, &colbits[3]);
+    SoGLContext_glGetIntegerv(SoGLContext_instance(newcontext), GL_RED_BITS, &colbits[0]);
+    SoGLContext_glGetIntegerv(SoGLContext_instance(newcontext), GL_GREEN_BITS, &colbits[1]);
+    SoGLContext_glGetIntegerv(SoGLContext_instance(newcontext), GL_BLUE_BITS, &colbits[2]);
+    SoGLContext_glGetIntegerv(SoGLContext_instance(newcontext), GL_ALPHA_BITS, &colbits[3]);
     SoDebugError::postInfo("SoOffscreenRenderer::renderFromBase",
                            "GL context GL_[RED|GREEN|BLUE|ALPHA]_BITS=="
                            "[%d, %d, %d, %d]",
                            colbits[0], colbits[1], colbits[2], colbits[3]);
   }
 
-  SoGLContext_glEnable(sogl_current_render_glue(), GL_DEPTH_TEST);
+  SoGLContext_glEnable(SoGLContext_instance(newcontext), GL_DEPTH_TEST);
   {
     // Use the bottom gradient colour (or the solid background colour) as the
     // GL clear colour.  When a gradient is active the pre_render_cb will
@@ -1007,7 +1012,7 @@ SoOffscreenRendererP::renderFromBase(SoBase * base)
     const SbColor & bgcol = this->has_gradient
                             ? this->gradient_bottom
                             : this->backgroundcolor;
-    SoGLContext_glClearColor(sogl_current_render_glue(), bgcol[0], bgcol[1], bgcol[2], 0.0f);
+    SoGLContext_glClearColor(SoGLContext_instance(newcontext), bgcol[0], bgcol[1], bgcol[2], 0.0f);
   }
 
   // Make this large to get best possible quality on any "big-image"
@@ -1044,7 +1049,7 @@ SoOffscreenRendererP::renderFromBase(SoBase * base)
     (void)memset(this->buffer, 0x00, bufsize);
   }
 
-  // needed to clear viewport after SoGLContext_glViewport(sogl_current_render_glue()) is called from
+  // needed to clear viewport after SoGLContext_glViewport(sogl_glue_from_state(action->getState())) is called from
   // SoGLRenderAction
   this->renderaction->addPreRenderCallback(pre_render_cb, this);
 

@@ -49,6 +49,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 message(STATUS "Setting C++ standard: C++${CMAKE_CXX_STANDARD} (required)")
 
+# Temporary addition of gcc debugging info everywhere
+add_definitions(-g)
+
 # Add path for Obol-specific utility scripts
 list(PREPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 

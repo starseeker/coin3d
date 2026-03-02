@@ -73,6 +73,9 @@ SoSeparator* createTexture(int width = 800, int height = 600);
 /** SoText2 and SoText3 labels in the same scene. */
 SoSeparator* createText(int width = 800, int height = 600);
 
+/** Multiple SoText2 (2-D billboard) labels at different positions and sizes. */
+SoSeparator* createText2(int width = 800, int height = 600);
+
 /** Background gradient using a callback node. */
 SoSeparator* createGradient(int width = 800, int height = 600);
 

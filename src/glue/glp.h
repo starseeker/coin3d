@@ -55,6 +55,7 @@
 
 #include <Inventor/system/gl.h>
 #include "base/dict.h"
+#include <Inventor/misc/SoState.h>
 
 /* ********************************************************************** */
 
@@ -143,8 +144,12 @@ typedef void (APIENTRY * OBOL_PFNGLCLEARCOLORPROC)(GLclampf red,
                                                    GLclampf alpha);
 typedef void (APIENTRY * OBOL_PFNGLCLEARPROC)(GLbitfield mask);
 typedef void (APIENTRY * OBOL_PFNGLFLUSHPROC)(void);
+typedef void (APIENTRY * OBOL_PFNGLFINISHPROC)(void);
+typedef GLenum (APIENTRY * OBOL_PFNGLGETERRORPROC)(void);
+typedef const GLubyte * (APIENTRY * OBOL_PFNGLGETSTRINGPROC)(GLenum name);
 typedef void (APIENTRY * OBOL_PFNGLENABLEPROC)(GLenum cap);
 typedef void (APIENTRY * OBOL_PFNGLDISABLEPROC)(GLenum cap);
+typedef GLboolean (APIENTRY * OBOL_PFNGLISENABLEDPROC)(GLenum cap);
 typedef void (APIENTRY * OBOL_PFNGLPIXELSTOREIPROC)(GLenum pname, GLint param);
 typedef void (APIENTRY * OBOL_PFNGLREADPIXELSPROC)(GLint x, GLint y,
                                                    GLsizei width, GLsizei height,
@@ -245,6 +250,7 @@ typedef void (APIENTRY * OBOL_PFNGLNEWLISTPROC)(GLuint list, GLenum mode);
 typedef void (APIENTRY * OBOL_PFNGLENDLISTPROC)(void);
 typedef void (APIENTRY * OBOL_PFNGLCALLLISTPROC)(GLuint list);
 typedef void (APIENTRY * OBOL_PFNGLDELETELISTSPROC)(GLuint list, GLsizei range);
+typedef GLuint (APIENTRY * OBOL_PFNGLGENLISTSPROC)(GLsizei range);
 typedef void (APIENTRY * OBOL_PFNGLPUSHATTRIBPROC)(GLbitfield mask);
 typedef void (APIENTRY * OBOL_PFNGLPOPATTRIBPROC)(void);
 
@@ -738,8 +744,12 @@ struct SoGLContext {
   OBOL_PFNGLCLEARCOLORPROC      glClearColor;
   OBOL_PFNGLCLEARPROC           glClear;
   OBOL_PFNGLFLUSHPROC           glFlush;
+  OBOL_PFNGLFINISHPROC          glFinish;
+  OBOL_PFNGLGETERRORPROC        glGetError;
+  OBOL_PFNGLGETSTRINGPROC       glGetString;
   OBOL_PFNGLENABLEPROC          glEnable;
   OBOL_PFNGLDISABLEPROC         glDisable;
+  OBOL_PFNGLISENABLEDPROC       glIsEnabled;
   OBOL_PFNGLPIXELSTOREIPROC     glPixelStorei;
   OBOL_PFNGLREADPIXELSPROC      glReadPixels;
   OBOL_PFNGLCOPYTEXSUBIMAGE2DPROC glCopyTexSubImage2D;
@@ -830,6 +840,7 @@ struct SoGLContext {
   OBOL_PFNGLENDLISTPROC glEndList;
   OBOL_PFNGLCALLLISTPROC glCallList;
   OBOL_PFNGLDELETELISTSPROC glDeleteLists;
+  OBOL_PFNGLGENLISTSPROC glGenLists;
   OBOL_PFNGLPUSHATTRIBPROC glPushAttrib;
   OBOL_PFNGLPOPATTRIBPROC glPopAttrib;
 
@@ -1122,6 +1133,18 @@ void SoGLContext_destruct(uint32_t contextid);
    Note: you should try to avoid using this function if possible! */
 
 void * coin_gl_current_context(void);
+
+/* Explicit context retrieval from a state pointer.  Defined in SoGL.cpp;
+   delegates to sogl_glue_instance() which derives the context from
+   state->getAction()->getCacheContext().  Works at every point in the
+   render pipeline, including during SoState construction. */
+const SoGLContext * sogl_glue_from_state(const SoState * state);
+
+/* Returns the function pointer for glGetString as seen in the linked GL
+   library.  Used by dl.cpp to verify that cc_dl_opengl_handle() opened the
+   same GL DLL that the rest of the library uses, without needing to include
+   raw OpenGL headers in dl.cpp. */
+void * coin_gl_getstring_ptr(void);
 
 /* Thread-local current render glue — set by SoGLRenderAction before each
    traversal pass so that GL element updategl() methods (which lack a state
@@ -1664,8 +1687,12 @@ void SoGLContext_glClearColor(const SoGLContext * glue,
                               GLclampf blue, GLclampf alpha);
 void SoGLContext_glClear(const SoGLContext * glue, GLbitfield mask);
 void SoGLContext_glFlush(const SoGLContext * glue);
+void SoGLContext_glFinish(const SoGLContext * glue);
+GLenum SoGLContext_glGetError(const SoGLContext * glue);
+const GLubyte * SoGLContext_glGetString(const SoGLContext * glue, GLenum name);
 void SoGLContext_glEnable(const SoGLContext * glue, GLenum cap);
 void SoGLContext_glDisable(const SoGLContext * glue, GLenum cap);
+GLboolean SoGLContext_glIsEnabled(const SoGLContext * glue, GLenum cap);
 void SoGLContext_glPixelStorei(const SoGLContext * glue,
                                GLenum pname, GLint param);
 void SoGLContext_glReadPixels(const SoGLContext * glue,
@@ -1764,6 +1791,7 @@ void SoGLContext_glNewList(const SoGLContext * glue, GLuint list, GLenum mode);
 void SoGLContext_glEndList(const SoGLContext * glue);
 void SoGLContext_glCallList(const SoGLContext * glue, GLuint list);
 void SoGLContext_glDeleteLists(const SoGLContext * glue, GLuint list, GLsizei range);
+GLuint SoGLContext_glGenLists(const SoGLContext * glue, GLsizei range);
 void SoGLContext_glPushAttrib(const SoGLContext * glue, GLbitfield mask);
 void SoGLContext_glPopAttrib(const SoGLContext * glue);
 

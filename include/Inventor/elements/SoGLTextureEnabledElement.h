@@ -38,6 +38,8 @@
 #endif
 
 #include <Inventor/elements/SoTextureEnabledElement.h>
+
+struct SoGLContext;
 #include <Inventor/elements/SoGLMultiTextureEnabledElement.h>
 
 typedef SoGLMultiTextureEnabledElement SoGLTextureEnabledElement;

@@ -958,28 +958,28 @@ SoCamera::drawCroppedFrame(SoGLRenderAction *action,
 
   SbVec2s oldorigin = oldvp.getViewportOriginPixels();
   SbVec2s oldsize = oldvp.getViewportSizePixels();
-  SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_PROJECTION);
+  SoGLContext_glMatrixMode(sogl_glue_from_state(state), GL_PROJECTION);
   // projection matrix will be set later, so don't push
-  SoGLContext_glOrtho(sogl_current_render_glue(), oldorigin[0], oldorigin[0]+oldsize[0]-1,
+  SoGLContext_glOrtho(sogl_glue_from_state(state), oldorigin[0], oldorigin[0]+oldsize[0]-1,
           oldorigin[1], oldorigin[1]+oldsize[1]-1,
           -1, 1);
 
   SoGLMultiTextureEnabledElement::disableAll(state);
 
-  SoGLContext_glPushAttrib(sogl_current_render_glue(), GL_LIGHTING_BIT|
+  SoGLContext_glPushAttrib(sogl_glue_from_state(state), GL_LIGHTING_BIT|
                GL_FOG_BIT|
                GL_DEPTH_BUFFER_BIT|
                GL_TEXTURE_BIT|
                GL_CURRENT_BIT);
 
-  SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_MODELVIEW);
-  SoGLContext_glPushMatrix(sogl_current_render_glue());
-  SoGLContext_glLoadIdentity(sogl_current_render_glue());
-  SoGLContext_glDisable(sogl_current_render_glue(), GL_LIGHTING);
-  SoGLContext_glDisable(sogl_current_render_glue(), GL_FOG);
-  SoGLContext_glDisable(sogl_current_render_glue(), GL_DEPTH_TEST);
+  SoGLContext_glMatrixMode(sogl_glue_from_state(state), GL_MODELVIEW);
+  SoGLContext_glPushMatrix(sogl_glue_from_state(state));
+  SoGLContext_glLoadIdentity(sogl_glue_from_state(state));
+  SoGLContext_glDisable(sogl_glue_from_state(state), GL_LIGHTING);
+  SoGLContext_glDisable(sogl_glue_from_state(state), GL_FOG);
+  SoGLContext_glDisable(sogl_glue_from_state(state), GL_DEPTH_TEST);
 
-  SoGLContext_glColor3f(sogl_current_render_glue(), 0.8f, 0.8f, 0.8f);
+  SoGLContext_glColor3f(sogl_glue_from_state(state), 0.8f, 0.8f, 0.8f);
 
   SbVec2s origin = newvp.getViewportOriginPixels();
   SbVec2s size = newvp.getViewportSizePixels();
@@ -989,55 +989,55 @@ SoCamera::drawCroppedFrame(SoGLRenderAction *action,
     short minpos = origin[0] - 1;
     short maxpos = origin[0] + size[0];
     if (viewportmapping == SoCamera::CROP_VIEWPORT_LINE_FRAME) {
-      SoGLContext_glBegin(sogl_current_render_glue(), GL_LINES);
-      SoGLContext_glVertex2s(sogl_current_render_glue(), minpos, oldorigin[1]);
-      SoGLContext_glVertex2s(sogl_current_render_glue(), minpos, oldorigin[1]+oldsize[1]);
-      SoGLContext_glVertex2s(sogl_current_render_glue(), maxpos, oldorigin[1]);
-      SoGLContext_glVertex2s(sogl_current_render_glue(), maxpos, oldorigin[1]+oldsize[1]);
-      SoGLContext_glEnd(sogl_current_render_glue());
+      SoGLContext_glBegin(sogl_glue_from_state(state), GL_LINES);
+      SoGLContext_glVertex2s(sogl_glue_from_state(state), minpos, oldorigin[1]);
+      SoGLContext_glVertex2s(sogl_glue_from_state(state), minpos, oldorigin[1]+oldsize[1]);
+      SoGLContext_glVertex2s(sogl_glue_from_state(state), maxpos, oldorigin[1]);
+      SoGLContext_glVertex2s(sogl_glue_from_state(state), maxpos, oldorigin[1]+oldsize[1]);
+      SoGLContext_glEnd(sogl_glue_from_state(state));
     }
     else {
-      SoGLContext_glBegin(sogl_current_render_glue(), GL_QUADS);
-      SoGLContext_glVertex2s(sogl_current_render_glue(), oldorigin[0], oldorigin[1]);
-      SoGLContext_glVertex2s(sogl_current_render_glue(), oldorigin[0], oldorigin[1]+oldsize[1]-1);
-      SoGLContext_glVertex2s(sogl_current_render_glue(), minpos, oldorigin[1]+oldsize[1]);
-      SoGLContext_glVertex2s(sogl_current_render_glue(), minpos, oldorigin[1]);
+      SoGLContext_glBegin(sogl_glue_from_state(state), GL_QUADS);
+      SoGLContext_glVertex2s(sogl_glue_from_state(state), oldorigin[0], oldorigin[1]);
+      SoGLContext_glVertex2s(sogl_glue_from_state(state), oldorigin[0], oldorigin[1]+oldsize[1]-1);
+      SoGLContext_glVertex2s(sogl_glue_from_state(state), minpos, oldorigin[1]+oldsize[1]);
+      SoGLContext_glVertex2s(sogl_glue_from_state(state), minpos, oldorigin[1]);
 
-      SoGLContext_glVertex2s(sogl_current_render_glue(), maxpos, oldorigin[1]);
-      SoGLContext_glVertex2s(sogl_current_render_glue(), maxpos, oldorigin[1]+oldsize[1]-1);
-      SoGLContext_glVertex2s(sogl_current_render_glue(), oldorigin[0]+oldsize[0]-1, oldorigin[1]+oldsize[1]-1);
-      SoGLContext_glVertex2s(sogl_current_render_glue(), oldorigin[0]+oldsize[0]-1, oldorigin[1]);
-      SoGLContext_glEnd(sogl_current_render_glue());
+      SoGLContext_glVertex2s(sogl_glue_from_state(state), maxpos, oldorigin[1]);
+      SoGLContext_glVertex2s(sogl_glue_from_state(state), maxpos, oldorigin[1]+oldsize[1]-1);
+      SoGLContext_glVertex2s(sogl_glue_from_state(state), oldorigin[0]+oldsize[0]-1, oldorigin[1]+oldsize[1]-1);
+      SoGLContext_glVertex2s(sogl_glue_from_state(state), oldorigin[0]+oldsize[0]-1, oldorigin[1]);
+      SoGLContext_glEnd(sogl_glue_from_state(state));
     }
   }
   else if (size[1] < orgsize[1]) {
     short minpos = origin[1] - 1;
     short maxpos = origin[1] + size[1];
     if (viewportmapping == SoCamera::CROP_VIEWPORT_LINE_FRAME) {
-      SoGLContext_glBegin(sogl_current_render_glue(), GL_LINES);
-      SoGLContext_glVertex2s(sogl_current_render_glue(), oldorigin[0], minpos);
-      SoGLContext_glVertex2s(sogl_current_render_glue(), oldorigin[0]+oldsize[0], minpos);
-      SoGLContext_glVertex2s(sogl_current_render_glue(), oldorigin[0], maxpos);
-      SoGLContext_glVertex2s(sogl_current_render_glue(), oldorigin[0]+oldsize[0], maxpos);
-      SoGLContext_glEnd(sogl_current_render_glue());
+      SoGLContext_glBegin(sogl_glue_from_state(state), GL_LINES);
+      SoGLContext_glVertex2s(sogl_glue_from_state(state), oldorigin[0], minpos);
+      SoGLContext_glVertex2s(sogl_glue_from_state(state), oldorigin[0]+oldsize[0], minpos);
+      SoGLContext_glVertex2s(sogl_glue_from_state(state), oldorigin[0], maxpos);
+      SoGLContext_glVertex2s(sogl_glue_from_state(state), oldorigin[0]+oldsize[0], maxpos);
+      SoGLContext_glEnd(sogl_glue_from_state(state));
     }
     else {
-      SoGLContext_glBegin(sogl_current_render_glue(), GL_QUADS);
-      SoGLContext_glVertex2s(sogl_current_render_glue(), oldorigin[0], minpos);
-      SoGLContext_glVertex2s(sogl_current_render_glue(), oldorigin[0]+oldsize[0]-1, minpos);
-      SoGLContext_glVertex2s(sogl_current_render_glue(), oldorigin[0]+oldsize[0]-1, oldorigin[1]);
-      SoGLContext_glVertex2s(sogl_current_render_glue(), oldorigin[0], oldorigin[1]);
+      SoGLContext_glBegin(sogl_glue_from_state(state), GL_QUADS);
+      SoGLContext_glVertex2s(sogl_glue_from_state(state), oldorigin[0], minpos);
+      SoGLContext_glVertex2s(sogl_glue_from_state(state), oldorigin[0]+oldsize[0]-1, minpos);
+      SoGLContext_glVertex2s(sogl_glue_from_state(state), oldorigin[0]+oldsize[0]-1, oldorigin[1]);
+      SoGLContext_glVertex2s(sogl_glue_from_state(state), oldorigin[0], oldorigin[1]);
 
-      SoGLContext_glVertex2s(sogl_current_render_glue(), oldorigin[0], maxpos);
-      SoGLContext_glVertex2s(sogl_current_render_glue(), oldorigin[0], oldorigin[1]+oldsize[1]-1);
-      SoGLContext_glVertex2s(sogl_current_render_glue(), oldorigin[0]+oldsize[0]-1, oldorigin[1]+oldsize[1]-1);
-      SoGLContext_glVertex2s(sogl_current_render_glue(), oldorigin[1]+oldsize[0]-1, maxpos);
-      SoGLContext_glEnd(sogl_current_render_glue());
+      SoGLContext_glVertex2s(sogl_glue_from_state(state), oldorigin[0], maxpos);
+      SoGLContext_glVertex2s(sogl_glue_from_state(state), oldorigin[0], oldorigin[1]+oldsize[1]-1);
+      SoGLContext_glVertex2s(sogl_glue_from_state(state), oldorigin[0]+oldsize[0]-1, oldorigin[1]+oldsize[1]-1);
+      SoGLContext_glVertex2s(sogl_glue_from_state(state), oldorigin[1]+oldsize[0]-1, maxpos);
+      SoGLContext_glEnd(sogl_glue_from_state(state));
     }
   }
 
-  SoGLContext_glPopMatrix(sogl_current_render_glue());
-  SoGLContext_glPopAttrib(sogl_current_render_glue());
+  SoGLContext_glPopMatrix(sogl_glue_from_state(state));
+  SoGLContext_glPopAttrib(sogl_glue_from_state(state));
 
   state->pop();
 }

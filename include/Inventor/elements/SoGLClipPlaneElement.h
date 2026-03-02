@@ -35,6 +35,8 @@
 
 #include <Inventor/elements/SoClipPlaneElement.h>
 
+struct SoGLContext;
+
 class OBOL_DLL_API SoGLClipPlaneElement : public SoClipPlaneElement {
   typedef SoClipPlaneElement inherited;
 
@@ -46,6 +48,7 @@ protected:
 
 public:
   virtual void init(SoState * state);
+  virtual void push(SoState * state);
   virtual void pop(SoState * state,
                    const SoElement * prevTopElement);
   static  int getMaxGLPlanes(void);
@@ -55,6 +58,7 @@ protected:
                         const SbMatrix & modelMatrix);
 
 private:
+  mutable const SoGLContext * glue = nullptr;
 };
 
 #endif // !OBOL_SOGLCLIPPLANEELEMENT_H

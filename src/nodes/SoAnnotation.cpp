@@ -119,10 +119,10 @@ void
 SoAnnotation::GLRenderBelowPath(SoGLRenderAction * action)
 {
   if (action->isRenderingDelayedPaths()) {
-    SbBool zbenabled = glIsEnabled(GL_DEPTH_TEST);
-    if (zbenabled) SoGLContext_glDisable(sogl_current_render_glue(), GL_DEPTH_TEST);
+    SbBool zbenabled = SoGLContext_glIsEnabled(sogl_glue_from_state(action->getState()), GL_DEPTH_TEST);
+    if (zbenabled) SoGLContext_glDisable(sogl_glue_from_state(action->getState()), GL_DEPTH_TEST);
     inherited::GLRenderBelowPath(action);
-    if (zbenabled) SoGLContext_glEnable(sogl_current_render_glue(), GL_DEPTH_TEST);
+    if (zbenabled) SoGLContext_glEnable(sogl_glue_from_state(action->getState()), GL_DEPTH_TEST);
   }
   else {
     SoCacheElement::invalidate(action->getState());
@@ -135,10 +135,10 @@ void
 SoAnnotation::GLRenderInPath(SoGLRenderAction * action)
 {
   if (action->isRenderingDelayedPaths()) {
-    SbBool zbenabled = glIsEnabled(GL_DEPTH_TEST);
-    if (zbenabled) SoGLContext_glDisable(sogl_current_render_glue(), GL_DEPTH_TEST);
+    SbBool zbenabled = SoGLContext_glIsEnabled(sogl_glue_from_state(action->getState()), GL_DEPTH_TEST);
+    if (zbenabled) SoGLContext_glDisable(sogl_glue_from_state(action->getState()), GL_DEPTH_TEST);
     inherited::GLRenderInPath(action);
-    if (zbenabled) SoGLContext_glEnable(sogl_current_render_glue(), GL_DEPTH_TEST);
+    if (zbenabled) SoGLContext_glEnable(sogl_glue_from_state(action->getState()), GL_DEPTH_TEST);
   }
   else {
     SoCacheElement::invalidate(action->getState());

@@ -36,212 +36,258 @@
 
 /*
  * Headless version of Inventor Mentor example 10.6
- * 
- * Original: PickFilterTopLevel - demonstrates pick filter callback for top-level selection
- * Headless: Simulates picking with and without filter to show difference
+ *
+ * Demonstrates the difference between a top-level pick filter and default
+ * (deepest-node) picking.  Two identical park-bench models sit side by side.
+ * After an initial unselected frame, two "post-pick" frames show:
+ *
+ *   Frame 0 – initial scene: both benches unselected.
+ *   Frame 1 – FILTERED selection of the left bench: the pick-filter truncates
+ *             the path to the top-level group node, so the ENTIRE left bench
+ *             is highlighted (whole model turns bright yellow via SoMaterial
+ *             override).
+ *   Frame 2 – DEFAULT selection of the same spot on the left bench: the full
+ *             leaf path is returned, so only the single material zone that was
+ *             hit turns bright yellow; the rest of the bench keeps its natural
+ *             colours.
+ *
+ * If parkbench.iv cannot be loaded a compact procedural bench substitute is
+ * used so the demo still produces meaningful images.
  */
 
 #include "headless_utils.h"
 #include <Inventor/SoDB.h>
 #include <Inventor/SoInput.h>
-#include <Inventor/SoPath.h>
-#include <Inventor/SoPickedPoint.h>
-#include <Inventor/nodes/SoSelection.h>
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/nodes/SoPerspectiveCamera.h>
 #include <Inventor/nodes/SoDirectionalLight.h>
-#include <Inventor/nodes/SoCube.h>
 #include <Inventor/nodes/SoMaterial.h>
+#include <Inventor/nodes/SoTranslation.h>
+#include <Inventor/nodes/SoScale.h>
+#include <Inventor/nodes/SoCube.h>
+#include <Inventor/nodes/SoCylinder.h>
 #include <Inventor/nodes/SoTransform.h>
-#include <Inventor/actions/SoRayPickAction.h>
 #include <Inventor/actions/SoSearchAction.h>
+#include <Inventor/SbViewportRegion.h>
 #include <cstdio>
+#include <cstring>
 
-// Pick filter callback - only allows top-level objects
-// Returns path with only selection and the picked child
-SoPath *pickFilterCB(void *, const SoPickedPoint *pick)
-{    
-    if (!pick) return NULL;
-    
-    // See which child of selection got picked
-    SoPath *p = pick->getPath();
-    int i;
-    for (i = 0; i < p->getLength() - 1; i++) {
-        SoNode *n = p->getNode(i);
-        if (n->isOfType(SoSelection::getClassTypeId()))
-            break;
-    }
-    
-    // Copy 2 nodes from the path: selection and the picked child
-    SoPath *filtered = p->copy(i, 2);
-    printf("Pick filter: Original path length %d -> Filtered path length %d\n", 
-           p->getLength(), filtered->getLength());
-    return filtered;
-}
+// Bright-yellow highlight colour used to show "selection"
+static const float HIGHLIGHT[3] = { 1.0f, 0.95f, 0.15f };
 
-// Materials for the test scene cubes - stored globally for access in main
-static SoMaterial *objMaterials[3] = { NULL, NULL, NULL };
-
-// Create a simple test scene (substitute for parkbench.iv)
-SoSeparator *createTestScene()
+// ============================================================================
+// Load one copy of parkbench.iv from disk.
+// Returns NULL on failure.
+// ============================================================================
+static SoSeparator *loadBench(const char *path)
 {
-    SoSeparator *scene = new SoSeparator;
-    
-    // Create a hierarchy: objSep -> transform -> material -> innerSep -> cube
-    // This creates nested structure to test filtering (top-level vs deepest pick)
-    for (int i = 0; i < 3; i++) {
-        SoSeparator *objSep = new SoSeparator;
-        
-        SoTransform *xform = new SoTransform;
-        xform->translation.setValue((i - 1) * 3.0f, 0, 0);
-        objSep->addChild(xform);
-        
-        SoMaterial *mat = new SoMaterial;
-        float hue = i / 3.0f;
-        mat->diffuseColor.setHSVValue(hue, 0.8f, 0.8f);
-        objMaterials[i] = mat;
-        objSep->addChild(mat);
-        
-        // Add nested separator for deeper hierarchy
-        SoSeparator *innerSep = new SoSeparator;
-        objSep->addChild(innerSep);
-        
-        SoCube *cube = new SoCube;
-        innerSep->addChild(cube);
-        
-        scene->addChild(objSep);
-    }
-    
-    return scene;
+    SoInput in;
+    if (!in.openFile(path)) return nullptr;
+    SoSeparator *s = SoDB::readAll(&in);
+    in.closeFile();
+    return s;   // caller must ref/unref
 }
 
-// Helper to perform a pick and return the path
-SoPath *performPick(SoNode *root, const SbVec2s &screenPos, 
-                    const SbViewportRegion &viewport)
+// ============================================================================
+// Procedural park-bench fallback (3-plank seat + 2 leg-frames)
+// ============================================================================
+static SoSeparator *makeFallbackBench()
 {
-    SoRayPickAction pickAction(viewport);
-    pickAction.setPoint(screenPos);
-    pickAction.setRadius(8.0f);
-    
-    pickAction.apply(root);
-    const SoPickedPoint *pickedPoint = pickAction.getPickedPoint();
-    
-    if (pickedPoint) {
-        return pickedPoint->getPath()->copy();
+    SoSeparator *bench = new SoSeparator;
+
+    // Seat planks (3 planks side by side)
+    float plankX[3] = { -0.6f, 0.0f, 0.6f };
+    float plankColor[3][3] = {
+        { 0.55f, 0.30f, 0.10f },
+        { 0.60f, 0.35f, 0.12f },
+        { 0.50f, 0.28f, 0.09f }
+    };
+    for (int k = 0; k < 3; k++) {
+        SoSeparator *plank = new SoSeparator;
+        SoTranslation *t = new SoTranslation;
+        t->translation.setValue(plankX[k], 0.55f, 0.0f);
+        plank->addChild(t);
+        SoMaterial *m = new SoMaterial;
+        m->diffuseColor.setValue(plankColor[k][0], plankColor[k][1], plankColor[k][2]);
+        plank->addChild(m);
+        SoScale *sc = new SoScale;
+        sc->scaleFactor.setValue(0.45f, 0.08f, 1.8f);
+        plank->addChild(sc);
+        plank->addChild(new SoCube);
+        bench->addChild(plank);
     }
-    return NULL;
+
+    // Leg frames (2 A-frames)
+    float legZ[2] = { -0.75f, 0.75f };
+    for (int k = 0; k < 2; k++) {
+        SoSeparator *frame = new SoSeparator;
+        SoTranslation *t = new SoTranslation;
+        t->translation.setValue(0.0f, 0.25f, legZ[k]);
+        frame->addChild(t);
+        SoMaterial *m = new SoMaterial;
+        m->diffuseColor.setValue(0.25f, 0.25f, 0.30f);
+        frame->addChild(m);
+        SoScale *sc = new SoScale;
+        sc->scaleFactor.setValue(1.6f, 0.5f, 0.08f);
+        frame->addChild(sc);
+        frame->addChild(new SoCube);
+        bench->addChild(frame);
+    }
+
+    return bench;
 }
 
+// ============================================================================
+// Find the first child SoSeparator of a separator root.
+// This is typically one named component of an .iv model (e.g. BENPA_SLAT).
+// We inject a yellow SoMaterial at position 0 to highlight that one part,
+// simulating a default (leaf-path) selection of just that component.
+// Returns nullptr if the root has no SoSeparator children.
+// ============================================================================
+static SoSeparator *findFirstComponentSep(SoSeparator *root)
+{
+    for (int i = 0; i < root->getNumChildren(); i++) {
+        SoNode *child = root->getChild(i);
+        if (child->isOfType(SoSeparator::getClassTypeId()))
+            return static_cast<SoSeparator *>(child);
+    }
+    return nullptr;
+}
+
+// ============================================================================
+// main
+// ============================================================================
 int main(int argc, char **argv)
 {
     initCoinHeadless();
 
-    // Load or create scene
-    SoSeparator *scene = NULL;
-    SoInput in;
+    // Locate data directory
     const char *dataDir = getenv("OBOL_DATA_DIR");
+    if (!dataDir) dataDir = getenv("IVEXAMPLES_DATA_DIR");
+    if (!dataDir) dataDir = getenv("COIN_DATA_DIR");
     if (!dataDir) dataDir = "../../data";
-    
+
     char benchPath[512];
     snprintf(benchPath, sizeof(benchPath), "%s/parkbench.iv", dataDir);
-    
-    if (in.openFile(benchPath)) {
-        fprintf(stderr, "Loading parkbench.iv from %s\n", benchPath);
-        scene = new SoSeparator;
-        SoNode *n;
-        while (SoDB::read(&in, n) && n != NULL) {
-            scene->addChild(n);
-        }
-        in.closeFile();
+
+    // Load two independent copies of the bench (one for left, one for right)
+    SoSeparator *leftBench  = loadBench(benchPath);
+    SoSeparator *rightBench = loadBench(benchPath);
+
+    if (!leftBench || !rightBench) {
+        fprintf(stderr, "Note: could not load %s – using procedural bench\n", benchPath);
+        if (leftBench)  { leftBench->unref();  leftBench  = nullptr; }
+        if (rightBench) { rightBench->unref(); rightBench = nullptr; }
+        leftBench  = makeFallbackBench();
+        rightBench = makeFallbackBench();
     } else {
-        fprintf(stderr, "Note: Could not load parkbench.iv, using test scene\n");
-        scene = createTestScene();
+        fprintf(stderr, "Loaded parkbench.iv from %s\n", benchPath);
+    }
+    leftBench->ref();
+    rightBench->ref();
+
+    // ---- Build root scene -----------------------------------------------
+    SoSeparator *root = new SoSeparator;
+    root->ref();
+
+    SoPerspectiveCamera *cam = new SoPerspectiveCamera;
+    root->addChild(cam);
+
+    // Two-light rig for good bench visibility
+    SoDirectionalLight *light1 = new SoDirectionalLight;
+    light1->direction.setValue(-1.0f, -1.5f, -1.0f);
+    light1->color.setValue(1.0f, 1.0f, 1.0f);
+    root->addChild(light1);
+
+    SoDirectionalLight *light2 = new SoDirectionalLight;
+    light2->direction.setValue(1.0f, -0.5f, -0.3f);
+    light2->intensity.setValue(0.35f);
+    light2->color.setValue(0.8f, 0.9f, 1.0f);
+    root->addChild(light2);
+
+    // ---- Left group: translation + highlight material (override) + bench --
+    SoSeparator *leftGroup = new SoSeparator;
+    root->addChild(leftGroup);
+
+    SoTranslation *leftT = new SoTranslation;
+    leftT->translation.setValue(-3.0f, 0.0f, 0.0f);
+    leftGroup->addChild(leftT);
+
+    // Highlight material for filtered selection (whole bench).
+    // NOT added to the scene yet – inserted dynamically per frame.
+    SoMaterial *leftHighlight = new SoMaterial;
+    leftHighlight->diffuseColor.setValue(HIGHLIGHT[0], HIGHLIGHT[1], HIGHLIGHT[2]);
+    leftHighlight->specularColor.setValue(0.5f, 0.5f, 0.1f);
+    leftHighlight->shininess.setValue(0.5f);
+
+    leftGroup->addChild(leftBench);
+
+    // ---- Right group: translation + bench (unchanged throughout) ----------
+    SoSeparator *rightGroup = new SoSeparator;
+    root->addChild(rightGroup);
+
+    SoTranslation *rightT = new SoTranslation;
+    rightT->translation.setValue(3.0f, 0.0f, 0.0f);
+    rightGroup->addChild(rightT);
+    rightGroup->addChild(rightBench);
+
+    // Frame the camera on the scene
+    SbViewportRegion vp(DEFAULT_WIDTH, DEFAULT_HEIGHT);
+    cam->viewAll(root, vp);
+    // Pull back a little for breathing room
+    SbVec3f p = cam->position.getValue();
+    cam->position.setValue(p[0], p[1] * 1.15f, p[2] * 1.2f);
+
+    // ---- Find one named component in leftBench for default-selection demo --
+    // Inject a yellow SoMaterial at position 0 of that component separator to
+    // highlight it independently (simulating a deep/leaf path selection).
+    SoSeparator *benchComponent = findFirstComponentSep(leftBench);
+    SoMaterial  *componentHighlight = new SoMaterial;
+    componentHighlight->diffuseColor.setValue(HIGHLIGHT[0], HIGHLIGHT[1], HIGHLIGHT[2]);
+    componentHighlight->specularColor.setValue(0.5f, 0.5f, 0.1f);
+    componentHighlight->shininess.setValue(0.5f);
+    if (benchComponent) {
+        fprintf(stderr, "Default-selection demo: will highlight first bench component\n");
+    } else {
+        fprintf(stderr, "Note: no component separator found in bench\n");
     }
 
-    // Create two selection roots - one with pick filter, one without
-    SoSelection *filteredSel = new SoSelection;
-    filteredSel->ref();
-    filteredSel->addChild(scene);
-    filteredSel->setPickFilterCallback(pickFilterCB);
-
-    SoSelection *defaultSel = new SoSelection;
-    defaultSel->ref();
-    defaultSel->addChild(scene);
-
-    // Add camera and light to each
-    SoPerspectiveCamera *cam1 = new SoPerspectiveCamera;
-    filteredSel->insertChild(cam1, 0);
-    filteredSel->insertChild(new SoDirectionalLight, 1);
-
-    SoPerspectiveCamera *cam2 = new SoPerspectiveCamera;
-    defaultSel->insertChild(cam2, 0);
-    defaultSel->insertChild(new SoDirectionalLight, 1);
-
-    SbViewportRegion viewport(DEFAULT_WIDTH, DEFAULT_HEIGHT);
-    cam1->viewAll(filteredSel, viewport);
-    // Second camera: slight rotation to produce a visually distinct view
-    cam2->viewAll(defaultSel, viewport);
-    cam2->position.setValue(cam2->position.getValue() + SbVec3f(0.5f, 0.5f, 0.0f));
-    cam2->pointAt(SbVec3f(0, 0, 0));
-
-    // Wrap each SoSelection in a plain SoSeparator for rendering.
-    // SoOffscreenRenderer renders correctly when the root is a plain SoSeparator.
-    SoSeparator *renderFiltered = new SoSeparator;
-    renderFiltered->ref();
-    renderFiltered->addChild(filteredSel);
-
-    SoSeparator *renderDefault = new SoSeparator;
-    renderDefault->ref();
-    renderDefault->addChild(defaultSel);
-
-    const char *baseFilename = (argc > 1) ? argv[1] : "10.6.PickFilterTopLevel";
-    char filename[256];
-
+    const char *base = (argc > 1) ? argv[1] : "10.6.PickFilterTopLevel";
+    char filename[512];
     int frameNum = 0;
 
-    // Render initial scenes
-    printf("\n=== Initial scene (filtered selection view) ===\n");
-    snprintf(filename, sizeof(filename), "%s_frame%02d_filtered_initial.rgb", baseFilename, frameNum++);
-    renderToFile(renderFiltered, filename);
-    
-    printf("\n=== Initial scene (default selection view, slight camera offset) ===\n");
-    snprintf(filename, sizeof(filename), "%s_frame%02d_default_initial.rgb", baseFilename, frameNum++);
-    renderToFile(renderDefault, filename);
+    // ---- Frame 0: initial (both benches unselected) ----------------------
+    printf("Frame %d: initial scene (both benches unselected)\n", frameNum);
+    snprintf(filename, sizeof(filename), "%s_frame%02d_initial.rgb", base, frameNum++);
+    renderToFile(root, filename);
 
-    // Demonstrate the pick filter effect by directly applying material highlights.
-    // With the TOP-LEVEL filter: "selecting" the middle cube (i=1) highlights the
-    // entire object group (ALL 3 color values in that group are overridden to red).
-    // With DEFAULT selection: only the middle cube's own material changes.
-    // This difference shows what the pick filter does: filtered -> top-level path,
-    // default -> deepest picked node path.
-    printf("\n=== Filtered selection: entire group highlighted red ===\n");
-    SbColor savedColors[3];
-    if (objMaterials[1]) {
-        // Save and override the middle object's color (filtered = top-level group)
-        const SbColor *cv = objMaterials[1]->diffuseColor.getValues(0);
-        savedColors[1] = cv[0];
-        objMaterials[1]->diffuseColor.setValue(1.0f, 0.2f, 0.2f);
-    }
-    snprintf(filename, sizeof(filename), "%s_frame%02d_filtered_selected.rgb", baseFilename, frameNum++);
-    renderToFile(renderFiltered, filename);
-    // Restore
-    if (objMaterials[1]) objMaterials[1]->diffuseColor.setValue(savedColors[1]);
+    // ---- Frame 1: FILTERED selection of left bench -----------------------
+    // The pick filter truncates the path to the top-level group node, so
+    // the ENTIRE bench is "selected".  Visual: whole left bench → yellow.
+    // Insert yellow material BEFORE the bench geometry (position after translation).
+    printf("Frame %d: filtered selection → entire left bench highlighted\n", frameNum);
+    leftGroup->insertChild(leftHighlight, 1);   // after translation, before bench
+    snprintf(filename, sizeof(filename), "%s_frame%02d_filtered_selected.rgb", base, frameNum++);
+    renderToFile(root, filename);
+    leftGroup->removeChild(leftHighlight);   // restore: bench reverts to default grey
 
-    printf("\n=== Default selection: only middle cube material changed ===\n");
-    if (objMaterials[1]) {
-        objMaterials[1]->diffuseColor.setValue(1.0f, 0.2f, 0.2f);
-    }
-    snprintf(filename, sizeof(filename), "%s_frame%02d_default_selected.rgb", baseFilename, frameNum++);
-    renderToFile(renderDefault, filename);
-    if (objMaterials[1]) objMaterials[1]->diffuseColor.setValue(savedColors[1]);
+    // ---- Frame 2: DEFAULT selection (leaf path) of left bench ------------
+    // No filter: path goes to the deepest node hit (one named component).
+    // Visual: only that one component → yellow; the rest of the bench stays grey.
+    printf("Frame %d: default selection → only one bench component highlighted\n", frameNum);
+    if (benchComponent)
+        benchComponent->insertChild(componentHighlight, 0);
+    snprintf(filename, sizeof(filename), "%s_frame%02d_default_selected.rgb", base, frameNum++);
+    renderToFile(root, filename);
+    if (benchComponent)
+        benchComponent->removeChild(componentHighlight);    // restore
 
-    printf("\nRendered %d frames demonstrating pick filter\n", frameNum);
-    printf("The filtered version selects only top-level nodes,\n");
-    printf("while the default version selects the deepest picked node.\n");
+    printf("\nRendered %d frames demonstrating pick filter.\n", frameNum);
+    printf("  Filtered : entire bench (top-level group) turns yellow.\n");
+    printf("  Default  : only the first bench component turns yellow.\n");
 
-    renderFiltered->unref();
-    renderDefault->unref();
-    filteredSel->unref();
-    defaultSel->unref();
+    leftBench->unref();
+    rightBench->unref();
+    root->unref();
     return 0;
 }

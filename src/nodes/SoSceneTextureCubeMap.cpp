@@ -479,7 +479,7 @@ SoSceneTextureCubeMapP::updatePBuffer(SoState * state, const float quality)
     if (this->contextManager) this->contextManager->makeContextCurrent(this->glcontext);
 
 
-    SoGLContext_glEnable(sogl_current_render_glue(), GL_DEPTH_TEST);
+    SoGLContext_glEnable(sogl_glue_from_state(state), GL_DEPTH_TEST);
 
     if (!this->canrendertotexture) {
       SbVec2s size = this->glcontextsize;
@@ -495,11 +495,11 @@ SoSceneTextureCubeMapP::updatePBuffer(SoState * state, const float quality)
                   
       for (int i=0; i<6; i++) {
         this->glaction->apply(this->updateCamera((SoGLCubeMapImage::Target)i));
-        SoGLContext_glFlush(sogl_current_render_glue());
+        SoGLContext_glFlush(sogl_glue_from_state(state));
 
-        SoGLContext_glPixelStorei(sogl_current_render_glue(), GL_PACK_ALIGNMENT, 1);
-        SoGLContext_glReadPixels(sogl_current_render_glue(), 0,0,size[0],size[1],GL_RGBA,GL_UNSIGNED_BYTE,cubeSidePtr);
-        SoGLContext_glPixelStorei(sogl_current_render_glue(), GL_PACK_ALIGNMENT, 4);
+        SoGLContext_glPixelStorei(sogl_glue_from_state(state), GL_PACK_ALIGNMENT, 1);
+        SoGLContext_glReadPixels(sogl_glue_from_state(state), 0,0,size[0],size[1],GL_RGBA,GL_UNSIGNED_BYTE,cubeSidePtr);
+        SoGLContext_glPixelStorei(sogl_glue_from_state(state), GL_PACK_ALIGNMENT, 4);
         cubeSidePtr += cubeSideSize;
       }
     }
@@ -692,12 +692,13 @@ SoSceneTextureCubeMapP::updateCamera(const SoGLCubeMapImage::Target target)
 }
 
 void
-SoSceneTextureCubeMapP::prerendercb(void * userdata, SoGLRenderAction * OBOL_UNUSED_ARG(action))
+SoSceneTextureCubeMapP::prerendercb(void * userdata, SoGLRenderAction * action)
 {
   SoSceneTextureCubeMap * thisp = (SoSceneTextureCubeMap*) userdata;
+  const SoGLContext * glue = sogl_glue_from_state(action->getState());
   SbColor col = thisp->backgroundColor.getValue();
-  SoGLContext_glClearColor(sogl_current_render_glue(), col[0], col[1], col[2], 1.0f);
-  SoGLContext_glClear(sogl_current_render_glue(), GL_DEPTH_BUFFER_BIT|GL_COLOR_BUFFER_BIT);
+  SoGLContext_glClearColor(glue, col[0], col[1], col[2], 1.0f);
+  SoGLContext_glClear(glue, GL_DEPTH_BUFFER_BIT|GL_COLOR_BUFFER_BIT);
 }
 
 #undef LOCK_GLIMAGE

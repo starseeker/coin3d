@@ -170,6 +170,7 @@
 #include <Inventor/sensors/SoFieldSensor.h>
 #include <Inventor/system/gl.h>
 
+#include "glue/glp.h"
 #include "nodes/SoSubNodeP.h"
 #include "base/SbImageFormatHandler.h"
 #include "base/SbJpegImageHandler.h"
@@ -441,19 +442,19 @@ SoImage::GLRender(SoGLRenderAction * action)
     srch = vpsize[1]-ypos;
   }
 
-  SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_MODELVIEW);
-  SoGLContext_glPushMatrix(sogl_current_render_glue());
-  SoGLContext_glLoadIdentity(sogl_current_render_glue());
-  SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_PROJECTION);
-  SoGLContext_glPushMatrix(sogl_current_render_glue());
-  SoGLContext_glLoadIdentity(sogl_current_render_glue());
-  SoGLContext_glOrtho(sogl_current_render_glue(), 0, vpsize[0], 0, vpsize[1], -1.0f, 1.0f);
+  SoGLContext_glMatrixMode(sogl_glue_from_state(state), GL_MODELVIEW);
+  SoGLContext_glPushMatrix(sogl_glue_from_state(state));
+  SoGLContext_glLoadIdentity(sogl_glue_from_state(state));
+  SoGLContext_glMatrixMode(sogl_glue_from_state(state), GL_PROJECTION);
+  SoGLContext_glPushMatrix(sogl_glue_from_state(state));
+  SoGLContext_glLoadIdentity(sogl_glue_from_state(state));
+  SoGLContext_glOrtho(sogl_glue_from_state(state), 0, vpsize[0], 0, vpsize[1], -1.0f, 1.0f);
 
   float oldzx, oldzy;
 
   if (orgsize != size) { // use glPixelZoom to scale image
-    SoGLContext_glGetFloatv(sogl_current_render_glue(), GL_ZOOM_X, &oldzx);
-    SoGLContext_glGetFloatv(sogl_current_render_glue(), GL_ZOOM_Y, &oldzy);
+    SoGLContext_glGetFloatv(sogl_glue_from_state(state), GL_ZOOM_X, &oldzx);
+    SoGLContext_glGetFloatv(sogl_glue_from_state(state), GL_ZOOM_Y, &oldzy);
 
     // calculate pixel zoom value
     float zx, zy;
@@ -461,7 +462,7 @@ SoImage::GLRender(SoGLRenderAction * action)
     zy = float(size[1]) / float(orgsize[1]);
 
     // update GL
-    SoGLContext_glPixelZoom(sogl_current_render_glue(), zx, zy);
+    SoGLContext_glPixelZoom(sogl_glue_from_state(state), zx, zy);
 
     // adjust glDrawPixels and glPixelStorage parameters to account for zoom
     srcw = (int) (srcw / zx);
@@ -487,37 +488,37 @@ SoImage::GLRender(SoGLRenderAction * action)
   offvp = (offvp || ypos < 0) ? TRUE : FALSE;  // FIXED: Operator precedence bug
   GLfloat offsety = ypos >= 0 ? 0.0f : ypos;
 
-  SoGLContext_glRasterPos3f(sogl_current_render_glue(), rpx, rpy, -nilpoint[2]);
+  SoGLContext_glRasterPos3f(sogl_glue_from_state(state), rpx, rpy, -nilpoint[2]);
 
-  if (offvp) { SoGLContext_glBitmap(sogl_current_render_glue(), 0,0,0,0,offsetx,offsety,NULL); }
+  if (offvp) { SoGLContext_glBitmap(sogl_glue_from_state(state), 0,0,0,0,offsetx,offsety,NULL); }
 
-  SoGLContext_glPixelStorei(sogl_current_render_glue(), GL_UNPACK_ROW_LENGTH, orgsize[0]);
-  SoGLContext_glPixelStorei(sogl_current_render_glue(), GL_UNPACK_SKIP_PIXELS, skipx);
-  SoGLContext_glPixelStorei(sogl_current_render_glue(), GL_UNPACK_SKIP_ROWS, skipy);
-  SoGLContext_glPixelStorei(sogl_current_render_glue(), GL_PACK_ROW_LENGTH, vpsize[0]);
-  SoGLContext_glPixelStorei(sogl_current_render_glue(), GL_PACK_ALIGNMENT, 1);
-  SoGLContext_glPixelStorei(sogl_current_render_glue(), GL_UNPACK_ALIGNMENT, 1);
+  SoGLContext_glPixelStorei(sogl_glue_from_state(state), GL_UNPACK_ROW_LENGTH, orgsize[0]);
+  SoGLContext_glPixelStorei(sogl_glue_from_state(state), GL_UNPACK_SKIP_PIXELS, skipx);
+  SoGLContext_glPixelStorei(sogl_glue_from_state(state), GL_UNPACK_SKIP_ROWS, skipy);
+  SoGLContext_glPixelStorei(sogl_glue_from_state(state), GL_PACK_ROW_LENGTH, vpsize[0]);
+  SoGLContext_glPixelStorei(sogl_glue_from_state(state), GL_PACK_ALIGNMENT, 1);
+  SoGLContext_glPixelStorei(sogl_glue_from_state(state), GL_UNPACK_ALIGNMENT, 1);
 
-  SoGLContext_glDrawPixels(sogl_current_render_glue(), srcw, srch, format, GL_UNSIGNED_BYTE,
+  SoGLContext_glDrawPixels(sogl_glue_from_state(state), srcw, srch, format, GL_UNSIGNED_BYTE,
                (const GLvoid*) dataptr);
 
-  SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_PROJECTION);
-  SoGLContext_glPopMatrix(sogl_current_render_glue());
-  SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_MODELVIEW);
-  SoGLContext_glPopMatrix(sogl_current_render_glue());
+  SoGLContext_glMatrixMode(sogl_glue_from_state(state), GL_PROJECTION);
+  SoGLContext_glPopMatrix(sogl_glue_from_state(state));
+  SoGLContext_glMatrixMode(sogl_glue_from_state(state), GL_MODELVIEW);
+  SoGLContext_glPopMatrix(sogl_glue_from_state(state));
 
   if (orgsize != size) {
     // restore zoom
-    SoGLContext_glPixelZoom(sogl_current_render_glue(), oldzx, oldzy);
+    SoGLContext_glPixelZoom(sogl_glue_from_state(state), oldzx, oldzy);
   }
 
   // restore to default values
-  SoGLContext_glPixelStorei(sogl_current_render_glue(), GL_UNPACK_ROW_LENGTH, 0);
-  SoGLContext_glPixelStorei(sogl_current_render_glue(), GL_UNPACK_SKIP_PIXELS, 0);
-  SoGLContext_glPixelStorei(sogl_current_render_glue(), GL_UNPACK_SKIP_ROWS, 0);
-  SoGLContext_glPixelStorei(sogl_current_render_glue(), GL_PACK_ROW_LENGTH, 0);
-  SoGLContext_glPixelStorei(sogl_current_render_glue(), GL_PACK_ALIGNMENT, 4);
-  SoGLContext_glPixelStorei(sogl_current_render_glue(), GL_UNPACK_ALIGNMENT, 4);
+  SoGLContext_glPixelStorei(sogl_glue_from_state(state), GL_UNPACK_ROW_LENGTH, 0);
+  SoGLContext_glPixelStorei(sogl_glue_from_state(state), GL_UNPACK_SKIP_PIXELS, 0);
+  SoGLContext_glPixelStorei(sogl_glue_from_state(state), GL_UNPACK_SKIP_ROWS, 0);
+  SoGLContext_glPixelStorei(sogl_glue_from_state(state), GL_PACK_ROW_LENGTH, 0);
+  SoGLContext_glPixelStorei(sogl_glue_from_state(state), GL_PACK_ALIGNMENT, 4);
+  SoGLContext_glPixelStorei(sogl_glue_from_state(state), GL_UNPACK_ALIGNMENT, 4);
 
   // don't auto cache Image nodes.
   SoGLCacheContextElement::shouldAutoCache(action->getState(),

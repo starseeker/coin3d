@@ -148,17 +148,17 @@ soshape_bigtexture::endShape(SoState * state,
 
   // clear texture matrix. We've already calculated the world space
   // texture coordinates.
-  SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_TEXTURE);
-  SoGLContext_glPushMatrix(sogl_current_render_glue());
-  SoGLContext_glLoadIdentity(sogl_current_render_glue());
-  SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_MODELVIEW);
+  SoGLContext_glMatrixMode(sogl_glue_from_state(state), GL_TEXTURE);
+  SoGLContext_glPushMatrix(sogl_glue_from_state(state));
+  SoGLContext_glLoadIdentity(sogl_glue_from_state(state));
+  SoGLContext_glMatrixMode(sogl_glue_from_state(state), GL_MODELVIEW);
 
   // disable texgen functions, we always supply texture coordinates
-  SoGLContext_glPushAttrib(sogl_current_render_glue(), GL_ENABLE_BIT);
-  SoGLContext_glDisable(sogl_current_render_glue(), GL_TEXTURE_GEN_S);
-  SoGLContext_glDisable(sogl_current_render_glue(), GL_TEXTURE_GEN_T);
-  SoGLContext_glDisable(sogl_current_render_glue(), GL_TEXTURE_GEN_R);
-  SoGLContext_glDisable(sogl_current_render_glue(), GL_TEXTURE_GEN_Q);
+  SoGLContext_glPushAttrib(sogl_glue_from_state(state), GL_ENABLE_BIT);
+  SoGLContext_glDisable(sogl_glue_from_state(state), GL_TEXTURE_GEN_S);
+  SoGLContext_glDisable(sogl_glue_from_state(state), GL_TEXTURE_GEN_T);
+  SoGLContext_glDisable(sogl_glue_from_state(state), GL_TEXTURE_GEN_R);
+  SoGLContext_glDisable(sogl_glue_from_state(state), GL_TEXTURE_GEN_Q);
 
   const int numreg = this->numregions;
   for (int i = 0; i < numreg; i++) {
@@ -178,7 +178,7 @@ soshape_bigtexture::endShape(SoState * state,
     this->image->applySubImage(state, i, this->quality, rectsize);
     int vcnt = 0;
     for (j = 0; j < numface; j++) {
-      SoGLContext_glBegin(sogl_current_render_glue(), GL_TRIANGLE_FAN);
+      SoGLContext_glBegin(sogl_glue_from_state(state), GL_TRIANGLE_FAN);
       numv = reg.facelist[j];
       for (int k = 0; k < numv; k++) {
         SoPrimitiveVertex * v = reg.pvlist[vcnt++];
@@ -187,22 +187,22 @@ soshape_bigtexture::endShape(SoState * state,
         tc[1] -= reg.start[1];
         tc[0] /= (reg.end[0]-reg.start[0]);
         tc[1] /= (reg.end[1]-reg.start[1]);
-        SoGLContext_glTexCoord4fv(sogl_current_render_glue(), tc.getValue());
-        SoGLContext_glNormal3fv(sogl_current_render_glue(), v->getNormal().getValue());
+        SoGLContext_glTexCoord4fv(sogl_glue_from_state(state), tc.getValue());
+        SoGLContext_glNormal3fv(sogl_glue_from_state(state), v->getNormal().getValue());
         mb.send(v->getMaterialIndex(), TRUE);
-        SoGLContext_glVertex3fv(sogl_current_render_glue(), v->getPoint().getValue());
+        SoGLContext_glVertex3fv(sogl_glue_from_state(state), v->getPoint().getValue());
       }
-      SoGLContext_glEnd(sogl_current_render_glue());
+      SoGLContext_glEnd(sogl_glue_from_state(state));
     }
   }
 
   // enable texgen (if active)
-  SoGLContext_glPopAttrib(sogl_current_render_glue());
+  SoGLContext_glPopAttrib(sogl_glue_from_state(state));
 
   // restore texture matrix
-  SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_TEXTURE);
-  SoGLContext_glPopMatrix(sogl_current_render_glue());
-  SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_MODELVIEW);
+  SoGLContext_glMatrixMode(sogl_glue_from_state(state), GL_TEXTURE);
+  SoGLContext_glPopMatrix(sogl_glue_from_state(state));
+  SoGLContext_glMatrixMode(sogl_glue_from_state(state), GL_MODELVIEW);
 
   // return TRUE if all textures were created in the correct resolution
   return ! this->image->exceededChangeLimit();

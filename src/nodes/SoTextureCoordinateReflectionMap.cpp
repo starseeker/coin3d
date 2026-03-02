@@ -167,7 +167,7 @@ SoTextureCoordinateReflectionMap::GLRender(SoGLRenderAction * action)
                                                action->getState());
   SoGLMultiTextureCoordinateElement::setTexGen(action->getState(),
                                                this, unit, handleTexgen, 
-                                               action,
+                                               this,
                                                  generate,
                                                action->getState());
   
@@ -188,9 +188,10 @@ SoTextureCoordinateReflectionMap::pick(SoPickAction * action)
 }
 
 void
-SoTextureCoordinateReflectionMap::handleTexgen(void * OBOL_UNUSED_ARG(data))
+SoTextureCoordinateReflectionMap::handleTexgen(void * data)
 {
-  SoGLContext_glTexGeni(sogl_current_render_glue(), GL_S, GL_TEXTURE_GEN_MODE, GL_REFLECTION_MAP);
-  SoGLContext_glTexGeni(sogl_current_render_glue(), GL_T, GL_TEXTURE_GEN_MODE, GL_REFLECTION_MAP);  
-  SoGLContext_glTexGeni(sogl_current_render_glue(), GL_R, GL_TEXTURE_GEN_MODE, GL_REFLECTION_MAP);
+  SoTextureCoordinateReflectionMap * thisp = (SoTextureCoordinateReflectionMap*)data;
+  SoGLContext_glTexGeni(thisp->cachedGlue, GL_S, GL_TEXTURE_GEN_MODE, GL_REFLECTION_MAP);
+  SoGLContext_glTexGeni(thisp->cachedGlue, GL_T, GL_TEXTURE_GEN_MODE, GL_REFLECTION_MAP);  
+  SoGLContext_glTexGeni(thisp->cachedGlue, GL_R, GL_TEXTURE_GEN_MODE, GL_REFLECTION_MAP);
 }

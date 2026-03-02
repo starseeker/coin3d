@@ -67,7 +67,7 @@
   makes the overlay / HUD graphics end up interspersed with the "real"
   geometry. If so, this can be solved by e.g. inserting an SoCallback
   node in the sub-scene, where you let the callback disable the depth
-  buffer with SoGLContext_glDisable(sogl_current_render_glue(), GL_DEPTH_TEST).
+  buffer with SoGLContext_glDisable(sogl_glue_from_state(state), GL_DEPTH_TEST).
 
   <b>FILE FORMAT/DEFAULTS:</b>
   \code

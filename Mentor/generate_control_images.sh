@@ -48,6 +48,7 @@ fi
 # Data directory for examples that load .iv files
 export COIN_DATA_DIR="$SCRIPT_DIR/data"
 export IVEXAMPLES_DATA_DIR="$SCRIPT_DIR/data"
+export OBOL_DATA_DIR="$SCRIPT_DIR/data"
 
 # Coin offscreen rendering config for Xvfb compatibility:
 #   COIN_GLX_PIXMAP_DIRECT_RENDERING=1  - use direct-rendered GLX pixmaps

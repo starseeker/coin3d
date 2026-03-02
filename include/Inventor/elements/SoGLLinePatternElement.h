@@ -35,6 +35,8 @@
 
 #include <Inventor/elements/SoLinePatternElement.h>
 
+struct SoGLContext;
+
 class OBOL_DLL_API SoGLLinePatternElement : public SoLinePatternElement {
   typedef SoLinePatternElement inherited;
 
@@ -55,6 +57,7 @@ protected:
   virtual void setElt(int32_t pattern);
 
 private:
+  mutable const SoGLContext * glue = nullptr;
   void updategl();
 
 };

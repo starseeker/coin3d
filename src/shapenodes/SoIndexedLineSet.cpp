@@ -299,7 +299,7 @@ SoIndexedLineSet::GLRender(SoGLRenderAction * action)
 
   if (!sendNormals) nbind = OVERALL;
   else if (nbind == OVERALL) {
-    SoGLContext_glNormal3fv(sogl_current_render_glue(), (const GLfloat *)normals);
+    SoGLContext_glNormal3fv(sogl_glue_from_state(state), (const GLfloat *)normals);
   }
 
   SbBool drawPoints =
@@ -379,7 +379,8 @@ SoIndexedLineSet::GLRender(SoGLRenderAction * action)
                             mbind != OVERALL);
   }
   else {
-    sogl_render_lineset((SoGLCoordinateElement*)coords,
+    sogl_render_lineset(sogl_glue_from_state(state),
+                        (SoGLCoordinateElement*)coords,
                         cindices,
                         numindices,
                         normals,

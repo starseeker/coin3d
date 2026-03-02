@@ -76,6 +76,7 @@ void
 SoGLMultiTextureMatrixElement::init(SoState * state)
 {
   inherited::init(state);
+  this->glue = sogl_glue_from_state(state);
 
   SoAction * action = state->getAction();
   assert(action->isOfType(SoGLRenderAction::getClassTypeId()));
@@ -90,6 +91,7 @@ void
 SoGLMultiTextureMatrixElement::push(SoState * state)
 {
   inherited::push(state);
+  this->glue = sogl_glue_from_state(state);
   SoGLMultiTextureMatrixElement * prev = (SoGLMultiTextureMatrixElement*)
     this->getNextInStack();
 
@@ -152,14 +154,14 @@ SoGLMultiTextureMatrixElement::updategl(const int unit) const
   if (unit != 0) {
     SoGLContext_glActiveTexture(glue, (GLenum) (int(GL_TEXTURE0) + unit));
   }
-  SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_TEXTURE);
+  SoGLContext_glMatrixMode(this->glue, GL_TEXTURE);
   if (unit < this->getNumUnits()) {
-    SoGLContext_glLoadMatrixf(sogl_current_render_glue(), this->getUnitData(unit).textureMatrix[0]);
+    SoGLContext_glLoadMatrixf(this->glue, this->getUnitData(unit).textureMatrix[0]);
   }
   else {
-    SoGLContext_glLoadIdentity(sogl_current_render_glue());
+    SoGLContext_glLoadIdentity(this->glue);
   }
-  SoGLContext_glMatrixMode(sogl_current_render_glue(), GL_MODELVIEW);
+  SoGLContext_glMatrixMode(this->glue, GL_MODELVIEW);
   if (unit != 0) {
     SoGLContext_glActiveTexture(glue, (GLenum) GL_TEXTURE0);
   }

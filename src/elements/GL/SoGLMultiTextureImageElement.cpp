@@ -124,6 +124,7 @@ void
 SoGLMultiTextureImageElement::init(SoState * state)
 {
   inherited::init(state);
+  this->glue = sogl_glue_from_state(state);
 
   SoAction * action = state->getAction();
   assert(action->isOfType(SoGLRenderAction::getClassTypeId()));
@@ -142,6 +143,7 @@ void
 SoGLMultiTextureImageElement::push(SoState * state)
 {
   inherited::push(state);
+  this->glue = sogl_glue_from_state(state);
   SoGLMultiTextureImageElement * prev = (SoGLMultiTextureImageElement*)
     this->getNextInStack();
   PRIVATE(this)->state = state;
@@ -333,14 +335,14 @@ SoGLMultiTextureImageElement::updateGL(const int unit)
     if (SoTextureCombineElement::isDefault(state, unit)) {
       switch (ud.model) {
       case DECAL:
-        SoGLContext_glTexEnvi(sogl_current_render_glue(), GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
+        SoGLContext_glTexEnvi(this->glue, GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
         break;
       case MODULATE:
-        SoGLContext_glTexEnvi(sogl_current_render_glue(), GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+        SoGLContext_glTexEnvi(this->glue, GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
         break;
       case BLEND:
-        SoGLContext_glTexEnvi(sogl_current_render_glue(), GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_BLEND);
-        SoGLContext_glTexEnvfv(sogl_current_render_glue(), GL_TEXTURE_ENV, GL_TEXTURE_ENV_COLOR, ud.blendColor.getValue());
+        SoGLContext_glTexEnvi(this->glue, GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_BLEND);
+        SoGLContext_glTexEnvfv(this->glue, GL_TEXTURE_ENV, GL_TEXTURE_ENV_COLOR, ud.blendColor.getValue());
         break;
       case REPLACE:
         // GL_REPLACE mode was introduced with OpenGL 1.1. It is
@@ -349,7 +351,7 @@ SoGLMultiTextureImageElement::updateGL(const int unit)
         //
         // FIXME: ..but we should do a sanity check anyway.
         // 20030901 mortene.
-        SoGLContext_glTexEnvi(sogl_current_render_glue(), GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+        SoGLContext_glTexEnvi(this->glue, GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
         break;
       default:
         assert(0 && "unknown model");
@@ -376,7 +378,7 @@ SoGLMultiTextureImageElement::updateGL(const int unit)
 /*!
   The size returned by this function will just be a very coarse
   estimate as it only uses the more or less obsoleted technique of
-  calling SoGLContext_glGetIntegerv(sogl_current_render_glue(), GL_MAX_TEXTURE_SIZE).
+  calling SoGLContext_glGetIntegerv(this->glue, GL_MAX_TEXTURE_SIZE).
   
   For a better estimate, use
   SoGLTextureImageElement::isTextureSizeLegal().

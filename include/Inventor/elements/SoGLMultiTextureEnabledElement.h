@@ -35,6 +35,8 @@
 
 #include <Inventor/elements/SoMultiTextureEnabledElement.h>
 
+struct SoGLContext;
+
 class OBOL_DLL_API SoGLMultiTextureEnabledElement : public SoMultiTextureEnabledElement {
   typedef SoMultiTextureEnabledElement inherited;
 
@@ -53,6 +55,7 @@ public:
   virtual void setElt(const int unit, const int mode);
 
 private:
+  mutable const SoGLContext * glue = nullptr;
   void updategl(const int unit);
   void updategl(const int unit, const Mode oldvalue, const Mode newvalue);
 

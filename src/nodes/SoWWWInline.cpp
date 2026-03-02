@@ -479,29 +479,29 @@ SoWWWInline::GLRender(SoGLRenderAction * action)
   y1 = y1/2.0f + cy;
   z1 = z1/2.0f + cz;
 
-  SoGLContext_glBegin(sogl_current_render_glue(), GL_LINE_LOOP);
-  SoGLContext_glVertex3f(sogl_current_render_glue(), x0, y0, z0);
-  SoGLContext_glVertex3f(sogl_current_render_glue(), x1, y0, z0);
-  SoGLContext_glVertex3f(sogl_current_render_glue(), x1, y1, z0);
-  SoGLContext_glVertex3f(sogl_current_render_glue(), x0, y1, z0);
-  SoGLContext_glEnd(sogl_current_render_glue());
-  SoGLContext_glBegin(sogl_current_render_glue(), GL_LINE_LOOP);
-  SoGLContext_glVertex3f(sogl_current_render_glue(), x0, y0, z1);
-  SoGLContext_glVertex3f(sogl_current_render_glue(), x1, y0, z1);
-  SoGLContext_glVertex3f(sogl_current_render_glue(), x1, y1, z1);
-  SoGLContext_glVertex3f(sogl_current_render_glue(), x0, y1, z1);
-  SoGLContext_glEnd(sogl_current_render_glue());
+  SoGLContext_glBegin(sogl_glue_from_state(state), GL_LINE_LOOP);
+  SoGLContext_glVertex3f(sogl_glue_from_state(state), x0, y0, z0);
+  SoGLContext_glVertex3f(sogl_glue_from_state(state), x1, y0, z0);
+  SoGLContext_glVertex3f(sogl_glue_from_state(state), x1, y1, z0);
+  SoGLContext_glVertex3f(sogl_glue_from_state(state), x0, y1, z0);
+  SoGLContext_glEnd(sogl_glue_from_state(state));
+  SoGLContext_glBegin(sogl_glue_from_state(state), GL_LINE_LOOP);
+  SoGLContext_glVertex3f(sogl_glue_from_state(state), x0, y0, z1);
+  SoGLContext_glVertex3f(sogl_glue_from_state(state), x1, y0, z1);
+  SoGLContext_glVertex3f(sogl_glue_from_state(state), x1, y1, z1);
+  SoGLContext_glVertex3f(sogl_glue_from_state(state), x0, y1, z1);
+  SoGLContext_glEnd(sogl_glue_from_state(state));
 
-  SoGLContext_glBegin(sogl_current_render_glue(), GL_LINES);
-  SoGLContext_glVertex3f(sogl_current_render_glue(), x0, y0, z0);
-  SoGLContext_glVertex3f(sogl_current_render_glue(), x0, y0, z1);
-  SoGLContext_glVertex3f(sogl_current_render_glue(), x0, y1, z0);
-  SoGLContext_glVertex3f(sogl_current_render_glue(), x0, y1, z1);
-  SoGLContext_glVertex3f(sogl_current_render_glue(), x1, y0, z0);
-  SoGLContext_glVertex3f(sogl_current_render_glue(), x1, y0, z1);
-  SoGLContext_glVertex3f(sogl_current_render_glue(), x1, y1, z0);
-  SoGLContext_glVertex3f(sogl_current_render_glue(), x1, y1, z1);
-  SoGLContext_glEnd(sogl_current_render_glue());
+  SoGLContext_glBegin(sogl_glue_from_state(state), GL_LINES);
+  SoGLContext_glVertex3f(sogl_glue_from_state(state), x0, y0, z0);
+  SoGLContext_glVertex3f(sogl_glue_from_state(state), x0, y0, z1);
+  SoGLContext_glVertex3f(sogl_glue_from_state(state), x0, y1, z0);
+  SoGLContext_glVertex3f(sogl_glue_from_state(state), x0, y1, z1);
+  SoGLContext_glVertex3f(sogl_glue_from_state(state), x1, y0, z0);
+  SoGLContext_glVertex3f(sogl_glue_from_state(state), x1, y0, z1);
+  SoGLContext_glVertex3f(sogl_glue_from_state(state), x1, y1, z0);
+  SoGLContext_glVertex3f(sogl_glue_from_state(state), x1, y1, z1);
+  SoGLContext_glEnd(sogl_glue_from_state(state));
 
   state->pop(); // restore state
 }

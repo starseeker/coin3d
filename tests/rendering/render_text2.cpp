@@ -1,7 +1,8 @@
 /*
- * render_text2.cpp - Visual regression test: SoText2 / SoText3 text rendering
+ * render_text2.cpp - Visual regression test: SoText2 2-D billboard text
  *
- * Scene built by ObolTest::Scenes::createText (includes both SoText2 and SoText3).
+ * Scene built by ObolTest::Scenes::createText2 (multiple SoText2 labels at
+ * different world positions, sizes, and colours anchored on a reference sphere).
  * Viewport: 800 x 600
  * Output: argv[1]+".rgb" (SGI RGB format)
  */
@@ -17,7 +18,7 @@ int main(int argc, char **argv)
 {
     initCoinHeadless();
 
-    SoSeparator *root = ObolTest::Scenes::createText(W, H);
+    SoSeparator *root = ObolTest::Scenes::createText2(W, H);
 
     char outpath[1024];
     if (argc > 1)

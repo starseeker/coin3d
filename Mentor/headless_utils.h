@@ -20,6 +20,7 @@
 #include <Inventor/nodekits/SoNodeKit.h>
 #include <Inventor/SoInteraction.h>
 #include <Inventor/SoOffscreenRenderer.h>
+#include <cstdlib>
 #include <Inventor/SbViewportRegion.h>
 #include <Inventor/nodes/SoNode.h>
 #include <Inventor/nodes/SoCamera.h>
@@ -141,12 +142,12 @@ inline bool renderToFile(
 
     if (!renderer.render(root)) {
         fprintf(stderr, "Error: Failed to render scene\n");
-        return false;
+        exit(1);
     }
 
     if (!renderer.writeToRGB(filename)) {
         fprintf(stderr, "Error: Failed to write to RGB file %s\n", filename);
-        return false;
+        exit(1);
     }
 
     printf("Successfully rendered to %s (%dx%d)\n", filename, width, height);
@@ -346,6 +347,15 @@ public:
         delete ctx;
     }
 
+    /* Resolve GL extension function pointers via glXGetProcAddressARB.
+       Without this, SoGLContext_getprocaddress() cannot find ARB/EXT
+       functions (e.g. glGenFramebuffers) that are not directly exported
+       as symbols from libGL.so, causing FBO initialisation to fail. */
+    virtual void * getProcAddress(const char * funcName) override {
+        return (void *)glXGetProcAddressARB(
+            reinterpret_cast<const GLubyte *>(funcName));
+    }
+
 private:
     Display *m_dpy;
 
@@ -459,12 +469,12 @@ inline bool renderToFile(
 
     if (!renderer->render(root)) {
         fprintf(stderr, "Error: Failed to render scene\n");
-        return false;
+        exit(1);
     }
 
     if (!renderer->writeToRGB(filename)) {
         fprintf(stderr, "Error: Failed to write to RGB file %s\n", filename);
-        return false;
+        exit(1);
     }
 
     printf("Successfully rendered to %s (%dx%d)\n", filename, width, height);

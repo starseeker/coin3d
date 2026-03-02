@@ -35,6 +35,8 @@
 
 #include <Inventor/elements/SoDrawStyleElement.h>
 
+struct SoGLContext;
+
 class OBOL_DLL_API SoGLDrawStyleElement : public SoDrawStyleElement {
   typedef SoDrawStyleElement inherited;
 
@@ -55,6 +57,7 @@ protected:
   virtual void setElt(int32_t style);
 
 private:
+  mutable const SoGLContext * glue = nullptr;
   void updategl();
 
 };

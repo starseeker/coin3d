@@ -570,7 +570,7 @@ public:
     void setScene(SoSeparator* r, SoPerspectiveCamera* c, bool nanort_supported = true) {
         root = r; cam = c; nanort_ok_ = nanort_supported; status_text.clear();
         /* Scene change invalidates coarse-render calibration. */
-        coarseRW_ = 0; coarseRH_ = 0;
+        coarseRW_ = 0; coarseRH_ = 0; calFocalDist_ = 0.0f;
         if (!nanort_ok_) {
             status_text = "Not supported (NanoRT)";
             delete fltk_img; fltk_img = nullptr;
@@ -593,19 +593,33 @@ public:
         int pw = std::max(w(), 1);
         int ph = std::max(h(), 1);
         if (!coarse_) {
-            /* Full-resolution render; next coarse render must re-calibrate. */
-            coarseRW_ = 0; coarseRH_ = 0; stepInComplete_ = true;
+            /* Full-resolution render.  The coarse calibration is intentionally
+             * preserved here so that the next drag re-uses the cached coarse
+             * size without repeating the step-in hunt. */
             if (!doRender_(pw, ph, pw, ph)) { redraw(); return; }
-        } else if (coarseRW_ == 0 || calPanelW_ != pw || calPanelH_ != ph ||
-                   !stepInComplete_) {
-            /* Step-in calibration needed or still in progress: run one round.
-             * timedStepIn_ returns true when the optimal level has been found,
-             * false when it ran out of per-call search budget and should be
-             * resumed next time. */
-            stepInComplete_ = timedStepIn_(pw, ph);
         } else {
-            /* Subsequent coarse renders: reuse calibrated size. */
-            if (!doRender_(pw, ph, coarseRW_, coarseRH_)) { redraw(); return; }
+            /* Invalidate the cached coarse resolution when the camera focal
+             * distance has changed by more than 2× since calibration was
+             * measured.  A large zoom change alters the effective ray density
+             * enough to make the old calibration unreliable. */
+            if (coarseRW_ != 0 && calFocalDist_ > 0.0f && cam) {
+                float fd = cam->focalDistance.getValue();
+                if (fd < calFocalDist_ * 0.5f || fd > calFocalDist_ * 2.0f) {
+                    coarseRW_ = 0; coarseRH_ = 0; stepInComplete_ = false;
+                    calFocalDist_ = 0.0f;
+                }
+            }
+            if (coarseRW_ == 0 || calPanelW_ != pw || calPanelH_ != ph ||
+                       !stepInComplete_) {
+                /* Step-in calibration needed or still in progress: run one round.
+                 * timedStepIn_ returns true when the optimal level has been found,
+                 * false when it ran out of per-call search budget and should be
+                 * resumed next time. */
+                stepInComplete_ = timedStepIn_(pw, ph);
+            } else {
+                /* Subsequent coarse renders: reuse calibrated size. */
+                if (!doRender_(pw, ph, coarseRW_, coarseRH_)) { redraw(); return; }
+            }
         }
         redraw();
         if (on_rendered) on_rendered();
@@ -775,6 +789,10 @@ private:
     /* Panel dimensions at which coarseRW_/RH_ were measured. */
     int  calPanelW_      = 0;
     int  calPanelH_      = 0;
+    /* Camera focal distance at which coarseRW_/RH_ were measured
+     * (0 = uncalibrated).  A large change in focal distance alters ray
+     * density enough to warrant recalibration. */
+    float calFocalDist_  = 0.0f;
     /* True once timedStepIn_ has converged to the optimal coarse level.
      * False while incremental refinement is still in progress. */
     bool stepInComplete_ = true;
@@ -890,10 +908,11 @@ private:
                 break;
             crw *= 2;
         }
-        coarseRW_  = bestRW;
-        coarseRH_  = bestRH;
-        calPanelW_ = pw;
-        calPanelH_ = ph;
+        coarseRW_     = bestRW;
+        coarseRH_     = bestRH;
+        calPanelW_    = pw;
+        calPanelH_    = ph;
+        calFocalDist_ = cam ? cam->focalDistance.getValue() : 0.0f;
         return optimal;
     }
 

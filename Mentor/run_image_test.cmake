@@ -59,9 +59,12 @@ if(UNIX AND NOT APPLE)
             set(_exec_cmd "${_xvfb_run}" "--auto-servernum" "--server-args=-screen 0 1024x768x24 +extension GLX" "${EXECUTABLE}" "${TEST_BASE}")
         endif()
     endif()
-    # Enable full indirect rendering for Xvfb compatibility
-    # Enable direct rendering for GLX pixmaps (required on modern X servers)
-    set(ENV{OBOL_FULL_INDIRECT_RENDERING} "1")
+    # Modern Mesa (llvmpipe/softpipe) on Xvfb supports GLX pbuffers with
+    # direct rendering and provides full OpenGL 4.x including FBOs.
+    # OBOL_FULL_INDIRECT_RENDERING would disable FBO support and break the
+    # offscreen renderer, so it must NOT be set for Xvfb+Mesa environments.
+    # OBOL_GLX_PIXMAP_DIRECT_RENDERING is kept for the pixmap fallback path
+    # on X servers that disallow indirect rendering.
     set(ENV{OBOL_GLX_PIXMAP_DIRECT_RENDERING} "1")
 endif()
 

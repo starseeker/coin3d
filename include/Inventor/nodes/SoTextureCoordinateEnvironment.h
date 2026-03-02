@@ -35,6 +35,8 @@
 
 #include <Inventor/nodes/SoSubNode.h>
 #include <Inventor/nodes/SoTextureCoordinateFunction.h>
+
+struct SoGLContext;
 #include <Inventor/SbVec4f.h>
 
 class OBOL_DLL_API SoTextureCoordinateEnvironment : public SoTextureCoordinateFunction {
@@ -59,6 +61,8 @@ private:
                                  const SbVec3f & p,
                                  const SbVec3f & n);
   static void handleTexgen(void *data);
+
+  mutable const SoGLContext * cachedGlue = nullptr;
 };
 
 #endif // !OBOL_SOTEXTURECOORDINATEENVIRONMENT_H

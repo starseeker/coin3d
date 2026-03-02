@@ -230,6 +230,7 @@ SoTextureCoordinatePlane::GLRender(SoGLRenderAction * action)
   int unit = SoTextureUnitElement::get(state);
 
   const SoGLContext * glue = SoGLContext_instance(SoGLCacheContextElement::get(state));
+  this->cachedGlue = glue;
   int maxunits = SoGLContext_max_texture_units(glue);
   if (unit < maxunits) {
     this->setupGencache();
@@ -261,10 +262,10 @@ void
 SoTextureCoordinatePlane::handleTexgen(void *data)
 {
   SoTextureCoordinatePlane *thisp = (SoTextureCoordinatePlane*)data;
-  SoGLContext_glTexGeni(sogl_current_render_glue(), GL_S, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
-  SoGLContext_glTexGeni(sogl_current_render_glue(), GL_T, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
-  SoGLContext_glTexGeni(sogl_current_render_glue(), GL_R, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
-  SoGLContext_glTexGeni(sogl_current_render_glue(), GL_Q, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
+  SoGLContext_glTexGeni(thisp->cachedGlue, GL_S, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
+  SoGLContext_glTexGeni(thisp->cachedGlue, GL_T, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
+  SoGLContext_glTexGeni(thisp->cachedGlue, GL_R, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
+  SoGLContext_glTexGeni(thisp->cachedGlue, GL_Q, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
 
   float plane[4];
   plane[3] = 0.0f;
@@ -272,18 +273,18 @@ SoTextureCoordinatePlane::handleTexgen(void *data)
   plane[0] = s[0];
   plane[1] = s[1];
   plane[2] = s[2];
-  SoGLContext_glTexGenfv(sogl_current_render_glue(), GL_S, GL_OBJECT_PLANE, plane);
+  SoGLContext_glTexGenfv(thisp->cachedGlue, GL_S, GL_OBJECT_PLANE, plane);
   const SbVec3f & t = thisp->directionT.getValue();
   plane[0] = t[0];
   plane[1] = t[1];
   plane[2] = t[2];
-  SoGLContext_glTexGenfv(sogl_current_render_glue(), GL_T, GL_OBJECT_PLANE, plane);
+  SoGLContext_glTexGenfv(thisp->cachedGlue, GL_T, GL_OBJECT_PLANE, plane);
 
   const SbVec3f & r = thisp->directionR.getValue();
   plane[0] = r[0];
   plane[1] = r[1];
   plane[2] = r[2];
-  SoGLContext_glTexGenfv(sogl_current_render_glue(), GL_R, GL_OBJECT_PLANE, plane);
+  SoGLContext_glTexGenfv(thisp->cachedGlue, GL_R, GL_OBJECT_PLANE, plane);
 
   // supply dummy plane for Q so that texture generation works
   // properly
@@ -291,7 +292,7 @@ SoTextureCoordinatePlane::handleTexgen(void *data)
   plane[1] = 0.0f;
   plane[2] = 0.0f;
   plane[3] = 1.0f;
-  SoGLContext_glTexGenfv(sogl_current_render_glue(), GL_Q, GL_OBJECT_PLANE, plane);
+  SoGLContext_glTexGenfv(thisp->cachedGlue, GL_Q, GL_OBJECT_PLANE, plane);
 }
 
 void

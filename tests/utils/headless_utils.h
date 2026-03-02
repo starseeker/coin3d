@@ -188,7 +188,7 @@ struct CoinOSMesaContext {
         prev_context(nullptr), prev_buffer(nullptr),
         prev_width(0), prev_height(0), prev_bytesPerRow(0), prev_format(0)
     {
-        context = OSMesaCreateContextExt(OSMESA_RGBA, 16, 0, 0, NULL);
+        context = OSMesaCreateContextExt(OSMESA_RGBA, 24, 0, 0, NULL);
         if (context) {
             buffer = std::make_unique<unsigned char[]>(width * height * 4);
         }

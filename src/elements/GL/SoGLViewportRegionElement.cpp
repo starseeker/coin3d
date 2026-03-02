@@ -79,6 +79,7 @@ SoGLViewportRegionElement::init(SoState * state)
 {
   inherited::init(state);
   this->initialized = FALSE;
+  this->glue = sogl_glue_from_state(state);
 }
 
 //! FIXME: write doc.
@@ -87,6 +88,7 @@ void
 SoGLViewportRegionElement::push(SoState * state)
 {
   inherited::push(state);
+  this->glue = sogl_glue_from_state(state);
   SoGLViewportRegionElement * prev = (SoGLViewportRegionElement*)
     this->getNextInStack();
   this->viewportRegion = prev->viewportRegion;
@@ -119,12 +121,12 @@ SoGLViewportRegionElement::setElt(const SbViewportRegion & viewportRegionarg)
 //! FIXME: write doc.
 
 void
-SoGLViewportRegionElement::updategl() const
+SoGLViewportRegionElement::updategl()
 {
   if (this->initialized) {
     SbVec2s origin = this->viewportRegion.getViewportOriginPixels();
     SbVec2s size = this->viewportRegion.getViewportSizePixels();
-    SoGLContext_glViewport(sogl_current_render_glue(), origin[0], origin[1], size[0], size[1]);
+    SoGLContext_glViewport(this->glue, origin[0], origin[1], size[0], size[1]);
 
 #if OBOL_DEBUG && 0 // debug
     SoDebugError::postInfo("SoGLViewportRegionElement::updategl",

@@ -1222,7 +1222,7 @@ REGISTER_TEST(primitives, ObolTest::TestCategory::Rendering,
 );
 
 REGISTER_TEST(materials, ObolTest::TestCategory::Rendering,
-    "Four spheres demonstrating material properties",
+    "Four spheres of the same base colour showing different material effects (matte, shiny, emissive, high-ambient)",
     e.has_visual = true;
     e.has_interactive = true;
     e.nanort_ok = true;
@@ -1230,7 +1230,7 @@ REGISTER_TEST(materials, ObolTest::TestCategory::Rendering,
 );
 
 REGISTER_TEST(lighting, ObolTest::TestCategory::Rendering,
-    "Scene lit by directional, point and spot lights (NanoRT: shadows via SoRaytracingParams)",
+    "Three spheres each lit by a different light type (directional, point, spot)",
     e.has_visual = true;
     e.has_interactive = true;
     e.nanort_ok = true;
@@ -1238,7 +1238,7 @@ REGISTER_TEST(lighting, ObolTest::TestCategory::Rendering,
 );
 
 REGISTER_TEST(transforms, ObolTest::TestCategory::Rendering,
-    "Hierarchical rotation and translation transforms",
+    "Translation, rotation, and scaling transform rows (3x3 grid of cubes)",
     e.has_visual = true;
     e.has_interactive = true;
     e.nanort_ok = true;
@@ -1246,7 +1246,7 @@ REGISTER_TEST(transforms, ObolTest::TestCategory::Rendering,
 );
 
 REGISTER_TEST(cameras, ObolTest::TestCategory::Rendering,
-    "Row of coloured spheres with explicit perspective camera",
+    "Three cubes receding along Z to illustrate perspective foreshortening",
     e.has_visual = true;
     e.has_interactive = true;
     e.nanort_ok = true;
@@ -1254,7 +1254,7 @@ REGISTER_TEST(cameras, ObolTest::TestCategory::Rendering,
 );
 
 REGISTER_TEST(texture, ObolTest::TestCategory::Rendering,
-    "Checkerboard-textured cube",
+    "Textured sphere and untextured sphere side by side (SoTexture2 checkerboard)",
     e.has_visual = true;
     e.has_interactive = true;
     e.nanort_ok = true;
@@ -1262,11 +1262,19 @@ REGISTER_TEST(texture, ObolTest::TestCategory::Rendering,
 );
 
 REGISTER_TEST(text, ObolTest::TestCategory::Rendering,
-    "SoText2 and SoText3 labels",
+    "SoText3 extruded 3-D geometry text",
     e.has_visual = true;
     e.has_interactive = true;
     e.nanort_ok = true;
     e.create_scene = ObolTest::Scenes::createText;
+);
+
+REGISTER_TEST(text2, ObolTest::TestCategory::Rendering,
+    "SoText2 2-D billboard text labels at varied positions and sizes",
+    e.has_visual = true;
+    e.has_interactive = true;
+    e.nanort_ok = true;
+    e.create_scene = ObolTest::Scenes::createText2;
 );
 
 REGISTER_TEST(gradient, ObolTest::TestCategory::Rendering,
@@ -1342,7 +1350,7 @@ REGISTER_TEST(drawstyle, ObolTest::TestCategory::Rendering,
 );
 
 REGISTER_TEST(indexed_face_set, ObolTest::TestCategory::Rendering,
-    "SoIndexedFaceSet tetrahedron",
+    "SoIndexedFaceSet octahedron with per-face material colours",
     e.has_visual = true;
     e.has_interactive = true;
     e.nanort_ok = true;

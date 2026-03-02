@@ -67,7 +67,7 @@ public:
   SbBool isAttached(void) const;
 
   // source should be the name of the calling function
-  static SbBool didOpenGLErrorOccur(const SbString & source);
+  static SbBool didOpenGLErrorOccur(const SbString & source, const SoGLContext * glue = nullptr);
   static void printInfoLog(const SoGLContext * g, OBOL_GLhandle handle, int objType);
 
   virtual void updateCoinParameter(SoState * state, const SbName & name, SoShaderParameter * param, const int value);

@@ -35,6 +35,8 @@
 
 #include <Inventor/nodes/SoSubNode.h>
 #include <Inventor/nodes/SoTextureCoordinateFunction.h>
+
+struct SoGLContext;
 #include <Inventor/fields/SoSFVec3f.h>
 #include <Inventor/SbVec4f.h>
 #include <Inventor/SbVec3f.h>
@@ -68,6 +70,7 @@ private:
                                  const SbVec3f &n);
   static void handleTexgen(void *data);
 
+  mutable const SoGLContext * cachedGlue = nullptr;
   SoTextureCoordinatePlaneP * pimpl;
   void setupGencache(void);
 };

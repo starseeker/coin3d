@@ -246,6 +246,7 @@
 /* Platform-specific glue headers are no longer needed with callback-based contexts */
 #include "misc/SoEnvironment.h"
 #include <Inventor/SoDB.h>
+#include <Inventor/elements/SoGLCacheContextElement.h>
 
 
 
@@ -1081,8 +1082,12 @@ glglue_resolve_symbols(SoGLContext * w)
   w->glClearColor      = (OBOL_PFNGLCLEARCOLORPROC)PROC(w, glClearColor);
   w->glClear           = (OBOL_PFNGLCLEARPROC)PROC(w, glClear);
   w->glFlush           = (OBOL_PFNGLFLUSHPROC)PROC(w, glFlush);
+  w->glFinish          = (OBOL_PFNGLFINISHPROC)PROC(w, glFinish);
+  w->glGetError        = (OBOL_PFNGLGETERRORPROC)PROC(w, glGetError);
+  w->glGetString       = (OBOL_PFNGLGETSTRINGPROC)PROC(w, glGetString);
   w->glEnable          = (OBOL_PFNGLENABLEPROC)PROC(w, glEnable);
   w->glDisable         = (OBOL_PFNGLDISABLEPROC)PROC(w, glDisable);
+  w->glIsEnabled       = (OBOL_PFNGLISENABLEDPROC)PROC(w, glIsEnabled);
   w->glPixelStorei     = (OBOL_PFNGLPIXELSTOREIPROC)PROC(w, glPixelStorei);
   w->glReadPixels      = (OBOL_PFNGLREADPIXELSPROC)PROC(w, glReadPixels);
   w->glCopyTexSubImage2D = (OBOL_PFNGLCOPYTEXSUBIMAGE2DPROC)PROC(w, glCopyTexSubImage2D);
@@ -1173,6 +1178,7 @@ glglue_resolve_symbols(SoGLContext * w)
   w->glEndList        = (OBOL_PFNGLENDLISTPROC)PROC(w, glEndList);
   w->glCallList       = (OBOL_PFNGLCALLLISTPROC)PROC(w, glCallList);
   w->glDeleteLists    = (OBOL_PFNGLDELETELISTSPROC)PROC(w, glDeleteLists);
+  w->glGenLists       = (OBOL_PFNGLGENLISTSPROC)PROC(w, glGenLists);
   w->glPushAttrib     = (OBOL_PFNGLPUSHATTRIBPROC)PROC(w, glPushAttrib);
   w->glPopAttrib      = (OBOL_PFNGLPOPATTRIBPROC)PROC(w, glPopAttrib);
 
@@ -5260,6 +5266,18 @@ coin_gl_current_context(void)
 
 /* ********************************************************************** */
 
+#ifndef SOGL_PREFIX_SET
+void *
+coin_gl_getstring_ptr(void)
+{
+  /* Return the address of glGetString as seen from this translation unit
+     (which includes the real OpenGL headers).  dl.cpp uses this to verify
+     that cc_dl_opengl_handle() opened the same GL library, without needing
+     to include raw GL headers itself. */
+  return (void *)glGetString;
+}
+#endif /* !SOGL_PREFIX_SET */
+
 /* Thread-local pointer to the SoGLContext for the render pass that is
    currently in progress on this thread.  Set by SoGLRenderAction before
    each traversal pass so that GL element updategl() methods (which do not
@@ -5558,6 +5576,27 @@ SoGLContext_glFlush(const SoGLContext * glue)
 }
 
 void
+SoGLContext_glFinish(const SoGLContext * glue)
+{
+  assert(glue->glFinish);
+  glue->glFinish();
+}
+
+GLenum
+SoGLContext_glGetError(const SoGLContext * glue)
+{
+  assert(glue->glGetError);
+  return glue->glGetError();
+}
+
+const GLubyte *
+SoGLContext_glGetString(const SoGLContext * glue, GLenum name)
+{
+  assert(glue->glGetString);
+  return glue->glGetString(name);
+}
+
+void
 SoGLContext_glEnable(const SoGLContext * glue, GLenum cap)
 {
   assert(glue->glEnable);
@@ -5569,6 +5608,13 @@ SoGLContext_glDisable(const SoGLContext * glue, GLenum cap)
 {
   assert(glue->glDisable);
   glue->glDisable(cap);
+}
+
+GLboolean
+SoGLContext_glIsEnabled(const SoGLContext * glue, GLenum cap)
+{
+  assert(glue->glIsEnabled);
+  return glue->glIsEnabled(cap);
 }
 
 void
@@ -6225,6 +6271,13 @@ SoGLContext_glDeleteLists(const SoGLContext * glue, GLuint list, GLsizei range)
 {
   assert(glue->glDeleteLists);
   glue->glDeleteLists(list, range);
+}
+
+GLuint
+SoGLContext_glGenLists(const SoGLContext * glue, GLsizei range)
+{
+  assert(glue->glGenLists);
+  return glue->glGenLists(range);
 }
 
 void

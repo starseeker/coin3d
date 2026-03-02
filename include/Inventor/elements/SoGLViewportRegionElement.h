@@ -35,6 +35,8 @@
 
 #include <Inventor/elements/SoViewportRegionElement.h>
 
+struct SoGLContext;
+
 class OBOL_DLL_API SoGLViewportRegionElement : public SoViewportRegionElement {
   typedef SoViewportRegionElement inherited;
 
@@ -55,7 +57,8 @@ protected:
 
 private:
   SbBool initialized;
-  void updategl() const;
+  const SoGLContext * glue = nullptr;
+  void updategl();
 };
 
 #endif // !OBOL_SOGLVIEWPORTREGIONELEMENT_H

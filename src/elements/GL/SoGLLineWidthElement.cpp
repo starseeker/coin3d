@@ -50,9 +50,9 @@
 
   \code
     GLfloat bounds[2];
-    SoGLContext_glGetFloatv(sogl_current_render_glue(), GL_LINE_WIDTH_RANGE, bounds);
+    SoGLContext_glGetFloatv(this->glue, GL_LINE_WIDTH_RANGE, bounds);
     GLfloat granularity[1];
-    SoGLContext_glGetFloatv(sogl_current_render_glue(), GL_LINE_WIDTH_GRANULARITY, granularity);
+    SoGLContext_glGetFloatv(this->glue, GL_LINE_WIDTH_GRANULARITY, granularity);
   \endcode
 
   Another, perhaps more convenient, way of acquiring the OpenGL
@@ -104,6 +104,7 @@ void
 SoGLLineWidthElement::init(SoState * stateptr)
 {
   inherited::init(stateptr);
+  this->glue = sogl_glue_from_state(stateptr);
 }
 
 // doc in superclass
@@ -112,6 +113,7 @@ SoGLLineWidthElement::push(SoState * stateptr)
 {
   SoGLLineWidthElement * prev = (SoGLLineWidthElement*)this->getNextInStack();
   this->data = prev->data;
+  this->glue = prev->glue;
   // capture previous element since we might or might not change the
   // GL state in set/pop
   prev->capture(stateptr);
@@ -143,7 +145,7 @@ SoGLLineWidthElement::updategl(void)
 {
   if (SoGLLineWidthElement::sizerange[0] == RANGE_NOT_CHECKED) {
     GLfloat vals[2];
-    SoGLContext_glGetFloatv(sogl_current_render_glue(), GL_LINE_WIDTH_RANGE, vals);
+    SoGLContext_glGetFloatv(this->glue, GL_LINE_WIDTH_RANGE, vals);
 
     // Matthias Koenig reported on coin-discuss that the OpenGL
     // implementation on SGI Onyx 2 InfiniteReality returns 0 for the
@@ -190,7 +192,7 @@ SoGLLineWidthElement::updategl(void)
         SoDebugError::postWarning("SoGLLineWidthElement::updategl",
                                   "%f is outside the legal range of [%f, %f] "
                                   "for this OpenGL implementation's "
-                                  "SoGLContext_glLineWidth(sogl_current_render_glue()) settings. It was now clamped.\n\n"
+                                  "SoGLContext_glLineWidth(this->glue) settings. It was now clamped.\n\n"
                                   "See the documentation of SoGLLineWidthElement for "
                                   "information on how the application programmer should "
                                   "acquire the boundary values for the legal "
@@ -204,7 +206,7 @@ SoGLLineWidthElement::updategl(void)
 
   // Forward to OpenGL state.
 
-  SoGLContext_glLineWidth(sogl_current_render_glue(), useval);
+  SoGLContext_glLineWidth(this->glue, useval);
 }
 
 #undef RANGE_NOT_CHECKED

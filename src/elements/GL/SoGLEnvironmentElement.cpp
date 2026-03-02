@@ -106,16 +106,17 @@ SoGLEnvironmentElement::setElt(SoState * const stateptr,
 void
 SoGLEnvironmentElement::updategl(SoState * const state)
 {
+  const SoGLContext * glue = sogl_glue_from_state(state);
   float ambient[4];
   ambient[0] = ambientColor[0] * ambientIntensity;
   ambient[1] = ambientColor[1] * ambientIntensity;
   ambient[2] = ambientColor[2] * ambientIntensity;
   ambient[3] = 1.0f;
 
-  SoGLContext_glLightModelfv(sogl_current_render_glue(), GL_LIGHT_MODEL_AMBIENT, ambient);
+  SoGLContext_glLightModelfv(glue, GL_LIGHT_MODEL_AMBIENT, ambient);
 
   if (fogType == (int)NONE) {
-    SoGLContext_glDisable(sogl_current_render_glue(), GL_FOG);
+    SoGLContext_glDisable(glue, GL_FOG);
     return;
   }
 
@@ -131,12 +132,12 @@ SoGLEnvironmentElement::updategl(SoState * const state)
 
   switch (fogType) {
   case HAZE:
-    SoGLContext_glFogi(sogl_current_render_glue(), GL_FOG_MODE, GL_LINEAR);
-    SoGLContext_glFogf(sogl_current_render_glue(), GL_FOG_START, this->fogStart);
-    SoGLContext_glFogf(sogl_current_render_glue(), GL_FOG_END, farval);
+    SoGLContext_glFogi(glue, GL_FOG_MODE, GL_LINEAR);
+    SoGLContext_glFogf(glue, GL_FOG_START, this->fogStart);
+    SoGLContext_glFogf(glue, GL_FOG_END, farval);
     break;
   case FOG:
-    SoGLContext_glFogi(sogl_current_render_glue(), GL_FOG_MODE, GL_EXP);
+    SoGLContext_glFogi(glue, GL_FOG_MODE, GL_EXP);
 
     // formula used for finding density:
     //
@@ -148,10 +149,10 @@ SoGLEnvironmentElement::updategl(SoState * const state)
     //
     // density = 5.545 / farval;
 
-    SoGLContext_glFogf(sogl_current_render_glue(), GL_FOG_DENSITY, 5.545f / farval);
+    SoGLContext_glFogf(glue, GL_FOG_DENSITY, 5.545f / farval);
     break;
   case SMOKE:
-    SoGLContext_glFogi(sogl_current_render_glue(), GL_FOG_MODE, GL_EXP2);
+    SoGLContext_glFogi(glue, GL_FOG_MODE, GL_EXP2);
     // formula used for finding density:
     //
     // 1/256 = e ^ (-(density * farval)^2)
@@ -165,7 +166,7 @@ SoGLEnvironmentElement::updategl(SoState * const state)
     // density = 2.35 / farval
     //
 
-    SoGLContext_glFogf(sogl_current_render_glue(), GL_FOG_DENSITY, 2.35f / farval);
+    SoGLContext_glFogf(glue, GL_FOG_DENSITY, 2.35f / farval);
     break;
   default:
     assert(0 && "unknown fog type");
@@ -173,6 +174,6 @@ SoGLEnvironmentElement::updategl(SoState * const state)
   }
 
   SbColor4f color(fogColor, 1.0f);
-  SoGLContext_glFogfv(sogl_current_render_glue(), GL_FOG_COLOR, color.getValue());
-  SoGLContext_glEnable(sogl_current_render_glue(), GL_FOG);
+  SoGLContext_glFogfv(glue, GL_FOG_COLOR, color.getValue());
+  SoGLContext_glEnable(glue, GL_FOG);
 }
