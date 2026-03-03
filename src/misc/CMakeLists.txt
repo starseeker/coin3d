@@ -1,6 +1,5 @@
 # source files
 set(OBOL_MISC_FILES
-	CoinStaticObjectInDLL.cpp
 	SoBase.cpp
 	SoBaseP.cpp
 	SoChildList.cpp
@@ -32,12 +31,12 @@ set(OBOL_MISC_FILES
 	CoinResources.cpp
 	SoDBP.cpp
 	SoEventManager.cpp
+	SoViewport.cpp
+	SoQuadViewport.cpp
 )
 
 # Files excluded from public API documentation, included in complete documentation.
 set(OBOL_MISC_INTERNAL_FILES
-	CoinStaticObjectInDLL.h
-	CoinStaticObjectInDLL.cpp
 	SbHash.h
 	SoBaseP.h
 	SoBaseP.cpp

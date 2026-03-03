@@ -56,7 +56,6 @@ public:
 
   static int32_t get(SoState * const state);
   static int32_t getDefault();
-  static int32_t getMaxGLSources();
 
 protected:
 };

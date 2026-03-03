@@ -71,7 +71,6 @@ public:
   SoSFEnum justification;
   SoSFBitMask parts;
 
-  SbBox3f getCharacterBounds(SoState * state, int stringindex, int charindex);
 
   virtual void GLRender(SoGLRenderAction * action);
   virtual void getPrimitiveCount(SoGetPrimitiveCountAction * action);
@@ -92,8 +91,6 @@ protected:
 private:
   class SoText3P * pimpl;
   friend class SoText3P;
-  void render(SoState * state, unsigned int part);
-  void generate(SoAction * action, unsigned int part);
 };
 
 #endif // !OBOL_SOTEXT3_H

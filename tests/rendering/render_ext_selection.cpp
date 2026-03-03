@@ -9,12 +9,11 @@
  *   4. LASSO lassoType field
  *   5. SoExtSelection::setTriangleFilterCallback — filter callback is invoked
  *   6. SoExtSelection::setLassoFilterCallback — filter decides per-path
- *   7. SoExtSelection::useOverlay / getOverlaySceneGraph
- *   8. getLassoColor, setLassoColor, getLassoWidth, setLassoWidth
- *   9. getOverlayLassoPattern, setOverlayLassoPattern
- *  10. Selection/deselection callbacks (inherited from SoSelection) fire
+ *   7. getLassoColor, setLassoColor, getLassoWidth, setLassoWidth
+ *   8. getOverlayLassoPattern, setOverlayLassoPattern
+ *   9. Selection/deselection callbacks (inherited from SoSelection) fire
  *      after programmatic lasso selection
- *  11. Render the scene with SoExtSelection as the root separator
+ *  10. Render the scene with SoExtSelection as the root separator
  *
  * Returns 0 on pass, 1 on fail.
  */
@@ -272,15 +271,6 @@ static bool test4_lassoFilter(const char *basepath)
     sc.extSel->setOverlayLassoPattern(0x00FF);
     printf("  test4 lassoPattern: 0x%04X\n",
            (unsigned)sc.extSel->getOverlayLassoPattern());
-
-    sc.extSel->setOverlayLassoColorIndex(3);
-    printf("  test4 lassoColorIndex: %d\n",
-           sc.extSel->getOverlayLassoColorIndex());
-
-    // useOverlay / getOverlaySceneGraph
-    sc.extSel->useOverlay(FALSE);
-    SoSeparator *overlay = sc.extSel->getOverlaySceneGraph();
-    printf("  test4 overlay graph: %p\n", (void*)overlay);
 
     sc.extSel->animateOverlayLasso(FALSE);
     printf("  test4 animated: %d\n",

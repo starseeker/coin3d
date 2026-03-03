@@ -88,8 +88,6 @@ public:
   void getTransform(SbVec3d & translation, SbDPRotation & rotation,
                     SbVec3d & scaleFactor, SbDPRotation & scaleOrientation,
                     const SbVec3d & center) const;
-  SbBool factor(SbDPMatrix & r, SbVec3d & s, SbDPMatrix & u, SbVec3d & t,
-                SbDPMatrix & proj);
   SbBool LUDecomposition(int index[4], double & d);
   void LUBackSubstitution(int index[4], double b[4]) const;
   SbDPMatrix transpose(void) const;

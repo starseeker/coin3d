@@ -76,7 +76,6 @@ public:
 
   static void getScreenSize(SoState * const state, const SbBox3f & boundingbox,
                             SbVec2s & rectsize);
-  static float getDecimatedComplexity(SoState * state, float complexity);
   const SoBoundingBoxCache * getBoundingBoxCache(void) const;
   
 protected:

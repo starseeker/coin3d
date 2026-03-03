@@ -1,52 +1,0 @@
-Quarter 1.2.3 (2025-06-26):
-* bugfixes:
-  - Updated cmake_minimum_required command to support CMake >= 3.30
-
-Quarter 1.2.2 (2024-09-04):
-* new:
-  - Added support for building modern styled documentation
-  - Added function setupDefaultCursors() to allow users with a custom navigation file to set default cursors quickly
-* bugfixes:
-  - Implemented workaround for Qt bug QTBUG-91556 - reversed QWheelEvent axis when ALT key is pressed
-  - Fixed bug that caused SoEventManager::NO_NAVIGATION even if interaction mode is finished
-  - ALT key is now a toggle key that temporary switches the current mode (nav or interaction) to the other mode
-
-Quarter 1.2.1 (2024-02-04):
-* bugfixes:
-  - Fix crash of Qt Designer plugin
-
-Quarter 1.2.0 (2024-02-03):
-* new:
-  - Version control system has been changed from Mercurial to Git
-  - Home of Coin3d organization has been changed from https://bitbucket.org/Coin3D
-    to https://github.com/coin3d due to Bitbucket ending Mercurial support
-  - Added CI for macOS, Windows, and Ubuntu per GitHub actions to repository
-  - Added support for Qt6
-  - Support qrc:/// URL schemes for navigationModeFile
-
-* bugfixes:
-  - cpack.d was made optional and disabled by default (add -DQUARTER_USE_CPACK=ON
-    to the cmake commandline to enable it)
-  - Fixed numerous documentation issues
-  - Added QUARTER_BUILD_TESTS option to control building of test code (default: ON)
-  - Check for valid OpenGL context
-
-Quarter 1.1.0 (2019-12-25):
-* new:
-  - Kongsberg Oil & Gas Technologies AS ended Quarter as a commercial product
-    and re-licensed it under the BSD 3-clause license as a service to the
-    user community.
-  - The build system has been migrated from GNU Autotools to CMake
-  - Added support for Qt5
-  - Added support for high DPI displays in Qt5
-  - New 3DConnexion Space Navigator support using the Spacenav opensource library
-  - Support for BitBucket and AppVeyor as continuous integration service providers
-
-* bugfixes:
-  - Always reinitialize SoRenderManager when GL context is (re-)initialized
-  - Avoid unnecessary redraws when moving window around. Fixes COIN-173
-  - Handle double click events
-  - Buffer went out of scope, while a reference was still held
-
-Quarter 1.0.0 (2009-01-26):
-- first proper release.

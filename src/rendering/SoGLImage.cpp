@@ -1651,16 +1651,6 @@ SoGLImageP::reallyBindPBuffer(SoState * state)
 
   SbBool mipmap = FALSE;
 
-#if 0
-  // disabled, we probably need to allocate space for the mipmaps in
-  // the pbuffer pederb, 2003-11-27
-  if (this->shouldCreateMipmap() && SoGLDriverDatabase::isSupported(glue, "GL_SGIS_generate_mipmap")) {
-    SoGLContext_glTexParameteri(glue, target, GL_GENERATE_MIPMAP_SGIS, GL_TRUE);
-    // glHint(GL_GENERATE_MIPMAP_HINT_SGIS, GL_NICEST);
-    mipmap = TRUE;
-  }
-#endif // disabled
-
   this->applyFilter(glue, mipmap);
   SoGLContext_context_bind_pbuffer(this->pbuffer);
 }

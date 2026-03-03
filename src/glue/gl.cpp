@@ -5554,25 +5554,6 @@ coin_gl_getstring_ptr(void)
 }
 #endif /* !SOGL_PREFIX_SET */
 
-/* Thread-local pointer to the SoGLContext for the render pass that is
-   currently in progress on this thread.  Set by SoGLRenderAction before
-   each traversal pass so that GL element updategl() methods (which do not
-   receive a state pointer) can still dispatch through the correct GL
-   backend in dual-GL builds. */
-static thread_local const SoGLContext * sogl_tls_render_glue = NULL;
-
-const SoGLContext *
-sogl_current_render_glue(void)
-{
-  return sogl_tls_render_glue;
-}
-
-void
-sogl_set_current_render_glue(const SoGLContext * glue)
-{
-  sogl_tls_render_glue = glue;
-}
-
 /* ********************************************************************** */
 
 SbBool

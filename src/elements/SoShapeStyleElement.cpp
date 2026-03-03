@@ -329,15 +329,6 @@ SoShapeStyleElement::needTexCoords(void) const
   return (this->flags&(TEXENABLED|TEX3ENABLED)) != 0;
 }
 
-/*!
-  Not implemented in Coin. It is used by SoVertexProperty in SGI OIV.
-*/
-int
-SoShapeStyleElement::getRenderCaseMask(void) const
-{
-  OBOL_OBSOLETED();
-  return 0;
-}
 
 /*!
   Returns if texture function is currently enabled.

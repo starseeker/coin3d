@@ -101,7 +101,6 @@ public:
   static SbBool getReadAsSoFile(void);
 
   virtual void doAction(SoAction * action);
-  virtual void doActionOnKidsOrBox(SoAction * action);
   virtual void callback(SoCallbackAction * action);
   virtual void GLRender(SoGLRenderAction * action);
   virtual void getBoundingBox(SoGetBoundingBoxAction * action);

@@ -80,7 +80,6 @@ public:
   SbBool mightNotRender(void) const;
   SbBool needNormals(void) const;
   SbBool needTexCoords(void) const;
-  int getRenderCaseMask(void) const;
 
   static void setDrawStyle(SoState * const state, const int32_t value);
   static void setComplexityType(SoState * const state,

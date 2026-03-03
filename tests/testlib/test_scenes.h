@@ -290,9 +290,6 @@ SoSeparator* createViewVolumeOps(int width = 800, int height = 600);
 /** Three SoLOD nodes side-by-side with sphere/cube/cone levels for LOD + picking tests. */
 SoSeparator* createLODPicking(int width = 800, int height = 600);
 
-/** Five SoText2 rows in an orthographic viewport matching the stt_reference layout. */
-SoSeparator* createSTTGL(int width = 400, int height = 200);
-
 // ---- Interaction / Dragger / Special factories ----
 
 /** Three-object scene (sphere, cube, cone) for camera manipulation testing. */

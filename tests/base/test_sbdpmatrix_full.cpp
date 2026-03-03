@@ -37,7 +37,6 @@
  * Covers:
  *   det3()           - identity 3×3 determinant == 1.0
  *   det4()           - identity 4×4 determinant == 1.0, scaled matrix
- *   factor()         - factor identity matrix
  *   inverse()        - inverse of translation matrix
  *   multLeft()       - A.multLeft(B) == B*A
  *   setTransform / getTransform round-trip
@@ -94,21 +93,6 @@ int main()
         bool pass = (std::fabs(d - 16.0) < 1e-9);
         runner.endTest(pass, pass ? "" :
             "SbDPMatrix det4 of 2*identity should be 16.0");
-    }
-
-    // -----------------------------------------------------------------------
-    // factor(): factor identity matrix — r and u should be near-identity
-    // -----------------------------------------------------------------------
-    runner.startTest("SbDPMatrix factor() on identity does not crash");
-    {
-        SbDPMatrix m = SbDPMatrix::identity();
-        SbDPMatrix r, u, proj;
-        SbVec3d s, t;
-        // factor() may return FALSE for identity (degenerate case in some impl);
-        // test only that it does not crash
-        m.factor(r, s, u, t, proj);
-        bool pass = true;
-        runner.endTest(pass, "");
     }
 
     // -----------------------------------------------------------------------

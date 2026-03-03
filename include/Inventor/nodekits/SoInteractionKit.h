@@ -113,7 +113,6 @@ protected:
   static void fieldSensorCB(void *, SoSensor *);
   SoSeparator *oldTopSep;
 
-  void connectSeparatorFields( SoSeparator *dest, SbBool onOff );
 
 private:
   class SoInteractionKitP * pimpl;

@@ -105,7 +105,6 @@
 /* glue/glp.h include removed - no longer needed for old callback system */
 
 #include "fields/SoGlobalField.h"
-#include "misc/CoinStaticObjectInDLL.h"
 #include "misc/systemsanity.icc"
 #include "misc/SoDBP.h"
 #include "misc/SbHash.h"
@@ -258,10 +257,6 @@ SoDB::init(ContextManager * context_manager)
 
   // Initialize threading subsystem first as it's needed for other components
   cc_thread_init();
-
-  // Releasing the mutex used for detecting multiple Coin instances in
-  // the process image.
-  CoinStaticObjectInDLL::init();
 
   // See systemsanity.icc
   SoDB_checkGCCBuiltinExpectSanity();
@@ -432,10 +427,9 @@ SoDB::init(ContextManager * context_manager)
   SoDBP::isinitialized = TRUE;
 
   // NOTE: SoDBP::isinitialized must be set to TRUE before this block,
-  // or you will get a "mysterious" crash on a mutex in
-  // CoinStaticObjectInDLL.cpp.  Logically, it should not be flagged
-  // before after initialization is done, but subsystems invoked from
-  // these methods needs to know that Coin is already initialized.
+  // or you will get a "mysterious" crash on a mutex. Logically, it should
+  // not be flagged before initialization is done, but subsystems invoked
+  // from these methods need to know that Coin is already initialized.
   SoProfilerP::parseCoinProfilerVariable();
   if (SoProfiler::isEnabled()) {
     SoProfiler::init();
@@ -998,28 +992,6 @@ SoSensorManager *
 SoDB::getSensorManager(void)
 {
   return SoDBP::sensormanager;
-}
-
-/*!
-  NOTE: THIS METHOD IS OBSOLETED. DON'T USE IT.
-
-  This is a wrapper around the POSIX \c select() call. It is provided
-  so you can do synchronous I/O while Coin continues to handle sensor
-  events, rendering, etc. The parameters are the same as for \c
-  select(), so check your system documentation on how to use them.
-
-  The void* arguments must be valid pointers to fd_set
-  structures. We've changed this from the original SGI Inventor API to
-  avoid messing up the header file with system-specific includes.
-
-  NOTE: THIS METHOD IS OBSOLETED. DON'T USE IT.
-*/
-int
-SoDB::doSelect(int OBOL_UNUSED_ARG(nfds), void * OBOL_UNUSED_ARG(readfds), void * OBOL_UNUSED_ARG(writefds),
-               void * OBOL_UNUSED_ARG(exceptfds), struct timeval * OBOL_UNUSED_ARG(usertimeout))
-{
-  assert(FALSE && "obsoleted method");
-  return 0;
 }
 
 /*!

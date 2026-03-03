@@ -753,18 +753,6 @@ SoInteractionKit::fieldSensorCB(void * d, SoSensor * s)
   SoInteractionKitP::sensorCB(d, s);
 }
 
-/*!
-  Obsoleted in Coin.
-*/
-void
-SoInteractionKit::connectSeparatorFields(SoSeparator * OBOL_UNUSED_ARG(dest), SbBool onOff)
-{
-  OBOL_OBSOLETED();
-  SoDebugError::postWarning("SoInteractionKit::connectSeparatorFields",
-                            "SoSeparator* input argument ignored, "
-                            "using topSeparator");
-  PRIVATE(this)->connectFields(onOff);
-}
 
 #undef PRIVATE
 

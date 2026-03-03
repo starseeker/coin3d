@@ -864,40 +864,6 @@ SoSensorManager::notifyChanged(void)
   }
 }
 
-/*!
-  NOTE: THIS METHOD IS OBSOLETED. DON'T USE IT.
-
-  This is a wrapper around the standard select(2) call, which will
-  make sure the sensor queues are updated while waiting for any action
-  to happen on the given file descriptors.
-
-  The void* arguments must be valid pointers to fd_set
-  structures. We've changed this from the original SGI Inventor API to
-  avoid messing up the header file with system specific includes.
-
-  NOTE: THIS METHOD IS OBSOLETED. DON'T USE IT.
-*/
-int
-SoSensorManager::doSelect(int OBOL_UNUSED_ARG(nfds), void * OBOL_UNUSED_ARG(readfds), void * OBOL_UNUSED_ARG(writefds),
-                          void * OBOL_UNUSED_ARG(exceptfds), struct timeval * OBOL_UNUSED_ARG(usertimeout))
-{
-  assert(FALSE && "obsoleted method");
-  return 0;
-}
-
-int
-SoSensorManager::mergeTimerQueues(void)
-{
-  assert(0 && "obsoleted");
-  return 0;
-}
-
-int
-SoSensorManager::mergeDelayQueues(void)
-{
-  assert(0 && "obsoleted");
-  return 0;
-}
 
 
 #undef DEBUG_DELAY_SENSORHANDLING

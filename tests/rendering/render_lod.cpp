@@ -2,7 +2,7 @@
  * render_lod.cpp - Integration test: SoLOD level-of-detail switching
  *
  * Scene built by ObolTest::Scenes::createLOD.
- * Viewport: 256 x 256
+ * Viewport: 800 x 600
  * Output: argv[1]+".rgb" (SGI RGB format)
  */
 
@@ -10,8 +10,8 @@
 #include "testlib/test_scenes.h"
 #include <cstdio>
 
-static const int W = 256;
-static const int H = 256;
+static const int W = 800;
+static const int H = 600;
 
 int main(int argc, char **argv)
 {

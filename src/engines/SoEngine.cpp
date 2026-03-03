@@ -421,16 +421,6 @@ SoEngine::writeInstance(SoOutput * out)
 }
 
 /*!
-  Writes the types of engine outputs for extension engines
-  (i.e. engines not built in to Coin).
-*/
-void
-SoEngine::writeOutputTypes(SoOutput * OBOL_UNUSED_ARG(out))
-{
-  OBOL_STUB();
-}
-
-/*!
   Make a duplicate of this engine and return a pointer to the
   duplicate.
 

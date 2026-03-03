@@ -1889,48 +1889,6 @@ SoTransformerDragger::setAllPartSwitches(int scalewhich, int rotatewhich, int tr
   }
 }
 
-/*!
-  Not implemented in Coin; should probably not have been public in the
-  Open Inventor API.  We'll consider to implement it if requested.
-*/
-int
-SoTransformerDragger::getMouseGestureDirection(SbBool OBOL_UNUSED_ARG(x_ok), SbBool OBOL_UNUSED_ARG(y_ok), SbBool OBOL_UNUSED_ARG(z_ok))
-{
-  OBOL_OBSOLETED();
-  return -1;
-}
-
-/*!
-  Not implemented in Coin; should probably not have been public in the
-  Open Inventor API.  We'll consider to implement it if requested.
-*/
-int
-SoTransformerDragger::getIgnoreAxis(SbVec2f OBOL_UNUSED_ARG(axis[3][2]), SbBool OBOL_UNUSED_ARG(x_ok), SbBool OBOL_UNUSED_ARG(y_ok), SbBool OBOL_UNUSED_ARG(z_ok))
-{
-  OBOL_OBSOLETED();
-  return -1;
-}
-
-/*!
-  Not implemented in Coin; should probably not have been public in the
-  Open Inventor API.  We'll consider to implement it if requested.
-*/
-void
-SoTransformerDragger::makeMinorAxisPerpendicularIfColinear(SbVec2f OBOL_UNUSED_ARG(origin), SbVec2f OBOL_UNUSED_ARG(axisends[3][2]), int OBOL_UNUSED_ARG(index_a), int OBOL_UNUSED_ARG(index_b))
-{
-  OBOL_OBSOLETED();
-}
-
-/*!
-  Not implemented in Coin; should probably not have been public in the
-  Open Inventor API.  We'll consider to implement it if requested.
-*/
-SbBool
-SoTransformerDragger::isColinear(SbVec2f OBOL_UNUSED_ARG(a1[2]), SbVec2f OBOL_UNUSED_ARG(a2[2]), int OBOL_UNUSED_ARG(pixels))
-{
-  OBOL_OBSOLETED();
-  return FALSE;
-}
 
 void
 SoTransformerDragger::getSurroundScaleMatrices(SbMatrix & mat, SbMatrix & inv)

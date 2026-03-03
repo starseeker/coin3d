@@ -2059,17 +2059,6 @@ SoInput::setIVVersion(float version)
 }
 
 /*!
-  This function has been obsoleted in Coin.
-*/
-void
-SoInput::initFile(FILE * /* newFP */, const char * /* fileName */,
-                  SbString * /* fullName */,
-                  SbBool /* openedHere */, SbDict * /* refDict */)
-{
-  OBOL_OBSOLETED();
-}
-
-/*!
   Returns \c TRUE if the current stream has had its header parsed.
   If it hasn't, this method will attempt to read the header and returns
   \c TRUE if it could be done.
@@ -2161,16 +2150,6 @@ SoInput::popFile(void)
 }
 
 /*!
-  This function has been obsoleted in Coin.
- */
-size_t
-SoInput::freeBytesInBuf(void) const
-{
-  OBOL_OBSOLETED();
-  return 0;
-}
-
-/*!
   Reads 32-bit signed integer value from the current stream. Returns
   \c FALSE if we hit end of file prematurely.
  */
@@ -2258,16 +2237,6 @@ SoInput::readChar(char * s, char charToRead)
   SoInput_FileInfo * fi = PRIVATE(this)->getTopOfStackPopOnEOF();
   if (!fi) return FALSE;
   return fi->readChar(s, charToRead);
-}
-
-/*!
-  This function has been obsoleted in Coin.
- */
-SbBool
-SoInput::makeRoomInBuf(size_t /* nBytes */)
-{
-  OBOL_OBSOLETED();
-  return FALSE;
 }
 
 /*!
@@ -2374,48 +2343,6 @@ SoInput::convertDoubleArray(char * from, double * to, int len)
     from += sizeof(double);
     to++;
   }
-}
-
-/*!
-  This function has been obsoleted in Coin.
-*/
-void
-SoInput::resetFilePointer(FILE * /* fptr */)
-{
-  OBOL_OBSOLETED();
-}
-
-/*!
-  This function is part of the TGS Inventor API, but is not
-  implemented in Coin.
-*/
-SbBool
-SoInput::isFileURL(const char * /* url */)
-{
-  OBOL_STUB();
-  return FALSE;
-}
-
-/*!
-  This function is part of the TGS Inventor API, but is not
-  implemented in Coin.
-*/
-char *
-SoInput::URLToFile(char * /* out_buf */, const char * /* in_buf */)
-{
-  OBOL_STUB();
-  return NULL;
-}
-
-/*!
-  This function is part of the TGS Inventor API, but is not
-  implemented in Coin.
-*/
-SbBool
-SoInput::IsURL(const char * /* c_strng */)
-{
-  OBOL_STUB();
-  return FALSE;
 }
 
 /*!

@@ -43,13 +43,12 @@
   the back side of the clipping plane is clipped away.
 
   Note that OpenGL implementations have a fixed maximum number of
-  clipping planes available. To find out what this number is, you can
-  use the following code:
+  clipping planes available. To find out what this number is for a
+  given context, use:
 
   \code
-      #include <Inventor/elements/SoGLClipPlaneElement.h>
-      // ...[snip]...
-      int maxplanes = SoGLClipPlaneElement::getMaxGLPlanes();
+      GLint maxplanes;
+      glGetIntegerv(GL_MAX_CLIP_PLANES, &maxplanes);
   \endcode
 
   Below is a simple, basic scene graph usage example of

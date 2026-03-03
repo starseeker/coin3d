@@ -430,38 +430,6 @@ SoRenderManager::detachRootSensor(void)
   }
 }
 
-/*
-  Attaches this SoRenderManagers clipsensor to a scene
-
-  \param[in] sceneroot scene to attach to
-
-  \deprecated Will not be available in Coin 5
-*/
-void
-SoRenderManager::attachClipSensor(SoNode * const sceneroot)
-{
-  //PRIVATE(this)->clipsensor->attach(sceneroot);
-  //if (PRIVATE(this)->autoclipping != SoRenderManager::NO_AUTO_CLIPPING) {
-  //  PRIVATE(this)->clipsensor->schedule();
-  //}
-}
-
-/*
-  Detaches the clipsensor from all tracked scenes
-
-  \deprecated Will not be available in Coin 5
-*/
-void
-SoRenderManager::detachClipSensor(void)
-{
-  //if (PRIVATE(this)->clipsensor->isScheduled()) {
-  //  PRIVATE(this)->clipsensor->unschedule();
-  //}
-  //if (PRIVATE(this)->clipsensor->getAttachedNode()) {
-  //  PRIVATE(this)->clipsensor->detach();
-  //}
-}
-
 /*!
   Clears buffers with the background color set correctly
   

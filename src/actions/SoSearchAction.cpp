@@ -117,29 +117,11 @@
   Return paths to all nodes found.
 */
 
-/*!
-  \var SbBool SoSearchAction::duringSearchAll
-
-  Obsoleted global flag, only present for compatibility reasons
-  with old SGI / TGS Inventor application code.
-
-  It's set to \c TRUE when an SoSearchAction traversal with
-  SoSearchAction::isSearchingAll() equal to \c TRUE is started, and is
-  reset to \c FALSE again after traversal has finished.
-
-  (The flag is used by SGI / TGS Inventor in SoSwitch::affectsState()
-  to know when SoSwitch::whichChild should behave as
-  SoSwitch::SO_SWITCH_ALL. We have a better solution for this problem
-  in Coin.)
-*/
-
 class SoSearchActionP {
 public:
 };
 
 SO_ACTION_SOURCE(SoSearchAction);
-
-SbBool SoSearchAction::duringSearchAll = FALSE;
 
 
 /*!
@@ -149,7 +131,6 @@ void
 SoSearchAction::initClass(void)
 {
   SO_ACTION_INTERNAL_INIT_CLASS(SoSearchAction, SoAction);
-  SoSearchAction::duringSearchAll = FALSE;
 }
 
 
@@ -467,11 +448,5 @@ SoSearchAction::beginTraversal(SoNode * nodeptr)
   if (this->path) this->path->unref();
   this->path = NULL;
 
-  // For compatibility with older application code which is using the
-  // now obsoleted 'duringSearchAll' flag.
-  SoSearchAction::duringSearchAll = this->isSearchingAll();
-
   this->traverse(nodeptr); // begin traversal at root node
-
-  SoSearchAction::duringSearchAll = FALSE;
 }

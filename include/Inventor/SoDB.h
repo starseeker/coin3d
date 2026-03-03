@@ -92,9 +92,6 @@ public:
   static SoSensorManager * getSensorManager(void);
   static void setDelaySensorTimeout(const SbTime & t);
   static const SbTime & getDelaySensorTimeout(void);
-  static int doSelect(int nfds, void * readfds, void * writefds,
-                      void * exceptfds, struct timeval * usertimeout);
-
   static void addConverter(SoType from, SoType to, SoType converter);
   static SoType getConverter(SoType from, SoType to);
 

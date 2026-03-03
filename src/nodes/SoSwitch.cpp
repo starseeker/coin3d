@@ -410,16 +410,6 @@ SoSwitch::getPrimitiveCount(SoGetPrimitiveCountAction *action)
   SoSwitch::doAction((SoAction*)action);
 }
 
-/*!
-  This function was part of the original SGI Inventor API, but it is
-  not supported in Coin, as it looks like it should probably have been
-  private in Inventor.
-*/
-void
-SoSwitch::traverseChildren(SoAction * OBOL_UNUSED_ARG(action))
-{
-  OBOL_OBSOLETED();
-}
 
 // Doc from superclass.
 void

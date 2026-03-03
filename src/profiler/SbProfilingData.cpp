@@ -844,53 +844,6 @@ SbProfilingData::preOffsetNodeTiming(int idx, SbTime timing)
   // 1) adjust for path (node)
   PRIVATE(this)->nodeData[idx].traversaltime += timing;
 
-#if 0
-  // 2) adjust for type
-  SbProfilingNodeKey tailnode = PRIVATE(this)->nodeData[idx].node;
-  SbProfilingNodeTypeKey typekey = PRIVATE(this)->nodeData[idx].nodetype;
-  std::map<SbProfilingNodeTypeKey, SbTypeProfilingData>::iterator typeit =
-    PRIVATE(this)->nodeTypeData.find(typekey);
-  if (typeit != PRIVATE(this)->nodeTypeData.end()) {
-    typeit->second.totaltime += timing;
-  } else {
-    SbTypeProfilingData data;
-    data.totaltime = timing;
-    PRIVATE(this)->nodeTypeData.insert(std::pair<SbProfilingNodeTypeKey, SbTypeProfilingData>(typekey, data));
-  }
-
-  // 3) adjust for name
-
-  // should we include timings at all named nodes up through the path
-  // all the way to the root?
-  const bool inclusive = false;
-
-  int parentidx = idx;
-  while (parentidx != -1) {
-    SbProfilingNodeNameKey namekey = PRIVATE(this)->nodeData[parentidx].nodename;
-    if (namekey != SbName::empty().getString()) {
-      std::map<SbProfilingNodeNameKey, SbNameProfilingData>::iterator nameit =
-        PRIVATE(this)->nodeNameData.find(namekey);
-      if (nameit != PRIVATE(this)->nodeNameData.end()) {
-        nameit->second.totaltime += timing;
-        if (idx == parentidx) { // entry at named node level
-          // DISABLED: we won't know the "unit" time for this aggregate
-          // time-sum so we can't give maximum unit time. we'll need to
-          // store total-time from preTraversal() to figure it
-          // out i think. 20080304 larsa
-          //if (nameit->second.maximumtime < timing) {
-          //  nameit->second.maximumtime = timing;
-          //}
-        }
-      } else {
-        SbNameProfilingData data;
-        data.totaltime = timing;
-        PRIVATE(this)->nodeNameData.insert(std::pair<SbProfilingNodeNameKey, SbNameProfilingData>(namekey, data));
-      }
-      if (!inclusive) break;
-    }
-    parentidx = PRIVATE(this)->nodeData[parentidx].parentidx;
-  }
-#endif
 }
 
 /*!

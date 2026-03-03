@@ -129,9 +129,6 @@ namespace {
       //cannot do any unreffing of Coin-nodes
 
       assert(this->nodemap.size()==0);
-#if 0
-      clear();
-#endif
     }
 
     SoTexture2 * createTexture(const TextureImageData * data)

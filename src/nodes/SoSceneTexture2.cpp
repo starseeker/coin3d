@@ -604,29 +604,6 @@ SoSceneTexture2::GLRender(SoGLRenderAction * action)
 void
 SoSceneTexture2::doAction(SoAction * OBOL_UNUSED_ARG(action))
 {
-#if 0 // disabled until we figure out what to do here, pederb 2003-11-27
-  SoState * state = action->getState();
-
-  if (SoTextureOverrideElement::getImageOverride(state))
-    return;
-
-  if (size != SbVec2s(0,0)) {
-    SoTextureImageElement::set(state, this,
-                               size, nc, bytes,
-                               (int)this->wrapT.getValue(),
-                               (int)this->wrapS.getValue(),
-                               (SoTextureImageElement::Model) model.getValue(),
-                               this->blendColor.getValue());
-    SoTextureEnabledElement::set(state, this, TRUE);
-  }
-  else {
-    SoTextureImageElement::setDefault(state, this);
-    SoTextureEnabledElement::set(state, this, FALSE);
-  }
-  if (this->isOverride()) {
-    SoTextureOverrideElement::setImageOverride(state, TRUE);
-  }
-#endif // disabled
 }
 
 // Documented in superclass.

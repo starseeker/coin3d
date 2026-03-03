@@ -105,11 +105,6 @@ public:
   SoSFEnum lassoPolicy;
   SoSFEnum lassoMode;
 
-  void useOverlay(SbBool overlay = TRUE);
-  SbBool isUsingOverlay(void);
-  SoSeparator * getOverlaySceneGraph(void);
-  void setOverlayLassoColorIndex(const int index);
-  int getOverlayLassoColorIndex(void);
   void setLassoColor(const SbColor & color);
   const SbColor & getLassoColor(void);
   void setLassoWidth(const float width);

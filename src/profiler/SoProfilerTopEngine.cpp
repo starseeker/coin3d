@@ -251,22 +251,9 @@ SoProfilerTopEngineP::qsort_alphanumeric_inc(const void * p1, const void * p2)
 void
 SoProfilerTopEngine::evaluate(void)
 {
-#if 0
-  this->statisticsNames.evaluate();
-  this->statisticsTimings.evaluate();
-  this->statisticsTimingsMax.evaluate();
-  this->statisticsCounts.evaluate();
-#endif
-
   const int inputsize = this->statisticsNames.getNum();
 
   if (this->statisticsTimings.getNum() != inputsize) {
-#if 0
-    SoDebugError::post("SoProfilerTopEngine::evaluate",
-                       "statisticsNames (#%d) and statisticsTimings (#%d) "
-                       "have different sizes.",
-                       inputsize, this->statisticsTimings.getNum());
-#endif
     return;
   }
 

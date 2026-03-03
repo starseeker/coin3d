@@ -331,16 +331,6 @@ SoMFNode::copyValue(int to, int from)
 SbBool
 SoMFNode::read1Value(SoInput * in, int index)
 {
-#if 0
-  // this was an attempt to fix reading of NULL keywords inside
-  // SoMFNode.  Unfortunately it introduced a much more serious bug
-  // (reading of USE keywords stopped working). I'm disabling this
-  // until we find a proper way to fix that bug.
-  SoNode * node = SoBaseP::readNode(in);
-  if (!node) return FALSE;
-  this->set1Value(index, node);
-  return TRUE;
-#else // buggy version
   SoSFNode sfnode;
   SbBool result = sfnode.readValue(in);
   if (result) {
@@ -349,7 +339,6 @@ SoMFNode::read1Value(SoInput * in, int index)
     this->set1Value(index, node);
   };
   return result;
-#endif // old version
 }
 
 // Export a single node.

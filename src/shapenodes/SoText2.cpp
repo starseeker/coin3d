@@ -244,7 +244,6 @@ public:
   void flushGlyphCache();
   void buildGlyphCache(SoState * state);
   SbBool shouldBuildGlyphCache(SoState * state);
-  void dumpBuffer(unsigned char * buffer, SbVec2s size, SbVec2s pos, SbBool mono);
   void computeBBox(SoAction * action, SbBox3f & box, SbVec3f & center);
   void updateFont(SoState * state);  // Update SbFont from state elements
   static void setRasterPos3f(const SoGLContext * glue, GLfloat x, GLfloat y, GLfloat z);
@@ -1193,28 +1192,6 @@ SoText2P::buildGlyphQuads(SoState * state, std::vector<SbVec3f> & quads)
   return quadsAdded;
 }
 
-
-void
-SoText2P::dumpBuffer(unsigned char * buffer, SbVec2s size, SbVec2s pos, SbBool mono)
-{
-  // FIXME: pure debug method, remove. preng 2003-03-18.
-  if (!buffer) {
-    fprintf(stderr,"bitmap error: buffer pointer NULL.\n");
-  } else {
-    int rows = size[1];
-    int bytes = mono ? size[0] >> 3 : size[0];
-    fprintf(stderr, "%s bitmap dump %d * %d bytes at %d, %d:\n",
-            mono ? "mono": "gray level", rows, bytes, pos[0], pos[1]);
-    for (int y=rows-1; y>=0; y--) {
-      for (int byte=0; byte<bytes; byte++) {
-        for (int bit=0; bit<8; bit++) {
-          fprintf(stderr, "%d", buffer[y*bytes + byte] & 0x80>>bit ? 1 : 0);
-        }
-      }
-      fprintf(stderr,"\n");
-    }
-  }
-}
 
 // FIXME: Use notify() mechanism to detect field changes. For
 // Coin3. preng, 2003-03-10.

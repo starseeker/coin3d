@@ -256,12 +256,6 @@ protected:
 
   void updateAntiSquishList(void);
   void setAllPartSwitches(int scalewhich, int rotatewhich, int translatewhich);
-  int getMouseGestureDirection(SbBool x_ok, SbBool y_ok, SbBool z_ok);
-  static int getIgnoreAxis(SbVec2f axis[3][2],
-                           SbBool x_ok, SbBool y_ok, SbBool z_ok);
-  static void makeMinorAxisPerpendicularIfColinear(SbVec2f origin, SbVec2f axisends[3][2], int index_a, int index_b);
-  static SbBool isColinear(SbVec2f a1[2], SbVec2f a2[2], int pixels);
-
   SoFieldSensor * translFieldSensor;
   SoFieldSensor * scaleFieldSensor;
   SoFieldSensor * rotateFieldSensor;

@@ -375,32 +375,4 @@ SoGLMultiTextureImageElement::updateGL(const int unit)
   }
 }
 
-/*!
-  The size returned by this function will just be a very coarse
-  estimate as it only uses the more or less obsoleted technique of
-  calling SoGLContext_glGetIntegerv(this->glue, GL_MAX_TEXTURE_SIZE).
-  
-  For a better estimate, use
-  SoGLTextureImageElement::isTextureSizeLegal().
-  
-  Note that this function needs an OpenGL context to be made current
-  for it to work. Without that, you will most likely get a faulty
-  return value or even a crash.
-*/
-int32_t
-SoGLMultiTextureImageElement::getMaxGLTextureSize(void)
-{
-  SoDebugError::postWarning("SoGLMultiTextureImageElement::getMaxGLTextureSize",
-                            "This function is obsoleted. It should not "
-                            "be used because its interface is fubar: "
-                            "the maximum texture size handled by "
-                            "the OpenGL driver depends on the context, and "
-                            "this function does not know which context this "
-                            "information is requested for.");
-
-  GLint val;
-  SoGLContext_glGetIntegerv(sogl_current_render_glue(), GL_MAX_TEXTURE_SIZE, &val);
-  return (int32_t)val;
-}
-
 #undef PRIVATE

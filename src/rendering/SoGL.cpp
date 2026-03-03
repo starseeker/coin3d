@@ -78,6 +78,26 @@
 
 // *************************************************************************
 
+// Thread-local storage for the GL dispatch context active during the
+// current SoGLRenderAction traversal pass on this thread.
+// Set by sogl_set_current_render_glue() (called from
+// SoGLRenderAction::beginTraversal / endTraversal).
+static thread_local const SoGLContext * s_current_render_glue = nullptr;
+
+const SoGLContext *
+sogl_current_render_glue(void)
+{
+  return s_current_render_glue;
+}
+
+void
+sogl_set_current_render_glue(const SoGLContext * glue)
+{
+  s_current_render_glue = glue;
+}
+
+// *************************************************************************
+
 // Convenience function for access to OpenGL wrapper from an SoState
 // pointer.
 const SoGLContext *

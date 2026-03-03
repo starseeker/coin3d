@@ -66,7 +66,6 @@ public:
     this->camera = NULL;
     this->viewport = SbViewportRegion();
     this->navigationstate = SoEventManager::MIXED_NAVIGATION;
-    // DEPRECATED: SCXML state machines removed
   }
 
   ~PImpl() {
@@ -79,7 +78,6 @@ public:
   SoCamera * camera;
   SbViewportRegion viewport;
   SoEventManager::NavigationState navigationstate;
-  // DEPRECATED: std::vector<SoScXMLStateMachine *> statemachines; // SCXML removed
 };
 
 #define PRIVATE(p) (p->pimpl)
@@ -97,7 +95,6 @@ SoEventManager::SoEventManager(void)
 */
 SoEventManager::~SoEventManager()
 {
-  // DEPRECATED: SCXML state machine cleanup removed
   // PImpl automatically cleaned up by SbPimplPtr
 }
 
@@ -108,7 +105,6 @@ void
 SoEventManager::setSceneGraph(SoNode * const sceneroot)
 {
   PRIVATE(this)->scene = sceneroot;
-  // DEPRECATED: SCXML state machine scene setting removed
 }
 
 /*!
@@ -127,7 +123,6 @@ void
 SoEventManager::setCamera(SoCamera * camera)
 {
   PRIVATE(this)->camera = camera;
-  // DEPRECATED: SCXML state machine camera setting removed
 }
 
 /*!
@@ -147,7 +142,6 @@ SoEventManager::setViewportRegion(const SbViewportRegion & newregion)
 {
   PRIVATE(this)->viewport = newregion;
   PRIVATE(this)->handleventaction->setViewportRegion(newregion);
-  // DEPRECATED: SCXML state machine viewport setting removed
 }
 
 /*!
@@ -216,7 +210,6 @@ SoEventManager::processEvent(const SoEvent * event)
     PRIVATE(this)->handleventaction->setEvent(event);
     PRIVATE(this)->handleventaction->apply(PRIVATE(this)->scene);
     status = PRIVATE(this)->handleventaction->isHandled();
-    // DEPRECATED: SCXML state machine processing removed
     break;
 
   default:
@@ -261,13 +254,5 @@ SoEventManager::actuallyProcessEvent(const SoEvent * const event)
 {
   return this->processEvent(event);
 }
-
-// DEPRECATED: All SCXML state machine methods removed
-// The following methods are no longer available:
-// - getNumSoScXMLStateMachines()
-// - getSoScXMLStateMachine()
-// - addSoScXMLStateMachine()
-// - removeSoScXMLStateMachine()
-// Use direct C++ navigation APIs instead.
 
 #undef PRIVATE

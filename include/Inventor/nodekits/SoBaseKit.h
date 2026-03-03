@@ -133,10 +133,8 @@ protected:
   void createNodekitPartsList(void); // not part of Coin
   void createFieldList(void); // replaces above method
   virtual void createDefaultParts(void);
-  const SoNodekitParts * getNodekitPartsList(void) const; // not part of Coin
   const SbList<SoSFNode*> & getCatalogInstances(void) const; // replaces above method
 
-  void catalogError(void);
   virtual SbBool setUpConnections(SbBool onoff, SbBool doitalways = FALSE);
   virtual SbBool readInstance(SoInput * in, unsigned short flags);
   virtual void setDefaultOnNonWritingFields(void);

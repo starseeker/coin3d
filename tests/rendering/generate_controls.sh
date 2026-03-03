@@ -147,6 +147,8 @@ gen_control render_quad_mesh          render_quad_mesh
 gen_control render_indexed_line_set   render_indexed_line_set
 gen_control render_point_set          render_point_set
 gen_control render_lod                render_lod
+gen_control render_quad_viewport_lod  render_quad_viewport_lod
+gen_control render_viewport_scene     render_viewport_scene
 gen_control render_scene_texture      render_scene_texture
 gen_control render_array_multiple_copy render_array_multiple_copy
 
@@ -159,7 +161,6 @@ gen_control render_shadow             render_shadow
 # HUD overlay tests
 gen_control render_hud_overlay        render_hud_overlay
 gen_control render_hud_no3d           render_hud_no3d
-gen_control render_stt_gl             render_stt_gl
 
 # Testlib demo scenes (shared scene factories; match obol_viewer output)
 gen_control render_text_demo          render_text_demo

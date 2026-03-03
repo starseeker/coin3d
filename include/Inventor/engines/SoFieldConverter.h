@@ -47,7 +47,6 @@ public:
   static void initClasses(void);
   virtual SoField * getInput(SoType type) = 0;
   virtual SoEngineOutput * getOutput(SoType type) = 0;
-  virtual SoField * getConnectedInput(void);
   int getForwardConnections(SoFieldList & l) const;
 
 protected:

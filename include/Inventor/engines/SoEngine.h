@@ -78,8 +78,6 @@ protected:
   static const SoFieldData ** getInputDataPtr(void);
   static const SoEngineOutputData ** getOutputDataPtr(void);
 
-  void writeOutputTypes(SoOutput * out);
-
 private:
   virtual void destroy(void); // overrides SoBase::destroy()
 

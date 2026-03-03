@@ -197,26 +197,6 @@ SoSensor::trigger(void)
   if (this->func) this->func(this->funcData, this);
 }
 
-/*!
-  \COININTERNAL
-  Open Inventor function not implemented in Coin.
- */
-void
-SoSensor::setNextInQueue(SoSensor * OBOL_UNUSED_ARG(next))
-{
-  OBOL_OBSOLETED();
-}
-
-/*!
-  \COININTERNAL
-  Open Inventor function not implemented in Coin.
- */
-SoSensor *
-SoSensor::getNextInQueue(void) const
-{
-  OBOL_OBSOLETED();
-  return NULL;
-}
 
 /*!
   Sets up initialization for static data for the sensors. Called by

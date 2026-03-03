@@ -955,20 +955,6 @@ SbDPMatrix::getTransform(SbVec3d & translation,
 }
 
 /*!
-  This function is not implemented in Coin.
-
-  \sa getTransform()
- */
-SbBool
-SbDPMatrix::factor(SbDPMatrix & OBOL_UNUSED_ARG(r), SbVec3d & OBOL_UNUSED_ARG(s), SbDPMatrix & OBOL_UNUSED_ARG(u), SbVec3d & OBOL_UNUSED_ARG(t),
-                 SbDPMatrix & OBOL_UNUSED_ARG(proj))
-{
-  // FIXME: not implemented, not documented. 1998MMDD mortene.
-  OBOL_STUB();
-  return FALSE;
-}
-
-/*!
   This function produces a permuted LU decomposition of the matrix.  It
   uses the common single-row-pivoting strategy.
 

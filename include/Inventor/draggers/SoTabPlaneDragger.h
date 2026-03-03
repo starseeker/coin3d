@@ -85,9 +85,6 @@ protected:
 
   void reallyAdjustScaleTabSize(SoGLRenderAction * action);
 
-  void getXYScreenLengths(SbVec2f & lengths, const SbMatrix & localtoscreen,
-                           const SbVec2s & winsize);
-
   void dragStart(void);
   void drag(void);
   void dragFinish(void);

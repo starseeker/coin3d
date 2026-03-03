@@ -959,22 +959,6 @@ int main()
             "SbMatrix multDirMatrix should not translate direction vector");
     }
 
-    runner.startTest("SbMatrix factor executes on translation+scale matrix");
-    {
-        // factor() exercises the polar-decomposition code path.
-        // Note: this implementation may return FALSE for non-standard matrices;
-        // the test verifies the call completes without crashing.
-        SbMatrix m;
-        m.setTransform(SbVec3f(1.0f, 2.0f, 3.0f),
-                       SbRotation::identity(),
-                       SbVec3f(2.0f, 2.0f, 2.0f));
-        SbMatrix r, u, proj;
-        SbVec3f  s, t;
-        m.factor(r, s, u, t, proj);  // exercises code; return value varies
-        bool pass = true;            // call completed without crash
-        runner.endTest(pass, pass ? "" : "SbMatrix factor crashed");
-    }
-
     // -----------------------------------------------------------------------
     // SbDPMatrix math suite — Tier 2 coverage expansion
     // Covers: multLeft, multRight, multVecMatrix, multDirMatrix, inverse, det4,
@@ -1100,25 +1084,6 @@ int main()
                     doubleNear(outT[2], 3.0, 1e-6);
         runner.endTest(pass, pass ? "" :
             "SbDPMatrix getTransform translation round-trip failed");
-    }
-
-    runner.startTest("SbDPMatrix factor executes on translation+scale matrix");
-    {
-        // factor() exercises the polar-decomposition code path.
-        // Note: this implementation may return FALSE for non-standard matrices;
-        // the test verifies the call completes without crashing.
-        SbMatrixd m = SbMatrixd::identity();
-        SbVec3d    inT(1.0, 2.0, 3.0);
-        SbDPRotation inR = SbDPRotation::identity();
-        SbVec3d    inS(2.0, 2.0, 2.0);
-        m.setTransform(inT, inR, inS);
-
-        SbMatrixd r, u, proj;
-        SbVec3d   s, t;
-        m.factor(r, s, u, t, proj);  // exercises code; return value varies
-        bool pass = true;            // call completed without crash
-        runner.endTest(pass, pass ? "" :
-            "SbDPMatrix factor crashed");
     }
 
     return runner.getSummary();

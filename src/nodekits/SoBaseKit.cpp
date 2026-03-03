@@ -1997,19 +1997,6 @@ SoBaseKit::createDefaultParts(void)
   }
 }
 
-/*!
-  In Open Inventor, this method returns a pointer to a private class.
-  It will always return \c NULL in Coin.
-
-  \sa createNodekitPartsList()
-*/
-const SoNodekitParts *
-SoBaseKit::getNodekitPartsList(void) const
-{
-  assert(0 &&
-         "SoBaseKit::getNodekitPartsList() obsoleted in Coin");
-  return NULL;
-}
 
 /*!
   \COININTERNAL
@@ -2021,14 +2008,6 @@ SoBaseKit::getCatalogInstances(void) const
   return PRIVATE(this)->instancelist;
 }
 
-/*!
-  Obsoleted from the API in Coin.
-*/
-void
-SoBaseKit::catalogError(void)
-{
-  OBOL_OBSOLETED();
-}
 
 // Note: the following documentation for setUpConnections() will also
 // be visible for subclass nodekits and draggers, so keep it general.

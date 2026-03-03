@@ -83,7 +83,6 @@ protected:
   virtual ~SoSeparator();
 
   virtual SbBool cullTest(SoState * state);
-  virtual SbBool cullTest(SoGLRenderAction * action, int & cullresults);
   virtual SbBool readInstance(SoInput * in, unsigned short flags);
 
 private:

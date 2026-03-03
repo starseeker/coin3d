@@ -209,22 +209,3 @@ SoTextureUnit::getMatrix(SoGetMatrixAction * action)
   SoTextureUnit::doAction(action);
 }
 
-/*!
-
-  Returns the maximum number of texture units for the current GL
-  context.  Do not call this method if you don't have a current active
-  GL context. You should also know that your OpenGL driver supports
-  multi-texturing.
-
-  This function is provided only to be compatible with TGS Inventor.
-  It's better to use SoGLContext_max_texture_units() if you're using
-  Coin (declared in Inventor/C/glue/gl.h).
-*/
-uint32_t
-SoTextureUnit::getMaxTextureUnit(void)
-{
-  GLint tmp;
-  SoGLContext_glGetIntegerv(sogl_current_render_glue(), GL_MAX_TEXTURE_UNITS, &tmp);
-
-  return (uint32_t) tmp;
-}

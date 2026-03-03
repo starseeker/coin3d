@@ -80,9 +80,6 @@ public:
   virtual void callback(SoCallbackAction * action);
   virtual void rayPick(SoRayPickAction * action);
 
-  static SbBool readImage(const SbString & fname, int & w, int & h, int & nc,
-                          unsigned char *& bytes);
-  
   // Convenience methods for in-memory texture management
   void setImageData(int width, int height, int numComponents, 
                     const unsigned char * pixels, 

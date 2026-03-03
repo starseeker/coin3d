@@ -940,17 +940,6 @@ SoSeparator::notify(SoNotList * nl)
   PRIVATE(this)->unlock();
 }
 
-/*!
-  This is an internal Open Inventor method. We've implemented
-  view frustum culling in a different manner. Let us know if
-  you need this function, and we'll consider implementing it.
-*/
-SbBool
-SoSeparator::cullTest(SoGLRenderAction * OBOL_UNUSED_ARG(action), int & OBOL_UNUSED_ARG(cullresults))
-{
-  OBOL_OBSOLETED();
-  return FALSE;
-}
 
 // Doc from superclass.
 SbBool

@@ -97,11 +97,6 @@
       much higher level interface abstraction than standard C/C++
       arrays.
 
-  Note: there are some field classes which have been obsoleted from the
-  Open Inventor API. They are: SoSFLong, SoSFULong, SoMFLong and
-  SoMFULong. You should use these classes instead (respectively):
-  SoSFInt32, SoSFUInt32, SoMFInt32 and SoMFUInt32.
-
   \TOOLMAKER_REF
 
   \sa SoFieldContainer, SoFieldData
@@ -1586,21 +1581,6 @@ SoField::shouldWrite(void) const
   if (this->isIgnored()) return TRUE;
 
   if (this->isConnected()) {
-#if 0 // disabled (was only needed for bidirectional connections in PROTOs)
-    // I suspect this code was here only to make the bidirectional
-    // connection hack in SoProto work. Connected PROTO instance
-    // fields should be written even if they have the default value
-    // (just like any other field). pederb, 2005-12-20
-    SoFieldContainer * thecontainer = this->getContainer();
-    if ( thecontainer != NULL &&
-         thecontainer->isOfType(SoProtoInstance::getClassTypeId()) ) {
-      // PROTO instance fields are usually connected, but we don't want to
-      // write out PROTO instance fields that contain default values - they
-      // will be hooked up and get the default value from the PROTO interface
-      // when they are read in again later anyways. -- 20040115 larsa
-      return FALSE;
-    }
-#endif // disabled PROTO hack
     return TRUE;
   }
 
@@ -2583,27 +2563,6 @@ SoField::initClasses(void)
   SoMFVec4ui32::initClass();
   SoMFVec4f::initClass();
   SoMFVec4d::initClass();
-
-  // Create these obsoleted types for backwards compatibility. They
-  // are typedef'ed to the types which obsoleted them, but this is
-  // needed so it will also be possible to use SoType::fromName() with
-  // the old names and create instances in that manner.
-  //
-  // FIXME: SoType::fromName("oldname") == SoType::fromName("newname")
-  // will fail, but this can be solved with a hack in
-  // SoType::operator==(). Do we _want_ to implement this hack,
-  // though? It'd be ugly as hell.  19991109 mortene.
-  // Does it need to be so ugly?  == could compare createInstance
-  // pointers if both have is set?  But would it be correct, and would
-  // any code depend on or benefit from such behaviour?  20070518 larsa
-  SoType::createType(SoSField::getClassTypeId(), "SFLong",
-                     &SoSFInt32::createInstance);
-  SoType::createType(SoSField::getClassTypeId(), "SFULong",
-                     &SoSFUInt32::createInstance);
-  SoType::createType(SoMField::getClassTypeId(), "MFLong",
-                     &SoMFInt32::createInstance);
-  SoType::createType(SoMField::getClassTypeId(), "MFULong",
-                     &SoMFUInt32::createInstance);
 }
 
 #undef FLAG_ALIVE_PATTERN

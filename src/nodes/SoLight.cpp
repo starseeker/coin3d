@@ -50,14 +50,12 @@
   engines usually have a fixed maximum number of available light
   sources which can be present in the state at the same time. If you
   reach the maximum number, further light sources will simply be
-  ignored. The maximum number of light sources for OpenGL rendering
-  can be found by using:
+  ignored. The maximum number of light sources for a given OpenGL
+  context can be queried with:
 
   \code
-      #include <Inventor/elements/SoGLLightIdElement.h>
-      #include <Inventor/nodes/SoSubNodeP.h>
-      // ...[snip]...
-      int nrlights = SoGLLightIdElement::getMaxGLSources();
+      GLint maxlights;
+      glGetIntegerv(GL_MAX_LIGHTS, &maxlights);
   \endcode
 
   If you are clever with how you use light sources, you can get away

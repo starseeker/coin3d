@@ -46,7 +46,7 @@
 #include <Inventor/errors/SoDebugError.h>
 
 #include "CoinTidbits.h"
-#include "config.h" // OBOL_OBSOLETED()
+#include "config.h" // OBOL_DEBUG
 
 /*!
   Constructor with \a isccw indicating if polygons are specified
@@ -348,16 +348,6 @@ SoNormalGenerator::getNumNormals(void) const
 }
 
 /*!
-  Sets the number of generated normals. This method is not supported
-  in Coin, and is provided for API compatibility only.
-*/
-void
-SoNormalGenerator::setNumNormals(const int /* num */)
-{
-  OBOL_OBSOLETED();
-}
-
-/*!
   Returns a pointer to the generated normals.
 */
 const SbVec3f *
@@ -381,18 +371,6 @@ SoNormalGenerator::getNormal(const int32_t i) const
 {
   assert(i >= 0 && i < this->getNumNormals());
   return this->getNormals()[i];
-}
-
-/*!
-  Sets the normal at index \a index to \a normal. This method
-  is not supported in Coin, and is provided for API compatibility
-  only.
-*/
-void
-SoNormalGenerator::setNormal(const int32_t /* index */,
-                             const SbVec3f & /* normal */)
-{
-  OBOL_OBSOLETED();
 }
 
 //

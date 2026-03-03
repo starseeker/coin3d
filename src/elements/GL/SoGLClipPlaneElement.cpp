@@ -112,31 +112,6 @@ SoGLClipPlaneElement::pop(SoState * state,
 
 //! FIXME: write doc.
 
-int
-SoGLClipPlaneElement::getMaxGLPlanes(void)
-{
-  // FIXME: should also make a likewise method available as part of
-  // the So*GLWidget classes. 20020802 mortene.
-
-  SoDebugError::postWarning("SoGLClipPlaneElement::getMaxGLPlanes",
-                            "This function is obsoleted. It should not "
-                            "be used because its interface is fubar: "
-                            "the number of clip planes available from "
-                            "the OpenGL driver depends on the context, and "
-                            "this function does not know which context this "
-                            "information is requested for.");
-
-  GLint val;
-  SoGLContext_glGetIntegerv(sogl_current_render_glue(), GL_MAX_CLIP_PLANES, &val);
-
-  assert((!sogl_glerror_debugging() || SoGLContext_glGetError(sogl_current_render_glue()) == GL_NO_ERROR) &&
-         "GL error when calling glGetInteger() -- no current GL context?");
-
-  return (int)val;
-}
-
-//! FIXME: write doc.
-
 void
 SoGLClipPlaneElement::addToElt(const SbPlane & plane,
                                const SbMatrix & modelMatrix)

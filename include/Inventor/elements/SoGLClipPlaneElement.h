@@ -51,7 +51,6 @@ public:
   virtual void push(SoState * state);
   virtual void pop(SoState * state,
                    const SoElement * prevTopElement);
-  static  int getMaxGLPlanes(void);
 
 protected:
   virtual void addToElt(const SbPlane & plane,

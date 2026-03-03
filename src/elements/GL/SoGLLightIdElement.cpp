@@ -164,31 +164,6 @@ SoGLLightIdElement::increment(SoState * const state,
 //! FIXME: write doc.
 
 int32_t
-SoGLLightIdElement::getMaxGLSources(void)
-{
-  // FIXME: should also make a likewise method available as part of
-  // the So*GLWidget classes. 20020802 mortene.
-
-  SoDebugError::postWarning("SoGLLightIdElement::getMaxGLSources",
-                            "This function is obsoleted. It should not "
-                            "be used because its interface is fubar: "
-                            "the number of light sources available from "
-                            "the OpenGL driver depends on the context, and "
-                            "this function does not know which context this "
-                            "information is requested for.");
-
-  GLint val;
-  SoGLContext_glGetIntegerv(sogl_current_render_glue(), GL_MAX_LIGHTS, &val);
-
-  assert((!sogl_glerror_debugging() || SoGLContext_glGetError(sogl_current_render_glue()) == GL_NO_ERROR) &&
-         "GL error when calling glGetInteger() -- no current GL context?");
-
-  return (int32_t)val;
-}
-
-//! FIXME: write doc.
-
-int32_t
 SoGLLightIdElement::increment(SoState * const state)
 {
   return increment(state, NULL);

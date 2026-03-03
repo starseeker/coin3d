@@ -206,27 +206,6 @@ SoEngineOutputData::getType(int index) const
 }
 
 /*!
-  FIXME: doc
-*/
-SbBool
-SoEngineOutputData::readDescriptions(SoInput * OBOL_UNUSED_ARG(in), SoEngine * OBOL_UNUSED_ARG(engine)) const
-{
-  OBOL_STUB();
-  return FALSE;
-}
-
-/*
-  FIXME: doc.
-*/
-void
-SoEngineOutputData::writeDescriptions(SoOutput * OBOL_UNUSED_ARG(out),
-                                  SoEngine *OBOL_UNUSED_ARG(engine)
-                                  ) const
-{
-  OBOL_STUB();
-}
-
-/*!
   \overload
 */
 void

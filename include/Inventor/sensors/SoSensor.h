@@ -58,9 +58,6 @@ public:
   virtual void trigger(void);
 
   virtual SbBool isBefore(const SoSensor * s) const = 0;
-  void setNextInQueue(SoSensor * next);
-  SoSensor * getNextInQueue(void) const;
-
   static void initClass(void);
 
 protected:

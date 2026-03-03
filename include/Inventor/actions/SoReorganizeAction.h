@@ -67,9 +67,6 @@ public:
   virtual void apply(SoPath * path);
   virtual void apply(const SoPathList & pathlist, SbBool obeysrules = FALSE);
 
-  static void startReport(const char * msg);
-  static void finishReport(void);
-
 protected:
   virtual void beginTraversal(SoNode * node);
 

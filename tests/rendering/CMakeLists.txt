@@ -157,6 +157,10 @@ add_rendering_test(render_quad_mesh_deep)
 add_rendering_test(render_field_connections)
 add_rendering_test(render_sogl_bindings)
 add_rendering_test(render_rt_proxy_shapes)
+add_rendering_test(render_viewport)
+add_rendering_test(render_quad_viewport)
+add_rendering_test(render_quad_viewport_lod)
+add_rendering_test(render_viewport_scene)
 
 # ---- NanoRT raytracing backend -------------------------------------------
 #
@@ -475,7 +479,6 @@ add_rendering_image_test(render_transforms RMSE_THRESHOLD 10.0)
 add_rendering_image_test(render_cameras    RMSE_THRESHOLD 10.0)
 add_rendering_image_test(render_drawstyle  RMSE_THRESHOLD 15.0)
 add_rendering_image_test(render_texture    RMSE_THRESHOLD 15.0)
-add_rendering_test(render_stt_gl)
 
 # ---- Build GL render test objects into one library ---------------------------
 # Each source's main() is renamed by compiling a small per-test wrapper that
@@ -532,7 +535,6 @@ endif()
 # Export the list to parent scope so tests/CMakeLists.txt can link obol_test
 set(OBOL_GL_RENDER_TESTS "${OBOL_GL_RENDER_TESTS}" PARENT_SCOPE)
 
-add_rendering_image_test(render_stt_gl     RMSE_THRESHOLD 15.0)
 # Text rendering: control images generated with Obol's ProFont baseline.
 # Higher RMSE threshold to accommodate subpixel differences between platforms.
 add_rendering_image_test(render_text2      RMSE_THRESHOLD 20.0)
@@ -554,6 +556,8 @@ add_rendering_image_test(render_quad_mesh         RMSE_THRESHOLD 15.0)
 add_rendering_image_test(render_indexed_line_set  RMSE_THRESHOLD 15.0)
 add_rendering_image_test(render_point_set         RMSE_THRESHOLD 15.0)
 add_rendering_image_test(render_lod               RMSE_THRESHOLD 15.0)
+add_rendering_image_test(render_quad_viewport_lod  RMSE_THRESHOLD 20.0)
+add_rendering_image_test(render_viewport_scene     RMSE_THRESHOLD 15.0)
 add_rendering_image_test(render_scene_texture     RMSE_THRESHOLD 20.0)
 add_rendering_image_test(render_array_multiple_copy RMSE_THRESHOLD 15.0)
 # Shadow rendering: control image generated with OSMesa backend (SoShadowGroup
@@ -645,7 +649,11 @@ foreach(_vtest render_sphere_position render_checker_texture
                render_quad_mesh_deep
                render_field_connections
                render_sogl_bindings
-               render_rt_proxy_shapes)
+               render_rt_proxy_shapes
+               render_viewport
+               render_quad_viewport
+               render_quad_viewport_lod
+               render_viewport_scene)
     add_test(
         NAME ${_vtest}
         COMMAND "${CMAKE_COMMAND}"

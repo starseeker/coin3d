@@ -72,7 +72,6 @@ public:
 protected:
   virtual ~SoSwitch();
 
-  void traverseChildren(SoAction * action);
 
 private:
   SoSwitchP *pimpl;

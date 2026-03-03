@@ -129,16 +129,6 @@ SoFieldConverter::initClasses(void)
   SoConvertAll::initClass();
 }
 
-/*!
-  This method is obsoleted in Coin. It should probably have been
-  private in OIV.
-*/
-SoField *
-SoFieldConverter::getConnectedInput(void)
-{
-  OBOL_OBSOLETED();
-  return NULL;
-}
 
 /*!
   Returns fields which are connected as slaves of the engine output.

@@ -580,15 +580,6 @@ SoWWWInline::doAction(SoAction * action)
   }
 }
 
-/*!
-  This method should probably have been private in Open Inventor API. It is
-  obsoleted in Coin. Let us know if you need it.
-*/
-void
-SoWWWInline::doActionOnKidsOrBox(SoAction * OBOL_UNUSED_ARG(action))
-{
-  OBOL_OBSOLETED();
-}
 
 // doc in super
 void

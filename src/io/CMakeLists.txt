@@ -6,9 +6,6 @@ set(OBOL_IO_FILES
 	SoInput_Reader.cpp
 	SoOutput.cpp
 	SoOutput_Writer.cpp
-	SoByteStream.cpp
-	SoTranSender.cpp
-	SoTranReceiver.cpp
 	SoWriterefCounter.cpp
 )
 

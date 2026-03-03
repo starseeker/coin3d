@@ -471,18 +471,6 @@ SoReorganizeAction::apply(const SoPathList & pathlist, SbBool OBOL_UNUSED_ARG(ob
   }
 }
 
-void
-SoReorganizeAction::startReport(const char * OBOL_UNUSED_ARG(msg))
-{
-  OBOL_STUB();
-}
-
-void
-SoReorganizeAction::finishReport(void)
-{
-  OBOL_STUB();
-}
-
 // Documented in superclass.
 void
 SoReorganizeAction::beginTraversal(SoNode * /* node */)

@@ -666,18 +666,6 @@ SoTexture2::rayPick(SoRayPickAction * action)
   SoTexture2::doAction(action);
 }
 
-/*!
-  Not implemented in Coin; should probably not have been public in the
-  original SGI Open Inventor API.  We'll consider to implement it if
-  requested.
-*/
-SbBool
-SoTexture2::readImage(const SbString & OBOL_UNUSED_ARG(fname), int & OBOL_UNUSED_ARG(w), int & OBOL_UNUSED_ARG(h), int & OBOL_UNUSED_ARG(nc),
-                      unsigned char *& OBOL_UNUSED_ARG(bytes))
-{
-  OBOL_OBSOLETED();
-  return FALSE;
-}
 
 /*!
   Convenience method for setting texture data from raw pixel data in memory.

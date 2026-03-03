@@ -125,6 +125,7 @@
 #include <Inventor/nodes/SoVertexShape.h>
 #include <Inventor/sensors/SoTimerSensor.h>
 #include <Inventor/misc/SoGLDriverDatabase.h>
+#include <Inventor/elements/SoContextManagerElement.h>
 
 #include "nodes/SoSubNodeP.h"
 #include "../misc/SoEnvironment.h"
@@ -563,18 +564,6 @@ line_line_intersect(const SbVec2s &p00, const SbVec2s & p01,
 
   /*compute intersection coordinates*/
   if (f == 0) return COLINEAR;
-#if 0 // we don't need the intersection point, disabled
-  int num, offset;
-  int x, y;
-  num = d*Ax;                                           /* numerator */
-  offset = SAME_SIGNS(num,f) ? f/2 : -f/2;              /* round direction*/
-  x = x1 + (num+offset) / f;                            /* intersection x */
-
-  num = d*Ay;
-  offset = SAME_SIGNS(num,f) ? f/2 : -f/2;
-  y = y1 + (num+offset) / f;                            /* intersection y */
-#endif // disabled code
-
   return DO_INTERSECT;
 #undef COLINEAR
 #undef DONT_INTERSECT
@@ -849,72 +838,6 @@ SoExtSelection::initClass(void)
 
 // *************************************************************************
 
-/*!
-  Specifies whether the overlay planes should be used to render the
-  lasso.
-
-  This method has been obsoleted in Coin, as most graphics cards comes
-  without support for overlay rendering. A better strategy is to just
-  "overlay" the lasso graphics on top of the scene after everything
-  else has been rendered -- and this is the strategy we apply in Coin.
-*/
-void
-SoExtSelection::useOverlay(SbBool OBOL_UNUSED_ARG(overlay))
-{
-  OBOL_OBSOLETED();
-}
-
-/*!
-  Returns whether overlay planes are used to draw the lasso.
-
-  \sa useOverlay().
-*/
-SbBool
-SoExtSelection::isUsingOverlay(void)
-{
-  OBOL_OBSOLETED();
-  return FALSE;
-}
-
-/*!
-  Returns the scene graph for overlay rendering. Will always return
-  NULL in Coin, as this method has been obsoleted.
-
-  (It is probably used in TGS Inventor from the SoXt / SoWin
-  libraries' So[Xt|Win]RenderArea class to fetch the overlay graph to
-  draw, and as such should be treated as an internal method.)
-*/
-SoSeparator *
-SoExtSelection::getOverlaySceneGraph(void)
-{
-  OBOL_OBSOLETED();
-  return NULL;
-}
-
-// *************************************************************************
-
-/*!
-  Obsoleted in Coin, use SoExtSelection::setLassoColor() instead.
-*/
-void
-SoExtSelection::setOverlayLassoColorIndex(const int OBOL_UNUSED_ARG(index))
-{
-  OBOL_OBSOLETED();
-}
-
-/*!
-  Obsoleted in Coin, use SoExtSelection::getLassoColor() instead.
-
-  \sa setOverlayLassoColorIndex().
-*/
-int
-SoExtSelection::getOverlayLassoColorIndex(void)
-{
-  OBOL_OBSOLETED();
-  return 0;
-}
-
-// *************************************************************************
 
 /*!
   Sets the lasso/rectangle line color. Default value is (1.0, 1.0,
@@ -1248,6 +1171,16 @@ SoExtSelection::GLRenderBelowPath(SoGLRenderAction * action)
 
   inherited::GLRenderBelowPath(action);
   SoState * state = action->getState();
+
+  // Automatically populate the context manager from the state element
+  // pushed by SoOffscreenRenderer, matching the pattern in SoSceneTexture2
+  // and SoShadowGroup so that lasso/rectangle selection works without
+  // requiring a manual setContextManager() call.
+  SoDB::ContextManager * stateMgr = SoContextManagerElement::get(state);
+  if (stateMgr && !PRIVATE(this)->contextManager) {
+    PRIVATE(this)->contextManager = stateMgr;
+  }
+
   state->push();
 
   if (action->isRenderingDelayedPaths()) {

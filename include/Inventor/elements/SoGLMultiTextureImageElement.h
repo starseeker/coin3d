@@ -98,7 +98,6 @@ private:
                          SbColor & blendcolor) {
     return get(state, 0, model, blendcolor);
   }
-  static int32_t getMaxGLTextureSize(void);
 };
 
 #endif // !OBOL_SOGLMULTITEXTUREIMAGEELEMENT_H

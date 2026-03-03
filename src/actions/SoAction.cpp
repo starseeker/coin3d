@@ -892,16 +892,6 @@ SoAction::getOriginalPathListAppliedTo(void) const
     PRIVATE(this)->applieddata.pathlistdata.origpathlist : NULL;
 }
 
-/*!
-  This method is not supported in Coin. It should probably
-  have been private in OIV.
-*/
-SbBool
-SoAction::isLastPathListAppliedTo(void) const
-{
-  OBOL_OBSOLETED();
-  return TRUE;
-}
 
 /*!
   Returns a code that indicates where the current node lies with

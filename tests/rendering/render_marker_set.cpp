@@ -1,7 +1,7 @@
 /*
  * render_marker_set.cpp - Integration test: SoMarkerSet rendering
  *
- * Validates SoMarkerSet API (type id, getNumDefinedMarkers, isMarkerBitSet)
+ * Validates SoMarkerSet API (type id, getNumDefinedMarkers)
  * and renders a scene with several markers.
  * The scene is built by the shared testlib factory (createMarkerSet).
  *
@@ -60,15 +60,6 @@ int main(int argc, char ** argv)
         } else {
             printf("render_marker_set: getNumDefinedMarkers() = %d OK\n", nMarkers);
         }
-    }
-
-    // -----------------------------------------------------------------------
-    // Static API: isMarkerBitSet does not crash
-    // -----------------------------------------------------------------------
-    {
-        // Call with valid marker index (0) and bit 0
-        (void)SoMarkerSet::isMarkerBitSet(0, 0);
-        printf("render_marker_set: isMarkerBitSet(0,0) OK\n");
     }
 
     // -----------------------------------------------------------------------

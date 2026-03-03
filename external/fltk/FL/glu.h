@@ -39,7 +39,9 @@
 #  ifdef __APPLE__  // PORTME: OpenGL Path abstraction
 #    include <OpenGL/glu.h>
 #  else
-#    include <GL/glu.h>
+#    ifdef HAVE_GL_GLU_H
+#      include <GL/glu.h>
+#    endif
 #  endif
 
 #endif // !FL_glu_H

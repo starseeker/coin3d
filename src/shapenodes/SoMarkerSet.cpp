@@ -1497,14 +1497,4 @@ SoMarkerSet::removeMarker(int idx)
   return TRUE;
 }
 
-/*!
-  Not supported in Coin. Should probably not have been part of the
-  public Open Inventor API.
-*/
-SbBool
-SoMarkerSet::isMarkerBitSet(int OBOL_UNUSED_ARG(idx), int OBOL_UNUSED_ARG(bitNumber))
-{
-  // FIXME: seems simple enough to support.. 20010815 mortene.
-  OBOL_OBSOLETED();
-  return FALSE;
-}
+

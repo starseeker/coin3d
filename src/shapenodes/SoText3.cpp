@@ -448,16 +448,6 @@ SoText3::computeBBox(SoAction * action, SbBox3f & box, SbVec3f & center)
 }
 
 
-/*!
-  Not implemented. Should probably have been private in Open Inventor API. Let us
-  know if you need this method for anything, and we'll implement it.
-*/
-SbBox3f
-SoText3::getCharacterBounds(SoState * OBOL_UNUSED_ARG(state), int OBOL_UNUSED_ARG(stringindex), int OBOL_UNUSED_ARG(charindex))
-{
-  OBOL_OBSOLETED();
-  return SbBox3f();
-}
 
 // doc in parent
 void
@@ -995,19 +985,6 @@ SoText3P::render(SoState * state, const cc_font_specification * fontspec,
     }
     ypos -= fontspec->size * PUBLIC(this)->spacing.getValue();
   }
-}
-
-// render text geometry
-void
-SoText3::render(SoState * OBOL_UNUSED_ARG(state), unsigned int OBOL_UNUSED_ARG(part))
-{
-  assert(FALSE && "obsoleted");
-}
-
-void
-SoText3::generate(SoAction * OBOL_UNUSED_ARG(action), unsigned int OBOL_UNUSED_ARG(part))
-{
-  assert(FALSE && "obsoleted");
 }
 
 // generate text geometry

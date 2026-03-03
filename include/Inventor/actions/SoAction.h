@@ -102,7 +102,6 @@ public:
   const SoPathList * getPathListAppliedTo(void) const;
   const SoPathList * getOriginalPathListAppliedTo(void) const;
 
-  SbBool isLastPathListAppliedTo(void) const;
 
   PathCode getPathCode(int & numindices, const int * & indices);
 

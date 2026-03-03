@@ -127,8 +127,6 @@ public:
   virtual SbBool readBinaryArray(double * d, int length);
   virtual SbBool eof(void) const;
 
-  virtual void resetFilePointer(FILE * fptr);
-
   virtual void getLocationString(SbString & string) const;
   virtual void putBack(const char c);
   virtual void putBack(const char * str);
@@ -163,12 +161,9 @@ protected:
   virtual SbBool popFile(void);
   void setIVVersion(float version);
   FILE * findFile(const char * fileName, SbString & fullName);
-  void initFile(FILE * newFP, const char * fileName, SbString * fullName,
-                SbBool openedHere, SbDict * refDict = NULL);
   SbBool checkHeader(SbBool bValidateBufferHeader = FALSE);
   SbBool fromBuffer(void) const;
   SbBool skipWhiteSpace(void);
-  size_t freeBytesInBuf(void) const;
   SbBool readInteger(int32_t & l);
   SbBool readUnsignedInteger(uint32_t & l);
   SbBool readReal(double & d);
@@ -177,7 +172,6 @@ protected:
   int readHexDigits(char * str);
   int readChar(char * str, char charToRead);
 
-  SbBool makeRoomInBuf(size_t nBytes);
   void convertShort(char * from, short * s);
   void convertInt32(char * from, int32_t * l);
   void convertFloat(char * from, float * f);
@@ -186,9 +180,6 @@ protected:
   void convertInt32Array(char * from, int32_t * to, int len);
   void convertFloatArray(char * from, float * to, int len);
   void convertDoubleArray(char * from, double * to, int len);
-  SbBool isFileURL(const char * url);
-  char * URLToFile(char * out_buf, const char * in_buf);
-  SbBool IsURL(const char * c_strng);
 
   static void setDirectories(SbStringList * dirs);
 

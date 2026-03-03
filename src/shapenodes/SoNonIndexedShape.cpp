@@ -36,8 +36,8 @@
 
   \ingroup coin_nodes
   
-  It contains the (now obsoleted) startIndex field and a convenience
-  method for calculating the bounding box.
+  It contains the startIndex field and a convenience method for
+  calculating the bounding box.
 */
 
 #include <Inventor/nodes/SoNonIndexedShape.h>
@@ -50,8 +50,7 @@
 
 /*!  
   \var SoSFInt32 SoNonIndexedShape::startIndex 
-  Coordinates are fetched from this index on. This field is now obsoleted, and 
-  is provided only for backward compatibility.  
+  Coordinates are fetched starting from this index. Default is 0.
 */
 
 

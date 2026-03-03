@@ -65,8 +65,6 @@ public:
   int getIndex(const SoEngine * engine, const SoEngineOutput * output) const;
   int getIndex(const SoNodeEngine * engine, const SoEngineOutput * output) const;
   const SoType & getType(int index) const;
-  SbBool readDescriptions(SoInput * input, SoEngine * engine) const;
-  void writeDescriptions(SoOutput * out, SoEngine * engine) const;
 
 private:
   SbBool hasOutput(const char * name) const;

@@ -65,14 +65,8 @@ public:
   void setDelaySensorTimeout(const SbTime & t);
   const SbTime & getDelaySensorTimeout(void);
 
-  int doSelect(int nfds, void * readfds, void * writefds,
-               void * exceptfds, struct timeval * userTimeOut);
-
 private:
   void notifyChanged(void);
-
-  int mergeTimerQueues(void);
-  int mergeDelayQueues(void);
   
   class SoSensorManagerP * pimpl;
   friend class SoSensorManagerP;

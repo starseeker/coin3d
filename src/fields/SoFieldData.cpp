@@ -238,15 +238,6 @@ SoFieldData::addField(SoFieldContainer * base, const char * name,
     // SoFieldData::addField().
     //
     // 20050708 mortene.
-#if 0
-    // Robustness: check whether or not the given field is actually a
-    // member of base.
-    const SoField * f = (const SoField *)(base + offs);
-    // The next is likely to segfault from the isOfType() call if
-    // there's an error (and not actually assert).
-    assert(f->isOfType(SoField::getClassTypeId()));
-#endif
-
     this->fields.append(new SoFieldEntry(name, offs));
   }
 }

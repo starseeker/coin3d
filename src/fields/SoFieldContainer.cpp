@@ -676,19 +676,6 @@ SoFieldContainer::notify(SoNotList * l)
 #endif // debug
 }
 
-/*!
-  \COININTERNAL
-  I can't make head or tails of this method, it seems to return TRUE
-  no matter what the arguments are.
- */
-SbBool
-SoFieldContainer::validateNewFieldValue(SoField * OBOL_UNUSED_ARG(field),
-                                   void * OBOL_UNUSED_ARG(newval))
-{
-  OBOL_STUB();
-  return TRUE;
-}
-
 // Documented in superclass. Overridden from SoBase to make sure field
 // connections into other field containers are also accounted for.
 void

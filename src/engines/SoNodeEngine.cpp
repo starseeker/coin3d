@@ -315,15 +315,6 @@ SoNodeEngine::writeInstance(SoOutput * out)
 }
 
 /*!
-  Writes the types of engine outputs for extension engines
-  (i.e. engines not built in to Coin).
-*/
-void
-SoNodeEngine::writeOutputTypes(SoOutput * OBOL_UNUSED_ARG(out))
-{
-  OBOL_STUB();
-}
-
 /*!
   Returns whether we're in a notification process. This is needed to
   avoid double notification when an engine enables outputs during

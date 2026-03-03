@@ -126,7 +126,6 @@ public:
   void setViewportRegion(const SbViewportRegion & reg);
   SoHandleEventAction * getHandleEventAction(void) const;
   void setHandleEventAction(SoHandleEventAction * newAction);
-  void setTempPathToThis(const SoPath * somethingclose);
   virtual void grabEventsSetup(void);
   virtual void grabEventsCleanup(void);
   void workFieldsIntoTransform(SbMatrix & mtx);

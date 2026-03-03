@@ -1168,16 +1168,6 @@ SoDragger::setHandleEventAction(SoHandleEventAction * action)
   PRIVATE(this)->eventaction = action;
 }
 
-/*!
-  This function is part of the original SGI Inventor 2.1 API, but has
-  not been implemented in Coin as it looks like a function which
-  should probably have been private in Open Inventor.
-*/
-void
-SoDragger::setTempPathToThis(const SoPath *)
-{
-  OBOL_OBSOLETED();
-}
 
 /*!
   Called when dragger starts grabbing events (mouse button down).

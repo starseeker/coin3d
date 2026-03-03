@@ -374,7 +374,7 @@ inline bool renderToFile(
 #endif
 
 #ifdef __unix__
-// GLX offscreen context (pbuffer or pixmap)
+// GLX offscreen context (pbuffer, pixmap, or hidden window fallback)
 struct GLXOffscreenCtx {
     Display  *dpy;
     int       width, height;
@@ -387,6 +387,10 @@ struct GLXOffscreenCtx {
     Pixmap       xpixmap;
     GLXPixmap    glxpixmap;
     XVisualInfo *vi;
+    // hidden window fallback (most compatible; actual rendering uses FBOs)
+    Window       dummy_win;
+    Colormap     dummy_colormap;
+    bool         use_window;
     // restore state
     GLXContext   prev_ctx;
     GLXDrawable  prev_draw;
@@ -396,8 +400,15 @@ struct GLXOffscreenCtx {
 /**
  * GLX context manager for system OpenGL headless rendering.
  * Requires a running X server (real or Xvfb).
- * Set OBOL_GLXGLUE_NO_PBUFFERS=1 to skip pbuffer and use pixmap fallback.
- * Set OBOL_GLX_PIXMAP_DIRECT_RENDERING=1 to request direct rendering.
+ *
+ * Context creation is attempted in order of preference:
+ *   1. GLX pbuffer  – direct rendering, then indirect
+ *   2. GLX pixmap   – direct rendering, then indirect
+ *   3. Hidden 1×1 X window (most compatible; like FLTK's Fl_Gl_Window approach)
+ *      Actual pixel data is always read from FBOs, so window size is irrelevant.
+ *
+ * Environment overrides:
+ *   OBOL_GLXGLUE_NO_PBUFFERS=1  – skip pbuffer attempt, go straight to pixmap/window.
  */
 class GLXContextManager : public SoDB::ContextManager {
 public:
@@ -425,6 +436,9 @@ public:
         ctx->xpixmap    = 0;
         ctx->glxpixmap  = 0;
         ctx->vi         = nullptr;
+        ctx->dummy_win  = 0;
+        ctx->dummy_colormap = 0;
+        ctx->use_window = false;
         ctx->prev_ctx   = nullptr;
         ctx->prev_draw  = 0;
         ctx->prev_read  = 0;
@@ -454,8 +468,10 @@ public:
                 ctx->fbconfig = fbcfgs[0];
                 ctx->pbuffer  = glXCreatePbuffer(dpy, fbcfgs[0], pbattribs);
                 if (ctx->pbuffer) {
-                    // Pbuffers require direct rendering; always use True
+                    // Try direct rendering first; fall back to indirect
                     ctx->ctx = glXCreateNewContext(dpy, fbcfgs[0], GLX_RGBA_TYPE, nullptr, True);
+                    if (!ctx->ctx)
+                        ctx->ctx = glXCreateNewContext(dpy, fbcfgs[0], GLX_RGBA_TYPE, nullptr, False);
                     if (ctx->ctx) {
                         ctx->use_pbuffer = true;
                         XFree(fbcfgs);
@@ -468,13 +484,7 @@ public:
             }
         }
 
-        // Fallback: Pixmap
-        // Modern X servers disable indirect rendering (BadValue from X_GLXCreateContext
-        // when direct=False). Check OBOL_GLX_PIXMAP_DIRECT_RENDERING to use direct.
-        Bool direct = False;
-        const char *dr = getenv("OBOL_GLX_PIXMAP_DIRECT_RENDERING");
-        if (dr && dr[0] != '0') direct = True;
-
+        // Choose a visual for the pixmap and window fallbacks
         int vattribs[] = {
             GLX_RGBA, GLX_RED_SIZE, 8, GLX_GREEN_SIZE, 8, GLX_BLUE_SIZE, 8,
             GLX_DEPTH_SIZE, 16, None
@@ -482,26 +492,56 @@ public:
         ctx->vi = glXChooseVisual(dpy, screen, vattribs);
         if (!ctx->vi) { delete ctx; return nullptr; }
 
+        // Fallback 1: GLX pixmap
         ctx->xpixmap = XCreatePixmap(dpy, RootWindow(dpy, screen),
                                      width, height, ctx->vi->depth);
-        if (!ctx->xpixmap) { XFree(ctx->vi); delete ctx; return nullptr; }
+        if (ctx->xpixmap) {
+            ctx->glxpixmap = glXCreateGLXPixmap(dpy, ctx->vi, ctx->xpixmap);
+            if (ctx->glxpixmap) {
+                // Try direct rendering first (modern X servers disable indirect)
+                ctx->ctx = glXCreateContext(dpy, ctx->vi, nullptr, True);
+                if (!ctx->ctx)
+                    ctx->ctx = glXCreateContext(dpy, ctx->vi, nullptr, False);
+                if (ctx->ctx)
+                    return ctx;
+                glXDestroyGLXPixmap(dpy, ctx->glxpixmap);
+                ctx->glxpixmap = 0;
+            }
+            XFreePixmap(dpy, ctx->xpixmap);
+            ctx->xpixmap = 0;
+        }
 
-        ctx->glxpixmap = glXCreateGLXPixmap(dpy, ctx->vi, ctx->xpixmap);
-        ctx->ctx       = glXCreateContext(dpy, ctx->vi, nullptr, direct);
-
-        if (!ctx->ctx && !direct) {
-            // If indirect failed, retry with direct rendering
+        // Fallback 2: small hidden window (most compatible; same approach as FLTK).
+        // Actual rendering always targets an FBO, so the 1×1 window size is fine.
+        XSetWindowAttributes swa;
+        memset(&swa, 0, sizeof(swa));
+        ctx->dummy_colormap = XCreateColormap(dpy, RootWindow(dpy, screen),
+                                              ctx->vi->visual, AllocNone);
+        swa.colormap         = ctx->dummy_colormap;
+        swa.override_redirect = True;
+        ctx->dummy_win = XCreateWindow(dpy, RootWindow(dpy, screen),
+                                       -1, -1, 1, 1, 0, ctx->vi->depth,
+                                       InputOutput, ctx->vi->visual,
+                                       CWColormap | CWOverrideRedirect, &swa);
+        if (ctx->dummy_win) {
+            XMapWindow(dpy, ctx->dummy_win);
+            XSync(dpy, False);
             ctx->ctx = glXCreateContext(dpy, ctx->vi, nullptr, True);
+            if (!ctx->ctx)
+                ctx->ctx = glXCreateContext(dpy, ctx->vi, nullptr, False);
+            if (ctx->ctx) {
+                ctx->use_window = true;
+                return ctx;
+            }
+            XDestroyWindow(dpy, ctx->dummy_win);
+            ctx->dummy_win = 0;
         }
-
-        if (!ctx->ctx || !ctx->glxpixmap) {
-            if (ctx->glxpixmap) glXDestroyGLXPixmap(dpy, ctx->glxpixmap);
-            if (ctx->xpixmap)   XFreePixmap(dpy, ctx->xpixmap);
-            XFree(ctx->vi);
-            delete ctx;
-            return nullptr;
-        }
-        return ctx;
+        XFreeColormap(dpy, ctx->dummy_colormap);
+        ctx->dummy_colormap = 0;
+        XFree(ctx->vi);
+        ctx->vi = nullptr;
+        delete ctx;
+        return nullptr;
     }
 
     virtual SbBool makeContextCurrent(void* context) override {
@@ -512,9 +552,13 @@ public:
         ctx->prev_draw = glXGetCurrentDrawable();
         ctx->prev_read = glXGetCurrentReadDrawable();
 
-        Bool ok = ctx->use_pbuffer
-            ? glXMakeCurrent(ctx->dpy, ctx->pbuffer, ctx->ctx)
-            : glXMakeCurrent(ctx->dpy, ctx->glxpixmap, ctx->ctx);
+        Bool ok;
+        if (ctx->use_pbuffer)
+            ok = glXMakeCurrent(ctx->dpy, ctx->pbuffer, ctx->ctx);
+        else if (ctx->use_window)
+            ok = glXMakeCurrent(ctx->dpy, ctx->dummy_win, ctx->ctx);
+        else
+            ok = glXMakeCurrent(ctx->dpy, ctx->glxpixmap, ctx->ctx);
         return ok ? TRUE : FALSE;
     }
 
@@ -534,11 +578,17 @@ public:
         if (ctx->ctx) glXDestroyContext(ctx->dpy, ctx->ctx);
         if (ctx->use_pbuffer) {
             if (ctx->pbuffer) glXDestroyPbuffer(ctx->dpy, ctx->pbuffer);
+        } else if (ctx->use_window) {
+            if (ctx->dummy_win) {
+                XUnmapWindow(ctx->dpy, ctx->dummy_win);
+                XDestroyWindow(ctx->dpy, ctx->dummy_win);
+            }
+            if (ctx->dummy_colormap) XFreeColormap(ctx->dpy, ctx->dummy_colormap);
         } else {
             if (ctx->glxpixmap) glXDestroyGLXPixmap(ctx->dpy, ctx->glxpixmap);
             if (ctx->xpixmap)   XFreePixmap(ctx->dpy, ctx->xpixmap);
-            if (ctx->vi)        XFree(ctx->vi);
         }
+        if (ctx->vi) XFree(ctx->vi);
         delete ctx;
     }
 

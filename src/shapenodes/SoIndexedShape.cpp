@@ -247,63 +247,6 @@ SoIndexedShape::getNumVerts(const int startCoord)
   return cnt;
 }
 
-/*!
-  Not implemented. Probably only used for internal purposes in SGI's
-  original Open Inventor, which means it should have been private.
-
-  Let us know if you need this method for any code you are porting and
-  we'll look into implement it properly.
-*/
-void
-SoIndexedShape::setupIndices(const int /* numParts */,
-                             const int /* numFaces */,
-                             const SbBool /* needNormals */,
-                             const SbBool /* needTexCoords */)
-{
-  OBOL_OBSOLETED();
-}
-
-/*!
-  Not implemented. Probably only used for internal purposes in SGI's
-  original Open Inventor, which means it should have been private.
-
-  Let us know if you need this method for any code you are porting and
-  we'll look into implement it properly.
-*/
-const int32_t *
-SoIndexedShape::getNormalIndices()
-{
-  OBOL_OBSOLETED();
-  return NULL;
-}
-
-/*!
-  Not implemented. Probably only used for internal purposes in SGI's
-  original Open Inventor, which means it should have been private.
-
-  Let us know if you need this method for any code you are porting and
-  we'll look into implement it properly.
-*/
-const int32_t *
-SoIndexedShape::getColorIndices()
-{
-  OBOL_OBSOLETED();
-  return NULL;
-}
-
-/*!
-  Not implemented. Probably only used for internal purposes in SGI's
-  original Open Inventor, which means it should have been private.
-
-  Let us know if you need this method for any code you are porting and
-  we'll look into implement it properly.
-*/
-const int32_t *
-SoIndexedShape::getTexCoordIndices()
-{
-  OBOL_OBSOLETED();
-  return NULL;
-}
 
 /*!
   Convenience method that will fetch data needed for rendering or

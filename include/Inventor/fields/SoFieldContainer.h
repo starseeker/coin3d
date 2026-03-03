@@ -73,8 +73,6 @@ public:
 
   virtual void notify(SoNotList * l);
 
-  virtual SbBool validateNewFieldValue(SoField * field, void * newval);
-
   virtual void addWriteReference(SoOutput * out, SbBool isfromfield = FALSE);
   virtual void writeInstance(SoOutput * out);
 

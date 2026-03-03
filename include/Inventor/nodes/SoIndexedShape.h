@@ -58,13 +58,6 @@ protected:
 
   virtual void computeBBox(SoAction * action, SbBox3f & box, SbVec3f & center);
   int getNumVerts(const int startCoord);
-  void setupIndices(const int numParts, const int numFaces,
-                    const SbBool needNormals, const SbBool needTexCoords);
-
-  const int32_t * getNormalIndices(void);
-  const int32_t * getColorIndices(void);
-  const int32_t * getTexCoordIndices(void);
-
   static SbBool areTexCoordsIndexed(SoAction * action);
 
   SbBool getVertexData(SoState * state,

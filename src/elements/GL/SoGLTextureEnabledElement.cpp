@@ -201,17 +201,6 @@ SoGLTextureEnabledElement::setElt(int32_t value)
   }
 }
 
-//
-// updates GL state (obsoleted)
-//
-void
-SoGLTextureEnabledElement::updategl(void)
-{
-  assert(0 && "obsoleted");
-  if (this->data) SoGLContext_glEnable(this->glue, GL_TEXTURE_2D);
-  else SoGLContext_glDisable(this->glue, GL_TEXTURE_2D);
-}
-
 void
 SoGLTextureEnabledElement::updategl(const Mode newvalue, const Mode oldvalue)
 {
