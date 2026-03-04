@@ -56,10 +56,6 @@ cc_fontspec_construct(cc_font_specification * spec,
   spec->size = size;
   spec->complexity = complexity;
   
-  /* Initialize strings using std::string constructors */
-  new (&spec->name) std::string();
-  new (&spec->style) std::string();
-  
   if (name_style) {
     /* Simple parsing: assume format is "fontname" or "fontname:style" */
     const char * colon = strchr(name_style, ':');
@@ -90,9 +86,9 @@ cc_fontspec_copy(const cc_font_specification * from,
   to->size = from->size;
   to->complexity = from->complexity;
   
-  /* Copy strings using std::string copy constructor */
-  new (&to->name) std::string(from->name);
-  new (&to->style) std::string(from->style);
+  /* Copy strings using std::string assignment */
+  to->name = from->name;
+  to->style = from->style;
 }
 
 void

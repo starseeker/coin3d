@@ -213,8 +213,12 @@ SbFontP::loadFontFromFile(const char * filepath)
     return FALSE;
   }
   
-  // Initialize font
-  int result = stt_InitFont(&fontinfo, fontdata, fontsize, 0);
+  // Initialize font — use stt_GetFontOffsetForIndex so that TrueType
+  // Collection (.ttc) files are handled correctly.  For plain .ttf files the
+  // function returns 0 (same as before); for .ttc files it returns the byte
+  // offset of the first font in the collection header.
+  int offset = stt_GetFontOffsetForIndex(fontdata, 0);
+  int result = (offset >= 0) ? stt_InitFont(&fontinfo, fontdata, fontsize, offset) : 0;
   if (!result) {
     SoDebugError::postWarning("SbFont::loadFontFromFile", 
                               "Failed to initialize font from: %s", filepath);
@@ -476,6 +480,20 @@ SbBool
 SbFont::loadFont(const SbString & fontpath)
 {
   return loadFont(fontpath.getString());
+}
+
+SbBool
+SbFont::loadFontIfFilePath(const char * name)
+{
+  if (!name || name[0] == '\0') return FALSE;
+  size_t len = strlen(name);
+  if (len <= 4) return FALSE;
+  const char * ext = name + len - 4;
+  if (strcmp(ext, ".ttf") != 0 && strcmp(ext, ".ttc") != 0) return FALSE;
+  // Only reload when the path has actually changed; avoids invalidating
+  // SoGlyphCache bitmap pointers that reference SbFont's internal cache.
+  if (pimpl->fontname == SbString(name)) return FALSE;
+  return loadFont(name);
 }
 
 void

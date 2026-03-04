@@ -267,18 +267,57 @@ rta.apply(root);
 // rta.getLights() gives the lights collected during traversal
 ```
 
-### What a Complete Nanort Integration Would Look Like
+### Approach 3: Use `SoRaytracerSceneCollector` (Recommended)
+
+`SoRaytracerSceneCollector` is the highest-level integration point and handles
+everything required by a practical raytracing backend:
+
+- World-space triangle collection with per-vertex normals and materials
+- World-space light extraction (directional, point, spot)
+- Proxy geometry for `SoLineSet`, `SoIndexedLineSet`, `SoPointSet`
+- Wireframe cylinder ring proxies for rotational dragger widgets
+- `DrawStyle INVISIBLE` pruning (picks/draggers that shouldn't cast shadows)
+- `SoText2`, `SoHUDLabel`, `SoHUDButton` pixel overlays
+- Scene change detection with `needsRebuild()` to avoid redundant BVH rebuilds
+- `compositeOverlays()` to alpha-blend text/HUD onto the framebuffer
+
+```cpp
+SoRaytracerSceneCollector collector;
+SbViewportRegion vp(800, 600);
+SoCamera * cam = findCamera(root);
+
+if (collector.needsRebuild(root, cam)) {
+    collector.reset();
+    collector.collect(root, vp);
+    buildMyBVH(collector.getTriangles());   // backend-specific
+    collector.updateCacheKeysAfterRebuild(root, cam);
+} else {
+    collector.collectOverlaysOnly(root, vp);
+}
+
+// ... raytrace ...
+collector.compositeOverlays(pixels, width, height, 3);
+collector.updateCameraId(cam);
+```
+
+See `tests/utils/nanort_context_manager.h` (nanort) and
+`tests/utils/embree_context_manager.h` (Intel Embree 4) for complete
+worked examples of this pattern.
+
+### What a Complete Raytracing Integration Looks Like
 
 A full integration (outside Obol itself) would:
 
-1. **Scene collection pass**: Apply `SoRaytraceRenderAction` to collect all
-   triangles with materials, transforms, texture coordinates, and light
-   sources.
-2. **BVH build**: Feed collected geometry into nanort's BVH builder.
+1. **Scene collection pass**: Call `SoRaytracerSceneCollector::collect()` to
+   extract all triangles with materials, world-space normals, lights, and
+   text/HUD overlays.
+2. **BVH build**: Feed `collector.getTriangles()` into your backend's
+   acceleration structure builder.
 3. **Render loop**: For each pixel, fire a primary ray using the camera
-   parameters from `SoRaytraceRenderAction::getViewVolume()`.  Shade hits
-   using the collected material and light data.
-4. **Output**: Write rendered pixels to an `SbImage` or directly to a buffer.
+   parameters from `SoViewVolume::projectPointToLine()`.  Shade hits
+   using `collector.getLights()`.
+4. **Overlay composite**: Call `collector.compositeOverlays()` to blend
+   text and HUD elements onto the rendered framebuffer.
 
 No OpenGL is required at any step.  The existing `SoRayPickAction` uses the
 same `generatePrimitives()` path and demonstrates that CPU-side ray
@@ -288,16 +327,19 @@ intersection works today without any OpenGL context.
 
 ## Summary Table
 
-| Feature Category | Nanort/Raytrace | OSMesa GL 2.0 | Full System GL |
-|-----------------|-----------------|---------------|----------------|
+| Feature Category | Nanort/Embree/Raytrace | OSMesa GL 2.0 | Full System GL |
+|-----------------|------------------------|---------------|----------------|
 | Scene graph traversal | ✓ | ✓ | ✓ |
 | Bounding box computation | ✓ | ✓ | ✓ |
 | Ray picking | ✓ | ✓ | ✓ |
 | Transform/matrix math | ✓ | ✓ | ✓ |
-| Material data | ✓ (via state) | ✓ | ✓ |
-| Light data | ✓ (via SoLightElement) | ✓ | ✓ |
+| Material data | ✓ (via SoRaytracerSceneCollector) | ✓ | ✓ |
+| Light data | ✓ (via SoRaytracerSceneCollector) | ✓ | ✓ |
 | Camera data | ✓ (via SoCallbackAction) | ✓ | ✓ |
 | Shape geometry (triangles) | ✓ (via generatePrimitives) | ✓ | ✓ |
+| Line/point geometry (proxy) | ✓ (via SoRaytracerSceneCollector) | ✓ | ✓ |
+| Text/HUD overlays | ✓ (via SoRaytracerSceneCollector) | ✓ | ✓ |
+| Scene change detection | ✓ (needsRebuild/updateCacheKeys) | — | — |
 | Texture image data | ✓ (via SoCallbackAction) | ✓ | ✓ |
 | Basic rasterization | ✗ | ✓ | ✓ |
 | VBO/vertex array rendering | ✗ | ✓ | ✓ |

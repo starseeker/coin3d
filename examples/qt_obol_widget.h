@@ -79,9 +79,19 @@
  * • Sensor bridge  (three QTimers) connects Coin's sensor queue to Qt's event
  *   loop — the same three-timer pattern as Quarter's SensorManager.
  *
+ * ── Camera interaction ──────────────────────────────────────────────────────
+ *
+ * Mouse interaction is handled directly in the widget:
+ * • Left-button drag   → orbit camera around its focal point (SoCamera::orbitCamera)
+ * • Middle-button drag → pan camera in the view plane
+ * • Scroll wheel       → zoom (move camera along view direction, keep focalDistance)
+ * Scene events (draggers, manipulators) still receive button press/release events
+ * and hover-location events; camera navigation is handled before scene routing.
+ *
  * ── Usage ──────────────────────────────────────────────────────────────────
  *
- *   SoDB::init(nullptr);   // or pass a QtObolContextManager for SoOffscreenRenderer
+ *   QtObolContextManager ctxMgr;   // required; nullptr share context is fine at startup
+ *   SoDB::init(&ctxMgr);
  *   SoNodeKit::init();
  *   SoInteraction::init();
  *
@@ -399,6 +409,7 @@ protected:
     // ---- Mouse events → SoEvents -------------------------------------------
 
     void mousePressEvent(QMouseEvent * e) override {
+        lastMousePos_ = e->pos();
         SoMouseButtonEvent ev;
         applyModifiers(&ev, e);
         ev.setPosition(mapToObol(e->pos()));
@@ -419,6 +430,38 @@ protected:
     }
 
     void mouseMoveEvent(QMouseEvent * e) override {
+        // Left-button drag → orbit camera around its focal point.
+        if (e->buttons() & Qt::LeftButton) {
+            SoCamera * cam = viewport_.getCamera();
+            if (cam) {
+                const QPoint delta = e->pos() - lastMousePos_;
+                SbVec3f lookDir;
+                cam->orientation.getValue().multVec(SbVec3f(0.0f, 0.0f, -1.0f), lookDir);
+                const SbVec3f orbitCenter =
+                    cam->position.getValue() + lookDir * cam->focalDistance.getValue();
+                cam->orbitCamera(orbitCenter, (float)delta.x(), (float)delta.y());
+                lastMousePos_ = e->pos();
+                update();
+                return;
+            }
+        }
+        // Middle-button drag → pan camera in the view plane.
+        if (e->buttons() & Qt::MiddleButton) {
+            SoCamera * cam = viewport_.getCamera();
+            if (cam) {
+                const QPoint delta = e->pos() - lastMousePos_;
+                SbVec3f right, up;
+                cam->orientation.getValue().multVec(SbVec3f(1.0f, 0.0f, 0.0f), right);
+                cam->orientation.getValue().multVec(SbVec3f(0.0f, 1.0f, 0.0f), up);
+                const float scale = cam->focalDistance.getValue() * 0.001f;
+                const SbVec3f pan =
+                    right * (-delta.x() * scale) + up * (delta.y() * scale);
+                cam->position.setValue(cam->position.getValue() + pan);
+                lastMousePos_ = e->pos();
+                update();
+                return;
+            }
+        }
         SoLocation2Event ev;
         applyModifiers(&ev, e);
         ev.setPosition(mapToObol(e->pos()));
@@ -427,9 +470,22 @@ protected:
     }
 
     void wheelEvent(QWheelEvent * e) override {
-        SoMouseButtonEvent ev;
         int delta = e->angleDelta().y();
         if (delta == 0) delta = e->angleDelta().x();
+        // Scroll → zoom: move the camera along its view direction and keep
+        // focalDistance consistent so subsequent orbit stays centred.
+        SoCamera * cam = viewport_.getCamera();
+        if (cam) {
+            SbVec3f lookDir;
+            cam->orientation.getValue().multVec(SbVec3f(0.0f, 0.0f, -1.0f), lookDir);
+            const float step = cam->focalDistance.getValue() * (delta > 0 ? 0.1f : -0.1f);
+            cam->position.setValue(cam->position.getValue() + lookDir * step);
+            cam->focalDistance.setValue(cam->focalDistance.getValue() - step);
+            update();
+            return;
+        }
+        // Fallback when no camera: pass scroll as BUTTON4/5 to the scene.
+        SoMouseButtonEvent ev;
         ev.setButton(delta > 0 ? SoMouseButtonEvent::BUTTON4
                                 : SoMouseButtonEvent::BUTTON5);
         ev.setState(SoButtonEvent::DOWN);
@@ -757,6 +813,7 @@ private:
     SoRenderManager renderMgr_;
     uint32_t        cacheContext_;
     bool            interactionMode_; // true while Alt is held (cosmetic only)
+    QPoint          lastMousePos_;    // last recorded mouse position for orbit/pan
 
     QTimer          idleTimer_;
     QTimer          delayTimer_;

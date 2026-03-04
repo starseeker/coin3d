@@ -122,6 +122,27 @@ struct TestEntry {
      * (e.g. background gradient).  May be empty.
      */
     std::function<void(SoOffscreenRenderer*)> configure_renderer;
+
+    /**
+     * Optional multi-frame render sequence for interaction tests.
+     *
+     * When set, obol_render calls this function instead of the default
+     * single-frame create_scene + render path.  The implementation should
+     * render a sequence of images that collectively demonstrate the
+     * interactive behavior of the test (e.g. before/after pick, dragger
+     * states, LOD distances).  Images should be written as
+     *   basepath + "_N.rgb"  (N = 0, 1, 2, …)
+     *
+     * Returns 0 on success, non-zero on failure.
+     * May be empty; in that case obol_render falls back to the single-frame
+     * create_scene path.
+     *
+     * @param basepath  Base file path prefix (without extension).
+     * @param width     Render width in pixels.
+     * @param height    Render height in pixels.
+     */
+    std::function<int(const std::string& /*basepath*/,
+                      int /*width*/, int /*height*/)> render_sequence;
 };
 
 // -------------------------------------------------------------------------

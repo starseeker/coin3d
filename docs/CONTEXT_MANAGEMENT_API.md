@@ -120,6 +120,97 @@ used in CI.
 
 Implement all four methods, then pass an instance to `SoDB::init()`.
 
+## Raytracing Context Managers (No OpenGL Required)
+
+A `ContextManager` may override the optional `renderScene()` virtual to
+replace the entire GL render pipeline with a CPU raytracing backend:
+
+```cpp
+class SoDB::ContextManager {
+public:
+    // ... (GL context lifecycle, unchanged) ...
+
+    // Optional override: render the scene without OpenGL.
+    // Called by SoOffscreenRenderer when a custom backend is active.
+    // Returns FALSE to fall back to the GL path.
+    virtual SbBool renderScene(SoNode * scene,
+                               unsigned int width, unsigned int height,
+                               unsigned char * pixels,
+                               unsigned int nrcomponents,
+                               const float background_rgb[3]);
+};
+```
+
+Obol ships two reference implementations:
+
+| Class | Backend | Header | Notes |
+|-------|---------|--------|-------|
+| `SoNanoRTContextManager` | [nanort](https://github.com/lighttransport/nanort) (bundled) | `tests/utils/nanort_context_manager.h` | Always available |
+| `SoEmbreeContextManager` | [Intel Embree 4](https://www.embree.org/) (system library) | `tests/utils/embree_context_manager.h` | Requires `libembree-dev` |
+
+Both managers delegate **all** scene collection to the generic
+`SoRaytracerSceneCollector` library class (see below) and differ only in their
+BVH build and ray-intersection code.
+
+### SoRaytracerSceneCollector
+
+`SoRaytracerSceneCollector` (`include/Inventor/SoRaytracerSceneCollector.h`) is
+a public Obol library class that encapsulates the full scene-collection
+pipeline that any CPU raytrace backend needs:
+
+| Capability | Description |
+|-----------|-------------|
+| Triangle collection | All `SoShape` subclasses → world-space `SoRtTriangle` list |
+| Light collection | `SoDirectionalLight`, `SoPointLight`, `SoSpotLight` → world-space `SoRtLightInfo` list |
+| Invisible shape pruning | `DrawStyle INVISIBLE` shapes pruned before geometry extraction |
+| Line proxy geometry | `SoLineSet` / `SoIndexedLineSet` → thin cylinder proxies (via `createCylinderProxy()`) |
+| Point proxy geometry | `SoPointSet` → small sphere proxies (via `createSphereProxy()`) |
+| Wireframe cylinder rings | `SoCylinder` with `DrawStyle LINES` → ring of tube segments |
+| Text overlays | `SoText2` pixel buffers (via `buildPixelBuffer()`) |
+| HUD label overlays | `SoHUDLabel` text rasterized via `SbFont` |
+| HUD button overlays | `SoHUDButton` border + centered label |
+| Overlay compositing | `compositeOverlays()` alpha-blends all overlays onto the framebuffer |
+| Scene change detection | `needsRebuild()` uses `SoNode::getNodeId()` to avoid unnecessary BVH rebuilds |
+
+Usage pattern:
+
+```cpp
+SoRaytracerSceneCollector collector;
+SbViewportRegion vp(800, 600);
+
+// Full scene rebuild:
+SoCamera * cam = findCamera(root);
+if (collector.needsRebuild(root, cam)) {
+    collector.reset();
+    collector.collect(root, vp);          // fills tris, lights, overlays
+    buildBVH(collector.getTriangles());    // backend-specific
+    collector.updateCacheKeysAfterRebuild(root, cam);
+} else {
+    collector.collectOverlaysOnly(root, vp); // cheap re-collect of text/HUD
+}
+
+// ... raytrace using cached BVH and collector.getLights() ...
+
+collector.compositeOverlays(pixels, width, height, 3);
+collector.updateCameraId(cam);
+```
+
+### Adding a New Raytracing Backend
+
+To integrate a new raytracing engine (e.g. OptiX, Embree, BRL-CAD librt):
+
+1. Create a `ContextManager` subclass (a single `.h` file is sufficient).
+2. Include `<Inventor/SoRaytracerSceneCollector.h>`.
+3. Add a `SoRaytracerSceneCollector` member.
+4. In `renderScene()`:
+   - Call `collector_.needsRebuild()` / `collector_.collect()` as above.
+   - Build your backend's acceleration structure from `collector_.getTriangles()`.
+   - Raytrace using `collector_.getLights()` for shading.
+   - Call `collector_.compositeOverlays()` for text/HUD.
+5. Pass the manager to `SoDB::init()`.
+
+See `tests/utils/embree_context_manager.h` for a complete worked example (~450 lines).
+
 ## Key Points
 
 * The manager must remain valid for the entire lifetime of the Obol library

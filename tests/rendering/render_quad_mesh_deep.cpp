@@ -16,6 +16,7 @@
  */
 
 #include "headless_utils.h"
+#include "testlib/test_scenes.h"
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/nodes/SoPerspectiveCamera.h>
 #include <Inventor/nodes/SoDirectionalLight.h>
@@ -419,6 +420,22 @@ int main(int argc, char **argv)
 
     const char *basepath =
         (argc > 1) ? argv[1] : "render_quad_mesh_deep";
+
+    /* Render the canonical factory scene as the primary output image.
+     * This ensures obol_viewer and obol_render produce identical scenes. */
+    {
+        SoSeparator *root = ObolTest::Scenes::createQuadMeshDeep(256, 256);
+        SbViewportRegion vp(256, 256);
+        SoOffscreenRenderer ren(vp);
+        ren.setComponents(SoOffscreenRenderer::RGB);
+        ren.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
+        if (ren.render(root)) {
+            char primaryPath[4096];
+            snprintf(primaryPath, sizeof(primaryPath), "%s.rgb", basepath);
+            ren.writeToRGB(primaryPath);
+        }
+        root->unref();
+    }
 
     printf("\n=== SoQuadMesh deep binding/normal tests ===\n");
 

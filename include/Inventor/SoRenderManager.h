@@ -49,6 +49,23 @@ class SoRenderManagerP;
 
 typedef void SoRenderManagerRenderCB(void * userdata, class SoRenderManager * mgr);
 
+/*!
+  \class SoRenderManager SoRenderManager.h Inventor/SoRenderManager.h
+  \brief Manages rendering of an Open Inventor scene graph into an OpenGL viewport.
+
+  \ingroup coin_general
+
+  SoRenderManager owns an SoGLRenderAction and drives frame rendering.
+  It supports multiple render modes (solid, wireframe, hidden-line, bounding
+  box), stereo output modes, and optional superimpositions (overlaid scene
+  nodes drawn after the main scene).
+
+  Applications that use Obol without a GUI toolkit create an
+  SoRenderManager directly, set the viewport and scene root, then call
+  render() from within their OpenGL context's swap/redraw callback.
+
+  \sa SoOffscreenRenderer, SoSceneManager, SoGLRenderAction
+*/
 class OBOL_DLL_API SoRenderManager {
 public:
 

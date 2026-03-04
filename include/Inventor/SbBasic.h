@@ -50,40 +50,70 @@ OBOL_DLL_API void SbDebugError_post(const char * source, const char * format, ..
 
 /* ********************************************************************** */
 
-/* Some useful inline template functions:
- *   SbAbs(Val)              - returns absolute value
- *   SbMin(Val1, Val2)       - returns minimum value
- *   SbMax(Val1, Val2)       - returns maximum value
- *   SbClamp(Val, Min, Max)  - returns clamped value
- *   SbSwap(Val1, Val2)      - swaps the two values (no return value)
- *   SbSqr(val)              - returns squared value
- */
+/*!
+  \defgroup coin_math_utilities Scalar math utilities
+  \brief Portable inline utilities for common numeric operations.
 
+  These constexpr template functions provide type-safe, portable
+  implementations of frequently needed scalar math operations.
+  They are header-only and fully inlined.
+*/
+
+/*!
+  \fn template<typename Type> constexpr Type SbAbs(Type Val)
+  \brief Return the absolute value of \a Val.
+  \ingroup coin_math_utilities
+*/
 template <typename Type>
 constexpr Type SbAbs( Type Val ) noexcept {
   return (Val < 0) ? 0 - Val : Val;
 }
 
+/*!
+  \fn template<typename Type> constexpr Type SbMax(const Type A, const Type B)
+  \brief Return the larger of \a A and \a B.
+  \ingroup coin_math_utilities
+*/
 template <typename Type>
 constexpr Type SbMax( const Type A, const Type B ) noexcept {
   return (A < B) ? B : A;
 }
 
+/*!
+  \fn template<typename Type> constexpr Type SbMin(const Type A, const Type B)
+  \brief Return the smaller of \a A and \a B.
+  \ingroup coin_math_utilities
+*/
 template <typename Type>
 constexpr Type SbMin( const Type A, const Type B ) noexcept {
   return (A < B) ? A : B;
 }
 
+/*!
+  \fn template<typename Type> constexpr Type SbClamp(const Type Val, const Type Min, const Type Max)
+  \brief Clamp \a Val to the range [\a Min, \a Max].
+  \ingroup coin_math_utilities
+*/
 template <typename Type>
 constexpr Type SbClamp( const Type Val, const Type Min, const Type Max ) noexcept {
   return (Val < Min) ? Min : (Val > Max) ? Max : Val;
 }
 
+/*!
+  \fn template<typename Type> constexpr void SbSwap(Type & A, Type & B)
+  \brief Swap the values of \a A and \a B in-place.
+  \ingroup coin_math_utilities
+*/
 template <typename Type>
 constexpr void SbSwap( Type & A, Type & B ) noexcept {
   Type T = A; A = B; B = T;
 }
 
+/*!
+  \fn template<typename Type> constexpr Type SbSqr(const Type val)
+  \brief Return the square of \a val (i.e. \a val * \a val).
+  \ingroup coin_math_utilities
+*/
 template <typename Type>
 constexpr Type SbSqr(const Type val) noexcept {
   return val * val;

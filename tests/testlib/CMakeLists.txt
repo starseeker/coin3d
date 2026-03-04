@@ -44,6 +44,12 @@ target_link_libraries(obol_testlib
     ${OBOL_TARGET_LINK_LIBRARIES}
 )
 
+# Expose the source-tree fonts directory so scene factories can load
+# external font files (e.g. Iosevka) without hard-coding absolute paths.
+target_compile_definitions(obol_testlib PRIVATE
+    OBOL_FONTS_DIR="${CMAKE_SOURCE_DIR}/fonts"
+)
+
 # Unity build support for faster testlib compilation
 if(OBOL_USE_UNITY_BUILD AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.16")
     set_target_properties(obol_testlib PROPERTIES UNITY_BUILD ON)

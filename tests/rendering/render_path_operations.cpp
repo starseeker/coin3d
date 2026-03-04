@@ -16,6 +16,7 @@
  */
 
 #include "headless_utils.h"
+#include "testlib/test_scenes.h"
 
 #include <Inventor/SoDB.h>
 #include <Inventor/SoFullPath.h>
@@ -361,7 +362,22 @@ int main(int argc, char **argv)
     initCoinHeadless();
 
     const char *basepath = (argc > 1) ? argv[1] : "render_path_operations";
-    (void)basepath;
+
+    /* Render the canonical factory scene as the primary output image.
+     * This ensures obol_viewer and obol_render produce identical scenes. */
+    {
+        SoSeparator *fRoot = ObolTest::Scenes::createPathOperations(256, 256);
+        SbViewportRegion fVp(256, 256);
+        SoOffscreenRenderer fRen(fVp);
+        fRen.setComponents(SoOffscreenRenderer::RGB);
+        fRen.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
+        if (fRen.render(fRoot)) {
+            char primaryPath[4096];
+            snprintf(primaryPath, sizeof(primaryPath), "%s.rgb", basepath);
+            fRen.writeToRGB(primaryPath);
+        }
+        fRoot->unref();
+    }
     int failures = 0;
 
     printf("\n=== SoPath operations in interaction context ===\n");

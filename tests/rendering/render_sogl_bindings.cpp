@@ -1,15 +1,12 @@
 /*
  * render_sogl_bindings.cpp — SoGL template coverage: PointSet/IndexedLineSet
  *
- * Exercises the static template instantiations in SoGL.cpp that are selected
- * based on (material-per-vertex, normals, textures) flags for SoPointSet, and
- * the (NormalBinding, MaterialBinding, TexturingEnabled) templates for
+ * Uses ObolTest::Scenes::createSOGLBindings — the same factory used by
+ * obol_viewer — for the primary rendered image.  Additionally exercises the
+ * static template instantiations in SoGL.cpp that are selected based on
+ * (material-per-vertex, normals, textures) flags for SoPointSet, and the
+ * (NormalBinding, MaterialBinding, TexturingEnabled) templates for
  * SoIndexedLineSet.
- *
- * SoPointSet dispatches to one of 8 sogl_render_pointset_m{0,1}n{0,1}t{0,1}
- * variants at run time.  The existing render_point_set test only exercises
- * m0n0t0 (OVERALL material, no normals, no texture).  This test covers the
- * other seven variants as well as several additional IndexedLineSet bindings.
  *
  * Tests:
  *   --- SoPointSet ---
@@ -31,6 +28,7 @@
  */
 
 #include "headless_utils.h"
+#include "testlib/test_scenes.h"
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/nodes/SoOrthographicCamera.h>
 #include <Inventor/nodes/SoDirectionalLight.h>
@@ -314,6 +312,22 @@ int main(int argc, char **argv)
 
     const char *basepath =
         (argc > 1) ? argv[1] : "render_sogl_bindings";
+
+    /* Render the canonical factory scene as the primary output image.
+     * This ensures obol_viewer and obol_render produce identical scenes. */
+    {
+        SoSeparator *root = ObolTest::Scenes::createSOGLBindings(W, H);
+        SbViewportRegion vp(W, H);
+        SoOffscreenRenderer ren(vp);
+        ren.setComponents(SoOffscreenRenderer::RGB);
+        ren.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
+        if (ren.render(root)) {
+            char primaryPath[4096];
+            snprintf(primaryPath, sizeof(primaryPath), "%s.rgb", basepath);
+            ren.writeToRGB(primaryPath);
+        }
+        root->unref();
+    }
 
     printf("\n=== SoGL PointSet/IndexedLineSet binding variant tests ===\n");
 

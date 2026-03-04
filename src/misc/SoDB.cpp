@@ -30,18 +30,16 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-/// * !
-//  \typedef int SbBool
-//  \brief SbBool is a compiler portable boolean type.
-//
-//  \ingroup coin_base
-//
-//  SbBool is meant to be a "compiler portable" way of defining a
-//  boolean type, since there are older compilers out there which don't
-//  support the ISO-standard C++ \c bool keyword.
-//
-//  SbBool is not really a class, just a \c typedef.
-// * / 
+/*!
+  \typedef bool SbBool
+  \brief SbBool is a boolean type alias used throughout Obol.
+
+  \ingroup coin_base
+
+  SbBool is a \c typedef for the C++ \c bool type, maintained for
+  API compatibility with Open Inventor 2.1 and the upstream Coin library.
+  All values are standard C++ \c true / \c false.
+*/
 
 
 /* *********************************************************************** */

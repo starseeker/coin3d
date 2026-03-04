@@ -25,6 +25,7 @@
  */
 
 #include "headless_utils.h"
+#include "testlib/test_scenes.h"
 #include <Inventor/SoDB.h>
 #include <Inventor/SoOffscreenRenderer.h>
 #include <Inventor/nodes/SoSeparator.h>
@@ -110,9 +111,27 @@ static SoSeparator *buildMainScene()
     return root;
 }
 
-int main(int /*argc*/, char ** /*argv*/)
+int main(int argc, char **argv)
 {
     initCoinHeadless();
+
+    const char *basepath = (argc > 1) ? argv[1] : "render_scene_texture_multi_mgr";
+
+    /* Render the canonical factory scene as the primary output image.
+     * This ensures obol_viewer and obol_render produce identical scenes. */
+    {
+        SoSeparator *fRoot = ObolTest::Scenes::createSceneTextureMultiMgr(256, 256);
+        SbViewportRegion fVp(256, 256);
+        SoOffscreenRenderer fRen(fVp);
+        fRen.setComponents(SoOffscreenRenderer::RGB);
+        fRen.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
+        if (fRen.render(fRoot)) {
+            char primaryPath[4096];
+            snprintf(primaryPath, sizeof(primaryPath), "%s.rgb", basepath);
+            fRen.writeToRGB(primaryPath);
+        }
+        fRoot->unref();
+    }
 
     // Create two independent OSMesa context managers.  If OSMesa is not
     // available in this build both will be nullptr and we skip the test.

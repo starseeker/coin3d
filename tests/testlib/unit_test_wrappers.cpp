@@ -21949,3 +21949,47 @@ REGISTER_TEST(unit_primitive_count_deep, ObolTest::TestCategory::Actions,
 );
 
 } // anonymous namespace (session 8)
+
+namespace {
+
+REGISTER_TEST(viewport, ObolTest::TestCategory::Rendering,
+    "Blue sphere scene for SoViewport API coverage",
+    e.has_visual = true;
+    e.has_interactive = true;
+    e.nanort_ok = true;
+    e.create_scene = ObolTest::Scenes::createViewport;
+);
+
+REGISTER_TEST(viewport_scene, ObolTest::TestCategory::Rendering,
+    "Green sphere scene rendered via SoViewport (visual regression)",
+    e.has_visual = true;
+    e.has_interactive = true;
+    e.nanort_ok = true;
+    e.create_scene = ObolTest::Scenes::createViewportScene;
+);
+
+REGISTER_TEST(quad_viewport, ObolTest::TestCategory::Rendering,
+    "LOD scene (sphere/cube/cone) for SoQuadViewport API coverage",
+    e.has_visual = true;
+    e.has_interactive = true;
+    e.nanort_ok = true;
+    e.create_scene = ObolTest::Scenes::createQuadViewport;
+);
+
+REGISTER_TEST(quad_viewport_lod, ObolTest::TestCategory::Rendering,
+    "LOD scene for SoQuadViewport composite regression (control image source)",
+    e.has_visual = true;
+    e.has_interactive = true;
+    e.nanort_ok = true;
+    e.create_scene = ObolTest::Scenes::createQuadViewportLOD;
+);
+
+REGISTER_TEST(scene_texture_multi_mgr, ObolTest::TestCategory::Rendering,
+    "SoSceneTexture2 flat-quad scene for multi-context-manager regression",
+    e.has_visual = true;
+    e.has_interactive = true;
+    e.nanort_ok = false;
+    e.create_scene = ObolTest::Scenes::createSceneTextureMultiMgr;
+);
+
+} // anonymous namespace (session 9)

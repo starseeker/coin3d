@@ -315,7 +315,6 @@ SoNodeEngine::writeInstance(SoOutput * out)
 }
 
 /*!
-/*!
   Returns whether we're in a notification process. This is needed to
   avoid double notification when an engine enables outputs during
   inputChanged().

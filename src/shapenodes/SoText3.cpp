@@ -1465,6 +1465,10 @@ SoText3P::setUpGlyphs(SoState * state, SoText3 * textnode)
   this->cache->readFontspec(state);
   const cc_font_specification * fontspec = this->cache->getCachedFontspec();
 
+  // If the font name looks like a file path (ends with .ttf or .ttc), try to
+  // load it from disk before generating glyph geometry.
+  this->font->loadFontIfFilePath(fontspec->name.c_str());
+
   // Set font to unit scale (1 EM = 1 unit) so that the rendering code can
   // apply fontspec->size as a multiplier to get scene-unit coordinates.
   // The rendering code does: vertex * fontspec->size, so the font must return

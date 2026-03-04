@@ -21,6 +21,7 @@
  */
 
 #include "headless_utils.h"
+#include "testlib/test_scenes.h"
 #include <Inventor/SbViewportRegion.h>
 #include <Inventor/SbColor.h>
 #include <Inventor/nodes/SoSeparator.h>
@@ -36,36 +37,6 @@
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-// Build a simple scene: camera + light + red sphere
-static SoSeparator *buildRedSphereScene()
-{
-    SoSeparator *root = new SoSeparator;
-    root->ref();
-
-    SoPerspectiveCamera *cam = new SoPerspectiveCamera;
-    root->addChild(cam);
-
-    SoDirectionalLight *light = new SoDirectionalLight;
-    light->direction.setValue(-0.3f, -0.5f, -0.8f);
-    root->addChild(light);
-
-    SoMaterial *mat = new SoMaterial;
-    mat->diffuseColor.setValue(0.9f, 0.1f, 0.1f);   // red
-    mat->specularColor.setValue(0.6f, 0.6f, 0.6f);
-    mat->shininess.setValue(0.4f);
-    root->addChild(mat);
-
-    SoSphere *sph = new SoSphere;
-    sph->radius.setValue(1.0f);
-    root->addChild(sph);
-
-    SbViewportRegion vp(64, 64);
-    cam->viewAll(root, vp);
-
-    root->unrefNoDelete();
-    return root;
-}
 
 // Minimum amount by which red must exceed green and blue to qualify as
 // a "predominantly red" pixel, and minimum red channel intensity.
@@ -88,13 +59,18 @@ static int countRedPixels(const unsigned char *buf, int w, int h)
 
 // ---------------------------------------------------------------------------
 
-int main(int /*argc*/, char ** /*argv*/)
+int main(int argc, char **argv)
 {
     initCoinHeadless();
 
+    const char *outpath = (argc > 1) ? argv[1] : "render_offscreen";
+
     bool ok = true;
 
-    SoSeparator *root = buildRedSphereScene();
+    /* Use the shared factory so viewer and CLI render the same scene.
+     * The factory creates a red sphere with perspective camera — identical
+     * to the old inline buildRedSphereScene(). */
+    SoSeparator *root = ObolTest::Scenes::createOffscreen(64, 64);
     root->ref();
 
     // ------------------------------------------------------------------
@@ -268,6 +244,21 @@ int main(int /*argc*/, char ** /*argv*/)
     }
 
     root->unref();
+
+    /* Write the canonical factory scene as the primary output image. */
+    if (ok) {
+        SoSeparator *out = ObolTest::Scenes::createOffscreen(256, 256);
+        SbViewportRegion vpOut(256, 256);
+        SoOffscreenRenderer rOut(vpOut);
+        rOut.setComponents(SoOffscreenRenderer::RGB);
+        rOut.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
+        if (rOut.render(out)) {
+            char path[4096];
+            snprintf(path, sizeof(path), "%s.rgb", outpath);
+            rOut.writeToRGB(path);
+        }
+        out->unref();
+    }
 
     if (ok) {
         printf("render_offscreen: ALL TESTS PASSED\n");

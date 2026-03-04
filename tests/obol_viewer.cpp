@@ -362,7 +362,11 @@ public:
 
     void setCamera(const float pos[3], const float orient[4], float dist) {
         if (!state || !state->cam) return;
-        state->cam->position.setValue(pos[0],pos[1],pos[2]);
+        /* Decode incoming orientation and only call setValue() when the value
+         * actually changed.  Unconditionally calling setValue() with the same
+         * values bumps the camera node's uniqueId, which propagates to the
+         * scene root and confuses the NanoRT BVH cache into thinking only the
+         * camera moved (cameraOnlyMoved false positive → stale renders). */
         float qx=orient[0],qy=orient[1],qz=orient[2],qw=orient[3];
         float len = sqrtf(qx*qx+qy*qy+qz*qz+qw*qw);
         if (len > 1e-6f) { qx/=len; qy/=len; qz/=len; qw/=len; }
@@ -370,8 +374,16 @@ public:
         SbVec3f ax(qx,qy,qz);
         if (ax.length() < 1e-6f) { ax=SbVec3f(0,1,0); angle=0; }
         else ax.normalize();
-        state->cam->orientation.setValue(SbRotation(ax, angle));
-        if (dist > 0.0f) state->cam->focalDistance.setValue(dist);
+        SbRotation newRot(ax, angle);
+
+        SbVec3f curPos = state->cam->position.getValue();
+        if (fabsf(curPos[0]-pos[0]) > 1e-6f || fabsf(curPos[1]-pos[1]) > 1e-6f ||
+                fabsf(curPos[2]-pos[2]) > 1e-6f)
+            state->cam->position.setValue(pos[0],pos[1],pos[2]);
+        if (!state->cam->orientation.getValue().equals(newRot, 1e-5f))
+            state->cam->orientation.setValue(newRot);
+        if (dist > 0.0f && fabsf(state->cam->focalDistance.getValue() - dist) > 1e-6f)
+            state->cam->focalDistance.setValue(dist);
         refreshRender();
     }
 
@@ -568,8 +580,15 @@ public:
 
     void setScene(SoSeparator* r, SoPerspectiveCamera* c, bool nanort_supported = true) {
         root = r; cam = c; nanort_ok_ = nanort_supported; status_text.clear();
-        /* Scene change invalidates coarse-render calibration. */
+        /* Scene change invalidates coarse-render calibration and the BVH
+         * geometry cache.  The cache reset is essential: Coin frees the old
+         * scene nodes and the allocator may immediately recycle those
+         * addresses for the new scene, so the new root/camera pointers can
+         * appear identical to the old ones even though the geometry has
+         * completely changed.  Without an explicit reset the stale BVH would
+         * be reused for the new scene (e.g. a cube rendered as a sphere). */
         coarseRW_ = 0; coarseRH_ = 0; calFocalDist_ = 0.0f;
+        s_nanort_mgr.resetCache();
         if (!nanort_ok_) {
             status_text = "Not supported (NanoRT)";
             delete fltk_img; fltk_img = nullptr;
@@ -638,18 +657,49 @@ public:
 
     void setCamera(const float pos[3], const float orient[4], float dist) {
         if (!cam) return;
-        cam->position.setValue(pos[0], pos[1], pos[2]);
+        /* Decode incoming orientation once so we can equality-check before
+         * calling setValue().  Skipping setValue() when the value has not
+         * changed prevents spurious SoNode::uniqueId bumps that would make
+         * the NanoRT BVH cache incorrectly infer a camera-only change
+         * (cameraOnlyMoved = true) when the geometry has also changed (e.g.
+         * a manipulator was just dragged).  Without this guard, calling
+         * setCamera() with the same values during a manip drag caused the
+         * NanoRT panel to skip the BVH rebuild and show a stale image. */
         float qx=orient[0], qy=orient[1], qz=orient[2], qw=orient[3];
         float len = sqrtf(qx*qx+qy*qy+qz*qz+qw*qw);
         if (len > 1e-6f) { qx/=len; qy/=len; qz/=len; qw/=len; }
         float angle = 2.0f*acosf(qw);
         SbVec3f ax(qx,qy,qz);
         if (ax.length() < 1e-6f) { ax=SbVec3f(0,1,0); angle=0; } else ax.normalize();
-        cam->orientation.setValue(SbRotation(ax, angle));
-        if (dist > 0.0f) cam->focalDistance.setValue(dist);
+        SbRotation newRot(ax, angle);
+
+        SbVec3f curPos = cam->position.getValue();
+        if (fabsf(curPos[0]-pos[0]) > 1e-6f || fabsf(curPos[1]-pos[1]) > 1e-6f ||
+                fabsf(curPos[2]-pos[2]) > 1e-6f)
+            cam->position.setValue(pos[0], pos[1], pos[2]);
+        if (!cam->orientation.getValue().equals(newRot, 1e-5f))
+            cam->orientation.setValue(newRot);
+        if (dist > 0.0f && fabsf(cam->focalDistance.getValue() - dist) > 1e-6f)
+            cam->focalDistance.setValue(dist);
         /* Camera is being moved (driven by sync from another panel or own drag):
          * switch to coarse mode for this render and schedule a full-resolution
          * refinement pass once the view has been stable for kRefineDelaySec. */
+        coarse_ = true;
+        Fl::remove_timeout(doRefine, this);
+        Fl::add_timeout(kRefineDelaySec, doRefine, this);
+        refreshRender();
+    }
+
+    /* Called by the cross-panel sync callback to re-render this panel after
+     * another panel's camera or scene changed.  All panels share the same
+     * camera pointer, so no camera field writes are needed here – doing them
+     * would trigger spurious Coin3D notifications that bump the camera's
+     * nodeId, causing the NanoRT BVH cache's "camera-only moved" heuristic to
+     * incorrectly skip a geometry rebuild when the dragger also moved scene
+     * objects.  Setting coarse mode and calling refreshRender() is sufficient
+     * to show the already-updated shared scene. */
+    void refreshFromSync() {
+        if (!root || !nanort_ok_) return;
         coarse_ = true;
         Fl::remove_timeout(doRefine, this);
         Fl::add_timeout(kRefineDelaySec, doRefine, this);
@@ -699,6 +749,7 @@ public:
             return 1;
         }
         case FL_RELEASE: {
+            bool was_dragger_active = dragger_active_;
             dragging_ = false;
             dragger_active_ = false;
             int rx = Fl::event_x()-x(), ry = Fl::event_y()-y();
@@ -715,6 +766,16 @@ public:
              * at full resolution immediately. */
             Fl::remove_timeout(doRefine, this);
             coarse_ = false;
+            /* After a dragger drag the coarse calibration was measured while
+             * BVH rebuilds were happening on every frame.  That overhead made
+             * the calibration too conservative (too low a resolution).  Reset
+             * it here so the next drag or orbit re-calibrates from scratch,
+             * measuring only pure raytrace cost and converging to the correct
+             * resolution for the scene. */
+            if (was_dragger_active) {
+                coarseRW_ = 0; coarseRH_ = 0;
+                stepInComplete_ = false; calFocalDist_ = 0.0f;
+            }
             notifyCameraChanged(); refreshRender(); return 1;
         }
         case FL_DRAG: {
@@ -828,6 +889,10 @@ private:
             pixel_buf[i*4+2] = bg_b;
             pixel_buf[i*4+3] = 255;
         }
+        /* Inform the NanoRT renderer of the full display dimensions so that
+         * line/point/cylinder proxy geometry is sized for the real panel
+         * resolution, not the reduced coarse render grid. */
+        s_nanort_mgr.setDisplayViewport((unsigned int)pw, (unsigned int)ph);
         SbBool ok = s_nanort_mgr.renderScene(root,
                                              (unsigned int)rw,
                                              (unsigned int)rh,
@@ -865,6 +930,12 @@ private:
      * optimal level has been found, false if the per-call budget was
      * exhausted before convergence (caller should invoke again next frame).
      *
+     * Both the fresh and resume paths perform an uncounted warm-up render
+     * when a BVH rebuild is expected (fresh start, or resume with an active
+     * scene dragger).  The warm-up absorbs the rebuild cost so the timed
+     * search loop measures only pure raytracing time, preventing BVH
+     * construction overhead from contaminating the calibration.
+     *
      * Sets coarseRW_, coarseRH_, calPanelW_, calPanelH_ on every return. */
     bool timedStepIn_(int pw, int ph) {
         using clock = std::chrono::steady_clock;
@@ -900,6 +971,26 @@ private:
             }
             tStart = clock::now();  /* reset search budget after cache warm-up */
             crw *= 2;               /* warm-up covered this level; start timed loop one step up */
+        } else if (dragger_active_) {
+            /* Resume warm-up for dynamic geometry: when a scene dragger is
+             * actively changing geometry each frame, the BVH is rebuilt on
+             * each renderScene() call.  Without a warm-up, that rebuild cost
+             * leaks into the timed search loop and makes the calibration
+             * converge to a resolution that is too coarse – the algorithm
+             * thinks the scene is slow to raytrace, but the slowness is
+             * actually BVH construction overhead.  Performing an uncounted
+             * warm-up at the current best resolution absorbs the rebuild cost
+             * before the timed loop begins, so the loop measures only pure
+             * raytracing time and calibrates coarseRW_ correctly.
+             * tStart is reset after the warm-up so the search budget only
+             * covers the raytrace measurements. */
+            const int rw0 = coarseRW_ < pw ? coarseRW_ : pw;
+            const int rh0 = rw0 < pw ? std::max(1, (rw0 * ph + pw / 2) / pw) : ph;
+            if (doRender_(pw, ph, rw0, rh0)) {
+                bestRW = rw0;
+                bestRH = rh0;
+            }
+            tStart = clock::now();  /* reset search budget: BVH rebuild cost excluded */
         }
 
         bool optimal = false;
@@ -1067,15 +1158,24 @@ public:
 
     void setCamera(const float pos[3], const float orient[4], float dist) {
         if (!cam) return;
-        cam->position.setValue(pos[0], pos[1], pos[2]);
+        /* Only call setValue() when the value has actually changed to avoid
+         * spurious camera nodeId bumps (see NanoRTPanel::setCamera comment). */
         float qx=orient[0], qy=orient[1], qz=orient[2], qw=orient[3];
         float len = sqrtf(qx*qx+qy*qy+qz*qz+qw*qw);
         if (len > 1e-6f) { qx/=len; qy/=len; qz/=len; qw/=len; }
         float angle = 2.0f*acosf(qw);
         SbVec3f ax(qx,qy,qz);
         if (ax.length() < 1e-6f) { ax=SbVec3f(0,1,0); angle=0; } else ax.normalize();
-        cam->orientation.setValue(SbRotation(ax, angle));
-        if (dist > 0.0f) cam->focalDistance.setValue(dist);
+        SbRotation newRot(ax, angle);
+
+        SbVec3f curPos = cam->position.getValue();
+        if (fabsf(curPos[0]-pos[0]) > 1e-6f || fabsf(curPos[1]-pos[1]) > 1e-6f ||
+                fabsf(curPos[2]-pos[2]) > 1e-6f)
+            cam->position.setValue(pos[0], pos[1], pos[2]);
+        if (!cam->orientation.getValue().equals(newRot, 1e-5f))
+            cam->orientation.setValue(newRot);
+        if (dist > 0.0f && fabsf(cam->focalDistance.getValue() - dist) > 1e-6f)
+            cam->focalDistance.setValue(dist);
         refreshRender();
     }
 
@@ -1298,34 +1398,45 @@ public:
         }
 #endif /* OBOL_VIEWER_NANORT */
 
-        /* Wire unified all-to-all camera sync so every active panel stays in
-         * sync when the sync button is checked. A single syncing_ flag prevents
-         * recursive callbacks. */
+        /* Wire unified all-to-all sync so every active panel stays in sync when
+         * the sync button is checked.  A single syncing_ flag prevents recursive
+         * callbacks.
+         *
+         * All panels share the same camera pointer, so setCamera() writes from
+         * the sync path would just re-set the camera to its current values.
+         * Coin3D fires a field-change notification even for same-value writes,
+         * which bumps the camera's nodeId.  The NanoRT BVH cache uses a
+         * "camera-only moved" heuristic to skip geometry rebuilds when only the
+         * camera changed; a spurious camera-nodeId bump caused by the redundant
+         * setCamera() write would trigger that heuristic even when a dragger
+         * also moved scene geometry, silently suppressing the BVH rebuild and
+         * leaving the NanoRT panel showing the old geometry.
+         *
+         * The fix: use refreshRender() / refreshFromSync() directly in the
+         * sync callbacks instead of setCamera().  The shared camera is already
+         * at the correct position; only a re-render is needed to show the
+         * updated scene in the other panels. */
 #if defined(OBOL_VIEWER_OSMESA_PANEL) || defined(OBOL_VIEWER_NANORT)
-        coin_panel_->on_camera_changed = [this](CoinPanel* src) {
+        coin_panel_->on_camera_changed = [this](CoinPanel* /*src*/) {
             if (!syncing_ && sync_btn_ && sync_btn_->value()) {
                 syncing_ = true;
-                float pos[3], orient[4], dist = 1.0f;
-                src->getCamera(pos, orient, dist);
 #  ifdef OBOL_VIEWER_OSMESA_PANEL
-                if (osmesa_panel_) osmesa_panel_->setCamera(pos, orient, dist);
+                if (osmesa_panel_) osmesa_panel_->refreshRender();
 #  endif
 #  ifdef OBOL_VIEWER_NANORT
-                if (nrt_panel_) nrt_panel_->setCamera(pos, orient, dist);
+                if (nrt_panel_) nrt_panel_->refreshFromSync();
 #  endif
                 syncing_ = false;
             }
         };
 #  ifdef OBOL_VIEWER_OSMESA_PANEL
         if (osmesa_panel_) {
-            osmesa_panel_->on_camera_changed = [this](OSMesaPanel* src) {
+            osmesa_panel_->on_camera_changed = [this](OSMesaPanel* /*src*/) {
                 if (!syncing_ && sync_btn_ && sync_btn_->value()) {
                     syncing_ = true;
-                    float pos[3], orient[4], dist = 1.0f;
-                    src->getCamera(pos, orient, dist);
-                    coin_panel_->setCamera(pos, orient, dist);
+                    coin_panel_->refreshRender();
 #    ifdef OBOL_VIEWER_NANORT
-                    if (nrt_panel_) nrt_panel_->setCamera(pos, orient, dist);
+                    if (nrt_panel_) nrt_panel_->refreshFromSync();
 #    endif
                     syncing_ = false;
                 }
@@ -1334,14 +1445,12 @@ public:
 #  endif /* OBOL_VIEWER_OSMESA_PANEL */
 #  ifdef OBOL_VIEWER_NANORT
         if (nrt_panel_) {
-            nrt_panel_->on_camera_changed = [this](NanoRTPanel* src) {
+            nrt_panel_->on_camera_changed = [this](NanoRTPanel* /*src*/) {
                 if (!syncing_ && sync_btn_ && sync_btn_->value()) {
                     syncing_ = true;
-                    float pos[3], orient[4], dist = 1.0f;
-                    src->getCamera(pos, orient, dist);
-                    coin_panel_->setCamera(pos, orient, dist);
+                    coin_panel_->refreshRender();
 #    ifdef OBOL_VIEWER_OSMESA_PANEL
-                    if (osmesa_panel_) osmesa_panel_->setCamera(pos, orient, dist);
+                    if (osmesa_panel_) osmesa_panel_->refreshRender();
 #    endif
                     syncing_ = false;
                 }

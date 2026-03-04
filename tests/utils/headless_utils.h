@@ -160,6 +160,74 @@ inline bool renderToFile(
     return true;
 }
 
+#elif defined(OBOL_EMBREE_BUILD)
+// ============================================================================
+// Embree Backend: CPU raytracing via Intel Embree 4, no OpenGL required
+// ============================================================================
+// Uses SoEmbreeContextManager (see tests/utils/embree_context_manager.h) which
+// delegates scene collection to SoRaytracerSceneCollector and performs ray-
+// triangle intersection via Embree's high-performance BVH.
+#include "embree_context_manager.h"
+
+namespace {
+    inline SoEmbreeContextManager & emb_context_manager_singleton() {
+        static SoEmbreeContextManager instance;
+        return instance;
+    }
+} // anonymous namespace
+
+inline void initCoinHeadless() {
+    SoDB::init(&emb_context_manager_singleton());
+    SoNodeKit::init();
+    SoInteraction::init();
+}
+
+inline SoOffscreenRenderer* getSharedRenderer() {
+    static SoOffscreenRenderer *s_renderer = nullptr;
+    if (!s_renderer) {
+        SbViewportRegion vp(DEFAULT_WIDTH, DEFAULT_HEIGHT);
+        s_renderer = new SoOffscreenRenderer(&emb_context_manager_singleton(), vp);
+    }
+    return s_renderer;
+}
+
+inline SoDB::ContextManager * getCoinHeadlessContextManager() {
+    return &emb_context_manager_singleton();
+}
+
+inline bool renderToFile(
+    SoNode *root,
+    const char *filename,
+    int width = DEFAULT_WIDTH,
+    int height = DEFAULT_HEIGHT,
+    const SbColor &backgroundColor = SbColor(0.0f, 0.0f, 0.0f))
+{
+    if (!root || !filename) {
+        fprintf(stderr, "Error: Invalid parameters to renderToFile\n");
+        return false;
+    }
+
+    SoOffscreenRenderer *renderer = getSharedRenderer();
+    SbViewportRegion viewport(width, height);
+    renderer->setViewportRegion(viewport);
+    renderer->setComponents(SoOffscreenRenderer::RGB);
+    renderer->setBackgroundColor(backgroundColor);
+
+    if (!renderer->render(root)) {
+        fprintf(stderr, "Error: Failed to render scene (Embree)\n");
+        return false;
+    }
+
+    if (!renderer->writeToRGB(filename)) {
+        fprintf(stderr, "Error: Failed to write to RGB file %s\n", filename);
+        return false;
+    }
+
+    printf("Successfully rendered to %s (%dx%d) [Embree]\n",
+           filename, width, height);
+    return true;
+}
+
 #elif defined(OBOL_OSMESA_BUILD)
 // ============================================================================
 // OSMesa Backend: For offscreen/headless rendering without display server.

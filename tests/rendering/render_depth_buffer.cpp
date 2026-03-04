@@ -22,6 +22,7 @@
  */
 
 #include "headless_utils.h"
+#include "testlib/test_scenes.h"
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/nodes/SoPerspectiveCamera.h>
 #include <Inventor/nodes/SoDirectionalLight.h>
@@ -56,6 +57,20 @@ int main(int argc, char **argv)
     else
         snprintf(outpath, sizeof(outpath), "render_depth_buffer.rgb");
 
+
+    /* Render the canonical factory scene as the primary output image.
+     * This ensures obol_viewer and obol_render produce identical scenes. */
+    {
+        SoSeparator *fRoot = ObolTest::Scenes::createDepthBuffer(256, 256);
+        SbViewportRegion fVp(256, 256);
+        SoOffscreenRenderer fRen(fVp);
+        fRen.setComponents(SoOffscreenRenderer::RGB);
+        fRen.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
+        if (fRen.render(fRoot)) {
+            fRen.writeToRGB(outpath);
+        }
+        fRoot->unref();
+    }
     SbViewportRegion vp(W, H);
     SoOffscreenRenderer renderer(vp);
     renderer.setComponents(SoOffscreenRenderer::RGB);
@@ -119,7 +134,6 @@ int main(int argc, char **argv)
     bool ok1 = renderer.render(root);
     int nb1  = ok1 ? countNonBackground(renderer.getBuffer()) : 0;
     printf("render_depth_buffer frame1 (LEQUAL): ok=%d nonbg=%d\n", ok1, nb1);
-    renderer.writeToRGB(outpath);
 
     // -----------------------------------------------------------------------
     // Frame 2: depth test disabled (test=FALSE, write=FALSE)

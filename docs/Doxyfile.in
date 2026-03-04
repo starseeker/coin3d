@@ -1,0 +1,87 @@
+# Doxyfile.in - Doxygen configuration template for Obol
+# Generated values (substituted by CMake configure_file):
+#   @PROJECT_NAME@         - project name
+#   @PROJECT_VERSION@      - version string
+#   @PROJECT_SOURCE_DIR@   - absolute path to the repository root
+#   @CMAKE_BINARY_DIR@     - absolute path to the build directory
+
+#---------------------------------------------------------------------------
+# Project identity
+#---------------------------------------------------------------------------
+PROJECT_NAME           = "@PROJECT_NAME@"
+PROJECT_NUMBER         = "@PROJECT_VERSION@"
+PROJECT_BRIEF          = "A 3D visualization library implementing a subset of the Open Inventor 2.1 API"
+OUTPUT_DIRECTORY       = "@CMAKE_BINARY_DIR@/docs/doxygen"
+
+#---------------------------------------------------------------------------
+# Input sources
+#   Process both headers (declarations) and implementation files (.cpp)
+#   because Obol follows the Coin convention of placing /*!  \fn ... */
+#   documentation in the .cpp file rather than the header.
+#---------------------------------------------------------------------------
+INPUT                  = "@PROJECT_SOURCE_DIR@/include/Inventor" \
+                         "@PROJECT_SOURCE_DIR@/src"
+RECURSIVE              = YES
+FILE_PATTERNS          = *.h *.cpp *.icc
+EXCLUDE                = "@PROJECT_SOURCE_DIR@/src/tools" \
+                         "@PROJECT_SOURCE_DIR@/src/fonts"
+EXCLUDE_PATTERNS       = */external/* *P.h *_p.h
+INCLUDE_PATH           = "@PROJECT_SOURCE_DIR@/src/base/utf8/include"
+
+#---------------------------------------------------------------------------
+# Extraction settings
+#   EXTRACT_ALL ensures undocumented symbols still appear so the generated
+#   docs give a complete picture of the public API even during the ongoing
+#   documentation pass.
+#---------------------------------------------------------------------------
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = NO
+EXTRACT_STATIC         = YES
+HIDE_UNDOC_MEMBERS     = NO
+HIDE_UNDOC_CLASSES     = NO
+
+#---------------------------------------------------------------------------
+# Output formats
+#---------------------------------------------------------------------------
+GENERATE_HTML          = YES
+HTML_OUTPUT            = html
+GENERATE_LATEX         = NO
+GENERATE_MAN           = NO
+GENERATE_XML           = NO
+
+#---------------------------------------------------------------------------
+# Build / pre-processing
+#---------------------------------------------------------------------------
+ENABLE_PREPROCESSING   = YES
+MACRO_EXPANSION        = YES
+EXPAND_ONLY_PREDEF     = YES
+# Expand away DLL-export/import decorators so they don't pollute signatures
+PREDEFINED             = OBOL_DLL_API= \
+                         OBOL_INTERNAL \
+                         OBOL_DEBUG=0 \
+                         "SbBool=bool"
+
+#---------------------------------------------------------------------------
+# Source browsing
+#---------------------------------------------------------------------------
+SOURCE_BROWSER         = YES
+INLINE_SOURCES         = NO
+STRIP_CODE_COMMENTS    = YES
+
+#---------------------------------------------------------------------------
+# Miscellaneous
+#---------------------------------------------------------------------------
+QUIET                  = NO
+WARNINGS               = YES
+WARN_IF_UNDOCUMENTED   = NO
+WARN_IF_DOC_ERROR      = YES
+WARN_LOGFILE           = "@CMAKE_BINARY_DIR@/docs/doxygen/doxygen_warnings.txt"
+SORT_MEMBER_DOCS       = NO
+SHOW_FILES             = YES
+SHOW_NAMESPACES        = YES
+FULL_PATH_NAMES        = YES
+STRIP_FROM_PATH        = "@PROJECT_SOURCE_DIR@"
+STRIP_FROM_INC_PATH    = "@PROJECT_SOURCE_DIR@/include"
+
+# Use the Coin/Open Inventor group structure already in the sources
+DISTRIBUTE_GROUP_DOC   = YES

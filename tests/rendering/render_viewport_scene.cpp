@@ -25,6 +25,7 @@
  */
 
 #include "headless_utils.h"
+#include "testlib/test_scenes.h"
 #include <Inventor/SoViewport.h>
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/nodes/SoDirectionalLight.h>
@@ -99,6 +100,20 @@ int main(int argc, char ** argv)
     const char * basepath = (argc > 1) ? argv[1] : "render_viewport_scene";
     char outpath[1024];
     snprintf(outpath, sizeof(outpath), "%s.rgb", basepath);
+
+    /* Render the canonical factory scene as the primary output image.
+     * This ensures obol_viewer and obol_render produce identical scenes. */
+    {
+        SoSeparator *fRoot = ObolTest::Scenes::createViewportScene(256, 256);
+        SbViewportRegion fVp(256, 256);
+        SoOffscreenRenderer fRen(fVp);
+        fRen.setComponents(SoOffscreenRenderer::RGB);
+        fRen.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
+        if (fRen.render(fRoot)) {
+            fRen.writeToRGB(outpath);
+        }
+        fRoot->unref();
+    }
 
     int failures = 0;
     printf("\n=== SoViewport scene render test ===\n");

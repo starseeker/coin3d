@@ -16,6 +16,7 @@
  */
 
 #include "headless_utils.h"
+#include "testlib/test_scenes.h"
 
 #include <Inventor/nodes/SoProceduralShape.h>
 #include <Inventor/nodes/SoSeparator.h>
@@ -219,6 +220,20 @@ int main(int argc, char** argv)
   else
     snprintf(outpath, sizeof(outpath), "render_procedural_shape.rgb");
 
+
+    /* Render the canonical factory scene as the primary output image.
+     * This ensures obol_viewer and obol_render produce identical scenes. */
+    {
+        SoSeparator *fRoot = ObolTest::Scenes::createProceduralShape(256, 256);
+        SbViewportRegion fVp(256, 256);
+        SoOffscreenRenderer fRen(fVp);
+        fRen.setComponents(SoOffscreenRenderer::RGB);
+        fRen.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
+        if (fRen.render(fRoot)) {
+            fRen.writeToRGB(outpath);
+        }
+        fRoot->unref();
+    }
   bool ok = renderToFile(root, outpath);
 
 #ifdef OBOL_NANORT_BUILD

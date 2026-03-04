@@ -63,9 +63,11 @@ add_testlib_rendering_test(render_drawstyle)
 add_testlib_rendering_test(render_texture)
 add_testlib_rendering_test(render_text2)
 add_testlib_rendering_test(render_text3)
+add_testlib_rendering_test(render_iosevka_text2)
+add_testlib_rendering_test(render_iosevka_text3)
 # Moved from top-level SIMPLE_TESTS: these need a rendering context to run
 add_testlib_rendering_test(render_gradient)
-add_rendering_test(render_background_gradient)
+add_testlib_rendering_test(render_background_gradient)
 add_testlib_rendering_test(render_colored_cube)
 add_testlib_rendering_test(render_coordinates)
 add_testlib_rendering_test(render_scene)
@@ -74,7 +76,7 @@ add_testlib_rendering_test(render_sphere_position)
 add_testlib_rendering_test(render_checker_texture)
 add_testlib_rendering_test(render_face_set)
 add_testlib_rendering_test(render_line_set)
-add_rendering_test(render_switch_visibility)
+add_testlib_rendering_test(render_switch_visibility)
 add_testlib_rendering_test(render_vertex_colors)
 add_testlib_rendering_test(render_clip_plane)
 add_testlib_rendering_test(render_indexed_face_set)
@@ -82,85 +84,85 @@ add_testlib_rendering_test(render_quad_mesh)
 add_testlib_rendering_test(render_indexed_line_set)
 add_testlib_rendering_test(render_lod)
 add_testlib_rendering_test(render_point_set)
-add_rendering_test(render_scene_texture)
-add_rendering_test(render_scene_texture_multi_mgr)
+add_testlib_rendering_test(render_scene_texture)
+add_testlib_rendering_test(render_scene_texture_multi_mgr)
 add_testlib_rendering_test(render_shadow)
 add_testlib_rendering_test(render_array_multiple_copy)
-add_rendering_test(render_shape_hints)
-add_rendering_test(render_environment)
-add_rendering_test(render_texture3)
-add_rendering_test(render_bump_map)
-add_rendering_test(render_texture_transform)
-add_rendering_test(render_depth_buffer)
-add_rendering_test(render_alpha_test)
+add_testlib_rendering_test(render_shape_hints)
+add_testlib_rendering_test(render_environment)
+add_testlib_rendering_test(render_texture3)
+add_testlib_rendering_test(render_bump_map)
+add_testlib_rendering_test(render_texture_transform)
+add_testlib_rendering_test(render_depth_buffer)
+add_testlib_rendering_test(render_alpha_test)
 add_testlib_rendering_test(render_draggers)
-add_rendering_test(render_offscreen)
+add_testlib_rendering_test(render_offscreen)
 add_testlib_rendering_test(render_triangle_strip_set)
 add_testlib_rendering_test(render_ascii_text)
 add_testlib_rendering_test(render_image_node)
-add_rendering_test(render_sorender_manager)
-add_rendering_test(render_gl_big_image)
-add_rendering_test(render_cubemap)
-add_rendering_test(render_gl_features)
-add_rendering_test(render_multi_texture)
+add_testlib_rendering_test(render_sorender_manager)
+add_testlib_rendering_test(render_gl_big_image)
+add_testlib_rendering_test(render_cubemap)
+add_testlib_rendering_test(render_gl_features)
+add_testlib_rendering_test(render_multi_texture)
 add_testlib_rendering_test(render_annotation)
 add_testlib_rendering_test(render_reset_transform)
 add_testlib_rendering_test(render_transparency)
 add_testlib_rendering_test(render_marker_set)
 add_testlib_rendering_test(render_hud_overlay)
 add_testlib_rendering_test(render_hud_no3d)
-add_rendering_test(render_hud_interaction)
+add_testlib_rendering_test(render_hud_interaction)
 # Testlib demo scenes: these use the shared scene factories so CLI and
 # obol_viewer render identical output.
 add_testlib_rendering_test(render_text_demo)
 add_testlib_rendering_test(render_hud_demo)
-add_rendering_test(render_procedural_shape)
-add_rendering_test(render_arb8_draggers)
-add_rendering_test(render_arb8_edit_cycle)
-add_rendering_test(render_pick_interaction)
+add_testlib_rendering_test(render_procedural_shape)
+add_testlib_rendering_test(render_arb8_draggers)
+add_testlib_rendering_test(render_arb8_edit_cycle)
+add_testlib_rendering_test(render_pick_interaction)
 add_testlib_rendering_test(render_simple_draggers)
 add_testlib_rendering_test(render_light_manips)
-add_rendering_test(render_event_callback_interaction)
-add_rendering_test(render_selection_interaction)
-add_rendering_test(render_sensor_interaction)
-add_rendering_test(render_pick_filter)
-add_rendering_test(render_scene_interaction)
-add_rendering_test(render_callback_node)
-add_rendering_test(render_camera_interaction)
+add_testlib_rendering_test(render_event_callback_interaction)
+add_testlib_rendering_test(render_selection_interaction)
+add_testlib_rendering_test(render_sensor_interaction)
+add_testlib_rendering_test(render_pick_filter)
+add_testlib_rendering_test(render_scene_interaction)
+add_testlib_rendering_test(render_callback_node)
+add_testlib_rendering_test(render_camera_interaction)
 add_testlib_rendering_test(render_manip_sequences)
-add_rendering_test(render_nodekit_interaction)
-add_rendering_test(render_path_operations)
-add_rendering_test(render_lod_picking)
-add_rendering_test(render_engine_interaction)
-add_rendering_test(render_bbox_action)
-add_rendering_test(render_search_action)
-add_rendering_test(render_callback_action)
-add_rendering_test(render_event_propagation)
-add_rendering_test(render_shader_program)
-add_rendering_test(render_raypick_shapes)
-add_rendering_test(render_material_binding)
-add_rendering_test(render_shadow_advanced)
-add_rendering_test(render_ext_selection)
-add_rendering_test(render_view_volume_ops)
-add_rendering_test(render_glrender_action_modes)
-add_rendering_test(render_callback_action_deep)
-add_rendering_test(render_text3_parts)
-add_rendering_test(render_write_read_action)
-add_rendering_test(render_sensors_rendering)
-add_rendering_test(render_ext_selection_events)
-add_rendering_test(render_render_manager_full)
-add_rendering_test(render_offscreen_advanced)
-add_rendering_test(render_glrender_deep)
-add_rendering_test(render_engine_converter)
-add_rendering_test(render_image_deep)
-add_rendering_test(render_quad_mesh_deep)
-add_rendering_test(render_field_connections)
-add_rendering_test(render_sogl_bindings)
-add_rendering_test(render_rt_proxy_shapes)
-add_rendering_test(render_viewport)
-add_rendering_test(render_quad_viewport)
-add_rendering_test(render_quad_viewport_lod)
-add_rendering_test(render_viewport_scene)
+add_testlib_rendering_test(render_nodekit_interaction)
+add_testlib_rendering_test(render_path_operations)
+add_testlib_rendering_test(render_lod_picking)
+add_testlib_rendering_test(render_engine_interaction)
+add_testlib_rendering_test(render_bbox_action)
+add_testlib_rendering_test(render_search_action)
+add_testlib_rendering_test(render_callback_action)
+add_testlib_rendering_test(render_event_propagation)
+add_testlib_rendering_test(render_shader_program)
+add_testlib_rendering_test(render_raypick_shapes)
+add_testlib_rendering_test(render_material_binding)
+add_testlib_rendering_test(render_shadow_advanced)
+add_testlib_rendering_test(render_ext_selection)
+add_testlib_rendering_test(render_view_volume_ops)
+add_testlib_rendering_test(render_glrender_action_modes)
+add_testlib_rendering_test(render_callback_action_deep)
+add_testlib_rendering_test(render_text3_parts)
+add_testlib_rendering_test(render_write_read_action)
+add_testlib_rendering_test(render_sensors_rendering)
+add_testlib_rendering_test(render_ext_selection_events)
+add_testlib_rendering_test(render_render_manager_full)
+add_testlib_rendering_test(render_offscreen_advanced)
+add_testlib_rendering_test(render_glrender_deep)
+add_testlib_rendering_test(render_engine_converter)
+add_testlib_rendering_test(render_image_deep)
+add_testlib_rendering_test(render_quad_mesh_deep)
+add_testlib_rendering_test(render_field_connections)
+add_testlib_rendering_test(render_sogl_bindings)
+add_testlib_rendering_test(render_rt_proxy_shapes)
+add_testlib_rendering_test(render_viewport)
+add_testlib_rendering_test(render_quad_viewport)
+add_testlib_rendering_test(render_quad_viewport_lod)
+add_testlib_rendering_test(render_viewport_scene)
 
 # ---- NanoRT raytracing backend -------------------------------------------
 #
@@ -213,6 +215,83 @@ macro(add_nanort_testlib_rendering_test name)
         )
     endif()
 endmacro()
+
+# ---- Embree 4 raytracing backend -----------------------------------------
+#
+# Intel Embree is an optional system library (not bundled).  When found via
+# find_package(), the add_embree_rendering_test() macro compiles tests with:
+#   - OBOL_EMBREE_BUILD defined  →  headless_utils.h uses SoEmbreeContextManager
+#   - The system embree4 include path and link target
+#
+# Embree tests use SoRaytracerSceneCollector (the same generic scene collection
+# API used by the NanoRT backend) so the same scene-graph functionality is
+# exercised: proxy shapes for line/point sets, wireframe cylinder rings,
+# text/HUD overlays, lights, and invisible-shape pruning.
+find_package(embree 4 QUIET
+    HINTS /usr/lib/x86_64-linux-gnu/cmake/embree-4.3.0
+          /usr/lib/cmake/embree4
+          /usr/local/lib/cmake/embree4)
+if(embree_FOUND OR TARGET embree4)
+    if(TARGET embree4)
+        set(EMBREE_LINK_TARGET embree4)
+    else()
+        set(EMBREE_LINK_TARGET embree)
+    endif()
+    message(STATUS "Embree ${embree_VERSION} found — building Embree rendering tests")
+
+    macro(add_embree_rendering_test name)
+        add_executable(emb_${name} ${name}.cpp)
+        target_include_directories(emb_${name} PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}
+            ${CMAKE_SOURCE_DIR}/tests/utils
+            ${PROJECT_SOURCE_DIR}/include
+            ${PROJECT_SOURCE_DIR}/include/Inventor/annex
+            ${PROJECT_BINARY_DIR}/include
+            ${OBOL_TARGET_INCLUDE_DIRECTORIES}
+        )
+        target_compile_definitions(emb_${name} PRIVATE OBOL_EMBREE_BUILD)
+        target_link_libraries(emb_${name}
+            ${PROJECT_NAME}
+            ${EMBREE_LINK_TARGET}
+            ${OBOL_TARGET_LINK_LIBRARIES})
+        set_target_properties(emb_${name} PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin"
+        )
+        add_test(
+            NAME emb_${name}
+            COMMAND "${CMAKE_COMMAND}"
+                -DEXECUTABLE=$<TARGET_FILE:emb_${name}>
+                -DTEST_TIMEOUT=${IMAGE_COMPARISON_TEST_TIMEOUT}
+                -P "${CMAKE_CURRENT_SOURCE_DIR}/run_rendering_test.cmake"
+        )
+        set_tests_properties(emb_${name} PROPERTIES
+            TIMEOUT ${IMAGE_COMPARISON_TEST_TIMEOUT}
+        )
+    endmacro()
+
+    macro(add_embree_testlib_rendering_test name)
+        add_embree_rendering_test(${name})
+        if(TARGET obol_testlib)
+            target_link_libraries(emb_${name} obol_testlib)
+            target_include_directories(emb_${name} PRIVATE
+                ${CMAKE_SOURCE_DIR}/tests
+            )
+        endif()
+    endmacro()
+
+    # Embree rendering tests (parallel to the NanoRT suite; same source files,
+    # different context manager via the OBOL_EMBREE_BUILD compile definition)
+    add_embree_rendering_test(render_embree)
+    add_embree_rendering_test(render_rt_proxy_shapes)
+    add_embree_rendering_test(render_background_gradient)
+    add_embree_testlib_rendering_test(render_primitives)
+    add_embree_testlib_rendering_test(render_materials)
+    add_embree_testlib_rendering_test(render_colored_cube)
+    add_embree_testlib_rendering_test(render_scene)
+else()
+    message(STATUS "Embree not found — skipping Embree rendering tests")
+    message(STATUS "  Install libembree-dev (Ubuntu) or embree-devel (Fedora) to enable")
+endif()
 
 # ---- NanoRT versions of standard rendering tests ----------------------------
 # These tests use SoOffscreenRenderer + the generalized ContextManager hook to
@@ -348,6 +427,39 @@ set_tests_properties(stt_reference PROPERTIES
     TIMEOUT ${IMAGE_COMPARISON_TEST_TIMEOUT}
 )
 
+# ---- stb_truetype direct-render test for Iosevka Aile TTC font ---------------
+# stt_iosevka loads the Iosevka Aile Regular .ttc font via SbFont::loadFont()
+# and renders text strings directly to PNG — no OpenGL or display server needed.
+# It validates that struetype correctly uses stt_GetFontOffsetForIndex for TTC
+# files and that the rendered glyphs are Iosevka-shaped.
+add_executable(stt_iosevka stt_iosevka.cpp)
+target_include_directories(stt_iosevka PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/tests/utils
+    ${PROJECT_SOURCE_DIR}/include
+    ${PROJECT_SOURCE_DIR}/include/Inventor/annex
+    ${PROJECT_BINARY_DIR}/include
+    ${OBOL_TARGET_INCLUDE_DIRECTORIES}
+    ${PROJECT_SOURCE_DIR}/external/nanort
+)
+target_compile_definitions(stt_iosevka PRIVATE
+    OBOL_FONTS_DIR="${CMAKE_SOURCE_DIR}/fonts"
+)
+target_link_libraries(stt_iosevka ${PROJECT_NAME} ${OBOL_TARGET_LINK_LIBRARIES})
+set_target_properties(stt_iosevka PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin"
+)
+add_test(
+    NAME stt_iosevka
+    COMMAND "${CMAKE_COMMAND}"
+        -DEXECUTABLE=$<TARGET_FILE:stt_iosevka>
+        -DTEST_TIMEOUT=${IMAGE_COMPARISON_TEST_TIMEOUT}
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/run_rendering_test.cmake"
+)
+set_tests_properties(stt_iosevka PROPERTIES
+    TIMEOUT ${IMAGE_COMPARISON_TEST_TIMEOUT}
+)
+
 # ---- CTest image-comparison integration --------------------------------------
 # Control images live in the shared tests/control_images/ directory.
 # The run_image_test.cmake driver handles Xvfb wrapping for GLX builds.
@@ -385,7 +497,7 @@ macro(add_rendering_image_test test_name)
         add_test(
             NAME ${test_name}_image_test
             COMMAND ${CMAKE_COMMAND}
-                -DEXECUTABLE=$<TARGET_FILE:obol_test>
+                -DEXECUTABLE=$<TARGET_FILE:obol_render>
                 -DTEST_NAME=${test_name}
                 -DTEST_BASE=${TEST_BASE}
                 -DCONTROL_IMAGE=${CONTROL_IMAGE}
@@ -537,9 +649,11 @@ set(OBOL_GL_RENDER_TESTS "${OBOL_GL_RENDER_TESTS}" PARENT_SCOPE)
 
 # Text rendering: control images generated with Obol's ProFont baseline.
 # Higher RMSE threshold to accommodate subpixel differences between platforms.
-add_rendering_image_test(render_text2      RMSE_THRESHOLD 20.0)
-add_rendering_image_test(render_text3      RMSE_THRESHOLD 20.0)
-add_rendering_image_test(render_ascii_text RMSE_THRESHOLD 20.0)
+add_rendering_image_test(render_text2           RMSE_THRESHOLD 20.0)
+add_rendering_image_test(render_text3           RMSE_THRESHOLD 20.0)
+add_rendering_image_test(render_ascii_text      RMSE_THRESHOLD 20.0)
+add_rendering_image_test(render_iosevka_text2   RMSE_THRESHOLD 20.0)
+add_rendering_image_test(render_iosevka_text3   RMSE_THRESHOLD 20.0)
 add_rendering_image_test(render_gradient    RMSE_THRESHOLD 15.0)
 add_rendering_image_test(render_colored_cube RMSE_THRESHOLD 15.0)
 add_rendering_image_test(render_coordinates RMSE_THRESHOLD 10.0)

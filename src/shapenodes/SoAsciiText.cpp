@@ -878,6 +878,12 @@ SoAsciiTextP::setUpGlyphs(SoState * state, SoAsciiText * textnode)
   this->cache->readFontspec(state);
   const cc_font_specification * fontspecptr = this->cache->getCachedFontspec();
   
+  // If the font name looks like a file path (ends with .ttf or .ttc), try to
+  // load it from disk before generating glyph geometry.
+  if (fontspecptr) {
+    this->font->loadFontIfFilePath(fontspecptr->name.c_str());
+  }
+
   // Update SbFont size from specification
   if (fontspecptr && fontspecptr->size > 0) {
     this->font->setSize(fontspecptr->size);

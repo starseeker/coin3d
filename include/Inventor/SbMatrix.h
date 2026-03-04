@@ -44,6 +44,20 @@ class SbDPMatrix;
 
 typedef float SbMat[4][4];
 
+/*!
+  \class SbMatrix SbMatrix.h Inventor/SbMatrix.h
+  \brief 4x4 single-precision floating-point matrix.
+
+  \ingroup coin_base
+
+  SbMatrix is used throughout Obol for transformations: translations,
+  rotations, scales, perspective projections, and arbitrary affine
+  transforms.  Methods are provided to compose, decompose, invert, and
+  multiply matrices as well as to extract rotation and translation
+  components.
+
+  \sa SbDPMatrix, SbRotation, SbVec3f
+*/
 class OBOL_DLL_API SbMatrix {
 public:
   SbMatrix(void);

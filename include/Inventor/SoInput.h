@@ -56,6 +56,29 @@ class SoInputP;
 
 // *************************************************************************
 
+/*!
+  \class SoInput SoInput.h Inventor/SoInput.h
+  \brief Reads Open Inventor scene data from files or memory buffers.
+
+  \ingroup coin_io
+
+  SoInput parses the Open Inventor ASCII and binary file formats.  It is
+  typically used indirectly via the SoDB::read() and SoDB::readAll()
+  convenience functions, but can also be used directly when finer control
+  over the input source is needed (e.g. reading from memory or a custom
+  stream).
+
+  Example — read a scene from a file:
+  \code
+  SoInput in;
+  if (in.openFile("scene.iv")) {
+      SoSeparator * root = SoDB::readAll(&in);
+      if (root) root->ref();
+  }
+  \endcode
+
+  \sa SoOutput, SoDB
+*/
 class OBOL_DLL_API SoInput {
 public:
   SoInput(void);

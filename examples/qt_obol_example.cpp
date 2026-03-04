@@ -42,9 +42,12 @@ int main(int argc, char ** argv)
     QApplication app(argc, argv);
 
     // ── 1. Initialise Obol ─────────────────────────────────────────────────
-    // SoDB::init(nullptr) is sufficient when only using the interactive widget.
-    // Pass a QtObolContextManager instead if you also need SoOffscreenRenderer.
-    SoDB::init(nullptr);
+    // A QtObolContextManager is required by SoDB::init to suppress the
+    // "Context manager is NULL" warning and to support SoOffscreenRenderer.
+    // No share context is available before the widget is created, so nullptr
+    // is passed here; the context manager will create its own GL contexts.
+    QtObolContextManager ctxMgr;
+    SoDB::init(&ctxMgr);
     SoNodeKit::init();
     SoInteraction::init();
 

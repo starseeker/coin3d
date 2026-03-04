@@ -113,7 +113,6 @@ void
 SoGlyphCache::readFontspec(SoState * state)
 {
   if (PRIVATE(this)->fontspec) {
-    cc_fontspec_clean(PRIVATE(this)->fontspec);
     delete PRIVATE(this)->fontspec;
     PRIVATE(this)->fontspec = NULL;
   }

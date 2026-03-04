@@ -53,7 +53,34 @@ class SoPath;
 // SoExtSelectionP" statement in the class definition.
 class SoOffscreenRendererP;
 
+/*!
+  \class SoOffscreenRenderer SoOffscreenRenderer.h Inventor/SoOffscreenRenderer.h
+  \brief Render an Open Inventor scene graph to an offscreen pixel buffer.
 
+  \ingroup coin_general
+
+  SoOffscreenRenderer renders a scene graph into an offscreen pixel buffer
+  without requiring an on-screen window.  The rendered pixels can be read
+  back and written to image files (RGB, PostScript, or any registered
+  writer format).
+
+  Rendering can use either the system OpenGL pipeline (via GLX/WGL) or the
+  software OSMesa pipeline, controlled through the SoDB::ContextManager
+  supplied at construction time.  When no explicit manager is provided the
+  global singleton from SoDB::getContextManager() is used.
+
+  Typical usage:
+  \code
+  SbViewportRegion vp(800, 600);
+  SoOffscreenRenderer renderer(vp);
+  renderer.setBackgroundColor(SbColor(0.1f, 0.1f, 0.1f));
+  if (renderer.render(root)) {
+      renderer.writeToRGB("output.rgb");
+  }
+  \endcode
+
+  \sa SoDB::ContextManager, SoRenderManager
+*/
 class OBOL_DLL_API SoOffscreenRenderer {
 public:
   enum Components {

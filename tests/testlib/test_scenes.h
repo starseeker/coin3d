@@ -76,6 +76,12 @@ SoSeparator* createText(int width = 800, int height = 600);
 /** Multiple SoText2 (2-D billboard) labels at different positions and sizes. */
 SoSeparator* createText2(int width = 800, int height = 600);
 
+/** Multiple SoText2 (2-D billboard) labels rendered with the Iosevka Aile font. */
+SoSeparator* createIosevkaText2(int width = 800, int height = 600);
+
+/** SoText3 extruded 3-D text rendered with the Iosevka Aile font. */
+SoSeparator* createIosevkaText3(int width = 800, int height = 600);
+
 /** Background gradient using a callback node. */
 SoSeparator* createGradient(int width = 800, int height = 600);
 
@@ -357,6 +363,21 @@ SoSeparator* createNanoRT(int width = 800, int height = 600);
 
 /** Ground plane + red sphere + SoRaytracingParams(shadows) — NanoRT shadow scene. */
 SoSeparator* createNanoRTShadow(int width = 800, int height = 600);
+
+/** Blue sphere scene for SoViewport API tests. */
+SoSeparator* createViewport(int width = 800, int height = 600);
+
+/** Green sphere scene rendered via SoViewport (control image source). */
+SoSeparator* createViewportScene(int width = 800, int height = 600);
+
+/** LOD scene (sphere/cube/cone) for SoQuadViewport multi-view tests. */
+SoSeparator* createQuadViewport(int width = 800, int height = 600);
+
+/** LOD scene for SoQuadViewport composite regression (control image source). */
+SoSeparator* createQuadViewportLOD(int width = 800, int height = 600);
+
+/** SoSceneTexture2 flat-quad scene for multi-context-manager regression test. */
+SoSeparator* createSceneTextureMultiMgr(int width = 800, int height = 600);
 
 // -------------------------------------------------------------------------
 // Utility helpers for interaction tests

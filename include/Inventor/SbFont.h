@@ -68,6 +68,11 @@ public:
 
   SbBool loadFont(const char * fontpath);
   SbBool loadFont(const SbString & fontpath);
+  /** Load font from \a name if it looks like a file path (ends with .ttf or
+   *  .ttc), and only if it differs from the currently loaded font.  Returns
+   *  TRUE if a font was loaded from disk, FALSE if the name was not a
+   *  file-path, if loading failed, or if the font was already loaded. */
+  SbBool loadFontIfFilePath(const char * name);
   void useDefaultFont(void);
 
   SbBool isValid(void) const;

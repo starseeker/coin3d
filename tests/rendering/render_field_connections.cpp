@@ -17,6 +17,7 @@
  */
 
 #include "headless_utils.h"
+#include "testlib/test_scenes.h"
 #include <Inventor/fields/SoSFFloat.h>
 #include <Inventor/fields/SoSFColor.h>
 #include <Inventor/fields/SoSFVec3f.h>

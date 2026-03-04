@@ -152,7 +152,7 @@ if(OBOL_BUILD_VIEWER)
 endif() # OBOL_BUILD_VIEWER
 
 # -----------------------------------------------------------------------
-# Unified CLI runner
+# Unified CLI runner (legacy – kept for backward compatibility)
 # -----------------------------------------------------------------------
 add_executable(obol_test obol_test.cpp)
 # --whole-archive ensures the static-initialiser REGISTER_TEST blocks in
@@ -181,13 +181,40 @@ endif()
 add_test(NAME obol_test_all COMMAND obol_test)
 
 # -----------------------------------------------------------------------
+# Non-graphical unit test runner  (obol_unittest)
+# Runs only tests with a run_unit function; no GL context required.
+# -----------------------------------------------------------------------
+add_executable(obol_unittest obol_unittest.cpp)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    target_link_libraries(obol_unittest PRIVATE
+        -Wl,--whole-archive obol_testlib -Wl,--no-whole-archive
+        ${PROJECT_NAME} ${OBOL_TARGET_LINK_LIBRARIES}
+    )
+else()
+    target_link_libraries(obol_unittest PRIVATE obol_testlib ${PROJECT_NAME} ${OBOL_TARGET_LINK_LIBRARIES})
+endif()
+target_include_directories(obol_unittest PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/testlib
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils
+    ${PROJECT_SOURCE_DIR}/include
+    ${PROJECT_SOURCE_DIR}/include/Inventor/annex
+    ${PROJECT_BINARY_DIR}/include
+    ${OBOL_TARGET_INCLUDE_DIRECTORIES}
+)
+if(USE_PTHREAD)
+    target_link_libraries(obol_unittest PRIVATE pthread)
+endif()
+add_test(NAME obol_unittest_all COMMAND obol_unittest)
+
+# -----------------------------------------------------------------------
 # Visual regression tests (rendering/ subdirectory)
 # These require standalone executables as each renders a scene to an image
 # file that is then compared against a control PNG.
 # -----------------------------------------------------------------------
 add_subdirectory(rendering)
 
-# ---- Generate render test dispatch table for obol_test ----------------------
+# ---- Generate render test dispatch table shared by obol_test and obol_render --
 # This file is written at configure time; it declares extern references to all
 # renamed main() functions and provides dispatchRenderTest().
 set(_dispatch "${CMAKE_CURRENT_BINARY_DIR}/render_test_dispatch.cpp")
@@ -204,7 +231,7 @@ endforeach()
 string(APPEND _dc "        {nullptr, nullptr}\n    };\n")
 string(APPEND _dc "    for (int i = 0; k[i].name; ++i) {\n")
 string(APPEND _dc "        if (name == k[i].name) {\n")
-string(APPEND _dc "            char prog[] = {\"obol_test\"};\n")
+string(APPEND _dc "            char prog[] = {\"obol_render\"};\n")
 string(APPEND _dc "            // PATH_MAX on Linux is 4096; reject longer paths to keep the\n")
 string(APPEND _dc "            // fixed-size buffer safe.  Return -2 to distinguish from 'not\n")
 string(APPEND _dc "            // found' (-1) vs 'path too long' (-2).\n")
@@ -231,6 +258,58 @@ target_sources(obol_test PRIVATE "${_dispatch}")
 if(TARGET obol_render_tests_gl)
     target_link_libraries(obol_test obol_render_tests_gl)
 endif()
+
+# -----------------------------------------------------------------------
+# Rendering test runner  (obol_render)
+# Runs visual/rendering tests; produces control images or image sequences.
+# Shares the same render test dispatch as obol_test.
+# -----------------------------------------------------------------------
+add_executable(obol_render obol_render.cpp)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    target_link_libraries(obol_render PRIVATE
+        -Wl,--whole-archive obol_testlib -Wl,--no-whole-archive
+        ${PROJECT_NAME} ${OBOL_TARGET_LINK_LIBRARIES}
+    )
+else()
+    target_link_libraries(obol_render PRIVATE obol_testlib ${PROJECT_NAME} ${OBOL_TARGET_LINK_LIBRARIES})
+endif()
+target_include_directories(obol_render PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/testlib
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils
+    ${PROJECT_SOURCE_DIR}/include
+    ${PROJECT_SOURCE_DIR}/include/Inventor/annex
+    ${PROJECT_BINARY_DIR}/include
+    ${OBOL_TARGET_INCLUDE_DIRECTORIES}
+)
+if(USE_PTHREAD)
+    target_link_libraries(obol_render PRIVATE pthread)
+endif()
+# Share the dispatch table and render test library with obol_render
+target_sources(obol_render PRIVATE "${_dispatch}")
+if(TARGET obol_render_tests_gl)
+    target_link_libraries(obol_render PRIVATE obol_render_tests_gl)
+endif()
+# On Linux the renderer includes headless_utils.h which uses GLX or OSMesa
+if(UNIX AND NOT APPLE)
+    if(X11_FOUND)
+        target_link_libraries(obol_render PRIVATE ${X11_X11_LIB})
+    endif()
+    if(TARGET OpenGL::GL)
+        target_link_libraries(obol_render PRIVATE OpenGL::GL)
+    elseif(OPENGL_gl_LIBRARY)
+        target_link_libraries(obol_render PRIVATE ${OPENGL_gl_LIBRARY})
+    endif()
+endif()
+if(OBOL_USE_OSMESA)
+    target_compile_definitions(obol_render PRIVATE OBOL_OSMESA_BUILD)
+    target_include_directories(obol_render PRIVATE
+        "${PROJECT_SOURCE_DIR}/external/osmesa/include")
+elseif(OBOL_BUILD_DUAL_GL)
+    target_compile_definitions(obol_render PRIVATE OBOL_BUILD_DUAL_GL)
+endif()
+install(TARGETS obol_render RUNTIME DESTINATION bin)
+install(TARGETS obol_unittest RUNTIME DESTINATION bin)
 
 # -----------------------------------------------------------------------
 # Image comparison utilities

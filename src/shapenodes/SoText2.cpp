@@ -1236,6 +1236,12 @@ SoText2P::buildGlyphCache(SoState * state)
   // This ensures the font scale matches between bbox calculation and rendering
   SbName fontname = SoFontNameElement::get(state);
   float fontsize = SoFontSizeElement::get(state);
+
+  // If the font name looks like a file path, load it now — before any glyph
+  // bitmaps are fetched — so that SbGlyph2D bitmap pointers remain valid for
+  // the lifetime of this cache.  Only reloads when the path has changed.
+  this->font->loadFontIfFilePath(fontname.getString());
+
   this->font->setSize(fontsize);
   
   int ypos = 0;
@@ -1398,12 +1404,11 @@ SoText2P::updateFont(SoState * state)
   // Get font information from state elements  
   SbName fontname = SoFontNameElement::get(state);
   float fontsize = SoFontSizeElement::get(state);
-  
-  // Set the size for the SbFont
+
+  // Font file loading is handled in buildGlyphCache() so that the font is
+  // set up before any glyph bitmap pointers are fetched into SoGlyphCache.
+  // Here we only update the size, which can safely change between frames.
   this->font->setSize(fontsize);
-  
-  // For now, we use ProFont as default. In a complete implementation,
-  // we could load specific font files based on the fontname parameter.
 }
 
 #undef PRIVATE

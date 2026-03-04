@@ -25,6 +25,7 @@
  */
 
 #include "headless_utils.h"
+#include "testlib/test_scenes.h"
 #include <Inventor/actions/SoCallbackAction.h>
 #include <Inventor/SoPrimitiveVertex.h>
 #include <Inventor/nodes/SoSeparator.h>

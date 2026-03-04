@@ -29,6 +29,7 @@
  */
 
 #include "headless_utils.h"
+#include "testlib/test_scenes.h"
 
 #include <Inventor/nodes/SoProceduralShape.h>
 #include <Inventor/nodes/SoSeparator.h>
@@ -244,6 +245,24 @@ int main(int argc, char** argv)
         static_cast<SoProceduralObjectValidateCB>(objCB));
 
     const char* base = (argc > 1) ? argv[1] : "render_arb8_edit_cycle";
+
+    /* Render the canonical factory scene as the primary output image.
+     * This ensures obol_viewer and obol_render produce identical scenes.
+     * Use the same dimensions and background as the step renders. */
+    {
+        SoSeparator *fRoot = ObolTest::Scenes::createArb8EditCycle(DEFAULT_WIDTH, DEFAULT_HEIGHT);
+        SbViewportRegion fVp(DEFAULT_WIDTH, DEFAULT_HEIGHT);
+        SoOffscreenRenderer fRen(fVp);
+        fRen.setComponents(SoOffscreenRenderer::RGB);
+        fRen.setBackgroundColor(kBgColor);
+        if (fRen.render(fRoot)) {
+            char primaryPath[4096];
+            snprintf(primaryPath, sizeof(primaryPath), "%s.rgb", base);
+            fRen.writeToRGB(primaryPath);
+        }
+        fRoot->unref();
+    }
+
 
     // =====================================================================
     // Step 1 — Initial state: solid ARB8 from JSON schema defaults
@@ -492,7 +511,7 @@ int main(int argc, char** argv)
         }
 
         char out[1024];
-        snprintf(out, sizeof(out), "%s.rgb", base);
+        snprintf(out, sizeof(out), "%s_step4.rgb", base);
         bool ok = renderToFile(root, out, DEFAULT_WIDTH, DEFAULT_HEIGHT, kBgColor);
         root->unref();
         return ok ? 0 : 1;

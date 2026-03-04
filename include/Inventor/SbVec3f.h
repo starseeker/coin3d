@@ -48,6 +48,19 @@ class SbVec3b;
 class SbVec3s;
 class SbVec3i32;
 
+/*!
+  \class SbVec3f SbVec3f.h Inventor/SbVec3f.h
+  \brief 3D vector with single-precision floating-point coordinates.
+
+  \ingroup coin_base
+
+  SbVec3f is the most widely used vector type in Obol.  It represents a
+  point or direction in 3D space and supports arithmetic operations,
+  normalization, dot product, cross product, and conversions to and from
+  related types (SbVec3d, SbVec3b, SbVec3s, SbVec3i32).
+
+  \sa SbVec2f, SbVec3d, SbVec4f
+*/
 class OBOL_DLL_API SbVec3f {
 public:
   SbVec3f(void) { }

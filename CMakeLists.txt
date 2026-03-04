@@ -49,9 +49,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 message(STATUS "Setting C++ standard: C++${CMAKE_CXX_STANDARD} (required)")
 
-# Temporary addition of gcc debugging info everywhere
-add_definitions(-g)
-
 # Add path for Obol-specific utility scripts
 list(PREPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
@@ -114,7 +111,25 @@ cmake_dependent_option(OBOL_BUILD_VIEWER
 # Internal alias used throughout src/ for Windows shared/static detection
 set(OBOL_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
 
-# Documentation options removed - not needed for minimal library build
+# Documentation: optional Doxygen API reference
+option(OBOL_BUILD_DOCS "Build Doxygen API documentation" OFF)
+if(OBOL_BUILD_DOCS)
+  find_package(Doxygen QUIET)
+  if(DOXYGEN_FOUND)
+    configure_file(
+      "${PROJECT_SOURCE_DIR}/docs/Doxyfile.in"
+      "${CMAKE_BINARY_DIR}/docs/Doxyfile"
+      @ONLY)
+    add_custom_target(obol_docs
+      COMMAND ${DOXYGEN_EXECUTABLE} "${CMAKE_BINARY_DIR}/docs/Doxyfile"
+      WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+      COMMENT "Generating Obol API documentation with Doxygen"
+      VERBATIM)
+    message(STATUS "Doxygen found: API docs target 'obol_docs' is available")
+  else()
+    message(WARNING "OBOL_BUILD_DOCS=ON but Doxygen was not found; docs target will not be created")
+  endif()
+endif()
 
 # Feature options
 # Backend selection:

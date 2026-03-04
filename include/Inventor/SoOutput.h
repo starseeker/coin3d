@@ -49,6 +49,18 @@ class SoFieldContainer;
 
 typedef void * SoOutputReallocCB(void * ptr, size_t newSize);
 
+/*!
+  \class SoOutput SoOutput.h Inventor/SoOutput.h
+  \brief Writes Open Inventor scene data to files or memory buffers.
+
+  \ingroup coin_io
+
+  SoOutput is the write counterpart to SoInput.  It serialises an Open
+  Inventor scene graph to a file, an in-memory buffer, or a C++ stream in
+  either ASCII or binary format.  SoWriteAction uses SoOutput internally.
+
+  \sa SoInput, SoWriteAction
+*/
 class OBOL_DLL_API SoOutput {
 public:
   enum Stage { COUNT_REFS, WRITE };

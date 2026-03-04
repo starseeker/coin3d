@@ -50,7 +50,23 @@ class SoGroup;
 
 typedef void SoDBHeaderCB(void * data, SoInput * input);
 
+/*!
+  \class SoDB SoDB.h Inventor/SoDB.h
+  \brief Central database and initialisation point for the Obol library.
 
+  \ingroup coin_general
+
+  SoDB holds global state for the Obol runtime: registered file-format
+  headers, global fields (including the \c realTime clock field), the
+  sensor manager, and the active SoDB::ContextManager used for OpenGL
+  context creation.
+
+  All methods are static.  SoDB::init() \b must be called before any
+  other Obol API, and SoDB::finish() should be called on shutdown to
+  release resources cleanly.
+
+  \sa SoDB::ContextManager, SoOffscreenRenderer
+*/
 class OBOL_DLL_API SoDB {
 public:
   // Forward declaration of ContextManager for init function
@@ -117,33 +133,42 @@ public:
   static void removeRoute(SoNode * from, const char * eventout,
                           SoNode * to, const char * eventin);
 
-  // Context Management API
-  //
-  // The ContextManager provides two complementary rendering paths:
-  //
-  // GL path (pure-virtual, must be implemented):
-  //   createOffscreenContext / makeContextCurrent / restorePreviousContext /
-  //   destroyContext – lifecycle management of an OpenGL offscreen context.
-  //   SoOffscreenRenderer uses these when GL rendering is active.
-  //
-  // Alternative render path (optional override, default returns FALSE):
-  //   renderScene() – fill a pre-allocated pixel buffer with rendered output
-  //   without using OpenGL.  When this returns TRUE, SoOffscreenRenderer
-  //   uses the resulting pixels directly and skips the entire GL pipeline.
-  //   SoNanoRTContextManager (tests/utils/nanort_context_manager.h) is a
-  //   reference implementation that uses nanort for ray-triangle intersection.
-  //
-  // The two paths are independent: a subclass may implement only the GL path
-  // (existing OSMesa / GLX managers), only the alternative path (a pure
-  // software raytracer with no-op GL methods), or both.
+  /*!
+    \class SoDB::ContextManager
+    \brief Abstract interface for OpenGL context creation and optional software rendering.
+
+    ContextManager provides two complementary rendering paths:
+
+    **GL path** (pure-virtual, must be implemented):
+    createOffscreenContext() / makeContextCurrent() / restorePreviousContext() /
+    destroyContext() — lifecycle management of an OpenGL offscreen context.
+    SoOffscreenRenderer uses these when GL rendering is active.
+
+    **Alternative render path** (optional override, default returns FALSE):
+    renderScene() — fill a pre-allocated pixel buffer without using OpenGL.
+    When this returns TRUE, SoOffscreenRenderer uses the resulting pixels
+    directly and skips the entire GL pipeline.
+    SoNanoRTContextManager (tests/utils/nanort_context_manager.h) is a
+    reference implementation using NanoRT for ray-triangle intersection.
+
+    The two paths are independent: a subclass may implement only the GL path
+    (e.g. the OSMesa / GLX managers), only the alternative path (a pure
+    software raytracer with no-op GL methods), or both.
+
+    \sa SoDB::init(), SoOffscreenRenderer
+  */
   class ContextManager {
   public:
     virtual ~ContextManager() {}
 
     // --- GL context lifecycle (required) -----------------------------------
+    /** \brief Create an offscreen GL context of the given dimensions. \return Opaque context handle, or NULL on failure. */
     virtual void * createOffscreenContext(unsigned int width, unsigned int height) = 0;
+    /** \brief Make \a context current for subsequent GL calls. \return TRUE on success. */
     virtual SbBool makeContextCurrent(void * context) = 0;
+    /** \brief Restore the context that was current before the last makeContextCurrent() call. */
     virtual void restorePreviousContext(void * context) = 0;
+    /** \brief Release all resources associated with \a context. */
     virtual void destroyContext(void * context) = 0;
 
     /**
