@@ -38,6 +38,18 @@
 #include <Inventor/fields/SoSFVec3f.h>
 #include <Inventor/fields/SoSFFloat.h>
 
+/*!
+  \class SoSpotLight SoSpotLight.h Inventor/nodes/SoSpotLight.h
+  \brief A positional light source with a cone-shaped beam.
+
+  \ingroup coin_nodes
+
+  SoSpotLight emits a cone of light from a position toward a direction.  Fields
+  location, direction, cutOffAngle, and dropOffRate control the cone geometry
+  and intensity distribution.
+
+  \sa SoLight, SoPointLight, SoDirectionalLight
+*/
 class OBOL_DLL_API SoSpotLight : public SoLight {
   typedef SoLight inherited;
 

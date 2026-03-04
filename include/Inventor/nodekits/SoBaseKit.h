@@ -63,6 +63,19 @@ class SoPath;
  (static_cast<_classname_ *>(_kit_->getAnyPart(_name_, FALSE, FALSE, FALSE)))
 
 
+/*!
+  \class SoBaseKit SoBaseKit.h Inventor/nodekits/SoBaseKit.h
+  \brief Abstract base class for all Obol node kits.
+
+  \ingroup coin_nodekits
+
+  SoBaseKit provides the machinery common to all node kits:
+  catalog-driven part management, part access by name, file I/O
+  for node-kit scenes, and the SO_KIT_* convenience macros.
+  Subclass to assemble reusable compound scene-graph objects.
+
+  \sa SoNodekitCatalog, SoAppearanceKit, SoSeparatorKit
+*/
 class OBOL_DLL_API SoBaseKit : public SoNode {
   typedef SoNode inherited;
 

@@ -39,6 +39,17 @@
 
 struct SoGLContext;
 
+/*!
+  \class SoTextureCoordinateObject SoTextureCoordinateObject.h Inventor/nodes/SoTextureCoordinateObject.h
+  \brief Generates texture coordinates using the object-space vertex position.
+
+  \ingroup coin_nodes
+
+  SoTextureCoordinateObject maps the object-space vertex coordinate to
+  a texture coordinate by applying a user-defined texture plane.
+
+  \sa SoTextureCoordinateFunction
+*/
 class OBOL_DLL_API SoTextureCoordinateObject : public SoTextureCoordinateFunction {
   typedef SoTextureCoordinateFunction inherited;
 

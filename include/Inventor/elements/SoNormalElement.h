@@ -37,6 +37,17 @@
 #include <Inventor/SbVec3f.h>
 #include <cassert>
 
+/*!
+  \class SoNormalElement SoNormalElement.h Inventor/elements/SoNormalElement.h
+  \brief Stores the current normal vector array.
+
+  \ingroup coin_elements
+
+  SoNormalElement stores the per-vertex or per-face normal vectors set
+  by an SoNormal node.
+
+  \sa SoReplacedElement
+*/
 class OBOL_DLL_API SoNormalElement : public SoReplacedElement {
   typedef SoReplacedElement inherited;
 

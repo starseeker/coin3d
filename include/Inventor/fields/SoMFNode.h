@@ -38,6 +38,19 @@
 
 class SoNode;
 
+/*!
+  \class SoMFNode SoMFNode.h Inventor/fields/SoMFNode.h
+  \brief Field type holding a array of pointers to scene-graph nodes.
+
+  \ingroup coin_fields
+
+  SoMFNode is a multi-valued field that stores
+  an array of values of type SoNode.
+  It inherits all field functionality from SoMField: value change notification,
+  field connections, and Inventor file I/O.
+
+  \sa SoMField, SoField
+*/
 class OBOL_DLL_API SoMFNode : public SoMField {
   typedef SoMField inherited;
 

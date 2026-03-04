@@ -36,6 +36,19 @@
 #include <Inventor/fields/SoSField.h>
 #include <Inventor/fields/SoSubField.h>
 
+/*!
+  \class SoSFInt32 SoSFInt32.h Inventor/fields/SoSFInt32.h
+  \brief Field type holding a single 32-bit signed integer value.
+
+  \ingroup coin_fields
+
+  SoSFInt32 is a single-valued field that stores
+  one value of type int32_t.
+  It inherits all field functionality from SoSField: value change notification,
+  field connections, and Inventor file I/O.
+
+  \sa SoSField, SoField
+*/
 class OBOL_DLL_API SoSFInt32 : public SoSField {
   typedef SoSField inherited;
 

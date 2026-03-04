@@ -35,6 +35,18 @@
 
 #include <Inventor/SoFullPath.h>
 
+/*!
+  \class SoTempPath SoTempPath.h Inventor/misc/SoTempPath.h
+  \brief Lightweight temporary path, used internally during traversal.
+
+  \ingroup coin_misc
+
+  SoTempPath is a fast path class used internally by actions
+  and sensors that need to track the current location in the
+  scene graph without the overhead of a full SoPath.
+
+  \sa SoFullPath, SoPath
+*/
 class OBOL_DLL_API SoTempPath : public SoFullPath {
 public:
   SoTempPath(const int approxlength);

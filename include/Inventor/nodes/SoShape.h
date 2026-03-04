@@ -49,6 +49,20 @@ class SbVec2f;
 class SoMaterialBundle;
 class SoBoundingBoxCache;
 
+/*!
+  \class SoShape SoShape.h Inventor/nodes/SoShape.h
+  \brief Abstract base class for all geometry nodes.
+
+  \ingroup coin_nodes
+
+  SoShape is the base for all visible geometric primitives (SoCone,
+  SoCube, SoIndexedFaceSet, etc.).  Subclasses implement
+  generatePrimitives() to decompose their geometry into triangles for
+  callback actions, and computeBBox() to supply a bounding box.  The
+  base class implements GLRender() using these two virtuals.
+
+  \sa SoNode, SoCone, SoCube, SoIndexedFaceSet
+*/
 class OBOL_DLL_API SoShape : public SoNode {
   typedef SoNode inherited;
 

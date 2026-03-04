@@ -39,6 +39,17 @@
 class SoState;
 class SoGLImage;
 
+/*!
+  \class SoBumpMapElement SoBumpMapElement.h Inventor/elements/SoBumpMapElement.h
+  \brief Stores the current bump map texture.
+
+  \ingroup coin_elements
+
+  SoBumpMapElement stores the normal map image and associated state
+  for bump mapping.
+
+  \sa SoReplacedElement
+*/
 class OBOL_DLL_API SoBumpMapElement : public SoReplacedElement {
   typedef SoReplacedElement inherited;
 

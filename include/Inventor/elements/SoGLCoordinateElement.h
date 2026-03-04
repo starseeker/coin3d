@@ -37,6 +37,17 @@
 
 struct SoGLContext;
 
+/*!
+  \class SoGLCoordinateElement SoGLCoordinateElement.h Inventor/elements/SoGLCoordinateElement.h
+  \brief GL-specific element for vertex coordinates.
+
+  \ingroup coin_elements
+
+  SoGLCoordinateElement extends SoCoordinateElement with OpenGL-specific
+  vertex array handling.
+
+  \sa SoCoordinateElement
+*/
 class OBOL_DLL_API SoGLCoordinateElement : public SoCoordinateElement {
   typedef SoCoordinateElement inherited;
 

@@ -37,6 +37,16 @@
 
 class SoPath;
 
+/*!
+  \class SoPathList SoPathList.h Inventor/lists/SoPathList.h
+  \brief Resizable array of SoPath pointers with automatic reference counting.
+
+  \ingroup coin_lists
+
+  SoPathList is a typed list of SoPath objects.
+
+  \sa SoBaseList, SoPath
+*/
 class OBOL_DLL_API SoPathList : public SoBaseList {
   typedef SoBaseList inherited;
 

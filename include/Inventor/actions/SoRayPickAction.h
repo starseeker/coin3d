@@ -47,6 +47,20 @@ class SoPickedPoint;
 class SoPickedPointList;
 class SoRayPickActionP;
 
+/*!
+  \class SoRayPickAction SoRayPickAction.h Inventor/actions/SoRayPickAction.h
+  \brief Picks objects in the scene by casting a ray.
+
+  \ingroup coin_actions
+
+  SoRayPickAction casts a ray into the scene and collects all intersected
+  geometry as SoPickedPoint objects.  The ray can be specified as a
+  viewport-relative 2D point (the most common case), or as an explicit
+  world-space ray origin and direction.  Use getPickedPoint() to get the
+  closest hit, or getPickedPointList() for all hits.
+
+  \sa SoPickAction, SoPickedPoint, SoHandleEventAction
+*/
 class OBOL_DLL_API SoRayPickAction : public SoPickAction {
   typedef SoPickAction inherited;
 

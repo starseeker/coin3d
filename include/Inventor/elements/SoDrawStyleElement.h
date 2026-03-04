@@ -35,6 +35,17 @@
 
 #include <Inventor/elements/SoInt32Element.h>
 
+/*!
+  \class SoDrawStyleElement SoDrawStyleElement.h Inventor/elements/SoDrawStyleElement.h
+  \brief Stores the current drawing style (filled, lines, points).
+
+  \ingroup coin_elements
+
+  SoDrawStyleElement stores the draw mode set by SoDrawStyle
+  (FILLED, LINES, POINTS, INVISIBLE).
+
+  \sa SoInt32Element
+*/
 class OBOL_DLL_API SoDrawStyleElement : public SoInt32Element {
   typedef SoInt32Element inherited;
 

@@ -45,6 +45,17 @@
 #include <Inventor/fields/SoMFVec2f.h>
 
 
+/*!
+  \class SoComposeVec2f SoComposeVec2f.h Inventor/engines/SoComposeVec2f.h
+  \brief Assembles an SbVec2f from two scalar components.
+
+  \ingroup coin_engines
+
+  SoComposeVec2f takes separate x and y float inputs and combines them
+  into an SbVec2f output.
+
+  \sa SoDecomposeVec2f, SoEngine
+*/
 class OBOL_DLL_API SoComposeVec2f : public SoEngine {
   typedef SoEngine inherited;
 

@@ -39,6 +39,17 @@
 class SoGLCoordinateElement;
 class SoTextureCoordinateBundle;
 
+/*!
+  \class SoIndexedMarkerSet SoIndexedMarkerSet.h Inventor/nodes/SoIndexedMarkerSet.h
+  \brief Renders a set of named marker symbols at indexed vertex positions.
+
+  \ingroup coin_nodes
+
+  SoIndexedMarkerSet draws user-defined markers from the SoMarkerSet symbol
+  library at positions selected by an index array into SoCoordinate3.
+
+  \sa SoMarkerSet, SoIndexedShape
+*/
 class OBOL_DLL_API SoIndexedMarkerSet : public SoIndexedPointSet {
   typedef SoIndexedPointSet inherited;
 

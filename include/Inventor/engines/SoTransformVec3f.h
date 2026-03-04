@@ -38,6 +38,17 @@
 #include <Inventor/fields/SoMFVec3f.h>
 #include <Inventor/fields/SoMFMatrix.h>
 
+/*!
+  \class SoTransformVec3f SoTransformVec3f.h Inventor/engines/SoTransformVec3f.h
+  \brief Transforms a 3D vector by a matrix.
+
+  \ingroup coin_engines
+
+  SoTransformVec3f multiplies each input point (or direction) by the
+  matrix input, producing transformed point, direction, and normal outputs.
+
+  \sa SoEngine, SbMatrix
+*/
 class OBOL_DLL_API SoTransformVec3f : public SoEngine {
   typedef SoEngine inherited;
 

@@ -39,6 +39,18 @@
 #include <Inventor/nodes/SoSubNode.h>
 #include <Inventor/elements/SoDepthBufferElement.h>
 
+/*!
+  \class SoDepthBuffer SoDepthBuffer.h Inventor/nodes/SoDepthBuffer.h
+  \brief Controls the OpenGL depth buffer settings.
+
+  \ingroup coin_nodes
+
+  SoDepthBuffer allows enabling/disabling depth testing, selecting the
+  depth comparison function, controlling depth writes, and configuring
+  the glDepthRange.
+
+  \sa SoNode
+*/
 class OBOL_DLL_API SoDepthBuffer : public SoNode {
   typedef SoNode inherited;
 

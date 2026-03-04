@@ -45,6 +45,17 @@ typedef const SbVec4f & SoTextureCoordinateFunctionCB(void * userdata,
 
 class SoMultiTextureCoordinateElementP;
 
+/*!
+  \class SoMultiTextureCoordinateElement SoMultiTextureCoordinateElement.h Inventor/elements/SoMultiTextureCoordinateElement.h
+  \brief Stores texture coordinates across multiple texture units.
+
+  \ingroup coin_elements
+
+  SoMultiTextureCoordinateElement maintains per-unit texture
+  coordinate arrays for multi-texturing.
+
+  \sa SoElement
+*/
 class OBOL_DLL_API SoMultiTextureCoordinateElement : public SoElement {
   typedef SoElement inherited;
 

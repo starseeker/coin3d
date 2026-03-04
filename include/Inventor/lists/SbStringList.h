@@ -37,6 +37,16 @@
 
 class SbString;
 
+/*!
+  \class SbStringList SbStringList.h Inventor/lists/SbStringList.h
+  \brief Resizable array of SbString objects.
+
+  \ingroup coin_lists
+
+  SbStringList is a typed list of SbString items built on SbPList.
+
+  \sa SbPList, SbString
+*/
 class OBOL_DLL_API SbStringList : public SbPList {
 public:
   SbStringList(void) { }

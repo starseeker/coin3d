@@ -35,6 +35,17 @@
 
 #include <Inventor/details/SoPointDetail.h>
 
+/*!
+  \class SoLineDetail SoLineDetail.h Inventor/details/SoLineDetail.h
+  \brief Pick detail for a hit on a line segment.
+
+  \ingroup coin_details
+
+  SoLineDetail records the line index and endpoint detail
+  information for a pick on an SoIndexedLineSet or SoLineSet.
+
+  \sa SoDetail, SoPointDetail, SoIndexedLineSet
+*/
 class OBOL_DLL_API SoLineDetail : public SoDetail {
   typedef SoDetail inherited;
 

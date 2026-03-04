@@ -45,6 +45,17 @@
 #include <Inventor/fields/SoMFVec3f.h>
 
 
+/*!
+  \class SoComposeRotationFromTo SoComposeRotationFromTo.h Inventor/engines/SoComposeRotationFromTo.h
+  \brief Computes the rotation that maps one vector to another.
+
+  \ingroup coin_engines
+
+  SoComposeRotationFromTo computes the shortest-arc rotation that
+  rotates the from vector to align with the to vector.
+
+  \sa SoComposeRotation, SoEngine
+*/
 class OBOL_DLL_API SoComposeRotationFromTo : public SoEngine {
   typedef SoEngine inherited;
 

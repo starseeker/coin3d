@@ -36,6 +36,17 @@
 #include <Inventor/nodekits/SoSubKit.h>
 #include <Inventor/nodekits/SoBaseKit.h>
 
+/*!
+  \class SoCameraKit SoCameraKit.h Inventor/nodekits/SoCameraKit.h
+  \brief Node kit that bundles a camera and its transform.
+
+  \ingroup coin_nodekits
+
+  SoCameraKit provides a named-part group containing a camera node
+  and its associated transformation.
+
+  \sa SoBaseKit, SoPerspectiveCamera
+*/
 class OBOL_DLL_API SoCameraKit : public SoBaseKit {
   typedef SoBaseKit inherited;
 

@@ -40,6 +40,19 @@
 
 class SoLODP;
 
+/*!
+  \class SoLOD SoLOD.h Inventor/nodes/SoLOD.h
+  \brief Selects a child based on distance from the camera (level of detail).
+
+  \ingroup coin_nodes
+
+  SoLOD (Level Of Detail) selects which child to render based on the
+  distance from the camera to the center field point.  Child 0 is the
+  highest-detail representation; the last child is the lowest.  The
+  range field specifies the switching distances.
+
+  \sa SoGroup, SoLevelOfDetail, SoNode
+*/
 class OBOL_DLL_API SoLOD : public SoGroup {
   typedef SoGroup inherited;
 

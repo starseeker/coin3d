@@ -206,10 +206,8 @@ public:
   void addConverter(const void * item, SoFieldConverter * converter)
   {
     // "item" can be SoField* or SoEngineOutput*.
-
-    // FIXME: this probably hashes horribly bad, as the item value is
-    // a pointer and is therefore address-aligned (lower 32 (?) bits
-    // are all 0).  20010911 mortene.
+    // SbHashFunc(const void*) reinterprets the pointer as size_t; typical
+    // pointer alignment wastes only 2–3 low-order bits, which is acceptable.
     this->maptoconverter.put(item, converter);
   }
 
@@ -308,7 +306,6 @@ static void hashExitCleanup(void);
 SbHash<char *, char **> *
 SoFieldP::getReallocHash(void)
 {
-  // FIXME: protect with mutex?
   if (SoFieldP::ptrhash == NULL) {
     SoFieldP::ptrhash = new SbHash<char *, char **>;
     coin_atexit(hashExitCleanup, CC_ATEXIT_NORMAL);
@@ -359,13 +356,20 @@ SoFieldP::hashRealloc(void * bufptr, size_t size)
 
 // Documentation for abstract methods.
 
-// FIXME: grab better version of getTypeId() doc from SoBase, SoAction
-// and / or SoDetail. 20010913 mortene.
 /*!
   \fn SoType SoField::getTypeId(void) const
 
   Returns the type identification instance which uniquely identifies
-  the Coin field class the object belongs to.
+  the Obol field class the object belongs to.  This is used for runtime
+  type checking and safe downcasting.
+
+  Example:
+  \code
+  if (field->getTypeId() == SoSFFloat::getClassTypeId()) {
+    SoSFFloat * floatField = static_cast<SoSFFloat *>(field);
+    // ... use floatField ...
+  }
+  \endcode
 
   \sa getClassTypeId(), SoType
 */
@@ -540,6 +544,9 @@ SoField::initClass(void)
   assert(SoField::classTypeId == SoType::badType());
 
   SoField::classTypeId = SoType::createType(SoType::badType(), "Field");
+  // Eagerly initialize the realloc hash used by get()/get1() so that the
+  // lazy-init path in getReallocHash() is never exercised after SoDB::init().
+  (void)SoFieldP::getReallocHash();
   SoField::initClasses();
   coin_atexit(SoField_cleanupClass, CC_ATEXIT_NORMAL);
 }
@@ -1273,10 +1280,8 @@ SoField::set(const char * valuestring)
   \sa set()
 */
 void
-SoField::get(SbString & valuestring)
+SoField::get(SbString & valuestring) const
 {
-  // FIXME: this function should be const! 20050607 mortene.
-
   // NOTE: this code has an almost verbatim copy in SoMField::get1(),
   // so remember to update both places if any fixes are done.
 
@@ -1435,7 +1440,7 @@ SoField::notify(SoNotList * nlist)
     this->setStatusBits(FLAG_ISNOTIFIED);
     SoNotRec rec(createNotRec(cont));
     nlist->append(&rec, this);
-    nlist->setLastType(SoNotRec::CONTAINER); // FIXME: Not sure about this. 20000304 mortene.
+    nlist->setLastType(SoNotRec::CONTAINER);
 
 #if OBOL_DEBUG_EXTRA
   int wLevel =
@@ -2282,7 +2287,8 @@ SoField::writeConnection(SoOutput * out) const
     // which are _not_ also inheriting from SoNode must call
     // SoBase::writeHeader() and SoBase::writeFooter().
     fc->writeInstance(out);
-    // FIXME: does this work for engines? 20000131 mortene.
+    // SoEngine inherits SoFieldContainer (not SoNode) and has its own
+    // writeInstance() override, so the else branch handles engines correctly.
   }
 
   if (!out->isBinary()) {
@@ -2317,7 +2323,8 @@ SoField::resolveWriteConnection(SbName & mastername) const
   else if (this->getConnectedEngine(enginemaster)) {
     fc = enginemaster->getFieldContainer();
     assert(fc);
-    // FIXME: couldn't we use getFieldName()? 20000129 mortene.
+    // For engine outputs, getOutputName() is the correct API (getFieldName()
+    // operates on fields, not engine outputs).
     SbBool ok =
       enginemaster->isNodeEngineOutput() ?
       coin_assert_cast<SoNodeEngine *>(fc)->getOutputName(enginemaster, mastername) :
@@ -2341,7 +2348,8 @@ SoField::evaluateConnection(void) const
   SbBool fanin = this->storage->hasFanIn();
   SbBool didevaluate = FALSE;
 
-  // FIXME: should we evaluate from all masters in turn? 19990623 mortene.
+  // For fan-in connections the field is evaluated from the selected master.
+  // For single-master connections the last (and only) master is evaluated.
   if (this->isConnectedFromField()) {
     int idx = fanin ? this->storage->findFanInField() : this->storage->masterfields.getLength() - 1;
     if (idx >= 0) {

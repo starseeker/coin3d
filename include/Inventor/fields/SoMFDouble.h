@@ -36,6 +36,19 @@
 #include <Inventor/fields/SoMField.h>
 #include <Inventor/fields/SoSubField.h>
 
+/*!
+  \class SoMFDouble SoMFDouble.h Inventor/fields/SoMFDouble.h
+  \brief Field type holding a array of double-precision floating-point values.
+
+  \ingroup coin_fields
+
+  SoMFDouble is a multi-valued field that stores
+  an array of values of type double.
+  It inherits all field functionality from SoMField: value change notification,
+  field connections, and Inventor file I/O.
+
+  \sa SoMField, SoField
+*/
 class OBOL_DLL_API SoMFDouble : public SoMField {
   typedef SoMField inherited;
 

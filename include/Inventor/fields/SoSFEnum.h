@@ -37,6 +37,19 @@
 #include <Inventor/fields/SoSubField.h>
 #include <Inventor/SbString.h>
 
+/*!
+  \class SoSFEnum SoSFEnum.h Inventor/fields/SoSFEnum.h
+  \brief Field type holding a single enumerated value.
+
+  \ingroup coin_fields
+
+  SoSFEnum is a single-valued field that stores
+  one value of type int (enum).
+  It inherits all field functionality from SoSField: value change notification,
+  field connections, and Inventor file I/O.
+
+  \sa SoSField, SoField
+*/
 class OBOL_DLL_API SoSFEnum : public SoSField {
   typedef SoSField inherited;
 

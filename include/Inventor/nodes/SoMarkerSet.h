@@ -37,6 +37,18 @@
 #include <Inventor/nodes/SoPointSet.h>
 #include <Inventor/fields/SoMFInt32.h>
 
+/*!
+  \class SoMarkerSet SoMarkerSet.h Inventor/nodes/SoMarkerSet.h
+  \brief Renders configurable marker symbols at vertex positions.
+
+  \ingroup coin_nodes
+
+  SoMarkerSet draws 2D marker symbols (cross, circle, square, etc.) at
+  each vertex in the current SoCoordinate3 node.  The markerIndex field
+  selects which built-in or custom marker is drawn.
+
+  \sa SoIndexedMarkerSet, SoNonIndexedShape
+*/
 class OBOL_DLL_API SoMarkerSet : public SoPointSet {
   typedef SoPointSet inherited;
 

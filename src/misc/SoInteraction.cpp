@@ -129,7 +129,7 @@ SoInteraction::init(void)
   if (!SoDB::isInitialized()) {
     // Use fprintf instead of SoDebugError to avoid dependency on initialized system
     fprintf(stderr, "SoInteraction::init: ERROR - SoDB::init() has not been called. "
-                    "Applications must call SoDB::init(&context_manager) before using any Coin3D functionality. "
+                    "Applications must call SoDB::init(&context_manager) before using any Obol functionality. "
                     "See documentation for SoDB::ContextManager for details.\n");
     return;
   }

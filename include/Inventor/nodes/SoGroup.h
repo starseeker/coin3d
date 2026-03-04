@@ -37,6 +37,19 @@
 
 class SoGroupP;
 
+/*!
+  \class SoGroup SoGroup.h Inventor/nodes/SoGroup.h
+  \brief A node that groups child nodes for sequential traversal.
+
+  \ingroup coin_nodes
+
+  SoGroup is the basic grouping node.  It holds an ordered list of
+  child nodes and traverses each child in order when an action is
+  applied.  Unlike SoSeparator, SoGroup does not push/pop state, so
+  property changes inside a group are visible to subsequent siblings.
+
+  \sa SoNode, SoSeparator
+*/
 class OBOL_DLL_API SoGroup : public SoNode {
   typedef SoNode inherited;
 

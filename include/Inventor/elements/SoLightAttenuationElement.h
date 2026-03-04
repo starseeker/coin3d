@@ -36,6 +36,17 @@
 #include <Inventor/elements/SoReplacedElement.h>
 #include <Inventor/SbVec3f.h>
 
+/*!
+  \class SoLightAttenuationElement SoLightAttenuationElement.h Inventor/elements/SoLightAttenuationElement.h
+  \brief Stores light attenuation coefficients.
+
+  \ingroup coin_elements
+
+  SoLightAttenuationElement stores the constant, linear, and quadratic
+  attenuation coefficients for point and spot lights.
+
+  \sa SoReplacedElement
+*/
 class OBOL_DLL_API SoLightAttenuationElement : public SoReplacedElement {
   typedef SoReplacedElement inherited;
 

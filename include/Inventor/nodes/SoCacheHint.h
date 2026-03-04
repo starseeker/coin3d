@@ -42,6 +42,18 @@
 // Please note that this is an experimental class. The API might
 // change a lot before/if it's included in any official Coin
 // release. pederb, 2004-07-02
+/*!
+  \class SoCacheHint SoCacheHint.h Inventor/nodes/SoCacheHint.h
+  \brief Provides hints to the render cache for VBO and display-list usage.
+
+  \ingroup coin_nodes
+
+  SoCacheHint allows the application to suggest how aggressively vertex
+  buffer objects (VBOs) or display lists should be used for geometry
+  in the sub-graph.
+
+  \sa SoNode, SoSeparator
+*/
 class OBOL_DLL_API SoCacheHint : public SoNode {
   typedef SoNode inherited;
 

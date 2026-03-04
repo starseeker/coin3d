@@ -39,6 +39,17 @@
 #include <Inventor/fields/SoSFShort.h>
 #include <Inventor/fields/SoSFVec3f.h>
 
+/*!
+  \class SoArray SoArray.h Inventor/nodes/SoArray.h
+  \brief Replicates its children in a regular 3D grid of copies.
+
+  \ingroup coin_nodes
+
+  SoArray instantiates its children numElements1 × numElements2 × numElements3
+  times, arranged in a regular grid with configurable separation.
+
+  \sa SoGroup, SoMultipleCopy
+*/
 class OBOL_DLL_API SoArray : public SoGroup {
     typedef SoGroup inherited;
 

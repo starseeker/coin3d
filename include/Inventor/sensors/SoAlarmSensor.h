@@ -35,6 +35,18 @@
 
 #include <Inventor/sensors/SoTimerQueueSensor.h>
 
+/*!
+  \class SoAlarmSensor SoAlarmSensor.h Inventor/sensors/SoAlarmSensor.h
+  \brief Fires a callback once at a specified absolute time.
+
+  \ingroup coin_sensors
+
+  SoAlarmSensor schedules a one-shot callback to fire at a specified
+  SbTime.  Unlike SoTimerSensor, the alarm fires exactly once and
+  does not repeat.
+
+  \sa SoSensor, SoTimerSensor, SbTime
+*/
 class OBOL_DLL_API SoAlarmSensor : public SoTimerQueueSensor {
   typedef SoTimerQueueSensor inherited;
 

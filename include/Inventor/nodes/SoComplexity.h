@@ -38,6 +38,19 @@
 #include <Inventor/fields/SoSFFloat.h>
 #include <Inventor/elements/SoComplexityTypeElement.h>
 
+/*!
+  \class SoComplexity SoComplexity.h Inventor/nodes/SoComplexity.h
+  \brief Controls the rendering complexity of subsequent shape nodes.
+
+  \ingroup coin_nodes
+
+  SoComplexity affects how finely geometry is tessellated.  The value
+  field (0.0–1.0) and type field (OBJECT_SPACE, SCREEN_SPACE, or
+  BOUNDING_BOX) give rendering hints to shape nodes such as SoSphere,
+  SoCone, and SoCylinder.
+
+  \sa SoNode, SoDrawStyle
+*/
 class OBOL_DLL_API SoComplexity : public SoNode {
   typedef SoNode inherited;
 

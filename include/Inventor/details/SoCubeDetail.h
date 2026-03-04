@@ -35,6 +35,17 @@
 
 #include <Inventor/details/SoSubDetail.h>
 
+/*!
+  \class SoCubeDetail SoCubeDetail.h Inventor/details/SoCubeDetail.h
+  \brief Pick detail for a hit on an SoCube node.
+
+  \ingroup coin_details
+
+  SoCubeDetail records which face of an SoCube (LEFT, RIGHT, BOTTOM,
+  TOP, FRONT, or BACK) was hit during a pick operation.
+
+  \sa SoDetail, SoCube
+*/
 class OBOL_DLL_API SoCubeDetail : public SoDetail {
   typedef SoDetail inherited;
 

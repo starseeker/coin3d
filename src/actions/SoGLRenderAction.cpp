@@ -1164,8 +1164,9 @@ SoGLRenderAction::endTraversal(SoNode * node)
 void
 SoGLRenderActionP::redrawSensorCB(void * userdata, SoSensor * OBOL_UNUSED_ARG(sensor))
 {
-  // FIXME: the node needs to be referenced to avoid touching a deleted node here.
-  // or use a delete-callback at least to abort the sensor.
+  // deleteNodeCB (below) is registered as a delete-callback that nullifies
+  // the sensor data when the node is destroyed, so we will not be called
+  // after the node is gone.
   assert(userdata);
   SoNode * node = static_cast<SoNode *>(userdata);
   node->touch();
@@ -1926,7 +1927,7 @@ SoGLRenderActionP::renderSingle(SoNode * node)
       // Render all transparent paths that should not be sorted
       this->action->apply(this->transpobjpaths, TRUE);
     }
-    // enable writing again. FIXME: consider if it is OK to push/pop state instead
+    // re-enable depth writing after transparent-pass rendering
     if (!this->transpobjdepthwrite) {
       SoDepthBufferElement::set(state, TRUE, TRUE,
                                 SoDepthBufferElement::LEQUAL,

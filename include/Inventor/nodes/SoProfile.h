@@ -41,6 +41,17 @@
 class SbVec2f;
 class SoState;
 
+/*!
+  \class SoProfile SoProfile.h Inventor/nodes/SoProfile.h
+  \brief Abstract base class for cross-section profile nodes.
+
+  \ingroup coin_nodes
+
+  SoProfile is the base for nodes that define 2D cross-section curves
+  (SoLinearProfile, etc.) used by extrusion or text shapes.
+
+  \sa SoLinearProfile
+*/
 class OBOL_DLL_API SoProfile : public SoNode {
   typedef SoNode inherited;
 

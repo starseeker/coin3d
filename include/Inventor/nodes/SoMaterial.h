@@ -41,6 +41,20 @@
 
 class SoMaterialP;
 
+/*!
+  \class SoMaterial SoMaterial.h Inventor/nodes/SoMaterial.h
+  \brief Sets the material appearance of subsequent geometry.
+
+  \ingroup coin_nodes
+
+  SoMaterial stores ambient, diffuse, specular, and emissive color fields
+  plus shininess and transparency.  These properties are applied to
+  all subsequent shape nodes in the same render state.  Multiple
+  material values are supported for per-face or per-vertex coloring
+  when combined with SoMaterialBinding.
+
+  \sa SoNode, SoBaseColor, SoMaterialBinding
+*/
 class OBOL_DLL_API SoMaterial : public SoNode {
   typedef SoNode inherited;
 

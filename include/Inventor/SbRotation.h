@@ -41,6 +41,20 @@
 class SbMatrix;
 class SbVec3f;
 
+/*!
+  \class SbRotation SbRotation.h Inventor/SbRotation.h
+  \brief Represents a rotation in 3D space using a quaternion.
+
+  \ingroup coin_base
+
+  SbRotation stores a rotation as a unit quaternion (q0, q1, q2, q3)
+  and provides conversions to and from angle-axis representation,
+  rotation matrices (SbMatrix), and a "rotate from/to" constructor.
+  Quaternion composition (multiplication), inversion, and spherical
+  linear interpolation (slerp) are also supported.
+
+  \sa SbMatrix, SbVec3f
+*/
 class OBOL_DLL_API SbRotation {
 public:
   SbRotation(void);

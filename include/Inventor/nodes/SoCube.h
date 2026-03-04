@@ -39,6 +39,18 @@
 
 class SoIndexedFaceSet;
 
+/*!
+  \class SoCube SoCube.h Inventor/nodes/SoCube.h
+  \brief Renders an axis-aligned box shape.
+
+  \ingroup coin_nodes
+
+  SoCube renders a rectangular box centered at the origin.  The width,
+  height, and depth fields (SoSFFloat) control the box dimensions.
+  The box is centered at the origin in the local coordinate system.
+
+  \sa SoCone, SoCylinder, SoSphere, SoShape
+*/
 class OBOL_DLL_API SoCube : public SoShape {
   typedef SoShape inherited;
 

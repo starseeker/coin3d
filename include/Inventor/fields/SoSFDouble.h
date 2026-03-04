@@ -36,6 +36,19 @@
 #include <Inventor/fields/SoSField.h>
 #include <Inventor/fields/SoSubField.h>
 
+/*!
+  \class SoSFDouble SoSFDouble.h Inventor/fields/SoSFDouble.h
+  \brief Field type holding a single double-precision floating-point value.
+
+  \ingroup coin_fields
+
+  SoSFDouble is a single-valued field that stores
+  one value of type double.
+  It inherits all field functionality from SoSField: value change notification,
+  field connections, and Inventor file I/O.
+
+  \sa SoSField, SoField
+*/
 class OBOL_DLL_API SoSFDouble : public SoSField {
   typedef SoSField inherited;
 

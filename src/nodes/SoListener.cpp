@@ -60,7 +60,7 @@
     }
   \endcode
 
-  \note VRML support has been removed from this version of Coin3D.
+  \note VRML support has been removed from Obol (the open-source fork of Coin3D).
 */
 
 #include <Inventor/nodes/SoListener.h>

@@ -39,6 +39,18 @@
 #include <Inventor/fields/SoSFShort.h>
 
 
+/*!
+  \class SoCounter SoCounter.h Inventor/engines/SoCounter.h
+  \brief Counts trigger events and outputs the current count.
+
+  \ingroup coin_engines
+
+  SoCounter increments its output count each time it receives a trigger
+  input.  It supports configurable min/max range and step size, and
+  emits a syncOut pulse when it wraps around.
+
+  \sa SoEngine, SoTimeCounter
+*/
 class OBOL_DLL_API SoCounter : public SoEngine {
   typedef SoEngine inherited;
 

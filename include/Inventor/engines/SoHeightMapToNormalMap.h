@@ -39,6 +39,17 @@
 
 class SbImage;
 
+/*!
+  \class SoHeightMapToNormalMap SoHeightMapToNormalMap.h Inventor/engines/SoHeightMapToNormalMap.h
+  \brief Converts a gray-scale height-map image to a tangent-space normal map.
+
+  \ingroup coin_engines
+
+  SoHeightMapToNormalMap takes an SoSFImage input (height map) and produces
+  an SoSFImage output (RGB normal map) suitable for normal-mapped rendering.
+
+  \sa SoEngine, SoTexture2
+*/
 class OBOL_DLL_API SoHeightMapToNormalMap : public SoTexture2Convert {
   typedef SoTexture2Convert inherited;
   SO_ENGINE_HEADER(SoHeightMapToNormalMap);

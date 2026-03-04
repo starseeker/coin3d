@@ -42,6 +42,17 @@
 #include <Inventor/fields/SoSFTrigger.h>
 #include <Inventor/fields/SoSFShort.h>
 
+/*!
+  \class SoTimeCounter SoTimeCounter.h Inventor/engines/SoTimeCounter.h
+  \brief Counts integer steps at a configurable rate.
+
+  \ingroup coin_engines
+
+  SoTimeCounter increments an integer output from min to max at a rate
+  controlled by the frequency field, optionally oscillating or looping.
+
+  \sa SoEngine, SoCounter
+*/
 class OBOL_DLL_API SoTimeCounter : public SoEngine {
   typedef SoEngine inherited;
   SO_ENGINE_HEADER(SoTimeCounter);

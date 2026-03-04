@@ -37,6 +37,17 @@
 
 struct SoGLContext;
 
+/*!
+  \class SoGLNormalElement SoGLNormalElement.h Inventor/elements/SoGLNormalElement.h
+  \brief GL-specific element for normal vectors.
+
+  \ingroup coin_elements
+
+  SoGLNormalElement extends SoNormalElement with OpenGL normal array
+  handling.
+
+  \sa SoNormalElement
+*/
 class OBOL_DLL_API SoGLNormalElement : public SoNormalElement {
   typedef SoNormalElement inherited;
 

@@ -41,6 +41,18 @@
 #include <Inventor/SbRotation.h>
 
 
+/*!
+  \class SoRotationXYZ SoRotationXYZ.h Inventor/nodes/SoRotationXYZ.h
+  \brief Applies a rotation about a single cardinal axis (X, Y, or Z).
+
+  \ingroup coin_nodes
+
+  SoRotationXYZ rotates the scene about one of the three world axes
+  by the angle specified in the angle field.  It is simpler than SoRotation
+  when the rotation axis is always X, Y, or Z.
+
+  \sa SoRotation, SoTransformation
+*/
 class OBOL_DLL_API SoRotationXYZ : public SoTransformation {
   typedef SoTransformation inherited;
 

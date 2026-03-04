@@ -35,6 +35,18 @@
 
 #include <Inventor/SbBasic.h>
 
+/*!
+  \class SoHardCopy SoHardCopy.h Inventor/annex/HardCopy/SoHardCopy.h
+  \brief Namespace class for hard-copy subsystem initialisation.
+
+  \ingroup coin_annex
+
+  SoHardCopy provides the initClass() method that registers all
+  hard-copy types.  Call SoHardCopy::init() before using any
+  vectorization classes.
+
+  \sa SoVectorizeAction, SoVectorizePSAction
+*/
 class OBOL_DLL_API SoHardCopy {
 
 public:

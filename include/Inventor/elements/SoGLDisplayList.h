@@ -40,6 +40,17 @@ class SoGLDisplayListP;
 
 // *************************************************************************
 
+/*!
+  \class SoGLDisplayList SoGLDisplayList.h Inventor/elements/SoGLDisplayList.h
+  \brief Manages an OpenGL display list or texture object.
+
+  \ingroup coin_elements
+
+  SoGLDisplayList wraps an OpenGL display list or texture object ID,
+  handling creation, reference counting, and context-aware deletion.
+
+  \sa SoGLCacheContextElement
+*/
 class OBOL_DLL_API SoGLDisplayList {
 public:
   enum Type {

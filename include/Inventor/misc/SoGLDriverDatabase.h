@@ -40,6 +40,18 @@ struct SoGLContext;
 
 class SbName;
 
+/*!
+  \class SoGLDriverDatabase SoGLDriverDatabase.h Inventor/misc/SoGLDriverDatabase.h
+  \brief Database of known OpenGL driver workarounds and capability flags.
+
+  \ingroup coin_misc
+
+  SoGLDriverDatabase stores a table of per-driver quirks and
+  feature availability flags compiled from both built-in knowledge
+  and run-time capability queries.
+
+  \sa SoGLImage
+*/
 class OBOL_DLL_API SoGLDriverDatabase {
 public:
   static SbBool isSupported(const SoGLContext * context, const SbName & feature);

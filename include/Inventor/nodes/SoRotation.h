@@ -37,6 +37,18 @@
 #include <Inventor/fields/SoSFRotation.h>
 #include <Inventor/nodes/SoTransformation.h>
 
+/*!
+  \class SoRotation SoRotation.h Inventor/nodes/SoRotation.h
+  \brief Applies a rotation to the current transformation matrix.
+
+  \ingroup coin_nodes
+
+  SoRotation applies a quaternion rotation (SbRotation) to the current model
+  matrix.  It is a simpler alternative to SoTransform when only a rotation
+  is needed.
+
+  \sa SoTransformation, SoTransform, SoTranslation, SoScale
+*/
 class OBOL_DLL_API SoRotation : public SoTransformation {
   typedef SoTransformation inherited;
 

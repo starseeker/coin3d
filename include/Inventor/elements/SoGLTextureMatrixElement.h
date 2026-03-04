@@ -40,6 +40,17 @@
 #include <Inventor/elements/SoTextureMatrixElement.h>
 #include <Inventor/elements/SoGLMultiTextureMatrixElement.h>
 
+/*!
+  \typedef SoGLTextureMatrixElement
+  \brief Compatibility alias for SoGLMultiTextureMatrixElement.
+
+  \ingroup coin_elements
+
+  This typedef maps the legacy SoGLTextureMatrixElement name to
+  SoGLMultiTextureMatrixElement.
+
+  \sa SoGLMultiTextureMatrixElement
+*/
 typedef SoGLMultiTextureMatrixElement SoGLTextureMatrixElement;
 
 #endif // !OBOL_SOGLTEXTUREMATRIXELEMENT_H

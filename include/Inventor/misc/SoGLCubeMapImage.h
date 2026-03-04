@@ -36,6 +36,17 @@
 #include <Inventor/SbBasic.h>
 #include <Inventor/misc/SoGLImage.h>
 
+/*!
+  \class SoGLCubeMapImage SoGLCubeMapImage.h Inventor/misc/SoGLCubeMapImage.h
+  \brief OpenGL cube-map texture image (six faces).
+
+  \ingroup coin_misc
+
+  SoGLCubeMapImage extends SoGLImage to manage a six-face
+  GL_TEXTURE_CUBE_MAP object for environment mapping.
+
+  \sa SoGLImage, SoTextureCubeMap
+*/
 class OBOL_DLL_API SoGLCubeMapImage : public SoGLImage {
   typedef SoGLImage inherited;
 

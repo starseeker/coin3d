@@ -45,6 +45,17 @@
 #include <Inventor/fields/SoMFVec2f.h>
 
 
+/*!
+  \class SoDecomposeVec2f SoDecomposeVec2f.h Inventor/engines/SoDecomposeVec2f.h
+  \brief Splits an SbVec2f into its scalar x and y components.
+
+  \ingroup coin_engines
+
+  SoDecomposeVec2f takes an SbVec2f input and exposes the x and y
+  components as separate float outputs.
+
+  \sa SoComposeVec2f, SoEngine
+*/
 class OBOL_DLL_API SoDecomposeVec2f : public SoEngine {
   typedef SoEngine inherited;
   SO_COMPOSE__HEADER(SoDecomposeVec2f);

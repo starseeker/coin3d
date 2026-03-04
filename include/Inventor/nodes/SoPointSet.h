@@ -40,6 +40,17 @@
 class SoCoordinateElement;
 class SoSeparator;
 
+/*!
+  \class SoPointSet SoPointSet.h Inventor/nodes/SoPointSet.h
+  \brief Renders a set of points at vertex coordinates.
+
+  \ingroup coin_nodes
+
+  SoPointSet renders point markers at each vertex position from
+  SoCoordinate3.  The numPoints field limits how many points are drawn.
+
+  \sa SoNonIndexedShape, SoCoordinate3, SoDrawStyle
+*/
 class OBOL_DLL_API SoPointSet : public SoNonIndexedShape {
   typedef SoNonIndexedShape inherited;
 

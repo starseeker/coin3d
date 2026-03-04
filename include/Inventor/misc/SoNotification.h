@@ -40,6 +40,18 @@ class SoEngineOutput;
 class SoField;
 
 
+/*!
+  \class SoNotList SoNotification.h Inventor/misc/SoNotification.h
+  \brief Notification propagation list.
+
+  \ingroup coin_misc
+
+  SoNotList carries the chain of SoNotRec records that describe how
+  a change notification is propagating through the scene graph from
+  its source to auditors.
+
+  \sa SoNotRec, SoBase
+*/
 class OBOL_DLL_API SoNotList {
 public:
   SoNotList(void);

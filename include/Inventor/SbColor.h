@@ -36,6 +36,19 @@
 #include <cstdint>
 #include <Inventor/SbVec3f.h>
 
+/*!
+  \class SbColor SbColor.h Inventor/SbColor.h
+  \brief RGB color value stored as three floating-point components.
+
+  \ingroup coin_base
+
+  SbColor extends SbVec3f with color-specific functionality: conversion
+  to and from HSV (hue/saturation/value) representation, and packing or
+  unpacking a 32-bit RGBA integer with a separate transparency value.
+  Components are in the range [0.0, 1.0].
+
+  \sa SbColor4f, SbVec3f
+*/
 class OBOL_DLL_API SbColor : public SbVec3f {
 public:
   SbColor(void);

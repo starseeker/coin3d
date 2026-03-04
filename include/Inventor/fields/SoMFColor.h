@@ -37,6 +37,19 @@
 #include <Inventor/fields/SoSubField.h>
 #include <Inventor/SbColor.h>
 
+/*!
+  \class SoMFColor SoMFColor.h Inventor/fields/SoMFColor.h
+  \brief Field type holding a array of RGB color values.
+
+  \ingroup coin_fields
+
+  SoMFColor is a multi-valued field that stores
+  an array of values of type SbColor.
+  It inherits all field functionality from SoMField: value change notification,
+  field connections, and Inventor file I/O.
+
+  \sa SoMField, SoField
+*/
 class OBOL_DLL_API SoMFColor : public SoMField {
   typedef SoMField inherited;
 

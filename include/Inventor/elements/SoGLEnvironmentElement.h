@@ -35,6 +35,17 @@
 
 #include <Inventor/elements/SoEnvironmentElement.h>
 
+/*!
+  \class SoGLEnvironmentElement SoGLEnvironmentElement.h Inventor/elements/SoGLEnvironmentElement.h
+  \brief GL-specific element for environment state.
+
+  \ingroup coin_elements
+
+  SoGLEnvironmentElement extends SoEnvironmentElement to issue the
+  corresponding OpenGL fog and ambient lighting calls.
+
+  \sa SoEnvironmentElement
+*/
 class OBOL_DLL_API SoGLEnvironmentElement : public SoEnvironmentElement {
   typedef SoEnvironmentElement inherited;
 

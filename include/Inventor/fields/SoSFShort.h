@@ -36,6 +36,19 @@
 #include <Inventor/fields/SoSField.h>
 #include <Inventor/fields/SoSubField.h>
 
+/*!
+  \class SoSFShort SoSFShort.h Inventor/fields/SoSFShort.h
+  \brief Field type holding a single 16-bit signed short integer.
+
+  \ingroup coin_fields
+
+  SoSFShort is a single-valued field that stores
+  one value of type int16_t.
+  It inherits all field functionality from SoSField: value change notification,
+  field connections, and Inventor file I/O.
+
+  \sa SoSField, SoField
+*/
 class OBOL_DLL_API SoSFShort : public SoSField {
   typedef SoSField inherited;
 

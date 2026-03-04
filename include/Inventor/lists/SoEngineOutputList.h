@@ -37,6 +37,16 @@
 
 class SoEngineOutput;
 
+/*!
+  \class SoEngineOutputList SoEngineOutputList.h Inventor/lists/SoEngineOutputList.h
+  \brief Resizable array of SoEngineOutput pointers.
+
+  \ingroup coin_lists
+
+  SoEngineOutputList stores a set of SoEngineOutput objects.
+
+  \sa SbPList, SoEngineOutput
+*/
 class OBOL_DLL_API SoEngineOutputList : public SbPList {
 public:
   SoEngineOutputList(void) : SbPList() { }

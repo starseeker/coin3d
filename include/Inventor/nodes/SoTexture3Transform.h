@@ -41,6 +41,17 @@
 class SbMatrix;
 
 
+/*!
+  \class SoTexture3Transform SoTexture3Transform.h Inventor/nodes/SoTexture3Transform.h
+  \brief Applies a 3D transformation to 3D texture coordinates.
+
+  \ingroup coin_nodes
+
+  SoTexture3Transform modifies the 3D texture coordinate matrix with
+  translation, rotation, scale, and center fields.
+
+  \sa SoTexture3, SoTexture2Transform
+*/
 class OBOL_DLL_API SoTexture3Transform : public SoNode {
   typedef SoNode inherited;
 

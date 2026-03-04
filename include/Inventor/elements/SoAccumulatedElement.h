@@ -36,6 +36,18 @@
 #include <Inventor/elements/SoSubElement.h>
 #include <Inventor/lists/SbList.h>
 
+/*!
+  \class SoAccumulatedElement SoAccumulatedElement.h Inventor/elements/SoAccumulatedElement.h
+  \brief Element base class for values that accumulate (e.g. transformation matrices).
+
+  \ingroup coin_elements
+
+  SoAccumulatedElement is a base for elements that accumulate values
+  rather than replace them (e.g., SoModelMatrixElement, SoLightElement).
+  It stores the list of node IDs that have contributed to the current value.
+
+  \sa SoElement, SoReplacedElement
+*/
 class OBOL_DLL_API SoAccumulatedElement : public SoElement {
   typedef SoElement inherited;
 

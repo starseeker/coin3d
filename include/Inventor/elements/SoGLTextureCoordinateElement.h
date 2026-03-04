@@ -40,6 +40,17 @@
 #include <Inventor/elements/SoTextureCoordinateElement.h>
 #include <Inventor/elements/SoGLMultiTextureCoordinateElement.h>
 
+/*!
+  \typedef SoGLTextureCoordinateElement
+  \brief Compatibility alias for SoGLMultiTextureCoordinateElement.
+
+  \ingroup coin_elements
+
+  This typedef maps the legacy SoGLTextureCoordinateElement name to
+  SoGLMultiTextureCoordinateElement.
+
+  \sa SoGLMultiTextureCoordinateElement
+*/
 typedef SoGLMultiTextureCoordinateElement SoGLTextureCoordinateElement;
 
 #endif // !OBOL_SOGLTEXTURECOORDINATEELEMENT_H

@@ -37,6 +37,17 @@
 #include <Inventor/fields/SoSFEnum.h>
 #include <Inventor/elements/SoLazyElement.h>
 
+/*!
+  \class SoLightModel SoLightModel.h Inventor/nodes/SoLightModel.h
+  \brief Selects the lighting model (Phong or base color).
+
+  \ingroup coin_nodes
+
+  SoLightModel selects between full Phong lighting (PHONG) and flat
+  unlit base-color rendering (BASE_COLOR).
+
+  \sa SoNode, SoLight, SoMaterial
+*/
 class OBOL_DLL_API SoLightModel : public SoNode {
   typedef SoNode inherited;
 

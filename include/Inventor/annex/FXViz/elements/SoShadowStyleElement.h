@@ -35,6 +35,17 @@
 
 #include <Inventor/elements/SoInt32Element.h>
 
+/*!
+  \class SoShadowStyleElement SoShadowStyleElement.h Inventor/annex/FXViz/elements/SoShadowStyleElement.h
+  \brief Traversal-state element for the shadow style.
+
+  \ingroup coin_annex
+
+  SoShadowStyleElement stores the shadow-style bitmask set by
+  SoShadowStyle nodes.
+
+  \sa SoInt32Element, SoShadowStyle
+*/
 class OBOL_DLL_API SoShadowStyleElement : public SoInt32Element {
   typedef SoInt32Element inherited;
 

@@ -40,6 +40,17 @@ class SoBaseKit;
 class SoNode;
 
 
+/*!
+  \class SoNodeKitDetail SoNodeKitDetail.h Inventor/details/SoNodeKitDetail.h
+  \brief Pick detail for a hit on a node kit.
+
+  \ingroup coin_details
+
+  SoNodeKitDetail records which part name and which node within a
+  node kit was intersected during a pick operation.
+
+  \sa SoDetail, SoBaseKit
+*/
 class OBOL_DLL_API SoNodeKitDetail : public SoDetail {
   typedef SoDetail inherited;
 

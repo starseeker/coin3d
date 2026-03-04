@@ -40,6 +40,18 @@
 #include <Inventor/elements/SoMultiTextureMatrixElement.h>
 #include <Inventor/SbMatrix.h>
 
+/*!
+  \typedef SoTextureMatrixElement
+  \brief Compatibility alias for SoMultiTextureMatrixElement (unit 0).
+
+  \ingroup coin_elements
+
+  This typedef maps the legacy SoTextureMatrixElement name to
+  SoMultiTextureMatrixElement.  Use SoMultiTextureMatrixElement
+  in new code.
+
+  \sa SoMultiTextureMatrixElement
+*/
 typedef SoMultiTextureMatrixElement SoTextureMatrixElement;
 
 #endif // !OBOL_SOTEXTUREMATRIXELEMENT_H

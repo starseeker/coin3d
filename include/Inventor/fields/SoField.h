@@ -44,6 +44,21 @@ class SoFieldList;
 class SoInput;
 class SoOutput;
 
+/*!
+  \class SoField SoField.h Inventor/fields/SoField.h
+  \brief Abstract base class for all field types.
+
+  \ingroup coin_fields
+
+  SoField is the base for the complete field hierarchy.  Fields store
+  typed data values and support automatic notification of dependent
+  nodes and engines when the value changes.  They can be connected to
+  other fields or engine outputs to form data-flow networks.  Subclasses
+  follow the naming convention SoSF (single-valued) and SoMF
+  (multi-valued).
+
+  \sa SoSField, SoMField, SoFieldContainer
+*/
 class OBOL_DLL_API SoField {
 
 public:
@@ -93,7 +108,7 @@ public:
   SoFieldContainer * getContainer(void) const;
 
   SbBool set(const char * valuestring);
-  void get(SbString & valuestring);
+  void get(SbString & valuestring) const;
 
   SbBool shouldWrite(void) const;
 

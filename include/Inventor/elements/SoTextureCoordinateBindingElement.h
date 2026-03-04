@@ -35,6 +35,18 @@
 
 #include <Inventor/elements/SoInt32Element.h>
 
+/*!
+  \class SoTextureCoordinateBindingElement SoTextureCoordinateBindingElement.h Inventor/elements/SoTextureCoordinateBindingElement.h
+  \brief Stores how texture coordinates are bound to vertices.
+
+  \ingroup coin_elements
+
+  SoTextureCoordinateBindingElement stores the texture coordinate
+  binding mode (PER_VERTEX, PER_VERTEX_INDEXED) set by
+  SoTextureCoordinateBinding.
+
+  \sa SoInt32Element
+*/
 class OBOL_DLL_API SoTextureCoordinateBindingElement : public SoInt32Element {
   typedef SoInt32Element inherited;
 

@@ -40,6 +40,20 @@ class SoTimerQueueSensor;
 class SoTimerSensor;
 class SbTime;
 
+/*!
+  \class SoSensorManager SoSensorManager.h Inventor/sensors/SoSensorManager.h
+  \brief Manages the scheduling and processing of all active sensors.
+
+  \ingroup coin_sensors
+
+  SoSensorManager maintains two queues: a delay queue (for
+  SoDelayQueueSensor) and a timer queue (for SoTimerQueueSensor).  It
+  is responsible for calling processDelayQueue() and processTimerQueue()
+  at appropriate times, typically driven by SoDB::doSelect() or the
+  window-system timer in a viewer.
+
+  \sa SoSensor, SoDB
+*/
 class OBOL_DLL_API SoSensorManager {
 public:
   SoSensorManager(void);

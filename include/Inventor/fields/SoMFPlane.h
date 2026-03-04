@@ -37,6 +37,19 @@
 #include <Inventor/fields/SoSubField.h>
 #include <Inventor/SbPlane.h>
 
+/*!
+  \class SoMFPlane SoMFPlane.h Inventor/fields/SoMFPlane.h
+  \brief Field type holding a array of 3D plane equations.
+
+  \ingroup coin_fields
+
+  SoMFPlane is a multi-valued field that stores
+  an array of values of type SbPlane.
+  It inherits all field functionality from SoMField: value change notification,
+  field connections, and Inventor file I/O.
+
+  \sa SoMField, SoField
+*/
 class OBOL_DLL_API SoMFPlane : public SoMField {
   typedef SoMField inherited;
 

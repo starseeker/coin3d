@@ -36,6 +36,17 @@
 #include <Inventor/elements/SoSubElement.h>
 #include <Inventor/SbViewVolume.h>
 
+/*!
+  \class SoPickRayElement SoPickRayElement.h Inventor/elements/SoPickRayElement.h
+  \brief Stores the current pick ray for pick traversal.
+
+  \ingroup coin_elements
+
+  SoPickRayElement stores the SbLine or view volume used by
+  SoRayPickAction to intersect geometry.
+
+  \sa SoElement
+*/
 class OBOL_DLL_API SoPickRayElement : public SoElement {
   typedef SoElement inherited;
 

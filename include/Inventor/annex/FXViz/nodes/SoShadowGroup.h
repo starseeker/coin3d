@@ -43,6 +43,18 @@
 
 class SoShadowGroupP;
 
+/*!
+  \class SoShadowGroup SoShadowGroup.h Inventor/annex/FXViz/nodes/SoShadowGroup.h
+  \brief Scene-graph separator that enables shadow rendering for its children.
+
+  \ingroup coin_annex
+
+  SoShadowGroup wraps a sub-graph in a shadow rendering pass;
+  child geometry casts and/or receives shadows according to its
+  SoShadowStyle.
+
+  \sa SoSeparator, SoShadowStyle, SoShadowDirectionalLight
+*/
 class OBOL_DLL_API SoShadowGroup : public SoSeparator {
   typedef SoSeparator inherited;
 

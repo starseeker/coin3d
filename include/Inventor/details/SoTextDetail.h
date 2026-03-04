@@ -35,6 +35,17 @@
 
 #include <Inventor/details/SoSubDetail.h>
 
+/*!
+  \class SoTextDetail SoTextDetail.h Inventor/details/SoTextDetail.h
+  \brief Pick detail for a hit on an SoText2 or SoText3 node.
+
+  \ingroup coin_details
+
+  SoTextDetail records the string index and character index within
+  that string of the text character that was hit during a pick.
+
+  \sa SoDetail, SoText2, SoText3
+*/
 class OBOL_DLL_API SoTextDetail : public SoDetail {
   typedef SoDetail inherited;
 

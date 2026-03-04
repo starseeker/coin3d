@@ -37,6 +37,19 @@
 #include <Inventor/SbVec2s.h>
 #include <Inventor/SbVec2f.h>
 
+/*!
+  \class SbViewportRegion SbViewportRegion.h Inventor/SbViewportRegion.h
+  \brief Describes a rectangular viewport region within a window.
+
+  \ingroup coin_base
+
+  SbViewportRegion stores the full window size and the active viewport
+  sub-region within it, both in normalized [0,1] floating-point
+  coordinates and in integer pixel coordinates.  It is used by render
+  and picking actions to determine how the scene maps to screen space.
+
+  \sa SbViewVolume, SoSceneManager, SoRenderManager
+*/
 class OBOL_DLL_API SbViewportRegion {
 public:
   SbViewportRegion(void);

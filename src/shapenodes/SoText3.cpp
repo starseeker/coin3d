@@ -84,7 +84,7 @@
        specularColor 1 1 1
      }
      Text3 {
-       string ["Coin3D"]
+       string ["Obol"]
        parts ALL
      }
    }

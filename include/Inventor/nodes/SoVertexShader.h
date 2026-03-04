@@ -35,6 +35,18 @@
 
 #include <Inventor/nodes/SoShaderObject.h>
 
+/*!
+  \class SoVertexShader SoVertexShader.h Inventor/nodes/SoVertexShader.h
+  \brief Specifies the source or binary of a vertex shader stage.
+
+  \ingroup coin_nodes
+
+  SoVertexShader is a child of SoShaderProgram that holds the GLSL (or
+  ARB) source or binary for the vertex processing stage.  Use the
+  sourceProgram field to supply the shader source.
+
+  \sa SoShaderObject, SoShaderProgram
+*/
 class OBOL_DLL_API SoVertexShader : public SoShaderObject {
   typedef SoShaderObject inherited;
   SO_NODE_HEADER(SoVertexShader);

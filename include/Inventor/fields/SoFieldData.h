@@ -45,6 +45,20 @@ class SoOutput;
 class SoEnumEntry;
 class SoFieldEntry;
 
+/*!
+  \class SoFieldData SoFieldData.h Inventor/fields/SoFieldData.h
+  \brief Stores type and offset metadata for a node or engine's fields.
+
+  \ingroup coin_fields
+
+  SoFieldData holds the per-class description of all fields owned by
+  an SoFieldContainer subclass.  Each field is described by its name
+  and byte offset within the container.  SoFieldData is normally
+  created automatically by the SO_NODE_SOURCE / SO_ENGINE_SOURCE macros
+  and is not used directly by application code.
+
+  \sa SoField, SoFieldContainer
+*/
 class OBOL_DLL_API SoFieldData {
 public:
   SoFieldData(void);

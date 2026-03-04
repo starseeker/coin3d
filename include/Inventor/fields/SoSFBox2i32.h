@@ -37,6 +37,19 @@
 #include <Inventor/fields/SoSubField.h>
 #include <Inventor/SbBox2i32.h>
 
+/*!
+  \class SoSFBox2i32 SoSFBox2i32.h Inventor/fields/SoSFBox2i32.h
+  \brief Field type holding a single 32-bit integer 2D bounding box.
+
+  \ingroup coin_fields
+
+  SoSFBox2i32 is a single-valued field that stores
+  one value of type SbBox2i32.
+  It inherits all field functionality from SoSField: value change notification,
+  field connections, and Inventor file I/O.
+
+  \sa SoSField, SoField
+*/
 class OBOL_DLL_API SoSFBox2i32 : public SoSField {
   typedef SoSField inherited;
 

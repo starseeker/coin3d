@@ -43,6 +43,21 @@
 
 class SoGetMatrixActionP;
 
+/*!
+  \class SoGetMatrixAction SoGetMatrixAction.h Inventor/actions/SoGetMatrixAction.h
+  \brief Computes the cumulative transformation matrix to a node in the scene graph.
+
+  \ingroup coin_actions
+
+  SoGetMatrixAction traverses the scene graph and accumulates the
+  composite transformation matrices.  After the action is applied to a
+  path, getMatrix() returns the model matrix at the tail of the path,
+  and getInverse() returns its inverse.  This is useful for converting
+  coordinates between world space and the local space of a particular
+  node.
+
+  \sa SoAction, SbMatrix
+*/
 class OBOL_DLL_API SoGetMatrixAction : public SoAction {
   typedef SoAction inherited;
 

@@ -38,6 +38,19 @@
 #include <Inventor/fields/SoSFFloat.h>
 #include <Inventor/fields/SoSFBitMask.h>
 
+/*!
+  \class SoCylinder SoCylinder.h Inventor/nodes/SoCylinder.h
+  \brief Renders a cylinder shape.
+
+  \ingroup coin_nodes
+
+  SoCylinder renders a cylinder with configurable radius and height.
+  The parts field controls which portions are rendered: SIDES, TOP,
+  BOTTOM, or ALL.  The cylinder is centered at the origin with its
+  axis aligned with the Y axis.
+
+  \sa SoCone, SoSphere, SoCube, SoShape
+*/
 class OBOL_DLL_API SoCylinder : public SoShape {
   typedef SoShape inherited;
 

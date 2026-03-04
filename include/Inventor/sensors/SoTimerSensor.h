@@ -35,6 +35,18 @@
 
 #include <Inventor/sensors/SoTimerQueueSensor.h>
 
+/*!
+  \class SoTimerSensor SoTimerSensor.h Inventor/sensors/SoTimerSensor.h
+  \brief Fires a callback at a fixed time interval.
+
+  \ingroup coin_sensors
+
+  SoTimerSensor fires its callback repeatedly at a configurable interval
+  (SbTime).  The base time and interval can be set to control when the
+  timer first fires and how often it repeats.
+
+  \sa SoTimerQueueSensor, SoAlarmSensor, SbTime
+*/
 class OBOL_DLL_API SoTimerSensor : public SoTimerQueueSensor {
   typedef SoTimerQueueSensor inherited;
 

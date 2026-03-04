@@ -42,6 +42,17 @@ class SoVectorizePSActionP;
 
 // *************************************************************************
 
+/*!
+  \class SoVectorizePSAction SoVectorizePSAction.h Inventor/annex/HardCopy/SoVectorizePSAction.h
+  \brief Vectorize action that writes PostScript output.
+
+  \ingroup coin_annex
+
+  SoVectorizePSAction extends SoVectorizeAction to produce
+  PostScript hard-copy output via SoPSVectorOutput.
+
+  \sa SoVectorizeAction, SoPSVectorOutput
+*/
 class OBOL_DLL_API SoVectorizePSAction : public SoVectorizeAction {
 
   SO_ACTION_HEADER(SoVectorizePSAction);

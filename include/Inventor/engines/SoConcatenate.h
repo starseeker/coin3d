@@ -38,6 +38,17 @@
 #include <Inventor/fields/SoMField.h>
 
 
+/*!
+  \class SoConcatenate SoConcatenate.h Inventor/engines/SoConcatenate.h
+  \brief Concatenates up to ten multi-valued fields into a single output.
+
+  \ingroup coin_engines
+
+  SoConcatenate merges up to ten multi-valued input fields (input[0]–input[9])
+  of the same type into a single output field.
+
+  \sa SoEngine
+*/
 class OBOL_DLL_API SoConcatenate : public SoEngine {
   typedef SoEngine inherited;
 

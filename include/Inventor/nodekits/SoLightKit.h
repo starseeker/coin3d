@@ -36,6 +36,17 @@
 #include <Inventor/nodekits/SoSubKit.h>
 #include <Inventor/nodekits/SoBaseKit.h>
 
+/*!
+  \class SoLightKit SoLightKit.h Inventor/nodekits/SoLightKit.h
+  \brief Node kit that bundles a light and its transform.
+
+  \ingroup coin_nodekits
+
+  SoLightKit groups a light node, its icon geometry, and its
+  transformation into a single named-part assembly.
+
+  \sa SoBaseKit, SoDirectionalLight
+*/
 class OBOL_DLL_API SoLightKit : public SoBaseKit {
   typedef SoBaseKit inherited;
 

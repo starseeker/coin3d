@@ -40,6 +40,19 @@
 class SbLine;
 class SbMatrix;
 
+/*!
+  \class SbPlane SbPlane.h Inventor/SbPlane.h
+  \brief Represents an infinite plane in 3D space.
+
+  \ingroup coin_base
+
+  SbPlane is defined by a unit normal vector and a distance from the
+  origin.  It supports intersection tests with lines (SbLine),
+  half-space queries, distance computation, and transformation by a
+  matrix (SbMatrix).
+
+  \sa SbLine, SbVec3f, SbMatrix
+*/
 class OBOL_DLL_API SbPlane {
 public:
   SbPlane(void);

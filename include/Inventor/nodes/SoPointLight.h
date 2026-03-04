@@ -37,6 +37,18 @@
 #include <Inventor/fields/SoSFVec3f.h>
 #include <Inventor/nodes/SoLight.h>
 
+/*!
+  \class SoPointLight SoPointLight.h Inventor/nodes/SoPointLight.h
+  \brief A positional (omnidirectional) point light source.
+
+  \ingroup coin_nodes
+
+  SoPointLight emits light equally in all directions from a single point in
+  space.  The location field (SoSFVec3f) specifies the position in the current
+  coordinate system.
+
+  \sa SoLight, SoDirectionalLight, SoSpotLight
+*/
 class OBOL_DLL_API SoPointLight : public SoLight {
   typedef SoLight inherited;
 

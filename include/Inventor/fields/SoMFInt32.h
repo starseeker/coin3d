@@ -36,6 +36,19 @@
 #include <Inventor/fields/SoMField.h>
 #include <Inventor/fields/SoSubField.h>
 
+/*!
+  \class SoMFInt32 SoMFInt32.h Inventor/fields/SoMFInt32.h
+  \brief Field type holding a array of 32-bit signed integer values.
+
+  \ingroup coin_fields
+
+  SoMFInt32 is a multi-valued field that stores
+  an array of values of type int32_t.
+  It inherits all field functionality from SoMField: value change notification,
+  field connections, and Inventor file I/O.
+
+  \sa SoMField, SoField
+*/
 class OBOL_DLL_API SoMFInt32 : public SoMField {
   typedef SoMField inherited;
 

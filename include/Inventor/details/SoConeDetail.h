@@ -35,6 +35,17 @@
 
 #include <Inventor/details/SoSubDetail.h>
 
+/*!
+  \class SoConeDetail SoConeDetail.h Inventor/details/SoConeDetail.h
+  \brief Pick detail for a hit on an SoCone node.
+
+  \ingroup coin_details
+
+  SoConeDetail describes which part (body or bottom cap) of an SoCone
+  was hit during a pick operation, along with texture coordinates.
+
+  \sa SoDetail, SoCone
+*/
 class OBOL_DLL_API SoConeDetail : public SoDetail {
   typedef SoDetail inherited;
 

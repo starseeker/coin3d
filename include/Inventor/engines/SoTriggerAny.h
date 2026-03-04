@@ -38,6 +38,17 @@
 #include <Inventor/fields/SoSFTrigger.h>
 
 
+/*!
+  \class SoTriggerAny SoTriggerAny.h Inventor/engines/SoTriggerAny.h
+  \brief Outputs a trigger when any of up to ten inputs fires.
+
+  \ingroup coin_engines
+
+  SoTriggerAny monitors up to ten SoSFTrigger inputs and fires its
+  output trigger whenever any one of them is triggered.
+
+  \sa SoEngine
+*/
 class OBOL_DLL_API SoTriggerAny : public SoEngine {
   typedef SoEngine inherited;
 

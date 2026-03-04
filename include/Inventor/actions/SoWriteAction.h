@@ -39,6 +39,19 @@
 
 class SoWriteActionP;
 
+/*!
+  \class SoWriteAction SoWriteAction.h Inventor/actions/SoWriteAction.h
+  \brief Writes a scene graph to a file or stream in Open Inventor format.
+
+  \ingroup coin_actions
+
+  SoWriteAction traverses a scene graph and serializes it to an
+  SoOutput in the Open Inventor ASCII or binary format.  The output
+  can be directed to a file, a memory buffer, or any custom stream via
+  SoOutput.
+
+  \sa SoAction, SoOutput, SoInput
+*/
 class OBOL_DLL_API SoWriteAction : public SoAction {
   typedef SoAction inherited;
 

@@ -41,6 +41,17 @@
 class SoState;
 class SoTextureCombineElementP;
 
+/*!
+  \class SoTextureCombineElement SoTextureCombineElement.h Inventor/elements/SoTextureCombineElement.h
+  \brief Stores multi-texture combine operation parameters.
+
+  \ingroup coin_elements
+
+  SoTextureCombineElement stores the GL_COMBINE parameters set by
+  SoTextureCombine nodes.
+
+  \sa SoElement
+*/
 class OBOL_DLL_API SoTextureCombineElement : public SoElement {
   typedef SoElement inherited;
 

@@ -38,6 +38,19 @@
 class SoInput;
 class SoOutput;
 
+/*!
+  \class SoMField SoMField.h Inventor/fields/SoMField.h
+  \brief Abstract base class for multi-valued fields.
+
+  \ingroup coin_fields
+
+  SoMField is the base for all multi-value field types (SoMFFloat,
+  SoMFVec3f, SoMFString, etc.).  Each SoMField holds a variable-length
+  array of typed values.  Concrete subclasses provide typed
+  get1Value()/set1Value()/setValues() methods.
+
+  \sa SoSField, SoField
+*/
 class OBOL_DLL_API SoMField : public SoField {
   typedef SoField inherited;
 
@@ -54,7 +67,7 @@ public:
   virtual void insertSpace(int start, int num);
 
   SbBool set1(const int index, const char * const valuestring);
-  void get1(const int index, SbString & valuestring);
+  void get1(const int index, SbString & valuestring) const;
 
   static void initClass(void);
 

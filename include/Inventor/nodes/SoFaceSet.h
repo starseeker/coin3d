@@ -39,6 +39,18 @@
 
 class SoFaceSetP;
 
+/*!
+  \class SoFaceSet SoFaceSet.h Inventor/nodes/SoFaceSet.h
+  \brief Renders a set of polygonal faces from sequential vertex coordinates.
+
+  \ingroup coin_nodes
+
+  SoFaceSet reads consecutive blocks of vertices from the current SoCoordinate3
+  node.  The numVertices field specifies how many vertices each polygon uses.
+  It is the non-indexed counterpart to SoIndexedFaceSet.
+
+  \sa SoNonIndexedShape, SoIndexedFaceSet, SoCoordinate3
+*/
 class OBOL_DLL_API SoFaceSet : public SoNonIndexedShape {
   typedef SoNonIndexedShape inherited;
 

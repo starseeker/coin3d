@@ -37,6 +37,18 @@
 
 class SoLocalBBoxMatrixElement;
 
+/*!
+  \class SoBBoxModelMatrixElement SoBBoxModelMatrixElement.h Inventor/elements/SoBBoxModelMatrixElement.h
+  \brief Variant of SoModelMatrixElement used during bounding-box computation.
+
+  \ingroup coin_elements
+
+  SoBBoxModelMatrixElement shadows SoModelMatrixElement specifically
+  for bounding-box traversal, allowing the bounding-box pass to
+  have its own independent model-matrix stack.
+
+  \sa SoModelMatrixElement
+*/
 class OBOL_DLL_API SoBBoxModelMatrixElement : public SoModelMatrixElement {
   typedef SoModelMatrixElement inherited;
 

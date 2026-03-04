@@ -35,6 +35,17 @@
 
 #include <Inventor/nodekits/SoSeparatorKit.h>
 
+/*!
+  \class SoShapeKit SoShapeKit.h Inventor/nodekits/SoShapeKit.h
+  \brief Node kit that bundles a shape with its appearance and coordinates.
+
+  \ingroup coin_nodekits
+
+  SoShapeKit extends SoSeparatorKit with additional named parts
+  for coordinate nodes, normal nodes, and a shape node.
+
+  \sa SoSeparatorKit, SoVertexShader
+*/
 class OBOL_DLL_API SoShapeKit : public SoSeparatorKit {
   typedef SoSeparatorKit inherited;
 

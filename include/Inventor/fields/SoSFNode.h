@@ -44,6 +44,19 @@
 class SoNode;
 
 
+/*!
+  \class SoSFNode SoSFNode.h Inventor/fields/SoSFNode.h
+  \brief Field type holding a single pointer to a scene-graph node.
+
+  \ingroup coin_fields
+
+  SoSFNode is a single-valued field that stores
+  one value of type SoNode.
+  It inherits all field functionality from SoSField: value change notification,
+  field connections, and Inventor file I/O.
+
+  \sa SoSField, SoField
+*/
 class OBOL_DLL_API SoSFNode : public SoSField {
   typedef SoSField inherited;
 

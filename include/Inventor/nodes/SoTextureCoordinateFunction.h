@@ -35,6 +35,18 @@
 
 #include <Inventor/nodes/SoSubNode.h>
 
+/*!
+  \class SoTextureCoordinateFunction SoTextureCoordinateFunction.h Inventor/nodes/SoTextureCoordinateFunction.h
+  \brief Abstract base class for procedural texture coordinate generators.
+
+  \ingroup coin_nodes
+
+  SoTextureCoordinateFunction is the base for nodes that compute texture
+  coordinates procedurally (e.g., environment mapping, sphere mapping).
+  Subclasses: SoTextureCoordinatePlane, SoTextureCoordinateSphere, etc.
+
+  \sa SoTextureCoordinatePlane, SoTextureCoordinateSphere
+*/
 class OBOL_DLL_API SoTextureCoordinateFunction : public SoNode {
   typedef SoNode inherited;
 

@@ -37,6 +37,17 @@
 
 class SoPickedPoint;
 
+/*!
+  \class SoPickedPointList SoPickedPointList.h Inventor/lists/SoPickedPointList.h
+  \brief Resizable array of SoPickedPoint pointers.
+
+  \ingroup coin_lists
+
+  SoPickedPointList stores the list of pick results returned by
+  SoRayPickAction.
+
+  \sa SbPList, SoPickedPoint, SoRayPickAction
+*/
 class OBOL_DLL_API SoPickedPointList : public SbPList {
 public:
   SoPickedPointList(void) : SbPList() { }

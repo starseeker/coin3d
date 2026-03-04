@@ -37,6 +37,17 @@
 
 struct SoGLContext;
 
+/*!
+  \class SoGLDepthBufferElement SoGLDepthBufferElement.h Inventor/elements/SoGLDepthBufferElement.h
+  \brief GL-specific element for depth buffer state.
+
+  \ingroup coin_elements
+
+  SoGLDepthBufferElement extends SoDepthBufferElement to issue the
+  corresponding glDepthFunc/glDepthMask/glEnable(GL_DEPTH_TEST) calls.
+
+  \sa SoDepthBufferElement
+*/
 class OBOL_DLL_API SoGLDepthBufferElement : public SoDepthBufferElement {
   typedef SoDepthBufferElement inherited;
   SO_ELEMENT_HEADER(SoGLDepthBufferElement);

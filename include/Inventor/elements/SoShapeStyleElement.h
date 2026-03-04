@@ -35,6 +35,18 @@
 
 #include <Inventor/elements/SoSubElement.h>
 
+/*!
+  \class SoShapeStyleElement SoShapeStyleElement.h Inventor/elements/SoShapeStyleElement.h
+  \brief Stores composite shape-style flags used by shape nodes during rendering.
+
+  \ingroup coin_elements
+
+  SoShapeStyleElement aggregates several rendering flags (normal
+  generation mode, texture enable, etc.) for quick lookup by shape
+  nodes.
+
+  \sa SoElement
+*/
 class OBOL_DLL_API SoShapeStyleElement : public SoElement {
   typedef SoElement inherited;
 

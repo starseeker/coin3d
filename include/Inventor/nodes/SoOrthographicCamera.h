@@ -36,6 +36,18 @@
 #include <Inventor/nodes/SoSubNode.h>
 #include <Inventor/nodes/SoCamera.h>
 
+/*!
+  \class SoOrthographicCamera SoOrthographicCamera.h Inventor/nodes/SoOrthographicCamera.h
+  \brief Camera with an orthographic (parallel) projection.
+
+  \ingroup coin_nodes
+
+  SoOrthographicCamera renders the scene without perspective foreshortening.
+  The height field controls the vertical extent of the view volume.  It is
+  commonly used for 2D or technical drawing views.
+
+  \sa SoCamera, SoPerspectiveCamera
+*/
 class OBOL_DLL_API SoOrthographicCamera : public SoCamera {
   typedef SoCamera inherited;
 

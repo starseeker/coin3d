@@ -37,6 +37,17 @@
 #include <Inventor/fields/SoSFName.h>
 #include <Inventor/fields/SoSFFloat.h>
 
+/*!
+  \class SoFont SoFont.h Inventor/nodes/SoFont.h
+  \brief Sets the font name and size for subsequent text nodes.
+
+  \ingroup coin_nodes
+
+  SoFont specifies the font used by SoText2 and SoText3 via its name
+  (SoSFName) and size (SoSFFloat) fields.
+
+  \sa SoText2, SoText3, SoFontStyle
+*/
 class OBOL_DLL_API SoFont : public SoNode {
   typedef SoNode inherited;
 

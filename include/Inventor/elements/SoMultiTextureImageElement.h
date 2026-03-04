@@ -41,6 +41,17 @@
 class SoState;
 class SoMultiTextureImageElementP;
 
+/*!
+  \class SoMultiTextureImageElement SoMultiTextureImageElement.h Inventor/elements/SoMultiTextureImageElement.h
+  \brief Stores texture images across multiple texture units.
+
+  \ingroup coin_elements
+
+  SoMultiTextureImageElement maintains per-unit texture image data
+  (image, wrap mode, filter) for multi-texturing.
+
+  \sa SoElement
+*/
 class OBOL_DLL_API SoMultiTextureImageElement : public SoElement {
   typedef SoElement inherited;
 

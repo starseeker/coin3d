@@ -42,6 +42,19 @@
 
 class SoCalculatorP;
 
+/*!
+  \class SoCalculator SoCalculator.h Inventor/engines/SoCalculator.h
+  \brief General-purpose expression evaluator engine.
+
+  \ingroup coin_engines
+
+  SoCalculator evaluates user-supplied mathematical expressions involving
+  up to eight scalar (a–h) and eight vector (A–H) input fields.  Results
+  are written to oa–od (scalar) and oA–oD (vector) output connectors.
+  Expressions use C-like floating-point syntax.
+
+  \sa SoEngine
+*/
 class OBOL_DLL_API SoCalculator : public SoEngine {
   typedef SoEngine inherited;
 

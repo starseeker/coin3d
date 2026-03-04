@@ -37,6 +37,18 @@
 #include <Inventor/fields/SoSFEnum.h>
 #include <Inventor/elements/SoTextureCoordinateBindingElement.h>
 
+/*!
+  \class SoTextureCoordinateBinding SoTextureCoordinateBinding.h Inventor/nodes/SoTextureCoordinateBinding.h
+  \brief Controls how texture coordinates are assigned to vertices.
+
+  \ingroup coin_nodes
+
+  SoTextureCoordinateBinding specifies whether texture coordinates from
+  SoTextureCoordinate2 are applied per vertex (PER_VERTEX) or per vertex
+  indexed (PER_VERTEX_INDEXED).
+
+  \sa SoTextureCoordinate2, SoNormalBinding
+*/
 class OBOL_DLL_API SoTextureCoordinateBinding : public SoNode {
   typedef SoNode inherited;
 

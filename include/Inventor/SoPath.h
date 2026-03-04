@@ -48,7 +48,20 @@ class SoNotList;
 class SoInput;
 class SoPathList;
 
+/*!
+  \class SoPath SoPath.h Inventor/SoPath.h
+  \brief Describes a path through a scene graph from a root to a leaf node.
 
+  \ingroup coin_nodes
+
+  SoPath stores an ordered sequence of (node, child-index) pairs that
+  describes a unique traversal path from a root SoNode down to a
+  specific node in the scene graph.  Paths are used by picking actions,
+  event handling, and search operations to identify the exact instance
+  of a shared node that was hit or found.
+
+  \sa SoFullPath, SoRayPickAction, SoSearchAction
+*/
 class OBOL_DLL_API SoPath : public SoBase {
   typedef SoBase inherited;
 

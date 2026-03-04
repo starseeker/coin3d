@@ -35,6 +35,17 @@
 
 #include <Inventor/elements/SoInt32Element.h>
 
+/*!
+  \class SoGLLightIdElement SoGLLightIdElement.h Inventor/elements/SoGLLightIdElement.h
+  \brief Allocates and tracks OpenGL light IDs.
+
+  \ingroup coin_elements
+
+  SoGLLightIdElement manages the assignment of GL_LIGHT0…GL_LIGHT7
+  indices to active light sources during rendering.
+
+  \sa SoInt32Element
+*/
 class OBOL_DLL_API SoGLLightIdElement : public SoInt32Element {
   typedef SoInt32Element inherited;
 

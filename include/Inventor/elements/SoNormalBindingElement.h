@@ -35,6 +35,17 @@
 
 #include <Inventor/elements/SoInt32Element.h>
 
+/*!
+  \class SoNormalBindingElement SoNormalBindingElement.h Inventor/elements/SoNormalBindingElement.h
+  \brief Stores how normal vectors are bound to geometry.
+
+  \ingroup coin_elements
+
+  SoNormalBindingElement stores the binding mode set by SoNormalBinding
+  (PER_VERTEX, PER_FACE, OVERALL, etc.).
+
+  \sa SoInt32Element
+*/
 class OBOL_DLL_API SoNormalBindingElement : public SoInt32Element {
   typedef SoInt32Element inherited;
 

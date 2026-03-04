@@ -44,6 +44,17 @@ typedef void SoScheduleDeleteCB(void * closure, uint32_t contextid);
 
 // *************************************************************************
 
+/*!
+  \class SoGLCacheContextElement SoGLCacheContextElement.h Inventor/elements/SoGLCacheContextElement.h
+  \brief Stores the current OpenGL context identifier.
+
+  \ingroup coin_elements
+
+  SoGLCacheContextElement holds an integer context ID used to associate
+  display lists and VBOs with a specific OpenGL context.
+
+  \sa SoElement
+*/
 class OBOL_DLL_API SoGLCacheContextElement : public SoElement {
   typedef SoElement inherited;
 

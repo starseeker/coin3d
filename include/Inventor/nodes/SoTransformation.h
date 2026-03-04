@@ -35,6 +35,19 @@
 
 #include <Inventor/nodes/SoSubNode.h>
 
+/*!
+  \class SoTransformation SoTransformation.h Inventor/nodes/SoTransformation.h
+  \brief Abstract base class for all transformation nodes.
+
+  \ingroup coin_nodes
+
+  SoTransformation is the abstract base for nodes that modify the
+  current model matrix in the traversal state.  Concrete subclasses
+  include SoTransform, SoTranslation, SoRotation, SoScale, and
+  SoMatrixTransform.
+
+  \sa SoTransform, SoTranslation, SoRotation, SoScale
+*/
 class OBOL_DLL_API SoTransformation : public SoNode {
   typedef SoNode inherited;
 

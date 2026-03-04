@@ -35,6 +35,18 @@
 
 #include <Inventor/lists/SoTypeList.h>
 
+/*!
+  \class SoEnabledElementsList SoEnabledElementsList.h Inventor/lists/SoEnabledElementsList.h
+  \brief List of element types enabled for a specific action class.
+
+  \ingroup coin_lists
+
+  SoEnabledElementsList stores the set of SoElement class types
+  that a given action class needs in its traversal state.  It
+  is used by SoState to pre-allocate the element stacks.
+
+  \sa SbPList, SoElement, SoAction
+*/
 class OBOL_DLL_API SoEnabledElementsList {
 public:
   SoEnabledElementsList(SoEnabledElementsList * const parentlist);

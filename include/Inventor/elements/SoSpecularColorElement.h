@@ -37,6 +37,17 @@
 
 class SbColor;
 
+/*!
+  \class SoSpecularColorElement SoSpecularColorElement.h Inventor/elements/SoSpecularColorElement.h
+  \brief Stores the current specular color array.
+
+  \ingroup coin_elements
+
+  SoSpecularColorElement stores the specular highlight colors set by
+  SoMaterial.
+
+  \sa SoReplacedElement
+*/
 class OBOL_DLL_API SoSpecularColorElement : public SoReplacedElement {
   typedef SoReplacedElement inherited;
 

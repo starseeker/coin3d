@@ -37,6 +37,19 @@
 
 typedef void SoCallbackCB(void * userdata, SoAction * action);
 
+/*!
+  \class SoCallback SoCallback.h Inventor/nodes/SoCallback.h
+  \brief Calls a user callback during scene-graph traversal.
+
+  \ingroup coin_nodes
+
+  SoCallback inserts a callback function at a specific point in the
+  scene graph.  The callback is invoked for every action that traverses
+  the node, allowing custom processing (e.g., setting up special OpenGL
+  state) to be interleaved with normal scene rendering.
+
+  \sa SoNode, SoEventCallback
+*/
 class OBOL_DLL_API SoCallback : public SoNode {
   typedef SoNode inherited;
 

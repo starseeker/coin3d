@@ -42,6 +42,18 @@
 class SoGroup;
 
 
+/*!
+  \class SoNodeKitListPart SoNodeKitListPart.h Inventor/nodekits/SoNodeKitListPart.h
+  \brief A node-kit part that holds a list of nodes.
+
+  \ingroup coin_nodekits
+
+  SoNodeKitListPart is used inside node kits to store a variable-
+  length list of child nodes.  It supports type-restricted
+  containers and optional grouping via SoGroup or SoSeparator.
+
+  \sa SoBaseKit, SoGroup
+*/
 class OBOL_DLL_API SoNodeKitListPart : public SoNode {
   typedef SoNode inherited;
 

@@ -47,6 +47,17 @@
 
 class SoProfilerStats;
 
+/*!
+  \class SoNodeVisualize SoNodeVisualize.h Inventor/annex/Profiler/nodekits/SoNodeVisualize.h
+  \brief Node kit that visualises a scene-graph node with profiling data.
+
+  \ingroup coin_annex
+
+  SoNodeVisualize renders a colored box representation of a node
+  with overlaid profiling time information.
+
+  \sa SoBaseKit, SoProfiler
+*/
 class OBOL_DLL_API SoNodeVisualize : public SoBaseKit
 {
   typedef SoBaseKit inherited;

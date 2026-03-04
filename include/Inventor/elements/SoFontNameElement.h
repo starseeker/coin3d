@@ -36,6 +36,17 @@
 #include <Inventor/SbName.h>
 #include <Inventor/elements/SoReplacedElement.h>
 
+/*!
+  \class SoFontNameElement SoFontNameElement.h Inventor/elements/SoFontNameElement.h
+  \brief Stores the current font name.
+
+  \ingroup coin_elements
+
+  SoFontNameElement stores the font name string set by an SoFont or
+  SoFontStyle node.
+
+  \sa SoReplacedElement
+*/
 class OBOL_DLL_API SoFontNameElement : public SoReplacedElement {
   typedef SoReplacedElement inherited;
 

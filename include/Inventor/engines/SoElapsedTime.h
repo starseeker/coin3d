@@ -41,6 +41,18 @@
 #include <Inventor/fields/SoSFTrigger.h>
 
 
+/*!
+  \class SoElapsedTime SoElapsedTime.h Inventor/engines/SoElapsedTime.h
+  \brief Outputs the elapsed time since the engine was created or reset.
+
+  \ingroup coin_engines
+
+  SoElapsedTime provides a real-time clock output (timeOut, SoSFTime)
+  scaled by the speed field.  It can be paused and reset, making it
+  useful for time-driven animations.
+
+  \sa SoEngine, SbTime, SoTimerSensor
+*/
 class OBOL_DLL_API SoElapsedTime : public SoEngine {
   typedef SoEngine inherited;
 

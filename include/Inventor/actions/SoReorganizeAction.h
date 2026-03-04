@@ -39,6 +39,20 @@ class SoSimplifier;
 class SoSeparator;
 class SoReorganizeActionP;
 
+/*!
+  \class SoReorganizeAction SoReorganizeAction.h Inventor/actions/SoReorganizeAction.h
+  \brief Reorganizes a scene graph to improve rendering performance.
+
+  \ingroup coin_actions
+
+  SoReorganizeAction traverses a scene graph and restructures geometry
+  nodes for better rendering efficiency.  It can merge shapes, convert
+  indexed primitives, and apply simplification.  The action requires an
+  SoSimplifier object and optionally an SoSeparator as reorganization
+  target.
+
+  \sa SoSimplifyAction, SoAction
+*/
 class OBOL_DLL_API SoReorganizeAction : public SoSimplifyAction {
   typedef SoSimplifyAction inherited;
 

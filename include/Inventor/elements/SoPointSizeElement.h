@@ -35,6 +35,17 @@
 
 #include <Inventor/elements/SoFloatElement.h>
 
+/*!
+  \class SoPointSizeElement SoPointSizeElement.h Inventor/elements/SoPointSizeElement.h
+  \brief Stores the current point size.
+
+  \ingroup coin_elements
+
+  SoPointSizeElement stores the point size (in pixels) set by
+  SoDrawStyle.
+
+  \sa SoFloatElement
+*/
 class OBOL_DLL_API SoPointSizeElement : public SoFloatElement {
   typedef SoFloatElement inherited;
 

@@ -40,6 +40,19 @@
 #include <Inventor/SbMatrix.h>
 #include <Inventor/SbVec3f.h>
 
+/*!
+  \class SoTransform SoTransform.h Inventor/nodes/SoTransform.h
+  \brief Affine transformation node (translation, rotation, scale).
+
+  \ingroup coin_nodes
+
+  SoTransform accumulates translation, rotation, scale center, scale, and
+  scale orientation into the traversal model matrix.  Fields: translation
+  (SbVec3f), rotation (SbRotation), scaleFactor (SbVec3f), scaleOrientation
+  (SbRotation), and center (SbVec3f).
+
+  \sa SoTranslation, SoRotation, SoScale, SoMatrixTransform
+*/
 class OBOL_DLL_API SoTransform : public SoTransformation {
   typedef SoTransformation inherited;
 

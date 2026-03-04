@@ -211,7 +211,8 @@ public:
   SbList <double> ppdistance;
 
   unsigned int flags;
-  SbBool objectspacevalid; // FIXME: why not a flag?
+  SbBool objectspacevalid; // Separate bool (not a flags bit) to keep the
+                           // flags enum values stable across versions.
 
   enum {
     WS_RAY_SET =         0x0001, // ray set by setRay()

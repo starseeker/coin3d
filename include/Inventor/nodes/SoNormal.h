@@ -39,6 +39,18 @@
 class SbVec3f;
 class SoNormalP;
 
+/*!
+  \class SoNormal SoNormal.h Inventor/nodes/SoNormal.h
+  \brief Stores surface normal vectors for subsequent shape nodes.
+
+  \ingroup coin_nodes
+
+  SoNormal provides explicit per-vertex or per-face normal vectors via its
+  vector field (SoMFVec3f).  Shape nodes use these when
+  SoNormalBinding specifies the binding.
+
+  \sa SoNode, SoNormalBinding, SoCoordinate3
+*/
 class OBOL_DLL_API SoNormal : public SoNode {
   typedef SoNode inherited;
 

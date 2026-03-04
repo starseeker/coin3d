@@ -42,6 +42,17 @@
 
 struct SoProfilerVisualizeKitP;
 
+/*!
+  \class SoProfilerVisualizeKit SoProfilerVisualizeKit.h Inventor/annex/Profiler/nodekits/SoProfilerVisualizeKit.h
+  \brief Node kit that provides a scene-tree profiling visualisation.
+
+  \ingroup coin_annex
+
+  SoProfilerVisualizeKit builds a real-time visual representation
+  of the scene graph annotated with profiling data.
+
+  \sa SoBaseKit, SoProfilerOverlayKit
+*/
 class OBOL_DLL_API SoProfilerVisualizeKit : public SoBaseKit {
   typedef SoBaseKit inherited;
   SO_KIT_HEADER(SoProfilerVisualizeKit);

@@ -120,7 +120,6 @@ sofieldcontainer_userdata_cleanup(void)
 // *************************************************************************
 
 #define FLAG_DONOTIFY      0x01
-#define FLAG_FIRSTINSTANCE 0x02
 
 // *************************************************************************
 
@@ -128,7 +127,7 @@ sofieldcontainer_userdata_cleanup(void)
   Constructor.
 */
 SoFieldContainer::SoFieldContainer(void)
-  : isBuiltIn(TRUE), donotify(FLAG_DONOTIFY) // HACK warning: donotify is used as a bitmask
+  : isBuiltIn(TRUE), donotify(FLAG_DONOTIFY)
 {
 }
 /*!
@@ -148,12 +147,16 @@ SoFieldContainer::~SoFieldContainer()
 // Use a stack of dictionaries when copying nodes to allow recursive
 // copying.
 
+// Value type is SoFieldContainer * (non-const) so that checkCopy() can return
+// a mutable pointer without a cast.  The key remains const because the original
+// is never modified through the map.
+// (Original typedef kept as comment for reference:)
 // typedef SbHash<const SoFieldContainer *, const SoFieldContainer *> SoFieldContainerCopyMap;
 
 #define SOFIELDCONTAINER_COPYDICT_DEBUG (OBOL_DEBUG && 0)
 
-class SoFieldContainerCopyMap : public SbHash<const SoFieldContainer *, const SoFieldContainer *> {
-  typedef SbHash<const SoFieldContainer *, const SoFieldContainer *> inherited;
+class SoFieldContainerCopyMap : public SbHash<const SoFieldContainer *, SoFieldContainer *> {
+  typedef SbHash<const SoFieldContainer *, SoFieldContainer *> inherited;
 public:
   SoFieldContainerCopyMap(void) : inherited() {
 #if SOFIELDCONTAINER_COPYDICT_DEBUG
@@ -168,14 +171,14 @@ public:
 #endif // DEBUG
   }
 
-  SbBool put(const SoFieldContainer * orig, const SoFieldContainer * copy) {
+  SbBool put(const SoFieldContainer * orig, SoFieldContainer * copy) {
 #if SOFIELDCONTAINER_COPYDICT_DEBUG
     SoDebugError::postInfo("SoFieldContainerCopyMap::put",
                            "%p === %p (setting)", orig, copy);
 #endif // DEBUG
     return inherited::put(orig, copy);
   }
-  SbBool get(const SoFieldContainer * orig, const SoFieldContainer * & copy)
+  SbBool get(const SoFieldContainer * orig, SoFieldContainer * & copy)
   {
     SbBool ok = inherited::get(orig, copy);
 #if SOFIELDCONTAINER_COPYDICT_DEBUG
@@ -579,7 +582,7 @@ SoFieldContainer::set(const char * fielddata, SoInput * in)
   }
 
   SoInput * readbuf = in ? new SoInput(in) : new SoInput;
-  readbuf->setBuffer(const_cast<char *>(fielddata), strlen(fielddata));
+  readbuf->setBuffer(fielddata, strlen(fielddata));
 
   SbBool dummy;
   SbBool ok = fields->read(readbuf, this, FALSE, dummy);
@@ -860,7 +863,7 @@ SoFieldContainer::addCopy(const SoFieldContainer * orig,
   assert(copiedinstances);
   assert(contentscopied);
 
-  SbBool s = copiedinstances->put(orig, copy);
+  SbBool s = copiedinstances->put(orig, const_cast<SoFieldContainer *>(copy));
   assert(s);
   s = contentscopied->put(orig, FALSE);
   assert(s);
@@ -881,12 +884,8 @@ SoFieldContainer::checkCopy(const SoFieldContainer * orig)
   SoFieldContainerCopyMap * copiedinstances = (*(copydict->copiedinstancestack))[0];
   assert(copiedinstances);
 
-  const SoFieldContainer * fccopy;
-  // FIXME: ugly constness cast. 20050520 mortene.
-  return const_cast<SoFieldContainer *>
-    (
-     copiedinstances->get(orig, fccopy) ? fccopy : NULL
-     );
+  SoFieldContainer * fccopy;
+  return copiedinstances->get(orig, fccopy) ? fccopy : NULL;
 }
 
 
@@ -963,7 +962,7 @@ SoFieldContainer::findCopy(const SoFieldContainer * orig,
       }
       assert(ccp);
       SoFieldContainer::addCopy(orig, ccp);
-      cp = const_cast<SoFieldContainer *>(ccp);
+      cp = checkCopy(orig);
     }
   }
 
@@ -1283,4 +1282,3 @@ SoFieldContainer::getUserData(void) const
 }
 
 #undef FLAG_DONOTIFY
-#undef FLAG_FIRSTINSTANCE

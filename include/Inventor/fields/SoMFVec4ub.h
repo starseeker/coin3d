@@ -37,6 +37,19 @@
 #include <Inventor/fields/SoSubField.h>
 #include <Inventor/SbVec4ub.h>
 
+/*!
+  \class SoMFVec4ub SoMFVec4ub.h Inventor/fields/SoMFVec4ub.h
+  \brief Field type holding a array of 4-component unsigned-byte vectors.
+
+  \ingroup coin_fields
+
+  SoMFVec4ub is a multi-valued field that stores
+  an array of values of type SbVec4ub.
+  It inherits all field functionality from SoMField: value change notification,
+  field connections, and Inventor file I/O.
+
+  \sa SoMField, SoField
+*/
 class OBOL_DLL_API SoMFVec4ub : public SoMField {
   typedef SoMField inherited;
 

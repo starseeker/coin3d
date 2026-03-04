@@ -38,6 +38,19 @@
 #include <Inventor/fields/SoSFFloat.h>
 #include <Inventor/fields/SoSFColor.h>
 
+/*!
+  \class SoLight SoLight.h Inventor/nodes/SoLight.h
+  \brief Abstract base class for light-source nodes.
+
+  \ingroup coin_nodes
+
+  SoLight is the base for all light source nodes.  It provides the
+  common fields: on (SoSFBool), intensity (SoSFFloat), and color
+  (SoSFColor).  Concrete subclasses define the light geometry:
+  SoDirectionalLight, SoPointLight, and SoSpotLight.
+
+  \sa SoNode, SoDirectionalLight, SoPointLight, SoSpotLight
+*/
 class OBOL_DLL_API SoLight : public SoNode {
   typedef SoNode inherited;
 

@@ -37,6 +37,17 @@
 #include <Inventor/fields/SoSFEnum.h>
 #include <Inventor/annex/FXViz/elements/SoShadowStyleElement.h>
 
+/*!
+  \class SoShadowStyle SoShadowStyle.h Inventor/annex/FXViz/nodes/SoShadowStyle.h
+  \brief Sets how child nodes cast and receive shadows.
+
+  \ingroup coin_annex
+
+  SoShadowStyle controls whether the geometry below it in the
+  scene graph casts shadows, receives shadows, both, or neither.
+
+  \sa SoShadowGroup, SoShadowCulling
+*/
 class OBOL_DLL_API SoShadowStyle : public SoNode {
   typedef SoNode inherited;
 

@@ -39,6 +39,17 @@
 #include <Inventor/fields/SoSFFloat.h>
 
 
+/*!
+  \class SoShadowSpotLight SoShadowSpotLight.h Inventor/annex/FXViz/nodes/SoShadowSpotLight.h
+  \brief Spot light that participates in shadow rendering.
+
+  \ingroup coin_annex
+
+  SoShadowSpotLight extends SoSpotLight with the extra fields
+  needed to generate a shadow map.
+
+  \sa SoSpotLight, SoShadowGroup
+*/
 class OBOL_DLL_API SoShadowSpotLight : public SoSpotLight {
   typedef SoSpotLight inherited;
 

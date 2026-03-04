@@ -37,6 +37,18 @@
 #include <Inventor/fields/SoSFMatrix.h>
 #include <Inventor/nodes/SoTransformation.h>
 
+/*!
+  \class SoMatrixTransform SoMatrixTransform.h Inventor/nodes/SoMatrixTransform.h
+  \brief Applies an arbitrary 4×4 matrix transformation.
+
+  \ingroup coin_nodes
+
+  SoMatrixTransform multiplies the current model matrix by the matrix stored
+  in its matrix field (SoSFMatrix), allowing arbitrary affine transformations
+  that cannot be expressed with SoTransform.
+
+  \sa SoTransformation, SoTransform
+*/
 class OBOL_DLL_API SoMatrixTransform : public SoTransformation {
   typedef SoTransformation inherited;
 

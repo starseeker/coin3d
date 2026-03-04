@@ -36,6 +36,17 @@
 #include <Inventor/elements/SoAccumulatedElement.h>
 #include <Inventor/SbMatrix.h>
 
+/*!
+  \class SoBumpMapMatrixElement SoBumpMapMatrixElement.h Inventor/elements/SoBumpMapMatrixElement.h
+  \brief Accumulates the bump-map texture coordinate matrix.
+
+  \ingroup coin_elements
+
+  SoBumpMapMatrixElement stores the texture matrix for bump-map
+  coordinate transformation.
+
+  \sa SoAccumulatedElement
+*/
 class OBOL_DLL_API SoBumpMapMatrixElement : public SoAccumulatedElement {
   typedef SoAccumulatedElement inherited;
 

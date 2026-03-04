@@ -35,6 +35,17 @@
 
 #include <Inventor/elements/SoInt32Element.h>
 
+/*!
+  \class SoVertexAttributeBindingElement SoVertexAttributeBindingElement.h Inventor/elements/SoVertexAttributeBindingElement.h
+  \brief Stores how vertex attributes are bound to geometry.
+
+  \ingroup coin_elements
+
+  SoVertexAttributeBindingElement stores the binding mode set by
+  SoVertexAttributeBinding.
+
+  \sa SoInt32Element
+*/
 class OBOL_DLL_API SoVertexAttributeBindingElement : public SoInt32Element {
   typedef SoInt32Element inherited;
 

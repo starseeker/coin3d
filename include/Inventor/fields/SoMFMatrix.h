@@ -37,6 +37,19 @@
 #include <Inventor/fields/SoSubField.h>
 #include <Inventor/SbMatrix.h>
 
+/*!
+  \class SoMFMatrix SoMFMatrix.h Inventor/fields/SoMFMatrix.h
+  \brief Field type holding a array of 4×4 transformation matrices.
+
+  \ingroup coin_fields
+
+  SoMFMatrix is a multi-valued field that stores
+  an array of values of type SbMatrix.
+  It inherits all field functionality from SoMField: value change notification,
+  field connections, and Inventor file I/O.
+
+  \sa SoMField, SoField
+*/
 class OBOL_DLL_API SoMFMatrix : public SoMField {
   typedef SoMField inherited;
 

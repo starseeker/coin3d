@@ -36,6 +36,18 @@
 #include <Inventor/nodes/SoSubNode.h>
 #include <Inventor/nodes/SoGroup.h>
 
+/*!
+  \class SoTransformSeparator SoTransformSeparator.h Inventor/nodes/SoTransformSeparator.h
+  \brief A separator that saves and restores only the transformation state.
+
+  \ingroup coin_nodes
+
+  SoTransformSeparator pushes and pops only the current transformation
+  matrix (not full render state like SoSeparator).  It is used to
+  scope local transforms without the overhead of full state save/restore.
+
+  \sa SoGroup, SoSeparator
+*/
 class OBOL_DLL_API SoTransformSeparator : public SoGroup {
   typedef SoGroup inherited;
 

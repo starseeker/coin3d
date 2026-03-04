@@ -37,6 +37,17 @@
 
 struct SoGLContext;
 
+/*!
+  \class SoGLMultiTextureMatrixElement SoGLMultiTextureMatrixElement.h Inventor/elements/SoGLMultiTextureMatrixElement.h
+  \brief GL-specific multi-unit texture matrix element.
+
+  \ingroup coin_elements
+
+  SoGLMultiTextureMatrixElement extends SoMultiTextureMatrixElement to
+  load per-unit texture matrices into OpenGL.
+
+  \sa SoMultiTextureMatrixElement
+*/
 class OBOL_DLL_API SoGLMultiTextureMatrixElement : public SoMultiTextureMatrixElement {
   typedef SoMultiTextureMatrixElement inherited;
 

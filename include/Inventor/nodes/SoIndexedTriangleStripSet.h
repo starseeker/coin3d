@@ -42,6 +42,17 @@
 
 #define SO_END_STRIP_INDEX (-1)
 
+/*!
+  \class SoIndexedTriangleStripSet SoIndexedTriangleStripSet.h Inventor/nodes/SoIndexedTriangleStripSet.h
+  \brief Renders indexed triangle strips.
+
+  \ingroup coin_nodes
+
+  SoIndexedTriangleStripSet renders triangle strips using index arrays
+  into SoCoordinate3.  Strips are separated by an index of -1.
+
+  \sa SoIndexedShape, SoTriangleStripSet, SoCoordinate3
+*/
 class OBOL_DLL_API SoIndexedTriangleStripSet : public SoIndexedShape {
   typedef SoIndexedShape inherited;
 

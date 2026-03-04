@@ -36,6 +36,17 @@
 #include <Inventor/elements/SoSubElement.h>
 #include <Inventor/SbViewportRegion.h>
 
+/*!
+  \class SoViewportRegionElement SoViewportRegionElement.h Inventor/elements/SoViewportRegionElement.h
+  \brief Maintains the current viewport region.
+
+  \ingroup coin_elements
+
+  SoViewportRegionElement stores the SbViewportRegion (window area and
+  DPI) for the active render pass.
+
+  \sa SoElement, SbViewportRegion
+*/
 class OBOL_DLL_API SoViewportRegionElement : public SoElement {
   typedef SoElement inherited;
 

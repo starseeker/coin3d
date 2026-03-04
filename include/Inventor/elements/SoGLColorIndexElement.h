@@ -35,6 +35,17 @@
 
 #include <Inventor/elements/SoReplacedElement.h>
 
+/*!
+  \class SoGLColorIndexElement SoGLColorIndexElement.h Inventor/elements/SoGLColorIndexElement.h
+  \brief Stores color-index mode state.
+
+  \ingroup coin_elements
+
+  SoGLColorIndexElement handles color-index (palette) rendering state
+  for contexts that do not use RGBA mode.
+
+  \sa SoReplacedElement
+*/
 class OBOL_DLL_API SoGLColorIndexElement : public SoReplacedElement {
   typedef SoReplacedElement inherited;
 

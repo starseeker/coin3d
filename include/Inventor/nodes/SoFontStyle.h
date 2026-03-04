@@ -42,6 +42,18 @@
 #include <Inventor/actions/SoCallbackAction.h>
 #endif // !OBOL_INTERNAL
 
+/*!
+  \class SoFontStyle SoFontStyle.h Inventor/nodes/SoFontStyle.h
+  \brief Sets the font family, style, and size for text nodes (VRML-style API).
+
+  \ingroup coin_nodes
+
+  SoFontStyle is an alternative to SoFont that provides family (SERIF, SANS,
+  TYPEWRITER), style (BOLD, ITALIC), and size fields matching the VRML/X3D
+  FontStyle semantics.
+
+  \sa SoFont, SoText2, SoText3
+*/
 class OBOL_DLL_API SoFontStyle : public SoFont {
   typedef SoFont inherited;
 

@@ -38,6 +38,19 @@
 #include <Inventor/fields/SoSFInt32.h>
 
 
+/*!
+  \class SoNonIndexedShape SoNonIndexedShape.h Inventor/nodes/SoNonIndexedShape.h
+  \brief Abstract base class for vertex shapes that use sequential (non-indexed) coordinates.
+
+  \ingroup coin_nodes
+
+  SoNonIndexedShape is the base for shapes like SoFaceSet, SoLineSet,
+  and SoPointSet that read vertices sequentially from a SoCoordinate3
+  node rather than using an index array.  The startIndex field specifies
+  the first coordinate to use.
+
+  \sa SoVertexShape, SoFaceSet, SoLineSet, SoPointSet
+*/
 class OBOL_DLL_API SoNonIndexedShape : public SoVertexShape {
   typedef SoVertexShape inherited;
 

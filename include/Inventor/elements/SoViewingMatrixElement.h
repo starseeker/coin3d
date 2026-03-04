@@ -36,6 +36,18 @@
 #include <Inventor/elements/SoReplacedElement.h>
 #include <Inventor/SbMatrix.h>
 
+/*!
+  \class SoViewingMatrixElement SoViewingMatrixElement.h Inventor/elements/SoViewingMatrixElement.h
+  \brief Maintains the camera view (world-to-camera) transformation matrix.
+
+  \ingroup coin_elements
+
+  SoViewingMatrixElement stores the view matrix set by camera nodes.
+  Combined with SoProjectionMatrixElement, it defines the full
+  model-view-projection transform.
+
+  \sa SoReplacedElement, SoModelMatrixElement, SoProjectionMatrixElement
+*/
 class OBOL_DLL_API SoViewingMatrixElement : public SoReplacedElement {
   typedef SoReplacedElement inherited;
 

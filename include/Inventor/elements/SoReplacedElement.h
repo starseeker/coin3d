@@ -36,6 +36,18 @@
 #include <Inventor/elements/SoSubElement.h>
 #include <cstdint>
 
+/*!
+  \class SoReplacedElement SoReplacedElement.h Inventor/elements/SoReplacedElement.h
+  \brief Element base class where a newer value replaces the previous one.
+
+  \ingroup coin_elements
+
+  SoReplacedElement is a base for elements whose value is set wholesale
+  by a node: the new value replaces (not accumulates) the previous one.
+  It stores the node ID of the node that last set it.
+
+  \sa SoElement, SoAccumulatedElement
+*/
 class OBOL_DLL_API SoReplacedElement : public SoElement {
   typedef SoElement inherited;
 

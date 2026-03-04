@@ -42,6 +42,17 @@ typedef SbBool SoForeignFileIdentifyFunc(const char *);
 
 class SoForeignFileKitP;
 
+/*!
+  \class SoForeignFileKit SoForeignFileKit.h Inventor/annex/ForeignFiles/SoForeignFileKit.h
+  \brief Node kit that wraps a non-Inventor scene loaded from a foreign file.
+
+  \ingroup coin_annex
+
+  SoForeignFileKit provides a node-kit wrapper for scene data loaded
+  from file formats other than the Inventor .iv format.
+
+  \sa SoBaseKit
+*/
 class OBOL_DLL_API SoForeignFileKit : public SoBaseKit {
   typedef SoBaseKit inherited;
 

@@ -36,6 +36,17 @@
 #include <Inventor/nodes/SoSubNode.h>
 #include <Inventor/nodes/SoNode.h>
 
+/*!
+  \class SoTexture SoTexture.h Inventor/nodes/SoTexture.h
+  \brief Abstract base class for texture nodes.
+
+  \ingroup coin_nodes
+
+  SoTexture is the base for SoTexture2, SoTexture3, SoTextureCubeMap,
+  and related nodes that apply image textures to geometry.
+
+  \sa SoTexture2, SoTexture3, SoTextureCubeMap
+*/
 class OBOL_DLL_API SoTexture : public SoNode {
   SO_NODE_ABSTRACT_HEADER(SoTexture);
   typedef SoNode inherited;

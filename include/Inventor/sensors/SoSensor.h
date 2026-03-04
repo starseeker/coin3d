@@ -40,6 +40,19 @@ class SoSensor;
 typedef void SoSensorCB(void * data, SoSensor * sensor);
 typedef SoSensorCB * SoSensorCBPtr;
 
+/*!
+  \class SoSensor SoSensor.h Inventor/sensors/SoSensor.h
+  \brief Abstract base class for all sensors.
+
+  \ingroup coin_sensors
+
+  SoSensor is the base for the Obol sensor hierarchy.  Sensors are
+  callback objects that fire when a scene-graph condition is met (a
+  node changes, a field changes, a timer fires, etc.).  The callback
+  function and user data are set via setFunction() and setData().
+
+  \sa SoFieldSensor, SoNodeSensor, SoTimerSensor, SoAlarmSensor
+*/
 class OBOL_DLL_API SoSensor {
 public:
   SoSensor(void);

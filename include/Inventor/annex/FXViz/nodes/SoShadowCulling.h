@@ -37,6 +37,17 @@
 #include <Inventor/fields/SoSFEnum.h>
 #include <Inventor/annex/FXViz/elements/SoGLShadowCullingElement.h>
 
+/*!
+  \class SoShadowCulling SoShadowCulling.h Inventor/annex/FXViz/nodes/SoShadowCulling.h
+  \brief Sets the shadow-culling mode for child geometry.
+
+  \ingroup coin_annex
+
+  SoShadowCulling controls whether child nodes participate in the
+  shadow map generation pass.
+
+  \sa SoShadowGroup, SoShadowStyle
+*/
 class OBOL_DLL_API SoShadowCulling : public SoNode {
   typedef SoNode inherited;
 

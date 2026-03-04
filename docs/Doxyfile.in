@@ -59,7 +59,8 @@ EXPAND_ONLY_PREDEF     = YES
 PREDEFINED             = OBOL_DLL_API= \
                          OBOL_INTERNAL \
                          OBOL_DEBUG=0 \
-                         "SbBool=bool"
+                         "SbBool=bool" \
+                         "OBOL_UNUSED_ARG(x)=x"
 
 #---------------------------------------------------------------------------
 # Source browsing

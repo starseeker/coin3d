@@ -36,6 +36,19 @@
 #include <Inventor/fields/SoMField.h>
 #include <Inventor/fields/SoSubField.h>
 
+/*!
+  \class SoMFFloat SoMFFloat.h Inventor/fields/SoMFFloat.h
+  \brief Field type holding a array of single-precision floating-point values.
+
+  \ingroup coin_fields
+
+  SoMFFloat is a multi-valued field that stores
+  an array of values of type float.
+  It inherits all field functionality from SoMField: value change notification,
+  field connections, and Inventor file I/O.
+
+  \sa SoMField, SoField
+*/
 class OBOL_DLL_API SoMFFloat : public SoMField {
   typedef SoMField inherited;
 

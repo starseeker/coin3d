@@ -38,6 +38,19 @@
 
 class SoBaseColorP;
 
+/*!
+  \class SoBaseColor SoBaseColor.h Inventor/nodes/SoBaseColor.h
+  \brief Sets diffuse colors for subsequent geometry, overriding the full material.
+
+  \ingroup coin_nodes
+
+  SoBaseColor provides a fast way to set only the diffuse color(s) for
+  geometry.  It replaces the diffuse component of the current material
+  without affecting other material properties.  Multiple colors can be
+  specified for per-face or per-vertex coloring.
+
+  \sa SoMaterial, SoMaterialBinding, SoNode
+*/
 class OBOL_DLL_API SoBaseColor : public SoNode {
   typedef SoNode inherited;
 

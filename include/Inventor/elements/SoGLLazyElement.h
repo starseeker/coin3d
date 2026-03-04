@@ -42,6 +42,17 @@ class SoGLRenderCache;
 class SoGLLazyElementP;
 class SoVBO;
 
+/*!
+  \class SoGLLazyElement SoGLLazyElement.h Inventor/elements/SoGLLazyElement.h
+  \brief GL-specific lazy element that applies batched material properties.
+
+  \ingroup coin_elements
+
+  SoGLLazyElement extends SoLazyElement to issue the actual OpenGL
+  glMaterial/glColor calls when rendering.
+
+  \sa SoLazyElement
+*/
 class OBOL_DLL_API SoGLLazyElement : public SoLazyElement {
   typedef SoLazyElement inherited;
 

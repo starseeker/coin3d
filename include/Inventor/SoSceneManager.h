@@ -49,6 +49,20 @@ class SbColor;
 
 typedef void SoSceneManagerRenderCB(void * userdata, class SoSceneManager * mgr);
 
+/*!
+  \class SoSceneManager SoSceneManager.h Inventor/SoSceneManager.h
+  \brief High-level manager that owns a scene graph and drives rendering and event handling.
+
+  \ingroup coin_rendering
+
+  SoSceneManager combines SoRenderManager and SoEventManager to provide
+  a single convenient object that connects a scene-graph root, a
+  viewport region, and an optional render callback.  The render()
+  method traverses the scene with a SoGLRenderAction; processEvent()
+  forwards events to a SoHandleEventAction.
+
+  \sa SoRenderManager, SoEventManager, SbViewportRegion
+*/
 class OBOL_DLL_API SoSceneManager {
 public:
   SoSceneManager(void);

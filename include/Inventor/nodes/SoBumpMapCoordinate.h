@@ -36,6 +36,17 @@
 #include <Inventor/nodes/SoSubNode.h>
 #include <Inventor/fields/SoMFVec2f.h>
 
+/*!
+  \class SoBumpMapCoordinate SoBumpMapCoordinate.h Inventor/nodes/SoBumpMapCoordinate.h
+  \brief Supplies bump-map texture coordinates for bump mapping.
+
+  \ingroup coin_nodes
+
+  SoBumpMapCoordinate provides UV coordinates specifically for bump map
+  texture lookups, separate from the regular texture coordinate set.
+
+  \sa SoBumpMap, SoTextureCoordinate2
+*/
 class OBOL_DLL_API SoBumpMapCoordinate : public SoNode {
   typedef SoNode inherited;
 

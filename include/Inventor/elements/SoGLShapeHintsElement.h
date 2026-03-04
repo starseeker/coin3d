@@ -35,6 +35,17 @@
 
 #include <Inventor/elements/SoShapeHintsElement.h>
 
+/*!
+  \class SoGLShapeHintsElement SoGLShapeHintsElement.h Inventor/elements/SoGLShapeHintsElement.h
+  \brief GL-specific element for shape hints.
+
+  \ingroup coin_elements
+
+  SoGLShapeHintsElement extends SoShapeHintsElement to issue the
+  corresponding glFrontFace/glCullFace/glLightModel calls.
+
+  \sa SoShapeHintsElement
+*/
 class OBOL_DLL_API SoGLShapeHintsElement : public SoShapeHintsElement {
   typedef SoShapeHintsElement inherited;
 

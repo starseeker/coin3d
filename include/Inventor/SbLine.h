@@ -38,6 +38,18 @@
 #include <Inventor/SbBasic.h>
 #include <Inventor/SbVec3f.h>
 
+/*!
+  \class SbLine SbLine.h Inventor/SbLine.h
+  \brief Represents an infinite line in 3D space.
+
+  \ingroup coin_base
+
+  SbLine is defined by a point on the line and a unit direction vector.
+  It provides operations to find the closest point on the line to a
+  given point, and to find the closest points between two lines.
+
+  \sa SbPlane, SbVec3f
+*/
 class OBOL_DLL_API SbLine {
 public:
   SbLine(void);

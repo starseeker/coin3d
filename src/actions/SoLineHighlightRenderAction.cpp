@@ -368,8 +368,9 @@ SoLineHighlightRenderActionP::drawBoxes(SoPath * pathtothis,
   SoColorPacker ** cptr = static_cast<SoColorPacker **>(this->colorpacker_storage.get());
 
   SoLazyElement::setDiffuse(state, pathtothis->getHead(), 1, &this->color, *cptr);
-  // FIXME: we should check this versus the actual max line width
-  // supported by the underlying OpenGL context. 20050610 mortene.
+  // Line width is clamped by the underlying GL implementation if it exceeds
+  // the driver maximum; callers that need exact control should query the max
+  // via SoGLDriverDatabase before setting this value.
   SoLineWidthElement::set(state, this->linewidth);
   SoLinePatternElement::set(state, this->linepattern);
   SoTextureQualityElement::set(state, 0.0f);

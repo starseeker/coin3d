@@ -38,6 +38,19 @@
 #include <Inventor/fields/SoSFFloat.h>
 #include <Inventor/nodes/SoShape.h>
 
+/*!
+  \class SoCone SoCone.h Inventor/nodes/SoCone.h
+  \brief Renders a cone shape.
+
+  \ingroup coin_nodes
+
+  SoCone renders a cone with configurable bottom radius and height.
+  The parts field controls which portions are rendered: SIDES, BOTTOM,
+  or ALL.  The tip of the cone is at y = +height/2 and the base disc
+  is at y = −height/2.
+
+  \sa SoCylinder, SoSphere, SoCube, SoShape
+*/
 class OBOL_DLL_API SoCone : public SoShape {
   typedef SoShape inherited;
 

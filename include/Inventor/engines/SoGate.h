@@ -41,6 +41,17 @@
 class SoEngineOutput;
 
 
+/*!
+  \class SoGate SoGate.h Inventor/engines/SoGate.h
+  \brief Passes or blocks a typed field value based on a boolean enable input.
+
+  \ingroup coin_engines
+
+  SoGate propagates the value of its input field to the output only when
+  the enable input is TRUE.  The field type is specified at construction.
+
+  \sa SoEngine
+*/
 class OBOL_DLL_API SoGate : public SoEngine {
   typedef SoEngine inherited;
 

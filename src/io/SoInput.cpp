@@ -208,14 +208,14 @@ SoInput::constructorsCommon(void)
   // directly or indirectly, before using any other part of the Coin
   // API. With the new strict initialization requirements, SoDB::init()
   // must be called with a proper ContextManager before constructing
-  // any Coin3D objects, including SoInput.
+  // any Obol objects, including SoInput.
   //
   // Note: The previous "forgiving" behavior of automatically calling
   // SoDB::init() has been removed to enforce proper initialization ordering.
   if (!SoDB::isInitialized()) {
     // Use fprintf instead of SoDebugError to avoid dependency on initialized system
     fprintf(stderr, "SoInput::SoInput: ERROR - SoDB::init() has not been called. "
-                    "Applications must call SoDB::init(&context_manager) before creating any Coin3D objects. "
+                    "Applications must call SoDB::init(&context_manager) before creating any Obol objects. "
                     "See documentation for SoDB::ContextManager for details.\n");
     // Continue with limited functionality but warn about potential issues
   }

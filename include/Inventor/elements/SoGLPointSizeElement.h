@@ -38,6 +38,16 @@
 
 struct SoGLContext;
 
+/*!
+  \class SoGLPointSizeElement SoGLPointSizeElement.h Inventor/elements/SoGLPointSizeElement.h
+  \brief GL-specific element for point size.
+
+  \ingroup coin_elements
+
+  SoGLPointSizeElement extends SoPointSizeElement to call glPointSize().
+
+  \sa SoPointSizeElement
+*/
 class OBOL_DLL_API SoGLPointSizeElement : public SoPointSizeElement {
   typedef SoPointSizeElement inherited;
 

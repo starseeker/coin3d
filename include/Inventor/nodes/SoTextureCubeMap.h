@@ -45,6 +45,17 @@ class SoFieldSensor;
 class SoSensor;
 class SoTextureCubeMapP;
 
+/*!
+  \class SoTextureCubeMap SoTextureCubeMap.h Inventor/nodes/SoTextureCubeMap.h
+  \brief Applies a cube-map texture for environment mapping.
+
+  \ingroup coin_nodes
+
+  SoTextureCubeMap provides six image faces (positiveX, negativeX, …)
+  for OpenGL cube-map texturing, enabling reflection and refraction effects.
+
+  \sa SoTexture, SoTextureCoordinateReflectionMap
+*/
 class OBOL_DLL_API SoTextureCubeMap : public SoTexture {
   typedef SoTexture inherited;
 

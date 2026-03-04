@@ -40,6 +40,17 @@
 
 // *************************************************************************
 
+/*!
+  \class SoProfilerElement SoProfilerElement.h Inventor/annex/Profiler/elements/SoProfilerElement.h
+  \brief Traversal-state element that carries the profiling data record.
+
+  \ingroup coin_annex
+
+  SoProfilerElement stores a pointer to the SbProfilingData
+  accumulator for the current traversal pass.
+
+  \sa SoElement, SbProfilingData
+*/
 class OBOL_DLL_API SoProfilerElement : public SoElement {
   typedef SoElement inherited;
   SO_ELEMENT_HEADER(SoProfilerElement);

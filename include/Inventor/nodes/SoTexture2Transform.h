@@ -39,6 +39,17 @@
 
 class SbMatrix;
 
+/*!
+  \class SoTexture2Transform SoTexture2Transform.h Inventor/nodes/SoTexture2Transform.h
+  \brief Applies a 2D transformation to texture coordinates.
+
+  \ingroup coin_nodes
+
+  SoTexture2Transform modifies the texture coordinate matrix with
+  configurable translation, rotation, scale, and center.
+
+  \sa SoTexture2, SoTextureCoordinate2
+*/
 class OBOL_DLL_API SoTexture2Transform : public SoNode {
   typedef SoNode inherited;
 

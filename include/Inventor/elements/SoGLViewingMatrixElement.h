@@ -37,6 +37,17 @@
 
 struct SoGLContext;
 
+/*!
+  \class SoGLViewingMatrixElement SoGLViewingMatrixElement.h Inventor/elements/SoGLViewingMatrixElement.h
+  \brief GL-specific element for the viewing (camera) matrix.
+
+  \ingroup coin_elements
+
+  SoGLViewingMatrixElement extends SoViewingMatrixElement to integrate
+  the camera transform into the GL_MODELVIEW matrix.
+
+  \sa SoViewingMatrixElement
+*/
 class OBOL_DLL_API SoGLViewingMatrixElement : public SoViewingMatrixElement {
   typedef SoViewingMatrixElement inherited;
 

@@ -39,6 +39,17 @@
 
 #include <Inventor/elements/SoMultiTextureCoordinateElement.h>
 
+/*!
+  \typedef SoTextureCoordinateElement
+  \brief Compatibility alias for SoMultiTextureCoordinateElement.
+
+  \ingroup coin_elements
+
+  This typedef maps the legacy SoTextureCoordinateElement name to
+  SoMultiTextureCoordinateElement.
+
+  \sa SoMultiTextureCoordinateElement
+*/
 typedef SoMultiTextureCoordinateElement SoTextureCoordinateElement;
 
 #endif // !OBOL_SOTEXTURECOORDINATEELEMENT_H

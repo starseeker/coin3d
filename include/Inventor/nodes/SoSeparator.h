@@ -41,6 +41,20 @@
 class SoState;
 class SoSeparatorP;
 
+/*!
+  \class SoSeparator SoSeparator.h Inventor/nodes/SoSeparator.h
+  \brief A group node that isolates its children from the rest of the scene.
+
+  \ingroup coin_nodes
+
+  SoSeparator is the most commonly used grouping node.  It saves the
+  current traversal state before rendering its children and restores it
+  afterward, so property and transform nodes inside a separator have no
+  effect on siblings outside it.  It also supports bounding-box caching
+  to speed up culling.
+
+  \sa SoGroup, SoNode
+*/
 class OBOL_DLL_API SoSeparator : public SoGroup {
   typedef SoGroup inherited;
 

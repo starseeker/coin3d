@@ -37,6 +37,18 @@
 
 class SoPathSensorP;
 
+/*!
+  \class SoPathSensor SoPathSensor.h Inventor/sensors/SoPathSensor.h
+  \brief Fires a callback when an attached path or the nodes it references change.
+
+  \ingroup coin_sensors
+
+  SoPathSensor monitors an SoPath and fires its callback when any node
+  along the path changes.  A TriggerFilter enum allows the caller to
+  restrict which types of changes trigger the callback.
+
+  \sa SoDataSensor, SoNodeSensor
+*/
 class OBOL_DLL_API SoPathSensor : public SoDataSensor {
   typedef SoDataSensor inherited;
 

@@ -36,6 +36,19 @@
 #include <Inventor/fields/SoMField.h>
 #include <Inventor/fields/SoSubField.h>
 
+/*!
+  \class SoMFShort SoMFShort.h Inventor/fields/SoMFShort.h
+  \brief Field type holding a array of 16-bit signed short integers.
+
+  \ingroup coin_fields
+
+  SoMFShort is a multi-valued field that stores
+  an array of values of type int16_t.
+  It inherits all field functionality from SoMField: value change notification,
+  field connections, and Inventor file I/O.
+
+  \sa SoMField, SoField
+*/
 class OBOL_DLL_API SoMFShort : public SoMField {
   typedef SoMField inherited;
 

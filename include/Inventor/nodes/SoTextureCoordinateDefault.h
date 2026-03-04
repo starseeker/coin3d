@@ -36,6 +36,17 @@
 #include <Inventor/nodes/SoSubNode.h>
 #include <Inventor/nodes/SoTextureCoordinateFunction.h>
 
+/*!
+  \class SoTextureCoordinateDefault SoTextureCoordinateDefault.h Inventor/nodes/SoTextureCoordinateDefault.h
+  \brief Resets texture coordinate generation to the default shape-based mode.
+
+  \ingroup coin_nodes
+
+  SoTextureCoordinateDefault cancels any active procedural texture
+  coordinate generator and reverts to the per-shape default.
+
+  \sa SoTextureCoordinateFunction
+*/
 class OBOL_DLL_API SoTextureCoordinateDefault : public SoTextureCoordinateFunction {
   typedef SoTextureCoordinateFunction inherited;
 

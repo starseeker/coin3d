@@ -40,6 +40,17 @@
 
 class SoListenerP;
 
+/*!
+  \class SoListener SoListener.h Inventor/nodes/SoListener.h
+  \brief Defines the position and orientation of the audio listener.
+
+  \ingroup coin_nodes
+
+  SoListener stores the 3D position and orientation used by the audio
+  subsystem (if present) to compute directional and spatial audio.
+
+  \sa SoNode
+*/
 class OBOL_DLL_API SoListener : public SoNode {
   typedef SoNode inherited;
 

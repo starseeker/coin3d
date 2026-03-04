@@ -38,6 +38,18 @@
 #include <Inventor/engines/SoEngineOutput.h>
 #include <Inventor/fields/SoSFFloat.h>
 
+/*!
+  \class SoInterpolate SoInterpolate.h Inventor/engines/SoInterpolate.h
+  \brief Abstract base class for linear interpolation engines.
+
+  \ingroup coin_engines
+
+  SoInterpolate linearly interpolates between values0 and values1 using
+  the alpha input (0.0 to 1.0).  Concrete subclasses provide typed
+  interpolation: SoInterpolateFloat, SoInterpolateVec3f, etc.
+
+  \sa SoEngine
+*/
 class OBOL_DLL_API SoInterpolate : public SoEngine {
   typedef SoEngine inherited;
   SO_ENGINE_ABSTRACT_HEADER(SoInterpolate);

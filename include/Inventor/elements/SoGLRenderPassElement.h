@@ -35,6 +35,17 @@
 
 #include <Inventor/elements/SoSubElement.h>
 
+/*!
+  \class SoGLRenderPassElement SoGLRenderPassElement.h Inventor/elements/SoGLRenderPassElement.h
+  \brief Stores the current GL render-pass index.
+
+  \ingroup coin_elements
+
+  SoGLRenderPassElement stores which pass of a multi-pass render
+  (e.g., for transparency or anti-aliasing) is currently active.
+
+  \sa SoElement
+*/
 class OBOL_DLL_API SoGLRenderPassElement : public SoElement {
   typedef SoElement inherited;
 

@@ -43,6 +43,18 @@
 class SoVertexPropertyP;
 class SoState;
 
+/*!
+  \class SoVertexProperty SoVertexProperty.h Inventor/nodes/SoVertexProperty.h
+  \brief Compact node that bundles vertex coordinates, normals, colors, and texture coordinates.
+
+  \ingroup coin_nodes
+
+  SoVertexProperty is a performance-oriented alternative to separate
+  SoCoordinate3, SoNormal, SoPackedColor, and SoTextureCoordinate2 nodes.
+  It holds all per-vertex data in a single node, reducing traversal overhead.
+
+  \sa SoCoordinate3, SoNormal, SoMaterial
+*/
 class OBOL_DLL_API SoVertexProperty : public SoNode {
   typedef SoNode inherited;
 

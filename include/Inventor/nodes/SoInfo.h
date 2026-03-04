@@ -36,6 +36,19 @@
 #include <Inventor/nodes/SoSubNode.h>
 #include <Inventor/fields/SoSFString.h>
 
+/*!
+  \class SoInfo SoInfo.h Inventor/nodes/SoInfo.h
+  \brief Stores an arbitrary text string in the scene graph.
+
+  \ingroup coin_nodes
+
+  SoInfo is a leaf node that holds a single SoSFString field named
+  string.  It has no visual representation and is used to embed
+  comments or metadata (such as tool versions or author names) directly
+  in an Inventor file.
+
+  \sa SoNode
+*/
 class OBOL_DLL_API SoInfo : public SoNode {
   typedef SoNode inherited;
 

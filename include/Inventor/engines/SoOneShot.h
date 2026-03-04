@@ -41,6 +41,18 @@
 #include <Inventor/fields/SoSFBitMask.h>
 
 
+/*!
+  \class SoOneShot SoOneShot.h Inventor/engines/SoOneShot.h
+  \brief Generates a single timed output pulse when triggered.
+
+  \ingroup coin_engines
+
+  SoOneShot fires once when its trigger input is set.  The ramp output
+  goes from 0 to 1 over the specified duration and the timeOut output
+  fires when complete.
+
+  \sa SoEngine
+*/
 class OBOL_DLL_API SoOneShot : public SoEngine {
   typedef SoEngine inherited;
 

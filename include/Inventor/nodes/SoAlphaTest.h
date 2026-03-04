@@ -37,6 +37,18 @@
 #include <Inventor/fields/SoSFFloat.h>
 #include <Inventor/nodes/SoSubNode.h>
 
+/*!
+  \class SoAlphaTest SoAlphaTest.h Inventor/nodes/SoAlphaTest.h
+  \brief Controls OpenGL alpha testing for subsequent geometry.
+
+  \ingroup coin_nodes
+
+  SoAlphaTest enables or disables the OpenGL alpha test and sets the
+  comparison function and reference value.  It allows efficient early
+  rejection of fully transparent fragments.
+
+  \sa SoNode, SoMaterial
+*/
 class OBOL_DLL_API SoAlphaTest : public SoNode {
   typedef SoNode inherited;
 

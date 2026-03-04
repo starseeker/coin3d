@@ -38,6 +38,18 @@
 
 class SoTextureCoordinate2P;
 
+/*!
+  \class SoTextureCoordinate2 SoTextureCoordinate2.h Inventor/nodes/SoTextureCoordinate2.h
+  \brief Stores 2D texture coordinates for indexed and non-indexed shape nodes.
+
+  \ingroup coin_nodes
+
+  SoTextureCoordinate2 supplies per-vertex UV texture coordinates via its
+  point field (SoMFVec2f).  Shape nodes use these with SoTextureCoordinateBinding
+  to apply textures.
+
+  \sa SoTexture2, SoTextureCoordinateBinding
+*/
 class OBOL_DLL_API SoTextureCoordinate2 : public SoNode {
   typedef SoNode inherited;
   SO_NODE_HEADER(SoTextureCoordinate2);

@@ -37,6 +37,19 @@
 #include <Inventor/fields/SoSubField.h>
 #include <Inventor/SbRotation.h>
 
+/*!
+  \class SoSFRotation SoSFRotation.h Inventor/fields/SoSFRotation.h
+  \brief Field type holding a single 3D rotation (quaternion).
+
+  \ingroup coin_fields
+
+  SoSFRotation is a single-valued field that stores
+  one value of type SbRotation.
+  It inherits all field functionality from SoSField: value change notification,
+  field connections, and Inventor file I/O.
+
+  \sa SoSField, SoField
+*/
 class OBOL_DLL_API SoSFRotation : public SoSField {
   typedef SoSField inherited;
 

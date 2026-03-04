@@ -35,6 +35,17 @@
 
 #include <Inventor/elements/SoInt32Element.h>
 
+/*!
+  \class SoPickStyleElement SoPickStyleElement.h Inventor/elements/SoPickStyleElement.h
+  \brief Stores the current pick style.
+
+  \ingroup coin_elements
+
+  SoPickStyleElement stores the pick mode set by SoPickStyle:
+  SHAPE, BOUNDING_BOX, UNPICKABLE, or SHAPE_ON_TOP.
+
+  \sa SoInt32Element
+*/
 class OBOL_DLL_API SoPickStyleElement : public SoInt32Element {
   typedef SoInt32Element inherited;
 

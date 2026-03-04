@@ -39,6 +39,18 @@
 #include <Inventor/fields/SoSFBool.h>
 #include <Inventor/elements/SoPolygonOffsetElement.h>
 
+/*!
+  \class SoPolygonOffset SoPolygonOffset.h Inventor/nodes/SoPolygonOffset.h
+  \brief Applies an OpenGL polygon offset to reduce z-fighting.
+
+  \ingroup coin_nodes
+
+  SoPolygonOffset enables or disables glPolygonOffset with configurable
+  factor and units values.  It can be applied to filled polygons, lines,
+  or points to prevent z-fighting when overlaying wireframe over solid geometry.
+
+  \sa SoNode, SoDrawStyle
+*/
 class OBOL_DLL_API SoPolygonOffset : public SoNode {
   typedef SoNode inherited;
 

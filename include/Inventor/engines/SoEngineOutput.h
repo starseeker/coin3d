@@ -42,6 +42,19 @@ class SoFieldContainer;
 class SoEngine;
 class SoNodeEngine;
 
+/*!
+  \class SoEngineOutput SoEngineOutput.h Inventor/engines/SoEngineOutput.h
+  \brief Represents a typed output connector of an SoEngine or SoNodeEngine.
+
+  \ingroup coin_engines
+
+  SoEngineOutput stores the type of a single engine output and maintains
+  the list of fields connected to that output.  Application code does not
+  typically construct SoEngineOutput directly; instances are declared inside
+  engine classes with SO_ENGINE_OUTPUT macros.
+
+  \sa SoEngine, SoField
+*/
 class OBOL_DLL_API SoEngineOutput {
 public:
   SoEngineOutput(void);

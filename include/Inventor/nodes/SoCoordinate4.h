@@ -38,6 +38,18 @@
 
 class SoCoordinate4P;
 
+/*!
+  \class SoCoordinate4 SoCoordinate4.h Inventor/nodes/SoCoordinate4.h
+  \brief Stores homogeneous (4D) vertex coordinates for NURBS and rational surfaces.
+
+  \ingroup coin_nodes
+
+  SoCoordinate4 provides rational (homogeneous) vertex positions via its
+  point field (SoMFVec4f).  It is used by NURBS surface and curve nodes
+  that require weighted control points.
+
+  \sa SoCoordinate3, SoNode
+*/
 class OBOL_DLL_API SoCoordinate4 : public SoNode {
   typedef SoNode inherited;
 

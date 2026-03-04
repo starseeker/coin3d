@@ -44,6 +44,17 @@ class SoCoordinateElement;
 class SoSeparator;
 class SoIndexedLineSetP;
 
+/*!
+  \class SoIndexedLineSet SoIndexedLineSet.h Inventor/nodes/SoIndexedLineSet.h
+  \brief Renders polylines using an index array into a coordinate node.
+
+  \ingroup coin_nodes
+
+  SoIndexedLineSet renders line strips using indices into SoCoordinate3.
+  Each line strip is terminated by an index of -1 in coordIndex.
+
+  \sa SoIndexedShape, SoLineSet, SoCoordinate3
+*/
 class OBOL_DLL_API SoIndexedLineSet : public SoIndexedShape {
   typedef SoIndexedShape inherited;
 

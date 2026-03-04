@@ -37,6 +37,18 @@
 #include <Inventor/nodes/SoCamera.h>
 #include <Inventor/fields/SoSFFloat.h>
 
+/*!
+  \class SoFrustumCamera SoFrustumCamera.h Inventor/nodes/SoFrustumCamera.h
+  \brief Camera with an arbitrary asymmetric perspective frustum.
+
+  \ingroup coin_nodes
+
+  SoFrustumCamera allows explicit control over the left, right, top, and bottom
+  extents of the near clipping plane, enabling off-axis and head-tracked
+  projections not possible with SoPerspectiveCamera.
+
+  \sa SoCamera, SoPerspectiveCamera
+*/
 class OBOL_DLL_API SoFrustumCamera : public SoCamera {
   typedef SoCamera inherited;
 

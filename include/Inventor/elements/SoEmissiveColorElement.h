@@ -37,6 +37,16 @@
 
 class SbColor;
 
+/*!
+  \class SoEmissiveColorElement SoEmissiveColorElement.h Inventor/elements/SoEmissiveColorElement.h
+  \brief Stores the current emissive color array.
+
+  \ingroup coin_elements
+
+  SoEmissiveColorElement stores the self-emission colors set by SoMaterial.
+
+  \sa SoReplacedElement
+*/
 class OBOL_DLL_API SoEmissiveColorElement : public SoReplacedElement {
   typedef SoReplacedElement inherited;
 

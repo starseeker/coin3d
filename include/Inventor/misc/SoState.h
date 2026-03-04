@@ -41,6 +41,18 @@ class SoAction;
 class SoTypeList;
 class SoElement;
 
+/*!
+  \class SoState SoState.h Inventor/misc/SoState.h
+  \brief Traversal state: a stack of element slots used during action traversal.
+
+  \ingroup coin_misc
+
+  SoState holds the per-traversal rendering or pick state as a
+  stack of SoElement instances.  Each SoAction creates its own
+  SoState from the list of elements it enables.
+
+  \sa SoElement, SoAction
+*/
 class OBOL_DLL_API SoState {
 public:
   SoState(SoAction * action,

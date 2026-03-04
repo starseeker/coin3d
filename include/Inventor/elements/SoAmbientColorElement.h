@@ -37,6 +37,17 @@
 
 class SbColor;
 
+/*!
+  \class SoAmbientColorElement SoAmbientColorElement.h Inventor/elements/SoAmbientColorElement.h
+  \brief Stores the current ambient color array.
+
+  \ingroup coin_elements
+
+  SoAmbientColorElement stores the ambient reflectivity colors set by
+  SoMaterial.
+
+  \sa SoReplacedElement
+*/
 class OBOL_DLL_API SoAmbientColorElement : public SoReplacedElement {
   typedef SoReplacedElement inherited;
 

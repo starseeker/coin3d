@@ -38,6 +38,18 @@
 
 class SoSimplifyActionP;
 
+/*!
+  \class SoSimplifyAction SoSimplifyAction.h Inventor/actions/SoSimplifyAction.h
+  \brief Abstract base class for scene-graph geometry simplification actions.
+
+  \ingroup coin_actions
+
+  SoSimplifyAction is the base for actions that simplify scene geometry,
+  typically for polygon count reduction.  SoReorganizeAction is the
+  main concrete subclass.
+
+  \sa SoReorganizeAction, SoAction
+*/
 class OBOL_DLL_API SoSimplifyAction : public SoAction {
   typedef SoAction inherited;
 

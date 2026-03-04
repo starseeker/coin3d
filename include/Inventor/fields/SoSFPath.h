@@ -40,6 +40,19 @@ class SoPath;
 class SoNotList;
 class SoNode;
 
+/*!
+  \class SoSFPath SoSFPath.h Inventor/fields/SoSFPath.h
+  \brief Field type holding a single pointer to an SoPath object.
+
+  \ingroup coin_fields
+
+  SoSFPath is a single-valued field that stores
+  one value of type SoPath.
+  It inherits all field functionality from SoSField: value change notification,
+  field connections, and Inventor file I/O.
+
+  \sa SoSField, SoField
+*/
 class OBOL_DLL_API SoSFPath : public SoSField {
   typedef SoSField inherited;
 

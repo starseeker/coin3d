@@ -41,7 +41,19 @@
 #define SO_SPACEBALL_RELEASE_EVENT(EVENT, BUTTON) \
  (SoSpaceballButtonEvent::isButtonReleaseEvent(EVENT, SoSpaceballButtonEvent::BUTTON))
 
+/*!
+  \class SoSpaceballButtonEvent SoSpaceballButtonEvent.h Inventor/events/SoSpaceballButtonEvent.h
+  \brief Represents a spaceball or space-mouse button press or release.
 
+  \ingroup coin_events
+
+  SoSpaceballButtonEvent extends SoButtonEvent with a Button enum for
+  spaceball-specific buttons.  It is usually paired with SoMotion3Event
+  for 6-DOF device input.  Convenience macros SO_SPACEBALL_PRESS_EVENT
+  and SO_SPACEBALL_RELEASE_EVENT simplify testing event types.
+
+  \sa SoButtonEvent, SoMotion3Event, SoEvent
+*/
 class OBOL_DLL_API SoSpaceballButtonEvent : public SoButtonEvent {
   typedef SoButtonEvent inherited;
 

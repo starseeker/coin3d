@@ -38,6 +38,19 @@
 
 class SoLineHighlightRenderActionP;
 
+/*!
+  \class SoLineHighlightRenderAction SoLineHighlightRenderAction.h Inventor/actions/SoLineHighlightRenderAction.h
+  \brief Renders the scene and draws wireframe highlights around selected nodes.
+
+  \ingroup coin_actions
+
+  SoLineHighlightRenderAction is a SoGLRenderAction subclass that, after
+  the normal scene render, re-renders each selected shape in the
+  SoSelection sub-graph as a colored wireframe overlay.  The highlight
+  color and line width are configurable.
+
+  \sa SoGLRenderAction, SoBoxHighlightRenderAction, SoSelection
+*/
 class OBOL_DLL_API SoLineHighlightRenderAction : public SoGLRenderAction {
   typedef SoGLRenderAction inherited;
 

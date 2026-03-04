@@ -37,6 +37,19 @@
 #include <Inventor/fields/SoSubField.h>
 #include <Inventor/SbMatrix.h>
 
+/*!
+  \class SoSFMatrix SoSFMatrix.h Inventor/fields/SoSFMatrix.h
+  \brief Field type holding a single 4×4 transformation matrix.
+
+  \ingroup coin_fields
+
+  SoSFMatrix is a single-valued field that stores
+  one value of type SbMatrix.
+  It inherits all field functionality from SoSField: value change notification,
+  field connections, and Inventor file I/O.
+
+  \sa SoSField, SoField
+*/
 class OBOL_DLL_API SoSFMatrix : public SoSField {
   typedef SoSField inherited;
 

@@ -180,6 +180,7 @@ macro(add_nanort_rendering_test name)
     add_executable(nrt_${name} ${name}.cpp)
     target_include_directories(nrt_${name} PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_SOURCE_DIR}/tests
         ${CMAKE_SOURCE_DIR}/tests/utils
         ${PROJECT_SOURCE_DIR}/include
         ${PROJECT_SOURCE_DIR}/include/Inventor/annex
@@ -243,7 +244,8 @@ if(embree_FOUND OR TARGET embree4)
         add_executable(emb_${name} ${name}.cpp)
         target_include_directories(emb_${name} PRIVATE
             ${CMAKE_CURRENT_SOURCE_DIR}
-            ${CMAKE_SOURCE_DIR}/tests/utils
+				${CMAKE_SOURCE_DIR}/tests
+				${CMAKE_SOURCE_DIR}/tests/utils
             ${PROJECT_SOURCE_DIR}/include
             ${PROJECT_SOURCE_DIR}/include/Inventor/annex
             ${PROJECT_BINARY_DIR}/include
@@ -282,8 +284,8 @@ if(embree_FOUND OR TARGET embree4)
     # Embree rendering tests (parallel to the NanoRT suite; same source files,
     # different context manager via the OBOL_EMBREE_BUILD compile definition)
     add_embree_rendering_test(render_embree)
-    add_embree_rendering_test(render_rt_proxy_shapes)
-    add_embree_rendering_test(render_background_gradient)
+    add_embree_testlib_rendering_test(render_rt_proxy_shapes)
+    add_embree_testlib_rendering_test(render_background_gradient)
     add_embree_testlib_rendering_test(render_primitives)
     add_embree_testlib_rendering_test(render_materials)
     add_embree_testlib_rendering_test(render_colored_cube)
@@ -306,12 +308,12 @@ add_nanort_testlib_rendering_test(render_materials)
 add_nanort_testlib_rendering_test(render_transforms)
 add_nanort_testlib_rendering_test(render_colored_cube)
 add_nanort_testlib_rendering_test(render_scene)
-add_nanort_rendering_test(render_rt_proxy_shapes)
-add_nanort_rendering_test(render_background_gradient)
+add_nanort_testlib_rendering_test(render_rt_proxy_shapes)
+add_nanort_testlib_rendering_test(render_background_gradient)
 # NanoRT procedural shape test: validates that SoProceduralShape with
 # DrawStyle LINES emits thin-cylinder proxy triangles (wireframe-as-cylinders)
 # so that the wireframe cone is visible in the NanoRT ray-tracing output.
-add_nanort_rendering_test(render_procedural_shape)
+add_nanort_testlib_rendering_test(render_procedural_shape)
 # NanoRT shadow test: validates shadow-ray casting via SoRaytracingParams.
 # Uses SoDirectionalLight + SoRaytracingParams(shadowsEnabled=TRUE); does NOT
 # use SoShadowGroup (which requires OpenGL GLSL shaders).  The pixel-level
@@ -322,7 +324,7 @@ add_nanort_rendering_test(render_nanort_shadow)
 # NanoRT text3_parts test: validates that SoText3 geometry (FRONT/ALL/BACK parts,
 # multiple coloured rows) is correctly collected via SoCallbackAction and rendered
 # without the double-scaling bug in SoText3P::generate.
-add_nanort_rendering_test(render_text3_parts)
+add_nanort_testlib_rendering_test(render_text3_parts)
 
 # NanoRT text demo: validates that SoText2 glyph pixels are composited
 # correctly onto the NanoRT framebuffer (letter shapes, not solid blocks).
@@ -383,7 +385,8 @@ add_nanort_testlib_rendering_test(render_hud_nanort)
 add_executable(render_nanort render_nanort.cpp)
 target_include_directories(render_nanort PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_SOURCE_DIR}/tests/utils
+	 ${CMAKE_SOURCE_DIR}/tests
+	 ${CMAKE_SOURCE_DIR}/tests/utils
     ${PROJECT_SOURCE_DIR}/include
     ${PROJECT_SOURCE_DIR}/include/Inventor/annex
     ${PROJECT_BINARY_DIR}/include
@@ -405,7 +408,8 @@ set_target_properties(render_nanort PROPERTIES
 add_executable(stt_reference stt_reference.cpp)
 target_include_directories(stt_reference PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_SOURCE_DIR}/tests/utils
+	 ${CMAKE_SOURCE_DIR}/tests
+	 ${CMAKE_SOURCE_DIR}/tests/utils
     ${PROJECT_SOURCE_DIR}/include
     ${PROJECT_SOURCE_DIR}/include/Inventor/annex
     ${PROJECT_BINARY_DIR}/include

@@ -35,6 +35,17 @@
 
 #include <Inventor/SbBasic.h>
 
+/*!
+  \class SoProfiler SoProfiler.h Inventor/annex/Profiler/SoProfiler.h
+  \brief Top-level controller for the Obol scene-graph profiler.
+
+  \ingroup coin_annex
+
+  SoProfiler enables or disables scene-graph traversal profiling
+  and provides access to the collected SbProfilingData.
+
+  \sa SbProfilingData, SoProfilerStats, SoProfilerElement
+*/
 class OBOL_DLL_API SoProfiler {
 public:
   static void init(void);

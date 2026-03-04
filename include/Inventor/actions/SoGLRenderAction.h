@@ -47,6 +47,20 @@ typedef float SoGLSortedObjectOrderCB(void * userdata, SoGLRenderAction * action
 
 class SoGLRenderActionP;
 
+/*!
+  \class SoGLRenderAction SoGLRenderAction.h Inventor/actions/SoGLRenderAction.h
+  \brief Traverses a scene graph and renders it with OpenGL.
+
+  \ingroup coin_actions
+
+  SoGLRenderAction is the main rendering action.  It traverses the
+  scene graph and issues the corresponding OpenGL drawing calls.
+  Key configurable features include: viewport region, transparency
+  rendering strategy (TransparencyType), multi-pass rendering, render
+  callbacks, and per-pass callbacks.
+
+  \sa SoAction, SoOffscreenRenderer, SoSceneManager
+*/
 class OBOL_DLL_API SoGLRenderAction : public SoAction {
   typedef SoAction inherited;
 

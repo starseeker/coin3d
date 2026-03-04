@@ -39,6 +39,19 @@
 
 class SoLevelOfDetailP;
 
+/*!
+  \class SoLevelOfDetail SoLevelOfDetail.h Inventor/nodes/SoLevelOfDetail.h
+  \brief Selects a child representation based on projected screen area (detail level).
+
+  \ingroup coin_nodes
+
+  SoLevelOfDetail computes the screen-space projected area of the bounding
+  sphere of each child and selects the child whose complexity budget
+  exceeds the computed area.  It is the original Open Inventor LOD mechanism;
+  SoLOD is a simpler distance-based alternative.
+
+  \sa SoGroup, SoLOD
+*/
 class OBOL_DLL_API SoLevelOfDetail : public SoGroup {
   typedef SoGroup inherited;
 

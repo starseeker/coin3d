@@ -35,6 +35,19 @@
 
 #include <Inventor/SoPath.h>
 
+/*!
+  \class SoFullPath SoFullPath.h Inventor/SoFullPath.h
+  \brief An SoPath subtype that exposes all nodes, including hidden children.
+
+  \ingroup coin_nodes
+
+  SoFullPath is an SoPath variant that provides direct indexed access
+  to every node in the path, including children that are normally
+  hidden (e.g., inside node kits).  Construction is private; instances
+  are obtained from actions that produce full paths.
+
+  \sa SoPath, SoNodeKitPath
+*/
 class OBOL_DLL_API SoFullPath : public SoPath {
   typedef SoPath inherited;
   friend class SoTempPath;

@@ -37,6 +37,19 @@
 #include <Inventor/fields/SoSubField.h>
 #include <Inventor/SbString.h>
 
+/*!
+  \class SoMFString SoMFString.h Inventor/fields/SoMFString.h
+  \brief Field type holding a array of text strings.
+
+  \ingroup coin_fields
+
+  SoMFString is a multi-valued field that stores
+  an array of values of type SbString.
+  It inherits all field functionality from SoMField: value change notification,
+  field connections, and Inventor file I/O.
+
+  \sa SoMField, SoField
+*/
 class OBOL_DLL_API SoMFString : public SoMField {
   typedef SoMField inherited;
 

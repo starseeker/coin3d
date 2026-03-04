@@ -36,6 +36,17 @@
 #include <Inventor/nodes/SoSubNode.h>
 #include <Inventor/fields/SoMFInt32.h>
 
+/*!
+  \class SoColorIndex SoColorIndex.h Inventor/nodes/SoColorIndex.h
+  \brief Sets the color index for color-indexed rendering contexts.
+
+  \ingroup coin_nodes
+
+  SoColorIndex is used in color-index (palette) rendering contexts to set
+  the current color lookup index.  It has no effect in RGBA mode.
+
+  \sa SoNode
+*/
 class OBOL_DLL_API SoColorIndex : public SoNode {
   typedef SoNode inherited;
 

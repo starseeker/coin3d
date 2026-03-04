@@ -43,6 +43,18 @@ class SoFieldSensor;
 class SoSensor;
 class SoBumpMapP;
 
+/*!
+  \class SoBumpMap SoBumpMap.h Inventor/nodes/SoBumpMap.h
+  \brief Applies bump mapping to subsequent geometry using a normal map.
+
+  \ingroup coin_nodes
+
+  SoBumpMap enables per-pixel normal mapping for subsequent shape nodes.
+  It stores the tangent-space normal map in its image field (SoSFImage)
+  or loads it from a file.
+
+  \sa SoNode, SoTexture2
+*/
 class OBOL_DLL_API SoBumpMap : public SoNode {
   typedef SoNode inherited;
 

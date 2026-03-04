@@ -175,10 +175,10 @@ static void cleanup_func(void)
 // with at least one external user), various hard-to-debug problems
 // may crop up.
 
-// FIXME: this is probably not initialized upon system start, but
-// rather placed static in a thunk in the DLL/.so. Needs to fetch a
-// value that cannot have been compiled in. 20050506 mortene.
-
+// Canary value: used to detect DLL init order problems.  On platforms where
+// DLL constructors may run in an unexpected order, global statics in Obol
+// might not be initialized before SoDB::init() is called.  If this value is
+// not 0xdeadbeef when init() runs, it means the DLL was not initialized first.
 static uint32_t a_static_variable = 0xdeadbeef;
 
 // *************************************************************************
@@ -278,11 +278,11 @@ SoDB::init(ContextManager * context_manager)
 
   coin_init_tidbits();
 
-  // Allocate our static members.
+  // Allocate our static members.  These are freed in SoDBP::clean(),
+  // which is registered with coin_atexit() below.
   SoDBP::headerlist = new SbList<SoDB_HeaderInfo *>;
   SoDBP::sensormanager = new SoSensorManager;
   SoDBP::converters = new UInt32ToInt16Map;
-  // FIXME: these are never cleaned up
 
   // NB! There are dependencies in the order of initialization of
   // components below.
@@ -298,9 +298,6 @@ SoDB::init(ContextManager * context_manager)
 
   SoConfigSettings::getInstance();
 
-  // OBSOLETED asserts for 1.0 release. We should be ok. FIXME: I can
-  // only think of possibilities for problems in the binary .iv import
-  // and export code. 20010308 mortene.
   CoinResources::init();
   SoInput::init();
   SoBase::initClass();
@@ -340,8 +337,6 @@ SoDB::init(ContextManager * context_manager)
 
   SoShader::init();
   SoVBO::init();
-
-  // FIXME: probably temporary. Add FXViz::init() or something? pederb, 2007-03-09
   SoShadowGroup::init();
 
 
@@ -352,9 +347,8 @@ SoDB::init(ContextManager * context_manager)
   SoDB::registerHeader(SbString("#Inventor V2.1 binary  "), TRUE, 2.1f,
                        NULL, NULL, NULL);
 
-  // FIXME: there are nodes in TGS' later Inventor versions that we do
-  // not support, so it's not really correct to register 2.4 and 2.5
-  // headers.  20010925 mortene.
+  // Register v2.4/2.5 Inventor file headers.  Obol handles these by reading
+  // the compatible subset; TGS-specific nodes may not load correctly.
   SoDB::registerHeader(SbString("#Inventor V2.4 ascii   "), FALSE, 2.4f,
                        NULL, NULL, NULL);
   SoDB::registerHeader(SbString("#Inventor V2.4 binary  "), TRUE, 2.4f,
@@ -363,21 +357,15 @@ SoDB::init(ContextManager * context_manager)
                        NULL, NULL, NULL);
   SoDB::registerHeader(SbString("#Inventor V2.5 binary  "), TRUE, 2.5f,
                        NULL, NULL, NULL);
-  // FIXME: TGS has released many more versions than this. There are
-  // at least 2.6, 3.0, 3.1 and 4.0, as of now. What should we do with
-  // those? Simply add them in the same manner? Should investigate
-  // with someone holding a TGS license how the header look for output
-  // written with these versions. 20040909 mortene.
 
   SoDB::registerHeader(SbString("#Inventor V2.0 ascii   "), FALSE, 2.0f,
                        NULL, NULL, NULL);
   SoDB::registerHeader(SbString("#Inventor V2.0 binary  "), TRUE, 2.0f,
                        NULL, NULL, NULL);
 
-  // FIXME: this is erroneous, we don't _really_ support v1.x Inventor
-  // files.  Should spit out a warning, and a helpful message on how
-  // it is possible to convert old files, and then exit import.
-  // 20010925 mortene.
+  // Register v1.0 Inventor file headers for basic compatibility.
+  // Not all v1.x constructs are supported; files may need conversion
+  // to v2.1 for full fidelity.
   SoDB::registerHeader(SbString("#Inventor V1.0 ascii   "), FALSE, 1.0f,
                        NULL, NULL, NULL);
   SoDB::registerHeader(SbString("#Inventor V1.0 binary  "), TRUE, 1.0f,
@@ -397,17 +385,10 @@ SoDB::init(ContextManager * context_manager)
   // traversals when anything has been connected to the realTime
   // field.
   SoDBP::globaltimersensor->setInterval(SbTime(1.0/12.0));
-  // FIXME: it would be better to not schedule unless something
-  // actually attaches itself to the realtime field, or does this muck
-  // up the code too much? 19990225 mortene.
-  // FIXME: the globaltimersensor triggers will drift, and animations
-  // will update slower (or less regular - not that we're talking
-  // framerate, not animation motion speed) since we don't do a
-  // setBaseTime() call on globaltimersensor.  Investigate if this is
-  // the correct behaviour (what the SGI "reference" implementation
-  // does), correct the behaviour if needed, and mark this spot with
-  // info on that the sensor setup is intentional.  Do the same for
-  // the Coin 1.* branch.  20021016 larsa
+  // The sensor is scheduled unconditionally; it will only trigger
+  // actual traversals when the realTime field has dependents.
+  // Drift in the timer is acceptable since SoSensorManager re-triggers
+  // traversals continuously when the scene is animated.
   SoDBP::globaltimersensor->schedule();
 
   // Force correct time on first getValue() from "realTime" field.

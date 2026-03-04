@@ -37,6 +37,18 @@
 #include <Inventor/nodes/SoNonIndexedShape.h>
 #include <Inventor/fields/SoSFInt32.h>
 
+/*!
+  \class SoQuadMesh SoQuadMesh.h Inventor/nodes/SoQuadMesh.h
+  \brief Renders a rectangular grid of quadrilateral faces.
+
+  \ingroup coin_nodes
+
+  SoQuadMesh renders a rows × columns grid of quads from sequential
+  vertices in SoCoordinate3.  The verticesPerRow and verticesPerColumn
+  fields specify the grid dimensions.
+
+  \sa SoNonIndexedShape, SoCoordinate3
+*/
 class OBOL_DLL_API SoQuadMesh : public SoNonIndexedShape {
   typedef SoNonIndexedShape inherited;
 

@@ -45,6 +45,17 @@
 class SoFieldSensor;
 class SoSensor;
 
+/*!
+  \class SoTexture3 SoTexture3.h Inventor/nodes/SoTexture3.h
+  \brief Applies a 3D volumetric texture to subsequent geometry.
+
+  \ingroup coin_nodes
+
+  SoTexture3 provides a 3D texture map (stack of 2D slices) for volumetric
+  texturing effects.
+
+  \sa SoTexture2, SoNode
+*/
 class OBOL_DLL_API SoTexture3 : public SoTexture {
   typedef SoTexture inherited;
 

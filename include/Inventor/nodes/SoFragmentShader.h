@@ -37,6 +37,17 @@
 
 // *************************************************************************
 
+/*!
+  \class SoFragmentShader SoFragmentShader.h Inventor/nodes/SoFragmentShader.h
+  \brief Specifies the source or binary of a fragment (pixel) shader stage.
+
+  \ingroup coin_nodes
+
+  SoFragmentShader is a child of SoShaderProgram that holds the GLSL (or
+  ARB) source or binary for the fragment processing stage.
+
+  \sa SoShaderObject, SoShaderProgram
+*/
 class OBOL_DLL_API SoFragmentShader : public SoShaderObject {
   typedef SoShaderObject inherited;
   SO_NODE_HEADER(SoFragmentShader);

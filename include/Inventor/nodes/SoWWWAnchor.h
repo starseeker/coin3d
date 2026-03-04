@@ -46,6 +46,17 @@ typedef void SoWWWAnchorCB(const SbString & url, void * data,
 
 // *************************************************************************
 
+/*!
+  \class SoWWWAnchor SoWWWAnchor.h Inventor/nodes/SoWWWAnchor.h
+  \brief Associates a URL hyperlink with its children.
+
+  \ingroup coin_nodes
+
+  SoWWWAnchor stores a URL in its name field.  When the user activates
+  (clicks) geometry under this node, the viewer can navigate to the URL.
+
+  \sa SoGroup
+*/
 class OBOL_DLL_API SoWWWAnchor : public SoLocateHighlight {
   typedef SoLocateHighlight inherited;
 

@@ -35,6 +35,18 @@
 
 #include <Inventor/sensors/SoDelayQueueSensor.h>
 
+/*!
+  \class SoIdleSensor SoIdleSensor.h Inventor/sensors/SoIdleSensor.h
+  \brief Fires a callback repeatedly whenever the application is idle.
+
+  \ingroup coin_sensors
+
+  SoIdleSensor schedules its callback to fire during every idle period
+  (i.e., when no other sensors or events are pending).  It is useful
+  for background processing tasks.
+
+  \sa SoDelayQueueSensor, SoOneShotSensor
+*/
 class OBOL_DLL_API SoIdleSensor : public SoDelayQueueSensor {
   typedef SoDelayQueueSensor inherited;
 

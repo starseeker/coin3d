@@ -43,6 +43,18 @@ struct SoGLContext;
 
 class SoTextureCoordinatePlaneP;
 
+/*!
+  \class SoTextureCoordinatePlane SoTextureCoordinatePlane.h Inventor/nodes/SoTextureCoordinatePlane.h
+  \brief Generates texture coordinates by projecting vertices onto planes.
+
+  \ingroup coin_nodes
+
+  SoTextureCoordinatePlane generates U and V texture coordinates by
+  projecting each vertex onto two configurable planes defined by
+  directionS and directionT vectors.
+
+  \sa SoTextureCoordinateFunction
+*/
 class OBOL_DLL_API SoTextureCoordinatePlane : public SoTextureCoordinateFunction {
   typedef SoTextureCoordinateFunction inherited;
 

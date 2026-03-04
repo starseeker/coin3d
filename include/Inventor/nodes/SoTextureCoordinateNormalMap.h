@@ -41,6 +41,17 @@ struct SoGLContext;
 #include <Inventor/SbVec4f.h>
 #include <Inventor/SbVec3f.h>
 
+/*!
+  \class SoTextureCoordinateNormalMap SoTextureCoordinateNormalMap.h Inventor/nodes/SoTextureCoordinateNormalMap.h
+  \brief Generates cube-map texture coordinates based on the vertex normal.
+
+  \ingroup coin_nodes
+
+  SoTextureCoordinateNormalMap maps the vertex normal directly to cube-map
+  texture coordinates (GL_REFLECTION_MAP or GL_NORMAL_MAP).
+
+  \sa SoTextureCoordinateFunction, SoTextureCubeMap
+*/
 class OBOL_DLL_API SoTextureCoordinateNormalMap : public SoTextureCoordinateFunction {
   typedef SoTextureCoordinateFunction inherited;
 

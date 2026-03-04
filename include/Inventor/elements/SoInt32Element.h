@@ -36,6 +36,18 @@
 #include <Inventor/elements/SoSubElement.h>
 #include <cstdint>
 
+/*!
+  \class SoInt32Element SoInt32Element.h Inventor/elements/SoInt32Element.h
+  \brief Element base class for a single 32-bit integer state value.
+
+  \ingroup coin_elements
+
+  SoInt32Element stores a single int32 value in the traversal state and
+  provides generic set/get methods.  Subclasses use it for discrete
+  rendering state (draw style, normal binding, etc.).
+
+  \sa SoElement, SoFloatElement
+*/
 class OBOL_DLL_API SoInt32Element : public SoElement {
   typedef SoElement inherited;
 

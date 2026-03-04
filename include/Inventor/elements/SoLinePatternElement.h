@@ -35,6 +35,17 @@
 
 #include <Inventor/elements/SoInt32Element.h>
 
+/*!
+  \class SoLinePatternElement SoLinePatternElement.h Inventor/elements/SoLinePatternElement.h
+  \brief Stores the current line stipple pattern.
+
+  \ingroup coin_elements
+
+  SoLinePatternElement stores the 16-bit stipple pattern set by
+  SoDrawStyle for line rendering.
+
+  \sa SoInt32Element
+*/
 class OBOL_DLL_API SoLinePatternElement : public SoInt32Element {
   typedef SoInt32Element inherited;
 

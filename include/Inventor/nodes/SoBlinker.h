@@ -40,6 +40,17 @@
 
 class SoBlinkerP;
 
+/*!
+  \class SoBlinker SoBlinker.h Inventor/nodes/SoBlinker.h
+  \brief Cycles through child nodes at a fixed frequency (blink/animate).
+
+  \ingroup coin_nodes
+
+  SoBlinker is an SoSwitch that automatically advances its whichChild field
+  at the rate specified by the speed field, producing animated cycling.
+
+  \sa SoSwitch, SoGroup
+*/
 class OBOL_DLL_API SoBlinker : public SoSwitch {
   typedef SoSwitch inherited;
 

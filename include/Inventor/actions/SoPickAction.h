@@ -40,6 +40,19 @@
 
 class SoPickActionP;
 
+/*!
+  \class SoPickAction SoPickAction.h Inventor/actions/SoPickAction.h
+  \brief Abstract base class for picking actions.
+
+  \ingroup coin_actions
+
+  SoPickAction is the base for actions that pick objects in the scene
+  by testing against geometry.  It stores the viewport region and
+  manages the pick-culling state.  Concrete subclasses such as
+  SoRayPickAction implement the actual intersection test.
+
+  \sa SoRayPickAction, SoAction
+*/
 class OBOL_DLL_API SoPickAction : public SoAction {
   typedef SoAction inherited;
 

@@ -25,9 +25,9 @@
 
 /*!
   \class SoEventManager SoEventManager.h Inventor/SoEventManager.h
-  \brief The SoEventManager class provides event handling for a Coin3D viewer.
+  \brief The SoEventManager class provides event handling for an Obol scene viewer.
 
-  The SoEventManager class provides a convenient event handler for Coin3D
+  The SoEventManager class provides a convenient event handler for Obol
   scenes. It can be used to do picking, camera manipulation, object
   manipulation etc.
 

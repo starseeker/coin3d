@@ -36,6 +36,17 @@
 #include <Inventor/elements/SoReplacedElement.h>
 #include <Inventor/SbVec2f.h>
 
+/*!
+  \class SoBumpMapCoordinateElement SoBumpMapCoordinateElement.h Inventor/elements/SoBumpMapCoordinateElement.h
+  \brief Stores bump-map texture coordinates.
+
+  \ingroup coin_elements
+
+  SoBumpMapCoordinateElement stores the UV coordinates specifically
+  for bump map lookups.
+
+  \sa SoReplacedElement
+*/
 class OBOL_DLL_API SoBumpMapCoordinateElement : public SoReplacedElement {
   typedef SoReplacedElement inherited;
 

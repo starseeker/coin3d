@@ -35,6 +35,17 @@
 
 #include <Inventor/elements/SoFloatElement.h>
 
+/*!
+  \class SoFontSizeElement SoFontSizeElement.h Inventor/elements/SoFontSizeElement.h
+  \brief Stores the current font size.
+
+  \ingroup coin_elements
+
+  SoFontSizeElement stores the font size (in points or object-space
+  units) set by an SoFont or SoFontStyle node.
+
+  \sa SoFloatElement
+*/
 class OBOL_DLL_API SoFontSizeElement : public SoFloatElement {
   typedef SoFloatElement inherited;
 

@@ -40,6 +40,17 @@ class SoGLShaderProgram;
 
 // *************************************************************************
 
+/*!
+  \class SoGLShaderProgramElement SoGLShaderProgramElement.h Inventor/elements/SoGLShaderProgramElement.h
+  \brief Stores the currently bound GLSL shader program.
+
+  \ingroup coin_elements
+
+  SoGLShaderProgramElement holds a reference to the active
+  SoGLSLShaderProgram that was last pushed by an SoShaderProgram node.
+
+  \sa SoReplacedElement
+*/
 class OBOL_DLL_API SoGLShaderProgramElement : public SoReplacedElement {
   typedef SoReplacedElement inherited;
   SO_ELEMENT_HEADER(SoGLShaderProgramElement);

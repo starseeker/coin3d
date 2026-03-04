@@ -47,6 +47,19 @@ typedef SoProto * SoFetchExternProtoCB(SoInput * in,
 
 // We need to inherit SoNode to be able to insert the PROTO definition
 // into the scene graph.
+/*!
+  \class SoProto SoProto.h Inventor/misc/SoProto.h
+  \brief Holds a VRML97 PROTO definition (legacy, VRML support removed).
+
+  \ingroup coin_misc
+
+  SoProto was the Open Inventor representation of a VRML97 PROTO
+  block.  VRML support has been removed from Obol (the
+  open-source fork of Coin3D); this class is retained as a
+  stub for API compatibility only.
+
+  \sa SoProtoInstance
+*/
 class OBOL_DLL_API SoProto : public SoNode {
 public:
   SoProto(const SbBool externproto = FALSE);

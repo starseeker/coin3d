@@ -37,6 +37,18 @@
 #include <Inventor/fields/SoSFEnum.h>
 #include <Inventor/fields/SoSFFloat.h>
 
+/*!
+  \class SoTextureScalePolicy SoTextureScalePolicy.h Inventor/nodes/SoTextureScalePolicy.h
+  \brief Controls how textures are scaled to power-of-two dimensions.
+
+  \ingroup coin_nodes
+
+  SoTextureScalePolicy selects whether textures are scaled up to the
+  nearest power of two (required by older OpenGL), left unscaled
+  (needs GL_ARB_texture_non_power_of_two), or fractionally scaled.
+
+  \sa SoTexture2
+*/
 class OBOL_DLL_API SoTextureScalePolicy : public SoNode {
   typedef SoNode inherited;
 

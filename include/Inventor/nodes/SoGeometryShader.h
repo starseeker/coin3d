@@ -39,6 +39,17 @@
 
 // *************************************************************************
 
+/*!
+  \class SoGeometryShader SoGeometryShader.h Inventor/nodes/SoGeometryShader.h
+  \brief Specifies the source or binary of a geometry shader stage.
+
+  \ingroup coin_nodes
+
+  SoGeometryShader is a child of SoShaderProgram that holds the GLSL source
+  for the optional geometry processing stage.
+
+  \sa SoShaderObject, SoShaderProgram
+*/
 class OBOL_DLL_API SoGeometryShader : public SoShaderObject {
   typedef SoShaderObject inherited;
   SO_NODE_HEADER(SoGeometryShader);

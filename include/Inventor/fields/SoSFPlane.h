@@ -37,6 +37,19 @@
 #include <Inventor/fields/SoSubField.h>
 #include <Inventor/SbPlane.h>
 
+/*!
+  \class SoSFPlane SoSFPlane.h Inventor/fields/SoSFPlane.h
+  \brief Field type holding a single 3D plane equation.
+
+  \ingroup coin_fields
+
+  SoSFPlane is a single-valued field that stores
+  one value of type SbPlane.
+  It inherits all field functionality from SoSField: value change notification,
+  field connections, and Inventor file I/O.
+
+  \sa SoSField, SoField
+*/
 class OBOL_DLL_API SoSFPlane : public SoSField {
   typedef SoSField inherited;
 

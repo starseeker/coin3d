@@ -47,6 +47,18 @@ typedef void SoShaderProgramEnableCB(void * closure,
 
 // *************************************************************************
 
+/*!
+  \class SoShaderProgram SoShaderProgram.h Inventor/nodes/SoShaderProgram.h
+  \brief Activates a collection of shader objects for subsequent geometry rendering.
+
+  \ingroup coin_nodes
+
+  SoShaderProgram links vertex, geometry, and fragment shader objects
+  (SoVertexShader, SoGeometryShader, SoFragmentShader) into an OpenGL
+  shader program.  Shader parameters are supplied via SoShaderParameter nodes.
+
+  \sa SoNode, SoVertexShader, SoFragmentShader, SoGeometryShader
+*/
 class OBOL_DLL_API SoShaderProgram : public SoNode {
   typedef SoNode inherited;
   SO_NODE_HEADER(SoShaderProgram);

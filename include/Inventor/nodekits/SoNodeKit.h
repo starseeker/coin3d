@@ -35,6 +35,19 @@
 
 #include <Inventor/SbBasic.h>
 
+/*!
+  \class SoNodeKit SoNodeKit.h Inventor/nodekits/SoNodeKit.h
+  \brief Provides global initialisation for the node-kit subsystem.
+
+  \ingroup coin_nodekits
+
+  SoNodeKit is the namespace class that owns the initClass() method
+  used to register all node-kit types before use.  Call
+  SoNodeKit::init() (or SoDB::init()) before creating any
+  node-kit instances.
+
+  \sa SoBaseKit
+*/
 class OBOL_DLL_API SoNodeKit {
 public:
   static void init(void);

@@ -37,6 +37,17 @@
 
 struct SoGLContext;
 
+/*!
+  \class SoGLLinePatternElement SoGLLinePatternElement.h Inventor/elements/SoGLLinePatternElement.h
+  \brief GL-specific element for line stipple pattern.
+
+  \ingroup coin_elements
+
+  SoGLLinePatternElement extends SoLinePatternElement to call
+  glLineStipple().
+
+  \sa SoLinePatternElement
+*/
 class OBOL_DLL_API SoGLLinePatternElement : public SoLinePatternElement {
   typedef SoLinePatternElement inherited;
 

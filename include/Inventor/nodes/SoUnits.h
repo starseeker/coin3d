@@ -37,6 +37,18 @@
 #include <Inventor/nodes/SoTransformation.h>
 #include <Inventor/fields/SoSFEnum.h>
 
+/*!
+  \class SoUnits SoUnits.h Inventor/nodes/SoUnits.h
+  \brief Converts subsequent geometry from a specified measurement unit to meters.
+
+  \ingroup coin_nodes
+
+  SoUnits applies a scale factor to the current transformation so that
+  subsequent geometry is interpreted in the specified unit (METERS,
+  CENTIMETERS, INCHES, FEET, MILLIMETERS, etc.).
+
+  \sa SoNode, SoTransformation
+*/
 class OBOL_DLL_API SoUnits : public SoTransformation {
   typedef SoTransformation inherited;
 

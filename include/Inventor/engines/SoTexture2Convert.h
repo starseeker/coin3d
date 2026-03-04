@@ -38,6 +38,17 @@
 #include <Inventor/engines/SoEngineOutput.h>
 #include <Inventor/fields/SoSFImage.h>
 
+/*!
+  \class SoTexture2Convert SoTexture2Convert.h Inventor/engines/SoTexture2Convert.h
+  \brief Performs image format conversion on a 2D texture.
+
+  \ingroup coin_engines
+
+  SoTexture2Convert takes an SoSFImage input and converts it to a
+  different pixel format or size, exposing the result as an output image.
+
+  \sa SoEngine, SoTexture2
+*/
 class OBOL_DLL_API SoTexture2Convert : public SoEngine {
   typedef SoEngine inherited;
   SO_ENGINE_ABSTRACT_HEADER(SoTexture2Convert);

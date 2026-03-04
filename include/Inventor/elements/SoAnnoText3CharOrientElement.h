@@ -35,6 +35,17 @@
 
 #include <Inventor/elements/SoInt32Element.h>
 
+/*!
+  \class SoAnnoText3CharOrientElement SoAnnoText3CharOrientElement.h Inventor/elements/SoAnnoText3CharOrientElement.h
+  \brief Stores the character orientation for SoAnnoText3.
+
+  \ingroup coin_elements
+
+  SoAnnoText3CharOrientElement stores whether annotation text
+  characters are oriented relative to the camera or the scene.
+
+  \sa SoInt32Element
+*/
 class OBOL_DLL_API SoAnnoText3CharOrientElement : public SoInt32Element {
   typedef SoInt32Element inherited;
 

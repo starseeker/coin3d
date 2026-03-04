@@ -37,6 +37,18 @@
 #include <Inventor/SbVec3f.h>
 #include <Inventor/SbVec4f.h>
 
+/*!
+  \class SoCoordinateElement SoCoordinateElement.h Inventor/elements/SoCoordinateElement.h
+  \brief Stores the current 3D (or 4D) vertex coordinate array.
+
+  \ingroup coin_elements
+
+  SoCoordinateElement stores the vertex positions set by a
+  SoCoordinate3 or SoCoordinate4 node and exposes them to shape
+  nodes during traversal.
+
+  \sa SoReplacedElement
+*/
 class OBOL_DLL_API SoCoordinateElement : public SoReplacedElement {
   typedef SoReplacedElement inherited;
 

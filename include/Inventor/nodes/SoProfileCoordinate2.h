@@ -36,6 +36,17 @@
 #include <Inventor/nodes/SoSubNode.h>
 #include <Inventor/fields/SoMFVec2f.h>
 
+/*!
+  \class SoProfileCoordinate2 SoProfileCoordinate2.h Inventor/nodes/SoProfileCoordinate2.h
+  \brief Stores 2D profile coordinates for extrusion profile nodes.
+
+  \ingroup coin_nodes
+
+  SoProfileCoordinate2 provides 2D control points (SoMFVec2f) consumed
+  by SoLinearProfile and similar profile nodes.
+
+  \sa SoProfile, SoLinearProfile
+*/
 class OBOL_DLL_API SoProfileCoordinate2 : public SoNode {
   typedef SoNode inherited;
 

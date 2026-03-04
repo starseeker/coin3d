@@ -37,6 +37,18 @@
 #include <Inventor/fields/SoSFEnum.h>
 #include <Inventor/nodes/SoSubNode.h>
 
+/*!
+  \class SoNormalBinding SoNormalBinding.h Inventor/nodes/SoNormalBinding.h
+  \brief Controls how normal vectors are bound to geometry.
+
+  \ingroup coin_nodes
+
+  SoNormalBinding specifies whether the normals from a SoNormal node are
+  applied per vertex (PER_VERTEX, PER_VERTEX_INDEXED) or per face
+  (PER_FACE, PER_FACE_INDEXED), or as a single overall normal (OVERALL).
+
+  \sa SoNormal, SoMaterialBinding
+*/
 class OBOL_DLL_API SoNormalBinding : public SoNode {
   typedef SoNode inherited;
 

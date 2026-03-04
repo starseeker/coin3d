@@ -37,6 +37,18 @@
 #include <Inventor/fields/SoSFEnum.h>
 #include <Inventor/elements/SoPickStyleElement.h>
 
+/*!
+  \class SoPickStyle SoPickStyle.h Inventor/nodes/SoPickStyle.h
+  \brief Controls how subsequent geometry participates in pick operations.
+
+  \ingroup coin_nodes
+
+  SoPickStyle selects the picking mode: SHAPE (normal), BOUNDING_BOX
+  (use bounding box only), UNPICKABLE (invisible to picks), or
+  SHAPE_ON_TOP.
+
+  \sa SoNode, SoRayPickAction
+*/
 class OBOL_DLL_API SoPickStyle : public SoNode {
   typedef SoNode inherited;
 

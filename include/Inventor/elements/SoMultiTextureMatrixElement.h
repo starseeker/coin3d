@@ -38,6 +38,17 @@
 
 class SoMultiTextureMatrixElementP;
 
+/*!
+  \class SoMultiTextureMatrixElement SoMultiTextureMatrixElement.h Inventor/elements/SoMultiTextureMatrixElement.h
+  \brief Accumulates texture matrices across multiple texture units.
+
+  \ingroup coin_elements
+
+  SoMultiTextureMatrixElement maintains per-unit texture transformation
+  matrices.
+
+  \sa SoAccumulatedElement
+*/
 class OBOL_DLL_API SoMultiTextureMatrixElement : public SoAccumulatedElement {
   typedef SoAccumulatedElement inherited;
 

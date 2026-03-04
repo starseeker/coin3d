@@ -40,6 +40,17 @@
 #include <Inventor/fields/SoSFEnum.h>
 #include <Inventor/elements/SoEnvironmentElement.h>
 
+/*!
+  \class SoEnvironment SoEnvironment.h Inventor/nodes/SoEnvironment.h
+  \brief Sets global environment parameters (fog, ambient light).
+
+  \ingroup coin_nodes
+
+  SoEnvironment configures global scene properties: ambient color and
+  intensity, and fog (mode, color, near/far distances).
+
+  \sa SoNode
+*/
 class OBOL_DLL_API SoEnvironment : public SoNode {
   typedef SoNode inherited;
 

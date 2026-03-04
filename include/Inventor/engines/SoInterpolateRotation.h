@@ -36,6 +36,17 @@
 #include <Inventor/engines/SoInterpolate.h>
 #include <Inventor/fields/SoMFRotation.h>
 
+/*!
+  \class SoInterpolateRotation SoInterpolateRotation.h Inventor/engines/SoInterpolateRotation.h
+  \brief Spherically interpolates between two rotations (slerp).
+
+  \ingroup coin_engines
+
+  SoInterpolateRotation performs quaternion spherical linear interpolation
+  (slerp) between input0 and input1 using the alpha input.
+
+  \sa SoInterpolate, SoEngine
+*/
 class OBOL_DLL_API SoInterpolateRotation : public SoInterpolate {
   typedef SoInterpolate inherited;
   SO_INTERPOLATE_HEADER(SoInterpolateRotation);

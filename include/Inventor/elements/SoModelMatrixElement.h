@@ -37,6 +37,18 @@
 #include <Inventor/SbMatrix.h>
 #include <Inventor/lists/SbPList.h>
 
+/*!
+  \class SoModelMatrixElement SoModelMatrixElement.h Inventor/elements/SoModelMatrixElement.h
+  \brief Maintains the cumulative model-to-world transformation matrix.
+
+  \ingroup coin_elements
+
+  SoModelMatrixElement stores the current model matrix in the traversal
+  state.  Transformation nodes (SoTransform, SoRotation, etc.) call
+  static methods to multiply or replace the matrix.
+
+  \sa SoAccumulatedElement, SoViewingMatrixElement
+*/
 class OBOL_DLL_API SoModelMatrixElement : public SoAccumulatedElement {
   typedef SoAccumulatedElement inherited;
 

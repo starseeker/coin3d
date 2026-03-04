@@ -44,6 +44,19 @@
 class SoEngine;
 
 
+/*!
+  \class SoSFEngine SoSFEngine.h Inventor/fields/SoSFEngine.h
+  \brief Field type holding a single pointer to an SoEngine node.
+
+  \ingroup coin_fields
+
+  SoSFEngine is a single-valued field that stores
+  one value of type SoEngine.
+  It inherits all field functionality from SoSField: value change notification,
+  field connections, and Inventor file I/O.
+
+  \sa SoSField, SoField
+*/
 class OBOL_DLL_API SoSFEngine : public SoSField {
   typedef SoSField inherited;
 

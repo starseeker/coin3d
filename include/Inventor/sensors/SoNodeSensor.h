@@ -35,6 +35,18 @@
 
 #include <Inventor/sensors/SoDataSensor.h>
 
+/*!
+  \class SoNodeSensor SoNodeSensor.h Inventor/sensors/SoNodeSensor.h
+  \brief Fires a callback when an attached node or its subgraph changes.
+
+  \ingroup coin_sensors
+
+  SoNodeSensor monitors an SoNode and fires its callback whenever the
+  node or any of its children change.  This makes it useful for
+  tracking modifications to whole sub-graphs.
+
+  \sa SoDataSensor, SoFieldSensor
+*/
 class OBOL_DLL_API SoNodeSensor : public SoDataSensor {
   typedef SoDataSensor inherited;
 

@@ -37,6 +37,19 @@
 #include <Inventor/SbName.h>
 #include <Inventor/fields/SoField.h>
 
+/*!
+  \class SoScriptEngine SoScriptEngine.h Inventor/misc/SoScriptEngine.h
+  \brief Abstract interface for embedded script engines (legacy stub).
+
+  \ingroup coin_misc
+
+  SoScriptEngine defined the abstract interface for plugging
+  scripting language engines into a VRML97 Script node.
+  VRML support has been removed from Obol; this class is
+  retained only as a stub.
+
+  \sa SoProto
+*/
 class OBOL_DLL_API SoScriptEngine {
 
 public:

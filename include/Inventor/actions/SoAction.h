@@ -74,6 +74,22 @@ class SoPathList;
 class SoState;
 class SoActionP;
 
+/*!
+  \class SoAction SoAction.h Inventor/actions/SoAction.h
+  \brief Abstract base class for all scene-graph traversal actions.
+
+  \ingroup coin_actions
+
+  SoAction is the base for the Open Inventor action hierarchy.  An action
+  is applied to a scene graph (a root SoNode, an SoPath, or an
+  SoPathList) and traverses it, performing a specific operation such as
+  rendering, picking, or computing a bounding box.  Subclasses override
+  initClass() to register which state elements they require and override
+  the per-node virtual methods to implement their specific behavior.
+
+  \sa SoGLRenderAction, SoGetBoundingBoxAction, SoRayPickAction,
+      SoCallbackAction, SoWriteAction
+*/
 class OBOL_DLL_API SoAction {
 public:
   static void initClass(void);

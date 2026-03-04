@@ -38,6 +38,17 @@
 
 class SoColorPacker;
 
+/*!
+  \class SoDiffuseColorElement SoDiffuseColorElement.h Inventor/elements/SoDiffuseColorElement.h
+  \brief Stores the current diffuse color array.
+
+  \ingroup coin_elements
+
+  SoDiffuseColorElement stores the diffuse colors set by SoMaterial
+  or SoBaseColor.
+
+  \sa SoReplacedElement
+*/
 class OBOL_DLL_API SoDiffuseColorElement : public SoReplacedElement {
   typedef SoReplacedElement inherited;
 

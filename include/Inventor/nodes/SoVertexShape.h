@@ -47,6 +47,19 @@ class SbVec3f;
 class SoCoordinateElement;
 class SoVertexShapeP;
 
+/*!
+  \class SoVertexShape SoVertexShape.h Inventor/nodes/SoVertexShape.h
+  \brief Abstract base class for shapes that use vertex coordinate data.
+
+  \ingroup coin_nodes
+
+  SoVertexShape is the base for all shapes that read vertex coordinates
+  from a SoCoordinate3/SoCoordinate4 node.  It manages the normal-vector
+  cache and provides utilities for automatic per-vertex and per-face
+  normal generation.
+
+  \sa SoShape, SoIndexedShape, SoNonIndexedShape
+*/
 class OBOL_DLL_API SoVertexShape : public SoShape {
   typedef SoShape inherited;
 

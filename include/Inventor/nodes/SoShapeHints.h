@@ -39,6 +39,18 @@
 #include <Inventor/fields/SoSFBool.h>
 #include <Inventor/nodes/SoSubNode.h>
 
+/*!
+  \class SoShapeHints SoShapeHints.h Inventor/nodes/SoShapeHints.h
+  \brief Provides rendering hints about the winding and convexity of subsequent shapes.
+
+  \ingroup coin_nodes
+
+  SoShapeHints tells the renderer whether shapes are solid (one-sided),
+  ordered (consistent winding), and convex.  These hints enable face-culling
+  and other optimizations, and control two-sided lighting.
+
+  \sa SoNode, SoShape
+*/
 class OBOL_DLL_API SoShapeHints : public SoNode {
   typedef SoNode inherited;
 

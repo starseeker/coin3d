@@ -40,6 +40,19 @@
 
 class SoNode;
 
+/*!
+  \class SoElement SoElement.h Inventor/elements/SoElement.h
+  \brief Abstract base class for all traversal-state elements.
+
+  \ingroup coin_elements
+
+  SoElement is the root of the element hierarchy. Each element slot in
+  the traversal state (SoState) holds a stack of SoElement instances.
+  Subclasses override init(), push(), pop(), and matches() to provide
+  specific state management for their data type.
+
+  \sa SoState, SoReplacedElement, SoAccumulatedElement
+*/
 class OBOL_DLL_API SoElement {
 public:
   static void initClass(void);

@@ -36,6 +36,18 @@
 #include <Inventor/nodes/SoSubNode.h>
 #include <Inventor/fields/SoSFName.h>
 
+/*!
+  \class SoLabel SoLabel.h Inventor/nodes/SoLabel.h
+  \brief Attaches a named label to the current traversal state.
+
+  \ingroup coin_nodes
+
+  SoLabel stores a single SbName in its label field.  It has no visual
+  effect; it is used to mark points in the scene graph that can be
+  located with SoSearchAction.
+
+  \sa SoNode, SoInfo
+*/
 class OBOL_DLL_API SoLabel : public SoNode {
   typedef SoNode inherited;
 

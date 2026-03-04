@@ -35,6 +35,18 @@
 
 #include <Inventor/sensors/SoDataSensor.h>
 
+/*!
+  \class SoFieldSensor SoFieldSensor.h Inventor/sensors/SoFieldSensor.h
+  \brief Fires a callback when an attached field changes value.
+
+  \ingroup coin_sensors
+
+  SoFieldSensor monitors a single SoField.  Its callback is scheduled
+  whenever the field value is set or modified.  Attach/detach are
+  managed via attach() and detach().
+
+  \sa SoDataSensor, SoNodeSensor
+*/
 class OBOL_DLL_API SoFieldSensor : public SoDataSensor {
   typedef SoDataSensor inherited;
 

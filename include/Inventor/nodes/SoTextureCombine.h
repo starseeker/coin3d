@@ -40,6 +40,17 @@
 #include <Inventor/fields/SoSFVec4f.h>
 #include <Inventor/elements/SoTextureCombineElement.h>
 
+/*!
+  \class SoTextureCombine SoTextureCombine.h Inventor/nodes/SoTextureCombine.h
+  \brief Configures multi-texture combine operations.
+
+  \ingroup coin_nodes
+
+  SoTextureCombine maps to the OpenGL GL_COMBINE texture environment
+  mode, allowing flexible blending of multiple texture units.
+
+  \sa SoTexture2, SoTextureUnit
+*/
 class OBOL_DLL_API SoTextureCombine : public SoNode {
   typedef SoNode inherited;
 

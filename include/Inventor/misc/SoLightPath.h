@@ -39,6 +39,17 @@
 class SoNode;
 class SoTempPath;
 
+/*!
+  \class SoLightPath SoLightPath.h Inventor/misc/SoLightPath.h
+  \brief Maintains the path from the scene root to a light node.
+
+  \ingroup coin_misc
+
+  SoLightPath is a lightweight path used internally to transform
+  light positions from world space to eye space during rendering.
+
+  \sa SoPath, SoLightElement
+*/
 class OBOL_DLL_API SoLightPath {
 public:
   SoLightPath(SoNode *node, const int approxlength);

@@ -42,6 +42,20 @@
 
 class SoGetBoundingBoxActionP;
 
+/*!
+  \class SoGetBoundingBoxAction SoGetBoundingBoxAction.h Inventor/actions/SoGetBoundingBoxAction.h
+  \brief Computes the bounding box of a scene graph.
+
+  \ingroup coin_actions
+
+  SoGetBoundingBoxAction traverses the scene graph and accumulates the
+  axis-aligned bounding box (SbBox3f) and the approximate center point
+  of all geometry.  The result can optionally be returned as a
+  transformed bounding box (SbXfBox3f) in the local coordinate space
+  of a specific node.
+
+  \sa SoAction, SbBox3f, SbXfBox3f
+*/
 class OBOL_DLL_API SoGetBoundingBoxAction : public SoAction {
   typedef SoAction inherited;
 

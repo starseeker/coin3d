@@ -37,6 +37,19 @@
 #include <Inventor/fields/SoSField.h>
 #include <Inventor/fields/SoSubField.h>
 
+/*!
+  \class SoSFString SoSFString.h Inventor/fields/SoSFString.h
+  \brief Field type holding a single text string.
+
+  \ingroup coin_fields
+
+  SoSFString is a single-valued field that stores
+  one value of type SbString.
+  It inherits all field functionality from SoSField: value change notification,
+  field connections, and Inventor file I/O.
+
+  \sa SoSField, SoField
+*/
 class OBOL_DLL_API SoSFString : public SoSField {
   typedef SoSField inherited;
 

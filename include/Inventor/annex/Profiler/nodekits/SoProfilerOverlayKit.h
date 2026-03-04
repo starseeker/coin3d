@@ -5,6 +5,17 @@
 #include <Inventor/nodekits/SoSubKit.h>
 #include <Inventor/fields/SoSFVec3f.h>
 
+/*!
+  \class SoProfilerOverlayKit SoProfilerOverlayKit.h Inventor/annex/Profiler/nodekits/SoProfilerOverlayKit.h
+  \brief Node kit that overlays profiling information on the rendered scene.
+
+  \ingroup coin_annex
+
+  SoProfilerOverlayKit adds an HUD-style transparent overlay over
+  the scene showing live profiling statistics.
+
+  \sa SoBaseKit, SoProfilerTopKit
+*/
 class OBOL_DLL_API SoProfilerOverlayKit : public SoBaseKit {
   typedef SoBaseKit inherited;
   SO_KIT_HEADER(SoProfilerOverlayKit);

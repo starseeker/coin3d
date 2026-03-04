@@ -35,6 +35,17 @@
 
 #include <Inventor/elements/SoInt32Element.h>
 
+/*!
+  \class SoDecimationTypeElement SoDecimationTypeElement.h Inventor/elements/SoDecimationTypeElement.h
+  \brief Stores the geometry decimation algorithm type.
+
+  \ingroup coin_elements
+
+  SoDecimationTypeElement stores the algorithm selector for the
+  geometry simplification engine.
+
+  \sa SoInt32Element
+*/
 class OBOL_DLL_API SoDecimationTypeElement : public SoInt32Element {
   typedef SoInt32Element inherited;
 

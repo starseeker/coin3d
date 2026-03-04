@@ -38,6 +38,19 @@
 
 class SoCoordinate3P;
 
+/*!
+  \class SoCoordinate3 SoCoordinate3.h Inventor/nodes/SoCoordinate3.h
+  \brief Stores 3D vertex coordinates for indexed and non-indexed shape nodes.
+
+  \ingroup coin_nodes
+
+  SoCoordinate3 supplies 3D vertex positions via its point field
+  (SoMFVec3f).  Shape nodes like SoIndexedFaceSet, SoFaceSet, and
+  SoLineSet read coordinates from the current SoCoordinate3 in the
+  traversal state.
+
+  \sa SoNode, SoIndexedFaceSet, SoFaceSet, SoCoordinate4
+*/
 class OBOL_DLL_API SoCoordinate3 : public SoNode {
   typedef SoNode inherited;
 

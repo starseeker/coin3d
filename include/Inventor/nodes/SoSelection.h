@@ -47,6 +47,19 @@ typedef void SoSelectionPathCB(void * data, SoPath * path);
 typedef void SoSelectionClassCB(void * data, SoSelection * sel);
 typedef SoPath * SoSelectionPickCB(void * data, const SoPickedPoint * pick);
 
+/*!
+  \class SoSelection SoSelection.h Inventor/nodes/SoSelection.h
+  \brief A group node that tracks user-selected objects in the scene.
+
+  \ingroup coin_nodes
+
+  SoSelection is an SoSeparator subclass that intercepts pick events and
+  maintains a list of selected paths.  Selection and deselection callbacks
+  can be registered.  Use SoBoxHighlightRenderAction or
+  SoLineHighlightRenderAction to draw the selection visually.
+
+  \sa SoGroup, SoBoxHighlightRenderAction, SoLineHighlightRenderAction
+*/
 class OBOL_DLL_API SoSelection : public SoSeparator {
   typedef SoSeparator inherited;
 

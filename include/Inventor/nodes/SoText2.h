@@ -41,6 +41,18 @@
 #include <Inventor/fields/SoSFEnum.h>
 #include <vector>
 
+/*!
+  \class SoText2 SoText2.h Inventor/nodes/SoText2.h
+  \brief Renders 2D text always facing the camera (screen-aligned).
+
+  \ingroup coin_nodes
+
+  SoText2 renders a string (or list of strings) in screen space using a
+  raster font.  The text always faces the camera regardless of scene
+  orientation.  Fields: string (SoMFString) and spacing (SoSFFloat).
+
+  \sa SoText3, SoFont, SoShape
+*/
 class OBOL_DLL_API SoText2 : public SoShape {
   typedef SoShape inherited;
 

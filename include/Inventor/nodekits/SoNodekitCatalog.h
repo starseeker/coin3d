@@ -42,6 +42,19 @@ class SbName;
 #define SO_CATALOG_NAME_NOT_FOUND -1
 
 
+/*!
+  \class SoNodekitCatalog SoNodekitCatalog.h Inventor/nodekits/SoNodekitCatalog.h
+  \brief Describes the part structure of a node kit.
+
+  \ingroup coin_nodekits
+
+  SoNodekitCatalog stores the part list of a node-kit class:
+  part names, allowed types, default types, null-by-default flags,
+  and containment relationships.  It is queried at run time to
+  find and create parts within a node kit.
+
+  \sa SoBaseKit
+*/
 class OBOL_DLL_API SoNodekitCatalog {
 public:
   static void initClass(void);

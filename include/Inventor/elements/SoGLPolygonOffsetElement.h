@@ -35,6 +35,17 @@
 
 #include <Inventor/elements/SoPolygonOffsetElement.h>
 
+/*!
+  \class SoGLPolygonOffsetElement SoGLPolygonOffsetElement.h Inventor/elements/SoGLPolygonOffsetElement.h
+  \brief GL-specific element for polygon offset.
+
+  \ingroup coin_elements
+
+  SoGLPolygonOffsetElement extends SoPolygonOffsetElement to call
+  glPolygonOffset() and enable/disable the OpenGL polygon-offset state.
+
+  \sa SoPolygonOffsetElement
+*/
 class OBOL_DLL_API SoGLPolygonOffsetElement : public SoPolygonOffsetElement {
   typedef SoPolygonOffsetElement inherited;
 

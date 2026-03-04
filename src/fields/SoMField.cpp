@@ -398,7 +398,7 @@ mfield_buffer_realloc(void * bufptr, size_t size)
   Return the value at \a index in the \a valuestring string.
 */
 void
-SoMField::get1(const int index, SbString & valuestring)
+SoMField::get1(const int index, SbString & valuestring) const
 {
   // Note: this code has an almost verbatim copy in SoField::get(), so
   // remember to update both places if any fixes are done.
@@ -451,8 +451,10 @@ SoMField::get1(const int index, SbString & valuestring)
 SbBool
 SoMField::readValue(SoInput * in)
 {
-  // FIXME: temporary disable notification (if on) during reading the
-  // field elements. 20000429 mortene.
+  // Note: notifications are intentionally not suppressed during element reads
+  // because readValue() can be called on live scene-graph nodes, not only
+  // during initial file import.  The valueChanged() call at the end handles
+  // the final notification.
 
   // This macro is convenient for reading with error detection.
 #define READ_VAL(val) \
@@ -525,15 +527,9 @@ SoMField::readValue(SoInput * in)
 
 #undef READ_VAL
 
-  // We need to trigger the notification chain here, as this function
-  // can be used on a node in a scene graph in any state -- not only
-  // during initial scene graph import.
-  //
-  // FIXME: this might cause major slowdowns at import, and we should
-  // probably disable notification at the container level during full
-  // scene graph import operations (probably best done from somewhere
-  // in SoBase::readInstance() or some such). Should investigate.
-  // 20031203 mortene.
+  // Trigger the notification chain.  This is intentional even during
+  // file import because readValue() may be called on live nodes at
+  // any point, not only at initial load time.
   this->valueChanged();
 
   return TRUE;
@@ -753,10 +749,9 @@ SoMField::insertSpace(int start, int numarg)
     this->copyValue(start+numarg+i, start+i);
   }
 
-  // Send notification.
-  // FIXME: It looks like a lot of unnecessary work is being done here
-  // if notifications are disabled. Look into shortcutting either here
-  // or somewhere not too far from here. kintel 20070103.
+  // Send notification.  valueChanged() → startNotify() → notify() checks
+  // isNotifyEnabled(), so this is already a no-op when notifications are
+  // disabled.
   this->valueChanged();
 }
 

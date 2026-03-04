@@ -39,6 +39,17 @@
 #include <Inventor/fields/SoMFEnum.h>
 
 
+/*!
+  \class SoBoolOperation SoBoolOperation.h Inventor/engines/SoBoolOperation.h
+  \brief Applies a boolean operation element-wise to two boolean input arrays.
+
+  \ingroup coin_engines
+
+  SoBoolOperation applies one of several two-input boolean functions
+  (AND, OR, NAND, NOR, XOR, etc.) element-wise to its a and b inputs.
+
+  \sa SoEngine
+*/
 class OBOL_DLL_API SoBoolOperation : public SoEngine {
   typedef SoEngine inherited;
 

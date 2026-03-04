@@ -35,6 +35,16 @@
 
 #include <Inventor/elements/SoReplacedElement.h>
 
+/*!
+  \class SoShininessElement SoShininessElement.h Inventor/elements/SoShininessElement.h
+  \brief Stores the current shininess (specular exponent) array.
+
+  \ingroup coin_elements
+
+  SoShininessElement stores the shininess values set by SoMaterial.
+
+  \sa SoReplacedElement
+*/
 class OBOL_DLL_API SoShininessElement : public SoReplacedElement {
   typedef SoReplacedElement inherited;
 

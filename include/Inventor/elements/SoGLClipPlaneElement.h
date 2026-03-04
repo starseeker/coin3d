@@ -37,6 +37,17 @@
 
 struct SoGLContext;
 
+/*!
+  \class SoGLClipPlaneElement SoGLClipPlaneElement.h Inventor/elements/SoGLClipPlaneElement.h
+  \brief GL-specific element for clip planes.
+
+  \ingroup coin_elements
+
+  SoGLClipPlaneElement extends SoClipPlaneElement to call
+  glClipPlane() / glEnable(GL_CLIP_PLANE_i).
+
+  \sa SoClipPlaneElement
+*/
 class OBOL_DLL_API SoGLClipPlaneElement : public SoClipPlaneElement {
   typedef SoClipPlaneElement inherited;
 

@@ -35,6 +35,18 @@
 
 #include <Inventor/elements/SoSubElement.h>
 
+/*!
+  \class SoFloatElement SoFloatElement.h Inventor/elements/SoFloatElement.h
+  \brief Element base class for a single floating-point state value.
+
+  \ingroup coin_elements
+
+  SoFloatElement stores a single float value in the traversal state and
+  provides generic set/get typed by a float.  Subclasses specialise it
+  for specific rendering parameters (complexity, line width, etc.).
+
+  \sa SoElement, SoInt32Element
+*/
 class OBOL_DLL_API SoFloatElement : public SoElement {
   typedef SoElement inherited;
 

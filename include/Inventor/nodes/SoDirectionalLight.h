@@ -37,6 +37,20 @@
 #include <Inventor/nodes/SoLight.h>
 #include <Inventor/fields/SoSFVec3f.h>
 
+/*!
+  \class SoDirectionalLight SoDirectionalLight.h Inventor/nodes/SoDirectionalLight.h
+  \brief A directional (infinite) light source defined by a direction vector.
+
+  \ingroup coin_nodes
+
+  SoDirectionalLight simulates a distant light source (like the sun)
+  that illuminates all geometry from a constant direction.  It has no
+  position and no attenuation.  The direction field (SoSFVec3f) points
+  toward the light source in world space (i.e., the opposite of the
+  illumination direction).
+
+  \sa SoLight, SoPointLight, SoSpotLight
+*/
 class OBOL_DLL_API SoDirectionalLight : public SoLight {
   typedef SoLight inherited;
 

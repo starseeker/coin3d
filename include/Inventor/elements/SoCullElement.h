@@ -39,6 +39,17 @@
 class SbBox3f;
 class SbViewVolume;
 
+/*!
+  \class SoCullElement SoCullElement.h Inventor/elements/SoCullElement.h
+  \brief Stores the current view-frustum cull status.
+
+  \ingroup coin_elements
+
+  SoCullElement tracks whether the current bounding box is entirely
+  inside or outside the view frustum, enabling early-out culling.
+
+  \sa SoElement
+*/
 class OBOL_DLL_API SoCullElement : public SoElement {
   typedef SoElement inherited;
 

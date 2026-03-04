@@ -35,6 +35,17 @@
 
 #include <Inventor/elements/SoFloatElement.h>
 
+/*!
+  \class SoCreaseAngleElement SoCreaseAngleElement.h Inventor/elements/SoCreaseAngleElement.h
+  \brief Stores the crease angle for automatic normal generation.
+
+  \ingroup coin_elements
+
+  SoCreaseAngleElement stores the crease angle (in radians) used by
+  shape nodes to decide whether to smooth normals across edges.
+
+  \sa SoFloatElement
+*/
 class OBOL_DLL_API SoCreaseAngleElement : public SoFloatElement {
   typedef SoFloatElement inherited;
 

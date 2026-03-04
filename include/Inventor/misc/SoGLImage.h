@@ -50,6 +50,18 @@ class SoGLDisplayList;
 class SoState;
 class SbImage;
 
+/*!
+  \class SoGLImage SoGLImage.h Inventor/misc/SoGLImage.h
+  \brief Manages an OpenGL 2D texture image with mip-maps and caching.
+
+  \ingroup coin_misc
+
+  SoGLImage wraps an OpenGL texture object and handles pixel data
+  upload, mip-map generation, texture parameter state, and
+  multi-context resource management.
+
+  \sa SoGLBigImage, SoGLCubeMapImage, SoTexture2
+*/
 class OBOL_DLL_API SoGLImage {
 public:
 

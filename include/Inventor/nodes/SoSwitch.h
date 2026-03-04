@@ -43,6 +43,19 @@
 
 class SoSwitchP;
 
+/*!
+  \class SoSwitch SoSwitch.h Inventor/nodes/SoSwitch.h
+  \brief Selectively traverses one or all children based on a switch index.
+
+  \ingroup coin_nodes
+
+  SoSwitch traverses only the child at position whichChild.  Special values
+  SO_SWITCH_NONE, SO_SWITCH_ALL, and SO_SWITCH_INHERIT control whether zero,
+  all, or an inherited index is used.  SoSwitch is commonly used to implement
+  show/hide behavior and state-machine animation.
+
+  \sa SoGroup, SoLOD
+*/
 class OBOL_DLL_API SoSwitch : public SoGroup {
   typedef SoGroup inherited;
 

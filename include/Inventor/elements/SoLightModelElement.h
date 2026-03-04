@@ -35,6 +35,17 @@
 
 #include <Inventor/elements/SoInt32Element.h>
 
+/*!
+  \class SoLightModelElement SoLightModelElement.h Inventor/elements/SoLightModelElement.h
+  \brief Stores the lighting model (Phong or base color).
+
+  \ingroup coin_elements
+
+  SoLightModelElement stores the lighting mode set by SoLightModel:
+  PHONG (full per-vertex lighting) or BASE_COLOR (unlit).
+
+  \sa SoInt32Element
+*/
 class OBOL_DLL_API SoLightModelElement : public SoInt32Element {
   typedef SoInt32Element inherited;
 

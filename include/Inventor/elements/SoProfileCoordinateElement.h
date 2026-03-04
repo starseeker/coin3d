@@ -43,6 +43,17 @@
  * - conversion between coord2 and coord3 (done in Inventor)
  */
 
+/*!
+  \class SoProfileCoordinateElement SoProfileCoordinateElement.h Inventor/elements/SoProfileCoordinateElement.h
+  \brief Stores 2D profile coordinates for extrusion.
+
+  \ingroup coin_elements
+
+  SoProfileCoordinateElement stores the 2D (or 3D rational) control
+  points set by SoProfileCoordinate2 or SoProfileCoordinate3.
+
+  \sa SoReplacedElement
+*/
 class OBOL_DLL_API SoProfileCoordinateElement : public SoReplacedElement {
   typedef SoReplacedElement inherited;
 

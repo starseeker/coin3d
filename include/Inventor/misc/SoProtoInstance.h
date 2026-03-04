@@ -43,6 +43,18 @@
 class SoProto;
 class SoSensor;
 
+/*!
+  \class SoProtoInstance SoProtoInstance.h Inventor/misc/SoProtoInstance.h
+  \brief Instance of a VRML97 PROTO definition (legacy, VRML support removed).
+
+  \ingroup coin_misc
+
+  SoProtoInstance represented a single instantiation of a VRML97
+  PROTO node.  VRML support has been removed from Obol; this
+  class is retained as a stub for API compatibility only.
+
+  \sa SoProto
+*/
 class OBOL_DLL_API SoProtoInstance : public SoNode {
   typedef SoNode inherited;
 

@@ -37,6 +37,18 @@
 #include <Inventor/nodes/SoShape.h>
 #include <Inventor/fields/SoSFFloat.h>
 
+/*!
+  \class SoSphere SoSphere.h Inventor/nodes/SoSphere.h
+  \brief Renders a sphere shape.
+
+  \ingroup coin_nodes
+
+  SoSphere renders a sphere centered at the origin.  The radius field
+  (SoSFFloat) controls its size.  The level of tessellation is
+  controlled by the SoComplexity node.
+
+  \sa SoCone, SoCylinder, SoCube, SoShape
+*/
 class OBOL_DLL_API SoSphere : public SoShape {
   typedef SoShape inherited;
 

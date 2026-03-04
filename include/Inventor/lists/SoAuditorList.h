@@ -49,6 +49,18 @@
 //  -mortene
 
 
+/*!
+  \class SoAuditorList SoAuditorList.h Inventor/lists/SoAuditorList.h
+  \brief Maintains the list of auditors (listeners) for an SoBase object.
+
+  \ingroup coin_lists
+
+  SoAuditorList stores the objects that are registered to receive
+  change notification from an SoBase instance.  Auditors include
+  sensors, field connections, and node children.
+
+  \sa SbPList, SoBase
+*/
 class OBOL_DLL_API SoAuditorList : private SbPList {
   typedef SbPList inherited;
 

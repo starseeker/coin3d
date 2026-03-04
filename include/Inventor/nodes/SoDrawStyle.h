@@ -40,6 +40,18 @@
 #include <Inventor/fields/SoSFInt32.h>
 #include <Inventor/nodes/SoSubNode.h>
 
+/*!
+  \class SoDrawStyle SoDrawStyle.h Inventor/nodes/SoDrawStyle.h
+  \brief Controls how geometry is drawn (filled, lines, points).
+
+  \ingroup coin_nodes
+
+  SoDrawStyle sets the OpenGL drawing style: FILLED (the default),
+  LINES (wireframe), POINTS, or INVISIBLE.  It also controls point
+  size, line width, and the stipple pattern for line dashes.
+
+  \sa SoNode, SoComplexity, SoLightModel
+*/
 class OBOL_DLL_API SoDrawStyle : public SoNode {
   typedef SoNode inherited;
 

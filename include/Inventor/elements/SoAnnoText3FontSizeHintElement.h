@@ -35,6 +35,17 @@
 
 #include <Inventor/elements/SoInt32Element.h>
 
+/*!
+  \class SoAnnoText3FontSizeHintElement SoAnnoText3FontSizeHintElement.h Inventor/elements/SoAnnoText3FontSizeHintElement.h
+  \brief Stores the font-size hint for SoAnnoText3.
+
+  \ingroup coin_elements
+
+  SoAnnoText3FontSizeHintElement stores the font-size hint (SCREEN or
+  OBJECT space) for annotation text.
+
+  \sa SoInt32Element
+*/
 class OBOL_DLL_API SoAnnoText3FontSizeHintElement : public SoInt32Element {
   typedef SoInt32Element inherited;
 

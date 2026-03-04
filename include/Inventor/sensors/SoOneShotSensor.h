@@ -35,6 +35,18 @@
 
 #include <Inventor/sensors/SoDelayQueueSensor.h>
 
+/*!
+  \class SoOneShotSensor SoOneShotSensor.h Inventor/sensors/SoOneShotSensor.h
+  \brief Fires a callback exactly once during the next idle period.
+
+  \ingroup coin_sensors
+
+  SoOneShotSensor schedules its callback to fire once during the next
+  idle queue processing cycle.  Unlike SoIdleSensor, it fires only
+  once per schedule() call.
+
+  \sa SoDelayQueueSensor, SoIdleSensor
+*/
 class OBOL_DLL_API SoOneShotSensor : public SoDelayQueueSensor {
   typedef SoDelayQueueSensor inherited;
 

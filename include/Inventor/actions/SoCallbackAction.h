@@ -77,6 +77,20 @@ typedef void SoPointCB(void * userdata, SoCallbackAction * action,
                        const SoPrimitiveVertex * v);
 
 
+/*!
+  \class SoCallbackAction SoCallbackAction.h Inventor/actions/SoCallbackAction.h
+  \brief Traverses a scene graph and invokes user callbacks for each node and primitive.
+
+  \ingroup coin_actions
+
+  SoCallbackAction calls user-registered pre/post-traversal callbacks for
+  every node type encountered, and decomposes geometry nodes into their
+  constituent triangles, line segments, and points, invoking the
+  corresponding typed callbacks (SoTriangleCB, SoLineSegmentCB, SoPointCB).
+  It is the primary mechanism for extracting geometric data from a scene.
+
+  \sa SoAction, SoPrimitiveVertex
+*/
 class OBOL_DLL_API SoCallbackAction : public SoAction {
   typedef SoAction inherited;
 

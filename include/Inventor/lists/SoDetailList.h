@@ -37,6 +37,17 @@
 
 class SoDetail;
 
+/*!
+  \class SoDetailList SoDetailList.h Inventor/lists/SoDetailList.h
+  \brief Resizable array of SoDetail pointers.
+
+  \ingroup coin_lists
+
+  SoDetailList holds a set of SoDetail objects.  Ownership is
+  not assumed; the caller is responsible for allocation and deletion.
+
+  \sa SbPList, SoDetail
+*/
 class OBOL_DLL_API SoDetailList : public SbPList {
 public:
   SoDetailList(void) : SbPList() { }

@@ -46,6 +46,18 @@ class SbVec2b;
 class SbVec2s;
 class SbVec2i32;
 
+/*!
+  \class SbVec2f SbVec2f.h Inventor/SbVec2f.h
+  \brief 2D vector with single-precision floating-point coordinates.
+
+  \ingroup coin_base
+
+  SbVec2f represents a point or direction in 2D space and supports
+  arithmetic operations, normalization, dot product, and conversions to
+  and from related types (SbVec2d, SbVec2b, SbVec2s, SbVec2i32).
+
+  \sa SbVec2d, SbVec3f, SbVec4f
+*/
 class OBOL_DLL_API SbVec2f {
 public:
   SbVec2f(void) { }

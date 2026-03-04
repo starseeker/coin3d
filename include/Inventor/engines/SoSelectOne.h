@@ -40,6 +40,16 @@
 class SoEngineOutput;
 
 
+/*!
+  \class SoSelectOne SoSelectOne.h Inventor/engines/SoSelectOne.h
+  \brief Selects a single element from a multi-valued field.
+
+  \ingroup coin_engines
+
+  SoSelectOne outputs the element at index from a multi-valued input field.
+
+  \sa SoEngine
+*/
 class OBOL_DLL_API SoSelectOne : public SoEngine {
   typedef SoEngine inherited;
 

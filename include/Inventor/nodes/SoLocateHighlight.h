@@ -41,6 +41,17 @@
 class SoFullPath;
 class SoLocateHighlightP;
 
+/*!
+  \class SoLocateHighlight SoLocateHighlight.h Inventor/nodes/SoLocateHighlight.h
+  \brief Highlights its children when the pointer is over them.
+
+  \ingroup coin_nodes
+
+  SoLocateHighlight re-renders its children with a highlight color when
+  the mouse cursor is located over them during cursor-tracking traversal.
+
+  \sa SoSeparator, SoSelection
+*/
 class OBOL_DLL_API SoLocateHighlight : public SoSeparator {
   typedef SoSeparator inherited;
 

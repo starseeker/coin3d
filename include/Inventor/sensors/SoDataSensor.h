@@ -42,6 +42,20 @@ class SoField;
 class SoPath;
 class SoNotList;
 
+/*!
+  \class SoDataSensor SoDataSensor.h Inventor/sensors/SoDataSensor.h
+  \brief Base class for sensors that monitor scene-graph data for changes.
+
+  \ingroup coin_sensors
+
+  SoDataSensor is the base for sensors that watch an SoNode, SoField,
+  or SoPath for modifications.  When the monitored object changes, the
+  sensor is scheduled for processing.  It provides access to the
+  notification list via getTriggerNode(), getTriggerField(), and
+  getTriggerPath().
+
+  \sa SoFieldSensor, SoNodeSensor, SoPathSensor
+*/
 class OBOL_DLL_API SoDataSensor : public SoDelayQueueSensor {
   typedef SoDelayQueueSensor inherited;
 

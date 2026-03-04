@@ -40,6 +40,18 @@
 
 class SoVectorOutputP;
 
+/*!
+  \class SoVectorOutput SoVectorOutput.h Inventor/annex/HardCopy/SoVectorOutput.h
+  \brief Abstract base for vector-graphics output streams.
+
+  \ingroup coin_annex
+
+  SoVectorOutput is the abstract base class for objects that receive
+  vector-graphics primitives from SoVectorizeAction.  Subclasses
+  write the primitives to specific formats (PostScript, etc.).
+
+  \sa SoVectorizeAction, SoPSVectorOutput
+*/
 class OBOL_DLL_API SoVectorOutput {
 
 public:

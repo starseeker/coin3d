@@ -37,6 +37,17 @@
 #include <Inventor/nodes/SoSubNode.h>
 #include <Inventor/actions/SoGLRenderAction.h>
 
+/*!
+  \class SoTransparencyType SoTransparencyType.h Inventor/nodes/SoTransparencyType.h
+  \brief Sets the transparency rendering algorithm for subsequent geometry.
+
+  \ingroup coin_nodes
+
+  SoTransparencyType allows per-sub-graph selection of the transparency
+  blending algorithm, overriding the global setting on SoGLRenderAction.
+
+  \sa SoGLRenderAction, SoNode
+*/
 class OBOL_DLL_API SoTransparencyType : public SoNode {
   typedef SoNode inherited;
 

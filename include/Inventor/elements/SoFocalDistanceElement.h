@@ -35,6 +35,17 @@
 
 #include <Inventor/elements/SoFloatElement.h>
 
+/*!
+  \class SoFocalDistanceElement SoFocalDistanceElement.h Inventor/elements/SoFocalDistanceElement.h
+  \brief Stores the camera focal distance.
+
+  \ingroup coin_elements
+
+  SoFocalDistanceElement stores the focal distance field value from
+  the active camera node.
+
+  \sa SoFloatElement
+*/
 class OBOL_DLL_API SoFocalDistanceElement : public SoFloatElement {
   typedef SoFloatElement inherited;
 

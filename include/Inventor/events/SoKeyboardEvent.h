@@ -49,7 +49,18 @@
 #define SO_KEY_RELEASE_EVENT(EVENT, KEY) \
  (SoKeyboardEvent::isKeyReleaseEvent(EVENT, SoKeyboardEvent::KEY))
 
+/*!
+  \class SoKeyboardEvent SoKeyboardEvent.h Inventor/events/SoKeyboardEvent.h
+  \brief Represents a keyboard key press or release.
 
+  \ingroup coin_events
+
+  SoKeyboardEvent carries a key code (Key enum) and a pressed/released
+  state.  Convenience macros SO_KEY_PRESS_EVENT and SO_KEY_RELEASE_EVENT
+  simplify testing a generic SoEvent pointer against a specific key.
+
+  \sa SoButtonEvent, SoEvent
+*/
 class OBOL_DLL_API SoKeyboardEvent : public SoButtonEvent {
   typedef SoButtonEvent inherited;
   SO_EVENT_HEADER();

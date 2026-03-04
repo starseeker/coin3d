@@ -38,6 +38,17 @@
 
 class SoMultiTextureEnabledElementP;
 
+/*!
+  \class SoMultiTextureEnabledElement SoMultiTextureEnabledElement.h Inventor/elements/SoMultiTextureEnabledElement.h
+  \brief Tracks which texture units are currently enabled.
+
+  \ingroup coin_elements
+
+  SoMultiTextureEnabledElement maintains a per-unit enabled flag
+  for multi-texturing.
+
+  \sa SoElement
+*/
 class OBOL_DLL_API SoMultiTextureEnabledElement : public SoElement {
   typedef SoElement inherited;
 

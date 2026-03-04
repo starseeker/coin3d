@@ -44,6 +44,17 @@
 #include <Inventor/fields/SoMFRotation.h>
 
 
+/*!
+  \class SoDecomposeRotation SoDecomposeRotation.h Inventor/engines/SoDecomposeRotation.h
+  \brief Splits an SbRotation into an axis vector and an angle.
+
+  \ingroup coin_engines
+
+  SoDecomposeRotation takes an SbRotation input and exposes the rotation
+  axis (SbVec3f) and angle (float) as separate outputs.
+
+  \sa SoComposeRotation, SoEngine
+*/
 class OBOL_DLL_API SoDecomposeRotation : public SoEngine {
   typedef SoEngine inherited;
   SO_COMPOSE__HEADER(SoDecomposeRotation);

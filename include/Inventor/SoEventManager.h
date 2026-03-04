@@ -43,6 +43,19 @@ class SoNode;
 class SbViewportRegion;
 class SoHandleEventAction;
 
+/*!
+  \class SoEventManager SoEventManager.h Inventor/SoEventManager.h
+  \brief Handles event delivery to a scene graph.
+
+  \ingroup coin_rendering
+
+  SoEventManager routes user-input events (keyboard, mouse, touch) to
+  the scene graph via a SoHandleEventAction.  It also manages a
+  NavigationState flag that controls whether camera navigation gestures
+  are intercepted before events reach individual nodes.
+
+  \sa SoSceneManager, SoHandleEventAction, SoEvent
+*/
 class OBOL_DLL_API SoEventManager {
 public:
   SoEventManager(void);

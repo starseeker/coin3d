@@ -35,6 +35,17 @@
 
 #include <Inventor/nodes/SoSubNode.h>
 
+/*!
+  \class SoTextureCoordinateCube SoTextureCoordinateCube.h Inventor/nodes/SoTextureCoordinateCube.h
+  \brief Generates cube-map texture coordinates for cube reflection/refraction.
+
+  \ingroup coin_nodes
+
+  SoTextureCoordinateCube generates texture coordinates suitable for
+  cube-map lookup based on the vertex normal.
+
+  \sa SoTextureCoordinateFunction, SoTextureCubeMap
+*/
 class OBOL_DLL_API SoTextureCoordinateCube : public SoNode {
   typedef SoNode inherited;
 

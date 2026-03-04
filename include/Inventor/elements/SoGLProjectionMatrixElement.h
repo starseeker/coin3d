@@ -37,6 +37,17 @@
 
 struct SoGLContext;
 
+/*!
+  \class SoGLProjectionMatrixElement SoGLProjectionMatrixElement.h Inventor/elements/SoGLProjectionMatrixElement.h
+  \brief GL-specific element for the projection matrix.
+
+  \ingroup coin_elements
+
+  SoGLProjectionMatrixElement extends SoProjectionMatrixElement to
+  load the matrix into GL_PROJECTION via glLoadMatrix.
+
+  \sa SoProjectionMatrixElement
+*/
 class OBOL_DLL_API SoGLProjectionMatrixElement : public SoProjectionMatrixElement {
   typedef SoProjectionMatrixElement inherited;
 

@@ -40,6 +40,17 @@
 
 class SoLight;
 
+/*!
+  \class SoLightElement SoLightElement.h Inventor/elements/SoLightElement.h
+  \brief Accumulates active light sources.
+
+  \ingroup coin_elements
+
+  SoLightElement accumulates the list of light sources (matrices and
+  light node pointers) as they are encountered during traversal.
+
+  \sa SoAccumulatedElement
+*/
 class OBOL_DLL_API SoLightElement : public SoAccumulatedElement {
   typedef SoAccumulatedElement inherited;
 

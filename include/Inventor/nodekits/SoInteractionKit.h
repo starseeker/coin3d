@@ -47,6 +47,18 @@ class SoFieldSensor;
 class SoSensor;
 class SoSeparator;
 
+/*!
+  \class SoInteractionKit SoInteractionKit.h Inventor/nodekits/SoInteractionKit.h
+  \brief Abstract base for node kits that respond to user interaction.
+
+  \ingroup coin_nodekits
+
+  SoInteractionKit extends SoBaseKit with the infrastructure for
+  dragger and manipulator node kits: surround transform, active
+  child switcher, and pick-path management.
+
+  \sa SoBaseKit
+*/
 class OBOL_DLL_API SoInteractionKit : public SoBaseKit {
   typedef SoBaseKit inherited;
 

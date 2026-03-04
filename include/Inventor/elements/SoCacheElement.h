@@ -37,6 +37,17 @@
 
 class SoCache;
 
+/*!
+  \class SoCacheElement SoCacheElement.h Inventor/elements/SoCacheElement.h
+  \brief Tracks render-cache validity during traversal.
+
+  \ingroup coin_elements
+
+  SoCacheElement marks which nodes are inside open caches, enabling
+  correct invalidation when dependent state changes.
+
+  \sa SoElement
+*/
 class OBOL_DLL_API SoCacheElement : public SoElement {
   typedef SoElement inherited;
 

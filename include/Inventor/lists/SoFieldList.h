@@ -37,6 +37,16 @@
 
 class SoField;
 
+/*!
+  \class SoFieldList SoFieldList.h Inventor/lists/SoFieldList.h
+  \brief Resizable array of SoField pointers.
+
+  \ingroup coin_lists
+
+  SoFieldList stores a set of SoField pointers; no ownership is implied.
+
+  \sa SbPList, SoField
+*/
 class OBOL_DLL_API SoFieldList : public SbPList {
 public:
   SoFieldList(void) : SbPList() { }

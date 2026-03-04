@@ -44,6 +44,17 @@
 class SoSensor;
 class SoSceneTextureCubeMapP;
 
+/*!
+  \class SoSceneTextureCubeMap SoSceneTextureCubeMap.h Inventor/nodes/SoSceneTextureCubeMap.h
+  \brief Renders a sub-scene into each face of a cube-map texture.
+
+  \ingroup coin_nodes
+
+  SoSceneTextureCubeMap renders the scene in its scene field from six
+  camera directions into a cube-map texture.
+
+  \sa SoTextureCubeMap, SoSceneTexture2
+*/
 class OBOL_DLL_API SoSceneTextureCubeMap : public SoNode {
   typedef SoNode inherited;
 

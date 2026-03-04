@@ -36,6 +36,18 @@
 #include <Inventor/nodes/SoSubNode.h>
 #include <Inventor/nodes/SoSeparator.h>
 
+/*!
+  \class SoAnnotation SoAnnotation.h Inventor/nodes/SoAnnotation.h
+  \brief Renders children on top of all other geometry by disabling depth testing.
+
+  \ingroup coin_nodes
+
+  SoAnnotation renders its children last, after all other scene geometry,
+  with depth testing disabled.  This ensures that annotation geometry
+  (labels, overlays) is always visible.
+
+  \sa SoSeparator, SoDepthBuffer
+*/
 class OBOL_DLL_API SoAnnotation : public SoSeparator {
   typedef SoSeparator inherited;
 

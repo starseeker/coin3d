@@ -37,6 +37,18 @@
 #include <Inventor/nodes/SoGroup.h>
 #include <Inventor/fields/SoSFPath.h>
 
+/*!
+  \class SoPathSwitch SoPathSwitch.h Inventor/nodes/SoPathSwitch.h
+  \brief Traverses its children only when the current path matches a target path.
+
+  \ingroup coin_nodes
+
+  SoPathSwitch renders its children only if the current traversal path
+  (from root to this node) matches the path stored in its switchPath
+  field.
+
+  \sa SoSwitch, SoPath
+*/
 class OBOL_DLL_API SoPathSwitch : public SoGroup {
   typedef SoGroup inherited;
 

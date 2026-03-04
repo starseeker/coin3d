@@ -38,6 +38,17 @@
 
 class SoPSVectorOutputP;
 
+/*!
+  \class SoPSVectorOutput SoPSVectorOutput.h Inventor/annex/HardCopy/SoPSVectorOutput.h
+  \brief PostScript vector-graphics output stream.
+
+  \ingroup coin_annex
+
+  SoPSVectorOutput is a concrete SoVectorOutput that writes scene
+  geometry as PostScript (EPS or PS) for hard-copy output.
+
+  \sa SoVectorOutput, SoVectorizePSAction
+*/
 class OBOL_DLL_API SoPSVectorOutput : public SoVectorOutput {
 public:
   SoPSVectorOutput();

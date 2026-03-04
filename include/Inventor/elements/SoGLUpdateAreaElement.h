@@ -39,6 +39,17 @@ struct SoGLContext;
 #include <Inventor/SbVec2f.h>
 #include <Inventor/SbVec2s.h>
 
+/*!
+  \class SoGLUpdateAreaElement SoGLUpdateAreaElement.h Inventor/elements/SoGLUpdateAreaElement.h
+  \brief Stores the area of the viewport that needs to be redrawn.
+
+  \ingroup coin_elements
+
+  SoGLUpdateAreaElement restricts rendering to a sub-area of the
+  viewport for incremental update operations.
+
+  \sa SoElement
+*/
 class OBOL_DLL_API SoGLUpdateAreaElement : public SoElement {
   typedef SoElement inherited;
 

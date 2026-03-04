@@ -38,6 +38,17 @@
 
 class SoProfile;
 
+/*!
+  \class SoProfileElement SoProfileElement.h Inventor/elements/SoProfileElement.h
+  \brief Accumulates cross-section profile nodes.
+
+  \ingroup coin_elements
+
+  SoProfileElement accumulates the list of SoProfile nodes active for
+  the current extrusion shape.
+
+  \sa SoAccumulatedElement
+*/
 class OBOL_DLL_API SoProfileElement : public SoAccumulatedElement {
   typedef SoAccumulatedElement inherited;
 

@@ -36,6 +36,17 @@
 #include <Inventor/nodes/SoSubNode.h>
 #include <Inventor/fields/SoMFVec3f.h>
 
+/*!
+  \class SoProfileCoordinate3 SoProfileCoordinate3.h Inventor/nodes/SoProfileCoordinate3.h
+  \brief Stores 3D (rational) profile coordinates for NURBS profiles.
+
+  \ingroup coin_nodes
+
+  SoProfileCoordinate3 provides 3D rational control points (SoMFVec3f)
+  for NURBS-based profile curves.
+
+  \sa SoProfile
+*/
 class OBOL_DLL_API SoProfileCoordinate3 : public SoNode {
   typedef SoNode inherited;
 

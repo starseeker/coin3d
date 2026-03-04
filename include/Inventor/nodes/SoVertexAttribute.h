@@ -44,6 +44,17 @@
 class SoMField;
 class SoVertexAttributeP;
 
+/*!
+  \class SoVertexAttribute SoVertexAttribute.h Inventor/nodes/SoVertexAttribute.h
+  \brief Supplies per-vertex shader attribute data.
+
+  \ingroup coin_nodes
+
+  SoVertexAttribute provides a named array of per-vertex data that is
+  bound to a vertex attribute index in a GLSL shader program.
+
+  \sa SoShaderProgram, SoVertexProperty
+*/
 class OBOL_DLL_API SoVertexAttribute : public SoNode {
   typedef SoNode inherited;
 

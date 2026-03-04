@@ -35,6 +35,17 @@
 
 #include <Inventor/elements/SoInt32Element.h>
 
+/*!
+  \class SoSwitchElement SoSwitchElement.h Inventor/elements/SoSwitchElement.h
+  \brief Stores the current SoSwitch traversal index.
+
+  \ingroup coin_elements
+
+  SoSwitchElement propagates the whichChild index from an SoSwitch
+  node so that nested switches can implement SO_SWITCH_INHERIT.
+
+  \sa SoInt32Element
+*/
 class OBOL_DLL_API SoSwitchElement : public SoInt32Element {
   typedef SoInt32Element inherited;
 

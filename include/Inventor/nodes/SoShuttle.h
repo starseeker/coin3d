@@ -43,6 +43,17 @@ class SoElapsedTime;
 class SoCalculator;
 class SoInterpolateVec3f;
 
+/*!
+  \class SoShuttle SoShuttle.h Inventor/nodes/SoShuttle.h
+  \brief Animates a translation oscillating between two positions.
+
+  \ingroup coin_nodes
+
+  SoShuttle oscillates its translation field between translation0 and
+  translation1 using an SoElapsedTime engine.
+
+  \sa SoTranslation, SoPendulum
+*/
 class OBOL_DLL_API SoShuttle : public SoTranslation {
   typedef SoTranslation inherited;
 

@@ -37,6 +37,17 @@
 
 struct SoGLContext;
 
+/*!
+  \class SoGLMultiTextureEnabledElement SoGLMultiTextureEnabledElement.h Inventor/elements/SoGLMultiTextureEnabledElement.h
+  \brief GL-specific element for multi-texture enable state.
+
+  \ingroup coin_elements
+
+  SoGLMultiTextureEnabledElement extends SoMultiTextureEnabledElement
+  to call glEnable/glDisable(GL_TEXTURE_2D) per unit.
+
+  \sa SoMultiTextureEnabledElement
+*/
 class OBOL_DLL_API SoGLMultiTextureEnabledElement : public SoMultiTextureEnabledElement {
   typedef SoMultiTextureEnabledElement inherited;
 

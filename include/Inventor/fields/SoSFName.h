@@ -37,6 +37,19 @@
 #include <Inventor/fields/SoSubField.h>
 #include <Inventor/SbName.h>
 
+/*!
+  \class SoSFName SoSFName.h Inventor/fields/SoSFName.h
+  \brief Field type holding a single symbolic name string.
+
+  \ingroup coin_fields
+
+  SoSFName is a single-valued field that stores
+  one value of type SbName.
+  It inherits all field functionality from SoSField: value change notification,
+  field connections, and Inventor file I/O.
+
+  \sa SoSField, SoField
+*/
 class OBOL_DLL_API SoSFName : public SoSField {
   typedef SoSField inherited;
 

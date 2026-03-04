@@ -44,6 +44,18 @@
 class SoSensor;
 class SoFieldSensor;
 
+/*!
+  \class SoText3 SoText3.h Inventor/nodes/SoText3.h
+  \brief Renders extruded 3D text geometry.
+
+  \ingroup coin_nodes
+
+  SoText3 generates 3D geometry for a string of text by extruding glyph
+  outlines.  Parts can be FRONT, BACK, SIDES, or ALL.  Font size and
+  type are controlled by an SoFont or SoFontStyle node.
+
+  \sa SoText2, SoFont, SoShape
+*/
 class OBOL_DLL_API SoText3 : public SoShape {
   typedef SoShape inherited;
 

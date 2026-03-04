@@ -37,6 +37,17 @@
 
 class SoEngine;
 
+/*!
+  \class SoEngineList SoEngineList.h Inventor/lists/SoEngineList.h
+  \brief Resizable array of SoEngine pointers.
+
+  \ingroup coin_lists
+
+  SoEngineList is a typed list of SoEngine objects, using SoBaseList
+  for automatic reference counting.
+
+  \sa SoBaseList, SoEngine
+*/
 class OBOL_DLL_API SoEngineList : public SoBaseList {
   typedef SoBaseList inherited;
 

@@ -37,6 +37,19 @@
 #include <Inventor/fields/SoSubField.h>
 #include <Inventor/SbVec3b.h>
 
+/*!
+  \class SoSFVec3b SoSFVec3b.h Inventor/fields/SoSFVec3b.h
+  \brief Field type holding a single 3-component byte vector.
+
+  \ingroup coin_fields
+
+  SoSFVec3b is a single-valued field that stores
+  one value of type SbVec3b.
+  It inherits all field functionality from SoSField: value change notification,
+  field connections, and Inventor file I/O.
+
+  \sa SoSField, SoField
+*/
 class OBOL_DLL_API SoSFVec3b : public SoSField {
   typedef SoSField inherited;
 

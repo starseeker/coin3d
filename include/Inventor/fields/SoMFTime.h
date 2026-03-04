@@ -37,6 +37,19 @@
 #include <Inventor/fields/SoSubField.h>
 #include <Inventor/SbTime.h>
 
+/*!
+  \class SoMFTime SoMFTime.h Inventor/fields/SoMFTime.h
+  \brief Field type holding a array of time values.
+
+  \ingroup coin_fields
+
+  SoMFTime is a multi-valued field that stores
+  an array of values of type SbTime.
+  It inherits all field functionality from SoMField: value change notification,
+  field connections, and Inventor file I/O.
+
+  \sa SoMField, SoField
+*/
 class OBOL_DLL_API SoMFTime : public SoMField {
   typedef SoMField inherited;
 

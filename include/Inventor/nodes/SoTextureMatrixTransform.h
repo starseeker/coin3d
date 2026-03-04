@@ -36,6 +36,17 @@
 #include <Inventor/nodes/SoSubNode.h>
 #include <Inventor/fields/SoSFMatrix.h>
 
+/*!
+  \class SoTextureMatrixTransform SoTextureMatrixTransform.h Inventor/nodes/SoTextureMatrixTransform.h
+  \brief Applies an arbitrary matrix to the texture coordinate transformation.
+
+  \ingroup coin_nodes
+
+  SoTextureMatrixTransform multiplies the current texture matrix by the
+  matrix stored in its matrix field.
+
+  \sa SoTexture2Transform
+*/
 class OBOL_DLL_API SoTextureMatrixTransform : public SoNode {
   typedef SoNode inherited;
 

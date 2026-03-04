@@ -42,6 +42,17 @@ class SoGLImage;
 class SoGLDisplayList;
 class SoGLMultiTextureImageElementP;
 
+/*!
+  \class SoGLMultiTextureImageElement SoGLMultiTextureImageElement.h Inventor/elements/SoGLMultiTextureImageElement.h
+  \brief GL-specific element for multi-unit texture images.
+
+  \ingroup coin_elements
+
+  SoGLMultiTextureImageElement extends SoMultiTextureImageElement to
+  upload and bind texture objects per unit.
+
+  \sa SoMultiTextureImageElement
+*/
 class OBOL_DLL_API SoGLMultiTextureImageElement : public SoMultiTextureImageElement {
   typedef SoMultiTextureImageElement inherited;
 

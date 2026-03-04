@@ -38,6 +38,19 @@
 
 class SoEngine;
 
+/*!
+  \class SoMFEngine SoMFEngine.h Inventor/fields/SoMFEngine.h
+  \brief Field type holding a array of pointers to SoEngine nodes.
+
+  \ingroup coin_fields
+
+  SoMFEngine is a multi-valued field that stores
+  an array of values of type SoEngine.
+  It inherits all field functionality from SoMField: value change notification,
+  field connections, and Inventor file I/O.
+
+  \sa SoMField, SoField
+*/
 class OBOL_DLL_API SoMFEngine : public SoMField {
   typedef SoMField inherited;
 

@@ -37,6 +37,18 @@
 #include <Inventor/fields/SoSFEnum.h>
 #include <Inventor/nodes/SoSubNode.h>
 
+/*!
+  \class SoMaterialBinding SoMaterialBinding.h Inventor/nodes/SoMaterialBinding.h
+  \brief Controls how material values are bound to geometry.
+
+  \ingroup coin_nodes
+
+  SoMaterialBinding specifies whether colors/materials from SoMaterial or
+  SoBaseColor are applied per object (OVERALL), per part (PER_PART), per
+  face (PER_FACE), or per vertex (PER_VERTEX), with optional indexed variants.
+
+  \sa SoMaterial, SoNormalBinding
+*/
 class OBOL_DLL_API SoMaterialBinding : public SoNode {
   typedef SoNode inherited;
 

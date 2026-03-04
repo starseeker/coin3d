@@ -3475,6 +3475,8 @@ SoSeparator* createGLBigImage(int width, int height)
     SoPerspectiveCamera *cam = new SoPerspectiveCamera;
     root->addChild(cam);
 
+    root->addChild(new SoDirectionalLight);
+
     SoTextureScalePolicy *tsp = new SoTextureScalePolicy;
     tsp->policy = SoTextureScalePolicy::FRACTURE;
     root->addChild(tsp);

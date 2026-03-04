@@ -40,6 +40,17 @@ class SoCacheHintElementP;
 // Please note that this is an experimental class. The API might
 // change a lot before/if it's included in any official Coin
 // release. pederb, 2004-07-02
+/*!
+  \class SoCacheHintElement SoCacheHintElement.h Inventor/elements/SoCacheHintElement.h
+  \brief Stores rendering cache hints (VBO, display-list usage).
+
+  \ingroup coin_elements
+
+  SoCacheHintElement carries the cache-strategy hint set by SoCacheHint
+  nodes.
+
+  \sa SoElement
+*/
 class OBOL_DLL_API SoCacheHintElement : public SoElement {
   typedef SoElement inherited;
 

@@ -35,6 +35,17 @@
 
 #include <Inventor/elements/SoFloatElement.h>
 
+/*!
+  \class SoTextureQualityElement SoTextureQualityElement.h Inventor/elements/SoTextureQualityElement.h
+  \brief Stores the texture quality (filtering) hint.
+
+  \ingroup coin_elements
+
+  SoTextureQualityElement stores the quality hint (0.0–1.0) that
+  texture nodes use to select filtering mode.
+
+  \sa SoFloatElement
+*/
 class OBOL_DLL_API SoTextureQualityElement : public SoFloatElement {
   typedef SoFloatElement inherited;
 

@@ -37,6 +37,19 @@
 #include <Inventor/fields/SoSubField.h>
 #include <Inventor/SbColor.h>
 
+/*!
+  \class SoSFColor SoSFColor.h Inventor/fields/SoSFColor.h
+  \brief Field type holding a single RGB color value.
+
+  \ingroup coin_fields
+
+  SoSFColor is a single-valued field that stores
+  one value of type SbColor.
+  It inherits all field functionality from SoSField: value change notification,
+  field connections, and Inventor file I/O.
+
+  \sa SoSField, SoField
+*/
 class OBOL_DLL_API SoSFColor : public SoSField {
   typedef SoSField inherited;
 

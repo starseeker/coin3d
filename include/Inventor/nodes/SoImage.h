@@ -44,6 +44,18 @@ class SoSensor;
 class SoFieldSensor;
 class SbImage;
 
+/*!
+  \class SoImage SoImage.h Inventor/nodes/SoImage.h
+  \brief Renders a 2D raster image in screen space.
+
+  \ingroup coin_nodes
+
+  SoImage renders a bitmap image at a fixed screen position or anchored to
+  a 3D point, always facing the camera.  Image data is in the image field
+  (SoSFImage) or loaded from filename.
+
+  \sa SoTexture2, SoShape
+*/
 class OBOL_DLL_API SoImage : public SoShape {
   typedef SoShape inherited;
 

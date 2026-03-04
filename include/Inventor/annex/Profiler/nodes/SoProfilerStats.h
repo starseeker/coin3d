@@ -44,6 +44,18 @@
 class SbProfilingData;
 class SoSeparator;
 
+/*!
+  \class SoProfilerStats SoProfilerStats.h Inventor/annex/Profiler/nodes/SoProfilerStats.h
+  \brief Node that exposes profiling statistics as fields.
+
+  \ingroup coin_annex
+
+  SoProfilerStats makes the current frame timing data available
+  as SoMF field values so that other engines or display nodes
+  can react to them.
+
+  \sa SoProfiler, SbProfilingData
+*/
 class OBOL_DLL_API SoProfilerStats : public SoNode {
   typedef SoNode inherited;
 

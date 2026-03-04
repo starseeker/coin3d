@@ -77,12 +77,14 @@ add_subdirectory(testlib)
 if(OBOL_BUILD_VIEWER)
     # FLTK was detected (system or bundled external/fltk) in the top-level
     # CMakeLists.txt.  FLTK_INCLUDE_DIRS and FLTK_LIBRARIES are already set.
+    # OBOL_VIEWER_USE_FLTK_GL is defined in the top-level CMakeLists.txt
+    # (before the FLTK detection block) so it can control FLTK_BUILD_GL.
 
     add_executable(obol_viewer obol_viewer.cpp)
 
     target_include_directories(obol_viewer PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}           # testlib/test_registry.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/utils     # headless_utils.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/utils     # headless_utils.h / fltk_context_manager.h
         ${CMAKE_CURRENT_SOURCE_DIR}/testlib   # test_registry.h (direct)
         ${PROJECT_SOURCE_DIR}/include
         ${PROJECT_SOURCE_DIR}/include/Inventor/annex
@@ -98,10 +100,26 @@ if(OBOL_BUILD_VIEWER)
         # in obol_viewer.cpp when OBOL_BUILD_DUAL_GL is set).  The panel uses
         # SoDB::createOSMesaContextManager() – no direct OSMesa dependency needed.
     elseif(OBOL_USE_OSMESA)
-        # Pure-OSMesa build: headless_utils.h uses OSMesa context manager
+        # Pure-OSMesa build: headless_utils.h uses OSMesa context manager.
+        # FLTK GL option does not apply here.
         target_compile_definitions(obol_viewer PRIVATE OBOL_OSMESA_BUILD)
         target_include_directories(obol_viewer PRIVATE
             "${PROJECT_SOURCE_DIR}/external/osmesa/include")
+    endif()
+
+    # Select the system-GL context manager for the viewer.
+    # OBOL_VIEWER_USE_FLTK_GL (default ON) selects fltk_context_manager.h which
+    # uses Fl_Gl_Window for cross-platform GL context creation.
+    # Set OFF to fall back to headless_utils.h (GLX on Linux) for CI environments
+    # where FLTK's OpenGL cannot obtain a context (headless / no display manager).
+    # This option does not apply to pure-OSMesa builds.
+    if(OBOL_VIEWER_USE_FLTK_GL AND NOT OBOL_USE_OSMESA)
+        target_compile_definitions(obol_viewer PRIVATE OBOL_VIEWER_FLTK_GL)
+        message(STATUS "obol_viewer: using FLTK GL context manager (portable)")
+    else()
+        if(NOT OBOL_USE_OSMESA)
+            message(STATUS "obol_viewer: using GLX context manager (headless_utils.h)")
+        endif()
     endif()
 
     # Optional NanoRT panel: enabled when nanort.h is found in external/nanort/
@@ -135,8 +153,9 @@ if(OBOL_BUILD_VIEWER)
                 ${FLTK_LIBRARIES}
         )
     endif()
-    # On Linux the viewer includes headless_utils.h which uses GLX symbols for
-    # the system-GL path; link the X/GL libs explicitly when available.
+    # On Linux, both the FLTK GL path (fltk_context_manager.h uses
+    # glXGetProcAddress) and the GLX fallback path (headless_utils.h) require
+    # the X11 and OpenGL libraries.  Link them explicitly when available.
     if(UNIX AND NOT APPLE)
         if(X11_FOUND)
             target_link_libraries(obol_viewer PRIVATE ${X11_X11_LIB})

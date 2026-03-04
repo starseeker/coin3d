@@ -47,6 +47,21 @@ class SbVec3s;
 class SbVec3i32;
 class SbDPPlane;
 
+/*!
+  \class SbVec3d SbVec3d.h Inventor/SbVec3d.h
+  \brief 3D vector with double-precision floating-point coordinates.
+
+  \ingroup coin_base
+
+  SbVec3d is the double-precision counterpart to SbVec3f.  It is used
+  when higher numerical accuracy is required for 3D positions,
+  directions, or geometric computations.  It supports the same
+  arithmetic, normalization, dot product, and cross product operations
+  as SbVec3f, plus conversions to and from SbVec3f, SbVec3b, SbVec3s,
+  and SbVec3i32.
+
+  \sa SbVec3f, SbVec2d, SbVec4d
+*/
 class OBOL_DLL_API SbVec3d {
 public:
   SbVec3d(void) { }

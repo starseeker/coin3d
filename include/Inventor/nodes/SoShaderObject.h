@@ -46,6 +46,17 @@ class SoState;
 
 // *************************************************************************
 
+/*!
+  \class SoShaderObject SoShaderObject.h Inventor/nodes/SoShaderObject.h
+  \brief Abstract base class for shader stage nodes.
+
+  \ingroup coin_nodes
+
+  SoShaderObject is the common base for SoVertexShader, SoFragmentShader,
+  and SoGeometryShader.  It holds the sourceType and sourceProgram fields.
+
+  \sa SoNode, SoShaderProgram
+*/
 class OBOL_DLL_API SoShaderObject : public SoNode {
   typedef SoNode inherited;
   SO_NODE_ABSTRACT_HEADER(SoShaderObject);

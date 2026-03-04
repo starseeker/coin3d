@@ -45,6 +45,17 @@
 #include <Inventor/fields/SoMFVec3f.h>
 
 
+/*!
+  \class SoDecomposeMatrix SoDecomposeMatrix.h Inventor/engines/SoDecomposeMatrix.h
+  \brief Decomposes a 4×4 matrix into translation, rotation, scale components.
+
+  \ingroup coin_engines
+
+  SoDecomposeMatrix decomposes an SbMatrix into its translation, rotation,
+  scaleFactor, scaleOrientation, and center components.
+
+  \sa SoComposeMatrix, SoEngine
+*/
 class OBOL_DLL_API SoDecomposeMatrix : public SoEngine {
   typedef SoEngine inherited;
   SO_COMPOSE__HEADER(SoDecomposeMatrix);

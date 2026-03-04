@@ -36,6 +36,18 @@
 #include <Inventor/lists/SbPList.h>
 #include <Inventor/SoType.h>
 
+/*!
+  \class SoTypeList SoTypeList.h Inventor/lists/SoTypeList.h
+  \brief Resizable array of SoType type identifiers.
+
+  \ingroup coin_lists
+
+  SoTypeList stores a set of SoType values and is used throughout
+  Obol to pass lists of type identifiers (e.g., enabled elements,
+  search results).
+
+  \sa SbPList, SoType
+*/
 class OBOL_DLL_API SoTypeList : public SbPList {
 public:
   SoTypeList(void) : SbPList() { }

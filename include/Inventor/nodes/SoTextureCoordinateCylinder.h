@@ -35,6 +35,17 @@
 
 #include <Inventor/nodes/SoSubNode.h>
 
+/*!
+  \class SoTextureCoordinateCylinder SoTextureCoordinateCylinder.h Inventor/nodes/SoTextureCoordinateCylinder.h
+  \brief Generates cylindrical projection texture coordinates.
+
+  \ingroup coin_nodes
+
+  SoTextureCoordinateCylinder wraps texture coordinates around a cylinder
+  based on vertex position.
+
+  \sa SoTextureCoordinateFunction
+*/
 class OBOL_DLL_API SoTextureCoordinateCylinder : public SoNode {
   typedef SoNode inherited;
 

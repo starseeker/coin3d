@@ -38,6 +38,17 @@
 
 class SoTextureCoordinate3P;
 
+/*!
+  \class SoTextureCoordinate3 SoTextureCoordinate3.h Inventor/nodes/SoTextureCoordinate3.h
+  \brief Stores 3D texture coordinates for volumetric texturing.
+
+  \ingroup coin_nodes
+
+  SoTextureCoordinate3 supplies per-vertex 3D texture coordinates
+  (SoMFVec3f) for use with SoTexture3.
+
+  \sa SoTexture3, SoTextureCoordinate2
+*/
 class OBOL_DLL_API SoTextureCoordinate3 : public SoNode {
   typedef SoNode inherited;
 

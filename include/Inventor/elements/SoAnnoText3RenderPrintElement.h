@@ -35,6 +35,17 @@
 
 #include <Inventor/elements/SoInt32Element.h>
 
+/*!
+  \class SoAnnoText3RenderPrintElement SoAnnoText3RenderPrintElement.h Inventor/elements/SoAnnoText3RenderPrintElement.h
+  \brief Stores the render-for-print flag for SoAnnoText3.
+
+  \ingroup coin_elements
+
+  SoAnnoText3RenderPrintElement stores whether annotation text should
+  be rendered at full print resolution.
+
+  \sa SoInt32Element
+*/
 class OBOL_DLL_API SoAnnoText3RenderPrintElement : public SoInt32Element {
   typedef SoInt32Element inherited;
 

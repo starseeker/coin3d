@@ -47,6 +47,17 @@
 
 class SoProfilerTopEngineP;
 
+/*!
+  \class SoProfilerTopEngine SoProfilerTopEngine.h Inventor/annex/Profiler/engines/SoProfilerTopEngine.h
+  \brief Engine that produces a sorted top-N list of slow nodes.
+
+  \ingroup coin_annex
+
+  SoProfilerTopEngine reads profiling data from an SoProfilerStats
+  node and outputs a sorted list of the slowest N nodes.
+
+  \sa SoEngine, SoProfilerStats
+*/
 class OBOL_DLL_API SoProfilerTopEngine : public SoEngine {
   typedef SoEngine inherited;
   SO_ENGINE_HEADER(SoProfilerTopEngine);

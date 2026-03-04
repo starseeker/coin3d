@@ -37,6 +37,16 @@
 
 struct SoGLContext;
 
+/*!
+  \class SoGLLineWidthElement SoGLLineWidthElement.h Inventor/elements/SoGLLineWidthElement.h
+  \brief GL-specific element for line width.
+
+  \ingroup coin_elements
+
+  SoGLLineWidthElement extends SoLineWidthElement to call glLineWidth().
+
+  \sa SoLineWidthElement
+*/
 class OBOL_DLL_API SoGLLineWidthElement : public SoLineWidthElement {
   typedef SoLineWidthElement inherited;
 

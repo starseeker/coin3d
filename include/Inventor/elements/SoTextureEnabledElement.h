@@ -39,6 +39,18 @@
 
 #include <Inventor/elements/SoMultiTextureEnabledElement.h>
 
+/*!
+  \typedef SoTextureEnabledElement
+  \brief Compatibility alias for SoMultiTextureEnabledElement.
+
+  \ingroup coin_elements
+
+  This typedef maps the legacy SoTextureEnabledElement name to
+  SoMultiTextureEnabledElement.  Use SoMultiTextureEnabledElement
+  in new code.
+
+  \sa SoMultiTextureEnabledElement
+*/
 typedef SoMultiTextureEnabledElement SoTextureEnabledElement;
 
 #endif // !OBOL_SOTEXTUREENABLEDELEMENT_H

@@ -38,6 +38,19 @@
 
 class SoBoxHighlightRenderActionP;
 
+/*!
+  \class SoBoxHighlightRenderAction SoBoxHighlightRenderAction.h Inventor/actions/SoBoxHighlightRenderAction.h
+  \brief Renders the scene and draws bounding-box highlights around selected nodes.
+
+  \ingroup coin_actions
+
+  SoBoxHighlightRenderAction is a SoGLRenderAction subclass that, after
+  the normal scene render, draws a colored bounding box around every
+  selected node in an SoSelection sub-graph.  The highlight color and
+  line width are configurable.
+
+  \sa SoGLRenderAction, SoLineHighlightRenderAction, SoSelection
+*/
 class OBOL_DLL_API SoBoxHighlightRenderAction : public SoGLRenderAction {
   typedef SoGLRenderAction inherited;
 

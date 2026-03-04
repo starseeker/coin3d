@@ -46,6 +46,18 @@ class SbBSPTree;
 
 // *************************************************************************
 
+/*!
+  \class SoVectorizeAction SoVectorizeAction.h Inventor/annex/HardCopy/SoVectorizeAction.h
+  \brief Action that converts a scene graph to vector-graphics primitives.
+
+  \ingroup coin_annex
+
+  SoVectorizeAction traverses a scene graph and converts geometry
+  to a stream of vector-graphics primitives for hard-copy output
+  via an SoVectorOutput object.
+
+  \sa SoVectorOutput, SoVectorizePSAction
+*/
 class OBOL_DLL_API SoVectorizeAction : public SoCallbackAction {
   typedef SoCallbackAction inherited;
   

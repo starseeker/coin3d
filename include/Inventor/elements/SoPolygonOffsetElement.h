@@ -35,6 +35,17 @@
 
 #include <Inventor/elements/SoReplacedElement.h>
 
+/*!
+  \class SoPolygonOffsetElement SoPolygonOffsetElement.h Inventor/elements/SoPolygonOffsetElement.h
+  \brief Stores polygon-offset parameters.
+
+  \ingroup coin_elements
+
+  SoPolygonOffsetElement stores the polygon-offset factor, units, and
+  style bits set by SoPolygonOffset.
+
+  \sa SoReplacedElement
+*/
 class OBOL_DLL_API SoPolygonOffsetElement : public SoReplacedElement {
   typedef SoReplacedElement inherited;
 

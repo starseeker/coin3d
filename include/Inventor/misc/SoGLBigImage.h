@@ -38,6 +38,18 @@
 #include <Inventor/SbVec2f.h>
 #include <Inventor/misc/SoGLImage.h>
 
+/*!
+  \class SoGLBigImage SoGLBigImage.h Inventor/misc/SoGLBigImage.h
+  \brief OpenGL texture image optimised for very large textures via tiling.
+
+  \ingroup coin_misc
+
+  SoGLBigImage splits an oversized texture into a grid of smaller
+  tiles so it can be used even on hardware with small texture-size
+  limits.
+
+  \sa SoGLImage
+*/
 class OBOL_DLL_API SoGLBigImage : public SoGLImage {
   typedef SoGLImage inherited;
 

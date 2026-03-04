@@ -39,6 +39,17 @@
 class SoBase;
 
 
+/*!
+  \class SoNotRec SoNotRec.h Inventor/misc/SoNotRec.h
+  \brief A single record in a scene-graph change notification chain.
+
+  \ingroup coin_misc
+
+  SoNotRec stores the base pointer and notification type for one
+  step in the notification chain carried by SoNotList.
+
+  \sa SoNotList, SoBase
+*/
 class OBOL_DLL_API SoNotRec {
 public:
   enum Type {

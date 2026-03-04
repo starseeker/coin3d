@@ -37,6 +37,17 @@
 #include <Inventor/nodes/SoTransformation.h>
 #include <Inventor/fields/SoSFBitMask.h>
 
+/*!
+  \class SoResetTransform SoResetTransform.h Inventor/nodes/SoResetTransform.h
+  \brief Resets the current transformation and/or bounding-box state.
+
+  \ingroup coin_nodes
+
+  SoResetTransform can clear the cumulative model transformation and/or the
+  bounding-box state.  The what field is a bitmask of TRANSFORM and BBOX.
+
+  \sa SoTransformation, SoTransform
+*/
 class OBOL_DLL_API SoResetTransform : public SoTransformation {
   typedef SoTransformation inherited;
 

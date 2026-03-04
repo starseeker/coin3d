@@ -36,6 +36,18 @@
 #include <Inventor/sensors/SoSensor.h>
 #include <Inventor/SbTime.h>
 
+/*!
+  \class SoTimerQueueSensor SoTimerQueueSensor.h Inventor/sensors/SoTimerQueueSensor.h
+  \brief Base class for sensors scheduled to fire at a specific time.
+
+  \ingroup coin_sensors
+
+  SoTimerQueueSensor is the base for timer-based sensors.  Subclasses
+  (SoTimerSensor, SoAlarmSensor) fire their callbacks at scheduled
+  wall-clock times managed by the SoSensorManager timer queue.
+
+  \sa SoSensor, SoTimerSensor, SoAlarmSensor
+*/
 class OBOL_DLL_API SoTimerQueueSensor : public SoSensor {
   typedef SoSensor inherited;
 

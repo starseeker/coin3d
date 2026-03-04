@@ -36,6 +36,17 @@
 #include <Inventor/nodekits/SoSubKit.h>
 #include <Inventor/nodekits/SoBaseKit.h>
 
+/*!
+  \class SoSceneKit SoSceneKit.h Inventor/nodekits/SoSceneKit.h
+  \brief Node kit that bundles a complete scene (cameras, lights, and geometry).
+
+  \ingroup coin_nodekits
+
+  SoSceneKit groups camera kits, light kits, and child geometry
+  kits into a top-level named-part scene structure.
+
+  \sa SoBaseKit, SoCameraKit, SoLightKit, SoSeparatorKit
+*/
 class OBOL_DLL_API SoSceneKit : public SoBaseKit {
   typedef SoBaseKit inherited;
 

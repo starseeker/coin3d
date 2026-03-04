@@ -41,6 +41,19 @@
 class SoGetPrimitiveCountActionP;
 class SbViewportRegion;
 
+/*!
+  \class SoGetPrimitiveCountAction SoGetPrimitiveCountAction.h Inventor/actions/SoGetPrimitiveCountAction.h
+  \brief Counts the number of geometric primitives in a scene graph.
+
+  \ingroup coin_actions
+
+  SoGetPrimitiveCountAction traverses the scene graph and tallies the
+  total number of triangles, lines, and points contributed by each
+  geometry node.  The results can be used for level-of-detail decisions
+  or profiling.
+
+  \sa SoAction, SoGetBoundingBoxAction
+*/
 class OBOL_DLL_API SoGetPrimitiveCountAction : public SoAction {
   typedef SoAction inherited;
 

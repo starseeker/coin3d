@@ -35,6 +35,17 @@
 
 #include <Inventor/elements/SoSubElement.h>
 
+/*!
+  \class SoTextureOverrideElement SoTextureOverrideElement.h Inventor/elements/SoTextureOverrideElement.h
+  \brief Tracks which texture state is currently overridden.
+
+  \ingroup coin_elements
+
+  SoTextureOverrideElement maintains flags indicating which texture
+  properties (quality, texture enable, etc.) are overridden.
+
+  \sa SoElement
+*/
 class OBOL_DLL_API SoTextureOverrideElement : public SoElement {
   typedef SoElement inherited;
 

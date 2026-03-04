@@ -82,11 +82,8 @@
 */
 
 
-// FIXME: document the SO_SFIELD_HEADER, SO_SFIELD_SOURCE and
-// SO_SFIELD_INIT_CLASS macros. Also write a note (with link to an
-// online bookstore?) about the Inventor Toolmaker, if the application
-// programmer should need to extend Coin with new single-value
-// fields. 20010913 mortene.
+// SO_SFIELD_HEADER, SO_SFIELD_SOURCE, and SO_SFIELD_INIT_CLASS macros are
+// documented in SoSubField.h.
 
 // *************************************************************************
 

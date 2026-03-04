@@ -37,6 +37,19 @@
 #include <Inventor/fields/SoSubField.h>
 #include <Inventor/SbVec3s.h>
 
+/*!
+  \class SoSFImage3 SoSFImage3.h Inventor/fields/SoSFImage3.h
+  \brief Field type holding a single 3D (volumetric) pixel image.
+
+  \ingroup coin_fields
+
+  SoSFImage3 is a single-valued field that stores
+  one value of type SbImage.
+  It inherits all field functionality from SoSField: value change notification,
+  field connections, and Inventor file I/O.
+
+  \sa SoSField, SoField
+*/
 class OBOL_DLL_API SoSFImage3 : public SoSField {
   typedef SoSField inherited;
 

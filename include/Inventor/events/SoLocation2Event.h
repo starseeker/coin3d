@@ -35,6 +35,18 @@
 
 #include <Inventor/events/SoEvent.h>
 
+/*!
+  \class SoLocation2Event SoLocation2Event.h Inventor/events/SoLocation2Event.h
+  \brief Represents a 2D mouse pointer movement event.
+
+  \ingroup coin_events
+
+  SoLocation2Event is generated when the pointing device moves in 2D
+  screen space.  It carries the new normalized position (available via
+  the base class SoEvent::getPosition()).
+
+  \sa SoEvent, SoMouseButtonEvent
+*/
 class OBOL_DLL_API SoLocation2Event : public SoEvent {
   typedef SoEvent inherited;
 

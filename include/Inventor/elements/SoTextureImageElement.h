@@ -39,6 +39,18 @@
 
 #include <Inventor/elements/SoMultiTextureImageElement.h>
 
+/*!
+  \typedef SoTextureImageElement
+  \brief Compatibility alias for SoMultiTextureImageElement (unit 0 texture image).
+
+  \ingroup coin_elements
+
+  This typedef maps the legacy SoTextureImageElement name to
+  SoMultiTextureImageElement, which now handles all texture units
+  including unit 0.  Use SoMultiTextureImageElement in new code.
+
+  \sa SoMultiTextureImageElement
+*/
 typedef SoMultiTextureImageElement SoTextureImageElement;
 
 #endif // !OBOL_SOTEXTUREIMAGEELEMENT_H

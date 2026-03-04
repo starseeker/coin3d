@@ -34,7 +34,7 @@
   \class SoProto SoProto.h Inventor/misc/SoProto.h
   \brief The SoProto class handles PROTO definitions.
 
-  \note VRML support has been removed from this version of Coin3D.
+  \note VRML support has been removed from Obol (the open-source fork of Coin3D).
   The SoProto functionality is no longer available.
 
   SoProto and SoProtoInstance were designed to read and handle VRML97 PROTOs.

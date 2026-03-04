@@ -41,6 +41,17 @@
 
 class SoGLRenderAction;
 
+/*!
+  \class SoWindowElement SoWindowElement.h Inventor/elements/SoWindowElement.h
+  \brief Stores a handle to the native rendering window/context.
+
+  \ingroup coin_elements
+
+  SoWindowElement stores the native window handle and OpenGL context
+  pointer for the current rendering surface.
+
+  \sa SoElement
+*/
 class OBOL_DLL_API SoWindowElement : public SoElement {
   typedef SoElement inherited;
 

@@ -35,6 +35,17 @@
 
 #include <Inventor/elements/SoInt32Element.h>
 
+/*!
+  \class SoMaterialBindingElement SoMaterialBindingElement.h Inventor/elements/SoMaterialBindingElement.h
+  \brief Stores how material values are bound to geometry.
+
+  \ingroup coin_elements
+
+  SoMaterialBindingElement stores the material binding mode set by
+  SoMaterialBinding.
+
+  \sa SoInt32Element
+*/
 class OBOL_DLL_API SoMaterialBindingElement : public SoInt32Element {
   typedef SoInt32Element inherited;
 

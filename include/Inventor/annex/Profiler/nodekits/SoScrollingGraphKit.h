@@ -47,6 +47,17 @@
 class SoSensor;
 class SoScrollingGraphKitP;
 
+/*!
+  \class SoScrollingGraphKit SoScrollingGraphKit.h Inventor/annex/Profiler/nodekits/SoScrollingGraphKit.h
+  \brief Node kit that displays a scrolling time-series graph.
+
+  \ingroup coin_annex
+
+  SoScrollingGraphKit renders a rolling graph of per-frame values
+  such as frame times for live profiling overlays.
+
+  \sa SoBaseKit, SoProfilerOverlayKit
+*/
 class SoScrollingGraphKit : public SoBaseKit {
   typedef SoBaseKit inherited;
   SO_KIT_HEADER(SoScrollingGraphKit);

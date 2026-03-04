@@ -40,6 +40,19 @@ class SoFieldData;
 class SoFieldList;
 class SoOutput;
 
+/*!
+  \class SoFieldContainer SoFieldContainer.h Inventor/fields/SoFieldContainer.h
+  \brief Base class for objects that own fields (nodes and engines).
+
+  \ingroup coin_fields
+
+  SoFieldContainer is the base for SoNode and SoEngine.  It manages a
+  set of SoField members (exposed through SoFieldData) and handles
+  the notification, copying, and I/O for those fields.  It provides
+  the common getField() / getFieldName() introspection API.
+
+  \sa SoField, SoNode, SoEngine
+*/
 class OBOL_DLL_API SoFieldContainer : public SoBase {
   typedef SoBase inherited;
 
@@ -105,7 +118,9 @@ protected:
 
 private:
   static SoType classTypeId;
-  // Note: donotify is used as a bitmask, so it needs to be int, not SbBool
+  // donotify stores bit flags: bit 0 = notification enabled.
+  // Stored as int (not SbBool) to accommodate future flag additions
+  // without needing a separate type change.
   int donotify;
 
 }; // SoFieldContainer

@@ -41,6 +41,19 @@
 #define SO_MOUSE_RELEASE_EVENT(EVENT, BUTTON) \
  (SoMouseButtonEvent::isButtonReleaseEvent(EVENT, SoMouseButtonEvent::BUTTON))
 
+/*!
+  \class SoMouseButtonEvent SoMouseButtonEvent.h Inventor/events/SoMouseButtonEvent.h
+  \brief Represents a mouse button press or release.
+
+  \ingroup coin_events
+
+  SoMouseButtonEvent extends SoButtonEvent with a Button enum that
+  identifies which mouse button was pressed or released.  Convenience
+  macros SO_MOUSE_PRESS_EVENT and SO_MOUSE_RELEASE_EVENT simplify
+  testing a generic SoEvent pointer against a specific button.
+
+  \sa SoButtonEvent, SoEvent
+*/
 class OBOL_DLL_API SoMouseButtonEvent : public SoButtonEvent {
   typedef SoButtonEvent inherited;
 

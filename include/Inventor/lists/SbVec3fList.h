@@ -36,6 +36,16 @@
 #include <Inventor/lists/SbPList.h>
 #include <Inventor/SbVec3f.h>
 
+/*!
+  \class SbVec3fList SbVec3fList.h Inventor/lists/SbVec3fList.h
+  \brief Resizable array of SbVec3f vectors.
+
+  \ingroup coin_lists
+
+  SbVec3fList is a typed list of SbVec3f items built on SbPList.
+
+  \sa SbPList, SbVec3f
+*/
 class OBOL_DLL_API SbVec3fList : public SbPList {
 public:
   SbVec3fList(void) { }

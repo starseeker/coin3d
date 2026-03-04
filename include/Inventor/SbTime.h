@@ -47,6 +47,21 @@
 #endif // max
 
 
+/*!
+  \class SbTime SbTime.h Inventor/SbTime.h
+  \brief Represents an absolute or elapsed time value.
+
+  \ingroup coin_base
+
+  SbTime stores a time value internally as seconds and microseconds.
+  It supports construction from a `double` (seconds), from separate
+  seconds and microseconds integers, or from a POSIX `timeval` struct.
+  Arithmetic and comparison operators allow time values to be added,
+  subtracted, and compared.  SbTime::getTimeOfDay() returns the current
+  wall-clock time.
+
+  \sa SoSensor
+*/
 class OBOL_DLL_API SbTime {
 public:
   SbTime(void);

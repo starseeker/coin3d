@@ -49,6 +49,19 @@ class SoHandleEventAction;
 
 typedef void SoEventCallbackCB(void * userdata, SoEventCallback * node);
 
+/*!
+  \class SoEventCallback SoEventCallback.h Inventor/nodes/SoEventCallback.h
+  \brief Calls user callbacks when specific events pass through the scene graph.
+
+  \ingroup coin_nodes
+
+  SoEventCallback lets application code intercept events during scene
+  traversal.  Callbacks registered with addEventCallback() are invoked
+  when a matching SoEvent type reaches the node.  The node can then
+  mark the event as handled, stopping further traversal.
+
+  \sa SoNode, SoEvent, SoHandleEventAction
+*/
 class OBOL_DLL_API SoEventCallback : public SoNode {
   typedef SoNode inherited;
 

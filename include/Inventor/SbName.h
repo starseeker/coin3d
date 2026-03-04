@@ -37,6 +37,20 @@
 
 class SbString;
 
+/*!
+  \class SbName SbName.h Inventor/SbName.h
+  \brief An interned string for fast equality comparison.
+
+  \ingroup coin_base
+
+  SbName stores strings in a global dictionary so that all instances
+  with the same character sequence share a single allocation.  Because
+  of this, equality tests reduce to pointer comparisons, making SbName
+  suitable for field names, node type names, and other frequently
+  compared identifiers.
+
+  \sa SbString
+*/
 class OBOL_DLL_API SbName {
 public:
   SbName(void);

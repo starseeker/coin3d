@@ -54,6 +54,17 @@ typedef void SoWWWInlineFetchURLCB(const SbString & url, void * userData,
 
 // *************************************************************************
 
+/*!
+  \class SoWWWInline SoWWWInline.h Inventor/nodes/SoWWWInline.h
+  \brief Loads a child scene from a URL on demand.
+
+  \ingroup coin_nodes
+
+  SoWWWInline specifies a URL from which to load a child scene graph.
+  The scene is fetched when the node is traversed, if not already cached.
+
+  \sa SoFile, SoGroup
+*/
 class OBOL_DLL_API SoWWWInline : public SoNode {
   typedef SoNode inherited;
 

@@ -36,6 +36,17 @@
 #include <Inventor/nodes/SoSubNode.h>
 #include <Inventor/nodes/SoPerspectiveCamera.h>
 
+/*!
+  \class SoReversePerspectiveCamera SoReversePerspectiveCamera.h Inventor/nodes/SoReversePerspectiveCamera.h
+  \brief Perspective camera with a mirrored (reversed) view frustum.
+
+  \ingroup coin_nodes
+
+  SoReversePerspectiveCamera applies a reversed perspective projection,
+  useful for special rendering effects such as shadow map generation.
+
+  \sa SoCamera, SoPerspectiveCamera
+*/
 class OBOL_DLL_API SoReversePerspectiveCamera : public SoPerspectiveCamera {
   typedef SoPerspectiveCamera inherited;
 

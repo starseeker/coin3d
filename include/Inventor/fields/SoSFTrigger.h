@@ -38,6 +38,19 @@
 
 class SoNotList;
 
+/*!
+  \class SoSFTrigger SoSFTrigger.h Inventor/fields/SoSFTrigger.h
+  \brief Field type holding a trigger (sends notification, holds no value).
+
+  \ingroup coin_fields
+
+  SoSFTrigger is a single-valued field that stores
+  one value of type void.
+  It inherits all field functionality from SoSField: value change notification,
+  field connections, and Inventor file I/O.
+
+  \sa SoSField, SoField
+*/
 class OBOL_DLL_API SoSFTrigger : public SoSField {
   typedef SoSField inherited;
 

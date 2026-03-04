@@ -37,6 +37,18 @@
 #include <Inventor/fields/SoSFPlane.h>
 #include <Inventor/fields/SoSFBool.h>
 
+/*!
+  \class SoClipPlane SoClipPlane.h Inventor/nodes/SoClipPlane.h
+  \brief Activates a user-defined OpenGL clipping plane.
+
+  \ingroup coin_nodes
+
+  SoClipPlane adds an additional clip plane (beyond the view frustum) that
+  discards fragments on one side of the plane.  The plane field (SoSFPlane)
+  specifies the plane in object space; the on field (SoSFBool) toggles it.
+
+  \sa SoNode
+*/
 class OBOL_DLL_API SoClipPlane : public SoNode {
   typedef SoNode inherited;
 

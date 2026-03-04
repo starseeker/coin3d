@@ -37,6 +37,18 @@
 
 #include <Inventor/SbBasic.h>
 
+/*!
+  \class SoContextHandler SoContextHandler.h Inventor/misc/SoContextHandler.h
+  \brief Global handler for OpenGL context creation and destruction events.
+
+  \ingroup coin_misc
+
+  SoContextHandler dispatches context-creation and context-destruction
+  callbacks registered by subsystems that need to manage per-context
+  GL resources (textures, VBOs, display lists).
+
+  \sa SoDB::ContextManager
+*/
 class OBOL_DLL_API SoContextHandler {
 public:
   static void destructingContext(uint32_t contextid);

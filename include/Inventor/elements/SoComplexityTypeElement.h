@@ -35,6 +35,17 @@
 
 #include <Inventor/elements/SoInt32Element.h>
 
+/*!
+  \class SoComplexityTypeElement SoComplexityTypeElement.h Inventor/elements/SoComplexityTypeElement.h
+  \brief Stores the complexity measurement type.
+
+  \ingroup coin_elements
+
+  SoComplexityTypeElement stores the complexity type (OBJECT_SPACE,
+  SCREEN_SPACE, or BOUNDING_BOX) set by SoComplexity.
+
+  \sa SoInt32Element
+*/
 class OBOL_DLL_API SoComplexityTypeElement : public SoInt32Element {
   typedef SoInt32Element inherited;
 

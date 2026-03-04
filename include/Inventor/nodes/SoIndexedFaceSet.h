@@ -42,6 +42,19 @@
 
 class SoIndexedFaceSetP;
 
+/*!
+  \class SoIndexedFaceSet SoIndexedFaceSet.h Inventor/nodes/SoIndexedFaceSet.h
+  \brief Renders a polygon mesh from indexed lists of vertices.
+
+  \ingroup coin_nodes
+
+  SoIndexedFaceSet defines a polygon mesh using indices into a
+  SoCoordinate3 node.  Faces are delimited by SO_END_FACE_INDEX (-1)
+  in the coordIndex field.  It supports per-face and per-vertex
+  normals, texture coordinates, and material bindings.
+
+  \sa SoShape, SoCoordinate3, SoIndexedShape, SoFaceSet
+*/
 class OBOL_DLL_API SoIndexedFaceSet : public SoIndexedShape {
   typedef SoIndexedShape inherited;
 

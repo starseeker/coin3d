@@ -37,6 +37,18 @@
 #include <Inventor/nodes/SoGroup.h>
 #include <Inventor/fields/SoMFMatrix.h>
 
+/*!
+  \class SoMultipleCopy SoMultipleCopy.h Inventor/nodes/SoMultipleCopy.h
+  \brief Renders its children once for each matrix in a list of transforms.
+
+  \ingroup coin_nodes
+
+  SoMultipleCopy traverses its children once per matrix in its matrix
+  field, applying each matrix as an additional transformation.  It is
+  used to render many instances of a sub-graph at different positions.
+
+  \sa SoGroup, SoArray
+*/
 class OBOL_DLL_API SoMultipleCopy : public SoGroup {
   typedef SoGroup inherited;
 

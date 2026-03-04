@@ -37,6 +37,19 @@
 #include <Inventor/fields/SoSubField.h>
 #include <Inventor/SbTime.h>
 
+/*!
+  \class SoSFTime SoSFTime.h Inventor/fields/SoSFTime.h
+  \brief Field type holding a single absolute or relative time value.
+
+  \ingroup coin_fields
+
+  SoSFTime is a single-valued field that stores
+  one value of type SbTime.
+  It inherits all field functionality from SoSField: value change notification,
+  field connections, and Inventor file I/O.
+
+  \sa SoSField, SoField
+*/
 class OBOL_DLL_API SoSFTime : public SoSField {
   typedef SoSField inherited;
 

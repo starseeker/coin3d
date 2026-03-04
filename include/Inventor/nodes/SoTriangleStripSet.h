@@ -37,6 +37,18 @@
 #include <Inventor/nodes/SoNonIndexedShape.h>
 #include <Inventor/fields/SoMFInt32.h>
 
+/*!
+  \class SoTriangleStripSet SoTriangleStripSet.h Inventor/nodes/SoTriangleStripSet.h
+  \brief Renders a set of triangle strips from sequential vertex coordinates.
+
+  \ingroup coin_nodes
+
+  SoTriangleStripSet reads consecutive vertices from SoCoordinate3 and
+  renders them as triangle strips.  The numVertices field specifies the
+  vertex count per strip.
+
+  \sa SoNonIndexedShape, SoIndexedTriangleStripSet, SoCoordinate3
+*/
 class OBOL_DLL_API SoTriangleStripSet : public SoNonIndexedShape {
   typedef SoNonIndexedShape inherited;
 

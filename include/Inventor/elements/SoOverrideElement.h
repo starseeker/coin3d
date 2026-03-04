@@ -38,6 +38,17 @@
 
 class SoType; // lame doxygen "fix"
 
+/*!
+  \class SoOverrideElement SoOverrideElement.h Inventor/elements/SoOverrideElement.h
+  \brief Tracks which elements are currently overridden.
+
+  \ingroup coin_elements
+
+  SoOverrideElement maintains a bitmask indicating which rendering
+  properties are being overridden by an SoOverride node.
+
+  \sa SoElement
+*/
 class OBOL_DLL_API SoOverrideElement : public SoElement {
   typedef SoElement inherited;
 

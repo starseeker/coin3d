@@ -49,6 +49,18 @@ typedef void * SbProfilingNodeKey; // void since it should not be dereferenced
 typedef int16_t SbProfilingNodeTypeKey;
 typedef const char * SbProfilingNodeNameKey;
 
+/*!
+  \class SbProfilingData SbProfilingData.h Inventor/annex/Profiler/SbProfilingData.h
+  \brief Stores per-frame traversal profiling data.
+
+  \ingroup coin_annex
+
+  SbProfilingData accumulates timing and traversal statistics for
+  scene-graph profiling.  It is filled by the profiler and read
+  by profiler visualisation kits.
+
+  \sa SoProfiler, SoProfilerStats
+*/
 class OBOL_DLL_API SbProfilingData {
 public:
   SbProfilingData(void);

@@ -37,6 +37,17 @@
 
 struct SoGLContext;
 
+/*!
+  \class SoGLModelMatrixElement SoGLModelMatrixElement.h Inventor/elements/SoGLModelMatrixElement.h
+  \brief GL-specific element for the model matrix.
+
+  \ingroup coin_elements
+
+  SoGLModelMatrixElement extends SoModelMatrixElement to load the
+  matrix into GL_MODELVIEW via glMultMatrix / glLoadMatrix.
+
+  \sa SoModelMatrixElement
+*/
 class OBOL_DLL_API SoGLModelMatrixElement : public SoModelMatrixElement {
   typedef SoModelMatrixElement inherited;
 

@@ -45,6 +45,20 @@ class SoNode;
 class SoState;
 class SbMatrix;
 
+/*!
+  \class SoPickedPoint SoPickedPoint.h Inventor/SoPickedPoint.h
+  \brief Stores information about a single point intersected during a pick operation.
+
+  \ingroup coin_nodes
+
+  SoPickedPoint is returned by SoRayPickAction and records the 3D
+  intersection point (in world and object space), the surface normal,
+  texture coordinates, material index, and the full scene-graph path to
+  the picked node.  Detail objects (SoDetail subclasses) attached to
+  the picked point provide geometry-type–specific hit information.
+
+  \sa SoRayPickAction, SoPath, SoDetail
+*/
 class OBOL_DLL_API SoPickedPoint {
 public:
   SoPickedPoint(const SoPickedPoint & pp);

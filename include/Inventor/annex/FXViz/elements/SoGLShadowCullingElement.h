@@ -35,6 +35,17 @@
 
 #include <Inventor/elements/SoInt32Element.h>
 
+/*!
+  \class SoGLShadowCullingElement SoGLShadowCullingElement.h Inventor/annex/FXViz/elements/SoGLShadowCullingElement.h
+  \brief GL-specific element for shadow culling mode.
+
+  \ingroup coin_annex
+
+  SoGLShadowCullingElement extends SoInt32Element to track the
+  active shadow-culling mode in the GL traversal state.
+
+  \sa SoInt32Element, SoShadowCulling
+*/
 class OBOL_DLL_API SoGLShadowCullingElement : public SoInt32Element {
   typedef SoInt32Element inherited;
 

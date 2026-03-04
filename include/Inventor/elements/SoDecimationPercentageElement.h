@@ -35,6 +35,17 @@
 
 #include <Inventor/elements/SoFloatElement.h>
 
+/*!
+  \class SoDecimationPercentageElement SoDecimationPercentageElement.h Inventor/elements/SoDecimationPercentageElement.h
+  \brief Stores the geometry decimation percentage.
+
+  \ingroup coin_elements
+
+  SoDecimationPercentageElement stores the target simplification
+  percentage (0.0–1.0) for level-of-detail decimation.
+
+  \sa SoFloatElement
+*/
 class OBOL_DLL_API SoDecimationPercentageElement : public SoFloatElement {
   typedef SoFloatElement inherited;
 

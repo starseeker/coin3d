@@ -41,6 +41,17 @@
 #include <Inventor/fields/SoMFFloat.h>
 #include <Inventor/lists/SbList.h>
 
+/*!
+  \class SoAsciiText SoAsciiText.h Inventor/nodes/SoAsciiText.h
+  \brief Renders ASCII text geometry as 3D extruded or flat primitives.
+
+  \ingroup coin_nodes
+
+  SoAsciiText is a legacy text node (Open Inventor 2.x API) that renders
+  strings using a current SoFont.  Prefer SoText2 or SoText3 for new code.
+
+  \sa SoText2, SoText3, SoFont
+*/
 class OBOL_DLL_API SoAsciiText : public SoShape {
   typedef SoShape inherited;
 

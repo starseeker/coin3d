@@ -37,6 +37,18 @@
 #include <Inventor/fields/SoSFInt32.h>
 #include <Inventor/fields/SoSFEnum.h>
 
+/*!
+  \class SoTextureUnit SoTextureUnit.h Inventor/nodes/SoTextureUnit.h
+  \brief Selects the active texture unit for multi-texturing.
+
+  \ingroup coin_nodes
+
+  SoTextureUnit sets the active OpenGL texture unit (GL_TEXTURE0 + unit)
+  so that subsequent SoTexture2 and SoTextureCoordinate2 nodes are
+  applied to that unit.
+
+  \sa SoTexture2, SoTextureCoordinate2
+*/
 class OBOL_DLL_API SoTextureUnit : public SoNode {
   typedef SoNode inherited;
 

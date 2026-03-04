@@ -37,6 +37,17 @@
 
 class SoTextureUnitElementP;
 
+/*!
+  \class SoTextureUnitElement SoTextureUnitElement.h Inventor/elements/SoTextureUnitElement.h
+  \brief Stores the currently active texture unit index.
+
+  \ingroup coin_elements
+
+  SoTextureUnitElement stores the texture unit index set by
+  SoTextureUnit for multi-texturing.
+
+  \sa SoInt32Element
+*/
 class OBOL_DLL_API SoTextureUnitElement : public SoInt32Element {
   typedef SoInt32Element inherited;
 

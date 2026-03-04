@@ -39,6 +39,17 @@
 struct SoGLContext;
 #include <Inventor/SbVec4f.h>
 
+/*!
+  \class SoTextureCoordinateEnvironment SoTextureCoordinateEnvironment.h Inventor/nodes/SoTextureCoordinateEnvironment.h
+  \brief Generates texture coordinates for environment (reflection) mapping.
+
+  \ingroup coin_nodes
+
+  SoTextureCoordinateEnvironment enables OpenGL sphere-map texture
+  coordinate generation for environment mapping effects.
+
+  \sa SoTextureCoordinateFunction
+*/
 class OBOL_DLL_API SoTextureCoordinateEnvironment : public SoTextureCoordinateFunction {
   typedef SoTextureCoordinateFunction inherited;
 

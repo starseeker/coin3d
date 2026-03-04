@@ -56,6 +56,20 @@ template <typename Type> class SbList;
 
 // *************************************************************************
 
+/*!
+  \class SoType SoType.h Inventor/SoType.h
+  \brief Run-time type identification for Open Inventor objects.
+
+  \ingroup coin_base
+
+  SoType provides a lightweight run-time type system for all Open
+  Inventor objects.  Each concrete class registers itself once at
+  startup, and instances carry a compact type token.  SoType supports
+  type-name lookup (fromName()), parent/child relationship queries, and
+  optional factory construction (createInstance()).
+
+  \sa SoBase, SoTypedObject
+*/
 class OBOL_DLL_API SoType {
 public:
   typedef void * (*instantiationMethod)(void *);

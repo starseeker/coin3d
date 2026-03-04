@@ -37,6 +37,17 @@
 
 struct SoGLContext;
 
+/*!
+  \class SoGLViewportRegionElement SoGLViewportRegionElement.h Inventor/elements/SoGLViewportRegionElement.h
+  \brief GL-specific element that applies the viewport region to OpenGL.
+
+  \ingroup coin_elements
+
+  SoGLViewportRegionElement extends SoViewportRegionElement to issue
+  the glViewport() call when the viewport changes.
+
+  \sa SoViewportRegionElement
+*/
 class OBOL_DLL_API SoGLViewportRegionElement : public SoViewportRegionElement {
   typedef SoViewportRegionElement inherited;
 

@@ -37,6 +37,17 @@
 #include <Inventor/fields/SoSFEnum.h>
 #include <Inventor/nodes/SoSubNode.h>
 
+/*!
+  \class SoVertexAttributeBinding SoVertexAttributeBinding.h Inventor/nodes/SoVertexAttributeBinding.h
+  \brief Controls how vertex attributes are bound to geometry.
+
+  \ingroup coin_nodes
+
+  SoVertexAttributeBinding specifies whether vertex attribute data from
+  SoVertexAttribute is applied per vertex or per face.
+
+  \sa SoVertexAttribute, SoNormalBinding
+*/
 class OBOL_DLL_API SoVertexAttributeBinding : public SoNode {
   typedef SoNode inherited;
 

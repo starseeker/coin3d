@@ -40,6 +40,18 @@ class SoFieldSensor;
 class SoGroup;
 class SoSensor;
 
+/*!
+  \class SoFile SoFile.h Inventor/nodes/SoFile.h
+  \brief Loads an external Inventor file and inserts its scene graph.
+
+  \ingroup coin_nodes
+
+  SoFile reads an external .iv file at runtime (specified by the name field)
+  and inserts the loaded scene graph as a virtual child.  It supports
+  both relative and absolute file paths.
+
+  \sa SoNode, SoInput
+*/
 class OBOL_DLL_API SoFile : public SoNode {
   typedef SoNode inherited;
 

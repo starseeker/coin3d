@@ -35,6 +35,17 @@
 
 #include <Inventor/elements/SoInt32Element.h>
 
+/*!
+  \class SoUnitsElement SoUnitsElement.h Inventor/elements/SoUnitsElement.h
+  \brief Stores the current scene measurement units.
+
+  \ingroup coin_elements
+
+  SoUnitsElement stores the unit scale set by SoUnits and makes it
+  available to coordinate and transform nodes.
+
+  \sa SoInt32Element
+*/
 class OBOL_DLL_API SoUnitsElement : public SoInt32Element {
   typedef SoInt32Element inherited;
 

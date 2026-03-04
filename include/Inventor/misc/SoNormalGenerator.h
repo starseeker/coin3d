@@ -38,6 +38,18 @@
 #include <Inventor/lists/SbList.h>
 #include <cstdint>
 
+/*!
+  \class SoNormalGenerator SoNormalGenerator.h Inventor/misc/SoNormalGenerator.h
+  \brief Generates per-vertex or per-face normal vectors for geometry.
+
+  \ingroup coin_misc
+
+  SoNormalGenerator computes smooth or flat surface normals for
+  indexed and non-indexed face sets, using the crease angle to
+  decide whether edges are smooth or sharp.
+
+  \sa SoNormal, SoNormalElement
+*/
 class OBOL_DLL_API SoNormalGenerator {
 public:
   SoNormalGenerator(const SbBool ccw, const int approxVertices = 64);

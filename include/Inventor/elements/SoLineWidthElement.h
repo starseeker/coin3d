@@ -35,6 +35,16 @@
 
 #include <Inventor/elements/SoFloatElement.h>
 
+/*!
+  \class SoLineWidthElement SoLineWidthElement.h Inventor/elements/SoLineWidthElement.h
+  \brief Stores the current line width.
+
+  \ingroup coin_elements
+
+  SoLineWidthElement stores the line width (in pixels) set by SoDrawStyle.
+
+  \sa SoFloatElement
+*/
 class OBOL_DLL_API SoLineWidthElement : public SoFloatElement {
   typedef SoFloatElement inherited;
 

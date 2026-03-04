@@ -42,6 +42,17 @@
 class SoGetBoundingBoxAction;
 
 
+/*!
+  \class SoComputeBoundingBox SoComputeBoundingBox.h Inventor/engines/SoComputeBoundingBox.h
+  \brief Computes the bounding box of a scene graph and exposes it as engine outputs.
+
+  \ingroup coin_engines
+
+  SoComputeBoundingBox applies SoGetBoundingBoxAction to a given node
+  (or path) and exposes the result as min, max, and boxCenter outputs.
+
+  \sa SoEngine, SoGetBoundingBoxAction
+*/
 class OBOL_DLL_API SoComputeBoundingBox : public SoEngine {
   typedef SoEngine inherited;
 

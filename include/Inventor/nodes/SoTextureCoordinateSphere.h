@@ -35,6 +35,17 @@
 
 #include <Inventor/nodes/SoSubNode.h>
 
+/*!
+  \class SoTextureCoordinateSphere SoTextureCoordinateSphere.h Inventor/nodes/SoTextureCoordinateSphere.h
+  \brief Generates spherical projection texture coordinates.
+
+  \ingroup coin_nodes
+
+  SoTextureCoordinateSphere wraps texture coordinates around a sphere
+  using a spherical projection of vertex positions.
+
+  \sa SoTextureCoordinateFunction
+*/
 class OBOL_DLL_API SoTextureCoordinateSphere : public SoNode {
   typedef SoNode inherited;
 

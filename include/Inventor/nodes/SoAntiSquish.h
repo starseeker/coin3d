@@ -39,6 +39,18 @@
 #include <Inventor/fields/SoSFBool.h>
 #include <Inventor/SbMatrix.h>
 
+/*!
+  \class SoAntiSquish SoAntiSquish.h Inventor/nodes/SoAntiSquish.h
+  \brief Removes non-uniform scaling from the current transformation.
+
+  \ingroup coin_nodes
+
+  SoAntiSquish computes the average of the current scale factors and inserts a
+  compensating uniform scale so that objects are not distorted by non-uniform
+  parent transformations.  Used internally by some draggers and manipulators.
+
+  \sa SoTransformation, SoTransform
+*/
 class OBOL_DLL_API SoAntiSquish : public SoTransformation {
   typedef SoTransformation inherited;
 

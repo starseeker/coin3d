@@ -42,6 +42,20 @@
 class SbViewportRegion;
 class SbVec2f;
 
+/*!
+  \class SoEvent SoEvent.h Inventor/events/SoEvent.h
+  \brief Base class for all user-input events.
+
+  \ingroup coin_events
+
+  SoEvent is the abstract base for all input events in Obol.  It
+  carries a timestamp and the normalized 2D screen position of the
+  event.  Subclasses represent specific event types: keyboard
+  (SoKeyboardEvent), mouse buttons (SoMouseButtonEvent), mouse
+  movement (SoLocation2Event), and 6-DOF input (SoMotion3Event).
+
+  \sa SoHandleEventAction, SoEventCallback
+*/
 class OBOL_DLL_API SoEvent {
   SO_EVENT_ABSTRACT_HEADER();
 public:

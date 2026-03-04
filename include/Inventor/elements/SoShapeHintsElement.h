@@ -35,6 +35,17 @@
 
 #include <Inventor/elements/SoSubElement.h>
 
+/*!
+  \class SoShapeHintsElement SoShapeHintsElement.h Inventor/elements/SoShapeHintsElement.h
+  \brief Stores shape-rendering hints (solid, ordered, convex).
+
+  \ingroup coin_elements
+
+  SoShapeHintsElement stores the vertex ordering and shape-type flags
+  set by SoShapeHints, controlling face culling and two-sided lighting.
+
+  \sa SoElement
+*/
 class OBOL_DLL_API SoShapeHintsElement : public SoElement {
   typedef SoElement inherited;
 

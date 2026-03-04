@@ -39,6 +39,19 @@
 
 class SbImage;
 
+/*!
+  \class SoSFImage SoSFImage.h Inventor/fields/SoSFImage.h
+  \brief Field type holding a single 2D pixel image (inline raster data).
+
+  \ingroup coin_fields
+
+  SoSFImage is a single-valued field that stores
+  one value of type SbImage.
+  It inherits all field functionality from SoSField: value change notification,
+  field connections, and Inventor file I/O.
+
+  \sa SoSField, SoField
+*/
 class OBOL_DLL_API SoSFImage : public SoSField {
   typedef SoSField inherited;
 

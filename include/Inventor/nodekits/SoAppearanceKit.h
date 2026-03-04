@@ -36,6 +36,18 @@
 #include <Inventor/nodekits/SoSubKit.h>
 #include <Inventor/nodekits/SoBaseKit.h>
 
+/*!
+  \class SoAppearanceKit SoAppearanceKit.h Inventor/nodekits/SoAppearanceKit.h
+  \brief Node kit that bundles surface-appearance nodes.
+
+  \ingroup coin_nodekits
+
+  SoAppearanceKit groups the material, drawing-style, texture,
+  lighting-model, and related appearance nodes into a single
+  named-part structure for convenient scene construction.
+
+  \sa SoBaseKit, SoMaterial, SoDrawStyle
+*/
 class OBOL_DLL_API SoAppearanceKit : public SoBaseKit {
   typedef SoBaseKit inherited;
 

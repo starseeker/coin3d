@@ -37,6 +37,16 @@
 
 // *************************************************************************
 
+/*!
+  \class SbIntList SbIntList.h Inventor/lists/SbIntList.h
+  \brief Resizable array of int values.
+
+  \ingroup coin_lists
+
+  SbIntList is a typed list of int items built on SbPList.
+
+  \sa SbPList
+*/
 class  OBOL_DLL_API SbIntList : public SbPList {
 public:
   SbIntList(void) : SbPList () { }

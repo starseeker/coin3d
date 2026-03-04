@@ -43,6 +43,19 @@ class SoPickedPointList;
 
 class SoHandleEventActionP;
 
+/*!
+  \class SoHandleEventAction SoHandleEventAction.h Inventor/actions/SoHandleEventAction.h
+  \brief Delivers an event to the scene graph and determines which node handles it.
+
+  \ingroup coin_actions
+
+  SoHandleEventAction traverses the scene graph and offers the current
+  SoEvent to each node.  The first node that handles the event sets the
+  "handled" flag and stops further traversal.  The action also supports
+  mouse-pick-based interaction via its getPickedPoint() method.
+
+  \sa SoAction, SoEvent, SoEventCallback, SoPickedPoint
+*/
 class OBOL_DLL_API SoHandleEventAction : public SoAction {
   typedef SoAction inherited;
 

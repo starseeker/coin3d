@@ -42,6 +42,17 @@ class SoMField;
 class SoVertexAttributeData;
 class SoVertexAttributeElementP;
 
+/*!
+  \class SoVertexAttributeElement SoVertexAttributeElement.h Inventor/elements/SoVertexAttributeElement.h
+  \brief Stores per-vertex shader attribute arrays.
+
+  \ingroup coin_elements
+
+  SoVertexAttributeElement stores the named attribute arrays set by
+  SoVertexAttribute nodes for use with GLSL shader programs.
+
+  \sa SoAccumulatedElement
+*/
 class OBOL_DLL_API SoVertexAttributeElement : public SoAccumulatedElement {
   typedef SoAccumulatedElement inherited;
   SO_ELEMENT_HEADER(SoVertexAttributeElement);

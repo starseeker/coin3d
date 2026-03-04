@@ -36,6 +36,17 @@
 #include <Inventor/engines/SoInterpolate.h>
 #include <Inventor/fields/SoMFFloat.h>
 
+/*!
+  \class SoInterpolateFloat SoInterpolateFloat.h Inventor/engines/SoInterpolateFloat.h
+  \brief Linearly interpolates between two float values.
+
+  \ingroup coin_engines
+
+  SoInterpolateFloat computes output = (1-alpha)*input0 + alpha*input1
+  for single-precision floating-point values.
+
+  \sa SoInterpolate, SoEngine
+*/
 class OBOL_DLL_API SoInterpolateFloat : public SoInterpolate {
   typedef SoInterpolate inherited;
   SO_INTERPOLATE_HEADER(SoInterpolateFloat);

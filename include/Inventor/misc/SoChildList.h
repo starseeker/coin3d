@@ -39,6 +39,18 @@
 class SoPath;
 class SoAction;
 
+/*!
+  \class SoChildList SoChildList.h Inventor/misc/SoChildList.h
+  \brief Maintains the ordered list of children of a group node.
+
+  \ingroup coin_misc
+
+  SoChildList stores pointers to the direct children of an SoGroup
+  (or other group-type node) and notifies auditors when the list
+  changes.
+
+  \sa SoNodeList, SoGroup
+*/
 class OBOL_DLL_API SoChildList : public SoNodeList {
   typedef SoNodeList inherited;
 

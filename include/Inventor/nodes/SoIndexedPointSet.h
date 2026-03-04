@@ -40,6 +40,17 @@ class SoVertexArrayIndexer;
 class SoGLCoordinateElement;
 class SoTextureCoordinateBundle;
 
+/*!
+  \class SoIndexedPointSet SoIndexedPointSet.h Inventor/nodes/SoIndexedPointSet.h
+  \brief Renders points at indexed vertex positions.
+
+  \ingroup coin_nodes
+
+  SoIndexedPointSet renders points at positions selected by an index
+  array into SoCoordinate3.
+
+  \sa SoIndexedShape, SoPointSet
+*/
 class OBOL_DLL_API SoIndexedPointSet : public SoIndexedShape {
   typedef SoIndexedShape inherited;
 

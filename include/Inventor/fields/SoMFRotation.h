@@ -37,6 +37,19 @@
 #include <Inventor/fields/SoSubField.h>
 #include <Inventor/SbRotation.h>
 
+/*!
+  \class SoMFRotation SoMFRotation.h Inventor/fields/SoMFRotation.h
+  \brief Field type holding a array of 3D rotations (quaternions).
+
+  \ingroup coin_fields
+
+  SoMFRotation is a multi-valued field that stores
+  an array of values of type SbRotation.
+  It inherits all field functionality from SoMField: value change notification,
+  field connections, and Inventor file I/O.
+
+  \sa SoMField, SoField
+*/
 class OBOL_DLL_API SoMFRotation : public SoMField {
   typedef SoMField inherited;
 

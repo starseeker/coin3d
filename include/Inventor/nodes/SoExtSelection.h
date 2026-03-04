@@ -74,6 +74,18 @@ typedef SbBool SoExtSelectionPointCB(void * userdata,
 typedef SoPath * SoLassoSelectionFilterCB(void * userdata, const SoPath * path);
 
 
+/*!
+  \class SoExtSelection SoExtSelection.h Inventor/nodes/SoExtSelection.h
+  \brief Extended selection node with lasso and rectangle selection modes.
+
+  \ingroup coin_nodes
+
+  SoExtSelection extends SoSelection with rubber-band lasso and rectangle
+  selection modes, allowing the user to select multiple objects by drawing
+  a selection region.
+
+  \sa SoSelection, SoGroup
+*/
 class OBOL_DLL_API SoExtSelection : public SoSelection {
   typedef SoSelection inherited;
 

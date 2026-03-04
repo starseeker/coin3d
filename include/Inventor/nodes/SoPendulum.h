@@ -43,6 +43,17 @@ class SoElapsedTime;
 class SoCalculator;
 class SoInterpolateRotation;
 
+/*!
+  \class SoPendulum SoPendulum.h Inventor/nodes/SoPendulum.h
+  \brief Animates a rotation oscillating between two values like a pendulum.
+
+  \ingroup coin_nodes
+
+  SoPendulum oscillates its rotation field between rotation0 and rotation1
+  using an SoElapsedTime engine, producing a pendulum-like animation.
+
+  \sa SoRotation, SoRotor
+*/
 class OBOL_DLL_API SoPendulum : public SoRotation {
   typedef SoRotation inherited;
 

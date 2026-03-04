@@ -40,6 +40,18 @@
 
 class SbMatrix;
 
+/*!
+  \class SoSurroundScale SoSurroundScale.h Inventor/nodes/SoSurroundScale.h
+  \brief Computes a scale that makes its siblings surround the sub-graph geometry.
+
+  \ingroup coin_nodes
+
+  SoSurroundScale automatically scales a dragger or manipulator so that it
+  encloses the bounding box of the node described by numNodesUpToContainer
+  and numNodesUpToReset.
+
+  \sa SoTransformation
+*/
 class OBOL_DLL_API SoSurroundScale : public SoTransformation {
   typedef SoTransformation inherited;
 

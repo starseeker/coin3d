@@ -39,6 +39,17 @@
 
 class SbMatrix;
 
+/*!
+  \class SoBumpMapTransform SoBumpMapTransform.h Inventor/nodes/SoBumpMapTransform.h
+  \brief Applies a 2D transformation to bump-map texture coordinates.
+
+  \ingroup coin_nodes
+
+  SoBumpMapTransform modifies the bump-map texture coordinate matrix,
+  analogous to SoTexture2Transform but for the bump-map coordinate set.
+
+  \sa SoBumpMap, SoTexture2Transform
+*/
 class OBOL_DLL_API SoBumpMapTransform : public SoNode {
   typedef SoNode inherited;
 

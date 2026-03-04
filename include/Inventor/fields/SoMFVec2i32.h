@@ -37,6 +37,19 @@
 #include <Inventor/fields/SoSubField.h>
 #include <Inventor/SbVec2i32.h>
 
+/*!
+  \class SoMFVec2i32 SoMFVec2i32.h Inventor/fields/SoMFVec2i32.h
+  \brief Field type holding a array of 2-component 32-bit integer vectors.
+
+  \ingroup coin_fields
+
+  SoMFVec2i32 is a multi-valued field that stores
+  an array of values of type SbVec2i32.
+  It inherits all field functionality from SoMField: value change notification,
+  field connections, and Inventor file I/O.
+
+  \sa SoMField, SoField
+*/
 class OBOL_DLL_API SoMFVec2i32 : public SoMField {
   typedef SoMField inherited;
 

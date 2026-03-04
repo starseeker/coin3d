@@ -35,6 +35,17 @@
 
 #include <Inventor/elements/SoFloatElement.h>
 
+/*!
+  \class SoComplexityElement SoComplexityElement.h Inventor/elements/SoComplexityElement.h
+  \brief Stores the current rendering complexity value.
+
+  \ingroup coin_elements
+
+  SoComplexityElement stores the 0.0–1.0 complexity value set by
+  SoComplexity, which geometry nodes use to adjust tessellation.
+
+  \sa SoFloatElement
+*/
 class OBOL_DLL_API SoComplexityElement : public SoFloatElement {
   typedef SoFloatElement inherited;
 

@@ -36,6 +36,17 @@
 #include <Inventor/elements/SoReplacedElement.h>
 #include <Inventor/SbColor.h>
 
+/*!
+  \class SoEnvironmentElement SoEnvironmentElement.h Inventor/elements/SoEnvironmentElement.h
+  \brief Stores global environment (fog and ambient) state.
+
+  \ingroup coin_elements
+
+  SoEnvironmentElement stores the fog parameters and ambient color/
+  intensity set by SoEnvironment.
+
+  \sa SoReplacedElement
+*/
 class OBOL_DLL_API SoEnvironmentElement : public SoReplacedElement {
   typedef SoReplacedElement inherited;
 

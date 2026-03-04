@@ -36,6 +36,17 @@
 #include <Inventor/engines/SoInterpolate.h>
 #include <Inventor/fields/SoMFVec4f.h>
 
+/*!
+  \class SoInterpolateVec4f SoInterpolateVec4f.h Inventor/engines/SoInterpolateVec4f.h
+  \brief Linearly interpolates between two 4D vectors.
+
+  \ingroup coin_engines
+
+  SoInterpolateVec4f performs component-wise linear interpolation
+  between input0 and input1 (SbVec4f) using the alpha input.
+
+  \sa SoInterpolate, SoEngine
+*/
 class OBOL_DLL_API SoInterpolateVec4f : public SoInterpolate {
   typedef SoInterpolate inherited;
   SO_INTERPOLATE_HEADER(SoInterpolateVec4f);

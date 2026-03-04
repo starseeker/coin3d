@@ -71,6 +71,18 @@ class SoState;
  * *** SoShaderParameter ***
  * **************************************************************************/
 
+/*!
+  \class SoShaderParameter SoShaderParameter.h Inventor/nodes/SoShaderParameter.h
+  \brief Supplies a named uniform variable to a shader program.
+
+  \ingroup coin_nodes
+
+  SoShaderParameter (and its concrete subclasses SoShaderParameter1f,
+  SoShaderParameter3f, SoShaderParameterMatrix, etc.) bind a typed
+  value to a GLSL uniform variable by name.
+
+  \sa SoShaderProgram
+*/
 class OBOL_DLL_API SoShaderParameter : public SoNode {
   typedef SoNode inherited;
   SO_NODE_ABSTRACT_HEADER(SoShaderParameter);

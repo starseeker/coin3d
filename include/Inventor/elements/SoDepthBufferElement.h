@@ -37,6 +37,17 @@
 #include <Inventor/elements/SoSubElement.h>
 #include <Inventor/SbVec2f.h>
 
+/*!
+  \class SoDepthBufferElement SoDepthBufferElement.h Inventor/elements/SoDepthBufferElement.h
+  \brief Stores depth-buffer test and write settings.
+
+  \ingroup coin_elements
+
+  SoDepthBufferElement stores the depth-test enable/function and
+  depth-write enable state set by SoDepthBuffer.
+
+  \sa SoElement
+*/
 class OBOL_DLL_API SoDepthBufferElement : public SoElement {
   typedef SoElement inherited;
   SO_ELEMENT_HEADER(SoDepthBufferElement);

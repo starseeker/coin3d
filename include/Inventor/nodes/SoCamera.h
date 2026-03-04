@@ -61,6 +61,20 @@ class SoPath;
 
 class SoCameraP;
 
+/*!
+  \class SoCamera SoCamera.h Inventor/nodes/SoCamera.h
+  \brief Abstract base class for camera nodes.
+
+  \ingroup coin_nodes
+
+  SoCamera defines the viewpoint and projection for rendering.  Its
+  fields control the near and far clipping planes, the focal distance,
+  and the viewport aspect ratio.  Concrete subclasses SoPerspectiveCamera
+  and SoOrthographicCamera implement specific projection types.
+  viewAll() and pointAt() provide convenient camera setup helpers.
+
+  \sa SoNode, SoPerspectiveCamera, SoOrthographicCamera
+*/
 class OBOL_DLL_API SoCamera : public SoNode {
   typedef SoNode inherited;
 

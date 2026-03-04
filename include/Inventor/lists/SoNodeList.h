@@ -37,6 +37,17 @@
 
 class SoNode;
 
+/*!
+  \class SoNodeList SoNodeList.h Inventor/lists/SoNodeList.h
+  \brief Resizable array of SoNode pointers with automatic reference counting.
+
+  \ingroup coin_lists
+
+  SoNodeList is a typed list of SoNode-derived objects using SoBaseList
+  for reference counting.
+
+  \sa SoBaseList, SoNode
+*/
 class OBOL_DLL_API SoNodeList : public SoBaseList {
   typedef SoBaseList inherited;
 

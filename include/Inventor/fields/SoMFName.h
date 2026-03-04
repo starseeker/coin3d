@@ -37,6 +37,19 @@
 #include <Inventor/fields/SoSubField.h>
 #include <Inventor/SbName.h>
 
+/*!
+  \class SoMFName SoMFName.h Inventor/fields/SoMFName.h
+  \brief Field type holding a array of symbolic name strings.
+
+  \ingroup coin_fields
+
+  SoMFName is a multi-valued field that stores
+  an array of values of type SbName.
+  It inherits all field functionality from SoMField: value change notification,
+  field connections, and Inventor file I/O.
+
+  \sa SoMField, SoField
+*/
 class OBOL_DLL_API SoMFName : public SoMField {
   typedef SoMField inherited;
 

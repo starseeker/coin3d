@@ -46,6 +46,19 @@ class SoOutput;
 class SoOutputDataEntry;
 class SoType;
 
+/*!
+  \class SoEngineOutputData SoOutputData.h Inventor/engines/SoOutputData.h
+  \brief Stores type and offset metadata for an engine's output connectors.
+
+  \ingroup coin_engines
+
+  SoEngineOutputData holds per-class descriptions of engine output
+  connectors, analogous to SoFieldData for fields.  It is managed
+  automatically by the SO_ENGINE_SOURCE macro and is not used directly
+  by application code.
+
+  \sa SoEngine, SoEngineOutput
+*/
 class OBOL_DLL_API SoEngineOutputData {
 public:
   SoEngineOutputData(void);

@@ -47,6 +47,20 @@ class SbRotation;
 class SbVec2f;
 class SbVec3f;
 
+/*!
+  \class SbViewVolume SbViewVolume.h Inventor/SbViewVolume.h
+  \brief Defines a view volume for a camera.
+
+  \ingroup coin_base
+
+  SbViewVolume describes either a perspective or orthographic view
+  frustum.  It provides methods to compute projection and camera-space
+  matrices, to project 2D screen coordinates to 3D picking rays
+  (SbLine), and to test geometry against the frustum (bounding-box and
+  sphere intersection).
+
+  \sa SbViewportRegion, SbMatrix, SbLine, SbPlane
+*/
 class OBOL_DLL_API SbViewVolume {
 public:
   enum ProjectionType { ORTHOGRAPHIC = 0, PERSPECTIVE = 1 };

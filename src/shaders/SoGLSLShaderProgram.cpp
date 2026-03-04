@@ -127,6 +127,13 @@ SoGLSLShaderProgram::enable(const SoGLContext * g)
   if (this->isContextExecutable(g)) {
     OBOL_GLhandle programhandle = this->getProgramHandle(g, TRUE);
     if (programhandle && g->glUseProgramObjectARB) {
+      // Clear any stale GL errors accumulated from prior operations (e.g.
+      // shadow-map FBO rendering) before calling glUseProgramObjectARB so
+      // the subsequent error check accurately reflects whether *this* call
+      // failed.  On re-entrant renders (camera drag, second frame) the
+      // ensureLinking() path returns early without draining the error queue
+      // itself, so stale errors would otherwise be mis-attributed here.
+      SoGLSLShaderObject::didOpenGLErrorOccur("SoGLSLShaderProgram::enable::pre-use");
       g->glUseProgramObjectARB(programhandle);
 
       if (SoGLSLShaderObject::didOpenGLErrorOccur("SoGLSLShaderProgram::enable")) {

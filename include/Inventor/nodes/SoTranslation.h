@@ -37,6 +37,17 @@
 #include <Inventor/fields/SoSFVec3f.h>
 #include <Inventor/nodes/SoTransformation.h>
 
+/*!
+  \class SoTranslation SoTranslation.h Inventor/nodes/SoTranslation.h
+  \brief Applies a translation to the current transformation matrix.
+
+  \ingroup coin_nodes
+
+  SoTranslation adds a translation (SbVec3f) to the current model matrix.
+  It is a simpler alternative to SoTransform when only a translation is needed.
+
+  \sa SoTransformation, SoTransform, SoRotation, SoScale
+*/
 class OBOL_DLL_API SoTranslation : public SoTransformation {
   typedef SoTransformation inherited;
 

@@ -42,6 +42,17 @@ struct SoGLContext;
 #include <Inventor/SbVec4f.h>
 #include <Inventor/SbVec3f.h>
 
+/*!
+  \class SoTextureCoordinateReflectionMap SoTextureCoordinateReflectionMap.h Inventor/nodes/SoTextureCoordinateReflectionMap.h
+  \brief Generates reflection-map texture coordinates for environment mapping.
+
+  \ingroup coin_nodes
+
+  SoTextureCoordinateReflectionMap enables GL_REFLECTION_MAP coordinate
+  generation for cube-map environment mapping.
+
+  \sa SoTextureCoordinateFunction, SoTextureCubeMap
+*/
 class OBOL_DLL_API SoTextureCoordinateReflectionMap : public SoTextureCoordinateFunction {
   typedef SoTextureCoordinateFunction inherited;
 

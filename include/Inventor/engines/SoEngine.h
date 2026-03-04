@@ -40,6 +40,19 @@ class SoEngineOutput;
 class SoEngineOutputList;
 class SoEngineOutputData;
 
+/*!
+  \class SoEngine SoEngine.h Inventor/engines/SoEngine.h
+  \brief Abstract base class for all data-flow computation engines.
+
+  \ingroup coin_engines
+
+  SoEngine is the root of the engine hierarchy.  Engines are data-flow
+  objects that compute output values from input fields.  They can be
+  connected to node fields to drive animations and reactive behavior
+  without requiring application polling.
+
+  \sa SoFieldContainer, SoEngineOutput, SoNodeEngine
+*/
 class OBOL_DLL_API SoEngine : public SoFieldContainer {
   typedef SoFieldContainer inherited;
 

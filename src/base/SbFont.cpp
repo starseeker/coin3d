@@ -34,7 +34,7 @@
   \class SbFont SbFont.h Inventor/SbFont.h
   \brief Clean, idiomatic C++ API for font management using struetype + ProFont.
 
-  This class provides a simple interface for loading and using fonts in Coin3D.
+  This class provides a simple interface for loading and using fonts in Obol.
   It uses struetype (TrueType font library) with the embedded ProFont as fallback.
   
   The design prioritizes simplicity - just load a font file or use the default,
@@ -304,7 +304,7 @@ SbFontP::findOrCreateGlyph(int character)
   sttmesh::GlyphBuildConfig cfg;
   cfg.scale = scale;
   cfg.epsilon = 0.5f;    // curve flattening tolerance
-  cfg.flipY = false;     // keep Y-up coordinate system for Coin3D
+  cfg.flipY = false;     // keep Y-up coordinate system for Obol
   
   try {
     sttmesh::GlyphMesh mesh = sttmesh::build_codepoint_mesh(fontinfo, character, cfg);

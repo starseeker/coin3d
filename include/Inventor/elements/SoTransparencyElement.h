@@ -36,6 +36,17 @@
 #include <Inventor/elements/SoReplacedElement.h>
 #include <Inventor/elements/SoLazyElement.h>
 
+/*!
+  \class SoTransparencyElement SoTransparencyElement.h Inventor/elements/SoTransparencyElement.h
+  \brief Stores the current transparency array.
+
+  \ingroup coin_elements
+
+  SoTransparencyElement stores the transparency (alpha) values set by
+  SoMaterial.
+
+  \sa SoReplacedElement
+*/
 class OBOL_DLL_API SoTransparencyElement : public SoReplacedElement {
   typedef SoReplacedElement inherited;
 

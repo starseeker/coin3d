@@ -52,6 +52,20 @@ class SoSearchAction;
 class SoWriteAction;
 class SbDict;
 
+/*!
+  \class SoNode SoNode.h Inventor/nodes/SoNode.h
+  \brief Abstract base class for all scene-graph nodes.
+
+  \ingroup coin_nodes
+
+  SoNode is the root of the scene-graph node hierarchy.  All nodes
+  carry fields (via SoFieldContainer) and respond to action traversal
+  by implementing GLRender, getBoundingBox, handleEvent, and other
+  virtual action methods.  Nodes are reference-counted via ref()/unref()
+  and support cloning (copy()) and deep copying (copyContents()).
+
+  \sa SoGroup, SoSeparator, SoShape, SoFieldContainer
+*/
 class OBOL_DLL_API SoNode : public SoFieldContainer {
   typedef SoFieldContainer inherited;
 

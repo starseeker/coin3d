@@ -43,6 +43,17 @@
 class SoSensor;
 class SoRotorP;
 
+/*!
+  \class SoRotor SoRotor.h Inventor/nodes/SoRotor.h
+  \brief Animates a continuous rotation about an axis.
+
+  \ingroup coin_nodes
+
+  SoRotor extends SoRotation with a speed field that continuously
+  increments the rotation angle, driven by an SoElapsedTime engine.
+
+  \sa SoRotation, SoPendulum
+*/
 class OBOL_DLL_API SoRotor : public SoRotation {
   typedef SoRotation inherited;
 

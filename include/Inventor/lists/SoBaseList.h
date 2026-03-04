@@ -38,6 +38,17 @@ class SoBase;
 #include <Inventor/SbBasic.h>
 #include <Inventor/lists/SbPList.h>
 
+/*!
+  \class SoBaseList SoBaseList.h Inventor/lists/SoBaseList.h
+  \brief Resizable array of reference-counted SoBase pointers.
+
+  \ingroup coin_lists
+
+  SoBaseList is a typed list of SoBase-derived objects.  Adding
+  an item calls ref() on it; removing calls unref().
+
+  \sa SbPList, SoBase
+*/
 class OBOL_DLL_API SoBaseList : public SbPList {
 public:
   SoBaseList(void);

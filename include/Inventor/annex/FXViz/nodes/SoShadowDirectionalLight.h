@@ -39,6 +39,17 @@
 #include <Inventor/fields/SoSFFloat.h>
 #include <Inventor/fields/SoSFVec3f.h>
 
+/*!
+  \class SoShadowDirectionalLight SoShadowDirectionalLight.h Inventor/annex/FXViz/nodes/SoShadowDirectionalLight.h
+  \brief Directional light that participates in shadow rendering.
+
+  \ingroup coin_annex
+
+  SoShadowDirectionalLight extends SoDirectionalLight with the
+  extra fields needed to generate a shadow map.
+
+  \sa SoDirectionalLight, SoShadowGroup
+*/
 class OBOL_DLL_API SoShadowDirectionalLight : public SoDirectionalLight {
   typedef SoDirectionalLight inherited;
 

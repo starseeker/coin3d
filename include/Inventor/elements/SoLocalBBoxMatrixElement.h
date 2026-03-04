@@ -35,6 +35,18 @@
 
 #include <Inventor/elements/SoModelMatrixElement.h>
 
+/*!
+  \class SoLocalBBoxMatrixElement SoLocalBBoxMatrixElement.h Inventor/elements/SoLocalBBoxMatrixElement.h
+  \brief Maintains the local coordinate-system matrix for bounding-box computation.
+
+  \ingroup coin_elements
+
+  SoLocalBBoxMatrixElement stores the cumulative transform from world
+  space to the bounding-box computation's local space.  Used internally
+  by SoGetBoundingBoxAction.
+
+  \sa SoElement
+*/
 class OBOL_DLL_API SoLocalBBoxMatrixElement : public SoElement {
   typedef SoElement inherited;
 

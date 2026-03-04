@@ -38,6 +38,17 @@
 class SoVBO;
 class SoGLVBOElementP;
 
+/*!
+  \class SoGLVBOElement SoGLVBOElement.h Inventor/elements/SoGLVBOElement.h
+  \brief Manages vertex buffer object (VBO) state for geometry nodes.
+
+  \ingroup coin_elements
+
+  SoGLVBOElement tracks whether VBOs are in use and holds references
+  to active VBO objects for geometry rendering.
+
+  \sa SoElement
+*/
 class OBOL_DLL_API SoGLVBOElement : public SoElement {
   typedef SoElement inherited;
 

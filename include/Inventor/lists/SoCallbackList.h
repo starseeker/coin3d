@@ -41,6 +41,17 @@
 
 typedef void SoCallbackListCB(void * userdata, void * callbackdata);
 
+/*!
+  \class SoCallbackList SoCallbackList.h Inventor/lists/SoCallbackList.h
+  \brief Manages a list of callback functions with user-data pointers.
+
+  \ingroup coin_lists
+
+  SoCallbackList stores (function, userdata) pairs and provides
+  methods to invoke all registered callbacks in order.
+
+  \sa SbPList
+*/
 class OBOL_DLL_API SoCallbackList {
 public:
   SoCallbackList(void);

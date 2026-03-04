@@ -36,6 +36,18 @@
 #include <Inventor/elements/SoReplacedElement.h>
 #include <Inventor/SbViewVolume.h>
 
+/*!
+  \class SoViewVolumeElement SoViewVolumeElement.h Inventor/elements/SoViewVolumeElement.h
+  \brief Maintains the camera view volume.
+
+  \ingroup coin_elements
+
+  SoViewVolumeElement stores the SbViewVolume that describes the camera
+  frustum or orthographic volume in world space.  Used for culling and
+  picking.
+
+  \sa SoReplacedElement, SbViewVolume
+*/
 class OBOL_DLL_API SoViewVolumeElement : public SoReplacedElement {
   typedef SoReplacedElement inherited;
 

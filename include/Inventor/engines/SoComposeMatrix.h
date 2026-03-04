@@ -46,6 +46,17 @@
 #include <Inventor/fields/SoMFRotation.h>
 
 
+/*!
+  \class SoComposeMatrix SoComposeMatrix.h Inventor/engines/SoComposeMatrix.h
+  \brief Assembles a 4×4 matrix from translation, rotation, scale, etc. components.
+
+  \ingroup coin_engines
+
+  SoComposeMatrix assembles a composite SbMatrix from separate translation,
+  rotation, scaleFactor, scaleOrientation, and center inputs.
+
+  \sa SoDecomposeMatrix, SoEngine
+*/
 class OBOL_DLL_API SoComposeMatrix : public SoEngine {
   typedef SoEngine inherited;
 

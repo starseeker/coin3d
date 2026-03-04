@@ -41,6 +41,18 @@ class SoNode;
 
 typedef void (* SoActionMethod)(SoAction *, SoNode *);
 
+/*!
+  \class SoActionMethodList SoActionMethodList.h Inventor/lists/SoActionMethodList.h
+  \brief Maps action types to their handler functions for a node class.
+
+  \ingroup coin_lists
+
+  SoActionMethodList stores the array of action-method function pointers
+  registered for each action type on a node class.  It is used
+  internally by the action dispatch mechanism.
+
+  \sa SbPList, SoAction
+*/
 class OBOL_DLL_API SoActionMethodList : public SbPList {
   typedef SbPList inherited;
 

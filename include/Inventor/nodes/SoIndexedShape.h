@@ -39,6 +39,20 @@
 
 class SoCoordinateElement;
 
+/*!
+  \class SoIndexedShape SoIndexedShape.h Inventor/nodes/SoIndexedShape.h
+  \brief Abstract base class for vertex shapes that use index arrays.
+
+  \ingroup coin_nodes
+
+  SoIndexedShape is the base for shapes like SoIndexedFaceSet and
+  SoIndexedLineSet that reference vertices, normals, texture coordinates,
+  and material values via index arrays (coordIndex, normalIndex,
+  textureCoordIndex, materialIndex).  An index of -1 acts as a primitive
+  terminator.
+
+  \sa SoVertexShape, SoIndexedFaceSet, SoIndexedLineSet
+*/
 class OBOL_DLL_API SoIndexedShape : public SoVertexShape {
   typedef SoVertexShape inherited;
 

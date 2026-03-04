@@ -37,6 +37,19 @@
 #include <Inventor/fields/SoSubField.h>
 #include <Inventor/SbBox3f.h>
 
+/*!
+  \class SoSFBox3f SoSFBox3f.h Inventor/fields/SoSFBox3f.h
+  \brief Field type holding a single single-precision 3D bounding box.
+
+  \ingroup coin_fields
+
+  SoSFBox3f is a single-valued field that stores
+  one value of type SbBox3f.
+  It inherits all field functionality from SoSField: value change notification,
+  field connections, and Inventor file I/O.
+
+  \sa SoSField, SoField
+*/
 class OBOL_DLL_API SoSFBox3f : public SoSField {
   typedef SoSField inherited;
 

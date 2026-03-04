@@ -35,6 +35,17 @@
 
 #include <Inventor/elements/SoInt32Element.h>
 
+/*!
+  \class SoTextOutlineEnabledElement SoTextOutlineEnabledElement.h Inventor/elements/SoTextOutlineEnabledElement.h
+  \brief Tracks whether text outline (vector font) mode is enabled.
+
+  \ingroup coin_elements
+
+  SoTextOutlineEnabledElement stores a boolean flag enabling or
+  disabling outline rendering for SoText3.
+
+  \sa SoInt32Element
+*/
 class OBOL_DLL_API SoTextOutlineEnabledElement : public SoInt32Element {
   typedef SoInt32Element inherited;
 

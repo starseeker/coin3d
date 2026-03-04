@@ -36,6 +36,19 @@
 #include <Inventor/fields/SoMField.h>
 #include <Inventor/fields/SoSubField.h>
 
+/*!
+  \class SoMFEnum SoMFEnum.h Inventor/fields/SoMFEnum.h
+  \brief Field type holding a array of enumerated values.
+
+  \ingroup coin_fields
+
+  SoMFEnum is a multi-valued field that stores
+  an array of values of type int (enum).
+  It inherits all field functionality from SoMField: value change notification,
+  field connections, and Inventor file I/O.
+
+  \sa SoMField, SoField
+*/
 class OBOL_DLL_API SoMFEnum : public SoMField {
   typedef SoMField inherited;
 

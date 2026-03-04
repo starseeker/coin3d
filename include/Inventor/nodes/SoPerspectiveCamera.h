@@ -36,6 +36,17 @@
 #include <Inventor/nodes/SoSubNode.h>
 #include <Inventor/nodes/SoCamera.h>
 
+/*!
+  \class SoPerspectiveCamera SoPerspectiveCamera.h Inventor/nodes/SoPerspectiveCamera.h
+  \brief Camera with a perspective (frustum) projection.
+
+  \ingroup coin_nodes
+
+  SoPerspectiveCamera renders the scene with standard perspective foreshortening.
+  The heightAngle field sets the vertical field-of-view angle in radians.
+
+  \sa SoCamera, SoOrthographicCamera
+*/
 class OBOL_DLL_API SoPerspectiveCamera : public SoCamera {
   typedef SoCamera inherited;
 

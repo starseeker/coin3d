@@ -33,6 +33,16 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
+/*!
+  \file SoSubField.h
+  \brief Macros for defining custom single-value (SoSF) and multi-value (SoMF) field classes.
+
+  Application code that extends Obol with new field types should use:
+  - \c SO_SFIELD_HEADER and \c SO_SFIELD_SOURCE to declare and implement a new SoSField subclass.
+  - \c SO_MFIELD_HEADER and \c SO_MFIELD_SOURCE to declare and implement a new SoMField subclass.
+  - \c SO_SFIELD_INIT_CLASS / \c SO_MFIELD_INIT_CLASS inside the static \c initClass() method.
+*/
+
 #include <Inventor/SbBasic.h> // for SO__QUOTE() definition
 #include <Inventor/SbName.h> // SoType::createType() needs to know SbName.
 #include <Inventor/SuUtils.h>

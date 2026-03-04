@@ -40,6 +40,20 @@
 
 class SoDetail;
 
+/*!
+  \class SoPrimitiveVertex SoPrimitiveVertex.h Inventor/SoPrimitiveVertex.h
+  \brief Stores vertex data generated during primitive decomposition.
+
+  \ingroup coin_nodes
+
+  SoPrimitiveVertex is passed to the triangle, line, and point
+  callbacks of SoCallbackAction.  It carries the vertex position,
+  surface normal, texture coordinates, material index, packed color,
+  and an optional SoDetail pointer that provides higher-level
+  geometric information about the primitive.
+
+  \sa SoCallbackAction, SoDetail, SoPickedPoint
+*/
 class OBOL_DLL_API SoPrimitiveVertex {
 public:
   SoPrimitiveVertex(void);

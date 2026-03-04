@@ -36,6 +36,17 @@
 #include <Inventor/engines/SoInterpolate.h>
 #include <Inventor/fields/SoMFVec3f.h>
 
+/*!
+  \class SoInterpolateVec3f SoInterpolateVec3f.h Inventor/engines/SoInterpolateVec3f.h
+  \brief Linearly interpolates between two 3D vectors.
+
+  \ingroup coin_engines
+
+  SoInterpolateVec3f performs component-wise linear interpolation
+  between input0 and input1 (SbVec3f) using the alpha input.
+
+  \sa SoInterpolate, SoEngine
+*/
 class OBOL_DLL_API SoInterpolateVec3f : public SoInterpolate {
   typedef SoInterpolate inherited;
   SO_INTERPOLATE_HEADER(SoInterpolateVec3f);

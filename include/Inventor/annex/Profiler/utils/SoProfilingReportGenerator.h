@@ -40,6 +40,17 @@ class SbProfilingData;
 class SbProfilingReportSortCriteria;   // opaque internal
 class SbProfilingReportPrintCriteria;  // opaque internal
 
+/*!
+  \class SoProfilingReportGenerator SoProfilingReportGenerator.h Inventor/annex/Profiler/utils/SoProfilingReportGenerator.h
+  \brief Generates text profiling reports from SbProfilingData.
+
+  \ingroup coin_annex
+
+  SoProfilingReportGenerator formats SbProfilingData into
+  human-readable text reports.
+
+  \sa SbProfilingData, SoProfiler
+*/
 class OBOL_DLL_API SoProfilingReportGenerator {
 public:
   static void init(void);

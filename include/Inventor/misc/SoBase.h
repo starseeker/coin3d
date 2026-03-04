@@ -43,6 +43,19 @@ class SoBaseList;
 class SoInput;
 class SoOutput;
 
+/*!
+  \class SoBase SoBase.h Inventor/misc/SoBase.h
+  \brief Abstract base class for all reference-counted Obol objects.
+
+  \ingroup coin_misc
+
+  SoBase is the common base for SoNode, SoEngine, SoPath, and other
+  reference-counted objects in the scene graph.  It provides
+  reference counting, type identification, field notification,
+  and Inventor file I/O support.
+
+  \sa SoNode, SoPath, SoEngine, SoType
+*/
 class OBOL_DLL_API SoBase {
 public:
   static void initClass(void);

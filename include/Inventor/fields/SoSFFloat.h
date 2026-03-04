@@ -36,6 +36,19 @@
 #include <Inventor/fields/SoSField.h>
 #include <Inventor/fields/SoSubField.h>
 
+/*!
+  \class SoSFFloat SoSFFloat.h Inventor/fields/SoSFFloat.h
+  \brief Field type holding a single single-precision floating-point value.
+
+  \ingroup coin_fields
+
+  SoSFFloat is a single-valued field that stores
+  one value of type float.
+  It inherits all field functionality from SoSField: value change notification,
+  field connections, and Inventor file I/O.
+
+  \sa SoSField, SoField
+*/
 class OBOL_DLL_API SoSFFloat : public SoSField {
   typedef SoSField inherited;
 

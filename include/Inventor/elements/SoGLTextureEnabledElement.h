@@ -42,6 +42,17 @@
 struct SoGLContext;
 #include <Inventor/elements/SoGLMultiTextureEnabledElement.h>
 
+/*!
+  \typedef SoGLTextureEnabledElement
+  \brief Compatibility alias for SoGLMultiTextureEnabledElement.
+
+  \ingroup coin_elements
+
+  This typedef maps the legacy SoGLTextureEnabledElement name to
+  SoGLMultiTextureEnabledElement.
+
+  \sa SoGLMultiTextureEnabledElement
+*/
 typedef SoGLMultiTextureEnabledElement SoGLTextureEnabledElement;
 
 #endif // !OBOL_SOGLTEXTUREENABLEDELEMENT_H

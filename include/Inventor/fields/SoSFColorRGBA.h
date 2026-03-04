@@ -37,6 +37,19 @@
 #include <Inventor/fields/SoSubField.h>
 #include <Inventor/SbColor4f.h>
 
+/*!
+  \class SoSFColorRGBA SoSFColorRGBA.h Inventor/fields/SoSFColorRGBA.h
+  \brief Field type holding a single RGBA color value (with alpha).
+
+  \ingroup coin_fields
+
+  SoSFColorRGBA is a single-valued field that stores
+  one value of type SbColor4f.
+  It inherits all field functionality from SoSField: value change notification,
+  field connections, and Inventor file I/O.
+
+  \sa SoSField, SoField
+*/
 class OBOL_DLL_API SoSFColorRGBA : public SoSField {
   typedef SoSField inherited;
 

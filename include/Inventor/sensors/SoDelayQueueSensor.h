@@ -37,6 +37,19 @@
 #include <Inventor/SbBasic.h>
 #include <cstdint>
 
+/*!
+  \class SoDelayQueueSensor SoDelayQueueSensor.h Inventor/sensors/SoDelayQueueSensor.h
+  \brief Base class for sensors that fire during the idle/delay queue.
+
+  \ingroup coin_sensors
+
+  SoDelayQueueSensor is the base for sensors whose callbacks are
+  scheduled for execution during the idle period between event
+  processing.  Sensors in the delay queue are processed whenever the
+  application is not handling events.
+
+  \sa SoSensor, SoIdleSensor, SoOneShotSensor, SoDataSensor
+*/
 class OBOL_DLL_API SoDelayQueueSensor : public SoSensor {
   typedef SoSensor inherited;
 

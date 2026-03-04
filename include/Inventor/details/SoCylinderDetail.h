@@ -35,6 +35,17 @@
 
 #include <Inventor/details/SoSubDetail.h>
 
+/*!
+  \class SoCylinderDetail SoCylinderDetail.h Inventor/details/SoCylinderDetail.h
+  \brief Pick detail for a hit on an SoCylinder node.
+
+  \ingroup coin_details
+
+  SoCylinderDetail records which part (SIDES, TOP, or BOTTOM) of an
+  SoCylinder was hit during a pick operation.
+
+  \sa SoDetail, SoCylinder
+*/
 class OBOL_DLL_API SoCylinderDetail : public SoDetail {
   typedef SoDetail inherited;
 

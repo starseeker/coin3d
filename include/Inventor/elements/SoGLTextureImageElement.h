@@ -40,6 +40,17 @@
 #include <Inventor/elements/SoTextureImageElement.h>
 #include <Inventor/elements/SoGLMultiTextureImageElement.h>
 
+/*!
+  \typedef SoGLTextureImageElement
+  \brief Compatibility alias for SoGLMultiTextureImageElement.
+
+  \ingroup coin_elements
+
+  This typedef maps the legacy SoGLTextureImageElement name to
+  SoGLMultiTextureImageElement.
+
+  \sa SoGLMultiTextureImageElement
+*/
 typedef SoGLMultiTextureImageElement SoGLTextureImageElement;
 
 #endif // !OBOL_SOGLTEXTUREIMAGEELEMENT_H

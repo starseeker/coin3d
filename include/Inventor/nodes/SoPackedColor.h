@@ -38,6 +38,17 @@
 
 class SoPackedColorP;
 
+/*!
+  \class SoPackedColor SoPackedColor.h Inventor/nodes/SoPackedColor.h
+  \brief Sets diffuse colors using packed 32-bit RGBA integers.
+
+  \ingroup coin_nodes
+
+  SoPackedColor provides an alternative to SoBaseColor for per-vertex or
+  per-face coloring using compact 32-bit RGBA values (0xRRGGBBAA).
+
+  \sa SoBaseColor, SoMaterial
+*/
 class OBOL_DLL_API SoPackedColor : public SoNode {
   typedef SoNode inherited;
 

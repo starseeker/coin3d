@@ -41,6 +41,19 @@ class SoPath;
 class SoNotList;
 class SoNode;
 
+/*!
+  \class SoMFPath SoMFPath.h Inventor/fields/SoMFPath.h
+  \brief Field type holding a array of pointers to SoPath objects.
+
+  \ingroup coin_fields
+
+  SoMFPath is a multi-valued field that stores
+  an array of values of type SoPath.
+  It inherits all field functionality from SoMField: value change notification,
+  field connections, and Inventor file I/O.
+
+  \sa SoMField, SoField
+*/
 class OBOL_DLL_API SoMFPath : public SoMField {
   typedef SoMField inherited;
 

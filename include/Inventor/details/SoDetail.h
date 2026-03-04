@@ -36,6 +36,18 @@
 #include <Inventor/SoType.h>
 
 
+/*!
+  \class SoDetail SoDetail.h Inventor/details/SoDetail.h
+  \brief Abstract base class for pick-result detail objects.
+
+  \ingroup coin_details
+
+  SoDetail is the base for all classes that describe where and how
+  a shape was hit during a pick operation.  Each shape subclass
+  may return a specialised SoDetail subclass from its pick method.
+
+  \sa SoPickedPoint, SoConeDetail, SoCubeDetail, SoCylinderDetail
+*/
 class OBOL_DLL_API SoDetail {
 
 public:

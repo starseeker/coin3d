@@ -49,6 +49,19 @@
 
 // *************************************************************************
 
+/*!
+  \class SbString SbString.h Inventor/SbString.h
+  \brief A string class with utilities for search and format operations.
+
+  \ingroup coin_base
+
+  SbString wraps a `std::string` and provides the Open Inventor API for
+  string manipulation: construction from `char *` and `wchar_t *`,
+  substring search, case-sensitive and case-insensitive comparison, hash
+  computation, and `sprintf`-style formatting.
+
+  \sa SbName
+*/
 class OBOL_DLL_API SbString {
 public:
   SbString(void) = default;

@@ -39,6 +39,17 @@
 class SoGLRenderAction;
 class SoVertexAttributeData;
 
+/*!
+  \class SoGLVertexAttributeElement SoGLVertexAttributeElement.h Inventor/elements/SoGLVertexAttributeElement.h
+  \brief GL-specific element for vertex shader attributes.
+
+  \ingroup coin_elements
+
+  SoGLVertexAttributeElement extends SoVertexAttributeElement to bind
+  named vertex attribute arrays to shader attribute locations.
+
+  \sa SoVertexAttributeElement
+*/
 class OBOL_DLL_API SoGLVertexAttributeElement : public SoVertexAttributeElement {
   typedef SoVertexAttributeElement inherited;
   SO_ELEMENT_HEADER(SoGLVertexAttributeElement);

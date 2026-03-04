@@ -35,6 +35,18 @@
 
 #include <Inventor/details/SoPointDetail.h>
 
+/*!
+  \class SoFaceDetail SoFaceDetail.h Inventor/details/SoFaceDetail.h
+  \brief Pick detail for a hit on a polygonal face.
+
+  \ingroup coin_details
+
+  SoFaceDetail records the face index, vertex indices, and
+  per-vertex detail information (SoPointDetail) for a pick on an
+  indexed or non-indexed face set.
+
+  \sa SoDetail, SoPointDetail, SoIndexedFaceSet
+*/
 class OBOL_DLL_API SoFaceDetail : public SoDetail {
   typedef SoDetail inherited;
 

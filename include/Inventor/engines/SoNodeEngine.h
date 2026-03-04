@@ -39,6 +39,18 @@ class SoEngineOutput;
 class SoEngineOutputList;
 class SoEngineOutputData;
 
+/*!
+  \class SoNodeEngine SoNodeEngine.h Inventor/engines/SoNodeEngine.h
+  \brief Abstract base class for engines that behave as scene-graph nodes.
+
+  \ingroup coin_engines
+
+  SoNodeEngine combines SoNode and engine semantics: it participates in
+  scene-graph traversal and also has typed outputs that can be connected
+  to fields of other nodes or engines.
+
+  \sa SoNode, SoEngine
+*/
 class OBOL_DLL_API SoNodeEngine : public SoNode {
   typedef SoNode inherited;
 

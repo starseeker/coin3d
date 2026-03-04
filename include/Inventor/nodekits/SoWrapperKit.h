@@ -35,6 +35,18 @@
 
 #include <Inventor/nodekits/SoSeparatorKit.h>
 
+/*!
+  \class SoWrapperKit SoWrapperKit.h Inventor/nodekits/SoWrapperKit.h
+  \brief Node kit that bundles arbitrary scene-graph content in a kit.
+
+  \ingroup coin_nodekits
+
+  SoWrapperKit provides a named-part kit for wrapping existing
+  scene-graph fragments, exposing a 'contents' part that can hold
+  any SoGroup-based sub-graph.
+
+  \sa SoSeparatorKit
+*/
 class OBOL_DLL_API SoWrapperKit : public SoSeparatorKit {
   typedef SoSeparatorKit inherited;
 

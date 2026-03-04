@@ -35,6 +35,19 @@
 
 #include <Inventor/fields/SoField.h>
 
+/*!
+  \class SoSField SoSField.h Inventor/fields/SoSField.h
+  \brief Abstract base class for single-valued fields.
+
+  \ingroup coin_fields
+
+  SoSField is the base for all single-value field types (SoSFFloat,
+  SoSFVec3f, SoSFString, etc.).  Each SoSField holds exactly one
+  typed value.  Concrete subclasses provide typed getValue()/setValue()
+  methods and the virtual serialization interface.
+
+  \sa SoMField, SoField
+*/
 class OBOL_DLL_API SoSField : public SoField {
   typedef SoField inherited;
 

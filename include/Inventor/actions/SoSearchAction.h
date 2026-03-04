@@ -41,6 +41,19 @@
 
 class SoSearchActionP;
 
+/*!
+  \class SoSearchAction SoSearchAction.h Inventor/actions/SoSearchAction.h
+  \brief Searches a scene graph for nodes matching specified criteria.
+
+  \ingroup coin_actions
+
+  SoSearchAction traverses a scene graph and collects paths to nodes that
+  match specified search criteria: by node type, by node name, by node
+  pointer, or any combination.  It can search for the first match or all
+  matches, and can optionally descend into node kits.
+
+  \sa SoAction, SoPath, SoPathList
+*/
 class OBOL_DLL_API SoSearchAction : public SoAction {
   typedef SoAction inherited;
 

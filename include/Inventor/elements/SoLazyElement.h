@@ -45,6 +45,18 @@ class SoLazyElementP;
 #define SO_LAZY_SHINY_THRESHOLD 0.005f
 
 
+/*!
+  \class SoLazyElement SoLazyElement.h Inventor/elements/SoLazyElement.h
+  \brief Aggregates lazily-applied material and lighting properties.
+
+  \ingroup coin_elements
+
+  SoLazyElement batches material properties (diffuse, ambient, specular,
+  shininess, transparency) and lighting flags for efficient GL state
+  management.  GL state is only sent when actually needed.
+
+  \sa SoElement
+*/
 class OBOL_DLL_API SoLazyElement : public SoElement {
   typedef SoElement inherited;
 

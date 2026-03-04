@@ -38,6 +38,17 @@
 #include <Inventor/fields/SoSFTrigger.h>
 
 
+/*!
+  \class SoOnOff SoOnOff.h Inventor/engines/SoOnOff.h
+  \brief Latches a boolean output that is set and cleared by trigger inputs.
+
+  \ingroup coin_engines
+
+  SoOnOff has two trigger inputs, on and off.  Triggering on sets the
+  isOn output to TRUE; triggering off sets it to FALSE.
+
+  \sa SoEngine
+*/
 class OBOL_DLL_API SoOnOff : public SoEngine {
   typedef SoEngine inherited;
 

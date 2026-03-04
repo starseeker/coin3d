@@ -40,6 +40,17 @@
 class SoCoordinateElement;
 class SoSeparator;
 
+/*!
+  \class SoLineSet SoLineSet.h Inventor/nodes/SoLineSet.h
+  \brief Renders a set of polylines from sequential vertex coordinates.
+
+  \ingroup coin_nodes
+
+  SoLineSet renders polylines using sequential vertices from SoCoordinate3.
+  The numVertices field specifies the vertex count per line strip.
+
+  \sa SoNonIndexedShape, SoIndexedLineSet, SoCoordinate3
+*/
 class OBOL_DLL_API SoLineSet : public SoNonIndexedShape {
   typedef SoNonIndexedShape inherited;
 

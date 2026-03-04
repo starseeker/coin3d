@@ -38,6 +38,18 @@
 class SoEngineOutput;
 
 
+/*!
+  \class SoFieldConverter SoFieldConverter.h Inventor/engines/SoFieldConverter.h
+  \brief Engine that automatically converts between incompatible connected field types.
+
+  \ingroup coin_engines
+
+  SoFieldConverter engines are inserted automatically by Obol when two
+  fields of different types are connected.  Application code does not
+  normally create them directly.
+
+  \sa SoEngine, SoField
+*/
 class OBOL_DLL_API SoFieldConverter : public SoEngine {
   typedef SoEngine inherited;
   SO_ENGINE_ABSTRACT_HEADER(SoFieldConverter);

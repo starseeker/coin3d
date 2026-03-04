@@ -37,6 +37,18 @@
 #include <Inventor/nodekits/SoBaseKit.h>
 #include <Inventor/fields/SoSFEnum.h>
 
+/*!
+  \class SoSeparatorKit SoSeparatorKit.h Inventor/nodekits/SoSeparatorKit.h
+  \brief Node kit based on SoSeparator with standard named parts.
+
+  \ingroup coin_nodekits
+
+  SoSeparatorKit provides a named-part group: pick style, units,
+  appearance, units, transform, and geometry child kits,
+  all under an SoSeparator.
+
+  \sa SoBaseKit, SoSeparator
+*/
 class OBOL_DLL_API SoSeparatorKit : public SoBaseKit {
   typedef SoBaseKit inherited;
 

@@ -37,6 +37,17 @@
 
 struct SoGLContext;
 
+/*!
+  \class SoGLDrawStyleElement SoGLDrawStyleElement.h Inventor/elements/SoGLDrawStyleElement.h
+  \brief GL-specific element for draw style.
+
+  \ingroup coin_elements
+
+  SoGLDrawStyleElement extends SoDrawStyleElement to issue the
+  corresponding OpenGL polygon/line/point draw calls.
+
+  \sa SoDrawStyleElement
+*/
 class OBOL_DLL_API SoGLDrawStyleElement : public SoDrawStyleElement {
   typedef SoDrawStyleElement inherited;
 

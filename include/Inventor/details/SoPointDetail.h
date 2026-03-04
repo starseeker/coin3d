@@ -35,6 +35,18 @@
 
 #include <Inventor/details/SoSubDetail.h>
 
+/*!
+  \class SoPointDetail SoPointDetail.h Inventor/details/SoPointDetail.h
+  \brief Pick detail for a single vertex/point hit.
+
+  \ingroup coin_details
+
+  SoPointDetail records the vertex index, texture coordinates,
+  normal, and material index of the intersected vertex for
+  use inside SoFaceDetail and SoLineDetail.
+
+  \sa SoDetail, SoFaceDetail, SoLineDetail
+*/
 class OBOL_DLL_API SoPointDetail : public SoDetail {
   typedef SoDetail inherited;
 

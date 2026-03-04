@@ -37,6 +37,18 @@
 #include <cassert>
 #include <cstddef> // NULL definition
 
+/*!
+  \class SbPList SbPList.h Inventor/lists/SbPList.h
+  \brief General-purpose resizable array of untyped (void *) pointers.
+
+  \ingroup coin_lists
+
+  SbPList is the low-level dynamic array used as a base for most
+  typed Obol list classes.  Items are stored as void pointers;
+  type safety is provided by the derived typed subclasses.
+
+  \sa SoBaseList, SoNodeList, SoPathList
+*/
 class OBOL_DLL_API SbPList {
   enum { DEFAULTSIZE = 4 };
 

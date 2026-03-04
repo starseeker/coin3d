@@ -43,6 +43,20 @@ class SbImage;
 typedef SbBool SbImageScheduleReadCB(const SbString &, SbImage *, void *);
 typedef SbBool SbImageReadImageCB(const SbString &, SbImage *, void *);
 
+/*!
+  \class SbImage SbImage.h Inventor/SbImage.h
+  \brief Stores a 2D or 3D raster image.
+
+  \ingroup coin_base
+
+  SbImage holds pixel data for a 2D image (width × height × bytes-per-pixel)
+  or a 3D image (width × height × depth × bytes-per-pixel).  It supports
+  deferred/scheduled loading via callbacks
+  (SbImageScheduleReadCB, SbImageReadImageCB), in-memory value setting,
+  and zero-copy pointer-based storage via setValuePtr().
+
+  \sa SoTexture2, SoTexture3
+*/
 class OBOL_DLL_API SbImage {
 public:
   SbImage(void);

@@ -46,6 +46,21 @@ class SbVec4s;
 class SbVec4i32;
 class SbVec3f;
 
+/*!
+  \class SbVec4f SbVec4f.h Inventor/SbVec4f.h
+  \brief 4D vector with single-precision floating-point coordinates.
+
+  \ingroup coin_base
+
+  SbVec4f represents a homogeneous 3D point (x, y, z, w) in
+  single-precision floating point.  It is used in projective
+  transformation math and as texture coordinate storage.  It supports
+  arithmetic operations and conversions to and from related types
+  (SbVec4d, SbVec4b, SbVec4s, SbVec4i32), plus a dehomogenize
+  operation to extract a Cartesian SbVec3f.
+
+  \sa SbVec4d, SbVec3f, SbVec2f
+*/
 class OBOL_DLL_API SbVec4f {
 public:
   SbVec4f(void) { }

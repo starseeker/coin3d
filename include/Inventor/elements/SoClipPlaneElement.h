@@ -37,6 +37,17 @@
 #include <Inventor/lists/SbList.h>
 #include <Inventor/SbPlane.h>
 
+/*!
+  \class SoClipPlaneElement SoClipPlaneElement.h Inventor/elements/SoClipPlaneElement.h
+  \brief Accumulates user-defined clipping planes.
+
+  \ingroup coin_elements
+
+  SoClipPlaneElement maintains the list of active SbPlane clip planes
+  accumulated from SoClipPlane nodes in the scene graph.
+
+  \sa SoAccumulatedElement
+*/
 class OBOL_DLL_API SoClipPlaneElement : public SoAccumulatedElement {
   typedef SoAccumulatedElement inherited;
 

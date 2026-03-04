@@ -36,6 +36,18 @@
 #include <Inventor/nodes/SoSubNode.h>
 #include <Inventor/nodes/SoProfile.h>
 
+/*!
+  \class SoLinearProfile SoLinearProfile.h Inventor/nodes/SoLinearProfile.h
+  \brief Defines a cross-section profile using linear segments.
+
+  \ingroup coin_nodes
+
+  SoLinearProfile provides a piecewise-linear 2D cross-section curve for
+  extrusion shapes.  Profile points are taken from the current
+  SoProfileCoordinate2 node.
+
+  \sa SoProfile, SoProfileCoordinate2
+*/
 class OBOL_DLL_API SoLinearProfile : public SoProfile {
   typedef SoProfile inherited;
 

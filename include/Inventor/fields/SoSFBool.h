@@ -36,6 +36,19 @@
 #include <Inventor/fields/SoSField.h>
 #include <Inventor/fields/SoSubField.h>
 
+/*!
+  \class SoSFBool SoSFBool.h Inventor/fields/SoSFBool.h
+  \brief Field type holding a single boolean value.
+
+  \ingroup coin_fields
+
+  SoSFBool is a single-valued field that stores
+  one value of type SbBool.
+  It inherits all field functionality from SoSField: value change notification,
+  field connections, and Inventor file I/O.
+
+  \sa SoSField, SoField
+*/
 class OBOL_DLL_API SoSFBool : public SoSField {
   typedef SoSField inherited;
 

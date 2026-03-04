@@ -42,6 +42,17 @@
 
 class SoProfilerTopKitP;
 
+/*!
+  \class SoProfilerTopKit SoProfilerTopKit.h Inventor/annex/Profiler/nodekits/SoProfilerTopKit.h
+  \brief Node kit that shows a top-N slowest nodes list overlay.
+
+  \ingroup coin_annex
+
+  SoProfilerTopKit extends SoProfilerOverlayKit to display a
+  ranked list of the slowest scene-graph nodes.
+
+  \sa SoProfilerOverlayKit, SoScrollingGraphKit
+*/
 class OBOL_DLL_API SoProfilerTopKit : public SoProfilerOverlayKit {
   typedef SoProfilerOverlayKit inherited;
   SO_KIT_HEADER(SoProfilerTopKit);

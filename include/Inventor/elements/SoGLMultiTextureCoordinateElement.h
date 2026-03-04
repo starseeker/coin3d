@@ -40,6 +40,18 @@ struct SoGLContext;
 class SoGLMultiTextureCoordinateElementP;
 typedef void SoTexCoordTexgenCB(void * data);
 
+/*!
+  \class SoGLMultiTextureCoordinateElement SoGLMultiTextureCoordinateElement.h Inventor/elements/SoGLMultiTextureCoordinateElement.h
+  \brief GL-specific multi-unit texture coordinate element.
+
+  \ingroup coin_elements
+
+  SoGLMultiTextureCoordinateElement extends
+  SoMultiTextureCoordinateElement to handle GL multi-texture
+  coordinate state.
+
+  \sa SoMultiTextureCoordinateElement
+*/
 class OBOL_DLL_API SoGLMultiTextureCoordinateElement : public SoMultiTextureCoordinateElement {
   typedef SoMultiTextureCoordinateElement inherited;
 

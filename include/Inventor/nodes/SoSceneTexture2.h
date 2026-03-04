@@ -44,6 +44,17 @@
 
 class SoSceneTexture2P;
 
+/*!
+  \class SoSceneTexture2 SoSceneTexture2.h Inventor/nodes/SoSceneTexture2.h
+  \brief Renders a sub-scene into a texture (render-to-texture).
+
+  \ingroup coin_nodes
+
+  SoSceneTexture2 renders the scene graph in its scene field to an
+  off-screen framebuffer and exposes the result as a 2D texture.
+
+  \sa SoTexture2, SoNode
+*/
 class OBOL_DLL_API SoSceneTexture2 : public SoNode {
   typedef SoNode inherited;
 

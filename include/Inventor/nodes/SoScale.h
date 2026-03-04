@@ -37,6 +37,17 @@
 #include <Inventor/fields/SoSFVec3f.h>
 #include <Inventor/nodes/SoTransformation.h>
 
+/*!
+  \class SoScale SoScale.h Inventor/nodes/SoScale.h
+  \brief Applies a scale to the current transformation matrix.
+
+  \ingroup coin_nodes
+
+  SoScale applies a non-uniform scale (SbVec3f) to the current model matrix.
+  It is a simpler alternative to SoTransform when only scaling is needed.
+
+  \sa SoTransformation, SoTransform, SoTranslation, SoRotation
+*/
 class OBOL_DLL_API SoScale : public SoTransformation {
   typedef SoTransformation inherited;
 
