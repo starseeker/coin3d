@@ -1191,11 +1191,11 @@ SoInput::read(SbName & n, SbBool validIdent)
 // std::numeric_limits<type>::max() ought to be all the information
 // needed.  20070520 larsa
 #define READ_NUM(reader, readType, num, type) \
-  SoInput_FileInfo * fi = this->getTopOfStack(); \
-  assert(fi); \
-  if (!fi->skipWhiteSpace()) return FALSE; \
+  SoInput_FileInfo * rn_fi__ = this->getTopOfStack(); \
+  assert(rn_fi__); \
+  if (!rn_fi__->skipWhiteSpace()) return FALSE; \
   readType _tmp; \
-  if (!fi->reader(_tmp)) return FALSE; \
+  if (!rn_fi__->reader(_tmp)) return FALSE; \
   num = (type) _tmp;
 
 #define READ_INTEGER(num, type) \

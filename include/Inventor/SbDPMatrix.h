@@ -51,6 +51,7 @@ public:
              const double a21, const double a22, const double a23, const double a24,
              const double a31, const double a32, const double a33, const double a34,
              const double a41, const double a42, const double a43, const double a44);
+  SbDPMatrix(const SbDPMatrix & matrix) = default;
   SbDPMatrix(const SbDPMat & matrix);
   SbDPMatrix(const SbDPMat * matrix);
   SbDPMatrix(const SbMatrix & matrix);

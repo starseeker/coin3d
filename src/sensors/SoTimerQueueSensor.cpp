@@ -123,8 +123,8 @@ SoTimerQueueSensor::SoTimerQueueSensor(void)
 
   \sa setFunction(), setData()
  */
-SoTimerQueueSensor::SoTimerQueueSensor(SoSensorCB * func, void * data)
-  : inherited(func, data), scheduled(FALSE)
+SoTimerQueueSensor::SoTimerQueueSensor(SoSensorCB * cbfunc, void * cbdata)
+  : inherited(cbfunc, cbdata), scheduled(FALSE)
 {
 }
 

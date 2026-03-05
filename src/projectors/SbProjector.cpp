@@ -213,9 +213,9 @@ SbProjector::findVanishingDistance(void) const
   while (cnt < 64 && (siz[1] > (1.0f / 512.0f))) {
     depth *= 2.0f;
     m.setTranslate(projdir * depth);
-    SbBox3f box = unitbox;
-    box.transform(m);
-    siz = vv.projectBox(box);
+    SbBox3f iter_box = unitbox;
+    iter_box.transform(m);
+    siz = vv.projectBox(iter_box);
     cnt++;
   }
   return depth;

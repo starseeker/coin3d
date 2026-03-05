@@ -134,6 +134,12 @@
 
 #include "config.h" // OBOL_STUB()
 
+// OBOL_EXTRA_DEBUG enables bounds-checking on matrix index operations;
+// define as 1 to activate (not defined by the build system, so default to 0).
+#ifndef OBOL_EXTRA_DEBUG
+#define OBOL_EXTRA_DEBUG 0
+#endif
+
 #ifndef OBOL_WORKAROUND_NO_USING_STD_FUNCS
 using std::memmove;
 using std::memcmp;
@@ -1557,16 +1563,16 @@ SbMatrix::print(FILE * fp) const
 #define sp_mat_pad(A) (A[W][X]=A[X][W]=A[W][Y]=A[Y][W]=A[W][Z]=A[Z][W]=0, A[W][W]=1)
 
 /** Copy nxn matrix A to C using "gets" for assignment **/
-#define sp_mat_copy(C, gets, A, n) {int i, j; for (i=0;i<n;i++) for (j=0;j<n;j++)\
-    C[i][j] gets (A[i][j]);}
+#define sp_mat_copy(C, gets, A, n) {int mi__,mj__; for (mi__=0;mi__<n;mi__++) for (mj__=0;mj__<n;mj__++)\
+    C[mi__][mj__] gets (A[mi__][mj__]);}
 
 /** Copy transpose of nxn matrix A to C using "gets" for assignment **/
-#define sp_mat_tpose(AT, gets, A, n) {int i, j; for (i=0;i<n;i++) for (j=0;j<n;j++)\
-    AT[i][j] gets (A[j][i]);}
+#define sp_mat_tpose(AT, gets, A, n) {int mi__,mj__; for (mi__=0;mi__<n;mi__++) for (mj__=0;mj__<n;mj__++)\
+    AT[mi__][mj__] gets (A[mj__][mi__]);}
 
 /** Assign nxn matrix C the element-wise combination of A and B using "op" **/
-#define sp_mat_binop(C, gets, A, op, B, n) {int i, j; for (i=0;i<n;i++) for (j=0;j<n;j++)\
-    C[i][j] gets (A[i][j]) op (B[i][j]);}
+#define sp_mat_binop(C, gets, A, op, B, n) {int mi__,mj__; for (mi__=0;mi__<n;mi__++) for (mj__=0;mj__<n;mj__++)\
+    C[mi__][mj__] gets (A[mi__][mj__]) op (B[mi__][mj__]);}
 
 /** Multiply the upper left 3x3 parts of A and B to get AB **/
 void
@@ -1966,7 +1972,7 @@ SbMatrixP::snuggle(SbRotation q, SbVec4f & k)
     big = qa[hi];
     if (all>two) {
       if (all>big) {/*all*/
-        {int i; for (i=0; i<4; i++) pa[i] = sgn(neg[i], 0.5f);}
+        {int qi; for (qi=0; qi<4; qi++) pa[qi] = sgn(neg[qi], 0.5f);}
         cycle(ka, par);
       }
       else {/*big*/ pa[hi] = sgn(neg[hi], 1.0f);}

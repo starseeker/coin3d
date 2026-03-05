@@ -541,7 +541,6 @@ SoText2::GLRender(SoGLRenderAction * action)
                 memy >= 0 && memy + bitmapsize[1] <= bbsize[1]) {
 
               const unsigned char * src = buffer;
-              int rowstride = bbsize[0] * 4;
 
               // stb_truetype bitmaps are stored top-to-bottom (row 0 = top of glyph).
               // glDrawPixels reads the pixel buffer bottom-to-top (row 0 = bottom of image).

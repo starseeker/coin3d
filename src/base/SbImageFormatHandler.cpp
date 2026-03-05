@@ -54,15 +54,20 @@ void SbImageFormatHandler::freeImageData(unsigned char* imagedata)
   delete[] imagedata;
 }
 
-unsigned char* SbImageFormatHandler::resizeImage(unsigned char* imagedata, int width, int height, int components,
-                                               int newwidth, int newheight)
+unsigned char* SbImageFormatHandler::resizeImage([[maybe_unused]] unsigned char* imagedata,
+                                               [[maybe_unused]] int width, [[maybe_unused]] int height,
+                                               [[maybe_unused]] int components,
+                                               [[maybe_unused]] int newwidth, [[maybe_unused]] int newheight)
 {
   setError("Image resizing not supported by this format handler");
   return nullptr;
 }
 
-unsigned char* SbImageFormatHandler::resize3DImage(unsigned char* imagedata, int width, int height, int depth, int components,
-                                                 int newwidth, int newheight, int newdepth)
+unsigned char* SbImageFormatHandler::resize3DImage([[maybe_unused]] unsigned char* imagedata,
+                                                 [[maybe_unused]] int width, [[maybe_unused]] int height,
+                                                 [[maybe_unused]] int depth, [[maybe_unused]] int components,
+                                                 [[maybe_unused]] int newwidth, [[maybe_unused]] int newheight,
+                                                 [[maybe_unused]] int newdepth)
 {
   setError("3D image resizing not supported by this format handler");
   return nullptr;

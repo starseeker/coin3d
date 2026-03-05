@@ -99,13 +99,13 @@ SoGLClipPlaneElement::pop(SoState * state,
                           const SoElement * prevTopElement)
 {
   this->capture(state);
-  const SoGLContext * glue = sogl_glue_from_state(state);
+  const SoGLContext * ctx = sogl_glue_from_state(state);
   const SoGLClipPlaneElement * prev = (const SoGLClipPlaneElement*)
     prevTopElement;
 
   // disable used planes
   for (int i = prev->startIndex; i < prev->getNum(); i++)
-    SoGLContext_glDisable(glue, (GLenum)((int)GL_CLIP_PLANE0 + i));
+    SoGLContext_glDisable(ctx, (GLenum)((int)GL_CLIP_PLANE0 + i));
 
   inherited::pop(state, prevTopElement);
 }

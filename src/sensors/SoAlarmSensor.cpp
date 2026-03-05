@@ -60,8 +60,8 @@ SoAlarmSensor::SoAlarmSensor(void)
 
   \sa setFunction(), setData()
  */
-SoAlarmSensor::SoAlarmSensor(SoSensorCB * func, void * data)
-  : inherited(func, data)
+SoAlarmSensor::SoAlarmSensor(SoSensorCB * cbfunc, void * cbdata)
+  : inherited(cbfunc, cbdata)
 {
 }
 

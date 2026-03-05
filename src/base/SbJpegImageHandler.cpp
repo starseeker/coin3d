@@ -60,7 +60,7 @@ std::vector<std::string> SbJpegImageHandler::getExtensions() const
   return {"jpg", "jpeg"};
 }
 
-unsigned char* SbJpegImageHandler::readImage(const char* filename, int* width, int* height, int* components)
+unsigned char* SbJpegImageHandler::readImage([[maybe_unused]] const char* filename, int* width, int* height, int* components)
 {
   // Image reading is not currently supported in the minimal build
   setError("JPEG image reading not supported in minimal build");

@@ -196,9 +196,22 @@
    is either fiddling manually with config.h, or in case a change is
    made which breaks this protection in the configure script. */
 
-#define GRAPHICS_API_COUNT (((defined(HAVE_WGL) ? 1 : 0) + \
-                            (defined(HAVE_EGL) ? 1 : 0) + \
-                            ((defined(HAVE_AGL) || defined(HAVE_CGL)) ? 1 : 0)))
+#if defined(HAVE_WGL)
+#define OBOL_HAVE_WGL_BIT 1
+#else
+#define OBOL_HAVE_WGL_BIT 0
+#endif
+#if defined(HAVE_EGL)
+#define OBOL_HAVE_EGL_BIT 1
+#else
+#define OBOL_HAVE_EGL_BIT 0
+#endif
+#if defined(HAVE_AGL) || defined(HAVE_CGL)
+#define OBOL_HAVE_AGL_CGL_BIT 1
+#else
+#define OBOL_HAVE_AGL_CGL_BIT 0
+#endif
+#define GRAPHICS_API_COUNT (OBOL_HAVE_WGL_BIT + OBOL_HAVE_EGL_BIT + OBOL_HAVE_AGL_CGL_BIT)
 
 #if GRAPHICS_API_COUNT == 0
 // Define HAVE_NOGL if no platform GL binding exists
@@ -208,6 +221,9 @@
 #endif
 
 #undef GRAPHICS_API_COUNT
+#undef OBOL_HAVE_WGL_BIT
+#undef OBOL_HAVE_EGL_BIT
+#undef OBOL_HAVE_AGL_CGL_BIT
 
 // *************************************************************************
 
@@ -344,7 +360,7 @@ coingl_unregister_osmesa_context(int contextid)
 }
 
 /* Query whether a context ID was registered as an OSMesa context. */
-static int
+[[maybe_unused]] static int
 coingl_context_backend_is_osmesa(int contextid)
 {
 #if defined(OBOL_BUILD_DUAL_GL)
@@ -551,7 +567,7 @@ glglue_resolve_envvar(const char * txt)
    environment variable that disables it.)
 */
 static SbBool
-glglue_allow_newer_opengl(const SoGLContext * w)
+glglue_allow_newer_opengl(const SoGLContext * OBOL_UNUSED_ARG(w))
 {
   static int force1_0_initialized = 0;
   static SbBool force1_0 = FALSE;

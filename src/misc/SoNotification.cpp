@@ -199,7 +199,7 @@ SoNotList::getTimeStamp(void) const
   if compiled with debug information on.
 */
 void
-SoNotList::print(FILE * const file) const
+SoNotList::print([[maybe_unused]] FILE * const file) const
 {
 #if OBOL_DEBUG
   (void)fprintf(file, "SoNotList: %p\n", this);

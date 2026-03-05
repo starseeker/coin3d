@@ -259,8 +259,8 @@
 class SoExtSelectionP {
 public:
   SoExtSelectionP(SoExtSelection * masterptr)
-    : runningselection(masterptr),
-      contextManager(NULL)
+    : contextManager(NULL),
+      runningselection(masterptr)
   {
     PUBLIC(this) = masterptr;
   }
@@ -1193,8 +1193,8 @@ SoExtSelection::GLRenderBelowPath(SoGLRenderAction * action)
     // are available when a selection event fires (which may happen before any
     // lasso draw, when draw() would otherwise be the only place they are set).
     PRIVATE(this)->cachedGlue = SoGLContext_instance(action->getCacheContext());
-    SoDB::ContextManager * stateMgr = SoContextManagerElement::get(state);
-    if (stateMgr) PRIVATE(this)->contextManager = stateMgr;
+    SoDB::ContextManager * delayedMgr = SoContextManagerElement::get(state);
+    if (delayedMgr) PRIVATE(this)->contextManager = delayedMgr;
 
     if (PRIVATE(this)->runningselection.mode != SoExtSelectionP::SelectionState::NONE) {
       action->addDelayedPath(action->getCurPath()->copy());
@@ -1489,12 +1489,14 @@ SoExtSelectionP::testShape(SoCallbackAction * action, const SoShape * shape)
 
   SbBool full = FALSE;
   switch (PUBLIC(this)->lassoPolicy.getValue()) {
-  case SoExtSelection::FULL_BBOX: /* fall through intended */
+  case SoExtSelection::FULL_BBOX:
     full = TRUE;
+    [[fallthrough]];
   case SoExtSelection::PART_BBOX:
     return testBBox(action, projmatrix, shape, rectbbox, full);
-  case SoExtSelection::FULL: /* fall through intended */
+  case SoExtSelection::FULL:
     full = TRUE;
+    [[fallthrough]];
   case SoExtSelection::PART:
     return testPrimitives(action, projmatrix, shape, rectbbox, full);
   default:

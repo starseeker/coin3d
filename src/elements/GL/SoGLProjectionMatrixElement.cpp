@@ -91,7 +91,7 @@ SoGLProjectionMatrixElement::push(SoState * state)
 
 void
 SoGLProjectionMatrixElement::pop(SoState * OBOL_UNUSED_ARG(state),
-                                 const SoElement * prevTopElement)
+                                 const SoElement * OBOL_UNUSED_ARG(prevTopElement))
 {
   this->capture(state);
   this->updategl();

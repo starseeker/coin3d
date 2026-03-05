@@ -155,8 +155,8 @@ compare_paths(const void * v0, const void * v1)
   int n = SbMin(p0->getLength(), p1->getLength());
   int i;
   for (i = 1; i < n; i++) {
-    const int diff = p0->getIndex(i) - p1->getIndex(i);
-    if (diff != 0) { return (int)diff; }
+    const int idx_diff = p0->getIndex(i) - p1->getIndex(i);
+    if (idx_diff != 0) { return (int)idx_diff; }
   }
   // shortest path first
   return p0->getLength() - p1->getLength();

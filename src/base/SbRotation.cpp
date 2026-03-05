@@ -730,7 +730,7 @@ SbRotation::fromString(const SbString & str)
   debug version of library, method does nothing in an optimized build.
  */
 void
-SbRotation::print(FILE * fp) const
+SbRotation::print([[maybe_unused]] FILE * fp) const
 {
 #if OBOL_DEBUG
   this->quat.print(fp);

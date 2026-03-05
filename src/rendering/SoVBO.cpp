@@ -74,9 +74,9 @@ static SbHash<uint32_t, SbBool> * vbo_isfast_hash;
 /*!
   Constructor
 */
-SoVBO::SoVBO(const GLenum target, const GLenum usage)
-  : target(target),
-    usage(usage),
+SoVBO::SoVBO(const GLenum vbo_target, const GLenum vbo_usage)
+  : target(vbo_target),
+    usage(vbo_usage),
     data(NULL),
     datasize(0),
     dataid(0),
@@ -202,7 +202,7 @@ SoVBO::init(void)
   \sa setBufferData()
 */
 void *
-SoVBO::allocBufferData(intptr_t size, SbUniqueId dataid)
+SoVBO::allocBufferData(intptr_t size, SbUniqueId new_dataid)
 {
   // schedule delete for all allocated GL resources
   for(
@@ -230,7 +230,7 @@ SoVBO::allocBufferData(intptr_t size, SbUniqueId dataid)
   this->didalloc = TRUE;
   this->data = (const GLvoid*) ptr;
   this->datasize = size;
-  this->dataid = dataid;
+  this->dataid = new_dataid;
   return (void*) this->data;
 }
 
@@ -240,7 +240,7 @@ SoVBO::allocBufferData(intptr_t size, SbUniqueId dataid)
   (SoNode::getNodeId()) to test if a buffer is valid for a node.
 */
 void
-SoVBO::setBufferData(const GLvoid * data, intptr_t size, SbUniqueId dataid)
+SoVBO::setBufferData(const GLvoid * new_data, intptr_t size, SbUniqueId new_dataid)
 {
   // schedule delete for all allocated GL resources
   for(
@@ -263,9 +263,9 @@ SoVBO::setBufferData(const GLvoid * data, intptr_t size, SbUniqueId dataid)
     delete[] ptr;
   }
 
-  this->data = data;
+  this->data = new_data;
   this->datasize = size;
-  this->dataid = dataid;
+  this->dataid = new_dataid;
   this->didalloc = FALSE;
 }
 
@@ -284,10 +284,10 @@ SoVBO::getBufferDataId(void) const
   Returns the data pointer and size.
 */
 void
-SoVBO::getBufferData(const GLvoid *& data, intptr_t & size)
+SoVBO::getBufferData(const GLvoid *& out_data, intptr_t & out_size)
 {
-  data = this->data;
-  size = this->datasize;
+  out_data = this->data;
+  out_size = this->datasize;
 }
 
 

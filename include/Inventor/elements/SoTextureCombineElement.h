@@ -137,6 +137,7 @@ public:
   public:
     UnitData();
     UnitData(const UnitData & org);
+    UnitData & operator=(const UnitData &) = default;
 
     SbUniqueId nodeid;
     Source rgbsource[3];

@@ -259,7 +259,7 @@ SbCylinder::intersect(const SbLine& l, SbVec3f& enter, SbVec3f& exit) const
   debug version of library, method does nothing in an optimized build.
  */
 void
-SbCylinder::print(FILE * fp) const
+SbCylinder::print([[maybe_unused]] FILE * fp) const
 {
 #if OBOL_DEBUG
   fprintf( fp, "axis: " );

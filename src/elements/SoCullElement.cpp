@@ -332,11 +332,11 @@ SoCullElement::docull(SoState * state, const SbBox3f & box, const SbBool transfo
   }
   if (updateelem && (flags != elem->flags)) {
     // force a push if necessary
-    SoCullElement * elem = coin_assert_cast<SoCullElement *>
+    SoCullElement * cull_elem = coin_assert_cast<SoCullElement *>
       (
        SoElement::getElement(state, classStackIndex)
        );
-    elem->flags = flags;
+    cull_elem->flags = flags;
   }
   return FALSE;
 }

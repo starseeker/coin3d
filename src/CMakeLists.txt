@@ -122,6 +122,11 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
     OBOL_DEBUG=$<CONFIG:Debug>
 )
 
+# Apply warning flags (controlled by OBOL_WARNINGS option in the top-level CMakeLists.txt)
+if(OBOL_WARNING_FLAGS)
+    target_compile_options(${PROJECT_NAME} PRIVATE ${OBOL_WARNING_FLAGS})
+endif()
+
 # Target-specific include directories (modern approach)
 target_include_directories(${PROJECT_NAME} 
     PRIVATE
@@ -298,7 +303,7 @@ else()
           DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Inventor 
           COMPONENT development 
           FILES_MATCHING PATTERN "*.h")
-  install(FILES ${PROJECT_SOURCE_DIR}/include/SoWinEnterScope.h ${PROJECT_SOURCE_DIR}/include/SoWinLeaveScope.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} COMPONENT development)
+
 
 # ############################################################################
 # Install target
@@ -330,6 +335,16 @@ else()
       endif()
     endif()
   endif()
+
+  # When using the bundled OSMesa submodule (DUAL_GL or osmesa-only builds),
+  # install its shared library alongside Obol so that consumers who locate Obol
+  # via find_package(Obol) can link and run without additional setup.
+  if((OBOL_BUILD_DUAL_GL OR OBOL_USE_OSMESA) AND TARGET osmesa)
+    install(TARGETS osmesa
+      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT runtime
+      LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT runtime
+    )
+  endif()
 endif()
 
 # ############################################################################
@@ -343,6 +358,10 @@ else()
   set(OBOL_CONFIG_PACKAGE_LOCATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}-${PROJECT_VERSION})
   string(TOLOWER ${PROJECT_NAME} OBOL_CONFIG_PACKAGE_BASENAME)
   if(UNIX OR MINGW)
+    configure_file(
+      "${CMAKE_CURRENT_SOURCE_DIR}/obol-default.cfg.in"
+      "${CMAKE_BINARY_DIR}/${PROJECT_NAME_LOWER}-default.cfg"
+      @ONLY)
     install(FILES "${CMAKE_BINARY_DIR}/${PROJECT_NAME_LOWER}-default.cfg" DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/Obol/conf)
   endif()
 endif()

@@ -671,16 +671,16 @@ SoTrackballDragger::drag(void)
   else if (PRIVATE(this)->whatkind == WHATKIND_SCALE) {
     PRIVATE(this)->lineProj->setViewVolume(this->getViewVolume());
     PRIVATE(this)->lineProj->setWorkingSpace(wk2ws);
-    SbVec3f startPt = this->getWorldStartingPoint();
-    ws2wk.multVecMatrix(startPt, startPt);
+    SbVec3f scalePt = this->getWorldStartingPoint();
+    ws2wk.multVecMatrix(scalePt, scalePt);
     SbVec3f projPt = PRIVATE(this)->lineProj->project(this->getNormalizedLocaterPosition());
     
-    float orglen = startPt.length();
+    float orglen = scalePt.length();
     float currlen = projPt.length();
 
     float scale = 0.0f;
     if (orglen > 0.0f) scale = currlen / orglen;
-    if (scale > 0.0f && startPt.dot(projPt) < 0.0f) scale = 0.0f;
+    if (scale > 0.0f && scalePt.dot(projPt) < 0.0f) scale = 0.0f;
 
     this->setMotionMatrix(this->appendScale(this->getStartMotionMatrix(),
                                             SbVec3f(scale, scale, scale),

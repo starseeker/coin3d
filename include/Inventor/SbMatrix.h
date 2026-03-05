@@ -65,6 +65,7 @@ public:
            const float a21, const float a22, const float a23, const float a24,
            const float a31, const float a32, const float a33, const float a34,
            const float a41, const float a42, const float a43, const float a44);
+  SbMatrix(const SbMatrix & matrix) = default;
   SbMatrix(const SbMat & matrix);
   SbMatrix(const SbMat * matrix);
   explicit SbMatrix(const SbDPMatrix & matrix);

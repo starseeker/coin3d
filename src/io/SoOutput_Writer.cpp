@@ -72,7 +72,7 @@ SoOutput_Writer *
 SoOutput_Writer::createWriter(FILE * fp, 
                               const SbBool shouldclose,
                               const SbName & compmethod,
-                              const float level)
+                              const float OBOL_UNUSED_ARG(level))
 {
   if (compmethod == "GZIP") {
     SoDebugError::postWarning("SoOutput_Writer::createWriter",

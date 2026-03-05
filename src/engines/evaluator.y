@@ -34,16 +34,12 @@
 /*
  * Syntax analyzer for SoCalculator expressions.
  *
- * Compile with
+ * Compile with (GNU Bison 3.x):
  *
- *         bison -Dapi.prefix=so_eval -o evaluator_tab.c -l evaluator.y
+ *         bison -o evaluator_tab.cpp -l evaluator.y
  *
- * ..with GNU bison version 1.27 (which is what we have on nfs.sim.no)
- * then patch the resulting evaluator_tab.c file with
- *
- *         patch -p0 < evaluator_tab.diff
- *
- * The patch is explained at the top of the diff file.
+ * The api.prefix is set via %define below - no command-line -D flag needed.
+ * No post-generation patching is required with modern bison (3.x+).
  */
 
 #include "config.h"
@@ -54,10 +50,11 @@
 /* isatty() on windows */
 #include <io.h>
 #endif /* HAVE_IO_H */
-#include <Inventor/C/basic.h>
+#include <Inventor/basic.h>
 #include "engines/evaluator.h"
-#define yyalloc so_evalalloc
 %}
+
+%define api.prefix {so_eval}
 
 %union
 {
@@ -104,7 +101,7 @@
   static char * get_regname(char reg, int regtype);
   enum { REGTYPE_IN, REGTYPE_OUT, REGTYPE_TMP };
   static so_eval_node *root_node;
-  static int so_evalerror(char *);
+  static int so_evalerror(const char *);
   static int so_evallex(void);
 %}
 
@@ -275,7 +272,7 @@ so_eval_error(void)
  * Called by bison parser upon lexical/syntax error.
  */
 int
-so_evalerror(char *myerr)
+so_evalerror(const char *myerr)
 {
   strncpy(myerrorbuf, myerr, 512);
   myerrorbuf[511] = 0; /* just in case string was too long */

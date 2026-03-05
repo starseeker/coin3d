@@ -123,7 +123,7 @@ SoNotRec::setPrevious(const SoNotRec * const prevptr)
   Prints debug information.
 */
 void
-SoNotRec::print(FILE * const file) const
+SoNotRec::print([[maybe_unused]] FILE * const file) const
 {
 #if OBOL_DEBUG
   (void)fprintf(file, "\tSoNotRec %p: type ", this);

@@ -74,8 +74,8 @@
   A constructor. Supply a callback if you need to handle additional
   data per vertex.
 */
-SbClip::SbClip(SbClipCallback * callback, void * userdata)
-  : callback(callback),
+SbClip::SbClip(SbClipCallback * cb, void * userdata)
+  : callback(cb),
     cbdata(userdata),
     curr(0)
 {

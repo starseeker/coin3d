@@ -44,13 +44,13 @@ static uint32_t shaderid = 0;
 
 // *************************************************************************
 
-SoGLShaderObject::SoGLShaderObject(const uint32_t cachecontext)
+SoGLShaderObject::SoGLShaderObject(const uint32_t cc)
 {
   this->isActiveFlag = TRUE;
   this->shadertype = VERTEX;
   this->paramsdirty = TRUE;
-  this->glctx = SoGLContext_instance(cachecontext);
-  this->cachecontext = cachecontext;
+  this->glctx = SoGLContext_instance(cc);
+  this->cachecontext = cc;
   this->id = ++shaderid;
 }
 

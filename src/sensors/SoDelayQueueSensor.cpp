@@ -80,8 +80,8 @@ SoDelayQueueSensor::SoDelayQueueSensor(void)
 
   \sa setFunction(), setData()
  */
-SoDelayQueueSensor::SoDelayQueueSensor(SoSensorCB * func, void * data)
-  : inherited(func, data)
+SoDelayQueueSensor::SoDelayQueueSensor(SoSensorCB * cbfunc, void * cbdata)
+  : inherited(cbfunc, cbdata)
 {
   this->scheduled = FALSE;
   this->priority = SoDelayQueueSensor::getDefaultPriority();

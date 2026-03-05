@@ -77,7 +77,7 @@ SoGLEnvironmentElement::init(SoState * state)
 // doc in superclass
 void
 SoGLEnvironmentElement::pop(SoState * OBOL_UNUSED_ARG(state),
-                           const SoElement * prevTopElement)
+                           const SoElement * OBOL_UNUSED_ARG(prevTopElement))
 {
   this->capture(state);
   this->updategl(state);

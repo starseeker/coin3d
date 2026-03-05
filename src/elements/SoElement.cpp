@@ -590,7 +590,7 @@ void
 SoElement::print(FILE * file) const
 {
   (void)fprintf(file, "%s[%p]\n",
-                this->getTypeId().getName().getString(), this);
+                this->getTypeId().getName().getString(), (void*)this);
 }
 
 /*!
@@ -639,9 +639,9 @@ SoElement::getIdFromStackIndex(const int stackIndex)
   Sets the depth value of the element instance in the state stack.
 */
 void
-SoElement::setDepth(const int depth)
+SoElement::setDepth(const int new_depth)
 {
-  this->depth = depth;
+  this->depth = new_depth;
 }
 
 /*!
@@ -692,9 +692,9 @@ SoElement::captureThis(SoState * state) const
   type system.
 */
 void
-SoElement::setTypeId(const SoType typeId)
+SoElement::setTypeId(const SoType new_typeId)
 {
-  this->typeId = typeId;
+  this->typeId = new_typeId;
 }
 
 /*!
@@ -725,9 +725,9 @@ SoElement::getStackIndex(void) const
   derived elements.
 */
 void
-SoElement::setStackIndex(const int stackIndex)
+SoElement::setStackIndex(const int new_stackIndex)
 {
-  this->stackIndex = stackIndex;
+  this->stackIndex = new_stackIndex;
 }
 
 /*!

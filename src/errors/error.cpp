@@ -132,7 +132,7 @@ cc_error_init(cc_error * me)
 */
 
 void
-cc_error_clean(cc_error * me)
+cc_error_clean(cc_error * OBOL_UNUSED_ARG(me))
 {
   // std::string automatically cleans up
   // No explicit cleanup needed

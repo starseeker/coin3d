@@ -101,8 +101,11 @@
 
 // *************************************************************************
 
+// set to 1 to enable GL cache debug output
 #if OBOL_DEBUG
-#define GLCACHE_DEBUG 0 // set to 1 to debug caching
+#define GLCACHE_DEBUG 1
+#else
+#define GLCACHE_DEBUG 0
 #endif
 
 // *************************************************************************

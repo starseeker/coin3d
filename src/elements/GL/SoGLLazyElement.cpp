@@ -350,7 +350,7 @@ SoGLLazyElement::enableBlending(const int sfactor, const int dfactor) const
 }
 
 inline void
-SoGLLazyElement::enableSeparateBlending(const SoGLContext * glue,
+SoGLLazyElement::enableSeparateBlending(const SoGLContext * ctx,
                                         const int sfactor,
                                         const int dfactor,
                                         const int alpha_sfactor,
@@ -358,8 +358,8 @@ SoGLLazyElement::enableSeparateBlending(const SoGLContext * glue,
 {
   SoGLContext_glEnable(this->glue, GL_BLEND);
 
-  if (SoGLContext_has_blendfuncseparate(glue)) {
-    SoGLContext_glBlendFuncSeparate(glue, sfactor, dfactor, alpha_sfactor, alpha_dfactor);
+  if (SoGLContext_has_blendfuncseparate(ctx)) {
+    SoGLContext_glBlendFuncSeparate(ctx, sfactor, dfactor, alpha_sfactor, alpha_dfactor);
   }
   else {
       // fall back to normal blending

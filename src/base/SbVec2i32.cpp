@@ -375,7 +375,7 @@ SbVec2i32::operator *= (double d)
   debug version of library, method does nothing in an optimized build.
  */
 void
-SbVec2i32::print(FILE * fp) const
+SbVec2i32::print([[maybe_unused]] FILE * fp) const
 {
 #if OBOL_DEBUG
   fprintf( fp, "<%d, %d>", this->vec[0], this->vec[1] );

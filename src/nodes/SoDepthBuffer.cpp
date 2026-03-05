@@ -193,7 +193,7 @@ SoDepthBuffer::GLRender(SoGLRenderAction * action)
   SoState * state = action->getState();
   SbBool testenable = this->test.getValue();
   SbBool writeenable = this->write.getValue();
-  SoDepthBufferElement::DepthWriteFunction function =
+  SoDepthBufferElement::DepthWriteFunction func =
     static_cast<SoDepthBufferElement::DepthWriteFunction>(this->function.getValue());
   SbVec2f depthrange = this->range.getValue();
 
@@ -207,13 +207,13 @@ SoDepthBuffer::GLRender(SoGLRenderAction * action)
     writeenable = SoDepthBufferElement::getWriteEnable(state);
   }
   if (this->function.isIgnored()) {
-    function = SoDepthBufferElement::getFunction(state);
+    func = SoDepthBufferElement::getFunction(state);
   }
   if (this->range.isIgnored()) {
-    range = SoDepthBufferElement::getRange(state);
+    depthrange = SoDepthBufferElement::getRange(state);
   }
 
   // update element
   SoDepthBufferElement::set(state, testenable, writeenable,
-                            function, depthrange);
+                            func, depthrange);
 }

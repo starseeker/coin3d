@@ -424,7 +424,7 @@ SbVec3s::fromString(const SbString & str)
   debug version of library, method does nothing in an optimized build.
 */
 void
-SbVec3s::print(FILE * fp) const
+SbVec3s::print([[maybe_unused]] FILE * fp) const
 {
 #if OBOL_DEBUG
   SbString str = "<";

@@ -130,11 +130,11 @@ SoGLMultiTextureEnabledElement::setElt(const int unit, const int value)
 void
 SoGLMultiTextureEnabledElement::updategl(const int unit)
 {
-  const SoGLContext * glue = SoGLContext_instance(this->cachecontext);
-  SoGLContext_glActiveTexture(glue, (GLenum) (int(GL_TEXTURE0) + unit));
+  const SoGLContext * ctx = SoGLContext_instance(this->cachecontext);
+  SoGLContext_glActiveTexture(ctx, (GLenum) (int(GL_TEXTURE0) + unit));
   if (this->isEnabled(unit)) SoGLContext_glEnable(this->glue, GL_TEXTURE_2D);
   else SoGLContext_glDisable(this->glue, GL_TEXTURE_2D);
-  SoGLContext_glActiveTexture(glue, (GLenum) GL_TEXTURE0);
+  SoGLContext_glActiveTexture(ctx, (GLenum) GL_TEXTURE0);
 
   GLenum glerror =  sogl_glerror_debugging() ? glGetError() : GL_NO_ERROR;
   while (glerror) {
@@ -147,8 +147,8 @@ SoGLMultiTextureEnabledElement::updategl(const int unit)
 void
 SoGLMultiTextureEnabledElement::updategl(const int unit, const Mode newvalue, const Mode oldvalue)
 {
-  const SoGLContext * glue = SoGLContext_instance(this->cachecontext);
-  SoGLContext_glActiveTexture(glue, (GLenum) (int(GL_TEXTURE0) + unit));
+  const SoGLContext * ctx = SoGLContext_instance(this->cachecontext);
+  SoGLContext_glActiveTexture(ctx, (GLenum) (int(GL_TEXTURE0) + unit));
 
   switch (oldvalue) {
   case DISABLED:
@@ -188,7 +188,7 @@ SoGLMultiTextureEnabledElement::updategl(const int unit, const Mode newvalue, co
     assert(0 && "should not happen");
     break;
   }
-  SoGLContext_glActiveTexture(glue, (GLenum) GL_TEXTURE0);
+  SoGLContext_glActiveTexture(ctx, (GLenum) GL_TEXTURE0);
 
   GLenum glerror =  sogl_glerror_debugging() ? glGetError() : GL_NO_ERROR;
   while (glerror) {

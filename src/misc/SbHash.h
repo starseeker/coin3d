@@ -149,9 +149,9 @@ class SbHash {
       SbHashEntry * entry = static_cast<SbHashEntry *>( ptr);
       cc_memalloc_deallocate(entry->memhandler, ptr);
     }
-  SbHashEntry(const Key & key, const Type & obj) : key(key), obj(obj) {}
-  SbHashEntry(const Key & key, const Type & obj, cc_memalloc *memhandler) 
-		: key(key), obj(obj), memhandler(memhandler) {}
+  SbHashEntry(const Key & k, const Type & v) : key(k), obj(v) {}
+  SbHashEntry(const Key & k, const Type & v, cc_memalloc *mh) 
+		: key(k), obj(v), memhandler(mh) {}
 
     Key key;
     Type obj;
@@ -527,7 +527,7 @@ public:
     memset(this->buckets, 0, this->size * sizeof(SbHashEntry *));
   }
 
-  void getStats(int & buckets_used, int & buckets, int & elements, float & chain_length_avg, int & chain_length_max)
+  void getStats(int & buckets_used, int & buckets_count, int & elements_count, float & chain_length_avg, int & chain_length_max)
   {
     unsigned int i;
     buckets_used = 0, chain_length_max = 0;
@@ -543,8 +543,8 @@ public:
         if (chain_l > chain_length_max) { chain_length_max = chain_l; }
       }
     }
-    buckets = this->size;
-    elements = this->elements;
+    buckets_count = this->size;
+    elements_count = this->elements;
     chain_length_avg = static_cast<float>( this->elements / buckets_used);
   }
 

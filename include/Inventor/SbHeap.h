@@ -46,7 +46,7 @@ typedef struct
 
 class OBOL_DLL_API SbHeap {
 public:
-  SbHeap(const SbHeapFuncs &SbHeapFuncs,
+  SbHeap(const SbHeapFuncs &i_SbHeapFuncs,
          const int initsize = 1024);
   ~SbHeap();
 

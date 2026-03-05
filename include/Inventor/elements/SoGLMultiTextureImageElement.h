@@ -84,6 +84,7 @@ public:
   public:
   GLUnitData() : glimage(NULL) {}
   GLUnitData(const GLUnitData & org) : glimage(org.glimage) {}
+  GLUnitData & operator=(const GLUnitData &) = default;
     SoGLImage * glimage;
   };
   

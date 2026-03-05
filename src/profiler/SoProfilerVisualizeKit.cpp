@@ -164,7 +164,7 @@ SoProfilerVisualizeKit::SoProfilerVisualizeKit()
   PRIVATE(this)->statsSensor.reset(new SoFieldSensor(statsCB, this));
   PRIVATE(this)->statsSensor->attach(&this->stats);
 
-  SoGroup * pretree = (SoGroup *)this->getAnyPart("pretree", TRUE);
+  SoGroup * pretree_grp = (SoGroup *)this->getAnyPart("pretree", TRUE);
 
   SoScale * treescale = new SoScale;
   treescale->scaleFactor.setValue(0.02f, 0.02f, 1.0f);
@@ -176,11 +176,11 @@ SoProfilerVisualizeKit::SoProfilerVisualizeKit()
   SoMaterial * m = new SoMaterial;
   SoTranslation * tr = new SoTranslation;
   tr->translation.setValue(0.0f, 0.0f, -2.0f);
-  pretree->addChild(treescale);
-  pretree->addChild(lm);
-  pretree->addChild(dl);
-  pretree->addChild(m);
-  pretree->addChild(tr);
+  pretree_grp->addChild(treescale);
+  pretree_grp->addChild(lm);
+  pretree_grp->addChild(dl);
+  pretree_grp->addChild(m);
+  pretree_grp->addChild(tr);
 }
 
 SoProfilerVisualizeKit::~SoProfilerVisualizeKit()

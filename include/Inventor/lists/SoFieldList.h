@@ -52,6 +52,7 @@ public:
   SoFieldList(void) : SbPList() { }
   SoFieldList(const int sizehint) : SbPList(sizehint) { }
   SoFieldList(const SoFieldList & l) : SbPList(l) { }
+  SoFieldList & operator=(const SoFieldList &) = default;
   
   void append(SoField * field) { 
     SbPList::append(static_cast<void *>(field));

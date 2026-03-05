@@ -147,15 +147,17 @@ const SoOverrideElement * const element = \
 return (element->flags & flag)
 
 #define SO_SET_OVERRIDE(flag) \
-SoOverrideElement * const element = \
-  const_cast<SoOverrideElement * const> \
+do { \
+SoOverrideElement * const over_elem = \
+  const_cast<SoOverrideElement *> \
   ( \
    coin_safe_cast<const SoOverrideElement *>(getElement(state, classStackIndex)) \
     ); \
-if (element && override) \
-  element->flags |= flag; \
-else if (element) \
-  element->flags &= ~flag
+if (over_elem && override) \
+  over_elem->flags |= flag; \
+else if (over_elem) \
+  over_elem->flags &= ~flag; \
+} while (0)
 
 // *************************************************************************
 

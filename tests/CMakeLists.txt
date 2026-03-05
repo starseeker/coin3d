@@ -122,8 +122,40 @@ if(OBOL_BUILD_VIEWER)
         endif()
     endif()
 
-    # Optional NanoRT panel: enabled when nanort.h is found in external/nanort/
-    if(EXISTS "${PROJECT_SOURCE_DIR}/external/nanort/nanort.h")
+    # Optional CPU raytracing panel: Embree (preferred) or NanoRT fallback.
+    #
+    # OBOL_VIEWER_USE_EMBREE (default ON when embree 4 is found on the system)
+    # selects the Embree 4 CPU raytracing panel as an alternative to NanoRT.
+    # When Embree is enabled, the NanoRT panel is skipped.  If neither backend
+    # is available the viewer builds without a CPU raytracing panel.
+    find_package(embree 4 QUIET
+        HINTS /usr/lib/x86_64-linux-gnu/cmake/embree-4.3.0
+              /usr/lib/cmake/embree4
+              /usr/local/lib/cmake/embree4)
+    if(embree_FOUND OR TARGET embree4)
+        if(TARGET embree4)
+            set(_obol_embree_link embree4)
+        else()
+            set(_obol_embree_link embree)
+        endif()
+        option(OBOL_VIEWER_USE_EMBREE
+            "Use Embree (rather than NanoRT) as the CPU raytracing panel in obol_viewer"
+            ON)
+    else()
+        option(OBOL_VIEWER_USE_EMBREE
+            "Use Embree (rather than NanoRT) as the CPU raytracing panel in obol_viewer"
+            OFF)
+    endif()
+
+    if(OBOL_VIEWER_USE_EMBREE AND (embree_FOUND OR TARGET embree4))
+        target_compile_definitions(obol_viewer PRIVATE OBOL_VIEWER_EMBREE)
+        target_include_directories(obol_viewer PRIVATE
+            "${CMAKE_CURRENT_SOURCE_DIR}/utils"   # embree_context_manager.h
+        )
+        target_link_libraries(obol_viewer PRIVATE ${_obol_embree_link})
+        message(STATUS "obol_viewer: Embree panel enabled (replaces NanoRT)")
+    elseif(EXISTS "${PROJECT_SOURCE_DIR}/external/nanort/nanort.h")
+        # Embree not available or disabled – fall back to NanoRT if present.
         target_compile_definitions(obol_viewer PRIVATE OBOL_VIEWER_NANORT)
         target_include_directories(obol_viewer PRIVATE
             "${PROJECT_SOURCE_DIR}/external/nanort"
@@ -131,7 +163,7 @@ if(OBOL_BUILD_VIEWER)
         )
         message(STATUS "obol_viewer: NanoRT panel enabled (external/nanort/nanort.h found)")
     else()
-        message(STATUS "obol_viewer: NanoRT panel disabled (external/nanort/nanort.h not found)")
+        message(STATUS "obol_viewer: No CPU raytracing panel (neither Embree nor NanoRT found)")
     endif()
 
     # Link against obol_testlib (with --whole-archive so REGISTER_TEST static
@@ -169,6 +201,70 @@ if(OBOL_BUILD_VIEWER)
 
     install(TARGETS obol_viewer RUNTIME DESTINATION bin)
 endif() # OBOL_BUILD_VIEWER
+
+# -----------------------------------------------------------------------
+# Qt scene viewer  (obol_qt_viewer)
+# Placed here so obol_testlib (scene catalogue) is already defined.
+# Enabled by -DOBOL_BUILD_QT_VIEWER=ON at CMake configure time (auto-
+# detected when Qt6 is found; requires OBOL_BUILD_TESTS=ON).
+# -----------------------------------------------------------------------
+if(OBOL_BUILD_QT_VIEWER)
+    add_executable(obol_qt_viewer obol_qt_viewer.cpp)
+
+    # Enable Qt's automatic MOC/UIC/RCC processing for this target.
+    set_target_properties(obol_qt_viewer PROPERTIES
+        AUTOMOC ON
+        AUTOUIC ON
+    )
+
+    target_include_directories(obol_qt_viewer PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}           # testlib/test_registry.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/utils     # qt_context_manager.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/testlib   # test_registry.h (direct)
+        ${PROJECT_SOURCE_DIR}/include
+        ${PROJECT_SOURCE_DIR}/include/Inventor/annex
+        ${PROJECT_BINARY_DIR}/include
+        ${OBOL_TARGET_INCLUDE_DIRECTORIES}
+    )
+
+    # Link against obol_testlib (with --whole-archive to preserve static
+    # initialisers), the Obol library, and Qt6 Widgets + Gui.
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_link_libraries(obol_qt_viewer
+            PRIVATE
+                -Wl,--whole-archive obol_testlib -Wl,--no-whole-archive
+                ${PROJECT_NAME}
+                ${OBOL_TARGET_LINK_LIBRARIES}
+                Qt6::Widgets
+                Qt6::Gui
+        )
+    else()
+        target_link_libraries(obol_qt_viewer
+            PRIVATE
+                obol_testlib
+                ${PROJECT_NAME}
+                ${OBOL_TARGET_LINK_LIBRARIES}
+                Qt6::Widgets
+                Qt6::Gui
+        )
+    endif()
+
+    # On Linux, link OpenGL explicitly (for glXGetProcAddress used by
+    # qt_context_manager.h on X11/Linux).
+    if(UNIX AND NOT APPLE)
+        if(X11_FOUND)
+            target_link_libraries(obol_qt_viewer PRIVATE ${X11_X11_LIB})
+        endif()
+        if(TARGET OpenGL::GL)
+            target_link_libraries(obol_qt_viewer PRIVATE OpenGL::GL)
+        elseif(OPENGL_gl_LIBRARY)
+            target_link_libraries(obol_qt_viewer PRIVATE ${OPENGL_gl_LIBRARY})
+        endif()
+    endif()
+
+    install(TARGETS obol_qt_viewer RUNTIME DESTINATION bin)
+    message(STATUS "obol_qt_viewer: enabled (Qt6 ${Qt6_VERSION})")
+endif() # OBOL_BUILD_QT_VIEWER
 
 # -----------------------------------------------------------------------
 # Unified CLI runner (legacy – kept for backward compatibility)

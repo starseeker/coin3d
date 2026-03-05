@@ -155,7 +155,7 @@
 
 class SoInteractionKitP {
 public:
-  SoInteractionKitP(SoInteractionKit * kit) : kit(kit) { }
+  SoInteractionKitP(SoInteractionKit * k) : kit(k) { }
 
   SoInteractionKit * kit;
   SoFieldSensor * fieldsensor;
@@ -346,14 +346,14 @@ SoInteractionKit::isPathSurrogateInMySubgraph(const SoPath * path,
     sa.apply(this);
     SoPathList & pathlist = sa.getPaths();
     for (int i = 0; i < pathlist.getLength(); i++) {
-      SoInteractionKit * kit = (SoInteractionKit *)pathlist[i]->getTail();
-      assert(kit->isOfType(SoInteractionKit::getClassTypeId()));
-      int idx = kit->pimpl->findSurrogateInPath(path);
-      if (idx >= 0) {
+      SoInteractionKit * found_kit = (SoInteractionKit *)pathlist[i]->getTail();
+      assert(found_kit->isOfType(SoInteractionKit::getClassTypeId()));
+      int found_idx = found_kit->pimpl->findSurrogateInPath(path);
+      if (found_idx >= 0) {
         if (fillargs) {
           pathToOwner = pathlist[i]->copy();
-          surrogatename = kit->pimpl->surrogatenamelist[idx];
-          surrogatepath = kit->pimpl->surrogatepathlist[idx];
+          surrogatename = found_kit->pimpl->surrogatenamelist[found_idx];
+          surrogatepath = found_kit->pimpl->surrogatepathlist[found_idx];
         }
         return TRUE;
       }

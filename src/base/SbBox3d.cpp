@@ -457,7 +457,7 @@ SbBox3d::transform(const SbDPMatrix & matrix)
   debug version of library, method does nothing in an optimized build.
  */
 void
-SbBox3d::print(FILE * fp) const
+SbBox3d::print([[maybe_unused]] FILE * fp) const
 {
 #if OBOL_DEBUG
   SbVec3d minv, maxv;

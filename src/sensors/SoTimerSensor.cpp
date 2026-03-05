@@ -71,8 +71,8 @@ SoTimerSensor::SoTimerSensor(void)
 
   \sa setFunction(), setData()
  */
-SoTimerSensor::SoTimerSensor(SoSensorCB * func, void * data)
-  : inherited(func, data)
+SoTimerSensor::SoTimerSensor(SoSensorCB * cbfunc, void * cbdata)
+  : inherited(cbfunc, cbdata)
 {
   this->interval.setValue(1.0f/30.0f);
   this->setbasetime = FALSE;

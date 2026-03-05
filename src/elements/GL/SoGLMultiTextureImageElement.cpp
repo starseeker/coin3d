@@ -322,8 +322,8 @@ SoGLMultiTextureImageElement::updateGL(const int unit)
     PRIVATE(this)->defaultdata;
   
   if (glud.glimage) {
-    const SoGLContext * glue = SoGLContext_instance(PRIVATE(this)->cachecontext);
-    SoGLContext_glActiveTexture(glue, (GLenum) (int(GL_TEXTURE0) + unit));
+    const SoGLContext * ctx = SoGLContext_instance(PRIVATE(this)->cachecontext);
+    SoGLContext_glActiveTexture(ctx, (GLenum) (int(GL_TEXTURE0) + unit));
 
     const UnitData & ud = this->getUnitData(unit);
     SoState * state = PRIVATE(this)->state;
@@ -364,7 +364,7 @@ SoGLMultiTextureImageElement::updateGL(const int unit)
     if (dl) {
       dl->call(state);
     }
-    SoGLContext_glActiveTexture(glue, (GLenum) GL_TEXTURE0);
+    SoGLContext_glActiveTexture(ctx, (GLenum) GL_TEXTURE0);
 
     GLenum glerror = sogl_glerror_debugging() ? glGetError() : GL_NO_ERROR;
     while (glerror) {

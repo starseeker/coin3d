@@ -139,7 +139,7 @@
 class SoSwitchP
 {
 public:
-  SoSwitchP(SoSwitch * master) : master(master) {};
+  SoSwitchP(SoSwitch * pub) : master(pub) {};
   SoSwitch *master;
 };
 

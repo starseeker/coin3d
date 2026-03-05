@@ -198,7 +198,7 @@ SoDBP::listWin32ProcessModules(void)
 #endif // !HAVE_WINDLL_RUNTIME_BINDING || !HAVE_TLHELP32_H
 
 SoSeparator *
-SoDBP::read3DSFile(SoInput * in)
+SoDBP::read3DSFile(SoInput * OBOL_UNUSED_ARG(in))
 {
   assert(SoDBP::is3dsFile(in));
 

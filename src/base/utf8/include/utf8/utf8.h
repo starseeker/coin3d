@@ -268,7 +268,7 @@ bool is_valid (const char* p)
 inline
 bool is_valid (std::string::const_iterator p, const std::string::const_iterator last)
 {
-  auto len = last - p;
+  [[maybe_unused]] auto len = last - p;
   auto prev_mode = error_mode (action::replace);
   bool valid = (next (p, last) != REPLACEMENT_CHARACTER);
   error_mode (prev_mode);

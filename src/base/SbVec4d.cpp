@@ -404,7 +404,7 @@ SbVec4d::setValue(const SbVec4i32 & v)
   debug version of library, method does nothing in an optimized build.
  */
 void
-SbVec4d::print(FILE * fp) const
+SbVec4d::print([[maybe_unused]] FILE * fp) const
 {
 #if OBOL_DEBUG
   fprintf( fp, "<%f, %f, %f, %f>", this->vec[0], this->vec[1], this->vec[2],

@@ -1282,15 +1282,15 @@ SoNode::write(SoWriteAction * action)
     // SoEngineOutput "field". An engine output might be connected via
     // an IS reference in a PROTO, and we then need to write back this
     // IS reference when exporting the file.
-    SoProto * proto = out->getCurrentProto();
-    if (proto && node->isOfType(SoNodeEngine::getClassTypeId())) {
+    SoProto * current_proto = out->getCurrentProto();
+    if (current_proto && node->isOfType(SoNodeEngine::getClassTypeId())) {
       SoEngineOutputList l;
       const int num = ((SoNodeEngine*)node)->getOutputs(l);
 
       for (int i = 0; i < num; i++) {
         SbName name;
         if (((SoNodeEngine*)node)->getOutputName(l[i], name)) {
-          SbName pname = proto->findISReference(node, name);
+          SbName pname = current_proto->findISReference(node, name);
           if (pname.getLength()) {
             out->indent();
             out->write(name.getString());

@@ -59,8 +59,8 @@ SoOneShotSensor::SoOneShotSensor(void)
 
   \sa setFunction(), setData()
  */
-SoOneShotSensor::SoOneShotSensor(SoSensorCB *func, void *data)
-  : inherited(func, data)
+SoOneShotSensor::SoOneShotSensor(SoSensorCB *cbfunc, void *cbdata)
+  : inherited(cbfunc, cbdata)
 {
 }
 

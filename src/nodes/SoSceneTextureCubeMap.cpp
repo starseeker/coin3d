@@ -482,8 +482,8 @@ SoSceneTextureCubeMapP::updatePBuffer(SoState * state, const float quality)
     SoGLContext_glEnable(sogl_glue_from_state(state), GL_DEPTH_TEST);
 
     if (!this->canrendertotexture) {
-      SbVec2s size = this->glcontextsize;
-      int cubeSideSize = size[0]*size[1]*4;
+      SbVec2s ctx_size = this->glcontextsize;
+      int cubeSideSize = ctx_size[0]*ctx_size[1]*4;
       int reqbytes = cubeSideSize*6; // 6 cube sides
       if (reqbytes > this->offscreenbuffersize) {
         delete[] this->offscreenbuffer;
@@ -498,7 +498,7 @@ SoSceneTextureCubeMapP::updatePBuffer(SoState * state, const float quality)
         SoGLContext_glFlush(sogl_glue_from_state(state));
 
         SoGLContext_glPixelStorei(sogl_glue_from_state(state), GL_PACK_ALIGNMENT, 1);
-        SoGLContext_glReadPixels(sogl_glue_from_state(state), 0,0,size[0],size[1],GL_RGBA,GL_UNSIGNED_BYTE,cubeSidePtr);
+        SoGLContext_glReadPixels(sogl_glue_from_state(state), 0,0,ctx_size[0],ctx_size[1],GL_RGBA,GL_UNSIGNED_BYTE,cubeSidePtr);
         SoGLContext_glPixelStorei(sogl_glue_from_state(state), GL_PACK_ALIGNMENT, 4);
         cubeSidePtr += cubeSideSize;
       }

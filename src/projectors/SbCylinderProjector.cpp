@@ -97,10 +97,10 @@ SbCylinderProjector::SbCylinderProjector(const SbBool orienttoeye)
 /*!
   Constructor taking an explicit \a cylinder projection definition.
 */
-SbCylinderProjector::SbCylinderProjector(const SbCylinder & cylinder,
+SbCylinderProjector::SbCylinderProjector(const SbCylinder & cyl,
                                          const SbBool orienttoeye)
   : intersectFront(TRUE),
-    cylinder(cylinder),
+    cylinder(cyl),
     orientToEye(orienttoeye),
     needSetup(TRUE)
 {

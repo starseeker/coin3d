@@ -49,8 +49,8 @@ class SoInput_FileInfo;
 
 class SoInputP {
 public:
-  SoInputP(SoInput * owner) {
-    this->owner = owner;
+  SoInputP(SoInput * pub) {
+    this->owner = pub;
     this->usingstdin = FALSE;
     this->contextManager = nullptr;
   }

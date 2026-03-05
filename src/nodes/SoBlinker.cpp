@@ -89,7 +89,7 @@ SO_NODE_SOURCE(SoBlinker);
 
 class SoBlinkerP {
 public:
-  SoBlinkerP(SoBlinker * master) : master(master) { }
+  SoBlinkerP(SoBlinker * pub) : master(pub) { }
 
   static void whichChildCB(void * closure, SoSensor * OBOL_UNUSED_ARG(sensor)) {
     SoBlinkerP * thisp = (SoBlinkerP*) closure;

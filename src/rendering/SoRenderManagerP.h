@@ -148,7 +148,7 @@ class SoRenderManagerRootSensor : public SoNodeSensor {
   typedef SoNodeSensor inherited;
 
 public:
-  SoRenderManagerRootSensor(SoSensorCB * func, void * data) : inherited(func, data) { }
+  SoRenderManagerRootSensor(SoSensorCB * f, void * d) : inherited(f, d) { }
   virtual ~SoRenderManagerRootSensor() { }
 
   virtual void notify(SoNotList * l);

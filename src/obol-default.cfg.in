@@ -1,0 +1,4 @@
+# Obol @OBOL_VERSION@ default runtime configuration file.
+# This file is read by the Obol library at startup to apply default settings.
+# Lines beginning with '#' are comments.  The format is:
+#   <variable-name> <value>

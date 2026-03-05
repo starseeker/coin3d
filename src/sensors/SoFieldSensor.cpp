@@ -61,8 +61,8 @@ SoFieldSensor::SoFieldSensor(void)
 
   \sa setFunction(), setData()
  */
-SoFieldSensor::SoFieldSensor(SoSensorCB * func, void * data)
-  : inherited(func, data)
+SoFieldSensor::SoFieldSensor(SoSensorCB * f, void * d)
+  : inherited(f, d)
 {
   this->convict = NULL;
 }

@@ -194,10 +194,10 @@ public:
   uint32_t rendercnt : RENDERCNT_BITS;
 
   // needed since some VRML97 nodes change the GL state inside the node
-  void testSetupShapeHints(SoShape * shape) {
+  void testSetupShapeHints(SoShape * /*shape*/) {
     // VRML97 support removed - this function is now a no-op
   }
-  void setupShapeHints(SoShape * shape, SoState * state) {
+  void setupShapeHints(SoShape * /*shape*/, SoState * /*state*/) {
     // VRML97 support removed - this function is now a no-op
   }
 

@@ -48,9 +48,9 @@
 #define PRIVATE(p) (p->pimpl)
 #define PUBLIC(p) (p->publ)
 
-SoSceneManagerP::SoSceneManagerP(SoSceneManager * publ) 
+SoSceneManagerP::SoSceneManagerP(SoSceneManager * pub) 
 {
-  PUBLIC(this) = publ;
+  PUBLIC(this) = pub;
   this->searchaction = new SoSearchAction;
 }
 

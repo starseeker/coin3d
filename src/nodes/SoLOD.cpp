@@ -142,7 +142,7 @@
 class SoLODP
 {
 public:
-  SoLODP(SoLOD * master) : master(master) {};
+  SoLODP(SoLOD * pub) : master(pub) {};
   SoLOD *master;
 };
 

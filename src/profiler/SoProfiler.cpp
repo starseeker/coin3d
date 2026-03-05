@@ -469,11 +469,11 @@ SoProfilerP::parseCoinProfilerOverlayVariable(void)
           toplisttype = INVALID;
         }
         if (toplisttype != INVALID) {
-          std::vector<std::string>::iterator it = subargs.begin();
-          ++it;
-          while (it != subargs.end()) {
+          std::vector<std::string>::iterator sub_it = subargs.begin();
+          ++sub_it;
+          while (sub_it != subargs.end()) {
             std::vector<std::string> subarg;
-            tokenize((*it).data(), "=", subarg, 2);
+            tokenize((*sub_it).data(), "=", subarg, 2);
             if (subarg[0].compare("header") == 0) {
               // display header on toplist
             }
@@ -507,7 +507,7 @@ SoProfilerP::parseCoinProfilerOverlayVariable(void)
             else if ((subarg[0].compare("exclusive") == 0) && (toplisttype != ACTION_TYPE)) {
               // no argument
             }
-            ++it;
+            ++sub_it;
           }
         } else {
           // FIXME: implement proper action

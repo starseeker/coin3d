@@ -162,12 +162,12 @@ using std::toupper;
 
 struct SoTypeData {
   SoTypeData(const SbName theName,
-             const SoType type = SoType::badType(),
+             const SoType tp = SoType::badType(),
              const SbBool ispublic = FALSE,
              const uint16_t theData = 0,
              const SoType theParent = SoType::badType(),
              const SoType::instantiationMethod createMethod = NULL)
-    : name(theName), type(type), isPublic(ispublic), data(theData),
+    : name(theName), type(tp), isPublic(ispublic), data(theData),
       parent(theParent), method(createMethod) { };
 
   SbName name;
@@ -684,9 +684,9 @@ SoType::fromName(const SbName name)
           if (i > 0) {
             // We now know the file pattern used on this system, so we
             // should prioritize that pattern first.
-            const char * pattern = modulenamepatterns[i];
+            const char * local_pattern = modulenamepatterns[i];
             modulenamepatterns[i] = modulenamepatterns[0];
-            modulenamepatterns[0] = pattern;
+            modulenamepatterns[0] = local_pattern;
           }
         }
       }

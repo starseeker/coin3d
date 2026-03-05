@@ -59,8 +59,8 @@ SoIdleSensor::SoIdleSensor(void)
 
   \sa setFunction(), setData()
  */
-SoIdleSensor::SoIdleSensor(SoSensorCB * func, void * data)
-  : inherited(func, data)
+SoIdleSensor::SoIdleSensor(SoSensorCB * cbfunc, void * cbdata)
+  : inherited(cbfunc, cbdata)
 {
 }
 

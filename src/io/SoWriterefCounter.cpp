@@ -130,8 +130,8 @@ typedef SbHash<const SoBase *, int> SoBase2Id;
 
 class SoWriterefCounterP {
 public:
-  SoWriterefCounterP(SoWriterefCounter * master, SoOutput * out, SoWriterefCounterP * dataCopy)
-    : master(master), out(out)
+  SoWriterefCounterP(SoWriterefCounter * pub, SoOutput * output, SoWriterefCounterP * dataCopy)
+    : master(pub), out(output)
   {
     if (dataCopy) {
       this->outputdata = dataCopy->outputdata;

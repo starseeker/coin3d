@@ -98,6 +98,7 @@ struct TestEntry {
     bool          has_visual;       /**< Can produce a rendered image */
     bool          has_interactive;  /**< Scene supports camera/event interaction */
     bool          nanort_ok;        /**< NanoRT raytracer can render this scene (false = GL-only) */
+    bool          embree_ok;        /**< Embree raytracer can render this scene (false = GL-only) */
 
     /**
      * Unit-test runner.
@@ -214,6 +215,7 @@ private:
         e.has_visual      = false;                                        \
         e.has_interactive = false;                                        \
         e.nanort_ok       = true;                                         \
+        e.embree_ok       = true;                                         \
         __VA_ARGS__;                                                      \
         ObolTest::TestRegistry::instance().registerTest(e);               \
         return true;                                                      \

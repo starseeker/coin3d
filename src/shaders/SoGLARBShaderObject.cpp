@@ -40,8 +40,8 @@
 
 // *************************************************************************
 
-SoGLARBShaderObject::SoGLARBShaderObject(const uint32_t cachecontext)
-  : SoGLShaderObject(cachecontext)
+SoGLARBShaderObject::SoGLARBShaderObject(const uint32_t cc)
+  : SoGLShaderObject(cc)
 {
   this->arbProgramID = 0;
 }

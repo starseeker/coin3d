@@ -990,7 +990,7 @@ cc_dl_coin_handle(void)
     }
 
     if (func) {
-      if (func == cc_dl_open) { return hnd; }
+      if (func == reinterpret_cast<void*>(&cc_dl_open)) { return hnd; }
 
       if (cc_dl_debugging()) {
         cc_debugerror_post("cc_dl_coin_handle",

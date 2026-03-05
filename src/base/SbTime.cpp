@@ -1045,6 +1045,6 @@ SbTime::addToString(SbString & str, const double v) const
   debug version of library, method does nothing in an optimized build.
  */
 void
-SbTime::print(FILE * fp) const
+SbTime::print([[maybe_unused]] FILE * fp) const
 {
 }

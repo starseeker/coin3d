@@ -94,7 +94,7 @@
 
 class SoSeparatorKitP {
 public:
-  SoSeparatorKitP(SoSeparatorKit * kit) : kit(kit) {}
+  SoSeparatorKitP(SoSeparatorKit * k) : kit(k) {}
 
   SoSeparatorKit * kit;
   SoFieldSensor * fieldsensor;

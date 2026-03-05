@@ -114,7 +114,7 @@ public:
     return static_cast<int>(str_.length());
   }
 
-  void makeEmpty(SbBool freeold = TRUE) {
+  void makeEmpty(SbBool /*freeold*/ = TRUE) {
     str_.clear();
   }
 

@@ -675,7 +675,7 @@ SbViewVolume::getDepth(void) const
   debug version of library, method does nothing in an optimized build.
  */
 void
-SbViewVolume::print(FILE * fp) const
+SbViewVolume::print([[maybe_unused]] FILE * fp) const
 {
 #if OBOL_DEBUG
   fprintf( fp, "  projtype: %d\n", static_cast<int>(this->getProjectionType()) );

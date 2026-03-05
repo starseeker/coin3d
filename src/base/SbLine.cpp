@@ -409,7 +409,7 @@ SbLine::getDirection(void) const
   debug version of library, method does nothing in an optimized build.
  */
 void
-SbLine::print(FILE * fp) const
+SbLine::print([[maybe_unused]] FILE * fp) const
 {
 #if OBOL_DEBUG
   fprintf( fp, "p: " );

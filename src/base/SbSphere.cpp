@@ -227,7 +227,7 @@ SbSphere::pointInside(const SbVec3f &p) const
   debug version of library, method does nothing in an optimized build.
  */
 void
-SbSphere::print(FILE * fp) const
+SbSphere::print([[maybe_unused]] FILE * fp) const
 {
 #if OBOL_DEBUG
   fprintf( fp, "center: " );

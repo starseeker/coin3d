@@ -259,7 +259,7 @@
 
 class SoText3P {
 public:
-  SoText3P(SoText3 * master) : master(master) { 
+  SoText3P(SoText3 * pub) : master(pub) { 
     this->font = new SbFont();  // Initialize with ProFont default
   }
   
@@ -410,8 +410,8 @@ SoText3::computeBBox(SoAction * action, SbBox3f & box, SbVec3f & center)
   int numprofiles = profilenodes.getLength();
   if ( numprofiles > 0) {
     assert(profilenodes[0]->getTypeId().isDerivedFrom(SoProfile::getClassTypeId()));
-    for (int i = numprofiles-1; i >= 0; i--) {
-      SoProfile *pn = (SoProfile *)profilenodes[i];
+    for (int pi = numprofiles-1; pi >= 0; pi--) {
+      SoProfile *pn = (SoProfile *)profilenodes[pi];
       // Skip NURBS profiles as they are no longer supported
       // Only handle linear profiles
       int32_t num;
@@ -839,7 +839,6 @@ SoText3P::render(SoState * state, const cc_font_specification * fontspec,
           int numedgeindices = 0;
           const int * indices = this->font->getGlyphEdgeIndices(glyphidx, numedgeindices);
           int ind = 0;
-          SbVec3f normala, normalb;
 
           SbList <SbVec3f> vertexlist;
           this->normalgenerator->reset(FALSE);
@@ -895,8 +894,8 @@ SoText3P::render(SoState * state, const cc_font_specification * fontspec,
             SbVec2f startb(vb[0], vb[1]);
 
             for (int j=firstprofile; j<numprofiles; j++) {
-              SoProfile * pn = (SoProfile *) profilenodes[j];
-              pn->getVertices(state, profnum, profcoords);
+              SoProfile * pn_iter = (SoProfile *) profilenodes[j];
+              pn_iter->getVertices(state, profnum, profcoords);
 
               for (int k=1; k<profnum; k++) {
 
@@ -1296,7 +1295,6 @@ SoText3P::generate(SoAction * action, const cc_font_specification * fontspec,
           int numedgeindices = 0;
           const int *indices = this->font->getGlyphEdgeIndices(glyphidx, numedgeindices);
           int ind = 0;
-          SbVec3f normala, normalb;
 
           SbList <SbVec3f> vertexlist;
           this->normalgenerator->reset(FALSE);
@@ -1352,8 +1350,8 @@ SoText3P::generate(SoAction * action, const cc_font_specification * fontspec,
             SbVec2f startb(vb[0], vb[1]);
 
             for (int j=firstprofile; j<numprofiles; j++) {
-              SoProfile *pn = (SoProfile *)profilenodes[j];
-              pn->getVertices(state, profnum, profcoords);
+              SoProfile *pn_iter = (SoProfile *)profilenodes[j];
+              pn_iter->getVertices(state, profnum, profcoords);
 
               for (int k=1; k<profnum; k++) {
 

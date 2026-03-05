@@ -375,7 +375,7 @@ operator !=(const SbPlane& p1, const SbPlane& p2)
   debug version of library, method does nothing in an optimized build.
 */
 void
-SbPlane::print(FILE * fp) const
+SbPlane::print([[maybe_unused]] FILE * fp) const
 {
 #if OBOL_DEBUG
   this->getNormal().print(fp);

@@ -531,10 +531,10 @@ SoAction::apply(SoNode * root)
     }
 
     // start profiling
-    SoState * state = this->getState();
+    SoState * action_state = this->getState();
     if (SoProfiler::isEnabled() &&
-        state->isElementEnabled(SoProfilerElement::getClassStackIndex())) {
-      SoProfilerElement * elt = SoProfilerElement::get(state);
+        action_state->isElementEnabled(SoProfilerElement::getClassStackIndex())) {
+      SoProfilerElement * elt = SoProfilerElement::get(action_state);
       assert(elt && "SoProfilerElement unexpectedly NULL when element is enabled");
       if (elt) {
         SbProfilingData & data = elt->getProfilingData();

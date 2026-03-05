@@ -349,7 +349,7 @@
 class SoShadowLightCache {
 public:
   SoShadowLightCache(SoState * state,
-                     const SoPath * path,
+                     const SoPath * light_path,
                      SoShadowGroup * sg,
                      SoNode * scene,
                      SoNode * bboxscene,
@@ -412,11 +412,11 @@ public:
     this->shadowmatrix->ref();
     this->shadowmatrix->value = SbMatrix::identity();
 
-    this->path = path->copy();
+    this->path = light_path->copy();
     this->path->ref();
-    assert(((SoFullPath*)path)->getTail()->isOfType(SoLight::getClassTypeId()));
+    assert(((SoFullPath*)light_path)->getTail()->isOfType(SoLight::getClassTypeId()));
 
-    this->light = (SoLight*)((SoFullPath*)path)->getTail();
+    this->light = (SoLight*)((SoFullPath*)light_path)->getTail();
     this->light->ref();
 
     this->createVSMProgram();
@@ -615,8 +615,8 @@ public:
 
 class SoShadowGroupP {
 public:
-  SoShadowGroupP(SoShadowGroup * master, SoDB::ContextManager * mgr) :
-    master(master),
+  SoShadowGroupP(SoShadowGroup * pub, SoDB::ContextManager * mgr) :
+    master(pub),
     contextManager(mgr),
     bboxaction(SbViewportRegion(SbVec2s(100,100))),
     matrixaction(SbViewportRegion(SbVec2s(100,100))),
@@ -1036,7 +1036,7 @@ SoShadowGroupP::updateShadowLights(SoGLRenderAction * action)
 
   if (!this->shadowlightsvalid) {
     int lightidoffset = SoLightElement::getLights(state).getLength();
-    float smoothing = 0.0f; // FIXME: temporary until we have time to fix this feature
+    // FIXME: implement gaussian smoothing for shadow edges
 
     int gaussmatrixsize = 0;
     float gaussstandarddeviation = 0.6f;
@@ -1641,10 +1641,10 @@ SoShadowGroupP::setVertexShader(SoState * state)
       this->vertexshader->parameter.set1Value(0, this->cameratransform);
       for (i = 0; i < numshadowlights; i++) {
         SoShadowLightCache * cache = this->shadowlights[i];
-        SbString str;
-        str.sprintf("shadowMatrix%d", i);
-        if (cache->shadowmatrix->name.getValue() != str) {
-          cache->shadowmatrix->name = str;
+        SbString matname_str;
+        matname_str.sprintf("shadowMatrix%d", i);
+        if (cache->shadowmatrix->name.getValue() != matname_str) {
+          cache->shadowmatrix->name = matname_str;
         }
         this->vertexshader->parameter.set1Value(1 + i, cache->shadowmatrix);
       }
@@ -1675,7 +1675,6 @@ SoShadowGroupP::setFragmentShader(SoState * state)
   SbBool perpixelother = FALSE;
   this->getQuality(state, perpixelspot, perpixelother);
 
-  const SoGLContext * glue = SoGLContext_instance(SoGLCacheContextElement::get(state));
   SbBool storedinvalid = SoCacheElement::setInvalid(FALSE);
   state->push();
 
@@ -2357,7 +2356,7 @@ SoSeparator *
 SoShadowLightCache::createGaussSG(SoShaderProgram * program, SoSceneTexture2 * tex)
 {
   SoSeparator * sep = new SoSeparator;
-  SoOrthographicCamera * camera = new SoOrthographicCamera;
+  SoOrthographicCamera * gauss_camera = new SoOrthographicCamera;
   SoShapeHints * sh = new SoShapeHints;
 
   const float verts[][3] = {
@@ -2374,12 +2373,12 @@ SoShadowLightCache::createGaussSG(SoShaderProgram * program, SoSceneTexture2 * t
 
   sep->addChild(sh);
 
-  camera->position = SbVec3f(0.5f, 0.5f, 2.0f);
-  camera->height = 1.0f;
-  camera->aspectRatio = 1.0f;
-  camera->viewportMapping = SoCamera::LEAVE_ALONE;
+  gauss_camera->position = SbVec3f(0.5f, 0.5f, 2.0f);
+  gauss_camera->height = 1.0f;
+  gauss_camera->aspectRatio = 1.0f;
+  gauss_camera->viewportMapping = SoCamera::LEAVE_ALONE;
 
-  sep->addChild(camera);
+  sep->addChild(gauss_camera);
   SoTextureUnit * unit = new SoTextureUnit;
   unit->unit = 0;
   sep->addChild(unit);

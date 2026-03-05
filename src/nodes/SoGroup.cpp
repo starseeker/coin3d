@@ -727,7 +727,7 @@ SoGroup::handleEvent(SoHandleEventAction * action)
 
 // Doc from superclass.
 void
-SoGroup::addWriteReference(SoOutput * out, SbBool isfromfield)
+SoGroup::addWriteReference(SoOutput * out, SbBool OBOL_UNUSED_ARG(isfromfield))
 {
   // SoGroup::write() used to count write references of children by calling
   // doAction() when ref was zero in the SoOutput::COUNT_REFS stage. However, 

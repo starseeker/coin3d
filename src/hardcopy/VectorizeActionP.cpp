@@ -1065,7 +1065,7 @@ SoVectorizeActionP::clip_cb(const SbVec3f & OBOL_UNUSED_ARG(v0), void * vdata0,
 // SoCamera pre callback. Needed to set up culling.
 //
 SoCallbackAction::Response 
-SoVectorizeActionP::camera_cb(void * OBOL_UNUSED_ARG(data), SoCallbackAction * action, const SoNode * node)
+SoVectorizeActionP::camera_cb(void * OBOL_UNUSED_ARG(data), SoCallbackAction * action, const SoNode * OBOL_UNUSED_ARG(node))
 {
   assert(node->isOfType(SoCamera::getClassTypeId()));
   SoState * state = action->getState();

@@ -390,7 +390,7 @@ SbVec2d::setValue(const SbVec2i32 & v)
 */
 
 void
-SbVec2d::print(FILE * fp) const
+SbVec2d::print([[maybe_unused]] FILE * fp) const
 {
 #if OBOL_DEBUG
   fprintf( fp, "<%f, %f>", this->vec[0], this->vec[1] );

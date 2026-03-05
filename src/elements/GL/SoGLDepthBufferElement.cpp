@@ -107,15 +107,15 @@ SoGLDepthBufferElement::pop(SoState * OBOL_UNUSED_ARG(state),
   Set this element's values.
 */
 void
-SoGLDepthBufferElement::setElt(SbBool test, SbBool write, DepthWriteFunction function, SbVec2f range)
+SoGLDepthBufferElement::setElt(SbBool new_test, SbBool new_write, DepthWriteFunction new_function, SbVec2f new_range)
 {
   SbBool update =
-    (test != this->test) ||
-    (write != this->write) ||
-    (function != this->function) ||
-    (range != this->range);
+    (new_test != this->test) ||
+    (new_write != this->write) ||
+    (new_function != this->function) ||
+    (new_range != this->range);
 
-  inherited::setElt(test, write, function, range);
+  inherited::setElt(new_test, new_write, new_function, new_range);
 
   if (update) {
     this->updategl();

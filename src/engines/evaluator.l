@@ -31,34 +31,26 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#ifndef COIN_INTERNAL
-#error this is a private header file
-#endif /* !COIN_INTERNAL */
-
 /*
  * Lexical scanner for SoCalculator. Compile into lexical scanner
- * lex.so_eval.c with
+ * so_eval.ic with (flex 2.6+):
  *
  *             flex -oso_eval.ic -L evaluator.l
  *
- * (Note: flex version should be 2.5.4, since this is what is
- * installed on nfs.sim.no).
- *
- * Flex 2.5.4 generates code that includes unitstd.h. unistd.h does
- * not exist on the windows platform. You therefore need to apply
- * a patch after running flex:
- *
- *             patch -p0 < so_eval.diff
- *
+ * The %option nounistd below suppresses inclusion of <unistd.h>, which
+ * does not exist on Windows. No post-generation patching is required.
  */
 
-#include <Inventor/C/basic.h>
+#include <Inventor/basic.h>
 #include <float.h>
 #include <stdlib.h>
 #include "engines/evaluator.h"
 %}
 
 %option noyywrap
+%option nounistd
+%option never-interactive
+%option noinput nounput
 %option prefix="so_eval"
 
 Digit                           [0-9]

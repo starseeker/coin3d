@@ -416,7 +416,7 @@ SbVec2s::fromString(const SbString & str)
   debug version of library, method does nothing in an optimized build.
 */
 void
-SbVec2s::print(FILE * fp) const
+SbVec2s::print([[maybe_unused]] FILE * fp) const
 {
 #if OBOL_DEBUG
   fputs(this->toString().getString(),fp);

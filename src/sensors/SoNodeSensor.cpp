@@ -65,8 +65,8 @@ SoNodeSensor::SoNodeSensor(void)
 
   \sa setFunction(), setData()
 */
-SoNodeSensor::SoNodeSensor(SoSensorCB * func, void * data)
-  : inherited(func, data)
+SoNodeSensor::SoNodeSensor(SoSensorCB * f, void * d)
+  : inherited(f, d)
 {
   this->convict = NULL;
 }

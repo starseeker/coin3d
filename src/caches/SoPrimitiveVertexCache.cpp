@@ -119,7 +119,7 @@ public:
     for (int i = 0; i < multitexvbo.getLength(); i++) {
       delete multitexvbo[i];
     }
-    if (lastenabled >= 1) {
+    if (last_enabled >= 1) {
       delete[] multitexcoords;
     }
     delete[] deptharray;
@@ -167,7 +167,7 @@ public:
   uint32_t firstcolor;
 
   const SbBool * enabledunits;
-  int lastenabled;
+  int last_enabled;
   const SoMultiTextureCoordinateElement * multielem;
   SbList <SbVec4f> * multitexcoords;
   SoState * state;
@@ -194,34 +194,34 @@ public:
                        const int numindices,
                        const SbBool color, const SbBool normal,
                        const SbBool texture, const SbBool * enabled,
-                       const int lastenabled);
+                       const int tex_last_enabled);
 
   void enableArrays(const SoGLContext * glue,
                     const SbBool color, const SbBool normal,
                     const SbBool texture, const SbBool * enabled,
-                    const int lastenabled);
+                    const int tex_last_enabled);
 
   void disableArrays(const SoGLContext * glue,
                      const SbBool color, const SbBool normal,
                      const SbBool texture, const SbBool * enabled,
-                     const int lastenabled);
+                     const int tex_last_enabled);
 
   void enableVBOs(const SoGLContext * glue,
                   const uint32_t contextid,
                   const SbBool color, const SbBool normal,
                   const SbBool texture, const SbBool * enabled,
-                  const int lastenabled);
+                  const int tex_last_enabled);
 
   void disableVBOs(const SoGLContext * glue,
                    const SbBool color, const SbBool normal,
                    const SbBool texture, const SbBool * enabled,
-                   const int lastenabled);
+                   const int tex_last_enabled);
 
   unsigned long countVBOSize(const SoGLContext * glue,
                              const uint32_t contextid,
                              const SbBool color, const SbBool normal,
                              const SbBool texture, const SbBool * enabled,
-                             const int lastenabled);
+                             const int tex_last_enabled);
 
 };
 
@@ -287,13 +287,13 @@ SoPrimitiveVertexCache::SoPrimitiveVertexCache(SoState * state)
   PRIVATE(this)->firstcolor = col;
 
   // set up for multi texturing
-  PRIVATE(this)->lastenabled = -1;
+  PRIVATE(this)->last_enabled = -1;
   PRIVATE(this)->enabledunits =
-    SoMultiTextureEnabledElement::getEnabledUnits(state, PRIVATE(this)->lastenabled);
+    SoMultiTextureEnabledElement::getEnabledUnits(state, PRIVATE(this)->last_enabled);
   PRIVATE(this)->multielem = NULL;
   PRIVATE(this)->multitexcoords = NULL;
-  if (PRIVATE(this)->lastenabled >= 1) {
-    PRIVATE(this)->multitexcoords = new SbList<SbVec4f>[PRIVATE(this)->lastenabled+1];
+  if (PRIVATE(this)->last_enabled >= 1) {
+    PRIVATE(this)->multitexcoords = new SbList<SbVec4f>[PRIVATE(this)->last_enabled+1];
     // delay fetching SoMultiTextureCoordinateElement until the first
     // triangle callback. SoTextureCoordinateBundle might push a new
     // element.
@@ -349,7 +349,7 @@ SoPrimitiveVertexCache::close(SoState * state)
 void
 SoPrimitiveVertexCache::renderTriangles(SoState * state, const int arrays) const
 {
-  int lastenabled = -1;
+  int last_enabled = -1;
   const int n = this->getNumTriangleIndices();
   if (n == 0) return;
 
@@ -358,7 +358,7 @@ SoPrimitiveVertexCache::renderTriangles(SoState * state, const int arrays) const
   const SbBool texture = (arrays & TEXCOORD) != 0;
   const SbBool color = this->colorPerVertex() && ((arrays & COLOR) != 0);
   if (texture) {
-    enabled = SoMultiTextureEnabledElement::getEnabledUnits(state, lastenabled);
+    enabled = SoMultiTextureEnabledElement::getEnabledUnits(state, last_enabled);
   }
 
   const uint32_t contextid = SoGLCacheContextElement::get(state);
@@ -377,15 +377,15 @@ SoPrimitiveVertexCache::renderTriangles(SoState * state, const int arrays) const
 
     SoPrimitiveVertexCacheP * thisp = const_cast<SoPrimitiveVertexCacheP *>(&PRIVATE(this).get());
 
-    thisp->enableVBOs(glue, contextid, color, normal, texture, enabled, lastenabled);
+    thisp->enableVBOs(glue, contextid, color, normal, texture, enabled, last_enabled);
     PRIVATE(this)->triangleindexer->render(glue, TRUE, contextid);
-    thisp->disableVBOs(glue, color, normal, texture, enabled, lastenabled);
+    thisp->disableVBOs(glue, color, normal, texture, enabled, last_enabled);
   }
   else if (SoGLDriverDatabase::isSupported(glue, SO_GL_VERTEX_ARRAY)) {
     SoPrimitiveVertexCacheP * thisp = const_cast<SoPrimitiveVertexCacheP *>(&PRIVATE(this).get());
-    thisp->enableArrays(glue, color, normal, texture, enabled, lastenabled);
+    thisp->enableArrays(glue, color, normal, texture, enabled, last_enabled);
     PRIVATE(this)->triangleindexer->render(glue, FALSE, contextid);
-    thisp->disableArrays(glue, color, normal, texture, enabled, lastenabled);
+    thisp->disableArrays(glue, color, normal, texture, enabled, last_enabled);
   }
   else {
     // fall back to immediate mode rendering
@@ -394,7 +394,7 @@ SoPrimitiveVertexCache::renderTriangles(SoState * state, const int arrays) const
     thisp->renderImmediate(glue,
                            this->getTriangleIndices(),
                            this->getNumTriangleIndices(),
-                           color, normal, texture, enabled, lastenabled);
+                           color, normal, texture, enabled, last_enabled);
     SoGLContext_glEnd(sogl_glue_from_state(state));
   }
 
@@ -409,7 +409,7 @@ void
 SoPrimitiveVertexCache::renderLines(SoState * state, const int arrays) const
 {
   // FIXME: VBO support for lines, pederb 2004-02-24
-  int lastenabled = -1;
+  int last_enabled = -1;
   const int n = this->getNumLineIndices();
   if (n == 0) return;
   const SbBool * enabled = NULL;
@@ -417,16 +417,16 @@ SoPrimitiveVertexCache::renderLines(SoState * state, const int arrays) const
   const SbBool texture = (arrays & TEXCOORD) != 0;
   SbBool color = this->colorPerVertex() && ((arrays & COLOR) != 0);
   if (texture) {
-    enabled = SoMultiTextureEnabledElement::getEnabledUnits(state, lastenabled);
+    enabled = SoMultiTextureEnabledElement::getEnabledUnits(state, last_enabled);
   }
   const SoGLContext * glue = sogl_glue_instance(state);
   const uint32_t contextid = SoGLCacheContextElement::get(state);
 
   if (SoGLDriverDatabase::isSupported(glue, SO_GL_VERTEX_ARRAY)) {
     SoPrimitiveVertexCacheP * thisp = const_cast<SoPrimitiveVertexCacheP *>(&PRIVATE(this).get());
-    thisp->enableArrays(glue, color, normal, texture, enabled, lastenabled);
+    thisp->enableArrays(glue, color, normal, texture, enabled, last_enabled);
     PRIVATE(this)->lineindexer->render(glue, FALSE, contextid);
-    thisp->disableArrays(glue, color, normal, texture, enabled, lastenabled);
+    thisp->disableArrays(glue, color, normal, texture, enabled, last_enabled);
   }
   else {
     // fall back to immediate mode rendering
@@ -435,7 +435,7 @@ SoPrimitiveVertexCache::renderLines(SoState * state, const int arrays) const
     thisp->renderImmediate(glue,
                            this->getLineIndices(),
                            this->getNumLineIndices(),
-                           color, normal, texture, enabled, lastenabled);
+                           color, normal, texture, enabled, last_enabled);
     SoGLContext_glEnd(sogl_glue_from_state(state));
   }
   // inform SoGLLazyElement that we might have changed the current color
@@ -449,7 +449,7 @@ void
 SoPrimitiveVertexCache::renderPoints(SoState * state, const int arrays) const
 {
   // FIXME: VBO support for points, pederb 2004-02-24
-  int lastenabled = -1;
+  int last_enabled = -1;
   const int n = this->getNumPointIndices();
   if (n == 0) return;
   const SbBool * enabled = NULL;
@@ -457,16 +457,16 @@ SoPrimitiveVertexCache::renderPoints(SoState * state, const int arrays) const
   const SbBool texture = (arrays & TEXCOORD) != 0;
   SbBool color = this->colorPerVertex() && ((arrays & COLOR) != 0);
   if (texture) {
-    enabled = SoMultiTextureEnabledElement::getEnabledUnits(state, lastenabled);
+    enabled = SoMultiTextureEnabledElement::getEnabledUnits(state, last_enabled);
   }
   const SoGLContext * glue = sogl_glue_instance(state);
   const uint32_t contextid = SoGLCacheContextElement::get(state);
 
   if (SoGLDriverDatabase::isSupported(glue, SO_GL_VERTEX_ARRAY)) {
     SoPrimitiveVertexCacheP * thisp = const_cast<SoPrimitiveVertexCacheP *>(&PRIVATE(this).get());
-    thisp->enableArrays(glue, color, normal, texture, enabled, lastenabled);
+    thisp->enableArrays(glue, color, normal, texture, enabled, last_enabled);
     PRIVATE(this)->pointindexer->render(glue, FALSE, contextid);
-    thisp->disableArrays(glue, color, normal, texture, enabled, lastenabled);
+    thisp->disableArrays(glue, color, normal, texture, enabled, last_enabled);
   }
   else {
     // fall back to immediate mode rendering
@@ -475,7 +475,7 @@ SoPrimitiveVertexCache::renderPoints(SoState * state, const int arrays) const
     thisp->renderImmediate(glue,
                            this->getPointIndices(),
                            this->getNumPointIndices(),
-                           color, normal, texture, enabled, lastenabled);
+                           color, normal, texture, enabled, last_enabled);
     SoGLContext_glEnd(sogl_glue_from_state(state));
   }
   // inform SoGLLazyElement that we might have changed the current color
@@ -492,7 +492,7 @@ SoPrimitiveVertexCache::addTriangle(const SoPrimitiveVertex * v0,
                                     const SoPrimitiveVertex * v2,
                                     const int * pointdetailidx)
 {
-  if (PRIVATE(this)->lastenabled >= 1 && PRIVATE(this)->multielem == NULL) {
+  if (PRIVATE(this)->last_enabled >= 1 && PRIVATE(this)->multielem == NULL) {
     // fetch SoMultiTextureCoordinateElement the first time we get here
     PRIVATE(this)->multielem = SoMultiTextureCoordinateElement::getInstance(PRIVATE(this)->state);
   }
@@ -549,7 +549,7 @@ SoPrimitiveVertexCache::addTriangle(const SoPrimitiveVertex * v0,
       triangleindices[i] = idx;
 
       // update texture coordinates for unit 1-n
-      for (int j = 1; j <= PRIVATE(this)->lastenabled; j++) {
+      for (int j = 1; j <= PRIVATE(this)->last_enabled; j++) {
         if (v.texcoordidx >= 0 &&
             (PRIVATE(this)->multielem->getType(j) == SoMultiTextureCoordinateElement::EXPLICIT)) {
           PRIVATE(this)->multitexcoords[j].append(PRIVATE(this)->multielem->get4(j, v.texcoordidx));
@@ -578,7 +578,7 @@ void
 SoPrimitiveVertexCache::addLine(const SoPrimitiveVertex * v0,
                                 const SoPrimitiveVertex * v1)
 {
-  if (PRIVATE(this)->lastenabled >= 1 && PRIVATE(this)->multielem == NULL) {
+  if (PRIVATE(this)->last_enabled >= 1 && PRIVATE(this)->multielem == NULL) {
     // fetch SoMultiTextureCoordinateElement the first time we get here
     PRIVATE(this)->multielem = SoMultiTextureCoordinateElement::getInstance(PRIVATE(this)->state);
   }
@@ -633,7 +633,7 @@ SoPrimitiveVertexCache::addLine(const SoPrimitiveVertex * v0,
       lineindices[i] = idx;
 
       // update texture coordinates for unit 1-n
-      for (int j = 1; j <= PRIVATE(this)->lastenabled; j++) {
+      for (int j = 1; j <= PRIVATE(this)->last_enabled; j++) {
         if (v.texcoordidx >= 0 &&
             (PRIVATE(this)->multielem->getType(j) == SoMultiTextureCoordinateElement::EXPLICIT)) {
           PRIVATE(this)->multitexcoords[j].append(PRIVATE(this)->multielem->get4(j, v.texcoordidx));
@@ -659,7 +659,7 @@ SoPrimitiveVertexCache::addLine(const SoPrimitiveVertex * v0,
 void
 SoPrimitiveVertexCache::addPoint(const SoPrimitiveVertex * v0)
 {
-  if (PRIVATE(this)->lastenabled >= 1 && PRIVATE(this)->multielem == NULL) {
+  if (PRIVATE(this)->last_enabled >= 1 && PRIVATE(this)->multielem == NULL) {
     // fetch SoMultiTextureCoordinateElement the first time we get here
     PRIVATE(this)->multielem = SoMultiTextureCoordinateElement::getInstance(PRIVATE(this)->state);
   }
@@ -710,7 +710,7 @@ SoPrimitiveVertexCache::addPoint(const SoPrimitiveVertex * v0)
     PRIVATE(this)->pointindexer->addPoint(idx);
 
     // update texture coordinates for unit 1-n
-    for (int j = 1; j <= PRIVATE(this)->lastenabled; j++) {
+    for (int j = 1; j <= PRIVATE(this)->last_enabled; j++) {
       if (v.texcoordidx >= 0 &&
           (PRIVATE(this)->multielem->getType(j) == SoMultiTextureCoordinateElement::EXPLICIT)) {
         PRIVATE(this)->multitexcoords[j].append(PRIVATE(this)->multielem->get4(j, v.texcoordidx));
@@ -793,7 +793,7 @@ SoPrimitiveVertexCache::colorPerVertex(void) const
 const SbVec4f *
 SoPrimitiveVertexCache::getMultiTextureCoordinateArray(const int unit) const
 {
-  assert(unit <= PRIVATE(this)->lastenabled);
+  assert(unit <= PRIVATE(this)->last_enabled);
   return PRIVATE(this)->multitexcoords[unit].getArrayPtr();
 }
 
@@ -944,7 +944,7 @@ void
 SoPrimitiveVertexCacheP::enableArrays(const SoGLContext * glue,
                                       const SbBool color, const SbBool normal,
                                       const SbBool texture, const SbBool * enabled,
-                                      const int lastenabled)
+                                      const int tex_last_enabled)
 {
   int i;
   if (color) {
@@ -958,7 +958,7 @@ SoPrimitiveVertexCacheP::enableArrays(const SoGLContext * glue,
                                 reinterpret_cast<const GLvoid *>(this->texcoordlist.getArrayPtr()));
     SoGLContext_glEnableClientState(glue, GL_TEXTURE_COORD_ARRAY);
 
-    for (i = 1; i <= lastenabled; i++) {
+    for (i = 1; i <= tex_last_enabled; i++) {
       if (enabled[i]) {
         SoGLContext_glClientActiveTexture(glue, GL_TEXTURE0 + i);
         SoGLContext_glTexCoordPointer(glue, 4, GL_FLOAT, 0,
@@ -983,20 +983,20 @@ void
 SoPrimitiveVertexCacheP::disableArrays(const SoGLContext * glue,
                                        const SbBool color, const SbBool normal,
                                        const SbBool texture, const SbBool * enabled,
-                                       const int lastenabled)
+                                       const int tex_last_enabled)
 {
   int i;
   if (normal) {
     SoGLContext_glDisableClientState(glue, GL_NORMAL_ARRAY);
   }
   if (texture) {
-    for (i = 1; i <= lastenabled; i++) {
+    for (i = 1; i <= tex_last_enabled; i++) {
       if (enabled[i]) {
         SoGLContext_glClientActiveTexture(glue, GL_TEXTURE0 + i);
         SoGLContext_glDisableClientState(glue, GL_TEXTURE_COORD_ARRAY);
       }
     }
-    if (lastenabled >= 1) {
+    if (tex_last_enabled >= 1) {
       // reset to default
       SoGLContext_glClientActiveTexture(glue, GL_TEXTURE0);
     }
@@ -1013,7 +1013,7 @@ SoPrimitiveVertexCacheP::enableVBOs(const SoGLContext * glue,
                                     uint32_t contextid,
                                     const SbBool color, const SbBool normal,
                                     const SbBool texture, const SbBool * enabled,
-                                    const int lastenabled)
+                                    const int tex_last_enabled)
 {
   int i;
   if (color) {
@@ -1036,7 +1036,7 @@ SoPrimitiveVertexCacheP::enableVBOs(const SoGLContext * glue,
     SoGLContext_glTexCoordPointer(glue, 4, GL_FLOAT, 0, NULL);
     SoGLContext_glEnableClientState(glue, GL_TEXTURE_COORD_ARRAY);
 
-    for (i = 1; i <= lastenabled; i++) {
+    for (i = 1; i <= tex_last_enabled; i++) {
       while (this->multitexvbo.getLength() <= i) {
         this->multitexvbo.append(NULL);
       }
@@ -1079,9 +1079,9 @@ void
 SoPrimitiveVertexCacheP::disableVBOs(const SoGLContext * glue,
                                      const SbBool color, const SbBool normal,
                                      const SbBool texture, const SbBool * enabled,
-                                     const int lastenabled)
+                                     const int tex_last_enabled)
 {
-  this->disableArrays(glue, color, normal, texture, enabled, lastenabled);
+  this->disableArrays(glue, color, normal, texture, enabled, tex_last_enabled);
   SoGLContext_glBindBuffer(glue, GL_ARRAY_BUFFER, 0); // Reset VBO binding
 }
 
@@ -1091,7 +1091,7 @@ SoPrimitiveVertexCacheP::renderImmediate(const SoGLContext * glue,
                                          const int numindices,
                                          const SbBool color, const SbBool normal,
                                          const SbBool texture, const SbBool * enabled,
-                                         const int lastenabled)
+                                         const int tex_last_enabled)
 {
   const unsigned char * colorptr = NULL;
   const SbVec3f * normalptr = NULL;
@@ -1120,7 +1120,7 @@ SoPrimitiveVertexCacheP::renderImmediate(const SoGLContext * glue,
     if (texture) {
       SoGLContext_glTexCoord4fv(sogl_glue_from_state(state), reinterpret_cast<const GLfloat *>(&texcoordptr[idx]));
 
-      for (int j = 1; j <= lastenabled; j++) {
+      for (int j = 1; j <= tex_last_enabled; j++) {
         if (enabled[j]) {
           const SbVec4f * mt = this->multitexcoords[j].getArrayPtr();
           SoGLContext_glMultiTexCoord4fv(glue,

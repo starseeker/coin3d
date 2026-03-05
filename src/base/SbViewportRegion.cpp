@@ -591,7 +591,7 @@ operator!=(const SbViewportRegion & reg1, const SbViewportRegion & reg2)
   debug version of library, method does nothing in an optimized build.
  */
 void
-SbViewportRegion::print(FILE * fp) const
+SbViewportRegion::print([[maybe_unused]] FILE * fp) const
 {
 #if OBOL_DEBUG
   (void)fprintf( fp, "  winsize:     " );

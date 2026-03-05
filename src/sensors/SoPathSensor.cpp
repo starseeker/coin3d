@@ -105,8 +105,8 @@ SoPathSensor::SoPathSensor(void)
 
   \sa setFunction(), setData()
  */
-SoPathSensor::SoPathSensor(SoSensorCB * func, void * data)
-  : inherited(func, data)
+SoPathSensor::SoPathSensor(SoSensorCB * f, void * d)
+  : inherited(f, d)
 {
   this->commonConstructor();
 }

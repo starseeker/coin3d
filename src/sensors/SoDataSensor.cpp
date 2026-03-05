@@ -84,8 +84,8 @@ SoDataSensor::SoDataSensor(void)
 
   \sa setFunction(), setData()
 */
-SoDataSensor::SoDataSensor(SoSensorCB * func, void * data)
-  : inherited(func, data),
+SoDataSensor::SoDataSensor(SoSensorCB * f, void * d)
+  : inherited(f, d),
     cbfunc(NULL),
     cbdata(NULL),
     findpath(FALSE),

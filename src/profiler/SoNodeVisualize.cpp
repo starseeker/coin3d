@@ -227,8 +227,8 @@ SoNodeVisualize::SoNodeVisualize(void)
   SoSwitch* sw=static_cast<SoSwitch*>(this->getAnyPart("childrenVisible",TRUE));
   sw->whichChild=SO_SWITCH_ALL;
 
-  SoMaterial *color=static_cast<SoMaterial*>(this->getAnyPart("color",TRUE));
-  color->diffuseColor=SbVec3f(1,1,0);
+  SoMaterial *color_mat=static_cast<SoMaterial*>(this->getAnyPart("color",TRUE));
+  color_mat->diffuseColor=SbVec3f(1,1,0);
 
   sw=static_cast<SoSwitch*>(this->getAnyPart("rotSwitch",TRUE));
   sw->whichChild=SO_SWITCH_NONE;
@@ -249,10 +249,10 @@ SoNodeVisualize::SoNodeVisualize(void)
 }
 
 SoNodeVisualize*
-SoNodeVisualize::visualize(SoNode * node) {
-  this->node=node;
-  if (node!=NULL) {
-    SoType type = node->getTypeId();
+SoNodeVisualize::visualize(SoNode * in_node) {
+  this->node=in_node;
+  if (in_node!=NULL) {
+    SoType type = in_node->getTypeId();
     //FIXME: Exchange all the named textures, with images
     //FIXME: Make the images better fitting for its shape
     //FIXME: Check if cubes are better options for some of the nodetypes
@@ -283,16 +283,16 @@ SoNodeVisualize::visualize(SoNode * node) {
       this->setAnyPart("texture", SoNodeVisualizeP::textures[top_transform]);
 
     } else if (type.isDerivedFrom(SoTexture::getClassTypeId())){
-      this->setAnyPart("texture", node);
+      this->setAnyPart("texture", in_node);
     }
   }
   return this;
 }
 
 void
-SoNodeVisualize::setupChildCatalog(SoNode * node,int depth) {
+SoNodeVisualize::setupChildCatalog(SoNode * in_node,int depth) {
   SoSeparator * sep=static_cast<SoSeparator*>(this->getAnyPart("childGeometry",TRUE));
-  SoNodeList * children=node->getChildren();
+  SoNodeList * node_children=in_node->getChildren();
   unsigned int numNodeChildren=this->nodeNumChildren();
 
   --depth;
@@ -300,7 +300,7 @@ SoNodeVisualize::setupChildCatalog(SoNode * node,int depth) {
   unsigned int i;
   for (i=0;i<numNodeChildren;++i) {
     sep->addChild(new SoTranslation());
-    SoNodeVisualize * nv=visualizeTree((*children)[i],depth);
+    SoNodeVisualize * nv=visualizeTree((*node_children)[i],depth);
     nv->parent=this;
     sep->addChild(nv);
   }
@@ -412,9 +412,9 @@ SoNodeVisualize::recalculate() {
    when there is too much information on the screen at once.
 */
 void
-SoNodeVisualize::visualizeSubTree(SoNode * node,int depth) {
+SoNodeVisualize::visualizeSubTree(SoNode * in_node,int depth) {
   if (!this->node)
-    this->visualize(node);
+    this->visualize(in_node);
   //We have reached the max visualization depth, don't expand anymore
   if (depth == 1) {
     //Always display a node without children as expanded
@@ -426,13 +426,13 @@ SoNodeVisualize::visualizeSubTree(SoNode * node,int depth) {
 
   //If we have children set up their catalog as well
   if (this->nodeNumChildren()) {
-    SoNodeList *children = this->getChildGeometry();
+    SoNodeList *node_children = this->getChildGeometry();
 
     //Only set up the catalog if we haven't done it before
-    if((this->nodeNumChildren() * 2) != (unsigned int)children->getLength())
-      this->setupChildCatalog(node, depth);
+    if((this->nodeNumChildren() * 2) != (unsigned int)node_children->getLength())
+      this->setupChildCatalog(in_node, depth);
 
-    assert((this->nodeNumChildren() * 2) == (unsigned int)children->getLength());
+    assert((this->nodeNumChildren() * 2) == (unsigned int)node_children->getLength());
   }
 }
 
@@ -457,7 +457,7 @@ SoNodeVisualize::traverse(SoProfilerStats * stats)
 
   assert(material->diffuseColor.getNum() == 1);
   assert(material->transparency.getNum() == 1);
-  SbColor color = material->diffuseColor[0];
+  SbColor node_color = material->diffuseColor[0];
   float transparency = material->transparency[0];
 
   float green = 0.0f;
@@ -476,12 +476,12 @@ SoNodeVisualize::traverse(SoProfilerStats * stats)
      //stats->hasGLCache((SoSeparator *)this->node)
      ) {
     // FIXME All children are cached. Make them inherit material
-    color = SbVec3f(0.0f, green, 1.0f);
+    node_color = SbVec3f(0.0f, green, 1.0f);
     transparency = 0.0f;
   }
 
   if (this->node->getTypeId().getName() == SbName("ScenarioSimulator"))
-    color = SbVec3f(1.0f, green, 0.0f);
+    node_color = SbVec3f(1.0f, green, 0.0f);
 
   /*  else if(stats->separatorsCullRoots.findNode(this->node)!=-1){
     // FIXME All children are culled. Make them inherit material
@@ -491,8 +491,8 @@ SoNodeVisualize::traverse(SoProfilerStats * stats)
   }
   */
 
-  if (material->diffuseColor[0] != color)
-    material->diffuseColor = color;
+  if (material->diffuseColor[0] != node_color)
+    material->diffuseColor = node_color;
 
   if (material->transparency[0] != transparency)
     material->transparency = transparency;
@@ -602,7 +602,7 @@ SoNodeVisualize::cleanClass(void)
 }
 
 /*!
-   Changes the state of a node with children
+   Changes the state of a node with node_children
 */
 bool
 SoNodeVisualize::clicked() {
@@ -626,10 +626,10 @@ SoNodeVisualize::clicked() {
 
   //If we are off now
   sw->whichChild=SO_SWITCH_ALL;
-  SoNodeList *children=this->getChildGeometry();
+  SoNodeList *node_children=this->getChildGeometry();
 
   //Lazy instantiation
-  if (children && this->nodeNumChildren()!=(unsigned int)children->getLength()) {
+  if (node_children && this->nodeNumChildren()!=(unsigned int)node_children->getLength()) {
     this->visualizeSubTree(node, 2);
     this->setAlternate(this->isAlternating());
   }
@@ -674,7 +674,7 @@ SoNodeVisualize::getSoNodeVisualizeRoot() {
 }
 
 /*!
-   Turns on the alternating direction state for all children
+   Turns on the alternating direction state for all node_children
 */
 void
 SoNodeVisualize::setAlternate(bool alternate) {
@@ -694,20 +694,20 @@ SoNodeVisualize::internalAlternating(bool alternate,int direction) {
   static_cast<SoSwitch*>(this->getAnyPart("rotSwitch",TRUE))
     ->whichChild=(alternate)?SO_SWITCH_ALL:SO_SWITCH_NONE;
 
-  SoNodeList * children=this->getChildGeometry();
+  SoNodeList * node_children=this->getChildGeometry();
   int l;
-  if (!children ||
-      (l=children->getLength())==0 ||
+  if (!node_children ||
+      (l=node_children->getLength())==0 ||
       static_cast<SoSwitch*>(this->getAnyPart("childrenVisible",FALSE))->whichChild.getValue()==SO_SWITCH_NONE)
     return;
 
   ++direction;
   for (int i=1;i<l;i+=2)
-    static_cast<SoNodeVisualize*> ((*children)[i])->internalAlternating(alternate,direction);
+    static_cast<SoNodeVisualize*> ((*node_children)[i])->internalAlternating(alternate,direction);
 }
 
 /*!
-   Does the associated node have any children?
+   Does the associated node have any node_children?
 */
 bool
 SoNodeVisualize::nodeHasChildren() {
@@ -715,14 +715,14 @@ SoNodeVisualize::nodeHasChildren() {
 }
 
 /*!
-   Number of children of the associated node
+   Number of node_children of the associated node
  */
 unsigned int
 SoNodeVisualize::nodeNumChildren() {
   assert(this->node);
-  SoNodeList * children=node->getChildren();
-  if (!children) return 0;
-  return children->getLength();
+  SoNodeList * node_children=this->node->getChildren();
+  if (!node_children) return 0;
+  return node_children->getLength();
 }
 
 /*!

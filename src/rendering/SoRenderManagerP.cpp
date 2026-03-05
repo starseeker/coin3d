@@ -56,9 +56,9 @@ int SoRenderManagerRootSensor::debugrootnotifications = -1;
 
 #define INHERIT_TRANSPARENCY_TYPE -1
 
-SoRenderManagerP::SoRenderManagerP(SoRenderManager * publ)
+SoRenderManagerP::SoRenderManagerP(SoRenderManager * pub)
 {
-  this->publ = publ;
+  this->publ = pub;
   this->getmatrixaction = NULL;
   this->getbboxaction = NULL;
   this->searchaction = NULL;
@@ -109,9 +109,9 @@ SoRenderManagerP::updateClippingPlanesCB(void * OBOL_UNUSED_ARG(closure), SoSens
 void
 SoRenderManagerP::setClippingPlanes(void)
 {
-  SoCamera * camera = this->camera;
-  SoNode * scene = this->scene;
-  if (!camera || !scene) return;
+  SoCamera * cur_camera = this->camera;
+  SoNode * cur_scene = this->scene;
+  if (!cur_camera || !cur_scene) return;
 
   SbViewportRegion vp = this->glaction->getViewportRegion();
 
@@ -120,7 +120,7 @@ SoRenderManagerP::setClippingPlanes(void)
   } else {
     this->getbboxaction->setViewportRegion(vp);
   }
-  this->getbboxaction->apply(scene);
+  this->getbboxaction->apply(cur_scene);
 
   SbXfBox3f xbox = this->getbboxaction->getXfBoundingBox();
   SbMatrix cammat;
@@ -129,9 +129,9 @@ SoRenderManagerP::setClippingPlanes(void)
   xbox.transform(inverse);
 
   SbMatrix mat;
-  mat.setTranslate(- camera->position.getValue());
+  mat.setTranslate(- cur_camera->position.getValue());
   xbox.transform(mat);
-  mat = camera->orientation.getValue().inverse();
+  mat = cur_camera->orientation.getValue().inverse();
   xbox.transform(mat);
   SbBox3f box = xbox.project();
 
@@ -198,9 +198,9 @@ void
 SoRenderManagerP::getCameraCoordinateSystem(SbMatrix & matrix,
                                             SbMatrix & inverse)
 {
-  SoCamera * camera = this->camera;
-  SoNode * scene = this->scene;
-  assert(camera && scene);
+  SoCamera * cur_camera = this->camera;
+  SoNode * cur_scene = this->scene;
+  assert(cur_camera && cur_scene);
 
   matrix = inverse = SbMatrix::identity();
 
@@ -211,8 +211,8 @@ SoRenderManagerP::getCameraCoordinateSystem(SbMatrix & matrix,
   this->searchaction->reset();
   this->searchaction->setSearchingAll(TRUE);
   this->searchaction->setInterest(SoSearchAction::FIRST);
-  this->searchaction->setNode(camera);
-  this->searchaction->apply(scene);
+  this->searchaction->setNode(cur_camera);
+  this->searchaction->apply(cur_scene);
 
   if (this->searchaction->getPath()) {
     if (!this->getmatrixaction) {

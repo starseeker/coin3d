@@ -280,11 +280,8 @@
 
 #endif /* !OBOL_DEBUG */
 
-#ifdef __GNUC__
-#define OBOL_UNUSED_ARG(x) x __attribute__((__unused__))
-#else
-#define OBOL_UNUSED_ARG(x) x
-#endif
+/* C++17 [[maybe_unused]] replaces __attribute__((__unused__)) portably */
+#define OBOL_UNUSED_ARG(x) x [[maybe_unused]]
 
 
 /* COMPILE_ONLY_BEFORE() - C++17 static_assert-based compile-time version guard */

@@ -554,7 +554,7 @@
 
 class SoBaseKitP {
 public:
-  SoBaseKitP(SoBaseKit * kit) : kit(kit) { }
+  SoBaseKitP(SoBaseKit * k) : kit(k) { }
 
   SoBaseKit * kit;
   SoFieldData * writedata;

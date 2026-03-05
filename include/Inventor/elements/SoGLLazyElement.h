@@ -171,7 +171,7 @@ private:
   void sendShininess(const float shininess) const;
   void sendTransparency(const int stipplenum) const;
   void enableBlending(const int sfactor, const int dfactor) const;
-  void enableSeparateBlending(const SoGLContext * glue,
+  void enableSeparateBlending(const SoGLContext * ctx,
                               const int sfactor, const int dfactor,
                               const int alpha_sfactor, const int alpha_dfactor) const;
   void disableBlending(void) const;

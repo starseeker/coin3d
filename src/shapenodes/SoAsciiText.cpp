@@ -236,7 +236,7 @@
 class SoAsciiTextP {
 public:
 
-  SoAsciiTextP(SoAsciiText * master) : master(master) { 
+  SoAsciiTextP(SoAsciiText * pub) : master(pub) { 
     this->font = new SbFont();  // Initialize with ProFont default
   }
   

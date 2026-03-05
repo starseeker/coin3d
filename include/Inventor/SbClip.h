@@ -62,9 +62,9 @@ private:
   class SbClipData {
   public:
     SbClipData(void) {}
-    SbClipData(const SbVec3f & v, void * data) 
+    SbClipData(const SbVec3f & v, void * i_data)
       : vertex(v),
-        data(data) {}
+        data(i_data) {}
   public:
     void get(SbVec3f &v, void *& dataref) {
       v = this->vertex;

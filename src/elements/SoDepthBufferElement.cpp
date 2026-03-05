@@ -228,10 +228,10 @@ SoDepthBufferElement::copyMatchInfo(void) const
   Virtual method to set the state to get derived elements updated.
 */
 void
-SoDepthBufferElement::setElt(SbBool test, SbBool write, DepthWriteFunction function, SbVec2f range)
+SoDepthBufferElement::setElt(SbBool new_test, SbBool new_write, DepthWriteFunction new_function, SbVec2f new_range)
 {
-  this->test = test;
-  this->write = write;
-  this->function = function;
-  this->range = range;
+  this->test = new_test;
+  this->write = new_write;
+  this->function = new_function;
+  this->range = new_range;
 }

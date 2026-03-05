@@ -206,7 +206,7 @@ SbString::upper() const
   debug version of library, method does nothing in an optimized build.
 */
 void
-SbString::print(std::FILE * fp) const
+SbString::print([[maybe_unused]] std::FILE * fp) const
 {
 #if OBOL_DEBUG
   std::fputs(this->getString(),fp);

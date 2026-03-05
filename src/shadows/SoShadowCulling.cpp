@@ -131,10 +131,10 @@ SoShadowCulling::GLRender(SoGLRenderAction * action)
   SoState * state = action->getState();
 
   if (SoShapeStyleElement::get(state)->getFlags() & SoShapeStyleElement::SHADOWMAP) {
-    int32_t mode = this->mode.getValue();
-    SoGLShadowCullingElement::set(state, this, mode);
+    int32_t culling_mode = this->mode.getValue();
+    SoGLShadowCullingElement::set(state, this, culling_mode);
     
-    if (mode == NO_CULLING) {
+    if (culling_mode == NO_CULLING) {
       SoShapeHintsElement::set(state, NULL, 
                                SoShapeHintsElement::UNKNOWN_ORDERING,
                                SoShapeHintsElement::UNKNOWN_SHAPE_TYPE,

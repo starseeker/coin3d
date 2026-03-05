@@ -1153,7 +1153,7 @@ SoConvertAll::~SoConvertAll()
 }
 
 SoField *
-SoConvertAll::getInput(SoType type)
+SoConvertAll::getInput([[maybe_unused]] SoType type)
 {
 #if OBOL_DEBUG
   SoType inputtype = this->input->getTypeId();
@@ -1171,7 +1171,7 @@ SoConvertAll::getInput(SoType type)
 }
 
 SoEngineOutput *
-SoConvertAll::getOutput(SoType type)
+SoConvertAll::getOutput([[maybe_unused]] SoType type)
 {
 #if OBOL_DEBUG
   SoType outputtype = this->output.getConnectionType();

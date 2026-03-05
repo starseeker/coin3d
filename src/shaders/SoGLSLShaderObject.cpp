@@ -46,8 +46,8 @@ static int32_t soglshaderobject_idcounter = 1;
 
 // *************************************************************************
 
-SoGLSLShaderObject::SoGLSLShaderObject(const uint32_t cachecontext)
-  : SoGLShaderObject(cachecontext)
+SoGLSLShaderObject::SoGLSLShaderObject(const uint32_t cc)
+  : SoGLShaderObject(cc)
 {
   this->programHandle = 0;
   this->shaderHandle = 0;
@@ -145,14 +145,14 @@ SoGLSLShaderObject::getNewParameter(void) const
 // *************************************************************************
 
 void
-SoGLSLShaderObject::attach(OBOL_GLhandle programHandle)
+SoGLSLShaderObject::attach(OBOL_GLhandle new_programHandle)
 {
-  if (programHandle <= 0 || this->programHandle == programHandle) return;
+  if (new_programHandle <= 0 || this->programHandle == new_programHandle) return;
 
   detach();
 
   if (this->shaderHandle) {
-    this->programHandle = programHandle;
+    this->programHandle = new_programHandle;
     this->glctx->glAttachObjectARB(this->programHandle, this->shaderHandle);
     this->isattached = TRUE;
   }

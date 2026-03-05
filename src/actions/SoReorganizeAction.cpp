@@ -753,12 +753,12 @@ SoReorganizeActionP::replaceIls(SoFullPath * path)
   ils->materialIndex.setNum(0);
   ils->textureCoordIndex.setNum(0);
 
-  int numlines = this->pvcache->getNumLineIndices() / 2;
+  int cache_numlines = this->pvcache->getNumLineIndices() / 2;
   const GLint * indices = this->pvcache->getLineIndices();
-  ils->coordIndex.setNum(numlines * 3);
+  ils->coordIndex.setNum(cache_numlines * 3);
   int32_t * ptr = ils->coordIndex.startEditing();
 
-  for (int i = 0; i < numlines; i++) {
+  for (int i = 0; i < cache_numlines; i++) {
     *ptr++ = static_cast<int32_t>(indices[i*2]);
     *ptr++ = static_cast<int32_t>(indices[i*2+1]);
     *ptr++ = -1;

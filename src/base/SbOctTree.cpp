@@ -479,10 +479,10 @@ SbOctTreeNode::splitNode(const SbOctTreeFuncs & itemfuncs)
   Constructor.
 */
 SbOctTree::SbOctTree(const SbBox3f & bbox,
-                     const SbOctTreeFuncs & itemfuncs,
+                     const SbOctTreeFuncs & funcs,
                      const int maxitems)
   : topnode(new SbOctTreeNode(bbox)),
-    itemfuncs(itemfuncs),
+    itemfuncs(funcs),
     maxitemspernode(maxitems)
 {
 }

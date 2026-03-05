@@ -95,9 +95,9 @@ SbPlaneProjector::SbPlaneProjector(const SbBool orient)
 /*!
   Constructor taking an explicit projection \a plane definition.
 */
-SbPlaneProjector::SbPlaneProjector(const SbPlane & plane, const SbBool orient)
-  : plane(plane),
-    nonOrientPlane(plane),
+SbPlaneProjector::SbPlaneProjector(const SbPlane & init_plane, const SbBool orient)
+  : plane(init_plane),
+    nonOrientPlane(init_plane),
     orientToEye(orient),
     needSetup(orient) // will need setup if orient-to-plane
 {
