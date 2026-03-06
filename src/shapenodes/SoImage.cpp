@@ -891,7 +891,7 @@ SoImage::getImage(SbVec2s & size, int & nc)
       }
       
       auto& registry = SbImageFormatRegistry::getInstance();
-      unsigned char* result = registry.resizeImage((unsigned char*)orgdata,
+      unsigned char* result = registry.resizeImage(const_cast<unsigned char*>(orgdata),
                                                   int(orgsize[0]), int(orgsize[1]), nc,
                                                   int(newsize[0]), int(newsize[1]), true);
       if (result) {
@@ -902,7 +902,7 @@ SoImage::getImage(SbVec2s & size, int & nc)
         // Fallback to internal simple resize if registry fails
         this->resizedimage->setValue(newsize, nc, NULL);
         const unsigned char * rezdata = this->resizedimage->getValue(newsize, nc);
-        simple_image_resize(orgdata, (unsigned char*)rezdata,
+        simple_image_resize(orgdata, const_cast<unsigned char*>(rezdata),
                            orgsize[0], orgsize[1], nc,
                            newsize[0], newsize[1]);
         this->resizedimagevalid = TRUE;
@@ -928,7 +928,7 @@ SoImage::testTransparency(void)
 
   if (nc == 2 || nc == 4) {
     int n = size[0] * size[1];
-    const unsigned char * ptr = (unsigned char *) data + nc - 1;
+    const unsigned char * ptr = data + nc - 1;
 
     while (n) {
       if (*ptr != 255) break;

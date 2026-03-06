@@ -532,7 +532,7 @@ SoFaceSet::GLRender(SoGLRenderAction * action)
     SoVertexShape::getVertexData(state, tmp, normals,
                                  needNormals);
 
-    const SoGLCoordinateElement * coords = (SoGLCoordinateElement *)tmp;
+    const SoGLCoordinateElement * coords = static_cast<const SoGLCoordinateElement*>(tmp);
 
     Binding mbind = this->findMaterialBinding(state);
     Binding nbind = this->findNormalBinding(state);
@@ -988,7 +988,7 @@ SoFaceSet::useConvexCache(SoAction * action)
   SoVertexShape::getVertexData(state, tmp, normals,
                                needNormals);
 
-  const SoGLCoordinateElement * coords = (SoGLCoordinateElement *)tmp;
+  const SoGLCoordinateElement * coords = static_cast<const SoGLCoordinateElement*>(tmp);
 
   SoTextureCoordinateBundle tb(action, TRUE, FALSE);
   doTextures = tb.needCoordinates();

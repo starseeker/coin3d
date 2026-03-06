@@ -509,23 +509,23 @@ soshape_bumprender::renderBumpSpecular(SoState * state,
   const SbVec3f * tptr = this->tangentlist.getArrayPtr();
   
   SoGLContext_glVertexPointer(glue, 3, GL_FLOAT, 0,
-                            (GLvoid*) cache->getVertexArray());
+                            const_cast<GLvoid*>(static_cast<const GLvoid*>(cache->getVertexArray())));
   SoGLContext_glEnableClientState(glue, GL_VERTEX_ARRAY);
 
   SoGLContext_glTexCoordPointer(glue, 2, GL_FLOAT, 0,
-                              (GLvoid*) cache->getBumpCoordArray());
+                              const_cast<GLvoid*>(static_cast<const GLvoid*>(cache->getBumpCoordArray())));
   SoGLContext_glEnableClientState(glue, GL_TEXTURE_COORD_ARRAY);
 
   SoGLContext_glNormalPointer(glue, GL_FLOAT, 0,
-                           (GLvoid*) cache->getNormalArray());
+                           const_cast<GLvoid*>(static_cast<const GLvoid*>(cache->getNormalArray())));
   SoGLContext_glEnableClientState(glue, GL_NORMAL_ARRAY);
 
   SoGLContext_glClientActiveTexture(glue, GL_TEXTURE1);
-  SoGLContext_glTexCoordPointer(glue, 3, GL_FLOAT, 6*sizeof(float), (GLvoid*) tptr);
+  SoGLContext_glTexCoordPointer(glue, 3, GL_FLOAT, 6*sizeof(float), const_cast<GLvoid*>(static_cast<const GLvoid*>(tptr)));
   SoGLContext_glEnableClientState(glue, GL_TEXTURE_COORD_ARRAY);
 
   SoGLContext_glClientActiveTexture(glue, GL_TEXTURE2);
-  SoGLContext_glTexCoordPointer(glue, 3, GL_FLOAT, 6*sizeof(float), (GLvoid*) (tptr + 1));
+  SoGLContext_glTexCoordPointer(glue, 3, GL_FLOAT, 6*sizeof(float), const_cast<GLvoid*>(static_cast<const GLvoid*>(tptr + 1)));
   SoGLContext_glEnableClientState(glue, GL_TEXTURE_COORD_ARRAY);
 
   SoGLContext_glDrawElements(glue, GL_TRIANGLES, n, GL_UNSIGNED_INT,
@@ -652,26 +652,26 @@ soshape_bumprender::renderBump(SoState * state,
   }
 
   SoGLContext_glVertexPointer(glue, 3, GL_FLOAT, 0,
-                            (GLvoid*) cache->getVertexArray());
+                            const_cast<GLvoid*>(static_cast<const GLvoid*>(cache->getVertexArray())));
   SoGLContext_glEnableClientState(glue, GL_VERTEX_ARRAY);
   SoGLContext_glTexCoordPointer(glue, 2, GL_FLOAT, 0,
-                              (GLvoid*) cache->getBumpCoordArray());
+                              const_cast<GLvoid*>(static_cast<const GLvoid*>(cache->getBumpCoordArray())));
   SoGLContext_glEnableClientState(glue, GL_TEXTURE_COORD_ARRAY);
 
   SoGLContext_glClientActiveTexture(glue, GL_TEXTURE1);
   if (use_vertex_program) {
     SoGLContext_glColorPointer(glue, 3, GL_FLOAT, 6*sizeof(float),
-                             (GLvoid*) (tsptr + 1));
+                             const_cast<GLvoid*>(static_cast<const GLvoid*>(tsptr + 1)));
     SoGLContext_glEnableClientState(glue, GL_COLOR_ARRAY);
     SoGLContext_glTexCoordPointer(glue, 3, GL_FLOAT, 6*sizeof(float),
-                                (GLvoid*) tsptr);
+                                const_cast<GLvoid*>(static_cast<const GLvoid*>(tsptr)));
     SoGLContext_glNormalPointer(glue, GL_FLOAT, 0,
-                              (GLvoid*) cache->getNormalArray());
+                              const_cast<GLvoid*>(static_cast<const GLvoid*>(cache->getNormalArray())));
     SoGLContext_glEnableClientState(glue, GL_NORMAL_ARRAY);
   }
   else {
     SoGLContext_glTexCoordPointer(glue, 3, GL_FLOAT, 0,
-                                (GLvoid*) cmptr);
+                                const_cast<GLvoid*>(static_cast<const GLvoid*>(cmptr)));
   }
   SoGLContext_glEnableClientState(glue, GL_TEXTURE_COORD_ARRAY);
 

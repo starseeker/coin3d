@@ -199,6 +199,7 @@
 #include <Inventor/elements/SoCacheElement.h>
 #include <Inventor/elements/SoCoordinateElement.h>
 #include <Inventor/elements/SoCreaseAngleElement.h>
+#include <Inventor/elements/SoGLCoordinateElement.h>
 #include <Inventor/elements/SoGLCacheContextElement.h>
 #include <Inventor/elements/SoGLLazyElement.h>
 #include <Inventor/elements/SoGLVBOElement.h>
@@ -609,7 +610,7 @@ SoIndexedFaceSet::GLRender(SoGLRenderAction * action)
     }
 
     sogl_render_faceset(sogl_glue_from_state(state),
-                        (SoGLCoordinateElement *)coords,
+                        static_cast<const SoGLCoordinateElement*>(coords),
                         cindices,
                         numindices,
                         normals,

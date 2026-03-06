@@ -204,10 +204,10 @@ SoGLLazyElement::~SoGLLazyElement()
 
 //! FIXME: write doc
 SoGLLazyElement *
-SoGLLazyElement::getInstance(const SoState *state)
+SoGLLazyElement::getInstance(SoState *state)
 {
-  return (SoGLLazyElement*)
-    state->getConstElement(classStackIndex);
+  return const_cast<SoGLLazyElement*>(static_cast<const SoGLLazyElement*>(
+    state->getConstElement(classStackIndex)));
 }
 
 inline void
@@ -455,7 +455,7 @@ void
 SoGLLazyElement::pop(SoState *stateptr, const SoElement * prevtopelement)
 {
   inherited::pop(stateptr, prevtopelement);
-  SoGLLazyElement * prev = (SoGLLazyElement*) prevtopelement;
+  const SoGLLazyElement * prev = static_cast<const SoGLLazyElement*>(prevtopelement);
   this->glstate = prev->glstate;
   this->colorindex = prev->colorindex;
   this->didsetbitmask = prev->didsetbitmask;
@@ -501,7 +501,7 @@ SoGLLazyElement::sendDiffuseByIndex(const int index) const
   if (index < 0 || index >= this->coinstate.numdiffuse) {
     static int first = 1;
     if (first) {
-      SoFullPath * path = (SoFullPath*) this->state->getAction()->getCurPath();
+      const SoFullPath * path = static_cast<const SoFullPath*>(this->state->getAction()->getCurPath());
       SoNode * tail = path->getTail();
       SbName name = tail->getName();
       SoDebugError::postWarning("SoGLLazyElement::sendDiffuseByIndex",
@@ -543,7 +543,7 @@ SoGLLazyElement::isColorIndex(SoState * state)
 //! FIXME: write doc
 
 void
-SoGLLazyElement::send(const SoState * stateptr, uint32_t mask) const
+SoGLLazyElement::send(SoState * stateptr, uint32_t mask) const
 {
   if (this->colorpacker) {
     if (!this->colorpacker->diffuseMatch(this->coinstate.diffusenodeid) ||
@@ -563,8 +563,8 @@ SoGLLazyElement::send(const SoState * stateptr, uint32_t mask) const
       switch (i) {
       case LIGHT_MODEL_CASE:
         if (this->coinstate.lightmodel != this->glstate.lightmodel) {
-          SoGLShaderProgram * prog = SoGLShaderProgramElement::get((SoState*) stateptr);
-          if (prog) prog->updateCoinParameter((SoState*)stateptr, SbName("coin_light_model"), this->coinstate.lightmodel);
+          SoGLShaderProgram * prog = SoGLShaderProgramElement::get(stateptr);
+          if (prog) prog->updateCoinParameter(stateptr, SbName("coin_light_model"), this->coinstate.lightmodel);
           this->sendLightModel(this->coinstate.lightmodel);
         }
         break;
@@ -621,7 +621,7 @@ SoGLLazyElement::send(const SoState * stateptr, uint32_t mask) const
               this->coinstate.alpha_blend_dfactor != this->glstate.alpha_blend_dfactor) {
             if ((this->coinstate.alpha_blend_sfactor != 0) &&
                 (this->coinstate.alpha_blend_dfactor != 0)) {
-              this->enableSeparateBlending(SoGLContext_instance(SoGLCacheContextElement::get((SoState*)stateptr)),
+              this->enableSeparateBlending(SoGLContext_instance(SoGLCacheContextElement::get(stateptr)),
                                            this->coinstate.blend_sfactor,
                                            this->coinstate.blend_dfactor,
                                            this->coinstate.alpha_blend_sfactor,
@@ -659,8 +659,8 @@ SoGLLazyElement::send(const SoState * stateptr, uint32_t mask) const
         break;
       case TWOSIDE_CASE:
         if (this->glstate.twoside != this->coinstate.twoside) {
-          SoGLShaderProgram * prog = SoGLShaderProgramElement::get((SoState*) stateptr);
-          if (prog) prog->updateCoinParameter((SoState*)stateptr, SbName("coin_two_sided_lighting"), this->coinstate.twoside);
+          SoGLShaderProgram * prog = SoGLShaderProgramElement::get(stateptr);
+          if (prog) prog->updateCoinParameter(stateptr, SbName("coin_two_sided_lighting"), this->coinstate.twoside);
           this->sendTwosideLighting(this->coinstate.twoside);
         }
         break;
@@ -1040,7 +1040,7 @@ SoGLLazyElement::endCaching(SoState * state)
 }
 
 void
-SoGLLazyElement::postCacheCall(const SoState * state, const GLState * poststate)
+SoGLLazyElement::postCacheCall(SoState * state, const GLState * poststate)
 {
   SoGLLazyElement * elem = getInstance(state);
   uint32_t mask = poststate->cachebitmask;
@@ -1100,9 +1100,10 @@ SoGLLazyElement::postCacheCall(const SoState * state, const GLState * poststate)
 SbBool
 SoGLLazyElement::preCacheCall(const SoState * state, const GLState * prestate)
 {
-  SoGLLazyElement * elem = getInstance(state);
+  const SoGLLazyElement * elem = static_cast<const SoGLLazyElement*>(
+    state->getConstElement(classStackIndex));
 
-  struct CoinState & curr = elem->coinstate;
+  const struct CoinState & curr = elem->coinstate;
   uint32_t mask = prestate->cachebitmask;
 
   for (int i = 0; (i < LAZYCASES_LAST)&&mask; i++, mask>>=1) {

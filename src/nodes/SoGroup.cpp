@@ -407,7 +407,7 @@ SoGroup::copyContents(const SoFieldContainer * from, SbBool copyconnections)
 
   inherited::copyContents(from, copyconnections);
 
-  SoGroup * g = (SoGroup *)from;
+  SoGroup * g = const_cast<SoGroup*>(static_cast<const SoGroup*>(from));
 
   // Add children of "from" group node.
   for (int i=0 ; i < g->getNumChildren(); i++) {
@@ -517,7 +517,7 @@ SoGroup::removeChild(int childindex)
 int
 SoGroup::findChild(const SoNode * node) const
 {
-  return this->getChildren()->find((SoNode *) node);
+  return this->getChildren()->find(node);
 }
 
 /*!
@@ -785,7 +785,7 @@ SoGroup::search(SoSearchAction * action)
 SoChildList *
 SoGroup::getChildren(void) const
 {
-  return ((SoGroup *)this)->children;
+  return this->children;
 }
 
 /*!

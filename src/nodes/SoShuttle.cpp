@@ -174,12 +174,12 @@ SoShuttle::copy(SbBool copyconnections) const
 {
   // Decouple connections to/from internal engines to avoid them being
   // copied.
-  ((SoShuttle *)this)->deconnectInternalEngines();
+  const_cast<SoShuttle*>(this)->deconnectInternalEngines();
 
   SoShuttle * cp = (SoShuttle *)inherited::copy(copyconnections);
 
   // Re-enable all connections to/from internal engines.
-  ((SoShuttle *)this)->reconnectInternalEngines();
+  const_cast<SoShuttle*>(this)->reconnectInternalEngines();
 
   return cp;
 }

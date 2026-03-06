@@ -250,12 +250,12 @@ SoBlinker::copy(SbBool copyconnections) const
 {
   // Decouple connections to/from internal engine to avoid it being
   // copied.
-  ((SoBlinker *)this)->deconnectInternalEngine();
+  const_cast<SoBlinker*>(this)->deconnectInternalEngine();
 
   SoBlinker * cp = (SoBlinker *)inherited::copy(copyconnections);
 
   // Re-enable all connections to/from internal engine.
-  ((SoBlinker *)this)->reconnectInternalEngine();
+  const_cast<SoBlinker*>(this)->reconnectInternalEngine();
 
   // Need to set this explicitly after reconnect, as the internal
   // engine for the copy initially contains incorrect values. The

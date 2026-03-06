@@ -1787,7 +1787,7 @@ SoOffscreenRenderer::getWriteFiletypeInfo(const int idx,
     // Store extensions as static strings to ensure lifetime
     static std::vector<std::string> static_extensions;
     static_extensions.push_back(ext);
-    extlist.append((void*)static_extensions.back().c_str());
+    extlist.append(const_cast<void*>(static_cast<const void*>(static_extensions.back().c_str())));
   }
   
   fullname = handler->getFormatName();
@@ -2206,7 +2206,7 @@ SoOffscreenRendererP::setCameraViewvolForTile(SoCamera * cam)
     SbVec3f jittervec;
     SbMatrix m;
     coin_viewvolume_jitter(renderaction->getNumPasses(), renderaction->getCurPass(),
-                           this->glcanvassize, (float *)jittervec.getValue());
+                           this->glcanvassize, const_cast<float*>(jittervec.getValue()));
     m.setTranslate(jittervec);
     proj.multRight(m);
   }

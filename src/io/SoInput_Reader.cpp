@@ -150,7 +150,7 @@ SoInput_FileReader::getFilePointer(void)
 
 SoInput_MemBufferReader::SoInput_MemBufferReader(const void * bufPointer, size_t bufSize)
 {
-  this->buf = (char*) bufPointer;
+  this->buf = const_cast<char*>(static_cast<const char*>(bufPointer));
   this->buflen = bufSize;
   this->bufpos = 0;
 }

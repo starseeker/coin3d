@@ -220,14 +220,14 @@ SoAuditorList::doNotify(SoNotList * l, const void * auditor, const SoNotRec::Typ
   case SoNotRec::CONTAINER:
   case SoNotRec::PARENT:
     {
-      SoFieldContainer * obj = (SoFieldContainer *)auditor;
+      SoFieldContainer * obj = const_cast<SoFieldContainer*>(static_cast<const SoFieldContainer*>(auditor));
       obj->notify(l);
     }
     break;
 
   case SoNotRec::SENSOR:
     {
-      SoDataSensor * obj = (SoDataSensor *)auditor;
+      SoDataSensor * obj = const_cast<SoDataSensor*>(static_cast<const SoDataSensor*>(auditor));
 #if OBOL_DEBUG && 0 // debug
       SoDebugError::postInfo("SoAuditorList::notify",
                              "notify and schedule sensor: %p", obj);
@@ -248,7 +248,7 @@ SoAuditorList::doNotify(SoNotList * l, const void * auditor, const SoNotRec::Typ
       // re-evaluation), so don't try to "optimize" the
       // notification mechanism by re-introducing that "feature".
       // :^/
-      ((SoField *)auditor)->notify(l);
+      const_cast<SoField*>(static_cast<const SoField*>(auditor))->notify(l);
     }
     break;
 

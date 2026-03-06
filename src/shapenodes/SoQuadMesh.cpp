@@ -587,8 +587,8 @@ namespace { namespace SoGL { namespace QuadMesh {
             t1 = t3;
             t2 = t4;
             if (!tb->isFunction()) {
-              t3 = &((SoTextureCoordinateBundle*)tb)->get(curridx1);
-              t4 = &((SoTextureCoordinateBundle*)tb)->get(curridx2);
+              t3 = &const_cast<SoTextureCoordinateBundle*>(tb)->get(curridx1);
+              t4 = &const_cast<SoTextureCoordinateBundle*>(tb)->get(curridx2);
             } else {
               assert(FALSE && "unimplemented");
             }
@@ -877,7 +877,7 @@ SoQuadMesh::GLRender(SoGLRenderAction * action)
   SoVertexShape::getVertexData(action->getState(), tmp, normals,
                                needNormals);
 
-  const SoGLCoordinateElement * coords = (SoGLCoordinateElement *)tmp;
+  const SoGLCoordinateElement * coords = static_cast<const SoGLCoordinateElement*>(tmp);
 
   const int start = this->startIndex.getValue();
 

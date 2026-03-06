@@ -342,8 +342,8 @@ SoDataSensor::notify(SoNotList * l)
     this->triggeroperationtype = firstrecord ? firstrecord->getOperationType() : SoNotRec::UNSPECIFIED;
     this->triggerindex = firstrecord ? firstrecord->getIndex() : -1;
     this->triggerfieldnumindices = firstrecord ? firstrecord->getFieldNumIndices() : 0;
-    this->triggergroupchild = (SoNode *) (firstrecord ? firstrecord->getGroupChild() : NULL);
-    this->triggergroupprevchild = (SoNode *) (firstrecord ? firstrecord->getGroupPrevChild() : NULL);
+    this->triggergroupchild = const_cast<SoNode*>(static_cast<const SoNode*>(firstrecord ? firstrecord->getGroupChild() : NULL));
+    this->triggergroupprevchild = const_cast<SoNode*>(static_cast<const SoNode*>(firstrecord ? firstrecord->getGroupPrevChild() : NULL));
   }
   this->schedule();
 }

@@ -428,7 +428,7 @@ fast_mipmap(SoState * state, int width, int height, int nc,
     SoGLContext_glTexImage2D(glue, GL_TEXTURE_2D, 0, internalFormat, width, height, 0, format,
                  GL_UNSIGNED_BYTE, data);
   }
-  unsigned char *src = (unsigned char *) data;
+  unsigned char *src = const_cast<unsigned char*>(data);
   for (level = 1; level <= levels; level++) {
     halve_image(width, height, nc, src, mipmap_buffer);
     if (width > 1) width >>= 1;
@@ -477,7 +477,7 @@ fast_mipmap(SoState * state, int width, int height, int depth,
                              GL_UNSIGNED_BYTE, data);
     }
   }
-  unsigned char *src = (unsigned char *) data;
+  unsigned char *src = const_cast<unsigned char*>(data);
   for (int level = 1; level <= levels; level++) {
     halve_image(width, height, depth, nc, src, mipmap_buffer);
     if (width > 1) width >>= 1;
@@ -1047,13 +1047,13 @@ SoGLImage::setData(const SbImage *image,
           SoGLContext_glTexSubImage3D(glw, GL_TEXTURE_3D, 0, 0, 0, 0,
                                     size[0], size[1], size[2],
                                     format, GL_UNSIGNED_BYTE,
-                                    (void*) bytes);
+                                    const_cast<void*>(static_cast<const void*>(bytes)));
         }
         else {
           SoGLContext_glTexSubImage2D(glw, GL_TEXTURE_2D, 0, 0, 0,
                                     size[0], size[1],
                                     format, GL_UNSIGNED_BYTE,
-                                    (void*) bytes);
+                                    const_cast<void*>(static_cast<const void*>(bytes)));
         }
       }
     }
@@ -1237,7 +1237,7 @@ SoGLImage::hasTransparency(void) const
   if (PRIVATE(this)->flags & FORCE_TRANSPARENCY_FALSE) return FALSE;
 
   if (PRIVATE(this)->needtransparencytest) {
-    ((SoGLImage*)this)->pimpl->checkTransparency();
+    const_cast<SoGLImage*>(this)->pimpl->checkTransparency();
   }
   return PRIVATE(this)->hastransparency;
 }

@@ -1035,7 +1035,7 @@ SoExtSelection::handleEvent(SoHandleEventAction * action)
 
   // An option for the end-user to abort a selection.
   if (e->getTypeId() == SoKeyboardEvent::getClassTypeId()) {
-    SoKeyboardEvent * k = (SoKeyboardEvent *)e;
+    SoKeyboardEvent * k = const_cast<SoKeyboardEvent*>(static_cast<const SoKeyboardEvent*>(e));
     // note: will match on either up or down presses, or even not any
     // up/down state set. this is what we want, to be robust against
     // e.g. someone setting up their own SoKeyboardEvent and manually
@@ -1544,7 +1544,7 @@ SoExtSelectionP::testBBox(SoCallbackAction * action,
     else center = bbox.getCenter();
   }
   else {
-    ((SoShape *)shape)->computeBBox(action, bbox, center);
+    const_cast<SoShape*>(shape)->computeBBox(action, bbox, center);
   }
   SbVec3f mincorner = bbox.getMin();
   SbVec3f maxcorner = bbox.getMax();
@@ -2203,7 +2203,7 @@ SoExtSelectionP::addPointToOffscreenBuffer(SoCallbackAction * action,
 void
 SoExtSelectionP::doSelect(const SoPath * path)
 {
-  SoPath * newpath = (SoPath*) path;
+  SoPath * newpath = const_cast<SoPath*>(path);
 
   if (this->filterCB && (!this->callfiltercbonlyifselectable ||
                          path->findNode(PUBLIC(this)) >= 0)) {
@@ -2312,7 +2312,7 @@ SoExtSelectionP::offscreenRenderLassoCallback(void * userdata, SoAction * action
   }
   const SbVec3f * tmparray = tmplist.getArrayPtr();
   for(i = 0; i < pimpl->runningselection.coords.getLength(); i++)
-    tessellator.addVertex(tmparray[i],(void*)&tmparray[i]);
+    tessellator.addVertex(tmparray[i], const_cast<void*>(static_cast<const void*>(&tmparray[i])));
   tessellator.endPolygon();
 
   SoGLContext_glMatrixMode(pimpl->cachedGlue, GL_PROJECTION);

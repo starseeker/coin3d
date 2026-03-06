@@ -590,7 +590,7 @@ void
 SoElement::print(FILE * file) const
 {
   (void)fprintf(file, "%s[%p]\n",
-                this->getTypeId().getName().getString(), (void*)this);
+                this->getTypeId().getName().getString(), static_cast<const void*>(this));
 }
 
 /*!

@@ -57,6 +57,7 @@
 #define STRUETYPE_IMPLEMENTATION
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
+#pragma GCC diagnostic ignored "-Wcast-qual"
 #include "fonts/struetype.h"
 #pragma GCC diagnostic pop
 

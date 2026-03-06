@@ -385,19 +385,19 @@ SoVectorizePSAction::printItem(const SoVectorizeItem * item) const
 {
   switch (item->type) {
   case SoVectorizeItem::TRIANGLE:
-    PRIVATE(this)->printTriangle((SoVectorizeTriangle*)item);
+    PRIVATE(this)->printTriangle(const_cast<SoVectorizeTriangle*>(static_cast<const SoVectorizeTriangle*>(item)));
     break;
   case SoVectorizeItem::LINE:
-    PRIVATE(this)->printLine((SoVectorizeLine*)item);
+    PRIVATE(this)->printLine(const_cast<SoVectorizeLine*>(static_cast<const SoVectorizeLine*>(item)));
     break;
   case SoVectorizeItem::POINT:
-    PRIVATE(this)->printPoint((SoVectorizePoint*)item);
+    PRIVATE(this)->printPoint(const_cast<SoVectorizePoint*>(static_cast<const SoVectorizePoint*>(item)));
     break;
   case SoVectorizeItem::TEXT:
-    PRIVATE(this)->printText((SoVectorizeText*)item);
+    PRIVATE(this)->printText(const_cast<SoVectorizeText*>(static_cast<const SoVectorizeText*>(item)));
     break;
   case SoVectorizeItem::IMAGE:
-    PRIVATE(this)->printImage((SoVectorizeImage*)item);
+    PRIVATE(this)->printImage(const_cast<SoVectorizeImage*>(static_cast<const SoVectorizeImage*>(item)));
     break;
   default:
     assert(0 && "unsupported item");

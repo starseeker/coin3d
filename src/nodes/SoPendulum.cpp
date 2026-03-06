@@ -168,12 +168,12 @@ SoPendulum::copy(SbBool copyconnections) const
 {
   // Decouple connections to/from internal engines to avoid them being
   // copied.
-  ((SoPendulum *)this)->deconnectInternalEngine();
+  const_cast<SoPendulum*>(this)->deconnectInternalEngine();
 
   SoPendulum * cp = (SoPendulum *)inherited::copy(copyconnections);
 
   // Re-enable all connections to/from internal engines.
-  ((SoPendulum *)this)->reconnectInternalEngine();
+  const_cast<SoPendulum*>(this)->reconnectInternalEngine();
 
   return cp;
 }

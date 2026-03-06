@@ -486,7 +486,7 @@ SoTriangleStripSet::GLRender(SoGLRenderAction * action)
   SoVertexShape::getVertexData(action->getState(), tmp, normals,
                                needNormals);
 
-  const SoGLCoordinateElement * coords = (SoGLCoordinateElement *)tmp;
+  const SoGLCoordinateElement * coords = static_cast<const SoGLCoordinateElement*>(tmp);
 
   if (!needNormals) nbind = OVERALL;
 

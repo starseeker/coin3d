@@ -584,8 +584,8 @@ static int atexit_qsort_cb(const void* q0, const void* q1)
 {
     tb_atexit_data* p0, * p1;
     
-    p0 = *((tb_atexit_data**) q0);
-    p1 = *((tb_atexit_data**) q1);
+    p0 = *const_cast<tb_atexit_data**>(static_cast<const tb_atexit_data* const*>(q0));
+    p1 = *const_cast<tb_atexit_data**>(static_cast<const tb_atexit_data* const*>(q1));
     
     if (p0->priority < p1->priority) return -1;
     if (p0->priority > p1->priority) return 1;

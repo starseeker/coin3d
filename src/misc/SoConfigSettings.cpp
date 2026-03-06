@@ -21,15 +21,6 @@ namespace {
   }
   const char COIN [] = "COIN";
 
-#if OBOL_DEBUG
-  SbBool isValidOption(const SbString & option)
-  {
-    size_t i;
-    for (i = 0; i<options_size() && option != VALID_OPTIONS[i]; ++i) {}
-    return (i!=options_size());
-  }
-#endif // OBOL_DEBUG
-
   const SbString INVALID_SETTING("");
 };
 
@@ -82,6 +73,11 @@ SoConfigSettings::reinitialize()
   //disabling this for now. Write a configure test for this in the
   //future. BFG 20091013
 #if OBOL_DEBUG && 0
+  auto isValidOption = [](const SbString & option) -> SbBool {
+    size_t i;
+    for (i = 0; i<options_size() && option != VALID_OPTIONS[i]; ++i) {}
+    return (i!=options_size());
+  };
   for (char ** test = environ; *test != NULL; ++test) {
     char * first = strchr(*test,'=');
     if (first) {

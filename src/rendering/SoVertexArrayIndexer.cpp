@@ -39,7 +39,7 @@
 
 #include "rendering/SoVertexArrayIndexer.h"
 
-#include <cassert>
+#include <algorithm>
 #include <cstring>
 #include <cstdio>
 
@@ -285,9 +285,9 @@ SoVertexArrayIndexer::render(const SoGLContext * glue, const SbBool renderasvbo,
     if (SoGLDriverDatabase::isSupported(glue, SO_GL_MULTIDRAW_ELEMENTS)) {
       SoGLContext_glMultiDrawElements(glue,
                                     this->target,
-                                    (GLsizei*) this->countarray.getArrayPtr(),
+                                    const_cast<GLsizei*>(this->countarray.getArrayPtr()),
                                     GL_UNSIGNED_INT,
-                                    (const GLvoid**) this->ciarray.getArrayPtr(),
+                                    reinterpret_cast<const GLvoid**>(const_cast<const int**>(this->ciarray.getArrayPtr())),
                                     this->countarray.getLength());
     }
     else {
@@ -365,57 +365,41 @@ static void sort2(int32_t * arr)
   }
 }
 
-// qsort callback used for sorting triangles based on vertex indices
-extern "C" {
-static int
-compare_triangle(const void * v0, const void * v1)
-{
-  int i;
-  int32_t * t0 = (int32_t*) v0;
-  int32_t * t1 = (int32_t*) v1;
+// Record types used for sorting index groups in-place with std::sort.
+struct TriangleRecord { int32_t v[3]; };
+struct LineRecord     { int32_t v[2]; };
+static_assert(sizeof(TriangleRecord) == 3 * sizeof(int32_t),
+              "TriangleRecord must be tightly packed");
+static_assert(sizeof(LineRecord) == 2 * sizeof(int32_t),
+              "LineRecord must be tightly packed");
 
-  int32_t ti0[3];
-  int32_t ti1[3];
-  for (i = 0; i < 3; i++) {
-    ti0[i] = t0[i];
-    ti1[i] = t1[i];
+// Comparator used for sorting triangles based on vertex indices
+struct compare_triangle {
+  bool operator()(const TriangleRecord & a, const TriangleRecord & b) const {
+    int32_t ti0[3] = { a.v[0], a.v[1], a.v[2] };
+    int32_t ti1[3] = { b.v[0], b.v[1], b.v[2] };
+    sort3(ti0);
+    sort3(ti1);
+    for (int i = 0; i < 3; i++) {
+      if (ti0[i] != ti1[i]) return ti0[i] < ti1[i];
+    }
+    return false;
   }
-  sort3(ti0);
-  sort3(ti1);
+};
 
-  for (i = 0; i < 3; i++) {
-    int32_t diff = ti0[i] - ti1[i];
-    if (diff != 0) return diff;
+// Comparator used for sorting lines based on vertex indices
+struct compare_line {
+  bool operator()(const LineRecord & a, const LineRecord & b) const {
+    int32_t ti0[2] = { a.v[0], a.v[1] };
+    int32_t ti1[2] = { b.v[0], b.v[1] };
+    sort2(ti0);
+    sort2(ti1);
+    for (int i = 0; i < 2; i++) {
+      if (ti0[i] != ti1[i]) return ti0[i] < ti1[i];
+    }
+    return false;
   }
-  return 0;
-}
-}
-
-// qsort callback used for sorting lines based on vertex indices
-extern "C" {
-static int
-compare_line(const void * v0, const void * v1)
-{
-  int i;
-  int32_t * t0 = (int32_t*) v0;
-  int32_t * t1 = (int32_t*) v1;
-
-  int32_t ti0[2];
-  int32_t ti1[2];
-  for (i = 0; i < 2; i++) {
-    ti0[i] = t0[i];
-    ti1[i] = t1[i];
-  }
-  sort2(ti0);
-  sort2(ti1);
-
-  for (i = 0; i < 2; i++) {
-    int32_t diff = ti0[i] - ti1[i];
-    if (diff != 0) return diff;
-  }
-  return 0;
-}
-}
+};
 
 //
 // sort triangles to optimize rendering
@@ -427,11 +411,10 @@ SoVertexArrayIndexer::sort_triangles(void)
   // GPU vertex cache. Not the optimal solution, but should work
   // pretty well. Example: bunny.iv (~70000 triangles) went from 238
   // fps with no sorting to 380 fps with sorting.
-  if (this->indexarray.getLength()) {
-    qsort((void*) this->indexarray.getArrayPtr(),
-          this->indexarray.getLength() / 3,
-          sizeof(int32_t) * 3,
-          compare_triangle);
+  const int n = this->indexarray.getLength() / 3;
+  if (n > 0) {
+    TriangleRecord * tris = reinterpret_cast<TriangleRecord *>(&this->indexarray[0]);
+    std::sort(tris, tris + n, compare_triangle());
   }
 }
 
@@ -443,13 +426,11 @@ SoVertexArrayIndexer::sort_lines(void)
 {
   // sort lines based on vertex indices to get more hits in the
   // GPU vertex cache.
-  if (this->indexarray.getLength()) {
-    qsort((void*) this->indexarray.getArrayPtr(),
-          this->indexarray.getLength() / 2,
-          sizeof(int32_t) * 2,
-          compare_line);
+  const int n = this->indexarray.getLength() / 2;
+  if (n > 0) {
+    LineRecord * lines = reinterpret_cast<LineRecord *>(&this->indexarray[0]);
+    std::sort(lines, lines + n, compare_line());
   }
-
 }
 
 /*!
@@ -481,5 +462,5 @@ SoVertexArrayIndexer::getWriteableIndices(void)
 {
   delete this->vbo;
   this->vbo = NULL;
-  return (GLint*) this->indexarray.getArrayPtr();
+  return const_cast<GLint*>(this->indexarray.getArrayPtr());
 }

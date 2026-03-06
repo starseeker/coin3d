@@ -36,7 +36,7 @@
 #include <cstdlib>
 #include <cassert>
 
-#include "config.h"
+#include <algorithm>
 
 #include <Inventor/lists/SbList.h>
 #include <Inventor/SoPrimitiveVertex.h>
@@ -84,22 +84,13 @@ soshape_trianglesort::triangle(SoState *,
   this->pvlist->append(*v3);
 }
 
-// qsort() callback.
-//
-// "extern C" wrapper is needed with the OSF1/cxx compiler (probably a
-// bug in the compiler, but it doesn't seem to hurt to do this
-// anyway).
-extern "C" {
-static int
-compare_triangles(const void * ptr1, const void * ptr2)
+// Comparator for sorting triangles back-to-front for transparent rendering.
+static bool compare_triangles(const soshape_trianglesort::sorted_triangle & tri1,
+                               const soshape_trianglesort::sorted_triangle & tri2)
 {
-  soshape_trianglesort::sorted_triangle * tri1 = (soshape_trianglesort::sorted_triangle*) ptr1;
-  soshape_trianglesort::sorted_triangle * tri2 = (soshape_trianglesort::sorted_triangle*) ptr2;
-
-  if (tri1->dist > tri2->dist) return -1;
-  if (tri1->dist == tri2->dist) return tri2->backface - tri1->backface;
-  return 1;
-}
+  if (tri1.dist > tri2.dist) return true;
+  if (tri1.dist == tri2.dist) return tri2.backface < tri1.backface;
+  return false;
 }
 
 void
@@ -179,8 +170,8 @@ soshape_trianglesort::endShape(SoState * state, SoMaterialBundle & mb)
     }
   }
 
-  const sorted_triangle * tarray = this->trianglelist->getArrayPtr();
-  qsort((void*)tarray, n, sizeof(sorted_triangle), compare_triangles);
+  sorted_triangle * tarray = &(*this->trianglelist)[0];
+  std::sort(tarray, tarray + n, compare_triangles);
 
   int idx;
 

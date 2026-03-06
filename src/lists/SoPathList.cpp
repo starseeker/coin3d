@@ -146,8 +146,8 @@ extern "C" {
 static int
 compare_paths(const void * v0, const void * v1)
 {
-  SoFullPath * p0 = *((SoFullPath**)v0);
-  SoFullPath * p1 = *((SoFullPath**)v1);
+  SoFullPath * p0 = *const_cast<SoFullPath**>(static_cast<const SoFullPath* const*>(v0));
+  SoFullPath * p1 = *const_cast<SoFullPath**>(static_cast<const SoFullPath* const*>(v1));
 
   const ptrdiff_t diff = (char *)p0->getHead() - (char *)p1->getHead();
   if (diff != 0) { return (int)diff; }

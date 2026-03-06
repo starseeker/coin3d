@@ -182,7 +182,7 @@ dot_product(float *v0, float *v1)
 /*
  * treverses (evaluates) the tree structure.
  */
-void
+static void
 so_eval_traverse(so_eval_node *node, so_eval_param *result, const so_eval_cbdata *cbdata)
 {
   so_eval_param param1, param2, param3;

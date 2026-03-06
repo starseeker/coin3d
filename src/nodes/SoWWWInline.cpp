@@ -667,7 +667,7 @@ SoWWWInline::copyContents(const SoFieldContainer * fromfc,
   this->getChildren()->truncate(0);
   inherited::copyContents(fromfc, copyconnections);
 
-  SoWWWInline * inlinenode = (SoWWWInline *) fromfc;
+  SoWWWInline * inlinenode = const_cast<SoWWWInline*>(static_cast<const SoWWWInline*>(fromfc));
 
   if (inlinenode->getChildren()->getLength() == 0) return;
 

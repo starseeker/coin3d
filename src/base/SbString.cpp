@@ -51,6 +51,7 @@
 */
 
 #include <Inventor/SbString.h>
+#include "misc/SbHash.h"
 #include <cctype>
 #include <algorithm>
 #include <locale>

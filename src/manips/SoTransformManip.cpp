@@ -192,7 +192,7 @@ SoTransformManip::setDragger(SoDragger * newdragger)
   Returns the dragger used by this manipulator.
 */
 SoDragger *
-SoTransformManip::getDragger(void)
+SoTransformManip::getDragger(void) const
 {
   if (this->children->getLength() > 0) {
     SoNode *node = (*children)[0];
@@ -520,7 +520,7 @@ void
 SoTransformManip::copyContents(const SoFieldContainer * fromfc, SbBool copyconnections)
 {
   assert(fromfc->isOfType(SoTransformManip::getClassTypeId()));
-  SoDragger *dragger = ((SoTransformManip*)fromfc)->getDragger();
+  SoDragger *dragger = static_cast<const SoTransformManip*>(fromfc)->getDragger();
   this->setDragger(dragger ? (SoDragger*) dragger->copy() : NULL);
   inherited::copyContents(fromfc, copyconnections);
 }

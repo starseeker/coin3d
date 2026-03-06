@@ -383,9 +383,9 @@ SoShader::getNamedScript(const SbName & name, const Type type)
 void
 SoShader::setupBuiltinShaders(void)
 {
-  shader_builtin_dict->put(SbName("lights/PointLight").getString(), (char*) POINTLIGHT_shadersource);
-  shader_builtin_dict->put(SbName("lights/SpotLight").getString(), (char*) SPOTLIGHT_shadersource);
-  shader_builtin_dict->put(SbName("lights/DirectionalLight").getString(), (char*) DIRECTIONALLIGHT_shadersource);
-  shader_builtin_dict->put(SbName("lights/DirSpotLight").getString(), (char*) DIRSPOTLIGHT_shadersource);
-  shader_builtin_dict->put(SbName("vsm/VsmLookup").getString(), (char*) VSMLOOKUP_shadersource);
+  shader_builtin_dict->put(SbName("lights/PointLight").getString(), const_cast<char*>(POINTLIGHT_shadersource));
+  shader_builtin_dict->put(SbName("lights/SpotLight").getString(), const_cast<char*>(SPOTLIGHT_shadersource));
+  shader_builtin_dict->put(SbName("lights/DirectionalLight").getString(), const_cast<char*>(DIRECTIONALLIGHT_shadersource));
+  shader_builtin_dict->put(SbName("lights/DirSpotLight").getString(), const_cast<char*>(DIRSPOTLIGHT_shadersource));
+  shader_builtin_dict->put(SbName("vsm/VsmLookup").getString(), const_cast<char*>(VSMLOOKUP_shadersource));
 }

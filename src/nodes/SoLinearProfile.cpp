@@ -161,11 +161,11 @@ SoLinearProfile::getTrimCurve(SoState * state, int32_t & numpoints,
     // get the appropriate coordinates and save the number of floats
     // per vector for later usage.
     if (elem->is2D()) {
-      points = (float*) elem->getArrayPtr2();
+      points = const_cast<float*>(reinterpret_cast<const float*>(elem->getArrayPtr2()));
       floatspervec = 2;
     }
     else {
-      points = (float*) elem->getArrayPtr3();
+      points = const_cast<float*>(reinterpret_cast<const float*>(elem->getArrayPtr3()));
       floatspervec = 3;
     }
 
@@ -201,7 +201,7 @@ SoLinearProfile::getTrimCurve(SoState * state, int32_t & numpoints,
   }
 
   // Set  return variables
-  points = (float*) coordListLinearProfile->getArrayPtr();
+  points = const_cast<float*>(coordListLinearProfile->getArrayPtr());
   numpoints = n;
   numknots = 0;
 }
@@ -231,11 +231,11 @@ SoLinearProfile::getVertices(SoState * state, int32_t & numvertices,
     // get the appropriate coordinates and save the number of floats
     // per vector for later usage.
     if (elem->is2D()) {
-      points = (float *) elem->getArrayPtr2();
+      points = const_cast<float*>(reinterpret_cast<const float*>(elem->getArrayPtr2()));
       floatspervec = 2;
     }
     else {
-      points = (float *) elem->getArrayPtr3();
+      points = const_cast<float*>(reinterpret_cast<const float*>(elem->getArrayPtr3()));
       floatspervec = 3;
     }
 
@@ -269,7 +269,7 @@ SoLinearProfile::getVertices(SoState * state, int32_t & numvertices,
       }
     }
 
-    vertices = (SbVec2f *) coordListLinearProfile->getArrayPtr();
+    vertices = const_cast<SbVec2f*>(reinterpret_cast<const SbVec2f*>(coordListLinearProfile->getArrayPtr()));
     numvertices = n;
   }
   else {

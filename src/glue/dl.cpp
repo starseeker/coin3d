@@ -800,7 +800,7 @@ cc_dl_sym(cc_libhandle handle, const char * symbolname)
 #ifdef HAVE_DL_LIB
 
   if ((handle == NULL) || (handle->nativehnd == NULL)) return NULL;
-  ptr = dlsym((void *)handle->nativehnd, symbolname);
+  ptr = dlsym(const_cast<void*>(handle->nativehnd), symbolname);
 
   if (cc_dl_debugging()) {
     const char * e = dlerror();
@@ -910,7 +910,7 @@ cc_dl_close(cc_libhandle handle)
 
     is_proc_img = (handle->libname == NULL_STR);
     if (!is_proc_img) {
-      result = dlclose((void *)handle->nativehnd);
+      result = dlclose(const_cast<void*>(handle->nativehnd));
     }
     
     if (result != 0) {

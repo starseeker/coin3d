@@ -846,7 +846,7 @@ SoGLBigImageP::createCache(const unsigned char * bytes, const SbVec2s& size, con
   this->cache = new unsigned char*[levels];
   this->cachesize = new SbVec2s[levels];
   // temporarily set first cache to simplify code below
-  this->cache[0] = (unsigned char*) bytes;
+  this->cache[0] = const_cast<unsigned char*>(bytes);
   this->cachesize[0] = size;
 
   for (int l = 1; l < levels; l++) {

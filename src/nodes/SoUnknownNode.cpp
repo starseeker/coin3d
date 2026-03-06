@@ -332,7 +332,7 @@ SoUnknownNode::copyContents(const SoFieldContainer * from,
   this->setNodeClassName(PRIVATE(src)->classname);
   
   const SoFieldData * srcdata = src->getFieldData();
-  SoFieldData * dstdata = (SoFieldData*) this->getFieldData();
+  SoFieldData * dstdata = const_cast<SoFieldData*>(this->getFieldData());
   
   for (i = 0; i < srcdata->getNumFields(); i++) {
     const SoField * srcfield = srcdata->getField(src, i);

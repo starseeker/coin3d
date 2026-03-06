@@ -400,7 +400,7 @@ SoInteractionKit::copyContents(const SoFieldContainer * fromFC,
   inherited::copyContents(fromFC, copyConnections);
 
   assert(fromFC->isOfType(SoInteractionKit::getClassTypeId()));
-  SoInteractionKit * kit = (SoInteractionKit *) fromFC;
+  SoInteractionKit * kit = const_cast<SoInteractionKit*>(static_cast<const SoInteractionKit*>(fromFC));
 
   PRIVATE(this)->surrogatenamelist.truncate(0);
   PRIVATE(this)->surrogatepathlist.truncate(0);

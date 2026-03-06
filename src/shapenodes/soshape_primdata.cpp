@@ -311,7 +311,7 @@ soshape_primdata::setVertex(const int idx, const SoPrimitiveVertex * const v)
 {
   this->vertsArray[idx] = *v;
   if (this->faceDetail || this->lineDetail) {
-    SoPointDetail * pd = (SoPointDetail *)v->getDetail();
+    SoPointDetail * pd = const_cast<SoPointDetail*>(static_cast<const SoPointDetail*>(v->getDetail()));
     assert(pd);
     this->pointDetails[idx] = * pd;
     this->vertsArray[idx].setDetail(&this->pointDetails[idx]);

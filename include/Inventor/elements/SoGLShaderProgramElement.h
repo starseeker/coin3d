@@ -61,7 +61,7 @@ public:
   static void enable(SoState * const state, const SbBool onoff);
   static void set(SoState *const state, SoNode *const node,
                           SoGLShaderProgram * program);
-  static SoGLShaderProgram * get(SoState * state);
+  static SoGLShaderProgram * get(const SoState * state);
 
   virtual void push(SoState *);
   virtual void pop(SoState * state, const SoElement *prevTopElement);

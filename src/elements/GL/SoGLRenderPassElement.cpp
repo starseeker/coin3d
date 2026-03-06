@@ -81,7 +81,7 @@ SoGLRenderPassElement::init(SoState * state)
 SbBool
 SoGLRenderPassElement::matches(const SoElement * element) const
 {
-  return this->passnr == ((SoGLRenderPassElement*)element)->passnr;
+  return this->passnr == static_cast<const SoGLRenderPassElement*>(element)->passnr;
 }
 
 //! FIXME: write doc.

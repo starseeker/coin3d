@@ -231,7 +231,7 @@ SoWWWAnchor::handleEvent(SoHandleEventAction * action)
   const SoEvent * event = action->getEvent();
   if (event->isOfType(SoMouseButtonEvent::getClassTypeId()) &&
       SoWWWAnchorP::fetchfunc) {
-    const SoMouseButtonEvent * mbevent = (SoMouseButtonEvent*)event;
+    const SoMouseButtonEvent * mbevent = const_cast<SoMouseButtonEvent*>(static_cast<const SoMouseButtonEvent*>(event));
     if (SoMouseButtonEvent::isButtonPressEvent(mbevent,
                                                SoMouseButtonEvent::BUTTON1)) {
       SbString s = this->getFullURLName();

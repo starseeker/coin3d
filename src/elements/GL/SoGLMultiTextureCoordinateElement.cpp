@@ -149,7 +149,7 @@ SoGLMultiTextureCoordinateElement::pop(SoState * state,
                                        const SoElement * prevTopElement)
 {
   inherited::pop(state, prevTopElement);
-  SoGLMultiTextureCoordinateElement * prev = (SoGLMultiTextureCoordinateElement*) prevTopElement;
+  const SoGLMultiTextureCoordinateElement * prev = static_cast<const SoGLMultiTextureCoordinateElement*>(prevTopElement);
 
   const SoGLContext * ctx = SoGLContext_instance(PRIVATE(this)->contextid);
   const int maxunits = SbMax(PRIVATE(this)->unitdata.getLength(), 
@@ -238,8 +238,8 @@ SoGLMultiTextureCoordinateElement::getType(const int unit) const
 const SoGLMultiTextureCoordinateElement *
 SoGLMultiTextureCoordinateElement::getInstance(SoState * const state)
 {
-  return (SoGLMultiTextureCoordinateElement*)
-    SoElement::getConstElement(state, classStackIndex);
+  return static_cast<const SoGLMultiTextureCoordinateElement*>(
+    SoElement::getConstElement(state, classStackIndex));
 }
 
 //!  FIXME: write doc.

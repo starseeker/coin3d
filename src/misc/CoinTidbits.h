@@ -169,7 +169,8 @@ void coin_atexit_cleanup(void);
 SbBool coin_is_exiting(void);
 
 void cc_coin_atexit(coin_atexit_f* fp);
-void SbAtexitStaticInternal(coin_atexit_f* fp);
+/* SbAtexitStaticInternal is declared in <Inventor/SuUtils.h> */
+#include <Inventor/SuUtils.h>
 
 /* ********************************************************************** */
 /* File descriptor functions */

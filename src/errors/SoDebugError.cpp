@@ -426,6 +426,9 @@ SoDebugError::getHandler(void * & data) const
 
 // Provide the Inventor-style API for external builds (wraps SoDebugError::post)
 // This implements SbDebugError_post declared in SbBasic.h for non-OBOL_INTERNAL builds.
+// Guard matches the #ifndef NDEBUG around the declaration in SbBasic.h to avoid
+// a -Wmissing-declarations warning in release builds where the declaration is hidden.
+#ifndef NDEBUG
 void
 SbDebugError_post(const char * source, const char * format, ...)
 {
@@ -436,3 +439,4 @@ SbDebugError_post(const char * source, const char * format, ...)
   va_end(args);
   SoDebugError::post(source, "%s", s.getString());
 }
+#endif // !NDEBUG

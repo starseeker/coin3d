@@ -163,7 +163,7 @@ SoPointLightManip::setDragger(SoDragger * newdragger)
   \sa setDragger()
 */
 SoDragger *
-SoPointLightManip::getDragger(void)
+SoPointLightManip::getDragger(void) const
 {
   if (this->children->getLength() > 0) {
     SoNode * node = (*children)[0];
@@ -416,7 +416,7 @@ void
 SoPointLightManip::copyContents(const SoFieldContainer * fromfc, SbBool copyconnections)
 {
   assert(fromfc->isOfType(SoPointLightManip::getClassTypeId()));
-  this->setDragger(((SoPointLightManip *)fromfc)->getDragger());
+  this->setDragger(static_cast<const SoPointLightManip*>(fromfc)->getDragger());
   inherited::copyContents(fromfc, copyconnections);
 }
 

@@ -55,7 +55,7 @@ public:
   static void initClass(void);
   SoTransformManip(void);
 
-  SoDragger * getDragger(void);
+  SoDragger * getDragger(void) const;
   SbBool replaceNode(SoPath * p);
   SbBool replaceManip(SoPath * p, SoTransform * newone) const;
 

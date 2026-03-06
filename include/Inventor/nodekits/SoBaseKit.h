@@ -168,7 +168,7 @@ private:
 
   SbBool makePart(const int partnum);
   int getRightSiblingIndex(const int partnum);
-  int findNodeInThisKit(SoNode *node, const int parentnum = -1) const;
+  int findNodeInThisKit(const SoNode *node, const int parentnum = -1) const;
 
   static SoNodekitCatalog * classcatalog;
   static const SoNodekitCatalog ** parentcatalogptr;

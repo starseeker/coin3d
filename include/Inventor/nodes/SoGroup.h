@@ -101,7 +101,7 @@ protected:
 		    const SoNode * pc = NULL,
 		    const int ci = -1);
 
-  SoChildList * children;
+  mutable SoChildList * children;
 
 private:
   friend class SoUnknownNode; // Let SoUnknownNode access readChildren().

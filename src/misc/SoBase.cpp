@@ -1363,15 +1363,15 @@ SoBase::readRoute(SoInput * in)
     ok = FALSE;
 
     // parse from-string
-    char * str1 = (char*) fromstring.getString();
-    char * str2 = str1 ? (char*) strchr(str1, '.') : NULL;
+    char * str1 = const_cast<char*>(fromstring.getString());
+    char * str2 = str1 ? const_cast<char*>(strchr(str1, '.')) : NULL;
     if (str1 && str2) {
       *str2++ = 0;
 
       // now parse to-string
       fromnodename = str1;
       fromfieldname = str2;
-      str1 = (char*) tostring.getString();
+      str1 = const_cast<char*>(tostring.getString());
       str2 = str1 ? strchr(str1, '.') : NULL;
       if (str1 && str2) {
         *str2++ = 0;
@@ -1430,14 +1430,14 @@ SoBase::doNotify(SoNotList * l, const void * auditor, const SoNotRec::Type type)
   case SoNotRec::CONTAINER:
   case SoNotRec::PARENT:
     {
-      SoFieldContainer * obj = (SoFieldContainer *)auditor;
+      SoFieldContainer * obj = const_cast<SoFieldContainer*>(static_cast<const SoFieldContainer*>(auditor));
       obj->notify(l);
     }
     break;
 
   case SoNotRec::SENSOR:
     {
-      SoDataSensor * obj = (SoDataSensor *)auditor;
+      SoDataSensor * obj = const_cast<SoDataSensor*>(static_cast<const SoDataSensor*>(auditor));
 #if OBOL_DEBUG && 0 // debug
       SoDebugError::postInfo("SoAuditorList::notify",
                              "notify and schedule sensor: %p", obj);
@@ -1458,7 +1458,7 @@ SoBase::doNotify(SoNotList * l, const void * auditor, const SoNotRec::Type type)
       // re-evaluation), so don't try to "optimize" the
       // notification mechanism by re-introducing that "feature".
       // :^/
-      ((SoField *)auditor)->notify(l);
+      const_cast<SoField*>(static_cast<const SoField*>(auditor))->notify(l);
     }
     break;
 

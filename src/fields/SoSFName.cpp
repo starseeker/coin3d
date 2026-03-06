@@ -94,6 +94,7 @@ SoSFName::readValue(SoInput * in)
 }
 
 // Write SbName value to output stream. Also used from SoMFName class.
+void sosfname_write_value(SoOutput * out, const SbName & val);
 void
 sosfname_write_value(SoOutput * out, const SbName & val)
 {

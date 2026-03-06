@@ -176,7 +176,7 @@ textureCoordinateCylinderCallback(void * userdata,
   so_texcoordcylinder_data * data = pimpl->so_texcoord_get_data();
  
   SoState * state = data->currentstate;
-  SoFullPath * path = (SoFullPath *) state->getAction()->getCurPath();
+  const SoFullPath * path = static_cast<const SoFullPath*>(state->getAction()->getCurPath());
   SoNode * node = path->getTail();
 
   if (!node->isOfType(SoShape::getClassTypeId())) {

@@ -1863,6 +1863,13 @@ get_regname(char reg, int regtype)
 
 
 
+/* Define YY_DECL before including so_eval.ic so the flex-generated file skips
+   its #ifndef YY_DECL block, which would otherwise emit a redundant
+   'extern int yylex()' forward declaration that conflicts with the static
+   so_evallex declaration in the bison-generated prologue above. */
+#ifndef YY_DECL
+#define YY_DECL int yylex(void)
+#endif
 #include "so_eval.ic" /* our lexical scanner */
 
 /* some very simple error handling for now :) */

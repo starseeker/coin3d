@@ -116,7 +116,7 @@ void
 SoGLUpdateAreaElement::pop(SoState * state,
                            const SoElement * prevTopElement)
 {
-  this->scissorstate = ((SoGLUpdateAreaElement*)prevTopElement)->scissorstate;
+  this->scissorstate = static_cast<const SoGLUpdateAreaElement*>(prevTopElement)->scissorstate;
   this->updategl();
   inherited::pop(state, prevTopElement);
 }
@@ -125,7 +125,7 @@ SoGLUpdateAreaElement::pop(SoState * state,
 SbBool
 SoGLUpdateAreaElement::matches(const SoElement * element) const
 {
-  const SoGLUpdateAreaElement * elem = (SoGLUpdateAreaElement*) element;
+  const SoGLUpdateAreaElement * elem = static_cast<const SoGLUpdateAreaElement*>(element);
   return
     this->origin == elem->origin &&
     this->size == elem->size;

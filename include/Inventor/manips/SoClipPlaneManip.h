@@ -55,7 +55,7 @@ public:
   static void initClass(void);
   SoClipPlaneManip(void);
 
-  SoDragger * getDragger(void);
+  SoDragger * getDragger(void) const;
   void setValue(const SbBox3f & box, const SbVec3f & planenormal,
                 float draggerscalefactor);
   SbBool replaceNode(SoPath * p);

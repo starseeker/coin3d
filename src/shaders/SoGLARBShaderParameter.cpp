@@ -214,7 +214,7 @@ SoGLARBShaderParameter::isValid(const SoGLShaderObject * shader, const int idx)
   assert(shader);
   assert(shader->shaderType() == SoShader::ARB_SHADER);
 
-  this->target     = ((SoGLARBShaderObject*)shader)->target;
+  this->target     = const_cast<SoGLARBShaderObject*>(static_cast<const SoGLARBShaderObject*>(shader))->target;
   this->identifier = idx;
   return TRUE;
 }

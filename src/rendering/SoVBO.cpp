@@ -117,7 +117,7 @@ SoVBO::~SoVBO()
   }
 
   if (this->didalloc) {
-    char * ptr = (char*) this->data;
+    char * ptr = const_cast<char*>(static_cast<const char*>(this->data));
     delete[] ptr;
   }
 }
@@ -219,10 +219,10 @@ SoVBO::allocBufferData(intptr_t size, SbUniqueId new_dataid)
   this->vbohash.clear();
 
   if (this->didalloc && this->datasize == size) {
-    return (void*)this->data;
+    return const_cast<void*>(this->data);
   }
   if (this->didalloc) {
-    char * ptr = (char*) this->data;
+    char * ptr = const_cast<char*>(static_cast<const char*>(this->data));
     delete[] ptr;
   }
 
@@ -231,7 +231,7 @@ SoVBO::allocBufferData(intptr_t size, SbUniqueId new_dataid)
   this->data = (const GLvoid*) ptr;
   this->datasize = size;
   this->dataid = new_dataid;
-  return (void*) this->data;
+  return const_cast<void*>(this->data);
 }
 
 /*!
@@ -259,7 +259,7 @@ SoVBO::setBufferData(const GLvoid * new_data, intptr_t size, SbUniqueId new_data
 
   // clean up old buffer (if any)
   if (this->didalloc) {
-    char * ptr = (char*) this->data;
+    char * ptr = const_cast<char*>(static_cast<const char*>(this->data));
     delete[] ptr;
   }
 

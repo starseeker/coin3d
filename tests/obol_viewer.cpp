@@ -773,6 +773,10 @@ public:
             SbViewportRegion vp(std::max(w(),1), std::max(h(),1));
             SoHandleEventAction ha(vp); ha.setEvent(&ev); ha.apply(root);
             dragger_active_ = ha.isHandled();
+            /* Entering a manip drag: invalidate coarse calibration so
+             * timedStepIn_'s dragger warm-up can re-calibrate with
+             * BVH rebuild overhead included in the timing. */
+            if (dragger_active_) stepInComplete_ = false;
             return 1;
         }
         case FL_RELEASE: {
@@ -886,7 +890,7 @@ private:
 
     /* Maximum render time (ms) per coarse frame; targets ~10 fps for
      * interactive feel.  Step-in stops when a level reaches 75% of this. */
-    static constexpr double kCoarseBudgetMs = 40.0;
+    static constexpr double kCoarseBudgetMs = 20.0;
     /* Fraction of kCoarseBudgetMs at which step-in stops doubling resolution.
      * 0.75 gives headroom so the chosen level reliably stays within budget. */
     static constexpr double kBudgetThreshold = 0.75;
@@ -1032,12 +1036,21 @@ private:
             double ms = std::chrono::duration<double, std::milli>(
                             clock::now() - t0).count();
             if (!ok) break;
-            bestRW = rw;
-            bestRH = rh;
-            /* Stop when this level is approaching the per-frame budget or the
-             * full panel size has been reached: optimal level found. */
-            if (ms >= kCoarseBudgetMs * kBudgetThreshold ||
-                    rw >= pw || rh >= ph) {
+            /* Only record this resolution as "best" when it fits within the
+             * per-frame budget.  This prevents the calibration from storing a
+             * slow full-resolution level as the coarse target: when rw reaches
+             * pw, the loop exits regardless (no higher level exists), but if
+             * that final render was too slow we want to keep the last fast
+             * level, not the newly exceeded one. */
+            const bool withinBudget =
+                ms < kCoarseBudgetMs * kBudgetThreshold;
+            if (withinBudget) {
+                bestRW = rw;
+                bestRH = rh;
+            }
+            /* Stop when this level exceeds the per-frame budget or the full
+             * panel size has been reached: optimal level found. */
+            if (!withinBudget || rw >= pw || rh >= ph) {
                 optimal = true;
                 break;
             }
@@ -1250,6 +1263,10 @@ public:
             SbViewportRegion vp(std::max(w(),1), std::max(h(),1));
             SoHandleEventAction ha(vp); ha.setEvent(&ev); ha.apply(root);
             dragger_active_ = ha.isHandled();
+            /* Entering a manip drag: invalidate coarse calibration so
+             * timedStepIn_'s dragger warm-up can re-calibrate with
+             * BVH rebuild overhead included in the timing. */
+            if (dragger_active_) stepInComplete_ = false;
             return 1;
         }
         case FL_RELEASE: {
@@ -1424,10 +1441,13 @@ private:
             double ms = std::chrono::duration<double, std::milli>(
                             clock::now() - t0).count();
             if (!ok) break;
-            bestRW = rw;
-            bestRH = rh;
-            if (ms >= kCoarseBudgetMs * kBudgetThreshold ||
-                    rw >= pw || rh >= ph) {
+            const bool withinBudget =
+                ms < kCoarseBudgetMs * kBudgetThreshold;
+            if (withinBudget) {
+                bestRW = rw;
+                bestRH = rh;
+            }
+            if (!withinBudget || rw >= pw || rh >= ph) {
                 optimal = true;
                 break;
             }

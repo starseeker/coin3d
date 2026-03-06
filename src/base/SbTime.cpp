@@ -538,6 +538,11 @@ SbTime::formatDate(const char * const fmt) const
   struct tm * ts = localtime(&secs);
 #endif
 
+  // format is a user-supplied strftime format string; non-literal is intentional.
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-nonliteral"
+#endif
   size_t ret = strftime(bufferpt, currentsize, format, ts);
   if ((ret == 0) || (ret == currentsize)) {
     bufferpt = NULL;
@@ -550,6 +555,9 @@ SbTime::formatDate(const char * const fmt) const
       ret = strftime(bufferpt, currentsize, format, ts);
     } while ((ret == 0) || (ret == currentsize));
   }
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
 
   if (bufferpt == buffer) {
     return SbString(bufferpt);

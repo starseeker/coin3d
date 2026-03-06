@@ -149,7 +149,7 @@ SoFontNameElement::copyMatchInfo(void) const
 void
 SoFontNameElement::print(FILE * file) const
 {
-  fprintf(file, "SoFontNameElement[%p]: font = %s\n", (void*)this,
+  fprintf(file, "SoFontNameElement[%p]: font = %s\n", static_cast<const void*>(this),
            this->fontName.getString());
 }
 

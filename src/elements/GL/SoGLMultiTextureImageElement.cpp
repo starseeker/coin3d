@@ -163,8 +163,7 @@ SoGLMultiTextureImageElement::pop(SoState * state,
                                   const SoElement * prevTopElement)
 {
   inherited::pop(state, prevTopElement);
-  SoGLMultiTextureImageElement * prev = (SoGLMultiTextureImageElement*)
-    prevTopElement;
+  const SoGLMultiTextureImageElement * prev = static_cast<const SoGLMultiTextureImageElement*>(prevTopElement);
 
   SoGLShaderProgram * prog = SoGLShaderProgramElement::get(state);
   SbString str;
@@ -259,8 +258,9 @@ SoGLMultiTextureImageElement::set(SoState * const state, SoNode * const node,
 void
 SoGLMultiTextureImageElement::restore(SoState * state, const int unit)
 {
-  SoGLMultiTextureImageElement * elem = (SoGLMultiTextureImageElement*)
-    state->getConstElement(classStackIndex);
+  SoGLMultiTextureImageElement * elem = const_cast<SoGLMultiTextureImageElement*>(
+    static_cast<const SoGLMultiTextureImageElement*>(
+      state->getConstElement(classStackIndex)));
   
   elem->updateGL(unit);
 }

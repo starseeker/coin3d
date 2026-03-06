@@ -1505,7 +1505,7 @@ SoInput::getLocationString(SbString & str) const
   const char * filename = this->getCurFileName();
 
   // FIXME: hack to cast away constness. Ugly. 19990713 mortene.
-  if (((SoInput *)this)->isBinary()) {
+  if (const_cast<SoInput*>(this)->isBinary()) {
     str.sprintf("\tOccurred at position %lu in binary file %s",
                 (unsigned long int) this->getTopOfStack()->getNumBytesParsedSoFar(),
                 filename ? filename : "<memory>");

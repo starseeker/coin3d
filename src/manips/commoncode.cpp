@@ -108,7 +108,7 @@ _class_::replaceManip(SoPath * path, _parentclass_ * newone) const \
   SoFullPath * fullpath = (SoFullPath *) path; \
   SoNode * fulltail = fullpath->getTail(); \
  \
-  if (fulltail != (SoNode *)this) { \
+  if (fulltail != const_cast<SoNode*>(static_cast<const SoNode*>(this))) { \
     SoDebugError::post("_class_::replaceManip", \
                        "child to replace is not this manip (but %s at %p)", \
                        fulltail->getTypeId().getName().getString(), fulltail); \
@@ -161,7 +161,7 @@ _class_::replaceManip(SoPath * path, _parentclass_ * newone) const \
       return FALSE; \
     } \
  \
-    ((SoGroup*)parent)->replaceChild((SoNode*)this, newone); \
+    ((SoGroup*)parent)->replaceChild(const_cast<SoNode*>(static_cast<const SoNode*>(this)), newone); \
   } \
  \
   return TRUE; \

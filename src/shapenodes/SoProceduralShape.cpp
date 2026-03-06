@@ -1323,9 +1323,15 @@ SoProceduralShape::generatePrimitives(SoAction* action)
     } else {
       // Non-GL path (e.g. SoCallbackAction for nanort): render each wireframe
       // segment as a thin tessellated cylinder so that triangle callbacks pick
-      // it up correctly.  Compute the world-space radius from the current line
+      // it up correctly.  Compute the local-space radius from the current line
       // width and view volume when available, otherwise fall back to a small
       // fixed value.
+      //
+      // The radius must be in LOCAL space: the triangle callback will apply the
+      // model matrix (including any Scale nodes) to the emitted vertices, which
+      // would inflate a world-space radius by the scale factor.  Dividing by
+      // the geometric mean of the model-matrix row-vector lengths compensates
+      // for that scale so the net world-space radius matches the pixel target.
       float radius = 0.02f;
       if (state) {
         float lineW = SoLineWidthElement::get(state);
@@ -1336,10 +1342,10 @@ SoProceduralShape::generatePrimitives(SoAction* action)
           // For perspective cameras vv.getHeight() is the frustum height at
           // the near plane.  Scale to the object's viewing distance so that
           // the cylinder radius corresponds to lineW pixels at object depth.
+          const SbMatrix& mm = SoModelMatrixElement::get(state);
           if (vv.getProjectionType() == SbViewVolume::PERSPECTIVE) {
             const float nearDist = vv.getNearDist();
             if (nearDist > 1e-6f) {
-              const SbMatrix& mm = SoModelMatrixElement::get(state);
               const SbVec3f objPos(mm[3][0], mm[3][1], mm[3][2]);
               const float dist =
                 (objPos - vv.getProjectionPoint()).length();
@@ -1349,8 +1355,17 @@ SoProceduralShape::generatePrimitives(SoAction* action)
           }
           const SbViewportRegion& vpr = SoViewportRegionElement::get(state);
           float vpH = static_cast<float>(vpr.getViewportSizePixels()[1]);
-          if (vpH > 0.0f)
+          if (vpH > 0.0f) {
             radius = lineW * wh / vpH * 0.5f;
+            // Convert to local space by dividing out the model matrix scale.
+            const SbMat & mv = mm.getValue();
+            const float sx = sqrtf(mv[0][0]*mv[0][0] + mv[0][1]*mv[0][1] + mv[0][2]*mv[0][2]);
+            const float sy = sqrtf(mv[1][0]*mv[1][0] + mv[1][1]*mv[1][1] + mv[1][2]*mv[1][2]);
+            const float sz = sqrtf(mv[2][0]*mv[2][0] + mv[2][1]*mv[2][1] + mv[2][2]*mv[2][2]);
+            const float scaleProduct = sx * sy * sz;
+            if (scaleProduct > 1e-12f)
+              radius /= cbrtf(scaleProduct);
+          }
         }
       }
       emitWireframeCylinders(action, wire, radius);

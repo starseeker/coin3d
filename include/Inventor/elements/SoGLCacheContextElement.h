@@ -73,7 +73,7 @@ public:
   static void set(SoState * state, int context,
                   SbBool twopasstransparency,
                   SbBool remoterendering);
-  static int get(SoState * state);
+  static int get(const SoState * state);
   static int getExtID(const char * str);
   static void getOpenGLVersion(SoState * state, int & major, int & minor);
   static SbBool extSupported(SoState * state, int extid);

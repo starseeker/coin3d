@@ -79,4 +79,6 @@ private:
   friend class SoBaseKit;
 };
 
+OBOL_DLL_API int operator==(const SoNodeKitPath & p1, const SoNodeKitPath & p2);
+
 #endif // !OBOL_SONODEKITPATH_H

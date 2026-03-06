@@ -508,7 +508,7 @@ int
 SoPath::getLength(void) const
 {
   if (this->firsthiddendirty) {
-    ((SoPath*)this)->setFirstHidden();
+    const_cast<SoPath*>(this)->setFirstHidden();
   }
   if (this->firsthidden >= 0) {
 #ifdef OBOL_EXTRA_DEBUG

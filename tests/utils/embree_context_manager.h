@@ -59,6 +59,7 @@
 #include <cstdint>
 #include <algorithm>
 #include <cstring>
+#include <thread>
 
 // ==========================================================================
 // Math helpers (shared with nanort path; kept minimal and self-contained)
@@ -531,14 +532,37 @@ public:
             SbViewVolume vv = cam->getViewVolume(aspect_ratio);
             if (aspect_ratio < 1.0f) vv.scale(1.0f / aspect_ratio);
 
-            uint32_t rngState = 0xDEADBEEFu;
+            /* Precompute 4 corner rays once per frame; interpolate per pixel.
+             * See nanort_context_manager.h for the rationale. */
+            SbVec3f corner_p0[4], corner_p1[4];
+            vv.projectPointToLine(SbVec2f(0.0f, 0.0f), corner_p0[0], corner_p1[0]);
+            vv.projectPointToLine(SbVec2f(1.0f, 0.0f), corner_p0[1], corner_p1[1]);
+            vv.projectPointToLine(SbVec2f(0.0f, 1.0f), corner_p0[2], corner_p1[2]);
+            vv.projectPointToLine(SbVec2f(1.0f, 1.0f), corner_p0[3], corner_p1[3]);
 
-            for (unsigned int y = 0; y < height; ++y) {
+            const float fw = static_cast<float>(width);
+            const float fh = static_cast<float>(height);
+
+            /* Parallel pixel loop using C++17 std::thread (fork-join per frame).
+             * See nanort_context_manager.h for the threading pattern rationale. */
+            const unsigned int nthreads = std::max(1u,
+                std::thread::hardware_concurrency());
+            const unsigned int effective_threads = std::min(nthreads, height);
+            const unsigned int rows_per_thread =
+                (height + effective_threads - 1) / effective_threads;
+
+            auto renderBand = [&](unsigned int y0, unsigned int y1) {
+                for (unsigned int y = y0; y < y1; ++y) {
+                /* Each thread/row uses its own RNG state seeded from y so
+                 * AA jitter is deterministic and threads don't share state.
+                 * 2654435761 is the Knuth multiplicative hash constant
+                 * (2^32 / phi ≈ 2654435769 rounded to nearest odd prime) which
+                 * spreads row indices across the 32-bit range before XOR. */
+                uint32_t rngState = 0xDEADBEEFu ^ (static_cast<uint32_t>(y) * 2654435761u);
+
                 for (unsigned int x = 0; x < width; ++x) {
                     const float fx = static_cast<float>(x);
                     const float fy = static_cast<float>(y);
-                    const float fw = static_cast<float>(width);
-                    const float fh = static_cast<float>(height);
 
                     float accum[3] = { 0.0f, 0.0f, 0.0f };
                     int hitSamples = 0;
@@ -552,14 +576,30 @@ public:
                         const float nx = (fx + jx) / fw;
                         const float ny = (fy + jy) / fh;
 
-                        SbVec3f p0, p1;
-                        vv.projectPointToLine(SbVec2f(nx, ny), p0, p1);
-                        SbVec3f d = p1 - p0;
-                        d.normalize();
+                        const float w00 = (1.0f - nx) * (1.0f - ny);
+                        const float w10 = nx            * (1.0f - ny);
+                        const float w01 = (1.0f - nx)  * ny;
+                        const float w11 = nx            * ny;
+                        float p0x = w00*corner_p0[0][0] + w10*corner_p0[1][0]
+                                  + w01*corner_p0[2][0] + w11*corner_p0[3][0];
+                        float p0y = w00*corner_p0[0][1] + w10*corner_p0[1][1]
+                                  + w01*corner_p0[2][1] + w11*corner_p0[3][1];
+                        float p0z = w00*corner_p0[0][2] + w10*corner_p0[1][2]
+                                  + w01*corner_p0[2][2] + w11*corner_p0[3][2];
+                        float p1x = w00*corner_p1[0][0] + w10*corner_p1[1][0]
+                                  + w01*corner_p1[2][0] + w11*corner_p1[3][0];
+                        float p1y = w00*corner_p1[0][1] + w10*corner_p1[1][1]
+                                  + w01*corner_p1[2][1] + w11*corner_p1[3][1];
+                        float p1z = w00*corner_p1[0][2] + w10*corner_p1[1][2]
+                                  + w01*corner_p1[2][2] + w11*corner_p1[3][2];
+
+                        float dx = p1x - p0x, dy_ = p1y - p0y, dz = p1z - p0z;
+                        const float invLen = 1.0f / std::sqrt(dx*dx + dy_*dy_ + dz*dz);
+                        dx *= invLen; dy_ *= invLen; dz *= invLen;
 
                         RTCRayHit rayhit;
-                        rayhit.ray.org_x = p0[0]; rayhit.ray.org_y = p0[1]; rayhit.ray.org_z = p0[2];
-                        rayhit.ray.dir_x = d[0];  rayhit.ray.dir_y = d[1];  rayhit.ray.dir_z = d[2];
+                        rayhit.ray.org_x = p0x; rayhit.ray.org_y = p0y; rayhit.ray.org_z = p0z;
+                        rayhit.ray.dir_x = dx;  rayhit.ray.dir_y = dy_;  rayhit.ray.dir_z = dz;
                         rayhit.ray.tnear = 0.001f;
                         rayhit.ray.tfar  = 1.0e30f;
                         rayhit.ray.mask  = static_cast<unsigned int>(-1);
@@ -588,14 +628,14 @@ public:
                         };
                         emb_normalize3(N);
 
-                        const float dir[3] = { d[0], d[1], d[2] };
-                        const float V[3]   = { -dir[0], -dir[1], -dir[2] };
+                        const float dir[3] = { dx, dy_, dz };
+                        const float V[3]   = { -dx, -dy_, -dz };
 
                         const float t = rayhit.ray.tfar;
                         const float hitPt[3] = {
-                            p0[0] + dir[0] * t,
-                            p0[1] + dir[1] * t,
-                            p0[2] + dir[2] * t
+                            p0x + dx * t,
+                            p0y + dy_ * t,
+                            p0z + dz * t
                         };
 
                         const SoRtMaterial & mat = tris[fid].mat;
@@ -652,13 +692,23 @@ public:
                         emb_clamp01(accum[2] * inv_s) * 255.0f);
                     if (nrcomponents == 4) pixels[idx + 3] = 255;
                 }
+                } /* end row loop inside renderBand */
+            }; /* end renderBand lambda */
+
+            std::vector<std::thread> workers;
+            workers.reserve(effective_threads);
+            for (unsigned int t = 0; t < effective_threads; ++t) {
+                const unsigned int y0 = t * rows_per_thread;
+                const unsigned int y1 = std::min(y0 + rows_per_thread, height);
+                workers.emplace_back(renderBand, y0, y1);
             }
+            for (auto & w : workers) w.join();
         }
 
         // --- 4. Composite text/HUD overlays ---------------------------------
         collector_.compositeOverlays(pixels, width, height, nrcomponents);
 
-        collector_.updateCameraId(cam);
+        collector_.updateCameraId(cam, scene);
         return TRUE;
     }
 

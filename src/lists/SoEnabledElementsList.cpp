@@ -110,13 +110,13 @@ SoEnabledElementsList::getElements(void) const
   // check if we need a new merge
   if (PRIVATE(this)->prevmerge != enable_counter) {
     int storedcounter = enable_counter;
-    SoEnabledElementsList * plist = (SoEnabledElementsList*) PRIVATE(this)->parent;
+    SoEnabledElementsList * plist = const_cast<SoEnabledElementsList*>(static_cast<const SoEnabledElementsList*>(PRIVATE(this)->parent));
     while (plist) {
-      ((SoEnabledElementsList*)this)->merge(*plist);
+      const_cast<SoEnabledElementsList*>(this)->merge(*plist);
       plist = plist->pimpl->parent;
     }
     // use and restore old counter since it might change during merge
-    ((SoEnabledElementsList*)this)->pimpl->prevmerge =
+    const_cast<SoEnabledElementsList*>(this)->pimpl->prevmerge =
       enable_counter = storedcounter;
   }
   PRIVATE(this)->unlock();

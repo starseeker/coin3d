@@ -1693,6 +1693,7 @@ SoOutput::removeSoBase2IdRef(const SoBase * base)
 
 // FIXME: temporary workaround to get the file header string. Used from
 // SoBase::writeHeader(). pederb, 2003-02-18
+SbString SoOutput_getHeaderString(const SoOutputP * pout);
 SbString
 SoOutput_getHeaderString(const SoOutputP * pout)
 {

@@ -162,7 +162,7 @@ SoDirectionalLightManip::setDragger(SoDragger * newdragger)
   Return pointer to internal SoDirectionalLightDragger dragger.
 */
 SoDragger *
-SoDirectionalLightManip::getDragger(void)
+SoDirectionalLightManip::getDragger(void) const
 {
   if (this->children->getLength() > 0) {
     SoNode * node = (*children)[0];
@@ -407,7 +407,7 @@ SoDirectionalLightManip::copyContents(const SoFieldContainer * fromfc,
                                       SbBool copyconnections)
 {
   assert(fromfc->isOfType(SoDirectionalLightManip::getClassTypeId()));
-  this->setDragger(((SoDirectionalLightManip *)fromfc)->getDragger());
+  this->setDragger(static_cast<const SoDirectionalLightManip*>(fromfc)->getDragger());
   inherited::copyContents(fromfc, copyconnections);
 }
 

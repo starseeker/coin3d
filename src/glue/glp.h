@@ -1701,11 +1701,7 @@ const SoGLContext * sogl_current_render_glue(void);
    pass so that SoCallback nodes can use the <Inventor/gl.h> macro wrappers. */
 void sogl_set_current_render_glue(const SoGLContext * glue);
 
-/* Returns the function pointer for glGetString as seen in the linked GL
-   library.  Used by dl.cpp to verify that cc_dl_opengl_handle() opened the
-   same GL DLL that the rest of the library uses, without needing to include
-   raw OpenGL headers in dl.cpp. */
-void * coin_gl_getstring_ptr(void);
+/* coin_gl_getstring_ptr is declared in glue/dlp.h */
 
 /* ********************************************************************** */
 
@@ -1761,6 +1757,37 @@ void SoGLContext_add_instance_created_callback(SoGLContext_instance_created_cb *
                                                void * closure);
 
 cc_libhandle SoGLContext_dl_handle(const SoGLContext * glw);
+
+/* GL_NV_register_combiners */
+SbBool SoGLContext_has_nv_register_combiners(const SoGLContext * glue);
+void SoGLContext_glCombinerParameterfvNV(const SoGLContext * glue, GLenum pname, const GLfloat * params);
+void SoGLContext_glCombinerParameterivNV(const SoGLContext * glue, GLenum pname, const GLint * params);
+void SoGLContext_glCombinerParameterfNV(const SoGLContext * glue, GLenum pname, GLfloat param);
+void SoGLContext_glCombinerParameteriNV(const SoGLContext * glue, GLenum pname, GLint param);
+void SoGLContext_glCombinerInputNV(const SoGLContext * glue, GLenum stage, GLenum portion, GLenum variable, GLenum input, GLenum mapping, GLenum componentUsage);
+void SoGLContext_glCombinerOutputNV(const SoGLContext * glue, GLenum stage, GLenum portion, GLenum abOutput, GLenum cdOutput, GLenum sumOutput, GLenum scale, GLenum bias, GLboolean abDotProduct, GLboolean cdDotProduct, GLboolean muxSum);
+void SoGLContext_glFinalCombinerInputNV(const SoGLContext * glue, GLenum variable, GLenum input, GLenum mapping, GLenum componentUsage);
+void SoGLContext_glGetCombinerInputParameterfvNV(const SoGLContext * glue, GLenum stage, GLenum portion, GLenum variable, GLenum pname, GLfloat * params);
+void SoGLContext_glGetCombinerInputParameterivNV(const SoGLContext * glue, GLenum stage, GLenum portion, GLenum variable, GLenum pname, GLint * params);
+void SoGLContext_glGetCombinerOutputParameterfvNV(const SoGLContext * glue, GLenum stage, GLenum portion, GLenum pname, GLfloat * params);
+void SoGLContext_glGetCombinerOutputParameterivNV(const SoGLContext * glue, GLenum stage, GLenum portion, GLenum pname, GLint * params);
+void SoGLContext_glGetFinalCombinerInputParameterfvNV(const SoGLContext * glue, GLenum variable, GLenum pname, GLfloat * params);
+void SoGLContext_glGetFinalCombinerInputParameterivNV(const SoGLContext * glue, GLenum variable, GLenum pname, GLint * params);
+
+/* GL_NV_texture_rectangle / GL_EXT_texture_rectangle / GL_NV_texture_shader */
+SbBool SoGLContext_has_nv_texture_rectangle(const SoGLContext * glue);
+SbBool SoGLContext_has_ext_texture_rectangle(const SoGLContext * glue);
+SbBool SoGLContext_has_nv_texture_shader(const SoGLContext * glue);
+
+/* GL_ARB_shadow / GL_ARB_depth_texture */
+SbBool SoGLContext_has_arb_shadow(const SoGLContext * glue);
+SbBool SoGLContext_has_arb_depth_texture(const SoGLContext * glue);
+
+/* GL_EXT_texture_env_combine / GL_ARB_texture_env_combine */
+SbBool SoGLContext_has_texture_env_combine(const SoGLContext * glue);
+
+/* Context ID accessor */
+uint32_t SoGLContext_get_contextid(const SoGLContext * glue);
 
 /* ********************************************************************** */
 
@@ -1893,6 +1920,8 @@ void SoGLContext_glPopClientAttrib(const SoGLContext * glue);
 
 /* Texture compression */
 SbBool cc_glue_has_texture_compression(const SoGLContext * glue);
+SbBool cc_glue_has_texture_compression_2d(const SoGLContext * glue);
+SbBool cc_glue_has_texture_compression_3d(const SoGLContext * glue);
 void SoGLContext_glCompressedTexImage3D(const SoGLContext * glue,
                                       GLenum target, 
                                       GLint level, 

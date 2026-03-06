@@ -199,6 +199,15 @@ if(OBOL_BUILD_VIEWER)
         endif()
     endif()
 
+    # C++17 std::thread is used for parallel CPU raytracing; ensure the platform
+    # threading library is linked.  Threads::Threads is already in
+    # OBOL_TARGET_LINK_LIBRARIES (via the top-level find_package(Threads)) so
+    # it is transitively available; this explicit link guards against future
+    # refactors that might drop it from the umbrella variable.
+    find_package(Threads REQUIRED)
+    target_link_libraries(obol_viewer PRIVATE Threads::Threads)
+    message(STATUS "obol_viewer: C++17 std::thread parallel CPU raytracing enabled (${CMAKE_THREAD_LIBS_INIT})")
+
     install(TARGETS obol_viewer RUNTIME DESTINATION bin)
 endif() # OBOL_BUILD_VIEWER
 

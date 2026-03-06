@@ -100,7 +100,7 @@ void
 SoGLMultiTextureEnabledElement::pop(SoState * OBOL_UNUSED_ARG(state),
                                     const SoElement * prevTopElement)
 {
-  SoGLMultiTextureEnabledElement * prev = (SoGLMultiTextureEnabledElement*) prevTopElement;
+  const SoGLMultiTextureEnabledElement * prev = static_cast<const SoGLMultiTextureEnabledElement*>(prevTopElement);
   const int maxunits = SbMax(this->getMaxUnits(), prev->getMaxUnits());
   
   for (int i = 0; i < maxunits; i++) {

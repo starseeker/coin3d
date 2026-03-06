@@ -86,6 +86,7 @@ SoSFInt32::readValue(SoInput * in)
 
 // Write integer value to output stream. Also used from SoMFInt32
 // class.
+void sosfint32_write_value(SoOutput * out, int32_t val);
 void
 sosfint32_write_value(SoOutput * out, int32_t val)
 {

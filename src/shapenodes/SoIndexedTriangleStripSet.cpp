@@ -100,6 +100,7 @@
 #include <Inventor/elements/SoMaterialBindingElement.h>
 #include <Inventor/elements/SoNormalBindingElement.h>
 #include <Inventor/elements/SoShapeHintsElement.h>
+#include <Inventor/elements/SoGLCoordinateElement.h>
 #include <Inventor/elements/SoGLLazyElement.h>
 #include <Inventor/elements/SoTextureCoordinateBindingElement.h>
 #include <Inventor/errors/SoDebugError.h>
@@ -309,7 +310,7 @@ SoIndexedTriangleStripSet::GLRender(SoGLRenderAction * action)
   mb.sendFirst(); // make sure we have the correct material
 
   sogl_render_tristrip(sogl_glue_from_state(state),
-                       (SoGLCoordinateElement *)coords,
+                       static_cast<const SoGLCoordinateElement*>(coords),
                        cindices,
                        numindices,
                        normals,

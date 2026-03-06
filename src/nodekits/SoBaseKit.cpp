@@ -705,14 +705,14 @@ SoBaseKit::getPartString(const SoBase * part)
 {
   const SoNodekitCatalog * catalog = this->getNodekitCatalog();
   if (part->isOfType(SoNode::getClassTypeId())) {
-    int idx = this->findNodeInThisKit((SoNode *)part);
+    int idx = this->findNodeInThisKit(static_cast<const SoNode*>(part));
     if (idx >= 0) {
       return SbString(catalog->getName(idx).getString());
     }
     return SbString();
   }
   else if (part->isOfType(SoPath::getClassTypeId())) {
-    SoFullPath * path = (SoFullPath *)part;
+    const SoFullPath * path = static_cast<const SoFullPath*>(part);
     int pathidx = path->findNode(this);
     if (pathidx < 0) return SbString();
     SoBaseKit * kit = this;
@@ -2437,10 +2437,10 @@ SoBaseKit::getRightSiblingIndex(const int partnum)
 // parentnum is checked if >= 0
 //
 int
-SoBaseKit::findNodeInThisKit(SoNode * node, const int parentnum) const
+SoBaseKit::findNodeInThisKit(const SoNode * node, const int parentnum) const
 {
   const SoNodekitCatalog * catalog = this->getNodekitCatalog();
-  if (node == (SoNode *)this) return 0;
+  if (node == this) return 0;
   int n = PRIVATE(this)->instancelist.getLength();
   for (int i = 1; i < n; i++) {
     if (PRIVATE(this)->instancelist[i]->getValue() == node &&

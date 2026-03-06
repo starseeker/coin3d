@@ -140,6 +140,7 @@ public:
  * --------------------------------------------------------------------- */
 
 extern "C" {
+SoDB::ContextManager * coin_create_osmesa_context_manager_impl();
 SoDB::ContextManager * coin_create_osmesa_context_manager_impl()
 {
   return new CoinOSMesaContextManagerImpl();

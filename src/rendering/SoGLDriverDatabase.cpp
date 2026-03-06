@@ -60,13 +60,10 @@
 // Forward declarations for OpenGL feature test functions
 typedef SbBool glglue_feature_test_f(const SoGLContext * glue);
 
-// Function declarations for runtime feature tests
+// Function declarations for runtime feature tests (defined locally in this file)
 extern "C" {
   SbBool multidraw_elements_wrapper(const SoGLContext * glue);
   SbBool glsl_clip_vertex_hw_wrapper(const SoGLContext * glue);
-  SbBool SoGLContext_vbo_in_displaylist_supported(const SoGLContext * glue);
-  SbBool SoGLContext_non_power_of_two_textures(const SoGLContext * glue);
-  SbBool SoGLContext_has_generate_mipmap(const SoGLContext * glue);
 }
 
 class SoGLDriverDatabaseP {

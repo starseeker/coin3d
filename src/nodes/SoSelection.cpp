@@ -838,7 +838,7 @@ SoSelection::findPath(const SoPath * path) const
   int idx = -1;
 
   // make copy only if necessary
-  if (path->getHead() != (SoNode *)this) {
+  if (path->getHead() != const_cast<SoNode*>(static_cast<const SoNode*>(this))) {
     SoPath * newpath = this->copyFromThis(path);
     if (newpath) {
       newpath->ref();
@@ -926,7 +926,7 @@ SoSelection::searchNode(SoNode * node) const
     coin_atexit((coin_atexit_f*) soselection_cleanup, CC_ATEXIT_NORMAL);
   }
   soselection_searchAction->setNode(node);
-  soselection_searchAction->apply((SoNode *)this);
+  soselection_searchAction->apply(const_cast<SoNode*>(static_cast<const SoNode*>(this)));
   SoPath * path = soselection_searchAction->getPath();
   if (path) path->ref();
   // reset action before returning 

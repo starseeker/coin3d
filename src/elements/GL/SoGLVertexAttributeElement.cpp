@@ -179,7 +179,7 @@ static void query_attribs(const Key & key,
     uint32_t shaderobj = shaderprogram->getGLSLShaderProgramHandle(data->state);
 
     data->index = glue->glGetAttribLocationARB((OBOL_GLhandle) shaderobj,
-                                               (OBOL_GLchar *) key);
+                                               const_cast<OBOL_GLchar*>(key));
 #if OBOL_DEBUG
     if (data->index < 0) {
       SoDebugError::postWarning("SoGLVertexAttributeElement::addElt",
@@ -247,7 +247,7 @@ static void disable_vbo(const Key & OBOL_UNUSED_ARG(key),
 void
 SoGLVertexAttributeElement::send(const int index) const
 {
-  this->applyToAttributes(send_attribs, (void *) &index);
+  this->applyToAttributes(send_attribs, const_cast<void*>(static_cast<const void*>(&index)));
 }
 
 //! FIXME: write doc.

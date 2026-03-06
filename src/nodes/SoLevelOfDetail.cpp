@@ -379,7 +379,7 @@ SoLevelOfDetail::doAction(SoAction *action)
     // reset path so that we get the local bounding box for the nodes
     // below this node.
     bboxAction->setResetPath(action->getCurPath());
-    bboxAction->apply((SoPath*) action->getCurPath()); // find bbox of all children
+    bboxAction->apply(const_cast<SoPath*>(action->getCurPath())); // find bbox of all children
     bbox = bboxAction->getBoundingBox();
   }
   else {

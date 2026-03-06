@@ -126,7 +126,7 @@ void
 SoNotRec::print([[maybe_unused]] FILE * const file) const
 {
 #if OBOL_DEBUG
-  (void)fprintf(file, "\tSoNotRec %p: type ", this);
+  (void)fprintf(file, "\tSoNotRec %p: type ", (const void *)this);
   switch (this->type) {
   case CONTAINER:  (void)fprintf(file, "CONTAINER"); break;
   case PARENT:     (void)fprintf(file, "PARENT"); break;
@@ -137,7 +137,7 @@ SoNotRec::print([[maybe_unused]] FILE * const file) const
   }
   if (this->base) {
     (void)fprintf(file, ", base %p (type %s, \"%s\")\n",
-                  this->base, this->base->getTypeId().getName().getString(),
+                  (const void *)this->base, this->base->getTypeId().getName().getString(),
                   this->base->getName().getString());
   }
   else {

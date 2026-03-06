@@ -57,7 +57,7 @@ public:
   static void initClass(void);
   SoDirectionalLightManip(void);
 
-  SoDragger * getDragger(void);
+  SoDragger * getDragger(void) const;
   SbBool replaceNode(SoPath * path);
   SbBool replaceManip(SoPath * path, SoDirectionalLight * newone) const;
 

@@ -122,7 +122,7 @@ void
 SoGLPointSizeElement::pop(SoState * OBOL_UNUSED_ARG(state),
                           const SoElement * prevTopElement)
 {
-  SoGLPointSizeElement * prev = (SoGLPointSizeElement*)prevTopElement;
+  const SoGLPointSizeElement * prev = static_cast<const SoGLPointSizeElement*>(prevTopElement);
   if (this->data != prev->data) {
     this->updategl();
   }

@@ -201,7 +201,7 @@ SoGLCacheContextElement::init(SoState * OBOL_UNUSED_ARG(state))
 SbBool
 SoGLCacheContextElement::matches(const SoElement * elt) const
 {
-  const SoGLCacheContextElement * elem = (SoGLCacheContextElement*) elt;
+  const SoGLCacheContextElement * elem = static_cast<const SoGLCacheContextElement*>(elt);
 
   return
     this->context == elem->context &&
@@ -256,10 +256,10 @@ SoGLCacheContextElement::set(SoState * state, int context,
   The value returned will always be a positive integer.
 */
 int
-SoGLCacheContextElement::get(SoState * state)
+SoGLCacheContextElement::get(const SoState * state)
 {
-  const SoGLCacheContextElement * elem = (const SoGLCacheContextElement *)
-    SoElement::getConstElement(state, classStackIndex);
+  const SoGLCacheContextElement * elem = static_cast<const SoGLCacheContextElement *>(
+    state->getConstElement(classStackIndex));
   return elem->context;
 }
 

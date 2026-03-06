@@ -676,7 +676,7 @@ SoVectorizeActionP::pre_shape_cb(void * userdata,
 
   SbBox3f bbox;
 
-  SoShape * shape = (SoShape *) node;
+  SoShape * shape = const_cast<SoShape*>(static_cast<const SoShape*>(node));
   const SoBoundingBoxCache * bboxcache = shape->getBoundingBoxCache();
   if (bboxcache && bboxcache->isValid(state)) {
     bbox = bboxcache->getProjectedBox();
@@ -768,8 +768,8 @@ SoVectorizeActionP::post_anno_cb(void * userdata,
 static int
 qsort_compare(const void * q0, const void * q1)
 {
-  SoVectorizeItem ** p0 = (SoVectorizeItem**) q0;
-  SoVectorizeItem ** p1 = (SoVectorizeItem**) q1;
+  SoVectorizeItem ** p0 = const_cast<SoVectorizeItem**>(static_cast<const SoVectorizeItem* const*>(q0));
+  SoVectorizeItem ** p1 = const_cast<SoVectorizeItem**>(static_cast<const SoVectorizeItem* const*>(q1));
 
   SoVectorizeItem * i0 = *p0;
   SoVectorizeItem * i1 = *p1;
@@ -792,7 +792,7 @@ SoVectorizeActionP::outputItems(void)
 {
   int i, n = this->itemlist.getLength();
   if (n) {
-    SoVectorizeItem ** ptr = (SoVectorizeItem**) this->itemlist.getArrayPtr();
+    SoVectorizeItem ** ptr = const_cast<SoVectorizeItem**>(this->itemlist.getArrayPtr());
     qsort(ptr, n, sizeof(void*), (qsort_cmp *) qsort_compare);
     
     for (i = 0; i < n; i++) {
@@ -801,7 +801,7 @@ SoVectorizeActionP::outputItems(void)
   }
   n = this->annotationlist.getLength();
   if (n) {
-    SoVectorizeItem ** ptr = (SoVectorizeItem**) this->annotationlist.getArrayPtr();
+    SoVectorizeItem ** ptr = const_cast<SoVectorizeItem**>(this->annotationlist.getArrayPtr());
     for (i = 0; i < n; i++) {
       PUBLIC(this)->printItem(ptr[i]);
     }

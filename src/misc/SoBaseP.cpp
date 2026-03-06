@@ -162,7 +162,7 @@ SoBase::PImpl::check_for_leaks(void)
         SbString s;
         s.sprintf("\"%s\"", name.getString());
         (void)printf("\t%p type==(0x%04x, '%s') name=='%s' refs==%d\n",
-                     base, t.getKey(), t.getName().getString(),
+                     (const void *)base, t.getKey(), t.getName().getString(),
                      name == "" ? "no name" : s.getString(),
                      base->getRefCount());
       }

@@ -231,5 +231,5 @@ SoTimerQueueSensor::isScheduled(void) const
 SbBool
 SoTimerQueueSensor::isBefore(const SoSensor * s) const
 {
-  return (this->triggertime < ((SoTimerQueueSensor *)s)->triggertime);
+  return (this->triggertime < static_cast<const SoTimerQueueSensor*>(s)->triggertime);
 }

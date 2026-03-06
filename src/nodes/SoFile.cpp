@@ -437,7 +437,7 @@ SoFile::copyContents(const SoFieldContainer * from, SbBool copyconnections)
   inherited::copyContents(from, copyconnections);
   this->namesensor->attach(&this->name);
 
-  SoFile * filenode = (SoFile *)from;
+  SoFile * filenode = const_cast<SoFile*>(static_cast<const SoFile*>(from));
 
   this->children->truncate(0);
   for (int i=0; i < filenode->children->getLength(); i++) {

@@ -372,7 +372,7 @@ static SbList<SbProfilingNodeTypeKey> * typekeys = NULL;
 static int longestnamelength = 0;
 static int longesttypenamelength = 0;
 
-int
+static int
 gencompare(const void * ptr1, const void * ptr2)
 {
   if (ptr1 < arraystart || ptr1 > arrayend || ptr2 < arraystart || ptr2 > arrayend) {

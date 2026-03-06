@@ -181,7 +181,7 @@ SoSpotLightManip::setDragger(SoDragger * newdragger)
   Returns pointer to internal dragger.
  */
 SoDragger *
-SoSpotLightManip::getDragger(void)
+SoSpotLightManip::getDragger(void) const
 {
   if (this->children->getLength() > 0) {
     SoNode *node = (*children)[0];
@@ -471,7 +471,7 @@ void
 SoSpotLightManip::copyContents(const SoFieldContainer * fromfc, SbBool copyconnections)
 {
   assert(fromfc->isOfType(SoSpotLightManip::getClassTypeId()));
-  SoDragger * dragger = ((SoSpotLightManip*)fromfc)->getDragger();
+  SoDragger * dragger = static_cast<const SoSpotLightManip*>(fromfc)->getDragger();
   this->setDragger(dragger ? (SoDragger*)dragger->copy() : NULL);
   inherited::copyContents(fromfc, copyconnections);
 }

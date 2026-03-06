@@ -70,6 +70,7 @@
 #include <cmath>
 #include <cstdint>
 #include <algorithm>
+#include <thread>
 
 // ==========================================================================
 // NrtScene: nanort BVH built from SoRtTriangle data
@@ -496,18 +497,67 @@ public:
             if (aspect_ratio < 1.0f) vv.scale(1.0f / aspect_ratio);
 
             NrtScene & nrtScene = cachedNrtScene_;
-            nanort::TriangleIntersector<float> intersector(
-                nrtScene.vertices.data(), nrtScene.faces.data(),
-                sizeof(float) * 3);
+            /* NOTE: TriangleIntersector has mutable per-call state (ray_org_,
+             * ray_coeff_, etc.) so it MUST NOT be shared across threads.
+             * Each worker thread creates its own intersector from the same
+             * (read-only) vertex/face pointers; construction is O(1). */
 
-            uint32_t rngState = 0xDEADBEEFu;
+            /* Precompute 4 corner rays once per frame.
+             * projectPointToLine() is linear in (nx,ny) for both perspective
+             * and orthographic projections, so bilinear interpolation over
+             * the 4 corners is exact for any pixel within the frame.
+             * This eliminates one projectPointToLine() call per pixel
+             * (replacing ~width*height double-precision ray computations with
+             * 4 calls + simple float arithmetic). */
+            SbVec3f corner_p0[4], corner_p1[4];
+            vv.projectPointToLine(SbVec2f(0.0f, 0.0f), corner_p0[0], corner_p1[0]);
+            vv.projectPointToLine(SbVec2f(1.0f, 0.0f), corner_p0[1], corner_p1[1]);
+            vv.projectPointToLine(SbVec2f(0.0f, 1.0f), corner_p0[2], corner_p1[2]);
+            vv.projectPointToLine(SbVec2f(1.0f, 1.0f), corner_p0[3], corner_p1[3]);
 
-            for (unsigned int y = 0; y < height; ++y) {
+            /* Decompose corners into additive basis for per-pixel interpolation:
+             *   p(nx,ny) = A + B*nx + C*ny + D*nx*ny
+             * For the resolutions used by the coarse-render calibration the
+             * bilinear term D is typically very small (it vanishes completely
+             * for the common case of a symmetric perspective frustum), but is
+             * included for correctness with asymmetric frusta. */
+            const float fw = static_cast<float>(width);
+            const float fh = static_cast<float>(height);
+
+            /* Parallel pixel loop using C++17 std::thread (fork-join per frame).
+             * Each worker thread processes a contiguous band of rows; threads
+             * are joined before returning so pixels[] is fully written on exit.
+             * Hardware concurrency is queried once; on single-core machines this
+             * resolves to 1 and no extra threads are spawned. */
+            const unsigned int nthreads = std::max(1u,
+                std::thread::hardware_concurrency());
+            /* Cap thread count to the number of rows to avoid empty workers. */
+            const unsigned int effective_threads = std::min(nthreads, height);
+            const unsigned int rows_per_thread =
+                (height + effective_threads - 1) / effective_threads;
+
+            /* Lambda: render rows [y0, y1) into pixels[]. All captures are by
+             * value or reference to variables that outlive the join() call.
+             * A thread-local TriangleIntersector is created inside the lambda
+             * because nanort::TriangleIntersector holds mutable per-call state
+             * (ray coefficients, hit record) that is not thread-safe to share. */
+            auto renderBand = [&](unsigned int y0, unsigned int y1) {
+                /* Per-thread intersector – constructed from the same read-only
+                 * vertex/face arrays that live in nrtScene (O(1) to create). */
+                nanort::TriangleIntersector<float> intersector(
+                    nrtScene.vertices.data(), nrtScene.faces.data(),
+                    sizeof(float) * 3);
+                for (unsigned int y = y0; y < y1; ++y) {
+                /* Each thread/row uses its own RNG state seeded from y so
+                 * AA jitter is deterministic and threads don't share state.
+                 * 2654435761 is the Knuth multiplicative hash constant
+                 * (2^32 / phi ≈ 2654435769 rounded to nearest odd prime) which
+                 * spreads row indices across the 32-bit range before XOR. */
+                uint32_t rngState = 0xDEADBEEFu ^ (static_cast<uint32_t>(y) * 2654435761u);
+
                 for (unsigned int x = 0; x < width; ++x) {
                     const float fx = static_cast<float>(x);
                     const float fy = static_cast<float>(y);
-                    const float fw = static_cast<float>(width);
-                    const float fh = static_cast<float>(height);
 
                     float accum[3] = { 0.0f, 0.0f, 0.0f };
                     int hitSamples = 0;
@@ -521,14 +571,33 @@ public:
                         const float nx = (fx + jx) / fw;
                         const float ny = (fy + jy) / fh;
 
-                        SbVec3f p0, p1;
-                        vv.projectPointToLine(SbVec2f(nx, ny), p0, p1);
-                        SbVec3f d = p1 - p0;
-                        d.normalize();
+                        /* Bilinear interpolation of the precomputed corner rays.
+                         * (1-nx)*(1-ny)*c[0] + nx*(1-ny)*c[1] + (1-nx)*ny*c[2] + nx*ny*c[3]
+                         * Rearranged to use 4 multiplications instead of 8: */
+                        const float w00 = (1.0f - nx) * (1.0f - ny);
+                        const float w10 = nx            * (1.0f - ny);
+                        const float w01 = (1.0f - nx)  * ny;
+                        const float w11 = nx            * ny;
+                        float p0x = w00*corner_p0[0][0] + w10*corner_p0[1][0]
+                                  + w01*corner_p0[2][0] + w11*corner_p0[3][0];
+                        float p0y = w00*corner_p0[0][1] + w10*corner_p0[1][1]
+                                  + w01*corner_p0[2][1] + w11*corner_p0[3][1];
+                        float p0z = w00*corner_p0[0][2] + w10*corner_p0[1][2]
+                                  + w01*corner_p0[2][2] + w11*corner_p0[3][2];
+                        float p1x = w00*corner_p1[0][0] + w10*corner_p1[1][0]
+                                  + w01*corner_p1[2][0] + w11*corner_p1[3][0];
+                        float p1y = w00*corner_p1[0][1] + w10*corner_p1[1][1]
+                                  + w01*corner_p1[2][1] + w11*corner_p1[3][1];
+                        float p1z = w00*corner_p1[0][2] + w10*corner_p1[1][2]
+                                  + w01*corner_p1[2][2] + w11*corner_p1[3][2];
+
+                        float dx = p1x - p0x, dy_ = p1y - p0y, dz = p1z - p0z;
+                        const float invLen = 1.0f / std::sqrt(dx*dx + dy_*dy_ + dz*dz);
+                        dx *= invLen; dy_ *= invLen; dz *= invLen;
 
                         nanort::Ray<float> ray;
-                        ray.org[0] = p0[0]; ray.org[1] = p0[1]; ray.org[2] = p0[2];
-                        ray.dir[0] = d[0];  ray.dir[1] = d[1];  ray.dir[2] = d[2];
+                        ray.org[0] = p0x; ray.org[1] = p0y; ray.org[2] = p0z;
+                        ray.dir[0] = dx;  ray.dir[1] = dy_;  ray.dir[2] = dz;
                         ray.min_t  = 0.001f;
                         ray.max_t  = 1.0e30f;
 
@@ -552,13 +621,13 @@ public:
                         };
                         nrt_normalize3(N);
 
-                        const float dir[3] = { d[0], d[1], d[2] };
-                        const float V[3]   = { -dir[0], -dir[1], -dir[2] };
+                        const float dir[3] = { dx, dy_, dz };
+                        const float V[3]   = { -dx, -dy_, -dz };
 
                         const float hitPt[3] = {
-                            p0[0] + dir[0] * isect.t,
-                            p0[1] + dir[1] * isect.t,
-                            p0[2] + dir[2] * isect.t
+                            p0x + dx * isect.t,
+                            p0y + dy_ * isect.t,
+                            p0z + dz * isect.t
                         };
 
                         const SoRtMaterial & mat = tris[fid].mat;
@@ -614,13 +683,24 @@ public:
                         nrt_clamp01(accum[2] * inv_s) * 255.0f);
                     if (nrcomponents == 4) pixels[idx + 3] = 255;
                 }
+                } /* end row loop inside renderBand */
+            }; /* end renderBand lambda */
+
+            /* Spawn worker threads – one per row-band. */
+            std::vector<std::thread> workers;
+            workers.reserve(effective_threads);
+            for (unsigned int t = 0; t < effective_threads; ++t) {
+                const unsigned int y0 = t * rows_per_thread;
+                const unsigned int y1 = std::min(y0 + rows_per_thread, height);
+                workers.emplace_back(renderBand, y0, y1);
             }
+            for (auto & w : workers) w.join();
         }
 
         // --- 5. Composite text/HUD overlays ---------------------------------
         collector_.compositeOverlays(pixels, width, height, nrcomponents);
 
-        collector_.updateCameraId(cam);
+        collector_.updateCameraId(cam, scene);
         return TRUE;
     }
 

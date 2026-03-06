@@ -107,7 +107,7 @@ SoGLLightIdElement::pop(SoState * state,
   const SoGLContext * glue = sogl_glue_from_state(state);
 
   int idx = this->data + 1;
-  int prevdata = ((SoGLLightIdElement*)prevTopElement)->data;
+  int prevdata = static_cast<const SoGLLightIdElement*>(prevTopElement)->data;
   // disable used light sources
   while (idx <= prevdata) {
     SoGLContext_glDisable(glue, (GLenum)((int32_t)GL_LIGHT0 + idx));

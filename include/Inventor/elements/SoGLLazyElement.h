@@ -80,8 +80,8 @@ public:
 
   void sendDiffuseByIndex(const int index) const;
   static SbBool isColorIndex(SoState *state);
-  static SoGLLazyElement * getInstance(const SoState *state);
-  void send(const SoState *state, uint32_t mask) const;
+  static SoGLLazyElement * getInstance(SoState *state);
+  void send(SoState * state, uint32_t mask) const;
 
   void sendVPPacked(SoState* state, const unsigned char* pcolor);
 
@@ -151,7 +151,7 @@ public:
   static void endCaching(SoState * state);
 
   static SbBool preCacheCall(const SoState * state, const SoGLLazyElement::GLState * prestate);
-  static void postCacheCall(const SoState * state, const SoGLLazyElement::GLState * poststate);
+  static void postCacheCall(SoState * state, const SoGLLazyElement::GLState * poststate);
 
   static void mergeCacheInfo(SoState * state,
                              SoGLLazyElement::GLState * childprestate,

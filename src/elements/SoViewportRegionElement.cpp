@@ -141,5 +141,5 @@ SoViewportRegionElement::setElt(const SbViewportRegion & viewportRegionarg)
 void
 SoViewportRegionElement::print(FILE * file) const
 {
-  fprintf(file, "SoViewportRegionElement[%p]\n", (void*)this);
+  fprintf(file, "SoViewportRegionElement[%p]\n", static_cast<const void*>(this));
 }

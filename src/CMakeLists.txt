@@ -87,6 +87,9 @@ if(OBOL_BUILD_DUAL_GL AND OBOL_OSMESA_INCLUDE_DIRS)
 endif()
 
 add_library(${PROJECT_NAME} ${OBOL_SOURCE} ${OBOL_ADDITIONAL_HDRS})
+if(TARGET obol_parser_gen)
+  add_dependencies(${PROJECT_NAME} obol_parser_gen)
+endif()
 
 # Set target properties
 set_target_properties(${PROJECT_NAME} PROPERTIES

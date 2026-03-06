@@ -14,6 +14,9 @@ cmake_policy(SET CMP0072 NEW)  # FindOpenGL prefers GLVND
 cmake_policy(SET CMP0075 NEW)  # Include CMAKE_REQUIRED_LIBRARIES in CheckIncludeFile
 cmake_policy(SET CMP0077 NEW)  # option() honors normal variables
 cmake_policy(SET CMP0079 NEW)  # target_link_libraries() allows use with targets in other directories
+if(POLICY CMP0118)
+  cmake_policy(SET CMP0118 NEW)  # GENERATED property is globally visible (needed for build-dir parser files)
+endif()
 
 # Project variables for compatibility
 set(OBOL_MAJOR_VERSION ${PROJECT_VERSION_MAJOR})
@@ -202,19 +205,36 @@ option(OBOL_COVERAGE "Enable code coverage instrumentation (GCC/Clang)" OFF)
 # Applied via target_compile_options so external dependencies are unaffected.
 #
 # Flags applied when OBOL_WARNINGS=ON:
-#   -Wall          catch a broad set of common problems
-#   -Wextra        additional checks beyond -Wall
-#   -Wundef        warn when an undefined identifier is used in #if
-#   -Wshadow       warn when a local variable shadows a member or outer variable
-#   -Wno-long-long suppress warnings about 'long long' (valid in C++11 and later)
-#   -Wpedantic     enforce strict ISO C++17.  The codebase now uses [[maybe_unused]]
-#                  (C++17) instead of __attribute__((__unused__)).  The generated
-#                  parser files (evaluator_tab.cpp + so_eval.ic) use internal
-#                  __attribute__ annotations from the bison/flex skeletons; these
-#                  are guarded by the tools' own ifdef machinery and do not require
-#                  any suppression.
+#   -Wall               catch a broad set of common problems
+#   -Wextra             additional checks beyond -Wall
+#   -Wundef             warn when an undefined identifier is used in #if
+#   -Wshadow            warn when a local variable shadows a member or outer variable
+#   -Wno-long-long      suppress warnings about 'long long' (valid in C++11 and later)
+#   -Wpedantic          enforce strict ISO C++17.  The codebase now uses [[maybe_unused]]
+#                       (C++17) instead of __attribute__((__unused__)).  The generated
+#                       parser files (evaluator_tab.cpp + so_eval.ic) use internal
+#                       __attribute__ annotations from the bison/flex skeletons; these
+#                       are guarded by the tools' own ifdef machinery and do not require
+#                       any suppression.
+#   -Wformat-nonliteral warn when a format string argument to printf/strftime is not a
+#                       string literal and cannot be checked at compile time.  The two
+#                       intentional pass-through strftime calls in SbTime::formatDate()
+#                       are suppressed with a local GCC diagnostic pragma.
+#   -Wmaybe-uninitialized  warn when a variable may be used before it is initialized.
+#   -Wmissing-declarations  warn when a non-static function has no prior declaration.
+#                           All 30 instances were fixed: static functions gained the
+#                           static keyword; cross-TU helpers gained forward declarations;
+#                           missing header declarations were added to glp.h and
+#                           SoNodeKitPath.h.
+#   -Wredundant-decls       warn when a symbol is declared more than once in the same
+#                           scope.  All 80 instances were fixed: the duplicate
+#                           SbAtexitStaticInternal declaration was removed from
+#                           CoinTidbits.h (SuUtils.h is now included instead);
+#                           redundant forward decls in SoGLDriverDatabase.cpp and glp.h
+#                           were removed; the flex-generated so_eval.ic include is
+#                           wrapped with a diagnostic pragma.
 #
-# Flags intentionally NOT applied and why:
+# Flags intentionally NOT applied and why (sourced from brlcad_CMakeLists.txt):
 #   -Wfloat-equal  Not viable: 3D geometry code legitimately compares floating-
 #                  point values against exact constants (0.0, 1.0) to test for
 #                  degenerate cases (zero-length vectors, identity matrices, etc.).
@@ -222,14 +242,17 @@ option(OBOL_COVERAGE "Enable code coverage instrumentation (GCC/Clang)" OFF)
 #                  with meaningless casts and obscure the intent.
 #   -Wbad-function-cast  C-only flag; not applicable to the C++ Obol library.
 #   -Wc++-compat         C-only flag; not applicable.
-#   -Winline       Too noisy: many functions are marked inline for API
-#                  compatibility reasons even when the compiler cannot inline
-#                  them; the warnings provide no actionable signal.
-option(OBOL_WARNINGS "Enable extra warning flags (-Wall -Wextra -Wundef -Wshadow -Wpedantic) on the Obol target" ON)
+#   -Winline       Too noisy: brlcad explicitly uses -Wno-inline for g++ because
+#                  GCC spews unquellable bogus warnings on default constructors.
+#   -Wdocumentation  Clang only; currently produces ~9000 warnings against the
+#                    Doxygen comment headers.  Not viable until the doc comments
+#                    are brought into conformance.
+#   -Wmissing-field-initializers  ~207 warnings; deferred to a future clean-up pass.
+option(OBOL_WARNINGS "Enable extra warning flags (-Wall -Wextra -Wundef -Wshadow -Wpedantic -Wformat-nonliteral -Wmaybe-uninitialized -Wmissing-declarations -Wredundant-decls -Wcast-qual) on the Obol target" ON)
 
 if(OBOL_WARNINGS AND NOT MSVC)
   set(_obol_warning_flags "")
-  foreach(_flag Wall Wextra Wundef Wshadow Wno-long-long Wpedantic)
+  foreach(_flag Wall Wextra Wundef Wshadow Wno-long-long Wpedantic Wformat-nonliteral Wmaybe-uninitialized Wmissing-declarations Wredundant-decls Wcast-qual)
     check_cxx_compiler_flag("-${_flag}" OBOL_CXX_HAS_${_flag})
     if(OBOL_CXX_HAS_${_flag})
       list(APPEND _obol_warning_flags "-${_flag}")

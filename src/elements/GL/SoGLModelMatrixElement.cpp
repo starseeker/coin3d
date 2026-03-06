@@ -135,8 +135,7 @@ SoGLModelMatrixElement::pop(SoState * stateptr,
 {
   inherited::pop(stateptr, prevTopElement);
 
-  SoGLModelMatrixElement * prev = (SoGLModelMatrixElement*)
-    prevTopElement;
+  const SoGLModelMatrixElement * prev = static_cast<const SoGLModelMatrixElement*>(prevTopElement);
 
   if (prev->stackoverflow) {
     SbMatrix mat = SoGLViewingMatrixElement::getResetMatrix(this->state);

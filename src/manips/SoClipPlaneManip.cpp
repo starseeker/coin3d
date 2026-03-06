@@ -267,7 +267,7 @@ SoClipPlaneManip::setDragger(SoDragger * newdragger)
   Returns pointer to dragger used for interaction.
  */
 SoDragger *
-SoClipPlaneManip::getDragger(void)
+SoClipPlaneManip::getDragger(void) const
 {
   if (this->children->getLength()) {
     SoNode *node = (*children)[0];
@@ -291,7 +291,7 @@ void
 SoClipPlaneManip::copyContents(const SoFieldContainer * fromfc, SbBool copyconnections)
 {
   assert(fromfc->isOfType(SoClipPlaneManip::getClassTypeId()));
-  this->setDragger(((SoClipPlaneManip*)fromfc)->getDragger());
+  this->setDragger(static_cast<const SoClipPlaneManip*>(fromfc)->getDragger());
   inherited::copyContents(fromfc, copyconnections);
 }
 

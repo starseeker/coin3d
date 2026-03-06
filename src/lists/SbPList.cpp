@@ -295,7 +295,7 @@ void
 SbPList::expandlist(const int size) const
 {
   const int oldsize = this->getLength();
-  SbPList * thisp = (SbPList *)this;
+  SbPList * thisp = const_cast<SbPList*>(this);
   thisp->expand(size);
   for (int i = oldsize; i < size; i++) (*thisp)[i] = NULL;
 }

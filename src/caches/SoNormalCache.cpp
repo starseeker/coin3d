@@ -726,8 +726,8 @@ SoNormalCache::generatePerFaceStrip(const SbVec3f * const coords,
     }
 #if OBOL_DEBUG
     if (idx > maxcoordidx) {
-      static uint32_t normgenerrors_facestrip = 0;
-      if (normgenerrors_facestrip < 1) {
+      static uint32_t normgenerrors_facestrip_oob = 0;
+      if (normgenerrors_facestrip_oob < 1) {
         SoDebugError::postWarning("SoNormalCache::generatePerFaceStrip",
                                   "Erroneous polygon specification in model. "
                                   "Index out of bounds: %d. Max index: %d. "
@@ -735,7 +735,7 @@ SoNormalCache::generatePerFaceStrip(const SbVec3f * const coords,
                                   "but there might be more errors).", 
                                   idx, maxcoordidx);
       }
-      normgenerrors_facestrip++;
+      normgenerrors_facestrip_oob++;
     }
 #endif // OBOL_DEBUG
   }

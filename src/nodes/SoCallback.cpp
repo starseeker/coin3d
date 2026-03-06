@@ -242,7 +242,7 @@ SoCallback::copyContents(const SoFieldContainer * from, SbBool copyconnections)
 {
   inherited::copyContents(from, copyconnections);
 
-  SoCallback * fromnode = (SoCallback *)from;
+  SoCallback * fromnode = const_cast<SoCallback*>(static_cast<const SoCallback*>(from));
   this->cbfunc = fromnode->cbfunc;
   this->cbdata = fromnode->cbdata;
 }

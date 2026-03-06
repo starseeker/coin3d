@@ -227,5 +227,5 @@ SoDelayQueueSensor::isIdleOnly(void) const
 SbBool
 SoDelayQueueSensor::isBefore(const SoSensor * s) const
 {
-  return (this->priority < ((SoDelayQueueSensor *)s)->priority);
+  return (this->priority < static_cast<const SoDelayQueueSensor*>(s)->priority);
 }

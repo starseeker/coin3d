@@ -101,8 +101,8 @@ void
 SoGLViewportRegionElement::pop(SoState * state,
                                const SoElement * prevTopElement)
 {
-  SoGLViewportRegionElement * prev =
-    (SoGLViewportRegionElement *)prevTopElement;
+  const SoGLViewportRegionElement * prev =
+    static_cast<const SoGLViewportRegionElement*>(prevTopElement);
   if (!(this->viewportRegion == prev->viewportRegion))
     this->updategl();
   prev->capture(state);

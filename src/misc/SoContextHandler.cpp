@@ -111,8 +111,8 @@ public:
 extern "C" { static int
 socontexthandler_qsortcb(const void * p0, const void * p1)
 {
-  socontexthandler_cbitem * i0 = (socontexthandler_cbitem *) p0;
-  socontexthandler_cbitem * i1 = (socontexthandler_cbitem *) p1;
+  socontexthandler_cbitem * i0 = const_cast<socontexthandler_cbitem*>(static_cast<const socontexthandler_cbitem*>(p0));
+  socontexthandler_cbitem * i1 = const_cast<socontexthandler_cbitem*>(static_cast<const socontexthandler_cbitem*>(p1));
 
   return int(i0->idx) - int(i1->idx);
 }
@@ -176,7 +176,7 @@ SoContextHandler::destructingContext(uint32_t contextid)
     listcopy.append(iter->key);
   }
 
-  qsort((void*) listcopy.getArrayPtr(),
+  qsort(const_cast<void*>(static_cast<const void*>(listcopy.getArrayPtr())),
         listcopy.getLength(),
         sizeof(socontexthandler_cbitem),
         socontexthandler_qsortcb);

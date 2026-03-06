@@ -90,6 +90,16 @@ struct ScRaytracerCbData {
     std::vector<SoRtLightInfo> *   lights;
     std::vector<SoRtTextOverlay> * overlays;
     SbViewportRegion               proxyVp;
+
+    /* Normal-matrix cache: recompute inverse-transpose only when the model
+     * matrix changes between triangles.  All triangles of the same shape
+     * share the same model matrix, so this avoids one expensive matrix
+     * inverse per triangle (O(n) inverse calls → O(shapes) inverse calls). */
+    float     lastMM[16];     /* flat row-major copy of last seen model matrix */
+    SbMatrix  normalMat;      /* corresponding inverse-transpose */
+    bool      normalMatValid; /* false until the first triangle is processed */
+
+    ScRaytracerCbData() : normalMatValid(false) {}
 };
 
 // Forward-declare all file-scope callbacks so they can be registered in
@@ -256,9 +266,10 @@ SoRaytracerSceneCollector::updateCacheKeysAfterRebuild(SoNode *  root,
 }
 
 void
-SoRaytracerSceneCollector::updateCameraId(SoCamera * cam)
+SoRaytracerSceneCollector::updateCameraId(SoCamera * cam, SoNode * root)
 {
-    cachedCamId_ = cam ? cam->getNodeId() : 0;
+    cachedCamId_  = cam  ? cam->getNodeId()  : 0;
+    if (root) cachedRootId_ = root->getNodeId();
 }
 
 void
@@ -337,17 +348,37 @@ SoRaytracerSceneCollector::computeWorldSpaceRadius(SoCallbackAction * action,
         SoViewVolumeElement::get(action->getState());
     float worldHeight = vv.getHeight();
 
+    const SbMatrix & mm = action->getModelMatrix();
+
     if (vv.getProjectionType() == SbViewVolume::PERSPECTIVE) {
         const float nearDist = vv.getNearDist();
         if (nearDist > 1e-6f) {
-            const SbMatrix & mm = action->getModelMatrix();
             const SbVec3f objPos(mm[3][0], mm[3][1], mm[3][2]);
             const float dist = (objPos - vv.getProjectionPoint()).length();
             const float refDist = (dist > nearDist) ? dist : nearDist;
             worldHeight = worldHeight * refDist / nearDist;
         }
     }
-    return sizePx * worldHeight / viewportHeightPx * 0.5f;
+
+    float radius = sizePx * worldHeight / viewportHeightPx * 0.5f;
+
+    /* The returned radius is used as a local-space dimension in proxy
+     * geometry (e.g. createCylinderProxy).  src_collectProxy wraps every
+     * proxy with the full current model matrix – including any Scale node –
+     * which would inflate the cylinder radius by that scale factor.  Divide
+     * by the approximate uniform scale (geometric mean of the three row-vector
+     * lengths in the upper-left 3×3) so the net world-space radius matches
+     * the pixel-size target.  For pure rotation/translation the scale is 1
+     * and the division is a no-op. */
+    const SbMat & mv = mm.getValue();
+    const float sx = sqrtf(mv[0][0]*mv[0][0] + mv[0][1]*mv[0][1] + mv[0][2]*mv[0][2]);
+    const float sy = sqrtf(mv[1][0]*mv[1][0] + mv[1][1]*mv[1][1] + mv[1][2]*mv[1][2]);
+    const float sz = sqrtf(mv[2][0]*mv[2][0] + mv[2][1]*mv[2][1] + mv[2][2]*mv[2][2]);
+    const float scaleProduct = sx * sy * sz;
+    if (scaleProduct > 1e-12f)
+        radius /= cbrtf(scaleProduct);
+
+    return radius;
 }
 
 SoSeparator *
@@ -510,7 +541,20 @@ src_triangleCB(void * ud,
     ScRaytracerCbData * cbdata = static_cast<ScRaytracerCbData *>(ud);
 
     const SbMatrix & mm = action->getModelMatrix();
-    SbMatrix normalMat   = mm.inverse().transpose();
+
+    /* Recompute the normal matrix (inverse-transpose) only when the model
+     * matrix has actually changed.  All triangles in the same shape share
+     * an identical model matrix, so this reduces O(triangles) expensive
+     * matrix inversions to O(shapes) inversions during scene collection. */
+    const SbMat & mmv = mm.getValue();   /* const float[4][4] */
+    if (!cbdata->normalMatValid ||
+        std::memcmp(cbdata->lastMM, mmv, sizeof(float) * 16) != 0)
+    {
+        cbdata->normalMat       = mm.inverse().transpose();
+        std::memcpy(cbdata->lastMM, mmv, sizeof(float) * 16);
+        cbdata->normalMatValid  = true;
+    }
+    const SbMatrix & normalMat = cbdata->normalMat;
 
     SoRtTriangle tri;
     const SoPrimitiveVertex * verts[3] = { v0, v1, v2 };

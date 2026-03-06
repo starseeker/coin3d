@@ -1412,7 +1412,7 @@ SoNode::addToCopyDict(void) const
         // just copy the pointer. A PROTO definition is
         // read-only. It's not possible to change it after it has been
         // created so this should be safe.
-        cp = (SoNode*) this;
+        cp = const_cast<SoNode*>(this);
       }
       else {
         cp = (SoNode *)this->getTypeId().createInstance(this->getInstantiationContext());
@@ -1438,7 +1438,7 @@ SoNode::copyContents(const SoFieldContainer * from, SbBool copyconnections)
   if (!this->isOfType(SoProto::getClassTypeId())) {
     inherited::copyContents(from, copyconnections);
 
-    SoNode * src = (SoNode *)from;
+    SoNode * src = const_cast<SoNode*>(static_cast<const SoNode*>(from));
     this->stateflags = src->stateflags;
   }
 }
@@ -1457,7 +1457,7 @@ SoNode::copyThroughConnection(void) const
   // instance).
   if (connfc) return SoFieldContainer::findCopy(this, TRUE);
   // if no copy has been made, just return self
-  return (SoFieldContainer*) this;
+  return const_cast<SoFieldContainer*>(static_cast<const SoFieldContainer*>(this));
 }
 
 /*!
