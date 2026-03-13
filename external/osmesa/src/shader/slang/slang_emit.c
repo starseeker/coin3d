@@ -537,7 +537,7 @@ emit_arith(slang_emit_info *emitInfo, slang_ir_node *n)
     /* result storage */
     if (!n->Store) {
 	GLint size = n->Children[0]->Store
-		     ? n->Children[0]->Store->Size : info->ResultSize;
+		     ? n->Children[0]->Store->Size : (GLint)info->ResultSize;
 	if (!alloc_temp_storage(emitInfo, n, size))
 	    return NULL;
     }
@@ -969,11 +969,9 @@ emit_move(slang_emit_info *emitInfo, slang_ir_node *n)
     /* For scalar (size==1) temps packed into register sub-components, also
      * verify the write-mask matches the expected component.  Without this
      * check two scalar temps that share the same register index but live in
-     * different components (e.g. T0.y vs T0.z) would both satisfy the Index
+     * different components (e.g. T0.x vs T0.y) would both satisfy the Index
      * test, causing the peephole to redirect the wrong instruction and
-     * clobber a live variable.  This was the root cause of the OSMesa 7.0.4
-     * SLANG bug where vec4(l, l*l, ...) produced incorrect results when
-     * the scalars happened to share a register. */
+     * clobber a live variable. */
     if (inst) {
 	const slang_ir_storage *rhs = n->Children[1]->Store;
 	const GLboolean scalar_ok = (rhs->Size != 1) ||
@@ -1113,7 +1111,7 @@ emit_not(slang_emit_info *emitInfo, slang_ir_node *n)
 	{ OPCODE_SGE, OPCODE_SLT },
 	{ OPCODE_SEQ, OPCODE_SNE },
 	{ OPCODE_SNE, OPCODE_SEQ },
-	{ 0, 0 }
+	{ (gl_inst_opcode)0, (gl_inst_opcode)0 }
     };
     struct prog_instruction *inst;
     GLuint i;

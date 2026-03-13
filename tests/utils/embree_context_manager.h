@@ -122,8 +122,13 @@ struct EmbreeScene {
         scene = rtcNewScene(device);
         if (!scene) { destroy(); return false; }
 
-        // Populate flat buffers
-        vertices.resize(n * 9);
+        // Populate flat buffers.
+        // One extra float of tail padding: Embree (libembree4) reads the
+        // last vertex with a 4-float (16-byte) aligned load even though
+        // RTC_FORMAT_FLOAT3 only uses 3 floats per slot, so it reads 4
+        // bytes past the last stored float.  Valgrind confirms the
+        // out-of-bounds read at exactly the first byte after n*9 floats.
+        vertices.resize(n * 9 + 1);
         indices.resize(n * 3);
         for (size_t i = 0; i < n; ++i) {
             for (int v = 0; v < 3; ++v) {

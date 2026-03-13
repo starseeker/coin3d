@@ -487,7 +487,10 @@ SoSceneTextureCubeMapP::updatePBuffer(SoState * state, const float quality)
       int reqbytes = cubeSideSize*6; // 6 cube sides
       if (reqbytes > this->offscreenbuffersize) {
         delete[] this->offscreenbuffer;
-        this->offscreenbuffer = new unsigned char[reqbytes];
+        // Extra 4096 bytes of padding: proprietary GPU drivers use
+        // vectorised/DMA stores during glReadPixels that can overrun the
+        // exact pixel-data size.  See SoSceneTexture2.cpp for details.
+        this->offscreenbuffer = new unsigned char[reqbytes + 4096];
         this->offscreenbuffersize = reqbytes;
       }
 

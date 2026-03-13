@@ -40,11 +40,11 @@ max_buffer_index(GLcontext *ctx, GLuint count, GLenum type,
 {
     const GLubyte *map = NULL;
     GLuint max = 0;
-    GLint i;
+    GLuint i;
 
     if (elementBuf->Name) {
 	/* elements are in a user-defined buffer object.  need to map it */
-	map = ctx->Driver.MapBuffer(ctx,
+	map = (const GLubyte *)ctx->Driver.MapBuffer(ctx,
 				    GL_ELEMENT_ARRAY_BUFFER_ARB,
 				    GL_READ_ONLY,
 				    elementBuf);

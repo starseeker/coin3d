@@ -829,7 +829,16 @@ SoSceneTexture2P::updateFrameBuffer(SoState * state, const float OBOL_UNUSED_ARG
       return;
     }
 
-    // FIXME: for some reason we need to do this every frame. Investigate why.
+  }
+
+  // Refresh the glimage's GL display list association on every frame.
+  // The DL can be removed from the glimage's internal list by context-cleanup
+  // callbacks (e.g. when a sibling GL context is destroyed) even while the FBO
+  // itself is still valid.  Without this call, SoGLImage::getGLDisplayList()
+  // falls through to createGLDisplayList() which — for an FBO-backed image
+  // with no pixel data — creates a new texture object that is never populated,
+  // corrupting the GL driver's heap metadata on the next allocation.
+  if (this->glimage && local_fbodata->fbo_frameBuffer != GL_INVALID_VALUE) {
     if (PUBLIC(this)->type.getValue() == SoSceneTexture2::DEPTH) {
       assert(local_fbodata->fbo_depthmap != NULL);
       this->glimage->setGLDisplayList(local_fbodata->fbo_depthmap, state,
@@ -1031,6 +1040,66 @@ SoSceneTexture2P::updatePBuffer(SoState * state, const float quality)
 
     if (this->contextManager) this->contextManager->makeContextCurrent(this->glcontext);
     const SoGLContext * pbglue = SoGLContext_instance(this->contextid);
+
+    // Some context managers (e.g. FLTKContextManager) provide a window-backed
+    // context that may be physically much smaller than the requested texture
+    // dimensions (e.g. a hidden 1×1 window used solely to own a GL context).
+    // Rendering the sub-scene directly to that tiny window framebuffer produces
+    // wrong pixel data and causes glReadPixels to overrun the valid framebuffer
+    // region, corrupting the heap.  When the inner context supports FBOs,
+    // create a temporary FBO of the exact texture size so that both rendering
+    // and the subsequent readback target the correct surface.
+    GLuint tmpFbo = 0, tmpColorTex = 0, tmpDepthRbo = 0;
+    GLint savedFbo = 0;
+    SbBool hasTmpFbo = FALSE;
+    if (!this->canrendertotexture &&
+        SoGLDriverDatabase::isSupported(pbglue, SO_GL_FRAMEBUFFER_OBJECT)) {
+      SoGLContext_glGetIntegerv(pbglue, GL_FRAMEBUFFER_BINDING_EXT, &savedFbo);
+
+      // Colour attachment: plain RGBA8 texture (no mipmaps needed).
+      SoGLContext_glGenTextures(pbglue, 1, &tmpColorTex);
+      SoGLContext_glBindTexture(pbglue, GL_TEXTURE_2D, tmpColorTex);
+      SoGLContext_glTexImage2D(pbglue, GL_TEXTURE_2D, 0, GL_RGBA8,
+                               this->glcontextsize[0], this->glcontextsize[1],
+                               0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+      SoGLContext_glTexParameteri(pbglue, GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+      SoGLContext_glTexParameteri(pbglue, GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+      SoGLContext_glBindTexture(pbglue, GL_TEXTURE_2D, 0);
+
+      // Depth attachment: 24-bit renderbuffer.
+      SoGLContext_glGenRenderbuffers(pbglue, 1, &tmpDepthRbo);
+      SoGLContext_glBindRenderbuffer(pbglue, GL_RENDERBUFFER_EXT, tmpDepthRbo);
+      SoGLContext_glRenderbufferStorage(pbglue, GL_RENDERBUFFER_EXT, GL_DEPTH_COMPONENT24,
+                                        this->glcontextsize[0], this->glcontextsize[1]);
+      SoGLContext_glBindRenderbuffer(pbglue, GL_RENDERBUFFER_EXT, 0);
+
+      // Assemble and validate the FBO.
+      SoGLContext_glGenFramebuffers(pbglue, 1, &tmpFbo);
+      SoGLContext_glBindFramebuffer(pbglue, GL_FRAMEBUFFER_EXT, tmpFbo);
+      SoGLContext_glFramebufferTexture2D(pbglue, GL_FRAMEBUFFER_EXT,
+                                         GL_COLOR_ATTACHMENT0_EXT,
+                                         GL_TEXTURE_2D, tmpColorTex, 0);
+      SoGLContext_glFramebufferRenderbuffer(pbglue, GL_FRAMEBUFFER_EXT,
+                                            GL_DEPTH_ATTACHMENT_EXT,
+                                            GL_RENDERBUFFER_EXT, tmpDepthRbo);
+
+      if (SoGLContext_glCheckFramebufferStatus(pbglue, GL_FRAMEBUFFER_EXT) ==
+          GL_FRAMEBUFFER_COMPLETE_EXT) {
+        hasTmpFbo = TRUE;
+      } else {
+        // FBO setup failed; fall back to window framebuffer rendering.
+        // Only restore a non-zero saved FBO explicitly; binding FBO 0 on
+        // drivers backed by a window surface (e.g. radeonsi on AMD) can
+        // crash _mesa_bind_framebuffers when the window is not fully exposed.
+        if (savedFbo != 0)
+          SoGLContext_glBindFramebuffer(pbglue, GL_FRAMEBUFFER_EXT, (GLuint)savedFbo);
+        SoGLContext_glDeleteFramebuffers(pbglue, 1, &tmpFbo);
+        SoGLContext_glDeleteRenderbuffers(pbglue, 1, &tmpDepthRbo);
+        SoGLContext_glDeleteTextures(pbglue, 1, &tmpColorTex);
+        tmpFbo = tmpColorTex = tmpDepthRbo = 0;
+      }
+    }
+
     SoGLContext_glEnable(pbglue, GL_DEPTH_TEST);
     this->glaction->apply(scene);
     // Make sure that rendering to pBuffer is completed to avoid
@@ -1038,11 +1107,23 @@ SoSceneTexture2P::updatePBuffer(SoState * state, const float quality)
     SoGLContext_glFlush(pbglue);
 
     if (!this->canrendertotexture) {
+      // Ensure the temp FBO is still bound before glReadPixels: apply() may
+      // have changed the framebuffer binding internally (e.g. via nested
+      // SoSceneTexture2 nodes).
+      if (hasTmpFbo)
+        SoGLContext_glBindFramebuffer(pbglue, GL_FRAMEBUFFER_EXT, tmpFbo);
       SbVec2s ctx_size = this->glcontextsize;
       int reqbytes = ctx_size[0]*ctx_size[1]*4;
       if (reqbytes > this->offscreenbuffersize) {
         delete[] this->offscreenbuffer;
-        this->offscreenbuffer = new unsigned char[reqbytes];
+        // Allocate with extra padding: proprietary GPU drivers (NVIDIA,
+        // radeonsi) use vectorised/DMA stores during glReadPixels that
+        // overrun the exact pixel-data size.  Valgrind on NVIDIA 535
+        // confirms writes at reqbytes+256 and reqbytes+272, meaning the
+        // driver overshoots the 256-byte zone entirely.  4096 bytes (one
+        // page) gives a safe margin for any conceivable DMA burst size
+        // without wasting meaningful memory.
+        this->offscreenbuffer = new unsigned char[reqbytes + 4096];
         this->offscreenbuffersize = reqbytes;
       }
       SoGLContext_glPixelStorei(pbglue, GL_PACK_ALIGNMENT, 1);
@@ -1050,7 +1131,22 @@ SoSceneTexture2P::updatePBuffer(SoState * state, const float quality)
                    this->offscreenbuffer);
       SoGLContext_glPixelStorei(pbglue, GL_PACK_ALIGNMENT, 4);
     }
-    
+
+    // Clean up temporary FBO now that pixel readback is complete.
+    if (hasTmpFbo) {
+      // Per the OpenGL spec, deleting a currently-bound FBO automatically
+      // reverts the binding to 0, so an explicit glBindFramebuffer(0) is
+      // not needed when savedFbo == 0.  Avoid calling it in that case:
+      // on some drivers (e.g. radeonsi on AMD) glBindFramebuffer(0) crashes
+      // inside _mesa_bind_framebuffers when the context is backed by a
+      // window surface that was never fully exposed.
+      if (savedFbo != 0)
+        SoGLContext_glBindFramebuffer(pbglue, GL_FRAMEBUFFER_EXT, (GLuint)savedFbo);
+      SoGLContext_glDeleteFramebuffers(pbglue, 1, &tmpFbo);
+      SoGLContext_glDeleteRenderbuffers(pbglue, 1, &tmpDepthRbo);
+      SoGLContext_glDeleteTextures(pbglue, 1, &tmpColorTex);
+    }
+
     if (this->contextManager) this->contextManager->restorePreviousContext(this->glcontext);
   }
   if (!this->glimagevalid || (this->glimage == NULL)) {
