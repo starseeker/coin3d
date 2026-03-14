@@ -33,7 +33,7 @@ set(OBOL_MISC_FILES
 	SoEventManager.cpp
 	SoViewport.cpp
 	SoQuadViewport.cpp
-	SoRaytracerSceneCollector.cpp
+	SoSceneCollector.cpp
 )
 
 # Files excluded from public API documentation, included in complete documentation.
@@ -61,9 +61,7 @@ set(OBOL_MISC_INTERNAL_FILES
 foreach(SRCFILE ${OBOL_MISC_FILES})
 	set(OBOL_SOURCE ${OBOL_SOURCE} misc/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
 endforeach(SRCFILE)
-if(OBOL_USE_OSMESA)
-	set(OBOL_SOURCE ${OBOL_SOURCE} misc/SoDBOSMesa.cpp CACHE INTERNAL "OBOL_SOURCE")
-elseif(OBOL_BUILD_DUAL_GL)
+if(OBOL_USE_SWRAST)
 	set(OBOL_SOURCE ${OBOL_SOURCE} misc/SoDBOSMesa.cpp CACHE INTERNAL "OBOL_SOURCE")
 endif()
 

@@ -33,6 +33,8 @@ migration guide.
 20. [Fields: Long Integer Types Removed](#20-fields-long-integer-types-removed)
 21. [Build System Differences](#21-build-system-differences)
 22. [Summary Table](#22-summary-table)
+23. [New: Extended ContextManager API](#23-new-extended-contextmanager-api)
+24. [New: Dual-GL Architecture (System GL + OSMesa in One Library)](#24-new-dual-gl-architecture-system-gl--osmesa-in-one-library)
 
 ---
 
@@ -76,7 +78,9 @@ SoDB::setContextManager(&myManager);  // deprecated path
 SoDB::init(&myManager);               // preferred path
 ```
 
-`SoDB::ContextManager` is an abstract base class declared inside `SoDB`:
+`SoDB::ContextManager` is an abstract base class declared inside `SoDB`.
+
+**Pure-virtual methods (required):**
 
 ```cpp
 class SoDB::ContextManager {
@@ -90,7 +94,20 @@ public:
 };
 ```
 
-`SoDB::getContextManager()` returns the registered instance.
+**Optional virtual methods (added during hardening — see §23):**
+
+| Method | Purpose | Default |
+|--------|---------|---------|
+| `isOSMesaContext(context)` | Identify OSMesa-backed contexts for GL dispatch | `FALSE` |
+| `maxOffscreenDimensions(w,h)` | Report backend size ceiling | `{0,0}` (probe via GL) |
+| `getActualSurfaceSize(ctx,w,h)` | Report exact surface size for readback safety | `{0,0}` (unknown) |
+| `getProcAddress(name)` | Backend-specific extension function resolver | `nullptr` |
+| `renderScene(scene,w,h,px,n,bg)` | Optional CPU/GPU render path bypassing GL | `FALSE` (use GL) |
+
+`SoDB::getContextManager()` returns the registered global instance.
+`SoDB::setContextManager()` replaces it at runtime (no re-init needed).
+`SoDB::createOSMesaContextManager()` returns a fully-configured built-in
+OSMesa manager (see §23).
 `SoDB::readAllVRML()` has been removed (see §3).
 
 ### Why
@@ -320,8 +337,9 @@ to the application-supplied `SoDB::ContextManager` callbacks; they return
 **PBuffer functions** (`cc_glglue_context_pbuffer_is_bound`, etc.) are stubs
 that always return `FALSE`/no-op.
 
-**Screen resolution detection** now returns a fixed 72 DPI instead of
-querying the display server:
+**Screen resolution detection** uses a default of 72 DPI instead of
+querying the display server.  Unlike Coin, applications can now change this
+value at runtime using the new static API on `SoOffscreenRenderer`:
 
 ```cpp
 // Coin (upstream) — queried display server
@@ -331,9 +349,15 @@ querying the display server:
   pixmmres = SoOffscreenWGLData::getResolution();
 #endif
 
-// Obol — portable constant
-SbVec2f pixmmres(72.0f / 25.4f, 72.0f / 25.4f);
+// Obol — portable default, overridable at runtime
+SbVec2f pixmmres(72.0f / 25.4f, 72.0f / 25.4f);   // internal default
+
+// Override to match display or output target:
+SoOffscreenRenderer::setScreenPixelsPerInch(96.0f);   // e.g. typical 96 DPI display
+float dpi = SoOffscreenRenderer::getScreenPixelsPerInch();  // read current value
 ```
+
+Both methods are static; the setting is process-wide.
 
 **OpenGL function loading** uses only the portable `cc_dl_sym()` path; the
 `wglGetProcAddress` and `glXGetProcAddressARB` paths are gone.
@@ -360,9 +384,12 @@ reason about and test than hidden `#ifdef` branches.
   any platform where they want offscreen rendering.  On Windows this typically
   means a WGL-based manager; on Linux a GLX- or EGL-based manager; on macOS a
   CGL-based manager.  OSMesa-based managers work on any platform.
-* **Fixed DPI:** Applications that relied on Coin's automatic screen DPI
-  detection for `SoOffscreenRenderer` pixel size calculations must now apply
-  their own DPI scaling.
+* **Configurable DPI:** The default 72 DPI is appropriate for most headless
+  use cases.  Applications that relied on Coin's automatic screen DPI detection
+  can set the desired value explicitly:
+  ```cpp
+  SoOffscreenRenderer::setScreenPixelsPerInch(96.0f);
+  ```
 
 ---
 
@@ -396,7 +423,7 @@ setting the `COIN_PROFILER` environment variable at runtime.
 
 In Obol, the profiling code is compiled in but **`SoProfiler::isEnabled()`
 always returns `FALSE` unless the build is configured with
-`-DCOIN_PROFILING=ON`**.  With that option off (the default) the entire
+`-DOBOL_PROFILING=ON`**.  With that option off (the default) the entire
 profiling code path is unreachable at runtime regardless of the `COIN_PROFILER`
 environment variable.
 
@@ -410,11 +437,11 @@ so that performance regressions cannot be silently introduced.
 ### User implications
 
 `SoProfilingReportGenerator`, `SbProfilingData`, and related classes are
-always compiled but are not reachable at runtime unless `-DCOIN_PROFILING=ON`
+always compiled but are not reachable at runtime unless `-DOBOL_PROFILING=ON`
 is specified at CMake configure time:
 
 ```bash
-cmake -S . -B build_dir -DCOIN_PROFILING=ON
+cmake -S . -B build_dir -DOBOL_PROFILING=ON
 ```
 
 When enabled, profiling behaves identically to upstream Coin: set the
@@ -700,29 +727,97 @@ Replace all uses of `SoSFLong`, `SoMFLong`, `SoSFULong`, `SoMFULong` with
 
 ## 21. Build System Differences
 
+### GL backend options
+
+The two primary GL backend switches replace the old `OBOL_USE_OSMESA` /
+`OBOL_USE_SYSTEM_ONLY` / `OBOL_BUILD_DUAL_GL` triplet:
+
 | CMake option | Default | Description |
 |---|---|---|
-| `COIN_PROFILING` | `OFF` | Enable profiling subsystem (`SoProfiler::isEnabled()` always FALSE when OFF) |
-| `COIN3D_USE_OSMESA` | `ON` | Link OSMesa for offscreen/headless rendering |
-| `COIN_BUILD_TESTS` | `ON` | Build the Catch2-based test suite |
-| `COIN_BUILD_EXAMPLES` | `OFF` | Build example applications |
+| `OBOL_USE_SYSTEM_GL` | auto¹ | Enable the system OpenGL backend |
+| `OBOL_USE_SWRAST` | auto² | Enable the software-rasterizer (OSMesa) backend |
+
+¹ Default `ON` when CMake's `find_package(OpenGL)` succeeds; `OFF` otherwise.  
+² Default `ON` when `external/osmesa/CMakeLists.txt` is present; `OFF` otherwise.
+
+The combination of these two flags determines the build mode:
+
+| `OBOL_USE_SWRAST` | `OBOL_USE_SYSTEM_GL` | Mode | Library name |
+|---|---|---|---|
+| `OFF` | `OFF` | No-OpenGL (custom context managers only) | `libObol-nogl` |
+| `ON` | `OFF` | Software-rasterizer only (headless/offscreen) | `libObol-swrast` |
+| `OFF` | `ON` | System OpenGL only | `libObol` |
+| `ON` | `ON` | **Dual-GL** (system primary + OSMesa per-renderer) | `libObol` |
+
+### Core options
+
+| CMake option | Default | Description |
+|---|---|---|
 | `BUILD_SHARED_LIBS` | `ON` | Shared vs. static library |
-| `COIN_THREADSAFE` | `ON` | Thread-safe render traversals |
-| `COIN_USE_PRECOMPILED_HEADERS` | `ON` | PCH for faster incremental builds (CMake ≥ 3.16) |
+| `OBOL_BUILD_TESTS` | `ON` | Build the Catch2-based test suite |
+| `OBOL_BUILD_DOCS` | `OFF` | Build Doxygen API documentation (requires Doxygen) |
+| `OBOL_THREADSAFE` | `ON` | Thread-safe render traversals |
 | `HAVE_NODEKITS` | `ON` | NodeKit support |
 | `HAVE_DRAGGERS` | `ON` | Dragger support |
 | `HAVE_MANIPULATORS` | `ON` | Manipulator support |
+| `OBOL_PROFILING` | `OFF` | Enable profiling subsystem (`SoProfiler::isEnabled()` always `FALSE` when `OFF`) |
+| `USE_EXCEPTIONS` | `ON` | Compile with C++ exceptions (GCC/Clang) |
+
+### Build quality options
+
+| CMake option | Default | Description |
+|---|---|---|
+| `OBOL_USE_UNITY_BUILD` | `ON` | Unity (jumbo) build for faster compilation (CMake ≥ 3.16) |
+| `OBOL_WARNINGS` | `ON` | Enable extra warning flags (`-Wall -Wextra -Wundef -Wshadow` etc.) on the Obol target |
+| `OBOL_COVERAGE` | `OFF` | Code-coverage instrumentation (GCC/Clang; adds `coverage` CTest target) |
+
+### Viewer options
+
+| CMake option | Default | Description |
+|---|---|---|
+| `OBOL_BUILD_VIEWER` | auto³ | Build `obol_viewer` FLTK scene viewer |
+| `OBOL_BUILD_MINIMALIST_VIEWER` | same as `OBOL_BUILD_VIEWER` | Build `obol_minimalist_viewer` stress-tester |
+| `OBOL_VIEWER_USE_FLTK_GL` | `ON` | Use FLTK GL context for the system-GL panel in `obol_viewer` |
+| `OBOL_VIEWER_USE_EMBREE` | auto⁴ | Enable Intel Embree 4 CPU raytracing panel in `obol_viewer` |
+| `OBOL_VIEWER_USE_VULKAN` | auto⁵ | Enable Vulkan hardware-rasterization panel in `obol_viewer` |
+| `OBOL_BUILD_QT_VIEWER` | auto⁶ | Build `obol_qt_viewer` Qt6 scene viewer |
+| `OBOL_BUILD_QT_EXAMPLE` | `OFF` | Build `qt_obol_example` standalone Qt/Obol widget demo |
+
+³ `ON` when `FLTK_FOUND` and `OBOL_BUILD_TESTS`; `OFF` otherwise.  
+⁴ `ON` when Embree 4 is found; `OFF` otherwise.  
+⁵ `ON` when Vulkan is found; `OFF` otherwise.  
+⁶ `ON` when Qt6 Widgets/Gui is found and `OBOL_BUILD_TESTS`; `OFF` otherwise.
+
+### MSVC-specific options (Windows only)
+
+| CMake option | Default | Description |
+|---|---|---|
+| `OBOL_BUILD_MSVC_STATIC_RUNTIME` | `OFF` | Link against the static MSVC C runtime (`/MT`) |
+| `OBOL_BUILD_MSVC_MP` | `ON` | Enable parallel compilation (`/MP`) in Visual Studio |
+
+**GL backend selection:** When neither `OBOL_USE_SWRAST` nor `OBOL_USE_SYSTEM_GL`
+is explicitly set, CMake auto-detects available GL libraries and sets the defaults
+as described above.  Setting both `ON` gives the dual-GL build in which both
+system GL and OSMesa are compiled into the same shared library, selectable per
+`SoOffscreenRenderer` instance at runtime (see §24).
+
+**Software rasterizer submodule:** The `external/osmesa` submodule provides the
+name-mangled OSMesa build required for `OBOL_USE_SWRAST=ON`.
+
+**FLTK detection:** CMake first looks for a system FLTK installation
+(`libfltk1.3-dev`); if none is found it automatically initialises the
+`external/fltk` submodule and builds FLTK from source.
 
 **Minimum compiler standard:** C++17.
-
-**Submodules are required** (`git clone --recurse-submodules`); the
-`external/libpng` submodule provides the PNG library needed by
-`SoOffscreenRenderer`.
 
 **Out-of-source builds are enforced.**  Attempting to configure in the source
 directory will fail immediately.
 
 Upstream Coin's Autoconf/Automake build system is not present in Obol; only CMake is supported.
+
+> **Note:** Obol's CMake options use the `OBOL_` prefix throughout.  The old
+> Coin-era `COIN_USE_PRECOMPILED_HEADERS` option no longer exists; unity builds
+> are controlled by `OBOL_USE_UNITY_BUILD` instead.
 
 ---
 
@@ -739,9 +834,9 @@ Upstream Coin's Autoconf/Automake build system is not present in Obol; only CMak
 | **NURBS** | `SoNurbsCurve`, `SoNurbsSurface`, etc. removed | Pre-tessellate to `SoIndexedFaceSet` / `SoIndexedLineSet` |
 | **Collision** | `SoIntersectionDetectionAction` removed | Perform intersection tests externally |
 | **Platform GL context** | WGL/GLX/AGL/CGL/EGL code removed | Implement `SoDB::ContextManager` for each platform |
-| **Fixed DPI** | Offscreen renderer uses 72 DPI constant | Apply application-level DPI scaling if needed |
+| **Configurable DPI** | Offscreen renderer defaults to 72 DPI; adjustable at runtime | Call `SoOffscreenRenderer::setScreenPixelsPerInch(dpi)` to override |
 | **PostScript/hardcopy** | Always compiled; API always available | No action needed; `SoVectorizePSAction` usable in all builds |
-| **Profiling** | Always compiled; off by default (`-DCOIN_PROFILING=ON` to enable) | Add CMake option; `COIN_PROFILER` env var activates it when enabled |
+| **Profiling** | Always compiled; off by default (`-DOBOL_PROFILING=ON` to enable) | Add CMake option; `COIN_PROFILER` env var activates it when enabled |
 | **Font: SoGlyph** | Removed (was deprecated in Coin) | Use `SbFont` / `SbGlyph2D` / `SbGlyph3D` |
 | **Font: Win32 GDI / libfreetype** | Both removed; embedded `struetype` rasterizer used | No external font library needed; supply `.ttf` files via `SbFont::loadFont()` |
 | **Threading C API** | `Inventor/C/threads/` headers not public | Use `Sb*` C++ threading classes |
@@ -754,4 +849,279 @@ Upstream Coin's Autoconf/Automake build system is not present in Obol; only CMak
 | **NEW: SoProceduralShape** | New node for callback-driven geometry | No migration needed; new capability |
 | **NEW: SbFont** | New public font API | Replaces internal `cc_flw_*` for user code |
 | **NEW: SuUtils.h** | `SbAtexitStaticInternal` now public | Use when writing custom node classes |
-| **Build system** | CMake only; C++17 required; submodules required | Update build scripts accordingly |
+| **NEW: Extended ContextManager** | `getActualSurfaceSize`, `maxOffscreenDimensions`, `isOSMesaContext`, `getProcAddress`, `renderScene` | Override as needed; defaults are safe no-ops |
+| **NEW: Per-renderer managers** | `SoOffscreenRenderer` accepts per-instance `ContextManager*` | Pass manager to constructor; use `SDB::createOSMesaContextManager()` for built-in OSMesa |
+| **NEW: Dual-GL mode** | System GL + OSMesa in one library (`OBOL_USE_SWRAST=ON` + `OBOL_USE_SYSTEM_GL=ON`) | Auto-enabled when both are detected; see §24 |
+| **Build system** | CMake only; C++17 required; `OBOL_` option prefix throughout | Update build scripts; replace old `OBOL_USE_OSMESA`→`OBOL_USE_SWRAST`, `OBOL_USE_SYSTEM_ONLY`→`OBOL_USE_SYSTEM_GL`, `COIN_USE_PRECOMPILED_HEADERS`→`OBOL_USE_UNITY_BUILD`, `COIN_BUILD_TESTS`→`OBOL_BUILD_TESTS` |
+
+---
+
+## 23. New: Extended ContextManager API
+
+### What changed
+
+The `SoDB::ContextManager` interface has been extended with additional optional
+virtual methods to support safety hardening, per-renderer backend selection, and
+alternative (non-GL) rendering paths.  All new methods have safe default
+implementations so existing managers continue to compile and work unchanged.
+
+### New virtual methods
+
+#### `getActualSurfaceSize()` — framebuffer safety
+
+```cpp
+virtual void getActualSurfaceSize(void * context,
+                                  unsigned int & width,
+                                  unsigned int & height) const;
+// Default: width = height = 0  ("unknown")
+```
+
+**This is the most important new method to implement.**
+
+Before calling `glReadPixels()`, Obol queries the actual pixel dimensions of the
+backing surface.  If the surface is smaller than the requested render target and
+FBO support is unavailable, Obol skips the readback and emits a diagnostic
+warning rather than writing past the end of the allocation.
+
+The default value of `{0,0}` (unknown) is safe: Obol falls back to relying on
+FBO creation success/failure as its guard.  Override this method in any manager
+whose backing surface can be smaller than the largest texture an application might
+request — for example, a manager that creates a 1×1 Pbuffer as a GL context
+anchor while using FBOs for actual rendering.
+
+#### `maxOffscreenDimensions()` — backend size ceiling
+
+```cpp
+virtual void maxOffscreenDimensions(unsigned int & width,
+                                    unsigned int & height) const;
+// Default: width = height = 0  ("probe via global GL pipeline")
+```
+
+Reports the maximum offscreen render dimensions this backend supports.  Used by
+`CoinOffscreenGLCanvas` to avoid requesting surfaces larger than the backend can
+provide.  An OSMesa manager should return a large value such as 16384×16384 since
+OSMesa is only RAM-limited.  The default `{0,0}` causes the canvas to probe via
+the global GL pipeline (backward-compatible behaviour).
+
+#### `isOSMesaContext()` — dual-GL dispatch
+
+```cpp
+virtual SbBool isOSMesaContext(void * context);
+// Default: FALSE
+```
+
+In dual-GL builds (`OBOL_USE_SWRAST=ON` + `OBOL_USE_SYSTEM_GL=ON`), both system GL and OSMesa are compiled into the
+same library.  Return `TRUE` for contexts created via OSMesa so that the GL-glue
+dispatch layer routes calls to the `osmesa_SoGLContext_*` implementation rather
+than the system-GL implementation.  Only meaningful in dual-GL builds; the default
+`FALSE` is correct for all single-backend managers.
+
+#### `getProcAddress()` — extension function resolution
+
+```cpp
+virtual void * getProcAddress(const char * funcName);
+// Default: nullptr  (falls back to dlsym)
+```
+
+Called by the GL glue layer when `dlsym()` cannot locate an extension entry
+point.  Override to delegate to the platform-specific resolver:
+- X11/GLX: `glXGetProcAddress()`
+- Windows: `wglGetProcAddress()`
+- EGL: `eglGetProcAddress()`
+- OSMesa: `OSMesaGetProcAddress()`
+
+In dual-GL builds this is essential: routing OSMesa extension lookups through
+`OSMesaGetProcAddress()` prevents the system-GL loader from returning a system-GL
+function pointer for an OSMesa extension, which would cause incorrect behaviour
+or crashes.
+
+#### `renderScene()` — alternative render path
+
+```cpp
+virtual SbBool renderScene(SoNode * scene,
+                           unsigned int width, unsigned int height,
+                           unsigned char * pixels,
+                           unsigned int nrcomponents,
+                           const float background_rgb[3]);
+// Default: FALSE  (use GL path)
+```
+
+When this returns `TRUE`, `SoOffscreenRenderer` uses `pixels` directly and
+bypasses the entire OpenGL pipeline.  `pixels` is a pre-allocated buffer of
+`width*height*nrcomponents` bytes in top-to-bottom row order, matching
+`SoOffscreenRenderer::getBuffer()`.
+
+Implement this to provide a CPU raytracing backend (NanoRT, Embree, OptiX) or a
+Vulkan rasterization backend.  Obol ships three reference implementations:
+
+| Class | Backend | Header |
+|-------|---------|--------|
+| `SoNanoRTContextManager` | NanoRT CPU raytracing (bundled) | `tests/utils/nanort_context_manager.h` |
+| `SoEmbreeContextManager` | Intel Embree 4 (system library) | `tests/utils/embree_context_manager.h` |
+| `SoVulkanContextManager` | Vulkan rasterization | `tests/utils/vulkan_context_manager.h` |
+
+All three delegate scene collection to `SoSceneCollector`; see
+`docs/CONTEXT_MANAGEMENT_API.md` for the full integration guide.
+
+### Per-renderer context managers
+
+`SoOffscreenRenderer` now accepts a `ContextManager*` in its constructors,
+enabling independent backend selection per renderer:
+
+```cpp
+// Coin (upstream) — one global context manager, no per-renderer choice
+SoOffscreenRenderer renderer(viewport);
+
+// Obol — per-instance backend selection
+CoinOSMesaContextManager osmesa_cm;
+SoOffscreenRenderer renderer(&osmesa_cm, viewport);
+
+// Switch backends at runtime:
+renderer.setContextManager(&other_cm);  // non-NULL: use this manager
+renderer.setContextManager(nullptr);    // NULL: revert to global singleton
+```
+
+### Built-in OSMesa factory
+
+`SoDB::createOSMesaContextManager()` returns a fully-configured OSMesa manager
+without requiring `<OSMesa/osmesa.h>` in application code.  Returns `nullptr`
+when the library was built without OSMesa support:
+
+```cpp
+auto mgr = std::unique_ptr<SoDB::ContextManager>(
+               SoDB::createOSMesaContextManager());
+if (mgr) {
+    SoOffscreenRenderer renderer(mgr.get(), viewport);
+    renderer.render(root);
+}
+```
+
+### Why
+
+These changes were driven by two needs:
+1. **Safety hardening** — `getActualSurfaceSize()` prevents `glReadPixels()`
+   from writing past the end of a small backing surface when FBO support is
+   unavailable.
+2. **Dual-GL support** — `isOSMesaContext()` and `getProcAddress()` give the
+   GL dispatch layer the information it needs to route calls to the correct
+   backend without any global state change.
+
+---
+
+## 24. New: Dual-GL Architecture (System GL + OSMesa in One Library)
+
+### Overview
+
+Obol can be built so that **both system OpenGL and OSMesa are available in the
+same shared library**, selectable per `SoOffscreenRenderer` instance at runtime.
+This mode is activated by setting both `OBOL_USE_SWRAST=ON` and
+`OBOL_USE_SYSTEM_GL=ON` (auto-enabled when both system GL and the
+`external/osmesa` submodule are detected and neither option is overridden).
+
+This might seem surprising — having two conflicting GL implementations in the
+same binary is normally a recipe for chaos.  This document explains why it is
+safe and how it works.
+
+### The Problem
+
+OSMesa defines the same OpenGL entry-point names as system GL
+(`glBegin`, `glGenTextures`, …).  Naïvely linking both into the same `.so`
+would produce duplicate symbol errors at link time, and even if it somehow
+linked, every GL call in the process would go to one implementation regardless
+of which context is "current".
+
+### The Solution: Symbol Namespacing
+
+Obol borrows the technique used by BRL-CAD for embedding a private `zlib`
+alongside the system `zlib`: the secondary implementation is compiled with
+every symbol renamed.
+
+The key file is `src/glue/gl_osmesa.cpp`:
+
+```cpp
+// Step 1: use OSMesa headers instead of system <GL/gl.h>
+#define OBOL_GLHEADERS_OSMESA_OVERRIDE 1
+
+// Step 2: activate MGL name mangling
+// After <OSMesa/gl_mangle.h> is included, every gl* call becomes mgl*
+// (OSMesaGetProcAddress("glBegin") → OSMesaGetProcAddress("mglBegin"))
+#define USE_MGL_NAMESPACE 1
+
+// Step 3: give every SoGLContext_* function an osmesa_ prefix
+#define SOGL_PREFIX_SET 1
+#define SOGL_PREFIX_STR osmesa_
+
+// Step 4: compile the main GL glue layer with the above defines active
+#include "gl.cpp"
+```
+
+This single-TU trick produces an object file that:
+- Calls `mgl*` (OSMesa-namespaced) GL functions internally
+- Exports `osmesa_SoGLContext_*` symbols (e.g. `osmesa_SoGLContext_glGenTextures`)
+
+The main `gl.cpp` object (compiled normally) exports `SoGLContext_*` symbols
+calling system GL (`glGenTextures`, …).
+
+Both objects link into the same `.so` with no symbol collision because:
+- The system-GL object uses `glGenTextures` (resolved from `libGL.so`)
+- The OSMesa object uses `mglGenTextures` (resolved from the OSMesa library,
+  which exports `mgl*` via its own `gl_mangle.h`)
+
+### Runtime Dispatch
+
+A thin dispatch layer in `gl.cpp` (compiled in dual-GL mode) keeps the
+stable `SoGLContext_*` API working at runtime:
+
+```
+Application calls SoGLContext_glGenTextures(ctx, ...)
+     │
+     └─► dispatch layer checks: coingl_is_osmesa_context(ctx)?
+              │YES: osmesa_SoGLContext_glGenTextures(ctx, ...)  ← calls mglGenTextures
+              └NO:  (inline) system glGenTextures(...)
+```
+
+The dispatch decision is based on a per-context flag set at context-creation
+time via `ContextManager::isOSMesaContext()`.  The `CoinOSMesaContextManager`
+returns `TRUE` from this method; the `FLTKContextManager` returns `FALSE`.
+
+### Why `USE_MGL_NAMESPACE` Is Not Set Globally
+
+In the software-rasterizer-only build (`OBOL_USE_SWRAST=ON`, `OBOL_USE_SYSTEM_GL=OFF`),
+`USE_MGL_NAMESPACE` is set as a `target_compile_definition` on the Obol library
+target only — not via `add_definitions()`.  This prevents the mangle header from
+being activated in test executables or viewer code that includes `<GL/glx.h>`
+(which conditionally includes `glx_mangle.h`, a file that does not exist on
+modern Ubuntu 24.04).
+
+In dual-GL builds, `USE_MGL_NAMESPACE` is **not** set globally at all; it is
+activated only inside `gl_osmesa.cpp` via the `#define` at the top of that file,
+ensuring complete isolation.
+
+### Why Is It Safe?
+
+1. **No linker collisions** — the `osmesa_` prefix on exported symbols and the
+   `mgl*` prefix on internal calls ensure the two GL code paths never share a
+   symbol name.
+2. **No runtime contamination** — every GL call goes through the dispatch layer,
+   which uses the per-context backend flag.  An OSMesa render never calls
+   system-GL entry points; a system-GL render never calls `mgl*` entry points.
+3. **Extension pointers are backend-local** — `ContextManager::getProcAddress()`
+   routes OSMesa extension lookups through `OSMesaGetProcAddress()`, so the
+   function pointer table for an OSMesa context always points into OSMesa, not
+   system GL.
+4. **No thread-local GL state leakage** — OSMesa maintains its own current-context
+   state separate from the system GL current-context (which is typically
+   maintained by GLX/WGL/CGL).  Making an OSMesa context current does not
+   disturb any system-GL context that another thread or panel may be using.
+
+### When to Use Which Mode
+
+| Scenario | Recommended option |
+|----------|--------------------|
+| Headless CI / servers with no GPU | `-DOBOL_USE_SWRAST=ON -DOBOL_USE_SYSTEM_GL=OFF` |
+| Desktop with GPU; no headless fallback needed | `-DOBOL_USE_SYSTEM_GL=ON -DOBOL_USE_SWRAST=OFF` |
+| Desktop with GPU + need for per-renderer OSMesa | `-DOBOL_USE_SWRAST=ON -DOBOL_USE_SYSTEM_GL=ON` (or leave both at auto-detect defaults) |
+| Embedded / custom GL driver, no system GL | `-DOBOL_USE_SWRAST=OFF -DOBOL_USE_SYSTEM_GL=OFF` + custom `ContextManager` |
+
+For detailed information on implementing a context manager for any of these
+scenarios, see `docs/CONTEXT_MANAGEMENT_API.md`.

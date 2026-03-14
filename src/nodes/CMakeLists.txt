@@ -55,7 +55,7 @@ set(OBOL_NODES_FILES
 	SoProfile.cpp
 	SoProfileCoordinate2.cpp
 	SoProfileCoordinate3.cpp
-	SoRaytracingParams.cpp
+	SoSceneRendererParams.cpp
 	SoResetTransform.cpp
 	SoReversePerspectiveCamera.cpp
 	SoRotation.cpp

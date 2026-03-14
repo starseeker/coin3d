@@ -3,7 +3,7 @@
  *
  * Architecture
  * ------------
- * This file is part of the OBOL_BUILD_DUAL_GL support, which allows both
+ * This file is part of the OBOL_DUAL_GL_BUILD support, which allows both
  * the system-OpenGL and the OSMesa GL backends to be compiled into a single
  * shared library so that applications can switch between them at runtime.
  *
@@ -32,7 +32,7 @@
  *
  * Dispatch
  * --------
- * A thin dispatch layer in gl.cpp (compiled with OBOL_BUILD_DUAL_GL
+ * A thin dispatch layer in gl.cpp (compiled with OBOL_DUAL_GL_BUILD
  * defined) keeps the stable SoGLContext_* API working at runtime: it
  * checks a per-context backend flag set at context-creation time and
  * forwards to either osmesa_SoGLContext_* or the system-GL implementation.
@@ -41,7 +41,7 @@
  * -------------------
  * The OSMesa headers live in external/osmesa/include/OSMesa/ (submodule).
  * src/glue/CMakeLists.txt adds that path to the include directories for
- * this translation unit when OBOL_BUILD_DUAL_GL is ON.
+ * this translation unit when OBOL_DUAL_GL_BUILD is ON.
  */
 
 /* -----------------------------------------------------------------------

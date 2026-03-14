@@ -8,10 +8,56 @@
 # Both viewers use the ObolEx (libObolEx) scene catalogue from tests/testlib/
 # with --whole-archive so that all REGISTER_TEST static initialisers run.
 #
+# FLTK detection, submodule management and viewer options all live here.
+# The top-level CMakeLists.txt does a basic find_package(FLTK QUIET) for
+# tests/rendering/render_basic_context; all viewer-specific logic is here.
+#
 # Requires:
-#   FLTK_FOUND    — system FLTK (libfltk1.3-dev or equivalent)
+#   FLTK_FOUND    — system FLTK (libfltk1.3-dev or equivalent) or the
+#                   external/fltk submodule (populated below when absent)
 #   OBOL_BUILD_TESTS — ObolEx library is built as part of the test suite
 # =============================================================================
+
+# -----------------------------------------------------------------------
+# FLTK GL context manager option
+# Controls whether the viewer uses an FLTK GL window for the system-GL
+# panel.  Set before the submodule build so FLTK is compiled with GL.
+# -----------------------------------------------------------------------
+option(OBOL_VIEWER_USE_FLTK_GL
+    "Use FLTK GL context for obol_viewer system-GL panel (portable; disable for CI/headless)"
+    ON)
+
+# Propagate to the submodule build in case it hasn't been configured yet.
+if(NOT FLTK_FOUND)
+  if(OBOL_VIEWER_USE_FLTK_GL)
+    set(FLTK_BUILD_GL ON CACHE BOOL "Build FLTK OpenGL library" FORCE)
+  else()
+    set(FLTK_BUILD_GL OFF CACHE BOOL "Build FLTK OpenGL library" FORCE)
+  endif()
+endif()
+
+# Keep FLTK_LIBRARIES in sync with OBOL_VIEWER_USE_FLTK_GL when using the
+# submodule (the top-level may have added fltk::gl unconditionally).
+if(FLTK_FOUND AND TARGET fltk::gl AND NOT OBOL_VIEWER_USE_FLTK_GL)
+  list(REMOVE_ITEM FLTK_LIBRARIES fltk::gl)
+elseif(FLTK_FOUND AND TARGET fltk::gl AND OBOL_VIEWER_USE_FLTK_GL)
+  if(NOT "fltk::gl" IN_LIST FLTK_LIBRARIES)
+    list(APPEND FLTK_LIBRARIES fltk::gl)
+  endif()
+endif()
+
+# -----------------------------------------------------------------------
+# Viewer build options
+# -----------------------------------------------------------------------
+cmake_dependent_option(OBOL_BUILD_VIEWER
+  "Build the FLTK scene viewer (obol_viewer); requires FLTK and OBOL_BUILD_TESTS"
+  "${FLTK_FOUND}"
+  "OBOL_BUILD_TESTS;FLTK_FOUND"
+  OFF)
+
+option(OBOL_BUILD_MINIMALIST_VIEWER
+    "Build obol_minimalist_viewer (BasicFLTKContextManager scene stress-tester)"
+    ${OBOL_BUILD_VIEWER})
 
 # -----------------------------------------------------------------------
 # obol_viewer: full-featured FLTK scene viewer
@@ -32,26 +78,27 @@ if(OBOL_BUILD_VIEWER)
     )
 
     # Compile definitions matching the Obol library build
-    if(OBOL_BUILD_DUAL_GL)
-        target_compile_definitions(obol_viewer PRIVATE OBOL_BUILD_DUAL_GL)
-    elseif(OBOL_USE_OSMESA)
-        target_compile_definitions(obol_viewer PRIVATE OBOL_OSMESA_BUILD)
+    if(OBOL_USE_SWRAST AND OBOL_USE_SYSTEM_GL)
+        target_compile_definitions(obol_viewer PRIVATE OBOL_SWRAST_BUILD OBOL_DUAL_GL_BUILD)
+        target_include_directories(obol_viewer PRIVATE
+            "${PROJECT_SOURCE_DIR}/external/osmesa/include")
+    elseif(OBOL_USE_SWRAST)
+        target_compile_definitions(obol_viewer PRIVATE OBOL_SWRAST_BUILD)
         target_include_directories(obol_viewer PRIVATE
             "${PROJECT_SOURCE_DIR}/external/osmesa/include")
     endif()
 
     # Select the system-GL context manager for the viewer.
-    if(OBOL_VIEWER_USE_FLTK_GL AND (OBOL_BUILD_DUAL_GL OR NOT OBOL_USE_OSMESA))
+    # FLTK GL context is used when system GL is available (alone or dual).
+    if(OBOL_VIEWER_USE_FLTK_GL AND OBOL_USE_SYSTEM_GL)
         target_compile_definitions(obol_viewer PRIVATE OBOL_VIEWER_FLTK_GL)
-        if(OBOL_BUILD_DUAL_GL)
+        if(OBOL_USE_SWRAST)
             message(STATUS "obol_viewer: using FLTK GL context manager for system-GL panel (dual-GL build)")
         else()
             message(STATUS "obol_viewer: using FLTK GL context manager (portable, hidden 1x1 window)")
         endif()
-    else()
-        if(NOT OBOL_USE_OSMESA)
-            message(STATUS "obol_viewer: using GLX context manager (headless_utils.h)")
-        endif()
+    elseif(OBOL_USE_SYSTEM_GL)
+        message(STATUS "obol_viewer: using GLX context manager (headless_utils.h)")
     endif()
 
     # Optional CPU raytracing panels: Embree and/or NanoRT.
@@ -155,10 +202,6 @@ endif() # OBOL_BUILD_VIEWER
 # -----------------------------------------------------------------------
 # obol_minimalist_viewer: basic FLTK context scene stress-tester
 # -----------------------------------------------------------------------
-option(OBOL_BUILD_MINIMALIST_VIEWER
-    "Build obol_minimalist_viewer (BasicFLTKContextManager scene stress-tester)"
-    ${OBOL_BUILD_VIEWER})
-
 if(OBOL_BUILD_MINIMALIST_VIEWER AND FLTK_FOUND AND OBOL_BUILD_TESTS)
     add_executable(obol_minimalist_viewer obol_minimalist_viewer.cpp)
 

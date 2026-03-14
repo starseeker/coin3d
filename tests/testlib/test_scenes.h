@@ -358,10 +358,10 @@ SoSeparator* createShadowAdvanced(int width = 800, int height = 600);
 /** RT proxy shapes: SoLineSet, SoIndexedLineSet, SoPointSet, SoCylinder quad. */
 SoSeparator* createRTProxyShapes(int width = 800, int height = 600);
 
-/** Four primitives + SoRaytracingParams — NanoRT raytracing scene. */
+/** Four primitives + SoSceneRendererParams — NanoRT raytracing scene. */
 SoSeparator* createNanoRT(int width = 800, int height = 600);
 
-/** Ground plane + red sphere + SoRaytracingParams(shadows) — NanoRT shadow scene. */
+/** Ground plane + red sphere + SoSceneRendererParams(shadows) — NanoRT shadow scene. */
 SoSeparator* createNanoRTShadow(int width = 800, int height = 600);
 
 /** Blue sphere scene for SoViewport API tests. */

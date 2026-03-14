@@ -1,6 +1,6 @@
 /* Example demonstrating OSMesa vs System OpenGL conditional compilation */
 
-#ifdef OBOL_OSMESA_BUILD
+#ifdef OBOL_SWRAST_BUILD
 /* OSMesa-specific code - Full context management example */
 #include <OSMesa/osmesa.h>
 #include <OSMesa/gl.h>
@@ -152,7 +152,7 @@ int main() {
     SoDB::init();
     
     // Set up context management - REQUIRED with new architecture
-    #ifdef OBOL_OSMESA_BUILD
+    #ifdef OBOL_SWRAST_BUILD
         initializeCoinOSMesaContext();
     #else
         initializeCoinSystemContext();  // Must be implemented by application

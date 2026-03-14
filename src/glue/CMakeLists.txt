@@ -1,9 +1,18 @@
 # source files
-set(OBOL_GLUE_FILES
-	dl.cpp
-	gl.cpp
-	toojpeg.cpp
-)
+if(NOT OBOL_USE_SWRAST AND NOT OBOL_USE_SYSTEM_GL)
+  # No-OpenGL build: use the no-op stub instead of the real GL dispatch layer.
+  set(OBOL_GLUE_FILES
+    dl.cpp
+    gl_stub.cpp
+    toojpeg.cpp
+  )
+else()
+  set(OBOL_GLUE_FILES
+    dl.cpp
+    gl.cpp
+    toojpeg.cpp
+  )
+endif()
 
 # Files excluded from public API documentation, included in complete documentation.
 set(OBOL_GLUE_INTERNAL_FILES
@@ -15,7 +24,7 @@ set(OBOL_GLUE_INTERNAL_FILES
 foreach(SRCFILE ${OBOL_GLUE_FILES})
 	set(OBOL_SOURCE ${OBOL_SOURCE} glue/${SRCFILE} CACHE INTERNAL "OBOL_SOURCE")
 endforeach(SRCFILE)
-if(OBOL_BUILD_DUAL_GL)
+if(OBOL_USE_SWRAST AND OBOL_USE_SYSTEM_GL)
 	set(OBOL_SOURCE ${OBOL_SOURCE} glue/gl_osmesa.cpp CACHE INTERNAL "OBOL_SOURCE")
 endif()
 

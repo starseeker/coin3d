@@ -22,7 +22,7 @@
  *     or a stub context manager on other platforms.  Use this if FLTK's
  *     OpenGL cannot obtain a context in the CI environment.
  *
- * OSMesa panel (dual-GL builds only: OBOL_BUILD_DUAL_GL)
+ * OSMesa panel (dual-GL builds only: OBOL_DUAL_GL_BUILD)
  * ─────────────────────────────────────────────────────────
  * In dual-GL builds a second "OSMesa" panel is shown alongside the system-GL
  * panel.  It uses its own SoOffscreenRenderer whose context manager is set to
@@ -127,7 +127,7 @@
 /* ---- Optional OSMesa panel: only available in dual-GL builds ----------- */
 /* SoDB::createOSMesaContextManager() provides the OSMesa backend without   */
 /* requiring the viewer to include any OSMesa headers directly.             */
-#ifdef OBOL_BUILD_DUAL_GL
+#ifdef OBOL_DUAL_GL_BUILD
 #  define OBOL_VIEWER_OSMESA_PANEL
 #endif
 
@@ -2223,17 +2223,17 @@ public:
 private:
     /* ---- coin panel label, chosen at compile time ---- */
     /* Macro combinations used for the system-GL (CoinPanel) label:
-     *   OBOL_BUILD_DUAL_GL: set when dual-GL build; OBOL_VIEWER_FLTK_GL is
+     *   OBOL_DUAL_GL_BUILD: set when dual-GL build; OBOL_VIEWER_FLTK_GL is
      *     also set so that the system-GL panel uses the same working Fl_Gl_Window
      *     context path as single-GL builds.
-     *   OBOL_OSMESA_BUILD:  set when pure-OSMesa; FLTK GL is never set.
+     *   OBOL_SWRAST_BUILD:  set when pure-OSMesa; FLTK GL is never set.
      *   OBOL_VIEWER_FLTK_GL: set for portable (FLTKContextManager hidden window) context.
      * Conditions are ordered by precedence: dual-GL first, then OSMesa, then
      * FLTK GL, then the legacy GLX fallback. */
     static const char* coinLabel() {
-#if defined(OBOL_BUILD_DUAL_GL)
+#if defined(OBOL_DUAL_GL_BUILD)
         return "System GL";
-#elif defined(OBOL_OSMESA_BUILD)
+#elif defined(OBOL_SWRAST_BUILD)
         return "OSMesa (headless)";
 #else
         return "System GL";

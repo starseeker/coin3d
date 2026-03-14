@@ -11,6 +11,13 @@
 // Backend toggle for OSMesa
 #cmakedefine HAVE_OSMESA
 
+// Non-OpenGL build (custom context drivers only: nanort, embree, vulkan, ...)
+// Use #ifndef to avoid a -Wmacro-redefined warning when -DOBOL_NO_OPENGL is
+// also passed on the compiler command line by add_definitions().
+#ifndef OBOL_NO_OPENGL
+#cmakedefine OBOL_NO_OPENGL
+#endif
+
 /* =========================================================================
  * Feature toggles (previously in setup.h)
  * These control which optional subsystems are compiled into the library.

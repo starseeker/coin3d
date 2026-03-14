@@ -267,7 +267,7 @@ CoinOffscreenGLCanvas::tryActivateGLContext(void)
        without consulting the global singleton. */
     coingl_register_context_manager(static_cast<int>(this->renderid), mgr);
 
-#ifdef OBOL_BUILD_DUAL_GL
+#ifdef OBOL_DUAL_GL_BUILD
     /* In dual-GL builds, tell the GL dispatch layer which backend this
        context was created with so SoGLContext_instance() can route to
        the correct (osmesa_ or sysgl) implementation. */

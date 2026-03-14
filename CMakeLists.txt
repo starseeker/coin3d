@@ -139,13 +139,6 @@ endif()
 option(BUILD_SHARED_LIBS "Build shared library when ON, static when OFF" ON)
 option(OBOL_BUILD_TESTS "Build unit tests" ON)
 
-# FLTK GL context manager for obol_viewer.
-# The actual compile-definition is set for the obol_viewer target in
-# examples/fltk/CMakeLists.txt.
-option(OBOL_VIEWER_USE_FLTK_GL
-    "Use FLTK GL context for obol_viewer system-GL panel (portable; disable for CI/headless)"
-    ON)
-
 # ---------------------------------------------------------------------------
 # FLTK detection and submodule fallback
 #
@@ -154,9 +147,10 @@ option(OBOL_VIEWER_USE_FLTK_GL
 #   2. external/fltk git submodule (populated at configure time when available)
 #   3. Disabled — FLTK-based viewers are silently skipped
 #
-# The git submodule is declared in .gitmodules and points to
-# https://github.com/fltk/fltk (branch-1.3).  It is initialised
-# automatically at configure time when system FLTK is absent.
+# FLTK viewer options (OBOL_BUILD_VIEWER, OBOL_VIEWER_USE_FLTK_GL, etc.)
+# are declared in examples/fltk/CMakeLists.txt where the viewers live.
+# Detection and the submodule build live here so that tests/ (which processes
+# before examples/) can also use FLTK (e.g. render_basic_context).
 # ---------------------------------------------------------------------------
 find_package(FLTK QUIET)
 if(FLTK_FOUND)
@@ -171,16 +165,16 @@ else()
     set(FLTK_BUILD_TEST         OFF CACHE BOOL "Build FLTK test/demo programs"  FORCE)
     set(FLTK_BUILD_EXAMPLES     OFF CACHE BOOL "Build FLTK example programs"    FORCE)
     set(FLTK_BUILD_FORMS        OFF CACHE BOOL "Build FLTK forms library"       FORCE)
-    if(OBOL_VIEWER_USE_FLTK_GL)
+    # FLTK_BUILD_GL is set by examples/fltk/CMakeLists.txt based on
+    # OBOL_VIEWER_USE_FLTK_GL; default ON here so the submodule is usable.
+    if(NOT DEFINED FLTK_BUILD_GL)
       set(FLTK_BUILD_GL         ON  CACHE BOOL "Build FLTK OpenGL library"      FORCE)
-    else()
-      set(FLTK_BUILD_GL         OFF CACHE BOOL "Build FLTK OpenGL library"      FORCE)
     endif()
     set(FLTK_BUILD_SHARED_LIBS  OFF CACHE BOOL "Build FLTK shared libraries"    FORCE)
     add_subdirectory("${PROJECT_SOURCE_DIR}/external/fltk" fltk_build EXCLUDE_FROM_ALL)
     set(FLTK_FOUND TRUE)
     set(FLTK_LIBRARIES fltk::fltk)
-    if(OBOL_VIEWER_USE_FLTK_GL AND TARGET fltk::gl)
+    if(TARGET fltk::gl)
       list(APPEND FLTK_LIBRARIES fltk::gl)
     endif()
     set(FLTK_INCLUDE_DIRS
@@ -192,34 +186,6 @@ else()
     endif()
   endif()
 endif()
-
-# obol_viewer uses libObolEx for its scene catalogue, so it can only be
-# built when OBOL_BUILD_TESTS is also ON.  cmake_dependent_option enforces
-# this: the viewer is silently disabled if FLTK is absent or tests are off.
-cmake_dependent_option(OBOL_BUILD_VIEWER
-  "Build the FLTK scene viewer (obol_viewer); requires FLTK and OBOL_BUILD_TESTS"
-  "${FLTK_FOUND}"
-  "OBOL_BUILD_TESTS;FLTK_FOUND"
-  OFF)
-
-# Qt scene viewer (obol_qt_viewer)
-# Requires Qt6 Widgets + Gui modules and OBOL_BUILD_TESTS.
-# Auto-detected: enabled when Qt6 is found and OBOL_BUILD_TESTS is ON.
-find_package(Qt6 QUIET COMPONENTS Widgets Gui)
-if(OBOL_BUILD_TESTS AND Qt6_FOUND)
-  message(STATUS "Qt6 found (${Qt6_VERSION}): obol_qt_viewer can be built")
-  set(QT_VIEWER_DEFAULT ON)
-else()
-  if(OBOL_BUILD_TESTS)
-    message(STATUS "Qt6 not found – obol_qt_viewer disabled")
-  endif()
-  set(QT_VIEWER_DEFAULT OFF)
-endif()
-cmake_dependent_option(OBOL_BUILD_QT_VIEWER
-  "Build the Qt scene viewer (obol_qt_viewer); requires Qt6 and OBOL_BUILD_TESTS"
-  "${QT_VIEWER_DEFAULT}"
-  "OBOL_BUILD_TESTS;Qt6_FOUND"
-  OFF)
 
 # Internal alias used throughout src/ for Windows shared/static detection
 set(OBOL_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
@@ -245,13 +211,32 @@ if(OBOL_BUILD_DOCS)
 endif()
 
 # Feature options
-# Backend selection:
-#   OBOL_USE_OSMESA=ON          → OSMesa-only (headless, no system GL)
-#   OBOL_USE_SYSTEM_ONLY=ON     → system OpenGL only (no OSMesa)
-#   default (both OFF)            → auto-detect; dual mode when both are available
-option(OBOL_USE_OSMESA "Build against OSMesa only for offscreen/headless rendering" OFF)
-option(OBOL_USE_SYSTEM_ONLY "Build against system OpenGL only (no OSMesa fallback)" OFF)
-option(OBOL_BUILD_DUAL_GL "Build with both system-OpenGL and OSMesa backends in a single library" OFF)
+# OpenGL backend toggles:
+#   Both ON  (default when both detected) → dual-GL mode
+#   SWRAST only                           → software-rasterizer-only (headless/offscreen)
+#   SYSTEM_GL only                        → system OpenGL only, no software fallback
+#   Both OFF                              → no OpenGL at all (custom context drivers only)
+#
+# Probe availability to set sensible defaults.
+find_package(OpenGL QUIET)
+if(OpenGL_FOUND)
+  set(_obol_sysgl_default ON)
+else()
+  set(_obol_sysgl_default OFF)
+endif()
+if(EXISTS "${PROJECT_SOURCE_DIR}/external/osmesa/CMakeLists.txt")
+  set(_obol_swrast_default ON)
+else()
+  set(_obol_swrast_default OFF)
+endif()
+option(OBOL_USE_SYSTEM_GL
+    "Enable system OpenGL backend"
+    ${_obol_sysgl_default})
+option(OBOL_USE_SWRAST
+    "Enable software rasterizer (OSMesa) backend for headless/offscreen rendering"
+    ${_obol_swrast_default})
+unset(_obol_sysgl_default)
+unset(_obol_swrast_default)
 option(OBOL_THREADSAFE "Enable thread safe render traversals" ON)
 
 # Component options
@@ -353,70 +338,59 @@ set(OBOL_TARGET_LINK_LIBRARIES)
 set(OBOL_TARGET_INCLUDE_DIRECTORIES)
 set(OBOL_TARGET_LINK_LIBRARIES_GL)
 
+# ============================================================================
 # OpenGL backend selection
-# -----------------------------------------------------------------------
-# Auto-detection when neither OSMESA-only nor SYSTEM-only is forced:
-#   1. Check for system OpenGL and for the OSMesa submodule
-#   2. If both are available → enable DUAL GL (one library, both backends)
-#   3. If only OSMesa submodule is available → OSMesa-only mode
-#   4. If only system GL is available → system-only mode
-# The user can override by setting OBOL_USE_OSMESA=ON (osmesa only)
-# or OBOL_USE_SYSTEM_ONLY=ON (system GL only) before configuring.
+# ============================================================================
+# OBOL_USE_SWRAST and OBOL_USE_SYSTEM_GL are set above.  Derive the actual
+# build mode from them:
 #
-# NOTE: system libosmesa6-dev is intentionally NOT used for auto-detection.
-# The project requires its own name-mangled OSMesa build (external/osmesa
-# submodule with USE_MGL_NAMESPACE).  The submodule include path
-# <OSMesa/osmesa.h> was chosen specifically to avoid pulling in the
-# system header at <GL/osmesa.h>, which uses un-mangled gl* symbols
-# incompatible with a dual system-GL+OSMesa build.
-# -----------------------------------------------------------------------
-if(NOT OBOL_USE_OSMESA AND NOT OBOL_USE_SYSTEM_ONLY AND NOT OBOL_BUILD_DUAL_GL)
-  find_package(OpenGL QUIET)
-  # "OSMesa available" means our submodule is present (not system osmesa)
-  if(EXISTS "${PROJECT_SOURCE_DIR}/external/osmesa/CMakeLists.txt")
-    set(_have_osmesa_submodule TRUE)
-  else()
-    set(_have_osmesa_submodule FALSE)
-  endif()
-  if(OpenGL_FOUND AND _have_osmesa_submodule)
-    set(OBOL_BUILD_DUAL_GL ON CACHE BOOL
-        "Build with both system-OpenGL and OSMesa backends in a single library" FORCE)
-    message(STATUS "Auto-detected system OpenGL + OSMesa submodule: enabling DUAL GL mode")
-  elseif(_have_osmesa_submodule)
-    set(OBOL_USE_OSMESA ON CACHE BOOL
-        "Build against OSMesa only for offscreen/headless rendering" FORCE)
-    message(STATUS "Auto-detected OSMesa submodule only: enabling OSMesa-only mode")
-  else()
-    # System-only (OpenGL required below will error if not present)
-    message(STATUS "Auto-detected: system OpenGL only (no OSMesa submodule found)")
-  endif()
-endif()
+#   OBOL_USE_SWRAST=OFF, OBOL_USE_SYSTEM_GL=OFF  →  no-OpenGL build
+#   OBOL_USE_SWRAST=ON,  OBOL_USE_SYSTEM_GL=OFF  →  software-rasterizer only
+#   OBOL_USE_SWRAST=OFF, OBOL_USE_SYSTEM_GL=ON   →  system-GL only
+#   OBOL_USE_SWRAST=ON,  OBOL_USE_SYSTEM_GL=ON   →  dual-GL (system primary,
+#                                                      swrast secondary)
+#
+# NOTE: the project's own name-mangled OSMesa build (external/osmesa
+# submodule with USE_MGL_NAMESPACE) is used for OBOL_USE_SWRAST.
+# The system libosmesa6-dev package is intentionally NOT used — its symbols
+# are not name-mangled and would collide with system libGL in a dual build.
+# ============================================================================
 
-if(OBOL_USE_OSMESA)
-  # OSMesa backend for offscreen/headless rendering
+if(NOT OBOL_USE_SWRAST AND NOT OBOL_USE_SYSTEM_GL)
+  # ── No-OpenGL build ────────────────────────────────────────────────────
+  message(STATUS "No-OpenGL build: both OBOL_USE_SWRAST and OBOL_USE_SYSTEM_GL are OFF")
+  set(HAVE_OPENGL 0)
+  set(OBOL_OUTPUT_NAME "Obol-nogl")
+  add_definitions(-DOBOL_NO_OPENGL)
+  message(STATUS "Library will be named: lib${OBOL_OUTPUT_NAME}")
+
+elseif(OBOL_USE_SWRAST AND NOT OBOL_USE_SYSTEM_GL)
+  # ── Software-rasterizer-only build ─────────────────────────────────────
+  message(STATUS "Software-rasterizer-only build (no system OpenGL)")
   find_package(OSMesa REQUIRED)
   if(OSMesa_FOUND)
     set(HAVE_OPENGL 1)
     set(HAVE_OSMESA 1)
-
     if(TARGET OSMesa::OSMesa)
       list(APPEND OBOL_TARGET_LINK_LIBRARIES_GL OSMesa::OSMesa)
     elseif(TARGET osmesa_interface)
-      # starseeker/osmesa submodule interface wrapper
       list(APPEND OBOL_TARGET_LINK_LIBRARIES_GL osmesa_interface)
       list(APPEND OBOL_TARGET_INCLUDE_DIRECTORIES ${OSMesa_INCLUDE_DIRS})
     else()
       list(APPEND OBOL_TARGET_INCLUDE_DIRECTORIES ${OSMesa_INCLUDE_DIRS})
       list(APPEND OBOL_TARGET_LINK_LIBRARIES_GL ${OSMesa_LIBRARIES})
     endif()
-
-    message(STATUS "Using OSMesa for offscreen/headless rendering")
+    message(STATUS "Using software rasterizer for offscreen/headless rendering")
   endif()
+  add_definitions(-DOBOL_SWRAST_BUILD)
+  set(OBOL_OUTPUT_NAME "Obol-swrast")
+  message(STATUS "Library will be named: lib${OBOL_OUTPUT_NAME}")
+
 else()
-  # System OpenGL backend (default or SYSTEM_ONLY)
+  # ── System-GL build (OBOL_USE_SYSTEM_GL=ON) ────────────────────────────
+  # Covers both system-only and dual (system + swrast).
   find_package(OpenGL REQUIRED)
   set(HAVE_OPENGL 1)
-
   if(OpenGL_OpenGL_FOUND AND TARGET OpenGL::OpenGL)
     list(APPEND OBOL_TARGET_LINK_LIBRARIES_GL OpenGL::OpenGL)
   elseif(OpenGL_GL_FOUND AND TARGET OpenGL::GL)
@@ -424,12 +398,10 @@ else()
   elseif(OPENGL_gl_LIBRARY)
     list(APPEND OBOL_TARGET_LINK_LIBRARIES_GL ${OPENGL_gl_LIBRARY})
   endif()
-
   # On Unix/Linux, detect GLX for offscreen rendering support
   if(UNIX AND NOT APPLE)
     find_package(X11 QUIET)
     if(X11_FOUND AND X11_X11_LIB)
-      # Check for GLX support (required for offscreen rendering on Linux)
       include(CheckIncludeFileCXX)
       set(CMAKE_REQUIRED_INCLUDES ${X11_INCLUDE_DIR} ${OPENGL_INCLUDE_DIR})
       check_include_file_cxx("GL/glx.h" HAVE_GLX_H)
@@ -442,53 +414,40 @@ else()
     endif()
   endif()
 
-  message(STATUS "Using system OpenGL")
+  if(OBOL_USE_SWRAST)
+    # ── Dual-GL build: system OpenGL primary, software rasterizer secondary ─
+    # gl_osmesa.cpp is compiled separately with OSMesa headers so that
+    # mgl*-mangled OSMesa symbols coexist with system gl* symbols.
+    find_package(OSMesa REQUIRED)
+    if(NOT OSMesa_FOUND)
+      message(FATAL_ERROR
+          "OBOL_USE_SWRAST=ON requires the external/osmesa submodule.\n"
+          "Run: git submodule update --init external/osmesa")
+    endif()
+    # Collect OSMesa include dirs and link libraries for the per-file target
+    if(TARGET osmesa_interface)
+      set(OBOL_OSMESA_INCLUDE_DIRS "${OSMesa_INCLUDE_DIRS}")
+      set(OBOL_OSMESA_LIBRARIES osmesa_interface)
+    elseif(TARGET OSMesa::OSMesa)
+      get_target_property(_osmesa_inc OSMesa::OSMesa INTERFACE_INCLUDE_DIRECTORIES)
+      set(OBOL_OSMESA_INCLUDE_DIRS "${_osmesa_inc}")
+      set(OBOL_OSMESA_LIBRARIES OSMesa::OSMesa)
+    else()
+      set(OBOL_OSMESA_INCLUDE_DIRS "${OSMesa_INCLUDE_DIRS}")
+      set(OBOL_OSMESA_LIBRARIES "${OSMesa_LIBRARIES}")
+    endif()
+    add_definitions(-DOBOL_SWRAST_BUILD -DOBOL_DUAL_GL_BUILD)
+    set(OBOL_OUTPUT_NAME "Obol")
+    message(STATUS "Dual-GL build: system OpenGL + software rasterizer in one library")
+  else()
+    # ── System-GL-only build ───────────────────────────────────────────────
+    set(OBOL_OUTPUT_NAME "Obol")
+    message(STATUS "Using system OpenGL")
+  endif()
+  message(STATUS "Library will be named: lib${OBOL_OUTPUT_NAME}")
 endif()
 
 list(APPEND OBOL_TARGET_LINK_LIBRARIES ${OBOL_TARGET_LINK_LIBRARIES_GL})
-
-# Dual-GL build: also find and store OSMesa libraries separately so
-# gl_osmesa.cpp can be compiled against them alongside system GL.
-# Our FindOSMesa.cmake only looks at the external/osmesa submodule, which
-# provides the name-mangled (mgl*) build required by dual GL.
-if(OBOL_BUILD_DUAL_GL)
-  if(OBOL_USE_OSMESA)
-    message(FATAL_ERROR "OBOL_BUILD_DUAL_GL and OBOL_USE_OSMESA are mutually exclusive. "
-            "DUAL GL uses system OpenGL as primary with OSMesa as a secondary backend.")
-  endif()
-  find_package(OSMesa REQUIRED)
-  if(NOT OSMesa_FOUND)
-    message(FATAL_ERROR "OBOL_BUILD_DUAL_GL requires the external/osmesa submodule.\n"
-            "Run: git submodule update --init --recursive")
-  endif()
-  # Collect OSMesa include dirs and link libraries for the per-file target
-  if(TARGET OSMesa::OSMesa)
-    get_target_property(_osmesa_inc OSMesa::OSMesa INTERFACE_INCLUDE_DIRECTORIES)
-    set(OBOL_OSMESA_INCLUDE_DIRS "${_osmesa_inc}")
-    set(OBOL_OSMESA_LIBRARIES OSMesa::OSMesa)
-  elseif(TARGET osmesa_interface)
-    set(OBOL_OSMESA_INCLUDE_DIRS "${OSMesa_INCLUDE_DIRS}")
-    set(OBOL_OSMESA_LIBRARIES osmesa_interface)
-  else()
-    set(OBOL_OSMESA_INCLUDE_DIRS "${OSMesa_INCLUDE_DIRS}")
-    set(OBOL_OSMESA_LIBRARIES "${OSMesa_LIBRARIES}")
-  endif()
-  add_definitions(-DOBOL_BUILD_DUAL_GL)
-  message(STATUS "Dual-GL build enabled: system OpenGL + OSMesa in one library")
-endif()
-
-# Set library output name based on backend selection
-if(OBOL_USE_OSMESA)
-  set(OBOL_OUTPUT_NAME "Obol-osmesa")
-  add_definitions(-DOBOL_OSMESA_BUILD)
-  # USE_MGL_NAMESPACE is set only on the Obol library target (see src/CMakeLists.txt)
-  # to avoid propagating it to test executables that include <GL/glx.h>, which
-  # conditionally includes "glx_mangle.h" (not present on modern Ubuntu 24.04).
-  message(STATUS "Library will be named: lib${OBOL_OUTPUT_NAME}")
-else()
-  set(OBOL_OUTPUT_NAME "Obol")
-  message(STATUS "Library will be named: lib${OBOL_OUTPUT_NAME}")
-endif()
 
 # Threading support
 find_package(Threads REQUIRED)
@@ -632,11 +591,15 @@ else()
   endif()
 endif()
 
-# OpenGL header detection (simplified)
-check_include_file(GL/gl.h HAVE_GL_GL_H)
-check_include_file(OpenGL/gl.h HAVE_OPENGL_GL_H)
-check_include_files("GL/gl.h;GL/glext.h" HAVE_GL_GLEXT_H)
-check_include_files("OpenGL/gl.h;OpenGL/glext.h" HAVE_OPENGL_GLEXT_H)
+# OpenGL header detection
+# Only check for system GL headers when system GL is the primary backend.
+# In swrast-only mode the OSMesa headers are used exclusively.
+if(OBOL_USE_SYSTEM_GL)
+  check_include_file(GL/gl.h HAVE_GL_GL_H)
+  check_include_file(OpenGL/gl.h HAVE_OPENGL_GL_H)
+  check_include_files("GL/gl.h;GL/glext.h" HAVE_GL_GLEXT_H)
+  check_include_files("OpenGL/gl.h;OpenGL/glext.h" HAVE_OPENGL_GLEXT_H)
+endif()
 
 if(HAVE_WINDOWS_H)
   set(SIM_INCLUDE_WINDOWS_H "#include <windows.h>")
@@ -644,17 +607,24 @@ else()
   set(SIM_INCLUDE_WINDOWS_H "/* #include <windows.h> - not needed on system */")
 endif()
 
-if(OBOL_USE_OSMESA)
-  # starseeker/osmesa backend - use starseeker/osmesa headers only.
+if(NOT OBOL_USE_SWRAST AND NOT OBOL_USE_SYSTEM_GL)
+  # No-OpenGL build: gl-headers.h will include the bundled type/constant stubs.
+  set(SIM_INCLUDE_GL_H "#include <Inventor/system/gl_stub.h>")
+  set(SIM_INCLUDE_GLEXT_H "/* no-OpenGL build: no OpenGL extension headers */")
+  set(SIM_GL_GLEXT_PROTOTYPES_DEFINE "/* no-OpenGL build: GL_GLEXT_PROTOTYPES not set */")
+  message(STATUS "No-OpenGL build: using bundled GL type/constant stubs")
+elseif(OBOL_USE_SWRAST AND NOT OBOL_USE_SYSTEM_GL)
+  # Software-rasterizer-only: use OSMesa headers exclusively.
   # OSMesa's gl.h already includes OSMesa/glext.h, so no system glext needed.
   # Mixing system GL/glext.h with OSMesa's MGL-mangled headers causes symbol
   # conflicts that corrupt the heap at runtime.
   set(SIM_INCLUDE_GL_H "#include <OSMesa/osmesa.h>
   #include <OSMesa/gl.h>")
   set(SIM_INCLUDE_GLEXT_H "/* OSMesa/gl.h already includes OSMesa/glext.h - system GL/glext.h must NOT be included */")
-  message(STATUS "Using starseeker/osmesa headers for GL with automatic MGL name mangling")
+  set(SIM_GL_GLEXT_PROTOTYPES_DEFINE "#define GL_GLEXT_PROTOTYPES 1")
+  message(STATUS "Using software-rasterizer (OSMesa) headers for GL with automatic MGL name mangling")
 else()
-  # System OpenGL backend
+  # System OpenGL backend (system-only or dual)
   if(HAVE_GL_GL_H)
     set(SIM_INCLUDE_GL_H "#include <GL/gl.h>")
   elseif(HAVE_OPENGL_GL_H)
@@ -669,6 +639,7 @@ else()
   else()
     set(SIM_INCLUDE_GLEXT_H "/* #include <GL/glext.h> - not found on system */")
   endif()
+  set(SIM_GL_GLEXT_PROTOTYPES_DEFINE "#define GL_GLEXT_PROTOTYPES 1")
 endif()
 
 # getcwd detection (POSIX vs Windows)

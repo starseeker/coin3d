@@ -41,8 +41,10 @@
 
 /* This define is at least needed before inclusion of the header files
    that are part of NVidia's Linux drivers v41.91. Without it, none of
-   the extension and OpenGL 1.1+ function prototypes will be set up. */
-#define GL_GLEXT_PROTOTYPES 1
+   the extension and OpenGL 1.1+ function prototypes will be set up.
+   In OBOL_NO_OPENGL builds this is omitted to avoid accidentally pulling
+   in real GL headers via the extension-prototype path. */
+@SIM_GL_GLEXT_PROTOTYPES_DEFINE@
 
 @SIM_INCLUDE_WINDOWS_H@
 

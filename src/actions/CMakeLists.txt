@@ -12,7 +12,7 @@ set(OBOL_ACTIONS_FILES
 	SoLineHighlightRenderAction.cpp
 	SoPickAction.cpp
 	SoRayPickAction.cpp
-	SoRaytraceRenderAction.cpp
+	SoSceneRenderAction.cpp
 	SoReorganizeAction.cpp
 	SoSearchAction.cpp
 	SoSimplifyAction.cpp

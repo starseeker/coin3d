@@ -177,7 +177,7 @@ public:
      *
      * The default implementation returns FALSE, which is appropriate for
      * applications that only use one backend.  Dual-backend implementations
-     * (OBOL_BUILD_DUAL_GL) should override this and return TRUE for
+     * (OBOL_DUAL_GL_BUILD) should override this and return TRUE for
      * contexts created via OSMesa so that the GL-glue dispatch layer can
      * route SoGLContext_instance() to the correct (osmesa_*) implementation.
      */
@@ -270,8 +270,8 @@ public:
 
   /**
    * Create a new OSMesa-backed context manager.  Returns NULL when the
-   * library was not built with OSMesa support (i.e. OBOL_OSMESA_BUILD
-   * and OBOL_BUILD_DUAL_GL are both absent).
+   * library was not built with OSMesa support (i.e. OBOL_SWRAST_BUILD
+   * and OBOL_DUAL_GL_BUILD are both absent).
    *
    * The caller owns the returned object and is responsible for deleting it
    * after all SoOffscreenRenderer instances that reference it have been

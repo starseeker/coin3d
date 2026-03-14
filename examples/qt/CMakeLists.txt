@@ -5,12 +5,34 @@
 #   obol_qt_viewer   — full-featured Qt scene viewer (scene catalogue browser)
 #   qt_obol_example  — standalone Qt/Obol widget demonstration
 #
+# Qt6 detection and viewer options all live here.
+#
 # obol_qt_viewer uses the ObolEx (libObolEx) scene catalogue from
 # tests/testlib/ with --whole-archive to preserve all REGISTER_TEST
 # static initialisers.
 #
 # Requires Qt6 Widgets + Gui (+ OpenGL/OpenGLWidgets for qt_obol_example).
 # =============================================================================
+
+# -----------------------------------------------------------------------
+# Qt6 detection and viewer option
+# -----------------------------------------------------------------------
+find_package(Qt6 QUIET COMPONENTS Widgets Gui)
+if(OBOL_BUILD_TESTS AND Qt6_FOUND)
+    message(STATUS "Qt6 found (${Qt6_VERSION}): obol_qt_viewer can be built")
+    set(_obol_qt_viewer_default ON)
+else()
+    if(OBOL_BUILD_TESTS)
+        message(STATUS "Qt6 not found – obol_qt_viewer disabled")
+    endif()
+    set(_obol_qt_viewer_default OFF)
+endif()
+cmake_dependent_option(OBOL_BUILD_QT_VIEWER
+    "Build the Qt scene viewer (obol_qt_viewer); requires Qt6 and OBOL_BUILD_TESTS"
+    "${_obol_qt_viewer_default}"
+    "OBOL_BUILD_TESTS;Qt6_FOUND"
+    OFF)
+unset(_obol_qt_viewer_default)
 
 # -----------------------------------------------------------------------
 # obol_qt_viewer: full-featured Qt6 scene viewer

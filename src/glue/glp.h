@@ -1010,7 +1010,7 @@ struct SoGLContext {
   OBOL_PFNGLPOLYGONOFFSETPROC glPolygonOffsetEXT;
 
   /* Core GL 1.0/1.1 dispatch pointers — always non-NULL after init.
-     Required so that dual-GL builds (OBOL_BUILD_DUAL_GL) never mix
+     Required so that dual-GL builds (OBOL_DUAL_GL_BUILD) never mix
      system-GL and OSMesa calls within the same render pass. */
   OBOL_PFNGLTEXIMAGE2DPROC      glTexImage2D;
   OBOL_PFNGLTEXPARAMETERIPROC   glTexParameteri;
@@ -2253,7 +2253,7 @@ SbBool SoGLContext_has_framebuffer_objects(const SoGLContext * glue);
 
 /* Core GL 1.0/1.1 wrappers — always dispatch through the correct backend.
    Use these everywhere a bare gl* call would otherwise mix backends in
-   dual-GL (OBOL_BUILD_DUAL_GL) builds. */
+   dual-GL (OBOL_DUAL_GL_BUILD) builds. */
 void SoGLContext_glTexImage2D(const SoGLContext * glue,
                               GLenum target, GLint level, GLint internalformat,
                               GLsizei width, GLsizei height, GLint border,
@@ -2684,7 +2684,7 @@ void SoGLContext_win32_updateHDCBitmap(void * ctx);
 /* -----------------------------------------------------------------------
  * Dual-GL backend registration
  *
- * When building with OBOL_BUILD_DUAL_GL=ON, both system-OpenGL and OSMesa
+ * When building with OBOL_DUAL_GL_BUILD=ON, both system-OpenGL and OSMesa
  * variants of the GL glue layer are compiled into the same library.
  * Applications (or CoinOffscreenGLCanvas) must call this function after
  * assigning a render-context ID to a context that was created via the OSMesa

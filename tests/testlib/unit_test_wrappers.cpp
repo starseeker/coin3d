@@ -67,7 +67,7 @@
 #include <Inventor/actions/SoGetBoundingBoxAction.h>
 #include <Inventor/actions/SoSearchAction.h>
 #include <Inventor/actions/SoCallbackAction.h>
-#include <Inventor/actions/SoRaytraceRenderAction.h>
+#include <Inventor/actions/SoSceneRenderAction.h>
 #include <Inventor/SoPrimitiveVertex.h>
 
 // Fields
@@ -371,7 +371,7 @@ static int runActionsTests()
 }
 
 // =========================================================================
-// Unit test: SoRaytraceRenderAction
+// Unit test: SoSceneRenderAction
 // =========================================================================
 static int runRaytraceActionTests()
 {
@@ -379,17 +379,17 @@ static int runRaytraceActionTests()
 
     // --- Type registration ---
     {
-        SoRaytraceRenderAction rta(SbViewportRegion(100, 100));
+        SoSceneRenderAction rta(SbViewportRegion(100, 100));
         if (rta.getTypeId() == SoType::badType()) {
-            fprintf(stderr, "  FAIL: SoRaytraceRenderAction has bad type\n");
+            fprintf(stderr, "  FAIL: SoSceneRenderAction has bad type\n");
             ++failures;
         }
         if (!rta.isOfType(SoCallbackAction::getClassTypeId())) {
-            fprintf(stderr, "  FAIL: SoRaytraceRenderAction not derived from SoCallbackAction\n");
+            fprintf(stderr, "  FAIL: SoSceneRenderAction not derived from SoCallbackAction\n");
             ++failures;
         }
         if (!rta.isOfType(SoAction::getClassTypeId())) {
-            fprintf(stderr, "  FAIL: SoRaytraceRenderAction not derived from SoAction\n");
+            fprintf(stderr, "  FAIL: SoSceneRenderAction not derived from SoAction\n");
             ++failures;
         }
     }
@@ -397,10 +397,10 @@ static int runRaytraceActionTests()
     // --- Viewport region round-trip ---
     {
         SbViewportRegion vp(320, 240);
-        SoRaytraceRenderAction rta(vp);
+        SoSceneRenderAction rta(vp);
         SbVec2s size = rta.getViewportRegion().getWindowSize();
         if (size[0] != 320 || size[1] != 240) {
-            fprintf(stderr, "  FAIL: SoRaytraceRenderAction viewport size mismatch (%d,%d)\n",
+            fprintf(stderr, "  FAIL: SoSceneRenderAction viewport size mismatch (%d,%d)\n",
                     (int)size[0], (int)size[1]);
             ++failures;
         }
@@ -414,7 +414,7 @@ static int runRaytraceActionTests()
         root->addChild(new SoCube);
 
         int triangleCount = 0;
-        SoRaytraceRenderAction rta(SbViewportRegion(100, 100));
+        SoSceneRenderAction rta(SbViewportRegion(100, 100));
         rta.addTriangleCallback(
             SoShape::getClassTypeId(),
             [](void* ud, SoCallbackAction*, const SoPrimitiveVertex*,
@@ -439,7 +439,7 @@ static int runRaytraceActionTests()
         root->addChild(new SoDirectionalLight);
         root->addChild(new SoCube);
 
-        SoRaytraceRenderAction rta(SbViewportRegion(100, 100));
+        SoSceneRenderAction rta(SbViewportRegion(100, 100));
         rta.addTriangleCallback(SoShape::getClassTypeId(),
             [](void*, SoCallbackAction*, const SoPrimitiveVertex*,
                const SoPrimitiveVertex*, const SoPrimitiveVertex*) {},
@@ -449,7 +449,7 @@ static int runRaytraceActionTests()
 
         const SoNodeList& lights = rta.getLights();
         if (lights.getLength() == 0) {
-            fprintf(stderr, "  FAIL: SoRaytraceRenderAction getLights() returned empty list\n");
+            fprintf(stderr, "  FAIL: SoSceneRenderAction getLights() returned empty list\n");
             ++failures;
         } else if (!lights[0]->isOfType(SoDirectionalLight::getClassTypeId())) {
             fprintf(stderr, "  FAIL: light is not SoDirectionalLight\n");
@@ -473,7 +473,7 @@ static int runRaytraceActionTests()
             bool set = false;
         } col;
 
-        SoRaytraceRenderAction rta(SbViewportRegion(100, 100));
+        SoSceneRenderAction rta(SbViewportRegion(100, 100));
         rta.addTriangleCallback(
             SoShape::getClassTypeId(),
             [](void* ud, SoCallbackAction* action,
@@ -1480,7 +1480,7 @@ REGISTER_TEST(coordinates, ObolTest::TestCategory::Rendering,
 );
 
 REGISTER_TEST(shadow, ObolTest::TestCategory::Rendering,
-    "Shadow-casting scene: SoShadowGroup (GL) + SoRaytracingParams (NanoRT)",
+    "Shadow-casting scene: SoShadowGroup (GL) + SoSceneRendererParams (NanoRT)",
     e.has_visual = true;
     e.has_interactive = true;
     e.nanort_ok = true;
@@ -2030,7 +2030,7 @@ REGISTER_TEST(unit_actions, ObolTest::TestCategory::Actions,
 );
 
 REGISTER_TEST(unit_raytrace_action, ObolTest::TestCategory::Actions,
-    "SoRaytraceRenderAction type, viewport, triangle collection, lights",
+    "SoSceneRenderAction type, viewport, triangle collection, lights",
     e.has_visual = false;
     e.run_unit = runRaytraceActionTests;
 );
@@ -2240,7 +2240,7 @@ REGISTER_TEST(rt_proxy_shapes, ObolTest::TestCategory::Rendering,
 );
 
 REGISTER_TEST(nanort, ObolTest::TestCategory::Rendering,
-    "Four primitives + SoRaytracingParams — NanoRT raytracing scene",
+    "Four primitives + SoSceneRendererParams — NanoRT raytracing scene",
     e.has_visual = true;
     e.has_interactive = true;
     e.nanort_ok = true;
@@ -2248,7 +2248,7 @@ REGISTER_TEST(nanort, ObolTest::TestCategory::Rendering,
 );
 
 REGISTER_TEST(nanort_shadow, ObolTest::TestCategory::Rendering,
-    "Ground plane + red sphere + SoRaytracingParams(shadows) — NanoRT shadow scene",
+    "Ground plane + red sphere + SoSceneRendererParams(shadows) — NanoRT shadow scene",
     e.has_visual = true;
     e.has_interactive = true;
     e.nanort_ok = true;

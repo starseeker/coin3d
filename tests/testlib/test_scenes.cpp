@@ -87,7 +87,7 @@
 #include <Inventor/manips/SoTabBoxManip.h>
 #include <Inventor/annex/HUD/nodekits/SoHUDKit.h>
 #include <Inventor/annex/HUD/nodes/SoHUDLabel.h>
-#include <Inventor/nodes/SoRaytracingParams.h>
+#include <Inventor/nodes/SoSceneRendererParams.h>
 #include <Inventor/annex/FXViz/nodes/SoShadowGroup.h>
 #include <Inventor/annex/FXViz/nodes/SoShadowStyle.h>
 #include <Inventor/annex/FXViz/nodes/SoShadowDirectionalLight.h>
@@ -905,9 +905,9 @@ SoSeparator* createShadow(int width, int height)
     SoSeparator* root = new SoSeparator;
     root->ref();
 
-    // NanoRT hint: enable shadow rays.  SoRaytracingParams is a no-op for
+    // NanoRT hint: enable shadow rays.  SoSceneRendererParams is a no-op for
     // GL renderers; the SoShadowGroup below handles GL shadow maps.
-    SoRaytracingParams* rtParams = new SoRaytracingParams;
+    SoSceneRendererParams* rtParams = new SoSceneRendererParams;
     rtParams->shadowsEnabled.setValue(TRUE);
     rtParams->ambientIntensity.setValue(0.2f);
     root->addChild(rtParams);
@@ -921,7 +921,7 @@ SoSeparator* createShadow(int width, int height)
     // OpenGL variance shadow maps for GL renderers.
     // NanoRT traverses SoShadowGroup as a plain separator and picks up
     // SoShadowDirectionalLight (a subclass of SoDirectionalLight) as a
-    // normal directional light; shadow rays are controlled by SoRaytracingParams.
+    // normal directional light; shadow rays are controlled by SoSceneRendererParams.
     SoShadowGroup* sg = new SoShadowGroup;
     sg->isActive.setValue(TRUE);
     sg->intensity.setValue(0.7f);
@@ -5443,14 +5443,14 @@ SoSeparator* createRTProxyShapes(int width, int height)
 }
 
 // =========================================================================
-// 99. createNanoRT — four primitives + SoRaytracingParams for NanoRT tests
+// 99. createNanoRT — four primitives + SoSceneRendererParams for NanoRT tests
 // =========================================================================
 SoSeparator* createNanoRT(int width, int height)
 {
     SoSeparator *root = new SoSeparator;
     root->ref();
 
-    SoRaytracingParams *rtParams = new SoRaytracingParams;
+    SoSceneRendererParams *rtParams = new SoSceneRendererParams;
     rtParams->shadowsEnabled.setValue(FALSE);
     root->addChild(rtParams);
 
@@ -5488,14 +5488,14 @@ SoSeparator* createNanoRT(int width, int height)
 }
 
 // =========================================================================
-// 100. createNanoRTShadow — ground + red sphere + SoRaytracingParams(shadows)
+// 100. createNanoRTShadow — ground + red sphere + SoSceneRendererParams(shadows)
 // =========================================================================
 SoSeparator* createNanoRTShadow(int width, int height)
 {
     SoSeparator *root = new SoSeparator;
     root->ref();
 
-    SoRaytracingParams *rtParams = new SoRaytracingParams;
+    SoSceneRendererParams *rtParams = new SoSceneRendererParams;
     rtParams->shadowsEnabled.setValue(TRUE);
     rtParams->ambientIntensity.setValue(0.2f);
     root->addChild(rtParams);

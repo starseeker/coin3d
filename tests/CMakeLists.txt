@@ -50,7 +50,7 @@ target_include_directories(simple_test_utils PUBLIC
     ${OBOL_TARGET_INCLUDE_DIRECTORIES}
 )
 # headless_utils.h needs the OSMesa submodule headers for pure osmesa builds
-if(OBOL_USE_OSMESA)
+if(OBOL_USE_SWRAST AND NOT OBOL_USE_SYSTEM_GL)
     target_include_directories(simple_test_utils PUBLIC
         "${PROJECT_SOURCE_DIR}/external/osmesa/include")
 endif()
@@ -226,12 +226,12 @@ if(UNIX AND NOT APPLE)
         target_link_libraries(obol_render PRIVATE ${OPENGL_gl_LIBRARY})
     endif()
 endif()
-if(OBOL_USE_OSMESA)
-    target_compile_definitions(obol_render PRIVATE OBOL_OSMESA_BUILD)
+if(OBOL_USE_SWRAST AND NOT OBOL_USE_SYSTEM_GL)
+    target_compile_definitions(obol_render PRIVATE OBOL_SWRAST_BUILD)
     target_include_directories(obol_render PRIVATE
         "${PROJECT_SOURCE_DIR}/external/osmesa/include")
-elseif(OBOL_BUILD_DUAL_GL)
-    target_compile_definitions(obol_render PRIVATE OBOL_BUILD_DUAL_GL)
+elseif(OBOL_USE_SWRAST AND OBOL_USE_SYSTEM_GL)
+    target_compile_definitions(obol_render PRIVATE OBOL_SWRAST_BUILD OBOL_DUAL_GL_BUILD)
 endif()
 install(TARGETS obol_render RUNTIME DESTINATION bin)
 install(TARGETS obol_unittest RUNTIME DESTINATION bin)

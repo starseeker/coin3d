@@ -717,7 +717,7 @@ SoNode::initClasses(void)
 
   SoDepthBuffer::initClass();
   SoAlphaTest::initClass();
-  SoRaytracingParams::initClass();
+  SoSceneRendererParams::initClass();
 }
 
 /*!

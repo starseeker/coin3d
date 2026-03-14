@@ -14,14 +14,14 @@
 # =============================================================================
 
 # ---- Backend detection (mirrors tests/rendering/CMakeLists.txt) --------
-if(DEFINED OBOL_USE_OSMESA)
-    set(TESTLIB_USE_OSMESA ${OBOL_USE_OSMESA})
+if(OBOL_USE_SWRAST AND NOT OBOL_USE_SYSTEM_GL)
+    set(TESTLIB_USE_SWRAST ON)
 else()
-    set(TESTLIB_USE_OSMESA OFF)
+    set(TESTLIB_USE_SWRAST OFF)
 endif()
-# Note: OBOL_BUILD_DUAL_GL builds use system GL (GLX+Xvfb) for rendering
-# tests, not OSMesa, because the Obol scene traversal uses system GL symbols.
-# Only pure OBOL_USE_OSMESA builds use the OSMesa context path here.
+# Note: dual-GL builds use system GL (GLX+Xvfb) for rendering tests;
+# the swrast layer is in the library but scene traversal uses system GL.
+# Only pure swrast-only builds use the OSMesa context path here.
 
 # ---- Library target -------------------------------------------------------
 add_library(ObolEx STATIC
@@ -61,10 +61,10 @@ if(OBOL_USE_UNITY_BUILD AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.16")
     set_target_properties(ObolEx PROPERTIES UNITY_BUILD ON)
 endif()
 
-# OSMesa backend (pure OBOL_USE_OSMESA builds only)
-if(TESTLIB_USE_OSMESA)
+# Software rasterizer backend (pure swrast-only builds)
+if(TESTLIB_USE_SWRAST)
     set(OSMESA_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/external/osmesa/include")
-    target_compile_definitions(ObolEx PUBLIC OBOL_OSMESA_BUILD)
+    target_compile_definitions(ObolEx PUBLIC OBOL_SWRAST_BUILD)
     if(EXISTS "${OSMESA_INCLUDE_DIR}")
         target_include_directories(ObolEx PUBLIC "${OSMESA_INCLUDE_DIR}")
     endif()

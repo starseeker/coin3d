@@ -284,7 +284,7 @@ static int OBOL_MAXIMUM_TEXTURE3_SIZE = -1;
 /* -----------------------------------------------------------------------
  * Dual-GL backend registry
  *
- * When OBOL_BUILD_DUAL_GL is defined and this is the primary (system-GL)
+ * When OBOL_DUAL_GL_BUILD is defined and this is the primary (system-GL)
  * compilation unit (SOGL_PREFIX_SET is NOT set), we maintain a small set of
  * context IDs that were created against the OSMesa backend.
  *
@@ -306,7 +306,7 @@ static int OBOL_MAXIMUM_TEXTURE3_SIZE = -1;
 extern "C" {  /* reopen extern "C" */
 #endif
 
-#if defined(OBOL_BUILD_DUAL_GL)
+#if defined(OBOL_DUAL_GL_BUILD)
 static std::unordered_set<int> * coingl_osmesa_context_ids = NULL;
 static std::mutex coingl_osmesa_context_mutex;
 
@@ -321,17 +321,17 @@ static void coingl_osmesa_registry_cleanup(void)
    gl_osmesa.cpp.  The linker resolves these from the glue_osmesa object. */
 const SoGLContext * osmesa_SoGLContext_instance(int contextid);
 void osmesa_SoGLContext_destruct(uint32_t contextid);
-#endif /* OBOL_BUILD_DUAL_GL */
+#endif /* OBOL_DUAL_GL_BUILD */
 
 /* Public C API: register an OSMesa-backed render-context ID.
    Must be called (once, at context-ID assignment time) by the application
    or CoinOffscreenGLCanvas before the first SoGLContext_instance() call
-   for that ID when OBOL_BUILD_DUAL_GL is enabled.
-   Safe to call even when OBOL_BUILD_DUAL_GL is not defined (no-op). */
+   for that ID when OBOL_DUAL_GL_BUILD is enabled.
+   Safe to call even when OBOL_DUAL_GL_BUILD is not defined (no-op). */
 void
 coingl_register_osmesa_context(int contextid)
 {
-#if defined(OBOL_BUILD_DUAL_GL)
+#if defined(OBOL_DUAL_GL_BUILD)
   std::lock_guard<std::mutex> lock(coingl_osmesa_context_mutex);
   if (!coingl_osmesa_context_ids) {
     coingl_osmesa_context_ids = new std::unordered_set<int>();
@@ -345,11 +345,11 @@ coingl_register_osmesa_context(int contextid)
 
 /* Remove an OSMesa context ID from the backend registry.
    Called from SoGLContext_destruct() to keep the registry consistent.
-   Safe to call even when OBOL_BUILD_DUAL_GL is not defined (no-op). */
+   Safe to call even when OBOL_DUAL_GL_BUILD is not defined (no-op). */
 void
 coingl_unregister_osmesa_context(int contextid)
 {
-#if defined(OBOL_BUILD_DUAL_GL)
+#if defined(OBOL_DUAL_GL_BUILD)
   std::lock_guard<std::mutex> lock(coingl_osmesa_context_mutex);
   if (coingl_osmesa_context_ids) {
     coingl_osmesa_context_ids->erase(contextid);
@@ -363,7 +363,7 @@ coingl_unregister_osmesa_context(int contextid)
 [[maybe_unused]] static int
 coingl_context_backend_is_osmesa(int contextid)
 {
-#if defined(OBOL_BUILD_DUAL_GL)
+#if defined(OBOL_DUAL_GL_BUILD)
   std::lock_guard<std::mutex> lock(coingl_osmesa_context_mutex);
   return (coingl_osmesa_context_ids &&
           coingl_osmesa_context_ids->count(contextid) > 0) ? 1 : 0;
@@ -579,7 +579,7 @@ glglue_allow_newer_opengl(const SoGLContext * OBOL_UNUSED_ARG(w))
 
   if (force1_0) return FALSE;
 
-#ifdef OBOL_OSMESA_BUILD
+#ifdef OBOL_SWRAST_BUILD
   /* For OSMesa builds, always allow newer OpenGL features.
      OSMesa provides OpenGL 2.0 capabilities which is our minimum target. */
   return TRUE;
@@ -744,11 +744,16 @@ SoGLContext_getprocaddress(const SoGLContext * glue, const char * symname)
 {
   void * ptr = NULL;
 
-#if defined(OBOL_OSMESA_BUILD) || defined(SOGL_PREFIX_SET)
+#if (defined(OBOL_SWRAST_BUILD) && !defined(OBOL_DUAL_GL_BUILD)) || defined(SOGL_PREFIX_SET)
   /* OSMesa path: resolve via OSMesaGetProcAddress first to guarantee we
      get an OSMesa function pointer and never accidentally pick up a system
      GL symbol from the process handle (the two implementations have
-     different dispatch tables and mixing them causes subtle corruption). */
+     different dispatch tables and mixing them causes subtle corruption).
+     This path is active in:
+       - pure swrast-only builds (OBOL_SWRAST_BUILD without OBOL_DUAL_GL_BUILD)
+       - the osmesa_ compilation unit in dual-GL builds (SOGL_PREFIX_SET)
+     It is NOT active in the system-GL compilation unit of a dual-GL build,
+     because gl.cpp is compiled without OSMesa headers there. */
   ptr = (void*)OSMesaGetProcAddress(symname);
   if (SoGLContext_debug()) {
     cc_debugerror_postinfo("SoGLContext_getprocaddress",
@@ -1088,7 +1093,7 @@ glglue_resolve_symbols(SoGLContext * w)
 
 
   /* Core GL 1.0/1.1 functions — always available, stored as function
-     pointers so dual-GL builds (OBOL_BUILD_DUAL_GL) dispatch through
+     pointers so dual-GL builds (OBOL_DUAL_GL_BUILD) dispatch through
      the correct backend rather than always calling system GL. */
   w->glTexImage2D      = (OBOL_PFNGLTEXIMAGE2DPROC)PROC(w, glTexImage2D);
   w->glTexParameteri   = (OBOL_PFNGLTEXPARAMETERIPROC)PROC(w, glTexParameteri);
@@ -2724,7 +2729,7 @@ glglue_check_driver(const char * vendor, const char * renderer,
 const SoGLContext *
 SoGLContext_instance(int contextid)
 {
-#if defined(OBOL_BUILD_DUAL_GL) && !defined(SOGL_PREFIX_SET)
+#if defined(OBOL_DUAL_GL_BUILD) && !defined(SOGL_PREFIX_SET)
   /* Dual-GL dispatch: if this context ID was registered as an OSMesa
      context, forward to the osmesa_ variant compiled in gl_osmesa.cpp. */
   if (coingl_context_backend_is_osmesa(contextid)) {
@@ -2733,7 +2738,7 @@ SoGLContext_instance(int contextid)
 #endif
 
   // Add debugging for OSMesa builds at function entry
-#ifdef OBOL_OSMESA_BUILD
+#ifdef OBOL_SWRAST_BUILD
   if (SoGLContext_debug()) {
     cc_debugerror_postinfo("SoGLContext_instance", "ENTRY: contextid=%d", contextid);
   }
@@ -2745,7 +2750,7 @@ SoGLContext_instance(int contextid)
 
   SoGLContext * gi = NULL;
 
-#ifdef OBOL_OSMESA_BUILD
+#ifdef OBOL_SWRAST_BUILD
   if (SoGLContext_debug()) {
     cc_debugerror_postinfo("SoGLContext_instance", "About to begin sync");
   }
@@ -2753,7 +2758,7 @@ SoGLContext_instance(int contextid)
 
 
   /* check environment variables */
-#ifdef OBOL_OSMESA_BUILD
+#ifdef OBOL_SWRAST_BUILD
   if (SoGLContext_debug()) {
     cc_debugerror_postinfo("SoGLContext_instance", "Checking environment variables");
   }
@@ -2770,7 +2775,7 @@ SoGLContext_instance(int contextid)
   }
   /* Platform detection calls removed */
 
-#ifdef OBOL_OSMESA_BUILD
+#ifdef OBOL_SWRAST_BUILD
   if (SoGLContext_debug()) {
     cc_debugerror_postinfo("SoGLContext_instance", "Checking global dict");
   }
@@ -2780,7 +2785,7 @@ SoGLContext_instance(int contextid)
     coin_atexit((coin_atexit_f *)glglue_cleanup, CC_ATEXIT_NORMAL);
   }
 
-#ifdef OBOL_OSMESA_BUILD
+#ifdef OBOL_SWRAST_BUILD
   if (SoGLContext_debug()) {
     cc_debugerror_postinfo("SoGLContext_instance", "Looking up context %d in dict", contextid);
   }
@@ -2788,7 +2793,7 @@ SoGLContext_instance(int contextid)
   found = cc_dict_get(gldict, (uintptr_t)contextid, &ptr);
 
   if (!found) {
-#ifdef OBOL_OSMESA_BUILD
+#ifdef OBOL_SWRAST_BUILD
     if (SoGLContext_debug()) {
       cc_debugerror_postinfo("SoGLContext_instance", "Context not found, creating new glglue instance");
     }
@@ -2809,19 +2814,19 @@ SoGLContext_instance(int contextid)
          text below. */
       chk = CoinInternal::getEnvironmentVariable("OBOL_GL_NO_CURRENT_CONTEXT_CHECK").has_value() ? 0 : 1;
     }
-#ifdef OBOL_OSMESA_BUILD
+#ifdef OBOL_SWRAST_BUILD
     if (SoGLContext_debug()) {
       cc_debugerror_postinfo("SoGLContext_instance", "Context check flag: %d", chk);
     }
 #endif
     if (chk) {
-#ifdef OBOL_OSMESA_BUILD
+#ifdef OBOL_SWRAST_BUILD
       if (SoGLContext_debug()) {
         cc_debugerror_postinfo("SoGLContext_instance", "About to call coin_gl_current_context()");
       }
 #endif
       const void * current_ctx = coin_gl_current_context();
-#ifdef OBOL_OSMESA_BUILD
+#ifdef OBOL_SWRAST_BUILD
       if (SoGLContext_debug()) {
         cc_debugerror_postinfo("SoGLContext_instance", "coin_gl_current_context() returned: %p", current_ctx);
 #ifndef SOGL_PREFIX_SET
@@ -2838,7 +2843,7 @@ SoGLContext_instance(int contextid)
       if (!manager) {
         assert(current_ctx && "Must have a current GL context when instantiating SoGLContext!! (Note: if you are using an old Mesa GL version, set the environment variable OBOL_GL_NO_CURRENT_CONTEXT_CHECK to get around what may be a Mesa bug.)");
       }
-#ifdef OBOL_OSMESA_BUILD
+#ifdef OBOL_SWRAST_BUILD
       else {
         if (SoGLContext_debug()) {
           cc_debugerror_postinfo("SoGLContext_instance", "Skipping context check for callback-based contexts");
@@ -2928,7 +2933,7 @@ SoGLContext_instance(int contextid)
 
     glglue_set_glVersion(gi);
 
-#ifdef OBOL_OSMESA_BUILD
+#ifdef OBOL_SWRAST_BUILD
     if (SoGLContext_debug()) {
       cc_debugerror_postinfo("SoGLContext_instance", "About to call glGetString(GL_VENDOR)");
     }
@@ -2939,7 +2944,7 @@ SoGLContext_instance(int contextid)
 
     gi->vendorstr = (const char *)glGetString(GL_VENDOR);
 
-#ifdef OBOL_OSMESA_BUILD
+#ifdef OBOL_SWRAST_BUILD
     if (SoGLContext_debug()) {
       cc_debugerror_postinfo("SoGLContext_instance", "glGetString(GL_VENDOR)=='%s' (=> vendor_is_SGI==%s)", 
                             gi->vendorstr ? gi->vendorstr : "(null)",
@@ -2953,7 +2958,7 @@ SoGLContext_instance(int contextid)
     gi->vendor_is_ati = (strcmp((const char *) gi->vendorstr, "ATI Technologies Inc.") == 0);
     gi->vendor_is_3dlabs = strcmp((const char *) gi->vendorstr, "3Dlabs") == 0;
 
-#ifdef OBOL_OSMESA_BUILD
+#ifdef OBOL_SWRAST_BUILD
     if (SoGLContext_debug()) {
       cc_debugerror_postinfo("SoGLContext_instance", "About to call glGetString(GL_RENDERER)");
     }
@@ -2972,7 +2977,7 @@ SoGLContext_instance(int contextid)
       cc_debugerror_postinfo("SoGLContext_instance", "OpenGL error after GL_RENDERER: 0x%x", error_after_renderer);
     }
     
-#ifdef OBOL_OSMESA_BUILD
+#ifdef OBOL_SWRAST_BUILD
     if (SoGLContext_debug()) {
       cc_debugerror_postinfo("SoGLContext_instance", "GL_RENDERER call completed, rendererstr = %p", gi->rendererstr);
       if (gi->rendererstr) {
@@ -2983,7 +2988,7 @@ SoGLContext_instance(int contextid)
     
     gi->extensionsstr = (const char *)glGetString(GL_EXTENSIONS);
 
-#ifdef OBOL_OSMESA_BUILD
+#ifdef OBOL_SWRAST_BUILD
     if (SoGLContext_debug()) {
       cc_debugerror_postinfo("SoGLContext_instance", "Extensions string: %s", 
                             gi->extensionsstr ? gi->extensionsstr : "(null)");
@@ -2998,14 +3003,14 @@ SoGLContext_instance(int contextid)
        same result as the old method.
     */
     if (gi->extensionsstr == NULL) {
-#ifdef OBOL_OSMESA_BUILD
+#ifdef OBOL_SWRAST_BUILD
       if (SoGLContext_debug()) {
         cc_debugerror_postinfo("SoGLContext_instance", "Extensions string is NULL, trying glGetStringi fallback");
       }
 #endif
       OBOL_PFNGLGETSTRINGIPROC glGetStringi = NULL;
       glGetStringi = (OBOL_PFNGLGETSTRINGIPROC)SoGLContext_getprocaddress(gi, "glGetStringi");
-#ifdef OBOL_OSMESA_BUILD
+#ifdef OBOL_SWRAST_BUILD
       if (SoGLContext_debug()) {
         cc_debugerror_postinfo("SoGLContext_instance", "glGetStringi = %p", glGetStringi);
       }
@@ -3132,7 +3137,7 @@ SoGLContext_instance(int contextid)
   }
 
 
-#ifdef OBOL_OSMESA_BUILD
+#ifdef OBOL_SWRAST_BUILD
   if (SoGLContext_debug()) {
     cc_debugerror_postinfo("SoGLContext_instance", "About to execute instance created callbacks");
   }
@@ -3147,7 +3152,7 @@ SoGLContext_instance(int contextid)
     }
   }
 
-#ifdef OBOL_OSMESA_BUILD
+#ifdef OBOL_SWRAST_BUILD
   if (SoGLContext_debug()) {
     cc_debugerror_postinfo("SoGLContext_instance", "RETURN: SoGLContext_instance returning successfully");
   }
@@ -3176,7 +3181,7 @@ SoGLContext_instance_from_context_ptr(void * ctx)
 void
 SoGLContext_destruct(uint32_t contextid)
 {
-#if defined(OBOL_BUILD_DUAL_GL) && !defined(SOGL_PREFIX_SET)
+#if defined(OBOL_DUAL_GL_BUILD) && !defined(SOGL_PREFIX_SET)
   /* In dual-GL builds, OSMesa contexts are stored in the osmesa variant's
      own dictionary.  Dispatch to the osmesa implementation and clean up the
      backend registry entries so the context ID can be treated as system-GL in
@@ -5997,7 +6002,7 @@ SoGLContext_has_framebuffer_objects(const SoGLContext * glue)
  * backend (system GL vs. OSMesa) is not known at compile time — in
  * particular inside SoSceneTexture2 and any other node that runs in
  * both a system-GL context and an OSMesa context within the same
- * process (OBOL_BUILD_DUAL_GL).  The function pointers were filled in
+ * process (OBOL_DUAL_GL_BUILD).  The function pointers were filled in
  * by glglue_resolve_symbols() from the correct backend. */
 
 void
@@ -6141,7 +6146,7 @@ SoGLContext_glCopyTexSubImage2D(const SoGLContext * glue,
  * Additional core GL 1.0/1.1 dispatch wrappers.
  *
  * These functions dispatch through the SoGLContext function-pointer table
- * so that dual-GL builds (OBOL_BUILD_DUAL_GL) correctly call either system
+ * so that dual-GL builds (OBOL_DUAL_GL_BUILD) correctly call either system
  * OpenGL or OSMesa based on which backend owns the current context, without
  * ever mixing backends within the same render pass.
  * --------------------------------------------------------------------- */

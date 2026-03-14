@@ -6,7 +6,7 @@
  * other through any global state.
  */
 
-#ifdef OBOL_OSMESA_BUILD
+#ifdef OBOL_SWRAST_BUILD
 /* OSMesa-specific context manager example */
 #include <Inventor/SoDB.h>
 #include <Inventor/SoOffscreenRenderer.h>
@@ -50,7 +50,7 @@ inline void demonstrateSystemGLUsage(SoDB::ContextManager * mgr) {
     printf("FBO Support: %s\n", hasFBOSupport ? "Yes" : "No");
 }
 
-#endif /* OBOL_OSMESA_BUILD */
+#endif /* OBOL_SWRAST_BUILD */
 
 /*
  * Preferred API usage summary

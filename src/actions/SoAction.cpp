@@ -407,7 +407,7 @@ SoAction::initClasses(void)
 {
   SoCallbackAction::initClass();
   SoGLRenderAction::initClass();
-  SoRaytraceRenderAction::initClass();
+  SoSceneRenderAction::initClass();
   SoBoxHighlightRenderAction::initClass();
   SoLineHighlightRenderAction::initClass();
   SoGetBoundingBoxAction::initClass();

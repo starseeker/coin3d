@@ -166,6 +166,6 @@
 #include <Inventor/nodes/SoCacheHint.h>
 #include <Inventor/nodes/SoDepthBuffer.h>
 #include <Inventor/nodes/SoAlphaTest.h>
-#include <Inventor/nodes/SoRaytracingParams.h>
+#include <Inventor/nodes/SoSceneRendererParams.h>
 
 #endif // !OBOL_SONODES_H

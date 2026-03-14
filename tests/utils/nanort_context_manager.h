@@ -5,7 +5,7 @@
  * nanort for CPU ray-triangle intersection instead of OpenGL.
  *
  * Scene collection (geometry extraction, proxy shapes, text overlays, lights)
- * is handled by SoRaytracerSceneCollector from the Obol library.  Only the
+ * is handled by SoSceneCollector from the Obol library.  Only the
  * nanort-specific BVH construction, ray-triangle intersection, and Phong
  * shading remain here.
  *
@@ -26,25 +26,25 @@
  *   renderer.render(root);          // calls nrt_mgr.renderScene() internally
  *   renderer.writeToRGB("out.rgb"); // writes the raytraced pixels
  *
- * Obol APIs used internally (via SoRaytracerSceneCollector):
+ * Obol APIs used internally (via SoSceneCollector):
  *   - SoCallbackAction  – extract triangles, normals, materials from scene graph
- *   - SoSearchAction    – find camera, SoRaytracingParams in scene graph
+ *   - SoSearchAction    – find camera, SoSceneRendererParams in scene graph
  *   - SbViewportRegion  – viewport for camera setup
  *   - SoCamera          – get view volume for ray generation
  *   - SbViewVolume      – projectPointToLine() for per-pixel ray directions
  *   - SbMatrix          – transform vertices/normals/positions to world space
- *   - SoRaytracingParams – rendering hints (shadows, reflections, AA, ambient)
+ *   - SoSceneRendererParams – rendering hints (shadows, reflections, AA, ambient)
  *
  * Rendering features implemented:
  *   - Perspective and orthographic cameras (via SoCamera / SbViewVolume)
- *   - All light types (via SoRaytracerSceneCollector light collection)
+ *   - All light types (via SoSceneCollector light collection)
  *   - SoMaterial: diffuse, specular, emissive, ambient, shininess
- *   - All triangle-generating shapes via SoRaytracerSceneCollector
- *   - SoRaytracingParams: hard shadows, specular reflections, AA, ambient fill
- *   - SoText2, SoHUDLabel, SoHUDButton overlays via SoRaytracerSceneCollector
+ *   - All triangle-generating shapes via SoSceneCollector
+ *   - SoSceneRendererParams: hard shadows, specular reflections, AA, ambient fill
+ *   - SoText2, SoHUDLabel, SoHUDButton overlays via SoSceneCollector
  *
  * Dependencies:
- *   - SoRaytracerSceneCollector (Obol library)
+ *   - SoSceneCollector (Obol library)
  *   - nanort.h (external/nanort/nanort.h)
  */
 
@@ -52,7 +52,7 @@
 #define OBOL_NANORT_CONTEXT_MANAGER_H
 
 // ---- Obol generic raytracing infrastructure ---------------------------------
-#include <Inventor/SoRaytracerSceneCollector.h>
+#include <Inventor/SoSceneCollector.h>
 #include <Inventor/SoDB.h>
 #include <Inventor/SbViewportRegion.h>
 #include <Inventor/SbViewVolume.h>
@@ -60,7 +60,7 @@
 #include <Inventor/SbVec3f.h>
 #include <Inventor/actions/SoSearchAction.h>
 #include <Inventor/nodes/SoCamera.h>
-#include <Inventor/nodes/SoRaytracingParams.h>
+#include <Inventor/nodes/SoSceneRendererParams.h>
 
 // ---- nanort -----------------------------------------------------------------
 #include "nanort.h"
@@ -73,11 +73,11 @@
 #include <thread>
 
 // ==========================================================================
-// NrtScene: nanort BVH built from SoRtTriangle data
+// NrtScene: nanort BVH built from SoScTriangle data
 // ==========================================================================
 // Holds the flat vertex/face/normal arrays consumed by nanort plus the built
 // BVH acceleration structure.  Material and interpolated-normal lookups use
-// the SoRtTriangle vector from SoRaytracerSceneCollector directly so this
+// the SoScTriangle vector from SoSceneCollector directly so this
 // struct only owns the intersection-query data.
 
 struct NrtScene {
@@ -86,7 +86,7 @@ struct NrtScene {
     std::vector<float>        normals;  // 9 floats/triangle
     nanort::BVHAccel<float>   accel;
 
-    bool build(const std::vector<SoRtTriangle> & tris)
+    bool build(const std::vector<SoScTriangle> & tris)
     {
         const size_t n = tris.size();
         if (n == 0) return false;
@@ -148,7 +148,7 @@ static inline float nrt_rand01(uint32_t & s) {
 
 // Phong shading contribution from one light.
 static void nrt_phong(const float * N, const float * V, const float * L,
-                      const SoRtMaterial & mat,
+                      const SoScMaterial & mat,
                       const float * lightRGB, float lightIntensity,
                       float out[3])
 {
@@ -202,8 +202,8 @@ static void nrt_shade(const NrtScene & scene,
                        const float hitPt[3],
                        const float N[3],
                        const float V[3],
-                       const SoRtMaterial & mat,
-                       const std::vector<SoRtLightInfo> & lights,
+                       const SoScMaterial & mat,
+                       const std::vector<SoScLightInfo> & lights,
                        float ambientFill,
                        bool shadowsEnabled,
                        float out[3])
@@ -212,15 +212,15 @@ static void nrt_shade(const NrtScene & scene,
     out[1] = mat.emission[1] + ambientFill * mat.ambient[1];
     out[2] = mat.emission[2] + ambientFill * mat.ambient[2];
 
-    for (const SoRtLightInfo & li : lights) {
+    for (const SoScLightInfo & li : lights) {
         float L[3];
         float attenuation = li.intensity;
         float shadowMaxT  = 1.0e30f;
 
-        if (li.type == SO_RT_DIRECTIONAL) {
+        if (li.type == SO_SC_DIRECTIONAL) {
             L[0] = -li.dir[0]; L[1] = -li.dir[1]; L[2] = -li.dir[2];
             nrt_normalize3(L);
-        } else if (li.type == SO_RT_POINT) {
+        } else if (li.type == SO_SC_POINT) {
             L[0] = li.pos[0] - hitPt[0];
             L[1] = li.pos[1] - hitPt[1];
             L[2] = li.pos[2] - hitPt[2];
@@ -230,7 +230,7 @@ static void nrt_shade(const NrtScene & scene,
             const float d2 = dist * dist;
             attenuation = li.intensity / (1.0f + d2);
             shadowMaxT  = dist;
-        } else { // SO_RT_SPOT
+        } else { // SO_SC_SPOT
             L[0] = li.pos[0] - hitPt[0];
             L[1] = li.pos[1] - hitPt[1];
             L[2] = li.pos[2] - hitPt[2];
@@ -266,9 +266,9 @@ static void nrt_shade(const NrtScene & scene,
 // Trace a ray and return RGB colour, with optional reflection bounces.
 static void nrt_trace(const NrtScene & scene,
                        const nanort::TriangleIntersector<float> & intersector,
-                       const std::vector<SoRtTriangle> & tris,
+                       const std::vector<SoScTriangle> & tris,
                        const float org[3], const float dir[3],
-                       const std::vector<SoRtLightInfo> & lights,
+                       const std::vector<SoScLightInfo> & lights,
                        float ambientFill,
                        bool shadowsEnabled,
                        int depth,
@@ -310,7 +310,7 @@ static void nrt_trace(const NrtScene & scene,
         org[2] + dir[2] * isect.t
     };
 
-    const SoRtMaterial & mat = tris[fid].mat;
+    const SoScMaterial & mat = tris[fid].mat;
 
     nrt_shade(scene, intersector, hitPt, N, V, mat, lights,
               ambientFill, shadowsEnabled, out);
@@ -347,10 +347,10 @@ static void nrt_trace(const NrtScene & scene,
 // SoNanoRTContextManager
 // ==========================================================================
 //
-// Scene collection is delegated to SoRaytracerSceneCollector which manages
+// Scene collection is delegated to SoSceneCollector which manages
 // the SoCallbackAction setup, proxy geometry, text overlays, light extraction,
 // and scene-change cache.  This class retains only nanort-specific state:
-// the built BVH (NrtScene) and the cached SoRaytracingParams settings.
+// the built BVH (NrtScene) and the cached SoSceneRendererParams settings.
 //
 // Thread safety: not thread-safe; use from a single thread.
 
@@ -442,19 +442,19 @@ public:
                     return FALSE;
             }
 
-            // Cache SoRaytracingParams (any change bumps root nodeId → rebuild)
+            // Cache SoSceneRendererParams (any change bumps root nodeId → rebuild)
             cachedShadowsEnabled_    = false;
             cachedMaxBouncesAllowed_ = 0;
             cachedSamplesPerPixel_   = 1;
             cachedAmbientFill_       = 0.20f;
             {
                 SoSearchAction sa;
-                sa.setType(SoRaytracingParams::getClassTypeId());
+                sa.setType(SoSceneRendererParams::getClassTypeId());
                 sa.setInterest(SoSearchAction::FIRST);
                 sa.apply(scene);
                 if (sa.getPath()) {
-                    const SoRaytracingParams * rp =
-                        static_cast<const SoRaytracingParams *>(
+                    const SoSceneRendererParams * rp =
+                        static_cast<const SoSceneRendererParams *>(
                             sa.getPath()->getTail());
                     cachedShadowsEnabled_    =
                         rp->shadowsEnabled.getValue() != FALSE;
@@ -484,8 +484,8 @@ public:
         const int   samplesPerPixel   = cachedSamplesPerPixel_;
         const float ambientFill       = cachedAmbientFill_;
 
-        const std::vector<SoRtTriangle>  & tris   = collector_.getTriangles();
-        const std::vector<SoRtLightInfo> & lights  = collector_.getLights();
+        const std::vector<SoScTriangle>  & tris   = collector_.getTriangles();
+        const std::vector<SoScLightInfo> & lights  = collector_.getLights();
 
         // --- 4. Raytrace ----------------------------------------------------
         if (!tris.empty()) {
@@ -630,7 +630,7 @@ public:
                             p0z + dz * isect.t
                         };
 
-                        const SoRtMaterial & mat = tris[fid].mat;
+                        const SoScMaterial & mat = tris[fid].mat;
 
                         float px[3] = { 0.0f, 0.0f, 0.0f };
                         nrt_shade(nrtScene, intersector, hitPt, N, V, mat,
@@ -705,7 +705,7 @@ public:
     }
 
 private:
-    SoRaytracerSceneCollector collector_;
+    SoSceneCollector collector_;
     NrtScene                  cachedNrtScene_;
     bool                      cachedShadowsEnabled_    = false;
     int                       cachedMaxBouncesAllowed_ = 0;

@@ -7,11 +7,11 @@
 #   examples/
 #   ├── CMakeLists.txt          this file
 #   ├── fltk/                   FLTK-based GUI viewers
-#   │   ├── CMakeLists.txt
+#   │   ├── CMakeLists.txt      FLTK detection + viewer options live here
 #   │   ├── obol_viewer.cpp         full-featured multi-panel scene viewer
 #   │   └── obol_minimalist_viewer.cpp  basic-context scene stress-tester
 #   ├── qt/                     Qt6-based viewer and widget example
-#   │   ├── CMakeLists.txt
+#   │   ├── CMakeLists.txt      Qt6 detection + viewer options live here
 #   │   ├── obol_qt_viewer.cpp      Qt6 scene catalogue browser
 #   │   ├── qt_obol_example.cpp     standalone QtObolWidget demo
 #   │   └── qt_obol_widget.h        self-contained Qt/Obol widget
@@ -27,37 +27,34 @@
 
 # -----------------------------------------------------------------------
 # FLTK viewers (obol_viewer, obol_minimalist_viewer)
+# Detection, submodule management and viewer options live in fltk/.
 # -----------------------------------------------------------------------
-if(OBOL_BUILD_VIEWER OR OBOL_BUILD_MINIMALIST_VIEWER)
-    if(FLTK_FOUND)
-        add_subdirectory(fltk)
-    else()
-        message(STATUS "examples/fltk: skipped (FLTK not found)")
-    endif()
-endif()
+add_subdirectory(fltk)
 
 # -----------------------------------------------------------------------
 # Qt viewers and examples (obol_qt_viewer, qt_obol_example)
+# Qt6 detection and viewer options live in qt/.
 # -----------------------------------------------------------------------
-if(OBOL_BUILD_QT_VIEWER OR OBOL_BUILD_QT_EXAMPLE)
-    if(Qt6_FOUND)
-        add_subdirectory(qt)
-    else()
-        message(STATUS "examples/qt: skipped (Qt6 not found)")
-    endif()
-endif()
+add_subdirectory(qt)
 
 # -----------------------------------------------------------------------
 # Mentor book examples (Open Inventor Mentor chapters)
+# Uses headless_utils.h → requires a GL backend
 # -----------------------------------------------------------------------
-add_subdirectory(Mentor)
+if(OBOL_USE_SWRAST OR OBOL_USE_SYSTEM_GL)
+    add_subdirectory(Mentor)
+else()
+    message(STATUS "examples/Mentor: skipped (no OpenGL backend configured)")
+endif()
 
 # -----------------------------------------------------------------------
 # Standalone headless rendering examples
 # These examples render scenes using the headless backend (headless_utils.h)
 # and write SGI RGB output images.  They demonstrate various Obol features
 # without requiring a display server.
+# Skipped in no-OpenGL mode (both OBOL_USE_SWRAST and OBOL_USE_SYSTEM_GL off).
 # -----------------------------------------------------------------------
+if(OBOL_USE_SWRAST OR OBOL_USE_SYSTEM_GL)
 
 # arb8_dragger_example: SoProceduralShape with interactive SoDragger handles
 add_executable(arb8_dragger_example arb8_dragger_example.cpp)
@@ -72,12 +69,12 @@ target_link_libraries(arb8_dragger_example PRIVATE
     ${PROJECT_NAME}
     ${OBOL_TARGET_LINK_LIBRARIES}
 )
-if(OBOL_USE_OSMESA)
-    target_compile_definitions(arb8_dragger_example PRIVATE OBOL_OSMESA_BUILD)
+if(OBOL_USE_SWRAST AND NOT OBOL_USE_SYSTEM_GL)
+    target_compile_definitions(arb8_dragger_example PRIVATE OBOL_SWRAST_BUILD)
     target_include_directories(arb8_dragger_example PRIVATE
         "${PROJECT_SOURCE_DIR}/external/osmesa/include")
-elseif(OBOL_BUILD_DUAL_GL)
-    target_compile_definitions(arb8_dragger_example PRIVATE OBOL_BUILD_DUAL_GL)
+elseif(OBOL_USE_SWRAST AND OBOL_USE_SYSTEM_GL)
+    target_compile_definitions(arb8_dragger_example PRIVATE OBOL_SWRAST_BUILD OBOL_DUAL_GL_BUILD)
 endif()
 if(UNIX AND NOT APPLE)
     if(X11_FOUND)
@@ -103,12 +100,12 @@ target_link_libraries(truncated_cone_example PRIVATE
     ${PROJECT_NAME}
     ${OBOL_TARGET_LINK_LIBRARIES}
 )
-if(OBOL_USE_OSMESA)
-    target_compile_definitions(truncated_cone_example PRIVATE OBOL_OSMESA_BUILD)
+if(OBOL_USE_SWRAST AND NOT OBOL_USE_SYSTEM_GL)
+    target_compile_definitions(truncated_cone_example PRIVATE OBOL_SWRAST_BUILD)
     target_include_directories(truncated_cone_example PRIVATE
         "${PROJECT_SOURCE_DIR}/external/osmesa/include")
-elseif(OBOL_BUILD_DUAL_GL)
-    target_compile_definitions(truncated_cone_example PRIVATE OBOL_BUILD_DUAL_GL)
+elseif(OBOL_USE_SWRAST AND OBOL_USE_SYSTEM_GL)
+    target_compile_definitions(truncated_cone_example PRIVATE OBOL_SWRAST_BUILD OBOL_DUAL_GL_BUILD)
 endif()
 if(UNIX AND NOT APPLE)
     if(X11_FOUND)
@@ -120,3 +117,5 @@ if(UNIX AND NOT APPLE)
         target_link_libraries(truncated_cone_example PRIVATE ${OPENGL_gl_LIBRARY})
     endif()
 endif()
+
+endif() # OBOL_USE_SWRAST OR OBOL_USE_SYSTEM_GL

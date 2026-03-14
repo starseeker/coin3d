@@ -40,7 +40,7 @@
  * -------
  * In single-backend Obol builds (system OpenGL only, or pure OSMesa) raw
  * gl*() calls work fine because there is only one backend.  In dual-backend
- * builds (OBOL_BUILD_DUAL_GL) both system OpenGL and OSMesa contexts coexist
+ * builds (OBOL_DUAL_GL_BUILD) both system OpenGL and OSMesa contexts coexist
  * in the same process; a raw gl*() call is always routed to the system GL
  * library regardless of which context is currently active, so OSMesa renders
  * receive the wrong calls.

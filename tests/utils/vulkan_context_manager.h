@@ -4,7 +4,7 @@
  * SoVulkanContextManager – a SoDB::ContextManager that uses the Vulkan API
  * for hardware-accelerated offscreen rasterisation.
  *
- * Scene collection is delegated to SoRaytracerSceneCollector (the same
+ * Scene collection is delegated to SoSceneCollector (the same
  * infrastructure used by SoNanoRTContextManager and SoEmbreeContextManager).
  * Per-vertex Phong lighting is pre-computed on the CPU from the collected
  * light and material data; the GPU only performs vertex transformation,
@@ -47,7 +47,7 @@
 #define OBOL_VULKAN_CONTEXT_MANAGER_H
 
 // ---- Obol generic raytracing infrastructure ---------------------------------
-#include <Inventor/SoRaytracerSceneCollector.h>
+#include <Inventor/SoSceneCollector.h>
 #include <Inventor/SoDB.h>
 #include <Inventor/SbViewportRegion.h>
 #include <Inventor/SbViewVolume.h>
@@ -55,7 +55,7 @@
 #include <Inventor/SbVec3f.h>
 #include <Inventor/actions/SoSearchAction.h>
 #include <Inventor/nodes/SoCamera.h>
-#include <Inventor/nodes/SoRaytracingParams.h>
+#include <Inventor/nodes/SoSceneRendererParams.h>
 
 // ---- Vulkan -----------------------------------------------------------------
 #include <vulkan/vulkan.h>
@@ -86,12 +86,12 @@ static inline void vk_normalize3(float v[3]) {
 // ==========================================================================
 // CPU-side Phong shading (no shadows – rasterisation backend)
 // ==========================================================================
-// All light and material data is collected by SoRaytracerSceneCollector.
+// All light and material data is collected by SoSceneCollector.
 // The resulting pre-lit RGBA colour is stored in each vertex so the
 // GPU performs only interpolation and depth testing.
 
 static void vk_phong_contrib(const float * N, const float * V, const float * L,
-                              const SoRtMaterial & mat,
+                              const SoScMaterial & mat,
                               const float * lightRGB, float lightIntensity,
                               float out[3])
 {
@@ -118,8 +118,8 @@ static void vk_phong_contrib(const float * N, const float * V, const float * L,
 // Compute the shaded RGBA colour for a surface point given its normal,
 // view direction, and the scene's light list.
 static void vk_shade(const float pos[3], const float N[3], const float V[3],
-                     const SoRtMaterial & mat,
-                     const std::vector<SoRtLightInfo> & lights,
+                     const SoScMaterial & mat,
+                     const std::vector<SoScLightInfo> & lights,
                      float ambientFill,
                      float out[4])
 {
@@ -128,14 +128,14 @@ static void vk_shade(const float pos[3], const float N[3], const float V[3],
     out[2] = mat.emission[2] + ambientFill * mat.ambient[2];
     out[3] = 1.0f;
 
-    for (const SoRtLightInfo & li : lights) {
+    for (const SoScLightInfo & li : lights) {
         float L[3];
         float attenuation = li.intensity;
 
-        if (li.type == SO_RT_DIRECTIONAL) {
+        if (li.type == SO_SC_DIRECTIONAL) {
             L[0] = -li.dir[0]; L[1] = -li.dir[1]; L[2] = -li.dir[2];
             vk_normalize3(L);
-        } else if (li.type == SO_RT_POINT) {
+        } else if (li.type == SO_SC_POINT) {
             L[0] = li.pos[0] - pos[0];
             L[1] = li.pos[1] - pos[1];
             L[2] = li.pos[2] - pos[2];
@@ -143,7 +143,7 @@ static void vk_shade(const float pos[3], const float N[3], const float V[3],
             if (dist < 1e-6f) continue;
             L[0] /= dist; L[1] /= dist; L[2] /= dist;
             attenuation = li.intensity / (1.0f + dist * dist);
-        } else { // SO_RT_SPOT
+        } else { // SO_SC_SPOT
             L[0] = li.pos[0] - pos[0];
             L[1] = li.pos[1] - pos[1];
             L[2] = li.pos[2] - pos[2];
@@ -337,16 +337,16 @@ public:
             collector_.reset();
             collector_.collect(scene, vp, proxyVp);
 
-            // Cache SoRaytracingParams
+            // Cache SoSceneRendererParams
             cachedAmbientFill_ = 0.20f;
             {
                 SoSearchAction sa;
-                sa.setType(SoRaytracingParams::getClassTypeId());
+                sa.setType(SoSceneRendererParams::getClassTypeId());
                 sa.setInterest(SoSearchAction::FIRST);
                 sa.apply(scene);
                 if (sa.getPath()) {
-                    const SoRaytracingParams * rp =
-                        static_cast<const SoRaytracingParams *>(
+                    const SoSceneRendererParams * rp =
+                        static_cast<const SoSceneRendererParams *>(
                             sa.getPath()->getTail());
                     cachedAmbientFill_ = rp->ambientIntensity.getValue();
                     if (cachedAmbientFill_ < 0.0f) cachedAmbientFill_ = 0.0f;
@@ -358,8 +358,8 @@ public:
             collector_.collectOverlaysOnly(scene, vp);
         }
 
-        const std::vector<SoRtTriangle>  & tris   = collector_.getTriangles();
-        const std::vector<SoRtLightInfo> & lights  = collector_.getLights();
+        const std::vector<SoScTriangle>  & tris   = collector_.getTriangles();
+        const std::vector<SoScLightInfo> & lights  = collector_.getLights();
         const float ambientFill = cachedAmbientFill_;
 
         // --- 3. Build view-projection matrix --------------------------------
@@ -432,7 +432,7 @@ public:
         std::vector<VkVtx> verts;
         verts.reserve(tris.size() * 3);
 
-        for (const SoRtTriangle & tri : tris) {
+        for (const SoScTriangle & tri : tris) {
             for (int v = 0; v < 3; ++v) {
                 VkVtx vtx;
                 vtx.pos[0] = tri.pos[v][0];
@@ -545,7 +545,7 @@ private:
     bool             initFailed_  = false;
 
     // Scene collector and cached parameters
-    SoRaytracerSceneCollector collector_;
+    SoSceneCollector collector_;
     float                     cachedAmbientFill_ = 0.20f;
     unsigned int              displayVpW_        = 0;
     unsigned int              displayVpH_        = 0;

@@ -1307,7 +1307,7 @@ SoProceduralShape::generatePrimitives(SoAction* action)
 
   // Consult the current draw style for all action types that carry state.
   // (For GLRenderAction the element is always present; for SoCallbackAction
-  // and SoRaytraceRenderAction it is set when a SoDrawStyle node is traversed.)
+  // and SoSceneRenderAction it is set when a SoDrawStyle node is traversed.)
   bool wireframeMode = false;
   SoState* state = action->getState();
   if (state) {

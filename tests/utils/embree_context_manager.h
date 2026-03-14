@@ -5,7 +5,7 @@
  * Intel Embree 4 for CPU ray-triangle intersection instead of OpenGL.
  *
  * Scene collection (geometry extraction, proxy shapes, text overlays, lights)
- * is handled by SoRaytracerSceneCollector from the Obol library — the same
+ * is handled by SoSceneCollector from the Obol library — the same
  * generic infrastructure used by SoNanoRTContextManager.  Only the Embree-
  * specific BVH construction and ray-triangle intersection differ.
  *
@@ -25,12 +25,12 @@
  *   renderer.writeToRGB("out.rgb");
  *
  * Rendering features:
- *   - All features from SoRaytracerSceneCollector (proxy shapes, HUD, …)
+ *   - All features from SoSceneCollector (proxy shapes, HUD, …)
  *   - Perspective and orthographic cameras
  *   - Directional, point, and spot lights with Phong shading
  *   - Hard shadows via rtcOccluded1()
  *   - Specular reflection bounces
- *   - Anti-aliasing (jittered multi-sample, from SoRaytracingParams)
+ *   - Anti-aliasing (jittered multi-sample, from SoSceneRendererParams)
  *   - SoText2, SoHUDLabel, SoHUDButton pixel overlays
  *
  * Requires: embree4/rtcore.h (libembree-dev on Ubuntu / embree4 on Fedora)
@@ -40,7 +40,7 @@
 #define OBOL_EMBREE_CONTEXT_MANAGER_H
 
 // ---- Obol generic raytracing infrastructure ---------------------------------
-#include <Inventor/SoRaytracerSceneCollector.h>
+#include <Inventor/SoSceneCollector.h>
 #include <Inventor/SoDB.h>
 #include <Inventor/SbViewportRegion.h>
 #include <Inventor/SbViewVolume.h>
@@ -48,7 +48,7 @@
 #include <Inventor/SbVec3f.h>
 #include <Inventor/actions/SoSearchAction.h>
 #include <Inventor/nodes/SoCamera.h>
-#include <Inventor/nodes/SoRaytracingParams.h>
+#include <Inventor/nodes/SoSceneRendererParams.h>
 
 // ---- Embree 4 ---------------------------------------------------------------
 #include <embree4/rtcore.h>
@@ -88,13 +88,13 @@ static inline float emb_rand01(uint32_t & s) {
 // Embree scene wrapper
 // ==========================================================================
 // Manages the Embree device/scene lifetime and provides convenience helpers
-// for building from SoRtTriangle data and querying ray hits / occlusion.
+// for building from SoScTriangle data and querying ray hits / occlusion.
 
 struct EmbreeScene {
     RTCDevice device = nullptr;
     RTCScene  scene  = nullptr;
 
-    // Flat vertex buffer mirroring the SoRtTriangle positions so Embree can
+    // Flat vertex buffer mirroring the SoScTriangle positions so Embree can
     // reference it directly (Embree holds a pointer, so lifetime must match).
     std::vector<float>        vertices; // 9 floats/triangle
     std::vector<unsigned int> indices;  // 3 indices/triangle
@@ -109,7 +109,7 @@ struct EmbreeScene {
     }
 
     // Build from a collected triangle list.  Returns true on success.
-    bool build(const std::vector<SoRtTriangle> & tris)
+    bool build(const std::vector<SoScTriangle> & tris)
     {
         destroy();
 
@@ -190,7 +190,7 @@ struct EmbreeScene {
 // ==========================================================================
 
 static void emb_phong(const float * N, const float * V, const float * L,
-                       const SoRtMaterial & mat,
+                       const SoScMaterial & mat,
                        const float * lightRGB, float lightIntensity,
                        float out[3])
 {
@@ -243,8 +243,8 @@ static void emb_shade(const EmbreeScene & es,
                        const float hitPt[3],
                        const float N[3],
                        const float V[3],
-                       const SoRtMaterial & mat,
-                       const std::vector<SoRtLightInfo> & lights,
+                       const SoScMaterial & mat,
+                       const std::vector<SoScLightInfo> & lights,
                        float ambientFill,
                        bool shadowsEnabled,
                        float out[3])
@@ -253,15 +253,15 @@ static void emb_shade(const EmbreeScene & es,
     out[1] = mat.emission[1] + ambientFill * mat.ambient[1];
     out[2] = mat.emission[2] + ambientFill * mat.ambient[2];
 
-    for (const SoRtLightInfo & li : lights) {
+    for (const SoScLightInfo & li : lights) {
         float L[3];
         float attenuation = li.intensity;
         float shadowMaxT  = 1.0e30f;
 
-        if (li.type == SO_RT_DIRECTIONAL) {
+        if (li.type == SO_SC_DIRECTIONAL) {
             L[0] = -li.dir[0]; L[1] = -li.dir[1]; L[2] = -li.dir[2];
             emb_normalize3(L);
-        } else if (li.type == SO_RT_POINT) {
+        } else if (li.type == SO_SC_POINT) {
             L[0] = li.pos[0] - hitPt[0];
             L[1] = li.pos[1] - hitPt[1];
             L[2] = li.pos[2] - hitPt[2];
@@ -271,7 +271,7 @@ static void emb_shade(const EmbreeScene & es,
             const float d2 = dist * dist;
             attenuation = li.intensity / (1.0f + d2);
             shadowMaxT  = dist;
-        } else { // SO_RT_SPOT
+        } else { // SO_SC_SPOT
             L[0] = li.pos[0] - hitPt[0];
             L[1] = li.pos[1] - hitPt[1];
             L[2] = li.pos[2] - hitPt[2];
@@ -306,10 +306,10 @@ static void emb_shade(const EmbreeScene & es,
 
 // Recursive ray trace (used for reflection bounces).
 static void emb_trace(const EmbreeScene & es,
-                       const std::vector<SoRtTriangle> & tris,
+                       const std::vector<SoScTriangle> & tris,
                        const std::vector<float> & normals,
                        const float org[3], const float dir[3],
-                       const std::vector<SoRtLightInfo> & lights,
+                       const std::vector<SoScLightInfo> & lights,
                        float ambientFill,
                        bool shadowsEnabled,
                        int depth,
@@ -358,7 +358,7 @@ static void emb_trace(const EmbreeScene & es,
         org[2] + dir[2] * t
     };
 
-    const SoRtMaterial & mat = tris[fid].mat;
+    const SoScMaterial & mat = tris[fid].mat;
     std::vector<float> dummy; // unused by emb_shade
     emb_shade(es, dummy, hitPt, N, V, mat, lights,
               ambientFill, shadowsEnabled, out);
@@ -464,7 +464,7 @@ public:
             collector_.reset();
             collector_.collect(scene, vp, proxyVp);
 
-            const std::vector<SoRtTriangle> & tris = collector_.getTriangles();
+            const std::vector<SoScTriangle> & tris = collector_.getTriangles();
 
             // Build Embree BVH
             embreeScene_.destroy();
@@ -486,19 +486,19 @@ public:
                 }
             }
 
-            // Cache SoRaytracingParams
+            // Cache SoSceneRendererParams
             cachedShadowsEnabled_    = false;
             cachedMaxBouncesAllowed_ = 0;
             cachedSamplesPerPixel_   = 1;
             cachedAmbientFill_       = 0.20f;
             {
                 SoSearchAction sa;
-                sa.setType(SoRaytracingParams::getClassTypeId());
+                sa.setType(SoSceneRendererParams::getClassTypeId());
                 sa.setInterest(SoSearchAction::FIRST);
                 sa.apply(scene);
                 if (sa.getPath()) {
-                    const SoRaytracingParams * rp =
-                        static_cast<const SoRaytracingParams *>(
+                    const SoSceneRendererParams * rp =
+                        static_cast<const SoSceneRendererParams *>(
                             sa.getPath()->getTail());
                     cachedShadowsEnabled_    =
                         rp->shadowsEnabled.getValue() != FALSE;
@@ -525,8 +525,8 @@ public:
         const int   samplesPerPixel   = cachedSamplesPerPixel_;
         const float ambientFill       = cachedAmbientFill_;
 
-        const std::vector<SoRtTriangle>  & tris   = collector_.getTriangles();
-        const std::vector<SoRtLightInfo> & lights  = collector_.getLights();
+        const std::vector<SoScTriangle>  & tris   = collector_.getTriangles();
+        const std::vector<SoScLightInfo> & lights  = collector_.getLights();
 
         // --- 3. Raytrace ----------------------------------------------------
         if (!tris.empty() && embreeScene_.scene) {
@@ -643,7 +643,7 @@ public:
                             p0z + dz * t
                         };
 
-                        const SoRtMaterial & mat = tris[fid].mat;
+                        const SoScMaterial & mat = tris[fid].mat;
 
                         float px[3] = { 0.0f, 0.0f, 0.0f };
                         std::vector<float> dummy;
@@ -718,7 +718,7 @@ public:
     }
 
 private:
-    SoRaytracerSceneCollector collector_;
+    SoSceneCollector collector_;
     EmbreeScene               embreeScene_;
     std::vector<float>        normals_;   // per-triangle vertex normals (9 floats/tri)
     bool                      cachedShadowsEnabled_    = false;

@@ -11,27 +11,28 @@
 # the test fails, indicating a rendering regression.
 #
 # Backend selection (inherits from parent project):
-#   OBOL_USE_OSMESA=ON  → define OBOL_OSMESA_BUILD, link OSMesa
+#   OBOL_USE_SWRAST=ON (without OBOL_USE_SYSTEM_GL)  → define OBOL_SWRAST_BUILD, link OSMesa
 #   default               → system OpenGL via GLX (needs X server / Xvfb)
 # =============================================================================
 
 # ---- Backend detection -------------------------------------------------------
-if(DEFINED OBOL_USE_OSMESA)
-    set(RENDERING_USE_OSMESA ${OBOL_USE_OSMESA})
+# Inherit from parent: swrast-only means using OSMesa context for rendering tests.
+# Dual-GL builds use system GL (GLX+Xvfb); swrast layer is in the library
+# but scene traversal uses system GL symbols.
+if(OBOL_USE_SWRAST AND NOT OBOL_USE_SYSTEM_GL)
+    set(RENDERING_USE_SWRAST ON)
 else()
-    set(RENDERING_USE_OSMESA OFF CACHE BOOL "Use OSMesa for rendering tests")
+    set(RENDERING_USE_SWRAST OFF)
 endif()
-# Note: OBOL_BUILD_DUAL_GL builds use system GL (GLX+Xvfb) for rendering
-# tests; the OSMesa layer is in the library but scene traversal uses system GL.
 
-if(RENDERING_USE_OSMESA)
+if(RENDERING_USE_SWRAST)
     set(OSMESA_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/external/osmesa/include")
     if(TARGET osmesa_interface)
         set(OSMESA_LINK_TARGET osmesa_interface)
     elseif(TARGET osmesa)
         set(OSMESA_LINK_TARGET osmesa)
     endif()
-    message(STATUS "Rendering tests: OSMesa backend")
+    message(STATUS "Rendering tests: software rasterizer (OSMesa) backend")
 else()
     message(STATUS "Rendering tests: GLX backend")
     find_package(X11 QUIET)
@@ -224,7 +225,7 @@ endmacro()
 #   - OBOL_EMBREE_BUILD defined  →  headless_utils.h uses SoEmbreeContextManager
 #   - The system embree4 include path and link target
 #
-# Embree tests use SoRaytracerSceneCollector (the same generic scene collection
+# Embree tests use SoSceneCollector (the same generic scene collection
 # API used by the NanoRT backend) so the same scene-graph functionality is
 # exercised: proxy shapes for line/point sets, wireframe cylinder rings,
 # text/HUD overlays, lights, and invisible-shape pruning.
@@ -314,8 +315,8 @@ add_nanort_testlib_rendering_test(render_background_gradient)
 # DrawStyle LINES emits thin-cylinder proxy triangles (wireframe-as-cylinders)
 # so that the wireframe cone is visible in the NanoRT ray-tracing output.
 add_nanort_testlib_rendering_test(render_procedural_shape)
-# NanoRT shadow test: validates shadow-ray casting via SoRaytracingParams.
-# Uses SoDirectionalLight + SoRaytracingParams(shadowsEnabled=TRUE); does NOT
+# NanoRT shadow test: validates shadow-ray casting via SoSceneRendererParams.
+# Uses SoDirectionalLight + SoSceneRendererParams(shadowsEnabled=TRUE); does NOT
 # use SoShadowGroup (which requires OpenGL GLSL shaders).  The pixel-level
 # shadow validation (lit vs shadow regions on the ground plane) is only run
 # under the NanoRT build; the GL backend does a basic non-blank geometry check.
@@ -470,11 +471,11 @@ set_tests_properties(stt_iosevka PROPERTIES
 # memory corruption when features like FBOs are unavailable.
 #
 # Two build paths:
-#   OSMesa mode (RENDERING_USE_OSMESA): uses initCoinHeadless() with the
-#       OSMesa context manager — same headless path as all other OSMesa tests.
+#   swrast mode (RENDERING_USE_SWRAST): uses initCoinHeadless() with the
+#       OSMesa context manager — same headless path as all other swrast tests.
 #   System GL mode: uses BasicFLTKContextManager (FLTK 1×1 window); requires
 #       FLTK, X11, and system OpenGL.
-if(RENDERING_USE_OSMESA OR (FLTK_FOUND AND X11_FOUND AND (TARGET OpenGL::GL OR OPENGL_gl_LIBRARY)))
+if(RENDERING_USE_SWRAST OR (FLTK_FOUND AND X11_FOUND AND (TARGET OpenGL::GL OR OPENGL_gl_LIBRARY)))
     add_executable(render_basic_context render_basic_context.cpp)
     target_include_directories(render_basic_context PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
@@ -491,18 +492,18 @@ if(RENDERING_USE_OSMESA OR (FLTK_FOUND AND X11_FOUND AND (TARGET OpenGL::GL OR O
             ${PROJECT_NAME}
             ${OBOL_TARGET_LINK_LIBRARIES}
     )
-    if(RENDERING_USE_OSMESA)
-        # OSMesa mode: use initCoinHeadless() (headless OSMesa context manager).
+    if(RENDERING_USE_SWRAST)
+        # Swrast mode: use initCoinHeadless() (headless OSMesa context manager).
         # OBOL_VIEWER_FLTK_GL must NOT be defined — the #else branch in
         # render_basic_context.cpp uses headless_utils.h / initCoinHeadless().
-        target_compile_definitions(render_basic_context PRIVATE OBOL_OSMESA_BUILD)
+        target_compile_definitions(render_basic_context PRIVATE OBOL_SWRAST_BUILD)
         if(OSMESA_INCLUDE_DIR)
             target_include_directories(render_basic_context PRIVATE ${OSMESA_INCLUDE_DIR})
         endif()
         if(OSMESA_LINK_TARGET)
             target_link_libraries(render_basic_context PRIVATE ${OSMESA_LINK_TARGET})
         endif()
-        message(STATUS "render_basic_context: graceful-degradation test enabled (OSMesa/headless path)")
+        message(STATUS "render_basic_context: graceful-degradation test enabled (swrast/headless path)")
     else()
         # System GL mode: use BasicFLTKContextManager (FLTK 1×1 GL window).
         target_compile_definitions(render_basic_context PRIVATE OBOL_VIEWER_FLTK_GL)
@@ -703,8 +704,8 @@ target_include_directories(obol_render_tests_gl PRIVATE
 target_link_libraries(obol_render_tests_gl
     PUBLIC ${PROJECT_NAME} ${OBOL_TARGET_LINK_LIBRARIES}
 )
-if(RENDERING_USE_OSMESA)
-    target_compile_definitions(obol_render_tests_gl PRIVATE OBOL_OSMESA_BUILD)
+if(RENDERING_USE_SWRAST)
+    target_compile_definitions(obol_render_tests_gl PRIVATE OBOL_SWRAST_BUILD)
     if(OSMESA_INCLUDE_DIR)
         target_include_directories(obol_render_tests_gl PRIVATE ${OSMESA_INCLUDE_DIR})
     endif()
@@ -759,7 +760,7 @@ add_rendering_image_test(render_array_multiple_copy RMSE_THRESHOLD 15.0)
 # GLSL shader compilation crashes on headless GLX pixmap contexts due to
 # multiple GL contexts in the same process).  Only register the image
 # comparison test when building with OSMesa so GLX builds don't crash.
-if(RENDERING_USE_OSMESA)
+if(RENDERING_USE_SWRAST)
     add_rendering_image_test(render_shadow RMSE_THRESHOLD 25.0)
 endif()
 
@@ -876,7 +877,7 @@ set_tests_properties(render_nanort PROPERTIES
 
 # Shadow rendering validation test: only safe to run with OSMesa (SoShadowGroup
 # GLSL shader compilation crashes on headless GLX pixmap contexts).
-if(RENDERING_USE_OSMESA)
+if(RENDERING_USE_SWRAST)
     add_test(
         NAME render_shadow
         COMMAND "${CMAKE_COMMAND}"
@@ -887,6 +888,31 @@ if(RENDERING_USE_OSMESA)
     )
     set_tests_properties(render_shadow PROPERTIES
         TIMEOUT ${IMAGE_COMPARISON_TEST_TIMEOUT}
+    )
+endif()
+
+# ---- No-OpenGL scene graph test (no-GL build only) --------------------------
+# Verifies that the no-GL build (both OBOL_USE_SWRAST and OBOL_USE_SYSTEM_GL
+# are OFF) can initialise, traverse, and query a scene graph without any
+# OpenGL calls or display server.
+if(NOT OBOL_USE_SWRAST AND NOT OBOL_USE_SYSTEM_GL)
+    add_executable(nogl_scenegraph_test nogl_scenegraph_test.cpp)
+    target_include_directories(nogl_scenegraph_test PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${PROJECT_SOURCE_DIR}/include
+        ${PROJECT_BINARY_DIR}/include
+    )
+    target_link_libraries(nogl_scenegraph_test ${PROJECT_NAME})
+    set_target_properties(nogl_scenegraph_test PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin"
+    )
+    add_test(
+        NAME nogl_scenegraph_test
+        COMMAND $<TARGET_FILE:nogl_scenegraph_test>
+    )
+    set_tests_properties(nogl_scenegraph_test PROPERTIES
+        TIMEOUT 60
+        LABELS "nogl"
     )
 endif()
 

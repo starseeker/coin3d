@@ -1619,14 +1619,14 @@ SoDB::setContextManager(ContextManager * manager)
  * C helper coin_create_osmesa_context_manager_impl(); we forward to it.
  * In builds without OSMesa support the function returns nullptr.
  * --------------------------------------------------------------------- */
-#if defined(OBOL_OSMESA_BUILD) || defined(OBOL_BUILD_DUAL_GL)
+#if defined(OBOL_SWRAST_BUILD) || defined(OBOL_DUAL_GL_BUILD)
 extern "C" SoDB::ContextManager * coin_create_osmesa_context_manager_impl();
 #endif
 
 SoDB::ContextManager *
 SoDB::createOSMesaContextManager()
 {
-#if defined(OBOL_OSMESA_BUILD) || defined(OBOL_BUILD_DUAL_GL)
+#if defined(OBOL_SWRAST_BUILD) || defined(OBOL_DUAL_GL_BUILD)
   return coin_create_osmesa_context_manager_impl();
 #else
   return nullptr;

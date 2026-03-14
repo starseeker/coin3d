@@ -16,15 +16,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        gl_mode: [system-only, osmesa-only, dual]
+        gl_mode: [system-only, swrast-only, dual]
         unity_build: [ON, OFF]
         include:
           - gl_mode: system-only
-            cmake_gl_flags: -DOBOL_USE_SYSTEM_ONLY=ON
-          - gl_mode: osmesa-only
-            cmake_gl_flags: -DOBOL_USE_OSMESA=ON
+            cmake_gl_flags: -DOBOL_USE_SYSTEM_GL=ON -DOBOL_USE_SWRAST=OFF
+          - gl_mode: swrast-only
+            cmake_gl_flags: -DOBOL_USE_SWRAST=ON -DOBOL_USE_SYSTEM_GL=OFF
           - gl_mode: dual
-            cmake_gl_flags: -DOBOL_BUILD_DUAL_GL=ON
+            cmake_gl_flags: -DOBOL_USE_SWRAST=ON -DOBOL_USE_SYSTEM_GL=ON
 
     steps:
       - name: Checkout repository with submodules

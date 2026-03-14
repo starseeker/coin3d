@@ -1,70 +1,57 @@
-# Obol - minimalist rework of Coin
+# Obol - 3D Scene Display and Interaction Library
 
 ![Obol_Demo](docs/obol_viewer.png)
 ![Obol_Demo_Moving](docs/obol_viewer_moving.png)
 
-## Background
+## Introduction
 
-Obol is an OpenGL-based, 3D graphics library that has its roots in the Coin
-implementation of the Open Inventor 2.1 API.  Open Inventor was a scene graph
-based, retained mode, rendering and model manipulation API originally designed
-by SGI.  It quickly became the de facto standard graphics library for 3D
-visualization and visual simulation software in the scientific and engineering
-community after its release.  Coin implements this API, but was developed from
-scratch independently before SGI Open Inventor became open source.
+Obol is a 3D graphics library intended to support easy definition of and
+interaction with geometric scenes.  It largely implements the Open Inventor
+2.1 API, but does not maintin strict compatibility - see docs/API_DIFFERENCES.md
+for more details.
 
-**Note**: Obol does not maintain API compatibility with either Coin or Open
-Inventor 2.1 itself.  There are a number of changes, including the deliberate
-removal of all VRML/XML related code, but the one users will see most
-immediately is the strict context management requirement — you must pass a
-`ContextManager*` to `SoDB::init()`.  This isolates all platform-specific
-OpenGL interaction in the application; most modern toolkits have their own
-solutions to context management, so Obol leverages what they already do rather
-than defining its own toolkit bindings.  For event-driven interactions the
-application translates its own events into Obol's terms.  See
-`docs/API_DIFFERENCES.md` for the complete API delta versus upstream Coin.
+Major design philosophies include broad cross platform compatibility and minimal
+external dependencies.  Most modern toolkits provide their own means
+of integrating with system OpenGL contexts or other means of 3D display
+visualization - Obol accordingly provides an API to allow the application
+to specify how to use their display mechanisms and works within that framework.
+There are multiple worked examples in the examples/ directory.
 
-The upstream sources used as the starting point can be found in the `upstream/`
-directory and are available for reference when debugging.
+## Requirements
+
+Obol needs a C++17 compiler.  Further requirements depend on what backends
+the user is interested in - typically, you'll want a system OpenGL available
+for the best combination of features and performance.  The libosmesa backend
+provides a software-only OpenGL 2.0 + extensions stack that can support most
+of what Obol needs, but it will be slower.  Integration with other backends
+is also possible - see the examples for raytracing and Vulkan based
+approaches.
 
 ## Why call this Obol?
 
 The name Obol refers to an ancient small-denomination Greek coin worth one
-sixth of a drachma — a play on the upstream [Coin](https://github.com/coin3d/coin)
-project name, the relatively minimalist goals of this effort, and the age of the
-library itself.
-
-The upstream Coin3D project has a number of dependencies and features orthogonal
-to the primary use case here: a self-contained, dependency-light CAD scene
-manager.  Since application data is already in memory there is no need for file
-I/O, and the core API should be as portable and dependency-free as possible.
-The original code, written for C89-era compilers, has many opportunities for
-simplification and modernization under C++17.
-
-Since the changes required are invasive and strict compatibility with Coin3D or
-Open Inventor is not a goal, it makes sense to rename the library.  Expect
-ongoing breaking changes until the codebase reaches a stable point.
-
-Because Obol's OpenGL backend needs only OpenGL 2.0, the
-[osmesa](https://github.com/starseeker/osmesa) offscreen rasterizer can serve as
-a fully headless fallback.  This means the same feature set works in both
-hardware-accelerated and headless/CI modes, with the only difference being
-rendering speed.
+sixth of a drachma — a play on the name of the upstream [Coin](https://github.com/coin3d/coin)
+project that Obol was originally derived from.  Obol has a much smaller
+scope than Coin, and it's primary OpenGL code is fixed function pipeline based,
+so a small, ancient coin seemed like a good fit.
 
 ## Documentation
 
 * `docs/API_DIFFERENCES.md` — comprehensive API migration guide (Obol vs. Coin)
-* `docs/BUILD_OPTIONS.md` — CMake build options reference
+* `docs/BACKEND_SURVEY.md` — Documents which parts of the API can work without OpenGL
 * `docs/CONTEXT_MANAGEMENT_API.md` — `SoDB::ContextManager` API reference with worked examples
-* `docs/TESTING.md` — test suite overview and how to write new tests
-* `docs/COIN_MIGRATION_PLAN.md` — modernization status and completed work log
-* `docs/THREADING_MIGRATION.md` — C++17 threading migration details
 * `docs/STORAGE_MIGRATION.md` — thread-local storage migration analysis and status
-* `docs/PLATFORM_CLEANUP_SUMMARY.md` — platform-specific code removal summary
 
 ## License and trademarks
 
+Most Obol code is from Coin, and maintains its copyright and license:
+
 BSD License (c) Kongsberg Oil & Gas Technologies AS
+
+Contributions by the Obol project are under the same terms and license as
+Coin.  Embedded code from other sources has its own licenses, but we do not
+include any code incompatible with the BSD license in core Obol - see COPYING
+for details.  The Mentor example files are LGPL.
 
 OpenGL and Open Inventor are trademarks of SGI Inc.
 

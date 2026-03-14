@@ -64,7 +64,7 @@
 #include <Inventor/nodes/SoCylinder.h>
 #include <Inventor/nodes/SoCoordinate3.h>
 #include <Inventor/nodes/SoIndexedFaceSet.h>
-#include <Inventor/nodes/SoRaytracingParams.h>
+#include <Inventor/nodes/SoSceneRendererParams.h>
 #include <Inventor/SoPrimitiveVertex.h>
 
 // ---- nanort ------------------------------------------------------------------
@@ -479,10 +479,10 @@ int main(int argc, char** argv)
     SoSeparator* root = new SoSeparator;
     root->ref();
 
-    // Raytracing hints (SoRaytracingParams library node): enable hard shadows.
+    // Raytracing hints (SoSceneRendererParams library node): enable hard shadows.
     // Adding this node to the scene graph is the canonical way for any scene to
     // request raytracing-backend features; the hints are backend-agnostic.
-    SoRaytracingParams* rtParams = new SoRaytracingParams;
+    SoSceneRendererParams* rtParams = new SoSceneRendererParams;
     rtParams->shadowsEnabled.setValue(TRUE);
     rtParams->ambientIntensity.setValue(0.12f);
     root->addChild(rtParams);
@@ -558,7 +558,7 @@ int main(int argc, char** argv)
     cam->viewAll(root, vp);
     cam->position.setValue(cam->position.getValue() * 1.2f);
 
-    // --- 3. Read rendering hints from SoRaytracingParams ---------------------
+    // --- 3. Read rendering hints from SoSceneRendererParams ---------------------
     // In a full application the caller would read these from the scene; here we
     // query the node directly since we created it above.
     const bool shadowsEnabled = rtParams->shadowsEnabled.getValue() != FALSE;

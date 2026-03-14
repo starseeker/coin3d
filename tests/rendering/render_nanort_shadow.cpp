@@ -1,7 +1,7 @@
 /*
  * render_nanort_shadow.cpp - NanoRT shadow casting demonstration and validation
  *
- * Builds a scene with SoRaytracingParams (shadowsEnabled=TRUE) containing:
+ * Builds a scene with SoSceneRendererParams (shadowsEnabled=TRUE) containing:
  *   - A SoDirectionalLight shining from above
  *   - A white ground plane (SoFaceSet)
  *   - A red sphere suspended above the plane
@@ -19,12 +19,12 @@
  *     ambient fill contributes.
  *   - Both populations must be present for the test to PASS.
  *
- * SoRaytracingParams notes:
+ * SoSceneRendererParams notes:
  *   - shadowsEnabled = TRUE  enables shadow rays in the nanort path.
  *   - ambientIntensity = 0.2 gives shadow regions ~14% of the ground color,
  *     i.e. ≈(36,36,36) for a diffuse=(0.7,0.7,0.7) surface, well above the
  *     black background (0,0,0) and clearly below the lit value of ≈(203,203,203).
- *   - The GL backend ignores SoRaytracingParams; renderToFile() is used there
+ *   - The GL backend ignores SoSceneRendererParams; renderToFile() is used there
  *     and the test passes without shadow validation (non-black geometry check).
  *
  * Writes argv[1]+".rgb" and returns 0 on pass, 1 on fail.
@@ -41,7 +41,7 @@
 #include <Inventor/nodes/SoNormal.h>
 #include <Inventor/nodes/SoNormalBinding.h>
 #include <Inventor/nodes/SoTranslation.h>
-#include <Inventor/nodes/SoRaytracingParams.h>
+#include <Inventor/nodes/SoSceneRendererParams.h>
 #include <Inventor/SbViewportRegion.h>
 #include <algorithm>
 #include <cstdio>
@@ -115,7 +115,7 @@ int main(int argc, char **argv)
     root->ref();
 
     // --- Raytracing hints: enable shadow rays -------------------------------
-    SoRaytracingParams *rtParams = new SoRaytracingParams;
+    SoSceneRendererParams *rtParams = new SoSceneRendererParams;
     rtParams->shadowsEnabled.setValue(TRUE);
     rtParams->ambientIntensity.setValue(0.2f);
     root->addChild(rtParams);
@@ -210,7 +210,7 @@ int main(int argc, char **argv)
         fprintf(stderr, "render_nanort_shadow: render() failed\n");
     }
 #else
-    // GL path: no shadow validation (SoRaytracingParams is ignored by GL).
+    // GL path: no shadow validation (SoSceneRendererParams is ignored by GL).
     // Just verify the scene renders non-blank geometry.
     SoOffscreenRenderer renderer(SbViewportRegion(W, H));
     renderer.setComponents(SoOffscreenRenderer::RGB);

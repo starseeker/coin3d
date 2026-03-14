@@ -1,25 +1,22 @@
-#ifndef OBOL_SOACTIONS_H
-#define OBOL_SOACTIONS_H
-
 /**************************************************************************\
  * Copyright (c) Kongsberg Oil & Gas Technologies AS
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
  * met:
- * 
+ *
  * Redistributions of source code must retain the above copyright notice,
  * this list of conditions and the following disclaimer.
- * 
+ *
  * Redistributions in binary form must reproduce the above copyright
  * notice, this list of conditions and the following disclaimer in the
  * documentation and/or other materials provided with the distribution.
- * 
+ *
  * Neither the name of the copyright holder nor the names of its
  * contributors may be used to endorse or promote products derived from
  * this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -33,21 +30,47 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#include <Inventor/actions/SoCallbackAction.h>
-#include <Inventor/actions/SoGLRenderAction.h>
-#include <Inventor/actions/SoSceneRenderAction.h>
-#include <Inventor/actions/SoBoxHighlightRenderAction.h>
-#include <Inventor/actions/SoLineHighlightRenderAction.h>
-#include <Inventor/actions/SoGetBoundingBoxAction.h>
-#include <Inventor/actions/SoGetMatrixAction.h>
-#include <Inventor/actions/SoGetPrimitiveCountAction.h>
-#include <Inventor/actions/SoHandleEventAction.h>
-#include <Inventor/actions/SoPickAction.h>
-#include <Inventor/actions/SoRayPickAction.h>
-#include <Inventor/actions/SoSearchAction.h>
-#include <Inventor/actions/SoReorganizeAction.h>
-#include <Inventor/actions/SoWriteAction.h>
-#include <Inventor/actions/SoSimplifyAction.h>
-#include <Inventor/actions/SoReorganizeAction.h>
+/*!
+  \class SoSceneRendererParams SoSceneRendererParams.h Inventor/nodes/SoSceneRendererParams.h
+  \brief Scene graph node carrying rendering hints for non-GL rendering backends.
 
-#endif // !OBOL_SOACTIONS_H
+  \ingroup coin_nodes
+
+  See the class header documentation for full details on the available
+  fields and their semantics.  This node has no OpenGL side-effects.
+*/
+
+#include <Inventor/nodes/SoSceneRendererParams.h>
+
+#include "nodes/SoSubNodeP.h"
+
+SO_NODE_SOURCE(SoSceneRendererParams);
+
+/*!
+  \copydetails SoNode::initClass(void)
+*/
+void
+SoSceneRendererParams::initClass(void)
+{
+  SO_NODE_INTERNAL_INIT_CLASS(SoSceneRendererParams, SO_FROM_OBOL_4_0);
+}
+
+/*!
+  Constructor.  Sets all fields to their default values.
+*/
+SoSceneRendererParams::SoSceneRendererParams(void)
+{
+  SO_NODE_INTERNAL_CONSTRUCTOR(SoSceneRendererParams);
+
+  SO_NODE_ADD_FIELD(shadowsEnabled,         (FALSE));
+  SO_NODE_ADD_FIELD(maxReflectionBounces,   (0));
+  SO_NODE_ADD_FIELD(samplesPerPixel,        (1));
+  SO_NODE_ADD_FIELD(ambientIntensity,       (0.2f));
+}
+
+/*!
+  Destructor.
+*/
+SoSceneRendererParams::~SoSceneRendererParams()
+{
+}

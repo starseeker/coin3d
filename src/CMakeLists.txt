@@ -76,7 +76,7 @@ set(OBOL_ADDITIONAL_HDRS
 # In dual-GL builds, gl_osmesa.cpp and SoDBOSMesa.cpp need the OSMesa
 # include directories.  Apply them per-file so they don't pollute the rest
 # of the build (system GL headers and OSMesa headers can conflict).
-if(OBOL_BUILD_DUAL_GL AND OBOL_OSMESA_INCLUDE_DIRS)
+if(OBOL_USE_SWRAST AND OBOL_USE_SYSTEM_GL AND OBOL_OSMESA_INCLUDE_DIRS)
     foreach(_osmesa_src
             "${CMAKE_CURRENT_SOURCE_DIR}/glue/gl_osmesa.cpp"
             "${CMAKE_CURRENT_SOURCE_DIR}/misc/SoDBOSMesa.cpp")
@@ -122,12 +122,12 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
     HAVE_CONFIG_H
     OBOL_INTERNAL
     OBOL_DEBUG=$<CONFIG:Debug>
-    # In OSMesa-only builds, all gl* calls in the library must be mangled to
+    # In swrast-only builds, all gl* calls in the library must be mangled to
     # mgl* so they resolve to the OSMesa library symbols.  This is scoped to
     # the library target so that test executables (which may include <GL/glx.h>)
     # are not affected — <GL/glx.h> conditionally includes "glx_mangle.h" when
     # USE_MGL_NAMESPACE is defined, and that file does not exist on Ubuntu 24.04.
-    $<$<BOOL:${OBOL_USE_OSMESA}>:USE_MGL_NAMESPACE>
+    $<$<BOOL:${OBOL_USE_SWRAST}>:$<$<NOT:$<BOOL:${OBOL_USE_SYSTEM_GL}>>:USE_MGL_NAMESPACE>>
 )
 
 # Apply warning flags (controlled by OBOL_WARNINGS option in the top-level CMakeLists.txt)
@@ -161,7 +161,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE ${OBOL_TARGET_LINK_LIBRARIES})
 
 # For dual-GL builds, also link OSMesa so that osmesa_SoGLContext_* functions
 # can resolve mgl* symbols at runtime.
-if(OBOL_BUILD_DUAL_GL)
+if(OBOL_USE_SWRAST AND OBOL_USE_SYSTEM_GL)
     target_link_libraries(${PROJECT_NAME} PRIVATE ${OBOL_OSMESA_LIBRARIES})
 endif()
 
@@ -347,7 +347,7 @@ else()
   # When using the bundled OSMesa submodule (DUAL_GL or osmesa-only builds),
   # install its shared library alongside Obol so that consumers who locate Obol
   # via find_package(Obol) can link and run without additional setup.
-  if((OBOL_BUILD_DUAL_GL OR OBOL_USE_OSMESA) AND TARGET osmesa)
+  if((OBOL_USE_SWRAST) AND TARGET osmesa)
     install(TARGETS osmesa
       RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT runtime
       LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT runtime

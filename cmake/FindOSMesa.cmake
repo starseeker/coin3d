@@ -4,8 +4,9 @@
 # The project builds its own OSMesa from the external/osmesa submodule
 # (starseeker/osmesa).  This version is compiled with OSMESA_NAME_MANGLING
 # so all GL symbols are prefixed with "mgl" rather than "gl", which is
-# required for OBOL_BUILD_DUAL_GL to coexist with system OpenGL in the
-# same shared library without symbol conflicts.
+# required for dual-GL builds (OBOL_USE_SWRAST + OBOL_USE_SYSTEM_GL both ON)
+# to coexist with system OpenGL in the same shared library without symbol
+# conflicts.
 #
 # NOTE: The system libosmesa6-dev package is intentionally NOT used here.
 # Its symbols are NOT name-mangled and would collide with system libGL
@@ -17,7 +18,7 @@
 #
 # If osmesa is not found (submodule missing / not initialised), the caller
 # can still configure a system-OpenGL-only build by setting
-# OBOL_USE_SYSTEM_ONLY=ON (or by not enabling OSMesa support at all).
+# OBOL_USE_SWRAST=OFF (or by setting OBOL_USE_SYSTEM_GL=ON only).
 #
 # This will define the following variables:
 #

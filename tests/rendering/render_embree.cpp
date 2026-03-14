@@ -3,14 +3,14 @@
  *
  * Intel Embree 4 raytracing backend demonstration for Obol/Coin scene graphs.
  *
- * This test demonstrates the SoRaytracerSceneCollector generic API together
+ * This test demonstrates the SoSceneCollector generic API together
  * with the SoEmbreeContextManager backend.  Scene collection (geometry,
  * lights, proxy shapes, text overlays) is handled entirely by the Obol
  * library; only the BVH build and ray intersection use Embree.
  *
  * Obol APIs exercised:
- *   - SoRaytracerSceneCollector   (generic scene collection + compositing)
- *   - SoRaytracingParams          (shadows, reflections, AA, ambient fill)
+ *   - SoSceneCollector   (generic scene collection + compositing)
+ *   - SoSceneRendererParams          (shadows, reflections, AA, ambient fill)
  *   - SoOffscreenRenderer         (dispatches to SoEmbreeContextManager)
  *   - SbViewportRegion / SbViewVolume (camera math)
  *
@@ -32,9 +32,9 @@
 #include <Inventor/nodes/SoCube.h>
 #include <Inventor/nodes/SoCylinder.h>
 #include <Inventor/nodes/SoCone.h>
-#include <Inventor/nodes/SoRaytracingParams.h>
+#include <Inventor/nodes/SoSceneRendererParams.h>
 #include <Inventor/SbViewportRegion.h>
-#include <Inventor/SoRaytracerSceneCollector.h>
+#include <Inventor/SoSceneCollector.h>
 
 #include <cstdio>
 #include <cstring>
@@ -65,7 +65,7 @@ int main(int argc, char ** argv)
     root->ref();
 
     // Raytracing hints: enable shadows for a more interesting image
-    SoRaytracingParams * rtParams = new SoRaytracingParams;
+    SoSceneRendererParams * rtParams = new SoSceneRendererParams;
     rtParams->shadowsEnabled.setValue(TRUE);
     rtParams->ambientIntensity.setValue(0.15f);
     root->addChild(rtParams);
@@ -143,11 +143,11 @@ int main(int argc, char ** argv)
     cam->position.setValue(cam->position.getValue() * 1.2f);
 
     // ---- Validate scene collection via the generic API ---------------------
-    // This exercises SoRaytracerSceneCollector directly so we can print
+    // This exercises SoSceneCollector directly so we can print
     // statistics about what was collected — independent of which intersection
     // backend (Embree, nanort, …) actually renders the scene.
     {
-        SoRaytracerSceneCollector collector;
+        SoSceneCollector collector;
         collector.collect(root, vp);
 
         printf("render_embree: collected %zu triangles, %zu lights, %zu overlays\n",

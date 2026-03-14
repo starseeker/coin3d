@@ -40,7 +40,7 @@
  * PURPOSE
  * -------
  * In single-backend Obol builds (system OpenGL only, or pure OSMesa) raw
- * gl*() calls work fine.  In dual-backend builds (OBOL_BUILD_DUAL_GL),
+ * gl*() calls work fine.  In dual-backend builds (OBOL_DUAL_GL_BUILD),
  * raw gl*() calls are always bound to the system GL library, so they
  * silently go to the wrong backend during OSMesa renders.
  *
@@ -107,7 +107,7 @@
  *
  * We undef each name before defining it to silence compiler warnings
  * when an existing #define is already present (e.g. from gl_mangle.h
- * in OBOL_OSMESA_BUILD builds that pull in <OSMesa/gl_mangle.h>).
+ * in OBOL_SWRAST_BUILD builds that pull in <OSMesa/gl_mangle.h>).
  */
 
 /* --- Immediate mode geometry --- */
