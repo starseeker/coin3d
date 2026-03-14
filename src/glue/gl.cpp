@@ -2917,9 +2917,6 @@ SoGLContext_instance(int contextid)
       }
     }
     
-    assert(gi->versionstr && "could not call glGetString() -- no current GL context?");
-    assert(glGetError() == GL_NO_ERROR && "GL error when calling glGetString() -- no current GL context?");
-
     if (!gi->versionstr) {
       cc_debugerror_postwarning("SoGLContext_instance",
                                 "glGetString(GL_VERSION) returned NULL -- no current GL context?");
@@ -3223,6 +3220,225 @@ SoGLContext_isdirect(const SoGLContext * w)
 }
 
 
+/* =========================================================================
+ * Warn-once helpers for missing GL capabilities
+ *
+ * Each sogl_warn_* function posts a single SoDebugError warning the first
+ * time an unsupported feature is used, then stays silent on subsequent
+ * calls.  This lets the application discover capability gaps from the log
+ * without being flooded by per-frame spam.
+ *
+ * The warnings deliberately name the missing extension / minimum GL version
+ * so that users can quickly understand what their context must provide.
+ * ========================================================================= */
+
+static void sogl_warn_no_polygon_offset(void)
+{
+  static SbBool warned = FALSE;
+  if (!warned) {
+    warned = TRUE;
+    cc_debugerror_postwarning("SoGLContext",
+      "glPolygonOffset is not available in this GL context "
+      "(requires OpenGL >= 1.1 or GL_EXT_polygon_offset). "
+      "Polygon-offset rendering will be skipped.");
+  }
+}
+
+static void sogl_warn_no_texture_objects(void)
+{
+  static SbBool warned = FALSE;
+  if (!warned) {
+    warned = TRUE;
+    cc_debugerror_postwarning("SoGLContext",
+      "Texture objects are not available in this GL context "
+      "(requires OpenGL >= 1.1 or GL_EXT_texture_object). "
+      "Texture rendering will be degraded or skipped.");
+  }
+}
+
+static void sogl_warn_no_texsubimage(void)
+{
+  static SbBool warned = FALSE;
+  if (!warned) {
+    warned = TRUE;
+    cc_debugerror_postwarning("SoGLContext",
+      "glTexSubImage2D is not available in this GL context "
+      "(requires OpenGL >= 1.1). "
+      "Incremental texture updates will be skipped.");
+  }
+}
+
+static void sogl_warn_no_3d_textures(void)
+{
+  static SbBool warned = FALSE;
+  if (!warned) {
+    warned = TRUE;
+    cc_debugerror_postwarning("SoGLContext",
+      "3D textures are not available in this GL context "
+      "(requires OpenGL >= 1.2 or GL_EXT_texture3D). "
+      "3D texture features will be skipped.");
+  }
+}
+
+static void sogl_warn_no_multitexture(void)
+{
+  static SbBool warned = FALSE;
+  if (!warned) {
+    warned = TRUE;
+    cc_debugerror_postwarning("SoGLContext",
+      "Multitexture units are not available in this GL context "
+      "(requires OpenGL >= 1.3 or GL_ARB_multitexture). "
+      "Multitexture features will be skipped.");
+  }
+}
+
+static void sogl_warn_no_client_attrib(void)
+{
+  static SbBool warned = FALSE;
+  if (!warned) {
+    warned = TRUE;
+    cc_debugerror_postwarning("SoGLContext",
+      "glPushClientAttrib/glPopClientAttrib are not available in this GL context. "
+      "Client attribute stack operations will be skipped.");
+  }
+}
+
+static void sogl_warn_no_compressed_textures(void)
+{
+  static SbBool warned = FALSE;
+  if (!warned) {
+    warned = TRUE;
+    cc_debugerror_postwarning("SoGLContext",
+      "Compressed textures are not available in this GL context "
+      "(requires OpenGL >= 1.3 or GL_ARB_texture_compression). "
+      "Compressed texture features will be skipped.");
+  }
+}
+
+static void sogl_warn_no_color_tables(void)
+{
+  static SbBool warned = FALSE;
+  if (!warned) {
+    warned = TRUE;
+    cc_debugerror_postwarning("SoGLContext",
+      "Color table operations are not available in this GL context "
+      "(requires GL_ARB_imaging or OpenGL >= 1.2 with imaging subset). "
+      "Paletted texture features will be skipped.");
+  }
+}
+
+static void sogl_warn_no_blend_equation(void)
+{
+  static SbBool warned = FALSE;
+  if (!warned) {
+    warned = TRUE;
+    cc_debugerror_postwarning("SoGLContext",
+      "glBlendEquation is not available in this GL context "
+      "(requires OpenGL >= 1.4 or GL_EXT_blend_minmax). "
+      "Advanced blending modes will be skipped.");
+  }
+}
+
+static void sogl_warn_no_blend_func_separate(void)
+{
+  static SbBool warned = FALSE;
+  if (!warned) {
+    warned = TRUE;
+    cc_debugerror_postwarning("SoGLContext",
+      "glBlendFuncSeparate is not available in this GL context "
+      "(requires OpenGL >= 1.4 or GL_EXT_blend_func_separate). "
+      "Separate blend-function features will be skipped.");
+  }
+}
+
+static void sogl_warn_no_vertex_arrays(void)
+{
+  static SbBool warned = FALSE;
+  if (!warned) {
+    warned = TRUE;
+    cc_debugerror_postwarning("SoGLContext",
+      "Vertex arrays are not available in this GL context "
+      "(requires OpenGL >= 1.1). "
+      "Vertex array rendering will be skipped.");
+  }
+}
+
+static void sogl_warn_no_draw_range_elements(void)
+{
+  static SbBool warned = FALSE;
+  if (!warned) {
+    warned = TRUE;
+    cc_debugerror_postwarning("SoGLContext",
+      "glDrawRangeElements is not available in this GL context "
+      "(requires OpenGL >= 1.2 or GL_EXT_draw_range_elements). "
+      "Optimised indexed draw calls will fall back to glDrawElements.");
+  }
+}
+
+static void sogl_warn_no_multidraw(void)
+{
+  static SbBool warned = FALSE;
+  if (!warned) {
+    warned = TRUE;
+    cc_debugerror_postwarning("SoGLContext",
+      "glMultiDrawArrays/glMultiDrawElements are not available in this GL context "
+      "(requires OpenGL >= 1.4). "
+      "Multi-draw operations will be skipped.");
+  }
+}
+
+static void sogl_warn_no_nv_varray(void)
+{
+  static SbBool warned = FALSE;
+  if (!warned) {
+    warned = TRUE;
+    cc_debugerror_postwarning("SoGLContext",
+      "GL_NV_vertex_array_range is not available in this GL context. "
+      "NV vertex array range operations will be skipped.");
+  }
+}
+
+static void sogl_warn_no_vbo(void)
+{
+  static SbBool warned = FALSE;
+  if (!warned) {
+    warned = TRUE;
+    cc_debugerror_postwarning("SoGLContext",
+      "Vertex buffer objects are not available in this GL context "
+      "(requires OpenGL >= 1.5 or GL_ARB_vertex_buffer_object). "
+      "VBO-accelerated rendering will fall back to immediate mode.");
+  }
+}
+
+static void sogl_warn_no_fbo(void)
+{
+  static SbBool warned = FALSE;
+  if (!warned) {
+    warned = TRUE;
+    cc_debugerror_postwarning("SoGLContext",
+      "Framebuffer objects are not available in this GL context "
+      "(requires OpenGL >= 3.0 or GL_EXT_framebuffer_object). "
+      "Features that require off-screen render targets — including "
+      "SoSceneTexture2, shadow maps and some transparency modes — "
+      "will be skipped. Provide a context with at least OpenGL 3.0 "
+      "for full Obol functionality.");
+  }
+}
+
+static void sogl_warn_no_core_func(const char * funcname)
+{
+  cc_debugerror_postwarning("SoGLContext",
+    "Core GL function '%s' is not available in this context. "
+    "This indicates a severely broken or uninitialized GL context. "
+    "Rendering results will be incorrect.", funcname);
+}
+
+/* Alias used by the Python-generated guards below. */
+static void sogl_warn_core_func_unavailable(const char * funcname)
+{
+  sogl_warn_no_core_func(funcname);
+}
+
 /*!
   Whether glPolygonOffset() is available or not: either we're on OpenGL
   1.1 or the GL_EXT_polygon_offset extension is available.
@@ -3244,7 +3460,10 @@ glglue_glPolygonOffset(const SoGLContext * w)
 {
   OBOL_PFNGLPOLYGONOFFSETPROC poff = NULL;
 
-  assert(w->glPolygonOffset ||  w->glPolygonOffsetEXT);
+  if (!w->glPolygonOffset && !w->glPolygonOffsetEXT) {
+    sogl_warn_no_polygon_offset();
+    return NULL;
+  }
 
   poff = w->glPolygonOffset;
 
@@ -3283,6 +3502,7 @@ SoGLContext_glPolygonOffsetEnable(const SoGLContext * w,
                                 SbBool enable, int m)
 {
   OBOL_PFNGLPOLYGONOFFSETPROC poff = glglue_glPolygonOffset(w);
+  if (!poff) return;
 
   if (enable) {
     if (poff == w->glPolygonOffset) {
@@ -3329,6 +3549,7 @@ SoGLContext_glPolygonOffset(const SoGLContext * w,
                           GLfloat units)
 {
   OBOL_PFNGLPOLYGONOFFSETPROC poff = glglue_glPolygonOffset(w);
+  if (!poff) return;
 
   if (poff == w->glPolygonOffsetEXT) {
     /* Try to detect if user actually attempted to specify a valid
@@ -3369,25 +3590,22 @@ SoGLContext_has_texture_objects(const SoGLContext * w)
 void
 SoGLContext_glGenTextures(const SoGLContext * w, GLsizei n, GLuint * textures)
 {
-  assert(w->glGenTextures);
+  if (!w || !w->glGenTextures) { sogl_warn_no_texture_objects(); return; }
   w->glGenTextures(n, textures);
-
 }
 
 void
 SoGLContext_glBindTexture(const SoGLContext * w, GLenum target, GLuint texture)
 {
-  assert(w->glBindTexture);
+  if (!w || !w->glBindTexture) { sogl_warn_no_texture_objects(); return; }
   w->glBindTexture(target, texture);
-
 }
 
 void
 SoGLContext_glDeleteTextures(const SoGLContext * w, GLsizei n, const GLuint * textures)
 {
-  assert(w->glDeleteTextures);
+  if (!w || !w->glDeleteTextures) { sogl_warn_no_texture_objects(); return; }
   w->glDeleteTextures(n, textures);
-
 }
 
 /*!
@@ -3420,7 +3638,7 @@ SoGLContext_glTexSubImage2D(const SoGLContext * w,
                           GLenum type,
                           const GLvoid * pixels)
 {
-  assert(w->glTexSubImage2D);
+  if (!w || !w->glTexSubImage2D) { sogl_warn_no_texsubimage(); return; }
   w->glTexSubImage2D(target, level, xoffset, yoffset,
                      width, height, format, type, pixels);
 }
@@ -3489,7 +3707,7 @@ void
 SoGLContext_glPushClientAttrib(const SoGLContext * w, GLbitfield mask)
 {
   if (!glglue_allow_newer_opengl(w)) return;
-  assert(w->glPushClientAttrib);
+  if (!w->glPushClientAttrib) { sogl_warn_no_client_attrib(); return; }
   w->glPushClientAttrib(mask);
 }
 
@@ -3497,7 +3715,7 @@ void
 SoGLContext_glPopClientAttrib(const SoGLContext * w)
 {
   if (!glglue_allow_newer_opengl(w)) return;
-  assert(w->glPopClientAttrib);
+  if (!w->glPopClientAttrib) { sogl_warn_no_client_attrib(); return; }
   w->glPopClientAttrib();
 }
 
@@ -3530,7 +3748,7 @@ SoGLContext_glTexImage3D(const SoGLContext * w,
                        GLenum type,
                        const GLvoid *pixels)
 {
-  assert(w->glTexImage3D);
+  if (!w || !w->glTexImage3D) { sogl_warn_no_3d_textures(); return; }
   w->glTexImage3D(target, level, internalformat,
                   width, height, depth, border,
                   format, type, pixels);
@@ -3550,7 +3768,7 @@ SoGLContext_glTexSubImage3D(const SoGLContext * w,
                           GLenum type,
                           const GLvoid * pixels)
 {
-  assert(w->glTexSubImage3D);
+  if (!w || !w->glTexSubImage3D) { sogl_warn_no_3d_textures(); return; }
   w->glTexSubImage3D(target, level, xoffset, yoffset,
                      zoffset, width, height, depth, format,
                      type, pixels);
@@ -3568,7 +3786,7 @@ SoGLContext_glCopyTexSubImage3D(const SoGLContext * w,
                               GLsizei width,
                               GLsizei height)
 {
-  assert(w->glCopyTexSubImage3D);
+  if (!w || !w->glCopyTexSubImage3D) { sogl_warn_no_3d_textures(); return; }
   w->glCopyTexSubImage3D(target,
                          level,
                          xoffset,
@@ -3584,7 +3802,7 @@ void
 SoGLContext_glActiveTexture(const SoGLContext * w,
                           GLenum texture)
 {
-  assert(w->glActiveTexture);
+  if (!w || !w->glActiveTexture) { sogl_warn_no_multitexture(); return; }
   w->glActiveTexture(texture);
 }
 
@@ -3594,7 +3812,7 @@ SoGLContext_glClientActiveTexture(const SoGLContext * w,
 {
   if (!w->glClientActiveTexture && texture == GL_TEXTURE0)
     return;
-  assert(w->glClientActiveTexture);
+  if (!w->glClientActiveTexture) { sogl_warn_no_multitexture(); return; }
   w->glClientActiveTexture(texture);
 }
 void
@@ -3603,7 +3821,7 @@ SoGLContext_glMultiTexCoord2f(const SoGLContext * w,
                             GLfloat s,
                             GLfloat t)
 {
-  assert(w->glMultiTexCoord2f);
+  if (!w || !w->glMultiTexCoord2f) { sogl_warn_no_multitexture(); return; }
   w->glMultiTexCoord2f(target, s, t);
 }
 
@@ -3612,7 +3830,7 @@ SoGLContext_glMultiTexCoord2fv(const SoGLContext * w,
                              GLenum target,
                              const GLfloat * v)
 {
-  assert(w->glMultiTexCoord2fv);
+  if (!w || !w->glMultiTexCoord2fv) { sogl_warn_no_multitexture(); return; }
   w->glMultiTexCoord2fv(target, v);
 }
 
@@ -3621,7 +3839,7 @@ SoGLContext_glMultiTexCoord3fv(const SoGLContext * w,
                              GLenum target,
                              const GLfloat * v)
 {
-  assert(w->glMultiTexCoord3fv);
+  if (!w || !w->glMultiTexCoord3fv) { sogl_warn_no_multitexture(); return; }
   w->glMultiTexCoord3fv(target, v);
 }
 
@@ -3630,7 +3848,7 @@ SoGLContext_glMultiTexCoord4fv(const SoGLContext * w,
                              GLenum target,
                              const GLfloat * v)
 {
-  assert(w->glMultiTexCoord4fv);
+  if (!w || !w->glMultiTexCoord4fv) { sogl_warn_no_multitexture(); return; }
   w->glMultiTexCoord4fv(target, v);
 }
 
@@ -3672,7 +3890,7 @@ SoGLContext_glCompressedTexImage3D(const SoGLContext * glue,
                                  GLsizei imageSize,
                                  const GLvoid * data)
 {
-  assert(glue->glCompressedTexImage3D);
+  if (!glue || !glue->glCompressedTexImage3D) { sogl_warn_no_compressed_textures(); return; }
   glue->glCompressedTexImage3D(target,
                                level,
                                internalformat,
@@ -3695,7 +3913,7 @@ SoGLContext_glCompressedTexImage2D(const SoGLContext * glue,
                                  GLsizei imageSize,
                                  const GLvoid *data)
 {
-  assert(glue->glCompressedTexImage2D);
+  if (!glue || !glue->glCompressedTexImage2D) { sogl_warn_no_compressed_textures(); return; }
   glue->glCompressedTexImage2D(target,
                                level,
                                internalformat,
@@ -3716,7 +3934,7 @@ SoGLContext_glCompressedTexImage1D(const SoGLContext * glue,
                                  GLsizei imageSize,
                                  const GLvoid *data)
 {
-  assert(glue->glCompressedTexImage1D);
+  if (!glue || !glue->glCompressedTexImage1D) { sogl_warn_no_compressed_textures(); return; }
   glue->glCompressedTexImage1D(target,
                                level,
                                internalformat,
@@ -3740,7 +3958,7 @@ SoGLContext_glCompressedTexSubImage3D(const SoGLContext * glue,
                                     GLsizei imageSize,
                                     const GLvoid *data)
 {
-  assert(glue->glCompressedTexSubImage3D);
+  if (!glue || !glue->glCompressedTexSubImage3D) { sogl_warn_no_compressed_textures(); return; }
   glue->glCompressedTexSubImage3D(target,
                                   level,
                                   xoffset,
@@ -3766,7 +3984,7 @@ SoGLContext_glCompressedTexSubImage2D(const SoGLContext * glue,
                                     GLsizei imageSize,
                                     const GLvoid *data)
 {
-  assert(glue->glCompressedTexSubImage2D);
+  if (!glue || !glue->glCompressedTexSubImage2D) { sogl_warn_no_compressed_textures(); return; }
   glue->glCompressedTexSubImage2D(target,
                                   level,
                                   xoffset,
@@ -3788,7 +4006,7 @@ SoGLContext_glCompressedTexSubImage1D(const SoGLContext * glue,
                                     GLsizei imageSize,
                                     const GLvoid *data)
 {
-  assert(glue->glCompressedTexSubImage1D);
+  if (!glue || !glue->glCompressedTexSubImage1D) { sogl_warn_no_compressed_textures(); return; }
   glue->glCompressedTexSubImage1D(target,
                                   level,
                                   xoffset,
@@ -3804,7 +4022,7 @@ SoGLContext_glGetCompressedTexImage(const SoGLContext * glue,
                                   GLint level,
                                   void * img)
 {
-  assert(glue->glGetCompressedTexImage);
+  if (!glue || !glue->glGetCompressedTexImage) { sogl_warn_no_compressed_textures(); return; }
   glue->glGetCompressedTexImage(target,
                                 level,
                                 img);
@@ -3846,7 +4064,7 @@ SoGLContext_glColorTable(const SoGLContext * glue,
                        GLenum type,
                        const GLvoid *table)
 {
-  assert(glue->glColorTable);
+  if (!glue || !glue->glColorTable) { sogl_warn_no_color_tables(); return; }
   glue->glColorTable(target,
                      internalFormat,
                      width,
@@ -3864,7 +4082,7 @@ SoGLContext_glColorSubTable(const SoGLContext * glue,
                           GLenum type,
                           const GLvoid * data)
 {
-  assert(glue->glColorSubTable);
+  if (!glue || !glue->glColorSubTable) { sogl_warn_no_color_tables(); return; }
   glue->glColorSubTable(target,
                         start,
                         count,
@@ -3880,7 +4098,7 @@ SoGLContext_glGetColorTable(const SoGLContext * glue,
                           GLenum type,
                           GLvoid *data)
 {
-  assert(glue->glGetColorTable);
+  if (!glue || !glue->glGetColorTable) { sogl_warn_no_color_tables(); return; }
   glue->glGetColorTable(target,
                         format,
                         type,
@@ -3893,7 +4111,7 @@ SoGLContext_glGetColorTableParameteriv(const SoGLContext * glue,
                                      GLenum pname,
                                      GLint *params)
 {
-  assert(glue->glGetColorTableParameteriv);
+  if (!glue || !glue->glGetColorTableParameteriv) { sogl_warn_no_color_tables(); return; }
   glue->glGetColorTableParameteriv(target,
                                    pname,
                                    params);
@@ -3905,7 +4123,7 @@ SoGLContext_glGetColorTableParameterfv(const SoGLContext * glue,
                                      GLenum pname,
                                      GLfloat *params)
 {
-  assert(glue->glGetColorTableParameterfv);
+  if (!glue || !glue->glGetColorTableParameterfv) { sogl_warn_no_color_tables(); return; }
   glue->glGetColorTableParameterfv(target,
                                    pname,
                                    params);
@@ -3922,7 +4140,7 @@ SoGLContext_has_blendequation(const SoGLContext * glue)
 void
 SoGLContext_glBlendEquation(const SoGLContext * glue, GLenum mode)
 {
-  assert(glue->glBlendEquation || glue->glBlendEquationEXT);
+  if (!glue->glBlendEquation && !glue->glBlendEquationEXT) { sogl_warn_no_blend_equation(); return; }
 
   if (glue->glBlendEquation) glue->glBlendEquation(mode);
   else glue->glBlendEquationEXT(mode);
@@ -3941,7 +4159,7 @@ SoGLContext_glBlendFuncSeparate(const SoGLContext * glue,
                               GLenum rgbsrc, GLenum rgbdst,
                               GLenum alphasrc, GLenum alphadst)
 {
-  assert(glue->glBlendFuncSeparate);
+  if (!glue || !glue->glBlendFuncSeparate) { sogl_warn_no_blend_func_separate(); return; }
   glue->glBlendFuncSeparate(rgbsrc, rgbdst, alphasrc, alphadst);
 }
 
@@ -3956,7 +4174,7 @@ void
 SoGLContext_glVertexPointer(const SoGLContext * glue,
                           GLint size, GLenum type, GLsizei stride, const GLvoid * pointer)
 {
-  assert(glue->glVertexPointer);
+  if (!glue || !glue->glVertexPointer) { sogl_warn_no_vertex_arrays(); return; }
   glue->glVertexPointer(size, type, stride, pointer);
 }
 
@@ -3965,7 +4183,7 @@ SoGLContext_glTexCoordPointer(const SoGLContext * glue,
                             GLint size, GLenum type,
                             GLsizei stride, const GLvoid * pointer)
 {
-  assert(glue->glTexCoordPointer);
+  if (!glue || !glue->glTexCoordPointer) { sogl_warn_no_vertex_arrays(); return; }
   glue->glTexCoordPointer(size, type, stride, pointer);
 }
 
@@ -3973,7 +4191,7 @@ void
 SoGLContext_glNormalPointer(const SoGLContext * glue,
                           GLenum type, GLsizei stride, const GLvoid *pointer)
 {
-  assert(glue->glNormalPointer);
+  if (!glue || !glue->glNormalPointer) { sogl_warn_no_vertex_arrays(); return; }
   glue->glNormalPointer(type, stride, pointer);
 }
 
@@ -3982,7 +4200,7 @@ SoGLContext_glColorPointer(const SoGLContext * glue,
                          GLint size, GLenum type,
                          GLsizei stride, const GLvoid * pointer)
 {
-  assert(glue->glColorPointer);
+  if (!glue || !glue->glColorPointer) { sogl_warn_no_vertex_arrays(); return; }
   glue->glColorPointer(size, type, stride, pointer);
 }
 
@@ -3990,21 +4208,21 @@ void
 SoGLContext_glIndexPointer(const SoGLContext * glue,
                          GLenum type, GLsizei stride, const GLvoid * pointer)
 {
-  assert(glue->glIndexPointer);
+  if (!glue || !glue->glIndexPointer) { sogl_warn_no_vertex_arrays(); return; }
   glue->glIndexPointer(type, stride, pointer);
 }
 
 void
 SoGLContext_glEnableClientState(const SoGLContext * glue, GLenum array)
 {
-  assert(glue->glEnableClientState);
+  if (!glue || !glue->glEnableClientState) { sogl_warn_no_vertex_arrays(); return; }
   glue->glEnableClientState(array);
 }
 
 void
 SoGLContext_glDisableClientState(const SoGLContext * glue, GLenum array)
 {
-  assert(glue->glDisableClientState);
+  if (!glue || !glue->glDisableClientState) { sogl_warn_no_vertex_arrays(); return; }
   glue->glDisableClientState(array);
 }
 
@@ -4012,7 +4230,7 @@ void
 SoGLContext_glInterleavedArrays(const SoGLContext * glue,
                               GLenum format, GLsizei stride, const GLvoid * pointer)
 {
-  assert(glue->glInterleavedArrays);
+  if (!glue || !glue->glInterleavedArrays) { sogl_warn_no_vertex_arrays(); return; }
   glue->glInterleavedArrays(format, stride, pointer);
 }
 
@@ -4020,7 +4238,7 @@ void
 SoGLContext_glDrawArrays(const SoGLContext * glue,
                        GLenum mode, GLint first, GLsizei count)
 {
-  assert(glue->glDrawArrays);
+  if (!glue || !glue->glDrawArrays) { sogl_warn_no_vertex_arrays(); return; }
   glue->glDrawArrays(mode, first, count);
 }
 
@@ -4029,7 +4247,7 @@ SoGLContext_glDrawElements(const SoGLContext * glue,
                          GLenum mode, GLsizei count, GLenum type,
                          const GLvoid * indices)
 {
-  assert(glue->glDrawElements);
+  if (!glue || !glue->glDrawElements) { sogl_warn_no_vertex_arrays(); return; }
   glue->glDrawElements(mode, count, type, indices);
 }
 
@@ -4038,14 +4256,14 @@ SoGLContext_glDrawRangeElements(const SoGLContext * glue,
                               GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type,
                               const GLvoid * indices)
 {
-  assert(glue->glDrawRangeElements);
+  if (!glue || !glue->glDrawRangeElements) { sogl_warn_no_draw_range_elements(); return; }
   glue->glDrawRangeElements(mode, start, end, count, type, indices);
 }
 
 void
 SoGLContext_glArrayElement(const SoGLContext * glue, GLint i)
 {
-  assert(glue->glArrayElement);
+  if (!glue || !glue->glArrayElement) { sogl_warn_no_vertex_arrays(); return; }
   glue->glArrayElement(i);
 }
 
@@ -4060,7 +4278,7 @@ void
 SoGLContext_glMultiDrawArrays(const SoGLContext * glue, GLenum mode, const GLint * first,
                             const GLsizei * count, GLsizei primcount)
 {
-  assert(glue->glMultiDrawArrays);
+  if (!glue || !glue->glMultiDrawArrays) { sogl_warn_no_multidraw(); return; }
   glue->glMultiDrawArrays(mode, first, count, primcount);
 }
 
@@ -4068,7 +4286,7 @@ void
 SoGLContext_glMultiDrawElements(const SoGLContext * glue, GLenum mode, const GLsizei * count,
                               GLenum type, const GLvoid ** indices, GLsizei primcount)
 {
-  assert(glue->glMultiDrawElements);
+  if (!glue || !glue->glMultiDrawElements) { sogl_warn_no_multidraw(); return; }
   glue->glMultiDrawElements(mode, count, type, indices, primcount);
 }
 
@@ -4082,14 +4300,14 @@ SoGLContext_has_nv_vertex_array_range(const SoGLContext * glue)
 void
 SoGLContext_glFlushVertexArrayRangeNV(const SoGLContext * glue)
 {
-  assert(glue->glFlushVertexArrayRangeNV);
+  if (!glue || !glue->glFlushVertexArrayRangeNV) { sogl_warn_no_nv_varray(); return; }
   glue->glFlushVertexArrayRangeNV();
 }
 
 void
 SoGLContext_glVertexArrayRangeNV(const SoGLContext * glue, GLsizei size, const GLvoid * pointer)
 {
-  assert(glue->glVertexArrayRangeNV);
+  if (!glue || !glue->glVertexArrayRangeNV) { sogl_warn_no_nv_varray(); return; }
   glue->glVertexArrayRangeNV(size, pointer);
 }
 
@@ -4098,14 +4316,14 @@ SoGLContext_glAllocateMemoryNV(const SoGLContext * glue,
                              GLsizei size, GLfloat readfreq,
                              GLfloat writefreq, GLfloat priority)
 {
-  assert(glue->glAllocateMemoryNV);
+  if (!glue || !glue->glAllocateMemoryNV) { sogl_warn_no_nv_varray(); return NULL; }
   return glue->glAllocateMemoryNV(size, readfreq, writefreq, priority);
 }
 
 void
 SoGLContext_glFreeMemoryNV(const SoGLContext * glue, GLvoid * buffer)
 {
-  assert(glue->glFreeMemoryNV);
+  if (!glue || !glue->glFreeMemoryNV) { sogl_warn_no_nv_varray(); return; }
   glue->glFreeMemoryNV(buffer);
 }
 
@@ -4122,28 +4340,28 @@ SoGLContext_has_vertex_buffer_object(const SoGLContext * glue)
 void
 SoGLContext_glBindBuffer(const SoGLContext * glue, GLenum target, GLuint buffer)
 {
-  assert(glue->glBindBuffer);
+  if (!glue || !glue->glBindBuffer) { sogl_warn_no_vbo(); return; }
   glue->glBindBuffer(target, buffer);
 }
 
 void
 SoGLContext_glDeleteBuffers(const SoGLContext * glue, GLsizei n, const GLuint *buffers)
 {
-  assert(glue->glDeleteBuffers);
+  if (!glue || !glue->glDeleteBuffers) { sogl_warn_no_vbo(); return; }
   glue->glDeleteBuffers(n, buffers);
 }
 
 void
 SoGLContext_glGenBuffers(const SoGLContext * glue, GLsizei n, GLuint *buffers)
 {
-  assert(glue->glGenBuffers);
+  if (!glue || !glue->glGenBuffers) { sogl_warn_no_vbo(); return; }
   glue->glGenBuffers(n, buffers);
 }
 
 GLboolean
 SoGLContext_glIsBuffer(const SoGLContext * glue, GLuint buffer)
 {
-  assert(glue->glIsBuffer);
+  if (!glue || !glue->glIsBuffer) { sogl_warn_no_vbo(); return GL_FALSE; }
   return glue->glIsBuffer(buffer);
 }
 
@@ -4154,7 +4372,7 @@ SoGLContext_glBufferData(const SoGLContext * glue,
                        const GLvoid *data,
                        GLenum usage)
 {
-  assert(glue->glBufferData);
+  if (!glue || !glue->glBufferData) { sogl_warn_no_vbo(); return; }
   glue->glBufferData(target, size, data, usage);
 }
 
@@ -4165,7 +4383,7 @@ SoGLContext_glBufferSubData(const SoGLContext * glue,
                           intptr_t size, /* 64 bit */
                           const GLvoid * data)
 {
-  assert(glue->glBufferSubData);
+  if (!glue || !glue->glBufferSubData) { sogl_warn_no_vbo(); return; }
   glue->glBufferSubData(target, offset, size, data);
 }
 
@@ -4176,7 +4394,7 @@ SoGLContext_glGetBufferSubData(const SoGLContext * glue,
                              intptr_t size, /* 64 bit */
                              GLvoid *data)
 {
-  assert(glue->glGetBufferSubData);
+  if (!glue || !glue->glGetBufferSubData) { sogl_warn_no_vbo(); return; }
   glue->glGetBufferSubData(target, offset, size, data);
 }
 
@@ -4184,7 +4402,7 @@ GLvoid *
 SoGLContext_glMapBuffer(const SoGLContext * glue,
                       GLenum target, GLenum access)
 {
-  assert(glue->glMapBuffer);
+  if (!glue || !glue->glMapBuffer) { sogl_warn_no_vbo(); return NULL; }
   return glue->glMapBuffer(target, access);
 }
 
@@ -4192,7 +4410,7 @@ GLboolean
 SoGLContext_glUnmapBuffer(const SoGLContext * glue,
                         GLenum target)
 {
-  assert(glue->glUnmapBuffer);
+  if (!glue || !glue->glUnmapBuffer) { sogl_warn_no_vbo(); return GL_FALSE; }
   return glue->glUnmapBuffer(target);
 }
 
@@ -4202,7 +4420,7 @@ SoGLContext_glGetBufferParameteriv(const SoGLContext * glue,
                                  GLenum pname,
                                  GLint * params)
 {
-  assert(glue->glGetBufferParameteriv);
+  if (!glue || !glue->glGetBufferParameteriv) { sogl_warn_no_vbo(); return; }
   glue->glGetBufferParameteriv(target, pname, params);
 }
 
@@ -4212,7 +4430,7 @@ SoGLContext_glGetBufferPointerv(const SoGLContext * glue,
                               GLenum pname,
                               GLvoid ** params)
 {
-  assert(glue->glGetBufferPointerv);
+  if (!glue || !glue->glGetBufferPointerv) { sogl_warn_no_vbo(); return; }
   glue->glGetBufferPointerv(target, pname, params);
 }
 
@@ -5637,112 +5855,112 @@ SoGLContext_add_instance_created_callback(SoGLContext_instance_created_cb * cb,
 void
 SoGLContext_glIsRenderbuffer(const SoGLContext * glue, GLuint renderbuffer)
 {
-  assert(glue->has_fbo);
+  if (!glue || !glue->has_fbo) { sogl_warn_no_fbo(); return; }
   glue->glIsRenderbuffer(renderbuffer);
 }
 
 void
 SoGLContext_glBindRenderbuffer(const SoGLContext * glue, GLenum target, GLuint renderbuffer)
 {
-  assert(glue->has_fbo);
+  if (!glue || !glue->has_fbo) { sogl_warn_no_fbo(); return; }
   glue->glBindRenderbuffer(target, renderbuffer);
 }
 
 void
 SoGLContext_glDeleteRenderbuffers(const SoGLContext * glue, GLsizei n, const GLuint *renderbuffers)
 {
-  assert(glue->has_fbo);
+  if (!glue || !glue->has_fbo) { sogl_warn_no_fbo(); return; }
   glue->glDeleteRenderbuffers(n, renderbuffers);
 }
 
 void
 SoGLContext_glGenRenderbuffers(const SoGLContext * glue, GLsizei n, GLuint *renderbuffers)
 {
-  assert(glue->has_fbo);
+  if (!glue || !glue->has_fbo) { sogl_warn_no_fbo(); return; }
   glue->glGenRenderbuffers(n, renderbuffers);
 }
 
 void
 SoGLContext_glRenderbufferStorage(const SoGLContext * glue, GLenum target, GLenum internalformat, GLsizei width, GLsizei height)
 {
-  assert(glue->has_fbo);
+  if (!glue || !glue->has_fbo) { sogl_warn_no_fbo(); return; }
   glue->glRenderbufferStorage(target, internalformat, width, height);
 }
 
 void
 SoGLContext_glGetRenderbufferParameteriv(const SoGLContext * glue, GLenum target, GLenum pname, GLint * params)
 {
-  assert(glue->has_fbo);
+  if (!glue || !glue->has_fbo) { sogl_warn_no_fbo(); return; }
   glue->glGetRenderbufferParameteriv(target, pname, params);
 }
 
 GLboolean
 SoGLContext_glIsFramebuffer(const SoGLContext * glue, GLuint framebuffer)
 {
-  assert(glue->has_fbo);
+  if (!glue || !glue->has_fbo) { sogl_warn_no_fbo(); return GL_FALSE; }
   return glue->glIsFramebuffer(framebuffer);
 }
 
 void
 SoGLContext_glBindFramebuffer(const SoGLContext * glue, GLenum target, GLuint framebuffer)
 {
-  assert(glue->has_fbo);
+  if (!glue || !glue->has_fbo) { sogl_warn_no_fbo(); return; }
   glue->glBindFramebuffer(target, framebuffer);
 }
 
 void
 SoGLContext_glDeleteFramebuffers(const SoGLContext * glue, GLsizei n, const GLuint * framebuffers)
 {
-  assert(glue->has_fbo);
+  if (!glue || !glue->has_fbo) { sogl_warn_no_fbo(); return; }
   glue->glDeleteFramebuffers(n, framebuffers);
 }
 
 void
 SoGLContext_glGenFramebuffers(const SoGLContext * glue, GLsizei n, GLuint * framebuffers)
 {
-  assert(glue->has_fbo);
+  if (!glue || !glue->has_fbo) { sogl_warn_no_fbo(); return; }
   glue->glGenFramebuffers(n, framebuffers);
 }
 
 GLenum
 SoGLContext_glCheckFramebufferStatus(const SoGLContext * glue, GLenum target)
 {
-  assert(glue->has_fbo);
+  if (!glue || !glue->has_fbo) { sogl_warn_no_fbo(); return GL_FRAMEBUFFER_UNSUPPORTED_EXT; }
   return glue->glCheckFramebufferStatus(target);
 }
 
 void
 SoGLContext_glFramebufferTexture1D(const SoGLContext * glue, GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level)
 {
-  assert(glue->has_fbo);
+  if (!glue || !glue->has_fbo) { sogl_warn_no_fbo(); return; }
   glue->glFramebufferTexture1D(target, attachment, textarget, texture, level);
 }
 
 void
 SoGLContext_glFramebufferTexture2D(const SoGLContext * glue, GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level)
 {
-  assert(glue->has_fbo);
+  if (!glue || !glue->has_fbo) { sogl_warn_no_fbo(); return; }
   glue->glFramebufferTexture2D(target, attachment, textarget, texture, level);
 }
 
 void
 SoGLContext_glFramebufferTexture3D(const SoGLContext * glue, GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level, GLint zoffset)
 {
-  assert(glue->has_fbo);
+  if (!glue || !glue->has_fbo) { sogl_warn_no_fbo(); return; }
   glue->glFramebufferTexture3D(target, attachment, textarget, texture, level,zoffset);
 }
 
 void
 SoGLContext_glFramebufferRenderbuffer(const SoGLContext * glue, GLenum target, GLenum attachment, GLenum renderbuffertarget, GLuint renderbuffer)
 {
-  assert(glue->has_fbo);
+  if (!glue || !glue->has_fbo) { sogl_warn_no_fbo(); return; }
   glue->glFramebufferRenderbuffer(target, attachment, renderbuffertarget, renderbuffer);
 }
 
 void
 SoGLContext_glGetFramebufferAttachmentParameteriv(const SoGLContext * glue, GLenum target, GLenum attachment, GLenum pname, GLint * params)
 {
-  assert(glue->has_fbo);
+  if (!glue || !glue->has_fbo) { sogl_warn_no_fbo(); return; }
   glue->glGetFramebufferAttachmentParameteriv(target, attachment, pname, params);
 }
 
@@ -5788,7 +6006,7 @@ SoGLContext_glTexImage2D(const SoGLContext * glue,
                          GLsizei width, GLsizei height, GLint border,
                          GLenum format, GLenum type, const GLvoid * pixels)
 {
-  assert(glue->glTexImage2D);
+  if (!glue || !glue->glTexImage2D) { sogl_warn_core_func_unavailable("glTexImage2D"); return; }
   glue->glTexImage2D(target, level, internalformat, width, height,
                      border, format, type, pixels);
 }
@@ -5797,7 +6015,7 @@ void
 SoGLContext_glTexParameteri(const SoGLContext * glue,
                             GLenum target, GLenum pname, GLint param)
 {
-  assert(glue->glTexParameteri);
+  if (!glue || !glue->glTexParameteri) { sogl_warn_core_func_unavailable("glTexParameteri"); return; }
   glue->glTexParameteri(target, pname, param);
 }
 
@@ -5805,7 +6023,7 @@ void
 SoGLContext_glTexParameterf(const SoGLContext * glue,
                             GLenum target, GLenum pname, GLfloat param)
 {
-  assert(glue->glTexParameterf);
+  if (!glue || !glue->glTexParameterf) { sogl_warn_core_func_unavailable("glTexParameterf"); return; }
   glue->glTexParameterf(target, pname, param);
 }
 
@@ -5813,7 +6031,7 @@ void
 SoGLContext_glGetIntegerv(const SoGLContext * glue,
                           GLenum pname, GLint * params)
 {
-  assert(glue->glGetIntegerv);
+  if (!glue || !glue->glGetIntegerv) { sogl_warn_core_func_unavailable("glGetIntegerv"); return; }
   glue->glGetIntegerv(pname, params);
 }
 
@@ -5821,7 +6039,7 @@ void
 SoGLContext_glGetFloatv(const SoGLContext * glue,
                         GLenum pname, GLfloat * params)
 {
-  assert(glue->glGetFloatv);
+  if (!glue || !glue->glGetFloatv) { sogl_warn_core_func_unavailable("glGetFloatv"); return; }
   glue->glGetFloatv(pname, params);
 }
 
@@ -5830,63 +6048,63 @@ SoGLContext_glClearColor(const SoGLContext * glue,
                          GLclampf red, GLclampf green,
                          GLclampf blue, GLclampf alpha)
 {
-  assert(glue->glClearColor);
+  if (!glue || !glue->glClearColor) { sogl_warn_core_func_unavailable("glClearColor"); return; }
   glue->glClearColor(red, green, blue, alpha);
 }
 
 void
 SoGLContext_glClear(const SoGLContext * glue, GLbitfield mask)
 {
-  assert(glue->glClear);
+  if (!glue || !glue->glClear) { sogl_warn_core_func_unavailable("glClear"); return; }
   glue->glClear(mask);
 }
 
 void
 SoGLContext_glFlush(const SoGLContext * glue)
 {
-  assert(glue->glFlush);
+  if (!glue || !glue->glFlush) { sogl_warn_core_func_unavailable("glFlush"); return; }
   glue->glFlush();
 }
 
 void
 SoGLContext_glFinish(const SoGLContext * glue)
 {
-  assert(glue->glFinish);
+  if (!glue || !glue->glFinish) { sogl_warn_core_func_unavailable("glFinish"); return; }
   glue->glFinish();
 }
 
 GLenum
 SoGLContext_glGetError(const SoGLContext * glue)
 {
-  assert(glue->glGetError);
+  if (!glue || !glue->glGetError) { sogl_warn_core_func_unavailable("glGetError"); return GL_NO_ERROR; }
   return glue->glGetError();
 }
 
 const GLubyte *
 SoGLContext_glGetString(const SoGLContext * glue, GLenum name)
 {
-  assert(glue->glGetString);
+  if (!glue || !glue->glGetString) { sogl_warn_core_func_unavailable("glGetString"); return NULL; }
   return glue->glGetString(name);
 }
 
 void
 SoGLContext_glEnable(const SoGLContext * glue, GLenum cap)
 {
-  assert(glue->glEnable);
+  if (!glue || !glue->glEnable) { sogl_warn_core_func_unavailable("glEnable"); return; }
   glue->glEnable(cap);
 }
 
 void
 SoGLContext_glDisable(const SoGLContext * glue, GLenum cap)
 {
-  assert(glue->glDisable);
+  if (!glue || !glue->glDisable) { sogl_warn_core_func_unavailable("glDisable"); return; }
   glue->glDisable(cap);
 }
 
 GLboolean
 SoGLContext_glIsEnabled(const SoGLContext * glue, GLenum cap)
 {
-  assert(glue->glIsEnabled);
+  if (!glue || !glue->glIsEnabled) { sogl_warn_core_func_unavailable("glIsEnabled"); return GL_FALSE; }
   return glue->glIsEnabled(cap);
 }
 
@@ -5894,7 +6112,7 @@ void
 SoGLContext_glPixelStorei(const SoGLContext * glue,
                           GLenum pname, GLint param)
 {
-  assert(glue->glPixelStorei);
+  if (!glue || !glue->glPixelStorei) { sogl_warn_core_func_unavailable("glPixelStorei"); return; }
   glue->glPixelStorei(pname, param);
 }
 
@@ -5903,7 +6121,7 @@ SoGLContext_glReadPixels(const SoGLContext * glue,
                          GLint x, GLint y, GLsizei width, GLsizei height,
                          GLenum format, GLenum type, GLvoid * pixels)
 {
-  assert(glue->glReadPixels);
+  if (!glue || !glue->glReadPixels) { sogl_warn_core_func_unavailable("glReadPixels"); return; }
   glue->glReadPixels(x, y, width, height, format, type, pixels);
 }
 
@@ -5914,7 +6132,7 @@ SoGLContext_glCopyTexSubImage2D(const SoGLContext * glue,
                                 GLint x, GLint y,
                                 GLsizei width, GLsizei height)
 {
-  assert(glue->glCopyTexSubImage2D);
+  if (!glue || !glue->glCopyTexSubImage2D) { sogl_warn_core_func_unavailable("glCopyTexSubImage2D"); return; }
   glue->glCopyTexSubImage2D(target, level, xoffset, yoffset,
                             x, y, width, height);
 }
@@ -5931,189 +6149,189 @@ SoGLContext_glCopyTexSubImage2D(const SoGLContext * glue,
 void
 SoGLContext_glBegin(const SoGLContext * glue, GLenum mode)
 {
-  assert(glue->glBegin);
+  if (!glue || !glue->glBegin) { sogl_warn_core_func_unavailable("glBegin"); return; }
   glue->glBegin(mode);
 }
 
 void
 SoGLContext_glEnd(const SoGLContext * glue)
 {
-  assert(glue->glEnd);
+  if (!glue || !glue->glEnd) { sogl_warn_core_func_unavailable("glEnd"); return; }
   glue->glEnd();
 }
 
 void
 SoGLContext_glVertex2f(const SoGLContext * glue, GLfloat x, GLfloat y)
 {
-  assert(glue->glVertex2f);
+  if (!glue || !glue->glVertex2f) { sogl_warn_core_func_unavailable("glVertex2f"); return; }
   glue->glVertex2f(x, y);
 }
 
 void
 SoGLContext_glVertex2s(const SoGLContext * glue, GLshort x, GLshort y)
 {
-  assert(glue->glVertex2s);
+  if (!glue || !glue->glVertex2s) { sogl_warn_core_func_unavailable("glVertex2s"); return; }
   glue->glVertex2s(x, y);
 }
 
 void
 SoGLContext_glVertex3f(const SoGLContext * glue, GLfloat x, GLfloat y, GLfloat z)
 {
-  assert(glue->glVertex3f);
+  if (!glue || !glue->glVertex3f) { sogl_warn_core_func_unavailable("glVertex3f"); return; }
   glue->glVertex3f(x, y, z);
 }
 
 void
 SoGLContext_glVertex3fv(const SoGLContext * glue, const GLfloat * v)
 {
-  assert(glue->glVertex3fv);
+  if (!glue || !glue->glVertex3fv) { sogl_warn_core_func_unavailable("glVertex3fv"); return; }
   glue->glVertex3fv(v);
 }
 
 void
 SoGLContext_glVertex4fv(const SoGLContext * glue, const GLfloat * v)
 {
-  assert(glue->glVertex4fv);
+  if (!glue || !glue->glVertex4fv) { sogl_warn_core_func_unavailable("glVertex4fv"); return; }
   glue->glVertex4fv(v);
 }
 
 void
 SoGLContext_glNormal3f(const SoGLContext * glue, GLfloat nx, GLfloat ny, GLfloat nz)
 {
-  assert(glue->glNormal3f);
+  if (!glue || !glue->glNormal3f) { sogl_warn_core_func_unavailable("glNormal3f"); return; }
   glue->glNormal3f(nx, ny, nz);
 }
 
 void
 SoGLContext_glNormal3fv(const SoGLContext * glue, const GLfloat * v)
 {
-  assert(glue->glNormal3fv);
+  if (!glue || !glue->glNormal3fv) { sogl_warn_core_func_unavailable("glNormal3fv"); return; }
   glue->glNormal3fv(v);
 }
 
 void
 SoGLContext_glColor3f(const SoGLContext * glue, GLfloat r, GLfloat g, GLfloat b)
 {
-  assert(glue->glColor3f);
+  if (!glue || !glue->glColor3f) { sogl_warn_core_func_unavailable("glColor3f"); return; }
   glue->glColor3f(r, g, b);
 }
 
 void
 SoGLContext_glColor3fv(const SoGLContext * glue, const GLfloat * v)
 {
-  assert(glue->glColor3fv);
+  if (!glue || !glue->glColor3fv) { sogl_warn_core_func_unavailable("glColor3fv"); return; }
   glue->glColor3fv(v);
 }
 
 void
 SoGLContext_glColor3ub(const SoGLContext * glue, GLubyte r, GLubyte g, GLubyte b)
 {
-  assert(glue->glColor3ub);
+  if (!glue || !glue->glColor3ub) { sogl_warn_core_func_unavailable("glColor3ub"); return; }
   glue->glColor3ub(r, g, b);
 }
 
 void
 SoGLContext_glColor3ubv(const SoGLContext * glue, const GLubyte * v)
 {
-  assert(glue->glColor3ubv);
+  if (!glue || !glue->glColor3ubv) { sogl_warn_core_func_unavailable("glColor3ubv"); return; }
   glue->glColor3ubv(v);
 }
 
 void
 SoGLContext_glColor4ub(const SoGLContext * glue, GLubyte r, GLubyte g, GLubyte b, GLubyte a)
 {
-  assert(glue->glColor4ub);
+  if (!glue || !glue->glColor4ub) { sogl_warn_core_func_unavailable("glColor4ub"); return; }
   glue->glColor4ub(r, g, b, a);
 }
 
 void
 SoGLContext_glTexCoord2f(const SoGLContext * glue, GLfloat s, GLfloat t)
 {
-  assert(glue->glTexCoord2f);
+  if (!glue || !glue->glTexCoord2f) { sogl_warn_core_func_unavailable("glTexCoord2f"); return; }
   glue->glTexCoord2f(s, t);
 }
 
 void
 SoGLContext_glTexCoord2fv(const SoGLContext * glue, const GLfloat * v)
 {
-  assert(glue->glTexCoord2fv);
+  if (!glue || !glue->glTexCoord2fv) { sogl_warn_core_func_unavailable("glTexCoord2fv"); return; }
   glue->glTexCoord2fv(v);
 }
 
 void
 SoGLContext_glTexCoord3f(const SoGLContext * glue, GLfloat s, GLfloat t, GLfloat r)
 {
-  assert(glue->glTexCoord3f);
+  if (!glue || !glue->glTexCoord3f) { sogl_warn_core_func_unavailable("glTexCoord3f"); return; }
   glue->glTexCoord3f(s, t, r);
 }
 
 void
 SoGLContext_glTexCoord3fv(const SoGLContext * glue, const GLfloat * v)
 {
-  assert(glue->glTexCoord3fv);
+  if (!glue || !glue->glTexCoord3fv) { sogl_warn_core_func_unavailable("glTexCoord3fv"); return; }
   glue->glTexCoord3fv(v);
 }
 
 void
 SoGLContext_glTexCoord4fv(const SoGLContext * glue, const GLfloat * v)
 {
-  assert(glue->glTexCoord4fv);
+  if (!glue || !glue->glTexCoord4fv) { sogl_warn_core_func_unavailable("glTexCoord4fv"); return; }
   glue->glTexCoord4fv(v);
 }
 
 void
 SoGLContext_glIndexi(const SoGLContext * glue, GLint c)
 {
-  assert(glue->glIndexi);
+  if (!glue || !glue->glIndexi) { sogl_warn_core_func_unavailable("glIndexi"); return; }
   glue->glIndexi(c);
 }
 
 void
 SoGLContext_glMatrixMode(const SoGLContext * glue, GLenum mode)
 {
-  assert(glue->glMatrixMode);
+  if (!glue || !glue->glMatrixMode) { sogl_warn_core_func_unavailable("glMatrixMode"); return; }
   glue->glMatrixMode(mode);
 }
 
 void
 SoGLContext_glLoadIdentity(const SoGLContext * glue)
 {
-  assert(glue->glLoadIdentity);
+  if (!glue || !glue->glLoadIdentity) { sogl_warn_core_func_unavailable("glLoadIdentity"); return; }
   glue->glLoadIdentity();
 }
 
 void
 SoGLContext_glLoadMatrixf(const SoGLContext * glue, const GLfloat * m)
 {
-  assert(glue->glLoadMatrixf);
+  if (!glue || !glue->glLoadMatrixf) { sogl_warn_core_func_unavailable("glLoadMatrixf"); return; }
   glue->glLoadMatrixf(m);
 }
 
 void
 SoGLContext_glLoadMatrixd(const SoGLContext * glue, const GLdouble * m)
 {
-  assert(glue->glLoadMatrixd);
+  if (!glue || !glue->glLoadMatrixd) { sogl_warn_core_func_unavailable("glLoadMatrixd"); return; }
   glue->glLoadMatrixd(m);
 }
 
 void
 SoGLContext_glMultMatrixf(const SoGLContext * glue, const GLfloat * m)
 {
-  assert(glue->glMultMatrixf);
+  if (!glue || !glue->glMultMatrixf) { sogl_warn_core_func_unavailable("glMultMatrixf"); return; }
   glue->glMultMatrixf(m);
 }
 
 void
 SoGLContext_glPushMatrix(const SoGLContext * glue)
 {
-  assert(glue->glPushMatrix);
+  if (!glue || !glue->glPushMatrix) { sogl_warn_core_func_unavailable("glPushMatrix"); return; }
   glue->glPushMatrix();
 }
 
 void
 SoGLContext_glPopMatrix(const SoGLContext * glue)
 {
-  assert(glue->glPopMatrix);
+  if (!glue || !glue->glPopMatrix) { sogl_warn_core_func_unavailable("glPopMatrix"); return; }
   glue->glPopMatrix();
 }
 
@@ -6123,7 +6341,7 @@ SoGLContext_glOrtho(const SoGLContext * glue,
                     GLdouble bottom, GLdouble top,
                     GLdouble near_val, GLdouble far_val)
 {
-  assert(glue->glOrtho);
+  if (!glue || !glue->glOrtho) { sogl_warn_core_func_unavailable("glOrtho"); return; }
   glue->glOrtho(left, right, bottom, top, near_val, far_val);
 }
 
@@ -6133,140 +6351,140 @@ SoGLContext_glFrustum(const SoGLContext * glue,
                       GLdouble bottom, GLdouble top,
                       GLdouble near_val, GLdouble far_val)
 {
-  assert(glue->glFrustum);
+  if (!glue || !glue->glFrustum) { sogl_warn_core_func_unavailable("glFrustum"); return; }
   glue->glFrustum(left, right, bottom, top, near_val, far_val);
 }
 
 void
 SoGLContext_glTranslatef(const SoGLContext * glue, GLfloat x, GLfloat y, GLfloat z)
 {
-  assert(glue->glTranslatef);
+  if (!glue || !glue->glTranslatef) { sogl_warn_core_func_unavailable("glTranslatef"); return; }
   glue->glTranslatef(x, y, z);
 }
 
 void
 SoGLContext_glRotatef(const SoGLContext * glue, GLfloat angle, GLfloat x, GLfloat y, GLfloat z)
 {
-  assert(glue->glRotatef);
+  if (!glue || !glue->glRotatef) { sogl_warn_core_func_unavailable("glRotatef"); return; }
   glue->glRotatef(angle, x, y, z);
 }
 
 void
 SoGLContext_glScalef(const SoGLContext * glue, GLfloat x, GLfloat y, GLfloat z)
 {
-  assert(glue->glScalef);
+  if (!glue || !glue->glScalef) { sogl_warn_core_func_unavailable("glScalef"); return; }
   glue->glScalef(x, y, z);
 }
 
 void
 SoGLContext_glLightf(const SoGLContext * glue, GLenum light, GLenum pname, GLfloat param)
 {
-  assert(glue->glLightf);
+  if (!glue || !glue->glLightf) { sogl_warn_core_func_unavailable("glLightf"); return; }
   glue->glLightf(light, pname, param);
 }
 
 void
 SoGLContext_glLightfv(const SoGLContext * glue, GLenum light, GLenum pname, const GLfloat * params)
 {
-  assert(glue->glLightfv);
+  if (!glue || !glue->glLightfv) { sogl_warn_core_func_unavailable("glLightfv"); return; }
   glue->glLightfv(light, pname, params);
 }
 
 void
 SoGLContext_glLightModeli(const SoGLContext * glue, GLenum pname, GLint param)
 {
-  assert(glue->glLightModeli);
+  if (!glue || !glue->glLightModeli) { sogl_warn_core_func_unavailable("glLightModeli"); return; }
   glue->glLightModeli(pname, param);
 }
 
 void
 SoGLContext_glLightModelfv(const SoGLContext * glue, GLenum pname, const GLfloat * params)
 {
-  assert(glue->glLightModelfv);
+  if (!glue || !glue->glLightModelfv) { sogl_warn_core_func_unavailable("glLightModelfv"); return; }
   glue->glLightModelfv(pname, params);
 }
 
 void
 SoGLContext_glMaterialf(const SoGLContext * glue, GLenum face, GLenum pname, GLfloat param)
 {
-  assert(glue->glMaterialf);
+  if (!glue || !glue->glMaterialf) { sogl_warn_core_func_unavailable("glMaterialf"); return; }
   glue->glMaterialf(face, pname, param);
 }
 
 void
 SoGLContext_glMaterialfv(const SoGLContext * glue, GLenum face, GLenum pname, const GLfloat * params)
 {
-  assert(glue->glMaterialfv);
+  if (!glue || !glue->glMaterialfv) { sogl_warn_core_func_unavailable("glMaterialfv"); return; }
   glue->glMaterialfv(face, pname, params);
 }
 
 void
 SoGLContext_glColorMaterial(const SoGLContext * glue, GLenum face, GLenum mode)
 {
-  assert(glue->glColorMaterial);
+  if (!glue || !glue->glColorMaterial) { sogl_warn_core_func_unavailable("glColorMaterial"); return; }
   glue->glColorMaterial(face, mode);
 }
 
 void
 SoGLContext_glFogi(const SoGLContext * glue, GLenum pname, GLint param)
 {
-  assert(glue->glFogi);
+  if (!glue || !glue->glFogi) { sogl_warn_core_func_unavailable("glFogi"); return; }
   glue->glFogi(pname, param);
 }
 
 void
 SoGLContext_glFogf(const SoGLContext * glue, GLenum pname, GLfloat param)
 {
-  assert(glue->glFogf);
+  if (!glue || !glue->glFogf) { sogl_warn_core_func_unavailable("glFogf"); return; }
   glue->glFogf(pname, param);
 }
 
 void
 SoGLContext_glFogfv(const SoGLContext * glue, GLenum pname, const GLfloat * params)
 {
-  assert(glue->glFogfv);
+  if (!glue || !glue->glFogfv) { sogl_warn_core_func_unavailable("glFogfv"); return; }
   glue->glFogfv(pname, params);
 }
 
 void
 SoGLContext_glTexEnvi(const SoGLContext * glue, GLenum target, GLenum pname, GLint param)
 {
-  assert(glue->glTexEnvi);
+  if (!glue || !glue->glTexEnvi) { sogl_warn_core_func_unavailable("glTexEnvi"); return; }
   glue->glTexEnvi(target, pname, param);
 }
 
 void
 SoGLContext_glTexEnvf(const SoGLContext * glue, GLenum target, GLenum pname, GLfloat param)
 {
-  assert(glue->glTexEnvf);
+  if (!glue || !glue->glTexEnvf) { sogl_warn_core_func_unavailable("glTexEnvf"); return; }
   glue->glTexEnvf(target, pname, param);
 }
 
 void
 SoGLContext_glTexEnvfv(const SoGLContext * glue, GLenum target, GLenum pname, const GLfloat * params)
 {
-  assert(glue->glTexEnvfv);
+  if (!glue || !glue->glTexEnvfv) { sogl_warn_core_func_unavailable("glTexEnvfv"); return; }
   glue->glTexEnvfv(target, pname, params);
 }
 
 void
 SoGLContext_glTexGeni(const SoGLContext * glue, GLenum coord, GLenum pname, GLint param)
 {
-  assert(glue->glTexGeni);
+  if (!glue || !glue->glTexGeni) { sogl_warn_core_func_unavailable("glTexGeni"); return; }
   glue->glTexGeni(coord, pname, param);
 }
 
 void
 SoGLContext_glTexGenf(const SoGLContext * glue, GLenum coord, GLenum pname, GLfloat param)
 {
-  assert(glue->glTexGenf);
+  if (!glue || !glue->glTexGenf) { sogl_warn_core_func_unavailable("glTexGenf"); return; }
   glue->glTexGenf(coord, pname, param);
 }
 
 void
 SoGLContext_glTexGenfv(const SoGLContext * glue, GLenum coord, GLenum pname, const GLfloat * params)
 {
-  assert(glue->glTexGenfv);
+  if (!glue || !glue->glTexGenfv) { sogl_warn_core_func_unavailable("glTexGenfv"); return; }
   glue->glTexGenfv(coord, pname, params);
 }
 
@@ -6277,21 +6495,21 @@ SoGLContext_glCopyTexImage2D(const SoGLContext * glue,
                              GLint x, GLint y,
                              GLsizei width, GLsizei height, GLint border)
 {
-  assert(glue->glCopyTexImage2D);
+  if (!glue || !glue->glCopyTexImage2D) { sogl_warn_core_func_unavailable("glCopyTexImage2D"); return; }
   glue->glCopyTexImage2D(target, level, internalformat, x, y, width, height, border);
 }
 
 void
 SoGLContext_glRasterPos2f(const SoGLContext * glue, GLfloat x, GLfloat y)
 {
-  assert(glue->glRasterPos2f);
+  if (!glue || !glue->glRasterPos2f) { sogl_warn_core_func_unavailable("glRasterPos2f"); return; }
   glue->glRasterPos2f(x, y);
 }
 
 void
 SoGLContext_glRasterPos3f(const SoGLContext * glue, GLfloat x, GLfloat y, GLfloat z)
 {
-  assert(glue->glRasterPos3f);
+  if (!glue || !glue->glRasterPos3f) { sogl_warn_core_func_unavailable("glRasterPos3f"); return; }
   glue->glRasterPos3f(x, y, z);
 }
 
@@ -6302,7 +6520,7 @@ SoGLContext_glBitmap(const SoGLContext * glue,
                      GLfloat xmove, GLfloat ymove,
                      const GLubyte * bitmap)
 {
-  assert(glue->glBitmap);
+  if (!glue || !glue->glBitmap) { sogl_warn_core_func_unavailable("glBitmap"); return; }
   glue->glBitmap(width, height, xorig, yorig, xmove, ymove, bitmap);
 }
 
@@ -6311,21 +6529,21 @@ SoGLContext_glDrawPixels(const SoGLContext * glue,
                          GLsizei width, GLsizei height,
                          GLenum format, GLenum type, const GLvoid * pixels)
 {
-  assert(glue->glDrawPixels);
+  if (!glue || !glue->glDrawPixels) { sogl_warn_core_func_unavailable("glDrawPixels"); return; }
   glue->glDrawPixels(width, height, format, type, pixels);
 }
 
 void
 SoGLContext_glPixelTransferf(const SoGLContext * glue, GLenum pname, GLfloat param)
 {
-  assert(glue->glPixelTransferf);
+  if (!glue || !glue->glPixelTransferf) { sogl_warn_core_func_unavailable("glPixelTransferf"); return; }
   glue->glPixelTransferf(pname, param);
 }
 
 void
 SoGLContext_glPixelTransferi(const SoGLContext * glue, GLenum pname, GLint param)
 {
-  assert(glue->glPixelTransferi);
+  if (!glue || !glue->glPixelTransferi) { sogl_warn_core_func_unavailable("glPixelTransferi"); return; }
   glue->glPixelTransferi(pname, param);
 }
 
@@ -6333,7 +6551,7 @@ void
 SoGLContext_glPixelMapfv(const SoGLContext * glue,
                          GLenum map, GLint mapsize, const GLfloat * values)
 {
-  assert(glue->glPixelMapfv);
+  if (!glue || !glue->glPixelMapfv) { sogl_warn_core_func_unavailable("glPixelMapfv"); return; }
   glue->glPixelMapfv(map, mapsize, values);
 }
 
@@ -6341,14 +6559,14 @@ void
 SoGLContext_glPixelMapuiv(const SoGLContext * glue,
                           GLenum map, GLint mapsize, const GLuint * values)
 {
-  assert(glue->glPixelMapuiv);
+  if (!glue || !glue->glPixelMapuiv) { sogl_warn_core_func_unavailable("glPixelMapuiv"); return; }
   glue->glPixelMapuiv(map, mapsize, values);
 }
 
 void
 SoGLContext_glPixelZoom(const SoGLContext * glue, GLfloat xfactor, GLfloat yfactor)
 {
-  assert(glue->glPixelZoom);
+  if (!glue || !glue->glPixelZoom) { sogl_warn_core_func_unavailable("glPixelZoom"); return; }
   glue->glPixelZoom(xfactor, yfactor);
 }
 
@@ -6356,7 +6574,7 @@ void
 SoGLContext_glViewport(const SoGLContext * glue,
                        GLint x, GLint y, GLsizei width, GLsizei height)
 {
-  assert(glue->glViewport);
+  if (!glue || !glue->glViewport) { sogl_warn_core_func_unavailable("glViewport"); return; }
   glue->glViewport(x, y, width, height);
 }
 
@@ -6364,105 +6582,105 @@ void
 SoGLContext_glScissor(const SoGLContext * glue,
                       GLint x, GLint y, GLsizei width, GLsizei height)
 {
-  assert(glue->glScissor);
+  if (!glue || !glue->glScissor) { sogl_warn_core_func_unavailable("glScissor"); return; }
   glue->glScissor(x, y, width, height);
 }
 
 void
 SoGLContext_glDepthMask(const SoGLContext * glue, GLboolean flag)
 {
-  assert(glue->glDepthMask);
+  if (!glue || !glue->glDepthMask) { sogl_warn_core_func_unavailable("glDepthMask"); return; }
   glue->glDepthMask(flag);
 }
 
 void
 SoGLContext_glDepthFunc(const SoGLContext * glue, GLenum func)
 {
-  assert(glue->glDepthFunc);
+  if (!glue || !glue->glDepthFunc) { sogl_warn_core_func_unavailable("glDepthFunc"); return; }
   glue->glDepthFunc(func);
 }
 
 void
 SoGLContext_glDepthRange(const SoGLContext * glue, GLclampd near_val, GLclampd far_val)
 {
-  assert(glue->glDepthRange);
+  if (!glue || !glue->glDepthRange) { sogl_warn_core_func_unavailable("glDepthRange"); return; }
   glue->glDepthRange(near_val, far_val);
 }
 
 void
 SoGLContext_glStencilFunc(const SoGLContext * glue, GLenum func, GLint ref, GLuint mask)
 {
-  assert(glue->glStencilFunc);
+  if (!glue || !glue->glStencilFunc) { sogl_warn_core_func_unavailable("glStencilFunc"); return; }
   glue->glStencilFunc(func, ref, mask);
 }
 
 void
 SoGLContext_glStencilOp(const SoGLContext * glue, GLenum fail, GLenum zfail, GLenum zpass)
 {
-  assert(glue->glStencilOp);
+  if (!glue || !glue->glStencilOp) { sogl_warn_core_func_unavailable("glStencilOp"); return; }
   glue->glStencilOp(fail, zfail, zpass);
 }
 
 void
 SoGLContext_glBlendFunc(const SoGLContext * glue, GLenum sfactor, GLenum dfactor)
 {
-  assert(glue->glBlendFunc);
+  if (!glue || !glue->glBlendFunc) { sogl_warn_core_func_unavailable("glBlendFunc"); return; }
   glue->glBlendFunc(sfactor, dfactor);
 }
 
 void
 SoGLContext_glAlphaFunc(const SoGLContext * glue, GLenum func, GLclampf ref)
 {
-  assert(glue->glAlphaFunc);
+  if (!glue || !glue->glAlphaFunc) { sogl_warn_core_func_unavailable("glAlphaFunc"); return; }
   glue->glAlphaFunc(func, ref);
 }
 
 void
 SoGLContext_glFrontFace(const SoGLContext * glue, GLenum mode)
 {
-  assert(glue->glFrontFace);
+  if (!glue || !glue->glFrontFace) { sogl_warn_core_func_unavailable("glFrontFace"); return; }
   glue->glFrontFace(mode);
 }
 
 void
 SoGLContext_glCullFace(const SoGLContext * glue, GLenum mode)
 {
-  assert(glue->glCullFace);
+  if (!glue || !glue->glCullFace) { sogl_warn_core_func_unavailable("glCullFace"); return; }
   glue->glCullFace(mode);
 }
 
 void
 SoGLContext_glPolygonMode(const SoGLContext * glue, GLenum face, GLenum mode)
 {
-  assert(glue->glPolygonMode);
+  if (!glue || !glue->glPolygonMode) { sogl_warn_core_func_unavailable("glPolygonMode"); return; }
   glue->glPolygonMode(face, mode);
 }
 
 void
 SoGLContext_glPolygonStipple(const SoGLContext * glue, const GLubyte * mask)
 {
-  assert(glue->glPolygonStipple);
+  if (!glue || !glue->glPolygonStipple) { sogl_warn_core_func_unavailable("glPolygonStipple"); return; }
   glue->glPolygonStipple(mask);
 }
 
 void
 SoGLContext_glLineWidth(const SoGLContext * glue, GLfloat width)
 {
-  assert(glue->glLineWidth);
+  if (!glue || !glue->glLineWidth) { sogl_warn_core_func_unavailable("glLineWidth"); return; }
   glue->glLineWidth(width);
 }
 
 void
 SoGLContext_glLineStipple(const SoGLContext * glue, GLint factor, GLushort pattern)
 {
-  assert(glue->glLineStipple);
+  if (!glue || !glue->glLineStipple) { sogl_warn_core_func_unavailable("glLineStipple"); return; }
   glue->glLineStipple(factor, pattern);
 }
 
 void
 SoGLContext_glPointSize(const SoGLContext * glue, GLfloat size)
 {
-  assert(glue->glPointSize);
+  if (!glue || !glue->glPointSize) { sogl_warn_core_func_unavailable("glPointSize"); return; }
   glue->glPointSize(size);
 }
 
@@ -6471,7 +6689,7 @@ SoGLContext_glColorMask(const SoGLContext * glue,
                         GLboolean red, GLboolean green,
                         GLboolean blue, GLboolean alpha)
 {
-  assert(glue->glColorMask);
+  if (!glue || !glue->glColorMask) { sogl_warn_core_func_unavailable("glColorMask"); return; }
   glue->glColorMask(red, green, blue, alpha);
 }
 
@@ -6479,91 +6697,91 @@ void
 SoGLContext_glClipPlane(const SoGLContext * glue,
                         GLenum plane, const GLdouble * equation)
 {
-  assert(glue->glClipPlane);
+  if (!glue || !glue->glClipPlane) { sogl_warn_core_func_unavailable("glClipPlane"); return; }
   glue->glClipPlane(plane, equation);
 }
 
 void
 SoGLContext_glDrawBuffer(const SoGLContext * glue, GLenum mode)
 {
-  assert(glue->glDrawBuffer);
+  if (!glue || !glue->glDrawBuffer) { sogl_warn_core_func_unavailable("glDrawBuffer"); return; }
   glue->glDrawBuffer(mode);
 }
 
 void
 SoGLContext_glClearIndex(const SoGLContext * glue, GLfloat c)
 {
-  assert(glue->glClearIndex);
+  if (!glue || !glue->glClearIndex) { sogl_warn_core_func_unavailable("glClearIndex"); return; }
   glue->glClearIndex(c);
 }
 
 void
 SoGLContext_glClearStencil(const SoGLContext * glue, GLint s)
 {
-  assert(glue->glClearStencil);
+  if (!glue || !glue->glClearStencil) { sogl_warn_core_func_unavailable("glClearStencil"); return; }
   glue->glClearStencil(s);
 }
 
 void
 SoGLContext_glAccum(const SoGLContext * glue, GLenum op, GLfloat value)
 {
-  assert(glue->glAccum);
+  if (!glue || !glue->glAccum) { sogl_warn_core_func_unavailable("glAccum"); return; }
   glue->glAccum(op, value);
 }
 
 void
 SoGLContext_glGetBooleanv(const SoGLContext * glue, GLenum pname, GLboolean * params)
 {
-  assert(glue->glGetBooleanv);
+  if (!glue || !glue->glGetBooleanv) { sogl_warn_core_func_unavailable("glGetBooleanv"); return; }
   glue->glGetBooleanv(pname, params);
 }
 
 void
 SoGLContext_glNewList(const SoGLContext * glue, GLuint list, GLenum mode)
 {
-  assert(glue->glNewList);
+  if (!glue || !glue->glNewList) { sogl_warn_core_func_unavailable("glNewList"); return; }
   glue->glNewList(list, mode);
 }
 
 void
 SoGLContext_glEndList(const SoGLContext * glue)
 {
-  assert(glue->glEndList);
+  if (!glue || !glue->glEndList) { sogl_warn_core_func_unavailable("glEndList"); return; }
   glue->glEndList();
 }
 
 void
 SoGLContext_glCallList(const SoGLContext * glue, GLuint list)
 {
-  assert(glue->glCallList);
+  if (!glue || !glue->glCallList) { sogl_warn_core_func_unavailable("glCallList"); return; }
   glue->glCallList(list);
 }
 
 void
 SoGLContext_glDeleteLists(const SoGLContext * glue, GLuint list, GLsizei range)
 {
-  assert(glue->glDeleteLists);
+  if (!glue || !glue->glDeleteLists) { sogl_warn_core_func_unavailable("glDeleteLists"); return; }
   glue->glDeleteLists(list, range);
 }
 
 GLuint
 SoGLContext_glGenLists(const SoGLContext * glue, GLsizei range)
 {
-  assert(glue->glGenLists);
+  if (!glue || !glue->glGenLists) { sogl_warn_core_func_unavailable("glGenLists"); return 0; }
   return glue->glGenLists(range);
 }
 
 void
 SoGLContext_glPushAttrib(const SoGLContext * glue, GLbitfield mask)
 {
-  assert(glue->glPushAttrib);
+  if (!glue || !glue->glPushAttrib) { sogl_warn_core_func_unavailable("glPushAttrib"); return; }
   glue->glPushAttrib(mask);
 }
 
 void
 SoGLContext_glPopAttrib(const SoGLContext * glue)
 {
-  assert(glue->glPopAttrib);
+  if (!glue || !glue->glPopAttrib) { sogl_warn_core_func_unavailable("glPopAttrib"); return; }
   glue->glPopAttrib();
 }
 
@@ -6590,1918 +6808,1918 @@ SoGLContext_glPopAttrib(const SoGLContext * glue)
 GLboolean
 SoGLContext_glAreTexturesResident(const SoGLContext * glue, GLsizei n, const GLuint * textures, GLboolean * residences)
 {
-  assert(glue->glAreTexturesResident);
+  if (!glue || !glue->glAreTexturesResident) { sogl_warn_core_func_unavailable("glAreTexturesResident"); return GL_FALSE; }
   return glue->glAreTexturesResident(n, textures, residences);
 }
 
 void
 SoGLContext_glBlendColor(const SoGLContext * glue, GLclampf red, GLclampf green, GLclampf blue, GLclampf alpha)
 {
-  assert(glue->glBlendColor);
+  if (!glue || !glue->glBlendColor) { sogl_warn_core_func_unavailable("glBlendColor"); return; }
   glue->glBlendColor(red, green, blue, alpha);
 }
 
 void
 SoGLContext_glCallLists(const SoGLContext * glue, GLsizei n, GLenum type, const GLvoid * lists)
 {
-  assert(glue->glCallLists);
+  if (!glue || !glue->glCallLists) { sogl_warn_core_func_unavailable("glCallLists"); return; }
   glue->glCallLists(n, type, lists);
 }
 
 void
 SoGLContext_glClearAccum(const SoGLContext * glue, GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha)
 {
-  assert(glue->glClearAccum);
+  if (!glue || !glue->glClearAccum) { sogl_warn_core_func_unavailable("glClearAccum"); return; }
   glue->glClearAccum(red, green, blue, alpha);
 }
 
 void
 SoGLContext_glClearDepth(const SoGLContext * glue, GLclampd depth)
 {
-  assert(glue->glClearDepth);
+  if (!glue || !glue->glClearDepth) { sogl_warn_core_func_unavailable("glClearDepth"); return; }
   glue->glClearDepth(depth);
 }
 
 void
 SoGLContext_glColor3b(const SoGLContext * glue, GLbyte red, GLbyte green, GLbyte blue)
 {
-  assert(glue->glColor3b);
+  if (!glue || !glue->glColor3b) { sogl_warn_core_func_unavailable("glColor3b"); return; }
   glue->glColor3b(red, green, blue);
 }
 
 void
 SoGLContext_glColor3bv(const SoGLContext * glue, const GLbyte * v)
 {
-  assert(glue->glColor3bv);
+  if (!glue || !glue->glColor3bv) { sogl_warn_core_func_unavailable("glColor3bv"); return; }
   glue->glColor3bv(v);
 }
 
 void
 SoGLContext_glColor3d(const SoGLContext * glue, GLdouble red, GLdouble green, GLdouble blue)
 {
-  assert(glue->glColor3d);
+  if (!glue || !glue->glColor3d) { sogl_warn_core_func_unavailable("glColor3d"); return; }
   glue->glColor3d(red, green, blue);
 }
 
 void
 SoGLContext_glColor3dv(const SoGLContext * glue, const GLdouble * v)
 {
-  assert(glue->glColor3dv);
+  if (!glue || !glue->glColor3dv) { sogl_warn_core_func_unavailable("glColor3dv"); return; }
   glue->glColor3dv(v);
 }
 
 void
 SoGLContext_glColor3i(const SoGLContext * glue, GLint red, GLint green, GLint blue)
 {
-  assert(glue->glColor3i);
+  if (!glue || !glue->glColor3i) { sogl_warn_core_func_unavailable("glColor3i"); return; }
   glue->glColor3i(red, green, blue);
 }
 
 void
 SoGLContext_glColor3iv(const SoGLContext * glue, const GLint * v)
 {
-  assert(glue->glColor3iv);
+  if (!glue || !glue->glColor3iv) { sogl_warn_core_func_unavailable("glColor3iv"); return; }
   glue->glColor3iv(v);
 }
 
 void
 SoGLContext_glColor3s(const SoGLContext * glue, GLshort red, GLshort green, GLshort blue)
 {
-  assert(glue->glColor3s);
+  if (!glue || !glue->glColor3s) { sogl_warn_core_func_unavailable("glColor3s"); return; }
   glue->glColor3s(red, green, blue);
 }
 
 void
 SoGLContext_glColor3sv(const SoGLContext * glue, const GLshort * v)
 {
-  assert(glue->glColor3sv);
+  if (!glue || !glue->glColor3sv) { sogl_warn_core_func_unavailable("glColor3sv"); return; }
   glue->glColor3sv(v);
 }
 
 void
 SoGLContext_glColor3ui(const SoGLContext * glue, GLuint red, GLuint green, GLuint blue)
 {
-  assert(glue->glColor3ui);
+  if (!glue || !glue->glColor3ui) { sogl_warn_core_func_unavailable("glColor3ui"); return; }
   glue->glColor3ui(red, green, blue);
 }
 
 void
 SoGLContext_glColor3uiv(const SoGLContext * glue, const GLuint * v)
 {
-  assert(glue->glColor3uiv);
+  if (!glue || !glue->glColor3uiv) { sogl_warn_core_func_unavailable("glColor3uiv"); return; }
   glue->glColor3uiv(v);
 }
 
 void
 SoGLContext_glColor3us(const SoGLContext * glue, GLushort red, GLushort green, GLushort blue)
 {
-  assert(glue->glColor3us);
+  if (!glue || !glue->glColor3us) { sogl_warn_core_func_unavailable("glColor3us"); return; }
   glue->glColor3us(red, green, blue);
 }
 
 void
 SoGLContext_glColor3usv(const SoGLContext * glue, const GLushort * v)
 {
-  assert(glue->glColor3usv);
+  if (!glue || !glue->glColor3usv) { sogl_warn_core_func_unavailable("glColor3usv"); return; }
   glue->glColor3usv(v);
 }
 
 void
 SoGLContext_glColor4b(const SoGLContext * glue, GLbyte red, GLbyte green, GLbyte blue, GLbyte alpha)
 {
-  assert(glue->glColor4b);
+  if (!glue || !glue->glColor4b) { sogl_warn_core_func_unavailable("glColor4b"); return; }
   glue->glColor4b(red, green, blue, alpha);
 }
 
 void
 SoGLContext_glColor4bv(const SoGLContext * glue, const GLbyte * v)
 {
-  assert(glue->glColor4bv);
+  if (!glue || !glue->glColor4bv) { sogl_warn_core_func_unavailable("glColor4bv"); return; }
   glue->glColor4bv(v);
 }
 
 void
 SoGLContext_glColor4d(const SoGLContext * glue, GLdouble red, GLdouble green, GLdouble blue, GLdouble alpha)
 {
-  assert(glue->glColor4d);
+  if (!glue || !glue->glColor4d) { sogl_warn_core_func_unavailable("glColor4d"); return; }
   glue->glColor4d(red, green, blue, alpha);
 }
 
 void
 SoGLContext_glColor4dv(const SoGLContext * glue, const GLdouble * v)
 {
-  assert(glue->glColor4dv);
+  if (!glue || !glue->glColor4dv) { sogl_warn_core_func_unavailable("glColor4dv"); return; }
   glue->glColor4dv(v);
 }
 
 void
 SoGLContext_glColor4f(const SoGLContext * glue, GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha)
 {
-  assert(glue->glColor4f);
+  if (!glue || !glue->glColor4f) { sogl_warn_core_func_unavailable("glColor4f"); return; }
   glue->glColor4f(red, green, blue, alpha);
 }
 
 void
 SoGLContext_glColor4fv(const SoGLContext * glue, const GLfloat * v)
 {
-  assert(glue->glColor4fv);
+  if (!glue || !glue->glColor4fv) { sogl_warn_core_func_unavailable("glColor4fv"); return; }
   glue->glColor4fv(v);
 }
 
 void
 SoGLContext_glColor4i(const SoGLContext * glue, GLint red, GLint green, GLint blue, GLint alpha)
 {
-  assert(glue->glColor4i);
+  if (!glue || !glue->glColor4i) { sogl_warn_core_func_unavailable("glColor4i"); return; }
   glue->glColor4i(red, green, blue, alpha);
 }
 
 void
 SoGLContext_glColor4iv(const SoGLContext * glue, const GLint * v)
 {
-  assert(glue->glColor4iv);
+  if (!glue || !glue->glColor4iv) { sogl_warn_core_func_unavailable("glColor4iv"); return; }
   glue->glColor4iv(v);
 }
 
 void
 SoGLContext_glColor4s(const SoGLContext * glue, GLshort red, GLshort green, GLshort blue, GLshort alpha)
 {
-  assert(glue->glColor4s);
+  if (!glue || !glue->glColor4s) { sogl_warn_core_func_unavailable("glColor4s"); return; }
   glue->glColor4s(red, green, blue, alpha);
 }
 
 void
 SoGLContext_glColor4sv(const SoGLContext * glue, const GLshort * v)
 {
-  assert(glue->glColor4sv);
+  if (!glue || !glue->glColor4sv) { sogl_warn_core_func_unavailable("glColor4sv"); return; }
   glue->glColor4sv(v);
 }
 
 void
 SoGLContext_glColor4ubv(const SoGLContext * glue, const GLubyte * v)
 {
-  assert(glue->glColor4ubv);
+  if (!glue || !glue->glColor4ubv) { sogl_warn_core_func_unavailable("glColor4ubv"); return; }
   glue->glColor4ubv(v);
 }
 
 void
 SoGLContext_glColor4ui(const SoGLContext * glue, GLuint red, GLuint green, GLuint blue, GLuint alpha)
 {
-  assert(glue->glColor4ui);
+  if (!glue || !glue->glColor4ui) { sogl_warn_core_func_unavailable("glColor4ui"); return; }
   glue->glColor4ui(red, green, blue, alpha);
 }
 
 void
 SoGLContext_glColor4uiv(const SoGLContext * glue, const GLuint * v)
 {
-  assert(glue->glColor4uiv);
+  if (!glue || !glue->glColor4uiv) { sogl_warn_core_func_unavailable("glColor4uiv"); return; }
   glue->glColor4uiv(v);
 }
 
 void
 SoGLContext_glColor4us(const SoGLContext * glue, GLushort red, GLushort green, GLushort blue, GLushort alpha)
 {
-  assert(glue->glColor4us);
+  if (!glue || !glue->glColor4us) { sogl_warn_core_func_unavailable("glColor4us"); return; }
   glue->glColor4us(red, green, blue, alpha);
 }
 
 void
 SoGLContext_glColor4usv(const SoGLContext * glue, const GLushort * v)
 {
-  assert(glue->glColor4usv);
+  if (!glue || !glue->glColor4usv) { sogl_warn_core_func_unavailable("glColor4usv"); return; }
   glue->glColor4usv(v);
 }
 
 void
 SoGLContext_glColorTableParameterfv(const SoGLContext * glue, GLenum target, GLenum pname, const GLfloat * params)
 {
-  assert(glue->glColorTableParameterfv);
+  if (!glue || !glue->glColorTableParameterfv) { sogl_warn_core_func_unavailable("glColorTableParameterfv"); return; }
   glue->glColorTableParameterfv(target, pname, params);
 }
 
 void
 SoGLContext_glColorTableParameteriv(const SoGLContext * glue, GLenum target, GLenum pname, const GLint * params)
 {
-  assert(glue->glColorTableParameteriv);
+  if (!glue || !glue->glColorTableParameteriv) { sogl_warn_core_func_unavailable("glColorTableParameteriv"); return; }
   glue->glColorTableParameteriv(target, pname, params);
 }
 
 void
 SoGLContext_glConvolutionFilter1D(const SoGLContext * glue, GLenum target, GLenum internalformat, GLsizei width, GLenum format, GLenum type, const GLvoid * image)
 {
-  assert(glue->glConvolutionFilter1D);
+  if (!glue || !glue->glConvolutionFilter1D) { sogl_warn_core_func_unavailable("glConvolutionFilter1D"); return; }
   glue->glConvolutionFilter1D(target, internalformat, width, format, type, image);
 }
 
 void
 SoGLContext_glConvolutionFilter2D(const SoGLContext * glue, GLenum target, GLenum internalformat, GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid * image)
 {
-  assert(glue->glConvolutionFilter2D);
+  if (!glue || !glue->glConvolutionFilter2D) { sogl_warn_core_func_unavailable("glConvolutionFilter2D"); return; }
   glue->glConvolutionFilter2D(target, internalformat, width, height, format, type, image);
 }
 
 void
 SoGLContext_glConvolutionParameterf(const SoGLContext * glue, GLenum target, GLenum pname, GLfloat params)
 {
-  assert(glue->glConvolutionParameterf);
+  if (!glue || !glue->glConvolutionParameterf) { sogl_warn_core_func_unavailable("glConvolutionParameterf"); return; }
   glue->glConvolutionParameterf(target, pname, params);
 }
 
 void
 SoGLContext_glConvolutionParameterfv(const SoGLContext * glue, GLenum target, GLenum pname, const GLfloat * params)
 {
-  assert(glue->glConvolutionParameterfv);
+  if (!glue || !glue->glConvolutionParameterfv) { sogl_warn_core_func_unavailable("glConvolutionParameterfv"); return; }
   glue->glConvolutionParameterfv(target, pname, params);
 }
 
 void
 SoGLContext_glConvolutionParameteri(const SoGLContext * glue, GLenum target, GLenum pname, GLint params)
 {
-  assert(glue->glConvolutionParameteri);
+  if (!glue || !glue->glConvolutionParameteri) { sogl_warn_core_func_unavailable("glConvolutionParameteri"); return; }
   glue->glConvolutionParameteri(target, pname, params);
 }
 
 void
 SoGLContext_glConvolutionParameteriv(const SoGLContext * glue, GLenum target, GLenum pname, const GLint * params)
 {
-  assert(glue->glConvolutionParameteriv);
+  if (!glue || !glue->glConvolutionParameteriv) { sogl_warn_core_func_unavailable("glConvolutionParameteriv"); return; }
   glue->glConvolutionParameteriv(target, pname, params);
 }
 
 void
 SoGLContext_glCopyColorSubTable(const SoGLContext * glue, GLenum target, GLsizei start, GLint x, GLint y, GLsizei width)
 {
-  assert(glue->glCopyColorSubTable);
+  if (!glue || !glue->glCopyColorSubTable) { sogl_warn_core_func_unavailable("glCopyColorSubTable"); return; }
   glue->glCopyColorSubTable(target, start, x, y, width);
 }
 
 void
 SoGLContext_glCopyColorTable(const SoGLContext * glue, GLenum target, GLenum internalformat, GLint x, GLint y, GLsizei width)
 {
-  assert(glue->glCopyColorTable);
+  if (!glue || !glue->glCopyColorTable) { sogl_warn_core_func_unavailable("glCopyColorTable"); return; }
   glue->glCopyColorTable(target, internalformat, x, y, width);
 }
 
 void
 SoGLContext_glCopyConvolutionFilter1D(const SoGLContext * glue, GLenum target, GLenum internalformat, GLint x, GLint y, GLsizei width)
 {
-  assert(glue->glCopyConvolutionFilter1D);
+  if (!glue || !glue->glCopyConvolutionFilter1D) { sogl_warn_core_func_unavailable("glCopyConvolutionFilter1D"); return; }
   glue->glCopyConvolutionFilter1D(target, internalformat, x, y, width);
 }
 
 void
 SoGLContext_glCopyConvolutionFilter2D(const SoGLContext * glue, GLenum target, GLenum internalformat, GLint x, GLint y, GLsizei width, GLsizei height)
 {
-  assert(glue->glCopyConvolutionFilter2D);
+  if (!glue || !glue->glCopyConvolutionFilter2D) { sogl_warn_core_func_unavailable("glCopyConvolutionFilter2D"); return; }
   glue->glCopyConvolutionFilter2D(target, internalformat, x, y, width, height);
 }
 
 void
 SoGLContext_glCopyPixels(const SoGLContext * glue, GLint x, GLint y, GLsizei width, GLsizei height, GLenum type)
 {
-  assert(glue->glCopyPixels);
+  if (!glue || !glue->glCopyPixels) { sogl_warn_core_func_unavailable("glCopyPixels"); return; }
   glue->glCopyPixels(x, y, width, height, type);
 }
 
 void
 SoGLContext_glCopyTexImage1D(const SoGLContext * glue, GLenum target, GLint level, GLenum internalformat, GLint x, GLint y, GLsizei width, GLint border)
 {
-  assert(glue->glCopyTexImage1D);
+  if (!glue || !glue->glCopyTexImage1D) { sogl_warn_core_func_unavailable("glCopyTexImage1D"); return; }
   glue->glCopyTexImage1D(target, level, internalformat, x, y, width, border);
 }
 
 void
 SoGLContext_glCopyTexSubImage1D(const SoGLContext * glue, GLenum target, GLint level, GLint xoffset, GLint x, GLint y, GLsizei width)
 {
-  assert(glue->glCopyTexSubImage1D);
+  if (!glue || !glue->glCopyTexSubImage1D) { sogl_warn_core_func_unavailable("glCopyTexSubImage1D"); return; }
   glue->glCopyTexSubImage1D(target, level, xoffset, x, y, width);
 }
 
 void
 SoGLContext_glEdgeFlag(const SoGLContext * glue, GLboolean flag)
 {
-  assert(glue->glEdgeFlag);
+  if (!glue || !glue->glEdgeFlag) { sogl_warn_core_func_unavailable("glEdgeFlag"); return; }
   glue->glEdgeFlag(flag);
 }
 
 void
 SoGLContext_glEdgeFlagPointer(const SoGLContext * glue, GLsizei stride, const GLvoid * ptr)
 {
-  assert(glue->glEdgeFlagPointer);
+  if (!glue || !glue->glEdgeFlagPointer) { sogl_warn_core_func_unavailable("glEdgeFlagPointer"); return; }
   glue->glEdgeFlagPointer(stride, ptr);
 }
 
 void
 SoGLContext_glEdgeFlagv(const SoGLContext * glue, const GLboolean * flag)
 {
-  assert(glue->glEdgeFlagv);
+  if (!glue || !glue->glEdgeFlagv) { sogl_warn_core_func_unavailable("glEdgeFlagv"); return; }
   glue->glEdgeFlagv(flag);
 }
 
 void
 SoGLContext_glEvalCoord1d(const SoGLContext * glue, GLdouble u)
 {
-  assert(glue->glEvalCoord1d);
+  if (!glue || !glue->glEvalCoord1d) { sogl_warn_core_func_unavailable("glEvalCoord1d"); return; }
   glue->glEvalCoord1d(u);
 }
 
 void
 SoGLContext_glEvalCoord1dv(const SoGLContext * glue, const GLdouble * u)
 {
-  assert(glue->glEvalCoord1dv);
+  if (!glue || !glue->glEvalCoord1dv) { sogl_warn_core_func_unavailable("glEvalCoord1dv"); return; }
   glue->glEvalCoord1dv(u);
 }
 
 void
 SoGLContext_glEvalCoord1f(const SoGLContext * glue, GLfloat u)
 {
-  assert(glue->glEvalCoord1f);
+  if (!glue || !glue->glEvalCoord1f) { sogl_warn_core_func_unavailable("glEvalCoord1f"); return; }
   glue->glEvalCoord1f(u);
 }
 
 void
 SoGLContext_glEvalCoord1fv(const SoGLContext * glue, const GLfloat * u)
 {
-  assert(glue->glEvalCoord1fv);
+  if (!glue || !glue->glEvalCoord1fv) { sogl_warn_core_func_unavailable("glEvalCoord1fv"); return; }
   glue->glEvalCoord1fv(u);
 }
 
 void
 SoGLContext_glEvalCoord2d(const SoGLContext * glue, GLdouble u, GLdouble v)
 {
-  assert(glue->glEvalCoord2d);
+  if (!glue || !glue->glEvalCoord2d) { sogl_warn_core_func_unavailable("glEvalCoord2d"); return; }
   glue->glEvalCoord2d(u, v);
 }
 
 void
 SoGLContext_glEvalCoord2dv(const SoGLContext * glue, const GLdouble * u)
 {
-  assert(glue->glEvalCoord2dv);
+  if (!glue || !glue->glEvalCoord2dv) { sogl_warn_core_func_unavailable("glEvalCoord2dv"); return; }
   glue->glEvalCoord2dv(u);
 }
 
 void
 SoGLContext_glEvalCoord2f(const SoGLContext * glue, GLfloat u, GLfloat v)
 {
-  assert(glue->glEvalCoord2f);
+  if (!glue || !glue->glEvalCoord2f) { sogl_warn_core_func_unavailable("glEvalCoord2f"); return; }
   glue->glEvalCoord2f(u, v);
 }
 
 void
 SoGLContext_glEvalCoord2fv(const SoGLContext * glue, const GLfloat * u)
 {
-  assert(glue->glEvalCoord2fv);
+  if (!glue || !glue->glEvalCoord2fv) { sogl_warn_core_func_unavailable("glEvalCoord2fv"); return; }
   glue->glEvalCoord2fv(u);
 }
 
 void
 SoGLContext_glEvalMesh1(const SoGLContext * glue, GLenum mode, GLint i1, GLint i2)
 {
-  assert(glue->glEvalMesh1);
+  if (!glue || !glue->glEvalMesh1) { sogl_warn_core_func_unavailable("glEvalMesh1"); return; }
   glue->glEvalMesh1(mode, i1, i2);
 }
 
 void
 SoGLContext_glEvalMesh2(const SoGLContext * glue, GLenum mode, GLint i1, GLint i2, GLint j1, GLint j2)
 {
-  assert(glue->glEvalMesh2);
+  if (!glue || !glue->glEvalMesh2) { sogl_warn_core_func_unavailable("glEvalMesh2"); return; }
   glue->glEvalMesh2(mode, i1, i2, j1, j2);
 }
 
 void
 SoGLContext_glEvalPoint1(const SoGLContext * glue, GLint i)
 {
-  assert(glue->glEvalPoint1);
+  if (!glue || !glue->glEvalPoint1) { sogl_warn_core_func_unavailable("glEvalPoint1"); return; }
   glue->glEvalPoint1(i);
 }
 
 void
 SoGLContext_glEvalPoint2(const SoGLContext * glue, GLint i, GLint j)
 {
-  assert(glue->glEvalPoint2);
+  if (!glue || !glue->glEvalPoint2) { sogl_warn_core_func_unavailable("glEvalPoint2"); return; }
   glue->glEvalPoint2(i, j);
 }
 
 void
 SoGLContext_glFeedbackBuffer(const SoGLContext * glue, GLsizei size, GLenum type, GLfloat * buffer)
 {
-  assert(glue->glFeedbackBuffer);
+  if (!glue || !glue->glFeedbackBuffer) { sogl_warn_core_func_unavailable("glFeedbackBuffer"); return; }
   glue->glFeedbackBuffer(size, type, buffer);
 }
 
 void
 SoGLContext_glFogiv(const SoGLContext * glue, GLenum pname, const GLint * params)
 {
-  assert(glue->glFogiv);
+  if (!glue || !glue->glFogiv) { sogl_warn_core_func_unavailable("glFogiv"); return; }
   glue->glFogiv(pname, params);
 }
 
 void
 SoGLContext_glGetClipPlane(const SoGLContext * glue, GLenum plane, GLdouble * equation)
 {
-  assert(glue->glGetClipPlane);
+  if (!glue || !glue->glGetClipPlane) { sogl_warn_core_func_unavailable("glGetClipPlane"); return; }
   glue->glGetClipPlane(plane, equation);
 }
 
 void
 SoGLContext_glGetConvolutionFilter(const SoGLContext * glue, GLenum target, GLenum format, GLenum type, GLvoid * image)
 {
-  assert(glue->glGetConvolutionFilter);
+  if (!glue || !glue->glGetConvolutionFilter) { sogl_warn_core_func_unavailable("glGetConvolutionFilter"); return; }
   glue->glGetConvolutionFilter(target, format, type, image);
 }
 
 void
 SoGLContext_glGetConvolutionParameterfv(const SoGLContext * glue, GLenum target, GLenum pname, GLfloat * params)
 {
-  assert(glue->glGetConvolutionParameterfv);
+  if (!glue || !glue->glGetConvolutionParameterfv) { sogl_warn_core_func_unavailable("glGetConvolutionParameterfv"); return; }
   glue->glGetConvolutionParameterfv(target, pname, params);
 }
 
 void
 SoGLContext_glGetConvolutionParameteriv(const SoGLContext * glue, GLenum target, GLenum pname, GLint * params)
 {
-  assert(glue->glGetConvolutionParameteriv);
+  if (!glue || !glue->glGetConvolutionParameteriv) { sogl_warn_core_func_unavailable("glGetConvolutionParameteriv"); return; }
   glue->glGetConvolutionParameteriv(target, pname, params);
 }
 
 void
 SoGLContext_glGetDoublev(const SoGLContext * glue, GLenum pname, GLdouble * params)
 {
-  assert(glue->glGetDoublev);
+  if (!glue || !glue->glGetDoublev) { sogl_warn_core_func_unavailable("glGetDoublev"); return; }
   glue->glGetDoublev(pname, params);
 }
 
 void
 SoGLContext_glGetHistogram(const SoGLContext * glue, GLenum target, GLboolean reset, GLenum format, GLenum type, GLvoid * values)
 {
-  assert(glue->glGetHistogram);
+  if (!glue || !glue->glGetHistogram) { sogl_warn_core_func_unavailable("glGetHistogram"); return; }
   glue->glGetHistogram(target, reset, format, type, values);
 }
 
 void
 SoGLContext_glGetHistogramParameterfv(const SoGLContext * glue, GLenum target, GLenum pname, GLfloat * params)
 {
-  assert(glue->glGetHistogramParameterfv);
+  if (!glue || !glue->glGetHistogramParameterfv) { sogl_warn_core_func_unavailable("glGetHistogramParameterfv"); return; }
   glue->glGetHistogramParameterfv(target, pname, params);
 }
 
 void
 SoGLContext_glGetHistogramParameteriv(const SoGLContext * glue, GLenum target, GLenum pname, GLint * params)
 {
-  assert(glue->glGetHistogramParameteriv);
+  if (!glue || !glue->glGetHistogramParameteriv) { sogl_warn_core_func_unavailable("glGetHistogramParameteriv"); return; }
   glue->glGetHistogramParameteriv(target, pname, params);
 }
 
 void
 SoGLContext_glGetLightfv(const SoGLContext * glue, GLenum light, GLenum pname, GLfloat * params)
 {
-  assert(glue->glGetLightfv);
+  if (!glue || !glue->glGetLightfv) { sogl_warn_core_func_unavailable("glGetLightfv"); return; }
   glue->glGetLightfv(light, pname, params);
 }
 
 void
 SoGLContext_glGetLightiv(const SoGLContext * glue, GLenum light, GLenum pname, GLint * params)
 {
-  assert(glue->glGetLightiv);
+  if (!glue || !glue->glGetLightiv) { sogl_warn_core_func_unavailable("glGetLightiv"); return; }
   glue->glGetLightiv(light, pname, params);
 }
 
 void
 SoGLContext_glGetMapdv(const SoGLContext * glue, GLenum target, GLenum query, GLdouble * v)
 {
-  assert(glue->glGetMapdv);
+  if (!glue || !glue->glGetMapdv) { sogl_warn_core_func_unavailable("glGetMapdv"); return; }
   glue->glGetMapdv(target, query, v);
 }
 
 void
 SoGLContext_glGetMapfv(const SoGLContext * glue, GLenum target, GLenum query, GLfloat * v)
 {
-  assert(glue->glGetMapfv);
+  if (!glue || !glue->glGetMapfv) { sogl_warn_core_func_unavailable("glGetMapfv"); return; }
   glue->glGetMapfv(target, query, v);
 }
 
 void
 SoGLContext_glGetMapiv(const SoGLContext * glue, GLenum target, GLenum query, GLint * v)
 {
-  assert(glue->glGetMapiv);
+  if (!glue || !glue->glGetMapiv) { sogl_warn_core_func_unavailable("glGetMapiv"); return; }
   glue->glGetMapiv(target, query, v);
 }
 
 void
 SoGLContext_glGetMaterialfv(const SoGLContext * glue, GLenum face, GLenum pname, GLfloat * params)
 {
-  assert(glue->glGetMaterialfv);
+  if (!glue || !glue->glGetMaterialfv) { sogl_warn_core_func_unavailable("glGetMaterialfv"); return; }
   glue->glGetMaterialfv(face, pname, params);
 }
 
 void
 SoGLContext_glGetMaterialiv(const SoGLContext * glue, GLenum face, GLenum pname, GLint * params)
 {
-  assert(glue->glGetMaterialiv);
+  if (!glue || !glue->glGetMaterialiv) { sogl_warn_core_func_unavailable("glGetMaterialiv"); return; }
   glue->glGetMaterialiv(face, pname, params);
 }
 
 void
 SoGLContext_glGetMinmax(const SoGLContext * glue, GLenum target, GLboolean reset, GLenum format, GLenum types, GLvoid * values)
 {
-  assert(glue->glGetMinmax);
+  if (!glue || !glue->glGetMinmax) { sogl_warn_core_func_unavailable("glGetMinmax"); return; }
   glue->glGetMinmax(target, reset, format, types, values);
 }
 
 void
 SoGLContext_glGetMinmaxParameterfv(const SoGLContext * glue, GLenum target, GLenum pname, GLfloat * params)
 {
-  assert(glue->glGetMinmaxParameterfv);
+  if (!glue || !glue->glGetMinmaxParameterfv) { sogl_warn_core_func_unavailable("glGetMinmaxParameterfv"); return; }
   glue->glGetMinmaxParameterfv(target, pname, params);
 }
 
 void
 SoGLContext_glGetMinmaxParameteriv(const SoGLContext * glue, GLenum target, GLenum pname, GLint * params)
 {
-  assert(glue->glGetMinmaxParameteriv);
+  if (!glue || !glue->glGetMinmaxParameteriv) { sogl_warn_core_func_unavailable("glGetMinmaxParameteriv"); return; }
   glue->glGetMinmaxParameteriv(target, pname, params);
 }
 
 void
 SoGLContext_glGetPixelMapfv(const SoGLContext * glue, GLenum map, GLfloat * values)
 {
-  assert(glue->glGetPixelMapfv);
+  if (!glue || !glue->glGetPixelMapfv) { sogl_warn_core_func_unavailable("glGetPixelMapfv"); return; }
   glue->glGetPixelMapfv(map, values);
 }
 
 void
 SoGLContext_glGetPixelMapuiv(const SoGLContext * glue, GLenum map, GLuint * values)
 {
-  assert(glue->glGetPixelMapuiv);
+  if (!glue || !glue->glGetPixelMapuiv) { sogl_warn_core_func_unavailable("glGetPixelMapuiv"); return; }
   glue->glGetPixelMapuiv(map, values);
 }
 
 void
 SoGLContext_glGetPixelMapusv(const SoGLContext * glue, GLenum map, GLushort * values)
 {
-  assert(glue->glGetPixelMapusv);
+  if (!glue || !glue->glGetPixelMapusv) { sogl_warn_core_func_unavailable("glGetPixelMapusv"); return; }
   glue->glGetPixelMapusv(map, values);
 }
 
 void
 SoGLContext_glGetPointerv(const SoGLContext * glue, GLenum pname, GLvoid ** params)
 {
-  assert(glue->glGetPointerv);
+  if (!glue || !glue->glGetPointerv) { sogl_warn_core_func_unavailable("glGetPointerv"); return; }
   glue->glGetPointerv(pname, params);
 }
 
 void
 SoGLContext_glGetPolygonStipple(const SoGLContext * glue, GLubyte * mask)
 {
-  assert(glue->glGetPolygonStipple);
+  if (!glue || !glue->glGetPolygonStipple) { sogl_warn_core_func_unavailable("glGetPolygonStipple"); return; }
   glue->glGetPolygonStipple(mask);
 }
 
 void
 SoGLContext_glGetSeparableFilter(const SoGLContext * glue, GLenum target, GLenum format, GLenum type, GLvoid * row, GLvoid * column, GLvoid * span)
 {
-  assert(glue->glGetSeparableFilter);
+  if (!glue || !glue->glGetSeparableFilter) { sogl_warn_core_func_unavailable("glGetSeparableFilter"); return; }
   glue->glGetSeparableFilter(target, format, type, row, column, span);
 }
 
 void
 SoGLContext_glGetTexEnvfv(const SoGLContext * glue, GLenum target, GLenum pname, GLfloat * params)
 {
-  assert(glue->glGetTexEnvfv);
+  if (!glue || !glue->glGetTexEnvfv) { sogl_warn_core_func_unavailable("glGetTexEnvfv"); return; }
   glue->glGetTexEnvfv(target, pname, params);
 }
 
 void
 SoGLContext_glGetTexEnviv(const SoGLContext * glue, GLenum target, GLenum pname, GLint * params)
 {
-  assert(glue->glGetTexEnviv);
+  if (!glue || !glue->glGetTexEnviv) { sogl_warn_core_func_unavailable("glGetTexEnviv"); return; }
   glue->glGetTexEnviv(target, pname, params);
 }
 
 void
 SoGLContext_glGetTexGendv(const SoGLContext * glue, GLenum coord, GLenum pname, GLdouble * params)
 {
-  assert(glue->glGetTexGendv);
+  if (!glue || !glue->glGetTexGendv) { sogl_warn_core_func_unavailable("glGetTexGendv"); return; }
   glue->glGetTexGendv(coord, pname, params);
 }
 
 void
 SoGLContext_glGetTexGenfv(const SoGLContext * glue, GLenum coord, GLenum pname, GLfloat * params)
 {
-  assert(glue->glGetTexGenfv);
+  if (!glue || !glue->glGetTexGenfv) { sogl_warn_core_func_unavailable("glGetTexGenfv"); return; }
   glue->glGetTexGenfv(coord, pname, params);
 }
 
 void
 SoGLContext_glGetTexGeniv(const SoGLContext * glue, GLenum coord, GLenum pname, GLint * params)
 {
-  assert(glue->glGetTexGeniv);
+  if (!glue || !glue->glGetTexGeniv) { sogl_warn_core_func_unavailable("glGetTexGeniv"); return; }
   glue->glGetTexGeniv(coord, pname, params);
 }
 
 void
 SoGLContext_glGetTexImage(const SoGLContext * glue, GLenum target, GLint level, GLenum format, GLenum type, GLvoid * pixels)
 {
-  assert(glue->glGetTexImage);
+  if (!glue || !glue->glGetTexImage) { sogl_warn_core_func_unavailable("glGetTexImage"); return; }
   glue->glGetTexImage(target, level, format, type, pixels);
 }
 
 void
 SoGLContext_glGetTexLevelParameterfv(const SoGLContext * glue, GLenum target, GLint level, GLenum pname, GLfloat * params)
 {
-  assert(glue->glGetTexLevelParameterfv);
+  if (!glue || !glue->glGetTexLevelParameterfv) { sogl_warn_core_func_unavailable("glGetTexLevelParameterfv"); return; }
   glue->glGetTexLevelParameterfv(target, level, pname, params);
 }
 
 void
 SoGLContext_glGetTexLevelParameteriv(const SoGLContext * glue, GLenum target, GLint level, GLenum pname, GLint * params)
 {
-  assert(glue->glGetTexLevelParameteriv);
+  if (!glue || !glue->glGetTexLevelParameteriv) { sogl_warn_core_func_unavailable("glGetTexLevelParameteriv"); return; }
   glue->glGetTexLevelParameteriv(target, level, pname, params);
 }
 
 void
 SoGLContext_glGetTexParameterfv(const SoGLContext * glue, GLenum target, GLenum pname, GLfloat * params)
 {
-  assert(glue->glGetTexParameterfv);
+  if (!glue || !glue->glGetTexParameterfv) { sogl_warn_core_func_unavailable("glGetTexParameterfv"); return; }
   glue->glGetTexParameterfv(target, pname, params);
 }
 
 void
 SoGLContext_glGetTexParameteriv(const SoGLContext * glue, GLenum target, GLenum pname, GLint * params)
 {
-  assert(glue->glGetTexParameteriv);
+  if (!glue || !glue->glGetTexParameteriv) { sogl_warn_core_func_unavailable("glGetTexParameteriv"); return; }
   glue->glGetTexParameteriv(target, pname, params);
 }
 
 void
 SoGLContext_glHint(const SoGLContext * glue, GLenum target, GLenum mode)
 {
-  assert(glue->glHint);
+  if (!glue || !glue->glHint) { sogl_warn_core_func_unavailable("glHint"); return; }
   glue->glHint(target, mode);
 }
 
 void
 SoGLContext_glHistogram(const SoGLContext * glue, GLenum target, GLsizei width, GLenum internalformat, GLboolean sink)
 {
-  assert(glue->glHistogram);
+  if (!glue || !glue->glHistogram) { sogl_warn_core_func_unavailable("glHistogram"); return; }
   glue->glHistogram(target, width, internalformat, sink);
 }
 
 void
 SoGLContext_glIndexMask(const SoGLContext * glue, GLuint mask)
 {
-  assert(glue->glIndexMask);
+  if (!glue || !glue->glIndexMask) { sogl_warn_core_func_unavailable("glIndexMask"); return; }
   glue->glIndexMask(mask);
 }
 
 void
 SoGLContext_glIndexd(const SoGLContext * glue, GLdouble c)
 {
-  assert(glue->glIndexd);
+  if (!glue || !glue->glIndexd) { sogl_warn_core_func_unavailable("glIndexd"); return; }
   glue->glIndexd(c);
 }
 
 void
 SoGLContext_glIndexdv(const SoGLContext * glue, const GLdouble * c)
 {
-  assert(glue->glIndexdv);
+  if (!glue || !glue->glIndexdv) { sogl_warn_core_func_unavailable("glIndexdv"); return; }
   glue->glIndexdv(c);
 }
 
 void
 SoGLContext_glIndexf(const SoGLContext * glue, GLfloat c)
 {
-  assert(glue->glIndexf);
+  if (!glue || !glue->glIndexf) { sogl_warn_core_func_unavailable("glIndexf"); return; }
   glue->glIndexf(c);
 }
 
 void
 SoGLContext_glIndexfv(const SoGLContext * glue, const GLfloat * c)
 {
-  assert(glue->glIndexfv);
+  if (!glue || !glue->glIndexfv) { sogl_warn_core_func_unavailable("glIndexfv"); return; }
   glue->glIndexfv(c);
 }
 
 void
 SoGLContext_glIndexiv(const SoGLContext * glue, const GLint * c)
 {
-  assert(glue->glIndexiv);
+  if (!glue || !glue->glIndexiv) { sogl_warn_core_func_unavailable("glIndexiv"); return; }
   glue->glIndexiv(c);
 }
 
 void
 SoGLContext_glIndexs(const SoGLContext * glue, GLshort c)
 {
-  assert(glue->glIndexs);
+  if (!glue || !glue->glIndexs) { sogl_warn_core_func_unavailable("glIndexs"); return; }
   glue->glIndexs(c);
 }
 
 void
 SoGLContext_glIndexsv(const SoGLContext * glue, const GLshort * c)
 {
-  assert(glue->glIndexsv);
+  if (!glue || !glue->glIndexsv) { sogl_warn_core_func_unavailable("glIndexsv"); return; }
   glue->glIndexsv(c);
 }
 
 void
 SoGLContext_glIndexub(const SoGLContext * glue, GLubyte c)
 {
-  assert(glue->glIndexub);
+  if (!glue || !glue->glIndexub) { sogl_warn_core_func_unavailable("glIndexub"); return; }
   glue->glIndexub(c);
 }
 
 void
 SoGLContext_glIndexubv(const SoGLContext * glue, const GLubyte * c)
 {
-  assert(glue->glIndexubv);
+  if (!glue || !glue->glIndexubv) { sogl_warn_core_func_unavailable("glIndexubv"); return; }
   glue->glIndexubv(c);
 }
 
 void
 SoGLContext_glInitNames(const SoGLContext * glue)
 {
-  assert(glue->glInitNames);
+  if (!glue || !glue->glInitNames) { sogl_warn_core_func_unavailable("glInitNames"); return; }
   glue->glInitNames();
 }
 
 GLboolean
 SoGLContext_glIsList(const SoGLContext * glue, GLuint list)
 {
-  assert(glue->glIsList);
+  if (!glue || !glue->glIsList) { sogl_warn_core_func_unavailable("glIsList"); return GL_FALSE; }
   return glue->glIsList(list);
 }
 
 GLboolean
 SoGLContext_glIsTexture(const SoGLContext * glue, GLuint texture)
 {
-  assert(glue->glIsTexture);
+  if (!glue || !glue->glIsTexture) { sogl_warn_core_func_unavailable("glIsTexture"); return GL_FALSE; }
   return glue->glIsTexture(texture);
 }
 
 void
 SoGLContext_glLightModelf(const SoGLContext * glue, GLenum pname, GLfloat param)
 {
-  assert(glue->glLightModelf);
+  if (!glue || !glue->glLightModelf) { sogl_warn_core_func_unavailable("glLightModelf"); return; }
   glue->glLightModelf(pname, param);
 }
 
 void
 SoGLContext_glLightModeliv(const SoGLContext * glue, GLenum pname, const GLint * params)
 {
-  assert(glue->glLightModeliv);
+  if (!glue || !glue->glLightModeliv) { sogl_warn_core_func_unavailable("glLightModeliv"); return; }
   glue->glLightModeliv(pname, params);
 }
 
 void
 SoGLContext_glLighti(const SoGLContext * glue, GLenum light, GLenum pname, GLint param)
 {
-  assert(glue->glLighti);
+  if (!glue || !glue->glLighti) { sogl_warn_core_func_unavailable("glLighti"); return; }
   glue->glLighti(light, pname, param);
 }
 
 void
 SoGLContext_glLightiv(const SoGLContext * glue, GLenum light, GLenum pname, const GLint * params)
 {
-  assert(glue->glLightiv);
+  if (!glue || !glue->glLightiv) { sogl_warn_core_func_unavailable("glLightiv"); return; }
   glue->glLightiv(light, pname, params);
 }
 
 void
 SoGLContext_glListBase(const SoGLContext * glue, GLuint base)
 {
-  assert(glue->glListBase);
+  if (!glue || !glue->glListBase) { sogl_warn_core_func_unavailable("glListBase"); return; }
   glue->glListBase(base);
 }
 
 void
 SoGLContext_glLoadName(const SoGLContext * glue, GLuint name)
 {
-  assert(glue->glLoadName);
+  if (!glue || !glue->glLoadName) { sogl_warn_core_func_unavailable("glLoadName"); return; }
   glue->glLoadName(name);
 }
 
 void
 SoGLContext_glLoadTransposeMatrixd(const SoGLContext * glue, const GLdouble * m)
 {
-  assert(glue->glLoadTransposeMatrixd);
+  if (!glue || !glue->glLoadTransposeMatrixd) { sogl_warn_core_func_unavailable("glLoadTransposeMatrixd"); return; }
   glue->glLoadTransposeMatrixd(m);
 }
 
 void
 SoGLContext_glLoadTransposeMatrixf(const SoGLContext * glue, const GLfloat * m)
 {
-  assert(glue->glLoadTransposeMatrixf);
+  if (!glue || !glue->glLoadTransposeMatrixf) { sogl_warn_core_func_unavailable("glLoadTransposeMatrixf"); return; }
   glue->glLoadTransposeMatrixf(m);
 }
 
 void
 SoGLContext_glLogicOp(const SoGLContext * glue, GLenum opcode)
 {
-  assert(glue->glLogicOp);
+  if (!glue || !glue->glLogicOp) { sogl_warn_core_func_unavailable("glLogicOp"); return; }
   glue->glLogicOp(opcode);
 }
 
 void
 SoGLContext_glMap1d(const SoGLContext * glue, GLenum target, GLdouble u1, GLdouble u2, GLint stride, GLint order, const GLdouble * points)
 {
-  assert(glue->glMap1d);
+  if (!glue || !glue->glMap1d) { sogl_warn_core_func_unavailable("glMap1d"); return; }
   glue->glMap1d(target, u1, u2, stride, order, points);
 }
 
 void
 SoGLContext_glMap1f(const SoGLContext * glue, GLenum target, GLfloat u1, GLfloat u2, GLint stride, GLint order, const GLfloat * points)
 {
-  assert(glue->glMap1f);
+  if (!glue || !glue->glMap1f) { sogl_warn_core_func_unavailable("glMap1f"); return; }
   glue->glMap1f(target, u1, u2, stride, order, points);
 }
 
 void
 SoGLContext_glMap2d(const SoGLContext * glue, GLenum target, GLdouble u1, GLdouble u2, GLint ustride, GLint uorder, GLdouble v1, GLdouble v2, GLint vstride, GLint vorder, const GLdouble * points)
 {
-  assert(glue->glMap2d);
+  if (!glue || !glue->glMap2d) { sogl_warn_core_func_unavailable("glMap2d"); return; }
   glue->glMap2d(target, u1, u2, ustride, uorder, v1, v2, vstride, vorder, points);
 }
 
 void
 SoGLContext_glMap2f(const SoGLContext * glue, GLenum target, GLfloat u1, GLfloat u2, GLint ustride, GLint uorder, GLfloat v1, GLfloat v2, GLint vstride, GLint vorder, const GLfloat * points)
 {
-  assert(glue->glMap2f);
+  if (!glue || !glue->glMap2f) { sogl_warn_core_func_unavailable("glMap2f"); return; }
   glue->glMap2f(target, u1, u2, ustride, uorder, v1, v2, vstride, vorder, points);
 }
 
 void
 SoGLContext_glMapGrid1d(const SoGLContext * glue, GLint un, GLdouble u1, GLdouble u2)
 {
-  assert(glue->glMapGrid1d);
+  if (!glue || !glue->glMapGrid1d) { sogl_warn_core_func_unavailable("glMapGrid1d"); return; }
   glue->glMapGrid1d(un, u1, u2);
 }
 
 void
 SoGLContext_glMapGrid1f(const SoGLContext * glue, GLint un, GLfloat u1, GLfloat u2)
 {
-  assert(glue->glMapGrid1f);
+  if (!glue || !glue->glMapGrid1f) { sogl_warn_core_func_unavailable("glMapGrid1f"); return; }
   glue->glMapGrid1f(un, u1, u2);
 }
 
 void
 SoGLContext_glMapGrid2d(const SoGLContext * glue, GLint un, GLdouble u1, GLdouble u2, GLint vn, GLdouble v1, GLdouble v2)
 {
-  assert(glue->glMapGrid2d);
+  if (!glue || !glue->glMapGrid2d) { sogl_warn_core_func_unavailable("glMapGrid2d"); return; }
   glue->glMapGrid2d(un, u1, u2, vn, v1, v2);
 }
 
 void
 SoGLContext_glMapGrid2f(const SoGLContext * glue, GLint un, GLfloat u1, GLfloat u2, GLint vn, GLfloat v1, GLfloat v2)
 {
-  assert(glue->glMapGrid2f);
+  if (!glue || !glue->glMapGrid2f) { sogl_warn_core_func_unavailable("glMapGrid2f"); return; }
   glue->glMapGrid2f(un, u1, u2, vn, v1, v2);
 }
 
 void
 SoGLContext_glMateriali(const SoGLContext * glue, GLenum face, GLenum pname, GLint param)
 {
-  assert(glue->glMateriali);
+  if (!glue || !glue->glMateriali) { sogl_warn_core_func_unavailable("glMateriali"); return; }
   glue->glMateriali(face, pname, param);
 }
 
 void
 SoGLContext_glMaterialiv(const SoGLContext * glue, GLenum face, GLenum pname, const GLint * params)
 {
-  assert(glue->glMaterialiv);
+  if (!glue || !glue->glMaterialiv) { sogl_warn_core_func_unavailable("glMaterialiv"); return; }
   glue->glMaterialiv(face, pname, params);
 }
 
 void
 SoGLContext_glMinmax(const SoGLContext * glue, GLenum target, GLenum internalformat, GLboolean sink)
 {
-  assert(glue->glMinmax);
+  if (!glue || !glue->glMinmax) { sogl_warn_core_func_unavailable("glMinmax"); return; }
   glue->glMinmax(target, internalformat, sink);
 }
 
 void
 SoGLContext_glMultMatrixd(const SoGLContext * glue, const GLdouble * m)
 {
-  assert(glue->glMultMatrixd);
+  if (!glue || !glue->glMultMatrixd) { sogl_warn_core_func_unavailable("glMultMatrixd"); return; }
   glue->glMultMatrixd(m);
 }
 
 void
 SoGLContext_glMultTransposeMatrixd(const SoGLContext * glue, const GLdouble * m)
 {
-  assert(glue->glMultTransposeMatrixd);
+  if (!glue || !glue->glMultTransposeMatrixd) { sogl_warn_core_func_unavailable("glMultTransposeMatrixd"); return; }
   glue->glMultTransposeMatrixd(m);
 }
 
 void
 SoGLContext_glMultTransposeMatrixf(const SoGLContext * glue, const GLfloat * m)
 {
-  assert(glue->glMultTransposeMatrixf);
+  if (!glue || !glue->glMultTransposeMatrixf) { sogl_warn_core_func_unavailable("glMultTransposeMatrixf"); return; }
   glue->glMultTransposeMatrixf(m);
 }
 
 void
 SoGLContext_glMultiTexCoord1d(const SoGLContext * glue, GLenum target, GLdouble s)
 {
-  assert(glue->glMultiTexCoord1d);
+  if (!glue || !glue->glMultiTexCoord1d) { sogl_warn_core_func_unavailable("glMultiTexCoord1d"); return; }
   glue->glMultiTexCoord1d(target, s);
 }
 
 void
 SoGLContext_glMultiTexCoord1dv(const SoGLContext * glue, GLenum target, const GLdouble * v)
 {
-  assert(glue->glMultiTexCoord1dv);
+  if (!glue || !glue->glMultiTexCoord1dv) { sogl_warn_core_func_unavailable("glMultiTexCoord1dv"); return; }
   glue->glMultiTexCoord1dv(target, v);
 }
 
 void
 SoGLContext_glMultiTexCoord1f(const SoGLContext * glue, GLenum target, GLfloat s)
 {
-  assert(glue->glMultiTexCoord1f);
+  if (!glue || !glue->glMultiTexCoord1f) { sogl_warn_core_func_unavailable("glMultiTexCoord1f"); return; }
   glue->glMultiTexCoord1f(target, s);
 }
 
 void
 SoGLContext_glMultiTexCoord1fv(const SoGLContext * glue, GLenum target, const GLfloat * v)
 {
-  assert(glue->glMultiTexCoord1fv);
+  if (!glue || !glue->glMultiTexCoord1fv) { sogl_warn_core_func_unavailable("glMultiTexCoord1fv"); return; }
   glue->glMultiTexCoord1fv(target, v);
 }
 
 void
 SoGLContext_glMultiTexCoord1i(const SoGLContext * glue, GLenum target, GLint s)
 {
-  assert(glue->glMultiTexCoord1i);
+  if (!glue || !glue->glMultiTexCoord1i) { sogl_warn_core_func_unavailable("glMultiTexCoord1i"); return; }
   glue->glMultiTexCoord1i(target, s);
 }
 
 void
 SoGLContext_glMultiTexCoord1iv(const SoGLContext * glue, GLenum target, const GLint * v)
 {
-  assert(glue->glMultiTexCoord1iv);
+  if (!glue || !glue->glMultiTexCoord1iv) { sogl_warn_core_func_unavailable("glMultiTexCoord1iv"); return; }
   glue->glMultiTexCoord1iv(target, v);
 }
 
 void
 SoGLContext_glMultiTexCoord1s(const SoGLContext * glue, GLenum target, GLshort s)
 {
-  assert(glue->glMultiTexCoord1s);
+  if (!glue || !glue->glMultiTexCoord1s) { sogl_warn_core_func_unavailable("glMultiTexCoord1s"); return; }
   glue->glMultiTexCoord1s(target, s);
 }
 
 void
 SoGLContext_glMultiTexCoord1sv(const SoGLContext * glue, GLenum target, const GLshort * v)
 {
-  assert(glue->glMultiTexCoord1sv);
+  if (!glue || !glue->glMultiTexCoord1sv) { sogl_warn_core_func_unavailable("glMultiTexCoord1sv"); return; }
   glue->glMultiTexCoord1sv(target, v);
 }
 
 void
 SoGLContext_glMultiTexCoord2d(const SoGLContext * glue, GLenum target, GLdouble s, GLdouble t)
 {
-  assert(glue->glMultiTexCoord2d);
+  if (!glue || !glue->glMultiTexCoord2d) { sogl_warn_core_func_unavailable("glMultiTexCoord2d"); return; }
   glue->glMultiTexCoord2d(target, s, t);
 }
 
 void
 SoGLContext_glMultiTexCoord2dv(const SoGLContext * glue, GLenum target, const GLdouble * v)
 {
-  assert(glue->glMultiTexCoord2dv);
+  if (!glue || !glue->glMultiTexCoord2dv) { sogl_warn_core_func_unavailable("glMultiTexCoord2dv"); return; }
   glue->glMultiTexCoord2dv(target, v);
 }
 
 void
 SoGLContext_glMultiTexCoord2i(const SoGLContext * glue, GLenum target, GLint s, GLint t)
 {
-  assert(glue->glMultiTexCoord2i);
+  if (!glue || !glue->glMultiTexCoord2i) { sogl_warn_core_func_unavailable("glMultiTexCoord2i"); return; }
   glue->glMultiTexCoord2i(target, s, t);
 }
 
 void
 SoGLContext_glMultiTexCoord2iv(const SoGLContext * glue, GLenum target, const GLint * v)
 {
-  assert(glue->glMultiTexCoord2iv);
+  if (!glue || !glue->glMultiTexCoord2iv) { sogl_warn_core_func_unavailable("glMultiTexCoord2iv"); return; }
   glue->glMultiTexCoord2iv(target, v);
 }
 
 void
 SoGLContext_glMultiTexCoord2s(const SoGLContext * glue, GLenum target, GLshort s, GLshort t)
 {
-  assert(glue->glMultiTexCoord2s);
+  if (!glue || !glue->glMultiTexCoord2s) { sogl_warn_core_func_unavailable("glMultiTexCoord2s"); return; }
   glue->glMultiTexCoord2s(target, s, t);
 }
 
 void
 SoGLContext_glMultiTexCoord2sv(const SoGLContext * glue, GLenum target, const GLshort * v)
 {
-  assert(glue->glMultiTexCoord2sv);
+  if (!glue || !glue->glMultiTexCoord2sv) { sogl_warn_core_func_unavailable("glMultiTexCoord2sv"); return; }
   glue->glMultiTexCoord2sv(target, v);
 }
 
 void
 SoGLContext_glMultiTexCoord3d(const SoGLContext * glue, GLenum target, GLdouble s, GLdouble t, GLdouble r)
 {
-  assert(glue->glMultiTexCoord3d);
+  if (!glue || !glue->glMultiTexCoord3d) { sogl_warn_core_func_unavailable("glMultiTexCoord3d"); return; }
   glue->glMultiTexCoord3d(target, s, t, r);
 }
 
 void
 SoGLContext_glMultiTexCoord3dv(const SoGLContext * glue, GLenum target, const GLdouble * v)
 {
-  assert(glue->glMultiTexCoord3dv);
+  if (!glue || !glue->glMultiTexCoord3dv) { sogl_warn_core_func_unavailable("glMultiTexCoord3dv"); return; }
   glue->glMultiTexCoord3dv(target, v);
 }
 
 void
 SoGLContext_glMultiTexCoord3f(const SoGLContext * glue, GLenum target, GLfloat s, GLfloat t, GLfloat r)
 {
-  assert(glue->glMultiTexCoord3f);
+  if (!glue || !glue->glMultiTexCoord3f) { sogl_warn_core_func_unavailable("glMultiTexCoord3f"); return; }
   glue->glMultiTexCoord3f(target, s, t, r);
 }
 
 void
 SoGLContext_glMultiTexCoord3i(const SoGLContext * glue, GLenum target, GLint s, GLint t, GLint r)
 {
-  assert(glue->glMultiTexCoord3i);
+  if (!glue || !glue->glMultiTexCoord3i) { sogl_warn_core_func_unavailable("glMultiTexCoord3i"); return; }
   glue->glMultiTexCoord3i(target, s, t, r);
 }
 
 void
 SoGLContext_glMultiTexCoord3iv(const SoGLContext * glue, GLenum target, const GLint * v)
 {
-  assert(glue->glMultiTexCoord3iv);
+  if (!glue || !glue->glMultiTexCoord3iv) { sogl_warn_core_func_unavailable("glMultiTexCoord3iv"); return; }
   glue->glMultiTexCoord3iv(target, v);
 }
 
 void
 SoGLContext_glMultiTexCoord3s(const SoGLContext * glue, GLenum target, GLshort s, GLshort t, GLshort r)
 {
-  assert(glue->glMultiTexCoord3s);
+  if (!glue || !glue->glMultiTexCoord3s) { sogl_warn_core_func_unavailable("glMultiTexCoord3s"); return; }
   glue->glMultiTexCoord3s(target, s, t, r);
 }
 
 void
 SoGLContext_glMultiTexCoord3sv(const SoGLContext * glue, GLenum target, const GLshort * v)
 {
-  assert(glue->glMultiTexCoord3sv);
+  if (!glue || !glue->glMultiTexCoord3sv) { sogl_warn_core_func_unavailable("glMultiTexCoord3sv"); return; }
   glue->glMultiTexCoord3sv(target, v);
 }
 
 void
 SoGLContext_glMultiTexCoord4d(const SoGLContext * glue, GLenum target, GLdouble s, GLdouble t, GLdouble r, GLdouble q)
 {
-  assert(glue->glMultiTexCoord4d);
+  if (!glue || !glue->glMultiTexCoord4d) { sogl_warn_core_func_unavailable("glMultiTexCoord4d"); return; }
   glue->glMultiTexCoord4d(target, s, t, r, q);
 }
 
 void
 SoGLContext_glMultiTexCoord4dv(const SoGLContext * glue, GLenum target, const GLdouble * v)
 {
-  assert(glue->glMultiTexCoord4dv);
+  if (!glue || !glue->glMultiTexCoord4dv) { sogl_warn_core_func_unavailable("glMultiTexCoord4dv"); return; }
   glue->glMultiTexCoord4dv(target, v);
 }
 
 void
 SoGLContext_glMultiTexCoord4f(const SoGLContext * glue, GLenum target, GLfloat s, GLfloat t, GLfloat r, GLfloat q)
 {
-  assert(glue->glMultiTexCoord4f);
+  if (!glue || !glue->glMultiTexCoord4f) { sogl_warn_core_func_unavailable("glMultiTexCoord4f"); return; }
   glue->glMultiTexCoord4f(target, s, t, r, q);
 }
 
 void
 SoGLContext_glMultiTexCoord4i(const SoGLContext * glue, GLenum target, GLint s, GLint t, GLint r, GLint q)
 {
-  assert(glue->glMultiTexCoord4i);
+  if (!glue || !glue->glMultiTexCoord4i) { sogl_warn_core_func_unavailable("glMultiTexCoord4i"); return; }
   glue->glMultiTexCoord4i(target, s, t, r, q);
 }
 
 void
 SoGLContext_glMultiTexCoord4iv(const SoGLContext * glue, GLenum target, const GLint * v)
 {
-  assert(glue->glMultiTexCoord4iv);
+  if (!glue || !glue->glMultiTexCoord4iv) { sogl_warn_core_func_unavailable("glMultiTexCoord4iv"); return; }
   glue->glMultiTexCoord4iv(target, v);
 }
 
 void
 SoGLContext_glMultiTexCoord4s(const SoGLContext * glue, GLenum target, GLshort s, GLshort t, GLshort r, GLshort q)
 {
-  assert(glue->glMultiTexCoord4s);
+  if (!glue || !glue->glMultiTexCoord4s) { sogl_warn_core_func_unavailable("glMultiTexCoord4s"); return; }
   glue->glMultiTexCoord4s(target, s, t, r, q);
 }
 
 void
 SoGLContext_glMultiTexCoord4sv(const SoGLContext * glue, GLenum target, const GLshort * v)
 {
-  assert(glue->glMultiTexCoord4sv);
+  if (!glue || !glue->glMultiTexCoord4sv) { sogl_warn_core_func_unavailable("glMultiTexCoord4sv"); return; }
   glue->glMultiTexCoord4sv(target, v);
 }
 
 void
 SoGLContext_glNormal3b(const SoGLContext * glue, GLbyte nx, GLbyte ny, GLbyte nz)
 {
-  assert(glue->glNormal3b);
+  if (!glue || !glue->glNormal3b) { sogl_warn_core_func_unavailable("glNormal3b"); return; }
   glue->glNormal3b(nx, ny, nz);
 }
 
 void
 SoGLContext_glNormal3bv(const SoGLContext * glue, const GLbyte * v)
 {
-  assert(glue->glNormal3bv);
+  if (!glue || !glue->glNormal3bv) { sogl_warn_core_func_unavailable("glNormal3bv"); return; }
   glue->glNormal3bv(v);
 }
 
 void
 SoGLContext_glNormal3d(const SoGLContext * glue, GLdouble nx, GLdouble ny, GLdouble nz)
 {
-  assert(glue->glNormal3d);
+  if (!glue || !glue->glNormal3d) { sogl_warn_core_func_unavailable("glNormal3d"); return; }
   glue->glNormal3d(nx, ny, nz);
 }
 
 void
 SoGLContext_glNormal3dv(const SoGLContext * glue, const GLdouble * v)
 {
-  assert(glue->glNormal3dv);
+  if (!glue || !glue->glNormal3dv) { sogl_warn_core_func_unavailable("glNormal3dv"); return; }
   glue->glNormal3dv(v);
 }
 
 void
 SoGLContext_glNormal3i(const SoGLContext * glue, GLint nx, GLint ny, GLint nz)
 {
-  assert(glue->glNormal3i);
+  if (!glue || !glue->glNormal3i) { sogl_warn_core_func_unavailable("glNormal3i"); return; }
   glue->glNormal3i(nx, ny, nz);
 }
 
 void
 SoGLContext_glNormal3iv(const SoGLContext * glue, const GLint * v)
 {
-  assert(glue->glNormal3iv);
+  if (!glue || !glue->glNormal3iv) { sogl_warn_core_func_unavailable("glNormal3iv"); return; }
   glue->glNormal3iv(v);
 }
 
 void
 SoGLContext_glNormal3s(const SoGLContext * glue, GLshort nx, GLshort ny, GLshort nz)
 {
-  assert(glue->glNormal3s);
+  if (!glue || !glue->glNormal3s) { sogl_warn_core_func_unavailable("glNormal3s"); return; }
   glue->glNormal3s(nx, ny, nz);
 }
 
 void
 SoGLContext_glNormal3sv(const SoGLContext * glue, const GLshort * v)
 {
-  assert(glue->glNormal3sv);
+  if (!glue || !glue->glNormal3sv) { sogl_warn_core_func_unavailable("glNormal3sv"); return; }
   glue->glNormal3sv(v);
 }
 
 void
 SoGLContext_glPassThrough(const SoGLContext * glue, GLfloat token)
 {
-  assert(glue->glPassThrough);
+  if (!glue || !glue->glPassThrough) { sogl_warn_core_func_unavailable("glPassThrough"); return; }
   glue->glPassThrough(token);
 }
 
 void
 SoGLContext_glPixelMapusv(const SoGLContext * glue, GLenum map, GLsizei mapsize, const GLushort * values)
 {
-  assert(glue->glPixelMapusv);
+  if (!glue || !glue->glPixelMapusv) { sogl_warn_core_func_unavailable("glPixelMapusv"); return; }
   glue->glPixelMapusv(map, mapsize, values);
 }
 
 void
 SoGLContext_glPixelStoref(const SoGLContext * glue, GLenum pname, GLfloat param)
 {
-  assert(glue->glPixelStoref);
+  if (!glue || !glue->glPixelStoref) { sogl_warn_core_func_unavailable("glPixelStoref"); return; }
   glue->glPixelStoref(pname, param);
 }
 
 void
 SoGLContext_glPopName(const SoGLContext * glue)
 {
-  assert(glue->glPopName);
+  if (!glue || !glue->glPopName) { sogl_warn_core_func_unavailable("glPopName"); return; }
   glue->glPopName();
 }
 
 void
 SoGLContext_glPrioritizeTextures(const SoGLContext * glue, GLsizei n, const GLuint * textures, const GLclampf * priorities)
 {
-  assert(glue->glPrioritizeTextures);
+  if (!glue || !glue->glPrioritizeTextures) { sogl_warn_core_func_unavailable("glPrioritizeTextures"); return; }
   glue->glPrioritizeTextures(n, textures, priorities);
 }
 
 void
 SoGLContext_glPushName(const SoGLContext * glue, GLuint name)
 {
-  assert(glue->glPushName);
+  if (!glue || !glue->glPushName) { sogl_warn_core_func_unavailable("glPushName"); return; }
   glue->glPushName(name);
 }
 
 void
 SoGLContext_glRasterPos2d(const SoGLContext * glue, GLdouble x, GLdouble y)
 {
-  assert(glue->glRasterPos2d);
+  if (!glue || !glue->glRasterPos2d) { sogl_warn_core_func_unavailable("glRasterPos2d"); return; }
   glue->glRasterPos2d(x, y);
 }
 
 void
 SoGLContext_glRasterPos2dv(const SoGLContext * glue, const GLdouble * v)
 {
-  assert(glue->glRasterPos2dv);
+  if (!glue || !glue->glRasterPos2dv) { sogl_warn_core_func_unavailable("glRasterPos2dv"); return; }
   glue->glRasterPos2dv(v);
 }
 
 void
 SoGLContext_glRasterPos2fv(const SoGLContext * glue, const GLfloat * v)
 {
-  assert(glue->glRasterPos2fv);
+  if (!glue || !glue->glRasterPos2fv) { sogl_warn_core_func_unavailable("glRasterPos2fv"); return; }
   glue->glRasterPos2fv(v);
 }
 
 void
 SoGLContext_glRasterPos2i(const SoGLContext * glue, GLint x, GLint y)
 {
-  assert(glue->glRasterPos2i);
+  if (!glue || !glue->glRasterPos2i) { sogl_warn_core_func_unavailable("glRasterPos2i"); return; }
   glue->glRasterPos2i(x, y);
 }
 
 void
 SoGLContext_glRasterPos2iv(const SoGLContext * glue, const GLint * v)
 {
-  assert(glue->glRasterPos2iv);
+  if (!glue || !glue->glRasterPos2iv) { sogl_warn_core_func_unavailable("glRasterPos2iv"); return; }
   glue->glRasterPos2iv(v);
 }
 
 void
 SoGLContext_glRasterPos2s(const SoGLContext * glue, GLshort x, GLshort y)
 {
-  assert(glue->glRasterPos2s);
+  if (!glue || !glue->glRasterPos2s) { sogl_warn_core_func_unavailable("glRasterPos2s"); return; }
   glue->glRasterPos2s(x, y);
 }
 
 void
 SoGLContext_glRasterPos2sv(const SoGLContext * glue, const GLshort * v)
 {
-  assert(glue->glRasterPos2sv);
+  if (!glue || !glue->glRasterPos2sv) { sogl_warn_core_func_unavailable("glRasterPos2sv"); return; }
   glue->glRasterPos2sv(v);
 }
 
 void
 SoGLContext_glRasterPos3d(const SoGLContext * glue, GLdouble x, GLdouble y, GLdouble z)
 {
-  assert(glue->glRasterPos3d);
+  if (!glue || !glue->glRasterPos3d) { sogl_warn_core_func_unavailable("glRasterPos3d"); return; }
   glue->glRasterPos3d(x, y, z);
 }
 
 void
 SoGLContext_glRasterPos3dv(const SoGLContext * glue, const GLdouble * v)
 {
-  assert(glue->glRasterPos3dv);
+  if (!glue || !glue->glRasterPos3dv) { sogl_warn_core_func_unavailable("glRasterPos3dv"); return; }
   glue->glRasterPos3dv(v);
 }
 
 void
 SoGLContext_glRasterPos3fv(const SoGLContext * glue, const GLfloat * v)
 {
-  assert(glue->glRasterPos3fv);
+  if (!glue || !glue->glRasterPos3fv) { sogl_warn_core_func_unavailable("glRasterPos3fv"); return; }
   glue->glRasterPos3fv(v);
 }
 
 void
 SoGLContext_glRasterPos3i(const SoGLContext * glue, GLint x, GLint y, GLint z)
 {
-  assert(glue->glRasterPos3i);
+  if (!glue || !glue->glRasterPos3i) { sogl_warn_core_func_unavailable("glRasterPos3i"); return; }
   glue->glRasterPos3i(x, y, z);
 }
 
 void
 SoGLContext_glRasterPos3iv(const SoGLContext * glue, const GLint * v)
 {
-  assert(glue->glRasterPos3iv);
+  if (!glue || !glue->glRasterPos3iv) { sogl_warn_core_func_unavailable("glRasterPos3iv"); return; }
   glue->glRasterPos3iv(v);
 }
 
 void
 SoGLContext_glRasterPos3s(const SoGLContext * glue, GLshort x, GLshort y, GLshort z)
 {
-  assert(glue->glRasterPos3s);
+  if (!glue || !glue->glRasterPos3s) { sogl_warn_core_func_unavailable("glRasterPos3s"); return; }
   glue->glRasterPos3s(x, y, z);
 }
 
 void
 SoGLContext_glRasterPos3sv(const SoGLContext * glue, const GLshort * v)
 {
-  assert(glue->glRasterPos3sv);
+  if (!glue || !glue->glRasterPos3sv) { sogl_warn_core_func_unavailable("glRasterPos3sv"); return; }
   glue->glRasterPos3sv(v);
 }
 
 void
 SoGLContext_glRasterPos4d(const SoGLContext * glue, GLdouble x, GLdouble y, GLdouble z, GLdouble w)
 {
-  assert(glue->glRasterPos4d);
+  if (!glue || !glue->glRasterPos4d) { sogl_warn_core_func_unavailable("glRasterPos4d"); return; }
   glue->glRasterPos4d(x, y, z, w);
 }
 
 void
 SoGLContext_glRasterPos4dv(const SoGLContext * glue, const GLdouble * v)
 {
-  assert(glue->glRasterPos4dv);
+  if (!glue || !glue->glRasterPos4dv) { sogl_warn_core_func_unavailable("glRasterPos4dv"); return; }
   glue->glRasterPos4dv(v);
 }
 
 void
 SoGLContext_glRasterPos4f(const SoGLContext * glue, GLfloat x, GLfloat y, GLfloat z, GLfloat w)
 {
-  assert(glue->glRasterPos4f);
+  if (!glue || !glue->glRasterPos4f) { sogl_warn_core_func_unavailable("glRasterPos4f"); return; }
   glue->glRasterPos4f(x, y, z, w);
 }
 
 void
 SoGLContext_glRasterPos4fv(const SoGLContext * glue, const GLfloat * v)
 {
-  assert(glue->glRasterPos4fv);
+  if (!glue || !glue->glRasterPos4fv) { sogl_warn_core_func_unavailable("glRasterPos4fv"); return; }
   glue->glRasterPos4fv(v);
 }
 
 void
 SoGLContext_glRasterPos4i(const SoGLContext * glue, GLint x, GLint y, GLint z, GLint w)
 {
-  assert(glue->glRasterPos4i);
+  if (!glue || !glue->glRasterPos4i) { sogl_warn_core_func_unavailable("glRasterPos4i"); return; }
   glue->glRasterPos4i(x, y, z, w);
 }
 
 void
 SoGLContext_glRasterPos4iv(const SoGLContext * glue, const GLint * v)
 {
-  assert(glue->glRasterPos4iv);
+  if (!glue || !glue->glRasterPos4iv) { sogl_warn_core_func_unavailable("glRasterPos4iv"); return; }
   glue->glRasterPos4iv(v);
 }
 
 void
 SoGLContext_glRasterPos4s(const SoGLContext * glue, GLshort x, GLshort y, GLshort z, GLshort w)
 {
-  assert(glue->glRasterPos4s);
+  if (!glue || !glue->glRasterPos4s) { sogl_warn_core_func_unavailable("glRasterPos4s"); return; }
   glue->glRasterPos4s(x, y, z, w);
 }
 
 void
 SoGLContext_glRasterPos4sv(const SoGLContext * glue, const GLshort * v)
 {
-  assert(glue->glRasterPos4sv);
+  if (!glue || !glue->glRasterPos4sv) { sogl_warn_core_func_unavailable("glRasterPos4sv"); return; }
   glue->glRasterPos4sv(v);
 }
 
 void
 SoGLContext_glReadBuffer(const SoGLContext * glue, GLenum mode)
 {
-  assert(glue->glReadBuffer);
+  if (!glue || !glue->glReadBuffer) { sogl_warn_core_func_unavailable("glReadBuffer"); return; }
   glue->glReadBuffer(mode);
 }
 
 void
 SoGLContext_glRectd(const SoGLContext * glue, GLdouble x1, GLdouble y1, GLdouble x2, GLdouble y2)
 {
-  assert(glue->glRectd);
+  if (!glue || !glue->glRectd) { sogl_warn_core_func_unavailable("glRectd"); return; }
   glue->glRectd(x1, y1, x2, y2);
 }
 
 void
 SoGLContext_glRectdv(const SoGLContext * glue, const GLdouble * v1, const GLdouble * v2)
 {
-  assert(glue->glRectdv);
+  if (!glue || !glue->glRectdv) { sogl_warn_core_func_unavailable("glRectdv"); return; }
   glue->glRectdv(v1, v2);
 }
 
 void
 SoGLContext_glRectf(const SoGLContext * glue, GLfloat x1, GLfloat y1, GLfloat x2, GLfloat y2)
 {
-  assert(glue->glRectf);
+  if (!glue || !glue->glRectf) { sogl_warn_core_func_unavailable("glRectf"); return; }
   glue->glRectf(x1, y1, x2, y2);
 }
 
 void
 SoGLContext_glRectfv(const SoGLContext * glue, const GLfloat * v1, const GLfloat * v2)
 {
-  assert(glue->glRectfv);
+  if (!glue || !glue->glRectfv) { sogl_warn_core_func_unavailable("glRectfv"); return; }
   glue->glRectfv(v1, v2);
 }
 
 void
 SoGLContext_glRecti(const SoGLContext * glue, GLint x1, GLint y1, GLint x2, GLint y2)
 {
-  assert(glue->glRecti);
+  if (!glue || !glue->glRecti) { sogl_warn_core_func_unavailable("glRecti"); return; }
   glue->glRecti(x1, y1, x2, y2);
 }
 
 void
 SoGLContext_glRectiv(const SoGLContext * glue, const GLint * v1, const GLint * v2)
 {
-  assert(glue->glRectiv);
+  if (!glue || !glue->glRectiv) { sogl_warn_core_func_unavailable("glRectiv"); return; }
   glue->glRectiv(v1, v2);
 }
 
 void
 SoGLContext_glRects(const SoGLContext * glue, GLshort x1, GLshort y1, GLshort x2, GLshort y2)
 {
-  assert(glue->glRects);
+  if (!glue || !glue->glRects) { sogl_warn_core_func_unavailable("glRects"); return; }
   glue->glRects(x1, y1, x2, y2);
 }
 
 void
 SoGLContext_glRectsv(const SoGLContext * glue, const GLshort * v1, const GLshort * v2)
 {
-  assert(glue->glRectsv);
+  if (!glue || !glue->glRectsv) { sogl_warn_core_func_unavailable("glRectsv"); return; }
   glue->glRectsv(v1, v2);
 }
 
 GLint
 SoGLContext_glRenderMode(const SoGLContext * glue, GLenum mode)
 {
-  assert(glue->glRenderMode);
+  if (!glue || !glue->glRenderMode) { sogl_warn_core_func_unavailable("glRenderMode"); return 0; }
   return glue->glRenderMode(mode);
 }
 
 void
 SoGLContext_glResetHistogram(const SoGLContext * glue, GLenum target)
 {
-  assert(glue->glResetHistogram);
+  if (!glue || !glue->glResetHistogram) { sogl_warn_core_func_unavailable("glResetHistogram"); return; }
   glue->glResetHistogram(target);
 }
 
 void
 SoGLContext_glResetMinmax(const SoGLContext * glue, GLenum target)
 {
-  assert(glue->glResetMinmax);
+  if (!glue || !glue->glResetMinmax) { sogl_warn_core_func_unavailable("glResetMinmax"); return; }
   glue->glResetMinmax(target);
 }
 
 void
 SoGLContext_glRotated(const SoGLContext * glue, GLdouble angle, GLdouble x, GLdouble y, GLdouble z)
 {
-  assert(glue->glRotated);
+  if (!glue || !glue->glRotated) { sogl_warn_core_func_unavailable("glRotated"); return; }
   glue->glRotated(angle, x, y, z);
 }
 
 void
 SoGLContext_glSampleCoverage(const SoGLContext * glue, GLclampf value, GLboolean invert)
 {
-  assert(glue->glSampleCoverage);
+  if (!glue || !glue->glSampleCoverage) { sogl_warn_core_func_unavailable("glSampleCoverage"); return; }
   glue->glSampleCoverage(value, invert);
 }
 
 void
 SoGLContext_glScaled(const SoGLContext * glue, GLdouble x, GLdouble y, GLdouble z)
 {
-  assert(glue->glScaled);
+  if (!glue || !glue->glScaled) { sogl_warn_core_func_unavailable("glScaled"); return; }
   glue->glScaled(x, y, z);
 }
 
 void
 SoGLContext_glSelectBuffer(const SoGLContext * glue, GLsizei size, GLuint * buffer)
 {
-  assert(glue->glSelectBuffer);
+  if (!glue || !glue->glSelectBuffer) { sogl_warn_core_func_unavailable("glSelectBuffer"); return; }
   glue->glSelectBuffer(size, buffer);
 }
 
 void
 SoGLContext_glSeparableFilter2D(const SoGLContext * glue, GLenum target, GLenum internalformat, GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid * row, const GLvoid * column)
 {
-  assert(glue->glSeparableFilter2D);
+  if (!glue || !glue->glSeparableFilter2D) { sogl_warn_core_func_unavailable("glSeparableFilter2D"); return; }
   glue->glSeparableFilter2D(target, internalformat, width, height, format, type, row, column);
 }
 
 void
 SoGLContext_glShadeModel(const SoGLContext * glue, GLenum mode)
 {
-  assert(glue->glShadeModel);
+  if (!glue || !glue->glShadeModel) { sogl_warn_core_func_unavailable("glShadeModel"); return; }
   glue->glShadeModel(mode);
 }
 
 void
 SoGLContext_glStencilMask(const SoGLContext * glue, GLuint mask)
 {
-  assert(glue->glStencilMask);
+  if (!glue || !glue->glStencilMask) { sogl_warn_core_func_unavailable("glStencilMask"); return; }
   glue->glStencilMask(mask);
 }
 
 void
 SoGLContext_glTexCoord1d(const SoGLContext * glue, GLdouble s)
 {
-  assert(glue->glTexCoord1d);
+  if (!glue || !glue->glTexCoord1d) { sogl_warn_core_func_unavailable("glTexCoord1d"); return; }
   glue->glTexCoord1d(s);
 }
 
 void
 SoGLContext_glTexCoord1dv(const SoGLContext * glue, const GLdouble * v)
 {
-  assert(glue->glTexCoord1dv);
+  if (!glue || !glue->glTexCoord1dv) { sogl_warn_core_func_unavailable("glTexCoord1dv"); return; }
   glue->glTexCoord1dv(v);
 }
 
 void
 SoGLContext_glTexCoord1f(const SoGLContext * glue, GLfloat s)
 {
-  assert(glue->glTexCoord1f);
+  if (!glue || !glue->glTexCoord1f) { sogl_warn_core_func_unavailable("glTexCoord1f"); return; }
   glue->glTexCoord1f(s);
 }
 
 void
 SoGLContext_glTexCoord1fv(const SoGLContext * glue, const GLfloat * v)
 {
-  assert(glue->glTexCoord1fv);
+  if (!glue || !glue->glTexCoord1fv) { sogl_warn_core_func_unavailable("glTexCoord1fv"); return; }
   glue->glTexCoord1fv(v);
 }
 
 void
 SoGLContext_glTexCoord1i(const SoGLContext * glue, GLint s)
 {
-  assert(glue->glTexCoord1i);
+  if (!glue || !glue->glTexCoord1i) { sogl_warn_core_func_unavailable("glTexCoord1i"); return; }
   glue->glTexCoord1i(s);
 }
 
 void
 SoGLContext_glTexCoord1iv(const SoGLContext * glue, const GLint * v)
 {
-  assert(glue->glTexCoord1iv);
+  if (!glue || !glue->glTexCoord1iv) { sogl_warn_core_func_unavailable("glTexCoord1iv"); return; }
   glue->glTexCoord1iv(v);
 }
 
 void
 SoGLContext_glTexCoord1s(const SoGLContext * glue, GLshort s)
 {
-  assert(glue->glTexCoord1s);
+  if (!glue || !glue->glTexCoord1s) { sogl_warn_core_func_unavailable("glTexCoord1s"); return; }
   glue->glTexCoord1s(s);
 }
 
 void
 SoGLContext_glTexCoord1sv(const SoGLContext * glue, const GLshort * v)
 {
-  assert(glue->glTexCoord1sv);
+  if (!glue || !glue->glTexCoord1sv) { sogl_warn_core_func_unavailable("glTexCoord1sv"); return; }
   glue->glTexCoord1sv(v);
 }
 
 void
 SoGLContext_glTexCoord2d(const SoGLContext * glue, GLdouble s, GLdouble t)
 {
-  assert(glue->glTexCoord2d);
+  if (!glue || !glue->glTexCoord2d) { sogl_warn_core_func_unavailable("glTexCoord2d"); return; }
   glue->glTexCoord2d(s, t);
 }
 
 void
 SoGLContext_glTexCoord2dv(const SoGLContext * glue, const GLdouble * v)
 {
-  assert(glue->glTexCoord2dv);
+  if (!glue || !glue->glTexCoord2dv) { sogl_warn_core_func_unavailable("glTexCoord2dv"); return; }
   glue->glTexCoord2dv(v);
 }
 
 void
 SoGLContext_glTexCoord2i(const SoGLContext * glue, GLint s, GLint t)
 {
-  assert(glue->glTexCoord2i);
+  if (!glue || !glue->glTexCoord2i) { sogl_warn_core_func_unavailable("glTexCoord2i"); return; }
   glue->glTexCoord2i(s, t);
 }
 
 void
 SoGLContext_glTexCoord2iv(const SoGLContext * glue, const GLint * v)
 {
-  assert(glue->glTexCoord2iv);
+  if (!glue || !glue->glTexCoord2iv) { sogl_warn_core_func_unavailable("glTexCoord2iv"); return; }
   glue->glTexCoord2iv(v);
 }
 
 void
 SoGLContext_glTexCoord2s(const SoGLContext * glue, GLshort s, GLshort t)
 {
-  assert(glue->glTexCoord2s);
+  if (!glue || !glue->glTexCoord2s) { sogl_warn_core_func_unavailable("glTexCoord2s"); return; }
   glue->glTexCoord2s(s, t);
 }
 
 void
 SoGLContext_glTexCoord2sv(const SoGLContext * glue, const GLshort * v)
 {
-  assert(glue->glTexCoord2sv);
+  if (!glue || !glue->glTexCoord2sv) { sogl_warn_core_func_unavailable("glTexCoord2sv"); return; }
   glue->glTexCoord2sv(v);
 }
 
 void
 SoGLContext_glTexCoord3d(const SoGLContext * glue, GLdouble s, GLdouble t, GLdouble r)
 {
-  assert(glue->glTexCoord3d);
+  if (!glue || !glue->glTexCoord3d) { sogl_warn_core_func_unavailable("glTexCoord3d"); return; }
   glue->glTexCoord3d(s, t, r);
 }
 
 void
 SoGLContext_glTexCoord3dv(const SoGLContext * glue, const GLdouble * v)
 {
-  assert(glue->glTexCoord3dv);
+  if (!glue || !glue->glTexCoord3dv) { sogl_warn_core_func_unavailable("glTexCoord3dv"); return; }
   glue->glTexCoord3dv(v);
 }
 
 void
 SoGLContext_glTexCoord3i(const SoGLContext * glue, GLint s, GLint t, GLint r)
 {
-  assert(glue->glTexCoord3i);
+  if (!glue || !glue->glTexCoord3i) { sogl_warn_core_func_unavailable("glTexCoord3i"); return; }
   glue->glTexCoord3i(s, t, r);
 }
 
 void
 SoGLContext_glTexCoord3iv(const SoGLContext * glue, const GLint * v)
 {
-  assert(glue->glTexCoord3iv);
+  if (!glue || !glue->glTexCoord3iv) { sogl_warn_core_func_unavailable("glTexCoord3iv"); return; }
   glue->glTexCoord3iv(v);
 }
 
 void
 SoGLContext_glTexCoord3s(const SoGLContext * glue, GLshort s, GLshort t, GLshort r)
 {
-  assert(glue->glTexCoord3s);
+  if (!glue || !glue->glTexCoord3s) { sogl_warn_core_func_unavailable("glTexCoord3s"); return; }
   glue->glTexCoord3s(s, t, r);
 }
 
 void
 SoGLContext_glTexCoord3sv(const SoGLContext * glue, const GLshort * v)
 {
-  assert(glue->glTexCoord3sv);
+  if (!glue || !glue->glTexCoord3sv) { sogl_warn_core_func_unavailable("glTexCoord3sv"); return; }
   glue->glTexCoord3sv(v);
 }
 
 void
 SoGLContext_glTexCoord4d(const SoGLContext * glue, GLdouble s, GLdouble t, GLdouble r, GLdouble q)
 {
-  assert(glue->glTexCoord4d);
+  if (!glue || !glue->glTexCoord4d) { sogl_warn_core_func_unavailable("glTexCoord4d"); return; }
   glue->glTexCoord4d(s, t, r, q);
 }
 
 void
 SoGLContext_glTexCoord4dv(const SoGLContext * glue, const GLdouble * v)
 {
-  assert(glue->glTexCoord4dv);
+  if (!glue || !glue->glTexCoord4dv) { sogl_warn_core_func_unavailable("glTexCoord4dv"); return; }
   glue->glTexCoord4dv(v);
 }
 
 void
 SoGLContext_glTexCoord4f(const SoGLContext * glue, GLfloat s, GLfloat t, GLfloat r, GLfloat q)
 {
-  assert(glue->glTexCoord4f);
+  if (!glue || !glue->glTexCoord4f) { sogl_warn_core_func_unavailable("glTexCoord4f"); return; }
   glue->glTexCoord4f(s, t, r, q);
 }
 
 void
 SoGLContext_glTexCoord4i(const SoGLContext * glue, GLint s, GLint t, GLint r, GLint q)
 {
-  assert(glue->glTexCoord4i);
+  if (!glue || !glue->glTexCoord4i) { sogl_warn_core_func_unavailable("glTexCoord4i"); return; }
   glue->glTexCoord4i(s, t, r, q);
 }
 
 void
 SoGLContext_glTexCoord4iv(const SoGLContext * glue, const GLint * v)
 {
-  assert(glue->glTexCoord4iv);
+  if (!glue || !glue->glTexCoord4iv) { sogl_warn_core_func_unavailable("glTexCoord4iv"); return; }
   glue->glTexCoord4iv(v);
 }
 
 void
 SoGLContext_glTexCoord4s(const SoGLContext * glue, GLshort s, GLshort t, GLshort r, GLshort q)
 {
-  assert(glue->glTexCoord4s);
+  if (!glue || !glue->glTexCoord4s) { sogl_warn_core_func_unavailable("glTexCoord4s"); return; }
   glue->glTexCoord4s(s, t, r, q);
 }
 
 void
 SoGLContext_glTexCoord4sv(const SoGLContext * glue, const GLshort * v)
 {
-  assert(glue->glTexCoord4sv);
+  if (!glue || !glue->glTexCoord4sv) { sogl_warn_core_func_unavailable("glTexCoord4sv"); return; }
   glue->glTexCoord4sv(v);
 }
 
 void
 SoGLContext_glTexEnviv(const SoGLContext * glue, GLenum target, GLenum pname, const GLint * params)
 {
-  assert(glue->glTexEnviv);
+  if (!glue || !glue->glTexEnviv) { sogl_warn_core_func_unavailable("glTexEnviv"); return; }
   glue->glTexEnviv(target, pname, params);
 }
 
 void
 SoGLContext_glTexGend(const SoGLContext * glue, GLenum coord, GLenum pname, GLdouble param)
 {
-  assert(glue->glTexGend);
+  if (!glue || !glue->glTexGend) { sogl_warn_core_func_unavailable("glTexGend"); return; }
   glue->glTexGend(coord, pname, param);
 }
 
 void
 SoGLContext_glTexGendv(const SoGLContext * glue, GLenum coord, GLenum pname, const GLdouble * params)
 {
-  assert(glue->glTexGendv);
+  if (!glue || !glue->glTexGendv) { sogl_warn_core_func_unavailable("glTexGendv"); return; }
   glue->glTexGendv(coord, pname, params);
 }
 
 void
 SoGLContext_glTexGeniv(const SoGLContext * glue, GLenum coord, GLenum pname, const GLint * params)
 {
-  assert(glue->glTexGeniv);
+  if (!glue || !glue->glTexGeniv) { sogl_warn_core_func_unavailable("glTexGeniv"); return; }
   glue->glTexGeniv(coord, pname, params);
 }
 
 void
 SoGLContext_glTexImage1D(const SoGLContext * glue, GLenum target, GLint level, GLint internalFormat, GLsizei width, GLint border, GLenum format, GLenum type, const GLvoid * pixels)
 {
-  assert(glue->glTexImage1D);
+  if (!glue || !glue->glTexImage1D) { sogl_warn_core_func_unavailable("glTexImage1D"); return; }
   glue->glTexImage1D(target, level, internalFormat, width, border, format, type, pixels);
 }
 
 void
 SoGLContext_glTexParameterfv(const SoGLContext * glue, GLenum target, GLenum pname, const GLfloat * params)
 {
-  assert(glue->glTexParameterfv);
+  if (!glue || !glue->glTexParameterfv) { sogl_warn_core_func_unavailable("glTexParameterfv"); return; }
   glue->glTexParameterfv(target, pname, params);
 }
 
 void
 SoGLContext_glTexParameteriv(const SoGLContext * glue, GLenum target, GLenum pname, const GLint * params)
 {
-  assert(glue->glTexParameteriv);
+  if (!glue || !glue->glTexParameteriv) { sogl_warn_core_func_unavailable("glTexParameteriv"); return; }
   glue->glTexParameteriv(target, pname, params);
 }
 
 void
 SoGLContext_glTexSubImage1D(const SoGLContext * glue, GLenum target, GLint level, GLint xoffset, GLsizei width, GLenum format, GLenum type, const GLvoid * pixels)
 {
-  assert(glue->glTexSubImage1D);
+  if (!glue || !glue->glTexSubImage1D) { sogl_warn_core_func_unavailable("glTexSubImage1D"); return; }
   glue->glTexSubImage1D(target, level, xoffset, width, format, type, pixels);
 }
 
 void
 SoGLContext_glTranslated(const SoGLContext * glue, GLdouble x, GLdouble y, GLdouble z)
 {
-  assert(glue->glTranslated);
+  if (!glue || !glue->glTranslated) { sogl_warn_core_func_unavailable("glTranslated"); return; }
   glue->glTranslated(x, y, z);
 }
 
 void
 SoGLContext_glVertex2d(const SoGLContext * glue, GLdouble x, GLdouble y)
 {
-  assert(glue->glVertex2d);
+  if (!glue || !glue->glVertex2d) { sogl_warn_core_func_unavailable("glVertex2d"); return; }
   glue->glVertex2d(x, y);
 }
 
 void
 SoGLContext_glVertex2dv(const SoGLContext * glue, const GLdouble * v)
 {
-  assert(glue->glVertex2dv);
+  if (!glue || !glue->glVertex2dv) { sogl_warn_core_func_unavailable("glVertex2dv"); return; }
   glue->glVertex2dv(v);
 }
 
 void
 SoGLContext_glVertex2fv(const SoGLContext * glue, const GLfloat * v)
 {
-  assert(glue->glVertex2fv);
+  if (!glue || !glue->glVertex2fv) { sogl_warn_core_func_unavailable("glVertex2fv"); return; }
   glue->glVertex2fv(v);
 }
 
 void
 SoGLContext_glVertex2i(const SoGLContext * glue, GLint x, GLint y)
 {
-  assert(glue->glVertex2i);
+  if (!glue || !glue->glVertex2i) { sogl_warn_core_func_unavailable("glVertex2i"); return; }
   glue->glVertex2i(x, y);
 }
 
 void
 SoGLContext_glVertex2iv(const SoGLContext * glue, const GLint * v)
 {
-  assert(glue->glVertex2iv);
+  if (!glue || !glue->glVertex2iv) { sogl_warn_core_func_unavailable("glVertex2iv"); return; }
   glue->glVertex2iv(v);
 }
 
 void
 SoGLContext_glVertex2sv(const SoGLContext * glue, const GLshort * v)
 {
-  assert(glue->glVertex2sv);
+  if (!glue || !glue->glVertex2sv) { sogl_warn_core_func_unavailable("glVertex2sv"); return; }
   glue->glVertex2sv(v);
 }
 
 void
 SoGLContext_glVertex3d(const SoGLContext * glue, GLdouble x, GLdouble y, GLdouble z)
 {
-  assert(glue->glVertex3d);
+  if (!glue || !glue->glVertex3d) { sogl_warn_core_func_unavailable("glVertex3d"); return; }
   glue->glVertex3d(x, y, z);
 }
 
 void
 SoGLContext_glVertex3dv(const SoGLContext * glue, const GLdouble * v)
 {
-  assert(glue->glVertex3dv);
+  if (!glue || !glue->glVertex3dv) { sogl_warn_core_func_unavailable("glVertex3dv"); return; }
   glue->glVertex3dv(v);
 }
 
 void
 SoGLContext_glVertex3i(const SoGLContext * glue, GLint x, GLint y, GLint z)
 {
-  assert(glue->glVertex3i);
+  if (!glue || !glue->glVertex3i) { sogl_warn_core_func_unavailable("glVertex3i"); return; }
   glue->glVertex3i(x, y, z);
 }
 
 void
 SoGLContext_glVertex3iv(const SoGLContext * glue, const GLint * v)
 {
-  assert(glue->glVertex3iv);
+  if (!glue || !glue->glVertex3iv) { sogl_warn_core_func_unavailable("glVertex3iv"); return; }
   glue->glVertex3iv(v);
 }
 
 void
 SoGLContext_glVertex3s(const SoGLContext * glue, GLshort x, GLshort y, GLshort z)
 {
-  assert(glue->glVertex3s);
+  if (!glue || !glue->glVertex3s) { sogl_warn_core_func_unavailable("glVertex3s"); return; }
   glue->glVertex3s(x, y, z);
 }
 
 void
 SoGLContext_glVertex3sv(const SoGLContext * glue, const GLshort * v)
 {
-  assert(glue->glVertex3sv);
+  if (!glue || !glue->glVertex3sv) { sogl_warn_core_func_unavailable("glVertex3sv"); return; }
   glue->glVertex3sv(v);
 }
 
 void
 SoGLContext_glVertex4d(const SoGLContext * glue, GLdouble x, GLdouble y, GLdouble z, GLdouble w)
 {
-  assert(glue->glVertex4d);
+  if (!glue || !glue->glVertex4d) { sogl_warn_core_func_unavailable("glVertex4d"); return; }
   glue->glVertex4d(x, y, z, w);
 }
 
 void
 SoGLContext_glVertex4dv(const SoGLContext * glue, const GLdouble * v)
 {
-  assert(glue->glVertex4dv);
+  if (!glue || !glue->glVertex4dv) { sogl_warn_core_func_unavailable("glVertex4dv"); return; }
   glue->glVertex4dv(v);
 }
 
 void
 SoGLContext_glVertex4f(const SoGLContext * glue, GLfloat x, GLfloat y, GLfloat z, GLfloat w)
 {
-  assert(glue->glVertex4f);
+  if (!glue || !glue->glVertex4f) { sogl_warn_core_func_unavailable("glVertex4f"); return; }
   glue->glVertex4f(x, y, z, w);
 }
 
 void
 SoGLContext_glVertex4i(const SoGLContext * glue, GLint x, GLint y, GLint z, GLint w)
 {
-  assert(glue->glVertex4i);
+  if (!glue || !glue->glVertex4i) { sogl_warn_core_func_unavailable("glVertex4i"); return; }
   glue->glVertex4i(x, y, z, w);
 }
 
 void
 SoGLContext_glVertex4iv(const SoGLContext * glue, const GLint * v)
 {
-  assert(glue->glVertex4iv);
+  if (!glue || !glue->glVertex4iv) { sogl_warn_core_func_unavailable("glVertex4iv"); return; }
   glue->glVertex4iv(v);
 }
 
 void
 SoGLContext_glVertex4s(const SoGLContext * glue, GLshort x, GLshort y, GLshort z, GLshort w)
 {
-  assert(glue->glVertex4s);
+  if (!glue || !glue->glVertex4s) { sogl_warn_core_func_unavailable("glVertex4s"); return; }
   glue->glVertex4s(x, y, z, w);
 }
 
 void
 SoGLContext_glVertex4sv(const SoGLContext * glue, const GLshort * v)
 {
-  assert(glue->glVertex4sv);
+  if (!glue || !glue->glVertex4sv) { sogl_warn_core_func_unavailable("glVertex4sv"); return; }
   glue->glVertex4sv(v);
 }
 

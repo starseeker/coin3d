@@ -34,17 +34,71 @@ if(PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
   message(FATAL_ERROR "${CMAKE_PROJECT_NAME} requires an out-of-source build. Please create a separate build directory and run 'cmake <path_to_${CMAKE_PROJECT_NAME}> [options]' from there.")
 endif()
 
-# Make sure submodules are initialized
-if (NOT EXISTS ${PROJECT_SOURCE_DIR}/external/osmesa/CMakeLists.txt)
-  find_program(GIT_EXECUTABLE git)
-  if (NOT GIT_EXECUTABLE)
-    message(FATAL_ERROR "Need to populate Git submodule, but unable to find git executable")
-  endif (NOT GIT_EXECUTABLE)
-  execute_process(
-    COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive ${PROJECT_SOURCE_DIR}
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    )
-endif()
+# ============================================================================
+# Git submodule helper
+# ============================================================================
+# Try to initialise a single git submodule at configure time.
+# Call this before using any path that may live in a submodule.
+#
+#   obol_init_submodule("external/fltk")
+#
+# Behaviour:
+#   1. If <path>/CMakeLists.txt already exists → no-op (already populated).
+#   2. Otherwise, check if the path is registered as a gitlink in the git
+#      index (mode 160000).  Only if it is do we run
+#      "git submodule update --init <path>" — this avoids accidentally
+#      kicking off a full network clone for a submodule that hasn't been
+#      registered yet.
+#   3. If git is unavailable or the command fails → emit a WARNING and
+#      continue; callers are expected to gracefully degrade.
+macro(obol_init_submodule submodule_path)
+  if(NOT EXISTS "${PROJECT_SOURCE_DIR}/${submodule_path}/CMakeLists.txt")
+    find_program(_obol_git git)
+    if(_obol_git)
+      # Check whether this path is actually registered as a git submodule
+      # (i.e. has a 160000 gitlink entry in the index).  Without the gitlink,
+      # "git submodule update --init" would try to clone from the URL in
+      # .gitmodules, which we do NOT want to trigger silently at configure
+      # time when the developer hasn't explicitly set up the submodule.
+      execute_process(
+        COMMAND ${_obol_git} ls-files --stage -- ${submodule_path}
+        WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
+        OUTPUT_VARIABLE _gitlink_output
+        RESULT_VARIABLE _gitlink_result
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+      )
+      if(_gitlink_result EQUAL 0 AND _gitlink_output MATCHES "^160000 ")
+        # Registered gitlink found → safe to initialise
+        message(STATUS "Initialising git submodule: ${submodule_path}")
+        execute_process(
+          COMMAND ${_obol_git} submodule update --init -- ${submodule_path}
+          WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
+          RESULT_VARIABLE _submodule_result
+          OUTPUT_QUIET
+          ERROR_QUIET
+        )
+        if(NOT _submodule_result EQUAL 0)
+          message(WARNING
+            "Failed to initialise submodule ${submodule_path}. "
+            "Run: git submodule update --init ${submodule_path}")
+        endif()
+        unset(_submodule_result)
+      else()
+        # Not yet registered as a gitlink — skip silently.
+        # Callers will detect the missing directory and degrade gracefully.
+      endif()
+      unset(_gitlink_output)
+      unset(_gitlink_result)
+    endif()
+    unset(_obol_git)
+  endif()
+endmacro()
+
+# Ensure the OSMesa submodule is present (needed for osmesa and dual-GL builds).
+# This is a no-op when osmesa files are already on disk (bundled or previously
+# initialised).
+obol_init_submodule("external/osmesa")
 
 # Set C++ standard requirements
 set(CMAKE_CXX_STANDARD 17)
@@ -86,48 +140,60 @@ option(BUILD_SHARED_LIBS "Build shared library when ON, static when OFF" ON)
 option(OBOL_BUILD_TESTS "Build unit tests" ON)
 
 # FLTK GL context manager for obol_viewer.
-# Defined here (before FLTK detection) so it can drive FLTK_BUILD_GL when
-# building the bundled FLTK.  The actual compile-definition is set for the
-# obol_viewer target in tests/CMakeLists.txt.
+# The actual compile-definition is set for the obol_viewer target in
+# examples/fltk/CMakeLists.txt.
 option(OBOL_VIEWER_USE_FLTK_GL
     "Use FLTK GL context for obol_viewer system-GL panel (portable; disable for CI/headless)"
     ON)
 
+# ---------------------------------------------------------------------------
+# FLTK detection and submodule fallback
+#
+# Priority:
+#   1. System FLTK (libfltk1.3-dev / libfltk-dev)
+#   2. external/fltk git submodule (populated at configure time when available)
+#   3. Disabled — FLTK-based viewers are silently skipped
+#
+# The git submodule is declared in .gitmodules and points to
+# https://github.com/fltk/fltk (branch-1.3).  It is initialised
+# automatically at configure time when system FLTK is absent.
+# ---------------------------------------------------------------------------
 find_package(FLTK QUIET)
-if(OBOL_BUILD_TESTS AND NOT FLTK_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/external/fltk/CMakeLists.txt")
-  message(STATUS "System FLTK not found; building bundled FLTK from external/fltk")
-  set(FLTK_BUILD_FLUID        OFF CACHE BOOL "Build FLTK fluid tool"         FORCE)
-  set(FLTK_BUILD_FLTK_OPTIONS OFF CACHE BOOL "Build FLTK fltk-options tool"  FORCE)
-  set(FLTK_BUILD_TEST         OFF CACHE BOOL "Build FLTK test/demo programs"  FORCE)
-  set(FLTK_BUILD_EXAMPLES     OFF CACHE BOOL "Build FLTK example programs"    FORCE)
-  set(FLTK_BUILD_FORMS        OFF CACHE BOOL "Build FLTK forms library"       FORCE)
-  # Enable the FLTK OpenGL library when the viewer will use Fl_Gl_Window for
-  # its cross-platform GL context manager; disable otherwise to keep the
-  # bundled FLTK build as lean as possible.
-  if(OBOL_VIEWER_USE_FLTK_GL)
-    set(FLTK_BUILD_GL         ON  CACHE BOOL "Build FLTK OpenGL library"      FORCE)
+if(FLTK_FOUND)
+  message(STATUS "FLTK: using system installation (${FLTK_INCLUDE_DIRS})")
+else()
+  # System FLTK not found.  Try to populate the submodule fallback.
+  obol_init_submodule("external/fltk")
+  if(EXISTS "${PROJECT_SOURCE_DIR}/external/fltk/CMakeLists.txt")
+    message(STATUS "FLTK: using external/fltk submodule")
+    set(FLTK_BUILD_FLUID        OFF CACHE BOOL "Build FLTK fluid tool"         FORCE)
+    set(FLTK_BUILD_FLTK_OPTIONS OFF CACHE BOOL "Build FLTK fltk-options tool"  FORCE)
+    set(FLTK_BUILD_TEST         OFF CACHE BOOL "Build FLTK test/demo programs"  FORCE)
+    set(FLTK_BUILD_EXAMPLES     OFF CACHE BOOL "Build FLTK example programs"    FORCE)
+    set(FLTK_BUILD_FORMS        OFF CACHE BOOL "Build FLTK forms library"       FORCE)
+    if(OBOL_VIEWER_USE_FLTK_GL)
+      set(FLTK_BUILD_GL         ON  CACHE BOOL "Build FLTK OpenGL library"      FORCE)
+    else()
+      set(FLTK_BUILD_GL         OFF CACHE BOOL "Build FLTK OpenGL library"      FORCE)
+    endif()
+    set(FLTK_BUILD_SHARED_LIBS  OFF CACHE BOOL "Build FLTK shared libraries"    FORCE)
+    add_subdirectory("${PROJECT_SOURCE_DIR}/external/fltk" fltk_build EXCLUDE_FROM_ALL)
+    set(FLTK_FOUND TRUE)
+    set(FLTK_LIBRARIES fltk::fltk)
+    if(OBOL_VIEWER_USE_FLTK_GL AND TARGET fltk::gl)
+      list(APPEND FLTK_LIBRARIES fltk::gl)
+    endif()
+    set(FLTK_INCLUDE_DIRS
+        "${PROJECT_SOURCE_DIR}/external/fltk"
+        "${CMAKE_BINARY_DIR}/fltk_build")
   else()
-    set(FLTK_BUILD_GL         OFF CACHE BOOL "Build FLTK OpenGL library"      FORCE)
-  endif()
-  set(FLTK_BUILD_SHARED_LIBS  OFF CACHE BOOL "Build FLTK shared libraries"    FORCE)
-  add_subdirectory("${PROJECT_SOURCE_DIR}/external/fltk" fltk_build EXCLUDE_FROM_ALL)
-  set(FLTK_FOUND TRUE)
-  set(FLTK_LIBRARIES fltk::fltk)
-  # When the FLTK GL library is built, add it to FLTK_LIBRARIES so that
-  # targets linking ${FLTK_LIBRARIES} automatically get Fl_Gl_Window support.
-  if(OBOL_VIEWER_USE_FLTK_GL AND TARGET fltk::gl)
-    list(APPEND FLTK_LIBRARIES fltk::gl)
-  endif()
-  set(FLTK_INCLUDE_DIRS
-      "${PROJECT_SOURCE_DIR}/external/fltk"
-      "${CMAKE_BINARY_DIR}/fltk_build")
-  message(STATUS "Using bundled FLTK from external/fltk")
-elseif()
-  if (OBOL_BUILD_TESTS)
-    message(STATUS "FLTK not found and external/fltk not present – obol_viewer disabled")
+    if(OBOL_BUILD_TESTS)
+      message(STATUS "FLTK: not found (no system package, no external/fltk submodule) – FLTK viewers disabled")
+    endif()
   endif()
 endif()
-# obol_viewer uses obol_testlib for its scene catalogue, so it can only be
+
+# obol_viewer uses libObolEx for its scene catalogue, so it can only be
 # built when OBOL_BUILD_TESTS is also ON.  cmake_dependent_option enforces
 # this: the viewer is silently disabled if FLTK is absent or tests are off.
 cmake_dependent_option(OBOL_BUILD_VIEWER
@@ -415,7 +481,9 @@ endif()
 if(OBOL_USE_OSMESA)
   set(OBOL_OUTPUT_NAME "Obol-osmesa")
   add_definitions(-DOBOL_OSMESA_BUILD)
-  add_definitions(-DUSE_MGL_NAMESPACE)  # Enable MGL name mangling to match osmesa library
+  # USE_MGL_NAMESPACE is set only on the Obol library target (see src/CMakeLists.txt)
+  # to avoid propagating it to test executables that include <GL/glx.h>, which
+  # conditionally includes "glx_mangle.h" (not present on modern Ubuntu 24.04).
   message(STATUS "Library will be named: lib${OBOL_OUTPUT_NAME}")
 else()
   set(OBOL_OUTPUT_NAME "Obol")
@@ -687,31 +755,16 @@ add_subdirectory(include)
 add_subdirectory(src)
 
 if(OBOL_BUILD_TESTS)
-  # Build libpng from the bundled submodule so that rgb_to_png and
+  # Build lodepng from the bundled source so that rgb_to_png and
   # image_comparator can write / compare PNG control images without
-  # requiring a system-installed libpng-dev package.
-  if(EXISTS "${PROJECT_SOURCE_DIR}/external/libpng/CMakeLists.txt")
-    set(PNG_SHARED      OFF CACHE BOOL "Build libpng shared library" FORCE)
-    set(PNG_STATIC      ON  CACHE BOOL "Build libpng static library" FORCE)
-    set(PNG_TESTS       OFF CACHE BOOL "Build libpng tests"          FORCE)
-    set(PNG_TOOLS       OFF CACHE BOOL "Build libpng tools"          FORCE)
-    set(PNG_EXECUTABLES OFF CACHE BOOL "Build libpng executables"    FORCE)
-    add_subdirectory("${PROJECT_SOURCE_DIR}/external/libpng" libpng_build
-                     EXCLUDE_FROM_ALL)
-    # Expose the built library to the tests subdirectory via standard
-    # find_package(PNG) variables so no changes are needed in tests/.
-    set(PNG_FOUND        TRUE  CACHE BOOL   "" FORCE)
-    set(PNG_INCLUDE_DIRS
-          "${PROJECT_SOURCE_DIR}/external/libpng"
-          "${CMAKE_BINARY_DIR}/libpng_build"
-        CACHE STRING "" FORCE)
-    set(PNG_LIBRARIES    png_static CACHE STRING "" FORCE)
-    message(STATUS "Using bundled libpng from external/libpng")
-  endif()
+  # requiring any system-installed PNG library.
+  add_library(lodepng STATIC "${PROJECT_SOURCE_DIR}/external/lodepng.cpp")
+  target_include_directories(lodepng PUBLIC "${PROJECT_SOURCE_DIR}/external")
+  message(STATUS "Using bundled lodepng from external/lodepng.cpp")
 
   enable_testing()
   add_subdirectory(tests)
-  add_subdirectory(Mentor)
+  add_subdirectory(examples)
 endif()
 
 # ============================================================================
@@ -781,47 +834,6 @@ if(OBOL_COVERAGE AND LCOV_EXECUTABLE AND GENHTML_EXECUTABLE)
   message(STATUS
     "Run 'cmake --build <dir> --target coverage' to generate the HTML report")
   message(STATUS "  Report will be written to: ${COVERAGE_OUTPUT_DIR}")
-endif()
-
-# ============================================================================
-# Qt example (examples/qt_obol_example.cpp + examples/qt_obol_widget.h)
-#
-# Built when -DOBOL_BUILD_QT_EXAMPLE=ON and Qt6 (Widgets + OpenGL) is found.
-# Demonstrates Qt/Obol integration using QtObolWidget, the full-featured
-# equivalent of Quarter's QuarterWidget.  See examples/qt_obol_widget.h for:
-#   - Feature-by-feature comparison: Quarter vs Obol (render/stereo/transparency
-#     modes, interaction mode, SpaceNavigator, Qt Designer plugin)
-#   - Answer to "does Obol make any of these harder?" (answer: no)
-# ============================================================================
-option(OBOL_BUILD_QT_EXAMPLE "Build the Qt/Obol example (requires Qt6)" OFF)
-
-if(OBOL_BUILD_QT_EXAMPLE)
-  find_package(Qt6 QUIET COMPONENTS Core Widgets OpenGL OpenGLWidgets)
-  if(Qt6Widgets_FOUND AND Qt6OpenGL_FOUND AND Qt6OpenGLWidgets_FOUND)
-    set(CMAKE_AUTOMOC ON)
-    add_executable(qt_obol_example
-        examples/qt_obol_example.cpp
-        examples/qt_obol_widget.h   # listed so AUTOMOC finds Q_OBJECT
-    )
-    target_include_directories(qt_obol_example PRIVATE
-        ${PROJECT_SOURCE_DIR}/examples
-        ${PROJECT_SOURCE_DIR}/include
-        ${PROJECT_SOURCE_DIR}/include/Inventor/annex
-        ${PROJECT_BINARY_DIR}/include
-        ${OBOL_TARGET_INCLUDE_DIRECTORIES}
-    )
-    target_link_libraries(qt_obol_example PRIVATE
-        ${PROJECT_NAME}
-        ${OBOL_TARGET_LINK_LIBRARIES}
-        Qt6::Core
-        Qt6::Widgets
-        Qt6::OpenGL
-        Qt6::OpenGLWidgets
-    )
-    message(STATUS "Qt/Obol example: enabled (Qt6 ${Qt6Widgets_VERSION})")
-  else()
-    message(STATUS "Qt/Obol example: disabled (Qt6 Widgets/OpenGL/OpenGLWidgets not found)")
-  endif()
 endif()
 
 # ============================================================================

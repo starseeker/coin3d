@@ -863,7 +863,10 @@ SoOffscreenRendererP::renderFromBase(SoBase * base)
                              (bufsize <= (this->bufferbytesize / 8));
         if (alloc) {
           delete[] this->buffer;
-          this->buffer = new unsigned char[bufsize];
+          /* Add 4096-byte (one page) guard: GPU DMA transfers during
+           * glReadPixels can overshoot the exact pixel-data size.  The same
+           * padding is applied in SoSceneTexture2::updatePBuffer(). */
+          this->buffer = new unsigned char[bufsize + 4096];
           this->bufferbytesize = bufsize;
         }
 
@@ -1041,7 +1044,9 @@ SoOffscreenRendererP::renderFromBase(SoBase * base)
 
   if (alloc) {
     delete[] this->buffer;
-    this->buffer = new unsigned char[bufsize];
+    /* Add 4096-byte (one page) guard: GPU DMA transfers during
+     * glReadPixels can overshoot the exact pixel-data size. */
+    this->buffer = new unsigned char[bufsize + 4096];
     this->bufferbytesize = bufsize;
   }
 

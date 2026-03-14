@@ -147,16 +147,15 @@ SoGLDisplayList::~SoGLDisplayList()
     SoGLContext_glDeleteLists(SoGLContext_instance(PRIVATE(this)->context), (GLuint) PRIVATE(this)->firstindex, PRIVATE(this)->numalloc);
   }
   else {
-    assert(PRIVATE(this)->type == TEXTURE_OBJECT);
-
+    // Should be a TEXTURE_OBJECT — clean it up if the GL context still has
+    // texture-object support.  A stripped-down context (e.g. one supplied by
+    // a legacy application) might have revoked or never had this capability;
+    // skip silently in that case rather than crashing inside the destructor.
     const SoGLContext * glw = SoGLContext_instance(PRIVATE(this)->context);
-    assert(SoGLContext_has_texture_objects(glw));
-
-    // Use temporary variable in case GLUint != unsigned int.
-    GLuint tmpindex = (GLuint) PRIVATE(this)->firstindex;
-    // It is only possible to create one texture object at a time, so
-    // there's only one index to delete.
-    SoGLContext_glDeleteTextures(glw, 1, &tmpindex);
+    if (glw && SoGLContext_has_texture_objects(glw)) {
+      GLuint tmpindex = (GLuint) PRIVATE(this)->firstindex;
+      SoGLContext_glDeleteTextures(glw, 1, &tmpindex);
+    }
   }
   delete PRIVATE(this);
 }
@@ -223,14 +222,13 @@ SoGLDisplayList::close(SoState * OBOL_UNUSED_ARG(state))
   }
   else {
     const SoGLContext * glw = SoGLContext_instance(PRIVATE(this)->context);
-    assert(SoGLContext_has_texture_objects(glw));
-    GLenum target = PRIVATE(this)->texturetarget;
-    if (target == 0) {
-      // target is not set. Assume normal 2D texture.
-      target = GL_TEXTURE_2D;
+    if (glw && SoGLContext_has_texture_objects(glw)) {
+      GLenum target = PRIVATE(this)->texturetarget;
+      if (target == 0) {
+        target = GL_TEXTURE_2D;
+      }
+      SoGLContext_glBindTexture(glw, target, (GLuint) 0);
     }
-    // unbind current texture object
-    SoGLContext_glBindTexture(glw, target, (GLuint) 0);
   }
 }
 
@@ -344,11 +342,16 @@ void
 SoGLDisplayList::bindTexture(SoState * OBOL_UNUSED_ARG(state))
 {
   const SoGLContext * glw = SoGLContext_instance(PRIVATE(this)->context);
-  assert(SoGLContext_has_texture_objects(glw));
+  if (!glw || !SoGLContext_has_texture_objects(glw)) {
+    SoDebugError::postWarning("SoGLDisplayList::bindTexture",
+      "Cannot bind texture object: texture objects are not supported by "
+      "this GL context (requires OpenGL >= 1.1 or GL_EXT_texture_object). "
+      "Texture rendering will be skipped.");
+    return;
+  }
 
   GLenum target = PRIVATE(this)->texturetarget;
   if (target == 0) {
-    // target is not set. Assume normal 2D texture.
     target = GL_TEXTURE_2D;
   }
   SoGLContext_glBindTexture(glw, target, (GLuint)PRIVATE(this)->firstindex);

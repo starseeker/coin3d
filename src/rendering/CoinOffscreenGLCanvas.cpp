@@ -458,6 +458,14 @@ CoinOffscreenGLCanvas::readPixels(uint8_t * dst,
   //
   // The values set up below matches the default settings of an
   // OpenGL driver.
+  //
+  // IMPORTANT: GL_PACK_* are *client* pixel-store parameters; they are NOT
+  // saved/restored by glPushAttrib/glPopAttrib (which only covers server
+  // state).  We therefore explicitly reset every pack pixel-store value to
+  // the GL default both here (before we use them) and after glPopAttrib at
+  // the end of this function.  This prevents any lingering GL_PACK_ROW_LENGTH
+  // from contaminating subsequent glReadPixels calls in other code paths
+  // (e.g. SoSceneTexture2::updatePBuffer) that may share the same GL context.
 
   SoGLContext_glPixelStorei(glue, GL_PACK_SWAP_BYTES, 0);
   SoGLContext_glPixelStorei(glue, GL_PACK_LSB_FIRST, 0);
@@ -553,6 +561,18 @@ CoinOffscreenGLCanvas::readPixels(uint8_t * dst,
   SoGLContext_glFlush(glue); glFinish();
 
   SoGLContext_glPopAttrib(glue);
+
+  // glPushAttrib/glPopAttrib does NOT save/restore client pixel-store state
+  // (GL_PACK_ROW_LENGTH etc.).  Explicitly reset them to the GL defaults so
+  // that any subsequent glReadPixels call — in SoSceneTexture2, shadow maps,
+  // or any other node that shares this context — sees a clean state and does
+  // not inherit our tiling row-length.
+  SoGLContext_glPixelStorei(glue, GL_PACK_ROW_LENGTH,  0);
+  SoGLContext_glPixelStorei(glue, GL_PACK_SKIP_ROWS,   0);
+  SoGLContext_glPixelStorei(glue, GL_PACK_SKIP_PIXELS, 0);
+  SoGLContext_glPixelStorei(glue, GL_PACK_SWAP_BYTES,  0);
+  SoGLContext_glPixelStorei(glue, GL_PACK_LSB_FIRST,   0);
+  SoGLContext_glPixelStorei(glue, GL_PACK_ALIGNMENT,   4); /* GL default */
 }
 
 // *************************************************************************

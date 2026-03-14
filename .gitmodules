@@ -1,0 +1,8 @@
+[submodule "external/osmesa"]
+	path = external/osmesa
+	url = https://github.com/starseeker/osmesa.git
+
+[submodule "external/fltk"]
+	path = external/fltk
+	url = https://github.com/fltk/fltk.git
+	branch = branch-1.3

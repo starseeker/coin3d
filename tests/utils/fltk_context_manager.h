@@ -402,10 +402,6 @@ public:
         }
         return p;
 #elif defined(__APPLE__)
-        /* The OpenGL framework is always present on macOS.  The static handle
-         * is intentional: dlopen with RTLD_LAZY is idempotent and the
-         * framework either exists at this path or it does not – retrying
-         * would not help. */
         static void* lib = dlopen(
             "/System/Library/Frameworks/OpenGL.framework/OpenGL", RTLD_LAZY);
         return lib ? dlsym(lib, funcName) : nullptr;
@@ -413,6 +409,44 @@ public:
         return reinterpret_cast<void*>(
             glXGetProcAddress(reinterpret_cast<const GLubyte*>(funcName)));
 #endif
+    }
+
+    /**
+     * Report the actual dimensions of the backing surface for \a context.
+     *
+     * On X11/GLX: per-context Pbuffers are 1×1 (all rendering uses FBOs).
+     * On Windows/macOS (FLTK fallback): the hidden 1×1 window surface.
+     * The caller (SoSceneTexture2) uses this to detect when a temporary FBO
+     * is needed and, if FBOs are also unavailable, to skip rendering with a
+     * diagnostic warning rather than corrupting memory.
+     */
+    virtual void getActualSurfaceSize(void* context,
+                                      unsigned int& width,
+                                      unsigned int& height) const override {
+#if !defined(_WIN32) && !defined(__APPLE__)
+        const FLTKOffscreenCtx* c = static_cast<const FLTKOffscreenCtx*>(context);
+        if (c && c->ctx && c->drawable) {
+            /* X11: each offscreen context gets its own 1×1 Pbuffer.
+             * All rendering is FBO-based; the Pbuffer is only needed as a
+             * glXMakeCurrent() target. */
+            width = 1; height = 1;
+            return;
+        }
+        if (mainPbuffer_) {
+            /* Main Pbuffer is 32×32 — large enough for probe queries but
+             * still too small for direct scene-texture readback. */
+            width = 32; height = 32;
+            return;
+        }
+#endif
+        /* FLTK window fallback — report actual window dimensions. */
+        if (win_) {
+            width  = static_cast<unsigned int>(win_->w());
+            height = static_cast<unsigned int>(win_->h());
+            return;
+        }
+        (void)context;
+        width = 1; height = 1;
     }
 
 private:
@@ -585,4 +619,184 @@ inline SoOffscreenRenderer* getSharedRenderer() {
     return s_renderer;
 }
 
+/* =========================================================================
+ * BasicFLTKContextManager
+ *
+ * A deliberately minimal SoDB::ContextManager that uses only FLTK's native
+ * Fl_Gl_Window path — no Pbuffers, no FBConfig, no per-context sharing.
+ * All offscreen contexts share the same 1×1 hidden window context.
+ *
+ * PURPOSE: Test harness for "basic application-provided context" scenarios.
+ * An application that builds its own window with Fl_Gl_Window and hands
+ * that context to Obol gets semantics equivalent to this manager:
+ *   - The backing surface is the 1×1 hidden window (reported via
+ *     getActualSurfaceSize so Obol can detect the limitation).
+ *   - FBO availability depends entirely on what the driver supports for
+ *     the chosen visual — a compatibility-profile context may not have it.
+ *   - Features requiring a proper-sized render target (SoSceneTexture2,
+ *     shadow maps) will degrade gracefully and emit diagnostic warnings
+ *     rather than crashing or corrupting memory.
+ *
+ * Use BasicFLTKContextManager in tests to verify that Obol never crashes
+ * on a limited context, and that the warnings are actionable.
+ * ========================================================================= */
+class BasicFLTKContextManager : public SoDB::ContextManager {
+public:
+    struct Ctx {
+        unsigned int width;
+        unsigned int height;
+    };
+
+    BasicFLTKContextManager() : win_(nullptr) {}
+
+    virtual ~BasicFLTKContextManager() {
+        if (win_) { win_->hide(); Fl::check(); delete win_; win_ = nullptr; }
+    }
+
+    virtual void* createOffscreenContext(unsigned int w, unsigned int h) override {
+        if (!ensureWindow()) return nullptr;
+        Ctx* c = new Ctx;
+        c->width  = w;
+        c->height = h;
+        return c;
+    }
+
+    virtual SbBool makeContextCurrent(void* /*context*/) override {
+        if (!ensureWindow()) return FALSE;
+        win_->make_current();
+        return glGetString(GL_VERSION) ? TRUE : FALSE;
+    }
+
+    virtual void restorePreviousContext(void* /*context*/) override {
+        /* Single shared context — nothing to restore. */
+    }
+
+    virtual void destroyContext(void* context) override {
+        delete static_cast<Ctx*>(context);
+    }
+
+    /**
+     * The actual backing surface is the 1×1 hidden window.
+     * Reporting this lets SoSceneTexture2 detect it cannot do a safe
+     * glReadPixels without a proper FBO, and warn instead of crashing.
+     */
+    virtual void getActualSurfaceSize(void* /*context*/,
+                                      unsigned int& width,
+                                      unsigned int& height) const override {
+        if (win_) {
+            width  = static_cast<unsigned int>(win_->w());
+            height = static_cast<unsigned int>(win_->h());
+        } else {
+            width = 1; height = 1;
+        }
+    }
+
+    virtual void* getProcAddress(const char* funcName) override {
+#if defined(_WIN32)
+        void* p = reinterpret_cast<void*>(wglGetProcAddress(funcName));
+        if (!p) {
+            HMODULE mod = GetModuleHandleA("opengl32.dll");
+            if (mod) p = reinterpret_cast<void*>(GetProcAddress(mod, funcName));
+        }
+        return p;
+#elif defined(__APPLE__)
+        static void* lib = dlopen(
+            "/System/Library/Frameworks/OpenGL.framework/OpenGL", RTLD_LAZY);
+        return lib ? dlsym(lib, funcName) : nullptr;
+#else
+        return reinterpret_cast<void*>(
+            glXGetProcAddress(reinterpret_cast<const GLubyte*>(funcName)));
+#endif
+    }
+
+    /* ------------------------------------------------------------------
+     * queryCapabilities()
+     *
+     * Makes the GL context current and probes what it actually supports.
+     * Call after the first successful render so the context exists.
+     * The result is cached; subsequent calls return the same struct.
+     * ------------------------------------------------------------------ */
+    struct GLCapabilities {
+        std::string version;        ///< GL_VERSION string
+        std::string vendor;         ///< GL_VENDOR string
+        std::string renderer;       ///< GL_RENDERER string
+        bool        has_fbo         = false;
+        bool        has_texobj      = false; ///< texture objects (GL >= 1.1)
+        bool        has_vbo         = false; ///< vertex buffer objects
+        bool        has_multitex    = false; ///< multitexture (GL >= 1.3)
+        bool        has_3dtex       = false; ///< 3-D textures (GL >= 1.2)
+        bool        has_vertex_arr  = false; ///< vertex arrays (GL >= 1.1)
+        bool        has_compressed  = false; ///< compressed textures
+        bool        has_glsl        = false; ///< GLSL shaders
+        bool        initialized     = false;
+    };
+
+    const GLCapabilities& queryCapabilities() {
+        if (caps_.initialized) return caps_;
+        if (!ensureWindow()) return caps_;
+        win_->make_current();
+
+        auto glstr = [](GLenum e) -> std::string {
+            const char* s = (const char*)glGetString(e);
+            return s ? s : "(null)";
+        };
+        caps_.version  = glstr(GL_VERSION);
+        caps_.vendor   = glstr(GL_VENDOR);
+        caps_.renderer = glstr(GL_RENDERER);
+
+        /* Parse major.minor from version string for quick comparisons. */
+        int major = 0, minor = 0;
+        sscanf(caps_.version.c_str(), "%d.%d", &major, &minor);
+        const int glver = major * 100 + minor * 10;
+
+        /* Check extensions / version for each capability. */
+        auto hasExt = [&](const char* ext) -> bool {
+            const char* exts = (const char*)glGetString(GL_EXTENSIONS);
+            if (exts && strstr(exts, ext)) return true;
+            /* Also try glGetStringi for core profiles (no GL_EXTENSIONS). */
+            typedef const GLubyte* (APIENTRY* PFNGLGETSTRINGI)(GLenum,GLuint);
+            PFNGLGETSTRINGI gsi = (PFNGLGETSTRINGI)getProcAddress("glGetStringi");
+            if (!gsi) return false;
+            GLint n = 0; glGetIntegerv(GL_NUM_EXTENSIONS, &n);
+            for (GLint i = 0; i < n; ++i) {
+                const char* e = (const char*)gsi(GL_EXTENSIONS, (GLuint)i);
+                if (e && strcmp(e, ext) == 0) return true;
+            }
+            return false;
+        };
+
+        caps_.has_texobj     = (glver >= 110) || hasExt("GL_EXT_texture_object");
+        caps_.has_vertex_arr = (glver >= 110);
+        caps_.has_3dtex      = (glver >= 120) || hasExt("GL_EXT_texture3D");
+        caps_.has_multitex   = (glver >= 130) || hasExt("GL_ARB_multitexture");
+        caps_.has_compressed = (glver >= 130) || hasExt("GL_ARB_texture_compression");
+        caps_.has_vbo        = (glver >= 150) || hasExt("GL_ARB_vertex_buffer_object");
+        caps_.has_fbo        = (glver >= 300) || hasExt("GL_EXT_framebuffer_object")
+                                               || hasExt("GL_ARB_framebuffer_object");
+        caps_.has_glsl       = (glver >= 200) || hasExt("GL_ARB_shading_language_100");
+
+        caps_.initialized = true;
+        return caps_;
+    }
+
+private:
+    FLTKGLContextWindow* win_;
+    GLCapabilities       caps_;
+
+    bool ensureWindow() {
+        if (win_) return true;
+        win_ = new FLTKGLContextWindow();
+        win_->position(-200, -200);
+        win_->show();
+        Fl::check();
+#if !defined(_WIN32) && !defined(__APPLE__)
+        if (fl_display) XSync(fl_display, False);
+#endif
+        win_->make_current();
+        return (bool)glGetString(GL_VERSION);
+    }
+};
+
 #endif /* FLTK_CONTEXT_MANAGER_H */
+
+

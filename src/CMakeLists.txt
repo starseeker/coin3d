@@ -29,7 +29,6 @@ include_directories(BEFORE
   "${PROJECT_SOURCE_DIR}/include/Inventor/annex"
   "${PROJECT_BINARY_DIR}/src/shadows"
   "${PROJECT_SOURCE_DIR}"
-  "${PROJECT_SOURCE_DIR}/external/utf8/include"
   # Subdirectory-specific include paths (needed in single-lib mode where
   # subdirectory include_directories() calls don't propagate to the parent)
   "${PROJECT_SOURCE_DIR}/src/base/utf8/include"
@@ -123,6 +122,12 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
     HAVE_CONFIG_H
     OBOL_INTERNAL
     OBOL_DEBUG=$<CONFIG:Debug>
+    # In OSMesa-only builds, all gl* calls in the library must be mangled to
+    # mgl* so they resolve to the OSMesa library symbols.  This is scoped to
+    # the library target so that test executables (which may include <GL/glx.h>)
+    # are not affected — <GL/glx.h> conditionally includes "glx_mangle.h" when
+    # USE_MGL_NAMESPACE is defined, and that file does not exist on Ubuntu 24.04.
+    $<$<BOOL:${OBOL_USE_OSMESA}>:USE_MGL_NAMESPACE>
 )
 
 # Apply warning flags (controlled by OBOL_WARNINGS option in the top-level CMakeLists.txt)

@@ -464,7 +464,84 @@ set_tests_properties(stt_iosevka PROPERTIES
     TIMEOUT ${IMAGE_COMPARISON_TEST_TIMEOUT}
 )
 
-# ---- CTest image-comparison integration --------------------------------------
+# ---- render_basic_context: graceful-degradation stress test ------------------
+# Tests that Obol never crashes when given a BasicFLTKContextManager (FLTK
+# 1×1 native window, no Pbuffers) and that diagnostics are issued instead of
+# memory corruption when features like FBOs are unavailable.
+#
+# Two build paths:
+#   OSMesa mode (RENDERING_USE_OSMESA): uses initCoinHeadless() with the
+#       OSMesa context manager — same headless path as all other OSMesa tests.
+#   System GL mode: uses BasicFLTKContextManager (FLTK 1×1 window); requires
+#       FLTK, X11, and system OpenGL.
+if(RENDERING_USE_OSMESA OR (FLTK_FOUND AND X11_FOUND AND (TARGET OpenGL::GL OR OPENGL_gl_LIBRARY)))
+    add_executable(render_basic_context render_basic_context.cpp)
+    target_include_directories(render_basic_context PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_SOURCE_DIR}/tests
+        ${CMAKE_SOURCE_DIR}/tests/utils
+        ${PROJECT_SOURCE_DIR}/include
+        ${PROJECT_SOURCE_DIR}/include/Inventor/annex
+        ${PROJECT_BINARY_DIR}/include
+        ${OBOL_TARGET_INCLUDE_DIRECTORIES}
+        ${FLTK_INCLUDE_DIRS}
+    )
+    target_link_libraries(render_basic_context
+        PRIVATE
+            ${PROJECT_NAME}
+            ${OBOL_TARGET_LINK_LIBRARIES}
+    )
+    if(RENDERING_USE_OSMESA)
+        # OSMesa mode: use initCoinHeadless() (headless OSMesa context manager).
+        # OBOL_VIEWER_FLTK_GL must NOT be defined — the #else branch in
+        # render_basic_context.cpp uses headless_utils.h / initCoinHeadless().
+        target_compile_definitions(render_basic_context PRIVATE OBOL_OSMESA_BUILD)
+        if(OSMESA_INCLUDE_DIR)
+            target_include_directories(render_basic_context PRIVATE ${OSMESA_INCLUDE_DIR})
+        endif()
+        if(OSMESA_LINK_TARGET)
+            target_link_libraries(render_basic_context PRIVATE ${OSMESA_LINK_TARGET})
+        endif()
+        message(STATUS "render_basic_context: graceful-degradation test enabled (OSMesa/headless path)")
+    else()
+        # System GL mode: use BasicFLTKContextManager (FLTK 1×1 GL window).
+        target_compile_definitions(render_basic_context PRIVATE OBOL_VIEWER_FLTK_GL)
+        target_link_libraries(render_basic_context
+            PRIVATE
+                ${FLTK_LIBRARIES}
+                ${X11_X11_LIB}
+        )
+        if(TARGET OpenGL::GL)
+            target_link_libraries(render_basic_context PRIVATE OpenGL::GL)
+        elseif(OPENGL_gl_LIBRARY)
+            target_link_libraries(render_basic_context PRIVATE ${OPENGL_gl_LIBRARY})
+        endif()
+        if(TARGET OpenGL::GLU)
+            target_link_libraries(render_basic_context PRIVATE OpenGL::GLU)
+        elseif(OPENGL_glu_LIBRARY)
+            target_link_libraries(render_basic_context PRIVATE ${OPENGL_glu_LIBRARY})
+        endif()
+        message(STATUS "render_basic_context: graceful-degradation test enabled (FLTK/system-GL path)")
+    endif()
+    find_package(Threads REQUIRED)
+    target_link_libraries(render_basic_context PRIVATE Threads::Threads)
+    set_target_properties(render_basic_context PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin"
+    )
+    add_test(
+        NAME render_basic_context
+        COMMAND "${CMAKE_COMMAND}"
+            -DEXECUTABLE=$<TARGET_FILE:render_basic_context>
+            -DTEST_BASE=${CMAKE_CURRENT_BINARY_DIR}/test_output/render_basic_context
+            -DTEST_TIMEOUT=${IMAGE_COMPARISON_TEST_TIMEOUT}
+            -P "${CMAKE_CURRENT_SOURCE_DIR}/run_rendering_test.cmake"
+    )
+    set_tests_properties(render_basic_context PROPERTIES
+        TIMEOUT ${IMAGE_COMPARISON_TEST_TIMEOUT}
+    )
+endif()
+
+
 # Control images live in the shared tests/control_images/ directory.
 # The run_image_test.cmake driver handles Xvfb wrapping for GLX builds.
 
@@ -817,16 +894,14 @@ endif()
 # Runs all rendering tests with GLX (via Xvfb) and converts the .rgb output to
 # control PNGs.  Invoke with:
 #   cmake --build build_dir --target generate_rendering_controls
-if(PNG_FOUND)
-    add_custom_target(generate_rendering_controls
-        COMMAND ${CMAKE_COMMAND} -E env
-            BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}
-            CONTROL_DIR=${CONTROL_IMAGES_DIR}
-            ${CMAKE_CURRENT_SOURCE_DIR}/generate_controls.sh
-        DEPENDS
-            image_comparator rgb_to_png
-            obol_test
-        COMMENT "Generating PNG control images for rendering regression tests"
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    )
-endif()
+add_custom_target(generate_rendering_controls
+    COMMAND ${CMAKE_COMMAND} -E env
+        BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}
+        CONTROL_DIR=${CONTROL_IMAGES_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/generate_controls.sh
+    DEPENDS
+        image_comparator rgb_to_png
+        obol_test
+    COMMENT "Generating PNG control images for rendering regression tests"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+)

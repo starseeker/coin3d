@@ -57,8 +57,16 @@
  *           processed, every gl* call in the included source becomes mgl*.
  *           This define is tested inside <OSMesa/gl.h> which includes
  *           <OSMesa/gl_mangle.h> when USE_MGL_NAMESPACE is set.
+ *
+ *           In osmesa-only builds (OBOL_USE_OSMESA=ON) this is already
+ *           supplied via target_compile_definitions on the library target;
+ *           the ifndef guard here prevents a macro-redefinition warning in
+ *           that case.  In dual-GL builds the CMake target does NOT define
+ *           it globally, so the define below is the sole activation point.
  * --------------------------------------------------------------------- */
+#ifndef USE_MGL_NAMESPACE
 #define USE_MGL_NAMESPACE 1
+#endif
 
 /* -----------------------------------------------------------------------
  * Step 3 – activate the SOGL function-name prefix so that every

@@ -219,6 +219,30 @@ public:
      */
     virtual void * getProcAddress(const char * /*funcName*/) { return nullptr; }
 
+    /**
+     * Report the actual pixel dimensions of the backing surface (window,
+     * Pbuffer, or renderbuffer) associated with \a context.
+     *
+     * Obol calls this before issuing a raw glReadPixels() to determine
+     * whether the surface is large enough to hold the requested number of
+     * pixels.  If the surface is smaller than the requested render target
+     * **and** framebuffer objects are unavailable to compensate, Obol will
+     * skip the readback and post a diagnostic warning explaining what the
+     * application must provide for the feature to work — preventing the
+     * memory corruption that results from reading beyond a tiny framebuffer.
+     *
+     * The default returns (0, 0), which means "unknown".  Obol treats an
+     * unknown size as "assume it is large enough" and relies on FBO
+     * creation success/failure as the fallback guard.  Implementing this
+     * method in your ContextManager is strongly recommended for any
+     * context whose backing surface might be smaller than the largest
+     * texture the application requests.
+     */
+    virtual void getActualSurfaceSize(void * /*context*/,
+                                      unsigned int & width,
+                                      unsigned int & height) const
+    { width = 0; height = 0; }
+
     // --- Optional alternative rendering path -------------------------------
     // If this returns TRUE, SoOffscreenRenderer uses 'pixels' directly and
     // skips the GL pipeline.  'pixels' is a pre-allocated row-major buffer of

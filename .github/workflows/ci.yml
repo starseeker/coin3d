@@ -42,6 +42,7 @@ jobs:
             libxcursor-dev libxft-dev libxinerama-dev \
             libgl-dev libglu1-mesa-dev \
             libfontconfig-dev libfreetype-dev \
+            libfltk1.3-dev \
             xvfb
 
       - name: Configure

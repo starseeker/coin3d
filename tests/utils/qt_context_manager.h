@@ -154,6 +154,40 @@ public:
         delete static_cast<QtOffscreenCtx*>(context);
     }
 
+    /**
+     * Report the actual dimensions of the QOffscreenSurface backing this
+     * context manager.
+     *
+     * Qt uses a single QOffscreenSurface as the glXMakeCurrent / eglMakeCurrent
+     * target.  All real rendering happens via FBOs; the surface itself is only
+     * a small "trampoline" whose size depends on the platform plugin.  On X11/
+     * Mesa it is typically 1×1.
+     *
+     * Returning the real surface size here lets SoSceneTexture2 detect when a
+     * temporary FBO is needed (FBO path) and, if FBOs are also unavailable, to
+     * skip the glReadPixels call with a diagnostic warning rather than
+     * overflowing the pixel buffer.
+     *
+     * We call surface_->size() so Qt's platform implementation reports the
+     * true surface dimensions.  If the surface has not been created yet we
+     * return (0, 0), which the Obol code treats as "unknown / assume large
+     * enough" — no regression on the happy path.
+     */
+    virtual void getActualSurfaceSize(void* /*context*/,
+                                      unsigned int& width,
+                                      unsigned int& height) const override
+    {
+        if (surface_ && surface_->isValid()) {
+            const QSize sz = surface_->size();
+            width  = static_cast<unsigned int>(sz.width()  > 0 ? sz.width()  : 1);
+            height = static_cast<unsigned int>(sz.height() > 0 ? sz.height() : 1);
+        } else {
+            /* Surface not yet created — unknown size, let Obol's FBO guard
+             * handle it; avoids a false-positive skip during early init. */
+            width = 0; height = 0;
+        }
+    }
+
     virtual void* getProcAddress(const char* funcName) override {
         if (!ensureContext()) return nullptr;
         return reinterpret_cast<void*>(

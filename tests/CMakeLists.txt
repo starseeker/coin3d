@@ -14,8 +14,10 @@
 #   │   ├── headless_utils.h     headless rendering helpers
 #   │   ├── scene_graph_utils.h/.cpp  scene-graph test helpers
 #   │   └── stb_image.h          public-domain PNG loader (fallback)
-#   ├── testlib/                 unified test registry (obol_testlib)
+#   ├── testlib/                 libObolEx: shared scene catalog + test registry
+#   │                            (used by both tests/ and examples/)
 #   ├── rendering/               visual regression tests (OSMesa / GLX)
+#   ├── tools/                   unit tests for utility subsystems
 #   └── obol_test.cpp            unified CLI test runner
 #
 # Adding new tests
@@ -62,264 +64,11 @@ set(IMAGE_COMPARISON_RMSE_THRESHOLD "5.0" CACHE STRING "RMSE threshold (0-255)")
 set(IMAGE_COMPARISON_TEST_TIMEOUT   "30"  CACHE STRING "Per-test timeout in seconds")
 
 # -----------------------------------------------------------------------
-# Test library (shared registry, scene factories, unit-test wrappers)
-# Must come before any target that links obol_testlib, but after
+# Test library — libObolEx (shared registry, scene factories, unit-test wrappers)
+# Must come before any target that links ObolEx / obol_testlib, but after
 # simple_test_utils is defined above.
 # -----------------------------------------------------------------------
 add_subdirectory(testlib)
-
-# -----------------------------------------------------------------------
-# FLTK scene viewer  (obol_viewer)
-# Placed here so that obol_testlib (scene catalogue) is already defined.
-# Enabled by -DOBOL_BUILD_VIEWER=ON at CMake configure time (auto-detected
-# when FLTK is found; requires OBOL_BUILD_TESTS=ON).
-# -----------------------------------------------------------------------
-if(OBOL_BUILD_VIEWER)
-    # FLTK was detected (system or bundled external/fltk) in the top-level
-    # CMakeLists.txt.  FLTK_INCLUDE_DIRS and FLTK_LIBRARIES are already set.
-    # OBOL_VIEWER_USE_FLTK_GL is defined in the top-level CMakeLists.txt
-    # (before the FLTK detection block) so it can control FLTK_BUILD_GL.
-
-    add_executable(obol_viewer obol_viewer.cpp)
-
-    target_include_directories(obol_viewer PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}           # testlib/test_registry.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/utils     # headless_utils.h / fltk_context_manager.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/testlib   # test_registry.h (direct)
-        ${PROJECT_SOURCE_DIR}/include
-        ${PROJECT_SOURCE_DIR}/include/Inventor/annex
-        ${PROJECT_BINARY_DIR}/include
-        ${OBOL_TARGET_INCLUDE_DIRECTORIES}
-        ${FLTK_INCLUDE_DIRS}
-    )
-
-    # Compile definitions matching the Obol library build
-    if(OBOL_BUILD_DUAL_GL)
-        target_compile_definitions(obol_viewer PRIVATE OBOL_BUILD_DUAL_GL)
-        # Dual-GL builds enable the OSMesa panel (OBOL_VIEWER_OSMESA_PANEL defined
-        # in obol_viewer.cpp when OBOL_BUILD_DUAL_GL is set).  The panel uses
-        # SoDB::createOSMesaContextManager() – no direct OSMesa dependency needed.
-    elseif(OBOL_USE_OSMESA)
-        # Pure-OSMesa build: headless_utils.h uses OSMesa context manager.
-        # FLTK GL option does not apply here.
-        target_compile_definitions(obol_viewer PRIVATE OBOL_OSMESA_BUILD)
-        target_include_directories(obol_viewer PRIVATE
-            "${PROJECT_SOURCE_DIR}/external/osmesa/include")
-    endif()
-
-    # Select the system-GL context manager for the viewer.
-    # OBOL_VIEWER_USE_FLTK_GL (default ON) selects fltk_context_manager.h which
-    # uses a small hidden 1x1 Fl_Gl_Window to own the GL context.  CoinPanel
-    # itself is a plain Fl_Box (consistent with all other panels); rendered
-    # pixels are delivered via fltk_img->draw().
-    # Set OFF to fall back to headless_utils.h (GLX on Linux) for CI environments
-    # where FLTK's OpenGL cannot obtain a context (headless / no display manager).
-    #
-    # This option applies to both single-GL and dual-GL builds.  In a dual-GL
-    # build (OBOL_BUILD_DUAL_GL), the OSMesa panel uses its own independent
-    # context manager (SoDB::createOSMesaContextManager()), so enabling FLTK GL
-    # for the system-GL CoinPanel does not interfere with OSMesa rendering.
-    # Pure-OSMesa builds (OBOL_OSMESA_BUILD) always use the headless path.
-    if(OBOL_VIEWER_USE_FLTK_GL AND (OBOL_BUILD_DUAL_GL OR NOT OBOL_USE_OSMESA))
-        target_compile_definitions(obol_viewer PRIVATE OBOL_VIEWER_FLTK_GL)
-        if(OBOL_BUILD_DUAL_GL)
-            message(STATUS "obol_viewer: using FLTK GL context manager for system-GL panel (dual-GL build)")
-        else()
-            message(STATUS "obol_viewer: using FLTK GL context manager (portable, hidden 1x1 window)")
-        endif()
-    else()
-        if(NOT OBOL_USE_OSMESA)
-            message(STATUS "obol_viewer: using GLX context manager (headless_utils.h)")
-        endif()
-    endif()
-
-    # Optional CPU raytracing panels: Embree and/or NanoRT.
-    #
-    # OBOL_VIEWER_USE_EMBREE (default ON when embree 4 is found on the system)
-    # enables the Embree 4 CPU raytracing panel.
-    # When NanoRT (external/nanort/nanort.h) is also present, both panels are
-    # compiled in simultaneously and can each be toggled at runtime.
-    # If neither backend is available the viewer builds without CPU raytracing.
-    find_package(embree 4 QUIET
-        HINTS /usr/lib/x86_64-linux-gnu/cmake/embree-4.3.0
-              /usr/lib/cmake/embree4
-              /usr/local/lib/cmake/embree4)
-    if(embree_FOUND OR TARGET embree4)
-        if(TARGET embree4)
-            set(_obol_embree_link embree4)
-        else()
-            set(_obol_embree_link embree)
-        endif()
-        option(OBOL_VIEWER_USE_EMBREE
-            "Use Embree (rather than NanoRT) as the CPU raytracing panel in obol_viewer"
-            ON)
-    else()
-        option(OBOL_VIEWER_USE_EMBREE
-            "Use Embree (rather than NanoRT) as the CPU raytracing panel in obol_viewer"
-            OFF)
-    endif()
-
-    if(OBOL_VIEWER_USE_EMBREE AND (embree_FOUND OR TARGET embree4))
-        target_compile_definitions(obol_viewer PRIVATE OBOL_VIEWER_EMBREE)
-        target_include_directories(obol_viewer PRIVATE
-            "${CMAKE_CURRENT_SOURCE_DIR}/utils"   # embree_context_manager.h
-        )
-        target_link_libraries(obol_viewer PRIVATE ${_obol_embree_link})
-        message(STATUS "obol_viewer: Embree panel enabled")
-    endif()
-    if(EXISTS "${PROJECT_SOURCE_DIR}/external/nanort/nanort.h")
-        # NanoRT is a header-only library; compile in the NanoRT panel when
-        # the header is present, regardless of whether Embree is also enabled.
-        target_compile_definitions(obol_viewer PRIVATE OBOL_VIEWER_NANORT)
-        target_include_directories(obol_viewer PRIVATE
-            "${PROJECT_SOURCE_DIR}/external/nanort"
-            "${CMAKE_CURRENT_SOURCE_DIR}/utils"   # nanort_context_manager.h
-        )
-        message(STATUS "obol_viewer: NanoRT panel enabled (external/nanort/nanort.h found)")
-    endif()
-    if(NOT (OBOL_VIEWER_USE_EMBREE AND (embree_FOUND OR TARGET embree4)) AND
-       NOT EXISTS "${PROJECT_SOURCE_DIR}/external/nanort/nanort.h")
-        message(STATUS "obol_viewer: No CPU raytracing panel (neither Embree nor NanoRT found)")
-    endif()
-
-    # Optional Vulkan rasterisation panel.
-    #
-    # OBOL_VIEWER_USE_VULKAN (default ON when the Vulkan loader is found)
-    # enables a hardware-accelerated Vulkan rasterisation panel.  Scene
-    # geometry is collected via SoRaytracerSceneCollector (same as NanoRT/
-    # Embree); per-vertex Phong lighting is pre-computed on the CPU and the
-    # GPU handles transformation, rasterisation, and depth testing.
-    find_package(Vulkan QUIET)
-    if(Vulkan_FOUND)
-        option(OBOL_VIEWER_USE_VULKAN
-            "Enable Vulkan hardware-rasterisation panel in obol_viewer"
-            ON)
-    else()
-        option(OBOL_VIEWER_USE_VULKAN
-            "Enable Vulkan hardware-rasterisation panel in obol_viewer"
-            OFF)
-    endif()
-    if(OBOL_VIEWER_USE_VULKAN AND Vulkan_FOUND)
-        target_compile_definitions(obol_viewer PRIVATE OBOL_VIEWER_VULKAN)
-        target_include_directories(obol_viewer PRIVATE
-            "${CMAKE_CURRENT_SOURCE_DIR}/utils"   # vulkan_context_manager.h
-        )
-        target_link_libraries(obol_viewer PRIVATE Vulkan::Vulkan)
-        message(STATUS "obol_viewer: Vulkan panel enabled")
-    elseif(OBOL_VIEWER_USE_VULKAN AND NOT Vulkan_FOUND)
-        message(STATUS "obol_viewer: Vulkan panel requested but Vulkan not found")
-    else()
-        message(STATUS "obol_viewer: Vulkan panel disabled")
-    endif()
-
-    # Link against obol_testlib (with --whole-archive so REGISTER_TEST static
-    # initialisers are not discarded) as well as the main Obol library.
-    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-        target_link_libraries(obol_viewer
-            PRIVATE
-                -Wl,--whole-archive obol_testlib -Wl,--no-whole-archive
-                ${PROJECT_NAME}
-                ${OBOL_TARGET_LINK_LIBRARIES}
-                ${FLTK_LIBRARIES}
-        )
-    else()
-        target_link_libraries(obol_viewer
-            PRIVATE
-                obol_testlib
-                ${PROJECT_NAME}
-                ${OBOL_TARGET_LINK_LIBRARIES}
-                ${FLTK_LIBRARIES}
-        )
-    endif()
-    # On Linux, both the FLTK GL path (fltk_context_manager.h uses
-    # glXGetProcAddress) and the GLX fallback path (headless_utils.h) require
-    # the X11 and OpenGL libraries.  Link them explicitly when available.
-    if(UNIX AND NOT APPLE)
-        if(X11_FOUND)
-            target_link_libraries(obol_viewer PRIVATE ${X11_X11_LIB})
-        endif()
-        if(TARGET OpenGL::GL)
-            target_link_libraries(obol_viewer PRIVATE OpenGL::GL)
-        elseif(OPENGL_gl_LIBRARY)
-            target_link_libraries(obol_viewer PRIVATE ${OPENGL_gl_LIBRARY})
-        endif()
-    endif()
-
-    # C++17 std::thread is used for parallel CPU raytracing; ensure the platform
-    # threading library is linked.  Threads::Threads is already in
-    # OBOL_TARGET_LINK_LIBRARIES (via the top-level find_package(Threads)) so
-    # it is transitively available; this explicit link guards against future
-    # refactors that might drop it from the umbrella variable.
-    find_package(Threads REQUIRED)
-    target_link_libraries(obol_viewer PRIVATE Threads::Threads)
-    message(STATUS "obol_viewer: C++17 std::thread parallel CPU raytracing enabled (${CMAKE_THREAD_LIBS_INIT})")
-
-    install(TARGETS obol_viewer RUNTIME DESTINATION bin)
-endif() # OBOL_BUILD_VIEWER
-
-# -----------------------------------------------------------------------
-# Qt scene viewer  (obol_qt_viewer)
-# Placed here so obol_testlib (scene catalogue) is already defined.
-# Enabled by -DOBOL_BUILD_QT_VIEWER=ON at CMake configure time (auto-
-# detected when Qt6 is found; requires OBOL_BUILD_TESTS=ON).
-# -----------------------------------------------------------------------
-if(OBOL_BUILD_QT_VIEWER)
-    add_executable(obol_qt_viewer obol_qt_viewer.cpp)
-
-    # Enable Qt's automatic MOC/UIC/RCC processing for this target.
-    set_target_properties(obol_qt_viewer PROPERTIES
-        AUTOMOC ON
-        AUTOUIC ON
-    )
-
-    target_include_directories(obol_qt_viewer PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}           # testlib/test_registry.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/utils     # qt_context_manager.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/testlib   # test_registry.h (direct)
-        ${PROJECT_SOURCE_DIR}/include
-        ${PROJECT_SOURCE_DIR}/include/Inventor/annex
-        ${PROJECT_BINARY_DIR}/include
-        ${OBOL_TARGET_INCLUDE_DIRECTORIES}
-    )
-
-    # Link against obol_testlib (with --whole-archive to preserve static
-    # initialisers), the Obol library, and Qt6 Widgets + Gui.
-    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-        target_link_libraries(obol_qt_viewer
-            PRIVATE
-                -Wl,--whole-archive obol_testlib -Wl,--no-whole-archive
-                ${PROJECT_NAME}
-                ${OBOL_TARGET_LINK_LIBRARIES}
-                Qt6::Widgets
-                Qt6::Gui
-        )
-    else()
-        target_link_libraries(obol_qt_viewer
-            PRIVATE
-                obol_testlib
-                ${PROJECT_NAME}
-                ${OBOL_TARGET_LINK_LIBRARIES}
-                Qt6::Widgets
-                Qt6::Gui
-        )
-    endif()
-
-    # On Linux, link OpenGL explicitly (for glXGetProcAddress used by
-    # qt_context_manager.h on X11/Linux).
-    if(UNIX AND NOT APPLE)
-        if(X11_FOUND)
-            target_link_libraries(obol_qt_viewer PRIVATE ${X11_X11_LIB})
-        endif()
-        if(TARGET OpenGL::GL)
-            target_link_libraries(obol_qt_viewer PRIVATE OpenGL::GL)
-        elseif(OPENGL_gl_LIBRARY)
-            target_link_libraries(obol_qt_viewer PRIVATE ${OPENGL_gl_LIBRARY})
-        endif()
-    endif()
-
-    install(TARGETS obol_qt_viewer RUNTIME DESTINATION bin)
-    message(STATUS "obol_qt_viewer: enabled (Qt6 ${Qt6_VERSION})")
-endif() # OBOL_BUILD_QT_VIEWER
 
 # -----------------------------------------------------------------------
 # Unified CLI runner (legacy – kept for backward compatibility)
@@ -330,11 +79,11 @@ add_executable(obol_test obol_test.cpp)
 # linker even though obol_test.cpp has no direct symbol references to them.
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_link_libraries(obol_test
-        -Wl,--whole-archive obol_testlib -Wl,--no-whole-archive
+        -Wl,--whole-archive ObolEx -Wl,--no-whole-archive
         ${PROJECT_NAME} ${OBOL_TARGET_LINK_LIBRARIES}
     )
 else()
-    target_link_libraries(obol_test obol_testlib ${PROJECT_NAME} ${OBOL_TARGET_LINK_LIBRARIES})
+    target_link_libraries(obol_test ObolEx ${PROJECT_NAME} ${OBOL_TARGET_LINK_LIBRARIES})
 endif()
 target_include_directories(obol_test PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
@@ -357,11 +106,11 @@ add_test(NAME obol_test_all COMMAND obol_test)
 add_executable(obol_unittest obol_unittest.cpp)
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_link_libraries(obol_unittest PRIVATE
-        -Wl,--whole-archive obol_testlib -Wl,--no-whole-archive
+        -Wl,--whole-archive ObolEx -Wl,--no-whole-archive
         ${PROJECT_NAME} ${OBOL_TARGET_LINK_LIBRARIES}
     )
 else()
-    target_link_libraries(obol_unittest PRIVATE obol_testlib ${PROJECT_NAME} ${OBOL_TARGET_LINK_LIBRARIES})
+    target_link_libraries(obol_unittest PRIVATE ObolEx ${PROJECT_NAME} ${OBOL_TARGET_LINK_LIBRARIES})
 endif()
 target_include_directories(obol_unittest PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
@@ -383,6 +132,12 @@ add_test(NAME obol_unittest_all COMMAND obol_unittest)
 # file that is then compared against a control PNG.
 # -----------------------------------------------------------------------
 add_subdirectory(rendering)
+
+# -----------------------------------------------------------------------
+# Tools unit tests (tools/ subdirectory)
+# Unit tests for utility subsystems (SbModernUtils, etc.)
+# -----------------------------------------------------------------------
+add_subdirectory(tools)
 
 # ---- Generate render test dispatch table shared by obol_test and obol_render --
 # This file is written at configure time; it declares extern references to all
@@ -437,11 +192,11 @@ endif()
 add_executable(obol_render obol_render.cpp)
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_link_libraries(obol_render PRIVATE
-        -Wl,--whole-archive obol_testlib -Wl,--no-whole-archive
+        -Wl,--whole-archive ObolEx -Wl,--no-whole-archive
         ${PROJECT_NAME} ${OBOL_TARGET_LINK_LIBRARIES}
     )
 else()
-    target_link_libraries(obol_render PRIVATE obol_testlib ${PROJECT_NAME} ${OBOL_TARGET_LINK_LIBRARIES})
+    target_link_libraries(obol_render PRIVATE ObolEx ${PROJECT_NAME} ${OBOL_TARGET_LINK_LIBRARIES})
 endif()
 target_include_directories(obol_render PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
@@ -488,40 +243,25 @@ install(TARGETS obol_unittest RUNTIME DESTINATION bin)
 set(CONTROL_IMAGES_DIR "${CMAKE_CURRENT_SOURCE_DIR}/control_images")
 
 # image_comparator: standalone tool for comparing SGI RGB / PNG images
-# Prefer the bundled external/libpng (built as png_static in the parent
-# project) over any system libpng so that builds without libpng-dev still
-# produce a fully-featured comparator.
-if(TARGET png_static)
-    set(PNG_FOUND TRUE)
-    set(PNG_INCLUDE_DIRS
-          "${CMAKE_SOURCE_DIR}/external/libpng"
-          "${CMAKE_BINARY_DIR}/libpng_build")
-    set(PNG_LIBRARIES png_static)
-    message(STATUS "Tests: using bundled png_static for image tools")
-else()
-    find_package(PNG QUIET)
-endif()
+# Uses bundled lodepng for PNG support (no external dependencies required).
 add_executable(image_comparator utils/image_comparator.cpp)
-if(PNG_FOUND)
-    target_compile_definitions(image_comparator PRIVATE HAVE_LIBPNG)
-    target_include_directories(image_comparator PRIVATE ${PNG_INCLUDE_DIRS})
-    target_link_libraries(image_comparator ${PNG_LIBRARIES})
-else()
-    target_include_directories(image_comparator PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/utils)
-endif()
+target_include_directories(image_comparator PRIVATE
+    "${CMAKE_SOURCE_DIR}/external"
+)
+target_link_libraries(image_comparator lodepng)
 set_target_properties(image_comparator PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin"
 )
 
-# rgb_to_png: convert SGI RGB files to PNG (requires libpng)
-if(PNG_FOUND)
-    add_executable(rgb_to_png utils/rgb_to_png.c)
-    target_include_directories(rgb_to_png PRIVATE ${PNG_INCLUDE_DIRS})
-    target_link_libraries(rgb_to_png ${PNG_LIBRARIES})
-    set_target_properties(rgb_to_png PROPERTIES
-        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin"
-    )
-endif()
+# rgb_to_png: convert SGI RGB files to PNG using lodepng
+add_executable(rgb_to_png utils/rgb_to_png.cpp)
+target_include_directories(rgb_to_png PRIVATE
+    "${CMAKE_SOURCE_DIR}/external"
+)
+target_link_libraries(rgb_to_png lodepng)
+set_target_properties(rgb_to_png PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin"
+)
 
 # Output directory for test-generated images
 file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/test_output")

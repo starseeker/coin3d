@@ -1040,6 +1040,14 @@ SoSceneTexture2P::updatePBuffer(SoState * state, const float quality)
 
     if (this->contextManager) this->contextManager->makeContextCurrent(this->glcontext);
     const SoGLContext * pbglue = SoGLContext_instance(this->contextid);
+    if (!pbglue) {
+      SoDebugError::postWarning("SoSceneTexture2::updatePBuffer",
+        "GL context (id=%d) could not be resolved. "
+        "Ensure the context is current before rendering SoSceneTexture2.",
+        this->contextid);
+      if (this->contextManager) this->contextManager->restorePreviousContext(this->glcontext);
+      return;
+    }
 
     // Some context managers (e.g. FLTKContextManager) provide a window-backed
     // context that may be physically much smaller than the requested texture
@@ -1101,6 +1109,54 @@ SoSceneTexture2P::updatePBuffer(SoState * state, const float quality)
     }
 
     SoGLContext_glEnable(pbglue, GL_DEPTH_TEST);
+
+    if (!this->canrendertotexture) {
+      // Readback path: we need to render into a surface whose dimensions
+      // match glcontextsize exactly, then call glReadPixels.
+      //
+      // The backing surface (Pbuffer, window) supplied by the context manager
+      // may be physically smaller than glcontextsize — particularly when the
+      // application provides a basic FLTK or X11 window context.  Calling
+      // glReadPixels with dimensions larger than the actual framebuffer causes
+      // undefined behaviour and memory corruption on many drivers.
+      //
+      // Strategy (in priority order):
+      //   1. If a correctly-sized temporary FBO was created above, use it.
+      //   2. If the context manager reports a surface large enough, render
+      //      directly to the default framebuffer.
+      //   3. Otherwise skip rendering and emit a diagnostic warning.
+
+      if (!hasTmpFbo) {
+        // Determine whether the backing surface is large enough.
+        unsigned int surf_w = 0, surf_h = 0;
+        if (this->contextManager)
+          this->contextManager->getActualSurfaceSize(this->glcontext, surf_w, surf_h);
+
+        bool surface_ok = (surf_w == 0) // Unknown size — attempt and trust FBO guard
+                       || (surf_w  >= (unsigned int)this->glcontextsize[0] &&
+                           surf_h  >= (unsigned int)this->glcontextsize[1]);
+
+        if (!surface_ok) {
+          static SbBool s_surface_warned = FALSE;
+          if (!s_surface_warned) {
+            s_surface_warned = TRUE;
+            SoDebugError::postWarning("SoSceneTexture2::updatePBuffer",
+              "Cannot render scene texture (%dx%d): the GL context's backing "
+              "surface is only %dx%d, and framebuffer objects are unavailable "
+              "to compensate. SoSceneTexture2 requires either (a) a context "
+              "with FBO support (OpenGL >= 3.0 or GL_EXT_framebuffer_object), "
+              "or (b) a backing surface at least as large as the texture. "
+              "Texture will remain blank until a capable context is provided.",
+              (int)this->glcontextsize[0], (int)this->glcontextsize[1],
+              (int)surf_w, (int)surf_h);
+          }
+          if (this->contextManager)
+            this->contextManager->restorePreviousContext(this->glcontext);
+          return;
+        }
+      }
+    }
+
     this->glaction->apply(scene);
     // Make sure that rendering to pBuffer is completed to avoid
     // flickering. DON'T REMOVE THIS. You have been warned.
@@ -1127,6 +1183,17 @@ SoSceneTexture2P::updatePBuffer(SoState * state, const float quality)
         this->offscreenbuffersize = reqbytes;
       }
       SoGLContext_glPixelStorei(pbglue, GL_PACK_ALIGNMENT, 1);
+      // Defensively reset GL_PACK_ROW_LENGTH to the default (0 = tightly
+      // packed) before calling glReadPixels.  GL_PACK_* are client
+      // pixel-store parameters that are NOT saved/restored by
+      // glPushAttrib/glPopAttrib; if the outer renderer (CoinOffscreenGLCanvas)
+      // left GL_PACK_ROW_LENGTH set to its full-image width, the inner
+      // glReadPixels would use an oversized row stride and overflow the buffer.
+      SoGLContext_glPixelStorei(pbglue, GL_PACK_ROW_LENGTH,  0);
+      SoGLContext_glPixelStorei(pbglue, GL_PACK_SKIP_ROWS,   0);
+      SoGLContext_glPixelStorei(pbglue, GL_PACK_SKIP_PIXELS, 0);
+      SoGLContext_glPixelStorei(pbglue, GL_PACK_SWAP_BYTES,  0);
+      SoGLContext_glPixelStorei(pbglue, GL_PACK_LSB_FIRST,   0);
       SoGLContext_glReadPixels(pbglue, 0, 0, ctx_size[0], ctx_size[1], GL_RGBA, GL_UNSIGNED_BYTE,
                    this->offscreenbuffer);
       SoGLContext_glPixelStorei(pbglue, GL_PACK_ALIGNMENT, 4);

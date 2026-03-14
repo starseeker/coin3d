@@ -11,6 +11,10 @@
 # Its symbols are NOT name-mangled and would collide with system libGL
 # in a dual build.
 #
+# The external/osmesa directory is populated via the git submodule declared
+# in .gitmodules, which is automatically initialised at configure time by
+# the obol_init_submodule() helper in the root CMakeLists.txt.
+#
 # If osmesa is not found (submodule missing / not initialised), the caller
 # can still configure a system-OpenGL-only build by setting
 # OBOL_USE_SYSTEM_ONLY=ON (or by not enabling OSMesa support at all).
@@ -51,7 +55,7 @@ else()
     if(OSMesa_FIND_REQUIRED)
         message(FATAL_ERROR
             "OSMesa submodule not found at external/osmesa.\n"
-            "Please run: git submodule update --init --recursive\n"
+            "Run: git submodule update --init external/osmesa\n"
             "The project requires its own name-mangled OSMesa build; "
             "the system libosmesa6-dev package is not compatible.")
     else()

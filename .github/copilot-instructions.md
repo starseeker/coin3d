@@ -1,56 +1,141 @@
-# Obol 3D Graphics Library - Copilot Instructions
+# GitHub Copilot Instructions for Obol
 
-## Repository Overview
+## Development Environment Setup
 
-**Obol** is a C++ library implementing a subset of the the Open Inventor 2.1 API (with some variations) for 3D graphics and visualization. This is an OpenGL-based, scene graph retained mode rendering library originally designed by SGI, now maintained as open source.  It is a fork of Coin - goals here are modernization, minimization of dependencies (by eliminating features, in some cases, to focus on core capabilities).
+### Required System Packages
 
-## Build Requirements and Dependencies
+Before building Obol, install the following development packages. On Ubuntu/Debian:
 
-### Essential Dependencies
-- **CMake 3.0+** (tested with 3.31.6) - primary build system
-- **libpng+** development headers for compiling
-
-### Documentation Dependencies
-- **Doxygen** - for API documentation generation (required by default)
-
-### Platform-Specific Requirements
-- **Linux**: Install the following packages before building. The full set is required to build the bundled FLTK viewer (`obol_viewer`) as well as the core library with GLX support:
-  ```bash
-  sudo apt-get install -y \
-    gdb cmake \
-    libpng-dev \
+```bash
+sudo apt-get update
+sudo apt-get install -y \
+    cmake build-essential \
     libx11-dev libxext-dev libxi-dev libxrandr-dev \
     libxcursor-dev libxft-dev libxinerama-dev \
-    libgl-dev libglu1-mesa-dev \
-    libfontconfig-dev libfreetype-dev
-  ```
-  - `libx11-dev`, `libxext-dev`, `libxi-dev` – core X11 headers (required for GLX and FLTK)
-  - `libxrandr-dev`, `libxcursor-dev`, `libxft-dev`, `libxinerama-dev` – X11 extension headers required by the bundled FLTK
-  - `libgl-dev`, `libglu1-mesa-dev` – OpenGL and GLU headers (provides `GL/gl.h`, `GL/glx.h`, `GL/glu.h`)
-  - `libfontconfig-dev`, `libfreetype-dev` – font configuration headers (required by FLTK)
-  - **Note**: Without these packages the bundled FLTK in `external/fltk` cannot configure or compile, causing `obol_viewer` to be silently disabled and the FLTK-dependent build targets to fail.
-- **Windows**: Visual Studio 2022
-- **macOS**: XQuartz for X11 builds
-
-## Critical Build Instructions
-
-### CMake Build (Primary - Always Use This)
-
-**ALWAYS clone with submodules**:
-```bash
-git clone --recurse-submodules https://github.com/starseeker/obol
+    libgl-dev libglu1-mesa-dev mesa-common-dev \
+    libfontconfig-dev libfreetype-dev \
+    qt6-base-dev qt6-base-private-dev libqt6opengl6-dev \
+    libembree-dev \
+    vulkan-sdk libvulkan-dev glslang-tools \
+    libpng-dev \
+    xvfb
 ```
 
-**Standard Release Build**:
+On Fedora/RHEL/Rocky:
+
 ```bash
-cmake -S . -B build_dir -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install_dir
-cmake --build build_dir --target install --config Release -- -j4
+sudo dnf install -y \
+    cmake gcc-c++ \
+    libX11-devel libXext-devel libXi-devel libXrandr-devel \
+    libXcursor-devel libXft-devel libXinerama-devel \
+    mesa-libGL-devel mesa-libGLU-devel \
+    fontconfig-devel freetype-devel \
+    qt6-qtbase-devel \
+    embree-devel \
+    vulkan-devel glslang \
+    libpng-devel \
+    xorg-x11-server-Xvfb
 ```
 
-**Critical CMake Notes**:
-- **Out-of-source builds are ENFORCED** - will fail if attempted in source directory
-- Build time: ~5-10 minutes on modern hardware
-- Always use `--recurse-submodules` when cloning - required for proper submodule setup
+#### Optional: FLTK via System Package (Linux only)
 
-**Critical Testing Notes**:
-- When testing with Xvfb, headless CI runners on Github sometimes have difficulties with context setup and access.  See various notes and test program workarounds for how to get GLX to produce images in the CI environment.  Refine notes here if new problems are encountered so future sessions will more readily be able to generate images.
+On Linux, FLTK-based viewers (`obol_viewer`, `obol_minimalist_viewer`) can use
+the system FLTK library when available:
+
+```bash
+# Ubuntu/Debian
+sudo apt-get install -y libfltk1.3-dev
+# Fedora/RHEL
+sudo dnf install -y fltk-devel
+```
+
+If no system FLTK is found, CMake automatically initialises the `external/fltk`
+git submodule at configure time and builds FLTK from source (see Submodules).
+
+### Package Groups
+
+| Group | Packages | Purpose |
+|-------|----------|---------|
+| X11 | `libx11-dev`, `libxext-dev`, `libxi-dev`, `libxrandr-dev`, `libxcursor-dev`, `libxft-dev`, `libxinerama-dev` | X Window System display and input |
+| Mesa/OpenGL | `libgl-dev`, `libglu-dev`, `mesa-common-dev` | OpenGL rendering (system GL backend) |
+| FLTK | `libfltk1.3-dev` *(optional — system)* | FLTK GUI toolkit for `obol_viewer` and `obol_minimalist_viewer` |
+| Qt6 | `qt6-base-dev`, `libqt6opengl6-dev` | Qt6 GUI toolkit for `obol_qt_viewer` and `qt_obol_example` |
+| Embree | `libembree-dev` (Embree 4) | Intel Embree CPU ray-tracing panel in viewers |
+| Vulkan SDK | `vulkan-sdk`, `libvulkan-dev`, `glslang-tools` | Vulkan hardware-rasterisation panel in viewers |
+
+### Git Submodules
+
+Two external libraries are managed as git submodules in `external/`:
+
+| Submodule | URL | Purpose |
+|-----------|-----|---------|
+| `external/fltk` | https://github.com/fltk/fltk (branch-1.3) | FLTK GUI toolkit (fallback when system FLTK absent) |
+| `external/osmesa` | https://github.com/starseeker/osmesa | Name-mangled OSMesa for dual-GL / headless builds |
+
+CMake initialises each submodule automatically at configure time when it is
+needed and the directory is empty.  To initialise them manually:
+
+```bash
+# Initialise all submodules at once
+git submodule update --init --recursive
+
+# Or initialise just one
+git submodule update --init external/fltk
+git submodule update --init external/osmesa
+```
+
+### Build
+
+```bash
+cmake -S . -B build \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DOBOL_BUILD_TESTS=ON
+cmake --build build -- -j$(nproc)
+```
+
+For headless/CI testing with OSMesa:
+
+```bash
+cmake -S . -B build -DOBOL_USE_OSMESA=ON -DOBOL_BUILD_TESTS=ON
+```
+
+### Running Tests
+
+```bash
+cd build
+# With a real display:
+ctest --output-on-failure
+# Headless (Xvfb):
+xvfb-run -a ctest --output-on-failure
+```
+
+## Repository Layout
+
+```
+obol/
+├── src/          Core Obol library (Open Inventor subset)
+├── include/      Public headers
+├── tests/        Test runners and visual regression tests
+│   ├── testlib/  libObolEx: shared scene catalog + test registry
+│   ├── utils/    Context managers and test utilities
+│   ├── rendering/ Visual regression tests
+│   └── tools/    Unit tests for utility subsystems
+├── examples/     GUI viewers and code examples
+│   ├── fltk/     FLTK-based viewers (obol_viewer, obol_minimalist_viewer)
+│   ├── qt/       Qt6-based viewer + widget example
+│   └── Mentor/   Open Inventor Mentor book examples
+└── external/     Third-party dependencies
+    ├── fltk/     FLTK submodule (populated on demand when system FLTK absent)
+    ├── osmesa/   OSMesa submodule (name-mangled; for dual-GL/headless)
+    ├── nanort/   NanoRT header-only raytracer (optional panel in obol_viewer)
+    └── lodepng.{cpp,h}  Bundled PNG codec (used by test image comparison)
+```
+
+## Code Conventions
+
+- C++17 required; use standard library features (e.g. `std::optional`, `std::string_view`)
+- CMake 3.16+ with modern target-based builds (`target_link_libraries`, `target_include_directories`)
+- All shared scene/test utilities go in `libObolEx` (`tests/testlib/`) so both tests and examples can link against them
+- GUI viewers belong in `examples/` (not `tests/`)
+- Headless/CLI test runners belong in `tests/`
+- utf8 support lives in `src/base/utf8/` (implementation) — do not use `external/utf8` (removed)
