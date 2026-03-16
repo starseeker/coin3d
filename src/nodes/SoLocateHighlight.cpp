@@ -70,9 +70,7 @@
 #include <Inventor/events/SoLocation2Event.h>
 #include <Inventor/SoPickedPoint.h>
 
-#ifdef OBOL_THREADSAFE
 #include <Inventor/threads/SbStorage.h>
-#endif // OBOL_THREADSAFE
 
 #include "CoinTidbits.h"
 #include "nodes/SoSubNodeP.h"
@@ -131,24 +129,14 @@
 class SoLocateHighlightP {
 public:
   SoLocateHighlightP() 
-#ifdef OBOL_THREADSAFE
     : colorpacker_storage(sizeof(void*), alloc_colorpacker, free_colorpacker)
-#endif // OBOL_THREADSAFE
   {}
 
-#ifdef OBOL_THREADSAFE
   SbStorage colorpacker_storage;
-#else // OBOL_THREADSAFE
-  SoColorPacker single_colorpacker;
-#endif // OBOL_THREADSAFE
   
   SoColorPacker * getColorPacker(void) {
-#ifdef OBOL_THREADSAFE
     SoColorPacker ** cptr = (SoColorPacker**) this->colorpacker_storage.get();
     return * cptr;
-#else // OBOL_THREADSAFE
-    return &this->single_colorpacker;
-#endif // OBOL_THREADSAFE
   }
   SbBool highlighted;
   static SoFullPath * currenthighlight;
@@ -159,7 +147,6 @@ public:
       SoLocateHighlightP::currenthighlight = NULL;
     }
   }
-#ifdef OBOL_THREADSAFE
 private:
   static void alloc_colorpacker(void * data) {
     SoColorPacker ** cptr = (SoColorPacker**) data;
@@ -169,7 +156,6 @@ private:
     SoColorPacker ** cptr = (SoColorPacker**) data;
     delete *cptr;
   }
-#endif // OBOL_THREADSAFE
 
 };
 

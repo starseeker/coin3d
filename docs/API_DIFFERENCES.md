@@ -46,13 +46,13 @@ data, and an array of other features that make it a broad-purpose scene graph.
 Obol deliberately strips the library back to a self-contained core suitable for
 a CAD scene-management back end:
 
-* **No GUI toolkit dependencies** — the application owns the OpenGL context and
+* **No GUI toolkit dependencies** — the application owns the context and
   feeds events in through Obol's abstract interfaces.
 * **No VRML/XML/audio** — file-format I/O beyond Open Inventor `.iv` and in-memory
   scene construction is out of scope.
 * **C++17 throughout** — platform shims written for C89 compilers are replaced
   with standard-library equivalents.
-* **OSMesa / headless first** — full test coverage in a completely headless
+* **headless first** — full test coverage in a completely headless
   environment is a first-class requirement, not an afterthought.
 
 The result is a smaller, faster-to-build, lower-dependency library that is a
@@ -382,8 +382,7 @@ reason about and test than hidden `#ifdef` branches.
   It compiles and links identically on all platforms.
 * **Required action:** Applications must implement `SoDB::ContextManager` for
   any platform where they want offscreen rendering.  On Windows this typically
-  means a WGL-based manager; on Linux a GLX- or EGL-based manager; on macOS a
-  CGL-based manager.  OSMesa-based managers work on any platform.
+  means a WGL-based manager; on Linux a GLX- or EGL-based manager; etc.  OSMesa-based managers work on any platform.
 * **Configurable DPI:** The default 72 DPI is appropriate for most headless
   use cases.  Applications that relied on Coin's automatic screen DPI detection
   can set the desired value explicitly:

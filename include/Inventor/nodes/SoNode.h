@@ -34,6 +34,7 @@
 \**************************************************************************/
 
 #include <Inventor/fields/SoFieldContainer.h>
+#include <atomic>
 
 class SoAction;
 class SoCallbackAction;
@@ -176,7 +177,7 @@ protected:
   static void setCompatibilityTypes(const SoType & nodetype, const uint32_t bitmask);
 
   SbUniqueId uniqueId;
-  static SbUniqueId nextUniqueId;
+  static std::atomic<SbUniqueId> nextUniqueId;
   static int nextActionMethodIndex;
 
 private:

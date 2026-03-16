@@ -48,7 +48,7 @@
 #include <exception>
 #include <iostream>
 #include <mutex>
-
+#include <vector>
 
 #include "threads/threads.h"
 
@@ -80,11 +80,17 @@ void StorageRegistry::unregisterStorage(cc_storage* storage) {
 }
 
 void StorageRegistry::cleanupThread(unsigned long threadid) {
-    std::shared_lock<std::shared_mutex> lock(registry_mutex);
-    
-    // Iterate through all registered storage objects and clean up
-    // the specified thread's data from each one
-    for (cc_storage* storage : registered_storages) {
+    // Snapshot the set of registered storages under the shared lock, then
+    // release the lock before touching any individual storage.  This avoids
+    // a potential deadlock where a storage destructor calls unregisterStorage()
+    // (exclusive lock) while we are still iterating under the shared lock.
+    std::vector<cc_storage*> snapshot;
+    {
+        std::shared_lock<std::shared_mutex> lock(registry_mutex);
+        snapshot.assign(registered_storages.begin(), registered_storages.end());
+    } // shared lock released before iterating
+
+    for (cc_storage* storage : snapshot) {
         if (!storage || !storage->dict) continue;
         
         void* data = nullptr;

@@ -62,6 +62,8 @@ public:
 
   SoActionMethod & operator[](const int index);
 
+  SoActionMethod getMethod(const int index);
+
   void addMethod(const SoType node, const SoActionMethod method);
   void setUp(void);
 

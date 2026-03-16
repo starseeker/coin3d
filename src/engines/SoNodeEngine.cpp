@@ -63,9 +63,7 @@
 #include <Inventor/errors/SoDebugError.h>
 
 #include "config.h"
-#ifdef OBOL_THREADSAFE
 #include "threads/recmutexp.h"
-#endif // OBOL_THREADSAFE
 
 // *************************************************************************
 
@@ -100,38 +98,19 @@ SoNodeEngine::SoNodeEngine(void)
 */
 SoNodeEngine::~SoNodeEngine()
 {
-#if OBOL_DEBUG && 0 // debug
-  SoDebugError::postInfo("SoNodeEngine::~SoNodeEngine", "%p", this);
-#endif // debug
 }
 
 // Overrides SoBase::destroy().
 void
 SoNodeEngine::destroy(void)
 {
-#if OBOL_DEBUG && 0 // debug
-  SbName n = this->getName();
-  SoType t = this->getTypeId();
-  SoDebugError::postInfo("SoNodeEngine::destroy", "start -- '%s' (%s)",
-                         n.getString(),
-                         t.getName().getString());
-#endif // debug
 
-#ifdef OBOL_THREADSAFE
   cc_recmutex_internal_field_lock();
-#endif // OBOL_THREADSAFE
   this->evaluateWrapper();
-#ifdef OBOL_THREADSAFE
   cc_recmutex_internal_field_unlock();
-#endif // OBOL_THREADSAFE
 
   inherited::destroy();
 
-#if OBOL_DEBUG && 0 // debug
-  SoDebugError::postInfo("SoNodeEngine::destroy", "done -- '%s' (%s)",
-                         n.getString(),
-                         t.getName().getString());
-#endif // debug
 }
 
 /*!
@@ -222,10 +201,6 @@ SoNodeEngine::inputChanged(SoField * OBOL_UNUSED_ARG(which))
 void
 SoNodeEngine::notify(SoNotList * nl)
 {
-#if OBOL_DEBUG && 0 // debug
-  SoDebugError::postInfo("SoNodeEngine::notify", "%p - %s, start",
-                         this, this->getTypeId().getName().getString());
-#endif // debug
 
   // Avoid recursive notification calls.
   if (this->isNotifying()) return;
@@ -255,10 +230,6 @@ SoNodeEngine::notify(SoNotList * nl)
 
   this->flags &= ~FLAG_ISNOTIFYING;
 
-#if OBOL_DEBUG && 0 // debug
-  SoDebugError::postInfo("SoNodeEngine::notify", "%p - %s, done",
-                         this, this->getTypeId().getName().getString());
-#endif // debug
 }
 
 /*!

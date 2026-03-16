@@ -135,6 +135,8 @@
 #include <cstdlib> // NULL
 #include <cstring> // strcmp()
 #include <cctype>   // toupper()
+#include <shared_mutex>
+#include <mutex>
 
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/lists/SoTypeList.h>
@@ -195,6 +197,11 @@ static Name2HandleMap * module_dict = NULL;
 typedef SbHash<const char *, void *> NameMap;
 static NameMap * dynload_tries = NULL;
 
+// Mutex protecting all access to type_dict, typedatalist, module_dict,
+// dynload_tries.  A shared_mutex allows concurrent readers (fromName lookups)
+// while serialising writers (createType, removeType, init, clean).
+static std::shared_mutex type_mutex;
+
 // *************************************************************************
 
 /*!
@@ -218,6 +225,8 @@ static NameMap * dynload_tries = NULL;
 void
 SoType::init(void)
 {
+  std::unique_lock<std::shared_mutex> lock(type_mutex);
+
   coin_atexit((coin_atexit_f *)SoType::clean, CC_ATEXIT_SOTYPE);
 
   // If any of these assert fails, it is probably because
@@ -237,6 +246,8 @@ SoType::init(void)
 void
 SoType::clean(void)
 {
+  std::unique_lock<std::shared_mutex> lock(type_mutex);
+
   // clean SoType::typedatalist (first delete structures)
   const int num = SoType::typedatalist->getLength();
   for (int i = 0; i < num; i++) delete (*SoType::typedatalist)[i];
@@ -266,6 +277,8 @@ SoType::createType(const SoType parent, const SbName name,
                    const instantiationMethod method,
                    const uint16_t data)
 {
+  std::unique_lock<std::shared_mutex> lock(type_mutex);
+
 #if OBOL_DEBUG
   // We don't use SoType::fromName() to test if a type with this name
   // already exists to avoid loading extension nodes in this context.
@@ -279,6 +292,10 @@ SoType::createType(const SoType parent, const SbName name,
     SoDebugError::post("SoType::createType",
                        "a type with name \"%s\" already created",
                        name.getString());
+    // Release write lock before calling fromName(), which itself acquires
+    // a read lock. Explicit unlock avoids a deadlock since unique_lock is
+    // not upgradeable and std::shared_mutex does not allow recursive locking.
+    lock.unlock();
     return SoType::fromName(name.getString());
   }
 #endif // OBOL_DEBUG
@@ -307,6 +324,8 @@ SoType::createType(const SoType parent, const SbName name,
 SbBool
 SoType::removeType(const SbName & name)
 {
+  std::unique_lock<std::shared_mutex> lock(type_mutex);
+
   int16_t index = 0;
   if (!type_dict->get(name.getString(), index)) {
     SoDebugError::post("SoType::removeType",
@@ -441,6 +460,7 @@ const SoType
 SoType::overrideType(const SoType originalType,
                      const instantiationMethod method)
 {
+  std::unique_lock<std::shared_mutex> lock(type_mutex);
   (*SoType::typedatalist)[(int)originalType.getKey()]->method = method;
   return originalType;
 }
@@ -507,270 +527,256 @@ SoType::fromName(const SbName name)
     if (env.has_value() && std::atoi(env->c_str()) > 0) enable_dynload = FALSE;
   }
 
-  // Check if SoType::init() was called properly
+  // Shared lock for the fast path (type already registered).
+  {
+    std::shared_lock<std::shared_mutex> rlock(type_mutex);
+
+    // Check if SoType::init() was called properly
+    if (type_dict == NULL) {
+      return SoType::badType();
+    }
+
+    // It should be possible to specify a type name with the "So" prefix
+    // and get the correct type id, even though the types in some type
+    // hierarchies are named internally without the prefix.
+    SbString tmp(name.getString());
+    if ( tmp.compareSubString("So") == 0 ) tmp = tmp.getSubString(2);
+    SbName noprefixname(tmp);
+
+    int16_t index = 0;
+    if (type_dict->get(name.getString(), index) ||
+        type_dict->get(noprefixname.getString(), index)) {
+      // Fast path: type already registered.
+      if (index < 0 || index >= SoType::typedatalist->getLength()) {
+        return SoType::badType();
+      }
+      if ((*SoType::typedatalist)[index] == NULL) {
+        return SoType::badType();
+      }
+      return (*SoType::typedatalist)[index]->type;
+    }
+  }
+
+  // Type not found under shared lock.  Fall through to dynamic loading
+  // (writer lock path) or return badType.
+  if ( !SoDB::isInitialized() || !enable_dynload ) {
+    return SoType::badType();
+  }
+
+  // For dynamic loading we need a writer lock for the entire operation.
+  std::unique_lock<std::shared_mutex> wlock(type_mutex);
+
+  // Re-check under writer lock — another thread may have registered the type
+  // between releasing the reader lock and acquiring the writer lock.
   if (type_dict == NULL) {
-    // This should not happen if SoDB::init() was called
     return SoType::badType();
   }
 
   assert((type_dict != NULL) && "SoType static class data not yet initialized");
 
-  // It should be possible to specify a type name with the "So" prefix
-  // and get the correct type id, even though the types in some type
-  // hierarchies are named internally without the prefix.
-  SbString tmp(name.getString());
-  if ( tmp.compareSubString("So") == 0 ) tmp = tmp.getSubString(2);
-  SbName noprefixname(tmp);
+  SbString tmp2(name.getString());
+  if ( tmp2.compareSubString("So") == 0 ) tmp2 = tmp2.getSubString(2);
+  SbName noprefixname2(tmp2);
 
   int16_t index = 0;
-  if (!type_dict->get(name.getString(), index) &&
-      !type_dict->get(noprefixname.getString(), index)) {
-    if ( !SoDB::isInitialized() ) {
+  if (type_dict->get(name.getString(), index) ||
+      type_dict->get(noprefixname2.getString(), index)) {
+    // Registered by another thread while we waited for the writer lock.
+    if (index < 0 || index >= SoType::typedatalist->getLength()) {
+      return SoType::badType();
+    }
+    if ((*SoType::typedatalist)[index] == NULL) {
+      return SoType::badType();
+    }
+    if (!(((*SoType::typedatalist)[index]->name == name) ||
+          ((*SoType::typedatalist)[index]->name == noprefixname2))) {
+      return SoType::badType();
+    }
+    return (*SoType::typedatalist)[index]->type;
+  }
+
+  {
+    // Ensure dynload_tries is initialized
+    if (dynload_tries == NULL) {
+      dynload_tries = new NameMap;
+    }
+
+    // Input validation: check for null or invalid name strings
+    const char * nameString = name.getString();
+    if (nameString == NULL || strlen(nameString) == 0) {
       return SoType::badType();
     }
 
-    if (enable_dynload) {
+    // Safety check: Disable dynamic loading for non-standard type names that
+    // are likely to be test cases or user-defined types that don't have 
+    // corresponding shared libraries. This prevents segfaults when trying
+    // to load non-existent modules.
+    SbString nameStr(nameString);
+    if (nameStr.compareSubString("So", 0) != 0 && 
+        nameStr.compareSubString("Sb", 0) != 0 &&
+        nameStr.getLength() < 20) { // Likely a test case name
+      return SoType::badType();
+    }
 
-      // Ensure dynload_tries is initialized
-      if (dynload_tries == NULL) {
-        dynload_tries = new NameMap;
-      }
-
-      // Input validation: check for null or invalid name strings
-      const char * nameString = name.getString();
-      if (nameString == NULL || strlen(nameString) == 0) {
-        return SoType::badType();
-      }
-
-      // Safety check: Disable dynamic loading for non-standard type names that
-      // are likely to be test cases or user-defined types that don't have 
-      // corresponding shared libraries. This prevents segfaults when trying
-      // to load non-existent modules.
-      SbString nameStr(nameString);
-      if (nameStr.compareSubString("So", 0) != 0 && 
-          nameStr.compareSubString("Sb", 0) != 0 &&
-          nameStr.getLength() < 20) { // Likely a test case name
-        return SoType::badType();
-      }
-
-      // Additional validation: reject names with invalid characters for module names
-      for (int i = 0; i < nameStr.getLength(); i++) {
-        char c = nameStr[i];
-        if (!((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || 
-              (c >= '0' && c <= '9') || c == '_')) {
-          return SoType::badType();
-        }
-      }
-
-      // find out which C++ name mangling scheme the compiler uses
-      static mangleFunc * manglefunc = getManglingFunction();
-      if ( manglefunc == NULL ) {
-        // dynamic loading is not yet supported for this compiler suite
-        static long first = 1;
-        if ( first ) {
-          auto env = CoinInternal::getEnvironmentVariable("OBOL_DEBUG_DL");
-          if (env.has_value() && (std::atoi(env->c_str()) > 0)) {
-            SoDebugError::post("SoType::fromName",
-                               "unable to figure out the C++ name mangling scheme");
-          }
-          first = 0;
-        }
-        return SoType::badType();
-      }
-      
-      SbString mangled;
-      try {
-        if (manglefunc != NULL) {
-          mangled = manglefunc(nameString);
-        } else {
-          // This should not happen since we checked above, but be safe
-          return SoType::badType();
-        }
-        
-        // Validate the mangled name is not empty
-        if (mangled.getLength() == 0 || mangled.getString() == NULL) {
-          return SoType::badType();
-        }
-      } catch (...) {
-        // If name mangling fails for any reason, return badType
-        return SoType::badType();
-      }
-
-      if ( module_dict == NULL ) {
-        module_dict = new Name2HandleMap;
-      }
-
-      // FIXME: should we search the application code for the initClass()
-      // symbol first?  dlopen(NULL) might not be portable enough, but it
-      // could be a cool feature.  20030223 larsa
-
-      // FIXME: We probably should use loadable modules (type MH_BUNDLE)
-      // instead of shared libraries for dynamic extension nodes, on Mac
-      // OS X, since (1) this is the Recommended Way for dynamically
-      // loadable code and (2) it allows us to unload them when they are
-      // no longer needed. Note that this would require major changes to
-      // the Mac cc_dl_open() and cc_dl_sym() code. 20030318 kyrah
-
-      static const char * modulenamepatterns[] = {
-        "%s.so", "lib%s.so", "%s.dll", "lib%s.dll", "%s.dylib", "lib%s.dylib",
-        NULL
-      };
-
-      SbString modulenamestring;
-      cc_libhandle handle = NULL;
-      int i;
-      for ( i = 0; (modulenamepatterns[i] != NULL) && (handle == NULL); i++ ) {
-        // Validate the format string to prevent buffer overflows
-        const char * pattern = modulenamepatterns[i];
-        if (pattern == NULL || strlen(pattern) > 50) {
-          continue; // Skip invalid patterns
-        }
-        
-        // Build module name with additional safety checks
-        try {
-          modulenamestring.sprintf(pattern, nameString);
-          
-          // Validate the resulting module name
-          if (modulenamestring.getLength() == 0 || 
-              modulenamestring.getLength() > 256 ||
-              modulenamestring.getString() == NULL) {
-            continue; // Skip if module name generation failed
-          }
-        } catch (...) {
-          continue; // Skip if sprintf fails
-        }
-
-        // We need to move the name string to an SbName since we use
-        // the name string pointer for hash tables and need identical
-        // names to produce the same pointers.
-        SbName module(modulenamestring.getString());
-
-        // Additional validation for module name
-        const char * moduleStr = module.getString();
-        if (moduleStr == NULL) {
-          continue;
-        }
-
-        // Register all the module names we have tried so we don't try
-        // them again.
-        void * dummy;
-        if (dynload_tries->get(moduleStr, dummy))
-          continue; // already tried
-        dynload_tries->put(moduleStr, NULL);
-
-        cc_libhandle idx = NULL;
-        if ( module_dict->get(moduleStr, idx) ) {
-          // Module has been loaded, but type is not yet finished initializing.
-          // SoType::badType() is here the expected return value.  See below.
-          return SoType::badType();
-        }
-
-        // FIXME: should we maybe use a Coin-specific search path variable
-        // instead of the LD_LIBRARY_PATH one?  20020216 larsa
-
-        // Safely attempt to open the dynamic library
-        try {
-          handle = cc_dl_open(moduleStr);
-        } catch (...) {
-          handle = NULL; // If cc_dl_open throws, treat as failure
-        }
-        
-        if ( handle != NULL ) {
-          // We register the module so we don't recurse infinitely in the
-          // initClass() function which calls SoType::fromName() on itself
-          // which expects SoType::badType() in return.  See above.
-          module_dict->put(module.getString(), handle);
-
-          if (i > 0) {
-            // We now know the file pattern used on this system, so we
-            // should prioritize that pattern first.
-            const char * local_pattern = modulenamepatterns[i];
-            modulenamepatterns[i] = modulenamepatterns[0];
-            modulenamepatterns[0] = local_pattern;
-          }
-        }
-      }
-
-      if ( handle == NULL ) return SoType::badType();
-
-      // find and invoke the initClass() function.
-      // FIXME: declspec stuff
-      initClassFunction * initClass = NULL;
-      
-      // Safely resolve the symbol with error handling
-      try {
-        const char * mangledStr = mangled.getString();
-        if (mangledStr != NULL && strlen(mangledStr) > 0) {
-          initClass = (initClassFunction *) cc_dl_sym(handle, mangledStr);
-        }
-      } catch (...) {
-        initClass = NULL; // If symbol resolution throws, treat as failure
-      }
-      
-      if ( initClass == NULL ) {
-        // FIXME: if a module is found and opened and initialization
-        // fails, the remaining module name patterns are not tried.
-        // might trigger as a problem one day...  2030224 larsa
-#if OBOL_DEBUG
-        SoDebugError::postWarning("SoType::fromName",
-                                  "Mangled symbol %s not found in module %s. "
-                                  "It might be compiled with the wrong compiler / "
-                                  "compiler-settings or something similar.",
-                                  mangled.getString(), modulenamestring.getString());
-#endif
-        // Safe cleanup with error handling
-        try {
-          cc_dl_close(handle);
-        } catch (...) {
-          // If close fails, continue anyway
-        }
-        return SoType::badType();
-      }
-
-      // Safely invoke the initClass function with error handling
-      try {
-        initClass();
-      } catch (...) {
-        // If initClass() throws an exception, cleanup and return failure
-#if OBOL_DEBUG
-        SoDebugError::postWarning("SoType::fromName",
-                                  "initClass() function threw an exception for type %s",
-                                  name.getString());
-#endif
-        try {
-          cc_dl_close(handle);
-        } catch (...) {
-          // If close fails, continue anyway
-        }
-        return SoType::badType();
-      }
-
-      // We run these tests to get the index.
-      if (!type_dict->get(name.getString(), index) &&
-          !type_dict->get(noprefixname.getString(), index)) {
-        // Type registration during initClass() failed
+    // Additional validation: reject names with invalid characters for module names
+    for (int i = 0; i < nameStr.getLength(); i++) {
+      char c = nameStr[i];
+      if (!((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || 
+            (c >= '0' && c <= '9') || c == '_')) {
         return SoType::badType();
       }
     }
-  }
 
-  // Final validation before accessing typedatalist
-  if (index < 0 || index >= SoType::typedatalist->getLength()) {
-    return SoType::badType();
+    // find out which C++ name mangling scheme the compiler uses
+    static mangleFunc * manglefunc = getManglingFunction();
+    if ( manglefunc == NULL ) {
+      // dynamic loading is not yet supported for this compiler suite
+      static long first = 1;
+      if ( first ) {
+        auto env = CoinInternal::getEnvironmentVariable("OBOL_DEBUG_DL");
+        if (env.has_value() && (std::atoi(env->c_str()) > 0)) {
+          SoDebugError::post("SoType::fromName",
+                             "unable to figure out the C++ name mangling scheme");
+        }
+        first = 0;
+      }
+      return SoType::badType();
+    }
+    
+    SbString mangled;
+    try {
+      if (manglefunc != NULL) {
+        mangled = manglefunc(nameString);
+      } else {
+        return SoType::badType();
+      }
+      if (mangled.getLength() == 0 || mangled.getString() == NULL) {
+        return SoType::badType();
+      }
+    } catch (...) {
+      return SoType::badType();
+    }
+
+    if ( module_dict == NULL ) {
+      module_dict = new Name2HandleMap;
+    }
+
+    static const char * modulenamepatterns[] = {
+      "%s.so", "lib%s.so", "%s.dll", "lib%s.dll", "%s.dylib", "lib%s.dylib",
+      NULL
+    };
+
+    SbString modulenamestring;
+    cc_libhandle handle = NULL;
+    int i;
+    for ( i = 0; (modulenamepatterns[i] != NULL) && (handle == NULL); i++ ) {
+      const char * pattern = modulenamepatterns[i];
+      if (pattern == NULL || strlen(pattern) > 50) {
+        continue;
+      }
+      try {
+        modulenamestring.sprintf(pattern, nameString);
+        if (modulenamestring.getLength() == 0 || 
+            modulenamestring.getLength() > 256 ||
+            modulenamestring.getString() == NULL) {
+          continue;
+        }
+      } catch (...) {
+        continue;
+      }
+
+      SbName module(modulenamestring.getString());
+      const char * moduleStr = module.getString();
+      if (moduleStr == NULL) { continue; }
+
+      void * dummy;
+      if (dynload_tries->get(moduleStr, dummy))
+        continue;
+      dynload_tries->put(moduleStr, NULL);
+
+      cc_libhandle idx = NULL;
+      if ( module_dict->get(moduleStr, idx) ) {
+        return SoType::badType();
+      }
+
+      try {
+        handle = cc_dl_open(moduleStr);
+      } catch (...) {
+        handle = NULL;
+      }
+      
+      if ( handle != NULL ) {
+        module_dict->put(module.getString(), handle);
+        if (i > 0) {
+          const char * local_pattern = modulenamepatterns[i];
+          modulenamepatterns[i] = modulenamepatterns[0];
+          modulenamepatterns[0] = local_pattern;
+        }
+      }
+    }
+
+    if ( handle == NULL ) return SoType::badType();
+
+    initClassFunction * initClass = NULL;
+    try {
+      const char * mangledStr = mangled.getString();
+      if (mangledStr != NULL && strlen(mangledStr) > 0) {
+        initClass = (initClassFunction *) cc_dl_sym(handle, mangledStr);
+      }
+    } catch (...) {
+      initClass = NULL;
+    }
+    
+    if ( initClass == NULL ) {
+#if OBOL_DEBUG
+      SoDebugError::postWarning("SoType::fromName",
+                                "Mangled symbol %s not found in module %s. "
+                                "It might be compiled with the wrong compiler / "
+                                "compiler-settings or something similar.",
+                                mangled.getString(), modulenamestring.getString());
+#endif
+      try { cc_dl_close(handle); } catch (...) {}
+      return SoType::badType();
+    }
+
+    // Release the writer lock before calling initClass(). initClass() will
+    // call SoType::createType(), which acquires a writer lock itself.
+    // std::shared_mutex does not support recursive locking, so holding the
+    // writer lock here would deadlock.
+    wlock.unlock();
+
+    try {
+      initClass();
+    } catch (...) {
+#if OBOL_DEBUG
+      SoDebugError::postWarning("SoType::fromName",
+                                "initClass() function threw an exception for type %s",
+                                name.getString());
+#endif
+      try { cc_dl_close(handle); } catch (...) {}
+      return SoType::badType();
+    }
+
+    // Re-acquire shared lock to read the newly registered type.
+    std::shared_lock<std::shared_mutex> rlock2(type_mutex);
+
+    if (!type_dict->get(name.getString(), index) &&
+        !type_dict->get(noprefixname2.getString(), index)) {
+      return SoType::badType();
+    }
+
+    if (index < 0 || index >= SoType::typedatalist->getLength()) {
+      return SoType::badType();
+    }
+    if ((*SoType::typedatalist)[index] == NULL) {
+      return SoType::badType();
+    }
+    if (!(((*SoType::typedatalist)[index]->name == name) ||
+          ((*SoType::typedatalist)[index]->name == noprefixname2))) {
+      return SoType::badType();
+    }
+    return (*SoType::typedatalist)[index]->type;
   }
-  
-  // Check if the type data is valid (could be NULL if removed)
-  if ((*SoType::typedatalist)[index] == NULL) {
-    return SoType::badType();
-  }
-  
-  // Validate the name matches (additional safety check)
-  if (!(((*SoType::typedatalist)[index]->name == name) ||
-        ((*SoType::typedatalist)[index]->name == noprefixname))) {
-    return SoType::badType();
-  }
-  
-  return (*SoType::typedatalist)[index]->type;
 }
 
 /*!
@@ -780,6 +786,7 @@ SoType::fromName(const SbName name)
 SoType
 SoType::fromKey(uint16_t key)
 {
+  std::shared_lock<std::shared_mutex> lock(type_mutex);
   assert(SoType::typedatalist);
   assert(key < SoType::typedatalist->getLength());
 
@@ -794,6 +801,7 @@ SoType::fromKey(uint16_t key)
 SbName
 SoType::getName(void) const
 {
+  std::shared_lock<std::shared_mutex> lock(type_mutex);
   assert(!this->isBad());
   return (*SoType::typedatalist)[(int)this->getKey()]->name;
 }
@@ -808,6 +816,7 @@ SoType::getName(void) const
 uint16_t
 SoType::getData(void) const
 {
+  std::shared_lock<std::shared_mutex> lock(type_mutex);
   assert(!this->isBad());
   return (*SoType::typedatalist)[(int)this->getKey()]->data;
 }
@@ -820,6 +829,7 @@ SoType::getData(void) const
 const SoType
 SoType::getParent(void) const
 {
+  std::shared_lock<std::shared_mutex> lock(type_mutex);
   assert(!this->isBad());
   return (*SoType::typedatalist)[(int)this->getKey()]->parent;
 }
@@ -867,6 +877,7 @@ SoType::isDerivedFrom(const SoType parent) const
     return FALSE;
   }
 
+  std::shared_lock<std::shared_mutex> lock(type_mutex);
   SoType type = *this;
   do {
 #if OBOL_DEBUG && 0 // debug
@@ -935,12 +946,22 @@ SoType::getAllDerivedFrom(const SoType type, SoTypeList & list)
 {
   assert(type != SoType::badType() && "argument is badType()");
 
+  std::shared_lock<std::shared_mutex> lock(type_mutex);
   int counter = 0;
   int n = SoType::typedatalist->getLength();
   for (int i = 0; i < n; i++) {
     if ((*SoType::typedatalist)[i]) {
       SoType chktype = (*SoType::typedatalist)[i]->type;
-      if (!chktype.isInternal() && chktype.isDerivedFrom(type)) {
+      if (chktype.isInternal()) continue;
+      // Walk the parent chain under the same shared lock to avoid
+      // re-entrant lock acquisition from isDerivedFrom().
+      SoType walktype = chktype;
+      bool derived = false;
+      while (!walktype.isBad()) {
+        if (walktype == type) { derived = true; break; }
+        walktype = (*SoType::typedatalist)[(int)walktype.getKey()]->parent;
+      }
+      if (derived) {
         list.append(chktype);
         counter++;
       }
@@ -957,6 +978,7 @@ SoType::getAllDerivedFrom(const SoType type, SoTypeList & list)
 SbBool
 SoType::canCreateInstance(void) const
 {
+  std::shared_lock<std::shared_mutex> lock(type_mutex);
   return ((*SoType::typedatalist)[(int)this->getKey()]->method != NULL);
 }
 
@@ -974,8 +996,13 @@ SoType::canCreateInstance(void) const
 void *
 SoType::createInstance(void * ctx) const
 {
-  if (this->canCreateInstance()) {
-    return (*((*SoType::typedatalist)[(int)this->getKey()]->method))(ctx);
+  instantiationMethod method = nullptr;
+  {
+    std::shared_lock<std::shared_mutex> lock(type_mutex);
+    method = (*SoType::typedatalist)[(int)this->getKey()]->method;
+  }
+  if (method) {
+    return (*method)(ctx);
   }
   else {
 #if OBOL_DEBUG
@@ -996,6 +1023,7 @@ SoType::createInstance(void * ctx) const
 int
 SoType::getNumTypes(void)
 {
+  std::shared_lock<std::shared_mutex> lock(type_mutex);
   // FIXME: typedatalist can contain entries for removed types, so the number
   // returned from this method is potentially too high. kintel 20080605.
   return SoType::typedatalist->getLength();
@@ -1013,6 +1041,7 @@ SoType::getNumTypes(void)
 SoType::instantiationMethod
 SoType::getInstantiationMethod(void) const
 {
+  std::shared_lock<std::shared_mutex> lock(type_mutex);
   return (*SoType::typedatalist)[(int)this->getKey()]->method;
 }
 
@@ -1030,6 +1059,7 @@ SoType::getInstantiationMethod(void) const
 void
 SoType::makeInternal(void)
 {
+  std::unique_lock<std::shared_mutex> lock(type_mutex);
   (*SoType::typedatalist)[(int)this->getKey()]->isPublic = FALSE;
 }
 
@@ -1040,6 +1070,7 @@ SoType::makeInternal(void)
 SbBool
 SoType::isInternal(void) const
 {
+  std::shared_lock<std::shared_mutex> lock(type_mutex);
   return (*SoType::typedatalist)[(int)this->getKey()]->isPublic == FALSE;
 }
 

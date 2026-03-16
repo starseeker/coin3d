@@ -37,9 +37,7 @@
 
 #include <vector>
 
-#ifdef OBOL_THREADSAFE
 #include <Inventor/threads/SbMutex.h>
-#endif // OBOL_THREADSAFE
 
 #include <Inventor/system/gl.h>
 #include <Inventor/SbColor4f.h>
@@ -71,14 +69,10 @@ public:
   static void cleanup(void);
 
   void lock(void) {
-#ifdef OBOL_THREADSAFE
     this->mutex.lock();
-#endif // OBOL_THREADSAFE
   }
   void unlock(void) {
-#ifdef OBOL_THREADSAFE
     this->mutex.unlock();
-#endif // OBOL_THREADSAFE
   }
 
   SoRenderManager * publ;
@@ -128,9 +122,7 @@ public:
   static SbBool touchtimer;
   static SbBool cleanupfunctionset;
 
-#ifdef OBOL_THREADSAFE
   SbMutex mutex;
-#endif // OBOL_THREADSAFE
 };
 
 // *************************************************************************

@@ -27,7 +27,11 @@
 #cmakedefine HAVE_DRAGGERS
 #cmakedefine HAVE_MANIPULATORS
 #cmakedefine HAVE_SOUND
-#cmakedefine OBOL_THREADSAFE
+/* Thread safety is unconditional in Obol (all #ifdef OBOL_THREADSAFE guards
+ * were removed in Phase 3 of the thread-safety migration).  Always define
+ * OBOL_THREADSAFE so that any remaining external code that tests for it
+ * continues to see "thread safe" as active. */
+#define OBOL_THREADSAFE 1
 #cmakedefine HAVE_3DS_IMPORT_CAPABILITIES
 #cmakedefine OBOL_HAVE_JAVASCRIPT
 

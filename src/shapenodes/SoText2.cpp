@@ -136,9 +136,7 @@
 #include <Inventor/elements/SoMultiTextureEnabledElement.h>
 #include <Inventor/elements/SoGLMultiTextureEnabledElement.h>
 
-#ifdef OBOL_THREADSAFE
 #include <Inventor/threads/SbMutex.h>
-#endif // OBOL_THREADSAFE
 
 #include "nodes/SoSubNodeP.h"
 #include "caches/SoGlyphCache.h"
@@ -269,24 +267,18 @@ public:
     thisp->unlock();
   }
   void lock(void) {
-#ifdef OBOL_THREADSAFE
     this->mutex.lock();
-#endif // OBOL_THREADSAFE
   }
   void unlock(void) {
-#ifdef OBOL_THREADSAFE
     this->mutex.unlock();
-#endif // OBOL_THREADSAFE
   }
 private:
-#ifdef OBOL_THREADSAFE
   // FIXME: a mutex for every instance seems a bit excessive,
   // especially since Microsoft Windows might have rather strict limits on the
   // total amount of mutex resources a process (or even a user) can
   // allocate. so consider making this a class-wide instance instead.
   // -mortene.
   SbMutex mutex;
-#endif // OBOL_THREADSAFE
   SoText2 * master;
 };
 

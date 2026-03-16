@@ -391,13 +391,8 @@ SbMutex * SoTexture2P::mutex = NULL;
 
 // *************************************************************************
 
-#ifdef OBOL_THREADSAFE
 #define LOCK_GLIMAGE(_thisp_) (PRIVATE(_thisp_)->mutex->lock())
 #define UNLOCK_GLIMAGE(_thisp_) (PRIVATE(_thisp_)->mutex->unlock())
-#else // OBOL_THREADSAFE
-#define LOCK_GLIMAGE(_thisp_)
-#define UNLOCK_GLIMAGE(_thisp_)
-#endif // OBOL_THREADSAFE
 
 // *************************************************************************
 
@@ -473,9 +468,7 @@ SoTexture2::initClass(void)
   SO_ENABLE(SoRayPickAction, SoMultiTextureEnabledElement);
   SO_ENABLE(SoRayPickAction, SoMultiTextureImageElement);
 
-#ifdef OBOL_THREADSAFE
   SoTexture2P::mutex = new SbMutex;
-#endif // OBOL_THREADSAFE
 
   coin_atexit(SoTexture2P::cleanup, CC_ATEXIT_NORMAL);
 }

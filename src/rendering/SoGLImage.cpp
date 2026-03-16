@@ -174,9 +174,7 @@
 #include <Inventor/misc/SoGLCubeMapImage.h>
 #include <Inventor/misc/SoGLDriverDatabase.h>
 
-#ifdef OBOL_THREADSAFE
 #include <Inventor/threads/SbMutex.h>
-#endif // OBOL_THREADSAFE
 
 
 #include "rendering/SoGL.h"
@@ -577,9 +575,7 @@ fast_image_resize3d(const unsigned char * src,
 
 class SoGLImageP {
 public:
-#ifdef OBOL_THREADSAFE
   static SbMutex * mutex;
-#endif // OBOL_THREADSAFE
 
   static SoType classTypeId;
   static uint32_t current_glimageid;
@@ -647,9 +643,7 @@ public:
 
 SoType SoGLImageP::classTypeId STATIC_SOTYPE_INIT;
 uint32_t SoGLImageP::current_glimageid = 1;
-#ifdef OBOL_THREADSAFE
 SbMutex * SoGLImageP::mutex;
-#endif // OBOL_THREADSAFE
 
 #undef PRIVATE
 #define PRIVATE(p) ((p)->pimpl)
@@ -671,13 +665,8 @@ SbMutex * SoGLImageP::mutex;
 
 // we now share one mutex among all glimages to avoid allocating too
 // many mutexes.
-#ifdef OBOL_THREADSAFE
 #define LOCK_GLIMAGE SoGLImageP::mutex->lock()
 #define UNLOCK_GLIMAGE SoGLImageP::mutex->unlock()
-#else // OBOL_THREADSAFE
-#define LOCK_GLIMAGE
-#define UNLOCK_GLIMAGE
-#endif // !OBOL_THREADSAFE
 
 // *************************************************************************
 
@@ -762,9 +751,7 @@ SoGLImage::initClass(void)
   assert(SoGLImageP::classTypeId.isBad());
   SoGLImageP::classTypeId = SoType::createType(SoType::badType(),
                                                SbName("GLImage"));
-#ifdef OBOL_THREADSAFE
   SoGLImageP::mutex = new SbMutex;
-#endif // OBOL_THREADSAFE
   glimage_bufferstorage = new SbStorage(sizeof(soglimage_buffer),
                                         glimage_buffer_construct, glimage_buffer_destruct);
 
@@ -781,10 +768,8 @@ SoGLImage::cleanupClass(void)
 {
   delete glimage_bufferstorage;
   glimage_bufferstorage = NULL;
-#ifdef OBOL_THREADSAFE
   delete SoGLImageP::mutex;
   SoGLImageP::mutex = NULL;
-#endif // OBOL_THREADSAFE
   SoGLImageP::classTypeId STATIC_SOTYPE_INIT;
 
   SoGLImageP::current_glimageid = 1;
@@ -1847,11 +1832,6 @@ SoGLImageP::unrefOldDL(SoState *state, const uint32_t maxage)
   while (i < n) {
     dldata & data = this->dlists[i];
     if (data.age >= maxage) {
-#if OBOL_DEBUG && 0 // debug
-      SoDebugError::postInfo("SoGLImageP::unrefOldDL",
-                             "DL killed because of old age: %p",
-                             this->owner);
-#endif // debug
       data.dlist->unref(state);
       this->dlists.removeFast(i);
       n--; // one less in list now
@@ -2021,9 +2001,7 @@ void
 SoGLImageP::contextCleanup(uint32_t context, void * closure)
 {
   SoGLImageP * thisp = (SoGLImageP *) closure;
-#ifdef OBOL_THREADSAFE
   SoGLImageP::mutex->lock();
-#endif // OBOL_THREADSAFE
 
   int n = thisp->dlists.getLength();
   int i = 0;
@@ -2036,9 +2014,7 @@ SoGLImageP::contextCleanup(uint32_t context, void * closure)
     }
     else i++;
   }
-#ifdef OBOL_THREADSAFE
   SoGLImageP::mutex->unlock();
-#endif // OBOL_THREADSAFE
 }
 
 // *************************************************************************

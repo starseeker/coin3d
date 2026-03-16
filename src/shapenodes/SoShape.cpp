@@ -215,13 +215,8 @@ public:
   // -mortene.
   static SbMutex * mutex;
 
-#ifdef OBOL_THREADSAFE
   void lock(void) { SoShapeP::mutex->lock(); }
   void unlock(void) { SoShapeP::mutex->unlock(); }
-#else // ! OBOL_THREADSAFE
-  void lock(void) { }
-  void unlock(void) { }
-#endif // ! OBOL_THREADSAFE
 
   static void cleanup(void);
 };
@@ -345,9 +340,7 @@ SoShape::initClass(void)
 {
   SO_NODE_INTERNAL_INIT_ABSTRACT_CLASS(SoShape, SO_FROM_INVENTOR_1);
 
-#ifdef OBOL_THREADSAFE
   SoShapeP::mutex = new SbMutex;
-#endif // OBOL_THREADSAFE
 
   soshape_staticstorage =
     new SbStorage(sizeof(soshape_staticdata),
@@ -783,18 +776,10 @@ SoShape::shouldGLRender(SoGLRenderAction * action)
     return FALSE;
   }
 
-#if OBOL_DEBUG && 0 // enable this to test generatePrimitives() rendering
-  SoMaterialBundle mb(action);
-  mb.sendFirst();
-  soshape_get_staticdata()->currentbundle = &mb;  // needed in the primitive callbacks
-  this->generatePrimitives(action);
-  return FALSE;
-#else // generatePrimitives() rendering
   if (PRIVATE(this)->rendercnt < ((1<<SoShapeP::RENDERCNT_BITS)-1)) {
     PRIVATE(this)->rendercnt++;
   }
   return TRUE; // let the shape node render the geometry using OpenGL
-#endif // ! generatePrimitives() rendering
 }
 
 /*!
@@ -891,10 +876,6 @@ SoShape::createTriangleDetail(SoRayPickAction * OBOL_UNUSED_ARG(action),
     return shapedata->primdata->createPickDetail();
   }
   // don't warn here. SoDetail instances are optional for extension nodes.
-#if OBOL_DEBUG && 0
-  SoDebugError::postInfo("SoShape::createTriangleDetail",
-                         "Unable to create triangle detail.");
-#endif // OBOL_DEBUG
   return NULL;
 }
 
@@ -925,10 +906,6 @@ SoShape::createLineSegmentDetail(SoRayPickAction * OBOL_UNUSED_ARG(action),
     return shapedata->primdata->createPickDetail();
   }
   // don't warn here. SoDetail instances are optional for extension nodes.
-#if OBOL_DEBUG && 0
-  SoDebugError::postInfo("SoShape::createLineSegmentDetail",
-                         "Unable to create line segment detail.");
-#endif // OBOL_DEBUG
   return NULL;
 }
 

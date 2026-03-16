@@ -43,6 +43,7 @@
 #include <Inventor/SbString.h>
 
 #include "misc/SbHash.h"
+#include <atomic>
 
 class SoSensor;
 class SbRWMutex;
@@ -80,14 +81,12 @@ public:
   static void updateRealTimeFieldCB(void * data, SoSensor * sensor);
   static void listWin32ProcessModules(void);
 
-#ifdef OBOL_THREADSAFE
   static SbRWMutex * globalmutex;
-#endif // OBOL_THREADSAFE
   static SbList<SoDB_HeaderInfo *> * headerlist;
   static SoSensorManager * sensormanager;
   static SoTimerSensor * globaltimersensor;
   static UInt32ToInt16Map * converters;
-  static int notificationcounter;
+  static std::atomic<int> notificationcounter;
   static SbBool isinitialized;
 
   static SbBool is3dsFile(SoInput * in);

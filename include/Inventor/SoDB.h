@@ -65,7 +65,36 @@ typedef void SoDBHeaderCB(void * data, SoInput * input);
   other Obol API, and SoDB::finish() should be called on shutdown to
   release resources cleanly.
 
-  \sa SoDB::ContextManager, SoOffscreenRenderer
+  \section thread_safety Thread Safety
+
+  Obol is thread safe for the following usage scenarios:
+
+  - **Concurrent render** — Multiple threads, each owning an independent GL
+    context and traversing its own independent scene graph, may render
+    simultaneously without any application-level locking.  Each thread must
+    call SoDB::init() once before its first traversal; after that the global
+    infrastructure (name interning, type system, reference counts, auditor
+    lists) is safe for concurrent access.  GL contexts must \e not be shared
+    between threads without explicit platform re-binding (glXMakeCurrent etc.);
+    Obol will emit a SoDebugError warning if cross-thread GL context use is
+    detected.
+
+  - **Init-then-read** — SoDB::init() is called once on one thread; afterwards
+    multiple threads may read (traverse) the scene graph simultaneously without
+    any further locking.
+
+  - **Mixed read/write** — When one or more threads mutate the scene graph
+    while others traverse it, the application must bracket mutations with
+    SoDB::writelock() / SoDB::writeunlock() and may bracket concurrent traversals
+    with SoDB::readlock() / SoDB::readunlock().  All SoAction::apply() calls
+    already acquire the global read lock internally.
+
+  The following scenario is \b not supported without additional application-level
+  synchronisation:
+  - Sharing a single \c SoAction or \c SoState between multiple threads.
+    Each thread must create and own its own action objects.
+
+  \sa SoDB::ContextManager, SoOffscreenRenderer, SoDB::readlock(), SoDB::writelock()
 */
 class OBOL_DLL_API SoDB {
 public:

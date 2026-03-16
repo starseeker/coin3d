@@ -47,12 +47,9 @@
 #include <Inventor/actions/SoAction.h>
 #include <Inventor/nodes/SoNode.h>
 #include <cassert>
+#include <shared_mutex>
 
 #include "config.h"
-
-#ifdef OBOL_THREADSAFE
-#include <Inventor/threads/SbMutex.h>
-#endif // OBOL_THREADSAFE
 
 #ifndef DOXYGEN_SKIP_THIS
 
@@ -63,18 +60,19 @@ public:
   SbList <SoType> addedtypes;
   SbList <SoActionMethod> addedmethods;
 
-#ifdef OBOL_THREADSAFE
-  SbMutex mutex;
-#endif // OBOL_THREADSAFE
+  std::shared_mutex mutex;
+
   void lock(void) {
-#ifdef OBOL_THREADSAFE
     this->mutex.lock();
-#endif
   }
   void unlock(void) {
-#ifdef OBOL_THREADSAFE
     this->mutex.unlock();
-#endif
+  }
+  void shared_lock(void) {
+    this->mutex.lock_shared();
+  }
+  void shared_unlock(void) {
+    this->mutex.unlock_shared();
   }
 };
 
@@ -119,6 +117,20 @@ SoActionMethod &
 SoActionMethodList::operator[](const int index)
 {
   return (SoActionMethod&)SbPList::operator[](index);
+}
+
+/*!
+  Returns the action method for the given \a index, holding a shared lock
+  to prevent data races with concurrent setUp() calls.  Use this method
+  instead of operator[] during action traversal (read paths).
+*/
+SoActionMethod
+SoActionMethodList::getMethod(const int index)
+{
+  PRIVATE(this)->shared_lock();
+  SoActionMethod m = (SoActionMethod)SbPList::operator[](index);
+  PRIVATE(this)->shared_unlock();
+  return m;
 }
 
 /*!

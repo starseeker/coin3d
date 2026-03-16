@@ -138,6 +138,7 @@ add_subdirectory(rendering)
 # Unit tests for utility subsystems (SbModernUtils, etc.)
 # -----------------------------------------------------------------------
 add_subdirectory(tools)
+add_subdirectory(threads)
 
 # ---- Generate render test dispatch table shared by obol_test and obol_render --
 # This file is written at configure time; it declares extern references to all

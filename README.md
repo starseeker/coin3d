@@ -7,7 +7,7 @@
 
 Obol is a 3D graphics library intended to support easy definition of and
 interaction with geometric scenes.  It largely implements the Open Inventor
-2.1 API, but does not maintin strict compatibility - see ![API_DIFFERENCES](docs/API_DIFFERENCES.md)
+2.1 API, but does not maintain strict compatibility - see ![API_DIFFERENCES](docs/API_DIFFERENCES.md)
 for more details.
 
 Major design philosophies include broad cross platform compatibility and minimal

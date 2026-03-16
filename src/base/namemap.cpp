@@ -37,6 +37,7 @@
 #include <cstring>
 #include <string>
 #include <functional>
+#include <mutex>
 
 #include "CoinTidbits.h"
 #include "config.h"
@@ -91,6 +92,7 @@ struct NamemapBucketEntry {
 
 static struct NamemapBucketEntry ** nametable = NULL;
 static struct NamemapMemChunk * headchunk = NULL;
+static std::mutex namemap_mutex;
 
 /* ************************************************************************* */
 
@@ -100,6 +102,7 @@ extern "C" {
 static void
 namemap_cleanup(void)
 {
+  std::lock_guard<std::mutex> lock(namemap_mutex);
   unsigned int i;
 
   struct NamemapMemChunk * chunkptr = headchunk;
@@ -172,6 +175,8 @@ namemap_find_or_add_string(const char * str, SbBool addifnotfound)
 {
   unsigned long h, i;
   struct NamemapBucketEntry * entry;
+
+  std::lock_guard<std::mutex> lock(namemap_mutex);
 
   if (nametable == NULL) { namemap_init(); }
   assert(nametable != static_cast<struct NamemapBucketEntry **>(NULL) && "name hash dead");

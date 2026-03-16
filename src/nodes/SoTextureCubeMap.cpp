@@ -91,9 +91,7 @@
 #include <Inventor/SbImage.h>
 #include "glue/glp.h"
 
-#ifdef OBOL_THREADSAFE
 #include <Inventor/threads/SbMutex.h>
-#endif // OBOL_THREADSAFE
 
 #include "nodes/SoSubNodeP.h"
 #include "elements/SoTextureScalePolicyElement.h"
@@ -236,9 +234,7 @@
 
 class SoTextureCubeMapP {
 public:
-#ifdef OBOL_THREADSAFE
   SbMutex mutex;
-#endif // OBOL_THREADSAFE
   SoGLCubeMapImage * glimage;
   SoFieldSensor * filenames_sensor;
   int readstatus;
@@ -248,13 +244,8 @@ public:
 
 #define PRIVATE(p) (p->pimpl)
 
-#ifdef OBOL_THREADSAFE
 #define LOCK_GLIMAGE(_thisp_) (PRIVATE(_thisp_)->mutex.lock())
 #define UNLOCK_GLIMAGE(_thisp_) (PRIVATE(_thisp_)->mutex.unlock())
-#else // OBOL_THREADSAFE
-#define LOCK_GLIMAGE(_thisp_)
-#define UNLOCK_GLIMAGE(_thisp_)
-#endif // OBOL_THREADSAFE
 
 
 SO_NODE_SOURCE(SoTextureCubeMap);

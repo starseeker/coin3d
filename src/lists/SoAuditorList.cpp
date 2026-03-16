@@ -50,16 +50,14 @@
 
 #include "config.h"
 
-#ifdef OBOL_THREADSAFE
 #include "threads/recmutexp.h"
 // we need this lock to avoid that auditors are added/removed by one
 // thread while another thread is notifying
 #define NOTIFY_LOCK (void) cc_recmutex_internal_notify_lock()
 #define NOTIFY_UNLOCK (void) cc_recmutex_internal_notify_unlock()
-#else // OBOL_THREADSAFE
-#define NOTIFY_LOCK
-#define NOTIFY_UNLOCK
-#endif // !OBOL_THREADSAFE
+
+#include <vector>
+#include <utility>
 
 /*!
   Default constructor.
@@ -170,41 +168,41 @@ SoAuditorList::remove(void * const auditor, const SoNotRec::Type type)
 
 /*!
   Send notification to all our auditors.
+
+  A true snapshot of the auditor list is taken under the notify lock
+  before any callbacks are invoked.  This lets callbacks safely add or
+  remove auditors mid-delivery without invalidating the iteration or
+  triggering undefined behaviour.
 */
 void
 SoAuditorList::notify(SoNotList * l)
 {
+  // Build snapshot under lock so concurrent add/remove is safe.
+  NOTIFY_LOCK;
   const int num = this->getLength();
-  if (num == 1) { // fast path for common case
-    this->doNotify(l, this->getObject(0), this->getType(0));
+  std::vector<std::pair<void *, SoNotRec::Type>> snap;
+  if (num > 1) snap.reserve(static_cast<size_t>(num));
+  for (int i = 0; i < num; i++)
+    snap.emplace_back(this->getObject(i), this->getType(i));
+  NOTIFY_UNLOCK;
+
+  if (num == 1) {
+    this->doNotify(l, snap[0].first, snap[0].second);
   }
-  // handle multiple auditors by copying the list, in case any one of
-  // the notifications we're sending out changes the list
-  // mid-traversal (that's also why we take special care of the
-  // 1-auditor case above -- so we don't have to copy the list for the
-  // common case)
   else if (num > 1) {
     // FIXME: should perhaps use a more general mechanism to detect when
     // to ignore notification? (In SoFieldContainer::notify() -- based
     // on SoNotList::getTimeStamp()?) 20000304 mortene.
     SbPList notified(num);
-
-    for (int i = 0; i < num; i++) {
-      void * auditor = this->getObject(i);
-      if (notified.find(auditor) == -1) {
+    for (auto & entry : snap) {
+      if (notified.find(entry.first) == -1) {
         // use a copy of 'l', since the notification list might change
         // when auditors are notified
         SoNotList listcopy(l);
-        this->doNotify(&listcopy, auditor, this->getType(i));
-        notified.append(auditor);
+        this->doNotify(&listcopy, entry.first, entry.second);
+        notified.append(entry.first);
       }
     }
-
-    // FIXME: it should be possible for the application programmer to
-    // do this (it is for instance useful and tempting to do it upon
-    // changes in engines). pederb, 2001-11-06
-    assert(num == this->getLength() &&
-           "auditors cannot be removed during the notification loop");
   }
 }
 
@@ -228,10 +226,6 @@ SoAuditorList::doNotify(SoNotList * l, const void * auditor, const SoNotRec::Typ
   case SoNotRec::SENSOR:
     {
       SoDataSensor * obj = const_cast<SoDataSensor*>(static_cast<const SoDataSensor*>(auditor));
-#if OBOL_DEBUG && 0 // debug
-      SoDebugError::postInfo("SoAuditorList::notify",
-                             "notify and schedule sensor: %p", obj);
-#endif // debug
       // don't schedule the sensor here. The sensor instance will do
       // that in notify() (it might also choose _not_ to schedule),
       obj->notify(l);

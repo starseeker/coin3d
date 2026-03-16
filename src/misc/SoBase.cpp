@@ -61,8 +61,11 @@
 
 #include <Inventor/misc/SoBase.h>
 
+#include <atomic>
 #include <cassert>
 #include <cstring>
+#include <mutex>
+#include <shared_mutex>
 
 #include "CoinTidbits.h"
 #include <Inventor/SoDB.h>
@@ -194,17 +197,18 @@ SoBase::SoBase(void)
 
   // Initialize auditor tree (std::map is automatically initialized)
 
-  this->objdata.referencecount = 0;
+  this->referencecount.store(0, std::memory_order_relaxed);
 
   // For debugging -- we try to catch dangling references after
   // premature destruction. See the SoBase::assertAlive() method for
   // further doc.
-  this->objdata.alive = ALIVE_PATTERN;
+  this->alive = ALIVE_PATTERN;
 
   // For debugging, store a pointer to all SoBase-instances.
 #if OBOL_DEBUG
   if (SoBase::PImpl::trackbaseobjects) {
     //void * dummy;
+    std::unique_lock<std::shared_mutex> lock(SoBase::PImpl::base_dict_mutex);
     assert(SoBase::PImpl::allbaseobj->find(this)==SoBase::PImpl::allbaseobj->const_end());
     (*SoBase::PImpl::allbaseobj)[this]=NULL;
   }
@@ -224,25 +228,25 @@ SoBase::~SoBase()
   SoDebugError::postInfo("SoBase::~SoBase", "%p", this);
 #endif // debug
 
-  // Set the 4 bits of bitpattern to anything but the "magic" pattern
-  // used to check that we are still alive.
-  this->objdata.alive = (~ALIVE_PATTERN) & 0xf;
+  // Set the alive sentinel to any value but the "magic" pattern used to
+  // check that we are still alive.
+  this->alive = (~ALIVE_PATTERN) & 0xf;
 
-  if (SoBase::PImpl::auditordict) {
-    //SoAuditorList * l;
-    if (SoBase::PImpl::auditordict->find(this)!=SoBase::PImpl::auditordict->const_end()) {
-      SoBase::PImpl::auditordict->erase(this);
-      //delete l;
+  {
+    std::unique_lock<std::shared_mutex> lock(SoBase::PImpl::base_dict_mutex);
+    if (SoBase::PImpl::auditordict) {
+      if (SoBase::PImpl::auditordict->find(this)!=SoBase::PImpl::auditordict->const_end()) {
+        SoBase::PImpl::auditordict->erase(this);
+      }
     }
+#if OBOL_DEBUG
+    if (SoBase::PImpl::trackbaseobjects) {
+      const size_t ok = SoBase::PImpl::allbaseobj->erase(this);
+      assert(ok && "something fishy going on in debug object tracking");
+    }
+#endif // OBOL_DEBUG
   }
   this->auditortree.clear(); // std::map cleanup
-
-#if OBOL_DEBUG
-  if (SoBase::PImpl::trackbaseobjects) {
-    const size_t ok = SoBase::PImpl::allbaseobj->erase(this);
-    assert(ok && "something fishy going on in debug object tracking");
-  }
-#endif // OBOL_DEBUG
 }
 
 //
@@ -438,7 +442,7 @@ SoBase::cleanClass(void)
 void
 SoBase::assertAlive(void) const
 {
-  if (this->objdata.alive != ALIVE_PATTERN) {
+  if (this->alive != ALIVE_PATTERN) {
     SoDebugError::post("SoBase::assertAlive",
                        "Detected an attempt to access an instance (%p) of an "
                        "SoBase-derived class after it was destructed!  "
@@ -470,37 +474,30 @@ SoBase::ref(void) const
 
   if (OBOL_DEBUG) this->assertAlive();
 
+  // Atomically increment the reference count.  acq_rel ordering
+  // ensures the increment is visible to any thread that subsequently
+  // reads the count via acquire-ordered load.
 #if OBOL_DEBUG
-  int32_t currentrefcount = this->objdata.referencecount;
-#endif // OBOL_DEBUG
-  this->objdata.referencecount++;
-
-#if OBOL_DEBUG
-  if (this->objdata.referencecount < currentrefcount) {
+  int32_t currentrefcount = this->referencecount.fetch_add(1, std::memory_order_acq_rel);
+  int32_t newrefcount = currentrefcount + 1;
+  if (newrefcount < currentrefcount) {
     SoDebugError::post("SoBase::ref",
                        "%p ('%s') - referencecount overflow!: %d -> %d",
                        this, this->getTypeId().getName().getString(),
-                       currentrefcount, this->objdata.referencecount);
+                       currentrefcount, newrefcount);
 
-    // The reference counter is contained within 27 bits of signed
-    // integer, which means it can go up to about ~67 million
-    // references. It's hard to imagine that this should be too small,
-    // so we don't bother to try to handle overflows any better than
-    // this.
-    //
-    // If we should ever revert this decision, look in Coin-1 for how
-    // to handle overflows graciously.
+    // The reference counter is a 32-bit signed integer, which means
+    // it can hold up to 2,147,483,647 (2^31 − 1) references.
     assert(FALSE && "reference count overflow");
   }
-#endif // OBOL_DEBUG
-
-#if OBOL_DEBUG
   if (SoBase::PImpl::tracerefs) {
     SoDebugError::postInfo("SoBase::ref",
                            "%p ('%s') - referencecount: %d",
                            this, this->getTypeId().getName().getString(),
-                           this->objdata.referencecount);
+                           newrefcount);
   }
+#else
+  this->referencecount.fetch_add(1, std::memory_order_acq_rel);
 #endif // OBOL_DEBUG
 }
 
@@ -520,15 +517,18 @@ SoBase::unref(void) const
 
   if (OBOL_DEBUG) this->assertAlive();
 
-  this->objdata.referencecount--;
-  int refcount = this->objdata.referencecount;
+  // Atomically decrement.  fetch_sub returns the old value, so the new
+  // value is (old - 1).  acq_rel ordering: the decrement is a release
+  // so prior writes are visible; it is also an acquire so if we observe
+  // refcount == 1 (i.e. new count == 0) we have a full fence before destroy().
+  int32_t refcount = this->referencecount.fetch_sub(1, std::memory_order_acq_rel) - 1;
 
 #if OBOL_DEBUG
   if (SoBase::PImpl::tracerefs) {
     SoDebugError::postInfo("SoBase::unref",
                            "%p ('%s') - referencecount: %d",
                            this, this->getTypeId().getName().getString(),
-                           this->objdata.referencecount);
+                           refcount);
   }
   if (refcount < 0) {
     // Do the debug output in two calls, since the getTypeId() might
@@ -558,14 +558,16 @@ SoBase::unrefNoDelete(void) const
 
   if (OBOL_DEBUG) this->assertAlive();
 
-  this->objdata.referencecount--;
 #if OBOL_DEBUG
+  int32_t newrefcount = this->referencecount.fetch_sub(1, std::memory_order_acq_rel) - 1;
   if (SoBase::PImpl::tracerefs) {
     SoDebugError::postInfo("SoBase::unrefNoDelete",
                            "%p ('%s') - referencecount: %d",
                            this, this->getTypeId().getName().getString(),
-                           this->objdata.referencecount);
+                           newrefcount);
   }
+#else
+  this->referencecount.fetch_sub(1, std::memory_order_acq_rel);
 #endif // OBOL_DEBUG
 }
 
@@ -575,7 +577,7 @@ SoBase::unrefNoDelete(void) const
 int32_t
 SoBase::getRefCount(void) const
 {
-  return this->objdata.referencecount;
+  return this->referencecount.load(std::memory_order_acquire);
 }
 
 /*!
@@ -639,7 +641,7 @@ SoBase::getName(void) const
   // you have invoked SoDB::cleanup().
   assert(SoBase::PImpl::obj2name);
 
-  //const char * value = NULL;
+  std::shared_lock<std::shared_mutex> lock(SoBase::PImpl::base_dict_mutex);
   SbHash<const SoBase *, const char *>::const_iterator tmp = SoBase::PImpl::obj2name->find(this);
   SbBool found = (tmp != SoBase::PImpl::obj2name->const_end());
   return SbName(found ? tmp->obj : "");
@@ -672,8 +674,18 @@ SoBase::setName(const SbName & newname)
   // un-deallocated SoBase-instances were allocated from. (I.e., run it
   // in a debugger and check the backtrace.)  -mortene.
 
+  std::unique_lock<std::shared_mutex> lock(SoBase::PImpl::base_dict_mutex);
+
+  // Read old name directly from the dict (not via getName(), which would
+  // try to acquire a shared lock on the same mutex we already hold).
+  SbName oldName;
+  {
+    SbHash<const SoBase *, const char *>::const_iterator tmp =
+      SoBase::PImpl::obj2name->find(this);
+    oldName = SbName(tmp != SoBase::PImpl::obj2name->const_end() ? tmp->obj : "");
+  }
+
   // remove old name first
-  SbName oldName = this->getName();
   if (oldName != SbName::empty()) SoBase::removeName(this, oldName.getString());
 
   // semantics in the original SGI Inventor is to not build a separate
@@ -839,6 +851,9 @@ sobase_audlist_add(void * pointer, void * type, void * closure)
 const SoAuditorList &
 SoBase::getAuditors(void) const
 {
+  // Exclusive lock: this function lazily writes to auditordict (both the
+  // initial dict creation and the per-object SoAuditorList entries).
+  std::unique_lock<std::shared_mutex> lock(SoBase::PImpl::base_dict_mutex);
   if (SoBase::PImpl::auditordict == NULL) {
     SoBase::PImpl::auditordict = new SbHash<const SoBase *, SoAuditorList *>();
     coin_atexit((coin_atexit_f*)SoBase::PImpl::cleanup_auditordict, CC_ATEXIT_NORMAL);
@@ -856,7 +871,9 @@ SoBase::getAuditors(void) const
     }
   }
   else {
-    (*SoBase::PImpl::auditordict)[this] = new SoAuditorList;
+    // Capture l before inserting so the loop below has a valid pointer.
+    l = new SoAuditorList;
+    (*SoBase::PImpl::auditordict)[this] = l;
   }
   
   // Traverse the std::map and call sobase_audlist_add for each entry
@@ -944,6 +961,7 @@ SoBase::decrementCurrentWriteCounter(void)
 SoBase *
 SoBase::getNamedBase(const SbName & name, SoType type)
 {
+  std::shared_lock<std::shared_mutex> lock(SoBase::PImpl::base_dict_mutex);
   SbHash<const char*, SbPList*>::const_iterator iter = 
     SoBase::PImpl::name2obj->find((const char *)name);
   if (iter!=SoBase::PImpl::name2obj->const_end()) {
@@ -969,6 +987,7 @@ SoBase::getNamedBases(const SbName & name, SoBaseList & baselist, SoType type)
 {
   int matches = 0;
 
+  std::shared_lock<std::shared_mutex> lock(SoBase::PImpl::base_dict_mutex);
   SbHash<const char*, SbPList*>::const_iterator iter = 
     SoBase::PImpl::name2obj->find((const char *)name);
   if (iter!=SoBase::PImpl::name2obj->const_end()) {

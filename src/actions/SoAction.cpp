@@ -917,7 +917,7 @@ SoAction::traverse(SoNode * const node)
   SoType t = node->getTypeId();
 
   int idx = SoNode::getActionMethodIndex(t);
-  SoActionMethod func = (*this->traversalMethods)[idx];
+  SoActionMethod func = this->traversalMethods->getMethod(idx);
 
   SoNodeProfiling profiling;
   profiling.preTraversal(this);

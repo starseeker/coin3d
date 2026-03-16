@@ -101,9 +101,7 @@
 #include <Inventor/SbTime.h>
 #include <Inventor/errors/SoDebugError.h>
 
-#ifdef OBOL_THREADSAFE
 #include <Inventor/threads/SbMutex.h>
-#endif // OBOL_THREADSAFE
 
 #include "misc/SbHash.h"
 
@@ -166,12 +164,10 @@ public:
   uint32_t alive;
   static void assertAlive(SoSensorManagerP * that);
 
-#ifdef OBOL_THREADSAFE
   SbMutex timermutex;
   SbMutex delaymutex;
   SbMutex immediatemutex;
   SbMutex reschedulemutex;
-#endif // OBOL_THREADSAFE
 };
 
 // The reason this is useful to keep around is that it is good for
@@ -193,7 +189,6 @@ SoSensorManagerP::assertAlive(SoSensorManagerP * that)
   }
 }
 
-#ifdef OBOL_THREADSAFE
 
 #define LOCK_TIMER_QUEUE(_mgr_) \
   _mgr_->pimpl->timermutex.lock();
@@ -219,18 +214,6 @@ SoSensorManagerP::assertAlive(SoSensorManagerP * that)
 #define UNLOCK_RESCHEDULE_LIST(_mgr_) \
   _mgr_->pimpl->immediatemutex.unlock();
 
-#else // OBOL_THREADSAFE
-
-#define LOCK_TIMER_QUEUE(_mgr_)
-#define UNLOCK_TIMER_QUEUE(_mgr_)
-#define LOCK_DELAY_QUEUE(_mgr_)
-#define UNLOCK_DELAY_QUEUE(_mgr_)
-#define LOCK_IMMEDIATE_QUEUE(_mgr_)
-#define UNLOCK_IMMEDIATE_QUEUE(_mgr_)
-#define LOCK_RESCHEDULE_LIST(_mgr_)
-#define UNLOCK_RESCHEDULE_LIST(_mgr_)
-
-#endif // ! OBOL_THREADSAFE
 
 #define PRIVATE(obj) ((obj)->pimpl)
 

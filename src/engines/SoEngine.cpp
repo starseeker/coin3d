@@ -70,9 +70,7 @@
 #include <Inventor/lists/SoEngineOutputList.h>
 
 #include "config.h"
-#ifdef OBOL_THREADSAFE
 #include "threads/recmutexp.h"
-#endif // OBOL_THREADSAFE
 
 // *************************************************************************
 
@@ -105,22 +103,12 @@ SoEngine::SoEngine(void)
 */
 SoEngine::~SoEngine()
 {
-#if OBOL_DEBUG && 0 // debug
-  SoDebugError::postInfo("SoEngine::~SoEngine", "%p", this);
-#endif // debug
 }
 
 // Overrides SoBase::destroy().
 void
 SoEngine::destroy(void)
 {
-#if OBOL_DEBUG && 0 // debug
-  SbName n = this->getName();
-  SoType t = this->getTypeId();
-  SoDebugError::postInfo("SoEngine::destroy", "start -- '%s' (%s)",
-                         n.getString(),
-                         t.getName().getString());
-#endif // debug
 
   // evaluate() before we actually destruct. It would be too late
   // during the destructor, as the SoEngine::evaluate() method is pure
@@ -134,22 +122,13 @@ SoEngine::destroy(void)
 
   // need to lock to avoid that evaluateWrapper() is called
   // simultaneously from more than one thread
-#ifdef OBOL_THREADSAFE
   cc_recmutex_internal_field_lock();
-#endif // OBOL_THREADSAFE
   this->evaluateWrapper();
-#ifdef OBOL_THREADSAFE
   cc_recmutex_internal_field_unlock();
-#endif // OBOL_THREADSAFE
 
   // SoBase destroy().
   inherited::destroy();
 
-#if OBOL_DEBUG && 0 // debug
-  SoDebugError::postInfo("SoEngine::destroy", "done -- '%s' (%s)",
-                         n.getString(),
-                         t.getName().getString());
-#endif // debug
 }
 
 /*!
@@ -306,10 +285,6 @@ SoEngine::inputChanged(SoField * OBOL_UNUSED_ARG(which))
 void
 SoEngine::notify(SoNotList * nl)
 {
-#if OBOL_DEBUG && 0 // debug
-  SoDebugError::postInfo("SoEngine::notify", "%p - %s, start",
-                         this, this->getTypeId().getName().getString());
-#endif // debug
 
   // Avoid recursive notification calls.
   if (this->isNotifying()) return;
@@ -344,10 +319,6 @@ SoEngine::notify(SoNotList * nl)
 
   this->flags &= ~FLAG_ISNOTIFYING;
 
-#if OBOL_DEBUG && 0 // debug
-  SoDebugError::postInfo("SoEngine::notify", "%p - %s, done",
-                         this, this->getTypeId().getName().getString());
-#endif // debug
 }
 
 /*!
@@ -515,11 +486,6 @@ SoEngine::shouldCopy(void) const
     }
   }
 
-#if OBOL_DEBUG && 0 // debug
-  SoDebugError::postInfo("SoEngine::shouldCopy", "%p - %s, result==%s",
-                         this, this->getTypeId().getName().getString(),
-                         result ? "TRUE" : "FALSE");
-#endif // debug
 
   return result;
 }

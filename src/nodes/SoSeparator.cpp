@@ -84,9 +84,7 @@
 #include "CoinTidbits.h"
 #include <Inventor/threads/SbStorage.h>
 
-#ifdef OBOL_THREADSAFE
 #include <Inventor/threads/SbMutex.h>
-#endif // OBOL_THREADSAFE
 
 #include "nodes/SoSubNodeP.h"
 #include "glue/glp.h"
@@ -319,14 +317,12 @@ public:
   uint32_t bboxcache_usecount;
   uint32_t bboxcache_destroycount;
 
-#ifdef OBOL_THREADSAFE
   // FIXME: a mutex for every SoSeparator instance seems a bit
   // excessive, especially since Microsoft Windows might have rather strict
   // limits on the total amount of mutex resources a process (or even
   // a user) can allocate. so consider making this a class-wide
   // instance instead.  -mortene.
   SbMutex mutex;
-#endif // !OBOL_THREADSAFE
   SbStorage * glcachestorage;
   static void invalidate_gl_cache(void * tls, void *) {
     soseparator_storage * ptr = (soseparator_storage*) tls;
@@ -344,14 +340,10 @@ public:
   }
 
   void lock(void) {
-#ifdef OBOL_THREADSAFE
     this->mutex.lock();
-#endif // OBOL_THREADSAFE
   }
   void unlock(void) {
-#ifdef OBOL_THREADSAFE
     this->mutex.unlock();
-#endif // OBOL_THREADSAFE
   }
 
   static SbBool doCull(SoSeparatorP * thisp, SoState * state,

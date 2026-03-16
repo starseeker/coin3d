@@ -46,12 +46,10 @@
 
 #include <Inventor/lists/SoEnabledElementsList.h>
 #include <cassert>
+#include <atomic>
+#include <mutex>
 
 #include "config.h"
-
-#ifdef OBOL_THREADSAFE
-#include <Inventor/threads/SbMutex.h>
-#endif // OBOL_THREADSAFE
 
 #ifndef DOXYGEN_SKIP_THIS
 
@@ -60,22 +58,16 @@ public:
   int prevmerge;
   SoTypeList elements;
   SoEnabledElementsList * parent;
-#ifdef OBOL_THREADSAFE
-  SbMutex mutex;
-#endif // OBOL_THREADSAFE
+  std::recursive_mutex mutex;
   void lock(void) {
-#ifdef OBOL_THREADSAFE
     this->mutex.lock();
-#endif
   }
   void unlock(void) {
-#ifdef OBOL_THREADSAFE
     this->mutex.unlock();
-#endif
   }
 };
 
-static int enable_counter = 0;
+static std::atomic<int> enable_counter{0};
 
 #endif // DOXYGEN_SKIP_THIS
 
@@ -108,16 +100,16 @@ SoEnabledElementsList::getElements(void) const
 {
   PRIVATE(this)->lock();
   // check if we need a new merge
-  if (PRIVATE(this)->prevmerge != enable_counter) {
-    int storedcounter = enable_counter;
+  if (PRIVATE(this)->prevmerge != enable_counter.load(std::memory_order_acquire)) {
+    int storedcounter = enable_counter.load(std::memory_order_relaxed);
     SoEnabledElementsList * plist = const_cast<SoEnabledElementsList*>(static_cast<const SoEnabledElementsList*>(PRIVATE(this)->parent));
     while (plist) {
       const_cast<SoEnabledElementsList*>(this)->merge(*plist);
       plist = plist->pimpl->parent;
     }
     // use and restore old counter since it might change during merge
-    const_cast<SoEnabledElementsList*>(this)->pimpl->prevmerge =
-      enable_counter = storedcounter;
+    const_cast<SoEnabledElementsList*>(this)->pimpl->prevmerge = storedcounter;
+    enable_counter.store(storedcounter, std::memory_order_release);
   }
   PRIVATE(this)->unlock();
   return PRIVATE(this)->elements;
@@ -130,6 +122,7 @@ SoEnabledElementsList::getElements(void) const
 void
 SoEnabledElementsList::enable(const SoType elementtype, const int stackindex)
 {
+  PRIVATE(this)->lock();
   while (stackindex >= PRIVATE(this)->elements.getLength())
     PRIVATE(this)->elements.append(SoType::badType());
 
@@ -138,8 +131,9 @@ SoEnabledElementsList::enable(const SoType elementtype, const int stackindex)
       (elementtype != currtype && elementtype.isDerivedFrom(currtype))) {
     PRIVATE(this)->elements.set(stackindex, elementtype);
     // increment to detect when a new merge is needed
-    enable_counter++;
+    enable_counter.fetch_add(1, std::memory_order_release);
   }
+  PRIVATE(this)->unlock();
 }
 
 /*!
@@ -149,11 +143,13 @@ SoEnabledElementsList::enable(const SoType elementtype, const int stackindex)
 void
 SoEnabledElementsList::merge(const SoEnabledElementsList & eel)
 {
+  PRIVATE(this)->lock();
   SoType bad = SoType::badType();
   const int num = eel.pimpl->elements.getLength();
   for (int i = 0; i < num; i++) {
     if (eel.pimpl->elements[i] != bad) this->enable(eel.pimpl->elements[i], i);
   }
+  PRIVATE(this)->unlock();
 }
 
 /*!
@@ -164,7 +160,7 @@ SoEnabledElementsList::merge(const SoEnabledElementsList & eel)
 int
 SoEnabledElementsList::getCounter(void)
 {
-  return enable_counter;
+  return enable_counter.load(std::memory_order_relaxed);
 }
 
 #undef PRIVATE

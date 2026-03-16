@@ -63,9 +63,7 @@
 #include "CoinTidbits.h"
 
 
-#ifdef OBOL_THREADSAFE
 #include <Inventor/threads/SbMutex.h>
-#endif // OBOL_THREADSAFE
 
 // *************************************************************************
 
@@ -116,9 +114,7 @@ class SoSceneTextureCubeMapP {
   SoCamera * ensureCamera(void);
   SoNode   * updateCamera(const SoGLCubeMapImage::Target target);
     
-#ifdef OBOL_THREADSAFE
   SbMutex mutex;
-#endif // OBOL_THREADSAFE
 
   SbBool canrendertotexture;
   unsigned char * offscreenbuffer;
@@ -155,13 +151,8 @@ SbRotation SoSceneTextureCubeMapP::ROT_POS_Z =
 
 #define PRIVATE(p) (p->pimpl)
 
-#ifdef OBOL_THREADSAFE
 #define LOCK_GLIMAGE(_thisp_) (PRIVATE(_thisp_)->mutex.lock())
 #define UNLOCK_GLIMAGE(_thisp_) (PRIVATE(_thisp_)->mutex.unlock())
-#else // OBOL_THREADSAFE
-#define LOCK_GLIMAGE(_thisp_)
-#define UNLOCK_GLIMAGE(_thisp_)
-#endif // OBOL_THREADSAFE
 
 
 SO_NODE_SOURCE(SoSceneTextureCubeMap);

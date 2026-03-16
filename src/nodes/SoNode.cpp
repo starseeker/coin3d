@@ -194,6 +194,7 @@ SbUniqueId is not really a class, just a \c typedef.
 // *************************************************************************
 
 #include <string>
+#include <atomic>
 
 #include <Inventor/nodes/SoNode.h>
 
@@ -328,7 +329,7 @@ SbUniqueId is not really a class, just a \c typedef.
 
 // *************************************************************************
 
-SbUniqueId SoNode::nextUniqueId = 1;
+std::atomic<SbUniqueId> SoNode::nextUniqueId{1};
 int SoNode::nextActionMethodIndex = 0;
 SoType SoNode::classTypeId STATIC_SOTYPE_INIT;
 
@@ -387,10 +388,12 @@ SoNode::getState(const unsigned int bits) const
 // simplify the VBO handling in attribute nodes, no node can have
 // nodeid == 0 (making it possible for VBO caches to set the current
 // dataid to 0 to mark the data as invalid / not set).
+// Note: fetch_add uses relaxed ordering — uniqueness is all that matters here;
+// the write to this->uniqueId is always private to the constructing thread.
 #define SET_UNIQUE_NODE_ID(obj) \
-  (obj)->uniqueId = SoNode::nextUniqueId++;   \
-  if (obj->uniqueId == 0) {                 \
-    obj->uniqueId = SoNode::nextUniqueId++; \
+  (obj)->uniqueId = SoNode::nextUniqueId.fetch_add(1, std::memory_order_relaxed); \
+  if ((obj)->uniqueId == 0) {                                                      \
+    (obj)->uniqueId = SoNode::nextUniqueId.fetch_add(1, std::memory_order_relaxed); \
   }
 
 // *************************************************************************
@@ -1472,7 +1475,7 @@ SoNode::copyThroughConnection(void) const
 SbUniqueId
 SoNode::getNextNodeId(void)
 {
-  return SoNode::nextUniqueId;
+  return SoNode::nextUniqueId.load(std::memory_order_relaxed);
 }
 
 /*!

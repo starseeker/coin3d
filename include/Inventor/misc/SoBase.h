@@ -37,6 +37,8 @@
 #include <Inventor/SoDB.h>
 #include <Inventor/lists/SoAuditorList.h>
 #include <map>
+#include <atomic>
+#include <cstdint>
 
 class SbString;
 class SoBaseList;
@@ -141,10 +143,12 @@ private:
 
   static SoType classTypeId;
 
-  struct {
-    mutable signed int referencecount : 28;
-    mutable unsigned int alive : 4;
-  } objdata;
+  // Reference count: atomic for thread safety.
+  mutable std::atomic<int32_t> referencecount;
+  // Alive sentinel: written only in constructor/destructor (single-thread
+  // contexts), read only in assertAlive() under OBOL_DEBUG.  Not atomic;
+  // assertAlive() is a debug-only best-effort check.
+  mutable uint8_t alive;
 
   void doNotify(SoNotList * l, const void * auditor, const SoNotRec::Type type);
   std::map<void*, void*> auditortree;

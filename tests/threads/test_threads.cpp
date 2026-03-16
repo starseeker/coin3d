@@ -151,6 +151,9 @@ static void *rwmutex_writer_func(void *data) {
 static void *barrier_thread_func(void *data) {
     g_counter++;
     g_barrier->enter();
+    // g_shared_data is a plain int; protect it so concurrent post-barrier
+    // increments from all threads don't race and lose updates.
+    SbThreadAutoLock lock(g_mutex);
     g_shared_data++;
     return nullptr;
 }
@@ -287,6 +290,7 @@ static bool test_rw_mutex() {
 
 static bool test_barrier() {
     const int num_threads = 4;
+    g_mutex = new SbMutex();
     g_barrier = new SbBarrier(num_threads);
     g_counter = 0;
     g_shared_data = 0;
@@ -306,6 +310,8 @@ static bool test_barrier() {
               (g_shared_data == num_threads);
     delete g_barrier;
     g_barrier = nullptr;
+    delete g_mutex;
+    g_mutex = nullptr;
     return ok;
 }
 

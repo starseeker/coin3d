@@ -237,7 +237,10 @@ option(OBOL_USE_SWRAST
     ${_obol_swrast_default})
 unset(_obol_sysgl_default)
 unset(_obol_swrast_default)
-option(OBOL_THREADSAFE "Enable thread safe render traversals" ON)
+# Thread safety is now unconditional (all #ifdef OBOL_THREADSAFE guards were
+# removed in Phase 3).  OBOL_THREADSAFE is kept as a no-op option for backward
+# compatibility only; it has no effect on the build.
+option(OBOL_THREADSAFE "Deprecated – thread safety is now always on; kept for compatibility" ON)
 
 # Component options
 option(HAVE_NODEKITS "Enable NodeKit support" ON)
@@ -251,6 +254,13 @@ option(USE_EXCEPTIONS "Compile with exceptions (g++ only)" ON)
 # Code coverage (GCC/Clang only; builds with --coverage flags and provides a
 # 'coverage' target that runs CTest then generates an lcov HTML report)
 option(OBOL_COVERAGE "Enable code coverage instrumentation (GCC/Clang)" OFF)
+
+# ThreadSanitizer (GCC/Clang only; adds -fsanitize=thread to detect data races
+# at runtime).  Mutually exclusive with OBOL_COVERAGE and address sanitizer.
+# Usage:
+#   cmake -DOBOL_TSAN=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo ...
+#   cmake --build <dir> && ctest
+option(OBOL_TSAN "Enable ThreadSanitizer instrumentation (GCC/Clang)" OFF)
 
 # Extra warning flags for the Obol library target (GCC/Clang only).
 # Applied via target_compile_options so external dependencies are unaffected.
@@ -676,11 +686,8 @@ if(HAVE_THREADS)
 else()
   set(FEAT_HAVE_THREADS 0)
 endif()
-if(OBOL_THREADSAFE)
-  set(FEAT_HAVE_SAFETHREAD 1)
-else()
-  set(FEAT_HAVE_SAFETHREAD 0)
-endif()
+# Thread safety is unconditional — always report it as enabled.
+set(FEAT_HAVE_SAFETHREAD 1)
 
 # ============================================================================
 # Code coverage instrumentation flags
@@ -715,6 +722,40 @@ if(OBOL_COVERAGE)
     message(WARNING
       "OBOL_COVERAGE=ON but compiler is not GCC/Clang – coverage disabled.")
     set(OBOL_COVERAGE OFF CACHE BOOL "" FORCE)
+  endif()
+endif()
+
+# ============================================================================
+# ThreadSanitizer instrumentation flags
+#
+# When OBOL_TSAN=ON (and the compiler is GCC or Clang), add -fsanitize=thread
+# to the compile and link flags for the entire project.  This must be done
+# BEFORE the source subdirectories are added.
+#
+# TSan is mutually exclusive with -fsanitize=address and --coverage; do not
+# combine with OBOL_COVERAGE=ON.
+#
+# Usage:
+#   cmake -DOBOL_TSAN=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo ...
+#   cmake --build <dir> && ctest --output-on-failure
+# ============================================================================
+if(OBOL_TSAN)
+  if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang" OR
+     CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    if(OBOL_COVERAGE)
+      message(WARNING
+        "OBOL_TSAN=ON and OBOL_COVERAGE=ON are mutually exclusive. "
+        "Disabling OBOL_TSAN.")
+      set(OBOL_TSAN OFF CACHE BOOL "" FORCE)
+    else()
+      message(STATUS "ThreadSanitizer instrumentation enabled")
+      add_compile_options(-fsanitize=thread -fno-omit-frame-pointer)
+      add_link_options(-fsanitize=thread)
+    endif()
+  else()
+    message(WARNING
+      "OBOL_TSAN=ON but compiler is not GCC/Clang – ThreadSanitizer disabled.")
+    set(OBOL_TSAN OFF CACHE BOOL "" FORCE)
   endif()
 endif()
 
@@ -811,7 +852,8 @@ endif()
 # Feature summary
 # ============================================================================
 
-add_feature_info(ThreadSafe OBOL_THREADSAFE "Thread safe render traversals")
+add_feature_info(ThreadSafe FEAT_HAVE_SAFETHREAD "Thread safe render traversals (always on)")
+add_feature_info(ThreadSanitizer OBOL_TSAN "ThreadSanitizer instrumentation")
 add_feature_info(Exceptions USE_EXCEPTIONS "Compile with exceptions")
 
 feature_summary(WHAT ALL

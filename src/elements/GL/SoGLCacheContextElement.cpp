@@ -42,8 +42,12 @@
 #include "config.h"
 #include <Inventor/elements/SoGLCacheContextElement.h>
 
+#include <atomic>
 #include <cstdlib>
 #include <cstring>
+#include <mutex>
+#include <thread>
+#include <unordered_map>
 
 #include <Inventor/SbName.h>
 #include <Inventor/elements/SoGLDisplayList.h>
@@ -52,13 +56,23 @@
 #include <Inventor/system/gl.h>
 #include <Inventor/misc/SoContextHandler.h>
 #include <Inventor/misc/SoGLDriverDatabase.h>
+#include <Inventor/errors/SoDebugError.h>
 
 #include "rendering/SoGL.h"
 #include "CoinTidbits.h"
 
 // *************************************************************************
 
-static int biggest_cache_context_id = 0;
+static std::atomic<int> biggest_cache_context_id{0};
+
+// Protects extsupportlist, scheduledeletelist, scheduledeletecblist,
+// and context_thread_map.
+static std::mutex glcache_list_mutex;
+
+// Maps each cache-context id to the std::thread::id of the thread that
+// first called set() for that context.  Used to detect cross-thread GL
+// context access (GL contexts are not safely sharable between threads).
+static std::unordered_map<int, std::thread::id> context_thread_map;
 
 // *************************************************************************
 
@@ -112,7 +126,7 @@ static void soglcachecontext_cleanup(void)
     soglcache_contextdestructioncb = NULL;
   }
 
-  biggest_cache_context_id = 0;
+  biggest_cache_context_id.store(0, std::memory_order_relaxed);
 }
 
 //
@@ -123,6 +137,8 @@ void
 SoGLCacheContextElement::cleanupContext(uint32_t contextid, void * OBOL_UNUSED_ARG(userdata))
 {
   int context = (int) contextid;
+
+  std::lock_guard<std::mutex> lock(glcache_list_mutex);
 
   int i = 0;
   int n = scheduledeletelist->getLength();
@@ -150,6 +166,8 @@ SoGLCacheContextElement::cleanupContext(uint32_t contextid, void * OBOL_UNUSED_A
     else i++;
   }
 
+  // Remove thread affinity record for this context.
+  context_thread_map.erase(context);
 }
 
 // *************************************************************************
@@ -235,8 +253,31 @@ SoGLCacheContextElement::set(SoState * state, int context,
   elem->rendering = remoterendering ? RENDERING_SET_INDIRECT : RENDERING_SET_DIRECT;
   elem->autocachebits = 0;
   elem->context = context;
-  if (context > biggest_cache_context_id) {
-    biggest_cache_context_id = context;
+  // Update biggest_cache_context_id atomically with a CAS loop.
+  {
+    int cur = biggest_cache_context_id.load(std::memory_order_relaxed);
+    while (context > cur) {
+      if (biggest_cache_context_id.compare_exchange_weak(cur, context,
+            std::memory_order_relaxed, std::memory_order_relaxed))
+        break;
+    }
+  }
+
+  // Record or verify per-context thread affinity.  OpenGL contexts are
+  // bound to a single thread; detecting a cross-thread access here is an
+  // early warning of a likely GL-state corruption.
+  {
+    std::lock_guard<std::mutex> lock(glcache_list_mutex);
+    auto it = context_thread_map.find(context);
+    if (it == context_thread_map.end()) {
+      context_thread_map[context] = std::this_thread::get_id();
+    } else if (it->second != std::this_thread::get_id()) {
+      SoDebugError::postWarning("SoGLCacheContextElement::set",
+        "GL cache context %d is being accessed from a different thread "
+        "than the one that originally used it. GL contexts must not be "
+        "shared across threads without explicit context migration.",
+        context);
+    }
   }
 
   if (remoterendering) elem->autocachebits = DO_AUTO_CACHE;
@@ -272,6 +313,7 @@ int
 SoGLCacheContextElement::getExtID(const char * str)
 {
   SbName extname(str);
+  std::lock_guard<std::mutex> lock(glcache_list_mutex);
   int i, n = extsupportlist->getLength();
   for (i = 0; i < n; i++) {
     if ((*extsupportlist)[i]->extname == extname) break;
@@ -293,6 +335,7 @@ SoGLCacheContextElement::getExtID(const char * str)
 SbBool
 SoGLCacheContextElement::extSupported(SoState * state, int extid)
 {
+  std::lock_guard<std::mutex> lock(glcache_list_mutex);
   assert(extid >= 0 && extid < extsupportlist->getLength());
 
   so_glext_info * info = (*extsupportlist)[extid];
@@ -472,6 +515,7 @@ SoGLCacheContextElement::scheduleDelete(SoState * state, class SoGLDisplayList *
     delete dl;
   }
   else {
+    std::lock_guard<std::mutex> lock(glcache_list_mutex);
     scheduledeletelist->append(dl);
   }
 }
@@ -497,6 +541,7 @@ SoGLCacheContextElement::scheduleDeleteCallback(const uint32_t contextid,
   info->cb = cb;
   info->closure = closure;
 
+  std::lock_guard<std::mutex> lock(glcache_list_mutex);
   scheduledeletecblist->append(info);
 }
 
@@ -515,6 +560,6 @@ SoGLCacheContextElement::scheduleDeleteCallback(const uint32_t contextid,
 uint32_t
 SoGLCacheContextElement::getUniqueCacheContext(void)
 {
-  uint32_t id = ++biggest_cache_context_id;
-  return id;
+  return static_cast<uint32_t>(
+    biggest_cache_context_id.fetch_add(1, std::memory_order_relaxed) + 1);
 }

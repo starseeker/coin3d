@@ -79,9 +79,7 @@
 #include <Inventor/errors/SoDebugError.h>
 #include <Inventor/system/gl.h>
 
-#ifdef OBOL_THREADSAFE
 #include <Inventor/threads/SbMutex.h>
-#endif // OBOL_THREADSAFE
 
 #include "CoinTidbits.h"
 #include "rendering/SoGL.h"
@@ -122,9 +120,7 @@ public:
   static SoType classTypeId;
 
   cc_storage * storage;
-#ifdef OBOL_THREADSAFE
   SbMutex mutex;
-#endif // !OBOL_THREADSAFE
   unsigned char ** cache;
   SbVec2s * cachesize;
   int numcachelevels;
@@ -135,14 +131,10 @@ public:
   }
 
   inline void lock(void) {
-#ifdef OBOL_THREADSAFE
     this->mutex.lock();
-#endif // OBOL_THREADSAFE
   }
   inline void unlock(void) {
-#ifdef OBOL_THREADSAFE
     this->mutex.unlock();
-#endif // OBOL_THREADSAFE
   }
 
   void copySubImage(SoGLBigImageTls * tls,
@@ -910,10 +902,6 @@ SoGLBigImageP::unrefOldDL(SoGLBigImageTls * tls, SoState * state, const uint32_t
   for (int i = 0; i < numimages; i++) {
     if (tls->glimagearray[i]) {
       if (tls->glimageage[i] >= maxage) {
-#if OBOL_DEBUG && 0 // debug
-        SoDebugError::postInfo("SoGLBigImageP::unrefOldDL",
-                               "Killed image because of old age.");
-#endif // debug
         tls->glimagearray[i]->unref(state);
         tls->glimagearray[i] = NULL;
       }

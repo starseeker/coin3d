@@ -135,9 +135,7 @@ SoVertexShape::initClass(void)
 {
   SO_NODE_INTERNAL_INIT_ABSTRACT_CLASS(SoVertexShape, SO_FROM_INVENTOR_1);
 
-#ifdef OBOL_THREADSAFE
   SoVertexShapeP::normalcachemutex = new SbRWMutex(SbRWMutex::READ_PRECEDENCE);
-#endif // OBOL_THREADSAFE
 
   coin_atexit((coin_atexit_f *)SoVertexShapeP::cleanup, CC_ATEXIT_NORMAL);
 }

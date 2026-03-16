@@ -75,9 +75,7 @@
 
 #include "config.h"
 
-#ifdef OBOL_THREADSAFE
 #include <Inventor/threads/SbRWMutex.h>
-#endif // OBOL_THREADSAFE
 
 #include "SbImageFormatHandler.h"
 #include "SbJpegImageHandler.h"
@@ -107,9 +105,7 @@ public:
       bpp(0),
       schedulecb(NULL),
       scheduleclosure(NULL)
-#ifdef OBOL_THREADSAFE
     , rwmutex(SbRWMutex::READ_PRECEDENCE)
-#endif // OBOL_THREADSAFE
   { }
   void freeData(void) {
     if (this->bytes) {
@@ -143,7 +139,6 @@ public:
 
   static SbList <ReadImageCBData> * readimagecallbacks;
 
-#ifdef OBOL_THREADSAFE
   SbRWMutex rwmutex;
   void readLock(void) {
     //    fprintf(stderr,"readlock: %p\n", this);
@@ -163,12 +158,6 @@ public:
     //fprintf(stderr,"writeUnlock: %p\n", this);
     this->rwmutex.writeUnlock();
   }
-#else // OBOL_THREADSAFE
-  void readLock(void) { }
-  void readUnlock(void) { }
-  void writeLock(void) { }
-  void writeUnlock(void) { }
-#endif // ! OBOL_THREADSAFE
 
 };
 

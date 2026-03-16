@@ -131,17 +131,10 @@
 #include "CoinTidbits.h"
 #include "misc/SbHash.h"
 
-#ifdef OBOL_THREADSAFE
 #include "threads/recmutexp.h"
 #define SOFIELD_RECLOCK (void) cc_recmutex_internal_field_lock()
 #define SOFIELD_RECUNLOCK (void) cc_recmutex_internal_field_unlock()
 
-#else // OBOL_THREADSAFE
-
-#define SOFIELD_RECLOCK
-#define SOFIELD_RECUNLOCK
-
-#endif // !OBOL_THREADSAFE
 
 // OBOL_DEBUG_EXTRA enables verbose field-level debug output; define as 1
 // to activate (not defined by the build system, so default to 0 here).

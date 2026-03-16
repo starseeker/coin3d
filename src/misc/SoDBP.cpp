@@ -15,18 +15,16 @@
 
 #include "fields/SoGlobalField.h"
 
-#ifdef OBOL_THREADSAFE
 // need to include SbRWMutex.h to make C++ call the actual destructor,
 // and not just default destructor
 #include <Inventor/threads/SbRWMutex.h>
 SbRWMutex * SoDBP::globalmutex = NULL;
-#endif // OBOL_THREADSAFE
 SbList<SoDB_HeaderInfo *> * SoDBP::headerlist = NULL;
 SoSensorManager * SoDBP::sensormanager = NULL;
 SoTimerSensor * SoDBP::globaltimersensor = NULL;
 UInt32ToInt16Map * SoDBP::converters = NULL;
 SbBool SoDBP::isinitialized = FALSE;
-int SoDBP::notificationcounter = 0;
+std::atomic<int> SoDBP::notificationcounter{0};
 SbList<SoDBP::ProgressCallbackInfo> * SoDBP::progresscblist = NULL;
 
 // *************************************************************************
@@ -65,10 +63,8 @@ SoDBP::clean(void)
   delete SoDBP::headerlist;
   SoDBP::headerlist = NULL;
 
-#ifdef OBOL_THREADSAFE
   delete SoDBP::globalmutex;
   SoDBP::globalmutex = NULL;
-#endif // OBOL_THREADSAFE
 }
 
 void

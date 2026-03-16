@@ -243,43 +243,31 @@
 class SoIndexedFaceSetP {
 public:
   SoIndexedFaceSetP(void) 
-#ifdef OBOL_THREADSAFE
     : convexmutex(SbRWMutex::READ_PRECEDENCE)
-#endif // OBOL_THREADSAFE
   { }
 
   SoVertexArrayIndexer * vaindexer;
   SoConvexDataCache * convexCache;
   int concavestatus;
 
-#ifdef OBOL_THREADSAFE
   // FIXME: a mutex for every instance seems a bit excessive,
   // especially since Microsoft Windows might have rather strict limits on the
   // total amount of mutex resources a process (or even a user) can
   // allocate. so consider making this a class-wide instance instead.
   // -mortene.
   SbRWMutex convexmutex;
-#endif // OBOL_THREADSAFE
 
   void readLockConvexCache(void) {
-#ifdef OBOL_THREADSAFE
     this->convexmutex.readLock();
-#endif // OBOL_THREADSAFE
   }
   void readUnlockConvexCache(void) {
-#ifdef OBOL_THREADSAFE
     this->convexmutex.readUnlock();
-#endif // OBOL_THREADSAFE
   }
   void writeLockConvexCache(void) {
-#ifdef OBOL_THREADSAFE
     this->convexmutex.writeLock();
-#endif // OBOL_THREADSAFE
   }
   void writeUnlockConvexCache(void) {
-#ifdef OBOL_THREADSAFE
     this->convexmutex.writeUnlock();
-#endif // OBOL_THREADSAFE
   }
 };
 

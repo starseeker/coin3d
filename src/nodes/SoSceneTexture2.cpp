@@ -310,9 +310,7 @@
 #include <Inventor/misc/SoGLDriverDatabase.h>
 
 
-#ifdef OBOL_THREADSAFE
 #include <Inventor/threads/SbMutex.h>
-#endif // OBOL_THREADSAFE
 
 #include "nodes/SoSubNodeP.h"
 #include "elements/SoTextureScalePolicyElement.h"
@@ -405,9 +403,7 @@ public:
     return q > 0.5f;
   }
 
-#ifdef OBOL_THREADSAFE
   SbMutex mutex;
-#endif // OBOL_THREADSAFE
   SbBool canrendertotexture;
   unsigned char * offscreenbuffer;
   int offscreenbuffersize;
@@ -418,13 +414,8 @@ public:
 #define PRIVATE(obj) obj->pimpl
 
 
-#ifdef OBOL_THREADSAFE
 #define LOCK_GLIMAGE(_thisp_) (PRIVATE(_thisp_)->mutex.lock())
 #define UNLOCK_GLIMAGE(_thisp_) (PRIVATE(_thisp_)->mutex.unlock())
-#else // OBOL_THREADSAFE
-#define LOCK_GLIMAGE(_thisp_)
-#define UNLOCK_GLIMAGE(_thisp_)
-#endif // OBOL_THREADSAFE
 
 SO_NODE_SOURCE(SoSceneTexture2);
 

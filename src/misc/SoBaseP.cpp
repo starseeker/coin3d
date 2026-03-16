@@ -86,6 +86,8 @@ SbString * SoBase::PImpl::refwriteprefix = NULL;
 SbBool SoBase::PImpl::tracerefs = FALSE;
 uint32_t SoBase::PImpl::writecounter = 0;
 
+std::shared_mutex SoBase::PImpl::base_dict_mutex;
+
 // *************************************************************************
 
 // Create a new SoNode-derived instance from the input stream.

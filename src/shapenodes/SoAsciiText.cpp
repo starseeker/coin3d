@@ -257,23 +257,16 @@ public:
   SoGlyphCache * cache;
   SbFont * font;
 
-#ifdef OBOL_THREADSAFE
   void lock(void) { this->mutex.lock(); }
   void unlock(void) { this->mutex.unlock(); }
-#else  // ! OBOL_THREADSAFE
-  void lock(void) { }
-  void unlock(void) { }
-#endif // ! OBOL_THREADSAFE
 
 private:
-#ifdef OBOL_THREADSAFE
   // FIXME: a mutex for every instance seems a bit excessive,
   // especially since Microsoft Windows might have rather strict limits on the
   // total amount of mutex resources a process (or even a user) can
   // allocate. so consider making this a class-wide instance instead.
   // -mortene.
   SbMutex mutex;
-#endif // OBOL_THREADSAFE
 };
 
 #define PRIVATE(p) ((p)->pimpl)

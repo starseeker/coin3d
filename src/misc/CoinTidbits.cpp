@@ -99,9 +99,7 @@ extern "C" {
 /* ********************************************************************** */
 /* Global state variables */
 
-#ifdef OBOL_THREADSAFE
 static std::mutex atexit_list_monitor;
-#endif /* OBOL_THREADSAFE */
 
 static int OBOL_DEBUG_EXTRA = -1;
 static int OBOL_DEBUG_NORMALIZE = -1;
@@ -634,9 +632,7 @@ void coin_atexit_cleanup(void)
 
 void coin_atexit_func(const char* name, coin_atexit_f* f, coin_atexit_priorities priority)
 {
-#ifdef OBOL_THREADSAFE
     atexit_list_monitor.lock();
-#endif /* OBOL_THREADSAFE */
     
     assert(!isexiting && "tried to attach an atexit function while exiting");
     
@@ -656,9 +652,7 @@ void coin_atexit_func(const char* name, coin_atexit_f* f, coin_atexit_priorities
         cc_list_append(atexit_list, data);
     }
     
-#ifdef OBOL_THREADSAFE
     atexit_list_monitor.unlock();
-#endif /* OBOL_THREADSAFE */
 }
 
 void cc_coin_atexit(coin_atexit_f* f)
