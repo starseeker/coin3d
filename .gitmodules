@@ -4,5 +4,5 @@
 
 [submodule "external/fltk"]
 	path = external/fltk
-	url = https://github.com/fltk/fltk.git
+	url = https://github.com/fltk/fltk
 	branch = branch-1.3

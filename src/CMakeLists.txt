@@ -33,6 +33,10 @@ include_directories(BEFORE
   # subdirectory include_directories() calls don't propagate to the parent)
   "${PROJECT_SOURCE_DIR}/src/base/utf8/include"
   "${PROJECT_BINARY_DIR}/src/draggers"
+  # CAD subsystem internal headers
+  "${CMAKE_CURRENT_SOURCE_DIR}/cad"
+  "${CMAKE_CURRENT_SOURCE_DIR}/cad/lod"
+  "${CMAKE_CURRENT_SOURCE_DIR}/cad/picking"
 )
 
 # add include dirs for non targets
@@ -55,6 +59,7 @@ foreach(_subdir actions base bundles caches details draggers elements
   add_subdirectory(${_subdir})
 endforeach()
 add_subdirectory(doc)
+add_subdirectory(cad)
 
 # As CMake does not support deep header hierarchies for framework generation we tweak the
 # installation paths for the install commands.  To make sure the symbolic links for versioned
@@ -148,10 +153,16 @@ target_include_directories(${PROJECT_NAME}
         # Subdirectory-specific paths (needed in single-lib mode)
         "${PROJECT_SOURCE_DIR}/src/base/utf8/include"
         "${PROJECT_BINARY_DIR}/src/draggers"
+        # CAD subsystem internal headers
+        "${CMAKE_CURRENT_SOURCE_DIR}/cad"
+        "${CMAKE_CURRENT_SOURCE_DIR}/cad/lod"
+        "${CMAKE_CURRENT_SOURCE_DIR}/cad/picking"
         ${OBOL_TARGET_INCLUDE_DIRECTORIES}
     PUBLIC
         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
         $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
+        # obol/ public headers (CadIds, SoCADAssembly, SoCADDetail, DepthPolicy)
+        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
     INTERFACE
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
@@ -310,6 +321,12 @@ else()
   install(DIRECTORY ${CMAKE_BINARY_DIR}/include/Inventor/ 
           DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Inventor 
           COMPONENT development 
+          FILES_MATCHING PATTERN "*.h")
+
+  # Install obol-specific public headers (e.g. SoCAD* interfaces)
+  install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/obol/
+          DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/obol
+          COMPONENT development
           FILES_MATCHING PATTERN "*.h")
 
 

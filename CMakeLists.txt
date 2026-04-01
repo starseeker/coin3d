@@ -776,8 +776,12 @@ if(OBOL_BUILD_TESTS)
 
   enable_testing()
   add_subdirectory(tests)
-  add_subdirectory(examples)
 endif()
+
+# examples/ is always added so that standalone demos (e.g. cad_simulation_viewer)
+# can be built without enabling the full test suite.  Each target inside
+# examples/ guards itself with its own option check.
+add_subdirectory(examples)
 
 # ============================================================================
 # Code coverage report target (lcov + genhtml)

@@ -140,6 +140,12 @@ add_subdirectory(rendering)
 add_subdirectory(tools)
 add_subdirectory(threads)
 
+# -----------------------------------------------------------------------
+# CAD subsystem unit tests (cad/ subdirectory)
+# Tests for CadIds, LoD, and picking — no GL context required.
+# -----------------------------------------------------------------------
+add_subdirectory(cad)
+
 # ---- Generate render test dispatch table shared by obol_test and obol_render --
 # This file is written at configure time; it declares extern references to all
 # renamed main() functions and provides dispatchRenderTest().
