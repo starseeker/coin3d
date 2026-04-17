@@ -438,5 +438,247 @@ CadPickQuery::pickBounds(
     return best;
 }
 
+// ===========================================================================
+// CadPartTriBVH
+// ===========================================================================
+
+SbBox3f
+CadPartTriBVH::triBounds(const TriEntry& t) noexcept
+{
+    SbBox3f b;
+    b.extendBy(t.p0);
+    b.extendBy(t.p1);
+    b.extendBy(t.p2);
+    const float kBoundsPadding = 1e-6f;
+    SbVec3f bmin, bmax;
+    b.getBounds(bmin, bmax);
+    b.setBounds(bmin - SbVec3f(kBoundsPadding, kBoundsPadding, kBoundsPadding),
+                bmax + SbVec3f(kBoundsPadding, kBoundsPadding, kBoundsPadding));
+    return b;
+}
+
+bool
+CadPartTriBVH::rayTriIntersect(const SbLine& ray,
+                                const SbVec3f& p0, const SbVec3f& p1,
+                                const SbVec3f& p2,
+                                float& t, float& u, float& v) noexcept
+{
+    // Möller–Trumbore algorithm.
+    const SbVec3f& orig = ray.getPosition();
+    const SbVec3f  dir  = ray.getDirection();
+
+    SbVec3f e1 = p1 - p0;
+    SbVec3f e2 = p2 - p0;
+    SbVec3f h  = dir.cross(e2);
+    float   a  = e1.dot(h);
+
+    if (std::abs(a) < 1e-12f) return false;  // Ray is parallel to triangle
+
+    float   f  = 1.0f / a;
+    SbVec3f s  = orig - p0;
+    u = f * s.dot(h);
+    if (u < 0.0f || u > 1.0f) return false;
+
+    SbVec3f q = s.cross(e1);
+    v = f * dir.dot(q);
+    if (v < 0.0f || u + v > 1.0f) return false;
+
+    t = f * e2.dot(q);
+    return t > 0.0f;
+}
+
+void
+CadPartTriBVH::build(const std::vector<SbVec3f>& positions,
+                     const std::vector<uint32_t>& indices)
+{
+    triangles_.clear();
+    nodes_.clear();
+    if (positions.empty() || indices.size() < 3) return;
+
+    const size_t nTri = indices.size() / 3;
+    triangles_.reserve(nTri);
+    for (size_t i = 0; i < nTri; ++i) {
+        uint32_t i0 = indices[i * 3 + 0];
+        uint32_t i1 = indices[i * 3 + 1];
+        uint32_t i2 = indices[i * 3 + 2];
+        if (i0 >= positions.size() || i1 >= positions.size() ||
+                i2 >= positions.size()) continue;
+        TriEntry e;
+        e.p0       = positions[i0];
+        e.p1       = positions[i1];
+        e.p2       = positions[i2];
+        e.triIndex = static_cast<uint32_t>(i);
+        triangles_.push_back(e);
+    }
+    if (triangles_.empty()) return;
+
+    std::vector<int> idx(triangles_.size());
+    std::iota(idx.begin(), idx.end(), 0);
+    buildRecursive(idx, 0, static_cast<int>(idx.size()));
+}
+
+int
+CadPartTriBVH::buildRecursive(std::vector<int>& indices, int begin, int end)
+{
+    assert(begin < end);
+    int nodeIdx = static_cast<int>(nodes_.size());
+    nodes_.emplace_back();
+    BvhNode& node = nodes_.back();
+
+    SbBox3f combined;
+    for (int i = begin; i < end; ++i) {
+        combined.extendBy(triBounds(triangles_[indices[i]]));
+    }
+    node.bounds = combined;
+
+    if (end - begin == 1) {
+        node.itemIdx = indices[begin];
+        node.left  = -1;
+        node.right = -1;
+        return nodeIdx;
+    }
+
+    SbVec3f extents = combined.getSize();
+    int axis = 0;
+    if (extents[1] > extents[0]) axis = 1;
+    if (extents[2] > extents[axis]) axis = 2;
+
+    int mid = begin + (end - begin) / 2;
+    std::nth_element(indices.begin() + begin, indices.begin() + mid,
+                     indices.begin() + end,
+                     [&](int a, int b) {
+                         SbVec3f ca = (triangles_[a].p0 + triangles_[a].p1 +
+                                       triangles_[a].p2) * (1.0f / 3.0f);
+                         SbVec3f cb = (triangles_[b].p0 + triangles_[b].p1 +
+                                       triangles_[b].p2) * (1.0f / 3.0f);
+                         return ca[axis] < cb[axis];
+                     });
+
+    int leftChild  = buildRecursive(indices, begin, mid);
+    int rightChild = buildRecursive(indices, mid, end);
+
+    nodes_[nodeIdx].left  = leftChild;
+    nodes_[nodeIdx].right = rightChild;
+    nodes_[nodeIdx].itemIdx = -1;
+    return nodeIdx;
+}
+
+void
+CadPartTriBVH::queryRecursive(int nodeIdx, const SbLine& ray,
+                               float& bestT, const TriEntry** bestTri,
+                               float& bestU, float& bestV) const
+{
+    if (nodeIdx < 0 || nodeIdx >= static_cast<int>(nodes_.size())) return;
+    const BvhNode& node = nodes_[nodeIdx];
+    if (!CadInstanceBVH::rayIntersectsBox(ray, node.bounds)) return;
+
+    if (node.itemIdx >= 0) {
+        const TriEntry& tri = triangles_[node.itemIdx];
+        float t = 0.0f, u = 0.0f, v = 0.0f;
+        if (rayTriIntersect(ray, tri.p0, tri.p1, tri.p2, t, u, v)) {
+            if (t < bestT) {
+                bestT   = t;
+                *bestTri = &tri;
+                bestU   = u;
+                bestV   = v;
+            }
+        }
+        return;
+    }
+    queryRecursive(node.left,  ray, bestT, bestTri, bestU, bestV);
+    queryRecursive(node.right, ray, bestT, bestTri, bestU, bestV);
+}
+
+std::optional<CadPartTriBVH::QueryResult>
+CadPartTriBVH::queryClosest(const SbLine& ray) const
+{
+    if (nodes_.empty()) return std::nullopt;
+
+    float bestT = std::numeric_limits<float>::infinity();
+    const TriEntry* bestTri = nullptr;
+    float bestU = 0.0f, bestV = 0.0f;
+    queryRecursive(0, ray, bestT, &bestTri, bestU, bestV);
+
+    if (!bestTri) return std::nullopt;
+    return QueryResult{ bestTri->triIndex, bestT, bestU, bestV };
+}
+
+// ===========================================================================
+// CadPickQuery::pickTriangle
+// ===========================================================================
+
+CadPickResult
+CadPickQuery::pickTriangle(
+    const SbLine&                                       ray,
+    const CadInstanceBVH&                               instanceBvh,
+    const std::unordered_map<PartId, obol::PartGeometry,
+                             std::hash<obol::PartId>>&  partGeometries,
+    std::unordered_map<PartId, CadPartTriBVH,
+                       std::hash<obol::PartId>>&        partTriBvhCache)
+{
+    CadPickResult best;
+    best.t = std::numeric_limits<float>::infinity();
+
+    const auto& candidates = instanceBvh.query(ray);
+    for (const auto* entry : candidates) {
+        const PartId& pid = entry->partId;
+
+        auto geomIt = partGeometries.find(pid);
+        if (geomIt == partGeometries.end()) continue;
+        const auto& geom = geomIt->second;
+        if (!geom.shaded.has_value()) continue;
+
+        // Build part triangle BVH lazily
+        auto bvhIt = partTriBvhCache.find(pid);
+        if (bvhIt == partTriBvhCache.end()) {
+            CadPartTriBVH triBvh;
+            triBvh.build(geom.shaded->positions, geom.shaded->indices);
+            partTriBvhCache[pid] = std::move(triBvh);
+            bvhIt = partTriBvhCache.find(pid);
+        }
+        if (!bvhIt->second.isBuilt()) continue;
+
+        // Transform ray into part-local space
+        SbMatrix w2l = entry->localToWorld.inverse();
+
+        SbVec3f localOrigin, localDir;
+        w2l.multVecMatrix(ray.getPosition(), localOrigin);
+        w2l.multDirMatrix(ray.getDirection(), localDir);
+        float dirLen = localDir.length();
+        if (dirLen < 1e-12f) continue;
+        localDir /= dirLen;
+        SbLine localRay(localOrigin, localOrigin + localDir);
+
+        auto hit = bvhIt->second.queryClosest(localRay);
+        if (!hit) continue;
+
+        // Compute the world-space hit point from the local-space barycentric
+        // intersection coordinates.
+        const auto& mesh = *geom.shaded;
+        uint32_t i0 = mesh.indices[hit->triIndex * 3 + 0];
+        uint32_t i1 = mesh.indices[hit->triIndex * 3 + 1];
+        uint32_t i2 = mesh.indices[hit->triIndex * 3 + 2];
+        SbVec3f localHit = mesh.positions[i0] * (1.0f - hit->u - hit->v)
+                         + mesh.positions[i1] * hit->u
+                         + mesh.positions[i2] * hit->v;
+        SbVec3f worldHit;
+        entry->localToWorld.multVecMatrix(localHit, worldHit);
+
+        float t = (worldHit - ray.getPosition()).dot(ray.getDirection());
+        if (t < 0.0f) continue;  // behind camera
+
+        if (t < best.t) {
+            best.t          = t;
+            best.hitPoint   = worldHit;
+            best.instanceId = entry->instanceId;
+            best.partId     = entry->partId;
+            best.primType   = CadPickResult::TRIANGLE;
+            best.primIndex0 = hit->triIndex;
+            best.valid      = true;
+        }
+    }
+    return best;
+}
+
 } // namespace picking
 } // namespace obol

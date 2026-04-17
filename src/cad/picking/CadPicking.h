@@ -206,6 +206,66 @@ private:
 };
 
 // ---------------------------------------------------------------------------
+// CadPartTriBVH – AABB tree over triangles of one part's TriMesh
+// ---------------------------------------------------------------------------
+
+/**
+ * @brief Triangle-level AABB tree for a single part's shaded geometry.
+ *
+ * Built once per part (lazily) and reused across frames.  Enables precise
+ * triangle picking in PICK_TRIANGLE and PICK_HYBRID modes.
+ */
+class CadPartTriBVH {
+public:
+    struct TriEntry {
+        SbVec3f  p0, p1, p2;   ///< Triangle vertices in part-local space
+        uint32_t triIndex;     ///< Triangle index (= mesh.indices offset / 3)
+    };
+
+    /** Build from vertex positions and a triangle index list. */
+    void build(const std::vector<SbVec3f>& positions,
+               const std::vector<uint32_t>& indices);
+
+    /** Combined result from queryClosest. */
+    struct QueryResult {
+        uint32_t triIndex;   ///< Triangle index in the original mesh
+        float    t;          ///< Ray parameter at the hit point (> 0)
+        float    u, v;       ///< Barycentric coordinates within the triangle
+    };
+
+    /**
+     * @brief Find the closest triangle intersected by @p ray.
+     *
+     * @param ray  Ray in part-local coordinates (direction need not be unit length).
+     * @return Closest intersected triangle, or empty if no intersection.
+     */
+    std::optional<QueryResult> queryClosest(const SbLine& ray) const;
+
+    /** true after build() with at least one triangle. */
+    bool isBuilt() const noexcept { return !nodes_.empty(); }
+
+private:
+    std::vector<TriEntry> triangles_;
+    std::vector<BvhNode>  nodes_;
+
+    int  buildRecursive(std::vector<int>& indices, int begin, int end);
+    void queryRecursive(int nodeIdx, const SbLine& ray,
+                        float& bestT, const TriEntry** bestTri,
+                        float& bestU, float& bestV) const;
+
+    static SbBox3f triBounds(const TriEntry& t) noexcept;
+
+    /**
+     * Möller–Trumbore ray–triangle intersection.
+     * Returns true on a forward hit (t > 0) and writes t, u, v.
+     */
+    static bool rayTriIntersect(const SbLine& ray,
+                                const SbVec3f& p0, const SbVec3f& p1,
+                                const SbVec3f& p2,
+                                float& t, float& u, float& v) noexcept;
+};
+
+// ---------------------------------------------------------------------------
 // CadPickQuery – orchestrates picking using the above BVH structures
 // ---------------------------------------------------------------------------
 
@@ -244,6 +304,27 @@ public:
     static CadPickResult pickBounds(
         const SbLine&        ray,
         const CadInstanceBVH& instanceBvh);
+
+    /**
+     * @brief Perform triangle (surface) picking.
+     *
+     * Tests the pick ray against each candidate instance's shaded triangle
+     * mesh using the per-part CadPartTriBVH.  Returns the closest forward
+     * hit, or an invalid result if no triangle is intersected.
+     *
+     * @param ray            World-space pick ray.
+     * @param instanceBvh    Pre-built instance BVH.
+     * @param partGeometries Map from PartId to PartGeometry.
+     * @param partTriBvhCache Lazily built per-part triangle BVH cache.
+     * @return Best hit or invalid result.
+     */
+    static CadPickResult pickTriangle(
+        const SbLine&                                       ray,
+        const CadInstanceBVH&                               instanceBvh,
+        const std::unordered_map<PartId, obol::PartGeometry,
+                                 std::hash<obol::PartId>>&  partGeometries,
+        std::unordered_map<PartId, CadPartTriBVH,
+                           std::hash<obol::PartId>>&        partTriBvhCache);
 };
 
 } // namespace picking

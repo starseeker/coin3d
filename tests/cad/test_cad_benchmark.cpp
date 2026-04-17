@@ -370,6 +370,13 @@ int main(int argc, char **argv)
     double cadBuildMs = Ms(t5 - t4).count();
     printf("  build:  %.1f ms\n", cadBuildMs);
 
+    // Find the assembly node (it's the only SoCADAssembly in cadRoot)
+    SoCADAssembly *cadAssembly = nullptr;
+    for (int i = 0; i < cadRoot->getNumChildren(); ++i) {
+        cadAssembly = dynamic_cast<SoCADAssembly*>(cadRoot->getChild(i));
+        if (cadAssembly) break;
+    }
+
     SbViewportRegion vpCAD(W, H);
     SoOffscreenRenderer cadRenderer(vpCAD);
     cadRenderer.setComponents(SoOffscreenRenderer::RGB);
@@ -379,7 +386,16 @@ int main(int argc, char **argv)
     bool cadOk = (cadRenderer.render(cadRoot) == TRUE);
     auto t7 = Clock::now();
     double cadRenderMs = Ms(t7 - t6).count();
-    printf("  render: %.1f ms  (ok=%d)\n", cadRenderMs, (int)cadOk);
+
+    // Report which rendering tier was selected
+    static const char *kTierName[] = {
+        "Tier 0 (immediate-mode, GL 1.1 fallback)",
+        "Tier 1 (VBO-loop, GL 2.0 / GLSL 1.10)",
+        "Tier 2 (instanced, GL 3.1+)",
+    };
+    int tier = cadAssembly ? cadAssembly->lastRenderTier() : -1;
+    const char *tierStr = (tier >= 0 && tier <= 2) ? kTierName[tier] : "unknown";
+    printf("  render: %.1f ms  (ok=%d)  [%s]\n", cadRenderMs, (int)cadOk, tierStr);
 
     const unsigned char *cadBuf = cadOk ? cadRenderer.getBuffer() : nullptr;
     int cadNonBlack = cadBuf ? countNonBlack(cadBuf, W, H) : 0;

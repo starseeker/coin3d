@@ -43,6 +43,7 @@
  */
 
 #include <obol/cad/CadIds.h>
+#include <Inventor/SbBox3f.h>
 #include <Inventor/SbMatrix.h>
 #include <Inventor/SbColor4f.h>
 
@@ -91,6 +92,7 @@ struct CadRepKey {
  *   - 1 uint32 part index within the frame plan's part list
  *   - 1 uint32 flags (bit 0 = selected)
  *   - 2 uint64 InstanceId (for CPU-side picking round-trip)
+ *   - 2 × float[3] world bounding box (for per-instance frustum culling)
  */
 struct CadVisibleInstance {
     std::array<float, 16> transform = {};   ///< Column-major 4×4
@@ -98,6 +100,10 @@ struct CadVisibleInstance {
     uint32_t partIndex = 0;
     uint32_t flags     = 0;   ///< bit 0: selected; bit 1: hovered
     InstanceId instanceId;
+    /// World-space bounding box min/max.  Used by the renderer for per-instance
+    /// frustum culling (avoids drawing instances completely outside the view).
+    float wbMin[3] = {0.0f, 0.0f, 0.0f};
+    float wbMax[3] = {0.0f, 0.0f, 0.0f};
 };
 
 // ---------------------------------------------------------------------------

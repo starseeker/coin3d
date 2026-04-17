@@ -45,12 +45,18 @@ SoCADAssembly
 │   ├── style     (color override, lineWidth)
 │   └── world bounds (cached)
 │
-├── Acceleration structures (rebuilt lazily)
-│   ├── CadInstanceBVH  (world-space AABB tree of all instances)
-│   └── CadPartEdgeBVH  (per-part AABB tree of wire segments, built on demand)
+├── Hidden-instance set  (excluded from rendering and frame plan)
+│   └── Use setHiddenInstances() to suppress aggregate rendering for
+│       instances materialised as explicit scene-graph nodes.
 │
-└── CadFramePlan  (rebuilt when dirty)
-    ├── visibleInstances  (sorted by partIndex for batching)
+├── Acceleration structures (rebuilt lazily)
+│   ├── CadInstanceBVH   (world-space AABB tree of all instances)
+│   ├── CadPartEdgeBVH   (per-part AABB tree of wire segments, built on demand)
+│   └── CadPartTriBVH    (per-part AABB tree of triangles, built on demand)
+│
+└── CadFramePlan  (cached; rebuilt only when dirty)
+    ├── visibleInstances  (sorted by partIndex for batching;
+    │                      includes world bounding box for frustum culling)
     ├── wireItems         (draw items for wire pass)
     └── shadedItems       (draw items for shaded pass)
 ```
@@ -131,6 +137,24 @@ assembly->updateInstanceTransform(iid, newMatrix);   // O(1) + BVH refit
 assembly->updateInstanceStyle(iid, newStyle);        // O(1), no BVH rebuild
 ```
 
+### Querying instance data (for on-demand node materialisation)
+
+After a pick, retrieve the full record for an instance to build an explicit
+scene-graph node (e.g. for interactive editing):
+
+```cpp
+std::optional<obol::InstanceRecord> rec = assembly->getInstanceRecord(iid);
+if (rec) {
+    auto* shape = new MyPartShape(rec->part, rec->localToRoot, rec->style);
+    sceneRoot->addChild(shape);
+    // Suppress double-rendering: hide the instance from aggregate rendering.
+    assembly->setHiddenInstances({ iid });
+}
+```
+
+When the user confirms the edit, call `assembly->upsertInstance(iid, updatedRec)`
+and clear the hidden set to return to aggregate rendering.
+
 ---
 
 ## Render modes (drawMode field)
@@ -152,15 +176,20 @@ the CAD surfaces even in wireframe mode.
 
 ## Pick modes (pickMode field)
 
-| Value         | Algorithm                                          |
-|---------------|----------------------------------------------------|
-| `PICK_AUTO`   | EDGE in wireframe; TRIANGLE (or EDGE) in shaded    |
-| `PICK_EDGE`   | Always pick against wire polyline segments         |
-| `PICK_TRIANGLE` | Always pick against shaded triangle mesh         |
-| `PICK_BOUNDS` | Bounding-box proxy only (fastest; least precise)   |
-| `PICK_HYBRID` | Try triangles; fall back to edges, then bounds     |
+| Value           | Algorithm                                                       |
+|-----------------|-----------------------------------------------------------------|
+| `PICK_AUTO`     | EDGE in wireframe; TRIANGLE in shaded                           |
+| `PICK_EDGE`     | Always pick against wire polyline segments                      |
+| `PICK_TRIANGLE` | Always pick against shaded triangle mesh (Möller–Trumbore BVH)  |
+| `PICK_BOUNDS`   | Bounding-box proxy only (fastest; least precise)                |
+| `PICK_HYBRID`   | Try edge first, then triangle, then bounds                      |
 
 Picking returns an `SoCADDetail` attached to `SoPickedPoint`.
+
+Edge-pick tolerance is specified in screen-space pixels via the
+`edgePickTolerancePx` field.  The renderer converts it to a world-space
+tolerance based on the current view volume and viewport, so it remains
+visually consistent across zoom levels.
 
 ### Pick result detail
 
@@ -175,6 +204,9 @@ if (detail) {
         // polyline index + segment index within that polyline
         uint32_t polyIdx = detail->getPrimIndex0();
         uint32_t segIdx  = detail->getPrimIndex1();
+    } else if (detail->getPrimType() == SoCADDetail::TRIANGLE) {
+        // triangle index (= mesh.indices offset / 3)
+        uint32_t triIdx = detail->getPrimIndex0();
     }
 }
 ```
@@ -248,24 +280,21 @@ Both `SegmentPopLod` and `TrianglePopLod` use a POP-inspired discretisation:
 4. `minLevelForSegment(i)` / `minLevelForTriangle(i)` is the lowest level at
    which primitive `i` is non-degenerate.
 
-### Level selection heuristic
+### Level selection
 
-The renderer selects a LoD level for each instance based on:
+The renderer selects a LoD level for each part based on the distance from
+the camera to the instance's world-space bounding sphere:
 
 ```
-pixelsPerUnit ≈ focalLength / (distance * viewportHeight)
-level = clamp(log2(pixelsPerUnit), 0, kMaxLevel)
+ratio  = dist / radius
+level  = floor(255 / (1 + ratio * 0.5))
 ```
 
-During interactive dragging, bias towards coarser LoD and refine on release:
-
-```cpp
-uint8_t chooseLoD(float pixelsPerUnit, bool isDragging) {
-    float raw = std::log2f(pixelsPerUnit);
-    if (isDragging) raw -= 2.0f;  // 2-level coarser during drag
-    return static_cast<uint8_t>(std::clamp(raw, 0.0f, 255.0f));
-}
-```
+This heuristic gives full detail (`level = 255`) up to `radius * 2` from
+the camera and progressively coarser levels as the object recedes.  LoD is
+only applied in Tier-0 (immediate-mode) rendering; the VBO-loop and
+instanced tiers draw full detail at all distances (level 255 passes through
+unchanged).
 
 ### Focus set (selected/hovered instances)
 
@@ -273,8 +302,28 @@ Force full-detail LoD for selected or hovered instances:
 
 ```cpp
 assembly->setSelectedInstances({ pickedIid });
-// Renderer will use kMaxLevel for these instances regardless of distance.
+// Renderer will use level 255 for these instances regardless of distance.
 ```
+
+---
+
+## Rendering tiers
+
+| Tier | Requirements | Method |
+|------|-------------|--------|
+| 2 | GL 3.1 + instanced shaders | One draw call per unique part |
+| 1 | GL 2.0 + GLSL 1.10 + VBOs | Per-instance loop, frustum-culled |
+| 0 | GL 1.1 (Mesa swrast fallback) | `glBegin`/`glEnd`, frustum-culled, LoD-aware |
+
+Per-instance frustum culling is active in Tier 0 and Tier 1: each instance's
+world bounding box is tested against the six frustum planes before issuing
+any draw call, skipping fully off-screen instances at no GPU cost.
+
+GPU resource uploads are short-circuited in all tiers: `CadGpuResources`
+tracks a per-part generation counter and skips the entire CPU-side
+array-flattening step if the GPU data is already current.  The frame plan
+itself is cached across camera moves and only rebuilt when geometry, instances,
+styles, selection, or draw mode change.
 
 ---
 
@@ -284,8 +333,11 @@ assembly->setSelectedInstances({ pickedIid });
   Thick-line rendering requires geometry shaders or triangle-based lines.
 * **Transparency**: no alpha-sorting is implemented.  Semi-transparent CAD
   parts may render with incorrect blending.
-* **GPU instancing**: the current implementation uses a per-instance loop.
-  `glMultiDrawElementsIndirect` batching is the intended next step.
+* **Tier-2 LoD/frustum culling**: the instanced path (Tier 2) does not yet
+  apply per-instance frustum culling or LoD; frustum and LoD features are
+  active in Tier 0 and Tier 1 only.
+* **Wireframe occlusion**: the `wireframeOcclusion` field is exposed but the
+  depth-only triangle prepass is not yet implemented.
 * **ID stability across reloads**: without stable per-node GUIDs,
   InstanceIds may change if the traversal order changes.
 * **Analytic curves**: wireframe geometry is stored as polylines.  Analytic
@@ -305,10 +357,11 @@ assembly->setSelectedInstances({ pickedIid });
 | `src/cad/SoCADAssembly.cpp`        | Node render/pick/bbox actions     |
 | `src/cad/SoCADDetail.cpp`          | Detail SO_DETAIL_SOURCE           |
 | `src/cad/CadFramePlan.h`           | Internal frame plan structs       |
+| `src/cad/CadGpuResources.h/.cpp`   | Per-context VBO cache (isUpToDate fast-path) |
 | `src/cad/lod/SegmentPopLod.h/.cpp` | POP LoD for segments              |
 | `src/cad/lod/TrianglePopLod.h/.cpp`| POP LoD for triangles             |
-| `src/cad/picking/CadPicking.h/.cpp`| CPU BVH picking                   |
+| `src/cad/picking/CadPicking.h/.cpp`| CPU BVH picking (edge + triangle) |
 | `tests/cad/test_cad_ids.cpp`       | Unit tests: ID generation         |
 | `tests/cad/test_segment_lod.cpp`   | Unit tests: segment LoD           |
 | `tests/cad/test_triangle_lod.cpp`  | Unit tests: triangle LoD          |
-| `tests/cad/test_cad_picking.cpp`   | Unit tests: picking               |
+| `tests/cad/test_cad_picking.cpp`   | Unit tests: edge + triangle picking |

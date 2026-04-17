@@ -13,6 +13,11 @@ set(CAD_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/SoCADDetail.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/SoCADAssembly.cpp
 
+    # GL renderer (VBO + shader, GL 2.0 baseline with optional GL 3.1+ instancing)
+    ${CMAKE_CURRENT_SOURCE_DIR}/CadGLCaps.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/CadGpuResources.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/CadRendererGL.cpp
+
     # LoD
     ${CMAKE_CURRENT_SOURCE_DIR}/lod/SegmentPopLod.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/lod/TrianglePopLod.cpp

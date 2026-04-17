@@ -2523,6 +2523,51 @@ w->glAreTexturesResident = (OBOL_PFNGLARETEXTURESRESIDENTPROC)PROC(w, glAreTextu
     w->has_fbo = FALSE;
   }
 
+  /* VAO support: GL 3.0 core or GL_ARB_vertex_array_object */
+  if (SoGLContext_glversion_matches_at_least(w, 3, 0, 0) ||
+      SoGLContext_glext_supported(w, "GL_ARB_vertex_array_object")) {
+    w->glGenVertexArrays    = (OBOL_PFNGLGENVERTEXARRAYSPROC)    PROC(w, glGenVertexArrays);
+    w->glBindVertexArray    = (OBOL_PFNGLBINDVERTEXARRAYPROC)    PROC(w, glBindVertexArray);
+    w->glDeleteVertexArrays = (OBOL_PFNGLDELETEVERTEXARRAYSPROC) PROC(w, glDeleteVertexArrays);
+    if (!w->glGenVertexArrays || !w->glBindVertexArray || !w->glDeleteVertexArrays) {
+      w->glGenVertexArrays = NULL;
+      w->glBindVertexArray = NULL;
+      w->glDeleteVertexArrays = NULL;
+    }
+  }
+
+  /* Instanced drawing: GL 3.1 core or GL_ARB_draw_instanced */
+  if (SoGLContext_glversion_matches_at_least(w, 3, 1, 0) ||
+      SoGLContext_glext_supported(w, "GL_ARB_draw_instanced")) {
+    w->glDrawElementsInstanced =
+      (OBOL_PFNGLDRAWELEMENTSINSTANCEDPROC) PROC(w, glDrawElementsInstanced);
+    w->glDrawArraysInstanced =
+      (OBOL_PFNGLDRAWARRAYSINSTANCEDPROC) PROC(w, glDrawArraysInstanced);
+    if (!w->glDrawElementsInstanced) {
+      w->glDrawElementsInstanced =
+        (OBOL_PFNGLDRAWELEMENTSINSTANCEDPROC) PROC(w, glDrawElementsInstancedARB);
+    }
+    if (!w->glDrawArraysInstanced) {
+      w->glDrawArraysInstanced =
+        (OBOL_PFNGLDRAWARRAYSINSTANCEDPROC) PROC(w, glDrawArraysInstancedARB);
+    }
+    if (!w->glDrawElementsInstanced || !w->glDrawArraysInstanced) {
+      w->glDrawElementsInstanced = NULL;
+      w->glDrawArraysInstanced   = NULL;
+    }
+  }
+
+  /* Instanced array divisor: GL 3.3 core or GL_ARB_instanced_arrays */
+  if (SoGLContext_glversion_matches_at_least(w, 3, 3, 0) ||
+      SoGLContext_glext_supported(w, "GL_ARB_instanced_arrays")) {
+    w->glVertexAttribDivisor =
+      (OBOL_PFNGLVERTEXATTRIBDIVISORPROC) PROC(w, glVertexAttribDivisor);
+    if (!w->glVertexAttribDivisor) {
+      w->glVertexAttribDivisor =
+        (OBOL_PFNGLVERTEXATTRIBDIVISORPROC) PROC(w, glVertexAttribDivisorARB);
+    }
+  }
+
 }
 
 #undef PROC

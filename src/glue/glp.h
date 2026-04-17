@@ -988,6 +988,18 @@ typedef void (APIENTRY * OBOL_PFNGLGENERATEMIPMAPPROC)(GLenum target);
 
 typedef GLubyte* (APIENTRY * OBOL_PFNGLGETSTRINGIPROC) (GLenum target, GLuint idx);
 
+/* Typedefs for VAO (GL 3.0 / GL_ARB_vertex_array_object) */
+typedef void (APIENTRY * OBOL_PFNGLGENVERTEXARRAYSPROC)(GLsizei n, GLuint *arrays);
+typedef void (APIENTRY * OBOL_PFNGLBINDVERTEXARRAYPROC)(GLuint array);
+typedef void (APIENTRY * OBOL_PFNGLDELETEVERTEXARRAYSPROC)(GLsizei n, const GLuint *arrays);
+
+/* Typedefs for instanced drawing (GL 3.1 / GL_ARB_draw_instanced) */
+typedef void (APIENTRY * OBOL_PFNGLDRAWELEMENTSINSTANCEDPROC)(GLenum mode, GLsizei count, GLenum type, const void *indices, GLsizei instancecount);
+typedef void (APIENTRY * OBOL_PFNGLDRAWARRAYSINSTANCEDPROC)(GLenum mode, GLint first, GLsizei count, GLsizei instancecount);
+
+/* Typedef for instanced array divisor (GL 3.3 / GL_ARB_instanced_arrays) */
+typedef void (APIENTRY * OBOL_PFNGLVERTEXATTRIBDIVISORPROC)(GLuint index, GLuint divisor);
+
 
 /* ********************************************************************** */
 
@@ -1620,6 +1632,18 @@ struct SoGLContext {
 
   /* glGetStringi - part of replacement for obsolete glGetString(GL_EXTENSIONS) in OpenGL 3.0 */
   OBOL_PFNGLGETSTRINGIPROC glGetStringi;
+
+  /* VAO support (GL 3.0 core or GL_ARB_vertex_array_object) */
+  OBOL_PFNGLGENVERTEXARRAYSPROC    glGenVertexArrays;
+  OBOL_PFNGLBINDVERTEXARRAYPROC    glBindVertexArray;
+  OBOL_PFNGLDELETEVERTEXARRAYSPROC glDeleteVertexArrays;
+
+  /* Instanced drawing (GL 3.1 core or GL_ARB_draw_instanced) */
+  OBOL_PFNGLDRAWELEMENTSINSTANCEDPROC glDrawElementsInstanced;
+  OBOL_PFNGLDRAWARRAYSINSTANCEDPROC   glDrawArraysInstanced;
+
+  /* Instanced array divisor (GL 3.3 core or GL_ARB_instanced_arrays) */
+  OBOL_PFNGLVERTEXATTRIBDIVISORPROC glVertexAttribDivisor;
 
   const char * versionstr;
   const char * vendorstr;
