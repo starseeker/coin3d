@@ -939,6 +939,8 @@ SoOffscreenRendererP::renderFromBase(SoBase * base)
         }
         // renderScene() returned FALSE: fall through to GL path.
         // The buffer will be overwritten by the GL pipeline below.
+        alt_mgr->reportDiagnostic("SoOffscreenRenderer",
+                                  "renderScene returned FALSE; falling back to GL path");
       }
     }
   }

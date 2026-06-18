@@ -498,7 +498,20 @@ class Ray {
 template <typename T = float>
 class BVHNode {
  public:
-  BVHNode() {}
+  BVHNode() {
+    bmin[0] = static_cast<T>(0.0);
+    bmin[1] = static_cast<T>(0.0);
+    bmin[2] = static_cast<T>(0.0);
+    flag = 0;
+
+    bmax[0] = static_cast<T>(0.0);
+    bmax[1] = static_cast<T>(0.0);
+    bmax[2] = static_cast<T>(0.0);
+    axis = 0;
+
+    data[0] = 0;
+    data[1] = 0;
+  }
   BVHNode(const BVHNode &rhs) {
     bmin[0] = rhs.bmin[0];
     bmin[1] = rhs.bmin[1];

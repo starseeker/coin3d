@@ -284,6 +284,15 @@ public:
                                unsigned char * pixels,
                                unsigned int nrcomponents,
                                const float background_rgb[3]) { (void)scene; (void)width; (void)height; (void)pixels; (void)nrcomponents; (void)background_rgb; return FALSE; }
+
+    /**
+     * Optional diagnostic hook for backend and renderer messages.  The default
+     * implementation is a no-op; applications that want structured backend
+     * diagnostics can override this instead of scraping SoDebugError output.
+     */
+    virtual void reportDiagnostic(const char * component,
+                                  const char * message)
+    { (void)component; (void)message; }
   };
 
   static ContextManager * getContextManager(void);
