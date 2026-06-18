@@ -56,7 +56,7 @@ public:
   SoPointDetail(void);
   virtual ~SoPointDetail();
   static void initClass(void);
-  virtual SoDetail * copy(void) const;
+  virtual SoDetail * copy(void) const override;
 
   int getCoordinateIndex(void) const;
   int getMaterialIndex(void) const;

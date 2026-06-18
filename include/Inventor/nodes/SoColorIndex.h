@@ -58,7 +58,7 @@ public:
 
   SoMFInt32 index;
 
-  virtual void GLRender(SoGLRenderAction * action);
+  virtual void GLRender(SoGLRenderAction * action) override;
 
 protected:
   virtual ~SoColorIndex();

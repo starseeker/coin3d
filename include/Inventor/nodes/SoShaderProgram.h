@@ -72,8 +72,8 @@ public:
                          void * closure);
 
 public: // Extender API  
-  virtual void GLRender(SoGLRenderAction * action);
-  virtual void search(SoSearchAction * action);
+  virtual void GLRender(SoGLRenderAction * action) override;
+  virtual void search(SoSearchAction * action) override;
 
 public: // Internal API
   static void initClass();

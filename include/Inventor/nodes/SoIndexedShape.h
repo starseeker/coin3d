@@ -70,7 +70,7 @@ protected:
   SoIndexedShape(void);
   virtual ~SoIndexedShape();
 
-  virtual void computeBBox(SoAction * action, SbBox3f & box, SbVec3f & center);
+  virtual void computeBBox(SoAction * action, SbBox3f & box, SbVec3f & center) override;
   int getNumVerts(const int startCoord);
   static SbBool areTexCoordsIndexed(SoAction * action);
 

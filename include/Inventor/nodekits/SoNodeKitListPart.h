@@ -81,25 +81,25 @@ public:
   void removeChild(SoNode * child);
   void replaceChild(int index, SoNode * newChild);
   void replaceChild(SoNode * oldChild, SoNode * newChild);
-  virtual SbBool affectsState(void) const;
-  virtual void doAction(SoAction * action);
-  virtual void callback(SoCallbackAction * action);
-  virtual void GLRender(SoGLRenderAction * action);
-  virtual void getBoundingBox(SoGetBoundingBoxAction * action);
-  virtual void getMatrix(SoGetMatrixAction * action);
-  virtual void handleEvent(SoHandleEventAction * action);
-  virtual void pick(SoPickAction * action);
-  virtual void search(SoSearchAction * action);
-  virtual void getPrimitiveCount(SoGetPrimitiveCountAction * action);
-  virtual SoChildList * getChildren(void) const;
+  virtual SbBool affectsState(void) const override;
+  virtual void doAction(SoAction * action) override;
+  virtual void callback(SoCallbackAction * action) override;
+  virtual void GLRender(SoGLRenderAction * action) override;
+  virtual void getBoundingBox(SoGetBoundingBoxAction * action) override;
+  virtual void getMatrix(SoGetMatrixAction * action) override;
+  virtual void handleEvent(SoHandleEventAction * action) override;
+  virtual void pick(SoPickAction * action) override;
+  virtual void search(SoSearchAction * action) override;
+  virtual void getPrimitiveCount(SoGetPrimitiveCountAction * action) override;
+  virtual SoChildList * getChildren(void) const override;
 
 protected:
   virtual ~SoNodeKitListPart();
 
   SoGroup * getContainerNode(void);
-  virtual SbBool readInstance(SoInput * in, unsigned short flags);
+  virtual SbBool readInstance(SoInput * in, unsigned short flags) override;
   virtual void copyContents(const SoFieldContainer * fromFC,
-                            SbBool copyConnections);
+                            SbBool copyConnections) override;
   SoChildList * children;
 
 private:

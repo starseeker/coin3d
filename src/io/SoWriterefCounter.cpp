@@ -332,7 +332,9 @@ SoWriterefCounter::setWriteref(const SoBase * base, const int ref)
     SbName name = base->getName();
     if (name == "") name = "<noname>";
     SoDebugError::postWarning("SoWriterefCounter::setWriteref",
-                              "writeref < 0 for %s <%p>", name.getString(), base);
+                              "writeref < 0 for %s <%p>",
+                              name.getString(),
+                              static_cast<const void *>(base));
   }
 }
 
@@ -509,4 +511,3 @@ SoWriterefCounter::debugWriterefs(void)
 
 
 #undef PRIVATE
-

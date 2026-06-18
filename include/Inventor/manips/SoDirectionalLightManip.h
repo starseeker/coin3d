@@ -61,23 +61,23 @@ public:
   SbBool replaceNode(SoPath * path);
   SbBool replaceManip(SoPath * path, SoDirectionalLight * newone) const;
 
-  virtual void doAction(SoAction * action);
-  virtual void callback(SoCallbackAction * action);
-  virtual void GLRender(SoGLRenderAction * action);
-  virtual void getBoundingBox(SoGetBoundingBoxAction * action);
-  virtual void getMatrix(SoGetMatrixAction * action);
-  virtual void handleEvent(SoHandleEventAction * action);
-  virtual void pick(SoPickAction * action);
-  virtual void search(SoSearchAction * action);
+  virtual void doAction(SoAction * action) override;
+  virtual void callback(SoCallbackAction * action) override;
+  virtual void GLRender(SoGLRenderAction * action) override;
+  virtual void getBoundingBox(SoGetBoundingBoxAction * action) override;
+  virtual void getMatrix(SoGetMatrixAction * action) override;
+  virtual void handleEvent(SoHandleEventAction * action) override;
+  virtual void pick(SoPickAction * action) override;
+  virtual void search(SoSearchAction * action) override;
 
-  virtual SoChildList * getChildren(void) const;
+  virtual SoChildList * getChildren(void) const override;
 
 protected:
   virtual ~SoDirectionalLightManip(void);
 
   void setDragger(SoDragger * newdragger);
 
-  virtual void copyContents(const SoFieldContainer * fromfc, SbBool copyconnections);
+  virtual void copyContents(const SoFieldContainer * fromfc, SbBool copyconnections) override;
   static void transferFieldValues(const SoDirectionalLight * from, SoDirectionalLight * to);
 
   static void valueChangedCB(void * f, SoDragger * d);

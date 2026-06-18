@@ -451,7 +451,8 @@ SoBase::assertAlive(void) const
                        "code (or less likely: internal library code), "
                        "causing premature destruction of a reference "
                        "counted object instance. This check was called "
-                       "from a dangling reference to it.", this);
+                       "from a dangling reference to it.",
+                       static_cast<const void *>(this));
     assert(FALSE && "SoBase-object no longer alive!");
   }
 }

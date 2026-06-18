@@ -63,7 +63,7 @@ public:
 
   int getCameraNumber(void);
   void setCameraNumber(int camNum);
-  virtual SbBool affectsState(void) const;
+  virtual SbBool affectsState(void) const override;
 
 protected:
   virtual ~SoSceneKit();

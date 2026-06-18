@@ -99,8 +99,7 @@ SoNodeSensor::attach(SoNode * node)
   if (this->convict != NULL) {
     this->detach();
     SoDebugError::postWarning("SoNodeSensor::attach", 
-                              "Attaching node sensor that is already attached.", 
-                              this);
+                              "Attaching node sensor that is already attached.");
   }
   this->convict = node;
   node->addAuditor(this, SoNotRec::SENSOR);
