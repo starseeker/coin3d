@@ -32,7 +32,7 @@
 
 #include "CadRendererGL.h"
 
-#include <obol/cad/SoCADAssembly.h>
+#include <Obol/cad/SoCADAssembly.h>
 
 #include <Inventor/system/gl.h>
 #include <Inventor/SbVec3f.h>

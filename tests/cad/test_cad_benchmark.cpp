@@ -31,9 +31,9 @@
 
 #include "headless_utils.h"
 
-#include <obol/cad/SoCADAssembly.h>
-#include <obol/cad/SoCADDetail.h>
-#include <obol/cad/CadIds.h>
+#include <Obol/cad/SoCADAssembly.h>
+#include <Obol/cad/SoCADDetail.h>
+#include <Obol/cad/CadIds.h>
 
 #include <Inventor/SoDB.h>
 #include <Inventor/SbViewportRegion.h>

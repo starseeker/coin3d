@@ -56,7 +56,7 @@ endif()
 # -----------------------------------------------------------------------
 if(OBOL_USE_SWRAST OR OBOL_USE_SYSTEM_GL)
 
-# arb8_dragger_example: SoProceduralShape with interactive SoDragger handles
+# arb8_dragger_example: v2 ARB8 mesh/wire/handle visualization
 add_executable(arb8_dragger_example arb8_dragger_example.cpp)
 target_include_directories(arb8_dragger_example PRIVATE
     ${PROJECT_SOURCE_DIR}/tests/utils   # headless_utils.h
@@ -74,7 +74,15 @@ if(OBOL_USE_SWRAST AND NOT OBOL_USE_SYSTEM_GL)
     target_include_directories(arb8_dragger_example PRIVATE
         "${PROJECT_SOURCE_DIR}/external/osmesa/include")
 elseif(OBOL_USE_SWRAST AND OBOL_USE_SYSTEM_GL)
-    target_compile_definitions(arb8_dragger_example PRIVATE OBOL_SWRAST_BUILD OBOL_DUAL_GL_BUILD)
+    target_compile_definitions(arb8_dragger_example PRIVATE
+        OBOL_SWRAST_BUILD OBOL_DUAL_GL_BUILD OBOL_HEADLESS_FORCE_SWRAST)
+    target_include_directories(arb8_dragger_example PRIVATE
+        "${PROJECT_SOURCE_DIR}/external/osmesa/include")
+    if(TARGET osmesa_interface)
+        target_link_libraries(arb8_dragger_example PRIVATE osmesa_interface)
+    elseif(TARGET osmesa)
+        target_link_libraries(arb8_dragger_example PRIVATE osmesa)
+    endif()
 endif()
 if(UNIX AND NOT APPLE)
     if(X11_FOUND)
@@ -87,7 +95,7 @@ if(UNIX AND NOT APPLE)
     endif()
 endif()
 
-# truncated_cone_example: SoProceduralShape with a custom frustum geometry type
+# truncated_cone_example: v2 mesh/polyline frustum geometry
 add_executable(truncated_cone_example truncated_cone_example.cpp)
 target_include_directories(truncated_cone_example PRIVATE
     ${PROJECT_SOURCE_DIR}/tests/utils   # headless_utils.h
@@ -105,7 +113,15 @@ if(OBOL_USE_SWRAST AND NOT OBOL_USE_SYSTEM_GL)
     target_include_directories(truncated_cone_example PRIVATE
         "${PROJECT_SOURCE_DIR}/external/osmesa/include")
 elseif(OBOL_USE_SWRAST AND OBOL_USE_SYSTEM_GL)
-    target_compile_definitions(truncated_cone_example PRIVATE OBOL_SWRAST_BUILD OBOL_DUAL_GL_BUILD)
+    target_compile_definitions(truncated_cone_example PRIVATE
+        OBOL_SWRAST_BUILD OBOL_DUAL_GL_BUILD OBOL_HEADLESS_FORCE_SWRAST)
+    target_include_directories(truncated_cone_example PRIVATE
+        "${PROJECT_SOURCE_DIR}/external/osmesa/include")
+    if(TARGET osmesa_interface)
+        target_link_libraries(truncated_cone_example PRIVATE osmesa_interface)
+    elseif(TARGET osmesa)
+        target_link_libraries(truncated_cone_example PRIVATE osmesa)
+    endif()
 endif()
 if(UNIX AND NOT APPLE)
     if(X11_FOUND)

@@ -42,103 +42,105 @@
  */
 
 #include "headless_utils.h"
-#include <Inventor/nodes/SoFont.h>
-#include <Inventor/nodes/SoGroup.h>
-#include <Inventor/nodes/SoLinearProfile.h>
-#include <Inventor/nodes/SoMaterial.h>
-#include <Inventor/nodes/SoMaterialBinding.h>
-#include <Inventor/nodes/SoPerspectiveCamera.h>
-#include <Inventor/nodes/SoProfileCoordinate2.h>
-#include <Inventor/nodes/SoText3.h>
-#include <Inventor/nodes/SoTranslation.h>
-#include <Inventor/nodes/SoDirectionalLight.h>
-#include <Inventor/nodes/SoSeparator.h>
-#include <cmath>
+#include <Obol/Obol.h>
+
 #include <cstdio>
+
+namespace {
+
+obol::Transform translation(float x, float y, float z)
+{
+    obol::Transform result;
+    result.translation = {x, y, z};
+    return result;
+}
+
+obol::Text3D beveledText(const char * text)
+{
+    obol::Text3D result;
+    result.text = text;
+    result.fontName = "Times-Roman";
+    result.fontSize = 10.0f;
+    result.parts = static_cast<uint32_t>(obol::Text3DParts::All);
+    result.justification = obol::TextJustification::Center;
+    result.partColors = {
+        {1.0f, 1.0f, 1.0f, 1.0f},
+        {1.0f, 1.0f, 0.0f, 1.0f},
+        {1.0f, 1.0f, 0.0f, 1.0f}
+    };
+    result.profile = {
+        {0.00f, 0.00f},
+        {0.25f, 0.25f},
+        {1.25f, 0.25f},
+        {1.50f, 0.00f}
+    };
+    return result;
+}
+
+obol::Material shinyTextMaterial()
+{
+    obol::Material material;
+    material.specular = {1.0f, 1.0f, 1.0f, 1.0f};
+    material.shininess = 0.1f;
+    return material;
+}
+
+bool renderView(obol::OffscreenRenderer & renderer,
+                obol::Scene & scene,
+                const char * filename,
+                const obol::Vec3 & position)
+{
+    obol::PerspectiveCamera camera;
+    camera.position = position;
+    camera.target = {0.0f, -1.0f, 0.0f};
+    camera.nearDistance = 5.0f;
+    camera.farDistance = 15.0f;
+    camera.verticalFieldOfViewRadians = 0.78539816339f;
+    scene.setCamera(camera);
+    const obol::FrameResult result = renderer.render(scene);
+    return result.success && renderer.writeRGB(filename);
+}
+
+} // namespace
 
 int main(int argc, char **argv)
 {
-    // Initialize Coin for headless operation
     initCoinHeadless();
 
-    SoGroup *root = new SoGroup;
-    root->ref();
+    obol::Scene scene;
+    obol::DirectionalLight light;
+    light.direction = {-0.5f, -0.7f, -1.0f};
+    scene.addDirectionalLight(light);
 
-    // Set up camera
-    SoPerspectiveCamera *myCamera = new SoPerspectiveCamera;
-    myCamera->position.setValue(0, -1, 10);
-    myCamera->nearDistance.setValue(5.0);
-    myCamera->farDistance.setValue(15.0);
-    root->addChild(myCamera);
+    const obol::Material material = shinyTextMaterial();
+    scene.addText3D(beveledText("Beveled"), material, translation(0.0f, 0.0f, 0.0f));
+    scene.addText3D(beveledText("Text"), material, translation(0.0f, -2.0f, 0.0f));
 
-    // Add light
-    root->addChild(new SoDirectionalLight);
-
-    // Material: white front, shiny yellow sides/back
-    SoMaterial *myMaterial = new SoMaterial;
-    SbColor colors[3];
-    colors[0].setValue(1, 1, 1);  // diffuse front
-    colors[1].setValue(1, 1, 0);  // diffuse sides
-    colors[2].setValue(1, 1, 0);  // diffuse back
-    myMaterial->diffuseColor.setValues(0, 3, colors);
-    myMaterial->specularColor.setValue(1, 1, 1);
-    myMaterial->shininess.setValue(.1);
-    root->addChild(myMaterial);
-
-    // Material binding
-    SoMaterialBinding *myBinding = new SoMaterialBinding;
-    myBinding->value = SoMaterialBinding::PER_PART;
-    root->addChild(myBinding);
-
-    // Font
-    SoFont *myFont = new SoFont;
-    myFont->name.setValue("Times-Roman");
-    root->addChild(myFont);
-
-    // Beveled cross-section profile
-    SoProfileCoordinate2 *myProfileCoords = new SoProfileCoordinate2;
-    SbVec2f coords[4];
-    coords[0].setValue(.00, .00);
-    coords[1].setValue(.25, .25);
-    coords[2].setValue(1.25, .25);
-    coords[3].setValue(1.50, .00);
-    myProfileCoords->point.setValues(0, 4, coords);
-    root->addChild(myProfileCoords);
-
-    SoLinearProfile *myLinearProfile = new SoLinearProfile;
-    int32_t indices[4] = {0, 1, 2, 3};
-    myLinearProfile->index.setValues(0, 4, indices);
-    root->addChild(myLinearProfile);
-
-    // Text
-    const char *words[] = {"Beveled", "Text"};
-    for (int i = 0; i < 2; i++) {
-        SoSeparator *textSep = new SoSeparator;
-        SoTranslation *myTranslation = new SoTranslation;
-        myTranslation->translation.setValue(0, -2.0 * i, 0);
-        textSep->addChild(myTranslation);
-        
-        SoText3 *myText = new SoText3;
-        myText->string.setValue(words[i]);
-        myText->parts = SoText3::ALL;
-        myText->justification = SoText3::CENTER;
-        textSep->addChild(myText);
-        
-        root->addChild(textSep);
-    }
+    obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
+                                        obol::RenderBackendKind::OpenGL2SWRast,
+                                        "headless-context");
+    obol::RenderTarget target;
+    target.width = DEFAULT_WIDTH;
+    target.height = DEFAULT_HEIGHT;
+    target.pixelFormat = obol::PixelFormat::RGB;
+    obol::OffscreenRenderer renderer(backend, target);
+    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
 
     const char *baseFilename = (argc > 1) ? argv[1] : "06.3.Complex3DText";
     char filename[256];
 
-    // Front view
     snprintf(filename, sizeof(filename), "%s_front.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderView(renderer, scene, filename, {0.0f, -1.0f, 10.0f})) {
+        fprintf(stderr, "Error: Failed to render front Complex3DText view with Obol v2 API\n");
+        return 1;
+    }
 
-    // Angle view
-    rotateCamera(myCamera, M_PI/4, M_PI/6);
     snprintf(filename, sizeof(filename), "%s_angle.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderView(renderer, scene, filename, {6.0f, 3.0f, 7.0f})) {
+        fprintf(stderr, "Error: Failed to render angled Complex3DText view with Obol v2 API\n");
+        return 1;
+    }
 
-    root->unref();
+    printf("Rendered beveled Complex3DText labels [Obol v2]\n");
     return 0;
 }

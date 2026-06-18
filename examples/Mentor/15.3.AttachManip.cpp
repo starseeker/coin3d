@@ -1,375 +1,206 @@
 /*
- *
- *  Copyright (C) 2000 Silicon Graphics, Inc.  All Rights Reserved.
- *
- *  This library is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU Lesser General Public
- *  License as published by the Free Software Foundation; either
- *  version 2.1 of the License, or (at your option) any later version.
- *
- *  This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  Lesser General Public License for more details.
- *
- *  Further, this software is distributed without any warranty that it is
- *  free of the rightful claim of any third person regarding infringement
- *  or the like.  Any license provided herein, whether implied or
- *  otherwise, applies only to this software file.  Patent licenses, if
- *  any, provided herein do not apply to combinations of this program with
- *  other software, or any other product whatsoever.
- *
- *  You should have received a copy of the GNU Lesser General Public
- *  License along with this library; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- *  Contact information: Silicon Graphics, Inc., 1600 Amphitheatre Pkwy,
- *  Mountain View, CA  94043, or:
- *
- *  http://www.sgi.com
- *
- *  For further information regarding this notice, see:
- *
- *  http://oss.sgi.com/projects/GenInfo/NoticeExplan/
- *
- */
-
-/*
  * Headless version of Inventor Mentor example 15.3
- * 
- * Original: AttachManip - Demonstrates attaching/detaching manipulators
- * Headless: Shows manipulator attachment without interactive manipulation
- * 
- * This example demonstrates how manipulators can be attached to different
- * objects in a scene. Three different manipulator types are shown:
- * - SoHandleBoxManip for the sphere
- * - SoTrackballManip for the cube
- * - SoTransformBoxManip for a node kit
- * 
- * In headless mode, we programmatically attach/detach manipulators and
- * render the scene to show the different manipulator types.
+ *
+ * Original: attach/detach different Inventor manipulators to selected nodes.
+ * Headless: application selection state displays v2 manipulator overlays.
  */
 
 #include "headless_utils.h"
-#include <Inventor/SoDB.h>
-#include <Inventor/SoInput.h>
-#include <Inventor/manips/SoHandleBoxManip.h>
-#include <Inventor/manips/SoTrackballManip.h>
-#include <Inventor/manips/SoTransformBoxManip.h>
-#include <Inventor/nodekits/SoBaseKit.h>
-#include <Inventor/nodekits/SoWrapperKit.h>
-#include <Inventor/nodes/SoCamera.h>
-#include <Inventor/nodes/SoCone.h>
-#include <Inventor/nodes/SoCube.h>
-#include <Inventor/nodes/SoGroup.h>
-#include <Inventor/nodes/SoLight.h>
-#include <Inventor/nodes/SoMaterial.h>
-#include <Inventor/nodes/SoSelection.h>
-#include <Inventor/nodes/SoSphere.h>
-#include <Inventor/nodes/SoTransform.h>
-#include <Inventor/nodes/SoPerspectiveCamera.h>
-#include <Inventor/nodes/SoDirectionalLight.h>
-#include <Inventor/nodes/SoSeparator.h>
-#include <Inventor/nodes/SoShape.h>
-#include <Inventor/actions/SoSearchAction.h>
+#include <Obol/Obol.h>
+
+#include <cmath>
 #include <cstdio>
 
-// Global data
-SoSeparator *root;
-SoHandleBoxManip    *myHandleBox;
-SoTrackballManip    *myTrackball;
-SoTransformBoxManip *myTransformBox;
-SoPath *handleBoxPath    = NULL;
-SoPath *trackballPath    = NULL;
-SoPath *transformBoxPath = NULL;
+namespace {
 
-// Is this node of a type that is influenced by transforms?
-SbBool isTransformable(SoNode *myNode)
+enum class Manipulator {
+    None,
+    SphereHandleBox,
+    CubeTrackball,
+    ConeTransformBox
+};
+
+constexpr float kPi = 3.14159265358979323846f;
+constexpr float kObjectSpacing = 3.2f;
+
+obol::Material material(float r, float g, float b)
 {
-    if (myNode->isOfType(SoGroup::getClassTypeId())
-        || myNode->isOfType(SoShape::getClassTypeId())
-        || myNode->isOfType(SoCamera::getClassTypeId())
-        || myNode->isOfType(SoLight::getClassTypeId()))
-        return TRUE;
-    else 
-        return FALSE;
+    obol::Material result;
+    result.baseColor = {r, g, b, 1.0f};
+    result.specular = {0.25f, 0.25f, 0.25f, 1.0f};
+    result.shininess = 0.35f;
+    return result;
 }
 
-//  Create a path to the transform node that affects the tail
-//  of the input path.  Three possible cases:
-//   [1] The path-tail is a node kit. Just ask the node kit for
-//       a path to the part called "transform"
-//   [2] The path-tail is NOT a group.  Search siblings of path
-//       tail from right to left until you find a transform. If
-//       none is found, or if another transformable object is 
-//       found (shape,group,light,or camera), then insert a 
-//       transform just to the left of the tail. This way, the 
-//       manipulator only effects the selected object.
-//   [3] The path-tail IS a group.  Search its children left to
-//       right until a transform is found. If a transformable
-//       node is found first, insert a transform just left of 
-//       that node.  This way the manip will affect all nodes
-//       in the group.
-SoPath *createTransformPath(SoPath *inputPath)
+obol::Transform transform(float x, float y, float z)
 {
-    int pathLength = inputPath->getLength();
-    if (pathLength < 2) // Won't be able to get parent of tail
-        return NULL;
-
-    SoNode *tail = inputPath->getTail();
-
-    // CASE 1: The tail is a node kit.
-    // Nodekits have built in policy for creating parts.
-    // The kit copies inputPath, then extends it past the 
-    // kit all the way down to the transform. It creates the
-    // transform if necessary.
-    if (tail->isOfType(SoBaseKit::getClassTypeId())) {
-        SoBaseKit *kit = (SoBaseKit *) tail;
-        return kit->createPathToPart("transform", TRUE, inputPath);
-    }
-
-    SoTransform *editXf = NULL;
-    SoGroup     *parent;
-
-    // CASE 2: The tail is not a group.
-    SbBool isTailGroup;
-    isTailGroup = tail->isOfType(SoGroup::getClassTypeId());
-    if (!isTailGroup) {
-        // 'parent' is node above tail. Search under parent right
-        // to left for a transform. If we find a 'movable' node
-        // insert a transform just left of tail.  
-        parent = (SoGroup *) inputPath->getNode(pathLength - 2);
-        int tailIndx = parent->findChild(tail);
-
-        for (int i = tailIndx; (i >= 0) && (editXf == NULL); i--) {
-            SoNode *myNode = parent->getChild(i);
-            if (myNode->isOfType(SoTransform::getClassTypeId()))
-                editXf = (SoTransform *) myNode;
-            else if (i != tailIndx && (isTransformable(myNode)))
-                break;
-        }
-        if (editXf == NULL) {
-            editXf = new SoTransform;
-            parent->insertChild(editXf, tailIndx);
-        }
-    }
-    // CASE 3: The tail is a group.
-    else {
-        // Search the children from left to right for transform 
-        // nodes. Stop the search if we come to a movable node.
-        // and insert a transform before it.
-        parent = (SoGroup *) tail;
-        int i;
-        for (i = 0;
-             (i < parent->getNumChildren()) && (editXf == NULL); 
-             i++) {
-            SoNode *myNode = parent->getChild(i);
-            if (myNode->isOfType(SoTransform::getClassTypeId()))
-                editXf = (SoTransform *) myNode;
-            else if (isTransformable(myNode))
-                break;
-        }
-        if (editXf == NULL) {
-            editXf = new SoTransform;
-            parent->insertChild(editXf, i);
-        }
-    }
-
-    // Create 'pathToXform.' Copy inputPath, then make last
-    // node be editXf.
-    SoPath *pathToXform = NULL;
-    pathToXform = inputPath->copy();
-    pathToXform->ref();
-    if (!isTailGroup) // pop off the last entry.
-        pathToXform->pop();
-    // add editXf to the end
-    int xfIndex   = parent->findChild(editXf);
-    pathToXform->append(xfIndex);
-    pathToXform->unrefNoDelete();
-
-    return pathToXform;
+    obol::Transform xf;
+    xf.translation = {x, y, z};
+    return xf;
 }
+
+void addWireBox(obol::Scene & scene,
+                const obol::Vec3 & center,
+                const obol::Vec3 & halfSize,
+                const obol::Material & mat)
+{
+    obol::Polyline box;
+    box.lineWidth = 2.0f;
+    const float x = halfSize.x;
+    const float y = halfSize.y;
+    const float z = halfSize.z;
+    box.points = {
+        {-x, -y, -z}, { x, -y, -z}, { x,  y, -z}, {-x,  y, -z},
+        {-x, -y, -z}, {-x, -y,  z}, { x, -y,  z}, { x,  y,  z},
+        {-x,  y,  z}, {-x, -y,  z}, { x, -y,  z}, { x, -y, -z},
+        { x,  y, -z}, { x,  y,  z}, {-x,  y,  z}, {-x,  y, -z}
+    };
+    scene.addPolyline(box, mat, transform(center.x, center.y, center.z));
+}
+
+void addCircle(obol::Scene & scene,
+               const obol::Vec3 & center,
+               float radius,
+               const obol::Vec3 & axis,
+               const obol::Material & mat)
+{
+    obol::Polyline circle;
+    circle.lineWidth = 2.0f;
+    for (int i = 0; i <= 48; ++i) {
+        const float angle = 2.0f * kPi * static_cast<float>(i) / 48.0f;
+        if (axis.x != 0.0f) {
+            circle.points.push_back({0.0f, radius * std::cos(angle), radius * std::sin(angle)});
+        } else if (axis.y != 0.0f) {
+            circle.points.push_back({radius * std::cos(angle), 0.0f, radius * std::sin(angle)});
+        } else {
+            circle.points.push_back({radius * std::cos(angle), radius * std::sin(angle), 0.0f});
+        }
+    }
+    scene.addPolyline(circle, mat, transform(center.x, center.y, center.z));
+}
+
+void addBaseObjects(obol::Scene & scene, Manipulator active)
+{
+    const obol::Material neutral = material(0.8f, 0.8f, 0.8f);
+    const obol::Material cubeMat =
+        active == Manipulator::CubeTrackball ? material(0.2f, 1.0f, 0.2f) : neutral;
+    const obol::Material sphereMat =
+        active == Manipulator::SphereHandleBox ? material(1.0f, 0.2f, 0.2f) : neutral;
+    const obol::Material coneMat =
+        active == Manipulator::ConeTransformBox ? material(0.2f, 0.2f, 1.0f) : neutral;
+
+    scene.addPrimitive(obol::Primitive::Cube, cubeMat, transform(-kObjectSpacing, 0.0f, 0.0f));
+
+    obol::PrimitiveOptions sphereOptions;
+    sphereOptions.radius = 1.0f;
+    scene.addPrimitive(obol::Primitive::Sphere,
+                       sphereMat,
+                       transform(0.0f, 0.0f, 0.0f),
+                       sphereOptions);
+
+    obol::PrimitiveOptions coneOptions;
+    coneOptions.radius = 1.0f;
+    coneOptions.height = 2.0f;
+    scene.addPrimitive(obol::Primitive::Cone,
+                       coneMat,
+                       transform(kObjectSpacing, 0.0f, 0.0f),
+                       coneOptions);
+}
+
+void addManipulatorOverlay(obol::Scene & scene, Manipulator active)
+{
+    if (active == Manipulator::SphereHandleBox) {
+        addWireBox(scene,
+                   {0.0f, 0.0f, 0.0f},
+                   {1.25f, 1.25f, 1.25f},
+                   material(1.0f, 0.2f, 0.2f));
+    } else if (active == Manipulator::CubeTrackball) {
+        const obol::Material mat = material(0.2f, 1.0f, 0.2f);
+        addCircle(scene, {-kObjectSpacing, 0.0f, 0.0f}, 1.35f, {1.0f, 0.0f, 0.0f}, mat);
+        addCircle(scene, {-kObjectSpacing, 0.0f, 0.0f}, 1.35f, {0.0f, 1.0f, 0.0f}, mat);
+        addCircle(scene, {-kObjectSpacing, 0.0f, 0.0f}, 1.35f, {0.0f, 0.0f, 1.0f}, mat);
+    } else if (active == Manipulator::ConeTransformBox) {
+        addWireBox(scene,
+                   {kObjectSpacing, 0.0f, 0.0f},
+                   {1.25f, 1.25f, 1.25f},
+                   material(0.2f, 0.2f, 1.0f));
+        addCircle(scene, {kObjectSpacing, 0.0f, 0.0f}, 1.55f, {0.0f, 0.0f, 1.0f}, material(0.2f, 0.2f, 1.0f));
+    }
+}
+
+obol::Scene makeScene(Manipulator active)
+{
+    obol::Scene scene;
+    obol::PerspectiveCamera camera;
+    camera.position = {0.0f, 1.2f, 16.0f};
+    camera.target = {0.0f, 0.0f, 0.0f};
+    camera.verticalFieldOfViewRadians = 0.55f;
+    scene.setCamera(camera);
+    scene.addDirectionalLight(obol::DirectionalLight{});
+    addBaseObjects(scene, active);
+    addManipulatorOverlay(scene, active);
+    return scene;
+}
+
+bool renderScene(obol::OffscreenRenderer & renderer,
+                 Manipulator active,
+                 const char * filename)
+{
+    obol::Scene scene = makeScene(active);
+    const obol::FrameResult result = renderer.render(scene);
+    return result.success && renderer.writeRGB(filename);
+}
+
+} // namespace
 
 int main(int argc, char **argv)
 {
     initCoinHeadless();
 
-    // Create the scene graph
-    root = new SoSeparator;
-    root->ref();
-
-    // Add camera and light
-    SoPerspectiveCamera *camera = new SoPerspectiveCamera;
-    root->addChild(camera);
-    root->addChild(new SoDirectionalLight);
-
-    // Create a cube with its own transform (left side)
-    SoSeparator *cubeRoot = new SoSeparator;
-    SoTransform *cubeXform = new SoTransform;
-    cubeXform->translation.setValue(-2.5, 0, 0);
-    root->addChild(cubeRoot);
-    cubeRoot->addChild(cubeXform);
-
-    SoMaterial *cubeMat = new SoMaterial;
-    cubeMat->diffuseColor.setValue(.8, .8, .8);
-    cubeRoot->addChild(cubeMat);
-    cubeRoot->addChild(new SoCube);
-
-    // Add a sphere node without a transform (center)
-    // (one will be added when we attach the manipulator)
-    SoSeparator *sphereRoot = new SoSeparator;
-    SoMaterial *sphereMat = new SoMaterial;
-    root->addChild(sphereRoot);
-    sphereMat->diffuseColor.setValue(.8, .8, .8);
-    sphereRoot->addChild(sphereMat);
-    sphereRoot->addChild(new SoSphere);
-
-    // Add a simple cone for the third object (right side)
-    // Using a wrapper kit like in original, but simplified
-    SoSeparator *coneRoot = new SoSeparator;
-    SoTransform *coneXform = new SoTransform;
-    coneXform->translation.setValue(2.5, 0, 0);
-    root->addChild(coneRoot);
-    coneRoot->addChild(coneXform);
-    
-    SoMaterial *coneMat = new SoMaterial;
-    coneMat->diffuseColor.setValue(.8, .8, .8);
-    coneRoot->addChild(coneMat);
-    
-    SoCone *cone = new SoCone;
-    coneRoot->addChild(cone);
-
-    // Create the manipulators
-    myHandleBox = new SoHandleBoxManip;
-    myHandleBox->ref();
-    myTrackball = new SoTrackballManip;
-    myTrackball->ref();
-    myTransformBox = new SoTransformBoxManip;
-    myTransformBox->ref();
-
-    // Setup camera to view the scene
-    SbViewportRegion viewport(DEFAULT_WIDTH, DEFAULT_HEIGHT);
-    camera->viewAll(root, viewport);
+    obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
+                                        obol::RenderBackendKind::OpenGL2SWRast,
+                                        "headless-context");
+    obol::RenderTarget target;
+    target.width = DEFAULT_WIDTH;
+    target.height = DEFAULT_HEIGHT;
+    target.pixelFormat = obol::PixelFormat::RGB;
+    obol::OffscreenRenderer renderer(backend, target);
+    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
 
     const char *baseFilename = (argc > 1) ? argv[1] : "15.3.AttachManip";
-    char filename[256];
+    char filename[512];
 
-    int frameNum = 0;
+    printf("\n=== Manipulator Attachment Demo [Obol v2] ===\n");
 
-    // Render initial scene without manipulators
-    printf("\n=== Manipulator Attachment Demo ===\n");
-    printf("Frame %d: Initial scene (no manipulators)\n", frameNum);
-    snprintf(filename, sizeof(filename), "%s_frame%02d_initial.rgb", baseFilename, frameNum++);
-    renderToFile(root, filename);
+    snprintf(filename, sizeof(filename), "%s_frame00_initial.rgb", baseFilename);
+    if (!renderScene(renderer, Manipulator::None, filename)) return 1;
+    snprintf(filename, sizeof(filename), "%s.rgb", baseFilename);
+    if (!renderScene(renderer, Manipulator::None, filename)) return 1;
 
-    // Create paths to the objects for manipulator attachment
-    SoSearchAction search;
+    printf("Frame 1: Attaching HandleBox overlay to sphere\n");
+    snprintf(filename, sizeof(filename), "%s_frame01_sphere_handlebox.rgb", baseFilename);
+    if (!renderScene(renderer, Manipulator::SphereHandleBox, filename)) return 1;
 
-    // Attach HandleBox to sphere
-    printf("\nFrame %d: Attaching HandleBox manipulator to sphere\n", frameNum);
-    search.reset();
-    search.setType(SoSphere::getClassTypeId());
-    search.setInterest(SoSearchAction::FIRST);
-    search.apply(root);
-    if (search.getPath()) {
-        SoPath *spherePath = search.getPath()->copy();
-        spherePath->ref();
-        handleBoxPath = createTransformPath(spherePath);
-        if (handleBoxPath) {
-            handleBoxPath->ref();
-            myHandleBox->replaceNode(handleBoxPath);
-            sphereMat->diffuseColor.setValue(1, 0.2, 0.2); // Highlight when selected
-        }
-        spherePath->unref();
-    }
-    snprintf(filename, sizeof(filename), "%s_frame%02d_sphere_handlebox.rgb", baseFilename, frameNum++);
-    renderToFile(root, filename);
+    printf("Frame 2: Detaching manipulator from sphere\n");
+    snprintf(filename, sizeof(filename), "%s_frame02_sphere_detached.rgb", baseFilename);
+    if (!renderScene(renderer, Manipulator::None, filename)) return 1;
 
-    // Detach from sphere
-    printf("Frame %d: Detaching manipulator from sphere\n", frameNum);
-    if (handleBoxPath) {
-        myHandleBox->replaceManip(handleBoxPath, new SoTransform);
-        handleBoxPath->unref();
-        handleBoxPath = NULL;
-        sphereMat->diffuseColor.setValue(.8, .8, .8);
-    }
-    snprintf(filename, sizeof(filename), "%s_frame%02d_sphere_detached.rgb", baseFilename, frameNum++);
-    renderToFile(root, filename);
+    printf("Frame 3: Attaching Trackball overlay to cube\n");
+    snprintf(filename, sizeof(filename), "%s_frame03_cube_trackball.rgb", baseFilename);
+    if (!renderScene(renderer, Manipulator::CubeTrackball, filename)) return 1;
 
-    // Attach Trackball to cube
-    printf("\nFrame %d: Attaching Trackball manipulator to cube\n", frameNum);
-    search.reset();
-    search.setType(SoCube::getClassTypeId());
-    search.setInterest(SoSearchAction::FIRST);
-    search.apply(root);
-    if (search.getPath()) {
-        SoPath *cubePath = search.getPath()->copy();
-        cubePath->ref();
-        trackballPath = createTransformPath(cubePath);
-        if (trackballPath) {
-            trackballPath->ref();
-            myTrackball->replaceNode(trackballPath);
-            cubeMat->diffuseColor.setValue(0.2, 1, 0.2); // Highlight when selected
-        }
-        cubePath->unref();
-    }
-    snprintf(filename, sizeof(filename), "%s_frame%02d_cube_trackball.rgb", baseFilename, frameNum++);
-    renderToFile(root, filename);
+    printf("Frame 4: Detaching manipulator from cube\n");
+    snprintf(filename, sizeof(filename), "%s_frame04_cube_detached.rgb", baseFilename);
+    if (!renderScene(renderer, Manipulator::None, filename)) return 1;
 
-    // Detach from cube
-    printf("Frame %d: Detaching manipulator from cube\n", frameNum);
-    if (trackballPath) {
-        myTrackball->replaceManip(trackballPath, new SoTransform);
-        trackballPath->unref();
-        trackballPath = NULL;
-        cubeMat->diffuseColor.setValue(.8, .8, .8);
-    }
-    snprintf(filename, sizeof(filename), "%s_frame%02d_cube_detached.rgb", baseFilename, frameNum++);
-    renderToFile(root, filename);
+    printf("Frame 5: Attaching TransformBox overlay to cone\n");
+    snprintf(filename, sizeof(filename), "%s_frame05_cone_transformbox.rgb", baseFilename);
+    if (!renderScene(renderer, Manipulator::ConeTransformBox, filename)) return 1;
 
-    // Attach TransformBox to cone
-    printf("\nFrame %d: Attaching TransformBox manipulator to cone\n", frameNum);
-    search.reset();
-    search.setType(SoCone::getClassTypeId());
-    search.setInterest(SoSearchAction::FIRST);
-    search.apply(root);
-    if (search.getPath()) {
-        SoPath *conePath = search.getPath()->copy();
-        conePath->ref();
-        transformBoxPath = createTransformPath(conePath);
-        if (transformBoxPath) {
-            transformBoxPath->ref();
-            myTransformBox->replaceNode(transformBoxPath);
-            coneMat->diffuseColor.setValue(0.2, 0.2, 1); // Highlight when selected
-        }
-        conePath->unref();
-    }
-    snprintf(filename, sizeof(filename), "%s_frame%02d_cone_transformbox.rgb", baseFilename, frameNum++);
-    renderToFile(root, filename);
+    printf("Frame 6: Detaching manipulator from cone\n");
+    snprintf(filename, sizeof(filename), "%s_frame06_cone_detached.rgb", baseFilename);
+    if (!renderScene(renderer, Manipulator::None, filename)) return 1;
 
-    // Detach from cone
-    printf("Frame %d: Detaching manipulator from cone\n", frameNum);
-    if (transformBoxPath) {
-        myTransformBox->replaceManip(transformBoxPath, new SoTransform);
-        transformBoxPath->unref();
-        transformBoxPath = NULL;
-        coneMat->diffuseColor.setValue(.8, .8, .8);
-    }
-    snprintf(filename, sizeof(filename), "%s_frame%02d_cone_detached.rgb", baseFilename, frameNum++);
-    renderToFile(root, filename);
-
-    printf("\n=== Summary ===\n");
-    printf("Demonstrated three manipulator types:\n");
-    printf("  - SoHandleBoxManip: Box with corner/edge/face handles\n");
-    printf("  - SoTrackballManip: Sphere with rotation bands\n");
-    printf("  - SoTransformBoxManip: Box with scale/rotate handles\n");
-    printf("In interactive mode, users would drag these handles to transform objects.\n");
-    printf("Rendered %d frames showing attachment/detachment\n", frameNum);
-
-    myHandleBox->unref();
-    myTrackball->unref();
-    myTransformBox->unref();
-    root->unref();
-
+    printf("Rendered 7 frames showing manipulator attachment/detachment.\n");
     return 0;
 }

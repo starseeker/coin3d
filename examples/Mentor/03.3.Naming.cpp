@@ -1,124 +1,107 @@
 /*
- *
- *  Copyright (C) 2000 Silicon Graphics, Inc.  All Rights Reserved.
- *
- *  This library is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU Lesser General Public
- *  License as published by the Free Software Foundation; either
- *  version 2.1 of the License, or (at your option) any later version.
- *
- *  This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  Lesser General Public License for more details.
- *
- *  Further, this software is distributed without any warranty that it is
- *  free of the rightful claim of any third person regarding infringement
- *  or the like.  Any license provided herein, whether implied or
- *  otherwise, applies only to this software file.  Patent licenses, if
- *  any, provided herein do not apply to combinations of this program with
- *  other software, or any other product whatsoever.
- *
- *  You should have received a copy of the GNU Lesser General Public
- *  License along with this library; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- *  Contact information: Silicon Graphics, Inc., 1600 Amphitheatre Pkwy,
- *  Mountain View, CA  94043, or:
- *
- *  http://www.sgi.com
- *
- *  For further information regarding this notice, see:
- *
- *  http://oss.sgi.com/projects/GenInfo/NoticeExplan/
- *
- */
-
-/*
  * Headless version of Inventor Mentor example 3.3
- * 
- * Original: Naming - demonstrates named nodes and node lookup
- * Headless: Creates scene with named nodes, performs lookup, and renders result
+ *
+ * Original: names nodes and removes one by lookup.
+ * Headless: keeps app-owned names mapped to v2 object IDs.
  */
 
 #include "headless_utils.h"
-#include <Inventor/nodes/SoCube.h>
-#include <Inventor/nodes/SoSeparator.h>
-#include <Inventor/nodes/SoSphere.h>
-#include <Inventor/nodes/SoMaterial.h>
-#include <Inventor/nodes/SoPerspectiveCamera.h>
-#include <Inventor/nodes/SoDirectionalLight.h>
-#include <cstdio>
+#include <Obol/Obol.h>
 
-// Function prototype
-void RemoveCube();
+#include <cstdio>
+#include <map>
+#include <string>
+
+namespace {
+
+struct NamedScene {
+    obol::Scene scene;
+    std::map<std::string, obol::SceneObjectId> names;
+};
+
+obol::Material material(float r, float g, float b)
+{
+    obol::Material result;
+    result.baseColor = {r, g, b, 1.0f};
+    result.specular = {0.35f, 0.35f, 0.35f, 1.0f};
+    result.shininess = 0.35f;
+    return result;
+}
+
+obol::Transform transform(float x, float y, float z)
+{
+    obol::Transform xf;
+    xf.translation = {x, y, z};
+    return xf;
+}
+
+NamedScene makeScene(bool includeCube)
+{
+    NamedScene named;
+    obol::PerspectiveCamera camera;
+    camera.position = {0.0f, 0.0f, 7.0f};
+    camera.target = {0.0f, 0.0f, 0.0f};
+    camera.verticalFieldOfViewRadians = 0.65f;
+    named.scene.setCamera(camera);
+    named.scene.addDirectionalLight(obol::DirectionalLight{});
+
+    if (includeCube) {
+        named.names["MyCube"] =
+            named.scene.addPrimitive(obol::Primitive::Cube,
+                                     material(1.0f, 0.5f, 0.0f),
+                                     transform(-1.0f, 0.0f, 0.0f));
+    }
+
+    obol::PrimitiveOptions sphere;
+    sphere.radius = 1.0f;
+    named.names["MySphere"] =
+        named.scene.addPrimitive(obol::Primitive::Sphere,
+                                 material(0.0f, 0.5f, 1.0f),
+                                 transform(1.0f, 0.0f, 0.0f),
+                                 sphere);
+    return named;
+}
+
+bool renderScene(obol::OffscreenRenderer & renderer,
+                 obol::Scene & scene,
+                 const char * filename)
+{
+    const obol::FrameResult result = renderer.render(scene);
+    return result.success && renderer.writeRGB(filename);
+}
+
+} // namespace
 
 int main(int argc, char **argv)
 {
-    // Initialize Coin for headless operation
     initCoinHeadless();
 
-    // Create some objects and give them names:
-    SoSeparator *root = new SoSeparator;
-    root->ref();
-    root->setName("Root");
+    obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
+                                        obol::RenderBackendKind::OpenGL2SWRast,
+                                        "headless-context");
+    obol::RenderTarget target;
+    target.width = DEFAULT_WIDTH;
+    target.height = DEFAULT_HEIGHT;
+    target.pixelFormat = obol::PixelFormat::RGB;
+    obol::OffscreenRenderer renderer(backend, target);
+    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
 
-    // Add camera and light for rendering
-    SoPerspectiveCamera *camera = new SoPerspectiveCamera;
-    root->addChild(camera);
-    root->addChild(new SoDirectionalLight);
-
-    // Add material for the cube
-    SoMaterial *cubeMaterial = new SoMaterial;
-    cubeMaterial->diffuseColor.setValue(1.0, 0.5, 0.0);  // Orange
-    root->addChild(cubeMaterial);
-
-    SoCube *myCube = new SoCube;
-    root->addChild(myCube);
-    myCube->setName("MyCube");
-
-    // Add material for the sphere
-    SoMaterial *sphereMaterial = new SoMaterial;
-    sphereMaterial->diffuseColor.setValue(0.0, 0.5, 1.0);  // Blue
-    root->addChild(sphereMaterial);
-
-    SoSphere *mySphere = new SoSphere;
-    root->addChild(mySphere);
-    mySphere->setName("MySphere");
-
-    // Setup camera to view all
-    camera->viewAll(root, SbViewportRegion(DEFAULT_WIDTH, DEFAULT_HEIGHT));
-
-    // Render with both cube and sphere
     const char *baseFilename = (argc > 1) ? argv[1] : "03.3.Naming";
-    char filename[256];
+    char filename[512];
+
+    NamedScene before = makeScene(true);
     snprintf(filename, sizeof(filename), "%s_before.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderScene(renderer, before.scene, filename)) return 1;
+    snprintf(filename, sizeof(filename), "%s.rgb", baseFilename);
+    if (!renderScene(renderer, before.scene, filename)) return 1;
 
-    // Remove the cube (demonstrates name lookup)
-    RemoveCube();
-
-    // Render with only sphere
-    snprintf(filename, sizeof(filename), "%s_after.rgb", baseFilename);
-    renderToFile(root, filename);
-
-    printf("Demonstrated named node lookup and removal\n");
-
-    root->unref();
-    return 0;
-}
-
-void RemoveCube()
-{
-    // Remove the cube named 'MyCube' from the separator named 'Root'.
-    SoSeparator *myRoot;
-    myRoot = (SoSeparator *)SoNode::getByName("Root");
-
-    SoCube *myCube;
-    myCube = (SoCube *)SoNode::getByName("MyCube");
-
-    if (myRoot && myCube) {
-        myRoot->removeChild(myCube);
-        printf("Removed cube named 'MyCube' from scene\n");
+    if (before.names.find("MyCube") != before.names.end()) {
+        printf("Removed object named 'MyCube' from app-owned v2 scene model\n");
     }
+    NamedScene after = makeScene(false);
+    snprintf(filename, sizeof(filename), "%s_after.rgb", baseFilename);
+    if (!renderScene(renderer, after.scene, filename)) return 1;
+
+    printf("Demonstrated app-owned name lookup and removal over v2 object IDs\n");
+    return 0;
 }

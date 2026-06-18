@@ -42,142 +42,137 @@
  */
 
 #include "headless_utils.h"
-#include <Inventor/SoDB.h>
-#include <Inventor/SoInput.h>
-#include <Inventor/SoOffscreenRenderer.h>
-#include <Inventor/SbViewportRegion.h>
-#include <Inventor/nodes/SoCube.h>
-#include <Inventor/nodes/SoCone.h>
-#include <Inventor/nodes/SoDirectionalLight.h>
-#include <Inventor/nodes/SoPerspectiveCamera.h>
-#include <Inventor/nodes/SoRotationXYZ.h>
-#include <Inventor/nodes/SoSeparator.h>
-#include <Inventor/nodes/SoTexture2.h>
-#include <Inventor/nodes/SoBaseColor.h>
-#include <Inventor/nodes/SoRotation.h>
+#include <Obol/Obol.h>
+
 #include <cstdio>
 #include <cmath>
+#include <memory>
 
-// Embedded scene to use as texture source (red cone)
-static const char red_cone_iv[] = 
-    "#Inventor V2.1 ascii\n\n"
-    "Separator {\n"
-    "  BaseColor { rgb 0.8 0 0 }\n"
-    "  Rotation { rotation 1 1 0  1.57 }\n"
-    "  Cone { }\n"
-    "}\n";
+namespace {
 
-SbBool generateTextureMap(SoNode *root, SoTexture2 *texture, 
-                          short textureWidth, short textureHeight)
+obol::Scene createTextureSourceScene()
 {
-    // Use the shared persistent renderer so we don't create a second GL context.
-    // (In headless Mesa/GLX environments only one offscreen context can be
-    // created successfully per process; a second attempt fails.)
-    // The renderer always operates at DEFAULT_WIDTH x DEFAULT_HEIGHT.
-    SoOffscreenRenderer *myRenderer = getSharedRenderer();
-    myRenderer->setComponents(SoOffscreenRenderer::RGB);
-    myRenderer->setBackgroundColor(SbColor(0.8, 0.8, 0.0));
-    
-    if (!myRenderer->render(root)) {
-        return FALSE;
+    obol::Scene scene;
+    obol::PerspectiveCamera camera;
+    camera.position = {0.0f, 0.0f, 8.0f};
+    camera.target = {0.0f, 0.0f, 0.0f};
+    camera.verticalFieldOfViewRadians = 0.75f;
+    scene.setCamera(camera);
+    scene.addDirectionalLight(obol::DirectionalLight{});
+
+    obol::Material red;
+    red.baseColor = {0.8f, 0.0f, 0.0f, 1.0f};
+
+    obol::Transform rootRotation;
+    rootRotation.rotationAxis = {1.0f, 0.0f, 0.0f};
+    rootRotation.rotationRadians = static_cast<float>(M_PI_2);
+    const obol::SceneGroupId rotatedRoot = scene.addGroup(rootRotation);
+
+    obol::Transform rotation;
+    rotation.rotationAxis = {1.0f, 1.0f, 0.0f};
+    rotation.rotationRadians = 1.57f;
+    scene.addPrimitive(obol::Primitive::Cone, red, rotation, obol::PrimitiveOptions{}, rotatedRoot);
+    return scene;
+}
+
+bool generateTextureMap(obol::OffscreenRenderer & renderer,
+                        obol::Texture2D & texture)
+{
+    obol::Scene textureScene = createTextureSourceScene();
+    renderer.setBackgroundColor({0.8f, 0.8f, 0.0f, 1.0f});
+    const obol::FrameResult result = renderer.render(textureScene);
+    const unsigned char * pixels = renderer.pixels();
+    if (!result.success || !pixels) {
+        return false;
     }
 
-    // Apply the rendered buffer as texture at full DEFAULT_WIDTH x DEFAULT_HEIGHT
-    texture->image.setValue(SbVec2s(DEFAULT_WIDTH, DEFAULT_HEIGHT),
-                           SoOffscreenRenderer::RGB, myRenderer->getBuffer());
-
-    return TRUE;
+    texture.image.width = renderer.width();
+    texture.image.height = renderer.height();
+    texture.image.format = obol::ImageFormat::RGB;
+    texture.image.pixels.assign(
+        pixels,
+        pixels + texture.image.width * texture.image.height * 3);
+    texture.model = obol::TextureModel::Modulate;
+    return true;
 }
+
+bool renderScene(obol::OffscreenRenderer & renderer,
+                 obol::Scene & scene,
+                 const char * filename)
+{
+    const obol::FrameResult result = renderer.render(scene);
+    return result.success && renderer.writeRGB(filename);
+}
+
+obol::Transform rotation(const obol::Vec3 & axis, float radians)
+{
+    obol::Transform transform;
+    transform.rotationAxis = axis;
+    transform.rotationRadians = radians;
+    return transform;
+}
+
+} // namespace
 
 int main(int argc, char **argv)
 {
-    // Initialize Coin for headless operation
     initCoinHeadless();
 
-    // Make a scene to render into a texture
-    SoSeparator *texRoot = new SoSeparator;
-    texRoot->ref();
+    obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
+                                        obol::RenderBackendKind::OpenGL2SWRast,
+                                        "headless-context");
+    obol::RenderTarget target;
+    target.width = DEFAULT_WIDTH;
+    target.height = DEFAULT_HEIGHT;
+    target.pixelFormat = obol::PixelFormat::RGB;
+    obol::OffscreenRenderer renderer(backend, target);
 
-    // Parse the embedded red cone scene
-    SoInput in;
-    // sizeof() includes null terminator, so subtract 1 for actual string length
-    in.setBuffer(red_cone_iv, sizeof(red_cone_iv) - 1);
-    SoSeparator *result = SoDB::readAll(&in);
-    if (result == NULL) {
-        fprintf(stderr, "Error: Could not parse scene\n");
-        texRoot->unref();
+    std::shared_ptr<obol::Texture2D> texture(new obol::Texture2D);
+    printf("Generating texture map (%dx%d)...\n", DEFAULT_WIDTH, DEFAULT_HEIGHT);
+    if (!generateTextureMap(renderer, *texture)) {
+        fprintf(stderr, "Error: Could not generate texture map with Obol v2 API\n");
         return 1;
     }
+    printf("Successfully generated texture map\n");
 
-    // Set up camera and lighting for texture generation
-    SoPerspectiveCamera *myCamera = new SoPerspectiveCamera;
-    SoRotationXYZ *rot = new SoRotationXYZ;
-    rot->axis = SoRotationXYZ::X;
-    rot->angle = M_PI_2;
-    myCamera->position.setValue(SbVec3f(-0.2, -0.2, 2.0));
-    myCamera->scaleHeight(0.4);
-    
-    texRoot->addChild(myCamera);
-    texRoot->addChild(new SoDirectionalLight);
-    texRoot->addChild(rot);
-    texRoot->addChild(result);
+    obol::Scene scene;
+    obol::PerspectiveCamera camera;
+    camera.position = {0.0f, 0.0f, 4.0f};
+    camera.target = {0.0f, 0.0f, 0.0f};
+    scene.setCamera(camera);
+    scene.addDirectionalLight(obol::DirectionalLight{});
 
-    myCamera->viewAll(texRoot, SbViewportRegion());
-
-    // Generate the texture map
-    SoTexture2 *texture = new SoTexture2;
-    texture->ref();
-    
-    printf("Generating texture map (128x128)...\n");
-    if (generateTextureMap(texRoot, texture, 128, 128)) {
-        printf("Successfully generated texture map\n");
-    } else {
-        fprintf(stderr, "Error: Could not generate texture map\n");
-        texture->unref();
-        texRoot->unref();
-        return 1;
-    }
-    texRoot->unref();
-
-    // Make a scene with a cube and apply the texture to it
-    SoSeparator *root = new SoSeparator;
-    root->ref();
-
-    // Add camera and light for final scene
-    SoPerspectiveCamera *camera = new SoPerspectiveCamera;
-    root->addChild(camera);
-    root->addChild(new SoDirectionalLight);
-
-    // Add the texture and cube
-    root->addChild(texture);
-    root->addChild(new SoCube);
-
-    // Setup camera
-    camera->viewAll(root, SbViewportRegion(DEFAULT_WIDTH, DEFAULT_HEIGHT));
+    obol::Material material;
+    material.baseColor = {1.0f, 1.0f, 1.0f, 1.0f};
+    material.baseColorTexture = texture;
+    const obol::SceneObjectId cube =
+        scene.addPrimitive(obol::Primitive::Cube, material);
 
     const char *baseFilename = (argc > 1) ? argv[1] : "09.2.Texture";
     char filename[256];
 
-    // Render cube with generated texture - front view
     printf("\nRendering textured cube...\n");
+    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
     snprintf(filename, sizeof(filename), "%s_front.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderScene(renderer, scene, filename)) {
+        fprintf(stderr, "Error: Failed to render textured cube front view with Obol v2 API\n");
+        return 1;
+    }
 
-    // Rotate to see different sides of the textured cube
-    SoRotation *cubeRot = new SoRotation;
-    root->insertChild(cubeRot, root->getNumChildren() - 1);
-    
-    cubeRot->rotation.setValue(SbVec3f(0, 1, 0), M_PI / 4);
+    scene.setObjectTransform(cube, rotation({0.0f, 1.0f, 0.0f}, static_cast<float>(M_PI / 4.0)));
     snprintf(filename, sizeof(filename), "%s_angle1.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderScene(renderer, scene, filename)) {
+        fprintf(stderr, "Error: Failed to render textured cube angle1 with Obol v2 API\n");
+        return 1;
+    }
 
-    cubeRot->rotation.setValue(SbVec3f(1, 1, 0), M_PI / 3);
+    scene.setObjectTransform(cube, rotation({1.0f, 1.0f, 0.0f}, static_cast<float>(M_PI / 3.0)));
     snprintf(filename, sizeof(filename), "%s_angle2.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderScene(renderer, scene, filename)) {
+        fprintf(stderr, "Error: Failed to render textured cube angle2 with Obol v2 API\n");
+        return 1;
+    }
 
-    texture->unref();
-    root->unref();
-
-    printf("\nSuccessfully completed offscreen texture rendering example\n");
+    printf("\nSuccessfully completed offscreen texture rendering example [Obol v2]\n");
     return 0;
 }

@@ -1,232 +1,194 @@
 /*
+ * Headless version of Inventor Mentor example 14.3
  *
- *  Copyright (C) 2000 Silicon Graphics, Inc.  All Rights Reserved.
- *
- *  This library is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU Lesser General Public
- *  License as published by the Free Software Foundation; either
- *  version 2.1 of the License, or (at your option) any later version.
- *
- *  This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  Lesser General Public License for more details.
- *
- *  Further, this software is distributed without any warranty that it is
- *  free of the rightful claim of any third person regarding infringement
- *  or the like.  Any license provided herein, whether implied or
- *  otherwise, applies only to this software file.  Patent licenses, if
- *  any, provided herein do not apply to combinations of this program with
- *  other software, or any other product whatsoever.
- *
- *  You should have received a copy of the GNU Lesser General Public
- *  License along with this library; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- *  Contact information: Silicon Graphics, Inc., 1600 Amphitheatre Pkwy,
- *  Mountain View, CA  94043, or:
- *
- *  http://www.sgi.com
- *
- *  For further information regarding this notice, see:
- *
- *  http://oss.sgi.com/projects/GenInfo/NoticeExplan/
- *
- */
-
-/*
- *  Headless version of Inventor Mentor example 14.3
- *
- *  Converted from interactive render area to headless rendering.
- *  This example illustrates the creation of motion hierarchies
- *  using nodekits by creating a model of a balance-style scale.
- *  
- *  Simulates keyboard events (LEFT_ARROW and RIGHT_ARROW) to
- *  tip the balance scale left and right.
+ * Original: ShapeKit hierarchy plus keyboard event callback tips a balance.
+ * Headless: application-owned hierarchy and key handling update v2 groups.
  */
 
 #include "headless_utils.h"
-#include <Inventor/events/SoKeyboardEvent.h>
-#include <Inventor/nodekits/SoCameraKit.h>
-#include <Inventor/nodekits/SoLightKit.h>
-#include <Inventor/nodekits/SoSceneKit.h>
-#include <Inventor/nodekits/SoShapeKit.h>
-#include <Inventor/nodes/SoCone.h>
-#include <Inventor/nodes/SoCube.h>
-#include <Inventor/nodes/SoCylinder.h>
-#include <Inventor/nodes/SoEventCallback.h>
-#include <Inventor/nodes/SoText2.h>
-#include <Inventor/nodes/SoTransform.h>
-#include <Inventor/nodes/SoPerspectiveCamera.h>
+#include <Obol/Obol.h>
+
 #include <cstdio>
 
-// Callback Function for Animating the Balance Scale.
-void
-tipTheBalance(
-   void *userData,
-   SoEventCallback *eventCB)
+namespace {
+
+struct BalanceKit {
+    obol::SceneGroupId beamGroup = obol::InvalidSceneGroupId;
+    obol::SceneGroupId stringLeftGroup = obol::InvalidSceneGroupId;
+    obol::SceneGroupId stringRightGroup = obol::InvalidSceneGroupId;
+    float beamAngle = 0.0f;
+};
+
+obol::Material material(float r, float g, float b)
 {
-   const SoEvent *ev = eventCB->getEvent();
-   
-   // Which Key was pressed?
-   // If Right or Left Arrow key, then continue...
-   if (SO_KEY_PRESS_EVENT(ev, RIGHT_ARROW) || 
-        SO_KEY_PRESS_EVENT(ev, LEFT_ARROW)) {
-      SoShapeKit  *support, *beam1, *string1, *string2;
-      SbRotation  startRot, beamIncrement, stringIncrement;
-
-      // Get the different nodekits from the userData.
-      support = (SoShapeKit *) userData;
-
-      // These three parts are extracted based on knowledge of the
-      // motion hierarchy
-      beam1   = (SoShapeKit *) support->getPart("childList[0]",TRUE);
-      string1 = (SoShapeKit *)   beam1->getPart("childList[0]",TRUE);
-      string2 = (SoShapeKit *)   beam1->getPart("childList[1]",TRUE);
-
-      // Set angular increments to be .1 Radians about the Z-Axis
-      // The strings rotate opposite the beam, and the two types
-      // of key press produce opposite effects.
-      if (SO_KEY_PRESS_EVENT(ev, RIGHT_ARROW)) {
-         beamIncrement.setValue(SbVec3f(0, 0, 1), -.1);
-         stringIncrement.setValue(SbVec3f(0, 0, 1), .1);
-      } 
-      else {
-         beamIncrement.setValue(SbVec3f(0, 0, 1), .1);
-         stringIncrement.setValue(SbVec3f(0, 0, 1), -.1);
-      }
-
-      // Use SO_GET_PART to find the transform for each of the 
-      // rotating parts and modify their rotations.
-
-      SoTransform *xf;
-      xf = SO_GET_PART(beam1, "transform", SoTransform);
-      startRot = xf->rotation.getValue();
-      xf->rotation.setValue(startRot *  beamIncrement);
-
-      xf = SO_GET_PART(string1, "transform", SoTransform);
-      startRot = xf->rotation.getValue();
-      xf->rotation.setValue(startRot *  stringIncrement);
-
-      xf = SO_GET_PART(string2, "transform", SoTransform);
-      startRot = xf->rotation.getValue();
-      xf->rotation.setValue(startRot *  stringIncrement);
-
-      eventCB->setHandled();
-   }
+    obol::Material result;
+    result.baseColor = {r, g, b, 1.0f};
+    result.specular = {0.2f, 0.2f, 0.2f, 1.0f};
+    result.shininess = 0.25f;
+    return result;
 }
 
-int
-main(int, char **)
+obol::Transform transform(float x, float y, float z)
 {
-   initCoinHeadless();
+    obol::Transform xf;
+    xf.translation = {x, y, z};
+    return xf;
+}
 
-   SoSceneKit *myScene = new SoSceneKit;
-   myScene->ref();
+obol::Transform rotateZ(float x, float y, float z, float angle)
+{
+    obol::Transform xf = transform(x, y, z);
+    xf.rotationAxis = {0.0f, 0.0f, 1.0f};
+    xf.rotationRadians = angle;
+    return xf;
+}
 
-   myScene->setPart("lightList[0]", new SoLightKit);
-   myScene->setPart("cameraList[0]", new SoCameraKit);
-   myScene->setCameraNumber(0);
+void addCylinder(obol::Scene & scene,
+                 float radius,
+                 float height,
+                 const obol::Material & mat,
+                 const obol::Transform & xf,
+                 obol::SceneGroupId parent)
+{
+    obol::PrimitiveOptions options;
+    options.radius = radius;
+    options.height = height;
+    scene.addPrimitive(obol::Primitive::Cylinder, mat, xf, options, parent);
+}
 
-   // Create the Balance Scale -- put each part in the 
-   // childList of its parent, to build up this hierarchy:
-   //
-   //                    myScene
-   //                       |
-   //                     support
-   //                       |
-   //                     beam
-   //                       |
-   //                   --------
-   //                   |       |
-   //                string1  string2
-   //                   |       |
-   //                tray1     tray2
+BalanceKit addBalance(obol::Scene & scene)
+{
+    BalanceKit kit;
 
-   SoShapeKit *support = new SoShapeKit();
-   support->setPart("shape", new SoCone);
-   support->set("shape { height 3 bottomRadius .3 }");
-   myScene->setPart("childList[0]", support);
+    obol::PrimitiveOptions supportOptions;
+    supportOptions.radius = 0.3f;
+    supportOptions.height = 3.0f;
+    scene.addPrimitive(obol::Primitive::Cone,
+                       material(0.65f, 0.65f, 0.7f),
+                       transform(0.0f, 0.0f, 0.0f),
+                       supportOptions);
 
-   SoShapeKit *beam = new SoShapeKit();
-   beam->setPart("shape", new SoCube);
-   beam->set("shape { width 3 height .2 depth .2 }");
-   beam->set("transform { translation 0 1.5 0 } ");
-   support->setPart("childList[0]", beam);
+    kit.beamGroup = scene.addGroup(transform(0.0f, 1.5f, 0.0f));
+    obol::PrimitiveOptions beamOptions;
+    beamOptions.width = 3.0f;
+    beamOptions.height = 0.2f;
+    beamOptions.depth = 0.2f;
+    scene.addPrimitive(obol::Primitive::Cube,
+                       material(0.75f, 0.45f, 0.18f),
+                       transform(0.0f, 0.0f, 0.0f),
+                       beamOptions,
+                       kit.beamGroup);
 
-   SoShapeKit *string1 = new SoShapeKit;
-   string1->setPart("shape", new SoCylinder);
-   string1->set("shape { radius .05 height 2}");
-   string1->set("transform { translation -1.5 -1 0 }");
-   string1->set("transform { center 0 1 0 }");
-   beam->setPart("childList[0]", string1);
+    kit.stringLeftGroup = scene.addGroup(transform(-1.5f, 0.0f, 0.0f), kit.beamGroup);
+    kit.stringRightGroup = scene.addGroup(transform(1.5f, 0.0f, 0.0f), kit.beamGroup);
 
-   SoShapeKit *string2 = new SoShapeKit;
-   string2->setPart("shape", new SoCylinder);
-   string2->set("shape { radius .05 height 2}");
-   string2->set("transform { translation 1.5 -1 0 } ");
-   string2->set("transform { center 0 1 0 } ");
-   beam->setPart("childList[1]", string2);
+    const obol::Material stringMaterial = material(0.9f, 0.9f, 0.85f);
+    addCylinder(scene,
+                0.05f,
+                2.0f,
+                stringMaterial,
+                transform(0.0f, -1.0f, 0.0f),
+                kit.stringLeftGroup);
+    addCylinder(scene,
+                0.05f,
+                2.0f,
+                stringMaterial,
+                transform(0.0f, -1.0f, 0.0f),
+                kit.stringRightGroup);
 
-   SoShapeKit *tray1 = new SoShapeKit;
-   tray1->setPart("shape", new SoCylinder);
-   tray1->set("shape { radius .75 height .1 }");
-   tray1->set("transform { translation 0 -1 0 } ");
-   string1->setPart("childList[0]", tray1);
+    const obol::Material trayMaterial = material(0.35f, 0.55f, 0.85f);
+    addCylinder(scene,
+                0.75f,
+                0.1f,
+                trayMaterial,
+                transform(0.0f, -2.0f, 0.0f),
+                kit.stringLeftGroup);
+    addCylinder(scene,
+                0.75f,
+                0.1f,
+                trayMaterial,
+                transform(0.0f, -2.0f, 0.0f),
+                kit.stringRightGroup);
 
-   SoShapeKit *tray2 = new SoShapeKit;
-   tray2->setPart("shape", new SoCylinder);
-   tray2->set("shape { radius .75 height .1 }");
-   tray2->set("transform { translation 0 -1 0 } ");
-   string2->setPart("childList[0]", tray2);
+    obol::Text2D label;
+    label.text = "Press Left or Right Arrow Key";
+    label.fontName = "Helvetica";
+    label.fontSize = 16.0f;
+    label.justification = obol::TextJustification::Center;
+    scene.addText2D(label,
+                    material(0.9f, 0.9f, 0.9f),
+                    transform(0.0f, -2.5f, 0.0f));
 
-   // Add EventCallback so Balance Responds to Events
-   SoEventCallback *myCallbackNode = new SoEventCallback;
-   myCallbackNode->addEventCallback(
-        SoKeyboardEvent::getClassTypeId(), 
-	tipTheBalance, support); 
-   support->setPart("callbackList[0]", myCallbackNode);
+    return kit;
+}
 
-   // Add Instructions as Text in the Scene...
-   SoShapeKit *myText = new SoShapeKit;
-   myText->setPart("shape", new SoText2);
-   myText->set("shape { string \"Press Left or Right Arrow Key\" }");
-   myText->set("shape { justification CENTER }");
-   myText->set("font { name \"Helvetica\" }");
-   myText->set("font { size 16.0 }");
-   myText->set("transform { translation 0 -2 0 }");
-   myScene->setPart("childList[1]", myText);
+void tipBalance(obol::Scene & scene, BalanceKit & kit, float delta)
+{
+    kit.beamAngle += delta;
+    scene.setGroupTransform(kit.beamGroup,
+                            rotateZ(0.0f, 1.5f, 0.0f, kit.beamAngle));
+    scene.setGroupTransform(kit.stringLeftGroup,
+                            rotateZ(-1.5f, 0.0f, 0.0f, -kit.beamAngle));
+    scene.setGroupTransform(kit.stringRightGroup,
+                            rotateZ(1.5f, 0.0f, 0.0f, -kit.beamAngle));
+}
 
-   // Get camera from scene and position it
-   SoPerspectiveCamera *myCamera = SO_GET_PART(myScene,
-      "cameraList[0].camera", SoPerspectiveCamera);
-   SbViewportRegion viewport(DEFAULT_WIDTH, DEFAULT_HEIGHT);
-   myCamera->viewAll(myScene, viewport);
+bool renderScene(obol::OffscreenRenderer & renderer,
+                 obol::Scene & scene,
+                 const char * filename)
+{
+    const obol::FrameResult result = renderer.render(scene);
+    return result.success && renderer.writeRGB(filename);
+}
 
-   char filename[64];
-   printf("Rendering Balance Scale with keyboard event simulation...\n");
-   
-   // Render initial balanced state
-   sprintf(filename, "output/14.3.Balance_00_initial.rgb");
-   renderToFile(myScene, filename);
-   
-   // Simulate pressing RIGHT_ARROW key multiple times
-   for (int i = 0; i < 5; i++) {
-      simulateKeyPress(myScene, viewport, SoKeyboardEvent::RIGHT_ARROW);
-      sprintf(filename, "output/14.3.Balance_%02d_right.rgb", i+1);
-      renderToFile(myScene, filename);
-   }
-   
-   // Simulate pressing LEFT_ARROW key to rebalance and tip left
-   for (int i = 0; i < 10; i++) {
-      simulateKeyPress(myScene, viewport, SoKeyboardEvent::LEFT_ARROW);
-      sprintf(filename, "output/14.3.Balance_%02d_left.rgb", i+6);
-      renderToFile(myScene, filename);
-   }
-   
-   printf("Done! Rendered 16 frames showing balance tipping.\n");
+} // namespace
 
-   myScene->unref();
+int main(int argc, char **argv)
+{
+    initCoinHeadless();
 
-   return 0;
+    obol::Scene scene;
+    obol::PerspectiveCamera camera;
+    camera.position = {0.0f, 1.0f, 9.0f};
+    camera.target = {0.0f, 0.2f, 0.0f};
+    camera.verticalFieldOfViewRadians = 0.65f;
+    scene.setCamera(camera);
+    scene.addDirectionalLight(obol::DirectionalLight{});
+
+    BalanceKit kit = addBalance(scene);
+
+    obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
+                                        obol::RenderBackendKind::OpenGL2SWRast,
+                                        "headless-context");
+    obol::RenderTarget target;
+    target.width = DEFAULT_WIDTH;
+    target.height = DEFAULT_HEIGHT;
+    target.pixelFormat = obol::PixelFormat::RGB;
+    obol::OffscreenRenderer renderer(backend, target);
+    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
+
+    const char *baseFilename = (argc > 1) ? argv[1] : "14.3.Balance";
+    char filename[512];
+
+    printf("Rendering Balance Scale with keyboard event simulation [Obol v2]...\n");
+
+    snprintf(filename, sizeof(filename), "%s_00_initial.rgb", baseFilename);
+    if (!renderScene(renderer, scene, filename)) return 1;
+    snprintf(filename, sizeof(filename), "%s.rgb", baseFilename);
+    if (!renderScene(renderer, scene, filename)) return 1;
+
+    for (int i = 0; i < 5; i++) {
+        tipBalance(scene, kit, -0.1f);
+        snprintf(filename, sizeof(filename), "%s_%02d_right.rgb", baseFilename, i + 1);
+        if (!renderScene(renderer, scene, filename)) return 1;
+    }
+
+    for (int i = 0; i < 10; i++) {
+        tipBalance(scene, kit, 0.1f);
+        snprintf(filename, sizeof(filename), "%s_%02d_left.rgb", baseFilename, i + 6);
+        if (!renderScene(renderer, scene, filename)) return 1;
+    }
+
+    printf("Done! Rendered 16 frames showing balance tipping.\n");
+    return 0;
 }

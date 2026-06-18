@@ -43,8 +43,8 @@
  *    and lazily-built acceleration structures.
  */
 
-#include <obol/cad/SoCADAssembly.h>
-#include <obol/cad/SoCADDetail.h>
+#include <Obol/cad/SoCADAssembly.h>
+#include <Obol/cad/SoCADDetail.h>
 #include "CadFramePlan.h"
 #include "CadRendererGL.h"
 #include "picking/CadPicking.h"

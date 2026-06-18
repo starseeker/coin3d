@@ -37,257 +37,182 @@
 /*
  * Headless version of Inventor Mentor example 10.6
  *
- * Demonstrates the difference between a top-level pick filter and default
- * (deepest-node) picking.  Two identical park-bench models sit side by side.
- * After an initial unselected frame, two "post-pick" frames show:
- *
- *   Frame 0 – initial scene: both benches unselected.
- *   Frame 1 – FILTERED selection of the left bench: the pick-filter truncates
- *             the path to the top-level group node, so the ENTIRE left bench
- *             is highlighted (whole model turns bright yellow via SoMaterial
- *             override).
- *   Frame 2 – DEFAULT selection of the same spot on the left bench: the full
- *             leaf path is returned, so only the single material zone that was
- *             hit turns bright yellow; the rest of the bench keeps its natural
- *             colours.
- *
- * If parkbench.iv cannot be loaded a compact procedural bench substitute is
- * used so the demo still produces meaningful images.
+ * Demonstrates top-level versus default pick filtering using v2 object IDs.
  */
 
 #include "headless_utils.h"
-#include <Inventor/SoDB.h>
-#include <Inventor/SoInput.h>
-#include <Inventor/nodes/SoSeparator.h>
-#include <Inventor/nodes/SoPerspectiveCamera.h>
-#include <Inventor/nodes/SoDirectionalLight.h>
-#include <Inventor/nodes/SoMaterial.h>
-#include <Inventor/nodes/SoTranslation.h>
-#include <Inventor/nodes/SoScale.h>
-#include <Inventor/nodes/SoCube.h>
-#include <Inventor/nodes/SoCylinder.h>
-#include <Inventor/nodes/SoTransform.h>
-#include <Inventor/actions/SoSearchAction.h>
-#include <Inventor/SbViewportRegion.h>
+#include <Obol/Obol.h>
+
 #include <cstdio>
-#include <cstring>
+#include <vector>
 
-// Bright-yellow highlight colour used to show "selection"
-static const float HIGHLIGHT[3] = { 1.0f, 0.95f, 0.15f };
+namespace {
 
-// ============================================================================
-// Load one copy of parkbench.iv from disk.
-// Returns NULL on failure.
-// ============================================================================
-static SoSeparator *loadBench(const char *path)
+struct BenchPart {
+    obol::SceneObjectId id = obol::InvalidSceneObjectId;
+    obol::Material material;
+};
+
+struct Bench {
+    obol::SceneGroupId group = obol::InvalidSceneGroupId;
+    std::vector<BenchPart> parts;
+};
+
+obol::Material material(float r, float g, float b)
 {
-    SoInput in;
-    if (!in.openFile(path)) return nullptr;
-    SoSeparator *s = SoDB::readAll(&in);
-    in.closeFile();
-    return s;   // caller must ref/unref
+    obol::Material result;
+    result.baseColor = {r, g, b, 1.0f};
+    return result;
 }
 
-// ============================================================================
-// Procedural park-bench fallback (3-plank seat + 2 leg-frames)
-// ============================================================================
-static SoSeparator *makeFallbackBench()
+obol::Material highlightMaterial()
 {
-    SoSeparator *bench = new SoSeparator;
+    obol::Material result = material(1.0f, 0.95f, 0.15f);
+    result.specular = {0.5f, 0.5f, 0.1f, 1.0f};
+    result.shininess = 0.5f;
+    return result;
+}
 
-    // Seat planks (3 planks side by side)
-    float plankX[3] = { -0.6f, 0.0f, 0.6f };
-    float plankColor[3][3] = {
-        { 0.55f, 0.30f, 0.10f },
-        { 0.60f, 0.35f, 0.12f },
-        { 0.50f, 0.28f, 0.09f }
+obol::Transform translation(float x, float y, float z)
+{
+    obol::Transform result;
+    result.translation = {x, y, z};
+    return result;
+}
+
+obol::Transform partTransform(float x, float y, float z,
+                              float sx, float sy, float sz)
+{
+    obol::Transform result;
+    result.translation = {x, y, z};
+    result.scale = {sx, sy, sz};
+    return result;
+}
+
+BenchPart addBenchCube(obol::Scene & scene,
+                       Bench & bench,
+                       const obol::Material & partMaterial,
+                       const obol::Transform & transform)
+{
+    BenchPart part;
+    part.material = partMaterial;
+    part.id = scene.addPrimitive(obol::Primitive::Cube,
+                                 partMaterial,
+                                 transform,
+                                 obol::PrimitiveOptions{},
+                                 bench.group);
+    bench.parts.push_back(part);
+    return part;
+}
+
+Bench makeBench(obol::Scene & scene, float x)
+{
+    Bench bench;
+    bench.group = scene.addGroup(translation(x, 0.0f, 0.0f));
+
+    const float plankX[3] = {-0.6f, 0.0f, 0.6f};
+    const obol::Material plankMaterials[3] = {
+        material(0.55f, 0.30f, 0.10f),
+        material(0.60f, 0.35f, 0.12f),
+        material(0.50f, 0.28f, 0.09f)
     };
-    for (int k = 0; k < 3; k++) {
-        SoSeparator *plank = new SoSeparator;
-        SoTranslation *t = new SoTranslation;
-        t->translation.setValue(plankX[k], 0.55f, 0.0f);
-        plank->addChild(t);
-        SoMaterial *m = new SoMaterial;
-        m->diffuseColor.setValue(plankColor[k][0], plankColor[k][1], plankColor[k][2]);
-        plank->addChild(m);
-        SoScale *sc = new SoScale;
-        sc->scaleFactor.setValue(0.45f, 0.08f, 1.8f);
-        plank->addChild(sc);
-        plank->addChild(new SoCube);
-        bench->addChild(plank);
+    for (int i = 0; i < 3; ++i) {
+        addBenchCube(scene,
+                     bench,
+                     plankMaterials[i],
+                     partTransform(plankX[i], 0.55f, 0.0f, 0.45f, 0.08f, 1.8f));
     }
 
-    // Leg frames (2 A-frames)
-    float legZ[2] = { -0.75f, 0.75f };
-    for (int k = 0; k < 2; k++) {
-        SoSeparator *frame = new SoSeparator;
-        SoTranslation *t = new SoTranslation;
-        t->translation.setValue(0.0f, 0.25f, legZ[k]);
-        frame->addChild(t);
-        SoMaterial *m = new SoMaterial;
-        m->diffuseColor.setValue(0.25f, 0.25f, 0.30f);
-        frame->addChild(m);
-        SoScale *sc = new SoScale;
-        sc->scaleFactor.setValue(1.6f, 0.5f, 0.08f);
-        frame->addChild(sc);
-        frame->addChild(new SoCube);
-        bench->addChild(frame);
+    const float legZ[2] = {-0.75f, 0.75f};
+    const obol::Material frameMaterial = material(0.25f, 0.25f, 0.30f);
+    for (int i = 0; i < 2; ++i) {
+        addBenchCube(scene,
+                     bench,
+                     frameMaterial,
+                     partTransform(0.0f, 0.25f, legZ[i], 1.6f, 0.5f, 0.08f));
     }
 
     return bench;
 }
 
-// ============================================================================
-// Find the first child SoSeparator of a separator root.
-// This is typically one named component of an .iv model (e.g. BENPA_SLAT).
-// We inject a yellow SoMaterial at position 0 to highlight that one part,
-// simulating a default (leaf-path) selection of just that component.
-// Returns nullptr if the root has no SoSeparator children.
-// ============================================================================
-static SoSeparator *findFirstComponentSep(SoSeparator *root)
+void setBenchMaterial(obol::Scene & scene, const Bench & bench, const obol::Material & mat)
 {
-    for (int i = 0; i < root->getNumChildren(); i++) {
-        SoNode *child = root->getChild(i);
-        if (child->isOfType(SoSeparator::getClassTypeId()))
-            return static_cast<SoSeparator *>(child);
+    for (const BenchPart & part : bench.parts) {
+        scene.setObjectMaterial(part.id, mat);
     }
-    return nullptr;
 }
 
-// ============================================================================
-// main
-// ============================================================================
+void restoreBenchMaterial(obol::Scene & scene, const Bench & bench)
+{
+    for (const BenchPart & part : bench.parts) {
+        scene.setObjectMaterial(part.id, part.material);
+    }
+}
+
+bool renderScene(obol::OffscreenRenderer & renderer,
+                 obol::Scene & scene,
+                 const char * filename)
+{
+    const obol::FrameResult result = renderer.render(scene);
+    return result.success && renderer.writeRGB(filename);
+}
+
+} // namespace
+
 int main(int argc, char **argv)
 {
     initCoinHeadless();
 
-    // Locate data directory
-    const char *dataDir = getenv("OBOL_DATA_DIR");
-    if (!dataDir) dataDir = getenv("IVEXAMPLES_DATA_DIR");
-    if (!dataDir) dataDir = getenv("COIN_DATA_DIR");
-    if (!dataDir) dataDir = "../../data";
+    obol::Scene scene;
+    obol::PerspectiveCamera camera;
+    camera.position = {0.0f, 5.5f, 8.0f};
+    camera.target = {0.0f, 0.2f, 0.0f};
+    camera.verticalFieldOfViewRadians = 0.62f;
+    scene.setCamera(camera);
 
-    char benchPath[512];
-    snprintf(benchPath, sizeof(benchPath), "%s/parkbench.iv", dataDir);
+    obol::DirectionalLight light1;
+    light1.direction = {-1.0f, -1.5f, -1.0f};
+    scene.addDirectionalLight(light1);
+    obol::DirectionalLight light2;
+    light2.direction = {1.0f, -0.5f, -0.3f};
+    light2.intensity = 0.35f;
+    light2.color = {0.8f, 0.9f, 1.0f, 1.0f};
+    scene.addDirectionalLight(light2);
 
-    // Load two independent copies of the bench (one for left, one for right)
-    SoSeparator *leftBench  = loadBench(benchPath);
-    SoSeparator *rightBench = loadBench(benchPath);
+    Bench leftBench = makeBench(scene, -3.0f);
+    makeBench(scene, 3.0f);
 
-    if (!leftBench || !rightBench) {
-        fprintf(stderr, "Note: could not load %s – using procedural bench\n", benchPath);
-        if (leftBench)  { leftBench->unref();  leftBench  = nullptr; }
-        if (rightBench) { rightBench->unref(); rightBench = nullptr; }
-        leftBench  = makeFallbackBench();
-        rightBench = makeFallbackBench();
-    } else {
-        fprintf(stderr, "Loaded parkbench.iv from %s\n", benchPath);
-    }
-    leftBench->ref();
-    rightBench->ref();
-
-    // ---- Build root scene -----------------------------------------------
-    SoSeparator *root = new SoSeparator;
-    root->ref();
-
-    SoPerspectiveCamera *cam = new SoPerspectiveCamera;
-    root->addChild(cam);
-
-    // Two-light rig for good bench visibility
-    SoDirectionalLight *light1 = new SoDirectionalLight;
-    light1->direction.setValue(-1.0f, -1.5f, -1.0f);
-    light1->color.setValue(1.0f, 1.0f, 1.0f);
-    root->addChild(light1);
-
-    SoDirectionalLight *light2 = new SoDirectionalLight;
-    light2->direction.setValue(1.0f, -0.5f, -0.3f);
-    light2->intensity.setValue(0.35f);
-    light2->color.setValue(0.8f, 0.9f, 1.0f);
-    root->addChild(light2);
-
-    // ---- Left group: translation + highlight material (override) + bench --
-    SoSeparator *leftGroup = new SoSeparator;
-    root->addChild(leftGroup);
-
-    SoTranslation *leftT = new SoTranslation;
-    leftT->translation.setValue(-3.0f, 0.0f, 0.0f);
-    leftGroup->addChild(leftT);
-
-    // Highlight material for filtered selection (whole bench).
-    // NOT added to the scene yet – inserted dynamically per frame.
-    SoMaterial *leftHighlight = new SoMaterial;
-    leftHighlight->diffuseColor.setValue(HIGHLIGHT[0], HIGHLIGHT[1], HIGHLIGHT[2]);
-    leftHighlight->specularColor.setValue(0.5f, 0.5f, 0.1f);
-    leftHighlight->shininess.setValue(0.5f);
-
-    leftGroup->addChild(leftBench);
-
-    // ---- Right group: translation + bench (unchanged throughout) ----------
-    SoSeparator *rightGroup = new SoSeparator;
-    root->addChild(rightGroup);
-
-    SoTranslation *rightT = new SoTranslation;
-    rightT->translation.setValue(3.0f, 0.0f, 0.0f);
-    rightGroup->addChild(rightT);
-    rightGroup->addChild(rightBench);
-
-    // Frame the camera on the scene
-    SbViewportRegion vp(DEFAULT_WIDTH, DEFAULT_HEIGHT);
-    cam->viewAll(root, vp);
-    // Pull back a little for breathing room
-    SbVec3f p = cam->position.getValue();
-    cam->position.setValue(p[0], p[1] * 1.15f, p[2] * 1.2f);
-
-    // ---- Find one named component in leftBench for default-selection demo --
-    // Inject a yellow SoMaterial at position 0 of that component separator to
-    // highlight it independently (simulating a deep/leaf path selection).
-    SoSeparator *benchComponent = findFirstComponentSep(leftBench);
-    SoMaterial  *componentHighlight = new SoMaterial;
-    componentHighlight->diffuseColor.setValue(HIGHLIGHT[0], HIGHLIGHT[1], HIGHLIGHT[2]);
-    componentHighlight->specularColor.setValue(0.5f, 0.5f, 0.1f);
-    componentHighlight->shininess.setValue(0.5f);
-    if (benchComponent) {
-        fprintf(stderr, "Default-selection demo: will highlight first bench component\n");
-    } else {
-        fprintf(stderr, "Note: no component separator found in bench\n");
-    }
+    obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
+                                        obol::RenderBackendKind::OpenGL2SWRast,
+                                        "headless-context");
+    obol::RenderTarget target;
+    target.width = DEFAULT_WIDTH;
+    target.height = DEFAULT_HEIGHT;
+    target.pixelFormat = obol::PixelFormat::RGB;
+    obol::OffscreenRenderer renderer(backend, target);
+    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
 
     const char *base = (argc > 1) ? argv[1] : "10.6.PickFilterTopLevel";
     char filename[512];
     int frameNum = 0;
 
-    // ---- Frame 0: initial (both benches unselected) ----------------------
     printf("Frame %d: initial scene (both benches unselected)\n", frameNum);
     snprintf(filename, sizeof(filename), "%s_frame%02d_initial.rgb", base, frameNum++);
-    renderToFile(root, filename);
+    if (!renderScene(renderer, scene, filename)) return 1;
 
-    // ---- Frame 1: FILTERED selection of left bench -----------------------
-    // The pick filter truncates the path to the top-level group node, so
-    // the ENTIRE bench is "selected".  Visual: whole left bench → yellow.
-    // Insert yellow material BEFORE the bench geometry (position after translation).
-    printf("Frame %d: filtered selection → entire left bench highlighted\n", frameNum);
-    leftGroup->insertChild(leftHighlight, 1);   // after translation, before bench
+    printf("Frame %d: filtered selection -> entire left bench highlighted\n", frameNum);
+    setBenchMaterial(scene, leftBench, highlightMaterial());
     snprintf(filename, sizeof(filename), "%s_frame%02d_filtered_selected.rgb", base, frameNum++);
-    renderToFile(root, filename);
-    leftGroup->removeChild(leftHighlight);   // restore: bench reverts to default grey
+    if (!renderScene(renderer, scene, filename)) return 1;
+    restoreBenchMaterial(scene, leftBench);
 
-    // ---- Frame 2: DEFAULT selection (leaf path) of left bench ------------
-    // No filter: path goes to the deepest node hit (one named component).
-    // Visual: only that one component → yellow; the rest of the bench stays grey.
-    printf("Frame %d: default selection → only one bench component highlighted\n", frameNum);
-    if (benchComponent)
-        benchComponent->insertChild(componentHighlight, 0);
+    printf("Frame %d: default selection -> only one bench component highlighted\n", frameNum);
+    if (!leftBench.parts.empty()) {
+        scene.setObjectMaterial(leftBench.parts[0].id, highlightMaterial());
+    }
     snprintf(filename, sizeof(filename), "%s_frame%02d_default_selected.rgb", base, frameNum++);
-    renderToFile(root, filename);
-    if (benchComponent)
-        benchComponent->removeChild(componentHighlight);    // restore
+    if (!renderScene(renderer, scene, filename)) return 1;
 
-    printf("\nRendered %d frames demonstrating pick filter.\n", frameNum);
-    printf("  Filtered : entire bench (top-level group) turns yellow.\n");
-    printf("  Default  : only the first bench component turns yellow.\n");
-
-    leftBench->unref();
-    rightBench->unref();
-    root->unref();
+    printf("\nRendered %d frames demonstrating top-level pick filtering [Obol v2]\n", frameNum);
     return 0;
 }

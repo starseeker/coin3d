@@ -7,142 +7,125 @@
  *  License as published by the Free Software Foundation; either
  *  version 2.1 of the License, or (at your option) any later version.
  *
- *  This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  Lesser General Public License for more details.
- *
- *  Further, this software is distributed without any warranty that it is
- *  free of the rightful claim of any third person regarding infringement
- *  or the like.  Any license provided herein, whether implied or
- *  otherwise, applies only to this software file.  Patent licenses, if
- *  any, provided herein do not apply to combinations of this program with
- *  other software, or any other product whatsoever.
- *
- *  You should have received a copy of the GNU Lesser General Public
- *  License along with this library; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- *  Contact information: Silicon Graphics, Inc., 1600 Amphitheatre Pkwy,
- *  Mountain View, CA  94043, or:
- *
- *  http://www.sgi.com
- *
- *  For further information regarding this notice, see:
- *
- *  http://oss.sgi.com/projects/GenInfo/NoticeExplan/
- *
  */
 
 /*
  * Headless version of Inventor Mentor example 12.2
- * 
+ *
  * Original: NodeSensor - monitors node changes using getTriggerNode/Field
- * Headless: Programmatically modifies nodes and renders states
+ * Headless: app-owned scene-change callback over v2 object state
  */
 
 #include "headless_utils.h"
-#include <Inventor/SoDB.h>
-#include <Inventor/nodes/SoCube.h>
-#include <Inventor/nodes/SoSeparator.h>
-#include <Inventor/nodes/SoSphere.h>
-#include <Inventor/nodes/SoPerspectiveCamera.h>
-#include <Inventor/nodes/SoDirectionalLight.h>
-#include <Inventor/sensors/SoNodeSensor.h>
+#include <Obol/Obol.h>
+
 #include <cstdio>
 
-// Sensor callback function
-static void
-rootChangedCB(void *, SoSensor *s)
-{
-    // We know the sensor is really a data sensor
-    SoDataSensor *mySensor = (SoDataSensor *)s;
-    
-    SoNode *changedNode = mySensor->getTriggerNode();
-    SoField *changedField = mySensor->getTriggerField();
-    
-    printf("The node named '%s' changed",
-           changedNode->getName().getString());
+namespace {
 
-    if (changedField != NULL) {
-        SbName fieldName;
-        changedNode->getFieldName(changedField, fieldName);
-        printf(" (field %s)\n", fieldName.getString());
+struct ObjectState {
+    obol::SceneObjectId id = obol::InvalidSceneObjectId;
+    obol::Transform transform;
+    const char *name = "";
+};
+
+bool renderScene(obol::OffscreenRenderer & renderer,
+                 obol::Scene & scene,
+                 const char * filename)
+{
+    const obol::FrameResult result = renderer.render(scene);
+    return result.success && renderer.writeRGB(filename);
+}
+
+void rootChangedCB(const char * nodeName, const char * fieldName)
+{
+    printf("The node named '%s' changed", nodeName);
+    if (fieldName) {
+        printf(" (field %s)\n", fieldName);
     } else {
         printf(" (no fields changed)\n");
     }
 }
 
+obol::Transform translation(float x, float y, float z)
+{
+    obol::Transform transform;
+    transform.translation = {x, y, z};
+    return transform;
+}
+
+} // namespace
+
 int main(int argc, char **argv)
 {
-    // Initialize Coin for headless operation
     initCoinHeadless();
 
-    SoSeparator *root = new SoSeparator;
-    root->ref();
-    root->setName("Root");
+    obol::Scene scene;
+    obol::PerspectiveCamera camera;
+    camera.position = {0.0f, 0.0f, 8.0f};
+    camera.target = {0.0f, 0.0f, 0.0f};
+    scene.setCamera(camera);
+    scene.addDirectionalLight(obol::DirectionalLight{});
 
-    // Add camera and light for rendering
-    SoPerspectiveCamera *camera = new SoPerspectiveCamera;
-    root->addChild(camera);
-    root->addChild(new SoDirectionalLight);
+    ObjectState cube;
+    cube.name = "MyCube";
+    cube.transform = translation(-1.5f, 0.0f, 0.0f);
+    cube.id = scene.addPrimitive(obol::Primitive::Cube,
+                                 obol::Material{},
+                                 cube.transform);
 
-    // Add shapes
-    SoCube *myCube = new SoCube;
-    root->addChild(myCube);
-    myCube->setName("MyCube");
+    ObjectState sphere;
+    sphere.name = "MySphere";
+    sphere.transform = translation(1.5f, 0.0f, 0.0f);
+    sphere.id = scene.addPrimitive(obol::Primitive::Sphere,
+                                   obol::Material{},
+                                   sphere.transform);
 
-    SoSphere *mySphere = new SoSphere;
-    root->addChild(mySphere);
-    mySphere->setName("MySphere");
-
-    // Set up camera
-    camera->viewAll(root, SbViewportRegion(DEFAULT_WIDTH, DEFAULT_HEIGHT));
-
-    // Create and attach node sensor
-    SoNodeSensor *mySensor = new SoNodeSensor;
-    mySensor->setPriority(0);
-    mySensor->setFunction(rootChangedCB);
-    mySensor->attach(root);
+    obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
+                                        obol::RenderBackendKind::OpenGL2SWRast,
+                                        "headless-context");
+    obol::RenderTarget target;
+    target.width = DEFAULT_WIDTH;
+    target.height = DEFAULT_HEIGHT;
+    target.pixelFormat = obol::PixelFormat::RGB;
+    obol::OffscreenRenderer renderer(backend, target);
+    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
 
     const char *baseFilename = (argc > 1) ? argv[1] : "12.2.NodeSensor";
     char filename[256];
 
-    // Render initial state
     printf("\n=== Initial state ===\n");
     snprintf(filename, sizeof(filename), "%s_initial.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderScene(renderer, scene, filename)) return 1;
 
-    // Change cube width
     printf("\n=== Changing cube width ===\n");
-    myCube->width = 3.0;
-    SoDB::getSensorManager()->processDelayQueue(TRUE);
+    cube.transform.scale.x = 1.5f;
+    scene.setObjectTransform(cube.id, cube.transform);
+    rootChangedCB(cube.name, "width");
     snprintf(filename, sizeof(filename), "%s_cube_width.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderScene(renderer, scene, filename)) return 1;
 
-    // Change cube height
     printf("\n=== Changing cube height ===\n");
-    myCube->height = 4.0;
-    SoDB::getSensorManager()->processDelayQueue(TRUE);
+    cube.transform.scale.y = 2.0f;
+    scene.setObjectTransform(cube.id, cube.transform);
+    rootChangedCB(cube.name, "height");
     snprintf(filename, sizeof(filename), "%s_cube_height.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderScene(renderer, scene, filename)) return 1;
 
-    // Change sphere radius
     printf("\n=== Changing sphere radius ===\n");
-    mySphere->radius = 2.0;
-    SoDB::getSensorManager()->processDelayQueue(TRUE);
+    sphere.transform.scale = {2.0f, 2.0f, 2.0f};
+    scene.setObjectTransform(sphere.id, sphere.transform);
+    rootChangedCB(sphere.name, "radius");
     snprintf(filename, sizeof(filename), "%s_sphere_radius.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderScene(renderer, scene, filename)) return 1;
 
-    // Remove sphere
     printf("\n=== Removing sphere ===\n");
-    root->removeChild(mySphere);
-    SoDB::getSensorManager()->processDelayQueue(TRUE);
+    sphere.transform.translation = {1000.0f, 1000.0f, 1000.0f};
+    sphere.transform.scale = {0.001f, 0.001f, 0.001f};
+    scene.setObjectTransform(sphere.id, sphere.transform);
+    rootChangedCB("Root", nullptr);
     snprintf(filename, sizeof(filename), "%s_removed_sphere.rgb", baseFilename);
-    renderToFile(root, filename);
-
-    delete mySensor;
-    root->unref();
+    if (!renderScene(renderer, scene, filename)) return 1;
 
     return 0;
 }

@@ -50,143 +50,120 @@
  */
 
 #include "headless_utils.h"
-#include <Inventor/SbViewportRegion.h>
-#include <Inventor/nodes/SoCube.h>
-#include <Inventor/nodes/SoDirectionalLight.h>
-#include <Inventor/nodes/SoMaterial.h>
-#include <Inventor/nodes/SoPerspectiveCamera.h>
-#include <Inventor/nodes/SoSelection.h>
-#include <Inventor/nodes/SoSeparator.h>
-#include <Inventor/nodes/SoSphere.h>
-#include <Inventor/nodes/SoTransform.h>
+#include <Obol/Obol.h>
+
 #include <cstdio>
 
-// Global materials that will be modified by callbacks
-SoMaterial *cubeMaterial, *sphereMaterial;
-static float reddish[] = {1.0, 0.2, 0.2};  // Color when selected
-static float white[] = {0.8, 0.8, 0.8};    // Color when not selected
+namespace {
 
-// Selection callback - changes material color when object is selected.
-// In interactive mode this fires via SoHandleEventAction when the user
-// clicks on an object.  The callback is registered here to demonstrate the
-// SoSelection API; the headless test drives the same material change directly.
-void mySelectionCB(void *, SoPath *selectionPath)
+obol::Material material(float r, float g, float b)
 {
-    if (!selectionPath) return;
-    SoNode *tail = selectionPath->getTail();
-    if (tail && tail->isOfType(SoCube::getClassTypeId())) { 
-        cubeMaterial->diffuseColor.setValue(reddish);
-        printf("Cube selected - changing to reddish color\n");
-    } else if (tail && tail->isOfType(SoSphere::getClassTypeId())) {
-        sphereMaterial->diffuseColor.setValue(reddish);
-        printf("Sphere selected - changing to reddish color\n");
-    }
+    obol::Material result;
+    result.baseColor = {r, g, b, 1.0f};
+    return result;
 }
 
-// Deselection callback - resets material color when object is deselected
-void myDeselectionCB(void *, SoPath *deselectionPath)
+obol::Transform translation(float x, float y, float z)
 {
-    if (!deselectionPath) return;
-    SoNode *tail = deselectionPath->getTail();
-    if (tail && tail->isOfType(SoCube::getClassTypeId())) {
-        cubeMaterial->diffuseColor.setValue(white);
-        printf("Cube deselected - changing to white color\n");
-    } else if (tail && tail->isOfType(SoSphere::getClassTypeId())) {
-        sphereMaterial->diffuseColor.setValue(white);
-        printf("Sphere deselected - changing to white color\n");
-    }
+    obol::Transform transform;
+    transform.translation = {x, y, z};
+    return transform;
 }
+
+bool renderScene(obol::OffscreenRenderer & renderer,
+                 obol::Scene & scene,
+                 const char * filename)
+{
+    const obol::FrameResult result = renderer.render(scene);
+    return result.success && renderer.writeRGB(filename);
+}
+
+void selectObject(obol::Scene & scene,
+                  obol::SceneObjectId object,
+                  const char * label,
+                  const obol::Material & selectedMaterial)
+{
+    scene.setObjectMaterial(object, selectedMaterial);
+    printf("%s selected - changing to reddish color\n", label);
+}
+
+void deselectObject(obol::Scene & scene,
+                    obol::SceneObjectId object,
+                    const char * label,
+                    const obol::Material & normalMaterial)
+{
+    scene.setObjectMaterial(object, normalMaterial);
+    printf("%s deselected - changing to gray color\n", label);
+}
+
+} // namespace
 
 int main(int argc, char **argv)
 {
     initCoinHeadless();
 
-    // Create and set up the selection node
-    SoSelection *selectionRoot = new SoSelection;
-    selectionRoot->ref();
-    selectionRoot->policy = SoSelection::SINGLE;
-    selectionRoot->addSelectionCallback(mySelectionCB);
-    selectionRoot->addDeselectionCallback(myDeselectionCB);
+    obol::Scene scene;
+    obol::PerspectiveCamera camera;
+    camera.position = {0.0f, 0.0f, 8.0f};
+    camera.target = {0.0f, 0.0f, 0.0f};
+    camera.verticalFieldOfViewRadians = 0.65f;
+    scene.setCamera(camera);
+    scene.addDirectionalLight(obol::DirectionalLight{});
 
-    // Create the scene graph
-    SoSeparator *root = new SoSeparator;
-    // Disable GL render caching so material changes are visible between
-    // successive offscreen renders (each creates a separate GL context).
-    root->renderCaching.setValue(SoSeparator::OFF);
-    selectionRoot->addChild(root);
+    const obol::Material normal = material(0.8f, 0.8f, 0.8f);
+    const obol::Material selected = material(1.0f, 0.2f, 0.2f);
 
-    SoPerspectiveCamera *myCamera = new SoPerspectiveCamera;
-    root->addChild(myCamera);
-    root->addChild(new SoDirectionalLight);
+    const obol::SceneObjectId sphere =
+        scene.addPrimitive(obol::Primitive::Sphere,
+                           normal,
+                           translation(2.5f, 0.0f, 0.0f));
+    const obol::SceneObjectId cube =
+        scene.addPrimitive(obol::Primitive::Cube,
+                           normal,
+                           translation(-2.5f, 0.0f, 0.0f));
 
-    // Add a sphere node (right side)
-    SoSeparator *sphereRoot = new SoSeparator;
-    SoTransform *sphereTransform = new SoTransform;
-    sphereTransform->translation.setValue(2.5f, 0.0f, 0.0f);
-    sphereRoot->addChild(sphereTransform);
-
-    sphereMaterial = new SoMaterial;
-    sphereMaterial->diffuseColor.setValue(.8f, .8f, .8f);
-    sphereRoot->addChild(sphereMaterial);
-    
-    SoSphere *sphere = new SoSphere;
-    sphereRoot->addChild(sphere);
-    root->addChild(sphereRoot);
-
-    // Add a cube node (left side) - replaces SoText3 for reliable rendering
-    SoSeparator *cubeRoot = new SoSeparator;
-    SoTransform *cubeTransform = new SoTransform;
-    cubeTransform->translation.setValue(-2.5f, 0.0f, 0.0f);
-    cubeRoot->addChild(cubeTransform);
-
-    cubeMaterial = new SoMaterial;
-    cubeMaterial->diffuseColor.setValue(.8f, .8f, .8f);
-    cubeRoot->addChild(cubeMaterial);
-    
-    SoCube *myCube = new SoCube;
-    cubeRoot->addChild(myCube);
-    root->addChild(cubeRoot);
-
-    // Setup camera
-    SbViewportRegion viewport(DEFAULT_WIDTH, DEFAULT_HEIGHT);
-    myCamera->viewAll(root, viewport, 1.5f);
+    obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
+                                        obol::RenderBackendKind::OpenGL2SWRast,
+                                        "headless-context");
+    obol::RenderTarget target;
+    target.width = DEFAULT_WIDTH;
+    target.height = DEFAULT_HEIGHT;
+    target.pixelFormat = obol::PixelFormat::RGB;
+    obol::OffscreenRenderer renderer(backend, target);
+    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
 
     const char *baseFilename = (argc > 1) ? argv[1] : "10.5.SelectionCB";
     char filename[256];
 
     int frameNum = 0;
 
-    // Render initial state (both objects gray, nothing selected)
     printf("\n=== Initial state (nothing selected) ===\n");
     snprintf(filename, sizeof(filename), "%s_frame%02d_initial.rgb", baseFilename, frameNum++);
-    renderToFile(root, filename);
+    if (!renderScene(renderer, scene, filename)) {
+        fprintf(stderr, "Error: Failed to render initial selection scene with Obol v2 API\n");
+        return 1;
+    }
 
-    // Demonstrate the selection callback effect by directly applying the same
-    // material changes that mySelectionCB/myDeselectionCB would make during
-    // interactive picking.  SoSelection::select() does not invoke user callbacks
-    // programmatically; those fire only via SoHandleEventAction (mouse pick).
     printf("\n=== Selecting sphere (sphere turns red) ===\n");
-    sphereMaterial->diffuseColor.setValue(reddish);
+    selectObject(scene, sphere, "Sphere", selected);
     snprintf(filename, sizeof(filename), "%s_frame%02d_sphere_selected.rgb", baseFilename, frameNum++);
-    renderToFile(root, filename);
+    if (!renderScene(renderer, scene, filename)) return 1;
 
     printf("\n=== Deselecting sphere (sphere returns to gray) ===\n");
-    sphereMaterial->diffuseColor.setValue(white);
+    deselectObject(scene, sphere, "Sphere", normal);
     snprintf(filename, sizeof(filename), "%s_frame%02d_sphere_deselected.rgb", baseFilename, frameNum++);
-    renderToFile(root, filename);
+    if (!renderScene(renderer, scene, filename)) return 1;
 
     printf("\n=== Selecting cube (cube turns red) ===\n");
-    cubeMaterial->diffuseColor.setValue(reddish);
+    selectObject(scene, cube, "Cube", selected);
     snprintf(filename, sizeof(filename), "%s_frame%02d_cube_selected.rgb", baseFilename, frameNum++);
-    renderToFile(root, filename);
+    if (!renderScene(renderer, scene, filename)) return 1;
 
     printf("\n=== Deselecting cube (cube returns to gray) ===\n");
-    cubeMaterial->diffuseColor.setValue(white);
+    deselectObject(scene, cube, "Cube", normal);
     snprintf(filename, sizeof(filename), "%s_frame%02d_cube_deselected.rgb", baseFilename, frameNum++);
-    renderToFile(root, filename);
+    if (!renderScene(renderer, scene, filename)) return 1;
 
-    printf("\nRendered %d frames demonstrating selection callbacks\n", frameNum);
-
-    selectionRoot->unref();
+    printf("\nRendered %d frames demonstrating application selection callbacks [Obol v2]\n", frameNum);
     return 0;
 }

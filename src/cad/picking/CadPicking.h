@@ -48,8 +48,8 @@
  * All structures are independent of BRL-CAD.
  */
 
-#include <obol/cad/CadIds.h>
-#include <obol/cad/SoCADAssembly.h>  // obol::PartGeometry, obol::InstanceRecord
+#include <Obol/cad/CadIds.h>
+#include <Obol/cad/SoCADAssembly.h>  // obol::PartGeometry, obol::InstanceRecord
 
 #include <Inventor/SbVec3f.h>
 #include <Inventor/SbBox3f.h>

@@ -16,7 +16,7 @@
 
 // Include SegmentPopLod directly (it's not a public API header,
 // but tests are allowed to test internal implementation)
-#include <obol/cad/CadIds.h>  // ensure headers compile together
+#include <Obol/cad/CadIds.h>  // ensure headers compile together
 
 // For the LoD we include from the source tree directly
 // (tests/cad/ is configured with src/cad/lod in its include path)

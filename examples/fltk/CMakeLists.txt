@@ -329,7 +329,7 @@ if(OBOL_BUILD_CAD_LARGE_VIEWER AND FLTK_FOUND)
         ${PROJECT_SOURCE_DIR}/tests/utils     # fltk_context_manager.h
         ${PROJECT_SOURCE_DIR}/include
         ${PROJECT_SOURCE_DIR}/include/Inventor/annex
-        ${PROJECT_SOURCE_DIR}/include/obol
+        ${PROJECT_SOURCE_DIR}/include/Obol
         ${PROJECT_BINARY_DIR}/include
         ${OBOL_TARGET_INCLUDE_DIRECTORIES}
         ${FLTK_INCLUDE_DIRS}

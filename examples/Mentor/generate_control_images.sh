@@ -30,6 +30,10 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BUILD_DIR="$(cd "${BUILD_DIR:-$SCRIPT_DIR/build}" && pwd)"
 BIN_DIR="$BUILD_DIR/bin"
+EXAMPLE_BIN_DIR="${EXAMPLE_BIN_DIR:-$BUILD_DIR/examples/Mentor/bin}"
+if [ ! -d "$EXAMPLE_BIN_DIR" ]; then
+    EXAMPLE_BIN_DIR="$BIN_DIR"
+fi
 CONTROL_DIR="${CONTROL_DIR:-$SCRIPT_DIR/control_images}"
 CONTROL_DIR="$(mkdir -p "$CONTROL_DIR" && cd "$CONTROL_DIR" && pwd)"
 
@@ -39,6 +43,9 @@ if [ ! -d "$BUILD_DIR" ]; then
 fi
 
 RGB_TO_PNG="$BIN_DIR/rgb_to_png"
+if [ ! -f "$RGB_TO_PNG" ] && [ -f "$BUILD_DIR/tests/bin/rgb_to_png" ]; then
+    RGB_TO_PNG="$BUILD_DIR/tests/bin/rgb_to_png"
+fi
 if [ ! -f "$RGB_TO_PNG" ]; then
     echo "Error: rgb_to_png not found at $RGB_TO_PNG"
     echo "Please build with libpng available (cmake .. && make rgb_to_png)"
@@ -66,15 +73,20 @@ cleanup_xvfb() {
 trap cleanup_xvfb EXIT INT TERM
 
 if [ -z "$DISPLAY" ]; then
-    echo "DISPLAY not set - starting Xvfb on :99"
-    Xvfb :99 -screen 0 1024x768x24 +extension GLX +render -noreset &
-    XVFB_PID=$!
-    sleep 1
-    export DISPLAY=:99
+    if command -v Xvfb >/dev/null 2>&1; then
+        echo "DISPLAY not set - starting Xvfb on :99"
+        Xvfb :99 -screen 0 1024x768x24 +extension GLX +render -noreset &
+        XVFB_PID=$!
+        sleep 1
+        export DISPLAY=:99
+    else
+        echo "DISPLAY not set and Xvfb not found - continuing for headless backends"
+    fi
 fi
 
 echo "Generating control images in: $CONTROL_DIR"
-echo "Using binaries from: $BIN_DIR"
+echo "Using example binaries from: $EXAMPLE_BIN_DIR"
+echo "Using converter: $RGB_TO_PNG"
 echo "Data directory: $COIN_DATA_DIR"
 echo "Display: $DISPLAY"
 echo ""
@@ -102,10 +114,10 @@ EXAMPLES=(
     "07.1.BasicTexture"
     "07.2.TextureCoordinates"
     "07.3.TextureFunction"
-    # "08.1.BSCurve"  # NURBS not available in this fork
-    # "08.2.UniCurve" # NURBS not available in this fork
-    # "08.3.BezSurf"  # NURBS not available in this fork
-    # "08.4.TrimSurf" # NURBS not available in this fork
+    "08.1.BSCurve"
+    "08.2.UniCurve"
+    "08.3.BezSurf"
+    "08.4.TrimSurf"
     "09.1.Print"
     "09.2.Texture"
     "09.3.Search"
@@ -132,11 +144,14 @@ EXAMPLES=(
     "13.7.Rotor"
     "13.8.Blinker"
     "14.1.FrolickingWords"
+    "14.2.Editors"
     "14.3.Balance"
     "15.1.ConeRadius"
     "15.2.SliderBox"
     "15.3.AttachManip"
     "15.4.Customize"
+    "16.2.Callback"
+    "16.3.AttachEditor"
     "17.2.GLCallback"
 )
 
@@ -267,7 +282,7 @@ for example in "${EXAMPLES[@]}"; do
     count=$((count + 1))
     printf "[%2d/%2d] Generating %s..." "$count" "$total" "$example"
 
-    exe="$BIN_DIR/$example"
+    exe="$EXAMPLE_BIN_DIR/$example"
     if [ ! -f "$exe" ]; then
         echo " SKIP (not built)"
         skipped=$((skipped + 1))

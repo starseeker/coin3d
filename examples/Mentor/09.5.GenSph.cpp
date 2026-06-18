@@ -42,103 +42,79 @@
  */
 
 #include "headless_utils.h"
-#include <Inventor/SoDB.h>
-#include <Inventor/SoPrimitiveVertex.h>
-#include <Inventor/actions/SoCallbackAction.h>
-#include <Inventor/nodes/SoDirectionalLight.h>
-#include <Inventor/nodes/SoMaterial.h>
-#include <Inventor/nodes/SoPerspectiveCamera.h>
-#include <Inventor/nodes/SoSeparator.h>
-#include <Inventor/nodes/SoSphere.h>
+#include <Obol/Obol.h>
+
 #include <cstdio>
 
-// Global counter for triangles
-static int triangleCount = 0;
+namespace {
 
-SoCallbackAction::Response printHeaderCallback(void *, 
-    SoCallbackAction *, const SoNode *node)
+void printSphereTriangles(const char * name, const obol::Mesh & mesh)
 {
-    printf("\nSphere ");
-    if (node->getName().getLength() > 0)
-        printf("named \"%s\" ", node->getName().getString());
-    printf("at address %p\n", node);
-    triangleCount = 0;
-    return SoCallbackAction::CONTINUE;
-}
+    printf("\nSphere named \"%s\"\n", name);
+    const size_t triangleCount = mesh.indices.size() / 3;
+    for (size_t triangle = 0; triangle < triangleCount && triangle < 3; ++triangle) {
+        const obol::Vec3 & v1 = mesh.positions[mesh.indices[triangle * 3 + 0]];
+        const obol::Vec3 & v2 = mesh.positions[mesh.indices[triangle * 3 + 1]];
+        const obol::Vec3 & v3 = mesh.positions[mesh.indices[triangle * 3 + 2]];
 
-void printTriangleCallback(void *, SoCallbackAction *,
-    const SoPrimitiveVertex *vertex1,
-    const SoPrimitiveVertex *vertex2,
-    const SoPrimitiveVertex *vertex3)
-{
-    triangleCount++;
-    
-    // Print only first few triangles to avoid overwhelming output
-    if (triangleCount <= 3) {
-        printf("  Triangle %d:\n", triangleCount);
+        printf("  Triangle %zu:\n", triangle + 1);
         printf("    v1: (%.2f, %.2f, %.2f)\n", 
-            vertex1->getPoint()[0],
-            vertex1->getPoint()[1],
-            vertex1->getPoint()[2]);
+               v1.x, v1.y, v1.z);
         printf("    v2: (%.2f, %.2f, %.2f)\n",
-            vertex2->getPoint()[0],
-            vertex2->getPoint()[1],
-            vertex2->getPoint()[2]);
+               v2.x, v2.y, v2.z);
         printf("    v3: (%.2f, %.2f, %.2f)\n",
-            vertex3->getPoint()[0],
-            vertex3->getPoint()[1],
-            vertex3->getPoint()[2]);
+               v3.x, v3.y, v3.z);
     }
+    printf("  Total triangles generated: %zu\n", triangleCount);
 }
 
-void printSpheres(SoNode *root)
+bool renderScene(obol::OffscreenRenderer & renderer,
+                 obol::Scene & scene,
+                 const char * filename)
 {
-    SoCallbackAction myAction;
-    myAction.addPreCallback(SoSphere::getClassTypeId(), 
-        printHeaderCallback, NULL);
-    myAction.addTriangleCallback(SoSphere::getClassTypeId(), 
-        printTriangleCallback, NULL);
-    myAction.apply(root);
-    
-    printf("  Total triangles generated: %d\n", triangleCount);
+    const obol::FrameResult result = renderer.render(scene);
+    return result.success && renderer.writeRGB(filename);
 }
+
+} // namespace
 
 int main(int argc, char **argv)
 {
-    // Initialize Coin for headless operation
     initCoinHeadless();
 
-    SoSeparator *root = new SoSeparator;
-    root->ref();
+    const obol::Mesh sphereMesh = obol::makeSphereMesh(1.0f, 24, 12);
 
-    // Add camera and light
-    SoPerspectiveCamera *camera = new SoPerspectiveCamera;
-    root->addChild(camera);
-    root->addChild(new SoDirectionalLight);
+    obol::Scene scene;
+    obol::PerspectiveCamera camera;
+    camera.position = {0.0f, 0.0f, 5.0f};
+    camera.target = {0.0f, 0.0f, 0.0f};
+    scene.setCamera(camera);
+    scene.addDirectionalLight(obol::DirectionalLight{});
 
-    // Create a named sphere
-    SoSphere *mySphere = new SoSphere;
-    mySphere->setName("TestSphere");
-    
-    SoMaterial *myMaterial = new SoMaterial;
-    myMaterial->diffuseColor.setValue(0.8, 0.2, 0.2);
-    root->addChild(myMaterial);
-    root->addChild(mySphere);
+    obol::Material material;
+    material.baseColor = {0.8f, 0.2f, 0.2f, 1.0f};
+    scene.addMesh(sphereMesh, material);
 
-    // Setup camera
-    camera->viewAll(root, SbViewportRegion(DEFAULT_WIDTH, DEFAULT_HEIGHT));
-
-    // Use callback action to print generated primitives
     printf("Generating primitives for sphere...\n");
-    printSpheres(root);
+    printSphereTriangles("TestSphere", sphereMesh);
 
     const char *baseFilename = (argc > 1) ? argv[1] : "09.5.GenSph";
     char filename[256];
-    
-    // Render the sphere
     snprintf(filename, sizeof(filename), "%s.rgb", baseFilename);
-    renderToFile(root, filename);
 
-    root->unref();
+    obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
+                                        obol::RenderBackendKind::OpenGL2SWRast,
+                                        "headless-context");
+    obol::RenderTarget target;
+    target.width = DEFAULT_WIDTH;
+    target.height = DEFAULT_HEIGHT;
+    target.pixelFormat = obol::PixelFormat::RGB;
+    obol::OffscreenRenderer renderer(backend, target);
+    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
+    if (!renderScene(renderer, scene, filename)) {
+        fprintf(stderr, "Error: Failed to render generated sphere mesh with Obol v2 API\n");
+        return 1;
+    }
+
     return 0;
 }

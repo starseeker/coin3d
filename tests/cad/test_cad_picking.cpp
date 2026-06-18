@@ -14,8 +14,8 @@
 
 #include "../test_utils.h"
 
-#include <obol/cad/CadIds.h>
-#include <obol/cad/SoCADAssembly.h>  // PartGeometry, WireRep, TriMesh, etc.
+#include <Obol/cad/CadIds.h>
+#include <Obol/cad/SoCADAssembly.h>  // PartGeometry, WireRep, TriMesh, etc.
 #include "CadPicking.h"
 
 #include <Inventor/SbVec3f.h>

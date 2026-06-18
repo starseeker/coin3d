@@ -1,226 +1,223 @@
 /*
+ * Headless version of Inventor Mentor example 15.4
  *
- *  Copyright (C) 2000 Silicon Graphics, Inc.  All Rights Reserved.
- *
- *  This library is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU Lesser General Public
- *  License as published by the Free Software Foundation; either
- *  version 2.1 of the License, or (at your option) any later version.
- *
- *  This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  Lesser General Public License for more details.
- *
- *  Further, this software is distributed without any warranty that it is
- *  free of the rightful claim of any third person regarding infringement
- *  or the like.  Any license provided herein, whether implied or
- *  otherwise, applies only to this software file.  Patent licenses, if
- *  any, provided herein do not apply to combinations of this program with
- *  other software, or any other product whatsoever.
- *
- *  You should have received a copy of the GNU Lesser General Public
- *  License along with this library; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- *  Contact information: Silicon Graphics, Inc., 1600 Amphitheatre Pkwy,
- *  Mountain View, CA  94043, or:
- *
- *  http://www.sgi.com
- *
- *  For further information regarding this notice, see:
- *
- *  http://oss.sgi.com/projects/GenInfo/NoticeExplan/
- *
- */
-
-/*
- *  Headless version of Inventor Mentor example 15.4
- *
- *  Converted from interactive viewer to headless rendering.
- *  Same as 15.2, with one difference:
- *  The draggers are customized to use different geometry.
- *  Creates custom scene graphs for the parts "translator"
- *  and "translatorActive" and uses setPart() to replace
- *  the default parts with custom geometry.
- *  
- *  Demonstrates nodekit part customization in a toolkit-agnostic way.
+ * Original: customized Translate1Dragger part geometry.
+ * Headless: custom v2 slider handles and active-state materials.
  */
 
 #include "headless_utils.h"
-#include <Inventor/draggers/SoTranslate1Dragger.h>
-#include <Inventor/engines/SoCalculator.h>
-#include <Inventor/nodekits/SoShapeKit.h>
-#include <Inventor/nodes/SoCube.h>
-#include <Inventor/nodes/SoMaterial.h>
-#include <Inventor/nodes/SoSeparator.h>
-#include <Inventor/nodes/SoText3.h>
-#include <Inventor/nodes/SoTransform.h>
-#include <Inventor/nodes/SoPerspectiveCamera.h>
-#include <Inventor/nodes/SoDirectionalLight.h>
+#include <Obol/Obol.h>
+
 #include <cstdio>
 
-int
-main(int, char **)
+namespace {
+
+enum class ActiveAxis {
+    None,
+    X,
+    Y,
+    Z
+};
+
+struct SliderHandle {
+    obol::SceneObjectId object = obol::InvalidSceneObjectId;
+    obol::Transform base;
+    obol::Vec3 axis = {1.0f, 0.0f, 0.0f};
+};
+
+struct SliderRig {
+    SliderHandle x;
+    SliderHandle y;
+    SliderHandle z;
+    obol::SceneObjectId text = obol::InvalidSceneObjectId;
+};
+
+obol::Material material(float r, float g, float b)
 {
-   initCoinHeadless();
+    obol::Material result;
+    result.baseColor = {r, g, b, 1.0f};
+    result.specular = {0.2f, 0.2f, 0.2f, 1.0f};
+    result.shininess = 0.25f;
+    return result;
+}
 
-   SoSeparator *root = new SoSeparator;
-   root->ref();
+obol::Transform transform(float x, float y, float z)
+{
+    obol::Transform xf;
+    xf.translation = {x, y, z};
+    return xf;
+}
 
-   // Add camera and light for headless rendering
-   SoPerspectiveCamera *camera = new SoPerspectiveCamera;
-   camera->position.setValue(0, 0, 35);
-   camera->orientation.setValue(SbRotation(SbVec3f(0, 1, 0), 0));
-   root->addChild(camera);
+obol::Transform rotate(float x, float y, float z,
+                       float ax, float ay, float az, float angle)
+{
+    obol::Transform xf = transform(x, y, z);
+    xf.rotationAxis = {ax, ay, az};
+    xf.rotationRadians = angle;
+    return xf;
+}
 
-   SoDirectionalLight *light = new SoDirectionalLight;
-   root->addChild(light);
+void addRail(obol::Scene & scene, const obol::Transform & xf)
+{
+    obol::Polyline rail;
+    rail.lineWidth = 2.0f;
+    rail.points = {{-3.0f, 0.0f, 0.0f}, {3.0f, 0.0f, 0.0f}};
+    scene.addPolyline(rail, material(0.65f, 0.65f, 0.65f), xf);
+}
 
-   // Create 3 translate1Draggers and place them in space.
-   SoSeparator *xDragSep = new SoSeparator;
-   SoSeparator *yDragSep = new SoSeparator;
-   SoSeparator *zDragSep = new SoSeparator;
-   root->addChild(xDragSep);
-   root->addChild(yDragSep);
-   root->addChild(zDragSep);
-   
-   // Separators will each hold a different transform
-   SoTransform *xDragXf = new SoTransform;
-   SoTransform *yDragXf = new SoTransform;
-   SoTransform *zDragXf = new SoTransform;
-   xDragXf->set("translation  0 -4 8");
-   yDragXf->set("translation -8  0 8 rotation 0 0 1  1.57");
-   zDragXf->set("translation -8 -4 0 rotation 0 1 0 -1.57");
-   xDragSep->addChild(xDragXf);
-   yDragSep->addChild(yDragXf);
-   zDragSep->addChild(zDragXf);
+SliderHandle addHandle(obol::Scene & scene,
+                       const obol::Transform & base,
+                       const obol::Vec3 & axis)
+{
+    obol::PrimitiveOptions cube;
+    cube.width = 3.0f;
+    cube.height = 0.4f;
+    cube.depth = 0.4f;
 
-   // Add the draggers under the separators, after transforms
-   SoTranslate1Dragger *xDragger = new SoTranslate1Dragger;
-   SoTranslate1Dragger *yDragger = new SoTranslate1Dragger;
-   SoTranslate1Dragger *zDragger = new SoTranslate1Dragger;
-   xDragSep->addChild(xDragger);
-   yDragSep->addChild(yDragger);
-   zDragSep->addChild(zDragger);
+    SliderHandle handle;
+    handle.base = base;
+    handle.axis = axis;
+    handle.object = scene.addPrimitive(obol::Primitive::Cube,
+                                       material(1.0f, 1.0f, 1.0f),
+                                       base,
+                                       cube);
+    return handle;
+}
 
-/////////////////////////////////////////////////////////////
-// CUSTOM DRAGGER GEOMETRY
+void addWireBox(obol::Scene & scene)
+{
+    obol::Polyline box;
+    box.lineWidth = 1.0f;
+    box.points = {
+        {-8.0f, -4.0f, -8.0f}, { 8.0f, -4.0f, -8.0f},
+        { 8.0f,  4.0f, -8.0f}, {-8.0f,  4.0f, -8.0f},
+        {-8.0f, -4.0f, -8.0f}, {-8.0f, -4.0f,  8.0f},
+        { 8.0f, -4.0f,  8.0f}, { 8.0f,  4.0f,  8.0f},
+        {-8.0f,  4.0f,  8.0f}, {-8.0f, -4.0f,  8.0f},
+        { 8.0f, -4.0f,  8.0f}, { 8.0f, -4.0f, -8.0f},
+        { 8.0f,  4.0f, -8.0f}, { 8.0f,  4.0f,  8.0f},
+        {-8.0f,  4.0f,  8.0f}, {-8.0f,  4.0f, -8.0f}
+    };
+    scene.addPolyline(box, material(1.0f, 0.0f, 1.0f));
+}
 
-   // Create myTranslator and myTranslatorActive.
-   // These are custom geometry for the draggers.
-   SoSeparator *myTranslator = new SoSeparator;
-   SoSeparator *myTranslatorActive = new SoSeparator;
-   myTranslator->ref();
-   myTranslatorActive->ref();
-   
-   // Materials for the dragger in regular and active states
-   SoMaterial *myMtl = new SoMaterial;
-   SoMaterial *myActiveMtl = new SoMaterial;
-   myMtl->diffuseColor.setValue(1,1,1);
-   myActiveMtl->diffuseColor.setValue(1,1,0);
-   myTranslator->addChild(myMtl);
-   myTranslatorActive->addChild(myActiveMtl);
-   
-   // Same shape for both versions - custom cube geometry
-   SoCube  *myCube = new SoCube;
-   myCube->set("width 3 height .4 depth .4");
-   myTranslator->addChild(myCube);
-   myTranslatorActive->addChild(myCube);
+void moveHandle(obol::Scene & scene,
+                const SliderHandle & handle,
+                float value,
+                bool active)
+{
+    obol::Transform xf = handle.base;
+    xf.translation = {
+        handle.base.translation.x + handle.axis.x * value,
+        handle.base.translation.y + handle.axis.y * value,
+        handle.base.translation.z + handle.axis.z * value
+    };
+    scene.setObjectTransform(handle.object, xf);
+    scene.setObjectMaterial(handle.object,
+                            active ? material(1.0f, 1.0f, 0.0f)
+                                   : material(1.0f, 1.0f, 1.0f));
+}
 
-   // Now, customize the draggers with the pieces we created.
-   xDragger->setPart("translator",myTranslator);
-   xDragger->setPart("translatorActive",myTranslatorActive);
-   yDragger->setPart("translator",myTranslator);
-   yDragger->setPart("translatorActive",myTranslatorActive);
-   zDragger->setPart("translator",myTranslator);
-   zDragger->setPart("translatorActive",myTranslatorActive);
+void updateRig(obol::Scene & scene,
+               const SliderRig & rig,
+               float x,
+               float y,
+               float z,
+               ActiveAxis active)
+{
+    moveHandle(scene, rig.x, x, active == ActiveAxis::X);
+    moveHandle(scene, rig.y, y, active == ActiveAxis::Y);
+    moveHandle(scene, rig.z, z, active == ActiveAxis::Z);
+    scene.setObjectTransform(rig.text, transform(x, y, z));
+}
 
-/////////////////////////////////////////////////////////////
+bool renderScene(obol::OffscreenRenderer & renderer,
+                 obol::Scene & scene,
+                 const char * filename)
+{
+    const obol::FrameResult result = renderer.render(scene);
+    return result.success && renderer.writeRGB(filename);
+}
 
-   // Create shape kit for the 3D text
-   SoShapeKit *textKit = new SoShapeKit;
-   root->addChild(textKit);
-   SoText3 *myText3 = new SoText3;
-   textKit->setPart("shape", myText3);
-   myText3->justification = SoText3::CENTER;
-   myText3->string.set1Value(0,"Slide Cubes");
-   myText3->string.set1Value(1,"To");
-   myText3->string.set1Value(2,"Move Me");
-   textKit->set("font { size 2}");
-   textKit->set("material { diffuseColor 1 1 0}");
+} // namespace
 
-   // Create shape kit for surrounding box.
-   SoShapeKit *boxKit = new SoShapeKit;
-   root->addChild(boxKit);
-   boxKit->setPart("shape", new SoCube);
-   boxKit->set("drawStyle { style LINES }");
-   boxKit->set("pickStyle { style UNPICKABLE }");
-   boxKit->set("material { emissiveColor 1 0 1 }");
-   boxKit->set("shape { width 16 height 8 depth 16 }");
+int main(int argc, char **argv)
+{
+    initCoinHeadless();
 
-   // Create the calculator to make a translation for the text
-   SoCalculator *myCalc = new SoCalculator;
-   myCalc->ref();
-   myCalc->A.connectFrom(&xDragger->translation);
-   myCalc->B.connectFrom(&yDragger->translation);
-   myCalc->C.connectFrom(&zDragger->translation);
-   myCalc->expression = "oA = vec3f(A[0],B[0],C[0])";
+    obol::Scene scene;
+    obol::PerspectiveCamera camera;
+    camera.position = {0.0f, 0.0f, 35.0f};
+    camera.target = {0.0f, 0.0f, 0.0f};
+    camera.verticalFieldOfViewRadians = 0.55f;
+    scene.setCamera(camera);
+    scene.addDirectionalLight(obol::DirectionalLight{});
 
-   // Connect the translation in textKit from myCalc
-   SoTransform *textXf 
-      = (SoTransform *) textKit->getPart("transform",TRUE);
-   textXf->translation.connectFrom(&myCalc->oA);
+    addWireBox(scene);
 
-   char filename[64];
-   printf("Rendering Customized Slider Box with custom dragger geometry...\n");
-   
-   // Render with different dragger positions
-   // The custom cube geometry makes the draggers more visible
-   
-   // Initial position (centered)
-   xDragger->translation.setValue(0, 0, 0);
-   yDragger->translation.setValue(0, 0, 0);
-   zDragger->translation.setValue(0, 0, 0);
-   sprintf(filename, "output/15.4.Customize_00_center.rgb");
-   renderToFile(root, filename);
-   
-   // Move text in X direction (showing custom white cubes)
-   for (int i = 1; i <= 3; i++) {
-      xDragger->translation.setValue(i * 2.5f, 0, 0);
-      sprintf(filename, "output/15.4.Customize_%02d_x_custom.rgb", i);
-      renderToFile(root, filename);
-   }
-   
-   // Reset and move in Y direction
-   xDragger->translation.setValue(0, 0, 0);
-   for (int i = 1; i <= 3; i++) {
-      yDragger->translation.setValue(i * 2.0f, 0, 0);
-      sprintf(filename, "output/15.4.Customize_%02d_y_custom.rgb", i + 3);
-      renderToFile(root, filename);
-   }
-   
-   // Reset and move in Z direction
-   yDragger->translation.setValue(0, 0, 0);
-   for (int i = 1; i <= 3; i++) {
-      zDragger->translation.setValue(i * 2.5f, 0, 0);
-      sprintf(filename, "output/15.4.Customize_%02d_z_custom.rgb", i + 6);
-      renderToFile(root, filename);
-   }
-   
-   // Combined movement showcasing custom geometry
-   xDragger->translation.setValue(5, 0, 0);
-   yDragger->translation.setValue(3, 0, 0);
-   zDragger->translation.setValue(5, 0, 0);
-   sprintf(filename, "output/15.4.Customize_10_combined.rgb");
-   renderToFile(root, filename);
-   
-   printf("Done! Rendered 11 frames showing customized dragger geometry.\n");
+    const obol::Transform xBase = transform(0.0f, -4.0f, 8.0f);
+    const obol::Transform yBase = rotate(-8.0f, 0.0f, 8.0f, 0.0f, 0.0f, 1.0f, 1.5708f);
+    const obol::Transform zBase = rotate(-8.0f, -4.0f, 0.0f, 0.0f, 1.0f, 0.0f, -1.5708f);
+    addRail(scene, xBase);
+    addRail(scene, yBase);
+    addRail(scene, zBase);
 
-   myCalc->unref();
-   myTranslator->unref();
-   myTranslatorActive->unref();
-   root->unref();
+    SliderRig rig;
+    rig.x = addHandle(scene, xBase, {1.0f, 0.0f, 0.0f});
+    rig.y = addHandle(scene, yBase, {0.0f, 1.0f, 0.0f});
+    rig.z = addHandle(scene, zBase, {0.0f, 0.0f, 1.0f});
 
-   return 0;
+    obol::Text3D text;
+    text.text = "Slide Cubes\nTo\nMove Me";
+    text.fontSize = 2.0f;
+    text.justification = obol::TextJustification::Center;
+    rig.text = scene.addText3D(text,
+                               material(1.0f, 1.0f, 0.0f),
+                               transform(0.0f, 0.0f, 0.0f));
+
+    obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
+                                        obol::RenderBackendKind::OpenGL2SWRast,
+                                        "headless-context");
+    obol::RenderTarget target;
+    target.width = DEFAULT_WIDTH;
+    target.height = DEFAULT_HEIGHT;
+    target.pixelFormat = obol::PixelFormat::RGB;
+    obol::OffscreenRenderer renderer(backend, target);
+    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
+
+    const char *baseFilename = (argc > 1) ? argv[1] : "15.4.Customize";
+    char filename[512];
+
+    printf("Rendering Customized Slider Box with v2 custom handles...\n");
+
+    updateRig(scene, rig, 0.0f, 0.0f, 0.0f, ActiveAxis::None);
+    snprintf(filename, sizeof(filename), "%s_00_center.rgb", baseFilename);
+    if (!renderScene(renderer, scene, filename)) return 1;
+    snprintf(filename, sizeof(filename), "%s.rgb", baseFilename);
+    if (!renderScene(renderer, scene, filename)) return 1;
+
+    for (int i = 1; i <= 3; i++) {
+        updateRig(scene, rig, i * 2.5f, 0.0f, 0.0f, ActiveAxis::X);
+        snprintf(filename, sizeof(filename), "%s_%02d_x_custom.rgb", baseFilename, i);
+        if (!renderScene(renderer, scene, filename)) return 1;
+    }
+
+    for (int i = 1; i <= 3; i++) {
+        updateRig(scene, rig, 0.0f, i * 2.0f, 0.0f, ActiveAxis::Y);
+        snprintf(filename, sizeof(filename), "%s_%02d_y_custom.rgb", baseFilename, i + 3);
+        if (!renderScene(renderer, scene, filename)) return 1;
+    }
+
+    for (int i = 1; i <= 3; i++) {
+        updateRig(scene, rig, 0.0f, 0.0f, i * 2.5f, ActiveAxis::Z);
+        snprintf(filename, sizeof(filename), "%s_%02d_z_custom.rgb", baseFilename, i + 6);
+        if (!renderScene(renderer, scene, filename)) return 1;
+    }
+
+    updateRig(scene, rig, 5.0f, 3.0f, 5.0f, ActiveAxis::None);
+    snprintf(filename, sizeof(filename), "%s_10_combined.rgb", baseFilename);
+    if (!renderScene(renderer, scene, filename)) return 1;
+
+    printf("Done! Rendered 11 frames showing customized dragger geometry.\n");
+    return 0;
 }

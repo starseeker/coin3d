@@ -42,14 +42,10 @@
  */
 
 #include "headless_utils.h"
-#include <Inventor/nodes/SoCoordinate3.h>
-#include <Inventor/nodes/SoMaterial.h>
-#include <Inventor/nodes/SoQuadMesh.h>
-#include <Inventor/nodes/SoSeparator.h>
-#include <Inventor/nodes/SoPerspectiveCamera.h>
-#include <Inventor/nodes/SoDirectionalLight.h>
-#include <cmath>
+#include <Obol/Obol.h>
+
 #include <cstdio>
+#include <cstdint>
 
 // Positions of all vertices (St. Louis Arch)
 static const float vertexPositions[60][3] =
@@ -80,67 +76,89 @@ static const float vertexPositions[60][3] =
    {  7.6, 21.7, 1.0}, { 10.3, 13.7, 1.2}, { 13.0,  0.0, 1.5}
 };
 
-SoSeparator *makeArch()
+namespace {
+
+obol::Mesh makeArchMesh()
 {
-    SoSeparator *result = new SoSeparator;
-    result->ref();
-
-    // Define the material
-    SoMaterial *myMaterial = new SoMaterial;
-    myMaterial->diffuseColor.setValue(.78, .57, .11);
-    result->addChild(myMaterial);
-
-    // Define coordinates for vertices
-    SoCoordinate3 *myCoords = new SoCoordinate3;
-    myCoords->point.setValues(0, 60, vertexPositions);
-    result->addChild(myCoords);
-
-    // Define the QuadMesh
-    SoQuadMesh *myQuadMesh = new SoQuadMesh;
-    myQuadMesh->verticesPerRow = 12;
-    myQuadMesh->verticesPerColumn = 5;
-    result->addChild(myQuadMesh);
-
-    result->unrefNoDelete();
-    return result;
+    obol::Mesh mesh;
+    mesh.topology = obol::MeshTopology::QuadGrid;
+    mesh.gridVertexRows = 5;
+    mesh.gridVertexColumns = 12;
+    for (const auto & position : vertexPositions) {
+        mesh.positions.push_back({position[0], position[1], position[2]});
+        mesh.indices.push_back(static_cast<uint32_t>(mesh.indices.size()));
+    }
+    return mesh;
 }
+
+obol::Material archMaterial()
+{
+    obol::Material material;
+    material.baseColor = {0.78f, 0.57f, 0.11f, 1.0f};
+    return material;
+}
+
+bool renderView(obol::OffscreenRenderer & renderer,
+                obol::Scene & scene,
+                const char * filename,
+                const obol::Vec3 & position)
+{
+    obol::PerspectiveCamera camera;
+    camera.position = position;
+    camera.target = {0.0f, 14.0f, 0.0f};
+    camera.verticalFieldOfViewRadians = 0.62f;
+    scene.setCamera(camera);
+    const obol::FrameResult result = renderer.render(scene);
+    return result.success && renderer.writeRGB(filename);
+}
+
+} // namespace
 
 int main(int argc, char **argv)
 {
-    // Initialize Coin for headless operation
     initCoinHeadless();
 
-    SoSeparator *root = new SoSeparator;
-    root->ref();
+    obol::Scene scene;
+    obol::DirectionalLight keyLight;
+    keyLight.direction = {-0.5f, -0.8f, -1.0f};
+    scene.addDirectionalLight(keyLight);
+    obol::DirectionalLight fillLight;
+    fillLight.direction = {1.0f, -0.4f, 1.0f};
+    fillLight.intensity = 0.35f;
+    scene.addDirectionalLight(fillLight);
+    scene.addMesh(makeArchMesh(), archMaterial());
 
-    // Add camera and light
-    SoPerspectiveCamera *camera = new SoPerspectiveCamera;
-    root->addChild(camera);
-    root->addChild(new SoDirectionalLight);
-
-    root->addChild(makeArch());
-
-    // Setup camera
-    camera->viewAll(root, SbViewportRegion(DEFAULT_WIDTH, DEFAULT_HEIGHT));
+    obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
+                                        obol::RenderBackendKind::OpenGL2SWRast,
+                                        "headless-context");
+    obol::RenderTarget target;
+    target.width = DEFAULT_WIDTH;
+    target.height = DEFAULT_HEIGHT;
+    target.pixelFormat = obol::PixelFormat::RGB;
+    obol::OffscreenRenderer renderer(backend, target);
+    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
 
     const char *baseFilename = (argc > 1) ? argv[1] : "05.4.QuadMesh";
     char filename[256];
 
-    // Front view
     snprintf(filename, sizeof(filename), "%s_front.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderView(renderer, scene, filename, {0.0f, 14.0f, 56.0f})) {
+        fprintf(stderr, "Error: Failed to render front QuadMesh view with Obol v2 API\n");
+        return 1;
+    }
 
-    // Side view
-    rotateCamera(camera, M_PI / 2, 0);
     snprintf(filename, sizeof(filename), "%s_side.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderView(renderer, scene, filename, {56.0f, 14.0f, 0.0f})) {
+        fprintf(stderr, "Error: Failed to render side QuadMesh view with Obol v2 API\n");
+        return 1;
+    }
 
-    // Angled view
-    camera->viewAll(root, SbViewportRegion(DEFAULT_WIDTH, DEFAULT_HEIGHT));
-    rotateCamera(camera, M_PI / 4, M_PI / 8);
     snprintf(filename, sizeof(filename), "%s_angle.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderView(renderer, scene, filename, {40.0f, 24.0f, 40.0f})) {
+        fprintf(stderr, "Error: Failed to render angled QuadMesh view with Obol v2 API\n");
+        return 1;
+    }
 
-    root->unref();
+    printf("Rendered arch QuadMesh views [Obol v2]\n");
     return 0;
 }

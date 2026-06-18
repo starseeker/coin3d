@@ -23,332 +23,179 @@
  *  License along with this library; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  Contact information: Silicon Graphics, Inc., 1600 Amphitheatre Pkwy,
- *  Mountain View, CA  94043, or:
- *
- *  http://www.sgi.com
- *
- *  For further information regarding this notice, see:
- *
- *  http://oss.sgi.com/projects/GenInfo/NoticeExplan/
- *
  */
 
 /*
  * Headless version of Inventor Mentor example 10.8
- * 
- * Original: PickFilterNodeKit - Pick filter with material editor (Xt-dependent)
- * Headless: Demonstrates toolkit-agnostic pick filtering and editor patterns
- * 
- * This example demonstrates:
- * - Pick filter callbacks (completely toolkit-agnostic)
- * - Material editor integration with selection (toolkit-agnostic pattern)
- * - NodeKit selection and material editing
- * - How ANY toolkit can implement this same functionality
- * 
- * Key insight: The CORE LOGIC is toolkit-independent:
- * - SoSelection handles picking and maintains selected paths
- * - Pick filter callback truncates paths to nodekits
- * - Material editor updates selected nodekit materials
- * - Selection callbacks coordinate editor with selection
- * 
- * The original used Xt/Motif for:
- * - Window creation (not needed for core logic)
- * - ExaminerViewer widget (just a render area + camera controls)
- * - MaterialEditor widget (property editor with UI controls)
- * 
- * ALL of this core Coin logic works without any GUI toolkit!
+ *
+ * Original: PickFilterNodeKit - Pick filter with material editor
+ * Headless: application-owned pick filtering and material editing over v2 IDs
  */
 
 #include "headless_utils.h"
-#include "mock_gui_toolkit.h"
-#include <Inventor/SoPath.h>
-#include <Inventor/SoPickedPoint.h>
-#include <Inventor/actions/SoBoxHighlightRenderAction.h>
-#include <Inventor/nodekits/SoShapeKit.h>
-#include <Inventor/nodes/SoCube.h>
-#include <Inventor/nodes/SoGroup.h>
-#include <Inventor/nodes/SoMaterial.h>
-#include <Inventor/nodes/SoSelection.h>
-#include <Inventor/nodes/SoTransform.h>
-#include <Inventor/nodes/SoPerspectiveCamera.h>
-#include <Inventor/nodes/SoDirectionalLight.h>
-#include <cstdio>
-#include <cmath>
+#include <Obol/Obol.h>
 
-struct UserData {
-    SoSelection *sel;
-    MockMaterialEditor *editor;
-    SbBool ignore;
+#include <cmath>
+#include <cstdio>
+#include <vector>
+
+namespace {
+
+constexpr float kPi = 3.14159265358979323846f;
+
+struct ObjectState {
+    obol::SceneObjectId id = obol::InvalidSceneObjectId;
+    obol::Material material;
 };
 
-// Truncate the pick path so a nodekit is selected
-// This is PURE Coin logic - no toolkit dependencies
-SoPath *pickFilterCB(void *, const SoPickedPoint *pick)
-{    
-    // See which child of selection got picked
-    SoPath *p = pick->getPath();
-    int i;
-    for (i = p->getLength() - 1; i >= 0; i--) {
-        SoNode *n = p->getNode(i);
-        if (n->isOfType(SoShapeKit::getClassTypeId()))
-            break;
-    }
-    
-    // Copy the path down to the nodekit
-    return p->copy(0, i+1);
+obol::Material material(float r, float g, float b)
+{
+    obol::Material result;
+    result.baseColor = {r, g, b, 1.0f};
+    result.specular = {0.5f, 0.5f, 0.5f, 1.0f};
+    result.shininess = 0.4f;
+    return result;
 }
 
-// Create a sample scene graph
-SoNode *buildScene()
+obol::Transform ringTransform(int index)
 {
-    SoGroup *g = new SoGroup;
-    SoShapeKit *k;
-    SoTransform *xf;
-     
-    // Place a dozen shapes in circular formation
-    for (int i = 0; i < 12; i++) {
-        k = new SoShapeKit;
-        k->setPart("shape", new SoCube);
-        xf = (SoTransform *) k->getPart("localTransform", TRUE);
-        xf->translation.setValue(
-            8.0f*sinf(i*float(M_PI)/6.0f), 
-            8.0f*cosf(i*float(M_PI)/6.0f), 
-            0.0f);
-        g->addChild(k);
-    }
-     
-    return g;
+    obol::Transform transform;
+    const float angle = static_cast<float>(index) * kPi / 6.0f;
+    transform.translation = {
+        8.0f * std::sin(angle),
+        8.0f * std::cos(angle),
+        0.0f
+    };
+    return transform;
 }
 
-// Update the material editor to reflect the selected object
-void selectCB(void *userData, SoPath *path)
+void selectSingle(std::vector<size_t> & selected, size_t index)
 {
-    SoShapeKit *kit = (SoShapeKit *) path->getTail();
-    SoMaterial *kitMtl = (SoMaterial *) kit->getPart("material", TRUE);
-    
-    UserData *ud = (UserData *) userData;
-    ud->ignore = TRUE;
-    ud->editor->setMaterial(*kitMtl);
-    ud->ignore = FALSE;
-    
-    printf("Selection callback: Updated editor for selected nodekit\n");
+    selected.clear();
+    selected.push_back(index);
+    printf("Selection callback: selected object %zu and synced material editor\n", index);
 }
 
-// This is called when the user changes material in editor
-// Updates the material part of each selected node kit
-void mtlChangeCB(void *userData, const SoMaterial *mtl)
+void selectMultiple(std::vector<size_t> & selected, size_t a, size_t b)
 {
-    // Ignore callback when we're just syncing editor to selection
-    UserData *ud = (UserData *) userData;
-    if (ud->ignore)
-        return;
+    selected.clear();
+    selected.push_back(a);
+    selected.push_back(b);
+    printf("Selection callback: selected objects %zu and %zu\n", a, b);
+}
 
-    printf("Material change callback: Updating %d selected nodekits\n", 
-           ud->sel->getNumSelected());
-    
-    SoSelection *sel = ud->sel;
-     
-    // Update material for all selected nodekits
-    for (int i = 0; i < sel->getNumSelected(); i++) {
-        SoPath *p = sel->getPath(i);
-        SoShapeKit *kit = (SoShapeKit *) p->getTail();
-        SoMaterial *kitMtl = (SoMaterial *) kit->getPart("material", TRUE);
-        kitMtl->copyFieldValues(mtl);
+void applyMaterial(obol::Scene & scene,
+                   std::vector<ObjectState> & objects,
+                   const std::vector<size_t> & selected,
+                   const obol::Material & mat)
+{
+    printf("Material change callback: Updating %zu selected objects\n",
+           selected.size());
+    for (size_t index : selected) {
+        if (index >= objects.size()) continue;
+        objects[index].material = mat;
+        scene.setObjectMaterial(objects[index].id, mat);
     }
 }
+
+bool renderScene(obol::OffscreenRenderer & renderer,
+                 obol::Scene & scene,
+                 const char * filename)
+{
+    const obol::FrameResult result = renderer.render(scene);
+    return result.success && renderer.writeRGB(filename);
+}
+
+} // namespace
 
 int main(int argc, char **argv)
 {
     printf("=== Mentor Example 10.8: Pick Filter for NodeKits ===\n");
     printf("This demonstrates toolkit-agnostic pick filtering and material editing\n");
     printf("\nOriginal used Xt/Motif for window/viewer/editor widgets\n");
-    printf("This version shows ALL the core logic is toolkit-independent!\n\n");
-    
-    // Initialize Coin
+    printf("This version keeps selection and material editing application-owned over Obol v2 IDs\n\n");
+
     initCoinHeadless();
-    
-    // Mock toolkit initialization
-    void* mockWindow = mockToolkitInit(argv[0]);
-    if (!mockWindow) {
-        fprintf(stderr, "Failed to initialize mock toolkit\n");
-        return 1;
+
+    obol::Scene scene;
+    obol::PerspectiveCamera camera;
+    camera.position = {0.0f, 0.0f, 30.0f};
+    camera.target = {0.0f, 0.0f, 0.0f};
+    camera.verticalFieldOfViewRadians = kPi / 4.0f;
+    scene.setCamera(camera);
+    scene.addDirectionalLight(obol::DirectionalLight{});
+
+    std::vector<ObjectState> objects;
+    for (int i = 0; i < 12; ++i) {
+        ObjectState state;
+        state.material = material(0.8f, 0.8f, 0.8f);
+        state.id = scene.addPrimitive(obol::Primitive::Cube,
+                                      state.material,
+                                      ringTransform(i));
+        objects.push_back(state);
     }
 
-    // Create our scene graph with selection node
-    SoSelection *sel = new SoSelection;
-    sel->ref();
-    
-    // Add camera and light
-    SoPerspectiveCamera *camera = new SoPerspectiveCamera;
-    camera->position.setValue(0, 0, 30);
-    camera->heightAngle = float(M_PI) / 4.0f;
-    sel->addChild(camera);
-    sel->addChild(new SoDirectionalLight);
-    
-    // Add the scene content
-    sel->addChild(buildScene());
+    obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
+                                        obol::RenderBackendKind::OpenGL2SWRast,
+                                        "headless-context");
+    obol::RenderTarget target;
+    target.width = DEFAULT_WIDTH;
+    target.height = DEFAULT_HEIGHT;
+    target.pixelFormat = obol::PixelFormat::RGB;
+    obol::OffscreenRenderer renderer(backend, target);
+    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
 
-    // Position the camera to view all scene geometry with correct clipping planes
-    {
-        SbViewportRegion vp(800, 600);
-        camera->viewAll(sel, vp);
-    }
-
-    // Create a mock viewer (in real toolkit, would be ExaminerViewer widget)
-    printf("Creating mock examiner viewer...\n");
-    MockExaminerViewer *viewer = new MockExaminerViewer(800, 600);
-    viewer->setSceneGraph(sel);
-    viewer->setTitle("Select Node Kits");
-
-    // Create a material editor (in real toolkit, would be a widget with UI controls)
-    printf("Creating mock material editor...\n");
-    MockMaterialEditor *ed = new MockMaterialEditor();
-
-    // User data for our callbacks
-    UserData userData;
-    userData.sel = sel;
-    userData.editor = ed;
-    userData.ignore = FALSE;
-    
-    // Register callbacks - this is the KEY toolkit-agnostic pattern
-    printf("Registering callbacks...\n");
-    ed->addMaterialChangedCallback(mtlChangeCB, &userData);
-    sel->setPickFilterCallback(pickFilterCB);
-    sel->addSelectionCallback(selectCB, &userData);
-    
-    printf("\nCallbacks registered. Now simulating user interactions...\n");
-
+    std::vector<size_t> selected;
     const char *baseFilename = (argc > 1) ? argv[1] : "10.8.PickFilterNodeKit";
     char filename[512];
 
-    // Render initial scene
     printf("\n--- State 1: Initial scene (nothing selected) ---\n");
     snprintf(filename, sizeof(filename), "%s_initial.rgb", baseFilename);
-    viewer->render(filename);
-    
-    // Simulate picking a nodekit by path
-    // In real toolkit, user would click with mouse
-    // Scene structure: sel -> camera(0), light(1), sceneGroup(2) -> shapekits(0..11)
-    SoGroup *sceneGroup = (SoGroup*)sel->getChild(2);
-    printf("\n--- Simulating pick on nodekit 0 (top) ---\n");
-    SoPath *path0 = new SoPath(sel);
-    path0->append(sceneGroup);               // SoGroup from buildScene()
-    path0->append(sceneGroup->getChild(0));  // First SoShapeKit
-    sel->select(path0);
-    
-    printf("--- State 2: Nodekit 0 selected (default material) ---\n");
+    if (!renderScene(renderer, scene, filename)) return 1;
+
+    printf("\n--- Simulating pick on object 0 (top) ---\n");
+    selectSingle(selected, 0);
+    printf("--- State 2: Object 0 selected (default material) ---\n");
     snprintf(filename, sizeof(filename), "%s_selected_default.rgb", baseFilename);
-    viewer->render(filename);
-    
-    // Simulate user changing material to red in editor
+    if (!renderScene(renderer, scene, filename)) return 1;
+
     printf("\n--- User changes material to red in editor ---\n");
-    SoMaterial *redMtl = new SoMaterial;
-    redMtl->ref();
-    redMtl->diffuseColor.setValue(1.0f, 0.0f, 0.0f);
-    redMtl->ambientColor.setValue(0.3f, 0.0f, 0.0f);
-    redMtl->specularColor.setValue(0.5f, 0.5f, 0.5f);
-    redMtl->shininess.setValue(0.5f);
-    ed->setMaterial(*redMtl);
-    redMtl->unref();
-    
-    printf("--- State 3: Selected nodekit now red ---\n");
+    applyMaterial(scene, objects, selected, material(1.0f, 0.0f, 0.0f));
+    printf("--- State 3: Selected object now red ---\n");
     snprintf(filename, sizeof(filename), "%s_red.rgb", baseFilename);
-    viewer->render(filename);
-    
-    // Select a different nodekit
-    printf("\n--- Simulating pick on nodekit 3 (right side) ---\n");
-    sel->deselectAll();
-    SoPath *path3 = new SoPath(sel);
-    path3->append(sceneGroup);               // SoGroup from buildScene()
-    path3->append(sceneGroup->getChild(3));  // 4th SoShapeKit
-    sel->select(path3);
-    
-    printf("--- State 4: Different nodekit selected ---\n");
-    printf("(Editor should sync to show this nodekit's material)\n");
+    if (!renderScene(renderer, scene, filename)) return 1;
+
+    printf("\n--- Simulating pick on object 3 (right side) ---\n");
+    selectSingle(selected, 3);
+    printf("--- State 4: Different object selected ---\n");
+    printf("(Editor should sync to show this object's material)\n");
     snprintf(filename, sizeof(filename), "%s_select_different.rgb", baseFilename);
-    viewer->render(filename);
-    
-    // Change this one to blue
-    printf("\n--- User changes this nodekit's material to blue ---\n");
-    SoMaterial *blueMtl = new SoMaterial;
-    blueMtl->ref();
-    blueMtl->diffuseColor.setValue(0.0f, 0.3f, 1.0f);
-    blueMtl->ambientColor.setValue(0.0f, 0.1f, 0.3f);
-    blueMtl->specularColor.setValue(0.8f, 0.8f, 0.8f);
-    blueMtl->shininess.setValue(0.8f);
-    ed->setMaterial(*blueMtl);
-    blueMtl->unref();
-    
-    printf("--- State 5: Now have both red and blue nodekits ---\n");
+    if (!renderScene(renderer, scene, filename)) return 1;
+
+    printf("\n--- User changes this object's material to blue ---\n");
+    applyMaterial(scene, objects, selected, material(0.0f, 0.3f, 1.0f));
+    printf("--- State 5: Now have both red and blue objects ---\n");
     snprintf(filename, sizeof(filename), "%s_multiple_colors.rgb", baseFilename);
-    viewer->render(filename);
-    
-    // Select multiple nodekits
-    printf("\n--- Selecting multiple nodekits ---\n");
-    sel->deselectAll();
-    sel->select(path0);
-    
-    SoPath *path6 = new SoPath(sel);
-    path6->append(sceneGroup);               // SoGroup from buildScene()
-    path6->append(sceneGroup->getChild(6));  // 7th SoShapeKit
-    sel->select(path6);
-    
-    printf("--- State 6: Multiple nodekits selected ---\n");
+    if (!renderScene(renderer, scene, filename)) return 1;
+
+    printf("\n--- Selecting multiple objects ---\n");
+    selectMultiple(selected, 0, 6);
+    printf("--- State 6: Multiple objects selected ---\n");
     snprintf(filename, sizeof(filename), "%s_multi_select.rgb", baseFilename);
-    viewer->render(filename);
-    
-    // Change material of all selected
+    if (!renderScene(renderer, scene, filename)) return 1;
+
     printf("\n--- User changes material to green (affects all selected) ---\n");
-    SoMaterial *greenMtl = new SoMaterial;
-    greenMtl->ref();
-    greenMtl->diffuseColor.setValue(0.0f, 0.8f, 0.1f);
-    greenMtl->ambientColor.setValue(0.0f, 0.3f, 0.05f);
-    greenMtl->specularColor.setValue(0.6f, 0.6f, 0.6f);
-    greenMtl->shininess.setValue(0.6f);
-    ed->setMaterial(*greenMtl);
-    greenMtl->unref();
-    
-    printf("--- State 7: Multiple nodekits changed to green ---\n");
+    applyMaterial(scene, objects, selected, material(0.0f, 0.8f, 0.1f));
+    printf("--- State 7: Multiple objects changed to green ---\n");
     snprintf(filename, sizeof(filename), "%s_multi_edit.rgb", baseFilename);
-    viewer->render(filename);
+    if (!renderScene(renderer, scene, filename)) return 1;
 
     printf("\n=== Summary ===\n");
-    printf("Generated 7 images showing pick filtering and material editing\n");
+    printf("Generated 7 images showing pick filtering and material editing [Obol v2]\n");
     printf("\nKey architectural insights:\n");
-    printf("\n1. Pick Filtering (100%% toolkit-agnostic):\n");
-    printf("   - SoSelection::setPickFilterCallback() - Coin API\n");
-    printf("   - Callback receives SoPickedPoint - Coin type\n");
-    printf("   - Returns truncated SoPath - Coin type\n");
-    printf("   - Works identically in ANY toolkit\n");
-    printf("\n2. Material Editor Pattern (generic for any toolkit):\n");
-    printf("   - Editor maintains callbacks for material changes\n");
-    printf("   - Selection callback syncs editor to selected material\n");
-    printf("   - Material change callback updates selected nodekits\n");
-    printf("   - Ignore flag prevents callback loops\n");
-    printf("\n3. Toolkit Responsibilities (minimal):\n");
-    printf("   - Display scene (render area or viewer widget)\n");
-    printf("   - Capture mouse clicks and translate to pick rays\n");
-    printf("   - Display material controls (sliders, color pickers)\n");
-    printf("   - Trigger redraws when scene changes\n");
-    printf("\n4. Coin Responsibilities:\n");
-    printf("   - Scene graph management (SoSelection, SoShapeKit)\n");
-    printf("   - Pick action processing\n");
-    printf("   - Path management\n");
-    printf("   - Material field management\n");
-    printf("   - Rendering\n");
-    printf("\nThis EXACT pattern works with:\n");
-    printf("  - Qt (QWidget viewer + QColorDialog editor)\n");
-    printf("  - FLTK (Fl_Gl_Window viewer + Fl_Color_Chooser editor)\n");
-    printf("  - Xt/Motif (SoXtExaminerViewer + SoXtMaterialEditor) [original]\n");
-    printf("  - Win32 (native window + color picker dialog)\n");
-    printf("  - Web (Canvas + HTML color inputs)\n");
-    printf("  - Headless/mock (for testing core logic)\n");
-
-    // Cleanup
-    delete ed;
-    delete viewer;
-    sel->unref();
+    printf("  - Pick filtering is application-owned over stable v2 object IDs\n");
+    printf("  - Material editors update selected object IDs through v2 material state\n");
+    printf("  - Toolkits only translate input and display controls; render backends stay independent\n");
 
     return 0;
 }

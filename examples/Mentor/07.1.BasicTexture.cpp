@@ -42,68 +42,92 @@
  */
 
 #include "headless_utils.h"
-#include <Inventor/nodes/SoCube.h>
-#include <Inventor/nodes/SoSeparator.h>
-#include <Inventor/nodes/SoTexture2.h>
-#include <Inventor/nodes/SoPerspectiveCamera.h>
-#include <Inventor/nodes/SoDirectionalLight.h>
-#include <Inventor/nodes/SoMaterial.h>
-#include <cmath>
+#include <Obol/Obol.h>
+
 #include <cstdio>
+#include <memory>
 
-int main(int argc, char **argv)
+namespace {
+
+std::shared_ptr<obol::Texture2D> checkerTexture()
 {
-    // Initialize Coin for headless operation
-    initCoinHeadless();
+    std::shared_ptr<obol::Texture2D> texture(new obol::Texture2D);
+    texture->image.width = 64;
+    texture->image.height = 64;
+    texture->image.format = obol::ImageFormat::RGB;
+    texture->image.pixels.resize(64 * 64 * 3);
 
-    SoSeparator *root = new SoSeparator;
-    root->ref();
-
-    // Add camera and light
-    SoPerspectiveCamera *camera = new SoPerspectiveCamera;
-    root->addChild(camera);
-    root->addChild(new SoDirectionalLight);
-
-    // Create a simple checkerboard pattern texture
-    // Since we don't have the brick.1.rgb file, we'll create a procedural pattern
-    unsigned char checker[64*64*3];
     for (int y = 0; y < 64; y++) {
         for (int x = 0; x < 64; x++) {
             int idx = (y * 64 + x) * 3;
             unsigned char val = ((x / 8) + (y / 8)) % 2 ? 200 : 50;
-            checker[idx] = val;
-            checker[idx+1] = val;
-            checker[idx+2] = val;
+            texture->image.pixels[idx] = val;
+            texture->image.pixels[idx + 1] = val;
+            texture->image.pixels[idx + 2] = val;
         }
     }
+    return texture;
+}
 
-    SoTexture2 *texture = new SoTexture2;
-    texture->image.setValue(SbVec2s(64, 64), 3, checker);
-    root->addChild(texture);
+obol::Material texturedMaterial()
+{
+    obol::Material material;
+    material.baseColor = {0.8f, 0.8f, 0.8f, 1.0f};
+    material.baseColorTexture = checkerTexture();
+    return material;
+}
 
-    // Add material for better visibility
-    SoMaterial *mat = new SoMaterial;
-    mat->diffuseColor.setValue(0.8, 0.8, 0.8);
-    root->addChild(mat);
+bool renderView(obol::OffscreenRenderer & renderer,
+                obol::Scene & scene,
+                const char * filename,
+                const obol::Vec3 & position)
+{
+    obol::PerspectiveCamera camera;
+    camera.position = position;
+    camera.target = {0.0f, 0.0f, 0.0f};
+    camera.verticalFieldOfViewRadians = 0.55f;
+    scene.setCamera(camera);
+    const obol::FrameResult result = renderer.render(scene);
+    return result.success && renderer.writeRGB(filename);
+}
 
-    // Make a cube
-    root->addChild(new SoCube);
+} // namespace
 
-    // Setup camera
-    camera->viewAll(root, SbViewportRegion(DEFAULT_WIDTH, DEFAULT_HEIGHT));
+int main(int argc, char **argv)
+{
+    initCoinHeadless();
+
+    obol::Scene scene;
+    obol::DirectionalLight light;
+    light.direction = {-0.5f, -0.7f, -1.0f};
+    scene.addDirectionalLight(light);
+    scene.addPrimitive(obol::Primitive::Cube, texturedMaterial());
+
+    obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
+                                        obol::RenderBackendKind::OpenGL2SWRast,
+                                        "headless-context");
+    obol::RenderTarget target;
+    target.width = DEFAULT_WIDTH;
+    target.height = DEFAULT_HEIGHT;
+    target.pixelFormat = obol::PixelFormat::RGB;
+    obol::OffscreenRenderer renderer(backend, target);
+    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
 
     const char *baseFilename = (argc > 1) ? argv[1] : "07.1.BasicTexture";
     char filename[256];
 
-    // Front view
     snprintf(filename, sizeof(filename), "%s_front.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderView(renderer, scene, filename, {0.0f, 0.0f, 5.0f})) {
+        fprintf(stderr, "Error: Failed to render front BasicTexture view with Obol v2 API\n");
+        return 1;
+    }
 
-    // Angled view
-    rotateCamera(camera, M_PI / 4, M_PI / 6);
     snprintf(filename, sizeof(filename), "%s_angle.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderView(renderer, scene, filename, {3.0f, 2.0f, 4.0f})) {
+        fprintf(stderr, "Error: Failed to render angled BasicTexture view with Obol v2 API\n");
+        return 1;
+    }
 
-    root->unref();
+    printf("Rendered textured cube [Obol v2]\n");
     return 0;
 }

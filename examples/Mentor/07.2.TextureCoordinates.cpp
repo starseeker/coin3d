@@ -42,103 +42,123 @@
  */
 
 #include "headless_utils.h"
-#include <Inventor/nodes/SoCoordinate3.h>
-#include <Inventor/nodes/SoFaceSet.h>
-#include <Inventor/nodes/SoNormal.h>
-#include <Inventor/nodes/SoNormalBinding.h>
-#include <Inventor/nodes/SoSeparator.h>
-#include <Inventor/nodes/SoTexture2.h>
-#include <Inventor/nodes/SoTextureCoordinate2.h>
-#include <Inventor/nodes/SoPerspectiveCamera.h>
-#include <Inventor/nodes/SoDirectionalLight.h>
-#include <cmath>
+#include <Obol/Obol.h>
+
 #include <cstdio>
+#include <memory>
 
-int main(int argc, char **argv)
+namespace {
+
+std::shared_ptr<obol::Texture2D> brickTexture()
 {
-    // Initialize Coin for headless operation
-    initCoinHeadless();
+    std::shared_ptr<obol::Texture2D> texture(new obol::Texture2D);
+    texture->image.width = 64;
+    texture->image.height = 64;
+    texture->image.format = obol::ImageFormat::RGB;
+    texture->image.pixels.resize(64 * 64 * 3);
 
-    SoSeparator *root = new SoSeparator;
-    root->ref();
-
-    // Add camera and light
-    SoPerspectiveCamera *camera = new SoPerspectiveCamera;
-    root->addChild(camera);
-    root->addChild(new SoDirectionalLight);
-
-    // Create a brick-pattern texture
-    unsigned char brick[64*64*3];
     for (int y = 0; y < 64; y++) {
         for (int x = 0; x < 64; x++) {
             int idx = (y * 64 + x) * 3;
-            // Create a brick pattern
             bool isHorizontalLine = (y % 16 == 0);
             bool isVerticalLine = ((x + (y/16)*8) % 32 == 0);
             bool isMortar = isHorizontalLine || isVerticalLine;
             
             if (isMortar) {
-                brick[idx] = 180;
-                brick[idx+1] = 180;
-                brick[idx+2] = 180;
+                texture->image.pixels[idx] = 180;
+                texture->image.pixels[idx + 1] = 180;
+                texture->image.pixels[idx + 2] = 180;
             } else {
-                brick[idx] = 150;
-                brick[idx+1] = 80;
-                brick[idx+2] = 60;
+                texture->image.pixels[idx] = 150;
+                texture->image.pixels[idx + 1] = 80;
+                texture->image.pixels[idx + 2] = 60;
             }
         }
     }
+    return texture;
+}
 
-    SoTexture2 *texture = new SoTexture2;
-    texture->image.setValue(SbVec2s(64, 64), 3, brick);
-    root->addChild(texture);
+obol::Mesh texturedSquare()
+{
+    obol::Mesh mesh;
+    mesh.topology = obol::MeshTopology::Polygons;
+    mesh.positions = {
+        {-3.0f, -3.0f, 0.0f},
+        { 3.0f, -3.0f, 0.0f},
+        { 3.0f,  3.0f, 0.0f},
+        {-3.0f,  3.0f, 0.0f}
+    };
+    mesh.texCoords = {
+        {0.0f, 0.0f},
+        {1.0f, 0.0f},
+        {1.0f, 1.0f},
+        {0.0f, 1.0f}
+    };
+    mesh.indices = {0, 1, 2, 3};
+    mesh.texCoordIndices = {0, 1, 2, 3};
+    mesh.faceVertexCounts = {4};
+    mesh.faceNormals = {{0.0f, 0.0f, 1.0f}};
+    return mesh;
+}
 
-    // Define the square's spatial coordinates
-    SoCoordinate3 *coord = new SoCoordinate3;
-    root->addChild(coord);
-    coord->point.set1Value(0, SbVec3f(-3, -3, 0));
-    coord->point.set1Value(1, SbVec3f( 3, -3, 0));
-    coord->point.set1Value(2, SbVec3f( 3,  3, 0));
-    coord->point.set1Value(3, SbVec3f(-3,  3, 0));
+obol::Material texturedMaterial()
+{
+    obol::Material material;
+    material.baseColorTexture = brickTexture();
+    return material;
+}
 
-    // Define the square's normal
-    SoNormal *normal = new SoNormal;
-    root->addChild(normal);
-    normal->vector.set1Value(0, SbVec3f(0, 0, 1));
+bool renderView(obol::OffscreenRenderer & renderer,
+                obol::Scene & scene,
+                const char * filename,
+                const obol::Vec3 & position)
+{
+    obol::PerspectiveCamera camera;
+    camera.position = position;
+    camera.target = {0.0f, 0.0f, 0.0f};
+    camera.verticalFieldOfViewRadians = 0.72f;
+    scene.setCamera(camera);
+    const obol::FrameResult result = renderer.render(scene);
+    return result.success && renderer.writeRGB(filename);
+}
 
-    // Define the square's texture coordinates
-    SoTextureCoordinate2 *texCoord = new SoTextureCoordinate2;
-    root->addChild(texCoord);
-    texCoord->point.set1Value(0, SbVec2f(0, 0));
-    texCoord->point.set1Value(1, SbVec2f(1, 0));
-    texCoord->point.set1Value(2, SbVec2f(1, 1));
-    texCoord->point.set1Value(3, SbVec2f(0, 1));
+} // namespace
 
-    // Define normal binding
-    SoNormalBinding *nBind = new SoNormalBinding;
-    root->addChild(nBind);
-    nBind->value.setValue(SoNormalBinding::OVERALL);
+int main(int argc, char **argv)
+{
+    initCoinHeadless();
 
-    // Define a FaceSet
-    SoFaceSet *myFaceSet = new SoFaceSet;
-    root->addChild(myFaceSet);
-    myFaceSet->numVertices.set1Value(0, 4);
+    obol::Scene scene;
+    obol::DirectionalLight light;
+    light.direction = {-0.5f, -0.7f, -1.0f};
+    scene.addDirectionalLight(light);
+    scene.addMesh(texturedSquare(), texturedMaterial());
 
-    // Setup camera
-    camera->viewAll(root, SbViewportRegion(DEFAULT_WIDTH, DEFAULT_HEIGHT));
+    obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
+                                        obol::RenderBackendKind::OpenGL2SWRast,
+                                        "headless-context");
+    obol::RenderTarget target;
+    target.width = DEFAULT_WIDTH;
+    target.height = DEFAULT_HEIGHT;
+    target.pixelFormat = obol::PixelFormat::RGB;
+    obol::OffscreenRenderer renderer(backend, target);
+    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
 
     const char *baseFilename = (argc > 1) ? argv[1] : "07.2.TextureCoordinates";
     char filename[256];
 
-    // Front view
     snprintf(filename, sizeof(filename), "%s_front.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderView(renderer, scene, filename, {0.0f, 0.0f, 10.0f})) {
+        fprintf(stderr, "Error: Failed to render front TextureCoordinates view with Obol v2 API\n");
+        return 1;
+    }
 
-    // Angled view
-    rotateCamera(camera, M_PI / 4, M_PI / 6);
     snprintf(filename, sizeof(filename), "%s_angle.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderView(renderer, scene, filename, {6.0f, 4.0f, 8.0f})) {
+        fprintf(stderr, "Error: Failed to render angled TextureCoordinates view with Obol v2 API\n");
+        return 1;
+    }
 
-    root->unref();
+    printf("Rendered textured square with explicit UVs [Obol v2]\n");
     return 0;
 }

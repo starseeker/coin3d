@@ -42,64 +42,67 @@
  */
 
 #include "headless_utils.h"
-#include <Inventor/SbViewportRegion.h>
-#include <Inventor/SoDB.h>
-#include <Inventor/SoOffscreenRenderer.h>
-#include <Inventor/nodes/SoSeparator.h>
-#include <Inventor/nodes/SoCube.h>
-#include <Inventor/nodes/SoSphere.h>
-#include <Inventor/nodes/SoMaterial.h>
-#include <Inventor/nodes/SoTransform.h>
-#include <Inventor/nodes/SoPerspectiveCamera.h>
-#include <Inventor/nodes/SoDirectionalLight.h>
+#include <Obol/Obol.h>
+
 #include <cstdio>
+
+namespace {
+
+obol::Transform translation(float x, float y, float z)
+{
+    obol::Transform transform;
+    transform.translation = {x, y, z};
+    return transform;
+}
+
+} // namespace
 
 int main(int argc, char **argv)
 {
-    // Initialize Coin for headless operation
     initCoinHeadless();
 
-    // Create a simple scene for demonstration
-    SoSeparator *root = new SoSeparator;
-    root->ref();
+    obol::Scene scene;
 
-    // Add camera and light
-    SoPerspectiveCamera *camera = new SoPerspectiveCamera;
-    root->addChild(camera);
-    root->addChild(new SoDirectionalLight);
+    obol::PerspectiveCamera camera;
+    camera.position = {0.0f, 0.0f, 11.0f};
+    camera.target = {0.0f, 0.0f, 0.0f};
+    camera.verticalFieldOfViewRadians = 0.62f;
+    scene.setCamera(camera);
+    scene.addDirectionalLight(obol::DirectionalLight{});
 
-    // Add some geometry
-    SoMaterial *redMat = new SoMaterial;
-    redMat->diffuseColor.setValue(1.0, 0.0, 0.0);
-    root->addChild(redMat);
-    
-    SoTransform *leftTrans = new SoTransform;
-    leftTrans->translation.setValue(-2, 0, 0);
-    root->addChild(leftTrans);
-    root->addChild(new SoCube);
+    obol::Material redMaterial;
+    redMaterial.baseColor = {1.0f, 0.0f, 0.0f, 1.0f};
+    scene.addPrimitive(obol::Primitive::Cube,
+                       redMaterial,
+                       translation(-2.0f, 0.0f, 0.0f));
 
-    SoMaterial *blueMat = new SoMaterial;
-    blueMat->diffuseColor.setValue(0.0, 0.5, 1.0);
-    root->addChild(blueMat);
-    
-    SoTransform *rightTrans = new SoTransform;
-    rightTrans->translation.setValue(4, 0, 0);
-    root->addChild(rightTrans);
-    root->addChild(new SoSphere);
-
-    // Setup camera
-    camera->viewAll(root, SbViewportRegion(DEFAULT_WIDTH, DEFAULT_HEIGHT));
+    obol::Material blueMaterial;
+    blueMaterial.baseColor = {0.0f, 0.5f, 1.0f, 1.0f};
+    scene.addPrimitive(obol::Primitive::Sphere,
+                       blueMaterial,
+                       translation(2.0f, 0.0f, 0.0f));
 
     const char *baseFilename = (argc > 1) ? argv[1] : "09.1.Print";
     char filename[256];
-
-    // Render to RGB file (demonstrates offscreen rendering)
     snprintf(filename, sizeof(filename), "%s.rgb", baseFilename);
-    renderToFile(root, filename);
-    
-    printf("Rendered scene using offscreen renderer\n");
-    printf("Note: Original example printed to PostScript\n");
 
-    root->unref();
+    obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
+                                        obol::RenderBackendKind::OpenGL2SWRast,
+                                        "headless-context");
+    obol::RenderTarget target;
+    target.width = DEFAULT_WIDTH;
+    target.height = DEFAULT_HEIGHT;
+    target.pixelFormat = obol::PixelFormat::RGB;
+    obol::OffscreenRenderer renderer(backend, target);
+    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
+
+    const obol::FrameResult result = renderer.render(scene);
+    if (!result.success || !renderer.writeRGB(filename)) {
+        fprintf(stderr, "Error: Failed to render print example with Obol v2 API\n");
+        return 1;
+    }
+    
+    printf("Rendered scene using Obol v2 offscreen renderer\n");
+    printf("Note: Original example printed to PostScript\n");
     return 0;
 }

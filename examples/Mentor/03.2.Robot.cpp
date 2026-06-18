@@ -42,155 +42,162 @@
  */
 
 #include "headless_utils.h"
-#include <Inventor/nodes/SoCube.h>
-#include <Inventor/nodes/SoCylinder.h>
-#include <Inventor/nodes/SoMaterial.h>
-#include <Inventor/nodes/SoSeparator.h>
-#include <Inventor/nodes/SoSphere.h>
-#include <Inventor/nodes/SoTransform.h>
-#include <Inventor/nodes/SoGroup.h>
-#include <Inventor/nodes/SoPerspectiveCamera.h>
-#include <Inventor/nodes/SoDirectionalLight.h>
-#include <cmath>
+#include <Obol/Obol.h>
+
 #include <cstdio>
 
-SoSeparator *makeRobot()
+namespace {
+
+obol::Transform translation(float x, float y, float z)
 {
-    // Robot with legs
-
-    // Construct parts for legs (thigh, calf and foot)
-    SoCube *thigh = new SoCube;     
-    thigh->width = 1.2;
-    thigh->height = 2.2;
-    thigh->depth = 1.1;
-
-    SoTransform *calfTransform = new SoTransform;
-    calfTransform->translation.setValue(0, -2.25, 0.0);
-
-    SoCube *calf = new SoCube;
-    calf->width = 1;
-    calf->height = 2.2;
-    calf->depth = 1;
-
-    SoTransform *footTransform = new SoTransform;
-    footTransform->translation.setValue(0, -1.5, .5);
-
-    SoCube *foot = new SoCube;
-    foot->width = 0.8;
-    foot->height = 0.8;
-    foot->depth = 2;
-
-    // Put leg parts together
-    SoGroup *leg = new SoGroup;      
-    leg->addChild(thigh);
-    leg->addChild(calfTransform);
-    leg->addChild(calf);
-    leg->addChild(footTransform);
-    leg->addChild(foot);
-
-    SoTransform *leftTransform = new SoTransform;
-    leftTransform->translation = SbVec3f(1, -4.25, 0);
-
-    // Left leg (shared instance)
-    SoSeparator *leftLeg = new SoSeparator;   
-    leftLeg->addChild(leftTransform);
-    leftLeg->addChild(leg);
-
-    SoTransform *rightTransform = new SoTransform;
-    rightTransform->translation.setValue(-1, -4.25, 0);
-
-    // Right leg (shared instance)
-    SoSeparator *rightLeg = new SoSeparator;   
-    rightLeg->addChild(rightTransform);
-    rightLeg->addChild(leg);
-
-    // Parts for body
-    SoTransform *bodyTransform = new SoTransform;    
-    bodyTransform->translation.setValue(0.0, 3.0, 0.0);
-
-    SoMaterial *bronze = new SoMaterial;
-    bronze->ambientColor.setValue(.33, .22, .27);
-    bronze->diffuseColor.setValue(.78, .57, .11);
-    bronze->specularColor.setValue(.99, .94, .81);
-    bronze->shininess = .28;
-
-    SoCylinder *bodyCylinder = new SoCylinder;
-    bodyCylinder->radius = 2.5;
-    bodyCylinder->height = 6;
-
-    // Construct body out of parts 
-    SoSeparator *body = new SoSeparator;  
-    body->addChild(bodyTransform);      
-    body->addChild(bronze);
-    body->addChild(bodyCylinder);
-    body->addChild(leftLeg);
-    body->addChild(rightLeg);
-
-    // Head parts
-    SoTransform *headTransform = new SoTransform;   
-    headTransform->translation.setValue(0, 7.5, 0);
-    headTransform->scaleFactor.setValue(1.5, 1.5, 1.5);
-
-    SoMaterial *silver = new SoMaterial;
-    silver->ambientColor.setValue(.2, .2, .2);
-    silver->diffuseColor.setValue(.6, .6, .6);
-    silver->specularColor.setValue(.5, .5, .5);
-    silver->shininess = .5;
-
-    SoSphere *headSphere = new SoSphere;
-
-    // Construct head
-    SoSeparator *head = new SoSeparator;      
-    head->addChild(headTransform);
-    head->addChild(silver);
-    head->addChild(headSphere);
-    
-    // Robot is just head and body
-    SoSeparator *robot = new SoSeparator;      
-    robot->addChild(body);
-    robot->addChild(head);
-
-    return robot;
+    obol::Transform t;
+    t.translation = {x, y, z};
+    return t;
 }
+
+obol::PrimitiveOptions box(float width, float height, float depth)
+{
+    obol::PrimitiveOptions options;
+    options.width = width;
+    options.height = height;
+    options.depth = depth;
+    return options;
+}
+
+obol::Material bronzeMaterial()
+{
+    obol::Material material;
+    material.baseColor = {0.78f, 0.57f, 0.11f, 1.0f};
+    material.specular = {0.99f, 0.94f, 0.81f, 1.0f};
+    material.shininess = 0.28f;
+    return material;
+}
+
+obol::Material silverMaterial()
+{
+    obol::Material material;
+    material.baseColor = {0.6f, 0.6f, 0.6f, 1.0f};
+    material.specular = {0.5f, 0.5f, 0.5f, 1.0f};
+    material.shininess = 0.5f;
+    return material;
+}
+
+void addLeg(obol::Scene & scene,
+            obol::SceneGroupId body,
+            float x,
+            const obol::Material & material)
+{
+    const obol::SceneGroupId leg =
+        scene.addGroup(translation(x, -4.25f, 0.0f), body);
+    scene.addPrimitive(obol::Primitive::Cube,
+                       material,
+                       obol::Transform{},
+                       box(1.2f, 2.2f, 1.1f),
+                       leg);
+
+    const obol::SceneGroupId calf =
+        scene.addGroup(translation(0.0f, -2.25f, 0.0f), leg);
+    scene.addPrimitive(obol::Primitive::Cube,
+                       material,
+                       obol::Transform{},
+                       box(1.0f, 2.2f, 1.0f),
+                       calf);
+
+    const obol::SceneGroupId foot =
+        scene.addGroup(translation(0.0f, -1.5f, 0.5f), calf);
+    scene.addPrimitive(obol::Primitive::Cube,
+                       material,
+                       obol::Transform{},
+                       box(0.8f, 0.8f, 2.0f),
+                       foot);
+}
+
+obol::Scene makeRobot()
+{
+    obol::Scene scene;
+    obol::DirectionalLight light;
+    light.direction = {-0.4f, -0.8f, -1.0f};
+    scene.addDirectionalLight(light);
+
+    const obol::Material bronze = bronzeMaterial();
+    const obol::Material silver = silverMaterial();
+
+    const obol::SceneGroupId body =
+        scene.addGroup(translation(0.0f, 3.0f, 0.0f));
+    obol::PrimitiveOptions bodyOptions;
+    bodyOptions.radius = 2.5f;
+    bodyOptions.height = 6.0f;
+    scene.addPrimitive(obol::Primitive::Cylinder,
+                       bronze,
+                       obol::Transform{},
+                       bodyOptions,
+                       body);
+    addLeg(scene, body, 1.0f, bronze);
+    addLeg(scene, body, -1.0f, bronze);
+
+    obol::Transform headTransform = translation(0.0f, 7.5f, 0.0f);
+    headTransform.scale = {1.5f, 1.5f, 1.5f};
+    const obol::SceneGroupId head = scene.addGroup(headTransform);
+    scene.addPrimitive(obol::Primitive::Sphere, silver, obol::Transform{},
+                       obol::PrimitiveOptions{}, head);
+
+    return scene;
+}
+
+bool renderView(obol::OffscreenRenderer & renderer,
+                obol::Scene & scene,
+                const char * filename,
+                const obol::Vec3 & position)
+{
+    obol::PerspectiveCamera camera;
+    camera.position = position;
+    camera.target = {0.0f, 1.0f, 0.0f};
+    camera.verticalFieldOfViewRadians = 0.75f;
+    scene.setCamera(camera);
+
+    const obol::FrameResult result = renderer.render(scene);
+    return result.success && renderer.writeRGB(filename);
+}
+
+} // namespace
 
 int main(int argc, char **argv)
 {
-    // Initialize Coin for headless operation
     initCoinHeadless();
 
-    SoSeparator *root = new SoSeparator;
-    root->ref();
+    obol::Scene scene = makeRobot();
+    obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
+                                        obol::RenderBackendKind::OpenGL,
+                                        "headless-context");
+    obol::RenderTarget target;
+    target.width = DEFAULT_WIDTH;
+    target.height = DEFAULT_HEIGHT;
+    target.pixelFormat = obol::PixelFormat::RGB;
+    obol::OffscreenRenderer renderer(backend, target);
+    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
 
-    // Add camera and light
-    SoPerspectiveCamera *camera = new SoPerspectiveCamera;
-    root->addChild(camera);
-    root->addChild(new SoDirectionalLight);
-
-    // Add the robot
-    root->addChild(makeRobot());
-
-    // Setup camera
-    camera->viewAll(root, SbViewportRegion(DEFAULT_WIDTH, DEFAULT_HEIGHT));
-
-    // Render from multiple angles
     const char *baseFilename = (argc > 1) ? argv[1] : "03.2.Robot";
     char filename[256];
     
-    // Front view
     snprintf(filename, sizeof(filename), "%s_front.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderView(renderer, scene, filename, {0.0f, 1.0f, 18.0f})) {
+        fprintf(stderr, "Error: Failed to render front robot view with Obol v2 API\n");
+        return 1;
+    }
     
-    // Side view
-    rotateCamera(camera, M_PI / 2, 0);
     snprintf(filename, sizeof(filename), "%s_side.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderView(renderer, scene, filename, {18.0f, 1.0f, 0.0f})) {
+        fprintf(stderr, "Error: Failed to render side robot view with Obol v2 API\n");
+        return 1;
+    }
     
-    // 45 degree angle view
-    camera->viewAll(root, SbViewportRegion(DEFAULT_WIDTH, DEFAULT_HEIGHT));
-    rotateCamera(camera, M_PI / 4, M_PI / 6);
     snprintf(filename, sizeof(filename), "%s_angle.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderView(renderer, scene, filename, {12.0f, 7.0f, 12.0f})) {
+        fprintf(stderr, "Error: Failed to render angled robot view with Obol v2 API\n");
+        return 1;
+    }
 
-    root->unref();
+    printf("Successfully rendered robot views to %s_*.rgb (%dx%d) [Obol v2]\n",
+           baseFilename, DEFAULT_WIDTH, DEFAULT_HEIGHT);
     return 0;
 }

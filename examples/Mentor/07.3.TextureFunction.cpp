@@ -42,122 +42,167 @@
  */
 
 #include "headless_utils.h"
-#include <Inventor/nodes/SoMaterial.h>
-#include <Inventor/nodes/SoSeparator.h>
-#include <Inventor/nodes/SoSphere.h>
-#include <Inventor/nodes/SoTexture2.h>
-#include <Inventor/nodes/SoTexture2Transform.h>
-#include <Inventor/nodes/SoTextureCoordinatePlane.h>
-#include <Inventor/nodes/SoTranslation.h>
-#include <Inventor/nodes/SoPerspectiveCamera.h>
-#include <Inventor/nodes/SoDirectionalLight.h>
+#include <Obol/Obol.h>
+
 #include <cmath>
 #include <cstdio>
+#include <memory>
 
-int main(int argc, char **argv)
+namespace {
+
+std::shared_ptr<obol::Texture2D> faceTexture()
 {
-    // Initialize Coin for headless operation
-    initCoinHeadless();
+    std::shared_ptr<obol::Texture2D> texture(new obol::Texture2D);
+    texture->image.width = 32;
+    texture->image.height = 32;
+    texture->image.format = obol::ImageFormat::RGB;
+    texture->image.pixels.resize(32 * 32 * 3);
 
-    SoSeparator *root = new SoSeparator;
-    root->ref();
-
-    // Add camera and light
-    SoPerspectiveCamera *camera = new SoPerspectiveCamera;
-    root->addChild(camera);
-    root->addChild(new SoDirectionalLight);
-
-    // Create a simple face texture (smiley-like pattern)
-    unsigned char face[32*32*3];
     for (int y = 0; y < 32; y++) {
         for (int x = 0; x < 32; x++) {
             int idx = (y * 32 + x) * 3;
             int dx = x - 16, dy = y - 16;
             int dist = dx*dx + dy*dy;
             
-            // Yellow circle for face
             if (dist < 225) {
-                face[idx] = 255;
-                face[idx+1] = 220;
-                face[idx+2] = 0;
+                texture->image.pixels[idx] = 255;
+                texture->image.pixels[idx + 1] = 220;
+                texture->image.pixels[idx + 2] = 0;
                 
-                // Eyes
                 if ((dx == -6 && dy > 2 && dy < 6) || (dx == 6 && dy > 2 && dy < 6)) {
-                    face[idx] = 0;
-                    face[idx+1] = 0;
-                    face[idx+2] = 0;
+                    texture->image.pixels[idx] = 0;
+                    texture->image.pixels[idx + 1] = 0;
+                    texture->image.pixels[idx + 2] = 0;
                 }
                 
-                // Smile
-                if (dy < -4 && dy > -8 && abs(dx) < 8 && abs(dx) > 5) {
-                    face[idx] = 0;
-                    face[idx+1] = 0;
-                    face[idx+2] = 0;
+                if (dy < -4 && dy > -8 && std::abs(dx) < 8 && std::abs(dx) > 5) {
+                    texture->image.pixels[idx] = 0;
+                    texture->image.pixels[idx + 1] = 0;
+                    texture->image.pixels[idx + 2] = 0;
                 }
             } else {
-                face[idx] = 100;
-                face[idx+1] = 100;
-                face[idx+2] = 150;
+                texture->image.pixels[idx] = 100;
+                texture->image.pixels[idx + 1] = 100;
+                texture->image.pixels[idx + 2] = 150;
             }
         }
     }
+    return texture;
+}
 
-    SoTexture2 *faceTexture = new SoTexture2;
-    faceTexture->image.setValue(SbVec2s(32, 32), 3, face);
-    root->addChild(faceTexture);
+obol::Material faceMaterial()
+{
+    obol::Material material;
+    material.baseColor = {1.0f, 1.0f, 1.0f, 1.0f};
+    material.baseColorTexture = faceTexture();
+    return material;
+}
 
-    // Make the diffuse color pure white
-    SoMaterial *myMaterial = new SoMaterial;
-    myMaterial->diffuseColor.setValue(1, 1, 1);
-    root->addChild(myMaterial);
+obol::Mesh mappedSphere(float frequency)
+{
+    constexpr float pi = 3.14159265359f;
+    constexpr int slices = 32;
+    constexpr int stacks = 16;
 
-    // This texture2Transform centers the texture about (0,0,0)
-    SoTexture2Transform *myTexXf = new SoTexture2Transform;
-    myTexXf->translation.setValue(.5, .5);
-    root->addChild(myTexXf);
+    obol::Mesh mesh;
+    for (int stack = 0; stack <= stacks; ++stack) {
+        const float v = static_cast<float>(stack) / static_cast<float>(stacks);
+        const float theta = pi * v;
+        const float y = std::cos(theta);
+        const float ring = std::sin(theta);
+        for (int slice = 0; slice <= slices; ++slice) {
+            const float u = static_cast<float>(slice) / static_cast<float>(slices);
+            const float phi = 2.0f * pi * u;
+            const float x = ring * std::cos(phi);
+            const float z = ring * std::sin(phi);
+            mesh.positions.push_back({x, y, z});
+            mesh.normals.push_back({x, y, z});
+            mesh.texCoords.push_back({frequency * x + 0.5f,
+                                      frequency * y + 0.5f});
+        }
+    }
 
-    // Define a texture coordinate plane node with frequency of 2
-    SoTextureCoordinatePlane *texPlane1 = new SoTextureCoordinatePlane;
-    texPlane1->directionS.setValue(SbVec3f(2, 0, 0));
-    texPlane1->directionT.setValue(SbVec3f(0, 2, 0));
-    root->addChild(texPlane1);
-    root->addChild(new SoSphere);
+    const uint32_t rowStride = slices + 1;
+    for (int stack = 0; stack < stacks; ++stack) {
+        for (int slice = 0; slice < slices; ++slice) {
+            const uint32_t a = static_cast<uint32_t>(stack * rowStride + slice);
+            const uint32_t b = a + 1;
+            const uint32_t c = a + rowStride + 1;
+            const uint32_t d = a + rowStride;
+            mesh.indices.push_back(a);
+            mesh.indices.push_back(b);
+            mesh.indices.push_back(c);
+            mesh.indices.push_back(a);
+            mesh.indices.push_back(c);
+            mesh.indices.push_back(d);
+        }
+    }
+    return mesh;
+}
 
-    // A translation node for spacing the three spheres
-    SoTranslation *myTranslation = new SoTranslation;
-    myTranslation->translation.setValue(2.5, 0, 0);
+obol::Transform translation(float x, float y, float z)
+{
+    obol::Transform transform;
+    transform.translation = {x, y, z};
+    return transform;
+}
 
-    // Create a second sphere with a repeat frequency of 1
-    SoTextureCoordinatePlane *texPlane2 = new SoTextureCoordinatePlane;
-    texPlane2->directionS.setValue(SbVec3f(1, 0, 0));
-    texPlane2->directionT.setValue(SbVec3f(0, 1, 0));
-    root->addChild(myTranslation);
-    root->addChild(texPlane2);
-    root->addChild(new SoSphere);
+bool renderView(obol::OffscreenRenderer & renderer,
+                obol::Scene & scene,
+                const char * filename,
+                const obol::Vec3 & position)
+{
+    obol::PerspectiveCamera camera;
+    camera.position = position;
+    camera.target = {2.5f, 0.0f, 0.0f};
+    camera.verticalFieldOfViewRadians = 0.62f;
+    scene.setCamera(camera);
+    const obol::FrameResult result = renderer.render(scene);
+    return result.success && renderer.writeRGB(filename);
+}
 
-    // The third sphere has a repeat frequency of 0.5
-    SoTextureCoordinatePlane *texPlane3 = new SoTextureCoordinatePlane;
-    texPlane3->directionS.setValue(SbVec3f(.5, 0, 0));
-    texPlane3->directionT.setValue(SbVec3f(0, .5, 0));
-    root->addChild(myTranslation);
-    root->addChild(texPlane3);
-    root->addChild(new SoSphere);
+} // namespace
 
-    // Setup camera to view all spheres
-    camera->viewAll(root, SbViewportRegion(DEFAULT_WIDTH, DEFAULT_HEIGHT));
+int main(int argc, char **argv)
+{
+    initCoinHeadless();
+
+    obol::Scene scene;
+    obol::DirectionalLight light;
+    light.direction = {-0.5f, -0.7f, -1.0f};
+    scene.addDirectionalLight(light);
+
+    const obol::Material material = faceMaterial();
+    scene.addMesh(mappedSphere(2.0f), material);
+    scene.addMesh(mappedSphere(1.0f), material, translation(2.5f, 0.0f, 0.0f));
+    scene.addMesh(mappedSphere(0.5f), material, translation(5.0f, 0.0f, 0.0f));
+
+    obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
+                                        obol::RenderBackendKind::OpenGL2SWRast,
+                                        "headless-context");
+    obol::RenderTarget target;
+    target.width = DEFAULT_WIDTH;
+    target.height = DEFAULT_HEIGHT;
+    target.pixelFormat = obol::PixelFormat::RGB;
+    obol::OffscreenRenderer renderer(backend, target);
+    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
+
 
     const char *baseFilename = (argc > 1) ? argv[1] : "07.3.TextureFunction";
     char filename[256];
 
-    // Front view
     snprintf(filename, sizeof(filename), "%s_front.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderView(renderer, scene, filename, {2.5f, 0.0f, 8.0f})) {
+        fprintf(stderr, "Error: Failed to render front TextureFunction view with Obol v2 API\n");
+        return 1;
+    }
 
-    // Angled view
-    rotateCamera(camera, M_PI / 4, M_PI / 6);
     snprintf(filename, sizeof(filename), "%s_angle.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderView(renderer, scene, filename, {8.0f, 4.0f, 6.0f})) {
+        fprintf(stderr, "Error: Failed to render angled TextureFunction view with Obol v2 API\n");
+        return 1;
+    }
 
-    root->unref();
+    printf("Rendered texture-function spheres with generated UVs [Obol v2]\n");
     return 0;
 }

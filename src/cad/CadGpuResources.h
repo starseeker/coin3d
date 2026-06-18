@@ -52,7 +52,7 @@
  *  - triVAO     : VAO binding triPosBuf + triNormBuf (only if caps.hasVAO)
  */
 
-#include <obol/cad/CadIds.h>
+#include <Obol/cad/CadIds.h>
 #include "CadGLCaps.h"
 
 #include <Inventor/system/gl.h>

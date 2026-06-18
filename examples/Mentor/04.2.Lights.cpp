@@ -42,73 +42,94 @@
  */
 
 #include "headless_utils.h"
-#include <Inventor/nodes/SoCone.h>
-#include <Inventor/nodes/SoDirectionalLight.h>
-#include <Inventor/nodes/SoMaterial.h>
-#include <Inventor/nodes/SoPointLight.h>
-#include <Inventor/nodes/SoSeparator.h>
-#include <Inventor/nodes/SoTransform.h>
-#include <Inventor/nodes/SoTransformSeparator.h>
-#include <Inventor/nodes/SoPerspectiveCamera.h>
+#include <Obol/Obol.h>
+
 #include <cstdio>
-#include <cmath>
+
+namespace {
+
+obol::Transform translation(const obol::Vec3 & position)
+{
+    obol::Transform transform;
+    transform.translation = position;
+    return transform;
+}
+
+obol::Vec3 lerp(const obol::Vec3 & a, const obol::Vec3 & b, float t)
+{
+    return obol::Vec3{
+        a.x + (b.x - a.x) * t,
+        a.y + (b.y - a.y) * t,
+        a.z + (b.z - a.z) * t
+    };
+}
+
+bool renderFrame(obol::OffscreenRenderer & renderer,
+                 obol::Scene & scene,
+                 const char * filename)
+{
+    const obol::FrameResult result = renderer.render(scene);
+    return result.success && renderer.writeRGB(filename);
+}
+
+} // namespace
 
 int main(int argc, char **argv)
 {
-    // Initialize Coin for headless operation
     initCoinHeadless();
 
-    SoSeparator *root = new SoSeparator;
-    root->ref();
+    obol::Scene scene;
+    obol::PerspectiveCamera camera;
+    camera.position = {0.0f, 0.0f, 7.0f};
+    camera.target = {0.0f, 0.0f, 0.0f};
+    camera.verticalFieldOfViewRadians = 0.65f;
+    scene.setCamera(camera);
 
-    // Add camera
-    SoPerspectiveCamera *camera = new SoPerspectiveCamera;
-    root->addChild(camera);
+    obol::DirectionalLight directional;
+    directional.direction = {0.0f, -1.0f, -1.0f};
+    directional.color = {1.0f, 0.0f, 0.0f, 1.0f};
+    scene.addDirectionalLight(directional);
 
-    // Add a red directional light
-    SoDirectionalLight *myDirLight = new SoDirectionalLight;
-    myDirLight->direction.setValue(0, -1, -1);
-    myDirLight->color.setValue(1, 0, 0);
-    root->addChild(myDirLight);
+    const obol::SceneGroupId movingLight = scene.addGroup();
+    obol::PointLight point;
+    point.color = {0.0f, 1.0f, 0.0f, 1.0f};
+    point.location = {0.0f, 0.0f, 0.0f};
+    scene.addPointLight(point, movingLight);
 
-    // Put the transform and the point light below a transform separator
-    SoTransformSeparator *myTransformSeparator = new SoTransformSeparator;
-    root->addChild(myTransformSeparator);
+    obol::Material coneMaterial;
+    coneMaterial.baseColor = {0.85f, 0.78f, 0.55f, 1.0f};
+    coneMaterial.specular = {0.4f, 0.4f, 0.4f, 1.0f};
+    coneMaterial.shininess = 0.35f;
+    scene.addPrimitive(obol::Primitive::Cone, coneMaterial);
 
-    // Transform to move the point light
-    SoTransform *lightTransform = new SoTransform;
-    myTransformSeparator->addChild(lightTransform);
-
-    // Add the green point light
-    SoPointLight *myPointLight = new SoPointLight;
-    myTransformSeparator->addChild(myPointLight);
-    myPointLight->color.setValue(0, 1, 0);
-
-    // Add a cone to the scene
-    root->addChild(new SoCone);
-
-    // Setup camera
-    camera->viewAll(root, SbViewportRegion(DEFAULT_WIDTH, DEFAULT_HEIGHT));
+    obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
+                                        obol::RenderBackendKind::OpenGL2SWRast,
+                                        "headless-context");
+    obol::RenderTarget target;
+    target.width = DEFAULT_WIDTH;
+    target.height = DEFAULT_HEIGHT;
+    target.pixelFormat = obol::PixelFormat::RGB;
+    obol::OffscreenRenderer renderer(backend, target);
+    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
 
     const char *baseFilename = (argc > 1) ? argv[1] : "04.2.Lights";
     char filename[256];
 
-    // Render with point light at different positions (simulating shuttle animation)
-    SbVec3f pos1(-2, -1, 3);
-    SbVec3f pos2(1, 2, -3);
+    const obol::Vec3 pos1{-2.0f, -1.0f, 3.0f};
+    const obol::Vec3 pos2{1.0f, 2.0f, -3.0f};
 
-    int numFrames = 5;
+    const int numFrames = 5;
     for (int i = 0; i < numFrames; i++) {
-        float t = (float)i / (float)(numFrames - 1);
-        SbVec3f pos = pos1 + t * (pos2 - pos1);
-        lightTransform->translation.setValue(pos);
+        const float t = static_cast<float>(i) / static_cast<float>(numFrames - 1);
+        scene.setGroupTransform(movingLight, translation(lerp(pos1, pos2, t)));
         
         snprintf(filename, sizeof(filename), "%s_frame%02d.rgb", baseFilename, i);
-        renderToFile(root, filename);
+        if (!renderFrame(renderer, scene, filename)) {
+            fprintf(stderr, "Error: Failed to render light animation frame %d with Obol v2 API\n", i);
+            return 1;
+        }
     }
 
-    printf("Rendered %d frames showing lighting variation\n", numFrames);
-
-    root->unref();
+    printf("Rendered %d frames showing lighting variation [Obol v2]\n", numFrames);
     return 0;
 }

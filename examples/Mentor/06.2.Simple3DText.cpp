@@ -42,100 +42,97 @@
  */
 
 #include "headless_utils.h"
-#include <Inventor/nodes/SoComplexity.h>
-#include <Inventor/nodes/SoFont.h>
-#include <Inventor/nodes/SoGroup.h>
-#include <Inventor/nodes/SoMaterial.h>
-#include <Inventor/nodes/SoMaterialBinding.h>
-#include <Inventor/nodes/SoSeparator.h>
-#include <Inventor/nodes/SoSphere.h>
-#include <Inventor/nodes/SoText3.h>
-#include <Inventor/nodes/SoTransform.h>
-#include <Inventor/nodes/SoPerspectiveCamera.h>
-#include <Inventor/nodes/SoDirectionalLight.h>
-#include <cmath>
+#include <Obol/Obol.h>
+
 #include <cstdio>
+
+namespace {
+
+obol::Transform transform(float x, float y, float z, float scale = 1.0f)
+{
+    obol::Transform result;
+    result.translation = {x, y, z};
+    result.scale = {scale, scale, scale};
+    return result;
+}
+
+obol::Text3D label(const char * text)
+{
+    obol::Text3D result;
+    result.text = text;
+    result.fontName = "Times";
+    result.fontSize = 0.2f;
+    result.parts = static_cast<uint32_t>(obol::Text3DParts::All);
+    result.partColors = {
+        {1.0f, 1.0f, 1.0f, 1.0f},
+        {0.1f, 0.1f, 0.1f, 1.0f}
+    };
+    return result;
+}
+
+bool renderView(obol::OffscreenRenderer & renderer,
+                obol::Scene & scene,
+                const char * filename,
+                const obol::Vec3 & position)
+{
+    obol::PerspectiveCamera camera;
+    camera.position = position;
+    camera.target = {0.0f, 0.0f, 0.0f};
+    camera.verticalFieldOfViewRadians = 0.55f;
+    scene.setCamera(camera);
+    const obol::FrameResult result = renderer.render(scene);
+    return result.success && renderer.writeRGB(filename);
+}
+
+} // namespace
 
 int main(int argc, char **argv)
 {
-    // Initialize Coin for headless operation
     initCoinHeadless();
 
-    SoGroup *root = new SoGroup;
-    root->ref();
+    obol::Scene scene;
+    obol::DirectionalLight light;
+    light.direction = {-0.5f, -0.7f, -1.0f};
+    scene.addDirectionalLight(light);
+    scene.addPrimitive(obol::Primitive::Sphere);
+    scene.addText3D(label("AFRICA"),
+                    obol::Material{},
+                    transform(0.25f, 0.0f, 1.25f));
+    scene.addText3D(label("ASIA"),
+                    obol::Material{},
+                    transform(0.8f, 0.6f, 0.5f, 0.7f));
 
-    // Add camera and light
-    SoPerspectiveCamera *camera = new SoPerspectiveCamera;
-    root->addChild(camera);
-    root->addChild(new SoDirectionalLight);
-
-    // Choose a font
-    SoFont *myFont = new SoFont;
-    myFont->name.setValue("Times");
-    myFont->size.setValue(.2);
-    root->addChild(myFont);
-
-    // Color the front of text white, sides dark grey
-    SoMaterial *myMaterial = new SoMaterial;
-    SoMaterialBinding *myBinding = new SoMaterialBinding;
-    myMaterial->diffuseColor.set1Value(0, SbColor(1, 1, 1));
-    myMaterial->diffuseColor.set1Value(1, SbColor(.1, .1, .1));
-    myBinding->value = SoMaterialBinding::PER_PART;
-    root->addChild(myMaterial);
-    root->addChild(myBinding);
-
-    // Create the globe
-    SoSeparator *sphereSep = new SoSeparator;
-    SoComplexity *sphereComplexity = new SoComplexity;
-    sphereComplexity->value = 0.55;
-    root->addChild(sphereSep);
-    sphereSep->addChild(sphereComplexity);
-    sphereSep->addChild(new SoSphere);
-
-    // Add 3D text for AFRICA
-    SoSeparator *africaSep = new SoSeparator;
-    SoTransform *africaTransform = new SoTransform;
-    SoText3 *africaText = new SoText3;
-    africaTransform->translation.setValue(.25, .0, 1.25);
-    africaText->parts = SoText3::ALL;
-    africaText->string = "AFRICA";
-    root->addChild(africaSep);
-    africaSep->addChild(africaTransform);
-    africaSep->addChild(africaText);
-
-    // Add 3D text for ASIA
-    SoSeparator *asiaSep = new SoSeparator;
-    SoTransform *asiaTransform = new SoTransform;
-    SoText3 *asiaText = new SoText3;
-    asiaTransform->translation.setValue(.8, .6, .5);
-    asiaTransform->scaleFactor.setValue(.7, .7, .7);
-    asiaText->parts = SoText3::ALL;
-    asiaText->string = "ASIA";
-    root->addChild(asiaSep);
-    asiaSep->addChild(asiaTransform);
-    asiaSep->addChild(asiaText);
-
-    // Setup camera
-    camera->viewAll(root, SbViewportRegion(DEFAULT_WIDTH, DEFAULT_HEIGHT));
+    obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
+                                        obol::RenderBackendKind::OpenGL2SWRast,
+                                        "headless-context");
+    obol::RenderTarget target;
+    target.width = DEFAULT_WIDTH;
+    target.height = DEFAULT_HEIGHT;
+    target.pixelFormat = obol::PixelFormat::RGB;
+    obol::OffscreenRenderer renderer(backend, target);
+    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
 
     const char *baseFilename = (argc > 1) ? argv[1] : "06.2.Simple3DText";
     char filename[256];
 
-    // Front view
     snprintf(filename, sizeof(filename), "%s_front.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderView(renderer, scene, filename, {0.0f, 0.0f, 5.0f})) {
+        fprintf(stderr, "Error: Failed to render front Simple3DText view with Obol v2 API\n");
+        return 1;
+    }
 
-    // Side view
-    rotateCamera(camera, M_PI / 2, 0);
     snprintf(filename, sizeof(filename), "%s_side.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderView(renderer, scene, filename, {5.0f, 0.0f, 0.0f})) {
+        fprintf(stderr, "Error: Failed to render side Simple3DText view with Obol v2 API\n");
+        return 1;
+    }
 
-    // Angled view
-    camera->viewAll(root, SbViewportRegion(DEFAULT_WIDTH, DEFAULT_HEIGHT));
-    rotateCamera(camera, M_PI / 4, M_PI / 6);
     snprintf(filename, sizeof(filename), "%s_angle.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderView(renderer, scene, filename, {3.0f, 2.0f, 4.0f})) {
+        fprintf(stderr, "Error: Failed to render angled Simple3DText view with Obol v2 API\n");
+        return 1;
+    }
 
-    root->unref();
+    printf("Rendered globe Simple3DText labels [Obol v2]\n");
     return 0;
 }

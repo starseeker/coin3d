@@ -42,215 +42,251 @@
  */
 
 #include "headless_utils.h"
-#include <Inventor/SbViewportRegion.h>
-#include <Inventor/SoDB.h>
-#include <Inventor/SoInput.h>
-#include <Inventor/SoPickedPoint.h>
-#include <Inventor/actions/SoRayPickAction.h>
-#include <Inventor/actions/SoGetBoundingBoxAction.h>
-#include <Inventor/actions/SoSearchAction.h>
-#include <Inventor/nodes/SoCube.h>
-#include <Inventor/nodes/SoMaterial.h>
-#include <Inventor/nodes/SoRotationXYZ.h>
-#include <Inventor/nodes/SoSeparator.h>
-#include <Inventor/nodes/SoTranslation.h>
-#include <Inventor/nodes/SoPerspectiveCamera.h>
-#include <Inventor/nodes/SoDirectionalLight.h>
+#include <Obol/Obol.h>
+
 #include <cmath>
 #include <cstdio>
 
-// Convert world coordinates to screen coordinates
-SbVec2s worldToScreen(const SbVec3f &worldPos, SoCamera *camera, 
-                      const SbViewportRegion &viewport)
+namespace {
+
+obol::Material material(float r, float g, float b)
 {
-    // Get camera parameters
-    SbViewVolume vv = camera->getViewVolume(viewport.getViewportAspectRatio());
-    
-    // Project world position to normalized device coordinates
-    SbVec3f ndc;
-    vv.projectToScreen(worldPos, ndc);
-    
-    // Convert to screen coordinates
-    SbVec2s vpSize = viewport.getViewportSizePixels();
-    short x = (short)(ndc[0] * vpSize[0]);
-    short y = (short)(ndc[1] * vpSize[1]);
-    
-    return SbVec2s(x, y);
+    obol::Material result;
+    result.baseColor = {r, g, b, 1.0f};
+    return result;
 }
 
-// Get center of an object's bounding box
-SbVec3f getObjectCenter(SoNode *node, const SbViewportRegion &viewport)
+obol::Material highlight(float r, float g, float b)
 {
-    SoGetBoundingBoxAction bboxAction(viewport);
-    bboxAction.apply(node);
-    SbBox3f bbox = bboxAction.getBoundingBox();
-    return bbox.getCenter();
+    obol::Material result = material(r, g, b);
+    result.emissive = {r * 0.35f, g * 0.35f, b * 0.35f, 1.0f};
+    return result;
 }
 
-// Perform pick action and return picked path
-SoPath* performPick(SoNode *root, const SbVec2s &screenPos,
-                    const SbViewportRegion &viewport)
+obol::Transform translation(const obol::Vec3 & offset)
 {
-    SoRayPickAction pickAction(viewport);
-    pickAction.setPoint(screenPos);
-    pickAction.setRadius(8.0f);
-    
-    pickAction.apply(root);
-    const SoPickedPoint *pickedPoint = pickAction.getPickedPoint();
-    
-    if (pickedPoint) {
-        return pickedPoint->getPath();
+    obol::Transform transform;
+    transform.translation = offset;
+    return transform;
+}
+
+obol::Mesh makeStarMesh()
+{
+    static const float points[][3] = {
+        {0.0f, 0.0f, 0.0f},
+        {0.0f, 0.0f, -0.55000001f},
+        {0.323282f, 0.0f, 0.44495901f},
+        {-0.523081f, 0.0f, -0.16995899f},
+        {0.523081f, 0.0f, -0.16995899f},
+        {-0.323282f, 0.0f, 0.44495901f},
+        {0.0f, 0.0f, -0.55000001f},
+        {0.0f, 0.12f, -0.5f},
+        {0.29389301f, 0.12f, 0.40450901f},
+        {0.323282f, 0.0f, 0.44495901f},
+        {0.323282f, 0.0f, 0.44495901f},
+        {0.29389301f, 0.12f, 0.40450901f},
+        {-0.475528f, 0.12f, -0.15450899f},
+        {-0.523081f, 0.0f, -0.16995899f},
+        {-0.523081f, 0.0f, -0.16995899f},
+        {-0.475528f, 0.12f, -0.15450899f},
+        {0.475528f, 0.12f, -0.15450899f},
+        {0.523081f, 0.0f, -0.16995899f},
+        {0.523081f, 0.0f, -0.16995899f},
+        {0.475528f, 0.12f, -0.15450899f},
+        {-0.29389301f, 0.12f, 0.40450901f},
+        {-0.323282f, 0.0f, 0.44495901f},
+        {-0.323282f, 0.0f, 0.44495901f},
+        {-0.29389301f, 0.12f, 0.40450901f},
+        {0.0f, 0.12f, -0.5f},
+        {0.0f, 0.0f, -0.55000001f},
+        {0.0f, 0.17f, -0.44999999f},
+        {0.264503f, 0.17f, 0.36405799f},
+        {0.264503f, 0.17f, 0.36405799f},
+        {-0.427975f, 0.17f, -0.13905799f},
+        {-0.427975f, 0.17f, -0.13905799f},
+        {0.427975f, 0.17f, -0.13905799f},
+        {0.427975f, 0.17f, -0.13905799f},
+        {-0.264503f, 0.17f, 0.36405799f},
+        {-0.264503f, 0.17f, 0.36405799f},
+        {0.0f, 0.17f, -0.44999999f},
+        {0.0f, 0.2f, -0.34999999f},
+        {0.205725f, 0.2f, 0.28315601f},
+        {0.205725f, 0.2f, 0.28315601f},
+        {-0.33287001f, 0.2f, -0.108156f},
+        {-0.33287001f, 0.2f, -0.108156f},
+        {0.33287001f, 0.2f, -0.108156f},
+        {0.33287001f, 0.2f, -0.108156f},
+        {-0.205725f, 0.2f, 0.28315601f},
+        {-0.205725f, 0.2f, 0.28315601f},
+        {0.0f, 0.2f, -0.34999999f},
+        {0.0f, 0.2f, -0.30000001f},
+        {0.17633601f, 0.2f, 0.242705f},
+        {-0.285317f, 0.2f, -0.092704996f},
+        {0.285317f, 0.2f, -0.092704996f},
+        {-0.17633601f, 0.2f, 0.242705f},
+        {0.0f, 0.2f, 0.0f}
+    };
+    static const uint32_t indices[] = {
+        9, 6, 8, 7, 27, 26, 37, 36, 47, 46, 51, 50, 49, 42,
+        13, 10, 12, 11, 29, 28, 39, 38, 48, 47, 51,
+        17, 14, 16, 15, 31, 30, 41, 40, 49, 48, 51,
+        21, 18, 20, 19, 33, 32, 43, 42, 50,
+        25, 22, 24, 23, 35, 34, 45, 44, 46, 50,
+        1, 2, 0, 3, 4,
+        4, 5, 0, 1
+    };
+
+    obol::Mesh mesh;
+    mesh.topology = obol::MeshTopology::TriangleStrips;
+    for (const auto & point : points) {
+        mesh.positions.push_back({point[0], point[1], point[2]});
     }
-    return NULL;
+    mesh.indices.assign(indices, indices + sizeof(indices) / sizeof(indices[0]));
+    mesh.stripVertexCounts = {14, 11, 11, 9, 10, 5, 4};
+    return mesh;
 }
+
+obol::Vec3 subtract(const obol::Vec3 & a, const obol::Vec3 & b)
+{
+    return obol::Vec3{a.x - b.x, a.y - b.y, a.z - b.z};
+}
+
+obol::Vec3 normalize(const obol::Vec3 & v)
+{
+    const float length = std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+    if (length <= 0.0f) {
+        return obol::Vec3{0.0f, 0.0f, -1.0f};
+    }
+    return obol::Vec3{v.x / length, v.y / length, v.z / length};
+}
+
+bool renderScene(obol::OffscreenRenderer & renderer,
+                 obol::Scene & scene,
+                 const char * filename)
+{
+    const obol::FrameResult result = renderer.render(scene);
+    return result.success && renderer.writeRGB(filename);
+}
+
+obol::PickResult pickAtWorldPoint(const obol::Scene & scene,
+                                  const obol::Vec3 & cameraPosition,
+                                  const obol::Vec3 & worldPoint)
+{
+    obol::PickRequest request;
+    request.viewportWidth = DEFAULT_WIDTH;
+    request.viewportHeight = DEFAULT_HEIGHT;
+    request.radiusPixels = 8.0f;
+    request.useWorldRay = true;
+    request.rayOrigin = cameraPosition;
+    request.rayDirection = normalize(subtract(worldPoint, cameraPosition));
+    return obol::Picker::pick(scene, request);
+}
+
+void printPickResult(const char * label, const obol::PickResult & result)
+{
+    if (!result.hit || result.hits.empty()) {
+        printf("\n%s was not picked\n", label);
+        return;
+    }
+
+    const obol::PickHit & hit = result.hits[0];
+    printf("\nPicked %s as scene object %u\n", label, hit.objectId);
+    printf("  point: (%.2f, %.2f, %.2f)\n",
+           hit.point.x, hit.point.y, hit.point.z);
+    printf("  normal: (%.2f, %.2f, %.2f)\n",
+           hit.normal.x, hit.normal.y, hit.normal.z);
+}
+
+} // namespace
 
 int main(int argc, char **argv)
 {
     initCoinHeadless();
 
-    SoSeparator *root = new SoSeparator;
-    root->ref();
+    obol::Scene scene;
+    const obol::Vec3 cameraPosition{0.0f, -5.5f, 0.0f};
+    obol::PerspectiveCamera camera;
+    camera.position = cameraPosition;
+    camera.target = {0.0f, 0.0f, 0.0f};
+    camera.up = {0.0f, 0.0f, 1.0f};
+    camera.verticalFieldOfViewRadians = 0.62f;
+    scene.setCamera(camera);
+    obol::DirectionalLight light;
+    light.direction = {0.0f, 1.0f, 0.0f};
+    scene.addDirectionalLight(light);
 
-    // Add camera and light
-    SoPerspectiveCamera *myCamera = new SoPerspectiveCamera;
-    root->addChild(myCamera);
-    root->addChild(new SoDirectionalLight);
+    const obol::Mesh starMesh = makeStarMesh();
+    const obol::Vec3 star1Center{-1.0f, 0.0f, 0.65f};
+    const obol::Vec3 star2Center{1.0f, 0.0f, -0.65f};
 
-    // Read star object from file (simulate by creating a simple object)
-    // In the original, it reads "star.iv" from data directory
-    // For headless version, we'll create two simple cubes instead
-    SoInput in;
-    SoSeparator *starObject = NULL;
-    
-    // Try to load the actual star.iv file
-    const char *dataDir = getenv("OBOL_DATA_DIR");
-    if (!dataDir) dataDir = getenv("IVEXAMPLES_DATA_DIR");
-    if (!dataDir) dataDir = getenv("COIN_DATA_DIR");
-    if (!dataDir) dataDir = "../../data";
-    
-    char starPath[512];
-    snprintf(starPath, sizeof(starPath), "%s/star.iv", dataDir);
-    
-    if (in.openFile(starPath)) {
-        starObject = SoDB::readAll(&in);
-        in.closeFile();
-    }
-    
-    // If we couldn't load the star, create a simple substitute
-    if (!starObject) {
-        fprintf(stderr, "Note: Could not load star.iv, using cube substitute\n");
-        starObject = new SoSeparator;
-        SoCube *cube = new SoCube;
-        cube->width = 2.0f;
-        cube->height = 2.0f;
-        cube->depth = 2.0f;
-        starObject->addChild(cube);
-    }
-    starObject->ref();
+    const obol::Material star1Material = material(0.9f, 0.9f, 0.9f);
+    const obol::Material star2Material = material(1.0f, 0.0f, 0.0f);
+    const obol::SceneObjectId star1 =
+        scene.addMesh(starMesh,
+                      star1Material,
+                      translation(star1Center));
+    const obol::SceneObjectId star2 =
+        scene.addMesh(starMesh,
+                      star2Material,
+                      translation(star2Center));
 
-    // Add rotation to tilt the scene
-    SoRotationXYZ *myRotation = new SoRotationXYZ;
-    myRotation->axis.setValue(SoRotationXYZ::X);
-    myRotation->angle.setValue(M_PI/2.2);
-    root->addChild(myRotation);
-
-    // First star object (white by default)
-    SoSeparator *star1Sep = new SoSeparator;
-    root->addChild(star1Sep);
-    star1Sep->addChild(starObject);
-
-    // Second star object (red)
-    SoMaterial *myMaterial = new SoMaterial;
-    myMaterial->diffuseColor.setValue(1.0, 0.0, 0.0);
-    root->addChild(myMaterial);
-    
-    SoTranslation *myTranslation = new SoTranslation;
-    myTranslation->translation.setValue(1., 0., 1.);
-    root->addChild(myTranslation);
-    
-    SoSeparator *star2Sep = new SoSeparator;
-    root->addChild(star2Sep);
-    star2Sep->addChild(starObject);
-
-    // Setup camera
-    SbViewportRegion viewport(DEFAULT_WIDTH, DEFAULT_HEIGHT);
-    myCamera->viewAll(root, viewport);
+    obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
+                                        obol::RenderBackendKind::OpenGL2SWRast,
+                                        "headless-context");
+    obol::RenderTarget target;
+    target.width = DEFAULT_WIDTH;
+    target.height = DEFAULT_HEIGHT;
+    target.pixelFormat = obol::PixelFormat::RGB;
+    obol::OffscreenRenderer renderer(backend, target);
+    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
 
     const char *baseFilename = (argc > 1) ? argv[1] : "09.4.PickAction";
     char filename[256];
 
     int frameNum = 0;
 
-    // Render initial scene
     snprintf(filename, sizeof(filename), "%s_initial.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderScene(renderer, scene, filename)) {
+        fprintf(stderr, "Error: Failed to render initial pick scene with Obol v2 API\n");
+        return 1;
+    }
     frameNum++;
 
-    // Simulate picking each object
-    // Get centers of the two star objects in world coordinates
-    SbVec3f star1Center = getObjectCenter(star1Sep, viewport);
-    SbVec3f star2Center = getObjectCenter(star2Sep, viewport);
+    printf("Star 1 center: world (%g, %g, %g), scene object %u\n",
+           star1Center.x, star1Center.y, star1Center.z, star1);
+    printf("Star 2 center: world (%g, %g, %g), scene object %u\n",
+           star2Center.x, star2Center.y, star2Center.z, star2);
 
-    // Convert to screen coordinates
-    SbVec2s star1Screen = worldToScreen(star1Center, myCamera, viewport);
-    SbVec2s star2Screen = worldToScreen(star2Center, myCamera, viewport);
-
-    printf("Star 1 center: world (%g, %g, %g) -> screen (%d, %d)\n",
-           star1Center[0], star1Center[1], star1Center[2],
-           star1Screen[0], star1Screen[1]);
-    printf("Star 2 center: world (%g, %g, %g) -> screen (%d, %d)\n",
-           star2Center[0], star2Center[1], star2Center[2],
-           star2Screen[0], star2Screen[1]);
-
-    // Perform pick on first star
-    SoPath *pickedPath1 = performPick(root, star1Screen, viewport);
-    if (pickedPath1) {
-        printf("\nPicked first star at screen position (%d, %d)\n", 
-               star1Screen[0], star1Screen[1]);
-        printf("Pick path length: %d\n", pickedPath1->getLength());
-        for (int i = 0; i < pickedPath1->getLength(); i++) {
-            SoNode *node = pickedPath1->getNode(i);
-            printf("  [%d] %s\n", i, node->getTypeId().getName().getString());
-        }
-        
-        // Highlight by changing material
-        SoMaterial *highlightMat = new SoMaterial;
-        highlightMat->emissiveColor.setValue(0.3f, 0.3f, 0.0f);
-        star1Sep->insertChild(highlightMat, 0);
-        
+    const obol::PickResult pickedStar1 =
+        pickAtWorldPoint(scene, cameraPosition, star1Center);
+    printPickResult("first star", pickedStar1);
+    if (pickedStar1.hit && !pickedStar1.hits.empty() &&
+        pickedStar1.hits[0].objectId == star1) {
+        scene.setObjectMaterial(star1, highlight(1.0f, 1.0f, 0.0f));
         snprintf(filename, sizeof(filename), "%s_pick_star1.rgb", baseFilename);
-        renderToFile(root, filename);
-        frameNum++;
-        
-        star1Sep->removeChild(0);
-    }
-
-    // Perform pick on second star
-    SoPath *pickedPath2 = performPick(root, star2Screen, viewport);
-    if (pickedPath2) {
-        printf("\nPicked second star at screen position (%d, %d)\n",
-               star2Screen[0], star2Screen[1]);
-        printf("Pick path length: %d\n", pickedPath2->getLength());
-        for (int i = 0; i < pickedPath2->getLength(); i++) {
-            SoNode *node = pickedPath2->getNode(i);
-            printf("  [%d] %s\n", i, node->getTypeId().getName().getString());
+        if (!renderScene(renderer, scene, filename)) {
+            fprintf(stderr, "Error: Failed to render first highlighted pick with Obol v2 API\n");
+            return 1;
         }
-        
-        // Highlight by changing material
-        SoMaterial *highlightMat = new SoMaterial;
-        highlightMat->emissiveColor.setValue(0.3f, 0.0f, 0.0f);
-        star2Sep->insertChild(highlightMat, 0);
-        
-        snprintf(filename, sizeof(filename), "%s_pick_star2.rgb", baseFilename);
-        renderToFile(root, filename);
         frameNum++;
-        
-        star2Sep->removeChild(0);
+        scene.setObjectMaterial(star1, star1Material);
     }
 
-    printf("\nRendered %d frames demonstrating pick action\n", frameNum);
+    const obol::PickResult pickedStar2 =
+        pickAtWorldPoint(scene, cameraPosition, star2Center);
+    printPickResult("second star", pickedStar2);
+    if (pickedStar2.hit && !pickedStar2.hits.empty() &&
+        pickedStar2.hits[0].objectId == star2) {
+        scene.setObjectMaterial(star2, highlight(1.0f, 0.0f, 0.0f));
+        snprintf(filename, sizeof(filename), "%s_pick_star2.rgb", baseFilename);
+        if (!renderScene(renderer, scene, filename)) {
+            fprintf(stderr, "Error: Failed to render second highlighted pick with Obol v2 API\n");
+            return 1;
+        }
+        frameNum++;
+        scene.setObjectMaterial(star2, star2Material);
+    }
 
-    starObject->unref();
-    root->unref();
+    printf("\nRendered %d frames demonstrating pick action [Obol v2]\n", frameNum);
     return 0;
 }

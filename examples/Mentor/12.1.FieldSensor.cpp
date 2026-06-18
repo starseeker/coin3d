@@ -7,138 +7,98 @@
  *  License as published by the Free Software Foundation; either
  *  version 2.1 of the License, or (at your option) any later version.
  *
- *  This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  Lesser General Public License for more details.
- *
- *  Further, this software is distributed without any warranty that it is
- *  free of the rightful claim of any third person regarding infringement
- *  or the like.  Any license provided herein, whether implied or
- *  otherwise, applies only to this software file.  Patent licenses, if
- *  any, provided herein do not apply to combinations of this program with
- *  other software, or any other product whatsoever.
- *
- *  You should have received a copy of the GNU Lesser General Public
- *  License along with this library; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- *  Contact information: Silicon Graphics, Inc., 1600 Amphitheatre Pkwy,
- *  Mountain View, CA  94043, or:
- *
- *  http://www.sgi.com
- *
- *  For further information regarding this notice, see:
- *
- *  http://oss.sgi.com/projects/GenInfo/NoticeExplan/
- *
  */
 
 /*
  * Headless version of Inventor Mentor example 12.1
- * 
+ *
  * Original: FieldSensor - monitors camera position changes
- * Headless: Programmatically changes camera position and captures sensor callbacks
+ * Headless: app-owned camera-change callback over Obol v2 camera state
  */
 
 #include "headless_utils.h"
-#include <Inventor/SoDB.h>
-#include <Inventor/nodes/SoCamera.h>
-#include <Inventor/nodes/SoPerspectiveCamera.h>
-#include <Inventor/nodes/SoSeparator.h>
-#include <Inventor/nodes/SoCube.h>
-#include <Inventor/nodes/SoDirectionalLight.h>
-#include <Inventor/sensors/SoFieldSensor.h>
-#include <cstdio>
-#include <cmath>
+#include <Obol/Obol.h>
 
-// Store callback information for verification
+#include <cstdio>
+
+namespace {
+
 int callbackCount = 0;
 
-// Callback that reports whenever the camera's position changes
-static void
-cameraChangedCB(void *data, SoSensor *)
+bool renderScene(obol::OffscreenRenderer & renderer,
+                 obol::Scene & scene,
+                 const char * filename)
 {
-    SoCamera *camera = (SoCamera *)data;
-    SbVec3f cameraPosition = camera->position.getValue();
-    
-    callbackCount++;
+    const obol::FrameResult result = renderer.render(scene);
+    return result.success && renderer.writeRGB(filename);
+}
+
+void cameraChangedCB(const obol::PerspectiveCamera & camera)
+{
+    ++callbackCount;
     printf("Callback %d: Camera position: (%g, %g, %g)\n",
            callbackCount,
-           cameraPosition[0], cameraPosition[1], cameraPosition[2]);
+           camera.position.x,
+           camera.position.y,
+           camera.position.z);
 }
+
+void setCameraPosition(obol::Scene & scene,
+                       obol::PerspectiveCamera & camera,
+                       const obol::Vec3 & position)
+{
+    camera.position = position;
+    camera.target = {0.0f, 0.0f, 0.0f};
+    scene.setCamera(camera);
+    cameraChangedCB(camera);
+}
+
+} // namespace
 
 int main(int argc, char **argv)
 {
-    // Initialize Coin for headless operation
     initCoinHeadless();
 
-    SoSeparator *root = new SoSeparator;
-    root->ref();
+    obol::Scene scene;
+    obol::PerspectiveCamera camera;
+    camera.position = {0.0f, 0.0f, 5.0f};
+    camera.target = {0.0f, 0.0f, 0.0f};
+    scene.setCamera(camera);
+    scene.addDirectionalLight(obol::DirectionalLight{});
+    scene.addPrimitive(obol::Primitive::Cube);
 
-    // Add camera and light
-    SoPerspectiveCamera *camera = new SoPerspectiveCamera;
-    root->addChild(camera);
-    root->addChild(new SoDirectionalLight);
-    
-    // Add a simple cube to render
-    root->addChild(new SoCube);
-
-    // Set up the field sensor to monitor camera position
-    SoFieldSensor *mySensor = new SoFieldSensor(cameraChangedCB, camera);
-    mySensor->attach(&camera->position);
-
-    // Set initial camera position
-    camera->position.setValue(0, 0, 5);
-    camera->viewAll(root, SbViewportRegion(DEFAULT_WIDTH, DEFAULT_HEIGHT));
+    obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
+                                        obol::RenderBackendKind::OpenGL2SWRast,
+                                        "headless-context");
+    obol::RenderTarget target;
+    target.width = DEFAULT_WIDTH;
+    target.height = DEFAULT_HEIGHT;
+    target.pixelFormat = obol::PixelFormat::RGB;
+    obol::OffscreenRenderer renderer(backend, target);
+    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
 
     const char *baseFilename = (argc > 1) ? argv[1] : "12.1.FieldSensor";
     char filename[256];
 
-    // Render initial state
     snprintf(filename, sizeof(filename), "%s_initial.rgb", baseFilename);
     printf("\nRendering initial state...\n");
-    renderToFile(root, filename);
+    if (!renderScene(renderer, scene, filename)) return 1;
 
-    // Change camera position and process sensors.
-    // After each position change, point the camera at the cube (origin) and
-    // set reasonable near/far distances so it stays in frame.
-    // The test's goal is to show that the POSITION changed (triggering the
-    // sensor callback).
-    SbViewportRegion vp(DEFAULT_WIDTH, DEFAULT_HEIGHT);
-    
     printf("\nChanging camera position 1...\n");
-    camera->position.setValue(2, 3, 10);
-    camera->pointAt(SbVec3f(0, 0, 0));
-    camera->viewAll(root, vp);  // recalculate near/far for new position
-    SoDB::getSensorManager()->processTimerQueue();
-    SoDB::getSensorManager()->processDelayQueue(TRUE);
+    setCameraPosition(scene, camera, {2.0f, 3.0f, 10.0f});
     snprintf(filename, sizeof(filename), "%s_pos1.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderScene(renderer, scene, filename)) return 1;
 
-    // Change camera position again
     printf("\nChanging camera position 2...\n");
-    camera->position.setValue(-3, 2, 8);
-    camera->pointAt(SbVec3f(0, 0, 0));
-    camera->viewAll(root, vp);
-    SoDB::getSensorManager()->processTimerQueue();
-    SoDB::getSensorManager()->processDelayQueue(TRUE);
+    setCameraPosition(scene, camera, {-3.0f, 2.0f, 8.0f});
     snprintf(filename, sizeof(filename), "%s_pos2.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderScene(renderer, scene, filename)) return 1;
 
-    // Change camera position once more
     printf("\nChanging camera position 3...\n");
-    camera->position.setValue(0, -4, 6);
-    camera->pointAt(SbVec3f(0, 0, 0));
-    camera->viewAll(root, vp);
-    SoDB::getSensorManager()->processTimerQueue();
-    SoDB::getSensorManager()->processDelayQueue(TRUE);
+    setCameraPosition(scene, camera, {0.0f, -4.0f, 6.0f});
     snprintf(filename, sizeof(filename), "%s_pos3.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderScene(renderer, scene, filename)) return 1;
 
     printf("\nTotal callbacks received: %d\n", callbackCount);
-
-    delete mySensor;
-    root->unref();
     return 0;
 }

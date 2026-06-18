@@ -42,80 +42,81 @@
  */
 
 #include "headless_utils.h"
-#include <Inventor/nodes/SoComplexity.h>
-#include <Inventor/nodes/SoFont.h>
-#include <Inventor/nodes/SoGroup.h>
-#include <Inventor/nodes/SoSeparator.h>
-#include <Inventor/nodes/SoSphere.h>
-#include <Inventor/nodes/SoText2.h>
-#include <Inventor/nodes/SoTranslation.h>
-#include <Inventor/nodes/SoPerspectiveCamera.h>
-#include <Inventor/nodes/SoDirectionalLight.h>
-#include <cmath>
+#include <Obol/Obol.h>
+
 #include <cstdio>
+
+namespace {
+
+obol::Transform translation(float x, float y, float z)
+{
+    obol::Transform transform;
+    transform.translation = {x, y, z};
+    return transform;
+}
+
+obol::Text2D label(const char * text)
+{
+    obol::Text2D result;
+    result.text = text;
+    result.fontName = "Times";
+    result.fontSize = 24.0f;
+    return result;
+}
+
+bool renderView(obol::OffscreenRenderer & renderer,
+                obol::Scene & scene,
+                const char * filename,
+                const obol::Vec3 & position)
+{
+    obol::PerspectiveCamera camera;
+    camera.position = position;
+    camera.target = {0.0f, 0.0f, 0.0f};
+    camera.verticalFieldOfViewRadians = 0.55f;
+    scene.setCamera(camera);
+    const obol::FrameResult result = renderer.render(scene);
+    return result.success && renderer.writeRGB(filename);
+}
+
+} // namespace
 
 int main(int argc, char **argv)
 {
-    // Initialize Coin for headless operation
     initCoinHeadless();
 
-    SoGroup *root = new SoGroup;
-    root->ref();
+    obol::Scene scene;
+    obol::DirectionalLight light;
+    light.direction = {-0.5f, -0.7f, -1.0f};
+    scene.addDirectionalLight(light);
+    scene.addPrimitive(obol::Primitive::Sphere);
+    scene.addText2D(label("AFRICA"), obol::Material{}, translation(0.25f, 0.0f, 1.25f));
+    scene.addText2D(label("ASIA"), obol::Material{}, translation(0.8f, 0.6f, 0.5f));
 
-    // Add camera and light
-    SoPerspectiveCamera *camera = new SoPerspectiveCamera;
-    root->addChild(camera);
-    root->addChild(new SoDirectionalLight);
-
-    // Choose a font
-    SoFont *myFont = new SoFont;
-    myFont->name.setValue("Times");
-    myFont->size.setValue(24.0);
-    root->addChild(myFont);
-
-    // Add the globe - a sphere
-    SoSeparator *sphereSep = new SoSeparator;
-    SoComplexity *sphereComplexity = new SoComplexity;
-    sphereComplexity->value = 0.55;
-    root->addChild(sphereSep);
-    sphereSep->addChild(sphereComplexity);
-    sphereSep->addChild(new SoSphere);
-
-    // Add Text2 for AFRICA
-    SoSeparator *africaSep = new SoSeparator;
-    SoTranslation *africaTranslate = new SoTranslation;
-    SoText2 *africaText = new SoText2;
-    africaTranslate->translation.setValue(.25, .0, 1.25);
-    africaText->string = "AFRICA";
-    root->addChild(africaSep);
-    africaSep->addChild(africaTranslate);
-    africaSep->addChild(africaText);
-
-    // Add Text2 for ASIA
-    SoSeparator *asiaSep = new SoSeparator;
-    SoTranslation *asiaTranslate = new SoTranslation;
-    SoText2 *asiaText = new SoText2;
-    asiaTranslate->translation.setValue(.8, .6, .5);
-    asiaText->string = "ASIA";
-    root->addChild(asiaSep);
-    asiaSep->addChild(asiaTranslate);
-    asiaSep->addChild(asiaText);
-
-    // Setup camera
-    camera->viewAll(root, SbViewportRegion(DEFAULT_WIDTH, DEFAULT_HEIGHT));
+    obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
+                                        obol::RenderBackendKind::OpenGL2SWRast,
+                                        "headless-context");
+    obol::RenderTarget target;
+    target.width = DEFAULT_WIDTH;
+    target.height = DEFAULT_HEIGHT;
+    target.pixelFormat = obol::PixelFormat::RGB;
+    obol::OffscreenRenderer renderer(backend, target);
+    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
 
     const char *baseFilename = (argc > 1) ? argv[1] : "06.1.Text";
     char filename[256];
 
-    // Front view
     snprintf(filename, sizeof(filename), "%s_front.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderView(renderer, scene, filename, {0.0f, 0.0f, 5.0f})) {
+        fprintf(stderr, "Error: Failed to render front Text view with Obol v2 API\n");
+        return 1;
+    }
 
-    // Rotated view
-    rotateCamera(camera, M_PI / 4, M_PI / 6);
     snprintf(filename, sizeof(filename), "%s_angle.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderView(renderer, scene, filename, {3.0f, 2.0f, 4.0f})) {
+        fprintf(stderr, "Error: Failed to render angled Text view with Obol v2 API\n");
+        return 1;
+    }
 
-    root->unref();
+    printf("Rendered globe Text2 labels [Obol v2]\n");
     return 0;
 }

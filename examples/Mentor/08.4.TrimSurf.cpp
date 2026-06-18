@@ -42,19 +42,8 @@
  */
 
 #include "headless_utils.h"
-#include <Inventor/nodes/SoComplexity.h>
-#include <Inventor/nodes/SoCoordinate3.h>
-#include <Inventor/nodes/SoNurbsSurface.h>
-#include <Inventor/nodes/SoProfileCoordinate2.h>
-#include <Inventor/nodes/SoNurbsProfile.h>
-#include <Inventor/nodes/SoProfile.h>
-#include <Inventor/nodes/SoSeparator.h>
-#include <Inventor/nodes/SoMaterial.h>
-#include <Inventor/nodes/SoSphere.h>
-#include <Inventor/nodes/SoTransform.h>
-#include <Inventor/nodes/SoPerspectiveCamera.h>
-#include <Inventor/nodes/SoDirectionalLight.h>
-#include <Inventor/actions/SoGetBoundingBoxAction.h>
+#include <Obol/Obol.h>
+
 #include <cmath>
 #include <cstdio>
 
@@ -98,135 +87,210 @@ const float tknots3[8] = {0, 0, 0, 0, 1, 1, 1, 1};
 // The Bezier knot vector for the surface
 const float knots[8] = {0, 0, 0, 0, 1, 1, 1, 1};
 
-// Create the nodes needed for the Bezier patch and its trim curves
-SoSeparator *makeSurface()
+namespace {
+
+float bernstein3(int i, float t)
 {
-    SoSeparator *surfSep = new SoSeparator();
-    surfSep->ref();
-
-    // Define the Bezier surface including the control points and complexity
-    SoComplexity *complexity = new SoComplexity;
-    SoCoordinate3 *controlPts = new SoCoordinate3;
-    SoNurbsSurface *surface = new SoNurbsSurface;
-    complexity->value = 0.7;
-    controlPts->point.setValues(0, 16, pts);
-    surface->numUControlPoints.setValue(4);
-    surface->numVControlPoints.setValue(4);
-    surface->uKnotVector.setValues(0, 8, knots);
-    surface->vKnotVector.setValues(0, 8, knots);
-    surfSep->addChild(complexity);
-    surfSep->addChild(controlPts);
-
-    // Define trim curves
-    SoProfileCoordinate2 *trimPts = new SoProfileCoordinate2;
-    SoNurbsProfile *nTrim1 = new SoNurbsProfile;
-    SoNurbsProfile *nTrim2 = new SoNurbsProfile;
-    SoNurbsProfile *nTrim3 = new SoNurbsProfile;
-    int32_t trimInds[5];
-
-    trimPts->point.setValues(0, 10, tpts);
-    trimInds[0] = 0;
-    trimInds[1] = 1;
-    trimInds[2] = 2;
-    trimInds[3] = 3;
-    trimInds[4] = 0;
-    nTrim1->index.setValues(0, 5, trimInds);
-    nTrim1->knotVector.setValues(0, 7, tknots1);
-    trimInds[0] = 4;
-    trimInds[1] = 5;
-    trimInds[2] = 6;
-    trimInds[3] = 7;
-    nTrim2->linkage.setValue(SoProfile::START_NEW);
-    nTrim2->index.setValues(0, 4, trimInds);
-    nTrim2->knotVector.setValues(0, 6, tknots2);
-    trimInds[0] = 7;
-    trimInds[1] = 8;
-    trimInds[2] = 9;
-    trimInds[3] = 4;
-    nTrim3->linkage.setValue(SoProfile::ADD_TO_CURRENT);
-    nTrim3->index.setValues(0, 4, trimInds);
-    nTrim3->knotVector.setValues(0, 8, tknots3);
-
-    surfSep->addChild(trimPts);
-    surfSep->addChild(nTrim1);
-    surfSep->addChild(nTrim2);
-    surfSep->addChild(nTrim3);
-    surfSep->addChild(surface);
-
-    surfSep->unrefNoDelete();
-    return surfSep;
+    const float inv = 1.0f - t;
+    switch (i) {
+    case 0: return inv * inv * inv;
+    case 1: return 3.0f * t * inv * inv;
+    case 2: return 3.0f * t * t * inv;
+    case 3: return t * t * t;
+    }
+    return 0.0f;
 }
+
+obol::Vec3 evaluateSurface(float u, float v)
+{
+    obol::Vec3 point;
+    for (int row = 0; row < 4; ++row) {
+        for (int column = 0; column < 4; ++column) {
+            const float weight = bernstein3(column, u) * bernstein3(row, v);
+            const int index = row * 4 + column;
+            point.x += weight * pts[index][0];
+            point.y += weight * pts[index][1];
+            point.z += weight * pts[index][2];
+        }
+    }
+    return point;
+}
+
+obol::Vec3 subtract(const obol::Vec3 & lhs, const obol::Vec3 & rhs)
+{
+    return {lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z};
+}
+
+obol::Vec3 cross(const obol::Vec3 & lhs, const obol::Vec3 & rhs)
+{
+    return {lhs.y * rhs.z - lhs.z * rhs.y,
+            lhs.z * rhs.x - lhs.x * rhs.z,
+            lhs.x * rhs.y - lhs.y * rhs.x};
+}
+
+obol::Vec3 normalize(const obol::Vec3 & value)
+{
+    const float length = std::sqrt(value.x * value.x +
+                                   value.y * value.y +
+                                   value.z * value.z);
+    if (length <= 0.0f) return {0.0f, 0.0f, 1.0f};
+    return {value.x / length, value.y / length, value.z / length};
+}
+
+float clamp01(float value)
+{
+    if (value < 0.0f) return 0.0f;
+    if (value > 1.0f) return 1.0f;
+    return value;
+}
+
+obol::Vec3 surfaceNormal(float u, float v)
+{
+    constexpr float delta = 0.01f;
+    const obol::Vec3 u0 = evaluateSurface(clamp01(u - delta), v);
+    const obol::Vec3 u1 = evaluateSurface(clamp01(u + delta), v);
+    const obol::Vec3 v0 = evaluateSurface(u, clamp01(v - delta));
+    const obol::Vec3 v1 = evaluateSurface(u, clamp01(v + delta));
+    return normalize(cross(subtract(u1, u0), subtract(v1, v0)));
+}
+
+bool insideTrimHole(float u, float v)
+{
+    return u >= tpts[4][0] &&
+           u <= tpts[6][0] &&
+           v >= tpts[4][1] &&
+           v <= tpts[6][1];
+}
+
+obol::Mesh tessellatedTrimmedSurface()
+{
+    constexpr uint32_t resolution = 32;
+    obol::Mesh mesh;
+    mesh.topology = obol::MeshTopology::Polygons;
+
+    for (uint32_t row = 0; row <= resolution; ++row) {
+        const float v = static_cast<float>(row) / static_cast<float>(resolution);
+        for (uint32_t column = 0; column <= resolution; ++column) {
+            const float u = static_cast<float>(column) / static_cast<float>(resolution);
+            mesh.positions.push_back(evaluateSurface(u, v));
+            mesh.normals.push_back(surfaceNormal(u, v));
+        }
+    }
+
+    const uint32_t rowStride = resolution + 1;
+    for (uint32_t row = 0; row < resolution; ++row) {
+        const float centerV = (static_cast<float>(row) + 0.5f) /
+                              static_cast<float>(resolution);
+        for (uint32_t column = 0; column < resolution; ++column) {
+            const float centerU = (static_cast<float>(column) + 0.5f) /
+                                  static_cast<float>(resolution);
+            if (insideTrimHole(centerU, centerV)) {
+                continue;
+            }
+
+            const uint32_t upperLeft = row * rowStride + column;
+            const uint32_t lowerLeft = (row + 1) * rowStride + column;
+            const uint32_t lowerRight = lowerLeft + 1;
+            const uint32_t upperRight = upperLeft + 1;
+            mesh.indices.push_back(upperLeft);
+            mesh.indices.push_back(upperRight);
+            mesh.indices.push_back(lowerRight);
+            mesh.indices.push_back(lowerLeft);
+            mesh.faceVertexCounts.push_back(4);
+        }
+    }
+    return mesh;
+}
+
+obol::Material surfaceMaterial()
+{
+    obol::Material material;
+    material.baseColor = {0.8f, 0.3f, 0.1f, 1.0f};
+    return material;
+}
+
+obol::Material markerMaterial()
+{
+    obol::Material material;
+    material.baseColor = {0.2f, 0.6f, 1.0f, 1.0f};
+    return material;
+}
+
+obol::Transform translation(float x, float y, float z)
+{
+    obol::Transform transform;
+    transform.translation = {x, y, z};
+    return transform;
+}
+
+bool renderView(obol::OffscreenRenderer & renderer,
+                obol::Scene & scene,
+                const char * filename,
+                const obol::Vec3 & position,
+                const obol::Vec3 & up = {0.0f, 1.0f, 0.0f})
+{
+    obol::PerspectiveCamera camera;
+    camera.position = position;
+    camera.target = {0.0f, -0.5f, 1.0f};
+    camera.up = up;
+    camera.verticalFieldOfViewRadians = 0.72f;
+    scene.setCamera(camera);
+    const obol::FrameResult result = renderer.render(scene);
+    return result.success && renderer.writeRGB(filename);
+}
+
+} // namespace
 
 int main(int argc, char **argv)
 {
-    // Initialize Coin for headless operation
     initCoinHeadless();
 
-    SoSeparator *root = new SoSeparator;
-    root->ref();
+    obol::Scene scene;
+    scene.addDirectionalLight(obol::DirectionalLight{});
+    scene.addMesh(tessellatedTrimmedSurface(), surfaceMaterial());
 
-    // Add camera and light
-    SoPerspectiveCamera *camera = new SoPerspectiveCamera;
-    root->addChild(camera);
-    root->addChild(new SoDirectionalLight);
-
-    // Add material for the surface
-    SoMaterial *mat = new SoMaterial;
-    mat->diffuseColor.setValue(0.8, 0.3, 0.1);
-    root->addChild(mat);
-
-    // Create the trimmed Bezier surface
-    SoSeparator *surfSep = makeSurface();
-    root->addChild(surfSep);
-
-    // Add control-point markers as small blue spheres.
-    // Always render in software mode, providing a visible test signature
-    // even when NURBS surface tessellation is unavailable.
-    SoSeparator *markerSep = new SoSeparator;
-    SoMaterial *markerMat = new SoMaterial;
-    markerMat->diffuseColor.setValue(0.2f, 0.6f, 1.0f);
-    markerSep->addChild(markerMat);
-    for (int i = 0; i < 16; i++) {
-        SoSeparator *ptSep = new SoSeparator;
-        SoTransform *ptXf = new SoTransform;
-        ptXf->translation.setValue(pts[i][0], pts[i][1], pts[i][2]);
-        ptXf->scaleFactor.setValue(0.4f, 0.4f, 0.4f);
-        ptSep->addChild(ptXf);
-        ptSep->addChild(new SoSphere);
-        markerSep->addChild(ptSep);
+    obol::PrimitiveOptions markerOptions;
+    markerOptions.radius = 0.4f;
+    const obol::Material marker = markerMaterial();
+    for (int i = 0; i < 16; ++i) {
+        scene.addPrimitive(obol::Primitive::Sphere,
+                           marker,
+                           translation(pts[i][0], pts[i][1], pts[i][2]),
+                           markerOptions);
     }
-    root->addChild(markerSep);
 
-    // Use viewAll to ensure the scene is fully in frame
-    SbViewportRegion vp(DEFAULT_WIDTH, DEFAULT_HEIGHT);
-    camera->viewAll(root, vp);
+    obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
+                                        obol::RenderBackendKind::OpenGL2SWRast,
+                                        "headless-context");
+    obol::RenderTarget target;
+    target.width = DEFAULT_WIDTH;
+    target.height = DEFAULT_HEIGHT;
+    target.pixelFormat = obol::PixelFormat::RGB;
+    obol::OffscreenRenderer renderer(backend, target);
+    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
 
     const char *baseFilename = (argc > 1) ? argv[1] : "08.4.TrimSurf";
     char filename[256];
 
-    // Default view (framed by viewAll)
     snprintf(filename, sizeof(filename), "%s_view1.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderView(renderer, scene, filename, {0.0f, -0.5f, 22.0f})) {
+        fprintf(stderr, "Error: Failed to render TrimSurf front view with Obol v2 API\n");
+        return 1;
+    }
 
-    // Compute scene center for additional views
-    SoGetBoundingBoxAction bba(vp);
-    bba.apply(root);
-    SbBox3f bbox = bba.getBoundingBox();
-    SbVec3f center = bbox.getCenter();
-    float radius = (bbox.getMax() - bbox.getMin()).length() * 0.9f;
-
-    // Side view: camera along +X axis
-    camera->position.setValue(center + SbVec3f(radius, 0, 0));
-    camera->pointAt(center);
     snprintf(filename, sizeof(filename), "%s_side.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderView(renderer, scene, filename, {22.0f, -0.5f, 1.0f})) {
+        fprintf(stderr, "Error: Failed to render TrimSurf side view with Obol v2 API\n");
+        return 1;
+    }
 
-    // Top view: camera along +Y axis
-    camera->position.setValue(center + SbVec3f(0, radius, 0));
-    camera->pointAt(center, SbVec3f(0, 0, -1));
     snprintf(filename, sizeof(filename), "%s_top.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderView(renderer, scene, filename, {0.0f, 22.0f, 1.0f},
+                    {0.0f, 0.0f, -1.0f})) {
+        fprintf(stderr, "Error: Failed to render TrimSurf top view with Obol v2 API\n");
+        return 1;
+    }
 
-    root->unref();
+    printf("Rendered tessellated trimmed Bezier surface [Obol v2]\n");
     return 0;
 }

@@ -42,7 +42,7 @@
  * must be rendered and what GPU resources are needed.
  */
 
-#include <obol/cad/CadIds.h>
+#include <Obol/cad/CadIds.h>
 #include <Inventor/SbBox3f.h>
 #include <Inventor/SbMatrix.h>
 #include <Inventor/SbColor4f.h>

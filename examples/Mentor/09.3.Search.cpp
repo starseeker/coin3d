@@ -42,62 +42,73 @@
  */
 
 #include "headless_utils.h"
-#include <Inventor/SoDB.h>
-#include <Inventor/actions/SoSearchAction.h>
-#include <Inventor/actions/SoWriteAction.h>
-#include <Inventor/nodes/SoDirectionalLight.h>
-#include <Inventor/nodes/SoSeparator.h>
-#include <Inventor/nodes/SoCube.h>
-#include <Inventor/nodes/SoMaterial.h>
-#include <Inventor/nodes/SoPerspectiveCamera.h>
+#include <Obol/Obol.h>
+
 #include <cstdio>
+
+namespace {
+
+bool renderScene(obol::OffscreenRenderer & renderer,
+                 obol::Scene & scene,
+                 const char * filename)
+{
+    const obol::FrameResult result = renderer.render(scene);
+    return result.success && renderer.writeRGB(filename);
+}
+
+} // namespace
 
 int main(int argc, char **argv)
 {
-    // Initialize Coin for headless operation
     initCoinHeadless();
 
-    // Create a scene without a light
-    SoSeparator *root = new SoSeparator;
-    root->ref();
+    obol::Scene scene;
 
-    SoMaterial *myMaterial = new SoMaterial;
-    myMaterial->diffuseColor.setValue(0.8, 0.3, 0.1);
-    root->addChild(myMaterial);
-    root->addChild(new SoCube);
+    obol::PerspectiveCamera camera;
+    camera.position = {0.0f, 0.0f, 5.0f};
+    camera.target = {0.0f, 0.0f, 0.0f};
+    scene.setCamera(camera);
 
-    // Use search action to look for lights
-    SoSearchAction mySearchAction;
-    mySearchAction.setType(SoLight::getClassTypeId());
-    mySearchAction.setInterest(SoSearchAction::FIRST);
-    mySearchAction.apply(root);
+    obol::Material material;
+    material.baseColor = {0.8f, 0.3f, 0.1f, 1.0f};
+    scene.addPrimitive(obol::Primitive::Cube, material);
+
+    obol::SceneQuery lightQuery;
+    lightQuery.category = obol::SceneObjectCategory::Light;
     
     const char *baseFilename = (argc > 1) ? argv[1] : "09.3.Search";
     char filename[256];
 
-    // Render before adding light
-    SoPerspectiveCamera *camera = new SoPerspectiveCamera;
-    root->insertChild(camera, 0);
-    camera->viewAll(root, SbViewportRegion(DEFAULT_WIDTH, DEFAULT_HEIGHT));
-    
+    obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
+                                        obol::RenderBackendKind::OpenGL2SWRast,
+                                        "headless-context");
+    obol::RenderTarget target;
+    target.width = DEFAULT_WIDTH;
+    target.height = DEFAULT_HEIGHT;
+    target.pixelFormat = obol::PixelFormat::RGB;
+    obol::OffscreenRenderer renderer(backend, target);
+    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
+
     snprintf(filename, sizeof(filename), "%s_no_light.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderScene(renderer, scene, filename)) {
+        fprintf(stderr, "Error: Failed to render unlit scene with Obol v2 API\n");
+        return 1;
+    }
     printf("Rendered scene without light\n");
 
-    // Check search result and add light if none found
-    if (mySearchAction.getPath() == NULL) {
-        printf("Search Action: No lights found - adding default light\n");
-        SoDirectionalLight *myLight = new SoDirectionalLight;
-        root->insertChild(myLight, 1); // After camera
+    if (!scene.hasObjects(lightQuery)) {
+        printf("Scene query: No lights found - adding default light\n");
+        scene.addDirectionalLight(obol::DirectionalLight{});
     } else {
-        printf("Search Action: Light already exists\n");
+        printf("Scene query: Light already exists\n");
     }
 
-    // Render after ensuring light exists
     snprintf(filename, sizeof(filename), "%s_with_light.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderScene(renderer, scene, filename)) {
+        fprintf(stderr, "Error: Failed to render lit scene with Obol v2 API\n");
+        return 1;
+    }
     printf("Rendered scene with light\n");
 
-    root->unref();
     return 0;
 }

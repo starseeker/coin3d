@@ -42,89 +42,122 @@
  */
 
 #include "headless_utils.h"
-#include <Inventor/nodes/SoMaterial.h>
-#include <Inventor/nodes/SoRotationXYZ.h>
-#include <Inventor/nodes/SoScale.h>
-#include <Inventor/nodes/SoSeparator.h>
-#include <Inventor/nodes/SoTranslation.h>
-#include <Inventor/nodes/SoCube.h>
-#include <Inventor/nodes/SoPerspectiveCamera.h>
-#include <Inventor/nodes/SoDirectionalLight.h>
-#include <cmath>
+#include <Obol/Obol.h>
+
 #include <cstdio>
+
+namespace {
+
+obol::Transform translation(float x, float y, float z)
+{
+    obol::Transform transform;
+    transform.translation = {x, y, z};
+    return transform;
+}
+
+obol::Transform xRotation(float radians)
+{
+    obol::Transform transform;
+    transform.rotationAxis = {1.0f, 0.0f, 0.0f};
+    transform.rotationRadians = radians;
+    return transform;
+}
+
+obol::Transform scale(float x, float y, float z)
+{
+    obol::Transform transform;
+    transform.scale = {x, y, z};
+    return transform;
+}
+
+obol::Material material(float r, float g, float b)
+{
+    obol::Material result;
+    result.baseColor = {r, g, b, 1.0f};
+    return result;
+}
+
+bool renderView(obol::OffscreenRenderer & renderer,
+                obol::Scene & scene,
+                const char * filename,
+                const obol::Vec3 & position)
+{
+    obol::PerspectiveCamera camera;
+    camera.position = position;
+    camera.target = {0.0f, 0.0f, 0.0f};
+    camera.verticalFieldOfViewRadians = 0.62f;
+    scene.setCamera(camera);
+    const obol::FrameResult result = renderer.render(scene);
+    return result.success && renderer.writeRGB(filename);
+}
+
+} // namespace
 
 int main(int argc, char **argv)
 {
-    // Initialize Coin for headless operation
     initCoinHeadless();
 
-    SoSeparator *root = new SoSeparator;
-    root->ref();
+    constexpr float halfPi = 1.57079632679f;
 
-    // Add camera and light
-    SoPerspectiveCamera *camera = new SoPerspectiveCamera;
-    root->addChild(camera);
-    root->addChild(new SoDirectionalLight);
+    obol::Scene scene;
+    obol::DirectionalLight light;
+    light.direction = {-0.5f, -0.7f, -1.0f};
+    scene.addDirectionalLight(light);
 
-    // Create two separators for left and right objects
-    SoSeparator *leftSep = new SoSeparator;
-    SoSeparator *rightSep = new SoSeparator;
-    root->addChild(leftSep);
-    root->addChild(rightSep);
+    const obol::Transform rotate = xRotation(halfPi);
+    const obol::Transform stretch = scale(2.0f, 1.0f, 3.0f);
 
-    // Create transformation nodes
-    SoTranslation *leftTranslation = new SoTranslation;
-    SoTranslation *rightTranslation = new SoTranslation;
-    SoRotationXYZ *myRotation = new SoRotationXYZ;
-    SoScale *myScale = new SoScale;
+    const obol::SceneGroupId leftTranslate =
+        scene.addGroup(translation(-1.5f, 0.0f, 0.0f));
+    const obol::SceneGroupId leftRotate =
+        scene.addGroup(rotate, leftTranslate);
+    const obol::SceneGroupId leftScale =
+        scene.addGroup(stretch, leftRotate);
+    scene.addPrimitive(obol::Primitive::Cube,
+                       material(1.0f, 0.5f, 0.0f),
+                       obol::Transform{},
+                       obol::PrimitiveOptions{},
+                       leftScale);
 
-    // Fill in values
-    leftTranslation->translation.setValue(-1.5, 0.0, 0.0);
-    rightTranslation->translation.setValue(1.5, 0.0, 0.0);
-    myRotation->angle = M_PI/2;  // 90 degrees
-    myRotation->axis = SoRotationXYZ::X;
-    myScale->scaleFactor.setValue(2., 1., 3.);
+    const obol::SceneGroupId rightTranslate =
+        scene.addGroup(translation(1.5f, 0.0f, 0.0f));
+    const obol::SceneGroupId rightScale =
+        scene.addGroup(stretch, rightTranslate);
+    const obol::SceneGroupId rightRotate =
+        scene.addGroup(rotate, rightScale);
+    scene.addPrimitive(obol::Primitive::Cube,
+                       material(0.0f, 0.5f, 1.0f),
+                       obol::Transform{},
+                       obol::PrimitiveOptions{},
+                       rightRotate);
 
-    // Left: translate, then rotate, then scale
-    leftSep->addChild(leftTranslation);
-    leftSep->addChild(myRotation);
-    leftSep->addChild(myScale);
-    
-    // Add material and object
-    SoMaterial *leftMat = new SoMaterial;
-    leftMat->diffuseColor.setValue(1.0, 0.5, 0.0);
-    leftSep->addChild(leftMat);
-    leftSep->addChild(new SoCube);
-
-    // Right: translate, then scale, then rotate
-    rightSep->addChild(rightTranslation);
-    rightSep->addChild(myScale);
-    rightSep->addChild(myRotation);
-    
-    // Add material and object
-    SoMaterial *rightMat = new SoMaterial;
-    rightMat->diffuseColor.setValue(0.0, 0.5, 1.0);
-    rightSep->addChild(rightMat);
-    rightSep->addChild(new SoCube);
-
-    // Setup camera
-    camera->viewAll(root, SbViewportRegion(DEFAULT_WIDTH, DEFAULT_HEIGHT));
+    obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
+                                        obol::RenderBackendKind::OpenGL2SWRast,
+                                        "headless-context");
+    obol::RenderTarget target;
+    target.width = DEFAULT_WIDTH;
+    target.height = DEFAULT_HEIGHT;
+    target.pixelFormat = obol::PixelFormat::RGB;
+    obol::OffscreenRenderer renderer(backend, target);
+    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
 
     const char *baseFilename = (argc > 1) ? argv[1] : "05.6.TransformOrdering";
     char filename[256];
 
-    // Render front view
     snprintf(filename, sizeof(filename), "%s_front.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderView(renderer, scene, filename, {0.0f, 0.0f, 10.0f})) {
+        fprintf(stderr, "Error: Failed to render front TransformOrdering view with Obol v2 API\n");
+        return 1;
+    }
     
-    printf("Rendered transform ordering example\n");
-    printf("Left: translate->rotate->scale, Right: translate->scale->rotate\n");
+    printf("Rendered transform ordering example [Obol v2]\n");
+    printf("Left: translate->rotate->scale, Right: translate->scale->rotate [Obol v2]\n");
 
-    // Render from angle
-    rotateCamera(camera, M_PI/4, M_PI/6);
     snprintf(filename, sizeof(filename), "%s_angle.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderView(renderer, scene, filename, {6.0f, 4.0f, 8.0f})) {
+        fprintf(stderr, "Error: Failed to render angled TransformOrdering view with Obol v2 API\n");
+        return 1;
+    }
 
-    root->unref();
     return 0;
 }

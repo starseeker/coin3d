@@ -81,7 +81,7 @@
 #include <Inventor/SbBox3f.h>
 #include <Inventor/SbVec3f.h>
 
-#include <obol/cad/CadIds.h>
+#include <Obol/cad/CadIds.h>
 
 #include <vector>
 #include <optional>
@@ -190,7 +190,7 @@ struct InstanceRecord {
 struct SoCADAssemblyImpl;
 
 /*!
-  \class SoCADAssembly SoCADAssembly.h obol/cad/SoCADAssembly.h
+  \class SoCADAssembly SoCADAssembly.h Obol/cad/SoCADAssembly.h
   \brief Compiled CAD assembly node for scalable large-scene rendering.
 
   \ingroup obol_cad

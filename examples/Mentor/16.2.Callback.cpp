@@ -1,216 +1,245 @@
 /*
- *
- *  Copyright (C) 2000 Silicon Graphics, Inc.  All Rights Reserved.
- *
- *  This library is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU Lesser General Public
- *  License as published by the Free Software Foundation; either
- *  version 2.1 of the License, or (at your option) any later version.
- *
- *  This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  Lesser General Public License for more details.
- *
- *  Further, this software is distributed without any warranty that it is
- *  free of the rightful claim of any third person regarding infringement
- *  or the like.  Any license provided herein, whether implied or
- *  otherwise, applies only to this software file.  Patent licenses, if
- *  any, provided herein do not apply to combinations of this program with
- *  other software, or any other product whatsoever.
- *
- *  You should have received a copy of the GNU Lesser General Public
- *  License along with this library; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- *  Contact information: Silicon Graphics, Inc., 1600 Amphitheatre Pkwy,
- *  Mountain View, CA  94043, or:
- *
- *  http://www.sgi.com
- *
- *  For further information regarding this notice, see:
- *
- *  http://oss.sgi.com/projects/GenInfo/NoticeExplan/
- *
- */
-
-/*
  * Headless version of Inventor Mentor example 16.2
- * 
- * Original: Callback - Material editor with callbacks
- * Headless: Demonstrates mock material editor callbacks
- * 
- * This example demonstrates:
- * - How a generic material editor can work with Coin (toolkit-agnostic)
- * - Material change callbacks for updating scene graph
- * - The pattern ANY toolkit must implement for property editors
- * 
- * Key insight: The material editor logic is toolkit-independent.
- * A toolkit only needs to:
- * 1. Display material color/property controls (sliders, color pickers, etc.)
- * 2. Call setMaterial() when user changes values
- * 3. Register callbacks to be notified of changes
- * 
- * The actual Coin integration (copying material values, triggering redraws)
- * works the same regardless of whether it's Qt, FLTK, Xt, or a mock.
+ *
+ * Original: material editor invokes callbacks that copy material node fields.
+ * Headless: toolkit-owned material editor callbacks update v2 object material.
  */
 
 #include "headless_utils.h"
-#include "mock_gui_toolkit.h"
-#include <Inventor/SoDB.h>
-#include <Inventor/SoInput.h>
-#include <Inventor/nodes/SoDirectionalLight.h>
-#include <Inventor/nodes/SoMaterial.h>
-#include <Inventor/nodes/SoPerspectiveCamera.h>
-#include <Inventor/nodes/SoSeparator.h>
+#include <Obol/Obol.h>
+
+#include <cmath>
 #include <cstdio>
+#include <cstdint>
+#include <vector>
 
-//  This is called by the Material Editor when a value changes
-void myMaterialEditorCB(void *userData, const SoMaterial *newMtl)
+namespace {
+
+using MaterialChangedCB = void (*)(void *, const obol::Material &);
+
+struct MaterialCallback {
+    MaterialChangedCB callback = nullptr;
+    void * userData = nullptr;
+};
+
+class MockMaterialEditor {
+public:
+    void addMaterialChangedCallback(MaterialChangedCB callback, void * userData)
+    {
+        callbacks_.push_back({callback, userData});
+    }
+
+    void setMaterial(const obol::Material & material)
+    {
+        material_ = material;
+        for (const MaterialCallback & cb : callbacks_) {
+            if (cb.callback) cb.callback(cb.userData, material_);
+        }
+    }
+
+private:
+    obol::Material material_;
+    std::vector<MaterialCallback> callbacks_;
+};
+
+struct MaterialTarget {
+    obol::Scene * scene = nullptr;
+    std::vector<obol::SceneObjectId> objects;
+};
+
+obol::Material material(float r, float g, float b, float shininess)
 {
-    SoMaterial *myMtl = (SoMaterial *) userData;
-
-    printf("Material editor callback invoked - copying material values\n");
-    
-    // Copy all the fields from the new material
-    myMtl->copyFieldValues(newMtl);
+    obol::Material result;
+    result.baseColor = {r, g, b, 1.0f};
+    result.specular = {0.55f, 0.55f, 0.55f, 1.0f};
+    result.shininess = shininess;
+    return result;
 }
+
+obol::Transform transform(float x, float y, float z)
+{
+    obol::Transform xf;
+    xf.translation = {x, y, z};
+    return xf;
+}
+
+obol::Mesh makeDishMesh()
+{
+    obol::Mesh mesh;
+    mesh.topology = obol::MeshTopology::Polygons;
+
+    constexpr int segments = 48;
+    constexpr float pi = 3.14159265358979323846f;
+
+    struct Ring {
+        float radius;
+        float z;
+        float radialNormal;
+        float zNormal;
+    };
+    const Ring rings[] = {
+        {0.95f, -0.34f,  0.0f, -1.0f},
+        {1.22f, -0.34f,  0.0f, -1.0f},
+        {1.42f, -0.12f,  0.85f, -0.52f},
+        {1.52f,  0.24f,  0.95f,  0.28f},
+        {1.44f,  0.36f,  0.25f,  0.97f},
+        {1.02f,  0.36f,  0.0f,   1.0f},
+        {0.78f,  0.10f, -0.70f,  0.72f},
+        {0.55f, -0.12f, -0.25f,  0.97f},
+        {0.10f, -0.16f,  0.0f,   1.0f}
+    };
+
+    const auto addRing = [&](const Ring & ring) {
+        const uint32_t first = static_cast<uint32_t>(mesh.positions.size());
+        for (int i = 0; i < segments; ++i) {
+            const float angle = 2.0f * pi * static_cast<float>(i) /
+                                static_cast<float>(segments);
+            const float c = std::cos(angle);
+            const float s = std::sin(angle);
+            mesh.positions.push_back({ring.radius * c, ring.radius * s, ring.z});
+            mesh.normals.push_back({ring.radialNormal * c,
+                                    ring.radialNormal * s,
+                                    ring.zNormal});
+        }
+        return first;
+    };
+
+    std::vector<uint32_t> ringStarts;
+    ringStarts.reserve(sizeof(rings) / sizeof(rings[0]));
+    for (const Ring & ring : rings) {
+        ringStarts.push_back(addRing(ring));
+    }
+
+    const auto addQuad = [&](uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
+        mesh.indices.push_back(a);
+        mesh.indices.push_back(b);
+        mesh.indices.push_back(c);
+        mesh.indices.push_back(d);
+        mesh.faceVertexCounts.push_back(4);
+    };
+
+    for (size_t ring = 0; ring + 1 < ringStarts.size(); ++ring) {
+        const uint32_t aStart = ringStarts[ring];
+        const uint32_t bStart = ringStarts[ring + 1];
+        for (int i = 0; i < segments; ++i) {
+            const uint32_t next = static_cast<uint32_t>((i + 1) % segments);
+            addQuad(aStart + i, bStart + i, bStart + next, aStart + next);
+        }
+    }
+
+    return mesh;
+}
+
+std::vector<obol::SceneObjectId> addDogDish(obol::Scene & scene, const obol::Material & mat)
+{
+    obol::SceneGroupId group = scene.addGroup(transform(0.0f, 0.0f, 0.0f));
+
+    std::vector<obol::SceneObjectId> editable;
+    editable.push_back(scene.addMesh(makeDishMesh(), mat, obol::Transform{}, group));
+
+    obol::Material food = material(1.0f, 0.1f, 0.05f, 0.45f);
+    obol::PrimitiveOptions kibble;
+    kibble.radius = 0.17f;
+    const obol::Vec3 foodCenters[] = {
+        {-0.62f, -0.30f, 0.18f}, {-0.34f, -0.34f, 0.22f},
+        {-0.05f, -0.32f, 0.25f}, { 0.24f, -0.34f, 0.22f},
+        { 0.54f, -0.28f, 0.18f}, {-0.48f, -0.04f, 0.28f},
+        {-0.18f, -0.02f, 0.34f}, { 0.12f, -0.01f, 0.36f},
+        { 0.42f,  0.03f, 0.29f}, { 0.70f,  0.05f, 0.22f},
+        {-0.60f,  0.30f, 0.20f}, {-0.31f,  0.29f, 0.30f},
+        { 0.00f,  0.30f, 0.38f}, { 0.30f,  0.30f, 0.32f},
+        { 0.58f,  0.31f, 0.24f}, {-0.16f,  0.54f, 0.34f},
+        { 0.16f,  0.52f, 0.34f}, { 0.46f,  0.50f, 0.28f}
+    };
+    for (const obol::Vec3 & center : foodCenters) {
+        scene.addPrimitive(obol::Primitive::Sphere,
+                           food,
+                           transform(center.x, center.y, center.z),
+                           kibble,
+                           group);
+    }
+
+    return editable;
+}
+
+void applyMaterialCallback(void * userData, const obol::Material & newMaterial)
+{
+    MaterialTarget * target = static_cast<MaterialTarget *>(userData);
+    if (!target || !target->scene) return;
+
+    printf("Material editor callback invoked - applying material by v2 object ID\n");
+    for (obol::SceneObjectId object : target->objects) {
+        target->scene->setObjectMaterial(object, newMaterial);
+    }
+}
+
+bool renderScene(obol::OffscreenRenderer & renderer,
+                 obol::Scene & scene,
+                 const char * filename)
+{
+    const obol::FrameResult result = renderer.render(scene);
+    return result.success && renderer.writeRGB(filename);
+}
+
+} // namespace
 
 int main(int argc, char **argv)
 {
     printf("=== Mentor Example 16.2: Material Editor Callback ===\n");
-    printf("This demonstrates toolkit-agnostic material editor patterns\n\n");
-    
-    // Initialize Coin for headless operation
+    printf("This demonstrates toolkit-agnostic material editor callbacks over Obol v2 IDs\n\n");
+
     initCoinHeadless();
-    
-    // Mock toolkit initialization (real toolkit would init X11, Qt, etc.)
-    void* mockWindow = mockToolkitInit(argv[0]);
-    if (!mockWindow) {
-        fprintf(stderr, "Failed to initialize mock toolkit\n");
-        return 1;
-    }
-    
-    // Build the render area (in real toolkit, would be an actual window)
-    MockRenderArea* myRenderArea = new MockRenderArea(800, 600);
-    
-    // Build the Material Editor (in real toolkit, would show GUI controls)
-    MockMaterialEditor* myEditor = new MockMaterialEditor();
-    
-    // Create a scene graph
-    SoSeparator *root = new SoSeparator;
-    SoPerspectiveCamera *myCamera = new SoPerspectiveCamera;
-    SoMaterial *myMaterial = new SoMaterial;
-    
-    root->ref();
-    myCamera->position.setValue(0.212482f, -0.881014f, 2.5f);
-    myCamera->heightAngle = float(M_PI)/4.0f; 
-    root->addChild(myCamera);
-    root->addChild(new SoDirectionalLight);
-    root->addChild(myMaterial);
 
-    // Read the geometry from a file and add to the scene
-    SoInput myInput;
-    const char *dataDir = getenv("OBOL_DATA_DIR");
-    if (dataDir) {
-        SoInput::addDirectoryFirst(dataDir);
-    } else {
-        SoInput::addDirectoryFirst("../../data");
-        SoInput::addDirectoryFirst("data");
-    }
-    if (!myInput.openFile("dogDish.iv")) {
-        fprintf(stderr, "Error: Could not open dogDish.iv\n");
-        fprintf(stderr, "Make sure data/dogDish.iv exists\n");
-        root->unref();
-        delete myEditor;
-        delete myRenderArea;
-        return 1;
-    }
-    SoSeparator *geomObject = SoDB::readAll(&myInput);
-    if (geomObject == NULL) {
-        fprintf(stderr, "Error: Could not read dogDish.iv\n");
-        root->unref();
-        delete myEditor;
-        delete myRenderArea;
-        return 1;
-    }
-    root->addChild(geomObject);
+    obol::Scene scene;
+    obol::PerspectiveCamera camera;
+    camera.position = {0.0f, -4.8f, 2.0f};
+    camera.target = {0.0f, 0.0f, 0.12f};
+    camera.up = {0.0f, 0.0f, 1.0f};
+    camera.verticalFieldOfViewRadians = 0.82f;
+    scene.setCamera(camera);
+    scene.addDirectionalLight(obol::DirectionalLight{});
 
-    // Add a callback for when the material changes
-    myEditor->addMaterialChangedCallback(myMaterialEditorCB, myMaterial); 
+    const obol::Material defaultMaterial = material(0.8f, 0.8f, 0.8f, 0.2f);
+    const std::vector<obol::SceneObjectId> dish = addDogDish(scene, defaultMaterial);
 
-    // Set the scene graph
-    myRenderArea->setSceneGraph(root);
+    MaterialTarget targetState{&scene, dish};
+    MockMaterialEditor editor;
+    editor.addMaterialChangedCallback(applyMaterialCallback, &targetState);
+
+    obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
+                                        obol::RenderBackendKind::OpenGL2SWRast,
+                                        "headless-context");
+    obol::RenderTarget target;
+    target.width = DEFAULT_WIDTH;
+    target.height = DEFAULT_HEIGHT;
+    target.pixelFormat = obol::PixelFormat::RGB;
+    obol::OffscreenRenderer renderer(backend, target);
+    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
 
     const char *baseFilename = (argc > 1) ? argv[1] : "16.2.Callback";
     char filename[512];
 
-    // Render initial state with default material
-    printf("\n--- State 1: Default material ---\n");
+    printf("--- State 1: Default material ---\n");
     snprintf(filename, sizeof(filename), "%s_default.rgb", baseFilename);
-    myRenderArea->render(filename);
+    if (!renderScene(renderer, scene, filename)) return 1;
 
-    // Simulate user changing material to red
-    printf("\n--- State 2: User changes to red material ---\n");
-    SoMaterial *redMaterial = new SoMaterial;
-    redMaterial->ref();
-    redMaterial->diffuseColor.setValue(1.0f, 0.0f, 0.0f);
-    redMaterial->ambientColor.setValue(0.3f, 0.0f, 0.0f);
-    redMaterial->specularColor.setValue(0.5f, 0.5f, 0.5f);
-    redMaterial->shininess.setValue(0.5f);
-    
-    // User edits material in editor - triggers callback
-    myEditor->setMaterial(*redMaterial);
-    redMaterial->unref();
+    printf("--- State 2: User changes to red material ---\n");
+    editor.setMaterial(material(1.0f, 0.0f, 0.0f, 0.5f));
     snprintf(filename, sizeof(filename), "%s_red.rgb", baseFilename);
-    myRenderArea->render(filename);
+    if (!renderScene(renderer, scene, filename)) return 1;
 
-    // Simulate user changing material to blue
-    printf("\n--- State 3: User changes to blue material ---\n");
-    SoMaterial *blueMaterial = new SoMaterial;
-    blueMaterial->ref();
-    blueMaterial->diffuseColor.setValue(0.0f, 0.3f, 1.0f);
-    blueMaterial->ambientColor.setValue(0.0f, 0.1f, 0.3f);
-    blueMaterial->specularColor.setValue(0.8f, 0.8f, 0.8f);
-    blueMaterial->shininess.setValue(0.8f);
-    
-    myEditor->setMaterial(*blueMaterial);
-    blueMaterial->unref();
+    printf("--- State 3: User changes to blue material ---\n");
+    editor.setMaterial(material(0.0f, 0.3f, 1.0f, 0.8f));
     snprintf(filename, sizeof(filename), "%s_blue.rgb", baseFilename);
-    myRenderArea->render(filename);
+    if (!renderScene(renderer, scene, filename)) return 1;
+    snprintf(filename, sizeof(filename), "%s.rgb", baseFilename);
+    if (!renderScene(renderer, scene, filename)) return 1;
 
-    // Simulate user changing material to gold
-    printf("\n--- State 4: User changes to gold material ---\n");
-    SoMaterial *goldMaterial = new SoMaterial;
-    goldMaterial->ref();
-    goldMaterial->diffuseColor.setValue(1.0f, 0.84f, 0.0f);
-    goldMaterial->ambientColor.setValue(0.3f, 0.25f, 0.0f);
-    goldMaterial->specularColor.setValue(1.0f, 1.0f, 0.5f);
-    goldMaterial->shininess.setValue(0.9f);
-    
-    myEditor->setMaterial(*goldMaterial);
-    goldMaterial->unref();
+    printf("--- State 4: User changes to gold material ---\n");
+    editor.setMaterial(material(1.0f, 0.84f, 0.0f, 0.9f));
     snprintf(filename, sizeof(filename), "%s_gold.rgb", baseFilename);
-    myRenderArea->render(filename);
+    if (!renderScene(renderer, scene, filename)) return 1;
 
-    printf("\n=== Summary ===\n");
-    printf("Generated 4 images showing different materials applied via editor callbacks\n");
-    printf("\nKey architectural point:\n");
-    printf("The material editor is a GENERIC pattern that works with any toolkit.\n");
-    printf("The toolkit only provides:\n");
-    printf("  1. UI controls (sliders, color pickers, etc.)\n");
-    printf("  2. Calls to setMaterial() when user changes values\n");
-    printf("  3. Callback registration mechanism\n");
-    printf("\nCoin handles:\n");
-    printf("  - Material field management\n");
-    printf("  - Scene graph updates\n");
-    printf("  - Rendering with new materials\n");
-    printf("\nThis same pattern works in Qt, FLTK, Xt, or any other toolkit.\n");
-
-    // Cleanup
-    delete myEditor;
-    delete myRenderArea;
-    root->unref();
-
+    printf("Generated 4 images showing material editor callbacks through Obol v2.\n");
     return 0;
 }

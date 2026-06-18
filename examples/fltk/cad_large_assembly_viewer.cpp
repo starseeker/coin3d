@@ -72,8 +72,8 @@
 
 #include <Inventor/actions/SoGetBoundingBoxAction.h>
 
-#include <obol/cad/SoCADAssembly.h>
-#include <obol/cad/CadIds.h>
+#include <Obol/cad/SoCADAssembly.h>
+#include <Obol/cad/CadIds.h>
 
 /* BasicFLTKContextManager – FLTK GL context for off-screen rendering */
 #include "fltk_context_manager.h"

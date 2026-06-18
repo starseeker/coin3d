@@ -42,40 +42,43 @@
  */
 
 #include "headless_utils.h"
-#include <Inventor/nodes/SoCone.h>
-#include <Inventor/nodes/SoDirectionalLight.h>
-#include <Inventor/nodes/SoMaterial.h>
-#include <Inventor/nodes/SoPerspectiveCamera.h>
-#include <Inventor/nodes/SoSeparator.h>
+#include <Obol/Obol.h>
 
 int main(int argc, char **argv)
 {
-    // Initialize Coin for headless operation
     initCoinHeadless();
 
-    // Make a scene containing a red cone
-    SoSeparator *root = new SoSeparator;
-    root->ref();
-    
-    SoPerspectiveCamera *myCamera = new SoPerspectiveCamera;
-    root->addChild(myCamera);
-    root->addChild(new SoDirectionalLight);
-    
-    SoMaterial *myMaterial = new SoMaterial;
-    myMaterial->diffuseColor.setValue(1.0, 0.0, 0.0);   // Red
-    root->addChild(myMaterial);
-    root->addChild(new SoCone);
+    obol::Scene scene;
 
-    // Make camera see everything
-    myCamera->viewAll(root, SbViewportRegion(DEFAULT_WIDTH, DEFAULT_HEIGHT));
+    obol::PerspectiveCamera camera;
+    camera.position = {0.0f, 0.0f, 5.0f};
+    camera.target = {0.0f, 0.0f, 0.0f};
+    scene.setCamera(camera);
 
-    // Render to file
+    scene.addDirectionalLight(obol::DirectionalLight{});
+
+    obol::Material material;
+    material.baseColor = {1.0f, 0.0f, 0.0f, 1.0f};
+    scene.addPrimitive(obol::Primitive::Cone, material);
+
     const char *filename = (argc > 1) ? argv[1] : "02.1.HelloCone.rgb";
-    if (!renderToFile(root, filename)) {
-        root->unref();
+    obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
+                                        obol::RenderBackendKind::OpenGL,
+                                        "headless-context");
+    obol::RenderTarget target;
+    target.width = DEFAULT_WIDTH;
+    target.height = DEFAULT_HEIGHT;
+    target.pixelFormat = obol::PixelFormat::RGB;
+    obol::OffscreenRenderer renderer(backend, target);
+    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
+
+    const obol::FrameResult result = renderer.render(scene);
+    if (!result.success || !renderer.writeRGB(filename)) {
+        fprintf(stderr, "Error: Failed to render scene with Obol v2 API\n");
         return 1;
     }
 
-    root->unref();
+    printf("Successfully rendered to %s (%dx%d) [Obol v2]\n",
+           filename, DEFAULT_WIDTH, DEFAULT_HEIGHT);
     return 0;
 }

@@ -1,0 +1,356 @@
+Obol v2 API Modernization Plan
+==============================
+
+Summary
+-------
+Redesign Obol as a hard v2 source break with a new backend-neutral public API,
+while preserving user-facing rendering, picking, scene traversal, text/font
+behavior, .iv file compatibility, and the OpenGL2/OSMesa swrast backend. The
+old Inventor-style API may remain as internal scaffolding during migration, but
+examples and v2 public documentation should use the new API only.
+
+The core design rule is: public APIs describe scene intent and render requests;
+backend APIs translate that intent to OpenGL2, system OpenGL, Vulkan, ray
+tracing, or future renderers.
+
+Key Changes
+-----------
+- Introduce a new public namespace and header tier, centered on obol::Scene,
+  Node, Group, Transform, Mesh, Material, Texture, Light, Camera, Renderer,
+  RenderTarget, RenderOptions, PickRequest, and PickResult.
+- Replace public SoGL* concepts with backend-neutral equivalents:
+  RenderBackend instead of SoGLRenderAction, RenderCapabilities instead of GL
+  version/extension queries, FrameRequest/FrameResult instead of implicit GL
+  state traversal, and RenderDiagnostics for graceful degradation warnings.
+- Formalize SoSceneCollector's current role into a v2 scene extraction layer:
+  produce immutable per-frame scene packets with geometry, materials, lights,
+  cameras, overlays, picking metadata, and resource references.
+- Preserve .iv read/write support:
+  .iv import maps legacy Inventor nodes into v2 scene objects, .iv export writes
+  the supported subset from v2 scenes, and legacy parser/writer internals may
+  remain while examples avoid old So* construction.
+- Keep OpenGL2 swrast as a required backend:
+  implement OpenGL2SWRastBackend as a compatibility renderer supporting Phong
+  material, 2D textures, VBO or client-array fallback, FBO offscreen when
+  available, text overlays, picking, and current image-test behavior.
+- Define feature profiles:
+  CorePortable for swrast/no-GL/future backends, RasterExtended for render
+  targets/multipass/shadows/advanced transparency where supported, and
+  BackendNative for explicit backend-specific escape hatches.
+- Preserve dragger/manipulator functionality as v2 interaction APIs:
+  applications should not need to recreate common transform handles, sliders,
+  drag planes, rotation rings, constraints, snapping, or attachment behavior.
+  Do not expose direct `SoDragger`/`SoManipulator` scene-node clones as the v2
+  core contract; instead provide backend-neutral tools/controllers that attach
+  to v2 object IDs or editable fields, consume application-provided input
+  events, request portable overlay/handle geometry, perform backend-neutral
+  drag math and picking, and report edits through explicit callbacks/state
+  updates. OpenGL2/swrast must support the baseline handles through ordinary
+  geometry plus CPU/color-ID picking or degrade with diagnostics.
+- Preserve field/engine/time semantics without exposing legacy field classes as
+  the v2 core contract. Public v2 APIs should use backend-neutral value types,
+  observable state, and application-provided clocks instead of direct
+  `SoSFTime`, `SoField`, or engine dependencies. Compatibility layers must
+  still preserve legacy behavior such as `SoSFTime` date/time string
+  formatting, global `realTime`-style updates, and field-to-text conversion
+  where examples or imported `.iv` content depend on it.
+- Keep advanced GL concepts out of the baseline:
+  no public dependency on texture units, display lists, GL matrix stacks,
+  geometry shaders, UBOs, SSBOs, or compute. Raw GLSL remains only as an
+  optional backend-native extension with capability checks.
+- Preserve raw OpenGL callback use cases as explicit backend-native extensions:
+  v2 should allow applications with existing OpenGL drawing code to attach an
+  OpenGL-only draw callback to a scene when the active backend exposes a
+  current OpenGL context. This is not part of CorePortable. Non-OpenGL
+  backends, missing contexts, or incompatible render phases must fail with a
+  clear unsupported-backend/no-context diagnostic instead of silently replacing
+  the callback with unrelated portable geometry.
+
+Implementation Plan
+-------------------
+1. Inventory and contract
+   - Catalog public So*, Sb*, SoGL*, examples, tests, and .iv features into
+     keep/rename/drop/internal categories.
+   - Write docs/API_MODERNIZATION_V2.md defining v2 naming, ownership,
+     threading, capabilities, degradation behavior, and migration rules.
+
+2. v2 scene API
+   - Add v2 scene construction APIs using RAII/value-oriented C++17 types.
+   - Support groups, transforms, cameras, lights, meshes, primitive shapes,
+     text, textures, materials, selection IDs, and metadata.
+   - Provide builders only where they reduce verbose scene construction in
+     examples.
+
+3. Renderer abstraction
+   - Add RenderBackend, Renderer, FrameRequest, FrameResult,
+     RenderCapabilities, and RenderDiagnostics.
+   - Adapt existing SoSceneCollector into the canonical scene-packet generator.
+   - Route SoOffscreenRenderer behavior through the new renderer layer or
+     replace it with obol::OffscreenRenderer.
+
+4. Backend migration
+   - Implement OpenGL2SWRastBackend first and make it the mandatory parity
+     backend.
+   - Adapt system OpenGL to the same backend interface.
+   - Adapt NanoRT/Embree/Vulkan test backends to consume the same scene packet.
+   - Keep old GL render internals only where useful, hidden behind backend
+     adapters.
+
+5. Examples migration
+   - Convert standalone examples, FLTK/Qt viewers, and Mentor examples to v2
+     scene construction and v2 rendering APIs.
+   - Preserve visual outputs and reference images unless the change is
+     intentionally documented.
+   - Convert dragger/manipulator examples to v2 interaction tools/controllers,
+     preserving the standard user-facing capabilities instead of replacing
+     them with one-off application code or static decorative geometry.
+   - Remove old public API usage from examples once equivalent v2 features
+     exist.
+
+6. Legacy cleanup
+   - Move remaining Inventor-compatible classes behind internal or
+     compatibility build options.
+   - Remove public SoGL* dependencies from v2 headers.
+   - Update docs so v2 is the primary API and Inventor compatibility is
+     described only as import/legacy internals.
+
+OpenGL2 Degradation Rules
+-------------------------
+- PBR or advanced material models degrade to Phong/material-color
+  approximation with diagnostics.
+- Unsupported shader graphs degrade to fixed material shading or fail the
+  specific material, not the frame.
+- Multipass effects require FBO support; without it, render the closest
+  single-pass equivalent and report the downgrade.
+- Shadows, bump mapping, advanced transparency, anisotropy, geometry shaders,
+  compute-like features, and native shader modules are optional capabilities.
+- Picking must remain available through CPU ray picking or ID-buffer fallback
+  where supported.
+- Text/HUD rendering must remain available through the existing font/overlay
+  path.
+
+Test Plan
+---------
+- Keep all existing tests passing throughout migration; no feature removal is
+  accepted without an explicit replacement test.
+- Add v2 API compile tests for scene creation, rendering, picking, .iv
+  import/export, and backend capability queries.
+- Add image parity tests comparing v2 examples against current control images
+  on swrast.
+- Keep swrast/OSMesa OpenGL2 in CI as the required compatibility backend.
+- Keep no-GL, NanoRT, Embree-optional, and Vulkan-optional tests using the
+  shared scene packet.
+- Add degradation tests that intentionally request unsupported features on
+  swrast and assert correct fallback plus diagnostics.
+- Add `.iv` import parity tests that prove both compatibility modes:
+  legacy-root rendering for unsupported nodes, and native v2 extraction for the
+  supported node subset needed by examples, picking, material callbacks, and
+  scene queries.
+
+Current Implementation Status
+-----------------------------
+- The v2 public header tree is `include/Obol`.
+- CAD-specific Obol APIs were migrated from `include/obol` to `include/Obol`.
+- Initial v2 scene/render APIs exist: `obol::Scene`, `obol::OffscreenRenderer`,
+  render capabilities, options, frame results, and diagnostics.
+- Initial v2 backend API exists: `obol::RenderBackend` and
+  `obol::ContextManagerBackend`, which adapts the existing context manager
+  render path while giving new examples a backend-neutral entry point.
+- Initial v2 render target API exists: `obol::RenderTarget` and
+  `obol::PixelFormat`, with `FrameResult::target` reporting the rendered
+  target.
+- The v2 scene bridge currently supports transform groups, primitive shapes,
+  triangle, polygon, triangle-strip, and quad-grid meshes, per-face mesh
+  normals/colors, indexed face-color palettes, indexed vertex-color palettes,
+  materials, transforms, perspective and orthographic cameras,
+  directional/point/spot lights, inline 2D textures, 2D text, and CAD
+  assemblies.
+- Triangle-strip meshes retain topology intent in `obol::Mesh` and degrade to
+  indexed faces in the legacy OpenGL2/swrast bridge.
+- Quad-grid meshes retain row/column topology intent in `obol::Mesh` and
+  degrade to indexed quad faces in the legacy OpenGL2/swrast bridge.
+- The v2 scene API supports stable-ID transform updates via
+  `Scene::setGroupTransform()` and `Scene::setObjectTransform()`.
+- Initial `.iv` compatibility bridge exists via `obol::SceneIO`.
+  Current limitation: imported `.iv` files are parsed through `SoDB::readAll()`
+  and retained as a legacy root inside `obol::Scene`. This is enough for
+  render/write compatibility and for the Chapter 11 read examples, but it does
+  not yet decompose imported legacy nodes into native v2 `SceneObjectId`s,
+  groups, materials, pick targets, or editable object state. Examples that need
+  stable v2 IDs, picking, or material/transform callbacks have therefore been
+  translated by hand for now. This is temporary; full `.iv` import must grow a
+  native v2 extraction path rather than being silently dropped.
+- Initial CPU picking bridge exists via `obol::Picker`, including viewport and
+  explicit world-ray requests, v2 `SceneObjectId` reporting for bridged v2
+  objects, and optional CAD instance/part details when available from the
+  backend.
+- Initial modern CAD facade exists via `obol::CadAssembly`, with the existing
+  `SoCADAssembly` node retained as the OpenGL2/swrast-compatible bridge.
+- `examples/Mentor/02.1.HelloCone.cpp`,
+  `examples/Mentor/02.2.EngineSpin.cpp`,
+  `examples/Mentor/02.3.Trackball.cpp`,
+  `examples/Mentor/02.4.Examiner.cpp`,
+  `examples/Mentor/03.1.Molecule.cpp`, `examples/Mentor/03.2.Robot.cpp`,
+  `examples/Mentor/03.3.Naming.cpp`,
+  `examples/Mentor/04.1.Cameras.cpp`, `examples/Mentor/04.2.Lights.cpp`,
+  `examples/Mentor/05.1.FaceSet.cpp`,
+  `examples/Mentor/05.2.IndexedFaceSet.cpp`,
+  `examples/Mentor/05.3.TriangleStripSet.cpp`,
+  `examples/Mentor/05.4.QuadMesh.cpp`,
+  `examples/Mentor/05.5.Binding.cpp`,
+  `examples/Mentor/05.6.TransformOrdering.cpp`,
+  `examples/Mentor/06.1.Text.cpp`,
+  `examples/Mentor/06.2.Simple3DText.cpp`,
+  `examples/Mentor/06.3.Complex3DText.cpp`,
+  `examples/Mentor/07.1.BasicTexture.cpp`,
+  `examples/Mentor/07.2.TextureCoordinates.cpp`,
+  `examples/Mentor/07.3.TextureFunction.cpp`,
+  `examples/Mentor/08.1.BSCurve.cpp`,
+  `examples/Mentor/08.2.UniCurve.cpp`,
+  `examples/Mentor/08.3.BezSurf.cpp`,
+  `examples/Mentor/08.4.TrimSurf.cpp`,
+  `examples/Mentor/09.1.Print.cpp`,
+  `examples/Mentor/09.2.Texture.cpp`,
+  `examples/Mentor/09.3.Search.cpp`,
+  `examples/Mentor/09.4.PickAction.cpp`,
+  `examples/Mentor/09.5.GenSph.cpp`,
+  `examples/Mentor/10.1.addEventCB.cpp`,
+  `examples/Mentor/10.2.setEventCB.cpp`,
+  `examples/Mentor/10.5.SelectionCB.cpp`,
+  `examples/Mentor/10.6.PickFilterTopLevel.cpp`,
+  `examples/Mentor/10.7.PickFilterManip.cpp`, and
+  `examples/Mentor/10.8.PickFilterNodeKit.cpp`,
+  `examples/Mentor/11.1.ReadFile.cpp`, and
+  `examples/Mentor/11.2.ReadString.cpp`,
+  `examples/Mentor/12.1.FieldSensor.cpp`,
+  `examples/Mentor/12.2.NodeSensor.cpp`,
+  `examples/Mentor/12.3.AlarmSensor.cpp`, and
+  `examples/Mentor/12.4.TimerSensor.cpp`,
+  `examples/Mentor/13.1.GlobalFlds.cpp`,
+  `examples/Mentor/13.2.ElapsedTime.cpp`,
+  `examples/Mentor/13.3.TimeCounter.cpp`,
+  `examples/Mentor/13.4.Gate.cpp`,
+  `examples/Mentor/13.5.Boolean.cpp`,
+  `examples/Mentor/13.6.Calculator.cpp`,
+  `examples/Mentor/13.7.Rotor.cpp`, and
+  `examples/Mentor/13.8.Blinker.cpp` have been migrated to v2 scene/render APIs.
+  `02.2.EngineSpin.cpp` exercises app-owned animation state,
+  `02.3.Trackball.cpp` and `02.4.Examiner.cpp` exercise app-owned camera
+  operations, `03.1.Molecule.cpp` exercises v2 primitive/group hierarchy,
+  `03.2.Robot.cpp` exercises the v2 group hierarchy, and
+  `03.3.Naming.cpp` exercises app-owned names mapped to stable v2 object IDs.
+  `04.1.Cameras.cpp` exercises perspective and orthographic camera projection,
+  `04.2.Lights.cpp` exercises multi-frame light movement through stable group
+  IDs, `05.1.FaceSet.cpp` exercises v2 polygon meshes with per-face normals,
+  `05.2.IndexedFaceSet.cpp` exercises indexed polygon meshes with per-face
+  colors, `05.3.TriangleStripSet.cpp` exercises v2 triangle-strip mesh
+  topology with an indexed-face swrast fallback, `05.4.QuadMesh.cpp`
+  exercises v2 quad-grid mesh topology with an indexed-face swrast fallback,
+  `05.5.Binding.cpp` exercises v2 face, indexed-face, and indexed-vertex
+  color bindings, and `05.6.TransformOrdering.cpp` exercises ordered
+  transform composition through nested v2 groups. `06.1.Text.cpp` exercises
+  v2 2D text labels with font metadata and world transforms.
+  `06.2.Simple3DText.cpp` exercises v2 3D text labels with font metadata,
+  transform scaling, part selection, and part colors.
+  `06.3.Complex3DText.cpp` exercises v2 3D text profile points for beveled
+  extrusion with a legacy OpenGL2/swrast profile-node fallback.
+  `07.1.BasicTexture.cpp` exercises v2 `Texture2D` image data attached through
+  `Material::baseColorTexture`.
+  `07.2.TextureCoordinates.cpp` exercises v2 mesh UV attributes and optional
+  texture coordinate indices.
+  `07.3.TextureFunction.cpp` exercises procedurally generated v2 mesh UVs as a
+  portable replacement for legacy texture-coordinate function nodes.
+- `08.1.BSCurve.cpp` exercises v2 `Polyline` as a sampled-curve fallback for
+  legacy NURBS curve content. Its example target is enabled; its old
+  NURBS-control image comparison remains skipped until controls are refreshed
+  for the sampled output.
+- `08.2.UniCurve.cpp` exercises v2 `Polyline` as a sampled uniform B-spline
+  fallback. Its example target is enabled; its old NURBS-control image
+  comparison remains skipped until controls are refreshed for the sampled
+  output.
+- `08.3.BezSurf.cpp` exercises v2 quad-grid meshes as a tessellated Bezier
+  surface fallback. Its example target is enabled; its old NURBS-control image
+  comparison remains skipped until controls are refreshed for the tessellated
+  output.
+- `08.4.TrimSurf.cpp` exercises v2 polygon meshes as a tessellated trimmed
+  Bezier surface fallback with a coarse parameter-space trim hole. Its example
+  target is enabled; its old NURBS-control image comparison remains skipped
+  until controls are refreshed for the tessellated output.
+- `09.1.Print.cpp` exercises v2 offscreen RGB rendering as the portable
+  replacement for the original PostScript-oriented print example.
+- `09.2.Texture.cpp` exercises v2 render-to-texture by copying offscreen RGB
+  pixels into `Texture2D` image data and applying it through material state.
+- `09.3.Search.cpp` exercises v2 `SceneQuery` and stable object IDs as the
+  portable replacement for Inventor search actions and backend node paths.
+- `09.4.PickAction.cpp` exercises v2 world-ray picking and material updates by
+  stable object ID as the portable replacement for Inventor pick paths and
+  per-node highlight insertion.
+- `09.5.GenSph.cpp` exercises v2 CPU-side sphere tessellation into portable
+  `Mesh` data as the replacement for Inventor primitive-generation callbacks.
+- `10.1.addEventCB.cpp` exercises application-owned keyboard event dispatch
+  that updates selected v2 object transforms by stable object ID.
+- `10.2.setEventCB.cpp` exercises application-owned pointer event translation,
+  v2 camera updates, and v2 `PointCloud` updates as the portable replacement
+  for toolkit/render-area event callbacks and point-set nodes.
+- `10.5.SelectionCB.cpp` exercises application-owned selection callbacks using
+  stable v2 object IDs and material updates, avoiding backend selection nodes.
+- `10.6.PickFilterTopLevel.cpp` exercises application-owned pick filtering:
+  top-level selection highlights all component object IDs in a model group,
+  while default selection highlights only the leaf component object ID.
+- `10.7.PickFilterManip.cpp` exercises the same application-owned filtering
+  pattern for manipulator-like overlays by highlighting/restoring the selected
+  controlled object through v2 material updates.
+- `10.8.PickFilterNodeKit.cpp` exercises application-owned pick filtering and
+  material-editor callbacks over multiple selected v2 object IDs.
+- `11.1.ReadFile.cpp` and `11.2.ReadString.cpp` exercise v2 `SceneIO` for
+  legacy Inventor file/string import. The legacy-root bridge now wraps imported
+  content behind v2 camera/light state so imported content renders correctly on
+  OpenGL2/swrast.
+- `12.1.FieldSensor.cpp`, `12.2.NodeSensor.cpp`, `12.3.AlarmSensor.cpp`, and
+  `12.4.TimerSensor.cpp` exercise application-owned field/node/alarm/timer
+  callbacks that update v2 camera, transform, and material/geometry state
+  without exposing backend sensor nodes.
+- `13.1.GlobalFlds.cpp`, `13.2.ElapsedTime.cpp`,
+  `13.3.TimeCounter.cpp`, and `13.4.Gate.cpp` exercise application-owned
+  field/engine evaluation that updates v2 text and object transforms without
+  exposing backend field or engine nodes.
+- `13.5.Boolean.cpp`, `13.6.Calculator.cpp`, `13.7.Rotor.cpp`, and
+  `13.8.Blinker.cpp` exercise application-owned boolean/calculator/rotor/
+  blinker evaluation over stable v2 object and group transforms.
+- `14.1.FrolickingWords.cpp`, `14.2.Editors.cpp`, and `14.3.Balance.cpp`
+  exercise application-owned kit/editor/event state over v2 text, primitive,
+  group, material, and light state. `14.2.Editors` control images were
+  refreshed for the intentional v2 procedural/editor output.
+- `15.1.ConeRadius.cpp`, `15.2.SliderBox.cpp`, `15.3.AttachManip.cpp`, and
+  `15.4.Customize.cpp` exercise application-owned manipulator/slider state
+  over v2 object IDs. `15.1` uses `Scene::setObjectPrimitiveOptions()` for
+  parameter edits, while `15.3` uses portable overlay geometry instead of
+  backend manipulator nodes.
+- `16.2.Callback.cpp` and `16.3.AttachEditor.cpp` exercise toolkit-owned
+  material editor callbacks/attachments over v2 object IDs and
+  `Scene::setObjectMaterial()`. Their controls now preserve red food, apply
+  edited materials only to the bowl, and map the unsuffixed compatibility frame
+  to the blue edited state visible in `main`.
+- Initial backend-native OpenGL callback support exists via
+  `Scene::addOpenGLCallback()`. `17.2.GLCallback.cpp` now uses that API to
+  draw its floor with raw OpenGL calls again. OpenGL backends execute the
+  callback during GL traversal with a current context; non-OpenGL/no-context
+  backends reject scenes containing OpenGL callbacks with explicit diagnostics.
+- Mentor examples in dual-GL builds can force the OSMesa/swrast headless path
+  with `OBOL_HEADLESS_FORCE_SWRAST`, so migrated v2 examples can render without
+  an X display while preserving the GLX path.
+- `tests/tools/test_v2_scene_suite.cpp` covers scene construction, scene
+  queries, material updates, primitive option updates, point-cloud updates,
+  primitive tessellation, non-GL rendering, degradation diagnostics, `.iv`
+  string round-trip, and picking.
+
+Assumptions
+-----------
+- v2 is allowed to break source compatibility with existing Inventor-style C++
+  code.
+- User-facing behavior, render output, picking, text, examples, and .iv
+  compatibility should be preserved.
+- OpenGL2/OSMesa swrast is a required compatibility backend, not the design
+  center of the new API.
+- Existing SoSceneCollector, ContextManager::renderScene(), and non-GL backend
+  tests are the starting point for the new renderer abstraction.

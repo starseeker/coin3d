@@ -70,8 +70,8 @@ SoCADAssembly
 Register the node type once at application start:
 
 ```cpp
-#include <obol/cad/SoCADAssembly.h>
-#include <obol/cad/SoCADDetail.h>
+#include <Obol/cad/SoCADAssembly.h>
+#include <Obol/cad/SoCADDetail.h>
 
 SoCADAssembly::initClass();   // also calls SoCADDetail::initClass()
 ```
@@ -215,7 +215,7 @@ if (detail) {
 
 ## DepthPolicy for auxiliary objects
 
-`obol::DepthPolicy` (in `include/obol/render/DepthPolicy.h`) controls how
+`obol::DepthPolicy` (in `include/Obol/render/DepthPolicy.h`) controls how
 non-CAD world objects interact with the depth buffer:
 
 | Value            | GL depth test | Description                             |
@@ -349,10 +349,10 @@ styles, selection, or draw mode change.
 
 | Path | Description |
 |------|-------------|
-| `include/obol/cad/CadIds.h`        | 128-bit ID types + `CadIdBuilder` |
-| `include/obol/cad/SoCADAssembly.h` | Main assembly node API            |
-| `include/obol/cad/SoCADDetail.h`   | Pick-result detail class          |
-| `include/obol/render/DepthPolicy.h`| Depth policy enum                 |
+| `include/Obol/cad/CadIds.h`        | 128-bit ID types + `CadIdBuilder` |
+| `include/Obol/cad/SoCADAssembly.h` | Main assembly node API            |
+| `include/Obol/cad/SoCADDetail.h`   | Pick-result detail class          |
+| `include/Obol/render/DepthPolicy.h`| Depth policy enum                 |
 | `src/cad/CadIds.cpp`               | FNV-1a 128-bit hash implementation|
 | `src/cad/SoCADAssembly.cpp`        | Node render/pick/bbox actions     |
 | `src/cad/SoCADDetail.cpp`          | Detail SO_DETAIL_SOURCE           |

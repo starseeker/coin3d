@@ -1,98 +1,81 @@
 /*
- *
- *  Copyright (C) 2000 Silicon Graphics, Inc.  All Rights Reserved.
- *
- *  This library is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU Lesser General Public
- *  License as published by the Free Software Foundation; either
- *  version 2.1 of the License, or (at your option) any later version.
- *
- *  This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  Lesser General Public License for more details.
- *
- *  Further, this software is distributed without any warranty that it is
- *  free of the rightful claim of any third person regarding infringement
- *  or the like.  Any license provided herein, whether implied or
- *  otherwise, applies only to this software file.  Patent licenses, if
- *  any, provided herein do not apply to combinations of this program with
- *  other software, or any other product whatsoever.
- *
- *  You should have received a copy of the GNU Lesser General Public
- *  License along with this library; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- *  Contact information: Silicon Graphics, Inc., 1600 Amphitheatre Pkwy,
- *  Mountain View, CA  94043, or:
- *
- *  http://www.sgi.com
- *
- *  For further information regarding this notice, see:
- *
- *  http://oss.sgi.com/projects/GenInfo/NoticeExplan/
- *
- */
-
-/*
  * Headless version of Inventor Mentor example 2.2
- * 
- * Original: EngineSpin - uses an engine to make a cone spin
- * Headless: Renders multiple frames showing the cone at different rotation angles
+ *
+ * Original: elapsed-time engine spins a cone.
+ * Headless: app-owned time updates a v2 object transform.
  */
 
 #include "headless_utils.h"
-#include <Inventor/engines/SoElapsedTime.h>
-#include <Inventor/nodes/SoCone.h>
-#include <Inventor/nodes/SoDirectionalLight.h>
-#include <Inventor/nodes/SoMaterial.h>
-#include <Inventor/nodes/SoPerspectiveCamera.h>
-#include <Inventor/nodes/SoRotationXYZ.h>
-#include <Inventor/nodes/SoSeparator.h>
+#include <Obol/Obol.h>
+
 #include <cmath>
 #include <cstdio>
 
+namespace {
+
+obol::Material red()
+{
+    obol::Material material;
+    material.baseColor = {1.0f, 0.0f, 0.0f, 1.0f};
+    material.specular = {0.25f, 0.25f, 0.25f, 1.0f};
+    material.shininess = 0.35f;
+    return material;
+}
+
+bool renderScene(obol::OffscreenRenderer & renderer,
+                 obol::Scene & scene,
+                 const char * filename)
+{
+    const obol::FrameResult result = renderer.render(scene);
+    return result.success && renderer.writeRGB(filename);
+}
+
+} // namespace
+
 int main(int argc, char **argv)
 {
-    // Initialize Coin for headless operation
     initCoinHeadless();
 
-    SoSeparator *root = new SoSeparator;
-    root->ref();
-    
-    SoPerspectiveCamera *myCamera = new SoPerspectiveCamera;
-    root->addChild(myCamera);
-    root->addChild(new SoDirectionalLight);
+    obol::Scene scene;
+    obol::PerspectiveCamera camera;
+    camera.position = {0.0f, 0.0f, 6.0f};
+    camera.target = {0.0f, 0.0f, 0.0f};
+    camera.verticalFieldOfViewRadians = 0.6f;
+    scene.setCamera(camera);
+    scene.addDirectionalLight(obol::DirectionalLight{});
 
-    // This transformation is used to rotate the cone
-    SoRotationXYZ *myRotXYZ = new SoRotationXYZ;
-    myRotXYZ->axis = SoRotationXYZ::X;     // rotate about X axis
-    root->addChild(myRotXYZ);
+    obol::PrimitiveOptions coneOptions;
+    coneOptions.radius = 1.0f;
+    coneOptions.height = 2.0f;
+    obol::Transform coneTransform;
+    coneTransform.rotationAxis = {1.0f, 0.0f, 0.0f};
+    const obol::SceneObjectId cone =
+        scene.addPrimitive(obol::Primitive::Cone, red(), coneTransform, coneOptions);
 
-    SoMaterial *myMaterial = new SoMaterial;
-    myMaterial->diffuseColor.setValue(1.0, 0.0, 0.0);   // Red
-    root->addChild(myMaterial);
-    root->addChild(new SoCone);
+    obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
+                                        obol::RenderBackendKind::OpenGL2SWRast,
+                                        "headless-context");
+    obol::RenderTarget target;
+    target.width = DEFAULT_WIDTH;
+    target.height = DEFAULT_HEIGHT;
+    target.pixelFormat = obol::PixelFormat::RGB;
+    obol::OffscreenRenderer renderer(backend, target);
+    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
 
-    // Setup camera
-    myCamera->viewAll(root, SbViewportRegion(DEFAULT_WIDTH, DEFAULT_HEIGHT));
-
-    // Render multiple frames at different rotation angles
-    // simulating the spinning animation
     const char *baseFilename = (argc > 1) ? argv[1] : "02.2.EngineSpin";
-    char filename[256];
-    
-    int numFrames = 8;  // Number of frames to render
-    for (int i = 0; i < numFrames; i++) {
-        float angle = (2.0f * M_PI * i) / numFrames;
-        myRotXYZ->angle.setValue(angle);
-        
-        snprintf(filename, sizeof(filename), "%s_frame%02d.rgb", baseFilename, i);
-        renderToFile(root, filename);
-    }
-    
-    printf("Rendered %d frames showing rotation animation\n", numFrames);
+    char filename[512];
 
-    root->unref();
+    for (int i = 0; i < 8; i++) {
+        coneTransform.rotationRadians = (2.0f * 3.14159265358979323846f * i) / 8.0f;
+        scene.setObjectTransform(cone, coneTransform);
+        snprintf(filename, sizeof(filename), "%s_frame%02d.rgb", baseFilename, i);
+        if (!renderScene(renderer, scene, filename)) return 1;
+        if (i == 0) {
+            snprintf(filename, sizeof(filename), "%s.rgb", baseFilename);
+            if (!renderScene(renderer, scene, filename)) return 1;
+        }
+    }
+
+    printf("Rendered 8 frames showing rotation animation [Obol v2]\n");
     return 0;
 }

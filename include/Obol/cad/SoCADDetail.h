@@ -44,10 +44,10 @@
  */
 
 #include <Inventor/details/SoSubDetail.h>
-#include <obol/cad/CadIds.h>
+#include <Obol/cad/CadIds.h>
 
 /*!
-  \class SoCADDetail SoCADDetail.h obol/cad/SoCADDetail.h
+  \class SoCADDetail SoCADDetail.h Obol/cad/SoCADDetail.h
   \brief Pick-result detail for an SoCADAssembly hit.
 
   \ingroup obol_cad

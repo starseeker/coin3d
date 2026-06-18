@@ -20,3 +20,19 @@ target_include_directories(test_tools_suite PRIVATE
     ${OBOL_TARGET_INCLUDE_DIRECTORIES}
 )
 add_test(NAME test_tools_suite COMMAND test_tools_suite)
+
+# test_v2_scene_suite: v2 scene/render facade smoke tests
+add_executable(test_v2_scene_suite test_v2_scene_suite.cpp)
+target_link_libraries(test_v2_scene_suite
+    ${PROJECT_NAME}
+    ${OBOL_TARGET_LINK_LIBRARIES}
+    simple_test_utils
+)
+target_include_directories(test_v2_scene_suite PRIVATE
+    ${CMAKE_SOURCE_DIR}/tests
+    ${PROJECT_SOURCE_DIR}/include
+    ${PROJECT_SOURCE_DIR}/include/Inventor/annex
+    ${PROJECT_BINARY_DIR}/include
+    ${OBOL_TARGET_INCLUDE_DIRECTORIES}
+)
+add_test(NAME test_v2_scene_suite COMMAND test_v2_scene_suite)

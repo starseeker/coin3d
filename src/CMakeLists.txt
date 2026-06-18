@@ -55,7 +55,7 @@ set(OBOL_SOURCE misc/CoinTidbits.cpp CACHE INTERNAL "OBOL_SOURCE")
 foreach(_subdir actions base bundles caches details draggers elements
                 engines errors events fields fonts glue io manips misc rendering lists
                 nodes shapenodes projectors sensors shadows threads shaders tools
-                hardcopy nodekits profiler hud)
+                hardcopy nodekits profiler hud modern)
   add_subdirectory(${_subdir})
 endforeach()
 add_subdirectory(doc)
@@ -161,7 +161,7 @@ target_include_directories(${PROJECT_NAME}
     PUBLIC
         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
         $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
-        # obol/ public headers (CadIds, SoCADAssembly, SoCADDetail, DepthPolicy)
+        # Obol/ public headers (v2 scene/render and CAD APIs)
         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
     INTERFACE
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
@@ -323,9 +323,9 @@ else()
           COMPONENT development 
           FILES_MATCHING PATTERN "*.h")
 
-  # Install obol-specific public headers (e.g. SoCAD* interfaces)
-  install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/obol/
-          DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/obol
+  # Install Obol-specific public headers (v2 scene/render and CAD APIs)
+  install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/Obol/
+          DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Obol
           COMPONENT development
           FILES_MATCHING PATTERN "*.h")
 

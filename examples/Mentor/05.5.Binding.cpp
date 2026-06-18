@@ -42,15 +42,10 @@
  */
 
 #include "headless_utils.h"
-#include <Inventor/nodes/SoCoordinate3.h>
-#include <Inventor/nodes/SoIndexedFaceSet.h>
-#include <Inventor/nodes/SoMaterial.h>
-#include <Inventor/nodes/SoMaterialBinding.h>
-#include <Inventor/nodes/SoSeparator.h>
-#include <Inventor/nodes/SoPerspectiveCamera.h>
-#include <Inventor/nodes/SoDirectionalLight.h>
-#include <cmath>
+#include <Obol/Obol.h>
+
 #include <cstdio>
+#include <cstdint>
 
 // Positions of all vertices (stellated dodecahedron)
 static const float vertexPositions[12][3] =
@@ -70,20 +65,20 @@ static const float vertexPositions[12][3] =
 };
 
 // Connectivity information
-static int32_t indices[72] =
+static const int32_t indices[72] =
 {
-   1,  2,  3,  4, 5, SO_END_FACE_INDEX, // top face
-   0,  1,  8,  7, 3, SO_END_FACE_INDEX, // 5 faces about top
-   0,  2,  7,  6, 4, SO_END_FACE_INDEX,
-   0,  3,  6, 10, 5, SO_END_FACE_INDEX,
-   0,  4, 10,  9, 1, SO_END_FACE_INDEX,
-   0,  5,  9,  8, 2, SO_END_FACE_INDEX, 
-    9,  5, 4, 6, 11, SO_END_FACE_INDEX, // 5 faces about bottom
-   10,  4, 3, 7, 11, SO_END_FACE_INDEX,
-    6,  3, 2, 8, 11, SO_END_FACE_INDEX,
-    7,  2, 1, 9, 11, SO_END_FACE_INDEX,
-    8,  1, 5,10, 11, SO_END_FACE_INDEX,
-    6,  7, 8, 9, 10, SO_END_FACE_INDEX, // bottom face
+   1,  2,  3,  4, 5, -1, // top face
+   0,  1,  8,  7, 3, -1, // 5 faces about top
+   0,  2,  7,  6, 4, -1,
+   0,  3,  6, 10, 5, -1,
+   0,  4, 10,  9, 1, -1,
+   0,  5,  9,  8, 2, -1,
+    9,  5, 4, 6, 11, -1, // 5 faces about bottom
+   10,  4, 3, 7, 11, -1,
+    6,  3, 2, 8, 11, -1,
+    7,  2, 1, 9, 11, -1,
+    8,  1, 5,10, 11, -1,
+    6,  7, 8, 9, 10, -1, // bottom face
 };
  
 // Colors for the 12 faces
@@ -94,87 +89,105 @@ static const float colors[12][3] =
    { .7, .7, 0}, {.0, 1.0,  .0}, {0, .7,  .7}, {1.0,  .0,  0}
 };
 
-SoSeparator *makeStellatedDodecahedron(int bindingType)
+namespace {
+
+void addConnectivity(obol::Mesh & mesh)
 {
-    SoSeparator *result = new SoSeparator;
-    result->ref();
-
-    // Set material binding
-    SoMaterialBinding *myBinding = new SoMaterialBinding;
-    switch(bindingType) {
-        case 0: myBinding->value = SoMaterialBinding::PER_FACE; break;
-        case 1: myBinding->value = SoMaterialBinding::PER_VERTEX_INDEXED; break;
-        case 2: myBinding->value = SoMaterialBinding::PER_FACE_INDEXED; break;
-        default: myBinding->value = SoMaterialBinding::PER_FACE; break;
+    uint32_t currentFaceCount = 0;
+    for (int32_t index : indices) {
+        if (index < 0) {
+            if (currentFaceCount > 0) {
+                mesh.faceVertexCounts.push_back(currentFaceCount);
+                currentFaceCount = 0;
+            }
+        } else {
+            mesh.indices.push_back(static_cast<uint32_t>(index));
+            ++currentFaceCount;
+        }
     }
-    result->addChild(myBinding);
+}
 
-    // Define colors
-    SoMaterial *myMaterials = new SoMaterial;
-    myMaterials->diffuseColor.setValues(0, 12, colors);
-    result->addChild(myMaterials);
+void addPalette(std::vector<obol::Color> & palette)
+{
+    for (const auto & color : colors) {
+        palette.push_back({color[0], color[1], color[2], 1.0f});
+    }
+}
 
-    // Define coordinates
-    SoCoordinate3 *myCoords = new SoCoordinate3;
-    myCoords->point.setValues(0, 12, vertexPositions);
-    result->addChild(myCoords);
+obol::Mesh makeStellatedDodecahedron(int bindingType)
+{
+    obol::Mesh mesh;
+    mesh.topology = obol::MeshTopology::Polygons;
 
-    // Define the IndexedFaceSet
-    SoIndexedFaceSet *myFaceSet = new SoIndexedFaceSet;
-    myFaceSet->coordIndex.setValues(0, 72, indices);
-    
-    // For PER_VERTEX_INDEXED, set material indices
+    for (const auto & position : vertexPositions) {
+        mesh.positions.push_back({position[0], position[1], position[2]});
+    }
+    addConnectivity(mesh);
+
     if (bindingType == 1) {
-        for (int i = 0; i < 72; i++) {
-            if (indices[i] != SO_END_FACE_INDEX) {
-                myFaceSet->materialIndex.set1Value(i, indices[i]);
+        addPalette(mesh.vertexColors);
+    } else {
+        addPalette(mesh.faceColors);
+        if (bindingType == 2) {
+            static const uint32_t faceIndices[12] = {
+                11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0
+            };
+            for (uint32_t index : faceIndices) {
+                mesh.faceColorIndices.push_back(index);
             }
         }
     }
-    // For PER_FACE_INDEXED, use a non-sequential mapping so the result
-    // is visually distinct from the PER_FACE case (reversed order here).
-    else if (bindingType == 2) {
-        int32_t faceIndices[12] = {11,10,9,8,7,6,5,4,3,2,1,0};
-        myFaceSet->materialIndex.setValues(0, 12, faceIndices);
-    }
-    
-    result->addChild(myFaceSet);
 
-    result->unrefNoDelete();
-    return result;
+    return mesh;
 }
+
+bool renderBinding(const char * filename, int bindingType)
+{
+    obol::Scene scene;
+    scene.addDirectionalLight(obol::DirectionalLight{});
+    scene.addMesh(makeStellatedDodecahedron(bindingType));
+
+    obol::PerspectiveCamera camera;
+    camera.position = {0.0f, 0.0f, 7.0f};
+    camera.target = {0.0f, 0.0f, 0.0f};
+    camera.verticalFieldOfViewRadians = 0.55f;
+    scene.setCamera(camera);
+
+    obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
+                                        obol::RenderBackendKind::OpenGL2SWRast,
+                                        "headless-context");
+    obol::RenderTarget target;
+    target.width = DEFAULT_WIDTH;
+    target.height = DEFAULT_HEIGHT;
+    target.pixelFormat = obol::PixelFormat::RGB;
+    obol::OffscreenRenderer renderer(backend, target);
+    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
+
+    const obol::FrameResult result = renderer.render(scene);
+    return result.success && renderer.writeRGB(filename);
+}
+
+} // namespace
 
 int main(int argc, char **argv)
 {
-    // Initialize Coin for headless operation
     initCoinHeadless();
 
     const char *baseFilename = (argc > 1) ? argv[1] : "05.5.Binding";
     char filename[256];
 
-    // Test all three binding types
     const char *bindingNames[] = {"per_face", "per_vertex_indexed", "per_face_indexed"};
     
     for (int binding = 0; binding < 3; binding++) {
-        SoSeparator *root = new SoSeparator;
-        root->ref();
-
-        // Add camera and light
-        SoPerspectiveCamera *camera = new SoPerspectiveCamera;
-        root->addChild(camera);
-        root->addChild(new SoDirectionalLight);
-
-        root->addChild(makeStellatedDodecahedron(binding));
-
-        // Setup camera
-        camera->viewAll(root, SbViewportRegion(DEFAULT_WIDTH, DEFAULT_HEIGHT));
-
         snprintf(filename, sizeof(filename), "%s_%s.rgb", baseFilename, bindingNames[binding]);
-        renderToFile(root, filename);
+        if (!renderBinding(filename, binding)) {
+            fprintf(stderr,
+                    "Error: Failed to render Binding view %s with Obol v2 API\n",
+                    bindingNames[binding]);
+            return 1;
+        }
         
-        printf("Rendered binding type %d: %s\n", binding, bindingNames[binding]);
-
-        root->unref();
+        printf("Rendered binding type %d: %s [Obol v2]\n", binding, bindingNames[binding]);
     }
 
     return 0;

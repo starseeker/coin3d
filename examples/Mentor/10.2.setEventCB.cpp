@@ -36,277 +36,168 @@
 
 /*
  * Headless version of Inventor Mentor example 10.2
- * 
+ *
  * Original: setEventCB - RenderArea event callback (Xt-specific)
- * Headless: Demonstrates generic event translation pattern
- * 
- * This example demonstrates:
- * - How toolkits translate native events to SoEvent (toolkit-agnostic pattern)
- * - Application event callbacks that intercept events before scene graph
- * - Mouse event handling (button press/release/drag)
- * - The minimal event interface ANY toolkit must provide
- * 
- * Key insight: The event handling logic in Coin is toolkit-independent.
- * A toolkit must:
- * 1. Capture native events (X11, Win32, etc.)
- * 2. Translate to SoEvent (position, button, state)
- * 3. Either apply to scene graph OR call application callback
- * 4. Trigger redraw if event was handled
- * 
- * Original used XButtonEvent, XMotionEvent - Xt-specific types
- * Mock version shows the GENERIC pattern any toolkit follows
+ * Headless: Demonstrates generic event translation with Obol v2 scene state
  */
 
 #include "headless_utils.h"
-#include "mock_gui_toolkit.h"
-#include <Inventor/Sb.h>
-#include <Inventor/nodes/SoCamera.h>
-#include <Inventor/nodes/SoCoordinate3.h>
-#include <Inventor/nodes/SoDrawStyle.h>
-#include <Inventor/nodes/SoGroup.h>
-#include <Inventor/nodes/SoLightModel.h>
-#include <Inventor/nodes/SoMaterial.h>
-#include <Inventor/nodes/SoPerspectiveCamera.h>
-#include <Inventor/nodes/SoPointSet.h>
-#include <Inventor/nodes/SoSeparator.h>
-#include <Inventor/nodes/SoSphere.h>
-#include <Inventor/nodes/SoTranslation.h>
-#include <Inventor/sensors/SoTimerSensor.h>
-#include <Inventor/events/SoMouseButtonEvent.h>
-#include <Inventor/events/SoLocation2Event.h>
-#include <cstdio>
+#include <Obol/Obol.h>
+
 #include <cmath>
+#include <cstdio>
 
-// Timer sensor for camera rotation
-SoTimerSensor *myTicker;
-#define UPDATE_RATE 1.0/30.0
-#define ROTATION_ANGLE M_PI/60.0
+namespace {
 
-// Camera rotation state
-bool rotating = false;
+constexpr float kPi = 3.14159265358979323846f;
+constexpr float kRotationAngle = kPi / 60.0f;
 
-// Global pointers to the coordinate and point set nodes
-static SoCoordinate3 *g_myCoord = NULL;
-static SoPointSet    *g_myPointSet = NULL;
+enum class Button {
+    Left,
+    Middle,
+    Right
+};
 
-// Project mouse position to 3D point
-void myProjectPoint(MockRenderArea *myRenderArea, 
-   int mousex, int mousey, SbVec3f &intersection)
+struct AppEvent {
+    Button button = Button::Left;
+    bool pressed = true;
+    int x = 0;
+    int y = 0;
+};
+
+struct AppState {
+    obol::Scene scene;
+    obol::PerspectiveCamera camera;
+    obol::PointCloud points;
+    obol::SceneObjectId pointObject = obol::InvalidSceneObjectId;
+    bool rotating = false;
+};
+
+obol::Material material(float r, float g, float b)
 {
-    // Take the x,y position of mouse, and normalize to [0,1].
-    SbVec2s size = myRenderArea->getSize();
-    float x = float(mousex) / size[0];
-    float y = float(mousey) / size[1];
-    
-    // Get the camera and view volume
-    SoGroup *root = (SoGroup *) myRenderArea->getSceneGraph();
-    SoCamera *myCamera = (SoCamera *) root->getChild(0);
-    SbViewVolume myViewVolume;
-    myViewVolume = myCamera->getViewVolume();
-    
-    // Project the mouse point to a line
-    SbVec3f p0, p1;
-    myViewVolume.projectPointToLine(SbVec2f(x,y), p0, p1);
-    
-    // Midpoint of the line intersects a plane thru the origin
-    intersection = (p0 + p1) / 2.0f;
+    obol::Material result;
+    result.baseColor = {r, g, b, 1.0f};
+    return result;
 }
 
-// Add point to the point set
-void myAddPoint(MockRenderArea *myRenderArea, const SbVec3f point)
+obol::Transform translation(float x, float y, float z)
 {
-    g_myCoord->point.set1Value(g_myCoord->point.getNum(), point);
-    g_myPointSet->numPoints.setValue(g_myCoord->point.getNum());
+    obol::Transform result;
+    result.translation = {x, y, z};
+    return result;
 }
 
-// Clear all points
-void myClearPoints(MockRenderArea *myRenderArea)
+obol::Vec3 projectMouseToPlane(const obol::PerspectiveCamera & camera,
+                               int mousex,
+                               int mousey)
 {
-    g_myCoord->point.deleteValues(0); 
-    g_myPointSet->numPoints.setValue(0);
+    const float ndcX =
+        2.0f * static_cast<float>(mousex) / static_cast<float>(DEFAULT_WIDTH) - 1.0f;
+    const float ndcY =
+        1.0f - 2.0f * static_cast<float>(mousey) / static_cast<float>(DEFAULT_HEIGHT);
+    const float distance = camera.position.z;
+    const float halfHeight = std::tan(camera.verticalFieldOfViewRadians * 0.5f) * distance;
+    const float halfWidth =
+        halfHeight * static_cast<float>(DEFAULT_WIDTH) / static_cast<float>(DEFAULT_HEIGHT);
+    return {ndcX * halfWidth, ndcY * halfHeight, 0.0f};
 }
 
-// Timer callback for camera rotation
-void tickerCallback(void *userData, SoSensor *)
+void rotateCamera(AppState & state)
 {
-    SoCamera *myCamera = (SoCamera *) userData;
-    SbRotation rot;
-    SbMatrix mtx;
-    SbVec3f pos;
-    
-    // Adjust the position
-    pos = myCamera->position.getValue();
-    rot = SbRotation(SbVec3f(0,1,0), (float)ROTATION_ANGLE);
-    mtx.setRotate(rot);
-    mtx.multVecMatrix(pos, pos);
-    myCamera->position.setValue(pos);
-    
-    // Adjust the orientation
-    myCamera->orientation.setValue(
-             myCamera->orientation.getValue() * rot);
+    const float c = std::cos(kRotationAngle);
+    const float s = std::sin(kRotationAngle);
+    const obol::Vec3 pos = state.camera.position;
+    state.camera.position = {
+        pos.x * c + pos.z * s,
+        pos.y,
+        -pos.x * s + pos.z * c
+    };
+    state.scene.setCamera(state.camera);
 }
 
-// Application event handler
-// This is the key function - it receives events INSTEAD of the scene graph
-// In original: receives XAnyEvent* from Xt
-// In mock: receives SoEvent* (already translated from native events)
-SbBool myAppEventHandler(void *userData, void *eventPtr)
+bool handleEvent(AppState & state, const AppEvent & event)
 {
-    MockRenderArea *myRenderArea = (MockRenderArea *) userData;
-    const SoEvent *event = (const SoEvent*)eventPtr;
-    SbVec3f vec;
-    SbBool handled = TRUE;
-    
-    // Check event type and handle appropriately
-    if (event->isOfType(SoMouseButtonEvent::getClassTypeId())) {
-        const SoMouseButtonEvent *buttonEvent = (const SoMouseButtonEvent*)event;
-        SbVec2s pos = buttonEvent->getPosition();
-        
-        if (buttonEvent->getState() == SoButtonEvent::DOWN) {
-            // Button press
-            if (buttonEvent->getButton() == SoMouseButtonEvent::BUTTON1) {
-                printf("LEFT button pressed at (%d, %d) - adding point\n", pos[0], pos[1]);
-                myProjectPoint(myRenderArea, pos[0], pos[1], vec);
-                myAddPoint(myRenderArea, vec);
-            } else if (buttonEvent->getButton() == SoMouseButtonEvent::BUTTON2) {
-                printf("MIDDLE button pressed - starting rotation\n");
-                rotating = true;
-                myTicker->schedule();
-            } else if (buttonEvent->getButton() == SoMouseButtonEvent::BUTTON3) {
-                printf("RIGHT button pressed - clearing points\n");
-                myClearPoints(myRenderArea);
-            }
-        } else {
-            // Button release
-            if (buttonEvent->getButton() == SoMouseButtonEvent::BUTTON2) {
-                printf("MIDDLE button released - stopping rotation\n");
-                rotating = false;
-                myTicker->unschedule();
-            }
-        }
-    } else if (event->isOfType(SoLocation2Event::getClassTypeId())) {
-        const SoLocation2Event *motionEvent = (const SoLocation2Event*)event;
-        
-        // Check if button 1 is held during motion (dragging)
-        // Note: In real implementation, would check button state from event
-        // For simulation, we'll handle this in the test sequence
-        // printf("Motion at (%d, %d)\n", pos[0], pos[1]);
-    } else {
-        handled = FALSE;
+    if (event.button == Button::Left && event.pressed) {
+        printf("LEFT button pressed at (%d, %d) - adding point\n", event.x, event.y);
+        state.points.points.push_back(projectMouseToPlane(state.camera, event.x, event.y));
+        state.scene.setObjectPointCloud(state.pointObject, state.points);
+        return true;
     }
-    
-    return handled;
+    if (event.button == Button::Middle) {
+        state.rotating = event.pressed;
+        printf("%s - %s rotation\n",
+               event.pressed ? "MIDDLE button pressed" : "MIDDLE button released",
+               event.pressed ? "starting" : "stopping");
+        return true;
+    }
+    if (event.button == Button::Right && event.pressed) {
+        printf("RIGHT button pressed - clearing points\n");
+        state.points.points.clear();
+        state.scene.setObjectPointCloud(state.pointObject, state.points);
+        return true;
+    }
+    return false;
 }
+
+bool renderScene(obol::OffscreenRenderer & renderer,
+                 obol::Scene & scene,
+                 const char * filename)
+{
+    const obol::FrameResult result = renderer.render(scene);
+    return result.success && renderer.writeRGB(filename);
+}
+
+} // namespace
 
 int main(int argc, char **argv)
 {
     printf("=== Mentor Example 10.2: RenderArea Event Callback ===\n");
     printf("This demonstrates toolkit-agnostic event translation pattern\n");
     printf("\nOriginal used Xt-specific XButtonEvent, XMotionEvent\n");
-    printf("This version shows the GENERIC pattern for any toolkit\n\n");
-    
-    // Initialize Coin
+    printf("This version keeps events application-owned and updates Obol v2 state\n\n");
+
     initCoinHeadless();
-    
-    // Mock toolkit initialization
-    void* mockWindow = mockToolkitInit(argv[0]);
-    if (!mockWindow) {
-        fprintf(stderr, "Failed to initialize mock toolkit\n");
-        return 1;
-    }
 
-    // Create and set up the root node
-    SoSeparator *root = new SoSeparator;
-    root->ref();
+    AppState app;
+    app.camera.position = {0.0f, 0.0f, 4.0f};
+    app.camera.target = {0.0f, 0.0f, 0.0f};
+    app.camera.nearDistance = 1.0f;
+    app.camera.farDistance = 7.0f;
+    app.camera.verticalFieldOfViewRadians = kPi / 3.0f;
+    app.scene.setCamera(app.camera);
 
-    // Add a camera
-    SoPerspectiveCamera *myCamera = new SoPerspectiveCamera;
-    root->addChild(myCamera);  // child 0
-    
-    // Use the base color light model
-    SoLightModel *myLightModel = new SoLightModel;
-    myLightModel->model = SoLightModel::BASE_COLOR;
-    root->addChild(myLightModel);  // child 1
-    
-    // Set up the camera view volume
-    myCamera->position.setValue(0, 0, 4);
-    myCamera->nearDistance.setValue(1.0f);
-    myCamera->farDistance.setValue(7.0f);
-    myCamera->heightAngle.setValue(float(M_PI)/3.0f);
+    obol::PrimitiveOptions sphereOptions;
+    sphereOptions.radius = 1.5f;
+    app.scene.addPrimitive(obol::Primitive::Sphere,
+                           material(0.4f, 0.6f, 0.8f),
+                           translation(0.0f, 0.0f, -2.0f),
+                           sphereOptions);
 
-    // Add a background sphere so the initial scene is not blank.
-    // The sphere is translated behind the projected click points (which land at z≈0)
-    // so that clicked points always appear in front of the sphere.
-    // A sub-separator isolates the sphere's material from the point rendering.
-    SoSeparator *bgSep = new SoSeparator;
-    SoMaterial  *bgMtl = new SoMaterial;
-    bgMtl->diffuseColor.setValue(0.4f, 0.6f, 0.8f);  // steel blue
-    bgSep->addChild(bgMtl);
-    SoTranslation *bgTrans = new SoTranslation;
-    bgTrans->translation.setValue(0.0f, 0.0f, -2.0f);  // behind projected points
-    bgSep->addChild(bgTrans);
-    SoSphere *bgSphere = new SoSphere;
-    bgSphere->radius.setValue(1.5f);
-    bgSep->addChild(bgSphere);
-    root->addChild(bgSep);  // child 2
+    app.points.pointSize = 6.0f;
+    app.pointObject =
+        app.scene.addPointCloud(app.points, material(1.0f, 1.0f, 0.0f));
 
-    // Bright yellow material and larger point size for the point set
-    SoMaterial *pointMtl = new SoMaterial;
-    pointMtl->diffuseColor.setValue(1.0f, 1.0f, 0.0f);  // yellow
-    root->addChild(pointMtl);  // child 3
+    obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
+                                        obol::RenderBackendKind::OpenGL2SWRast,
+                                        "headless-context");
+    obol::RenderTarget target;
+    target.width = DEFAULT_WIDTH;
+    target.height = DEFAULT_HEIGHT;
+    target.pixelFormat = obol::PixelFormat::RGB;
+    obol::OffscreenRenderer renderer(backend, target);
+    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
 
-    SoDrawStyle *pointStyle = new SoDrawStyle;
-    pointStyle->pointSize.setValue(6.0f);
-    root->addChild(pointStyle);  // child 4
-
-    // Add a coordinate and point set
-    SoCoordinate3 *myCoord = new SoCoordinate3;
-    SoPointSet *myPointSet = new SoPointSet;
-    myPointSet->numPoints.setValue(0);  // start with no points rendered
-    g_myCoord    = myCoord;
-    g_myPointSet = myPointSet;
-    root->addChild(myCoord);     // child 5
-    root->addChild(myPointSet);  // child 6
-
-    // Timer sensor for camera rotation
-    myTicker = new SoTimerSensor(tickerCallback, myCamera);
-    myTicker->setInterval(SbTime(UPDATE_RATE));
-
-    // Create a render area
-    MockRenderArea *myRenderArea = new MockRenderArea(800, 600);
-    myRenderArea->setSceneGraph(root);
-    myRenderArea->setTitle("Event Handler Demo");
-
-    // Set event callback - events go to application instead of scene graph
-    // This is the KEY pattern: toolkit sends events to callback instead of scene
     printf("Setting event callback - events will go to app handler\n");
-    myRenderArea->setEventCallback(
-        [](void* userData, void* eventPtr) -> SbBool {
-            return myAppEventHandler(userData, eventPtr);
-        },
-        myRenderArea);
-
-    // Now simulate a sequence of user interactions
-    // In real toolkit, these would come from actual user input
-    
     printf("\n=== Simulating user interactions ===\n\n");
 
     const char *baseFilename = (argc > 1) ? argv[1] : "10.2.setEventCB";
     char filename[512];
 
-    // State 1: Initial empty scene
     printf("--- State 1: Initial empty scene ---\n");
     snprintf(filename, sizeof(filename), "%s_initial.rgb", baseFilename);
-    myRenderArea->render(filename);
-    
-    // Simulate left button clicks to add points
+    if (!renderScene(renderer, app.scene, filename)) return 1;
+
     printf("\n--- Simulating LEFT button clicks to add points ---\n");
-    MockAnyEvent nativeEvent;
-    SoEvent* coinEvent;
-    
-    // Add a spread of 12 points across the view.  Using more points makes the
-    // visual difference between "with points" and "cleared" frames obvious.
-    // Coordinates are chosen to land in front of the background sphere.
     static const int clickCoords[][2] = {
         {400, 300}, {250, 200}, {550, 200}, {250, 400}, {550, 400},
         {150, 300}, {650, 300}, {400, 150}, {400, 450},
@@ -314,57 +205,34 @@ int main(int argc, char **argv)
     };
     static const int numClicks = 12;
 
-    nativeEvent.type   = MockButtonPress;
-    nativeEvent.button = MockButton1;
-
     for (int i = 0; i < numClicks; i++) {
-        nativeEvent.x = clickCoords[i][0];
-        nativeEvent.y = clickCoords[i][1];
-        coinEvent = translateNativeEvent(&nativeEvent, myRenderArea->getViewportRegion());
-        myRenderArea->processEvent(coinEvent);
-        delete coinEvent;
+        handleEvent(app, AppEvent{Button::Left, true, clickCoords[i][0], clickCoords[i][1]});
     }
-    
+
     printf("--- State 2: After adding %d points ---\n", numClicks);
     snprintf(filename, sizeof(filename), "%s_points.rgb", baseFilename);
-    myRenderArea->render(filename);
-    
-    // Simulate middle button press to start rotation
+    if (!renderScene(renderer, app.scene, filename)) return 1;
+
     printf("\n--- Simulating MIDDLE button for rotation ---\n");
-    nativeEvent.button = MockButton2;
-    nativeEvent.x = 400;
-    nativeEvent.y = 300;
-    coinEvent = translateNativeEvent(&nativeEvent, myRenderArea->getViewportRegion());
-    myRenderArea->processEvent(coinEvent);
-    delete coinEvent;
-    
-    // Process timer events to rotate camera
-    printf("Processing timer sensor for rotation...\n");
+    handleEvent(app, AppEvent{Button::Middle, true, 400, 300});
+
+    printf("Processing application timer ticks for rotation...\n");
     for (int i = 0; i < 10; i++) {
-        SoDB::getSensorManager()->processTimerQueue();
+        if (app.rotating) rotateCamera(app);
     }
-    
+
     printf("--- State 3: After camera rotation ---\n");
     snprintf(filename, sizeof(filename), "%s_rotated.rgb", baseFilename);
-    myRenderArea->render(filename);
-    
-    // Release middle button to stop rotation
-    nativeEvent.type = MockButtonRelease;
-    coinEvent = translateNativeEvent(&nativeEvent, myRenderArea->getViewportRegion());
-    myRenderArea->processEvent(coinEvent);
-    delete coinEvent;
-    
-    // Simulate right button to clear
+    if (!renderScene(renderer, app.scene, filename)) return 1;
+
+    handleEvent(app, AppEvent{Button::Middle, false, 400, 300});
+
     printf("\n--- Simulating RIGHT button to clear points ---\n");
-    nativeEvent.type = MockButtonPress;
-    nativeEvent.button = MockButton3;
-    coinEvent = translateNativeEvent(&nativeEvent, myRenderArea->getViewportRegion());
-    myRenderArea->processEvent(coinEvent);
-    delete coinEvent;
-    
+    handleEvent(app, AppEvent{Button::Right, true, 400, 300});
+
     printf("--- State 4: After clearing points ---\n");
     snprintf(filename, sizeof(filename), "%s_cleared.rgb", baseFilename);
-    myRenderArea->render(filename);
+    if (!renderScene(renderer, app.scene, filename)) return 1;
 
     printf("\n=== Summary ===\n");
     printf("Generated 4 images showing event-driven interaction\n");
@@ -372,25 +240,20 @@ int main(int argc, char **argv)
     printf("Event translation is a GENERIC pattern that works with ANY toolkit.\n");
     printf("\nToolkit responsibilities:\n");
     printf("  1. Capture native events (X11 XEvent, Win32 MSG, etc.)\n");
-    printf("  2. Translate to SoEvent (normalize coordinates, map buttons)\n");
-    printf("  3. Send to application callback OR scene graph\n");
+    printf("  2. Translate to app event data (position, button, state)\n");
+    printf("  3. Send to application callback, then update Obol v2 scene state\n");
     printf("  4. Trigger redraw if event was handled\n");
-    printf("\nCoin responsibilities:\n");
-    printf("  - Define SoEvent abstraction (toolkit-independent)\n");
-    printf("  - Process events through SoHandleEventAction\n");
-    printf("  - Handle events in nodes (manipulators, event callbacks)\n");
+    printf("\nObol v2 responsibilities:\n");
+    printf("  - Maintain backend-neutral scene data\n");
+    printf("  - Render updated scene state through the selected backend\n");
+    printf("  - Avoid requiring backend event or node callback types\n");
     printf("\nThis exact pattern works with:\n");
-    printf("  - X11/Xt (original): XEvent -> SoEvent\n");
-    printf("  - Qt: QMouseEvent -> SoEvent\n");
-    printf("  - FLTK: Fl_Event -> SoEvent\n");
-    printf("  - Win32: MSG -> SoEvent\n");
-    printf("  - Web: JavaScript Event -> SoEvent\n");
-    printf("  - Custom/mock: Generic struct -> SoEvent\n");
-
-    // Cleanup
-    delete myTicker;
-    delete myRenderArea;
-    root->unref();
+    printf("  - X11/Xt: XEvent -> app event\n");
+    printf("  - Qt: QMouseEvent -> app event\n");
+    printf("  - FLTK: Fl_Event -> app event\n");
+    printf("  - Win32: MSG -> app event\n");
+    printf("  - Web: JavaScript Event -> app event\n");
+    printf("  - Custom/mock: Generic struct -> app event\n");
 
     return 0;
 }

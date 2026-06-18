@@ -1,160 +1,126 @@
 /*
+ * Headless version of Inventor Mentor example 14.1
  *
- *  Copyright (C) 2000 Silicon Graphics, Inc.  All Rights Reserved.
- *
- *  This library is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU Lesser General Public
- *  License as published by the Free Software Foundation; either
- *  version 2.1 of the License, or (at your option) any later version.
- *
- *  This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  Lesser General Public License for more details.
- *
- *  Further, this software is distributed without any warranty that it is
- *  free of the rightful claim of any third person regarding infringement
- *  or the like.  Any license provided herein, whether implied or
- *  otherwise, applies only to this software file.  Patent licenses, if
- *  any, provided herein do not apply to combinations of this program with
- *  other software, or any other product whatsoever.
- *
- *  You should have received a copy of the GNU Lesser General Public
- *  License along with this library; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- *  Contact information: Silicon Graphics, Inc., 1600 Amphitheatre Pkwy,
- *  Mountain View, CA  94043, or:
- *
- *  http://www.sgi.com
- *
- *  For further information regarding this notice, see:
- *
- *  http://oss.sgi.com/projects/GenInfo/NoticeExplan/
- *
- */
-
-/*
- *  Headless version of Inventor Mentor example 14.1
- *
- *  Converted from interactive viewer to headless rendering.
- *  Uses SoShapeKits to create two 3-D words, "NICE" and "HAPPY"
- *  Uses a calculator engine and an elapsed time engine to make
- *  the words change color and fly about.
- *  Renders animation frames at different time values.
+ * Original: ShapeKits plus elapsed time and calculator engines animate 3D text.
+ * Headless: application-owned kit state drives v2 text transforms/materials.
  */
 
 #include "headless_utils.h"
-#include <Inventor/engines/SoCalculator.h>
-#include <Inventor/engines/SoElapsedTime.h>
-#include <Inventor/nodekits/SoShapeKit.h>
-#include <Inventor/nodes/SoMaterial.h>
-#include <Inventor/nodes/SoSeparator.h>
-#include <Inventor/nodes/SoText3.h>
-#include <Inventor/nodes/SoTransform.h>
-#include <Inventor/nodes/SoPerspectiveCamera.h>
-#include <Inventor/nodes/SoDirectionalLight.h>
-#include <Inventor/sensors/SoSensorManager.h>
+#include <Obol/Obol.h>
+
+#include <cmath>
 #include <cstdio>
+#include <string>
 
-int
-main(int, char **)
+namespace {
+
+struct WordKit {
+    obol::SceneObjectId text = obol::InvalidSceneObjectId;
+    obol::Transform transform;
+    obol::Material material;
+    float phase = 0.0f;
+};
+
+obol::Material material(float r, float g, float b)
 {
-   initCoinHeadless();
+    obol::Material result;
+    result.baseColor = {r, g, b, 1.0f};
+    result.specular = {0.35f, 0.35f, 0.35f, 1.0f};
+    result.shininess = 0.45f;
+    return result;
+}
 
-   SoSeparator *root = new SoSeparator;
-   root->ref();
+WordKit addWord(obol::Scene & scene, const char * string, float phase)
+{
+    obol::Text3D text;
+    text.text = string;
+    text.fontSize = 2.0f;
+    text.parts = static_cast<uint32_t>(obol::Text3DParts::All);
 
-   // Add camera and light for headless rendering
-   SoPerspectiveCamera *camera = new SoPerspectiveCamera;
-   camera->position.setValue(0, 0, 15);
-   camera->orientation.setValue(SbRotation(SbVec3f(0, 1, 0), 0));
-   root->addChild(camera);
+    WordKit kit;
+    kit.phase = phase;
+    kit.material = material(0.8f, 0.8f, 0.2f);
+    kit.text = scene.addText3D(text, kit.material, kit.transform);
+    return kit;
+}
 
-   SoDirectionalLight *light = new SoDirectionalLight;
-   root->addChild(light);
+void evaluateWord(obol::Scene & scene, WordKit & kit, float time)
+{
+    const float ta = std::cos(2.0f * time + kit.phase);
+    const float tb = std::sin(2.0f * time + kit.phase);
 
-   // Create shape kits with the words "HAPPY" and "NICE"
-   SoShapeKit *happyKit = new SoShapeKit;
-   root->addChild(happyKit);
-   happyKit->setPart("shape", new SoText3);
-   happyKit->set("shape { parts ALL string \"HAPPY\"}");
-   happyKit->set("font { size 2}");
+    kit.transform.translation = {
+        3.0f * ta * ta * ta,
+        3.0f * tb * tb * tb,
+        0.0f
+    };
+    kit.transform.scale = {
+        std::fabs(ta) + 0.1f,
+        std::fabs(tb) * 0.5f + 0.1f,
+        1.0f
+    };
+    kit.material.baseColor = {
+        std::fabs(ta),
+        std::fabs(tb),
+        0.5f,
+        1.0f
+    };
 
-   SoShapeKit *niceKit = new SoShapeKit;
-   root->addChild(niceKit);
-   niceKit->setPart("shape", new SoText3);
-   niceKit->set("shape { parts ALL string \"NICE\"}");
-   niceKit->set("font { size 2}");
+    scene.setObjectTransform(kit.text, kit.transform);
+    scene.setObjectMaterial(kit.text, kit.material);
+}
 
-   // Create the Elapsed Time engine
-   SoElapsedTime *myTimer = new SoElapsedTime;
-   myTimer->ref();
+bool renderScene(obol::OffscreenRenderer & renderer,
+                 obol::Scene & scene,
+                 const char * filename)
+{
+    const obol::FrameResult result = renderer.render(scene);
+    return result.success && renderer.writeRGB(filename);
+}
 
-   // Create two calculator - one for HAPPY, one for NICE.
-   SoCalculator *happyCalc = new SoCalculator;
-   happyCalc->ref();
-   happyCalc->a.connectFrom(&myTimer->timeOut);
-   happyCalc->expression = "ta=cos(2*a); tb=sin(2*a); \
-     oA = vec3f(3*pow(ta,3),3*pow(tb,3),1); \
-     oB = vec3f(fabs(ta)+.1,fabs(tb)/2+.1,1); \
-     oC = vec3f(fabs(ta),fabs(tb),.5)";
+} // namespace
 
-   // The second calculator uses different arguments to
-   // sin() and cos(), so it moves out of phase.
-   SoCalculator *niceCalc = new SoCalculator;
-   niceCalc->ref();
-   niceCalc->a.connectFrom(&myTimer->timeOut);
-   niceCalc->expression = "ta=cos(2*a+2); tb=sin(2*a+2); \
-     oA = vec3f(3*pow(ta,3),3*pow(tb,3),1); \
-     oB = vec3f(fabs(ta)+.1,fabs(tb)/2+.1,1); \
-     oC = vec3f(fabs(ta),fabs(tb),.5)";
+int main(int argc, char **argv)
+{
+    initCoinHeadless();
 
-   // Connect the transforms from the calculators...
-   SoTransform *happyXf
-      = (SoTransform *) happyKit->getPart("transform",TRUE);
-   happyXf->translation.connectFrom(&happyCalc->oA);
-   happyXf->scaleFactor.connectFrom(&happyCalc->oB);
-   SoTransform *niceXf
-      = (SoTransform *) niceKit->getPart("transform",TRUE);
-   niceXf->translation.connectFrom(&niceCalc->oA);
-   niceXf->scaleFactor.connectFrom(&niceCalc->oB);
+    obol::Scene scene;
+    obol::PerspectiveCamera camera;
+    camera.position = {0.0f, 0.0f, 15.0f};
+    camera.target = {0.0f, 0.0f, 0.0f};
+    camera.verticalFieldOfViewRadians = 0.6f;
+    scene.setCamera(camera);
+    scene.addDirectionalLight(obol::DirectionalLight{});
 
-   // Connect the materials from the calculators...
-   SoMaterial *happyMtl
-      = (SoMaterial *) happyKit->getPart("material",TRUE);
-   happyMtl->diffuseColor.connectFrom(&happyCalc->oC);
-   SoMaterial *niceMtl
-      = (SoMaterial *) niceKit->getPart("material",TRUE);
-   niceMtl->diffuseColor.connectFrom(&niceCalc->oC);
+    WordKit happy = addWord(scene, "HAPPY", 0.0f);
+    WordKit nice = addWord(scene, "NICE", 2.0f);
 
-   // Render animation sequence at different time values
-   char filename[64];
-   SbViewportRegion viewport(DEFAULT_WIDTH, DEFAULT_HEIGHT);
-   
-   printf("Rendering Frolicking Words animation sequence...\n");
-   
-   // Render frames at various times to capture the animation
-   for (int frame = 0; frame < 20; frame++) {
-      float time = frame * 0.4f;  // 0.4 second intervals
-      
-      // Set the time explicitly
-      myTimer->timeIn.setValue(SbTime(time));
-      
-      // Process the sensor queue to let engines update
-      SoDB::getSensorManager()->processTimerQueue();
-      SoDB::getSensorManager()->processDelayQueue(TRUE);
-      
-      sprintf(filename, "output/14.1.FrolickingWords_%02d.rgb", frame);
-      renderToFile(root, filename, DEFAULT_WIDTH, DEFAULT_HEIGHT);
-   }
-   
-   printf("Done! Rendered 20 animation frames.\n");
+    obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
+                                        obol::RenderBackendKind::OpenGL2SWRast,
+                                        "headless-context");
+    obol::RenderTarget target;
+    target.width = DEFAULT_WIDTH;
+    target.height = DEFAULT_HEIGHT;
+    target.pixelFormat = obol::PixelFormat::RGB;
+    obol::OffscreenRenderer renderer(backend, target);
+    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
 
-   myTimer->unref();
-   happyCalc->unref();
-   niceCalc->unref();
-   root->unref();
+    const char *baseFilename = (argc > 1) ? argv[1] : "14.1.FrolickingWords";
+    char filename[512];
 
-   return 0;
+    printf("Rendering Frolicking Words animation sequence [Obol v2]...\n");
+    for (int frame = 0; frame < 20; frame++) {
+        const float time = static_cast<float>(frame) * 0.4f;
+        evaluateWord(scene, happy, time);
+        evaluateWord(scene, nice, time);
+
+        snprintf(filename, sizeof(filename), "%s_frame%02d.rgb", baseFilename, frame);
+        if (!renderScene(renderer, scene, filename)) return 1;
+    }
+
+    const std::string primaryFilename = std::string(baseFilename) + ".rgb";
+    if (!renderScene(renderer, scene, primaryFilename.c_str())) return 1;
+
+    printf("Done! Rendered 20 animation frames.\n");
+    return 0;
 }

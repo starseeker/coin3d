@@ -1,132 +1,110 @@
 /*
- *
- *  Copyright (C) 2000 Silicon Graphics, Inc.  All Rights Reserved.
- *
- *  This library is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU Lesser General Public
- *  License as published by the Free Software Foundation; either
- *  version 2.1 of the License, or (at your option) any later version.
- *
- *  This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  Lesser General Public License for more details.
- *
- *  Further, this software is distributed without any warranty that it is
- *  free of the rightful claim of any third person regarding infringement
- *  or the like.  Any license provided herein, whether implied or
- *  otherwise, applies only to this software file.  Patent licenses, if
- *  any, provided herein do not apply to combinations of this program with
- *  other software, or any other product whatsoever.
- *
- *  You should have received a copy of the GNU Lesser General Public
- *  License along with this library; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- *  Contact information: Silicon Graphics, Inc., 1600 Amphitheatre Pkwy,
- *  Mountain View, CA  94043, or:
- *
- *  http://www.sgi.com
- *
- *  For further information regarding this notice, see:
- *
- *  http://oss.sgi.com/projects/GenInfo/NoticeExplan/
- *
- */
-
-/*
  * Headless version of Inventor Mentor example 15.1
- * 
- * Original: ConeRadius - Uses SoTranslate1Dragger to control cone bottomRadius
- * Headless: Demonstrates dragger control of geometry via engine connections
- * 
- * The dragger's translation field connects to an SoDecomposeVec3f engine,
- * which extracts the x component and feeds it to the cone's bottomRadius.
- * In headless mode, we programmatically set the dragger position and render
- * the results to show the cone responding to the dragger's value.
+ *
+ * Original: Translate1Dragger drives a cone radius through an engine.
+ * Headless: application-owned drag value updates v2 primitive options by ID.
  */
 
 #include "headless_utils.h"
-#include <Inventor/SoDB.h>
-#include <Inventor/engines/SoCompose.h>
-#include <Inventor/nodes/SoCone.h>
-#include <Inventor/nodes/SoSeparator.h>
-#include <Inventor/nodes/SoTransform.h>
-#include <Inventor/nodes/SoPerspectiveCamera.h>
-#include <Inventor/nodes/SoDirectionalLight.h>
-#include <Inventor/draggers/SoTranslate1Dragger.h>
+#include <Obol/Obol.h>
+
 #include <cstdio>
+
+namespace {
+
+obol::Material material(float r, float g, float b)
+{
+    obol::Material result;
+    result.baseColor = {r, g, b, 1.0f};
+    result.specular = {0.25f, 0.25f, 0.25f, 1.0f};
+    result.shininess = 0.35f;
+    return result;
+}
+
+obol::Transform transform(float x, float y, float z)
+{
+    obol::Transform xf;
+    xf.translation = {x, y, z};
+    return xf;
+}
+
+bool renderScene(obol::OffscreenRenderer & renderer,
+                 obol::Scene & scene,
+                 const char * filename)
+{
+    const obol::FrameResult result = renderer.render(scene);
+    return result.success && renderer.writeRGB(filename);
+}
+
+} // namespace
 
 int main(int argc, char **argv)
 {
     initCoinHeadless();
 
-    SoSeparator *root = new SoSeparator;
-    root->ref();
+    obol::Scene scene;
+    obol::PerspectiveCamera camera;
+    camera.position = {0.0f, 3.0f, 9.0f};
+    camera.target = {0.0f, 1.6f, 0.0f};
+    camera.verticalFieldOfViewRadians = 0.6f;
+    scene.setCamera(camera);
+    scene.addDirectionalLight(obol::DirectionalLight{});
 
-    // Add camera and light
-    SoPerspectiveCamera *camera = new SoPerspectiveCamera;
-    root->addChild(camera);
-    root->addChild(new SoDirectionalLight);
+    obol::PrimitiveOptions coneOptions;
+    coneOptions.radius = 1.0f;
+    coneOptions.height = 3.0f;
+    const obol::SceneObjectId cone =
+        scene.addPrimitive(obol::Primitive::Cone,
+                           material(0.85f, 0.55f, 0.2f),
+                           transform(0.0f, 2.2f, 0.0f),
+                           coneOptions);
 
-    // Create myDragger with an initial translation of (1,0,0)
-    SoTranslate1Dragger *myDragger = new SoTranslate1Dragger;
-    root->addChild(myDragger);
-    myDragger->translation.setValue(1, 0, 0);
+    obol::PrimitiveOptions markerOptions;
+    markerOptions.width = 0.25f;
+    markerOptions.height = 0.25f;
+    markerOptions.depth = 0.25f;
+    const obol::SceneObjectId dragger =
+        scene.addPrimitive(obol::Primitive::Cube,
+                           material(0.2f, 0.7f, 1.0f),
+                           transform(1.0f, 0.0f, 0.0f),
+                           markerOptions);
 
-    // Place an SoCone above myDragger
-    SoTransform *myTransform = new SoTransform;
-    SoCone *myCone = new SoCone;
-    root->addChild(myTransform);
-    root->addChild(myCone);
-    myTransform->translation.setValue(0, 3, 0);
+    obol::Polyline axis;
+    axis.lineWidth = 2.0f;
+    axis.points = {{0.0f, 0.0f, 0.0f}, {2.8f, 0.0f, 0.0f}};
+    scene.addPolyline(axis, material(0.8f, 0.8f, 0.8f));
 
-    // SoDecomposeVec3f engine extracts myDragger's x-component
-    // The result is connected to myCone's bottomRadius.
-    SoDecomposeVec3f *myEngine = new SoDecomposeVec3f;
-    myEngine->ref();
-    myEngine->vector.connectFrom(&myDragger->translation);
-    myCone->bottomRadius.connectFrom(&myEngine->x);
-
-    // Setup camera to view the scene
-    SbViewportRegion viewport(DEFAULT_WIDTH, DEFAULT_HEIGHT);
-    camera->viewAll(root, viewport);
+    obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
+                                        obol::RenderBackendKind::OpenGL2SWRast,
+                                        "headless-context");
+    obol::RenderTarget target;
+    target.width = DEFAULT_WIDTH;
+    target.height = DEFAULT_HEIGHT;
+    target.pixelFormat = obol::PixelFormat::RGB;
+    obol::OffscreenRenderer renderer(backend, target);
+    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
 
     const char *baseFilename = (argc > 1) ? argv[1] : "15.1.ConeRadius";
-    char filename[256];
+    char filename[512];
+    const float positions[] = {0.5f, 1.0f, 1.5f, 2.0f, 2.5f};
 
-    int frameNum = 0;
+    printf("=== Dragger Controls Cone Radius via Obol v2 State ===\n");
+    for (int i = 0; i < 5; i++) {
+        const float radius = positions[i];
+        coneOptions.radius = radius;
+        scene.setObjectPrimitiveOptions(cone, coneOptions);
+        scene.setObjectTransform(dragger, transform(radius, 0.0f, 0.0f));
 
-    // Test different dragger positions to show cone radius changing
-    float testPositions[] = {0.5f, 1.0f, 1.5f, 2.0f, 2.5f};
-    int numPositions = sizeof(testPositions) / sizeof(testPositions[0]);
-
-    printf("=== Dragger Controls Cone Radius via Engine ===\n");
-    printf("Demonstrating SoTranslate1Dragger connected to cone bottomRadius\n\n");
-
-    for (int i = 0; i < numPositions; i++) {
-        float xPos = testPositions[i];
-        
-        // Set dragger position programmatically (simulates user dragging)
-        myDragger->translation.setValue(xPos, 0, 0);
-        
-        printf("Frame %d: Dragger X = %.1f, Cone bottomRadius = %.1f\n",
-               frameNum, xPos, myCone->bottomRadius.getValue());
-        
+        printf("Frame %d: dragger.x = %.1f, cone radius = %.1f\n",
+               i, radius, radius);
         snprintf(filename, sizeof(filename), "%s_frame%02d_radius%.1f.rgb",
-                 baseFilename, frameNum, xPos);
-        renderToFile(root, filename);
-        frameNum++;
+                 baseFilename, i, radius);
+        if (!renderScene(renderer, scene, filename)) return 1;
     }
 
-    printf("\n=== Demonstrating Engine Connection ===\n");
-    printf("The dragger's translation.x automatically updates cone->bottomRadius\n");
-    printf("This shows how draggers can control scene parameters via engines.\n");
-    printf("In interactive mode, the user would drag the manipulator handle.\n");
-    printf("Rendered %d frames showing different cone radii\n", frameNum);
+    snprintf(filename, sizeof(filename), "%s.rgb", baseFilename);
+    if (!renderScene(renderer, scene, filename)) return 1;
 
-    myEngine->unref();
-    root->unref();
-
+    printf("Rendered 5 frames showing dragger-driven primitive options.\n");
     return 0;
 }

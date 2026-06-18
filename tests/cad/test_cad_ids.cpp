@@ -15,7 +15,7 @@
  */
 
 #include "../test_utils.h"
-#include <obol/cad/CadIds.h>
+#include <Obol/cad/CadIds.h>
 
 #include <unordered_map>
 #include <string>

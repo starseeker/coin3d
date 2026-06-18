@@ -42,15 +42,8 @@
  */
 
 #include "headless_utils.h"
-#include <Inventor/nodes/SoCoordinate3.h>
-#include <Inventor/nodes/SoFaceSet.h>
-#include <Inventor/nodes/SoMaterial.h>
-#include <Inventor/nodes/SoNormal.h>
-#include <Inventor/nodes/SoNormalBinding.h>
-#include <Inventor/nodes/SoSeparator.h>
-#include <Inventor/nodes/SoPerspectiveCamera.h>
-#include <Inventor/nodes/SoDirectionalLight.h>
-#include <cmath>
+#include <Obol/Obol.h>
+
 #include <cstdio>
 
 // Eight polygons. The first four are triangles, the second four are quadrilaterals.
@@ -70,7 +63,7 @@ static const float vertices[28][3] =
 };
 
 // Number of vertices in each polygon
-static int32_t numvertices[8] = {3, 3, 3, 3, 4, 4, 4, 4};
+static uint32_t numvertices[8] = {3, 3, 3, 3, 4, 4, 4, 4};
 
 // Normals for each polygon (recalculated for the scaled vertex positions)
 static const float norms[8][3] =
@@ -82,84 +75,93 @@ static const float norms[8][3] =
    {0, .1466f, -.9892f}, { .9892f, .1466f, 0},//rear, right quads
 };
 
-SoSeparator *makeObeliskFaceSet()
+namespace {
+
+obol::Mesh makeObeliskMesh()
 {
-    SoSeparator *obelisk = new SoSeparator();
-    obelisk->ref();
-
-    // Define the normals
-    SoNormal *myNormals = new SoNormal;
-    myNormals->vector.setValues(0, 8, norms);
-    obelisk->addChild(myNormals);
-    
-    SoNormalBinding *myNormalBinding = new SoNormalBinding;
-    myNormalBinding->value = SoNormalBinding::PER_FACE;
-    obelisk->addChild(myNormalBinding);
-
-    // Define material for obelisk (warm sandstone tone for good contrast)
-    SoMaterial *myMaterial = new SoMaterial;
-    myMaterial->diffuseColor.setValue(.75f, .60f, .35f);
-    obelisk->addChild(myMaterial);
-
-    // Define coordinates for vertices
-    SoCoordinate3 *myCoords = new SoCoordinate3;
-    myCoords->point.setValues(0, 28, vertices);
-    obelisk->addChild(myCoords);
-
-    // Define the FaceSet
-    SoFaceSet *myFaceSet = new SoFaceSet;
-    myFaceSet->numVertices.setValues(0, 8, numvertices);
-    obelisk->addChild(myFaceSet);
-
-    obelisk->unrefNoDelete();
-    return obelisk;
+    obol::Mesh mesh;
+    mesh.topology = obol::MeshTopology::Polygons;
+    for (const auto & vertex : vertices) {
+        mesh.positions.push_back({vertex[0], vertex[1], vertex[2]});
+        mesh.indices.push_back(static_cast<uint32_t>(mesh.indices.size()));
+    }
+    for (uint32_t count : numvertices) {
+        mesh.faceVertexCounts.push_back(count);
+    }
+    for (const auto & normal : norms) {
+        mesh.faceNormals.push_back({normal[0], normal[1], normal[2]});
+    }
+    return mesh;
 }
+
+obol::Material sandstoneMaterial()
+{
+    obol::Material material;
+    material.baseColor = {0.75f, 0.60f, 0.35f, 1.0f};
+    return material;
+}
+
+bool renderView(obol::OffscreenRenderer & renderer,
+                obol::Scene & scene,
+                const char * filename,
+                const obol::Vec3 & position)
+{
+    obol::PerspectiveCamera camera;
+    camera.position = position;
+    camera.target = {0.0f, 0.0f, 0.0f};
+    camera.verticalFieldOfViewRadians = 0.62f;
+    scene.setCamera(camera);
+    const obol::FrameResult result = renderer.render(scene);
+    return result.success && renderer.writeRGB(filename);
+}
+
+} // namespace
 
 int main(int argc, char **argv)
 {
-    // Initialize Coin for headless operation
     initCoinHeadless();
 
-    SoSeparator *root = new SoSeparator;
-    root->ref();
+    obol::Scene scene;
+    obol::DirectionalLight keyLight;
+    keyLight.direction = {-1.0f, -1.0f, -1.0f};
+    scene.addDirectionalLight(keyLight);
+    obol::DirectionalLight fillLight;
+    fillLight.direction = {1.0f, 0.5f, 1.0f};
+    fillLight.intensity = 0.4f;
+    scene.addDirectionalLight(fillLight);
+    scene.addMesh(makeObeliskMesh(), sandstoneMaterial());
 
-    // Add camera and two lights (key + fill) so no face is completely black
-    SoPerspectiveCamera *camera = new SoPerspectiveCamera;
-    root->addChild(camera);
-    SoDirectionalLight *keyLight = new SoDirectionalLight;
-    keyLight->direction.setValue(-1, -1, -1);
-    root->addChild(keyLight);
-    SoDirectionalLight *fillLight = new SoDirectionalLight;
-    fillLight->direction.setValue(1, 0.5, 1);
-    fillLight->intensity = 0.4f;
-    root->addChild(fillLight);
-
-    root->addChild(makeObeliskFaceSet());
-
-    // Setup camera
-    camera->viewAll(root, SbViewportRegion(DEFAULT_WIDTH, DEFAULT_HEIGHT));
+    obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
+                                        obol::RenderBackendKind::OpenGL2SWRast,
+                                        "headless-context");
+    obol::RenderTarget target;
+    target.width = DEFAULT_WIDTH;
+    target.height = DEFAULT_HEIGHT;
+    target.pixelFormat = obol::PixelFormat::RGB;
+    obol::OffscreenRenderer renderer(backend, target);
+    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
 
     const char *baseFilename = (argc > 1) ? argv[1] : "05.1.FaceSet";
     char filename[256];
 
-    // Front view – slight elevation so the apex is visible
-    camera->viewAll(root, SbViewportRegion(DEFAULT_WIDTH, DEFAULT_HEIGHT));
-    rotateCamera(camera, 0, M_PI / 8);
     snprintf(filename, sizeof(filename), "%s_front.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderView(renderer, scene, filename, {0.0f, 5.0f, 26.0f})) {
+        fprintf(stderr, "Error: Failed to render front FaceSet view with Obol v2 API\n");
+        return 1;
+    }
 
-    // Side view – 3/4 angle from the left with elevation
-    camera->viewAll(root, SbViewportRegion(DEFAULT_WIDTH, DEFAULT_HEIGHT));
-    rotateCamera(camera, M_PI / 3, M_PI / 8);
     snprintf(filename, sizeof(filename), "%s_side.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderView(renderer, scene, filename, {-22.0f, 5.0f, 13.0f})) {
+        fprintf(stderr, "Error: Failed to render side FaceSet view with Obol v2 API\n");
+        return 1;
+    }
 
-    // Angled view – isometric-like vantage from above-left
-    camera->viewAll(root, SbViewportRegion(DEFAULT_WIDTH, DEFAULT_HEIGHT));
-    rotateCamera(camera, M_PI / 4, M_PI / 5);
     snprintf(filename, sizeof(filename), "%s_angle.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderView(renderer, scene, filename, {-18.0f, 9.0f, 18.0f})) {
+        fprintf(stderr, "Error: Failed to render angled FaceSet view with Obol v2 API\n");
+        return 1;
+    }
 
-    root->unref();
+    printf("Rendered obelisk FaceSet views [Obol v2]\n");
     return 0;
 }

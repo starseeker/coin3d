@@ -38,103 +38,107 @@
  * Headless version of Inventor Mentor example 4.1
  * 
  * Original: Cameras - demonstrates different camera types with blinker
- * Headless: Renders scene from three different camera perspectives
+ * Headless: Renders scene from three different camera projections
  */
 
 #include "headless_utils.h"
-#include <Inventor/nodes/SoDirectionalLight.h>
-#include <Inventor/nodes/SoMaterial.h>
-#include <Inventor/nodes/SoOrthographicCamera.h>
-#include <Inventor/nodes/SoPerspectiveCamera.h>
-#include <Inventor/nodes/SoSeparator.h>
-#include <Inventor/nodes/SoCube.h>
-#include <Inventor/nodes/SoCone.h>
-#include <Inventor/nodes/SoSphere.h>
-#include <Inventor/nodes/SoTransform.h>
+#include <Obol/Obol.h>
+
 #include <cstdio>
+
+namespace {
+
+obol::Material material(float r, float g, float b)
+{
+    obol::Material m;
+    m.baseColor = {r, g, b, 1.0f};
+    return m;
+}
+
+obol::Transform translation(float x, float y, float z)
+{
+    obol::Transform t;
+    t.translation = {x, y, z};
+    return t;
+}
+
+obol::Scene makeScene()
+{
+    obol::Scene scene;
+    scene.addDirectionalLight(obol::DirectionalLight{});
+
+    scene.addPrimitive(obol::Primitive::Cone,
+                       material(0.85f, 0.15f, 0.10f),
+                       translation(-2.5f, 0.0f, 1.0f));
+    scene.addPrimitive(obol::Primitive::Sphere,
+                       material(0.15f, 0.70f, 0.20f));
+    scene.addPrimitive(obol::Primitive::Cube,
+                       material(0.15f, 0.30f, 0.85f),
+                       translation(2.5f, 0.0f, -1.0f));
+    return scene;
+}
+
+bool renderScene(obol::OffscreenRenderer & renderer,
+                 obol::Scene & scene,
+                 const char * filename)
+{
+    const obol::FrameResult result = renderer.render(scene);
+    return result.success && renderer.writeRGB(filename);
+}
+
+} // namespace
 
 int main(int argc, char **argv)
 {
-    // Initialize Coin for headless operation
     initCoinHeadless();
 
-    SoSeparator *root = new SoSeparator;
-    root->ref();
-
-    // Create a light
-    root->addChild(new SoDirectionalLight);
-
-    // Create a scene with three distinct 3D shapes at different depths.
-    // Depth variation makes the perspective vs. orthographic difference obvious.
-
-    // Red cone – left, slightly in front
-    SoSeparator *coneSep = new SoSeparator;
-    SoMaterial *coneMat = new SoMaterial;
-    coneMat->diffuseColor.setValue(0.85f, 0.15f, 0.10f);
-    coneSep->addChild(coneMat);
-    SoTransform *coneXf = new SoTransform;
-    coneXf->translation.setValue(-2.5f, 0.0f, 1.0f);
-    coneSep->addChild(coneXf);
-    coneSep->addChild(new SoCone);
-    root->addChild(coneSep);
-
-    // Green sphere – centre
-    SoSeparator *sphereSep = new SoSeparator;
-    SoMaterial *sphereMat = new SoMaterial;
-    sphereMat->diffuseColor.setValue(0.15f, 0.70f, 0.20f);
-    sphereSep->addChild(sphereMat);
-    sphereSep->addChild(new SoSphere);
-    root->addChild(sphereSep);
-
-    // Blue cube – right, slightly behind
-    SoSeparator *cubeSep = new SoSeparator;
-    SoMaterial *cubeMat = new SoMaterial;
-    cubeMat->diffuseColor.setValue(0.15f, 0.30f, 0.85f);
-    cubeSep->addChild(cubeMat);
-    SoTransform *cubeXf = new SoTransform;
-    cubeXf->translation.setValue(2.5f, 0.0f, -1.0f);
-    cubeSep->addChild(cubeXf);
-    cubeSep->addChild(new SoCube);
-    root->addChild(cubeSep);
-
-    // Create three cameras
-    SoOrthographicCamera *orthoViewAll = new SoOrthographicCamera;
-    SoPerspectiveCamera *perspViewAll = new SoPerspectiveCamera;
-    SoPerspectiveCamera *perspOffCenter = new SoPerspectiveCamera;
-
-    // Setup viewport
-    SbViewportRegion myRegion(DEFAULT_WIDTH, DEFAULT_HEIGHT);
+    obol::Scene scene = makeScene();
+    obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
+                                        obol::RenderBackendKind::OpenGL2SWRast,
+                                        "headless-context");
+    obol::RenderTarget target;
+    target.width = DEFAULT_WIDTH;
+    target.height = DEFAULT_HEIGHT;
+    target.pixelFormat = obol::PixelFormat::RGB;
+    obol::OffscreenRenderer renderer(backend, target);
+    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
 
     const char *baseFilename = (argc > 1) ? argv[1] : "04.1.Cameras";
     char filename[256];
 
-    // Render from orthographic camera
-    root->insertChild(orthoViewAll, 0);
-    orthoViewAll->viewAll(root, myRegion);
+    obol::OrthographicCamera orthoCamera;
+    orthoCamera.position = {0.0f, 0.0f, 10.0f};
+    orthoCamera.target = {0.0f, 0.0f, 0.0f};
+    orthoCamera.height = 6.5f;
+    scene.setCamera(orthoCamera);
     snprintf(filename, sizeof(filename), "%s_orthographic.rgb", baseFilename);
-    renderToFile(root, filename);
-    root->removeChild(0);
+    if (!renderScene(renderer, scene, filename)) {
+        fprintf(stderr, "Error: Failed to render orthographic camera view with Obol v2 API\n");
+        return 1;
+    }
 
-    // Render from perspective camera (view all)
-    root->insertChild(perspViewAll, 0);
-    perspViewAll->viewAll(root, myRegion);
+    obol::PerspectiveCamera perspectiveCamera;
+    perspectiveCamera.position = {0.0f, 0.0f, 10.0f};
+    perspectiveCamera.target = {0.0f, 0.0f, 0.0f};
+    perspectiveCamera.verticalFieldOfViewRadians = 0.65f;
+    scene.setCamera(perspectiveCamera);
     snprintf(filename, sizeof(filename), "%s_perspective.rgb", baseFilename);
-    renderToFile(root, filename);
-    root->removeChild(0);
+    if (!renderScene(renderer, scene, filename)) {
+        fprintf(stderr, "Error: Failed to render perspective camera view with Obol v2 API\n");
+        return 1;
+    }
 
-    // Render from off-center perspective camera
-    root->insertChild(perspOffCenter, 0);
-    perspOffCenter->viewAll(root, myRegion);
-    SbVec3f initialPos = perspOffCenter->position.getValue();
-    float x, y, z;
-    initialPos.getValue(x, y, z);
-    perspOffCenter->position.setValue(x + x/2., y + y/2., z + z/4.);
+    obol::PerspectiveCamera offCenterCamera;
+    offCenterCamera.position = {3.0f, 2.5f, 12.0f};
+    offCenterCamera.target = {0.0f, 0.0f, 0.0f};
+    offCenterCamera.verticalFieldOfViewRadians = 0.65f;
+    scene.setCamera(offCenterCamera);
     snprintf(filename, sizeof(filename), "%s_offcenter.rgb", baseFilename);
-    renderToFile(root, filename);
-    root->removeChild(0);
+    if (!renderScene(renderer, scene, filename)) {
+        fprintf(stderr, "Error: Failed to render off-center camera view with Obol v2 API\n");
+        return 1;
+    }
 
-    printf("Rendered scene from 3 different camera perspectives\n");
-
-    root->unref();
+    printf("Rendered scene from 3 different camera projections [Obol v2]\n");
     return 0;
 }

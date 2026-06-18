@@ -42,15 +42,10 @@
  */
 
 #include "headless_utils.h"
-#include <Inventor/nodes/SoCoordinate3.h>
-#include <Inventor/nodes/SoIndexedFaceSet.h>
-#include <Inventor/nodes/SoMaterial.h>
-#include <Inventor/nodes/SoMaterialBinding.h>
-#include <Inventor/nodes/SoSeparator.h>
-#include <Inventor/nodes/SoPerspectiveCamera.h>
-#include <Inventor/nodes/SoDirectionalLight.h>
-#include <cmath>
+#include <Obol/Obol.h>
+
 #include <cstdio>
+#include <cstdint>
 
 // Positions of all of the vertices
 static const float vertexPositions[12][3] =
@@ -73,23 +68,23 @@ static const float vertexPositions[12][3] =
 };
 
 // Connectivity information; 12 faces with 5 vertices each
-static int32_t indices[72] =
+static const int32_t indices[72] =
 {
-   1,  2,  3,  4, 5, SO_END_FACE_INDEX, // top face
+   1,  2,  3,  4, 5, -1, // top face
 
-   0,  1,  8,  7, 3, SO_END_FACE_INDEX, // 5 faces about top
-   0,  2,  7,  6, 4, SO_END_FACE_INDEX,
-   0,  3,  6, 10, 5, SO_END_FACE_INDEX,
-   0,  4, 10,  9, 1, SO_END_FACE_INDEX,
-   0,  5,  9,  8, 2, SO_END_FACE_INDEX, 
+   0,  1,  8,  7, 3, -1, // 5 faces about top
+   0,  2,  7,  6, 4, -1,
+   0,  3,  6, 10, 5, -1,
+   0,  4, 10,  9, 1, -1,
+   0,  5,  9,  8, 2, -1, 
 
-    9,  5, 4, 6, 11, SO_END_FACE_INDEX, // 5 faces about bottom
-   10,  4, 3, 7, 11, SO_END_FACE_INDEX,
-    6,  3, 2, 8, 11, SO_END_FACE_INDEX,
-    7,  2, 1, 9, 11, SO_END_FACE_INDEX,
-    8,  1, 5,10, 11, SO_END_FACE_INDEX,
+    9,  5, 4, 6, 11, -1, // 5 faces about bottom
+   10,  4, 3, 7, 11, -1,
+    6,  3, 2, 8, 11, -1,
+    7,  2, 1, 9, 11, -1,
+    8,  1, 5,10, 11, -1,
 
-    6,  7, 8, 9, 10, SO_END_FACE_INDEX, // bottom face
+    6,  7, 8, 9, 10, -1, // bottom face
 };
  
 // Colors for the 12 faces
@@ -100,71 +95,92 @@ static const float colors[12][3] =
    { .7, .7, 0}, { .0, 1.0,  .0}, {0, .7,  .7}, {1.0,  .0,  0}
 };
 
-SoSeparator *makeStellatedDodecahedron()
+namespace {
+
+obol::Mesh makeStellatedDodecahedronMesh()
 {
-    SoSeparator *result = new SoSeparator;
-    result->ref();
+    obol::Mesh mesh;
+    mesh.topology = obol::MeshTopology::Polygons;
+    for (const auto & position : vertexPositions) {
+        mesh.positions.push_back({position[0], position[1], position[2]});
+    }
 
-    // Define material bindings - one color per face
-    SoMaterialBinding *myBinding = new SoMaterialBinding;
-    myBinding->value = SoMaterialBinding::PER_FACE;
-    result->addChild(myBinding);
+    uint32_t currentFaceCount = 0;
+    for (int32_t index : indices) {
+        if (index < 0) {
+            if (currentFaceCount > 0) {
+                mesh.faceVertexCounts.push_back(currentFaceCount);
+                currentFaceCount = 0;
+            }
+        } else {
+            mesh.indices.push_back(static_cast<uint32_t>(index));
+            ++currentFaceCount;
+        }
+    }
 
-    // Define materials
-    SoMaterial *myMaterials = new SoMaterial;
-    myMaterials->diffuseColor.setValues(0, 12, colors);
-    result->addChild(myMaterials);
-
-    // Define coordinates
-    SoCoordinate3 *myCoords = new SoCoordinate3;
-    myCoords->point.setValues(0, 12, vertexPositions);
-    result->addChild(myCoords);
-
-    // Define the IndexedFaceSet
-    SoIndexedFaceSet *myFaceSet = new SoIndexedFaceSet;
-    myFaceSet->coordIndex.setValues(0, 72, indices);
-    result->addChild(myFaceSet);
-
-    result->unrefNoDelete();
-    return result;
+    for (const auto & color : colors) {
+        mesh.faceColors.push_back({color[0], color[1], color[2], 1.0f});
+    }
+    return mesh;
 }
+
+bool renderView(obol::OffscreenRenderer & renderer,
+                obol::Scene & scene,
+                const char * filename,
+                const obol::Vec3 & position)
+{
+    obol::PerspectiveCamera camera;
+    camera.position = position;
+    camera.target = {0.0f, 0.0f, 0.0f};
+    camera.verticalFieldOfViewRadians = 0.55f;
+    scene.setCamera(camera);
+    const obol::FrameResult result = renderer.render(scene);
+    return result.success && renderer.writeRGB(filename);
+}
+
+} // namespace
 
 int main(int argc, char **argv)
 {
-    // Initialize Coin for headless operation
     initCoinHeadless();
 
-    SoSeparator *root = new SoSeparator;
-    root->ref();
+    obol::Scene scene;
+    obol::DirectionalLight light;
+    light.direction = {-0.5f, -0.7f, -1.0f};
+    scene.addDirectionalLight(light);
+    scene.addMesh(makeStellatedDodecahedronMesh());
 
-    // Add camera and light
-    SoPerspectiveCamera *camera = new SoPerspectiveCamera;
-    root->addChild(camera);
-    root->addChild(new SoDirectionalLight);
-
-    root->addChild(makeStellatedDodecahedron());
-
-    // Setup camera
-    camera->viewAll(root, SbViewportRegion(DEFAULT_WIDTH, DEFAULT_HEIGHT));
+    obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
+                                        obol::RenderBackendKind::OpenGL2SWRast,
+                                        "headless-context");
+    obol::RenderTarget target;
+    target.width = DEFAULT_WIDTH;
+    target.height = DEFAULT_HEIGHT;
+    target.pixelFormat = obol::PixelFormat::RGB;
+    obol::OffscreenRenderer renderer(backend, target);
+    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
 
     const char *baseFilename = (argc > 1) ? argv[1] : "05.2.IndexedFaceSet";
     char filename[256];
 
-    // Front view
     snprintf(filename, sizeof(filename), "%s_front.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderView(renderer, scene, filename, {0.0f, 0.0f, 7.0f})) {
+        fprintf(stderr, "Error: Failed to render front IndexedFaceSet view with Obol v2 API\n");
+        return 1;
+    }
 
-    // Side view
-    rotateCamera(camera, M_PI / 2, 0);
     snprintf(filename, sizeof(filename), "%s_side.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderView(renderer, scene, filename, {7.0f, 0.0f, 0.0f})) {
+        fprintf(stderr, "Error: Failed to render side IndexedFaceSet view with Obol v2 API\n");
+        return 1;
+    }
 
-    // Top view
-    camera->viewAll(root, SbViewportRegion(DEFAULT_WIDTH, DEFAULT_HEIGHT));
-    rotateCamera(camera, 0, M_PI / 2);
     snprintf(filename, sizeof(filename), "%s_top.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderView(renderer, scene, filename, {0.0f, 7.0f, 0.1f})) {
+        fprintf(stderr, "Error: Failed to render top IndexedFaceSet view with Obol v2 API\n");
+        return 1;
+    }
 
-    root->unref();
+    printf("Rendered stellated IndexedFaceSet views [Obol v2]\n");
     return 0;
 }

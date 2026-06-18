@@ -42,16 +42,10 @@
  */
 
 #include "headless_utils.h"
-#include <Inventor/nodes/SoCoordinate3.h>
-#include <Inventor/nodes/SoMaterial.h>
-#include <Inventor/nodes/SoMaterialBinding.h>
-#include <Inventor/nodes/SoSeparator.h>
-#include <Inventor/nodes/SoShapeHints.h>
-#include <Inventor/nodes/SoTriangleStripSet.h>
-#include <Inventor/nodes/SoPerspectiveCamera.h>
-#include <Inventor/nodes/SoDirectionalLight.h>
-#include <cmath>
+#include <Obol/Obol.h>
+
 #include <cstdio>
+#include <cstdint>
 
 // Positions of all vertices
 static const float vertexPositions[40][3] =
@@ -80,7 +74,7 @@ static const float vertexPositions[40][3] =
 };
 
 // Number of vertices in each strip
-static int32_t numVertices[2] = { 32, 8 };  // flag, pole
+static uint32_t numVertices[2] = { 32, 8 };  // flag, pole
 
 // Colors for the strips
 static const float colors[2][3] =
@@ -89,76 +83,88 @@ static const float colors[2][3] =
    { .4, .4, .4 }, // grey flagpole
 };
 
-SoSeparator *makePennant()
+namespace {
+
+obol::Mesh makePennantMesh()
 {
-    SoSeparator *result = new SoSeparator;
-    result->ref();
+    obol::Mesh mesh;
+    mesh.topology = obol::MeshTopology::TriangleStrips;
 
-    // Shape hints for double sided lighting
-    SoShapeHints *myHints = new SoShapeHints;
-    myHints->vertexOrdering = SoShapeHints::COUNTERCLOCKWISE;
-    result->addChild(myHints);
+    for (const auto & position : vertexPositions) {
+        mesh.positions.push_back({position[0], position[1], position[2]});
+        mesh.indices.push_back(static_cast<uint32_t>(mesh.indices.size()));
+    }
+    for (uint32_t count : numVertices) {
+        mesh.stripVertexCounts.push_back(count);
+    }
+    for (const auto & color : colors) {
+        mesh.faceColors.push_back({color[0], color[1], color[2], 1.0f});
+    }
 
-    // Define material binding
-    SoMaterialBinding *myBinding = new SoMaterialBinding;
-    myBinding->value = SoMaterialBinding::PER_PART;
-    result->addChild(myBinding);
-
-    // Define materials
-    SoMaterial *myMaterials = new SoMaterial;
-    myMaterials->diffuseColor.setValues(0, 2, colors);
-    result->addChild(myMaterials);
-
-    // Define coordinates
-    SoCoordinate3 *myCoords = new SoCoordinate3;
-    myCoords->point.setValues(0, 40, vertexPositions);
-    result->addChild(myCoords);
-
-    // Define the TriangleStripSet
-    SoTriangleStripSet *myStrips = new SoTriangleStripSet;
-    myStrips->numVertices.setValues(0, 2, numVertices);
-    result->addChild(myStrips);
-
-    result->unrefNoDelete();
-    return result;
+    return mesh;
 }
+
+bool renderView(obol::OffscreenRenderer & renderer,
+                obol::Scene & scene,
+                const char * filename,
+                const obol::Vec3 & position)
+{
+    obol::PerspectiveCamera camera;
+    camera.position = position;
+    camera.target = {5.0f, 8.0f, -1.0f};
+    camera.verticalFieldOfViewRadians = 0.62f;
+    scene.setCamera(camera);
+    const obol::FrameResult result = renderer.render(scene);
+    return result.success && renderer.writeRGB(filename);
+}
+
+} // namespace
 
 int main(int argc, char **argv)
 {
-    // Initialize Coin for headless operation
     initCoinHeadless();
 
-    SoSeparator *root = new SoSeparator;
-    root->ref();
+    obol::Scene scene;
+    obol::DirectionalLight keyLight;
+    keyLight.direction = {-0.5f, -0.9f, -1.0f};
+    scene.addDirectionalLight(keyLight);
+    obol::DirectionalLight fillLight;
+    fillLight.direction = {1.0f, -0.3f, 1.0f};
+    fillLight.intensity = 0.45f;
+    scene.addDirectionalLight(fillLight);
+    scene.addMesh(makePennantMesh());
 
-    // Add camera and light
-    SoPerspectiveCamera *camera = new SoPerspectiveCamera;
-    root->addChild(camera);
-    root->addChild(new SoDirectionalLight);
-
-    root->addChild(makePennant());
-
-    // Setup camera
-    camera->viewAll(root, SbViewportRegion(DEFAULT_WIDTH, DEFAULT_HEIGHT));
+    obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
+                                        obol::RenderBackendKind::OpenGL2SWRast,
+                                        "headless-context");
+    obol::RenderTarget target;
+    target.width = DEFAULT_WIDTH;
+    target.height = DEFAULT_HEIGHT;
+    target.pixelFormat = obol::PixelFormat::RGB;
+    obol::OffscreenRenderer renderer(backend, target);
+    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
 
     const char *baseFilename = (argc > 1) ? argv[1] : "05.3.TriangleStripSet";
     char filename[256];
 
-    // Front view
     snprintf(filename, sizeof(filename), "%s_front.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderView(renderer, scene, filename, {5.0f, 8.0f, 24.0f})) {
+        fprintf(stderr, "Error: Failed to render front TriangleStripSet view with Obol v2 API\n");
+        return 1;
+    }
 
-    // Side view
-    rotateCamera(camera, M_PI / 2, 0);
     snprintf(filename, sizeof(filename), "%s_side.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderView(renderer, scene, filename, {24.0f, 8.0f, -1.0f})) {
+        fprintf(stderr, "Error: Failed to render side TriangleStripSet view with Obol v2 API\n");
+        return 1;
+    }
 
-    // Angled view
-    camera->viewAll(root, SbViewportRegion(DEFAULT_WIDTH, DEFAULT_HEIGHT));
-    rotateCamera(camera, M_PI / 4, M_PI / 8);
     snprintf(filename, sizeof(filename), "%s_angle.rgb", baseFilename);
-    renderToFile(root, filename);
+    if (!renderView(renderer, scene, filename, {17.0f, 13.0f, 17.0f})) {
+        fprintf(stderr, "Error: Failed to render angled TriangleStripSet view with Obol v2 API\n");
+        return 1;
+    }
 
-    root->unref();
+    printf("Rendered pennant TriangleStripSet views [Obol v2]\n");
     return 0;
 }

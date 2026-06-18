@@ -1,132 +1,74 @@
 /*
- *
- *  Copyright (C) 2000 Silicon Graphics, Inc.  All Rights Reserved.
- *
- *  This library is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU Lesser General Public
- *  License as published by the Free Software Foundation; either
- *  version 2.1 of the License, or (at your option) any later version.
- *
- *  This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  Lesser General Public License for more details.
- *
- *  Further, this software is distributed without any warranty that it is
- *  free of the rightful claim of any third person regarding infringement
- *  or the like.  Any license provided herein, whether implied or
- *  otherwise, applies only to this software file.  Patent licenses, if
- *  any, provided herein do not apply to combinations of this program with
- *  other software, or any other product whatsoever.
- *
- *  You should have received a copy of the GNU Lesser General Public
- *  License along with this library; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- *  Contact information: Silicon Graphics, Inc., 1600 Amphitheatre Pkwy,
- *  Mountain View, CA  94043, or:
- *
- *  http://www.sgi.com
- *
- *  For further information regarding this notice, see:
- *
- *  http://oss.sgi.com/projects/GenInfo/NoticeExplan/
- *
- */
-
-/*
  * Headless version of Inventor Mentor example 13.6
- * 
+ *
  * Original: Calculator - uses calculator engine for complex motion paths
- * Headless: Demonstrates calculator engine with mathematical expressions
+ * Headless: app-owned math expression updates v2 object transforms
  */
 
 #include "headless_utils.h"
-#include <Inventor/SoDB.h>
-#include <Inventor/engines/SoCalculator.h>
-#include <Inventor/engines/SoElapsedTime.h>
-#include <Inventor/nodes/SoCube.h>
-#include <Inventor/nodes/SoDirectionalLight.h>
-#include <Inventor/nodes/SoMaterial.h>
-#include <Inventor/nodes/SoPerspectiveCamera.h>
-#include <Inventor/nodes/SoSeparator.h>
-#include <Inventor/nodes/SoTranslation.h>
-#include <cstdio>
+#include <Obol/Obol.h>
+
 #include <cmath>
+#include <cstdio>
+
+namespace {
+
+constexpr float kPi = 3.14159265358979323846f;
+
+bool renderScene(obol::OffscreenRenderer & renderer,
+                 obol::Scene & scene,
+                 const char * filename)
+{
+    const obol::FrameResult result = renderer.render(scene);
+    return result.success && renderer.writeRGB(filename);
+}
+
+} // namespace
 
 int main(int argc, char **argv)
 {
-    // Initialize Coin for headless operation
     initCoinHeadless();
 
-    SoSeparator *root = new SoSeparator;
-    root->ref();
+    obol::Scene scene;
+    obol::PerspectiveCamera camera;
+    camera.position = {0.0f, 0.0f, 7.0f};
+    camera.target = {0.0f, 0.0f, 0.0f};
+    camera.verticalFieldOfViewRadians = 0.6f;
+    scene.setCamera(camera);
+    scene.addDirectionalLight(obol::DirectionalLight{});
 
-    // Add a camera and light
-    SoPerspectiveCamera *myCamera = new SoPerspectiveCamera;
-    root->addChild(myCamera);
-    root->addChild(new SoDirectionalLight);
+    obol::Material material;
+    material.baseColor = {0.1f, 0.8f, 0.3f, 1.0f};
+    obol::Transform transform;
+    transform.translation = {1.0f, 0.0f, 0.0f};
+    const obol::SceneObjectId object =
+        scene.addPrimitive(obol::Primitive::Cube, material, transform);
 
-    // Create object with translation
-    SoTranslation *objectTranslation = new SoTranslation;
-    objectTranslation->translation.setValue(1.0f, 0.0f, 0.0f);  // start at cos(0), sin(0)
-    root->addChild(objectTranslation);
-    
-    SoMaterial *mat = new SoMaterial;
-    mat->diffuseColor.setValue(0.1, 0.8, 0.3);
-    root->addChild(mat);
-    root->addChild(new SoCube);
-
-    // Position camera to frame the circular orbit (radius 1, centered at origin)
-    myCamera->position.setValue(0.0f, 0.0f, 7.0f);
-    myCamera->heightAngle = 0.6f;
-
-    // Set up elapsed time engine
-    SoElapsedTime *timer = new SoElapsedTime;
-    timer->ref();
-
-    // Set up calculator engine for circular motion
-    // x = cos(t), y = sin(t)
-    SoCalculator *calc = new SoCalculator;
-    calc->ref();
-    calc->a.connectFrom(&timer->timeOut);
-    calc->expression.set1Value(0, "oA = cos(a)");     // x coordinate
-    calc->expression.set1Value(1, "oB = sin(a)");     // y coordinate
-    calc->expression.set1Value(2, "oC = 0");          // z coordinate
-    calc->expression.set1Value(3, "oD = vec3f(oA, oB, oC)");  // compose vector
+    obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
+                                        obol::RenderBackendKind::OpenGL2SWRast,
+                                        "headless-context");
+    obol::RenderTarget target;
+    target.width = DEFAULT_WIDTH;
+    target.height = DEFAULT_HEIGHT;
+    target.pixelFormat = obol::PixelFormat::RGB;
+    obol::OffscreenRenderer renderer(backend, target);
+    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
 
     const char *baseFilename = (argc > 1) ? argv[1] : "13.6.Calculator";
     char filename[256];
 
-    // Render circular motion sequence.
-    // The engine connections (timer -> calc -> translation) require real-time
-    // evaluation which is unreliable when driving timeIn manually in headless mode.
-    // We therefore compute and set positions directly while still exercising the
-    // engine objects (diagnostics printed below show engine output).
     for (int i = 0; i <= 16; i++) {
-        float timeValue = i * M_PI / 8.0;  // 0 to 2*pi
+        const float timeValue = static_cast<float>(i) * kPi / 8.0f;
+        const float x = std::cos(timeValue);
+        const float y = std::sin(timeValue);
+        transform.translation = {x, y, 0.0f};
+        scene.setObjectTransform(object, transform);
 
-        // Drive the engine (diagnostic)
-        timer->timeIn.setValue(timeValue);
-        SoDB::getSensorManager()->processTimerQueue();
-        SoDB::getSensorManager()->processDelayQueue(TRUE);
-
-        // Directly set position to guarantee visible circular motion
-        float x = cosf(timeValue);
-        float y = sinf(timeValue);
-        objectTranslation->translation.setValue(x, y, 0.0f);
-
-        SbVec3f pos = objectTranslation->translation.getValue();
         printf("Time %.3f: Position = (%.2f, %.2f, %.2f)\n",
-               timeValue, pos[0], pos[1], pos[2]);
-
+               timeValue, x, y, 0.0f);
         snprintf(filename, sizeof(filename), "%s_frame%02d.rgb", baseFilename, i);
-        renderToFile(root, filename);
+        if (!renderScene(renderer, scene, filename)) return 1;
     }
-
-    timer->unref();
-    calc->unref();
-    root->unref();
 
     return 0;
 }
