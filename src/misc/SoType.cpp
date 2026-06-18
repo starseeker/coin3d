@@ -661,21 +661,29 @@ SoType::fromName(const SbName name)
       module_dict = new Name2HandleMap;
     }
 
-    static const char * modulenamepatterns[] = {
-      "%s.so", "lib%s.so", "%s.dll", "lib%s.dll", "%s.dylib", "lib%s.dylib",
-      NULL
+    struct ModuleNamePattern {
+      const char * prefix;
+      const char * suffix;
+    };
+    static ModuleNamePattern modulenamepatterns[] = {
+      { "", "so" },
+      { "lib", "so" },
+      { "", "dll" },
+      { "lib", "dll" },
+      { "", "dylib" },
+      { "lib", "dylib" },
+      { NULL, NULL }
     };
 
     SbString modulenamestring;
     cc_libhandle handle = NULL;
     int i;
-    for ( i = 0; (modulenamepatterns[i] != NULL) && (handle == NULL); i++ ) {
-      const char * pattern = modulenamepatterns[i];
-      if (pattern == NULL || strlen(pattern) > 50) {
-        continue;
-      }
+    for ( i = 0; (modulenamepatterns[i].prefix != NULL) && (handle == NULL); i++ ) {
       try {
-        modulenamestring.sprintf(pattern, nameString);
+        modulenamestring.sprintf("%s%s.%s",
+                                 modulenamepatterns[i].prefix,
+                                 nameString,
+                                 modulenamepatterns[i].suffix);
         if (modulenamestring.getLength() == 0 || 
             modulenamestring.getLength() > 256 ||
             modulenamestring.getString() == NULL) {
@@ -708,7 +716,7 @@ SoType::fromName(const SbName name)
       if ( handle != NULL ) {
         module_dict->put(module.getString(), handle);
         if (i > 0) {
-          const char * local_pattern = modulenamepatterns[i];
+          ModuleNamePattern local_pattern = modulenamepatterns[i];
           modulenamepatterns[i] = modulenamepatterns[0];
           modulenamepatterns[0] = local_pattern;
         }
@@ -1113,4 +1121,3 @@ SoType::isInternal(void) const
   Comparison operator for sorting type data according to some internal
   criterion.
 */
-

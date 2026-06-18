@@ -50,7 +50,8 @@ public:
   static SoType getClassTypeId(void);
   virtual SoType getTypeId(void) const;
 
-  static void post(const SoInput * const input, const char * const format, ...);
+  static void post(const SoInput * const input, const char * const format, ...)
+    OBOL_PRINTF_FORMAT(2, 3);
 
   static void initClass(void);
 

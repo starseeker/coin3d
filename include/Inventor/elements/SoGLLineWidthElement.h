@@ -68,7 +68,6 @@ protected:
 
 private:
   mutable const SoGLContext * glue = nullptr;
-  SoState * state;
   static float sizerange[2];
   void updategl(void);
 };

@@ -67,7 +67,7 @@ private:
   const SoNormalElement * elem;
   const SoGLNormalElement * glelem;
   SoNode * node;
-  SoNormalBundleP * pimpl; // for future use
+  [[maybe_unused]] SoNormalBundleP * pimpl; // for future use
 };
 
 

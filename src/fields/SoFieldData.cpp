@@ -435,7 +435,7 @@ SoFieldData::read(SoInput * in, SoFieldContainer * object,
       SoDebugError::postInfo("SoFieldData::read",
                              "fieldsval==0x%08x => "
                              "flags==0x%02x numfields==%u (0x%02x)",
-                             fieldsval, fieldflags, numfields);
+                             fieldsval, fieldflags, numfields, numfields);
     }
 
     // Unknown node type, must read field descriptions.

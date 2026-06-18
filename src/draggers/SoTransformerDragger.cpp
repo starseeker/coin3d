@@ -912,12 +912,13 @@ SoTransformerDragger::setUpConnections(SbBool onoff, SbBool doitalways)
 // FIXME: should collect these methods in a common method visible to
 // all draggers implementing the exact same functionality. 20010826 mortene.
 static void
-SoTransformerDragger_set_default(SoDragger * dragger, const char * fmt,
+SoTransformerDragger_set_default(SoDragger * dragger, const char * prefix,
+                                 const char * suffix,
                                  int minval, int maxval)
 {
   SbString str;
   for (int i = minval; i <= maxval; i++) {
-    str.sprintf(fmt, i);
+    str.sprintf("%s%d%s", prefix, i, suffix);
     SoField * f = dragger->getField(str.getString());
     assert(f);
     f->setDefault(TRUE);
@@ -934,9 +935,9 @@ SoTransformerDragger::setDefaultOnNonWritingFields(void)
   this->axisFeedbackLocation.setDefault(TRUE);
   this->translateBoxFeedbackRotation.setDefault(TRUE);
 
-  SoTransformerDragger_set_default(this, "translator%dLocateGroup", 1, 6);
-  SoTransformerDragger_set_default(this, "rotator%dLocateGroup", 1, 6);
-  SoTransformerDragger_set_default(this, "scale%dLocateGroup", 1, 6);
+  SoTransformerDragger_set_default(this, "translator", "LocateGroup", 1, 6);
+  SoTransformerDragger_set_default(this, "rotator", "LocateGroup", 1, 6);
+  SoTransformerDragger_set_default(this, "scale", "LocateGroup", 1, 6);
 
   inherited::setDefaultOnNonWritingFields();
 }

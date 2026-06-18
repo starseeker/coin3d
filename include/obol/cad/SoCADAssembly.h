@@ -187,7 +187,7 @@ struct InstanceRecord {
 // SoCADAssembly node
 // ---------------------------------------------------------------------------
 
-class SoCADAssemblyImpl;
+struct SoCADAssemblyImpl;
 
 /*!
   \class SoCADAssembly SoCADAssembly.h obol/cad/SoCADAssembly.h

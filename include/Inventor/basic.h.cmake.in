@@ -52,6 +52,15 @@
 
 /* *********************************************************************** */
 
+#if defined(__GNUC__) || defined(__clang__)
+#define OBOL_PRINTF_FORMAT(_formatidx_, _firstarg_) \
+  __attribute__((format(printf, _formatidx_, _firstarg_)))
+#else
+#define OBOL_PRINTF_FORMAT(_formatidx_, _firstarg_)
+#endif
+
+/* *********************************************************************** */
+
 // C++17 modernization: Use native bool for SbBool
 // This aligns internal code with the modernized public API
 using SbBool = bool;

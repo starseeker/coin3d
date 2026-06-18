@@ -888,45 +888,33 @@ SoProfilingReportGeneratorP::printName(const SbProfilingData & data, SbString & 
   case SoProfilingReportGenerator::NODES:
   {
     if (entryidx == -1) {
-      SbString format;
-      format.sprintf("%%-%ds", SbMax(longestnamelength, longesttypenamelength));
-      string.sprintf(format.getString(), "NAME");
+      string.sprintf("%-*s", SbMax(longestnamelength, longesttypenamelength), "NAME");
     } else {
       SbName nodename(data.getNodeName(entryidx));
       if (nodename == SbName::empty()) {
         nodename = data.getNodeType(entryidx).getName();
       }
-      SbString format;
-      format.sprintf("%%-%ds", SbMax(longestnamelength, longesttypenamelength));
-      string.sprintf(format.getString(), nodename.getString());
+      string.sprintf("%-*s", SbMax(longestnamelength, longesttypenamelength), nodename.getString());
     }
     break;
   }
   case SoProfilingReportGenerator::NAMES:
   {
     if (entryidx == -1) {
-      SbString format;
-      format.sprintf("%%-%ds", longestnamelength);
-      string.sprintf(format.getString(), "NAME");
+      string.sprintf("%-*s", longestnamelength, "NAME");
     } else {
       SbName name((*namekeys)[entryidx]);
-      SbString format;
-      format.sprintf("%%-%ds", longestnamelength);
-      string.sprintf(format.getString(), name.getString());
+      string.sprintf("%-*s", longestnamelength, name.getString());
     }
     break;
   }
   case SoProfilingReportGenerator::TYPES:
   {
     if (entryidx == -1) {
-      SbString format;
-      format.sprintf("%%-%ds", longesttypenamelength);
-      string.sprintf(format.getString(), "TYPE");
+      string.sprintf("%-*s", longesttypenamelength, "TYPE");
     } else {
       SoType nodetype = SoType::fromKey((*typekeys)[entryidx]);
-      SbString format;
-      format.sprintf("%%-%ds", longesttypenamelength);
-      string.sprintf(format.getString(), nodetype.getName().getString());
+      string.sprintf("%-*s", longesttypenamelength, nodetype.getName().getString());
     }
     break;
   }
@@ -939,26 +927,24 @@ SoProfilingReportGeneratorP::printName(const SbProfilingData & data, SbString & 
 void
 SoProfilingReportGeneratorP::printType(const SbProfilingData & data, SbString & string, int entryidx)
 {
-  SbString format;
-  format.sprintf("%%-%ds", longesttypenamelength);
   if (entryidx == -1) {
-    string.sprintf(format.getString(), "TYPE");
+    string.sprintf("%-*s", longesttypenamelength, "TYPE");
     return;
   }
   switch (sortcategory) {
   case SoProfilingReportGenerator::NODES:
   {
     SbName nodetype(data.getNodeType(entryidx).getName());
-    string.sprintf(format.getString(), nodetype.getString());
+    string.sprintf("%-*s", longesttypenamelength, nodetype.getString());
     break;
   }
   case SoProfilingReportGenerator::NAMES:
-    string.sprintf(format.getString(), "???");
+    string.sprintf("%-*s", longesttypenamelength, "???");
     break;
   case SoProfilingReportGenerator::TYPES:
   {
     SbName nodetype(SoType::fromKey((*typekeys)[entryidx]).getName());
-    string.sprintf(format.getString(), nodetype.getString());
+    string.sprintf("%-*s", longesttypenamelength, nodetype.getString());
     break;
   }
   default:
@@ -1343,7 +1329,7 @@ SoProfilingReportGeneratorP::printTimePercentAvg(const SbProfilingData & data, S
 void
 SoProfilingReportGeneratorP::printMemBytes(const SbProfilingData & data, SbString & string, int entryidx)
 {
-  static const char formatstring[] = "%8ldB";
+  static const char formatstring[] = "%8zuB";
   if (entryidx == -1) {
     string.sprintf("%9s", "MEMORY");
     return;
@@ -1356,10 +1342,10 @@ SoProfilingReportGeneratorP::printMemBytes(const SbProfilingData & data, SbStrin
     break;
   }
   case SoProfilingReportGenerator::NAMES:
-    string.sprintf(formatstring, 0);
+    string.sprintf(formatstring, size_t{0});
     break;
   case SoProfilingReportGenerator::TYPES:
-    string.sprintf(formatstring, 0);
+    string.sprintf(formatstring, size_t{0});
     break;
   default:
     assert(!"unsupported report categorization");
@@ -1397,7 +1383,7 @@ SoProfilingReportGeneratorP::printMemKilobytes(const SbProfilingData & data, SbS
 void
 SoProfilingReportGeneratorP::printGfxMemBytes(const SbProfilingData & data, SbString & string, int entryidx)
 {
-  static const char formatstring[] = "%8ldB";
+  static const char formatstring[] = "%8zuB";
   if (entryidx == -1) {
     string.sprintf("%9s", "GFX MEM");
     return;
@@ -1410,10 +1396,10 @@ SoProfilingReportGeneratorP::printGfxMemBytes(const SbProfilingData & data, SbSt
     break;
   }
   case SoProfilingReportGenerator::NAMES:
-    string.sprintf(formatstring, 0);
+    string.sprintf(formatstring, size_t{0});
     break;
   case SoProfilingReportGenerator::TYPES:
-    string.sprintf(formatstring, 0);
+    string.sprintf(formatstring, size_t{0});
     break;
   default:
     assert(!"unsupported report categorization");

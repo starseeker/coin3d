@@ -44,7 +44,7 @@ class SoField;
 class OBOL_DLL_API SoDebug {
 public:
   static const char * GetEnv(const char * var);
-  static void RTPrintf(const char * formatstr, ...);
+  static void RTPrintf(const char * formatstr, ...) OBOL_PRINTF_FORMAT(1, 2);
   static void NamePtr(const char * name, void * ptr);
   static const char * PtrName(void * ptr);
   static void write(SoNode * node);

@@ -37,7 +37,8 @@
 
 // Debug error posting - Inventor-style API for debug builds
 #ifndef NDEBUG
-OBOL_DLL_API void SbDebugError_post(const char * source, const char * format, ...);
+OBOL_DLL_API void SbDebugError_post(const char * source, const char * format, ...)
+  OBOL_PRINTF_FORMAT(2, 3);
 #endif // !NDEBUG
 
 /* ********************************************************************** */

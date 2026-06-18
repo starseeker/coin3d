@@ -786,7 +786,9 @@ cc_dl_open(const char * filename)
   if (cc_dl_debugging() && h) {
     cc_debugerror_postinfo("cc_dl_open",
                            "\"%s\" success => cc_libhandle==%p, nativehnd==%p", 
-                           h->libname.getString(), h, h->nativehnd);
+                           h->libname.getString(),
+                           static_cast<void *>(h),
+                           const_cast<void *>(h->nativehnd));
   }
 
   return h;
@@ -896,7 +898,8 @@ cc_dl_close(cc_libhandle handle)
     cc_debugerror_postinfo("cc_dl_close",
                            "closing '%s', cc_libhandle==%p, nativehnd==%p",
                            handle->libname.getString(),
-                           handle, handle->nativehnd);
+                           static_cast<void *>(handle),
+                           const_cast<void *>(handle->nativehnd));
   }
 
 #ifdef HAVE_DL_LIB
@@ -996,7 +999,9 @@ cc_dl_coin_handle(void)
         cc_debugerror_post("cc_dl_coin_handle",
                            "function ptr from opened Coin image, %p, "
                            "does not match expected value from current "
-                           "image; %p", func, cc_dl_open);
+                           "image; %p",
+                           func,
+                           reinterpret_cast<void *>(&cc_dl_open));
       }
     }
     else if (cc_dl_debugging()) {

@@ -71,10 +71,6 @@
 
 /* ********************************************************************** */
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-
 static std::mutex error_mutex;
 
 /* FIXME: should be hidden from public API, and only visible to
@@ -290,7 +286,3 @@ cc_error_post(const char * format, ...)
   cc_error_post_arglist(format, argptr);
   va_end(argptr);
 }
-
-#ifdef __cplusplus
-} /* extern "C" */
-#endif /* __cplusplus */

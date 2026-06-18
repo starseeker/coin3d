@@ -51,10 +51,6 @@
 #include <string>
 #include <stdarg.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-
 /* ********************************************************************** */
 /* Base error structures and functions */
 /* ********************************************************************** */
@@ -86,8 +82,10 @@ OBOL_DLL_API void cc_error_set_handler_callback(cc_error_cb * func, void * data)
 OBOL_DLL_API cc_error_cb * cc_error_get_handler_callback(void);
 OBOL_DLL_API void * cc_error_get_handler_data(void);
 
-OBOL_DLL_API void cc_error_post(const char * format, ...);
-OBOL_DLL_API void cc_error_post_arglist(const char * format, va_list args);
+OBOL_DLL_API void cc_error_post(const char * format, ...)
+  OBOL_PRINTF_FORMAT(1, 2);
+OBOL_DLL_API void cc_error_post_arglist(const char * format, va_list args)
+  OBOL_PRINTF_FORMAT(1, 0);
 
 OBOL_DLL_API void cc_error_handle(cc_error * me);
 OBOL_DLL_API cc_error_cb * cc_error_get_handler(void ** data);
@@ -116,9 +114,12 @@ typedef struct cc_debugerror {
 typedef void cc_debugerror_cb(const cc_debugerror * err, void * data);
 
 /* Debug error functions */
-OBOL_DLL_API void cc_debugerror_post(const char * source, const char * format, ...);
-OBOL_DLL_API void cc_debugerror_postwarning(const char * source, const char * format, ...);
-OBOL_DLL_API void cc_debugerror_postinfo(const char * source, const char * format, ...);
+OBOL_DLL_API void cc_debugerror_post(const char * source, const char * format, ...)
+  OBOL_PRINTF_FORMAT(2, 3);
+OBOL_DLL_API void cc_debugerror_postwarning(const char * source, const char * format, ...)
+  OBOL_PRINTF_FORMAT(2, 3);
+OBOL_DLL_API void cc_debugerror_postinfo(const char * source, const char * format, ...)
+  OBOL_PRINTF_FORMAT(2, 3);
 
 OBOL_DLL_API void cc_debugerror_init(cc_debugerror * me);
 OBOL_DLL_API void cc_debugerror_clean(cc_debugerror * me);
@@ -129,9 +130,5 @@ OBOL_DLL_API void cc_debugerror_set_handler_callback(cc_debugerror_cb * function
 OBOL_DLL_API cc_debugerror_cb * cc_debugerror_get_handler_callback(void);
 OBOL_DLL_API void * cc_debugerror_get_handler_data(void);
 OBOL_DLL_API cc_debugerror_cb * cc_debugerror_get_handler(void ** data);
-
-#ifdef __cplusplus
-} /* extern "C" */
-#endif /* __cplusplus */
 
 #endif /* ! OBOL_INTERNAL_ERROR_H */

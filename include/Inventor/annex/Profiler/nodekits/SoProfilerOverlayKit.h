@@ -39,7 +39,7 @@ protected:
   virtual ~SoProfilerOverlayKit(void);
 
 private:
-  struct SoProfilerOverlayKitP * pimpl;
+  [[maybe_unused]] struct SoProfilerOverlayKitP * pimpl;
 };
 
 #endif // !OBOL_SOPROFILEROVERLAYKIT_H

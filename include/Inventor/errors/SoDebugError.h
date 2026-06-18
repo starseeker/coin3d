@@ -62,9 +62,12 @@ public:
 
   SoDebugError::Severity getSeverity(void) const;
 
-  static void post(const char * const source, const char * const format, ...);
-  static void postWarning(const char * const source, const char * const format, ...);
-  static void postInfo(const char * const source, const char * const format, ...);
+  static void post(const char * const source, const char * const format, ...)
+    OBOL_PRINTF_FORMAT(2, 3);
+  static void postWarning(const char * const source, const char * const format, ...)
+    OBOL_PRINTF_FORMAT(2, 3);
+  static void postInfo(const char * const source, const char * const format, ...)
+    OBOL_PRINTF_FORMAT(2, 3);
 
   static void initClass(void);
 

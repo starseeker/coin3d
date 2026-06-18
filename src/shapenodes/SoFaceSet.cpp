@@ -604,7 +604,10 @@ SoFaceSet::GLRender(SoGLRenderAction * action)
       
     }
     else {
-      SOGL_FACESET_GLRENDER(nbind, mbind, doTextures, (sogl_glue_from_state(state),
+      SOGL_FACESET_GLRENDER(static_cast<SoGL::FaceSet::AttributeBinding>(nbind),
+                            static_cast<SoGL::FaceSet::AttributeBinding>(mbind),
+                            doTextures,
+                            (sogl_glue_from_state(state),
                                                    coords,
                                                        normals,
                                                        &mb,

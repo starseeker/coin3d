@@ -622,8 +622,7 @@ int
 SoPath::findNode(const SoNode * const node) const
 {
   const int len = this->getFullLength();
-  const SoNode ** nodeptr = (const SoNode**) this->nodes.getArrayPtr();
-  for (int i = 0; i < len; i++) if (nodeptr[i] == node) return i;
+  for (int i = 0; i < len; i++) if (this->nodes[i] == node) return i;
   return -1;
 }
 

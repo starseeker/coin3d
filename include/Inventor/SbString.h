@@ -181,7 +181,7 @@ public:
     return substr.compare(text);
   }
 
-  SbString & sprintf(const char * formatstr, ...) {
+  SbString & sprintf(const char * formatstr, ...) OBOL_PRINTF_FORMAT(2, 3) {
     va_list args;
     va_start(args, formatstr);
     vsprintf(formatstr, args);
@@ -189,7 +189,7 @@ public:
     return *this;
   }
   
-  SbString & vsprintf(const char * formatstr, va_list args) {
+  SbString & vsprintf(const char * formatstr, va_list args) OBOL_PRINTF_FORMAT(2, 0) {
     // Probe the required size using a copy of the va_list, so the
     // original remains valid for the actual formatting call.
     va_list args_copy;

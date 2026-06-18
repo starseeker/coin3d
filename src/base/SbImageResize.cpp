@@ -252,7 +252,6 @@ static void zoom(Image* dst, const Image* src, float (*filterf)(float), float fw
   unsigned char* raster;
   float pixel[4];
   int bpp;
-  unsigned char* dstptr;
   int dstxsize, dstysize;
 
   bpp = src->bpp;
@@ -316,7 +315,6 @@ static void zoom(Image* dst, const Image* src, float (*filterf)(float), float fw
 
   // Apply filter to zoom horizontally from src to tmp
   raster = (unsigned char*)std::calloc(src->xsize, src->bpp);
-  dstptr = tmp->data;
 
   for (k = 0; k < tmp->ysize; k++) {
     get_row(raster, src, k);
@@ -392,7 +390,6 @@ static void zoom(Image* dst, const Image* src, float (*filterf)(float), float fw
   raster = (unsigned char*)std::calloc(tmp->ysize, tmp->bpp);
   for (k = 0; k < dstxsize; k++) {
     get_column(raster, tmp, k);
-    dstptr = dst->data + k * bpp;
     for (i = 0; i < dstysize; i++) {
       for (b = 0; b < bpp; b++) pixel[b] = 0.0f;
       for (j = 0; j < contrib[i].n; ++j) {
@@ -401,7 +398,6 @@ static void zoom(Image* dst, const Image* src, float (*filterf)(float), float fw
         }
       }
       put_pixel(dst, k, i, pixel);
-      dstptr += bpp * dstxsize;
     }
   }
 
@@ -631,4 +627,3 @@ bool SbImageResize_resize2D_inplace(const unsigned char* src, unsigned char* des
   
   return true;
 }
-

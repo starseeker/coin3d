@@ -379,15 +379,9 @@ SoProfilerTopEngine::evaluate(void)
   }
 
   // set up the needed format strings
-  SbString namefmt; namefmt.sprintf("%%-%ds ", namelen);
-
   SbString countfmt;
-  countfmt.sprintf("%ld", maxcount * 10);
-  countfmt.sprintf("%%%dd ", countfmt.getLength());
-
-  SbString timesecsfmt("%8.6f ");
-  SbString timemsecsfmt("%4.0fms ");
-  SbString timepercentfmt("%5.1f%% ");
+  countfmt.sprintf("%d", maxcount * 10);
+  const int countwidth = countfmt.getLength();
 
   const int numcols = this->columns.getNum();
 
@@ -398,48 +392,49 @@ SoProfilerTopEngine::evaluate(void)
     for (int col = 0; col < numcols; ++col) {
       switch (static_cast<Column>(this->columns[col])) {
       case NAME:
-        element.sprintf(namefmt.getString(),
+        element.sprintf("%-*s ",
+                        static_cast<int>(namelen),
                         PRIVATE(this)->data[c].name.getString());
         break;
       case COUNT:
-        element.sprintf(countfmt.getString(), PRIVATE(this)->data[c].count);
+        element.sprintf("%*d ", countwidth, PRIVATE(this)->data[c].count);
         break;
       case TIME_SECS:
-        element.sprintf(timesecsfmt.getString(),
+        element.sprintf("%8.6f ",
                         PRIVATE(this)->data[c].timing.getValue());
         break;
       case TIME_SECS_MAX:
-        element.sprintf(timesecsfmt.getString(),
+        element.sprintf("%8.6f ",
                         PRIVATE(this)->data[c].timingmax.getValue());
         break;
       case TIME_SECS_AVG:
-        element.sprintf(timesecsfmt.getString(),
+        element.sprintf("%8.6f ",
                         PRIVATE(this)->data[c].timingavg.getValue());
         break;
       case TIME_MSECS:
-        element.sprintf(timemsecsfmt.getString(),
+        element.sprintf("%4.0fms ",
                         (PRIVATE(this)->data[c].timing.getValue() * 1000.0));
         break;
       case TIME_MSECS_MAX:
-        element.sprintf(timemsecsfmt.getString(),
+        element.sprintf("%4.0fms ",
                         (PRIVATE(this)->data[c].timingmax.getValue() * 1000.0));
         break;
       case TIME_MSECS_AVG:
-        element.sprintf(timemsecsfmt.getString(),
+        element.sprintf("%4.0fms ",
                         (PRIVATE(this)->data[c].timingavg.getValue() * 1000.0));
         break;
       case TIME_PERCENT:
-        element.sprintf(timepercentfmt.getString(),
+        element.sprintf("%5.1f%% ",
                         (100.0 * (PRIVATE(this)->data[c].timing.getValue() /
                                   totaltime.getValue())));
         break;
       case TIME_PERCENT_MAX:
-        element.sprintf(timepercentfmt.getString(),
+        element.sprintf("%5.1f%% ",
                         (100.0 * (PRIVATE(this)->data[c].timingmax.getValue() /
                                   totaltime.getValue())));
         break;
       case TIME_PERCENT_AVG:
-        element.sprintf(timepercentfmt.getString(),
+        element.sprintf("%5.1f%% ",
                         (100.0 * (PRIVATE(this)->data[c].timingavg.getValue() /
                                   totaltime.getValue())));
         break;
