@@ -62,9 +62,12 @@ public:
 
   SoDebugError::Severity getSeverity(void) const;
 
-  static void post(const char * const source, const char * const format, ...);
-  static void postWarning(const char * const source, const char * const format, ...);
-  static void postInfo(const char * const source, const char * const format, ...);
+  static void post(const char * const source, const char * const format, ...)
+    OBOL_PRINTF_FORMAT(2, 3);
+  static void postWarning(const char * const source, const char * const format, ...)
+    OBOL_PRINTF_FORMAT(2, 3);
+  static void postInfo(const char * const source, const char * const format, ...)
+    OBOL_PRINTF_FORMAT(2, 3);
 
   static void initClass(void);
 
@@ -81,6 +84,14 @@ private:
   static void * callbackData;
   Severity severity;
 };
+
+#ifndef NDEBUG
+template <typename Type>
+constexpr void SbDividerChk(const char * funcname, Type divider) noexcept {
+  if (!(divider != static_cast<Type>(0)))
+    SoDebugError::post(funcname, "divide by zero error.");
+}
+#endif // !NDEBUG
 
 // Avoid problem with Microsoft Win32 API headers (see above).
 #if defined(SODEBUGERROR_STORE_ERROR_DEF)

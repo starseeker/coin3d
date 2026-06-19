@@ -111,7 +111,8 @@ _class_::replaceManip(SoPath * path, _parentclass_ * newone) const \
   if (fulltail != const_cast<SoNode*>(static_cast<const SoNode*>(this))) { \
     SoDebugError::post("_class_::replaceManip", \
                        "child to replace is not this manip (but %s at %p)", \
-                       fulltail->getTypeId().getName().getString(), fulltail); \
+                       fulltail->getTypeId().getName().getString(), \
+                       static_cast<void *>(fulltail)); \
     return FALSE; \
   } \
  \
@@ -130,7 +131,10 @@ _class_::replaceManip(SoPath * path, _parentclass_ * newone) const \
       SoDebugError::postWarning("_class_::replaceManip", \
                                 "failed to replace manip %p with node %p" \
                                 "in kit %p (partname='%s')", \
-                                this, newone, kit, partname.getString()); \
+                                static_cast<const void *>(this), \
+                                static_cast<void *>(newone), \
+                                static_cast<void *>(kit), \
+                                partname.getString()); \
       if (constructed) { \
         newone->ref(); \
         newone->unref(); \
@@ -153,7 +157,7 @@ _class_::replaceManip(SoPath * path, _parentclass_ * newone) const \
     if (!parent->isOfType(SoGroup::getClassTypeId())) { \
       SoDebugError::post("_class_::replaceNode", \
                          "parent node %p is not an SoGroup, but %s", \
-                         parent, parent->getTypeId().getName().getString()); \
+                         static_cast<void *>(parent), parent->getTypeId().getName().getString()); \
       if (constructed) { \
         newone->ref(); \
         newone->unref(); \

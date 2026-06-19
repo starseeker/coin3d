@@ -89,7 +89,7 @@ public:
   /*! Horizontal text justification relative to \c position. */
   SoSFEnum    justification;
 
-  virtual void GLRender(SoGLRenderAction * action);
+  virtual void GLRender(SoGLRenderAction * action) override;
 
 protected:
   virtual ~SoHUDLabel(void);

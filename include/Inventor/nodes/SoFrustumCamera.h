@@ -63,12 +63,12 @@ public:
   SoSFFloat top;
   SoSFFloat bottom;
 
-  virtual void scaleHeight(float scalefactor);
-  virtual SbViewVolume getViewVolume(float useaspectratio = 0.0f) const;
+  virtual void scaleHeight(float scalefactor) override;
+  virtual SbViewVolume getViewVolume(float useaspectratio = 0.0f) const override;
 
 protected:
   virtual ~SoFrustumCamera();
-  virtual void viewBoundingBox(const SbBox3f & box, float aspect, float slack);  
+  virtual void viewBoundingBox(const SbBox3f & box, float aspect, float slack) override;  
 };
 
 #endif // OBOL_SOFRUSTUM_CAMERA_H

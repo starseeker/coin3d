@@ -66,7 +66,7 @@ public:
   
 private:
   // just in case it is needed at a later stage
-  SoTextureUnitElementP * pimpl;
+  [[maybe_unused]] SoTextureUnitElementP * pimpl;
 };
 
 #endif // !OBOL_SOTEXTUREUNITELEMENT_H

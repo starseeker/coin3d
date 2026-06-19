@@ -90,7 +90,7 @@ public:
   void addWidget(SoNode * widget);
   void removeWidget(SoNode * widget);
 
-  virtual void handleEvent(SoHandleEventAction * action);
+  virtual void handleEvent(SoHandleEventAction * action) override;
 
 protected:
   virtual ~SoHUDKit(void);

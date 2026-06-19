@@ -955,7 +955,10 @@ SoQuadMesh::GLRender(SoGLRenderAction * action)
     goto glrender_done;
   }
 
-  SOGL_QUADMESH_GLRENDER(nbind, mbind, doTextures, (sogl_glue_from_state(state),
+  SOGL_QUADMESH_GLRENDER(static_cast<SoGL::QuadMesh::AttributeBinding>(nbind),
+                         static_cast<SoGL::QuadMesh::AttributeBinding>(mbind),
+                         doTextures,
+                         (sogl_glue_from_state(state),
                                                    coords,
                                                     normals,
                                                     &mb,

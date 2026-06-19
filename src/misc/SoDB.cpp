@@ -92,6 +92,7 @@
 #include <Inventor/misc/SoProto.h>
 #include <Inventor/misc/SoProtoInstance.h>
 #include <Inventor/nodes/SoSeparator.h>
+#include <Inventor/nodekits/SoNodeKit.h>
 #include <Inventor/sensors/SoTimerSensor.h>
 #include <Inventor/annex/HardCopy/SoHardCopy.h>
 #include <Inventor/errors/SoDebugError.h>
@@ -411,6 +412,7 @@ SoDB::init(ContextManager * context_manager)
     SoProfiler::init();
   }
 
+  SoNodeKit::init();
   SoHUD::init();
 
   // Note: OSMesa context initialization has been moved to test applications
@@ -1615,4 +1617,3 @@ SoDB::createOSMesaContextManager()
 }
 
 /* *********************************************************************** */
-

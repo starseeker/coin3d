@@ -282,7 +282,7 @@ public:
     }
     SbString s;
     s.sprintf("field==%p/%s/'%s'",
-              f,
+              static_cast<const void *>(f),
               f->getTypeId().getName().getString(),
               fname.getString());
     return s;

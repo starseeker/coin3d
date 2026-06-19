@@ -843,24 +843,24 @@ int main(int argc, char **argv)
     // HUGE SCALE: 22^3 = 10,648 instances — CAD+LoD render, no-LoD build only
     // -----------------------------------------------------------------------
     {
-        const int HUGE  = 22;
-        const int nInst = HUGE * HUGE * HUGE;
+        const int hugeGrid = 22;
+        const int nInst = hugeGrid * hugeGrid * hugeGrid;
         printf("=== HUGE scale: %d instances (grid %dx%dx%d, %zu tris each) ===\n",
-               nInst, HUGE, HUGE, HUGE, trisPerPart);
+               nInst, hugeGrid, hugeGrid, hugeGrid, trisPerPart);
         printf("    total triangles (full detail): %zu\n",
                (size_t)nInst * trisPerPart);
         printf("    (SG not attempted; no-LoD render skipped at this scale)\n\n");
 
         // CAD no LoD — build only, skip render to stay within CI time budget
         auto t0 = Clock::now();
-        SoSeparator *cadRoot = buildCADScene(mesh, HUGE, /*lod=*/false);
+        SoSeparator *cadRoot = buildCADScene(mesh, hugeGrid, /*lod=*/false);
         double cadBuildMs = Ms(Clock::now() - t0).count();
         printf("--- CAD (no LoD, build only) ---\n");
         printf("  build: %.1f ms\n\n", cadBuildMs);
 
         // CAD with LoD — render to exercise LoD path
         t0 = Clock::now();
-        SoSeparator *cadLodRoot = buildCADScene(mesh, HUGE, /*lod=*/true);
+        SoSeparator *cadLodRoot = buildCADScene(mesh, hugeGrid, /*lod=*/true);
         double cadLodBuildMs = Ms(Clock::now() - t0).count();
         printf("--- CAD (with LoD) ---\n");
         printf("  build: %.1f ms\n", cadLodBuildMs);

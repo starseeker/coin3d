@@ -71,13 +71,13 @@ public:
   enum ProjectorFrontSetting { FRONT, BACK, USE_PICK };
 
   // override these in case we decide to do some extra work later
-  virtual void callback(SoCallbackAction * action);
-  virtual void GLRender(SoGLRenderAction * action);
-  virtual void getMatrix(SoGetMatrixAction * action);
-  virtual void rayPick(SoRayPickAction * action);
-  virtual void search(SoSearchAction * action);
-  virtual void write(SoWriteAction * action);
-  virtual void getPrimitiveCount(SoGetPrimitiveCountAction * action);
+  virtual void callback(SoCallbackAction * action) override;
+  virtual void GLRender(SoGLRenderAction * action) override;
+  virtual void getMatrix(SoGetMatrixAction * action) override;
+  virtual void rayPick(SoRayPickAction * action) override;
+  virtual void search(SoSearchAction * action) override;
+  virtual void write(SoWriteAction * action) override;
+  virtual void getPrimitiveCount(SoGetPrimitiveCountAction * action) override;
 
   void setProjectorEpsilon(const float epsilon);
   float getProjectorEpsilon(void) const;
@@ -126,8 +126,8 @@ public:
   void setViewportRegion(const SbViewportRegion & reg);
   SoHandleEventAction * getHandleEventAction(void) const;
   void setHandleEventAction(SoHandleEventAction * newAction);
-  virtual void grabEventsSetup(void);
-  virtual void grabEventsCleanup(void);
+  virtual void grabEventsSetup(void) override;
+  virtual void grabEventsCleanup(void) override;
   void workFieldsIntoTransform(SbMatrix & mtx);
   void setFrontOnProjector(ProjectorFrontSetting newval);
   ProjectorFrontSetting getFrontOnProjector(void) const;
@@ -154,14 +154,14 @@ protected:
   SbBool isAdequateConstraintMotion(void);
   virtual SbBool shouldGrabBasedOnSurrogate(const SoPath * pickpath, const SoPath * surrogatepath);
   void setCameraInfo(SoAction * action);
-  virtual void handleEvent(SoHandleEventAction * ha);
+  virtual void handleEvent(SoHandleEventAction * ha) override;
   void transferMotion(SoDragger * child);
   void setIgnoreInBbox(SbBool newval);
   SbBool isIgnoreInBbox(void);
-  virtual void getBoundingBox(SoGetBoundingBoxAction * action);
+  virtual void getBoundingBox(SoGetBoundingBoxAction * action) override;
   void setActiveChildDragger(SoDragger * newchilddragger);
   SoDragger * getActiveChildDragger(void) const;
-  virtual void setDefaultOnNonWritingFields(void);
+  virtual void setDefaultOnNonWritingFields(void) override;
 
   static void childTransferMotionAndValueChangedCB(void *, SoDragger *);
   static void childValueChangedCB(void *, SoDragger *);

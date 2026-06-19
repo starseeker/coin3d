@@ -179,8 +179,8 @@ public:
 
   SbBool binarystream;
   SbBool usercalledopenfile;
-  SbString fltprecision;
-  SbString dblprecision;
+  int fltprecision;
+  int dblprecision;
   int indentlevel;
   SbBool writecompact;
   SbBool disabledwriting;
@@ -311,8 +311,8 @@ SoOutput::constructorCommon(void)
 
   PRIVATE(this)->usercalledopenfile = FALSE;
   PRIVATE(this)->binarystream = FALSE;
-  PRIVATE(this)->fltprecision = "%.8g";
-  PRIVATE(this)->dblprecision = "%.16lg";
+  PRIVATE(this)->fltprecision = 8;
+  PRIVATE(this)->dblprecision = 16;
   PRIVATE(this)->disabledwriting = FALSE;
   this->wroteHeader = FALSE;
   PRIVATE(this)->writecompact = FALSE;
@@ -713,8 +713,8 @@ SoOutput::setFloatPrecision(const int precision)
   const int fltnum = SbClamp(precision, 0, 8);
   const int dblnum = precision * 2;
 
-  PRIVATE(this)->fltprecision.sprintf("%%.%dg", fltnum);
-  PRIVATE(this)->dblprecision.sprintf("%%.%dlg", dblnum);
+  PRIVATE(this)->fltprecision = fltnum;
+  PRIVATE(this)->dblprecision = dblnum;
 }
 
 /*!
@@ -927,7 +927,7 @@ SoOutput::write(const float f)
     SbBool changed = coin_locale_set_portable(&storedlocale);
 
     SbString s;
-    s.sprintf(PRIVATE(this)->fltprecision.getString(), f);
+    s.sprintf("%.*g", PRIVATE(this)->fltprecision, static_cast<double>(f));
     
     // make sure scientific exponential is written in a platform independent way
     // always with three digits
@@ -964,7 +964,7 @@ SoOutput::write(const double d)
     SbBool changed = coin_locale_set_portable(&storedlocale);
 
     SbString s;
-    s.sprintf(PRIVATE(this)->dblprecision.getString(), d);
+    s.sprintf("%.*lg", PRIVATE(this)->dblprecision, d);
 
     // make sure scientific exponential is written in a platform independent way
     // always with three digits

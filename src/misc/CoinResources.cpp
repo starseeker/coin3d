@@ -219,10 +219,6 @@ CoinResources::get(const char * resloc)
       }
       filename.sprintf("%s/%s/%s", coindirenv->c_str(), OBOL_DATADIR, resloc + 5);
 #endif // !OBOL_MACOSX_FRAMEWORK
-      if (OBOL_DEBUG && 0) {
-        SoDebugError::postInfo("CoinResources::get", "trying to load '%s'.",
-                               filename.getString());
-      }
       FILE * fp = fopen(filename.getString(), "rb");
       if (!fp) {
         handle->filenotfound = TRUE;
@@ -252,10 +248,6 @@ CoinResources::get(const char * resloc)
         // hook up something that clears out everything instead.
         handle->loadedbuf = buffer;
 
-        if (OBOL_DEBUG && 0) {
-          SoDebugError::postInfo("CoinResources::get", "load '%s' ok.",
-                                 filename.getString());
-        }
       } else {
         handle->filenotfound = TRUE;
         break;

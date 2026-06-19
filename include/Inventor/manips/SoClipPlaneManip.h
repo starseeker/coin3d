@@ -61,16 +61,16 @@ public:
   SbBool replaceNode(SoPath * p);
   SbBool replaceManip(SoPath * p, SoClipPlane * newone) const;
 
-  virtual void doAction(SoAction * action);
-  virtual void callback(SoCallbackAction * action);
-  virtual void GLRender(SoGLRenderAction * action);
-  virtual void getBoundingBox(SoGetBoundingBoxAction * action);
-  virtual void getMatrix(SoGetMatrixAction * action);
-  virtual void handleEvent(SoHandleEventAction * action);
-  virtual void pick(SoPickAction * action);
-  virtual void search(SoSearchAction * action);
+  virtual void doAction(SoAction * action) override;
+  virtual void callback(SoCallbackAction * action) override;
+  virtual void GLRender(SoGLRenderAction * action) override;
+  virtual void getBoundingBox(SoGetBoundingBoxAction * action) override;
+  virtual void getMatrix(SoGetMatrixAction * action) override;
+  virtual void handleEvent(SoHandleEventAction * action) override;
+  virtual void pick(SoPickAction * action) override;
+  virtual void search(SoSearchAction * action) override;
 
-  virtual SoChildList * getChildren(void) const;
+  virtual SoChildList * getChildren(void) const override;
 
   SoSFVec3f draggerPosition;
 
@@ -79,7 +79,7 @@ protected:
 
   void setDragger(SoDragger * newdragger);
 
-  virtual void copyContents(const SoFieldContainer * fromfc, SbBool copyconnections);
+  virtual void copyContents(const SoFieldContainer * fromfc, SbBool copyconnections) override;
   static void valueChangedCB(void * f, SoDragger * d);
   static void fieldSensorCB(void * f, SoSensor * d);
   static void transferFieldValues(const SoClipPlane * from, SoClipPlane * to);

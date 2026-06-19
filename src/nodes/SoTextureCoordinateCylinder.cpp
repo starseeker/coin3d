@@ -98,8 +98,7 @@ so_texcoordcylinder_destruct_data(void * OBOL_UNUSED_ARG(closure))
 class SoTextureCoordinateCylinderP {
 
 public:
-  SoTextureCoordinateCylinderP(SoTextureCoordinateCylinder * texturenode) 
-    : master(texturenode) { }
+  SoTextureCoordinateCylinderP(SoTextureCoordinateCylinder *) { }
   
   SbVec4f calculateTextureCoordinate(const SbVec3f & point, const SbVec3f & n);
   
@@ -112,8 +111,6 @@ public:
     
   SbStorage * so_texcoord_storage;
 
-private:
-  SoTextureCoordinateCylinder * master;
 };
 
 

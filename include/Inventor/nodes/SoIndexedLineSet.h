@@ -64,22 +64,22 @@ public:
   static void initClass(void);
   SoIndexedLineSet(void);
 
-  virtual void GLRender(SoGLRenderAction * action);
-  virtual void getBoundingBox(SoGetBoundingBoxAction * action);
-  virtual void getPrimitiveCount(SoGetPrimitiveCountAction * action);
+  virtual void GLRender(SoGLRenderAction * action) override;
+  virtual void getBoundingBox(SoGetBoundingBoxAction * action) override;
+  virtual void getPrimitiveCount(SoGetPrimitiveCountAction * action) override;
 
   SoSeparator * createCylinderProxy(const SoCoordinateElement * coords,
                                     float cylRadius) const;
 
 protected:
   virtual ~SoIndexedLineSet();
-  virtual void notify(SoNotList * list);
+  virtual void notify(SoNotList * list) override;
 
 private:
-  virtual void generatePrimitives(SoAction * action);
+  virtual void generatePrimitives(SoAction * action) override;
 
-  virtual SbBool generateDefaultNormals(SoState * state, SoNormalBundle * bundle);
-  virtual SbBool generateDefaultNormals(SoState * state, SoNormalCache * nc);
+  virtual SbBool generateDefaultNormals(SoState * state, SoNormalBundle * bundle) override;
+  virtual SbBool generateDefaultNormals(SoState * state, SoNormalCache * nc) override;
 
   enum Binding {
     OVERALL = 0,

@@ -73,7 +73,7 @@ public:
   SoSFEnum function;
   SoSFFloat value;
 
-  virtual void GLRender(SoGLRenderAction * action);
+  virtual void GLRender(SoGLRenderAction * action) override;
 
 protected:
   virtual ~SoAlphaTest();

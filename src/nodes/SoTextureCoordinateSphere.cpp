@@ -98,8 +98,7 @@ SO_NODE_SOURCE(SoTextureCoordinateSphere);
 class SoTextureCoordinateSphereP {
 
 public:
-  SoTextureCoordinateSphereP(SoTextureCoordinateSphere * texturenode)
-    : master(texturenode) { }
+  SoTextureCoordinateSphereP(SoTextureCoordinateSphere *) { }
 
   SbVec4f calculateTextureCoordinate(const SbVec3f & point, const SbVec3f & n);
 
@@ -112,15 +111,12 @@ public:
 
   SbStorage * so_texcoord_storage;
 
-private:
-  SoTextureCoordinateSphere * master;
 };
 
 
 static const SbVec4f & textureCoordinateSphereCallback(void * userdata, const SbVec3f & point, const SbVec3f & normal);
 
 #define PRIVATE(p) (p->pimpl)
-#define PUBLIC(p) (p->master)
 
 
 /*!

@@ -63,9 +63,9 @@ class OBOL_DLL_API SoProtoInstance : public SoNode {
 
   PRIVATE_NODE_TYPESYSTEM_HEADER();
 protected:
-  virtual const SoFieldData * getFieldData(void) const;
+  virtual const SoFieldData * getFieldData(void) const override;
 private:
-  SoFieldData * classfielddata;
+  [[maybe_unused]] SoFieldData * classfielddata;
 
 public:
   static void initClass(void);
@@ -80,12 +80,12 @@ public:
   SoProto * getProtoDefinition(void) const;
   SbName getProtoName(void) const;
   
-  virtual void write(SoWriteAction * action);
+  virtual void write(SoWriteAction * action) override;
 
 protected:
   virtual ~SoProtoInstance();
-  virtual SbBool readInstance(SoInput * in, unsigned short flags);
-  virtual const char * getFileFormatName(void) const;
+  virtual SbBool readInstance(SoInput * in, unsigned short flags) override;
+  virtual const char * getFileFormatName(void) const override;
 
 private:
 

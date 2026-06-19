@@ -75,7 +75,7 @@ public:
 protected:
   virtual ~SoShapeKit();
 
-  virtual void setDefaultOnNonWritingFields(void);
+  virtual void setDefaultOnNonWritingFields(void) override;
 };
 
 #endif // !OBOL_SOSHAPEKIT_H

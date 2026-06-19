@@ -499,7 +499,10 @@ SoTriangleStripSet::GLRender(SoGLRenderAction * action)
 
   mb.sendFirst(); // make sure we have the correct material
 
-  SOGL_TRISTRIPSET_GLRENDER(nbind, mbind, doTextures, (sogl_glue_from_state(state),
+  SOGL_TRISTRIPSET_GLRENDER(static_cast<SoGL::TriStripSet::AttributeBinding>(nbind),
+                            static_cast<SoGL::TriStripSet::AttributeBinding>(mbind),
+                            doTextures,
+                            (sogl_glue_from_state(state),
                                                    coords,
                                                        normals,
                                                        &mb,

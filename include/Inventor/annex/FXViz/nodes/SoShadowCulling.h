@@ -64,7 +64,7 @@ public:
 
   SoSFEnum mode;
 
-  virtual void GLRender(SoGLRenderAction * action);
+  virtual void GLRender(SoGLRenderAction * action) override;
 
 protected:
   virtual ~SoShadowCulling();

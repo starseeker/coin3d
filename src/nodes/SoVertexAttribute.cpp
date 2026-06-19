@@ -263,7 +263,7 @@ SoVertexAttribute::GLRender(SoGLRenderAction * action)
       SbString msg("\nUnable to use Vertex Attributes:\n");
       if (!opengl_version_match) msg += "OpenGL version < 2.0\n";
       if (!vertex_shader_supported) msg += "GL_ARB_vertex_shader extension not supported\n";
-      SoDebugError::post("SoVertexAttribute::GLRender", msg.getString());
+      SoDebugError::post("SoVertexAttribute::GLRender", "%s", msg.getString());
     }
     return;
   }

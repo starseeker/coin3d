@@ -863,7 +863,8 @@ glglue_set_glVersion(SoGLContext * w)
                              "glGetString(GL_VERSION)=='%s'", w->versionstr);
     } else {
       cc_debugerror_postinfo("glglue_set_glVersion",
-                             "glGetString(GL_VERSION)==%p (NULL or empty)", w->versionstr);
+                             "glGetString(GL_VERSION)==%p (NULL or empty)",
+                             static_cast<const void *>(w->versionstr));
     }
   }
 
@@ -2876,7 +2877,9 @@ SoGLContext_instance(int contextid)
         cc_debugerror_postinfo("SoGLContext_instance", "coin_gl_current_context() returned: %p", current_ctx);
 #ifndef SOGL_PREFIX_SET
         SoDB::ContextManager* manager = coingl_get_context_manager(contextid);
-        cc_debugerror_postinfo("SoGLContext_instance", "context_manager = %p", manager);
+        cc_debugerror_postinfo("SoGLContext_instance",
+                               "context_manager = %p",
+                               static_cast<void *>(manager));
 #endif
       }
 #endif
@@ -2958,7 +2961,9 @@ SoGLContext_instance(int contextid)
     
     /* Additional debugging for OSMesa context */
     if (SoGLContext_debug()) {
-      cc_debugerror_postinfo("SoGLContext_instance", "glGetString(GL_VERSION) returned: %p", gi->versionstr);
+      cc_debugerror_postinfo("SoGLContext_instance",
+                             "glGetString(GL_VERSION) returned: %p",
+                             static_cast<const void *>(gi->versionstr));
       if (gi->versionstr) {
         /* Try to safely check if the string is readable */
         volatile char testchar = gi->versionstr[0];
@@ -3024,7 +3029,9 @@ SoGLContext_instance(int contextid)
     
 #ifdef OBOL_SWRAST_BUILD
     if (SoGLContext_debug()) {
-      cc_debugerror_postinfo("SoGLContext_instance", "GL_RENDERER call completed, rendererstr = %p", gi->rendererstr);
+      cc_debugerror_postinfo("SoGLContext_instance",
+                             "GL_RENDERER call completed, rendererstr = %p",
+                             static_cast<const void *>(gi->rendererstr));
       if (gi->rendererstr) {
         cc_debugerror_postinfo("SoGLContext_instance", "Renderer string: %s", gi->rendererstr);
       }
@@ -3057,7 +3064,9 @@ SoGLContext_instance(int contextid)
       glGetStringi = (OBOL_PFNGLGETSTRINGIPROC)SoGLContext_getprocaddress(gi, "glGetStringi");
 #ifdef OBOL_SWRAST_BUILD
       if (SoGLContext_debug()) {
-        cc_debugerror_postinfo("SoGLContext_instance", "glGetStringi = %p", glGetStringi);
+        cc_debugerror_postinfo("SoGLContext_instance",
+                               "glGetStringi = %p",
+                               reinterpret_cast<void *>(glGetStringi));
       }
 #endif
       if (glGetStringi != NULL) {
@@ -3083,7 +3092,7 @@ SoGLContext_instance(int contextid)
         } else {
           cc_debugerror_postwarning ("SoGLContext_instance",
                                      "glGetIntegerv(GL_NUM_EXTENSIONS) did not return a value, "
-                                     "so unable to get extensions for this GL driver, ",
+                                     "so unable to get extensions for this GL driver, "
                                      "version: %s, vendor: %s", gi->versionstr, gi->vendorstr);
         }
       } else {

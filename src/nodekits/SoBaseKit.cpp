@@ -2365,7 +2365,7 @@ SoBaseKit::setPart(const int partnum, SoNode * node)
     SoDebugError::postWarning("SoBaseKit::setPart",
                               "Node pointer (%p, '%s', '%s') is already used under the same group node in the catalog "
                               "as a child of part '%s' -- this is not allowed",
-                              node,
+                              static_cast<void *>(node),
                               node->getName().getString(),
                               node->getTypeId().getName().getString(),
                               catalog->getName(parentIdx).getString());

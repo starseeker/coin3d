@@ -1363,7 +1363,7 @@ namespace { namespace SoGL { namespace FaceSet {
 
         if (current_errors < 1) {
           SoDebugError::postWarning("[faceset]::GLRender", "Erroneous polygon detected. "
-                                    "Ignoring (offset: %d, [%d %d %d]). Should be within "
+                                    "Ignoring (offset: %td, [%d %d %d]). Should be within "
                                     " [0, %d] This message will only be shown once, but "
                                     "more errors might be present",
                                     viptr - vistartptr - 3, v1, v2, v3, numverts - 1);
@@ -1379,7 +1379,7 @@ namespace { namespace SoGL { namespace FaceSet {
 
         if (current_errors < 1) {
           SoDebugError::postWarning("[faceset]::GLRender", "Erroneous polygon detected. "
-                                    "(offset: %d, [%d %d %d %d]). Should be within "
+                                    "(offset: %td, [%d %d %d %d]). Should be within "
                                     " [0, %d] This message will only be shown once, but "
                                     "more errors might be present",
                                     viptr - vistartptr - 4, v1, v2, v3, v4, numverts - 1);
@@ -1395,7 +1395,7 @@ namespace { namespace SoGL { namespace FaceSet {
 
           if (current_errors < 1) {
             SoDebugError::postWarning("[faceset]::GLRender", "Erroneous polygon detected. "
-                                      "(offset: %d, [%d %d %d %d %d]). Should be within "
+                                      "(offset: %td, [%d %d %d %d %d]). Should be within "
                                       " [0, %d] This message will only be shown once, but "
                                       "more errors might be present",
                                       viptr - vistartptr - 5, v1, v2, v3, v4, v5, numverts - 1);
@@ -1597,7 +1597,7 @@ namespace { namespace SoGL { namespace FaceSet {
             if (v1 >= numverts) {
               if (current_errors < 1) {
                 SoDebugError::postWarning("[faceset]::GLRender", "Erroneous polygon detected. "
-                                          "(offset: %d, [... %d]). Should be within "
+                                          "(offset: %td, [... %d]). Should be within "
                                           "[0, %d] This message will only be shown once, but "
                                           "more errors might be present",
                                           viptr - vistartptr - 1, v1, numverts - 1);
@@ -1883,7 +1883,7 @@ namespace { namespace SoGL { namespace TriStripSet {
         static uint32_t current_errors = 0;
         if (current_errors < 1) {
           SoDebugError::postWarning("[tristrip]::GLRender", "Erroneous polygon detected. "
-                                    "Ignoring (offset: %d, [%d %d %d]). Should be within "
+                                    "Ignoring (offset: %td, [%d %d %d]). Should be within "
                                     " [0, %d] This message will only be shown once, but "
                                     "more errors may be present",
                                     viptr - vistartptr - 3, v1, v2, v3, numverts - 1);

@@ -62,9 +62,9 @@ public:
 
   SoSFInt32 numPoints;
 
-  virtual void GLRender(SoGLRenderAction * action);
-  virtual void getBoundingBox(SoGetBoundingBoxAction * action);
-  virtual void getPrimitiveCount(SoGetPrimitiveCountAction * action);
+  virtual void GLRender(SoGLRenderAction * action) override;
+  virtual void getBoundingBox(SoGetBoundingBoxAction * action) override;
+  virtual void getPrimitiveCount(SoGetPrimitiveCountAction * action) override;
 
   SoSeparator * createSphereProxy(const SoCoordinateElement * coords,
                                   float sphRadius) const;
@@ -75,12 +75,12 @@ public:
 protected:
   virtual ~SoPointSet();
 
-  virtual void generatePrimitives(SoAction * action);
-  virtual void computeBBox(SoAction * action, SbBox3f & box, SbVec3f & center);
+  virtual void generatePrimitives(SoAction * action) override;
+  virtual void computeBBox(SoAction * action, SbBox3f & box, SbVec3f & center) override;
 
-  virtual SbBool generateDefaultNormals(SoState *, SoNormalCache * nc);
+  virtual SbBool generateDefaultNormals(SoState *, SoNormalCache * nc) override;
   virtual SbBool generateDefaultNormals(SoState * state,
-                                        SoNormalBundle * bundle);
+                                        SoNormalBundle * bundle) override;
 
 private:
   enum Binding {

@@ -98,8 +98,8 @@ public:
   void addClickCallback(SoHUDButtonCB * cb, void * userdata = NULL);
   void removeClickCallback(SoHUDButtonCB * cb, void * userdata = NULL);
 
-  virtual void GLRender(SoGLRenderAction * action);
-  virtual void handleEvent(SoHandleEventAction * action);
+  virtual void GLRender(SoGLRenderAction * action) override;
+  virtual void handleEvent(SoHandleEventAction * action) override;
 
 protected:
   virtual ~SoHUDButton(void);

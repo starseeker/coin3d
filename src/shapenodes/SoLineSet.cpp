@@ -499,7 +499,10 @@ SoLineSet::GLRender(SoGLRenderAction * action)
   SbBool drawPoints =
     SoDrawStyleElement::get(state) == SoDrawStyleElement::POINTS;
 
-  SOGL_LINESET_GLRENDER(nbind, mbind, doTextures, (sogl_glue_from_state(state),
+  SOGL_LINESET_GLRENDER(static_cast<SoGL::LineSet::AttributeBinding>(nbind),
+                        static_cast<SoGL::LineSet::AttributeBinding>(mbind),
+                        doTextures,
+                        (sogl_glue_from_state(state),
                                                    coords,
                                                    normals,
                                                    &mb,

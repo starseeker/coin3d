@@ -59,7 +59,7 @@ public:
   static void initClass(void);
   SoShadowDirectionalLight(void);
 
-  virtual void GLRender(SoGLRenderAction * action);
+  virtual void GLRender(SoGLRenderAction * action) override;
 
   SoSFNode shadowMapScene;
   SoSFFloat maxShadowDistance;

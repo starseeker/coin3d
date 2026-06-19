@@ -61,7 +61,7 @@ public:
   virtual SoType getTypeId(void) const;
   SbBool isOfType(const SoType type) const;
 
-  static void post(const char * const format, ...);
+  static void post(const char * const format, ...) OBOL_PRINTF_FORMAT(1, 2);
 
   static SbString getString(const SoNode * const node);
   static SbString getString(const SoPath * const path);

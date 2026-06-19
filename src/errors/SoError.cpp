@@ -355,5 +355,5 @@ SoError::generateBaseString(SbString & str,
                             const char * const what)
 {
   str.sprintf("%s named \"%s\" at address %p",
-              what, base->getName().getString(), base);
+              what, base->getName().getString(), static_cast<const void *>(base));
 }

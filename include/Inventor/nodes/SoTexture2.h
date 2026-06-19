@@ -87,10 +87,10 @@ public:
   SoSFColor blendColor;
   SoSFBool enableCompressedTexture;
 
-  virtual void doAction(SoAction * action);
-  virtual void GLRender(SoGLRenderAction * action);
-  virtual void callback(SoCallbackAction * action);
-  virtual void rayPick(SoRayPickAction * action);
+  virtual void doAction(SoAction * action) override;
+  virtual void GLRender(SoGLRenderAction * action) override;
+  virtual void callback(SoCallbackAction * action) override;
+  virtual void rayPick(SoRayPickAction * action) override;
 
   // Convenience methods for in-memory texture management
   void setImageData(int width, int height, int numComponents, 
@@ -102,8 +102,8 @@ public:
 protected:
   virtual ~SoTexture2();
 
-  virtual SbBool readInstance(SoInput * in, unsigned short flags);
-  virtual void notify(SoNotList * list);
+  virtual SbBool readInstance(SoInput * in, unsigned short flags) override;
+  virtual void notify(SoNotList * list) override;
   int getReadStatus(void);
   void setReadStatus(int s);
 

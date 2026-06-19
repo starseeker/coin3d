@@ -104,8 +104,7 @@ SO_NODE_SOURCE(SoTextureCoordinateCube);
 class SoTextureCoordinateCubeP {
 
 public:
-  SoTextureCoordinateCubeP(SoTextureCoordinateCube * texturenode)
-    : master(texturenode) { }
+  SoTextureCoordinateCubeP(SoTextureCoordinateCube *) { }
 
   SbVec4f calculateTextureCoordinate(const SbVec3f & point, const SbVec3f & n);
 
@@ -117,9 +116,6 @@ public:
   }
 
   SbStorage * so_texcoord_storage;
-
-private:
-  SoTextureCoordinateCube * master;
 
 };
 

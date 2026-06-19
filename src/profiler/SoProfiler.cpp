@@ -401,8 +401,7 @@ SoProfilerP::parseCoinProfilerOverlayVariable(void)
           profiler::console::lines = atoi(subargs[0].data());
           if (profiler::console::lines < 0 || profiler::console::lines > 512) {
             SoDebugError::postWarning("SoProfiler",
-                                      "Number of lines out of range. Setting 20.",
-                                      profiler::console::lines);
+                                      "Number of lines out of range. Setting 20.");
             profiler::console::lines = 20;
           }
         } else {

@@ -429,12 +429,13 @@ SoTransformBoxDragger::setUpConnections(SbBool onoff, SbBool doitalways)
 // FIXME: should collect these methods in a common method visible to
 // all draggers implementing the exact same functionality. 20010826 mortene.
 static void
-SoTransformBoxDragger_set_default(SoDragger * dragger, const char * fmt,
+SoTransformBoxDragger_set_default(SoDragger * dragger, const char * prefix,
+                                  const char * suffix,
                                   int minval, int maxval)
 {
   SbString str;
   for (int i = minval; i <= maxval; i++) {
-    str.sprintf(fmt, i);
+    str.sprintf("%s%d%s", prefix, i, suffix);
     SoField * f = dragger->getField(str.getString());
     assert(f);
     f->setDefault(TRUE);
@@ -447,8 +448,8 @@ SoTransformBoxDragger::setDefaultOnNonWritingFields(void)
 {
   this->surroundScale.setDefault(TRUE);
 
-  SoTransformBoxDragger_set_default(this, "rotator%d", 1, 3);
-  SoTransformBoxDragger_set_default(this, "translator%d", 1, 6);
+  SoTransformBoxDragger_set_default(this, "rotator", "", 1, 3);
+  SoTransformBoxDragger_set_default(this, "translator", "", 1, 6);
 
   inherited::setDefaultOnNonWritingFields();
 }

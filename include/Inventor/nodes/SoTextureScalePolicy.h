@@ -68,7 +68,7 @@ public:
   SoSFEnum policy;
   SoSFFloat quality;
 
-  virtual void GLRender(SoGLRenderAction * action);
+  virtual void GLRender(SoGLRenderAction * action) override;
 
 protected:
   virtual ~SoTextureScalePolicy();

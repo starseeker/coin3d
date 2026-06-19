@@ -72,10 +72,10 @@ static void nodekit_cleanup(void)
 /*!
   Initialize the nodekit system.
 
-  Note that this method is \e not called implicitly from SoDB::init().
-  As a matter of fact, this method calls SoDB::init() itself to make
-  sure all the underlying classes for the nodekits classes have
-  been initialized.
+  This method is called implicitly from SoDB::init(), so applications
+  normally only need the standard SoDB initialization step before using
+  nodekits.  Explicit calls remain harmless after SoDB has initialized
+  the underlying classes.
 
   This method is also called from within SoInteraction::init(), as the
   interaction functionality in Coin depends on the nodekit classes.

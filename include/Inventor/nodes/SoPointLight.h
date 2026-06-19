@@ -60,7 +60,7 @@ public:
 
   SoSFVec3f location;
 
-  virtual void GLRender(SoGLRenderAction * action);
+  virtual void GLRender(SoGLRenderAction * action) override;
 
 protected:
   virtual ~SoPointLight();
