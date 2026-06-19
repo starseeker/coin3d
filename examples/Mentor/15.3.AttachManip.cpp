@@ -2,13 +2,12 @@
  * Headless version of Inventor Mentor example 15.3
  *
  * Original: attach/detach different Inventor manipulators to selected nodes.
- * Headless: application selection state displays v2 manipulator overlays.
+ * Headless: application selection state displays v2 interaction overlays.
  */
 
 #include "headless_utils.h"
 #include <Obol/Obol.h>
 
-#include <cmath>
 #include <cstdio>
 
 namespace {
@@ -20,8 +19,13 @@ enum class Manipulator {
     ConeTransformBox
 };
 
-constexpr float kPi = 3.14159265358979323846f;
-constexpr float kObjectSpacing = 3.2f;
+constexpr float kObjectSpacing = 2.5f;
+
+struct ObjectIds {
+    obol::SceneObjectId cube = obol::InvalidSceneObjectId;
+    obol::SceneObjectId sphere = obol::InvalidSceneObjectId;
+    obol::SceneObjectId cone = obol::InvalidSceneObjectId;
+};
 
 obol::Material material(float r, float g, float b)
 {
@@ -39,48 +43,17 @@ obol::Transform transform(float x, float y, float z)
     return xf;
 }
 
-void addWireBox(obol::Scene & scene,
-                const obol::Vec3 & center,
-                const obol::Vec3 & halfSize,
-                const obol::Material & mat)
+obol::PerspectiveCamera viewAllCamera(const obol::Scene & scene)
 {
-    obol::Polyline box;
-    box.lineWidth = 2.0f;
-    const float x = halfSize.x;
-    const float y = halfSize.y;
-    const float z = halfSize.z;
-    box.points = {
-        {-x, -y, -z}, { x, -y, -z}, { x,  y, -z}, {-x,  y, -z},
-        {-x, -y, -z}, {-x, -y,  z}, { x, -y,  z}, { x,  y,  z},
-        {-x,  y,  z}, {-x, -y,  z}, { x, -y,  z}, { x, -y, -z},
-        { x,  y, -z}, { x,  y,  z}, {-x,  y,  z}, {-x,  y, -z}
-    };
-    scene.addPolyline(box, mat, transform(center.x, center.y, center.z));
+    obol::ViewAllRequest request;
+    request.viewportWidth = DEFAULT_WIDTH;
+    request.viewportHeight = DEFAULT_HEIGHT;
+    return obol::CameraFraming::viewAllPerspective(scene, request);
 }
 
-void addCircle(obol::Scene & scene,
-               const obol::Vec3 & center,
-               float radius,
-               const obol::Vec3 & axis,
-               const obol::Material & mat)
+ObjectIds addBaseObjects(obol::Scene & scene, Manipulator active)
 {
-    obol::Polyline circle;
-    circle.lineWidth = 2.0f;
-    for (int i = 0; i <= 48; ++i) {
-        const float angle = 2.0f * kPi * static_cast<float>(i) / 48.0f;
-        if (axis.x != 0.0f) {
-            circle.points.push_back({0.0f, radius * std::cos(angle), radius * std::sin(angle)});
-        } else if (axis.y != 0.0f) {
-            circle.points.push_back({radius * std::cos(angle), 0.0f, radius * std::sin(angle)});
-        } else {
-            circle.points.push_back({radius * std::cos(angle), radius * std::sin(angle), 0.0f});
-        }
-    }
-    scene.addPolyline(circle, mat, transform(center.x, center.y, center.z));
-}
-
-void addBaseObjects(obol::Scene & scene, Manipulator active)
-{
+    ObjectIds ids;
     const obol::Material neutral = material(0.8f, 0.8f, 0.8f);
     const obol::Material cubeMat =
         active == Manipulator::CubeTrackball ? material(0.2f, 1.0f, 0.2f) : neutral;
@@ -89,56 +62,69 @@ void addBaseObjects(obol::Scene & scene, Manipulator active)
     const obol::Material coneMat =
         active == Manipulator::ConeTransformBox ? material(0.2f, 0.2f, 1.0f) : neutral;
 
-    scene.addPrimitive(obol::Primitive::Cube, cubeMat, transform(-kObjectSpacing, 0.0f, 0.0f));
+    ids.cube = scene.addPrimitive(obol::Primitive::Cube,
+                                  cubeMat,
+                                  transform(-kObjectSpacing, 0.0f, 0.0f));
 
     obol::PrimitiveOptions sphereOptions;
     sphereOptions.radius = 1.0f;
-    scene.addPrimitive(obol::Primitive::Sphere,
-                       sphereMat,
-                       transform(0.0f, 0.0f, 0.0f),
-                       sphereOptions);
+    ids.sphere = scene.addPrimitive(obol::Primitive::Sphere,
+                                    sphereMat,
+                                    transform(0.0f, 0.0f, 0.0f),
+                                    sphereOptions);
 
     obol::PrimitiveOptions coneOptions;
     coneOptions.radius = 1.0f;
     coneOptions.height = 2.0f;
-    scene.addPrimitive(obol::Primitive::Cone,
-                       coneMat,
-                       transform(kObjectSpacing, 0.0f, 0.0f),
-                       coneOptions);
+    ids.cone = scene.addPrimitive(obol::Primitive::Cone,
+                                  coneMat,
+                                  transform(kObjectSpacing, 0.0f, 0.0f),
+                                  coneOptions);
+    return ids;
 }
 
-void addManipulatorOverlay(obol::Scene & scene, Manipulator active)
+void addManipulatorOverlay(obol::Scene & scene,
+                           Manipulator active,
+                           const ObjectIds & ids)
 {
     if (active == Manipulator::SphereHandleBox) {
-        addWireBox(scene,
-                   {0.0f, 0.0f, 0.0f},
-                   {1.25f, 1.25f, 1.25f},
-                   material(1.0f, 0.2f, 0.2f));
+        obol::ManipulatorOverlay overlay;
+        overlay.target = ids.sphere;
+        overlay.kind = obol::ManipulatorOverlayKind::HandleBox;
+        overlay.transform = transform(0.0f, 0.0f, 0.0f);
+        overlay.boxHalfSize = {1.25f, 1.25f, 1.25f};
+        overlay.lineWidth = 2.0f;
+        overlay.material = material(1.0f, 0.2f, 0.2f);
+        obol::TransformDragger::addManipulatorOverlay(scene, overlay);
     } else if (active == Manipulator::CubeTrackball) {
-        const obol::Material mat = material(0.2f, 1.0f, 0.2f);
-        addCircle(scene, {-kObjectSpacing, 0.0f, 0.0f}, 1.35f, {1.0f, 0.0f, 0.0f}, mat);
-        addCircle(scene, {-kObjectSpacing, 0.0f, 0.0f}, 1.35f, {0.0f, 1.0f, 0.0f}, mat);
-        addCircle(scene, {-kObjectSpacing, 0.0f, 0.0f}, 1.35f, {0.0f, 0.0f, 1.0f}, mat);
+        obol::ManipulatorOverlay overlay;
+        overlay.target = ids.cube;
+        overlay.kind = obol::ManipulatorOverlayKind::Trackball;
+        overlay.transform = transform(-kObjectSpacing, 0.0f, 0.0f);
+        overlay.trackballRadius = 1.35f;
+        overlay.lineWidth = 2.0f;
+        overlay.segments = 48;
+        overlay.material = material(0.2f, 1.0f, 0.2f);
+        obol::TransformDragger::addManipulatorOverlay(scene, overlay);
     } else if (active == Manipulator::ConeTransformBox) {
-        addWireBox(scene,
-                   {kObjectSpacing, 0.0f, 0.0f},
-                   {1.25f, 1.25f, 1.25f},
-                   material(0.2f, 0.2f, 1.0f));
-        addCircle(scene, {kObjectSpacing, 0.0f, 0.0f}, 1.55f, {0.0f, 0.0f, 1.0f}, material(0.2f, 0.2f, 1.0f));
+        obol::ManipulatorOverlay overlay;
+        overlay.target = ids.cone;
+        overlay.kind = obol::ManipulatorOverlayKind::TransformBox;
+        overlay.transform = transform(kObjectSpacing, 0.0f, 0.0f);
+        overlay.boxHalfSize = {1.25f, 1.25f, 1.25f};
+        overlay.lineWidth = 2.0f;
+        overlay.material = material(0.92f, 0.92f, 0.88f);
+        obol::TransformDragger::addManipulatorOverlay(scene, overlay);
     }
 }
 
 obol::Scene makeScene(Manipulator active)
 {
     obol::Scene scene;
-    obol::PerspectiveCamera camera;
-    camera.position = {0.0f, 1.2f, 16.0f};
-    camera.target = {0.0f, 0.0f, 0.0f};
-    camera.verticalFieldOfViewRadians = 0.55f;
-    scene.setCamera(camera);
     scene.addDirectionalLight(obol::DirectionalLight{});
-    addBaseObjects(scene, active);
-    addManipulatorOverlay(scene, active);
+    const ObjectIds ids = addBaseObjects(scene, active);
+    scene.setCamera(viewAllCamera(scene));
+    addManipulatorOverlay(scene, active, ids);
     return scene;
 }
 

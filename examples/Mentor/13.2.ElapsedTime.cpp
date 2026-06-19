@@ -53,8 +53,12 @@ int main(int argc, char **argv)
     const char *baseFilename = (argc > 1) ? argv[1] : "13.2.ElapsedTime";
     char filename[256];
 
+    const obol::Time startTime = obol::Time::unixEpoch();
     for (int i = 0; i <= 10; i++) {
-        const float timeValue = i * 0.5f;
+        const obol::Time currentTime =
+            startTime + obol::TimeSpan::fromMilliseconds(i * 500.0);
+        const float timeValue =
+            static_cast<float>((currentTime - startTime).seconds);
         objectTransform.translation = {timeValue, 0.0f, 0.0f};
         scene.setObjectTransform(object, objectTransform);
         printf("Time %.1f: X position = %.2f\n", timeValue, timeValue);

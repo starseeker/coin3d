@@ -47,11 +47,12 @@ void rootChangedCB(const char * nodeName, const char * fieldName)
     }
 }
 
-obol::Transform translation(float x, float y, float z)
+obol::PerspectiveCamera viewAllCamera(const obol::Scene & scene)
 {
-    obol::Transform transform;
-    transform.translation = {x, y, z};
-    return transform;
+    obol::ViewAllRequest request;
+    request.viewportWidth = DEFAULT_WIDTH;
+    request.viewportHeight = DEFAULT_HEIGHT;
+    return obol::CameraFraming::viewAllPerspective(scene, request);
 }
 
 } // namespace
@@ -61,25 +62,51 @@ int main(int argc, char **argv)
     initCoinHeadless();
 
     obol::Scene scene;
-    obol::PerspectiveCamera camera;
-    camera.position = {0.0f, 0.0f, 8.0f};
-    camera.target = {0.0f, 0.0f, 0.0f};
-    scene.setCamera(camera);
     scene.addDirectionalLight(obol::DirectionalLight{});
 
     ObjectState cube;
     cube.name = "MyCube";
-    cube.transform = translation(-1.5f, 0.0f, 0.0f);
     cube.id = scene.addPrimitive(obol::Primitive::Cube,
                                  obol::Material{},
                                  cube.transform);
 
     ObjectState sphere;
     sphere.name = "MySphere";
-    sphere.transform = translation(1.5f, 0.0f, 0.0f);
     sphere.id = scene.addPrimitive(obol::Primitive::Sphere,
                                    obol::Material{},
                                    sphere.transform);
+    scene.setCamera(viewAllCamera(scene));
+
+    obol::ObservableValue<obol::Transform> cubeTransform(cube.transform);
+    cubeTransform.addObserver(
+        [&](const obol::ValueChange<obol::Transform> & change) {
+            cube.transform = change.value;
+            scene.setObjectTransform(cube.id, cube.transform);
+            rootChangedCB(cube.name,
+                          change.fieldName.empty()
+                              ? nullptr
+                              : change.fieldName.c_str());
+        });
+
+    obol::ObservableValue<obol::Transform> sphereTransform(sphere.transform);
+    sphereTransform.addObserver(
+        [&](const obol::ValueChange<obol::Transform> & change) {
+            sphere.transform = change.value;
+            scene.setObjectTransform(sphere.id, sphere.transform);
+            rootChangedCB(sphere.name,
+                          change.fieldName.empty()
+                              ? nullptr
+                              : change.fieldName.c_str());
+        });
+
+    obol::ObservableValue<bool> spherePresent(true);
+    spherePresent.addObserver([&](const obol::ValueChange<bool> & change) {
+        if (!change.value && sphere.id != obol::InvalidSceneObjectId) {
+            scene.removeObject(sphere.id);
+            sphere.id = obol::InvalidSceneObjectId;
+        }
+        rootChangedCB("Root", nullptr);
+    });
 
     obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
                                         obol::RenderBackendKind::OpenGL2SWRast,
@@ -100,30 +127,24 @@ int main(int argc, char **argv)
 
     printf("\n=== Changing cube width ===\n");
     cube.transform.scale.x = 1.5f;
-    scene.setObjectTransform(cube.id, cube.transform);
-    rootChangedCB(cube.name, "width");
+    cubeTransform.set(cube.transform, "width");
     snprintf(filename, sizeof(filename), "%s_cube_width.rgb", baseFilename);
     if (!renderScene(renderer, scene, filename)) return 1;
 
     printf("\n=== Changing cube height ===\n");
     cube.transform.scale.y = 2.0f;
-    scene.setObjectTransform(cube.id, cube.transform);
-    rootChangedCB(cube.name, "height");
+    cubeTransform.set(cube.transform, "height");
     snprintf(filename, sizeof(filename), "%s_cube_height.rgb", baseFilename);
     if (!renderScene(renderer, scene, filename)) return 1;
 
     printf("\n=== Changing sphere radius ===\n");
     sphere.transform.scale = {2.0f, 2.0f, 2.0f};
-    scene.setObjectTransform(sphere.id, sphere.transform);
-    rootChangedCB(sphere.name, "radius");
+    sphereTransform.set(sphere.transform, "radius");
     snprintf(filename, sizeof(filename), "%s_sphere_radius.rgb", baseFilename);
     if (!renderScene(renderer, scene, filename)) return 1;
 
     printf("\n=== Removing sphere ===\n");
-    sphere.transform.translation = {1000.0f, 1000.0f, 1000.0f};
-    sphere.transform.scale = {0.001f, 0.001f, 0.001f};
-    scene.setObjectTransform(sphere.id, sphere.transform);
-    rootChangedCB("Root", nullptr);
+    spherePresent.set(false);
     snprintf(filename, sizeof(filename), "%s_removed_sphere.rgb", baseFilename);
     if (!renderScene(renderer, scene, filename)) return 1;
 

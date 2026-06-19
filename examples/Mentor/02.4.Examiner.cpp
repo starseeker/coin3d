@@ -17,8 +17,6 @@ obol::Material red()
 {
     obol::Material material;
     material.baseColor = {1.0f, 0.0f, 0.0f, 1.0f};
-    material.specular = {0.25f, 0.25f, 0.25f, 1.0f};
-    material.shininess = 0.35f;
     return material;
 }
 
@@ -30,15 +28,19 @@ bool renderScene(obol::OffscreenRenderer & renderer,
     return result.success && renderer.writeRGB(filename);
 }
 
-void setCamera(obol::Scene & scene, float x, float y, float z)
+obol::PerspectiveCamera viewAllCamera(const obol::Scene & scene)
 {
-    obol::PerspectiveCamera camera;
-    camera.position = {x, y, z};
-    camera.target = {0.0f, 0.0f, 0.0f};
-    camera.verticalFieldOfViewRadians = 0.6f;
-    camera.nearDistance = 0.1f;
-    camera.farDistance = 100.0f;
-    scene.setCamera(camera);
+    obol::ViewAllRequest request;
+    request.viewportWidth = DEFAULT_WIDTH;
+    request.viewportHeight = DEFAULT_HEIGHT;
+    return obol::CameraFraming::viewAllPerspective(scene, request);
+}
+
+float length(const obol::Vec3 & value)
+{
+    return std::sqrt(value.x * value.x +
+                     value.y * value.y +
+                     value.z * value.z);
 }
 
 } // namespace
@@ -50,7 +52,8 @@ int main(int argc, char **argv)
     obol::Scene scene;
     scene.addDirectionalLight(obol::DirectionalLight{});
     scene.addPrimitive(obol::Primitive::Cone, red());
-    setCamera(scene, 0.0f, 0.0f, 6.0f);
+    const obol::PerspectiveCamera initialCamera = viewAllCamera(scene);
+    scene.setCamera(initialCamera);
 
     obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
                                         obol::RenderBackendKind::OpenGL2SWRast,
@@ -73,14 +76,30 @@ int main(int argc, char **argv)
 
     for (int i = 1; i <= 8; i++) {
         const float angle = (3.14159265358979323846f / 4.0f) * i;
-        setCamera(scene, 6.0f * std::sin(angle), 0.0f, 6.0f * std::cos(angle));
+        obol::PerspectiveCamera camera = initialCamera;
+        const float radius = length(initialCamera.position);
+        camera.position = {
+            radius * std::sin(angle),
+            initialCamera.position.y,
+            radius * std::cos(angle)
+        };
+        camera.target = {0.0f, 0.0f, 0.0f};
+        scene.setCamera(camera);
         snprintf(filename, sizeof(filename), "%s_frame%02d_tumble.rgb", baseFilename, frame++);
         if (!renderScene(renderer, scene, filename)) return 1;
     }
 
     for (int i = 0; i < 4; i++) {
         const float scale = 0.5f + i * 0.5f;
-        setCamera(scene, 0.0f, 0.0f, 6.0f * scale);
+        obol::PerspectiveCamera camera = initialCamera;
+        camera.position = {
+            initialCamera.position.x * scale,
+            initialCamera.position.y * scale,
+            initialCamera.position.z * scale
+        };
+        camera.nearDistance = initialCamera.nearDistance * scale;
+        camera.farDistance = initialCamera.farDistance * scale;
+        scene.setCamera(camera);
         snprintf(filename, sizeof(filename), "%s_frame%02d_dolly.rgb", baseFilename, frame++);
         if (!renderScene(renderer, scene, filename)) return 1;
     }

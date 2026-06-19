@@ -9,6 +9,7 @@
 #include <Obol/Obol.h>
 
 #include <cstdio>
+#include <string>
 
 namespace {
 
@@ -60,16 +61,17 @@ int main(int argc, char **argv)
     const char *baseFilename = (argc > 1) ? argv[1] : "13.1.GlobalFlds";
     char filename[256];
 
-    const char *values[] = {
-        "Saturday, 01/01/00 12:00:00 AM",
-        "Saturday, 01/01/00 01:01:01 AM",
-        "Saturday, 01/01/00 02:02:02 AM"
+    const obol::Time values[] = {
+        obol::Time::fromUnixSeconds(946684800.0),
+        obol::Time::fromUnixSeconds(946688461.0),
+        obol::Time::fromUnixSeconds(946692122.0)
     };
     const char *suffixes[] = {"time1", "time2", "time3"};
 
     for (int i = 0; i < 3; ++i) {
-        obol::Scene scene = makeScene(values[i]);
-        printf("Reference realTime value %d: %s\n", i + 1, values[i]);
+        const std::string text = values[i].formatUTC();
+        obol::Scene scene = makeScene(text.c_str());
+        printf("Reference realTime value %d: %s\n", i + 1, text.c_str());
         snprintf(filename, sizeof(filename), "%s_%s.rgb", baseFilename, suffixes[i]);
         if (!renderScene(renderer, scene, filename)) return 1;
     }

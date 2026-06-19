@@ -61,6 +61,14 @@ bool renderScene(obol::OffscreenRenderer & renderer,
     return result.success && renderer.writeRGB(filename);
 }
 
+void applyViewAllCamera(obol::Scene & scene)
+{
+    obol::ViewAllRequest request;
+    request.viewportWidth = DEFAULT_WIDTH;
+    request.viewportHeight = DEFAULT_HEIGHT;
+    scene.setCamera(obol::CameraFraming::viewAllPerspective(scene, request));
+}
+
 } // namespace
 
 int main(int argc, char **argv)
@@ -68,11 +76,6 @@ int main(int argc, char **argv)
     initCoinHeadless();
 
     obol::Scene scene;
-    obol::PerspectiveCamera camera;
-    camera.position = {15.0f, 0.0f, 28.0f};
-    camera.target = {15.0f, 0.0f, 0.0f};
-    camera.verticalFieldOfViewRadians = 0.52f;
-    scene.setCamera(camera);
     scene.addDirectionalLight(obol::DirectionalLight{});
 
     const obol::Material colors[] = {
@@ -98,6 +101,7 @@ int main(int argc, char **argv)
             firstConeMaterial = coneMaterial;
         }
     }
+    applyViewAllCamera(scene);
 
     obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
                                         obol::RenderBackendKind::OpenGL2SWRast,

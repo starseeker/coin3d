@@ -44,11 +44,12 @@
 #include "headless_utils.h"
 #include <Obol/Obol.h>
 
+#include <cmath>
 #include <cstdio>
 
 // Eight polygons. The first four are triangles, the second four are quadrilaterals.
 // Vertex Y coordinates are scaled and centred at the origin (y = -7.5 to +7.5)
-// so that rotateCamera() orbits correctly and the obelisk fills the views
+// so that camera orbiting works correctly and the obelisk fills the views
 // with a proportional 2:1 height-to-base ratio.
 static const float vertices[28][3] =
 {
@@ -104,15 +105,41 @@ obol::Material sandstoneMaterial()
 bool renderView(obol::OffscreenRenderer & renderer,
                 obol::Scene & scene,
                 const char * filename,
-                const obol::Vec3 & position)
+                const obol::PerspectiveCamera & camera)
 {
-    obol::PerspectiveCamera camera;
-    camera.position = position;
-    camera.target = {0.0f, 0.0f, 0.0f};
-    camera.verticalFieldOfViewRadians = 0.62f;
     scene.setCamera(camera);
     const obol::FrameResult result = renderer.render(scene);
     return result.success && renderer.writeRGB(filename);
+}
+
+obol::PerspectiveCamera orbitCamera(const obol::PerspectiveCamera & camera,
+                                    float azimuth,
+                                    float elevation)
+{
+    obol::CameraOrbitRequest request;
+    request.camera = camera;
+    request.azimuthRadians = azimuth;
+    request.elevationRadians = elevation;
+    return obol::CameraFraming::orbit(request);
+}
+
+void makeCameras(const obol::Scene & scene,
+                 obol::PerspectiveCamera & frontCamera,
+                 obol::PerspectiveCamera & sideCamera,
+                 obol::PerspectiveCamera & angleCamera)
+{
+    obol::ViewAllRequest request;
+    request.viewportWidth = DEFAULT_WIDTH;
+    request.viewportHeight = DEFAULT_HEIGHT;
+    const obol::PerspectiveCamera baseCamera =
+        obol::CameraFraming::viewAllPerspective(scene, request);
+    frontCamera = orbitCamera(baseCamera, 0.0f, static_cast<float>(M_PI / 8.0));
+    sideCamera = orbitCamera(baseCamera,
+                             static_cast<float>(M_PI / 3.0),
+                             static_cast<float>(M_PI / 8.0));
+    angleCamera = orbitCamera(baseCamera,
+                              static_cast<float>(M_PI / 4.0),
+                              static_cast<float>(M_PI / 5.0));
 }
 
 } // namespace
@@ -131,6 +158,11 @@ int main(int argc, char **argv)
     scene.addDirectionalLight(fillLight);
     scene.addMesh(makeObeliskMesh(), sandstoneMaterial());
 
+    obol::PerspectiveCamera frontCamera;
+    obol::PerspectiveCamera sideCamera;
+    obol::PerspectiveCamera angleCamera;
+    makeCameras(scene, frontCamera, sideCamera, angleCamera);
+
     obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
                                         obol::RenderBackendKind::OpenGL2SWRast,
                                         "headless-context");
@@ -145,19 +177,19 @@ int main(int argc, char **argv)
     char filename[256];
 
     snprintf(filename, sizeof(filename), "%s_front.rgb", baseFilename);
-    if (!renderView(renderer, scene, filename, {0.0f, 5.0f, 26.0f})) {
+    if (!renderView(renderer, scene, filename, frontCamera)) {
         fprintf(stderr, "Error: Failed to render front FaceSet view with Obol v2 API\n");
         return 1;
     }
 
     snprintf(filename, sizeof(filename), "%s_side.rgb", baseFilename);
-    if (!renderView(renderer, scene, filename, {-22.0f, 5.0f, 13.0f})) {
+    if (!renderView(renderer, scene, filename, sideCamera)) {
         fprintf(stderr, "Error: Failed to render side FaceSet view with Obol v2 API\n");
         return 1;
     }
 
     snprintf(filename, sizeof(filename), "%s_angle.rgb", baseFilename);
-    if (!renderView(renderer, scene, filename, {-18.0f, 9.0f, 18.0f})) {
+    if (!renderView(renderer, scene, filename, angleCamera)) {
         fprintf(stderr, "Error: Failed to render angled FaceSet view with Obol v2 API\n");
         return 1;
     }

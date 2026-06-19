@@ -73,10 +73,11 @@ struct AppState {
     bool rotating = false;
 };
 
-obol::Material material(float r, float g, float b)
+obol::Material material(float r, float g, float b, bool unlit = false)
 {
     obol::Material result;
     result.baseColor = {r, g, b, 1.0f};
+    result.unlit = unlit;
     return result;
 }
 
@@ -169,7 +170,7 @@ int main(int argc, char **argv)
     obol::PrimitiveOptions sphereOptions;
     sphereOptions.radius = 1.5f;
     app.scene.addPrimitive(obol::Primitive::Sphere,
-                           material(0.4f, 0.6f, 0.8f),
+                           material(0.4f, 0.6f, 0.8f, true),
                            translation(0.0f, 0.0f, -2.0f),
                            sphereOptions);
 
@@ -195,6 +196,8 @@ int main(int argc, char **argv)
 
     printf("--- State 1: Initial empty scene ---\n");
     snprintf(filename, sizeof(filename), "%s_initial.rgb", baseFilename);
+    if (!renderScene(renderer, app.scene, filename)) return 1;
+    snprintf(filename, sizeof(filename), "%s.rgb", baseFilename);
     if (!renderScene(renderer, app.scene, filename)) return 1;
 
     printf("\n--- Simulating LEFT button clicks to add points ---\n");

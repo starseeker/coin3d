@@ -33,24 +33,33 @@ bool renderScene(obol::OffscreenRenderer & renderer,
     return result.success && renderer.writeRGB(filename);
 }
 
-void cameraChangedCB(const obol::PerspectiveCamera & camera)
+void cameraChangedCB(const obol::ValueChange<obol::Vec3> & change)
 {
     ++callbackCount;
     printf("Callback %d: Camera position: (%g, %g, %g)\n",
            callbackCount,
-           camera.position.x,
-           camera.position.y,
-           camera.position.z);
+           change.value.x,
+           change.value.y,
+           change.value.z);
+}
+
+obol::PerspectiveCamera viewAllCamera(const obol::Scene & scene,
+                                      const obol::Vec3 & requestedPosition)
+{
+    obol::ViewAllRequest request;
+    request.viewportWidth = DEFAULT_WIDTH;
+    request.viewportHeight = DEFAULT_HEIGHT;
+    request.position = requestedPosition;
+    return obol::CameraFraming::viewAllPerspective(scene, request);
 }
 
 void setCameraPosition(obol::Scene & scene,
-                       obol::PerspectiveCamera & camera,
+                       obol::ObservableValue<obol::Vec3> & cameraPosition,
                        const obol::Vec3 & position)
 {
-    camera.position = position;
-    camera.target = {0.0f, 0.0f, 0.0f};
+    cameraPosition.set(position, "position");
+    const obol::PerspectiveCamera camera = viewAllCamera(scene, position);
     scene.setCamera(camera);
-    cameraChangedCB(camera);
 }
 
 } // namespace
@@ -60,12 +69,13 @@ int main(int argc, char **argv)
     initCoinHeadless();
 
     obol::Scene scene;
-    obol::PerspectiveCamera camera;
-    camera.position = {0.0f, 0.0f, 5.0f};
-    camera.target = {0.0f, 0.0f, 0.0f};
-    scene.setCamera(camera);
     scene.addDirectionalLight(obol::DirectionalLight{});
     scene.addPrimitive(obol::Primitive::Cube);
+    obol::ObservableValue<obol::Vec3> cameraPosition({0.0f, 0.0f, 5.0f});
+    cameraPosition.addObserver(cameraChangedCB);
+    const obol::PerspectiveCamera camera =
+        viewAllCamera(scene, cameraPosition.get());
+    scene.setCamera(camera);
 
     obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
                                         obol::RenderBackendKind::OpenGL2SWRast,
@@ -85,17 +95,17 @@ int main(int argc, char **argv)
     if (!renderScene(renderer, scene, filename)) return 1;
 
     printf("\nChanging camera position 1...\n");
-    setCameraPosition(scene, camera, {2.0f, 3.0f, 10.0f});
+    setCameraPosition(scene, cameraPosition, {2.0f, 3.0f, 10.0f});
     snprintf(filename, sizeof(filename), "%s_pos1.rgb", baseFilename);
     if (!renderScene(renderer, scene, filename)) return 1;
 
     printf("\nChanging camera position 2...\n");
-    setCameraPosition(scene, camera, {-3.0f, 2.0f, 8.0f});
+    setCameraPosition(scene, cameraPosition, {-3.0f, 2.0f, 8.0f});
     snprintf(filename, sizeof(filename), "%s_pos2.rgb", baseFilename);
     if (!renderScene(renderer, scene, filename)) return 1;
 
     printf("\nChanging camera position 3...\n");
-    setCameraPosition(scene, camera, {0.0f, -4.0f, 6.0f});
+    setCameraPosition(scene, cameraPosition, {0.0f, -4.0f, 6.0f});
     snprintf(filename, sizeof(filename), "%s_pos3.rgb", baseFilename);
     if (!renderScene(renderer, scene, filename)) return 1;
 

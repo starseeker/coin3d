@@ -44,6 +44,7 @@
 #include "headless_utils.h"
 #include <Obol/Obol.h>
 
+#include <cmath>
 #include <cstdio>
 
 namespace {
@@ -88,17 +89,40 @@ obol::Material shinyTextMaterial()
 bool renderView(obol::OffscreenRenderer & renderer,
                 obol::Scene & scene,
                 const char * filename,
-                const obol::Vec3 & position)
+                const obol::PerspectiveCamera & camera)
+{
+    scene.setCamera(camera);
+    const obol::FrameResult result = renderer.render(scene);
+    return result.success && renderer.writeRGB(filename);
+}
+
+obol::PerspectiveCamera frontCamera()
 {
     obol::PerspectiveCamera camera;
-    camera.position = position;
+    camera.position = {0.0f, -1.0f, 10.0f};
     camera.target = {0.0f, -1.0f, 0.0f};
     camera.nearDistance = 5.0f;
     camera.farDistance = 15.0f;
     camera.verticalFieldOfViewRadians = 0.78539816339f;
-    scene.setCamera(camera);
-    const obol::FrameResult result = renderer.render(scene);
-    return result.success && renderer.writeRGB(filename);
+    return camera;
+}
+
+obol::PerspectiveCamera orbitCamera(const obol::PerspectiveCamera & camera,
+                                    float azimuth,
+                                    float elevation)
+{
+    obol::CameraOrbitRequest request;
+    request.camera = camera;
+    request.azimuthRadians = azimuth;
+    request.elevationRadians = elevation;
+    return obol::CameraFraming::orbit(request);
+}
+
+obol::PerspectiveCamera angleCamera()
+{
+    return orbitCamera(frontCamera(),
+                       static_cast<float>(M_PI / 4.0),
+                       static_cast<float>(M_PI / 6.0));
 }
 
 } // namespace
@@ -109,7 +133,6 @@ int main(int argc, char **argv)
 
     obol::Scene scene;
     obol::DirectionalLight light;
-    light.direction = {-0.5f, -0.7f, -1.0f};
     scene.addDirectionalLight(light);
 
     const obol::Material material = shinyTextMaterial();
@@ -130,13 +153,13 @@ int main(int argc, char **argv)
     char filename[256];
 
     snprintf(filename, sizeof(filename), "%s_front.rgb", baseFilename);
-    if (!renderView(renderer, scene, filename, {0.0f, -1.0f, 10.0f})) {
+    if (!renderView(renderer, scene, filename, frontCamera())) {
         fprintf(stderr, "Error: Failed to render front Complex3DText view with Obol v2 API\n");
         return 1;
     }
 
     snprintf(filename, sizeof(filename), "%s_angle.rgb", baseFilename);
-    if (!renderView(renderer, scene, filename, {6.0f, 3.0f, 7.0f})) {
+    if (!renderView(renderer, scene, filename, angleCamera())) {
         fprintf(stderr, "Error: Failed to render angled Complex3DText view with Obol v2 API\n");
         return 1;
     }

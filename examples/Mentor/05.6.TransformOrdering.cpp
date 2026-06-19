@@ -44,6 +44,7 @@
 #include "headless_utils.h"
 #include <Obol/Obol.h>
 
+#include <cmath>
 #include <cstdio>
 
 namespace {
@@ -77,16 +78,38 @@ obol::Material material(float r, float g, float b)
     return result;
 }
 
+obol::PerspectiveCamera orbitCamera(const obol::PerspectiveCamera & camera,
+                                    float azimuth,
+                                    float elevation)
+{
+    obol::CameraOrbitRequest request;
+    request.camera = camera;
+    request.azimuthRadians = azimuth;
+    request.elevationRadians = elevation;
+    return obol::CameraFraming::orbit(request);
+}
+
+obol::PerspectiveCamera makeCamera(const obol::Scene & scene, bool angled)
+{
+    obol::ViewAllRequest request;
+    request.viewportWidth = DEFAULT_WIDTH;
+    request.viewportHeight = DEFAULT_HEIGHT;
+    const obol::PerspectiveCamera camera =
+        obol::CameraFraming::viewAllPerspective(scene, request);
+    if (angled) {
+        return orbitCamera(camera,
+                           static_cast<float>(M_PI / 4.0),
+                           static_cast<float>(M_PI / 6.0));
+    }
+    return camera;
+}
+
 bool renderView(obol::OffscreenRenderer & renderer,
                 obol::Scene & scene,
                 const char * filename,
-                const obol::Vec3 & position)
+                bool angled)
 {
-    obol::PerspectiveCamera camera;
-    camera.position = position;
-    camera.target = {0.0f, 0.0f, 0.0f};
-    camera.verticalFieldOfViewRadians = 0.62f;
-    scene.setCamera(camera);
+    scene.setCamera(makeCamera(scene, angled));
     const obol::FrameResult result = renderer.render(scene);
     return result.success && renderer.writeRGB(filename);
 }
@@ -101,7 +124,6 @@ int main(int argc, char **argv)
 
     obol::Scene scene;
     obol::DirectionalLight light;
-    light.direction = {-0.5f, -0.7f, -1.0f};
     scene.addDirectionalLight(light);
 
     const obol::Transform rotate = xRotation(halfPi);
@@ -145,7 +167,7 @@ int main(int argc, char **argv)
     char filename[256];
 
     snprintf(filename, sizeof(filename), "%s_front.rgb", baseFilename);
-    if (!renderView(renderer, scene, filename, {0.0f, 0.0f, 10.0f})) {
+    if (!renderView(renderer, scene, filename, false)) {
         fprintf(stderr, "Error: Failed to render front TransformOrdering view with Obol v2 API\n");
         return 1;
     }
@@ -154,7 +176,7 @@ int main(int argc, char **argv)
     printf("Left: translate->rotate->scale, Right: translate->scale->rotate [Obol v2]\n");
 
     snprintf(filename, sizeof(filename), "%s_angle.rgb", baseFilename);
-    if (!renderView(renderer, scene, filename, {6.0f, 4.0f, 8.0f})) {
+    if (!renderView(renderer, scene, filename, true)) {
         fprintf(stderr, "Error: Failed to render angled TransformOrdering view with Obol v2 API\n");
         return 1;
     }

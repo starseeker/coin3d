@@ -44,6 +44,7 @@
 #include "headless_utils.h"
 #include <Obol/Obol.h>
 
+#include <cmath>
 #include <cstdio>
 #include <cstdint>
 
@@ -101,15 +102,37 @@ obol::Material archMaterial()
 bool renderView(obol::OffscreenRenderer & renderer,
                 obol::Scene & scene,
                 const char * filename,
-                const obol::Vec3 & position)
+                const obol::PerspectiveCamera & camera)
 {
-    obol::PerspectiveCamera camera;
-    camera.position = position;
-    camera.target = {0.0f, 14.0f, 0.0f};
-    camera.verticalFieldOfViewRadians = 0.62f;
     scene.setCamera(camera);
     const obol::FrameResult result = renderer.render(scene);
     return result.success && renderer.writeRGB(filename);
+}
+
+obol::PerspectiveCamera orbitCamera(const obol::PerspectiveCamera & camera,
+                                    float azimuth,
+                                    float elevation)
+{
+    obol::CameraOrbitRequest request;
+    request.camera = camera;
+    request.azimuthRadians = azimuth;
+    request.elevationRadians = elevation;
+    return obol::CameraFraming::orbit(request);
+}
+
+void makeCameras(const obol::Scene & scene,
+                 obol::PerspectiveCamera & frontCamera,
+                 obol::PerspectiveCamera & sideCamera,
+                 obol::PerspectiveCamera & angleCamera)
+{
+    obol::ViewAllRequest request;
+    request.viewportWidth = DEFAULT_WIDTH;
+    request.viewportHeight = DEFAULT_HEIGHT;
+    frontCamera = obol::CameraFraming::viewAllPerspective(scene, request);
+    sideCamera = orbitCamera(frontCamera, static_cast<float>(M_PI / 2.0), 0.0f);
+    angleCamera = orbitCamera(frontCamera,
+                              static_cast<float>(M_PI / 4.0),
+                              static_cast<float>(M_PI / 8.0));
 }
 
 } // namespace
@@ -119,14 +142,13 @@ int main(int argc, char **argv)
     initCoinHeadless();
 
     obol::Scene scene;
-    obol::DirectionalLight keyLight;
-    keyLight.direction = {-0.5f, -0.8f, -1.0f};
-    scene.addDirectionalLight(keyLight);
-    obol::DirectionalLight fillLight;
-    fillLight.direction = {1.0f, -0.4f, 1.0f};
-    fillLight.intensity = 0.35f;
-    scene.addDirectionalLight(fillLight);
+    scene.addDirectionalLight(obol::DirectionalLight{});
     scene.addMesh(makeArchMesh(), archMaterial());
+
+    obol::PerspectiveCamera frontCamera;
+    obol::PerspectiveCamera sideCamera;
+    obol::PerspectiveCamera angleCamera;
+    makeCameras(scene, frontCamera, sideCamera, angleCamera);
 
     obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
                                         obol::RenderBackendKind::OpenGL2SWRast,
@@ -142,19 +164,19 @@ int main(int argc, char **argv)
     char filename[256];
 
     snprintf(filename, sizeof(filename), "%s_front.rgb", baseFilename);
-    if (!renderView(renderer, scene, filename, {0.0f, 14.0f, 56.0f})) {
+    if (!renderView(renderer, scene, filename, frontCamera)) {
         fprintf(stderr, "Error: Failed to render front QuadMesh view with Obol v2 API\n");
         return 1;
     }
 
     snprintf(filename, sizeof(filename), "%s_side.rgb", baseFilename);
-    if (!renderView(renderer, scene, filename, {56.0f, 14.0f, 0.0f})) {
+    if (!renderView(renderer, scene, filename, sideCamera)) {
         fprintf(stderr, "Error: Failed to render side QuadMesh view with Obol v2 API\n");
         return 1;
     }
 
     snprintf(filename, sizeof(filename), "%s_angle.rgb", baseFilename);
-    if (!renderView(renderer, scene, filename, {40.0f, 24.0f, 40.0f})) {
+    if (!renderView(renderer, scene, filename, angleCamera)) {
         fprintf(stderr, "Error: Failed to render angled QuadMesh view with Obol v2 API\n");
         return 1;
     }

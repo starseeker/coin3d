@@ -6,8 +6,7 @@
  * All rights reserved.
 \**************************************************************************/
 
-#include <Inventor/SbBasic.h>
-
+#include <Obol/base/Export.h>
 #include <Obol/cad/CadIds.h>
 #include <Obol/scene/Scene.h>
 
@@ -59,7 +58,7 @@ struct PickResult {
     std::vector<PickHit> hits;
 };
 
-class OBOL_DLL_API Picker {
+class OBOL_V2_API Picker {
 public:
     static PickResult pick(const Scene & scene, const PickRequest & request);
 };

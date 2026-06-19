@@ -75,7 +75,7 @@
 #include "CadGpuResources.h"
 #include "CadFramePlan.h"
 
-#include <Obol/cad/SoCADAssembly.h>
+#include <Obol/compat/cad/SoCADAssembly.h>
 
 #include <Inventor/SbMatrix.h>
 #include <Inventor/SbVec3f.h>

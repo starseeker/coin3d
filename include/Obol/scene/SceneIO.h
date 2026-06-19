@@ -6,24 +6,34 @@
  * All rights reserved.
 \**************************************************************************/
 
-#include <Inventor/SbBasic.h>
-#include <Inventor/SoDB.h>
-
+#include <Obol/base/Export.h>
 #include <Obol/scene/Scene.h>
 
 #include <string>
 
 namespace obol {
 
-class OBOL_DLL_API SceneIO {
+class OBOL_V2_API SceneIO {
 public:
     static bool readInventorString(const std::string & input,
                                    Scene & scene,
-                                   SoDB::ContextManager * manager = nullptr);
+                                   NativeContextHandle manager = nullptr);
 
     static bool readInventorFile(const char * filename,
                                  Scene & scene,
-                                 SoDB::ContextManager * manager = nullptr);
+                                 NativeContextHandle manager = nullptr);
+
+    static SceneObjectId addInventorString(const std::string & input,
+                                           Scene & scene,
+                                           const Transform & transform = Transform{},
+                                           SceneGroupId parent = RootSceneGroupId,
+                                           NativeContextHandle manager = nullptr);
+
+    static SceneObjectId addInventorFile(const char * filename,
+                                         Scene & scene,
+                                         const Transform & transform = Transform{},
+                                         SceneGroupId parent = RootSceneGroupId,
+                                         NativeContextHandle manager = nullptr);
 
     static bool writeInventorString(const Scene & scene,
                                     std::string & output);

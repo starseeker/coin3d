@@ -158,7 +158,8 @@ endif()
 # then for each TEST_BASE_<suffix>.rgb, look for <dir>/<example>_<suffix>_control.png
 # -----------------------------------------------------------------------
 get_filename_component(CONTROL_DIR "${CONTROL_IMAGE}" DIRECTORY)
-get_filename_component(_ctrl_name_we "${CONTROL_IMAGE}" NAME_WE)
+get_filename_component(_ctrl_name "${CONTROL_IMAGE}" NAME)
+string(REGEX REPLACE "\\.[^.]*$" "" _ctrl_name_we "${_ctrl_name}")
 # Strip trailing "_control" to recover the bare example name
 string(REGEX REPLACE "_control$" "" EXAMPLE_NAME "${_ctrl_name_we}")
 
@@ -170,7 +171,8 @@ list(SORT _all_generated)
 file(GLOB_RECURSE _subdir_generated "${TEST_DIR}/*.rgb")
 foreach(_sg ${_subdir_generated})
     # Only add if it matches TEST_BASE prefix or output/ subdir pattern
-    get_filename_component(_sg_name "${_sg}" NAME_WE)
+    get_filename_component(_sg_name_full "${_sg}" NAME)
+    string(REGEX REPLACE "\\.[^.]*$" "" _sg_name "${_sg_name_full}")
     string(FIND "${_sg_name}" "${EXAMPLE_NAME}" _sg_pos)
     if(_sg_pos EQUAL 0 AND NOT "${_sg}" IN_LIST _all_generated AND NOT "${_sg}" STREQUAL "${TEST_IMAGE}")
         list(APPEND _all_generated "${_sg}")
@@ -180,7 +182,8 @@ endforeach()
 set(_frame_count 0)
 foreach(_frame_img ${_all_generated})
     # Compute the view suffix by stripping TEST_BASE from the generated file path (no ext)
-    get_filename_component(_frame_name_we "${_frame_img}" NAME_WE)
+    get_filename_component(_frame_name "${_frame_img}" NAME)
+    string(REGEX REPLACE "\\.[^.]*$" "" _frame_name_we "${_frame_name}")
     # _frame_name_we is like "10.1.addEventCB_test_frame00_initial"
     # TEST_BASENAME is like "10.1.addEventCB_test"
     string(REPLACE "${TEST_BASENAME}" "" _frame_suffix "${_frame_name_we}")

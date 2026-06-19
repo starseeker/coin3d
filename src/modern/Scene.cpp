@@ -1,6 +1,7 @@
 #include <Obol/scene/Scene.h>
 
 #include <Obol/cad/CadAssembly.h>
+#include <Obol/compat/cad/SoCADAssembly.h>
 
 #include <Inventor/SbName.h>
 #include <Inventor/SbMatrix.h>
@@ -17,8 +18,11 @@
 #include <Inventor/nodes/SoDirectionalLight.h>
 #include <Inventor/nodes/SoDrawStyle.h>
 #include <Inventor/nodes/SoFont.h>
+#include <Inventor/nodes/SoGroup.h>
 #include <Inventor/nodes/SoIndexedFaceSet.h>
+#include <Inventor/nodes/SoIndexedTriangleStripSet.h>
 #include <Inventor/nodes/SoLineSet.h>
+#include <Inventor/nodes/SoLightModel.h>
 #include <Inventor/nodes/SoMaterial.h>
 #include <Inventor/nodes/SoMaterialBinding.h>
 #include <Inventor/nodes/SoNormal.h>
@@ -27,21 +31,25 @@
 #include <Inventor/nodes/SoPerspectiveCamera.h>
 #include <Inventor/nodes/SoPointLight.h>
 #include <Inventor/nodes/SoPointSet.h>
+#include <Inventor/nodes/SoQuadMesh.h>
 #include <Inventor/nodes/SoLinearProfile.h>
 #include <Inventor/nodes/SoProfileCoordinate2.h>
 #include <Inventor/nodes/SoSeparator.h>
+#include <Inventor/nodes/SoShapeHints.h>
 #include <Inventor/nodes/SoSpotLight.h>
 #include <Inventor/nodes/SoSphere.h>
 #include <Inventor/nodes/SoText2.h>
 #include <Inventor/nodes/SoText3.h>
 #include <Inventor/nodes/SoTexture2.h>
 #include <Inventor/nodes/SoTextureCoordinate2.h>
+#include <Inventor/nodes/SoTriangleStripSet.h>
 #include <Inventor/nodes/SoTransform.h>
 
 #include <cmath>
 #include <cstdint>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace obol {
 namespace {
@@ -81,6 +89,7 @@ SceneObjectCategory categoryForType(SceneObjectType type)
     case SceneObjectType::CadAssembly:
         return SceneObjectCategory::Cad;
     case SceneObjectType::OpenGLCallback:
+    case SceneObjectType::LegacySceneGraph:
         return SceneObjectCategory::BackendNative;
     case SceneObjectType::Any:
         break;
@@ -109,6 +118,24 @@ void invokeOpenGLCallback(void * userdata, SoAction * action)
         lazyElement->reset(state,
             SoLazyElement::DIFFUSE_MASK | SoLazyElement::LIGHT_MODEL_MASK);
     }
+}
+
+std::shared_ptr<SoSeparator> copyLegacySeparator(const SoSeparator & root)
+{
+    SoNode * copy = root.copy(FALSE);
+    SoSeparator * separator =
+        copy && copy->isOfType(SoSeparator::getClassTypeId())
+            ? static_cast<SoSeparator *>(copy)
+            : nullptr;
+    if (!separator) {
+        return {};
+    }
+    separator->ref();
+    return std::shared_ptr<SoSeparator>(
+        separator,
+        [](SoSeparator * node) {
+            if (node) node->unref();
+        });
 }
 
 SoMaterial * createMaterial(const Material & material)
@@ -227,6 +254,19 @@ SbMatrix transformMatrix(const Transform & transform)
     return matrix;
 }
 
+Matrix4 toMatrix4(const SbMatrix & matrix)
+{
+    Matrix4 result;
+    for (int column = 0; column < 4; ++column) {
+        for (int row = 0; row < 4; ++row) {
+            result.values[static_cast<size_t>(column) * 4 +
+                          static_cast<size_t>(row)] =
+                matrix[column][row];
+        }
+    }
+    return result;
+}
+
 SoNode * createPrimitiveNode(Primitive primitive, const PrimitiveOptions & options)
 {
     switch (primitive) {
@@ -256,6 +296,1040 @@ SoNode * createPrimitiveNode(Primitive primitive, const PrimitiveOptions & optio
     }
     }
     return new SoCube;
+}
+
+Vec3 fromSbVec3f(const SbVec3f & v)
+{
+    return {v[0], v[1], v[2]};
+}
+
+Color fromSbColor(const SbColor & color, float alpha = 1.0f)
+{
+    return {color[0], color[1], color[2], alpha};
+}
+
+bool nearlyEqual(float lhs, float rhs)
+{
+    return std::fabs(lhs - rhs) <= 1.0e-5f;
+}
+
+bool isZeroVector(const SbVec3f & v)
+{
+    return nearlyEqual(v[0], 0.0f) &&
+           nearlyEqual(v[1], 0.0f) &&
+           nearlyEqual(v[2], 0.0f);
+}
+
+bool isIdentityRotation(const SbRotation & rotation)
+{
+    return rotation.equals(SbRotation::identity(), 1.0e-5f);
+}
+
+bool transformFromMatrix(const SbMatrix & matrix, Transform & transform)
+{
+    SbVec3f translation;
+    SbRotation rotation;
+    SbVec3f scale;
+    SbRotation scaleOrientation;
+    matrix.getTransform(translation, rotation, scale, scaleOrientation);
+
+    if (!isIdentityRotation(scaleOrientation)) {
+        return false;
+    }
+
+    transform.translation = fromSbVec3f(translation);
+    transform.scale = fromSbVec3f(scale);
+
+    SbVec3f axis;
+    float radians = 0.0f;
+    rotation.getValue(axis, radians);
+    if (nearlyEqual(radians, 0.0f)) {
+        transform.rotationAxis = {0.0f, 0.0f, 1.0f};
+        transform.rotationRadians = 0.0f;
+    } else {
+        transform.rotationAxis = fromSbVec3f(axis);
+        transform.rotationRadians = radians;
+    }
+    return true;
+}
+
+SbVec3f transformPoint(const SbMatrix & matrix, const SbVec3f & point)
+{
+    SbVec3f result;
+    matrix.multVecMatrix(point, result);
+    return result;
+}
+
+SbVec3f transformDirection(const SbMatrix & matrix, const SbVec3f & direction)
+{
+    SbVec3f result;
+    matrix.multDirMatrix(direction, result);
+    if (result.length() > 0.0f) {
+        result.normalize();
+    }
+    return result;
+}
+
+struct LegacyExtractionState {
+    Material material;
+    std::vector<Material> materials;
+    std::vector<Vec3> coordinates;
+    std::vector<Vec3> normals;
+    std::vector<Vec2> texCoords;
+    SoMaterialBinding::Binding materialBinding = SoMaterialBinding::OVERALL;
+    SoNormalBinding::Binding normalBinding = SoNormalBinding::PER_VERTEX_INDEXED;
+    float lineWidth = 1.0f;
+    float pointSize = 1.0f;
+    SbMatrix transform = SbMatrix::identity();
+};
+
+struct LegacyExtractionResult {
+    bool fullySupported = true;
+    bool extractedAny = false;
+};
+
+bool applyLegacyMaterial(const SoMaterial & node,
+                         LegacyExtractionState & state)
+{
+    if (node.ambientColor.getNum() > 1) {
+        return false;
+    }
+
+    const int diffuseCount = node.diffuseColor.getNum();
+    const bool hasMaterialPalette = diffuseCount > 1;
+
+    if (hasMaterialPalette) {
+        if (node.specularColor.getNum() > 1 ||
+            node.emissiveColor.getNum() > 1 ||
+            node.shininess.getNum() > 1 ||
+            (node.transparency.getNum() > 1 &&
+             node.transparency.getNum() != diffuseCount)) {
+            return false;
+        }
+
+        std::vector<Material> materials;
+        materials.reserve(static_cast<size_t>(diffuseCount));
+        for (int i = 0; i < diffuseCount; ++i) {
+            Material material = state.material;
+            material.baseColor = fromSbColor(node.diffuseColor[i],
+                                            material.baseColor.a);
+            if (node.specularColor.getNum() == 1) {
+                material.specular =
+                    fromSbColor(node.specularColor[0], material.specular.a);
+            }
+            if (node.emissiveColor.getNum() == 1) {
+                material.emissive =
+                    fromSbColor(node.emissiveColor[0], material.emissive.a);
+            }
+            if (node.shininess.getNum() == 1) {
+                material.shininess = node.shininess[0];
+            }
+            if (node.transparency.getNum() == 1) {
+                material.baseColor.a = 1.0f - node.transparency[0];
+            } else if (node.transparency.getNum() == diffuseCount) {
+                material.baseColor.a = 1.0f - node.transparency[i];
+            }
+            materials.push_back(material);
+        }
+        state.materials = materials;
+        state.material = materials.front();
+        return true;
+    }
+
+    if (node.specularColor.getNum() > 1 ||
+        node.emissiveColor.getNum() > 1 ||
+        node.shininess.getNum() > 1 ||
+        node.transparency.getNum() > 1) {
+        return false;
+    }
+
+    Material material = state.material;
+    if (node.diffuseColor.getNum() == 1) {
+        material.baseColor = fromSbColor(node.diffuseColor[0], material.baseColor.a);
+    }
+    if (node.specularColor.getNum() == 1) {
+        material.specular = fromSbColor(node.specularColor[0], material.specular.a);
+    }
+    if (node.emissiveColor.getNum() == 1) {
+        material.emissive = fromSbColor(node.emissiveColor[0], material.emissive.a);
+    }
+    if (node.shininess.getNum() == 1) {
+        material.shininess = node.shininess[0];
+    }
+    if (node.transparency.getNum() == 1) {
+        material.baseColor.a = 1.0f - node.transparency[0];
+    }
+
+    state.material = material;
+    state.materials.clear();
+    return true;
+}
+
+bool applyLegacyCoordinates(const SoCoordinate3 & node,
+                            LegacyExtractionState & state)
+{
+    state.coordinates.clear();
+    state.coordinates.reserve(static_cast<size_t>(node.point.getNum()));
+    for (int i = 0; i < node.point.getNum(); ++i) {
+        state.coordinates.push_back(fromSbVec3f(node.point[i]));
+    }
+    return true;
+}
+
+bool applyLegacyNormals(const SoNormal & node,
+                        LegacyExtractionState & state)
+{
+    state.normals.clear();
+    state.normals.reserve(static_cast<size_t>(node.vector.getNum()));
+    for (int i = 0; i < node.vector.getNum(); ++i) {
+        state.normals.push_back(fromSbVec3f(node.vector[i]));
+    }
+    return true;
+}
+
+bool applyLegacyTextureCoordinates(const SoTextureCoordinate2 & node,
+                                   LegacyExtractionState & state)
+{
+    state.texCoords.clear();
+    state.texCoords.reserve(static_cast<size_t>(node.point.getNum()));
+    for (int i = 0; i < node.point.getNum(); ++i) {
+        const SbVec2f point = node.point[i];
+        state.texCoords.push_back({point[0], point[1]});
+    }
+    return true;
+}
+
+bool applyLegacyMaterialBinding(const SoMaterialBinding & node,
+                                LegacyExtractionState & state)
+{
+    state.materialBinding =
+        static_cast<SoMaterialBinding::Binding>(node.value.getValue());
+    return true;
+}
+
+bool applyLegacyNormalBinding(const SoNormalBinding & node,
+                              LegacyExtractionState & state)
+{
+    state.normalBinding =
+        static_cast<SoNormalBinding::Binding>(node.value.getValue());
+    return true;
+}
+
+bool applyLegacyDrawStyle(const SoDrawStyle & node,
+                          LegacyExtractionState & state)
+{
+    if (node.style.getValue() != SoDrawStyle::FILLED) {
+        return false;
+    }
+    state.lineWidth = node.lineWidth.getValue();
+    state.pointSize = node.pointSize.getValue();
+    return true;
+}
+
+bool appendLegacyTransform(const SoTransform & node,
+                           LegacyExtractionState & state)
+{
+    if (!isZeroVector(node.center.getValue()) ||
+        !isIdentityRotation(node.scaleOrientation.getValue())) {
+        return false;
+    }
+
+    SbMatrix matrix;
+    matrix.setTransform(node.translation.getValue(),
+                        node.rotation.getValue(),
+                        node.scaleFactor.getValue());
+    state.transform.multRight(matrix);
+    return true;
+}
+
+bool addLegacyPrimitive(Scene & scene,
+                        Primitive primitive,
+                        const PrimitiveOptions & options,
+                        const LegacyExtractionState & state)
+{
+    if (state.materialBinding != SoMaterialBinding::OVERALL) {
+        return false;
+    }
+    Transform transform;
+    if (!transformFromMatrix(state.transform, transform)) {
+        return false;
+    }
+    scene.addPrimitive(primitive, state.material, transform, options);
+    return true;
+}
+
+std::vector<Color> legacyMaterialColors(const LegacyExtractionState & state)
+{
+    std::vector<Color> colors;
+    if (!state.materials.empty()) {
+        colors.reserve(state.materials.size());
+        for (const Material & material : state.materials) {
+            colors.push_back(material.baseColor);
+        }
+    } else {
+        colors.push_back(state.material.baseColor);
+    }
+    return colors;
+}
+
+size_t triangleStripFaceCount(const Mesh & mesh);
+
+bool addLegacyIndexedFaceSet(Scene & scene,
+                             const SoIndexedFaceSet & node,
+                             const LegacyExtractionState & state)
+{
+    if (state.coordinates.empty() || node.coordIndex.getNum() <= 0) {
+        return false;
+    }
+
+    Transform transform;
+    if (!transformFromMatrix(state.transform, transform)) {
+        return false;
+    }
+
+    Mesh mesh;
+    mesh.topology = MeshTopology::Polygons;
+    mesh.positions = state.coordinates;
+
+    size_t currentFaceVertexCount = 0;
+    std::vector<size_t> faceMaterialIndices;
+    std::vector<size_t> faceNormalIndices;
+    const int coordCount = node.coordIndex.getNum();
+    const int materialIndexCount = node.materialIndex.getNum();
+    const int normalIndexCount = node.normalIndex.getNum();
+    const int textureCoordIndexCount = node.textureCoordIndex.getNum();
+
+    for (int i = 0; i < coordCount; ++i) {
+        const int coordIndex = node.coordIndex[i];
+        const int materialIndex =
+            i < materialIndexCount ? node.materialIndex[i] : -1;
+        const int normalIndex =
+            i < normalIndexCount ? node.normalIndex[i] : -1;
+        const int textureCoordIndex =
+            i < textureCoordIndexCount ? node.textureCoordIndex[i] : -1;
+
+        if (coordIndex == SO_END_FACE_INDEX) {
+            if (currentFaceVertexCount < 3) {
+                return false;
+            }
+            mesh.faceVertexCounts.push_back(
+                static_cast<uint32_t>(currentFaceVertexCount));
+            currentFaceVertexCount = 0;
+            continue;
+        }
+        if (coordIndex < 0 ||
+            static_cast<size_t>(coordIndex) >= state.coordinates.size()) {
+            return false;
+        }
+
+        if (!state.texCoords.empty()) {
+            size_t texCoordIndex = static_cast<size_t>(coordIndex);
+            if (textureCoordIndex >= 0) {
+                texCoordIndex = static_cast<size_t>(textureCoordIndex);
+            }
+            if (texCoordIndex >= state.texCoords.size()) {
+                return false;
+            }
+            mesh.texCoordIndices.push_back(static_cast<uint32_t>(texCoordIndex));
+        }
+
+        if (currentFaceVertexCount == 0 &&
+            (state.materialBinding == SoMaterialBinding::PER_FACE ||
+             state.materialBinding == SoMaterialBinding::PER_PART ||
+             state.materialBinding == SoMaterialBinding::PER_FACE_INDEXED ||
+             state.materialBinding == SoMaterialBinding::PER_PART_INDEXED)) {
+            size_t faceMaterialIndex = mesh.faceVertexCounts.size();
+            if (state.materialBinding == SoMaterialBinding::PER_FACE_INDEXED ||
+                state.materialBinding == SoMaterialBinding::PER_PART_INDEXED) {
+                if (materialIndex >= 0) {
+                    faceMaterialIndex = static_cast<size_t>(materialIndex);
+                } else if (static_cast<int>(mesh.faceVertexCounts.size()) <
+                           materialIndexCount) {
+                    const int indexed =
+                        node.materialIndex[static_cast<int>(mesh.faceVertexCounts.size())];
+                    if (indexed < 0) {
+                        return false;
+                    }
+                    faceMaterialIndex = static_cast<size_t>(indexed);
+                }
+            }
+            faceMaterialIndices.push_back(faceMaterialIndex);
+        }
+        if (currentFaceVertexCount == 0 &&
+            !state.normals.empty() &&
+            (state.normalBinding == SoNormalBinding::PER_FACE ||
+             state.normalBinding == SoNormalBinding::PER_PART ||
+             state.normalBinding == SoNormalBinding::PER_FACE_INDEXED ||
+             state.normalBinding == SoNormalBinding::PER_PART_INDEXED)) {
+            size_t faceNormalIndex = mesh.faceVertexCounts.size();
+            if (state.normalBinding == SoNormalBinding::PER_FACE_INDEXED ||
+                state.normalBinding == SoNormalBinding::PER_PART_INDEXED) {
+                if (normalIndex >= 0) {
+                    faceNormalIndex = static_cast<size_t>(normalIndex);
+                } else if (static_cast<int>(mesh.faceVertexCounts.size()) <
+                           normalIndexCount) {
+                    const int indexed =
+                        node.normalIndex[static_cast<int>(mesh.faceVertexCounts.size())];
+                    if (indexed < 0) {
+                        return false;
+                    }
+                    faceNormalIndex = static_cast<size_t>(indexed);
+                }
+            }
+            faceNormalIndices.push_back(faceNormalIndex);
+        }
+
+        if (state.materialBinding == SoMaterialBinding::PER_VERTEX_INDEXED) {
+            size_t vertexMaterialIndex = static_cast<size_t>(coordIndex);
+            if (materialIndex >= 0) {
+                vertexMaterialIndex = static_cast<size_t>(materialIndex);
+            }
+            mesh.vertexColorIndices.push_back(
+                static_cast<uint32_t>(vertexMaterialIndex));
+        }
+        if (!state.normals.empty() &&
+            (state.normalBinding == SoNormalBinding::PER_VERTEX ||
+             state.normalBinding == SoNormalBinding::PER_VERTEX_INDEXED)) {
+            size_t vertexNormalIndex = static_cast<size_t>(coordIndex);
+            if (normalIndex >= 0) {
+                vertexNormalIndex = static_cast<size_t>(normalIndex);
+            }
+            if (vertexNormalIndex != static_cast<size_t>(coordIndex) ||
+                vertexNormalIndex >= state.normals.size()) {
+                return false;
+            }
+        }
+
+        mesh.indices.push_back(static_cast<uint32_t>(coordIndex));
+        ++currentFaceVertexCount;
+    }
+
+    if (currentFaceVertexCount != 0) {
+        if (currentFaceVertexCount < 3) {
+            return false;
+        }
+        mesh.faceVertexCounts.push_back(
+            static_cast<uint32_t>(currentFaceVertexCount));
+    }
+    if (mesh.faceVertexCounts.empty()) {
+        return false;
+    }
+    if (!state.texCoords.empty()) {
+        mesh.texCoords = state.texCoords;
+        if (textureCoordIndexCount == 0) {
+            mesh.texCoordIndices.clear();
+        } else if (mesh.texCoordIndices.size() != mesh.indices.size()) {
+            return false;
+        }
+    }
+    if (!state.normals.empty()) {
+        switch (state.normalBinding) {
+        case SoNormalBinding::OVERALL:
+            if (state.normals.empty()) {
+                return false;
+            }
+            mesh.faceNormals.assign(mesh.faceVertexCounts.size(),
+                                    state.normals.front());
+            break;
+        case SoNormalBinding::PER_FACE:
+        case SoNormalBinding::PER_PART:
+            if (state.normals.size() < mesh.faceVertexCounts.size()) {
+                return false;
+            }
+            mesh.faceNormals.assign(
+                state.normals.begin(),
+                state.normals.begin() +
+                    static_cast<std::ptrdiff_t>(mesh.faceVertexCounts.size()));
+            break;
+        case SoNormalBinding::PER_FACE_INDEXED:
+        case SoNormalBinding::PER_PART_INDEXED:
+            if (faceNormalIndices.size() != mesh.faceVertexCounts.size()) {
+                return false;
+            }
+            for (size_t index : faceNormalIndices) {
+                if (index >= state.normals.size()) {
+                    return false;
+                }
+                mesh.faceNormals.push_back(state.normals[index]);
+            }
+            break;
+        case SoNormalBinding::PER_VERTEX:
+        case SoNormalBinding::PER_VERTEX_INDEXED:
+            if (state.normals.size() < mesh.positions.size()) {
+                return false;
+            }
+            mesh.normals.assign(
+                state.normals.begin(),
+                state.normals.begin() +
+                    static_cast<std::ptrdiff_t>(mesh.positions.size()));
+            break;
+        }
+    }
+
+    const std::vector<Color> colors = legacyMaterialColors(state);
+    switch (state.materialBinding) {
+    case SoMaterialBinding::OVERALL:
+        break;
+    case SoMaterialBinding::PER_FACE:
+    case SoMaterialBinding::PER_PART:
+        if (colors.size() < mesh.faceVertexCounts.size()) {
+            return false;
+        }
+        mesh.faceColors.assign(colors.begin(),
+                               colors.begin() +
+                                   static_cast<std::ptrdiff_t>(mesh.faceVertexCounts.size()));
+        break;
+    case SoMaterialBinding::PER_FACE_INDEXED:
+    case SoMaterialBinding::PER_PART_INDEXED:
+        if (faceMaterialIndices.size() != mesh.faceVertexCounts.size()) {
+            return false;
+        }
+        for (size_t index : faceMaterialIndices) {
+            if (index >= colors.size()) {
+                return false;
+            }
+            mesh.faceColorIndices.push_back(static_cast<uint32_t>(index));
+        }
+        mesh.faceColors = colors;
+        break;
+    case SoMaterialBinding::PER_VERTEX:
+        if (colors.size() < mesh.positions.size()) {
+            return false;
+        }
+        mesh.vertexColors.assign(colors.begin(),
+                                 colors.begin() +
+                                     static_cast<std::ptrdiff_t>(mesh.positions.size()));
+        break;
+    case SoMaterialBinding::PER_VERTEX_INDEXED:
+        if (mesh.vertexColorIndices.size() != mesh.indices.size()) {
+            return false;
+        }
+        for (uint32_t index : mesh.vertexColorIndices) {
+            if (index >= colors.size()) {
+                return false;
+            }
+        }
+        mesh.vertexColors = colors;
+        break;
+    }
+
+    scene.addMesh(mesh, state.material, transform);
+    return true;
+}
+
+bool addLegacyIndexedTriangleStripSet(Scene & scene,
+                                      const SoIndexedTriangleStripSet & node,
+                                      const LegacyExtractionState & state)
+{
+    if (state.coordinates.empty() || node.coordIndex.getNum() <= 0) {
+        return false;
+    }
+    if (state.materialBinding == SoMaterialBinding::PER_VERTEX_INDEXED ||
+        state.materialBinding == SoMaterialBinding::PER_FACE_INDEXED ||
+        state.materialBinding == SoMaterialBinding::PER_PART_INDEXED ||
+        state.normalBinding == SoNormalBinding::PER_FACE ||
+        state.normalBinding == SoNormalBinding::PER_PART ||
+        state.normalBinding == SoNormalBinding::PER_FACE_INDEXED ||
+        state.normalBinding == SoNormalBinding::PER_PART_INDEXED) {
+        return false;
+    }
+
+    Transform transform;
+    if (!transformFromMatrix(state.transform, transform)) {
+        return false;
+    }
+
+    Mesh mesh;
+    mesh.topology = MeshTopology::TriangleStrips;
+    mesh.positions = state.coordinates;
+
+    size_t currentStripVertexCount = 0;
+    const int coordCount = node.coordIndex.getNum();
+    const int normalIndexCount = node.normalIndex.getNum();
+    const int textureCoordIndexCount = node.textureCoordIndex.getNum();
+
+    for (int i = 0; i < coordCount; ++i) {
+        const int coordIndex = node.coordIndex[i];
+        const int normalIndex =
+            i < normalIndexCount ? node.normalIndex[i] : -1;
+        const int textureCoordIndex =
+            i < textureCoordIndexCount ? node.textureCoordIndex[i] : -1;
+
+        if (coordIndex == SO_END_STRIP_INDEX) {
+            if (currentStripVertexCount < 3) {
+                return false;
+            }
+            mesh.stripVertexCounts.push_back(
+                static_cast<uint32_t>(currentStripVertexCount));
+            currentStripVertexCount = 0;
+            continue;
+        }
+        if (coordIndex < 0 ||
+            static_cast<size_t>(coordIndex) >= state.coordinates.size()) {
+            return false;
+        }
+
+        if (!state.texCoords.empty()) {
+            size_t texCoordIndex = static_cast<size_t>(coordIndex);
+            if (textureCoordIndex >= 0) {
+                texCoordIndex = static_cast<size_t>(textureCoordIndex);
+            }
+            if (texCoordIndex >= state.texCoords.size()) {
+                return false;
+            }
+            mesh.texCoordIndices.push_back(static_cast<uint32_t>(texCoordIndex));
+        }
+
+        if (!state.normals.empty() &&
+            (state.normalBinding == SoNormalBinding::PER_VERTEX ||
+             state.normalBinding == SoNormalBinding::PER_VERTEX_INDEXED)) {
+            size_t vertexNormalIndex = static_cast<size_t>(coordIndex);
+            if (normalIndex >= 0) {
+                vertexNormalIndex = static_cast<size_t>(normalIndex);
+            }
+            if (vertexNormalIndex != static_cast<size_t>(coordIndex) ||
+                vertexNormalIndex >= state.normals.size()) {
+                return false;
+            }
+        }
+
+        mesh.indices.push_back(static_cast<uint32_t>(coordIndex));
+        ++currentStripVertexCount;
+    }
+
+    if (currentStripVertexCount != 0) {
+        if (currentStripVertexCount < 3) {
+            return false;
+        }
+        mesh.stripVertexCounts.push_back(
+            static_cast<uint32_t>(currentStripVertexCount));
+    }
+    if (mesh.stripVertexCounts.empty()) {
+        return false;
+    }
+
+    if (!state.texCoords.empty()) {
+        mesh.texCoords = state.texCoords;
+        if (textureCoordIndexCount == 0) {
+            mesh.texCoordIndices.clear();
+        } else if (mesh.texCoordIndices.size() != mesh.indices.size()) {
+            return false;
+        }
+    }
+    if (!state.normals.empty()) {
+        switch (state.normalBinding) {
+        case SoNormalBinding::OVERALL:
+            if (state.normals.empty()) {
+                return false;
+            }
+            mesh.normals.assign(mesh.positions.size(), state.normals.front());
+            break;
+        case SoNormalBinding::PER_VERTEX:
+        case SoNormalBinding::PER_VERTEX_INDEXED:
+            if (state.normals.size() < mesh.positions.size()) {
+                return false;
+            }
+            mesh.normals.assign(
+                state.normals.begin(),
+                state.normals.begin() +
+                    static_cast<std::ptrdiff_t>(mesh.positions.size()));
+            break;
+        case SoNormalBinding::PER_FACE:
+        case SoNormalBinding::PER_PART:
+        case SoNormalBinding::PER_FACE_INDEXED:
+        case SoNormalBinding::PER_PART_INDEXED:
+            return false;
+        }
+    }
+
+    const std::vector<Color> colors = legacyMaterialColors(state);
+    switch (state.materialBinding) {
+    case SoMaterialBinding::OVERALL:
+        break;
+    case SoMaterialBinding::PER_PART:
+        if (colors.size() < mesh.stripVertexCounts.size()) {
+            return false;
+        }
+        mesh.faceColors.assign(
+            colors.begin(),
+            colors.begin() +
+                static_cast<std::ptrdiff_t>(mesh.stripVertexCounts.size()));
+        break;
+    case SoMaterialBinding::PER_FACE: {
+        const size_t faceCount = triangleStripFaceCount(mesh);
+        if (colors.size() < faceCount) {
+            return false;
+        }
+        mesh.faceColors.assign(colors.begin(),
+                               colors.begin() +
+                                   static_cast<std::ptrdiff_t>(faceCount));
+        break;
+    }
+    case SoMaterialBinding::PER_FACE_INDEXED:
+    case SoMaterialBinding::PER_PART_INDEXED:
+    case SoMaterialBinding::PER_VERTEX:
+    case SoMaterialBinding::PER_VERTEX_INDEXED:
+        return false;
+    }
+
+    scene.addMesh(mesh, state.material, transform);
+    return true;
+}
+
+bool addLegacyLineSet(Scene & scene,
+                      const SoLineSet & node,
+                      const LegacyExtractionState & state)
+{
+    if (state.coordinates.empty() ||
+        (state.materialBinding != SoMaterialBinding::OVERALL &&
+         state.materialBinding != SoMaterialBinding::PER_PART)) {
+        return false;
+    }
+
+    Transform transform;
+    if (!transformFromMatrix(state.transform, transform)) {
+        return false;
+    }
+
+    size_t cursor = 0;
+    std::vector<uint32_t> lineCounts;
+    if (node.numVertices.getNum() == 0 ||
+        (node.numVertices.getNum() == 1 && node.numVertices[0] < 0)) {
+        lineCounts.push_back(static_cast<uint32_t>(state.coordinates.size()));
+    } else {
+        for (int i = 0; i < node.numVertices.getNum(); ++i) {
+            const int count = node.numVertices[i];
+            if (count < 0) {
+                if (cursor >= state.coordinates.size()) {
+                    return false;
+                }
+                lineCounts.push_back(
+                    static_cast<uint32_t>(state.coordinates.size() - cursor));
+                cursor = state.coordinates.size();
+                break;
+            }
+            lineCounts.push_back(static_cast<uint32_t>(count));
+            cursor += static_cast<size_t>(count);
+        }
+        if (cursor > state.coordinates.size()) {
+            return false;
+        }
+    }
+
+    if (state.materialBinding == SoMaterialBinding::PER_PART &&
+        state.materials.size() < lineCounts.size()) {
+        return false;
+    }
+
+    cursor = 0;
+    for (size_t lineIndex = 0; lineIndex < lineCounts.size(); ++lineIndex) {
+        const uint32_t count = lineCounts[lineIndex];
+        if (count < 2 || cursor + count > state.coordinates.size()) {
+            return false;
+        }
+        Polyline polyline;
+        polyline.lineWidth = state.lineWidth;
+        polyline.points.assign(state.coordinates.begin() +
+                                   static_cast<std::ptrdiff_t>(cursor),
+                               state.coordinates.begin() +
+                                   static_cast<std::ptrdiff_t>(cursor + count));
+        const Material & material =
+            state.materialBinding == SoMaterialBinding::PER_PART
+                ? state.materials[lineIndex]
+                : state.material;
+        scene.addPolyline(polyline, material, transform);
+        cursor += count;
+    }
+
+    return !lineCounts.empty();
+}
+
+bool addLegacyPointSet(Scene & scene,
+                       const SoPointSet & node,
+                       const LegacyExtractionState & state)
+{
+    if (state.coordinates.empty() ||
+        state.materialBinding != SoMaterialBinding::OVERALL) {
+        return false;
+    }
+
+    Transform transform;
+    if (!transformFromMatrix(state.transform, transform)) {
+        return false;
+    }
+
+    const int requested = node.numPoints.getValue();
+    const size_t count = requested < 0
+        ? state.coordinates.size()
+        : static_cast<size_t>(requested);
+    if (count == 0 || count > state.coordinates.size()) {
+        return false;
+    }
+
+    PointCloud pointCloud;
+    pointCloud.pointSize = state.pointSize;
+    pointCloud.points.assign(state.coordinates.begin(),
+                             state.coordinates.begin() +
+                                 static_cast<std::ptrdiff_t>(count));
+    scene.addPointCloud(pointCloud, state.material, transform);
+    return true;
+}
+
+bool addLegacyLight(Scene & scene,
+                    const SoDirectionalLight & node,
+                    const LegacyExtractionState & state)
+{
+    if (!node.on.getValue()) {
+        return true;
+    }
+    DirectionalLight light;
+    light.direction = fromSbVec3f(transformDirection(state.transform,
+                                                     node.direction.getValue()));
+    light.color = fromSbColor(node.color.getValue());
+    light.intensity = node.intensity.getValue();
+    scene.addDirectionalLight(light);
+    return true;
+}
+
+bool addLegacyLight(Scene & scene,
+                    const SoPointLight & node,
+                    const LegacyExtractionState & state)
+{
+    if (!node.on.getValue()) {
+        return true;
+    }
+    PointLight light;
+    light.location = fromSbVec3f(transformPoint(state.transform,
+                                                node.location.getValue()));
+    light.color = fromSbColor(node.color.getValue());
+    light.intensity = node.intensity.getValue();
+    scene.addPointLight(light);
+    return true;
+}
+
+bool addLegacyLight(Scene & scene,
+                    const SoSpotLight & node,
+                    const LegacyExtractionState & state)
+{
+    if (!node.on.getValue()) {
+        return true;
+    }
+    SpotLight light;
+    light.location = fromSbVec3f(transformPoint(state.transform,
+                                                node.location.getValue()));
+    light.direction = fromSbVec3f(transformDirection(state.transform,
+                                                     node.direction.getValue()));
+    light.color = fromSbColor(node.color.getValue());
+    light.intensity = node.intensity.getValue();
+    light.cutOffAngleRadians = node.cutOffAngle.getValue();
+    light.dropOffRate = node.dropOffRate.getValue();
+    scene.addSpotLight(light);
+    return true;
+}
+
+LegacyExtractionResult extractLegacyNode(const SoNode & node,
+                                         LegacyExtractionState & state,
+                                         Scene & scene);
+
+LegacyExtractionResult extractLegacyChildren(const SoGroup & group,
+                                             LegacyExtractionState & state,
+                                             Scene & scene,
+                                             bool isolateState)
+{
+    LegacyExtractionState childState = state;
+    LegacyExtractionState & traversalState = isolateState ? childState : state;
+    LegacyExtractionResult result;
+
+    for (int i = 0; i < group.getNumChildren(); ++i) {
+        SoNode * child = group.getChild(i);
+        if (!child) {
+            continue;
+        }
+        LegacyExtractionResult childResult =
+            extractLegacyNode(*child, traversalState, scene);
+        result.fullySupported = result.fullySupported && childResult.fullySupported;
+        result.extractedAny = result.extractedAny || childResult.extractedAny;
+        if (!result.fullySupported) {
+            break;
+        }
+    }
+    return result;
+}
+
+LegacyExtractionResult extractLegacyNode(const SoNode & node,
+                                         LegacyExtractionState & state,
+                                         Scene & scene)
+{
+    LegacyExtractionResult result;
+
+    if (node.isOfType(SoSeparator::getClassTypeId())) {
+        return extractLegacyChildren(static_cast<const SoSeparator &>(node),
+                                     state,
+                                     scene,
+                                     true);
+    }
+    if (node.isOfType(SoGroup::getClassTypeId())) {
+        return extractLegacyChildren(static_cast<const SoGroup &>(node),
+                                     state,
+                                     scene,
+                                     false);
+    }
+    if (node.isOfType(SoMaterial::getClassTypeId())) {
+        result.fullySupported =
+            applyLegacyMaterial(static_cast<const SoMaterial &>(node), state);
+        return result;
+    }
+    if (node.isOfType(SoMaterialBinding::getClassTypeId())) {
+        result.fullySupported =
+            applyLegacyMaterialBinding(static_cast<const SoMaterialBinding &>(node),
+                                       state);
+        return result;
+    }
+    if (node.isOfType(SoCoordinate3::getClassTypeId())) {
+        result.fullySupported =
+            applyLegacyCoordinates(static_cast<const SoCoordinate3 &>(node), state);
+        return result;
+    }
+    if (node.isOfType(SoNormal::getClassTypeId())) {
+        result.fullySupported =
+            applyLegacyNormals(static_cast<const SoNormal &>(node), state);
+        return result;
+    }
+    if (node.isOfType(SoNormalBinding::getClassTypeId())) {
+        result.fullySupported =
+            applyLegacyNormalBinding(static_cast<const SoNormalBinding &>(node),
+                                     state);
+        return result;
+    }
+    if (node.isOfType(SoTextureCoordinate2::getClassTypeId())) {
+        result.fullySupported =
+            applyLegacyTextureCoordinates(
+                static_cast<const SoTextureCoordinate2 &>(node),
+                state);
+        return result;
+    }
+    if (node.isOfType(SoDrawStyle::getClassTypeId())) {
+        result.fullySupported =
+            applyLegacyDrawStyle(static_cast<const SoDrawStyle &>(node), state);
+        return result;
+    }
+    if (node.isOfType(SoTransform::getClassTypeId())) {
+        result.fullySupported =
+            appendLegacyTransform(static_cast<const SoTransform &>(node), state);
+        return result;
+    }
+    if (node.isOfType(SoDirectionalLight::getClassTypeId())) {
+        result.fullySupported =
+            addLegacyLight(scene, static_cast<const SoDirectionalLight &>(node), state);
+        result.extractedAny = result.fullySupported;
+        return result;
+    }
+    if (node.isOfType(SoPointLight::getClassTypeId())) {
+        result.fullySupported =
+            addLegacyLight(scene, static_cast<const SoPointLight &>(node), state);
+        result.extractedAny = result.fullySupported;
+        return result;
+    }
+    if (node.isOfType(SoSpotLight::getClassTypeId())) {
+        result.fullySupported =
+            addLegacyLight(scene, static_cast<const SoSpotLight &>(node), state);
+        result.extractedAny = result.fullySupported;
+        return result;
+    }
+    if (node.isOfType(SoCube::getClassTypeId())) {
+        const SoCube & cube = static_cast<const SoCube &>(node);
+        PrimitiveOptions options;
+        options.width = cube.width.getValue();
+        options.height = cube.height.getValue();
+        options.depth = cube.depth.getValue();
+        result.fullySupported =
+            addLegacyPrimitive(scene, Primitive::Cube, options, state);
+        result.extractedAny = result.fullySupported;
+        return result;
+    }
+    if (node.isOfType(SoSphere::getClassTypeId())) {
+        const SoSphere & sphere = static_cast<const SoSphere &>(node);
+        PrimitiveOptions options;
+        options.radius = sphere.radius.getValue();
+        result.fullySupported =
+            addLegacyPrimitive(scene, Primitive::Sphere, options, state);
+        result.extractedAny = result.fullySupported;
+        return result;
+    }
+    if (node.isOfType(SoCone::getClassTypeId())) {
+        const SoCone & cone = static_cast<const SoCone &>(node);
+        if (cone.parts.getValue() != SoCone::ALL) {
+            result.fullySupported = false;
+            return result;
+        }
+        PrimitiveOptions options;
+        options.radius = cone.bottomRadius.getValue();
+        options.height = cone.height.getValue();
+        result.fullySupported =
+            addLegacyPrimitive(scene, Primitive::Cone, options, state);
+        result.extractedAny = result.fullySupported;
+        return result;
+    }
+    if (node.isOfType(SoCylinder::getClassTypeId())) {
+        const SoCylinder & cylinder = static_cast<const SoCylinder &>(node);
+        if (cylinder.parts.getValue() != SoCylinder::ALL) {
+            result.fullySupported = false;
+            return result;
+        }
+        PrimitiveOptions options;
+        options.radius = cylinder.radius.getValue();
+        options.height = cylinder.height.getValue();
+        result.fullySupported =
+            addLegacyPrimitive(scene, Primitive::Cylinder, options, state);
+        result.extractedAny = result.fullySupported;
+        return result;
+    }
+    if (node.isOfType(SoIndexedFaceSet::getClassTypeId())) {
+        result.fullySupported =
+            addLegacyIndexedFaceSet(scene,
+                                    static_cast<const SoIndexedFaceSet &>(node),
+                                    state);
+        result.extractedAny = result.fullySupported;
+        return result;
+    }
+    if (node.isOfType(SoIndexedTriangleStripSet::getClassTypeId())) {
+        result.fullySupported =
+            addLegacyIndexedTriangleStripSet(
+                scene,
+                static_cast<const SoIndexedTriangleStripSet &>(node),
+                state);
+        result.extractedAny = result.fullySupported;
+        return result;
+    }
+    if (node.isOfType(SoLineSet::getClassTypeId())) {
+        result.fullySupported =
+            addLegacyLineSet(scene, static_cast<const SoLineSet &>(node), state);
+        result.extractedAny = result.fullySupported;
+        return result;
+    }
+    if (node.isOfType(SoPointSet::getClassTypeId())) {
+        result.fullySupported =
+            addLegacyPointSet(scene, static_cast<const SoPointSet &>(node), state);
+        result.extractedAny = result.fullySupported;
+        return result;
+    }
+
+    result.fullySupported = false;
+    return result;
+}
+
+bool tryExtractLegacyScene(const SoSeparator & root,
+                           Scene & scene)
+{
+    Scene candidate;
+    LegacyExtractionState state;
+    LegacyExtractionResult result = extractLegacyNode(root, state, candidate);
+    if (!result.fullySupported || !result.extractedAny) {
+        return false;
+    }
+
+    scene = std::move(candidate);
+    return true;
 }
 
 bool hasPolygonFaces(const Mesh & mesh)
@@ -391,6 +1465,7 @@ SoMaterial * createFaceColorMaterial(const std::vector<Color> & colors)
 
 enum class LegacyMeshMaterialBinding {
     None,
+    PerPart,
     PerFace,
     PerFaceIndexed,
     PerVertexIndexed
@@ -405,6 +1480,12 @@ LegacyMeshMaterialBinding meshMaterialBinding(const Mesh & mesh)
         return LegacyMeshMaterialBinding::PerFaceIndexed;
     }
     if (!mesh.faceColors.empty()) {
+        const size_t stripCount = mesh.stripVertexCounts.empty()
+            ? 1
+            : mesh.stripVertexCounts.size();
+        if (hasTriangleStrips(mesh) && mesh.faceColors.size() == stripCount) {
+            return LegacyMeshMaterialBinding::PerPart;
+        }
         return LegacyMeshMaterialBinding::PerFace;
     }
     return LegacyMeshMaterialBinding::None;
@@ -412,10 +1493,12 @@ LegacyMeshMaterialBinding meshMaterialBinding(const Mesh & mesh)
 
 std::vector<Color> meshMaterialColors(const Mesh & mesh)
 {
-    if (!mesh.vertexColors.empty()) {
+    const LegacyMeshMaterialBinding binding = meshMaterialBinding(mesh);
+    if (binding == LegacyMeshMaterialBinding::PerVertexIndexed) {
         return mesh.vertexColors;
     }
-    if (!mesh.faceColorIndices.empty() && !mesh.faceColors.empty()) {
+    if (binding == LegacyMeshMaterialBinding::PerPart ||
+        binding == LegacyMeshMaterialBinding::PerFaceIndexed) {
         return mesh.faceColors;
     }
     return effectiveFaceColors(mesh);
@@ -424,6 +1507,8 @@ std::vector<Color> meshMaterialColors(const Mesh & mesh)
 SoMaterialBinding::Binding toLegacyMaterialBinding(LegacyMeshMaterialBinding binding)
 {
     switch (binding) {
+    case LegacyMeshMaterialBinding::PerPart:
+        return SoMaterialBinding::PER_PART;
     case LegacyMeshMaterialBinding::PerFace:
         return SoMaterialBinding::PER_FACE;
     case LegacyMeshMaterialBinding::PerFaceIndexed:
@@ -436,8 +1521,215 @@ SoMaterialBinding::Binding toLegacyMaterialBinding(LegacyMeshMaterialBinding bin
     return SoMaterialBinding::OVERALL;
 }
 
+SoSeparator * createTriangleStripNode(const Mesh & mesh)
+{
+    const std::vector<uint32_t> stream = meshIndexStream(mesh);
+
+    SoSeparator * sep = new SoSeparator;
+
+    SoShapeHints * hints = new SoShapeHints;
+    hints->vertexOrdering.setValue(SoShapeHints::COUNTERCLOCKWISE);
+    sep->addChild(hints);
+
+    SoCoordinate3 * coords = new SoCoordinate3;
+    for (size_t i = 0; i < stream.size(); ++i) {
+        const uint32_t index = stream[i];
+        if (index >= mesh.positions.size()) {
+            continue;
+        }
+        coords->point.set1Value(static_cast<int>(i), toSbVec3f(mesh.positions[index]));
+    }
+    sep->addChild(coords);
+
+    if (!mesh.normals.empty()) {
+        SoNormal * normals = new SoNormal;
+        for (size_t i = 0; i < stream.size(); ++i) {
+            const uint32_t index = stream[i];
+            if (index < mesh.normals.size()) {
+                normals->vector.set1Value(static_cast<int>(i),
+                                          toSbVec3f(mesh.normals[index]));
+            }
+        }
+        sep->addChild(normals);
+    }
+
+    if (!mesh.texCoords.empty()) {
+        SoTextureCoordinate2 * texCoords = new SoTextureCoordinate2;
+        for (size_t i = 0; i < stream.size(); ++i) {
+            uint32_t index = stream[i];
+            if (!mesh.texCoordIndices.empty() && i < mesh.texCoordIndices.size()) {
+                index = mesh.texCoordIndices[i];
+            }
+            if (index < mesh.texCoords.size()) {
+                texCoords->point.set1Value(static_cast<int>(i),
+                                           mesh.texCoords[index].x,
+                                           mesh.texCoords[index].y);
+            }
+        }
+        sep->addChild(texCoords);
+    }
+
+    if (!mesh.vertexColors.empty()) {
+        SoMaterial * material = new SoMaterial;
+        for (size_t i = 0; i < stream.size(); ++i) {
+            const uint32_t index = stream[i];
+            if (index < mesh.vertexColors.size()) {
+                const Color & color = mesh.vertexColors[index];
+                material->diffuseColor.set1Value(static_cast<int>(i),
+                                                 color.r, color.g, color.b);
+                material->transparency.set1Value(static_cast<int>(i),
+                                                 1.0f - color.a);
+            }
+        }
+        sep->addChild(material);
+        SoMaterialBinding * binding = new SoMaterialBinding;
+        binding->value.setValue(SoMaterialBinding::PER_VERTEX);
+        sep->addChild(binding);
+    } else if (!mesh.faceColors.empty()) {
+        const size_t stripCount = mesh.stripVertexCounts.empty()
+            ? 1
+            : mesh.stripVertexCounts.size();
+        SoMaterialBinding::Binding bindingValue = SoMaterialBinding::OVERALL;
+        std::vector<Color> colors;
+        if (mesh.faceColors.size() == 1) {
+            colors = mesh.faceColors;
+            bindingValue = SoMaterialBinding::OVERALL;
+        } else if (mesh.faceColors.size() == stripCount) {
+            colors = mesh.faceColors;
+            bindingValue = SoMaterialBinding::PER_PART;
+        } else {
+            colors = effectiveFaceColors(mesh);
+            bindingValue = SoMaterialBinding::PER_FACE;
+        }
+
+        SoMaterial * material = createFaceColorMaterial(colors);
+        if (material) {
+            sep->addChild(material);
+            if (bindingValue != SoMaterialBinding::OVERALL) {
+                SoMaterialBinding * binding = new SoMaterialBinding;
+                binding->value.setValue(bindingValue);
+                sep->addChild(binding);
+            }
+        }
+    }
+
+    SoTriangleStripSet * strips = new SoTriangleStripSet;
+    if (mesh.stripVertexCounts.empty()) {
+        strips->numVertices.set1Value(0, static_cast<int32_t>(stream.size()));
+    } else {
+        for (size_t i = 0; i < mesh.stripVertexCounts.size(); ++i) {
+            strips->numVertices.set1Value(static_cast<int>(i),
+                static_cast<int32_t>(mesh.stripVertexCounts[i]));
+        }
+    }
+    sep->addChild(strips);
+
+    return sep;
+}
+
+SoSeparator * createQuadGridNode(const Mesh & mesh)
+{
+    const std::vector<uint32_t> stream = meshIndexStream(mesh);
+
+    SoSeparator * sep = new SoSeparator;
+
+    SoCoordinate3 * coords = new SoCoordinate3;
+    for (size_t i = 0; i < stream.size(); ++i) {
+        const uint32_t index = stream[i];
+        if (index >= mesh.positions.size()) {
+            continue;
+        }
+        coords->point.set1Value(static_cast<int>(i), toSbVec3f(mesh.positions[index]));
+    }
+    sep->addChild(coords);
+
+    if (!mesh.normals.empty()) {
+        SoNormal * normals = new SoNormal;
+        for (size_t i = 0; i < stream.size(); ++i) {
+            const uint32_t index = stream[i];
+            if (index < mesh.normals.size()) {
+                normals->vector.set1Value(static_cast<int>(i),
+                                          toSbVec3f(mesh.normals[index]));
+            }
+        }
+        sep->addChild(normals);
+    }
+
+    if (!mesh.texCoords.empty()) {
+        SoTextureCoordinate2 * texCoords = new SoTextureCoordinate2;
+        for (size_t i = 0; i < stream.size(); ++i) {
+            uint32_t index = stream[i];
+            if (!mesh.texCoordIndices.empty() && i < mesh.texCoordIndices.size()) {
+                index = mesh.texCoordIndices[i];
+            }
+            if (index < mesh.texCoords.size()) {
+                texCoords->point.set1Value(static_cast<int>(i),
+                                           mesh.texCoords[index].x,
+                                           mesh.texCoords[index].y);
+            }
+        }
+        sep->addChild(texCoords);
+    }
+
+    if (!mesh.vertexColors.empty()) {
+        SoMaterial * material = new SoMaterial;
+        for (size_t i = 0; i < stream.size(); ++i) {
+            const uint32_t index = stream[i];
+            if (index < mesh.vertexColors.size()) {
+                const Color & color = mesh.vertexColors[index];
+                material->diffuseColor.set1Value(static_cast<int>(i),
+                                                 color.r, color.g, color.b);
+                material->transparency.set1Value(static_cast<int>(i),
+                                                 1.0f - color.a);
+            }
+        }
+        sep->addChild(material);
+        SoMaterialBinding * binding = new SoMaterialBinding;
+        binding->value.setValue(SoMaterialBinding::PER_VERTEX);
+        sep->addChild(binding);
+    } else if (!mesh.faceColors.empty()) {
+        const std::vector<Color> colors = effectiveFaceColors(mesh);
+        SoMaterial * material = createFaceColorMaterial(colors);
+        if (material) {
+            sep->addChild(material);
+            SoMaterialBinding * binding = new SoMaterialBinding;
+            binding->value.setValue(colors.size() == 1
+                ? SoMaterialBinding::OVERALL
+                : SoMaterialBinding::PER_FACE);
+            sep->addChild(binding);
+        }
+    }
+
+    SoQuadMesh * quadMesh = new SoQuadMesh;
+    quadMesh->verticesPerRow.setValue(static_cast<int32_t>(mesh.gridVertexColumns));
+    quadMesh->verticesPerColumn.setValue(static_cast<int32_t>(mesh.gridVertexRows));
+    sep->addChild(quadMesh);
+
+    return sep;
+}
+
 SoSeparator * createMeshNode(const Mesh & mesh)
 {
+    if (hasTriangleStrips(mesh) &&
+        mesh.faceColorIndices.empty() &&
+        mesh.vertexColorIndices.empty()) {
+        return createTriangleStripNode(mesh);
+    }
+
+    if (hasQuadGrid(mesh) &&
+        mesh.faceColorIndices.empty() &&
+        mesh.vertexColorIndices.empty()) {
+        const std::vector<uint32_t> stream = meshIndexStream(mesh);
+        const size_t required =
+            static_cast<size_t>(mesh.gridVertexRows) *
+            static_cast<size_t>(mesh.gridVertexColumns);
+        if (mesh.gridVertexRows > 0 &&
+            mesh.gridVertexColumns > 0 &&
+            required <= stream.size()) {
+            return createQuadGridNode(mesh);
+        }
+    }
+
     SoSeparator * sep = new SoSeparator;
 
     SoCoordinate3 * coords = new SoCoordinate3;
@@ -554,9 +1846,9 @@ SoSeparator * createMeshNode(const Mesh & mesh)
                 const uint32_t b = stream[start + i + 1];
                 const uint32_t c = stream[start + i + 2];
                 if (i % 2 == 0) {
-                    appendFace({a, b, c});
-                } else {
                     appendFace({b, a, c});
+                } else {
+                    appendFace({a, b, c});
                 }
             }
         };
@@ -814,7 +2106,8 @@ struct Scene::Impl {
             Text2D,
             Text3D,
             CadAssembly,
-            OpenGLCallback
+            OpenGLCallback,
+            LegacySceneGraph
         };
 
         Kind kind = Kind::Primitive;
@@ -832,7 +2125,9 @@ struct Scene::Impl {
         Text3D text3D;
         std::shared_ptr<CadAssembly> cadAssembly;
         OpenGLCallback openGLCallback;
+        std::shared_ptr<SoSeparator> legacySceneGraph;
         SceneGroupId parent = RootSceneGroupId;
+        bool active = true;
 
         SceneObjectType publicType() const
         {
@@ -859,6 +2154,8 @@ struct Scene::Impl {
                 return SceneObjectType::CadAssembly;
             case Kind::OpenGLCallback:
                 return SceneObjectType::OpenGLCallback;
+            case Kind::LegacySceneGraph:
+                return SceneObjectType::LegacySceneGraph;
             }
             return SceneObjectType::Any;
         }
@@ -1161,6 +2458,30 @@ Scene::addOpenGLCallback(const OpenGLCallback & callback,
     return static_cast<SceneObjectId>(impl_->objects.size());
 }
 
+SceneObjectId
+Scene::addLegacySceneGraph(NativeSceneGraphHandle rootHandle,
+                           const Transform & transform,
+                           SceneGroupId parent)
+{
+    SoSeparator * root = static_cast<SoSeparator *>(rootHandle);
+    if (!root) {
+        return InvalidSceneObjectId;
+    }
+
+    std::shared_ptr<SoSeparator> copy = copyLegacySeparator(*root);
+    if (!copy) {
+        return InvalidSceneObjectId;
+    }
+
+    Impl::Object object;
+    object.kind = Impl::Object::Kind::LegacySceneGraph;
+    object.legacySceneGraph = copy;
+    object.transform = transform;
+    object.parent = parent <= impl_->groups.size() ? parent : RootSceneGroupId;
+    impl_->objects.push_back(object);
+    return static_cast<SceneObjectId>(impl_->objects.size());
+}
+
 bool
 Scene::setObjectTransform(SceneObjectId object,
                           const Transform & transform)
@@ -1169,7 +2490,11 @@ Scene::setObjectTransform(SceneObjectId object,
         object > impl_->objects.size()) {
         return false;
     }
-    impl_->objects[object - 1].transform = transform;
+    Impl::Object & target = impl_->objects[object - 1];
+    if (!target.active) {
+        return false;
+    }
+    target.transform = transform;
     return true;
 }
 
@@ -1182,6 +2507,9 @@ Scene::setObjectMaterial(SceneObjectId object,
         return false;
     }
     Impl::Object & target = impl_->objects[object - 1];
+    if (!target.active) {
+        return false;
+    }
     switch (target.kind) {
     case Impl::Object::Kind::Primitive:
     case Impl::Object::Kind::Mesh:
@@ -1189,6 +2517,7 @@ Scene::setObjectMaterial(SceneObjectId object,
     case Impl::Object::Kind::PointCloud:
     case Impl::Object::Kind::Text2D:
     case Impl::Object::Kind::Text3D:
+    case Impl::Object::Kind::LegacySceneGraph:
         target.material = material;
         return true;
     case Impl::Object::Kind::DirectionalLight:
@@ -1210,6 +2539,9 @@ Scene::setObjectPrimitiveOptions(SceneObjectId object,
         return false;
     }
     Impl::Object & target = impl_->objects[object - 1];
+    if (!target.active) {
+        return false;
+    }
     if (target.kind != Impl::Object::Kind::Primitive) {
         return false;
     }
@@ -1226,10 +2558,28 @@ Scene::setObjectPointCloud(SceneObjectId object,
         return false;
     }
     Impl::Object & target = impl_->objects[object - 1];
+    if (!target.active) {
+        return false;
+    }
     if (target.kind != Impl::Object::Kind::PointCloud) {
         return false;
     }
     target.pointCloud = pointCloud;
+    return true;
+}
+
+bool
+Scene::removeObject(SceneObjectId object)
+{
+    if (object == InvalidSceneObjectId ||
+        object > impl_->objects.size()) {
+        return false;
+    }
+    Impl::Object & target = impl_->objects[object - 1];
+    if (!target.active) {
+        return false;
+    }
+    target.active = false;
     return true;
 }
 
@@ -1265,13 +2615,24 @@ Scene::hasCamera() const
 bool
 Scene::empty() const
 {
-    return impl_->objects.empty() && impl_->groups.empty() && !impl_->legacyRoot;
+    for (const Impl::Object & object : impl_->objects) {
+        if (object.active) {
+            return false;
+        }
+    }
+    return impl_->groups.empty() && !impl_->legacyRoot;
 }
 
 size_t
 Scene::objectCount() const
 {
-    return impl_->objects.size();
+    size_t count = 0;
+    for (const Impl::Object & object : impl_->objects) {
+        if (object.active) {
+            ++count;
+        }
+    }
+    return count;
 }
 
 size_t
@@ -1286,6 +2647,9 @@ Scene::findObjects(const SceneQuery & query) const
     std::vector<SceneObjectInfo> results;
     for (size_t i = 0; i < impl_->objects.size(); ++i) {
         const Impl::Object & object = impl_->objects[i];
+        if (!object.active) {
+            continue;
+        }
         const SceneObjectType type = object.publicType();
         if (!matchesQuery(type, query)) {
             continue;
@@ -1303,6 +2667,9 @@ SceneObjectId
 Scene::findFirstObject(const SceneQuery & query) const
 {
     for (size_t i = 0; i < impl_->objects.size(); ++i) {
+        if (!impl_->objects[i].active) {
+            continue;
+        }
         const SceneObjectType type = impl_->objects[i].publicType();
         if (matchesQuery(type, query)) {
             return static_cast<SceneObjectId>(i + 1);
@@ -1317,6 +2684,84 @@ Scene::hasObjects(const SceneQuery & query) const
     return findFirstObject(query) != InvalidSceneObjectId;
 }
 
+ScenePacket
+Scene::capturePacket() const
+{
+    ScenePacket packet;
+    std::vector<SbMatrix> groupWorldMatrices;
+    groupWorldMatrices.reserve(impl_->groups.size());
+    packet.groups.reserve(impl_->groups.size());
+    for (size_t i = 0; i < impl_->groups.size(); ++i) {
+        const Impl::Group & group = impl_->groups[i];
+        SbMatrix worldMatrix = transformMatrix(group.transform);
+        if (group.parent != RootSceneGroupId &&
+            group.parent <= groupWorldMatrices.size()) {
+            worldMatrix.multLeft(groupWorldMatrices[group.parent - 1]);
+        }
+        groupWorldMatrices.push_back(worldMatrix);
+
+        SceneGroupRecord record;
+        record.id = static_cast<SceneGroupId>(i + 1);
+        record.parent = group.parent;
+        record.transform = group.transform;
+        record.localToWorld = toMatrix4(worldMatrix);
+        packet.groups.push_back(record);
+    }
+
+    const auto parentWorldMatrix = [&](SceneGroupId parent) -> SbMatrix {
+        if (parent != RootSceneGroupId && parent <= groupWorldMatrices.size()) {
+            return groupWorldMatrices[parent - 1];
+        }
+        return SbMatrix::identity();
+    };
+
+    if (impl_->hasCamera && impl_->cameraKind == Impl::CameraKind::Perspective) {
+        packet.camera.kind = SceneCameraKind::Perspective;
+        packet.camera.perspective = impl_->camera;
+    } else if (impl_->hasCamera &&
+               impl_->cameraKind == Impl::CameraKind::Orthographic) {
+        packet.camera.kind = SceneCameraKind::Orthographic;
+        packet.camera.orthographic = impl_->orthographicCamera;
+    }
+
+    packet.objects.reserve(objectCount());
+    for (size_t i = 0; i < impl_->objects.size(); ++i) {
+        const Impl::Object & object = impl_->objects[i];
+        if (!object.active) {
+            continue;
+        }
+
+        SceneObjectRecord record;
+        record.id = static_cast<SceneObjectId>(i + 1);
+        record.type = object.publicType();
+        record.category = categoryForType(record.type);
+        record.parent = object.parent;
+        record.transform = object.transform;
+        SbMatrix objectWorldMatrix = transformMatrix(object.transform);
+        objectWorldMatrix.multLeft(parentWorldMatrix(object.parent));
+        record.localToWorld = toMatrix4(objectWorldMatrix);
+        record.material = object.material;
+        record.primitive = object.primitive;
+        record.primitiveOptions = object.primitiveOptions;
+        record.mesh = object.mesh;
+        record.polyline = object.polyline;
+        record.pointCloud = object.pointCloud;
+        record.directionalLight = object.directionalLight;
+        record.pointLight = object.pointLight;
+        record.spotLight = object.spotLight;
+        record.text2D = object.text2D;
+        record.text3D = object.text3D;
+        record.cadAssembly = object.cadAssembly;
+        record.openGLCallback = object.openGLCallback;
+        record.hasLegacySceneGraph =
+            object.kind == Impl::Object::Kind::LegacySceneGraph &&
+            object.legacySceneGraph != nullptr;
+        packet.objects.push_back(record);
+    }
+    packet.hasLegacyFallbackRoot = impl_->legacyRoot != nullptr;
+    return packet;
+}
+
 void
 Scene::clear()
 {
@@ -1327,7 +2772,7 @@ Scene::clear()
     impl_->cameraKind = Impl::CameraKind::Perspective;
 }
 
-SoSeparator *
+NativeSceneGraphHandle
 Scene::createLegacySceneGraph() const
 {
     SoSeparator * legacyRoot = nullptr;
@@ -1357,10 +2802,6 @@ Scene::createLegacySceneGraph() const
         camera->nearDistance.setValue(impl_->orthographicCamera.nearDistance);
         camera->farDistance.setValue(impl_->orthographicCamera.farDistance);
         root->addChild(camera);
-    }
-
-    if (legacyRoot) {
-        root->addChild(legacyRoot);
     }
 
     std::vector<SbMatrix> groupWorldMatrices;
@@ -1399,6 +2840,9 @@ Scene::createLegacySceneGraph() const
 
     for (size_t i = 0; i < impl_->objects.size(); ++i) {
         const Impl::Object & object = impl_->objects[i];
+        if (!object.active) {
+            continue;
+        }
         const SceneObjectId objectId = static_cast<SceneObjectId>(i + 1);
         const SbMatrix parentMatrix = parentWorldMatrix(object.parent);
         if (object.kind == Impl::Object::Kind::DirectionalLight) {
@@ -1441,6 +2885,10 @@ Scene::createLegacySceneGraph() const
         }
     }
 
+    if (legacyRoot) {
+        root->addChild(legacyRoot);
+    }
+
     std::vector<SoSeparator *> groupNodes;
     groupNodes.reserve(impl_->groups.size());
     for (size_t i = 0; i < impl_->groups.size(); ++i) {
@@ -1462,6 +2910,9 @@ Scene::createLegacySceneGraph() const
 
     for (size_t i = 0; i < impl_->objects.size(); ++i) {
         const Impl::Object & object = impl_->objects[i];
+        if (!object.active) {
+            continue;
+        }
         const SceneObjectId objectId = static_cast<SceneObjectId>(i + 1);
         SoSeparator * parent = root;
         if (object.parent != RootSceneGroupId &&
@@ -1488,7 +2939,23 @@ Scene::createLegacySceneGraph() const
         sep->addChild(createTransform(object.transform));
         if (object.kind == Impl::Object::Kind::CadAssembly) {
             if (object.cadAssembly) {
-                sep->addChild(object.cadAssembly->createLegacyNode());
+                sep->addChild(static_cast<SoNode *>(
+                    object.cadAssembly->createLegacyNode()));
+            }
+            parent->addChild(sep);
+            continue;
+        }
+        if (object.kind == Impl::Object::Kind::LegacySceneGraph) {
+            sep->addChild(createMaterial(object.material));
+            if (object.legacySceneGraph) {
+                SoNode * copy = object.legacySceneGraph->copy(FALSE);
+                SoSeparator * legacy =
+                    copy && copy->isOfType(SoSeparator::getClassTypeId())
+                        ? static_cast<SoSeparator *>(copy)
+                        : nullptr;
+                if (legacy) {
+                    sep->addChild(legacy);
+                }
             }
             parent->addChild(sep);
             continue;
@@ -1496,6 +2963,11 @@ Scene::createLegacySceneGraph() const
         if (object.material.baseColorTexture) {
             SoTexture2 * texture = createTexture(*object.material.baseColorTexture);
             if (texture) sep->addChild(texture);
+        }
+        if (object.material.unlit) {
+            SoLightModel * lightModel = new SoLightModel;
+            lightModel->model.setValue(SoLightModel::BASE_COLOR);
+            sep->addChild(lightModel);
         }
         if (object.kind == Impl::Object::Kind::Mesh) {
             const LegacyMeshMaterialBinding meshBinding =
@@ -1532,11 +3004,28 @@ Scene::createLegacySceneGraph() const
     return root;
 }
 
+void
+Scene::releaseLegacySceneGraph(NativeSceneGraphHandle rootHandle)
+{
+    SoSeparator * root = static_cast<SoSeparator *>(rootHandle);
+    if (root) {
+        root->unref();
+    }
+}
+
 Scene
-Scene::fromLegacySceneGraph(const SoSeparator & root)
+Scene::fromLegacySceneGraph(NativeSceneGraphHandle rootHandle)
 {
     Scene scene;
-    scene.impl_->setLegacyRoot(root);
+    SoSeparator * root = static_cast<SoSeparator *>(rootHandle);
+    if (!root) {
+        return scene;
+    }
+    if (tryExtractLegacyScene(*root, scene)) {
+        return scene;
+    }
+
+    scene.impl_->setLegacyRoot(*root);
     return scene;
 }
 

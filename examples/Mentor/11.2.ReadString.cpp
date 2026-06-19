@@ -43,6 +43,14 @@ bool renderScene(obol::OffscreenRenderer & renderer,
     return result.success && renderer.writeRGB(filename);
 }
 
+void applyViewAllCamera(obol::Scene & scene)
+{
+    obol::ViewAllRequest request;
+    request.viewportWidth = DEFAULT_WIDTH;
+    request.viewportHeight = DEFAULT_HEIGHT;
+    scene.setCamera(obol::CameraFraming::viewAllPerspective(scene, request));
+}
+
 } // namespace
 
 int main(int argc, char **argv)
@@ -57,10 +65,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    obol::PerspectiveCamera camera;
-    camera.position = {0.0f, 0.0f, 5.0f};
-    camera.target = {0.0f, 0.0f, 0.0f};
-    scene.setCamera(camera);
+    applyViewAllCamera(scene);
     scene.addDirectionalLight(obol::DirectionalLight{});
 
     printf("Successfully parsed scene from string buffer through Obol v2 SceneIO\n");

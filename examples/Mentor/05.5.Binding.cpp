@@ -141,17 +141,20 @@ obol::Mesh makeStellatedDodecahedron(int bindingType)
     return mesh;
 }
 
+obol::PerspectiveCamera viewAllCamera(const obol::Scene & scene)
+{
+    obol::ViewAllRequest request;
+    request.viewportWidth = DEFAULT_WIDTH;
+    request.viewportHeight = DEFAULT_HEIGHT;
+    return obol::CameraFraming::viewAllPerspective(scene, request);
+}
+
 bool renderBinding(const char * filename, int bindingType)
 {
     obol::Scene scene;
     scene.addDirectionalLight(obol::DirectionalLight{});
     scene.addMesh(makeStellatedDodecahedron(bindingType));
-
-    obol::PerspectiveCamera camera;
-    camera.position = {0.0f, 0.0f, 7.0f};
-    camera.target = {0.0f, 0.0f, 0.0f};
-    camera.verticalFieldOfViewRadians = 0.55f;
-    scene.setCamera(camera);
+    scene.setCamera(viewAllCamera(scene));
 
     obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
                                         obol::RenderBackendKind::OpenGL2SWRast,

@@ -1,5 +1,9 @@
 #include <Obol/cad/CadAssembly.h>
+#include <Obol/compat/cad/SoCADAssembly.h>
 
+#include <Inventor/SbBox3f.h>
+#include <Inventor/SbColor4f.h>
+#include <Inventor/SbMatrix.h>
 #include <Inventor/SoType.h>
 
 namespace obol {
@@ -40,6 +44,97 @@ void ensureCadNodeClassInitialized()
     if (SoCADAssembly::getClassTypeId().isBad()) {
         SoCADAssembly::initClass();
     }
+}
+
+SbVec3f
+toLegacyVec3(const Vec3 & value)
+{
+    return SbVec3f(value.x, value.y, value.z);
+}
+
+SbColor4f
+toLegacyColor(const Color & value)
+{
+    return SbColor4f(value.r, value.g, value.b, value.a);
+}
+
+SbMatrix
+toLegacyMatrix(const CadMatrix4 & value)
+{
+    return SbMatrix(value.values[0], value.values[1], value.values[2], value.values[3],
+                    value.values[4], value.values[5], value.values[6], value.values[7],
+                    value.values[8], value.values[9], value.values[10], value.values[11],
+                    value.values[12], value.values[13], value.values[14], value.values[15]);
+}
+
+SbBox3f
+toLegacyBounds(const CadBounds3 & bounds)
+{
+    SbBox3f result;
+    if (!bounds.empty) {
+        result.setBounds(toLegacyVec3(bounds.minimum),
+                         toLegacyVec3(bounds.maximum));
+    }
+    return result;
+}
+
+InstanceStyle
+toLegacyStyle(const CadInstanceStyle & style)
+{
+    InstanceStyle result;
+    result.hasColorOverride = style.hasColorOverride;
+    result.color = toLegacyColor(style.color);
+    result.lineWidth = style.lineWidth;
+    return result;
+}
+
+PartGeometry
+toLegacyGeometry(const CadPartGeometry & geometry)
+{
+    PartGeometry result;
+    if (geometry.wire) {
+        WireRep wire;
+        wire.bounds = toLegacyBounds(geometry.wire->bounds);
+        for (const CadWirePolyline & polyline : geometry.wire->polylines) {
+            WirePolyline legacyPolyline;
+            legacyPolyline.edgeId = polyline.edgeId;
+            legacyPolyline.points.reserve(polyline.points.size());
+            for (const Vec3 & point : polyline.points) {
+                legacyPolyline.points.push_back(toLegacyVec3(point));
+            }
+            wire.polylines.push_back(legacyPolyline);
+        }
+        result.wire = wire;
+    }
+    if (geometry.shaded) {
+        TriMesh mesh;
+        mesh.positions.reserve(geometry.shaded->positions.size());
+        for (const Vec3 & position : geometry.shaded->positions) {
+            mesh.positions.push_back(toLegacyVec3(position));
+        }
+        mesh.normals.reserve(geometry.shaded->normals.size());
+        for (const Vec3 & normal : geometry.shaded->normals) {
+            mesh.normals.push_back(toLegacyVec3(normal));
+        }
+        mesh.indices = geometry.shaded->indices;
+        mesh.bounds = toLegacyBounds(geometry.shaded->bounds);
+        result.shaded = mesh;
+    }
+    return result;
+}
+
+InstanceRecord
+toLegacyRecord(const CadInstanceRecord & record)
+{
+    InstanceRecord result;
+    result.part = record.part;
+    result.localToRoot = toLegacyMatrix(record.localToRoot);
+    result.parent = record.parent;
+    result.childName = record.childName;
+    result.occurrenceIndex = record.occurrenceIndex;
+    result.boolOp = record.boolOp;
+    result.style = toLegacyStyle(record.style);
+    return result;
 }
 
 } // namespace
@@ -105,7 +200,7 @@ CadAssembly::lodEnabled() const
 }
 
 void
-CadAssembly::upsertPart(PartId id, const PartGeometry & geometry)
+CadAssembly::upsertPart(PartId id, const CadPartGeometry & geometry)
 {
     parts_[id] = geometry;
 }
@@ -117,7 +212,7 @@ CadAssembly::removePart(PartId id)
 }
 
 InstanceId
-CadAssembly::upsertInstanceAuto(const InstanceRecord & record)
+CadAssembly::upsertInstanceAuto(const CadInstanceRecord & record)
 {
     const InstanceId id = CadIdBuilder::extendNameOccBool(record.parent,
                                                           record.childName,
@@ -128,7 +223,7 @@ CadAssembly::upsertInstanceAuto(const InstanceRecord & record)
 }
 
 void
-CadAssembly::upsertInstance(InstanceId id, const InstanceRecord & record)
+CadAssembly::upsertInstance(InstanceId id, const CadInstanceRecord & record)
 {
     instances_[id] = record;
 }
@@ -140,7 +235,7 @@ CadAssembly::removeInstance(InstanceId id)
 }
 
 void
-CadAssembly::updateInstanceTransform(InstanceId id, const SbMatrix & localToRoot)
+CadAssembly::updateInstanceTransform(InstanceId id, const CadMatrix4 & localToRoot)
 {
     auto it = instances_.find(id);
     if (it != instances_.end()) {
@@ -149,7 +244,7 @@ CadAssembly::updateInstanceTransform(InstanceId id, const SbMatrix & localToRoot
 }
 
 void
-CadAssembly::updateInstanceStyle(InstanceId id, const InstanceStyle & style)
+CadAssembly::updateInstanceStyle(InstanceId id, const CadInstanceStyle & style)
 {
     auto it = instances_.find(id);
     if (it != instances_.end()) {
@@ -181,23 +276,57 @@ CadAssembly::instanceCount() const
     return instances_.size();
 }
 
-const PartGeometry *
+std::vector<PartId>
+CadAssembly::partIds() const
+{
+    std::vector<PartId> ids;
+    ids.reserve(parts_.size());
+    for (const auto & entry : parts_) {
+        ids.push_back(entry.first);
+    }
+    return ids;
+}
+
+std::vector<InstanceId>
+CadAssembly::instanceIds() const
+{
+    std::vector<InstanceId> ids;
+    ids.reserve(instances_.size());
+    for (const auto & entry : instances_) {
+        ids.push_back(entry.first);
+    }
+    return ids;
+}
+
+const CadPartGeometry *
 CadAssembly::partGeometry(PartId id) const
 {
     auto it = parts_.find(id);
     return it == parts_.end() ? nullptr : &it->second;
 }
 
-std::optional<InstanceRecord>
+std::optional<CadInstanceRecord>
 CadAssembly::getInstanceRecord(InstanceId id) const
 {
     auto it = instances_.find(id);
     return it == instances_.end()
-        ? std::optional<InstanceRecord>{}
-        : std::optional<InstanceRecord>{it->second};
+        ? std::optional<CadInstanceRecord>{}
+        : std::optional<CadInstanceRecord>{it->second};
 }
 
-SoCADAssembly *
+const std::vector<InstanceId> &
+CadAssembly::selectedInstances() const
+{
+    return selectedInstances_;
+}
+
+const std::vector<InstanceId> &
+CadAssembly::hiddenInstances() const
+{
+    return hiddenInstances_;
+}
+
+NativeNodeHandle
 CadAssembly::createLegacyNode() const
 {
     ensureCadNodeClassInitialized();
@@ -211,10 +340,10 @@ CadAssembly::createLegacyNode() const
 
     node->beginUpdate();
     for (const auto & entry : parts_) {
-        node->upsertPart(entry.first, entry.second);
+        node->upsertPart(entry.first, toLegacyGeometry(entry.second));
     }
     for (const auto & entry : instances_) {
-        node->upsertInstance(entry.first, entry.second);
+        node->upsertInstance(entry.first, toLegacyRecord(entry.second));
     }
     node->setSelectedInstances(selectedInstances_);
     node->setHiddenInstances(hiddenInstances_);

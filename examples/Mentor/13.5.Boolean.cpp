@@ -40,6 +40,14 @@ obol::Transform hidden()
     return transform;
 }
 
+obol::PerspectiveCamera viewAllCamera(const obol::Scene & scene)
+{
+    obol::ViewAllRequest request;
+    request.viewportWidth = DEFAULT_WIDTH;
+    request.viewportHeight = DEFAULT_HEIGHT;
+    return obol::CameraFraming::viewAllPerspective(scene, request);
+}
+
 } // namespace
 
 int main(int argc, char **argv)
@@ -47,16 +55,17 @@ int main(int argc, char **argv)
     initCoinHeadless();
 
     obol::Scene scene;
-    obol::PerspectiveCamera camera;
-    camera.position = {0.0f, 0.0f, 5.0f};
-    camera.target = {0.0f, 0.0f, 0.0f};
-    scene.setCamera(camera);
     scene.addDirectionalLight(obol::DirectionalLight{});
 
     const obol::SceneObjectId cube =
         scene.addPrimitive(obol::Primitive::Cube, material(1.0f, 0.0f, 0.0f));
     const obol::SceneObjectId sphere =
         scene.addPrimitive(obol::Primitive::Sphere, material(0.0f, 0.0f, 1.0f), hidden());
+
+    obol::Scene cameraScene;
+    cameraScene.addDirectionalLight(obol::DirectionalLight{});
+    cameraScene.addPrimitive(obol::Primitive::Cube, material(1.0f, 0.0f, 0.0f));
+    scene.setCamera(viewAllCamera(cameraScene));
 
     obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
                                         obol::RenderBackendKind::OpenGL2SWRast,

@@ -2,7 +2,7 @@
  * Headless version of Inventor Mentor example 15.2
  *
  * Original: three Translate1Draggers feed a calculator engine for text motion.
- * Headless: application slider state composes a v2 transform directly.
+ * Headless: TransformDragger axis translations compose the v2 text transform.
  */
 
 #include "headless_utils.h"
@@ -95,6 +95,35 @@ bool renderScene(obol::OffscreenRenderer & renderer,
     return result.success && renderer.writeRGB(filename);
 }
 
+obol::Transform translateOnAxis(const obol::Transform & start,
+                                const obol::Vec3 & axis,
+                                float distance)
+{
+    obol::AxisDragRequest request;
+    request.startTransform = start;
+    request.axis = axis;
+    request.distance = distance;
+    const obol::AxisDragResult result =
+        obol::TransformDragger::translateOnAxis(request);
+    return result.valid ? result.transform : start;
+}
+
+obol::Transform sliderTextTransform(const SliderState & state)
+{
+    obol::Transform result = transform(0.0f, 0.0f, 0.0f);
+    result = translateOnAxis(result, {1.0f, 0.0f, 0.0f}, state.x);
+    result = translateOnAxis(result, {0.0f, 1.0f, 0.0f}, state.y);
+    result = translateOnAxis(result, {0.0f, 0.0f, 1.0f}, state.z);
+    return result;
+}
+
+bool setTextPosition(obol::Scene & scene,
+                     obol::SceneObjectId textId,
+                     const SliderState & state)
+{
+    return scene.setObjectTransform(textId, sliderTextTransform(state));
+}
+
 } // namespace
 
 int main(int argc, char **argv)
@@ -137,7 +166,7 @@ int main(int argc, char **argv)
 
     printf("Rendering Slider Box with app-owned slider positions [Obol v2]...\n");
 
-    scene.setObjectTransform(textId, transform(state.x, state.y, state.z));
+    setTextPosition(scene, textId, state);
     snprintf(filename, sizeof(filename), "%s_00_center.rgb", baseFilename);
     if (!renderScene(renderer, scene, filename)) return 1;
     snprintf(filename, sizeof(filename), "%s.rgb", baseFilename);
@@ -145,27 +174,27 @@ int main(int argc, char **argv)
 
     for (int i = 1; i <= 4; i++) {
         state = {i * 2.0f, 0.0f, 0.0f};
-        scene.setObjectTransform(textId, transform(state.x, state.y, state.z));
+        setTextPosition(scene, textId, state);
         snprintf(filename, sizeof(filename), "%s_%02d_x_pos.rgb", baseFilename, i);
         if (!renderScene(renderer, scene, filename)) return 1;
     }
 
     for (int i = 1; i <= 4; i++) {
         state = {0.0f, i * 1.5f, 0.0f};
-        scene.setObjectTransform(textId, transform(state.x, state.y, state.z));
+        setTextPosition(scene, textId, state);
         snprintf(filename, sizeof(filename), "%s_%02d_y_pos.rgb", baseFilename, i + 4);
         if (!renderScene(renderer, scene, filename)) return 1;
     }
 
     for (int i = 1; i <= 4; i++) {
         state = {0.0f, 0.0f, i * 2.0f};
-        scene.setObjectTransform(textId, transform(state.x, state.y, state.z));
+        setTextPosition(scene, textId, state);
         snprintf(filename, sizeof(filename), "%s_%02d_z_pos.rgb", baseFilename, i + 8);
         if (!renderScene(renderer, scene, filename)) return 1;
     }
 
     state = {4.0f, 2.0f, 4.0f};
-    scene.setObjectTransform(textId, transform(state.x, state.y, state.z));
+    setTextPosition(scene, textId, state);
     snprintf(filename, sizeof(filename), "%s_13_combined.rgb", baseFilename);
     if (!renderScene(renderer, scene, filename)) return 1;
 

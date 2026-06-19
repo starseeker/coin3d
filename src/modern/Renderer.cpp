@@ -1,24 +1,36 @@
 #include <Obol/scene/Renderer.h>
+#include <Obol/scene/ScenePacketGeometry.h>
 
 #include <Inventor/SbColor.h>
 #include <Inventor/SbViewportRegion.h>
 #include <Inventor/SoOffscreenRenderer.h>
 #include <Inventor/nodes/SoSeparator.h>
 
+#include <cstdio>
 #include <memory>
 #include <utility>
 
 namespace obol {
 namespace {
 
+SoDB::ContextManager *
+toRendererLegacyContext(NativeContextHandle handle)
+{
+    return static_cast<SoDB::ContextManager *>(handle);
+}
+
 RenderCapabilities queryCapabilities(RenderBackend * backend,
                                      SoOffscreenRenderer & renderer,
                                      SoDB::ContextManager * manager)
 {
-    RenderCapabilities caps;
+    RenderCapabilities caps = backend ? backend->capabilities() : RenderCapabilities{};
     if (backend) {
-        caps.backendKind = backend->kind();
-        caps.backendName = backend->name() ? backend->name() : "";
+        if (caps.backendKind == RenderBackendKind::Unknown) {
+            caps.backendKind = backend->kind();
+        }
+        if (caps.backendName.empty() && backend->name()) {
+            caps.backendName = backend->name();
+        }
     }
     if (!manager) {
         return caps;
@@ -86,11 +98,133 @@ RenderTarget makeTarget(unsigned int width, unsigned int height)
     return target;
 }
 
+size_t componentCount(PixelFormat format)
+{
+    switch (format) {
+    case PixelFormat::Luminance:
+        return 1;
+    case PixelFormat::LuminanceAlpha:
+        return 2;
+    case PixelFormat::RGB:
+        return 3;
+    case PixelFormat::RGBA:
+        return 4;
+    }
+    return 3;
+}
+
+bool writeByte(FILE * file, unsigned char value)
+{
+    return std::fputc(value, file) != EOF;
+}
+
+bool writeBigEndianShort(FILE * file, unsigned short value)
+{
+    return writeByte(file, static_cast<unsigned char>((value >> 8) & 0xff)) &&
+           writeByte(file, static_cast<unsigned char>(value & 0xff));
+}
+
+bool writePacketRGB(const char * filename,
+                    const unsigned char * pixels,
+                    const RenderTarget & target)
+{
+    if (!filename || !pixels) {
+        return false;
+    }
+
+    FILE * file = std::fopen(filename, "wb");
+    if (!file) {
+        return false;
+    }
+
+    const size_t components = componentCount(target.pixelFormat);
+    if (!writeBigEndianShort(file, 0x01da) ||
+        !writeByte(file, 0x00) ||
+        !writeByte(file, 0x01) ||
+        !writeBigEndianShort(file, components == 1 ? 0x0002 : 0x0003) ||
+        !writeBigEndianShort(file, static_cast<unsigned short>(target.width)) ||
+        !writeBigEndianShort(file, static_cast<unsigned short>(target.height)) ||
+        !writeBigEndianShort(file, static_cast<unsigned short>(components)) ||
+        !writeBigEndianShort(file, 0x0000) ||
+        !writeBigEndianShort(file, 0x0000) ||
+        !writeBigEndianShort(file, 0x0000) ||
+        !writeBigEndianShort(file, 0x00ff)) {
+        std::fclose(file);
+        return false;
+    }
+
+    unsigned char headerRest[488] = {};
+    const char name[] = "Obol packet renderer";
+    for (size_t i = 0; i + 1 < sizeof(name) && i < 80; ++i) {
+        headerRest[i] = static_cast<unsigned char>(name[i]);
+    }
+    if (std::fwrite(headerRest, 1, sizeof(headerRest), file) != sizeof(headerRest)) {
+        std::fclose(file);
+        return false;
+    }
+
+    for (size_t channel = 0; channel < components; ++channel) {
+        for (unsigned int y = 0; y < target.height; ++y) {
+            for (unsigned int x = 0; x < target.width; ++x) {
+                const size_t source =
+                    (static_cast<size_t>(y) * target.width + x) *
+                        components +
+                    channel;
+                if (!writeByte(file, pixels[source])) {
+                    std::fclose(file);
+                    return false;
+                }
+            }
+        }
+    }
+
+    return std::fclose(file) == 0;
+}
+
 } // namespace
 
 RenderBackend::~RenderBackend() = default;
 
-ContextManagerBackend::ContextManagerBackend(SoDB::ContextManager * manager,
+NativeContextHandle
+RenderBackend::legacyContextHandle()
+{
+    return nullptr;
+}
+
+RenderCapabilities
+RenderBackend::capabilities() const
+{
+    RenderCapabilities caps;
+    caps.backendKind = kind();
+    caps.backendName = name() ? name() : "";
+    return caps;
+}
+
+bool
+RenderBackend::renderPacket(const ScenePacket & packet,
+                            const RenderTarget &,
+                            const RenderOptions &,
+                            const Color &,
+                            std::vector<unsigned char> &,
+                            std::vector<RenderDiagnostic> & diagnostics)
+{
+    std::vector<PacketGeometryDiagnostic> geometryDiagnostics;
+    inspectPacketGeometrySupport(packet, &geometryDiagnostics);
+    for (const PacketGeometryDiagnostic & geometryDiagnostic :
+         geometryDiagnostics) {
+        addDiagnostic(diagnostics,
+                      geometryDiagnostic.severity ==
+                              PacketGeometryDiagnosticSeverity::Error
+                          ? DiagnosticSeverity::Error
+                          : DiagnosticSeverity::Warning,
+                      geometryDiagnostic.message);
+    }
+    addDiagnostic(diagnostics, DiagnosticSeverity::Error,
+                  "Render backend does not implement packet rendering and did not provide a legacy context.");
+    return false;
+}
+
+ContextManagerBackend::ContextManagerBackend(NativeContextHandle manager,
                                              RenderBackendKind backendKind,
                                              const char * backendName)
     : manager_(manager)
@@ -101,8 +235,8 @@ ContextManagerBackend::ContextManagerBackend(SoDB::ContextManager * manager,
 
 ContextManagerBackend::~ContextManagerBackend() = default;
 
-SoDB::ContextManager *
-ContextManagerBackend::legacyContextManager()
+NativeContextHandle
+ContextManagerBackend::legacyContextHandle()
 {
     return manager_;
 }
@@ -122,7 +256,7 @@ ContextManagerBackend::name() const
 struct OffscreenRenderer::Impl {
     Impl(RenderBackend & backendIn, const RenderTarget & targetIn)
         : backend(&backendIn)
-        , manager(backendIn.legacyContextManager())
+        , manager(toRendererLegacyContext(backendIn.legacyContextHandle()))
         , target(targetIn)
         , renderer(manager, SbViewportRegion(targetIn.width, targetIn.height))
     {
@@ -133,7 +267,7 @@ struct OffscreenRenderer::Impl {
          const RenderTarget & targetIn)
         : ownedBackend(std::move(ownedBackendIn))
         , backend(ownedBackend.get())
-        , manager(backend ? backend->legacyContextManager() : nullptr)
+        , manager(backend ? toRendererLegacyContext(backend->legacyContextHandle()) : nullptr)
         , target(targetIn)
         , renderer(manager, SbViewportRegion(targetIn.width, targetIn.height))
     {
@@ -145,6 +279,8 @@ struct OffscreenRenderer::Impl {
     SoDB::ContextManager * manager = nullptr;
     RenderTarget target;
     Color background = {0.0f, 0.0f, 0.0f, 1.0f};
+    std::vector<unsigned char> packetPixels;
+    bool hasPacketPixels = false;
     SoOffscreenRenderer renderer;
 };
 
@@ -161,7 +297,7 @@ OffscreenRenderer::OffscreenRenderer(RenderBackend & backend,
 {
 }
 
-OffscreenRenderer::OffscreenRenderer(SoDB::ContextManager * manager,
+OffscreenRenderer::OffscreenRenderer(NativeContextHandle manager,
                                      const RenderTarget & target)
     : impl_(new Impl(std::unique_ptr<RenderBackend>(
                          new ContextManagerBackend(manager)),
@@ -169,7 +305,7 @@ OffscreenRenderer::OffscreenRenderer(SoDB::ContextManager * manager,
 {
 }
 
-OffscreenRenderer::OffscreenRenderer(SoDB::ContextManager * manager,
+OffscreenRenderer::OffscreenRenderer(NativeContextHandle manager,
                                      unsigned int width,
                                      unsigned int height)
     : impl_(new Impl(std::unique_ptr<RenderBackend>(
@@ -188,6 +324,8 @@ OffscreenRenderer::setSize(unsigned int width, unsigned int height)
 {
     impl_->target.width = width;
     impl_->target.height = height;
+    impl_->packetPixels.clear();
+    impl_->hasPacketPixels = false;
     impl_->renderer.setViewportRegion(SbViewportRegion(width, height));
 }
 
@@ -213,6 +351,8 @@ void
 OffscreenRenderer::setRenderTarget(const RenderTarget & target)
 {
     impl_->target = target;
+    impl_->packetPixels.clear();
+    impl_->hasPacketPixels = false;
     impl_->renderer.setViewportRegion(SbViewportRegion(target.width, target.height));
     impl_->renderer.setComponents(toLegacyComponents(target.pixelFormat));
 }
@@ -268,8 +408,34 @@ OffscreenRenderer::render(const Scene & scene, const RenderOptions & options)
         return result;
     }
 
+    if (!impl_->manager) {
+        impl_->packetPixels.clear();
+        impl_->hasPacketPixels = false;
+        result.success =
+            impl_->backend &&
+            impl_->backend->renderPacket(scene.capturePacket(),
+                                         impl_->target,
+                                         options,
+                                         impl_->background,
+                                         impl_->packetPixels,
+                                         result.diagnostics);
+        const size_t requiredBytes =
+            static_cast<size_t>(impl_->target.width) *
+            static_cast<size_t>(impl_->target.height) *
+            componentCount(impl_->target.pixelFormat);
+        if (result.success && impl_->packetPixels.size() < requiredBytes) {
+            addDiagnostic(result.diagnostics, DiagnosticSeverity::Error,
+                          "Packet renderer returned fewer pixels than the render target requires.");
+            result.success = false;
+        }
+        impl_->hasPacketPixels = result.success;
+        return result;
+    }
+
+    impl_->packetPixels.clear();
+    impl_->hasPacketPixels = false;
     std::unique_ptr<SoSeparator, void(*)(SoSeparator *)> root(
-        scene.createLegacySceneGraph(),
+        static_cast<SoSeparator *>(scene.createLegacySceneGraph()),
         [](SoSeparator * node) {
             if (node) node->unref();
         });
@@ -285,12 +451,24 @@ OffscreenRenderer::render(const Scene & scene, const RenderOptions & options)
 const unsigned char *
 OffscreenRenderer::pixels() const
 {
+    if (impl_->hasPacketPixels && !impl_->packetPixels.empty()) {
+        return impl_->packetPixels.data();
+    }
+    if (!impl_->manager) {
+        return nullptr;
+    }
     return impl_->renderer.getBuffer();
 }
 
 bool
 OffscreenRenderer::writeRGB(const char * filename) const
 {
+    if (impl_->hasPacketPixels && !impl_->packetPixels.empty()) {
+        return writePacketRGB(filename, impl_->packetPixels.data(), impl_->target);
+    }
+    if (!impl_->manager) {
+        return false;
+    }
     return impl_->renderer.writeToRGB(filename) == TRUE;
 }
 

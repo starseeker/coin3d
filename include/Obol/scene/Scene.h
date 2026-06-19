@@ -33,7 +33,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#include <Inventor/SbBasic.h>
+#include <Obol/base/Export.h>
 
 #include <array>
 #include <cstddef>
@@ -42,8 +42,6 @@
 #include <memory>
 #include <string>
 #include <vector>
-
-class SoSeparator;
 
 namespace obol {
 
@@ -72,6 +70,15 @@ struct Transform {
     Vec3 rotationAxis = {0.0f, 0.0f, 1.0f};
     float rotationRadians = 0.0f;
     Vec3 scale = {1.0f, 1.0f, 1.0f};
+};
+
+struct Matrix4 {
+    // Column-major storage: values[column * 4 + row].
+    std::array<float, 16> values = {
+        1.0f, 0.0f, 0.0f, 0.0f,
+        0.0f, 1.0f, 0.0f, 0.0f,
+        0.0f, 0.0f, 1.0f, 0.0f,
+        0.0f, 0.0f, 0.0f, 1.0f};
 };
 
 enum class ImageFormat {
@@ -114,6 +121,7 @@ struct Material {
     Color emissive = {0.0f, 0.0f, 0.0f, 1.0f};
     float shininess = 0.2f;
     std::shared_ptr<Texture2D> baseColorTexture;
+    bool unlit = false;
 };
 
 enum class MeshTopology {
@@ -180,7 +188,7 @@ struct PrimitiveOptions {
     float radius = 1.0f;
 };
 
-OBOL_DLL_API Mesh makeSphereMesh(float radius = 1.0f,
+OBOL_V2_API Mesh makeSphereMesh(float radius = 1.0f,
                                  uint32_t slices = 32,
                                  uint32_t stacks = 16);
 
@@ -274,7 +282,8 @@ enum class SceneObjectType {
     Text2D,
     Text3D,
     CadAssembly,
-    OpenGLCallback
+    OpenGLCallback,
+    LegacySceneGraph
 };
 
 enum class SceneObjectCategory {
@@ -297,7 +306,57 @@ struct SceneObjectInfo {
     SceneGroupId parent = RootSceneGroupId;
 };
 
-class OBOL_DLL_API Scene {
+enum class SceneCameraKind {
+    None,
+    Perspective,
+    Orthographic
+};
+
+struct SceneCameraRecord {
+    SceneCameraKind kind = SceneCameraKind::None;
+    PerspectiveCamera perspective;
+    OrthographicCamera orthographic;
+};
+
+struct SceneGroupRecord {
+    SceneGroupId id = InvalidSceneGroupId;
+    SceneGroupId parent = RootSceneGroupId;
+    Transform transform;
+    Matrix4 localToWorld;
+};
+
+struct SceneObjectRecord {
+    SceneObjectId id = InvalidSceneObjectId;
+    SceneObjectType type = SceneObjectType::Any;
+    SceneObjectCategory category = SceneObjectCategory::Any;
+    SceneGroupId parent = RootSceneGroupId;
+    Transform transform;
+    Matrix4 localToWorld;
+    Material material;
+
+    Primitive primitive = Primitive::Cube;
+    PrimitiveOptions primitiveOptions;
+    Mesh mesh;
+    Polyline polyline;
+    PointCloud pointCloud;
+    DirectionalLight directionalLight;
+    PointLight pointLight;
+    SpotLight spotLight;
+    Text2D text2D;
+    Text3D text3D;
+    std::shared_ptr<const CadAssembly> cadAssembly;
+    OpenGLCallback openGLCallback;
+    bool hasLegacySceneGraph = false;
+};
+
+struct ScenePacket {
+    SceneCameraRecord camera;
+    std::vector<SceneGroupRecord> groups;
+    std::vector<SceneObjectRecord> objects;
+    bool hasLegacyFallbackRoot = false;
+};
+
+class OBOL_V2_API Scene {
 public:
     Scene();
     Scene(const Scene & other);
@@ -349,10 +408,14 @@ public:
                                  SceneGroupId parent = RootSceneGroupId);
     SceneObjectId addOpenGLCallback(const OpenGLCallback & callback,
                                     SceneGroupId parent = RootSceneGroupId);
+    SceneObjectId addLegacySceneGraph(NativeSceneGraphHandle root,
+                                      const Transform & transform = Transform{},
+                                      SceneGroupId parent = RootSceneGroupId);
     bool setObjectTransform(SceneObjectId object, const Transform & transform);
     bool setObjectMaterial(SceneObjectId object, const Material & material);
     bool setObjectPrimitiveOptions(SceneObjectId object, const PrimitiveOptions & options);
     bool setObjectPointCloud(SceneObjectId object, const PointCloud & pointCloud);
+    bool removeObject(SceneObjectId object);
 
     void setCamera(const PerspectiveCamera & camera);
     void setCamera(const OrthographicCamera & camera);
@@ -365,13 +428,16 @@ public:
     std::vector<SceneObjectInfo> findObjects(const SceneQuery & query = SceneQuery{}) const;
     SceneObjectId findFirstObject(const SceneQuery & query = SceneQuery{}) const;
     bool hasObjects(const SceneQuery & query = SceneQuery{}) const;
+    ScenePacket capturePacket() const;
     void clear();
 
     // Legacy bridge for the v2 rollout.  New application code should render
-    // through obol::OffscreenRenderer instead of depending on SoSeparator.
-    SoSeparator * createLegacySceneGraph() const;
+    // through obol::OffscreenRenderer instead of depending on native scene
+    // graph handles.
+    NativeSceneGraphHandle createLegacySceneGraph() const;
+    static void releaseLegacySceneGraph(NativeSceneGraphHandle root);
 
-    static Scene fromLegacySceneGraph(const SoSeparator & root);
+    static Scene fromLegacySceneGraph(NativeSceneGraphHandle root);
 
 private:
     struct Impl;

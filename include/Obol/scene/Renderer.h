@@ -6,9 +6,7 @@
  * All rights reserved.
 \**************************************************************************/
 
-#include <Inventor/SbBasic.h>
-#include <Inventor/SoDB.h>
-
+#include <Obol/base/Export.h>
 #include <Obol/scene/Scene.h>
 
 #include <string>
@@ -76,33 +74,40 @@ struct FrameResult {
     std::vector<RenderDiagnostic> diagnostics;
 };
 
-class OBOL_DLL_API RenderBackend {
+class OBOL_V2_API RenderBackend {
 public:
     virtual ~RenderBackend();
 
-    virtual SoDB::ContextManager * legacyContextManager() = 0;
+    virtual NativeContextHandle legacyContextHandle();
+    virtual RenderCapabilities capabilities() const;
+    virtual bool renderPacket(const ScenePacket & packet,
+                              const RenderTarget & target,
+                              const RenderOptions & options,
+                              const Color & background,
+                              std::vector<unsigned char> & pixels,
+                              std::vector<RenderDiagnostic> & diagnostics);
     virtual RenderBackendKind kind() const = 0;
     virtual const char * name() const = 0;
 };
 
-class OBOL_DLL_API ContextManagerBackend : public RenderBackend {
+class OBOL_V2_API ContextManagerBackend : public RenderBackend {
 public:
-    ContextManagerBackend(SoDB::ContextManager * manager,
+    ContextManagerBackend(NativeContextHandle manager,
                           RenderBackendKind backendKind = RenderBackendKind::Unknown,
                           const char * backendName = "context-manager");
     ~ContextManagerBackend() override;
 
-    SoDB::ContextManager * legacyContextManager() override;
+    NativeContextHandle legacyContextHandle() override;
     RenderBackendKind kind() const override;
     const char * name() const override;
 
 private:
-    SoDB::ContextManager * manager_;
+    NativeContextHandle manager_;
     RenderBackendKind kind_;
     std::string name_;
 };
 
-class OBOL_DLL_API OffscreenRenderer {
+class OBOL_V2_API OffscreenRenderer {
 public:
     OffscreenRenderer(RenderBackend & backend,
                       const RenderTarget & target);
@@ -111,10 +116,10 @@ public:
                       unsigned int width,
                       unsigned int height);
 
-    OffscreenRenderer(SoDB::ContextManager * manager,
+    OffscreenRenderer(NativeContextHandle manager,
                       const RenderTarget & target);
 
-    OffscreenRenderer(SoDB::ContextManager * manager,
+    OffscreenRenderer(NativeContextHandle manager,
                       unsigned int width,
                       unsigned int height);
     ~OffscreenRenderer();

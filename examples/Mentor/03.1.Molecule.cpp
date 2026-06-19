@@ -40,17 +40,20 @@ void addWaterMolecule(obol::Scene & scene)
                        oxygen,
                        molecule);
 
-    obol::PrimitiveOptions hydrogen;
-    hydrogen.radius = 0.75f;
+    obol::PrimitiveOptions scaledHydrogen;
+    scaledHydrogen.radius = 0.75f;
     scene.addPrimitive(obol::Primitive::Sphere,
                        material(1.0f, 1.0f, 1.0f),
                        transform(0.0f, -1.2f, 0.0f),
-                       hydrogen,
+                       scaledHydrogen,
                        molecule);
+
+    obol::PrimitiveOptions defaultHydrogen;
+    defaultHydrogen.radius = 1.0f;
     scene.addPrimitive(obol::Primitive::Sphere,
                        material(1.0f, 1.0f, 1.0f),
                        transform(1.1852f, 1.3877f, 0.0f),
-                       hydrogen,
+                       defaultHydrogen,
                        molecule);
 }
 

@@ -2,7 +2,7 @@
  * Headless version of Inventor Mentor example 15.4
  *
  * Original: customized Translate1Dragger part geometry.
- * Headless: custom v2 slider handles and active-state materials.
+ * Headless: TransformDragger axis translation with custom v2 slider handles.
  */
 
 #include "headless_utils.h"
@@ -106,13 +106,12 @@ void moveHandle(obol::Scene & scene,
                 float value,
                 bool active)
 {
-    obol::Transform xf = handle.base;
-    xf.translation = {
-        handle.base.translation.x + handle.axis.x * value,
-        handle.base.translation.y + handle.axis.y * value,
-        handle.base.translation.z + handle.axis.z * value
-    };
-    scene.setObjectTransform(handle.object, xf);
+    obol::AxisDragRequest request;
+    request.target = handle.object;
+    request.startTransform = handle.base;
+    request.axis = handle.axis;
+    request.distance = value;
+    obol::TransformDragger::applyAxisTranslation(scene, request);
     scene.setObjectMaterial(handle.object,
                             active ? material(1.0f, 1.0f, 0.0f)
                                    : material(1.0f, 1.0f, 1.0f));

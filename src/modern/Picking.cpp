@@ -8,7 +8,7 @@
 #include <Inventor/lists/SoPickedPointList.h>
 #include <Inventor/nodes/SoNode.h>
 #include <Inventor/nodes/SoSeparator.h>
-#include <Obol/cad/SoCADDetail.h>
+#include <Obol/compat/cad/SoCADDetail.h>
 
 #include <cstdlib>
 #include <cstring>
@@ -22,7 +22,7 @@ Vec3 toVec3(const SbVec3f & v)
     return Vec3{v[0], v[1], v[2]};
 }
 
-SbVec3f toSbVec3f(const Vec3 & v)
+SbVec3f pickingToSbVec3f(const Vec3 & v)
 {
     return SbVec3f(v.x, v.y, v.z);
 }
@@ -121,7 +121,7 @@ Picker::pick(const Scene & scene, const PickRequest & request)
     }
 
     std::unique_ptr<SoSeparator, void(*)(SoSeparator *)> root(
-        scene.createLegacySceneGraph(),
+        static_cast<SoSeparator *>(scene.createLegacySceneGraph()),
         [](SoSeparator * node) {
             if (node) node->unref();
         });
@@ -129,8 +129,8 @@ Picker::pick(const Scene & scene, const PickRequest & request)
     SoRayPickAction action(SbViewportRegion(request.viewportWidth,
                                             request.viewportHeight));
     if (request.useWorldRay) {
-        action.setRay(toSbVec3f(request.rayOrigin),
-                      toSbVec3f(request.rayDirection),
+        action.setRay(pickingToSbVec3f(request.rayOrigin),
+                      pickingToSbVec3f(request.rayDirection),
                       request.nearDistance,
                       request.farDistance);
     } else {

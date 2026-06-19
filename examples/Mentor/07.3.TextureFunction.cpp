@@ -147,15 +147,35 @@ obol::Transform translation(float x, float y, float z)
     return transform;
 }
 
+obol::PerspectiveCamera orbitCamera(const obol::PerspectiveCamera & camera,
+                                    float azimuth,
+                                    float elevation)
+{
+    obol::CameraOrbitRequest request;
+    request.camera = camera;
+    request.azimuthRadians = azimuth;
+    request.elevationRadians = elevation;
+    return obol::CameraFraming::orbit(request);
+}
+
+void makeCameras(const obol::Scene & scene,
+                 obol::PerspectiveCamera & frontCamera,
+                 obol::PerspectiveCamera & angleCamera)
+{
+    obol::ViewAllRequest request;
+    request.viewportWidth = DEFAULT_WIDTH;
+    request.viewportHeight = DEFAULT_HEIGHT;
+    frontCamera = obol::CameraFraming::viewAllPerspective(scene, request);
+    angleCamera = orbitCamera(frontCamera,
+                              static_cast<float>(M_PI / 4.0),
+                              static_cast<float>(M_PI / 6.0));
+}
+
 bool renderView(obol::OffscreenRenderer & renderer,
                 obol::Scene & scene,
                 const char * filename,
-                const obol::Vec3 & position)
+                const obol::PerspectiveCamera & camera)
 {
-    obol::PerspectiveCamera camera;
-    camera.position = position;
-    camera.target = {2.5f, 0.0f, 0.0f};
-    camera.verticalFieldOfViewRadians = 0.62f;
     scene.setCamera(camera);
     const obol::FrameResult result = renderer.render(scene);
     return result.success && renderer.writeRGB(filename);
@@ -169,13 +189,16 @@ int main(int argc, char **argv)
 
     obol::Scene scene;
     obol::DirectionalLight light;
-    light.direction = {-0.5f, -0.7f, -1.0f};
     scene.addDirectionalLight(light);
 
     const obol::Material material = faceMaterial();
     scene.addMesh(mappedSphere(2.0f), material);
     scene.addMesh(mappedSphere(1.0f), material, translation(2.5f, 0.0f, 0.0f));
     scene.addMesh(mappedSphere(0.5f), material, translation(5.0f, 0.0f, 0.0f));
+
+    obol::PerspectiveCamera frontCamera;
+    obol::PerspectiveCamera angleCamera;
+    makeCameras(scene, frontCamera, angleCamera);
 
     obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
                                         obol::RenderBackendKind::OpenGL2SWRast,
@@ -192,13 +215,13 @@ int main(int argc, char **argv)
     char filename[256];
 
     snprintf(filename, sizeof(filename), "%s_front.rgb", baseFilename);
-    if (!renderView(renderer, scene, filename, {2.5f, 0.0f, 8.0f})) {
+    if (!renderView(renderer, scene, filename, frontCamera)) {
         fprintf(stderr, "Error: Failed to render front TextureFunction view with Obol v2 API\n");
         return 1;
     }
 
     snprintf(filename, sizeof(filename), "%s_angle.rgb", baseFilename);
-    if (!renderView(renderer, scene, filename, {8.0f, 4.0f, 6.0f})) {
+    if (!renderView(renderer, scene, filename, angleCamera)) {
         fprintf(stderr, "Error: Failed to render angled TextureFunction view with Obol v2 API\n");
         return 1;
     }

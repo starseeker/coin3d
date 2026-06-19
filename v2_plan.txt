@@ -22,6 +22,10 @@ Key Changes
   RenderBackend instead of SoGLRenderAction, RenderCapabilities instead of GL
   version/extension queries, FrameRequest/FrameResult instead of implicit GL
   state traversal, and RenderDiagnostics for graceful degradation warnings.
+  Public v2 headers should not include `SoDB`, `SbBasic`, or other Inventor
+  headers just to express the modern API; compatibility entry points use opaque
+  native handles (`NativeContextHandle`, `NativeSceneGraphHandle`, and
+  `NativeNodeHandle`) and bridge implementation files perform legacy casts.
 - Formalize SoSceneCollector's current role into a v2 scene extraction layer:
   produce immutable per-frame scene packets with geometry, materials, lights,
   cameras, overlays, picking metadata, and resource references.
@@ -54,6 +58,15 @@ Key Changes
   still preserve legacy behavior such as `SoSFTime` date/time string
   formatting, global `realTime`-style updates, and field-to-text conversion
   where examples or imported `.iv` content depend on it.
+- Initial backend-neutral time support exists via `obol::Time` and
+  `obol::TimeSpan`, including UTC formatting compatible with the Mentor clock
+  example. Remaining engine work should build on these value types rather than
+  exposing `SoSFTime` in the v2 core API.
+- Initial backend-neutral observable state support exists via
+  `obol::ObservableValue`, including field-name metadata for sensor-style
+  callbacks. Remaining sensor/engine work should build on observable values
+  and explicit scene updates rather than exposing `SoField` or backend sensor
+  nodes in the v2 core API.
 - Keep advanced GL concepts out of the baseline:
   no public dependency on texture units, display lists, GL matrix stacks,
   geometry shaders, UBOs, SSBOs, or compute. Raw GLSL remains only as an
@@ -136,7 +149,8 @@ Test Plan
 - Add v2 API compile tests for scene creation, rendering, picking, .iv
   import/export, and backend capability queries.
 - Add image parity tests comparing v2 examples against current control images
-  on swrast.
+  on swrast, including all generated suffixed frames/views for multi-output
+  Mentor examples.
 - Keep swrast/OSMesa OpenGL2 in CI as the required compatibility backend.
 - Keep no-GL, NanoRT, Embree-optional, and Vulkan-optional tests using the
   shared scene packet.
@@ -152,40 +166,117 @@ Current Implementation Status
 - The v2 public header tree is `include/Obol`.
 - CAD-specific Obol APIs were migrated from `include/obol` to `include/Obol`.
 - Initial v2 scene/render APIs exist: `obol::Scene`, `obol::OffscreenRenderer`,
-  render capabilities, options, frame results, and diagnostics.
+  render capabilities, options, frame results, and diagnostics. Modern v2
+  headers use `OBOL_V2_API` from `Obol/base/Export.h`, and `Obol/Obol.h`
+  compiles without Inventor include paths. Legacy scene graph bridge hooks now
+  use opaque native handles rather than public `SoSeparator` signatures.
+- Initial scene extraction support exists via `Scene::capturePacket()` and
+  `obol::ScenePacket`, which snapshot camera state, group hierarchy, active
+  object records, local transforms, resolved column-major `localToWorld`
+  matrices, geometry/material/light/text payloads, CAD handles, and
+  backend-native/legacy markers without exposing Inventor types. Packet-only
+  backends can now implement `RenderBackend::renderPacket()` and return owned
+  pixels through `OffscreenRenderer`; remaining work is to route real
+  production renderers through packets instead of the legacy graph bridge.
+  `obol::collectPacketTriangles()` provides the first reusable packet-side
+  geometry lowering layer for non-GL backends, producing world-space triangles
+  from v2 primitives and mesh topologies without involving `SoSceneCollector`.
+  `obol::collectPacketLineSegments()` and `obol::collectPacketPoints()` add the
+  matching world-space packet records for v2 polylines and point clouds,
+  preserving line width, point size, material, and color intent.
+  `obol::collectPacketLights()` lowers v2 directional, point, and spot lights
+  into world-space packet records, preserving color, intensity, spot
+  cutoff/dropoff, and group-transform effects.
+  `obol::collectPacketText()` lowers v2 2D and 3D text into packet records
+  with material, world transform/origin, font metadata, justification,
+  depth-test intent, 3D parts, part colors, and profile data.
+  `obol::collectPacketCadAssemblies()` lowers v2 CAD assemblies into packet
+  records with draw/pick options, copied part geometry, instance metadata,
+  composed world transforms, styles, and selected/hidden state without exposing
+  `SoCADAssembly`.
+  `obol::extractPacketScene()` aggregates geometry, lights, text, and CAD
+  records into a single backend-facing `ExtractedPacketScene`, preserving
+  support counts and diagnostics while marking scenes incomplete when they
+  still require legacy fallback roots, raw OpenGL callbacks, or other
+  backend-specific compatibility paths.
+  `obol::inspectPacketGeometrySupport()` classifies packet contents so
+  backends can emit consistent diagnostics for light, text, CAD,
+  backend-native, and legacy content. CAD, text, legacy graph, and
+  backend-native objects remain explicit specialized/fallback paths rather than
+  silently pretending to be generic triangles.
 - Initial v2 backend API exists: `obol::RenderBackend` and
   `obol::ContextManagerBackend`, which adapts the existing context manager
-  render path while giving new examples a backend-neutral entry point.
+  render path through opaque `NativeContextHandle` values while giving new
+  examples a backend-neutral entry point. `RenderBackend::capabilities()` and
+  `RenderBackend::renderPacket()` now let non-legacy/packet-only backends
+  report capabilities and render directly, and `legacyContextHandle()` is an
+  optional compatibility hook rather than a mandatory backend concept.
 - Initial v2 render target API exists: `obol::RenderTarget` and
   `obol::PixelFormat`, with `FrameResult::target` reporting the rendered
   target.
+- Initial v2 camera-framing support exists via `obol::CameraFraming`, including
+  `viewAllPerspective()` and `orbit()` for common scene-fitting and app-owned
+  orbit workflows without exposing legacy camera nodes in examples or
+  application code.
 - The v2 scene bridge currently supports transform groups, primitive shapes,
   triangle, polygon, triangle-strip, and quad-grid meshes, per-face mesh
   normals/colors, indexed face-color palettes, indexed vertex-color palettes,
-  materials, transforms, perspective and orthographic cameras,
+  materials including unlit/base-color rendering, transforms, perspective and
+  orthographic cameras,
   directional/point/spot lights, inline 2D textures, 2D text, and CAD
   assemblies.
-- Triangle-strip meshes retain topology intent in `obol::Mesh` and degrade to
-  indexed faces in the legacy OpenGL2/swrast bridge.
-- Quad-grid meshes retain row/column topology intent in `obol::Mesh` and
-  degrade to indexed quad faces in the legacy OpenGL2/swrast bridge.
+- Triangle-strip meshes retain topology intent in `obol::Mesh`. The legacy
+  OpenGL2/swrast bridge preserves native `SoTriangleStripSet` nodes when the
+  v2 strip data can be represented directly, with indexed-face fallback kept
+  for richer indexed cases.
+- Quad-grid meshes retain row/column topology intent in `obol::Mesh`. The
+  legacy OpenGL2/swrast bridge preserves native `SoQuadMesh` nodes when the
+  v2 grid data can be represented directly, with indexed-face fallback kept
+  for richer indexed cases.
 - The v2 scene API supports stable-ID transform updates via
   `Scene::setGroupTransform()` and `Scene::setObjectTransform()`.
+- Initial backend-neutral interaction support exists via
+  `obol::TransformDragger`: it computes axis-constrained translation and
+  rotation edits plus plane and bounded free translation edits, applies them to
+  scene objects by stable ID, and can create portable translate-axis,
+  trackball, and box overlay geometry as ordinary v2 scene objects.
+  `obol::ManipulatorOverlay` carries target-object attachment metadata for
+  handle-box, trackball, and transform-box overlays. This is the first reusable
+  dragger/manipulator API slice; remaining work includes handle-box and
+  transform-box controller semantics, richer trackball/rotation interaction
+  state, snapping/constraints beyond component/scalar clamping, and full
+  attachment lifecycle state.
 - Initial `.iv` compatibility bridge exists via `obol::SceneIO`.
-  Current limitation: imported `.iv` files are parsed through `SoDB::readAll()`
-  and retained as a legacy root inside `obol::Scene`. This is enough for
-  render/write compatibility and for the Chapter 11 read examples, but it does
-  not yet decompose imported legacy nodes into native v2 `SceneObjectId`s,
-  groups, materials, pick targets, or editable object state. Examples that need
-  stable v2 IDs, picking, or material/transform callbacks have therefore been
-  translated by hand for now. This is temporary; full `.iv` import must grow a
-  native v2 extraction path rather than being silently dropped.
+  Imported `.iv` files are still parsed through `SoDB::readAll()`, but
+  `Scene::fromLegacySceneGraph()` now performs conservative native extraction
+  for simple fully-supported content: separators/groups, single-value
+  materials, simple transforms, primitive shapes, basic lights, and
+  `Coordinate3`/`IndexedFaceSet` polygon meshes plus
+  `IndexedTriangleStripSet` strip meshes, `LineSet` polylines, and `PointSet`
+  point clouds with common material/draw-style bindings, explicit normals, and
+  texture coordinates. Unsupported content, including primitive material
+  bindings and complex mesh/state graphs, falls back to the copied legacy root;
+  v2 lights are emitted before legacy fallback roots so imported content is lit
+  correctly.
+  `Scene::addLegacySceneGraph()` plus `SceneIO::addInventorFile()` /
+  `SceneIO::addInventorString()` can also import unsupported Inventor content
+  as transformable v2 objects with stable IDs, which keeps `.iv` assets usable
+  in animated examples before full native decomposition exists. Chapter 11 read
+  examples derive v2 cameras from Inventor `viewAll()` to preserve imported
+  scene framing. Remaining work: expand extraction to richer mesh/state graphs,
+  imported pick targets, editable stable IDs, and additional binding/state
+  combinations without silently dropping unsupported behavior.
 - Initial CPU picking bridge exists via `obol::Picker`, including viewport and
   explicit world-ray requests, v2 `SceneObjectId` reporting for bridged v2
   objects, and optional CAD instance/part details when available from the
   backend.
-- Initial modern CAD facade exists via `obol::CadAssembly`, with the existing
-  `SoCADAssembly` node retained as the OpenGL2/swrast-compatible bridge.
+- Initial modern CAD facade exists via `obol::CadAssembly`, using neutral
+  `CadPartGeometry`, `CadWireRep`, `CadTriMesh`, `CadMatrix4`, and
+  `CadInstanceRecord` payloads. The existing `SoCADAssembly` node is retained
+  as the OpenGL2/swrast-compatible bridge under `Obol/compat/cad`, with
+  old-path forwarding headers retained for existing callers. It is no longer
+  pulled in by the v2 umbrella header; `CadAssembly::createLegacyNode()`
+  returns an opaque `NativeNodeHandle` for bridge internals.
 - `examples/Mentor/02.1.HelloCone.cpp`,
   `examples/Mentor/02.2.EngineSpin.cpp`,
   `examples/Mentor/02.3.Trackball.cpp`,
@@ -234,48 +325,67 @@ Current Implementation Status
   `examples/Mentor/13.6.Calculator.cpp`,
   `examples/Mentor/13.7.Rotor.cpp`, and
   `examples/Mentor/13.8.Blinker.cpp` have been migrated to v2 scene/render APIs.
-  `02.2.EngineSpin.cpp` exercises app-owned animation state,
+  `02.1.HelloCone.cpp` preserves original `viewAll()` camera framing through
+  `CameraFraming` and diffuse material through v2 scene construction,
+  `02.2.EngineSpin.cpp` exercises app-owned animation state while preserving
+  the original camera framing/material through `CameraFraming`,
   `02.3.Trackball.cpp` and `02.4.Examiner.cpp` exercise app-owned camera
-  operations, `03.1.Molecule.cpp` exercises v2 primitive/group hierarchy,
+  operations initialized from `CameraFraming`, `03.1.Molecule.cpp` exercises
+  v2 primitive/group hierarchy,
   `03.2.Robot.cpp` exercises the v2 group hierarchy, and
   `03.3.Naming.cpp` exercises app-owned names mapped to stable v2 object IDs.
   `04.1.Cameras.cpp` exercises perspective and orthographic camera projection,
   `04.2.Lights.cpp` exercises multi-frame light movement through stable group
-  IDs, `05.1.FaceSet.cpp` exercises v2 polygon meshes with per-face normals,
+  IDs, `05.1.FaceSet.cpp` exercises v2 polygon meshes with per-face normals
+  and cameras derived from the original `viewAll()`/orbit setup through
+  `CameraFraming`,
   `05.2.IndexedFaceSet.cpp` exercises indexed polygon meshes with per-face
-  colors, `05.3.TriangleStripSet.cpp` exercises v2 triangle-strip mesh
-  topology with an indexed-face swrast fallback, `05.4.QuadMesh.cpp`
-  exercises v2 quad-grid mesh topology with an indexed-face swrast fallback,
+  colors and camera fitting/orbit through `CameraFraming`,
+  `05.3.TriangleStripSet.cpp` exercises v2 triangle-strip mesh topology with a
+  native OpenGL2/swrast strip bridge where representable and camera
+  fitting/orbit through `CameraFraming`,
+  `05.4.QuadMesh.cpp` exercises v2 quad-grid mesh topology with a native
+  OpenGL2/swrast quad-mesh bridge where representable and cameras derived from
+  the original `viewAll()`/orbit setup through `CameraFraming`,
   `05.5.Binding.cpp` exercises v2 face, indexed-face, and indexed-vertex
-  color bindings, and `05.6.TransformOrdering.cpp` exercises ordered
-  transform composition through nested v2 groups. `06.1.Text.cpp` exercises
-  v2 2D text labels with font metadata and world transforms.
+  color bindings with camera fitting through `CameraFraming`, and
+  `05.6.TransformOrdering.cpp` exercises ordered
+  transform composition through nested v2 groups with cameras derived from the
+  original `viewAll()` and orbit setup through `CameraFraming` for image parity.
+  `06.1.Text.cpp`
+  exercises v2 2D text labels with font metadata and world transforms while
+  preserving the original `viewAll()`/orbit camera sequence through
+  `CameraFraming` and default lighting for image parity.
   `06.2.Simple3DText.cpp` exercises v2 3D text labels with font metadata,
-  transform scaling, part selection, and part colors.
+  transform scaling, part selection, and part colors while preserving the
+  original `viewAll()`/orbit camera sequence through `CameraFraming` and
+  default lighting for image parity.
   `06.3.Complex3DText.cpp` exercises v2 3D text profile points for beveled
-  extrusion with a legacy OpenGL2/swrast profile-node fallback.
+  extrusion with a legacy OpenGL2/swrast profile-node fallback, preserving the
+  original explicit camera and orbit sequence through `CameraFraming` for
+  visual parity.
   `07.1.BasicTexture.cpp` exercises v2 `Texture2D` image data attached through
-  `Material::baseColorTexture`.
+  `Material::baseColorTexture`, with cameras derived from the original
+  `viewAll()` and orbit sequence through `CameraFraming` for visual parity.
   `07.2.TextureCoordinates.cpp` exercises v2 mesh UV attributes and optional
-  texture coordinate indices.
+  texture coordinate indices, with cameras derived from the original
+  `viewAll()` and orbit sequence through `CameraFraming` for visual parity.
   `07.3.TextureFunction.cpp` exercises procedurally generated v2 mesh UVs as a
-  portable replacement for legacy texture-coordinate function nodes.
+  portable replacement for legacy texture-coordinate function nodes, with
+  cameras derived from the original `viewAll()` and orbit sequence through
+  `CameraFraming` for visual parity.
 - `08.1.BSCurve.cpp` exercises v2 `Polyline` as a sampled-curve fallback for
-  legacy NURBS curve content. Its example target is enabled; its old
-  NURBS-control image comparison remains skipped until controls are refreshed
-  for the sampled output.
+  legacy NURBS curve content. Its example target and sampled-control image
+  comparisons are enabled.
 - `08.2.UniCurve.cpp` exercises v2 `Polyline` as a sampled uniform B-spline
-  fallback. Its example target is enabled; its old NURBS-control image
-  comparison remains skipped until controls are refreshed for the sampled
-  output.
+  fallback. Its example target and sampled-control image comparisons are
+  enabled.
 - `08.3.BezSurf.cpp` exercises v2 quad-grid meshes as a tessellated Bezier
-  surface fallback. Its example target is enabled; its old NURBS-control image
-  comparison remains skipped until controls are refreshed for the tessellated
-  output.
+  surface fallback. Its example target and tessellated-control image
+  comparisons are enabled.
 - `08.4.TrimSurf.cpp` exercises v2 polygon meshes as a tessellated trimmed
   Bezier surface fallback with a coarse parameter-space trim hole. Its example
-  target is enabled; its old NURBS-control image comparison remains skipped
-  until controls are refreshed for the tessellated output.
+  target and tessellated-control image comparisons are enabled.
 - `09.1.Print.cpp` exercises v2 offscreen RGB rendering as the portable
   replacement for the original PostScript-oriented print example.
 - `09.2.Texture.cpp` exercises v2 render-to-texture by copying offscreen RGB
@@ -291,58 +401,87 @@ Current Implementation Status
   that updates selected v2 object transforms by stable object ID.
 - `10.2.setEventCB.cpp` exercises application-owned pointer event translation,
   v2 camera updates, and v2 `PointCloud` updates as the portable replacement
-  for toolkit/render-area event callbacks and point-set nodes.
+  for toolkit/render-area event callbacks and point-set nodes. It writes the
+  compatibility primary frame at the initial event state and uses suffixed
+  frames for points, rotation, and clearing.
 - `10.5.SelectionCB.cpp` exercises application-owned selection callbacks using
-  stable v2 object IDs and material updates, avoiding backend selection nodes.
+  stable v2 object IDs and material updates, avoiding backend selection nodes;
+  its camera uses `CameraFraming` so both selectable objects and selected-state
+  colors remain visible.
 - `10.6.PickFilterTopLevel.cpp` exercises application-owned pick filtering:
   top-level selection highlights all component object IDs in a model group,
-  while default selection highlights only the leaf component object ID.
+  while default selection highlights only the leaf component object ID; its v2
+  procedural bench is centered and framed through `CameraFraming` so
+  whole-object versus component selection remains visible.
 - `10.7.PickFilterManip.cpp` exercises the same application-owned filtering
   pattern for manipulator-like overlays by highlighting/restoring the selected
-  controlled object through v2 material updates.
+  controlled object through v2 material updates, with `CameraFraming` so the
+  full selectable cone row remains visible.
 - `10.8.PickFilterNodeKit.cpp` exercises application-owned pick filtering and
   material-editor callbacks over multiple selected v2 object IDs.
 - `11.1.ReadFile.cpp` and `11.2.ReadString.cpp` exercise v2 `SceneIO` for
   legacy Inventor file/string import. The legacy-root bridge now wraps imported
   content behind v2 camera/light state so imported content renders correctly on
-  OpenGL2/swrast.
+  OpenGL2/swrast, with camera fitting through `CameraFraming`.
 - `12.1.FieldSensor.cpp`, `12.2.NodeSensor.cpp`, `12.3.AlarmSensor.cpp`, and
   `12.4.TimerSensor.cpp` exercise application-owned field/node/alarm/timer
   callbacks that update v2 camera, transform, and material/geometry state
-  without exposing backend sensor nodes.
+  without exposing backend sensor nodes. `12.1` and `12.2` now use
+  `obol::ObservableValue` for watched camera/object state and
+  `obol::CameraFraming` for view-all camera setup. `Scene::removeObject()` is
+  the backend-neutral deletion API for node-change examples and avoids offscreen
+  placeholder geometry.
 - `13.1.GlobalFlds.cpp`, `13.2.ElapsedTime.cpp`,
   `13.3.TimeCounter.cpp`, and `13.4.Gate.cpp` exercise application-owned
   field/engine evaluation that updates v2 text and object transforms without
-  exposing backend field or engine nodes.
+  exposing backend field or engine nodes. `13.1`, `13.2`, `13.3`, and `13.4`
+  now use `obol::Time`/`TimeSpan` for deterministic clock formatting and
+  elapsed-time progression, and `13.4` uses `obol::ObservableValue` for
+  gate-enable state plus bounded `TransformDragger` free translation for the
+  moving object.
 - `13.5.Boolean.cpp`, `13.6.Calculator.cpp`, `13.7.Rotor.cpp`, and
   `13.8.Blinker.cpp` exercise application-owned boolean/calculator/rotor/
-  blinker evaluation over stable v2 object and group transforms.
+  blinker evaluation over stable v2 object and group transforms. `13.5`
+  preserves the original switch-framed `viewAll()` camera through
+  `CameraFraming` while toggling v2 object visibility, and `13.7` imports the
+  windmill `.iv` assets as
+  transformable legacy-graph objects, with camera fitting/orbit through
+  `CameraFraming`, so the rotor group drives the original vanes geometry.
 - `14.1.FrolickingWords.cpp`, `14.2.Editors.cpp`, and `14.3.Balance.cpp`
   exercise application-owned kit/editor/event state over v2 text, primitive,
   group, material, and light state. `14.2.Editors` control images were
   refreshed for the intentional v2 procedural/editor output.
 - `15.1.ConeRadius.cpp`, `15.2.SliderBox.cpp`, `15.3.AttachManip.cpp`, and
   `15.4.Customize.cpp` exercise application-owned manipulator/slider state
-  over v2 object IDs. `15.1` uses `Scene::setObjectPrimitiveOptions()` for
-  parameter edits, while `15.3` uses portable overlay geometry instead of
-  backend manipulator nodes.
+  over v2 object IDs. `TransformDragger` now provides reusable
+  axis/plane/free translation math, axis-rotation math, stable-ID scene
+  updates, and portable translate-axis, trackball, and box overlay geometry.
+  `15.1`, `15.2`, and `15.4` now use the shared axis-translation path, and
+  `15.1` and `15.3` use `CameraFraming`, and `15.3` uses the shared portable
+  trackball and target-attached manipulator overlay paths; richer handle-box,
+  transform-box, and trackball controller semantics remain follow-up work.
 - `16.2.Callback.cpp` and `16.3.AttachEditor.cpp` exercise toolkit-owned
   material editor callbacks/attachments over v2 object IDs and
-  `Scene::setObjectMaterial()`. Their controls now preserve red food, apply
-  edited materials only to the bowl, and map the unsuffixed compatibility frame
-  to the blue edited state visible in `main`.
+  `Scene::setObjectMaterial()`. They import the original `dogDish.iv` content
+  as a transformable legacy-graph object, preserve red food, apply edited
+  materials through the inherited bowl material, and map the unsuffixed
+  compatibility frame to the blue edited state visible in `main`.
 - Initial backend-native OpenGL callback support exists via
   `Scene::addOpenGLCallback()`. `17.2.GLCallback.cpp` now uses that API to
   draw its floor with raw OpenGL calls again. OpenGL backends execute the
   callback during GL traversal with a current context; non-OpenGL/no-context
   backends reject scenes containing OpenGL callbacks with explicit diagnostics.
+  The example preserves the original camera-orientation sequence using v2 value
+  types plus local vector math, leaves raw GL drawing as its only intentional
+  backend-native dependency, and expresses the legacy cumulative transform
+  result directly in v2 object transforms for image parity.
 - Mentor examples in dual-GL builds can force the OSMesa/swrast headless path
   with `OBOL_HEADLESS_FORCE_SWRAST`, so migrated v2 examples can render without
   an X display while preserving the GLX path.
 - `tests/tools/test_v2_scene_suite.cpp` covers scene construction, scene
   queries, material updates, primitive option updates, point-cloud updates,
-  primitive tessellation, non-GL rendering, degradation diagnostics, `.iv`
-  string round-trip, and picking.
+  primitive tessellation, packet extraction aggregation, non-GL rendering,
+  degradation diagnostics, `.iv` string round-trip, and picking.
 
 Assumptions
 -----------

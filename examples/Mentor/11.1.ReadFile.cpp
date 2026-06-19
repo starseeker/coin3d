@@ -32,13 +32,17 @@ bool renderScene(obol::OffscreenRenderer & renderer,
     return result.success && renderer.writeRGB(filename);
 }
 
+void applyViewAllCamera(obol::Scene & scene)
+{
+    obol::ViewAllRequest request;
+    request.viewportWidth = DEFAULT_WIDTH;
+    request.viewportHeight = DEFAULT_HEIGHT;
+    scene.setCamera(obol::CameraFraming::viewAllPerspective(scene, request));
+}
+
 void addViewState(obol::Scene & scene)
 {
-    obol::PerspectiveCamera camera;
-    camera.position = {0.0f, 0.0f, 6.0f};
-    camera.target = {0.0f, 0.0f, 0.0f};
-    camera.verticalFieldOfViewRadians = 0.75f;
-    scene.setCamera(camera);
+    applyViewAllCamera(scene);
     scene.addDirectionalLight(obol::DirectionalLight{});
 }
 

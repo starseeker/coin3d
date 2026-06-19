@@ -10,6 +10,7 @@
 
 #include <Inventor/gl.h>
 
+#include <cmath>
 #include <cstdio>
 
 namespace {
@@ -20,8 +21,6 @@ obol::Material material(float r, float g, float b)
 {
     obol::Material result;
     result.baseColor = {r, g, b, 1.0f};
-    result.specular = {0.25f, 0.25f, 0.25f, 1.0f};
-    result.shininess = 0.25f;
     return result;
 }
 
@@ -103,7 +102,7 @@ obol::Scene makeScene(const obol::PerspectiveCamera & camera)
     sphere.radius = 1.0f;
     scene.addPrimitive(obol::Primitive::Sphere,
                        material(0.0f, 0.0f, 1.0f),
-                       transform(4.0f, 0.0f, 0.0f),
+                       transform(2.0f, -2.0f, 0.0f),
                        sphere);
 
     return scene;
@@ -118,11 +117,54 @@ bool renderView(obol::OffscreenRenderer & renderer,
     return result.success && renderer.writeRGB(filename);
 }
 
-obol::PerspectiveCamera cameraAt(float x, float y, float z)
+obol::Vec3 add(const obol::Vec3 & lhs, const obol::Vec3 & rhs)
 {
+    return {lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z};
+}
+
+obol::Vec3 scaled(const obol::Vec3 & value, float scale)
+{
+    return {value.x * scale, value.y * scale, value.z * scale};
+}
+
+obol::Vec3 rotatedAroundAxis(const obol::Vec3 & value,
+                             const obol::Vec3 & axis,
+                             float radians)
+{
+    const float axisLength =
+        std::sqrt(axis.x * axis.x + axis.y * axis.y + axis.z * axis.z);
+    if (axisLength <= 0.0f || radians == 0.0f) return value;
+
+    const obol::Vec3 unitAxis = {axis.x / axisLength,
+                                axis.y / axisLength,
+                                axis.z / axisLength};
+    const float cosine = std::cos(radians);
+    const float sine = std::sin(radians);
+    const float dot =
+        unitAxis.x * value.x + unitAxis.y * value.y + unitAxis.z * value.z;
+    const obol::Vec3 cross = {
+        unitAxis.y * value.z - unitAxis.z * value.y,
+        unitAxis.z * value.x - unitAxis.x * value.z,
+        unitAxis.x * value.y - unitAxis.y * value.x,
+    };
+
+    return add(add(scaled(value, cosine), scaled(cross, sine)),
+               scaled(unitAxis, dot * (1.0f - cosine)));
+}
+
+obol::PerspectiveCamera cameraWithOrientation(const obol::Vec3 & position,
+                                              const obol::Vec3 & axis,
+                                              float angleRadians)
+{
+    const obol::Vec3 forward =
+        rotatedAroundAxis({0.0f, 0.0f, -1.0f}, axis, angleRadians);
+    const obol::Vec3 up =
+        rotatedAroundAxis({0.0f, 1.0f, 0.0f}, axis, angleRadians);
+
     obol::PerspectiveCamera camera;
-    camera.position = {x, y, z};
-    camera.target = {0.5f, -1.4f, 0.0f};
+    camera.position = position;
+    camera.target = add(position, scaled(forward, 5.0f));
+    camera.up = up;
     camera.verticalFieldOfViewRadians = 1.57079632679f;
     camera.nearDistance = 2.0f;
     camera.farDistance = 12.0f;
@@ -151,22 +193,30 @@ int main(int argc, char **argv)
 
     printf("Rendering scene with v2 backend-native OpenGL callback for floor...\n");
 
-    obol::PerspectiveCamera camera = cameraAt(0.0f, 0.0f, 5.0f);
+    obol::PerspectiveCamera camera =
+        cameraWithOrientation({0.0f, 0.0f, 5.0f},
+                              {0.0f, 1.0f, 0.0f},
+                              0.0f);
     snprintf(filename, sizeof(filename), "%s_00_default.rgb", baseFilename);
     if (!renderView(renderer, camera, filename)) return 1;
     snprintf(filename, sizeof(filename), "%s.rgb", baseFilename);
     if (!renderView(renderer, camera, filename)) return 1;
 
-    camera = cameraAt(-3.0f, 2.0f, 5.0f);
+    camera = cameraWithOrientation({-3.0f, 2.0f, 5.0f},
+                                   {0.0f, 1.0f, 0.0f},
+                                   0.3f);
     snprintf(filename, sizeof(filename), "%s_01_angle1.rgb", baseFilename);
     if (!renderView(renderer, camera, filename)) return 1;
 
-    camera = cameraAt(3.0f, 2.0f, 5.0f);
+    camera = cameraWithOrientation({3.0f, 2.0f, 5.0f},
+                                   {0.0f, 1.0f, 0.0f},
+                                   -0.3f);
     snprintf(filename, sizeof(filename), "%s_02_angle2.rgb", baseFilename);
     if (!renderView(renderer, camera, filename)) return 1;
 
-    camera = cameraAt(0.0f, 4.0f, 5.0f);
-    camera.target = {0.5f, -2.2f, 0.0f};
+    camera = cameraWithOrientation({0.0f, 4.0f, 5.0f},
+                                   {1.0f, 0.0f, 0.0f},
+                                   -0.4f);
     snprintf(filename, sizeof(filename), "%s_03_top.rgb", baseFilename);
     if (!renderView(renderer, camera, filename)) return 1;
 

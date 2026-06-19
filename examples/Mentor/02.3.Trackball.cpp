@@ -17,8 +17,6 @@ obol::Material red()
 {
     obol::Material material;
     material.baseColor = {1.0f, 0.0f, 0.0f, 1.0f};
-    material.specular = {0.25f, 0.25f, 0.25f, 1.0f};
-    material.shininess = 0.35f;
     return material;
 }
 
@@ -30,6 +28,14 @@ bool renderScene(obol::OffscreenRenderer & renderer,
     return result.success && renderer.writeRGB(filename);
 }
 
+obol::PerspectiveCamera viewAllCamera(const obol::Scene & scene)
+{
+    obol::ViewAllRequest request;
+    request.viewportWidth = DEFAULT_WIDTH;
+    request.viewportHeight = DEFAULT_HEIGHT;
+    return obol::CameraFraming::viewAllPerspective(scene, request);
+}
+
 } // namespace
 
 int main(int argc, char **argv)
@@ -39,6 +45,7 @@ int main(int argc, char **argv)
     obol::Scene scene;
     scene.addDirectionalLight(obol::DirectionalLight{});
     scene.addPrimitive(obol::Primitive::Cone, red());
+    const obol::PerspectiveCamera fittedCamera = viewAllCamera(scene);
 
     obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
                                         obol::RenderBackendKind::OpenGL2SWRast,
@@ -55,10 +62,9 @@ int main(int argc, char **argv)
 
     for (int i = 0; i < 16; i++) {
         const float angle = (2.0f * 3.14159265358979323846f * i) / 16.0f;
-        obol::PerspectiveCamera camera;
+        obol::PerspectiveCamera camera = fittedCamera;
         camera.position = {5.0f * std::cos(angle), 3.0f, 5.0f * std::sin(angle)};
         camera.target = {0.0f, 0.0f, 0.0f};
-        camera.verticalFieldOfViewRadians = 0.6f;
         scene.setCamera(camera);
 
         snprintf(filename, sizeof(filename), "%s_frame%02d.rgb", baseFilename, i);

@@ -10,15 +10,24 @@
 #include <sstream>
 
 namespace obol {
+namespace {
+
+SoDB::ContextManager *
+toSceneIOLegacyContext(NativeContextHandle handle)
+{
+    return static_cast<SoDB::ContextManager *>(handle);
+}
+
+} // namespace
 
 bool
 SceneIO::readInventorString(const std::string & input,
                             Scene & scene,
-                            SoDB::ContextManager * manager)
+                            NativeContextHandle manager)
 {
     SoInput in;
     if (manager) {
-        in.setContextManager(manager);
+        in.setContextManager(toSceneIOLegacyContext(manager));
     }
     in.setBuffer(input.data(), input.size());
 
@@ -28,7 +37,7 @@ SceneIO::readInventorString(const std::string & input,
     }
 
     root->ref();
-    scene = Scene::fromLegacySceneGraph(*root);
+    scene = Scene::fromLegacySceneGraph(root);
     root->unref();
     return true;
 }
@@ -36,7 +45,7 @@ SceneIO::readInventorString(const std::string & input,
 bool
 SceneIO::readInventorFile(const char * filename,
                           Scene & scene,
-                          SoDB::ContextManager * manager)
+                          NativeContextHandle manager)
 {
     if (!filename) {
         return false;
@@ -44,7 +53,7 @@ SceneIO::readInventorFile(const char * filename,
 
     SoInput in;
     if (manager) {
-        in.setContextManager(manager);
+        in.setContextManager(toSceneIOLegacyContext(manager));
     }
     if (!in.openFile(filename)) {
         return false;
@@ -57,16 +66,71 @@ SceneIO::readInventorFile(const char * filename,
     }
 
     root->ref();
-    scene = Scene::fromLegacySceneGraph(*root);
+    scene = Scene::fromLegacySceneGraph(root);
     root->unref();
     return true;
+}
+
+SceneObjectId
+SceneIO::addInventorString(const std::string & input,
+                           Scene & scene,
+                           const Transform & transform,
+                           SceneGroupId parent,
+                           NativeContextHandle manager)
+{
+    SoInput in;
+    if (manager) {
+        in.setContextManager(toSceneIOLegacyContext(manager));
+    }
+    in.setBuffer(input.data(), input.size());
+
+    SoSeparator * root = SoDB::readAll(&in);
+    if (!root) {
+        return InvalidSceneObjectId;
+    }
+
+    root->ref();
+    const SceneObjectId object = scene.addLegacySceneGraph(root, transform, parent);
+    root->unref();
+    return object;
+}
+
+SceneObjectId
+SceneIO::addInventorFile(const char * filename,
+                         Scene & scene,
+                         const Transform & transform,
+                         SceneGroupId parent,
+                         NativeContextHandle manager)
+{
+    if (!filename) {
+        return InvalidSceneObjectId;
+    }
+
+    SoInput in;
+    if (manager) {
+        in.setContextManager(toSceneIOLegacyContext(manager));
+    }
+    if (!in.openFile(filename)) {
+        return InvalidSceneObjectId;
+    }
+
+    SoSeparator * root = SoDB::readAll(&in);
+    in.closeFile();
+    if (!root) {
+        return InvalidSceneObjectId;
+    }
+
+    root->ref();
+    const SceneObjectId object = scene.addLegacySceneGraph(root, transform, parent);
+    root->unref();
+    return object;
 }
 
 bool
 SceneIO::writeInventorString(const Scene & scene, std::string & output)
 {
     std::unique_ptr<SoSeparator, void(*)(SoSeparator *)> root(
-        scene.createLegacySceneGraph(),
+        static_cast<SoSeparator *>(scene.createLegacySceneGraph()),
         [](SoSeparator * node) {
             if (node) node->unref();
         });
@@ -90,7 +154,7 @@ SceneIO::writeInventorFile(const Scene & scene, const char * filename)
     }
 
     std::unique_ptr<SoSeparator, void(*)(SoSeparator *)> root(
-        scene.createLegacySceneGraph(),
+        static_cast<SoSeparator *>(scene.createLegacySceneGraph()),
         [](SoSeparator * node) {
             if (node) node->unref();
         });

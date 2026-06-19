@@ -55,8 +55,8 @@
 
 #include "headless_utils.h"
 
-#include <Obol/cad/SoCADAssembly.h>
-#include <Obol/cad/SoCADDetail.h>
+#include <Obol/compat/cad/SoCADAssembly.h>
+#include <Obol/compat/cad/SoCADDetail.h>
 #include <Obol/cad/CadIds.h>
 #include "lod/TrianglePopLod.h"
 

@@ -1,9 +1,17 @@
 # source files
 set(OBOL_MODERN_FILES
+    Camera.cpp
+    Interaction.cpp
     Picking.cpp
     Scene.cpp
+    ScenePacketCad.cpp
+    ScenePacketExtraction.cpp
+    ScenePacketGeometry.cpp
+    ScenePacketLighting.cpp
+    ScenePacketText.cpp
     SceneIO.cpp
     Renderer.cpp
+    Time.cpp
 )
 
 # build library

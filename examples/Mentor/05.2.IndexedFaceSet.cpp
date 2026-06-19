@@ -44,6 +44,7 @@
 #include "headless_utils.h"
 #include <Obol/Obol.h>
 
+#include <cmath>
 #include <cstdio>
 #include <cstdint>
 
@@ -127,15 +128,35 @@ obol::Mesh makeStellatedDodecahedronMesh()
 bool renderView(obol::OffscreenRenderer & renderer,
                 obol::Scene & scene,
                 const char * filename,
-                const obol::Vec3 & position)
+                const obol::PerspectiveCamera & camera)
 {
-    obol::PerspectiveCamera camera;
-    camera.position = position;
-    camera.target = {0.0f, 0.0f, 0.0f};
-    camera.verticalFieldOfViewRadians = 0.55f;
     scene.setCamera(camera);
     const obol::FrameResult result = renderer.render(scene);
     return result.success && renderer.writeRGB(filename);
+}
+
+obol::PerspectiveCamera orbitCamera(const obol::PerspectiveCamera & camera,
+                                    float azimuth,
+                                    float elevation)
+{
+    obol::CameraOrbitRequest request;
+    request.camera = camera;
+    request.azimuthRadians = azimuth;
+    request.elevationRadians = elevation;
+    return obol::CameraFraming::orbit(request);
+}
+
+void makeCameras(const obol::Scene & scene,
+                 obol::PerspectiveCamera & frontCamera,
+                 obol::PerspectiveCamera & sideCamera,
+                 obol::PerspectiveCamera & topCamera)
+{
+    obol::ViewAllRequest request;
+    request.viewportWidth = DEFAULT_WIDTH;
+    request.viewportHeight = DEFAULT_HEIGHT;
+    frontCamera = obol::CameraFraming::viewAllPerspective(scene, request);
+    sideCamera = orbitCamera(frontCamera, static_cast<float>(M_PI / 2.0), 0.0f);
+    topCamera = orbitCamera(frontCamera, 0.0f, static_cast<float>(M_PI / 2.0));
 }
 
 } // namespace
@@ -145,10 +166,13 @@ int main(int argc, char **argv)
     initCoinHeadless();
 
     obol::Scene scene;
-    obol::DirectionalLight light;
-    light.direction = {-0.5f, -0.7f, -1.0f};
-    scene.addDirectionalLight(light);
+    scene.addDirectionalLight(obol::DirectionalLight{});
     scene.addMesh(makeStellatedDodecahedronMesh());
+
+    obol::PerspectiveCamera frontCamera;
+    obol::PerspectiveCamera sideCamera;
+    obol::PerspectiveCamera topCamera;
+    makeCameras(scene, frontCamera, sideCamera, topCamera);
 
     obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
                                         obol::RenderBackendKind::OpenGL2SWRast,
@@ -164,19 +188,19 @@ int main(int argc, char **argv)
     char filename[256];
 
     snprintf(filename, sizeof(filename), "%s_front.rgb", baseFilename);
-    if (!renderView(renderer, scene, filename, {0.0f, 0.0f, 7.0f})) {
+    if (!renderView(renderer, scene, filename, frontCamera)) {
         fprintf(stderr, "Error: Failed to render front IndexedFaceSet view with Obol v2 API\n");
         return 1;
     }
 
     snprintf(filename, sizeof(filename), "%s_side.rgb", baseFilename);
-    if (!renderView(renderer, scene, filename, {7.0f, 0.0f, 0.0f})) {
+    if (!renderView(renderer, scene, filename, sideCamera)) {
         fprintf(stderr, "Error: Failed to render side IndexedFaceSet view with Obol v2 API\n");
         return 1;
     }
 
     snprintf(filename, sizeof(filename), "%s_top.rgb", baseFilename);
-    if (!renderView(renderer, scene, filename, {0.0f, 7.0f, 0.1f})) {
+    if (!renderView(renderer, scene, filename, topCamera)) {
         fprintf(stderr, "Error: Failed to render top IndexedFaceSet view with Obol v2 API\n");
         return 1;
     }

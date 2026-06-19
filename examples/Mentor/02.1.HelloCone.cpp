@@ -44,22 +44,29 @@
 #include "headless_utils.h"
 #include <Obol/Obol.h>
 
+namespace {
+
+obol::PerspectiveCamera viewAllCamera(const obol::Scene & scene)
+{
+    obol::ViewAllRequest request;
+    request.viewportWidth = DEFAULT_WIDTH;
+    request.viewportHeight = DEFAULT_HEIGHT;
+    return obol::CameraFraming::viewAllPerspective(scene, request);
+}
+
+} // namespace
+
 int main(int argc, char **argv)
 {
     initCoinHeadless();
 
     obol::Scene scene;
-
-    obol::PerspectiveCamera camera;
-    camera.position = {0.0f, 0.0f, 5.0f};
-    camera.target = {0.0f, 0.0f, 0.0f};
-    scene.setCamera(camera);
-
     scene.addDirectionalLight(obol::DirectionalLight{});
 
     obol::Material material;
     material.baseColor = {1.0f, 0.0f, 0.0f, 1.0f};
     scene.addPrimitive(obol::Primitive::Cone, material);
+    scene.setCamera(viewAllCamera(scene));
 
     const char *filename = (argc > 1) ? argv[1] : "02.1.HelloCone.rgb";
     obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
