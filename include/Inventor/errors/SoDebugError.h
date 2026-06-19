@@ -85,6 +85,14 @@ private:
   Severity severity;
 };
 
+#ifndef NDEBUG
+template <typename Type>
+constexpr void SbDividerChk(const char * funcname, Type divider) noexcept {
+  if (!(divider != static_cast<Type>(0)))
+    SoDebugError::post(funcname, "divide by zero error.");
+}
+#endif // !NDEBUG
+
 // Avoid problem with Microsoft Win32 API headers (see above).
 #if defined(SODEBUGERROR_STORE_ERROR_DEF)
 #pragma pop_macro("ERROR")

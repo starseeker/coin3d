@@ -35,12 +35,6 @@
 
 #include <Inventor/basic.h>
 
-// Debug error posting - Inventor-style API for debug builds
-#ifndef NDEBUG
-OBOL_DLL_API void SbDebugError_post(const char * source, const char * format, ...)
-  OBOL_PRINTF_FORMAT(2, 3);
-#endif // !NDEBUG
-
 /* ********************************************************************** */
 /* Trap people trying to use Inventor headers while compiling C source code.
  * (we get support mail about this from time to time)
@@ -126,16 +120,10 @@ constexpr Type SbSqr(const Type val) noexcept {
 // warning if so for debug builds.  inlined like this to not take much
 // screenspace in inline functions.
 
-#ifndef NDEBUG
-template <typename Type>
-constexpr void SbDividerChk(const char * funcname, Type divider) noexcept {
-  if (!(divider != static_cast<Type>(0)))
-    SbDebugError_post(funcname, "divide by zero error.", divider);
-}
-#else
+#ifdef NDEBUG
 template <typename Type>
 constexpr void SbDividerChk(const char *, Type) noexcept {}
-#endif // !NDEBUG
+#endif // NDEBUG
 
 /* ********************************************************************** */
 
