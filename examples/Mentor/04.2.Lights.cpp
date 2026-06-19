@@ -79,11 +79,6 @@ int main(int argc, char **argv)
     initCoinHeadless();
 
     obol::Scene scene;
-    obol::PerspectiveCamera camera;
-    camera.position = {0.0f, 0.0f, 7.0f};
-    camera.target = {0.0f, 0.0f, 0.0f};
-    camera.verticalFieldOfViewRadians = 0.65f;
-    scene.setCamera(camera);
 
     obol::DirectionalLight directional;
     directional.direction = {0.0f, -1.0f, -1.0f};
@@ -96,11 +91,13 @@ int main(int argc, char **argv)
     point.location = {0.0f, 0.0f, 0.0f};
     scene.addPointLight(point, movingLight);
 
-    obol::Material coneMaterial;
-    coneMaterial.baseColor = {0.85f, 0.78f, 0.55f, 1.0f};
-    coneMaterial.specular = {0.4f, 0.4f, 0.4f, 1.0f};
-    coneMaterial.shininess = 0.35f;
-    scene.addPrimitive(obol::Primitive::Cone, coneMaterial);
+    scene.addPrimitive(obol::Primitive::Cone, obol::Material{});
+
+    obol::ViewAllRequest cameraRequest;
+    cameraRequest.viewportWidth = DEFAULT_WIDTH;
+    cameraRequest.viewportHeight = DEFAULT_HEIGHT;
+    scene.setCamera(obol::CameraFraming::viewAllPerspective(scene,
+                                                            cameraRequest));
 
     obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
                                         obol::RenderBackendKind::OpenGL2SWRast,

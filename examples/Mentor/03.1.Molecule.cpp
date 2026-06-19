@@ -8,6 +8,7 @@
 #include "headless_utils.h"
 #include <Obol/Obol.h>
 
+#include <cmath>
 #include <cstdio>
 
 namespace {
@@ -49,29 +50,53 @@ void addWaterMolecule(obol::Scene & scene)
                        molecule);
 
     obol::PrimitiveOptions defaultHydrogen;
-    defaultHydrogen.radius = 1.0f;
+    defaultHydrogen.radius = 0.75f;
+    // The original example uses SoGroup, so hydrogen1's scale/translation
+    // remains in the traversal state when hydrogen2 is visited.
+    const float inheritedScale = 0.75f;
+    const float inheritedTranslationY = -1.2f;
     scene.addPrimitive(obol::Primitive::Sphere,
                        material(1.0f, 1.0f, 1.0f),
-                       transform(1.1852f, 1.3877f, 0.0f),
+                       transform(1.1852f * inheritedScale,
+                                 inheritedTranslationY +
+                                     1.3877f * inheritedScale,
+                                 0.0f),
                        defaultHydrogen,
                        molecule);
 }
 
-bool renderScene(obol::OffscreenRenderer & renderer,
-                 obol::Scene & scene,
-                 const char * filename)
+bool renderView(obol::OffscreenRenderer & renderer,
+                obol::Scene & scene,
+                const char * filename,
+                const obol::PerspectiveCamera & camera)
 {
+    scene.setCamera(camera);
     const obol::FrameResult result = renderer.render(scene);
     return result.success && renderer.writeRGB(filename);
 }
 
-void setCamera(obol::Scene & scene, const obol::Vec3 & position)
+obol::PerspectiveCamera orbitCamera(const obol::PerspectiveCamera & camera,
+                                    float azimuth,
+                                    float elevation)
 {
-    obol::PerspectiveCamera camera;
-    camera.position = position;
-    camera.target = {0.3f, 0.0f, 0.0f};
-    camera.verticalFieldOfViewRadians = 0.65f;
-    scene.setCamera(camera);
+    obol::CameraOrbitRequest request;
+    request.camera = camera;
+    request.azimuthRadians = azimuth;
+    request.elevationRadians = elevation;
+    return obol::CameraFraming::orbit(request);
+}
+
+void makeCameras(const obol::Scene & scene,
+                 obol::PerspectiveCamera & frontCamera,
+                 obol::PerspectiveCamera & sideCamera,
+                 obol::PerspectiveCamera & angleCamera)
+{
+    obol::ViewAllRequest request;
+    request.viewportWidth = DEFAULT_WIDTH;
+    request.viewportHeight = DEFAULT_HEIGHT;
+    frontCamera = obol::CameraFraming::viewAllPerspective(scene, request);
+    sideCamera = orbitCamera(frontCamera, static_cast<float>(M_PI / 2.0), 0.0f);
+    angleCamera = orbitCamera(frontCamera, 0.0f, static_cast<float>(M_PI / 4.0));
 }
 
 } // namespace
@@ -83,6 +108,10 @@ int main(int argc, char **argv)
     obol::Scene scene;
     scene.addDirectionalLight(obol::DirectionalLight{});
     addWaterMolecule(scene);
+    obol::PerspectiveCamera frontCamera;
+    obol::PerspectiveCamera sideCamera;
+    obol::PerspectiveCamera angleCamera;
+    makeCameras(scene, frontCamera, sideCamera, angleCamera);
 
     obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
                                         obol::RenderBackendKind::OpenGL2SWRast,
@@ -97,19 +126,16 @@ int main(int argc, char **argv)
     const char *baseFilename = (argc > 1) ? argv[1] : "03.1.Molecule";
     char filename[512];
 
-    setCamera(scene, {0.0f, 0.0f, 6.0f});
     snprintf(filename, sizeof(filename), "%s_front.rgb", baseFilename);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderView(renderer, scene, filename, frontCamera)) return 1;
     snprintf(filename, sizeof(filename), "%s.rgb", baseFilename);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderView(renderer, scene, filename, frontCamera)) return 1;
 
-    setCamera(scene, {6.0f, 0.0f, 0.0f});
     snprintf(filename, sizeof(filename), "%s_side.rgb", baseFilename);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderView(renderer, scene, filename, sideCamera)) return 1;
 
-    setCamera(scene, {4.0f, 3.0f, 5.0f});
     snprintf(filename, sizeof(filename), "%s_angle.rgb", baseFilename);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderView(renderer, scene, filename, angleCamera)) return 1;
 
     return 0;
 }

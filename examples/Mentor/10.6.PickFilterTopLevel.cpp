@@ -38,6 +38,8 @@
  * Headless version of Inventor Mentor example 10.6
  *
  * Demonstrates top-level versus default pick filtering using v2 object IDs.
+ * Two benches are shown so filtered whole-model selection and default
+ * component selection stay visually comparable with the original example.
  */
 
 #include "headless_utils.h"
@@ -110,37 +112,29 @@ Bench makeBench(obol::Scene & scene, float x)
     Bench bench;
     bench.group = scene.addGroup(translation(x, 0.0f, 0.0f));
 
-    const obol::Material gray = material(0.65f, 0.67f, 0.67f);
-    const float slatX[11] = {
-        -2.5f, -2.0f, -1.5f, -1.0f, -0.5f, 0.0f,
-         0.5f,  1.0f,  1.5f,  2.0f,  2.5f
+    const float plankX[3] = {-0.6f, 0.0f, 0.6f};
+    const obol::Material plankMaterials[3] = {
+        material(0.55f, 0.30f, 0.10f),
+        material(0.60f, 0.35f, 0.12f),
+        material(0.50f, 0.28f, 0.09f)
     };
-    for (float sx : slatX) {
+    for (int i = 0; i < 3; ++i) {
         addBenchCube(scene,
                      bench,
-                     gray,
-                     partTransform(sx, 0.75f, 0.0f, 0.055f, 0.85f, 0.05f));
+                     plankMaterials[i],
+                     partTransform(plankX[i], 0.55f, 0.0f, 0.45f, 0.08f, 1.8f));
     }
 
-    addBenchCube(scene, bench, gray, partTransform(0.0f, 0.0f, 0.0f, 1.7f, 0.12f, 0.08f));
-    addBenchCube(scene, bench, gray, partTransform(0.0f, 1.45f, 0.0f, 1.55f, 0.07f, 0.08f));
-    addBenchCube(scene, bench, gray, partTransform(-3.1f, 0.55f, 0.0f, 0.10f, 0.95f, 0.10f));
-    addBenchCube(scene, bench, gray, partTransform(3.1f, 0.55f, 0.0f, 0.10f, 0.95f, 0.10f));
-    addBenchCube(scene, bench, gray, partTransform(-2.6f, -0.75f, 0.0f, 0.10f, 0.70f, 0.10f));
-    addBenchCube(scene, bench, gray, partTransform(2.6f, -0.75f, 0.0f, 0.10f, 0.70f, 0.10f));
-    addBenchCube(scene, bench, gray, partTransform(-2.8f, 0.10f, 0.0f, 0.06f, 0.75f, 0.08f));
-    addBenchCube(scene, bench, gray, partTransform(2.8f, 0.10f, 0.0f, 0.06f, 0.75f, 0.08f));
+    const float legZ[2] = {-0.75f, 0.75f};
+    const obol::Material frameMaterial = material(0.25f, 0.25f, 0.30f);
+    for (int i = 0; i < 2; ++i) {
+        addBenchCube(scene,
+                     bench,
+                     frameMaterial,
+                     partTransform(0.0f, 0.25f, legZ[i], 1.6f, 0.5f, 0.08f));
+    }
 
     return bench;
-}
-
-void applyViewAllCamera(obol::Scene & scene)
-{
-    obol::ViewAllRequest request;
-    request.viewportWidth = DEFAULT_WIDTH;
-    request.viewportHeight = DEFAULT_HEIGHT;
-    request.slack = 1.25f;
-    scene.setCamera(obol::CameraFraming::viewAllPerspective(scene, request));
 }
 
 void setBenchMaterial(obol::Scene & scene, const Bench & bench, const obol::Material & mat)
@@ -172,6 +166,11 @@ int main(int argc, char **argv)
     initCoinHeadless();
 
     obol::Scene scene;
+    obol::PerspectiveCamera camera;
+    camera.position = {0.0f, 5.5f, 8.0f};
+    camera.target = {0.0f, 0.2f, 0.0f};
+    camera.verticalFieldOfViewRadians = 0.62f;
+    scene.setCamera(camera);
 
     obol::DirectionalLight light1;
     light1.direction = {-1.0f, -1.5f, -1.0f};
@@ -182,8 +181,8 @@ int main(int argc, char **argv)
     light2.color = {0.8f, 0.9f, 1.0f, 1.0f};
     scene.addDirectionalLight(light2);
 
-    Bench bench = makeBench(scene, 0.0f);
-    applyViewAllCamera(scene);
+    Bench leftBench = makeBench(scene, -3.0f);
+    makeBench(scene, 3.0f);
 
     obol::ContextManagerBackend backend(getCoinHeadlessContextManager(),
                                         obol::RenderBackendKind::OpenGL2SWRast,
@@ -199,19 +198,19 @@ int main(int argc, char **argv)
     char filename[512];
     int frameNum = 0;
 
-    printf("Frame %d: initial scene (bench unselected)\n", frameNum);
+    printf("Frame %d: initial scene (both benches unselected)\n", frameNum);
     snprintf(filename, sizeof(filename), "%s_frame%02d_initial.rgb", base, frameNum++);
     if (!renderScene(renderer, scene, filename)) return 1;
 
-    printf("Frame %d: filtered selection -> entire bench highlighted\n", frameNum);
-    setBenchMaterial(scene, bench, highlightMaterial());
+    printf("Frame %d: filtered selection -> entire left bench highlighted\n", frameNum);
+    setBenchMaterial(scene, leftBench, highlightMaterial());
     snprintf(filename, sizeof(filename), "%s_frame%02d_filtered_selected.rgb", base, frameNum++);
     if (!renderScene(renderer, scene, filename)) return 1;
-    restoreBenchMaterial(scene, bench);
+    restoreBenchMaterial(scene, leftBench);
 
-    printf("Frame %d: default selection -> only one bench component highlighted\n", frameNum);
-    if (!bench.parts.empty()) {
-        scene.setObjectMaterial(bench.parts[0].id, highlightMaterial());
+    printf("Frame %d: default selection -> only one left-bench component highlighted\n", frameNum);
+    if (!leftBench.parts.empty()) {
+        scene.setObjectMaterial(leftBench.parts[0].id, highlightMaterial());
     }
     snprintf(filename, sizeof(filename), "%s_frame%02d_default_selected.rgb", base, frameNum++);
     if (!renderScene(renderer, scene, filename)) return 1;

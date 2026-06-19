@@ -38,21 +38,73 @@ Current comparison summary:
 | Chapter | Common | Changed | Avg RMSE | Max RMSE | Max-diff image | Initial assessment |
 | --- | ---: | ---: | ---: | ---: | --- | --- |
 | 02 | 41 | 41 | 0.57 | 1.88 | `02.2.EngineSpin_frame06_control.png` | Fixed/aligned. Cone examples now preserve the original diffuse material and `viewAll()`-derived camera/viewer state while keeping v2 app-owned animation and camera updates. Remaining delta is rasterization noise. |
-| 03 | 11 | 11 | 60.86 | 105.93 | `03.3.Naming_before_control.png` | Mixed. Molecule/Robot color regression was fixed. `03.3.Naming` separated cube/sphere composition is accepted as clearer v2 intent. |
-| 04 | 10 | 10 | 33.56 | 37.69 | `04.2.Lights_frame01_control.png` | Mostly acceptable after light-state bridge fix; gradient behavior restored. |
+| 03 | 11 | 11 | 48.76 | 105.93 | `03.3.Naming_before_control.png` | Mixed. `03.1.Molecule` transform-state regression has been fixed by preserving the original `SoGroup` inherited transform behavior. `03.3.Naming` separated cube/sphere composition is accepted as clearer v2 intent. `03.2.Robot` is much more legible in v2 but changes material/color substantially enough to need signoff as an intentional improvement. |
+| 04 | 10 | 10 | 17.11 | 37.06 | `04.1.Cameras_orthographic_control.png` | Improved. `04.2.Lights` now uses the original default cone material and `viewAll()`-derived camera, restoring the yellow-to-red light-gradient scale/framing. Remaining Chapter 04 deltas are in the camera-projection example, not Lights. |
 | 05 | 23 | 23 | 1.25 | 6.23 | `05.6.TransformOrdering_front_control.png` | Fixed/aligned. FaceSet, IndexedFaceSet, TriangleStripSet, QuadMesh, Binding, and TransformOrdering now preserve original camera/light/material intent; native strip/quad mesh bridge paths avoid fallback normal artifacts. Remaining delta is minor rasterization/subpixel noise. |
 | 06 | 10 | 10 | 6.50 | 16.40 | `06.2.Simple3DText_front_control.png` | Fixed/aligned. `06.1.Text` and `06.2.Simple3DText` now preserve the original `viewAll()`/orbit camera sequence and default lighting; `06.3.Complex3DText` preserves its explicit camera/orbit sequence while keeping the v2 text-profile fallback. Remaining delta is text rasterization and sphere/text tessellation shading noise. |
 | 07 | 9 | 9 | 2.43 | 6.71 | `07.3.TextureFunction_angle_control.png` | Fixed/aligned. `07.1.BasicTexture`, `07.2.TextureCoordinates`, and `07.3.TextureFunction` now preserve the original texture data/UV behavior, `viewAll()`/orbit camera sequence, and default lighting. Remaining delta is minor rasterization/tessellation noise. |
 | 08 | 16 | 16 | 20.95 | 29.60 | `08.2.UniCurve_top_control.png` | Intentional fallback, with fixes. NURBS examples are sampled/tessellated; `08.3`/`08.4` lighting/normals corrected. |
 | 09 | 13 | 13 | 34.10 | 56.04 | `09.4.PickAction_pick_star2_control.png` | Improved. `09.1.Print` camera framing fixed; `09.2.Texture` source texture framing fixed; `09.4.PickAction` cube/star regression fixed. |
-| 10 | 38 | 38 | 28.52 | 52.48 | `10.2.setEventCB_rotated_control.png` | Improved. `10.2.setEventCB` primary frame is back to the initial light-blue sphere and uses suffixed frames for event-state changes; `10.5.SelectionCB`, `10.6.PickFilterTopLevel`, and `10.7.PickFilterManip` framing/selection-state visibility fixed. `10.8.PickFilterNodeKit` remains visually close to `main`; manipulator geometry remains a first-class v2 interaction follow-up. |
+| 10 | 38 | 38 | 29.69 | 70.77 | `10.6.PickFilterTopLevel_frame01_filtered_selected_control.png` | Improved with old-v2 context. `10.2.setEventCB` primary frame is back to the initial light-blue sphere and uses suffixed frames for event-state changes; `10.5.SelectionCB` and `10.7.PickFilterManip` framing/selection-state visibility fixed. `10.6.PickFilterTopLevel` has been restored to the `ee1ce99` old-v2 two-bench abstraction, preserving whole-bench versus component-only selection even though it differs from `main`'s imported curved park bench. `10.8.PickFilterNodeKit` remains visually close to `main`; manipulator geometry remains a first-class v2 interaction follow-up. |
 | 11 | 2 | 2 | 0.94 | 1.18 | `11.1.ReadFile_control.png` | Fixed/aligned. Imported/string scenes use `viewAll()`-derived v2 cameras, and v2 lights are ordered before legacy fallback roots so `ReadFile` and `ReadString` match the original lit imported content. |
 | 12 | 24 | 21 | 18.88 | 34.44 | `12.4.TimerSensor_frame08_control.png` | Improved. `12.1.FieldSensor` now preserves the original camera-position callback plus `viewAll()` render behavior, and `12.2.NodeSensor` uses real `Scene::removeObject()` with overlapping default cube/sphere geometry. Remaining deltas are `AlarmSensor`/`TimerSensor` presentation differences. |
 | 13 | 109 | 77 | 20.37 | 51.99 | `13.4.Gate_enabled_04_control.png` | Improved. `13.1.GlobalFlds` time formatting fixed; `13.3.TimeCounter` intentionally shows clearer time progression with adjusted initial framing; `13.4.Gate` has explicit open/closed cues; `13.5.Boolean` view framing fixed; `13.7.Rotor` now uses the original windmill `.iv` assets through transformable v2 legacy-graph objects; `13.8.Blinker` camera framing fixed. Remaining max is the intentionally clearer Gate visualization. |
 | 14 | 8 | 8 | 21.63 | 29.34 | `14.2.Editors_light_finish_control.png` | Improved. `14.2.Editors` desk geometry/camera were brought closer to the imported `desk.iv` view; v2 `light_off` remains intentionally darker because the light-off editor state is actually applied. |
 | 15 | 12 | 12 | 21.64 | 33.46 | `15.3.AttachManip_frame05_cone_transformbox_control.png` | Improved. `15.1.ConeRadius` now uses `viewAll()`-derived framing, gray cone material, primitive-option radius edits, and a portable dragger proxy; `15.3.AttachManip` now matches main object spacing/framing more closely and uses a white transform-box proxy. Remaining delta is simplified manipulator handle geometry pending first-class manipulator/dragger support. |
-| 16 | 11 | 11 | 8.78 | 18.03 | `16.3.AttachEditor_orange_control.png` | Fixed/aligned. Callback/editor examples now import the original `dogDish.iv` through transformable v2 legacy-graph objects, preserve red food, apply edited material through the inherited bowl material, and keep unsuffixed controls mapped to main's blue state. Remaining delta is minor material/shading noise. |
+| 16 | 11 | 11 | 7.30 | 18.03 | `16.3.AttachEditor_orange_control.png` | Fixed/aligned. Callback/editor examples now import the original `dogDish.iv` through transformable v2 legacy-graph objects, preserve red food, apply edited material through the inherited bowl material, and keep unsuffixed controls mapped to main's blue state. Remaining delta is minor material/shading noise. |
 | 17 | 5 | 5 | 14.30 | 18.96 | `17.2.GLCallback_00_default_control.png` | Fixed/aligned. `17.2.GLCallback` uses `Scene::addOpenGLCallback()` and raw OpenGL drawing again, with legacy camera orientations and cumulative transform semantics preserved in v2 object state. Remaining delta is minor rasterization/shading noise. |
+
+## Current Recheck Notes
+
+Regenerated against `main` controls on 2026-06-19 using
+`/tmp/obol_control_compare.tsv`. There are no `main` controls missing from the
+current tree. There are 67 v2-only controls, primarily new multi-frame Chapter
+14/15 interaction states; treat those as added coverage, not parity failures.
+When comparing current v2 against an older v2 baseline, use commit
+`ee1ce99dd4a99911853afaf1ef3010340baef811` as the old-v2 control-image
+source.
+
+Likely regressions or follow-up fixes:
+
+- No current recheck item is classified as a clear regression after the
+  `03.1.Molecule`, `04.2.Lights`, and `10.6.PickFilterTopLevel` fixes.
+
+Likely intentional improvements or acceptable deltas:
+
+- `03.3.Naming`: v2's separated cube/sphere state is clearer and should remain
+  accepted.
+- `03.2.Robot`: v2 is substantially more visible than `main`; keep this in the
+  improvement bucket if the gold material is intentional, otherwise restore the
+  original material while retaining the better visibility.
+- `05.2.IndexedFaceSet_side/top`: v2 remains visually cleaner while preserving
+  the indexed-face intent.
+- `10.6.PickFilterTopLevel`: current controls are pixel-perfect matches to the
+  `ee1ce99` old-v2 controls. The two-bench abstraction is accepted as a clearer
+  v2 demonstration of whole-object versus component selection, even though it
+  intentionally differs from `main`'s curved imported park bench.
+- `13.3.TimeCounter`: v2 better communicates time-varying motion, though the
+  first cube is much smaller than `main`; keep only if the current framing is
+  intentional.
+- `13.4.Gate`: v2's explicit open/closed visual cues are clearer than both
+  `main` and the first v2 translation.
+- `14.2.Editors_light_off`: v2 correctly appears dark because the light-off
+  state is actually applied; this is likely more correct than `main`.
+
+Currently aligned or close enough after prior fixes:
+
+- `03.1.Molecule` now preserves the original `SoGroup` transform-state
+  behavior for the second hydrogen atom, so both hydrogens remain attached to
+  the oxygen rather than one white ball drifting away.
+- `04.2.Lights` now restores the original default cone material and
+  `viewAll()` camera framing while keeping v2 light animation through a stable
+  group transform.
+- `09.4.PickAction` now renders stars rather than boxes.
+- `11.1.ReadFile` and `11.2.ReadString` are close; the red cone/string import
+  problem is not visible in the current controls.
+- `13.7.Rotor` is back to the windmill assets and visually close to `main`.
+- `13.8.Blinker` is close after the camera adjustment.
+- `16.2.Callback`, `16.3.AttachEditor`, and `17.2.GLCallback` are visually
+  aligned aside from small shading/rasterization differences.
 
 ## Confirmed Regressions
 
