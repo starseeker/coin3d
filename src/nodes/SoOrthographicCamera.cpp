@@ -187,8 +187,14 @@ SoOrthographicCamera::viewBoundingBox(const SbBox3f & box,
   this->position.setValue(box.getCenter() + cameradirection * -radius);
 
   // Set up the clipping planes tangent to the bounding sphere of the scene.
-  this->nearDistance = radius * ( -slack + 1);
-  this->farDistance = radius * ( slack + 1);
+  // Keep the near plane strictly positive.  With the usual slack value of
+  // 1.0, the tangent formula produces 0.0, which is not a valid camera
+  // volume and can leave GL renders blank.
+  const float EPS = 0.001f;
+  const float nearv = SbMax(SbMax(radius * EPS, EPS), radius * ( -slack + 1));
+  const float farv = SbMax(nearv + EPS, radius * ( slack + 1));
+  this->nearDistance = nearv;
+  this->farDistance = farv;
 
   // The focal distance is simply the distance from the camera to the
   // scene midpoint. This field is not used in rendering, its just

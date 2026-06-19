@@ -191,6 +191,12 @@ int main(int argc, char ** argv)
         cam->position.setValue(0.0f, 0.0f, 5.0f);
         vp.setCamera(cam);
         vp.viewAll();
+        if (cam->nearDistance.getValue() <= 0.0f ||
+                cam->farDistance.getValue() <= cam->nearDistance.getValue()) {
+            printf("FAIL test6 camera clip range: near=%g far=%g\n",
+                   cam->nearDistance.getValue(), cam->farDistance.getValue());
+            ++failures;
+        }
 
         SoOffscreenRenderer * renderer =
             new SoOffscreenRenderer(getCoinHeadlessContextManager(),
@@ -247,6 +253,39 @@ int main(int argc, char ** argv)
     // -----------------------------------------------------------------------
     {
         SoSeparator * geom = buildScene();
+
+        SoViewport vp;
+        vp.setWindowSize(SbVec2s((short)W, (short)H));
+        vp.setSceneGraph(geom);
+
+        SoOrthographicCamera * cam = new SoOrthographicCamera;
+        cam->position.setValue(0.0f, 0.0f, 100.0f);
+        vp.setCamera(cam);
+        vp.viewAll();
+
+        SoOffscreenRenderer * renderer =
+            new SoOffscreenRenderer(getCoinHeadlessContextManager(),
+                                    vp.getViewportRegion());
+        renderer->setComponents(SoOffscreenRenderer::RGB);
+
+        bool clipok = cam->nearDistance.getValue() > 0.0f &&
+            cam->farDistance.getValue() > cam->nearDistance.getValue();
+        bool rendered = (vp.render(renderer) == TRUE);
+        bool ok = clipok && rendered &&
+                  validateNonBlack(renderer->getBuffer(), W * H, "test8_ortho_viewall");
+        printf("  test8 orthographic viewAll ok=%d near=%g far=%g\n",
+               (int)ok, cam->nearDistance.getValue(), cam->farDistance.getValue());
+
+        delete renderer;
+        geom->unref();
+        if (!ok) { printf("FAIL test8\n"); ++failures; }
+    }
+
+    // -----------------------------------------------------------------------
+    // Test 9: processEvent() smoke test (no crash)
+    // -----------------------------------------------------------------------
+    {
+        SoSeparator * geom = buildScene();
         SoViewport vp;
         vp.setWindowSize(SbVec2s((short)W, (short)H));
         vp.setSceneGraph(geom);
@@ -260,12 +299,12 @@ int main(int argc, char ** argv)
         evt.setState(SoButtonEvent::DOWN);
         vp.processEvent(&evt);  // must not crash
 
-        printf("  test8 processEvent smoke: PASS\n");
+        printf("  test9 processEvent smoke: PASS\n");
         geom->unref();
     }
 
     // -----------------------------------------------------------------------
-    // Test 9: setSceneGraph(nullptr) clears the scene
+    // Test 10: setSceneGraph(nullptr) clears the scene
     // -----------------------------------------------------------------------
     {
         SoSeparator * geom = buildScene();
@@ -274,23 +313,23 @@ int main(int argc, char ** argv)
         bool ok = (vp.getSceneGraph() == geom);
         vp.setSceneGraph(nullptr);
         ok = ok && (vp.getSceneGraph() == nullptr);
-        printf("  test9 setSceneGraph(nullptr) ok=%d\n", (int)ok);
+        printf("  test10 setSceneGraph(nullptr) ok=%d\n", (int)ok);
         geom->unref();
-        if (!ok) { printf("FAIL test9\n"); ++failures; }
-    }
-
-    // -----------------------------------------------------------------------
-    // Test 10: getRoot() returns non-null
-    // -----------------------------------------------------------------------
-    {
-        SoViewport vp;
-        bool ok = (vp.getRoot() != nullptr);
-        printf("  test10 getRoot ok=%d\n", (int)ok);
         if (!ok) { printf("FAIL test10\n"); ++failures; }
     }
 
     // -----------------------------------------------------------------------
-    // Test 11: setCamera(nullptr) removes camera without crash
+    // Test 11: getRoot() returns non-null
+    // -----------------------------------------------------------------------
+    {
+        SoViewport vp;
+        bool ok = (vp.getRoot() != nullptr);
+        printf("  test11 getRoot ok=%d\n", (int)ok);
+        if (!ok) { printf("FAIL test11\n"); ++failures; }
+    }
+
+    // -----------------------------------------------------------------------
+    // Test 12: setCamera(nullptr) removes camera without crash
     // -----------------------------------------------------------------------
     {
         SoViewport vp;
@@ -298,8 +337,8 @@ int main(int argc, char ** argv)
         vp.setCamera(cam);
         vp.setCamera(nullptr);
         bool ok = (vp.getCamera() == nullptr);
-        printf("  test11 setCamera(nullptr) ok=%d\n", (int)ok);
-        if (!ok) { printf("FAIL test11\n"); ++failures; }
+        printf("  test12 setCamera(nullptr) ok=%d\n", (int)ok);
+        if (!ok) { printf("FAIL test12\n"); ++failures; }
     }
 
     // -----------------------------------------------------------------------
