@@ -29,11 +29,16 @@ struct ObjectState {
     const char *name = "";
 };
 
-bool renderScene(obol::OffscreenRenderer & renderer,
+bool renderScene(obol::Renderer & renderer,
                  obol::Scene & scene,
+                 const obol::RenderTarget & target,
                  const char * filename)
 {
-    const obol::FrameResult result = renderer.render(scene);
+    obol::FrameRequest request;
+    request.scene = &scene;
+    request.target = target;
+    request.background = {0.0f, 0.0f, 0.0f, 1.0f};
+    const obol::FrameResult result = renderer.render(request);
     return result.success && renderer.writeRGB(filename);
 }
 
@@ -115,38 +120,37 @@ int main(int argc, char **argv)
     target.width = DEFAULT_WIDTH;
     target.height = DEFAULT_HEIGHT;
     target.pixelFormat = obol::PixelFormat::RGB;
-    obol::OffscreenRenderer renderer(backend, target);
-    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
+    obol::Renderer renderer(backend);
 
     const char *baseFilename = (argc > 1) ? argv[1] : "12.2.NodeSensor";
     char filename[256];
 
     printf("\n=== Initial state ===\n");
     snprintf(filename, sizeof(filename), "%s_initial.rgb", baseFilename);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderScene(renderer, scene, target, filename)) return 1;
 
     printf("\n=== Changing cube width ===\n");
     cube.transform.scale.x = 1.5f;
     cubeTransform.set(cube.transform, "width");
     snprintf(filename, sizeof(filename), "%s_cube_width.rgb", baseFilename);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderScene(renderer, scene, target, filename)) return 1;
 
     printf("\n=== Changing cube height ===\n");
     cube.transform.scale.y = 2.0f;
     cubeTransform.set(cube.transform, "height");
     snprintf(filename, sizeof(filename), "%s_cube_height.rgb", baseFilename);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderScene(renderer, scene, target, filename)) return 1;
 
     printf("\n=== Changing sphere radius ===\n");
     sphere.transform.scale = {2.0f, 2.0f, 2.0f};
     sphereTransform.set(sphere.transform, "radius");
     snprintf(filename, sizeof(filename), "%s_sphere_radius.rgb", baseFilename);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderScene(renderer, scene, target, filename)) return 1;
 
     printf("\n=== Removing sphere ===\n");
     spherePresent.set(false);
     snprintf(filename, sizeof(filename), "%s_removed_sphere.rgb", baseFilename);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderScene(renderer, scene, target, filename)) return 1;
 
     return 0;
 }

@@ -53,11 +53,16 @@ obol::Transform transformForIndex(int index)
     return transform;
 }
 
-bool renderScene(obol::OffscreenRenderer & renderer,
+bool renderScene(obol::Renderer & renderer,
                  obol::Scene & scene,
+                 const obol::RenderTarget & target,
                  const char * filename)
 {
-    const obol::FrameResult result = renderer.render(scene);
+    obol::FrameRequest request;
+    request.scene = &scene;
+    request.target = target;
+    request.background = {0.0f, 0.0f, 0.0f, 1.0f};
+    const obol::FrameResult result = renderer.render(request);
     return result.success && renderer.writeRGB(filename);
 }
 
@@ -110,8 +115,7 @@ int main(int argc, char **argv)
     target.width = DEFAULT_WIDTH;
     target.height = DEFAULT_HEIGHT;
     target.pixelFormat = obol::PixelFormat::RGB;
-    obol::OffscreenRenderer renderer(backend, target);
-    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
+    obol::Renderer renderer(backend);
 
     const char *baseFilename = (argc > 1) ? argv[1] : "10.7.PickFilterManip";
     char filename[256];
@@ -119,17 +123,17 @@ int main(int argc, char **argv)
 
     printf("\n=== Initial scene ===\n");
     snprintf(filename, sizeof(filename), "%s_frame%02d_initial.rgb", baseFilename, frameNum++);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderScene(renderer, scene, target, filename)) return 1;
 
     printf("\n=== Object selected (highlighted; manipulator would attach in an interactive app) ===\n");
     scene.setObjectMaterial(firstCone, material(1.0f, 0.5f, 0.0f));
     snprintf(filename, sizeof(filename), "%s_frame%02d_with_manip.rgb", baseFilename, frameNum++);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderScene(renderer, scene, target, filename)) return 1;
 
     printf("\n=== Object deselected (restored to original color) ===\n");
     scene.setObjectMaterial(firstCone, firstConeMaterial);
     snprintf(filename, sizeof(filename), "%s_frame%02d_without_manip.rgb", baseFilename, frameNum++);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderScene(renderer, scene, target, filename)) return 1;
 
     printf("\nRendered %d frames demonstrating pick filtering around manipulators [Obol v2]\n", frameNum);
     return 0;

@@ -163,10 +163,14 @@ bool renderBinding(const char * filename, int bindingType)
     target.width = DEFAULT_WIDTH;
     target.height = DEFAULT_HEIGHT;
     target.pixelFormat = obol::PixelFormat::RGB;
-    obol::OffscreenRenderer renderer(backend, target);
-    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
 
-    const obol::FrameResult result = renderer.render(scene);
+    obol::FrameRequest request;
+    request.scene = &scene;
+    request.target = target;
+    request.background = {0.0f, 0.0f, 0.0f, 1.0f};
+
+    obol::Renderer renderer(backend);
+    const obol::FrameResult result = renderer.render(request);
     return result.success && renderer.writeRGB(filename);
 }
 

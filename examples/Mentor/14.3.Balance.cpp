@@ -133,11 +133,16 @@ void tipBalance(obol::Scene & scene, BalanceKit & kit, float delta)
                             rotateZ(1.5f, 0.0f, 0.0f, -kit.beamAngle));
 }
 
-bool renderScene(obol::OffscreenRenderer & renderer,
+bool renderScene(obol::Renderer & renderer,
                  obol::Scene & scene,
+                 const obol::RenderTarget & target,
                  const char * filename)
 {
-    const obol::FrameResult result = renderer.render(scene);
+    obol::FrameRequest request;
+    request.scene = &scene;
+    request.target = target;
+    request.background = {0.0f, 0.0f, 0.0f, 1.0f};
+    const obol::FrameResult result = renderer.render(request);
     return result.success && renderer.writeRGB(filename);
 }
 
@@ -164,8 +169,7 @@ int main(int argc, char **argv)
     target.width = DEFAULT_WIDTH;
     target.height = DEFAULT_HEIGHT;
     target.pixelFormat = obol::PixelFormat::RGB;
-    obol::OffscreenRenderer renderer(backend, target);
-    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
+    obol::Renderer renderer(backend);
 
     const char *baseFilename = (argc > 1) ? argv[1] : "14.3.Balance";
     char filename[512];
@@ -173,20 +177,20 @@ int main(int argc, char **argv)
     printf("Rendering Balance Scale with keyboard event simulation [Obol v2]...\n");
 
     snprintf(filename, sizeof(filename), "%s_00_initial.rgb", baseFilename);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderScene(renderer, scene, target, filename)) return 1;
     snprintf(filename, sizeof(filename), "%s.rgb", baseFilename);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderScene(renderer, scene, target, filename)) return 1;
 
     for (int i = 0; i < 5; i++) {
         tipBalance(scene, kit, -0.1f);
         snprintf(filename, sizeof(filename), "%s_%02d_right.rgb", baseFilename, i + 1);
-        if (!renderScene(renderer, scene, filename)) return 1;
+        if (!renderScene(renderer, scene, target, filename)) return 1;
     }
 
     for (int i = 0; i < 10; i++) {
         tipBalance(scene, kit, 0.1f);
         snprintf(filename, sizeof(filename), "%s_%02d_left.rgb", baseFilename, i + 6);
-        if (!renderScene(renderer, scene, filename)) return 1;
+        if (!renderScene(renderer, scene, target, filename)) return 1;
     }
 
     printf("Done! Rendered 16 frames showing balance tipping.\n");

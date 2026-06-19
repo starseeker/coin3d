@@ -12,11 +12,16 @@
 
 namespace {
 
-bool renderScene(obol::OffscreenRenderer & renderer,
+bool renderScene(obol::Renderer & renderer,
                  obol::Scene & scene,
+                 const obol::RenderTarget & target,
                  const char * filename)
 {
-    const obol::FrameResult result = renderer.render(scene);
+    obol::FrameRequest request;
+    request.scene = &scene;
+    request.target = target;
+    request.background = {0.0f, 0.0f, 0.0f, 1.0f};
+    const obol::FrameResult result = renderer.render(request);
     return result.success && renderer.writeRGB(filename);
 }
 
@@ -36,11 +41,6 @@ obol::Transform transform(float x, float y, float z,
     result.translation = {x, y, z};
     result.scale = {sx, sy, sz};
     return result;
-}
-
-obol::Transform hidden()
-{
-    return transform(1000.0f, 1000.0f, 1000.0f, 0.001f, 0.001f, 0.001f);
 }
 
 obol::Polyline trackLine()
@@ -93,7 +93,8 @@ int main(int argc, char **argv)
     const obol::SceneObjectId openGate =
         scene.addPrimitive(obol::Primitive::Cube,
                            material(0.0f, 0.8f, 0.18f),
-                           hidden());
+                           transform(-0.25f, 0.65f, 0.0f,
+                                     0.08f, 0.35f, 0.08f));
     const obol::SceneObjectId closedLabel =
         scene.addText3D(label("GATE CLOSED", 0.28f),
                         material(1.0f, 0.05f, 0.02f),
@@ -101,7 +102,9 @@ int main(int argc, char **argv)
     const obol::SceneObjectId openLabel =
         scene.addText3D(label("GATE OPEN", 0.28f),
                         material(0.0f, 0.8f, 0.18f),
-                        hidden());
+                        transform(1.0f, 1.2f, 0.0f));
+    scene.setObjectVisible(openGate, false);
+    scene.setObjectVisible(openLabel, false);
 
     const auto applyGateState = [&scene,
                                  closedGate,
@@ -109,17 +112,15 @@ int main(int argc, char **argv)
                                  closedLabel,
                                  openLabel](bool enabled) {
         if (enabled) {
-            scene.setObjectTransform(closedGate, hidden());
-            scene.setObjectTransform(openGate, transform(-0.25f, 0.65f, 0.0f,
-                                                         0.08f, 0.35f, 0.08f));
-            scene.setObjectTransform(closedLabel, hidden());
-            scene.setObjectTransform(openLabel, transform(1.0f, 1.2f, 0.0f));
+            scene.setObjectVisible(closedGate, false);
+            scene.setObjectVisible(openGate, true);
+            scene.setObjectVisible(closedLabel, false);
+            scene.setObjectVisible(openLabel, true);
         } else {
-            scene.setObjectTransform(closedGate, transform(-0.25f, 0.0f, 0.0f,
-                                                           0.08f, 1.2f, 0.08f));
-            scene.setObjectTransform(openGate, hidden());
-            scene.setObjectTransform(closedLabel, transform(1.0f, 1.2f, 0.0f));
-            scene.setObjectTransform(openLabel, hidden());
+            scene.setObjectVisible(closedGate, true);
+            scene.setObjectVisible(openGate, false);
+            scene.setObjectVisible(closedLabel, true);
+            scene.setObjectVisible(openLabel, false);
         }
     };
 
@@ -157,8 +158,7 @@ int main(int argc, char **argv)
     target.width = DEFAULT_WIDTH;
     target.height = DEFAULT_HEIGHT;
     target.pixelFormat = obol::PixelFormat::RGB;
-    obol::OffscreenRenderer renderer(backend, target);
-    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
+    obol::Renderer renderer(backend);
 
     const char *baseFilename = (argc > 1) ? argv[1] : "13.4.Gate";
     char filename[256];
@@ -175,7 +175,7 @@ int main(int argc, char **argv)
         gateEnabled.set(false, "enable");
         printf("Time %.1f: Gate disabled, X = %.2f\n", timeValue, objectTransform.translation.x);
         snprintf(filename, sizeof(filename), "%s_disabled_%02d.rgb", baseFilename, i);
-        if (!renderScene(renderer, scene, filename)) return 1;
+        if (!renderScene(renderer, scene, target, filename)) return 1;
     }
 
     printf("\n=== Gate ENABLED ===\n");
@@ -188,7 +188,7 @@ int main(int argc, char **argv)
         gateEnabled.set(true, "enable");
         printf("Time %.1f: Gate enabled, X = %.2f\n", timeValue, objectTransform.translation.x);
         snprintf(filename, sizeof(filename), "%s_enabled_%02d.rgb", baseFilename, i);
-        if (!renderScene(renderer, scene, filename)) return 1;
+        if (!renderScene(renderer, scene, target, filename)) return 1;
     }
 
     return 0;

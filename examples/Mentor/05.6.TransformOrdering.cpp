@@ -104,13 +104,18 @@ obol::PerspectiveCamera makeCamera(const obol::Scene & scene, bool angled)
     return camera;
 }
 
-bool renderView(obol::OffscreenRenderer & renderer,
+bool renderView(obol::Renderer & renderer,
                 obol::Scene & scene,
+                const obol::RenderTarget & target,
                 const char * filename,
                 bool angled)
 {
     scene.setCamera(makeCamera(scene, angled));
-    const obol::FrameResult result = renderer.render(scene);
+    obol::FrameRequest request;
+    request.scene = &scene;
+    request.target = target;
+    request.background = {0.0f, 0.0f, 0.0f, 1.0f};
+    const obol::FrameResult result = renderer.render(request);
     return result.success && renderer.writeRGB(filename);
 }
 
@@ -160,14 +165,13 @@ int main(int argc, char **argv)
     target.width = DEFAULT_WIDTH;
     target.height = DEFAULT_HEIGHT;
     target.pixelFormat = obol::PixelFormat::RGB;
-    obol::OffscreenRenderer renderer(backend, target);
-    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
+    obol::Renderer renderer(backend);
 
     const char *baseFilename = (argc > 1) ? argv[1] : "05.6.TransformOrdering";
     char filename[256];
 
     snprintf(filename, sizeof(filename), "%s_front.rgb", baseFilename);
-    if (!renderView(renderer, scene, filename, false)) {
+    if (!renderView(renderer, scene, target, filename, false)) {
         fprintf(stderr, "Error: Failed to render front TransformOrdering view with Obol v2 API\n");
         return 1;
     }
@@ -176,7 +180,7 @@ int main(int argc, char **argv)
     printf("Left: translate->rotate->scale, Right: translate->scale->rotate [Obol v2]\n");
 
     snprintf(filename, sizeof(filename), "%s_angle.rgb", baseFilename);
-    if (!renderView(renderer, scene, filename, true)) {
+    if (!renderView(renderer, scene, target, filename, true)) {
         fprintf(stderr, "Error: Failed to render angled TransformOrdering view with Obol v2 API\n");
         return 1;
     }

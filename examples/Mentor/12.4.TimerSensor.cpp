@@ -26,11 +26,16 @@ namespace {
 constexpr float kPi = 3.14159265358979323846f;
 int rotationCount = 0;
 
-bool renderScene(obol::OffscreenRenderer & renderer,
+bool renderScene(obol::Renderer & renderer,
                  obol::Scene & scene,
+                 const obol::RenderTarget & target,
                  const char * filename)
 {
-    const obol::FrameResult result = renderer.render(scene);
+    obol::FrameRequest request;
+    request.scene = &scene;
+    request.target = target;
+    request.background = {0.0f, 0.0f, 0.0f, 1.0f};
+    const obol::FrameResult result = renderer.render(request);
     return result.success && renderer.writeRGB(filename);
 }
 
@@ -84,8 +89,7 @@ int main(int argc, char **argv)
     target.width = DEFAULT_WIDTH;
     target.height = DEFAULT_HEIGHT;
     target.pixelFormat = obol::PixelFormat::RGB;
-    obol::OffscreenRenderer renderer(backend, target);
-    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
+    obol::Renderer renderer(backend);
 
     float intervalSeconds = 1.0f;
 
@@ -94,14 +98,14 @@ int main(int argc, char **argv)
 
     printf("Initial state\n");
     snprintf(filename, sizeof(filename), "%s_initial.rgb", baseFilename);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderScene(renderer, scene, target, filename)) return 1;
 
     int frameCount = 0;
     for (int i = 0; i < 8; i++) {
         rotatingSensorCallback(scene, cone, coneTransform);
 
         snprintf(filename, sizeof(filename), "%s_frame%02d.rgb", baseFilename, ++frameCount);
-        if (!renderScene(renderer, scene, filename)) return 1;
+        if (!renderScene(renderer, scene, target, filename)) return 1;
 
         if (i == 4) {
             printf("\n5 seconds elapsed, triggering scheduling sensor...\n");

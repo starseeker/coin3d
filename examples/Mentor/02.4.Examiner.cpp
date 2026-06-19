@@ -20,11 +20,16 @@ obol::Material red()
     return material;
 }
 
-bool renderScene(obol::OffscreenRenderer & renderer,
+bool renderScene(obol::Renderer & renderer,
                  obol::Scene & scene,
+                 const obol::RenderTarget & target,
                  const char * filename)
 {
-    const obol::FrameResult result = renderer.render(scene);
+    obol::FrameRequest request;
+    request.scene = &scene;
+    request.target = target;
+    request.background = {0.0f, 0.0f, 0.0f, 1.0f};
+    const obol::FrameResult result = renderer.render(request);
     return result.success && renderer.writeRGB(filename);
 }
 
@@ -62,17 +67,16 @@ int main(int argc, char **argv)
     target.width = DEFAULT_WIDTH;
     target.height = DEFAULT_HEIGHT;
     target.pixelFormat = obol::PixelFormat::RGB;
-    obol::OffscreenRenderer renderer(backend, target);
-    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
+    obol::Renderer renderer(backend);
 
     const char *baseFilename = (argc > 1) ? argv[1] : "02.4.Examiner";
     char filename[512];
     int frame = 0;
 
     snprintf(filename, sizeof(filename), "%s_frame%02d_initial.rgb", baseFilename, frame++);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderScene(renderer, scene, target, filename)) return 1;
     snprintf(filename, sizeof(filename), "%s.rgb", baseFilename);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderScene(renderer, scene, target, filename)) return 1;
 
     for (int i = 1; i <= 8; i++) {
         const float angle = (3.14159265358979323846f / 4.0f) * i;
@@ -86,7 +90,7 @@ int main(int argc, char **argv)
         camera.target = {0.0f, 0.0f, 0.0f};
         scene.setCamera(camera);
         snprintf(filename, sizeof(filename), "%s_frame%02d_tumble.rgb", baseFilename, frame++);
-        if (!renderScene(renderer, scene, filename)) return 1;
+        if (!renderScene(renderer, scene, target, filename)) return 1;
     }
 
     for (int i = 0; i < 4; i++) {
@@ -101,7 +105,7 @@ int main(int argc, char **argv)
         camera.farDistance = initialCamera.farDistance * scale;
         scene.setCamera(camera);
         snprintf(filename, sizeof(filename), "%s_frame%02d_dolly.rgb", baseFilename, frame++);
-        if (!renderScene(renderer, scene, filename)) return 1;
+        if (!renderScene(renderer, scene, target, filename)) return 1;
     }
 
     printf("Rendered %d frames simulating examiner viewer operations [Obol v2]\n", frame);

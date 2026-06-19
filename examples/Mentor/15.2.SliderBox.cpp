@@ -87,11 +87,16 @@ void addWireBox(obol::Scene & scene)
     scene.addPolyline(box, material(1.0f, 0.0f, 1.0f));
 }
 
-bool renderScene(obol::OffscreenRenderer & renderer,
+bool renderScene(obol::Renderer & renderer,
                  obol::Scene & scene,
+                 const obol::RenderTarget & target,
                  const char * filename)
 {
-    const obol::FrameResult result = renderer.render(scene);
+    obol::FrameRequest request;
+    request.scene = &scene;
+    request.target = target;
+    request.background = {0.0f, 0.0f, 0.0f, 1.0f};
+    const obol::FrameResult result = renderer.render(request);
     return result.success && renderer.writeRGB(filename);
 }
 
@@ -157,8 +162,7 @@ int main(int argc, char **argv)
     target.width = DEFAULT_WIDTH;
     target.height = DEFAULT_HEIGHT;
     target.pixelFormat = obol::PixelFormat::RGB;
-    obol::OffscreenRenderer renderer(backend, target);
-    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
+    obol::Renderer renderer(backend);
 
     const char *baseFilename = (argc > 1) ? argv[1] : "15.2.SliderBox";
     char filename[512];
@@ -168,35 +172,35 @@ int main(int argc, char **argv)
 
     setTextPosition(scene, textId, state);
     snprintf(filename, sizeof(filename), "%s_00_center.rgb", baseFilename);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderScene(renderer, scene, target, filename)) return 1;
     snprintf(filename, sizeof(filename), "%s.rgb", baseFilename);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderScene(renderer, scene, target, filename)) return 1;
 
     for (int i = 1; i <= 4; i++) {
         state = {i * 2.0f, 0.0f, 0.0f};
         setTextPosition(scene, textId, state);
         snprintf(filename, sizeof(filename), "%s_%02d_x_pos.rgb", baseFilename, i);
-        if (!renderScene(renderer, scene, filename)) return 1;
+        if (!renderScene(renderer, scene, target, filename)) return 1;
     }
 
     for (int i = 1; i <= 4; i++) {
         state = {0.0f, i * 1.5f, 0.0f};
         setTextPosition(scene, textId, state);
         snprintf(filename, sizeof(filename), "%s_%02d_y_pos.rgb", baseFilename, i + 4);
-        if (!renderScene(renderer, scene, filename)) return 1;
+        if (!renderScene(renderer, scene, target, filename)) return 1;
     }
 
     for (int i = 1; i <= 4; i++) {
         state = {0.0f, 0.0f, i * 2.0f};
         setTextPosition(scene, textId, state);
         snprintf(filename, sizeof(filename), "%s_%02d_z_pos.rgb", baseFilename, i + 8);
-        if (!renderScene(renderer, scene, filename)) return 1;
+        if (!renderScene(renderer, scene, target, filename)) return 1;
     }
 
     state = {4.0f, 2.0f, 4.0f};
     setTextPosition(scene, textId, state);
     snprintf(filename, sizeof(filename), "%s_13_combined.rgb", baseFilename);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderScene(renderer, scene, target, filename)) return 1;
 
     printf("Done! Rendered 14 frames showing slider-controlled text movement.\n");
     return 0;

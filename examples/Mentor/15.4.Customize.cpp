@@ -130,11 +130,16 @@ void updateRig(obol::Scene & scene,
     scene.setObjectTransform(rig.text, transform(x, y, z));
 }
 
-bool renderScene(obol::OffscreenRenderer & renderer,
+bool renderScene(obol::Renderer & renderer,
                  obol::Scene & scene,
+                 const obol::RenderTarget & target,
                  const char * filename)
 {
-    const obol::FrameResult result = renderer.render(scene);
+    obol::FrameRequest request;
+    request.scene = &scene;
+    request.target = target;
+    request.background = {0.0f, 0.0f, 0.0f, 1.0f};
+    const obol::FrameResult result = renderer.render(request);
     return result.success && renderer.writeRGB(filename);
 }
 
@@ -181,8 +186,7 @@ int main(int argc, char **argv)
     target.width = DEFAULT_WIDTH;
     target.height = DEFAULT_HEIGHT;
     target.pixelFormat = obol::PixelFormat::RGB;
-    obol::OffscreenRenderer renderer(backend, target);
-    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
+    obol::Renderer renderer(backend);
 
     const char *baseFilename = (argc > 1) ? argv[1] : "15.4.Customize";
     char filename[512];
@@ -191,31 +195,31 @@ int main(int argc, char **argv)
 
     updateRig(scene, rig, 0.0f, 0.0f, 0.0f, ActiveAxis::None);
     snprintf(filename, sizeof(filename), "%s_00_center.rgb", baseFilename);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderScene(renderer, scene, target, filename)) return 1;
     snprintf(filename, sizeof(filename), "%s.rgb", baseFilename);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderScene(renderer, scene, target, filename)) return 1;
 
     for (int i = 1; i <= 3; i++) {
         updateRig(scene, rig, i * 2.5f, 0.0f, 0.0f, ActiveAxis::X);
         snprintf(filename, sizeof(filename), "%s_%02d_x_custom.rgb", baseFilename, i);
-        if (!renderScene(renderer, scene, filename)) return 1;
+        if (!renderScene(renderer, scene, target, filename)) return 1;
     }
 
     for (int i = 1; i <= 3; i++) {
         updateRig(scene, rig, 0.0f, i * 2.0f, 0.0f, ActiveAxis::Y);
         snprintf(filename, sizeof(filename), "%s_%02d_y_custom.rgb", baseFilename, i + 3);
-        if (!renderScene(renderer, scene, filename)) return 1;
+        if (!renderScene(renderer, scene, target, filename)) return 1;
     }
 
     for (int i = 1; i <= 3; i++) {
         updateRig(scene, rig, 0.0f, 0.0f, i * 2.5f, ActiveAxis::Z);
         snprintf(filename, sizeof(filename), "%s_%02d_z_custom.rgb", baseFilename, i + 6);
-        if (!renderScene(renderer, scene, filename)) return 1;
+        if (!renderScene(renderer, scene, target, filename)) return 1;
     }
 
     updateRig(scene, rig, 5.0f, 3.0f, 5.0f, ActiveAxis::None);
     snprintf(filename, sizeof(filename), "%s_10_combined.rgb", baseFilename);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderScene(renderer, scene, target, filename)) return 1;
 
     printf("Done! Rendered 11 frames showing customized dragger geometry.\n");
     return 0;

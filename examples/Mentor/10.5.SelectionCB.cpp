@@ -70,11 +70,16 @@ obol::Transform translation(float x, float y, float z)
     return transform;
 }
 
-bool renderScene(obol::OffscreenRenderer & renderer,
+bool renderScene(obol::Renderer & renderer,
                  obol::Scene & scene,
+                 const obol::RenderTarget & target,
                  const char * filename)
 {
-    const obol::FrameResult result = renderer.render(scene);
+    obol::FrameRequest request;
+    request.scene = &scene;
+    request.target = target;
+    request.background = {0.0f, 0.0f, 0.0f, 1.0f};
+    const obol::FrameResult result = renderer.render(request);
     return result.success && renderer.writeRGB(filename);
 }
 
@@ -134,8 +139,7 @@ int main(int argc, char **argv)
     target.width = DEFAULT_WIDTH;
     target.height = DEFAULT_HEIGHT;
     target.pixelFormat = obol::PixelFormat::RGB;
-    obol::OffscreenRenderer renderer(backend, target);
-    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
+    obol::Renderer renderer(backend);
 
     const char *baseFilename = (argc > 1) ? argv[1] : "10.5.SelectionCB";
     char filename[256];
@@ -144,7 +148,7 @@ int main(int argc, char **argv)
 
     printf("\n=== Initial state (nothing selected) ===\n");
     snprintf(filename, sizeof(filename), "%s_frame%02d_initial.rgb", baseFilename, frameNum++);
-    if (!renderScene(renderer, scene, filename)) {
+    if (!renderScene(renderer, scene, target, filename)) {
         fprintf(stderr, "Error: Failed to render initial selection scene with Obol v2 API\n");
         return 1;
     }
@@ -152,22 +156,22 @@ int main(int argc, char **argv)
     printf("\n=== Selecting sphere (sphere turns red) ===\n");
     selectObject(scene, sphere, "Sphere", selected);
     snprintf(filename, sizeof(filename), "%s_frame%02d_sphere_selected.rgb", baseFilename, frameNum++);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderScene(renderer, scene, target, filename)) return 1;
 
     printf("\n=== Deselecting sphere (sphere returns to gray) ===\n");
     deselectObject(scene, sphere, "Sphere", normal);
     snprintf(filename, sizeof(filename), "%s_frame%02d_sphere_deselected.rgb", baseFilename, frameNum++);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderScene(renderer, scene, target, filename)) return 1;
 
     printf("\n=== Selecting cube (cube turns red) ===\n");
     selectObject(scene, cube, "Cube", selected);
     snprintf(filename, sizeof(filename), "%s_frame%02d_cube_selected.rgb", baseFilename, frameNum++);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderScene(renderer, scene, target, filename)) return 1;
 
     printf("\n=== Deselecting cube (cube returns to gray) ===\n");
     deselectObject(scene, cube, "Cube", normal);
     snprintf(filename, sizeof(filename), "%s_frame%02d_cube_deselected.rgb", baseFilename, frameNum++);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderScene(renderer, scene, target, filename)) return 1;
 
     printf("\nRendered %d frames demonstrating application selection callbacks [Obol v2]\n", frameNum);
     return 0;

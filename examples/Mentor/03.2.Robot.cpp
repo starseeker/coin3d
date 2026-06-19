@@ -144,8 +144,9 @@ obol::Scene makeRobot()
     return scene;
 }
 
-bool renderView(obol::OffscreenRenderer & renderer,
+bool renderView(obol::Renderer & renderer,
                 obol::Scene & scene,
+                const obol::RenderTarget & target,
                 const char * filename,
                 const obol::Vec3 & position)
 {
@@ -155,7 +156,11 @@ bool renderView(obol::OffscreenRenderer & renderer,
     camera.verticalFieldOfViewRadians = 0.75f;
     scene.setCamera(camera);
 
-    const obol::FrameResult result = renderer.render(scene);
+    obol::FrameRequest request;
+    request.scene = &scene;
+    request.target = target;
+    request.background = {0.0f, 0.0f, 0.0f, 1.0f};
+    const obol::FrameResult result = renderer.render(request);
     return result.success && renderer.writeRGB(filename);
 }
 
@@ -173,26 +178,25 @@ int main(int argc, char **argv)
     target.width = DEFAULT_WIDTH;
     target.height = DEFAULT_HEIGHT;
     target.pixelFormat = obol::PixelFormat::RGB;
-    obol::OffscreenRenderer renderer(backend, target);
-    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
+    obol::Renderer renderer(backend);
 
     const char *baseFilename = (argc > 1) ? argv[1] : "03.2.Robot";
     char filename[256];
     
     snprintf(filename, sizeof(filename), "%s_front.rgb", baseFilename);
-    if (!renderView(renderer, scene, filename, {0.0f, 1.0f, 18.0f})) {
+    if (!renderView(renderer, scene, target, filename, {0.0f, 1.0f, 18.0f})) {
         fprintf(stderr, "Error: Failed to render front robot view with Obol v2 API\n");
         return 1;
     }
     
     snprintf(filename, sizeof(filename), "%s_side.rgb", baseFilename);
-    if (!renderView(renderer, scene, filename, {18.0f, 1.0f, 0.0f})) {
+    if (!renderView(renderer, scene, target, filename, {18.0f, 1.0f, 0.0f})) {
         fprintf(stderr, "Error: Failed to render side robot view with Obol v2 API\n");
         return 1;
     }
     
     snprintf(filename, sizeof(filename), "%s_angle.rgb", baseFilename);
-    if (!renderView(renderer, scene, filename, {12.0f, 7.0f, 12.0f})) {
+    if (!renderView(renderer, scene, target, filename, {12.0f, 7.0f, 12.0f})) {
         fprintf(stderr, "Error: Failed to render angled robot view with Obol v2 API\n");
         return 1;
     }

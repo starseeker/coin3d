@@ -26,11 +26,16 @@ namespace {
 constexpr float kHalfPi = 1.57079632679f;
 bool flagRaised = false;
 
-bool renderScene(obol::OffscreenRenderer & renderer,
+bool renderScene(obol::Renderer & renderer,
                  obol::Scene & scene,
+                 const obol::RenderTarget & target,
                  const char * filename)
 {
-    const obol::FrameResult result = renderer.render(scene);
+    obol::FrameRequest request;
+    request.scene = &scene;
+    request.target = target;
+    request.background = {0.0f, 0.0f, 0.0f, 1.0f};
+    const obol::FrameResult result = renderer.render(request);
     return result.success && renderer.writeRGB(filename);
 }
 
@@ -77,22 +82,21 @@ int main(int argc, char **argv)
     target.width = DEFAULT_WIDTH;
     target.height = DEFAULT_HEIGHT;
     target.pixelFormat = obol::PixelFormat::RGB;
-    obol::OffscreenRenderer renderer(backend, target);
-    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
+    obol::Renderer renderer(backend);
 
     const char *baseFilename = (argc > 1) ? argv[1] : "12.3.AlarmSensor";
     char filename[256];
 
     printf("Before alarm triggers...\n");
     snprintf(filename, sizeof(filename), "%s_before.rgb", baseFilename);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderScene(renderer, scene, target, filename)) return 1;
 
     printf("\nProcessing app alarm queue...\n");
     raiseFlagCallback(scene, flag, flagTransform);
 
     printf("\nAfter alarm triggers...\n");
     snprintf(filename, sizeof(filename), "%s_after.rgb", baseFilename);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderScene(renderer, scene, target, filename)) return 1;
 
     printf("\nFlag raised: %s\n", flagRaised ? "Yes" : "No");
     return 0;

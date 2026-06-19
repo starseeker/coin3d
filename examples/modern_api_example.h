@@ -1,8 +1,8 @@
 /* Modern C++ example demonstrating the Obol v2 render API.
  *
  * Applications still provide the platform/backend context implementation, but
- * v2 code should wrap it in obol::ContextManagerBackend and render through
- * obol::OffscreenRenderer instead of constructing Inventor nodes directly.
+ * v2 code should wrap it in obol::ContextManagerBackend and render explicit
+ * obol::FrameRequest values instead of constructing Inventor nodes directly.
  */
 
 #ifndef OBOL_EXAMPLES_MODERN_API_EXAMPLE_H
@@ -40,8 +40,13 @@ inline void demonstrateObolV2Usage(SoDB::ContextManager * mgr)
     target.width = 256;
     target.height = 256;
     target.pixelFormat = obol::PixelFormat::RGB;
-    obol::OffscreenRenderer renderer(backend, target);
-    obol::FrameResult result = renderer.render(scene);
+
+    obol::FrameRequest request;
+    request.scene = &scene;
+    request.target = target;
+
+    obol::Renderer renderer(backend);
+    obol::FrameResult result = renderer.render(request);
     if (!result.success) {
         std::printf("Obol v2 render failed\n");
         return;
@@ -66,8 +71,8 @@ inline void demonstrateObolV2Usage(SoDB::ContextManager * mgr)
  *
  * 2. Pass that manager to SoDB::init() at application start.
  *
- * 3. Wrap the manager in obol::ContextManagerBackend and pass that backend to
- *    each obol::OffscreenRenderer.
+ * 3. Wrap the manager in obol::ContextManagerBackend, create obol::Renderer,
+ *    and submit explicit obol::FrameRequest values for each frame.
  *
  * This keeps application code on the v2 scene/render API while preserving the
  * existing tested OpenGL2, system OpenGL, OSMesa, and non-GL render paths.

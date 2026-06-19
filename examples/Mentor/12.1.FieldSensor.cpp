@@ -25,11 +25,16 @@ namespace {
 
 int callbackCount = 0;
 
-bool renderScene(obol::OffscreenRenderer & renderer,
+bool renderScene(obol::Renderer & renderer,
                  obol::Scene & scene,
+                 const obol::RenderTarget & target,
                  const char * filename)
 {
-    const obol::FrameResult result = renderer.render(scene);
+    obol::FrameRequest request;
+    request.scene = &scene;
+    request.target = target;
+    request.background = {0.0f, 0.0f, 0.0f, 1.0f};
+    const obol::FrameResult result = renderer.render(request);
     return result.success && renderer.writeRGB(filename);
 }
 
@@ -84,30 +89,29 @@ int main(int argc, char **argv)
     target.width = DEFAULT_WIDTH;
     target.height = DEFAULT_HEIGHT;
     target.pixelFormat = obol::PixelFormat::RGB;
-    obol::OffscreenRenderer renderer(backend, target);
-    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
+    obol::Renderer renderer(backend);
 
     const char *baseFilename = (argc > 1) ? argv[1] : "12.1.FieldSensor";
     char filename[256];
 
     snprintf(filename, sizeof(filename), "%s_initial.rgb", baseFilename);
     printf("\nRendering initial state...\n");
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderScene(renderer, scene, target, filename)) return 1;
 
     printf("\nChanging camera position 1...\n");
     setCameraPosition(scene, cameraPosition, {2.0f, 3.0f, 10.0f});
     snprintf(filename, sizeof(filename), "%s_pos1.rgb", baseFilename);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderScene(renderer, scene, target, filename)) return 1;
 
     printf("\nChanging camera position 2...\n");
     setCameraPosition(scene, cameraPosition, {-3.0f, 2.0f, 8.0f});
     snprintf(filename, sizeof(filename), "%s_pos2.rgb", baseFilename);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderScene(renderer, scene, target, filename)) return 1;
 
     printf("\nChanging camera position 3...\n");
     setCameraPosition(scene, cameraPosition, {0.0f, -4.0f, 6.0f});
     snprintf(filename, sizeof(filename), "%s_pos3.rgb", baseFilename);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderScene(renderer, scene, target, filename)) return 1;
 
     printf("\nTotal callbacks received: %d\n", callbackCount);
     return 0;

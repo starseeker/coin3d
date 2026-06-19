@@ -36,3 +36,17 @@ target_include_directories(test_v2_scene_suite PRIVATE
     ${OBOL_TARGET_INCLUDE_DIRECTORIES}
 )
 add_test(NAME test_v2_scene_suite COMMAND test_v2_scene_suite)
+
+add_test(
+    NAME test_v2_example_render_api
+    COMMAND ${CMAKE_COMMAND}
+        -DPROJECT_SOURCE_DIR=${PROJECT_SOURCE_DIR}
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/check_v2_example_render_api.cmake
+)
+
+add_test(
+    NAME test_v2_public_headers
+    COMMAND ${CMAKE_COMMAND}
+        -DPROJECT_SOURCE_DIR=${PROJECT_SOURCE_DIR}
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/check_v2_public_headers.cmake
+)

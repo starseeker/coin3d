@@ -87,35 +87,34 @@ void addManipulatorOverlay(obol::Scene & scene,
                            Manipulator active,
                            const ObjectIds & ids)
 {
+    obol::ManipulatorAttachment attachment;
     if (active == Manipulator::SphereHandleBox) {
         obol::ManipulatorOverlay overlay;
         overlay.target = ids.sphere;
         overlay.kind = obol::ManipulatorOverlayKind::HandleBox;
-        overlay.transform = transform(0.0f, 0.0f, 0.0f);
         overlay.boxHalfSize = {1.25f, 1.25f, 1.25f};
         overlay.lineWidth = 2.0f;
         overlay.material = material(1.0f, 0.2f, 0.2f);
-        obol::TransformDragger::addManipulatorOverlay(scene, overlay);
+        attachment = obol::TransformDragger::attachManipulator(scene, overlay);
     } else if (active == Manipulator::CubeTrackball) {
         obol::ManipulatorOverlay overlay;
         overlay.target = ids.cube;
         overlay.kind = obol::ManipulatorOverlayKind::Trackball;
-        overlay.transform = transform(-kObjectSpacing, 0.0f, 0.0f);
         overlay.trackballRadius = 1.35f;
         overlay.lineWidth = 2.0f;
         overlay.segments = 48;
         overlay.material = material(0.2f, 1.0f, 0.2f);
-        obol::TransformDragger::addManipulatorOverlay(scene, overlay);
+        attachment = obol::TransformDragger::attachManipulator(scene, overlay);
     } else if (active == Manipulator::ConeTransformBox) {
         obol::ManipulatorOverlay overlay;
         overlay.target = ids.cone;
         overlay.kind = obol::ManipulatorOverlayKind::TransformBox;
-        overlay.transform = transform(kObjectSpacing, 0.0f, 0.0f);
         overlay.boxHalfSize = {1.25f, 1.25f, 1.25f};
         overlay.lineWidth = 2.0f;
         overlay.material = material(0.92f, 0.92f, 0.88f);
-        obol::TransformDragger::addManipulatorOverlay(scene, overlay);
+        attachment = obol::TransformDragger::attachManipulator(scene, overlay);
     }
+    (void)attachment;
 }
 
 obol::Scene makeScene(Manipulator active)
@@ -128,12 +127,17 @@ obol::Scene makeScene(Manipulator active)
     return scene;
 }
 
-bool renderScene(obol::OffscreenRenderer & renderer,
+bool renderScene(obol::Renderer & renderer,
                  Manipulator active,
+                 const obol::RenderTarget & target,
                  const char * filename)
 {
     obol::Scene scene = makeScene(active);
-    const obol::FrameResult result = renderer.render(scene);
+    obol::FrameRequest request;
+    request.scene = &scene;
+    request.target = target;
+    request.background = {0.0f, 0.0f, 0.0f, 1.0f};
+    const obol::FrameResult result = renderer.render(request);
     return result.success && renderer.writeRGB(filename);
 }
 
@@ -150,8 +154,7 @@ int main(int argc, char **argv)
     target.width = DEFAULT_WIDTH;
     target.height = DEFAULT_HEIGHT;
     target.pixelFormat = obol::PixelFormat::RGB;
-    obol::OffscreenRenderer renderer(backend, target);
-    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
+    obol::Renderer renderer(backend);
 
     const char *baseFilename = (argc > 1) ? argv[1] : "15.3.AttachManip";
     char filename[512];
@@ -159,33 +162,33 @@ int main(int argc, char **argv)
     printf("\n=== Manipulator Attachment Demo [Obol v2] ===\n");
 
     snprintf(filename, sizeof(filename), "%s_frame00_initial.rgb", baseFilename);
-    if (!renderScene(renderer, Manipulator::None, filename)) return 1;
+    if (!renderScene(renderer, Manipulator::None, target, filename)) return 1;
     snprintf(filename, sizeof(filename), "%s.rgb", baseFilename);
-    if (!renderScene(renderer, Manipulator::None, filename)) return 1;
+    if (!renderScene(renderer, Manipulator::None, target, filename)) return 1;
 
     printf("Frame 1: Attaching HandleBox overlay to sphere\n");
     snprintf(filename, sizeof(filename), "%s_frame01_sphere_handlebox.rgb", baseFilename);
-    if (!renderScene(renderer, Manipulator::SphereHandleBox, filename)) return 1;
+    if (!renderScene(renderer, Manipulator::SphereHandleBox, target, filename)) return 1;
 
     printf("Frame 2: Detaching manipulator from sphere\n");
     snprintf(filename, sizeof(filename), "%s_frame02_sphere_detached.rgb", baseFilename);
-    if (!renderScene(renderer, Manipulator::None, filename)) return 1;
+    if (!renderScene(renderer, Manipulator::None, target, filename)) return 1;
 
     printf("Frame 3: Attaching Trackball overlay to cube\n");
     snprintf(filename, sizeof(filename), "%s_frame03_cube_trackball.rgb", baseFilename);
-    if (!renderScene(renderer, Manipulator::CubeTrackball, filename)) return 1;
+    if (!renderScene(renderer, Manipulator::CubeTrackball, target, filename)) return 1;
 
     printf("Frame 4: Detaching manipulator from cube\n");
     snprintf(filename, sizeof(filename), "%s_frame04_cube_detached.rgb", baseFilename);
-    if (!renderScene(renderer, Manipulator::None, filename)) return 1;
+    if (!renderScene(renderer, Manipulator::None, target, filename)) return 1;
 
     printf("Frame 5: Attaching TransformBox overlay to cone\n");
     snprintf(filename, sizeof(filename), "%s_frame05_cone_transformbox.rgb", baseFilename);
-    if (!renderScene(renderer, Manipulator::ConeTransformBox, filename)) return 1;
+    if (!renderScene(renderer, Manipulator::ConeTransformBox, target, filename)) return 1;
 
     printf("Frame 6: Detaching manipulator from cone\n");
     snprintf(filename, sizeof(filename), "%s_frame06_cone_detached.rgb", baseFilename);
-    if (!renderScene(renderer, Manipulator::None, filename)) return 1;
+    if (!renderScene(renderer, Manipulator::None, target, filename)) return 1;
 
     printf("Rendered 7 frames showing manipulator attachment/detachment.\n");
     return 0;

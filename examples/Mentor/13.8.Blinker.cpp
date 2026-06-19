@@ -12,11 +12,16 @@
 
 namespace {
 
-bool renderScene(obol::OffscreenRenderer & renderer,
+bool renderScene(obol::Renderer & renderer,
                  obol::Scene & scene,
+                 const obol::RenderTarget & target,
                  const char * filename)
 {
-    const obol::FrameResult result = renderer.render(scene);
+    obol::FrameRequest request;
+    request.scene = &scene;
+    request.target = target;
+    request.background = {0.0f, 0.0f, 0.0f, 1.0f};
+    const obol::FrameResult result = renderer.render(request);
     return result.success && renderer.writeRGB(filename);
 }
 
@@ -32,14 +37,6 @@ obol::Transform transform(float x, float y, float z, float sx, float sy, float s
     obol::Transform result;
     result.translation = {x, y, z};
     result.scale = {sx, sy, sz};
-    return result;
-}
-
-obol::Transform hidden()
-{
-    obol::Transform result;
-    result.translation = {1000.0f, 1000.0f, 1000.0f};
-    result.scale = {0.001f, 0.001f, 0.001f};
     return result;
 }
 
@@ -75,8 +72,7 @@ int main(int argc, char **argv)
     target.width = DEFAULT_WIDTH;
     target.height = DEFAULT_HEIGHT;
     target.pixelFormat = obol::PixelFormat::RGB;
-    obol::OffscreenRenderer renderer(backend, target);
-    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
+    obol::Renderer renderer(backend);
 
     const char *baseFilename = (argc > 1) ? argv[1] : "13.8.Blinker";
     char filename[256];
@@ -85,15 +81,17 @@ int main(int argc, char **argv)
         const float time = i * 0.25f;
         const bool fastOn = (int(time / 0.5f) % 2) == 0;
         const bool slowOn = (int(time / 2.0f) % 2) == 0;
-        scene.setObjectTransform(fast, fastOn ? fastVisible : hidden());
-        scene.setObjectTransform(slow, slowOn ? slowVisible : hidden());
+        scene.setObjectVisible(fast, fastOn);
+        scene.setObjectVisible(slow, slowOn);
+        scene.setObjectTransform(fast, fastVisible);
+        scene.setObjectTransform(slow, slowVisible);
 
         printf("Time %.2f: Fast=%s, Slow=%s\n",
                time,
                fastOn ? "ON " : "OFF",
                slowOn ? "ON " : "OFF");
         snprintf(filename, sizeof(filename), "%s_frame%02d.rgb", baseFilename, i);
-        if (!renderScene(renderer, scene, filename)) return 1;
+        if (!renderScene(renderer, scene, target, filename)) return 1;
     }
 
     return 0;

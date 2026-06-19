@@ -140,11 +140,16 @@ bool handleEvent(AppState & state, const AppEvent & event)
     return false;
 }
 
-bool renderScene(obol::OffscreenRenderer & renderer,
+bool renderScene(obol::Renderer & renderer,
                  obol::Scene & scene,
+                 const obol::RenderTarget & target,
                  const char * filename)
 {
-    const obol::FrameResult result = renderer.render(scene);
+    obol::FrameRequest request;
+    request.scene = &scene;
+    request.target = target;
+    request.background = {0.0f, 0.0f, 0.0f, 1.0f};
+    const obol::FrameResult result = renderer.render(request);
     return result.success && renderer.writeRGB(filename);
 }
 
@@ -185,8 +190,7 @@ int main(int argc, char **argv)
     target.width = DEFAULT_WIDTH;
     target.height = DEFAULT_HEIGHT;
     target.pixelFormat = obol::PixelFormat::RGB;
-    obol::OffscreenRenderer renderer(backend, target);
-    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
+    obol::Renderer renderer(backend);
 
     printf("Setting event callback - events will go to app handler\n");
     printf("\n=== Simulating user interactions ===\n\n");
@@ -196,9 +200,9 @@ int main(int argc, char **argv)
 
     printf("--- State 1: Initial empty scene ---\n");
     snprintf(filename, sizeof(filename), "%s_initial.rgb", baseFilename);
-    if (!renderScene(renderer, app.scene, filename)) return 1;
+    if (!renderScene(renderer, app.scene, target, filename)) return 1;
     snprintf(filename, sizeof(filename), "%s.rgb", baseFilename);
-    if (!renderScene(renderer, app.scene, filename)) return 1;
+    if (!renderScene(renderer, app.scene, target, filename)) return 1;
 
     printf("\n--- Simulating LEFT button clicks to add points ---\n");
     static const int clickCoords[][2] = {
@@ -214,7 +218,7 @@ int main(int argc, char **argv)
 
     printf("--- State 2: After adding %d points ---\n", numClicks);
     snprintf(filename, sizeof(filename), "%s_points.rgb", baseFilename);
-    if (!renderScene(renderer, app.scene, filename)) return 1;
+    if (!renderScene(renderer, app.scene, target, filename)) return 1;
 
     printf("\n--- Simulating MIDDLE button for rotation ---\n");
     handleEvent(app, AppEvent{Button::Middle, true, 400, 300});
@@ -226,7 +230,7 @@ int main(int argc, char **argv)
 
     printf("--- State 3: After camera rotation ---\n");
     snprintf(filename, sizeof(filename), "%s_rotated.rgb", baseFilename);
-    if (!renderScene(renderer, app.scene, filename)) return 1;
+    if (!renderScene(renderer, app.scene, target, filename)) return 1;
 
     handleEvent(app, AppEvent{Button::Middle, false, 400, 300});
 
@@ -235,7 +239,7 @@ int main(int argc, char **argv)
 
     printf("--- State 4: After clearing points ---\n");
     snprintf(filename, sizeof(filename), "%s_cleared.rgb", baseFilename);
-    if (!renderScene(renderer, app.scene, filename)) return 1;
+    if (!renderScene(renderer, app.scene, target, filename)) return 1;
 
     printf("\n=== Summary ===\n");
     printf("Generated 4 images showing event-driven interaction\n");

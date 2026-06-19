@@ -75,19 +75,23 @@ obol::Scene createTextureSourceScene()
     return scene;
 }
 
-bool generateTextureMap(obol::OffscreenRenderer & renderer,
+bool generateTextureMap(obol::Renderer & renderer,
+                        const obol::RenderTarget & target,
                         obol::Texture2D & texture)
 {
     obol::Scene textureScene = createTextureSourceScene();
-    renderer.setBackgroundColor({0.8f, 0.8f, 0.0f, 1.0f});
-    const obol::FrameResult result = renderer.render(textureScene);
+    obol::FrameRequest request;
+    request.scene = &textureScene;
+    request.target = target;
+    request.background = {0.8f, 0.8f, 0.0f, 1.0f};
+    const obol::FrameResult result = renderer.render(request);
     const unsigned char * pixels = renderer.pixels();
     if (!result.success || !pixels) {
         return false;
     }
 
-    texture.image.width = renderer.width();
-    texture.image.height = renderer.height();
+    texture.image.width = target.width;
+    texture.image.height = target.height;
     texture.image.format = obol::ImageFormat::RGB;
     texture.image.pixels.assign(
         pixels,
@@ -96,11 +100,16 @@ bool generateTextureMap(obol::OffscreenRenderer & renderer,
     return true;
 }
 
-bool renderScene(obol::OffscreenRenderer & renderer,
+bool renderScene(obol::Renderer & renderer,
                  obol::Scene & scene,
+                 const obol::RenderTarget & target,
                  const char * filename)
 {
-    const obol::FrameResult result = renderer.render(scene);
+    obol::FrameRequest request;
+    request.scene = &scene;
+    request.target = target;
+    request.background = {0.0f, 0.0f, 0.0f, 1.0f};
+    const obol::FrameResult result = renderer.render(request);
     return result.success && renderer.writeRGB(filename);
 }
 
@@ -125,11 +134,11 @@ int main(int argc, char **argv)
     target.width = DEFAULT_WIDTH;
     target.height = DEFAULT_HEIGHT;
     target.pixelFormat = obol::PixelFormat::RGB;
-    obol::OffscreenRenderer renderer(backend, target);
+    obol::Renderer renderer(backend);
 
     std::shared_ptr<obol::Texture2D> texture(new obol::Texture2D);
     printf("Generating texture map (%dx%d)...\n", DEFAULT_WIDTH, DEFAULT_HEIGHT);
-    if (!generateTextureMap(renderer, *texture)) {
+    if (!generateTextureMap(renderer, target, *texture)) {
         fprintf(stderr, "Error: Could not generate texture map with Obol v2 API\n");
         return 1;
     }
@@ -152,23 +161,22 @@ int main(int argc, char **argv)
     char filename[256];
 
     printf("\nRendering textured cube...\n");
-    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
     snprintf(filename, sizeof(filename), "%s_front.rgb", baseFilename);
-    if (!renderScene(renderer, scene, filename)) {
+    if (!renderScene(renderer, scene, target, filename)) {
         fprintf(stderr, "Error: Failed to render textured cube front view with Obol v2 API\n");
         return 1;
     }
 
     scene.setObjectTransform(cube, rotation({0.0f, 1.0f, 0.0f}, static_cast<float>(M_PI / 4.0)));
     snprintf(filename, sizeof(filename), "%s_angle1.rgb", baseFilename);
-    if (!renderScene(renderer, scene, filename)) {
+    if (!renderScene(renderer, scene, target, filename)) {
         fprintf(stderr, "Error: Failed to render textured cube angle1 with Obol v2 API\n");
         return 1;
     }
 
     scene.setObjectTransform(cube, rotation({1.0f, 1.0f, 0.0f}, static_cast<float>(M_PI / 3.0)));
     snprintf(filename, sizeof(filename), "%s_angle2.rgb", baseFilename);
-    if (!renderScene(renderer, scene, filename)) {
+    if (!renderScene(renderer, scene, target, filename)) {
         fprintf(stderr, "Error: Failed to render textured cube angle2 with Obol v2 API\n");
         return 1;
     }

@@ -1,5 +1,5 @@
 #include <Obol/scene/Renderer.h>
-#include <Obol/scene/ScenePacketGeometry.h>
+#include <Obol/scene/ScenePacketExtraction.h>
 
 #include <Inventor/SbColor.h>
 #include <Inventor/SbViewportRegion.h>
@@ -18,6 +18,9 @@ toRendererLegacyContext(NativeContextHandle handle)
 {
     return static_cast<SoDB::ContextManager *>(handle);
 }
+
+bool supportsOpenGLCallbacks(RenderBackendKind kind,
+                             SoDB::ContextManager * manager);
 
 RenderCapabilities queryCapabilities(RenderBackend * backend,
                                      SoOffscreenRenderer & renderer,
@@ -48,18 +51,67 @@ RenderCapabilities queryCapabilities(RenderBackend * backend,
     unsigned int maxH = 0;
     manager->maxOffscreenDimensions(maxW, maxH);
     caps.softwareRasterizer = (maxW >= 16384 && maxH >= 16384);
+    caps.corePortable = true;
+    caps.rasterExtended =
+        caps.rasterExtended ||
+        caps.framebufferObjects ||
+        caps.shaders ||
+        caps.openGL3;
+    caps.backendNative =
+        caps.backendNative ||
+        supportsOpenGLCallbacks(caps.backendKind, manager);
 
     return caps;
 }
 
 void addDiagnostic(std::vector<RenderDiagnostic> & diagnostics,
                    DiagnosticSeverity severity,
-                   const std::string & message)
+                   const std::string & message,
+                   SceneObjectId objectId = InvalidSceneObjectId)
 {
     RenderDiagnostic diagnostic;
     diagnostic.severity = severity;
+    diagnostic.objectId = objectId;
     diagnostic.message = message;
     diagnostics.push_back(diagnostic);
+}
+
+void addPacketExtractionDiagnostic(
+    std::vector<RenderDiagnostic> & diagnostics,
+    const PacketGeometryDiagnostic & packetDiagnostic)
+{
+    addDiagnostic(diagnostics,
+                  packetDiagnostic.severity ==
+                          PacketGeometryDiagnosticSeverity::Error
+                      ? DiagnosticSeverity::Error
+                      : DiagnosticSeverity::Warning,
+                  packetDiagnostic.message,
+                  packetDiagnostic.objectId);
+}
+
+void addRenderOptionDiagnostics(const RenderOptions & options,
+                                const RenderCapabilities & capabilities,
+                                std::vector<RenderDiagnostic> & diagnostics)
+{
+    if (options.nativeShaders &&
+        !supportsRenderFeatureProfile(capabilities,
+                                      RenderFeatureProfile::BackendNative)) {
+        addDiagnostic(diagnostics, DiagnosticSeverity::Warning,
+                      "Native shader requests require the BackendNative feature profile; rendering with portable fixed-function/Phong fallback.");
+    }
+    if (options.advancedTransparency &&
+        !supportsRenderFeatureProfile(capabilities,
+                                      RenderFeatureProfile::RasterExtended)) {
+        addDiagnostic(diagnostics, DiagnosticSeverity::Warning,
+                      "Advanced transparency requires the RasterExtended feature profile; rendering with the backend default transparency mode.");
+    }
+    if (options.shadows &&
+        (!supportsRenderFeatureProfile(capabilities,
+                                       RenderFeatureProfile::RasterExtended) ||
+         !capabilities.framebufferObjects)) {
+        addDiagnostic(diagnostics, DiagnosticSeverity::Warning,
+                      "Shadow rendering requires RasterExtended framebuffer support; rendering without shadows.");
+    }
 }
 
 SoOffscreenRenderer::Components toLegacyComponents(PixelFormat format)
@@ -111,6 +163,13 @@ size_t componentCount(PixelFormat format)
         return 4;
     }
     return 3;
+}
+
+bool sameRenderTarget(const RenderTarget & a, const RenderTarget & b)
+{
+    return a.width == b.width &&
+           a.height == b.height &&
+           a.pixelFormat == b.pixelFormat;
 }
 
 bool writeByte(FILE * file, unsigned char value)
@@ -185,6 +244,21 @@ bool writePacketRGB(const char * filename,
 
 RenderBackend::~RenderBackend() = default;
 
+bool
+supportsRenderFeatureProfile(const RenderCapabilities & capabilities,
+                             RenderFeatureProfile profile)
+{
+    switch (profile) {
+    case RenderFeatureProfile::CorePortable:
+        return capabilities.corePortable;
+    case RenderFeatureProfile::RasterExtended:
+        return capabilities.rasterExtended;
+    case RenderFeatureProfile::BackendNative:
+        return capabilities.backendNative;
+    }
+    return false;
+}
+
 NativeContextHandle
 RenderBackend::legacyContextHandle()
 {
@@ -208,16 +282,11 @@ RenderBackend::renderPacket(const ScenePacket & packet,
                             std::vector<unsigned char> &,
                             std::vector<RenderDiagnostic> & diagnostics)
 {
-    std::vector<PacketGeometryDiagnostic> geometryDiagnostics;
-    inspectPacketGeometrySupport(packet, &geometryDiagnostics);
-    for (const PacketGeometryDiagnostic & geometryDiagnostic :
-         geometryDiagnostics) {
-        addDiagnostic(diagnostics,
-                      geometryDiagnostic.severity ==
-                              PacketGeometryDiagnosticSeverity::Error
-                          ? DiagnosticSeverity::Error
-                          : DiagnosticSeverity::Warning,
-                      geometryDiagnostic.message);
+    ExtractedPacketScene extracted;
+    extractPacketScene(packet, extracted);
+    for (const PacketGeometryDiagnostic & extractionDiagnostic :
+         extracted.diagnostics) {
+        addPacketExtractionDiagnostic(diagnostics, extractionDiagnostic);
     }
     addDiagnostic(diagnostics, DiagnosticSeverity::Error,
                   "Render backend does not implement packet rendering and did not provide a legacy context.");
@@ -347,6 +416,14 @@ OffscreenRenderer::pixelFormat() const
     return impl_->target.pixelFormat;
 }
 
+RenderCapabilities
+OffscreenRenderer::capabilities() const
+{
+    return queryCapabilities(impl_->backend,
+                             impl_->renderer,
+                             impl_->manager);
+}
+
 void
 OffscreenRenderer::setRenderTarget(const RenderTarget & target)
 {
@@ -385,25 +462,24 @@ OffscreenRenderer::render(const Scene & scene, const RenderOptions & options)
                                             impl_->renderer,
                                             impl_->manager);
 
-    if (options.nativeShaders) {
-        addDiagnostic(result.diagnostics, DiagnosticSeverity::Warning,
-                      "Native shader requests are backend-specific in v2; the initial renderer uses fixed-function/Phong fallback.");
-    }
-    if (options.advancedTransparency) {
-        addDiagnostic(result.diagnostics, DiagnosticSeverity::Warning,
-                      "Advanced transparency is optional; the initial renderer uses the backend default transparency mode.");
-    }
-    if (options.shadows && !result.capabilities.framebufferObjects) {
-        addDiagnostic(result.diagnostics, DiagnosticSeverity::Warning,
-                      "Shadow rendering requested, but framebuffer object support is unavailable or unknown; rendering without shadows.");
-    }
+    addRenderOptionDiagnostics(options,
+                               result.capabilities,
+                               result.diagnostics);
 
-    if (scene.hasObjects(SceneQuery{SceneObjectType::OpenGLCallback,
-                                    SceneObjectCategory::BackendNative}) &&
+    const ScenePacket packet = scene.capturePacket();
+    SceneObjectId openGLCallbackObject = InvalidSceneObjectId;
+    for (const SceneObjectRecord & object : packet.objects) {
+        if (object.type == SceneObjectType::OpenGLCallback) {
+            openGLCallbackObject = object.id;
+            break;
+        }
+    }
+    if (openGLCallbackObject != InvalidSceneObjectId &&
         !supportsOpenGLCallbacks(result.capabilities.backendKind,
                                  impl_->manager)) {
         addDiagnostic(result.diagnostics, DiagnosticSeverity::Error,
-                      "Scene contains backend-native OpenGL callbacks, but the active backend does not provide an OpenGL context.");
+                      "Scene contains backend-native OpenGL callbacks, but the active backend does not provide an OpenGL context.",
+                      openGLCallbackObject);
         result.success = false;
         return result;
     }
@@ -411,9 +487,23 @@ OffscreenRenderer::render(const Scene & scene, const RenderOptions & options)
     if (!impl_->manager) {
         impl_->packetPixels.clear();
         impl_->hasPacketPixels = false;
+        ExtractedPacketScene extracted;
+        const bool packetComplete = extractPacketScene(packet, extracted);
+        for (const PacketGeometryDiagnostic & extractionDiagnostic :
+             extracted.diagnostics) {
+            addPacketExtractionDiagnostic(result.diagnostics,
+                                          extractionDiagnostic);
+        }
+        if (!packetComplete) {
+            addDiagnostic(result.diagnostics,
+                          DiagnosticSeverity::Error,
+                          "Scene packet contains content that cannot be fully lowered for packet rendering.");
+            result.success = false;
+            return result;
+        }
         result.success =
             impl_->backend &&
-            impl_->backend->renderPacket(scene.capturePacket(),
+            impl_->backend->renderPacket(packet,
                                          impl_->target,
                                          options,
                                          impl_->background,
@@ -470,6 +560,126 @@ OffscreenRenderer::writeRGB(const char * filename) const
         return false;
     }
     return impl_->renderer.writeToRGB(filename) == TRUE;
+}
+
+struct Renderer::Impl {
+    explicit Impl(RenderBackend & backendIn)
+        : backend(&backendIn)
+    {
+    }
+
+    explicit Impl(std::unique_ptr<RenderBackend> ownedBackendIn)
+        : ownedBackend(std::move(ownedBackendIn))
+        , backend(ownedBackend.get())
+    {
+    }
+
+    std::unique_ptr<RenderBackend> ownedBackend;
+    RenderBackend * backend = nullptr;
+    std::unique_ptr<OffscreenRenderer> offscreen;
+};
+
+Renderer::Renderer(RenderBackend & backend)
+    : impl_(new Impl(backend))
+{
+}
+
+Renderer::Renderer(NativeContextHandle manager,
+                   RenderBackendKind backendKind,
+                   const char * backendName)
+    : impl_(new Impl(std::unique_ptr<RenderBackend>(
+          new ContextManagerBackend(manager, backendKind, backendName))))
+{
+}
+
+Renderer::~Renderer()
+{
+    delete impl_;
+}
+
+FrameResult
+Renderer::render(const FrameRequest & request)
+{
+    FrameResult result;
+    result.target = request.target;
+
+    if (!impl_->backend) {
+        impl_->offscreen.reset();
+        addDiagnostic(result.diagnostics,
+                      DiagnosticSeverity::Error,
+                      "Renderer has no render backend.");
+        return result;
+    }
+
+    result.capabilities = impl_->backend->capabilities();
+    if (!request.scene) {
+        impl_->offscreen.reset();
+        addDiagnostic(result.diagnostics,
+                      DiagnosticSeverity::Error,
+                      "FrameRequest has no scene.");
+        return result;
+    }
+
+    if (!impl_->offscreen) {
+        impl_->offscreen.reset(new OffscreenRenderer(*impl_->backend,
+                                                     request.target));
+    } else if (!sameRenderTarget(impl_->offscreen->renderTarget(),
+                                 request.target)) {
+        impl_->offscreen->setRenderTarget(request.target);
+    }
+    impl_->offscreen->setBackgroundColor(request.background);
+    return impl_->offscreen->render(*request.scene, request.options);
+}
+
+unsigned int
+Renderer::width() const
+{
+    return impl_->offscreen ? impl_->offscreen->width() : 0;
+}
+
+unsigned int
+Renderer::height() const
+{
+    return impl_->offscreen ? impl_->offscreen->height() : 0;
+}
+
+PixelFormat
+Renderer::pixelFormat() const
+{
+    return impl_->offscreen ? impl_->offscreen->pixelFormat() : PixelFormat::RGB;
+}
+
+RenderTarget
+Renderer::renderTarget() const
+{
+    if (impl_->offscreen) {
+        return impl_->offscreen->renderTarget();
+    }
+    RenderTarget target;
+    target.width = 0;
+    target.height = 0;
+    return target;
+}
+
+RenderCapabilities
+Renderer::capabilities() const
+{
+    if (impl_->offscreen) {
+        return impl_->offscreen->capabilities();
+    }
+    return impl_->backend ? impl_->backend->capabilities() : RenderCapabilities{};
+}
+
+const unsigned char *
+Renderer::pixels() const
+{
+    return impl_->offscreen ? impl_->offscreen->pixels() : nullptr;
+}
+
+bool
+Renderer::writeRGB(const char * filename) const
+{
+    return impl_->offscreen ? impl_->offscreen->writeRGB(filename) : false;
 }
 
 } // namespace obol

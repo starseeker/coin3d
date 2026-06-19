@@ -108,12 +108,17 @@ obol::Scene makeScene(const obol::PerspectiveCamera & camera)
     return scene;
 }
 
-bool renderView(obol::OffscreenRenderer & renderer,
+bool renderView(obol::Renderer & renderer,
                 const obol::PerspectiveCamera & camera,
+                const obol::RenderTarget & target,
                 const char * filename)
 {
     obol::Scene scene = makeScene(camera);
-    const obol::FrameResult result = renderer.render(scene);
+    obol::FrameRequest request;
+    request.scene = &scene;
+    request.target = target;
+    request.background = {0.8f, 0.8f, 0.8f, 1.0f};
+    const obol::FrameResult result = renderer.render(request);
     return result.success && renderer.writeRGB(filename);
 }
 
@@ -185,8 +190,7 @@ int main(int argc, char **argv)
     target.width = DEFAULT_WIDTH;
     target.height = DEFAULT_HEIGHT;
     target.pixelFormat = obol::PixelFormat::RGB;
-    obol::OffscreenRenderer renderer(backend, target);
-    renderer.setBackgroundColor({0.8f, 0.8f, 0.8f, 1.0f});
+    obol::Renderer renderer(backend);
 
     const char *baseFilename = (argc > 1) ? argv[1] : "17.2.GLCallback";
     char filename[512];
@@ -198,27 +202,27 @@ int main(int argc, char **argv)
                               {0.0f, 1.0f, 0.0f},
                               0.0f);
     snprintf(filename, sizeof(filename), "%s_00_default.rgb", baseFilename);
-    if (!renderView(renderer, camera, filename)) return 1;
+    if (!renderView(renderer, camera, target, filename)) return 1;
     snprintf(filename, sizeof(filename), "%s.rgb", baseFilename);
-    if (!renderView(renderer, camera, filename)) return 1;
+    if (!renderView(renderer, camera, target, filename)) return 1;
 
     camera = cameraWithOrientation({-3.0f, 2.0f, 5.0f},
                                    {0.0f, 1.0f, 0.0f},
                                    0.3f);
     snprintf(filename, sizeof(filename), "%s_01_angle1.rgb", baseFilename);
-    if (!renderView(renderer, camera, filename)) return 1;
+    if (!renderView(renderer, camera, target, filename)) return 1;
 
     camera = cameraWithOrientation({3.0f, 2.0f, 5.0f},
                                    {0.0f, 1.0f, 0.0f},
                                    -0.3f);
     snprintf(filename, sizeof(filename), "%s_02_angle2.rgb", baseFilename);
-    if (!renderView(renderer, camera, filename)) return 1;
+    if (!renderView(renderer, camera, target, filename)) return 1;
 
     camera = cameraWithOrientation({0.0f, 4.0f, 5.0f},
                                    {1.0f, 0.0f, 0.0f},
                                    -0.4f);
     snprintf(filename, sizeof(filename), "%s_03_top.rgb", baseFilename);
-    if (!renderView(renderer, camera, filename)) return 1;
+    if (!renderView(renderer, camera, target, filename)) return 1;
 
     printf("Done! Rendered 4 views showing OpenGL callback integration.\n");
     return 0;

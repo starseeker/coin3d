@@ -64,11 +64,16 @@ obol::Vec3 lerp(const obol::Vec3 & a, const obol::Vec3 & b, float t)
     };
 }
 
-bool renderFrame(obol::OffscreenRenderer & renderer,
+bool renderFrame(obol::Renderer & renderer,
                  obol::Scene & scene,
+                 const obol::RenderTarget & target,
                  const char * filename)
 {
-    const obol::FrameResult result = renderer.render(scene);
+    obol::FrameRequest request;
+    request.scene = &scene;
+    request.target = target;
+    request.background = {0.0f, 0.0f, 0.0f, 1.0f};
+    const obol::FrameResult result = renderer.render(request);
     return result.success && renderer.writeRGB(filename);
 }
 
@@ -106,8 +111,7 @@ int main(int argc, char **argv)
     target.width = DEFAULT_WIDTH;
     target.height = DEFAULT_HEIGHT;
     target.pixelFormat = obol::PixelFormat::RGB;
-    obol::OffscreenRenderer renderer(backend, target);
-    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
+    obol::Renderer renderer(backend);
 
     const char *baseFilename = (argc > 1) ? argv[1] : "04.2.Lights";
     char filename[256];
@@ -121,7 +125,7 @@ int main(int argc, char **argv)
         scene.setGroupTransform(movingLight, translation(lerp(pos1, pos2, t)));
         
         snprintf(filename, sizeof(filename), "%s_frame%02d.rgb", baseFilename, i);
-        if (!renderFrame(renderer, scene, filename)) {
+        if (!renderFrame(renderer, scene, target, filename)) {
             fprintf(stderr, "Error: Failed to render light animation frame %d with Obol v2 API\n", i);
             return 1;
         }

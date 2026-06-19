@@ -85,11 +85,16 @@ obol::Transform transform(float x, float y, float z)
     return result;
 }
 
-bool renderScene(obol::OffscreenRenderer & renderer,
+bool renderScene(obol::Renderer & renderer,
                  obol::Scene & scene,
+                 const obol::RenderTarget & target,
                  const char * filename)
 {
-    const obol::FrameResult result = renderer.render(scene);
+    obol::FrameRequest request;
+    request.scene = &scene;
+    request.target = target;
+    request.background = {0.0f, 0.0f, 0.0f, 1.0f};
+    const obol::FrameResult result = renderer.render(request);
     return result.success && renderer.writeRGB(filename);
 }
 
@@ -156,8 +161,7 @@ int main(int argc, char **argv)
     target.width = DEFAULT_WIDTH;
     target.height = DEFAULT_HEIGHT;
     target.pixelFormat = obol::PixelFormat::RGB;
-    obol::OffscreenRenderer renderer(backend, target);
-    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
+    obol::Renderer renderer(backend);
 
     const char *baseFilename = (argc > 1) ? argv[1] : "10.1.addEventCB";
     char filename[256];
@@ -166,7 +170,7 @@ int main(int argc, char **argv)
 
     printf("\n=== Initial state (nothing selected) ===\n");
     snprintf(filename, sizeof(filename), "%s_frame%02d_initial.rgb", baseFilename, frameNum++);
-    if (!renderScene(renderer, scene, filename)) {
+    if (!renderScene(renderer, scene, target, filename)) {
         fprintf(stderr, "Error: Failed to render initial event callback scene with Obol v2 API\n");
         return 1;
     }
@@ -181,7 +185,7 @@ int main(int argc, char **argv)
 
     printf("\n=== Cube and sphere selected ===\n");
     snprintf(filename, sizeof(filename), "%s_frame%02d_selected.rgb", baseFilename, frameNum++);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderScene(renderer, scene, target, filename)) return 1;
 
     printf("\n=== Simulating UP ARROW key presses (scale up) ===\n");
     printf("This demonstrates application event dispatch triggering callbacks\n");
@@ -191,7 +195,7 @@ int main(int argc, char **argv)
                i + 1, cube.transform.scale.x, cube.transform.scale.y, cube.transform.scale.z);
 
         snprintf(filename, sizeof(filename), "%s_frame%02d_scaleup_%d.rgb", baseFilename, frameNum++, i+1);
-        if (!renderScene(renderer, scene, filename)) return 1;
+        if (!renderScene(renderer, scene, target, filename)) return 1;
     }
 
     printf("\n=== Simulating DOWN ARROW key presses (scale down) ===\n");
@@ -201,7 +205,7 @@ int main(int argc, char **argv)
                i + 1, cube.transform.scale.x, cube.transform.scale.y, cube.transform.scale.z);
 
         snprintf(filename, sizeof(filename), "%s_frame%02d_scaledown_%d.rgb", baseFilename, frameNum++, i+1);
-        if (!renderScene(renderer, scene, filename)) return 1;
+        if (!renderScene(renderer, scene, target, filename)) return 1;
     }
 
     printf("\nRendered %d frames demonstrating application event callbacks [Obol v2]\n", frameNum);

@@ -232,8 +232,12 @@ bool renderScene(const obol::Scene & scene, const char * filename)
     target.height = DEFAULT_HEIGHT;
     target.pixelFormat = obol::PixelFormat::RGB;
 
-    obol::OffscreenRenderer renderer(backend, target);
-    const obol::FrameResult result = renderer.render(scene);
+    obol::FrameRequest request;
+    request.scene = &scene;
+    request.target = target;
+
+    obol::Renderer renderer(backend);
+    const obol::FrameResult result = renderer.render(request);
     return result.success && renderer.writeRGB(filename);
 }
 

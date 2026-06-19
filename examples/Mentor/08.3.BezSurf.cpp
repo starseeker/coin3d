@@ -188,8 +188,9 @@ obol::Transform translation(float x, float y, float z)
     return transform;
 }
 
-bool renderView(obol::OffscreenRenderer & renderer,
+bool renderView(obol::Renderer & renderer,
                 obol::Scene & scene,
+                const obol::RenderTarget & target,
                 const char * filename,
                 const obol::Vec3 & position,
                 const obol::Vec3 & up = {0.0f, 1.0f, 0.0f})
@@ -200,7 +201,11 @@ bool renderView(obol::OffscreenRenderer & renderer,
     camera.up = up;
     camera.verticalFieldOfViewRadians = 0.72f;
     scene.setCamera(camera);
-    const obol::FrameResult result = renderer.render(scene);
+    obol::FrameRequest request;
+    request.scene = &scene;
+    request.target = target;
+    request.background = {0.0f, 0.0f, 0.0f, 1.0f};
+    const obol::FrameResult result = renderer.render(request);
     return result.success && renderer.writeRGB(filename);
 }
 
@@ -231,26 +236,25 @@ int main(int argc, char **argv)
     target.width = DEFAULT_WIDTH;
     target.height = DEFAULT_HEIGHT;
     target.pixelFormat = obol::PixelFormat::RGB;
-    obol::OffscreenRenderer renderer(backend, target);
-    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
+    obol::Renderer renderer(backend);
 
     const char *baseFilename = (argc > 1) ? argv[1] : "08.3.BezSurf";
     char filename[256];
 
     snprintf(filename, sizeof(filename), "%s_view1.rgb", baseFilename);
-    if (!renderView(renderer, scene, filename, {0.0f, -0.5f, 22.0f})) {
+    if (!renderView(renderer, scene, target, filename, {0.0f, -0.5f, 22.0f})) {
         fprintf(stderr, "Error: Failed to render BezSurf front view with Obol v2 API\n");
         return 1;
     }
 
     snprintf(filename, sizeof(filename), "%s_side.rgb", baseFilename);
-    if (!renderView(renderer, scene, filename, {22.0f, -0.5f, 1.0f})) {
+    if (!renderView(renderer, scene, target, filename, {22.0f, -0.5f, 1.0f})) {
         fprintf(stderr, "Error: Failed to render BezSurf side view with Obol v2 API\n");
         return 1;
     }
 
     snprintf(filename, sizeof(filename), "%s_top.rgb", baseFilename);
-    if (!renderView(renderer, scene, filename, {0.0f, 22.0f, 1.0f},
+    if (!renderView(renderer, scene, target, filename, {0.0f, 22.0f, 1.0f},
                     {0.0f, 0.0f, -1.0f})) {
         fprintf(stderr, "Error: Failed to render BezSurf top view with Obol v2 API\n");
         return 1;

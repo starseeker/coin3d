@@ -181,6 +181,30 @@ SoTexture2::Model toLegacyTextureModel(TextureModel model)
     return SoTexture2::MODULATE;
 }
 
+TextureWrap fromLegacyWrap(int wrap)
+{
+    return wrap == SoTexture2::CLAMP ? TextureWrap::Clamp : TextureWrap::Repeat;
+}
+
+bool fromLegacyTextureModel(int model, TextureModel & result)
+{
+    switch (model) {
+    case SoTexture2::MODULATE:
+        result = TextureModel::Modulate;
+        return true;
+    case SoTexture2::DECAL:
+        result = TextureModel::Decal;
+        return true;
+    case SoTexture2::BLEND:
+        result = TextureModel::Blend;
+        return true;
+    case SoTexture2::REPLACE:
+        result = TextureModel::Replace;
+        return true;
+    }
+    return false;
+}
+
 int imageComponentCount(ImageFormat format)
 {
     return static_cast<int>(format);
@@ -373,9 +397,14 @@ SbVec3f transformDirection(const SbMatrix & matrix, const SbVec3f & direction)
 struct LegacyExtractionState {
     Material material;
     std::vector<Material> materials;
+    SceneGroupId parentGroup = RootSceneGroupId;
+    std::string fontName = "default";
+    float fontSize = 1.0f;
     std::vector<Vec3> coordinates;
     std::vector<Vec3> normals;
     std::vector<Vec2> texCoords;
+    std::vector<Vec2> profileCoords;
+    std::vector<Vec2> textProfile;
     SoMaterialBinding::Binding materialBinding = SoMaterialBinding::OVERALL;
     SoNormalBinding::Binding normalBinding = SoNormalBinding::PER_VERTEX_INDEXED;
     float lineWidth = 1.0f;
@@ -499,6 +528,65 @@ bool applyLegacyTextureCoordinates(const SoTextureCoordinate2 & node,
     return true;
 }
 
+bool applyLegacyFont(const SoFont & node,
+                     LegacyExtractionState & state)
+{
+    state.fontName = node.name.getValue().getString();
+    state.fontSize = node.size.getValue();
+    return true;
+}
+
+bool applyLegacyProfileCoordinates(const SoProfileCoordinate2 & node,
+                                   LegacyExtractionState & state)
+{
+    state.profileCoords.clear();
+    state.profileCoords.reserve(static_cast<size_t>(node.point.getNum()));
+    for (int i = 0; i < node.point.getNum(); ++i) {
+        const SbVec2f point = node.point[i];
+        state.profileCoords.push_back({point[0], point[1]});
+    }
+    return true;
+}
+
+bool applyLegacyLinearProfile(const SoLinearProfile & node,
+                              LegacyExtractionState & state)
+{
+    if (state.profileCoords.empty()) {
+        return false;
+    }
+    const int linkage = node.linkage.getValue();
+    if (linkage != SoProfile::START_FIRST &&
+        linkage != SoProfile::START_NEW) {
+        return false;
+    }
+
+    std::vector<Vec2> profile;
+    if (node.index.getNum() == 0) {
+        profile = state.profileCoords;
+    } else {
+        for (int i = 0; i < node.index.getNum(); ++i) {
+            const int index = node.index[i];
+            if (index == -1) {
+                for (size_t j = 0; j < state.profileCoords.size(); ++j) {
+                    profile.push_back(state.profileCoords[j]);
+                }
+                continue;
+            }
+            if (index < 0 ||
+                static_cast<size_t>(index) >= state.profileCoords.size()) {
+                return false;
+            }
+            profile.push_back(state.profileCoords[static_cast<size_t>(index)]);
+        }
+    }
+
+    if (profile.empty()) {
+        return false;
+    }
+    state.textProfile = profile;
+    return true;
+}
+
 bool applyLegacyMaterialBinding(const SoMaterialBinding & node,
                                 LegacyExtractionState & state)
 {
@@ -524,6 +612,70 @@ bool applyLegacyDrawStyle(const SoDrawStyle & node,
     state.lineWidth = node.lineWidth.getValue();
     state.pointSize = node.pointSize.getValue();
     return true;
+}
+
+bool applyLegacyTexture(const SoTexture2 & node,
+                        LegacyExtractionState & state)
+{
+    SbVec2s size;
+    int components = 0;
+    const unsigned char * pixels = node.image.getValue(size, components);
+    if (!pixels || size[0] <= 0 || size[1] <= 0 || components < 1 || components > 4) {
+        return node.filename.getValue().getLength() == 0;
+    }
+
+    TextureModel model = TextureModel::Modulate;
+    if (!fromLegacyTextureModel(node.model.getValue(), model)) {
+        return false;
+    }
+
+    Texture2D texture;
+    texture.image.width = static_cast<unsigned int>(size[0]);
+    texture.image.height = static_cast<unsigned int>(size[1]);
+    texture.image.format = static_cast<ImageFormat>(components);
+    const size_t pixelCount =
+        static_cast<size_t>(texture.image.width) *
+        static_cast<size_t>(texture.image.height) *
+        static_cast<size_t>(components);
+    texture.image.pixels.assign(pixels, pixels + pixelCount);
+    texture.wrapS = fromLegacyWrap(node.wrapS.getValue());
+    texture.wrapT = fromLegacyWrap(node.wrapT.getValue());
+    texture.model = model;
+    texture.blendColor = fromSbColor(node.blendColor.getValue());
+
+    state.material.baseColorTexture.reset(new Texture2D(texture));
+    for (Material & material : state.materials) {
+        material.baseColorTexture = state.material.baseColorTexture;
+    }
+    return true;
+}
+
+bool applyLegacyLightModel(const SoLightModel & node,
+                           LegacyExtractionState & state)
+{
+    const int model = node.model.getValue();
+    if (model == SoLightModel::BASE_COLOR) {
+        state.material.unlit = true;
+        for (Material & material : state.materials) {
+            material.unlit = true;
+        }
+        return true;
+    }
+    if (model == SoLightModel::PHONG) {
+        state.material.unlit = false;
+        for (Material & material : state.materials) {
+            material.unlit = false;
+        }
+        return true;
+    }
+    return false;
+}
+
+bool applyLegacyShapeHints(const SoShapeHints & node)
+{
+    const int ordering = node.vertexOrdering.getValue();
+    return ordering == SoShapeHints::UNKNOWN_ORDERING ||
+           ordering == SoShapeHints::COUNTERCLOCKWISE;
 }
 
 bool appendLegacyTransform(const SoTransform & node,
@@ -554,7 +706,7 @@ bool addLegacyPrimitive(Scene & scene,
     if (!transformFromMatrix(state.transform, transform)) {
         return false;
     }
-    scene.addPrimitive(primitive, state.material, transform, options);
+    scene.addPrimitive(primitive, state.material, transform, options, state.parentGroup);
     return true;
 }
 
@@ -573,6 +725,7 @@ std::vector<Color> legacyMaterialColors(const LegacyExtractionState & state)
 }
 
 size_t triangleStripFaceCount(const Mesh & mesh);
+size_t quadGridFaceCount(const Mesh & mesh);
 
 bool addLegacyIndexedFaceSet(Scene & scene,
                              const SoIndexedFaceSet & node,
@@ -813,7 +966,7 @@ bool addLegacyIndexedFaceSet(Scene & scene,
         break;
     }
 
-    scene.addMesh(mesh, state.material, transform);
+    scene.addMesh(mesh, state.material, transform, state.parentGroup);
     return true;
 }
 
@@ -972,7 +1125,248 @@ bool addLegacyIndexedTriangleStripSet(Scene & scene,
         return false;
     }
 
-    scene.addMesh(mesh, state.material, transform);
+    scene.addMesh(mesh, state.material, transform, state.parentGroup);
+    return true;
+}
+
+bool addLegacyTriangleStripSet(Scene & scene,
+                               const SoTriangleStripSet & node,
+                               const LegacyExtractionState & state)
+{
+    if (state.coordinates.empty()) {
+        return false;
+    }
+    if (state.materialBinding == SoMaterialBinding::PER_FACE_INDEXED ||
+        state.materialBinding == SoMaterialBinding::PER_PART_INDEXED ||
+        state.materialBinding == SoMaterialBinding::PER_VERTEX_INDEXED ||
+        state.normalBinding == SoNormalBinding::PER_FACE_INDEXED ||
+        state.normalBinding == SoNormalBinding::PER_PART_INDEXED) {
+        return false;
+    }
+
+    Transform transform;
+    if (!transformFromMatrix(state.transform, transform)) {
+        return false;
+    }
+
+    Mesh mesh;
+    mesh.topology = MeshTopology::TriangleStrips;
+    mesh.positions = state.coordinates;
+
+    size_t cursor = 0;
+    if (node.numVertices.getNum() == 0 ||
+        (node.numVertices.getNum() == 1 && node.numVertices[0] < 0)) {
+        if (state.coordinates.size() < 3) {
+            return false;
+        }
+        mesh.stripVertexCounts.push_back(
+            static_cast<uint32_t>(state.coordinates.size()));
+    } else {
+        for (int i = 0; i < node.numVertices.getNum(); ++i) {
+            const int count = node.numVertices[i];
+            if (count < 0) {
+                if (cursor + 3 > state.coordinates.size()) {
+                    return false;
+                }
+                mesh.stripVertexCounts.push_back(
+                    static_cast<uint32_t>(state.coordinates.size() - cursor));
+                cursor = state.coordinates.size();
+                break;
+            }
+            if (count < 3) {
+                return false;
+            }
+            cursor += static_cast<size_t>(count);
+            if (cursor > state.coordinates.size()) {
+                return false;
+            }
+            mesh.stripVertexCounts.push_back(static_cast<uint32_t>(count));
+        }
+    }
+    if (mesh.stripVertexCounts.empty()) {
+        return false;
+    }
+
+    if (!state.texCoords.empty()) {
+        if (state.texCoords.size() < mesh.positions.size()) {
+            return false;
+        }
+        mesh.texCoords.assign(
+            state.texCoords.begin(),
+            state.texCoords.begin() +
+                static_cast<std::ptrdiff_t>(mesh.positions.size()));
+    }
+
+    if (!state.normals.empty()) {
+        switch (state.normalBinding) {
+        case SoNormalBinding::OVERALL:
+            mesh.normals.assign(mesh.positions.size(), state.normals.front());
+            break;
+        case SoNormalBinding::PER_VERTEX:
+        case SoNormalBinding::PER_VERTEX_INDEXED:
+            if (state.normals.size() < mesh.positions.size()) {
+                return false;
+            }
+            mesh.normals.assign(
+                state.normals.begin(),
+                state.normals.begin() +
+                    static_cast<std::ptrdiff_t>(mesh.positions.size()));
+            break;
+        case SoNormalBinding::PER_FACE:
+        case SoNormalBinding::PER_PART:
+            return false;
+        case SoNormalBinding::PER_FACE_INDEXED:
+        case SoNormalBinding::PER_PART_INDEXED:
+            return false;
+        }
+    }
+
+    const std::vector<Color> colors = legacyMaterialColors(state);
+    switch (state.materialBinding) {
+    case SoMaterialBinding::OVERALL:
+        break;
+    case SoMaterialBinding::PER_PART:
+        if (colors.size() < mesh.stripVertexCounts.size()) {
+            return false;
+        }
+        mesh.faceColors.assign(
+            colors.begin(),
+            colors.begin() +
+                static_cast<std::ptrdiff_t>(mesh.stripVertexCounts.size()));
+        break;
+    case SoMaterialBinding::PER_FACE: {
+        const size_t faceCount = triangleStripFaceCount(mesh);
+        if (colors.size() < faceCount) {
+            return false;
+        }
+        mesh.faceColors.assign(colors.begin(),
+                               colors.begin() +
+                                   static_cast<std::ptrdiff_t>(faceCount));
+        break;
+    }
+    case SoMaterialBinding::PER_VERTEX:
+        if (colors.size() < mesh.positions.size()) {
+            return false;
+        }
+        mesh.vertexColors.assign(
+            colors.begin(),
+            colors.begin() +
+                static_cast<std::ptrdiff_t>(mesh.positions.size()));
+        break;
+    case SoMaterialBinding::PER_FACE_INDEXED:
+    case SoMaterialBinding::PER_PART_INDEXED:
+    case SoMaterialBinding::PER_VERTEX_INDEXED:
+        return false;
+    }
+
+    scene.addMesh(mesh, state.material, transform, state.parentGroup);
+    return true;
+}
+
+bool addLegacyQuadMesh(Scene & scene,
+                       const SoQuadMesh & node,
+                       const LegacyExtractionState & state)
+{
+    const int rows = node.verticesPerColumn.getValue();
+    const int columns = node.verticesPerRow.getValue();
+    if (rows < 2 || columns < 2) {
+        return false;
+    }
+    const size_t vertexCount =
+        static_cast<size_t>(rows) * static_cast<size_t>(columns);
+    if (state.coordinates.size() < vertexCount) {
+        return false;
+    }
+    if (state.materialBinding == SoMaterialBinding::PER_FACE_INDEXED ||
+        state.materialBinding == SoMaterialBinding::PER_PART_INDEXED ||
+        state.materialBinding == SoMaterialBinding::PER_VERTEX_INDEXED ||
+        state.normalBinding == SoNormalBinding::PER_FACE_INDEXED ||
+        state.normalBinding == SoNormalBinding::PER_PART_INDEXED) {
+        return false;
+    }
+
+    Transform transform;
+    if (!transformFromMatrix(state.transform, transform)) {
+        return false;
+    }
+
+    Mesh mesh;
+    mesh.topology = MeshTopology::QuadGrid;
+    mesh.gridVertexRows = static_cast<uint32_t>(rows);
+    mesh.gridVertexColumns = static_cast<uint32_t>(columns);
+    mesh.positions.assign(state.coordinates.begin(),
+                          state.coordinates.begin() +
+                              static_cast<std::ptrdiff_t>(vertexCount));
+
+    if (!state.texCoords.empty()) {
+        if (state.texCoords.size() < vertexCount) {
+            return false;
+        }
+        mesh.texCoords.assign(
+            state.texCoords.begin(),
+            state.texCoords.begin() + static_cast<std::ptrdiff_t>(vertexCount));
+    }
+
+    const size_t faceCount = quadGridFaceCount(mesh);
+    if (!state.normals.empty()) {
+        switch (state.normalBinding) {
+        case SoNormalBinding::OVERALL:
+            mesh.faceNormals.assign(faceCount, state.normals.front());
+            break;
+        case SoNormalBinding::PER_FACE:
+        case SoNormalBinding::PER_PART:
+            if (state.normals.size() < faceCount) {
+                return false;
+            }
+            mesh.faceNormals.assign(
+                state.normals.begin(),
+                state.normals.begin() +
+                    static_cast<std::ptrdiff_t>(faceCount));
+            break;
+        case SoNormalBinding::PER_VERTEX:
+        case SoNormalBinding::PER_VERTEX_INDEXED:
+            if (state.normals.size() < vertexCount) {
+                return false;
+            }
+            mesh.normals.assign(
+                state.normals.begin(),
+                state.normals.begin() +
+                    static_cast<std::ptrdiff_t>(vertexCount));
+            break;
+        case SoNormalBinding::PER_FACE_INDEXED:
+        case SoNormalBinding::PER_PART_INDEXED:
+            return false;
+        }
+    }
+
+    const std::vector<Color> colors = legacyMaterialColors(state);
+    switch (state.materialBinding) {
+    case SoMaterialBinding::OVERALL:
+        break;
+    case SoMaterialBinding::PER_FACE:
+    case SoMaterialBinding::PER_PART:
+        if (colors.size() < faceCount) {
+            return false;
+        }
+        mesh.faceColors.assign(colors.begin(),
+                               colors.begin() +
+                                   static_cast<std::ptrdiff_t>(faceCount));
+        break;
+    case SoMaterialBinding::PER_VERTEX:
+        if (colors.size() < vertexCount) {
+            return false;
+        }
+        mesh.vertexColors.assign(
+            colors.begin(),
+            colors.begin() + static_cast<std::ptrdiff_t>(vertexCount));
+        break;
+    case SoMaterialBinding::PER_FACE_INDEXED:
+    case SoMaterialBinding::PER_PART_INDEXED:
+    case SoMaterialBinding::PER_VERTEX_INDEXED:
+        return false;
+    }
+
+    scene.addMesh(mesh, state.material, transform, state.parentGroup);
     return true;
 }
 
@@ -1037,7 +1431,7 @@ bool addLegacyLineSet(Scene & scene,
             state.materialBinding == SoMaterialBinding::PER_PART
                 ? state.materials[lineIndex]
                 : state.material;
-        scene.addPolyline(polyline, material, transform);
+        scene.addPolyline(polyline, material, transform, state.parentGroup);
         cursor += count;
     }
 
@@ -1071,7 +1465,151 @@ bool addLegacyPointSet(Scene & scene,
     pointCloud.points.assign(state.coordinates.begin(),
                              state.coordinates.begin() +
                                  static_cast<std::ptrdiff_t>(count));
-    scene.addPointCloud(pointCloud, state.material, transform);
+    scene.addPointCloud(pointCloud, state.material, transform, state.parentGroup);
+    return true;
+}
+
+bool legacyTextString(const SoMFString & strings, std::string & result)
+{
+    if (strings.getNum() <= 0) {
+        return false;
+    }
+    result.clear();
+    for (int i = 0; i < strings.getNum(); ++i) {
+        if (i > 0) {
+            result += "\n";
+        }
+        result += strings[i].getString();
+    }
+    return true;
+}
+
+bool legacyTextJustification(int value, TextJustification & justification)
+{
+    switch (value) {
+    case SoText2::LEFT:
+        justification = TextJustification::Left;
+        return true;
+    case SoText2::RIGHT:
+        justification = TextJustification::Right;
+        return true;
+    case SoText2::CENTER:
+        justification = TextJustification::Center;
+        return true;
+    }
+    return false;
+}
+
+bool addLegacyText2D(Scene & scene,
+                     const SoText2 & node,
+                     const LegacyExtractionState & state)
+{
+    if (state.materialBinding != SoMaterialBinding::OVERALL) {
+        return false;
+    }
+
+    Transform transform;
+    if (!transformFromMatrix(state.transform, transform)) {
+        return false;
+    }
+
+    Text2D text;
+    if (!legacyTextString(node.string, text.text) ||
+        !legacyTextJustification(node.justification.getValue(), text.justification)) {
+        return false;
+    }
+    text.fontName = state.fontName;
+    text.fontSize = state.fontSize;
+    text.spacing = node.spacing.getValue();
+    text.depthTest = node.depthTest.getValue() == TRUE;
+    scene.addText2D(text, state.material, transform, state.parentGroup);
+    return true;
+}
+
+bool addLegacyText3D(Scene & scene,
+                     const SoText3 & node,
+                     const LegacyExtractionState & state)
+{
+    if (state.materialBinding != SoMaterialBinding::OVERALL &&
+        state.materialBinding != SoMaterialBinding::PER_PART) {
+        return false;
+    }
+
+    Transform transform;
+    if (!transformFromMatrix(state.transform, transform)) {
+        return false;
+    }
+
+    Text3D text;
+    if (!legacyTextString(node.string, text.text) ||
+        !legacyTextJustification(node.justification.getValue(), text.justification)) {
+        return false;
+    }
+    text.fontName = state.fontName;
+    text.fontSize = state.fontSize;
+    text.spacing = node.spacing.getValue();
+    text.parts = static_cast<uint32_t>(node.parts.getValue());
+    if (state.materialBinding == SoMaterialBinding::PER_PART) {
+        text.partColors = legacyMaterialColors(state);
+    }
+    text.profile = state.textProfile;
+    scene.addText3D(text, state.material, transform, state.parentGroup);
+    return true;
+}
+
+bool addLegacyPerspectiveCamera(Scene & scene,
+                                const SoPerspectiveCamera & node,
+                                const LegacyExtractionState & state)
+{
+    SbVec3f forward;
+    SbVec3f up;
+    node.orientation.getValue().multVec(SbVec3f(0.0f, 0.0f, -1.0f),
+                                        forward);
+    node.orientation.getValue().multVec(SbVec3f(0.0f, 1.0f, 0.0f),
+                                        up);
+
+    const SbVec3f position = transformPoint(state.transform,
+                                            node.position.getValue());
+    const SbVec3f worldForward = transformDirection(state.transform, forward);
+    const SbVec3f worldUp = transformDirection(state.transform, up);
+    const SbVec3f target = position + worldForward * node.focalDistance.getValue();
+
+    PerspectiveCamera camera;
+    camera.position = fromSbVec3f(position);
+    camera.target = fromSbVec3f(target);
+    camera.up = fromSbVec3f(worldUp);
+    camera.verticalFieldOfViewRadians = node.heightAngle.getValue();
+    camera.nearDistance = node.nearDistance.getValue();
+    camera.farDistance = node.farDistance.getValue();
+    scene.setCamera(camera);
+    return true;
+}
+
+bool addLegacyOrthographicCamera(Scene & scene,
+                                 const SoOrthographicCamera & node,
+                                 const LegacyExtractionState & state)
+{
+    SbVec3f forward;
+    SbVec3f up;
+    node.orientation.getValue().multVec(SbVec3f(0.0f, 0.0f, -1.0f),
+                                        forward);
+    node.orientation.getValue().multVec(SbVec3f(0.0f, 1.0f, 0.0f),
+                                        up);
+
+    const SbVec3f position = transformPoint(state.transform,
+                                            node.position.getValue());
+    const SbVec3f worldForward = transformDirection(state.transform, forward);
+    const SbVec3f worldUp = transformDirection(state.transform, up);
+    const SbVec3f target = position + worldForward * node.focalDistance.getValue();
+
+    OrthographicCamera camera;
+    camera.position = fromSbVec3f(position);
+    camera.target = fromSbVec3f(target);
+    camera.up = fromSbVec3f(worldUp);
+    camera.height = node.height.getValue();
+    camera.nearDistance = node.nearDistance.getValue();
+    camera.farDistance = node.farDistance.getValue();
+    scene.setCamera(camera);
     return true;
 }
 
@@ -1087,7 +1625,7 @@ bool addLegacyLight(Scene & scene,
                                                      node.direction.getValue()));
     light.color = fromSbColor(node.color.getValue());
     light.intensity = node.intensity.getValue();
-    scene.addDirectionalLight(light);
+    scene.addDirectionalLight(light, state.parentGroup);
     return true;
 }
 
@@ -1103,7 +1641,7 @@ bool addLegacyLight(Scene & scene,
                                                 node.location.getValue()));
     light.color = fromSbColor(node.color.getValue());
     light.intensity = node.intensity.getValue();
-    scene.addPointLight(light);
+    scene.addPointLight(light, state.parentGroup);
     return true;
 }
 
@@ -1123,13 +1661,70 @@ bool addLegacyLight(Scene & scene,
     light.intensity = node.intensity.getValue();
     light.cutOffAngleRadians = node.cutOffAngle.getValue();
     light.dropOffRate = node.dropOffRate.getValue();
-    scene.addSpotLight(light);
+    scene.addSpotLight(light, state.parentGroup);
     return true;
 }
 
 LegacyExtractionResult extractLegacyNode(const SoNode & node,
                                          LegacyExtractionState & state,
                                          Scene & scene);
+
+bool isGeneratedLegacyGroup(const SoNode & node)
+{
+    const char * name = node.getName().getString();
+    return name && std::string(name).find("ObolSceneGroup_") == 0;
+}
+
+LegacyExtractionResult extractGeneratedLegacyGroup(const SoSeparator & group,
+                                                   const LegacyExtractionState & state,
+                                                   Scene & scene)
+{
+    LegacyExtractionResult result;
+    LegacyExtractionState groupState = state;
+
+    int childIndex = 0;
+    while (childIndex < group.getNumChildren()) {
+        SoNode * child = group.getChild(childIndex);
+        if (!child || !child->isOfType(SoTransform::getClassTypeId())) {
+            break;
+        }
+        if (!appendLegacyTransform(static_cast<const SoTransform &>(*child),
+                                   groupState)) {
+            result.fullySupported = false;
+            return result;
+        }
+        ++childIndex;
+    }
+
+    Transform groupTransform;
+    if (!transformFromMatrix(groupState.transform, groupTransform)) {
+        result.fullySupported = false;
+        return result;
+    }
+
+    const SceneGroupId importedGroup =
+        scene.addGroup(groupTransform, state.parentGroup);
+    result.extractedAny = true;
+
+    LegacyExtractionState childState = state;
+    childState.parentGroup = importedGroup;
+    childState.transform = SbMatrix::identity();
+
+    for (; childIndex < group.getNumChildren(); ++childIndex) {
+        SoNode * child = group.getChild(childIndex);
+        if (!child) {
+            continue;
+        }
+        LegacyExtractionResult childResult =
+            extractLegacyNode(*child, childState, scene);
+        result.fullySupported = result.fullySupported && childResult.fullySupported;
+        result.extractedAny = result.extractedAny || childResult.extractedAny;
+        if (!result.fullySupported) {
+            break;
+        }
+    }
+    return result;
+}
 
 LegacyExtractionResult extractLegacyChildren(const SoGroup & group,
                                              LegacyExtractionState & state,
@@ -1163,6 +1758,12 @@ LegacyExtractionResult extractLegacyNode(const SoNode & node,
     LegacyExtractionResult result;
 
     if (node.isOfType(SoSeparator::getClassTypeId())) {
+        if (isGeneratedLegacyGroup(node)) {
+            return extractGeneratedLegacyGroup(
+                static_cast<const SoSeparator &>(node),
+                state,
+                scene);
+        }
         return extractLegacyChildren(static_cast<const SoSeparator &>(node),
                                      state,
                                      scene,
@@ -1177,6 +1778,24 @@ LegacyExtractionResult extractLegacyNode(const SoNode & node,
     if (node.isOfType(SoMaterial::getClassTypeId())) {
         result.fullySupported =
             applyLegacyMaterial(static_cast<const SoMaterial &>(node), state);
+        return result;
+    }
+    if (node.isOfType(SoFont::getClassTypeId())) {
+        result.fullySupported =
+            applyLegacyFont(static_cast<const SoFont &>(node), state);
+        return result;
+    }
+    if (node.isOfType(SoProfileCoordinate2::getClassTypeId())) {
+        result.fullySupported =
+            applyLegacyProfileCoordinates(
+                static_cast<const SoProfileCoordinate2 &>(node),
+                state);
+        return result;
+    }
+    if (node.isOfType(SoLinearProfile::getClassTypeId())) {
+        result.fullySupported =
+            applyLegacyLinearProfile(static_cast<const SoLinearProfile &>(node),
+                                     state);
         return result;
     }
     if (node.isOfType(SoMaterialBinding::getClassTypeId())) {
@@ -1213,9 +1832,42 @@ LegacyExtractionResult extractLegacyNode(const SoNode & node,
             applyLegacyDrawStyle(static_cast<const SoDrawStyle &>(node), state);
         return result;
     }
+    if (node.isOfType(SoTexture2::getClassTypeId())) {
+        result.fullySupported =
+            applyLegacyTexture(static_cast<const SoTexture2 &>(node), state);
+        return result;
+    }
+    if (node.isOfType(SoLightModel::getClassTypeId())) {
+        result.fullySupported =
+            applyLegacyLightModel(static_cast<const SoLightModel &>(node), state);
+        return result;
+    }
+    if (node.isOfType(SoShapeHints::getClassTypeId())) {
+        result.fullySupported =
+            applyLegacyShapeHints(static_cast<const SoShapeHints &>(node));
+        return result;
+    }
     if (node.isOfType(SoTransform::getClassTypeId())) {
         result.fullySupported =
             appendLegacyTransform(static_cast<const SoTransform &>(node), state);
+        return result;
+    }
+    if (node.isOfType(SoPerspectiveCamera::getClassTypeId())) {
+        result.fullySupported =
+            addLegacyPerspectiveCamera(
+                scene,
+                static_cast<const SoPerspectiveCamera &>(node),
+                state);
+        result.extractedAny = result.fullySupported;
+        return result;
+    }
+    if (node.isOfType(SoOrthographicCamera::getClassTypeId())) {
+        result.fullySupported =
+            addLegacyOrthographicCamera(
+                scene,
+                static_cast<const SoOrthographicCamera &>(node),
+                state);
+        result.extractedAny = result.fullySupported;
         return result;
     }
     if (node.isOfType(SoDirectionalLight::getClassTypeId())) {
@@ -1301,6 +1953,20 @@ LegacyExtractionResult extractLegacyNode(const SoNode & node,
         result.extractedAny = result.fullySupported;
         return result;
     }
+    if (node.isOfType(SoTriangleStripSet::getClassTypeId())) {
+        result.fullySupported =
+            addLegacyTriangleStripSet(scene,
+                                      static_cast<const SoTriangleStripSet &>(node),
+                                      state);
+        result.extractedAny = result.fullySupported;
+        return result;
+    }
+    if (node.isOfType(SoQuadMesh::getClassTypeId())) {
+        result.fullySupported =
+            addLegacyQuadMesh(scene, static_cast<const SoQuadMesh &>(node), state);
+        result.extractedAny = result.fullySupported;
+        return result;
+    }
     if (node.isOfType(SoLineSet::getClassTypeId())) {
         result.fullySupported =
             addLegacyLineSet(scene, static_cast<const SoLineSet &>(node), state);
@@ -1310,6 +1976,18 @@ LegacyExtractionResult extractLegacyNode(const SoNode & node,
     if (node.isOfType(SoPointSet::getClassTypeId())) {
         result.fullySupported =
             addLegacyPointSet(scene, static_cast<const SoPointSet &>(node), state);
+        result.extractedAny = result.fullySupported;
+        return result;
+    }
+    if (node.isOfType(SoText2::getClassTypeId())) {
+        result.fullySupported =
+            addLegacyText2D(scene, static_cast<const SoText2 &>(node), state);
+        result.extractedAny = result.fullySupported;
+        return result;
+    }
+    if (node.isOfType(SoText3::getClassTypeId())) {
+        result.fullySupported =
+            addLegacyText3D(scene, static_cast<const SoText3 &>(node), state);
         result.extractedAny = result.fullySupported;
         return result;
     }
@@ -2087,6 +2765,8 @@ struct Scene::Impl {
     struct Group {
         Transform transform;
         SceneGroupId parent = RootSceneGroupId;
+        bool active = true;
+        bool visible = true;
     };
 
     enum class CameraKind {
@@ -2128,6 +2808,7 @@ struct Scene::Impl {
         std::shared_ptr<SoSeparator> legacySceneGraph;
         SceneGroupId parent = RootSceneGroupId;
         bool active = true;
+        bool visible = true;
 
         SceneObjectType publicType() const
         {
@@ -2223,6 +2904,19 @@ struct Scene::Impl {
         }
     }
 
+    bool groupIsActive(SceneGroupId group) const
+    {
+        return group != RootSceneGroupId &&
+               group != InvalidSceneGroupId &&
+               group <= groups.size() &&
+               groups[group - 1].active;
+    }
+
+    SceneGroupId validParentGroup(SceneGroupId parent) const
+    {
+        return groupIsActive(parent) ? parent : RootSceneGroupId;
+    }
+
     std::vector<Object> objects;
     std::vector<Group> groups;
     SoSeparator * legacyRoot = nullptr;
@@ -2276,7 +2970,7 @@ Scene::addGroup(const Transform & transform,
 {
     Impl::Group group;
     group.transform = transform;
-    group.parent = parent <= impl_->groups.size() ? parent : RootSceneGroupId;
+    group.parent = impl_->validParentGroup(parent);
     impl_->groups.push_back(group);
     return static_cast<SceneGroupId>(impl_->groups.size());
 }
@@ -2287,10 +2981,68 @@ Scene::setGroupTransform(SceneGroupId group,
 {
     if (group == RootSceneGroupId ||
         group == InvalidSceneGroupId ||
-        group > impl_->groups.size()) {
+        group > impl_->groups.size() ||
+        !impl_->groups[group - 1].active) {
         return false;
     }
     impl_->groups[group - 1].transform = transform;
+    return true;
+}
+
+bool
+Scene::getGroupTransform(SceneGroupId group, Transform & transform) const
+{
+    if (group == RootSceneGroupId ||
+        group == InvalidSceneGroupId ||
+        group > impl_->groups.size() ||
+        !impl_->groups[group - 1].active) {
+        return false;
+    }
+    transform = impl_->groups[group - 1].transform;
+    return true;
+}
+
+bool
+Scene::setGroupVisible(SceneGroupId group, bool visible)
+{
+    if (group == RootSceneGroupId ||
+        group == InvalidSceneGroupId ||
+        group > impl_->groups.size() ||
+        !impl_->groups[group - 1].active) {
+        return false;
+    }
+    impl_->groups[group - 1].visible = visible;
+    return true;
+}
+
+bool
+Scene::isGroupVisible(SceneGroupId group) const
+{
+    return impl_->groupIsActive(group) && impl_->groups[group - 1].visible;
+}
+
+bool
+Scene::removeGroup(SceneGroupId group)
+{
+    if (group == RootSceneGroupId ||
+        group == InvalidSceneGroupId ||
+        group > impl_->groups.size() ||
+        !impl_->groups[group - 1].active) {
+        return false;
+    }
+
+    for (const Impl::Group & candidate : impl_->groups) {
+        if (candidate.active && candidate.parent == group) {
+            return false;
+        }
+    }
+    for (const Impl::Object & object : impl_->objects) {
+        if (object.active && object.parent == group) {
+            return false;
+        }
+    }
+
+    impl_->groups[group - 1].active = false;
     return true;
 }
 
@@ -2307,7 +3059,7 @@ Scene::addPrimitive(Primitive primitive,
     object.primitiveOptions = options;
     object.material = material;
     object.transform = transform;
-    object.parent = parent <= impl_->groups.size() ? parent : RootSceneGroupId;
+    object.parent = impl_->validParentGroup(parent);
     impl_->objects.push_back(object);
     return static_cast<SceneObjectId>(impl_->objects.size());
 }
@@ -2323,7 +3075,7 @@ Scene::addMesh(const Mesh & mesh,
     object.mesh = mesh;
     object.material = material;
     object.transform = transform;
-    object.parent = parent <= impl_->groups.size() ? parent : RootSceneGroupId;
+    object.parent = impl_->validParentGroup(parent);
     impl_->objects.push_back(object);
     return static_cast<SceneObjectId>(impl_->objects.size());
 }
@@ -2339,7 +3091,7 @@ Scene::addPolyline(const Polyline & polyline,
     object.polyline = polyline;
     object.material = material;
     object.transform = transform;
-    object.parent = parent <= impl_->groups.size() ? parent : RootSceneGroupId;
+    object.parent = impl_->validParentGroup(parent);
     impl_->objects.push_back(object);
     return static_cast<SceneObjectId>(impl_->objects.size());
 }
@@ -2355,7 +3107,7 @@ Scene::addPointCloud(const PointCloud & pointCloud,
     object.pointCloud = pointCloud;
     object.material = material;
     object.transform = transform;
-    object.parent = parent <= impl_->groups.size() ? parent : RootSceneGroupId;
+    object.parent = impl_->validParentGroup(parent);
     impl_->objects.push_back(object);
     return static_cast<SceneObjectId>(impl_->objects.size());
 }
@@ -2367,7 +3119,7 @@ Scene::addDirectionalLight(const DirectionalLight & light,
     Impl::Object object;
     object.kind = Impl::Object::Kind::DirectionalLight;
     object.directionalLight = light;
-    object.parent = parent <= impl_->groups.size() ? parent : RootSceneGroupId;
+    object.parent = impl_->validParentGroup(parent);
     impl_->objects.push_back(object);
     return static_cast<SceneObjectId>(impl_->objects.size());
 }
@@ -2379,7 +3131,7 @@ Scene::addPointLight(const PointLight & light,
     Impl::Object object;
     object.kind = Impl::Object::Kind::PointLight;
     object.pointLight = light;
-    object.parent = parent <= impl_->groups.size() ? parent : RootSceneGroupId;
+    object.parent = impl_->validParentGroup(parent);
     impl_->objects.push_back(object);
     return static_cast<SceneObjectId>(impl_->objects.size());
 }
@@ -2391,7 +3143,7 @@ Scene::addSpotLight(const SpotLight & light,
     Impl::Object object;
     object.kind = Impl::Object::Kind::SpotLight;
     object.spotLight = light;
-    object.parent = parent <= impl_->groups.size() ? parent : RootSceneGroupId;
+    object.parent = impl_->validParentGroup(parent);
     impl_->objects.push_back(object);
     return static_cast<SceneObjectId>(impl_->objects.size());
 }
@@ -2407,7 +3159,7 @@ Scene::addText2D(const Text2D & text,
     object.text2D = text;
     object.material = material;
     object.transform = transform;
-    object.parent = parent <= impl_->groups.size() ? parent : RootSceneGroupId;
+    object.parent = impl_->validParentGroup(parent);
     impl_->objects.push_back(object);
     return static_cast<SceneObjectId>(impl_->objects.size());
 }
@@ -2423,7 +3175,7 @@ Scene::addText3D(const Text3D & text,
     object.text3D = text;
     object.material = material;
     object.transform = transform;
-    object.parent = parent <= impl_->groups.size() ? parent : RootSceneGroupId;
+    object.parent = impl_->validParentGroup(parent);
     impl_->objects.push_back(object);
     return static_cast<SceneObjectId>(impl_->objects.size());
 }
@@ -2437,7 +3189,7 @@ Scene::addCadAssembly(const CadAssembly & assembly,
     object.kind = Impl::Object::Kind::CadAssembly;
     object.cadAssembly = std::make_shared<CadAssembly>(assembly);
     object.transform = transform;
-    object.parent = parent <= impl_->groups.size() ? parent : RootSceneGroupId;
+    object.parent = impl_->validParentGroup(parent);
     impl_->objects.push_back(object);
     return static_cast<SceneObjectId>(impl_->objects.size());
 }
@@ -2453,7 +3205,7 @@ Scene::addOpenGLCallback(const OpenGLCallback & callback,
     Impl::Object object;
     object.kind = Impl::Object::Kind::OpenGLCallback;
     object.openGLCallback = callback;
-    object.parent = parent <= impl_->groups.size() ? parent : RootSceneGroupId;
+    object.parent = impl_->validParentGroup(parent);
     impl_->objects.push_back(object);
     return static_cast<SceneObjectId>(impl_->objects.size());
 }
@@ -2477,7 +3229,7 @@ Scene::addLegacySceneGraph(NativeSceneGraphHandle rootHandle,
     object.kind = Impl::Object::Kind::LegacySceneGraph;
     object.legacySceneGraph = copy;
     object.transform = transform;
-    object.parent = parent <= impl_->groups.size() ? parent : RootSceneGroupId;
+    object.parent = impl_->validParentGroup(parent);
     impl_->objects.push_back(object);
     return static_cast<SceneObjectId>(impl_->objects.size());
 }
@@ -2495,6 +3247,22 @@ Scene::setObjectTransform(SceneObjectId object,
         return false;
     }
     target.transform = transform;
+    return true;
+}
+
+bool
+Scene::getObjectTransform(SceneObjectId object,
+                          Transform & transform) const
+{
+    if (object == InvalidSceneObjectId ||
+        object > impl_->objects.size()) {
+        return false;
+    }
+    const Impl::Object & target = impl_->objects[object - 1];
+    if (!target.active) {
+        return false;
+    }
+    transform = target.transform;
     return true;
 }
 
@@ -2569,6 +3337,32 @@ Scene::setObjectPointCloud(SceneObjectId object,
 }
 
 bool
+Scene::setObjectVisible(SceneObjectId object, bool visible)
+{
+    if (object == InvalidSceneObjectId ||
+        object > impl_->objects.size()) {
+        return false;
+    }
+    Impl::Object & target = impl_->objects[object - 1];
+    if (!target.active) {
+        return false;
+    }
+    target.visible = visible;
+    return true;
+}
+
+bool
+Scene::isObjectVisible(SceneObjectId object) const
+{
+    if (object == InvalidSceneObjectId ||
+        object > impl_->objects.size()) {
+        return false;
+    }
+    const Impl::Object & target = impl_->objects[object - 1];
+    return target.active && target.visible;
+}
+
+bool
 Scene::removeObject(SceneObjectId object)
 {
     if (object == InvalidSceneObjectId ||
@@ -2620,7 +3414,12 @@ Scene::empty() const
             return false;
         }
     }
-    return impl_->groups.empty() && !impl_->legacyRoot;
+    for (const Impl::Group & group : impl_->groups) {
+        if (group.active) {
+            return false;
+        }
+    }
+    return !impl_->legacyRoot;
 }
 
 size_t
@@ -2638,7 +3437,13 @@ Scene::objectCount() const
 size_t
 Scene::groupCount() const
 {
-    return impl_->groups.size();
+    size_t count = 0;
+    for (const Impl::Group & group : impl_->groups) {
+        if (group.active) {
+            ++count;
+        }
+    }
+    return count;
 }
 
 std::vector<SceneObjectInfo>
@@ -2689,16 +3494,33 @@ Scene::capturePacket() const
 {
     ScenePacket packet;
     std::vector<SbMatrix> groupWorldMatrices;
+    std::vector<bool> groupVisibility;
     groupWorldMatrices.reserve(impl_->groups.size());
+    groupVisibility.reserve(impl_->groups.size());
     packet.groups.reserve(impl_->groups.size());
     for (size_t i = 0; i < impl_->groups.size(); ++i) {
         const Impl::Group & group = impl_->groups[i];
+        if (!group.active) {
+            groupWorldMatrices.push_back(SbMatrix::identity());
+            groupVisibility.push_back(false);
+            continue;
+        }
+        const bool parentVisible =
+            group.parent == RootSceneGroupId ||
+            (impl_->groupIsActive(group.parent) &&
+             group.parent <= groupVisibility.size() &&
+             groupVisibility[group.parent - 1]);
+        const bool visible = group.visible && parentVisible;
         SbMatrix worldMatrix = transformMatrix(group.transform);
-        if (group.parent != RootSceneGroupId &&
+        if (impl_->groupIsActive(group.parent) &&
             group.parent <= groupWorldMatrices.size()) {
             worldMatrix.multLeft(groupWorldMatrices[group.parent - 1]);
         }
         groupWorldMatrices.push_back(worldMatrix);
+        groupVisibility.push_back(visible);
+        if (!visible) {
+            continue;
+        }
 
         SceneGroupRecord record;
         record.id = static_cast<SceneGroupId>(i + 1);
@@ -2709,10 +3531,17 @@ Scene::capturePacket() const
     }
 
     const auto parentWorldMatrix = [&](SceneGroupId parent) -> SbMatrix {
-        if (parent != RootSceneGroupId && parent <= groupWorldMatrices.size()) {
+        if (impl_->groupIsActive(parent) &&
+            parent <= groupWorldMatrices.size()) {
             return groupWorldMatrices[parent - 1];
         }
         return SbMatrix::identity();
+    };
+    const auto parentVisible = [&](SceneGroupId parent) -> bool {
+        return parent == RootSceneGroupId ||
+               (impl_->groupIsActive(parent) &&
+                parent <= groupVisibility.size() &&
+                groupVisibility[parent - 1]);
     };
 
     if (impl_->hasCamera && impl_->cameraKind == Impl::CameraKind::Perspective) {
@@ -2727,7 +3556,7 @@ Scene::capturePacket() const
     packet.objects.reserve(objectCount());
     for (size_t i = 0; i < impl_->objects.size(); ++i) {
         const Impl::Object & object = impl_->objects[i];
-        if (!object.active) {
+        if (!object.active || !object.visible || !parentVisible(object.parent)) {
             continue;
         }
 
@@ -2805,22 +3634,43 @@ Scene::createLegacySceneGraph() const
     }
 
     std::vector<SbMatrix> groupWorldMatrices;
+    std::vector<bool> groupVisibility;
     groupWorldMatrices.reserve(impl_->groups.size());
+    groupVisibility.reserve(impl_->groups.size());
     for (size_t i = 0; i < impl_->groups.size(); ++i) {
         const Impl::Group & group = impl_->groups[i];
+        if (!group.active) {
+            groupWorldMatrices.push_back(SbMatrix::identity());
+            groupVisibility.push_back(false);
+            continue;
+        }
+        const bool parentVisible =
+            group.parent == RootSceneGroupId ||
+            (impl_->groupIsActive(group.parent) &&
+             group.parent <= groupVisibility.size() &&
+             groupVisibility[group.parent - 1]);
+        const bool visible = group.visible && parentVisible;
         SbMatrix matrix = transformMatrix(group.transform);
-        if (group.parent != RootSceneGroupId &&
+        if (impl_->groupIsActive(group.parent) &&
             group.parent <= groupWorldMatrices.size()) {
             matrix.multLeft(groupWorldMatrices[group.parent - 1]);
         }
         groupWorldMatrices.push_back(matrix);
+        groupVisibility.push_back(visible);
     }
 
     const auto parentWorldMatrix = [&](SceneGroupId parent) -> SbMatrix {
-        if (parent != RootSceneGroupId && parent <= groupWorldMatrices.size()) {
+        if (impl_->groupIsActive(parent) &&
+            parent <= groupWorldMatrices.size()) {
             return groupWorldMatrices[parent - 1];
         }
         return SbMatrix::identity();
+    };
+    const auto parentVisible = [&](SceneGroupId parent) -> bool {
+        return parent == RootSceneGroupId ||
+               (impl_->groupIsActive(parent) &&
+                parent <= groupVisibility.size() &&
+                groupVisibility[parent - 1]);
     };
 
     const auto transformPoint = [](const SbMatrix & matrix, const Vec3 & point) -> SbVec3f {
@@ -2840,7 +3690,7 @@ Scene::createLegacySceneGraph() const
 
     for (size_t i = 0; i < impl_->objects.size(); ++i) {
         const Impl::Object & object = impl_->objects[i];
-        if (!object.active) {
+        if (!object.active || !object.visible || !parentVisible(object.parent)) {
             continue;
         }
         const SceneObjectId objectId = static_cast<SceneObjectId>(i + 1);
@@ -2893,6 +3743,12 @@ Scene::createLegacySceneGraph() const
     groupNodes.reserve(impl_->groups.size());
     for (size_t i = 0; i < impl_->groups.size(); ++i) {
         const Impl::Group & group = impl_->groups[i];
+        const bool visible =
+            i < groupVisibility.size() ? groupVisibility[i] : false;
+        if (!group.active || !visible) {
+            groupNodes.push_back(nullptr);
+            continue;
+        }
         const SceneGroupId groupId = static_cast<SceneGroupId>(i + 1);
         SoSeparator * sep = new SoSeparator;
         const std::string name = legacyGroupName(groupId);
@@ -2900,8 +3756,9 @@ Scene::createLegacySceneGraph() const
         sep->addChild(createTransform(group.transform));
 
         SoSeparator * parent = root;
-        if (group.parent != RootSceneGroupId &&
-            group.parent <= groupNodes.size()) {
+        if (impl_->groupIsActive(group.parent) &&
+            group.parent <= groupNodes.size() &&
+            groupNodes[group.parent - 1]) {
             parent = groupNodes[group.parent - 1];
         }
         parent->addChild(sep);
@@ -2910,13 +3767,14 @@ Scene::createLegacySceneGraph() const
 
     for (size_t i = 0; i < impl_->objects.size(); ++i) {
         const Impl::Object & object = impl_->objects[i];
-        if (!object.active) {
+        if (!object.active || !object.visible || !parentVisible(object.parent)) {
             continue;
         }
         const SceneObjectId objectId = static_cast<SceneObjectId>(i + 1);
         SoSeparator * parent = root;
-        if (object.parent != RootSceneGroupId &&
-            object.parent <= groupNodes.size()) {
+        if (impl_->groupIsActive(object.parent) &&
+            object.parent <= groupNodes.size() &&
+            groupNodes[object.parent - 1]) {
             parent = groupNodes[object.parent - 1];
         }
         if (object.kind == Impl::Object::Kind::DirectionalLight ||
@@ -3025,7 +3883,7 @@ Scene::fromLegacySceneGraph(NativeSceneGraphHandle rootHandle)
         return scene;
     }
 
-    scene.impl_->setLegacyRoot(*root);
+    scene.addLegacySceneGraph(root, Transform{}, RootSceneGroupId);
     return scene;
 }
 

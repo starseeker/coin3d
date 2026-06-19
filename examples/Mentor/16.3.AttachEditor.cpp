@@ -101,11 +101,16 @@ void applyProgrammaticMaterial(MaterialAttachment & attachment,
     }
 }
 
-bool renderScene(obol::OffscreenRenderer & renderer,
+bool renderScene(obol::Renderer & renderer,
                  obol::Scene & scene,
+                 const obol::RenderTarget & target,
                  const char * filename)
 {
-    const obol::FrameResult result = renderer.render(scene);
+    obol::FrameRequest request;
+    request.scene = &scene;
+    request.target = target;
+    request.background = {0.0f, 0.0f, 0.0f, 1.0f};
+    const obol::FrameResult result = renderer.render(request);
     return result.success && renderer.writeRGB(filename);
 }
 
@@ -143,15 +148,14 @@ int main(int argc, char **argv)
     target.width = DEFAULT_WIDTH;
     target.height = DEFAULT_HEIGHT;
     target.pixelFormat = obol::PixelFormat::RGB;
-    obol::OffscreenRenderer renderer(backend, target);
-    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
+    obol::Renderer renderer(backend);
 
     const char *baseFilename = (argc > 1) ? argv[1] : "16.3.AttachEditor";
     char filename[512];
 
     printf("--- State 1: Default material before attach ---\n");
     snprintf(filename, sizeof(filename), "%s_default.rgb", baseFilename);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderScene(renderer, scene, target, filename)) return 1;
 
     printf("--- Attaching editor to material state ---\n");
     editor.attach(&attachment);
@@ -163,19 +167,19 @@ int main(int argc, char **argv)
     printf("--- State 2: User edits to red via attached editor ---\n");
     editor.setMaterial(material(1.0f, 0.0f, 0.0f, 0.5f));
     snprintf(filename, sizeof(filename), "%s_red.rgb", baseFilename);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderScene(renderer, scene, target, filename)) return 1;
 
     printf("--- State 3: User edits to blue via attached editor ---\n");
     editor.setMaterial(material(0.0f, 0.3f, 1.0f, 0.8f));
     snprintf(filename, sizeof(filename), "%s_blue.rgb", baseFilename);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderScene(renderer, scene, target, filename)) return 1;
     snprintf(filename, sizeof(filename), "%s.rgb", baseFilename);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderScene(renderer, scene, target, filename)) return 1;
 
     printf("--- State 4: User edits to green via attached editor ---\n");
     editor.setMaterial(material(0.0f, 0.8f, 0.1f, 0.6f));
     snprintf(filename, sizeof(filename), "%s_green.rgb", baseFilename);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderScene(renderer, scene, target, filename)) return 1;
 
     printf("--- State 5: Programmatic material change syncs to editor ---\n");
     applyProgrammaticMaterial(attachment, material(1.0f, 0.5f, 0.0f, 0.4f));
@@ -185,7 +189,7 @@ int main(int argc, char **argv)
            editor.material().baseColor.g,
            editor.material().baseColor.b);
     snprintf(filename, sizeof(filename), "%s_orange.rgb", baseFilename);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderScene(renderer, scene, target, filename)) return 1;
 
     printf("Generated 5 images showing bidirectional material editor attachment.\n");
     return 0;

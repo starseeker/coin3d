@@ -151,11 +151,16 @@ void restoreBenchMaterial(obol::Scene & scene, const Bench & bench)
     }
 }
 
-bool renderScene(obol::OffscreenRenderer & renderer,
+bool renderScene(obol::Renderer & renderer,
                  obol::Scene & scene,
+                 const obol::RenderTarget & target,
                  const char * filename)
 {
-    const obol::FrameResult result = renderer.render(scene);
+    obol::FrameRequest request;
+    request.scene = &scene;
+    request.target = target;
+    request.background = {0.0f, 0.0f, 0.0f, 1.0f};
+    const obol::FrameResult result = renderer.render(request);
     return result.success && renderer.writeRGB(filename);
 }
 
@@ -191,8 +196,7 @@ int main(int argc, char **argv)
     target.width = DEFAULT_WIDTH;
     target.height = DEFAULT_HEIGHT;
     target.pixelFormat = obol::PixelFormat::RGB;
-    obol::OffscreenRenderer renderer(backend, target);
-    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
+    obol::Renderer renderer(backend);
 
     const char *base = (argc > 1) ? argv[1] : "10.6.PickFilterTopLevel";
     char filename[512];
@@ -200,12 +204,12 @@ int main(int argc, char **argv)
 
     printf("Frame %d: initial scene (both benches unselected)\n", frameNum);
     snprintf(filename, sizeof(filename), "%s_frame%02d_initial.rgb", base, frameNum++);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderScene(renderer, scene, target, filename)) return 1;
 
     printf("Frame %d: filtered selection -> entire left bench highlighted\n", frameNum);
     setBenchMaterial(scene, leftBench, highlightMaterial());
     snprintf(filename, sizeof(filename), "%s_frame%02d_filtered_selected.rgb", base, frameNum++);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderScene(renderer, scene, target, filename)) return 1;
     restoreBenchMaterial(scene, leftBench);
 
     printf("Frame %d: default selection -> only one left-bench component highlighted\n", frameNum);
@@ -213,7 +217,7 @@ int main(int argc, char **argv)
         scene.setObjectMaterial(leftBench.parts[0].id, highlightMaterial());
     }
     snprintf(filename, sizeof(filename), "%s_frame%02d_default_selected.rgb", base, frameNum++);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderScene(renderer, scene, target, filename)) return 1;
 
     printf("\nRendered %d frames demonstrating top-level pick filtering [Obol v2]\n", frameNum);
     return 0;

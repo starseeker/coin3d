@@ -160,11 +160,16 @@ obol::Vec3 normalize(const obol::Vec3 & v)
     return obol::Vec3{v.x / length, v.y / length, v.z / length};
 }
 
-bool renderScene(obol::OffscreenRenderer & renderer,
+bool renderScene(obol::Renderer & renderer,
                  obol::Scene & scene,
+                 const obol::RenderTarget & target,
                  const char * filename)
 {
-    const obol::FrameResult result = renderer.render(scene);
+    obol::FrameRequest request;
+    request.scene = &scene;
+    request.target = target;
+    request.background = {0.0f, 0.0f, 0.0f, 1.0f};
+    const obol::FrameResult result = renderer.render(request);
     return result.success && renderer.writeRGB(filename);
 }
 
@@ -237,8 +242,7 @@ int main(int argc, char **argv)
     target.width = DEFAULT_WIDTH;
     target.height = DEFAULT_HEIGHT;
     target.pixelFormat = obol::PixelFormat::RGB;
-    obol::OffscreenRenderer renderer(backend, target);
-    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
+    obol::Renderer renderer(backend);
 
     const char *baseFilename = (argc > 1) ? argv[1] : "09.4.PickAction";
     char filename[256];
@@ -246,7 +250,7 @@ int main(int argc, char **argv)
     int frameNum = 0;
 
     snprintf(filename, sizeof(filename), "%s_initial.rgb", baseFilename);
-    if (!renderScene(renderer, scene, filename)) {
+    if (!renderScene(renderer, scene, target, filename)) {
         fprintf(stderr, "Error: Failed to render initial pick scene with Obol v2 API\n");
         return 1;
     }
@@ -264,7 +268,7 @@ int main(int argc, char **argv)
         pickedStar1.hits[0].objectId == star1) {
         scene.setObjectMaterial(star1, highlight(1.0f, 1.0f, 0.0f));
         snprintf(filename, sizeof(filename), "%s_pick_star1.rgb", baseFilename);
-        if (!renderScene(renderer, scene, filename)) {
+        if (!renderScene(renderer, scene, target, filename)) {
             fprintf(stderr, "Error: Failed to render first highlighted pick with Obol v2 API\n");
             return 1;
         }
@@ -279,7 +283,7 @@ int main(int argc, char **argv)
         pickedStar2.hits[0].objectId == star2) {
         scene.setObjectMaterial(star2, highlight(1.0f, 0.0f, 0.0f));
         snprintf(filename, sizeof(filename), "%s_pick_star2.rgb", baseFilename);
-        if (!renderScene(renderer, scene, filename)) {
+        if (!renderScene(renderer, scene, target, filename)) {
             fprintf(stderr, "Error: Failed to render second highlighted pick with Obol v2 API\n");
             return 1;
         }

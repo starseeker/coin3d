@@ -22,6 +22,7 @@ enum class DiagnosticSeverity {
 
 struct RenderDiagnostic {
     DiagnosticSeverity severity = DiagnosticSeverity::Info;
+    SceneObjectId objectId = InvalidSceneObjectId;
     std::string message;
 };
 
@@ -34,10 +35,19 @@ enum class RenderBackendKind {
     Custom
 };
 
+enum class RenderFeatureProfile {
+    CorePortable,
+    RasterExtended,
+    BackendNative
+};
+
 struct RenderCapabilities {
     bool known = false;
     RenderBackendKind backendKind = RenderBackendKind::Unknown;
     std::string backendName;
+    bool corePortable = false;
+    bool rasterExtended = false;
+    bool backendNative = false;
     bool softwareRasterizer = false;
     bool framebufferObjects = false;
     bool shaders = false;
@@ -47,6 +57,10 @@ struct RenderCapabilities {
     int glMinor = 0;
     int glRelease = 0;
 };
+
+OBOL_V2_API bool supportsRenderFeatureProfile(
+    const RenderCapabilities & capabilities,
+    RenderFeatureProfile profile);
 
 struct RenderOptions {
     bool shadows = false;
@@ -65,6 +79,13 @@ struct RenderTarget {
     unsigned int width = 1;
     unsigned int height = 1;
     PixelFormat pixelFormat = PixelFormat::RGB;
+};
+
+struct FrameRequest {
+    const Scene * scene = nullptr;
+    RenderTarget target;
+    RenderOptions options;
+    Color background = {0.0f, 0.0f, 0.0f, 1.0f};
 };
 
 struct FrameResult {
@@ -131,6 +152,7 @@ public:
     unsigned int width() const;
     unsigned int height() const;
     PixelFormat pixelFormat() const;
+    RenderCapabilities capabilities() const;
 
     void setRenderTarget(const RenderTarget & target);
     RenderTarget renderTarget() const;
@@ -139,6 +161,35 @@ public:
 
     FrameResult render(const Scene & scene,
                        const RenderOptions & options = RenderOptions{});
+
+    const unsigned char * pixels() const;
+    bool writeRGB(const char * filename) const;
+
+private:
+    struct Impl;
+    Impl * impl_;
+};
+
+class OBOL_V2_API Renderer {
+public:
+    explicit Renderer(RenderBackend & backend);
+
+    Renderer(NativeContextHandle manager,
+             RenderBackendKind backendKind = RenderBackendKind::Unknown,
+             const char * backendName = "context-manager");
+
+    ~Renderer();
+
+    Renderer(const Renderer &) = delete;
+    Renderer & operator=(const Renderer &) = delete;
+
+    FrameResult render(const FrameRequest & request);
+
+    unsigned int width() const;
+    unsigned int height() const;
+    PixelFormat pixelFormat() const;
+    RenderTarget renderTarget() const;
+    RenderCapabilities capabilities() const;
 
     const unsigned char * pixels() const;
     bool writeRGB(const char * filename) const;

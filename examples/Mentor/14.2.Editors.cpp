@@ -133,12 +133,17 @@ obol::Scene makeScene(const EditorState & state)
     return scene;
 }
 
-bool renderState(obol::OffscreenRenderer & renderer,
+bool renderState(obol::Renderer & renderer,
                  const EditorState & state,
+                 const obol::RenderTarget & target,
                  const char * filename)
 {
     obol::Scene scene = makeScene(state);
-    const obol::FrameResult result = renderer.render(scene);
+    obol::FrameRequest request;
+    request.scene = &scene;
+    request.target = target;
+    request.background = {0.0f, 0.0f, 0.0f, 1.0f};
+    const obol::FrameResult result = renderer.render(request);
     return result.success && renderer.writeRGB(filename);
 }
 
@@ -164,51 +169,50 @@ int main(int argc, char **argv)
     target.width = DEFAULT_WIDTH;
     target.height = DEFAULT_HEIGHT;
     target.pixelFormat = obol::PixelFormat::RGB;
-    obol::OffscreenRenderer renderer(backend, target);
-    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
+    obol::Renderer renderer(backend);
 
     const char *baseFilename = (argc > 1) ? argv[1] : "14.2.Editors";
     char filename[512];
 
     printf("--- State 1: Initial desk with default lighting ---\n");
     snprintf(filename, sizeof(filename), "%s_initial.rgb", baseFilename);
-    if (!renderState(renderer, state, filename)) return 1;
+    if (!renderState(renderer, state, target, filename)) return 1;
     snprintf(filename, sizeof(filename), "%s.rgb", baseFilename);
-    if (!renderState(renderer, state, filename)) return 1;
+    if (!renderState(renderer, state, target, filename)) return 1;
 
     printf("--- State 2: User changes desk to darker wood via material editor ---\n");
     state.deskMaterial = makeMaterial(0.5f, 0.25f, 0.1f);
     state.deskMaterial.specular = {0.3f, 0.3f, 0.3f, 1.0f};
     state.deskMaterial.shininess = 0.3f;
     snprintf(filename, sizeof(filename), "%s_dark_wood.rgb", baseFilename);
-    if (!renderState(renderer, state, filename)) return 1;
+    if (!renderState(renderer, state, target, filename)) return 1;
 
     printf("--- State 3: User changes light direction via light editor ---\n");
     state.light.direction = {1.0f, -1.0f, -1.0f};
     snprintf(filename, sizeof(filename), "%s_light_direction.rgb", baseFilename);
-    if (!renderState(renderer, state, filename)) return 1;
+    if (!renderState(renderer, state, target, filename)) return 1;
 
     printf("--- State 4: User changes light color and intensity ---\n");
     state.light.color = {1.0f, 1.0f, 0.8f, 1.0f};
     state.light.intensity = 1.2f;
     snprintf(filename, sizeof(filename), "%s_warm_bright_light.rgb", baseFilename);
-    if (!renderState(renderer, state, filename)) return 1;
+    if (!renderState(renderer, state, target, filename)) return 1;
 
     printf("--- State 5: User changes desk to lighter finish ---\n");
     state.deskMaterial = makeMaterial(0.9f, 0.7f, 0.4f);
     state.deskMaterial.shininess = 0.6f;
     snprintf(filename, sizeof(filename), "%s_light_finish.rgb", baseFilename);
-    if (!renderState(renderer, state, filename)) return 1;
+    if (!renderState(renderer, state, target, filename)) return 1;
 
     printf("--- State 6: User turns light off ---\n");
     state.lightOn = false;
     snprintf(filename, sizeof(filename), "%s_light_off.rgb", baseFilename);
-    if (!renderState(renderer, state, filename)) return 1;
+    if (!renderState(renderer, state, target, filename)) return 1;
 
     printf("--- State 7: User turns light back on ---\n");
     state.lightOn = true;
     snprintf(filename, sizeof(filename), "%s_light_on.rgb", baseFilename);
-    if (!renderState(renderer, state, filename)) return 1;
+    if (!renderState(renderer, state, target, filename)) return 1;
 
     printf("\nGenerated 7 images showing editor state applied through Obol v2 scenes.\n");
     printf("Material and light widgets are represented as toolkit-owned state that can target any backend.\n");

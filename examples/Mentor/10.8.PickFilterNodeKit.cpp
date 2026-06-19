@@ -98,11 +98,16 @@ void applyMaterial(obol::Scene & scene,
     }
 }
 
-bool renderScene(obol::OffscreenRenderer & renderer,
+bool renderScene(obol::Renderer & renderer,
                  obol::Scene & scene,
+                 const obol::RenderTarget & target,
                  const char * filename)
 {
-    const obol::FrameResult result = renderer.render(scene);
+    obol::FrameRequest request;
+    request.scene = &scene;
+    request.target = target;
+    request.background = {0.0f, 0.0f, 0.0f, 1.0f};
+    const obol::FrameResult result = renderer.render(request);
     return result.success && renderer.writeRGB(filename);
 }
 
@@ -142,8 +147,7 @@ int main(int argc, char **argv)
     target.width = DEFAULT_WIDTH;
     target.height = DEFAULT_HEIGHT;
     target.pixelFormat = obol::PixelFormat::RGB;
-    obol::OffscreenRenderer renderer(backend, target);
-    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
+    obol::Renderer renderer(backend);
 
     std::vector<size_t> selected;
     const char *baseFilename = (argc > 1) ? argv[1] : "10.8.PickFilterNodeKit";
@@ -151,44 +155,44 @@ int main(int argc, char **argv)
 
     printf("\n--- State 1: Initial scene (nothing selected) ---\n");
     snprintf(filename, sizeof(filename), "%s_initial.rgb", baseFilename);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderScene(renderer, scene, target, filename)) return 1;
 
     printf("\n--- Simulating pick on object 0 (top) ---\n");
     selectSingle(selected, 0);
     printf("--- State 2: Object 0 selected (default material) ---\n");
     snprintf(filename, sizeof(filename), "%s_selected_default.rgb", baseFilename);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderScene(renderer, scene, target, filename)) return 1;
 
     printf("\n--- User changes material to red in editor ---\n");
     applyMaterial(scene, objects, selected, material(1.0f, 0.0f, 0.0f));
     printf("--- State 3: Selected object now red ---\n");
     snprintf(filename, sizeof(filename), "%s_red.rgb", baseFilename);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderScene(renderer, scene, target, filename)) return 1;
 
     printf("\n--- Simulating pick on object 3 (right side) ---\n");
     selectSingle(selected, 3);
     printf("--- State 4: Different object selected ---\n");
     printf("(Editor should sync to show this object's material)\n");
     snprintf(filename, sizeof(filename), "%s_select_different.rgb", baseFilename);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderScene(renderer, scene, target, filename)) return 1;
 
     printf("\n--- User changes this object's material to blue ---\n");
     applyMaterial(scene, objects, selected, material(0.0f, 0.3f, 1.0f));
     printf("--- State 5: Now have both red and blue objects ---\n");
     snprintf(filename, sizeof(filename), "%s_multiple_colors.rgb", baseFilename);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderScene(renderer, scene, target, filename)) return 1;
 
     printf("\n--- Selecting multiple objects ---\n");
     selectMultiple(selected, 0, 6);
     printf("--- State 6: Multiple objects selected ---\n");
     snprintf(filename, sizeof(filename), "%s_multi_select.rgb", baseFilename);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderScene(renderer, scene, target, filename)) return 1;
 
     printf("\n--- User changes material to green (affects all selected) ---\n");
     applyMaterial(scene, objects, selected, material(0.0f, 0.8f, 0.1f));
     printf("--- State 7: Multiple objects changed to green ---\n");
     snprintf(filename, sizeof(filename), "%s_multi_edit.rgb", baseFilename);
-    if (!renderScene(renderer, scene, filename)) return 1;
+    if (!renderScene(renderer, scene, target, filename)) return 1;
 
     printf("\n=== Summary ===\n");
     printf("Generated 7 images showing pick filtering and material editing [Obol v2]\n");

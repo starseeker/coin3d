@@ -105,13 +105,18 @@ obol::Mesh makePennantMesh()
     return mesh;
 }
 
-bool renderView(obol::OffscreenRenderer & renderer,
+bool renderView(obol::Renderer & renderer,
                 obol::Scene & scene,
+                const obol::RenderTarget & target,
                 const char * filename,
                 const obol::PerspectiveCamera & camera)
 {
     scene.setCamera(camera);
-    const obol::FrameResult result = renderer.render(scene);
+    obol::FrameRequest request;
+    request.scene = &scene;
+    request.target = target;
+    request.background = {0.0f, 0.0f, 0.0f, 1.0f};
+    const obol::FrameResult result = renderer.render(request);
     return result.success && renderer.writeRGB(filename);
 }
 
@@ -163,26 +168,25 @@ int main(int argc, char **argv)
     target.width = DEFAULT_WIDTH;
     target.height = DEFAULT_HEIGHT;
     target.pixelFormat = obol::PixelFormat::RGB;
-    obol::OffscreenRenderer renderer(backend, target);
-    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
+    obol::Renderer renderer(backend);
 
     const char *baseFilename = (argc > 1) ? argv[1] : "05.3.TriangleStripSet";
     char filename[256];
 
     snprintf(filename, sizeof(filename), "%s_front.rgb", baseFilename);
-    if (!renderView(renderer, scene, filename, frontCamera)) {
+    if (!renderView(renderer, scene, target, filename, frontCamera)) {
         fprintf(stderr, "Error: Failed to render front TriangleStripSet view with Obol v2 API\n");
         return 1;
     }
 
     snprintf(filename, sizeof(filename), "%s_side.rgb", baseFilename);
-    if (!renderView(renderer, scene, filename, sideCamera)) {
+    if (!renderView(renderer, scene, target, filename, sideCamera)) {
         fprintf(stderr, "Error: Failed to render side TriangleStripSet view with Obol v2 API\n");
         return 1;
     }
 
     snprintf(filename, sizeof(filename), "%s_angle.rgb", baseFilename);
-    if (!renderView(renderer, scene, filename, angleCamera)) {
+    if (!renderView(renderer, scene, target, filename, angleCamera)) {
         fprintf(stderr, "Error: Failed to render angled TriangleStripSet view with Obol v2 API\n");
         return 1;
     }

@@ -12,11 +12,16 @@
 
 namespace {
 
-bool renderScene(obol::OffscreenRenderer & renderer,
+bool renderScene(obol::Renderer & renderer,
                  obol::Scene & scene,
+                 const obol::RenderTarget & target,
                  const char * filename)
 {
-    const obol::FrameResult result = renderer.render(scene);
+    obol::FrameRequest request;
+    request.scene = &scene;
+    request.target = target;
+    request.background = {0.0f, 0.0f, 0.0f, 1.0f};
+    const obol::FrameResult result = renderer.render(request);
     return result.success && renderer.writeRGB(filename);
 }
 
@@ -30,14 +35,6 @@ obol::Material material(float r, float g, float b)
 obol::Transform visible()
 {
     return obol::Transform{};
-}
-
-obol::Transform hidden()
-{
-    obol::Transform transform;
-    transform.translation = {1000.0f, 1000.0f, 1000.0f};
-    transform.scale = {0.001f, 0.001f, 0.001f};
-    return transform;
 }
 
 obol::PerspectiveCamera viewAllCamera(const obol::Scene & scene)
@@ -60,7 +57,8 @@ int main(int argc, char **argv)
     const obol::SceneObjectId cube =
         scene.addPrimitive(obol::Primitive::Cube, material(1.0f, 0.0f, 0.0f));
     const obol::SceneObjectId sphere =
-        scene.addPrimitive(obol::Primitive::Sphere, material(0.0f, 0.0f, 1.0f), hidden());
+        scene.addPrimitive(obol::Primitive::Sphere, material(0.0f, 0.0f, 1.0f));
+    scene.setObjectVisible(sphere, false);
 
     obol::Scene cameraScene;
     cameraScene.addDirectionalLight(obol::DirectionalLight{});
@@ -74,8 +72,7 @@ int main(int argc, char **argv)
     target.width = DEFAULT_WIDTH;
     target.height = DEFAULT_HEIGHT;
     target.pixelFormat = obol::PixelFormat::RGB;
-    obol::OffscreenRenderer renderer(backend, target);
-    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
+    obol::Renderer renderer(backend);
 
     const char *baseFilename = (argc > 1) ? argv[1] : "13.5.Boolean";
     char filename[256];
@@ -83,13 +80,15 @@ int main(int argc, char **argv)
     for (int i = 0; i <= 8; i++) {
         const float timeValue = i * 0.5f;
         const int which = i % 2;
-        scene.setObjectTransform(cube, which == 0 ? visible() : hidden());
-        scene.setObjectTransform(sphere, which == 1 ? visible() : hidden());
+        scene.setObjectVisible(cube, which == 0);
+        scene.setObjectVisible(sphere, which == 1);
+        scene.setObjectTransform(cube, visible());
+        scene.setObjectTransform(sphere, visible());
 
         printf("Time %.1f: Showing %s (whichChild=%d)\n",
                timeValue, which == 0 ? "Cube" : "Sphere", which);
         snprintf(filename, sizeof(filename), "%s_frame%02d.rgb", baseFilename, i);
-        if (!renderScene(renderer, scene, filename)) return 1;
+        if (!renderScene(renderer, scene, target, filename)) return 1;
     }
 
     return 0;

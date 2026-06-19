@@ -78,11 +78,16 @@ obol::Scene makeScene()
     return scene;
 }
 
-bool renderScene(obol::OffscreenRenderer & renderer,
+bool renderScene(obol::Renderer & renderer,
                  obol::Scene & scene,
+                 const obol::RenderTarget & target,
                  const char * filename)
 {
-    const obol::FrameResult result = renderer.render(scene);
+    obol::FrameRequest request;
+    request.scene = &scene;
+    request.target = target;
+    request.background = {0.0f, 0.0f, 0.0f, 1.0f};
+    const obol::FrameResult result = renderer.render(request);
     return result.success && renderer.writeRGB(filename);
 }
 
@@ -100,8 +105,7 @@ int main(int argc, char **argv)
     target.width = DEFAULT_WIDTH;
     target.height = DEFAULT_HEIGHT;
     target.pixelFormat = obol::PixelFormat::RGB;
-    obol::OffscreenRenderer renderer(backend, target);
-    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
+    obol::Renderer renderer(backend);
 
     const char *baseFilename = (argc > 1) ? argv[1] : "04.1.Cameras";
     char filename[256];
@@ -112,7 +116,7 @@ int main(int argc, char **argv)
     orthoCamera.height = 6.5f;
     scene.setCamera(orthoCamera);
     snprintf(filename, sizeof(filename), "%s_orthographic.rgb", baseFilename);
-    if (!renderScene(renderer, scene, filename)) {
+    if (!renderScene(renderer, scene, target, filename)) {
         fprintf(stderr, "Error: Failed to render orthographic camera view with Obol v2 API\n");
         return 1;
     }
@@ -123,7 +127,7 @@ int main(int argc, char **argv)
     perspectiveCamera.verticalFieldOfViewRadians = 0.65f;
     scene.setCamera(perspectiveCamera);
     snprintf(filename, sizeof(filename), "%s_perspective.rgb", baseFilename);
-    if (!renderScene(renderer, scene, filename)) {
+    if (!renderScene(renderer, scene, target, filename)) {
         fprintf(stderr, "Error: Failed to render perspective camera view with Obol v2 API\n");
         return 1;
     }
@@ -134,7 +138,7 @@ int main(int argc, char **argv)
     offCenterCamera.verticalFieldOfViewRadians = 0.65f;
     scene.setCamera(offCenterCamera);
     snprintf(filename, sizeof(filename), "%s_offcenter.rgb", baseFilename);
-    if (!renderScene(renderer, scene, filename)) {
+    if (!renderScene(renderer, scene, target, filename)) {
         fprintf(stderr, "Error: Failed to render off-center camera view with Obol v2 API\n");
         return 1;
     }

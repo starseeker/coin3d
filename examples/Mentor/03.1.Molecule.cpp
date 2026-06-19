@@ -65,13 +65,18 @@ void addWaterMolecule(obol::Scene & scene)
                        molecule);
 }
 
-bool renderView(obol::OffscreenRenderer & renderer,
+bool renderView(obol::Renderer & renderer,
                 obol::Scene & scene,
+                const obol::RenderTarget & target,
                 const char * filename,
                 const obol::PerspectiveCamera & camera)
 {
     scene.setCamera(camera);
-    const obol::FrameResult result = renderer.render(scene);
+    obol::FrameRequest request;
+    request.scene = &scene;
+    request.target = target;
+    request.background = {0.0f, 0.0f, 0.0f, 1.0f};
+    const obol::FrameResult result = renderer.render(request);
     return result.success && renderer.writeRGB(filename);
 }
 
@@ -120,22 +125,21 @@ int main(int argc, char **argv)
     target.width = DEFAULT_WIDTH;
     target.height = DEFAULT_HEIGHT;
     target.pixelFormat = obol::PixelFormat::RGB;
-    obol::OffscreenRenderer renderer(backend, target);
-    renderer.setBackgroundColor({0.0f, 0.0f, 0.0f, 1.0f});
+    obol::Renderer renderer(backend);
 
     const char *baseFilename = (argc > 1) ? argv[1] : "03.1.Molecule";
     char filename[512];
 
     snprintf(filename, sizeof(filename), "%s_front.rgb", baseFilename);
-    if (!renderView(renderer, scene, filename, frontCamera)) return 1;
+    if (!renderView(renderer, scene, target, filename, frontCamera)) return 1;
     snprintf(filename, sizeof(filename), "%s.rgb", baseFilename);
-    if (!renderView(renderer, scene, filename, frontCamera)) return 1;
+    if (!renderView(renderer, scene, target, filename, frontCamera)) return 1;
 
     snprintf(filename, sizeof(filename), "%s_side.rgb", baseFilename);
-    if (!renderView(renderer, scene, filename, sideCamera)) return 1;
+    if (!renderView(renderer, scene, target, filename, sideCamera)) return 1;
 
     snprintf(filename, sizeof(filename), "%s_angle.rgb", baseFilename);
-    if (!renderView(renderer, scene, filename, angleCamera)) return 1;
+    if (!renderView(renderer, scene, target, filename, angleCamera)) return 1;
 
     return 0;
 }

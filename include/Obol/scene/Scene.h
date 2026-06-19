@@ -369,6 +369,10 @@ public:
     SceneGroupId addGroup(const Transform & transform = Transform{},
                           SceneGroupId parent = RootSceneGroupId);
     bool setGroupTransform(SceneGroupId group, const Transform & transform);
+    bool getGroupTransform(SceneGroupId group, Transform & transform) const;
+    bool setGroupVisible(SceneGroupId group, bool visible);
+    bool isGroupVisible(SceneGroupId group) const;
+    bool removeGroup(SceneGroupId group);
 
     SceneObjectId addPrimitive(Primitive primitive,
                                const Material & material = Material{},
@@ -412,9 +416,12 @@ public:
                                       const Transform & transform = Transform{},
                                       SceneGroupId parent = RootSceneGroupId);
     bool setObjectTransform(SceneObjectId object, const Transform & transform);
+    bool getObjectTransform(SceneObjectId object, Transform & transform) const;
     bool setObjectMaterial(SceneObjectId object, const Material & material);
     bool setObjectPrimitiveOptions(SceneObjectId object, const PrimitiveOptions & options);
     bool setObjectPointCloud(SceneObjectId object, const PointCloud & pointCloud);
+    bool setObjectVisible(SceneObjectId object, bool visible);
+    bool isObjectVisible(SceneObjectId object) const;
     bool removeObject(SceneObjectId object);
 
     void setCamera(const PerspectiveCamera & camera);
@@ -431,9 +438,9 @@ public:
     ScenePacket capturePacket() const;
     void clear();
 
-    // Legacy bridge for the v2 rollout.  New application code should render
-    // through obol::OffscreenRenderer instead of depending on native scene
-    // graph handles.
+    // Legacy bridge for the v2 rollout.  New application code should submit
+    // obol::FrameRequest values to obol::Renderer instead of depending on
+    // native scene graph handles.
     NativeSceneGraphHandle createLegacySceneGraph() const;
     static void releaseLegacySceneGraph(NativeSceneGraphHandle root);
 
