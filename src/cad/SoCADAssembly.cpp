@@ -785,8 +785,11 @@ SoCADAssembly::rayPick(SoRayPickAction* action)
 
     impl_->rebuildBvhIfNeeded();
 
-    // Get the pick ray in world space
-    SbLine worldRay = action->getLine();
+    // Match SoShape picking semantics: SoRayPickAction stores the active
+    // ray in object space only after setObjectSpace() updates it from the
+    // current traversal state.
+    action->setObjectSpace();
+    SbLine pickRay = action->getLine();
 
     // Determine effective pick mode
     int pm = pickMode.getValue();
@@ -794,9 +797,9 @@ SoCADAssembly::rayPick(SoRayPickAction* action)
         pm = (drawMode.getValue() == WIREFRAME) ? PICK_EDGE : PICK_TRIANGLE;
     }
 
-    // Derive a world-space edge-pick tolerance from the screen-space field.
+    // Derive an assembly-space edge-pick tolerance from the screen-space field.
     // Approximate: use the view volume to find how large one pixel is in world
-    // space at the assembly centre, then scale by the user-specified tolerance.
+    // coordinates at the assembly centre, then scale by the user-specified tolerance.
     float toleranceWS = edgePickTolerancePx.getValue() * 0.01f;
     {
         SoState* state = action->getState();
@@ -818,15 +821,16 @@ SoCADAssembly::rayPick(SoRayPickAction* action)
                 }
                 float dist = vv.getNearDist() * 10.0f;
                 if (!bbox.isEmpty()) {
-                    dist = (bbox.getCenter() - worldRay.getPosition())
-                               .dot(worldRay.getDirection());
+                    dist = (bbox.getCenter() - pickRay.getPosition())
+                               .dot(pickRay.getDirection());
                     dist = std::max(vv.getNearDist(), dist);
                 }
                 // Height of the view volume at that distance (perspective or ortho)
                 float nearH  = vv.getHeight();          // at nearDist for persp
                 float nearD  = vv.getNearDist();
                 float pixelH = (nearH / vpH) * (dist / nearD);
-                toleranceWS  = edgePickTolerancePx.getValue() * pixelH;
+                toleranceWS = std::max(toleranceWS,
+                    edgePickTolerancePx.getValue() * pixelH);
             }
         }
     }
@@ -835,7 +839,7 @@ SoCADAssembly::rayPick(SoRayPickAction* action)
 
     if (pm == PICK_EDGE || pm == PICK_HYBRID) {
         result = obol::picking::CadPickQuery::pickEdge(
-            worldRay,
+            pickRay,
             impl_->instanceBvh_,
             impl_->parts_,
             impl_->partEdgeBvhCache_,
@@ -844,23 +848,26 @@ SoCADAssembly::rayPick(SoRayPickAction* action)
 
     if (!result.valid && (pm == PICK_TRIANGLE || pm == PICK_HYBRID)) {
         result = obol::picking::CadPickQuery::pickTriangle(
-            worldRay,
+            pickRay,
             impl_->instanceBvh_,
             impl_->parts_,
-            impl_->partTriBvhCache_);
+            impl_->partTriBvhCache_,
+            toleranceWS);
     }
 
     if (!result.valid && pm == PICK_BOUNDS) {
         result = obol::picking::CadPickQuery::pickBounds(
-            worldRay,
-            impl_->instanceBvh_);
+            pickRay,
+            impl_->instanceBvh_,
+            toleranceWS);
     }
 
     // For PICK_HYBRID: also try bounds if triangle picking returned nothing.
     if (!result.valid && pm == PICK_HYBRID) {
         result = obol::picking::CadPickQuery::pickBounds(
-            worldRay,
-            impl_->instanceBvh_);
+            pickRay,
+            impl_->instanceBvh_,
+            toleranceWS);
     }
 
     if (!result.valid) return;

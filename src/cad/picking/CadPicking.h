@@ -131,6 +131,15 @@ public:
      */
     std::vector<const Entry*> query(const SbLine& ray) const;
 
+    /**
+     * @brief Collect instances whose world AABB intersects @p ray, allowing
+     * @p tolerance world-space slack around each AABB.
+     *
+     * This is intended for tolerant edge picking, where a ray just outside
+     * an instance box may still be close enough to hit one of its edges.
+     */
+    std::vector<const Entry*> query(const SbLine& ray, float tolerance) const;
+
     /** true after build() has been called with at least one entry. */
     bool isBuilt() const noexcept { return !nodes_.empty(); }
 
@@ -146,7 +155,7 @@ private:
 
     int buildRecursive(std::vector<int>& indices, int begin, int end);
 
-    void queryRecursive(int nodeIdx, const SbLine& ray,
+    void queryRecursive(int nodeIdx, const SbLine& ray, float tolerance,
                         std::vector<const Entry*>& results) const;
 };
 
@@ -298,12 +307,13 @@ public:
     /**
      * @brief Perform bounding-box picking (bounds proxy).
      *
-     * Intersects the pick ray with instance world bounding boxes.  Always
-     * returns a result as long as any instance exists.
+     * Intersects the pick ray with instance world bounding boxes using
+     * optional world-space slack around each box.
      */
     static CadPickResult pickBounds(
-        const SbLine&        ray,
-        const CadInstanceBVH& instanceBvh);
+        const SbLine&         ray,
+        const CadInstanceBVH& instanceBvh,
+        float                 toleranceWS = 0.0f);
 
     /**
      * @brief Perform triangle (surface) picking.
@@ -324,7 +334,8 @@ public:
         const std::unordered_map<PartId, obol::PartGeometry,
                                  std::hash<obol::PartId>>&  partGeometries,
         std::unordered_map<PartId, CadPartTriBVH,
-                           std::hash<obol::PartId>>&        partTriBvhCache);
+                           std::hash<obol::PartId>>&        partTriBvhCache,
+        float                                               toleranceWS = 0.0f);
 };
 
 } // namespace picking

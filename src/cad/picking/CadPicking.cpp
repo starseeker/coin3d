@@ -45,6 +45,56 @@
 namespace obol {
 namespace picking {
 
+namespace {
+
+SbBox3f
+expandedBox(const SbBox3f& box, float tolerance) noexcept
+{
+    if (box.isEmpty() || tolerance <= 0.0f) return box;
+
+    SbVec3f bmin, bmax;
+    box.getBounds(bmin, bmax);
+    const SbVec3f pad(tolerance, tolerance, tolerance);
+
+    SbBox3f expanded;
+    expanded.setBounds(bmin - pad, bmax + pad);
+    return expanded;
+}
+
+bool
+rayBoxHit(const SbLine& ray, const SbBox3f& box, float* hitT) noexcept
+{
+    if (box.isEmpty()) return false;
+    SbVec3f bmin, bmax;
+    box.getBounds(bmin, bmax);
+
+    const SbVec3f& orig = ray.getPosition();
+    const SbVec3f& dir  = ray.getDirection();
+
+    float tmin = -std::numeric_limits<float>::infinity();
+    float tmax =  std::numeric_limits<float>::infinity();
+
+    for (int a = 0; a < 3; ++a) {
+        float d = dir[a];
+        if (std::abs(d) < 1e-12f) {
+            if (orig[a] < bmin[a] || orig[a] > bmax[a]) return false;
+        } else {
+            float t1 = (bmin[a] - orig[a]) / d;
+            float t2 = (bmax[a] - orig[a]) / d;
+            if (t1 > t2) std::swap(t1, t2);
+            if (t1 > tmin) tmin = t1;
+            if (t2 < tmax) tmax = t2;
+            if (tmin > tmax) return false;
+        }
+    }
+
+    if (tmax < 0.0f) return false;
+    if (hitT) *hitT = std::max(0.0f, tmin);
+    return true;
+}
+
+}  // namespace
+
 // ===========================================================================
 // CadInstanceBVH
 // ===========================================================================
@@ -111,55 +161,37 @@ CadInstanceBVH::buildRecursive(std::vector<int>& indices, int begin, int end)
 bool
 CadInstanceBVH::rayIntersectsBox(const SbLine& ray, const SbBox3f& box) noexcept
 {
-    if (box.isEmpty()) return false;
-    SbVec3f bmin, bmax;
-    box.getBounds(bmin, bmax);
-
-    const SbVec3f& orig = ray.getPosition();
-    const SbVec3f& dir  = ray.getDirection();
-
-    float tmin = -std::numeric_limits<float>::infinity();
-    float tmax =  std::numeric_limits<float>::infinity();
-
-    for (int a = 0; a < 3; ++a) {
-        float d = dir[a];
-        if (std::abs(d) < 1e-12f) {
-            // Ray parallel to slab — check if origin is inside
-            if (orig[a] < bmin[a] || orig[a] > bmax[a]) return false;
-        } else {
-            float t1 = (bmin[a] - orig[a]) / d;
-            float t2 = (bmax[a] - orig[a]) / d;
-            if (t1 > t2) std::swap(t1, t2);
-            if (t1 > tmin) tmin = t1;
-            if (t2 < tmax) tmax = t2;
-            if (tmin > tmax) return false;
-        }
-    }
-    return tmax >= 0.0f;
+    return rayBoxHit(ray, box, nullptr);
 }
 
 void
-CadInstanceBVH::queryRecursive(int nodeIdx, const SbLine& ray,
+CadInstanceBVH::queryRecursive(int nodeIdx, const SbLine& ray, float tolerance,
                                std::vector<const Entry*>& results) const
 {
     if (nodeIdx < 0 || nodeIdx >= static_cast<int>(nodes_.size())) return;
     const BvhNode& node = nodes_[nodeIdx];
-    if (!rayIntersectsBox(ray, node.bounds)) return;
+    if (!rayIntersectsBox(ray, expandedBox(node.bounds, tolerance))) return;
 
     if (node.itemIdx >= 0) {
         results.push_back(&entries_[node.itemIdx]);
         return;
     }
-    queryRecursive(node.left,  ray, results);
-    queryRecursive(node.right, ray, results);
+    queryRecursive(node.left,  ray, tolerance, results);
+    queryRecursive(node.right, ray, tolerance, results);
 }
 
 std::vector<const CadInstanceBVH::Entry*>
 CadInstanceBVH::query(const SbLine& ray) const
 {
+    return query(ray, 0.0f);
+}
+
+std::vector<const CadInstanceBVH::Entry*>
+CadInstanceBVH::query(const SbLine& ray, float tolerance) const
+{
     std::vector<const Entry*> results;
     if (!nodes_.empty()) {
-        queryRecursive(0, ray, results);
+        queryRecursive(0, ray, tolerance, results);
     }
     return results;
 }
@@ -290,8 +322,7 @@ CadPartEdgeBVH::queryRecursive(int nodeIdx, const SbLine& ray, float tolerance,
     if (nodeIdx < 0 || nodeIdx >= static_cast<int>(nodes_.size())) return;
     const BvhNode& node = nodes_[nodeIdx];
 
-    // Cull if ray doesn't intersect the expanded AABB
-    if (!CadInstanceBVH::rayIntersectsBox(ray, node.bounds)) return;
+    if (!CadInstanceBVH::rayIntersectsBox(ray, expandedBox(node.bounds, tolerance))) return;
 
     if (node.itemIdx >= 0) {
         const SegEntry& seg = segments_[node.itemIdx];
@@ -339,7 +370,7 @@ CadPickQuery::pickEdge(
     CadPickResult best;
     best.t = std::numeric_limits<float>::infinity();
 
-    const auto& candidates = instanceBvh.query(ray);
+    const auto& candidates = instanceBvh.query(ray, toleranceWS);
     for (const auto* entry : candidates) {
         const PartId& pid = entry->partId;
 
@@ -425,21 +456,20 @@ CadPickQuery::pickEdge(
 CadPickResult
 CadPickQuery::pickBounds(
     const SbLine&         ray,
-    const CadInstanceBVH& instanceBvh)
+    const CadInstanceBVH& instanceBvh,
+    float                 toleranceWS)
 {
     CadPickResult best;
     best.t = std::numeric_limits<float>::infinity();
 
-    const auto& candidates = instanceBvh.query(ray);
+    const auto& candidates = instanceBvh.query(ray, toleranceWS);
     for (const auto* entry : candidates) {
-        SbVec3f bmin, bmax;
-        entry->worldBounds.getBounds(bmin, bmax);
-        SbVec3f center = entry->worldBounds.getCenter();
-        float t = (center - ray.getPosition()).dot(ray.getDirection());
-        if (t < 0.0f) continue;
+        const SbBox3f bounds = expandedBox(entry->worldBounds, toleranceWS);
+        float t = std::numeric_limits<float>::infinity();
+        if (!rayBoxHit(ray, bounds, &t)) continue;
         if (t < best.t) {
             best.t          = t;
-            best.hitPoint   = center;
+            best.hitPoint   = ray.getPosition() + ray.getDirection() * t;
             best.instanceId = entry->instanceId;
             best.partId     = entry->partId;
             best.primType   = CadPickResult::BOUNDS;
@@ -625,12 +655,13 @@ CadPickQuery::pickTriangle(
     const std::unordered_map<PartId, obol::PartGeometry,
                              std::hash<obol::PartId>>&  partGeometries,
     std::unordered_map<PartId, CadPartTriBVH,
-                       std::hash<obol::PartId>>&        partTriBvhCache)
+                       std::hash<obol::PartId>>&        partTriBvhCache,
+    float                                               toleranceWS)
 {
     CadPickResult best;
     best.t = std::numeric_limits<float>::infinity();
 
-    const auto& candidates = instanceBvh.query(ray);
+    const auto& candidates = instanceBvh.query(ray, toleranceWS);
     for (const auto* entry : candidates) {
         const PartId& pid = entry->partId;
 
