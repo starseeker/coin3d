@@ -514,13 +514,57 @@ static bool isBoxOutsideFrustum(const float wbMin[3], const float wbMax[3],
 
 // Compute a POP LoD level based on camera-to-object distance and object radius.
 // Returns 255 (full detail) when very close; decreases as the object shrinks.
-static uint8_t computeLodLevel(float dist, float radius) noexcept
+static uint8_t computeLodLevel(float dist, float radius, float lodScale) noexcept
 {
     if (radius < 1e-6f) return 255;
-    float ratio = dist / radius; // 0 = touching; large = tiny/far
+    const float scale = lodScale > 0.0f ? lodScale : 1.0f;
+    float ratio = (dist / radius) * scale; // 0 = touching; large = tiny/far
     // Mapping: ratio ≈ 0 → 255; ratio = 2 → ~170; ratio = 50 → ~10
     float level = 255.0f / (1.0f + ratio * 0.5f);
     return static_cast<uint8_t>(std::min(255.0f, std::max(0.0f, level)));
+}
+
+static uint8_t instanceLodLevel(const obol::internal::CadVisibleInstance& inst,
+                                const SbVec3f& cameraPos,
+                                const obol::CadRenderState& renderState) noexcept
+{
+    if (renderState.selectedFullDetail && (inst.flags & 1u))
+        return 255;
+
+    float cx = (inst.wbMin[0] + inst.wbMax[0]) * 0.5f;
+    float cy = (inst.wbMin[1] + inst.wbMax[1]) * 0.5f;
+    float cz = (inst.wbMin[2] + inst.wbMax[2]) * 0.5f;
+    float dx = inst.wbMax[0] - inst.wbMin[0];
+    float dy = inst.wbMax[1] - inst.wbMin[1];
+    float dz = inst.wbMax[2] - inst.wbMin[2];
+    float radius = std::sqrt(dx*dx + dy*dy + dz*dz) * 0.5f;
+    float distX = cx - cameraPos[0];
+    float distY = cy - cameraPos[1];
+    float distZ = cz - cameraPos[2];
+    float dist  = std::sqrt(distX*distX + distY*distY + distZ*distZ);
+    return computeLodLevel(dist, radius, renderState.lodScale);
+}
+
+const std::vector<uint32_t> *
+CadRendererGL::lodIndicesForInstance(
+        const SoCADAssembly& assembly,
+        PartId part,
+        const obol::internal::CadVisibleInstance& inst,
+        const SbVec3f& cameraPos,
+        const obol::CadRenderState& renderState,
+        const std::unordered_map<PartId, uint64_t,
+                                 std::hash<PartId>>& partGenMap)
+{
+    if (!renderState.lodEnabled)
+        return nullptr;
+
+    const uint8_t level = instanceLodLevel(inst, cameraPos, renderState);
+    if (level >= 255)
+        return nullptr;
+
+    auto genIt = partGenMap.find(part);
+    uint64_t gen = (genIt != partGenMap.end()) ? genIt->second : 0;
+    return this->getLodCachedIndices(part, level, gen, assembly);
 }
 
 void CadRendererGL::render(
@@ -529,7 +573,7 @@ void CadRendererGL::render(
         const SoGLContext*   glue,
         const SbMatrix&      viewProj,
         const SbVec3f&       cameraPos,
-        bool                 lodEnabled,
+        const CadRenderState& renderState,
         const std::unordered_map<PartId, uint64_t,
                                  std::hash<PartId>>& partGenMap)
 {
@@ -543,15 +587,21 @@ void CadRendererGL::render(
         ensurePartUploaded(repKey.part, assembly, gen, glue);
     }
 
-    if (caps_.canUseInstanced() && shaders_.wireInst && shaders_.shadedInst) {
+    const bool needsShadedLod =
+        renderState.lodEnabled && !plan.shadedItems.empty();
+
+    if (!needsShadedLod &&
+            caps_.canUseInstanced() && shaders_.wireInst && shaders_.shadedInst) {
         lastRenderTier_ = 2;
         renderInstanced(plan, assembly, glue, viewProj, partGenMap);
     } else if (caps_.canUseVbo() && shaders_.wire) {
         lastRenderTier_ = 1;
-        renderVboLoop(plan, assembly, glue, viewProj, cameraPos, lodEnabled, partGenMap);
+        renderVboLoop(plan, assembly, glue, viewProj, cameraPos,
+                      renderState, partGenMap);
     } else {
         lastRenderTier_ = 0;
-        renderImmediateMode(plan, assembly, glue, viewProj, cameraPos, lodEnabled, partGenMap);
+        renderImmediateMode(plan, assembly, glue, viewProj, cameraPos,
+                            renderState, partGenMap);
     }
 }
 
@@ -637,15 +687,52 @@ static void bindAndDrawTri(const CadTriGpu* t, const SoGLContext* glue,
     }
 }
 
+static void bindAndDrawTriClientIndices(const CadTriGpu* t,
+                                        const SoGLContext* glue,
+                                        GLint locPos,
+                                        GLint locNorm,
+                                        bool& hasNorm,
+                                        const uint32_t *indices,
+                                        GLsizei indexCount)
+{
+    if (!t || t->idxCount == 0 || !indices || indexCount == 0)
+        return;
+
+    hasNorm = (t->normBuf != 0);
+
+    glue->glBindBuffer(GL_ARRAY_BUFFER, t->posBuf);
+    glue->glVertexAttribPointerARB(static_cast<GLuint>(locPos), 3,
+                                   GL_FLOAT, GL_FALSE,
+                                   3 * sizeof(float), nullptr);
+    glue->glEnableVertexAttribArrayARB(static_cast<GLuint>(locPos));
+
+    if (hasNorm && locNorm >= 0) {
+        glue->glBindBuffer(GL_ARRAY_BUFFER, t->normBuf);
+        glue->glVertexAttribPointerARB(static_cast<GLuint>(locNorm), 3,
+                                       GL_FLOAT, GL_FALSE,
+                                       3 * sizeof(float), nullptr);
+        glue->glEnableVertexAttribArrayARB(static_cast<GLuint>(locNorm));
+    }
+
+    glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    glue->glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, indices);
+
+    if (hasNorm && locNorm >= 0) {
+        glue->glDisableVertexAttribArrayARB(static_cast<GLuint>(locNorm));
+    }
+    glue->glDisableVertexAttribArrayARB(static_cast<GLuint>(locPos));
+    glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
 void CadRendererGL::renderVboLoop(
         const CadFramePlan& plan,
-        const SoCADAssembly& /*assembly*/,
+        const SoCADAssembly& assembly,
         const SoGLContext*   glue,
         const SbMatrix&      viewProj,
-        const SbVec3f&       /*cameraPos*/,
-        bool                 /*lodEnabled*/,
+        const SbVec3f&       cameraPos,
+        const CadRenderState& renderState,
         const std::unordered_map<PartId, uint64_t,
-                                 std::hash<PartId>>& /*partGenMap*/)
+                                 std::hash<PartId>>& partGenMap)
 {
     // OI stores matrices row-major.  GL reads them column-major.  Passing
     // the raw float[16] with GL_FALSE means GL transposes our row-major
@@ -724,7 +811,18 @@ void CadRendererGL::renderVboLoop(
                 };
                 glue->glUniform4fvARB(locColor, 1, rgba);
 
-                bindAndDrawTri(t, glue, locPos, locNorm, hasNorm);
+                const std::vector<uint32_t> *lodIdx =
+                    this->lodIndicesForInstance(assembly, item.rep.part,
+                                                inst, cameraPos, renderState,
+                                                partGenMap);
+                if (lodIdx) {
+                    bindAndDrawTriClientIndices(t, glue, locPos, locNorm,
+                                                hasNorm, lodIdx->data(),
+                                                static_cast<GLsizei>(
+                                                    lodIdx->size()));
+                } else {
+                    bindAndDrawTri(t, glue, locPos, locNorm, hasNorm);
+                }
             }
         }
 
@@ -742,7 +840,7 @@ void CadRendererGL::renderImmediateMode(
         const SoGLContext*   /*glue*/,
         const SbMatrix&      viewProj,
         const SbVec3f&       cameraPos,
-        bool                 lodEnabled,
+        const CadRenderState& renderState,
         const std::unordered_map<PartId, uint64_t,
                                  std::hash<PartId>>& partGenMap)
 {
@@ -808,33 +906,6 @@ void CadRendererGL::renderImmediateMode(
 
         const bool hasNorm = !mesh.normals.empty();
 
-        // Compute LoD-filtered indices for this part if enabled.
-        // All instances share the same part, so determine a representative
-        // LoD level by using the first visible instance's world-bounds centre.
-        const std::vector<uint32_t>* lodIdx = nullptr;
-        if (lodEnabled && item.instanceCount > 0) {
-            const auto& rep = plan.visibleInstances[item.baseInstance];
-            float cx = (rep.wbMin[0] + rep.wbMax[0]) * 0.5f;
-            float cy = (rep.wbMin[1] + rep.wbMax[1]) * 0.5f;
-            float cz = (rep.wbMin[2] + rep.wbMax[2]) * 0.5f;
-            float dx = rep.wbMax[0] - rep.wbMin[0];
-            float dy = rep.wbMax[1] - rep.wbMin[1];
-            float dz = rep.wbMax[2] - rep.wbMin[2];
-            float radius = std::sqrt(dx*dx + dy*dy + dz*dz) * 0.5f;
-            float distX = cx - cameraPos[0];
-            float distY = cy - cameraPos[1];
-            float distZ = cz - cameraPos[2];
-            float dist  = std::sqrt(distX*distX + distY*distY + distZ*distZ);
-            uint8_t level = computeLodLevel(dist, radius);
-            if (level < 255) {
-                auto genIt = partGenMap.find(item.rep.part);
-                uint64_t gen = (genIt != partGenMap.end()) ? genIt->second : 0;
-                lodIdx = getLodCachedIndices(item.rep.part, level, gen, assembly);
-            }
-        }
-
-        const std::vector<uint32_t>& drawIdx = lodIdx ? *lodIdx : mesh.indices;
-
         for (uint32_t ii = 0; ii < item.instanceCount; ++ii) {
             const auto& inst = plan.visibleInstances[item.baseInstance + ii];
             if (isBoxOutsideFrustum(inst.wbMin, inst.wbMax, fp)) continue;
@@ -846,6 +917,13 @@ void CadRendererGL::renderImmediateMode(
             glLoadMatrixf(mvp[0]);
 
             glColor4ub(inst.rgba[0], inst.rgba[1], inst.rgba[2], inst.rgba[3]);
+
+            const std::vector<uint32_t> *lodIdx =
+                this->lodIndicesForInstance(assembly, item.rep.part, inst,
+                                            cameraPos, renderState,
+                                            partGenMap);
+            const std::vector<uint32_t>& drawIdx =
+                lodIdx ? *lodIdx : mesh.indices;
 
             glBegin(GL_TRIANGLES);
             for (size_t t = 0; t + 2 < drawIdx.size(); t += 3) {

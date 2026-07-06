@@ -76,6 +76,7 @@
 #include "CadFramePlan.h"
 
 #include <obol/cad/SoCADAssembly.h>
+#include <obol/cad/CadViewState.h>
 
 #include <Inventor/SbMatrix.h>
 #include <Inventor/SbVec3f.h>
@@ -108,7 +109,7 @@ public:
      * @param glue       Active GL dispatch context (from sogl_current_render_glue()).
      * @param viewProj   Combined view-projection matrix (OI row-major, GL_FALSE upload).
      * @param cameraPos  Camera (eye) position in world space (for LoD distance).
-     * @param lodEnabled Apply POP LoD level selection when drawing triangles.
+     * @param renderState Resolved per-view render policy.
      * @param partGenMap Map from PartId → generation counter (to detect stale VBOs).
      */
     void render(const CadFramePlan& plan,
@@ -116,7 +117,7 @@ public:
                 const SoGLContext*   glue,
                 const SbMatrix&      viewProj,
                 const SbVec3f&       cameraPos,
-                bool                 lodEnabled,
+                const CadRenderState& renderState,
                 const std::unordered_map<PartId, uint64_t,
                                          std::hash<PartId>>& partGenMap);
 
@@ -177,6 +178,15 @@ private:
         PartId pid, uint8_t level, uint64_t gen,
         const SoCADAssembly& assembly);
 
+    const std::vector<uint32_t>* lodIndicesForInstance(
+        const SoCADAssembly& assembly,
+        PartId part,
+        const CadVisibleInstance& inst,
+        const SbVec3f& cameraPos,
+        const CadRenderState& renderState,
+        const std::unordered_map<PartId, uint64_t,
+                                 std::hash<PartId>>& partGenMap);
+
     // -----------------------------------------------------------------------
     // Tier-1: VBO-loop path (GL 2.0+)
     // -----------------------------------------------------------------------
@@ -186,7 +196,7 @@ private:
                        const SoGLContext*   glue,
                        const SbMatrix&      viewProj,
                        const SbVec3f&       cameraPos,
-                       bool                 lodEnabled,
+                       const CadRenderState& renderState,
                        const std::unordered_map<PartId, uint64_t,
                                                 std::hash<PartId>>& partGenMap);
 
@@ -202,7 +212,7 @@ private:
                              const SoGLContext*   glue,
                              const SbMatrix&      viewProj,
                              const SbVec3f&       cameraPos,
-                             bool                 lodEnabled,
+                             const CadRenderState& renderState,
                              const std::unordered_map<PartId, uint64_t,
                                                        std::hash<PartId>>& partGenMap);
 

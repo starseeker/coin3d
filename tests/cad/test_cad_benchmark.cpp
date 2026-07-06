@@ -32,6 +32,7 @@
 #include "headless_utils.h"
 
 #include <obol/cad/SoCADAssembly.h>
+#include <obol/cad/SoCADViewState.h>
 #include <obol/cad/SoCADDetail.h>
 #include <obol/cad/CadIds.h>
 
@@ -59,6 +60,7 @@
 #include <cmath>
 #include <vector>
 #include <string>
+#include <utility>
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -202,6 +204,11 @@ static SoSeparator *buildCADScene(int grid)
     lm->model.setValue(SoLightModel::BASE_COLOR);
     root->addChild(lm);
 
+    SoCADViewState *viewState = new SoCADViewState;
+    viewState->viewIdLow.setValue(1);
+    viewState->lodMode.setValue(SoCADViewState::LOD_DISABLED);
+    root->addChild(viewState);
+
     SoCADAssembly *assembly = new SoCADAssembly;
     assembly->drawMode.setValue(SoCADAssembly::WIREFRAME);
     root->addChild(assembly);
@@ -210,11 +217,14 @@ static SoSeparator *buildCADScene(int grid)
     obol::PartId unitBoxPartId = obol::CadIdBuilder::hash128("unit_box");
     obol::PartGeometry geom;
     geom.wire = buildBoxWire();
-    assembly->upsertPart(unitBoxPartId, geom);
+    assembly->upsertParts({{unitBoxPartId, std::move(geom)}});
 
     // Create grid^3 instances with per-instance transforms
     obol::InstanceId rootId = obol::CadIdBuilder::Root();
     int instanceIdx = 0;
+    std::vector<obol::InstanceRecord> records;
+    records.reserve(static_cast<size_t>(grid) * static_cast<size_t>(grid) *
+                    static_cast<size_t>(grid));
     for (int ix = 0; ix < grid; ++ix) {
         for (int iy = 0; iy < grid; ++iy) {
             for (int iz = 0; iz < grid; ++iz) {
@@ -234,10 +244,11 @@ static SoSeparator *buildCADScene(int grid)
                 rec.style.hasColorOverride = true;
                 rec.style.color = SbColor4f(0.8f, 0.8f, 0.8f, 1.0f);
 
-                assembly->upsertInstanceAuto(rec);
+                records.push_back(std::move(rec));
             }
         }
     }
+    assembly->upsertInstancesAuto(records);
 
     // Frame camera the same way as the SG scene
     SbViewportRegion vp(W, H);
