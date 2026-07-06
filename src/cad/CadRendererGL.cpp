@@ -45,6 +45,23 @@
 #include <algorithm>
 #include <cassert>
 
+static_assert(sizeof(SbVec3f) == 3 * sizeof(float),
+              "SbVec3f must remain tightly packed for CAD GPU uploads");
+
+static const float*
+packedVec3fData(const std::vector<SbVec3f>& values)
+{
+    return values.empty() ? nullptr : values[0].getValue();
+}
+
+static void
+appendPackedPoint(std::vector<float>& packed, const SbVec3f& point)
+{
+    packed.push_back(point[0]);
+    packed.push_back(point[1]);
+    packed.push_back(point[2]);
+}
+
 // ---------------------------------------------------------------------------
 // GLSL shader sources – Tier 1 (GL 2.0 / GLSL 1.10, no #version directive)
 // ---------------------------------------------------------------------------
@@ -376,60 +393,80 @@ void CadRendererGL::ensurePartUploaded(PartId pid, const SoCADAssembly& assembly
     const obol::PartGeometry* geom = assembly.partGeometry(pid);
     if (!geom) return;
 
-    // Build CPU-side flat arrays for wire geometry
+    // Build CPU-side flat arrays for indexed wire geometry.  Pure flat
+    // segment-pair input can be uploaded directly from WireRep::segmentPoints.
     std::vector<float>    wirePos;
     std::vector<uint32_t> wireSegIdx;
+    const float*          pWirePos = nullptr;
+    const uint32_t*       pWireSeg = nullptr;
+    GLsizei               wirePointCount = 0;
+    GLsizei               wireSegIdxCount = 0;
     if (geom->wire.has_value()) {
         const auto& wr = *geom->wire;
-        for (const auto& poly : wr.polylines) {
-            if (poly.points.size() < 2) continue;
-            const uint32_t base = static_cast<uint32_t>(wirePos.size() / 3);
-            for (const auto& pt : poly.points) {
-                wirePos.push_back(pt[0]);
-                wirePos.push_back(pt[1]);
-                wirePos.push_back(pt[2]);
+        const size_t flatPointCount = wr.segmentCount() * 2;
+        if (flatPointCount > 0 && wr.polylines.empty()) {
+            pWirePos = packedVec3fData(wr.segmentPoints);
+            wirePointCount = static_cast<GLsizei>(flatPointCount);
+        } else {
+            size_t polyPointCount = 0;
+            size_t polySegmentCount = 0;
+            for (const auto& poly : wr.polylines) {
+                polyPointCount += poly.points.size();
+                if (poly.points.size() >= 2)
+                    polySegmentCount += poly.points.size() - 1;
             }
-            // Emit a segment (pair of indices) for each consecutive pair
-            for (uint32_t i = 0; i + 1 < poly.points.size(); ++i) {
-                wireSegIdx.push_back(base + i);
-                wireSegIdx.push_back(base + i + 1);
+            wirePos.reserve((flatPointCount + polyPointCount) * 3);
+            wireSegIdx.reserve(flatPointCount + polySegmentCount * 2);
+
+            for (size_t i = 0; i + 1 < flatPointCount; i += 2) {
+                const uint32_t base =
+                    static_cast<uint32_t>(wirePos.size() / 3);
+                appendPackedPoint(wirePos, wr.segmentPoints[i]);
+                appendPackedPoint(wirePos, wr.segmentPoints[i + 1]);
+                wireSegIdx.push_back(base);
+                wireSegIdx.push_back(base + 1);
             }
+
+            for (const auto& poly : wr.polylines) {
+                if (poly.points.size() < 2) continue;
+                const uint32_t base =
+                    static_cast<uint32_t>(wirePos.size() / 3);
+                for (const auto& pt : poly.points)
+                    appendPackedPoint(wirePos, pt);
+                for (uint32_t i = 0; i + 1 < poly.points.size(); ++i) {
+                    wireSegIdx.push_back(base + i);
+                    wireSegIdx.push_back(base + i + 1);
+                }
+            }
+
+            pWirePos = wirePos.empty() ? nullptr : wirePos.data();
+            pWireSeg = wireSegIdx.empty() ? nullptr : wireSegIdx.data();
+            wirePointCount = static_cast<GLsizei>(wirePos.size() / 3);
+            wireSegIdxCount = static_cast<GLsizei>(wireSegIdx.size());
         }
     }
 
-    // Flatten triangle geometry
-    std::vector<float>    triPos;
-    std::vector<float>    triNorm;
-    std::vector<uint32_t> triIdx;
+    // Triangle mesh vectors already use packed SbVec3f storage.
+    const float*    pTriPos = nullptr;
+    const float*    pTriNorm = nullptr;
+    const uint32_t* pTriIdx = nullptr;
+    GLsizei         triPosCount = 0;
+    GLsizei         triIdxCount = 0;
     if (geom->shaded.has_value()) {
         const auto& mesh = *geom->shaded;
-        for (const auto& p : mesh.positions) {
-            triPos.push_back(p[0]);
-            triPos.push_back(p[1]);
-            triPos.push_back(p[2]);
-        }
-        if (!mesh.normals.empty()) {
-            for (const auto& n : mesh.normals) {
-                triNorm.push_back(n[0]);
-                triNorm.push_back(n[1]);
-                triNorm.push_back(n[2]);
-            }
-        }
-        triIdx = mesh.indices;
+        pTriPos = packedVec3fData(mesh.positions);
+        pTriNorm = packedVec3fData(mesh.normals);
+        pTriIdx = mesh.indices.empty() ? nullptr : mesh.indices.data();
+        triPosCount = static_cast<GLsizei>(mesh.positions.size());
+        triIdxCount = static_cast<GLsizei>(mesh.indices.size());
     }
 
-    const float*    pWirePos  = wirePos.empty()    ? nullptr : wirePos.data();
-    const uint32_t* pWireSeg  = wireSegIdx.empty() ? nullptr : wireSegIdx.data();
-    const float*    pTriPos   = triPos.empty()     ? nullptr : triPos.data();
-    const float*    pTriNorm  = triNorm.empty()    ? nullptr : triNorm.data();
-    const uint32_t* pTriIdx   = triIdx.empty()     ? nullptr : triIdx.data();
-
     gpuRes_.upload(pid,
-                   pWirePos,  static_cast<GLsizei>(wirePos.size() / 3),
-                   pWireSeg,  static_cast<GLsizei>(wireSegIdx.size()),
-                   pTriPos,   static_cast<GLsizei>(triPos.size() / 3),
+                   pWirePos,  wirePointCount,
+                   pWireSeg,  wireSegIdxCount,
+                   pTriPos,   triPosCount,
                    pTriNorm,
-                   pTriIdx,   static_cast<GLsizei>(triIdx.size()),
+                   pTriIdx,   triIdxCount,
                    gen,
                    glue, caps_);
 }
@@ -624,13 +661,18 @@ static void bindAndDrawWire(const CadWireGpu* w, const SoGLContext* glue,
                                        GL_FLOAT, GL_FALSE,
                                        3 * sizeof(float), nullptr);
         glue->glEnableVertexAttribArrayARB(static_cast<GLuint>(locPos));
-        glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, w->segIdxBuf);
+        if (!w->sequentialSegments)
+            glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, w->segIdxBuf);
     }
 
-    glue->glDrawElements(GL_LINES,
-                         w->segCount * 2,
-                         GL_UNSIGNED_INT,
-                         nullptr);
+    if (w->sequentialSegments) {
+        glue->glDrawArrays(GL_LINES, 0, w->segCount * 2);
+    } else {
+        glue->glDrawElements(GL_LINES,
+                             w->segCount * 2,
+                             GL_UNSIGNED_INT,
+                             nullptr);
+    }
     {
         GLenum err = glGetError();
         if (err != GL_NO_ERROR)
@@ -642,7 +684,8 @@ static void bindAndDrawWire(const CadWireGpu* w, const SoGLContext* glue,
     } else {
         glue->glDisableVertexAttribArrayARB(static_cast<GLuint>(locPos));
         glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+        if (!w->sequentialSegments)
+            glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     }
 }
 
@@ -884,6 +927,18 @@ void CadRendererGL::renderImmediateMode(
 
             glColor4ub(inst.rgba[0], inst.rgba[1], inst.rgba[2], inst.rgba[3]);
 
+            const size_t flatPointCount = wire.segmentCount() * 2;
+            if (flatPointCount > 0) {
+                glBegin(GL_LINES);
+                for (size_t i = 0; i + 1 < flatPointCount; i += 2) {
+                    const SbVec3f& a = wire.segmentPoints[i];
+                    const SbVec3f& b = wire.segmentPoints[i + 1];
+                    glVertex3f(a[0], a[1], a[2]);
+                    glVertex3f(b[0], b[1], b[2]);
+                }
+                glEnd();
+            }
+
             for (const auto& poly : wire.polylines) {
                 if (poly.points.size() < 2) continue;
                 glBegin(GL_LINE_STRIP);
@@ -1060,15 +1115,23 @@ void CadRendererGL::renderInstanced(
                                                GL_FLOAT, GL_FALSE,
                                                3 * sizeof(float), nullptr);
                 glue->glEnableVertexAttribArrayARB(static_cast<GLuint>(locPos));
-                glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, w->segIdxBuf);
+                if (!w->sequentialSegments)
+                    glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, w->segIdxBuf);
                 bindInstAttribs(item.baseInstance);
             }
 
-            glue->glDrawElementsInstanced(GL_LINES,
-                                          w->segCount * 2,
-                                          GL_UNSIGNED_INT,
-                                          nullptr,
-                                          static_cast<GLsizei>(item.instanceCount));
+            if (w->sequentialSegments) {
+                glue->glDrawArraysInstanced(GL_LINES,
+                                            0,
+                                            w->segCount * 2,
+                                            static_cast<GLsizei>(item.instanceCount));
+            } else {
+                glue->glDrawElementsInstanced(GL_LINES,
+                                              w->segCount * 2,
+                                              GL_UNSIGNED_INT,
+                                              nullptr,
+                                              static_cast<GLsizei>(item.instanceCount));
+            }
 
             if (w->vao && glue->glBindVertexArray) {
                 unbindInstAttribs();
@@ -1077,7 +1140,8 @@ void CadRendererGL::renderInstanced(
                 unbindInstAttribs();
                 glue->glDisableVertexAttribArrayARB(static_cast<GLuint>(locPos));
                 glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
-                glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+                if (!w->sequentialSegments)
+                    glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
             }
         }
 

@@ -353,8 +353,19 @@ CadPickQuery::pickEdge(
         if (bvhIt == partBvhCache.end()) {
             CadPartEdgeBVH edgeBvh;
             std::vector<CadPartEdgeBVH::SegEntry> segs;
+            const obol::WireRep& wire = *geom.wire;
+            segs.reserve(wire.segmentCount());
+            for (size_t i = 0; i < wire.segmentCount(); ++i) {
+                const uint32_t segId =
+                    (i < wire.segmentIds.size()) ?
+                    wire.segmentIds[i] : static_cast<uint32_t>(i);
+                segs.push_back({ wire.segmentPoints[2 * i],
+                                 wire.segmentPoints[2 * i + 1],
+                                 segId,
+                                 0 });
+            }
             uint32_t polyIdx = 0;
-            for (const auto& polyline : geom.wire->polylines) {
+            for (const auto& polyline : wire.polylines) {
                 for (size_t si = 0; si + 1 < polyline.points.size(); ++si) {
                     segs.push_back({ polyline.points[si],
                                      polyline.points[si + 1],

@@ -163,8 +163,8 @@ class CadPartEdgeBVH {
 public:
     struct SegEntry {
         SbVec3f  p0, p1;        ///< Segment endpoints in part-local space
-        uint32_t polylineIdx;   ///< Index of the owning polyline
-        uint32_t segmentIdx;    ///< Index within the polyline (0 = first seg)
+        uint32_t polylineIdx;   ///< Polyline index, or flat segment ID/index
+        uint32_t segmentIdx;    ///< Index within the polyline, or 0 for flat segments
     };
 
     /** Build from a flat list of segments. */

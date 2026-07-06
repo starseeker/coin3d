@@ -91,13 +91,14 @@ public:
     PrimType getPrimType() const noexcept { return primType_; }
 
     /**
-     * Index of the polyline (for EDGE) or face (for TRIANGLE) within the
-     * part geometry.  Undefined for BOUNDS hits.
+     * Flat segment ID/index or polyline index (for EDGE), or face index
+     * (for TRIANGLE) within the part geometry.  Undefined for BOUNDS hits.
      */
     uint32_t getPrimIndex0() const noexcept { return primIndex0_; }
 
     /**
-     * Segment index within the polyline (for EDGE), or unused (for TRIANGLE).
+     * Segment index within the polyline (for EDGE polylines), 0 for flat
+     * EDGE segments, or unused for TRIANGLE.
      */
     uint32_t getPrimIndex1() const noexcept { return primIndex1_; }
 

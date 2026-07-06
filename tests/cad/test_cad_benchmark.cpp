@@ -14,7 +14,7 @@
  *     phases so the CAD assembly's scalability advantage can be observed.
  *
  * A "wireframe box" part consists of the 12 edges of a unit cube expressed
- * as 12 two-point polylines (for the CAD approach) or a SoLineSet with 12
+ * as 12 flat segments (for the CAD approach) or a SoLineSet with 12
  * GL_LINES pairs (for the scene-graph approach).
  *
  * Grid size: INSTANCES_PER_AXIS (default 8) → INSTANCES_PER_AXIS^3 instances.
@@ -171,16 +171,16 @@ static SoSeparator *buildSceneGraph(int grid)
 static obol::WireRep buildBoxWire()
 {
     obol::WireRep wire;
+    wire.segmentPoints.reserve(24);
+    wire.segmentIds.reserve(12);
     for (int e = 0; e < 12; ++e) {
-        obol::WirePolyline poly;
-        poly.points.push_back(SbVec3f(BOX_EDGES[e][0][0],
-                                      BOX_EDGES[e][0][1],
-                                      BOX_EDGES[e][0][2]));
-        poly.points.push_back(SbVec3f(BOX_EDGES[e][1][0],
-                                      BOX_EDGES[e][1][1],
-                                      BOX_EDGES[e][1][2]));
-        poly.edgeId = static_cast<uint32_t>(e + 1);
-        wire.polylines.push_back(std::move(poly));
+        wire.segmentPoints.push_back(SbVec3f(BOX_EDGES[e][0][0],
+                                             BOX_EDGES[e][0][1],
+                                             BOX_EDGES[e][0][2]));
+        wire.segmentPoints.push_back(SbVec3f(BOX_EDGES[e][1][0],
+                                             BOX_EDGES[e][1][1],
+                                             BOX_EDGES[e][1][2]));
+        wire.segmentIds.push_back(static_cast<uint32_t>(e + 1));
     }
     wire.bounds = SbBox3f(SbVec3f(0,0,0), SbVec3f(1,1,1));
     return wire;

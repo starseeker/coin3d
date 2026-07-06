@@ -49,10 +49,13 @@ static obol::WireRep makeCubeWireframe()
         // verticals
         {{0,0,0},{0,0,1}}, {{1,0,0},{1,0,1}}, {{1,1,0},{1,1,1}}, {{0,1,0},{0,1,1}},
     };
-    for (auto& e : edges) {
-        obol::WirePolyline poly;
-        poly.points = { e.a, e.b };
-        rep.polylines.push_back(poly);
+    rep.segmentPoints.reserve(edges.size() * 2);
+    rep.segmentIds.reserve(edges.size());
+    for (size_t i = 0; i < edges.size(); ++i) {
+        const auto& e = edges[i];
+        rep.segmentPoints.push_back(e.a);
+        rep.segmentPoints.push_back(e.b);
+        rep.segmentIds.push_back(static_cast<uint32_t>(i));
     }
     rep.bounds.setBounds(SbVec3f(0,0,0), SbVec3f(1,1,1));
     return rep;

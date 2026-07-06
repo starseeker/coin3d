@@ -42,8 +42,8 @@
  *
  * ### Key design decisions
  * - Geometry is ingested via an explicit API (not by populating child nodes).
- * - Wire polylines are the primary wireframe primitive; triangle meshes are
- *   optional and used for shaded rendering.
+ * - Wire geometry may be supplied either as flat segments or polylines;
+ *   triangle meshes are optional and used for shaded rendering.
  * - Picking returns SoCADDetail with stable InstanceId.
  * - LoD (Level of Detail) is applied at render time via POP-like quantisation.
  * - The node renders entirely within its GLRender() override; it does NOT
@@ -85,6 +85,7 @@
 
 #include <vector>
 #include <optional>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -115,11 +116,31 @@ struct WirePolyline {
 };
 
 /**
- * @brief Collection of polylines representing the wireframe of a part.
+ * @brief Collection of line geometry representing the wireframe of a part.
  */
 struct WireRep {
+    /**
+     * Flat segment endpoint list in part-local coordinates.
+     *
+     * Each consecutive pair (segmentPoints[2i], segmentPoints[2i+1])
+     * defines one independent line segment.  This is the preferred storage
+     * for CAD wire data that is naturally segment-oriented.
+     */
+    std::vector<SbVec3f> segmentPoints;
+
+    /**
+     * Optional stable ID per flat segment.  When present, segmentIds[i]
+     * identifies the segment defined by segmentPoints[2i..2i+1].
+     */
+    std::vector<uint32_t> segmentIds;
+
+    /** Return the number of complete flat segments. */
+    size_t segmentCount() const noexcept { return segmentPoints.size() / 2; }
+
+    /** Polyline storage for curves or callers that need connected strips. */
     std::vector<WirePolyline> polylines;
-    /** Tight axis-aligned bounding box enclosing all polylines. */
+
+    /** Tight axis-aligned bounding box enclosing all wire geometry. */
     SbBox3f bounds;
 };
 
@@ -146,7 +167,7 @@ struct TriMesh {
  * hierarchy / bounds queries.
  */
 struct PartGeometry {
-    std::optional<WireRep> wire;    ///< Feature-edge polylines (no tessellation needed)
+    std::optional<WireRep> wire;    ///< Feature edges (no tessellation needed)
     std::optional<TriMesh> shaded;  ///< Optional triangle mesh for shading
 };
 
@@ -256,7 +277,7 @@ public:
     /** Rendering mode. */
     enum DrawMode {
         SHADED           = 0,  ///< Shaded triangles only
-        WIREFRAME        = 1,  ///< Wireframe polylines only
+        WIREFRAME        = 1,  ///< Wireframe segments/polylines only
         SHADED_WITH_EDGES = 2, ///< Shaded triangles + wire overlay
     };
 

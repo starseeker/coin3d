@@ -35,8 +35,8 @@
  * @brief SoCADAssembly Inventor node – compiled CAD assembly renderer.
  *
  * Implementation notes:
- *  - GLRender: iterates visible instances, draws wire polylines using
- *    GL_LINE_STRIP (instancing-aware loop) and optionally triangle meshes.
+ *  - GLRender: iterates visible instances, draws wire segments/polylines and
+ *    optionally triangle meshes.
  *  - rayPick: delegates to CadPickQuery using the current pickMode.
  *  - getBoundingBox: returns the union of all instance world bounds.
  *  - The Pimpl (SoCADAssemblyImpl) holds the mutable instance/part databases
@@ -940,6 +940,7 @@ SoCADAssembly::getPrimitiveCount(SoGetPrimitiveCountAction* action)
         if (geomIt == impl_->parts_.end()) continue;
         const auto& geom = geomIt->second;
         if (geom.wire) {
+            totalLines += static_cast<int>(geom.wire->segmentCount());
             for (const auto& poly : geom.wire->polylines) {
                 if (poly.points.size() >= 2) {
                     totalLines += static_cast<int>(poly.points.size() - 1);
