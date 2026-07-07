@@ -77,10 +77,19 @@
 #include <memory>
 #include <algorithm>
 #include <cstring>
+#include <cstdlib>
+#include <cstdio>
 
 // ---------------------------------------------------------------------------
 // SoCADAssemblyImpl – private implementation (Pimpl pattern)
 // ---------------------------------------------------------------------------
+
+static bool
+cadDebugEnabled()
+{
+    const char *env = std::getenv("OBOL_CAD_DEBUG");
+    return env && env[0] && env[0] != '0';
+}
 
 struct InstanceData {
     obol::PartId          partId;
@@ -302,7 +311,10 @@ struct SoCADAssemblyImpl {
             std::memcpy(vi.transform.data(), idata.localToRoot[0],
                         16 * sizeof(float));
 
-            // Colour with selection override – evaluate selected once only.
+            // Instance style already encodes application-specific selection
+            // colors.  Keep the selected bit separate for view policies such
+            // as selected-full-detail LoD, but do not impose a fixed CAD-node
+            // highlight color here.
             const bool isSel = selected.count(iid) != 0;
             float r = 0.8f, g = 0.8f, b = 0.8f, a = 1.0f;
             if (idata.style.hasColorOverride) {
@@ -311,13 +323,29 @@ struct SoCADAssemblyImpl {
                 b = idata.style.color[2];
                 a = idata.style.color[3];
             }
-            if (isSel) { r = 1.0f; g = 1.0f; b = 0.0f; }
 
             vi.rgba[0] = static_cast<uint8_t>(std::min(255.0f, r * 255.0f));
             vi.rgba[1] = static_cast<uint8_t>(std::min(255.0f, g * 255.0f));
             vi.rgba[2] = static_cast<uint8_t>(std::min(255.0f, b * 255.0f));
             vi.rgba[3] = static_cast<uint8_t>(std::min(255.0f, a * 255.0f));
             vi.flags   = isSel ? 1u : 0u;
+
+            if (cadDebugEnabled()) {
+                std::fprintf(stderr,
+                             "SoCADAssembly plan instance=%016llx:%016llx "
+                             "styleOverride=%d style=(%.9g %.9g %.9g %.9g) "
+                             "rgba=(%u %u %u %u) selected=%d\n",
+                             static_cast<unsigned long long>(iid.w0),
+                             static_cast<unsigned long long>(iid.w1),
+                             idata.style.hasColorOverride ? 1 : 0,
+                             idata.style.color[0], idata.style.color[1],
+                             idata.style.color[2], idata.style.color[3],
+                             static_cast<unsigned>(vi.rgba[0]),
+                             static_cast<unsigned>(vi.rgba[1]),
+                             static_cast<unsigned>(vi.rgba[2]),
+                             static_cast<unsigned>(vi.rgba[3]),
+                             isSel ? 1 : 0);
+            }
 
             // Store world bounding box for per-instance frustum culling.
             SbVec3f wbMn, wbMx;
@@ -772,6 +800,17 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
     // instanced path selected automatically when available)
     impl_->renderer_->render(impl_->cachedPlan_, *this, glue, viewProj,
                              cameraPos, renderState, impl_->partGeneration_);
+    if (cadDebugEnabled()) {
+        std::fprintf(stderr,
+                     "SoCADAssembly render tier=%d visible=%zu wireItems=%zu "
+                     "shadedItems=%zu parts=%zu instances=%zu\n",
+                     impl_->renderer_->lastRenderTier(),
+                     impl_->cachedPlan_.visibleInstances.size(),
+                     impl_->cachedPlan_.wireItems.size(),
+                     impl_->cachedPlan_.shadedItems.size(),
+                     impl_->parts_.size(),
+                     impl_->instances_.size());
+    }
 }
 
 // ---------------------------------------------------------------------------

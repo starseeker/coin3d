@@ -62,6 +62,26 @@ appendPackedPoint(std::vector<float>& packed, const SbVec3f& point)
     packed.push_back(point[2]);
 }
 
+static void
+setImmediateMaterialFromRgba(const uint8_t rgba[4])
+{
+    const float r = rgba[0] / 255.0f;
+    const float g = rgba[1] / 255.0f;
+    const float b = rgba[2] / 255.0f;
+    const float a = rgba[3] / 255.0f;
+
+    const GLfloat ambient[4] = {r * 0.2f, g * 0.2f, b * 0.2f, a};
+    const GLfloat diffuse[4] = {r * 0.6f, g * 0.6f, b * 0.6f, a};
+    const GLfloat specular[4] = {r * 0.2f, g * 0.2f, b * 0.2f, a};
+    const GLfloat emission[4] = {0.0f, 0.0f, 0.0f, a};
+
+    glColor4ub(rgba[0], rgba[1], rgba[2], rgba[3]);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, emission);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, ambient);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, specular);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, diffuse);
+}
+
 // ---------------------------------------------------------------------------
 // GLSL shader sources – Tier 1 (GL 2.0 / GLSL 1.10, no #version directive)
 // ---------------------------------------------------------------------------
@@ -954,6 +974,8 @@ void CadRendererGL::renderImmediateMode(
     if (wasLighting) glEnable(GL_LIGHTING);
     // Simple Phong-like: enable lighting for shaded items if lighting was on,
     // else just draw with flat colour.
+    GLboolean wasColorMaterial = glIsEnabled(GL_COLOR_MATERIAL);
+    glDisable(GL_COLOR_MATERIAL);
     for (const auto& item : plan.shadedItems) {
         const obol::PartGeometry* geom = assembly.partGeometry(item.rep.part);
         if (!geom || !geom->shaded.has_value()) continue;
@@ -971,7 +993,7 @@ void CadRendererGL::renderImmediateMode(
             mvp.multRight(viewProj);
             glLoadMatrixf(mvp[0]);
 
-            glColor4ub(inst.rgba[0], inst.rgba[1], inst.rgba[2], inst.rgba[3]);
+            setImmediateMaterialFromRgba(inst.rgba.data());
 
             const std::vector<uint32_t> *lodIdx =
                 this->lodIndicesForInstance(assembly, item.rep.part, inst,
@@ -995,6 +1017,7 @@ void CadRendererGL::renderImmediateMode(
             glEnd();
         }
     }
+    if (wasColorMaterial) glEnable(GL_COLOR_MATERIAL);
 
     // Restore matrix state
     glMatrixMode(GL_MODELVIEW);
