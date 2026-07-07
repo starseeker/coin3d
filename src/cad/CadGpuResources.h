@@ -67,11 +67,12 @@ namespace internal {
 
 /** GPU buffers for one part's wire representation. */
 struct CadWireGpu {
-    GLuint posBuf    = 0; ///< float[3] positions for all polyline points
-    GLuint segIdxBuf = 0; ///< uint32 pairs: segment (start,end) indices
+    GLuint posBuf    = 0; ///< float[3] positions for all wire points
+    GLuint segIdxBuf = 0; ///< uint32 pairs: segment indices, or 0 for sequential pairs
     GLuint vao       = 0; ///< VAO binding posBuf (0 if no VAO support)
     GLsizei segCount = 0; ///< number of line segments (indices / 2)
     GLsizei vertCount = 0; ///< total point count in posBuf
+    bool sequentialSegments = false; ///< true when positions are already segment pairs
 };
 
 /** GPU buffers for one part's shaded triangle representation. */
@@ -107,11 +108,12 @@ public:
      * Ensure the GPU representation for @p pid is current.
      *
      * @param pid        Part ID.
-     * @param wireData   Wire geometry (positions for all polylines, flattened).
+     * @param wireData   Wire geometry as packed float[3] positions.
      *                   May be nullptr if the part has no wire rep.
      * @param wireCount  Number of float[3] entries in wireData.
      * @param segIdx     Segment index pairs (start,end) into wireData.
-     *                   May be nullptr if wireData is nullptr.
+     *                   May be nullptr when wireData is already consecutive
+     *                   endpoint pairs for GL_LINES.
      * @param segIdxCount Number of uint32 elements in segIdx.
      * @param triPos     Triangle vertex positions, may be nullptr.
      * @param triPosCount Number of float[3] entries in triPos.

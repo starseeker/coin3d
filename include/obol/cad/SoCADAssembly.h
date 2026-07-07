@@ -42,8 +42,8 @@
  *
  * ### Key design decisions
  * - Geometry is ingested via an explicit API (not by populating child nodes).
- * - Wire polylines are the primary wireframe primitive; triangle meshes are
- *   optional and used for shaded rendering.
+ * - Wire geometry may be supplied either as flat segments or polylines;
+ *   triangle meshes are optional and used for shaded rendering.
  * - Picking returns SoCADDetail with stable InstanceId.
  * - LoD (Level of Detail) is applied at render time via POP-like quantisation.
  * - The node renders entirely within its GLRender() override; it does NOT
@@ -85,9 +85,12 @@
 
 #include <vector>
 #include <optional>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <string>
+
+class SoDetail;
 
 namespace obol {
 
@@ -113,11 +116,31 @@ struct WirePolyline {
 };
 
 /**
- * @brief Collection of polylines representing the wireframe of a part.
+ * @brief Collection of line geometry representing the wireframe of a part.
  */
 struct WireRep {
+    /**
+     * Flat segment endpoint list in part-local coordinates.
+     *
+     * Each consecutive pair (segmentPoints[2i], segmentPoints[2i+1])
+     * defines one independent line segment.  This is the preferred storage
+     * for CAD wire data that is naturally segment-oriented.
+     */
+    std::vector<SbVec3f> segmentPoints;
+
+    /**
+     * Optional stable ID per flat segment.  When present, segmentIds[i]
+     * identifies the segment defined by segmentPoints[2i..2i+1].
+     */
+    std::vector<uint32_t> segmentIds;
+
+    /** Return the number of complete flat segments. */
+    size_t segmentCount() const noexcept { return segmentPoints.size() / 2; }
+
+    /** Polyline storage for curves or callers that need connected strips. */
     std::vector<WirePolyline> polylines;
-    /** Tight axis-aligned bounding box enclosing all polylines. */
+
+    /** Tight axis-aligned bounding box enclosing all wire geometry. */
     SbBox3f bounds;
 };
 
@@ -144,7 +167,7 @@ struct TriMesh {
  * hierarchy / bounds queries.
  */
 struct PartGeometry {
-    std::optional<WireRep> wire;    ///< Feature-edge polylines (no tessellation needed)
+    std::optional<WireRep> wire;    ///< Feature edges (no tessellation needed)
     std::optional<TriMesh> shaded;  ///< Optional triangle mesh for shading
 };
 
@@ -181,6 +204,45 @@ struct InstanceRecord {
     InstanceStyle style;
 };
 
+/**
+ * @brief Bulk part update record.
+ */
+struct PartUpdate {
+    PartId       part;
+    PartGeometry geometry;
+};
+
+/**
+ * @brief Bulk instance update record.
+ */
+struct InstanceUpdate {
+    InstanceId     instance;
+    InstanceRecord record;
+};
+
+/**
+ * @brief Domain-neutral pick hit record produced by SoCADAssembly.
+ *
+ * Applications that need richer pick details can subclass SoCADAssembly and
+ * override createPickDetail() to translate this stable CAD hit identity into
+ * application-specific detail data.
+ */
+struct CadPickDetailRecord {
+    enum PrimitiveKind {
+        EDGE     = 0,
+        TRIANGLE = 1,
+        BOUNDS   = 2,
+    };
+
+    InstanceId    instance;
+    PartId        part;
+    SbVec3f       point         = SbVec3f(0.0f, 0.0f, 0.0f);
+    PrimitiveKind primitiveKind = BOUNDS;
+    uint32_t      primIndex0    = 0;
+    uint32_t      primIndex1    = 0;
+    float         u             = 0.0f;
+};
+
 } // namespace obol
 
 // ---------------------------------------------------------------------------
@@ -215,7 +277,7 @@ public:
     /** Rendering mode. */
     enum DrawMode {
         SHADED           = 0,  ///< Shaded triangles only
-        WIREFRAME        = 1,  ///< Wireframe polylines only
+        WIREFRAME        = 1,  ///< Wireframe segments/polylines only
         SHADED_WITH_EDGES = 2, ///< Shaded triangles + wire overlay
     };
 
@@ -232,7 +294,6 @@ public:
     SoSFEnum  pickMode;             ///< Default: PICK_AUTO
     SoSFFloat edgePickTolerancePx;  ///< Screen-space edge pick tolerance (pixels)
     SoSFBool  wireframeOcclusion;   ///< Run depth-only triangle pass in wireframe mode
-    SoSFBool  lodEnabled;           ///< Apply POP LoD to triangle meshes (default: FALSE)
 
     // -----------------------------------------------------------------------
     // Class registration
@@ -251,6 +312,9 @@ public:
     /** End a batch update and rebuild acceleration structures as needed. */
     void endUpdate();
 
+    /** Remove all parts, instances, selection and hidden-state records. */
+    void clear();
+
     // -----------------------------------------------------------------------
     // Part library
     // -----------------------------------------------------------------------
@@ -261,6 +325,14 @@ public:
      * @param geom Part geometry (wire and/or shaded).
      */
     void upsertPart(obol::PartId pid, const obol::PartGeometry& geom);
+
+    /**
+     * Insert or replace many parts as one dirty operation.
+     *
+     * This avoids per-part scene notifications and recomputes bounds for
+     * affected instances once after all geometry updates have landed.
+     */
+    void upsertParts(const std::vector<obol::PartUpdate>& updates);
 
     /**
      * Remove a part.  Any instances referencing this part become non-renderable
@@ -287,6 +359,20 @@ public:
      * Use this when you already have a stable external identifier.
      */
     void upsertInstance(obol::InstanceId iid, const obol::InstanceRecord& rec);
+
+    /**
+     * Insert or update many automatically-identified instances.
+     *
+     * @return Generated InstanceIds, in the same order as @p records.
+     */
+    std::vector<obol::InstanceId> upsertInstancesAuto(
+        const std::vector<obol::InstanceRecord>& records);
+
+    /**
+     * Insert or update many explicitly-identified instances as one dirty
+     * operation.
+     */
+    void upsertInstances(const std::vector<obol::InstanceUpdate>& updates);
 
     /** Remove an instance.  No-op if @p iid is not in the database. */
     void removeInstance(obol::InstanceId iid);
@@ -331,7 +417,7 @@ public:
      * The returned pointer is stable until the next geometry change for
      * that part (i.e., until the next upsertPart/removePart call).
      *
-     * Used internally by the renderer when @c lodEnabled is TRUE.
+     * Used internally by the renderer when LoD is enabled by SoCADViewState.
      */
     const std::vector<uint32_t>* getLodFilteredIndices(obol::PartId pid,
                                                         uint8_t level) const;
@@ -350,6 +436,17 @@ public:
     void setHiddenInstances(const std::vector<obol::InstanceId>& ids);
 
     /**
+     * Exclude a set of instances from picking while keeping them visible.
+     *
+     * This is the compiled-assembly equivalent of Inventor pick style
+     * suppression: instances remain in render and bounds plans, but the pick
+     * BVH ignores them.  Use this for view/application state such as
+     * "visible but not selectable" without promoting the instance to a full
+     * scene-graph node.
+     */
+    void setUnpickableInstances(const std::vector<obol::InstanceId>& ids);
+
+    /**
      * Returns the rendering tier selected during the last GLRender() call:
      *   -1 = not yet rendered
      *    0 = immediate-mode fallback (GL 1.1 fixed-function, no working GLSL+VBO)
@@ -360,6 +457,16 @@ public:
 
 protected:
     ~SoCADAssembly() override;
+
+    /**
+     * Create the detail stored on SoPickedPoint for ray picks.
+     *
+     * The default implementation returns an SoCADDetail.  Subclasses can
+     * override this to expose richer application details while still using
+     * SoCADAssembly's accelerated picking implementation.
+     */
+    virtual SoDetail* createPickDetail(
+        const obol::CadPickDetailRecord& hit) const;
 
     // -----------------------------------------------------------------------
     // Inventor action overrides

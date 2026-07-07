@@ -70,7 +70,8 @@ CadGLCaps CadGLCaps::detect(const SoGLContext * glue)
                    glue->glBindVertexArray    != nullptr &&
                    glue->glDeleteVertexArrays != nullptr);
 
-    caps.hasInstancing = (glue->glDrawElementsInstanced != nullptr);
+    caps.hasInstancing = (glue->glDrawElementsInstanced != nullptr &&
+                          glue->glDrawArraysInstanced != nullptr);
 
     caps.hasAttribDivisor = (glue->glVertexAttribDivisor != nullptr);
 

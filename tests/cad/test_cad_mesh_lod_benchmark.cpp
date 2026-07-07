@@ -19,9 +19,9 @@
  * ----------------------------------------
  * 1. Standard SG  : one SoSeparator + SoTransform + SoCoordinate3 +
  *                   SoIndexedFaceSet per instance (full detail, no LoD).
- * 2. CAD (no LoD) : one SoCADAssembly node, lodEnabled=FALSE, SHADED mode.
- *                   Renders all triangles of every instance.
- * 3. CAD (LoD)    : same SoCADAssembly, lodEnabled=TRUE.
+ * 2. CAD (no LoD) : one SoCADAssembly node, SoCADViewState LoD disabled,
+ *                   SHADED mode. Renders all triangles of every instance.
+ * 3. CAD (LoD)    : same SoCADAssembly, SoCADViewState LoD enabled.
  *                   Instances project to varying sizes → POP LoD selects
  *                   a coarser mesh for distant instances, reducing total
  *                   rendered triangles.
@@ -56,6 +56,7 @@
 #include "headless_utils.h"
 
 #include <obol/cad/SoCADAssembly.h>
+#include <obol/cad/SoCADViewState.h>
 #include <obol/cad/SoCADDetail.h>
 #include <obol/cad/CadIds.h>
 #include "lod/TrianglePopLod.h"
@@ -86,6 +87,7 @@
 #include <string>
 #include <unordered_map>
 #include <numeric>
+#include <utility>
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -289,9 +291,14 @@ static SoSeparator *buildCADScene(const IcoMesh& mesh, int grid, bool useLod)
     lm->model.setValue(SoLightModel::BASE_COLOR);
     root->addChild(lm);
 
+    SoCADViewState *viewState = new SoCADViewState;
+    viewState->viewIdLow.setValue(useLod ? 2 : 1);
+    viewState->lodMode.setValue(useLod ? SoCADViewState::LOD_ENABLED :
+                                         SoCADViewState::LOD_DISABLED);
+    root->addChild(viewState);
+
     SoCADAssembly *asm_ = new SoCADAssembly;
     asm_->drawMode.setValue(SoCADAssembly::SHADED);
-    asm_->lodEnabled.setValue(useLod ? TRUE : FALSE);
     root->addChild(asm_);
 
     // One part: the icosphere
@@ -303,11 +310,14 @@ static SoSeparator *buildCADScene(const IcoMesh& mesh, int grid, bool useLod)
     triMesh.indices   = mesh.indices;
     triMesh.bounds    = mesh.bounds;
     geom.shaded       = triMesh;
-    asm_->upsertPart(pid, geom);
+    asm_->upsertParts({{pid, std::move(geom)}});
 
     // Grid of instances with per-instance transforms
     obol::InstanceId rootId = obol::CadIdBuilder::Root();
     int instanceIdx = 0;
+    std::vector<obol::InstanceRecord> records;
+    records.reserve(static_cast<size_t>(grid) * static_cast<size_t>(grid) *
+                    static_cast<size_t>(grid));
     for (int ix = 0; ix < grid; ++ix) {
         for (int iy = 0; iy < grid; ++iy) {
             for (int iz = 0; iz < grid; ++iz) {
@@ -325,10 +335,11 @@ static SoSeparator *buildCADScene(const IcoMesh& mesh, int grid, bool useLod)
                     SbVec3f(ix * SPACING, iy * SPACING, iz * SPACING));
                 rec.style.hasColorOverride = true;
                 rec.style.color = SbColor4f(0.8f, 0.8f, 0.8f, 1.0f);
-                asm_->upsertInstanceAuto(rec);
+                records.push_back(std::move(rec));
             }
         }
     }
+    asm_->upsertInstancesAuto(records);
 
     SbViewportRegion vp(W, H);
     cam->viewAll(root, vp);

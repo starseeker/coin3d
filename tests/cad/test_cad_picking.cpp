@@ -49,10 +49,13 @@ static obol::WireRep makeCubeWireframe()
         // verticals
         {{0,0,0},{0,0,1}}, {{1,0,0},{1,0,1}}, {{1,1,0},{1,1,1}}, {{0,1,0},{0,1,1}},
     };
-    for (auto& e : edges) {
-        obol::WirePolyline poly;
-        poly.points = { e.a, e.b };
-        rep.polylines.push_back(poly);
+    rep.segmentPoints.reserve(edges.size() * 2);
+    rep.segmentIds.reserve(edges.size());
+    for (size_t i = 0; i < edges.size(); ++i) {
+        const auto& e = edges[i];
+        rep.segmentPoints.push_back(e.a);
+        rep.segmentPoints.push_back(e.b);
+        rep.segmentIds.push_back(static_cast<uint32_t>(i));
     }
     rep.bounds.setBounds(SbVec3f(0,0,0), SbVec3f(1,1,1));
     return rep;
@@ -458,6 +461,53 @@ static int test_pick_triangle()
         runner.endTest(result.valid && result.instanceId == iidPyr
                        && result.primType == CadPickResult::TRIANGLE,
                        "pickTriangle should return a TRIANGLE hit on the pyramid");
+    }
+
+    // -----------------------------------------------------------------------
+    // Test: flat LoD-style mesh remains pickable with tolerant candidate lookup
+    // -----------------------------------------------------------------------
+    runner.startTest("CadPickQuery::pickTriangle: flat LoD mesh hit");
+    {
+        PartId pidFlat = CadIdBuilder::hash128("flat_triangle");
+        InstanceId iidFlat = CadIdBuilder::extendNameOccBool(
+            CadIdBuilder::Root(), "flat_triangle", 0, 0);
+
+        obol::TriMesh flat;
+        flat.positions = {
+            SbVec3f(-1.0f, -1.0f, 0.0f),
+            SbVec3f( 1.0f, -1.0f, 0.0f),
+            SbVec3f( 0.0f,  1.0f, 0.0f)
+        };
+        flat.indices = { 0, 1, 2 };
+        flat.bounds.setBounds(SbVec3f(-1.0f, -1.0f, 0.0f),
+                              SbVec3f( 1.0f,  1.0f, 0.0f));
+
+        std::unordered_map<PartId, obol::PartGeometry, std::hash<PartId>> flatParts;
+        {
+            obol::PartGeometry g;
+            g.shaded = flat;
+            flatParts[pidFlat] = g;
+        }
+
+        CadInstanceBVH flatBvh;
+        {
+            std::vector<CadInstanceBVH::Entry> entries;
+            CadInstanceBVH::Entry e;
+            e.worldBounds = flat.bounds;
+            e.instanceId = iidFlat;
+            e.partId = pidFlat;
+            e.localToWorld = identityM;
+            entries.push_back(e);
+            flatBvh.build(entries);
+        }
+
+        std::unordered_map<PartId, CadPartTriBVH, std::hash<PartId>> flatTriCache;
+        SbLine ray(SbVec3f(0.0f, 0.0f, 5.0f), SbVec3f(0.0f, 0.0f, 4.0f));
+        CadPickResult result = CadPickQuery::pickTriangle(
+            ray, flatBvh, flatParts, flatTriCache, 0.05f);
+        runner.endTest(result.valid && result.instanceId == iidFlat
+                       && result.primType == CadPickResult::TRIANGLE,
+                       "pickTriangle should hit a flat LoD triangle");
     }
 
     // -----------------------------------------------------------------------

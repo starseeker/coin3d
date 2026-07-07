@@ -49,8 +49,12 @@ SoCADAssembly
 │   └── Use setHiddenInstances() to suppress aggregate rendering for
 │       instances materialised as explicit scene-graph nodes.
 │
+├── Unpickable-instance set  (visible, but excluded from pick BVH)
+│   └── Use setUnpickableInstances() for visible-but-not-selectable
+│       instances without materialising separate scene-graph nodes.
+│
 ├── Acceleration structures (rebuilt lazily)
-│   ├── CadInstanceBVH   (world-space AABB tree of all instances)
+│   ├── CadInstanceBVH   (world-space AABB tree of pickable instances)
 │   ├── CadPartEdgeBVH   (per-part AABB tree of wire segments, built on demand)
 │   └── CadPartTriBVH    (per-part AABB tree of triangles, built on demand)
 │
@@ -72,8 +76,9 @@ Register the node type once at application start:
 ```cpp
 #include <obol/cad/SoCADAssembly.h>
 #include <obol/cad/SoCADDetail.h>
+#include <obol/cad/SoCADViewState.h>
 
-SoCADAssembly::initClass();   // also calls SoCADDetail::initClass()
+SoCADAssembly::initClass();   // also registers CAD detail and view-state types
 ```
 
 ### Adding parts
@@ -95,6 +100,24 @@ PartId pid = CadIdBuilder::hash128("my_part_name");
 assembly->upsertPart(pid, geom);
 ```
 
+### Adding a view policy
+
+`SoCADAssembly` stores shared geometry and instances. Per-view render policy,
+including LoD enablement, is supplied by an `SoCADViewState` node earlier in
+the same traversal branch:
+
+```cpp
+SoCADViewState* view = new SoCADViewState;
+view->viewIdLow.setValue(1);
+view->lodMode.setValue(SoCADViewState::LOD_ENABLED);
+
+root->addChild(view);
+root->addChild(assembly);
+```
+
+Multiple views can traverse the same shared assembly with different
+`SoCADViewState` values.
+
 ### Adding instances
 
 ```cpp
@@ -113,19 +136,31 @@ InstanceId iid = assembly->upsertInstanceAuto(rec);
 
 ### Batch updates (performance)
 
-Wrap multiple inserts in `beginUpdate()` / `endUpdate()` to defer internal
-rebuilds until the end of the batch:
+Use the bulk APIs when loading or regenerating scene data. They mark the
+assembly dirty once and recompute affected instance bounds as a batch:
+
+```cpp
+std::vector<obol::PartUpdate> parts = { ... };
+std::vector<obol::InstanceRecord> instances = { ... };
+
+assembly->upsertParts(parts);
+std::vector<obol::InstanceId> ids = assembly->upsertInstancesAuto(instances);
+```
+
+For a complete rebuild, use `clear()` inside the same update window:
 
 ```cpp
 assembly->beginUpdate();
-for (const auto& part : newParts) {
-    assembly->upsertPart(part.id, part.geom);
-}
-for (const auto& inst : newInstances) {
-    assembly->upsertInstanceAuto(inst);
-}
-assembly->endUpdate();  // one rebuild instead of N
+assembly->clear();
+assembly->upsertParts(parts);
+assembly->upsertInstances(instances);
+assembly->endUpdate();
 ```
+
+`clear()` removes parts, instances, hidden/selected/unpickable sets, LoD
+payloads, BVHs, and cached frame plans. It is intended for owners that rebuild an
+assembly from an external source of truth rather than editing the existing
+packet incrementally.
 
 ### Fast transform edits
 
@@ -154,6 +189,26 @@ if (rec) {
 
 When the user confirms the edit, call `assembly->upsertInstance(iid, updatedRec)`
 and clear the hidden set to return to aggregate rendering.
+
+### Visibility and pickability sets
+
+```cpp
+assembly->setHiddenInstances(hiddenIds);         // no render, bounds, pick
+assembly->setUnpickableInstances(unpickableIds); // render/bounds only
+assembly->setSelectedInstances(selectedIds);     // selection flag for LoD/style
+```
+
+Hidden instances are omitted from frame plans, bounding boxes, primitive counts,
+and picking.  Unpickable instances remain visible and contribute bounds, but
+the pick BVH ignores them.  This lets a CAD owner keep large selected,
+unselected, hidden, and visible-but-not-selectable subsets aggregated as one
+compiled assembly instead of expanding them into many scene-graph nodes.
+
+If a subset needs behavior that is not stable per-instance state, such as a
+different render pass, a custom manipulator, or detailed edit/inspection
+semantics, create a purpose-specific CAD assembly or materialise explicit nodes
+for that subset.  Bulk selection by itself should stay aggregated; individual
+editing and per-primitive state are the usual promotion triggers.
 
 ---
 
@@ -210,6 +265,18 @@ if (detail) {
     }
 }
 ```
+
+Applications that need domain-specific pick metadata should subclass
+`SoCADAssembly` and override `createPickDetail(const CadPickDetailRecord&)`.
+The default implementation returns `SoCADDetail`; subclasses can return any
+`SoDetail` subclass while preserving the accelerated CPU picking path. The
+record contains the picked instance id, part id, primitive kind and indices,
+model-space hit point, and interpolation parameter.
+
+When an assembly is traversed as a normal scene-graph node, the detail is
+attached to that assembly node.  If an owner delegates to an internal assembly
+that is not itself in the active pick path, Obol attaches the detail to the
+picked path tail so `pp->getDetail()` still returns the accelerated CAD detail.
 
 ---
 
@@ -291,10 +358,9 @@ level  = floor(255 / (1 + ratio * 0.5))
 ```
 
 This heuristic gives full detail (`level = 255`) up to `radius * 2` from
-the camera and progressively coarser levels as the object recedes.  LoD is
-only applied in Tier-0 (immediate-mode) rendering; the VBO-loop and
-instanced tiers draw full detail at all distances (level 255 passes through
-unchanged).
+the camera and progressively coarser levels as the object recedes.  LoD policy
+comes from `SoCADViewState`, not the assembly, so one shared assembly can be
+rendered at different detail levels in different views.
 
 ### Focus set (selected/hovered instances)
 
@@ -319,6 +385,11 @@ Per-instance frustum culling is active in Tier 0 and Tier 1: each instance's
 world bounding box is tested against the six frustum planes before issuing
 any draw call, skipping fully off-screen instances at no GPU cost.
 
+Shaded mesh LoD is active in Tier 0 and Tier 1. When shaded LoD is enabled on
+a GL 3.1-capable context, the renderer currently falls back from Tier 2 to
+Tier 1 so each instance can use its own LoD level. A future Tier-2 improvement
+should bin instances by `(part, lodLevel)` and issue instanced draws per bin.
+
 GPU resource uploads are short-circuited in all tiers: `CadGpuResources`
 tracks a per-part generation counter and skips the entire CPU-side
 array-flattening step if the GPU data is already current.  The frame plan
@@ -333,9 +404,8 @@ styles, selection, or draw mode change.
   Thick-line rendering requires geometry shaders or triangle-based lines.
 * **Transparency**: no alpha-sorting is implemented.  Semi-transparent CAD
   parts may render with incorrect blending.
-* **Tier-2 LoD/frustum culling**: the instanced path (Tier 2) does not yet
-  apply per-instance frustum culling or LoD; frustum and LoD features are
-  active in Tier 0 and Tier 1 only.
+* **Tier-2 shaded LoD**: shaded LoD currently routes Tier-2-capable contexts
+  through the Tier-1 VBO loop. This favors correctness over maximum batching.
 * **Wireframe occlusion**: the `wireframeOcclusion` field is exposed but the
   depth-only triangle prepass is not yet implemented.
 * **ID stability across reloads**: without stable per-node GUIDs,
@@ -352,10 +422,12 @@ styles, selection, or draw mode change.
 | `include/obol/cad/CadIds.h`        | 128-bit ID types + `CadIdBuilder` |
 | `include/obol/cad/SoCADAssembly.h` | Main assembly node API            |
 | `include/obol/cad/SoCADDetail.h`   | Pick-result detail class          |
+| `include/obol/cad/SoCADViewState.h`| Per-view CAD render policy node   |
 | `include/obol/render/DepthPolicy.h`| Depth policy enum                 |
 | `src/cad/CadIds.cpp`               | FNV-1a 128-bit hash implementation|
 | `src/cad/SoCADAssembly.cpp`        | Node render/pick/bbox actions     |
 | `src/cad/SoCADDetail.cpp`          | Detail SO_DETAIL_SOURCE           |
+| `src/cad/SoCADViewState.cpp`       | View-state element and node        |
 | `src/cad/CadFramePlan.h`           | Internal frame plan structs       |
 | `src/cad/CadGpuResources.h/.cpp`   | Per-context VBO cache (isUpToDate fast-path) |
 | `src/cad/lod/SegmentPopLod.h/.cpp` | POP LoD for segments              |

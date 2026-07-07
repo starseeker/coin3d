@@ -11,6 +11,7 @@ set(CAD_SOURCES
     # Core CAD node
     ${CMAKE_CURRENT_SOURCE_DIR}/CadIds.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/SoCADDetail.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/SoCADViewState.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/SoCADAssembly.cpp
 
     # GL renderer (VBO + shader, GL 2.0 baseline with optional GL 3.1+ instancing)

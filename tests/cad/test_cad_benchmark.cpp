@@ -14,7 +14,7 @@
  *     phases so the CAD assembly's scalability advantage can be observed.
  *
  * A "wireframe box" part consists of the 12 edges of a unit cube expressed
- * as 12 two-point polylines (for the CAD approach) or a SoLineSet with 12
+ * as 12 flat segments (for the CAD approach) or a SoLineSet with 12
  * GL_LINES pairs (for the scene-graph approach).
  *
  * Grid size: INSTANCES_PER_AXIS (default 8) → INSTANCES_PER_AXIS^3 instances.
@@ -32,6 +32,7 @@
 #include "headless_utils.h"
 
 #include <obol/cad/SoCADAssembly.h>
+#include <obol/cad/SoCADViewState.h>
 #include <obol/cad/SoCADDetail.h>
 #include <obol/cad/CadIds.h>
 
@@ -59,6 +60,7 @@
 #include <cmath>
 #include <vector>
 #include <string>
+#include <utility>
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -169,16 +171,16 @@ static SoSeparator *buildSceneGraph(int grid)
 static obol::WireRep buildBoxWire()
 {
     obol::WireRep wire;
+    wire.segmentPoints.reserve(24);
+    wire.segmentIds.reserve(12);
     for (int e = 0; e < 12; ++e) {
-        obol::WirePolyline poly;
-        poly.points.push_back(SbVec3f(BOX_EDGES[e][0][0],
-                                      BOX_EDGES[e][0][1],
-                                      BOX_EDGES[e][0][2]));
-        poly.points.push_back(SbVec3f(BOX_EDGES[e][1][0],
-                                      BOX_EDGES[e][1][1],
-                                      BOX_EDGES[e][1][2]));
-        poly.edgeId = static_cast<uint32_t>(e + 1);
-        wire.polylines.push_back(std::move(poly));
+        wire.segmentPoints.push_back(SbVec3f(BOX_EDGES[e][0][0],
+                                             BOX_EDGES[e][0][1],
+                                             BOX_EDGES[e][0][2]));
+        wire.segmentPoints.push_back(SbVec3f(BOX_EDGES[e][1][0],
+                                             BOX_EDGES[e][1][1],
+                                             BOX_EDGES[e][1][2]));
+        wire.segmentIds.push_back(static_cast<uint32_t>(e + 1));
     }
     wire.bounds = SbBox3f(SbVec3f(0,0,0), SbVec3f(1,1,1));
     return wire;
@@ -202,6 +204,11 @@ static SoSeparator *buildCADScene(int grid)
     lm->model.setValue(SoLightModel::BASE_COLOR);
     root->addChild(lm);
 
+    SoCADViewState *viewState = new SoCADViewState;
+    viewState->viewIdLow.setValue(1);
+    viewState->lodMode.setValue(SoCADViewState::LOD_DISABLED);
+    root->addChild(viewState);
+
     SoCADAssembly *assembly = new SoCADAssembly;
     assembly->drawMode.setValue(SoCADAssembly::WIREFRAME);
     root->addChild(assembly);
@@ -210,11 +217,14 @@ static SoSeparator *buildCADScene(int grid)
     obol::PartId unitBoxPartId = obol::CadIdBuilder::hash128("unit_box");
     obol::PartGeometry geom;
     geom.wire = buildBoxWire();
-    assembly->upsertPart(unitBoxPartId, geom);
+    assembly->upsertParts({{unitBoxPartId, std::move(geom)}});
 
     // Create grid^3 instances with per-instance transforms
     obol::InstanceId rootId = obol::CadIdBuilder::Root();
     int instanceIdx = 0;
+    std::vector<obol::InstanceRecord> records;
+    records.reserve(static_cast<size_t>(grid) * static_cast<size_t>(grid) *
+                    static_cast<size_t>(grid));
     for (int ix = 0; ix < grid; ++ix) {
         for (int iy = 0; iy < grid; ++iy) {
             for (int iz = 0; iz < grid; ++iz) {
@@ -234,10 +244,11 @@ static SoSeparator *buildCADScene(int grid)
                 rec.style.hasColorOverride = true;
                 rec.style.color = SbColor4f(0.8f, 0.8f, 0.8f, 1.0f);
 
-                assembly->upsertInstanceAuto(rec);
+                records.push_back(std::move(rec));
             }
         }
     }
+    assembly->upsertInstancesAuto(records);
 
     // Frame camera the same way as the SG scene
     SbViewportRegion vp(W, H);

@@ -62,7 +62,7 @@ struct CadGLCaps {
     bool hasShaderObjects = false;
     /** Vertex Array Objects available (GL 3.0 / ARB_vertex_array_object). */
     bool hasVAO           = false;
-    /** glDrawElementsInstanced available (GL 3.1 / ARB_draw_instanced). */
+    /** glDrawElementsInstanced and glDrawArraysInstanced available. */
     bool hasInstancing    = false;
     /** glVertexAttribDivisor available (GL 3.3 / ARB_instanced_arrays). */
     bool hasAttribDivisor = false;

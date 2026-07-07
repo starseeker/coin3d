@@ -28,7 +28,7 @@
  *
  * LoD benefit
  * ───────────
- * With lodEnabled=TRUE, SoCADAssembly applies POP quantisation:
+ * With SoCADViewState LoD enabled, SoCADAssembly applies POP quantisation:
  *   • Instances close to the camera show full-detail meshes.
  *   • Instances farther away show coarser representations.
  *   • The total GL draw-call work decreases substantially at large scales.
@@ -73,6 +73,7 @@
 #include <Inventor/actions/SoGetBoundingBoxAction.h>
 
 #include <obol/cad/SoCADAssembly.h>
+#include <obol/cad/SoCADViewState.h>
 #include <obol/cad/CadIds.h>
 
 /* BasicFLTKContextManager – FLTK GL context for off-screen rendering */
@@ -100,6 +101,7 @@
 #include <algorithm>
 #include <unordered_map>
 #include <chrono>
+#include <utility>
 
 #ifndef M_PI
 #  define M_PI 3.14159265358979323846
@@ -274,6 +276,7 @@ static obol::WireRep buildBoxWire(float hw)
 struct AssemblyState {
     SoSeparator* root         = nullptr;
     SoCamera*    camera       = nullptr;
+    SoCADViewState*      viewState    = nullptr;
     SoCADAssembly*       assembly     = nullptr;
     int                  numInstances = 0;
     int                  numParts     = 0;
@@ -328,6 +331,8 @@ static int populateAssembly(SoCADAssembly* asm_, int target)
         std::ceil(std::cbrt(static_cast<double>(target) / PARTS_PER_CELL))));
 
     // Register part geometries
+    std::vector<obol::PartUpdate> partUpdates;
+    partUpdates.reserve(5);
     {
         obol::PartGeometry geom;
         MeshData ico3 = buildIcosphere(3);
@@ -338,7 +343,7 @@ static int populateAssembly(SoCADAssembly* asm_, int target)
         tm.bounds    = ico3.bounds;
         geom.shaded  = tm;
         s_pidPrecision = obol::CadIdBuilder::hash128("precision_part");
-        asm_->upsertPart(s_pidPrecision, geom);
+        partUpdates.push_back({s_pidPrecision, std::move(geom)});
     }
     {
         obol::PartGeometry geom;
@@ -350,7 +355,7 @@ static int populateAssembly(SoCADAssembly* asm_, int target)
         tm.bounds    = ico2.bounds;
         geom.shaded  = tm;
         s_pidStandard = obol::CadIdBuilder::hash128("standard_part");
-        asm_->upsertPart(s_pidStandard, geom);
+        partUpdates.push_back({s_pidStandard, std::move(geom)});
     }
     {
         obol::PartGeometry geom;
@@ -362,7 +367,7 @@ static int populateAssembly(SoCADAssembly* asm_, int target)
         tm.bounds    = ico1.bounds;
         geom.shaded  = tm;
         s_pidDetail = obol::CadIdBuilder::hash128("detail_part");
-        asm_->upsertPart(s_pidDetail, geom);
+        partUpdates.push_back({s_pidDetail, std::move(geom)});
     }
     {
         obol::PartGeometry geom;
@@ -374,7 +379,7 @@ static int populateAssembly(SoCADAssembly* asm_, int target)
         tm.bounds    = ico0.bounds;
         geom.shaded  = tm;
         s_pidFastener = obol::CadIdBuilder::hash128("fastener_part");
-        asm_->upsertPart(s_pidFastener, geom);
+        partUpdates.push_back({s_pidFastener, std::move(geom)});
     }
     {
         obol::PartGeometry geom;
@@ -389,8 +394,9 @@ static int populateAssembly(SoCADAssembly* asm_, int target)
         // Feature-edge wire overlay for the panel
         geom.wire    = buildBoxWire(1.8f);
         s_pidPanel   = obol::CadIdBuilder::hash128("panel_part");
-        asm_->upsertPart(s_pidPanel, geom);
+        partUpdates.push_back({s_pidPanel, std::move(geom)});
     }
+    asm_->upsertParts(partUpdates);
 
     // Color palette for visual variety
     static const SbColor4f PALETTE[] = {
@@ -407,9 +413,10 @@ static int populateAssembly(SoCADAssembly* asm_, int target)
 
     obol::InstanceId rootId = obol::CadIdBuilder::Root();
     int instIdx = 0;
-
-    // Batch update for efficiency
-    asm_->beginUpdate();
+    std::vector<obol::InstanceRecord> instanceRecords;
+    instanceRecords.reserve(
+        static_cast<size_t>(S) * static_cast<size_t>(S) *
+        static_cast<size_t>(S) * PARTS_PER_CELL);
 
     for (int ix = 0; ix < S; ++ix) {
         for (int iy = 0; iy < S; ++iy) {
@@ -450,7 +457,7 @@ static int populateAssembly(SoCADAssembly* asm_, int target)
 
                     rec.style.hasColorOverride = true;
                     rec.style.color            = color;
-                    asm_->upsertInstanceAuto(rec);
+                    instanceRecords.push_back(std::move(rec));
                     ++instIdx;
                 };
 
@@ -496,7 +503,7 @@ static int populateAssembly(SoCADAssembly* asm_, int target)
         }
     }
 
-    asm_->endUpdate();
+    asm_->upsertInstancesAuto(instanceRecords);
 
     return instIdx;
 }
@@ -531,10 +538,16 @@ static AssemblyState buildLargeScene(int targetInstances, int width, int height)
         root->addChild(lt);
     }
 
+    /* ---- Per-view CAD render policy ---- */
+    SoCADViewState* viewState = new SoCADViewState;
+    viewState->viewIdLow.setValue(1);
+    viewState->lodMode.setValue(SoCADViewState::LOD_ENABLED);
+    root->addChild(viewState);
+    st.viewState = viewState;
+
     /* ---- SoCADAssembly ---- */
     SoCADAssembly* asm_ = new SoCADAssembly;
     asm_->drawMode.setValue(SoCADAssembly::SHADED);
-    asm_->lodEnabled.setValue(TRUE);
     root->addChild(asm_);
     st.assembly = asm_;
 
@@ -998,6 +1011,13 @@ public:
 
         if (s_asm.root) s_asm.root->unref();
         s_asm = buildLargeScene(SCALE_LEVELS[s_scaleLevelIdx], pw, ph);
+        if (s_asm.viewState) {
+            s_asm.viewState->lodMode.setValue(
+                s_lodEnabled ? SoCADViewState::LOD_ENABLED :
+                               SoCADViewState::LOD_DISABLED);
+        }
+        if (s_asm.assembly)
+            s_asm.assembly->drawMode.setValue(DRAW_MODES[s_drawModeIdx]);
         // Restore chosen projection type after rebuild
         if (!s_perspectiveCamera)
             switchCameraType(false);
@@ -1027,8 +1047,11 @@ private:
     {
         auto* self = static_cast<LargeAssemblyWindow*>(data);
         s_lodEnabled = !s_lodEnabled;
-        if (s_asm.assembly)
-            s_asm.assembly->lodEnabled.setValue(s_lodEnabled ? TRUE : FALSE);
+        if (s_asm.viewState) {
+            s_asm.viewState->lodMode.setValue(
+                s_lodEnabled ? SoCADViewState::LOD_ENABLED :
+                               SoCADViewState::LOD_DISABLED);
+        }
         if (self->lod_btn_) {
             self->lod_btn_->label(s_lodEnabled ? "LoD: ON" : "LoD: OFF");
             self->lod_btn_->color(s_lodEnabled

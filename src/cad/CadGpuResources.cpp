@@ -69,6 +69,7 @@ void CadGpuResources::deleteWireGpu(CadWireGpu& w, const SoGLContext * glue)
     }
     w.segCount  = 0;
     w.vertCount = 0;
+    w.sequentialSegments = false;
 }
 
 void CadGpuResources::deleteTriGpu(CadTriGpu& t, const SoGLContext * glue)
@@ -120,10 +121,12 @@ void CadGpuResources::upload(
     entry.generation = generation;
 
     // --- Wire geometry ---
-    if (wireData && wireCount > 0 && segIdx && segIdxCount > 0) {
+    if (wireData && wireCount > 0 &&
+            ((segIdx && segIdxCount > 0) || (!segIdx && wireCount >= 2))) {
         CadWireGpu& w = entry.wire;
         w.vertCount = wireCount;
-        w.segCount  = segIdxCount / 2;
+        w.sequentialSegments = (segIdx == nullptr);
+        w.segCount  = w.sequentialSegments ? wireCount / 2 : segIdxCount / 2;
 
         glue->glGenBuffers(1, &w.posBuf);
         glue->glBindBuffer(GL_ARRAY_BUFFER, w.posBuf);
@@ -131,11 +134,13 @@ void CadGpuResources::upload(
                            static_cast<GLsizeiptr>(wireCount) * 3 * sizeof(float),
                            wireData, GL_STATIC_DRAW);
 
-        glue->glGenBuffers(1, &w.segIdxBuf);
-        glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, w.segIdxBuf);
-        glue->glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                           static_cast<GLsizeiptr>(segIdxCount) * sizeof(uint32_t),
-                           segIdx, GL_STATIC_DRAW);
+        if (!w.sequentialSegments) {
+            glue->glGenBuffers(1, &w.segIdxBuf);
+            glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, w.segIdxBuf);
+            glue->glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+                               static_cast<GLsizeiptr>(segIdxCount) * sizeof(uint32_t),
+                               segIdx, GL_STATIC_DRAW);
+        }
 
         // Build VAO for wire geometry
         if (caps.hasVAO && glue->glGenVertexArrays) {
@@ -147,7 +152,8 @@ void CadGpuResources::upload(
                                            3 * sizeof(float), nullptr);
             glue->glEnableVertexAttribArrayARB(0);
 
-            glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, w.segIdxBuf);
+            if (!w.sequentialSegments)
+                glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, w.segIdxBuf);
 
             // Unbind VAO first, then the VBOs
             glue->glBindVertexArray(0);

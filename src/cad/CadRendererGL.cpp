@@ -45,6 +45,43 @@
 #include <algorithm>
 #include <cassert>
 
+static_assert(sizeof(SbVec3f) == 3 * sizeof(float),
+              "SbVec3f must remain tightly packed for CAD GPU uploads");
+
+static const float*
+packedVec3fData(const std::vector<SbVec3f>& values)
+{
+    return values.empty() ? nullptr : values[0].getValue();
+}
+
+static void
+appendPackedPoint(std::vector<float>& packed, const SbVec3f& point)
+{
+    packed.push_back(point[0]);
+    packed.push_back(point[1]);
+    packed.push_back(point[2]);
+}
+
+static void
+setImmediateMaterialFromRgba(const uint8_t rgba[4])
+{
+    const float r = rgba[0] / 255.0f;
+    const float g = rgba[1] / 255.0f;
+    const float b = rgba[2] / 255.0f;
+    const float a = rgba[3] / 255.0f;
+
+    const GLfloat ambient[4] = {r * 0.2f, g * 0.2f, b * 0.2f, a};
+    const GLfloat diffuse[4] = {r * 0.6f, g * 0.6f, b * 0.6f, a};
+    const GLfloat specular[4] = {r * 0.2f, g * 0.2f, b * 0.2f, a};
+    const GLfloat emission[4] = {0.0f, 0.0f, 0.0f, a};
+
+    glColor4ub(rgba[0], rgba[1], rgba[2], rgba[3]);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, emission);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, ambient);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, specular);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, diffuse);
+}
+
 // ---------------------------------------------------------------------------
 // GLSL shader sources – Tier 1 (GL 2.0 / GLSL 1.10, no #version directive)
 // ---------------------------------------------------------------------------
@@ -376,60 +413,80 @@ void CadRendererGL::ensurePartUploaded(PartId pid, const SoCADAssembly& assembly
     const obol::PartGeometry* geom = assembly.partGeometry(pid);
     if (!geom) return;
 
-    // Build CPU-side flat arrays for wire geometry
+    // Build CPU-side flat arrays for indexed wire geometry.  Pure flat
+    // segment-pair input can be uploaded directly from WireRep::segmentPoints.
     std::vector<float>    wirePos;
     std::vector<uint32_t> wireSegIdx;
+    const float*          pWirePos = nullptr;
+    const uint32_t*       pWireSeg = nullptr;
+    GLsizei               wirePointCount = 0;
+    GLsizei               wireSegIdxCount = 0;
     if (geom->wire.has_value()) {
         const auto& wr = *geom->wire;
-        for (const auto& poly : wr.polylines) {
-            if (poly.points.size() < 2) continue;
-            const uint32_t base = static_cast<uint32_t>(wirePos.size() / 3);
-            for (const auto& pt : poly.points) {
-                wirePos.push_back(pt[0]);
-                wirePos.push_back(pt[1]);
-                wirePos.push_back(pt[2]);
+        const size_t flatPointCount = wr.segmentCount() * 2;
+        if (flatPointCount > 0 && wr.polylines.empty()) {
+            pWirePos = packedVec3fData(wr.segmentPoints);
+            wirePointCount = static_cast<GLsizei>(flatPointCount);
+        } else {
+            size_t polyPointCount = 0;
+            size_t polySegmentCount = 0;
+            for (const auto& poly : wr.polylines) {
+                polyPointCount += poly.points.size();
+                if (poly.points.size() >= 2)
+                    polySegmentCount += poly.points.size() - 1;
             }
-            // Emit a segment (pair of indices) for each consecutive pair
-            for (uint32_t i = 0; i + 1 < poly.points.size(); ++i) {
-                wireSegIdx.push_back(base + i);
-                wireSegIdx.push_back(base + i + 1);
+            wirePos.reserve((flatPointCount + polyPointCount) * 3);
+            wireSegIdx.reserve(flatPointCount + polySegmentCount * 2);
+
+            for (size_t i = 0; i + 1 < flatPointCount; i += 2) {
+                const uint32_t base =
+                    static_cast<uint32_t>(wirePos.size() / 3);
+                appendPackedPoint(wirePos, wr.segmentPoints[i]);
+                appendPackedPoint(wirePos, wr.segmentPoints[i + 1]);
+                wireSegIdx.push_back(base);
+                wireSegIdx.push_back(base + 1);
             }
+
+            for (const auto& poly : wr.polylines) {
+                if (poly.points.size() < 2) continue;
+                const uint32_t base =
+                    static_cast<uint32_t>(wirePos.size() / 3);
+                for (const auto& pt : poly.points)
+                    appendPackedPoint(wirePos, pt);
+                for (uint32_t i = 0; i + 1 < poly.points.size(); ++i) {
+                    wireSegIdx.push_back(base + i);
+                    wireSegIdx.push_back(base + i + 1);
+                }
+            }
+
+            pWirePos = wirePos.empty() ? nullptr : wirePos.data();
+            pWireSeg = wireSegIdx.empty() ? nullptr : wireSegIdx.data();
+            wirePointCount = static_cast<GLsizei>(wirePos.size() / 3);
+            wireSegIdxCount = static_cast<GLsizei>(wireSegIdx.size());
         }
     }
 
-    // Flatten triangle geometry
-    std::vector<float>    triPos;
-    std::vector<float>    triNorm;
-    std::vector<uint32_t> triIdx;
+    // Triangle mesh vectors already use packed SbVec3f storage.
+    const float*    pTriPos = nullptr;
+    const float*    pTriNorm = nullptr;
+    const uint32_t* pTriIdx = nullptr;
+    GLsizei         triPosCount = 0;
+    GLsizei         triIdxCount = 0;
     if (geom->shaded.has_value()) {
         const auto& mesh = *geom->shaded;
-        for (const auto& p : mesh.positions) {
-            triPos.push_back(p[0]);
-            triPos.push_back(p[1]);
-            triPos.push_back(p[2]);
-        }
-        if (!mesh.normals.empty()) {
-            for (const auto& n : mesh.normals) {
-                triNorm.push_back(n[0]);
-                triNorm.push_back(n[1]);
-                triNorm.push_back(n[2]);
-            }
-        }
-        triIdx = mesh.indices;
+        pTriPos = packedVec3fData(mesh.positions);
+        pTriNorm = packedVec3fData(mesh.normals);
+        pTriIdx = mesh.indices.empty() ? nullptr : mesh.indices.data();
+        triPosCount = static_cast<GLsizei>(mesh.positions.size());
+        triIdxCount = static_cast<GLsizei>(mesh.indices.size());
     }
 
-    const float*    pWirePos  = wirePos.empty()    ? nullptr : wirePos.data();
-    const uint32_t* pWireSeg  = wireSegIdx.empty() ? nullptr : wireSegIdx.data();
-    const float*    pTriPos   = triPos.empty()     ? nullptr : triPos.data();
-    const float*    pTriNorm  = triNorm.empty()    ? nullptr : triNorm.data();
-    const uint32_t* pTriIdx   = triIdx.empty()     ? nullptr : triIdx.data();
-
     gpuRes_.upload(pid,
-                   pWirePos,  static_cast<GLsizei>(wirePos.size() / 3),
-                   pWireSeg,  static_cast<GLsizei>(wireSegIdx.size()),
-                   pTriPos,   static_cast<GLsizei>(triPos.size() / 3),
+                   pWirePos,  wirePointCount,
+                   pWireSeg,  wireSegIdxCount,
+                   pTriPos,   triPosCount,
                    pTriNorm,
-                   pTriIdx,   static_cast<GLsizei>(triIdx.size()),
+                   pTriIdx,   triIdxCount,
                    gen,
                    glue, caps_);
 }
@@ -514,13 +571,57 @@ static bool isBoxOutsideFrustum(const float wbMin[3], const float wbMax[3],
 
 // Compute a POP LoD level based on camera-to-object distance and object radius.
 // Returns 255 (full detail) when very close; decreases as the object shrinks.
-static uint8_t computeLodLevel(float dist, float radius) noexcept
+static uint8_t computeLodLevel(float dist, float radius, float lodScale) noexcept
 {
     if (radius < 1e-6f) return 255;
-    float ratio = dist / radius; // 0 = touching; large = tiny/far
+    const float scale = lodScale > 0.0f ? lodScale : 1.0f;
+    float ratio = (dist / radius) * scale; // 0 = touching; large = tiny/far
     // Mapping: ratio ≈ 0 → 255; ratio = 2 → ~170; ratio = 50 → ~10
     float level = 255.0f / (1.0f + ratio * 0.5f);
     return static_cast<uint8_t>(std::min(255.0f, std::max(0.0f, level)));
+}
+
+static uint8_t instanceLodLevel(const obol::internal::CadVisibleInstance& inst,
+                                const SbVec3f& cameraPos,
+                                const obol::CadRenderState& renderState) noexcept
+{
+    if (renderState.selectedFullDetail && (inst.flags & 1u))
+        return 255;
+
+    float cx = (inst.wbMin[0] + inst.wbMax[0]) * 0.5f;
+    float cy = (inst.wbMin[1] + inst.wbMax[1]) * 0.5f;
+    float cz = (inst.wbMin[2] + inst.wbMax[2]) * 0.5f;
+    float dx = inst.wbMax[0] - inst.wbMin[0];
+    float dy = inst.wbMax[1] - inst.wbMin[1];
+    float dz = inst.wbMax[2] - inst.wbMin[2];
+    float radius = std::sqrt(dx*dx + dy*dy + dz*dz) * 0.5f;
+    float distX = cx - cameraPos[0];
+    float distY = cy - cameraPos[1];
+    float distZ = cz - cameraPos[2];
+    float dist  = std::sqrt(distX*distX + distY*distY + distZ*distZ);
+    return computeLodLevel(dist, radius, renderState.lodScale);
+}
+
+const std::vector<uint32_t> *
+CadRendererGL::lodIndicesForInstance(
+        const SoCADAssembly& assembly,
+        PartId part,
+        const obol::internal::CadVisibleInstance& inst,
+        const SbVec3f& cameraPos,
+        const obol::CadRenderState& renderState,
+        const std::unordered_map<PartId, uint64_t,
+                                 std::hash<PartId>>& partGenMap)
+{
+    if (!renderState.lodEnabled)
+        return nullptr;
+
+    const uint8_t level = instanceLodLevel(inst, cameraPos, renderState);
+    if (level >= 255)
+        return nullptr;
+
+    auto genIt = partGenMap.find(part);
+    uint64_t gen = (genIt != partGenMap.end()) ? genIt->second : 0;
+    return this->getLodCachedIndices(part, level, gen, assembly);
 }
 
 void CadRendererGL::render(
@@ -529,7 +630,7 @@ void CadRendererGL::render(
         const SoGLContext*   glue,
         const SbMatrix&      viewProj,
         const SbVec3f&       cameraPos,
-        bool                 lodEnabled,
+        const CadRenderState& renderState,
         const std::unordered_map<PartId, uint64_t,
                                  std::hash<PartId>>& partGenMap)
 {
@@ -543,15 +644,21 @@ void CadRendererGL::render(
         ensurePartUploaded(repKey.part, assembly, gen, glue);
     }
 
-    if (caps_.canUseInstanced() && shaders_.wireInst && shaders_.shadedInst) {
+    const bool needsShadedLod =
+        renderState.lodEnabled && !plan.shadedItems.empty();
+
+    if (!needsShadedLod &&
+            caps_.canUseInstanced() && shaders_.wireInst && shaders_.shadedInst) {
         lastRenderTier_ = 2;
         renderInstanced(plan, assembly, glue, viewProj, partGenMap);
     } else if (caps_.canUseVbo() && shaders_.wire) {
         lastRenderTier_ = 1;
-        renderVboLoop(plan, assembly, glue, viewProj, cameraPos, lodEnabled, partGenMap);
+        renderVboLoop(plan, assembly, glue, viewProj, cameraPos,
+                      renderState, partGenMap);
     } else {
         lastRenderTier_ = 0;
-        renderImmediateMode(plan, assembly, glue, viewProj, cameraPos, lodEnabled, partGenMap);
+        renderImmediateMode(plan, assembly, glue, viewProj, cameraPos,
+                            renderState, partGenMap);
     }
 }
 
@@ -574,13 +681,18 @@ static void bindAndDrawWire(const CadWireGpu* w, const SoGLContext* glue,
                                        GL_FLOAT, GL_FALSE,
                                        3 * sizeof(float), nullptr);
         glue->glEnableVertexAttribArrayARB(static_cast<GLuint>(locPos));
-        glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, w->segIdxBuf);
+        if (!w->sequentialSegments)
+            glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, w->segIdxBuf);
     }
 
-    glue->glDrawElements(GL_LINES,
-                         w->segCount * 2,
-                         GL_UNSIGNED_INT,
-                         nullptr);
+    if (w->sequentialSegments) {
+        glue->glDrawArrays(GL_LINES, 0, w->segCount * 2);
+    } else {
+        glue->glDrawElements(GL_LINES,
+                             w->segCount * 2,
+                             GL_UNSIGNED_INT,
+                             nullptr);
+    }
     {
         GLenum err = glGetError();
         if (err != GL_NO_ERROR)
@@ -592,7 +704,8 @@ static void bindAndDrawWire(const CadWireGpu* w, const SoGLContext* glue,
     } else {
         glue->glDisableVertexAttribArrayARB(static_cast<GLuint>(locPos));
         glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+        if (!w->sequentialSegments)
+            glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     }
 }
 
@@ -637,15 +750,52 @@ static void bindAndDrawTri(const CadTriGpu* t, const SoGLContext* glue,
     }
 }
 
+static void bindAndDrawTriClientIndices(const CadTriGpu* t,
+                                        const SoGLContext* glue,
+                                        GLint locPos,
+                                        GLint locNorm,
+                                        bool& hasNorm,
+                                        const uint32_t *indices,
+                                        GLsizei indexCount)
+{
+    if (!t || t->idxCount == 0 || !indices || indexCount == 0)
+        return;
+
+    hasNorm = (t->normBuf != 0);
+
+    glue->glBindBuffer(GL_ARRAY_BUFFER, t->posBuf);
+    glue->glVertexAttribPointerARB(static_cast<GLuint>(locPos), 3,
+                                   GL_FLOAT, GL_FALSE,
+                                   3 * sizeof(float), nullptr);
+    glue->glEnableVertexAttribArrayARB(static_cast<GLuint>(locPos));
+
+    if (hasNorm && locNorm >= 0) {
+        glue->glBindBuffer(GL_ARRAY_BUFFER, t->normBuf);
+        glue->glVertexAttribPointerARB(static_cast<GLuint>(locNorm), 3,
+                                       GL_FLOAT, GL_FALSE,
+                                       3 * sizeof(float), nullptr);
+        glue->glEnableVertexAttribArrayARB(static_cast<GLuint>(locNorm));
+    }
+
+    glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    glue->glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, indices);
+
+    if (hasNorm && locNorm >= 0) {
+        glue->glDisableVertexAttribArrayARB(static_cast<GLuint>(locNorm));
+    }
+    glue->glDisableVertexAttribArrayARB(static_cast<GLuint>(locPos));
+    glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
 void CadRendererGL::renderVboLoop(
         const CadFramePlan& plan,
-        const SoCADAssembly& /*assembly*/,
+        const SoCADAssembly& assembly,
         const SoGLContext*   glue,
         const SbMatrix&      viewProj,
-        const SbVec3f&       /*cameraPos*/,
-        bool                 /*lodEnabled*/,
+        const SbVec3f&       cameraPos,
+        const CadRenderState& renderState,
         const std::unordered_map<PartId, uint64_t,
-                                 std::hash<PartId>>& /*partGenMap*/)
+                                 std::hash<PartId>>& partGenMap)
 {
     // OI stores matrices row-major.  GL reads them column-major.  Passing
     // the raw float[16] with GL_FALSE means GL transposes our row-major
@@ -724,7 +874,18 @@ void CadRendererGL::renderVboLoop(
                 };
                 glue->glUniform4fvARB(locColor, 1, rgba);
 
-                bindAndDrawTri(t, glue, locPos, locNorm, hasNorm);
+                const std::vector<uint32_t> *lodIdx =
+                    this->lodIndicesForInstance(assembly, item.rep.part,
+                                                inst, cameraPos, renderState,
+                                                partGenMap);
+                if (lodIdx) {
+                    bindAndDrawTriClientIndices(t, glue, locPos, locNorm,
+                                                hasNorm, lodIdx->data(),
+                                                static_cast<GLsizei>(
+                                                    lodIdx->size()));
+                } else {
+                    bindAndDrawTri(t, glue, locPos, locNorm, hasNorm);
+                }
             }
         }
 
@@ -742,7 +903,7 @@ void CadRendererGL::renderImmediateMode(
         const SoGLContext*   /*glue*/,
         const SbMatrix&      viewProj,
         const SbVec3f&       cameraPos,
-        bool                 lodEnabled,
+        const CadRenderState& renderState,
         const std::unordered_map<PartId, uint64_t,
                                  std::hash<PartId>>& partGenMap)
 {
@@ -786,6 +947,18 @@ void CadRendererGL::renderImmediateMode(
 
             glColor4ub(inst.rgba[0], inst.rgba[1], inst.rgba[2], inst.rgba[3]);
 
+            const size_t flatPointCount = wire.segmentCount() * 2;
+            if (flatPointCount > 0) {
+                glBegin(GL_LINES);
+                for (size_t i = 0; i + 1 < flatPointCount; i += 2) {
+                    const SbVec3f& a = wire.segmentPoints[i];
+                    const SbVec3f& b = wire.segmentPoints[i + 1];
+                    glVertex3f(a[0], a[1], a[2]);
+                    glVertex3f(b[0], b[1], b[2]);
+                }
+                glEnd();
+            }
+
             for (const auto& poly : wire.polylines) {
                 if (poly.points.size() < 2) continue;
                 glBegin(GL_LINE_STRIP);
@@ -801,39 +974,14 @@ void CadRendererGL::renderImmediateMode(
     if (wasLighting) glEnable(GL_LIGHTING);
     // Simple Phong-like: enable lighting for shaded items if lighting was on,
     // else just draw with flat colour.
+    GLboolean wasColorMaterial = glIsEnabled(GL_COLOR_MATERIAL);
+    glDisable(GL_COLOR_MATERIAL);
     for (const auto& item : plan.shadedItems) {
         const obol::PartGeometry* geom = assembly.partGeometry(item.rep.part);
         if (!geom || !geom->shaded.has_value()) continue;
         const obol::TriMesh& mesh = *geom->shaded;
 
         const bool hasNorm = !mesh.normals.empty();
-
-        // Compute LoD-filtered indices for this part if enabled.
-        // All instances share the same part, so determine a representative
-        // LoD level by using the first visible instance's world-bounds centre.
-        const std::vector<uint32_t>* lodIdx = nullptr;
-        if (lodEnabled && item.instanceCount > 0) {
-            const auto& rep = plan.visibleInstances[item.baseInstance];
-            float cx = (rep.wbMin[0] + rep.wbMax[0]) * 0.5f;
-            float cy = (rep.wbMin[1] + rep.wbMax[1]) * 0.5f;
-            float cz = (rep.wbMin[2] + rep.wbMax[2]) * 0.5f;
-            float dx = rep.wbMax[0] - rep.wbMin[0];
-            float dy = rep.wbMax[1] - rep.wbMin[1];
-            float dz = rep.wbMax[2] - rep.wbMin[2];
-            float radius = std::sqrt(dx*dx + dy*dy + dz*dz) * 0.5f;
-            float distX = cx - cameraPos[0];
-            float distY = cy - cameraPos[1];
-            float distZ = cz - cameraPos[2];
-            float dist  = std::sqrt(distX*distX + distY*distY + distZ*distZ);
-            uint8_t level = computeLodLevel(dist, radius);
-            if (level < 255) {
-                auto genIt = partGenMap.find(item.rep.part);
-                uint64_t gen = (genIt != partGenMap.end()) ? genIt->second : 0;
-                lodIdx = getLodCachedIndices(item.rep.part, level, gen, assembly);
-            }
-        }
-
-        const std::vector<uint32_t>& drawIdx = lodIdx ? *lodIdx : mesh.indices;
 
         for (uint32_t ii = 0; ii < item.instanceCount; ++ii) {
             const auto& inst = plan.visibleInstances[item.baseInstance + ii];
@@ -845,7 +993,14 @@ void CadRendererGL::renderImmediateMode(
             mvp.multRight(viewProj);
             glLoadMatrixf(mvp[0]);
 
-            glColor4ub(inst.rgba[0], inst.rgba[1], inst.rgba[2], inst.rgba[3]);
+            setImmediateMaterialFromRgba(inst.rgba.data());
+
+            const std::vector<uint32_t> *lodIdx =
+                this->lodIndicesForInstance(assembly, item.rep.part, inst,
+                                            cameraPos, renderState,
+                                            partGenMap);
+            const std::vector<uint32_t>& drawIdx =
+                lodIdx ? *lodIdx : mesh.indices;
 
             glBegin(GL_TRIANGLES);
             for (size_t t = 0; t + 2 < drawIdx.size(); t += 3) {
@@ -862,6 +1017,7 @@ void CadRendererGL::renderImmediateMode(
             glEnd();
         }
     }
+    if (wasColorMaterial) glEnable(GL_COLOR_MATERIAL);
 
     // Restore matrix state
     glMatrixMode(GL_MODELVIEW);
@@ -982,15 +1138,23 @@ void CadRendererGL::renderInstanced(
                                                GL_FLOAT, GL_FALSE,
                                                3 * sizeof(float), nullptr);
                 glue->glEnableVertexAttribArrayARB(static_cast<GLuint>(locPos));
-                glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, w->segIdxBuf);
+                if (!w->sequentialSegments)
+                    glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, w->segIdxBuf);
                 bindInstAttribs(item.baseInstance);
             }
 
-            glue->glDrawElementsInstanced(GL_LINES,
-                                          w->segCount * 2,
-                                          GL_UNSIGNED_INT,
-                                          nullptr,
-                                          static_cast<GLsizei>(item.instanceCount));
+            if (w->sequentialSegments) {
+                glue->glDrawArraysInstanced(GL_LINES,
+                                            0,
+                                            w->segCount * 2,
+                                            static_cast<GLsizei>(item.instanceCount));
+            } else {
+                glue->glDrawElementsInstanced(GL_LINES,
+                                              w->segCount * 2,
+                                              GL_UNSIGNED_INT,
+                                              nullptr,
+                                              static_cast<GLsizei>(item.instanceCount));
+            }
 
             if (w->vao && glue->glBindVertexArray) {
                 unbindInstAttribs();
@@ -999,7 +1163,8 @@ void CadRendererGL::renderInstanced(
                 unbindInstAttribs();
                 glue->glDisableVertexAttribArrayARB(static_cast<GLuint>(locPos));
                 glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
-                glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+                if (!w->sequentialSegments)
+                    glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
             }
         }
 
