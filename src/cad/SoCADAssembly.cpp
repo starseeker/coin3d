@@ -57,6 +57,7 @@
 #include <Inventor/actions/SoGetPrimitiveCountAction.h>
 #include <Inventor/SoPickedPoint.h>
 #include <Inventor/SoFullPath.h>
+#include <Inventor/SoDB.h>
 #include <Inventor/SbLine.h>
 #include <Inventor/SbVec3f.h>
 #include <Inventor/SbBox3f.h>
@@ -67,6 +68,7 @@
 #include <Inventor/elements/SoViewportRegionElement.h>
 #include <Inventor/elements/SoViewingMatrixElement.h>
 #include <Inventor/elements/SoProjectionMatrixElement.h>
+#include <Inventor/elements/SoContextManagerElement.h>
 
 #include <Inventor/system/gl.h>
 #include "rendering/SoGL.h"
@@ -79,6 +81,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <cstdio>
+#include <cmath>
 
 // ---------------------------------------------------------------------------
 // SoCADAssemblyImpl – private implementation (Pimpl pattern)
@@ -90,6 +93,238 @@ cadDebugEnabled()
     const char *env = std::getenv("OBOL_CAD_DEBUG");
     return env && env[0] && env[0] != '0';
 }
+
+namespace {
+
+struct CadSoftwareClipPoint {
+    double v[4];
+};
+
+static CadSoftwareClipPoint
+cadSoftwareTransform(const SbMatrix& matrix, const SbVec3f& point)
+{
+    const float *m = matrix[0];
+    CadSoftwareClipPoint result;
+    for (int col = 0; col < 4; ++col) {
+        result.v[col] = static_cast<double>(point[0]) * m[col] +
+            static_cast<double>(point[1]) * m[4 + col] +
+            static_cast<double>(point[2]) * m[8 + col] + m[12 + col];
+    }
+    return result;
+}
+
+static bool
+cadSoftwareClipScreen(double& x0, double& y0, double& x1, double& y1,
+                      double left, double bottom, double right, double top)
+{
+    auto code = [left, bottom, right, top](double x, double y) {
+        unsigned int result = 0;
+        if (x < left) result |= 1u;
+        else if (x > right) result |= 2u;
+        if (y < bottom) result |= 4u;
+        else if (y > top) result |= 8u;
+        return result;
+    };
+    unsigned int c0 = code(x0, y0);
+    unsigned int c1 = code(x1, y1);
+    for (;;) {
+        if (!(c0 | c1)) return true;
+        if (c0 & c1) return false;
+        const unsigned int c = c0 ? c0 : c1;
+        double x = 0.0, y = 0.0;
+        if (c & 8u) {
+            y = top;
+            x = x0 + (x1 - x0) * (top - y0) / (y1 - y0);
+        } else if (c & 4u) {
+            y = bottom;
+            x = x0 + (x1 - x0) * (bottom - y0) / (y1 - y0);
+        } else if (c & 2u) {
+            x = right;
+            y = y0 + (y1 - y0) * (right - x0) / (x1 - x0);
+        } else {
+            x = left;
+            y = y0 + (y1 - y0) * (left - x0) / (x1 - x0);
+        }
+        if (c == c0) { x0 = x; y0 = y; c0 = code(x0, y0); }
+        else { x1 = x; y1 = y; c1 = code(x1, y1); }
+    }
+}
+
+static double
+cadSoftwarePlaneValue(const CadSoftwareClipPoint& point, int plane)
+{
+    switch (plane) {
+        case 0: return point.v[3] + point.v[0];
+        case 1: return point.v[3] - point.v[0];
+        case 2: return point.v[3] + point.v[1];
+        case 3: return point.v[3] - point.v[1];
+        case 4: return point.v[3] + point.v[2];
+        default: return point.v[3] - point.v[2];
+    }
+}
+
+static bool
+cadSoftwareClip(CadSoftwareClipPoint& a, CadSoftwareClipPoint& b)
+{
+    for (int plane = 0; plane < 6; ++plane) {
+        const double da = cadSoftwarePlaneValue(a, plane);
+        const double db = cadSoftwarePlaneValue(b, plane);
+        if (da < 0.0 && db < 0.0) return false;
+        if (da >= 0.0 && db >= 0.0) continue;
+        const double denominator = da - db;
+        if (std::abs(denominator) < 1.0e-20) return false;
+        const double t = da / denominator;
+        CadSoftwareClipPoint clipped;
+        for (int i = 0; i < 4; ++i)
+            clipped.v[i] = a.v[i] + t * (b.v[i] - a.v[i]);
+        if (da < 0.0) a = clipped;
+        else b = clipped;
+    }
+    return std::abs(a.v[3]) > 1.0e-20 && std::abs(b.v[3]) > 1.0e-20;
+}
+
+static void
+cadSoftwarePutPixel(unsigned char *pixels, unsigned int width,
+                    unsigned int height, int x, int y,
+                    const std::array<uint8_t, 4>& color)
+{
+    if (x < 0 || y < 0 || static_cast<unsigned int>(x) >= width ||
+            static_cast<unsigned int>(y) >= height)
+        return;
+    unsigned char *pixel = pixels +
+        (static_cast<size_t>(y) * width + static_cast<unsigned int>(x)) * 4;
+    if (color[3] == 255) {
+        std::memcpy(pixel, color.data(), 4);
+        return;
+    }
+    const unsigned int alpha = color[3];
+    const unsigned int inverse = 255 - alpha;
+    for (int i = 0; i < 3; ++i)
+        pixel[i] = static_cast<unsigned char>(
+            (color[i] * alpha + pixel[i] * inverse + 127) / 255);
+    pixel[3] = 255;
+}
+
+static void
+cadSoftwareLine(unsigned char *pixels, unsigned int width,
+                unsigned int height, int x0, int y0, int x1, int y1,
+                const obol::internal::CadVisibleInstance& instance)
+{
+    std::array<uint8_t, 4> color = instance.rgba;
+    if (color[3] == 0) color[3] = 255;
+    const int pixelWidth = std::max(1, static_cast<int>(
+        std::lround(instance.lineWidth)));
+    const int lowOffset = -(pixelWidth - 1) / 2;
+    const int highOffset = pixelWidth / 2;
+    const unsigned int factor = std::max<unsigned int>(
+        1u, instance.linePatternFactor);
+    int dx = std::abs(x1 - x0);
+    int sx = x0 < x1 ? 1 : -1;
+    int dy = -std::abs(y1 - y0);
+    int sy = y0 < y1 ? 1 : -1;
+    int error = dx + dy;
+    unsigned int step = 0;
+    for (;;) {
+        const unsigned int patternBit = (step / factor) & 15u;
+        if (instance.linePattern & (1u << patternBit)) {
+            for (int oy = lowOffset; oy <= highOffset; ++oy)
+                for (int ox = lowOffset; ox <= highOffset; ++ox)
+                    cadSoftwarePutPixel(pixels, width, height,
+                                        x0 + ox, y0 + oy, color);
+        }
+        if (x0 == x1 && y0 == y1) break;
+        const int twiceError = 2 * error;
+        if (twiceError >= dy) { error += dy; x0 += sx; }
+        if (twiceError <= dx) { error += dx; y0 += sy; }
+        ++step;
+    }
+}
+
+static void
+cadSoftwareSegment(unsigned char *pixels, unsigned int width,
+                   unsigned int height, const SbVec2s& origin,
+                   const SbVec2s& size, const SbMatrix& transform,
+                   const SbVec3f& p0, const SbVec3f& p1,
+                   const obol::internal::CadVisibleInstance& instance)
+{
+    const float *m = transform[0];
+    if (m[3] == 0.0f && m[7] == 0.0f && m[11] == 0.0f && m[15] != 0.0f) {
+        const double inverseW = 1.0 / m[15];
+        double x0 = origin[0] + ((p0[0] * m[0] + p0[1] * m[4] +
+            p0[2] * m[8] + m[12]) * inverseW * 0.5 + 0.5) * (size[0] - 1);
+        double y0 = origin[1] + ((p0[0] * m[1] + p0[1] * m[5] +
+            p0[2] * m[9] + m[13]) * inverseW * 0.5 + 0.5) * (size[1] - 1);
+        double x1 = origin[0] + ((p1[0] * m[0] + p1[1] * m[4] +
+            p1[2] * m[8] + m[12]) * inverseW * 0.5 + 0.5) * (size[0] - 1);
+        double y1 = origin[1] + ((p1[0] * m[1] + p1[1] * m[5] +
+            p1[2] * m[9] + m[13]) * inverseW * 0.5 + 0.5) * (size[1] - 1);
+        if (!cadSoftwareClipScreen(x0, y0, x1, y1, origin[0], origin[1],
+                origin[0] + size[0] - 1, origin[1] + size[1] - 1))
+            return;
+        cadSoftwareLine(pixels, width, height,
+            static_cast<int>(x0 + 0.5), static_cast<int>(y0 + 0.5),
+            static_cast<int>(x1 + 0.5), static_cast<int>(y1 + 0.5), instance);
+        return;
+    }
+
+    CadSoftwareClipPoint a = cadSoftwareTransform(transform, p0);
+    CadSoftwareClipPoint b = cadSoftwareTransform(transform, p1);
+    if (!cadSoftwareClip(a, b)) return;
+    const int x0 = origin[0] + static_cast<int>(std::lround(
+        (a.v[0] / a.v[3] * 0.5 + 0.5) * (size[0] - 1)));
+    const int y0 = origin[1] + static_cast<int>(std::lround(
+        (a.v[1] / a.v[3] * 0.5 + 0.5) * (size[1] - 1)));
+    const int x1 = origin[0] + static_cast<int>(std::lround(
+        (b.v[0] / b.v[3] * 0.5 + 0.5) * (size[0] - 1)));
+    const int y1 = origin[1] + static_cast<int>(std::lround(
+        (b.v[1] / b.v[3] * 0.5 + 0.5) * (size[1] - 1)));
+    cadSoftwareLine(pixels, width, height, x0, y0, x1, y1, instance);
+}
+
+static bool
+cadRenderSoftwareWire(const obol::internal::CadFramePlan& plan,
+                      const SoCADAssembly& assembly, SoState *state,
+                      const SbMatrix& viewProj)
+{
+    if (plan.wireItems.empty() || !plan.shadedItems.empty() ||
+            assembly.wireframeOcclusion.getValue())
+        return false;
+    SoDB::ContextManager *manager = SoContextManagerElement::get(state);
+    unsigned char *pixels = nullptr;
+    unsigned int width = 0, height = 0, components = 0;
+    if (!manager || !manager->getCurrentSoftwareFramebuffer(
+            pixels, width, height, components) || components != 4)
+        return false;
+    const SbViewportRegion& viewport = SoViewportRegionElement::get(state);
+    const SbVec2s origin = viewport.getViewportOriginPixels();
+    const SbVec2s size = viewport.getViewportSizePixels();
+    if (size[0] <= 0 || size[1] <= 0) return false;
+
+    for (const auto& item : plan.wireItems) {
+        const obol::PartGeometry *geometry = assembly.partGeometry(item.rep.part);
+        if (!geometry || !geometry->wire.has_value()) continue;
+        const obol::WireRep& wire = *geometry->wire;
+        for (uint32_t i = 0; i < item.instanceCount; ++i) {
+            const auto& instance = plan.visibleInstances[item.baseInstance + i];
+            SbMatrix model;
+            model.setValue(instance.transform.data());
+            SbMatrix transform = model;
+            transform.multRight(viewProj);
+            for (size_t p = 0; p + 1 < wire.segmentPoints.size(); p += 2)
+                cadSoftwareSegment(pixels, width, height, origin, size,
+                    transform, wire.segmentPoints[p], wire.segmentPoints[p + 1],
+                    instance);
+            for (const auto& polyline : wire.polylines)
+                for (size_t p = 1; p < polyline.points.size(); ++p)
+                    cadSoftwareSegment(pixels, width, height, origin, size,
+                        transform, polyline.points[p - 1], polyline.points[p],
+                        instance);
+        }
+    }
+    return true;
+}
+
+} // namespace
 
 struct InstanceData {
     obol::PartId          partId;
@@ -838,10 +1073,16 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
     const obol::CadRenderState renderState =
         obol::resolveCadRenderState(SoCADViewStateElement::get(state));
 
-    // Delegate to the VBO + shader renderer (GL 2.0 minimum; optional GL 3.1+
-    // instanced path selected automatically when available)
-    impl_->renderer_->render(impl_->cachedPlan_, *this, glue, viewProj,
-                             cameraPos, renderState, impl_->partGeneration_);
+    // Ordinary software wireframes bypass Mesa's fixed-function interpreter.
+    // All other modes continue through the retained GL renderer.
+    const bool softwareWire = dm == WIREFRAME && cadRenderSoftwareWire(
+        impl_->cachedPlan_, *this, state, viewProj);
+    if (!softwareWire) {
+        // Delegate to the VBO + shader renderer (GL 2.0 minimum; optional GL
+        // 3.1+ instanced path selected automatically when available).
+        impl_->renderer_->render(impl_->cachedPlan_, *this, glue, viewProj,
+                                 cameraPos, renderState, impl_->partGeneration_);
+    }
     if (cadDebugEnabled()) {
         std::fprintf(stderr,
                      "SoCADAssembly render tier=%d visible=%zu wireItems=%zu "
