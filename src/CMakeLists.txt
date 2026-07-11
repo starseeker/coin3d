@@ -225,6 +225,13 @@ endif()
 # Platform-specific configuration
 # ============================================================================
 
+# The bundled software renderer is installed beside Obol.  Keep that
+# relationship relocatable so consumers do not need LD_LIBRARY_PATH merely to
+# load a dual-backend Obol installation.
+if(UNIX AND NOT APPLE AND OBOL_USE_SWRAST)
+  set_property(TARGET ${PROJECT_NAME} APPEND PROPERTY INSTALL_RPATH "$ORIGIN")
+endif()
+
 # Set library version properties
 if(WIN32 AND NOT MINGW)
     set_target_properties(${PROJECT_NAME} PROPERTIES 

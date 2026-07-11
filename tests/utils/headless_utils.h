@@ -341,6 +341,28 @@ public:
     virtual void * getProcAddress(const char * funcName) override {
         return reinterpret_cast<void*>(OSMesaGetProcAddress(funcName));
     }
+
+    virtual SbBool getCurrentSoftwareFramebuffer(
+        unsigned char *& pixels, unsigned int & width,
+        unsigned int & height, unsigned int & components) override {
+        OSMesaContext current = OSMesaGetCurrentContext();
+        GLsizei w = 0, h = 0;
+        GLint format = 0;
+        void *buffer = nullptr;
+        const GLboolean gotBuffer = current ?
+            OSMesaGetColorBuffer(current, &w, &h, &format, &buffer) : GL_FALSE;
+        if (!gotBuffer || !buffer || w <= 0 || h <= 0 ||
+                format != OSMESA_RGBA) {
+            pixels = nullptr;
+            width = height = components = 0;
+            return FALSE;
+        }
+        pixels = static_cast<unsigned char *>(buffer);
+        width = static_cast<unsigned int>(w);
+        height = static_cast<unsigned int>(h);
+        components = 4;
+        return TRUE;
+    }
 };
 
 namespace {

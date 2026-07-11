@@ -799,13 +799,17 @@ void CadRendererGL::render(
         renderState.lodEnabled && !plan.shadedItems.empty();
 
     const char *flatWireEnv = std::getenv("OBOL_CAD_FLAT_WIRE");
-    const bool flatWireEnabled = flatWireEnv ? flatWireEnv[0] != '0' :
-        !caps_.isSoftwareRenderer;
+    const bool flatWireEnabled = flatWireEnv ? flatWireEnv[0] != '0' : true;
+    const bool canUseFlatWire = caps_.isSoftwareRenderer ?
+        caps_.canUseFixedVbo() : (caps_.canUseVbo() && shaders_.wire);
     if (flatWireEnabled && plan.shadedItems.empty() &&
             plan.wireItems.size() >= 128 &&
-            caps_.canUseVbo() && shaders_.wire &&
+            canUseFlatWire &&
             renderFlatWire(plan, assembly, glue, viewProj)) {
         lastRenderTier_ = 3;
+    } else if (caps_.isSoftwareRenderer && caps_.canUseFixedVbo()) {
+        lastRenderTier_ = 1;
+        renderFixedVboLoop(plan, glue, viewProj);
     } else if (!needsShadedLod && caps_.canUseInstanced() &&
             shaders_.wireInst && shaders_.shadedInst) {
         lastRenderTier_ = 2;
@@ -961,11 +965,28 @@ bool CadRendererGL::renderFlatWire(
 
     const CadWireRasterState rasterState =
         captureWireRasterState(glue, caps_.hasLineStipple);
-    glue->glUseProgramObjectARB(shaders_.wire);
+    const bool fixedFunction = caps_.isSoftwareRenderer;
+    GLboolean wasLighting = GL_FALSE;
+    GLint locColor = -1;
+    GLint locPos = 0;
+    if (fixedFunction) {
+        glue->glMatrixMode(GL_PROJECTION);
+        glue->glPushMatrix();
+        glue->glLoadIdentity();
+        glue->glMatrixMode(GL_MODELVIEW);
+        glue->glPushMatrix();
+        glue->glLoadMatrixf(viewProj[0]);
+        wasLighting = glue->glIsEnabled(GL_LIGHTING);
+        glue->glDisable(GL_LIGHTING);
+        glue->glEnableClientState(GL_VERTEX_ARRAY);
+        glue->glBindBuffer(GL_ARRAY_BUFFER, flat.posBuf);
+        glue->glVertexPointer(3, GL_FLOAT, 3 * sizeof(float), nullptr);
+    } else {
+        glue->glUseProgramObjectARB(shaders_.wire);
     const GLint locVP = glue->glGetUniformLocationARB(shaders_.wire, "u_viewProj");
     const GLint locModel = glue->glGetUniformLocationARB(shaders_.wire, "u_model");
-    const GLint locColor = glue->glGetUniformLocationARB(shaders_.wire, "u_color");
-    GLint locPos = glue->glGetAttribLocationARB(shaders_.wire, "a_pos");
+        locColor = glue->glGetUniformLocationARB(shaders_.wire, "u_color");
+        locPos = glue->glGetAttribLocationARB(shaders_.wire, "a_pos");
     if (locPos < 0) locPos = 0;
     const SbMatrix identity = SbMatrix::identity();
     glue->glUniformMatrix4fvARB(locVP, 1, GL_FALSE, viewProj[0]);
@@ -980,12 +1001,18 @@ bool CadRendererGL::renderFlatWire(
                                        3 * sizeof(float), nullptr);
         glue->glEnableVertexAttribArrayARB(static_cast<GLuint>(locPos));
     }
+    }
     for (const CadFlatWireGroup& group : flat.groups) {
-        const float color[4] = {group.rgba[0] / 255.0f,
-                                group.rgba[1] / 255.0f,
-                                group.rgba[2] / 255.0f,
-                                group.rgba[3] / 255.0f};
-        glue->glUniform4fvARB(locColor, 1, color);
+        if (fixedFunction) {
+            glue->glColor4ub(group.rgba[0], group.rgba[1],
+                             group.rgba[2], group.rgba[3]);
+        } else {
+            const float color[4] = {group.rgba[0] / 255.0f,
+                                    group.rgba[1] / 255.0f,
+                                    group.rgba[2] / 255.0f,
+                                    group.rgba[3] / 255.0f};
+            glue->glUniform4fvARB(locColor, 1, color);
+        }
         glue->glLineWidth(std::max(1.0f, group.lineWidth));
         if (caps_.hasLineStipple) {
             if (group.linePattern != 0xffffu) {
@@ -998,13 +1025,23 @@ bool CadRendererGL::renderFlatWire(
         }
         glue->glDrawArrays(GL_LINES, group.first, group.count);
     }
-    if (flat.vao && glue->glBindVertexArray)
+    if (fixedFunction) {
+        glue->glDisableClientState(GL_VERTEX_ARRAY);
+        glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
+        if (wasLighting) glue->glEnable(GL_LIGHTING);
+        glue->glMatrixMode(GL_MODELVIEW);
+        glue->glPopMatrix();
+        glue->glMatrixMode(GL_PROJECTION);
+        glue->glPopMatrix();
+        glue->glMatrixMode(GL_MODELVIEW);
+    } else if (flat.vao && glue->glBindVertexArray)
         glue->glBindVertexArray(0);
     else {
         glue->glDisableVertexAttribArrayARB(static_cast<GLuint>(locPos));
         glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
     }
-    glue->glUseProgramObjectARB(0);
+    if (!fixedFunction)
+        glue->glUseProgramObjectARB(0);
     restoreWireRasterState(glue, rasterState, caps_.hasLineStipple);
     return true;
 }

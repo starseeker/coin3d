@@ -398,6 +398,7 @@ struct SoCADAssemblyImpl {
 
     // VBO + shader renderer (lazy-created on first GLRender call)
     std::unique_ptr<obol::internal::CadRendererGL> renderer_;
+    bool lastDirectSoftwareWire_ = false;
 
     // Rebuild instance BVH if dirty
     void rebuildBvhIfNeeded() {
@@ -1073,10 +1074,13 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
     const obol::CadRenderState renderState =
         obol::resolveCadRenderState(SoCADViewStateElement::get(state));
 
-    // Ordinary software wireframes bypass Mesa's fixed-function interpreter.
-    // All other modes continue through the retained GL renderer.
-    const bool softwareWire = dm == WIREFRAME && cadRenderSoftwareWire(
-        impl_->cachedPlan_, *this, state, viewProj);
+    // Explicit FAST mode allows ordinary software wireframes to bypass Mesa's
+    // fixed-function interpreter.  AUTO is deliberately quality-first because
+    // direct CPU rasterization is workload-dependent and can be slower.
+    const bool softwareWire = dm == WIREFRAME &&
+        renderState.softwareWireMode == obol::CadSoftwareWireMode::FAST &&
+        cadRenderSoftwareWire(impl_->cachedPlan_, *this, state, viewProj);
+    impl_->lastDirectSoftwareWire_ = softwareWire;
     if (!softwareWire) {
         // Delegate to the VBO + shader renderer (GL 2.0 minimum; optional GL
         // 3.1+ instanced path selected automatically when available).
@@ -1086,13 +1090,16 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
     if (cadDebugEnabled()) {
         std::fprintf(stderr,
                      "SoCADAssembly render tier=%d visible=%zu wireItems=%zu "
-                     "shadedItems=%zu parts=%zu instances=%zu\n",
+                     "shadedItems=%zu parts=%zu instances=%zu "
+                     "softwareWireMode=%d direct=%d\n",
                      impl_->renderer_->lastRenderTier(),
                      impl_->cachedPlan_.visibleInstances.size(),
                      impl_->cachedPlan_.wireItems.size(),
                      impl_->cachedPlan_.shadedItems.size(),
                      impl_->parts_.size(),
-                     impl_->instances_.size());
+                     impl_->instances_.size(),
+                     static_cast<int>(renderState.softwareWireMode),
+                     softwareWire ? 1 : 0);
     }
 }
 
@@ -1293,4 +1300,10 @@ SoCADAssembly::lastRenderTier() const
 {
     if (!impl_->renderer_) return -1;
     return impl_->renderer_->lastRenderTier();
+}
+
+bool
+SoCADAssembly::lastRenderUsedDirectSoftwareWire() const
+{
+    return impl_->lastDirectSoftwareWire_;
 }

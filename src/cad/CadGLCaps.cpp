@@ -94,6 +94,8 @@ CadGLCaps CadGLCaps::detect(const SoGLContext * glue)
         (std::strstr(rendererString, "llvmpipe") ||
          std::strstr(rendererString, "softpipe") ||
          std::strstr(rendererString, "swrast") ||
+         std::strstr(rendererString, "Obol OSMesa") ||
+         std::strstr(rendererString, "Mesa OffScreen") ||
          std::strstr(rendererString, "Software Rasterizer"));
     bool compatibilityProfile = versionString &&
         std::strstr(versionString, "OpenGL ES") == nullptr;

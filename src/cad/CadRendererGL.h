@@ -131,7 +131,7 @@ public:
     /**
      * Returns the rendering tier used during the last render() call:
      *   0 = immediate-mode fallback (GL 1.1, no working GLSL+VBO)
-     *   1 = VBO-loop (GL 2.0, GLSL 1.10)
+     *   1 = retained VBO loop (fixed-function compatibility or GLSL)
      *   2 = instanced (GL 3.1+)
      *   3 = flattened wire batch (hardware GL)
      *  -1 = render() not yet called

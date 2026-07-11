@@ -93,6 +93,13 @@ public:
         LOD_ENABLED  = 1
     };
 
+    enum SoftwareWireMode {
+        SOFTWARE_WIRE_INHERIT = -1,
+        SOFTWARE_WIRE_AUTO = 0,
+        SOFTWARE_WIRE_QUALITY = 1,
+        SOFTWARE_WIRE_FAST = 2
+    };
+
     static void initClass(void);
     SoCADViewState(void);
 
@@ -101,6 +108,7 @@ public:
     SoSFEnum   lodMode;
     SoSFFloat  lodScale;
     SoSFBool   selectedFullDetail;
+    SoSFEnum   softwareWireMode;
 
     virtual SbBool affectsState(void) const override;
     virtual void doAction(SoAction *action) override;

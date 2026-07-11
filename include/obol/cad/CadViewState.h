@@ -57,6 +57,20 @@ enum class CadLodMode : int {
 };
 
 /**
+ * @brief Software-backend wireframe rasterization policy.
+ *
+ * AUTO lets the active backend choose its preferred path, QUALITY forces the
+ * retained GL renderer, and FAST permits direct one-pixel CPU rasterization
+ * into a software framebuffer. FAST intentionally trades GL depth testing and
+ * antialiasing for lower interaction latency.
+ */
+enum class CadSoftwareWireMode : int {
+    AUTO    = 0,
+    QUALITY = 1,
+    FAST    = 2
+};
+
+/**
  * @brief Traversal-time state supplied by a view.
  *
  * This struct is deliberately generic: applications map their own model,
@@ -67,6 +81,7 @@ struct CadViewState {
     CadLodMode lodMode = CadLodMode::DISABLED;
     float      lodScale = 1.0f;
     bool       selectedFullDetail = true;
+    CadSoftwareWireMode softwareWireMode = CadSoftwareWireMode::AUTO;
 };
 
 /**
@@ -77,6 +92,7 @@ struct CadRenderState {
     bool     lodEnabled = false;
     float    lodScale = 1.0f;
     bool     selectedFullDetail = true;
+    CadSoftwareWireMode softwareWireMode = CadSoftwareWireMode::AUTO;
 };
 
 inline CadRenderState
@@ -87,6 +103,7 @@ resolveCadRenderState(const CadViewState& viewState)
     render.lodEnabled = viewState.lodMode == CadLodMode::ENABLED;
     render.lodScale = viewState.lodScale > 0.0f ? viewState.lodScale : 1.0f;
     render.selectedFullDetail = viewState.selectedFullDetail;
+    render.softwareWireMode = viewState.softwareWireMode;
     return render;
 }
 
