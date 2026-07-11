@@ -95,6 +95,10 @@ struct InstanceData {
     obol::PartId          partId;
     SbMatrix              localToRoot;
     obol::InstanceStyle   style;
+    obol::InstanceId      parent;
+    std::string           childName;
+    uint32_t              occurrenceIndex = 0;
+    uint8_t               boolOp = 0;
     SbBox3f               worldBounds;   // cached; recomputed on transform change
 };
 
@@ -153,6 +157,7 @@ struct SoCADAssemblyImpl {
 
     // Frame plan cache.  Rebuilt lazily when planDirty_ is true.
     obol::internal::CadFramePlan cachedPlan_;
+    uint64_t nextPlanRevision_ = 1;
     bool planDirty_    = true;   ///< Plan must be rebuilt before next render
     int  cachedDM_     = -1;     ///< Draw mode used for the cached plan
 
@@ -257,6 +262,10 @@ struct SoCADAssemblyImpl {
         idata.partId         = rec.part;
         idata.localToRoot    = rec.localToRoot;
         idata.style          = rec.style;
+        idata.parent         = rec.parent;
+        idata.childName      = rec.childName;
+        idata.occurrenceIndex = rec.occurrenceIndex;
+        idata.boolOp         = rec.boolOp;
 
         auto geomIt = parts_.find(rec.part);
         idata.worldBounds = geomIt != parts_.end() ?
@@ -328,6 +337,12 @@ struct SoCADAssemblyImpl {
             vi.rgba[1] = static_cast<uint8_t>(std::min(255.0f, g * 255.0f));
             vi.rgba[2] = static_cast<uint8_t>(std::min(255.0f, b * 255.0f));
             vi.rgba[3] = static_cast<uint8_t>(std::min(255.0f, a * 255.0f));
+            vi.lineWidth = std::max(1.0f, idata.style.lineWidth);
+            vi.linePattern = idata.style.linePattern;
+            vi.linePatternFactor = std::max<uint16_t>(
+                1u, idata.style.linePatternFactor);
+            if (vi.lineWidth != 1.0f || vi.linePattern != 0xffffu)
+                plan.hasCustomWireStyle = true;
             vi.flags   = isSel ? 1u : 0u;
 
             if (cadDebugEnabled()) {
@@ -374,6 +389,14 @@ struct SoCADAssemblyImpl {
             if (partIt == parts_.end()) continue;
             const auto& geom = partIt->second;
 
+            std::stable_sort(vis.begin(), vis.end(),
+                [](const CadVisibleInstance& a, const CadVisibleInstance& b) {
+                    if (a.linePattern != b.linePattern)
+                        return a.linePattern > b.linePattern;
+                    if (a.linePatternFactor != b.linePatternFactor)
+                        return a.linePatternFactor < b.linePatternFactor;
+                    return a.lineWidth < b.lineWidth;
+                });
             const uint32_t count = static_cast<uint32_t>(vis.size());
 
             // Fill partIndex (index into the upcoming visibleInstances block)
@@ -388,9 +411,23 @@ struct SoCADAssemblyImpl {
                 item.rep.part  = pid;
                 item.rep.type  = CadRepType::WireSegments;
                 item.rep.level = 255;
-                item.baseInstance  = baseInst;
-                item.instanceCount = count;
-                plan.wireItems.push_back(item);
+                uint32_t runStart = 0;
+                while (runStart < count) {
+                    uint32_t runEnd = runStart + 1;
+                    while (runEnd < count &&
+                           vis[runEnd].lineWidth == vis[runStart].lineWidth &&
+                           vis[runEnd].linePattern == vis[runStart].linePattern &&
+                           vis[runEnd].linePatternFactor ==
+                               vis[runStart].linePatternFactor)
+                        ++runEnd;
+                    item.baseInstance = baseInst + runStart;
+                    item.instanceCount = runEnd - runStart;
+                    item.customWireStyle =
+                        vis[runStart].lineWidth != 1.0f ||
+                        vis[runStart].linePattern != 0xffffu;
+                    plan.wireItems.push_back(item);
+                    runStart = runEnd;
+                }
                 if (!requiredWireParts.count(pid)) {
                     plan.requiredReps.push_back(item.rep);
                     requiredWireParts.insert(pid);
@@ -682,8 +719,10 @@ SoCADAssembly::getInstanceRecord(obol::InstanceId iid) const
     rec.part        = d.partId;
     rec.localToRoot = d.localToRoot;
     rec.style       = d.style;
-    // parent/childName/occurrenceIndex/boolOp are derivation inputs and are
-    // not stored after insert; the caller must track them externally if needed.
+    rec.parent      = d.parent;
+    rec.childName  = d.childName;
+    rec.occurrenceIndex = d.occurrenceIndex;
+    rec.boolOp      = d.boolOp;
     return rec;
 }
 
@@ -789,6 +828,9 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
     if (impl_->planDirty_ || impl_->cachedDM_ != dm) {
         impl_->cachedPlan_  = impl_->buildFramePlan(dm, impl_->selected_,
                                                      impl_->hidden_);
+        impl_->cachedPlan_.revision = impl_->nextPlanRevision_++;
+        if (impl_->nextPlanRevision_ == 0)
+            impl_->nextPlanRevision_ = 1;
         impl_->planDirty_   = false;
         impl_->cachedDM_    = dm;
     }

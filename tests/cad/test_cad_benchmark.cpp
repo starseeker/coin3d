@@ -403,9 +403,10 @@ int main(int argc, char **argv)
         "Tier 0 (immediate-mode, GL 1.1 fallback)",
         "Tier 1 (VBO-loop, GL 2.0 / GLSL 1.10)",
         "Tier 2 (instanced, GL 3.1+)",
+        "Tier 3 (flattened wire batch, GL 2.0+)",
     };
     int tier = cadAssembly ? cadAssembly->lastRenderTier() : -1;
-    const char *tierStr = (tier >= 0 && tier <= 2) ? kTierName[tier] : "unknown";
+    const char *tierStr = (tier >= 0 && tier <= 3) ? kTierName[tier] : "unknown";
     printf("  render: %.1f ms  (ok=%d)  [%s]\n", cadRenderMs, (int)cadOk, tierStr);
 
     const unsigned char *cadBuf = cadOk ? cadRenderer.getBuffer() : nullptr;

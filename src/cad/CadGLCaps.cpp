@@ -35,6 +35,10 @@
 
 #include <Inventor/system/gl.h>
 
+#include <cstring>
+#include <cstdio>
+#include <cstdlib>
+
 namespace obol {
 namespace internal {
 
@@ -48,9 +52,13 @@ CadGLCaps CadGLCaps::detect(const SoGLContext * glue)
                    glue->glBufferData       != nullptr &&
                    glue->glDeleteBuffers    != nullptr &&
                    glue->glDrawElements     != nullptr &&
-                   glue->glVertexAttribPointerARB        != nullptr &&
-                   glue->glEnableVertexAttribArrayARB    != nullptr &&
-                   glue->glDisableVertexAttribArrayARB   != nullptr);
+                   glue->glDrawArrays       != nullptr);
+
+    caps.hasFixedVertexArrays =
+        (glue->glVertexPointer != nullptr &&
+         glue->glNormalPointer != nullptr &&
+         glue->glEnableClientState != nullptr &&
+         glue->glDisableClientState != nullptr);
 
     caps.hasShaderObjects = (glue->glCreateShaderObjectARB  != nullptr &&
                              glue->glShaderSourceARB         != nullptr &&
@@ -68,12 +76,38 @@ CadGLCaps CadGLCaps::detect(const SoGLContext * glue)
 
     caps.hasVAO = (glue->glGenVertexArrays    != nullptr &&
                    glue->glBindVertexArray    != nullptr &&
-                   glue->glDeleteVertexArrays != nullptr);
+                   glue->glDeleteVertexArrays != nullptr &&
+                   glue->glVertexAttribPointerARB != nullptr &&
+                   glue->glEnableVertexAttribArrayARB != nullptr &&
+                   glue->glDisableVertexAttribArrayARB != nullptr);
 
     caps.hasInstancing = (glue->glDrawElementsInstanced != nullptr &&
                           glue->glDrawArraysInstanced != nullptr);
 
     caps.hasAttribDivisor = (glue->glVertexAttribDivisor != nullptr);
+
+    const char *versionString = reinterpret_cast<const char *>(
+        glue->glGetString ? glue->glGetString(GL_VERSION) : nullptr);
+    const char *rendererString = reinterpret_cast<const char *>(
+        glue->glGetString ? glue->glGetString(GL_RENDERER) : nullptr);
+    caps.isSoftwareRenderer = rendererString &&
+        (std::strstr(rendererString, "llvmpipe") ||
+         std::strstr(rendererString, "softpipe") ||
+         std::strstr(rendererString, "swrast") ||
+         std::strstr(rendererString, "Software Rasterizer"));
+    bool compatibilityProfile = versionString &&
+        std::strstr(versionString, "OpenGL ES") == nullptr;
+#if defined(GL_CONTEXT_PROFILE_MASK) && defined(GL_CONTEXT_COMPATIBILITY_PROFILE_BIT)
+    if (compatibilityProfile && versionString && versionString[0] >= '3' &&
+        glue->glGetIntegerv) {
+        GLint profileMask = 0;
+        glue->glGetIntegerv(GL_CONTEXT_PROFILE_MASK, &profileMask);
+        compatibilityProfile =
+            (profileMask & GL_CONTEXT_COMPATIBILITY_PROFILE_BIT) != 0;
+    }
+#endif
+    caps.hasLineStipple = compatibilityProfile &&
+        glue->glLineStipple != nullptr;
 
     // Probe whether GLSL vertex shaders actually execute during glDrawElements.
     // Some software renderers (Mesa 7.x swrast) report ARB_shader_objects but
@@ -89,7 +123,12 @@ CadGLCaps CadGLCaps::detect(const SoGLContext * glue)
     //     is fast and easy to restore.
     //   - After the test we clear pixel (0,0) back to its original colour via
     //     glClear + scissor so the caller's framebuffer is not contaminated.
-    if (caps.hasVBO && caps.hasShaderObjects) {
+    const bool needsLegacyDrawProbe = versionString &&
+        std::strstr(versionString, "Mesa 7.") != nullptr;
+
+    if (caps.hasVBO && caps.hasShaderObjects && !needsLegacyDrawProbe) {
+        caps.hasGLSLDraw = true;
+    } else if (caps.hasVBO && caps.hasShaderObjects) {
         static const char * kProbeVS =
             "attribute vec3 a_pos;\n"
             "void main() { gl_Position = vec4(a_pos, 1.0); }\n";
@@ -144,18 +183,18 @@ CadGLCaps CadGLCaps::detect(const SoGLContext * glue)
 
                     // Save pixel (0,0) before probe so we can restore it
                     unsigned char before[4] = {}, after[4] = {};
-                    glReadPixels(0, 0, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, before);
+                    glue->glReadPixels(0, 0, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, before);
 
                     // Restrict the probe draw to a single pixel via scissor
-                    GLboolean scissorWasEnabled = glIsEnabled(GL_SCISSOR_TEST);
+                    GLboolean scissorWasEnabled = glue->glIsEnabled(GL_SCISSOR_TEST);
                     GLint scissorBox[4] = {};
-                    glGetIntegerv(GL_SCISSOR_BOX, scissorBox);
-                    glEnable(GL_SCISSOR_TEST);
-                    glScissor(0, 0, 1, 1);
+                    glue->glGetIntegerv(GL_SCISSOR_BOX, scissorBox);
+                    glue->glEnable(GL_SCISSOR_TEST);
+                    glue->glScissor(0, 0, 1, 1);
 
                     // Disable depth test for the probe so it always writes
-                    GLboolean depthWasEnabled = glIsEnabled(GL_DEPTH_TEST);
-                    glDisable(GL_DEPTH_TEST);
+                    GLboolean depthWasEnabled = glue->glIsEnabled(GL_DEPTH_TEST);
+                    glue->glDisable(GL_DEPTH_TEST);
 
                     glue->glUseProgramObjectARB(prog);
                     glue->glVertexAttribPointerARB(0, 3, GL_FLOAT, GL_FALSE,
@@ -165,23 +204,23 @@ CadGLCaps CadGLCaps::detect(const SoGLContext * glue)
                     glue->glDisableVertexAttribArrayARB(0);
                     glue->glUseProgramObjectARB(0);
 
-                    glReadPixels(0, 0, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, after);
+                    glue->glReadPixels(0, 0, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, after);
 
                     // Restore the single pixel we may have overwritten
                     // (write it back via a 1x1 glDrawPixels if available,
                     // otherwise fall back to glClear of just that pixel)
-                    glScissor(0, 0, 1, 1);
-                    glClearColor(before[0] / 255.0f, before[1] / 255.0f,
-                                 before[2] / 255.0f, before[3] / 255.0f);
-                    glClear(GL_COLOR_BUFFER_BIT);
+                    glue->glScissor(0, 0, 1, 1);
+                    glue->glClearColor(before[0] / 255.0f, before[1] / 255.0f,
+                                       before[2] / 255.0f, before[3] / 255.0f);
+                    glue->glClear(GL_COLOR_BUFFER_BIT);
                     // Restore scissor state
                     if (!scissorWasEnabled)
-                        glDisable(GL_SCISSOR_TEST);
-                    glScissor(scissorBox[0], scissorBox[1],
-                              scissorBox[2], scissorBox[3]);
+                        glue->glDisable(GL_SCISSOR_TEST);
+                    glue->glScissor(scissorBox[0], scissorBox[1],
+                                    scissorBox[2], scissorBox[3]);
                     // Restore depth test state
                     if (depthWasEnabled)
-                        glEnable(GL_DEPTH_TEST);
+                        glue->glEnable(GL_DEPTH_TEST);
 
                     glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
                     glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
@@ -200,6 +239,25 @@ CadGLCaps CadGLCaps::detect(const SoGLContext * glue)
         if (prog) glue->glDeleteObjectARB(prog);
 
         caps.hasGLSLDraw = probeOk;
+    }
+
+    if (std::getenv("OBOL_CAD_DEBUG") ||
+            std::getenv("OBOL_CAD_CAPS_DEBUG")) {
+        const char *vendorString = reinterpret_cast<const char *>(
+            glue->glGetString(GL_VENDOR));
+        std::fprintf(stderr,
+            "CadGLCaps context=%u vendor=%s renderer=%s version=%s "
+            "vbo=%d shaders=%d vao=%d "
+            "fixedArrays=%d instancing=%d divisor=%d stipple=%d glslDraw=%d "
+            "software=%d\n",
+            glue->contextid,
+            vendorString ? vendorString : "unknown",
+            rendererString ? rendererString : "unknown",
+            versionString ? versionString : "unknown",
+            caps.hasVBO, caps.hasShaderObjects, caps.hasVAO,
+            caps.hasFixedVertexArrays,
+            caps.hasInstancing, caps.hasAttribDivisor, caps.hasLineStipple,
+            caps.hasGLSLDraw, caps.isSoftwareRenderer);
     }
 
     return caps;

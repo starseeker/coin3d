@@ -136,6 +136,7 @@
 #include <cstring> // strcmp()
 #include <cctype>   // toupper()
 #include <shared_mutex>
+#include <atomic>
 #include <mutex>
 
 #include <Inventor/errors/SoDebugError.h>
@@ -201,6 +202,13 @@ static NameMap * dynload_tries = NULL;
 // dynload_tries.  A shared_mutex allows concurrent readers (fromName lookups)
 // while serialising writers (createType, removeType, init, clean).
 static std::shared_mutex type_mutex;
+
+// Parent links never change after type creation.  Keep a fixed atomic index
+// alongside typedatalist so isDerivedFrom(), which is called for virtually
+// every node in a render traversal, does not need to acquire type_mutex or
+// touch the potentially reallocating SbList storage.  removeType() clears the
+// corresponding link before releasing the removed record.
+static std::atomic<uint16_t> type_parent_key[UINT16_MAX + 1];
 
 // *************************************************************************
 
@@ -308,6 +316,8 @@ SoType::createType(const SoType parent, const SbName name,
   newType.index = SoType::typedatalist->getLength();
   SoTypeData * typeData = new SoTypeData(name, newType, TRUE, data, parent, method);
   SoType::typedatalist->append(typeData);
+  type_parent_key[newType.getKey()].store(parent.getKey(),
+					  std::memory_order_release);
 
   // add to dictionary for fast lookup
   type_dict->put(name.getString(), newType.getKey());
@@ -337,6 +347,8 @@ SoType::removeType(const SbName & name)
   type_dict->erase(name.getString());
   SoTypeData *typedata = (*SoType::typedatalist)[index];
   (*SoType::typedatalist)[index] = NULL;
+  type_parent_key[static_cast<uint16_t>(index)].store(0,
+						      std::memory_order_release);
   delete typedata;
 
 #if OBOL_DEBUG && 0 // debug
@@ -885,7 +897,6 @@ SoType::isDerivedFrom(const SoType parent) const
     return FALSE;
   }
 
-  std::shared_lock<std::shared_mutex> lock(type_mutex);
   SoType type = *this;
   do {
 #if OBOL_DEBUG && 0 // debug
@@ -895,7 +906,7 @@ SoType::isDerivedFrom(const SoType parent) const
                            parent.getName().getString());
 #endif // debug
     if (type == parent) return TRUE;
-    type = (*SoType::typedatalist)[(int)type.getKey()]->parent;
+    type.index = type_parent_key[type.getKey()].load(std::memory_order_acquire);
   } while (!type.isBad());
 
   return FALSE;
