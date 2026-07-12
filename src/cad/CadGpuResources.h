@@ -113,6 +113,20 @@ struct CadFlatWireGpu {
     std::vector<CadFlatWireGroup> groups;
 };
 
+struct CadFlatShadedGroup {
+    GLint first = 0;
+    GLsizei count = 0;
+    uint8_t rgba[4] = {204, 204, 204, 255};
+};
+
+struct CadFlatShadedGpu {
+    GLuint posBuf = 0;
+    GLuint normBuf = 0;
+    uint64_t planRevision = 0;
+    GLsizei vertexCount = 0;
+    std::vector<CadFlatShadedGroup> groups;
+};
+
 /**
  * @brief GPU resource cache shared across frames within one GL context.
  *
@@ -204,6 +218,14 @@ public:
 
     const CadFlatWireGpu& flatWire() const { return flatWire_; }
 
+    void uploadFlatShaded(uint64_t planRevision,
+                          const std::vector<float>& positions,
+                          const std::vector<float>& normals,
+                          const std::vector<CadFlatShadedGroup>& groups,
+                          const SoGLContext *glue);
+
+    const CadFlatShadedGpu& flatShaded() const { return flatShaded_; }
+
     /** Release all GL resources (call with the correct GL context active). */
     void releaseAll(const SoGLContext * glue);
 
@@ -217,6 +239,7 @@ private:
     std::unordered_map<PartId, Entry, std::hash<PartId>> cache_;
     GLuint instanceVbo_ = 0;
     CadFlatWireGpu flatWire_;
+    CadFlatShadedGpu flatShaded_;
 
     void deleteWireGpu(CadWireGpu& w, const SoGLContext * glue);
     void deleteTriGpu(CadTriGpu& t, const SoGLContext * glue);

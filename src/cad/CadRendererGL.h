@@ -133,7 +133,8 @@ public:
      *   0 = immediate-mode fallback (GL 1.1, no working GLSL+VBO)
      *   1 = retained VBO loop (fixed-function compatibility or GLSL)
      *   2 = instanced (GL 3.1+)
-     *   3 = flattened wire batch (hardware GL)
+     *   3 = flattened wire/hidden-line batch
+     *   4 = flattened shaded batch
      *  -1 = render() not yet called
      */
     int lastRenderTier() const { return lastRenderTier_; }
@@ -142,7 +143,7 @@ private:
     // Capability flags (populated on first render call)
     bool      capsDetected_ = false;
     CadGLCaps caps_;
-    int       lastRenderTier_ = -1; ///< -1=none, 0=imm, 1=vbo, 2=inst, 3=flat wire
+    int       lastRenderTier_ = -1; ///< -1=none, 0=imm, 1=vbo, 2=inst, 3/4=flat
 
     // GPU objects are namespaced by GL context.  A renderer may be traversed
     // by multiple system-GL or offscreen contexts during its lifetime.
@@ -260,6 +261,12 @@ private:
                         const SoCADAssembly& assembly,
                         const SoGLContext* glue,
                         const SbMatrix& viewProj);
+
+    bool renderFlatShaded(const CadFramePlan& plan,
+                          const SoCADAssembly& assembly,
+                          const SoGLContext* glue,
+                          const SbMatrix& viewProj,
+                          bool depthOnly);
 
     // -----------------------------------------------------------------------
     // Shader compilation helpers

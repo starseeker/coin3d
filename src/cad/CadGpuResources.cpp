@@ -328,6 +328,33 @@ void CadGpuResources::uploadFlatWire(
     flatWire_.groups = groups;
 }
 
+void CadGpuResources::uploadFlatShaded(
+        uint64_t planRevision,
+        const std::vector<float>& positions,
+        const std::vector<float>& normals,
+        const std::vector<CadFlatShadedGroup>& groups,
+        const SoGLContext *glue)
+{
+    if (!glue || positions.empty() || positions.size() != normals.size())
+        return;
+    if (!flatShaded_.posBuf)
+        glue->glGenBuffers(1, &flatShaded_.posBuf);
+    if (!flatShaded_.normBuf)
+        glue->glGenBuffers(1, &flatShaded_.normBuf);
+    glue->glBindBuffer(GL_ARRAY_BUFFER, flatShaded_.posBuf);
+    glue->glBufferData(GL_ARRAY_BUFFER,
+                       static_cast<GLsizeiptr>(positions.size() * sizeof(float)),
+                       positions.data(), GL_STATIC_DRAW);
+    glue->glBindBuffer(GL_ARRAY_BUFFER, flatShaded_.normBuf);
+    glue->glBufferData(GL_ARRAY_BUFFER,
+                       static_cast<GLsizeiptr>(normals.size() * sizeof(float)),
+                       normals.data(), GL_STATIC_DRAW);
+    glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
+    flatShaded_.planRevision = planRevision;
+    flatShaded_.vertexCount = static_cast<GLsizei>(positions.size() / 3);
+    flatShaded_.groups = groups;
+}
+
 // ---------------------------------------------------------------------------
 // releaseAll()
 // ---------------------------------------------------------------------------
@@ -346,10 +373,15 @@ void CadGpuResources::releaseAll(const SoGLContext * glue)
             glue->glDeleteVertexArrays(1, &flatWire_.vao);
         if (flatWire_.posBuf && glue->glDeleteBuffers)
             glue->glDeleteBuffers(1, &flatWire_.posBuf);
+        if (flatShaded_.posBuf && glue->glDeleteBuffers)
+            glue->glDeleteBuffers(1, &flatShaded_.posBuf);
+        if (flatShaded_.normBuf && glue->glDeleteBuffers)
+            glue->glDeleteBuffers(1, &flatShaded_.normBuf);
     }
     cache_.clear();
     instanceVbo_ = 0;
     flatWire_ = CadFlatWireGpu();
+    flatShaded_ = CadFlatShadedGpu();
 }
 
 } // namespace internal

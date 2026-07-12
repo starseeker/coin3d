@@ -788,7 +788,87 @@ void CadRendererGL::render(
     if (!ensureReady(glue)) return;
     if (plan.visibleInstances.empty()) return;
 
-    // Upload geometry for all required part reps
+    const char *flatShadedEnv = std::getenv("OBOL_CAD_FLAT_SHADED");
+    const bool flatShadedEnabled = flatShadedEnv ?
+        flatShadedEnv[0] != '0' : true;
+    const bool canUseFlatShaded = caps_.isSoftwareRenderer ?
+        caps_.canUseFixedVbo() : (caps_.canUseVbo() && shaders_.shaded);
+    const bool useFlatShaded = flatShadedEnabled && canUseFlatShaded &&
+        (!renderState.lodEnabled || !assembly.hasPartLod()) &&
+        plan.shadedItems.size() >= 128;
+
+    if (assembly.drawMode.getValue() == SoCADAssembly::HIDDEN_LINE) {
+        if (useFlatShaded) {
+            SoGLContext_glColorMask(glue, GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+            SoGLContext_glEnable(glue, GL_POLYGON_OFFSET_FILL);
+            SoGLContext_glPolygonOffset(glue, 1.0f, 1.0f);
+            const bool depthRendered = renderFlatShaded(
+                plan, assembly, glue, viewProj, true);
+            SoGLContext_glDisable(glue, GL_POLYGON_OFFSET_FILL);
+            SoGLContext_glColorMask(glue, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+            if (depthRendered && renderFlatWire(
+                    plan, assembly, glue, viewProj)) {
+                lastRenderTier_ = 3;
+                return;
+            }
+        }
+
+        // The per-part fallback needs retained representations.
+        for (const auto& repKey : plan.requiredReps) {
+            auto genIt = partGenMap.find(repKey.part);
+            uint64_t gen = (genIt != partGenMap.end()) ? genIt->second : 0;
+            ensurePartUploaded(repKey.part, assembly, gen, glue);
+        }
+        CadFramePlan depthPlan = plan;
+        depthPlan.wireItems.clear();
+        CadFramePlan wirePlan = plan;
+        wirePlan.shadedItems.clear();
+
+        SoGLContext_glColorMask(glue, GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+        SoGLContext_glEnable(glue, GL_POLYGON_OFFSET_FILL);
+        SoGLContext_glPolygonOffset(glue, 1.0f, 1.0f);
+        if (caps_.canUseVbo() && shaders_.shaded) {
+            renderVboLoop(depthPlan, assembly, glue, viewProj, cameraPos,
+                          renderState, partGenMap, false, true);
+        } else if (caps_.canUseFixedVbo()) {
+            renderFixedVboLoop(depthPlan, glue, viewProj);
+        } else {
+            renderImmediateMode(depthPlan, assembly, glue, viewProj,
+                                cameraPos, renderState, partGenMap);
+        }
+        SoGLContext_glDisable(glue, GL_POLYGON_OFFSET_FILL);
+        SoGLContext_glColorMask(glue, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+
+        if (caps_.canUseInstanced() && shaders_.wireInst) {
+            lastRenderTier_ = 2;
+            renderInstanced(wirePlan, assembly, glue, viewProj, partGenMap,
+                            false, false);
+        } else if (caps_.canUseVbo() && shaders_.wire) {
+            lastRenderTier_ = 1;
+            renderVboLoop(wirePlan, assembly, glue, viewProj, cameraPos,
+                          renderState, partGenMap, false, false);
+        } else if (caps_.canUseFixedVbo()) {
+            lastRenderTier_ = 1;
+            renderFixedVboLoop(wirePlan, glue, viewProj);
+        } else {
+            lastRenderTier_ = 0;
+            renderImmediateMode(wirePlan, assembly, glue, viewProj,
+                                cameraPos, renderState, partGenMap);
+        }
+        return;
+    }
+
+    if (useFlatShaded && renderFlatShaded(
+            plan, assembly, glue, viewProj, false)) {
+        if (plan.wireItems.empty() ||
+                renderFlatWire(plan, assembly, glue, viewProj)) {
+            lastRenderTier_ = 4;
+            return;
+        }
+    }
+
+    // Upload geometry for the per-part rendering paths only after the flat
+    // aggregate paths have declined the frame.
     for (const auto& repKey : plan.requiredReps) {
         auto genIt = partGenMap.find(repKey.part);
         uint64_t gen = (genIt != partGenMap.end()) ? genIt->second : 0;
@@ -872,6 +952,26 @@ static void appendTransformedFlatWirePoint(
                         z * matrix[9] + matrix[13]);
     positions.push_back(x * matrix[2] + y * matrix[6] +
                         z * matrix[10] + matrix[14]);
+}
+
+static SbVec3f transformedFlatPoint(
+        const SbVec3f& point,
+        const std::array<float, 16>& matrix)
+{
+    const float x = point[0];
+    const float y = point[1];
+    const float z = point[2];
+    return SbVec3f(x * matrix[0] + y * matrix[4] + z * matrix[8] + matrix[12],
+                   x * matrix[1] + y * matrix[5] + z * matrix[9] + matrix[13],
+                   x * matrix[2] + y * matrix[6] + z * matrix[10] + matrix[14]);
+}
+
+static uint32_t flatRgbaKey(const CadVisibleInstance& inst)
+{
+    return static_cast<uint32_t>(inst.rgba[0]) |
+           (static_cast<uint32_t>(inst.rgba[1]) << 8) |
+           (static_cast<uint32_t>(inst.rgba[2]) << 16) |
+           (static_cast<uint32_t>(inst.rgba[3]) << 24);
 }
 
 } // namespace
@@ -1043,6 +1143,182 @@ bool CadRendererGL::renderFlatWire(
     if (!fixedFunction)
         glue->glUseProgramObjectARB(0);
     restoreWireRasterState(glue, rasterState, caps_.hasLineStipple);
+    return true;
+}
+
+bool CadRendererGL::renderFlatShaded(
+        const CadFramePlan& plan,
+        const SoCADAssembly& assembly,
+        const SoGLContext* glue,
+        const SbMatrix& viewProj,
+        bool depthOnly)
+{
+    constexpr size_t maxVertexBytes = 512u * 1024u * 1024u;
+    const CadFlatShadedGpu& cached = gpuRes_->flatShaded();
+    if (cached.planRevision != plan.revision) {
+        struct Occurrence {
+            const CadDrawItem *item;
+            uint32_t instanceOffset;
+        };
+        std::vector<Occurrence> occurrences;
+        size_t vertexCount = 0;
+        for (const CadDrawItem& item : plan.shadedItems) {
+            const obol::PartGeometry *geom = assembly.partGeometry(item.rep.part);
+            if (!geom || !geom->shaded.has_value()) continue;
+            const size_t count = geom->shaded->indices.size();
+            if (count == 0 || count > maxVertexBytes / (6 * sizeof(float)))
+                return false;
+            if (item.instanceCount >
+                    (maxVertexBytes / (6 * sizeof(float))) / count)
+                return false;
+            vertexCount += count * item.instanceCount;
+            if (vertexCount > maxVertexBytes / (6 * sizeof(float)))
+                return false;
+            for (uint32_t ii = 0; ii < item.instanceCount; ++ii)
+                occurrences.push_back(Occurrence{&item, ii});
+        }
+        std::sort(occurrences.begin(), occurrences.end(),
+                  [&](const Occurrence& a, const Occurrence& b) {
+            const CadVisibleInstance& ai = plan.visibleInstances[
+                a.item->baseInstance + a.instanceOffset];
+            const CadVisibleInstance& bi = plan.visibleInstances[
+                b.item->baseInstance + b.instanceOffset];
+            return flatRgbaKey(ai) < flatRgbaKey(bi);
+        });
+
+        std::vector<float> positions;
+        std::vector<float> normals;
+        positions.reserve(vertexCount * 3);
+        normals.reserve(vertexCount * 3);
+        std::vector<CadFlatShadedGroup> groups;
+        uint32_t activeColor = 0;
+        bool haveGroup = false;
+        for (const Occurrence& occurrence : occurrences) {
+            const CadDrawItem& item = *occurrence.item;
+            const CadVisibleInstance& inst = plan.visibleInstances[
+                item.baseInstance + occurrence.instanceOffset];
+            const uint32_t color = flatRgbaKey(inst);
+            if (!haveGroup || color != activeColor) {
+                CadFlatShadedGroup group;
+                group.first = static_cast<GLint>(positions.size() / 3);
+                std::copy(inst.rgba.begin(), inst.rgba.end(), group.rgba);
+                groups.push_back(group);
+                activeColor = color;
+                haveGroup = true;
+            }
+
+            const obol::TriMesh& mesh =
+                *assembly.partGeometry(item.rep.part)->shaded;
+            for (size_t t = 0; t + 2 < mesh.indices.size(); t += 3) {
+                const uint32_t ia = mesh.indices[t];
+                const uint32_t ib = mesh.indices[t + 1];
+                const uint32_t ic = mesh.indices[t + 2];
+                if (ia >= mesh.positions.size() || ib >= mesh.positions.size() ||
+                        ic >= mesh.positions.size())
+                    return false;
+                const SbVec3f a = transformedFlatPoint(mesh.positions[ia],
+                                                       inst.transform);
+                const SbVec3f b = transformedFlatPoint(mesh.positions[ib],
+                                                       inst.transform);
+                const SbVec3f c = transformedFlatPoint(mesh.positions[ic],
+                                                       inst.transform);
+                SbVec3f normal = (b - a).cross(c - a);
+                if (normal.sqrLength() > 0.0f)
+                    normal.normalize();
+                else
+                    normal.setValue(0.0f, 0.0f, 1.0f);
+                const SbVec3f triangle[3] = {a, b, c};
+                for (const SbVec3f& point : triangle) {
+                    positions.push_back(point[0]);
+                    positions.push_back(point[1]);
+                    positions.push_back(point[2]);
+                    normals.push_back(normal[0]);
+                    normals.push_back(normal[1]);
+                    normals.push_back(normal[2]);
+                }
+            }
+            groups.back().count = static_cast<GLsizei>(positions.size() / 3) -
+                                  groups.back().first;
+        }
+        if (positions.empty()) return false;
+        gpuRes_->uploadFlatShaded(plan.revision, positions, normals, groups, glue);
+    }
+
+    const CadFlatShadedGpu& flat = gpuRes_->flatShaded();
+    if (!flat.posBuf || !flat.normBuf || flat.groups.empty()) return false;
+
+    if (caps_.isSoftwareRenderer) {
+        glue->glMatrixMode(GL_PROJECTION);
+        glue->glPushMatrix();
+        glue->glLoadIdentity();
+        glue->glMatrixMode(GL_MODELVIEW);
+        glue->glPushMatrix();
+        glue->glLoadMatrixf(viewProj[0]);
+        const GLboolean wasLighting = glue->glIsEnabled(GL_LIGHTING);
+        if (depthOnly) glue->glDisable(GL_LIGHTING);
+        glue->glEnableClientState(GL_VERTEX_ARRAY);
+        glue->glBindBuffer(GL_ARRAY_BUFFER, flat.posBuf);
+        glue->glVertexPointer(3, GL_FLOAT, 3 * sizeof(float), nullptr);
+        if (!depthOnly) {
+            glue->glEnableClientState(GL_NORMAL_ARRAY);
+            glue->glBindBuffer(GL_ARRAY_BUFFER, flat.normBuf);
+            glue->glNormalPointer(GL_FLOAT, 3 * sizeof(float), nullptr);
+        }
+        for (const CadFlatShadedGroup& group : flat.groups) {
+            if (!depthOnly) setImmediateMaterialFromRgba(glue, group.rgba);
+            glue->glDrawArrays(GL_TRIANGLES, group.first, group.count);
+        }
+        if (!depthOnly) glue->glDisableClientState(GL_NORMAL_ARRAY);
+        glue->glDisableClientState(GL_VERTEX_ARRAY);
+        glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
+        if (wasLighting) glue->glEnable(GL_LIGHTING);
+        else glue->glDisable(GL_LIGHTING);
+        glue->glMatrixMode(GL_MODELVIEW);
+        glue->glPopMatrix();
+        glue->glMatrixMode(GL_PROJECTION);
+        glue->glPopMatrix();
+        glue->glMatrixMode(GL_MODELVIEW);
+        return true;
+    }
+
+    glue->glUseProgramObjectARB(shaders_.shaded);
+    const GLint locVP = glue->glGetUniformLocationARB(shaders_.shaded,
+                                                       "u_viewProj");
+    const GLint locModel = glue->glGetUniformLocationARB(shaders_.shaded,
+                                                          "u_model");
+    const GLint locColor = glue->glGetUniformLocationARB(shaders_.shaded,
+                                                          "u_color");
+    const GLint locLight = glue->glGetUniformLocationARB(shaders_.shaded,
+                                                          "u_lightDir");
+    const GLint locHasNorm = glue->glGetUniformLocationARB(shaders_.shaded,
+                                                            "u_hasNorm");
+    const SbMatrix identity = SbMatrix::identity();
+    glue->glUniformMatrix4fvARB(locVP, 1, GL_FALSE, viewProj[0]);
+    glue->glUniformMatrix4fvARB(locModel, 1, GL_FALSE, identity[0]);
+    glue->glUniform3fvARB(locLight, 1, kLightDir);
+    glue->glUniform1iARB(locHasNorm, depthOnly ? 0 : 1);
+    glue->glBindBuffer(GL_ARRAY_BUFFER, flat.posBuf);
+    glue->glVertexAttribPointerARB(0, 3, GL_FLOAT, GL_FALSE,
+                                   3 * sizeof(float), nullptr);
+    glue->glEnableVertexAttribArrayARB(0);
+    if (!depthOnly) {
+        glue->glBindBuffer(GL_ARRAY_BUFFER, flat.normBuf);
+        glue->glVertexAttribPointerARB(1, 3, GL_FLOAT, GL_FALSE,
+                                       3 * sizeof(float), nullptr);
+        glue->glEnableVertexAttribArrayARB(1);
+    }
+    for (const CadFlatShadedGroup& group : flat.groups) {
+        const float rgba[4] = {group.rgba[0] / 255.0f,
+                               group.rgba[1] / 255.0f,
+                               group.rgba[2] / 255.0f,
+                               group.rgba[3] / 255.0f};
+        glue->glUniform4fvARB(locColor, 1, rgba);
+        glue->glDrawArrays(GL_TRIANGLES, group.first, group.count);
+    }
+    if (!depthOnly) glue->glDisableVertexAttribArrayARB(1);
+    glue->glDisableVertexAttribArrayARB(0);
+    glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glue->glUseProgramObjectARB(0);
     return true;
 }
 

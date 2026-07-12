@@ -281,6 +281,7 @@ public:
         SHADED           = 0,  ///< Shaded triangles only
         WIREFRAME        = 1,  ///< Wireframe segments/polylines only
         SHADED_WITH_EDGES = 2, ///< Shaded triangles + wire overlay
+        HIDDEN_LINE      = 3,  ///< Triangle depth prepass + visible wire edges
     };
 
     /** Picking mode. */
@@ -397,6 +398,9 @@ public:
 
     /** Number of parts currently in the part library. */
     size_t partCount() const;
+
+    /** True when any part has a progressive triangle LoD hierarchy. */
+    bool hasPartLod() const;
 
     /**
      * Return the geometry for @p pid, or nullptr if not in the part library.

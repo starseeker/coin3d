@@ -611,9 +611,11 @@ struct SoCADAssemblyImpl {
         }
 
         const bool needWire   = (dm == SoCADAssembly::WIREFRAME ||
-                                 dm == SoCADAssembly::SHADED_WITH_EDGES);
+                                 dm == SoCADAssembly::SHADED_WITH_EDGES ||
+                                 dm == SoCADAssembly::HIDDEN_LINE);
         const bool needShaded = (dm == SoCADAssembly::SHADED ||
-                                 dm == SoCADAssembly::SHADED_WITH_EDGES);
+                                 dm == SoCADAssembly::SHADED_WITH_EDGES ||
+                                 dm == SoCADAssembly::HIDDEN_LINE);
 
         // Track which (part, type) pairs have already been added to requiredReps
         // to avoid duplicates (a part with both wire and shaded gets one entry each).
@@ -714,6 +716,7 @@ SoCADAssembly::SoCADAssembly()
     SO_NODE_DEFINE_ENUM_VALUE(DrawMode, SHADED);
     SO_NODE_DEFINE_ENUM_VALUE(DrawMode, WIREFRAME);
     SO_NODE_DEFINE_ENUM_VALUE(DrawMode, SHADED_WITH_EDGES);
+    SO_NODE_DEFINE_ENUM_VALUE(DrawMode, HIDDEN_LINE);
     SO_NODE_SET_SF_ENUM_TYPE(drawMode, DrawMode);
     SO_NODE_ADD_FIELD(drawMode, (WIREFRAME));
 
@@ -936,6 +939,7 @@ SoCADAssembly::setSelectedInstances(const std::vector<obol::InstanceId>& ids)
 
 size_t SoCADAssembly::instanceCount() const { return impl_->instances_.size(); }
 size_t SoCADAssembly::partCount()     const { return impl_->parts_.size();     }
+bool SoCADAssembly::hasPartLod() const { return !impl_->partLods_.empty(); }
 
 const obol::PartGeometry*
 SoCADAssembly::partGeometry(obol::PartId pid) const
