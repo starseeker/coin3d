@@ -424,10 +424,19 @@ int main(int argc, char **argv)
     std::vector<unsigned char> cadFastImage;
     double cadQualityMs = 0.0;
     double cadFastMs = 0.0;
+#if defined(OBOL_SWRAST_BUILD) && !defined(OBOL_DUAL_GL_BUILD)
+    // The direct FAST path writes into the OSMesa software framebuffer.
+    // System-GL and dual-GL tests render through GLX, where FAST deliberately
+    // falls back to the retained renderer because no software framebuffer is
+    // exposed by the active context manager.
+    constexpr bool fastUsesDirectSoftwareWire = true;
+#else
+    constexpr bool fastUsesDirectSoftwareWire = false;
+#endif
     bool cadQualityOk = benchmarkMode(SoCADViewState::SOFTWARE_WIRE_QUALITY,
         false, cadQualityImage, cadQualityMs);
     bool cadFastOk = benchmarkMode(SoCADViewState::SOFTWARE_WIRE_FAST,
-        true, cadFastImage, cadFastMs);
+        fastUsesDirectSoftwareWire, cadFastImage, cadFastMs);
     bool cadOk = cadQualityOk && cadFastOk;
     double cadRenderMs = cadFastMs;
 
