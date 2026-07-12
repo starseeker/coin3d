@@ -246,10 +246,14 @@ private:
     Type * newbuffer = new Type[this->itembuffersize];
     const int n = this->numitems;
     if (n > 0) {
+#if defined(__GNUC__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Warray-bounds"
+#endif
       for (int i = 0; i < n; i++) newbuffer[i] = this->itembuffer[i];
+#if defined(__GNUC__)
 #pragma GCC diagnostic pop
+#endif
     }
     if (this->itembuffer != this->builtinbuffer) delete[] this->itembuffer;
     this->itembuffer = newbuffer;

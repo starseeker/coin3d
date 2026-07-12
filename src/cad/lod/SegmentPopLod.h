@@ -74,7 +74,7 @@ namespace obol {
  *   auto segs = lod.segmentsAtLevel(5); // get level-5 segment list
  * @endcode
  */
-class SegmentPopLod {
+class OBOL_DLL_API SegmentPopLod {
 public:
     /** Maximum representable LoD level (full detail). */
     static constexpr uint8_t kMaxLevel = 255;

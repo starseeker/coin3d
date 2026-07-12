@@ -20080,7 +20080,7 @@ static int runRayPickDeepTest()
 
         // intersect(box)
         SbVec3f boxIsect;
-        SbBool onSurface;
+        SbBool onSurface = FALSE;
         SbBox3f box(SbVec3f(-1,-1,-1), SbVec3f(1,1,1));
         SbBool hitBox = rpa.intersect(box, boxIsect, onSurface);
 

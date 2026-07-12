@@ -69,6 +69,9 @@ target_link_libraries(arb8_dragger_example PRIVATE
     ${PROJECT_NAME}
     ${OBOL_TARGET_LINK_LIBRARIES}
 )
+if(OBOL_USE_SWRAST AND OBOL_OSMESA_LIBRARIES)
+    target_link_libraries(arb8_dragger_example PRIVATE ${OBOL_OSMESA_LIBRARIES})
+endif()
 if(OBOL_USE_SWRAST AND (NOT OBOL_USE_SYSTEM_GL OR WIN32))
     target_compile_definitions(arb8_dragger_example PRIVATE OBOL_SWRAST_BUILD)
     target_include_directories(arb8_dragger_example PRIVATE
@@ -100,6 +103,9 @@ target_link_libraries(truncated_cone_example PRIVATE
     ${PROJECT_NAME}
     ${OBOL_TARGET_LINK_LIBRARIES}
 )
+if(OBOL_USE_SWRAST AND OBOL_OSMESA_LIBRARIES)
+    target_link_libraries(truncated_cone_example PRIVATE ${OBOL_OSMESA_LIBRARIES})
+endif()
 if(OBOL_USE_SWRAST AND (NOT OBOL_USE_SYSTEM_GL OR WIN32))
     target_compile_definitions(truncated_cone_example PRIVATE OBOL_SWRAST_BUILD)
     target_include_directories(truncated_cone_example PRIVATE

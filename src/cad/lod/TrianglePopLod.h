@@ -68,7 +68,7 @@ namespace obol {
  *   auto tris = lod.trianglesAtLevel(5);  // list of non-degenerate tri indices
  * @endcode
  */
-class TrianglePopLod {
+class OBOL_DLL_API TrianglePopLod {
 public:
     /** Maximum representable LoD level (full detail). */
     static constexpr uint8_t kMaxLevel = 255;

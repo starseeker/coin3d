@@ -103,6 +103,21 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     CXX_EXTENSIONS OFF
 )
 
+# Several supported extension points (notably the GL dispatch wrappers used
+# by Inventor/gl.h) retain their historical declarations in private headers.
+# Export all compiled symbols on Windows so those established entry points
+# are present in the import library for shared builds as they are for static
+# builds.
+if(WIN32 AND BUILD_SHARED_LIBS)
+    set_target_properties(${PROJECT_NAME} PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
+    if(MSVC)
+        # Auto-export necessarily overlaps symbols already marked dllexport.
+        # LINK uses the first identical specification, so silence only that
+        # expected duplicate-export diagnostic.
+        target_link_options(${PROJECT_NAME} PRIVATE /IGNORE:4197)
+    endif()
+endif()
+
 # Set library output name based on backend selection
 if(DEFINED OBOL_OUTPUT_NAME)
     set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME ${OBOL_OUTPUT_NAME})
