@@ -195,6 +195,13 @@ private:
         const std::unordered_map<PartId, uint64_t,
                                  std::hash<PartId>>& partGenMap);
 
+    void renderPoints(const CadFramePlan& plan,
+                      const SoCADAssembly& assembly,
+                      const SoGLContext* glue,
+                      const SbMatrix& viewProj,
+                      const std::unordered_map<PartId, uint64_t,
+                                               std::hash<PartId>>& partGenMap);
+
     // -----------------------------------------------------------------------
     // Tier-1: VBO-loop path (GL 2.0+)
     // -----------------------------------------------------------------------

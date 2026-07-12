@@ -43,6 +43,7 @@
  * changes (tracked via a generation counter).
  *
  * Layout of each CadPartGpuRep:
+ *  - pointPosBuf: interleaved float[3] point primitive positions
  *  - wirePosBuf : interleaved float[3] positions for all polyline points
  *  - wireSegBuf : uint32 pairs (start, end) index pairs into wirePosBuf
  *  - triPosBuf  : interleaved float[3] positions for triangle vertices
@@ -65,6 +66,13 @@ struct SoGLContext;
 
 namespace obol {
 namespace internal {
+
+/** GPU buffers for one part's point representation. */
+struct CadPointGpu {
+    GLuint posBuf = 0;
+    GLuint vao = 0;
+    GLsizei count = 0;
+};
 
 /** GPU buffers for one part's wire representation. */
 struct CadWireGpu {
@@ -92,6 +100,7 @@ struct CadTriGpu {
 /** All GPU representations for one part in one GL context. */
 struct CadPartGpuRep {
     uint64_t generation = UINT64_MAX; ///< UINT64_MAX = not yet uploaded; otherwise matches part generation
+    CadPointGpu point;
     CadWireGpu wire;
     CadTriGpu  tri;
 };
@@ -109,6 +118,7 @@ struct CadFlatWireGpu {
     GLuint posBuf = 0;
     GLuint vao = 0;
     uint64_t planRevision = 0;
+    uint64_t geometryRevision = 0;
     GLsizei vertexCount = 0;
     std::vector<CadFlatWireGroup> groups;
 };
@@ -123,6 +133,7 @@ struct CadFlatShadedGpu {
     GLuint posBuf = 0;
     GLuint normBuf = 0;
     uint64_t planRevision = 0;
+    uint64_t geometryRevision = 0;
     GLsizei vertexCount = 0;
     std::vector<CadFlatShadedGroup> groups;
 };
@@ -144,6 +155,8 @@ public:
      * Ensure the GPU representation for @p pid is current.
      *
      * @param pid        Part ID.
+     * @param pointData  Point geometry as packed float[3] positions.
+     * @param pointCount Number of float[3] entries in pointData.
      * @param wireData   Wire geometry as packed float[3] positions.
      *                   May be nullptr if the part has no wire rep.
      * @param wireCount  Number of float[3] entries in wireData.
@@ -161,6 +174,7 @@ public:
      * @param caps       GL capability flags.
      */
     void upload(PartId pid,
+                const float*    pointData,   GLsizei pointCount,
                 const float*    wireData,    GLsizei wireCount,
                 const uint32_t* segIdx,      GLsizei segIdxCount,
                 const float*    triPos,      GLsizei triPosCount,
@@ -178,6 +192,9 @@ public:
      * before calling upload() when the geometry has not changed.
      */
     bool isUpToDate(PartId pid, uint64_t gen) const;
+
+    /** Return the point GPU rep for @p pid, or nullptr if not uploaded. */
+    const CadPointGpu* pointFor(PartId pid) const;
 
     /** Return the wire GPU rep for @p pid, or nullptr if not uploaded. */
     const CadWireGpu* wireFor(PartId pid) const;
@@ -211,18 +228,27 @@ public:
     GLuint instanceVbo() const { return instanceVbo_; }
 
     void uploadFlatWire(uint64_t planRevision,
+                        uint64_t geometryRevision,
                         const std::vector<float>& positions,
                         const std::vector<CadFlatWireGroup>& groups,
                         const SoGLContext *glue,
                         const CadGLCaps& caps);
 
+    void updateFlatWireGroups(uint64_t planRevision,
+                              const std::vector<CadFlatWireGroup>& groups);
+
     const CadFlatWireGpu& flatWire() const { return flatWire_; }
 
     void uploadFlatShaded(uint64_t planRevision,
+                          uint64_t geometryRevision,
                           const std::vector<float>& positions,
                           const std::vector<float>& normals,
                           const std::vector<CadFlatShadedGroup>& groups,
                           const SoGLContext *glue);
+
+    void updateFlatShadedGroups(
+        uint64_t planRevision,
+        const std::vector<CadFlatShadedGroup>& groups);
 
     const CadFlatShadedGpu& flatShaded() const { return flatShaded_; }
 
@@ -232,6 +258,7 @@ public:
 private:
     struct Entry {
         uint64_t    generation = 0;
+        CadPointGpu point;
         CadWireGpu  wire;
         CadTriGpu   tri;
     };
@@ -241,6 +268,7 @@ private:
     CadFlatWireGpu flatWire_;
     CadFlatShadedGpu flatShaded_;
 
+    void deletePointGpu(CadPointGpu& p, const SoGLContext * glue);
     void deleteWireGpu(CadWireGpu& w, const SoGLContext * glue);
     void deleteTriGpu(CadTriGpu& t, const SoGLContext * glue);
 

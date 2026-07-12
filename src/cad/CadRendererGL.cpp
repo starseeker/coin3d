@@ -480,7 +480,7 @@ bool CadRendererGL::ensureReady(const SoGLContext* glue)
             // Shader programs are used by both retained rendering tiers.  If
             // the capability probe rejects GLSL drawing, render() falls back
             // to immediate mode and these programs remain harmless.
-            if (caps_.hasShaderObjects)
+            if (caps_.hasShaderObjects && !caps_.isSoftwareRenderer)
                 compileAllShaders(glue);
             SharedCadShaders programs;
             programs.caps = caps_;
@@ -509,6 +509,13 @@ void CadRendererGL::ensurePartUploaded(PartId pid, const SoCADAssembly& assembly
     // Retrieve part geometry from the assembly
     const obol::PartGeometry* geom = assembly.partGeometry(pid);
     if (!geom) return;
+
+    const float* pPointPos = nullptr;
+    GLsizei pointCount = 0;
+    if (geom->points.has_value()) {
+        pPointPos = packedVec3fData(geom->points->positions);
+        pointCount = static_cast<GLsizei>(geom->points->positions.size());
+    }
 
     // Build CPU-side flat arrays for indexed wire geometry.  Pure flat
     // segment-pair input can be uploaded directly from WireRep::segmentPoints.
@@ -579,6 +586,7 @@ void CadRendererGL::ensurePartUploaded(PartId pid, const SoCADAssembly& assembly
     }
 
     gpuRes_->upload(pid,
+                   pPointPos, pointCount,
                    pWirePos,  wirePointCount,
                    pWireSeg,  wireSegIdxCount,
                    pTriPos,   triPosCount,
@@ -753,6 +761,169 @@ static void restoreWireRasterState(
         glue->glDisable(GL_LINE_STIPPLE);
 }
 
+void CadRendererGL::renderPoints(
+        const CadFramePlan& plan,
+        const SoCADAssembly& assembly,
+        const SoGLContext* glue,
+        const SbMatrix& viewProj,
+        const std::unordered_map<PartId, uint64_t,
+                                 std::hash<PartId>>& partGenMap)
+{
+    if (plan.pointItems.empty()) return;
+
+    for (const CadDrawItem& item : plan.pointItems) {
+        auto generation = partGenMap.find(item.rep.part);
+        ensurePartUploaded(item.rep.part, assembly,
+            generation != partGenMap.end() ? generation->second : 0, glue);
+    }
+
+    GLfloat savedPointSize = 1.0f;
+    glue->glGetFloatv(GL_POINT_SIZE, &savedPointSize);
+    const FrustumPlanes fp = extractFrustumPlanes(viewProj);
+    const bool fixedFunction = caps_.isSoftwareRenderer || !shaders_.wire;
+
+    if (fixedFunction) {
+        glue->glMatrixMode(GL_PROJECTION);
+        glue->glPushMatrix();
+        glue->glLoadIdentity();
+        glue->glMatrixMode(GL_MODELVIEW);
+        glue->glPushMatrix();
+        const GLboolean wasLighting = glue->glIsEnabled(GL_LIGHTING);
+        glue->glDisable(GL_LIGHTING);
+        glue->glEnableClientState(GL_VERTEX_ARRAY);
+
+        for (const CadDrawItem& item : plan.pointItems) {
+            const PartGeometry* geometry = assembly.partGeometry(item.rep.part);
+            const CadPointGpu* gpu = gpuRes_->pointFor(item.rep.part);
+            if (!geometry || !geometry->points) continue;
+            const PointRep& points = *geometry->points;
+            const GLsizei pointCount = static_cast<GLsizei>(
+                points.positions.size());
+            if (pointCount <= 0) continue;
+            const bool pointColors = points.colors.size() == points.positions.size() &&
+                points.colorValid.size() == points.positions.size();
+            if (gpu) {
+                glue->glBindBuffer(GL_ARRAY_BUFFER, gpu->posBuf);
+                glue->glVertexPointer(3, GL_FLOAT, 3 * sizeof(float), nullptr);
+            }
+
+            for (uint32_t i = 0; i < item.instanceCount; ++i) {
+                const CadVisibleInstance& inst =
+                    plan.visibleInstances[item.baseInstance + i];
+                if (isBoxOutsideFrustum(inst.wbMin, inst.wbMax, fp)) continue;
+                SbMatrix model;
+                model.setValue(inst.transform.data());
+                SbMatrix mvp = model;
+                mvp.multRight(viewProj);
+                glue->glLoadMatrixf(mvp[0]);
+                const bool usePointColors = pointColors && !(inst.flags & 5u);
+                if (gpu && !usePointColors) {
+                    glue->glColor4ub(inst.rgba[0], inst.rgba[1],
+                                     inst.rgba[2], inst.rgba[3]);
+                    glue->glPointSize(std::max(1.0f, inst.lineWidth));
+                    glue->glDrawArrays(GL_POINTS, 0, pointCount);
+                    continue;
+                }
+                glue->glPointSize(std::max(1.0f, inst.lineWidth));
+                if (!gpu) glue->glBegin(GL_POINTS);
+                for (GLsizei p = 0; p < pointCount; ++p) {
+                    if (usePointColors && points.colorValid[p]) {
+                        const SbColor& color = points.colors[p];
+                        glue->glColor4f(color[0], color[1], color[2],
+                                        inst.rgba[3] / 255.0f);
+                    } else {
+                        glue->glColor4ub(inst.rgba[0], inst.rgba[1],
+                                         inst.rgba[2], inst.rgba[3]);
+                    }
+                    if (gpu)
+                        glue->glDrawArrays(GL_POINTS, p, 1);
+                    else {
+                        const SbVec3f& point = points.positions[p];
+                        glue->glVertex3f(point[0], point[1], point[2]);
+                    }
+                }
+                if (!gpu) glue->glEnd();
+            }
+        }
+
+        glue->glDisableClientState(GL_VERTEX_ARRAY);
+        glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
+        if (wasLighting) glue->glEnable(GL_LIGHTING);
+        glue->glMatrixMode(GL_MODELVIEW);
+        glue->glPopMatrix();
+        glue->glMatrixMode(GL_PROJECTION);
+        glue->glPopMatrix();
+        glue->glMatrixMode(GL_MODELVIEW);
+    } else {
+        glue->glUseProgramObjectARB(shaders_.wire);
+        const GLint locVP = glue->glGetUniformLocationARB(shaders_.wire,
+                                                           "u_viewProj");
+        const GLint locModel = glue->glGetUniformLocationARB(shaders_.wire,
+                                                              "u_model");
+        const GLint locColor = glue->glGetUniformLocationARB(shaders_.wire,
+                                                              "u_color");
+        GLint locPos = glue->glGetAttribLocationARB(shaders_.wire, "a_pos");
+        if (locPos < 0) locPos = 0;
+        glue->glUniformMatrix4fvARB(locVP, 1, GL_FALSE, viewProj[0]);
+
+        for (const CadDrawItem& item : plan.pointItems) {
+            const PartGeometry* geometry = assembly.partGeometry(item.rep.part);
+            const CadPointGpu* gpu = gpuRes_->pointFor(item.rep.part);
+            if (!geometry || !geometry->points || !gpu) continue;
+            const PointRep& points = *geometry->points;
+            const bool pointColors = points.colors.size() == points.positions.size() &&
+                points.colorValid.size() == points.positions.size();
+            if (gpu->vao && glue->glBindVertexArray) {
+                glue->glBindVertexArray(gpu->vao);
+            } else {
+                glue->glBindBuffer(GL_ARRAY_BUFFER, gpu->posBuf);
+                glue->glVertexAttribPointerARB(static_cast<GLuint>(locPos), 3,
+                    GL_FLOAT, GL_FALSE, 3 * sizeof(float), nullptr);
+                glue->glEnableVertexAttribArrayARB(static_cast<GLuint>(locPos));
+            }
+
+            for (uint32_t i = 0; i < item.instanceCount; ++i) {
+                const CadVisibleInstance& inst =
+                    plan.visibleInstances[item.baseInstance + i];
+                if (isBoxOutsideFrustum(inst.wbMin, inst.wbMax, fp)) continue;
+                glue->glUniformMatrix4fvARB(locModel, 1, GL_FALSE,
+                                            inst.transform.data());
+                const bool usePointColors = pointColors && !(inst.flags & 5u);
+                if (!usePointColors) {
+                    const float color[4] = {
+                        inst.rgba[0] / 255.0f, inst.rgba[1] / 255.0f,
+                        inst.rgba[2] / 255.0f, inst.rgba[3] / 255.0f};
+                    glue->glUniform4fvARB(locColor, 1, color);
+                    glue->glPointSize(std::max(1.0f, inst.lineWidth));
+                    glue->glDrawArrays(GL_POINTS, 0, gpu->count);
+                    continue;
+                }
+                for (GLsizei p = 0; p < gpu->count; ++p) {
+                    float color[4] = {
+                        inst.rgba[0] / 255.0f, inst.rgba[1] / 255.0f,
+                        inst.rgba[2] / 255.0f, inst.rgba[3] / 255.0f};
+                    if (usePointColors && points.colorValid[p]) {
+                        color[0] = points.colors[p][0];
+                        color[1] = points.colors[p][1];
+                        color[2] = points.colors[p][2];
+                    }
+                    glue->glUniform4fvARB(locColor, 1, color);
+                    glue->glPointSize(std::max(1.0f, inst.lineWidth));
+                    glue->glDrawArrays(GL_POINTS, p, 1);
+                }
+            }
+            if (gpu->vao && glue->glBindVertexArray)
+                glue->glBindVertexArray(0);
+            else {
+                glue->glDisableVertexAttribArrayARB(static_cast<GLuint>(locPos));
+                glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
+            }
+        }
+        glue->glUseProgramObjectARB(0);
+    }
+    glue->glPointSize(savedPointSize);
+}
+
 const std::vector<uint32_t> *
 CadRendererGL::lodIndicesForInstance(
         const SoCADAssembly& assembly,
@@ -796,6 +967,8 @@ void CadRendererGL::render(
     const bool useFlatShaded = flatShadedEnabled && canUseFlatShaded &&
         (!renderState.lodEnabled || !assembly.hasPartLod()) &&
         plan.shadedItems.size() >= 128;
+
+    renderPoints(plan, assembly, glue, viewProj, partGenMap);
 
     if (assembly.drawMode.getValue() == SoCADAssembly::HIDDEN_LINE) {
         if (useFlatShaded) {
@@ -938,20 +1111,21 @@ static FlatWireStyleKey flatWireStyleKey(const CadVisibleInstance& inst)
     return key;
 }
 
-static void appendTransformedFlatWirePoint(
+static void writeTransformedFlatPoint(
         std::vector<float>& positions,
+        size_t& offset,
         const SbVec3f& point,
         const std::array<float, 16>& matrix)
 {
     const float x = point[0];
     const float y = point[1];
     const float z = point[2];
-    positions.push_back(x * matrix[0] + y * matrix[4] +
-                        z * matrix[8] + matrix[12]);
-    positions.push_back(x * matrix[1] + y * matrix[5] +
-                        z * matrix[9] + matrix[13]);
-    positions.push_back(x * matrix[2] + y * matrix[6] +
-                        z * matrix[10] + matrix[14]);
+    positions[offset++] = x * matrix[0] + y * matrix[4] +
+                          z * matrix[8] + matrix[12];
+    positions[offset++] = x * matrix[1] + y * matrix[5] +
+                          z * matrix[9] + matrix[13];
+    positions[offset++] = x * matrix[2] + y * matrix[6] +
+                          z * matrix[10] + matrix[14];
 }
 
 static SbVec3f transformedFlatPoint(
@@ -985,8 +1159,8 @@ bool CadRendererGL::renderFlatWire(
     constexpr size_t maxPositionBytes = 256u * 1024u * 1024u;
     const CadFlatWireGpu& cached = gpuRes_->flatWire();
     if (cached.planRevision != plan.revision) {
-        std::vector<const CadDrawItem *> items;
-        items.reserve(plan.wireItems.size());
+        const bool rebuildGeometry =
+            cached.geometryRevision != plan.geometryRevision;
         size_t pointCount = 0;
         for (const CadDrawItem& item : plan.wireItems) {
             const obol::PartGeometry *geom = assembly.partGeometry(item.rep.part);
@@ -1004,60 +1178,66 @@ bool CadRendererGL::renderFlatWire(
             pointCount += segments * 2 * item.instanceCount;
             if (pointCount > maxPositionBytes / (3 * sizeof(float)))
                 return false;
-            items.push_back(&item);
         }
-        std::sort(items.begin(), items.end(), [&](const CadDrawItem *a,
-                                                  const CadDrawItem *b) {
-            return flatWireStyleKey(plan.visibleInstances[a->baseInstance]) <
-                   flatWireStyleKey(plan.visibleInstances[b->baseInstance]);
-        });
 
         std::vector<float> positions;
-        positions.reserve(pointCount * 3);
+        if (rebuildGeometry)
+            positions.resize(pointCount * 3);
+        size_t positionOffset = 0;
         std::vector<CadFlatWireGroup> groups;
         FlatWireStyleKey activeKey;
         bool haveGroup = false;
-        for (const CadDrawItem *item : items) {
-            const CadVisibleInstance& styleInst =
-                plan.visibleInstances[item->baseInstance];
-            const FlatWireStyleKey key = flatWireStyleKey(styleInst);
-            if (!haveGroup || key < activeKey || activeKey < key) {
-                CadFlatWireGroup group;
-                group.first = static_cast<GLint>(positions.size() / 3);
-                group.lineWidth = styleInst.lineWidth;
-                group.linePattern = styleInst.linePattern;
-                group.linePatternFactor = styleInst.linePatternFactor;
-                std::copy(styleInst.rgba.begin(), styleInst.rgba.end(), group.rgba);
-                groups.push_back(group);
-                activeKey = key;
-                haveGroup = true;
-            }
-
-            const obol::PartGeometry *geom = assembly.partGeometry(item->rep.part);
+        size_t vertexOffset = 0;
+        for (const CadDrawItem& item : plan.wireItems) {
+            const obol::PartGeometry *geom = assembly.partGeometry(item.rep.part);
+            if (!geom || !geom->wire.has_value()) continue;
             const obol::WireRep& wire = *geom->wire;
-            for (uint32_t ii = 0; ii < item->instanceCount; ++ii) {
+            size_t segments = wire.segmentCount();
+            for (const obol::WirePolyline& poly : wire.polylines)
+                if (poly.points.size() >= 2)
+                    segments += poly.points.size() - 1;
+            const size_t instanceVertices = segments * 2;
+            for (uint32_t ii = 0; ii < item.instanceCount; ++ii) {
                 const CadVisibleInstance& inst =
-                    plan.visibleInstances[item->baseInstance + ii];
-                for (size_t p = 0; p + 1 < wire.segmentPoints.size(); p += 2) {
-                    appendTransformedFlatWirePoint(positions,
-                                                   wire.segmentPoints[p], inst.transform);
-                    appendTransformedFlatWirePoint(positions,
-                                                   wire.segmentPoints[p + 1], inst.transform);
+                    plan.visibleInstances[item.baseInstance + ii];
+                const FlatWireStyleKey key = flatWireStyleKey(inst);
+                if (!haveGroup || key < activeKey || activeKey < key) {
+                    CadFlatWireGroup group;
+                    group.first = static_cast<GLint>(vertexOffset);
+                    group.lineWidth = inst.lineWidth;
+                    group.linePattern = inst.linePattern;
+                    group.linePatternFactor = inst.linePatternFactor;
+                    std::copy(inst.rgba.begin(), inst.rgba.end(), group.rgba);
+                    groups.push_back(group);
+                    activeKey = key;
+                    haveGroup = true;
                 }
-                for (const obol::WirePolyline& poly : wire.polylines) {
-                    for (size_t p = 0; p + 1 < poly.points.size(); ++p) {
-                        appendTransformedFlatWirePoint(positions,
-                                                       poly.points[p], inst.transform);
-                        appendTransformedFlatWirePoint(positions,
-                                                       poly.points[p + 1], inst.transform);
+                groups.back().count += static_cast<GLsizei>(instanceVertices);
+                vertexOffset += instanceVertices;
+                if (rebuildGeometry) {
+                    for (size_t p = 0; p + 1 < wire.segmentPoints.size(); p += 2) {
+                        writeTransformedFlatPoint(positions, positionOffset,
+                                                  wire.segmentPoints[p], inst.transform);
+                        writeTransformedFlatPoint(positions, positionOffset,
+                                                  wire.segmentPoints[p + 1], inst.transform);
+                    }
+                    for (const obol::WirePolyline& poly : wire.polylines) {
+                        for (size_t p = 0; p + 1 < poly.points.size(); ++p) {
+                            writeTransformedFlatPoint(positions, positionOffset,
+                                                      poly.points[p], inst.transform);
+                            writeTransformedFlatPoint(positions, positionOffset,
+                                                      poly.points[p + 1], inst.transform);
+                        }
                     }
                 }
             }
-            groups.back().count = static_cast<GLsizei>(positions.size() / 3) -
-                                  groups.back().first;
         }
-        if (positions.empty()) return false;
-        gpuRes_->uploadFlatWire(plan.revision, positions, groups, glue, caps_);
+        if (pointCount == 0 || groups.empty()) return false;
+        if (rebuildGeometry)
+            gpuRes_->uploadFlatWire(plan.revision, plan.geometryRevision,
+                                    positions, groups, glue, caps_);
+        else
+            gpuRes_->updateFlatWireGroups(plan.revision, groups);
     }
 
     const CadFlatWireGpu& flat = gpuRes_->flatWire();
@@ -1156,6 +1336,8 @@ bool CadRendererGL::renderFlatShaded(
     constexpr size_t maxVertexBytes = 512u * 1024u * 1024u;
     const CadFlatShadedGpu& cached = gpuRes_->flatShaded();
     if (cached.planRevision != plan.revision) {
+        const bool rebuildGeometry =
+            cached.geometryRevision != plan.geometryRevision;
         struct Occurrence {
             const CadDrawItem *item;
             uint32_t instanceOffset;
@@ -1177,22 +1359,17 @@ bool CadRendererGL::renderFlatShaded(
             for (uint32_t ii = 0; ii < item.instanceCount; ++ii)
                 occurrences.push_back(Occurrence{&item, ii});
         }
-        std::sort(occurrences.begin(), occurrences.end(),
-                  [&](const Occurrence& a, const Occurrence& b) {
-            const CadVisibleInstance& ai = plan.visibleInstances[
-                a.item->baseInstance + a.instanceOffset];
-            const CadVisibleInstance& bi = plan.visibleInstances[
-                b.item->baseInstance + b.instanceOffset];
-            return flatRgbaKey(ai) < flatRgbaKey(bi);
-        });
-
         std::vector<float> positions;
         std::vector<float> normals;
-        positions.reserve(vertexCount * 3);
-        normals.reserve(vertexCount * 3);
+        if (rebuildGeometry) {
+            positions.resize(vertexCount * 3);
+            normals.resize(vertexCount * 3);
+        }
+        size_t shadedOffset = 0;
         std::vector<CadFlatShadedGroup> groups;
         uint32_t activeColor = 0;
         bool haveGroup = false;
+        size_t vertexOffset = 0;
         for (const Occurrence& occurrence : occurrences) {
             const CadDrawItem& item = *occurrence.item;
             const CadVisibleInstance& inst = plan.visibleInstances[
@@ -1200,7 +1377,7 @@ bool CadRendererGL::renderFlatShaded(
             const uint32_t color = flatRgbaKey(inst);
             if (!haveGroup || color != activeColor) {
                 CadFlatShadedGroup group;
-                group.first = static_cast<GLint>(positions.size() / 3);
+                group.first = static_cast<GLint>(vertexOffset);
                 std::copy(inst.rgba.begin(), inst.rgba.end(), group.rgba);
                 groups.push_back(group);
                 activeColor = color;
@@ -1209,6 +1386,10 @@ bool CadRendererGL::renderFlatShaded(
 
             const obol::TriMesh& mesh =
                 *assembly.partGeometry(item.rep.part)->shaded;
+            groups.back().count += static_cast<GLsizei>(mesh.indices.size());
+            vertexOffset += mesh.indices.size();
+            if (!rebuildGeometry)
+                continue;
             for (size_t t = 0; t + 2 < mesh.indices.size(); t += 3) {
                 const uint32_t ia = mesh.indices[t];
                 const uint32_t ib = mesh.indices[t + 1];
@@ -1229,19 +1410,21 @@ bool CadRendererGL::renderFlatShaded(
                     normal.setValue(0.0f, 0.0f, 1.0f);
                 const SbVec3f triangle[3] = {a, b, c};
                 for (const SbVec3f& point : triangle) {
-                    positions.push_back(point[0]);
-                    positions.push_back(point[1]);
-                    positions.push_back(point[2]);
-                    normals.push_back(normal[0]);
-                    normals.push_back(normal[1]);
-                    normals.push_back(normal[2]);
+                    positions[shadedOffset] = point[0];
+                    normals[shadedOffset++] = normal[0];
+                    positions[shadedOffset] = point[1];
+                    normals[shadedOffset++] = normal[1];
+                    positions[shadedOffset] = point[2];
+                    normals[shadedOffset++] = normal[2];
                 }
             }
-            groups.back().count = static_cast<GLsizei>(positions.size() / 3) -
-                                  groups.back().first;
         }
-        if (positions.empty()) return false;
-        gpuRes_->uploadFlatShaded(plan.revision, positions, normals, groups, glue);
+        if (vertexCount == 0 || groups.empty()) return false;
+        if (rebuildGeometry)
+            gpuRes_->uploadFlatShaded(plan.revision, plan.geometryRevision,
+                                      positions, normals, groups, glue);
+        else
+            gpuRes_->updateFlatShadedGroups(plan.revision, groups);
     }
 
     const CadFlatShadedGpu& flat = gpuRes_->flatShaded();

@@ -358,10 +358,50 @@ CadPartEdgeBVH::queryClosest(const SbLine& ray, float tolerance) const
 // ===========================================================================
 
 CadPickResult
+CadPickQuery::pickPoint(
+    const SbLine& ray,
+    const CadInstanceBVH& instanceBvh,
+    const std::unordered_map<PartId, std::shared_ptr<const obol::PartGeometry>,
+                             std::hash<obol::PartId>>& partGeometries,
+    float toleranceWS)
+{
+    CadPickResult best;
+    best.t = std::numeric_limits<float>::infinity();
+    const float tolerance2 = toleranceWS * toleranceWS;
+    const SbVec3f rayOrigin = ray.getPosition();
+    const SbVec3f rayDirection = ray.getDirection();
+
+    for (const auto* entry : instanceBvh.query(ray, toleranceWS)) {
+        auto geometry = partGeometries.find(entry->partId);
+        if (geometry == partGeometries.end() || !geometry->second ||
+                !geometry->second->points)
+            continue;
+        const obol::PointRep& points = *geometry->second->points;
+        for (size_t i = 0; i < points.positions.size(); ++i) {
+            SbVec3f worldPoint;
+            entry->localToWorld.multVecMatrix(points.positions[i], worldPoint);
+            const float t = (worldPoint - rayOrigin).dot(rayDirection);
+            if (t < 0.0f || t >= best.t) continue;
+            const SbVec3f closest = rayOrigin + rayDirection * t;
+            if ((worldPoint - closest).sqrLength() > tolerance2) continue;
+            best.t = t;
+            best.hitPoint = worldPoint;
+            best.instanceId = entry->instanceId;
+            best.partId = entry->partId;
+            best.primType = CadPickResult::POINT;
+            best.primIndex0 = i < points.pointIds.size() ?
+                points.pointIds[i] : static_cast<uint32_t>(i);
+            best.valid = true;
+        }
+    }
+    return best;
+}
+
+CadPickResult
 CadPickQuery::pickEdge(
     const SbLine&                                       ray,
     const CadInstanceBVH&                               instanceBvh,
-    const std::unordered_map<PartId, obol::PartGeometry,
+    const std::unordered_map<PartId, std::shared_ptr<const obol::PartGeometry>,
                              std::hash<obol::PartId>>&  partGeometries,
     std::unordered_map<PartId, CadPartEdgeBVH,
                        std::hash<obol::PartId>>&        partBvhCache,
@@ -375,8 +415,8 @@ CadPickQuery::pickEdge(
         const PartId& pid = entry->partId;
 
         auto geomIt = partGeometries.find(pid);
-        if (geomIt == partGeometries.end()) continue;
-        const auto& geom = geomIt->second;
+        if (geomIt == partGeometries.end() || !geomIt->second) continue;
+        const auto& geom = *geomIt->second;
         if (!geom.wire.has_value()) continue;
 
         // Build part edge BVH lazily
@@ -652,7 +692,7 @@ CadPickResult
 CadPickQuery::pickTriangle(
     const SbLine&                                       ray,
     const CadInstanceBVH&                               instanceBvh,
-    const std::unordered_map<PartId, obol::PartGeometry,
+    const std::unordered_map<PartId, std::shared_ptr<const obol::PartGeometry>,
                              std::hash<obol::PartId>>&  partGeometries,
     std::unordered_map<PartId, CadPartTriBVH,
                        std::hash<obol::PartId>>&        partTriBvhCache,
@@ -666,8 +706,8 @@ CadPickQuery::pickTriangle(
         const PartId& pid = entry->partId;
 
         auto geomIt = partGeometries.find(pid);
-        if (geomIt == partGeometries.end()) continue;
-        const auto& geom = geomIt->second;
+        if (geomIt == partGeometries.end() || !geomIt->second) continue;
+        const auto& geom = *geomIt->second;
         if (!geom.shaded.has_value()) continue;
 
         // Build part triangle BVH lazily

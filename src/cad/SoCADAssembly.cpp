@@ -339,7 +339,7 @@ struct InstanceData {
 
 struct SoCADAssemblyImpl {
     // Part library
-    std::unordered_map<obol::PartId, obol::PartGeometry,
+    std::unordered_map<obol::PartId, std::shared_ptr<const obol::PartGeometry>,
                        std::hash<obol::PartId>> parts_;
 
     // Instance database
@@ -371,9 +371,12 @@ struct SoCADAssemblyImpl {
     std::unordered_map<obol::PartId, obol::picking::CadPartTriBVH,
                        std::hash<obol::PartId>> partTriBvhCache_;
 
-    // Per-part LoD structures (built when shaded geometry is supplied via upsertPart)
-    std::unordered_map<obol::PartId, obol::TrianglePopLod,
-                       std::hash<obol::PartId>> partLods_;
+    // Per-part LoD structures.  Shaded parts are LoD-capable immediately, but
+    // the hierarchy is built only if a render actually requests an LoD level.
+    std::unordered_set<obol::PartId,
+                       std::hash<obol::PartId>> lodCapableParts_;
+    mutable std::unordered_map<obol::PartId, obol::TrianglePopLod,
+                               std::hash<obol::PartId>> partLods_;
 
     // Per-part generation counter – incremented when geometry changes so the
     // renderer knows to re-upload VBOs.
@@ -393,7 +396,10 @@ struct SoCADAssemblyImpl {
     // Frame plan cache.  Rebuilt lazily when planDirty_ is true.
     obol::internal::CadFramePlan cachedPlan_;
     uint64_t nextPlanRevision_ = 1;
+    uint64_t nextGeometryRevision_ = 1;
+    uint64_t geometryRevision_ = 0;
     bool planDirty_    = true;   ///< Plan must be rebuilt before next render
+    bool geometryDirty_ = true;  ///< Flattened geometry must be rebuilt
     int  cachedDM_     = -1;     ///< Draw mode used for the cached plan
 
     // VBO + shader renderer (lazy-created on first GLRender call)
@@ -423,6 +429,7 @@ struct SoCADAssemblyImpl {
     SbBox3f computeWorldBounds(const obol::PartGeometry& geom,
                                const SbMatrix& m) const {
         SbBox3f local;
+        if (geom.points) { local.extendBy(geom.points->bounds); }
         if (geom.wire)   { local.extendBy(geom.wire->bounds);   }
         if (geom.shaded) { local.extendBy(geom.shaded->bounds); }
         if (local.isEmpty()) {
@@ -448,22 +455,21 @@ struct SoCADAssemblyImpl {
         return world;
     }
 
-    void updatePartGeometry(obol::PartId pid,
-                            const obol::PartGeometry& geom) {
+    void updatePartGeometry(
+            obol::PartId pid,
+            const std::shared_ptr<const obol::PartGeometry>& geom) {
+        if (!geom) return;
         parts_[pid] = geom;
         partGeneration_[pid] = nextGeneration_++;
         partEdgeBvhCache_.erase(pid);
         partTriBvhCache_.erase(pid);
         lodIndexCache_.erase(pid);
 
-        if (geom.shaded.has_value()) {
-            const auto& mesh = *geom.shaded;
-            obol::TrianglePopLod lod;
-            lod.build(mesh.positions, mesh.indices, mesh.bounds);
-            partLods_[pid] = std::move(lod);
-        } else {
-            partLods_.erase(pid);
-        }
+        partLods_.erase(pid);
+        if (geom->shaded.has_value())
+            lodCapableParts_.insert(pid);
+        else
+            lodCapableParts_.erase(pid);
     }
 
     void recomputeWorldBoundsForPart(obol::PartId pid) {
@@ -471,8 +477,8 @@ struct SoCADAssemblyImpl {
         for (auto& [iid, idata] : instances_) {
             if (idata.partId != pid)
                 continue;
-            idata.worldBounds = geomIt != parts_.end() ?
-                computeWorldBounds(geomIt->second, idata.localToRoot) :
+            idata.worldBounds = geomIt != parts_.end() && geomIt->second ?
+                computeWorldBounds(*geomIt->second, idata.localToRoot) :
                 SbBox3f();
         }
     }
@@ -486,8 +492,8 @@ struct SoCADAssemblyImpl {
             if (!pids.count(idata.partId))
                 continue;
             auto geomIt = parts_.find(idata.partId);
-            idata.worldBounds = geomIt != parts_.end() ?
-                computeWorldBounds(geomIt->second, idata.localToRoot) :
+            idata.worldBounds = geomIt != parts_.end() && geomIt->second ?
+                computeWorldBounds(*geomIt->second, idata.localToRoot) :
                 SbBox3f();
         }
     }
@@ -504,13 +510,14 @@ struct SoCADAssemblyImpl {
         idata.boolOp         = rec.boolOp;
 
         auto geomIt = parts_.find(rec.part);
-        idata.worldBounds = geomIt != parts_.end() ?
-            computeWorldBounds(geomIt->second, rec.localToRoot) : SbBox3f();
+        idata.worldBounds = geomIt != parts_.end() && geomIt->second ?
+            computeWorldBounds(*geomIt->second, rec.localToRoot) : SbBox3f();
     }
 
     void markDirty() {
         bvhDirty_ = true;
         planDirty_ = true;
+        geometryDirty_ = true;
     }
 
     /**
@@ -579,7 +586,8 @@ struct SoCADAssemblyImpl {
                 1u, idata.style.linePatternFactor);
             if (vi.lineWidth != 1.0f || vi.linePattern != 0xffffu)
                 plan.hasCustomWireStyle = true;
-            vi.flags   = isSel ? 1u : 0u;
+            vi.flags = (isSel ? 1u : 0u) |
+                       (idata.style.hasColorOverride ? 4u : 0u);
 
             if (cadDebugEnabled()) {
                 std::fprintf(stderr,
@@ -619,22 +627,15 @@ struct SoCADAssemblyImpl {
 
         // Track which (part, type) pairs have already been added to requiredReps
         // to avoid duplicates (a part with both wire and shaded gets one entry each).
-        std::unordered_set<obol::PartId, std::hash<obol::PartId>> requiredWireParts, requiredShadedParts;
+        std::unordered_set<obol::PartId, std::hash<obol::PartId>>
+            requiredPointParts, requiredWireParts, requiredShadedParts;
 
         uint32_t baseInst = 0;
         for (auto& [pid, vis] : byPart) {
             auto partIt = parts_.find(pid);
-            if (partIt == parts_.end()) continue;
-            const auto& geom = partIt->second;
+            if (partIt == parts_.end() || !partIt->second) continue;
+            const auto& geom = *partIt->second;
 
-            std::stable_sort(vis.begin(), vis.end(),
-                [](const CadVisibleInstance& a, const CadVisibleInstance& b) {
-                    if (a.linePattern != b.linePattern)
-                        return a.linePattern > b.linePattern;
-                    if (a.linePatternFactor != b.linePatternFactor)
-                        return a.linePatternFactor < b.linePatternFactor;
-                    return a.lineWidth < b.lineWidth;
-                });
             const uint32_t count = static_cast<uint32_t>(vis.size());
 
             // Fill partIndex (index into the upcoming visibleInstances block)
@@ -669,6 +670,20 @@ struct SoCADAssemblyImpl {
                 if (!requiredWireParts.count(pid)) {
                     plan.requiredReps.push_back(item.rep);
                     requiredWireParts.insert(pid);
+                }
+            }
+
+            if (geom.points.has_value() && !geom.points->positions.empty()) {
+                CadDrawItem item;
+                item.rep.part = pid;
+                item.rep.type = CadRepType::Points;
+                item.rep.level = 255;
+                item.baseInstance = baseInst;
+                item.instanceCount = count;
+                plan.pointItems.push_back(item);
+                if (!requiredPointParts.count(pid)) {
+                    plan.requiredReps.push_back(item.rep);
+                    requiredPointParts.insert(pid);
                 }
             }
 
@@ -752,6 +767,10 @@ SoCADAssembly::createPickDetail(
             detail->setPrimType(SoCADDetail::TRIANGLE);
             detail->setPrimIndex0(hit.primIndex0);
             break;
+        case obol::CadPickDetailRecord::POINT:
+            detail->setPrimType(SoCADDetail::POINT);
+            detail->setPrimIndex0(hit.primIndex0);
+            break;
         case obol::CadPickDetailRecord::BOUNDS:
         default:
             detail->setPrimType(SoCADDetail::BOUNDS);
@@ -769,6 +788,7 @@ void SoCADAssembly::endUpdate()
     impl_->inUpdate_ = false;
     impl_->bvhDirty_ = true;
     impl_->planDirty_ = true;
+    impl_->geometryDirty_ = true;
     touch();
 }
 
@@ -783,11 +803,13 @@ SoCADAssembly::clear()
     impl_->unpickable_.clear();
     impl_->partEdgeBvhCache_.clear();
     impl_->partTriBvhCache_.clear();
+    impl_->lodCapableParts_.clear();
     impl_->partLods_.clear();
     impl_->lodIndexCache_.clear();
     impl_->instanceBvh_ = obol::picking::CadInstanceBVH();
     impl_->bvhDirty_ = true;
     impl_->planDirty_ = true;
+    impl_->geometryDirty_ = true;
     if (!impl_->inUpdate_)
         touch();
 }
@@ -797,7 +819,8 @@ SoCADAssembly::clear()
 void
 SoCADAssembly::upsertPart(obol::PartId pid, const obol::PartGeometry& geom)
 {
-    impl_->updatePartGeometry(pid, geom);
+    impl_->updatePartGeometry(pid,
+        std::make_shared<const obol::PartGeometry>(geom));
     impl_->recomputeWorldBoundsForPart(pid);
     impl_->markDirty();
     if (!impl_->inUpdate_) touch();
@@ -812,7 +835,8 @@ SoCADAssembly::upsertParts(const std::vector<obol::PartUpdate>& updates)
     std::unordered_set<obol::PartId, std::hash<obol::PartId>> changedParts;
     changedParts.reserve(updates.size());
     for (const auto& update : updates) {
-        impl_->updatePartGeometry(update.part, update.geometry);
+        impl_->updatePartGeometry(update.part,
+            std::make_shared<const obol::PartGeometry>(update.geometry));
         changedParts.insert(update.part);
     }
     impl_->recomputeWorldBoundsForParts(changedParts);
@@ -822,12 +846,31 @@ SoCADAssembly::upsertParts(const std::vector<obol::PartUpdate>& updates)
 }
 
 void
+SoCADAssembly::upsertSharedParts(
+    const std::vector<obol::SharedPartUpdate>& updates)
+{
+    if (updates.empty()) return;
+    std::unordered_set<obol::PartId, std::hash<obol::PartId>> changedParts;
+    changedParts.reserve(updates.size());
+    for (const auto& update : updates) {
+        if (!update.geometry) continue;
+        impl_->updatePartGeometry(update.part, update.geometry);
+        changedParts.insert(update.part);
+    }
+    if (changedParts.empty()) return;
+    impl_->recomputeWorldBoundsForParts(changedParts);
+    impl_->markDirty();
+    if (!impl_->inUpdate_) touch();
+}
+
+void
 SoCADAssembly::removePart(obol::PartId pid)
 {
     impl_->parts_.erase(pid);
     impl_->partGeneration_.erase(pid);
     impl_->partEdgeBvhCache_.erase(pid);
     impl_->partTriBvhCache_.erase(pid);
+    impl_->lodCapableParts_.erase(pid);
     impl_->partLods_.erase(pid);
     impl_->lodIndexCache_.erase(pid);
     impl_->recomputeWorldBoundsForPart(pid);
@@ -898,6 +941,7 @@ SoCADAssembly::removeInstance(obol::InstanceId iid)
     impl_->unpickable_.erase(iid);
     impl_->bvhDirty_  = true;
     impl_->planDirty_ = true;
+    impl_->geometryDirty_ = true;
     if (!impl_->inUpdate_) touch();
 }
 
@@ -908,11 +952,12 @@ SoCADAssembly::updateInstanceTransform(obol::InstanceId iid, const SbMatrix& m)
     if (it == impl_->instances_.end()) return;
     it->second.localToRoot = m;
     auto geomIt = impl_->parts_.find(it->second.partId);
-    if (geomIt != impl_->parts_.end()) {
-        it->second.worldBounds = impl_->computeWorldBounds(geomIt->second, m);
+    if (geomIt != impl_->parts_.end() && geomIt->second) {
+        it->second.worldBounds = impl_->computeWorldBounds(*geomIt->second, m);
     }
     impl_->bvhDirty_  = true;
     impl_->planDirty_ = true;
+    impl_->geometryDirty_ = true;
     if (!impl_->inUpdate_) touch();
 }
 
@@ -922,6 +967,23 @@ SoCADAssembly::updateInstanceStyle(obol::InstanceId iid, const obol::InstanceSty
     auto it = impl_->instances_.find(iid);
     if (it == impl_->instances_.end()) return;
     it->second.style = style;
+    impl_->planDirty_ = true;
+    if (!impl_->inUpdate_) touch();
+}
+
+void
+SoCADAssembly::updateInstanceStyles(
+    const std::vector<obol::InstanceStyleUpdate>& updates)
+{
+    if (updates.empty()) return;
+    bool changed = false;
+    for (const auto& update : updates) {
+        auto it = impl_->instances_.find(update.instance);
+        if (it == impl_->instances_.end()) continue;
+        it->second.style = update.style;
+        changed = true;
+    }
+    if (!changed) return;
     impl_->planDirty_ = true;
     if (!impl_->inUpdate_) touch();
 }
@@ -939,14 +1001,14 @@ SoCADAssembly::setSelectedInstances(const std::vector<obol::InstanceId>& ids)
 
 size_t SoCADAssembly::instanceCount() const { return impl_->instances_.size(); }
 size_t SoCADAssembly::partCount()     const { return impl_->parts_.size();     }
-bool SoCADAssembly::hasPartLod() const { return !impl_->partLods_.empty(); }
+bool SoCADAssembly::hasPartLod() const { return !impl_->lodCapableParts_.empty(); }
 
 const obol::PartGeometry*
 SoCADAssembly::partGeometry(obol::PartId pid) const
 {
     auto it = impl_->parts_.find(pid);
     if (it == impl_->parts_.end()) return nullptr;
-    return &it->second;
+    return it->second.get();
 }
 
 std::optional<obol::InstanceRecord>
@@ -970,7 +1032,20 @@ const std::vector<uint32_t>*
 SoCADAssembly::getLodFilteredIndices(obol::PartId pid, uint8_t level) const
 {
     auto lodIt = impl_->partLods_.find(pid);
-    if (lodIt == impl_->partLods_.end() || !lodIt->second.isBuilt()) return nullptr;
+    if (lodIt == impl_->partLods_.end()) {
+        if (impl_->lodCapableParts_.find(pid) ==
+                impl_->lodCapableParts_.end())
+            return nullptr;
+        auto partIt = impl_->parts_.find(pid);
+        if (partIt == impl_->parts_.end() || !partIt->second ||
+                !partIt->second->shaded.has_value())
+            return nullptr;
+        const auto& mesh = *partIt->second->shaded;
+        obol::TrianglePopLod lod;
+        lod.build(mesh.positions, mesh.indices, mesh.bounds);
+        lodIt = impl_->partLods_.emplace(pid, std::move(lod)).first;
+    }
+    if (!lodIt->second.isBuilt()) return nullptr;
 
     auto genIt = impl_->partGeneration_.find(pid);
     uint64_t gen = (genIt != impl_->partGeneration_.end()) ? genIt->second : 0;
@@ -984,10 +1059,10 @@ SoCADAssembly::getLodFilteredIndices(obol::PartId pid, uint8_t level) const
     if (it == cacheEntry.byLevel.end()) {
         std::vector<uint32_t> drawIndices;
         auto partIt = impl_->parts_.find(pid);
-        if (partIt != impl_->parts_.end() &&
-                partIt->second.shaded.has_value()) {
+        if (partIt != impl_->parts_.end() && partIt->second &&
+                partIt->second->shaded.has_value()) {
             const std::vector<uint32_t>& meshIndices =
-                partIt->second.shaded->indices;
+                partIt->second->shaded->indices;
             const std::vector<uint32_t> triangleOrdinals =
                 lodIt->second.trianglesAtLevel(level);
             drawIndices.reserve(triangleOrdinals.size() * 3);
@@ -1013,6 +1088,7 @@ SoCADAssembly::setHiddenInstances(const std::vector<obol::InstanceId>& ids)
     impl_->hidden_.insert(ids.begin(), ids.end());
     impl_->bvhDirty_ = true;
     impl_->planDirty_ = true;
+    impl_->geometryDirty_ = true;
     if (!impl_->inUpdate_) touch();
 }
 
@@ -1066,12 +1142,21 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
     // hidden set, or draw mode have changed.  Camera moves do NOT invalidate
     // the plan, so it is reused every frame during interactive orbit.
     if (impl_->planDirty_ || impl_->cachedDM_ != dm) {
+        const bool geometryChanged = impl_->geometryDirty_ ||
+                                     impl_->cachedDM_ != dm;
         impl_->cachedPlan_  = impl_->buildFramePlan(dm, impl_->selected_,
                                                      impl_->hidden_);
         impl_->cachedPlan_.revision = impl_->nextPlanRevision_++;
         if (impl_->nextPlanRevision_ == 0)
             impl_->nextPlanRevision_ = 1;
+        if (geometryChanged) {
+            impl_->geometryRevision_ = impl_->nextGeometryRevision_++;
+            if (impl_->nextGeometryRevision_ == 0)
+                impl_->nextGeometryRevision_ = 1;
+        }
+        impl_->cachedPlan_.geometryRevision = impl_->geometryRevision_;
         impl_->planDirty_   = false;
+        impl_->geometryDirty_ = false;
         impl_->cachedDM_    = dm;
     }
 
@@ -1126,6 +1211,7 @@ SoCADAssembly::rayPick(SoRayPickAction* action)
 
     // Determine effective pick mode
     int pm = pickMode.getValue();
+    const bool automaticPick = pm == PICK_AUTO;
     if (pm == PICK_AUTO) {
         pm = (drawMode.getValue() == WIREFRAME) ? PICK_EDGE : PICK_TRIANGLE;
     }
@@ -1170,7 +1256,12 @@ SoCADAssembly::rayPick(SoRayPickAction* action)
 
     obol::picking::CadPickResult result;
 
-    if (pm == PICK_EDGE || pm == PICK_HYBRID) {
+    if (automaticPick || pm == PICK_EDGE || pm == PICK_HYBRID) {
+        result = obol::picking::CadPickQuery::pickPoint(
+            pickRay, impl_->instanceBvh_, impl_->parts_, toleranceWS);
+    }
+
+    if (!result.valid && (pm == PICK_EDGE || pm == PICK_HYBRID)) {
         result = obol::picking::CadPickQuery::pickEdge(
             pickRay,
             impl_->instanceBvh_,
@@ -1222,6 +1313,10 @@ SoCADAssembly::rayPick(SoRayPickAction* action)
             break;
         case obol::picking::CadPickResult::TRIANGLE:
             hit.primitiveKind = obol::CadPickDetailRecord::TRIANGLE;
+            hit.primIndex0 = result.primIndex0;
+            break;
+        case obol::picking::CadPickResult::POINT:
+            hit.primitiveKind = obol::CadPickDetailRecord::POINT;
             hit.primIndex0 = result.primIndex0;
             break;
         default:
@@ -1277,8 +1372,10 @@ SoCADAssembly::getPrimitiveCount(SoGetPrimitiveCountAction* action)
         if (impl_->hidden_.count(iid))
             continue;
         auto geomIt = impl_->parts_.find(idata.partId);
-        if (geomIt == impl_->parts_.end()) continue;
-        const auto& geom = geomIt->second;
+        if (geomIt == impl_->parts_.end() || !geomIt->second) continue;
+        const auto& geom = *geomIt->second;
+        if (geom.points)
+            action->addNumPoints(static_cast<int>(geom.points->positions.size()));
         if (geom.wire) {
             totalLines += static_cast<int>(geom.wire->segmentCount());
             for (const auto& poly : geom.wire->polylines) {

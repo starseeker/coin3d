@@ -59,8 +59,9 @@ namespace internal {
 // ---------------------------------------------------------------------------
 
 enum class CadRepType : uint8_t {
-    WireSegments = 0,
-    Triangles    = 1,
+    Points       = 0,
+    WireSegments = 1,
+    Triangles    = 2,
 };
 
 /**
@@ -101,7 +102,7 @@ struct CadVisibleInstance {
     uint16_t linePattern = 0xffffu;
     uint16_t linePatternFactor = 1u;
     uint32_t partIndex = 0;
-    uint32_t flags     = 0;   ///< bit 0: selected; bit 1: hovered
+    uint32_t flags     = 0;   ///< bit 0: selected; bit 1: hovered; bit 2: color override
     InstanceId instanceId;
     /// World-space bounding box min/max.  Used by the renderer for per-instance
     /// frustum culling (avoids drawing instances completely outside the view).
@@ -145,6 +146,9 @@ struct CadFramePlan {
     /** Changes whenever immutable presentation data in this plan changes. */
     uint64_t revision = 0;
 
+    /** Changes only when flattened geometry, transforms, or visibility change. */
+    uint64_t geometryRevision = 0;
+
     /** All visible instances, sorted by (partIndex, repLevel) for batching. */
     std::vector<CadVisibleInstance> visibleInstances;
     bool hasCustomWireStyle = false;
@@ -154,6 +158,9 @@ struct CadFramePlan {
      * of visibleInstances that share the same CadRepKey.
      */
     std::vector<CadDrawItem> wireItems;
+
+    /** Draw items for point primitives. */
+    std::vector<CadDrawItem> pointItems;
 
     /**
      * Draw items for the shaded pass.  May be empty in WIREFRAME mode unless

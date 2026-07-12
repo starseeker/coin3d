@@ -226,9 +226,11 @@ static int test_pick_query()
     obol::PartGeometry geomPyramid;
     geomPyramid.shaded = makePyramid();
 
-    std::unordered_map<PartId, obol::PartGeometry, std::hash<PartId>> parts;
-    parts[pidCube]    = geomCube;
-    parts[pidPyramid] = geomPyramid;
+    std::unordered_map<PartId, std::shared_ptr<const obol::PartGeometry>,
+                       std::hash<PartId>> parts;
+    parts[pidCube] = std::make_shared<const obol::PartGeometry>(geomCube);
+    parts[pidPyramid] =
+        std::make_shared<const obol::PartGeometry>(geomPyramid);
 
     // Instance 1: cube at origin
     InstanceId iidCube = CadIdBuilder::extendNameOccBool(
@@ -428,11 +430,12 @@ static int test_pick_triangle()
 
     obol::TriMesh pyr = makePyramid();
 
-    std::unordered_map<PartId, obol::PartGeometry, std::hash<PartId>> parts;
+    std::unordered_map<PartId, std::shared_ptr<const obol::PartGeometry>,
+                       std::hash<PartId>> parts;
     {
         obol::PartGeometry g;
         g.shaded = pyr;
-        parts[pidPyr] = g;
+        parts[pidPyr] = std::make_shared<const obol::PartGeometry>(g);
     }
 
     CadInstanceBVH bvh;
@@ -482,11 +485,13 @@ static int test_pick_triangle()
         flat.bounds.setBounds(SbVec3f(-1.0f, -1.0f, 0.0f),
                               SbVec3f( 1.0f,  1.0f, 0.0f));
 
-        std::unordered_map<PartId, obol::PartGeometry, std::hash<PartId>> flatParts;
+        std::unordered_map<PartId, std::shared_ptr<const obol::PartGeometry>,
+                           std::hash<PartId>> flatParts;
         {
             obol::PartGeometry g;
             g.shaded = flat;
-            flatParts[pidFlat] = g;
+            flatParts[pidFlat] =
+                std::make_shared<const obol::PartGeometry>(g);
         }
 
         CadInstanceBVH flatBvh;
@@ -532,11 +537,13 @@ static int test_pick_triangle()
         InstanceId iidWire = CadIdBuilder::extendNameOccBool(
             CadIdBuilder::Root(), "wire_only", 0, 0);
 
-        std::unordered_map<PartId, obol::PartGeometry, std::hash<PartId>> wireParts;
+        std::unordered_map<PartId, std::shared_ptr<const obol::PartGeometry>,
+                           std::hash<PartId>> wireParts;
         {
             obol::PartGeometry g;
             g.wire = makeCubeWireframe();
-            wireParts[pidWire] = g;
+            wireParts[pidWire] =
+                std::make_shared<const obol::PartGeometry>(g);
         }
 
         CadInstanceBVH wireBvh;
@@ -562,6 +569,54 @@ static int test_pick_triangle()
     return runner.getSummary();
 }
 
+static int test_pick_point()
+{
+    TestRunner runner;
+    const PartId part = CadIdBuilder::hash128("points");
+    const InstanceId instance = CadIdBuilder::extendNameOccBool(
+        CadIdBuilder::Root(), "points", 0, 0);
+    PointRep pointGeometry;
+    pointGeometry.positions = {SbVec3f(-1.0f, 0.0f, 0.0f),
+                               SbVec3f(2.0f, 0.0f, 0.0f)};
+    pointGeometry.pointIds = {17, 23};
+    pointGeometry.bounds.setBounds(SbVec3f(-1.0f, 0.0f, 0.0f),
+                                   SbVec3f(2.0f, 0.0f, 0.0f));
+    std::unordered_map<PartId, std::shared_ptr<const PartGeometry>,
+                       std::hash<PartId>> parts;
+    PartGeometry geometry;
+    geometry.points = pointGeometry;
+    parts[part] = std::make_shared<const PartGeometry>(geometry);
+
+    CadInstanceBVH bvh;
+    CadInstanceBVH::Entry entry;
+    entry.worldBounds = pointGeometry.bounds;
+    entry.instanceId = instance;
+    entry.partId = part;
+    entry.localToWorld.setTranslate(SbVec3f(4.0f, 3.0f, 0.0f));
+    SbBox3f worldBounds = pointGeometry.bounds;
+    worldBounds.transform(entry.localToWorld);
+    entry.worldBounds = worldBounds;
+    bvh.build({entry});
+
+    runner.startTest("CadPickQuery::pickPoint: transformed stable point ID");
+    SbLine hitRay(SbVec3f(6.02f, 3.0f, 5.0f),
+                  SbVec3f(6.02f, 3.0f, 4.0f));
+    CadPickResult hit = CadPickQuery::pickPoint(
+        hitRay, bvh, parts, 0.05f);
+    runner.endTest(hit.valid && hit.instanceId == instance &&
+                   hit.primType == CadPickResult::POINT &&
+                   hit.primIndex0 == 23,
+                   "Point picking should preserve transform, identity, and point ID");
+
+    runner.startTest("CadPickQuery::pickPoint: outside tolerance");
+    SbLine missRay(SbVec3f(6.2f, 3.0f, 5.0f),
+                   SbVec3f(6.2f, 3.0f, 4.0f));
+    runner.endTest(!CadPickQuery::pickPoint(
+        missRay, bvh, parts, 0.05f).valid,
+        "Point picking should reject points outside tolerance");
+    return runner.getSummary();
+}
+
 // ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
@@ -574,5 +629,6 @@ int main()
     failures += test_pick_query();
     failures += test_part_tri_bvh();
     failures += test_pick_triangle();
+    failures += test_pick_point();
     return failures;
 }
