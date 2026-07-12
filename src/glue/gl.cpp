@@ -787,9 +787,15 @@ SoGLContext_getprocaddress(const SoGLContext * glue, const char * symname)
     }
   }
 #else
-  /* System GL path: try dlsym first (works for core functions that are
-     directly exported by the GL library). */
-  ptr = cc_dl_sym(SoGLContext_dl_handle(glue), symname);
+  /* A dual-GL process may export both system GL and OSMesa entry points.
+     Ask the manager for the current context first so even core symbols use
+     the matching dispatch table rather than whichever library won dlsym. */
+  {
+    SoDB::ContextManager * mgr = static_cast<SoDB::ContextManager*>(glue->context_manager);
+    if (!mgr) mgr = SoDB::getContextManager();
+    if (mgr) ptr = mgr->getProcAddress(symname);
+  }
+  if (ptr == NULL) ptr = cc_dl_sym(SoGLContext_dl_handle(glue), symname);
 #endif
 
   /* Final fallback: ask the context manager.  For system-GL contexts (GLX,
@@ -3160,7 +3166,24 @@ SoGLContext_instance(int contextid)
        it's better to print a warning than asserting here if the user
        did something wrong while creating it.
     */
-    glerr = glGetError();
+    OBOL_PFNGLGETERRORPROC contextGetError =
+      (OBOL_PFNGLGETERRORPROC)SoGLContext_getprocaddress(gi, "glGetError");
+    OBOL_PFNGLGETSTRINGPROC contextGetString =
+      (OBOL_PFNGLGETSTRINGPROC)SoGLContext_getprocaddress(gi, "glGetString");
+    OBOL_PFNGLGETINTEGERVPROC contextGetIntegerv =
+      (OBOL_PFNGLGETINTEGERVPROC)SoGLContext_getprocaddress(gi, "glGetIntegerv");
+    OBOL_PFNGLGETFLOATVPROC contextGetFloatv =
+      (OBOL_PFNGLGETFLOATVPROC)SoGLContext_getprocaddress(gi, "glGetFloatv");
+    if (!contextGetError || !contextGetString || !contextGetIntegerv || !contextGetFloatv) {
+      cc_debugerror_postwarning("SoGLContext_instance",
+                                "current context does not expose required core GL functions");
+      (void)cc_dict_remove(gldict, (uintptr_t)contextid);
+      if (gi->glextdict) { cc_dict_destruct(gi->glextdict); }
+      free(gi);
+      return NULL;
+    }
+
+    glerr = contextGetError();
     while (glerr != GL_NO_ERROR) {
       const char* errorstr = coin_glerror_string(glerr);
       cc_debugerror_postinfo("SoGLContext_instance",
@@ -3168,7 +3191,7 @@ SoGLContext_instance(int contextid)
                              "initialization. This can occur during normal cleanup or if the "
                              "context was set up incorrectly.", 
                              glerr, errorstr ? errorstr : "unknown");
-      glerr = glGetError();
+      glerr = contextGetError();
 
       /* We might get this error if there is no current context.
          Break out and assert later in that case */
@@ -3178,7 +3201,7 @@ SoGLContext_instance(int contextid)
     /* NB: if you are getting a crash here, it's because an attempt at
      * setting up a SoGLContext instance was made when there is no
      * current OpenGL context. */
-    gi->versionstr = (const char *)glGetString(GL_VERSION);
+    gi->versionstr = (const char *)contextGetString(GL_VERSION);
     
     /* Additional debugging for OSMesa context */
     if (SoGLContext_debug()) {
@@ -3213,7 +3236,8 @@ SoGLContext_instance(int contextid)
   /* Platform-specific initialization is no longer needed with callback-based contexts.
      Applications are responsible for providing complete OpenGL contexts through callbacks. */
 
-    gi->vendorstr = (const char *)glGetString(GL_VENDOR);
+    gi->vendorstr = (const char *)contextGetString(GL_VENDOR);
+    if (!gi->vendorstr) gi->vendorstr = "Unknown";
 
 #ifdef OBOL_SWRAST_BUILD
     if (SoGLContext_debug()) {
@@ -3236,14 +3260,15 @@ SoGLContext_instance(int contextid)
 #endif
 
     // Add error checking to isolate the crash
-    GLenum error_before_renderer = glGetError();
+    GLenum error_before_renderer = contextGetError();
     if (error_before_renderer != GL_NO_ERROR) {
       cc_debugerror_postinfo("SoGLContext_instance", "OpenGL error before GL_RENDERER: 0x%x", error_before_renderer);
     }
     
-    gi->rendererstr = (const char *)glGetString(GL_RENDERER);
+    gi->rendererstr = (const char *)contextGetString(GL_RENDERER);
+    if (!gi->rendererstr) gi->rendererstr = "Unknown";
     
-    GLenum error_after_renderer = glGetError();
+    GLenum error_after_renderer = contextGetError();
     if (error_after_renderer != GL_NO_ERROR) {
       cc_debugerror_postinfo("SoGLContext_instance", "OpenGL error after GL_RENDERER: 0x%x", error_after_renderer);
     }
@@ -3259,7 +3284,7 @@ SoGLContext_instance(int contextid)
     }
 #endif
     
-    gi->extensionsstr = (const char *)glGetString(GL_EXTENSIONS);
+    gi->extensionsstr = (const char *)contextGetString(GL_EXTENSIONS);
 
 #ifdef OBOL_SWRAST_BUILD
     if (SoGLContext_debug()) {
@@ -3292,7 +3317,7 @@ SoGLContext_instance(int contextid)
 #endif
       if (glGetStringi != NULL) {
         GLint num_strings = 0;
-        glGetIntegerv(GL_NUM_EXTENSIONS, &num_strings);
+        contextGetIntegerv(GL_NUM_EXTENSIONS, &num_strings);
         if (num_strings > 0) {
           int buffer_size = 1024;
           char *ext_strings_buffer = (char *)malloc(buffer_size * sizeof (char));
@@ -3326,15 +3351,15 @@ SoGLContext_instance(int contextid)
 
     /* read some limits */
 
-    glGetIntegerv(GL_MAX_TEXTURE_SIZE, &gltmp);
+    contextGetIntegerv(GL_MAX_TEXTURE_SIZE, &gltmp);
     gi->max_texture_size = gltmp;
 
-    glGetIntegerv(GL_MAX_LIGHTS, &gltmp);
+    contextGetIntegerv(GL_MAX_LIGHTS, &gltmp);
     gi->max_lights = (int) gltmp;
 
     {
       GLfloat vals[2];
-      glGetFloatv(GL_POINT_SIZE_RANGE, vals);
+      contextGetFloatv(GL_POINT_SIZE_RANGE, vals);
 
       /* Matthias Koenig reported on coin-discuss that the OpenGL
          implementation on SGI Onyx 2 InfiniteReality returns 0 for the
@@ -3353,7 +3378,7 @@ SoGLContext_instance(int contextid)
     }
     {
       GLfloat vals[2];
-      glGetFloatv(GL_LINE_WIDTH_RANGE, vals);
+      contextGetFloatv(GL_LINE_WIDTH_RANGE, vals);
 
       /* Matthias Koenig reported on coin-discuss that the OpenGL
          implementation on SGI Onyx 2 InfiniteReality returns 0 for the
@@ -3389,7 +3414,7 @@ SoGLContext_instance(int contextid)
     gi->max_anisotropy = 0.0f;
     if (SoGLContext_glext_supported(gi, "GL_EXT_texture_filter_anisotropic")) {
       gi->can_do_anisotropic_filtering = TRUE;
-      glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &gi->max_anisotropy);
+      contextGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &gi->max_anisotropy);
       if (SoGLContext_debug()) {
         cc_debugerror_postinfo("SoGLContext_instance",
                                "Anisotropic filtering: %s (%g)",
