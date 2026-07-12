@@ -72,7 +72,7 @@ namespace picking {
 /**
  * @brief Result of a single ray pick against the CAD assembly.
  */
-struct CadPickResult {
+struct OBOL_DLL_API CadPickResult {
     InstanceId  instanceId;          ///< Picked instance
     PartId      partId;              ///< Part used by the picked instance
 
@@ -94,7 +94,7 @@ struct CadPickResult {
 // ---------------------------------------------------------------------------
 
 /** Internal AABB tree node (flat array representation). */
-struct BvhNode {
+struct OBOL_DLL_API BvhNode {
     SbBox3f bounds;
     int     left  = -1;   ///< Child index, or -1 if leaf
     int     right = -1;   ///< Child index, or -1 if leaf
@@ -111,7 +111,7 @@ struct BvhNode {
  * Each leaf holds one instance's world-space bounding box.  During picking
  * the tree prunes the candidate set from O(N) to O(log N + hits).
  */
-class CadInstanceBVH {
+class OBOL_DLL_API CadInstanceBVH {
 public:
     struct Entry {
         SbBox3f    worldBounds;
@@ -168,7 +168,7 @@ private:
  *
  * Built once per part (lazily) and reused across frames.
  */
-class CadPartEdgeBVH {
+class OBOL_DLL_API CadPartEdgeBVH {
 public:
     struct SegEntry {
         SbVec3f  p0, p1;        ///< Segment endpoints in part-local space
@@ -224,7 +224,7 @@ private:
  * Built once per part (lazily) and reused across frames.  Enables precise
  * triangle picking in PICK_TRIANGLE and PICK_HYBRID modes.
  */
-class CadPartTriBVH {
+class OBOL_DLL_API CadPartTriBVH {
 public:
     struct TriEntry {
         SbVec3f  p0, p1, p2;   ///< Triangle vertices in part-local space
@@ -283,7 +283,7 @@ private:
  *
  * Instantiate one per rayPick() call; reuse the BVH structures across calls.
  */
-class CadPickQuery {
+class OBOL_DLL_API CadPickQuery {
 public:
     /**
      * @brief Perform edge (wire) picking.

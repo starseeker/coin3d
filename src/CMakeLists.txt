@@ -91,6 +91,7 @@ if(OBOL_USE_SWRAST AND OBOL_USE_SYSTEM_GL AND OBOL_OSMESA_INCLUDE_DIRS)
 endif()
 
 add_library(${PROJECT_NAME} ${OBOL_SOURCE} ${OBOL_ADDITIONAL_HDRS})
+target_compile_definitions(${PROJECT_NAME} PRIVATE UTF8_NO_AUTOLINK)
 if(TARGET obol_parser_gen)
   add_dependencies(${PROJECT_NAME} obol_parser_gen)
 endif()
@@ -101,6 +102,21 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     CXX_STANDARD_REQUIRED ON
     CXX_EXTENSIONS OFF
 )
+
+# Several supported extension points (notably the GL dispatch wrappers used
+# by Inventor/gl.h) retain their historical declarations in private headers.
+# Export all compiled symbols on Windows so those established entry points
+# are present in the import library for shared builds as they are for static
+# builds.
+if(WIN32 AND BUILD_SHARED_LIBS)
+    set_target_properties(${PROJECT_NAME} PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
+    if(MSVC)
+        # Auto-export necessarily overlaps symbols already marked dllexport.
+        # LINK uses the first identical specification, so silence only that
+        # expected duplicate-export diagnostic.
+        target_link_options(${PROJECT_NAME} PRIVATE /IGNORE:4197)
+    endif()
+endif()
 
 # Set library output name based on backend selection
 if(DEFINED OBOL_OUTPUT_NAME)
@@ -173,7 +189,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE ${OBOL_TARGET_LINK_LIBRARIES})
 # For dual-GL builds, also link OSMesa so that osmesa_SoGLContext_* functions
 # can resolve mgl* symbols at runtime.
 if(OBOL_USE_SWRAST AND OBOL_USE_SYSTEM_GL)
-    target_link_libraries(${PROJECT_NAME} PRIVATE ${OBOL_OSMESA_LIBRARIES})
+    target_link_libraries(${PROJECT_NAME} PUBLIC ${OBOL_OSMESA_LIBRARIES})
 endif()
 
 if(WIN32)
@@ -224,6 +240,13 @@ endif()
 # ============================================================================
 # Platform-specific configuration
 # ============================================================================
+
+# The bundled software renderer is installed beside Obol.  Keep that
+# relationship relocatable so consumers do not need LD_LIBRARY_PATH merely to
+# load a dual-backend Obol installation.
+if(UNIX AND NOT APPLE AND OBOL_USE_SWRAST)
+  set_property(TARGET ${PROJECT_NAME} APPEND PROPERTY INSTALL_RPATH "$ORIGIN")
+endif()
 
 # Set library version properties
 if(WIN32 AND NOT MINGW)
@@ -365,9 +388,10 @@ else()
   # install its shared library alongside Obol so that consumers who locate Obol
   # via find_package(Obol) can link and run without additional setup.
   if((OBOL_USE_SWRAST) AND TARGET osmesa)
-    install(TARGETS osmesa
+    install(TARGETS osmesa osmesa_interface EXPORT ${PROJECT_NAME}
       RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT runtime
       LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT runtime
+      ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT development
     )
   endif()
 endif()
@@ -410,8 +434,12 @@ write_basic_package_version_file("${CMAKE_CURRENT_BINARY_DIR}/${OBOL_CONFIG_PACK
 )
 
 # To make the component usable not only from the install directory but also from the build directory
+set(_obol_export_targets ${PROJECT_NAME})
+if(OBOL_USE_SWRAST AND TARGET osmesa_interface AND TARGET osmesa)
+  list(APPEND _obol_export_targets osmesa_interface osmesa)
+endif()
 export(
-  TARGETS ${PROJECT_NAME}
+  TARGETS ${_obol_export_targets}
   FILE ${OBOL_CONFIG_PACKAGE_BASENAME}-export.cmake
 )
 

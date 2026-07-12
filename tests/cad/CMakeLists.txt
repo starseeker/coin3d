@@ -38,6 +38,18 @@ target_include_directories(test_cad_ids PRIVATE ${CAD_TEST_INCLUDES})
 add_test(NAME test_cad_ids COMMAND test_cad_ids)
 
 # ---------------------------------------------------------------------------
+# test_cad_instance_records
+# ---------------------------------------------------------------------------
+add_executable(test_cad_instance_records test_cad_instance_records.cpp)
+target_link_libraries(test_cad_instance_records
+    ${PROJECT_NAME}
+    ${OBOL_TARGET_LINK_LIBRARIES}
+    simple_test_utils
+)
+target_include_directories(test_cad_instance_records PRIVATE ${CAD_TEST_INCLUDES})
+add_test(NAME test_cad_instance_records COMMAND test_cad_instance_records)
+
+# ---------------------------------------------------------------------------
 # test_segment_lod
 # ---------------------------------------------------------------------------
 add_executable(test_segment_lod test_segment_lod.cpp)

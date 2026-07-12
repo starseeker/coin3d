@@ -131,8 +131,9 @@ public:
     /**
      * Returns the rendering tier used during the last render() call:
      *   0 = immediate-mode fallback (GL 1.1, no working GLSL+VBO)
-     *   1 = VBO-loop (GL 2.0, GLSL 1.10)
+     *   1 = retained VBO loop (fixed-function compatibility or GLSL)
      *   2 = instanced (GL 3.1+)
+     *   3 = flattened wire batch (hardware GL)
      *  -1 = render() not yet called
      */
     int lastRenderTier() const { return lastRenderTier_; }
@@ -141,10 +142,13 @@ private:
     // Capability flags (populated on first render call)
     bool      capsDetected_ = false;
     CadGLCaps caps_;
-    int       lastRenderTier_ = -1; ///< last tier used: -1=none, 0=imm, 1=vbo, 2=inst
+    int       lastRenderTier_ = -1; ///< -1=none, 0=imm, 1=vbo, 2=inst, 3=flat wire
 
-    // Per-context GPU resource cache
-    CadGpuResources gpuRes_;
+    // GPU objects are namespaced by GL context.  A renderer may be traversed
+    // by multiple system-GL or offscreen contexts during its lifetime.
+    std::unordered_map<uint32_t, std::unique_ptr<CadGpuResources>> gpuResources_;
+    CadGpuResources *gpuRes_ = nullptr;
+    uint32_t gpuContextId_ = 0;
 
     // CPU-side LoD index cache.  Keyed by (PartId, level); invalidated when
     // the part's generation counter changes.
@@ -163,6 +167,9 @@ private:
     };
     ShaderPrograms shaders_;
     uint32_t shadersContextId_ = 0;
+
+    static void contextDestroyed(uint32_t contextId, void *closure);
+    void releaseContext(uint32_t contextId, const SoGLContext *glue);
 
     // Ensure capabilities have been detected and shaders compiled
     bool ensureReady(const SoGLContext * glue);
@@ -198,7 +205,13 @@ private:
                        const SbVec3f&       cameraPos,
                        const CadRenderState& renderState,
                        const std::unordered_map<PartId, uint64_t,
-                                                std::hash<PartId>>& partGenMap);
+                                                std::hash<PartId>>& partGenMap,
+                       bool customWireOnly,
+                       bool drawShaded);
+
+    void renderFixedVboLoop(const CadFramePlan& plan,
+                            const SoGLContext* glue,
+                            const SbMatrix& viewProj);
 
     /**
      * Tier-0 fallback: fixed-function immediate-mode rendering via
@@ -239,7 +252,14 @@ private:
                          const SoGLContext*   glue,
                          const SbMatrix&      viewProj,
                          const std::unordered_map<PartId, uint64_t,
-                                                   std::hash<PartId>>& partGenMap);
+                                                   std::hash<PartId>>& partGenMap,
+                         bool solidWireOnly,
+                         bool drawShaded);
+
+    bool renderFlatWire(const CadFramePlan& plan,
+                        const SoCADAssembly& assembly,
+                        const SoGLContext* glue,
+                        const SbMatrix& viewProj);
 
     // -----------------------------------------------------------------------
     // Shader compilation helpers
@@ -248,7 +268,6 @@ private:
     GLuint compileShader(const SoGLContext* glue, GLenum type, const char* src);
     GLuint linkProgram(const SoGLContext* glue, GLuint vs, GLuint fs);
     bool   compileAllShaders(const SoGLContext* glue);
-    void   deleteShaders(const SoGLContext* glue);
 
     // Non-copyable
     CadRendererGL(const CadRendererGL&) = delete;

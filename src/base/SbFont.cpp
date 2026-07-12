@@ -55,11 +55,15 @@
 
 // struetype single-header library - define implementation here
 #define STRUETYPE_IMPLEMENTATION
+#if defined(__GNUC__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
 #pragma GCC diagnostic ignored "-Wcast-qual"
+#endif
 #include "fonts/struetype.h"
+#if defined(__GNUC__)
 #pragma GCC diagnostic pop
+#endif
 
 // Include stt_glyph_mesh for 3D vector glyph generation
 #include "fonts/stt_glyph_mesh.hpp"

@@ -1088,11 +1088,20 @@ static int runScalabilityTests()
     // ----- configuration --------------------------------------------------
     // Sizes express the number of *leaf geometry nodes* (SoCube instances).
     // Total node count depends on the structure (see comments below).
-    static const int kFlatSizes[]  = { 100, 500, 1000, 5000, 10000, 20000 };
-    static const int kTreeSizes[]  = { 100, 500, 1000, 5000, 10000, 20000 };
+    /* Keep the always-on unit suite bounded.  Larger 5k-20k samples belong
+       in a manually invoked benchmark, not in every CTest run. */
+    static const int kFlatSizes[]  = { 100, 500, 1000 };
+    static const int kTreeSizes[]  = { 100, 500, 1000 };
     // Deep recursive traversal can exhaust the system stack; cap accordingly.
+#ifdef _WIN32
+    // Windows executables default to a smaller stack than typical Unix
+    // builds; recursive action traversal becomes unsafe above this depth.
+    static const int kChainSizes[] = { 100, 250, 500 };
+    static const int CHAIN_MAX     = 500;
+#else
     static const int kChainSizes[] = { 100, 500, 1000, 2000, 5000 };
     static const int CHAIN_MAX     = 5000;
+#endif
     (void)CHAIN_MAX;
 
     printf("# Obol Scene Graph Scalability Benchmark\n");
@@ -2072,7 +2081,7 @@ REGISTER_TEST(unit_orbit_camera, ObolTest::TestCategory::Base,
 );
 
 REGISTER_TEST(unit_scalability, ObolTest::TestCategory::Nodes,
-    "Scene graph scalability: flat / binary-tree / linear-chain at 100..20000 nodes",
+    "Scene graph scalability smoke test: flat / binary-tree / linear-chain at 100..1000 nodes",
     e.has_visual = false;
     e.run_unit = runScalabilityTests;
 );
@@ -6396,8 +6405,8 @@ static int runViewVolumeOrthoTests()
         SbViewVolume vv;
         vv.ortho(-2.0f, 2.0f, -2.0f, 2.0f, 1.0f, 100.0f);
         // Check getPlane
-        SbPlane near = vv.getPlane(vv.getNearDist());
-        SbVec3f n = near.getNormal();
+        SbPlane nearPlane = vv.getPlane(vv.getNearDist());
+        SbVec3f n = nearPlane.getNormal();
         if (n.length() < 0.5f) {
             fprintf(stderr, "  FAIL: ortho near plane normal length\n"); ++failures;
         }
@@ -11973,14 +11982,14 @@ static int runSceneIOTests()
 
         // Write to a temp file
         SoOutput out;
-        SbString filePath("/tmp/obol_test_write.iv");
+        SbString filePath("obol_test_write.iv");
         out.openFile(filePath.getString());
         SoWriteAction wa(&out);
         wa.apply(original);
         out.closeFile();
 
         // Check file was created and is non-empty
-        FILE* f = fopen("/tmp/obol_test_write.iv", "r");
+        FILE* f = fopen("obol_test_write.iv", "r");
         if (!f) {
             fprintf(stderr, "  FAIL: SoWriteAction file not created\n"); ++failures;
         } else {
@@ -12066,7 +12075,7 @@ static int runSceneIOTests()
     // --- read scene from file (using previously written file) ---
     {
         SoInput inFile;
-        if (inFile.openFile("/tmp/obol_test_write.iv")) {
+        if (inFile.openFile("obol_test_write.iv")) {
             SoSeparator* root = SoDB::readAll(&inFile);
             if (!root) {
                 fprintf(stderr, "  FAIL: SoDB::readAll from file null\n"); ++failures;
@@ -12766,7 +12775,7 @@ static int runIODeepTests()
         // Write scene as binary
         SoOutput out;
         out.setBinary(TRUE);
-        out.openFile("/tmp/obol_test_bin.iv");
+        out.openFile("obol_test_bin.iv");
         SoSeparator* scene = new SoSeparator(); scene->ref();
         scene->addChild(new SoCube());
         SoWriteAction wa(&out);
@@ -12776,7 +12785,7 @@ static int runIODeepTests()
 
         // Read it back
         SoInput in;
-        if (in.openFile("/tmp/obol_test_bin.iv")) {
+        if (in.openFile("obol_test_bin.iv")) {
             SoSeparator* r = SoDB::readAll(&in);
             if (!r) {
                 fprintf(stderr, "  FAIL: readAll binary file returned null\n"); ++failures;
@@ -13982,7 +13991,7 @@ static int runComplexSceneIOTests()
 
         // Write to file
         SoOutput out;
-        out.openFile("/tmp/obol_complex_scene.iv");
+        out.openFile("obol_complex_scene.iv");
         SoWriteAction wa(&out);
         wa.apply(scene);
         out.closeFile();
@@ -13990,7 +13999,7 @@ static int runComplexSceneIOTests()
 
         // Read back
         SoInput in;
-        if (!in.openFile("/tmp/obol_complex_scene.iv")) {
+        if (!in.openFile("obol_complex_scene.iv")) {
             fprintf(stderr, "  FAIL: Complex scene file not created\n"); ++failures;
         } else {
             SoSeparator* read = SoDB::readAll(&in);
@@ -14054,14 +14063,14 @@ static int runComplexSceneIOTests()
 
         SoOutput out;
         out.setBinary(TRUE);
-        out.openFile("/tmp/obol_binary_scene.iv");
+        out.openFile("obol_binary_scene.iv");
         SoWriteAction wa(&out);
         wa.apply(scene);
         out.closeFile();
         scene->unref();
 
         // Check file exists
-        FILE* f = fopen("/tmp/obol_binary_scene.iv", "rb");
+        FILE* f = fopen("obol_binary_scene.iv", "rb");
         if (!f) {
             fprintf(stderr, "  FAIL: Binary scene file not created\n"); ++failures;
         } else {
@@ -17637,7 +17646,7 @@ static int runSoInputTest()
     // --- SoInput openFile/closeFile ---
     {
         // Write a simple .iv file to /tmp and read it back
-        const char* fname = "/tmp/test_soinput.iv";
+        const char* fname = "test_soinput.iv";
         FILE* f = fopen(fname, "w");
         if (f) {
             fprintf(f, "#Inventor V2.1 ascii\n\nSeparator {\n  Cone {}\n}\n");
@@ -18119,9 +18128,9 @@ static int runCameraDeepTest3()
         // Get view volume
         SbViewportRegion vp(512, 512);
         SbViewVolume vv = cam->getViewVolume(1.0f);
-        float near = vv.getNearDist();
-        if (near <= 0.0f) {
-            fprintf(stderr, "  FAIL: ortho camera viewvolume near=%.4f\n", near); ++failures;
+        float nearDistance = vv.getNearDist();
+        if (nearDistance <= 0.0f) {
+            fprintf(stderr, "  FAIL: ortho camera viewvolume near=%.4f\n", nearDistance); ++failures;
         }
         cam->unref();
     }
@@ -18167,9 +18176,9 @@ static int runCameraDeepTest3()
 
         // getViewVolume (float aspectratio version)
         SbViewVolume vv = cam->getViewVolume(1.0f);
-        float near = vv.getNearDist();
-        if (near <= 0.0f) {
-            fprintf(stderr, "  FAIL: cam getViewVolume near=%.4f\n", near); ++failures;
+        float nearDistance = vv.getNearDist();
+        if (nearDistance <= 0.0f) {
+            fprintf(stderr, "  FAIL: cam getViewVolume near=%.4f\n", nearDistance); ++failures;
         }
 
         cam->unref();
@@ -20071,7 +20080,7 @@ static int runRayPickDeepTest()
 
         // intersect(box)
         SbVec3f boxIsect;
-        SbBool onSurface;
+        SbBool onSurface = FALSE;
         SbBox3f box(SbVec3f(-1,-1,-1), SbVec3f(1,1,1));
         SbBool hitBox = rpa.intersect(box, boxIsect, onSurface);
 

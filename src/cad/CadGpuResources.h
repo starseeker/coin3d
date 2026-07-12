@@ -58,6 +58,7 @@
 #include <Inventor/system/gl.h>
 
 #include <unordered_map>
+#include <vector>
 #include <cstdint>
 
 struct SoGLContext;
@@ -73,6 +74,8 @@ struct CadWireGpu {
     GLsizei segCount = 0; ///< number of line segments (indices / 2)
     GLsizei vertCount = 0; ///< total point count in posBuf
     bool sequentialSegments = false; ///< true when positions are already segment pairs
+    GLuint instanceVbo = 0; ///< instance buffer recorded in this VAO
+    uint32_t instanceBase = UINT32_MAX; ///< first instance recorded in this VAO
 };
 
 /** GPU buffers for one part's shaded triangle representation. */
@@ -82,6 +85,8 @@ struct CadTriGpu {
     GLuint idxBuf   = 0; ///< uint32 triangle indices
     GLuint vao      = 0; ///< VAO binding pos+norm+idx (0 if no VAO support)
     GLsizei idxCount = 0; ///< total index count (= 3 × triangle count)
+    GLuint instanceVbo = 0; ///< instance buffer recorded in this VAO
+    uint32_t instanceBase = UINT32_MAX; ///< first instance recorded in this VAO
 };
 
 /** All GPU representations for one part in one GL context. */
@@ -89,6 +94,23 @@ struct CadPartGpuRep {
     uint64_t generation = UINT64_MAX; ///< UINT64_MAX = not yet uploaded; otherwise matches part generation
     CadWireGpu wire;
     CadTriGpu  tri;
+};
+
+struct CadFlatWireGroup {
+    GLint first = 0;
+    GLsizei count = 0;
+    float lineWidth = 1.0f;
+    uint16_t linePattern = 0xffffu;
+    uint16_t linePatternFactor = 1u;
+    uint8_t rgba[4] = {204, 204, 204, 255};
+};
+
+struct CadFlatWireGpu {
+    GLuint posBuf = 0;
+    GLuint vao = 0;
+    uint64_t planRevision = 0;
+    GLsizei vertexCount = 0;
+    std::vector<CadFlatWireGroup> groups;
 };
 
 /**
@@ -146,8 +168,14 @@ public:
     /** Return the wire GPU rep for @p pid, or nullptr if not uploaded. */
     const CadWireGpu* wireFor(PartId pid) const;
 
+    /** Mutable wire rep for updating retained VAO instance bindings. */
+    CadWireGpu* wireFor(PartId pid);
+
     /** Return the tri GPU rep for @p pid, or nullptr if not uploaded. */
     const CadTriGpu* triFor(PartId pid) const;
+
+    /** Mutable triangle rep for updating retained VAO instance bindings. */
+    CadTriGpu* triFor(PartId pid);
 
     /**
      * Invalidate and delete GPU resources for @p pid.
@@ -168,6 +196,14 @@ public:
     /** Return the per-instance VBO name, or 0 if not uploaded. */
     GLuint instanceVbo() const { return instanceVbo_; }
 
+    void uploadFlatWire(uint64_t planRevision,
+                        const std::vector<float>& positions,
+                        const std::vector<CadFlatWireGroup>& groups,
+                        const SoGLContext *glue,
+                        const CadGLCaps& caps);
+
+    const CadFlatWireGpu& flatWire() const { return flatWire_; }
+
     /** Release all GL resources (call with the correct GL context active). */
     void releaseAll(const SoGLContext * glue);
 
@@ -180,6 +216,7 @@ private:
 
     std::unordered_map<PartId, Entry, std::hash<PartId>> cache_;
     GLuint instanceVbo_ = 0;
+    CadFlatWireGpu flatWire_;
 
     void deleteWireGpu(CadWireGpu& w, const SoGLContext * glue);
     void deleteTriGpu(CadTriGpu& t, const SoGLContext * glue);

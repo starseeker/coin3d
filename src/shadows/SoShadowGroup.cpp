@@ -2197,12 +2197,14 @@ SoShadowGroupP::supported(const SoGLContext * glue, SbString& reason)
   const bool supported =
     SoGLContext_glversion_matches_at_least(glue, 2, 0, 0) &&
     SoGLDriverDatabase::isSupported(glue, SO_GL_FRAMEBUFFER_OBJECT) &&
+    SoGLDriverDatabase::isSupported(glue, SO_GL_ARB_SHADER_OBJECT) &&
     has_texfloat;
 
   if (supported) { return true; }
 
   reason = "Unable to render shadows.";
   if (!SoGLDriverDatabase::isSupported(glue, SO_GL_FRAMEBUFFER_OBJECT)) reason += " Frame buffer objects not supported.";
+  if (!SoGLDriverDatabase::isSupported(glue, SO_GL_ARB_SHADER_OBJECT)) reason += " Shader objects not supported.";
   if (!SoGLContext_glversion_matches_at_least(glue, 2, 0, 0)) reason += " OpenGL version < 2.0.";
   if (!has_texfloat) reason += " Floating point textures not supported.";
 

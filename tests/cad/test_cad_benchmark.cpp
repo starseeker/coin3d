@@ -56,6 +56,7 @@
 #include <Inventor/actions/SoGetBoundingBoxAction.h>
 
 #include <chrono>
+#include <cstdlib>
 #include <cstdio>
 #include <cmath>
 #include <vector>
@@ -320,6 +321,9 @@ static void swapToOrthoCamera(SoSeparator *root)
 int main(int argc, char **argv)
 {
     const char *outprefix = (argc > 1) ? argv[1] : "test_cad_benchmark";
+    const int grid = argc > 2 ? std::max(1, std::atoi(argv[2])) :
+        INSTANCES_PER_AXIS;
+    const int repeats = argc > 3 ? std::max(1, std::atoi(argv[3])) : 10;
 
     // Initialise Obol with the headless backend
     initCoinHeadless();
@@ -328,8 +332,7 @@ int main(int argc, char **argv)
     SoCADAssembly::initClass();
 
     printf("test_cad_benchmark: instances_per_axis=%d  total_instances=%d\n",
-           INSTANCES_PER_AXIS,
-           INSTANCES_PER_AXIS * INSTANCES_PER_AXIS * INSTANCES_PER_AXIS);
+           grid, grid * grid * grid);
     printf("test_cad_benchmark: viewport=%dx%d\n", W, H);
     printf("\n");
 
@@ -342,7 +345,7 @@ int main(int argc, char **argv)
     printf("--- Standard scene-graph approach ---\n");
 
     auto t0 = Clock::now();
-    SoSeparator *sgRoot = buildSceneGraph(INSTANCES_PER_AXIS);
+    SoSeparator *sgRoot = buildSceneGraph(grid);
     auto t1 = Clock::now();
     double sgBuildMs = Ms(t1 - t0).count();
     printf("  build:  %.1f ms\n", sgBuildMs);
@@ -376,16 +379,19 @@ int main(int argc, char **argv)
     printf("\n--- CAD assembly approach ---\n");
 
     auto t4 = Clock::now();
-    SoSeparator *cadRoot = buildCADScene(INSTANCES_PER_AXIS);
+    SoSeparator *cadRoot = buildCADScene(grid);
     auto t5 = Clock::now();
     double cadBuildMs = Ms(t5 - t4).count();
     printf("  build:  %.1f ms\n", cadBuildMs);
 
     // Find the assembly node (it's the only SoCADAssembly in cadRoot)
     SoCADAssembly *cadAssembly = nullptr;
+    SoCADViewState *cadViewState = nullptr;
     for (int i = 0; i < cadRoot->getNumChildren(); ++i) {
-        cadAssembly = dynamic_cast<SoCADAssembly*>(cadRoot->getChild(i));
-        if (cadAssembly) break;
+        if (!cadAssembly)
+            cadAssembly = dynamic_cast<SoCADAssembly*>(cadRoot->getChild(i));
+        if (!cadViewState)
+            cadViewState = dynamic_cast<SoCADViewState*>(cadRoot->getChild(i));
     }
 
     SbViewportRegion vpCAD(W, H);
@@ -393,22 +399,67 @@ int main(int argc, char **argv)
     cadRenderer.setComponents(SoOffscreenRenderer::RGB);
     cadRenderer.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
 
-    auto t6 = Clock::now();
-    bool cadOk = (cadRenderer.render(cadRoot) == TRUE);
-    auto t7 = Clock::now();
-    double cadRenderMs = Ms(t7 - t6).count();
+    auto benchmarkMode = [&](int mode, bool expectDirect,
+                             std::vector<unsigned char>& image,
+                             double& averageMs) {
+        if (!cadViewState) return false;
+        cadViewState->softwareWireMode.setValue(mode);
+        if (cadRenderer.render(cadRoot) != TRUE) return false;
+        auto begin = Clock::now();
+        for (int i = 0; i < repeats; ++i) {
+            if (cadRenderer.render(cadRoot) != TRUE) return false;
+        }
+        if (!cadAssembly ||
+            cadAssembly->lastRenderUsedDirectSoftwareWire() != expectDirect)
+            return false;
+        auto end = Clock::now();
+        averageMs = Ms(end - begin).count() / repeats;
+        const unsigned char *buffer = cadRenderer.getBuffer();
+        if (!buffer) return false;
+        image.assign(buffer, buffer + static_cast<size_t>(W) * H * 3);
+        return true;
+    };
+
+    std::vector<unsigned char> cadQualityImage;
+    std::vector<unsigned char> cadFastImage;
+    double cadQualityMs = 0.0;
+    double cadFastMs = 0.0;
+#if defined(OBOL_SWRAST_BUILD) && !defined(OBOL_DUAL_GL_BUILD)
+    // The direct FAST path writes into the OSMesa software framebuffer.
+    // System-GL and dual-GL tests render through GLX, where FAST deliberately
+    // falls back to the retained renderer because no software framebuffer is
+    // exposed by the active context manager.
+    constexpr bool fastUsesDirectSoftwareWire = true;
+#else
+    constexpr bool fastUsesDirectSoftwareWire = false;
+#endif
+    bool cadQualityOk = benchmarkMode(SoCADViewState::SOFTWARE_WIRE_QUALITY,
+        false, cadQualityImage, cadQualityMs);
+    bool cadFastOk = benchmarkMode(SoCADViewState::SOFTWARE_WIRE_FAST,
+        fastUsesDirectSoftwareWire, cadFastImage, cadFastMs);
+    bool cadOk = cadQualityOk && cadFastOk;
+    double cadRenderMs = cadFastMs;
 
     // Report which rendering tier was selected
     static const char *kTierName[] = {
         "Tier 0 (immediate-mode, GL 1.1 fallback)",
-        "Tier 1 (VBO-loop, GL 2.0 / GLSL 1.10)",
+        "Tier 1 (retained VBO loop)",
         "Tier 2 (instanced, GL 3.1+)",
+        "Tier 3 (flattened wire batch, GL 2.0+)",
     };
     int tier = cadAssembly ? cadAssembly->lastRenderTier() : -1;
-    const char *tierStr = (tier >= 0 && tier <= 2) ? kTierName[tier] : "unknown";
-    printf("  render: %.1f ms  (ok=%d)  [%s]\n", cadRenderMs, (int)cadOk, tierStr);
+    const char *tierStr = (tier >= 0 && tier <= 3) ? kTierName[tier] : "unknown";
+    printf("  quality render: %.3f ms/frame  (ok=%d)  [%s]\n",
+           cadQualityMs, (int)cadQualityOk, tierStr);
+    printf("  fast render:    %.3f ms/frame  (ok=%d)\n",
+           cadFastMs, (int)cadFastOk);
+    if (cadFastMs > 0.0)
+        printf("  fast speedup:   %.2fx\n", cadQualityMs / cadFastMs);
+    if (!cadQualityImage.empty() && !cadFastImage.empty())
+        printf("  quality/fast pixel MAD: %.2f / 255\n",
+               pixelMAD(cadQualityImage.data(), cadFastImage.data(), W, H));
 
-    const unsigned char *cadBuf = cadOk ? cadRenderer.getBuffer() : nullptr;
+    const unsigned char *cadBuf = cadOk ? cadFastImage.data() : nullptr;
     int cadNonBlack = cadBuf ? countNonBlack(cadBuf, W, H) : 0;
     printf("  non-black pixels: %d / %d  (%.1f%%)\n",
            cadNonBlack, W*H, 100.0 * cadNonBlack / (W*H));
@@ -493,7 +544,7 @@ int main(int argc, char **argv)
     // -----------------------------------------------------------------------
     printf("\n--- Orthographic: scene-graph approach ---\n");
 
-    SoSeparator *sgOrthoRoot = buildSceneGraph(INSTANCES_PER_AXIS);
+    SoSeparator *sgOrthoRoot = buildSceneGraph(grid);
     swapToOrthoCamera(sgOrthoRoot);
 
     SbViewportRegion vpSGO(W, H);
@@ -521,7 +572,7 @@ int main(int argc, char **argv)
     // -----------------------------------------------------------------------
     printf("\n--- Orthographic: CAD assembly approach ---\n");
 
-    SoSeparator *cadOrthoRoot = buildCADScene(INSTANCES_PER_AXIS);
+    SoSeparator *cadOrthoRoot = buildCADScene(grid);
     swapToOrthoCamera(cadOrthoRoot);
 
     SbViewportRegion vpCADO(W, H);

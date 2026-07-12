@@ -39,6 +39,20 @@ if(EXISTS "${PROJECT_SOURCE_DIR}/external/osmesa/CMakeLists.txt")
     # Add the osmesa subproject
     add_subdirectory("${PROJECT_SOURCE_DIR}/external/osmesa" osmesa_build EXCLUDE_FROM_ALL)
 
+    # OSMesa is added before Obol establishes its global output directories,
+    # so set them explicitly to keep the runtime DLL beside Obol executables.
+    set_target_properties(osmesa PROPERTIES
+        ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+    foreach(_config ${CMAKE_CONFIGURATION_TYPES})
+        string(TOUPPER "${_config}" _config_upper)
+        set_target_properties(osmesa PROPERTIES
+            ARCHIVE_OUTPUT_DIRECTORY_${_config_upper} "${CMAKE_BINARY_DIR}/lib"
+            LIBRARY_OUTPUT_DIRECTORY_${_config_upper} "${CMAKE_BINARY_DIR}/lib"
+            RUNTIME_OUTPUT_DIRECTORY_${_config_upper} "${CMAKE_BINARY_DIR}/bin")
+    endforeach()
+
     # Create an interface wrapper to avoid export issues
     if(NOT TARGET osmesa_interface)
         add_library(osmesa_interface INTERFACE)

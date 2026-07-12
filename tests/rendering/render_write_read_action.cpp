@@ -177,7 +177,7 @@ static bool test2_writeReadFile()
 {
     SoSeparator *origRoot = buildScene();
 
-    const char *tmpPath = "/tmp/render_write_read_test.iv";
+    const char *tmpPath = "render_write_read_test.iv";
 
     // Write to file
     SoOutput out;

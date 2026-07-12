@@ -97,6 +97,9 @@ struct CadRepKey {
 struct CadVisibleInstance {
     std::array<float, 16> transform = {};   ///< Column-major 4×4
     std::array<uint8_t, 4> rgba     = {204, 204, 204, 255}; ///< RGBA8
+    float lineWidth = 1.0f;
+    uint16_t linePattern = 0xffffu;
+    uint16_t linePatternFactor = 1u;
     uint32_t partIndex = 0;
     uint32_t flags     = 0;   ///< bit 0: selected; bit 1: hovered
     InstanceId instanceId;
@@ -120,6 +123,7 @@ struct CadDrawItem {
     CadRepKey rep;
     uint32_t  baseInstance   = 0; ///< First CadVisibleInstance index for this item
     uint32_t  instanceCount  = 0; ///< Number of instances sharing this part rep
+    bool      customWireStyle = false; ///< Wire run requires width/stipple state
     // GPU-resolved at render time:
     uint32_t  vertexOffset   = 0; ///< Byte offset into vertex buffer
     uint32_t  indexOffset    = 0; ///< Byte offset into index buffer
@@ -138,8 +142,12 @@ struct CadDrawItem {
  * database and LoD choices, then hands it to CadRendererGL to execute.
  */
 struct CadFramePlan {
+    /** Changes whenever immutable presentation data in this plan changes. */
+    uint64_t revision = 0;
+
     /** All visible instances, sorted by (partIndex, repLevel) for batching. */
     std::vector<CadVisibleInstance> visibleInstances;
+    bool hasCustomWireStyle = false;
 
     /**
      * Draw items for the wire pass.  Each item refers to a contiguous run

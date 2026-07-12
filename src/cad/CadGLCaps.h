@@ -58,6 +58,8 @@ namespace internal {
 struct CadGLCaps {
     /** VBO functions available (GL 1.5 / ARB_vertex_buffer_object). */
     bool hasVBO           = false;
+    /** Fixed-function vertex-array calls needed by the compatibility VBO tier. */
+    bool hasFixedVertexArrays = false;
     /** GLSL shader objects available (GL 2.0 / ARB_shader_objects). */
     bool hasShaderObjects = false;
     /** Vertex Array Objects available (GL 3.0 / ARB_vertex_array_object). */
@@ -66,6 +68,10 @@ struct CadGLCaps {
     bool hasInstancing    = false;
     /** glVertexAttribDivisor available (GL 3.3 / ARB_instanced_arrays). */
     bool hasAttribDivisor = false;
+    /** Compatibility-profile fixed-function line stippling is available. */
+    bool hasLineStipple   = false;
+    /** Context is backed by a known CPU software rasterizer. */
+    bool isSoftwareRenderer = false;
     /**
      * True when GLSL vertex shaders actually execute during glDrawElements.
      * Some older software renderers (e.g. Mesa 7.x swrast) report
@@ -85,6 +91,11 @@ struct CadGLCaps {
     /** True if the minimum requirements for Tier-1 VBO-loop rendering are met. */
     bool canUseVbo() const {
         return hasVBO && hasShaderObjects && hasGLSLDraw;
+    }
+
+    /** True when retained VBOs can be drawn without GLSL. */
+    bool canUseFixedVbo() const {
+        return hasVBO && hasFixedVertexArrays;
     }
 
     /** Detect capabilities from the given GL context. */

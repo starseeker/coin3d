@@ -612,7 +612,7 @@ SoGLLazyElement::send(SoState * stateptr, uint32_t mask) const
         break;
       case BLENDING_CASE:
         if (this->coinstate.blending) {
-          if (this->glstate.blending != this->coinstate.blending ||
+          if (this->glstate.blending != static_cast<int32_t>(this->coinstate.blending) ||
               this->coinstate.blend_sfactor != this->glstate.blend_sfactor ||
               this->coinstate.blend_dfactor != this->glstate.blend_dfactor ||
               this->coinstate.alpha_blend_sfactor != this->glstate.alpha_blend_sfactor ||
@@ -631,7 +631,7 @@ SoGLLazyElement::send(SoState * stateptr, uint32_t mask) const
           }
         }
         else {
-          if (this->coinstate.blending != this->glstate.blending) {
+          if (static_cast<int32_t>(this->coinstate.blending) != this->glstate.blending) {
             this->disableBlending();
           }
         }
@@ -651,19 +651,19 @@ SoGLLazyElement::send(SoState * stateptr, uint32_t mask) const
         }
         break;
       case CULLING_CASE:
-        if (this->glstate.culling != this->coinstate.culling) {
+        if (this->glstate.culling != static_cast<int32_t>(this->coinstate.culling)) {
           this->sendBackfaceCulling(this->coinstate.culling);
         }
         break;
       case TWOSIDE_CASE:
-        if (this->glstate.twoside != this->coinstate.twoside) {
+        if (this->glstate.twoside != static_cast<int32_t>(this->coinstate.twoside)) {
           SoGLShaderProgram * prog = SoGLShaderProgramElement::get(stateptr);
           if (prog) prog->updateCoinParameter(stateptr, SbName("coin_two_sided_lighting"), this->coinstate.twoside);
           this->sendTwosideLighting(this->coinstate.twoside);
         }
         break;
       case SHADE_MODEL_CASE:
-        if (this->glstate.flatshading != this->coinstate.flatshading) {
+        if (this->glstate.flatshading != static_cast<int32_t>(this->coinstate.flatshading)) {
           this->sendFlatshading(this->coinstate.flatshading);
         }
         break;
@@ -786,7 +786,7 @@ SoGLLazyElement::sendFlatshading(SoState * state, const SbBool onoff)
 {
   SbBool cacheopen = state->isCacheOpen();
   SoGLLazyElement * elem = getInstance(state);
-  if (elem->glstate.flatshading != onoff) {
+  if (elem->glstate.flatshading != static_cast<int32_t>(onoff)) {
     elem->sendFlatshading(onoff);
     if (cacheopen) elem->lazyDidSet(SHADE_MODEL_MASK);
   }
@@ -1147,7 +1147,7 @@ SoGLLazyElement::preCacheCall(const SoState * state, const GLState * prestate)
         }
         break;
       case BLENDING_CASE:
-        if (curr.blending != prestate->blending) {
+        if (static_cast<int32_t>(curr.blending) != prestate->blending) {
           GLLAZY_DEBUG("blending failed");
           return FALSE;
         }
@@ -1174,19 +1174,19 @@ SoGLLazyElement::preCacheCall(const SoState * state, const GLState * prestate)
         }
         break;
       case CULLING_CASE:
-        if (curr.culling != prestate->culling) {
+        if (static_cast<int32_t>(curr.culling) != prestate->culling) {
           GLLAZY_DEBUG("culling failed");
           return FALSE;
         }
         break;
       case TWOSIDE_CASE:
-        if (curr.twoside != prestate->twoside) {
+        if (static_cast<int32_t>(curr.twoside) != prestate->twoside) {
           GLLAZY_DEBUG("twoside failed");
           return FALSE;
         }
         break;
       case SHADE_MODEL_CASE:
-        if (curr.flatshading != prestate->flatshading) {
+        if (static_cast<int32_t>(curr.flatshading) != prestate->flatshading) {
           GLLAZY_DEBUG("shade model failed");
           return FALSE;
         }

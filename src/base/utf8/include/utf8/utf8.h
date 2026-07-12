@@ -834,6 +834,6 @@ bool operator !=(const exception& lhs, const exception& rhs)
 #endif
 #include <utf8/ini.h>
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(UTF8_NO_AUTOLINK)
 #pragma comment (lib, "utf8")
 #endif

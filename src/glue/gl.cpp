@@ -323,6 +323,8 @@ const SoGLContext * osmesa_SoGLContext_instance(int contextid);
 void osmesa_SoGLContext_destruct(uint32_t contextid);
 #endif /* OBOL_DUAL_GL_BUILD */
 
+static SoDB::ContextManager * coingl_get_context_manager(int contextid);
+
 /* Public C API: register an OSMesa-backed render-context ID.
    Must be called (once, at context-ID assignment time) by the application
    or CoinOffscreenGLCanvas before the first SoGLContext_instance() call
@@ -364,9 +366,14 @@ coingl_unregister_osmesa_context(int contextid)
 coingl_context_backend_is_osmesa(int contextid)
 {
 #if defined(OBOL_DUAL_GL_BUILD)
-  std::lock_guard<std::mutex> lock(coingl_osmesa_context_mutex);
-  return (coingl_osmesa_context_ids &&
-          coingl_osmesa_context_ids->count(contextid) > 0) ? 1 : 0;
+  {
+    std::lock_guard<std::mutex> lock(coingl_osmesa_context_mutex);
+    if (coingl_osmesa_context_ids &&
+        coingl_osmesa_context_ids->count(contextid) > 0) return 1;
+  }
+  SoDB::ContextManager * mgr = coingl_get_context_manager(contextid);
+  if (!mgr) mgr = SoDB::getContextManager();
+  return (mgr && mgr->isOSMesaContext(NULL)) ? 1 : 0;
 #else
   (void)contextid;
   return 0;
@@ -797,6 +804,13 @@ SoGLContext_getprocaddress(const SoGLContext * glue, const char * symname)
 #ifndef SOGL_PREFIX_SET
   if (ptr == NULL) {
     SoDB::ContextManager * mgr = static_cast<SoDB::ContextManager*>(glue->context_manager);
+    /* Cache-context IDs can briefly outlive the offscreen canvas that
+       registered them (for example while SoSceneTexture2 is rebuilding an
+       inner render target).  In that transition the GL context is still
+       current, but the per-ID registry entry has already been removed.
+       Fall back to the application's manager so WGL/GLX extension symbols
+       remain resolvable instead of treating a modern context as OpenGL 1.1. */
+    if (!mgr) mgr = SoDB::getContextManager();
     if (mgr) {
       ptr = mgr->getProcAddress(symname);
       if (SoGLContext_debug()) {
@@ -813,6 +827,66 @@ SoGLContext_getprocaddress(const SoGLContext * glue, const char * symname)
   }
   return ptr;
 }
+
+#ifndef SOGL_PREFIX_SET
+static void
+glglue_core_get_object_parameter(OBOL_GLhandle object, GLenum pname,
+                                 GLint *params)
+{
+  const SoGLContext *glue = sogl_current_render_glue();
+  if (!glue || !params) return;
+  typedef GLboolean (*is_object_t)(GLuint);
+  typedef void (*get_object_t)(GLuint, GLenum, GLint *);
+  is_object_t isshader = (is_object_t)SoGLContext_getprocaddress(glue, "glIsShader");
+  get_object_t getshader = (get_object_t)SoGLContext_getprocaddress(glue, "glGetShaderiv");
+  get_object_t getprogram = (get_object_t)SoGLContext_getprocaddress(glue, "glGetProgramiv");
+  if (isshader && isshader((GLuint)object)) {
+    if (getshader) getshader((GLuint)object, pname, params);
+  } else if (getprogram) {
+    getprogram((GLuint)object, pname, params);
+  }
+}
+
+static void
+glglue_core_delete_object(OBOL_GLhandle object)
+{
+  const SoGLContext *glue = sogl_current_render_glue();
+  if (!glue) return;
+  typedef GLboolean (*is_object_t)(GLuint);
+  typedef void (*delete_object_t)(GLuint);
+  is_object_t isshader = (is_object_t)SoGLContext_getprocaddress(glue, "glIsShader");
+  delete_object_t deleteshader =
+    (delete_object_t)SoGLContext_getprocaddress(glue, "glDeleteShader");
+  delete_object_t deleteprogram =
+    (delete_object_t)SoGLContext_getprocaddress(glue, "glDeleteProgram");
+  if (isshader && isshader((GLuint)object)) {
+    if (deleteshader) deleteshader((GLuint)object);
+  } else if (deleteprogram) {
+    deleteprogram((GLuint)object);
+  }
+}
+
+static void
+glglue_core_get_info_log(OBOL_GLhandle object, GLsizei maxLength,
+                         GLsizei *length, OBOL_GLchar *infoLog)
+{
+  const SoGLContext *glue = sogl_current_render_glue();
+  if (!glue) return;
+  typedef GLboolean (*is_object_t)(GLuint);
+  typedef void (*get_log_t)(GLuint, GLsizei, GLsizei *, char *);
+  is_object_t isshader = (is_object_t)SoGLContext_getprocaddress(glue, "glIsShader");
+  get_log_t getshaderlog =
+    (get_log_t)SoGLContext_getprocaddress(glue, "glGetShaderInfoLog");
+  get_log_t getprogramlog =
+    (get_log_t)SoGLContext_getprocaddress(glue, "glGetProgramInfoLog");
+  if (isshader && isshader((GLuint)object)) {
+    if (getshaderlog)
+      getshaderlog((GLuint)object, maxLength, length, (char *)infoLog);
+  } else if (getprogramlog) {
+    getprogramlog((GLuint)object, maxLength, length, (char *)infoLog);
+  }
+}
+#endif /* !SOGL_PREFIX_SET */
 
 /* Global dictionary which stores the mappings from the context IDs to
    actual SoGLContext instances. */
@@ -2205,6 +2279,18 @@ w->glAreTexturesResident = (OBOL_PFNGLARETEXTURESRESIDENTPROC)PROC(w, glAreTextu
   }
 #endif /* GL_ARB_vertex_program */
 
+  if (SoGLContext_glversion_matches_at_least(w, 2, 0, 0)) {
+    if (!w->glVertexAttribPointerARB)
+      w->glVertexAttribPointerARB = (OBOL_PFNGLVERTEXATTRIBPOINTERARBPROC)
+        SoGLContext_getprocaddress(w, "glVertexAttribPointer");
+    if (!w->glEnableVertexAttribArrayARB)
+      w->glEnableVertexAttribArrayARB = (OBOL_PFNGLENABLEVERTEXATTRIBARRAYARBPROC)
+        SoGLContext_getprocaddress(w, "glEnableVertexAttribArray");
+    if (!w->glDisableVertexAttribArrayARB)
+      w->glDisableVertexAttribArrayARB = (OBOL_PFNGLDISABLEVERTEXATTRIBARRAYARBPROC)
+        SoGLContext_getprocaddress(w, "glDisableVertexAttribArray");
+  }
+
 
 #ifdef GL_ARB_vertex_shader
 
@@ -2239,6 +2325,33 @@ w->glAreTexturesResident = (OBOL_PFNGLARETEXTURESRESIDENTPROC)PROC(w, glAreTextu
 #undef BIND_FUNCTION_WITH_WARN
   }
 #endif /* GL_ARB_vertex_shader */
+
+  /* Core GL 2.x contexts are not required to repeat the promoted ARB
+     extension strings.  Most desktop drivers retain the ABI-compatible ARB
+     entry points, so resolve them directly before declaring vertex shader
+     support unavailable. */
+#ifdef GL_ARB_vertex_shader
+  if (!w->has_arb_vertex_shader &&
+      SoGLContext_glversion_matches_at_least(w, 2, 0, 0)) {
+    w->glBindAttribLocationARB =
+      (OBOL_PFNGLBINDATTRIBLOCATIONARBPROC)PROC(w, glBindAttribLocationARB);
+    w->glGetActiveAttribARB =
+      (OBOL_PFNGLGETACTIVEATTRIBARBPROC)PROC(w, glGetActiveAttribARB);
+    w->glGetAttribLocationARB =
+      (OBOL_PFNGLGETATTRIBLOCATIONARBPROC)PROC(w, glGetAttribLocationARB);
+    if (!w->glBindAttribLocationARB)
+      w->glBindAttribLocationARB = (OBOL_PFNGLBINDATTRIBLOCATIONARBPROC)
+        SoGLContext_getprocaddress(w, "glBindAttribLocation");
+    if (!w->glGetActiveAttribARB)
+      w->glGetActiveAttribARB = (OBOL_PFNGLGETACTIVEATTRIBARBPROC)
+        SoGLContext_getprocaddress(w, "glGetActiveAttrib");
+    if (!w->glGetAttribLocationARB)
+      w->glGetAttribLocationARB = (OBOL_PFNGLGETATTRIBLOCATIONARBPROC)
+        SoGLContext_getprocaddress(w, "glGetAttribLocation");
+    w->has_arb_vertex_shader = w->glBindAttribLocationARB &&
+      w->glGetActiveAttribARB && w->glGetAttribLocationARB;
+  }
+#endif
 
 
   w->glGetUniformLocationARB = NULL;
@@ -2339,6 +2452,114 @@ w->glAreTexturesResident = (OBOL_PFNGLARETEXTURESRESIDENTPROC)PROC(w, glAreTextu
 #undef BIND_FUNCTION_WITH_WARN
   }
 #endif /* GL_ARB_shader_objects */
+
+  /* As above, promoted GLSL functionality may be present without the old
+     extension string.  Desktop GL implementations expose the ARB aliases
+     for compatibility; binding them here lets modern Tk/Qt contexts use the
+     retained shader and instancing tiers. */
+#ifdef GL_ARB_shader_objects
+  if (!w->has_arb_shader_objects &&
+      SoGLContext_glversion_matches_at_least(w, 2, 0, 0)) {
+#define BIND_CORE_ARB(_func_, _type_) w->_func_ = (_type_)PROC(w, _func_)
+    BIND_CORE_ARB(glGetUniformLocationARB, OBOL_PFNGLGETUNIFORMLOCATIONARBPROC);
+    BIND_CORE_ARB(glGetActiveUniformARB, OBOL_PFNGLGETACTIVEUNIFORMARBPROC);
+    BIND_CORE_ARB(glUniform1fARB, OBOL_PFNGLUNIFORM1FARBPROC);
+    BIND_CORE_ARB(glUniform2fARB, OBOL_PFNGLUNIFORM2FARBPROC);
+    BIND_CORE_ARB(glUniform3fARB, OBOL_PFNGLUNIFORM3FARBPROC);
+    BIND_CORE_ARB(glUniform4fARB, OBOL_PFNGLUNIFORM4FARBPROC);
+    BIND_CORE_ARB(glCreateShaderObjectARB, OBOL_PFNGLCREATESHADEROBJECTARBPROC);
+    BIND_CORE_ARB(glShaderSourceARB, OBOL_PFNGLSHADERSOURCEARBPROC);
+    BIND_CORE_ARB(glCompileShaderARB, OBOL_PFNGLCOMPILESHADERARBPROC);
+    BIND_CORE_ARB(glGetObjectParameterivARB, OBOL_PFNGLGETOBJECTPARAMETERIVARBPROC);
+    BIND_CORE_ARB(glDeleteObjectARB, OBOL_PFNGLDELETEOBJECTARBPROC);
+    BIND_CORE_ARB(glAttachObjectARB, OBOL_PFNGLATTACHOBJECTARBPROC);
+    BIND_CORE_ARB(glDetachObjectARB, OBOL_PFNGLDETACHOBJECTARBPROC);
+    BIND_CORE_ARB(glGetInfoLogARB, OBOL_PFNGLGETINFOLOGARBPROC);
+    BIND_CORE_ARB(glLinkProgramARB, OBOL_PFNGLLINKPROGRAMARBPROC);
+    BIND_CORE_ARB(glUseProgramObjectARB, OBOL_PFNGLUSEPROGRAMOBJECTARBPROC);
+    BIND_CORE_ARB(glCreateProgramObjectARB, OBOL_PFNGLCREATEPROGRAMOBJECTARBPROC);
+    BIND_CORE_ARB(glUniform1fvARB, OBOL_PFNGLUNIFORM1FVARBPROC);
+    BIND_CORE_ARB(glUniform2fvARB, OBOL_PFNGLUNIFORM2FVARBPROC);
+    BIND_CORE_ARB(glUniform3fvARB, OBOL_PFNGLUNIFORM3FVARBPROC);
+    BIND_CORE_ARB(glUniform4fvARB, OBOL_PFNGLUNIFORM4FVARBPROC);
+    BIND_CORE_ARB(glUniform1iARB, OBOL_PFNGLUNIFORM1IARBPROC);
+    BIND_CORE_ARB(glUniform2iARB, OBOL_PFNGLUNIFORM2IARBPROC);
+    BIND_CORE_ARB(glUniform3iARB, OBOL_PFNGLUNIFORM3IARBPROC);
+    BIND_CORE_ARB(glUniform4iARB, OBOL_PFNGLUNIFORM4IARBPROC);
+    BIND_CORE_ARB(glUniform1ivARB, OBOL_PFNGLUNIFORM1IVARBPROC);
+    BIND_CORE_ARB(glUniform2ivARB, OBOL_PFNGLUNIFORM2IVARBPROC);
+    BIND_CORE_ARB(glUniform3ivARB, OBOL_PFNGLUNIFORM3IVARBPROC);
+    BIND_CORE_ARB(glUniform4ivARB, OBOL_PFNGLUNIFORM4IVARBPROC);
+    BIND_CORE_ARB(glUniformMatrix2fvARB, OBOL_PFNGLUNIFORMMATRIX2FVARBPROC);
+    BIND_CORE_ARB(glUniformMatrix3fvARB, OBOL_PFNGLUNIFORMMATRIX3FVARBPROC);
+    BIND_CORE_ARB(glUniformMatrix4fvARB, OBOL_PFNGLUNIFORMMATRIX4FVARBPROC);
+#undef BIND_CORE_ARB
+
+#define BIND_PROMOTED(_field_, _type_, _core_) \
+    if (!w->_field_) w->_field_ = (_type_)SoGLContext_getprocaddress(w, _core_)
+    BIND_PROMOTED(glGetUniformLocationARB, OBOL_PFNGLGETUNIFORMLOCATIONARBPROC, "glGetUniformLocation");
+    BIND_PROMOTED(glGetActiveUniformARB, OBOL_PFNGLGETACTIVEUNIFORMARBPROC, "glGetActiveUniform");
+    BIND_PROMOTED(glUniform1fARB, OBOL_PFNGLUNIFORM1FARBPROC, "glUniform1f");
+    BIND_PROMOTED(glUniform2fARB, OBOL_PFNGLUNIFORM2FARBPROC, "glUniform2f");
+    BIND_PROMOTED(glUniform3fARB, OBOL_PFNGLUNIFORM3FARBPROC, "glUniform3f");
+    BIND_PROMOTED(glUniform4fARB, OBOL_PFNGLUNIFORM4FARBPROC, "glUniform4f");
+    BIND_PROMOTED(glCreateShaderObjectARB, OBOL_PFNGLCREATESHADEROBJECTARBPROC, "glCreateShader");
+    BIND_PROMOTED(glShaderSourceARB, OBOL_PFNGLSHADERSOURCEARBPROC, "glShaderSource");
+    BIND_PROMOTED(glCompileShaderARB, OBOL_PFNGLCOMPILESHADERARBPROC, "glCompileShader");
+    BIND_PROMOTED(glAttachObjectARB, OBOL_PFNGLATTACHOBJECTARBPROC, "glAttachShader");
+    BIND_PROMOTED(glDetachObjectARB, OBOL_PFNGLDETACHOBJECTARBPROC, "glDetachShader");
+    BIND_PROMOTED(glLinkProgramARB, OBOL_PFNGLLINKPROGRAMARBPROC, "glLinkProgram");
+    BIND_PROMOTED(glUseProgramObjectARB, OBOL_PFNGLUSEPROGRAMOBJECTARBPROC, "glUseProgram");
+    BIND_PROMOTED(glCreateProgramObjectARB, OBOL_PFNGLCREATEPROGRAMOBJECTARBPROC, "glCreateProgram");
+    BIND_PROMOTED(glUniform1fvARB, OBOL_PFNGLUNIFORM1FVARBPROC, "glUniform1fv");
+    BIND_PROMOTED(glUniform2fvARB, OBOL_PFNGLUNIFORM2FVARBPROC, "glUniform2fv");
+    BIND_PROMOTED(glUniform3fvARB, OBOL_PFNGLUNIFORM3FVARBPROC, "glUniform3fv");
+    BIND_PROMOTED(glUniform4fvARB, OBOL_PFNGLUNIFORM4FVARBPROC, "glUniform4fv");
+    BIND_PROMOTED(glUniform1iARB, OBOL_PFNGLUNIFORM1IARBPROC, "glUniform1i");
+    BIND_PROMOTED(glUniform2iARB, OBOL_PFNGLUNIFORM2IARBPROC, "glUniform2i");
+    BIND_PROMOTED(glUniform3iARB, OBOL_PFNGLUNIFORM3IARBPROC, "glUniform3i");
+    BIND_PROMOTED(glUniform4iARB, OBOL_PFNGLUNIFORM4IARBPROC, "glUniform4i");
+    BIND_PROMOTED(glUniform1ivARB, OBOL_PFNGLUNIFORM1IVARBPROC, "glUniform1iv");
+    BIND_PROMOTED(glUniform2ivARB, OBOL_PFNGLUNIFORM2IVARBPROC, "glUniform2iv");
+    BIND_PROMOTED(glUniform3ivARB, OBOL_PFNGLUNIFORM3IVARBPROC, "glUniform3iv");
+    BIND_PROMOTED(glUniform4ivARB, OBOL_PFNGLUNIFORM4IVARBPROC, "glUniform4iv");
+    BIND_PROMOTED(glUniformMatrix2fvARB, OBOL_PFNGLUNIFORMMATRIX2FVARBPROC, "glUniformMatrix2fv");
+    BIND_PROMOTED(glUniformMatrix3fvARB, OBOL_PFNGLUNIFORMMATRIX3FVARBPROC, "glUniformMatrix3fv");
+    BIND_PROMOTED(glUniformMatrix4fvARB, OBOL_PFNGLUNIFORMMATRIX4FVARBPROC, "glUniformMatrix4fv");
+#undef BIND_PROMOTED
+#ifndef SOGL_PREFIX_SET
+    if (!w->glGetObjectParameterivARB &&
+        SoGLContext_getprocaddress(w, "glGetShaderiv") &&
+        SoGLContext_getprocaddress(w, "glGetProgramiv"))
+      w->glGetObjectParameterivARB = glglue_core_get_object_parameter;
+    if (!w->glDeleteObjectARB &&
+        SoGLContext_getprocaddress(w, "glDeleteShader") &&
+        SoGLContext_getprocaddress(w, "glDeleteProgram"))
+      w->glDeleteObjectARB = glglue_core_delete_object;
+    if (!w->glGetInfoLogARB &&
+        SoGLContext_getprocaddress(w, "glGetShaderInfoLog") &&
+        SoGLContext_getprocaddress(w, "glGetProgramInfoLog"))
+      w->glGetInfoLogARB = glglue_core_get_info_log;
+#endif /* !SOGL_PREFIX_SET */
+    w->has_arb_shader_objects = w->glCreateShaderObjectARB &&
+      w->glShaderSourceARB && w->glCompileShaderARB &&
+      w->glGetObjectParameterivARB && w->glDeleteObjectARB &&
+      w->glAttachObjectARB && w->glLinkProgramARB &&
+      w->glUseProgramObjectARB && w->glCreateProgramObjectARB &&
+      w->glGetUniformLocationARB && w->glUniformMatrix4fvARB;
+
+  }
+
+#ifdef SOGL_PREFIX_SET
+  /* The bundled Mesa 7.0.4 OSMesa exports ARB shader symbols but its
+     software linker is not usable on modern Windows and faults inside
+     glLinkProgramARB.  Treat it as the fixed-function renderer it safely
+     provides.  System GL and newer OSMesa implementations are unaffected. */
+  if (w->versionstr && strstr(w->versionstr, "Mesa 7.0.4")) {
+    w->has_arb_shader_objects = FALSE;
+  }
+#endif
+#endif
 
   w->glGenQueries = NULL; /* so that SoGLContext_has_occlusion_query() works  */
 #if defined(GL_VERSION_1_5)

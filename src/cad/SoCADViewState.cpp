@@ -70,7 +70,9 @@ SoCADViewStateElement::matches(const SoElement *element) const
         this->viewState_.lodMode == other->viewState_.lodMode &&
         this->viewState_.lodScale == other->viewState_.lodScale &&
         this->viewState_.selectedFullDetail ==
-            other->viewState_.selectedFullDetail;
+            other->viewState_.selectedFullDetail &&
+        this->viewState_.softwareWireMode ==
+            other->viewState_.softwareWireMode;
 }
 
 SoElement *
@@ -133,11 +135,18 @@ SoCADViewState::SoCADViewState(void)
     SO_NODE_ADD_FIELD(lodMode, (LOD_INHERIT));
     SO_NODE_ADD_FIELD(lodScale, (1.0f));
     SO_NODE_ADD_FIELD(selectedFullDetail, (TRUE));
+    SO_NODE_ADD_FIELD(softwareWireMode, (SOFTWARE_WIRE_INHERIT));
 
     SO_NODE_DEFINE_ENUM_VALUE(LodMode, LOD_INHERIT);
     SO_NODE_DEFINE_ENUM_VALUE(LodMode, LOD_DISABLED);
     SO_NODE_DEFINE_ENUM_VALUE(LodMode, LOD_ENABLED);
     SO_NODE_SET_SF_ENUM_TYPE(lodMode, LodMode);
+
+    SO_NODE_DEFINE_ENUM_VALUE(SoftwareWireMode, SOFTWARE_WIRE_INHERIT);
+    SO_NODE_DEFINE_ENUM_VALUE(SoftwareWireMode, SOFTWARE_WIRE_AUTO);
+    SO_NODE_DEFINE_ENUM_VALUE(SoftwareWireMode, SOFTWARE_WIRE_QUALITY);
+    SO_NODE_DEFINE_ENUM_VALUE(SoftwareWireMode, SOFTWARE_WIRE_FAST);
+    SO_NODE_SET_SF_ENUM_TYPE(softwareWireMode, SoftwareWireMode);
 }
 
 SoCADViewState::~SoCADViewState() = default;
@@ -178,6 +187,22 @@ SoCADViewState::doAction(SoAction *action)
     if (!this->selectedFullDetail.isIgnored())
         viewState.selectedFullDetail =
             this->selectedFullDetail.getValue() ? true : false;
+    if (!this->softwareWireMode.isIgnored()) {
+        switch (this->softwareWireMode.getValue()) {
+            case SOFTWARE_WIRE_QUALITY:
+                viewState.softwareWireMode =
+                    obol::CadSoftwareWireMode::QUALITY;
+                break;
+            case SOFTWARE_WIRE_FAST:
+                viewState.softwareWireMode = obol::CadSoftwareWireMode::FAST;
+                break;
+            case SOFTWARE_WIRE_AUTO:
+                viewState.softwareWireMode = obol::CadSoftwareWireMode::AUTO;
+                break;
+            default:
+                break;
+        }
+    }
 
     SoCADViewStateElement::set(state, viewState);
 }

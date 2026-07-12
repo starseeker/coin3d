@@ -272,6 +272,18 @@ public:
                                       unsigned int & height) const
     { width = 0; height = 0; }
 
+    /**
+     * Return the writable color buffer for the software context that is
+     * current on this thread.  The pointer is transient and is valid only
+     * while that context remains current.  Backends with no directly
+     * writable framebuffer return FALSE.
+     */
+    virtual SbBool getCurrentSoftwareFramebuffer(unsigned char *& pixels,
+                                                  unsigned int & width,
+                                                  unsigned int & height,
+                                                  unsigned int & components)
+    { pixels = nullptr; width = height = components = 0; return FALSE; }
+
     // --- Optional alternative rendering path -------------------------------
     // If this returns TRUE, SoOffscreenRenderer uses 'pixels' directly and
     // skips the GL pipeline.  'pixels' is a pre-allocated row-major buffer of

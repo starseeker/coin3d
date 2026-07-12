@@ -2406,7 +2406,14 @@ SoField::valueChanged(SbBool resetdefault)
   if (this->changeStatusBits(FLAG_READONLY, TRUE)) {
     this->setDirty(FALSE);
     if (resetdefault) this->setDefault(FALSE);
-    if (this->container) this->startNotify();
+    // A disabled container with no direct field auditors has nowhere to
+    // propagate.  Avoid opening a global notification transaction for bulk
+    // construction, while preserving sensors and field connections.
+    const bool hasauditors = this->hasExtendedStorage() &&
+      this->storage->auditors.getLength() > 0;
+    if (this->container &&
+        (this->container->isNotifyEnabled() || hasauditors))
+      this->startNotify();
     this->clearStatusBits(FLAG_READONLY);
   }
 }

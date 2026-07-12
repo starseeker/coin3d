@@ -70,6 +70,8 @@ void CadGpuResources::deleteWireGpu(CadWireGpu& w, const SoGLContext * glue)
     w.segCount  = 0;
     w.vertCount = 0;
     w.sequentialSegments = false;
+    w.instanceVbo = 0;
+    w.instanceBase = UINT32_MAX;
 }
 
 void CadGpuResources::deleteTriGpu(CadTriGpu& t, const SoGLContext * glue)
@@ -91,6 +93,8 @@ void CadGpuResources::deleteTriGpu(CadTriGpu& t, const SoGLContext * glue)
         t.idxBuf = 0;
     }
     t.idxCount = 0;
+    t.instanceVbo = 0;
+    t.instanceBase = UINT32_MAX;
 }
 
 // ---------------------------------------------------------------------------
@@ -239,7 +243,21 @@ const CadWireGpu* CadGpuResources::wireFor(PartId pid) const
     return &it->second.wire;
 }
 
+CadWireGpu* CadGpuResources::wireFor(PartId pid)
+{
+    auto it = cache_.find(pid);
+    if (it == cache_.end() || it->second.wire.vertCount == 0) return nullptr;
+    return &it->second.wire;
+}
+
 const CadTriGpu* CadGpuResources::triFor(PartId pid) const
+{
+    auto it = cache_.find(pid);
+    if (it == cache_.end() || it->second.tri.idxCount == 0) return nullptr;
+    return &it->second.tri;
+}
+
+CadTriGpu* CadGpuResources::triFor(PartId pid)
 {
     auto it = cache_.find(pid);
     if (it == cache_.end() || it->second.tri.idxCount == 0) return nullptr;
@@ -278,6 +296,38 @@ void CadGpuResources::uploadInstanceData(const void* data, GLsizeiptr byteSize,
     glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
+void CadGpuResources::uploadFlatWire(
+        uint64_t planRevision,
+        const std::vector<float>& positions,
+        const std::vector<CadFlatWireGroup>& groups,
+        const SoGLContext *glue,
+        const CadGLCaps& caps)
+{
+    if (!glue || !caps.hasVBO || positions.empty()) return;
+
+    if (!flatWire_.posBuf)
+        glue->glGenBuffers(1, &flatWire_.posBuf);
+    glue->glBindBuffer(GL_ARRAY_BUFFER, flatWire_.posBuf);
+    glue->glBufferData(GL_ARRAY_BUFFER,
+                       static_cast<GLsizeiptr>(positions.size() * sizeof(float)),
+                       positions.data(), GL_STATIC_DRAW);
+
+    if (!flatWire_.vao && caps.hasVAO && glue->glGenVertexArrays) {
+        glue->glGenVertexArrays(1, &flatWire_.vao);
+        glue->glBindVertexArray(flatWire_.vao);
+        glue->glBindBuffer(GL_ARRAY_BUFFER, flatWire_.posBuf);
+        glue->glVertexAttribPointerARB(0, 3, GL_FLOAT, GL_FALSE,
+                                       3 * sizeof(float), nullptr);
+        glue->glEnableVertexAttribArrayARB(0);
+        glue->glBindVertexArray(0);
+    }
+    glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    flatWire_.planRevision = planRevision;
+    flatWire_.vertexCount = static_cast<GLsizei>(positions.size() / 3);
+    flatWire_.groups = groups;
+}
+
 // ---------------------------------------------------------------------------
 // releaseAll()
 // ---------------------------------------------------------------------------
@@ -292,9 +342,14 @@ void CadGpuResources::releaseAll(const SoGLContext * glue)
         if (instanceVbo_ && glue->glDeleteBuffers) {
             glue->glDeleteBuffers(1, &instanceVbo_);
         }
+        if (flatWire_.vao && glue->glDeleteVertexArrays)
+            glue->glDeleteVertexArrays(1, &flatWire_.vao);
+        if (flatWire_.posBuf && glue->glDeleteBuffers)
+            glue->glDeleteBuffers(1, &flatWire_.posBuf);
     }
     cache_.clear();
     instanceVbo_ = 0;
+    flatWire_ = CadFlatWireGpu();
 }
 
 } // namespace internal

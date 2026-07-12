@@ -745,14 +745,60 @@ SoOffscreenRenderer::getGLRenderAction(void) const
 static void
 pre_render_cb(void * userdata, SoGLRenderAction * action)
 {
-  SoGLContext_glClear(sogl_glue_from_state(action->getState()), GL_DEPTH_BUFFER_BIT|GL_COLOR_BUFFER_BIT);
+  SoOffscreenRendererP * thisp = static_cast<SoOffscreenRendererP *>(userdata);
+  // SoGLRenderAction::apply() initializes its state after renderFromBase()
+  // sets up the action, so publish the per-renderer manager here, after state
+  // initialization and before any scene nodes are traversed.
+  if (thisp)
+    SoContextManagerElement::set(action->getState(),
+                                 thisp->instanceContextManager);
+  SoDB::ContextManager * manager = thisp ? thisp->instanceContextManager : NULL;
+  unsigned char * softwarePixels = NULL;
+  unsigned int softwareWidth = 0, softwareHeight = 0, softwareComponents = 0;
+  const SbBool directSoftwareBackground = thisp && manager &&
+    manager->getCurrentSoftwareFramebuffer(softwarePixels, softwareWidth,
+                                            softwareHeight, softwareComponents) &&
+    softwareComponents == 4;
+
+  SoGLContext_glClear(sogl_glue_from_state(action->getState()),
+                      directSoftwareBackground ? GL_DEPTH_BUFFER_BIT :
+                      (GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT));
   action->setRenderingIsRemote(FALSE);
+
+  if (directSoftwareBackground) {
+    const SbViewportRegion & region = action->getViewportRegion();
+    const SbVec2s origin = region.getViewportOriginPixels();
+    const SbVec2s size = region.getViewportSizePixels();
+    const SbColor & bottom = thisp->has_gradient ?
+      thisp->gradient_bottom : thisp->backgroundcolor;
+    const SbColor & top = thisp->has_gradient ?
+      thisp->gradient_top : thisp->backgroundcolor;
+    for (int y = 0; y < size[1]; ++y) {
+      const int py = origin[1] + y;
+      if (py < 0 || static_cast<unsigned int>(py) >= softwareHeight) continue;
+      const float t = size[1] > 1 ? static_cast<float>(y) /
+        static_cast<float>(size[1] - 1) : 0.0f;
+      const unsigned char color[3] = {
+        static_cast<unsigned char>((bottom[0] * (1.0f - t) + top[0] * t) * 255.0f),
+        static_cast<unsigned char>((bottom[1] * (1.0f - t) + top[1] * t) * 255.0f),
+        static_cast<unsigned char>((bottom[2] * (1.0f - t) + top[2] * t) * 255.0f)
+      };
+      const int xBegin = SbMax(0, static_cast<int>(origin[0]));
+      const int xEnd = SbMin(static_cast<int>(softwareWidth),
+                             static_cast<int>(origin[0] + size[0]));
+      unsigned char * pixel = softwarePixels +
+        (static_cast<size_t>(py) * softwareWidth + xBegin) * 4;
+      for (int x = xBegin; x < xEnd; ++x, pixel += 4) {
+        pixel[0] = color[0]; pixel[1] = color[1]; pixel[2] = color[2];
+        pixel[3] = 255;
+      }
+    }
+  }
 
   // If a gradient background has been requested, paint it now over the
   // cleared colour buffer before the scene is drawn.  We use immediate-mode
   // GL so that this works without any VBO/VAO infrastructure.
-  SoOffscreenRendererP * thisp = static_cast<SoOffscreenRendererP *>(userdata);
-  if (thisp && thisp->has_gradient) {
+  if (thisp && thisp->has_gradient && !directSoftwareBackground) {
     // Save enough GL state to restore afterwards.
     // glPushAttrib/glPopAttrib are deprecated in core-profile OpenGL 3.1+ but
     // are available in the compatibility profile used by this renderer.

@@ -182,6 +182,8 @@ struct InstanceStyle {
     bool     hasColorOverride = false;
     SbColor4f color           = SbColor4f(0.8f, 0.8f, 0.8f, 1.0f);
     float    lineWidth        = 1.0f;
+    uint16_t linePattern      = 0xffffu;
+    uint16_t linePatternFactor = 1u;
 };
 
 /**
@@ -450,10 +452,14 @@ public:
      * Returns the rendering tier selected during the last GLRender() call:
      *   -1 = not yet rendered
      *    0 = immediate-mode fallback (GL 1.1 fixed-function, no working GLSL+VBO)
-     *    1 = VBO-loop (GL 2.0, GLSL 1.10)
+     *    1 = retained VBO loop (fixed-function compatibility or GLSL)
      *    2 = instanced (GL 3.1+, one draw call per unique part)
+     *    3 = flattened wire batch (hardware GL, one draw per style)
      */
     int lastRenderTier() const;
+
+    /** True when the last render used the direct software wire rasterizer. */
+    bool lastRenderUsedDirectSoftwareWire() const;
 
 protected:
     ~SoCADAssembly() override;

@@ -252,22 +252,28 @@ _class_::createInstance(void * /*ctx*/) \
   do { \
     this->_field_.setValue _defaultval_;\
     this->_field_.setContainer(this); \
-    fieldData->addField(this, SO__QUOTE(_field_), &this->_field_); \
+    if (SO_NODE_IS_FIRST_INSTANCE()) { \
+      fieldData->addField(this, SO__QUOTE(_field_), &this->_field_); \
+    } \
   } WHILE_0
 
 // New for Coin-3
 #define SO_NODE_ADD_EMPTY_MFIELD(_field_) \
   do { \
     this->_field_.setContainer(this); \
-    fieldData->addField(this, SO__QUOTE(_field_), &this->_field_);\
+    if (SO_NODE_IS_FIRST_INSTANCE()) { \
+      fieldData->addField(this, SO__QUOTE(_field_), &this->_field_);\
+    } \
   } WHILE_0
 
 
 // FIXME: document. 20000103 mortene.
 #define SO_NODE_DEFINE_ENUM_VALUE(_enumname_, _enumval_) \
   do { \
-    fieldData->addEnumValue(SO__QUOTE(_enumname_), \
-                            SO__QUOTE(_enumval_), _enumval_); \
+    if (SO_NODE_IS_FIRST_INSTANCE()) { \
+      fieldData->addEnumValue(SO__QUOTE(_enumname_), \
+                              SO__QUOTE(_enumval_), _enumval_); \
+    } \
   } WHILE_0
 
 // *************************************************************************

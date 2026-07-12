@@ -150,12 +150,12 @@ int main(int argc, char **argv)
     at->value.setValue(0.5f);
 
     bool ok1 = renderer.render(root);
-    // Alpha test uses RGBA buffer; non-bg check still works on RGB portion
+    // The renderer was configured for RGB components above.
     const unsigned char *buf1 = renderer.getBuffer();
     int nb1 = 0;
     if (ok1 && buf1) {
         for (int i = 0; i < W * H; ++i) {
-            const unsigned char *p = buf1 + i * 4;
+            const unsigned char *p = buf1 + i * 3;
             if (p[0] > 15 || p[1] > 15 || p[2] > 15) ++nb1;
         }
     }
@@ -172,7 +172,7 @@ int main(int argc, char **argv)
     int nb2 = 0;
     if (ok2 && buf2) {
         for (int i = 0; i < W * H; ++i) {
-            const unsigned char *p = buf2 + i * 4;
+            const unsigned char *p = buf2 + i * 3;
             if (p[0] > 15 || p[1] > 15 || p[2] > 15) ++nb2;
         }
     }
@@ -188,7 +188,7 @@ int main(int argc, char **argv)
     int nb3 = 0;
     if (ok3 && buf3) {
         for (int i = 0; i < W * H; ++i) {
-            const unsigned char *p = buf3 + i * 4;
+            const unsigned char *p = buf3 + i * 3;
             if (p[0] > 15 || p[1] > 15 || p[2] > 15) ++nb3;
         }
     }

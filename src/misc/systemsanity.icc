@@ -12,9 +12,7 @@
 // will fail) if the compilation environment is not set up correctly - it
 // does not need to be run from anywhere...
 
-static
-void
-SoDB_compileTimeAsserts(void) __attribute__((unused));
+[[maybe_unused]] static void SoDB_compileTimeAsserts(void);
 
 static
 void
