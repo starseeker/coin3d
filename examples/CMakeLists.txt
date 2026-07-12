@@ -69,7 +69,7 @@ target_link_libraries(arb8_dragger_example PRIVATE
     ${PROJECT_NAME}
     ${OBOL_TARGET_LINK_LIBRARIES}
 )
-if(OBOL_USE_SWRAST AND NOT OBOL_USE_SYSTEM_GL)
+if(OBOL_USE_SWRAST AND (NOT OBOL_USE_SYSTEM_GL OR WIN32))
     target_compile_definitions(arb8_dragger_example PRIVATE OBOL_SWRAST_BUILD)
     target_include_directories(arb8_dragger_example PRIVATE
         "${PROJECT_SOURCE_DIR}/external/osmesa/include")
@@ -100,7 +100,7 @@ target_link_libraries(truncated_cone_example PRIVATE
     ${PROJECT_NAME}
     ${OBOL_TARGET_LINK_LIBRARIES}
 )
-if(OBOL_USE_SWRAST AND NOT OBOL_USE_SYSTEM_GL)
+if(OBOL_USE_SWRAST AND (NOT OBOL_USE_SYSTEM_GL OR WIN32))
     target_compile_definitions(truncated_cone_example PRIVATE OBOL_SWRAST_BUILD)
     target_include_directories(truncated_cone_example PRIVATE
         "${PROJECT_SOURCE_DIR}/external/osmesa/include")

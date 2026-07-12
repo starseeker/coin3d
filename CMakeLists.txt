@@ -507,7 +507,7 @@ if(MSVC)
   endif()
 
   # Enable C++ exception handling
-  add_compile_options(/EHsc)
+  add_compile_options(/EHsc /Zc:__cplusplus)
 
   # Static runtime linking
   if(OBOL_BUILD_MSVC_STATIC_RUNTIME)
@@ -516,6 +516,7 @@ if(MSVC)
 
   # MSVC-specific definitions
   add_compile_definitions(
+    NOMINMAX
     _CRT_NONSTDC_NO_DEPRECATE
     _CRT_SECURE_NO_DEPRECATE 
     _CRT_SECURE_NO_WARNINGS
@@ -530,7 +531,9 @@ endif()
 set(HAVE_GZDOPEN 1)
 if(WIN32)
   set(HAVE_WIN32_API 1)
-  #set(HAVE_WGL 1)
+  set(HAVE_WGL 1)
+  set(HAVE_IO_H 1)
+  set(HAVE_GETENVIRONMENTVARIABLE 1)
   if(MINGW)
     set(OBOL_DEFAULT_SHARED_POSTFIX "")
     set(OBOL_DEFAULT_STATIC_POSTFIX "")
@@ -548,13 +551,13 @@ if(WIN32)
     set(OBOL_LIBRARY_SUFFIX ${CMAKE_STATIC_LIBRARY_SUFFIX})
   endif()
   set(CMAKE_RELEASE_POSTFIX "${OBOL_DEFAULT_POSTFIX}"
-    CACHE STRING "Default filename postfix for libraries under configuration Release")
+    CACHE STRING "Default filename postfix for libraries under configuration Release" FORCE)
   set(CMAKE_MINSIZEREL_POSTFIX "${OBOL_DEFAULT_POSTFIX}"
-    CACHE STRING "Default filename postfix for libraries under configuration MinSizeRel")
+    CACHE STRING "Default filename postfix for libraries under configuration MinSizeRel" FORCE)
   set(CMAKE_RELWITHDEBINFO_POSTFIX "${OBOL_DEFAULT_POSTFIX}"
-    CACHE STRING "Default filename postfix for libraries under configuration RelWithDebInfo")
+    CACHE STRING "Default filename postfix for libraries under configuration RelWithDebInfo" FORCE)
   set(CMAKE_DEBUG_POSTFIX "${OBOL_DEFAULT_POSTFIX}d"
-    CACHE STRING "Default filename postfix for libraries under configuration Debug")
+    CACHE STRING "Default filename postfix for libraries under configuration Debug" FORCE)
 
   set(OBOL_RELEASE_SYSTEM_LIBRARY_NAME Obol${CMAKE_RELEASE_POSTFIX}${OBOL_LIBRARY_SUFFIX})
   set(OBOL_DEBUG_SYSTEM_LIBRARY_NAME Obol${CMAKE_DEBUG_POSTFIX}${OBOL_LIBRARY_SUFFIX})
@@ -607,10 +610,16 @@ endif()
 # Only check for system GL headers when system GL is the primary backend.
 # In swrast-only mode the OSMesa headers are used exclusively.
 if(OBOL_USE_SYSTEM_GL)
-  check_include_file(GL/gl.h HAVE_GL_GL_H)
-  check_include_file(OpenGL/gl.h HAVE_OPENGL_GL_H)
-  check_include_files("GL/gl.h;GL/glext.h" HAVE_GL_GLEXT_H)
-  check_include_files("OpenGL/gl.h;OpenGL/glext.h" HAVE_OPENGL_GLEXT_H)
+  if(WIN32)
+    # The Windows SDK's GL/gl.h requires windows.h to be included first, so a
+    # standalone check_include_file() probe gives a false negative.
+    set(HAVE_GL_GL_H 1)
+  else()
+    check_include_file(GL/gl.h HAVE_GL_GL_H)
+    check_include_file(OpenGL/gl.h HAVE_OPENGL_GL_H)
+    check_include_files("GL/gl.h;GL/glext.h" HAVE_GL_GLEXT_H)
+    check_include_files("OpenGL/gl.h;OpenGL/glext.h" HAVE_OPENGL_GLEXT_H)
+  endif()
 endif()
 
 if(HAVE_WINDOWS_H)

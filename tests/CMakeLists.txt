@@ -50,7 +50,7 @@ target_include_directories(simple_test_utils PUBLIC
     ${OBOL_TARGET_INCLUDE_DIRECTORIES}
 )
 # headless_utils.h needs the OSMesa submodule headers for pure osmesa builds
-if(OBOL_USE_SWRAST AND NOT OBOL_USE_SYSTEM_GL)
+if(OBOL_USE_SWRAST AND (NOT OBOL_USE_SYSTEM_GL OR WIN32))
     target_include_directories(simple_test_utils PUBLIC
         "${PROJECT_SOURCE_DIR}/external/osmesa/include")
 endif()
@@ -233,12 +233,77 @@ if(UNIX AND NOT APPLE)
         target_link_libraries(obol_render PRIVATE ${OPENGL_gl_LIBRARY})
     endif()
 endif()
-if(OBOL_USE_SWRAST AND NOT OBOL_USE_SYSTEM_GL)
+if(OBOL_USE_SWRAST AND (NOT OBOL_USE_SYSTEM_GL OR WIN32))
     target_compile_definitions(obol_render PRIVATE OBOL_SWRAST_BUILD)
     target_include_directories(obol_render PRIVATE
         "${PROJECT_SOURCE_DIR}/external/osmesa/include")
 elseif(OBOL_USE_SWRAST AND OBOL_USE_SYSTEM_GL)
     target_compile_definitions(obol_render PRIVATE OBOL_SWRAST_BUILD OBOL_DUAL_GL_BUILD)
+endif()
+
+# Native Windows system-OpenGL runner for dual-GL builds.  The OSMesa runner
+# above remains the default; this second executable initialises the same tests
+# with FLTKContextManager, which creates a hidden WGL context.
+if(WIN32 AND OBOL_USE_SYSTEM_GL AND OBOL_USE_SWRAST AND
+   TARGET obol_render_tests_wgl)
+    set(_dispatch_wgl "${CMAKE_CURRENT_BINARY_DIR}/render_test_dispatch_wgl.cpp")
+    set(_dc_wgl "// Auto-generated WGL render test dispatch - DO NOT EDIT.\n")
+    string(APPEND _dc_wgl "#include <string>\n#include <cstring>\n\n")
+    foreach(_t ${OBOL_WGL_RENDER_TESTS})
+        string(APPEND _dc_wgl "extern int run_wgl_render_test_${_t}(int, char**);\n")
+    endforeach()
+    string(APPEND _dc_wgl "\nint dispatchRenderTest(const std::string& name, const std::string& basepath) {\n")
+    string(APPEND _dc_wgl "    static const struct { const char* name; int(*fn)(int, char**); } k[] = {\n")
+    foreach(_t ${OBOL_WGL_RENDER_TESTS})
+        string(APPEND _dc_wgl "        {\"${_t}\", run_wgl_render_test_${_t}},\n")
+    endforeach()
+    string(APPEND _dc_wgl "        {nullptr, nullptr}\n    };\n")
+    string(APPEND _dc_wgl "    for (int i = 0; k[i].name; ++i) {\n")
+    string(APPEND _dc_wgl "        if (name == k[i].name) {\n")
+    string(APPEND _dc_wgl "            char prog[] = {\"obol_test_wgl\"};\n")
+    string(APPEND _dc_wgl "            if (basepath.size() >= 4096) return -2;\n")
+    string(APPEND _dc_wgl "            if (basepath.empty()) { char* argv1[2] = {prog, nullptr}; return k[i].fn(1, argv1); }\n")
+    string(APPEND _dc_wgl "            char base[4096]; strncpy(base, basepath.c_str(), sizeof(base)-1); base[sizeof(base)-1] = '\\0';\n")
+    string(APPEND _dc_wgl "            char* argv[3] = {prog, base, nullptr}; return k[i].fn(2, argv);\n")
+    string(APPEND _dc_wgl "        }\n    }\n    return -1;\n}\n")
+    file(WRITE "${_dispatch_wgl}" "${_dc_wgl}")
+
+    add_executable(obol_test_wgl obol_test.cpp "${_dispatch_wgl}")
+    target_compile_definitions(obol_test_wgl PRIVATE OBOL_TEST_WGL)
+    target_include_directories(obol_test_wgl PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/testlib
+        ${CMAKE_CURRENT_SOURCE_DIR}/utils
+        ${PROJECT_SOURCE_DIR}/include
+        ${PROJECT_SOURCE_DIR}/include/Inventor/annex
+        ${PROJECT_BINARY_DIR}/include
+        ${OBOL_TARGET_INCLUDE_DIRECTORIES}
+        ${FLTK_INCLUDE_DIRS}
+    )
+    target_link_libraries(obol_test_wgl PRIVATE
+        ObolEx ${PROJECT_NAME} ${OBOL_TARGET_LINK_LIBRARIES}
+        obol_render_tests_wgl ${FLTK_LIBRARIES}
+    )
+    if(TARGET OpenGL::GL)
+        target_link_libraries(obol_test_wgl PRIVATE OpenGL::GL)
+    elseif(OPENGL_gl_LIBRARY)
+        target_link_libraries(obol_test_wgl PRIVATE ${OPENGL_gl_LIBRARY})
+    endif()
+
+    foreach(_vtest ${OBOL_WGL_RENDER_TESTS})
+        add_test(
+            NAME ${_vtest}_wgl
+            COMMAND "${CMAKE_COMMAND}"
+                -DEXECUTABLE=$<TARGET_FILE:obol_test_wgl>
+                -DTEST_NAME=${_vtest}
+                -DTEST_TIMEOUT=${IMAGE_COMPARISON_TEST_TIMEOUT}
+                -P "${CMAKE_CURRENT_SOURCE_DIR}/rendering/run_rendering_test.cmake"
+        )
+        set_tests_properties(${_vtest}_wgl PROPERTIES
+            TIMEOUT ${IMAGE_COMPARISON_TEST_TIMEOUT}
+            LABELS "wgl;system-gl"
+        )
+    endforeach()
 endif()
 install(TARGETS obol_render RUNTIME DESTINATION bin)
 install(TARGETS obol_unittest RUNTIME DESTINATION bin)

@@ -84,8 +84,8 @@
 
 /* Platform-specific GL function pointer loader */
 #if defined(_WIN32)
-#  include <windows.h>
-#  include <GL/gl.h>
+#  include <Inventor/system/gl.h>
+#  include <FL/platform.H>
 #elif defined(__APPLE__)
 #  include <dlfcn.h>
 #  include <OpenGL/gl.h>
@@ -207,7 +207,13 @@ public:
 struct FLTKOffscreenCtx {
     unsigned int width;
     unsigned int height;
-#if !defined(_WIN32) && !defined(__APPLE__)
+#if defined(_WIN32)
+    HGLRC ctx;
+    HDC hdc;
+    HWND hwnd;
+    HGLRC prev_ctx;
+    HDC prev_dc;
+#elif !defined(__APPLE__)
     /* X11/GLX: real shared context -------------------------------------- */
     GLXContext   ctx;        /* shared child context; nullptr if creation failed */
     Display*     dpy;        /* X11 Display* (fl_display at creation time)       */
@@ -274,7 +280,29 @@ public:
         FLTKOffscreenCtx* ctx = new FLTKOffscreenCtx;
         ctx->width  = width;
         ctx->height = height;
-#if !defined(_WIN32) && !defined(__APPLE__)
+#if defined(_WIN32)
+        ctx->ctx = nullptr;
+        ctx->hdc = nullptr;
+        ctx->hwnd = fl_xid(win_);
+        ctx->prev_ctx = nullptr;
+        ctx->prev_dc = nullptr;
+        if (ctx->hwnd) {
+            ctx->hdc = GetDC(ctx->hwnd);
+            HGLRC share = wglGetCurrentContext();
+            if (ctx->hdc && share) {
+                ctx->ctx = wglCreateContext(ctx->hdc);
+                if (!ctx->ctx) {
+                    fprintf(stderr, "WGL: wglCreateContext failed (error %lu)\n",
+                            static_cast<unsigned long>(GetLastError()));
+                } else if (!wglShareLists(share, ctx->ctx)) {
+                    fprintf(stderr, "WGL: wglShareLists failed (error %lu)\n",
+                            static_cast<unsigned long>(GetLastError()));
+                    wglDeleteContext(ctx->ctx);
+                    ctx->ctx = nullptr;
+                }
+            }
+        }
+#elif !defined(__APPLE__)
         ctx->ctx      = nullptr;
         ctx->dpy      = mainDpy_;
         ctx->drawable = 0;
@@ -320,7 +348,27 @@ public:
 
     virtual SbBool makeContextCurrent(void* context) override {
         if (!ensureWindow()) return FALSE;
-#if !defined(_WIN32) && !defined(__APPLE__)
+#if defined(_WIN32)
+        FLTKOffscreenCtx* c = static_cast<FLTKOffscreenCtx*>(context);
+        if (c && c->ctx && c->hdc) {
+            /* initializeFBO() may ask to activate an already-current
+             * context.  Preserve the original parent instead of replacing
+             * it with this context itself, otherwise the later restore
+             * cannot return from a nested offscreen render. */
+            if (wglGetCurrentContext() == c->ctx)
+                return glGetString(GL_VERSION) ? TRUE : FALSE;
+            c->prev_ctx = wglGetCurrentContext();
+            c->prev_dc = wglGetCurrentDC();
+            if (!wglMakeCurrent(c->hdc, c->ctx)) {
+                fprintf(stderr, "WGL: wglMakeCurrent failed (error %lu)\n",
+                        static_cast<unsigned long>(GetLastError()));
+                c->prev_ctx = nullptr;
+                c->prev_dc = nullptr;
+                return FALSE;
+            }
+            return glGetString(GL_VERSION) ? TRUE : FALSE;
+        }
+#elif !defined(__APPLE__)
         FLTKOffscreenCtx* c = static_cast<FLTKOffscreenCtx*>(context);
         if (c && c->ctx && c->dpy && c->drawable) {
             /* Save the currently-active context so restorePreviousContext()
@@ -355,7 +403,15 @@ public:
     }
 
     virtual void restorePreviousContext(void* context) override {
-#if !defined(_WIN32) && !defined(__APPLE__)
+#if defined(_WIN32)
+        FLTKOffscreenCtx* c = static_cast<FLTKOffscreenCtx*>(context);
+        if (c && c->ctx) {
+            wglMakeCurrent(c->prev_dc, c->prev_ctx);
+            c->prev_ctx = nullptr;
+            c->prev_dc = nullptr;
+            return;
+        }
+#elif !defined(__APPLE__)
         FLTKOffscreenCtx* c = static_cast<FLTKOffscreenCtx*>(context);
         if (c && c->ctx && c->dpy) {
             if (c->prev_ctx) {
@@ -375,7 +431,18 @@ public:
 
     virtual void destroyContext(void* context) override {
         FLTKOffscreenCtx* c = static_cast<FLTKOffscreenCtx*>(context);
-#if !defined(_WIN32) && !defined(__APPLE__)
+#if defined(_WIN32)
+        if (c && c->ctx) {
+            if (wglGetCurrentContext() == c->ctx)
+                wglMakeCurrent(nullptr, nullptr);
+            wglDeleteContext(c->ctx);
+            c->ctx = nullptr;
+        }
+        if (c && c->hdc && c->hwnd) {
+            ReleaseDC(c->hwnd, c->hdc);
+            c->hdc = nullptr;
+        }
+#elif !defined(__APPLE__)
         if (c && c->ctx && c->dpy) {
             /* Deactivate before destroying to satisfy GLX requirements. */
             if (glXGetCurrentContext() == c->ctx)
@@ -394,13 +461,19 @@ public:
 
     virtual void* getProcAddress(const char* funcName) override {
 #if defined(_WIN32)
-        void* p = reinterpret_cast<void*>(wglGetProcAddress(funcName));
-        if (!p) {
+        PROC proc = wglGetProcAddress(funcName);
+        /* WGL documents four non-null failure sentinels in addition to
+         * NULL.  Never expose one of them as a callable GL entry point. */
+        if (proc == nullptr || proc == reinterpret_cast<PROC>(1) ||
+            proc == reinterpret_cast<PROC>(2) ||
+            proc == reinterpret_cast<PROC>(3) ||
+            proc == reinterpret_cast<PROC>(-1)) {
+            proc = nullptr;
             HMODULE mod = GetModuleHandleA("opengl32.dll");
             if (mod)
-                p = reinterpret_cast<void*>(GetProcAddress(mod, funcName));
+                proc = GetProcAddress(mod, funcName);
         }
-        return p;
+        return reinterpret_cast<void*>(proc);
 #elif defined(__APPLE__)
         static void* lib = dlopen(
             "/System/Library/Frameworks/OpenGL.framework/OpenGL", RTLD_LAZY);
@@ -423,7 +496,13 @@ public:
     virtual void getActualSurfaceSize(void* context,
                                       unsigned int& width,
                                       unsigned int& height) const override {
-#if !defined(_WIN32) && !defined(__APPLE__)
+#if defined(_WIN32)
+        const FLTKOffscreenCtx* c = static_cast<const FLTKOffscreenCtx*>(context);
+        if (c && c->ctx) {
+            width = 1; height = 1;
+            return;
+        }
+#elif !defined(__APPLE__)
         const FLTKOffscreenCtx* c = static_cast<const FLTKOffscreenCtx*>(context);
         if (c && c->ctx && c->drawable) {
             /* X11: each offscreen context gets its own 1×1 Pbuffer.
@@ -572,6 +651,7 @@ private:
  * so that obol_viewer.cpp requires no conditional logic beyond the header
  * selection guard.
  * ======================================================================= */
+#ifndef OBOL_FLTK_CONTEXT_CLASS_ONLY
 namespace {
     /* Meyer's singleton: thread-safe construction (C++11), destroyed at
      * program exit after all static objects in this translation unit. */
@@ -618,6 +698,7 @@ inline SoOffscreenRenderer* getSharedRenderer() {
     }
     return s_renderer;
 }
+#endif /* !OBOL_FLTK_CONTEXT_CLASS_ONLY */
 
 /* =========================================================================
  * BasicFLTKContextManager
@@ -693,12 +774,16 @@ public:
 
     virtual void* getProcAddress(const char* funcName) override {
 #if defined(_WIN32)
-        void* p = reinterpret_cast<void*>(wglGetProcAddress(funcName));
-        if (!p) {
+        PROC proc = wglGetProcAddress(funcName);
+        if (proc == nullptr || proc == reinterpret_cast<PROC>(1) ||
+            proc == reinterpret_cast<PROC>(2) ||
+            proc == reinterpret_cast<PROC>(3) ||
+            proc == reinterpret_cast<PROC>(-1)) {
+            proc = nullptr;
             HMODULE mod = GetModuleHandleA("opengl32.dll");
-            if (mod) p = reinterpret_cast<void*>(GetProcAddress(mod, funcName));
+            if (mod) proc = GetProcAddress(mod, funcName);
         }
-        return p;
+        return reinterpret_cast<void*>(proc);
 #elif defined(__APPLE__)
         static void* lib = dlopen(
             "/System/Library/Frameworks/OpenGL.framework/OpenGL", RTLD_LAZY);

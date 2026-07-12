@@ -91,6 +91,7 @@ if(OBOL_USE_SWRAST AND OBOL_USE_SYSTEM_GL AND OBOL_OSMESA_INCLUDE_DIRS)
 endif()
 
 add_library(${PROJECT_NAME} ${OBOL_SOURCE} ${OBOL_ADDITIONAL_HDRS})
+target_compile_definitions(${PROJECT_NAME} PRIVATE UTF8_NO_AUTOLINK)
 if(TARGET obol_parser_gen)
   add_dependencies(${PROJECT_NAME} obol_parser_gen)
 endif()
@@ -372,9 +373,10 @@ else()
   # install its shared library alongside Obol so that consumers who locate Obol
   # via find_package(Obol) can link and run without additional setup.
   if((OBOL_USE_SWRAST) AND TARGET osmesa)
-    install(TARGETS osmesa
+    install(TARGETS osmesa osmesa_interface EXPORT ${PROJECT_NAME}
       RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT runtime
       LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT runtime
+      ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT development
     )
   endif()
 endif()
@@ -417,8 +419,12 @@ write_basic_package_version_file("${CMAKE_CURRENT_BINARY_DIR}/${OBOL_CONFIG_PACK
 )
 
 # To make the component usable not only from the install directory but also from the build directory
+set(_obol_export_targets ${PROJECT_NAME})
+if(OBOL_USE_SWRAST AND TARGET osmesa_interface AND TARGET osmesa)
+  list(APPEND _obol_export_targets osmesa_interface osmesa)
+endif()
 export(
-  TARGETS ${PROJECT_NAME}
+  TARGETS ${_obol_export_targets}
   FILE ${OBOL_CONFIG_PACKAGE_BASENAME}-export.cmake
 )
 

@@ -32,6 +32,7 @@
 
 #include "shaders/SoGLSLShaderProgram.h"
 
+
 #include <Inventor/elements/SoGLCacheContextElement.h>
 #include <Inventor/misc/SoContextHandler.h>
 
@@ -133,10 +134,10 @@ SoGLSLShaderProgram::enable(const SoGLContext * g)
       // failed.  On re-entrant renders (camera drag, second frame) the
       // ensureLinking() path returns early without draining the error queue
       // itself, so stale errors would otherwise be mis-attributed here.
-      SoGLSLShaderObject::didOpenGLErrorOccur("SoGLSLShaderProgram::enable::pre-use");
+      SoGLSLShaderObject::didOpenGLErrorOccur("SoGLSLShaderProgram::enable::pre-use", g);
       g->glUseProgramObjectARB(programhandle);
 
-      if (SoGLSLShaderObject::didOpenGLErrorOccur("SoGLSLShaderProgram::enable")) {
+      if (SoGLSLShaderObject::didOpenGLErrorOccur("SoGLSLShaderProgram::enable", g)) {
         SoGLSLShaderObject::printInfoLog(g, programhandle, 0);
       }
     }
@@ -208,7 +209,7 @@ SoGLSLShaderProgram::ensureLinking(const SoGLContext * g)
     if (g->glLinkProgramARB) {
       g->glLinkProgramARB(programHandle);
 
-      if (SoGLSLShaderObject::didOpenGLErrorOccur("SoGLSLShaderProgram::ensureLinking")) {
+      if (SoGLSLShaderObject::didOpenGLErrorOccur("SoGLSLShaderProgram::ensureLinking", g)) {
         SoGLSLShaderObject::printInfoLog(g, programHandle, 0);
       }
     }

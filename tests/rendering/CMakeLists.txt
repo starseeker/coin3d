@@ -16,10 +16,9 @@
 # =============================================================================
 
 # ---- Backend detection -------------------------------------------------------
-# Inherit from parent: swrast-only means using OSMesa context for rendering tests.
-# Dual-GL builds use system GL (GLX+Xvfb); swrast layer is in the library
-# but scene traversal uses system GL symbols.
-if(OBOL_USE_SWRAST AND NOT OBOL_USE_SYSTEM_GL)
+# Use OSMesa for swrast-only builds and for Windows dual-GL builds, where
+# there is no GLX/Xvfb context available for headless test execution.
+if(OBOL_USE_SWRAST AND (NOT OBOL_USE_SYSTEM_GL OR WIN32))
     set(RENDERING_USE_SWRAST ON)
 else()
     set(RENDERING_USE_SWRAST OFF)
@@ -401,6 +400,7 @@ set_target_properties(render_nanort PROPERTIES
 )
 
 # ---- stb_truetype direct-render reference tool -------------------------------
+file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/test_output")
 # stt_reference renders the same text strings as render_text2 and
 # render_text_demo directly via SbFont/stb_truetype without OpenGL.
 # The output PNG serves as a ground-truth reference for evaluating the
@@ -423,10 +423,8 @@ set_target_properties(stt_reference PROPERTIES
 )
 add_test(
     NAME stt_reference
-    COMMAND "${CMAKE_COMMAND}"
-        -DEXECUTABLE=$<TARGET_FILE:stt_reference>
-        -DTEST_TIMEOUT=${IMAGE_COMPARISON_TEST_TIMEOUT}
-        -P "${CMAKE_CURRENT_SOURCE_DIR}/run_rendering_test.cmake"
+    COMMAND $<TARGET_FILE:stt_reference>
+        "${CMAKE_CURRENT_BINARY_DIR}/test_output/stt_reference.png"
 )
 set_tests_properties(stt_reference PROPERTIES
     TIMEOUT ${IMAGE_COMPARISON_TEST_TIMEOUT}
@@ -456,10 +454,8 @@ set_target_properties(stt_iosevka PROPERTIES
 )
 add_test(
     NAME stt_iosevka
-    COMMAND "${CMAKE_COMMAND}"
-        -DEXECUTABLE=$<TARGET_FILE:stt_iosevka>
-        -DTEST_TIMEOUT=${IMAGE_COMPARISON_TEST_TIMEOUT}
-        -P "${CMAKE_CURRENT_SOURCE_DIR}/run_rendering_test.cmake"
+    COMMAND $<TARGET_FILE:stt_iosevka>
+        "${CMAKE_CURRENT_BINARY_DIR}/test_output/stt_iosevka.png"
 )
 set_tests_properties(stt_iosevka PROPERTIES
     TIMEOUT ${IMAGE_COMPARISON_TEST_TIMEOUT}
@@ -724,6 +720,48 @@ endif()
 if(TARGET obol_testlib)
     target_link_libraries(obol_render_tests_gl PUBLIC obol_testlib)
     target_include_directories(obol_render_tests_gl PRIVATE ${CMAKE_SOURCE_DIR}/tests)
+endif()
+
+# In a Windows dual-GL build, compile a second copy of the render-test
+# wrappers against the native FLTK/WGL context helper.  This keeps the
+# deterministic OSMesa suite while also exercising the system-OpenGL dispatch
+# path from the same scene and validation sources.
+if(WIN32 AND OBOL_USE_SYSTEM_GL AND OBOL_USE_SWRAST AND FLTK_FOUND)
+    set(_wgl_wrapper_sources "")
+    foreach(_t ${OBOL_GL_RENDER_TESTS})
+        set(_wrapper "${CMAKE_CURRENT_BINARY_DIR}/gl_wrappers/${_t}_wgl.cpp")
+        file(WRITE "${_wrapper}"
+            "#define OBOL_TEST_WGL 1\n"
+            "#define main run_wgl_render_test_${_t}\n"
+            "#include \"${CMAKE_CURRENT_SOURCE_DIR}/${_t}.cpp\"\n"
+        )
+        list(APPEND _wgl_wrapper_sources "${_wrapper}")
+    endforeach()
+
+    add_library(obol_render_tests_wgl STATIC ${_wgl_wrapper_sources})
+    target_compile_definitions(obol_render_tests_wgl PUBLIC OBOL_TEST_WGL)
+    target_include_directories(obol_render_tests_wgl PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_SOURCE_DIR}/tests
+        ${CMAKE_SOURCE_DIR}/tests/utils
+        ${PROJECT_SOURCE_DIR}/include
+        ${PROJECT_SOURCE_DIR}/include/Inventor/annex
+        ${PROJECT_BINARY_DIR}/include
+        ${OBOL_TARGET_INCLUDE_DIRECTORIES}
+        ${FLTK_INCLUDE_DIRS}
+    )
+    target_link_libraries(obol_render_tests_wgl PUBLIC
+        ${PROJECT_NAME}
+        ${OBOL_TARGET_LINK_LIBRARIES}
+        obol_testlib
+        ${FLTK_LIBRARIES}
+    )
+    if(TARGET OpenGL::GL)
+        target_link_libraries(obol_render_tests_wgl PUBLIC OpenGL::GL)
+    elseif(OPENGL_gl_LIBRARY)
+        target_link_libraries(obol_render_tests_wgl PUBLIC ${OPENGL_gl_LIBRARY})
+    endif()
+    set(OBOL_WGL_RENDER_TESTS "${OBOL_GL_RENDER_TESTS}" PARENT_SCOPE)
 endif()
 
 # Export the list to parent scope so tests/CMakeLists.txt can link obol_test

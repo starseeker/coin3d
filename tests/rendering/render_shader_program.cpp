@@ -547,6 +547,13 @@ int main(int argc, char **argv)
         fRoot->unref();
     }
 
+#ifdef OBOL_TEST_WGL
+    /* The native Windows check deliberately uses one renderer.  It still
+     * compiles, links, binds uniforms, and draws a real GLSL program; the
+     * extended cases below remain covered by the OSMesa runner. */
+    return 0;
+#endif
+
     int failures = 0;
 
     printf("\n=== SoShaderProgram / GLSL shader tests ===\n");

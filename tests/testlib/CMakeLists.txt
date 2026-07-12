@@ -14,14 +14,13 @@
 # =============================================================================
 
 # ---- Backend detection (mirrors tests/rendering/CMakeLists.txt) --------
-if(OBOL_USE_SWRAST AND NOT OBOL_USE_SYSTEM_GL)
+if(OBOL_USE_SWRAST AND (NOT OBOL_USE_SYSTEM_GL OR WIN32))
     set(TESTLIB_USE_SWRAST ON)
 else()
     set(TESTLIB_USE_SWRAST OFF)
 endif()
-# Note: dual-GL builds use system GL (GLX+Xvfb) for rendering tests;
-# the swrast layer is in the library but scene traversal uses system GL.
-# Only pure swrast-only builds use the OSMesa context path here.
+# Linux dual-GL builds use system GL (GLX+Xvfb); Windows dual-GL builds use
+# OSMesa because no GLX headless context is available there.
 
 # ---- Library target -------------------------------------------------------
 add_library(ObolEx STATIC

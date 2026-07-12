@@ -323,6 +323,8 @@ const SoGLContext * osmesa_SoGLContext_instance(int contextid);
 void osmesa_SoGLContext_destruct(uint32_t contextid);
 #endif /* OBOL_DUAL_GL_BUILD */
 
+static SoDB::ContextManager * coingl_get_context_manager(int contextid);
+
 /* Public C API: register an OSMesa-backed render-context ID.
    Must be called (once, at context-ID assignment time) by the application
    or CoinOffscreenGLCanvas before the first SoGLContext_instance() call
@@ -364,9 +366,14 @@ coingl_unregister_osmesa_context(int contextid)
 coingl_context_backend_is_osmesa(int contextid)
 {
 #if defined(OBOL_DUAL_GL_BUILD)
-  std::lock_guard<std::mutex> lock(coingl_osmesa_context_mutex);
-  return (coingl_osmesa_context_ids &&
-          coingl_osmesa_context_ids->count(contextid) > 0) ? 1 : 0;
+  {
+    std::lock_guard<std::mutex> lock(coingl_osmesa_context_mutex);
+    if (coingl_osmesa_context_ids &&
+        coingl_osmesa_context_ids->count(contextid) > 0) return 1;
+  }
+  SoDB::ContextManager * mgr = coingl_get_context_manager(contextid);
+  if (!mgr) mgr = SoDB::getContextManager();
+  return (mgr && mgr->isOSMesaContext(NULL)) ? 1 : 0;
 #else
   (void)contextid;
   return 0;
@@ -797,6 +804,13 @@ SoGLContext_getprocaddress(const SoGLContext * glue, const char * symname)
 #ifndef SOGL_PREFIX_SET
   if (ptr == NULL) {
     SoDB::ContextManager * mgr = static_cast<SoDB::ContextManager*>(glue->context_manager);
+    /* Cache-context IDs can briefly outlive the offscreen canvas that
+       registered them (for example while SoSceneTexture2 is rebuilding an
+       inner render target).  In that transition the GL context is still
+       current, but the per-ID registry entry has already been removed.
+       Fall back to the application's manager so WGL/GLX extension symbols
+       remain resolvable instead of treating a modern context as OpenGL 1.1. */
+    if (!mgr) mgr = SoDB::getContextManager();
     if (mgr) {
       ptr = mgr->getProcAddress(symname);
       if (SoGLContext_debug()) {
@@ -2533,7 +2547,18 @@ w->glAreTexturesResident = (OBOL_PFNGLARETEXTURESRESIDENTPROC)PROC(w, glAreTextu
       w->glAttachObjectARB && w->glLinkProgramARB &&
       w->glUseProgramObjectARB && w->glCreateProgramObjectARB &&
       w->glGetUniformLocationARB && w->glUniformMatrix4fvARB;
+
   }
+
+#ifdef SOGL_PREFIX_SET
+  /* The bundled Mesa 7.0.4 OSMesa exports ARB shader symbols but its
+     software linker is not usable on modern Windows and faults inside
+     glLinkProgramARB.  Treat it as the fixed-function renderer it safely
+     provides.  System GL and newer OSMesa implementations are unaffected. */
+  if (w->versionstr && strstr(w->versionstr, "Mesa 7.0.4")) {
+    w->has_arb_shader_objects = FALSE;
+  }
+#endif
 #endif
 
   w->glGenQueries = NULL; /* so that SoGLContext_has_occlusion_query() works  */

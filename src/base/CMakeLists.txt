@@ -82,8 +82,8 @@ set(OBOL_BASE_FILES
 
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
 	set(OBOL_BASE_FILES ${OBOL_BASE_FILES}
-		buffer.cpp
-		win.cpp
+		utf8/buffer.cpp
+		utf8/win.cpp
 	)
 endif()
 

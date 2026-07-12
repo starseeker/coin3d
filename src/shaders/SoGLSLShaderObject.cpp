@@ -57,11 +57,15 @@ SoGLSLShaderObject::SoGLSLShaderObject(const uint32_t cc)
 
 SoGLSLShaderObject::~SoGLSLShaderObject()
 {
-  // make sure we don't detach, since the program might have been
-  // destructed already. FIXME: investigate if not calling detach will
-  // lead to memory leaks. pederb, 2006-10-17
+  /* Scene nodes are commonly released after offscreen rendering has
+     restored a different WGL context.  Deleting a shader through that
+     context corrupts some drivers' program namespace.  The owning context
+     releases any remaining shader objects when it is destroyed; avoid an
+     unsafe cross-context delete here. */
   this->isattached = FALSE;
-  this->unload();
+  this->shaderHandle = 0;
+  this->programHandle = 0;
+  this->programid = 0;
 }
 
 // *************************************************************************
@@ -213,7 +217,7 @@ SoGLSLShaderObject::didOpenGLErrorOccur(const SbString & source, const SoGLConte
     SoGLContext_glFlush(glue);
   }
 
-  GLenum glErr = glGetError();
+  GLenum glErr = glue ? SoGLContext_glGetError(glue) : glGetError();
   while (glErr != GL_NO_ERROR) {
     SoDebugError::post(source.getString(), "error: '%s' %s",
                        coin_glerror_string(glErr),
@@ -222,7 +226,7 @@ SoGLSLShaderObject::didOpenGLErrorOccur(const SbString & source, const SoGLConte
                        "and re-run to get more information)");
 
     retCode = TRUE;
-    glErr = glGetError();
+    glErr = glue ? SoGLContext_glGetError(glue) : glGetError();
   }
   return retCode;
 }

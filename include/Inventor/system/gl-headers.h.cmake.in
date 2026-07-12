@@ -60,6 +60,19 @@
 #else
 @SIM_INCLUDE_GL_H@
 @SIM_INCLUDE_GLEXT_H@
+
+/* The Windows SDK only supplies OpenGL 1.1 headers.  Provide the extension
+   scalar types used by Obol's run-time-loaded OpenGL entry points when a
+   newer Khronos extension header is not available. */
+#if defined(_WIN32) && !defined(GL_VERSION_1_5)
+#  include <stddef.h>
+typedef ptrdiff_t GLintptr;
+typedef ptrdiff_t GLsizeiptr;
+#endif
+#if defined(_WIN32) && !defined(GL_ARB_shader_objects)
+typedef char GLcharARB;
+typedef unsigned int GLhandleARB;
+#endif
 #endif /* OBOL_GLHEADERS_OSMESA_OVERRIDE */
 
 #endif /* ! OBOL_GLHEADERS_H */

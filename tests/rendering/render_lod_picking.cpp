@@ -46,12 +46,12 @@ static SoLOD *buildLOD()
     lod->range.set1Value(1, 15.0f);
 
     // Level 0 (near): sphere
-    SoSeparator *near = new SoSeparator;
+    SoSeparator *nearLevel = new SoSeparator;
     SoMaterial *m0 = new SoMaterial;
     m0->diffuseColor.setValue(0.2f,0.8f,0.2f); // green
-    near->addChild(m0);
-    near->addChild(new SoSphere);
-    lod->addChild(near);
+    nearLevel->addChild(m0);
+    nearLevel->addChild(new SoSphere);
+    lod->addChild(nearLevel);
 
     // Level 1 (mid): cube
     SoSeparator *mid = new SoSeparator;

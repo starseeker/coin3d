@@ -11,7 +11,7 @@ endif()
 
 if(EXAMPLES_USE_SWRAST)
     if(TARGET Obol)
-        set(OSMESA_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../external/osmesa/include")
+        set(OSMESA_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/external/osmesa/include")
         # When building as a subdirectory of the main Obol project, the osmesa target
         # is available via the parent project's FindOSMesa.cmake
         if(TARGET osmesa_interface)
@@ -69,7 +69,7 @@ if(TARGET Obol)
             ${OBOL_TARGET_INCLUDE_DIRECTORIES}
         )
         target_link_libraries(${name} ${_OBOL_LINK_TARGET} ${OBOL_TARGET_LINK_LIBRARIES})
-        if(EXAMPLES_USE_SWRAST AND NOT OBOL_USE_SYSTEM_GL)
+        if(EXAMPLES_USE_SWRAST AND (NOT OBOL_USE_SYSTEM_GL OR WIN32))
             target_compile_definitions(${name} PRIVATE OBOL_SWRAST_BUILD)
             if(OSMESA_INCLUDE_DIR)
                 target_include_directories(${name} PRIVATE ${OSMESA_INCLUDE_DIR})
@@ -113,7 +113,7 @@ else()
                 ${_MENTOR_UTILS_DIR}
             )
             target_link_libraries(${name} Obol::Obol)
-            if(EXAMPLES_USE_SWRAST AND NOT OBOL_USE_SYSTEM_GL)
+            if(EXAMPLES_USE_SWRAST AND (NOT OBOL_USE_SYSTEM_GL OR WIN32))
                 target_compile_definitions(${name} PRIVATE OBOL_SWRAST_BUILD)
                 if(OSMESA_INCLUDE_DIR)
                     target_include_directories(${name} PRIVATE ${OSMESA_INCLUDE_DIR})
@@ -154,7 +154,7 @@ else()
                 ${CMAKE_CURRENT_SOURCE_DIR}
                 ${_MENTOR_UTILS_DIR})
             target_link_libraries(${name} Obol ${OPENGL_LIBRARIES})
-            if(EXAMPLES_USE_SWRAST AND NOT OBOL_USE_SYSTEM_GL)
+            if(EXAMPLES_USE_SWRAST AND (NOT OBOL_USE_SYSTEM_GL OR WIN32))
                 target_compile_definitions(${name} PRIVATE OBOL_SWRAST_BUILD)
                 if(OSMESA_INCLUDE_DIR)
                     target_include_directories(${name} PRIVATE ${OSMESA_INCLUDE_DIR})
@@ -453,7 +453,10 @@ add_image_test(13.4.Gate)
 add_image_test(13.5.Boolean)
 add_image_test(13.6.Calculator)
 add_image_test(13.7.Rotor RMSE_THRESHOLD 40.0)
-add_image_test(13.8.Blinker)
+# Multiple independently positioned blinking shapes amplify small software-
+# rasterizer coverage differences; the perceptual hash remains the primary
+# structural check.
+add_image_test(13.8.Blinker RMSE_THRESHOLD 30.0)
 add_image_test(14.1.FrolickingWords)
 add_image_test(14.2.Editors)
 add_image_test(14.3.Balance)

@@ -228,14 +228,11 @@ inline bool renderToFile(
     return true;
 }
 
-#elif defined(OBOL_SWRAST_BUILD) && !defined(OBOL_DUAL_GL_BUILD)
+#elif defined(OBOL_SWRAST_BUILD) && !defined(OBOL_TEST_WGL) && (!defined(OBOL_DUAL_GL_BUILD) || defined(_WIN32))
 // ============================================================================
 // Software-rasterizer (OSMesa) backend: for offscreen/headless rendering
-// without a display server.  Used for swrast-only builds only.
-// Dual-GL builds (OBOL_DUAL_GL_BUILD) do NOT enter this path: examples in
-// dual-GL builds use system GL symbols and fall through to the system-GL /
-// GLX path below (requires Xvfb).  OSMesa headers are not available to the
-// examples in a dual-GL build.
+// without a display server.  Also used for Windows dual-GL tests because
+// Windows has no GLX/Xvfb context; the interactive viewer still uses WGL.
 // Headers come from the project's own submodule (external/osmesa/include/OSMesa/)
 // ============================================================================
 #include <OSMesa/osmesa.h>
@@ -505,6 +502,11 @@ inline bool writeToRGB(uint8_t* /*pixels*/, int /*width*/, int /*height*/,
 // ============================================================================
 // System OpenGL Backend: GLX on Linux (use Xvfb for headless operation)
 // ============================================================================
+#ifdef OBOL_TEST_WGL
+#define OBOL_FLTK_CONTEXT_CLASS_ONLY
+#include "fltk_context_manager.h"
+#undef OBOL_FLTK_CONTEXT_CLASS_ONLY
+#endif
 #ifdef __unix__
 #include <X11/Xlib.h>
 #include <GL/glx.h>
@@ -788,7 +790,12 @@ inline void initCoinHeadless() {
     set_sysgl_context_manager(&glx_context_manager);
     SoDB::init(&glx_context_manager);
 #else
-    // Non-Unix: provide a stub context manager (rendering may not work)
+#ifdef OBOL_TEST_WGL
+    static FLTKContextManager wgl_context_manager;
+    set_sysgl_context_manager(&wgl_context_manager);
+    SoDB::init(&wgl_context_manager);
+#else
+    // Other non-Unix builds without a native test manager use a stub.
     class StubContextManager : public SoDB::ContextManager {
     public:
         virtual void* createOffscreenContext(unsigned int, unsigned int) override { return nullptr; }
@@ -799,6 +806,7 @@ inline void initCoinHeadless() {
     static StubContextManager stub;
     set_sysgl_context_manager(&stub);
     SoDB::init(&stub);
+#endif
 #endif
     SoNodeKit::init();
     SoInteraction::init();
