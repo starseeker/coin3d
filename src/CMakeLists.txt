@@ -174,7 +174,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE ${OBOL_TARGET_LINK_LIBRARIES})
 # For dual-GL builds, also link OSMesa so that osmesa_SoGLContext_* functions
 # can resolve mgl* symbols at runtime.
 if(OBOL_USE_SWRAST AND OBOL_USE_SYSTEM_GL)
-    target_link_libraries(${PROJECT_NAME} PRIVATE ${OBOL_OSMESA_LIBRARIES})
+    target_link_libraries(${PROJECT_NAME} PUBLIC ${OBOL_OSMESA_LIBRARIES})
 endif()
 
 if(WIN32)
