@@ -418,6 +418,35 @@ void CadGpuResources::updateFlatShadedGroups(
     flatShaded_.groups = groups;
 }
 
+void CadGpuResources::uploadSubpixelProxyPoints(
+        uint64_t revision,
+        const std::vector<float>& positions,
+        const std::vector<uint8_t>& colors,
+        const SoGLContext *glue)
+{
+    if (!glue || positions.empty() || positions.size() % 3 != 0 ||
+            colors.size() != (positions.size() / 3) * 4)
+        return;
+
+    if (!subpixelProxyPoints_.posBuf)
+        glue->glGenBuffers(1, &subpixelProxyPoints_.posBuf);
+    if (!subpixelProxyPoints_.colorBuf)
+        glue->glGenBuffers(1, &subpixelProxyPoints_.colorBuf);
+
+    glue->glBindBuffer(GL_ARRAY_BUFFER, subpixelProxyPoints_.posBuf);
+    glue->glBufferData(GL_ARRAY_BUFFER,
+                       static_cast<GLsizeiptr>(positions.size() * sizeof(float)),
+                       positions.data(), GL_STREAM_DRAW);
+    glue->glBindBuffer(GL_ARRAY_BUFFER, subpixelProxyPoints_.colorBuf);
+    glue->glBufferData(GL_ARRAY_BUFFER,
+                       static_cast<GLsizeiptr>(colors.size() * sizeof(uint8_t)),
+                       colors.data(), GL_STREAM_DRAW);
+    glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    subpixelProxyPoints_.revision = revision;
+    subpixelProxyPoints_.count = static_cast<GLsizei>(positions.size() / 3);
+}
+
 // ---------------------------------------------------------------------------
 // releaseAll()
 // ---------------------------------------------------------------------------
@@ -441,11 +470,16 @@ void CadGpuResources::releaseAll(const SoGLContext * glue)
             glue->glDeleteBuffers(1, &flatShaded_.posBuf);
         if (flatShaded_.normBuf && glue->glDeleteBuffers)
             glue->glDeleteBuffers(1, &flatShaded_.normBuf);
+        if (subpixelProxyPoints_.posBuf && glue->glDeleteBuffers)
+            glue->glDeleteBuffers(1, &subpixelProxyPoints_.posBuf);
+        if (subpixelProxyPoints_.colorBuf && glue->glDeleteBuffers)
+            glue->glDeleteBuffers(1, &subpixelProxyPoints_.colorBuf);
     }
     cache_.clear();
     instanceVbo_ = 0;
     flatWire_ = CadFlatWireGpu();
     flatShaded_ = CadFlatShadedGpu();
+    subpixelProxyPoints_ = CadSubpixelProxyGpu();
 }
 
 } // namespace internal

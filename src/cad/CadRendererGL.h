@@ -108,6 +108,8 @@ public:
      * @param assembly   The owning node (for geometry access).
      * @param glue       Active GL dispatch context (from sogl_current_render_glue()).
      * @param viewProj   Combined view-projection matrix (OI row-major, GL_FALSE upload).
+     * @param viewMatrix Active model-view matrix before local instance transforms.
+     * @param projectionMatrix Active projection matrix.
      * @param cameraPos  Camera (eye) position in world space (for LoD distance).
      * @param renderState Resolved per-view render policy.
      * @param partGenMap Map from PartId → generation counter (to detect stale VBOs).
@@ -116,6 +118,8 @@ public:
                 const SoCADAssembly& assembly,
                 const SoGLContext*   glue,
                 const SbMatrix&      viewProj,
+                const SbMatrix&      viewMatrix,
+                const SbMatrix&      projectionMatrix,
                 const SbVec3f&       cameraPos,
                 const CadRenderState& renderState,
                 const std::unordered_map<PartId, uint64_t,
@@ -162,6 +166,7 @@ private:
     // Compiled shader programs (keyed by context id, lazily compiled)
     struct ShaderPrograms {
         GLuint wire    = 0; ///< Wire-pass shader (no lighting)
+        GLuint proxyPoint = 0; ///< Batched subpixel-proxy point shader
         GLuint shaded  = 0; ///< Shaded-pass shader (Phong, no instancing)
         GLuint wireInst   = 0; ///< Wire-pass shader (instanced)
         GLuint shadedInst = 0; ///< Shaded-pass shader (instanced Phong)
@@ -202,6 +207,15 @@ private:
                       const std::unordered_map<PartId, uint64_t,
                                                std::hash<PartId>>& partGenMap);
 
+    void renderSubpixelProxyPoints(const CadFramePlan& plan,
+                                   const SoGLContext* glue,
+                                   const SbMatrix& viewProj);
+
+    static bool isSubpixelProxyInstance(const CadFramePlan& plan,
+                                        size_t visibleInstanceIndex);
+    static bool wireRepHasUncollapsedInstances(const CadFramePlan& plan,
+                                               PartId part);
+
     // -----------------------------------------------------------------------
     // Tier-1: VBO-loop path (GL 2.0+)
     // -----------------------------------------------------------------------
@@ -219,7 +233,9 @@ private:
 
     void renderFixedVboLoop(const CadFramePlan& plan,
                             const SoGLContext* glue,
-                            const SbMatrix& viewProj);
+                            const SbMatrix& viewProj,
+                            const SbMatrix& viewMatrix,
+                            const SbMatrix& projectionMatrix);
 
     /**
      * Tier-0 fallback: fixed-function immediate-mode rendering via
@@ -232,6 +248,8 @@ private:
                              const SoCADAssembly& assembly,
                              const SoGLContext*   glue,
                              const SbMatrix&      viewProj,
+                             const SbMatrix&      viewMatrix,
+                             const SbMatrix&      projectionMatrix,
                              const SbVec3f&       cameraPos,
                              const CadRenderState& renderState,
                              const std::unordered_map<PartId, uint64_t,
@@ -273,6 +291,8 @@ private:
                           const SoCADAssembly& assembly,
                           const SoGLContext* glue,
                           const SbMatrix& viewProj,
+                          const SbMatrix& viewMatrix,
+                          const SbMatrix& projectionMatrix,
                           bool depthOnly);
 
     // -----------------------------------------------------------------------

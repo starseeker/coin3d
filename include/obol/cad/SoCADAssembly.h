@@ -148,10 +148,12 @@ struct WireRep {
  * @brief Optional shaded triangle mesh for a part.
  *
  * normals may be empty; in that case flat normals are computed at render time.
+ * When present, normals has one entry per position and is addressed by the
+ * same triangle indices as positions.
  */
 struct TriMesh {
     std::vector<SbVec3f>  positions;
-    std::vector<SbVec3f>  normals;    ///< optional; may be empty
+    std::vector<SbVec3f>  normals;    ///< optional; empty or positions.size()
     std::vector<uint32_t> indices;    ///< triangle list (3 indices per tri)
     SbBox3f               bounds;
 };
@@ -190,6 +192,14 @@ struct PartGeometry {
     std::optional<PointRep> points; ///< Point primitives and optional attributes
     std::optional<WireRep> wire;    ///< Feature edges (no tessellation needed)
     std::optional<TriMesh> shaded;  ///< Optional triangle mesh for shading
+
+    /**
+     * This wire representation is a conservative LoD proxy rather than
+     * authored geometry.  Renderers may replace it with a single depth-tested
+     * point when its complete projected extent is subpixel.  The original
+     * geometry remains available for bounds queries and picking.
+     */
+    bool subpixelProxyEligible = false;
 };
 
 // ---------------------------------------------------------------------------
@@ -442,6 +452,18 @@ public:
     /** Number of parts currently in the part library. */
     size_t partCount() const;
 
+    /**
+     * Return stable instance IDs in deterministic order.
+     *
+     * Renderer-neutral backends use this together with getInstanceRecord()
+     * and partGeometry() to consume the retained assembly without rebuilding
+     * a per-instance scene graph.
+     */
+    std::vector<obol::InstanceId> instanceIds() const;
+
+    /** True when an instance is hidden from rendering and generic traversal. */
+    bool isInstanceHidden(obol::InstanceId iid) const;
+
     /** True when any part can provide progressive triangle LoD. */
     bool hasPartLod() const;
 
@@ -508,6 +530,9 @@ public:
 
     /** True when the last render used the direct software wire rasterizer. */
     bool lastRenderUsedDirectSoftwareWire() const;
+
+    /** Number of LoD proxy occurrences rendered as subpixel points last frame. */
+    size_t lastSubpixelProxyCount() const;
 
 protected:
     ~SoCADAssembly() override;

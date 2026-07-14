@@ -138,6 +138,14 @@ struct CadFlatShadedGpu {
     std::vector<CadFlatShadedGroup> groups;
 };
 
+/** Dynamic world-space vertex/color buffers for one frame's proxy points. */
+struct CadSubpixelProxyGpu {
+    GLuint posBuf = 0;
+    GLuint colorBuf = 0;
+    uint64_t revision = 0;
+    GLsizei count = 0;
+};
+
 /**
  * @brief GPU resource cache shared across frames within one GL context.
  *
@@ -252,6 +260,16 @@ public:
 
     const CadFlatShadedGpu& flatShaded() const { return flatShaded_; }
 
+    void uploadSubpixelProxyPoints(uint64_t revision,
+                                   const std::vector<float>& positions,
+                                   const std::vector<uint8_t>& colors,
+                                   const SoGLContext *glue);
+
+    const CadSubpixelProxyGpu& subpixelProxyPoints() const
+    {
+        return subpixelProxyPoints_;
+    }
+
     /** Release all GL resources (call with the correct GL context active). */
     void releaseAll(const SoGLContext * glue);
 
@@ -267,6 +285,7 @@ private:
     GLuint instanceVbo_ = 0;
     CadFlatWireGpu flatWire_;
     CadFlatShadedGpu flatShaded_;
+    CadSubpixelProxyGpu subpixelProxyPoints_;
 
     void deletePointGpu(CadPointGpu& p, const SoGLContext * glue);
     void deleteWireGpu(CadWireGpu& w, const SoGLContext * glue);

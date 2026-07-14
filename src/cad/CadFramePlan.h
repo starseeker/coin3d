@@ -132,6 +132,16 @@ struct CadDrawItem {
     int       baseVertex     = 0; ///< Base vertex for indexed drawing
 };
 
+/**
+ * A view-local point replacing one eligible wire proxy for this frame.
+ * Positions are world-space, so the batch has no per-instance transform.
+ */
+struct CadSubpixelProxyPoint {
+    SbVec3f position;
+    std::array<uint8_t, 4> rgba = {204, 204, 204, 255};
+    InstanceId instanceId;
+};
+
 // ---------------------------------------------------------------------------
 // CadFramePlan: the complete per-frame rendering work order
 // ---------------------------------------------------------------------------
@@ -161,6 +171,16 @@ struct CadFramePlan {
 
     /** Draw items for point primitives. */
     std::vector<CadDrawItem> pointItems;
+
+    /**
+     * Camera-dependent replacements for wire proxy instances.  The mask is
+     * parallel to visibleInstances; set entries are omitted from wire draws
+     * and emitted by the single point batch instead.
+     */
+    std::vector<uint8_t> subpixelProxyMask;
+    std::vector<CadSubpixelProxyPoint> subpixelProxyPoints;
+    uint64_t subpixelProxyRevision = 0;
+    uint64_t subpixelProxySourcePlanRevision = 0;
 
     /**
      * Draw items for the shaded pass.  May be empty in WIREFRAME mode unless

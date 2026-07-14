@@ -109,6 +109,18 @@ static const char * kWireFS1 =
     "    gl_FragColor = v_color;\n"
     "}\n";
 
+// View-local proxy points carry their own per-occurrence colour so thousands
+// of differently coloured AABB/OBB replacements remain one draw call.
+static const char * kProxyPointVS1 =
+    "attribute vec3 a_pos;\n"
+    "attribute vec4 a_color;\n"
+    "uniform mat4 u_viewProj;\n"
+    "varying vec4 v_color;\n"
+    "void main() {\n"
+    "    gl_Position = u_viewProj * vec4(a_pos, 1.0);\n"
+    "    v_color = a_color;\n"
+    "}\n";
+
 // Shaded pass: simple directional light in world space
 static const char * kShadedVS1 =
     "attribute vec3 a_pos;\n"
@@ -221,6 +233,7 @@ namespace {
 struct SharedCadShaders {
     CadGLCaps caps;
     GLuint wire = 0;
+    GLuint proxyPoint = 0;
     GLuint shaded = 0;
     GLuint wireInst = 0;
     GLuint shadedInst = 0;
@@ -244,6 +257,7 @@ releaseSharedCadShaders(uint32_t contextId, void *)
     SharedCadShaders &programs = found->second;
     if (glue && glue->glDeleteObjectARB) {
         if (programs.wire) glue->glDeleteObjectARB(programs.wire);
+        if (programs.proxyPoint) glue->glDeleteObjectARB(programs.proxyPoint);
         if (programs.shaded) glue->glDeleteObjectARB(programs.shaded);
         if (programs.wireInst) glue->glDeleteObjectARB(programs.wireInst);
         if (programs.shadedInst) glue->glDeleteObjectARB(programs.shadedInst);
@@ -400,6 +414,19 @@ bool CadRendererGL::compileAllShaders(const SoGLContext* glue)
         if (!shaders_.wire) return false;
     }
     {
+        GLuint vs = compileShader(glue, GL_VERTEX_SHADER_ARB, kProxyPointVS1);
+        GLuint fs = compileShader(glue, GL_FRAGMENT_SHADER_ARB, kWireFS1);
+        if (!vs || !fs) {
+            if (vs) glue->glDeleteObjectARB(vs);
+            if (fs) glue->glDeleteObjectARB(fs);
+            return false;
+        }
+        shaders_.proxyPoint = linkProgram(glue, vs, fs);
+        glue->glDeleteObjectARB(vs);
+        glue->glDeleteObjectARB(fs);
+        if (!shaders_.proxyPoint) return false;
+    }
+    {
         GLuint vs = compileShader(glue, GL_VERTEX_SHADER_ARB, kShadedVS1);
         GLuint fs = compileShader(glue, GL_FRAGMENT_SHADER_ARB, kShadedFS1);
         if (!vs || !fs) {
@@ -471,6 +498,7 @@ bool CadRendererGL::ensureReady(const SoGLContext* glue)
         if (found != sharedCadShaders.end()) {
             caps_ = found->second.caps;
             shaders_.wire = found->second.wire;
+            shaders_.proxyPoint = found->second.proxyPoint;
             shaders_.shaded = found->second.shaded;
             shaders_.wireInst = found->second.wireInst;
             shaders_.shadedInst = found->second.shadedInst;
@@ -485,6 +513,7 @@ bool CadRendererGL::ensureReady(const SoGLContext* glue)
             SharedCadShaders programs;
             programs.caps = caps_;
             programs.wire = shaders_.wire;
+            programs.proxyPoint = shaders_.proxyPoint;
             programs.shaded = shaders_.shaded;
             programs.wireInst = shaders_.wireInst;
             programs.shadedInst = shaders_.shadedInst;
@@ -924,6 +953,144 @@ void CadRendererGL::renderPoints(
     glue->glPointSize(savedPointSize);
 }
 
+bool CadRendererGL::isSubpixelProxyInstance(
+        const CadFramePlan& plan, size_t visibleInstanceIndex)
+{
+    return visibleInstanceIndex < plan.subpixelProxyMask.size() &&
+        plan.subpixelProxyMask[visibleInstanceIndex] != 0;
+}
+
+bool CadRendererGL::wireRepHasUncollapsedInstances(
+        const CadFramePlan& plan, PartId part)
+{
+    for (const CadDrawItem& item : plan.wireItems) {
+        if (!(item.rep.part == part)) continue;
+        for (uint32_t i = 0; i < item.instanceCount; ++i) {
+            if (!isSubpixelProxyInstance(plan, item.baseInstance + i))
+                return true;
+        }
+    }
+    return false;
+}
+
+void CadRendererGL::renderSubpixelProxyPoints(
+        const CadFramePlan& plan, const SoGLContext* glue,
+        const SbMatrix& viewProj)
+{
+    if (plan.subpixelProxyPoints.empty())
+        return;
+
+    const bool useVbo = caps_.canUseVbo();
+    const bool fixedFunction = caps_.isSoftwareRenderer ||
+        !shaders_.proxyPoint || !useVbo;
+    GLfloat savedPointSize = 1.0f;
+    glue->glGetFloatv(GL_POINT_SIZE, &savedPointSize);
+    glue->glPointSize(1.0f);
+
+    if (!useVbo) {
+        glue->glMatrixMode(GL_PROJECTION);
+        glue->glPushMatrix();
+        glue->glLoadIdentity();
+        glue->glMatrixMode(GL_MODELVIEW);
+        glue->glPushMatrix();
+        glue->glLoadMatrixf(viewProj[0]);
+        const GLboolean wasLighting = glue->glIsEnabled(GL_LIGHTING);
+        glue->glDisable(GL_LIGHTING);
+        glue->glBegin(GL_POINTS);
+        for (const CadSubpixelProxyPoint& point : plan.subpixelProxyPoints) {
+            glue->glColor4ub(point.rgba[0], point.rgba[1], point.rgba[2],
+                             point.rgba[3]);
+            glue->glVertex3f(point.position[0], point.position[1],
+                             point.position[2]);
+        }
+        glue->glEnd();
+        if (wasLighting) glue->glEnable(GL_LIGHTING);
+        glue->glMatrixMode(GL_MODELVIEW);
+        glue->glPopMatrix();
+        glue->glMatrixMode(GL_PROJECTION);
+        glue->glPopMatrix();
+        glue->glMatrixMode(GL_MODELVIEW);
+        glue->glPointSize(savedPointSize);
+        return;
+    }
+
+    const CadSubpixelProxyGpu& cached = gpuRes_->subpixelProxyPoints();
+    if (cached.revision != plan.subpixelProxyRevision || !cached.posBuf ||
+            !cached.colorBuf) {
+        std::vector<float> positions;
+        std::vector<uint8_t> colors;
+        positions.reserve(plan.subpixelProxyPoints.size() * 3u);
+        colors.reserve(plan.subpixelProxyPoints.size() * 4u);
+        for (const CadSubpixelProxyPoint& point : plan.subpixelProxyPoints) {
+            appendPackedPoint(positions, point.position);
+            colors.insert(colors.end(), point.rgba.begin(), point.rgba.end());
+        }
+        gpuRes_->uploadSubpixelProxyPoints(plan.subpixelProxyRevision,
+                                           positions, colors, glue);
+    }
+    const CadSubpixelProxyGpu& gpu = gpuRes_->subpixelProxyPoints();
+    if (!gpu.posBuf || !gpu.colorBuf || gpu.count <= 0) {
+        glue->glPointSize(savedPointSize);
+        return;
+    }
+
+    if (fixedFunction) {
+        glue->glMatrixMode(GL_PROJECTION);
+        glue->glPushMatrix();
+        glue->glLoadIdentity();
+        glue->glMatrixMode(GL_MODELVIEW);
+        glue->glPushMatrix();
+        glue->glLoadMatrixf(viewProj[0]);
+        const GLboolean wasLighting = glue->glIsEnabled(GL_LIGHTING);
+        glue->glDisable(GL_LIGHTING);
+        glue->glEnableClientState(GL_VERTEX_ARRAY);
+        glue->glEnableClientState(GL_COLOR_ARRAY);
+        glue->glBindBuffer(GL_ARRAY_BUFFER, gpu.posBuf);
+        glue->glVertexPointer(3, GL_FLOAT, 3 * sizeof(float), nullptr);
+        glue->glBindBuffer(GL_ARRAY_BUFFER, gpu.colorBuf);
+        glue->glColorPointer(4, GL_UNSIGNED_BYTE, 4 * sizeof(uint8_t),
+                             nullptr);
+        glue->glDrawArrays(GL_POINTS, 0, gpu.count);
+        glue->glDisableClientState(GL_COLOR_ARRAY);
+        glue->glDisableClientState(GL_VERTEX_ARRAY);
+        glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
+        if (wasLighting) glue->glEnable(GL_LIGHTING);
+        glue->glMatrixMode(GL_MODELVIEW);
+        glue->glPopMatrix();
+        glue->glMatrixMode(GL_PROJECTION);
+        glue->glPopMatrix();
+        glue->glMatrixMode(GL_MODELVIEW);
+    } else {
+        glue->glUseProgramObjectARB(shaders_.proxyPoint);
+        const GLint locVP = glue->glGetUniformLocationARB(shaders_.proxyPoint,
+                                                           "u_viewProj");
+        GLint locPos = glue->glGetAttribLocationARB(shaders_.proxyPoint,
+                                                     "a_pos");
+        GLint locColor = glue->glGetAttribLocationARB(shaders_.proxyPoint,
+                                                       "a_color");
+        if (locPos < 0) locPos = 0;
+        glue->glUniformMatrix4fvARB(locVP, 1, GL_FALSE, viewProj[0]);
+        glue->glBindBuffer(GL_ARRAY_BUFFER, gpu.posBuf);
+        glue->glVertexAttribPointerARB(static_cast<GLuint>(locPos), 3,
+                                       GL_FLOAT, GL_FALSE,
+                                       3 * sizeof(float), nullptr);
+        glue->glEnableVertexAttribArrayARB(static_cast<GLuint>(locPos));
+        if (locColor >= 0) {
+            glue->glBindBuffer(GL_ARRAY_BUFFER, gpu.colorBuf);
+            glue->glVertexAttribPointerARB(static_cast<GLuint>(locColor), 4,
+                GL_UNSIGNED_BYTE, GL_TRUE, 4 * sizeof(uint8_t), nullptr);
+            glue->glEnableVertexAttribArrayARB(static_cast<GLuint>(locColor));
+        }
+        glue->glDrawArrays(GL_POINTS, 0, gpu.count);
+        if (locColor >= 0)
+            glue->glDisableVertexAttribArrayARB(static_cast<GLuint>(locColor));
+        glue->glDisableVertexAttribArrayARB(static_cast<GLuint>(locPos));
+        glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glue->glUseProgramObjectARB(0);
+    }
+    glue->glPointSize(savedPointSize);
+}
+
 const std::vector<uint32_t> *
 CadRendererGL::lodIndicesForInstance(
         const SoCADAssembly& assembly,
@@ -951,6 +1118,8 @@ void CadRendererGL::render(
         const SoCADAssembly& assembly,
         const SoGLContext*   glue,
         const SbMatrix&      viewProj,
+        const SbMatrix&      viewMatrix,
+        const SbMatrix&      projectionMatrix,
         const SbVec3f&       cameraPos,
         const CadRenderState& renderState,
         const std::unordered_map<PartId, uint64_t,
@@ -976,18 +1145,23 @@ void CadRendererGL::render(
             SoGLContext_glEnable(glue, GL_POLYGON_OFFSET_FILL);
             SoGLContext_glPolygonOffset(glue, 1.0f, 1.0f);
             const bool depthRendered = renderFlatShaded(
-                plan, assembly, glue, viewProj, true);
+                plan, assembly, glue, viewProj, viewMatrix, projectionMatrix,
+                true);
             SoGLContext_glDisable(glue, GL_POLYGON_OFFSET_FILL);
             SoGLContext_glColorMask(glue, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
             if (depthRendered && renderFlatWire(
                     plan, assembly, glue, viewProj)) {
                 lastRenderTier_ = 3;
+                renderSubpixelProxyPoints(plan, glue, viewProj);
                 return;
             }
         }
 
         // The per-part fallback needs retained representations.
         for (const auto& repKey : plan.requiredReps) {
+            if (repKey.type == CadRepType::WireSegments &&
+                    !wireRepHasUncollapsedInstances(plan, repKey.part))
+                continue;
             auto genIt = partGenMap.find(repKey.part);
             uint64_t gen = (genIt != partGenMap.end()) ? genIt->second : 0;
             ensurePartUploaded(repKey.part, assembly, gen, glue);
@@ -1004,10 +1178,12 @@ void CadRendererGL::render(
             renderVboLoop(depthPlan, assembly, glue, viewProj, cameraPos,
                           renderState, partGenMap, false, true);
         } else if (caps_.canUseFixedVbo()) {
-            renderFixedVboLoop(depthPlan, glue, viewProj);
+            renderFixedVboLoop(depthPlan, glue, viewProj, viewMatrix,
+                               projectionMatrix);
         } else {
-            renderImmediateMode(depthPlan, assembly, glue, viewProj,
-                                cameraPos, renderState, partGenMap);
+            renderImmediateMode(depthPlan, assembly, glue, viewProj, viewMatrix,
+                                projectionMatrix, cameraPos, renderState,
+                                partGenMap);
         }
         SoGLContext_glDisable(glue, GL_POLYGON_OFFSET_FILL);
         SoGLContext_glColorMask(glue, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
@@ -1022,20 +1198,37 @@ void CadRendererGL::render(
                           renderState, partGenMap, false, false);
         } else if (caps_.canUseFixedVbo()) {
             lastRenderTier_ = 1;
-            renderFixedVboLoop(wirePlan, glue, viewProj);
+            renderFixedVboLoop(wirePlan, glue, viewProj, viewMatrix,
+                               projectionMatrix);
         } else {
             lastRenderTier_ = 0;
-            renderImmediateMode(wirePlan, assembly, glue, viewProj,
-                                cameraPos, renderState, partGenMap);
+            renderImmediateMode(wirePlan, assembly, glue, viewProj, viewMatrix,
+                                projectionMatrix, cameraPos, renderState,
+                                partGenMap);
         }
+        renderSubpixelProxyPoints(plan, glue, viewProj);
         return;
     }
 
-    if (useFlatShaded && renderFlatShaded(
-            plan, assembly, glue, viewProj, false)) {
+    bool flatShadedRendered = false;
+    if (useFlatShaded) {
+        const GLboolean polygonOffsetWasEnabled =
+            glue->glIsEnabled(GL_POLYGON_OFFSET_FILL);
+        if (!polygonOffsetWasEnabled) {
+            SoGLContext_glEnable(glue, GL_POLYGON_OFFSET_FILL);
+            SoGLContext_glPolygonOffset(glue, 1.0f, 1.0f);
+        }
+        flatShadedRendered = renderFlatShaded(
+            plan, assembly, glue, viewProj, viewMatrix, projectionMatrix,
+            false);
+        if (!polygonOffsetWasEnabled)
+            SoGLContext_glDisable(glue, GL_POLYGON_OFFSET_FILL);
+    }
+    if (flatShadedRendered) {
         if (plan.wireItems.empty() ||
                 renderFlatWire(plan, assembly, glue, viewProj)) {
             lastRenderTier_ = 4;
+            renderSubpixelProxyPoints(plan, glue, viewProj);
             return;
         }
     }
@@ -1043,6 +1236,9 @@ void CadRendererGL::render(
     // Upload geometry for the per-part rendering paths only after the flat
     // aggregate paths have declined the frame.
     for (const auto& repKey : plan.requiredReps) {
+        if (repKey.type == CadRepType::WireSegments &&
+                !wireRepHasUncollapsedInstances(plan, repKey.part))
+            continue;
         auto genIt = partGenMap.find(repKey.part);
         uint64_t gen = (genIt != partGenMap.end()) ? genIt->second : 0;
         ensurePartUploaded(repKey.part, assembly, gen, glue);
@@ -1055,6 +1251,17 @@ void CadRendererGL::render(
     const bool flatWireEnabled = flatWireEnv ? flatWireEnv[0] != '0' : true;
     const bool canUseFlatWire = caps_.isSoftwareRenderer ?
         caps_.canUseFixedVbo() : (caps_.canUseVbo() && shaders_.wire);
+    /* Keep shaded polygons fractionally behind wire geometry.  A wire source
+     * may be a separate assembly from its shaded peer, so relying on a local
+     * shaded-with-edges mode leaves coplanar overlays at the mercy of depth
+     * rounding. */
+    const GLboolean polygonOffsetWasEnabled =
+        glue->glIsEnabled(GL_POLYGON_OFFSET_FILL);
+    if (!plan.shadedItems.empty() && !polygonOffsetWasEnabled) {
+        SoGLContext_glEnable(glue, GL_POLYGON_OFFSET_FILL);
+        SoGLContext_glPolygonOffset(glue, 1.0f, 1.0f);
+    }
+
     if (flatWireEnabled && plan.shadedItems.empty() &&
             plan.wireItems.size() >= 128 &&
             canUseFlatWire &&
@@ -1062,7 +1269,7 @@ void CadRendererGL::render(
         lastRenderTier_ = 3;
     } else if (caps_.isSoftwareRenderer && caps_.canUseFixedVbo()) {
         lastRenderTier_ = 1;
-        renderFixedVboLoop(plan, glue, viewProj);
+        renderFixedVboLoop(plan, glue, viewProj, viewMatrix, projectionMatrix);
     } else if (!needsShadedLod && caps_.canUseInstanced() &&
             shaders_.wireInst && shaders_.shadedInst) {
         lastRenderTier_ = 2;
@@ -1074,12 +1281,17 @@ void CadRendererGL::render(
                       renderState, partGenMap, false, true);
     } else if (caps_.canUseFixedVbo()) {
         lastRenderTier_ = 1;
-        renderFixedVboLoop(plan, glue, viewProj);
+        renderFixedVboLoop(plan, glue, viewProj, viewMatrix, projectionMatrix);
     } else {
         lastRenderTier_ = 0;
-        renderImmediateMode(plan, assembly, glue, viewProj, cameraPos,
-                            renderState, partGenMap);
+        renderImmediateMode(plan, assembly, glue, viewProj, viewMatrix,
+                            projectionMatrix, cameraPos, renderState,
+                            partGenMap);
     }
+
+    if (!plan.shadedItems.empty() && !polygonOffsetWasEnabled)
+        SoGLContext_glDisable(glue, GL_POLYGON_OFFSET_FILL);
+    renderSubpixelProxyPoints(plan, glue, viewProj);
 }
 
 namespace {
@@ -1140,6 +1352,22 @@ static SbVec3f transformedFlatPoint(
                    x * matrix[2] + y * matrix[6] + z * matrix[10] + matrix[14]);
 }
 
+static SbVec3f transformedFlatNormal(
+        const SbVec3f& normal,
+        const std::array<float, 16>& matrix)
+{
+    SbMatrix transform;
+    transform.setValue(matrix.data());
+    const SbMatrix normalMatrix = transform.inverse().transpose();
+    SbVec3f result;
+    normalMatrix.multDirMatrix(normal, result);
+    if (result.sqrLength() > 0.0f)
+        result.normalize();
+    else
+        result.setValue(0.0f, 0.0f, 1.0f);
+    return result;
+}
+
 static uint32_t flatRgbaKey(const CadVisibleInstance& inst)
 {
     return static_cast<uint32_t>(inst.rgba[0]) |
@@ -1157,10 +1385,13 @@ bool CadRendererGL::renderFlatWire(
         const SbMatrix& viewProj)
 {
     constexpr size_t maxPositionBytes = 256u * 1024u * 1024u;
+    const uint64_t presentationRevision = plan.subpixelProxyRevision ?
+        plan.subpixelProxyRevision : plan.revision;
     const CadFlatWireGpu& cached = gpuRes_->flatWire();
-    if (cached.planRevision != plan.revision) {
-        const bool rebuildGeometry =
-            cached.geometryRevision != plan.geometryRevision;
+    if (cached.planRevision != presentationRevision) {
+        // Proxy membership changes with the camera, so the flattened buffer
+        // must be rebuilt even when the underlying assembly is unchanged.
+        const bool rebuildGeometry = true;
         size_t pointCount = 0;
         for (const CadDrawItem& item : plan.wireItems) {
             const obol::PartGeometry *geom = assembly.partGeometry(item.rep.part);
@@ -1171,13 +1402,16 @@ bool CadRendererGL::renderFlatWire(
                 if (poly.points.size() >= 2)
                     segments += poly.points.size() - 1;
             if (segments == 0) continue;
-            if (segments > (maxPositionBytes / (6 * sizeof(float))) ||
-                    item.instanceCount >
-                    (maxPositionBytes / (6 * sizeof(float))) / segments)
-                return false;
-            pointCount += segments * 2 * item.instanceCount;
-            if (pointCount > maxPositionBytes / (3 * sizeof(float)))
-                return false;
+            for (uint32_t ii = 0; ii < item.instanceCount; ++ii) {
+                if (isSubpixelProxyInstance(plan, item.baseInstance + ii))
+                    continue;
+                const size_t maxPoints =
+                    maxPositionBytes / (3 * sizeof(float));
+                if (segments > maxPoints / 2 ||
+                        pointCount > maxPoints - segments * 2)
+                    return false;
+                pointCount += segments * 2;
+            }
         }
 
         std::vector<float> positions;
@@ -1198,8 +1432,11 @@ bool CadRendererGL::renderFlatWire(
                     segments += poly.points.size() - 1;
             const size_t instanceVertices = segments * 2;
             for (uint32_t ii = 0; ii < item.instanceCount; ++ii) {
+                const size_t visibleIndex = item.baseInstance + ii;
+                if (isSubpixelProxyInstance(plan, visibleIndex))
+                    continue;
                 const CadVisibleInstance& inst =
-                    plan.visibleInstances[item.baseInstance + ii];
+                    plan.visibleInstances[visibleIndex];
                 const FlatWireStyleKey key = flatWireStyleKey(inst);
                 if (!haveGroup || key < activeKey || activeKey < key) {
                     CadFlatWireGroup group;
@@ -1234,10 +1471,10 @@ bool CadRendererGL::renderFlatWire(
         }
         if (pointCount == 0 || groups.empty()) return false;
         if (rebuildGeometry)
-            gpuRes_->uploadFlatWire(plan.revision, plan.geometryRevision,
+            gpuRes_->uploadFlatWire(presentationRevision, plan.geometryRevision,
                                     positions, groups, glue, caps_);
         else
-            gpuRes_->updateFlatWireGroups(plan.revision, groups);
+            gpuRes_->updateFlatWireGroups(presentationRevision, groups);
     }
 
     const CadFlatWireGpu& flat = gpuRes_->flatWire();
@@ -1331,6 +1568,8 @@ bool CadRendererGL::renderFlatShaded(
         const SoCADAssembly& assembly,
         const SoGLContext* glue,
         const SbMatrix& viewProj,
+        const SbMatrix& viewMatrix,
+        const SbMatrix& projectionMatrix,
         bool depthOnly)
 {
     constexpr size_t maxVertexBytes = 512u * 1024u * 1024u;
@@ -1386,6 +1625,8 @@ bool CadRendererGL::renderFlatShaded(
 
             const obol::TriMesh& mesh =
                 *assembly.partGeometry(item.rep.part)->shaded;
+            const bool hasVertexNormals =
+                mesh.normals.size() == mesh.positions.size();
             groups.back().count += static_cast<GLsizei>(mesh.indices.size());
             vertexOffset += mesh.indices.size();
             if (!rebuildGeometry)
@@ -1409,13 +1650,23 @@ bool CadRendererGL::renderFlatShaded(
                 else
                     normal.setValue(0.0f, 0.0f, 1.0f);
                 const SbVec3f triangle[3] = {a, b, c};
-                for (const SbVec3f& point : triangle) {
+                const SbVec3f triangleNormals[3] = {
+                    hasVertexNormals ?
+                        transformedFlatNormal(mesh.normals[ia], inst.transform) : normal,
+                    hasVertexNormals ?
+                        transformedFlatNormal(mesh.normals[ib], inst.transform) : normal,
+                    hasVertexNormals ?
+                        transformedFlatNormal(mesh.normals[ic], inst.transform) : normal
+                };
+                for (size_t vertex = 0; vertex < 3; ++vertex) {
+                    const SbVec3f& point = triangle[vertex];
+                    const SbVec3f& vertexNormal = triangleNormals[vertex];
                     positions[shadedOffset] = point[0];
-                    normals[shadedOffset++] = normal[0];
+                    normals[shadedOffset++] = vertexNormal[0];
                     positions[shadedOffset] = point[1];
-                    normals[shadedOffset++] = normal[1];
+                    normals[shadedOffset++] = vertexNormal[1];
                     positions[shadedOffset] = point[2];
-                    normals[shadedOffset++] = normal[2];
+                    normals[shadedOffset++] = vertexNormal[2];
                 }
             }
         }
@@ -1433,12 +1684,13 @@ bool CadRendererGL::renderFlatShaded(
     if (caps_.isSoftwareRenderer) {
         glue->glMatrixMode(GL_PROJECTION);
         glue->glPushMatrix();
-        glue->glLoadIdentity();
+        glue->glLoadMatrixf(projectionMatrix[0]);
         glue->glMatrixMode(GL_MODELVIEW);
         glue->glPushMatrix();
-        glue->glLoadMatrixf(viewProj[0]);
+        glue->glLoadMatrixf(viewMatrix[0]);
         const GLboolean wasLighting = glue->glIsEnabled(GL_LIGHTING);
         if (depthOnly) glue->glDisable(GL_LIGHTING);
+        else glue->glEnable(GL_LIGHTING);
         glue->glEnableClientState(GL_VERTEX_ARRAY);
         glue->glBindBuffer(GL_ARRAY_BUFFER, flat.posBuf);
         glue->glVertexPointer(3, GL_FLOAT, 3 * sizeof(float), nullptr);
@@ -1673,7 +1925,9 @@ void CadRendererGL::renderVboLoop(
             if (!w) continue;
 
             for (uint32_t i = 0; i < item.instanceCount; ++i) {
-                const auto& inst = plan.visibleInstances[item.baseInstance + i];
+                const size_t visibleIndex = item.baseInstance + i;
+                if (isSubpixelProxyInstance(plan, visibleIndex)) continue;
+                const auto& inst = plan.visibleInstances[visibleIndex];
                 if (isBoxOutsideFrustum(inst.wbMin, inst.wbMax, fp)) continue;
 
                 glue->glUniformMatrix4fvARB(locModel, 1, GL_FALSE,
@@ -1750,11 +2004,13 @@ void CadRendererGL::renderVboLoop(
 void CadRendererGL::renderFixedVboLoop(
         const CadFramePlan& plan,
         const SoGLContext* glue,
-        const SbMatrix& viewProj)
+        const SbMatrix& viewProj,
+        const SbMatrix& viewMatrix,
+        const SbMatrix& projectionMatrix)
 {
     glue->glMatrixMode(GL_PROJECTION);
     glue->glPushMatrix();
-    glue->glLoadIdentity();
+    glue->glLoadMatrixf(projectionMatrix[0]);
     glue->glMatrixMode(GL_MODELVIEW);
     glue->glPushMatrix();
 
@@ -1775,14 +2031,16 @@ void CadRendererGL::renderFixedVboLoop(
             glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, wire->segIdxBuf);
 
         for (uint32_t i = 0; i < item.instanceCount; ++i) {
-            const auto& inst = plan.visibleInstances[item.baseInstance + i];
+            const size_t visibleIndex = item.baseInstance + i;
+            if (isSubpixelProxyInstance(plan, visibleIndex)) continue;
+            const auto& inst = plan.visibleInstances[visibleIndex];
             if (isBoxOutsideFrustum(inst.wbMin, inst.wbMax, fp)) continue;
 
             SbMatrix model;
             model.setValue(inst.transform.data());
-            SbMatrix mvp = model;
-            mvp.multRight(viewProj);
-            glue->glLoadMatrixf(mvp[0]);
+            SbMatrix modelView = model;
+            modelView.multRight(viewMatrix);
+            glue->glLoadMatrixf(modelView[0]);
             glue->glColor4ub(inst.rgba[0], inst.rgba[1],
                              inst.rgba[2], inst.rgba[3]);
             applyWireRasterStyle(glue, inst, caps_.hasLineStipple);
@@ -1797,9 +2055,15 @@ void CadRendererGL::renderFixedVboLoop(
 
     glue->glDisableClientState(GL_VERTEX_ARRAY);
     restoreWireRasterState(glue, rasterState, caps_.hasLineStipple);
-    if (wasLighting) glue->glEnable(GL_LIGHTING);
 
     const GLboolean wasColorMaterial = glue->glIsEnabled(GL_COLOR_MATERIAL);
+    GLint wasTwoSidedLighting = GL_FALSE;
+    glue->glGetIntegerv(GL_LIGHT_MODEL_TWO_SIDE, &wasTwoSidedLighting);
+    if (!plan.shadedItems.empty()) {
+        // CAD shading must not depend on the caller enabling GL_LIGHTING.
+        glue->glEnable(GL_LIGHTING);
+        glue->glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
+    }
     glue->glDisable(GL_COLOR_MATERIAL);
     glue->glEnableClientState(GL_VERTEX_ARRAY);
     for (const auto& item : plan.shadedItems) {
@@ -1822,9 +2086,9 @@ void CadRendererGL::renderFixedVboLoop(
 
             SbMatrix model;
             model.setValue(inst.transform.data());
-            SbMatrix mvp = model;
-            mvp.multRight(viewProj);
-            glue->glLoadMatrixf(mvp[0]);
+            SbMatrix modelView = model;
+            modelView.multRight(viewMatrix);
+            glue->glLoadMatrixf(modelView[0]);
             setImmediateMaterialFromRgba(glue, inst.rgba.data());
             glue->glDrawElements(GL_TRIANGLES, tri->idxCount,
                                  GL_UNSIGNED_INT, nullptr);
@@ -1833,6 +2097,10 @@ void CadRendererGL::renderFixedVboLoop(
     }
     glue->glDisableClientState(GL_VERTEX_ARRAY);
     if (wasColorMaterial) glue->glEnable(GL_COLOR_MATERIAL);
+    else glue->glDisable(GL_COLOR_MATERIAL);
+    glue->glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, wasTwoSidedLighting);
+    if (wasLighting) glue->glEnable(GL_LIGHTING);
+    else glue->glDisable(GL_LIGHTING);
 
     glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
     glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
@@ -1852,17 +2120,18 @@ void CadRendererGL::renderImmediateMode(
         const SoCADAssembly& assembly,
         const SoGLContext*   glue,
         const SbMatrix&      viewProj,
+        const SbMatrix&      viewMatrix,
+        const SbMatrix&      projectionMatrix,
         const SbVec3f&       cameraPos,
         const CadRenderState& renderState,
         const std::unordered_map<PartId, uint64_t,
                                  std::hash<PartId>>& partGenMap)
 {
-    // Push GL matrix state, set up the view-projection matrix in MODELVIEW
-    // (the fixed-function pipeline applies MODELVIEW * PROJECTION to each vertex).
-    // We fold the per-instance transform into MODELVIEW = viewProj * model.
+    // Keep projection out of GL_MODELVIEW so normal transformation uses only
+    // the affine local-to-eye transform.
     glue->glMatrixMode(GL_PROJECTION);
     glue->glPushMatrix();
-    glue->glLoadIdentity();  // Identity projection – we bake VP into MODELVIEW
+    glue->glLoadMatrixf(projectionMatrix[0]);
 
     glue->glMatrixMode(GL_MODELVIEW);
     glue->glPushMatrix();
@@ -1883,19 +2152,16 @@ void CadRendererGL::renderImmediateMode(
         const obol::WireRep& wire = *geom->wire;
 
         for (uint32_t ii = 0; ii < item.instanceCount; ++ii) {
-            const auto& inst = plan.visibleInstances[item.baseInstance + ii];
+            const size_t visibleIndex = item.baseInstance + ii;
+            if (isSubpixelProxyInstance(plan, visibleIndex)) continue;
+            const auto& inst = plan.visibleInstances[visibleIndex];
             if (isBoxOutsideFrustum(inst.wbMin, inst.wbMax, fp)) continue;
 
-            // Build the combined VP * M matrix in OI convention,
-            // then load it as the GL MODELVIEW.
-            // OI row-major → glLoadMatrixf reads as column-major → gives transpose
-            // which is exactly what the fixed-function pipeline needs.
             SbMatrix model;
-            // inst.transform is a flat float[16] copy of OI localToRoot
             model.setValue(inst.transform.data());
-            SbMatrix mvp = model;
-            mvp.multRight(viewProj);
-            glue->glLoadMatrixf(mvp[0]); // OI[0] = start of float[4][4]; GL reads column-major
+            SbMatrix modelView = model;
+            modelView.multRight(viewMatrix);
+            glue->glLoadMatrixf(modelView[0]);
 
             glue->glColor4ub(inst.rgba[0], inst.rgba[1], inst.rgba[2], inst.rgba[3]);
             applyWireRasterStyle(glue, inst, caps_.hasLineStipple);
@@ -1926,10 +2192,15 @@ void CadRendererGL::renderImmediateMode(
     restoreWireRasterState(glue, rasterState, caps_.hasLineStipple);
 
     // --- Shaded pass ---
-    if (wasLighting) glue->glEnable(GL_LIGHTING);
-    // Simple Phong-like: enable lighting for shaded items if lighting was on,
-    // else just draw with flat colour.
     GLboolean wasColorMaterial = glue->glIsEnabled(GL_COLOR_MATERIAL);
+    GLint wasTwoSidedLighting = GL_FALSE;
+    glue->glGetIntegerv(GL_LIGHT_MODEL_TWO_SIDE, &wasTwoSidedLighting);
+    if (!plan.shadedItems.empty()) {
+        // Shaded CAD geometry always uses its normals, regardless of the
+        // lighting state inherited from the surrounding scene graph.
+        glue->glEnable(GL_LIGHTING);
+        glue->glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
+    }
     glue->glDisable(GL_COLOR_MATERIAL);
     for (const auto& item : plan.shadedItems) {
         const obol::PartGeometry* geom = assembly.partGeometry(item.rep.part);
@@ -1944,9 +2215,9 @@ void CadRendererGL::renderImmediateMode(
 
             SbMatrix model;
             model.setValue(inst.transform.data());
-            SbMatrix mvp = model;
-            mvp.multRight(viewProj);
-            glue->glLoadMatrixf(mvp[0]);
+            SbMatrix modelView = model;
+            modelView.multRight(viewMatrix);
+            glue->glLoadMatrixf(modelView[0]);
 
             setImmediateMaterialFromRgba(glue, inst.rgba.data());
 
@@ -1973,6 +2244,10 @@ void CadRendererGL::renderImmediateMode(
         }
     }
     if (wasColorMaterial) glue->glEnable(GL_COLOR_MATERIAL);
+    else glue->glDisable(GL_COLOR_MATERIAL);
+    glue->glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, wasTwoSidedLighting);
+    if (wasLighting) glue->glEnable(GL_LIGHTING);
+    else glue->glDisable(GL_LIGHTING);
 
     // Restore matrix state
     glue->glMatrixMode(GL_MODELVIEW);
@@ -2086,50 +2361,60 @@ void CadRendererGL::renderInstanced(
             if (solidWireOnly && item.customWireStyle) continue;
             CadWireGpu* w = gpuRes_->wireFor(item.rep.part);
             if (!w || w->segCount == 0) continue;
-            const auto& styleInst =
-                plan.visibleInstances[item.baseInstance];
-            applyWireRasterStyle(glue, styleInst, caps_.hasLineStipple);
+            uint32_t runStart = 0;
+            while (runStart < item.instanceCount) {
+                while (runStart < item.instanceCount &&
+                    isSubpixelProxyInstance(plan, item.baseInstance + runStart))
+                    ++runStart;
+                if (runStart == item.instanceCount)
+                    break;
+                uint32_t runEnd = runStart + 1;
+                while (runEnd < item.instanceCount &&
+                    !isSubpixelProxyInstance(plan, item.baseInstance + runEnd))
+                    ++runEnd;
 
-            if (w->vao && glue->glBindVertexArray) {
-                glue->glBindVertexArray(w->vao);
-                if (w->instanceVbo != instVbo ||
-                        w->instanceBase != item.baseInstance) {
-                    bindInstAttribs(item.baseInstance);
-                    w->instanceVbo = instVbo;
-                    w->instanceBase = item.baseInstance;
+                const uint32_t baseInstance = item.baseInstance + runStart;
+                const auto& styleInst = plan.visibleInstances[baseInstance];
+                applyWireRasterStyle(glue, styleInst, caps_.hasLineStipple);
+                if (w->vao && glue->glBindVertexArray) {
+                    glue->glBindVertexArray(w->vao);
+                    if (w->instanceVbo != instVbo ||
+                            w->instanceBase != baseInstance) {
+                        bindInstAttribs(baseInstance);
+                        w->instanceVbo = instVbo;
+                        w->instanceBase = baseInstance;
+                    }
+                } else {
+                    glue->glBindBuffer(GL_ARRAY_BUFFER, w->posBuf);
+                    glue->glVertexAttribPointerARB(static_cast<GLuint>(locPos), 3,
+                                                   GL_FLOAT, GL_FALSE,
+                                                   3 * sizeof(float), nullptr);
+                    glue->glEnableVertexAttribArrayARB(static_cast<GLuint>(locPos));
+                    if (!w->sequentialSegments)
+                        glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, w->segIdxBuf);
+                    bindInstAttribs(baseInstance);
                 }
-            } else {
-                glue->glBindBuffer(GL_ARRAY_BUFFER, w->posBuf);
-                glue->glVertexAttribPointerARB(static_cast<GLuint>(locPos), 3,
-                                               GL_FLOAT, GL_FALSE,
-                                               3 * sizeof(float), nullptr);
-                glue->glEnableVertexAttribArrayARB(static_cast<GLuint>(locPos));
-                if (!w->sequentialSegments)
-                    glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, w->segIdxBuf);
-                bindInstAttribs(item.baseInstance);
-            }
 
-            if (w->sequentialSegments) {
-                glue->glDrawArraysInstanced(GL_LINES,
-                                            0,
-                                            w->segCount * 2,
-                                            static_cast<GLsizei>(item.instanceCount));
-            } else {
-                glue->glDrawElementsInstanced(GL_LINES,
-                                              w->segCount * 2,
-                                              GL_UNSIGNED_INT,
-                                              nullptr,
-                                              static_cast<GLsizei>(item.instanceCount));
-            }
+                const GLsizei runCount = static_cast<GLsizei>(runEnd - runStart);
+                if (w->sequentialSegments) {
+                    glue->glDrawArraysInstanced(GL_LINES, 0, w->segCount * 2,
+                                                runCount);
+                } else {
+                    glue->glDrawElementsInstanced(GL_LINES, w->segCount * 2,
+                                                  GL_UNSIGNED_INT, nullptr,
+                                                  runCount);
+                }
 
-            if (w->vao && glue->glBindVertexArray) {
-                glue->glBindVertexArray(0);
-            } else {
-                unbindInstAttribs();
-                glue->glDisableVertexAttribArrayARB(static_cast<GLuint>(locPos));
-                glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
-                if (!w->sequentialSegments)
-                    glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+                if (w->vao && glue->glBindVertexArray) {
+                    glue->glBindVertexArray(0);
+                } else {
+                    unbindInstAttribs();
+                    glue->glDisableVertexAttribArrayARB(static_cast<GLuint>(locPos));
+                    glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
+                    if (!w->sequentialSegments)
+                        glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+                }
+                runStart = runEnd;
             }
         }
 
