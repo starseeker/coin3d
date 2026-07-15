@@ -35,6 +35,7 @@
 
 #include <Inventor/actions/SoAction.h>
 #include <Inventor/actions/SoSubAction.h>
+#include <Inventor/SoDB.h>
 #include <Inventor/SbBasic.h>
 #include <Inventor/SbViewportRegion.h>
 #include <cstdint>
@@ -119,6 +120,8 @@ public:
   void setPassCallback(SoGLRenderPassCB * const func, void * const userdata);
   void setCacheContext(const uint32_t context);
   uint32_t getCacheContext(void) const;
+  void setContextManager(SoDB::ContextManager * manager);
+  SoDB::ContextManager * getContextManager(void) const;
 
   void addDelayedPath(SoPath * path);
   SbBool isRenderingDelayedPaths(void) const;

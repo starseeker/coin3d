@@ -71,6 +71,7 @@ public:
         EDGE     = 0,   ///< Hit an edge / wire polyline segment.
         TRIANGLE = 1,   ///< Hit a shaded triangle.
         BOUNDS   = 2,   ///< Hit only the bounding-box proxy (no fine geometry).
+        POINT    = 3,   ///< Hit a point primitive.
     };
 
     SoCADDetail();

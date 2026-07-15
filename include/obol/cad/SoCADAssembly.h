@@ -148,18 +148,40 @@ struct WireRep {
  * @brief Optional shaded triangle mesh for a part.
  *
  * normals may be empty; in that case flat normals are computed at render time.
+ * When present, normals has one entry per position and is addressed by the
+ * same triangle indices as positions.
  */
 struct TriMesh {
     std::vector<SbVec3f>  positions;
-    std::vector<SbVec3f>  normals;    ///< optional; may be empty
+    std::vector<SbVec3f>  normals;    ///< optional; empty or positions.size()
     std::vector<uint32_t> indices;    ///< triangle list (3 indices per tri)
     SbBox3f               bounds;
 };
 
 /**
+ * @brief Collection of point primitives representing a part.
+ *
+ * Optional attribute arrays are either empty or parallel to @c positions.
+ * Scales are model-space characteristic radii used by bounds and export;
+ * interactive raster size remains an instance presentation property.
+ */
+struct PointRep {
+    std::vector<SbVec3f> positions;
+    std::vector<uint32_t> pointIds;
+    std::vector<uint8_t> colorValid;
+    std::vector<SbColor> colors;
+    std::vector<uint8_t> scaleValid;
+    std::vector<float> scales;
+    std::vector<uint8_t> normalValid;
+    std::vector<SbVec3f> normals;
+    SbBox3f bounds;
+};
+
+/**
  * @brief Combined geometry payload for a single part.
  *
- * Either or both channels may be absent:
+ * Any channel may be absent:
+ * - @c points : needed for point rendering and point picking.
  * - @c wire : needed for wireframe rendering and edge picking.
  * - @c shaded : needed for shaded rendering and triangle picking.
  *
@@ -167,8 +189,17 @@ struct TriMesh {
  * hierarchy / bounds queries.
  */
 struct PartGeometry {
+    std::optional<PointRep> points; ///< Point primitives and optional attributes
     std::optional<WireRep> wire;    ///< Feature edges (no tessellation needed)
     std::optional<TriMesh> shaded;  ///< Optional triangle mesh for shading
+
+    /**
+     * This wire representation is a conservative LoD proxy rather than
+     * authored geometry.  Renderers may replace it with a single depth-tested
+     * point when its complete projected extent is subpixel.  The original
+     * geometry remains available for bounds queries and picking.
+     */
+    bool subpixelProxyEligible = false;
 };
 
 // ---------------------------------------------------------------------------
@@ -214,12 +245,26 @@ struct PartUpdate {
     PartGeometry geometry;
 };
 
+/** Bulk update retaining immutable geometry owned by the producer. */
+struct SharedPartUpdate {
+    PartId part;
+    std::shared_ptr<const PartGeometry> geometry;
+};
+
 /**
  * @brief Bulk instance update record.
  */
 struct InstanceUpdate {
     InstanceId     instance;
     InstanceRecord record;
+};
+
+/**
+ * @brief Bulk presentation-only instance update record.
+ */
+struct InstanceStyleUpdate {
+    InstanceId    instance;
+    InstanceStyle style;
 };
 
 /**
@@ -234,6 +279,7 @@ struct CadPickDetailRecord {
         EDGE     = 0,
         TRIANGLE = 1,
         BOUNDS   = 2,
+        POINT    = 3,
     };
 
     InstanceId    instance;
@@ -281,6 +327,7 @@ public:
         SHADED           = 0,  ///< Shaded triangles only
         WIREFRAME        = 1,  ///< Wireframe segments/polylines only
         SHADED_WITH_EDGES = 2, ///< Shaded triangles + wire overlay
+        HIDDEN_LINE      = 3,  ///< Triangle depth prepass + visible wire edges
     };
 
     /** Picking mode. */
@@ -336,6 +383,9 @@ public:
      */
     void upsertParts(const std::vector<obol::PartUpdate>& updates);
 
+    /** Retain producer-owned immutable part geometry without copying it. */
+    void upsertSharedParts(const std::vector<obol::SharedPartUpdate>& updates);
+
     /**
      * Remove a part.  Any instances referencing this part become non-renderable
      * (they remain in the instance database so they can be re-attached if the
@@ -385,6 +435,10 @@ public:
     /** Fast path: update only the visual style for an existing instance. */
     void updateInstanceStyle(obol::InstanceId iid, const obol::InstanceStyle& style);
 
+    /** Update many visual styles without rebuilding bounds or the pick BVH. */
+    void updateInstanceStyles(
+        const std::vector<obol::InstanceStyleUpdate>& updates);
+
     /** Replace the selection highlight set. */
     void setSelectedInstances(const std::vector<obol::InstanceId>& ids);
 
@@ -397,6 +451,21 @@ public:
 
     /** Number of parts currently in the part library. */
     size_t partCount() const;
+
+    /**
+     * Return stable instance IDs in deterministic order.
+     *
+     * Renderer-neutral backends use this together with getInstanceRecord()
+     * and partGeometry() to consume the retained assembly without rebuilding
+     * a per-instance scene graph.
+     */
+    std::vector<obol::InstanceId> instanceIds() const;
+
+    /** True when an instance is hidden from rendering and generic traversal. */
+    bool isInstanceHidden(obol::InstanceId iid) const;
+
+    /** True when any part can provide progressive triangle LoD. */
+    bool hasPartLod() const;
 
     /**
      * Return the geometry for @p pid, or nullptr if not in the part library.
@@ -415,7 +484,8 @@ public:
     /**
      * Return LoD-filtered triangle indices for @p pid at the given @p level.
      *
-     * Returns nullptr when no LoD structure is available for the part.
+     * Builds the part's LoD structure on first demand.  Returns nullptr when
+     * no shaded geometry is available for the part.
      * The returned pointer is stable until the next geometry change for
      * that part (i.e., until the next upsertPart/removePart call).
      *
@@ -460,6 +530,12 @@ public:
 
     /** True when the last render used the direct software wire rasterizer. */
     bool lastRenderUsedDirectSoftwareWire() const;
+
+    /** Number of LoD proxy occurrences rendered as subpixel points last frame. */
+    size_t lastSubpixelProxyCount() const;
+
+    /** Revision of the last camera-dependent subpixel proxy presentation. */
+    uint64_t lastSubpixelProxyRevision() const;
 
 protected:
     ~SoCADAssembly() override;

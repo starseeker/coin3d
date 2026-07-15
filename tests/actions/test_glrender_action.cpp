@@ -40,6 +40,7 @@
  *   - setSmoothing / isSmoothing
  *   - setNumPasses / getNumPasses
  *   - setCacheContext / getCacheContext
+ *   - setContextManager / getContextManager
  *   - setPassUpdate / isPassUpdate
  *   - setRenderingIsRemote / getRenderingIsRemote
  *   - setSortedLayersNumPasses / getSortedLayersNumPasses
@@ -211,6 +212,18 @@ int main()
         bool pass = (action.getCacheContext() == 42u);
         runner.endTest(pass, pass ? "" :
             "SoGLRenderAction setCacheContext round-trip failed");
+    }
+
+    runner.startTest("SoGLRenderAction: context manager round-trip");
+    {
+        SoGLRenderAction action(vp);
+        SoDB::ContextManager * manager = SoDB::getContextManager();
+        action.setContextManager(manager);
+        bool pass = manager && action.getContextManager() == manager;
+        action.setContextManager(NULL);
+        pass = pass && action.getContextManager() == NULL;
+        runner.endTest(pass, pass ? "" :
+            "SoGLRenderAction context manager round-trip failed");
     }
 
     // -----------------------------------------------------------------------

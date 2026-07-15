@@ -112,6 +112,29 @@ main()
     runner.endTest(stored.has_value() && sameRecord(*stored, intersection),
         "bulk explicit insertion must be lossless");
 
+    runner.startTest("shaded parts provide LoD on first demand");
+    obol::PartGeometry shaded;
+    obol::TriMesh triangle;
+    triangle.positions = {SbVec3f(0.0f, 0.0f, 0.0f),
+                          SbVec3f(1.0f, 0.0f, 0.0f),
+                          SbVec3f(0.0f, 1.0f, 0.0f)};
+    triangle.indices = {0, 1, 2};
+    triangle.bounds.setBounds(SbVec3f(0.0f, 0.0f, 0.0f),
+                              SbVec3f(1.0f, 1.0f, 0.0f));
+    shaded.shaded = std::move(triangle);
+    assembly->upsertPart(first.part, shaded);
+    const std::vector<uint32_t> *fullDetail =
+        assembly->getLodFilteredIndices(first.part, 255);
+    runner.endTest(assembly->hasPartLod() && fullDetail &&
+        fullDetail->size() == 3,
+        "LoD capability must be visible before its hierarchy is requested");
+
+    runner.startTest("replacing shaded geometry invalidates LoD capability");
+    assembly->upsertPart(first.part, obol::PartGeometry());
+    runner.endTest(!assembly->hasPartLod() &&
+        !assembly->getLodFilteredIndices(first.part, 255),
+        "part replacement must discard the previous LoD hierarchy");
+
     assembly->unref();
     return runner.getSummary();
 }

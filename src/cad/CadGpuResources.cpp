@@ -53,6 +53,19 @@ CadGpuResources::~CadGpuResources()
 // Internal delete helpers
 // ---------------------------------------------------------------------------
 
+void CadGpuResources::deletePointGpu(CadPointGpu& p, const SoGLContext * glue)
+{
+    if (p.vao && glue->glDeleteVertexArrays) {
+        glue->glDeleteVertexArrays(1, &p.vao);
+        p.vao = 0;
+    }
+    if (p.posBuf && glue->glDeleteBuffers) {
+        glue->glDeleteBuffers(1, &p.posBuf);
+        p.posBuf = 0;
+    }
+    p.count = 0;
+}
+
 void CadGpuResources::deleteWireGpu(CadWireGpu& w, const SoGLContext * glue)
 {
     if (w.vao && glue->glDeleteVertexArrays) {
@@ -103,6 +116,7 @@ void CadGpuResources::deleteTriGpu(CadTriGpu& t, const SoGLContext * glue)
 
 void CadGpuResources::upload(
         PartId pid,
+        const float*    pointData,   GLsizei pointCount,
         const float*    wireData,    GLsizei wireCount,
         const uint32_t* segIdx,      GLsizei segIdxCount,
         const float*    triPos,      GLsizei triPosCount,
@@ -120,9 +134,30 @@ void CadGpuResources::upload(
     if (entry.generation == generation) return;
 
     // Release stale resources first
+    deletePointGpu(entry.point, glue);
     deleteWireGpu(entry.wire, glue);
     deleteTriGpu(entry.tri, glue);
     entry.generation = generation;
+
+    if (pointData && pointCount > 0) {
+        CadPointGpu& p = entry.point;
+        p.count = pointCount;
+        glue->glGenBuffers(1, &p.posBuf);
+        glue->glBindBuffer(GL_ARRAY_BUFFER, p.posBuf);
+        glue->glBufferData(GL_ARRAY_BUFFER,
+                           static_cast<GLsizeiptr>(pointCount) * 3 * sizeof(float),
+                           pointData, GL_STATIC_DRAW);
+        if (caps.hasVAO && glue->glGenVertexArrays) {
+            glue->glGenVertexArrays(1, &p.vao);
+            glue->glBindVertexArray(p.vao);
+            glue->glBindBuffer(GL_ARRAY_BUFFER, p.posBuf);
+            glue->glVertexAttribPointerARB(0, 3, GL_FLOAT, GL_FALSE,
+                                           3 * sizeof(float), nullptr);
+            glue->glEnableVertexAttribArrayARB(0);
+            glue->glBindVertexArray(0);
+        }
+        glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
+    }
 
     // --- Wire geometry ---
     if (wireData && wireCount > 0 &&
@@ -236,6 +271,13 @@ bool CadGpuResources::isUpToDate(PartId pid, uint64_t gen) const
 // Access
 // ---------------------------------------------------------------------------
 
+const CadPointGpu* CadGpuResources::pointFor(PartId pid) const
+{
+    auto it = cache_.find(pid);
+    if (it == cache_.end() || it->second.point.count == 0) return nullptr;
+    return &it->second.point;
+}
+
 const CadWireGpu* CadGpuResources::wireFor(PartId pid) const
 {
     auto it = cache_.find(pid);
@@ -273,6 +315,7 @@ void CadGpuResources::invalidatePart(PartId pid, const SoGLContext * glue)
     auto it = cache_.find(pid);
     if (it == cache_.end()) return;
     if (glue) {
+        deletePointGpu(it->second.point, glue);
         deleteWireGpu(it->second.wire, glue);
         deleteTriGpu(it->second.tri,  glue);
     }
@@ -298,6 +341,7 @@ void CadGpuResources::uploadInstanceData(const void* data, GLsizeiptr byteSize,
 
 void CadGpuResources::uploadFlatWire(
         uint64_t planRevision,
+        uint64_t geometryRevision,
         const std::vector<float>& positions,
         const std::vector<CadFlatWireGroup>& groups,
         const SoGLContext *glue,
@@ -324,8 +368,83 @@ void CadGpuResources::uploadFlatWire(
     glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
 
     flatWire_.planRevision = planRevision;
+    flatWire_.geometryRevision = geometryRevision;
     flatWire_.vertexCount = static_cast<GLsizei>(positions.size() / 3);
     flatWire_.groups = groups;
+}
+
+void CadGpuResources::updateFlatWireGroups(
+        uint64_t planRevision,
+        const std::vector<CadFlatWireGroup>& groups)
+{
+    flatWire_.planRevision = planRevision;
+    flatWire_.groups = groups;
+}
+
+void CadGpuResources::uploadFlatShaded(
+        uint64_t planRevision,
+        uint64_t geometryRevision,
+        const std::vector<float>& positions,
+        const std::vector<float>& normals,
+        const std::vector<CadFlatShadedGroup>& groups,
+        const SoGLContext *glue)
+{
+    if (!glue || positions.empty() || positions.size() != normals.size())
+        return;
+    if (!flatShaded_.posBuf)
+        glue->glGenBuffers(1, &flatShaded_.posBuf);
+    if (!flatShaded_.normBuf)
+        glue->glGenBuffers(1, &flatShaded_.normBuf);
+    glue->glBindBuffer(GL_ARRAY_BUFFER, flatShaded_.posBuf);
+    glue->glBufferData(GL_ARRAY_BUFFER,
+                       static_cast<GLsizeiptr>(positions.size() * sizeof(float)),
+                       positions.data(), GL_STATIC_DRAW);
+    glue->glBindBuffer(GL_ARRAY_BUFFER, flatShaded_.normBuf);
+    glue->glBufferData(GL_ARRAY_BUFFER,
+                       static_cast<GLsizeiptr>(normals.size() * sizeof(float)),
+                       normals.data(), GL_STATIC_DRAW);
+    glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
+    flatShaded_.planRevision = planRevision;
+    flatShaded_.geometryRevision = geometryRevision;
+    flatShaded_.vertexCount = static_cast<GLsizei>(positions.size() / 3);
+    flatShaded_.groups = groups;
+}
+
+void CadGpuResources::updateFlatShadedGroups(
+        uint64_t planRevision,
+        const std::vector<CadFlatShadedGroup>& groups)
+{
+    flatShaded_.planRevision = planRevision;
+    flatShaded_.groups = groups;
+}
+
+void CadGpuResources::uploadSubpixelProxyPoints(
+        uint64_t revision,
+        const std::vector<float>& positions,
+        const std::vector<uint8_t>& colors,
+        const SoGLContext *glue)
+{
+    if (!glue || positions.empty() || positions.size() % 3 != 0 ||
+            colors.size() != (positions.size() / 3) * 4)
+        return;
+
+    if (!subpixelProxyPoints_.posBuf)
+        glue->glGenBuffers(1, &subpixelProxyPoints_.posBuf);
+    if (!subpixelProxyPoints_.colorBuf)
+        glue->glGenBuffers(1, &subpixelProxyPoints_.colorBuf);
+
+    glue->glBindBuffer(GL_ARRAY_BUFFER, subpixelProxyPoints_.posBuf);
+    glue->glBufferData(GL_ARRAY_BUFFER,
+                       static_cast<GLsizeiptr>(positions.size() * sizeof(float)),
+                       positions.data(), GL_STREAM_DRAW);
+    glue->glBindBuffer(GL_ARRAY_BUFFER, subpixelProxyPoints_.colorBuf);
+    glue->glBufferData(GL_ARRAY_BUFFER,
+                       static_cast<GLsizeiptr>(colors.size() * sizeof(uint8_t)),
+                       colors.data(), GL_STREAM_DRAW);
+    glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    subpixelProxyPoints_.revision = revision;
+    subpixelProxyPoints_.count = static_cast<GLsizei>(positions.size() / 3);
 }
 
 // ---------------------------------------------------------------------------
@@ -336,6 +455,7 @@ void CadGpuResources::releaseAll(const SoGLContext * glue)
 {
     if (glue) {
         for (auto& kv : cache_) {
+            deletePointGpu(kv.second.point, glue);
             deleteWireGpu(kv.second.wire, glue);
             deleteTriGpu(kv.second.tri,   glue);
         }
@@ -346,10 +466,20 @@ void CadGpuResources::releaseAll(const SoGLContext * glue)
             glue->glDeleteVertexArrays(1, &flatWire_.vao);
         if (flatWire_.posBuf && glue->glDeleteBuffers)
             glue->glDeleteBuffers(1, &flatWire_.posBuf);
+        if (flatShaded_.posBuf && glue->glDeleteBuffers)
+            glue->glDeleteBuffers(1, &flatShaded_.posBuf);
+        if (flatShaded_.normBuf && glue->glDeleteBuffers)
+            glue->glDeleteBuffers(1, &flatShaded_.normBuf);
+        if (subpixelProxyPoints_.posBuf && glue->glDeleteBuffers)
+            glue->glDeleteBuffers(1, &subpixelProxyPoints_.posBuf);
+        if (subpixelProxyPoints_.colorBuf && glue->glDeleteBuffers)
+            glue->glDeleteBuffers(1, &subpixelProxyPoints_.colorBuf);
     }
     cache_.clear();
     instanceVbo_ = 0;
     flatWire_ = CadFlatWireGpu();
+    flatShaded_ = CadFlatShadedGpu();
+    subpixelProxyPoints_ = CadSubpixelProxyGpu();
 }
 
 } // namespace internal

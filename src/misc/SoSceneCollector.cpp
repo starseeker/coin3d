@@ -39,6 +39,8 @@
 
 #include <Inventor/SoSceneCollector.h>
 
+#include <obol/cad/SoCADAssembly.h>
+
 // Obol scene graph
 #include <Inventor/SbColor.h>
 #include <Inventor/SbMatrix.h>
@@ -113,6 +115,9 @@ src_triangleCB(void * ud,
 
 static SoCallbackAction::Response
 src_shapePruneCB(void * ud, SoCallbackAction * action, const SoNode * node);
+
+static SoCallbackAction::Response
+src_cadAssemblyCB(void * ud, SoCallbackAction * action, const SoNode * node);
 
 static SoCallbackAction::Response
 src_lineSetCB(void * ud, SoCallbackAction * action, const SoNode * node);
@@ -497,6 +502,11 @@ SoSceneCollector::collectImpl(SoNode *              root,
     cba.addPreCallback(SoShape::getClassTypeId(),
                        src_shapePruneCB, nullptr);
 
+    // Retained CAD assemblies are not per-instance SoShape nodes.  Expand
+    // their immutable triangle payload directly for renderer-neutral backends.
+    cba.addPreCallback(SoCADAssembly::getClassTypeId(),
+                       src_cadAssemblyCB, &cbdata);
+
     // Proxy geometry: lines → cylinders
     cba.addPreCallback(SoLineSet::getClassTypeId(),
                        src_lineSetCB, &cbdata);
@@ -590,6 +600,107 @@ src_shapePruneCB(void * /*ud*/,
     if (action->getDrawStyle() == SoDrawStyle::INVISIBLE)
         return SoCallbackAction::PRUNE;
     return SoCallbackAction::CONTINUE;
+}
+
+SoCallbackAction::Response
+src_cadAssemblyCB(void *ud, SoCallbackAction *action, const SoNode *node)
+{
+    ScRaytracerCbData *cbdata = static_cast<ScRaytracerCbData *>(ud);
+    const SoCADAssembly *assembly = static_cast<const SoCADAssembly *>(node);
+    if (!cbdata || !action || !assembly)
+        return SoCallbackAction::PRUNE;
+
+    SbColor ambient, diffuse, specular, emission;
+    float shininess = 0.0f;
+    float transparency = 0.0f;
+    action->getMaterial(ambient, diffuse, specular, emission, shininess,
+                        transparency, 0);
+    const SbMatrix parentToWorld = action->getModelMatrix();
+
+    for (const obol::InstanceId &instanceId : assembly->instanceIds()) {
+        if (assembly->isInstanceHidden(instanceId))
+            continue;
+        const std::optional<obol::InstanceRecord> instance =
+            assembly->getInstanceRecord(instanceId);
+        if (!instance)
+            continue;
+        const obol::PartGeometry *geometry =
+            assembly->partGeometry(instance->part);
+        if (!geometry || !geometry->shaded)
+            continue;
+        const obol::TriMesh &mesh = *geometry->shaded;
+
+        SbMatrix localToWorld = instance->localToRoot;
+        localToWorld.multRight(parentToWorld);
+        const SbMatrix normalMatrix = localToWorld.inverse().transpose();
+
+        SoScMaterial material;
+        material.diffuse[0] = diffuse[0];
+        material.diffuse[1] = diffuse[1];
+        material.diffuse[2] = diffuse[2];
+        material.specular[0] = specular[0];
+        material.specular[1] = specular[1];
+        material.specular[2] = specular[2];
+        material.ambient[0] = ambient[0];
+        material.ambient[1] = ambient[1];
+        material.ambient[2] = ambient[2];
+        material.emission[0] = emission[0];
+        material.emission[1] = emission[1];
+        material.emission[2] = emission[2];
+        material.shininess = shininess;
+        if (instance->style.hasColorOverride) {
+            material.diffuse[0] = instance->style.color[0];
+            material.diffuse[1] = instance->style.color[1];
+            material.diffuse[2] = instance->style.color[2];
+        }
+
+        for (size_t index = 0; index + 2 < mesh.indices.size(); index += 3) {
+            const uint32_t i0 = mesh.indices[index];
+            const uint32_t i1 = mesh.indices[index + 1];
+            const uint32_t i2 = mesh.indices[index + 2];
+            if (i0 >= mesh.positions.size() || i1 >= mesh.positions.size() ||
+                i2 >= mesh.positions.size())
+                continue;
+
+            SbVec3f localNormals[3];
+            const uint32_t vertexIndices[3] = {i0, i1, i2};
+            if (mesh.normals.size() == mesh.positions.size()) {
+                for (int i = 0; i < 3; ++i)
+                    localNormals[i] = mesh.normals[vertexIndices[i]];
+            } else {
+                SbVec3f normal =
+                    (mesh.positions[i1] - mesh.positions[i0]).cross(
+                    mesh.positions[i2] - mesh.positions[i0]);
+                if (normal.length() == 0.0f)
+                    continue;
+                normal.normalize();
+                localNormals[0] = normal;
+                localNormals[1] = normal;
+                localNormals[2] = normal;
+            }
+
+            SoScTriangle triangle;
+            triangle.mat = material;
+            for (int i = 0; i < 3; ++i) {
+                SbVec3f worldPosition;
+                SbVec3f worldNormal;
+                localToWorld.multVecMatrix(mesh.positions[vertexIndices[i]],
+                                           worldPosition);
+                normalMatrix.multDirMatrix(localNormals[i], worldNormal);
+                if (worldNormal.length() > 0.0f)
+                    worldNormal.normalize();
+                triangle.pos[i][0] = worldPosition[0];
+                triangle.pos[i][1] = worldPosition[1];
+                triangle.pos[i][2] = worldPosition[2];
+                triangle.norm[i][0] = worldNormal[0];
+                triangle.norm[i][1] = worldNormal[1];
+                triangle.norm[i][2] = worldNormal[2];
+            }
+            cbdata->tris->push_back(triangle);
+        }
+    }
+
+    return SoCallbackAction::PRUNE;
 }
 
 SoCallbackAction::Response

@@ -118,6 +118,42 @@ else()
 endif()
 
 if(_bench_has_gl)
+    # ---------------------------------------------------------------------------
+    # test_cad_subpixel_proxy  (view-local AABB/OBB point replacement)
+    # ---------------------------------------------------------------------------
+    add_executable(test_cad_subpixel_proxy test_cad_subpixel_proxy.cpp)
+
+    target_include_directories(test_cad_subpixel_proxy PRIVATE
+        ${CAD_TEST_INCLUDES}
+        ${CMAKE_SOURCE_DIR}/tests/utils
+        ${CMAKE_SOURCE_DIR}/tests
+    )
+    target_link_libraries(test_cad_subpixel_proxy PRIVATE
+        ${PROJECT_NAME}
+        ${OBOL_TARGET_LINK_LIBRARIES}
+        simple_test_utils
+    )
+    if(_bench_use_swrast)
+        target_compile_definitions(test_cad_subpixel_proxy PRIVATE OBOL_SWRAST_BUILD)
+        if(_bench_osmesa_inc)
+            target_include_directories(test_cad_subpixel_proxy PRIVATE ${_bench_osmesa_inc})
+        endif()
+        if(_bench_osmesa_link)
+            target_link_libraries(test_cad_subpixel_proxy PRIVATE ${_bench_osmesa_link})
+        endif()
+    else()
+        if(X11_FOUND)
+            target_link_libraries(test_cad_subpixel_proxy PRIVATE ${X11_X11_LIB})
+            target_include_directories(test_cad_subpixel_proxy PRIVATE ${X11_INCLUDE_DIR})
+        endif()
+        if(OpenGL_FOUND AND TARGET OpenGL::GL)
+            target_link_libraries(test_cad_subpixel_proxy PRIVATE OpenGL::GL)
+        elseif(OPENGL_gl_LIBRARY)
+            target_link_libraries(test_cad_subpixel_proxy PRIVATE ${OPENGL_gl_LIBRARY})
+        endif()
+    endif()
+    add_test(NAME test_cad_subpixel_proxy COMMAND test_cad_subpixel_proxy)
+
     add_executable(test_cad_benchmark test_cad_benchmark.cpp)
 
     target_include_directories(test_cad_benchmark PRIVATE

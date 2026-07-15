@@ -548,6 +548,7 @@ public:
   SoGLRenderAction::SoGLRenderAbortCB * abortcallback;
   void * abortcallbackdata;
   uint32_t cachecontext;
+  SoDB::ContextManager * contextmanager;
   int currentpass;
   SoPathList delayedpaths;
   SbBool delayedpathrender;
@@ -719,6 +720,7 @@ SoGLRenderAction::SoGLRenderAction(const SbViewportRegion & viewportregion)
   PRIVATE(this)->rendering = SoGLRenderActionP::RENDERING_UNSET;
   PRIVATE(this)->abortcallback = NULL;
   PRIVATE(this)->cachecontext = 0;
+  PRIVATE(this)->contextmanager = NULL;
   PRIVATE(this)->needglinit = TRUE;
   PRIVATE(this)->sortedlayersblendpasses = 4;
   PRIVATE(this)->viewportheight = 0;
@@ -741,6 +743,9 @@ SoGLRenderAction::SoGLRenderAction(const SbViewportRegion & viewportregion)
 */
 SoGLRenderAction::~SoGLRenderAction()
 {
+  if (PRIVATE(this)->contextmanager) {
+    coingl_unregister_context_manager(static_cast<int>(PRIVATE(this)->cachecontext));
+  }
 }
 
 /*!
@@ -980,7 +985,14 @@ void
 SoGLRenderAction::setCacheContext(const uint32_t context)
 {
   if (context != PRIVATE(this)->cachecontext) {
+    if (PRIVATE(this)->contextmanager) {
+      coingl_unregister_context_manager(static_cast<int>(PRIVATE(this)->cachecontext));
+    }
     PRIVATE(this)->cachecontext = context;
+    if (PRIVATE(this)->contextmanager) {
+      coingl_register_context_manager(static_cast<int>(context),
+                                      PRIVATE(this)->contextmanager);
+    }
     this->invalidateState();
   }
 }
@@ -992,6 +1004,27 @@ uint32_t
 SoGLRenderAction::getCacheContext(void) const
 {
   return PRIVATE(this)->cachecontext;
+}
+
+void
+SoGLRenderAction::setContextManager(SoDB::ContextManager * manager)
+{
+  if (manager == PRIVATE(this)->contextmanager) return;
+  if (PRIVATE(this)->contextmanager) {
+    coingl_unregister_context_manager(static_cast<int>(PRIVATE(this)->cachecontext));
+  }
+  PRIVATE(this)->contextmanager = manager;
+  if (manager) {
+    coingl_register_context_manager(static_cast<int>(PRIVATE(this)->cachecontext),
+                                    manager);
+  }
+  this->invalidateState();
+}
+
+SoDB::ContextManager *
+SoGLRenderAction::getContextManager(void) const
+{
+  return PRIVATE(this)->contextmanager;
 }
 
 /*!

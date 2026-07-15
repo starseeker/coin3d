@@ -77,7 +77,7 @@ struct OBOL_DLL_API CadPickResult {
     PartId      partId;              ///< Part used by the picked instance
 
     /** Primitive type matching SoCADDetail::PrimType. */
-    enum PrimType { EDGE = 0, TRIANGLE = 1, BOUNDS = 2 } primType = BOUNDS;
+    enum PrimType { EDGE = 0, TRIANGLE = 1, BOUNDS = 2, POINT = 3 } primType = BOUNDS;
 
     uint32_t    primIndex0 = 0;  ///< Polyline index (EDGE) or tri index (TRIANGLE)
     uint32_t    primIndex1 = 0;  ///< Segment index within polyline (EDGE only)
@@ -285,6 +285,14 @@ private:
  */
 class OBOL_DLL_API CadPickQuery {
 public:
+    /** Perform tolerant point-primitive picking. */
+    static CadPickResult pickPoint(
+        const SbLine& ray,
+        const CadInstanceBVH& instanceBvh,
+        const std::unordered_map<PartId, std::shared_ptr<const obol::PartGeometry>,
+                                 std::hash<obol::PartId>>& partGeometries,
+        float toleranceWS);
+
     /**
      * @brief Perform edge (wire) picking.
      *
@@ -298,7 +306,7 @@ public:
     static CadPickResult pickEdge(
         const SbLine&                                       ray,
         const CadInstanceBVH&                               instanceBvh,
-        const std::unordered_map<PartId, obol::PartGeometry,
+        const std::unordered_map<PartId, std::shared_ptr<const obol::PartGeometry>,
                                  std::hash<obol::PartId>>&  partGeometries,
         std::unordered_map<PartId, CadPartEdgeBVH,
                            std::hash<obol::PartId>>&        partBvhCache,
@@ -331,7 +339,7 @@ public:
     static CadPickResult pickTriangle(
         const SbLine&                                       ray,
         const CadInstanceBVH&                               instanceBvh,
-        const std::unordered_map<PartId, obol::PartGeometry,
+        const std::unordered_map<PartId, std::shared_ptr<const obol::PartGeometry>,
                                  std::hash<obol::PartId>>&  partGeometries,
         std::unordered_map<PartId, CadPartTriBVH,
                            std::hash<obol::PartId>>&        partTriBvhCache,
