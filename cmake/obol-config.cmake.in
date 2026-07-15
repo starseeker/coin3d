@@ -50,6 +50,15 @@ set(Obol_LIBRARIES Obol::Obol)
 set(Obol_LIBRARY   Obol::Obol)
 if(NOT OBOL_BUILD_MAC_FRAMEWORK)
   set(Obol_INCLUDE_DIRS ${Obol_INCLUDE_DIR})
+  set(Obol_NanoRTContextManager_INCLUDE_DIR
+      "${Obol_INCLUDE_DIR}/obol/testing")
+  if(EXISTS "${Obol_NanoRTContextManager_INCLUDE_DIR}/nanort_context_manager.h" AND
+     EXISTS "${Obol_NanoRTContextManager_INCLUDE_DIR}/nanort.h")
+    set(Obol_NanoRTContextManager_FOUND TRUE)
+  else()
+    unset(Obol_NanoRTContextManager_INCLUDE_DIR)
+    set(Obol_NanoRTContextManager_FOUND FALSE)
+  endif()
 endif()
 
 # Feature flags recorded at build time
@@ -58,4 +67,3 @@ set(Obol_HAVE_SAFETHREAD @FEAT_HAVE_SAFETHREAD@)
 
 set(Obol_FOUND TRUE)
 check_required_components(Obol)
-

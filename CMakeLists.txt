@@ -237,6 +237,9 @@ option(OBOL_USE_SYSTEM_GL
 option(OBOL_USE_SWRAST
     "Enable software rasterizer (OSMesa) backend for headless/offscreen rendering"
     ${_obol_swrast_default})
+option(OBOL_BUILD_BUNDLED_OSMESA
+    "Build Obol's OSMesa submodule instead of using a compatible installed OSMesa"
+    ON)
 unset(_obol_sysgl_default)
 unset(_obol_swrast_default)
 # Thread safety is now unconditional (all #ifdef OBOL_THREADSAFE guards were

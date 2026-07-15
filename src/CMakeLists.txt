@@ -186,10 +186,16 @@ target_include_directories(${PROJECT_NAME}
 # Target-specific linking (modern approach)  
 target_link_libraries(${PROJECT_NAME} PRIVATE ${OBOL_TARGET_LINK_LIBRARIES})
 
-# For dual-GL builds, also link OSMesa so that osmesa_SoGLContext_* functions
-# can resolve mgl* symbols at runtime.
+# For dual-GL builds, link OSMesa so osmesa_SoGLContext_* functions can resolve
+# mgl* symbols at runtime.  A shared Obol carries that runtime dependency
+# itself; exposing it would make an externally supplied OSMesa target leak
+# into the installed package interface.
 if(OBOL_USE_SWRAST AND OBOL_USE_SYSTEM_GL)
-    target_link_libraries(${PROJECT_NAME} PUBLIC ${OBOL_OSMESA_LIBRARIES})
+    if(OBOL_BUILD_SHARED_LIBS)
+        target_link_libraries(${PROJECT_NAME} PRIVATE ${OBOL_OSMESA_LIBRARIES})
+    else()
+        target_link_libraries(${PROJECT_NAME} PUBLIC ${OBOL_OSMESA_LIBRARIES})
+    endif()
 endif()
 
 if(WIN32)
@@ -351,6 +357,15 @@ else()
           DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/obol
           COMPONENT development
           FILES_MATCHING PATTERN "*.h")
+
+  # The NanoRT context manager is a diagnostic/test backend implemented by
+  # Obol.  Keep its header-only helper and nanort dependency together so
+  # package consumers do not reach into an Obol source checkout.
+  install(FILES
+          ${PROJECT_SOURCE_DIR}/tests/utils/nanort_context_manager.h
+          ${PROJECT_SOURCE_DIR}/external/nanort/nanort.h
+          DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/obol/testing
+          COMPONENT development)
 
 
 # ############################################################################
