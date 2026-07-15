@@ -138,6 +138,7 @@ endif()
 # Core build options
 option(BUILD_SHARED_LIBS "Build shared library when ON, static when OFF" ON)
 option(OBOL_BUILD_TESTS "Build unit tests" ON)
+option(OBOL_BUILD_EXAMPLES "Build example programs and viewers" ON)
 
 # ---------------------------------------------------------------------------
 # FLTK detection and submodule fallback
@@ -792,10 +793,11 @@ if(OBOL_BUILD_TESTS)
   add_subdirectory(tests)
 endif()
 
-# examples/ is always added so that standalone demos (e.g. cad_simulation_viewer)
-# can be built without enabling the full test suite.  Each target inside
-# examples/ guards itself with its own option check.
-add_subdirectory(examples)
+# Examples are useful for standalone Obol development, but package builds do
+# not need to compile them merely to provide the retained scene graph.
+if(OBOL_BUILD_EXAMPLES)
+  add_subdirectory(examples)
+endif()
 
 # ============================================================================
 # Code coverage report target (lcov + genhtml)
