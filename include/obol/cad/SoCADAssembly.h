@@ -534,6 +534,9 @@ public:
     /** Number of LoD proxy occurrences rendered as subpixel points last frame. */
     size_t lastSubpixelProxyCount() const;
 
+    /** Revision of the last camera-dependent subpixel proxy presentation. */
+    uint64_t lastSubpixelProxyRevision() const;
+
 protected:
     ~SoCADAssembly() override;
 

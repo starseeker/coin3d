@@ -118,25 +118,15 @@ cadSoftwareTransform(const SbMatrix& matrix, const SbVec3f& point)
 }
 
 static bool
-cadSubpixelProxyPoint(const obol::WireRep& wire,
-                      const obol::internal::CadVisibleInstance& instance,
-                      const SbMatrix& viewProj, const SbVec2s& viewportSize,
-                      float pixelLimit, SbVec3f& point)
+cadSubpixelProxyCorners(const obol::WireRep& wire,
+                        std::array<SbVec3f, 8>& corners)
 {
-    if (wire.segmentPoints.empty() || viewportSize[0] <= 1 ||
-            viewportSize[1] <= 1 || pixelLimit <= 0.0f)
+    // Only the canonical 12-segment proxy representation is eligible.  Do
+    // this validation once when a shared part is published rather than once
+    // per occurrence on every camera update.
+    if (wire.segmentPoints.size() != 24u || !wire.polylines.empty())
         return false;
 
-    SbMatrix model;
-    model.setValue(instance.transform.data());
-    SbMatrix modelViewProj = model;
-    modelViewProj.multRight(viewProj);
-
-    // Eligible BRL-CAD proxies are boxes: their 12 line segments carry only
-    // eight unique corners.  Do not transform the repeated endpoints for
-    // every small occurrence.  Refuse an incorrectly marked non-box proxy
-    // rather than making its screen extent less conservative.
-    std::array<SbVec3f, 8> corners;
     size_t cornerCount = 0;
     const auto addCorner = [&](const SbVec3f& candidate) -> bool {
         for (size_t i = 0; i < cornerCount; ++i) {
@@ -151,13 +141,28 @@ cadSubpixelProxyPoint(const obol::WireRep& wire,
         corners[cornerCount++] = candidate;
         return true;
     };
-    for (const SbVec3f& localPoint : wire.segmentPoints)
-        if (!addCorner(localPoint))
+
+    for (const SbVec3f& point : wire.segmentPoints)
+        if (!addCorner(point))
             return false;
-    for (const obol::WirePolyline& polyline : wire.polylines)
-        for (const SbVec3f& localPoint : polyline.points)
-            if (!addCorner(localPoint))
-                return false;
+
+    return cornerCount == corners.size();
+}
+
+static bool
+cadSubpixelProxyPoint(const std::array<SbVec3f, 8>& corners,
+                      const obol::internal::CadVisibleInstance& instance,
+                      const SbMatrix& viewProj, const SbVec2s& viewportSize,
+                      float pixelLimit, SbVec3f& point)
+{
+    if (viewportSize[0] <= 1 || viewportSize[1] <= 1 ||
+            pixelLimit <= 0.0f)
+        return false;
+
+    SbMatrix model;
+    model.setValue(instance.transform.data());
+    SbMatrix modelViewProj = model;
+    modelViewProj.multRight(viewProj);
 
     double minX = 0.0, minY = 0.0, maxX = 0.0, maxY = 0.0;
     double nearestDepth = 0.0;
@@ -195,8 +200,8 @@ cadSubpixelProxyPoint(const obol::WireRep& wire,
         return true;
     };
 
-    for (size_t i = 0; i < cornerCount; ++i)
-        if (!project(corners[i]))
+    for (const SbVec3f& corner : corners)
+        if (!project(corner))
             return false;
 
     if (!havePoint)
@@ -204,6 +209,25 @@ cadSubpixelProxyPoint(const obol::WireRep& wire,
     const double width = (maxX - minX) * 0.5 * (viewportSize[0] - 1);
     const double height = (maxY - minY) * 0.5 * (viewportSize[1] - 1);
     return width <= pixelLimit && height <= pixelLimit;
+}
+
+static bool
+cadSameSubpixelProxyPoints(
+        const std::vector<obol::internal::CadSubpixelProxyPoint>& left,
+        const std::vector<obol::internal::CadSubpixelProxyPoint>& right)
+{
+    if (left.size() != right.size())
+        return false;
+    for (size_t i = 0; i < left.size(); ++i) {
+        const obol::internal::CadSubpixelProxyPoint& a = left[i];
+        const obol::internal::CadSubpixelProxyPoint& b = right[i];
+        if (a.instanceId != b.instanceId || a.rgba != b.rgba ||
+                a.position[0] != b.position[0] ||
+                a.position[1] != b.position[1] ||
+                a.position[2] != b.position[2])
+            return false;
+    }
+    return true;
 }
 
 static bool
@@ -460,6 +484,11 @@ struct SoCADAssemblyImpl {
     // Part library
     std::unordered_map<obol::PartId, std::shared_ptr<const obol::PartGeometry>,
                        std::hash<obol::PartId>> parts_;
+    // Cached, validated corners for the small subset of shared parts that
+    // are conservative AABB/OBB display proxies.  This avoids rediscovering
+    // eight corners from 24 wire endpoints for every occurrence per view.
+    std::unordered_map<obol::PartId, std::array<SbVec3f, 8>,
+                       std::hash<obol::PartId>> subpixelProxyCorners_;
 
     // Instance database
     std::unordered_map<obol::InstanceId, InstanceData,
@@ -519,8 +548,17 @@ struct SoCADAssemblyImpl {
     uint64_t nextSubpixelProxyRevision_ = 1;
     uint64_t geometryRevision_ = 0;
     uint64_t subpixelProxyStatePlanRevision_ = 0;
-    std::unordered_map<obol::InstanceId, bool,
-                       std::hash<obol::InstanceId>> subpixelProxyState_;
+    uint64_t subpixelProxyViewPlanRevision_ = 0;
+    SbMatrix subpixelProxyViewProj_;
+    SbVec2s subpixelProxyViewportSize_ = SbVec2s(0, 0);
+    bool subpixelProxyViewValid_ = false;
+    // The presentation plan fixes visible-instance order for its lifetime.
+    // Keep hysteresis state by that index rather than hashing every proxy on
+    // camera-only frames.  All three vectors are reset when the plan changes.
+    std::vector<uint8_t> subpixelProxyState_;
+    std::vector<uint8_t> subpixelProxyScratchMask_;
+    std::vector<obol::internal::CadSubpixelProxyPoint>
+        subpixelProxyScratchPoints_;
     bool planDirty_    = true;   ///< Plan must be rebuilt before next render
     bool geometryDirty_ = true;  ///< Flattened geometry must be rebuilt
     int  cachedDM_     = -1;     ///< Draw mode used for the cached plan
@@ -583,6 +621,15 @@ struct SoCADAssemblyImpl {
             const std::shared_ptr<const obol::PartGeometry>& geom) {
         if (!geom) return;
         parts_[pid] = geom;
+        if (geom->subpixelProxyEligible && geom->wire.has_value()) {
+            std::array<SbVec3f, 8> corners;
+            if (cadSubpixelProxyCorners(*geom->wire, corners))
+                subpixelProxyCorners_[pid] = std::move(corners);
+            else
+                subpixelProxyCorners_.erase(pid);
+        } else {
+            subpixelProxyCorners_.erase(pid);
+        }
         partGeneration_[pid] = nextGeneration_++;
         partEdgeBvhCache_.erase(pid);
         partTriBvhCache_.erase(pid);
@@ -836,39 +883,47 @@ struct SoCADAssemblyImpl {
     {
         using namespace obol::internal;
         CadFramePlan& plan = cachedPlan_;
+        if (subpixelProxyViewValid_ &&
+                subpixelProxyViewPlanRevision_ == plan.revision &&
+                subpixelProxyViewportSize_[0] == viewportSize[0] &&
+                subpixelProxyViewportSize_[1] == viewportSize[1] &&
+                subpixelProxyViewProj_ == viewProj)
+            return;
+
         if (subpixelProxyStatePlanRevision_ != plan.revision) {
-            subpixelProxyState_.clear();
+            subpixelProxyState_.assign(plan.visibleInstances.size(), 0u);
             subpixelProxyStatePlanRevision_ = plan.revision;
         }
 
-        std::vector<uint8_t> mask(plan.visibleInstances.size(), 0u);
-        std::vector<CadSubpixelProxyPoint> points;
+        std::vector<uint8_t>& mask = subpixelProxyScratchMask_;
+        std::vector<CadSubpixelProxyPoint>& points =
+            subpixelProxyScratchPoints_;
+        mask.assign(plan.visibleInstances.size(), 0u);
+        points.clear();
         for (const CadDrawItem& item : plan.wireItems) {
             const auto partIt = parts_.find(item.rep.part);
+            const auto cornersIt = subpixelProxyCorners_.find(item.rep.part);
             if (partIt == parts_.end() || !partIt->second ||
-                    !partIt->second->subpixelProxyEligible ||
-                    !partIt->second->wire.has_value())
+                    cornersIt == subpixelProxyCorners_.end())
                 continue;
 
-            const obol::WireRep& wire = *partIt->second->wire;
             for (uint32_t i = 0; i < item.instanceCount; ++i) {
                 const size_t visibleIndex = item.baseInstance + i;
                 if (visibleIndex >= plan.visibleInstances.size())
                     continue;
                 const CadVisibleInstance& instance =
                     plan.visibleInstances[visibleIndex];
-                const auto prior = subpixelProxyState_.find(instance.instanceId);
                 const float threshold =
-                    prior != subpixelProxyState_.end() && prior->second ?
+                    subpixelProxyState_[visibleIndex] ?
                     1.25f : 0.75f;
                 SbVec3f point;
-                if (!cadSubpixelProxyPoint(wire, instance, viewProj,
+                if (!cadSubpixelProxyPoint(cornersIt->second, instance, viewProj,
                         viewportSize, threshold, point)) {
-                    subpixelProxyState_.erase(instance.instanceId);
+                    subpixelProxyState_[visibleIndex] = 0u;
                     continue;
                 }
 
-                subpixelProxyState_[instance.instanceId] = true;
+                subpixelProxyState_[visibleIndex] = 1u;
                 mask[visibleIndex] = 1u;
                 CadSubpixelProxyPoint replacement;
                 replacement.position = point;
@@ -879,15 +934,23 @@ struct SoCADAssemblyImpl {
         }
 
         const bool changed = plan.subpixelProxySourcePlanRevision !=
-                plan.revision || mask != plan.subpixelProxyMask;
-        if (!changed)
-            return;
-        plan.subpixelProxyMask = std::move(mask);
-        plan.subpixelProxyPoints = std::move(points);
-        plan.subpixelProxySourcePlanRevision = plan.revision;
-        plan.subpixelProxyRevision = nextSubpixelProxyRevision_++;
-        if (nextSubpixelProxyRevision_ == 0)
-            nextSubpixelProxyRevision_ = 1;
+                plan.revision || mask != plan.subpixelProxyMask ||
+                !cadSameSubpixelProxyPoints(points,
+                    plan.subpixelProxyPoints);
+        if (changed) {
+            // Swapping preserves previous storage in the scratch vectors for
+            // the next camera update instead of allocating frame-local data.
+            plan.subpixelProxyMask.swap(mask);
+            plan.subpixelProxyPoints.swap(points);
+            plan.subpixelProxySourcePlanRevision = plan.revision;
+            plan.subpixelProxyRevision = nextSubpixelProxyRevision_++;
+            if (nextSubpixelProxyRevision_ == 0)
+                nextSubpixelProxyRevision_ = 1;
+        }
+        subpixelProxyViewProj_ = viewProj;
+        subpixelProxyViewportSize_ = viewportSize;
+        subpixelProxyViewPlanRevision_ = plan.revision;
+        subpixelProxyViewValid_ = true;
     }
 };
 
@@ -978,6 +1041,7 @@ void
 SoCADAssembly::clear()
 {
     impl_->parts_.clear();
+    impl_->subpixelProxyCorners_.clear();
     impl_->partGeneration_.clear();
     impl_->instances_.clear();
     impl_->selected_.clear();
@@ -1049,6 +1113,7 @@ void
 SoCADAssembly::removePart(obol::PartId pid)
 {
     impl_->parts_.erase(pid);
+    impl_->subpixelProxyCorners_.erase(pid);
     impl_->partGeneration_.erase(pid);
     impl_->partEdgeBvhCache_.erase(pid);
     impl_->partTriBvhCache_.erase(pid);
@@ -1625,4 +1690,10 @@ size_t
 SoCADAssembly::lastSubpixelProxyCount() const
 {
     return impl_->cachedPlan_.subpixelProxyPoints.size();
+}
+
+uint64_t
+SoCADAssembly::lastSubpixelProxyRevision() const
+{
+    return impl_->cachedPlan_.subpixelProxyRevision;
 }

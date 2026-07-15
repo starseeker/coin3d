@@ -96,6 +96,19 @@ main()
     instance.style.color = SbColor4f(1.0f, 0.0f, 0.0f, 1.0f);
     assembly->upsertInstanceAuto(instance);
 
+    // An incorrectly tagged payload must not collapse.  It still has twelve
+    // segments, but one endpoint introduces a ninth unique corner so it is
+    // not the canonical conservative proxy representation.
+    obol::PartGeometry malformed = geometry;
+    malformed.wire->segmentPoints[0].setValue(-0.75f, -0.5f, -0.5f);
+    const obol::PartId malformedPart =
+        obol::CadIdBuilder::hash128("malformed-subpixel-proxy");
+    assembly->upsertPart(malformedPart, malformed);
+    instance.part = malformedPart;
+    instance.childName = "malformed-proxy";
+    instance.occurrenceIndex = 1;
+    assembly->upsertInstanceAuto(instance);
+
     const SbViewportRegion viewport(256, 256);
     SoOffscreenRenderer renderer(viewport);
     renderer.setComponents(SoOffscreenRenderer::RGB);
@@ -105,6 +118,29 @@ main()
     if (!render(renderer, root) || assembly->lastSubpixelProxyCount() != 1u ||
         nonBlackPixels(renderer) == 0u) {
         std::fprintf(stderr, "subpixel proxy did not collapse to a point\n");
+        root->unref();
+        return 1;
+    }
+    const uint64_t initialPresentation =
+        assembly->lastSubpixelProxyRevision();
+    if (!initialPresentation || !render(renderer, root) ||
+        assembly->lastSubpixelProxyRevision() != initialPresentation) {
+        std::fprintf(stderr,
+            "unchanged subpixel proxy view rebuilt presentation state\n");
+        root->unref();
+        return 1;
+    }
+
+    // The box remains subpixel from the opposite side, but its nearest
+    // depth-preserving corner changes.  This must advance the presentation
+    // revision even though the collapsed-instance mask does not change.
+    camera->position.setValue(0.0f, 0.0f, -5.0f);
+    camera->orientation.setValue(SbRotation(SbVec3f(0.0f, 1.0f, 0.0f),
+        3.14159265f));
+    if (!render(renderer, root) || assembly->lastSubpixelProxyCount() != 1u ||
+        assembly->lastSubpixelProxyRevision() == initialPresentation) {
+        std::fprintf(stderr,
+            "camera movement did not update subpixel proxy presentation\n");
         root->unref();
         return 1;
     }
