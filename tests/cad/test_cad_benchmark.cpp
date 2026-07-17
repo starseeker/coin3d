@@ -31,10 +31,10 @@
 
 #include "headless_utils.h"
 
-#include <obol/cad/SoCADAssembly.h>
-#include <obol/cad/SoCADViewState.h>
-#include <obol/cad/SoCADDetail.h>
-#include <obol/cad/CadIds.h>
+#include <Obol/cad/SoCADAssembly.h>
+#include <Obol/cad/SoCADViewState.h>
+#include <Obol/cad/SoCADDetail.h>
+#include <Obol/cad/CadIds.h>
 
 #include <Inventor/SoDB.h>
 #include <Inventor/SbViewportRegion.h>
@@ -169,9 +169,9 @@ static SoSeparator *buildSceneGraph(int grid)
 /**
  * Build the unit wireframe box as a WireRep for SoCADAssembly.
  */
-static obol::WireRep buildBoxWire()
+static Obol::WireRep buildBoxWire()
 {
-    obol::WireRep wire;
+    Obol::WireRep wire;
     wire.segmentPoints.reserve(24);
     wire.segmentIds.reserve(12);
     for (int e = 0; e < 12; ++e) {
@@ -215,15 +215,15 @@ static SoSeparator *buildCADScene(int grid)
     root->addChild(assembly);
 
     // Register one part: the unit wireframe box
-    obol::PartId unitBoxPartId = obol::CadIdBuilder::hash128("unit_box");
-    obol::PartGeometry geom;
+    Obol::PartId unitBoxPartId = Obol::CadIdBuilder::hash128("unit_box");
+    Obol::PartGeometry geom;
     geom.wire = buildBoxWire();
     assembly->upsertParts({{unitBoxPartId, std::move(geom)}});
 
     // Create grid^3 instances with per-instance transforms
-    obol::InstanceId rootId = obol::CadIdBuilder::Root();
+    Obol::InstanceId rootId = Obol::CadIdBuilder::Root();
     int instanceIdx = 0;
-    std::vector<obol::InstanceRecord> records;
+    std::vector<Obol::InstanceRecord> records;
     records.reserve(static_cast<size_t>(grid) * static_cast<size_t>(grid) *
                     static_cast<size_t>(grid));
     for (int ix = 0; ix < grid; ++ix) {
@@ -232,7 +232,7 @@ static SoSeparator *buildCADScene(int grid)
                 char name[64];
                 snprintf(name, sizeof(name), "box_%d_%d_%d", ix, iy, iz);
 
-                obol::InstanceRecord rec;
+                Obol::InstanceRecord rec;
                 rec.part   = unitBoxPartId;
                 rec.parent = rootId;
                 rec.childName = name;

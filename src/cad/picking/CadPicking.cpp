@@ -42,7 +42,7 @@
 #include <numeric>
 #include <functional>
 
-namespace obol {
+namespace Obol {
 namespace picking {
 
 namespace {
@@ -361,8 +361,8 @@ CadPickResult
 CadPickQuery::pickPoint(
     const SbLine& ray,
     const CadInstanceBVH& instanceBvh,
-    const std::unordered_map<PartId, std::shared_ptr<const obol::PartGeometry>,
-                             std::hash<obol::PartId>>& partGeometries,
+    const std::unordered_map<PartId, std::shared_ptr<const Obol::PartGeometry>,
+                             std::hash<Obol::PartId>>& partGeometries,
     float toleranceWS)
 {
     CadPickResult best;
@@ -376,7 +376,7 @@ CadPickQuery::pickPoint(
         if (geometry == partGeometries.end() || !geometry->second ||
                 !geometry->second->points)
             continue;
-        const obol::PointRep& points = *geometry->second->points;
+        const Obol::PointRep& points = *geometry->second->points;
         for (size_t i = 0; i < points.positions.size(); ++i) {
             SbVec3f worldPoint;
             entry->localToWorld.multVecMatrix(points.positions[i], worldPoint);
@@ -401,10 +401,10 @@ CadPickResult
 CadPickQuery::pickEdge(
     const SbLine&                                       ray,
     const CadInstanceBVH&                               instanceBvh,
-    const std::unordered_map<PartId, std::shared_ptr<const obol::PartGeometry>,
-                             std::hash<obol::PartId>>&  partGeometries,
+    const std::unordered_map<PartId, std::shared_ptr<const Obol::PartGeometry>,
+                             std::hash<Obol::PartId>>&  partGeometries,
     std::unordered_map<PartId, CadPartEdgeBVH,
-                       std::hash<obol::PartId>>&        partBvhCache,
+                       std::hash<Obol::PartId>>&        partBvhCache,
     float                                               toleranceWS)
 {
     CadPickResult best;
@@ -424,7 +424,7 @@ CadPickQuery::pickEdge(
         if (bvhIt == partBvhCache.end()) {
             CadPartEdgeBVH edgeBvh;
             std::vector<CadPartEdgeBVH::SegEntry> segs;
-            const obol::WireRep& wire = *geom.wire;
+            const Obol::WireRep& wire = *geom.wire;
             segs.reserve(wire.segmentCount());
             for (size_t i = 0; i < wire.segmentCount(); ++i) {
                 const uint32_t segId =
@@ -692,10 +692,10 @@ CadPickResult
 CadPickQuery::pickTriangle(
     const SbLine&                                       ray,
     const CadInstanceBVH&                               instanceBvh,
-    const std::unordered_map<PartId, std::shared_ptr<const obol::PartGeometry>,
-                             std::hash<obol::PartId>>&  partGeometries,
+    const std::unordered_map<PartId, std::shared_ptr<const Obol::PartGeometry>,
+                             std::hash<Obol::PartId>>&  partGeometries,
     std::unordered_map<PartId, CadPartTriBVH,
-                       std::hash<obol::PartId>>&        partTriBvhCache,
+                       std::hash<Obol::PartId>>&        partTriBvhCache,
     float                                               toleranceWS)
 {
     CadPickResult best;
@@ -763,4 +763,4 @@ CadPickQuery::pickTriangle(
 }
 
 } // namespace picking
-} // namespace obol
+} // namespace Obol

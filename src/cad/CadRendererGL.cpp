@@ -32,7 +32,7 @@
 
 #include "CadRendererGL.h"
 
-#include <obol/cad/SoCADAssembly.h>
+#include <Obol/cad/SoCADAssembly.h>
 
 #include <Inventor/misc/SoContextHandler.h>
 #include <Inventor/system/gl.h>
@@ -225,7 +225,7 @@ static const GLuint kInstColorLoc     = 6;
 // Fixed light direction (world space, normalised)
 static const float kLightDir[3] = { 0.577f, 0.577f, 0.577f };
 
-namespace obol {
+namespace Obol {
 namespace internal {
 
 namespace {
@@ -536,7 +536,7 @@ void CadRendererGL::ensurePartUploaded(PartId pid, const SoCADAssembly& assembly
     if (gpuRes_->isUpToDate(pid, gen)) return;
 
     // Retrieve part geometry from the assembly
-    const obol::PartGeometry* geom = assembly.partGeometry(pid);
+    const Obol::PartGeometry* geom = assembly.partGeometry(pid);
     if (!geom) return;
 
     const float* pPointPos = nullptr;
@@ -716,9 +716,9 @@ static uint8_t computeLodLevel(float dist, float radius, float lodScale) noexcep
     return static_cast<uint8_t>(std::min(255.0f, std::max(0.0f, level)));
 }
 
-static uint8_t instanceLodLevel(const obol::internal::CadVisibleInstance& inst,
+static uint8_t instanceLodLevel(const Obol::internal::CadVisibleInstance& inst,
                                 const SbVec3f& cameraPos,
-                                const obol::CadRenderState& renderState) noexcept
+                                const Obol::CadRenderState& renderState) noexcept
 {
     if (renderState.selectedFullDetail && (inst.flags & 1u))
         return 255;
@@ -759,7 +759,7 @@ static CadWireRasterState captureWireRasterState(
 
 static void applyWireRasterStyle(
         const SoGLContext *glue,
-        const obol::internal::CadVisibleInstance& inst,
+        const Obol::internal::CadVisibleInstance& inst,
         bool hasLineStipple)
 {
     glue->glLineWidth(std::max(1.0f, inst.lineWidth));
@@ -1095,9 +1095,9 @@ const std::vector<uint32_t> *
 CadRendererGL::lodIndicesForInstance(
         const SoCADAssembly& assembly,
         PartId part,
-        const obol::internal::CadVisibleInstance& inst,
+        const Obol::internal::CadVisibleInstance& inst,
         const SbVec3f& cameraPos,
-        const obol::CadRenderState& renderState,
+        const Obol::CadRenderState& renderState,
         const std::unordered_map<PartId, uint64_t,
                                  std::hash<PartId>>& partGenMap)
 {
@@ -1394,11 +1394,11 @@ bool CadRendererGL::renderFlatWire(
         const bool rebuildGeometry = true;
         size_t pointCount = 0;
         for (const CadDrawItem& item : plan.wireItems) {
-            const obol::PartGeometry *geom = assembly.partGeometry(item.rep.part);
+            const Obol::PartGeometry *geom = assembly.partGeometry(item.rep.part);
             if (!geom || !geom->wire.has_value()) continue;
-            const obol::WireRep& wire = *geom->wire;
+            const Obol::WireRep& wire = *geom->wire;
             size_t segments = wire.segmentCount();
-            for (const obol::WirePolyline& poly : wire.polylines)
+            for (const Obol::WirePolyline& poly : wire.polylines)
                 if (poly.points.size() >= 2)
                     segments += poly.points.size() - 1;
             if (segments == 0) continue;
@@ -1423,11 +1423,11 @@ bool CadRendererGL::renderFlatWire(
         bool haveGroup = false;
         size_t vertexOffset = 0;
         for (const CadDrawItem& item : plan.wireItems) {
-            const obol::PartGeometry *geom = assembly.partGeometry(item.rep.part);
+            const Obol::PartGeometry *geom = assembly.partGeometry(item.rep.part);
             if (!geom || !geom->wire.has_value()) continue;
-            const obol::WireRep& wire = *geom->wire;
+            const Obol::WireRep& wire = *geom->wire;
             size_t segments = wire.segmentCount();
-            for (const obol::WirePolyline& poly : wire.polylines)
+            for (const Obol::WirePolyline& poly : wire.polylines)
                 if (poly.points.size() >= 2)
                     segments += poly.points.size() - 1;
             const size_t instanceVertices = segments * 2;
@@ -1458,7 +1458,7 @@ bool CadRendererGL::renderFlatWire(
                         writeTransformedFlatPoint(positions, positionOffset,
                                                   wire.segmentPoints[p + 1], inst.transform);
                     }
-                    for (const obol::WirePolyline& poly : wire.polylines) {
+                    for (const Obol::WirePolyline& poly : wire.polylines) {
                         for (size_t p = 0; p + 1 < poly.points.size(); ++p) {
                             writeTransformedFlatPoint(positions, positionOffset,
                                                       poly.points[p], inst.transform);
@@ -1584,7 +1584,7 @@ bool CadRendererGL::renderFlatShaded(
         std::vector<Occurrence> occurrences;
         size_t vertexCount = 0;
         for (const CadDrawItem& item : plan.shadedItems) {
-            const obol::PartGeometry *geom = assembly.partGeometry(item.rep.part);
+            const Obol::PartGeometry *geom = assembly.partGeometry(item.rep.part);
             if (!geom || !geom->shaded.has_value()) continue;
             const size_t count = geom->shaded->indices.size();
             if (count == 0 || count > maxVertexBytes / (6 * sizeof(float)))
@@ -1623,7 +1623,7 @@ bool CadRendererGL::renderFlatShaded(
                 haveGroup = true;
             }
 
-            const obol::TriMesh& mesh =
+            const Obol::TriMesh& mesh =
                 *assembly.partGeometry(item.rep.part)->shaded;
             const bool hasVertexNormals =
                 mesh.normals.size() == mesh.positions.size();
@@ -2147,9 +2147,9 @@ void CadRendererGL::renderImmediateMode(
 
     // --- Wire pass ---
     for (const auto& item : plan.wireItems) {
-        const obol::PartGeometry* geom = assembly.partGeometry(item.rep.part);
+        const Obol::PartGeometry* geom = assembly.partGeometry(item.rep.part);
         if (!geom || !geom->wire.has_value()) continue;
-        const obol::WireRep& wire = *geom->wire;
+        const Obol::WireRep& wire = *geom->wire;
 
         for (uint32_t ii = 0; ii < item.instanceCount; ++ii) {
             const size_t visibleIndex = item.baseInstance + ii;
@@ -2203,9 +2203,9 @@ void CadRendererGL::renderImmediateMode(
     }
     glue->glDisable(GL_COLOR_MATERIAL);
     for (const auto& item : plan.shadedItems) {
-        const obol::PartGeometry* geom = assembly.partGeometry(item.rep.part);
+        const Obol::PartGeometry* geom = assembly.partGeometry(item.rep.part);
         if (!geom || !geom->shaded.has_value()) continue;
-        const obol::TriMesh& mesh = *geom->shaded;
+        const Obol::TriMesh& mesh = *geom->shaded;
 
         const bool hasNorm = !mesh.normals.empty();
 
@@ -2511,4 +2511,4 @@ void CadRendererGL::releaseGpuResources(const SoGLContext* glue)
 }
 
 } // namespace internal
-} // namespace obol
+} // namespace Obol

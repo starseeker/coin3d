@@ -55,17 +55,17 @@
  *   asm->drawMode = SoCADAssembly::WIREFRAME;
  *
  *   // Add a part with wire geometry
- *   obol::PartId pid = obol::CadIdBuilder::hash128("wheel");
- *   obol::PartGeometry geom;
- *   geom.wire = obol::WireRep{ ... };
+ *   Obol::PartId pid = Obol::CadIdBuilder::hash128("wheel");
+ *   Obol::PartGeometry geom;
+ *   geom.wire = Obol::WireRep{ ... };
  *   asm->upsertPart(pid, geom);
  *
  *   // Add an instance
- *   obol::InstanceRecord rec;
+ *   Obol::InstanceRecord rec;
  *   rec.part   = pid;
- *   rec.parent = obol::CadIdBuilder::Root();
+ *   rec.parent = Obol::CadIdBuilder::Root();
  *   rec.localToRoot.makeIdentity();
- *   obol::InstanceId iid = asm->upsertInstanceAuto(rec);
+ *   Obol::InstanceId iid = asm->upsertInstanceAuto(rec);
  *
  *   root->addChild(asm);
  * @endcode
@@ -81,7 +81,7 @@
 #include <Inventor/SbBox3f.h>
 #include <Inventor/SbVec3f.h>
 
-#include <obol/cad/CadIds.h>
+#include <Obol/cad/CadIds.h>
 
 #include <vector>
 #include <optional>
@@ -92,7 +92,7 @@
 
 class SoDetail;
 
-namespace obol {
+namespace Obol {
 
 // ---------------------------------------------------------------------------
 // Geometry primitives ingested via the SoCADAssembly API
@@ -291,7 +291,7 @@ struct CadPickDetailRecord {
     float         u             = 0.0f;
 };
 
-} // namespace obol
+} // namespace Obol
 
 // ---------------------------------------------------------------------------
 // SoCADAssembly node
@@ -311,7 +311,7 @@ struct SoCADAssemblyImpl;
 
   See SoCADAssembly.h for a complete usage example.
 
-  \sa SoCADDetail, obol::CadIdBuilder, obol::PartGeometry
+  \sa SoCADDetail, Obol::CadIdBuilder, Obol::PartGeometry
 */
 class OBOL_DLL_API SoCADAssembly : public SoNode {
     typedef SoNode inherited;
@@ -373,7 +373,7 @@ public:
      * @param pid  Stable part identifier (use CadIdBuilder::hash128 to create).
      * @param geom Part geometry (wire and/or shaded).
      */
-    void upsertPart(obol::PartId pid, const obol::PartGeometry& geom);
+    void upsertPart(Obol::PartId pid, const Obol::PartGeometry& geom);
 
     /**
      * Insert or replace many parts as one dirty operation.
@@ -381,17 +381,17 @@ public:
      * This avoids per-part scene notifications and recomputes bounds for
      * affected instances once after all geometry updates have landed.
      */
-    void upsertParts(const std::vector<obol::PartUpdate>& updates);
+    void upsertParts(const std::vector<Obol::PartUpdate>& updates);
 
     /** Retain producer-owned immutable part geometry without copying it. */
-    void upsertSharedParts(const std::vector<obol::SharedPartUpdate>& updates);
+    void upsertSharedParts(const std::vector<Obol::SharedPartUpdate>& updates);
 
     /**
      * Remove a part.  Any instances referencing this part become non-renderable
      * (they remain in the instance database so they can be re-attached if the
      * part is re-inserted later).
      */
-    void removePart(obol::PartId pid);
+    void removePart(Obol::PartId pid);
 
     // -----------------------------------------------------------------------
     // Instance management
@@ -404,43 +404,43 @@ public:
      * @return The generated InstanceId (stable within the session as long as
      *         the same traversal path is used).
      */
-    obol::InstanceId upsertInstanceAuto(const obol::InstanceRecord& rec);
+    Obol::InstanceId upsertInstanceAuto(const Obol::InstanceRecord& rec);
 
     /**
      * Insert or update an instance with an explicitly-supplied InstanceId.
      * Use this when you already have a stable external identifier.
      */
-    void upsertInstance(obol::InstanceId iid, const obol::InstanceRecord& rec);
+    void upsertInstance(Obol::InstanceId iid, const Obol::InstanceRecord& rec);
 
     /**
      * Insert or update many automatically-identified instances.
      *
      * @return Generated InstanceIds, in the same order as @p records.
      */
-    std::vector<obol::InstanceId> upsertInstancesAuto(
-        const std::vector<obol::InstanceRecord>& records);
+    std::vector<Obol::InstanceId> upsertInstancesAuto(
+        const std::vector<Obol::InstanceRecord>& records);
 
     /**
      * Insert or update many explicitly-identified instances as one dirty
      * operation.
      */
-    void upsertInstances(const std::vector<obol::InstanceUpdate>& updates);
+    void upsertInstances(const std::vector<Obol::InstanceUpdate>& updates);
 
     /** Remove an instance.  No-op if @p iid is not in the database. */
-    void removeInstance(obol::InstanceId iid);
+    void removeInstance(Obol::InstanceId iid);
 
     /** Fast path: update only the transform for an existing instance. */
-    void updateInstanceTransform(obol::InstanceId iid, const SbMatrix& localToRoot);
+    void updateInstanceTransform(Obol::InstanceId iid, const SbMatrix& localToRoot);
 
     /** Fast path: update only the visual style for an existing instance. */
-    void updateInstanceStyle(obol::InstanceId iid, const obol::InstanceStyle& style);
+    void updateInstanceStyle(Obol::InstanceId iid, const Obol::InstanceStyle& style);
 
     /** Update many visual styles without rebuilding bounds or the pick BVH. */
     void updateInstanceStyles(
-        const std::vector<obol::InstanceStyleUpdate>& updates);
+        const std::vector<Obol::InstanceStyleUpdate>& updates);
 
     /** Replace the selection highlight set. */
-    void setSelectedInstances(const std::vector<obol::InstanceId>& ids);
+    void setSelectedInstances(const std::vector<Obol::InstanceId>& ids);
 
     // -----------------------------------------------------------------------
     // Query
@@ -459,10 +459,10 @@ public:
      * and partGeometry() to consume the retained assembly without rebuilding
      * a per-instance scene graph.
      */
-    std::vector<obol::InstanceId> instanceIds() const;
+    std::vector<Obol::InstanceId> instanceIds() const;
 
     /** True when an instance is hidden from rendering and generic traversal. */
-    bool isInstanceHidden(obol::InstanceId iid) const;
+    bool isInstanceHidden(Obol::InstanceId iid) const;
 
     /** True when any part can provide progressive triangle LoD. */
     bool hasPartLod() const;
@@ -471,7 +471,7 @@ public:
      * Return the geometry for @p pid, or nullptr if not in the part library.
      * Used by the GPU renderer to upload per-part VBOs.
      */
-    const obol::PartGeometry* partGeometry(obol::PartId pid) const;
+    const Obol::PartGeometry* partGeometry(Obol::PartId pid) const;
 
     /**
      * Return the full instance record for @p iid, or empty if not found.
@@ -479,7 +479,7 @@ public:
      * Useful for "materialising" a picked instance into a normal scene-graph
      * node: retrieve part, transform and style, then build an explicit shape.
      */
-    std::optional<obol::InstanceRecord> getInstanceRecord(obol::InstanceId iid) const;
+    std::optional<Obol::InstanceRecord> getInstanceRecord(Obol::InstanceId iid) const;
 
     /**
      * Return LoD-filtered triangle indices for @p pid at the given @p level.
@@ -491,7 +491,7 @@ public:
      *
      * Used internally by the renderer when LoD is enabled by SoCADViewState.
      */
-    const std::vector<uint32_t>* getLodFilteredIndices(obol::PartId pid,
+    const std::vector<uint32_t>* getLodFilteredIndices(Obol::PartId pid,
                                                         uint8_t level) const;
 
     /**
@@ -505,7 +505,7 @@ public:
      * scene-graph nodes, hide the corresponding aggregate entries so they
      * don't double-render.
      */
-    void setHiddenInstances(const std::vector<obol::InstanceId>& ids);
+    void setHiddenInstances(const std::vector<Obol::InstanceId>& ids);
 
     /**
      * Exclude a set of instances from picking while keeping them visible.
@@ -516,7 +516,7 @@ public:
      * "visible but not selectable" without promoting the instance to a full
      * scene-graph node.
      */
-    void setUnpickableInstances(const std::vector<obol::InstanceId>& ids);
+    void setUnpickableInstances(const std::vector<Obol::InstanceId>& ids);
 
     /**
      * Returns the rendering tier selected during the last GLRender() call:
@@ -548,7 +548,7 @@ protected:
      * SoCADAssembly's accelerated picking implementation.
      */
     virtual SoDetail* createPickDetail(
-        const obol::CadPickDetailRecord& hit) const;
+        const Obol::CadPickDetailRecord& hit) const;
 
     // -----------------------------------------------------------------------
     // Inventor action overrides

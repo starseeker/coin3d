@@ -353,8 +353,8 @@ else()
           FILES_MATCHING PATTERN "*.h")
 
   # Install obol-specific public headers (e.g. SoCAD* interfaces)
-  install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/obol/
-          DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/obol
+  install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/Obol/
+          DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Obol
           COMPONENT development
           FILES_MATCHING PATTERN "*.h")
 
@@ -364,7 +364,7 @@ else()
   install(FILES
           ${PROJECT_SOURCE_DIR}/tests/utils/nanort_context_manager.h
           ${PROJECT_SOURCE_DIR}/external/nanort/nanort.h
-          DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/obol/testing
+          DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Obol/testing
           COMPONENT development)
 
 

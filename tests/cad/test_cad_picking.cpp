@@ -14,8 +14,8 @@
 
 #include "../test_utils.h"
 
-#include <obol/cad/CadIds.h>
-#include <obol/cad/SoCADAssembly.h>  // PartGeometry, WireRep, TriMesh, etc.
+#include <Obol/cad/CadIds.h>
+#include <Obol/cad/SoCADAssembly.h>  // PartGeometry, WireRep, TriMesh, etc.
 #include "CadPicking.h"
 
 #include <Inventor/SbVec3f.h>
@@ -28,17 +28,17 @@
 #include <cmath>
 
 using namespace SimpleTest;
-using namespace obol;
-using namespace obol::picking;
+using namespace Obol;
+using namespace Obol::picking;
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 /** Build a unit-cube wireframe (12 edges, 24 segment endpoints). */
-static obol::WireRep makeCubeWireframe()
+static Obol::WireRep makeCubeWireframe()
 {
-    obol::WireRep rep;
+    Obol::WireRep rep;
     // 12 edges of a unit cube [0,1]^3
     struct Edge { SbVec3f a, b; };
     std::vector<Edge> edges = {
@@ -62,9 +62,9 @@ static obol::WireRep makeCubeWireframe()
 }
 
 /** Build a simple pyramid triangle mesh. */
-static obol::TriMesh makePyramid()
+static Obol::TriMesh makePyramid()
 {
-    obol::TriMesh mesh;
+    Obol::TriMesh mesh;
     mesh.positions = {
         SbVec3f(0,0,0), SbVec3f(1,0,0), SbVec3f(0.5f,1,0),  // base triangle
         SbVec3f(0.5f,0.5f,1)                                   // apex
@@ -220,17 +220,17 @@ static int test_pick_query()
     PartId pidCube = CadIdBuilder::hash128(std::string("cube_part"));
     PartId pidPyramid = CadIdBuilder::hash128(std::string("pyramid_part"));
 
-    obol::PartGeometry geomCube;
+    Obol::PartGeometry geomCube;
     geomCube.wire = makeCubeWireframe();
 
-    obol::PartGeometry geomPyramid;
+    Obol::PartGeometry geomPyramid;
     geomPyramid.shaded = makePyramid();
 
-    std::unordered_map<PartId, std::shared_ptr<const obol::PartGeometry>,
+    std::unordered_map<PartId, std::shared_ptr<const Obol::PartGeometry>,
                        std::hash<PartId>> parts;
-    parts[pidCube] = std::make_shared<const obol::PartGeometry>(geomCube);
+    parts[pidCube] = std::make_shared<const Obol::PartGeometry>(geomCube);
     parts[pidPyramid] =
-        std::make_shared<const obol::PartGeometry>(geomPyramid);
+        std::make_shared<const Obol::PartGeometry>(geomPyramid);
 
     // Instance 1: cube at origin
     InstanceId iidCube = CadIdBuilder::extendNameOccBool(
@@ -326,7 +326,7 @@ static int test_pick_query()
 
 static int test_part_tri_bvh()
 {
-    using namespace obol::picking;
+    using namespace Obol::picking;
     SimpleTest::TestRunner runner;
 
     // -----------------------------------------------------------------------
@@ -401,7 +401,7 @@ static int test_part_tri_bvh()
     // -----------------------------------------------------------------------
     runner.startTest("CadPartTriBVH: pyramid mesh – closest triangle hit");
     {
-        obol::TriMesh pyramid = makePyramid();
+        Obol::TriMesh pyramid = makePyramid();
         CadPartTriBVH bvh;
         bvh.build(pyramid.positions, pyramid.indices);
         // Ray from above shooting through base (z~=0)
@@ -415,10 +415,10 @@ static int test_part_tri_bvh()
 
 static int test_pick_triangle()
 {
-    using namespace obol::picking;
+    using namespace Obol::picking;
     SimpleTest::TestRunner runner;
 
-    using namespace obol;
+    using namespace Obol;
 
     // Set up one instance of the pyramid with a simple identity transform
     PartId    pidPyr = CadIdBuilder::hash128("pyramid");
@@ -428,14 +428,14 @@ static int test_pick_triangle()
     SbMatrix identityM;
     identityM.makeIdentity();
 
-    obol::TriMesh pyr = makePyramid();
+    Obol::TriMesh pyr = makePyramid();
 
-    std::unordered_map<PartId, std::shared_ptr<const obol::PartGeometry>,
+    std::unordered_map<PartId, std::shared_ptr<const Obol::PartGeometry>,
                        std::hash<PartId>> parts;
     {
-        obol::PartGeometry g;
+        Obol::PartGeometry g;
         g.shaded = pyr;
-        parts[pidPyr] = std::make_shared<const obol::PartGeometry>(g);
+        parts[pidPyr] = std::make_shared<const Obol::PartGeometry>(g);
     }
 
     CadInstanceBVH bvh;
@@ -475,7 +475,7 @@ static int test_pick_triangle()
         InstanceId iidFlat = CadIdBuilder::extendNameOccBool(
             CadIdBuilder::Root(), "flat_triangle", 0, 0);
 
-        obol::TriMesh flat;
+        Obol::TriMesh flat;
         flat.positions = {
             SbVec3f(-1.0f, -1.0f, 0.0f),
             SbVec3f( 1.0f, -1.0f, 0.0f),
@@ -485,13 +485,13 @@ static int test_pick_triangle()
         flat.bounds.setBounds(SbVec3f(-1.0f, -1.0f, 0.0f),
                               SbVec3f( 1.0f,  1.0f, 0.0f));
 
-        std::unordered_map<PartId, std::shared_ptr<const obol::PartGeometry>,
+        std::unordered_map<PartId, std::shared_ptr<const Obol::PartGeometry>,
                            std::hash<PartId>> flatParts;
         {
-            obol::PartGeometry g;
+            Obol::PartGeometry g;
             g.shaded = flat;
             flatParts[pidFlat] =
-                std::make_shared<const obol::PartGeometry>(g);
+                std::make_shared<const Obol::PartGeometry>(g);
         }
 
         CadInstanceBVH flatBvh;
@@ -537,13 +537,13 @@ static int test_pick_triangle()
         InstanceId iidWire = CadIdBuilder::extendNameOccBool(
             CadIdBuilder::Root(), "wire_only", 0, 0);
 
-        std::unordered_map<PartId, std::shared_ptr<const obol::PartGeometry>,
+        std::unordered_map<PartId, std::shared_ptr<const Obol::PartGeometry>,
                            std::hash<PartId>> wireParts;
         {
-            obol::PartGeometry g;
+            Obol::PartGeometry g;
             g.wire = makeCubeWireframe();
             wireParts[pidWire] =
-                std::make_shared<const obol::PartGeometry>(g);
+                std::make_shared<const Obol::PartGeometry>(g);
         }
 
         CadInstanceBVH wireBvh;

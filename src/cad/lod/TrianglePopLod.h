@@ -57,7 +57,7 @@
 #include <vector>
 #include <cstdint>
 
-namespace obol {
+namespace Obol {
 
 /**
  * @brief POP-quantisation LoD for a triangle mesh.
@@ -119,6 +119,6 @@ private:
     bool                 built_ = false;
 };
 
-} // namespace obol
+} // namespace Obol
 
 #endif // OBOL_CAD_LOD_TRIANGLEPOPLOD_H

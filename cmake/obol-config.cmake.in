@@ -51,7 +51,7 @@ set(Obol_LIBRARY   Obol::Obol)
 if(NOT OBOL_BUILD_MAC_FRAMEWORK)
   set(Obol_INCLUDE_DIRS ${Obol_INCLUDE_DIR})
   set(Obol_NanoRTContextManager_INCLUDE_DIR
-      "${Obol_INCLUDE_DIR}/obol/testing")
+      "${Obol_INCLUDE_DIR}/Obol/testing")
   if(EXISTS "${Obol_NanoRTContextManager_INCLUDE_DIR}/nanort_context_manager.h" AND
      EXISTS "${Obol_NanoRTContextManager_INCLUDE_DIR}/nanort.h")
     set(Obol_NanoRTContextManager_FOUND TRUE)

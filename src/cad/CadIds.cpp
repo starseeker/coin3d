@@ -30,11 +30,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#include <obol/cad/CadIds.h>
+#include <Obol/cad/CadIds.h>
 
 #include <cstring>
 
-namespace obol {
+namespace Obol {
 
 // ---------------------------------------------------------------------------
 // CadIdBuilder – FNV-1a 128-bit implementation
@@ -153,4 +153,4 @@ CadIdBuilder::extendNameOccBool(CadId128     parent,
     return result;
 }
 
-} // namespace obol
+} // namespace Obol

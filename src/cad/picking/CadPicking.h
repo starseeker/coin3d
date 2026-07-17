@@ -48,8 +48,8 @@
  * All structures are independent of BRL-CAD.
  */
 
-#include <obol/cad/CadIds.h>
-#include <obol/cad/SoCADAssembly.h>  // obol::PartGeometry, obol::InstanceRecord
+#include <Obol/cad/CadIds.h>
+#include <Obol/cad/SoCADAssembly.h>  // Obol::PartGeometry, Obol::InstanceRecord
 
 #include <Inventor/SbVec3f.h>
 #include <Inventor/SbBox3f.h>
@@ -62,7 +62,7 @@
 #include <cstdint>
 #include <cmath>
 
-namespace obol {
+namespace Obol {
 namespace picking {
 
 // ---------------------------------------------------------------------------
@@ -289,8 +289,8 @@ public:
     static CadPickResult pickPoint(
         const SbLine& ray,
         const CadInstanceBVH& instanceBvh,
-        const std::unordered_map<PartId, std::shared_ptr<const obol::PartGeometry>,
-                                 std::hash<obol::PartId>>& partGeometries,
+        const std::unordered_map<PartId, std::shared_ptr<const Obol::PartGeometry>,
+                                 std::hash<Obol::PartId>>& partGeometries,
         float toleranceWS);
 
     /**
@@ -306,10 +306,10 @@ public:
     static CadPickResult pickEdge(
         const SbLine&                                       ray,
         const CadInstanceBVH&                               instanceBvh,
-        const std::unordered_map<PartId, std::shared_ptr<const obol::PartGeometry>,
-                                 std::hash<obol::PartId>>&  partGeometries,
+        const std::unordered_map<PartId, std::shared_ptr<const Obol::PartGeometry>,
+                                 std::hash<Obol::PartId>>&  partGeometries,
         std::unordered_map<PartId, CadPartEdgeBVH,
-                           std::hash<obol::PartId>>&        partBvhCache,
+                           std::hash<Obol::PartId>>&        partBvhCache,
         float                                               toleranceWS);
 
     /**
@@ -339,14 +339,14 @@ public:
     static CadPickResult pickTriangle(
         const SbLine&                                       ray,
         const CadInstanceBVH&                               instanceBvh,
-        const std::unordered_map<PartId, std::shared_ptr<const obol::PartGeometry>,
-                                 std::hash<obol::PartId>>&  partGeometries,
+        const std::unordered_map<PartId, std::shared_ptr<const Obol::PartGeometry>,
+                                 std::hash<Obol::PartId>>&  partGeometries,
         std::unordered_map<PartId, CadPartTriBVH,
-                           std::hash<obol::PartId>>&        partTriBvhCache,
+                           std::hash<Obol::PartId>>&        partTriBvhCache,
         float                                               toleranceWS = 0.0f);
 };
 
 } // namespace picking
-} // namespace obol
+} // namespace Obol
 
 #endif // OBOL_CAD_PICKING_CADPICKING_H

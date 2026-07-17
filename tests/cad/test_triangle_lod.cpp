@@ -1,6 +1,6 @@
 /**
  * @file test_triangle_lod.cpp
- * @brief Unit tests for obol::TrianglePopLod.
+ * @brief Unit tests for Obol::TrianglePopLod.
  *
  * Tests:
  *  1. Build from a subdivided plane
@@ -22,7 +22,7 @@
 #include <cmath>
 
 using namespace SimpleTest;
-using namespace obol;
+using namespace Obol;
 
 // ---------------------------------------------------------------------------
 // Helpers

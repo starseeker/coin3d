@@ -5,7 +5,7 @@
 
 #include "../test_utils.h"
 
-#include <obol/cad/SoCADAssembly.h>
+#include <Obol/cad/SoCADAssembly.h>
 
 #include <Inventor/SoDB.h>
 
@@ -18,7 +18,7 @@ sameMatrix(const SbMatrix &a, const SbMatrix &b)
 }
 
 static bool
-sameRecord(const obol::InstanceRecord &a, const obol::InstanceRecord &b)
+sameRecord(const Obol::InstanceRecord &a, const Obol::InstanceRecord &b)
 {
     return a.part == b.part && sameMatrix(a.localToRoot, b.localToRoot) &&
         a.parent == b.parent && a.childName == b.childName &&
@@ -37,9 +37,9 @@ main()
     SoCADAssembly *assembly = new SoCADAssembly;
     assembly->ref();
 
-    obol::InstanceRecord first;
-    first.part = obol::CadIdBuilder::hash128("shared-part");
-    first.parent = obol::CadIdBuilder::hash128("parent");
+    Obol::InstanceRecord first;
+    first.part = Obol::CadIdBuilder::hash128("shared-part");
+    first.parent = Obol::CadIdBuilder::hash128("parent");
     first.childName = "wheel";
     first.occurrenceIndex = 0;
     first.boolOp = 0;
@@ -49,16 +49,16 @@ main()
     first.localToRoot.setTranslate(SbVec3f(1.0f, 2.0f, 3.0f));
 
     runner.startTest("automatic instance insertion preserves the full record");
-    const obol::InstanceId firstId = assembly->upsertInstanceAuto(first);
-    std::optional<obol::InstanceRecord> stored =
+    const Obol::InstanceId firstId = assembly->upsertInstanceAuto(first);
+    std::optional<Obol::InstanceRecord> stored =
         assembly->getInstanceRecord(firstId);
     runner.endTest(stored.has_value() && sameRecord(*stored, first),
         "getInstanceRecord must preserve identity, transform, and style");
 
     runner.startTest("duplicate occurrence receives a distinct stable ID");
-    obol::InstanceRecord duplicate = first;
+    Obol::InstanceRecord duplicate = first;
     duplicate.occurrenceIndex = 1;
-    const obol::InstanceId duplicateId =
+    const Obol::InstanceId duplicateId =
         assembly->upsertInstanceAuto(duplicate);
     stored = assembly->getInstanceRecord(duplicateId);
     runner.endTest(duplicateId != firstId && stored.has_value() &&
@@ -66,9 +66,9 @@ main()
         "occurrence identity must survive assembly insertion");
 
     runner.startTest("Boolean operation receives a distinct stable ID");
-    obol::InstanceRecord subtract = first;
+    Obol::InstanceRecord subtract = first;
     subtract.boolOp = 1;
-    const obol::InstanceId subtractId = assembly->upsertInstanceAuto(subtract);
+    const Obol::InstanceId subtractId = assembly->upsertInstanceAuto(subtract);
     stored = assembly->getInstanceRecord(subtractId);
     runner.endTest(subtractId != firstId && stored.has_value() &&
         sameRecord(*stored, subtract),
@@ -88,7 +88,7 @@ main()
         "transform updates must not demote identity metadata");
 
     runner.startTest("style fast path preserves occurrence identity");
-    obol::InstanceStyle restyled = duplicate.style;
+    Obol::InstanceStyle restyled = duplicate.style;
     restyled.lineWidth = 7.0f;
     assembly->updateInstanceStyle(duplicateId, restyled);
     stored = assembly->getInstanceRecord(duplicateId);
@@ -99,22 +99,22 @@ main()
         "style updates must not demote identity metadata");
 
     runner.startTest("explicit bulk insertion preserves full records");
-    obol::InstanceRecord intersection = first;
+    Obol::InstanceRecord intersection = first;
     intersection.childName = "overlap";
     intersection.boolOp = 2;
-    const obol::InstanceId intersectionId =
-        obol::CadIdBuilder::hash128("external-intersection-id");
-    obol::InstanceUpdate update;
+    const Obol::InstanceId intersectionId =
+        Obol::CadIdBuilder::hash128("external-intersection-id");
+    Obol::InstanceUpdate update;
     update.instance = intersectionId;
     update.record = intersection;
-    assembly->upsertInstances(std::vector<obol::InstanceUpdate>(1, update));
+    assembly->upsertInstances(std::vector<Obol::InstanceUpdate>(1, update));
     stored = assembly->getInstanceRecord(intersectionId);
     runner.endTest(stored.has_value() && sameRecord(*stored, intersection),
         "bulk explicit insertion must be lossless");
 
     runner.startTest("shaded parts provide LoD on first demand");
-    obol::PartGeometry shaded;
-    obol::TriMesh triangle;
+    Obol::PartGeometry shaded;
+    Obol::TriMesh triangle;
     triangle.positions = {SbVec3f(0.0f, 0.0f, 0.0f),
                           SbVec3f(1.0f, 0.0f, 0.0f),
                           SbVec3f(0.0f, 1.0f, 0.0f)};
@@ -130,7 +130,7 @@ main()
         "LoD capability must be visible before its hierarchy is requested");
 
     runner.startTest("replacing shaded geometry invalidates LoD capability");
-    assembly->upsertPart(first.part, obol::PartGeometry());
+    assembly->upsertPart(first.part, Obol::PartGeometry());
     runner.endTest(!assembly->hasPartLod() &&
         !assembly->getLodFilteredIndices(first.part, 255),
         "part replacement must discard the previous LoD hierarchy");

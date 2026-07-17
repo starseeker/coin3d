@@ -37,7 +37,7 @@
 #include <cassert>
 #include <cstdint>
 
-namespace obol {
+namespace Obol {
 
 // ---------------------------------------------------------------------------
 // snapNorm – identical convention to SegmentPopLod::snapNorm
@@ -171,4 +171,4 @@ TrianglePopLod::minLevelForTriangle(uint32_t idx) const
     return minLevel_[idx];
 }
 
-} // namespace obol
+} // namespace Obol

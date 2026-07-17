@@ -30,7 +30,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#include <obol/cad/SoCADDetail.h>
+#include <Obol/cad/SoCADDetail.h>
 
 SO_DETAIL_SOURCE(SoCADDetail);
 

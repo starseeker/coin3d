@@ -41,7 +41,7 @@
  * interacts with the depth buffer when rendered after CAD geometry.
  */
 
-namespace obol {
+namespace Obol {
 
 /**
  * @brief Depth-buffer policy for world-space auxiliary objects.
@@ -52,7 +52,7 @@ namespace obol {
  *
  * @code
  *   AuxLineGrid grid;
- *   grid.depthPolicy = obol::DepthPolicy::ALWAYS_VISIBLE;
+ *   grid.depthPolicy = Obol::DepthPolicy::ALWAYS_VISIBLE;
  * @endcode
  */
 enum class DepthPolicy : uint8_t {
@@ -78,6 +78,6 @@ enum class DepthPolicy : uint8_t {
     XRAY = 2,
 };
 
-} // namespace obol
+} // namespace Obol
 
 #endif // OBOL_RENDER_DEPTHPOLICY_H

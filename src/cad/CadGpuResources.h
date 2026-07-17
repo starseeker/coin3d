@@ -53,7 +53,7 @@
  *  - triVAO     : VAO binding triPosBuf + triNormBuf (only if caps.hasVAO)
  */
 
-#include <obol/cad/CadIds.h>
+#include <Obol/cad/CadIds.h>
 #include "CadGLCaps.h"
 
 #include <Inventor/system/gl.h>
@@ -64,7 +64,7 @@
 
 struct SoGLContext;
 
-namespace obol {
+namespace Obol {
 namespace internal {
 
 /** GPU buffers for one part's point representation. */
@@ -297,6 +297,6 @@ private:
 };
 
 } // namespace internal
-} // namespace obol
+} // namespace Obol
 
 #endif // OBOL_CAD_CADGPURESOURCES_H

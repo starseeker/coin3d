@@ -52,7 +52,7 @@
 
 struct SoGLContext;
 
-namespace obol {
+namespace Obol {
 namespace internal {
 
 struct CadGLCaps {
@@ -103,6 +103,6 @@ struct CadGLCaps {
 };
 
 } // namespace internal
-} // namespace obol
+} // namespace Obol
 
 #endif // OBOL_CAD_CADGLCAPS_H

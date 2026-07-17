@@ -39,7 +39,7 @@
 
 #include <Inventor/SoSceneCollector.h>
 
-#include <obol/cad/SoCADAssembly.h>
+#include <Obol/cad/SoCADAssembly.h>
 
 // Obol scene graph
 #include <Inventor/SbColor.h>
@@ -617,18 +617,18 @@ src_cadAssemblyCB(void *ud, SoCallbackAction *action, const SoNode *node)
                         transparency, 0);
     const SbMatrix parentToWorld = action->getModelMatrix();
 
-    for (const obol::InstanceId &instanceId : assembly->instanceIds()) {
+    for (const Obol::InstanceId &instanceId : assembly->instanceIds()) {
         if (assembly->isInstanceHidden(instanceId))
             continue;
-        const std::optional<obol::InstanceRecord> instance =
+        const std::optional<Obol::InstanceRecord> instance =
             assembly->getInstanceRecord(instanceId);
         if (!instance)
             continue;
-        const obol::PartGeometry *geometry =
+        const Obol::PartGeometry *geometry =
             assembly->partGeometry(instance->part);
         if (!geometry || !geometry->shaded)
             continue;
-        const obol::TriMesh &mesh = *geometry->shaded;
+        const Obol::TriMesh &mesh = *geometry->shaded;
 
         SbMatrix localToWorld = instance->localToRoot;
         localToWorld.multRight(parentToWorld);

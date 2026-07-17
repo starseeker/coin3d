@@ -30,7 +30,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
-#include <obol/cad/SoCADViewState.h>
+#include <Obol/cad/SoCADViewState.h>
 
 #include <Inventor/SoType.h>
 #include <Inventor/actions/SoCallbackAction.h>
@@ -58,7 +58,7 @@ void
 SoCADViewStateElement::init(SoState *state)
 {
     inherited::init(state);
-    viewState_ = obol::CadViewState();
+    viewState_ = Obol::CadViewState();
 }
 
 SbBool
@@ -86,7 +86,7 @@ SoCADViewStateElement::copyMatchInfo(void) const
 
 void
 SoCADViewStateElement::set(SoState *state,
-                           const obol::CadViewState& viewState)
+                           const Obol::CadViewState& viewState)
 {
     if (!state)
         return;
@@ -97,15 +97,15 @@ SoCADViewStateElement::set(SoState *state,
         element->viewState_ = viewState;
 }
 
-obol::CadViewState
+Obol::CadViewState
 SoCADViewStateElement::get(SoState *state)
 {
     if (!state)
-        return obol::CadViewState();
+        return Obol::CadViewState();
     const SoCADViewStateElement *element =
         static_cast<const SoCADViewStateElement *>(
             getConstElement(state, classStackIndex));
-    return element ? element->viewState_ : obol::CadViewState();
+    return element ? element->viewState_ : Obol::CadViewState();
 }
 
 SO_NODE_SOURCE(SoCADViewState);
@@ -161,7 +161,7 @@ void
 SoCADViewState::doAction(SoAction *action)
 {
     SoState *state = action ? action->getState() : NULL;
-    obol::CadViewState viewState = SoCADViewStateElement::get(state);
+    Obol::CadViewState viewState = SoCADViewStateElement::get(state);
 
     if (!this->viewIdHigh.isIgnored() || !this->viewIdLow.isIgnored()) {
         const uint64_t hi =
@@ -173,10 +173,10 @@ SoCADViewState::doAction(SoAction *action)
     if (!this->lodMode.isIgnored()) {
         switch (this->lodMode.getValue()) {
             case LOD_DISABLED:
-                viewState.lodMode = obol::CadLodMode::DISABLED;
+                viewState.lodMode = Obol::CadLodMode::DISABLED;
                 break;
             case LOD_ENABLED:
-                viewState.lodMode = obol::CadLodMode::ENABLED;
+                viewState.lodMode = Obol::CadLodMode::ENABLED;
                 break;
             default:
                 break;
@@ -191,13 +191,13 @@ SoCADViewState::doAction(SoAction *action)
         switch (this->softwareWireMode.getValue()) {
             case SOFTWARE_WIRE_QUALITY:
                 viewState.softwareWireMode =
-                    obol::CadSoftwareWireMode::QUALITY;
+                    Obol::CadSoftwareWireMode::QUALITY;
                 break;
             case SOFTWARE_WIRE_FAST:
-                viewState.softwareWireMode = obol::CadSoftwareWireMode::FAST;
+                viewState.softwareWireMode = Obol::CadSoftwareWireMode::FAST;
                 break;
             case SOFTWARE_WIRE_AUTO:
-                viewState.softwareWireMode = obol::CadSoftwareWireMode::AUTO;
+                viewState.softwareWireMode = Obol::CadSoftwareWireMode::AUTO;
                 break;
             default:
                 break;

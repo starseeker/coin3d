@@ -75,8 +75,8 @@
 #include "CadGpuResources.h"
 #include "CadFramePlan.h"
 
-#include <obol/cad/SoCADAssembly.h>
-#include <obol/cad/CadViewState.h>
+#include <Obol/cad/SoCADAssembly.h>
+#include <Obol/cad/CadViewState.h>
 
 #include <Inventor/SbMatrix.h>
 #include <Inventor/SbVec3f.h>
@@ -90,7 +90,7 @@
 struct SoGLContext;
 class SoGLRenderAction;
 
-namespace obol {
+namespace Obol {
 namespace internal {
 
 /**
@@ -309,6 +309,6 @@ private:
 };
 
 } // namespace internal
-} // namespace obol
+} // namespace Obol
 
 #endif // OBOL_CAD_CADRENDERERGL_H

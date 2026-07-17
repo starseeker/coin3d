@@ -42,7 +42,7 @@
  * must be rendered and what GPU resources are needed.
  */
 
-#include <obol/cad/CadIds.h>
+#include <Obol/cad/CadIds.h>
 #include <Inventor/SbBox3f.h>
 #include <Inventor/SbMatrix.h>
 #include <Inventor/SbColor4f.h>
@@ -51,7 +51,7 @@
 #include <cstdint>
 #include <array>
 
-namespace obol {
+namespace Obol {
 namespace internal {
 
 // ---------------------------------------------------------------------------
@@ -199,6 +199,6 @@ struct CadFramePlan {
 };
 
 } // namespace internal
-} // namespace obol
+} // namespace Obol
 
 #endif // OBOL_CAD_CADFRAMEPLAN_H

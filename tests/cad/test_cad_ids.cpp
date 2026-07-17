@@ -1,6 +1,6 @@
 /**
  * @file test_cad_ids.cpp
- * @brief Unit tests for obol::CadIdBuilder and obol::CadId128.
+ * @brief Unit tests for Obol::CadIdBuilder and Obol::CadId128.
  *
  * Tests:
  *  1. Same traversal path produces identical InstanceId
@@ -15,14 +15,14 @@
  */
 
 #include "../test_utils.h"
-#include <obol/cad/CadIds.h>
+#include <Obol/cad/CadIds.h>
 
 #include <unordered_map>
 #include <string>
 #include <cassert>
 
 using namespace SimpleTest;
-using namespace obol;
+using namespace Obol;
 
 int main()
 {

@@ -44,7 +44,7 @@
  */
 
 #include <Inventor/details/SoSubDetail.h>
-#include <obol/cad/CadIds.h>
+#include <Obol/cad/CadIds.h>
 
 /*!
   \class SoCADDetail SoCADDetail.h obol/cad/SoCADDetail.h
@@ -59,7 +59,7 @@
   - The primitive type (EDGE, TRIANGLE, or BOUNDS).
   - Optional primitive index and parameterisation along an edge (u ∈ [0,1]).
 
-  \sa SoCADAssembly, SoDetail, obol::CadId128
+  \sa SoCADAssembly, SoDetail, Obol::CadId128
 */
 class OBOL_DLL_API SoCADDetail : public SoDetail {
     typedef SoDetail inherited;
@@ -83,10 +83,10 @@ public:
     // --- accessors ---
 
     /** InstanceId of the assembly instance that was hit. */
-    obol::InstanceId getInstanceId() const noexcept { return instanceId_; }
+    Obol::InstanceId getInstanceId() const noexcept { return instanceId_; }
 
     /** PartId of the geometry part used by this instance. */
-    obol::PartId getPartId() const noexcept { return partId_; }
+    Obol::PartId getPartId() const noexcept { return partId_; }
 
     /** Type of geometry primitive that was hit. */
     PrimType getPrimType() const noexcept { return primType_; }
@@ -111,16 +111,16 @@ public:
 
     // --- mutators ---
 
-    void setInstanceId(obol::InstanceId id)  noexcept { instanceId_ = id; }
-    void setPartId    (obol::PartId     id)  noexcept { partId_     = id; }
+    void setInstanceId(Obol::InstanceId id)  noexcept { instanceId_ = id; }
+    void setPartId    (Obol::PartId     id)  noexcept { partId_     = id; }
     void setPrimType  (PrimType         t)   noexcept { primType_   = t;  }
     void setPrimIndex0(uint32_t         idx) noexcept { primIndex0_ = idx; }
     void setPrimIndex1(uint32_t         idx) noexcept { primIndex1_ = idx; }
     void setU         (float            u)   noexcept { u_          = u;   }
 
 private:
-    obol::InstanceId instanceId_;
-    obol::PartId     partId_;
+    Obol::InstanceId instanceId_;
+    Obol::PartId     partId_;
     PrimType         primType_   = BOUNDS;
     uint32_t         primIndex0_ = 0;
     uint32_t         primIndex1_ = 0;
