@@ -328,7 +328,6 @@ cadSoftwareLine(unsigned char *pixels, unsigned int width,
                 const Obol::internal::CadVisibleInstance& instance)
 {
     std::array<uint8_t, 4> color = instance.rgba;
-    if (color[3] == 0) color[3] = 255;
     const int pixelWidth = std::max(1, static_cast<int>(
         std::lround(instance.lineWidth)));
     const int lowOffset = -(pixelWidth - 1) / 2;
@@ -1437,6 +1436,21 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
 
     const GLboolean lightingEnabled = glue->glIsEnabled(GL_LIGHTING);
     const GLboolean light0Enabled = glue->glIsEnabled(GL_LIGHT0);
+    const bool hasTransparency = std::any_of(
+        impl_->cachedPlan_.visibleInstances.begin(),
+        impl_->cachedPlan_.visibleInstances.end(),
+        [](const Obol::internal::CadVisibleInstance& instance) {
+            return instance.rgba[3] < 255;
+        });
+    const GLboolean blendEnabled = glue->glIsEnabled(GL_BLEND);
+    GLint blendSource = GL_ONE;
+    GLint blendDestination = GL_ZERO;
+    if (hasTransparency) {
+        glue->glGetIntegerv(GL_BLEND_SRC, &blendSource);
+        glue->glGetIntegerv(GL_BLEND_DST, &blendDestination);
+        glue->glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glue->glEnable(GL_BLEND);
+    }
 
     // Explicit FAST mode allows ordinary software wireframes to bypass Mesa's
     // fixed-function interpreter.  AUTO is deliberately quality-first because
@@ -1451,6 +1465,11 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
         impl_->renderer_->render(impl_->cachedPlan_, *this, glue, viewProj,
                                  viewMat, projMat, cameraPos, renderState,
                                  impl_->partGeneration_);
+    }
+    if (hasTransparency) {
+        glue->glBlendFunc(static_cast<GLenum>(blendSource),
+                          static_cast<GLenum>(blendDestination));
+        if (!blendEnabled) glue->glDisable(GL_BLEND);
     }
     if (cadDebugEnabled()) {
         std::fprintf(stderr,

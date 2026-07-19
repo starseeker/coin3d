@@ -295,6 +295,12 @@ private:
                           const SbMatrix& projectionMatrix,
                           bool depthOnly);
 
+    bool renderFlatTriangleEdges(const CadFramePlan& plan,
+                                 const SoGLContext* glue,
+                                 const SbMatrix& viewProj,
+                                 const SbMatrix& viewMatrix,
+                                 const SbMatrix& projectionMatrix);
+
     // -----------------------------------------------------------------------
     // Shader compilation helpers
     // -----------------------------------------------------------------------

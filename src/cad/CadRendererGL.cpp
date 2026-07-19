@@ -1133,13 +1133,15 @@ void CadRendererGL::render(
         flatShadedEnv[0] != '0' : true;
     const bool canUseFlatShaded = caps_.isSoftwareRenderer ?
         caps_.canUseFixedVbo() : (caps_.canUseVbo() && shaders_.shaded);
+    const bool hiddenLine =
+        assembly.drawMode.getValue() == SoCADAssembly::HIDDEN_LINE;
     const bool useFlatShaded = flatShadedEnabled && canUseFlatShaded &&
         (!renderState.lodEnabled || !assembly.hasPartLod()) &&
-        plan.shadedItems.size() >= 128;
+        (hiddenLine || plan.shadedItems.size() >= 128);
 
     renderPoints(plan, assembly, glue, viewProj, partGenMap);
 
-    if (assembly.drawMode.getValue() == SoCADAssembly::HIDDEN_LINE) {
+    if (hiddenLine) {
         if (useFlatShaded) {
             SoGLContext_glColorMask(glue, GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
             SoGLContext_glEnable(glue, GL_POLYGON_OFFSET_FILL);
@@ -1149,8 +1151,12 @@ void CadRendererGL::render(
                 true);
             SoGLContext_glDisable(glue, GL_POLYGON_OFFSET_FILL);
             SoGLContext_glColorMask(glue, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-            if (depthRendered && renderFlatWire(
-                    plan, assembly, glue, viewProj)) {
+            const bool triangleEdgesRendered = depthRendered &&
+                renderFlatTriangleEdges(plan, glue, viewProj, viewMatrix,
+                                        projectionMatrix);
+            const bool explicitWireRendered = plan.wireItems.empty() ||
+                renderFlatWire(plan, assembly, glue, viewProj);
+            if (triangleEdgesRendered && explicitWireRendered) {
                 lastRenderTier_ = 3;
                 renderSubpixelProxyPoints(plan, glue, viewProj);
                 return;
@@ -1754,6 +1760,80 @@ bool CadRendererGL::renderFlatShaded(
     glue->glDisableVertexAttribArrayARB(0);
     glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
     glue->glUseProgramObjectARB(0);
+    return true;
+}
+
+bool CadRendererGL::renderFlatTriangleEdges(
+        const CadFramePlan& plan,
+        const SoGLContext* glue,
+        const SbMatrix& viewProj,
+        const SbMatrix& viewMatrix,
+        const SbMatrix& projectionMatrix)
+{
+    const CadFlatShadedGpu& flat = gpuRes_->flatShaded();
+    if (flat.planRevision != plan.revision || !flat.posBuf ||
+            flat.groups.empty())
+        return false;
+
+    GLint polygonMode[2] = {GL_FILL, GL_FILL};
+    glue->glGetIntegerv(GL_POLYGON_MODE, polygonMode);
+    glue->glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+    if (caps_.isSoftwareRenderer) {
+        glue->glMatrixMode(GL_PROJECTION);
+        glue->glPushMatrix();
+        glue->glLoadMatrixf(projectionMatrix[0]);
+        glue->glMatrixMode(GL_MODELVIEW);
+        glue->glPushMatrix();
+        glue->glLoadMatrixf(viewMatrix[0]);
+        const GLboolean wasLighting = glue->glIsEnabled(GL_LIGHTING);
+        glue->glDisable(GL_LIGHTING);
+        glue->glEnableClientState(GL_VERTEX_ARRAY);
+        glue->glBindBuffer(GL_ARRAY_BUFFER, flat.posBuf);
+        glue->glVertexPointer(3, GL_FLOAT, 3 * sizeof(float), nullptr);
+        for (const CadFlatShadedGroup& group : flat.groups) {
+            glue->glColor4ub(group.rgba[0], group.rgba[1],
+                             group.rgba[2], group.rgba[3]);
+            glue->glDrawArrays(GL_TRIANGLES, group.first, group.count);
+        }
+        glue->glDisableClientState(GL_VERTEX_ARRAY);
+        glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
+        if (wasLighting) glue->glEnable(GL_LIGHTING);
+        glue->glMatrixMode(GL_MODELVIEW);
+        glue->glPopMatrix();
+        glue->glMatrixMode(GL_PROJECTION);
+        glue->glPopMatrix();
+        glue->glMatrixMode(GL_MODELVIEW);
+    } else {
+        glue->glUseProgramObjectARB(shaders_.wire);
+        const GLint locVP = glue->glGetUniformLocationARB(shaders_.wire,
+                                                          "u_viewProj");
+        const GLint locModel = glue->glGetUniformLocationARB(shaders_.wire,
+                                                             "u_model");
+        const GLint locColor = glue->glGetUniformLocationARB(shaders_.wire,
+                                                             "u_color");
+        const SbMatrix identity = SbMatrix::identity();
+        glue->glUniformMatrix4fvARB(locVP, 1, GL_FALSE, viewProj[0]);
+        glue->glUniformMatrix4fvARB(locModel, 1, GL_FALSE, identity[0]);
+        glue->glBindBuffer(GL_ARRAY_BUFFER, flat.posBuf);
+        glue->glVertexAttribPointerARB(0, 3, GL_FLOAT, GL_FALSE,
+                                       3 * sizeof(float), nullptr);
+        glue->glEnableVertexAttribArrayARB(0);
+        for (const CadFlatShadedGroup& group : flat.groups) {
+            const float rgba[4] = {group.rgba[0] / 255.0f,
+                                   group.rgba[1] / 255.0f,
+                                   group.rgba[2] / 255.0f,
+                                   group.rgba[3] / 255.0f};
+            glue->glUniform4fvARB(locColor, 1, rgba);
+            glue->glDrawArrays(GL_TRIANGLES, group.first, group.count);
+        }
+        glue->glDisableVertexAttribArrayARB(0);
+        glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glue->glUseProgramObjectARB(0);
+    }
+
+    glue->glPolygonMode(GL_FRONT, static_cast<GLenum>(polygonMode[0]));
+    glue->glPolygonMode(GL_BACK, static_cast<GLenum>(polygonMode[1]));
     return true;
 }
 
