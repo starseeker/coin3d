@@ -20,6 +20,7 @@ OUTPUT_DIRECTORY       = "@CMAKE_BINARY_DIR@/docs/doxygen"
 #   documentation in the .cpp file rather than the header.
 #---------------------------------------------------------------------------
 INPUT                  = "@PROJECT_SOURCE_DIR@/include/Inventor" \
+                         "@PROJECT_SOURCE_DIR@/include/Obol" \
                          "@PROJECT_SOURCE_DIR@/src"
 RECURSIVE              = YES
 FILE_PATTERNS          = *.h *.cpp *.icc
