@@ -32,7 +32,7 @@
 
 #include "CadRendererGL.h"
 
-#include <obol/cad/SoCADAssembly.h>
+#include <Obol/cad/SoCADAssembly.h>
 
 #include <Inventor/misc/SoContextHandler.h>
 #include <Inventor/system/gl.h>
@@ -121,7 +121,7 @@ static const char * kProxyPointVS1 =
     "    v_color = a_color;\n"
     "}\n";
 
-// Shaded pass: simple directional light in world space
+// Shaded pass: multi-light (directional/point/spot) in world space
 static const char * kShadedVS1 =
     "attribute vec3 a_pos;\n"
     "attribute vec3 a_norm;\n"
@@ -130,9 +130,12 @@ static const char * kShadedVS1 =
     "uniform vec4  u_color;\n"
     "uniform int   u_hasNorm;\n"
     "varying vec3  v_norm;\n"
+    "varying vec3  v_worldPos;\n"
     "varying vec4  v_color;\n"
     "void main() {\n"
-    "    gl_Position = u_viewProj * u_model * vec4(a_pos, 1.0);\n"
+    "    vec4 wp = u_model * vec4(a_pos, 1.0);\n"
+    "    gl_Position = u_viewProj * wp;\n"
+    "    v_worldPos = wp.xyz;\n"
     "    if (u_hasNorm != 0) {\n"
     "        v_norm = mat3(u_model[0].xyz, u_model[1].xyz, u_model[2].xyz) * a_norm;\n"
     "    } else {\n"
@@ -142,15 +145,38 @@ static const char * kShadedVS1 =
     "}\n";
 
 static const char * kShadedFS1 =
-    "uniform vec3 u_lightDir;\n"
-    "varying vec3 v_norm;\n"
-    "varying vec4 v_color;\n"
+    "uniform int   u_numLights;\n"
+    "uniform int   u_ltype[8];\n"
+    "uniform vec3  u_lvec[8];\n"
+    "uniform vec3  u_laxis[8];\n"
+    "uniform vec3  u_lcolor[8];\n"
+    "uniform float u_lcos[8];\n"
+    "varying vec3  v_norm;\n"
+    "varying vec3  v_worldPos;\n"
+    "varying vec4  v_color;\n"
     "void main() {\n"
     "    vec3 n = normalize(v_norm);\n"
-    "    float nDotL = max(0.0, dot(n, u_lightDir));\n"
-    "    vec3 ambient = v_color.rgb * 0.25;\n"
-    "    vec3 diffuse = v_color.rgb * nDotL * 0.75;\n"
-    "    gl_FragColor = vec4(ambient + diffuse, v_color.a);\n"
+    "    if (!gl_FrontFacing) n = -n;\n"
+    "    vec3 col = v_color.rgb * 0.25;\n"
+    "    for (int i = 0; i < 8; i++) {\n"
+    "        if (i >= u_numLights) break;\n"
+    "        vec3 L;\n"
+    "        float atten = 1.0;\n"
+    "        if (u_ltype[i] == 0) {\n"
+    "            L = normalize(u_lvec[i]);\n"
+    "        } else {\n"
+    "            vec3 d = u_lvec[i] - v_worldPos;\n"
+    "            float dl = length(d);\n"
+    "            L = (dl > 0.0) ? d / dl : vec3(0.0, 0.0, 1.0);\n"
+    "            if (u_ltype[i] == 2) {\n"
+    "                float c = dot(normalize(u_laxis[i]), -L);\n"
+    "                if (c < u_lcos[i]) atten = 0.0;\n"
+    "            }\n"
+    "        }\n"
+    "        float ndl = max(0.0, dot(n, L));\n"
+    "        col += v_color.rgb * u_lcolor[i] * (ndl * 0.75 * atten);\n"
+    "    }\n"
+    "    gl_FragColor = vec4(col, v_color.a);\n"
     "}\n";
 
 // ---------------------------------------------------------------------------
@@ -186,9 +212,12 @@ static const char * kShadedVS2 =
     "uniform mat4 u_viewProj;\n"
     "uniform int  u_hasNorm;\n"
     "out vec3 v_norm;\n"
+    "out vec3 v_worldPos;\n"
     "out vec4 v_color;\n"
     "void main() {\n"
-    "    gl_Position = u_viewProj * a_instTransform * vec4(a_pos, 1.0);\n"
+    "    vec4 wp = a_instTransform * vec4(a_pos, 1.0);\n"
+    "    gl_Position = u_viewProj * wp;\n"
+    "    v_worldPos = wp.xyz;\n"
     "    if (u_hasNorm != 0) {\n"
     "        mat3 nm = mat3(a_instTransform[0].xyz,\n"
     "                       a_instTransform[1].xyz,\n"
@@ -202,16 +231,39 @@ static const char * kShadedVS2 =
 
 static const char * kShadedFS2 =
     "#version 140\n"
-    "uniform vec3 u_lightDir;\n"
+    "uniform int   u_numLights;\n"
+    "uniform int   u_ltype[8];\n"
+    "uniform vec3  u_lvec[8];\n"
+    "uniform vec3  u_laxis[8];\n"
+    "uniform vec3  u_lcolor[8];\n"
+    "uniform float u_lcos[8];\n"
     "in  vec3 v_norm;\n"
+    "in  vec3 v_worldPos;\n"
     "in  vec4 v_color;\n"
     "out vec4 fragColor;\n"
     "void main() {\n"
     "    vec3 n = normalize(v_norm);\n"
-    "    float nDotL = max(0.0, dot(n, u_lightDir));\n"
-    "    vec3 ambient = v_color.rgb * 0.25;\n"
-    "    vec3 diffuse = v_color.rgb * nDotL * 0.75;\n"
-    "    fragColor = vec4(ambient + diffuse, v_color.a);\n"
+    "    if (!gl_FrontFacing) n = -n;\n"
+    "    vec3 col = v_color.rgb * 0.25;\n"
+    "    for (int i = 0; i < 8; i++) {\n"
+    "        if (i >= u_numLights) break;\n"
+    "        vec3 L;\n"
+    "        float atten = 1.0;\n"
+    "        if (u_ltype[i] == 0) {\n"
+    "            L = normalize(u_lvec[i]);\n"
+    "        } else {\n"
+    "            vec3 d = u_lvec[i] - v_worldPos;\n"
+    "            float dl = length(d);\n"
+    "            L = (dl > 0.0) ? d / dl : vec3(0.0, 0.0, 1.0);\n"
+    "            if (u_ltype[i] == 2) {\n"
+    "                float c = dot(normalize(u_laxis[i]), -L);\n"
+    "                if (c < u_lcos[i]) atten = 0.0;\n"
+    "            }\n"
+    "        }\n"
+    "        float ndl = max(0.0, dot(n, L));\n"
+    "        col += v_color.rgb * u_lcolor[i] * (ndl * 0.75 * atten);\n"
+    "    }\n"
+    "    fragColor = vec4(col, v_color.a);\n"
     "}\n";
 
 // Attribute locations for instanced vertex attributes
@@ -225,7 +277,7 @@ static const GLuint kInstColorLoc     = 6;
 // Fixed light direction (world space, normalised)
 static const float kLightDir[3] = { 0.577f, 0.577f, 0.577f };
 
-namespace obol {
+namespace Obol {
 namespace internal {
 
 namespace {
@@ -281,6 +333,57 @@ CadRendererGL::CadRendererGL()
         SoContextHandler::addContextDestructionCallback(
             CadRendererGL::contextDestroyed, nullptr);
     });
+}
+
+void
+CadRendererGL::uploadLights(const SoGLContext* glue, GLuint program)
+{
+    // Build parallel arrays for the shaded shader's u_light* uniforms.  Fall
+    // back to a single fixed directional light when no scene lights are set.
+    int   type[kMaxLights];
+    float vec[kMaxLights * 3];
+    float axis[kMaxLights * 3];
+    float color[kMaxLights * 3];
+    float cosCut[kMaxLights];
+    int n = 0;
+    if (this->lights_.empty()) {
+        type[0] = 0;
+        vec[0] = kLightDir[0]; vec[1] = kLightDir[1]; vec[2] = kLightDir[2];
+        axis[0] = 0.0f; axis[1] = 0.0f; axis[2] = -1.0f;
+        color[0] = 1.0f; color[1] = 1.0f; color[2] = 1.0f;
+        cosCut[0] = -2.0f;
+        n = 1;
+    } else {
+        for (const GlLight& l : this->lights_) {
+            if (n >= kMaxLights) break;
+            type[n] = l.type;
+            vec[n * 3 + 0] = l.vec[0];
+            vec[n * 3 + 1] = l.vec[1];
+            vec[n * 3 + 2] = l.vec[2];
+            axis[n * 3 + 0] = l.axis[0];
+            axis[n * 3 + 1] = l.axis[1];
+            axis[n * 3 + 2] = l.axis[2];
+            color[n * 3 + 0] = l.color[0];
+            color[n * 3 + 1] = l.color[1];
+            color[n * 3 + 2] = l.color[2];
+            cosCut[n] = l.cosCutoff;
+            ++n;
+        }
+        if (n == 0) { // all filtered out; keep the shader well-defined
+            type[0] = 0;
+            vec[0] = kLightDir[0]; vec[1] = kLightDir[1]; vec[2] = kLightDir[2];
+            axis[0] = 0.0f; axis[1] = 0.0f; axis[2] = -1.0f;
+            color[0] = 1.0f; color[1] = 1.0f; color[2] = 1.0f;
+            cosCut[0] = -2.0f;
+            n = 1;
+        }
+    }
+    glue->glUniform1iARB(glue->glGetUniformLocationARB(program, "u_numLights"), n);
+    glue->glUniform1ivARB(glue->glGetUniformLocationARB(program, "u_ltype"), n, type);
+    glue->glUniform3fvARB(glue->glGetUniformLocationARB(program, "u_lvec"), n, vec);
+    glue->glUniform3fvARB(glue->glGetUniformLocationARB(program, "u_laxis"), n, axis);
+    glue->glUniform3fvARB(glue->glGetUniformLocationARB(program, "u_lcolor"), n, color);
+    glue->glUniform1fvARB(glue->glGetUniformLocationARB(program, "u_lcos"), n, cosCut);
 }
 
 CadRendererGL::~CadRendererGL()
@@ -536,7 +639,7 @@ void CadRendererGL::ensurePartUploaded(PartId pid, const SoCADAssembly& assembly
     if (gpuRes_->isUpToDate(pid, gen)) return;
 
     // Retrieve part geometry from the assembly
-    const obol::PartGeometry* geom = assembly.partGeometry(pid);
+    const Obol::PartGeometry* geom = assembly.partGeometry(pid);
     if (!geom) return;
 
     const float* pPointPos = nullptr;
@@ -716,9 +819,9 @@ static uint8_t computeLodLevel(float dist, float radius, float lodScale) noexcep
     return static_cast<uint8_t>(std::min(255.0f, std::max(0.0f, level)));
 }
 
-static uint8_t instanceLodLevel(const obol::internal::CadVisibleInstance& inst,
+static uint8_t instanceLodLevel(const Obol::internal::CadVisibleInstance& inst,
                                 const SbVec3f& cameraPos,
-                                const obol::CadRenderState& renderState) noexcept
+                                const Obol::CadRenderState& renderState) noexcept
 {
     if (renderState.selectedFullDetail && (inst.flags & 1u))
         return 255;
@@ -759,7 +862,7 @@ static CadWireRasterState captureWireRasterState(
 
 static void applyWireRasterStyle(
         const SoGLContext *glue,
-        const obol::internal::CadVisibleInstance& inst,
+        const Obol::internal::CadVisibleInstance& inst,
         bool hasLineStipple)
 {
     glue->glLineWidth(std::max(1.0f, inst.lineWidth));
@@ -1095,9 +1198,9 @@ const std::vector<uint32_t> *
 CadRendererGL::lodIndicesForInstance(
         const SoCADAssembly& assembly,
         PartId part,
-        const obol::internal::CadVisibleInstance& inst,
+        const Obol::internal::CadVisibleInstance& inst,
         const SbVec3f& cameraPos,
-        const obol::CadRenderState& renderState,
+        const Obol::CadRenderState& renderState,
         const std::unordered_map<PartId, uint64_t,
                                  std::hash<PartId>>& partGenMap)
 {
@@ -1133,13 +1236,15 @@ void CadRendererGL::render(
         flatShadedEnv[0] != '0' : true;
     const bool canUseFlatShaded = caps_.isSoftwareRenderer ?
         caps_.canUseFixedVbo() : (caps_.canUseVbo() && shaders_.shaded);
+    const bool hiddenLine =
+        assembly.drawMode.getValue() == SoCADAssembly::HIDDEN_LINE;
     const bool useFlatShaded = flatShadedEnabled && canUseFlatShaded &&
         (!renderState.lodEnabled || !assembly.hasPartLod()) &&
-        plan.shadedItems.size() >= 128;
+        (hiddenLine || plan.shadedItems.size() >= 128);
 
     renderPoints(plan, assembly, glue, viewProj, partGenMap);
 
-    if (assembly.drawMode.getValue() == SoCADAssembly::HIDDEN_LINE) {
+    if (hiddenLine) {
         if (useFlatShaded) {
             SoGLContext_glColorMask(glue, GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
             SoGLContext_glEnable(glue, GL_POLYGON_OFFSET_FILL);
@@ -1149,8 +1254,12 @@ void CadRendererGL::render(
                 true);
             SoGLContext_glDisable(glue, GL_POLYGON_OFFSET_FILL);
             SoGLContext_glColorMask(glue, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-            if (depthRendered && renderFlatWire(
-                    plan, assembly, glue, viewProj)) {
+            const bool triangleEdgesRendered = depthRendered &&
+                renderFlatTriangleEdges(plan, glue, viewProj, viewMatrix,
+                                        projectionMatrix);
+            const bool explicitWireRendered = plan.wireItems.empty() ||
+                renderFlatWire(plan, assembly, glue, viewProj);
+            if (triangleEdgesRendered && explicitWireRendered) {
                 lastRenderTier_ = 3;
                 renderSubpixelProxyPoints(plan, glue, viewProj);
                 return;
@@ -1394,11 +1503,11 @@ bool CadRendererGL::renderFlatWire(
         const bool rebuildGeometry = true;
         size_t pointCount = 0;
         for (const CadDrawItem& item : plan.wireItems) {
-            const obol::PartGeometry *geom = assembly.partGeometry(item.rep.part);
+            const Obol::PartGeometry *geom = assembly.partGeometry(item.rep.part);
             if (!geom || !geom->wire.has_value()) continue;
-            const obol::WireRep& wire = *geom->wire;
+            const Obol::WireRep& wire = *geom->wire;
             size_t segments = wire.segmentCount();
-            for (const obol::WirePolyline& poly : wire.polylines)
+            for (const Obol::WirePolyline& poly : wire.polylines)
                 if (poly.points.size() >= 2)
                     segments += poly.points.size() - 1;
             if (segments == 0) continue;
@@ -1423,11 +1532,11 @@ bool CadRendererGL::renderFlatWire(
         bool haveGroup = false;
         size_t vertexOffset = 0;
         for (const CadDrawItem& item : plan.wireItems) {
-            const obol::PartGeometry *geom = assembly.partGeometry(item.rep.part);
+            const Obol::PartGeometry *geom = assembly.partGeometry(item.rep.part);
             if (!geom || !geom->wire.has_value()) continue;
-            const obol::WireRep& wire = *geom->wire;
+            const Obol::WireRep& wire = *geom->wire;
             size_t segments = wire.segmentCount();
-            for (const obol::WirePolyline& poly : wire.polylines)
+            for (const Obol::WirePolyline& poly : wire.polylines)
                 if (poly.points.size() >= 2)
                     segments += poly.points.size() - 1;
             const size_t instanceVertices = segments * 2;
@@ -1458,7 +1567,7 @@ bool CadRendererGL::renderFlatWire(
                         writeTransformedFlatPoint(positions, positionOffset,
                                                   wire.segmentPoints[p + 1], inst.transform);
                     }
-                    for (const obol::WirePolyline& poly : wire.polylines) {
+                    for (const Obol::WirePolyline& poly : wire.polylines) {
                         for (size_t p = 0; p + 1 < poly.points.size(); ++p) {
                             writeTransformedFlatPoint(positions, positionOffset,
                                                       poly.points[p], inst.transform);
@@ -1584,7 +1693,7 @@ bool CadRendererGL::renderFlatShaded(
         std::vector<Occurrence> occurrences;
         size_t vertexCount = 0;
         for (const CadDrawItem& item : plan.shadedItems) {
-            const obol::PartGeometry *geom = assembly.partGeometry(item.rep.part);
+            const Obol::PartGeometry *geom = assembly.partGeometry(item.rep.part);
             if (!geom || !geom->shaded.has_value()) continue;
             const size_t count = geom->shaded->indices.size();
             if (count == 0 || count > maxVertexBytes / (6 * sizeof(float)))
@@ -1623,7 +1732,7 @@ bool CadRendererGL::renderFlatShaded(
                 haveGroup = true;
             }
 
-            const obol::TriMesh& mesh =
+            const Obol::TriMesh& mesh =
                 *assembly.partGeometry(item.rep.part)->shaded;
             const bool hasVertexNormals =
                 mesh.normals.size() == mesh.positions.size();
@@ -1723,14 +1832,12 @@ bool CadRendererGL::renderFlatShaded(
                                                           "u_model");
     const GLint locColor = glue->glGetUniformLocationARB(shaders_.shaded,
                                                           "u_color");
-    const GLint locLight = glue->glGetUniformLocationARB(shaders_.shaded,
-                                                          "u_lightDir");
     const GLint locHasNorm = glue->glGetUniformLocationARB(shaders_.shaded,
                                                             "u_hasNorm");
     const SbMatrix identity = SbMatrix::identity();
     glue->glUniformMatrix4fvARB(locVP, 1, GL_FALSE, viewProj[0]);
     glue->glUniformMatrix4fvARB(locModel, 1, GL_FALSE, identity[0]);
-    glue->glUniform3fvARB(locLight, 1, kLightDir);
+    this->uploadLights(glue, shaders_.shaded);
     glue->glUniform1iARB(locHasNorm, depthOnly ? 0 : 1);
     glue->glBindBuffer(GL_ARRAY_BUFFER, flat.posBuf);
     glue->glVertexAttribPointerARB(0, 3, GL_FLOAT, GL_FALSE,
@@ -1754,6 +1861,80 @@ bool CadRendererGL::renderFlatShaded(
     glue->glDisableVertexAttribArrayARB(0);
     glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
     glue->glUseProgramObjectARB(0);
+    return true;
+}
+
+bool CadRendererGL::renderFlatTriangleEdges(
+        const CadFramePlan& plan,
+        const SoGLContext* glue,
+        const SbMatrix& viewProj,
+        const SbMatrix& viewMatrix,
+        const SbMatrix& projectionMatrix)
+{
+    const CadFlatShadedGpu& flat = gpuRes_->flatShaded();
+    if (flat.planRevision != plan.revision || !flat.posBuf ||
+            flat.groups.empty())
+        return false;
+
+    GLint polygonMode[2] = {GL_FILL, GL_FILL};
+    glue->glGetIntegerv(GL_POLYGON_MODE, polygonMode);
+    glue->glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+    if (caps_.isSoftwareRenderer) {
+        glue->glMatrixMode(GL_PROJECTION);
+        glue->glPushMatrix();
+        glue->glLoadMatrixf(projectionMatrix[0]);
+        glue->glMatrixMode(GL_MODELVIEW);
+        glue->glPushMatrix();
+        glue->glLoadMatrixf(viewMatrix[0]);
+        const GLboolean wasLighting = glue->glIsEnabled(GL_LIGHTING);
+        glue->glDisable(GL_LIGHTING);
+        glue->glEnableClientState(GL_VERTEX_ARRAY);
+        glue->glBindBuffer(GL_ARRAY_BUFFER, flat.posBuf);
+        glue->glVertexPointer(3, GL_FLOAT, 3 * sizeof(float), nullptr);
+        for (const CadFlatShadedGroup& group : flat.groups) {
+            glue->glColor4ub(group.rgba[0], group.rgba[1],
+                             group.rgba[2], group.rgba[3]);
+            glue->glDrawArrays(GL_TRIANGLES, group.first, group.count);
+        }
+        glue->glDisableClientState(GL_VERTEX_ARRAY);
+        glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
+        if (wasLighting) glue->glEnable(GL_LIGHTING);
+        glue->glMatrixMode(GL_MODELVIEW);
+        glue->glPopMatrix();
+        glue->glMatrixMode(GL_PROJECTION);
+        glue->glPopMatrix();
+        glue->glMatrixMode(GL_MODELVIEW);
+    } else {
+        glue->glUseProgramObjectARB(shaders_.wire);
+        const GLint locVP = glue->glGetUniformLocationARB(shaders_.wire,
+                                                          "u_viewProj");
+        const GLint locModel = glue->glGetUniformLocationARB(shaders_.wire,
+                                                             "u_model");
+        const GLint locColor = glue->glGetUniformLocationARB(shaders_.wire,
+                                                             "u_color");
+        const SbMatrix identity = SbMatrix::identity();
+        glue->glUniformMatrix4fvARB(locVP, 1, GL_FALSE, viewProj[0]);
+        glue->glUniformMatrix4fvARB(locModel, 1, GL_FALSE, identity[0]);
+        glue->glBindBuffer(GL_ARRAY_BUFFER, flat.posBuf);
+        glue->glVertexAttribPointerARB(0, 3, GL_FLOAT, GL_FALSE,
+                                       3 * sizeof(float), nullptr);
+        glue->glEnableVertexAttribArrayARB(0);
+        for (const CadFlatShadedGroup& group : flat.groups) {
+            const float rgba[4] = {group.rgba[0] / 255.0f,
+                                   group.rgba[1] / 255.0f,
+                                   group.rgba[2] / 255.0f,
+                                   group.rgba[3] / 255.0f};
+            glue->glUniform4fvARB(locColor, 1, rgba);
+            glue->glDrawArrays(GL_TRIANGLES, group.first, group.count);
+        }
+        glue->glDisableVertexAttribArrayARB(0);
+        glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glue->glUseProgramObjectARB(0);
+    }
+
+    glue->glPolygonMode(GL_FRONT, static_cast<GLenum>(polygonMode[0]));
+    glue->glPolygonMode(GL_BACK, static_cast<GLenum>(polygonMode[1]));
     return true;
 }
 
@@ -1953,11 +2134,10 @@ void CadRendererGL::renderVboLoop(
         GLint locVP      = glue->glGetUniformLocationARB(shaders_.shaded, "u_viewProj");
         GLint locModel   = glue->glGetUniformLocationARB(shaders_.shaded, "u_model");
         GLint locColor   = glue->glGetUniformLocationARB(shaders_.shaded, "u_color");
-        GLint locLight   = glue->glGetUniformLocationARB(shaders_.shaded, "u_lightDir");
         GLint locHasNorm = glue->glGetUniformLocationARB(shaders_.shaded, "u_hasNorm");
 
         glue->glUniformMatrix4fvARB(locVP, 1, GL_FALSE, vpData);
-        glue->glUniform3fvARB(locLight, 1, kLightDir);
+        this->uploadLights(glue, shaders_.shaded);
 
         for (const auto& item : plan.shadedItems) {
             const CadTriGpu* t = gpuRes_->triFor(item.rep.part);
@@ -2147,9 +2327,9 @@ void CadRendererGL::renderImmediateMode(
 
     // --- Wire pass ---
     for (const auto& item : plan.wireItems) {
-        const obol::PartGeometry* geom = assembly.partGeometry(item.rep.part);
+        const Obol::PartGeometry* geom = assembly.partGeometry(item.rep.part);
         if (!geom || !geom->wire.has_value()) continue;
-        const obol::WireRep& wire = *geom->wire;
+        const Obol::WireRep& wire = *geom->wire;
 
         for (uint32_t ii = 0; ii < item.instanceCount; ++ii) {
             const size_t visibleIndex = item.baseInstance + ii;
@@ -2203,9 +2383,9 @@ void CadRendererGL::renderImmediateMode(
     }
     glue->glDisable(GL_COLOR_MATERIAL);
     for (const auto& item : plan.shadedItems) {
-        const obol::PartGeometry* geom = assembly.partGeometry(item.rep.part);
+        const Obol::PartGeometry* geom = assembly.partGeometry(item.rep.part);
         if (!geom || !geom->shaded.has_value()) continue;
-        const obol::TriMesh& mesh = *geom->shaded;
+        const Obol::TriMesh& mesh = *geom->shaded;
 
         const bool hasNorm = !mesh.normals.empty();
 
@@ -2427,14 +2607,13 @@ void CadRendererGL::renderInstanced(
         glue->glUseProgramObjectARB(shaders_.shadedInst);
 
         GLint locVP      = glue->glGetUniformLocationARB(shaders_.shadedInst, "u_viewProj");
-        GLint locLight   = glue->glGetUniformLocationARB(shaders_.shadedInst, "u_lightDir");
         GLint locHasNorm = glue->glGetUniformLocationARB(shaders_.shadedInst, "u_hasNorm");
         GLint locPos     = glue->glGetAttribLocationARB(shaders_.shadedInst, "a_pos");
         GLint locNorm    = glue->glGetAttribLocationARB(shaders_.shadedInst, "a_norm");
         if (locPos < 0) locPos = 0;
 
         glue->glUniformMatrix4fvARB(locVP, 1, GL_FALSE, vp);
-        glue->glUniform3fvARB(locLight, 1, kLightDir);
+        this->uploadLights(glue, shaders_.shadedInst);
 
         for (const auto& item : plan.shadedItems) {
             CadTriGpu* t = gpuRes_->triFor(item.rep.part);
@@ -2511,4 +2690,4 @@ void CadRendererGL::releaseGpuResources(const SoGLContext* glue)
 }
 
 } // namespace internal
-} // namespace obol
+} // namespace Obol

@@ -43,9 +43,9 @@
  *    and lazily-built acceleration structures.
  */
 
-#include <obol/cad/SoCADAssembly.h>
-#include <obol/cad/SoCADDetail.h>
-#include <obol/cad/SoCADViewState.h>
+#include <Obol/cad/SoCADAssembly.h>
+#include <Obol/cad/SoCADDetail.h>
+#include <Obol/cad/SoCADViewState.h>
 #include "CadFramePlan.h"
 #include "CadRendererGL.h"
 #include "picking/CadPicking.h"
@@ -69,6 +69,12 @@
 #include <Inventor/elements/SoViewingMatrixElement.h>
 #include <Inventor/elements/SoProjectionMatrixElement.h>
 #include <Inventor/elements/SoContextManagerElement.h>
+#include <Inventor/elements/SoLightElement.h>
+#include <Inventor/nodes/SoLight.h>
+#include <Inventor/nodes/SoDirectionalLight.h>
+#include <Inventor/nodes/SoPointLight.h>
+#include <Inventor/nodes/SoSpotLight.h>
+#include <Inventor/SbColor.h>
 
 #include <Inventor/system/gl.h>
 #include "rendering/SoGL.h"
@@ -118,7 +124,7 @@ cadSoftwareTransform(const SbMatrix& matrix, const SbVec3f& point)
 }
 
 static bool
-cadSubpixelProxyCorners(const obol::WireRep& wire,
+cadSubpixelProxyCorners(const Obol::WireRep& wire,
                         std::array<SbVec3f, 8>& corners)
 {
     // Only the canonical 12-segment proxy representation is eligible.  Do
@@ -151,7 +157,7 @@ cadSubpixelProxyCorners(const obol::WireRep& wire,
 
 static bool
 cadSubpixelProxyPoint(const std::array<SbVec3f, 8>& corners,
-                      const obol::internal::CadVisibleInstance& instance,
+                      const Obol::internal::CadVisibleInstance& instance,
                       const SbMatrix& viewProj, const SbVec2s& viewportSize,
                       float pixelLimit, SbVec3f& point)
 {
@@ -213,14 +219,14 @@ cadSubpixelProxyPoint(const std::array<SbVec3f, 8>& corners,
 
 static bool
 cadSameSubpixelProxyPoints(
-        const std::vector<obol::internal::CadSubpixelProxyPoint>& left,
-        const std::vector<obol::internal::CadSubpixelProxyPoint>& right)
+        const std::vector<Obol::internal::CadSubpixelProxyPoint>& left,
+        const std::vector<Obol::internal::CadSubpixelProxyPoint>& right)
 {
     if (left.size() != right.size())
         return false;
     for (size_t i = 0; i < left.size(); ++i) {
-        const obol::internal::CadSubpixelProxyPoint& a = left[i];
-        const obol::internal::CadSubpixelProxyPoint& b = right[i];
+        const Obol::internal::CadSubpixelProxyPoint& a = left[i];
+        const Obol::internal::CadSubpixelProxyPoint& b = right[i];
         if (a.instanceId != b.instanceId || a.rgba != b.rgba ||
                 a.position[0] != b.position[0] ||
                 a.position[1] != b.position[1] ||
@@ -325,10 +331,9 @@ cadSoftwarePutPixel(unsigned char *pixels, unsigned int width,
 static void
 cadSoftwareLine(unsigned char *pixels, unsigned int width,
                 unsigned int height, int x0, int y0, int x1, int y1,
-                const obol::internal::CadVisibleInstance& instance)
+                const Obol::internal::CadVisibleInstance& instance)
 {
     std::array<uint8_t, 4> color = instance.rgba;
-    if (color[3] == 0) color[3] = 255;
     const int pixelWidth = std::max(1, static_cast<int>(
         std::lround(instance.lineWidth)));
     const int lowOffset = -(pixelWidth - 1) / 2;
@@ -362,7 +367,7 @@ cadSoftwareSegment(unsigned char *pixels, unsigned int width,
                    unsigned int height, const SbVec2s& origin,
                    const SbVec2s& size, const SbMatrix& transform,
                    const SbVec3f& p0, const SbVec3f& p1,
-                   const obol::internal::CadVisibleInstance& instance)
+                   const Obol::internal::CadVisibleInstance& instance)
 {
     const float *m = transform[0];
     if (m[3] == 0.0f && m[7] == 0.0f && m[11] == 0.0f && m[15] != 0.0f) {
@@ -402,7 +407,7 @@ static void
 cadSoftwarePoint(unsigned char *pixels, unsigned int width,
                  unsigned int height, const SbVec2s& origin,
                  const SbVec2s& size, const SbMatrix& viewProj,
-                 const obol::internal::CadSubpixelProxyPoint& point)
+                 const Obol::internal::CadSubpixelProxyPoint& point)
 {
     const CadSoftwareClipPoint clip =
         cadSoftwareTransform(viewProj, point.position);
@@ -419,7 +424,7 @@ cadSoftwarePoint(unsigned char *pixels, unsigned int width,
 }
 
 static bool
-cadRenderSoftwareWire(const obol::internal::CadFramePlan& plan,
+cadRenderSoftwareWire(const Obol::internal::CadFramePlan& plan,
                       const SoCADAssembly& assembly, SoState *state,
                       const SbMatrix& viewProj)
 {
@@ -438,9 +443,9 @@ cadRenderSoftwareWire(const obol::internal::CadFramePlan& plan,
     if (size[0] <= 0 || size[1] <= 0) return false;
 
     for (const auto& item : plan.wireItems) {
-        const obol::PartGeometry *geometry = assembly.partGeometry(item.rep.part);
+        const Obol::PartGeometry *geometry = assembly.partGeometry(item.rep.part);
         if (!geometry || !geometry->wire.has_value()) continue;
-        const obol::WireRep& wire = *geometry->wire;
+        const Obol::WireRep& wire = *geometry->wire;
         for (uint32_t i = 0; i < item.instanceCount; ++i) {
             const size_t visibleIndex = item.baseInstance + i;
             if (visibleIndex < plan.subpixelProxyMask.size() &&
@@ -470,10 +475,10 @@ cadRenderSoftwareWire(const obol::internal::CadFramePlan& plan,
 } // namespace
 
 struct InstanceData {
-    obol::PartId          partId;
+    Obol::PartId          partId;
     SbMatrix              localToRoot;
-    obol::InstanceStyle   style;
-    obol::InstanceId      parent;
+    Obol::InstanceStyle   style;
+    Obol::InstanceId      parent;
     std::string           childName;
     uint32_t              occurrenceIndex = 0;
     uint8_t               boolOp = 0;
@@ -482,54 +487,54 @@ struct InstanceData {
 
 struct SoCADAssemblyImpl {
     // Part library
-    std::unordered_map<obol::PartId, std::shared_ptr<const obol::PartGeometry>,
-                       std::hash<obol::PartId>> parts_;
+    std::unordered_map<Obol::PartId, std::shared_ptr<const Obol::PartGeometry>,
+                       std::hash<Obol::PartId>> parts_;
     // Cached, validated corners for the small subset of shared parts that
     // are conservative AABB/OBB display proxies.  This avoids rediscovering
     // eight corners from 24 wire endpoints for every occurrence per view.
-    std::unordered_map<obol::PartId, std::array<SbVec3f, 8>,
-                       std::hash<obol::PartId>> subpixelProxyCorners_;
+    std::unordered_map<Obol::PartId, std::array<SbVec3f, 8>,
+                       std::hash<Obol::PartId>> subpixelProxyCorners_;
 
     // Instance database
-    std::unordered_map<obol::InstanceId, InstanceData,
-                       std::hash<obol::InstanceId>> instances_;
+    std::unordered_map<Obol::InstanceId, InstanceData,
+                       std::hash<Obol::InstanceId>> instances_;
 
     // Selection set
-    std::unordered_set<obol::InstanceId,
-                       std::hash<obol::InstanceId>> selected_;
+    std::unordered_set<Obol::InstanceId,
+                       std::hash<Obol::InstanceId>> selected_;
 
     // Hidden-instance set (excluded from rendering and frame plan)
-    std::unordered_set<obol::InstanceId,
-                       std::hash<obol::InstanceId>> hidden_;
+    std::unordered_set<Obol::InstanceId,
+                       std::hash<Obol::InstanceId>> hidden_;
 
     // Unpickable-instance set (visible, but excluded from pick BVH)
-    std::unordered_set<obol::InstanceId,
-                       std::hash<obol::InstanceId>> unpickable_;
+    std::unordered_set<Obol::InstanceId,
+                       std::hash<Obol::InstanceId>> unpickable_;
 
     // Picking acceleration structures
-    obol::picking::CadInstanceBVH instanceBvh_;
+    Obol::picking::CadInstanceBVH instanceBvh_;
     bool bvhDirty_   = true;
     bool inUpdate_   = false;
 
     // Per-part edge BVH cache (lazily built during picking)
-    std::unordered_map<obol::PartId, obol::picking::CadPartEdgeBVH,
-                       std::hash<obol::PartId>> partEdgeBvhCache_;
+    std::unordered_map<Obol::PartId, Obol::picking::CadPartEdgeBVH,
+                       std::hash<Obol::PartId>> partEdgeBvhCache_;
 
     // Per-part triangle BVH cache (lazily built during picking)
-    std::unordered_map<obol::PartId, obol::picking::CadPartTriBVH,
-                       std::hash<obol::PartId>> partTriBvhCache_;
+    std::unordered_map<Obol::PartId, Obol::picking::CadPartTriBVH,
+                       std::hash<Obol::PartId>> partTriBvhCache_;
 
     // Per-part LoD structures.  Shaded parts are LoD-capable immediately, but
     // the hierarchy is built only if a render actually requests an LoD level.
-    std::unordered_set<obol::PartId,
-                       std::hash<obol::PartId>> lodCapableParts_;
-    mutable std::unordered_map<obol::PartId, obol::TrianglePopLod,
-                               std::hash<obol::PartId>> partLods_;
+    std::unordered_set<Obol::PartId,
+                       std::hash<Obol::PartId>> lodCapableParts_;
+    mutable std::unordered_map<Obol::PartId, Obol::TrianglePopLod,
+                               std::hash<Obol::PartId>> partLods_;
 
     // Per-part generation counter – incremented when geometry changes so the
     // renderer knows to re-upload VBOs.
-    std::unordered_map<obol::PartId, uint64_t,
-                       std::hash<obol::PartId>> partGeneration_;
+    std::unordered_map<Obol::PartId, uint64_t,
+                       std::hash<Obol::PartId>> partGeneration_;
     uint64_t nextGeneration_ = 1;
 
     // LoD index cache: per-(PartId, level) filtered triangle index lists.
@@ -538,11 +543,11 @@ struct SoCADAssemblyImpl {
         uint64_t generation = UINT64_MAX;
         std::unordered_map<uint8_t, std::vector<uint32_t>> byLevel;
     };
-    mutable std::unordered_map<obol::PartId, LodCacheEntry,
-                               std::hash<obol::PartId>> lodIndexCache_;
+    mutable std::unordered_map<Obol::PartId, LodCacheEntry,
+                               std::hash<Obol::PartId>> lodIndexCache_;
 
     // Frame plan cache.  Rebuilt lazily when planDirty_ is true.
-    obol::internal::CadFramePlan cachedPlan_;
+    Obol::internal::CadFramePlan cachedPlan_;
     uint64_t nextPlanRevision_ = 1;
     uint64_t nextGeometryRevision_ = 1;
     uint64_t nextSubpixelProxyRevision_ = 1;
@@ -557,25 +562,25 @@ struct SoCADAssemblyImpl {
     // camera-only frames.  All three vectors are reset when the plan changes.
     std::vector<uint8_t> subpixelProxyState_;
     std::vector<uint8_t> subpixelProxyScratchMask_;
-    std::vector<obol::internal::CadSubpixelProxyPoint>
+    std::vector<Obol::internal::CadSubpixelProxyPoint>
         subpixelProxyScratchPoints_;
     bool planDirty_    = true;   ///< Plan must be rebuilt before next render
     bool geometryDirty_ = true;  ///< Flattened geometry must be rebuilt
     int  cachedDM_     = -1;     ///< Draw mode used for the cached plan
 
     // VBO + shader renderer (lazy-created on first GLRender call)
-    std::unique_ptr<obol::internal::CadRendererGL> renderer_;
+    std::unique_ptr<Obol::internal::CadRendererGL> renderer_;
     bool lastDirectSoftwareWire_ = false;
 
     // Rebuild instance BVH if dirty
     void rebuildBvhIfNeeded() {
         if (!bvhDirty_) return;
-        std::vector<obol::picking::CadInstanceBVH::Entry> entries;
+        std::vector<Obol::picking::CadInstanceBVH::Entry> entries;
         entries.reserve(instances_.size());
         for (const auto& [iid, idata] : instances_) {
             if (hidden_.count(iid) || unpickable_.count(iid))
                 continue;
-            obol::picking::CadInstanceBVH::Entry e;
+            Obol::picking::CadInstanceBVH::Entry e;
             e.worldBounds  = idata.worldBounds;
             e.instanceId   = iid;
             e.partId       = idata.partId;
@@ -587,7 +592,7 @@ struct SoCADAssemblyImpl {
     }
 
     // Compute world bounds for an instance from part geometry
-    SbBox3f computeWorldBounds(const obol::PartGeometry& geom,
+    SbBox3f computeWorldBounds(const Obol::PartGeometry& geom,
                                const SbMatrix& m) const {
         SbBox3f local;
         if (geom.points) { local.extendBy(geom.points->bounds); }
@@ -617,8 +622,8 @@ struct SoCADAssemblyImpl {
     }
 
     void updatePartGeometry(
-            obol::PartId pid,
-            const std::shared_ptr<const obol::PartGeometry>& geom) {
+            Obol::PartId pid,
+            const std::shared_ptr<const Obol::PartGeometry>& geom) {
         if (!geom) return;
         parts_[pid] = geom;
         if (geom->subpixelProxyEligible && geom->wire.has_value()) {
@@ -642,7 +647,7 @@ struct SoCADAssemblyImpl {
             lodCapableParts_.erase(pid);
     }
 
-    void recomputeWorldBoundsForPart(obol::PartId pid) {
+    void recomputeWorldBoundsForPart(Obol::PartId pid) {
         auto geomIt = parts_.find(pid);
         for (auto& [iid, idata] : instances_) {
             if (idata.partId != pid)
@@ -654,8 +659,8 @@ struct SoCADAssemblyImpl {
     }
 
     void recomputeWorldBoundsForParts(
-        const std::unordered_set<obol::PartId,
-                                 std::hash<obol::PartId>>& pids) {
+        const std::unordered_set<Obol::PartId,
+                                 std::hash<Obol::PartId>>& pids) {
         if (pids.empty())
             return;
         for (auto& [iid, idata] : instances_) {
@@ -668,8 +673,8 @@ struct SoCADAssemblyImpl {
         }
     }
 
-    void updateInstance(obol::InstanceId iid,
-                        const obol::InstanceRecord& rec) {
+    void updateInstance(Obol::InstanceId iid,
+                        const Obol::InstanceRecord& rec) {
         InstanceData& idata  = instances_[iid];
         idata.partId         = rec.part;
         idata.localToRoot    = rec.localToRoot;
@@ -701,23 +706,23 @@ struct SoCADAssemblyImpl {
      * @param selected Set of selected instance IDs (for colour override).
      * @param hidden   Set of hidden instance IDs (excluded from the plan).
      */
-    obol::internal::CadFramePlan buildFramePlan(
+    Obol::internal::CadFramePlan buildFramePlan(
             int dm,
-            const std::unordered_set<obol::InstanceId,
-                                     std::hash<obol::InstanceId>>& selected,
-            const std::unordered_set<obol::InstanceId,
-                                     std::hash<obol::InstanceId>>& hidden) const
+            const std::unordered_set<Obol::InstanceId,
+                                     std::hash<Obol::InstanceId>>& selected,
+            const std::unordered_set<Obol::InstanceId,
+                                     std::hash<Obol::InstanceId>>& hidden) const
     {
-        using namespace obol::internal;
+        using namespace Obol::internal;
 
         CadFramePlan plan;
         if (instances_.empty()) return plan;
 
         // Collect (partId → list of CadVisibleInstance) grouped by part.
         // We use a stable insertion-order map so every run is contiguous.
-        std::unordered_map<obol::PartId,
+        std::unordered_map<Obol::PartId,
                            std::vector<CadVisibleInstance>,
-                           std::hash<obol::PartId>> byPart;
+                           std::hash<Obol::PartId>> byPart;
 
         for (const auto& [iid, idata] : instances_) {
             // Skip hidden instances
@@ -797,7 +802,7 @@ struct SoCADAssemblyImpl {
 
         // Track which (part, type) pairs have already been added to requiredReps
         // to avoid duplicates (a part with both wire and shaded gets one entry each).
-        std::unordered_set<obol::PartId, std::hash<obol::PartId>>
+        std::unordered_set<Obol::PartId, std::hash<Obol::PartId>>
             requiredPointParts, requiredWireParts, requiredShadedParts;
 
         uint32_t baseInst = 0;
@@ -881,7 +886,7 @@ struct SoCADAssemblyImpl {
     void updateSubpixelProxyPlan(const SbMatrix& viewProj,
                                  const SbVec2s& viewportSize)
     {
-        using namespace obol::internal;
+        using namespace Obol::internal;
         CadFramePlan& plan = cachedPlan_;
         if (subpixelProxyViewValid_ &&
                 subpixelProxyViewPlanRevision_ == plan.revision &&
@@ -996,27 +1001,27 @@ SoCADAssembly::~SoCADAssembly() = default;
 
 SoDetail*
 SoCADAssembly::createPickDetail(
-    const obol::CadPickDetailRecord& hit) const
+    const Obol::CadPickDetailRecord& hit) const
 {
     SoCADDetail* detail = new SoCADDetail;
     detail->setInstanceId(hit.instance);
     detail->setPartId(hit.part);
     switch (hit.primitiveKind) {
-        case obol::CadPickDetailRecord::EDGE:
+        case Obol::CadPickDetailRecord::EDGE:
             detail->setPrimType(SoCADDetail::EDGE);
             detail->setPrimIndex0(hit.primIndex0);
             detail->setPrimIndex1(hit.primIndex1);
             detail->setU(hit.u);
             break;
-        case obol::CadPickDetailRecord::TRIANGLE:
+        case Obol::CadPickDetailRecord::TRIANGLE:
             detail->setPrimType(SoCADDetail::TRIANGLE);
             detail->setPrimIndex0(hit.primIndex0);
             break;
-        case obol::CadPickDetailRecord::POINT:
+        case Obol::CadPickDetailRecord::POINT:
             detail->setPrimType(SoCADDetail::POINT);
             detail->setPrimIndex0(hit.primIndex0);
             break;
-        case obol::CadPickDetailRecord::BOUNDS:
+        case Obol::CadPickDetailRecord::BOUNDS:
         default:
             detail->setPrimType(SoCADDetail::BOUNDS);
             break;
@@ -1052,7 +1057,7 @@ SoCADAssembly::clear()
     impl_->lodCapableParts_.clear();
     impl_->partLods_.clear();
     impl_->lodIndexCache_.clear();
-    impl_->instanceBvh_ = obol::picking::CadInstanceBVH();
+    impl_->instanceBvh_ = Obol::picking::CadInstanceBVH();
     impl_->bvhDirty_ = true;
     impl_->planDirty_ = true;
     impl_->geometryDirty_ = true;
@@ -1063,26 +1068,26 @@ SoCADAssembly::clear()
 // --- Part library ----------------------------------------------------------
 
 void
-SoCADAssembly::upsertPart(obol::PartId pid, const obol::PartGeometry& geom)
+SoCADAssembly::upsertPart(Obol::PartId pid, const Obol::PartGeometry& geom)
 {
     impl_->updatePartGeometry(pid,
-        std::make_shared<const obol::PartGeometry>(geom));
+        std::make_shared<const Obol::PartGeometry>(geom));
     impl_->recomputeWorldBoundsForPart(pid);
     impl_->markDirty();
     if (!impl_->inUpdate_) touch();
 }
 
 void
-SoCADAssembly::upsertParts(const std::vector<obol::PartUpdate>& updates)
+SoCADAssembly::upsertParts(const std::vector<Obol::PartUpdate>& updates)
 {
     if (updates.empty())
         return;
 
-    std::unordered_set<obol::PartId, std::hash<obol::PartId>> changedParts;
+    std::unordered_set<Obol::PartId, std::hash<Obol::PartId>> changedParts;
     changedParts.reserve(updates.size());
     for (const auto& update : updates) {
         impl_->updatePartGeometry(update.part,
-            std::make_shared<const obol::PartGeometry>(update.geometry));
+            std::make_shared<const Obol::PartGeometry>(update.geometry));
         changedParts.insert(update.part);
     }
     impl_->recomputeWorldBoundsForParts(changedParts);
@@ -1093,10 +1098,10 @@ SoCADAssembly::upsertParts(const std::vector<obol::PartUpdate>& updates)
 
 void
 SoCADAssembly::upsertSharedParts(
-    const std::vector<obol::SharedPartUpdate>& updates)
+    const std::vector<Obol::SharedPartUpdate>& updates)
 {
     if (updates.empty()) return;
-    std::unordered_set<obol::PartId, std::hash<obol::PartId>> changedParts;
+    std::unordered_set<Obol::PartId, std::hash<Obol::PartId>> changedParts;
     changedParts.reserve(updates.size());
     for (const auto& update : updates) {
         if (!update.geometry) continue;
@@ -1110,7 +1115,7 @@ SoCADAssembly::upsertSharedParts(
 }
 
 void
-SoCADAssembly::removePart(obol::PartId pid)
+SoCADAssembly::removePart(Obol::PartId pid)
 {
     impl_->parts_.erase(pid);
     impl_->subpixelProxyCorners_.erase(pid);
@@ -1127,34 +1132,34 @@ SoCADAssembly::removePart(obol::PartId pid)
 
 // --- Instance management ---------------------------------------------------
 
-obol::InstanceId
-SoCADAssembly::upsertInstanceAuto(const obol::InstanceRecord& rec)
+Obol::InstanceId
+SoCADAssembly::upsertInstanceAuto(const Obol::InstanceRecord& rec)
 {
-    obol::InstanceId iid = obol::CadIdBuilder::extendNameOccBool(
+    Obol::InstanceId iid = Obol::CadIdBuilder::extendNameOccBool(
         rec.parent, rec.childName, rec.occurrenceIndex, rec.boolOp);
     upsertInstance(iid, rec);
     return iid;
 }
 
 void
-SoCADAssembly::upsertInstance(obol::InstanceId iid, const obol::InstanceRecord& rec)
+SoCADAssembly::upsertInstance(Obol::InstanceId iid, const Obol::InstanceRecord& rec)
 {
     impl_->updateInstance(iid, rec);
     impl_->markDirty();
     if (!impl_->inUpdate_) touch();
 }
 
-std::vector<obol::InstanceId>
+std::vector<Obol::InstanceId>
 SoCADAssembly::upsertInstancesAuto(
-    const std::vector<obol::InstanceRecord>& records)
+    const std::vector<Obol::InstanceRecord>& records)
 {
-    std::vector<obol::InstanceId> ids;
+    std::vector<Obol::InstanceId> ids;
     ids.reserve(records.size());
     if (records.empty())
         return ids;
 
     for (const auto& rec : records) {
-        obol::InstanceId iid = obol::CadIdBuilder::extendNameOccBool(
+        Obol::InstanceId iid = Obol::CadIdBuilder::extendNameOccBool(
             rec.parent, rec.childName, rec.occurrenceIndex, rec.boolOp);
         ids.push_back(iid);
         impl_->updateInstance(iid, rec);
@@ -1167,7 +1172,7 @@ SoCADAssembly::upsertInstancesAuto(
 
 void
 SoCADAssembly::upsertInstances(
-    const std::vector<obol::InstanceUpdate>& updates)
+    const std::vector<Obol::InstanceUpdate>& updates)
 {
     if (updates.empty())
         return;
@@ -1180,7 +1185,7 @@ SoCADAssembly::upsertInstances(
 }
 
 void
-SoCADAssembly::removeInstance(obol::InstanceId iid)
+SoCADAssembly::removeInstance(Obol::InstanceId iid)
 {
     impl_->instances_.erase(iid);
     impl_->selected_.erase(iid);
@@ -1193,7 +1198,7 @@ SoCADAssembly::removeInstance(obol::InstanceId iid)
 }
 
 void
-SoCADAssembly::updateInstanceTransform(obol::InstanceId iid, const SbMatrix& m)
+SoCADAssembly::updateInstanceTransform(Obol::InstanceId iid, const SbMatrix& m)
 {
     auto it = impl_->instances_.find(iid);
     if (it == impl_->instances_.end()) return;
@@ -1209,7 +1214,7 @@ SoCADAssembly::updateInstanceTransform(obol::InstanceId iid, const SbMatrix& m)
 }
 
 void
-SoCADAssembly::updateInstanceStyle(obol::InstanceId iid, const obol::InstanceStyle& style)
+SoCADAssembly::updateInstanceStyle(Obol::InstanceId iid, const Obol::InstanceStyle& style)
 {
     auto it = impl_->instances_.find(iid);
     if (it == impl_->instances_.end()) return;
@@ -1220,7 +1225,7 @@ SoCADAssembly::updateInstanceStyle(obol::InstanceId iid, const obol::InstanceSty
 
 void
 SoCADAssembly::updateInstanceStyles(
-    const std::vector<obol::InstanceStyleUpdate>& updates)
+    const std::vector<Obol::InstanceStyleUpdate>& updates)
 {
     if (updates.empty()) return;
     bool changed = false;
@@ -1236,7 +1241,7 @@ SoCADAssembly::updateInstanceStyles(
 }
 
 void
-SoCADAssembly::setSelectedInstances(const std::vector<obol::InstanceId>& ids)
+SoCADAssembly::setSelectedInstances(const std::vector<Obol::InstanceId>& ids)
 {
     impl_->selected_.clear();
     impl_->selected_.insert(ids.begin(), ids.end());
@@ -1249,43 +1254,43 @@ SoCADAssembly::setSelectedInstances(const std::vector<obol::InstanceId>& ids)
 size_t SoCADAssembly::instanceCount() const { return impl_->instances_.size(); }
 size_t SoCADAssembly::partCount()     const { return impl_->parts_.size();     }
 
-std::vector<obol::InstanceId>
+std::vector<Obol::InstanceId>
 SoCADAssembly::instanceIds() const
 {
-    std::vector<obol::InstanceId> ids;
+    std::vector<Obol::InstanceId> ids;
     ids.reserve(impl_->instances_.size());
     for (const auto &entry : impl_->instances_)
         ids.push_back(entry.first);
     std::sort(ids.begin(), ids.end(),
-        [](const obol::InstanceId &a, const obol::InstanceId &b) {
+        [](const Obol::InstanceId &a, const Obol::InstanceId &b) {
             return a.w0 != b.w0 ? a.w0 < b.w0 : a.w1 < b.w1;
         });
     return ids;
 }
 
 bool
-SoCADAssembly::isInstanceHidden(obol::InstanceId iid) const
+SoCADAssembly::isInstanceHidden(Obol::InstanceId iid) const
 {
     return impl_->hidden_.find(iid) != impl_->hidden_.end();
 }
 
 bool SoCADAssembly::hasPartLod() const { return !impl_->lodCapableParts_.empty(); }
 
-const obol::PartGeometry*
-SoCADAssembly::partGeometry(obol::PartId pid) const
+const Obol::PartGeometry*
+SoCADAssembly::partGeometry(Obol::PartId pid) const
 {
     auto it = impl_->parts_.find(pid);
     if (it == impl_->parts_.end()) return nullptr;
     return it->second.get();
 }
 
-std::optional<obol::InstanceRecord>
-SoCADAssembly::getInstanceRecord(obol::InstanceId iid) const
+std::optional<Obol::InstanceRecord>
+SoCADAssembly::getInstanceRecord(Obol::InstanceId iid) const
 {
     auto it = impl_->instances_.find(iid);
     if (it == impl_->instances_.end()) return std::nullopt;
     const InstanceData& d = it->second;
-    obol::InstanceRecord rec;
+    Obol::InstanceRecord rec;
     rec.part        = d.partId;
     rec.localToRoot = d.localToRoot;
     rec.style       = d.style;
@@ -1297,7 +1302,7 @@ SoCADAssembly::getInstanceRecord(obol::InstanceId iid) const
 }
 
 const std::vector<uint32_t>*
-SoCADAssembly::getLodFilteredIndices(obol::PartId pid, uint8_t level) const
+SoCADAssembly::getLodFilteredIndices(Obol::PartId pid, uint8_t level) const
 {
     auto lodIt = impl_->partLods_.find(pid);
     if (lodIt == impl_->partLods_.end()) {
@@ -1309,7 +1314,7 @@ SoCADAssembly::getLodFilteredIndices(obol::PartId pid, uint8_t level) const
                 !partIt->second->shaded.has_value())
             return nullptr;
         const auto& mesh = *partIt->second->shaded;
-        obol::TrianglePopLod lod;
+        Obol::TrianglePopLod lod;
         lod.build(mesh.positions, mesh.indices, mesh.bounds);
         lodIt = impl_->partLods_.emplace(pid, std::move(lod)).first;
     }
@@ -1350,7 +1355,7 @@ SoCADAssembly::getLodFilteredIndices(obol::PartId pid, uint8_t level) const
 }
 
 void
-SoCADAssembly::setHiddenInstances(const std::vector<obol::InstanceId>& ids)
+SoCADAssembly::setHiddenInstances(const std::vector<Obol::InstanceId>& ids)
 {
     impl_->hidden_.clear();
     impl_->hidden_.insert(ids.begin(), ids.end());
@@ -1361,7 +1366,7 @@ SoCADAssembly::setHiddenInstances(const std::vector<obol::InstanceId>& ids)
 }
 
 void
-SoCADAssembly::setUnpickableInstances(const std::vector<obol::InstanceId>& ids)
+SoCADAssembly::setUnpickableInstances(const std::vector<Obol::InstanceId>& ids)
 {
     impl_->unpickable_.clear();
     impl_->unpickable_.insert(ids.begin(), ids.end());
@@ -1387,7 +1392,7 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
 
     // Lazy-create the renderer the first time we have a GL context.
     if (!impl_->renderer_) {
-        impl_->renderer_ = std::make_unique<obol::internal::CadRendererGL>();
+        impl_->renderer_ = std::make_unique<Obol::internal::CadRendererGL>();
     }
 
     // Build the combined view-projection matrix from the state stack.
@@ -1432,25 +1437,106 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
     impl_->updateSubpixelProxyPlan(viewProj,
         viewport.getViewportSizePixels());
 
-    const obol::CadRenderState renderState =
-        obol::resolveCadRenderState(SoCADViewStateElement::get(state));
+    const Obol::CadRenderState renderState =
+        Obol::resolveCadRenderState(SoCADViewStateElement::get(state));
 
     const GLboolean lightingEnabled = glue->glIsEnabled(GL_LIGHTING);
     const GLboolean light0Enabled = glue->glIsEnabled(GL_LIGHT0);
+    const bool hasTransparency = std::any_of(
+        impl_->cachedPlan_.visibleInstances.begin(),
+        impl_->cachedPlan_.visibleInstances.end(),
+        [](const Obol::internal::CadVisibleInstance& instance) {
+            return instance.rgba[3] < 255;
+        });
+    const GLboolean blendEnabled = glue->glIsEnabled(GL_BLEND);
+    GLint blendSource = GL_ONE;
+    GLint blendDestination = GL_ZERO;
+    if (hasTransparency) {
+        glue->glGetIntegerv(GL_BLEND_SRC, &blendSource);
+        glue->glGetIntegerv(GL_BLEND_DST, &blendDestination);
+        glue->glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glue->glEnable(GL_BLEND);
+    }
 
     // Explicit FAST mode allows ordinary software wireframes to bypass Mesa's
     // fixed-function interpreter.  AUTO is deliberately quality-first because
     // direct CPU rasterization is workload-dependent and can be slower.
     const bool softwareWire = dm == WIREFRAME &&
-        renderState.softwareWireMode == obol::CadSoftwareWireMode::FAST &&
+        renderState.softwareWireMode == Obol::CadSoftwareWireMode::FAST &&
         cadRenderSoftwareWire(impl_->cachedPlan_, *this, state, viewProj);
     impl_->lastDirectSoftwareWire_ = softwareWire;
     if (!softwareWire) {
+        // Feed the shaded GLSL pass ALL enabled scene lights (the camera-tracked
+        // headlight plus any in-scene database lights), so the hardware view
+        // lights consistently with the fixed-function path instead of using a
+        // single hardcoded world-fixed direction.  Directional, point, and spot
+        // lights are all supported (up to CadRendererGL::kMaxLights), each with
+        // its own RGB colour x intensity.
+        //
+        // The shaded GLSL pass lights in WORLD space (v_worldPos/v_norm use the
+        // model matrix without the view).  Obol authors all its lights directly
+        // in world coordinates -- the headlight direction is rewritten in world
+        // space each frame, and DB light positions are world bbox centers -- and
+        // places them without transform nodes above them, so the SoLight field
+        // values ARE world space.  We therefore read the raw fields rather than
+        // SoLightElement::getMatrix(), whose accumulated matrix for the
+        // post-camera scene-lights group is contaminated with the view transform
+        // in this custom render batch (which would put point/spot positions in
+        // eye space and make them drift with the camera).
+        const SoNodeList& lights = SoLightElement::getLights(state);
+        std::vector<Obol::internal::CadRendererGL::GlLight> glLights;
+        for (int li = 0; li < lights.getLength(); ++li) {
+            SoLight* l = static_cast<SoLight*>(lights[li]);
+            if (!l || !l->on.getValue())
+                continue;
+            const SbColor c = l->color.getValue();
+            const float inten = l->intensity.getValue();
+            Obol::internal::CadRendererGL::GlLight gl;
+            gl.color[0] = c[0] * inten;
+            gl.color[1] = c[1] * inten;
+            gl.color[2] = c[2] * inten;
+            if (l->isOfType(SoDirectionalLight::getClassTypeId())) {
+                SoDirectionalLight* dl = static_cast<SoDirectionalLight*>(l);
+                SbVec3f travel = dl->direction.getValue();
+                if (travel.length() <= 0.0f)
+                    continue;
+                travel.normalize();
+                gl.type = 0;  // directional; shader wants direction toward light
+                gl.vec[0] = -travel[0]; gl.vec[1] = -travel[1];
+                gl.vec[2] = -travel[2];
+            } else if (l->isOfType(SoSpotLight::getClassTypeId())) {
+                SoSpotLight* sl = static_cast<SoSpotLight*>(l);
+                SbVec3f pos = sl->location.getValue();
+                SbVec3f axis = sl->direction.getValue();
+                if (axis.length() > 0.0f) axis.normalize();
+                gl.type = 2;  // spot
+                gl.vec[0] = pos[0];  gl.vec[1] = pos[1];  gl.vec[2] = pos[2];
+                gl.axis[0] = axis[0]; gl.axis[1] = axis[1]; gl.axis[2] = axis[2];
+                gl.cosCutoff =
+                    static_cast<float>(std::cos(sl->cutOffAngle.getValue()));
+            } else if (l->isOfType(SoPointLight::getClassTypeId())) {
+                SoPointLight* pl = static_cast<SoPointLight*>(l);
+                SbVec3f pos = pl->location.getValue();
+                gl.type = 1;  // point
+                gl.vec[0] = pos[0]; gl.vec[1] = pos[1]; gl.vec[2] = pos[2];
+            } else {
+                continue;
+            }
+            glLights.push_back(gl);
+        }
+        // Empty list => renderer falls back to its default fixed light.
+        impl_->renderer_->setLights(glLights);
+
         // Delegate to the VBO + shader renderer (GL 2.0 minimum; optional GL
         // 3.1+ instanced path selected automatically when available).
         impl_->renderer_->render(impl_->cachedPlan_, *this, glue, viewProj,
                                  viewMat, projMat, cameraPos, renderState,
                                  impl_->partGeneration_);
+    }
+    if (hasTransparency) {
+        glue->glBlendFunc(static_cast<GLenum>(blendSource),
+                          static_cast<GLenum>(blendDestination));
+        if (!blendEnabled) glue->glDisable(GL_BLEND);
     }
     if (cadDebugEnabled()) {
         std::fprintf(stderr,
@@ -1531,15 +1617,15 @@ SoCADAssembly::rayPick(SoRayPickAction* action)
         }
     }
 
-    obol::picking::CadPickResult result;
+    Obol::picking::CadPickResult result;
 
     if (automaticPick || pm == PICK_EDGE || pm == PICK_HYBRID) {
-        result = obol::picking::CadPickQuery::pickPoint(
+        result = Obol::picking::CadPickQuery::pickPoint(
             pickRay, impl_->instanceBvh_, impl_->parts_, toleranceWS);
     }
 
     if (!result.valid && (pm == PICK_EDGE || pm == PICK_HYBRID)) {
-        result = obol::picking::CadPickQuery::pickEdge(
+        result = Obol::picking::CadPickQuery::pickEdge(
             pickRay,
             impl_->instanceBvh_,
             impl_->parts_,
@@ -1548,7 +1634,7 @@ SoCADAssembly::rayPick(SoRayPickAction* action)
     }
 
     if (!result.valid && (pm == PICK_TRIANGLE || pm == PICK_HYBRID)) {
-        result = obol::picking::CadPickQuery::pickTriangle(
+        result = Obol::picking::CadPickQuery::pickTriangle(
             pickRay,
             impl_->instanceBvh_,
             impl_->parts_,
@@ -1557,7 +1643,7 @@ SoCADAssembly::rayPick(SoRayPickAction* action)
     }
 
     if (!result.valid && pm == PICK_BOUNDS) {
-        result = obol::picking::CadPickQuery::pickBounds(
+        result = Obol::picking::CadPickQuery::pickBounds(
             pickRay,
             impl_->instanceBvh_,
             toleranceWS);
@@ -1565,7 +1651,7 @@ SoCADAssembly::rayPick(SoRayPickAction* action)
 
     // For PICK_HYBRID: also try bounds if triangle picking returned nothing.
     if (!result.valid && pm == PICK_HYBRID) {
-        result = obol::picking::CadPickQuery::pickBounds(
+        result = Obol::picking::CadPickQuery::pickBounds(
             pickRay,
             impl_->instanceBvh_,
             toleranceWS);
@@ -1577,27 +1663,27 @@ SoCADAssembly::rayPick(SoRayPickAction* action)
     SoPickedPoint* pp = action->addIntersection(result.hitPoint);
     if (!pp) return;
 
-    obol::CadPickDetailRecord hit;
+    Obol::CadPickDetailRecord hit;
     hit.instance = result.instanceId;
     hit.part = result.partId;
     hit.point = result.hitPoint;
     switch (result.primType) {
-        case obol::picking::CadPickResult::EDGE:
-            hit.primitiveKind = obol::CadPickDetailRecord::EDGE;
+        case Obol::picking::CadPickResult::EDGE:
+            hit.primitiveKind = Obol::CadPickDetailRecord::EDGE;
             hit.primIndex0 = result.primIndex0;
             hit.primIndex1 = result.primIndex1;
             hit.u = result.u;
             break;
-        case obol::picking::CadPickResult::TRIANGLE:
-            hit.primitiveKind = obol::CadPickDetailRecord::TRIANGLE;
+        case Obol::picking::CadPickResult::TRIANGLE:
+            hit.primitiveKind = Obol::CadPickDetailRecord::TRIANGLE;
             hit.primIndex0 = result.primIndex0;
             break;
-        case obol::picking::CadPickResult::POINT:
-            hit.primitiveKind = obol::CadPickDetailRecord::POINT;
+        case Obol::picking::CadPickResult::POINT:
+            hit.primitiveKind = Obol::CadPickDetailRecord::POINT;
             hit.primIndex0 = result.primIndex0;
             break;
         default:
-            hit.primitiveKind = obol::CadPickDetailRecord::BOUNDS;
+            hit.primitiveKind = Obol::CadPickDetailRecord::BOUNDS;
             break;
     }
 

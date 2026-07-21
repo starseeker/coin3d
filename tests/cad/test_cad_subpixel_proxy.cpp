@@ -2,8 +2,8 @@
 
 #include "headless_utils.h"
 
-#include <obol/cad/SoCADAssembly.h>
-#include <obol/cad/CadIds.h>
+#include <Obol/cad/SoCADAssembly.h>
+#include <Obol/cad/CadIds.h>
 
 #include <Inventor/SbViewportRegion.h>
 #include <Inventor/nodes/SoOrthographicCamera.h>
@@ -13,7 +13,7 @@
 
 namespace {
 
-obol::WireRep
+Obol::WireRep
 unitBox()
 {
     static const int edges[12][2] = {
@@ -27,7 +27,7 @@ unitBox()
         SbVec3f(-0.5f, -0.5f, 0.5f), SbVec3f(0.5f, -0.5f, 0.5f),
         SbVec3f(0.5f, 0.5f, 0.5f), SbVec3f(-0.5f, 0.5f, 0.5f)
     };
-    obol::WireRep wire;
+    Obol::WireRep wire;
     for (const auto &edge : edges) {
         wire.segmentPoints.push_back(corners[edge[0]]);
         wire.segmentPoints.push_back(corners[edge[1]]);
@@ -81,15 +81,15 @@ main()
     assembly->drawMode.setValue(SoCADAssembly::WIREFRAME);
     root->addChild(assembly);
 
-    obol::PartGeometry geometry;
+    Obol::PartGeometry geometry;
     geometry.wire = unitBox();
     geometry.subpixelProxyEligible = true;
-    const obol::PartId part = obol::CadIdBuilder::hash128("subpixel-proxy");
+    const Obol::PartId part = Obol::CadIdBuilder::hash128("subpixel-proxy");
     assembly->upsertPart(part, geometry);
 
-    obol::InstanceRecord instance;
+    Obol::InstanceRecord instance;
     instance.part = part;
-    instance.parent = obol::CadIdBuilder::Root();
+    instance.parent = Obol::CadIdBuilder::Root();
     instance.childName = "proxy";
     instance.localToRoot.makeIdentity();
     instance.style.hasColorOverride = true;
@@ -99,10 +99,10 @@ main()
     // An incorrectly tagged payload must not collapse.  It still has twelve
     // segments, but one endpoint introduces a ninth unique corner so it is
     // not the canonical conservative proxy representation.
-    obol::PartGeometry malformed = geometry;
+    Obol::PartGeometry malformed = geometry;
     malformed.wire->segmentPoints[0].setValue(-0.75f, -0.5f, -0.5f);
-    const obol::PartId malformedPart =
-        obol::CadIdBuilder::hash128("malformed-subpixel-proxy");
+    const Obol::PartId malformedPart =
+        Obol::CadIdBuilder::hash128("malformed-subpixel-proxy");
     assembly->upsertPart(malformedPart, malformed);
     instance.part = malformedPart;
     instance.childName = "malformed-proxy";

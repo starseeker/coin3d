@@ -72,9 +72,9 @@
 
 #include <Inventor/actions/SoGetBoundingBoxAction.h>
 
-#include <obol/cad/SoCADAssembly.h>
-#include <obol/cad/SoCADViewState.h>
-#include <obol/cad/CadIds.h>
+#include <Obol/cad/SoCADAssembly.h>
+#include <Obol/cad/SoCADViewState.h>
+#include <Obol/cad/CadIds.h>
 
 /* BasicFLTKContextManager – FLTK GL context for off-screen rendering */
 #include "fltk_context_manager.h"
@@ -247,11 +247,11 @@ static MeshData buildBoxMesh(float hw, float hh, float hd)
 }
 
 /** Build the 12 edge polylines of a unit box [-hw,hw]^3. */
-static obol::WireRep buildBoxWire(float hw)
+static Obol::WireRep buildBoxWire(float hw)
 {
-    obol::WireRep wire;
+    Obol::WireRep wire;
     for (int e = 0; e < 12; ++e) {
-        obol::WirePolyline poly;
+        Obol::WirePolyline poly;
         const float* p0 = BOX_EDGES[e][0];
         const float* p1 = BOX_EDGES[e][1];
         // Map [0,1] to [-hw, hw]
@@ -289,11 +289,11 @@ static AssemblyState s_asm;
  * Part IDs (one per geometry type)
  * ========================================================================= */
 
-static obol::PartId s_pidPrecision;   // icosphere sub=3  (1280 tris)
-static obol::PartId s_pidStandard;    // icosphere sub=2  ( 320 tris)
-static obol::PartId s_pidDetail;      // icosphere sub=1  (  80 tris)
-static obol::PartId s_pidFastener;    // icosphere sub=0  (  20 tris)
-static obol::PartId s_pidPanel;       // box mesh          (  12 tris + 12 edges)
+static Obol::PartId s_pidPrecision;   // icosphere sub=3  (1280 tris)
+static Obol::PartId s_pidStandard;    // icosphere sub=2  ( 320 tris)
+static Obol::PartId s_pidDetail;      // icosphere sub=1  (  80 tris)
+static Obol::PartId s_pidFastener;    // icosphere sub=0  (  20 tris)
+static Obol::PartId s_pidPanel;       // box mesh          (  12 tris + 12 edges)
 
 /** Triangle counts per part type (for stats display). */
 static constexpr size_t TRIS_PRECISION = 1280;
@@ -331,61 +331,61 @@ static int populateAssembly(SoCADAssembly* asm_, int target)
         std::ceil(std::cbrt(static_cast<double>(target) / PARTS_PER_CELL))));
 
     // Register part geometries
-    std::vector<obol::PartUpdate> partUpdates;
+    std::vector<Obol::PartUpdate> partUpdates;
     partUpdates.reserve(5);
     {
-        obol::PartGeometry geom;
+        Obol::PartGeometry geom;
         MeshData ico3 = buildIcosphere(3);
-        obol::TriMesh tm;
+        Obol::TriMesh tm;
         tm.positions = ico3.positions;
         tm.normals   = ico3.normals;
         tm.indices   = ico3.indices;
         tm.bounds    = ico3.bounds;
         geom.shaded  = tm;
-        s_pidPrecision = obol::CadIdBuilder::hash128("precision_part");
+        s_pidPrecision = Obol::CadIdBuilder::hash128("precision_part");
         partUpdates.push_back({s_pidPrecision, std::move(geom)});
     }
     {
-        obol::PartGeometry geom;
+        Obol::PartGeometry geom;
         MeshData ico2 = buildIcosphere(2);
-        obol::TriMesh tm;
+        Obol::TriMesh tm;
         tm.positions = ico2.positions;
         tm.normals   = ico2.normals;
         tm.indices   = ico2.indices;
         tm.bounds    = ico2.bounds;
         geom.shaded  = tm;
-        s_pidStandard = obol::CadIdBuilder::hash128("standard_part");
+        s_pidStandard = Obol::CadIdBuilder::hash128("standard_part");
         partUpdates.push_back({s_pidStandard, std::move(geom)});
     }
     {
-        obol::PartGeometry geom;
+        Obol::PartGeometry geom;
         MeshData ico1 = buildIcosphere(1);
-        obol::TriMesh tm;
+        Obol::TriMesh tm;
         tm.positions = ico1.positions;
         tm.normals   = ico1.normals;
         tm.indices   = ico1.indices;
         tm.bounds    = ico1.bounds;
         geom.shaded  = tm;
-        s_pidDetail = obol::CadIdBuilder::hash128("detail_part");
+        s_pidDetail = Obol::CadIdBuilder::hash128("detail_part");
         partUpdates.push_back({s_pidDetail, std::move(geom)});
     }
     {
-        obol::PartGeometry geom;
+        Obol::PartGeometry geom;
         MeshData ico0 = buildIcosphere(0);
-        obol::TriMesh tm;
+        Obol::TriMesh tm;
         tm.positions = ico0.positions;
         tm.normals   = ico0.normals;
         tm.indices   = ico0.indices;
         tm.bounds    = ico0.bounds;
         geom.shaded  = tm;
-        s_pidFastener = obol::CadIdBuilder::hash128("fastener_part");
+        s_pidFastener = Obol::CadIdBuilder::hash128("fastener_part");
         partUpdates.push_back({s_pidFastener, std::move(geom)});
     }
     {
-        obol::PartGeometry geom;
+        Obol::PartGeometry geom;
         // Panel: wide flat box representing a structural skin panel
         MeshData box = buildBoxMesh(1.8f, 0.15f, 1.8f);
-        obol::TriMesh tm;
+        Obol::TriMesh tm;
         tm.positions = box.positions;
         tm.normals   = box.normals;
         tm.indices   = box.indices;
@@ -393,7 +393,7 @@ static int populateAssembly(SoCADAssembly* asm_, int target)
         geom.shaded  = tm;
         // Feature-edge wire overlay for the panel
         geom.wire    = buildBoxWire(1.8f);
-        s_pidPanel   = obol::CadIdBuilder::hash128("panel_part");
+        s_pidPanel   = Obol::CadIdBuilder::hash128("panel_part");
         partUpdates.push_back({s_pidPanel, std::move(geom)});
     }
     asm_->upsertParts(partUpdates);
@@ -411,9 +411,9 @@ static int populateAssembly(SoCADAssembly* asm_, int target)
     };
     static constexpr int NPALETTE = static_cast<int>(sizeof(PALETTE)/sizeof(PALETTE[0]));
 
-    obol::InstanceId rootId = obol::CadIdBuilder::Root();
+    Obol::InstanceId rootId = Obol::CadIdBuilder::Root();
     int instIdx = 0;
-    std::vector<obol::InstanceRecord> instanceRecords;
+    std::vector<Obol::InstanceRecord> instanceRecords;
     instanceRecords.reserve(
         static_cast<size_t>(S) * static_cast<size_t>(S) *
         static_cast<size_t>(S) * PARTS_PER_CELL);
@@ -431,13 +431,13 @@ static int populateAssembly(SoCADAssembly* asm_, int target)
                 int colorIdx = (ix + iy * 3 + iz * 7) % NPALETTE;
 
                 // Helper lambda: insert one instance at local offset from cell
-                auto addInst = [&](obol::PartId pid,
+                auto addInst = [&](Obol::PartId pid,
                                    SbVec3f localPos,
                                    float scale,
                                    const SbColor4f& color) {
                     char name[64];
                     snprintf(name, sizeof(name), "inst_%d", instIdx);
-                    obol::InstanceRecord rec;
+                    Obol::InstanceRecord rec;
                     rec.part            = pid;
                     rec.parent          = rootId;
                     rec.childName       = name;

@@ -61,7 +61,7 @@
 #include <vector>
 #include <cstdint>
 
-namespace obol {
+namespace Obol {
 
 /**
  * @brief POP-quantisation LoD for a collection of line segments.
@@ -135,6 +135,6 @@ private:
     bool                 built_  = false;
 };
 
-} // namespace obol
+} // namespace Obol
 
 #endif // OBOL_CAD_LOD_SEGMENTPOPLOD_H

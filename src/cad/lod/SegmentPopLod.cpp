@@ -38,7 +38,7 @@
 #include <cstdint>
 #include <limits>
 
-namespace obol {
+namespace Obol {
 
 // ---------------------------------------------------------------------------
 // snapNorm – snap a normalised [0,1] coordinate to a POP grid cell centre
@@ -171,4 +171,4 @@ SegmentPopLod::minLevelForSegment(uint32_t idx) const
     return minLevel_[idx];
 }
 
-} // namespace obol
+} // namespace Obol

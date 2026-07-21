@@ -38,7 +38,7 @@
  * @brief Inventor traversal state for per-view CAD rendering policy.
  */
 
-#include <obol/cad/CadViewState.h>
+#include <Obol/cad/CadViewState.h>
 
 #include <Inventor/elements/SoSubElement.h>
 #include <Inventor/fields/SoSFBool.h>
@@ -64,14 +64,14 @@ public:
     virtual SbBool matches(const SoElement *element) const override;
     virtual SoElement *copyMatchInfo(void) const override;
 
-    static void set(SoState *state, const obol::CadViewState& viewState);
-    static obol::CadViewState get(SoState *state);
+    static void set(SoState *state, const Obol::CadViewState& viewState);
+    static Obol::CadViewState get(SoState *state);
 
 protected:
     virtual ~SoCADViewStateElement();
 
 private:
-    obol::CadViewState viewState_;
+    Obol::CadViewState viewState_;
 };
 
 /**

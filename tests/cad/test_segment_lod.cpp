@@ -1,6 +1,6 @@
 /**
  * @file test_segment_lod.cpp
- * @brief Unit tests for obol::SegmentPopLod.
+ * @brief Unit tests for Obol::SegmentPopLod.
  *
  * Tests:
  *  1. Build from a grid of segments
@@ -16,7 +16,7 @@
 
 // Include SegmentPopLod directly (it's not a public API header,
 // but tests are allowed to test internal implementation)
-#include <obol/cad/CadIds.h>  // ensure headers compile together
+#include <Obol/cad/CadIds.h>  // ensure headers compile together
 
 // For the LoD we include from the source tree directly
 // (tests/cad/ is configured with src/cad/lod in its include path)
@@ -29,7 +29,7 @@
 #include <cmath>
 
 using namespace SimpleTest;
-using namespace obol;
+using namespace Obol;
 
 // ---------------------------------------------------------------------------
 // Helpers

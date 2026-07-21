@@ -55,10 +55,10 @@
 
 #include "headless_utils.h"
 
-#include <obol/cad/SoCADAssembly.h>
-#include <obol/cad/SoCADViewState.h>
-#include <obol/cad/SoCADDetail.h>
-#include <obol/cad/CadIds.h>
+#include <Obol/cad/SoCADAssembly.h>
+#include <Obol/cad/SoCADViewState.h>
+#include <Obol/cad/SoCADDetail.h>
+#include <Obol/cad/CadIds.h>
 #include "lod/TrianglePopLod.h"
 
 #include <Inventor/SoDB.h>
@@ -302,9 +302,9 @@ static SoSeparator *buildCADScene(const IcoMesh& mesh, int grid, bool useLod)
     root->addChild(asm_);
 
     // One part: the icosphere
-    obol::PartId pid = obol::CadIdBuilder::hash128("icosphere");
-    obol::PartGeometry geom;
-    obol::TriMesh triMesh;
+    Obol::PartId pid = Obol::CadIdBuilder::hash128("icosphere");
+    Obol::PartGeometry geom;
+    Obol::TriMesh triMesh;
     triMesh.positions = mesh.positions;
     triMesh.normals   = mesh.normals;
     triMesh.indices   = mesh.indices;
@@ -313,9 +313,9 @@ static SoSeparator *buildCADScene(const IcoMesh& mesh, int grid, bool useLod)
     asm_->upsertParts({{pid, std::move(geom)}});
 
     // Grid of instances with per-instance transforms
-    obol::InstanceId rootId = obol::CadIdBuilder::Root();
+    Obol::InstanceId rootId = Obol::CadIdBuilder::Root();
     int instanceIdx = 0;
-    std::vector<obol::InstanceRecord> records;
+    std::vector<Obol::InstanceRecord> records;
     records.reserve(static_cast<size_t>(grid) * static_cast<size_t>(grid) *
                     static_cast<size_t>(grid));
     for (int ix = 0; ix < grid; ++ix) {
@@ -324,7 +324,7 @@ static SoSeparator *buildCADScene(const IcoMesh& mesh, int grid, bool useLod)
                 char name[64];
                 snprintf(name, sizeof(name), "s_%d_%d_%d", ix, iy, iz);
 
-                obol::InstanceRecord rec;
+                Obol::InstanceRecord rec;
                 rec.part           = pid;
                 rec.parent         = rootId;
                 rec.childName      = name;
@@ -406,7 +406,7 @@ static BenchResult runBench(SoSeparator *root, const char *label,
  */
 static bool validateLodDirect(const IcoMesh& mesh)
 {
-    obol::TrianglePopLod lod;
+    Obol::TrianglePopLod lod;
     lod.build(mesh.positions, mesh.indices, mesh.bounds);
 
     const size_t totalTris = mesh.indices.size() / 3;
@@ -422,7 +422,7 @@ static bool validateLodDirect(const IcoMesh& mesh)
     }
 
     // Check full detail at kMaxLevel
-    size_t atMax = lod.trianglesAtLevel(obol::TrianglePopLod::kMaxLevel).size();
+    size_t atMax = lod.trianglesAtLevel(Obol::TrianglePopLod::kMaxLevel).size();
     if (atMax != totalTris) {
         fprintf(stderr, "FAIL [lod-direct]: trianglesAtLevel(255)=%zu != %zu\n",
                 atMax, totalTris);

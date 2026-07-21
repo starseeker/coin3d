@@ -74,9 +74,9 @@ SoCADAssembly
 Register the node type once at application start:
 
 ```cpp
-#include <obol/cad/SoCADAssembly.h>
-#include <obol/cad/SoCADDetail.h>
-#include <obol/cad/SoCADViewState.h>
+#include <Obol/cad/SoCADAssembly.h>
+#include <Obol/cad/SoCADDetail.h>
+#include <Obol/cad/SoCADViewState.h>
 
 SoCADAssembly::initClass();   // also registers CAD detail and view-state types
 ```
@@ -84,7 +84,7 @@ SoCADAssembly::initClass();   // also registers CAD detail and view-state types
 ### Adding parts
 
 ```cpp
-using namespace obol;
+using namespace Obol;
 
 // Create a wire-only part (no tessellation needed)
 WireRep wire;
@@ -140,11 +140,11 @@ Use the bulk APIs when loading or regenerating scene data. They mark the
 assembly dirty once and recompute affected instance bounds as a batch:
 
 ```cpp
-std::vector<obol::PartUpdate> parts = { ... };
-std::vector<obol::InstanceRecord> instances = { ... };
+std::vector<Obol::PartUpdate> parts = { ... };
+std::vector<Obol::InstanceRecord> instances = { ... };
 
 assembly->upsertParts(parts);
-std::vector<obol::InstanceId> ids = assembly->upsertInstancesAuto(instances);
+std::vector<Obol::InstanceId> ids = assembly->upsertInstancesAuto(instances);
 ```
 
 For a complete rebuild, use `clear()` inside the same update window:
@@ -178,7 +178,7 @@ After a pick, retrieve the full record for an instance to build an explicit
 scene-graph node (e.g. for interactive editing):
 
 ```cpp
-std::optional<obol::InstanceRecord> rec = assembly->getInstanceRecord(iid);
+std::optional<Obol::InstanceRecord> rec = assembly->getInstanceRecord(iid);
 if (rec) {
     auto* shape = new MyPartShape(rec->part, rec->localToRoot, rec->style);
     sceneRoot->addChild(shape);
@@ -253,8 +253,8 @@ SoPickedPoint* pp = ...; // from SoRayPickAction
 const SoCADDetail* detail = 
     dynamic_cast<const SoCADDetail*>(pp->getDetail());
 if (detail) {
-    obol::InstanceId iid = detail->getInstanceId();
-    obol::PartId     pid = detail->getPartId();
+    Obol::InstanceId iid = detail->getInstanceId();
+    Obol::PartId     pid = detail->getPartId();
     if (detail->getPrimType() == SoCADDetail::EDGE) {
         // polyline index + segment index within that polyline
         uint32_t polyIdx = detail->getPrimIndex0();
@@ -282,7 +282,7 @@ picked path tail so `pp->getDetail()` still returns the accelerated CAD detail.
 
 ## DepthPolicy for auxiliary objects
 
-`obol::DepthPolicy` (in `include/obol/render/DepthPolicy.h`) controls how
+`Obol::DepthPolicy` (in `include/Obol/render/DepthPolicy.h`) controls how
 non-CAD world objects interact with the depth buffer:
 
 | Value            | GL depth test | Description                             |
@@ -305,7 +305,7 @@ When your CAD system has no per-node GUID (e.g. BRL-CAD comb trees), use
 traversal path:
 
 ```cpp
-using namespace obol;
+using namespace Obol;
 InstanceId root  = CadIdBuilder::Root();
 InstanceId car   = CadIdBuilder::extendNameOccBool(root,  "car",    0, 0);
 InstanceId wheel = CadIdBuilder::extendNameOccBool(car,   "wheel",  0, 0); // FL
@@ -419,11 +419,11 @@ styles, selection, or draw mode change.
 
 | Path | Description |
 |------|-------------|
-| `include/obol/cad/CadIds.h`        | 128-bit ID types + `CadIdBuilder` |
-| `include/obol/cad/SoCADAssembly.h` | Main assembly node API            |
-| `include/obol/cad/SoCADDetail.h`   | Pick-result detail class          |
-| `include/obol/cad/SoCADViewState.h`| Per-view CAD render policy node   |
-| `include/obol/render/DepthPolicy.h`| Depth policy enum                 |
+| `include/Obol/cad/CadIds.h`        | 128-bit ID types + `CadIdBuilder` |
+| `include/Obol/cad/SoCADAssembly.h` | Main assembly node API            |
+| `include/Obol/cad/SoCADDetail.h`   | Pick-result detail class          |
+| `include/Obol/cad/SoCADViewState.h`| Per-view CAD render policy node   |
+| `include/Obol/render/DepthPolicy.h`| Depth policy enum                 |
 | `src/cad/CadIds.cpp`               | FNV-1a 128-bit hash implementation|
 | `src/cad/SoCADAssembly.cpp`        | Node render/pick/bbox actions     |
 | `src/cad/SoCADDetail.cpp`          | Detail SO_DETAIL_SOURCE           |

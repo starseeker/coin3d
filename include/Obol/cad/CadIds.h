@@ -53,7 +53,7 @@
 #include <functional>
 #include <string>
 
-namespace obol {
+namespace Obol {
 
 // ---------------------------------------------------------------------------
 // CadId128 – opaque 128-bit identifier
@@ -95,7 +95,7 @@ using InstanceId = CadId128;
  *
  * ### Usage example
  * @code
- *   using namespace obol;
+ *   using namespace Obol;
  *   InstanceId root = CadIdBuilder::Root();
  *   InstanceId child = CadIdBuilder::extendNameOccBool(root, "wheel", 0, 0);
  *   InstanceId grandChild = CadIdBuilder::extendNameOccBool(child, "bolt", 2, 0);
@@ -158,15 +158,15 @@ private:
     static void fnv1a128_update(uint64_t& hi, uint64_t& lo, uint8_t byte) noexcept;
 };
 
-} // namespace obol
+} // namespace Obol
 
 // ---------------------------------------------------------------------------
 // std::hash specialisations
 // ---------------------------------------------------------------------------
 namespace std {
 template<>
-struct hash<obol::CadId128> {
-    size_t operator()(const obol::CadId128& id) const noexcept {
+struct hash<Obol::CadId128> {
+    size_t operator()(const Obol::CadId128& id) const noexcept {
         // Fold 128 bits into size_t via XOR with a rotation
         uint64_t h = id.w0 ^ (id.w1 * 0x9e3779b97f4a7c15ULL);
         h ^= h >> 30;

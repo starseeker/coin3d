@@ -40,7 +40,7 @@
 
 #include <cstdint>
 
-namespace obol {
+namespace Obol {
 
 /**
  * @brief View-local LoD policy.
@@ -107,6 +107,6 @@ resolveCadRenderState(const CadViewState& viewState)
     return render;
 }
 
-} // namespace obol
+} // namespace Obol
 
 #endif // OBOL_CAD_VIEW_STATE_H

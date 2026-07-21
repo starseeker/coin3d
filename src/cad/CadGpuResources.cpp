@@ -35,7 +35,7 @@
 #include <Inventor/system/gl.h>
 #include "glue/glp.h"
 
-namespace obol {
+namespace Obol {
 namespace internal {
 
 // ---------------------------------------------------------------------------
@@ -483,4 +483,4 @@ void CadGpuResources::releaseAll(const SoGLContext * glue)
 }
 
 } // namespace internal
-} // namespace obol
+} // namespace Obol

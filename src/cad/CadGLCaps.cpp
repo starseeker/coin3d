@@ -39,7 +39,7 @@
 #include <cstdio>
 #include <cstdlib>
 
-namespace obol {
+namespace Obol {
 namespace internal {
 
 CadGLCaps CadGLCaps::detect(const SoGLContext * glue)
@@ -266,4 +266,4 @@ CadGLCaps CadGLCaps::detect(const SoGLContext * glue)
 }
 
 } // namespace internal
-} // namespace obol
+} // namespace Obol
