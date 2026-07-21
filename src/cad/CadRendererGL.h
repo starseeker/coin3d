@@ -143,11 +143,38 @@ public:
      */
     int lastRenderTier() const { return lastRenderTier_; }
 
+    /// Maximum simultaneous lights the shaded GLSL passes evaluate.
+    static const int kMaxLights = 8;
+
+    /// One light for the shaded GLSL passes, in world space.
+    struct GlLight {
+        int   type = 0;                       ///< 0=directional, 1=point, 2=spot
+        float vec[3] = { 0.577f, 0.577f, 0.577f }; ///< dir: toward-light; point/spot: world position
+        float axis[3] = { 0.0f, 0.0f, -1.0f };     ///< spot: world travel axis (else unused)
+        float color[3] = { 1.0f, 1.0f, 1.0f };     ///< rgb premultiplied by intensity
+        float cosCutoff = -2.0f;              ///< spot cutoff cosine (<= -1 disables the cone test)
+    };
+
+    /**
+     * Set the scene lights used by the shaded GLSL passes.  Supplied each frame
+     * by SoCADAssembly from the enabled SoLight nodes (directional headlight and
+     * any in-scene point/spot/directional sources) so the hardware view lights
+     * consistently with the rest of the pipeline.  An empty list falls back to
+     * the historical single fixed directional light.
+     */
+    void setLights(const std::vector<GlLight>& lights) { this->lights_ = lights; }
+
 private:
+    /// Upload the current light set to @p program's u_light* uniforms.
+    void uploadLights(const SoGLContext* glue, GLuint program);
+
     // Capability flags (populated on first render call)
     bool      capsDetected_ = false;
     CadGLCaps caps_;
     int       lastRenderTier_ = -1; ///< -1=none, 0=imm, 1=vbo, 2=inst, 3/4=flat
+    /// Scene lights for the shaded GLSL passes (set per-frame by SoCADAssembly).
+    /// Empty means "use the historical fixed directional light".
+    std::vector<GlLight> lights_;
 
     // GPU objects are namespaced by GL context.  A renderer may be traversed
     // by multiple system-GL or offscreen contexts during its lifetime.

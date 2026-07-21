@@ -69,6 +69,12 @@
 #include <Inventor/elements/SoViewingMatrixElement.h>
 #include <Inventor/elements/SoProjectionMatrixElement.h>
 #include <Inventor/elements/SoContextManagerElement.h>
+#include <Inventor/elements/SoLightElement.h>
+#include <Inventor/nodes/SoLight.h>
+#include <Inventor/nodes/SoDirectionalLight.h>
+#include <Inventor/nodes/SoPointLight.h>
+#include <Inventor/nodes/SoSpotLight.h>
+#include <Inventor/SbColor.h>
 
 #include <Inventor/system/gl.h>
 #include "rendering/SoGL.h"
@@ -1460,6 +1466,63 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
         cadRenderSoftwareWire(impl_->cachedPlan_, *this, state, viewProj);
     impl_->lastDirectSoftwareWire_ = softwareWire;
     if (!softwareWire) {
+        // Feed the shaded GLSL pass the scene's directional light so it tracks
+        // the camera headlight (and any authored directional light) instead of
+        // a hardcoded world-fixed direction.
+        // The shaded GLSL pass lights in WORLD space (v_worldPos/v_norm use the
+        // model matrix without the view).  Obol authors all its lights directly
+        // in world coordinates -- the headlight direction is rewritten in world
+        // space each frame, and DB light positions are world bbox centers -- and
+        // places them without transform nodes above them, so the SoLight field
+        // values ARE world space.  We therefore read the raw fields rather than
+        // SoLightElement::getMatrix(), whose accumulated matrix for the
+        // post-camera scene-lights group is contaminated with the view transform
+        // in this custom render batch (which would put point/spot positions in
+        // eye space and make them drift with the camera).
+        const SoNodeList& lights = SoLightElement::getLights(state);
+        std::vector<Obol::internal::CadRendererGL::GlLight> glLights;
+        for (int li = 0; li < lights.getLength(); ++li) {
+            SoLight* l = static_cast<SoLight*>(lights[li]);
+            if (!l || !l->on.getValue())
+                continue;
+            const SbColor c = l->color.getValue();
+            const float inten = l->intensity.getValue();
+            Obol::internal::CadRendererGL::GlLight gl;
+            gl.color[0] = c[0] * inten;
+            gl.color[1] = c[1] * inten;
+            gl.color[2] = c[2] * inten;
+            if (l->isOfType(SoDirectionalLight::getClassTypeId())) {
+                SoDirectionalLight* dl = static_cast<SoDirectionalLight*>(l);
+                SbVec3f travel = dl->direction.getValue();
+                if (travel.length() <= 0.0f)
+                    continue;
+                travel.normalize();
+                gl.type = 0;  // directional; shader wants direction toward light
+                gl.vec[0] = -travel[0]; gl.vec[1] = -travel[1];
+                gl.vec[2] = -travel[2];
+            } else if (l->isOfType(SoSpotLight::getClassTypeId())) {
+                SoSpotLight* sl = static_cast<SoSpotLight*>(l);
+                SbVec3f pos = sl->location.getValue();
+                SbVec3f axis = sl->direction.getValue();
+                if (axis.length() > 0.0f) axis.normalize();
+                gl.type = 2;  // spot
+                gl.vec[0] = pos[0];  gl.vec[1] = pos[1];  gl.vec[2] = pos[2];
+                gl.axis[0] = axis[0]; gl.axis[1] = axis[1]; gl.axis[2] = axis[2];
+                gl.cosCutoff =
+                    static_cast<float>(std::cos(sl->cutOffAngle.getValue()));
+            } else if (l->isOfType(SoPointLight::getClassTypeId())) {
+                SoPointLight* pl = static_cast<SoPointLight*>(l);
+                SbVec3f pos = pl->location.getValue();
+                gl.type = 1;  // point
+                gl.vec[0] = pos[0]; gl.vec[1] = pos[1]; gl.vec[2] = pos[2];
+            } else {
+                continue;
+            }
+            glLights.push_back(gl);
+        }
+        // Empty list => renderer falls back to its default fixed light.
+        impl_->renderer_->setLights(glLights);
+
         // Delegate to the VBO + shader renderer (GL 2.0 minimum; optional GL
         // 3.1+ instanced path selected automatically when available).
         impl_->renderer_->render(impl_->cachedPlan_, *this, glue, viewProj,
