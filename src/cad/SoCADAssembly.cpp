@@ -1466,9 +1466,13 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
         cadRenderSoftwareWire(impl_->cachedPlan_, *this, state, viewProj);
     impl_->lastDirectSoftwareWire_ = softwareWire;
     if (!softwareWire) {
-        // Feed the shaded GLSL pass the scene's directional light so it tracks
-        // the camera headlight (and any authored directional light) instead of
-        // a hardcoded world-fixed direction.
+        // Feed the shaded GLSL pass ALL enabled scene lights (the camera-tracked
+        // headlight plus any in-scene database lights), so the hardware view
+        // lights consistently with the fixed-function path instead of using a
+        // single hardcoded world-fixed direction.  Directional, point, and spot
+        // lights are all supported (up to CadRendererGL::kMaxLights), each with
+        // its own RGB colour x intensity.
+        //
         // The shaded GLSL pass lights in WORLD space (v_worldPos/v_norm use the
         // model matrix without the view).  Obol authors all its lights directly
         // in world coordinates -- the headlight direction is rewritten in world
