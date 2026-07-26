@@ -207,7 +207,6 @@ static SoSeparator *buildCADScene(int grid)
 
     SoCADViewState *viewState = new SoCADViewState;
     viewState->viewIdLow.setValue(1);
-    viewState->lodMode.setValue(SoCADViewState::LOD_DISABLED);
     root->addChild(viewState);
 
     SoCADAssembly *assembly = new SoCADAssembly;

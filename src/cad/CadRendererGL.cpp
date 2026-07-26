@@ -287,6 +287,7 @@ static const char * kShadedVS1 =
 
 static const char * kShadedFS1 =
     "uniform int   u_numLights;\n"
+    "uniform int   u_hasNorm;\n"
     "uniform int   u_ltype[8];\n"
     "uniform vec3  u_lvec[8];\n"
     "uniform vec3  u_laxis[8];\n"
@@ -296,8 +297,15 @@ static const char * kShadedFS1 =
     "varying vec3  v_worldPos;\n"
     "varying vec4  v_color;\n"
     "void main() {\n"
-    "    vec3 n = normalize(v_norm);\n"
-    "    if (!gl_FrontFacing) n = -n;\n"
+    "    vec3 n;\n"
+    "    if (u_hasNorm != 0) {\n"
+    "        n = normalize(v_norm);\n"
+    "        if (!gl_FrontFacing) n = -n;\n"
+    "    } else {\n"
+    "        vec3 fn = cross(dFdx(v_worldPos), dFdy(v_worldPos));\n"
+    "        float fl = length(fn);\n"
+    "        n = (fl > 0.0) ? fn / fl : vec3(0.0, 0.0, 1.0);\n"
+    "    }\n"
     "    vec3 col = v_color.rgb * 0.25;\n"
     "    for (int i = 0; i < 8; i++) {\n"
     "        if (i >= u_numLights) break;\n"
@@ -373,6 +381,7 @@ static const char * kShadedVS2 =
 static const char * kShadedFS2 =
     "#version 140\n"
     "uniform int   u_numLights;\n"
+    "uniform int   u_hasNorm;\n"
     "uniform int   u_ltype[8];\n"
     "uniform vec3  u_lvec[8];\n"
     "uniform vec3  u_laxis[8];\n"
@@ -383,8 +392,15 @@ static const char * kShadedFS2 =
     "in  vec4 v_color;\n"
     "out vec4 fragColor;\n"
     "void main() {\n"
-    "    vec3 n = normalize(v_norm);\n"
-    "    if (!gl_FrontFacing) n = -n;\n"
+    "    vec3 n;\n"
+    "    if (u_hasNorm != 0) {\n"
+    "        n = normalize(v_norm);\n"
+    "        if (!gl_FrontFacing) n = -n;\n"
+    "    } else {\n"
+    "        vec3 fn = cross(dFdx(v_worldPos), dFdy(v_worldPos));\n"
+    "        float fl = length(fn);\n"
+    "        n = (fl > 0.0) ? fn / fl : vec3(0.0, 0.0, 1.0);\n"
+    "    }\n"
     "    vec3 col = v_color.rgb * 0.25;\n"
     "    for (int i = 0; i < 8; i++) {\n"
     "        if (i >= u_numLights) break;\n"
@@ -2594,17 +2610,33 @@ void CadRendererGL::renderImmediateMode(
 
             glue->glBegin(GL_TRIANGLES);
             for (size_t t = 0; t + 2 < drawIndexCount; t += 3) {
+                SbVec3f triangle[3];
+                for (int k = 0; k < 3; ++k) {
+                    uint32_t idx = drawIdx[t + k];
+                    triangle[k] = mesh.isProgressive() ?
+                        progressiveSnapPoint(mesh.positions[idx],
+                            mesh.progressiveQuantizationMinimum,
+                            mesh.progressiveQuantizationMaximum,
+                            drawLevel) : mesh.positions[idx];
+                }
+                if (!hasNorm) {
+                    SbVec3f faceNormal =
+                        (triangle[1] - triangle[0]).cross(
+                            triangle[2] - triangle[0]);
+                    if (faceNormal.sqrLength() > 0.0f)
+                        faceNormal.normalize();
+                    else
+                        faceNormal.setValue(0.0f, 0.0f, 1.0f);
+                    glue->glNormal3f(faceNormal[0], faceNormal[1],
+                                     faceNormal[2]);
+                }
                 for (int k = 0; k < 3; ++k) {
                     uint32_t idx = drawIdx[t + k];
                     if (hasNorm && idx < mesh.normals.size()) {
                         const auto& n = mesh.normals[idx];
                         glue->glNormal3f(n[0], n[1], n[2]);
                     }
-                    const SbVec3f p = mesh.isProgressive() ?
-                        progressiveSnapPoint(mesh.positions[idx],
-                            mesh.progressiveQuantizationMinimum,
-                            mesh.progressiveQuantizationMaximum,
-                            drawLevel) : mesh.positions[idx];
+                    const SbVec3f& p = triangle[k];
                     glue->glVertex3f(p[0], p[1], p[2]);
                 }
             }

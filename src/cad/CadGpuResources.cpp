@@ -36,9 +36,41 @@
 #include "glue/glp.h"
 
 #include <algorithm>
+#include <limits>
 
 namespace Obol {
 namespace internal {
+
+static GLsizei
+progressiveBufferCapacity(GLsizei required, GLsizei current,
+                          bool progressive)
+{
+    if (!progressive || current <= 0)
+        return required;
+    const GLsizei maximum = std::numeric_limits<GLsizei>::max();
+    const GLsizei doubled =
+        current > maximum / 2 ? maximum : current * 2;
+    return std::max(required, doubled);
+}
+
+static void
+allocateAndPopulateBuffer(const SoGLContext *glue, GLenum target,
+                          GLsizeiptr capacityBytes,
+                          GLsizeiptr logicalBytes, const void *data,
+                          GLenum usage)
+{
+    /* glBufferData's size describes both the allocation and, when data is
+     * non-null, how many bytes the driver reads from data.  Progressive
+     * growth may deliberately reserve more capacity than the current vector
+     * contains, so allocate the store first and upload only the logical
+     * bytes. */
+    if (capacityBytes > logicalBytes) {
+        glue->glBufferData(target, capacityBytes, nullptr, usage);
+        glue->glBufferSubData(target, 0, logicalBytes, data);
+    } else {
+        glue->glBufferData(target, logicalBytes, data, usage);
+    }
+}
 
 // ---------------------------------------------------------------------------
 // Destructor
@@ -199,12 +231,13 @@ void CadGpuResources::upload(
             glue->glGenBuffers(1, &w.posBuf);
         glue->glBindBuffer(GL_ARRAY_BUFFER, w.posBuf);
         if (newWireBuffers || wireCount > w.posCapacity) {
-            GLsizei capacity = wireCount;
-            if (progressive && w.posCapacity > 0)
-                capacity = std::max(wireCount, w.posCapacity * 2);
-            glue->glBufferData(GL_ARRAY_BUFFER,
-                               static_cast<GLsizeiptr>(capacity) * 3 * sizeof(float),
-                               wireData, progressive ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
+            const GLsizei capacity = progressiveBufferCapacity(
+                wireCount, w.posCapacity, progressive);
+            allocateAndPopulateBuffer(
+                glue, GL_ARRAY_BUFFER,
+                static_cast<GLsizeiptr>(capacity) * 3 * sizeof(float),
+                static_cast<GLsizeiptr>(wireCount) * 3 * sizeof(float),
+                wireData, progressive ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
             w.posCapacity = capacity;
         } else if (wireCount > oldWireCount) {
             glue->glBufferSubData(
@@ -221,14 +254,14 @@ void CadGpuResources::upload(
                 glue->glGenBuffers(1, &w.segIdxBuf);
             glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, w.segIdxBuf);
             if (newIndexBuffer || segIdxCount > w.idxCapacity) {
-                GLsizei capacity = segIdxCount;
-                if (progressive && w.idxCapacity > 0)
-                    capacity = std::max(segIdxCount, w.idxCapacity * 2);
-                glue->glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                                   static_cast<GLsizeiptr>(capacity) *
-                                       sizeof(uint32_t),
-                                   segIdx,
-                                   progressive ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
+                const GLsizei capacity = progressiveBufferCapacity(
+                    segIdxCount, w.idxCapacity, progressive);
+                allocateAndPopulateBuffer(
+                    glue, GL_ELEMENT_ARRAY_BUFFER,
+                    static_cast<GLsizeiptr>(capacity) * sizeof(uint32_t),
+                    static_cast<GLsizeiptr>(segIdxCount) * sizeof(uint32_t),
+                    segIdx,
+                    progressive ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
                 w.idxCapacity = capacity;
             } else if (segIdxCount > oldSegIdxCount) {
                 glue->glBufferSubData(
@@ -285,12 +318,13 @@ void CadGpuResources::upload(
             glue->glGenBuffers(1, &t.posBuf);
         glue->glBindBuffer(GL_ARRAY_BUFFER, t.posBuf);
         if (newPosBuffer || triPosCount > t.posCapacity) {
-            GLsizei capacity = triPosCount;
-            if (progressive && t.posCapacity > 0)
-                capacity = std::max(triPosCount, t.posCapacity * 2);
-            glue->glBufferData(GL_ARRAY_BUFFER,
-                               static_cast<GLsizeiptr>(capacity) * 3 * sizeof(float),
-                               triPos, progressive ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
+            const GLsizei capacity = progressiveBufferCapacity(
+                triPosCount, t.posCapacity, progressive);
+            allocateAndPopulateBuffer(
+                glue, GL_ARRAY_BUFFER,
+                static_cast<GLsizeiptr>(capacity) * 3 * sizeof(float),
+                static_cast<GLsizeiptr>(triPosCount) * 3 * sizeof(float),
+                triPos, progressive ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
             t.posCapacity = capacity;
         } else if (triPosCount > oldVertCount) {
             glue->glBufferSubData(
@@ -307,14 +341,14 @@ void CadGpuResources::upload(
                 glue->glGenBuffers(1, &t.normBuf);
             glue->glBindBuffer(GL_ARRAY_BUFFER, t.normBuf);
             if (newNormBuffer || triPosCount > t.normCapacity) {
-                GLsizei capacity = triPosCount;
-                if (progressive && t.normCapacity > 0)
-                    capacity = std::max(triPosCount, t.normCapacity * 2);
-                glue->glBufferData(GL_ARRAY_BUFFER,
-                                   static_cast<GLsizeiptr>(capacity) *
-                                       3 * sizeof(float),
-                                   triNorm,
-                                   progressive ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
+                const GLsizei capacity = progressiveBufferCapacity(
+                    triPosCount, t.normCapacity, progressive);
+                allocateAndPopulateBuffer(
+                    glue, GL_ARRAY_BUFFER,
+                    static_cast<GLsizeiptr>(capacity) * 3 * sizeof(float),
+                    static_cast<GLsizeiptr>(triPosCount) * 3 * sizeof(float),
+                    triNorm,
+                    progressive ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
                 t.normCapacity = capacity;
             } else if (triPosCount > oldVertCount) {
                 glue->glBufferSubData(
@@ -331,13 +365,13 @@ void CadGpuResources::upload(
             glue->glGenBuffers(1, &t.idxBuf);
         glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, t.idxBuf);
         if (newIndexBuffer || triIdxCount > t.idxCapacity) {
-            GLsizei capacity = triIdxCount;
-            if (progressive && t.idxCapacity > 0)
-                capacity = std::max(triIdxCount, t.idxCapacity * 2);
-            glue->glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                               static_cast<GLsizeiptr>(capacity) *
-                                   sizeof(uint32_t),
-                               triIdx, progressive ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
+            const GLsizei capacity = progressiveBufferCapacity(
+                triIdxCount, t.idxCapacity, progressive);
+            allocateAndPopulateBuffer(
+                glue, GL_ELEMENT_ARRAY_BUFFER,
+                static_cast<GLsizeiptr>(capacity) * sizeof(uint32_t),
+                static_cast<GLsizeiptr>(triIdxCount) * sizeof(uint32_t),
+                triIdx, progressive ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
             t.idxCapacity = capacity;
         } else if (triIdxCount > oldIdxCount) {
             glue->glBufferSubData(
