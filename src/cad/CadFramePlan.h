@@ -55,7 +55,7 @@ namespace Obol {
 namespace internal {
 
 // ---------------------------------------------------------------------------
-// Rep key: identifies a (Part, type, LoD level) GPU resource slot
+// Rep key: identifies one stable (Part, representation type) GPU resource.
 // ---------------------------------------------------------------------------
 
 enum class CadRepType : uint8_t {
@@ -67,16 +67,16 @@ enum class CadRepType : uint8_t {
 /**
  * @brief Key for a GPU geometry representation.
  *
- * A representation is keyed by (part ID, geometry type, LoD level).
- * Level 0 is the coarsest; higher levels add detail.
+ * The resident PoP prefix is one appendable resource.  Per-instance active
+ * cuts select a draw count and quantization level without creating another
+ * GPU representation.
  */
 struct CadRepKey {
     PartId       part;
     CadRepType   type  = CadRepType::WireSegments;
-    uint8_t      level = 255; ///< 255 = full detail (no LoD reduction)
 
     bool operator==(const CadRepKey& o) const noexcept {
-        return part == o.part && type == o.type && level == o.level;
+        return part == o.part && type == o.type;
     }
 };
 
@@ -103,6 +103,7 @@ struct CadVisibleInstance {
     uint16_t linePatternFactor = 1u;
     uint32_t partIndex = 0;
     uint32_t flags     = 0;   ///< bit 0: selected; bit 1: hovered; bit 2: color override
+    uint8_t lodLevel   = 255; ///< producer-authored retained PoP draw cut
     InstanceId instanceId;
     /// World-space bounding box min/max.  Used by the renderer for per-instance
     /// frustum culling (avoids drawing instances completely outside the view).
@@ -125,6 +126,7 @@ struct CadDrawItem {
     uint32_t  baseInstance   = 0; ///< First CadVisibleInstance index for this item
     uint32_t  instanceCount  = 0; ///< Number of instances sharing this part rep
     bool      customWireStyle = false; ///< Wire run requires width/stipple state
+    bool      cullBackfaces = false; ///< Safe CCW closed-surface shaded draw
     // GPU-resolved at render time:
     uint32_t  vertexOffset   = 0; ///< Byte offset into vertex buffer
     uint32_t  indexOffset    = 0; ///< Byte offset into index buffer

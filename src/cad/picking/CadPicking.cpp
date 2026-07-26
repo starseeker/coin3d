@@ -93,6 +93,41 @@ rayBoxHit(const SbLine& ray, const SbBox3f& box, float* hitT) noexcept
     return true;
 }
 
+uint8_t
+progressiveLevel(uint8_t requested, uint8_t minimum, uint8_t resident) noexcept
+{
+    if (resident >= 16) return requested;
+    if (requested >= 16) requested = resident;
+    return std::max(minimum, std::min(resident, requested));
+}
+
+float
+progressiveSnapCoordinate(float value, float minimum, float maximum,
+                          uint8_t level) noexcept
+{
+    if (level >= 15 || !(maximum > minimum)) return value;
+    const double mask = std::pow(2.0, static_cast<double>(15 - level));
+    const double scaled =
+        (static_cast<double>(value) - minimum) /
+        (static_cast<double>(maximum) - minimum) * 65535.0;
+    const double low = std::floor(std::floor(scaled) / mask);
+    const double high = std::ceil(std::ceil(scaled) / mask);
+    const double snapped = (low + high) * 0.5 * mask;
+    return static_cast<float>(
+        (snapped / 65535.0) *
+        (static_cast<double>(maximum) - minimum) + minimum);
+}
+
+SbVec3f
+progressiveSnapPoint(const SbVec3f& point, const SbVec3f& minimum,
+                     const SbVec3f& maximum, uint8_t level) noexcept
+{
+    return SbVec3f(
+        progressiveSnapCoordinate(point[0], minimum[0], maximum[0], level),
+        progressiveSnapCoordinate(point[1], minimum[1], maximum[1], level),
+        progressiveSnapCoordinate(point[2], minimum[2], maximum[2], level));
+}
+
 }  // namespace
 
 // ===========================================================================
@@ -419,36 +454,66 @@ CadPickQuery::pickEdge(
         const auto& geom = *geomIt->second;
         if (!geom.wire.has_value()) continue;
 
-        // Build part edge BVH lazily
-        auto bvhIt = partBvhCache.find(pid);
-        if (bvhIt == partBvhCache.end()) {
-            CadPartEdgeBVH edgeBvh;
+        const Obol::WireRep& wire = *geom.wire;
+        CadPartEdgeBVH progressiveBvh;
+        const CadPartEdgeBVH *edgeBvh = nullptr;
+        if (wire.isProgressive()) {
+            const uint8_t level = progressiveLevel(
+                entry->lodLevel, wire.progressiveMinimumLevel,
+                wire.progressiveResidentLevel);
+            const size_t segmentCount = wire.segmentCountAtLevel(level);
             std::vector<CadPartEdgeBVH::SegEntry> segs;
-            const Obol::WireRep& wire = *geom.wire;
-            segs.reserve(wire.segmentCount());
-            for (size_t i = 0; i < wire.segmentCount(); ++i) {
+            segs.reserve(segmentCount);
+            for (size_t i = 0; i < segmentCount; ++i) {
                 const uint32_t segId =
                     (i < wire.segmentIds.size()) ?
                     wire.segmentIds[i] : static_cast<uint32_t>(i);
-                segs.push_back({ wire.segmentPoints[2 * i],
-                                 wire.segmentPoints[2 * i + 1],
-                                 segId,
-                                 0 });
+                segs.push_back({
+                    progressiveSnapPoint(
+                        wire.segmentPoints[2 * i],
+                        wire.progressiveQuantizationMinimum,
+                        wire.progressiveQuantizationMaximum, level),
+                    progressiveSnapPoint(
+                        wire.segmentPoints[2 * i + 1],
+                        wire.progressiveQuantizationMinimum,
+                        wire.progressiveQuantizationMaximum, level),
+                    segId, 0 });
             }
-            uint32_t polyIdx = 0;
-            for (const auto& polyline : wire.polylines) {
-                for (size_t si = 0; si + 1 < polyline.points.size(); ++si) {
-                    segs.push_back({ polyline.points[si],
-                                     polyline.points[si + 1],
-                                     polyIdx,
-                                     static_cast<uint32_t>(si) });
+            progressiveBvh.build(std::move(segs));
+            edgeBvh = &progressiveBvh;
+        } else {
+            // Build non-progressive part edge BVH lazily.
+            auto bvhIt = partBvhCache.find(pid);
+            if (bvhIt == partBvhCache.end()) {
+                CadPartEdgeBVH cached;
+                std::vector<CadPartEdgeBVH::SegEntry> segs;
+                segs.reserve(wire.segmentCount());
+                for (size_t i = 0; i < wire.segmentCount(); ++i) {
+                    const uint32_t segId =
+                        (i < wire.segmentIds.size()) ?
+                        wire.segmentIds[i] : static_cast<uint32_t>(i);
+                    segs.push_back({ wire.segmentPoints[2 * i],
+                                     wire.segmentPoints[2 * i + 1],
+                                     segId,
+                                     0 });
                 }
-                ++polyIdx;
+                uint32_t polyIdx = 0;
+                for (const auto& polyline : wire.polylines) {
+                    for (size_t si = 0; si + 1 < polyline.points.size(); ++si) {
+                        segs.push_back({ polyline.points[si],
+                                         polyline.points[si + 1],
+                                         polyIdx,
+                                         static_cast<uint32_t>(si) });
+                    }
+                    ++polyIdx;
+                }
+                cached.build(std::move(segs));
+                partBvhCache[pid] = std::move(cached);
+                bvhIt = partBvhCache.find(pid);
             }
-            edgeBvh.build(std::move(segs));
-            partBvhCache[pid] = std::move(edgeBvh);
-            bvhIt = partBvhCache.find(pid);
+            edgeBvh = &bvhIt->second;
         }
+        if (!edgeBvh || !edgeBvh->isBuilt()) continue;
 
         // Transform ray into part-local space
         SbMatrix w2l = entry->localToWorld.inverse();
@@ -466,7 +531,7 @@ CadPickQuery::pickEdge(
         float scaleApprox = 1.0f / (dirLen > 1e-6f ? dirLen : 1.0f);
         float localTol = toleranceWS * scaleApprox;
 
-        auto hit = bvhIt->second.queryClosest(localRay, localTol);
+        auto hit = edgeBvh->queryClosest(localRay, localTol);
         if (!hit) continue;
 
         // Compute world-space t for depth comparison
@@ -710,15 +775,39 @@ CadPickQuery::pickTriangle(
         const auto& geom = *geomIt->second;
         if (!geom.shaded.has_value()) continue;
 
-        // Build part triangle BVH lazily
-        auto bvhIt = partTriBvhCache.find(pid);
-        if (bvhIt == partTriBvhCache.end()) {
-            CadPartTriBVH triBvh;
-            triBvh.build(geom.shaded->positions, geom.shaded->indices);
-            partTriBvhCache[pid] = std::move(triBvh);
-            bvhIt = partTriBvhCache.find(pid);
+        const Obol::TriMesh& mesh = *geom.shaded;
+        CadPartTriBVH progressiveBvh;
+        const CadPartTriBVH *triBvh = nullptr;
+        uint8_t activeLevel = 255;
+        std::vector<SbVec3f> progressivePositions;
+        std::vector<uint32_t> progressiveIndices;
+        if (mesh.isProgressive()) {
+            activeLevel = progressiveLevel(
+                entry->lodLevel, mesh.progressiveMinimumLevel,
+                mesh.progressiveResidentLevel);
+            const size_t indexCount = mesh.indexCountAtLevel(activeLevel);
+            progressivePositions.reserve(mesh.positions.size());
+            for (const SbVec3f& point : mesh.positions) {
+                progressivePositions.push_back(progressiveSnapPoint(
+                    point, mesh.progressiveQuantizationMinimum,
+                    mesh.progressiveQuantizationMaximum, activeLevel));
+            }
+            progressiveIndices.assign(
+                mesh.indices.begin(), mesh.indices.begin() + indexCount);
+            progressiveBvh.build(progressivePositions, progressiveIndices);
+            triBvh = &progressiveBvh;
+        } else {
+            // Build non-progressive part triangle BVH lazily.
+            auto bvhIt = partTriBvhCache.find(pid);
+            if (bvhIt == partTriBvhCache.end()) {
+                CadPartTriBVH cached;
+                cached.build(mesh.positions, mesh.indices);
+                partTriBvhCache[pid] = std::move(cached);
+                bvhIt = partTriBvhCache.find(pid);
+            }
+            triBvh = &bvhIt->second;
         }
-        if (!bvhIt->second.isBuilt()) continue;
+        if (!triBvh || !triBvh->isBuilt()) continue;
 
         // Transform ray into part-local space
         SbMatrix w2l = entry->localToWorld.inverse();
@@ -731,18 +820,22 @@ CadPickQuery::pickTriangle(
         localDir /= dirLen;
         SbLine localRay(localOrigin, localOrigin + localDir);
 
-        auto hit = bvhIt->second.queryClosest(localRay);
+        auto hit = triBvh->queryClosest(localRay);
         if (!hit) continue;
 
         // Compute the world-space hit point from the local-space barycentric
         // intersection coordinates.
-        const auto& mesh = *geom.shaded;
-        uint32_t i0 = mesh.indices[hit->triIndex * 3 + 0];
-        uint32_t i1 = mesh.indices[hit->triIndex * 3 + 1];
-        uint32_t i2 = mesh.indices[hit->triIndex * 3 + 2];
-        SbVec3f localHit = mesh.positions[i0] * (1.0f - hit->u - hit->v)
-                         + mesh.positions[i1] * hit->u
-                         + mesh.positions[i2] * hit->v;
+        const std::vector<uint32_t>& pickIndices = mesh.isProgressive() ?
+            progressiveIndices : mesh.indices;
+        const std::vector<SbVec3f>& pickPositions = mesh.isProgressive() ?
+            progressivePositions : mesh.positions;
+        uint32_t i0 = pickIndices[hit->triIndex * 3 + 0];
+        uint32_t i1 = pickIndices[hit->triIndex * 3 + 1];
+        uint32_t i2 = pickIndices[hit->triIndex * 3 + 2];
+        SbVec3f localHit =
+            pickPositions[i0] * (1.0f - hit->u - hit->v)
+          + pickPositions[i1] * hit->u
+          + pickPositions[i2] * hit->v;
         SbVec3f worldHit;
         entry->localToWorld.multVecMatrix(localHit, worldHit);
 

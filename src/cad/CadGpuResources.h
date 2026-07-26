@@ -72,6 +72,7 @@ struct CadPointGpu {
     GLuint posBuf = 0;
     GLuint vao = 0;
     GLsizei count = 0;
+    GLsizei posCapacity = 0;
 };
 
 /** GPU buffers for one part's wire representation. */
@@ -81,6 +82,9 @@ struct CadWireGpu {
     GLuint vao       = 0; ///< VAO binding posBuf (0 if no VAO support)
     GLsizei segCount = 0; ///< number of line segments (indices / 2)
     GLsizei vertCount = 0; ///< total point count in posBuf
+    GLsizei posCapacity = 0; ///< allocated float[3] entries
+    GLsizei idxCount = 0; ///< allocated/logical segment index entries
+    GLsizei idxCapacity = 0; ///< allocated uint32 entries
     bool sequentialSegments = false; ///< true when positions are already segment pairs
     GLuint instanceVbo = 0; ///< instance buffer recorded in this VAO
     uint32_t instanceBase = UINT32_MAX; ///< first instance recorded in this VAO
@@ -92,7 +96,11 @@ struct CadTriGpu {
     GLuint normBuf  = 0; ///< float[3] normals (0 if no normals supplied)
     GLuint idxBuf   = 0; ///< uint32 triangle indices
     GLuint vao      = 0; ///< VAO binding pos+norm+idx (0 if no VAO support)
+    GLsizei vertCount = 0; ///< total point/normal entries
     GLsizei idxCount = 0; ///< total index count (= 3 × triangle count)
+    GLsizei posCapacity = 0; ///< allocated float[3] position entries
+    GLsizei normCapacity = 0; ///< allocated float[3] normal entries
+    GLsizei idxCapacity = 0; ///< allocated uint32 entries
     GLuint instanceVbo = 0; ///< instance buffer recorded in this VAO
     uint32_t instanceBase = UINT32_MAX; ///< first instance recorded in this VAO
 };
@@ -127,11 +135,13 @@ struct CadFlatShadedGroup {
     GLint first = 0;
     GLsizei count = 0;
     uint8_t rgba[4] = {204, 204, 204, 255};
+    bool cullBackfaces = false;
 };
 
 struct CadFlatShadedGpu {
     GLuint posBuf = 0;
     GLuint normBuf = 0;
+    GLuint vao = 0;
     uint64_t planRevision = 0;
     uint64_t geometryRevision = 0;
     GLsizei vertexCount = 0;
@@ -142,6 +152,7 @@ struct CadFlatShadedGpu {
 struct CadSubpixelProxyGpu {
     GLuint posBuf = 0;
     GLuint colorBuf = 0;
+    GLuint vao = 0;
     uint64_t revision = 0;
     GLsizei count = 0;
 };
@@ -189,6 +200,7 @@ public:
                 const float*    triNorm,
                 const uint32_t* triIdx,      GLsizei triIdxCount,
                 uint64_t        generation,
+                bool            progressive,
                 const SoGLContext * glue,
                 const CadGLCaps& caps);
 
@@ -252,7 +264,8 @@ public:
                           const std::vector<float>& positions,
                           const std::vector<float>& normals,
                           const std::vector<CadFlatShadedGroup>& groups,
-                          const SoGLContext *glue);
+                          const SoGLContext *glue,
+                          const CadGLCaps& caps);
 
     void updateFlatShadedGroups(
         uint64_t planRevision,
@@ -263,7 +276,8 @@ public:
     void uploadSubpixelProxyPoints(uint64_t revision,
                                    const std::vector<float>& positions,
                                    const std::vector<uint8_t>& colors,
-                                   const SoGLContext *glue);
+                                   const SoGLContext *glue,
+                                   const CadGLCaps& caps);
 
     const CadSubpixelProxyGpu& subpixelProxyPoints() const
     {

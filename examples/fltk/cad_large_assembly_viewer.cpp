@@ -541,7 +541,6 @@ static AssemblyState buildLargeScene(int targetInstances, int width, int height)
     /* ---- Per-view CAD render policy ---- */
     SoCADViewState* viewState = new SoCADViewState;
     viewState->viewIdLow.setValue(1);
-    viewState->lodMode.setValue(SoCADViewState::LOD_ENABLED);
     root->addChild(viewState);
     st.viewState = viewState;
 
@@ -806,7 +805,7 @@ public:
     }
 
     void update(int instances, int parts, double renderMs,
-                bool lodOn, const char* drawModeName)
+                const char* drawModeName)
     {
         // Approximate full-detail triangle total (worst-case without LoD)
         size_t totalTris =
@@ -819,12 +818,11 @@ public:
 
         snprintf(buf_, sizeof(buf_),
                  "  Instances: %d  |  Parts: %d  |  Full-detail tris: ~%s"
-                 "  |  Mode: %s  |  LoD: %s  |  Frame: %.1f ms (%.0f FPS)",
+                 "  |  Mode: %s  |  Frame: %.1f ms (%.0f FPS)",
                  instances,
                  parts,
                  formatLarge(totalTris),
                  drawModeName,
-                 lodOn ? "ON" : "OFF",
                  renderMs,
                  renderMs > 0.0 ? 1000.0 / renderMs : 0.0);
         label(buf_);
@@ -855,7 +853,6 @@ static StatusBar*   s_status  = nullptr;
 
 /* Current draw mode (cycling through modes). */
 static int  s_drawModeIdx = 1;   // 0=WIREFRAME, 1=SHADED, 2=SHADED_WITH_EDGES
-static bool s_lodEnabled  = true;
 static bool s_perspectiveCamera = true;  // true=perspective, false=orthographic
 
 static const char* const DRAW_MODE_NAMES[] = {
@@ -929,7 +926,7 @@ static void switchCameraType(bool toPerspective)
  *  ┌─────────────────────────────────────────────────────────────────┐
  *  │                    RenderPanel (3-D view)                       │
  *  ├─────────────────────────────────────────────────────────────────┤
- *  │ [LoD] [Mode] [Proj] [Scale] [Reset View] [Save RGB…]           │
+ *  │ [Mode] [Proj] [Scale] [Reset View] [Save RGB…]                 │
  *  ├─────────────────────────────────────────────────────────────────┤
  *  │ Instances: N  |  Full-detail tris: ~NM  |  Frame: N ms (N FPS) │
  *  └─────────────────────────────────────────────────────────────────┘
@@ -942,7 +939,7 @@ public:
 
     LargeAssemblyWindow(int W, int H)
         : Fl_Double_Window(W, H,
-              "Obol – Large-Scale CAD Assembly (SoCADAssembly + LoD)")
+              "Obol – Large-Scale CAD Assembly (SoCADAssembly)")
     {
         int panel_h = H - TOOLBAR_H - STATUS_H;
 
@@ -953,13 +950,6 @@ public:
         tb->color(fl_rgb_color(32, 34, 48));
 
         int bx = 6, by = panel_h + 6, bh = 28;
-
-        lod_btn_ = new Fl_Button(bx, by, 100, bh, "LoD: ON");
-        lod_btn_->callback(lodCB, this);
-        lod_btn_->labelsize(11);
-        lod_btn_->color(fl_rgb_color(40, 130, 60));
-        lod_btn_->labelcolor(FL_WHITE);
-        bx += 106;
 
         mode_btn_ = new Fl_Button(bx, by, 120, bh, "Mode: Shaded");
         mode_btn_->callback(modeCB, this);
@@ -1011,11 +1001,6 @@ public:
 
         if (s_asm.root) s_asm.root->unref();
         s_asm = buildLargeScene(SCALE_LEVELS[s_scaleLevelIdx], pw, ph);
-        if (s_asm.viewState) {
-            s_asm.viewState->lodMode.setValue(
-                s_lodEnabled ? SoCADViewState::LOD_ENABLED :
-                               SoCADViewState::LOD_DISABLED);
-        }
         if (s_asm.assembly)
             s_asm.assembly->drawMode.setValue(DRAW_MODES[s_drawModeIdx]);
         // Restore chosen projection type after rebuild
@@ -1027,7 +1012,6 @@ public:
     }
 
 private:
-    Fl_Button* lod_btn_   = nullptr;
     Fl_Button* mode_btn_  = nullptr;
     Fl_Button* proj_btn_  = nullptr;
     Fl_Button* scale_btn_ = nullptr;
@@ -1039,28 +1023,7 @@ private:
             s_asm.numInstances,
             s_asm.numParts,
             s_panel ? s_panel->lastRenderMs() : 0.0,
-            s_lodEnabled,
             DRAW_MODE_NAMES[s_drawModeIdx]);
-    }
-
-    static void lodCB(Fl_Widget*, void* data)
-    {
-        auto* self = static_cast<LargeAssemblyWindow*>(data);
-        s_lodEnabled = !s_lodEnabled;
-        if (s_asm.viewState) {
-            s_asm.viewState->lodMode.setValue(
-                s_lodEnabled ? SoCADViewState::LOD_ENABLED :
-                               SoCADViewState::LOD_DISABLED);
-        }
-        if (self->lod_btn_) {
-            self->lod_btn_->label(s_lodEnabled ? "LoD: ON" : "LoD: OFF");
-            self->lod_btn_->color(s_lodEnabled
-                ? fl_rgb_color(40, 130, 60)
-                : fl_rgb_color(150, 60, 40));
-            self->lod_btn_->redraw();
-        }
-        if (s_panel) s_panel->refreshRender();
-        self->updateStatus();
     }
 
     static void modeCB(Fl_Widget*, void* data)

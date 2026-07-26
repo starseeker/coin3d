@@ -67,10 +67,6 @@ SoCADViewStateElement::matches(const SoElement *element) const
     const SoCADViewStateElement *other =
         static_cast<const SoCADViewStateElement *>(element);
     return this->viewState_.viewId == other->viewState_.viewId &&
-        this->viewState_.lodMode == other->viewState_.lodMode &&
-        this->viewState_.lodScale == other->viewState_.lodScale &&
-        this->viewState_.selectedFullDetail ==
-            other->viewState_.selectedFullDetail &&
         this->viewState_.softwareWireMode ==
             other->viewState_.softwareWireMode;
 }
@@ -132,15 +128,7 @@ SoCADViewState::SoCADViewState(void)
 
     SO_NODE_ADD_FIELD(viewIdHigh, (0));
     SO_NODE_ADD_FIELD(viewIdLow, (0));
-    SO_NODE_ADD_FIELD(lodMode, (LOD_INHERIT));
-    SO_NODE_ADD_FIELD(lodScale, (1.0f));
-    SO_NODE_ADD_FIELD(selectedFullDetail, (TRUE));
     SO_NODE_ADD_FIELD(softwareWireMode, (SOFTWARE_WIRE_INHERIT));
-
-    SO_NODE_DEFINE_ENUM_VALUE(LodMode, LOD_INHERIT);
-    SO_NODE_DEFINE_ENUM_VALUE(LodMode, LOD_DISABLED);
-    SO_NODE_DEFINE_ENUM_VALUE(LodMode, LOD_ENABLED);
-    SO_NODE_SET_SF_ENUM_TYPE(lodMode, LodMode);
 
     SO_NODE_DEFINE_ENUM_VALUE(SoftwareWireMode, SOFTWARE_WIRE_INHERIT);
     SO_NODE_DEFINE_ENUM_VALUE(SoftwareWireMode, SOFTWARE_WIRE_AUTO);
@@ -170,23 +158,6 @@ SoCADViewState::doAction(SoAction *action)
             static_cast<uint64_t>(this->viewIdLow.getValue());
         viewState.viewId = hi | lo;
     }
-    if (!this->lodMode.isIgnored()) {
-        switch (this->lodMode.getValue()) {
-            case LOD_DISABLED:
-                viewState.lodMode = Obol::CadLodMode::DISABLED;
-                break;
-            case LOD_ENABLED:
-                viewState.lodMode = Obol::CadLodMode::ENABLED;
-                break;
-            default:
-                break;
-        }
-    }
-    if (!this->lodScale.isIgnored())
-        viewState.lodScale = this->lodScale.getValue();
-    if (!this->selectedFullDetail.isIgnored())
-        viewState.selectedFullDetail =
-            this->selectedFullDetail.getValue() ? true : false;
     if (!this->softwareWireMode.isIgnored()) {
         switch (this->softwareWireMode.getValue()) {
             case SOFTWARE_WIRE_QUALITY:

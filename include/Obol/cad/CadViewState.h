@@ -43,20 +43,6 @@
 namespace Obol {
 
 /**
- * @brief View-local LoD policy.
- *
- * INHERIT leaves the current traversal state's LoD policy unchanged. If no
- * earlier view state exists, LoD is disabled. Applications should set ENABLED
- * or DISABLED explicitly from each view controller when they need predictable
- * per-view behavior.
- */
-enum class CadLodMode : int {
-    INHERIT  = -1,
-    DISABLED = 0,
-    ENABLED  = 1
-};
-
-/**
  * @brief Software-backend wireframe rasterization policy.
  *
  * AUTO lets the active backend choose its preferred path, QUALITY forces the
@@ -78,9 +64,6 @@ enum class CadSoftwareWireMode : int {
  */
 struct CadViewState {
     uint64_t   viewId = 0;
-    CadLodMode lodMode = CadLodMode::DISABLED;
-    float      lodScale = 1.0f;
-    bool       selectedFullDetail = true;
     CadSoftwareWireMode softwareWireMode = CadSoftwareWireMode::AUTO;
 };
 
@@ -89,9 +72,6 @@ struct CadViewState {
  */
 struct CadRenderState {
     uint64_t viewId = 0;
-    bool     lodEnabled = false;
-    float    lodScale = 1.0f;
-    bool     selectedFullDetail = true;
     CadSoftwareWireMode softwareWireMode = CadSoftwareWireMode::AUTO;
 };
 
@@ -100,9 +80,6 @@ resolveCadRenderState(const CadViewState& viewState)
 {
     CadRenderState render;
     render.viewId = viewState.viewId;
-    render.lodEnabled = viewState.lodMode == CadLodMode::ENABLED;
-    render.lodScale = viewState.lodScale > 0.0f ? viewState.lodScale : 1.0f;
-    render.selectedFullDetail = viewState.selectedFullDetail;
     render.softwareWireMode = viewState.softwareWireMode;
     return render;
 }

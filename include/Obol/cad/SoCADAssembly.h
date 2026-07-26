@@ -45,7 +45,8 @@
  * - Wire geometry may be supplied either as flat segments or polylines;
  *   triangle meshes are optional and used for shaded rendering.
  * - Picking returns SoCADDetail with stable InstanceId.
- * - LoD (Level of Detail) is applied at render time via POP-like quantisation.
+ * - Progressive cuts are supplied explicitly per instance by the producer;
+ *   this node never derives LoD from the camera or rebuilds a hierarchy.
  * - The node renders entirely within its GLRender() override; it does NOT
  *   walk children.
  *
@@ -84,6 +85,8 @@
 #include <Obol/cad/CadIds.h>
 
 #include <vector>
+#include <array>
+#include <algorithm>
 #include <optional>
 #include <cstddef>
 #include <cstdint>
@@ -142,6 +145,25 @@ struct WireRep {
 
     /** Tight axis-aligned bounding box enclosing all wire geometry. */
     SbBox3f bounds;
+
+    /** Cumulative segment counts for retained PoP levels 0..15. */
+    std::array<uint32_t, 16> progressiveSegmentCount = {};
+    uint8_t progressiveMinimumLevel = 255;
+    uint8_t progressiveResidentLevel = 255;
+    SbVec3f progressiveQuantizationMinimum;
+    SbVec3f progressiveQuantizationMaximum;
+
+    bool isProgressive() const noexcept {
+        return progressiveResidentLevel < 16;
+    }
+
+    size_t segmentCountAtLevel(uint8_t level) const noexcept {
+        if (!isProgressive()) return segmentCount();
+        level = std::max(progressiveMinimumLevel,
+                         std::min(progressiveResidentLevel, level));
+        return std::min<size_t>(progressiveSegmentCount[level],
+                                segmentCount());
+    }
 };
 
 /**
@@ -156,6 +178,24 @@ struct TriMesh {
     std::vector<SbVec3f>  normals;    ///< optional; empty or positions.size()
     std::vector<uint32_t> indices;    ///< triangle list (3 indices per tri)
     SbBox3f               bounds;
+    /** Cumulative triangle index counts for retained PoP levels 0..15. */
+    std::array<uint32_t, 16> progressiveIndexCount = {};
+    uint8_t progressiveMinimumLevel = 255;
+    uint8_t progressiveResidentLevel = 255;
+    SbVec3f progressiveQuantizationMinimum;
+    SbVec3f progressiveQuantizationMaximum;
+
+    bool isProgressive() const noexcept {
+        return progressiveResidentLevel < 16;
+    }
+
+    size_t indexCountAtLevel(uint8_t level) const noexcept {
+        if (!isProgressive()) return indices.size();
+        level = std::max(progressiveMinimumLevel,
+                         std::min(progressiveResidentLevel, level));
+        return std::min<size_t>(progressiveIndexCount[level],
+                                indices.size());
+    }
 };
 
 /**
@@ -192,6 +232,19 @@ struct PartGeometry {
     std::optional<PointRep> points; ///< Point primitives and optional attributes
     std::optional<WireRep> wire;    ///< Feature edges (no tessellation needed)
     std::optional<TriMesh> shaded;  ///< Optional triangle mesh for shading
+
+    /**
+     * The shaded triangles form a verified closed, manifold, consistently
+     * oriented surface whose exterior winding has been normalized to
+     * counter-clockwise.  The renderer may cull back faces only when this
+     * guarantee is true and the occurrence transform preserves orientation.
+     *
+     * This is deliberately producer-supplied rather than inferred by the
+     * renderer: validating topology belongs in geometry preparation and may
+     * be persisted with an LoD asset.  Open, unoriented, transparent, or
+     * otherwise unverified meshes must leave this false.
+     */
+    bool shadedCullBackfaces = false;
 
     /**
      * This wire representation is a conservative LoD proxy rather than
@@ -233,6 +286,8 @@ struct InstanceRecord {
     std::string   childName;       ///< Name string from the comb tree node
     uint32_t      occurrenceIndex = 0; ///< Sibling disambiguator (0-based)
     uint8_t       boolOp          = 0; ///< Boolean operation (0=union,1=sub,2=inter)
+    /** Per-occurrence retained PoP draw cut.  255 selects full resident data. */
+    uint8_t       lodLevel        = 255;
 
     InstanceStyle style;
 };
@@ -257,6 +312,11 @@ struct SharedPartUpdate {
 struct InstanceUpdate {
     InstanceId     instance;
     InstanceRecord record;
+};
+
+struct InstanceLodUpdate {
+    InstanceId instance;
+    uint8_t lodLevel = 255;
 };
 
 /**
@@ -426,6 +486,10 @@ public:
      */
     void upsertInstances(const std::vector<Obol::InstanceUpdate>& updates);
 
+    /** Update only retained progressive draw cuts. */
+    void updateInstanceLodLevels(
+        const std::vector<Obol::InstanceLodUpdate>& updates);
+
     /** Remove an instance.  No-op if @p iid is not in the database. */
     void removeInstance(Obol::InstanceId iid);
 
@@ -464,8 +528,8 @@ public:
     /** True when an instance is hidden from rendering and generic traversal. */
     bool isInstanceHidden(Obol::InstanceId iid) const;
 
-    /** True when any part can provide progressive triangle LoD. */
-    bool hasPartLod() const;
+    /** True when any retained part contains producer-authored PoP prefixes. */
+    bool hasProgressivePartLod() const;
 
     /**
      * Return the geometry for @p pid, or nullptr if not in the part library.
@@ -480,19 +544,6 @@ public:
      * node: retrieve part, transform and style, then build an explicit shape.
      */
     std::optional<Obol::InstanceRecord> getInstanceRecord(Obol::InstanceId iid) const;
-
-    /**
-     * Return LoD-filtered triangle indices for @p pid at the given @p level.
-     *
-     * Builds the part's LoD structure on first demand.  Returns nullptr when
-     * no shaded geometry is available for the part.
-     * The returned pointer is stable until the next geometry change for
-     * that part (i.e., until the next upsertPart/removePart call).
-     *
-     * Used internally by the renderer when LoD is enabled by SoCADViewState.
-     */
-    const std::vector<uint32_t>* getLodFilteredIndices(Obol::PartId pid,
-                                                        uint8_t level) const;
 
     /**
      * Exclude a set of instances from rendering.
