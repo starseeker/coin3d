@@ -41,9 +41,7 @@
 #include <Obol/cad/CadViewState.h>
 
 #include <Inventor/elements/SoSubElement.h>
-#include <Inventor/fields/SoSFBool.h>
 #include <Inventor/fields/SoSFEnum.h>
-#include <Inventor/fields/SoSFFloat.h>
 #include <Inventor/fields/SoSFUInt32.h>
 #include <Inventor/nodes/SoSubNode.h>
 
@@ -79,7 +77,7 @@ private:
  *
  * Place one of these in a view-specific branch before shared CAD assembly
  * nodes. The shared assembly data remains immutable across views; the
- * traversal state carries view-local policy such as LoD enablement.
+ * traversal state carries presentation policy that does not alter geometry.
  */
 class OBOL_DLL_API SoCADViewState : public SoNode {
     typedef SoNode inherited;
@@ -87,12 +85,6 @@ class OBOL_DLL_API SoCADViewState : public SoNode {
     SO_NODE_HEADER(SoCADViewState);
 
 public:
-    enum LodMode {
-        LOD_INHERIT  = -1,
-        LOD_DISABLED = 0,
-        LOD_ENABLED  = 1
-    };
-
     enum SoftwareWireMode {
         SOFTWARE_WIRE_INHERIT = -1,
         SOFTWARE_WIRE_AUTO = 0,
@@ -105,9 +97,6 @@ public:
 
     SoSFUInt32 viewIdHigh;
     SoSFUInt32 viewIdLow;
-    SoSFEnum   lodMode;
-    SoSFFloat  lodScale;
-    SoSFBool   selectedFullDetail;
     SoSFEnum   softwareWireMode;
 
     virtual SbBool affectsState(void) const override;

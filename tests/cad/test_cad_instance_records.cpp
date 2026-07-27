@@ -112,7 +112,7 @@ main()
     runner.endTest(stored.has_value() && sameRecord(*stored, intersection),
         "bulk explicit insertion must be lossless");
 
-    runner.startTest("shaded parts provide LoD on first demand");
+    runner.startTest("ordinary shaded parts do not invent LoD");
     Obol::PartGeometry shaded;
     Obol::TriMesh triangle;
     triangle.positions = {SbVec3f(0.0f, 0.0f, 0.0f),
@@ -123,17 +123,21 @@ main()
                               SbVec3f(1.0f, 1.0f, 0.0f));
     shaded.shaded = std::move(triangle);
     assembly->upsertPart(first.part, shaded);
-    const std::vector<uint32_t> *fullDetail =
-        assembly->getLodFilteredIndices(first.part, 255);
-    runner.endTest(assembly->hasPartLod() && fullDetail &&
-        fullDetail->size() == 3,
-        "LoD capability must be visible before its hierarchy is requested");
+    runner.endTest(!assembly->hasProgressivePartLod(),
+        "the CAD node must not build a camera-driven hierarchy");
 
-    runner.startTest("replacing shaded geometry invalidates LoD capability");
+    runner.startTest("producer-authored progressive metadata is retained");
+    shaded.shaded->progressiveMinimumLevel = 0;
+    shaded.shaded->progressiveResidentLevel = 15;
+    shaded.shaded->progressiveIndexCount.fill(3);
+    assembly->upsertPart(first.part, shaded);
+    runner.endTest(assembly->hasProgressivePartLod(),
+        "only an explicit resident prefix may enable progressive drawing");
+
+    runner.startTest("replacing shaded geometry clears progressive capability");
     assembly->upsertPart(first.part, Obol::PartGeometry());
-    runner.endTest(!assembly->hasPartLod() &&
-        !assembly->getLodFilteredIndices(first.part, 255),
-        "part replacement must discard the previous LoD hierarchy");
+    runner.endTest(!assembly->hasProgressivePartLod(),
+        "part replacement must discard the previous progressive prefix");
 
     assembly->unref();
     return runner.getSummary();

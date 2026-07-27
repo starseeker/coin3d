@@ -102,14 +102,14 @@ assembly->upsertPart(pid, geom);
 
 ### Adding a view policy
 
-`SoCADAssembly` stores shared geometry and instances. Per-view render policy,
-including LoD enablement, is supplied by an `SoCADViewState` node earlier in
-the same traversal branch:
+`SoCADAssembly` stores shared geometry and instances. Non-geometric per-view
+presentation policy is supplied by an `SoCADViewState` node earlier in the
+same traversal branch. Progressive levels are producer-authored per instance;
+the CAD node does not derive them from its camera:
 
 ```cpp
 SoCADViewState* view = new SoCADViewState;
 view->viewIdLow.setValue(1);
-view->lodMode.setValue(SoCADViewState::LOD_ENABLED);
 
 root->addChild(view);
 root->addChild(assembly);
@@ -157,8 +157,8 @@ assembly->upsertInstances(instances);
 assembly->endUpdate();
 ```
 
-`clear()` removes parts, instances, hidden/selected/unpickable sets, LoD
-payloads, BVHs, and cached frame plans. It is intended for owners that rebuild an
+`clear()` removes parts, instances, hidden/selected/unpickable sets, retained
+progressive prefixes, BVHs, and cached frame plans. It is intended for owners that rebuild an
 assembly from an external source of truth rather than editing the existing
 packet incrementally.
 
@@ -195,7 +195,7 @@ and clear the hidden set to return to aggregate rendering.
 ```cpp
 assembly->setHiddenInstances(hiddenIds);         // no render, bounds, pick
 assembly->setUnpickableInstances(unpickableIds); // render/bounds only
-assembly->setSelectedInstances(selectedIds);     // selection flag for LoD/style
+assembly->setSelectedInstances(selectedIds);     // selection/style state
 ```
 
 Hidden instances are omitted from frame plans, bounding boxes, primitive counts,
@@ -223,7 +223,7 @@ editing and per-primitive state are the usual promotion triggers.
 ### Wireframe occlusion
 
 When `drawMode = WIREFRAME` and `wireframeOcclusion = TRUE`, the renderer
-runs a depth-only triangle pass (using coarse LoD if available) before the
+runs a depth-only triangle pass using the same active progressive cut before the
 wire pass.  This makes auxiliary `OCCLUDED` objects (see DepthPolicy) respect
 the CAD surfaces even in wireframe mode.
 
@@ -336,40 +336,26 @@ PartId pid2 = CadIdBuilder::hash128(keyBytes, keyLen); // from raw bytes
 
 ## LoD strategy
 
-### POP-buffer quantisation
+### Producer-authored retained prefixes
 
-Both `SegmentPopLod` and `TrianglePopLod` use a POP-inspired discretisation:
+The geometry producer supplies exact coordinates in activation order,
+cumulative primitive counts for levels 0 through 15, quantization bounds, and
+the minimum/resident levels. Each `InstanceRecord::lodLevel` selects one active
+cut. `updateInstanceLodLevels()` changes only those cuts.
 
-1. Normalise all coordinates to `[0, 1]` relative to the part bounding box.
-2. At LoD level `L` the grid has `2^(L+1)` cells per axis.
-3. A primitive is **degenerate** (dropped) if all its endpoints snap to the
-   same grid cell.
-4. `minLevelForSegment(i)` / `minLevelForTriangle(i)` is the lowest level at
-   which primitive `i` is non-degenerate.
+The CAD node deliberately does not inspect camera distance, projected size, or
+selection to choose a level, and it never builds a second hierarchy. A view
+owner may therefore share one resident part between views while assigning a
+different active level to each occurrence. Shaded rendering, wire rendering,
+hidden-line depth, and picking all clamp to the same producer-authored prefix
+and snap retained exact coordinates with the same quantization rule.
 
-### Level selection
+Growing a progressive part appends CPU/GPU tails when possible. Changing an
+active cut does not rebuild the part or upload geometry. Replacing a part is
+reserved for actual prefix growth, trimming, or source invalidation.
 
-The renderer selects a LoD level for each part based on the distance from
-the camera to the instance's world-space bounding sphere:
-
-```
-ratio  = dist / radius
-level  = floor(255 / (1 + ratio * 0.5))
-```
-
-This heuristic gives full detail (`level = 255`) up to `radius * 2` from
-the camera and progressively coarser levels as the object recedes.  LoD policy
-comes from `SoCADViewState`, not the assembly, so one shared assembly can be
-rendered at different detail levels in different views.
-
-### Focus set (selected/hovered instances)
-
-Force full-detail LoD for selected or hovered instances:
-
-```cpp
-assembly->setSelectedInstances({ pickedIid });
-// Renderer will use level 255 for these instances regardless of distance.
-```
+`SegmentPopLod` and `TrianglePopLod` remain standalone preparation utilities;
+they are not called by `SoCADAssembly` or its renderer.
 
 ---
 
@@ -379,15 +365,15 @@ assembly->setSelectedInstances({ pickedIid });
 |------|-------------|--------|
 | 2 | GL 3.1 + instanced shaders | One draw call per unique part |
 | 1 | GL 2.0 + GLSL 1.10 + VBOs | Per-instance loop, frustum-culled |
-| 0 | GL 1.1 (Mesa swrast fallback) | `glBegin`/`glEnd`, frustum-culled, LoD-aware |
+| 0 | GL 1.1 (Mesa swrast fallback) | `glBegin`/`glEnd`, frustum-culled, progressive-cut aware |
 
 Per-instance frustum culling is active in Tier 0 and Tier 1: each instance's
 world bounding box is tested against the six frustum planes before issuing
 any draw call, skipping fully off-screen instances at no GPU cost.
 
-Shaded mesh LoD is active in Tier 0 and Tier 1. When shaded LoD is enabled on
-a GL 3.1-capable context, the renderer currently falls back from Tier 2 to
-Tier 1 so each instance can use its own LoD level. A future Tier-2 improvement
+Producer-authored progressive cuts are active in Tier 0 and Tier 1. When a
+progressive part is present on a GL 3.1-capable context, the renderer currently
+falls back from Tier 2 to Tier 1 so each instance can use its own level. A future Tier-2 improvement
 should bin instances by `(part, lodLevel)` and issue instanced draws per bin.
 
 GPU resource uploads are short-circuited in all tiers: `CadGpuResources`
@@ -404,7 +390,7 @@ styles, selection, or draw mode change.
   Thick-line rendering requires geometry shaders or triangle-based lines.
 * **Transparency**: no alpha-sorting is implemented.  Semi-transparent CAD
   parts may render with incorrect blending.
-* **Tier-2 shaded LoD**: shaded LoD currently routes Tier-2-capable contexts
+* **Tier-2 progressive drawing**: progressive parts currently route Tier-2-capable contexts
   through the Tier-1 VBO loop. This favors correctness over maximum batching.
 * **Wireframe occlusion**: the `wireframeOcclusion` field is exposed but the
   depth-only triangle prepass is not yet implemented.

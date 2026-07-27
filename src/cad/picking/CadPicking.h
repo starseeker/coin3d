@@ -118,6 +118,7 @@ public:
         InstanceId instanceId;
         PartId     partId;
         SbMatrix   localToWorld;  ///< For transforming pick ray into part space
+        uint8_t    lodLevel = 255; ///< Active retained progressive cut
     };
 
     /** Build the BVH from a flat list of instance entries.  O(N log N). */

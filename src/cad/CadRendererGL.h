@@ -110,8 +110,6 @@ public:
      * @param viewProj   Combined view-projection matrix (OI row-major, GL_FALSE upload).
      * @param viewMatrix Active model-view matrix before local instance transforms.
      * @param projectionMatrix Active projection matrix.
-     * @param cameraPos  Camera (eye) position in world space (for LoD distance).
-     * @param renderState Resolved per-view render policy.
      * @param partGenMap Map from PartId → generation counter (to detect stale VBOs).
      */
     void render(const CadFramePlan& plan,
@@ -120,8 +118,6 @@ public:
                 const SbMatrix&      viewProj,
                 const SbMatrix&      viewMatrix,
                 const SbMatrix&      projectionMatrix,
-                const SbVec3f&       cameraPos,
-                const CadRenderState& renderState,
                 const std::unordered_map<PartId, uint64_t,
                                          std::hash<PartId>>& partGenMap);
 
@@ -182,19 +178,13 @@ private:
     CadGpuResources *gpuRes_ = nullptr;
     uint32_t gpuContextId_ = 0;
 
-    // CPU-side LoD index cache.  Keyed by (PartId, level); invalidated when
-    // the part's generation counter changes.
-    struct LodCacheEntry {
-        uint64_t generation = UINT64_MAX;
-        std::unordered_map<uint8_t, std::vector<uint32_t>> byLevel;
-    };
-    std::unordered_map<PartId, LodCacheEntry, std::hash<PartId>> lodCache_;
-
     // Compiled shader programs (keyed by context id, lazily compiled)
     struct ShaderPrograms {
         GLuint wire    = 0; ///< Wire-pass shader (no lighting)
+        GLuint wirePop = 0; ///< Wire-pass shader with branchless PoP snapping
         GLuint proxyPoint = 0; ///< Batched subpixel-proxy point shader
         GLuint shaded  = 0; ///< Shaded-pass shader (Phong, no instancing)
+        GLuint shadedPop = 0; ///< Shaded-pass shader with branchless PoP snapping
         GLuint wireInst   = 0; ///< Wire-pass shader (instanced)
         GLuint shadedInst = 0; ///< Shaded-pass shader (instanced Phong)
     };
@@ -209,23 +199,8 @@ private:
 
     // Ensure part geometry has been uploaded to GPU
     void ensurePartUploaded(PartId pid, const SoCADAssembly& assembly,
-                            uint64_t gen, const SoGLContext * glue);
-
-    // Return cached LoD-filtered triangle indices for (pid, level, gen).
-    // Builds the filtered list on first access and reuses it thereafter.
-    // Returns nullptr if the assembly has no LoD structure for this part.
-    const std::vector<uint32_t>* getLodCachedIndices(
-        PartId pid, uint8_t level, uint64_t gen,
-        const SoCADAssembly& assembly);
-
-    const std::vector<uint32_t>* lodIndicesForInstance(
-        const SoCADAssembly& assembly,
-        PartId part,
-        const CadVisibleInstance& inst,
-        const SbVec3f& cameraPos,
-        const CadRenderState& renderState,
-        const std::unordered_map<PartId, uint64_t,
-                                 std::hash<PartId>>& partGenMap);
+                            uint64_t gen, uint8_t requestedLod,
+                            const SoGLContext * glue);
 
     void renderPoints(const CadFramePlan& plan,
                       const SoCADAssembly& assembly,
@@ -251,14 +226,11 @@ private:
                        const SoCADAssembly& assembly,
                        const SoGLContext*   glue,
                        const SbMatrix&      viewProj,
-                       const SbVec3f&       cameraPos,
-                       const CadRenderState& renderState,
-                       const std::unordered_map<PartId, uint64_t,
-                                                std::hash<PartId>>& partGenMap,
                        bool customWireOnly,
                        bool drawShaded);
 
     void renderFixedVboLoop(const CadFramePlan& plan,
+                            const SoCADAssembly& assembly,
                             const SoGLContext* glue,
                             const SbMatrix& viewProj,
                             const SbMatrix& viewMatrix,
@@ -276,11 +248,7 @@ private:
                              const SoGLContext*   glue,
                              const SbMatrix&      viewProj,
                              const SbMatrix&      viewMatrix,
-                             const SbMatrix&      projectionMatrix,
-                             const SbVec3f&       cameraPos,
-                             const CadRenderState& renderState,
-                             const std::unordered_map<PartId, uint64_t,
-                                                       std::hash<PartId>>& partGenMap);
+                             const SbMatrix&      projectionMatrix);
 
     void drawWireVboLoop(const CadFramePlan& plan,
                          const SoGLContext* glue,

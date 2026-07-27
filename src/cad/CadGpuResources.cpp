@@ -35,8 +35,43 @@
 #include <Inventor/system/gl.h>
 #include "glue/glp.h"
 
+#include <algorithm>
+#include <cstdlib>
+#include <limits>
+
 namespace Obol {
 namespace internal {
+
+static GLsizei
+progressiveBufferCapacity(GLsizei required, GLsizei current,
+                          bool progressive)
+{
+    if (!progressive || current <= 0)
+        return required;
+    const GLsizei maximum = std::numeric_limits<GLsizei>::max();
+    const GLsizei doubled =
+        current > maximum / 2 ? maximum : current * 2;
+    return std::max(required, doubled);
+}
+
+static void
+allocateAndPopulateBuffer(const SoGLContext *glue, GLenum target,
+                          GLsizeiptr capacityBytes,
+                          GLsizeiptr logicalBytes, const void *data,
+                          GLenum usage)
+{
+    /* glBufferData's size describes both the allocation and, when data is
+     * non-null, how many bytes the driver reads from data.  Progressive
+     * growth may deliberately reserve more capacity than the current vector
+     * contains, so allocate the store first and upload only the logical
+     * bytes. */
+    if (capacityBytes > logicalBytes) {
+        glue->glBufferData(target, capacityBytes, nullptr, usage);
+        glue->glBufferSubData(target, 0, logicalBytes, data);
+    } else {
+        glue->glBufferData(target, logicalBytes, data, usage);
+    }
+}
 
 // ---------------------------------------------------------------------------
 // Destructor
@@ -64,6 +99,7 @@ void CadGpuResources::deletePointGpu(CadPointGpu& p, const SoGLContext * glue)
         p.posBuf = 0;
     }
     p.count = 0;
+    p.posCapacity = 0;
 }
 
 void CadGpuResources::deleteWireGpu(CadWireGpu& w, const SoGLContext * glue)
@@ -82,6 +118,9 @@ void CadGpuResources::deleteWireGpu(CadWireGpu& w, const SoGLContext * glue)
     }
     w.segCount  = 0;
     w.vertCount = 0;
+    w.posCapacity = 0;
+    w.idxCount = 0;
+    w.idxCapacity = 0;
     w.sequentialSegments = false;
     w.instanceVbo = 0;
     w.instanceBase = UINT32_MAX;
@@ -105,9 +144,34 @@ void CadGpuResources::deleteTriGpu(CadTriGpu& t, const SoGLContext * glue)
         glue->glDeleteBuffers(1, &t.idxBuf);
         t.idxBuf = 0;
     }
+    t.vertCount = 0;
     t.idxCount = 0;
+    t.posCapacity = 0;
+    t.normCapacity = 0;
+    t.idxCapacity = 0;
     t.instanceVbo = 0;
     t.instanceBase = UINT32_MAX;
+}
+
+void CadGpuResources::deleteProgressiveGpu(
+        CadProgressiveGpu& p, const SoGLContext *glue)
+{
+    if (p.posBuf && glue->glDeleteBuffers)
+        glue->glDeleteBuffers(1, &p.posBuf);
+    if (p.normBuf && glue->glDeleteBuffers)
+        glue->glDeleteBuffers(1, &p.normBuf);
+    progressiveBytes_ = p.bytes <= progressiveBytes_ ?
+        progressiveBytes_ - p.bytes : 0;
+    p = CadProgressiveGpu();
+}
+
+void CadGpuResources::deleteProgressiveGpu(
+        Entry& entry, const SoGLContext *glue)
+{
+    for (CadProgressiveGpu& p : entry.progressiveWire)
+        deleteProgressiveGpu(p, glue);
+    for (CadProgressiveGpu& p : entry.progressiveTri)
+        deleteProgressiveGpu(p, glue);
 }
 
 // ---------------------------------------------------------------------------
@@ -123,6 +187,7 @@ void CadGpuResources::upload(
         const float*    triNorm,
         const uint32_t* triIdx,      GLsizei triIdxCount,
         uint64_t        generation,
+        bool            progressive,
         const SoGLContext * glue,
         const CadGLCaps& caps)
 {
@@ -130,18 +195,36 @@ void CadGpuResources::upload(
 
     auto& entry = cache_[pid];
 
-    // Already up-to-date?
-    if (entry.generation == generation) return;
+    // The same progressive source generation may be realized at a larger
+    // view-dependent prefix later.
+    if (isUpToDate(
+            pid, generation, wireCount, segIdxCount,
+            triPosCount, triIdxCount))
+        return;
 
-    // Release stale resources first
-    deletePointGpu(entry.point, glue);
-    deleteWireGpu(entry.wire, glue);
-    deleteTriGpu(entry.tri, glue);
+    /* Ordinary geometry replacement is allowed to change every byte and
+     * representation.  Producer-declared progressive geometry is a stricter
+     * cumulative-prefix contract, so preserve its buffer objects below and
+     * append only newly resident tails. */
+    const bool progressiveReset = progressive &&
+        ((entry.wire.vertCount > 0 && wireCount < entry.wire.vertCount) ||
+         (entry.tri.vertCount > 0 && triPosCount < entry.tri.vertCount) ||
+         (entry.tri.idxCount > 0 && triIdxCount < entry.tri.idxCount));
+    if (!progressive || progressiveReset) {
+        deletePointGpu(entry.point, glue);
+        deleteWireGpu(entry.wire, glue);
+        deleteTriGpu(entry.tri, glue);
+        deleteProgressiveGpu(entry, glue);
+    } else {
+        /* Point primitives have no retained prefix contract. */
+        deletePointGpu(entry.point, glue);
+    }
     entry.generation = generation;
 
     if (pointData && pointCount > 0) {
         CadPointGpu& p = entry.point;
         p.count = pointCount;
+        p.posCapacity = pointCount;
         glue->glGenBuffers(1, &p.posBuf);
         glue->glBindBuffer(GL_ARRAY_BUFFER, p.posBuf);
         glue->glBufferData(GL_ARRAY_BUFFER,
@@ -163,26 +246,70 @@ void CadGpuResources::upload(
     if (wireData && wireCount > 0 &&
             ((segIdx && segIdxCount > 0) || (!segIdx && wireCount >= 2))) {
         CadWireGpu& w = entry.wire;
-        w.vertCount = wireCount;
-        w.sequentialSegments = (segIdx == nullptr);
-        w.segCount  = w.sequentialSegments ? wireCount / 2 : segIdxCount / 2;
+        const bool sequential = (segIdx == nullptr);
+        const bool appendable = progressive && w.posBuf &&
+            w.sequentialSegments == sequential &&
+            wireCount >= w.vertCount &&
+            (sequential || (w.segIdxBuf && segIdxCount >= w.idxCount));
 
-        glue->glGenBuffers(1, &w.posBuf);
+        if (!appendable && w.posBuf)
+            deleteWireGpu(w, glue);
+
+        const GLsizei oldWireCount = w.vertCount;
+        const GLsizei oldSegIdxCount = w.idxCount;
+        const bool newWireBuffers = !w.posBuf;
+        if (newWireBuffers)
+            glue->glGenBuffers(1, &w.posBuf);
         glue->glBindBuffer(GL_ARRAY_BUFFER, w.posBuf);
-        glue->glBufferData(GL_ARRAY_BUFFER,
-                           static_cast<GLsizeiptr>(wireCount) * 3 * sizeof(float),
-                           wireData, GL_STATIC_DRAW);
-
-        if (!w.sequentialSegments) {
-            glue->glGenBuffers(1, &w.segIdxBuf);
-            glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, w.segIdxBuf);
-            glue->glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                               static_cast<GLsizeiptr>(segIdxCount) * sizeof(uint32_t),
-                               segIdx, GL_STATIC_DRAW);
+        if (newWireBuffers || wireCount > w.posCapacity) {
+            const GLsizei capacity = progressiveBufferCapacity(
+                wireCount, w.posCapacity, progressive);
+            allocateAndPopulateBuffer(
+                glue, GL_ARRAY_BUFFER,
+                static_cast<GLsizeiptr>(capacity) * 3 * sizeof(float),
+                static_cast<GLsizeiptr>(wireCount) * 3 * sizeof(float),
+                wireData, progressive ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
+            w.posCapacity = capacity;
+        } else if (wireCount > oldWireCount) {
+            glue->glBufferSubData(
+                GL_ARRAY_BUFFER,
+                static_cast<GLintptr>(oldWireCount) * 3 * sizeof(float),
+                static_cast<GLsizeiptr>(wireCount - oldWireCount) *
+                    3 * sizeof(float),
+                wireData + static_cast<size_t>(oldWireCount) * 3);
         }
 
+        if (!sequential) {
+            const bool newIndexBuffer = !w.segIdxBuf;
+            if (newIndexBuffer)
+                glue->glGenBuffers(1, &w.segIdxBuf);
+            glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, w.segIdxBuf);
+            if (newIndexBuffer || segIdxCount > w.idxCapacity) {
+                const GLsizei capacity = progressiveBufferCapacity(
+                    segIdxCount, w.idxCapacity, progressive);
+                allocateAndPopulateBuffer(
+                    glue, GL_ELEMENT_ARRAY_BUFFER,
+                    static_cast<GLsizeiptr>(capacity) * sizeof(uint32_t),
+                    static_cast<GLsizeiptr>(segIdxCount) * sizeof(uint32_t),
+                    segIdx,
+                    progressive ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
+                w.idxCapacity = capacity;
+            } else if (segIdxCount > oldSegIdxCount) {
+                glue->glBufferSubData(
+                    GL_ELEMENT_ARRAY_BUFFER,
+                    static_cast<GLintptr>(oldSegIdxCount) * sizeof(uint32_t),
+                    static_cast<GLsizeiptr>(segIdxCount - oldSegIdxCount) *
+                        sizeof(uint32_t),
+                    segIdx + oldSegIdxCount);
+            }
+        }
+        w.vertCount = wireCount;
+        w.idxCount = sequential ? 0 : segIdxCount;
+        w.sequentialSegments = sequential;
+        w.segCount = sequential ? wireCount / 2 : segIdxCount / 2;
+
         // Build VAO for wire geometry
-        if (caps.hasVAO && glue->glGenVertexArrays) {
+        if (caps.hasVAO && glue->glGenVertexArrays && !w.vao) {
             glue->glGenVertexArrays(1, &w.vao);
             glue->glBindVertexArray(w.vao);
 
@@ -200,35 +327,96 @@ void CadGpuResources::upload(
 
         glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
         glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    } else if (progressive && entry.wire.posBuf) {
+        deleteWireGpu(entry.wire, glue);
     }
 
     // --- Triangle geometry ---
     if (triPos && triPosCount > 0 && triIdx && triIdxCount > 0) {
         CadTriGpu& t = entry.tri;
-        t.idxCount = triIdxCount;
+        const bool normalsMatch = static_cast<bool>(triNorm) ==
+            static_cast<bool>(t.normBuf);
+        const bool appendable = progressive && t.posBuf && t.idxBuf &&
+            normalsMatch && triPosCount >= t.vertCount &&
+            triIdxCount >= t.idxCount;
+        if (!appendable && t.posBuf)
+            deleteTriGpu(t, glue);
 
-        glue->glGenBuffers(1, &t.posBuf);
+        const GLsizei oldVertCount = t.vertCount;
+        const GLsizei oldIdxCount = t.idxCount;
+        const bool newPosBuffer = !t.posBuf;
+        if (newPosBuffer)
+            glue->glGenBuffers(1, &t.posBuf);
         glue->glBindBuffer(GL_ARRAY_BUFFER, t.posBuf);
-        glue->glBufferData(GL_ARRAY_BUFFER,
-                           static_cast<GLsizeiptr>(triPosCount) * 3 * sizeof(float),
-                           triPos, GL_STATIC_DRAW);
-
-        if (triNorm) {
-            glue->glGenBuffers(1, &t.normBuf);
-            glue->glBindBuffer(GL_ARRAY_BUFFER, t.normBuf);
-            glue->glBufferData(GL_ARRAY_BUFFER,
-                               static_cast<GLsizeiptr>(triPosCount) * 3 * sizeof(float),
-                               triNorm, GL_STATIC_DRAW);
+        if (newPosBuffer || triPosCount > t.posCapacity) {
+            const GLsizei capacity = progressiveBufferCapacity(
+                triPosCount, t.posCapacity, progressive);
+            allocateAndPopulateBuffer(
+                glue, GL_ARRAY_BUFFER,
+                static_cast<GLsizeiptr>(capacity) * 3 * sizeof(float),
+                static_cast<GLsizeiptr>(triPosCount) * 3 * sizeof(float),
+                triPos, progressive ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
+            t.posCapacity = capacity;
+        } else if (triPosCount > oldVertCount) {
+            glue->glBufferSubData(
+                GL_ARRAY_BUFFER,
+                static_cast<GLintptr>(oldVertCount) * 3 * sizeof(float),
+                static_cast<GLsizeiptr>(triPosCount - oldVertCount) *
+                    3 * sizeof(float),
+                triPos + static_cast<size_t>(oldVertCount) * 3);
         }
 
-        glue->glGenBuffers(1, &t.idxBuf);
+        if (triNorm) {
+            const bool newNormBuffer = !t.normBuf;
+            if (newNormBuffer)
+                glue->glGenBuffers(1, &t.normBuf);
+            glue->glBindBuffer(GL_ARRAY_BUFFER, t.normBuf);
+            if (newNormBuffer || triPosCount > t.normCapacity) {
+                const GLsizei capacity = progressiveBufferCapacity(
+                    triPosCount, t.normCapacity, progressive);
+                allocateAndPopulateBuffer(
+                    glue, GL_ARRAY_BUFFER,
+                    static_cast<GLsizeiptr>(capacity) * 3 * sizeof(float),
+                    static_cast<GLsizeiptr>(triPosCount) * 3 * sizeof(float),
+                    triNorm,
+                    progressive ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
+                t.normCapacity = capacity;
+            } else if (triPosCount > oldVertCount) {
+                glue->glBufferSubData(
+                    GL_ARRAY_BUFFER,
+                    static_cast<GLintptr>(oldVertCount) * 3 * sizeof(float),
+                    static_cast<GLsizeiptr>(triPosCount - oldVertCount) *
+                        3 * sizeof(float),
+                    triNorm + static_cast<size_t>(oldVertCount) * 3);
+            }
+        }
+
+        const bool newIndexBuffer = !t.idxBuf;
+        if (newIndexBuffer)
+            glue->glGenBuffers(1, &t.idxBuf);
         glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, t.idxBuf);
-        glue->glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                           static_cast<GLsizeiptr>(triIdxCount) * sizeof(uint32_t),
-                           triIdx, GL_STATIC_DRAW);
+        if (newIndexBuffer || triIdxCount > t.idxCapacity) {
+            const GLsizei capacity = progressiveBufferCapacity(
+                triIdxCount, t.idxCapacity, progressive);
+            allocateAndPopulateBuffer(
+                glue, GL_ELEMENT_ARRAY_BUFFER,
+                static_cast<GLsizeiptr>(capacity) * sizeof(uint32_t),
+                static_cast<GLsizeiptr>(triIdxCount) * sizeof(uint32_t),
+                triIdx, progressive ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
+            t.idxCapacity = capacity;
+        } else if (triIdxCount > oldIdxCount) {
+            glue->glBufferSubData(
+                GL_ELEMENT_ARRAY_BUFFER,
+                static_cast<GLintptr>(oldIdxCount) * sizeof(uint32_t),
+                static_cast<GLsizeiptr>(triIdxCount - oldIdxCount) *
+                    sizeof(uint32_t),
+                triIdx + oldIdxCount);
+        }
+        t.vertCount = triPosCount;
+        t.idxCount = triIdxCount;
 
         // Build VAO for triangle geometry
-        if (caps.hasVAO && glue->glGenVertexArrays) {
+        if (caps.hasVAO && glue->glGenVertexArrays && !t.vao) {
             glue->glGenVertexArrays(1, &t.vao);
             glue->glBindVertexArray(t.vao);
 
@@ -253,6 +441,8 @@ void CadGpuResources::upload(
 
         glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
         glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    } else if (progressive && entry.tri.posBuf) {
+        deleteTriGpu(entry.tri, glue);
     }
 }
 
@@ -260,11 +450,22 @@ void CadGpuResources::upload(
 // isUpToDate()
 // ---------------------------------------------------------------------------
 
-bool CadGpuResources::isUpToDate(PartId pid, uint64_t gen) const
+bool CadGpuResources::isUpToDate(
+        PartId pid, uint64_t gen, GLsizei requiredWirePoints,
+        GLsizei requiredWireIndices, GLsizei requiredTriPoints,
+        GLsizei requiredTriIndices) const
 {
     auto it = cache_.find(pid);
     if (it == cache_.end()) return false;
-    return it->second.generation == gen;
+    const Entry& entry = it->second;
+    if (entry.generation != gen)
+        return false;
+    if (requiredWirePoints > entry.wire.vertCount ||
+            requiredWireIndices > entry.wire.idxCount ||
+            requiredTriPoints > entry.tri.vertCount ||
+            requiredTriIndices > entry.tri.idxCount)
+        return false;
+    return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -306,6 +507,140 @@ CadTriGpu* CadGpuResources::triFor(PartId pid)
     return &it->second.tri;
 }
 
+const CadProgressiveGpu* CadGpuResources::progressiveFor(
+        PartId pid, bool shaded, uint8_t level)
+{
+    auto it = cache_.find(pid);
+    if (it == cache_.end() || level >= 16) return nullptr;
+    CadProgressiveGpu& p = shaded ?
+        it->second.progressiveTri[level] :
+        it->second.progressiveWire[level];
+    if (p.posBuf && p.vertexCount > 0)
+        p.lastUsedFrame = progressiveFrame_;
+    return p.posBuf && p.vertexCount > 0 ? &p : nullptr;
+}
+
+void CadGpuResources::uploadProgressive(
+        PartId pid, bool shaded, uint8_t level,
+        const std::vector<float>& positions,
+        const std::vector<float>& normals,
+        bool indexed, const SoGLContext *glue)
+{
+    if (!glue || !glue->glGenBuffers || level >= 16 ||
+            positions.empty() || positions.size() % 3 != 0 ||
+            (!normals.empty() && normals.size() != positions.size()))
+        return;
+    auto found = cache_.find(pid);
+    if (found == cache_.end()) return;
+    CadProgressiveGpu& p = shaded ?
+        found->second.progressiveTri[level] :
+        found->second.progressiveWire[level];
+    deleteProgressiveGpu(p, glue);
+
+    glue->glGenBuffers(1, &p.posBuf);
+    glue->glBindBuffer(GL_ARRAY_BUFFER, p.posBuf);
+    glue->glBufferData(
+        GL_ARRAY_BUFFER,
+        static_cast<GLsizeiptr>(positions.size() * sizeof(float)),
+        positions.data(), GL_STATIC_DRAW);
+    if (!normals.empty()) {
+        glue->glGenBuffers(1, &p.normBuf);
+        glue->glBindBuffer(GL_ARRAY_BUFFER, p.normBuf);
+        glue->glBufferData(
+            GL_ARRAY_BUFFER,
+            static_cast<GLsizeiptr>(normals.size() * sizeof(float)),
+            normals.data(), GL_STATIC_DRAW);
+    }
+    glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
+    p.vertexCount = static_cast<GLsizei>(positions.size() / 3);
+    p.indexed = indexed;
+    p.bytes = (positions.size() + normals.size()) * sizeof(float);
+    p.lastUsedFrame = progressiveFrame_;
+    progressiveBytes_ += p.bytes;
+}
+
+void CadGpuResources::beginProgressiveFrame()
+{
+    ++progressiveFrame_;
+    if (progressiveFrame_ == 0)
+        progressiveFrame_ = 1;
+}
+
+void CadGpuResources::endProgressiveFrame(const SoGLContext *glue)
+{
+    if (!glue) return;
+
+    size_t reserveBudget = 64u * 1024u * 1024u;
+    if (const char *value = std::getenv("OBOL_CAD_PROGRESSIVE_CACHE_MB")) {
+        char *end = nullptr;
+        const unsigned long long megabytes = std::strtoull(value, &end, 10);
+        if (end != value && *end == '\0' && megabytes > 0 &&
+                megabytes <= std::numeric_limits<size_t>::max() /
+                    (1024u * 1024u))
+            reserveBudget =
+                static_cast<size_t>(megabytes) * 1024u * 1024u;
+    }
+
+    /* The current stable cut can be hundreds of megabytes by itself.  Treat
+     * the configured amount as a bounded auxiliary LRU reserve above that
+     * unavoidable active working set, rather than allowing the active cut to
+     * evict every cheap interaction cut.  This keeps a recently used coarse
+     * PoP VBO ready for immediate motion without unbounded GPU growth. */
+    size_t activeBytes = 0;
+    for (const auto& item : cache_) {
+        const auto countActive = [&](const CadProgressiveGpu& p) {
+            if (p.posBuf && p.lastUsedFrame == progressiveFrame_ &&
+                    p.bytes <= std::numeric_limits<size_t>::max() -
+                        activeBytes)
+                activeBytes += p.bytes;
+        };
+        for (const CadProgressiveGpu& p : item.second.progressiveWire)
+            countActive(p);
+        for (const CadProgressiveGpu& p : item.second.progressiveTri)
+            countActive(p);
+    }
+    const size_t budget =
+        activeBytes <= std::numeric_limits<size_t>::max() - reserveBudget ?
+        activeBytes + reserveBudget : std::numeric_limits<size_t>::max();
+    while (progressiveBytes_ > budget) {
+        CadProgressiveGpu *victim = nullptr;
+        bool victimIsAnchor = true;
+        uint8_t victimLevel = 0;
+        for (auto& item : cache_) {
+            auto consider = [&](auto& cuts, uint8_t level) {
+                CadProgressiveGpu& p = cuts[level];
+                if (!p.posBuf || p.lastUsedFrame == progressiveFrame_)
+                    return;
+                bool isAnchor = true;
+                for (uint8_t lower = 0; lower < level; ++lower) {
+                    if (cuts[lower].posBuf) {
+                        isAnchor = false;
+                        break;
+                    }
+                }
+                if (!victim ||
+                        (victimIsAnchor && !isAnchor) ||
+                        (victimIsAnchor == isAnchor &&
+                         (level > victimLevel ||
+                          (level == victimLevel &&
+                           (p.lastUsedFrame < victim->lastUsedFrame ||
+                            (p.lastUsedFrame == victim->lastUsedFrame &&
+                             p.bytes > victim->bytes)))))) {
+                    victim = &p;
+                    victimIsAnchor = isAnchor;
+                    victimLevel = level;
+                }
+            };
+            for (uint8_t level = 0; level < 16; ++level)
+                consider(item.second.progressiveWire, level);
+            for (uint8_t level = 0; level < 16; ++level)
+                consider(item.second.progressiveTri, level);
+        }
+        if (!victim) break;
+        deleteProgressiveGpu(*victim, glue);
+    }
+}
+
 // ---------------------------------------------------------------------------
 // invalidatePart()
 // ---------------------------------------------------------------------------
@@ -318,6 +653,7 @@ void CadGpuResources::invalidatePart(PartId pid, const SoGLContext * glue)
         deletePointGpu(it->second.point, glue);
         deleteWireGpu(it->second.wire, glue);
         deleteTriGpu(it->second.tri,  glue);
+        deleteProgressiveGpu(it->second, glue);
     }
     cache_.erase(it);
 }
@@ -387,7 +723,8 @@ void CadGpuResources::uploadFlatShaded(
         const std::vector<float>& positions,
         const std::vector<float>& normals,
         const std::vector<CadFlatShadedGroup>& groups,
-        const SoGLContext *glue)
+        const SoGLContext *glue,
+        const CadGLCaps& caps)
 {
     if (!glue || positions.empty() || positions.size() != normals.size())
         return;
@@ -403,6 +740,23 @@ void CadGpuResources::uploadFlatShaded(
     glue->glBufferData(GL_ARRAY_BUFFER,
                        static_cast<GLsizeiptr>(normals.size() * sizeof(float)),
                        normals.data(), GL_STATIC_DRAW);
+
+    /* Flat batches are rendered by direct GLSL calls.  Never record their
+     * attribute pointers in VAO 0: Qt's QOpenGLWidget compositor also uses
+     * that VAO in its shared presentation context. */
+    if (!flatShaded_.vao && caps.hasVAO && glue->glGenVertexArrays) {
+        glue->glGenVertexArrays(1, &flatShaded_.vao);
+        glue->glBindVertexArray(flatShaded_.vao);
+        glue->glBindBuffer(GL_ARRAY_BUFFER, flatShaded_.posBuf);
+        glue->glVertexAttribPointerARB(0, 3, GL_FLOAT, GL_FALSE,
+                                       3 * sizeof(float), nullptr);
+        glue->glEnableVertexAttribArrayARB(0);
+        glue->glBindBuffer(GL_ARRAY_BUFFER, flatShaded_.normBuf);
+        glue->glVertexAttribPointerARB(1, 3, GL_FLOAT, GL_FALSE,
+                                       3 * sizeof(float), nullptr);
+        glue->glEnableVertexAttribArrayARB(1);
+        glue->glBindVertexArray(0);
+    }
     glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
     flatShaded_.planRevision = planRevision;
     flatShaded_.geometryRevision = geometryRevision;
@@ -422,7 +776,8 @@ void CadGpuResources::uploadSubpixelProxyPoints(
         uint64_t revision,
         const std::vector<float>& positions,
         const std::vector<uint8_t>& colors,
-        const SoGLContext *glue)
+        const SoGLContext *glue,
+        const CadGLCaps& caps)
 {
     if (!glue || positions.empty() || positions.size() % 3 != 0 ||
             colors.size() != (positions.size() / 3) * 4)
@@ -441,6 +796,24 @@ void CadGpuResources::uploadSubpixelProxyPoints(
     glue->glBufferData(GL_ARRAY_BUFFER,
                        static_cast<GLsizeiptr>(colors.size() * sizeof(uint8_t)),
                        colors.data(), GL_STREAM_DRAW);
+
+    /* Proxy membership changes during view motion, which makes this path a
+     * frequent compositor boundary.  Keep both streams in an Obol-owned VAO
+     * instead of mutating the caller/default VAO every frame. */
+    if (!subpixelProxyPoints_.vao && caps.hasVAO &&
+            glue->glGenVertexArrays) {
+        glue->glGenVertexArrays(1, &subpixelProxyPoints_.vao);
+        glue->glBindVertexArray(subpixelProxyPoints_.vao);
+        glue->glBindBuffer(GL_ARRAY_BUFFER, subpixelProxyPoints_.posBuf);
+        glue->glVertexAttribPointerARB(0, 3, GL_FLOAT, GL_FALSE,
+                                       3 * sizeof(float), nullptr);
+        glue->glEnableVertexAttribArrayARB(0);
+        glue->glBindBuffer(GL_ARRAY_BUFFER, subpixelProxyPoints_.colorBuf);
+        glue->glVertexAttribPointerARB(1, 4, GL_UNSIGNED_BYTE, GL_TRUE,
+                                       4 * sizeof(uint8_t), nullptr);
+        glue->glEnableVertexAttribArrayARB(1);
+        glue->glBindVertexArray(0);
+    }
     glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
 
     subpixelProxyPoints_.revision = revision;
@@ -458,6 +831,7 @@ void CadGpuResources::releaseAll(const SoGLContext * glue)
             deletePointGpu(kv.second.point, glue);
             deleteWireGpu(kv.second.wire, glue);
             deleteTriGpu(kv.second.tri,   glue);
+            deleteProgressiveGpu(kv.second, glue);
         }
         if (instanceVbo_ && glue->glDeleteBuffers) {
             glue->glDeleteBuffers(1, &instanceVbo_);
@@ -470,16 +844,22 @@ void CadGpuResources::releaseAll(const SoGLContext * glue)
             glue->glDeleteBuffers(1, &flatShaded_.posBuf);
         if (flatShaded_.normBuf && glue->glDeleteBuffers)
             glue->glDeleteBuffers(1, &flatShaded_.normBuf);
+        if (flatShaded_.vao && glue->glDeleteVertexArrays)
+            glue->glDeleteVertexArrays(1, &flatShaded_.vao);
         if (subpixelProxyPoints_.posBuf && glue->glDeleteBuffers)
             glue->glDeleteBuffers(1, &subpixelProxyPoints_.posBuf);
         if (subpixelProxyPoints_.colorBuf && glue->glDeleteBuffers)
             glue->glDeleteBuffers(1, &subpixelProxyPoints_.colorBuf);
+        if (subpixelProxyPoints_.vao && glue->glDeleteVertexArrays)
+            glue->glDeleteVertexArrays(1, &subpixelProxyPoints_.vao);
     }
     cache_.clear();
     instanceVbo_ = 0;
     flatWire_ = CadFlatWireGpu();
     flatShaded_ = CadFlatShadedGpu();
     subpixelProxyPoints_ = CadSubpixelProxyGpu();
+    progressiveBytes_ = 0;
+    progressiveFrame_ = 0;
 }
 
 } // namespace internal

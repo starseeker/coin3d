@@ -49,7 +49,6 @@
 #include "CadFramePlan.h"
 #include "CadRendererGL.h"
 #include "picking/CadPicking.h"
-#include "lod/TrianglePopLod.h"
 
 #include <Inventor/actions/SoGLRenderAction.h>
 #include <Inventor/actions/SoRayPickAction.h>
@@ -69,7 +68,9 @@
 #include <Inventor/elements/SoViewingMatrixElement.h>
 #include <Inventor/elements/SoProjectionMatrixElement.h>
 #include <Inventor/elements/SoContextManagerElement.h>
+#include <Inventor/elements/SoGLLazyElement.h>
 #include <Inventor/elements/SoLightElement.h>
+#include <Inventor/elements/SoShapeHintsElement.h>
 #include <Inventor/nodes/SoLight.h>
 #include <Inventor/nodes/SoDirectionalLight.h>
 #include <Inventor/nodes/SoPointLight.h>
@@ -99,6 +100,29 @@ cadDebugEnabled()
 {
     const char *env = std::getenv("OBOL_CAD_DEBUG");
     return env && env[0] && env[0] != '0';
+}
+
+static bool
+cadLightDebugEnabled()
+{
+    const char *env = std::getenv("OBOL_CAD_LIGHT_DEBUG");
+    return env && env[0] && env[0] != '0';
+}
+
+static bool
+cadTransformPreservesOrientation(const std::array<float, 16>& transform)
+{
+    const double determinant =
+        static_cast<double>(transform[0]) *
+            (static_cast<double>(transform[5]) * transform[10] -
+             static_cast<double>(transform[6]) * transform[9]) -
+        static_cast<double>(transform[1]) *
+            (static_cast<double>(transform[4]) * transform[10] -
+             static_cast<double>(transform[6]) * transform[8]) +
+        static_cast<double>(transform[2]) *
+            (static_cast<double>(transform[4]) * transform[9] -
+             static_cast<double>(transform[5]) * transform[8]);
+    return std::isfinite(determinant) && determinant > 1.0e-12;
 }
 
 namespace {
@@ -482,6 +506,7 @@ struct InstanceData {
     std::string           childName;
     uint32_t              occurrenceIndex = 0;
     uint8_t               boolOp = 0;
+    uint8_t               lodLevel = 255;
     SbBox3f               worldBounds;   // cached; recomputed on transform change
 };
 
@@ -524,27 +549,15 @@ struct SoCADAssemblyImpl {
     std::unordered_map<Obol::PartId, Obol::picking::CadPartTriBVH,
                        std::hash<Obol::PartId>> partTriBvhCache_;
 
-    // Per-part LoD structures.  Shaded parts are LoD-capable immediately, but
-    // the hierarchy is built only if a render actually requests an LoD level.
+    // Parts whose producer supplied retained progressive prefixes.
     std::unordered_set<Obol::PartId,
-                       std::hash<Obol::PartId>> lodCapableParts_;
-    mutable std::unordered_map<Obol::PartId, Obol::TrianglePopLod,
-                               std::hash<Obol::PartId>> partLods_;
+                       std::hash<Obol::PartId>> progressiveParts_;
 
     // Per-part generation counter – incremented when geometry changes so the
     // renderer knows to re-upload VBOs.
     std::unordered_map<Obol::PartId, uint64_t,
                        std::hash<Obol::PartId>> partGeneration_;
     uint64_t nextGeneration_ = 1;
-
-    // LoD index cache: per-(PartId, level) filtered triangle index lists.
-    // Cleared when a part's generation counter changes.
-    struct LodCacheEntry {
-        uint64_t generation = UINT64_MAX;
-        std::unordered_map<uint8_t, std::vector<uint32_t>> byLevel;
-    };
-    mutable std::unordered_map<Obol::PartId, LodCacheEntry,
-                               std::hash<Obol::PartId>> lodIndexCache_;
 
     // Frame plan cache.  Rebuilt lazily when planDirty_ is true.
     Obol::internal::CadFramePlan cachedPlan_;
@@ -585,6 +598,7 @@ struct SoCADAssemblyImpl {
             e.instanceId   = iid;
             e.partId       = idata.partId;
             e.localToWorld = idata.localToRoot;
+            e.lodLevel     = idata.lodLevel;
             entries.push_back(e);
         }
         instanceBvh_.build(std::move(entries));
@@ -638,13 +652,13 @@ struct SoCADAssemblyImpl {
         partGeneration_[pid] = nextGeneration_++;
         partEdgeBvhCache_.erase(pid);
         partTriBvhCache_.erase(pid);
-        lodIndexCache_.erase(pid);
-
-        partLods_.erase(pid);
-        if (geom->shaded.has_value())
-            lodCapableParts_.insert(pid);
+        const bool progressive =
+            (geom->shaded.has_value() && geom->shaded->isProgressive()) ||
+            (geom->wire.has_value() && geom->wire->isProgressive());
+        if (progressive)
+            progressiveParts_.insert(pid);
         else
-            lodCapableParts_.erase(pid);
+            progressiveParts_.erase(pid);
     }
 
     void recomputeWorldBoundsForPart(Obol::PartId pid) {
@@ -683,6 +697,7 @@ struct SoCADAssemblyImpl {
         idata.childName      = rec.childName;
         idata.occurrenceIndex = rec.occurrenceIndex;
         idata.boolOp         = rec.boolOp;
+        idata.lodLevel       = rec.lodLevel;
 
         auto geomIt = parts_.find(rec.part);
         idata.worldBounds = geomIt != parts_.end() && geomIt->second ?
@@ -763,6 +778,7 @@ struct SoCADAssemblyImpl {
                 plan.hasCustomWireStyle = true;
             vi.flags = (isSel ? 1u : 0u) |
                        (idata.style.hasColorOverride ? 4u : 0u);
+            vi.lodLevel = idata.lodLevel;
 
             if (cadDebugEnabled()) {
                 std::fprintf(stderr,
@@ -824,7 +840,6 @@ struct SoCADAssemblyImpl {
                 CadDrawItem item;
                 item.rep.part  = pid;
                 item.rep.type  = CadRepType::WireSegments;
-                item.rep.level = 255;
                 uint32_t runStart = 0;
                 while (runStart < count) {
                     uint32_t runEnd = runStart + 1;
@@ -852,7 +867,6 @@ struct SoCADAssemblyImpl {
                 CadDrawItem item;
                 item.rep.part = pid;
                 item.rep.type = CadRepType::Points;
-                item.rep.level = 255;
                 item.baseInstance = baseInst;
                 item.instanceCount = count;
                 plan.pointItems.push_back(item);
@@ -867,9 +881,15 @@ struct SoCADAssemblyImpl {
                 CadDrawItem item;
                 item.rep.part  = pid;
                 item.rep.type  = CadRepType::Triangles;
-                item.rep.level = 255;
                 item.baseInstance  = baseInst;
                 item.instanceCount = count;
+                item.cullBackfaces = geom.shadedCullBackfaces &&
+                    std::all_of(vis.begin(), vis.end(),
+                        [](const CadVisibleInstance& instance) {
+                            return instance.rgba[3] == 255 &&
+                                cadTransformPreservesOrientation(
+                                    instance.transform);
+                        });
                 plan.shadedItems.push_back(item);
                 if (!requiredShadedParts.count(pid)) {
                     plan.requiredReps.push_back(item.rep);
@@ -1036,9 +1056,10 @@ void SoCADAssembly::beginUpdate() { impl_->inUpdate_ = true; }
 void SoCADAssembly::endUpdate()
 {
     impl_->inUpdate_ = false;
-    impl_->bvhDirty_ = true;
-    impl_->planDirty_ = true;
-    impl_->geometryDirty_ = true;
+    /* Public mutations record the exact caches they invalidate even while
+     * notifications are batched.  Do not turn a selection/style-only batch
+     * into a geometry and BVH rebuild merely because it was framed by
+     * beginUpdate()/endUpdate(). */
     touch();
 }
 
@@ -1054,9 +1075,7 @@ SoCADAssembly::clear()
     impl_->unpickable_.clear();
     impl_->partEdgeBvhCache_.clear();
     impl_->partTriBvhCache_.clear();
-    impl_->lodCapableParts_.clear();
-    impl_->partLods_.clear();
-    impl_->lodIndexCache_.clear();
+    impl_->progressiveParts_.clear();
     impl_->instanceBvh_ = Obol::picking::CadInstanceBVH();
     impl_->bvhDirty_ = true;
     impl_->planDirty_ = true;
@@ -1122,9 +1141,7 @@ SoCADAssembly::removePart(Obol::PartId pid)
     impl_->partGeneration_.erase(pid);
     impl_->partEdgeBvhCache_.erase(pid);
     impl_->partTriBvhCache_.erase(pid);
-    impl_->lodCapableParts_.erase(pid);
-    impl_->partLods_.erase(pid);
-    impl_->lodIndexCache_.erase(pid);
+    impl_->progressiveParts_.erase(pid);
     impl_->recomputeWorldBoundsForPart(pid);
     impl_->markDirty();
     if (!impl_->inUpdate_) touch();
@@ -1182,6 +1199,27 @@ SoCADAssembly::upsertInstances(
     impl_->markDirty();
     if (!impl_->inUpdate_)
         touch();
+}
+
+void
+SoCADAssembly::updateInstanceLodLevels(
+    const std::vector<Obol::InstanceLodUpdate>& updates)
+{
+    bool changed = false;
+    for (const auto& update : updates) {
+        auto found = impl_->instances_.find(update.instance);
+        if (found == impl_->instances_.end() ||
+                found->second.lodLevel == update.lodLevel)
+            continue;
+        found->second.lodLevel = update.lodLevel;
+        changed = true;
+    }
+    if (!changed) return;
+    impl_->planDirty_ = true;
+    /* The instance BVH also carries the active cut used by exact picking.
+     * Rebuilding remains lazy and therefore does not add work to rendering. */
+    impl_->bvhDirty_ = true;
+    if (!impl_->inUpdate_) touch();
 }
 
 void
@@ -1274,7 +1312,10 @@ SoCADAssembly::isInstanceHidden(Obol::InstanceId iid) const
     return impl_->hidden_.find(iid) != impl_->hidden_.end();
 }
 
-bool SoCADAssembly::hasPartLod() const { return !impl_->lodCapableParts_.empty(); }
+bool SoCADAssembly::hasProgressivePartLod() const
+{
+    return !impl_->progressiveParts_.empty();
+}
 
 const Obol::PartGeometry*
 SoCADAssembly::partGeometry(Obol::PartId pid) const
@@ -1298,60 +1339,8 @@ SoCADAssembly::getInstanceRecord(Obol::InstanceId iid) const
     rec.childName  = d.childName;
     rec.occurrenceIndex = d.occurrenceIndex;
     rec.boolOp      = d.boolOp;
+    rec.lodLevel    = d.lodLevel;
     return rec;
-}
-
-const std::vector<uint32_t>*
-SoCADAssembly::getLodFilteredIndices(Obol::PartId pid, uint8_t level) const
-{
-    auto lodIt = impl_->partLods_.find(pid);
-    if (lodIt == impl_->partLods_.end()) {
-        if (impl_->lodCapableParts_.find(pid) ==
-                impl_->lodCapableParts_.end())
-            return nullptr;
-        auto partIt = impl_->parts_.find(pid);
-        if (partIt == impl_->parts_.end() || !partIt->second ||
-                !partIt->second->shaded.has_value())
-            return nullptr;
-        const auto& mesh = *partIt->second->shaded;
-        Obol::TrianglePopLod lod;
-        lod.build(mesh.positions, mesh.indices, mesh.bounds);
-        lodIt = impl_->partLods_.emplace(pid, std::move(lod)).first;
-    }
-    if (!lodIt->second.isBuilt()) return nullptr;
-
-    auto genIt = impl_->partGeneration_.find(pid);
-    uint64_t gen = (genIt != impl_->partGeneration_.end()) ? genIt->second : 0;
-
-    auto& cacheEntry = impl_->lodIndexCache_[pid];
-    if (cacheEntry.generation != gen) {
-        cacheEntry.generation = gen;
-        cacheEntry.byLevel.clear();
-    }
-    auto it = cacheEntry.byLevel.find(level);
-    if (it == cacheEntry.byLevel.end()) {
-        std::vector<uint32_t> drawIndices;
-        auto partIt = impl_->parts_.find(pid);
-        if (partIt != impl_->parts_.end() && partIt->second &&
-                partIt->second->shaded.has_value()) {
-            const std::vector<uint32_t>& meshIndices =
-                partIt->second->shaded->indices;
-            const std::vector<uint32_t> triangleOrdinals =
-                lodIt->second.trianglesAtLevel(level);
-            drawIndices.reserve(triangleOrdinals.size() * 3);
-            for (uint32_t tri : triangleOrdinals) {
-                const size_t base = static_cast<size_t>(tri) * 3;
-                if (base + 2 >= meshIndices.size())
-                    continue;
-                drawIndices.push_back(meshIndices[base]);
-                drawIndices.push_back(meshIndices[base + 1]);
-                drawIndices.push_back(meshIndices[base + 2]);
-            }
-        }
-        cacheEntry.byLevel[level] = std::move(drawIndices);
-        return &cacheEntry.byLevel[level];
-    }
-    return &it->second;
 }
 
 void
@@ -1390,6 +1379,26 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
     const SoGLContext* glue = sogl_glue_from_state(state);
     if (!glue) return;
 
+    // SoCADAssembly issues GL calls directly instead of going through
+    // SoShape.  Synchronize Coin's lazy shape state before doing so: the raw
+    // GL cull bit may legitimately still describe a sibling whose separator
+    // has already popped, while the element state already says this node is
+    // two-sided.  Establish counter-clockwise/two-sided as the conservative
+    // assembly baseline; the renderer locally enables culling only for parts
+    // carrying a verified closed/oriented guarantee and restores this raw
+    // state before returning.  Keeping this in a local state frame lets the
+    // next node restore its own semantics through the normal lazy-element
+    // path.
+    state->push();
+    SoShapeHintsElement::set(state, this,
+        SoShapeHintsElement::COUNTERCLOCKWISE,
+        SoShapeHintsElement::UNKNOWN_SHAPE_TYPE,
+        SoShapeHintsElement::CONVEX);
+    SoGLLazyElement::getInstance(state)->send(state,
+        SoLazyElement::VERTEXORDERING_MASK |
+        SoLazyElement::CULLING_MASK |
+        SoLazyElement::TWOSIDE_MASK);
+
     // Lazy-create the renderer the first time we have a GL context.
     if (!impl_->renderer_) {
         impl_->renderer_ = std::make_unique<Obol::internal::CadRendererGL>();
@@ -1402,12 +1411,6 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
     // OI post-multiply convention: VP = view * proj
     SbMatrix viewProj = viewMat;
     viewProj.multRight(projMat);
-
-    // Derive camera (eye) position in world space from the inverse view matrix.
-    // In OI convention: p_view = p_world * view, so p_world = p_view * view^-1.
-    // The view-space origin (0,0,0) maps to the translation row of the inverse.
-    SbMatrix invView = viewMat.inverse();
-    SbVec3f cameraPos(invView[3][0], invView[3][1], invView[3][2]);
 
     const int dm = drawMode.getValue();
 
@@ -1526,11 +1529,33 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
         }
         // Empty list => renderer falls back to its default fixed light.
         impl_->renderer_->setLights(glLights);
+        if (cadLightDebugEnabled()) {
+            static unsigned int reportCount = 0;
+            if (reportCount++ < 32) {
+                std::fprintf(stderr,
+                    "SoCADAssembly lights count=%zu stateCount=%d",
+                    glLights.size(), lights.getLength());
+                for (size_t i = 0;
+                     i < std::min<size_t>(glLights.size(), 2); ++i) {
+                    const auto& gl = glLights[i];
+                    std::fprintf(stderr,
+                        " l%zu={type=%d vec=(%.9g,%.9g,%.9g) "
+                        "axis=(%.9g,%.9g,%.9g) "
+                        "color=(%.9g,%.9g,%.9g) cos=%.9g}",
+                        i, gl.type,
+                        gl.vec[0], gl.vec[1], gl.vec[2],
+                        gl.axis[0], gl.axis[1], gl.axis[2],
+                        gl.color[0], gl.color[1], gl.color[2],
+                        gl.cosCutoff);
+                }
+                std::fprintf(stderr, "\n");
+            }
+        }
 
         // Delegate to the VBO + shader renderer (GL 2.0 minimum; optional GL
         // 3.1+ instanced path selected automatically when available).
         impl_->renderer_->render(impl_->cachedPlan_, *this, glue, viewProj,
-                                 viewMat, projMat, cameraPos, renderState,
+                                 viewMat, projMat,
                                  impl_->partGeneration_);
     }
     if (hasTransparency) {
@@ -1553,6 +1578,17 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
                      softwareWire ? 1 : 0,
                      lightingEnabled ? 1 : 0, light0Enabled ? 1 : 0);
     }
+    // The CAD renderer deliberately bypasses Coin's normal SoShape path and
+    // issues raw GL calls.  Even though it restores the raw raster state it
+    // borrows, material, lighting, blending, and shader transitions may no
+    // longer match SoGLLazyElement's cached belief.  Invalidate that cache
+    // before popping our local state frame so the next Coin node resends its
+    // own state instead of inheriting a stale CAD frame.  This is the proper
+    // renderer boundary; hosts must not compensate with extra clears or
+    // presentation timing workarounds.
+    SoGLLazyElement::getInstance(state)->reset(state,
+        SoLazyElement::ALL_MASK);
+    state->pop();
 }
 
 // ---------------------------------------------------------------------------
