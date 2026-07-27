@@ -124,17 +124,23 @@ public:
     CadDirectGLStateGuard(const SoGLContext *context, bool vbo, bool vao)
         : glue_(context), hasVbo_(vbo), hasVao_(vao)
     {
+#ifdef GL_CURRENT_PROGRAM
         if (glue_->glUseProgramObjectARB) {
             glue_->glGetIntegerv(GL_CURRENT_PROGRAM, &program_);
             hasProgram_ = true;
         }
+#endif
+#ifdef GL_VERTEX_ARRAY_BINDING
         if (hasVao_)
             glue_->glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &vao_);
+#endif
+#if defined(GL_ARRAY_BUFFER_BINDING) && defined(GL_ELEMENT_ARRAY_BUFFER_BINDING)
         if (hasVbo_) {
             glue_->glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &arrayBuffer_);
             glue_->glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING,
                                  &elementBuffer_);
         }
+#endif
         glue_->glGetIntegerv(GL_MATRIX_MODE, &matrixMode_);
         glue_->glGetBooleanv(GL_COLOR_WRITEMASK, colorMask_);
         polygonOffsetEnabled_ =

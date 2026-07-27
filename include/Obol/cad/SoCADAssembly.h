@@ -159,8 +159,8 @@ struct WireRep {
 
     size_t segmentCountAtLevel(uint8_t level) const noexcept {
         if (!isProgressive()) return segmentCount();
-        level = std::max(progressiveMinimumLevel,
-                         std::min(progressiveResidentLevel, level));
+        level = (std::max)(progressiveMinimumLevel,
+                         (std::min)(progressiveResidentLevel, level));
         return std::min<size_t>(progressiveSegmentCount[level],
                                 segmentCount());
     }
@@ -191,8 +191,8 @@ struct TriMesh {
 
     size_t indexCountAtLevel(uint8_t level) const noexcept {
         if (!isProgressive()) return indices.size();
-        level = std::max(progressiveMinimumLevel,
-                         std::min(progressiveResidentLevel, level));
+        level = (std::max)(progressiveMinimumLevel,
+                         (std::min)(progressiveResidentLevel, level));
         return std::min<size_t>(progressiveIndexCount[level],
                                 indices.size());
     }
