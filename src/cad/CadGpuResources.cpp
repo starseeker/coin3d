@@ -36,6 +36,7 @@
 #include "glue/glp.h"
 
 #include <algorithm>
+#include <cstdlib>
 #include <limits>
 
 namespace Obol {
@@ -152,6 +153,27 @@ void CadGpuResources::deleteTriGpu(CadTriGpu& t, const SoGLContext * glue)
     t.instanceBase = UINT32_MAX;
 }
 
+void CadGpuResources::deleteProgressiveGpu(
+        CadProgressiveGpu& p, const SoGLContext *glue)
+{
+    if (p.posBuf && glue->glDeleteBuffers)
+        glue->glDeleteBuffers(1, &p.posBuf);
+    if (p.normBuf && glue->glDeleteBuffers)
+        glue->glDeleteBuffers(1, &p.normBuf);
+    progressiveBytes_ = p.bytes <= progressiveBytes_ ?
+        progressiveBytes_ - p.bytes : 0;
+    p = CadProgressiveGpu();
+}
+
+void CadGpuResources::deleteProgressiveGpu(
+        Entry& entry, const SoGLContext *glue)
+{
+    for (CadProgressiveGpu& p : entry.progressiveWire)
+        deleteProgressiveGpu(p, glue);
+    for (CadProgressiveGpu& p : entry.progressiveTri)
+        deleteProgressiveGpu(p, glue);
+}
+
 // ---------------------------------------------------------------------------
 // upload()
 // ---------------------------------------------------------------------------
@@ -173,17 +195,26 @@ void CadGpuResources::upload(
 
     auto& entry = cache_[pid];
 
-    // Already up-to-date?
-    if (entry.generation == generation) return;
+    // The same progressive source generation may be realized at a larger
+    // view-dependent prefix later.
+    if (isUpToDate(
+            pid, generation, wireCount, segIdxCount,
+            triPosCount, triIdxCount))
+        return;
 
     /* Ordinary geometry replacement is allowed to change every byte and
      * representation.  Producer-declared progressive geometry is a stricter
      * cumulative-prefix contract, so preserve its buffer objects below and
      * append only newly resident tails. */
-    if (!progressive) {
+    const bool progressiveReset = progressive &&
+        ((entry.wire.vertCount > 0 && wireCount < entry.wire.vertCount) ||
+         (entry.tri.vertCount > 0 && triPosCount < entry.tri.vertCount) ||
+         (entry.tri.idxCount > 0 && triIdxCount < entry.tri.idxCount));
+    if (!progressive || progressiveReset) {
         deletePointGpu(entry.point, glue);
         deleteWireGpu(entry.wire, glue);
         deleteTriGpu(entry.tri, glue);
+        deleteProgressiveGpu(entry, glue);
     } else {
         /* Point primitives have no retained prefix contract. */
         deletePointGpu(entry.point, glue);
@@ -419,11 +450,22 @@ void CadGpuResources::upload(
 // isUpToDate()
 // ---------------------------------------------------------------------------
 
-bool CadGpuResources::isUpToDate(PartId pid, uint64_t gen) const
+bool CadGpuResources::isUpToDate(
+        PartId pid, uint64_t gen, GLsizei requiredWirePoints,
+        GLsizei requiredWireIndices, GLsizei requiredTriPoints,
+        GLsizei requiredTriIndices) const
 {
     auto it = cache_.find(pid);
     if (it == cache_.end()) return false;
-    return it->second.generation == gen;
+    const Entry& entry = it->second;
+    if (entry.generation != gen)
+        return false;
+    if (requiredWirePoints > entry.wire.vertCount ||
+            requiredWireIndices > entry.wire.idxCount ||
+            requiredTriPoints > entry.tri.vertCount ||
+            requiredTriIndices > entry.tri.idxCount)
+        return false;
+    return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -465,6 +507,140 @@ CadTriGpu* CadGpuResources::triFor(PartId pid)
     return &it->second.tri;
 }
 
+const CadProgressiveGpu* CadGpuResources::progressiveFor(
+        PartId pid, bool shaded, uint8_t level)
+{
+    auto it = cache_.find(pid);
+    if (it == cache_.end() || level >= 16) return nullptr;
+    CadProgressiveGpu& p = shaded ?
+        it->second.progressiveTri[level] :
+        it->second.progressiveWire[level];
+    if (p.posBuf && p.vertexCount > 0)
+        p.lastUsedFrame = progressiveFrame_;
+    return p.posBuf && p.vertexCount > 0 ? &p : nullptr;
+}
+
+void CadGpuResources::uploadProgressive(
+        PartId pid, bool shaded, uint8_t level,
+        const std::vector<float>& positions,
+        const std::vector<float>& normals,
+        bool indexed, const SoGLContext *glue)
+{
+    if (!glue || !glue->glGenBuffers || level >= 16 ||
+            positions.empty() || positions.size() % 3 != 0 ||
+            (!normals.empty() && normals.size() != positions.size()))
+        return;
+    auto found = cache_.find(pid);
+    if (found == cache_.end()) return;
+    CadProgressiveGpu& p = shaded ?
+        found->second.progressiveTri[level] :
+        found->second.progressiveWire[level];
+    deleteProgressiveGpu(p, glue);
+
+    glue->glGenBuffers(1, &p.posBuf);
+    glue->glBindBuffer(GL_ARRAY_BUFFER, p.posBuf);
+    glue->glBufferData(
+        GL_ARRAY_BUFFER,
+        static_cast<GLsizeiptr>(positions.size() * sizeof(float)),
+        positions.data(), GL_STATIC_DRAW);
+    if (!normals.empty()) {
+        glue->glGenBuffers(1, &p.normBuf);
+        glue->glBindBuffer(GL_ARRAY_BUFFER, p.normBuf);
+        glue->glBufferData(
+            GL_ARRAY_BUFFER,
+            static_cast<GLsizeiptr>(normals.size() * sizeof(float)),
+            normals.data(), GL_STATIC_DRAW);
+    }
+    glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
+    p.vertexCount = static_cast<GLsizei>(positions.size() / 3);
+    p.indexed = indexed;
+    p.bytes = (positions.size() + normals.size()) * sizeof(float);
+    p.lastUsedFrame = progressiveFrame_;
+    progressiveBytes_ += p.bytes;
+}
+
+void CadGpuResources::beginProgressiveFrame()
+{
+    ++progressiveFrame_;
+    if (progressiveFrame_ == 0)
+        progressiveFrame_ = 1;
+}
+
+void CadGpuResources::endProgressiveFrame(const SoGLContext *glue)
+{
+    if (!glue) return;
+
+    size_t reserveBudget = 64u * 1024u * 1024u;
+    if (const char *value = std::getenv("OBOL_CAD_PROGRESSIVE_CACHE_MB")) {
+        char *end = nullptr;
+        const unsigned long long megabytes = std::strtoull(value, &end, 10);
+        if (end != value && *end == '\0' && megabytes > 0 &&
+                megabytes <= std::numeric_limits<size_t>::max() /
+                    (1024u * 1024u))
+            reserveBudget =
+                static_cast<size_t>(megabytes) * 1024u * 1024u;
+    }
+
+    /* The current stable cut can be hundreds of megabytes by itself.  Treat
+     * the configured amount as a bounded auxiliary LRU reserve above that
+     * unavoidable active working set, rather than allowing the active cut to
+     * evict every cheap interaction cut.  This keeps a recently used coarse
+     * PoP VBO ready for immediate motion without unbounded GPU growth. */
+    size_t activeBytes = 0;
+    for (const auto& item : cache_) {
+        const auto countActive = [&](const CadProgressiveGpu& p) {
+            if (p.posBuf && p.lastUsedFrame == progressiveFrame_ &&
+                    p.bytes <= std::numeric_limits<size_t>::max() -
+                        activeBytes)
+                activeBytes += p.bytes;
+        };
+        for (const CadProgressiveGpu& p : item.second.progressiveWire)
+            countActive(p);
+        for (const CadProgressiveGpu& p : item.second.progressiveTri)
+            countActive(p);
+    }
+    const size_t budget =
+        activeBytes <= std::numeric_limits<size_t>::max() - reserveBudget ?
+        activeBytes + reserveBudget : std::numeric_limits<size_t>::max();
+    while (progressiveBytes_ > budget) {
+        CadProgressiveGpu *victim = nullptr;
+        bool victimIsAnchor = true;
+        uint8_t victimLevel = 0;
+        for (auto& item : cache_) {
+            auto consider = [&](auto& cuts, uint8_t level) {
+                CadProgressiveGpu& p = cuts[level];
+                if (!p.posBuf || p.lastUsedFrame == progressiveFrame_)
+                    return;
+                bool isAnchor = true;
+                for (uint8_t lower = 0; lower < level; ++lower) {
+                    if (cuts[lower].posBuf) {
+                        isAnchor = false;
+                        break;
+                    }
+                }
+                if (!victim ||
+                        (victimIsAnchor && !isAnchor) ||
+                        (victimIsAnchor == isAnchor &&
+                         (level > victimLevel ||
+                          (level == victimLevel &&
+                           (p.lastUsedFrame < victim->lastUsedFrame ||
+                            (p.lastUsedFrame == victim->lastUsedFrame &&
+                             p.bytes > victim->bytes)))))) {
+                    victim = &p;
+                    victimIsAnchor = isAnchor;
+                    victimLevel = level;
+                }
+            };
+            for (uint8_t level = 0; level < 16; ++level)
+                consider(item.second.progressiveWire, level);
+            for (uint8_t level = 0; level < 16; ++level)
+                consider(item.second.progressiveTri, level);
+        }
+        if (!victim) break;
+        deleteProgressiveGpu(*victim, glue);
+    }
+}
+
 // ---------------------------------------------------------------------------
 // invalidatePart()
 // ---------------------------------------------------------------------------
@@ -477,6 +653,7 @@ void CadGpuResources::invalidatePart(PartId pid, const SoGLContext * glue)
         deletePointGpu(it->second.point, glue);
         deleteWireGpu(it->second.wire, glue);
         deleteTriGpu(it->second.tri,  glue);
+        deleteProgressiveGpu(it->second, glue);
     }
     cache_.erase(it);
 }
@@ -654,6 +831,7 @@ void CadGpuResources::releaseAll(const SoGLContext * glue)
             deletePointGpu(kv.second.point, glue);
             deleteWireGpu(kv.second.wire, glue);
             deleteTriGpu(kv.second.tri,   glue);
+            deleteProgressiveGpu(kv.second, glue);
         }
         if (instanceVbo_ && glue->glDeleteBuffers) {
             glue->glDeleteBuffers(1, &instanceVbo_);
@@ -680,6 +858,8 @@ void CadGpuResources::releaseAll(const SoGLContext * glue)
     flatWire_ = CadFlatWireGpu();
     flatShaded_ = CadFlatShadedGpu();
     subpixelProxyPoints_ = CadSubpixelProxyGpu();
+    progressiveBytes_ = 0;
+    progressiveFrame_ = 0;
 }
 
 } // namespace internal

@@ -60,6 +60,7 @@
 
 #include <unordered_map>
 #include <vector>
+#include <array>
 #include <cstdint>
 
 struct SoGLContext;
@@ -103,6 +104,23 @@ struct CadTriGpu {
     GLsizei idxCapacity = 0; ///< allocated uint32 entries
     GLuint instanceVbo = 0; ///< instance buffer recorded in this VAO
     uint32_t instanceBase = UINT32_MAX; ///< first instance recorded in this VAO
+};
+
+/**
+ * Fixed-function VBOs for one retained PoP coordinate cut.
+ *
+ * Indexed entries contain one snapped position per source vertex and reuse
+ * the ordinary triangle index/normal buffers.  Expanded entries contain
+ * triangle-corner positions and normals and are used when the source has no
+ * normals, preserving flat lighting without per-frame glBegin/glVertex work.
+ */
+struct CadProgressiveGpu {
+    GLuint posBuf = 0;
+    GLuint normBuf = 0;
+    GLsizei vertexCount = 0;
+    bool indexed = false;
+    size_t bytes = 0;
+    uint64_t lastUsedFrame = 0;
 };
 
 /** All GPU representations for one part in one GL context. */
@@ -211,7 +229,11 @@ public:
      * This allows callers to skip the expensive CPU-side array-building step
      * before calling upload() when the geometry has not changed.
      */
-    bool isUpToDate(PartId pid, uint64_t gen) const;
+    bool isUpToDate(
+        PartId pid, uint64_t gen, GLsizei requiredWirePoints = 0,
+        GLsizei requiredWireIndices = 0,
+        GLsizei requiredTriPoints = 0,
+        GLsizei requiredTriIndices = 0) const;
 
     /** Return the point GPU rep for @p pid, or nullptr if not uploaded. */
     const CadPointGpu* pointFor(PartId pid) const;
@@ -227,6 +249,21 @@ public:
 
     /** Mutable triangle rep for updating retained VAO instance bindings. */
     CadTriGpu* triFor(PartId pid);
+
+    /** Return a cached fixed-function PoP cut, or nullptr if not built. */
+    const CadProgressiveGpu* progressiveFor(
+        PartId pid, bool shaded, uint8_t level);
+
+    /** Upload one fixed-function PoP cut for reuse across frames/instances. */
+    void uploadProgressive(
+        PartId pid, bool shaded, uint8_t level,
+        const std::vector<float>& positions,
+        const std::vector<float>& normals,
+        bool indexed, const SoGLContext *glue);
+
+    /** Delimit a render so active PoP cuts survive cache-budget pruning. */
+    void beginProgressiveFrame();
+    void endProgressiveFrame(const SoGLContext *glue);
 
     /**
      * Invalidate and delete GPU resources for @p pid.
@@ -293,6 +330,8 @@ private:
         CadPointGpu point;
         CadWireGpu  wire;
         CadTriGpu   tri;
+        std::array<CadProgressiveGpu, 16> progressiveWire;
+        std::array<CadProgressiveGpu, 16> progressiveTri;
     };
 
     std::unordered_map<PartId, Entry, std::hash<PartId>> cache_;
@@ -300,10 +339,16 @@ private:
     CadFlatWireGpu flatWire_;
     CadFlatShadedGpu flatShaded_;
     CadSubpixelProxyGpu subpixelProxyPoints_;
+    uint64_t progressiveFrame_ = 0;
+    size_t progressiveBytes_ = 0;
 
     void deletePointGpu(CadPointGpu& p, const SoGLContext * glue);
     void deleteWireGpu(CadWireGpu& w, const SoGLContext * glue);
     void deleteTriGpu(CadTriGpu& t, const SoGLContext * glue);
+    void deleteProgressiveGpu(
+        CadProgressiveGpu& p, const SoGLContext *glue);
+    void deleteProgressiveGpu(
+        Entry& entry, const SoGLContext *glue);
 
     // Non-copyable
     CadGpuResources(const CadGpuResources&) = delete;

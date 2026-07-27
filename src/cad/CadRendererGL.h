@@ -181,8 +181,10 @@ private:
     // Compiled shader programs (keyed by context id, lazily compiled)
     struct ShaderPrograms {
         GLuint wire    = 0; ///< Wire-pass shader (no lighting)
+        GLuint wirePop = 0; ///< Wire-pass shader with branchless PoP snapping
         GLuint proxyPoint = 0; ///< Batched subpixel-proxy point shader
         GLuint shaded  = 0; ///< Shaded-pass shader (Phong, no instancing)
+        GLuint shadedPop = 0; ///< Shaded-pass shader with branchless PoP snapping
         GLuint wireInst   = 0; ///< Wire-pass shader (instanced)
         GLuint shadedInst = 0; ///< Shaded-pass shader (instanced Phong)
     };
@@ -197,7 +199,8 @@ private:
 
     // Ensure part geometry has been uploaded to GPU
     void ensurePartUploaded(PartId pid, const SoCADAssembly& assembly,
-                            uint64_t gen, const SoGLContext * glue);
+                            uint64_t gen, uint8_t requestedLod,
+                            const SoGLContext * glue);
 
     void renderPoints(const CadFramePlan& plan,
                       const SoCADAssembly& assembly,

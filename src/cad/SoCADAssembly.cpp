@@ -103,6 +103,13 @@ cadDebugEnabled()
 }
 
 static bool
+cadLightDebugEnabled()
+{
+    const char *env = std::getenv("OBOL_CAD_LIGHT_DEBUG");
+    return env && env[0] && env[0] != '0';
+}
+
+static bool
 cadTransformPreservesOrientation(const std::array<float, 16>& transform)
 {
     const double determinant =
@@ -1049,9 +1056,10 @@ void SoCADAssembly::beginUpdate() { impl_->inUpdate_ = true; }
 void SoCADAssembly::endUpdate()
 {
     impl_->inUpdate_ = false;
-    impl_->bvhDirty_ = true;
-    impl_->planDirty_ = true;
-    impl_->geometryDirty_ = true;
+    /* Public mutations record the exact caches they invalidate even while
+     * notifications are batched.  Do not turn a selection/style-only batch
+     * into a geometry and BVH rebuild merely because it was framed by
+     * beginUpdate()/endUpdate(). */
     touch();
 }
 
@@ -1521,6 +1529,28 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
         }
         // Empty list => renderer falls back to its default fixed light.
         impl_->renderer_->setLights(glLights);
+        if (cadLightDebugEnabled()) {
+            static unsigned int reportCount = 0;
+            if (reportCount++ < 32) {
+                std::fprintf(stderr,
+                    "SoCADAssembly lights count=%zu stateCount=%d",
+                    glLights.size(), lights.getLength());
+                for (size_t i = 0;
+                     i < std::min<size_t>(glLights.size(), 2); ++i) {
+                    const auto& gl = glLights[i];
+                    std::fprintf(stderr,
+                        " l%zu={type=%d vec=(%.9g,%.9g,%.9g) "
+                        "axis=(%.9g,%.9g,%.9g) "
+                        "color=(%.9g,%.9g,%.9g) cos=%.9g}",
+                        i, gl.type,
+                        gl.vec[0], gl.vec[1], gl.vec[2],
+                        gl.axis[0], gl.axis[1], gl.axis[2],
+                        gl.color[0], gl.color[1], gl.color[2],
+                        gl.cosCutoff);
+                }
+                std::fprintf(stderr, "\n");
+            }
+        }
 
         // Delegate to the VBO + shader renderer (GL 2.0 minimum; optional GL
         // 3.1+ instanced path selected automatically when available).
