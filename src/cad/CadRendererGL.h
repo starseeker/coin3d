@@ -167,7 +167,7 @@ private:
     // Capability flags (populated on first render call)
     bool      capsDetected_ = false;
     CadGLCaps caps_;
-    int       lastRenderTier_ = -1; ///< -1=none, 0=imm, 1=vbo, 2=inst, 3/4=flat
+    int       lastRenderTier_ = -1; ///< -1=none, 0=imm, 1=vbo, 2=inst, 3/4=flat, 5=mixed flat-wire
     /// Scene lights for the shaded GLSL passes (set per-frame by SoCADAssembly).
     /// Empty means "use the historical fixed directional light".
     std::vector<GlLight> lights_;
@@ -228,6 +228,7 @@ private:
                        const SoCADAssembly& assembly,
                        const SoGLContext*   glue,
                        const SbMatrix&      viewProj,
+                       bool drawWire,
                        bool customWireOnly,
                        bool drawShaded);
 
@@ -236,7 +237,9 @@ private:
                             const SoGLContext* glue,
                             const SbMatrix& viewProj,
                             const SbMatrix& viewMatrix,
-                            const SbMatrix& projectionMatrix);
+                            const SbMatrix& projectionMatrix,
+                            bool drawWire,
+                            bool drawShaded);
 
     /**
      * Tier-0 fallback: fixed-function immediate-mode rendering via
@@ -250,7 +253,9 @@ private:
                              const SoGLContext*   glue,
                              const SbMatrix&      viewProj,
                              const SbMatrix&      viewMatrix,
-                             const SbMatrix&      projectionMatrix);
+                             const SbMatrix&      projectionMatrix,
+                             bool drawWire,
+                             bool drawShaded);
 
     void drawWireVboLoop(const CadFramePlan& plan,
                          const SoGLContext* glue,
@@ -276,6 +281,7 @@ private:
                          const SbMatrix&      viewProj,
                          const std::unordered_map<PartId, uint64_t,
                                                    std::hash<PartId>>& partGenMap,
+                         bool drawWire,
                          bool solidWireOnly,
                          bool drawShaded);
 

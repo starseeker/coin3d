@@ -1454,6 +1454,28 @@ SoCADAssembly::removePart(Obol::PartId pid)
     if (!impl_->inUpdate_) touch();
 }
 
+void
+SoCADAssembly::removeParts(const std::vector<Obol::PartId>& pids)
+{
+    if (pids.empty()) return;
+    std::unordered_set<Obol::PartId, std::hash<Obol::PartId>> changedParts;
+    changedParts.reserve(pids.size());
+    for (const Obol::PartId pid : pids) {
+        if (!impl_->parts_.erase(pid))
+            continue;
+        changedParts.insert(pid);
+        impl_->subpixelProxyCorners_.erase(pid);
+        impl_->partGeneration_.erase(pid);
+        impl_->partEdgeBvhCache_.erase(pid);
+        impl_->partTriBvhCache_.erase(pid);
+        impl_->progressiveParts_.erase(pid);
+    }
+    if (changedParts.empty()) return;
+    impl_->recomputeWorldBoundsForParts(changedParts);
+    impl_->markDirty();
+    if (!impl_->inUpdate_) touch();
+}
+
 // --- Instance management ---------------------------------------------------
 
 Obol::InstanceId

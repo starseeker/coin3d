@@ -1691,13 +1691,14 @@ void CadRendererGL::render(
         SoGLContext_glPolygonOffset(glue, 1.0f, 1.0f);
         if (caps_.canUseVbo() && shaders_.shaded &&
                 progressiveShadedShaderReady) {
-            renderVboLoop(depthPlan, assembly, glue, viewProj, false, true);
+            renderVboLoop(
+                depthPlan, assembly, glue, viewProj, false, false, true);
         } else if (caps_.canUseFixedVbo()) {
             renderFixedVboLoop(depthPlan, assembly, glue, viewProj, viewMatrix,
-                               projectionMatrix);
+                               projectionMatrix, false, true);
         } else {
             renderImmediateMode(depthPlan, assembly, glue, viewProj, viewMatrix,
-                                projectionMatrix);
+                                projectionMatrix, false, true);
         }
         SoGLContext_glDisable(glue, GL_POLYGON_OFFSET_FILL);
         SoGLContext_glColorMask(glue, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
@@ -1706,19 +1707,20 @@ void CadRendererGL::render(
                 progressiveWireInstShaderReady) {
             lastRenderTier_ = 2;
             renderInstanced(wirePlan, assembly, glue, viewProj, partGenMap,
-                            false, false);
+                            true, false, false);
         } else if (caps_.canUseVbo() && shaders_.wire &&
                 progressiveWireShaderReady) {
             lastRenderTier_ = 1;
-            renderVboLoop(wirePlan, assembly, glue, viewProj, false, false);
+            renderVboLoop(
+                wirePlan, assembly, glue, viewProj, true, false, false);
         } else if (caps_.canUseFixedVbo()) {
             lastRenderTier_ = 1;
             renderFixedVboLoop(wirePlan, assembly, glue, viewProj, viewMatrix,
-                               projectionMatrix);
+                               projectionMatrix, true, false);
         } else {
             lastRenderTier_ = 0;
             renderImmediateMode(wirePlan, assembly, glue, viewProj, viewMatrix,
-                                projectionMatrix);
+                                projectionMatrix, true, false);
         }
         renderSubpixelProxyPoints(plan, glue, viewProj);
         gpuRes_->endProgressiveFrame(glue);
@@ -1749,11 +1751,27 @@ void CadRendererGL::render(
         }
     }
 
-    // Upload geometry for the per-part rendering paths only after the flat
-    // aggregate paths have declined the frame.
+    /*
+     * Wire and shaded work are independent presentation channels.  In
+     * particular, thousands of conservative fallback boxes must remain one
+     * flat world-space batch even after the first few retained PoP meshes
+     * appear in the shaded channel.  The old all-or-nothing gate disabled
+     * this path as soon as any progressive part existed, turning a 50k-leaf
+     * cold scene back into tens of thousands of VBO uploads and draw calls.
+     */
+    const char *flatWireEnv = std::getenv("OBOL_CAD_FLAT_WIRE");
+    const bool flatWireEnabled = flatWireEnv ? flatWireEnv[0] != '0' : true;
+    const bool canUseFlatWire = caps_.isSoftwareRenderer ?
+        caps_.canUseFixedVbo() : (caps_.canUseVbo() && shaders_.wire);
+    const bool flatWireRendered = flatWireEnabled &&
+        plan.wireItems.size() >= 128 && canUseFlatWire &&
+        renderFlatWire(plan, assembly, glue, viewProj);
+
+    // Upload only the representations still needed by the per-part paths.
     for (const auto& repKey : plan.requiredReps) {
         if (repKey.type == CadRepType::WireSegments &&
-                !wireRepHasUncollapsedInstances(plan, repKey.part))
+                (flatWireRendered ||
+                 !wireRepHasUncollapsedInstances(plan, repKey.part)))
             continue;
         auto genIt = partGenMap.find(repKey.part);
         uint64_t gen = (genIt != partGenMap.end()) ? genIt->second : 0;
@@ -1762,10 +1780,6 @@ void CadRendererGL::render(
             maximumRequestedLod(plan, assembly, repKey.part), glue);
     }
 
-    const char *flatWireEnv = std::getenv("OBOL_CAD_FLAT_WIRE");
-    const bool flatWireEnabled = flatWireEnv ? flatWireEnv[0] != '0' : true;
-    const bool canUseFlatWire = caps_.isSoftwareRenderer ?
-        caps_.canUseFixedVbo() : (caps_.canUseVbo() && shaders_.wire);
     /* Keep shaded polygons fractionally behind wire geometry.  A wire source
      * may be a separate assembly from its shaded peer, so relying on a local
      * shaded-with-edges mode leaves coplanar overlays at the mercy of depth
@@ -1777,37 +1791,36 @@ void CadRendererGL::render(
         SoGLContext_glPolygonOffset(glue, 1.0f, 1.0f);
     }
 
-    if (flatWireEnabled && !retainedProgressive &&
-            plan.shadedItems.empty() &&
-            plan.wireItems.size() >= 128 &&
-            canUseFlatWire &&
-            renderFlatWire(plan, assembly, glue, viewProj)) {
+    if (flatWireRendered && plan.shadedItems.empty()) {
         lastRenderTier_ = 3;
     } else if (caps_.isSoftwareRenderer && !softwareGlslRequested() &&
             caps_.canUseFixedVbo()) {
         lastRenderTier_ = 1;
         renderFixedVboLoop(plan, assembly, glue, viewProj, viewMatrix,
-                           projectionMatrix);
+                           projectionMatrix, !flatWireRendered, true);
     } else if (caps_.canUseInstanced() &&
             shaders_.wireInst && shaders_.shadedInst &&
             progressiveWireInstShaderReady &&
             progressiveShadedInstShaderReady) {
         lastRenderTier_ = 2;
         renderInstanced(plan, assembly, glue, viewProj, partGenMap,
-                        false, true);
+                        !flatWireRendered, false, true);
     } else if (caps_.canUseVbo() && shaders_.wire &&
             progressiveWireShaderReady && progressiveShadedShaderReady) {
         lastRenderTier_ = 1;
-        renderVboLoop(plan, assembly, glue, viewProj, false, true);
+        renderVboLoop(plan, assembly, glue, viewProj,
+                      !flatWireRendered, false, true);
     } else if (caps_.canUseFixedVbo()) {
         lastRenderTier_ = 1;
         renderFixedVboLoop(plan, assembly, glue, viewProj, viewMatrix,
-                           projectionMatrix);
+                           projectionMatrix, !flatWireRendered, true);
     } else {
         lastRenderTier_ = 0;
         renderImmediateMode(plan, assembly, glue, viewProj, viewMatrix,
-                            projectionMatrix);
+                            projectionMatrix, !flatWireRendered, true);
     }
+    if (flatWireRendered && !plan.shadedItems.empty())
+        lastRenderTier_ = 5;
 
     if (!plan.shadedItems.empty() && !polygonOffsetWasEnabled)
         SoGLContext_glDisable(glue, GL_POLYGON_OFFSET_FILL);
@@ -1818,12 +1831,14 @@ void CadRendererGL::render(
 namespace {
 
 struct FlatWireStyleKey {
+    uint8_t priority = 0;
     uint32_t rgba = 0;
     uint32_t widthBits = 0;
     uint16_t pattern = 0xffffu;
     uint16_t factor = 1u;
 
     bool operator<(const FlatWireStyleKey& other) const noexcept {
+        if (priority != other.priority) return priority < other.priority;
         if (rgba != other.rgba) return rgba < other.rgba;
         if (widthBits != other.widthBits) return widthBits < other.widthBits;
         if (pattern != other.pattern) return pattern < other.pattern;
@@ -1834,6 +1849,8 @@ struct FlatWireStyleKey {
 static FlatWireStyleKey flatWireStyleKey(const CadVisibleInstance& inst)
 {
     FlatWireStyleKey key;
+    // Draw hover/selection emphasis after ordinary geometry at equal depth.
+    key.priority = static_cast<uint8_t>(inst.flags & 3u);
     key.rgba = static_cast<uint32_t>(inst.rgba[0]) |
                (static_cast<uint32_t>(inst.rgba[1]) << 8) |
                (static_cast<uint32_t>(inst.rgba[2]) << 16) |
@@ -1899,6 +1916,12 @@ static uint32_t flatRgbaKey(const CadVisibleInstance& inst)
 
 } // namespace
 
+static uint8_t progressiveLevel(
+    uint8_t requested, uint8_t minimum, uint8_t resident);
+static SbVec3f progressiveSnapPoint(
+    const SbVec3f& point, const SbVec3f& minimum,
+    const SbVec3f& maximum, uint8_t level);
+
 bool CadRendererGL::renderFlatWire(
         const CadFramePlan& plan,
         const SoCADAssembly& assembly,
@@ -1910,21 +1933,46 @@ bool CadRendererGL::renderFlatWire(
         plan.subpixelProxyRevision : plan.revision;
     const CadFlatWireGpu& cached = gpuRes_->flatWire();
     if (cached.planRevision != presentationRevision) {
-        // Proxy membership changes with the camera, so the flattened buffer
-        // must be rebuilt even when the underlying assembly is unchanged.
-        const bool rebuildGeometry = true;
+        struct Occurrence {
+            const Obol::WireRep *wire = nullptr;
+            const CadVisibleInstance *instance = nullptr;
+            size_t flatSegments = 0;
+            size_t polylineSegments = 0;
+            uint8_t level = 15;
+            FlatWireStyleKey style;
+        };
+
+        /*
+         * Flatten in presentation-style order.  Grouping only adjacent
+         * instances in unordered part order can leave a colorful assembly
+         * with almost one draw call per leaf, defeating the batch.  Stable
+         * InstanceId tie breaks make coincident-edge results reproducible;
+         * selection/hover priority in the style key leaves emphasis on top.
+         */
+        std::vector<Occurrence> occurrences;
+        occurrences.reserve(plan.visibleInstances.size());
         size_t pointCount = 0;
         for (const CadDrawItem& item : plan.wireItems) {
             const Obol::PartGeometry *geom = assembly.partGeometry(item.rep.part);
             if (!geom || !geom->wire.has_value()) continue;
             const Obol::WireRep& wire = *geom->wire;
-            size_t segments = wire.segmentCount();
+            size_t polylineSegments = 0;
             for (const Obol::WirePolyline& poly : wire.polylines)
                 if (poly.points.size() >= 2)
-                    segments += poly.points.size() - 1;
-            if (segments == 0) continue;
+                    polylineSegments += poly.points.size() - 1;
             for (uint32_t ii = 0; ii < item.instanceCount; ++ii) {
-                if (isSubpixelProxyInstance(plan, item.baseInstance + ii))
+                const size_t visibleIndex = item.baseInstance + ii;
+                if (visibleIndex >= plan.visibleInstances.size() ||
+                        isSubpixelProxyInstance(plan, visibleIndex))
+                    continue;
+                const CadVisibleInstance& instance =
+                    plan.visibleInstances[visibleIndex];
+                const uint8_t effectiveLevel =
+                    assembly.effectiveProgressiveLodLevel(instance.lodLevel);
+                const size_t flatSegments =
+                    wire.segmentCountAtLevel(effectiveLevel);
+                const size_t segments = flatSegments + polylineSegments;
+                if (segments == 0)
                     continue;
                 const size_t maxPoints =
                     maxPositionBytes / (3 * sizeof(float));
@@ -1932,70 +1980,88 @@ bool CadRendererGL::renderFlatWire(
                         pointCount > maxPoints - segments * 2)
                     return false;
                 pointCount += segments * 2;
+                Occurrence occurrence;
+                occurrence.wire = &wire;
+                occurrence.instance = &instance;
+                occurrence.flatSegments = flatSegments;
+                occurrence.polylineSegments = polylineSegments;
+                occurrence.level = progressiveLevel(
+                    effectiveLevel, wire.progressiveMinimumLevel,
+                    wire.progressiveResidentLevel);
+                occurrence.style = flatWireStyleKey(instance);
+                occurrences.push_back(occurrence);
             }
         }
 
-        std::vector<float> positions;
-        if (rebuildGeometry)
-            positions.resize(pointCount * 3);
+        std::sort(occurrences.begin(), occurrences.end(),
+            [](const Occurrence& a, const Occurrence& b) {
+                if (a.style < b.style) return true;
+                if (b.style < a.style) return false;
+                if (a.instance->instanceId.w1 != b.instance->instanceId.w1)
+                    return a.instance->instanceId.w1 <
+                        b.instance->instanceId.w1;
+                return a.instance->instanceId.w0 <
+                    b.instance->instanceId.w0;
+            });
+
+        std::vector<float> positions(pointCount * 3);
         size_t positionOffset = 0;
         std::vector<CadFlatWireGroup> groups;
         FlatWireStyleKey activeKey;
         bool haveGroup = false;
         size_t vertexOffset = 0;
-        for (const CadDrawItem& item : plan.wireItems) {
-            const Obol::PartGeometry *geom = assembly.partGeometry(item.rep.part);
-            if (!geom || !geom->wire.has_value()) continue;
-            const Obol::WireRep& wire = *geom->wire;
-            size_t segments = wire.segmentCount();
-            for (const Obol::WirePolyline& poly : wire.polylines)
-                if (poly.points.size() >= 2)
-                    segments += poly.points.size() - 1;
-            const size_t instanceVertices = segments * 2;
-            for (uint32_t ii = 0; ii < item.instanceCount; ++ii) {
-                const size_t visibleIndex = item.baseInstance + ii;
-                if (isSubpixelProxyInstance(plan, visibleIndex))
-                    continue;
-                const CadVisibleInstance& inst =
-                    plan.visibleInstances[visibleIndex];
-                const FlatWireStyleKey key = flatWireStyleKey(inst);
-                if (!haveGroup || key < activeKey || activeKey < key) {
-                    CadFlatWireGroup group;
-                    group.first = static_cast<GLint>(vertexOffset);
-                    group.lineWidth = inst.lineWidth;
-                    group.linePattern = inst.linePattern;
-                    group.linePatternFactor = inst.linePatternFactor;
-                    std::copy(inst.rgba.begin(), inst.rgba.end(), group.rgba);
-                    groups.push_back(group);
-                    activeKey = key;
-                    haveGroup = true;
-                }
-                groups.back().count += static_cast<GLsizei>(instanceVertices);
-                vertexOffset += instanceVertices;
-                if (rebuildGeometry) {
-                    for (size_t p = 0; p + 1 < wire.segmentPoints.size(); p += 2) {
-                        writeTransformedFlatPoint(positions, positionOffset,
-                                                  wire.segmentPoints[p], inst.transform);
-                        writeTransformedFlatPoint(positions, positionOffset,
-                                                  wire.segmentPoints[p + 1], inst.transform);
-                    }
-                    for (const Obol::WirePolyline& poly : wire.polylines) {
-                        for (size_t p = 0; p + 1 < poly.points.size(); ++p) {
-                            writeTransformedFlatPoint(positions, positionOffset,
-                                                      poly.points[p], inst.transform);
-                            writeTransformedFlatPoint(positions, positionOffset,
-                                                      poly.points[p + 1], inst.transform);
-                        }
-                    }
+        for (const Occurrence& occurrence : occurrences) {
+            const Obol::WireRep& wire = *occurrence.wire;
+            const CadVisibleInstance& inst = *occurrence.instance;
+            const size_t instanceVertices =
+                (occurrence.flatSegments +
+                 occurrence.polylineSegments) * 2;
+            const FlatWireStyleKey& key = occurrence.style;
+            if (!haveGroup || key < activeKey || activeKey < key) {
+                CadFlatWireGroup group;
+                group.first = static_cast<GLint>(vertexOffset);
+                group.lineWidth = inst.lineWidth;
+                group.linePattern = inst.linePattern;
+                group.linePatternFactor = inst.linePatternFactor;
+                std::copy(inst.rgba.begin(), inst.rgba.end(), group.rgba);
+                groups.push_back(group);
+                activeKey = key;
+                haveGroup = true;
+            }
+            groups.back().count += static_cast<GLsizei>(instanceVertices);
+            vertexOffset += instanceVertices;
+
+            const size_t flatPointCount = occurrence.flatSegments * 2;
+            for (size_t p = 0; p + 1 < flatPointCount; p += 2) {
+                const SbVec3f a = wire.isProgressive() &&
+                        occurrence.level < 15 ?
+                    progressiveSnapPoint(wire.segmentPoints[p],
+                        wire.progressiveQuantizationMinimum,
+                        wire.progressiveQuantizationMaximum,
+                        occurrence.level) : wire.segmentPoints[p];
+                const SbVec3f b = wire.isProgressive() &&
+                        occurrence.level < 15 ?
+                    progressiveSnapPoint(wire.segmentPoints[p + 1],
+                        wire.progressiveQuantizationMinimum,
+                        wire.progressiveQuantizationMaximum,
+                        occurrence.level) : wire.segmentPoints[p + 1];
+                writeTransformedFlatPoint(
+                    positions, positionOffset, a, inst.transform);
+                writeTransformedFlatPoint(
+                    positions, positionOffset, b, inst.transform);
+            }
+            for (const Obol::WirePolyline& poly : wire.polylines) {
+                for (size_t p = 0; p + 1 < poly.points.size(); ++p) {
+                    writeTransformedFlatPoint(positions, positionOffset,
+                                              poly.points[p], inst.transform);
+                    writeTransformedFlatPoint(positions, positionOffset,
+                                              poly.points[p + 1], inst.transform);
                 }
             }
         }
         if (pointCount == 0 || groups.empty()) return false;
-        if (rebuildGeometry)
-            gpuRes_->uploadFlatWire(presentationRevision, plan.geometryRevision,
-                                    positions, groups, glue, caps_);
-        else
-            gpuRes_->updateFlatWireGroups(presentationRevision, groups);
+        gpuRes_->uploadFlatWire(presentationRevision, plan.geometryRevision,
+                                positions, groups, glue, caps_);
     }
 
     const CadFlatWireGpu& flat = gpuRes_->flatWire();
@@ -2639,6 +2705,7 @@ void CadRendererGL::renderVboLoop(
         const SoCADAssembly& assembly,
         const SoGLContext*   glue,
         const SbMatrix&      viewProj,
+        bool drawWire,
         bool customWireOnly,
         bool drawShaded)
 {
@@ -2656,7 +2723,7 @@ void CadRendererGL::renderVboLoop(
     const FrustumPlanes fp = extractFrustumPlanes(viewProj);
 
     // --- Wire pass ---
-    if (!plan.wireItems.empty()) {
+    if (drawWire && !plan.wireItems.empty()) {
         const CadWireRasterState rasterState = captureWireRasterState(
             glue, caps_.hasLineStipple);
         struct WireLocations {
@@ -2998,7 +3065,9 @@ void CadRendererGL::renderFixedVboLoop(
         const SoGLContext* glue,
         const SbMatrix& viewProj,
         const SbMatrix& viewMatrix,
-        const SbMatrix& projectionMatrix)
+        const SbMatrix& projectionMatrix,
+        bool drawWire,
+        bool drawShaded)
 {
     glue->glMatrixMode(GL_PROJECTION);
     glue->glPushMatrix();
@@ -3013,7 +3082,7 @@ void CadRendererGL::renderFixedVboLoop(
     const CadWireRasterState rasterState = captureWireRasterState(
         glue, caps_.hasLineStipple);
 
-    for (const auto& item : plan.wireItems) {
+    if (drawWire) for (const auto& item : plan.wireItems) {
         const CadWireGpu *wire = gpuRes_->wireFor(item.rep.part);
         if (!wire) continue;
         const PartGeometry *geometry = assembly.partGeometry(item.rep.part);
@@ -3070,14 +3139,14 @@ void CadRendererGL::renderFixedVboLoop(
     const GLboolean wasColorMaterial = glue->glIsEnabled(GL_COLOR_MATERIAL);
     GLint wasTwoSidedLighting = GL_FALSE;
     glue->glGetIntegerv(GL_LIGHT_MODEL_TWO_SIDE, &wasTwoSidedLighting);
-    if (!plan.shadedItems.empty()) {
+    if (drawShaded && !plan.shadedItems.empty()) {
         // CAD shading must not depend on the caller enabling GL_LIGHTING.
         glue->glEnable(GL_LIGHTING);
         glue->glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
     }
     glue->glDisable(GL_COLOR_MATERIAL);
     glue->glEnableClientState(GL_VERTEX_ARRAY);
-    for (const auto& item : plan.shadedItems) {
+    if (drawShaded) for (const auto& item : plan.shadedItems) {
         const CadTriGpu *tri = gpuRes_->triFor(item.rep.part);
         if (!tri) continue;
         const PartGeometry *geometry = assembly.partGeometry(item.rep.part);
@@ -3172,7 +3241,9 @@ void CadRendererGL::renderImmediateMode(
         const SoGLContext*   glue,
         const SbMatrix&      viewProj,
         const SbMatrix&      viewMatrix,
-        const SbMatrix&      projectionMatrix)
+        const SbMatrix&      projectionMatrix,
+        bool drawWire,
+        bool drawShaded)
 {
     // Keep projection out of GL_MODELVIEW so normal transformation uses only
     // the affine local-to-eye transform.
@@ -3193,7 +3264,7 @@ void CadRendererGL::renderImmediateMode(
     const FrustumPlanes fp = extractFrustumPlanes(viewProj);
 
     // --- Wire pass ---
-    for (const auto& item : plan.wireItems) {
+    if (drawWire) for (const auto& item : plan.wireItems) {
         const Obol::PartGeometry* geom = assembly.partGeometry(item.rep.part);
         if (!geom || !geom->wire.has_value()) continue;
         const Obol::WireRep& wire = *geom->wire;
@@ -3257,14 +3328,14 @@ void CadRendererGL::renderImmediateMode(
     GLboolean wasColorMaterial = glue->glIsEnabled(GL_COLOR_MATERIAL);
     GLint wasTwoSidedLighting = GL_FALSE;
     glue->glGetIntegerv(GL_LIGHT_MODEL_TWO_SIDE, &wasTwoSidedLighting);
-    if (!plan.shadedItems.empty()) {
+    if (drawShaded && !plan.shadedItems.empty()) {
         // Shaded CAD geometry always uses its normals, regardless of the
         // lighting state inherited from the surrounding scene graph.
         glue->glEnable(GL_LIGHTING);
         glue->glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
     }
     glue->glDisable(GL_COLOR_MATERIAL);
-    for (const auto& item : plan.shadedItems) {
+    if (drawShaded) for (const auto& item : plan.shadedItems) {
         const Obol::PartGeometry* geom = assembly.partGeometry(item.rep.part);
         if (!geom || !geom->shaded.has_value()) continue;
         const Obol::TriMesh& mesh = *geom->shaded;
@@ -3354,6 +3425,7 @@ void CadRendererGL::renderInstanced(
         const SbMatrix&      viewProj,
         const std::unordered_map<PartId, uint64_t,
                                  std::hash<PartId>>& /*partGenMap*/,
+        bool drawWire,
         bool solidWireOnly,
         bool drawShaded)
 {
@@ -3432,7 +3504,7 @@ void CadRendererGL::renderInstanced(
     };
 
     // --- Wire pass ---
-    if (!plan.wireItems.empty()) {
+    if (drawWire && !plan.wireItems.empty()) {
         const CadWireRasterState rasterState = captureWireRasterState(
             glue, caps_.hasLineStipple);
         struct WireLocations {

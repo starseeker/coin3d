@@ -419,7 +419,7 @@ public:
     SoSFEnum  pickMode;             ///< Default: PICK_AUTO
     SoSFFloat edgePickTolerancePx;  ///< Screen-space edge pick tolerance (pixels)
     SoSFBool  wireframeOcclusion;   ///< Run depth-only triangle pass in wireframe mode
-    /** Emergency render-only PoP ceiling, or -1 when disabled.
+    /** Interactive render-only PoP ceiling, or -1 when disabled.
      *
      * This does not mutate producer-authored per-instance cuts or rebuild the
      * frame plan.  It lets a view controller shed already-retained draw work
@@ -475,6 +475,16 @@ public:
      * part is re-inserted later).
      */
     void removePart(Obol::PartId pid);
+
+    /**
+     * Remove many parts as one dirty operation.
+     *
+     * Instance bounds are recomputed in one pass after all removals.  Use
+     * this for a scene-wide LoD cut change; calling removePart() thousands
+     * of times would otherwise rescan the complete instance population once
+     * per retired part.
+     */
+    void removeParts(const std::vector<Obol::PartId>& pids);
 
     // -----------------------------------------------------------------------
     // Instance management

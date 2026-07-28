@@ -9,7 +9,10 @@
 #include <Inventor/nodes/SoOrthographicCamera.h>
 #include <Inventor/nodes/SoSeparator.h>
 
+#include <cstdlib>
 #include <cstdio>
+#include <cstring>
+#include <vector>
 
 namespace {
 
@@ -159,6 +162,137 @@ main()
     camera->height.setValue(200.0f);
     if (!render(renderer, root) || assembly->lastSubpixelProxyCount() != 0u) {
         std::fprintf(stderr, "subpixel proxy did not expand back to wire\n");
+        root->unref();
+        return 1;
+    }
+
+    /*
+     * More than 128 independently authored wire parts select the flat batch.
+     * Keep one retained progressive shaded part in the same assembly: this is
+     * the mixed cold-start state that must not disable box batching.  Compare
+     * it with the ordinary per-part renderer so batching cannot silently
+     * change authored coordinates or occurrence placement.
+     */
+    assembly->drawMode.setValue(SoCADAssembly::SHADED_WITH_EDGES);
+    for (int i = 0; i < 144; ++i) {
+        Obol::PartGeometry box;
+        box.wire = unitBox();
+        box.subpixelProxyEligible = true;
+        const float sx = 0.65f + 0.07f * static_cast<float>(i % 5);
+        const float sy = 0.55f + 0.05f * static_cast<float>((i / 5) % 7);
+        const float sz = 0.45f + 0.03f * static_cast<float>((i / 11) % 9);
+        box.wire->bounds.makeEmpty();
+        for (SbVec3f& point : box.wire->segmentPoints) {
+            point.setValue(point[0] * sx + 0.11f * static_cast<float>(i % 3),
+                           point[1] * sy - 0.09f * static_cast<float>(i % 4),
+                           point[2] * sz);
+            box.wire->bounds.extendBy(point);
+        }
+        char partName[64] = {};
+        std::snprintf(partName, sizeof(partName), "distinct-proxy-%03d", i);
+        const Obol::PartId boxPart = Obol::CadIdBuilder::hash128(partName);
+        assembly->upsertPart(boxPart, box);
+
+        Obol::InstanceRecord boxInstance;
+        boxInstance.part = boxPart;
+        boxInstance.parent = Obol::CadIdBuilder::Root();
+        boxInstance.childName = partName;
+        boxInstance.occurrenceIndex = static_cast<uint32_t>(i + 2);
+        boxInstance.localToRoot.setTranslate(SbVec3f(
+            -27.5f + 5.0f * static_cast<float>(i % 12),
+            -27.5f + 5.0f * static_cast<float>(i / 12), 0.0f));
+        boxInstance.style.hasColorOverride = true;
+        boxInstance.style.color = SbColor4f(
+            (i & 1) ? 1.0f : 0.2f,
+            (i & 2) ? 0.8f : 0.25f,
+            (i & 4) ? 0.9f : 0.3f, 1.0f);
+        assembly->upsertInstanceAuto(boxInstance);
+    }
+
+    Obol::PartGeometry progressiveGeometry;
+    Obol::TriMesh triangle;
+    triangle.positions = {
+        SbVec3f(-1.5f, -1.0f, -0.25f),
+        SbVec3f(1.5f, -1.0f, -0.25f),
+        SbVec3f(0.0f, 1.5f, -0.25f)
+    };
+    triangle.indices = {0, 1, 2};
+    triangle.bounds = SbBox3f(
+        SbVec3f(-1.5f, -1.0f, -0.25f),
+        SbVec3f(1.5f, 1.5f, -0.25f));
+    triangle.progressiveMinimumLevel = 15;
+    triangle.progressiveResidentLevel = 15;
+    triangle.progressiveIndexCount[15] = 3;
+    triangle.progressivePositionCount[15] = 3;
+    triangle.progressiveQuantizationMinimum = triangle.bounds.getMin();
+    triangle.progressiveQuantizationMaximum = triangle.bounds.getMax();
+    progressiveGeometry.shaded = std::move(triangle);
+    const Obol::PartId progressivePart =
+        Obol::CadIdBuilder::hash128("mixed-progressive-triangle");
+    assembly->upsertPart(progressivePart, progressiveGeometry);
+    Obol::InstanceRecord progressiveInstance;
+    progressiveInstance.part = progressivePart;
+    progressiveInstance.parent = Obol::CadIdBuilder::Root();
+    progressiveInstance.childName = "mixed-progressive-triangle";
+    progressiveInstance.localToRoot.makeIdentity();
+    assembly->upsertInstanceAuto(progressiveInstance);
+
+    camera->height.setValue(70.0f);
+    setenv("OBOL_CAD_FLAT_WIRE", "0", 1);
+    if (!render(renderer, root)) {
+        std::fprintf(stderr, "per-part mixed proxy reference did not render\n");
+        root->unref();
+        return 1;
+    }
+    const SbVec2s imageSize = renderer.getViewportRegion().getViewportSizePixels();
+    const size_t imageBytes = static_cast<size_t>(imageSize[0]) *
+        static_cast<size_t>(imageSize[1]) * 3u;
+    std::vector<unsigned char> reference(
+        renderer.getBuffer(), renderer.getBuffer() + imageBytes);
+
+    setenv("OBOL_CAD_FLAT_WIRE", "1", 1);
+    if (!render(renderer, root) || assembly->lastRenderTier() != 5) {
+        std::fprintf(stderr,
+            "mixed progressive scene did not retain the flat wire batch\n");
+        root->unref();
+        return 1;
+    }
+    const unsigned char *batched = renderer.getBuffer();
+    size_t changedPixels = 0;
+    size_t coveredPixels = 0;
+    for (size_t p = 0; p < imageBytes; p += 3) {
+        const bool referenceCovered =
+            reference[p] || reference[p + 1] || reference[p + 2];
+        const bool batchedCovered =
+            batched[p] || batched[p + 1] || batched[p + 2];
+        if (referenceCovered || batchedCovered)
+            ++coveredPixels;
+        if (std::memcmp(reference.data() + p, batched + p, 3) != 0)
+            ++changedPixels;
+    }
+    if (!coveredPixels || changedPixels > coveredPixels / 50u) {
+        std::fprintf(stderr,
+            "flat wire batch changed mixed-scene placement (%zu/%zu pixels)\n",
+            changedPixels, coveredPixels);
+        root->unref();
+        return 1;
+    }
+
+    // Scene-wide LoD admission may retire thousands of distinct mesh parts
+    // in one camera epoch.  The bulk API must remove the complete set without
+    // changing unrelated parts or requiring one full instance scan per part.
+    std::vector<Obol::PartId> removalParts;
+    for (int i = 0; i < 3; ++i) {
+        char name[64] = {};
+        std::snprintf(name, sizeof(name), "bulk-remove-part-%d", i);
+        const Obol::PartId id = Obol::CadIdBuilder::hash128(name);
+        assembly->upsertPart(id, geometry);
+        removalParts.push_back(id);
+    }
+    const size_t beforeBulkRemove = assembly->partCount();
+    assembly->removeParts(removalParts);
+    if (assembly->partCount() + removalParts.size() != beforeBulkRemove) {
+        std::fprintf(stderr, "bulk part removal did not remove exact set\n");
         root->unref();
         return 1;
     }
