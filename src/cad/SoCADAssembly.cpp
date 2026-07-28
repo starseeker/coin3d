@@ -511,6 +511,17 @@ struct InstanceData {
 };
 
 struct SoCADAssemblyImpl {
+    static constexpr size_t ProgressiveLevelBinCount = 17;
+
+    struct ProgressiveShadedPlanGroup {
+        Obol::PartId part;
+        uint32_t baseInstance = 0;
+        uint32_t instanceCount = 0;
+        std::array<uint32_t, ProgressiveLevelBinCount> levelCounts = {};
+        size_t shadedItemBegin = 0;
+        size_t shadedItemCount = 0;
+    };
+
     // Part library
     std::unordered_map<Obol::PartId, std::shared_ptr<const Obol::PartGeometry>,
                        std::hash<Obol::PartId>> parts_;
@@ -561,6 +572,16 @@ struct SoCADAssemblyImpl {
 
     // Frame plan cache.  Rebuilt lazily when planDirty_ is true.
     Obol::internal::CadFramePlan cachedPlan_;
+    // A shaded progressive plan is ordered into at most 17 level buckets
+    // (PoP levels 0..15 plus the producer-default sentinel).  These indices
+    // let a sparse LoD journal move an occurrence between buckets with at
+    // most 16 swaps instead of rebuilding and sorting the entire assembly.
+    std::vector<ProgressiveShadedPlanGroup> progressiveShadedPlanGroups_;
+    std::unordered_map<Obol::PartId, size_t, std::hash<Obol::PartId>>
+        progressiveShadedPlanGroupByPart_;
+    std::unordered_map<Obol::InstanceId, uint32_t,
+                       std::hash<Obol::InstanceId>>
+        progressivePlanIndexByInstance_;
     uint64_t nextPlanRevision_ = 1;
     uint64_t nextGeometryRevision_ = 1;
     uint64_t nextSubpixelProxyRevision_ = 1;
@@ -708,6 +729,13 @@ struct SoCADAssemblyImpl {
         bvhDirty_ = true;
         planDirty_ = true;
         geometryDirty_ = true;
+        progressiveShadedPlanGroups_.clear();
+        progressiveShadedPlanGroupByPart_.clear();
+        progressivePlanIndexByInstance_.clear();
+    }
+
+    static size_t progressiveLevelBin(uint8_t level) {
+        return level < 16 ? static_cast<size_t>(level) : 16u;
     }
 
     /**
@@ -827,6 +855,36 @@ struct SoCADAssemblyImpl {
             if (partIt == parts_.end() || !partIt->second) continue;
             const auto& geom = *partIt->second;
 
+            /*
+             * A retained PoP part is one shared resident buffer, but each
+             * occurrence may select a different prefix.  Keep occurrences
+             * with the same active level contiguous so the renderer can issue
+             * at most one instanced draw per (part, level, wire-style), rather
+             * than falling back to one draw per occurrence.
+             *
+             * The instance id tie-breaker also makes the frame plan stable
+             * across unordered-map iteration order.
+             */
+            const bool progressiveWire =
+                geom.wire.has_value() && geom.wire->isProgressive();
+            const bool progressiveShaded =
+                geom.shaded.has_value() && geom.shaded->isProgressive();
+            std::sort(vis.begin(), vis.end(),
+                [](const CadVisibleInstance& a,
+                   const CadVisibleInstance& b) {
+                    if (a.lodLevel != b.lodLevel)
+                        return a.lodLevel < b.lodLevel;
+                    if (a.lineWidth != b.lineWidth)
+                        return a.lineWidth < b.lineWidth;
+                    if (a.linePattern != b.linePattern)
+                        return a.linePattern < b.linePattern;
+                    if (a.linePatternFactor != b.linePatternFactor)
+                        return a.linePatternFactor < b.linePatternFactor;
+                    if (a.instanceId.w1 != b.instanceId.w1)
+                        return a.instanceId.w1 < b.instanceId.w1;
+                    return a.instanceId.w0 < b.instanceId.w0;
+                });
+
             const uint32_t count = static_cast<uint32_t>(vis.size());
 
             // Fill partIndex (index into the upcoming visibleInstances block)
@@ -847,7 +905,10 @@ struct SoCADAssemblyImpl {
                            vis[runEnd].lineWidth == vis[runStart].lineWidth &&
                            vis[runEnd].linePattern == vis[runStart].linePattern &&
                            vis[runEnd].linePatternFactor ==
-                               vis[runStart].linePatternFactor)
+                               vis[runStart].linePatternFactor &&
+                           (!progressiveWire ||
+                            vis[runEnd].lodLevel ==
+                                vis[runStart].lodLevel))
                         ++runEnd;
                     item.baseInstance = baseInst + runStart;
                     item.instanceCount = runEnd - runStart;
@@ -878,21 +939,62 @@ struct SoCADAssemblyImpl {
 
             // Shaded draw item
             if (needShaded && geom.shaded.has_value()) {
-                CadDrawItem item;
-                item.rep.part  = pid;
-                item.rep.type  = CadRepType::Triangles;
-                item.baseInstance  = baseInst;
-                item.instanceCount = count;
-                item.cullBackfaces = geom.shadedCullBackfaces &&
-                    std::all_of(vis.begin(), vis.end(),
-                        [](const CadVisibleInstance& instance) {
-                            return instance.rgba[3] == 255 &&
-                                cadTransformPreservesOrientation(
-                                    instance.transform);
-                        });
-                plan.shadedItems.push_back(item);
+                const size_t itemBegin = plan.shadedItems.size();
+                uint32_t runStart = 0;
+                while (runStart < count) {
+                    uint32_t runEnd = runStart + 1;
+                    while (runEnd < count &&
+                           (!progressiveShaded ||
+                            vis[runEnd].lodLevel ==
+                                vis[runStart].lodLevel))
+                        ++runEnd;
+                    CadDrawItem item;
+                    item.rep.part  = pid;
+                    item.rep.type  = CadRepType::Triangles;
+                    item.baseInstance = baseInst + runStart;
+                    item.instanceCount = runEnd - runStart;
+                    item.cullBackfaces = geom.shadedCullBackfaces &&
+                        std::all_of(vis.begin() + runStart,
+                            vis.begin() + runEnd,
+                            [](const CadVisibleInstance& instance) {
+                                return instance.rgba[3] == 255 &&
+                                    cadTransformPreservesOrientation(
+                                        instance.transform);
+                            });
+                    plan.shadedItems.push_back(item);
+                    runStart = runEnd;
+                }
+                /*
+                 * A progressive part can occupy no more than one run per PoP
+                 * level, and no more runs than it has occurrences.  Reserve
+                 * that fixed number of draw-item slots in the cached plan.
+                 * Sparse level changes can then alter run boundaries in place
+                 * without inserting into the global draw-item vector.
+                 */
+                if (progressiveShaded) {
+                    const size_t slotCount =
+                        std::min<size_t>(count, ProgressiveLevelBinCount);
+                    while (plan.shadedItems.size() - itemBegin < slotCount) {
+                        CadDrawItem item;
+                        item.rep.part = pid;
+                        item.rep.type = CadRepType::Triangles;
+                        item.baseInstance = baseInst;
+                        item.instanceCount = 0;
+                        item.cullBackfaces = geom.shadedCullBackfaces &&
+                            std::all_of(vis.begin(), vis.end(),
+                                [](const CadVisibleInstance& instance) {
+                                    return instance.rgba[3] == 255 &&
+                                        cadTransformPreservesOrientation(
+                                            instance.transform);
+                                });
+                        plan.shadedItems.push_back(item);
+                    }
+                }
                 if (!requiredShadedParts.count(pid)) {
-                    plan.requiredReps.push_back(item.rep);
+                    CadRepKey rep;
+                    rep.part = pid;
+                    rep.type = CadRepType::Triangles;
+                    plan.requiredReps.push_back(rep);
                     requiredShadedParts.insert(pid);
                 }
             }
@@ -901,6 +1003,184 @@ struct SoCADAssemblyImpl {
         }
 
         return plan;
+    }
+
+    void rebuildProgressiveShadedPlanIndex() {
+        progressiveShadedPlanGroups_.clear();
+        progressiveShadedPlanGroupByPart_.clear();
+        progressivePlanIndexByInstance_.clear();
+        if (cachedDM_ != SoCADAssembly::SHADED ||
+                cachedPlan_.visibleInstances.empty())
+            return;
+
+        size_t base = 0;
+        while (base < cachedPlan_.visibleInstances.size()) {
+            const uint32_t partBase =
+                cachedPlan_.visibleInstances[base].partIndex;
+            size_t end = base + 1;
+            while (end < cachedPlan_.visibleInstances.size() &&
+                    cachedPlan_.visibleInstances[end].partIndex == partBase)
+                ++end;
+
+            const auto instanceFound = instances_.find(
+                cachedPlan_.visibleInstances[base].instanceId);
+            if (instanceFound == instances_.end()) {
+                base = end;
+                continue;
+            }
+            const Obol::PartId part = instanceFound->second.partId;
+            const auto geometryFound = parts_.find(part);
+            if (geometryFound == parts_.end() || !geometryFound->second ||
+                    !geometryFound->second->shaded.has_value() ||
+                    !geometryFound->second->shaded->isProgressive()) {
+                base = end;
+                continue;
+            }
+
+            ProgressiveShadedPlanGroup group;
+            group.part = part;
+            group.baseInstance = static_cast<uint32_t>(base);
+            group.instanceCount = static_cast<uint32_t>(end - base);
+            for (size_t i = base; i < end; ++i) {
+                const auto& instance = cachedPlan_.visibleInstances[i];
+                ++group.levelCounts[progressiveLevelBin(instance.lodLevel)];
+                progressivePlanIndexByInstance_[instance.instanceId] =
+                    static_cast<uint32_t>(i);
+            }
+            for (size_t i = 0; i < cachedPlan_.shadedItems.size(); ++i) {
+                if (!(cachedPlan_.shadedItems[i].rep.part == part))
+                    continue;
+                if (group.shadedItemCount == 0)
+                    group.shadedItemBegin = i;
+                ++group.shadedItemCount;
+            }
+            if (group.shadedItemCount == 0) {
+                base = end;
+                continue;
+            }
+            progressiveShadedPlanGroupByPart_[part] =
+                progressiveShadedPlanGroups_.size();
+            progressiveShadedPlanGroups_.push_back(group);
+            base = end;
+        }
+    }
+
+    bool patchProgressiveShadedPlanLod(
+            Obol::InstanceId instance, uint8_t lodLevel,
+            std::unordered_set<size_t>& changedGroups) {
+        if (planDirty_ || geometryDirty_ ||
+                cachedDM_ != SoCADAssembly::SHADED)
+            return false;
+        const auto indexFound =
+            progressivePlanIndexByInstance_.find(instance);
+        if (indexFound == progressivePlanIndexByInstance_.end())
+            return false;
+        uint32_t index = indexFound->second;
+        if (index >= cachedPlan_.visibleInstances.size())
+            return false;
+        auto& visible = cachedPlan_.visibleInstances;
+        const auto instanceFound = instances_.find(instance);
+        if (instanceFound == instances_.end())
+            return false;
+        const auto groupFound =
+            progressiveShadedPlanGroupByPart_.find(
+                instanceFound->second.partId);
+        if (groupFound == progressiveShadedPlanGroupByPart_.end())
+            return false;
+        const size_t groupIndex = groupFound->second;
+        ProgressiveShadedPlanGroup& group =
+            progressiveShadedPlanGroups_[groupIndex];
+        const size_t oldBin = progressiveLevelBin(visible[index].lodLevel);
+        const size_t newBin = progressiveLevelBin(lodLevel);
+
+        const auto swapVisible = [&](uint32_t left, uint32_t right) {
+            if (left == right)
+                return;
+            std::swap(visible[left], visible[right]);
+            progressivePlanIndexByInstance_[visible[left].instanceId] = left;
+            progressivePlanIndexByInstance_[visible[right].instanceId] = right;
+        };
+
+        if (oldBin < newBin) {
+            uint32_t boundary = group.baseInstance;
+            for (size_t bin = 0; bin <= oldBin; ++bin)
+                boundary += group.levelCounts[bin];
+            swapVisible(index, boundary - 1);
+            index = boundary - 1;
+            for (size_t bin = oldBin + 1; bin <= newBin; ++bin) {
+                boundary += group.levelCounts[bin];
+                swapVisible(index, boundary - 1);
+                index = boundary - 1;
+            }
+        } else if (oldBin > newBin) {
+            uint32_t boundary = group.baseInstance;
+            for (size_t bin = 0; bin < oldBin; ++bin)
+                boundary += group.levelCounts[bin];
+            swapVisible(index, boundary);
+            index = boundary;
+            for (size_t bin = oldBin; bin-- > newBin; ) {
+                uint32_t previousBoundary = group.baseInstance;
+                for (size_t prior = 0; prior < bin; ++prior)
+                    previousBoundary += group.levelCounts[prior];
+                swapVisible(index, previousBoundary);
+                index = previousBoundary;
+            }
+        }
+        visible[index].lodLevel = lodLevel;
+        progressivePlanIndexByInstance_[instance] = index;
+        if (oldBin != newBin) {
+            --group.levelCounts[oldBin];
+            ++group.levelCounts[newBin];
+        }
+        changedGroups.insert(groupIndex);
+        return true;
+    }
+
+    void finishProgressiveShadedPlanPatch(
+            const std::unordered_set<size_t>& changedGroups) {
+        for (size_t groupIndex : changedGroups) {
+            if (groupIndex >= progressiveShadedPlanGroups_.size())
+                continue;
+            ProgressiveShadedPlanGroup& group =
+                progressiveShadedPlanGroups_[groupIndex];
+            if (group.shadedItemBegin + group.shadedItemCount >
+                    cachedPlan_.shadedItems.size())
+                continue;
+            const bool cullBackfaces =
+                cachedPlan_.shadedItems[group.shadedItemBegin].cullBackfaces;
+            size_t slot = 0;
+            uint32_t base = group.baseInstance;
+            for (size_t bin = 0;
+                    bin < ProgressiveLevelBinCount &&
+                    slot < group.shadedItemCount; ++bin) {
+                const uint32_t count = group.levelCounts[bin];
+                if (!count)
+                    continue;
+                auto& item =
+                    cachedPlan_.shadedItems[group.shadedItemBegin + slot++];
+                item.rep.part = group.part;
+                item.rep.type =
+                    Obol::internal::CadRepType::Triangles;
+                item.baseInstance = base;
+                item.instanceCount = count;
+                item.cullBackfaces = cullBackfaces;
+                base += count;
+            }
+            while (slot < group.shadedItemCount) {
+                auto& item =
+                    cachedPlan_.shadedItems[group.shadedItemBegin + slot++];
+                item.rep.part = group.part;
+                item.rep.type =
+                    Obol::internal::CadRepType::Triangles;
+                item.baseInstance = group.baseInstance;
+                item.instanceCount = 0;
+                item.cullBackfaces = cullBackfaces;
+            }
+        }
+        cachedPlan_.revision = nextPlanRevision_++;
+        if (nextPlanRevision_ == 0)
+            nextPlanRevision_ = 1;
+        subpixelProxyStatePlanRevision_ = 0;
     }
 
     void updateSubpixelProxyPlan(const SbMatrix& viewProj,
@@ -1015,6 +1295,7 @@ SoCADAssembly::SoCADAssembly()
 
     SO_NODE_ADD_FIELD(edgePickTolerancePx, (5.0f));
     SO_NODE_ADD_FIELD(wireframeOcclusion,  (FALSE));
+    SO_NODE_ADD_FIELD(progressiveLodCeiling, (-1));
 }
 
 SoCADAssembly::~SoCADAssembly() = default;
@@ -1206,16 +1487,26 @@ SoCADAssembly::updateInstanceLodLevels(
     const std::vector<Obol::InstanceLodUpdate>& updates)
 {
     bool changed = false;
+    bool sparsePlanPatch = !impl_->planDirty_ && !impl_->geometryDirty_ &&
+        impl_->cachedDM_ == SoCADAssembly::SHADED;
+    std::unordered_set<size_t> changedPlanGroups;
     for (const auto& update : updates) {
         auto found = impl_->instances_.find(update.instance);
         if (found == impl_->instances_.end() ||
                 found->second.lodLevel == update.lodLevel)
             continue;
+        if (sparsePlanPatch &&
+                !impl_->patchProgressiveShadedPlanLod(
+                    update.instance, update.lodLevel, changedPlanGroups))
+            sparsePlanPatch = false;
         found->second.lodLevel = update.lodLevel;
         changed = true;
     }
     if (!changed) return;
-    impl_->planDirty_ = true;
+    if (sparsePlanPatch)
+        impl_->finishProgressiveShadedPlanPatch(changedPlanGroups);
+    else
+        impl_->planDirty_ = true;
     /* The instance BVH also carries the active cut used by exact picking.
      * Rebuilding remains lazy and therefore does not add work to rendering. */
     impl_->bvhDirty_ = true;
@@ -1315,6 +1606,15 @@ SoCADAssembly::isInstanceHidden(Obol::InstanceId iid) const
 bool SoCADAssembly::hasProgressivePartLod() const
 {
     return !impl_->progressiveParts_.empty();
+}
+
+uint8_t SoCADAssembly::effectiveProgressiveLodLevel(
+    uint8_t requested) const
+{
+    const int ceiling = progressiveLodCeiling.getValue();
+    if (ceiling < 0 || ceiling > 15)
+        return requested;
+    return std::min(requested, static_cast<uint8_t>(ceiling));
 }
 
 const Obol::PartGeometry*
@@ -1434,6 +1734,7 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
         impl_->planDirty_   = false;
         impl_->geometryDirty_ = false;
         impl_->cachedDM_    = dm;
+        impl_->rebuildProgressiveShadedPlanIndex();
     }
 
     const SbViewportRegion& viewport = SoViewportRegionElement::get(state);
@@ -1654,6 +1955,10 @@ SoCADAssembly::rayPick(SoRayPickAction* action)
     }
 
     Obol::picking::CadPickResult result;
+    const int configuredLodCeiling = progressiveLodCeiling.getValue();
+    const uint8_t pickLodCeiling =
+        configuredLodCeiling >= 0 && configuredLodCeiling <= 15 ?
+        static_cast<uint8_t>(configuredLodCeiling) : 255;
 
     if (automaticPick || pm == PICK_EDGE || pm == PICK_HYBRID) {
         result = Obol::picking::CadPickQuery::pickPoint(
@@ -1666,7 +1971,8 @@ SoCADAssembly::rayPick(SoRayPickAction* action)
             impl_->instanceBvh_,
             impl_->parts_,
             impl_->partEdgeBvhCache_,
-            toleranceWS);
+            toleranceWS,
+            pickLodCeiling);
     }
 
     if (!result.valid && (pm == PICK_TRIANGLE || pm == PICK_HYBRID)) {
@@ -1675,7 +1981,8 @@ SoCADAssembly::rayPick(SoRayPickAction* action)
             impl_->instanceBvh_,
             impl_->parts_,
             impl_->partTriBvhCache_,
-            toleranceWS);
+            toleranceWS,
+            pickLodCeiling);
     }
 
     if (!result.valid && pm == PICK_BOUNDS) {

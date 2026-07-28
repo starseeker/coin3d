@@ -186,7 +186,9 @@ private:
         GLuint shaded  = 0; ///< Shaded-pass shader (Phong, no instancing)
         GLuint shadedPop = 0; ///< Shaded-pass shader with branchless PoP snapping
         GLuint wireInst   = 0; ///< Wire-pass shader (instanced)
+        GLuint wirePopInst = 0; ///< Wire-pass PoP shader (instanced by level)
         GLuint shadedInst = 0; ///< Shaded-pass shader (instanced Phong)
+        GLuint shadedPopInst = 0; ///< Shaded PoP shader (instanced by level)
     };
     ShaderPrograms shaders_;
     uint32_t shadersContextId_ = 0;

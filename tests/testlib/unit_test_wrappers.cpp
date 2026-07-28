@@ -4086,6 +4086,34 @@ static int runRotationTests()
         }
     }
 
+    // --- 180-degree multi-axis matrix round-trip ---
+    {
+        // trace == -1 is singular for trace-only quaternion conversions.
+        // This matrix is a 180-degree rotation around (1,0,1).
+        SbMatrix m(0.0f, 0.0f, 1.0f, 0.0f,
+                   0.0f, -1.0f, 0.0f, 0.0f,
+                   1.0f, 0.0f, 0.0f, 0.0f,
+                   0.0f, 0.0f, 0.0f, 1.0f);
+        SbRotation r(m);
+        SbMatrix got;
+        r.getValue(got);
+        bool pass = true;
+        for (int row = 0; row < 3; ++row) {
+            for (int col = 0; col < 3; ++col)
+                pass = pass && approxEqual(got[row][col], m[row][col], 1e-4f);
+        }
+        float qx, qy, qz, qw;
+        r.getValue(qx, qy, qz, qw);
+        const float qnorm = std::sqrt(qx*qx + qy*qy + qz*qz + qw*qw);
+        pass = pass && approxEqual(qnorm, 1.0f, 1e-4f);
+        if (!pass) {
+            fprintf(stderr, "  FAIL: 180-degree matrix round-trip "
+                    "(q=%f %f %f %f, norm=%f)\n",
+                    qx, qy, qz, qw, qnorm);
+            ++failures;
+        }
+    }
+
     // --- rotate-to constructor (from, to) ---
     {
         SbVec3f from(1.0f, 0.0f, 0.0f);

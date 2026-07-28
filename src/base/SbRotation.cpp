@@ -79,6 +79,7 @@
 #include <Inventor/SbVec3f.h>
 #include <Inventor/SbMatrix.h>
 #include <Inventor/fields/SoSFRotation.h>
+#include <algorithm>
 #include <cassert>
 #include <cfloat>
 #include "coinString.h"
@@ -395,36 +396,70 @@ SbRotation::setValue(const float q[4])
 SbRotation &
 SbRotation::setValue(const SbMatrix & m)
 {
-  float scalerow = m[0][0] + m[1][1] + m[2][2];
+  // Use explicit scalar branches rather than the indexed cyclic form.  Apart
+  // from being easier to audit, this keeps the trace == -1 / 180-degree case
+  // well conditioned.  The old path could lose one component of a
+  // multi-axis 180-degree rotation and return a non-unit quaternion.
+  const double m00 = m[0][0];
+  const double m01 = m[0][1];
+  const double m02 = m[0][2];
+  const double m10 = m[1][0];
+  const double m11 = m[1][1];
+  const double m12 = m[1][2];
+  const double m20 = m[2][0];
+  const double m21 = m[2][1];
+  const double m22 = m[2][2];
+  const double homogeneous = m[3][3];
+  const double trace = m00 + m11 + m22;
+  double qx = 0.0;
+  double qy = 0.0;
+  double qz = 0.0;
+  double qw = 1.0;
+  double s = 0.0;
 
-  if (scalerow > 0.0f) {
-    float s = static_cast<float>(sqrt(scalerow + m[3][3]));
-    this->quat[3] = s * 0.5f;
-    s = 0.5f / s;
-
-    this->quat[0] = (m[1][2] - m[2][1]) * s;
-    this->quat[1] = (m[2][0] - m[0][2]) * s;
-    this->quat[2] = (m[0][1] - m[1][0]) * s;
+  if (trace > 0.0) {
+    s = 2.0 * sqrt(std::max(0.0, trace + homogeneous));
+    if (s > DBL_EPSILON) {
+      qw = 0.25 * s;
+      qx = (m12 - m21) / s;
+      qy = (m20 - m02) / s;
+      qz = (m01 - m10) / s;
+    }
+  }
+  else if (m00 >= m11 && m00 >= m22) {
+    s = 2.0 * sqrt(std::max(0.0, m00 - m11 - m22 + homogeneous));
+    if (s > DBL_EPSILON) {
+      qx = 0.25 * s;
+      qy = (m01 + m10) / s;
+      qz = (m02 + m20) / s;
+      qw = (m12 - m21) / s;
+    }
+  }
+  else if (m11 >= m22) {
+    s = 2.0 * sqrt(std::max(0.0, m11 - m00 - m22 + homogeneous));
+    if (s > DBL_EPSILON) {
+      qx = (m01 + m10) / s;
+      qy = 0.25 * s;
+      qz = (m12 + m21) / s;
+      qw = (m20 - m02) / s;
+    }
   }
   else {
-    int i = 0;
-    if (m[1][1] > m[0][0]) i = 1;
-    if (m[2][2] > m[i][i]) i = 2;
-
-    int j = (i+1)%3;
-    int k = (j+1)%3;
-
-    float s = static_cast<float>(sqrt((m[i][i] - (m[j][j] + m[k][k])) + m[3][3]));
-
-    this->quat[i] = s * 0.5f;
-    s = 0.5f / s;
-
-    this->quat[3] = (m[j][k] - m[k][j]) * s;
-    this->quat[j] = (m[i][j] + m[j][i]) * s;
-    this->quat[k] = (m[i][k] + m[k][i]) * s;
+    s = 2.0 * sqrt(std::max(0.0, m22 - m00 - m11 + homogeneous));
+    if (s > DBL_EPSILON) {
+      qx = (m02 + m20) / s;
+      qy = (m12 + m21) / s;
+      qz = 0.25 * s;
+      qw = (m01 - m10) / s;
+    }
   }
 
-  if (m[3][3] != 1.0f) this->operator*=(1.0f/static_cast<float>(sqrt(m[3][3])));
+  this->quat.setValue(static_cast<float>(qx), static_cast<float>(qy),
+                      static_cast<float>(qz), static_cast<float>(qw));
+  if (homogeneous > 0.0 && homogeneous != 1.0)
+    this->operator*=(1.0f / static_cast<float>(sqrt(homogeneous)));
+  if (this->quat.normalize() == 0.0f)
+    this->quat.setValue(0.0f, 0.0f, 0.0f, 1.0f);
   return *this;
 }
 
@@ -736,4 +771,3 @@ SbRotation::print([[maybe_unused]] FILE * fp) const
   this->quat.print(fp);
 #endif // OBOL_DEBUG
 }
-

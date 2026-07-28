@@ -77,6 +77,7 @@
 #include <Inventor/fields/SoSFEnum.h>
 #include <Inventor/fields/SoSFBool.h>
 #include <Inventor/fields/SoSFFloat.h>
+#include <Inventor/fields/SoSFInt32.h>
 #include <Inventor/SbMatrix.h>
 #include <Inventor/SbColor4f.h>
 #include <Inventor/SbBox3f.h>
@@ -403,6 +404,13 @@ public:
     SoSFEnum  pickMode;             ///< Default: PICK_AUTO
     SoSFFloat edgePickTolerancePx;  ///< Screen-space edge pick tolerance (pixels)
     SoSFBool  wireframeOcclusion;   ///< Run depth-only triangle pass in wireframe mode
+    /** Emergency render-only PoP ceiling, or -1 when disabled.
+     *
+     * This does not mutate producer-authored per-instance cuts or rebuild the
+     * frame plan.  It lets a view controller shed already-retained draw work
+     * in O(1) at interaction start while its precise per-instance allocator
+     * catches up. */
+    SoSFInt32 progressiveLodCeiling;
 
     // -----------------------------------------------------------------------
     // Class registration
@@ -530,6 +538,9 @@ public:
 
     /** True when any retained part contains producer-authored PoP prefixes. */
     bool hasProgressivePartLod() const;
+
+    /** Apply the render-only progressive ceiling to one requested level. */
+    uint8_t effectiveProgressiveLodLevel(uint8_t requested) const;
 
     /**
      * Return the geometry for @p pid, or nullptr if not in the part library.
