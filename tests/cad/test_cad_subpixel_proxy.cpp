@@ -6,12 +6,15 @@
 #include <Obol/cad/CadIds.h>
 
 #include <Inventor/SbViewportRegion.h>
+#include <Inventor/nodes/SoDirectionalLight.h>
 #include <Inventor/nodes/SoOrthographicCamera.h>
 #include <Inventor/nodes/SoSeparator.h>
 
 #include <cstdlib>
 #include <cstdio>
 #include <cstring>
+#include <algorithm>
+#include <string>
 #include <vector>
 
 namespace {
@@ -62,6 +65,167 @@ nonBlackPixels(const SoOffscreenRenderer &renderer)
             ++count;
     }
     return count;
+}
+
+struct HalfImageStats {
+    double leftMean = 0.0;
+    double rightMean = 0.0;
+    size_t leftPixels = 0;
+    size_t rightPixels = 0;
+};
+
+HalfImageStats
+foregroundHalfStats(const SoOffscreenRenderer &renderer)
+{
+    HalfImageStats result;
+    const unsigned char *buffer = renderer.getBuffer();
+    const SbVec2s size = renderer.getViewportRegion().getViewportSizePixels();
+    if (!buffer || size[0] <= 0 || size[1] <= 0)
+        return result;
+
+    double leftSum = 0.0;
+    double rightSum = 0.0;
+    for (int y = 0; y < size[1]; ++y) {
+        for (int x = 0; x < size[0]; ++x) {
+            const unsigned char *pixel =
+                buffer + (static_cast<size_t>(y) * size[0] + x) * 3u;
+            if (!pixel[0] && !pixel[1] && !pixel[2])
+                continue;
+            const double luma =
+                0.2126 * pixel[0] + 0.7152 * pixel[1] + 0.0722 * pixel[2];
+            if (x < size[0] / 2) {
+                leftSum += luma;
+                ++result.leftPixels;
+            } else {
+                rightSum += luma;
+                ++result.rightPixels;
+            }
+        }
+    }
+    if (result.leftPixels)
+        result.leftMean = leftSum / result.leftPixels;
+    if (result.rightPixels)
+        result.rightMean = rightSum / result.rightPixels;
+    return result;
+}
+
+bool
+normalFreeTwoSidedGlslMatchesFixed()
+{
+    SoSeparator *root = new SoSeparator;
+    root->ref();
+    SoOrthographicCamera *camera = new SoOrthographicCamera;
+    camera->position.setValue(0.0f, 0.0f, 5.0f);
+    camera->nearDistance.setValue(0.1f);
+    camera->farDistance.setValue(100.0f);
+    camera->height.setValue(2.4f);
+    root->addChild(camera);
+
+    SoDirectionalLight *light = new SoDirectionalLight;
+    light->direction.setValue(0.0f, 0.0f, -1.0f);
+    root->addChild(light);
+
+    SoCADAssembly *assembly = new SoCADAssembly;
+    assembly->drawMode.setValue(SoCADAssembly::SHADED);
+    root->addChild(assembly);
+
+    /*
+     * Two disjoint, coplanar triangles deliberately use opposite winding and
+     * have no authored normal stream.  The retained progressive declaration
+     * makes the fixed VBO reference compute flat normals from the geometry,
+     * matching the normal-free PoP payloads used by BRL-CAD meshes such as
+     * Lucy.  With two-sided lighting, both visible triangles must receive the
+     * same headlight contribution.
+     */
+    Obol::TriMesh mesh;
+    mesh.positions = {
+        SbVec3f(-1.05f, -0.8f, 0.0f),
+        SbVec3f(-0.05f, -0.8f, 0.0f),
+        SbVec3f(-0.55f, 0.8f, 0.0f),
+        SbVec3f(0.05f, -0.8f, 0.0f),
+        SbVec3f(1.05f, -0.8f, 0.0f),
+        SbVec3f(0.55f, 0.8f, 0.0f)
+    };
+    mesh.indices = {0, 1, 2, 3, 5, 4};
+    mesh.bounds.makeEmpty();
+    for (const SbVec3f& point : mesh.positions)
+        mesh.bounds.extendBy(point);
+    mesh.progressiveMinimumLevel = 15;
+    mesh.progressiveResidentLevel = 15;
+    mesh.progressiveIndexCount[15] =
+        static_cast<uint32_t>(mesh.indices.size());
+    mesh.progressivePositionCount[15] =
+        static_cast<uint32_t>(mesh.positions.size());
+    mesh.progressiveQuantizationMinimum = mesh.bounds.getMin();
+    mesh.progressiveQuantizationMaximum = mesh.bounds.getMax();
+
+    Obol::PartGeometry geometry;
+    geometry.shaded = std::move(mesh);
+    geometry.shadedCullBackfaces = false;
+    const Obol::PartId part =
+        Obol::CadIdBuilder::hash128("normal-free-two-sided");
+    assembly->upsertPart(part, geometry);
+
+    Obol::InstanceRecord instance;
+    instance.part = part;
+    instance.parent = Obol::CadIdBuilder::Root();
+    instance.childName = "normal-free-two-sided";
+    instance.localToRoot.makeIdentity();
+    instance.lodLevel = 15;
+    instance.style.hasColorOverride = true;
+    instance.style.color = SbColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+    assembly->upsertInstanceAuto(instance);
+
+    const SbViewportRegion viewport(256, 192);
+    SoOffscreenRenderer renderer(viewport);
+    renderer.setComponents(SoOffscreenRenderer::RGB);
+    renderer.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
+
+    const char *previousGlsl = std::getenv("OBOL_CAD_SOFTWARE_GLSL");
+    const bool hadPreviousGlsl = previousGlsl != nullptr;
+    const std::string previousGlslValue =
+        previousGlsl ? std::string(previousGlsl) : std::string();
+    const auto restoreGlslEnvironment = [&]() {
+        if (hadPreviousGlsl)
+            setenv("OBOL_CAD_SOFTWARE_GLSL",
+                   previousGlslValue.c_str(), 1);
+        else
+            unsetenv("OBOL_CAD_SOFTWARE_GLSL");
+    };
+
+    unsetenv("OBOL_CAD_SOFTWARE_GLSL");
+    if (!render(renderer, root)) {
+        restoreGlslEnvironment();
+        root->unref();
+        return false;
+    }
+    const HalfImageStats fixed = foregroundHalfStats(renderer);
+
+    setenv("OBOL_CAD_SOFTWARE_GLSL", "1", 1);
+    const bool rendered = render(renderer, root);
+    const HalfImageStats glsl = foregroundHalfStats(renderer);
+    restoreGlslEnvironment();
+    root->unref();
+
+    if (!rendered || fixed.leftPixels < 100 || fixed.rightPixels < 100 ||
+            glsl.leftPixels < 100 || glsl.rightPixels < 100)
+        return false;
+    const double minimumLit = 0.75 *
+        (std::min)(fixed.leftMean, fixed.rightMean);
+    const double glslLow = (std::min)(glsl.leftMean, glsl.rightMean);
+    const double glslHigh = (std::max)(glsl.leftMean, glsl.rightMean);
+    const bool matched = glslLow >= minimumLit && glslHigh > 0.0 &&
+        glslLow / glslHigh >= 0.9;
+    if (!matched) {
+        std::fprintf(stderr,
+            "two-sided stats fixed={left=%.3f/%zu right=%.3f/%zu} "
+            "glsl={left=%.3f/%zu right=%.3f/%zu}\n",
+            fixed.leftMean, fixed.leftPixels,
+            fixed.rightMean, fixed.rightPixels,
+            glsl.leftMean, glsl.leftPixels,
+            glsl.rightMean, glsl.rightPixels);
+    }
+    return matched;
 }
 
 } // namespace
@@ -298,5 +462,10 @@ main()
     }
 
     root->unref();
+    if (!normalFreeTwoSidedGlslMatchesFixed()) {
+        std::fprintf(stderr,
+            "normal-free two-sided GLSL shading diverged from fixed VBO\n");
+        return 1;
+    }
     return 0;
 }

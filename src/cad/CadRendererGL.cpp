@@ -335,6 +335,9 @@ static const char * kShadedFS1 =
     "uniform vec3  u_laxis[8];\n"
     "uniform vec3  u_lcolor[8];\n"
     "uniform float u_lcos[8];\n"
+    "uniform vec3  u_eyeWorld;\n"
+    "uniform vec3  u_viewTowardEye;\n"
+    "uniform int   u_perspective;\n"
     "varying vec3  v_norm;\n"
     "varying vec3  v_worldPos;\n"
     "varying vec4  v_color;\n"
@@ -347,6 +350,9 @@ static const char * kShadedFS1 =
     "        vec3 fn = cross(dFdx(v_worldPos), dFdy(v_worldPos));\n"
     "        float fl = length(fn);\n"
     "        n = (fl > 0.0) ? fn / fl : vec3(0.0, 0.0, 1.0);\n"
+    "        vec3 toEye = (u_perspective != 0) ?\n"
+    "            normalize(u_eyeWorld - v_worldPos) : u_viewTowardEye;\n"
+    "        if (dot(n, toEye) < 0.0) n = -n;\n"
     "    }\n"
     "    vec3 col = v_color.rgb * 0.06;\n"
     "    for (int i = 0; i < 8; i++) {\n"
@@ -505,6 +511,9 @@ static const char * kShadedFS2 =
     "uniform vec3  u_laxis[8];\n"
     "uniform vec3  u_lcolor[8];\n"
     "uniform float u_lcos[8];\n"
+    "uniform vec3  u_eyeWorld;\n"
+    "uniform vec3  u_viewTowardEye;\n"
+    "uniform int   u_perspective;\n"
     "in  vec3 v_norm;\n"
     "in  vec3 v_worldPos;\n"
     "in  vec4 v_color;\n"
@@ -518,6 +527,9 @@ static const char * kShadedFS2 =
     "        vec3 fn = cross(dFdx(v_worldPos), dFdy(v_worldPos));\n"
     "        float fl = length(fn);\n"
     "        n = (fl > 0.0) ? fn / fl : vec3(0.0, 0.0, 1.0);\n"
+    "        vec3 toEye = (u_perspective != 0) ?\n"
+    "            normalize(u_eyeWorld - v_worldPos) : u_viewTowardEye;\n"
+    "        if (dot(n, toEye) < 0.0) n = -n;\n"
     "    }\n"
     "    vec3 col = v_color.rgb * 0.06;\n"
     "    for (int i = 0; i < 8; i++) {\n"
@@ -696,6 +708,27 @@ CadRendererGL::uploadLights(const SoGLContext* glue, GLuint program)
                 vec[0], vec[1], vec[2], color[0], color[1], color[2]);
         }
     }
+}
+
+void
+CadRendererGL::uploadViewFacing(const SoGLContext* glue, GLuint program,
+                                const SbViewVolume& viewVolume)
+{
+    const SbVec3f eye = viewVolume.getProjectionPoint();
+    SbVec3f towardEye = -viewVolume.getProjectionDirection();
+    if (towardEye.normalize() == 0.0f)
+        towardEye.setValue(0.0f, 0.0f, 1.0f);
+    const GLint eyeLocation =
+        glue->glGetUniformLocationARB(program, "u_eyeWorld");
+    const GLint directionLocation =
+        glue->glGetUniformLocationARB(program, "u_viewTowardEye");
+    const GLint perspectiveLocation =
+        glue->glGetUniformLocationARB(program, "u_perspective");
+    glue->glUniform3fvARB(eyeLocation, 1, eye.getValue());
+    glue->glUniform3fvARB(directionLocation, 1, towardEye.getValue());
+    glue->glUniform1iARB(
+        perspectiveLocation,
+        viewVolume.getProjectionType() == SbViewVolume::PERSPECTIVE ? 1 : 0);
 }
 
 CadRendererGL::~CadRendererGL()
@@ -1609,6 +1642,7 @@ void CadRendererGL::render(
         const SbMatrix&      viewProj,
         const SbMatrix&      viewMatrix,
         const SbMatrix&      projectionMatrix,
+        const SbViewVolume&  viewVolume,
         const std::unordered_map<PartId, uint64_t,
                                  std::hash<PartId>>& partGenMap)
 {
@@ -1692,7 +1726,8 @@ void CadRendererGL::render(
         if (caps_.canUseVbo() && shaders_.shaded &&
                 progressiveShadedShaderReady) {
             renderVboLoop(
-                depthPlan, assembly, glue, viewProj, false, false, true);
+                depthPlan, assembly, glue, viewProj, viewVolume,
+                false, false, true);
         } else if (caps_.canUseFixedVbo()) {
             renderFixedVboLoop(depthPlan, assembly, glue, viewProj, viewMatrix,
                                projectionMatrix, false, true);
@@ -1706,13 +1741,15 @@ void CadRendererGL::render(
         if (caps_.canUseInstanced() && shaders_.wireInst &&
                 progressiveWireInstShaderReady) {
             lastRenderTier_ = 2;
-            renderInstanced(wirePlan, assembly, glue, viewProj, partGenMap,
+            renderInstanced(wirePlan, assembly, glue, viewProj, viewVolume,
+                            partGenMap,
                             true, false, false);
         } else if (caps_.canUseVbo() && shaders_.wire &&
                 progressiveWireShaderReady) {
             lastRenderTier_ = 1;
             renderVboLoop(
-                wirePlan, assembly, glue, viewProj, true, false, false);
+                wirePlan, assembly, glue, viewProj, viewVolume,
+                true, false, false);
         } else if (caps_.canUseFixedVbo()) {
             lastRenderTier_ = 1;
             renderFixedVboLoop(wirePlan, assembly, glue, viewProj, viewMatrix,
@@ -1803,12 +1840,12 @@ void CadRendererGL::render(
             progressiveWireInstShaderReady &&
             progressiveShadedInstShaderReady) {
         lastRenderTier_ = 2;
-        renderInstanced(plan, assembly, glue, viewProj, partGenMap,
+        renderInstanced(plan, assembly, glue, viewProj, viewVolume, partGenMap,
                         !flatWireRendered, false, true);
     } else if (caps_.canUseVbo() && shaders_.wire &&
             progressiveWireShaderReady && progressiveShadedShaderReady) {
         lastRenderTier_ = 1;
-        renderVboLoop(plan, assembly, glue, viewProj,
+        renderVboLoop(plan, assembly, glue, viewProj, viewVolume,
                       !flatWireRendered, false, true);
     } else if (caps_.canUseFixedVbo()) {
         lastRenderTier_ = 1;
@@ -2705,6 +2742,7 @@ void CadRendererGL::renderVboLoop(
         const SoCADAssembly& assembly,
         const SoGLContext*   glue,
         const SbMatrix&      viewProj,
+        const SbViewVolume&  viewVolume,
         bool drawWire,
         bool customWireOnly,
         bool drawShaded)
@@ -2919,6 +2957,8 @@ void CadRendererGL::renderVboLoop(
                         loc.viewProjection, 1, GL_FALSE, vpData);
                     if (!lightsUploaded[variant]) {
                         this->uploadLights(glue, activeProgram);
+                        this->uploadViewFacing(
+                            glue, activeProgram, viewVolume);
                         lightsUploaded[variant] = true;
                     }
                 }
@@ -3423,6 +3463,7 @@ void CadRendererGL::renderInstanced(
         const SoCADAssembly& assembly,
         const SoGLContext*   glue,
         const SbMatrix&      viewProj,
+        const SbViewVolume&  viewVolume,
         const std::unordered_map<PartId, uint64_t,
                                  std::hash<PartId>>& /*partGenMap*/,
         bool drawWire,
@@ -3720,6 +3761,8 @@ void CadRendererGL::renderInstanced(
                     loc.viewProjection, 1, GL_FALSE, vp);
                 if (!lightsUploaded[variant]) {
                     this->uploadLights(glue, activeProgram);
+                    this->uploadViewFacing(
+                        glue, activeProgram, viewVolume);
                     lightsUploaded[variant] = true;
                 }
             }

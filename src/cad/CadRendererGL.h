@@ -80,6 +80,7 @@
 
 #include <Inventor/SbMatrix.h>
 #include <Inventor/SbVec3f.h>
+#include <Inventor/SbViewVolume.h>
 #include <Inventor/system/gl.h>
 
 #include <memory>
@@ -110,6 +111,8 @@ public:
      * @param viewProj   Combined view-projection matrix (OI row-major, GL_FALSE upload).
      * @param viewMatrix Active model-view matrix before local instance transforms.
      * @param projectionMatrix Active projection matrix.
+     * @param viewVolume Camera projection point/direction used to orient
+     *                   derivative-generated two-sided normals.
      * @param partGenMap Map from PartId → generation counter (to detect stale VBOs).
      */
     void render(const CadFramePlan& plan,
@@ -118,6 +121,7 @@ public:
                 const SbMatrix&      viewProj,
                 const SbMatrix&      viewMatrix,
                 const SbMatrix&      projectionMatrix,
+                const SbViewVolume&  viewVolume,
                 const std::unordered_map<PartId, uint64_t,
                                          std::hash<PartId>>& partGenMap);
 
@@ -163,6 +167,9 @@ public:
 private:
     /// Upload the current light set to @p program's u_light* uniforms.
     void uploadLights(const SoGLContext* glue, GLuint program);
+    /// Upload camera-facing data used only when a mesh has no normal stream.
+    void uploadViewFacing(const SoGLContext* glue, GLuint program,
+                          const SbViewVolume& viewVolume);
 
     // Capability flags (populated on first render call)
     bool      capsDetected_ = false;
@@ -228,6 +235,7 @@ private:
                        const SoCADAssembly& assembly,
                        const SoGLContext*   glue,
                        const SbMatrix&      viewProj,
+                       const SbViewVolume&  viewVolume,
                        bool drawWire,
                        bool customWireOnly,
                        bool drawShaded);
@@ -279,6 +287,7 @@ private:
                          const SoCADAssembly& assembly,
                          const SoGLContext*   glue,
                          const SbMatrix&      viewProj,
+                         const SbViewVolume&  viewVolume,
                          const std::unordered_map<PartId, uint64_t,
                                                    std::hash<PartId>>& partGenMap,
                          bool drawWire,

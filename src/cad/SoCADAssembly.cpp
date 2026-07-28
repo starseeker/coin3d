@@ -1786,6 +1786,7 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
     }
 
     const SbViewportRegion& viewport = SoViewportRegionElement::get(state);
+    const SbViewVolume& viewVolume = SoViewVolumeElement::get(state);
     impl_->updateSubpixelProxyPlan(viewProj,
         viewport.getViewportSizePixels());
 
@@ -1904,7 +1905,7 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
         // Delegate to the VBO + shader renderer (GL 2.0 minimum; optional GL
         // 3.1+ instanced path selected automatically when available).
         impl_->renderer_->render(impl_->cachedPlan_, *this, glue, viewProj,
-                                 viewMat, projMat,
+                                 viewMat, projMat, viewVolume,
                                  impl_->partGeneration_);
     }
     if (hasTransparency) {
