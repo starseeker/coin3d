@@ -181,6 +181,13 @@ struct TriMesh {
     SbBox3f               bounds;
     /** Cumulative triangle index counts for retained PoP levels 0..15. */
     std::array<uint32_t, 16> progressiveIndexCount = {};
+    /**
+     * Cumulative position counts addressed by each retained PoP index
+     * prefix.  Producers should compute this once while constructing the
+     * geometry; renderers use it to avoid rescanning the index prefix on
+     * every frame.
+     */
+    std::array<uint32_t, 16> progressivePositionCount = {};
     uint8_t progressiveMinimumLevel = 255;
     uint8_t progressiveResidentLevel = 255;
     SbVec3f progressiveQuantizationMinimum;
@@ -196,6 +203,14 @@ struct TriMesh {
                          (std::min)(progressiveResidentLevel, level));
         return std::min<size_t>(progressiveIndexCount[level],
                                 indices.size());
+    }
+
+    size_t positionCountAtLevel(uint8_t level) const noexcept {
+        if (!isProgressive()) return positions.size();
+        level = (std::max)(progressiveMinimumLevel,
+                         (std::min)(progressiveResidentLevel, level));
+        return std::min<size_t>(progressivePositionCount[level],
+                                positions.size());
     }
 };
 

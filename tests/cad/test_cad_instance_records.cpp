@@ -130,6 +130,7 @@ main()
     shaded.shaded->progressiveMinimumLevel = 0;
     shaded.shaded->progressiveResidentLevel = 15;
     shaded.shaded->progressiveIndexCount.fill(3);
+    shaded.shaded->progressivePositionCount.fill(3);
     assembly->upsertPart(first.part, shaded);
     runner.endTest(assembly->hasProgressivePartLod(),
         "only an explicit resident prefix may enable progressive drawing");

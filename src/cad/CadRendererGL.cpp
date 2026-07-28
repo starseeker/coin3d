@@ -1146,17 +1146,10 @@ void CadRendererGL::ensurePartUploaded(
         const auto& mesh = *geom->shaded;
         size_t requiredIndexCount = mesh.isProgressive() ?
             mesh.indexCountAtLevel(requestedLod) : mesh.indices.size();
-        size_t requiredPositionCount = mesh.positions.size();
-        if (mesh.isProgressive() && requiredIndexCount > 0) {
-            uint32_t maximumIndex = 0;
-            for (size_t i = 0; i < requiredIndexCount; ++i) {
-                if (mesh.indices[i] >= mesh.positions.size())
-                    return;
-                maximumIndex = std::max(maximumIndex, mesh.indices[i]);
-            }
-            requiredPositionCount =
-                static_cast<size_t>(maximumIndex) + 1;
-        }
+        size_t requiredPositionCount = mesh.isProgressive() ?
+            mesh.positionCountAtLevel(requestedLod) : mesh.positions.size();
+        if (requiredIndexCount > 0 && requiredPositionCount == 0)
+            return;
         pTriPos = packedVec3fData(mesh.positions);
         pTriNorm = packedVec3fData(mesh.normals);
         pTriIdx = mesh.indices.empty() ? nullptr : mesh.indices.data();
