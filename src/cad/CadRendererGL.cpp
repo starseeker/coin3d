@@ -1306,26 +1306,9 @@ static void restoreWireRasterState(
 static uint8_t maximumRequestedLod(
         const CadFramePlan& plan, const SoCADAssembly& assembly, PartId part)
 {
-    uint8_t requested = 0;
-    bool found = false;
-    const auto consider = [&](const CadDrawItem& item) {
-        if (!(item.rep.part == part))
-            return;
-        for (uint32_t i = 0; i < item.instanceCount; ++i) {
-            const size_t visibleIndex = item.baseInstance + i;
-            if (visibleIndex >= plan.visibleInstances.size())
-                continue;
-            requested = std::max(
-                requested, assembly.effectiveProgressiveLodLevel(
-                    plan.visibleInstances[visibleIndex].lodLevel));
-            found = true;
-        }
-    };
-    for (const CadDrawItem& item : plan.wireItems)
-        consider(item);
-    for (const CadDrawItem& item : plan.shadedItems)
-        consider(item);
-    return found ? requested : 15;
+    const auto found = plan.maximumRequestedLodByPart.find(part);
+    return found != plan.maximumRequestedLodByPart.end() ?
+        assembly.effectiveProgressiveLodLevel(found->second) : 15;
 }
 
 void CadRendererGL::renderPoints(
@@ -1504,14 +1487,8 @@ bool CadRendererGL::isSubpixelProxyInstance(
 bool CadRendererGL::wireRepHasUncollapsedInstances(
         const CadFramePlan& plan, PartId part)
 {
-    for (const CadDrawItem& item : plan.wireItems) {
-        if (!(item.rep.part == part)) continue;
-        for (uint32_t i = 0; i < item.instanceCount; ++i) {
-            if (!isSubpixelProxyInstance(plan, item.baseInstance + i))
-                return true;
-        }
-    }
-    return false;
+    return plan.wirePartsWithUncollapsedInstances.find(part) !=
+        plan.wirePartsWithUncollapsedInstances.end();
 }
 
 void CadRendererGL::renderSubpixelProxyPoints(

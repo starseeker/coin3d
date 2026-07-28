@@ -886,6 +886,14 @@ struct SoCADAssemblyImpl {
                 });
 
             const uint32_t count = static_cast<uint32_t>(vis.size());
+            if (count > 0 &&
+                    ((needWire && geom.wire.has_value()) ||
+                     (needShaded && geom.shaded.has_value()))) {
+                uint8_t maximumLod = 0;
+                for (const auto& instance : vis)
+                    maximumLod = std::max(maximumLod, instance.lodLevel);
+                plan.maximumRequestedLodByPart[pid] = maximumLod;
+            }
 
             // Fill partIndex (index into the upcoming visibleInstances block)
             for (auto& vi : vis) vi.partIndex = baseInst;
@@ -921,6 +929,7 @@ struct SoCADAssemblyImpl {
                 if (!requiredWireParts.count(pid)) {
                     plan.requiredReps.push_back(item.rep);
                     requiredWireParts.insert(pid);
+                    plan.wirePartsWithUncollapsedInstances.insert(pid);
                 }
             }
 
@@ -1176,6 +1185,13 @@ struct SoCADAssemblyImpl {
                 item.instanceCount = 0;
                 item.cullBackfaces = cullBackfaces;
             }
+            uint8_t maximumLod = 0;
+            for (size_t bin = 0; bin < ProgressiveLevelBinCount; ++bin) {
+                if (group.levelCounts[bin])
+                    maximumLod = static_cast<uint8_t>(
+                        std::min<size_t>(bin, 15u));
+            }
+            cachedPlan_.maximumRequestedLodByPart[group.part] = maximumLod;
         }
         cachedPlan_.revision = nextPlanRevision_++;
         if (nextPlanRevision_ == 0)
@@ -1205,17 +1221,25 @@ struct SoCADAssemblyImpl {
             subpixelProxyScratchPoints_;
         mask.assign(plan.visibleInstances.size(), 0u);
         points.clear();
+        plan.wirePartsWithUncollapsedInstances.clear();
         for (const CadDrawItem& item : plan.wireItems) {
             const auto partIt = parts_.find(item.rep.part);
             const auto cornersIt = subpixelProxyCorners_.find(item.rep.part);
             if (partIt == parts_.end() || !partIt->second ||
-                    cornersIt == subpixelProxyCorners_.end())
+                    cornersIt == subpixelProxyCorners_.end()) {
+                if (item.instanceCount > 0)
+                    plan.wirePartsWithUncollapsedInstances.insert(
+                        item.rep.part);
                 continue;
+            }
 
             for (uint32_t i = 0; i < item.instanceCount; ++i) {
                 const size_t visibleIndex = item.baseInstance + i;
-                if (visibleIndex >= plan.visibleInstances.size())
+                if (visibleIndex >= plan.visibleInstances.size()) {
+                    plan.wirePartsWithUncollapsedInstances.insert(
+                        item.rep.part);
                     continue;
+                }
                 const CadVisibleInstance& instance =
                     plan.visibleInstances[visibleIndex];
                 const float threshold =
@@ -1225,6 +1249,8 @@ struct SoCADAssemblyImpl {
                 if (!cadSubpixelProxyPoint(cornersIt->second, instance, viewProj,
                         viewportSize, threshold, point)) {
                     subpixelProxyState_[visibleIndex] = 0u;
+                    plan.wirePartsWithUncollapsedInstances.insert(
+                        item.rep.part);
                     continue;
                 }
 
