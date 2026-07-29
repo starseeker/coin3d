@@ -245,14 +245,12 @@ static const char * kWirePopVS1 =
     "uniform vec3 u_popDecodeScale;\n"
     "uniform vec3 u_popMin;\n"
     "varying vec4 v_color;\n"
-    "vec3 popPosition(vec3 p) {\n"
-    "    vec3 scaled = (p - u_popMin) * u_popEncodeScale;\n"
+    "void main() {\n"
+    "    vec3 scaled = (a_pos - u_popMin) * u_popEncodeScale;\n"
     "    vec3 low = floor(scaled);\n"
     "    vec3 high = ceil(scaled);\n"
-    "    return (low + high) * u_popDecodeScale + u_popMin;\n"
-    "}\n"
-    "void main() {\n"
-    "    vec4 wp = u_model * vec4(popPosition(a_pos), 1.0);\n"
+    "    vec3 p = (low + high) * u_popDecodeScale + u_popMin;\n"
+    "    vec4 wp = u_model * vec4(p, 1.0);\n"
     "    gl_Position = u_viewProj * wp;\n"
     "    v_color = u_color;\n"
     "}\n";
@@ -307,17 +305,53 @@ static const char * kShadedPopVS1 =
     "varying vec3  v_norm;\n"
     "varying vec3  v_worldPos;\n"
     "varying vec4  v_color;\n"
-    "vec3 popPosition(vec3 p) {\n"
-    "    vec3 scaled = (p - u_popMin) * u_popEncodeScale;\n"
+    "void main() {\n"
+    "    vec3 scaled = (a_pos - u_popMin) * u_popEncodeScale;\n"
     "    vec3 low = floor(scaled);\n"
     "    vec3 high = ceil(scaled);\n"
-    "    return (low + high) * u_popDecodeScale + u_popMin;\n"
-    "}\n"
-    "void main() {\n"
-    "    vec4 wp = u_model * vec4(popPosition(a_pos), 1.0);\n"
+    "    vec3 p = (low + high) * u_popDecodeScale + u_popMin;\n"
+    "    vec4 wp = u_model * vec4(p, 1.0);\n"
     "    gl_Position = u_viewProj * wp;\n"
     "    v_worldPos = wp.xyz;\n"
     "    v_norm = mat3(u_model[0].xyz, u_model[1].xyz, u_model[2].xyz) * a_norm;\n"
+    "    v_color = u_color;\n"
+    "}\n";
+
+/* Face-normal shading derives its normal from world-position derivatives in
+ * the fragment stage.  Do not make every vertex transform an a_norm value
+ * that this program can never consume. */
+static const char * kShadedFaceVS1 =
+    "attribute vec3 a_pos;\n"
+    "uniform mat4  u_model;\n"
+    "uniform mat4  u_viewProj;\n"
+    "uniform vec4  u_color;\n"
+    "varying vec3  v_worldPos;\n"
+    "varying vec4  v_color;\n"
+    "void main() {\n"
+    "    vec4 wp = u_model * vec4(a_pos, 1.0);\n"
+    "    gl_Position = u_viewProj * wp;\n"
+    "    v_worldPos = wp.xyz;\n"
+    "    v_color = u_color;\n"
+    "}\n";
+
+static const char * kShadedPopFaceVS1 =
+    "attribute vec3 a_pos;\n"
+    "uniform mat4  u_model;\n"
+    "uniform mat4  u_viewProj;\n"
+    "uniform vec4  u_color;\n"
+    "uniform vec3  u_popEncodeScale;\n"
+    "uniform vec3  u_popDecodeScale;\n"
+    "uniform vec3  u_popMin;\n"
+    "varying vec3  v_worldPos;\n"
+    "varying vec4  v_color;\n"
+    "void main() {\n"
+    "    vec3 scaled = (a_pos - u_popMin) * u_popEncodeScale;\n"
+    "    vec3 low = floor(scaled);\n"
+    "    vec3 high = ceil(scaled);\n"
+    "    vec3 p = (low + high) * u_popDecodeScale + u_popMin;\n"
+    "    vec4 wp = u_model * vec4(p, 1.0);\n"
+    "    gl_Position = u_viewProj * wp;\n"
+    "    v_worldPos = wp.xyz;\n"
     "    v_color = u_color;\n"
     "}\n";
 
@@ -378,6 +412,47 @@ static const char * kShadedFS1 =
     "    gl_FragColor = vec4(col, v_color.a);\n"
     "}\n";
 
+/* The ordinary qged/mged scene has exactly one directional headlight.  Keep a
+ * pair of compact shaders for that overwhelmingly common case instead of
+ * making every software-rendered fragment execute the generic eight-light
+ * loop, dynamically indexed uniform arrays, and both normal-generation paths.
+ * The generic shader remains authoritative for mixed or multiple lights. */
+static const char * kShadedDirectionalNormFS1 =
+    "uniform vec3  u_lightVec;\n"
+    "uniform vec3  u_lightColor;\n"
+    "varying vec3  v_norm;\n"
+    "varying vec4  v_color;\n"
+    "void main() {\n"
+    "    vec3 n = normalize(v_norm);\n"
+    "    n *= gl_FrontFacing ? 1.0 : -1.0;\n"
+    "    float ndl = max(0.0, dot(n, u_lightVec));\n"
+    "    float spec = (ndl > 0.0) ? 0.2 : 0.0;\n"
+    "    vec3 col = v_color.rgb *\n"
+    "        (vec3(0.06) + u_lightColor * (ndl * 0.6 + spec));\n"
+    "    gl_FragColor = vec4(col, v_color.a);\n"
+    "}\n";
+
+static const char * kShadedDirectionalFaceFS1 =
+    "uniform vec3  u_lightVec;\n"
+    "uniform vec3  u_lightColor;\n"
+    "uniform vec3  u_eyeWorld;\n"
+    "uniform vec3  u_viewTowardEye;\n"
+    "uniform int   u_perspective;\n"
+    "varying vec3  v_worldPos;\n"
+    "varying vec4  v_color;\n"
+    "void main() {\n"
+    "    vec3 fn = cross(dFdx(v_worldPos), dFdy(v_worldPos));\n"
+    "    vec3 n = fn * inversesqrt(max(dot(fn, fn), 1.0e-30));\n"
+    "    vec3 toEye = (u_perspective != 0) ?\n"
+    "        normalize(u_eyeWorld - v_worldPos) : u_viewTowardEye;\n"
+    "    n *= 2.0 * step(0.0, dot(n, toEye)) - 1.0;\n"
+    "    float ndl = max(0.0, dot(n, u_lightVec));\n"
+    "    float spec = (ndl > 0.0) ? 0.2 : 0.0;\n"
+    "    vec3 col = v_color.rgb *\n"
+    "        (vec3(0.06) + u_lightColor * (ndl * 0.6 + spec));\n"
+    "    gl_FragColor = vec4(col, v_color.a);\n"
+    "}\n";
+
 static const char * kShadedFaceDebugFS1 =
     "void main() {\n"
     "    gl_FragColor = gl_FrontFacing ?\n"
@@ -423,15 +498,12 @@ static const char * kWirePopVS2 =
     "uniform vec3 u_popDecodeScale;\n"
     "uniform vec3 u_popMin;\n"
     "out vec4 v_color;\n"
-    "vec3 popPosition(vec3 p) {\n"
-    "    vec3 scaled = (p - u_popMin) * u_popEncodeScale;\n"
+    "void main() {\n"
+    "    vec3 scaled = (a_pos - u_popMin) * u_popEncodeScale;\n"
     "    vec3 low = floor(scaled);\n"
     "    vec3 high = ceil(scaled);\n"
-    "    return (low + high) * u_popDecodeScale + u_popMin;\n"
-    "}\n"
-    "void main() {\n"
-    "    gl_Position = u_viewProj * a_instTransform *\n"
-    "                  vec4(popPosition(a_pos), 1.0);\n"
+    "    vec3 p = (low + high) * u_popDecodeScale + u_popMin;\n"
+    "    gl_Position = u_viewProj * a_instTransform * vec4(p, 1.0);\n"
     "    v_color = a_instColor;\n"
     "}\n";
 
@@ -481,14 +553,12 @@ static const char * kShadedPopVS2 =
     "out vec3 v_norm;\n"
     "out vec3 v_worldPos;\n"
     "out vec4 v_color;\n"
-    "vec3 popPosition(vec3 p) {\n"
-    "    vec3 scaled = (p - u_popMin) * u_popEncodeScale;\n"
+    "void main() {\n"
+    "    vec3 scaled = (a_pos - u_popMin) * u_popEncodeScale;\n"
     "    vec3 low = floor(scaled);\n"
     "    vec3 high = ceil(scaled);\n"
-    "    return (low + high) * u_popDecodeScale + u_popMin;\n"
-    "}\n"
-    "void main() {\n"
-    "    vec4 wp = a_instTransform * vec4(popPosition(a_pos), 1.0);\n"
+    "    vec3 p = (low + high) * u_popDecodeScale + u_popMin;\n"
+    "    vec4 wp = a_instTransform * vec4(p, 1.0);\n"
     "    gl_Position = u_viewProj * wp;\n"
     "    v_worldPos = wp.xyz;\n"
     "    if (u_hasNorm != 0) {\n"
@@ -578,6 +648,10 @@ struct SharedCadShaders {
     GLuint proxyPoint = 0;
     GLuint shaded = 0;
     GLuint shadedPop = 0;
+    GLuint shadedDirectionalNorm = 0;
+    GLuint shadedDirectionalFace = 0;
+    GLuint shadedPopDirectionalNorm = 0;
+    GLuint shadedPopDirectionalFace = 0;
     GLuint wireInst = 0;
     GLuint wirePopInst = 0;
     GLuint shadedInst = 0;
@@ -606,6 +680,14 @@ releaseSharedCadShaders(uint32_t contextId, void *)
         if (programs.proxyPoint) glue->glDeleteObjectARB(programs.proxyPoint);
         if (programs.shaded) glue->glDeleteObjectARB(programs.shaded);
         if (programs.shadedPop) glue->glDeleteObjectARB(programs.shadedPop);
+        if (programs.shadedDirectionalNorm)
+            glue->glDeleteObjectARB(programs.shadedDirectionalNorm);
+        if (programs.shadedDirectionalFace)
+            glue->glDeleteObjectARB(programs.shadedDirectionalFace);
+        if (programs.shadedPopDirectionalNorm)
+            glue->glDeleteObjectARB(programs.shadedPopDirectionalNorm);
+        if (programs.shadedPopDirectionalFace)
+            glue->glDeleteObjectARB(programs.shadedPopDirectionalFace);
         if (programs.wireInst) glue->glDeleteObjectARB(programs.wireInst);
         if (programs.wirePopInst)
             glue->glDeleteObjectARB(programs.wirePopInst);
@@ -964,6 +1046,49 @@ bool CadRendererGL::compileAllShaders(const SoGLContext* glue)
         glue->glDeleteObjectARB(fs);
         if (!shaders_.shadedPop) return false;
     }
+    if (!cadShaderDebugMode()) {
+        const auto compileDirectionalPair =
+            [this, glue](const char *normalVertexSource,
+                         const char *faceVertexSource,
+                         GLuint& normalProgram,
+                         GLuint& faceProgram) {
+                GLuint normalVs = compileShader(
+                    glue, GL_VERTEX_SHADER_ARB, normalVertexSource);
+                GLuint faceVs = compileShader(
+                    glue, GL_VERTEX_SHADER_ARB, faceVertexSource);
+                GLuint normalFs = compileShader(
+                    glue, GL_FRAGMENT_SHADER_ARB,
+                    kShadedDirectionalNormFS1);
+                GLuint faceFs = compileShader(
+                    glue, GL_FRAGMENT_SHADER_ARB,
+                    kShadedDirectionalFaceFS1);
+                if (normalVs && normalFs)
+                    normalProgram = linkProgram(
+                        glue, normalVs, normalFs);
+                if (faceVs && faceFs)
+                    faceProgram = linkProgram(glue, faceVs, faceFs);
+                if (normalVs) glue->glDeleteObjectARB(normalVs);
+                if (faceVs) glue->glDeleteObjectARB(faceVs);
+                if (normalFs) glue->glDeleteObjectARB(normalFs);
+                if (faceFs) glue->glDeleteObjectARB(faceFs);
+                if (!normalProgram || !faceProgram) {
+                    if (normalProgram)
+                        glue->glDeleteObjectARB(normalProgram);
+                    if (faceProgram)
+                        glue->glDeleteObjectARB(faceProgram);
+                    normalProgram = 0;
+                    faceProgram = 0;
+                }
+            };
+        compileDirectionalPair(
+            kShadedVS1, kShadedFaceVS1,
+            shaders_.shadedDirectionalNorm,
+            shaders_.shadedDirectionalFace);
+        compileDirectionalPair(
+            kShadedPopVS1, kShadedPopFaceVS1,
+            shaders_.shadedPopDirectionalNorm,
+            shaders_.shadedPopDirectionalFace);
+    }
 
     // --- Tier-2 shaders (only when instancing is available) ---
     if (caps_.canUseInstanced()) {
@@ -1054,6 +1179,14 @@ bool CadRendererGL::ensureReady(const SoGLContext* glue)
             shaders_.proxyPoint = found->second.proxyPoint;
             shaders_.shaded = found->second.shaded;
             shaders_.shadedPop = found->second.shadedPop;
+            shaders_.shadedDirectionalNorm =
+                found->second.shadedDirectionalNorm;
+            shaders_.shadedDirectionalFace =
+                found->second.shadedDirectionalFace;
+            shaders_.shadedPopDirectionalNorm =
+                found->second.shadedPopDirectionalNorm;
+            shaders_.shadedPopDirectionalFace =
+                found->second.shadedPopDirectionalFace;
             shaders_.wireInst = found->second.wireInst;
             shaders_.wirePopInst = found->second.wirePopInst;
             shaders_.shadedInst = found->second.shadedInst;
@@ -1074,6 +1207,14 @@ bool CadRendererGL::ensureReady(const SoGLContext* glue)
             programs.proxyPoint = shaders_.proxyPoint;
             programs.shaded = shaders_.shaded;
             programs.shadedPop = shaders_.shadedPop;
+            programs.shadedDirectionalNorm =
+                shaders_.shadedDirectionalNorm;
+            programs.shadedDirectionalFace =
+                shaders_.shadedDirectionalFace;
+            programs.shadedPopDirectionalNorm =
+                shaders_.shadedPopDirectionalNorm;
+            programs.shadedPopDirectionalFace =
+                shaders_.shadedPopDirectionalFace;
             programs.wireInst = shaders_.wireInst;
             programs.wirePopInst = shaders_.wirePopInst;
             programs.shadedInst = shaders_.shadedInst;
@@ -2857,35 +2998,99 @@ void CadRendererGL::renderVboLoop(
             GLint model = -1;
             GLint color = -1;
             GLint hasNormal = -1;
+            GLint lightVector = -1;
+            GLint lightColor = -1;
             GLint encodeScale = -1;
             GLint decodeScale = -1;
             GLint minimum = -1;
         };
-        const GLuint programs[2] = {shaders_.shaded, shaders_.shadedPop};
-        ShadedLocations locations[2];
-        for (int variant = 0; variant < 2; ++variant) {
-            if (!programs[variant])
+        enum ShadedProgramIndex {
+            GenericExact = 0,
+            GenericPop,
+            DirectionalNormExact,
+            DirectionalNormPop,
+            DirectionalFaceExact,
+            DirectionalFacePop,
+            ShadedProgramCount
+        };
+        const GLuint programs[ShadedProgramCount] = {
+            shaders_.shaded,
+            shaders_.shadedPop,
+            shaders_.shadedDirectionalNorm,
+            shaders_.shadedPopDirectionalNorm,
+            shaders_.shadedDirectionalFace,
+            shaders_.shadedPopDirectionalFace
+        };
+        ShadedLocations locations[ShadedProgramCount];
+        for (int programIndex = 0;
+                programIndex < ShadedProgramCount; ++programIndex) {
+            if (!programs[programIndex])
                 continue;
-            locations[variant].viewProjection =
+            locations[programIndex].viewProjection =
                 glue->glGetUniformLocationARB(
-                    programs[variant], "u_viewProj");
-            locations[variant].model = glue->glGetUniformLocationARB(
-                programs[variant], "u_model");
-            locations[variant].color = glue->glGetUniformLocationARB(
-                programs[variant], "u_color");
-            locations[variant].hasNormal = glue->glGetUniformLocationARB(
-                programs[variant], "u_hasNorm");
+                    programs[programIndex], "u_viewProj");
+            locations[programIndex].model =
+                glue->glGetUniformLocationARB(
+                    programs[programIndex], "u_model");
+            locations[programIndex].color =
+                glue->glGetUniformLocationARB(
+                    programs[programIndex], "u_color");
+            locations[programIndex].hasNormal =
+                glue->glGetUniformLocationARB(
+                    programs[programIndex], "u_hasNorm");
+            locations[programIndex].lightVector =
+                glue->glGetUniformLocationARB(
+                    programs[programIndex], "u_lightVec");
+            locations[programIndex].lightColor =
+                glue->glGetUniformLocationARB(
+                    programs[programIndex], "u_lightColor");
+            const bool progressiveProgram =
+                programIndex == GenericPop ||
+                programIndex == DirectionalNormPop ||
+                programIndex == DirectionalFacePop;
+            if (progressiveProgram) {
+                locations[programIndex].encodeScale =
+                    glue->glGetUniformLocationARB(
+                        programs[programIndex], "u_popEncodeScale");
+                locations[programIndex].decodeScale =
+                    glue->glGetUniformLocationARB(
+                        programs[programIndex], "u_popDecodeScale");
+                locations[programIndex].minimum =
+                    glue->glGetUniformLocationARB(
+                        programs[programIndex], "u_popMin");
+            }
         }
-        if (programs[1]) {
-            locations[1].encodeScale = glue->glGetUniformLocationARB(
-                programs[1], "u_popEncodeScale");
-            locations[1].decodeScale = glue->glGetUniformLocationARB(
-                programs[1], "u_popDecodeScale");
-            locations[1].minimum = glue->glGetUniformLocationARB(
-                programs[1], "u_popMin");
+
+        bool directionalLight = false;
+        float directionalVector[3] = {
+            kLightDir[0], kLightDir[1], kLightDir[2]
+        };
+        float directionalColor[3] = {1.0f, 1.0f, 1.0f};
+        if (this->lights_.empty()) {
+            directionalLight = true;
+        } else if (this->lights_.size() == 1 &&
+                   this->lights_[0].type == 0) {
+            directionalLight = true;
+            for (int component = 0; component < 3; ++component) {
+                directionalVector[component] =
+                    this->lights_[0].vec[component];
+                directionalColor[component] =
+                    this->lights_[0].color[component];
+            }
         }
+        if (directionalLight) {
+            SbVec3f normalized(
+                directionalVector[0], directionalVector[1],
+                directionalVector[2]);
+            if (normalized.normalize() == 0.0f)
+                normalized.setValue(kLightDir);
+            directionalVector[0] = normalized[0];
+            directionalVector[1] = normalized[1];
+            directionalVector[2] = normalized[2];
+        }
+
         GLuint activeProgram = 0;
-        bool lightsUploaded[2] = {false, false};
+        bool programUploaded[ShadedProgramCount] = {};
         if (cadLightDebugRequested()) {
             static unsigned int uniformLocationReportCount = 0;
             if (uniformLocationReportCount++ < 4) {
@@ -2949,17 +3154,39 @@ void CadRendererGL::renderVboLoop(
                         progressive->progressiveMinimumLevel,
                         progressive->progressiveResidentLevel) : 15;
                 const int variant = progressive && level < 15 ? 1 : 0;
-                const ShadedLocations& loc = locations[variant];
-                if (activeProgram != programs[variant]) {
-                    activeProgram = programs[variant];
+                int programIndex = variant ? GenericPop : GenericExact;
+                if (directionalLight) {
+                    const int directionalIndex = hasNorm ?
+                        (variant ? DirectionalNormPop :
+                                   DirectionalNormExact) :
+                        (variant ? DirectionalFacePop :
+                                   DirectionalFaceExact);
+                    if (programs[directionalIndex])
+                        programIndex = directionalIndex;
+                }
+                const ShadedLocations& loc = locations[programIndex];
+                if (activeProgram != programs[programIndex]) {
+                    activeProgram = programs[programIndex];
                     glue->glUseProgramObjectARB(activeProgram);
                     glue->glUniformMatrix4fvARB(
                         loc.viewProjection, 1, GL_FALSE, vpData);
-                    if (!lightsUploaded[variant]) {
-                        this->uploadLights(glue, activeProgram);
-                        this->uploadViewFacing(
-                            glue, activeProgram, viewVolume);
-                        lightsUploaded[variant] = true;
+                    if (!programUploaded[programIndex]) {
+                        if (programIndex >= DirectionalNormExact) {
+                            glue->glUniform3fvARB(
+                                loc.lightVector, 1, directionalVector);
+                            glue->glUniform3fvARB(
+                                loc.lightColor, 1, directionalColor);
+                            if (programIndex == DirectionalFaceExact ||
+                                    programIndex == DirectionalFacePop) {
+                                this->uploadViewFacing(
+                                    glue, activeProgram, viewVolume);
+                            }
+                        } else {
+                            this->uploadLights(glue, activeProgram);
+                            this->uploadViewFacing(
+                                glue, activeProgram, viewVolume);
+                        }
+                        programUploaded[programIndex] = true;
                     }
                 }
                 glue->glUniform1iARB(

@@ -192,6 +192,10 @@ private:
         GLuint proxyPoint = 0; ///< Batched subpixel-proxy point shader
         GLuint shaded  = 0; ///< Shaded-pass shader (Phong, no instancing)
         GLuint shadedPop = 0; ///< Shaded-pass shader with branchless PoP snapping
+        GLuint shadedDirectionalNorm = 0; ///< One-directional-light shader with vertex normals
+        GLuint shadedDirectionalFace = 0; ///< One-directional-light shader with derivative normals
+        GLuint shadedPopDirectionalNorm = 0; ///< Directional PoP shader with vertex normals
+        GLuint shadedPopDirectionalFace = 0; ///< Directional PoP shader with derivative normals
         GLuint wireInst   = 0; ///< Wire-pass shader (instanced)
         GLuint wirePopInst = 0; ///< Wire-pass PoP shader (instanced by level)
         GLuint shadedInst = 0; ///< Shaded-pass shader (instanced Phong)
