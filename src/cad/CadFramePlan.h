@@ -50,6 +50,8 @@
 #include <vector>
 #include <cstdint>
 #include <array>
+#include <unordered_map>
+#include <unordered_set>
 
 namespace Obol {
 namespace internal {
@@ -195,6 +197,16 @@ struct CadFramePlan {
      * this list to page in any missing GPU resources before drawing.
      */
     std::vector<CadRepKey> requiredReps;
+
+    /**
+     * Per-part summaries used while paging GPU representations.  Keeping
+     * these in the plan avoids rescanning every draw item for every required
+     * part (quadratic in a scene with many distinct meshes).
+     */
+    std::unordered_map<PartId, uint8_t, std::hash<PartId>>
+        maximumRequestedLodByPart;
+    std::unordered_set<PartId, std::hash<PartId>>
+        wirePartsWithUncollapsedInstances;
 
     /** Aggregate world bounding box of all visible instances. */
     SbBox3f worldBounds;

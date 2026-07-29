@@ -77,6 +77,7 @@
 #include <Inventor/fields/SoSFEnum.h>
 #include <Inventor/fields/SoSFBool.h>
 #include <Inventor/fields/SoSFFloat.h>
+#include <Inventor/fields/SoSFInt32.h>
 #include <Inventor/SbMatrix.h>
 #include <Inventor/SbColor4f.h>
 #include <Inventor/SbBox3f.h>
@@ -180,6 +181,13 @@ struct TriMesh {
     SbBox3f               bounds;
     /** Cumulative triangle index counts for retained PoP levels 0..15. */
     std::array<uint32_t, 16> progressiveIndexCount = {};
+    /**
+     * Cumulative position counts addressed by each retained PoP index
+     * prefix.  Producers should compute this once while constructing the
+     * geometry; renderers use it to avoid rescanning the index prefix on
+     * every frame.
+     */
+    std::array<uint32_t, 16> progressivePositionCount = {};
     uint8_t progressiveMinimumLevel = 255;
     uint8_t progressiveResidentLevel = 255;
     SbVec3f progressiveQuantizationMinimum;
@@ -195,6 +203,14 @@ struct TriMesh {
                          (std::min)(progressiveResidentLevel, level));
         return std::min<size_t>(progressiveIndexCount[level],
                                 indices.size());
+    }
+
+    size_t positionCountAtLevel(uint8_t level) const noexcept {
+        if (!isProgressive()) return positions.size();
+        level = (std::max)(progressiveMinimumLevel,
+                         (std::min)(progressiveResidentLevel, level));
+        return std::min<size_t>(progressivePositionCount[level],
+                                positions.size());
     }
 };
 
@@ -403,6 +419,13 @@ public:
     SoSFEnum  pickMode;             ///< Default: PICK_AUTO
     SoSFFloat edgePickTolerancePx;  ///< Screen-space edge pick tolerance (pixels)
     SoSFBool  wireframeOcclusion;   ///< Run depth-only triangle pass in wireframe mode
+    /** Interactive render-only PoP ceiling, or -1 when disabled.
+     *
+     * This does not mutate producer-authored per-instance cuts or rebuild the
+     * frame plan.  It lets a view controller shed already-retained draw work
+     * in O(1) at interaction start while its precise per-instance allocator
+     * catches up. */
+    SoSFInt32 progressiveLodCeiling;
 
     // -----------------------------------------------------------------------
     // Class registration
@@ -452,6 +475,16 @@ public:
      * part is re-inserted later).
      */
     void removePart(Obol::PartId pid);
+
+    /**
+     * Remove many parts as one dirty operation.
+     *
+     * Instance bounds are recomputed in one pass after all removals.  Use
+     * this for a scene-wide LoD cut change; calling removePart() thousands
+     * of times would otherwise rescan the complete instance population once
+     * per retired part.
+     */
+    void removeParts(const std::vector<Obol::PartId>& pids);
 
     // -----------------------------------------------------------------------
     // Instance management
@@ -530,6 +563,9 @@ public:
 
     /** True when any retained part contains producer-authored PoP prefixes. */
     bool hasProgressivePartLod() const;
+
+    /** Apply the render-only progressive ceiling to one requested level. */
+    uint8_t effectiveProgressiveLodLevel(uint8_t requested) const;
 
     /**
      * Return the geometry for @p pid, or nullptr if not in the part library.

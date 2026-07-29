@@ -245,14 +245,12 @@ static const char * kWirePopVS1 =
     "uniform vec3 u_popDecodeScale;\n"
     "uniform vec3 u_popMin;\n"
     "varying vec4 v_color;\n"
-    "vec3 popPosition(vec3 p) {\n"
-    "    vec3 scaled = (p - u_popMin) * u_popEncodeScale;\n"
+    "void main() {\n"
+    "    vec3 scaled = (a_pos - u_popMin) * u_popEncodeScale;\n"
     "    vec3 low = floor(scaled);\n"
     "    vec3 high = ceil(scaled);\n"
-    "    return (low + high) * u_popDecodeScale + u_popMin;\n"
-    "}\n"
-    "void main() {\n"
-    "    vec4 wp = u_model * vec4(popPosition(a_pos), 1.0);\n"
+    "    vec3 p = (low + high) * u_popDecodeScale + u_popMin;\n"
+    "    vec4 wp = u_model * vec4(p, 1.0);\n"
     "    gl_Position = u_viewProj * wp;\n"
     "    v_color = u_color;\n"
     "}\n";
@@ -307,20 +305,62 @@ static const char * kShadedPopVS1 =
     "varying vec3  v_norm;\n"
     "varying vec3  v_worldPos;\n"
     "varying vec4  v_color;\n"
-    "vec3 popPosition(vec3 p) {\n"
-    "    vec3 scaled = (p - u_popMin) * u_popEncodeScale;\n"
+    "void main() {\n"
+    "    vec3 scaled = (a_pos - u_popMin) * u_popEncodeScale;\n"
     "    vec3 low = floor(scaled);\n"
     "    vec3 high = ceil(scaled);\n"
-    "    return (low + high) * u_popDecodeScale + u_popMin;\n"
-    "}\n"
-    "void main() {\n"
-    "    vec4 wp = u_model * vec4(popPosition(a_pos), 1.0);\n"
+    "    vec3 p = (low + high) * u_popDecodeScale + u_popMin;\n"
+    "    vec4 wp = u_model * vec4(p, 1.0);\n"
     "    gl_Position = u_viewProj * wp;\n"
     "    v_worldPos = wp.xyz;\n"
     "    v_norm = mat3(u_model[0].xyz, u_model[1].xyz, u_model[2].xyz) * a_norm;\n"
     "    v_color = u_color;\n"
     "}\n";
 
+/* Face-normal shading derives its normal from world-position derivatives in
+ * the fragment stage.  Do not make every vertex transform an a_norm value
+ * that this program can never consume. */
+static const char * kShadedFaceVS1 =
+    "attribute vec3 a_pos;\n"
+    "uniform mat4  u_model;\n"
+    "uniform mat4  u_viewProj;\n"
+    "uniform vec4  u_color;\n"
+    "varying vec3  v_worldPos;\n"
+    "varying vec4  v_color;\n"
+    "void main() {\n"
+    "    vec4 wp = u_model * vec4(a_pos, 1.0);\n"
+    "    gl_Position = u_viewProj * wp;\n"
+    "    v_worldPos = wp.xyz;\n"
+    "    v_color = u_color;\n"
+    "}\n";
+
+static const char * kShadedPopFaceVS1 =
+    "attribute vec3 a_pos;\n"
+    "uniform mat4  u_model;\n"
+    "uniform mat4  u_viewProj;\n"
+    "uniform vec4  u_color;\n"
+    "uniform vec3  u_popEncodeScale;\n"
+    "uniform vec3  u_popDecodeScale;\n"
+    "uniform vec3  u_popMin;\n"
+    "varying vec3  v_worldPos;\n"
+    "varying vec4  v_color;\n"
+    "void main() {\n"
+    "    vec3 scaled = (a_pos - u_popMin) * u_popEncodeScale;\n"
+    "    vec3 low = floor(scaled);\n"
+    "    vec3 high = ceil(scaled);\n"
+    "    vec3 p = (low + high) * u_popDecodeScale + u_popMin;\n"
+    "    vec4 wp = u_model * vec4(p, 1.0);\n"
+    "    gl_Position = u_viewProj * wp;\n"
+    "    v_worldPos = wp.xyz;\n"
+    "    v_color = u_color;\n"
+    "}\n";
+
+/* Keep the direct GLSL tiers visually consistent with the compatibility
+ * renderer and BRL-CAD's established default material: material ambient 0.2
+ * under environment ambient 0.3 gives 0.06, diffuse is 0.6, and the default
+ * zero-shininess specular term contributes 0.2 whenever the face is lit.
+ * Besides avoiding backend-dependent appearance, retaining these exact
+ * weights prevents broad headlight-facing surfaces from saturating. */
 static const char * kShadedFS1 =
     "uniform int   u_numLights;\n"
     "uniform int   u_hasNorm;\n"
@@ -329,6 +369,9 @@ static const char * kShadedFS1 =
     "uniform vec3  u_laxis[8];\n"
     "uniform vec3  u_lcolor[8];\n"
     "uniform float u_lcos[8];\n"
+    "uniform vec3  u_eyeWorld;\n"
+    "uniform vec3  u_viewTowardEye;\n"
+    "uniform int   u_perspective;\n"
     "varying vec3  v_norm;\n"
     "varying vec3  v_worldPos;\n"
     "varying vec4  v_color;\n"
@@ -341,8 +384,11 @@ static const char * kShadedFS1 =
     "        vec3 fn = cross(dFdx(v_worldPos), dFdy(v_worldPos));\n"
     "        float fl = length(fn);\n"
     "        n = (fl > 0.0) ? fn / fl : vec3(0.0, 0.0, 1.0);\n"
+    "        vec3 toEye = (u_perspective != 0) ?\n"
+    "            normalize(u_eyeWorld - v_worldPos) : u_viewTowardEye;\n"
+    "        if (dot(n, toEye) < 0.0) n = -n;\n"
     "    }\n"
-    "    vec3 col = v_color.rgb * 0.25;\n"
+    "    vec3 col = v_color.rgb * 0.06;\n"
     "    for (int i = 0; i < 8; i++) {\n"
     "        if (i >= u_numLights) break;\n"
     "        vec3 L;\n"
@@ -359,8 +405,51 @@ static const char * kShadedFS1 =
     "            }\n"
     "        }\n"
     "        float ndl = max(0.0, dot(n, L));\n"
-    "        col += v_color.rgb * u_lcolor[i] * (ndl * 0.75 * atten);\n"
+    "        float spec = (ndl > 0.0) ? 0.2 : 0.0;\n"
+    "        col += v_color.rgb * u_lcolor[i] *\n"
+    "               ((ndl * 0.6 + spec) * atten);\n"
     "    }\n"
+    "    gl_FragColor = vec4(col, v_color.a);\n"
+    "}\n";
+
+/* The ordinary qged/mged scene has exactly one directional headlight.  Keep a
+ * pair of compact shaders for that overwhelmingly common case instead of
+ * making every software-rendered fragment execute the generic eight-light
+ * loop, dynamically indexed uniform arrays, and both normal-generation paths.
+ * The generic shader remains authoritative for mixed or multiple lights. */
+static const char * kShadedDirectionalNormFS1 =
+    "uniform vec3  u_lightVec;\n"
+    "uniform vec3  u_lightColor;\n"
+    "varying vec3  v_norm;\n"
+    "varying vec4  v_color;\n"
+    "void main() {\n"
+    "    vec3 n = normalize(v_norm);\n"
+    "    n *= gl_FrontFacing ? 1.0 : -1.0;\n"
+    "    float ndl = max(0.0, dot(n, u_lightVec));\n"
+    "    float spec = (ndl > 0.0) ? 0.2 : 0.0;\n"
+    "    vec3 col = v_color.rgb *\n"
+    "        (vec3(0.06) + u_lightColor * (ndl * 0.6 + spec));\n"
+    "    gl_FragColor = vec4(col, v_color.a);\n"
+    "}\n";
+
+static const char * kShadedDirectionalFaceFS1 =
+    "uniform vec3  u_lightVec;\n"
+    "uniform vec3  u_lightColor;\n"
+    "uniform vec3  u_eyeWorld;\n"
+    "uniform vec3  u_viewTowardEye;\n"
+    "uniform int   u_perspective;\n"
+    "varying vec3  v_worldPos;\n"
+    "varying vec4  v_color;\n"
+    "void main() {\n"
+    "    vec3 fn = cross(dFdx(v_worldPos), dFdy(v_worldPos));\n"
+    "    vec3 n = fn * inversesqrt(max(dot(fn, fn), 1.0e-30));\n"
+    "    vec3 toEye = (u_perspective != 0) ?\n"
+    "        normalize(u_eyeWorld - v_worldPos) : u_viewTowardEye;\n"
+    "    n *= 2.0 * step(0.0, dot(n, toEye)) - 1.0;\n"
+    "    float ndl = max(0.0, dot(n, u_lightVec));\n"
+    "    float spec = (ndl > 0.0) ? 0.2 : 0.0;\n"
+    "    vec3 col = v_color.rgb *\n"
+    "        (vec3(0.06) + u_lightColor * (ndl * 0.6 + spec));\n"
     "    gl_FragColor = vec4(col, v_color.a);\n"
     "}\n";
 
@@ -399,6 +488,25 @@ static const char * kWireVS2 =
     "    v_color = a_instColor;\n"
     "}\n";
 
+static const char * kWirePopVS2 =
+    "#version 140\n"
+    "in vec3  a_pos;\n"
+    "in mat4  a_instTransform;\n"
+    "in vec4  a_instColor;\n"
+    "uniform mat4 u_viewProj;\n"
+    "uniform vec3 u_popEncodeScale;\n"
+    "uniform vec3 u_popDecodeScale;\n"
+    "uniform vec3 u_popMin;\n"
+    "out vec4 v_color;\n"
+    "void main() {\n"
+    "    vec3 scaled = (a_pos - u_popMin) * u_popEncodeScale;\n"
+    "    vec3 low = floor(scaled);\n"
+    "    vec3 high = ceil(scaled);\n"
+    "    vec3 p = (low + high) * u_popDecodeScale + u_popMin;\n"
+    "    gl_Position = u_viewProj * a_instTransform * vec4(p, 1.0);\n"
+    "    v_color = a_instColor;\n"
+    "}\n";
+
 static const char * kWireFS2 =
     "#version 140\n"
     "in  vec4 v_color;\n"
@@ -431,6 +539,39 @@ static const char * kShadedVS2 =
     "    v_color = a_instColor;\n"
     "}\n";
 
+static const char * kShadedPopVS2 =
+    "#version 140\n"
+    "in vec3  a_pos;\n"
+    "in vec3  a_norm;\n"
+    "in mat4  a_instTransform;\n"
+    "in vec4  a_instColor;\n"
+    "uniform mat4 u_viewProj;\n"
+    "uniform int  u_hasNorm;\n"
+    "uniform vec3 u_popEncodeScale;\n"
+    "uniform vec3 u_popDecodeScale;\n"
+    "uniform vec3 u_popMin;\n"
+    "out vec3 v_norm;\n"
+    "out vec3 v_worldPos;\n"
+    "out vec4 v_color;\n"
+    "void main() {\n"
+    "    vec3 scaled = (a_pos - u_popMin) * u_popEncodeScale;\n"
+    "    vec3 low = floor(scaled);\n"
+    "    vec3 high = ceil(scaled);\n"
+    "    vec3 p = (low + high) * u_popDecodeScale + u_popMin;\n"
+    "    vec4 wp = a_instTransform * vec4(p, 1.0);\n"
+    "    gl_Position = u_viewProj * wp;\n"
+    "    v_worldPos = wp.xyz;\n"
+    "    if (u_hasNorm != 0) {\n"
+    "        mat3 nm = mat3(a_instTransform[0].xyz,\n"
+    "                       a_instTransform[1].xyz,\n"
+    "                       a_instTransform[2].xyz);\n"
+    "        v_norm = nm * a_norm;\n"
+    "    } else {\n"
+    "        v_norm = vec3(0.0, 0.0, 1.0);\n"
+    "    }\n"
+    "    v_color = a_instColor;\n"
+    "}\n";
+
 static const char * kShadedFS2 =
     "#version 140\n"
     "uniform int   u_numLights;\n"
@@ -440,6 +581,9 @@ static const char * kShadedFS2 =
     "uniform vec3  u_laxis[8];\n"
     "uniform vec3  u_lcolor[8];\n"
     "uniform float u_lcos[8];\n"
+    "uniform vec3  u_eyeWorld;\n"
+    "uniform vec3  u_viewTowardEye;\n"
+    "uniform int   u_perspective;\n"
     "in  vec3 v_norm;\n"
     "in  vec3 v_worldPos;\n"
     "in  vec4 v_color;\n"
@@ -453,8 +597,11 @@ static const char * kShadedFS2 =
     "        vec3 fn = cross(dFdx(v_worldPos), dFdy(v_worldPos));\n"
     "        float fl = length(fn);\n"
     "        n = (fl > 0.0) ? fn / fl : vec3(0.0, 0.0, 1.0);\n"
+    "        vec3 toEye = (u_perspective != 0) ?\n"
+    "            normalize(u_eyeWorld - v_worldPos) : u_viewTowardEye;\n"
+    "        if (dot(n, toEye) < 0.0) n = -n;\n"
     "    }\n"
-    "    vec3 col = v_color.rgb * 0.25;\n"
+    "    vec3 col = v_color.rgb * 0.06;\n"
     "    for (int i = 0; i < 8; i++) {\n"
     "        if (i >= u_numLights) break;\n"
     "        vec3 L;\n"
@@ -471,7 +618,9 @@ static const char * kShadedFS2 =
     "            }\n"
     "        }\n"
     "        float ndl = max(0.0, dot(n, L));\n"
-    "        col += v_color.rgb * u_lcolor[i] * (ndl * 0.75 * atten);\n"
+    "        float spec = (ndl > 0.0) ? 0.2 : 0.0;\n"
+    "        col += v_color.rgb * u_lcolor[i] *\n"
+    "               ((ndl * 0.6 + spec) * atten);\n"
     "    }\n"
     "    fragColor = vec4(col, v_color.a);\n"
     "}\n";
@@ -499,8 +648,14 @@ struct SharedCadShaders {
     GLuint proxyPoint = 0;
     GLuint shaded = 0;
     GLuint shadedPop = 0;
+    GLuint shadedDirectionalNorm = 0;
+    GLuint shadedDirectionalFace = 0;
+    GLuint shadedPopDirectionalNorm = 0;
+    GLuint shadedPopDirectionalFace = 0;
     GLuint wireInst = 0;
+    GLuint wirePopInst = 0;
     GLuint shadedInst = 0;
+    GLuint shadedPopInst = 0;
 };
 
 std::mutex sharedCadShadersMutex;
@@ -525,8 +680,20 @@ releaseSharedCadShaders(uint32_t contextId, void *)
         if (programs.proxyPoint) glue->glDeleteObjectARB(programs.proxyPoint);
         if (programs.shaded) glue->glDeleteObjectARB(programs.shaded);
         if (programs.shadedPop) glue->glDeleteObjectARB(programs.shadedPop);
+        if (programs.shadedDirectionalNorm)
+            glue->glDeleteObjectARB(programs.shadedDirectionalNorm);
+        if (programs.shadedDirectionalFace)
+            glue->glDeleteObjectARB(programs.shadedDirectionalFace);
+        if (programs.shadedPopDirectionalNorm)
+            glue->glDeleteObjectARB(programs.shadedPopDirectionalNorm);
+        if (programs.shadedPopDirectionalFace)
+            glue->glDeleteObjectARB(programs.shadedPopDirectionalFace);
         if (programs.wireInst) glue->glDeleteObjectARB(programs.wireInst);
+        if (programs.wirePopInst)
+            glue->glDeleteObjectARB(programs.wirePopInst);
         if (programs.shadedInst) glue->glDeleteObjectARB(programs.shadedInst);
+        if (programs.shadedPopInst)
+            glue->glDeleteObjectARB(programs.shadedPopInst);
     }
     sharedCadShaders.erase(found);
 }
@@ -623,6 +790,27 @@ CadRendererGL::uploadLights(const SoGLContext* glue, GLuint program)
                 vec[0], vec[1], vec[2], color[0], color[1], color[2]);
         }
     }
+}
+
+void
+CadRendererGL::uploadViewFacing(const SoGLContext* glue, GLuint program,
+                                const SbViewVolume& viewVolume)
+{
+    const SbVec3f eye = viewVolume.getProjectionPoint();
+    SbVec3f towardEye = -viewVolume.getProjectionDirection();
+    if (towardEye.normalize() == 0.0f)
+        towardEye.setValue(0.0f, 0.0f, 1.0f);
+    const GLint eyeLocation =
+        glue->glGetUniformLocationARB(program, "u_eyeWorld");
+    const GLint directionLocation =
+        glue->glGetUniformLocationARB(program, "u_viewTowardEye");
+    const GLint perspectiveLocation =
+        glue->glGetUniformLocationARB(program, "u_perspective");
+    glue->glUniform3fvARB(eyeLocation, 1, eye.getValue());
+    glue->glUniform3fvARB(directionLocation, 1, towardEye.getValue());
+    glue->glUniform1iARB(
+        perspectiveLocation,
+        viewVolume.getProjectionType() == SbViewVolume::PERSPECTIVE ? 1 : 0);
 }
 
 CadRendererGL::~CadRendererGL()
@@ -858,6 +1046,49 @@ bool CadRendererGL::compileAllShaders(const SoGLContext* glue)
         glue->glDeleteObjectARB(fs);
         if (!shaders_.shadedPop) return false;
     }
+    if (!cadShaderDebugMode()) {
+        const auto compileDirectionalPair =
+            [this, glue](const char *normalVertexSource,
+                         const char *faceVertexSource,
+                         GLuint& normalProgram,
+                         GLuint& faceProgram) {
+                GLuint normalVs = compileShader(
+                    glue, GL_VERTEX_SHADER_ARB, normalVertexSource);
+                GLuint faceVs = compileShader(
+                    glue, GL_VERTEX_SHADER_ARB, faceVertexSource);
+                GLuint normalFs = compileShader(
+                    glue, GL_FRAGMENT_SHADER_ARB,
+                    kShadedDirectionalNormFS1);
+                GLuint faceFs = compileShader(
+                    glue, GL_FRAGMENT_SHADER_ARB,
+                    kShadedDirectionalFaceFS1);
+                if (normalVs && normalFs)
+                    normalProgram = linkProgram(
+                        glue, normalVs, normalFs);
+                if (faceVs && faceFs)
+                    faceProgram = linkProgram(glue, faceVs, faceFs);
+                if (normalVs) glue->glDeleteObjectARB(normalVs);
+                if (faceVs) glue->glDeleteObjectARB(faceVs);
+                if (normalFs) glue->glDeleteObjectARB(normalFs);
+                if (faceFs) glue->glDeleteObjectARB(faceFs);
+                if (!normalProgram || !faceProgram) {
+                    if (normalProgram)
+                        glue->glDeleteObjectARB(normalProgram);
+                    if (faceProgram)
+                        glue->glDeleteObjectARB(faceProgram);
+                    normalProgram = 0;
+                    faceProgram = 0;
+                }
+            };
+        compileDirectionalPair(
+            kShadedVS1, kShadedFaceVS1,
+            shaders_.shadedDirectionalNorm,
+            shaders_.shadedDirectionalFace);
+        compileDirectionalPair(
+            kShadedPopVS1, kShadedPopFaceVS1,
+            shaders_.shadedPopDirectionalNorm,
+            shaders_.shadedPopDirectionalFace);
+    }
 
     // --- Tier-2 shaders (only when instancing is available) ---
     if (caps_.canUseInstanced()) {
@@ -871,6 +1102,16 @@ bool CadRendererGL::compileAllShaders(const SoGLContext* glue)
             if (fs) glue->glDeleteObjectARB(fs);
         }
         {
+            GLuint vs = compileShader(
+                glue, GL_VERTEX_SHADER_ARB, kWirePopVS2);
+            GLuint fs = compileShader(glue, GL_FRAGMENT_SHADER_ARB, kWireFS2);
+            if (vs && fs) {
+                shaders_.wirePopInst = linkProgram(glue, vs, fs);
+            }
+            if (vs) glue->glDeleteObjectARB(vs);
+            if (fs) glue->glDeleteObjectARB(fs);
+        }
+        {
             GLuint vs = compileShader(glue, GL_VERTEX_SHADER_ARB, kShadedVS2);
             GLuint fs = compileShader(glue, GL_FRAGMENT_SHADER_ARB, kShadedFS2);
             if (vs && fs) {
@@ -879,12 +1120,29 @@ bool CadRendererGL::compileAllShaders(const SoGLContext* glue)
             if (vs) glue->glDeleteObjectARB(vs);
             if (fs) glue->glDeleteObjectARB(fs);
         }
+        {
+            GLuint vs = compileShader(
+                glue, GL_VERTEX_SHADER_ARB, kShadedPopVS2);
+            GLuint fs = compileShader(glue, GL_FRAGMENT_SHADER_ARB, kShadedFS2);
+            if (vs && fs) {
+                shaders_.shadedPopInst = linkProgram(glue, vs, fs);
+            }
+            if (vs) glue->glDeleteObjectARB(vs);
+            if (fs) glue->glDeleteObjectARB(fs);
+        }
         // If instanced shaders failed, fall back to Tier-1
-        if (!shaders_.wireInst || !shaders_.shadedInst) {
+        if (!shaders_.wireInst || !shaders_.wirePopInst ||
+                !shaders_.shadedInst || !shaders_.shadedPopInst) {
             if (shaders_.wireInst)   glue->glDeleteObjectARB(shaders_.wireInst);
+            if (shaders_.wirePopInst)
+                glue->glDeleteObjectARB(shaders_.wirePopInst);
             if (shaders_.shadedInst) glue->glDeleteObjectARB(shaders_.shadedInst);
+            if (shaders_.shadedPopInst)
+                glue->glDeleteObjectARB(shaders_.shadedPopInst);
             shaders_.wireInst   = 0;
+            shaders_.wirePopInst = 0;
             shaders_.shadedInst = 0;
+            shaders_.shadedPopInst = 0;
         }
     }
 
@@ -921,8 +1179,18 @@ bool CadRendererGL::ensureReady(const SoGLContext* glue)
             shaders_.proxyPoint = found->second.proxyPoint;
             shaders_.shaded = found->second.shaded;
             shaders_.shadedPop = found->second.shadedPop;
+            shaders_.shadedDirectionalNorm =
+                found->second.shadedDirectionalNorm;
+            shaders_.shadedDirectionalFace =
+                found->second.shadedDirectionalFace;
+            shaders_.shadedPopDirectionalNorm =
+                found->second.shadedPopDirectionalNorm;
+            shaders_.shadedPopDirectionalFace =
+                found->second.shadedPopDirectionalFace;
             shaders_.wireInst = found->second.wireInst;
+            shaders_.wirePopInst = found->second.wirePopInst;
             shaders_.shadedInst = found->second.shadedInst;
+            shaders_.shadedPopInst = found->second.shadedPopInst;
         } else {
             caps_ = CadGLCaps::detect(glue);
             shaders_ = ShaderPrograms();
@@ -939,8 +1207,18 @@ bool CadRendererGL::ensureReady(const SoGLContext* glue)
             programs.proxyPoint = shaders_.proxyPoint;
             programs.shaded = shaders_.shaded;
             programs.shadedPop = shaders_.shadedPop;
+            programs.shadedDirectionalNorm =
+                shaders_.shadedDirectionalNorm;
+            programs.shadedDirectionalFace =
+                shaders_.shadedDirectionalFace;
+            programs.shadedPopDirectionalNorm =
+                shaders_.shadedPopDirectionalNorm;
+            programs.shadedPopDirectionalFace =
+                shaders_.shadedPopDirectionalFace;
             programs.wireInst = shaders_.wireInst;
+            programs.wirePopInst = shaders_.wirePopInst;
             programs.shadedInst = shaders_.shadedInst;
+            programs.shadedPopInst = shaders_.shadedPopInst;
             sharedCadShaders.emplace(glue->contextid, programs);
         }
         capsDetected_ = true;
@@ -1042,17 +1320,10 @@ void CadRendererGL::ensurePartUploaded(
         const auto& mesh = *geom->shaded;
         size_t requiredIndexCount = mesh.isProgressive() ?
             mesh.indexCountAtLevel(requestedLod) : mesh.indices.size();
-        size_t requiredPositionCount = mesh.positions.size();
-        if (mesh.isProgressive() && requiredIndexCount > 0) {
-            uint32_t maximumIndex = 0;
-            for (size_t i = 0; i < requiredIndexCount; ++i) {
-                if (mesh.indices[i] >= mesh.positions.size())
-                    return;
-                maximumIndex = std::max(maximumIndex, mesh.indices[i]);
-            }
-            requiredPositionCount =
-                static_cast<size_t>(maximumIndex) + 1;
-        }
+        size_t requiredPositionCount = mesh.isProgressive() ?
+            mesh.positionCountAtLevel(requestedLod) : mesh.positions.size();
+        if (requiredIndexCount > 0 && requiredPositionCount == 0)
+            return;
         pTriPos = packedVec3fData(mesh.positions);
         pTriNorm = packedVec3fData(mesh.normals);
         pTriIdx = mesh.indices.empty() ? nullptr : mesh.indices.data();
@@ -1200,27 +1471,11 @@ static void restoreWireRasterState(
 }
 
 static uint8_t maximumRequestedLod(
-        const CadFramePlan& plan, PartId part)
+        const CadFramePlan& plan, const SoCADAssembly& assembly, PartId part)
 {
-    uint8_t requested = 0;
-    bool found = false;
-    const auto consider = [&](const CadDrawItem& item) {
-        if (!(item.rep.part == part))
-            return;
-        for (uint32_t i = 0; i < item.instanceCount; ++i) {
-            const size_t visibleIndex = item.baseInstance + i;
-            if (visibleIndex >= plan.visibleInstances.size())
-                continue;
-            requested = std::max(
-                requested, plan.visibleInstances[visibleIndex].lodLevel);
-            found = true;
-        }
-    };
-    for (const CadDrawItem& item : plan.wireItems)
-        consider(item);
-    for (const CadDrawItem& item : plan.shadedItems)
-        consider(item);
-    return found ? requested : 15;
+    const auto found = plan.maximumRequestedLodByPart.find(part);
+    return found != plan.maximumRequestedLodByPart.end() ?
+        assembly.effectiveProgressiveLodLevel(found->second) : 15;
 }
 
 void CadRendererGL::renderPoints(
@@ -1399,14 +1654,8 @@ bool CadRendererGL::isSubpixelProxyInstance(
 bool CadRendererGL::wireRepHasUncollapsedInstances(
         const CadFramePlan& plan, PartId part)
 {
-    for (const CadDrawItem& item : plan.wireItems) {
-        if (!(item.rep.part == part)) continue;
-        for (uint32_t i = 0; i < item.instanceCount; ++i) {
-            if (!isSubpixelProxyInstance(plan, item.baseInstance + i))
-                return true;
-        }
-    }
-    return false;
+    return plan.wirePartsWithUncollapsedInstances.find(part) !=
+        plan.wirePartsWithUncollapsedInstances.end();
 }
 
 void CadRendererGL::renderSubpixelProxyPoints(
@@ -1534,6 +1783,7 @@ void CadRendererGL::render(
         const SbMatrix&      viewProj,
         const SbMatrix&      viewMatrix,
         const SbMatrix&      projectionMatrix,
+        const SbViewVolume&  viewVolume,
         const std::unordered_map<PartId, uint64_t,
                                  std::hash<PartId>>& partGenMap)
 {
@@ -1562,6 +1812,10 @@ void CadRendererGL::render(
         !retainedProgressive || shaders_.wirePop;
     const bool progressiveShadedShaderReady =
         !retainedProgressive || shaders_.shadedPop;
+    const bool progressiveWireInstShaderReady =
+        !retainedProgressive || shaders_.wirePopInst;
+    const bool progressiveShadedInstShaderReady =
+        !retainedProgressive || shaders_.shadedPopInst;
     const bool useFlatShaded = flatShadedEnabled && canUseFlatShaded &&
         !retainedProgressive &&
         (hiddenLine || plan.shadedItems.size() >= 128);
@@ -1600,7 +1854,7 @@ void CadRendererGL::render(
             uint64_t gen = (genIt != partGenMap.end()) ? genIt->second : 0;
             ensurePartUploaded(
                 repKey.part, assembly, gen,
-                maximumRequestedLod(plan, repKey.part), glue);
+                maximumRequestedLod(plan, assembly, repKey.part), glue);
         }
         CadFramePlan depthPlan = plan;
         depthPlan.wireItems.clear();
@@ -1612,34 +1866,39 @@ void CadRendererGL::render(
         SoGLContext_glPolygonOffset(glue, 1.0f, 1.0f);
         if (caps_.canUseVbo() && shaders_.shaded &&
                 progressiveShadedShaderReady) {
-            renderVboLoop(depthPlan, assembly, glue, viewProj, false, true);
+            renderVboLoop(
+                depthPlan, assembly, glue, viewProj, viewVolume,
+                false, false, true);
         } else if (caps_.canUseFixedVbo()) {
             renderFixedVboLoop(depthPlan, assembly, glue, viewProj, viewMatrix,
-                               projectionMatrix);
+                               projectionMatrix, false, true);
         } else {
             renderImmediateMode(depthPlan, assembly, glue, viewProj, viewMatrix,
-                                projectionMatrix);
+                                projectionMatrix, false, true);
         }
         SoGLContext_glDisable(glue, GL_POLYGON_OFFSET_FILL);
         SoGLContext_glColorMask(glue, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 
-        if (!retainedProgressive &&
-                caps_.canUseInstanced() && shaders_.wireInst) {
+        if (caps_.canUseInstanced() && shaders_.wireInst &&
+                progressiveWireInstShaderReady) {
             lastRenderTier_ = 2;
-            renderInstanced(wirePlan, assembly, glue, viewProj, partGenMap,
-                            false, false);
+            renderInstanced(wirePlan, assembly, glue, viewProj, viewVolume,
+                            partGenMap,
+                            true, false, false);
         } else if (caps_.canUseVbo() && shaders_.wire &&
                 progressiveWireShaderReady) {
             lastRenderTier_ = 1;
-            renderVboLoop(wirePlan, assembly, glue, viewProj, false, false);
+            renderVboLoop(
+                wirePlan, assembly, glue, viewProj, viewVolume,
+                true, false, false);
         } else if (caps_.canUseFixedVbo()) {
             lastRenderTier_ = 1;
             renderFixedVboLoop(wirePlan, assembly, glue, viewProj, viewMatrix,
-                               projectionMatrix);
+                               projectionMatrix, true, false);
         } else {
             lastRenderTier_ = 0;
             renderImmediateMode(wirePlan, assembly, glue, viewProj, viewMatrix,
-                                projectionMatrix);
+                                projectionMatrix, true, false);
         }
         renderSubpixelProxyPoints(plan, glue, viewProj);
         gpuRes_->endProgressiveFrame(glue);
@@ -1670,26 +1929,35 @@ void CadRendererGL::render(
         }
     }
 
-    // Upload geometry for the per-part rendering paths only after the flat
-    // aggregate paths have declined the frame.
+    /*
+     * Wire and shaded work are independent presentation channels.  In
+     * particular, thousands of conservative fallback boxes must remain one
+     * flat world-space batch even after the first few retained PoP meshes
+     * appear in the shaded channel.  The old all-or-nothing gate disabled
+     * this path as soon as any progressive part existed, turning a 50k-leaf
+     * cold scene back into tens of thousands of VBO uploads and draw calls.
+     */
+    const char *flatWireEnv = std::getenv("OBOL_CAD_FLAT_WIRE");
+    const bool flatWireEnabled = flatWireEnv ? flatWireEnv[0] != '0' : true;
+    const bool canUseFlatWire = caps_.isSoftwareRenderer ?
+        caps_.canUseFixedVbo() : (caps_.canUseVbo() && shaders_.wire);
+    const bool flatWireRendered = flatWireEnabled &&
+        plan.wireItems.size() >= 128 && canUseFlatWire &&
+        renderFlatWire(plan, assembly, glue, viewProj);
+
+    // Upload only the representations still needed by the per-part paths.
     for (const auto& repKey : plan.requiredReps) {
         if (repKey.type == CadRepType::WireSegments &&
-                !wireRepHasUncollapsedInstances(plan, repKey.part))
+                (flatWireRendered ||
+                 !wireRepHasUncollapsedInstances(plan, repKey.part)))
             continue;
         auto genIt = partGenMap.find(repKey.part);
         uint64_t gen = (genIt != partGenMap.end()) ? genIt->second : 0;
         ensurePartUploaded(
             repKey.part, assembly, gen,
-            maximumRequestedLod(plan, repKey.part), glue);
+            maximumRequestedLod(plan, assembly, repKey.part), glue);
     }
 
-    const bool needsShadedLod =
-        retainedProgressive && !plan.shadedItems.empty();
-
-    const char *flatWireEnv = std::getenv("OBOL_CAD_FLAT_WIRE");
-    const bool flatWireEnabled = flatWireEnv ? flatWireEnv[0] != '0' : true;
-    const bool canUseFlatWire = caps_.isSoftwareRenderer ?
-        caps_.canUseFixedVbo() : (caps_.canUseVbo() && shaders_.wire);
     /* Keep shaded polygons fractionally behind wire geometry.  A wire source
      * may be a separate assembly from its shaded peer, so relying on a local
      * shaded-with-edges mode leaves coplanar overlays at the mercy of depth
@@ -1701,35 +1969,36 @@ void CadRendererGL::render(
         SoGLContext_glPolygonOffset(glue, 1.0f, 1.0f);
     }
 
-    if (flatWireEnabled && !retainedProgressive &&
-            plan.shadedItems.empty() &&
-            plan.wireItems.size() >= 128 &&
-            canUseFlatWire &&
-            renderFlatWire(plan, assembly, glue, viewProj)) {
+    if (flatWireRendered && plan.shadedItems.empty()) {
         lastRenderTier_ = 3;
     } else if (caps_.isSoftwareRenderer && !softwareGlslRequested() &&
             caps_.canUseFixedVbo()) {
         lastRenderTier_ = 1;
         renderFixedVboLoop(plan, assembly, glue, viewProj, viewMatrix,
-                           projectionMatrix);
-    } else if (!needsShadedLod && caps_.canUseInstanced() &&
-            shaders_.wireInst && shaders_.shadedInst) {
+                           projectionMatrix, !flatWireRendered, true);
+    } else if (caps_.canUseInstanced() &&
+            shaders_.wireInst && shaders_.shadedInst &&
+            progressiveWireInstShaderReady &&
+            progressiveShadedInstShaderReady) {
         lastRenderTier_ = 2;
-        renderInstanced(plan, assembly, glue, viewProj, partGenMap,
-                        false, true);
+        renderInstanced(plan, assembly, glue, viewProj, viewVolume, partGenMap,
+                        !flatWireRendered, false, true);
     } else if (caps_.canUseVbo() && shaders_.wire &&
             progressiveWireShaderReady && progressiveShadedShaderReady) {
         lastRenderTier_ = 1;
-        renderVboLoop(plan, assembly, glue, viewProj, false, true);
+        renderVboLoop(plan, assembly, glue, viewProj, viewVolume,
+                      !flatWireRendered, false, true);
     } else if (caps_.canUseFixedVbo()) {
         lastRenderTier_ = 1;
         renderFixedVboLoop(plan, assembly, glue, viewProj, viewMatrix,
-                           projectionMatrix);
+                           projectionMatrix, !flatWireRendered, true);
     } else {
         lastRenderTier_ = 0;
         renderImmediateMode(plan, assembly, glue, viewProj, viewMatrix,
-                            projectionMatrix);
+                            projectionMatrix, !flatWireRendered, true);
     }
+    if (flatWireRendered && !plan.shadedItems.empty())
+        lastRenderTier_ = 5;
 
     if (!plan.shadedItems.empty() && !polygonOffsetWasEnabled)
         SoGLContext_glDisable(glue, GL_POLYGON_OFFSET_FILL);
@@ -1740,12 +2009,14 @@ void CadRendererGL::render(
 namespace {
 
 struct FlatWireStyleKey {
+    uint8_t priority = 0;
     uint32_t rgba = 0;
     uint32_t widthBits = 0;
     uint16_t pattern = 0xffffu;
     uint16_t factor = 1u;
 
     bool operator<(const FlatWireStyleKey& other) const noexcept {
+        if (priority != other.priority) return priority < other.priority;
         if (rgba != other.rgba) return rgba < other.rgba;
         if (widthBits != other.widthBits) return widthBits < other.widthBits;
         if (pattern != other.pattern) return pattern < other.pattern;
@@ -1756,6 +2027,8 @@ struct FlatWireStyleKey {
 static FlatWireStyleKey flatWireStyleKey(const CadVisibleInstance& inst)
 {
     FlatWireStyleKey key;
+    // Draw hover/selection emphasis after ordinary geometry at equal depth.
+    key.priority = static_cast<uint8_t>(inst.flags & 3u);
     key.rgba = static_cast<uint32_t>(inst.rgba[0]) |
                (static_cast<uint32_t>(inst.rgba[1]) << 8) |
                (static_cast<uint32_t>(inst.rgba[2]) << 16) |
@@ -1821,6 +2094,12 @@ static uint32_t flatRgbaKey(const CadVisibleInstance& inst)
 
 } // namespace
 
+static uint8_t progressiveLevel(
+    uint8_t requested, uint8_t minimum, uint8_t resident);
+static SbVec3f progressiveSnapPoint(
+    const SbVec3f& point, const SbVec3f& minimum,
+    const SbVec3f& maximum, uint8_t level);
+
 bool CadRendererGL::renderFlatWire(
         const CadFramePlan& plan,
         const SoCADAssembly& assembly,
@@ -1832,21 +2111,46 @@ bool CadRendererGL::renderFlatWire(
         plan.subpixelProxyRevision : plan.revision;
     const CadFlatWireGpu& cached = gpuRes_->flatWire();
     if (cached.planRevision != presentationRevision) {
-        // Proxy membership changes with the camera, so the flattened buffer
-        // must be rebuilt even when the underlying assembly is unchanged.
-        const bool rebuildGeometry = true;
+        struct Occurrence {
+            const Obol::WireRep *wire = nullptr;
+            const CadVisibleInstance *instance = nullptr;
+            size_t flatSegments = 0;
+            size_t polylineSegments = 0;
+            uint8_t level = 15;
+            FlatWireStyleKey style;
+        };
+
+        /*
+         * Flatten in presentation-style order.  Grouping only adjacent
+         * instances in unordered part order can leave a colorful assembly
+         * with almost one draw call per leaf, defeating the batch.  Stable
+         * InstanceId tie breaks make coincident-edge results reproducible;
+         * selection/hover priority in the style key leaves emphasis on top.
+         */
+        std::vector<Occurrence> occurrences;
+        occurrences.reserve(plan.visibleInstances.size());
         size_t pointCount = 0;
         for (const CadDrawItem& item : plan.wireItems) {
             const Obol::PartGeometry *geom = assembly.partGeometry(item.rep.part);
             if (!geom || !geom->wire.has_value()) continue;
             const Obol::WireRep& wire = *geom->wire;
-            size_t segments = wire.segmentCount();
+            size_t polylineSegments = 0;
             for (const Obol::WirePolyline& poly : wire.polylines)
                 if (poly.points.size() >= 2)
-                    segments += poly.points.size() - 1;
-            if (segments == 0) continue;
+                    polylineSegments += poly.points.size() - 1;
             for (uint32_t ii = 0; ii < item.instanceCount; ++ii) {
-                if (isSubpixelProxyInstance(plan, item.baseInstance + ii))
+                const size_t visibleIndex = item.baseInstance + ii;
+                if (visibleIndex >= plan.visibleInstances.size() ||
+                        isSubpixelProxyInstance(plan, visibleIndex))
+                    continue;
+                const CadVisibleInstance& instance =
+                    plan.visibleInstances[visibleIndex];
+                const uint8_t effectiveLevel =
+                    assembly.effectiveProgressiveLodLevel(instance.lodLevel);
+                const size_t flatSegments =
+                    wire.segmentCountAtLevel(effectiveLevel);
+                const size_t segments = flatSegments + polylineSegments;
+                if (segments == 0)
                     continue;
                 const size_t maxPoints =
                     maxPositionBytes / (3 * sizeof(float));
@@ -1854,70 +2158,88 @@ bool CadRendererGL::renderFlatWire(
                         pointCount > maxPoints - segments * 2)
                     return false;
                 pointCount += segments * 2;
+                Occurrence occurrence;
+                occurrence.wire = &wire;
+                occurrence.instance = &instance;
+                occurrence.flatSegments = flatSegments;
+                occurrence.polylineSegments = polylineSegments;
+                occurrence.level = progressiveLevel(
+                    effectiveLevel, wire.progressiveMinimumLevel,
+                    wire.progressiveResidentLevel);
+                occurrence.style = flatWireStyleKey(instance);
+                occurrences.push_back(occurrence);
             }
         }
 
-        std::vector<float> positions;
-        if (rebuildGeometry)
-            positions.resize(pointCount * 3);
+        std::sort(occurrences.begin(), occurrences.end(),
+            [](const Occurrence& a, const Occurrence& b) {
+                if (a.style < b.style) return true;
+                if (b.style < a.style) return false;
+                if (a.instance->instanceId.w1 != b.instance->instanceId.w1)
+                    return a.instance->instanceId.w1 <
+                        b.instance->instanceId.w1;
+                return a.instance->instanceId.w0 <
+                    b.instance->instanceId.w0;
+            });
+
+        std::vector<float> positions(pointCount * 3);
         size_t positionOffset = 0;
         std::vector<CadFlatWireGroup> groups;
         FlatWireStyleKey activeKey;
         bool haveGroup = false;
         size_t vertexOffset = 0;
-        for (const CadDrawItem& item : plan.wireItems) {
-            const Obol::PartGeometry *geom = assembly.partGeometry(item.rep.part);
-            if (!geom || !geom->wire.has_value()) continue;
-            const Obol::WireRep& wire = *geom->wire;
-            size_t segments = wire.segmentCount();
-            for (const Obol::WirePolyline& poly : wire.polylines)
-                if (poly.points.size() >= 2)
-                    segments += poly.points.size() - 1;
-            const size_t instanceVertices = segments * 2;
-            for (uint32_t ii = 0; ii < item.instanceCount; ++ii) {
-                const size_t visibleIndex = item.baseInstance + ii;
-                if (isSubpixelProxyInstance(plan, visibleIndex))
-                    continue;
-                const CadVisibleInstance& inst =
-                    plan.visibleInstances[visibleIndex];
-                const FlatWireStyleKey key = flatWireStyleKey(inst);
-                if (!haveGroup || key < activeKey || activeKey < key) {
-                    CadFlatWireGroup group;
-                    group.first = static_cast<GLint>(vertexOffset);
-                    group.lineWidth = inst.lineWidth;
-                    group.linePattern = inst.linePattern;
-                    group.linePatternFactor = inst.linePatternFactor;
-                    std::copy(inst.rgba.begin(), inst.rgba.end(), group.rgba);
-                    groups.push_back(group);
-                    activeKey = key;
-                    haveGroup = true;
-                }
-                groups.back().count += static_cast<GLsizei>(instanceVertices);
-                vertexOffset += instanceVertices;
-                if (rebuildGeometry) {
-                    for (size_t p = 0; p + 1 < wire.segmentPoints.size(); p += 2) {
-                        writeTransformedFlatPoint(positions, positionOffset,
-                                                  wire.segmentPoints[p], inst.transform);
-                        writeTransformedFlatPoint(positions, positionOffset,
-                                                  wire.segmentPoints[p + 1], inst.transform);
-                    }
-                    for (const Obol::WirePolyline& poly : wire.polylines) {
-                        for (size_t p = 0; p + 1 < poly.points.size(); ++p) {
-                            writeTransformedFlatPoint(positions, positionOffset,
-                                                      poly.points[p], inst.transform);
-                            writeTransformedFlatPoint(positions, positionOffset,
-                                                      poly.points[p + 1], inst.transform);
-                        }
-                    }
+        for (const Occurrence& occurrence : occurrences) {
+            const Obol::WireRep& wire = *occurrence.wire;
+            const CadVisibleInstance& inst = *occurrence.instance;
+            const size_t instanceVertices =
+                (occurrence.flatSegments +
+                 occurrence.polylineSegments) * 2;
+            const FlatWireStyleKey& key = occurrence.style;
+            if (!haveGroup || key < activeKey || activeKey < key) {
+                CadFlatWireGroup group;
+                group.first = static_cast<GLint>(vertexOffset);
+                group.lineWidth = inst.lineWidth;
+                group.linePattern = inst.linePattern;
+                group.linePatternFactor = inst.linePatternFactor;
+                std::copy(inst.rgba.begin(), inst.rgba.end(), group.rgba);
+                groups.push_back(group);
+                activeKey = key;
+                haveGroup = true;
+            }
+            groups.back().count += static_cast<GLsizei>(instanceVertices);
+            vertexOffset += instanceVertices;
+
+            const size_t flatPointCount = occurrence.flatSegments * 2;
+            for (size_t p = 0; p + 1 < flatPointCount; p += 2) {
+                const SbVec3f a = wire.isProgressive() &&
+                        occurrence.level < 15 ?
+                    progressiveSnapPoint(wire.segmentPoints[p],
+                        wire.progressiveQuantizationMinimum,
+                        wire.progressiveQuantizationMaximum,
+                        occurrence.level) : wire.segmentPoints[p];
+                const SbVec3f b = wire.isProgressive() &&
+                        occurrence.level < 15 ?
+                    progressiveSnapPoint(wire.segmentPoints[p + 1],
+                        wire.progressiveQuantizationMinimum,
+                        wire.progressiveQuantizationMaximum,
+                        occurrence.level) : wire.segmentPoints[p + 1];
+                writeTransformedFlatPoint(
+                    positions, positionOffset, a, inst.transform);
+                writeTransformedFlatPoint(
+                    positions, positionOffset, b, inst.transform);
+            }
+            for (const Obol::WirePolyline& poly : wire.polylines) {
+                for (size_t p = 0; p + 1 < poly.points.size(); ++p) {
+                    writeTransformedFlatPoint(positions, positionOffset,
+                                              poly.points[p], inst.transform);
+                    writeTransformedFlatPoint(positions, positionOffset,
+                                              poly.points[p + 1], inst.transform);
                 }
             }
         }
         if (pointCount == 0 || groups.empty()) return false;
-        if (rebuildGeometry)
-            gpuRes_->uploadFlatWire(presentationRevision, plan.geometryRevision,
-                                    positions, groups, glue, caps_);
-        else
-            gpuRes_->updateFlatWireGroups(presentationRevision, groups);
+        gpuRes_->uploadFlatWire(presentationRevision, plan.geometryRevision,
+                                positions, groups, glue, caps_);
     }
 
     const CadFlatWireGpu& flat = gpuRes_->flatWire();
@@ -2305,7 +2627,7 @@ static GLsizei progressiveWireSegmentCount(
     if (!geometry || !geometry->wire || !geometry->wire->isProgressive())
         return residentCount;
     return static_cast<GLsizei>(geometry->wire->segmentCountAtLevel(
-        instance.lodLevel));
+        assembly.effectiveProgressiveLodLevel(instance.lodLevel)));
 }
 
 static GLsizei progressiveTriangleIndexCount(
@@ -2317,7 +2639,7 @@ static GLsizei progressiveTriangleIndexCount(
             !geometry->shaded->isProgressive())
         return residentCount;
     return static_cast<GLsizei>(geometry->shaded->indexCountAtLevel(
-        instance.lodLevel));
+        assembly.effectiveProgressiveLodLevel(instance.lodLevel)));
 }
 
 static uint8_t
@@ -2561,6 +2883,8 @@ void CadRendererGL::renderVboLoop(
         const SoCADAssembly& assembly,
         const SoGLContext*   glue,
         const SbMatrix&      viewProj,
+        const SbViewVolume&  viewVolume,
+        bool drawWire,
         bool customWireOnly,
         bool drawShaded)
 {
@@ -2578,7 +2902,7 @@ void CadRendererGL::renderVboLoop(
     const FrustumPlanes fp = extractFrustumPlanes(viewProj);
 
     // --- Wire pass ---
-    if (!plan.wireItems.empty()) {
+    if (drawWire && !plan.wireItems.empty()) {
         const CadWireRasterState rasterState = captureWireRasterState(
             glue, caps_.hasLineStipple);
         struct WireLocations {
@@ -2631,7 +2955,8 @@ void CadRendererGL::renderVboLoop(
 
                 const uint8_t level = progressive ?
                     progressiveLevel(
-                        inst.lodLevel, progressive->progressiveMinimumLevel,
+                        assembly.effectiveProgressiveLodLevel(inst.lodLevel),
+                        progressive->progressiveMinimumLevel,
                         progressive->progressiveResidentLevel) : 15;
                 const int variant = progressive && level < 15 ? 1 : 0;
                 const WireLocations& loc = locations[variant];
@@ -2673,35 +2998,99 @@ void CadRendererGL::renderVboLoop(
             GLint model = -1;
             GLint color = -1;
             GLint hasNormal = -1;
+            GLint lightVector = -1;
+            GLint lightColor = -1;
             GLint encodeScale = -1;
             GLint decodeScale = -1;
             GLint minimum = -1;
         };
-        const GLuint programs[2] = {shaders_.shaded, shaders_.shadedPop};
-        ShadedLocations locations[2];
-        for (int variant = 0; variant < 2; ++variant) {
-            if (!programs[variant])
+        enum ShadedProgramIndex {
+            GenericExact = 0,
+            GenericPop,
+            DirectionalNormExact,
+            DirectionalNormPop,
+            DirectionalFaceExact,
+            DirectionalFacePop,
+            ShadedProgramCount
+        };
+        const GLuint programs[ShadedProgramCount] = {
+            shaders_.shaded,
+            shaders_.shadedPop,
+            shaders_.shadedDirectionalNorm,
+            shaders_.shadedPopDirectionalNorm,
+            shaders_.shadedDirectionalFace,
+            shaders_.shadedPopDirectionalFace
+        };
+        ShadedLocations locations[ShadedProgramCount];
+        for (int programIndex = 0;
+                programIndex < ShadedProgramCount; ++programIndex) {
+            if (!programs[programIndex])
                 continue;
-            locations[variant].viewProjection =
+            locations[programIndex].viewProjection =
                 glue->glGetUniformLocationARB(
-                    programs[variant], "u_viewProj");
-            locations[variant].model = glue->glGetUniformLocationARB(
-                programs[variant], "u_model");
-            locations[variant].color = glue->glGetUniformLocationARB(
-                programs[variant], "u_color");
-            locations[variant].hasNormal = glue->glGetUniformLocationARB(
-                programs[variant], "u_hasNorm");
+                    programs[programIndex], "u_viewProj");
+            locations[programIndex].model =
+                glue->glGetUniformLocationARB(
+                    programs[programIndex], "u_model");
+            locations[programIndex].color =
+                glue->glGetUniformLocationARB(
+                    programs[programIndex], "u_color");
+            locations[programIndex].hasNormal =
+                glue->glGetUniformLocationARB(
+                    programs[programIndex], "u_hasNorm");
+            locations[programIndex].lightVector =
+                glue->glGetUniformLocationARB(
+                    programs[programIndex], "u_lightVec");
+            locations[programIndex].lightColor =
+                glue->glGetUniformLocationARB(
+                    programs[programIndex], "u_lightColor");
+            const bool progressiveProgram =
+                programIndex == GenericPop ||
+                programIndex == DirectionalNormPop ||
+                programIndex == DirectionalFacePop;
+            if (progressiveProgram) {
+                locations[programIndex].encodeScale =
+                    glue->glGetUniformLocationARB(
+                        programs[programIndex], "u_popEncodeScale");
+                locations[programIndex].decodeScale =
+                    glue->glGetUniformLocationARB(
+                        programs[programIndex], "u_popDecodeScale");
+                locations[programIndex].minimum =
+                    glue->glGetUniformLocationARB(
+                        programs[programIndex], "u_popMin");
+            }
         }
-        if (programs[1]) {
-            locations[1].encodeScale = glue->glGetUniformLocationARB(
-                programs[1], "u_popEncodeScale");
-            locations[1].decodeScale = glue->glGetUniformLocationARB(
-                programs[1], "u_popDecodeScale");
-            locations[1].minimum = glue->glGetUniformLocationARB(
-                programs[1], "u_popMin");
+
+        bool directionalLight = false;
+        float directionalVector[3] = {
+            kLightDir[0], kLightDir[1], kLightDir[2]
+        };
+        float directionalColor[3] = {1.0f, 1.0f, 1.0f};
+        if (this->lights_.empty()) {
+            directionalLight = true;
+        } else if (this->lights_.size() == 1 &&
+                   this->lights_[0].type == 0) {
+            directionalLight = true;
+            for (int component = 0; component < 3; ++component) {
+                directionalVector[component] =
+                    this->lights_[0].vec[component];
+                directionalColor[component] =
+                    this->lights_[0].color[component];
+            }
         }
+        if (directionalLight) {
+            SbVec3f normalized(
+                directionalVector[0], directionalVector[1],
+                directionalVector[2]);
+            if (normalized.normalize() == 0.0f)
+                normalized.setValue(kLightDir);
+            directionalVector[0] = normalized[0];
+            directionalVector[1] = normalized[1];
+            directionalVector[2] = normalized[2];
+        }
+
         GLuint activeProgram = 0;
-        bool lightsUploaded[2] = {false, false};
+        bool programUploaded[ShadedProgramCount] = {};
         if (cadLightDebugRequested()) {
             static unsigned int uniformLocationReportCount = 0;
             if (uniformLocationReportCount++ < 4) {
@@ -2761,18 +3150,43 @@ void CadRendererGL::renderVboLoop(
 
                 const uint8_t level = progressive ?
                     progressiveLevel(
-                        inst.lodLevel, progressive->progressiveMinimumLevel,
+                        assembly.effectiveProgressiveLodLevel(inst.lodLevel),
+                        progressive->progressiveMinimumLevel,
                         progressive->progressiveResidentLevel) : 15;
                 const int variant = progressive && level < 15 ? 1 : 0;
-                const ShadedLocations& loc = locations[variant];
-                if (activeProgram != programs[variant]) {
-                    activeProgram = programs[variant];
+                int programIndex = variant ? GenericPop : GenericExact;
+                if (directionalLight) {
+                    const int directionalIndex = hasNorm ?
+                        (variant ? DirectionalNormPop :
+                                   DirectionalNormExact) :
+                        (variant ? DirectionalFacePop :
+                                   DirectionalFaceExact);
+                    if (programs[directionalIndex])
+                        programIndex = directionalIndex;
+                }
+                const ShadedLocations& loc = locations[programIndex];
+                if (activeProgram != programs[programIndex]) {
+                    activeProgram = programs[programIndex];
                     glue->glUseProgramObjectARB(activeProgram);
                     glue->glUniformMatrix4fvARB(
                         loc.viewProjection, 1, GL_FALSE, vpData);
-                    if (!lightsUploaded[variant]) {
-                        this->uploadLights(glue, activeProgram);
-                        lightsUploaded[variant] = true;
+                    if (!programUploaded[programIndex]) {
+                        if (programIndex >= DirectionalNormExact) {
+                            glue->glUniform3fvARB(
+                                loc.lightVector, 1, directionalVector);
+                            glue->glUniform3fvARB(
+                                loc.lightColor, 1, directionalColor);
+                            if (programIndex == DirectionalFaceExact ||
+                                    programIndex == DirectionalFacePop) {
+                                this->uploadViewFacing(
+                                    glue, activeProgram, viewVolume);
+                            }
+                        } else {
+                            this->uploadLights(glue, activeProgram);
+                            this->uploadViewFacing(
+                                glue, activeProgram, viewVolume);
+                        }
+                        programUploaded[programIndex] = true;
                     }
                 }
                 glue->glUniform1iARB(
@@ -2918,7 +3332,9 @@ void CadRendererGL::renderFixedVboLoop(
         const SoGLContext* glue,
         const SbMatrix& viewProj,
         const SbMatrix& viewMatrix,
-        const SbMatrix& projectionMatrix)
+        const SbMatrix& projectionMatrix,
+        bool drawWire,
+        bool drawShaded)
 {
     glue->glMatrixMode(GL_PROJECTION);
     glue->glPushMatrix();
@@ -2933,7 +3349,7 @@ void CadRendererGL::renderFixedVboLoop(
     const CadWireRasterState rasterState = captureWireRasterState(
         glue, caps_.hasLineStipple);
 
-    for (const auto& item : plan.wireItems) {
+    if (drawWire) for (const auto& item : plan.wireItems) {
         const CadWireGpu *wire = gpuRes_->wireFor(item.rep.part);
         if (!wire) continue;
         const PartGeometry *geometry = assembly.partGeometry(item.rep.part);
@@ -2961,7 +3377,8 @@ void CadRendererGL::renderFixedVboLoop(
             GLuint positionBuffer = wire->posBuf;
             if (progressive) {
                 const uint8_t level = progressiveLevel(
-                    inst.lodLevel, progressive->progressiveMinimumLevel,
+                    assembly.effectiveProgressiveLodLevel(inst.lodLevel),
+                    progressive->progressiveMinimumLevel,
                     progressive->progressiveResidentLevel);
                 if (level < 15) {
                     const CadProgressiveGpu *cut =
@@ -2989,14 +3406,14 @@ void CadRendererGL::renderFixedVboLoop(
     const GLboolean wasColorMaterial = glue->glIsEnabled(GL_COLOR_MATERIAL);
     GLint wasTwoSidedLighting = GL_FALSE;
     glue->glGetIntegerv(GL_LIGHT_MODEL_TWO_SIDE, &wasTwoSidedLighting);
-    if (!plan.shadedItems.empty()) {
+    if (drawShaded && !plan.shadedItems.empty()) {
         // CAD shading must not depend on the caller enabling GL_LIGHTING.
         glue->glEnable(GL_LIGHTING);
         glue->glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
     }
     glue->glDisable(GL_COLOR_MATERIAL);
     glue->glEnableClientState(GL_VERTEX_ARRAY);
-    for (const auto& item : plan.shadedItems) {
+    if (drawShaded) for (const auto& item : plan.shadedItems) {
         const CadTriGpu *tri = gpuRes_->triFor(item.rep.part);
         if (!tri) continue;
         const PartGeometry *geometry = assembly.partGeometry(item.rep.part);
@@ -3024,7 +3441,8 @@ void CadRendererGL::renderFixedVboLoop(
             const CadProgressiveGpu *cut = nullptr;
             if (progressive) {
                 const uint8_t level = progressiveLevel(
-                    inst.lodLevel, progressive->progressiveMinimumLevel,
+                    assembly.effectiveProgressiveLodLevel(inst.lodLevel),
+                    progressive->progressiveMinimumLevel,
                     progressive->progressiveResidentLevel);
                 if (level < 15 || tri->normBuf == 0) {
                     cut = ensureProgressiveTriGpu(
@@ -3090,7 +3508,9 @@ void CadRendererGL::renderImmediateMode(
         const SoGLContext*   glue,
         const SbMatrix&      viewProj,
         const SbMatrix&      viewMatrix,
-        const SbMatrix&      projectionMatrix)
+        const SbMatrix&      projectionMatrix,
+        bool drawWire,
+        bool drawShaded)
 {
     // Keep projection out of GL_MODELVIEW so normal transformation uses only
     // the affine local-to-eye transform.
@@ -3111,7 +3531,7 @@ void CadRendererGL::renderImmediateMode(
     const FrustumPlanes fp = extractFrustumPlanes(viewProj);
 
     // --- Wire pass ---
-    for (const auto& item : plan.wireItems) {
+    if (drawWire) for (const auto& item : plan.wireItems) {
         const Obol::PartGeometry* geom = assembly.partGeometry(item.rep.part);
         if (!geom || !geom->wire.has_value()) continue;
         const Obol::WireRep& wire = *geom->wire;
@@ -3132,9 +3552,12 @@ void CadRendererGL::renderImmediateMode(
             applyWireRasterStyle(glue, inst, caps_.hasLineStipple);
 
             const size_t flatPointCount =
-                wire.segmentCountAtLevel(inst.lodLevel) * 2;
+                wire.segmentCountAtLevel(
+                    assembly.effectiveProgressiveLodLevel(
+                        inst.lodLevel)) * 2;
             const uint8_t drawLevel = progressiveLevel(
-                inst.lodLevel, wire.progressiveMinimumLevel,
+                assembly.effectiveProgressiveLodLevel(inst.lodLevel),
+                wire.progressiveMinimumLevel,
                 wire.progressiveResidentLevel);
             if (flatPointCount > 0) {
                 glue->glBegin(GL_LINES);
@@ -3172,14 +3595,14 @@ void CadRendererGL::renderImmediateMode(
     GLboolean wasColorMaterial = glue->glIsEnabled(GL_COLOR_MATERIAL);
     GLint wasTwoSidedLighting = GL_FALSE;
     glue->glGetIntegerv(GL_LIGHT_MODEL_TWO_SIDE, &wasTwoSidedLighting);
-    if (!plan.shadedItems.empty()) {
+    if (drawShaded && !plan.shadedItems.empty()) {
         // Shaded CAD geometry always uses its normals, regardless of the
         // lighting state inherited from the surrounding scene graph.
         glue->glEnable(GL_LIGHTING);
         glue->glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
     }
     glue->glDisable(GL_COLOR_MATERIAL);
-    for (const auto& item : plan.shadedItems) {
+    if (drawShaded) for (const auto& item : plan.shadedItems) {
         const Obol::PartGeometry* geom = assembly.partGeometry(item.rep.part);
         if (!geom || !geom->shaded.has_value()) continue;
         const Obol::TriMesh& mesh = *geom->shaded;
@@ -3201,9 +3624,12 @@ void CadRendererGL::renderImmediateMode(
 
             const std::vector<uint32_t>& drawIdx = mesh.indices;
             const size_t drawIndexCount =
-                mesh.indexCountAtLevel(inst.lodLevel);
+                mesh.indexCountAtLevel(
+                    assembly.effectiveProgressiveLodLevel(
+                        inst.lodLevel));
             const uint8_t drawLevel = progressiveLevel(
-                inst.lodLevel, mesh.progressiveMinimumLevel,
+                assembly.effectiveProgressiveLodLevel(inst.lodLevel),
+                mesh.progressiveMinimumLevel,
                 mesh.progressiveResidentLevel);
 
             glue->glBegin(GL_TRIANGLES);
@@ -3261,11 +3687,13 @@ void CadRendererGL::renderImmediateMode(
 
 void CadRendererGL::renderInstanced(
         const CadFramePlan& plan,
-        const SoCADAssembly& /*assembly*/,
+        const SoCADAssembly& assembly,
         const SoGLContext*   glue,
         const SbMatrix&      viewProj,
+        const SbViewVolume&  viewVolume,
         const std::unordered_map<PartId, uint64_t,
                                  std::hash<PartId>>& /*partGenMap*/,
+        bool drawWire,
         bool solidWireOnly,
         bool drawShaded)
 {
@@ -3344,21 +3772,82 @@ void CadRendererGL::renderInstanced(
     };
 
     // --- Wire pass ---
-    if (!plan.wireItems.empty()) {
+    if (drawWire && !plan.wireItems.empty()) {
         const CadWireRasterState rasterState = captureWireRasterState(
             glue, caps_.hasLineStipple);
-        glue->glUseProgramObjectARB(shaders_.wireInst);
-
-        GLint locVP  = glue->glGetUniformLocationARB(shaders_.wireInst, "u_viewProj");
-        GLint locPos = glue->glGetAttribLocationARB(shaders_.wireInst,  "a_pos");
-        if (locPos < 0) locPos = 0;
-
-        glue->glUniformMatrix4fvARB(locVP, 1, GL_FALSE, vp);
+        struct WireLocations {
+            GLint viewProjection = -1;
+            GLint position = 0;
+            GLint encodeScale = -1;
+            GLint decodeScale = -1;
+            GLint minimum = -1;
+        };
+        const GLuint programs[2] = {
+            shaders_.wireInst, shaders_.wirePopInst
+        };
+        WireLocations locations[2];
+        for (int variant = 0; variant < 2; ++variant) {
+            if (!programs[variant])
+                continue;
+            locations[variant].viewProjection =
+                glue->glGetUniformLocationARB(
+                    programs[variant], "u_viewProj");
+            locations[variant].position =
+                glue->glGetAttribLocationARB(programs[variant], "a_pos");
+            if (locations[variant].position < 0)
+                locations[variant].position = 0;
+        }
+        if (programs[1]) {
+            locations[1].encodeScale = glue->glGetUniformLocationARB(
+                programs[1], "u_popEncodeScale");
+            locations[1].decodeScale = glue->glGetUniformLocationARB(
+                programs[1], "u_popDecodeScale");
+            locations[1].minimum = glue->glGetUniformLocationARB(
+                programs[1], "u_popMin");
+        }
+        GLuint activeProgram = 0;
 
         for (const auto& item : plan.wireItems) {
             if (solidWireOnly && item.customWireStyle) continue;
             CadWireGpu* w = gpuRes_->wireFor(item.rep.part);
             if (!w || w->segCount == 0) continue;
+            if (item.baseInstance >= plan.visibleInstances.size())
+                continue;
+            const PartGeometry *geometry =
+                assembly.partGeometry(item.rep.part);
+            const WireRep *progressive =
+                geometry && geometry->wire &&
+                geometry->wire->isProgressive() ?
+                &*geometry->wire : nullptr;
+            const CadVisibleInstance& levelInstance =
+                plan.visibleInstances[item.baseInstance];
+            const uint8_t level = progressive ?
+                progressiveLevel(
+                    assembly.effectiveProgressiveLodLevel(
+                        levelInstance.lodLevel),
+                    progressive->progressiveMinimumLevel,
+                    progressive->progressiveResidentLevel) : 15;
+            const int variant = progressive && level < 15 ? 1 : 0;
+            const WireLocations& loc = locations[variant];
+            if (!programs[variant])
+                continue;
+            if (activeProgram != programs[variant]) {
+                activeProgram = programs[variant];
+                glue->glUseProgramObjectARB(activeProgram);
+                glue->glUniformMatrix4fvARB(
+                    loc.viewProjection, 1, GL_FALSE, vp);
+            }
+            if (variant) {
+                uploadProgressivePositionUniforms(
+                    glue, loc.encodeScale, loc.decodeScale, loc.minimum,
+                    level,
+                    progressive->progressiveQuantizationMinimum,
+                    progressive->progressiveQuantizationMaximum);
+            }
+            const GLsizei segmentCount = progressiveWireSegmentCount(
+                assembly, item.rep.part, levelInstance, w->segCount);
+            if (segmentCount <= 0)
+                continue;
             uint32_t runStart = 0;
             while (runStart < item.instanceCount) {
                 while (runStart < item.instanceCount &&
@@ -3384,10 +3873,12 @@ void CadRendererGL::renderInstanced(
                     }
                 } else {
                     glue->glBindBuffer(GL_ARRAY_BUFFER, w->posBuf);
-                    glue->glVertexAttribPointerARB(static_cast<GLuint>(locPos), 3,
+                    glue->glVertexAttribPointerARB(
+                                                   static_cast<GLuint>(loc.position), 3,
                                                    GL_FLOAT, GL_FALSE,
                                                    3 * sizeof(float), nullptr);
-                    glue->glEnableVertexAttribArrayARB(static_cast<GLuint>(locPos));
+                    glue->glEnableVertexAttribArrayARB(
+                        static_cast<GLuint>(loc.position));
                     if (!w->sequentialSegments)
                         glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, w->segIdxBuf);
                     bindInstAttribs(baseInstance);
@@ -3395,10 +3886,12 @@ void CadRendererGL::renderInstanced(
 
                 const GLsizei runCount = static_cast<GLsizei>(runEnd - runStart);
                 if (w->sequentialSegments) {
-                    glue->glDrawArraysInstanced(GL_LINES, 0, w->segCount * 2,
+                    glue->glDrawArraysInstanced(
+                                                GL_LINES, 0, segmentCount * 2,
                                                 runCount);
                 } else {
-                    glue->glDrawElementsInstanced(GL_LINES, w->segCount * 2,
+                    glue->glDrawElementsInstanced(
+                                                  GL_LINES, segmentCount * 2,
                                                   GL_UNSIGNED_INT, nullptr,
                                                   runCount);
                 }
@@ -3407,7 +3900,8 @@ void CadRendererGL::renderInstanced(
                     glue->glBindVertexArray(0);
                 } else {
                     unbindInstAttribs();
-                    glue->glDisableVertexAttribArrayARB(static_cast<GLuint>(locPos));
+                    glue->glDisableVertexAttribArrayARB(
+                        static_cast<GLuint>(loc.position));
                     glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
                     if (!w->sequentialSegments)
                         glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
@@ -3422,23 +3916,98 @@ void CadRendererGL::renderInstanced(
 
     // --- Shaded pass ---
     if (drawShaded && !plan.shadedItems.empty()) {
-        glue->glUseProgramObjectARB(shaders_.shadedInst);
-
-        GLint locVP      = glue->glGetUniformLocationARB(shaders_.shadedInst, "u_viewProj");
-        GLint locHasNorm = glue->glGetUniformLocationARB(shaders_.shadedInst, "u_hasNorm");
-        GLint locPos     = glue->glGetAttribLocationARB(shaders_.shadedInst, "a_pos");
-        GLint locNorm    = glue->glGetAttribLocationARB(shaders_.shadedInst, "a_norm");
-        if (locPos < 0) locPos = 0;
-
-        glue->glUniformMatrix4fvARB(locVP, 1, GL_FALSE, vp);
-        this->uploadLights(glue, shaders_.shadedInst);
+        struct ShadedLocations {
+            GLint viewProjection = -1;
+            GLint hasNormal = -1;
+            GLint position = 0;
+            GLint normal = 1;
+            GLint encodeScale = -1;
+            GLint decodeScale = -1;
+            GLint minimum = -1;
+        };
+        const GLuint programs[2] = {
+            shaders_.shadedInst, shaders_.shadedPopInst
+        };
+        ShadedLocations locations[2];
+        for (int variant = 0; variant < 2; ++variant) {
+            if (!programs[variant])
+                continue;
+            locations[variant].viewProjection =
+                glue->glGetUniformLocationARB(
+                    programs[variant], "u_viewProj");
+            locations[variant].hasNormal =
+                glue->glGetUniformLocationARB(
+                    programs[variant], "u_hasNorm");
+            locations[variant].position =
+                glue->glGetAttribLocationARB(programs[variant], "a_pos");
+            locations[variant].normal =
+                glue->glGetAttribLocationARB(programs[variant], "a_norm");
+            if (locations[variant].position < 0)
+                locations[variant].position = 0;
+            if (locations[variant].normal < 0)
+                locations[variant].normal = 1;
+        }
+        if (programs[1]) {
+            locations[1].encodeScale = glue->glGetUniformLocationARB(
+                programs[1], "u_popEncodeScale");
+            locations[1].decodeScale = glue->glGetUniformLocationARB(
+                programs[1], "u_popDecodeScale");
+            locations[1].minimum = glue->glGetUniformLocationARB(
+                programs[1], "u_popMin");
+        }
+        GLuint activeProgram = 0;
+        bool lightsUploaded[2] = {false, false};
 
         for (const auto& item : plan.shadedItems) {
             CadTriGpu* t = gpuRes_->triFor(item.rep.part);
             if (!t || t->idxCount == 0) continue;
+            if (item.baseInstance >= plan.visibleInstances.size())
+                continue;
+            const PartGeometry *geometry =
+                assembly.partGeometry(item.rep.part);
+            const TriMesh *progressive =
+                geometry && geometry->shaded &&
+                geometry->shaded->isProgressive() ?
+                &*geometry->shaded : nullptr;
+            const CadVisibleInstance& levelInstance =
+                plan.visibleInstances[item.baseInstance];
+            const uint8_t level = progressive ?
+                progressiveLevel(
+                    assembly.effectiveProgressiveLodLevel(
+                        levelInstance.lodLevel),
+                    progressive->progressiveMinimumLevel,
+                    progressive->progressiveResidentLevel) : 15;
+            const int variant = progressive && level < 15 ? 1 : 0;
+            const ShadedLocations& loc = locations[variant];
+            if (!programs[variant])
+                continue;
+            if (activeProgram != programs[variant]) {
+                activeProgram = programs[variant];
+                glue->glUseProgramObjectARB(activeProgram);
+                glue->glUniformMatrix4fvARB(
+                    loc.viewProjection, 1, GL_FALSE, vp);
+                if (!lightsUploaded[variant]) {
+                    this->uploadLights(glue, activeProgram);
+                    this->uploadViewFacing(
+                        glue, activeProgram, viewVolume);
+                    lightsUploaded[variant] = true;
+                }
+            }
+            if (variant) {
+                uploadProgressivePositionUniforms(
+                    glue, loc.encodeScale, loc.decodeScale, loc.minimum,
+                    level,
+                    progressive->progressiveQuantizationMinimum,
+                    progressive->progressiveQuantizationMaximum);
+            }
+            const GLsizei indexCount = progressiveTriangleIndexCount(
+                assembly, item.rep.part, levelInstance, t->idxCount);
+            if (indexCount <= 0)
+                continue;
 
             setCadBackfaceCulling(glue, item.cullBackfaces);
-            glue->glUniform1iARB(locHasNorm, (t->normBuf != 0) ? 1 : 0);
+            glue->glUniform1iARB(
+                loc.hasNormal, (t->normBuf != 0) ? 1 : 0);
 
             if (t->vao && glue->glBindVertexArray) {
                 glue->glBindVertexArray(t->vao);
@@ -3450,23 +4019,27 @@ void CadRendererGL::renderInstanced(
                 }
             } else {
                 glue->glBindBuffer(GL_ARRAY_BUFFER, t->posBuf);
-                glue->glVertexAttribPointerARB(static_cast<GLuint>(locPos), 3,
+                glue->glVertexAttribPointerARB(
+                                               static_cast<GLuint>(loc.position), 3,
                                                GL_FLOAT, GL_FALSE,
                                                3 * sizeof(float), nullptr);
-                glue->glEnableVertexAttribArrayARB(static_cast<GLuint>(locPos));
-                if (t->normBuf && locNorm >= 0) {
+                glue->glEnableVertexAttribArrayARB(
+                    static_cast<GLuint>(loc.position));
+                if (t->normBuf && loc.normal >= 0) {
                     glue->glBindBuffer(GL_ARRAY_BUFFER, t->normBuf);
-                    glue->glVertexAttribPointerARB(static_cast<GLuint>(locNorm), 3,
+                    glue->glVertexAttribPointerARB(
+                                                   static_cast<GLuint>(loc.normal), 3,
                                                    GL_FLOAT, GL_FALSE,
                                                    3 * sizeof(float), nullptr);
-                    glue->glEnableVertexAttribArrayARB(static_cast<GLuint>(locNorm));
+                    glue->glEnableVertexAttribArrayARB(
+                        static_cast<GLuint>(loc.normal));
                 }
                 glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, t->idxBuf);
                 bindInstAttribs(item.baseInstance);
             }
 
             glue->glDrawElementsInstanced(GL_TRIANGLES,
-                                          t->idxCount,
+                                          indexCount,
                                           GL_UNSIGNED_INT,
                                           nullptr,
                                           static_cast<GLsizei>(item.instanceCount));
@@ -3475,10 +4048,12 @@ void CadRendererGL::renderInstanced(
                 glue->glBindVertexArray(0);
             } else {
                 unbindInstAttribs();
-                if (t->normBuf && locNorm >= 0) {
-                    glue->glDisableVertexAttribArrayARB(static_cast<GLuint>(locNorm));
+                if (t->normBuf && loc.normal >= 0) {
+                    glue->glDisableVertexAttribArrayARB(
+                        static_cast<GLuint>(loc.normal));
                 }
-                glue->glDisableVertexAttribArrayARB(static_cast<GLuint>(locPos));
+                glue->glDisableVertexAttribArrayARB(
+                    static_cast<GLuint>(loc.position));
                 glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
                 glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
             }

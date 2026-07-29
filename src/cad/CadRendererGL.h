@@ -80,6 +80,7 @@
 
 #include <Inventor/SbMatrix.h>
 #include <Inventor/SbVec3f.h>
+#include <Inventor/SbViewVolume.h>
 #include <Inventor/system/gl.h>
 
 #include <memory>
@@ -110,6 +111,8 @@ public:
      * @param viewProj   Combined view-projection matrix (OI row-major, GL_FALSE upload).
      * @param viewMatrix Active model-view matrix before local instance transforms.
      * @param projectionMatrix Active projection matrix.
+     * @param viewVolume Camera projection point/direction used to orient
+     *                   derivative-generated two-sided normals.
      * @param partGenMap Map from PartId → generation counter (to detect stale VBOs).
      */
     void render(const CadFramePlan& plan,
@@ -118,6 +121,7 @@ public:
                 const SbMatrix&      viewProj,
                 const SbMatrix&      viewMatrix,
                 const SbMatrix&      projectionMatrix,
+                const SbViewVolume&  viewVolume,
                 const std::unordered_map<PartId, uint64_t,
                                          std::hash<PartId>>& partGenMap);
 
@@ -163,11 +167,14 @@ public:
 private:
     /// Upload the current light set to @p program's u_light* uniforms.
     void uploadLights(const SoGLContext* glue, GLuint program);
+    /// Upload camera-facing data used only when a mesh has no normal stream.
+    void uploadViewFacing(const SoGLContext* glue, GLuint program,
+                          const SbViewVolume& viewVolume);
 
     // Capability flags (populated on first render call)
     bool      capsDetected_ = false;
     CadGLCaps caps_;
-    int       lastRenderTier_ = -1; ///< -1=none, 0=imm, 1=vbo, 2=inst, 3/4=flat
+    int       lastRenderTier_ = -1; ///< -1=none, 0=imm, 1=vbo, 2=inst, 3/4=flat, 5=mixed flat-wire
     /// Scene lights for the shaded GLSL passes (set per-frame by SoCADAssembly).
     /// Empty means "use the historical fixed directional light".
     std::vector<GlLight> lights_;
@@ -185,8 +192,14 @@ private:
         GLuint proxyPoint = 0; ///< Batched subpixel-proxy point shader
         GLuint shaded  = 0; ///< Shaded-pass shader (Phong, no instancing)
         GLuint shadedPop = 0; ///< Shaded-pass shader with branchless PoP snapping
+        GLuint shadedDirectionalNorm = 0; ///< One-directional-light shader with vertex normals
+        GLuint shadedDirectionalFace = 0; ///< One-directional-light shader with derivative normals
+        GLuint shadedPopDirectionalNorm = 0; ///< Directional PoP shader with vertex normals
+        GLuint shadedPopDirectionalFace = 0; ///< Directional PoP shader with derivative normals
         GLuint wireInst   = 0; ///< Wire-pass shader (instanced)
+        GLuint wirePopInst = 0; ///< Wire-pass PoP shader (instanced by level)
         GLuint shadedInst = 0; ///< Shaded-pass shader (instanced Phong)
+        GLuint shadedPopInst = 0; ///< Shaded PoP shader (instanced by level)
     };
     ShaderPrograms shaders_;
     uint32_t shadersContextId_ = 0;
@@ -226,6 +239,8 @@ private:
                        const SoCADAssembly& assembly,
                        const SoGLContext*   glue,
                        const SbMatrix&      viewProj,
+                       const SbViewVolume&  viewVolume,
+                       bool drawWire,
                        bool customWireOnly,
                        bool drawShaded);
 
@@ -234,7 +249,9 @@ private:
                             const SoGLContext* glue,
                             const SbMatrix& viewProj,
                             const SbMatrix& viewMatrix,
-                            const SbMatrix& projectionMatrix);
+                            const SbMatrix& projectionMatrix,
+                            bool drawWire,
+                            bool drawShaded);
 
     /**
      * Tier-0 fallback: fixed-function immediate-mode rendering via
@@ -248,7 +265,9 @@ private:
                              const SoGLContext*   glue,
                              const SbMatrix&      viewProj,
                              const SbMatrix&      viewMatrix,
-                             const SbMatrix&      projectionMatrix);
+                             const SbMatrix&      projectionMatrix,
+                             bool drawWire,
+                             bool drawShaded);
 
     void drawWireVboLoop(const CadFramePlan& plan,
                          const SoGLContext* glue,
@@ -272,8 +291,10 @@ private:
                          const SoCADAssembly& assembly,
                          const SoGLContext*   glue,
                          const SbMatrix&      viewProj,
+                         const SbViewVolume&  viewVolume,
                          const std::unordered_map<PartId, uint64_t,
                                                    std::hash<PartId>>& partGenMap,
+                         bool drawWire,
                          bool solidWireOnly,
                          bool drawShaded);
 

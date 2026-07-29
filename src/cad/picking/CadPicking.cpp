@@ -440,7 +440,8 @@ CadPickQuery::pickEdge(
                              std::hash<Obol::PartId>>&  partGeometries,
     std::unordered_map<PartId, CadPartEdgeBVH,
                        std::hash<Obol::PartId>>&        partBvhCache,
-    float                                               toleranceWS)
+    float                                               toleranceWS,
+    uint8_t                                             lodCeiling)
 {
     CadPickResult best;
     best.t = std::numeric_limits<float>::infinity();
@@ -459,7 +460,8 @@ CadPickQuery::pickEdge(
         const CadPartEdgeBVH *edgeBvh = nullptr;
         if (wire.isProgressive()) {
             const uint8_t level = progressiveLevel(
-                entry->lodLevel, wire.progressiveMinimumLevel,
+                std::min(entry->lodLevel, lodCeiling),
+                wire.progressiveMinimumLevel,
                 wire.progressiveResidentLevel);
             const size_t segmentCount = wire.segmentCountAtLevel(level);
             std::vector<CadPartEdgeBVH::SegEntry> segs;
@@ -761,7 +763,8 @@ CadPickQuery::pickTriangle(
                              std::hash<Obol::PartId>>&  partGeometries,
     std::unordered_map<PartId, CadPartTriBVH,
                        std::hash<Obol::PartId>>&        partTriBvhCache,
-    float                                               toleranceWS)
+    float                                               toleranceWS,
+    uint8_t                                             lodCeiling)
 {
     CadPickResult best;
     best.t = std::numeric_limits<float>::infinity();
@@ -783,7 +786,8 @@ CadPickQuery::pickTriangle(
         std::vector<uint32_t> progressiveIndices;
         if (mesh.isProgressive()) {
             activeLevel = progressiveLevel(
-                entry->lodLevel, mesh.progressiveMinimumLevel,
+                std::min(entry->lodLevel, lodCeiling),
+                mesh.progressiveMinimumLevel,
                 mesh.progressiveResidentLevel);
             const size_t indexCount = mesh.indexCountAtLevel(activeLevel);
             progressivePositions.reserve(mesh.positions.size());

@@ -311,7 +311,8 @@ public:
                                  std::hash<Obol::PartId>>&  partGeometries,
         std::unordered_map<PartId, CadPartEdgeBVH,
                            std::hash<Obol::PartId>>&        partBvhCache,
-        float                                               toleranceWS);
+        float                                               toleranceWS,
+        uint8_t                                             lodCeiling = 255);
 
     /**
      * @brief Perform bounding-box picking (bounds proxy).
@@ -344,7 +345,8 @@ public:
                                  std::hash<Obol::PartId>>&  partGeometries,
         std::unordered_map<PartId, CadPartTriBVH,
                            std::hash<Obol::PartId>>&        partTriBvhCache,
-        float                                               toleranceWS = 0.0f);
+        float                                               toleranceWS = 0.0f,
+        uint8_t                                             lodCeiling = 255);
 };
 
 } // namespace picking
