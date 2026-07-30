@@ -8,8 +8,16 @@
 #include <Obol/cad/SoCADAssembly.h>
 
 #include <Inventor/SoDB.h>
+#include <Inventor/sensors/SoNodeSensor.h>
 
 using namespace SimpleTest;
+
+static void
+nodeChanged(void *data, SoSensor *)
+{
+    unsigned int *changeCount = static_cast<unsigned int *>(data);
+    ++(*changeCount);
+}
 
 static bool
 sameMatrix(const SbMatrix &a, const SbMatrix &b)
@@ -134,6 +142,24 @@ main()
     assembly->upsertPart(first.part, shaded);
     runner.endTest(assembly->hasProgressivePartLod(),
         "only an explicit resident prefix may enable progressive drawing");
+
+    runner.startTest("identical shared geometry publication is a strict no-op");
+    unsigned int changeCount = 0;
+    SoNodeSensor changeSensor(nodeChanged, &changeCount);
+    changeSensor.setPriority(0);
+    changeSensor.attach(assembly);
+    const std::shared_ptr<const Obol::PartGeometry> immutableGeometry =
+        std::make_shared<const Obol::PartGeometry>(shaded);
+    Obol::SharedPartUpdate sharedUpdate;
+    sharedUpdate.part = first.part;
+    sharedUpdate.geometry = immutableGeometry;
+    assembly->upsertSharedParts({sharedUpdate});
+    const unsigned int firstPublicationChanges = changeCount;
+    assembly->upsertSharedParts({sharedUpdate});
+    runner.endTest(firstPublicationChanges > 0 &&
+        changeCount == firstPublicationChanges,
+        "republishing one immutable generation must not notify or rescan");
+    changeSensor.detach();
 
     runner.startTest("replacing shaded geometry clears progressive capability");
     assembly->upsertPart(first.part, Obol::PartGeometry());

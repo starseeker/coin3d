@@ -48,13 +48,31 @@
 #include <Inventor/SbColor4f.h>
 
 #include <vector>
+#include <deque>
 #include <cstdint>
 #include <array>
+#include <memory>
 #include <unordered_map>
 #include <unordered_set>
 
 namespace Obol {
+
+struct PartGeometry;
+
 namespace internal {
+
+enum CadInstanceFlag : uint32_t {
+    CadInstanceSelected      = 1u << 0,
+    CadInstanceHovered       = 1u << 1,
+    CadInstanceColorOverride = 1u << 2,
+    /*
+     * Visibility is retained presentation state, not topology.  Keeping a
+     * hidden occurrence in the compiled plan lets a sparse erase/show delta
+     * preserve part bindings, level buckets, GPU atlases, and every unrelated
+     * instance record.
+     */
+    CadInstanceHidden        = 1u << 3
+};
 
 // ---------------------------------------------------------------------------
 // Rep key: identifies one stable (Part, representation type) GPU resource.
@@ -93,7 +111,7 @@ struct CadRepKey {
  *   - 16 floats for the 4×4 local-to-world transform (column-major)
  *   - 4 bytes RGBA color
  *   - 1 uint32 part index within the frame plan's part list
- *   - 1 uint32 flags (bit 0 = selected)
+ *   - 1 uint32 flags (CadInstanceFlag)
  *   - 2 uint64 InstanceId (for CPU-side picking round-trip)
  *   - 2 × float[3] world bounding box (for per-instance frustum culling)
  */
@@ -104,13 +122,36 @@ struct CadVisibleInstance {
     uint16_t linePattern = 0xffffu;
     uint16_t linePatternFactor = 1u;
     uint32_t partIndex = 0;
-    uint32_t flags     = 0;   ///< bit 0: selected; bit 1: hovered; bit 2: color override
+    uint32_t flags     = 0;   ///< CadInstanceFlag bit set
     uint8_t lodLevel   = 255; ///< producer-authored retained PoP draw cut
     InstanceId instanceId;
     /// World-space bounding box min/max.  Used by the renderer for per-instance
     /// frustum culling (avoids drawing instances completely outside the view).
     float wbMin[3] = {0.0f, 0.0f, 0.0f};
     float wbMax[3] = {0.0f, 0.0f, 0.0f};
+};
+
+// ---------------------------------------------------------------------------
+// Stable part binding: geometry and generation resolved while compiling plan
+// ---------------------------------------------------------------------------
+
+/**
+ * @brief Direct, lifetime-safe binding for one part used by this plan.
+ *
+ * A frame plan owns the immutable geometry shared pointer.  Camera-only
+ * frames and sparse LoD-cut changes can therefore use a compact array index
+ * instead of resolving the same PartId through assembly hash tables for
+ * every draw item.  A topology-compatible retained-array replacement patches
+ * this binding and generation in place; only channel/topology changes
+ * recompile the plan.
+ */
+struct CadPartBinding {
+    PartId part;
+    std::shared_ptr<const PartGeometry> geometry;
+    uint64_t generation = 0;
+    bool subpixelProxyEligible = false;
+    bool structuralProxy = false;
+    std::array<SbVec3f, 8> subpixelProxyCorners = {};
 };
 
 // ---------------------------------------------------------------------------
@@ -125,6 +166,7 @@ struct CadVisibleInstance {
  */
 struct CadDrawItem {
     CadRepKey rep;
+    uint32_t  partIndex      = 0; ///< Index into CadFramePlan::partBindings
     uint32_t  baseInstance   = 0; ///< First CadVisibleInstance index for this item
     uint32_t  instanceCount  = 0; ///< Number of instances sharing this part rep
     bool      customWireStyle = false; ///< Wire run requires width/stipple state
@@ -144,6 +186,90 @@ struct CadSubpixelProxyPoint {
     SbVec3f position;
     std::array<uint8_t, 4> rgba = {204, 204, 204, 255};
     InstanceId instanceId;
+    uint32_t flags = 0;
+};
+
+/**
+ * One non-consuming batch of in-place instance attribute changes.
+ *
+ * Revision-stamped indices let renderers in independent GL contexts patch
+ * only the instance records they have not yet observed.
+ */
+struct CadInstanceAttributeDelta {
+    uint64_t revision = 0;
+    std::vector<uint32_t> visibleIndices;
+    bool visibilityChanged = false;
+};
+
+/**
+ * One fixed progressive-part span whose per-occurrence PoP cuts changed.
+ *
+ * The occurrence and draw-item slots are structural and remain allocated in
+ * the plan.  A renderer which has prepared the preceding revision can update
+ * just these ranges instead of repeating whole-scene visibility, atlas-touch,
+ * instance-packing, and indirect-command passes.
+ */
+struct CadShadedLodRange {
+    uint32_t partIndex = 0;
+    uint32_t baseInstance = 0;
+    uint32_t instanceCount = 0;
+    uint32_t shadedItemBegin = 0;
+    uint32_t shadedItemCount = 0;
+};
+
+struct CadShadedLodDelta {
+    uint64_t revision = 0;
+    std::vector<CadShadedLodRange> ranges;
+};
+
+/**
+ * One append-only structural publication.
+ *
+ * Streaming realization keeps the compiled prefix fixed, hides superseded
+ * box records, and appends new part/instance/draw-item ranges.  Retained
+ * renderers can therefore admit and append only the shaded tail.  Any
+ * structural mutation which cannot honor this contract does not publish a
+ * delta and continues to invalidate the exact layout normally.
+ */
+struct CadPlanAppendDelta {
+    uint64_t revision = 0;
+    uint64_t subpixelProxyInputRevision = 0;
+    uint32_t visibleBegin = 0;
+    uint32_t visibleCount = 0;
+    uint32_t partBegin = 0;
+    uint32_t partCount = 0;
+    uint32_t shadedItemBegin = 0;
+    uint32_t shadedItemCount = 0;
+    std::vector<uint32_t> retiredVisibleIndices;
+};
+
+/**
+ * One topology-compatible replacement of immutable arrays behind fixed part
+ * and occurrence slots.  Progressive resident-prefix growth uses this path.
+ */
+struct CadPartGeometryRange {
+    uint32_t partIndex = 0;
+    uint32_t baseInstance = 0;
+    uint32_t instanceCount = 0;
+    uint32_t shadedItemBegin = 0;
+    uint32_t shadedItemCount = 0;
+};
+
+struct CadPartGeometryDelta {
+    uint64_t revision = 0;
+    /**
+     * True when one or more replacement parts changed conservative bounds.
+     * Bounds-preserving immutable generation swaps leave the instance BVH
+     * valid and need only patch renderer geometry bindings.
+     */
+    bool boundsChanged = false;
+    /**
+     * True when producer-authorized proxy eligibility or conservative proxy
+     * corners changed.  Most progressive resident-prefix updates preserve
+     * these inputs and therefore must not trigger a scene-wide reprojection.
+     */
+    bool subpixelProxyInputChanged = false;
+    std::vector<CadPartGeometryRange> ranges;
 };
 
 // ---------------------------------------------------------------------------
@@ -160,11 +286,58 @@ struct CadFramePlan {
     /** Changes whenever immutable presentation data in this plan changes. */
     uint64_t revision = 0;
 
-    /** Changes only when flattened geometry, transforms, or visibility change. */
+    /** Changes only when flattened geometry or transforms change. */
     uint64_t geometryRevision = 0;
 
-    /** All visible instances, sorted by (partIndex, repLevel) for batching. */
+    /**
+     * Changes when shaded draw membership, order, or per-occurrence LoD runs
+     * change.  A color/selection-only update deliberately leaves this stable
+     * so a prepared indirect command stream can be retained.
+     */
+    uint64_t shadedLayoutRevision = 0;
+
+    /**
+     * Changes when in-place per-instance attributes (currently color and
+     * presentation flags) change without changing shaded draw membership.
+     */
+    uint64_t instanceAttributeRevision = 0;
+    uint64_t instanceAttributeDeltaFloorRevision = 0;
+    size_t instanceAttributeDeltaEntryCount = 0;
+    std::deque<CadInstanceAttributeDelta> instanceAttributeDeltas;
+
+    /**
+     * Changes only when active PoP cuts move within fixed progressive-part
+     * spans.  Structural shadedLayoutRevision deliberately remains stable,
+     * allowing retained renderers to consume this bounded delta journal.
+     */
+    uint64_t shadedLodRevision = 0;
+    uint64_t shadedLodDeltaFloorRevision = 0;
+    size_t shadedLodDeltaEntryCount = 0;
+    std::deque<CadShadedLodDelta> shadedLodDeltas;
+
+    uint64_t appendRevision = 0;
+    uint64_t appendDeltaFloorRevision = 0;
+    size_t appendDeltaEntryCount = 0;
+    std::deque<CadPlanAppendDelta> appendDeltas;
+
+    uint64_t partGeometryRevision = 0;
+    uint64_t partGeometryDeltaFloorRevision = 0;
+    size_t partGeometryDeltaEntryCount = 0;
+    std::deque<CadPartGeometryDelta> partGeometryDeltas;
+
+    /**
+     * All retained instances, sorted by (partIndex, repLevel) for batching.
+     * CadInstanceHidden records remain here and are skipped at execution.
+     */
     std::vector<CadVisibleInstance> visibleInstances;
+
+    /**
+     * Direct part bindings referenced by visibleInstances and draw items.
+     * The shared ownership makes payload access valid for the complete plan
+     * lifetime, including camera-only frames with no scene traversal.
+     */
+    std::vector<CadPartBinding> partBindings;
+
     bool hasCustomWireStyle = false;
 
     /**
@@ -184,7 +357,13 @@ struct CadFramePlan {
     std::vector<uint8_t> subpixelProxyMask;
     std::vector<CadSubpixelProxyPoint> subpixelProxyPoints;
     uint64_t subpixelProxyRevision = 0;
-    uint64_t subpixelProxySourcePlanRevision = 0;
+    /**
+     * Changes only when the occurrence topology or conservative proxy inputs
+     * change.  It deliberately remains stable while immutable PoP buffers
+     * grow behind fixed part and occurrence slots.
+     */
+    uint64_t subpixelProxyInputRevision = 0;
+    uint64_t subpixelProxySourceInputRevision = 0;
 
     /**
      * Draw items for the shaded pass.  May be empty in WIREFRAME mode unless
@@ -208,7 +387,7 @@ struct CadFramePlan {
     std::unordered_set<PartId, std::hash<PartId>>
         wirePartsWithUncollapsedInstances;
 
-    /** Aggregate world bounding box of all visible instances. */
+    /** Conservative aggregate world bounding box of visible instances. */
     SbBox3f worldBounds;
 };
 

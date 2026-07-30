@@ -82,6 +82,7 @@
 
 #include <unordered_map>
 #include <unordered_set>
+#include <map>
 #include <array>
 #include <vector>
 #include <memory>
@@ -107,6 +108,24 @@ cadLightDebugEnabled()
 {
     const char *env = std::getenv("OBOL_CAD_LIGHT_DEBUG");
     return env && env[0] && env[0] != '0';
+}
+
+static bool
+cadPlanDebugEnabled()
+{
+    const char *env = std::getenv("OBOL_CAD_PLAN_DEBUG");
+    return env && env[0] && env[0] != '0';
+}
+
+static uint64_t
+cadPlanDebugMessageLimit()
+{
+    const char *env = std::getenv("OBOL_CAD_PLAN_DEBUG_LIMIT");
+    if (!env || !env[0])
+        return 64;
+    char *end = nullptr;
+    const unsigned long long value = std::strtoull(env, &end, 10);
+    return end != env && value > 0 ? static_cast<uint64_t>(value) : 64;
 }
 
 static bool
@@ -177,6 +196,40 @@ cadSubpixelProxyCorners(const Obol::WireRep& wire,
             return false;
 
     return cornerCount == corners.size();
+}
+
+static bool
+cadSubpixelGeometryCorners(const Obol::PartGeometry& geometry,
+                           std::array<SbVec3f, 8>& corners)
+{
+    /*
+     * A shaded LoD payload is producer-authorized and its complete bounds are
+     * the conservative replacement extent.  Wire-only proxy data retains the
+     * stricter canonical-box validation so accidentally tagged authored line
+     * work cannot disappear into a point.
+     */
+    SbBox3f bounds;
+    bounds.makeEmpty();
+    if (geometry.shaded && !geometry.shaded->bounds.isEmpty())
+        bounds.extendBy(geometry.shaded->bounds);
+    if (geometry.points && !geometry.points->bounds.isEmpty())
+        bounds.extendBy(geometry.points->bounds);
+    if (!bounds.isEmpty()) {
+        SbVec3f minimum;
+        SbVec3f maximum;
+        bounds.getBounds(minimum, maximum);
+        size_t index = 0;
+        for (int z = 0; z < 2; ++z)
+            for (int y = 0; y < 2; ++y)
+                for (int x = 0; x < 2; ++x)
+                    corners[index++] = SbVec3f(
+                        x ? maximum[0] : minimum[0],
+                        y ? maximum[1] : minimum[1],
+                        z ? maximum[2] : minimum[2]);
+        return true;
+    }
+    return geometry.wire &&
+        cadSubpixelProxyCorners(*geometry.wire, corners);
 }
 
 static bool
@@ -252,6 +305,7 @@ cadSameSubpixelProxyPoints(
         const Obol::internal::CadSubpixelProxyPoint& a = left[i];
         const Obol::internal::CadSubpixelProxyPoint& b = right[i];
         if (a.instanceId != b.instanceId || a.rgba != b.rgba ||
+                a.flags != b.flags ||
                 a.position[0] != b.position[0] ||
                 a.position[1] != b.position[1] ||
                 a.position[2] != b.position[2])
@@ -433,6 +487,8 @@ cadSoftwarePoint(unsigned char *pixels, unsigned int width,
                  const SbVec2s& size, const SbMatrix& viewProj,
                  const Obol::internal::CadSubpixelProxyPoint& point)
 {
+    if (point.flags & Obol::internal::CadInstanceHidden)
+        return;
     const CadSoftwareClipPoint clip =
         cadSoftwareTransform(viewProj, point.position);
     if (std::abs(clip.v[3]) < 1.0e-20)
@@ -472,10 +528,16 @@ cadRenderSoftwareWire(const Obol::internal::CadFramePlan& plan,
         const Obol::WireRep& wire = *geometry->wire;
         for (uint32_t i = 0; i < item.instanceCount; ++i) {
             const size_t visibleIndex = item.baseInstance + i;
+            if (visibleIndex >= plan.visibleInstances.size())
+                continue;
+            const auto& instance = plan.visibleInstances[visibleIndex];
+            if (instance.partIndex != item.partIndex ||
+                    (instance.flags &
+                        Obol::internal::CadInstanceHidden))
+                continue;
             if (visibleIndex < plan.subpixelProxyMask.size() &&
                     plan.subpixelProxyMask[visibleIndex])
                 continue;
-            const auto& instance = plan.visibleInstances[visibleIndex];
             SbMatrix model;
             model.setValue(instance.transform.data());
             SbMatrix transform = model;
@@ -522,24 +584,70 @@ struct SoCADAssemblyImpl {
         size_t shadedItemCount = 0;
     };
 
+    struct CachedPlanPartSpan {
+        uint32_t partIndex = 0;
+        uint32_t baseInstance = 0;
+        uint32_t instanceCount = 0;
+        size_t wireItemBegin = 0;
+        size_t wireItemCount = 0;
+        size_t pointItemBegin = 0;
+        size_t pointItemCount = 0;
+        size_t shadedItemBegin = 0;
+        size_t shadedItemCount = 0;
+    };
+
     // Part library
     std::unordered_map<Obol::PartId, std::shared_ptr<const Obol::PartGeometry>,
                        std::hash<Obol::PartId>> parts_;
-    // Cached, validated corners for the small subset of shared parts that
-    // are conservative AABB/OBB display proxies.  This avoids rediscovering
-    // eight corners from 24 wire endpoints for every occurrence per view.
+    // Cached, validated corners for parts eligible for camera-local subpixel
+    // aggregation.  These may be conservative structural AABB/OBB proxies or
+    // retained LoD meshes.  This avoids rediscovering eight conservative
+    // bounds corners for every occurrence per view.
     std::unordered_map<Obol::PartId, std::array<SbVec3f, 8>,
                        std::hash<Obol::PartId>> subpixelProxyCorners_;
 
     // Instance database
     std::unordered_map<Obol::InstanceId, InstanceData,
                        std::hash<Obol::InstanceId>> instances_;
+    /*
+     * Retain the renderer's primary grouping as assembly state instead of
+     * recovering it by globally sorting every compiled frame plan.  The slot
+     * table makes a part-changing update/removal O(1), while the ordered map
+     * lets plan compilation walk unique parts in deterministic order.
+     */
+    struct InstancePartBucket {
+        Obol::InstanceId first;
+        InstanceData *firstData = nullptr;
+        bool hasFirst = false;
+        std::vector<Obol::InstanceId> additional;
+        std::vector<InstanceData *> additionalData;
+
+        size_t size() const noexcept {
+            return hasFirst ? additional.size() + 1u : 0u;
+        }
+        Obol::InstanceId at(size_t slot) const {
+            return slot ? additional[slot - 1u] : first;
+        }
+        InstanceData *dataAt(size_t slot) const {
+            return slot ? additionalData[slot - 1u] : firstData;
+        }
+    };
+    /*
+     * Keep the common one-instance/part case inline in the map node.  Only a
+     * genuinely shared asset allocates a secondary vector, avoiding one heap
+     * allocation per unique vehicle part.
+     */
+    std::map<Obol::PartId, InstancePartBucket> instanceIdsByPart_;
+    std::unordered_map<Obol::InstanceId, size_t,
+                       std::hash<Obol::InstanceId>>
+        instancePartSlot_;
 
     // Selection set
     std::unordered_set<Obol::InstanceId,
                        std::hash<Obol::InstanceId>> selected_;
 
-    // Hidden-instance set (excluded from rendering and frame plan)
+    // Hidden-instance set (excluded from rendering and picking, retained in
+    // the compiled plan as a sparse presentation flag).
     std::unordered_set<Obol::InstanceId,
                        std::hash<Obol::InstanceId>> hidden_;
 
@@ -577,20 +685,34 @@ struct SoCADAssemblyImpl {
     // let a sparse LoD journal move an occurrence between buckets with at
     // most 16 swaps instead of rebuilding and sorting the entire assembly.
     std::vector<ProgressiveShadedPlanGroup> progressiveShadedPlanGroups_;
-    std::unordered_map<Obol::PartId, size_t, std::hash<Obol::PartId>>
-        progressiveShadedPlanGroupByPart_;
+    std::unordered_map<Obol::InstanceId, size_t,
+                       std::hash<Obol::InstanceId>>
+        progressiveShadedPlanGroupByInstance_;
+    // Direct retained-instance lookup.  Progressive level-bucket swaps keep
+    // this current, and sparse selection/visibility/style updates reuse it.
     std::unordered_map<Obol::InstanceId, uint32_t,
                        std::hash<Obol::InstanceId>>
         progressivePlanIndexByInstance_;
+    std::unordered_map<Obol::PartId, std::vector<CachedPlanPartSpan>,
+                       std::hash<Obol::PartId>>
+        cachedPlanPartSpansByPart_;
     uint64_t nextPlanRevision_ = 1;
     uint64_t nextGeometryRevision_ = 1;
+    uint64_t nextShadedLayoutRevision_ = 1;
+    uint64_t nextShadedLodRevision_ = 1;
+    uint64_t nextAppendRevision_ = 1;
+    uint64_t nextPartGeometryRevision_ = 1;
+    uint64_t nextInstanceAttributeRevision_ = 1;
     uint64_t nextSubpixelProxyRevision_ = 1;
+    uint64_t nextSubpixelProxyInputRevision_ = 1;
     uint64_t geometryRevision_ = 0;
-    uint64_t subpixelProxyStatePlanRevision_ = 0;
-    uint64_t subpixelProxyViewPlanRevision_ = 0;
+    uint64_t subpixelProxyStateInputRevision_ = 0;
+    uint64_t subpixelProxyViewInputRevision_ = 0;
     SbMatrix subpixelProxyViewProj_;
     SbVec2s subpixelProxyViewportSize_ = SbVec2s(0, 0);
+    float subpixelProxyPixelThreshold_ = 1.0f;
     bool subpixelProxyViewValid_ = false;
+    uint32_t subpixelProxyCameraMotionReuseCount_ = 0;
     // The presentation plan fixes visible-instance order for its lifetime.
     // Keep hysteresis state by that index rather than hashing every proxy on
     // camera-only frames.  All three vectors are reset when the plan changes.
@@ -598,9 +720,31 @@ struct SoCADAssemblyImpl {
     std::vector<uint8_t> subpixelProxyScratchMask_;
     std::vector<Obol::internal::CadSubpixelProxyPoint>
         subpixelProxyScratchPoints_;
+    std::vector<uint32_t> subpixelProxyVisibleByPoint_;
+    std::vector<uint32_t> subpixelProxyScratchVisibleByPoint_;
+    // UINT32_MAX denotes an occurrence which is not represented by a point.
+    // The direct index lets a sparse color update patch a collapsed proxy
+    // without reclassifying every occurrence for the unchanged camera.
+    std::vector<uint32_t> subpixelProxyPointByVisible_;
+    uint64_t subpixelProxyClassifiedAppendRevision_ = 0;
+    std::unordered_map<Obol::PartId, size_t, std::hash<Obol::PartId>>
+        uncollapsedStructuralProxyCountByPart_;
+    size_t uncollapsedStructuralProxyCount_ = 0;
     bool planDirty_    = true;   ///< Plan must be rebuilt before next render
     bool geometryDirty_ = true;  ///< Flattened geometry must be rebuilt
     int  cachedDM_     = -1;     ///< Draw mode used for the cached plan
+    const char *planDirtyReason_ = "initial";
+    uint64_t framePlanBuildCount_ = 0;
+    uint64_t progressivePlanPatchFailureCount_ = 0;
+    uint64_t planDebugBuildMessageCount_ = 0;
+    uint64_t planDebugPatchMessageCount_ = 0;
+    size_t cachedPlanTombstoneCount_ = 0;
+    bool streamTombstoneCompactionPerformed_ = false;
+    std::vector<uint32_t> pendingInstanceAttributeIndices_;
+    // Producer-supplied manifest count.  A cold stream presents one
+    // structural record and can append at most one richer record per
+    // occurrence, so this also bounds the retained presentation tail.
+    size_t streamingOccurrenceCapacityHint_ = 0;
 
     // VBO + shader renderer (lazy-created on first GLRender call)
     std::unique_ptr<Obol::internal::CadRendererGL> renderer_;
@@ -626,9 +770,8 @@ struct SoCADAssemblyImpl {
         bvhDirty_ = false;
     }
 
-    // Compute world bounds for an instance from part geometry
-    SbBox3f computeWorldBounds(const Obol::PartGeometry& geom,
-                               const SbMatrix& m) const {
+    static SbBox3f partGeometryBounds(
+            const Obol::PartGeometry& geom) {
         SbBox3f local;
         if (geom.points) { local.extendBy(geom.points->bounds); }
         if (geom.wire)   { local.extendBy(geom.wire->bounds);   }
@@ -638,6 +781,24 @@ struct SoCADAssemblyImpl {
             local.extendBy(SbVec3f(-0.5f,-0.5f,-0.5f));
             local.extendBy(SbVec3f( 0.5f, 0.5f, 0.5f));
         }
+        return local;
+    }
+
+    static bool partGeometryBoundsEqual(
+            const Obol::PartGeometry& left,
+            const Obol::PartGeometry& right) {
+        const SbBox3f leftBounds = partGeometryBounds(left);
+        const SbBox3f rightBounds = partGeometryBounds(right);
+        if (leftBounds.isEmpty() || rightBounds.isEmpty())
+            return leftBounds.isEmpty() && rightBounds.isEmpty();
+        return leftBounds.getMin() == rightBounds.getMin() &&
+            leftBounds.getMax() == rightBounds.getMax();
+    }
+
+    // Compute world bounds for an instance from part geometry
+    SbBox3f computeWorldBounds(const Obol::PartGeometry& geom,
+                               const SbMatrix& m) const {
+        const SbBox3f local = partGeometryBounds(geom);
         // Transform all 8 corners
         SbBox3f world;
         SbVec3f mn, mx;
@@ -661,9 +822,9 @@ struct SoCADAssemblyImpl {
             const std::shared_ptr<const Obol::PartGeometry>& geom) {
         if (!geom) return;
         parts_[pid] = geom;
-        if (geom->subpixelProxyEligible && geom->wire.has_value()) {
+        if (geom->subpixelProxyEligible) {
             std::array<SbVec3f, 8> corners;
-            if (cadSubpixelProxyCorners(*geom->wire, corners))
+            if (cadSubpixelGeometryCorners(*geom, corners))
                 subpixelProxyCorners_[pid] = std::move(corners);
             else
                 subpixelProxyCorners_.erase(pid);
@@ -684,11 +845,15 @@ struct SoCADAssemblyImpl {
 
     void recomputeWorldBoundsForPart(Obol::PartId pid) {
         auto geomIt = parts_.find(pid);
-        for (auto& [iid, idata] : instances_) {
-            if (idata.partId != pid)
+        const auto indexed = instanceIdsByPart_.find(pid);
+        if (indexed == instanceIdsByPart_.end())
+            return;
+        for (size_t slot = 0; slot < indexed->second.size(); ++slot) {
+            InstanceData *idata = indexed->second.dataAt(slot);
+            if (!idata)
                 continue;
-            idata.worldBounds = geomIt != parts_.end() && geomIt->second ?
-                computeWorldBounds(*geomIt->second, idata.localToRoot) :
+            idata->worldBounds = geomIt != parts_.end() && geomIt->second ?
+                computeWorldBounds(*geomIt->second, idata->localToRoot) :
                 SbBox3f();
         }
     }
@@ -698,44 +863,317 @@ struct SoCADAssemblyImpl {
                                  std::hash<Obol::PartId>>& pids) {
         if (pids.empty())
             return;
-        for (auto& [iid, idata] : instances_) {
-            if (!pids.count(idata.partId))
+        for (const Obol::PartId pid : pids) {
+            const auto indexed = instanceIdsByPart_.find(pid);
+            if (indexed == instanceIdsByPart_.end())
                 continue;
-            auto geomIt = parts_.find(idata.partId);
-            idata.worldBounds = geomIt != parts_.end() && geomIt->second ?
-                computeWorldBounds(*geomIt->second, idata.localToRoot) :
-                SbBox3f();
+            const auto geometry = parts_.find(pid);
+            for (size_t slot = 0; slot < indexed->second.size(); ++slot) {
+                InstanceData *idata = indexed->second.dataAt(slot);
+                if (!idata)
+                    continue;
+                idata->worldBounds =
+                    geometry != parts_.end() && geometry->second ?
+                    computeWorldBounds(
+                        *geometry->second, idata->localToRoot) :
+                    SbBox3f();
+            }
         }
+    }
+
+    void removeInstanceFromPartIndex(
+            Obol::InstanceId iid, Obol::PartId pid) {
+        const auto indexed = instanceIdsByPart_.find(pid);
+        const auto slot = instancePartSlot_.find(iid);
+        if (indexed == instanceIdsByPart_.end() ||
+                slot == instancePartSlot_.end())
+            return;
+        InstancePartBucket& ids = indexed->second;
+        size_t offset = slot->second;
+        if (offset >= ids.size() || !(ids.at(offset) == iid)) {
+            offset = ids.size();
+            for (size_t candidate = 0; candidate < ids.size(); ++candidate) {
+                if (ids.at(candidate) == iid) {
+                    offset = candidate;
+                    break;
+                }
+            }
+            if (offset == ids.size()) {
+                instancePartSlot_.erase(slot);
+                return;
+            }
+        }
+        const size_t last = ids.size() - 1u;
+        if (offset < last) {
+            const Obol::InstanceId replacement = ids.at(last);
+            InstanceData *replacementData = ids.dataAt(last);
+            if (offset == 0)
+                ids.first = replacement;
+            else
+                ids.additional[offset - 1u] = replacement;
+            if (offset == 0)
+                ids.firstData = replacementData;
+            else
+                ids.additionalData[offset - 1u] = replacementData;
+            instancePartSlot_[replacement] = offset;
+        }
+        if (last == 0) {
+            ids.hasFirst = false;
+            ids.firstData = nullptr;
+        } else {
+            ids.additional.pop_back();
+            ids.additionalData.pop_back();
+        }
+        instancePartSlot_.erase(iid);
+        if (!ids.hasFirst)
+            instanceIdsByPart_.erase(indexed);
+    }
+
+    void addInstanceToPartIndex(
+            Obol::InstanceId iid, Obol::PartId pid,
+            InstanceData *idata) {
+        InstancePartBucket& ids = instanceIdsByPart_[pid];
+        const size_t slot = ids.size();
+        instancePartSlot_[iid] = slot;
+        if (!ids.hasFirst) {
+            ids.first = iid;
+            ids.firstData = idata;
+            ids.hasFirst = true;
+        } else {
+            ids.additional.push_back(iid);
+            ids.additionalData.push_back(idata);
+        }
+    }
+
+    void updateKnownInstance(Obol::InstanceId iid,
+                             const Obol::InstanceRecord& rec,
+                             InstanceData *prior) {
+        InstanceData *idata = prior;
+        if (!prior) {
+            const auto inserted =
+                instances_.try_emplace(iid, InstanceData());
+            idata = &inserted.first->second;
+            addInstanceToPartIndex(iid, rec.part, idata);
+        } else if (!(prior->partId == rec.part)) {
+            removeInstanceFromPartIndex(iid, prior->partId);
+            addInstanceToPartIndex(iid, rec.part, prior);
+        }
+        idata->partId         = rec.part;
+        idata->localToRoot    = rec.localToRoot;
+        idata->style          = rec.style;
+        idata->parent         = rec.parent;
+        idata->childName      = rec.childName;
+        idata->occurrenceIndex = rec.occurrenceIndex;
+        idata->boolOp         = rec.boolOp;
+        idata->lodLevel       = rec.lodLevel;
+
+        auto geomIt = parts_.find(rec.part);
+        idata->worldBounds = geomIt != parts_.end() && geomIt->second ?
+            computeWorldBounds(*geomIt->second, rec.localToRoot) : SbBox3f();
     }
 
     void updateInstance(Obol::InstanceId iid,
                         const Obol::InstanceRecord& rec) {
-        InstanceData& idata  = instances_[iid];
-        idata.partId         = rec.part;
-        idata.localToRoot    = rec.localToRoot;
-        idata.style          = rec.style;
-        idata.parent         = rec.parent;
-        idata.childName      = rec.childName;
-        idata.occurrenceIndex = rec.occurrenceIndex;
-        idata.boolOp         = rec.boolOp;
-        idata.lodLevel       = rec.lodLevel;
-
-        auto geomIt = parts_.find(rec.part);
-        idata.worldBounds = geomIt != parts_.end() && geomIt->second ?
-            computeWorldBounds(*geomIt->second, rec.localToRoot) : SbBox3f();
+        const auto prior = instances_.find(iid);
+        updateKnownInstance(iid, rec,
+            prior == instances_.end() ? nullptr : &prior->second);
     }
 
-    void markDirty() {
+    void markDirty(const char *reason = "geometry-or-structure") {
         bvhDirty_ = true;
         planDirty_ = true;
         geometryDirty_ = true;
+        planDirtyReason_ = reason;
         progressiveShadedPlanGroups_.clear();
-        progressiveShadedPlanGroupByPart_.clear();
+        progressiveShadedPlanGroupByInstance_.clear();
         progressivePlanIndexByInstance_.clear();
+        cachedPlanPartSpansByPart_.clear();
+        pendingInstanceAttributeIndices_.clear();
     }
 
     static size_t progressiveLevelBin(uint8_t level) {
         return level < 16 ? static_cast<size_t>(level) : 16u;
+    }
+
+    static bool drawModeHasShadedPlan(int drawMode) {
+        return drawMode == SoCADAssembly::SHADED ||
+            drawMode == SoCADAssembly::SHADED_WITH_EDGES ||
+            drawMode == SoCADAssembly::HIDDEN_LINE;
+    }
+
+    bool patchCachedInstanceFlags(Obol::InstanceId instance) {
+        const auto fail = [&](const char *reason) {
+            if (cadPlanDebugEnabled() &&
+                    planDebugPatchMessageCount_++ <
+                        cadPlanDebugMessageLimit())
+                std::fprintf(stderr,
+                    "SoCADAssembly sparse instance-flag patch rejected "
+                    "reason=%s instance=%016llx:%016llx "
+                    "plan_dirty=%d geometry_dirty=%d draw_mode=%d "
+                    "visible=%zu instances=%zu parts=%zu selected=%zu "
+                    "hidden=%zu\n",
+                    reason ? reason : "unknown",
+                    static_cast<unsigned long long>(instance.w0),
+                    static_cast<unsigned long long>(instance.w1),
+                    planDirty_ ? 1 : 0, geometryDirty_ ? 1 : 0, cachedDM_,
+                    cachedPlan_.visibleInstances.size(), instances_.size(),
+                    parts_.size(), selected_.size(), hidden_.size());
+            return false;
+        };
+        if (planDirty_ || geometryDirty_)
+            return fail("plan-state");
+        const auto indexFound =
+            progressivePlanIndexByInstance_.find(instance);
+        if (indexFound == progressivePlanIndexByInstance_.end())
+            return fail("instance-not-indexed");
+        if (indexFound->second >= cachedPlan_.visibleInstances.size())
+            return fail("invalid-visible-index");
+        auto& record = cachedPlan_.visibleInstances[indexFound->second];
+        uint32_t flags = record.flags &
+            ~(Obol::internal::CadInstanceSelected |
+              Obol::internal::CadInstanceHidden);
+        if (selected_.count(instance))
+            flags |= Obol::internal::CadInstanceSelected;
+        if (hidden_.count(instance))
+            flags |= Obol::internal::CadInstanceHidden;
+        record.flags = flags;
+        if (indexFound->second < subpixelProxyPointByVisible_.size()) {
+            const uint32_t pointIndex =
+                subpixelProxyPointByVisible_[indexFound->second];
+            if (pointIndex != std::numeric_limits<uint32_t>::max() &&
+                    pointIndex < cachedPlan_.subpixelProxyPoints.size()) {
+                cachedPlan_.subpixelProxyPoints[pointIndex].flags =
+                    record.flags;
+            }
+        }
+        pendingInstanceAttributeIndices_.push_back(indexFound->second);
+        return true;
+    }
+
+    bool patchCachedInstanceStyle(Obol::InstanceId instance) {
+        if (planDirty_ || geometryDirty_ ||
+                cachedDM_ < SoCADAssembly::SHADED ||
+                cachedDM_ > SoCADAssembly::HIDDEN_LINE)
+            return false;
+        const auto indexFound =
+            progressivePlanIndexByInstance_.find(instance);
+        const auto instanceFound = instances_.find(instance);
+        if (indexFound == progressivePlanIndexByInstance_.end() ||
+                indexFound->second >= cachedPlan_.visibleInstances.size() ||
+                instanceFound == instances_.end())
+            return false;
+        auto& record = cachedPlan_.visibleInstances[indexFound->second];
+        const bool wasOpaque = record.rgba[3] == 255;
+        const float oldLineWidth = record.lineWidth;
+        const uint16_t oldLinePattern = record.linePattern;
+        const uint16_t oldLinePatternFactor = record.linePatternFactor;
+        const Obol::InstanceStyle& style = instanceFound->second.style;
+        float r = 0.8f;
+        float g = 0.8f;
+        float b = 0.8f;
+        float a = 1.0f;
+        if (style.hasColorOverride) {
+            r = style.color[0];
+            g = style.color[1];
+            b = style.color[2];
+            a = style.color[3];
+        }
+        record.rgba[0] =
+            static_cast<uint8_t>(std::min(255.0f, r * 255.0f));
+        record.rgba[1] =
+            static_cast<uint8_t>(std::min(255.0f, g * 255.0f));
+        record.rgba[2] =
+            static_cast<uint8_t>(std::min(255.0f, b * 255.0f));
+        record.rgba[3] =
+            static_cast<uint8_t>(std::min(255.0f, a * 255.0f));
+        record.lineWidth = std::max(1.0f, style.lineWidth);
+        record.linePattern = style.linePattern;
+        record.linePatternFactor =
+            std::max<uint16_t>(1u, style.linePatternFactor);
+        if (style.hasColorOverride)
+            record.flags |= Obol::internal::CadInstanceColorOverride;
+        else
+            record.flags &= ~Obol::internal::CadInstanceColorOverride;
+        /*
+         * Opacity participates in shaded cull-run construction, while line
+         * width and stipple participate in wire draw-run construction.  A
+         * color-only style change is an instance-stream update in every draw
+         * mode, but changes to either grouping property need a new plan.
+         */
+        if (wasOpaque != (record.rgba[3] == 255))
+            return false;
+        const bool hasWirePlan =
+            cachedDM_ == SoCADAssembly::WIREFRAME ||
+            cachedDM_ == SoCADAssembly::SHADED_WITH_EDGES ||
+            cachedDM_ == SoCADAssembly::HIDDEN_LINE;
+        if (hasWirePlan &&
+                (record.lineWidth != oldLineWidth ||
+                 record.linePattern != oldLinePattern ||
+                 record.linePatternFactor != oldLinePatternFactor))
+            return false;
+        const uint32_t visibleIndex = indexFound->second;
+        if (visibleIndex < subpixelProxyPointByVisible_.size()) {
+            const uint32_t pointIndex =
+                subpixelProxyPointByVisible_[visibleIndex];
+            if (pointIndex != std::numeric_limits<uint32_t>::max() &&
+                    pointIndex < cachedPlan_.subpixelProxyPoints.size())
+                cachedPlan_.subpixelProxyPoints[pointIndex].rgba =
+                    record.rgba;
+        }
+        pendingInstanceAttributeIndices_.push_back(visibleIndex);
+        return true;
+    }
+
+    void finishSparsePresentationPatch(bool visibilityChanged = false) {
+        cachedPlan_.revision = nextPlanRevision_++;
+        if (nextPlanRevision_ == 0)
+            nextPlanRevision_ = 1;
+        cachedPlan_.instanceAttributeRevision =
+            nextInstanceAttributeRevision_++;
+        if (nextInstanceAttributeRevision_ == 0)
+            nextInstanceAttributeRevision_ = 1;
+        std::sort(pendingInstanceAttributeIndices_.begin(),
+            pendingInstanceAttributeIndices_.end());
+        pendingInstanceAttributeIndices_.erase(
+            std::unique(pendingInstanceAttributeIndices_.begin(),
+                pendingInstanceAttributeIndices_.end()),
+            pendingInstanceAttributeIndices_.end());
+        if (!pendingInstanceAttributeIndices_.empty()) {
+            Obol::internal::CadInstanceAttributeDelta delta;
+            delta.revision =
+                cachedPlan_.instanceAttributeRevision;
+            delta.visibleIndices =
+                pendingInstanceAttributeIndices_;
+            delta.visibilityChanged = visibilityChanged;
+            cachedPlan_.instanceAttributeDeltaEntryCount +=
+                delta.visibleIndices.size();
+            cachedPlan_.instanceAttributeDeltas.push_back(
+                std::move(delta));
+        }
+        static constexpr size_t maxDeltaBatches = 256u;
+        static constexpr size_t maxDeltaEntries = 65536u;
+        while (cachedPlan_.instanceAttributeDeltas.size() >
+                    maxDeltaBatches ||
+                cachedPlan_.instanceAttributeDeltaEntryCount >
+                    maxDeltaEntries) {
+            const auto& front =
+                cachedPlan_.instanceAttributeDeltas.front();
+            cachedPlan_.instanceAttributeDeltaEntryCount -=
+                front.visibleIndices.size();
+            cachedPlan_.instanceAttributeDeltaFloorRevision =
+                std::max(
+                    cachedPlan_.instanceAttributeDeltaFloorRevision,
+                    front.revision);
+            cachedPlan_.instanceAttributeDeltas.pop_front();
+        }
+        pendingInstanceAttributeIndices_.clear();
+        /*
+         * Visibility does not alter screen-size classification at an
+         * unchanged camera.  Existing aggregate points retain their stable
+         * slots and receive the hidden flag above; non-proxied instances use
+         * the same attribute journal in the mesh stream.  Camera or threshold
+         * changes remain responsible for recomputing proxy membership.
+         */
     }
 
     /**
@@ -747,30 +1185,73 @@ struct SoCADAssemblyImpl {
      *
      * @param dm       Draw mode (WIREFRAME / SHADED / SHADED_WITH_EDGES).
      * @param selected Set of selected instance IDs (for colour override).
-     * @param hidden   Set of hidden instance IDs (excluded from the plan).
+     * @param hidden   Set of hidden instance IDs (flagged in the plan).
      */
     Obol::internal::CadFramePlan buildFramePlan(
             int dm,
             const std::unordered_set<Obol::InstanceId,
                                      std::hash<Obol::InstanceId>>& selected,
             const std::unordered_set<Obol::InstanceId,
-                                     std::hash<Obol::InstanceId>>& hidden) const
+                                     std::hash<Obol::InstanceId>>& hidden,
+            const std::map<Obol::PartId, InstancePartBucket> *buckets =
+                nullptr) const
     {
         using namespace Obol::internal;
 
         CadFramePlan plan;
         if (instances_.empty()) return plan;
 
-        // Collect (partId → list of CadVisibleInstance) grouped by part.
-        // We use a stable insertion-order map so every run is contiguous.
-        std::unordered_map<Obol::PartId,
-                           std::vector<CadVisibleInstance>,
-                           std::hash<Obol::PartId>> byPart;
+        /*
+         * Write directly into the final flat allocation.  Retaining a second
+         * array of (PartId, CadVisibleInstance) records doubled the memory
+         * traffic of large streamed plan rebuilds even after the global sort
+         * had been removed.
+         */
+        struct VisiblePartSpan {
+            Obol::PartId part;
+            size_t begin = 0;
+            size_t end = 0;
+        };
+        std::vector<VisiblePartSpan> visiblePartSpans;
+        const auto& sourceBuckets =
+            buckets ? *buckets : instanceIdsByPart_;
+        visiblePartSpans.reserve(sourceBuckets.size());
+        size_t sourceInstanceCount = instances_.size();
+        if (buckets) {
+            sourceInstanceCount = 0;
+            for (const auto& indexed : sourceBuckets)
+                sourceInstanceCount += indexed.second.size();
+        }
+        /*
+         * A full compact source initially presents structural fallback boxes,
+         * then appends at most one richer presentation record per occurrence.
+         * Reserve that known upper bound before publishing the initial plan.
+         * Otherwise vector growth near convergence can copy tens of
+         * thousands of records in one GUI frame even though the logical
+         * mutation batch is small.
+         *
+         * Delta plans are transient and should stay exactly sized.
+         */
+        const size_t expectedSourceCount =
+            buckets ? sourceInstanceCount :
+            std::max(sourceInstanceCount,
+                     streamingOccurrenceCapacityHint_);
+        const size_t streamedTailCapacity =
+            buckets ? 0u : expectedSourceCount;
+        plan.visibleInstances.reserve(
+            expectedSourceCount + streamedTailCapacity);
+        plan.partBindings.reserve(
+            std::min(parts_.size(), sourceBuckets.size()) +
+            streamedTailCapacity);
+        if (!buckets) {
+            plan.wireItems.reserve(expectedSourceCount);
+            plan.pointItems.reserve(expectedSourceCount);
+            plan.shadedItems.reserve(expectedSourceCount);
+            plan.requiredReps.reserve(expectedSourceCount * 2u);
+        }
 
-        for (const auto& [iid, idata] : instances_) {
-            // Skip hidden instances
-            if (hidden.count(iid)) continue;
-
+        const auto appendInstance =
+            [&](Obol::InstanceId iid, const InstanceData& idata) {
             CadVisibleInstance vi;
             vi.instanceId = iid;
             vi.partIndex  = 0; // filled in below
@@ -804,8 +1285,12 @@ struct SoCADAssemblyImpl {
                 1u, idata.style.linePatternFactor);
             if (vi.lineWidth != 1.0f || vi.linePattern != 0xffffu)
                 plan.hasCustomWireStyle = true;
-            vi.flags = (isSel ? 1u : 0u) |
-                       (idata.style.hasColorOverride ? 4u : 0u);
+            const bool isHidden = hidden.count(iid) != 0;
+            vi.flags =
+                (isSel ? CadInstanceSelected : 0u) |
+                (idata.style.hasColorOverride ?
+                    CadInstanceColorOverride : 0u) |
+                (isHidden ? CadInstanceHidden : 0u);
             vi.lodLevel = idata.lodLevel;
 
             if (cadDebugEnabled()) {
@@ -831,10 +1316,56 @@ struct SoCADAssemblyImpl {
             vi.wbMin[0] = wbMn[0]; vi.wbMin[1] = wbMn[1]; vi.wbMin[2] = wbMn[2];
             vi.wbMax[0] = wbMx[0]; vi.wbMax[1] = wbMx[1]; vi.wbMax[2] = wbMx[2];
 
-            if (!idata.worldBounds.isEmpty())
+            if (!isHidden && !idata.worldBounds.isEmpty())
                 plan.worldBounds.extendBy(idata.worldBounds);
 
-            byPart[idata.partId].push_back(vi);
+            plan.visibleInstances.push_back(std::move(vi));
+        };
+
+        /*
+         * The maintained part index is already in the renderer's primary
+         * order.  Only occurrences which genuinely share a part need the
+         * secondary (LoD/style/id) sort.  A 50k-unique scene therefore avoids
+         * sorting and moving 50k large instance records on every streamed
+         * publication wave.
+         */
+        for (const auto& indexed : sourceBuckets) {
+            /*
+             * Do not retain unrenderable occurrences in the compiled plan.
+             * Once geometry arrives, the normal structural/geometry
+             * publication invalidates the plan and adds this part.
+             */
+            const auto part = parts_.find(indexed.first);
+            if (part == parts_.end() || !part->second)
+                continue;
+            const size_t groupBegin = plan.visibleInstances.size();
+            for (size_t slot = 0; slot < indexed.second.size(); ++slot) {
+                const Obol::InstanceId iid = indexed.second.at(slot);
+                const InstanceData *idata = indexed.second.dataAt(slot);
+                if (idata)
+                    appendInstance(iid, *idata);
+            }
+            const size_t groupEnd = plan.visibleInstances.size();
+            if (groupBegin == groupEnd)
+                continue;
+            std::sort(
+                plan.visibleInstances.begin() + groupBegin,
+                plan.visibleInstances.end(),
+                [](const CadVisibleInstance& av,
+                   const CadVisibleInstance& bv) {
+                    if (av.lodLevel != bv.lodLevel)
+                        return av.lodLevel < bv.lodLevel;
+                    if (av.lineWidth != bv.lineWidth)
+                        return av.lineWidth < bv.lineWidth;
+                    if (av.linePattern != bv.linePattern)
+                        return av.linePattern < bv.linePattern;
+                    if (av.linePatternFactor != bv.linePatternFactor)
+                        return av.linePatternFactor <
+                            bv.linePatternFactor;
+                    return av.instanceId < bv.instanceId;
+                });
+            visiblePartSpans.push_back(
+                VisiblePartSpan{indexed.first, groupBegin, groupEnd});
         }
 
         const bool needWire   = (dm == SoCADAssembly::WIREFRAME ||
@@ -844,106 +1375,119 @@ struct SoCADAssemblyImpl {
                                  dm == SoCADAssembly::SHADED_WITH_EDGES ||
                                  dm == SoCADAssembly::HIDDEN_LINE);
 
-        // Track which (part, type) pairs have already been added to requiredReps
-        // to avoid duplicates (a part with both wire and shaded gets one entry each).
-        std::unordered_set<Obol::PartId, std::hash<Obol::PartId>>
-            requiredPointParts, requiredWireParts, requiredShadedParts;
-
-        uint32_t baseInst = 0;
-        for (auto& [pid, vis] : byPart) {
+        for (const VisiblePartSpan& visibleSpan : visiblePartSpans) {
+            const Obol::PartId pid = visibleSpan.part;
+            const size_t groupBegin = visibleSpan.begin;
+            const size_t groupEnd = visibleSpan.end;
             auto partIt = parts_.find(pid);
-            if (partIt == parts_.end() || !partIt->second) continue;
+            if (partIt == parts_.end() || !partIt->second) {
+                continue;
+            }
             const auto& geom = *partIt->second;
+            CadPartBinding binding;
+            binding.part = pid;
+            binding.geometry = partIt->second;
+            binding.structuralProxy = geom.structuralProxy;
+            const auto generationIt = partGeneration_.find(pid);
+            if (generationIt != partGeneration_.end())
+                binding.generation = generationIt->second;
+            const uint32_t partIndex =
+                static_cast<uint32_t>(plan.partBindings.size());
+            const auto subpixelCorners =
+                subpixelProxyCorners_.find(pid);
+            if (subpixelCorners != subpixelProxyCorners_.end()) {
+                binding.subpixelProxyEligible = true;
+                binding.subpixelProxyCorners =
+                    subpixelCorners->second;
+            }
+            plan.partBindings.push_back(std::move(binding));
 
             /*
-             * A retained PoP part is one shared resident buffer, but each
-             * occurrence may select a different prefix.  Keep occurrences
-             * with the same active level contiguous so the renderer can issue
-             * at most one instanced draw per (part, level, wire-style), rather
-             * than falling back to one draw per occurrence.
-             *
-             * The instance id tie-breaker also makes the frame plan stable
-             * across unordered-map iteration order.
+             * The global flat sort already keeps a part's occurrences in
+             * (level, wire-style, instance-id) order.  It both defines stable
+             * draw runs and avoids a separately allocated vector and sort for
+             * every unique part.
              */
             const bool progressiveWire =
                 geom.wire.has_value() && geom.wire->isProgressive();
             const bool progressiveShaded =
                 geom.shaded.has_value() && geom.shaded->isProgressive();
-            std::sort(vis.begin(), vis.end(),
-                [](const CadVisibleInstance& a,
-                   const CadVisibleInstance& b) {
-                    if (a.lodLevel != b.lodLevel)
-                        return a.lodLevel < b.lodLevel;
-                    if (a.lineWidth != b.lineWidth)
-                        return a.lineWidth < b.lineWidth;
-                    if (a.linePattern != b.linePattern)
-                        return a.linePattern < b.linePattern;
-                    if (a.linePatternFactor != b.linePatternFactor)
-                        return a.linePatternFactor < b.linePatternFactor;
-                    if (a.instanceId.w1 != b.instanceId.w1)
-                        return a.instanceId.w1 < b.instanceId.w1;
-                    return a.instanceId.w0 < b.instanceId.w0;
-                });
-
-            const uint32_t count = static_cast<uint32_t>(vis.size());
+            const size_t groupCount = groupEnd - groupBegin;
+            if (groupCount > std::numeric_limits<uint32_t>::max())
+                return CadFramePlan();
+            const uint32_t count = static_cast<uint32_t>(groupCount);
+            const auto visAt =
+                [&](size_t offset) -> CadVisibleInstance& {
+                    return plan.visibleInstances[groupBegin + offset];
+                };
+            const auto cullSafe =
+                [&](size_t begin, size_t end) {
+                    for (size_t i = begin; i < end; ++i) {
+                        const CadVisibleInstance& instance = visAt(i);
+                        if (instance.rgba[3] != 255 ||
+                                !cadTransformPreservesOrientation(
+                                    instance.transform))
+                            return false;
+                    }
+                    return true;
+                };
             if (count > 0 &&
                     ((needWire && geom.wire.has_value()) ||
                      (needShaded && geom.shaded.has_value()))) {
                 uint8_t maximumLod = 0;
-                for (const auto& instance : vis)
-                    maximumLod = std::max(maximumLod, instance.lodLevel);
+                for (size_t i = 0; i < groupCount; ++i)
+                    maximumLod =
+                        std::max(maximumLod, visAt(i).lodLevel);
                 plan.maximumRequestedLodByPart[pid] = maximumLod;
             }
 
-            // Fill partIndex (index into the upcoming visibleInstances block)
-            for (auto& vi : vis) vi.partIndex = baseInst;
-
-            // Append instances to flat list
-            for (const auto& vi : vis) plan.visibleInstances.push_back(vi);
+            // Bind each occurrence directly to this plan-owned part payload.
+            for (size_t i = 0; i < groupCount; ++i)
+                visAt(i).partIndex = partIndex;
 
             // Wire draw item
             if (needWire && geom.wire.has_value()) {
                 CadDrawItem item;
                 item.rep.part  = pid;
                 item.rep.type  = CadRepType::WireSegments;
+                item.partIndex = partIndex;
                 uint32_t runStart = 0;
                 while (runStart < count) {
                     uint32_t runEnd = runStart + 1;
                     while (runEnd < count &&
-                           vis[runEnd].lineWidth == vis[runStart].lineWidth &&
-                           vis[runEnd].linePattern == vis[runStart].linePattern &&
-                           vis[runEnd].linePatternFactor ==
-                               vis[runStart].linePatternFactor &&
+                           visAt(runEnd).lineWidth ==
+                               visAt(runStart).lineWidth &&
+                           visAt(runEnd).linePattern ==
+                               visAt(runStart).linePattern &&
+                           visAt(runEnd).linePatternFactor ==
+                               visAt(runStart).linePatternFactor &&
                            (!progressiveWire ||
-                            vis[runEnd].lodLevel ==
-                                vis[runStart].lodLevel))
+                            visAt(runEnd).lodLevel ==
+                                visAt(runStart).lodLevel))
                         ++runEnd;
-                    item.baseInstance = baseInst + runStart;
+                    item.baseInstance =
+                        static_cast<uint32_t>(groupBegin) + runStart;
                     item.instanceCount = runEnd - runStart;
                     item.customWireStyle =
-                        vis[runStart].lineWidth != 1.0f ||
-                        vis[runStart].linePattern != 0xffffu;
+                        visAt(runStart).lineWidth != 1.0f ||
+                        visAt(runStart).linePattern != 0xffffu;
                     plan.wireItems.push_back(item);
                     runStart = runEnd;
                 }
-                if (!requiredWireParts.count(pid)) {
-                    plan.requiredReps.push_back(item.rep);
-                    requiredWireParts.insert(pid);
-                    plan.wirePartsWithUncollapsedInstances.insert(pid);
-                }
+                // Each part is visited exactly once by the flat grouped walk.
+                plan.requiredReps.push_back(item.rep);
+                plan.wirePartsWithUncollapsedInstances.insert(pid);
             }
 
             if (geom.points.has_value() && !geom.points->positions.empty()) {
                 CadDrawItem item;
                 item.rep.part = pid;
                 item.rep.type = CadRepType::Points;
-                item.baseInstance = baseInst;
+                item.partIndex = partIndex;
+                item.baseInstance = static_cast<uint32_t>(groupBegin);
                 item.instanceCount = count;
                 plan.pointItems.push_back(item);
-                if (!requiredPointParts.count(pid)) {
-                    plan.requiredReps.push_back(item.rep);
-                    requiredPointParts.insert(pid);
-                }
+                plan.requiredReps.push_back(item.rep);
             }
 
             // Shaded draw item
@@ -954,22 +1498,18 @@ struct SoCADAssemblyImpl {
                     uint32_t runEnd = runStart + 1;
                     while (runEnd < count &&
                            (!progressiveShaded ||
-                            vis[runEnd].lodLevel ==
-                                vis[runStart].lodLevel))
+                            visAt(runEnd).lodLevel ==
+                                visAt(runStart).lodLevel))
                         ++runEnd;
                     CadDrawItem item;
                     item.rep.part  = pid;
                     item.rep.type  = CadRepType::Triangles;
-                    item.baseInstance = baseInst + runStart;
+                    item.partIndex = partIndex;
+                    item.baseInstance =
+                        static_cast<uint32_t>(groupBegin) + runStart;
                     item.instanceCount = runEnd - runStart;
                     item.cullBackfaces = geom.shadedCullBackfaces &&
-                        std::all_of(vis.begin() + runStart,
-                            vis.begin() + runEnd,
-                            [](const CadVisibleInstance& instance) {
-                                return instance.rgba[3] == 255 &&
-                                    cadTransformPreservesOrientation(
-                                        instance.transform);
-                            });
+                        cullSafe(runStart, runEnd);
                     plan.shadedItems.push_back(item);
                     runStart = runEnd;
                 }
@@ -987,28 +1527,21 @@ struct SoCADAssemblyImpl {
                         CadDrawItem item;
                         item.rep.part = pid;
                         item.rep.type = CadRepType::Triangles;
-                        item.baseInstance = baseInst;
+                        item.partIndex = partIndex;
+                        item.baseInstance =
+                            static_cast<uint32_t>(groupBegin);
                         item.instanceCount = 0;
                         item.cullBackfaces = geom.shadedCullBackfaces &&
-                            std::all_of(vis.begin(), vis.end(),
-                                [](const CadVisibleInstance& instance) {
-                                    return instance.rgba[3] == 255 &&
-                                        cadTransformPreservesOrientation(
-                                            instance.transform);
-                                });
+                            cullSafe(0, groupCount);
                         plan.shadedItems.push_back(item);
                     }
                 }
-                if (!requiredShadedParts.count(pid)) {
-                    CadRepKey rep;
-                    rep.part = pid;
-                    rep.type = CadRepType::Triangles;
-                    plan.requiredReps.push_back(rep);
-                    requiredShadedParts.insert(pid);
-                }
+                CadRepKey rep;
+                rep.part = pid;
+                rep.type = CadRepType::Triangles;
+                plan.requiredReps.push_back(rep);
             }
 
-            baseInst += count;
         }
 
         return plan;
@@ -1016,32 +1549,104 @@ struct SoCADAssemblyImpl {
 
     void rebuildProgressiveShadedPlanIndex() {
         progressiveShadedPlanGroups_.clear();
-        progressiveShadedPlanGroupByPart_.clear();
+        progressiveShadedPlanGroupByInstance_.clear();
         progressivePlanIndexByInstance_.clear();
-        if (cachedDM_ != SoCADAssembly::SHADED ||
-                cachedPlan_.visibleInstances.empty())
+        cachedPlanPartSpansByPart_.clear();
+        if (cachedPlan_.visibleInstances.empty())
             return;
+        progressivePlanIndexByInstance_.reserve(
+            cachedPlan_.visibleInstances.size());
+        for (size_t i = 0; i < cachedPlan_.visibleInstances.size(); ++i)
+            progressivePlanIndexByInstance_[
+                cachedPlan_.visibleInstances[i].instanceId] =
+                static_cast<uint32_t>(i);
+
+        /*
+         * Draw items are emitted contiguously per part.  Index those ranges
+         * once.  Scanning the complete shaded-item vector for every part made
+         * a plan rebuild O(parts * draw-items)—2.5 billion comparisons for a
+         * 50k unique-part scene—and dominated the qged GUI thread.
+         */
+        const size_t noItem = std::numeric_limits<size_t>::max();
+        std::vector<size_t> wireItemBegin(
+            cachedPlan_.partBindings.size(), noItem);
+        std::vector<size_t> wireItemCount(
+            cachedPlan_.partBindings.size(), 0);
+        for (size_t i = 0; i < cachedPlan_.wireItems.size(); ++i) {
+            const size_t partIndex =
+                cachedPlan_.wireItems[i].partIndex;
+            if (partIndex >= wireItemBegin.size())
+                continue;
+            if (wireItemBegin[partIndex] == noItem)
+                wireItemBegin[partIndex] = i;
+            ++wireItemCount[partIndex];
+        }
+        std::vector<size_t> pointItemBegin(
+            cachedPlan_.partBindings.size(), noItem);
+        std::vector<size_t> pointItemCount(
+            cachedPlan_.partBindings.size(), 0);
+        for (size_t i = 0; i < cachedPlan_.pointItems.size(); ++i) {
+            const size_t partIndex =
+                cachedPlan_.pointItems[i].partIndex;
+            if (partIndex >= pointItemBegin.size())
+                continue;
+            if (pointItemBegin[partIndex] == noItem)
+                pointItemBegin[partIndex] = i;
+            ++pointItemCount[partIndex];
+        }
+        std::vector<size_t> shadedItemBegin(
+            cachedPlan_.partBindings.size(), noItem);
+        std::vector<size_t> shadedItemCount(
+            cachedPlan_.partBindings.size(), 0);
+        for (size_t i = 0; i < cachedPlan_.shadedItems.size(); ++i) {
+            const size_t partIndex =
+                cachedPlan_.shadedItems[i].partIndex;
+            if (partIndex >= shadedItemBegin.size())
+                continue;
+            if (shadedItemBegin[partIndex] == noItem)
+                shadedItemBegin[partIndex] = i;
+            ++shadedItemCount[partIndex];
+        }
 
         size_t base = 0;
         while (base < cachedPlan_.visibleInstances.size()) {
-            const uint32_t partBase =
+            const uint32_t partIndex =
                 cachedPlan_.visibleInstances[base].partIndex;
             size_t end = base + 1;
             while (end < cachedPlan_.visibleInstances.size() &&
-                    cachedPlan_.visibleInstances[end].partIndex == partBase)
+                    cachedPlan_.visibleInstances[end].partIndex == partIndex)
                 ++end;
 
-            const auto instanceFound = instances_.find(
-                cachedPlan_.visibleInstances[base].instanceId);
-            if (instanceFound == instances_.end()) {
+            if (partIndex >= cachedPlan_.partBindings.size()) {
                 base = end;
                 continue;
             }
-            const Obol::PartId part = instanceFound->second.partId;
-            const auto geometryFound = parts_.find(part);
-            if (geometryFound == parts_.end() || !geometryFound->second ||
-                    !geometryFound->second->shaded.has_value() ||
-                    !geometryFound->second->shaded->isProgressive()) {
+            const auto& binding = cachedPlan_.partBindings[partIndex];
+            const Obol::PartId part = binding.part;
+            CachedPlanPartSpan span;
+            span.partIndex = partIndex;
+            span.baseInstance = static_cast<uint32_t>(base);
+            span.instanceCount = static_cast<uint32_t>(end - base);
+            if (wireItemBegin[partIndex] != noItem) {
+                span.wireItemBegin = wireItemBegin[partIndex];
+                span.wireItemCount = wireItemCount[partIndex];
+            }
+            if (pointItemBegin[partIndex] != noItem) {
+                span.pointItemBegin = pointItemBegin[partIndex];
+                span.pointItemCount = pointItemCount[partIndex];
+            }
+            if (shadedItemBegin[partIndex] != noItem) {
+                span.shadedItemBegin = shadedItemBegin[partIndex];
+                span.shadedItemCount = shadedItemCount[partIndex];
+            }
+            cachedPlanPartSpansByPart_[part].push_back(span);
+            if (!drawModeHasShadedPlan(cachedDM_)) {
+                base = end;
+                continue;
+            }
+            if (!binding.geometry ||
+                    !binding.geometry->shaded.has_value() ||
+                    !binding.geometry->shaded->isProgressive()) {
                 base = end;
                 continue;
             }
@@ -1053,49 +1658,970 @@ struct SoCADAssemblyImpl {
             for (size_t i = base; i < end; ++i) {
                 const auto& instance = cachedPlan_.visibleInstances[i];
                 ++group.levelCounts[progressiveLevelBin(instance.lodLevel)];
-                progressivePlanIndexByInstance_[instance.instanceId] =
-                    static_cast<uint32_t>(i);
             }
-            for (size_t i = 0; i < cachedPlan_.shadedItems.size(); ++i) {
-                if (!(cachedPlan_.shadedItems[i].rep.part == part))
-                    continue;
-                if (group.shadedItemCount == 0)
-                    group.shadedItemBegin = i;
-                ++group.shadedItemCount;
-            }
+            group.shadedItemBegin = shadedItemBegin[partIndex];
+            group.shadedItemCount = shadedItemCount[partIndex];
             if (group.shadedItemCount == 0) {
                 base = end;
                 continue;
             }
-            progressiveShadedPlanGroupByPart_[part] =
+            const size_t groupIndex =
                 progressiveShadedPlanGroups_.size();
+            for (size_t i = base; i < end; ++i)
+                progressiveShadedPlanGroupByInstance_[
+                    cachedPlan_.visibleInstances[i].instanceId] =
+                        groupIndex;
             progressiveShadedPlanGroups_.push_back(group);
             base = end;
         }
     }
 
+    static bool partGeometryPlanCompatible(
+            const Obol::PartGeometry& oldGeometry,
+            const Obol::PartGeometry& newGeometry) {
+        if (oldGeometry.points.has_value() !=
+                newGeometry.points.has_value() ||
+                oldGeometry.wire.has_value() !=
+                newGeometry.wire.has_value() ||
+                oldGeometry.shaded.has_value() !=
+                newGeometry.shaded.has_value())
+            return false;
+        if (oldGeometry.wire &&
+                oldGeometry.wire->isProgressive() !=
+                    newGeometry.wire->isProgressive())
+            return false;
+        if (oldGeometry.shaded &&
+                oldGeometry.shaded->isProgressive() !=
+                    newGeometry.shaded->isProgressive())
+            return false;
+        return true;
+    }
+
+    /*
+     * Append a streamed batch without moving the compiled prefix.  A batch
+     * may contain new occurrences and box-to-mesh presentation replacements.
+     * Replacements tombstone their old presentation record and redirect the
+     * stable InstanceId to a new tail record.  This also handles a shared
+     * structural-box part: its draw range stays intact while the replaced
+     * occurrence is discarded by the normal hidden-instance path.
+     *
+     * A later draw-mode change or explicit compaction naturally removes the
+     * tombstones and restores global part order.
+     */
+    bool appendCachedInstances(
+            const std::vector<Obol::InstanceId>& instanceIds,
+            bool allowReplacements = false) {
+        using namespace Obol::internal;
+
+        const auto fail = [&](const char *reason, size_t actual = 0,
+                              size_t expected = 0) {
+            if (cadPlanDebugEnabled() &&
+                    planDebugPatchMessageCount_++ <
+                        cadPlanDebugMessageLimit())
+                std::fprintf(stderr,
+                    "SoCADAssembly sparse append rejected reason=%s "
+                    "batch=%zu actual=%zu expected=%zu "
+                    "plan_dirty=%d geometry_dirty=%d draw_mode=%d "
+                    "visible=%zu instances=%zu parts=%zu\n",
+                    reason ? reason : "unknown", instanceIds.size(),
+                    actual, expected, planDirty_ ? 1 : 0,
+                    geometryDirty_ ? 1 : 0, cachedDM_,
+                    cachedPlan_.visibleInstances.size(),
+                    instances_.size(), parts_.size());
+            return false;
+        };
+        if (instanceIds.empty() || planDirty_ || geometryDirty_ ||
+                cachedDM_ < 0)
+            return fail("plan-state");
+        std::map<Obol::PartId, InstancePartBucket> appendedBuckets;
+        std::vector<uint32_t> replacedIndices;
+        replacedIndices.reserve(instanceIds.size());
+        std::unordered_set<Obol::InstanceId, std::hash<Obol::InstanceId>>
+            uniqueInstances;
+        uniqueInstances.reserve(instanceIds.size());
+        for (const Obol::InstanceId instance : instanceIds) {
+            if (!uniqueInstances.insert(instance).second)
+                return fail("duplicate-instance");
+            const auto retained = instances_.find(instance);
+            if (retained == instances_.end())
+                return fail("instance-not-retained");
+            const auto compiled =
+                progressivePlanIndexByInstance_.find(instance);
+            if (compiled != progressivePlanIndexByInstance_.end()) {
+                if (!allowReplacements)
+                    return fail("instance-already-compiled");
+                if (compiled->second >=
+                        cachedPlan_.visibleInstances.size())
+                    return fail("invalid-replacement-index");
+                const CadVisibleInstance& oldVisible =
+                    cachedPlan_.visibleInstances[compiled->second];
+                if (oldVisible.partIndex >=
+                        cachedPlan_.partBindings.size())
+                    return fail("invalid-replacement-part");
+                if (cachedPlan_.partBindings[oldVisible.partIndex].part ==
+                        retained->second.partId)
+                    return fail("replacement-part-unchanged");
+                replacedIndices.push_back(compiled->second);
+            }
+            const auto geometry = parts_.find(retained->second.partId);
+            if (geometry == parts_.end() || !geometry->second)
+                return fail("part-not-retained");
+            InstancePartBucket& bucket =
+                appendedBuckets[retained->second.partId];
+            if (!bucket.hasFirst) {
+                bucket.first = instance;
+                bucket.firstData = &retained->second;
+                bucket.hasFirst = true;
+            } else {
+                bucket.additional.push_back(instance);
+                bucket.additionalData.push_back(&retained->second);
+            }
+        }
+
+        CadFramePlan delta = buildFramePlan(
+            cachedDM_, selected_, hidden_, &appendedBuckets);
+        if (delta.visibleInstances.size() != instanceIds.size())
+            return fail("visible-count", delta.visibleInstances.size(),
+                        instanceIds.size());
+        if (delta.partBindings.size() != appendedBuckets.size())
+            return fail("binding-count", delta.partBindings.size(),
+                        appendedBuckets.size());
+        const size_t visibleBase =
+            cachedPlan_.visibleInstances.size();
+        const size_t partBase = cachedPlan_.partBindings.size();
+        const size_t wireItemBase = cachedPlan_.wireItems.size();
+        const size_t pointItemBase = cachedPlan_.pointItems.size();
+        const size_t shadedItemBase = cachedPlan_.shadedItems.size();
+        if (visibleBase + delta.visibleInstances.size() >
+                    std::numeric_limits<uint32_t>::max() ||
+                partBase + delta.partBindings.size() >
+                    std::numeric_limits<uint32_t>::max())
+            return fail("index-overflow");
+
+        /*
+         * All validation which can reject the operation has completed.
+         * Retire replacement presentations only now, so a failed sparse
+         * attempt leaves the cached plan untouched for the fallback rebuild.
+         */
+        for (const uint32_t oldIndex : replacedIndices) {
+            auto& oldVisible = cachedPlan_.visibleInstances[oldIndex];
+            oldVisible.flags |= CadInstanceHidden;
+            progressiveShadedPlanGroupByInstance_.erase(
+                oldVisible.instanceId);
+        }
+        cachedPlanTombstoneCount_ += replacedIndices.size();
+
+        const size_t noItem = std::numeric_limits<size_t>::max();
+        std::vector<size_t> wireBegin(delta.partBindings.size(), noItem);
+        std::vector<size_t> wireCount(delta.partBindings.size(), 0);
+        for (size_t i = 0; i < delta.wireItems.size(); ++i) {
+            const size_t partIndex = delta.wireItems[i].partIndex;
+            if (partIndex >= wireBegin.size())
+                return fail("wire-item-part-index");
+            if (wireBegin[partIndex] == noItem)
+                wireBegin[partIndex] = i;
+            ++wireCount[partIndex];
+        }
+        std::vector<size_t> pointBegin(delta.partBindings.size(), noItem);
+        std::vector<size_t> pointCount(delta.partBindings.size(), 0);
+        for (size_t i = 0; i < delta.pointItems.size(); ++i) {
+            const size_t partIndex = delta.pointItems[i].partIndex;
+            if (partIndex >= pointBegin.size())
+                return fail("point-item-part-index");
+            if (pointBegin[partIndex] == noItem)
+                pointBegin[partIndex] = i;
+            ++pointCount[partIndex];
+        }
+        std::vector<size_t> shadedBegin(delta.partBindings.size(), noItem);
+        std::vector<size_t> shadedCount(delta.partBindings.size(), 0);
+        for (size_t i = 0; i < delta.shadedItems.size(); ++i) {
+            const size_t partIndex = delta.shadedItems[i].partIndex;
+            if (partIndex >= shadedBegin.size())
+                return fail("shaded-item-part-index");
+            if (shadedBegin[partIndex] == noItem)
+                shadedBegin[partIndex] = i;
+            ++shadedCount[partIndex];
+        }
+
+        size_t localBase = 0;
+        while (localBase < delta.visibleInstances.size()) {
+            const uint32_t localPart =
+                delta.visibleInstances[localBase].partIndex;
+            size_t localEnd = localBase + 1u;
+            while (localEnd < delta.visibleInstances.size() &&
+                    delta.visibleInstances[localEnd].partIndex == localPart)
+                ++localEnd;
+            if (localPart >= delta.partBindings.size())
+                return fail("visible-part-index");
+            const Obol::PartId part =
+                delta.partBindings[localPart].part;
+            CachedPlanPartSpan span;
+            span.partIndex = static_cast<uint32_t>(
+                partBase + localPart);
+            span.baseInstance = static_cast<uint32_t>(
+                visibleBase + localBase);
+            span.instanceCount = static_cast<uint32_t>(
+                localEnd - localBase);
+            if (wireBegin[localPart] != noItem) {
+                span.wireItemBegin =
+                    wireItemBase + wireBegin[localPart];
+                span.wireItemCount = wireCount[localPart];
+            }
+            if (pointBegin[localPart] != noItem) {
+                span.pointItemBegin =
+                    pointItemBase + pointBegin[localPart];
+                span.pointItemCount = pointCount[localPart];
+            }
+            if (shadedBegin[localPart] != noItem) {
+                span.shadedItemBegin =
+                    shadedItemBase + shadedBegin[localPart];
+                span.shadedItemCount = shadedCount[localPart];
+            }
+            cachedPlanPartSpansByPart_[part].push_back(span);
+
+            const CadPartBinding& binding =
+                delta.partBindings[localPart];
+            if (drawModeHasShadedPlan(cachedDM_) &&
+                    binding.geometry && binding.geometry->shaded &&
+                    binding.geometry->shaded->isProgressive()) {
+                ProgressiveShadedPlanGroup group;
+                group.part = part;
+                group.baseInstance = span.baseInstance;
+                group.instanceCount = span.instanceCount;
+                for (size_t i = localBase; i < localEnd; ++i)
+                    ++group.levelCounts[progressiveLevelBin(
+                        delta.visibleInstances[i].lodLevel)];
+                group.shadedItemBegin = span.shadedItemBegin;
+                group.shadedItemCount = span.shadedItemCount;
+                if (!group.shadedItemCount)
+                    return fail("missing-progressive-draw-item");
+                const size_t groupIndex =
+                    progressiveShadedPlanGroups_.size();
+                for (size_t i = localBase; i < localEnd; ++i)
+                    progressiveShadedPlanGroupByInstance_[
+                        delta.visibleInstances[i].instanceId] =
+                            groupIndex;
+                progressiveShadedPlanGroups_.push_back(group);
+            }
+            for (size_t i = localBase; i < localEnd; ++i)
+                progressivePlanIndexByInstance_[
+                    delta.visibleInstances[i].instanceId] =
+                        static_cast<uint32_t>(visibleBase + i);
+            localBase = localEnd;
+        }
+
+        for (CadVisibleInstance& visible : delta.visibleInstances) {
+            visible.partIndex += static_cast<uint32_t>(partBase);
+            cachedPlan_.visibleInstances.push_back(std::move(visible));
+        }
+        for (CadPartBinding& binding : delta.partBindings)
+            cachedPlan_.partBindings.push_back(std::move(binding));
+        const auto appendItems = [visibleBase, partBase](
+                auto& destination, auto& source) {
+            for (auto& item : source) {
+                item.baseInstance += static_cast<uint32_t>(visibleBase);
+                item.partIndex += static_cast<uint32_t>(partBase);
+                destination.push_back(std::move(item));
+            }
+        };
+        appendItems(cachedPlan_.wireItems, delta.wireItems);
+        appendItems(cachedPlan_.pointItems, delta.pointItems);
+        appendItems(cachedPlan_.shadedItems, delta.shadedItems);
+        for (CadRepKey& rep : delta.requiredReps)
+            cachedPlan_.requiredReps.push_back(std::move(rep));
+        for (const auto& item : delta.maximumRequestedLodByPart) {
+            auto inserted = cachedPlan_.maximumRequestedLodByPart.emplace(
+                item.first, item.second);
+            if (!inserted.second)
+                inserted.first->second =
+                    std::max(inserted.first->second, item.second);
+        }
+        cachedPlan_.wirePartsWithUncollapsedInstances.insert(
+            delta.wirePartsWithUncollapsedInstances.begin(),
+            delta.wirePartsWithUncollapsedInstances.end());
+        cachedPlan_.hasCustomWireStyle =
+            cachedPlan_.hasCustomWireStyle || delta.hasCustomWireStyle;
+        if (!delta.worldBounds.isEmpty())
+            cachedPlan_.worldBounds.extendBy(delta.worldBounds);
+
+        CadPlanAppendDelta appendDelta;
+        appendDelta.revision = nextAppendRevision_++;
+        if (nextAppendRevision_ == 0)
+            nextAppendRevision_ = 1;
+        appendDelta.subpixelProxyInputRevision =
+            nextSubpixelProxyInputRevision_++;
+        if (nextSubpixelProxyInputRevision_ == 0)
+            nextSubpixelProxyInputRevision_ = 1;
+        cachedPlan_.subpixelProxyInputRevision =
+            appendDelta.subpixelProxyInputRevision;
+        appendDelta.visibleBegin =
+            static_cast<uint32_t>(visibleBase);
+        appendDelta.visibleCount =
+            static_cast<uint32_t>(
+                cachedPlan_.visibleInstances.size() - visibleBase);
+        appendDelta.partBegin =
+            static_cast<uint32_t>(partBase);
+        appendDelta.partCount =
+            static_cast<uint32_t>(
+                cachedPlan_.partBindings.size() - partBase);
+        appendDelta.shadedItemBegin =
+            static_cast<uint32_t>(shadedItemBase);
+        appendDelta.shadedItemCount =
+            static_cast<uint32_t>(
+                cachedPlan_.shadedItems.size() - shadedItemBase);
+        appendDelta.retiredVisibleIndices =
+            std::move(replacedIndices);
+        cachedPlan_.appendRevision = appendDelta.revision;
+        cachedPlan_.appendDeltaEntryCount +=
+            1u + appendDelta.retiredVisibleIndices.size();
+        cachedPlan_.appendDeltas.push_back(
+            std::move(appendDelta));
+        static constexpr size_t maxAppendDeltaBatches = 256u;
+        static constexpr size_t maxAppendDeltaEntries = 65536u;
+        while (cachedPlan_.appendDeltas.size() >
+                    maxAppendDeltaBatches ||
+                cachedPlan_.appendDeltaEntryCount >
+                    maxAppendDeltaEntries) {
+            const auto& front =
+                cachedPlan_.appendDeltas.front();
+            cachedPlan_.appendDeltaEntryCount -=
+                1u + front.retiredVisibleIndices.size();
+            cachedPlan_.appendDeltaFloorRevision =
+                std::max(
+                    cachedPlan_.appendDeltaFloorRevision,
+                    front.revision);
+            cachedPlan_.appendDeltas.pop_front();
+        }
+
+        bvhDirty_ = true;
+        return true;
+    }
+
+    /*
+     * Replace the part behind one uniquely owned presentation slot without
+     * recompiling the complete assembly.
+     *
+     * Cold progressive population commonly changes a leaf from its structural
+     * box part to a newly arrived mesh part.  In a large vehicle most such
+     * parts have one occurrence.  The old implementation treated every wave
+     * as arbitrary topology and rebuilt the growing N-entry plan, making
+     * streamed realization quadratic.  A unique slot can instead retain its
+     * visible-instance index and part-binding index, tombstone its old draw
+     * items, and append the new channel items.  The next draw-mode transition
+     * or genuinely shared-part edit performs a normal compact rebuild.
+     */
+    bool canPatchCachedInstancePartRebind(
+            Obol::InstanceId instance, Obol::PartId oldPart) const {
+        if (planDirty_ || geometryDirty_ || cachedDM_ < 0)
+            return false;
+        const auto retained = instances_.find(instance);
+        if (retained == instances_.end())
+            return false;
+        const Obol::PartId newPart = retained->second.partId;
+        if (newPart == oldPart)
+            return false;
+        const auto oldSpanFound = cachedPlanPartSpansByPart_.find(oldPart);
+        if (oldSpanFound == cachedPlanPartSpansByPart_.end() ||
+                oldSpanFound->second.size() != 1u ||
+                oldSpanFound->second.front().instanceCount != 1u ||
+                cachedPlanPartSpansByPart_.count(newPart))
+            return false;
+        const CachedPlanPartSpan oldSpan =
+            oldSpanFound->second.front();
+        if (oldSpan.partIndex >= cachedPlan_.partBindings.size() ||
+                oldSpan.baseInstance >= cachedPlan_.visibleInstances.size())
+            return false;
+        const Obol::internal::CadVisibleInstance& visible =
+            cachedPlan_.visibleInstances[oldSpan.baseInstance];
+        if (!(visible.instanceId == instance) ||
+                visible.partIndex != oldSpan.partIndex)
+            return false;
+        if (!(cachedPlan_.partBindings[oldSpan.partIndex].part == oldPart))
+            return false;
+        const auto newGeometryFound = parts_.find(newPart);
+        if (newGeometryFound == parts_.end() || !newGeometryFound->second)
+            return false;
+        const auto rangeIsValid = [](size_t size, size_t begin, size_t count) {
+            return begin <= size && count <= size - begin;
+        };
+        return rangeIsValid(
+                   cachedPlan_.wireItems.size(),
+                   oldSpan.wireItemBegin, oldSpan.wireItemCount) &&
+            rangeIsValid(
+                   cachedPlan_.pointItems.size(),
+                   oldSpan.pointItemBegin, oldSpan.pointItemCount) &&
+            rangeIsValid(
+                   cachedPlan_.shadedItems.size(),
+                   oldSpan.shadedItemBegin, oldSpan.shadedItemCount);
+    }
+
+    bool patchCachedInstancePartRebind(
+            Obol::InstanceId instance, Obol::PartId oldPart,
+            bool prevalidated = false) {
+        using namespace Obol::internal;
+
+        if (!prevalidated &&
+                !canPatchCachedInstancePartRebind(instance, oldPart))
+            return false;
+        const auto retained = instances_.find(instance);
+        const Obol::PartId newPart = retained->second.partId;
+        const auto oldSpanFound = cachedPlanPartSpansByPart_.find(oldPart);
+        const CachedPlanPartSpan oldSpan =
+            oldSpanFound->second.front();
+        CadVisibleInstance& visible =
+            cachedPlan_.visibleInstances[oldSpan.baseInstance];
+        const auto newGeometryFound = parts_.find(newPart);
+        const Obol::PartGeometry& geometry = *newGeometryFound->second;
+
+        const auto disableItems = [](auto& items, size_t begin, size_t count) {
+            if (begin > items.size() || count > items.size() - begin)
+                return false;
+            for (size_t i = begin; i < begin + count; ++i)
+                items[i].instanceCount = 0;
+            return true;
+        };
+        if (!disableItems(
+                cachedPlan_.wireItems, oldSpan.wireItemBegin,
+                oldSpan.wireItemCount) ||
+                !disableItems(
+                    cachedPlan_.pointItems, oldSpan.pointItemBegin,
+                    oldSpan.pointItemCount) ||
+                !disableItems(
+                    cachedPlan_.shadedItems, oldSpan.shadedItemBegin,
+                    oldSpan.shadedItemCount))
+            return false;
+
+        const InstanceData& data = retained->second;
+        std::memcpy(
+            visible.transform.data(), data.localToRoot[0],
+            16 * sizeof(float));
+        float r = 0.8f, g = 0.8f, b = 0.8f, a = 1.0f;
+        if (data.style.hasColorOverride) {
+            r = data.style.color[0];
+            g = data.style.color[1];
+            b = data.style.color[2];
+            a = data.style.color[3];
+        }
+        visible.rgba[0] = static_cast<uint8_t>(
+            std::min(255.0f, r * 255.0f));
+        visible.rgba[1] = static_cast<uint8_t>(
+            std::min(255.0f, g * 255.0f));
+        visible.rgba[2] = static_cast<uint8_t>(
+            std::min(255.0f, b * 255.0f));
+        visible.rgba[3] = static_cast<uint8_t>(
+            std::min(255.0f, a * 255.0f));
+        visible.lineWidth = std::max(1.0f, data.style.lineWidth);
+        visible.linePattern = data.style.linePattern;
+        visible.linePatternFactor = std::max<uint16_t>(
+            1u, data.style.linePatternFactor);
+        if (visible.lineWidth != 1.0f ||
+                visible.linePattern != 0xffffu)
+            cachedPlan_.hasCustomWireStyle = true;
+        visible.flags =
+            (selected_.count(instance) ? CadInstanceSelected : 0u) |
+            (data.style.hasColorOverride ?
+                CadInstanceColorOverride : 0u) |
+            (hidden_.count(instance) ? CadInstanceHidden : 0u);
+        visible.lodLevel = data.lodLevel;
+        if (!data.worldBounds.isEmpty()) {
+            SbVec3f minimum, maximum;
+            data.worldBounds.getBounds(minimum, maximum);
+            for (int axis = 0; axis < 3; ++axis) {
+                visible.wbMin[axis] = minimum[axis];
+                visible.wbMax[axis] = maximum[axis];
+            }
+            if (!(visible.flags & CadInstanceHidden))
+                cachedPlan_.worldBounds.extendBy(data.worldBounds);
+        }
+
+        CadPartBinding& binding =
+            cachedPlan_.partBindings[oldSpan.partIndex];
+        binding.part = newPart;
+        binding.geometry = newGeometryFound->second;
+        const auto generation = partGeneration_.find(newPart);
+        binding.generation = generation == partGeneration_.end() ?
+            0 : generation->second;
+        binding.structuralProxy = newGeometryFound->second->structuralProxy;
+        const auto proxy = subpixelProxyCorners_.find(newPart);
+        binding.subpixelProxyEligible =
+            proxy != subpixelProxyCorners_.end();
+        if (binding.subpixelProxyEligible)
+            binding.subpixelProxyCorners = proxy->second;
+        else
+            binding.subpixelProxyCorners = {};
+
+        cachedPlan_.maximumRequestedLodByPart.erase(oldPart);
+        cachedPlan_.wirePartsWithUncollapsedInstances.erase(oldPart);
+        progressiveShadedPlanGroupByInstance_.erase(instance);
+
+        CachedPlanPartSpan newSpan;
+        newSpan.partIndex = oldSpan.partIndex;
+        newSpan.baseInstance = oldSpan.baseInstance;
+        newSpan.instanceCount = 1u;
+        const bool needWire =
+            cachedDM_ == SoCADAssembly::WIREFRAME ||
+            cachedDM_ == SoCADAssembly::SHADED_WITH_EDGES ||
+            cachedDM_ == SoCADAssembly::HIDDEN_LINE;
+        const bool needShaded =
+            cachedDM_ == SoCADAssembly::SHADED ||
+            cachedDM_ == SoCADAssembly::SHADED_WITH_EDGES ||
+            cachedDM_ == SoCADAssembly::HIDDEN_LINE;
+        if ((needWire && geometry.wire) ||
+                (needShaded && geometry.shaded) ||
+                (geometry.points && !geometry.points->positions.empty()))
+            cachedPlan_.maximumRequestedLodByPart[newPart] =
+                visible.lodLevel;
+
+        if (needWire && geometry.wire) {
+            CadDrawItem item;
+            item.rep.part = newPart;
+            item.rep.type = CadRepType::WireSegments;
+            item.partIndex = oldSpan.partIndex;
+            item.baseInstance = oldSpan.baseInstance;
+            item.instanceCount = 1u;
+            item.customWireStyle =
+                visible.lineWidth != 1.0f ||
+                visible.linePattern != 0xffffu;
+            newSpan.wireItemBegin = cachedPlan_.wireItems.size();
+            newSpan.wireItemCount = 1u;
+            cachedPlan_.wireItems.push_back(item);
+            cachedPlan_.requiredReps.push_back(item.rep);
+            cachedPlan_.wirePartsWithUncollapsedInstances.insert(newPart);
+        }
+        if (geometry.points && !geometry.points->positions.empty()) {
+            CadDrawItem item;
+            item.rep.part = newPart;
+            item.rep.type = CadRepType::Points;
+            item.partIndex = oldSpan.partIndex;
+            item.baseInstance = oldSpan.baseInstance;
+            item.instanceCount = 1u;
+            newSpan.pointItemBegin = cachedPlan_.pointItems.size();
+            newSpan.pointItemCount = 1u;
+            cachedPlan_.pointItems.push_back(item);
+            cachedPlan_.requiredReps.push_back(item.rep);
+        }
+        if (needShaded && geometry.shaded) {
+            CadDrawItem item;
+            item.rep.part = newPart;
+            item.rep.type = CadRepType::Triangles;
+            item.partIndex = oldSpan.partIndex;
+            item.baseInstance = oldSpan.baseInstance;
+            item.instanceCount = 1u;
+            item.cullBackfaces = geometry.shadedCullBackfaces &&
+                visible.rgba[3] == 255 &&
+                cadTransformPreservesOrientation(visible.transform);
+            newSpan.shadedItemBegin = cachedPlan_.shadedItems.size();
+            newSpan.shadedItemCount = 1u;
+            cachedPlan_.shadedItems.push_back(item);
+            cachedPlan_.requiredReps.push_back(item.rep);
+            if (geometry.shaded->isProgressive()) {
+                ProgressiveShadedPlanGroup group;
+                group.part = newPart;
+                group.baseInstance = oldSpan.baseInstance;
+                group.instanceCount = 1u;
+                group.levelCounts[
+                    progressiveLevelBin(visible.lodLevel)] = 1u;
+                group.shadedItemBegin = newSpan.shadedItemBegin;
+                group.shadedItemCount = 1u;
+                progressiveShadedPlanGroupByInstance_[instance] =
+                    progressiveShadedPlanGroups_.size();
+                progressiveShadedPlanGroups_.push_back(group);
+            }
+        }
+
+        cachedPlanPartSpansByPart_.erase(oldSpanFound);
+        cachedPlanPartSpansByPart_[newPart].push_back(newSpan);
+        cachedPlan_.subpixelProxyInputRevision =
+            nextSubpixelProxyInputRevision_++;
+        if (nextSubpixelProxyInputRevision_ == 0)
+            nextSubpixelProxyInputRevision_ = 1;
+        subpixelProxyStateInputRevision_ = 0;
+        subpixelProxyViewValid_ = false;
+        bvhDirty_ = true;
+        return true;
+    }
+
+    /*
+     * Apply a wave of independent unique-slot presentation rebinds without
+     * appending duplicate visible-instance records.  Validate the complete
+     * wave before mutating the cached plan so a shared structural range or a
+     * repeated target part can fall back to the append representation
+     * atomically.
+     */
+    bool patchCachedInstancePartRebinds(
+            const std::vector<std::pair<Obol::InstanceId, Obol::PartId>>&
+                rebinds) {
+        if (rebinds.empty())
+            return false;
+        std::unordered_set<Obol::PartId, std::hash<Obol::PartId>>
+            targetParts;
+        targetParts.reserve(rebinds.size());
+        for (const auto& rebind : rebinds) {
+            if (!canPatchCachedInstancePartRebind(
+                    rebind.first, rebind.second))
+                return false;
+            const auto retained = instances_.find(rebind.first);
+            if (retained == instances_.end() ||
+                    !targetParts.insert(retained->second.partId).second)
+                return false;
+        }
+        /*
+         * The preflight above makes the batch atomic.  Do not repeat the
+         * same part/span/instance hash lookups inside every patch, and reserve
+         * the exact worst-case append capacity before the first mutation.
+         * Cold box-to-mesh waves otherwise spend more owner-thread time in
+         * allocator growth and duplicate validation than in renderer work.
+         */
+        cachedPlan_.wireItems.reserve(
+            cachedPlan_.wireItems.size() + rebinds.size());
+        cachedPlan_.pointItems.reserve(
+            cachedPlan_.pointItems.size() + rebinds.size());
+        cachedPlan_.shadedItems.reserve(
+            cachedPlan_.shadedItems.size() + rebinds.size());
+        cachedPlan_.requiredReps.reserve(
+            cachedPlan_.requiredReps.size() + 3u * rebinds.size());
+        progressiveShadedPlanGroups_.reserve(
+            progressiveShadedPlanGroups_.size() + rebinds.size());
+        progressiveShadedPlanGroupByInstance_.reserve(
+            progressiveShadedPlanGroupByInstance_.size() +
+                rebinds.size());
+        cachedPlanPartSpansByPart_.reserve(
+            cachedPlanPartSpansByPart_.size() + rebinds.size());
+        cachedPlan_.maximumRequestedLodByPart.reserve(
+            cachedPlan_.maximumRequestedLodByPart.size() +
+                rebinds.size());
+        cachedPlan_.wirePartsWithUncollapsedInstances.reserve(
+            cachedPlan_.wirePartsWithUncollapsedInstances.size() +
+                rebinds.size());
+        for (const auto& rebind : rebinds) {
+            if (!patchCachedInstancePartRebind(
+                    rebind.first, rebind.second, true))
+                return false;
+        }
+        return true;
+    }
+
+    void finishSparseStructuralPatch() {
+        geometryRevision_ = nextGeometryRevision_++;
+        if (nextGeometryRevision_ == 0)
+            nextGeometryRevision_ = 1;
+        cachedPlan_.geometryRevision = geometryRevision_;
+        cachedPlan_.revision = nextPlanRevision_++;
+        if (nextPlanRevision_ == 0)
+            nextPlanRevision_ = 1;
+        cachedPlan_.shadedLayoutRevision =
+            nextShadedLayoutRevision_++;
+        if (nextShadedLayoutRevision_ == 0)
+            nextShadedLayoutRevision_ = 1;
+    }
+
+    /*
+     * Replace the immutable arrays behind an existing retained part without
+     * recompiling the assembly-wide instance plan.  Progressive population
+     * growth changes a part generation and its resident prefix capacity, but
+     * not the occurrence topology, styles, or level buckets.
+     */
+    bool patchCachedPartGeometry(
+            Obol::PartId part,
+            Obol::internal::CadPartGeometryDelta& geometryDelta,
+            bool preservesBounds = false) {
+        if (planDirty_ || geometryDirty_)
+            return false;
+        const auto geometryFound = parts_.find(part);
+        if (geometryFound == parts_.end() || !geometryFound->second)
+            return false;
+        const auto spansFound = cachedPlanPartSpansByPart_.find(part);
+        if (spansFound == cachedPlanPartSpansByPart_.end()) {
+            /*
+             * An unreferenced retained part has no current frame binding.
+             * Hidden occurrences remain indexed, so a referenced part must
+             * always have a span even while every occurrence is hidden.
+             */
+            const auto referenced = instanceIdsByPart_.find(part);
+            return referenced == instanceIdsByPart_.end() ||
+                referenced->second.size() == 0;
+        }
+        const auto generationFound = partGeneration_.find(part);
+        const uint64_t generation =
+            generationFound == partGeneration_.end() ?
+            0 : generationFound->second;
+        const auto proxyFound = subpixelProxyCorners_.find(part);
+        auto& visible = cachedPlan_.visibleInstances;
+        for (const CachedPlanPartSpan& span : spansFound->second) {
+            if (span.partIndex >= cachedPlan_.partBindings.size() ||
+                    span.baseInstance > visible.size() ||
+                    span.instanceCount >
+                        visible.size() - span.baseInstance ||
+                    span.shadedItemBegin >
+                        cachedPlan_.shadedItems.size() ||
+                    span.shadedItemCount >
+                        cachedPlan_.shadedItems.size() -
+                            span.shadedItemBegin)
+                return false;
+            const auto& binding =
+                cachedPlan_.partBindings[span.partIndex];
+            if (!binding.geometry ||
+                    !partGeometryPlanCompatible(
+                        *binding.geometry, *geometryFound->second))
+                return false;
+        }
+        for (const CachedPlanPartSpan& span : spansFound->second) {
+            auto& binding = cachedPlan_.partBindings[span.partIndex];
+            const bool newProxyEligible =
+                proxyFound != subpixelProxyCorners_.end();
+            if (binding.subpixelProxyEligible != newProxyEligible ||
+                    (newProxyEligible &&
+                     binding.subpixelProxyCorners != proxyFound->second) ||
+                    binding.structuralProxy !=
+                        geometryFound->second->structuralProxy)
+                geometryDelta.subpixelProxyInputChanged = true;
+            binding.geometry = geometryFound->second;
+            binding.generation = generation;
+            binding.subpixelProxyEligible = newProxyEligible;
+            binding.structuralProxy =
+                geometryFound->second->structuralProxy;
+            if (binding.subpixelProxyEligible)
+                binding.subpixelProxyCorners = proxyFound->second;
+            else
+                binding.subpixelProxyCorners = {};
+
+            if (!preservesBounds) {
+                geometryDelta.boundsChanged = true;
+                for (uint32_t offset = 0;
+                        offset < span.instanceCount; ++offset) {
+                    auto& occurrence =
+                        visible[span.baseInstance + offset];
+                    const auto instanceFound =
+                        instances_.find(occurrence.instanceId);
+                    if (instanceFound == instances_.end())
+                        return false;
+                    const SbBox3f& bounds =
+                        instanceFound->second.worldBounds;
+                    if (bounds.isEmpty())
+                        continue;
+                    SbVec3f minimum, maximum;
+                    bounds.getBounds(minimum, maximum);
+                    for (int axis = 0; axis < 3; ++axis) {
+                        occurrence.wbMin[axis] = minimum[axis];
+                        occurrence.wbMax[axis] = maximum[axis];
+                    }
+                    cachedPlan_.worldBounds.extendBy(bounds);
+                }
+            }
+
+            const size_t shadedEnd =
+                span.shadedItemBegin + span.shadedItemCount;
+            for (size_t itemIndex = span.shadedItemBegin;
+                    itemIndex < shadedEnd; ++itemIndex) {
+                auto& item = cachedPlan_.shadedItems[itemIndex];
+                if (!(item.rep.part == part))
+                    return false;
+                item.cullBackfaces =
+                    geometryFound->second->shadedCullBackfaces &&
+                    std::all_of(
+                        visible.begin() + item.baseInstance,
+                        visible.begin() + item.baseInstance +
+                            item.instanceCount,
+                        [](const Obol::internal::CadVisibleInstance&
+                                occurrence) {
+                            return occurrence.rgba[3] == 255 &&
+                                cadTransformPreservesOrientation(
+                                    occurrence.transform);
+                        });
+            }
+        }
+
+        geometryDelta.ranges.reserve(
+            geometryDelta.ranges.size() +
+            spansFound->second.size());
+        for (const CachedPlanPartSpan& span :
+                spansFound->second) {
+            Obol::internal::CadPartGeometryRange range;
+            range.partIndex = span.partIndex;
+            range.baseInstance = span.baseInstance;
+            range.instanceCount = span.instanceCount;
+            range.shadedItemBegin = static_cast<uint32_t>(
+                span.shadedItemBegin);
+            range.shadedItemCount = static_cast<uint32_t>(
+                span.shadedItemCount);
+            geometryDelta.ranges.push_back(range);
+        }
+        return true;
+    }
+
+    void finishPartGeometryPatch(
+            Obol::internal::CadPartGeometryDelta geometryDelta) {
+        if (geometryDelta.ranges.empty())
+            return;
+        const bool subpixelProxyInputChanged =
+            geometryDelta.subpixelProxyInputChanged;
+        const bool boundsChanged =
+            geometryDelta.boundsChanged;
+        geometryDelta.revision =
+            nextPartGeometryRevision_++;
+        if (nextPartGeometryRevision_ == 0)
+            nextPartGeometryRevision_ = 1;
+        cachedPlan_.partGeometryRevision =
+            geometryDelta.revision;
+        cachedPlan_.partGeometryDeltaEntryCount +=
+            geometryDelta.ranges.size();
+        cachedPlan_.partGeometryDeltas.push_back(
+            std::move(geometryDelta));
+        static constexpr size_t maxGeometryDeltaBatches = 256u;
+        static constexpr size_t maxGeometryDeltaRanges = 65536u;
+        while (cachedPlan_.partGeometryDeltas.size() >
+                    maxGeometryDeltaBatches ||
+                cachedPlan_.partGeometryDeltaEntryCount >
+                    maxGeometryDeltaRanges) {
+            const auto& front =
+                cachedPlan_.partGeometryDeltas.front();
+            cachedPlan_.partGeometryDeltaEntryCount -=
+                front.ranges.size();
+            cachedPlan_.partGeometryDeltaFloorRevision =
+                std::max(
+                    cachedPlan_.partGeometryDeltaFloorRevision,
+                    front.revision);
+            cachedPlan_.partGeometryDeltas.pop_front();
+        }
+
+        geometryRevision_ = nextGeometryRevision_++;
+        if (nextGeometryRevision_ == 0)
+            nextGeometryRevision_ = 1;
+        cachedPlan_.geometryRevision = geometryRevision_;
+        cachedPlan_.revision = nextPlanRevision_++;
+        if (nextPlanRevision_ == 0)
+            nextPlanRevision_ = 1;
+        /*
+         * Fixed channel/occurrence slots do not change shaded layout.  The
+         * renderer consumes partGeometryRevision to patch the changed atlas
+         * records.  Only a conservative proxy-input change requires the
+         * assembly to reclassify all affected occurrences for this view.
+         */
+        if (subpixelProxyInputChanged) {
+            cachedPlan_.subpixelProxyInputRevision =
+                nextSubpixelProxyInputRevision_++;
+            if (nextSubpixelProxyInputRevision_ == 0)
+                nextSubpixelProxyInputRevision_ = 1;
+            subpixelProxyStateInputRevision_ = 0;
+            subpixelProxyViewValid_ = false;
+        }
+        if (boundsChanged)
+            bvhDirty_ = true;
+    }
+
+    bool patchCachedInstanceLodLevel(
+            Obol::InstanceId instance, uint8_t lodLevel,
+            std::unordered_set<size_t>& changedGroups) {
+        const auto fail = [&](const char *reason) {
+            if (cadPlanDebugEnabled() &&
+                    planDebugPatchMessageCount_++ <
+                        cadPlanDebugMessageLimit())
+                std::fprintf(stderr,
+                    "SoCADAssembly sparse LoD classification rejected "
+                    "reason=%s instance=%016llx:%016llx level=%u "
+                    "plan_dirty=%d geometry_dirty=%d draw_mode=%d\n",
+                    reason ? reason : "unknown",
+                    static_cast<unsigned long long>(instance.w0),
+                    static_cast<unsigned long long>(instance.w1),
+                    static_cast<unsigned>(lodLevel),
+                    planDirty_ ? 1 : 0, geometryDirty_ ? 1 : 0,
+                    cachedDM_);
+            return false;
+        };
+        if (planDirty_ || geometryDirty_ ||
+                !drawModeHasShadedPlan(cachedDM_))
+            return fail("plan-state");
+        const auto retained = instances_.find(instance);
+        if (retained == instances_.end())
+            return fail("instance-not-retained");
+        const auto indexed =
+            progressivePlanIndexByInstance_.find(instance);
+        if (indexed == progressivePlanIndexByInstance_.end()) {
+            /*
+             * A retained fallback with no active representation in this draw
+             * mode has no compiled level to patch.  Updating its source record
+             * is sufficient.
+             */
+            const bool inactive =
+                cachedPlanPartSpansByPart_.find(
+                retained->second.partId) ==
+                    cachedPlanPartSpansByPart_.end();
+            return inactive ? true : fail("active-instance-not-indexed");
+        }
+        if (indexed->second >= cachedPlan_.visibleInstances.size())
+            return fail("invalid-visible-index");
+        const auto& visible =
+            cachedPlan_.visibleInstances[indexed->second];
+        if (visible.partIndex >= cachedPlan_.partBindings.size())
+            return fail("invalid-part-index");
+        const auto& binding =
+            cachedPlan_.partBindings[visible.partIndex];
+        if (!binding.geometry)
+            return fail("missing-binding-geometry");
+        const bool progressiveShaded =
+            binding.geometry->shaded &&
+            binding.geometry->shaded->isProgressive();
+        if (progressiveShaded)
+            return patchProgressiveShadedPlanLod(
+                instance, lodLevel, changedGroups);
+
+        const bool wireActive =
+            cachedDM_ == SoCADAssembly::SHADED_WITH_EDGES ||
+            cachedDM_ == SoCADAssembly::HIDDEN_LINE;
+        if (wireActive && binding.geometry->wire &&
+                binding.geometry->wire->isProgressive())
+            return fail("progressive-wire-layout");
+
+        /*
+         * Ordinary meshes and structural fallbacks draw the same arrays at
+         * every level.  Preserve the authored bookkeeping value in-place, but
+         * do not manufacture a layout invalidation for it.
+         */
+        cachedPlan_.visibleInstances[indexed->second].lodLevel =
+            lodLevel;
+        return true;
+    }
+
     bool patchProgressiveShadedPlanLod(
             Obol::InstanceId instance, uint8_t lodLevel,
             std::unordered_set<size_t>& changedGroups) {
-        if (planDirty_ || geometryDirty_ ||
-                cachedDM_ != SoCADAssembly::SHADED)
+        const auto fail = [&](const char *reason) {
+            ++progressivePlanPatchFailureCount_;
+            if (cadPlanDebugEnabled() &&
+                    planDebugPatchMessageCount_++ <
+                        cadPlanDebugMessageLimit())
+                std::fprintf(stderr,
+                    "SoCADAssembly sparse LoD patch rejected reason=%s "
+                    "instance=%016llx:%016llx level=%u "
+                    "plan_dirty=%d geometry_dirty=%d draw_mode=%d "
+                    "visible=%zu instances=%zu parts=%zu\n",
+                    reason ? reason : "unknown",
+                    static_cast<unsigned long long>(instance.w0),
+                    static_cast<unsigned long long>(instance.w1),
+                    static_cast<unsigned>(lodLevel),
+                    planDirty_ ? 1 : 0, geometryDirty_ ? 1 : 0, cachedDM_,
+                    cachedPlan_.visibleInstances.size(), instances_.size(),
+                    parts_.size());
             return false;
+        };
+        if (planDirty_ || geometryDirty_ ||
+                !drawModeHasShadedPlan(cachedDM_))
+            return fail("plan-state");
         const auto indexFound =
             progressivePlanIndexByInstance_.find(instance);
         if (indexFound == progressivePlanIndexByInstance_.end())
-            return false;
+            return fail("instance-not-indexed");
         uint32_t index = indexFound->second;
         if (index >= cachedPlan_.visibleInstances.size())
-            return false;
+            return fail("invalid-visible-index");
         auto& visible = cachedPlan_.visibleInstances;
         const auto instanceFound = instances_.find(instance);
         if (instanceFound == instances_.end())
-            return false;
+            return fail("instance-not-retained");
         const auto groupFound =
-            progressiveShadedPlanGroupByPart_.find(
-                instanceFound->second.partId);
-        if (groupFound == progressiveShadedPlanGroupByPart_.end())
-            return false;
+            progressiveShadedPlanGroupByInstance_.find(instance);
+        if (groupFound == progressiveShadedPlanGroupByInstance_.end())
+            return fail("part-group-not-indexed");
         const size_t groupIndex = groupFound->second;
         ProgressiveShadedPlanGroup& group =
             progressiveShadedPlanGroups_[groupIndex];
@@ -1106,6 +2632,37 @@ struct SoCADAssemblyImpl {
             if (left == right)
                 return;
             std::swap(visible[left], visible[right]);
+            /*
+             * Screen-size proxy membership is independent of the PoP cut.
+             * Keep all index-parallel classification state attached to the
+             * occurrence when level bucketing swaps two records, avoiding a
+             * complete scene reprojection at an unchanged camera.
+             */
+            if (subpixelProxyState_.size() == visible.size())
+                std::swap(subpixelProxyState_[left],
+                          subpixelProxyState_[right]);
+            if (cachedPlan_.subpixelProxyMask.size() == visible.size())
+                std::swap(cachedPlan_.subpixelProxyMask[left],
+                          cachedPlan_.subpixelProxyMask[right]);
+            if (subpixelProxyPointByVisible_.size() == visible.size())
+                std::swap(subpixelProxyPointByVisible_[left],
+                          subpixelProxyPointByVisible_[right]);
+            if (subpixelProxyPointByVisible_.size() == visible.size()) {
+                const uint32_t noPoint =
+                    std::numeric_limits<uint32_t>::max();
+                const uint32_t leftPoint =
+                    subpixelProxyPointByVisible_[left];
+                const uint32_t rightPoint =
+                    subpixelProxyPointByVisible_[right];
+                if (leftPoint != noPoint &&
+                        leftPoint <
+                            subpixelProxyVisibleByPoint_.size())
+                    subpixelProxyVisibleByPoint_[leftPoint] = left;
+                if (rightPoint != noPoint &&
+                        rightPoint <
+                            subpixelProxyVisibleByPoint_.size())
+                    subpixelProxyVisibleByPoint_[rightPoint] = right;
+            }
             progressivePlanIndexByInstance_[visible[left].instanceId] = left;
             progressivePlanIndexByInstance_[visible[right].instanceId] = right;
         };
@@ -1147,6 +2704,7 @@ struct SoCADAssemblyImpl {
 
     void finishProgressiveShadedPlanPatch(
             const std::unordered_set<size_t>& changedGroups) {
+        Obol::internal::CadShadedLodDelta delta;
         for (size_t groupIndex : changedGroups) {
             if (groupIndex >= progressiveShadedPlanGroups_.size())
                 continue;
@@ -1192,80 +2750,527 @@ struct SoCADAssemblyImpl {
                         std::min<size_t>(bin, 15u));
             }
             cachedPlan_.maximumRequestedLodByPart[group.part] = maximumLod;
+            if (group.baseInstance <
+                    cachedPlan_.visibleInstances.size() &&
+                    group.shadedItemBegin <=
+                        std::numeric_limits<uint32_t>::max() &&
+                    group.shadedItemCount <=
+                        std::numeric_limits<uint32_t>::max()) {
+                Obol::internal::CadShadedLodRange range;
+                range.partIndex =
+                    cachedPlan_.visibleInstances[
+                        group.baseInstance].partIndex;
+                range.baseInstance = group.baseInstance;
+                range.instanceCount = group.instanceCount;
+                range.shadedItemBegin = static_cast<uint32_t>(
+                    group.shadedItemBegin);
+                range.shadedItemCount = static_cast<uint32_t>(
+                    group.shadedItemCount);
+                delta.ranges.push_back(range);
+            }
         }
         cachedPlan_.revision = nextPlanRevision_++;
         if (nextPlanRevision_ == 0)
             nextPlanRevision_ = 1;
-        subpixelProxyStatePlanRevision_ = 0;
+        if (!changedGroups.empty()) {
+            /*
+             * The fixed group/item slots did not change structurally.
+             * Publish a bounded LoD journal while leaving the layout stamp
+             * stable, so retained renderers can patch only the affected
+             * atlas demands, instance levels, and commands.
+             */
+            std::sort(delta.ranges.begin(), delta.ranges.end(),
+                [](const auto& left, const auto& right) {
+                    return left.baseInstance < right.baseInstance;
+                });
+            delta.ranges.erase(
+                std::unique(delta.ranges.begin(), delta.ranges.end(),
+                    [](const auto& left, const auto& right) {
+                        return left.partIndex == right.partIndex &&
+                            left.baseInstance == right.baseInstance;
+                    }),
+                delta.ranges.end());
+            cachedPlan_.shadedLodRevision =
+                nextShadedLodRevision_++;
+            if (nextShadedLodRevision_ == 0)
+                nextShadedLodRevision_ = 1;
+            delta.revision = cachedPlan_.shadedLodRevision;
+            cachedPlan_.shadedLodDeltaEntryCount +=
+                delta.ranges.size();
+            cachedPlan_.shadedLodDeltas.push_back(std::move(delta));
+            static constexpr size_t maxDeltaBatches = 256u;
+            static constexpr size_t maxDeltaRanges = 65536u;
+            while (cachedPlan_.shadedLodDeltas.size() >
+                        maxDeltaBatches ||
+                    cachedPlan_.shadedLodDeltaEntryCount >
+                        maxDeltaRanges) {
+                const auto& front =
+                    cachedPlan_.shadedLodDeltas.front();
+                cachedPlan_.shadedLodDeltaEntryCount -=
+                    front.ranges.size();
+                cachedPlan_.shadedLodDeltaFloorRevision =
+                    std::max(
+                        cachedPlan_.shadedLodDeltaFloorRevision,
+                        front.revision);
+                cachedPlan_.shadedLodDeltas.pop_front();
+            }
+        }
     }
 
-    void updateSubpixelProxyPlan(const SbMatrix& viewProj,
-                                 const SbVec2s& viewportSize)
+    bool subpixelProxyPointForOccurrence(
+            const Obol::internal::CadFramePlan& plan,
+            size_t visibleIndex,
+            const SbMatrix& viewProj,
+            const SbVec2s& viewportSize,
+            float pixelThreshold,
+            bool wasCollapsed,
+            Obol::internal::CadSubpixelProxyPoint& replacement) const
+    {
+        using namespace Obol::internal;
+        if (visibleIndex >= plan.visibleInstances.size())
+            return false;
+        const CadVisibleInstance& instance =
+            plan.visibleInstances[visibleIndex];
+        if (instance.flags & CadInstanceHidden)
+            return false;
+        if (instance.partIndex >= plan.partBindings.size())
+            return false;
+        const CadPartBinding& binding =
+            plan.partBindings[instance.partIndex];
+        if (!binding.subpixelProxyEligible)
+            return false;
+        const bool wireActive =
+            cachedDM_ == SoCADAssembly::WIREFRAME ||
+            cachedDM_ == SoCADAssembly::SHADED_WITH_EDGES ||
+            cachedDM_ == SoCADAssembly::HIDDEN_LINE;
+        const bool shadedActive =
+            cachedDM_ == SoCADAssembly::SHADED ||
+            cachedDM_ == SoCADAssembly::SHADED_WITH_EDGES ||
+            cachedDM_ == SoCADAssembly::HIDDEN_LINE;
+        if (!binding.geometry ||
+                !((wireActive && binding.geometry->wire) ||
+                  (shadedActive && binding.geometry->shaded)))
+            return false;
+        const float threshold = pixelThreshold *
+            (wasCollapsed ? 1.25f : 0.75f);
+        SbVec3f point;
+        if (!cadSubpixelProxyPoint(
+                binding.subpixelProxyCorners, instance, viewProj,
+                viewportSize, threshold, point))
+            return false;
+
+        replacement.position = point;
+        replacement.rgba = instance.rgba;
+        replacement.instanceId = instance.instanceId;
+        replacement.flags = instance.flags;
+        return true;
+    }
+
+    void refreshWireProxyParts(
+            const std::unordered_set<Obol::PartId,
+                                     std::hash<Obol::PartId>>& parts)
     {
         using namespace Obol::internal;
         CadFramePlan& plan = cachedPlan_;
-        if (subpixelProxyViewValid_ &&
-                subpixelProxyViewPlanRevision_ == plan.revision &&
+        const bool wireActive =
+            cachedDM_ == SoCADAssembly::WIREFRAME ||
+            cachedDM_ == SoCADAssembly::SHADED_WITH_EDGES ||
+            cachedDM_ == SoCADAssembly::HIDDEN_LINE;
+        for (const Obol::PartId part : parts) {
+            const auto previous =
+                uncollapsedStructuralProxyCountByPart_.find(part);
+            if (previous !=
+                    uncollapsedStructuralProxyCountByPart_.end()) {
+                uncollapsedStructuralProxyCount_ =
+                    previous->second <=
+                            uncollapsedStructuralProxyCount_ ?
+                        uncollapsedStructuralProxyCount_ -
+                            previous->second :
+                        0u;
+                uncollapsedStructuralProxyCountByPart_.erase(previous);
+            }
+            plan.wirePartsWithUncollapsedInstances.erase(part);
+            if (!wireActive)
+                continue;
+
+            bool hasUncollapsed = false;
+            size_t structuralCount = 0;
+            const auto spans = cachedPlanPartSpansByPart_.find(part);
+            if (spans == cachedPlanPartSpansByPart_.end())
+                continue;
+            for (const CachedPlanPartSpan& span : spans->second) {
+                if (span.partIndex >= plan.partBindings.size())
+                    continue;
+                const CadPartBinding& binding =
+                    plan.partBindings[span.partIndex];
+                if (!binding.geometry || !binding.geometry->wire)
+                    continue;
+                const bool structuralProxy =
+                    binding.structuralProxy;
+                for (uint32_t offset = 0;
+                        offset < span.instanceCount; ++offset) {
+                    const size_t visibleIndex =
+                        span.baseInstance + offset;
+                    if (visibleIndex >= plan.visibleInstances.size())
+                        continue;
+                    const CadVisibleInstance& occurrence =
+                        plan.visibleInstances[visibleIndex];
+                    if (occurrence.partIndex != span.partIndex ||
+                            (occurrence.flags & CadInstanceHidden) ||
+                            (visibleIndex <
+                                 plan.subpixelProxyMask.size() &&
+                             plan.subpixelProxyMask[visibleIndex]))
+                        continue;
+                    hasUncollapsed = true;
+                    if (structuralProxy)
+                        ++structuralCount;
+                }
+            }
+            if (hasUncollapsed)
+                plan.wirePartsWithUncollapsedInstances.insert(part);
+            if (structuralCount) {
+                uncollapsedStructuralProxyCountByPart_[part] =
+                    structuralCount;
+                uncollapsedStructuralProxyCount_ += structuralCount;
+            }
+        }
+    }
+
+    bool patchSubpixelProxyAppendPlan(
+            const SbMatrix& viewProj,
+            const SbVec2s& viewportSize,
+            float pixelThreshold)
+    {
+        using namespace Obol::internal;
+        CadFramePlan& plan = cachedPlan_;
+        if (!subpixelProxyViewValid_ ||
+                subpixelProxyViewInputRevision_ !=
+                    subpixelProxyStateInputRevision_ ||
+                subpixelProxyStateInputRevision_ == 0 ||
+                subpixelProxyViewportSize_[0] != viewportSize[0] ||
+                subpixelProxyViewportSize_[1] != viewportSize[1] ||
+                subpixelProxyPixelThreshold_ != pixelThreshold ||
+                !(subpixelProxyViewProj_ == viewProj) ||
+                subpixelProxyClassifiedAppendRevision_ <
+                    plan.appendDeltaFloorRevision)
+            return false;
+
+        std::vector<const CadPlanAppendDelta *> deltas;
+        size_t expectedVisibleExtent = subpixelProxyState_.size();
+        for (const CadPlanAppendDelta& delta : plan.appendDeltas) {
+            if (delta.revision <=
+                    subpixelProxyClassifiedAppendRevision_)
+                continue;
+            if (delta.visibleBegin != expectedVisibleExtent ||
+                    delta.visibleBegin >
+                        plan.visibleInstances.size() ||
+                    delta.visibleCount >
+                        plan.visibleInstances.size() -
+                            delta.visibleBegin ||
+                    !delta.subpixelProxyInputRevision)
+                return false;
+            for (const uint32_t retired :
+                    delta.retiredVisibleIndices)
+                if (retired >= delta.visibleBegin)
+                    return false;
+            expectedVisibleExtent += delta.visibleCount;
+            deltas.push_back(&delta);
+        }
+        if (deltas.empty() ||
+                expectedVisibleExtent !=
+                    plan.visibleInstances.size() ||
+                deltas.back()->subpixelProxyInputRevision !=
+                    plan.subpixelProxyInputRevision)
+            return false;
+
+        const uint32_t noPoint =
+            std::numeric_limits<uint32_t>::max();
+        std::unordered_set<Obol::PartId,
+                           std::hash<Obol::PartId>> affectedParts;
+        affectedParts.reserve(deltas.size() * 2u);
+        const auto removePointForVisible =
+            [&](uint32_t visibleIndex) {
+                if (visibleIndex >=
+                        subpixelProxyPointByVisible_.size())
+                    return false;
+                const uint32_t pointIndex =
+                    subpixelProxyPointByVisible_[visibleIndex];
+                if (pointIndex == noPoint)
+                    return true;
+                if (pointIndex >= plan.subpixelProxyPoints.size() ||
+                        pointIndex >=
+                            subpixelProxyVisibleByPoint_.size())
+                    return false;
+                const size_t last =
+                    plan.subpixelProxyPoints.size() - 1u;
+                if (pointIndex != last) {
+                    const uint32_t movedVisible =
+                        subpixelProxyVisibleByPoint_[last];
+                    if (movedVisible >=
+                            subpixelProxyPointByVisible_.size())
+                        return false;
+                    plan.subpixelProxyPoints[pointIndex] =
+                        std::move(plan.subpixelProxyPoints[last]);
+                    subpixelProxyVisibleByPoint_[pointIndex] =
+                        movedVisible;
+                    subpixelProxyPointByVisible_[movedVisible] =
+                        pointIndex;
+                }
+                plan.subpixelProxyPoints.pop_back();
+                subpixelProxyVisibleByPoint_.pop_back();
+                subpixelProxyPointByVisible_[visibleIndex] =
+                    noPoint;
+                return true;
+            };
+
+        for (const CadPlanAppendDelta *delta : deltas) {
+            for (const uint32_t retired :
+                    delta->retiredVisibleIndices) {
+                if (retired >= plan.visibleInstances.size() ||
+                        !removePointForVisible(retired))
+                    return false;
+                const CadVisibleInstance& old =
+                    plan.visibleInstances[retired];
+                if (old.partIndex < plan.partBindings.size())
+                    affectedParts.insert(
+                        plan.partBindings[old.partIndex].part);
+                if (retired < subpixelProxyState_.size())
+                    subpixelProxyState_[retired] = 0u;
+                if (retired < plan.subpixelProxyMask.size())
+                    plan.subpixelProxyMask[retired] = 0u;
+            }
+
+            const size_t newExtent =
+                static_cast<size_t>(delta->visibleBegin) +
+                delta->visibleCount;
+            subpixelProxyState_.resize(newExtent, 0u);
+            plan.subpixelProxyMask.resize(newExtent, 0u);
+            subpixelProxyPointByVisible_.resize(
+                newExtent, noPoint);
+            for (size_t visibleIndex = delta->visibleBegin;
+                    visibleIndex < newExtent; ++visibleIndex) {
+                const CadVisibleInstance& occurrence =
+                    plan.visibleInstances[visibleIndex];
+                if (occurrence.partIndex < plan.partBindings.size())
+                    affectedParts.insert(
+                        plan.partBindings[
+                            occurrence.partIndex].part);
+                CadSubpixelProxyPoint replacement;
+                const bool collapsed =
+                    subpixelProxyPointForOccurrence(
+                        plan, visibleIndex, viewProj, viewportSize,
+                        pixelThreshold, false, replacement);
+                subpixelProxyState_[visibleIndex] =
+                    collapsed ? 1u : 0u;
+                plan.subpixelProxyMask[visibleIndex] =
+                    collapsed ? 1u : 0u;
+                if (!collapsed)
+                    continue;
+                subpixelProxyPointByVisible_[visibleIndex] =
+                    static_cast<uint32_t>(
+                        plan.subpixelProxyPoints.size());
+                plan.subpixelProxyPoints.push_back(
+                    std::move(replacement));
+                subpixelProxyVisibleByPoint_.push_back(
+                    static_cast<uint32_t>(visibleIndex));
+            }
+        }
+
+        refreshWireProxyParts(affectedParts);
+        plan.subpixelProxySourceInputRevision =
+            plan.subpixelProxyInputRevision;
+        plan.subpixelProxyRevision = nextSubpixelProxyRevision_++;
+        if (nextSubpixelProxyRevision_ == 0)
+            nextSubpixelProxyRevision_ = 1;
+        subpixelProxyClassifiedAppendRevision_ =
+            plan.appendRevision;
+        subpixelProxyStateInputRevision_ =
+            plan.subpixelProxyInputRevision;
+        subpixelProxyViewInputRevision_ =
+            plan.subpixelProxyInputRevision;
+        return true;
+    }
+
+    void updateSubpixelProxyPlan(const SbMatrix& viewProj,
+                                 const SbVec2s& viewportSize,
+                                 float pixelThreshold,
+                                 bool cameraMotionReuse)
+    {
+        using namespace Obol::internal;
+        CadFramePlan& plan = cachedPlan_;
+        pixelThreshold = std::isfinite(pixelThreshold) ?
+            std::max(1.0f, std::min(64.0f, pixelThreshold)) : 1.0f;
+        if (plan.subpixelProxyInputRevision !=
+                subpixelProxyViewInputRevision_ &&
+                patchSubpixelProxyAppendPlan(
+                    viewProj, viewportSize, pixelThreshold))
+            return;
+        /*
+         * Reproject the already classified point/mesh cut for the input burst
+         * instead of rescanning every occurrence on the GUI thread.
+         * Rotation and translation preserve the desired PoP prefix.  Zoom
+         * may change it, but the retained cut is still the fastest coherent
+         * first response and avoids blocking input on exact admission.  The
+         * view controller clears this hint on the first quiet frame or when a
+         * coverage pass proves that newly visible geometry is missing.
+         */
+        if (cameraMotionReuse && subpixelProxyViewValid_ &&
+                subpixelProxyViewInputRevision_ ==
+                    plan.subpixelProxyInputRevision &&
                 subpixelProxyViewportSize_[0] == viewportSize[0] &&
                 subpixelProxyViewportSize_[1] == viewportSize[1] &&
+                subpixelProxyPixelThreshold_ == pixelThreshold &&
+                !(subpixelProxyViewProj_ == viewProj)) {
+            ++subpixelProxyCameraMotionReuseCount_;
+            subpixelProxyViewProj_ = viewProj;
+            return;
+        }
+        if (subpixelProxyViewValid_ &&
+                subpixelProxyViewInputRevision_ ==
+                    plan.subpixelProxyInputRevision &&
+                subpixelProxyViewportSize_[0] == viewportSize[0] &&
+                subpixelProxyViewportSize_[1] == viewportSize[1] &&
+                subpixelProxyPixelThreshold_ == pixelThreshold &&
                 subpixelProxyViewProj_ == viewProj)
             return;
 
-        if (subpixelProxyStatePlanRevision_ != plan.revision) {
+        subpixelProxyCameraMotionReuseCount_ = 0;
+        if (subpixelProxyStateInputRevision_ !=
+                plan.subpixelProxyInputRevision) {
             subpixelProxyState_.assign(plan.visibleInstances.size(), 0u);
-            subpixelProxyStatePlanRevision_ = plan.revision;
+            subpixelProxyStateInputRevision_ =
+                plan.subpixelProxyInputRevision;
         }
 
         std::vector<uint8_t>& mask = subpixelProxyScratchMask_;
         std::vector<CadSubpixelProxyPoint>& points =
             subpixelProxyScratchPoints_;
+        std::vector<uint32_t>& visibleByPoint =
+            subpixelProxyScratchVisibleByPoint_;
         mask.assign(plan.visibleInstances.size(), 0u);
+        subpixelProxyPointByVisible_.assign(
+            plan.visibleInstances.size(),
+            std::numeric_limits<uint32_t>::max());
         points.clear();
-        plan.wirePartsWithUncollapsedInstances.clear();
-        for (const CadDrawItem& item : plan.wireItems) {
-            const auto partIt = parts_.find(item.rep.part);
-            const auto cornersIt = subpixelProxyCorners_.find(item.rep.part);
-            if (partIt == parts_.end() || !partIt->second ||
-                    cornersIt == subpixelProxyCorners_.end()) {
-                if (item.instanceCount > 0)
-                    plan.wirePartsWithUncollapsedInstances.insert(
-                        item.rep.part);
+        visibleByPoint.clear();
+        /*
+         * Classify each occurrence once, independently of its active draw
+         * channels.  In particular a shaded-only PoP mesh must be able to
+         * enter the same one-call point batch as a wire AABB.  Iterating draw
+         * items duplicated work in SHADED_WITH_EDGES and left SHADED with no
+         * subpixel escape path at all.
+         */
+        for (size_t visibleIndex = 0;
+                visibleIndex < plan.visibleInstances.size(); ++visibleIndex) {
+            CadSubpixelProxyPoint replacement;
+            if (!subpixelProxyPointForOccurrence(
+                    plan, visibleIndex, viewProj, viewportSize,
+                    pixelThreshold,
+                    subpixelProxyState_[visibleIndex] != 0u,
+                    replacement)) {
+                subpixelProxyState_[visibleIndex] = 0u;
                 continue;
             }
 
-            for (uint32_t i = 0; i < item.instanceCount; ++i) {
-                const size_t visibleIndex = item.baseInstance + i;
-                if (visibleIndex >= plan.visibleInstances.size()) {
-                    plan.wirePartsWithUncollapsedInstances.insert(
-                        item.rep.part);
-                    continue;
-                }
-                const CadVisibleInstance& instance =
-                    plan.visibleInstances[visibleIndex];
-                const float threshold =
-                    subpixelProxyState_[visibleIndex] ?
-                    1.25f : 0.75f;
-                SbVec3f point;
-                if (!cadSubpixelProxyPoint(cornersIt->second, instance, viewProj,
-                        viewportSize, threshold, point)) {
-                    subpixelProxyState_[visibleIndex] = 0u;
-                    plan.wirePartsWithUncollapsedInstances.insert(
-                        item.rep.part);
-                    continue;
-                }
-
-                subpixelProxyState_[visibleIndex] = 1u;
-                mask[visibleIndex] = 1u;
-                CadSubpixelProxyPoint replacement;
-                replacement.position = point;
-                replacement.rgba = instance.rgba;
-                replacement.instanceId = instance.instanceId;
-                points.push_back(replacement);
-            }
+            subpixelProxyState_[visibleIndex] = 1u;
+            mask[visibleIndex] = 1u;
+            subpixelProxyPointByVisible_[visibleIndex] =
+                static_cast<uint32_t>(points.size());
+            points.push_back(std::move(replacement));
+            visibleByPoint.push_back(
+                static_cast<uint32_t>(visibleIndex));
         }
 
-        const bool changed = plan.subpixelProxySourcePlanRevision !=
-                plan.revision || mask != plan.subpixelProxyMask ||
+        plan.wirePartsWithUncollapsedInstances.clear();
+        uncollapsedStructuralProxyCountByPart_.clear();
+        size_t uncollapsedStructuralProxyCount = 0;
+        for (const CadDrawItem& item : plan.wireItems) {
+            bool hasUncollapsed = false;
+            size_t structuralCount = 0;
+            const CadPartBinding *binding =
+                item.partIndex < plan.partBindings.size() ?
+                    &plan.partBindings[item.partIndex] : nullptr;
+            const bool structuralProxy =
+                binding && binding->structuralProxy;
+            for (uint32_t i = 0; i < item.instanceCount; ++i) {
+                const size_t visibleIndex = item.baseInstance + i;
+                if (visibleIndex >= mask.size())
+                    continue;
+                const CadVisibleInstance& instance =
+                    plan.visibleInstances[visibleIndex];
+                if (instance.partIndex != item.partIndex ||
+                        (instance.flags & CadInstanceHidden))
+                    continue;
+                if (!mask[visibleIndex]) {
+                    hasUncollapsed = true;
+                    if (structuralProxy) {
+                        ++uncollapsedStructuralProxyCount;
+                        ++structuralCount;
+                    }
+                }
+            }
+            if (hasUncollapsed)
+                plan.wirePartsWithUncollapsedInstances.insert(
+                    item.rep.part);
+            if (structuralCount)
+                uncollapsedStructuralProxyCountByPart_[
+                    item.rep.part] += structuralCount;
+        }
+        uncollapsedStructuralProxyCount_ =
+            uncollapsedStructuralProxyCount;
+        if (cadPlanDebugEnabled() && uncollapsedStructuralProxyCount) {
+            std::unordered_set<size_t> structuralVisibleIndices;
+            std::unordered_set<Obol::InstanceId,
+                std::hash<Obol::InstanceId>> structuralInstances;
+            size_t structuralItemReferences = 0;
+            size_t structuralHiddenReferences = 0;
+            size_t structuralStaleReferences = 0;
+            size_t structuralPartCount = 0;
+            for (const CadDrawItem& item : plan.wireItems) {
+                const CadPartBinding *binding =
+                    item.partIndex < plan.partBindings.size() ?
+                        &plan.partBindings[item.partIndex] : nullptr;
+                const bool structuralProxy =
+                    binding && binding->structuralProxy;
+                if (!structuralProxy)
+                    continue;
+                ++structuralPartCount;
+                for (uint32_t i = 0; i < item.instanceCount; ++i) {
+                    const size_t visibleIndex = item.baseInstance + i;
+                    if (visibleIndex >= plan.visibleInstances.size())
+                        continue;
+                    ++structuralItemReferences;
+                    const CadVisibleInstance& instance =
+                        plan.visibleInstances[visibleIndex];
+                    if (instance.partIndex != item.partIndex) {
+                        ++structuralStaleReferences;
+                        continue;
+                    }
+                    if (instance.flags & CadInstanceHidden) {
+                        ++structuralHiddenReferences;
+                        continue;
+                    }
+                    structuralVisibleIndices.insert(visibleIndex);
+                    structuralInstances.insert(instance.instanceId);
+                }
+            }
+            std::fprintf(stderr,
+                "SoCADAssembly structural proxy debug "
+                "uncollapsed=%zu item_refs=%zu hidden_refs=%zu "
+                "stale_refs=%zu "
+                "distinct_visible=%zu distinct_instances=%zu "
+                "wire_items=%zu structural_items=%zu visible_records=%zu\n",
+                uncollapsedStructuralProxyCount,
+                structuralItemReferences, structuralHiddenReferences,
+                structuralStaleReferences,
+                structuralVisibleIndices.size(), structuralInstances.size(),
+                plan.wireItems.size(), structuralPartCount,
+                plan.visibleInstances.size());
+        }
+
+        const bool changed = plan.subpixelProxySourceInputRevision !=
+                plan.subpixelProxyInputRevision ||
+                mask != plan.subpixelProxyMask ||
                 !cadSameSubpixelProxyPoints(points,
                     plan.subpixelProxyPoints);
         if (changed) {
@@ -1273,14 +3278,20 @@ struct SoCADAssemblyImpl {
             // the next camera update instead of allocating frame-local data.
             plan.subpixelProxyMask.swap(mask);
             plan.subpixelProxyPoints.swap(points);
-            plan.subpixelProxySourcePlanRevision = plan.revision;
+            subpixelProxyVisibleByPoint_.swap(visibleByPoint);
+            plan.subpixelProxySourceInputRevision =
+                plan.subpixelProxyInputRevision;
             plan.subpixelProxyRevision = nextSubpixelProxyRevision_++;
             if (nextSubpixelProxyRevision_ == 0)
                 nextSubpixelProxyRevision_ = 1;
         }
         subpixelProxyViewProj_ = viewProj;
         subpixelProxyViewportSize_ = viewportSize;
-        subpixelProxyViewPlanRevision_ = plan.revision;
+        subpixelProxyPixelThreshold_ = pixelThreshold;
+        subpixelProxyViewInputRevision_ =
+            plan.subpixelProxyInputRevision;
+        subpixelProxyClassifiedAppendRevision_ =
+            plan.appendRevision;
         subpixelProxyViewValid_ = true;
     }
 };
@@ -1322,6 +3333,8 @@ SoCADAssembly::SoCADAssembly()
     SO_NODE_ADD_FIELD(edgePickTolerancePx, (5.0f));
     SO_NODE_ADD_FIELD(wireframeOcclusion,  (FALSE));
     SO_NODE_ADD_FIELD(progressiveLodCeiling, (-1));
+    SO_NODE_ADD_FIELD(pointProxyPixelThreshold, (1.0f));
+    SO_NODE_ADD_FIELD(cameraMotionFrameReuse, (FALSE));
 }
 
 SoCADAssembly::~SoCADAssembly() = default;
@@ -1360,6 +3373,47 @@ SoCADAssembly::createPickDetail(
 
 void SoCADAssembly::beginUpdate() { impl_->inUpdate_ = true; }
 
+void SoCADAssembly::reserveStreamingCapacity(size_t expectedOccurrences)
+{
+    if (!expectedOccurrences)
+        return;
+    impl_->streamingOccurrenceCapacityHint_ =
+        std::max(impl_->streamingOccurrenceCapacityHint_,
+                 expectedOccurrences);
+
+    /*
+     * These tables retain one logical record per occurrence/part in the
+     * distinct-part worst case.  reserve() does not construct records, so the
+     * memory is committed only as table/vector capacity rather than as
+     * populated mesh data.
+     */
+    impl_->parts_.reserve(expectedOccurrences);
+    impl_->instances_.reserve(expectedOccurrences);
+    impl_->instancePartSlot_.reserve(expectedOccurrences);
+    impl_->progressivePlanIndexByInstance_.reserve(
+        expectedOccurrences);
+    impl_->cachedPlanPartSpansByPart_.reserve(
+        expectedOccurrences);
+
+    /*
+     * A plan may already exist if the structural stream disclosed its
+     * manifest after publishing the overall/root proxy.  Grow its buffers
+     * while that population is still small instead of allowing geometric
+     * vector growth near convergence to copy the mature plan.
+     */
+    const size_t visibleCapacity =
+        expectedOccurrences >
+                std::numeric_limits<size_t>::max() / 2u ?
+            std::numeric_limits<size_t>::max() :
+            expectedOccurrences * 2u;
+    impl_->cachedPlan_.visibleInstances.reserve(visibleCapacity);
+    impl_->cachedPlan_.partBindings.reserve(expectedOccurrences + 1u);
+    impl_->cachedPlan_.wireItems.reserve(expectedOccurrences);
+    impl_->cachedPlan_.pointItems.reserve(expectedOccurrences);
+    impl_->cachedPlan_.shadedItems.reserve(expectedOccurrences);
+    impl_->cachedPlan_.requiredReps.reserve(visibleCapacity);
+}
+
 void SoCADAssembly::endUpdate()
 {
     impl_->inUpdate_ = false;
@@ -1377,6 +3431,16 @@ SoCADAssembly::clear()
     impl_->subpixelProxyCorners_.clear();
     impl_->partGeneration_.clear();
     impl_->instances_.clear();
+    impl_->instanceIdsByPart_.clear();
+    impl_->instancePartSlot_.clear();
+    impl_->cachedPlanTombstoneCount_ = 0;
+    impl_->streamTombstoneCompactionPerformed_ = false;
+    impl_->subpixelProxyPointByVisible_.clear();
+    impl_->subpixelProxyVisibleByPoint_.clear();
+    impl_->subpixelProxyScratchVisibleByPoint_.clear();
+    impl_->subpixelProxyClassifiedAppendRevision_ = 0;
+    impl_->uncollapsedStructuralProxyCountByPart_.clear();
+    impl_->uncollapsedStructuralProxyCount_ = 0;
     impl_->selected_.clear();
     impl_->hidden_.clear();
     impl_->unpickable_.clear();
@@ -1399,7 +3463,11 @@ SoCADAssembly::upsertPart(Obol::PartId pid, const Obol::PartGeometry& geom)
     impl_->updatePartGeometry(pid,
         std::make_shared<const Obol::PartGeometry>(geom));
     impl_->recomputeWorldBoundsForPart(pid);
-    impl_->markDirty();
+    Obol::internal::CadPartGeometryDelta geometryDelta;
+    if (!impl_->patchCachedPartGeometry(pid, geometryDelta))
+        impl_->markDirty("part-geometry-unpatchable");
+    else
+        impl_->finishPartGeometryPatch(std::move(geometryDelta));
     if (!impl_->inUpdate_) touch();
 }
 
@@ -1410,6 +3478,7 @@ SoCADAssembly::upsertParts(const std::vector<Obol::PartUpdate>& updates)
         return;
 
     std::unordered_set<Obol::PartId, std::hash<Obol::PartId>> changedParts;
+    bool topologyDirty = false;
     changedParts.reserve(updates.size());
     for (const auto& update : updates) {
         impl_->updatePartGeometry(update.part,
@@ -1417,7 +3486,19 @@ SoCADAssembly::upsertParts(const std::vector<Obol::PartUpdate>& updates)
         changedParts.insert(update.part);
     }
     impl_->recomputeWorldBoundsForParts(changedParts);
-    impl_->markDirty();
+    Obol::internal::CadPartGeometryDelta geometryDelta;
+    for (const Obol::PartId part : changedParts) {
+        if (!impl_->patchCachedPartGeometry(
+                part, geometryDelta)) {
+            topologyDirty = true;
+            break;
+        }
+    }
+    if (topologyDirty)
+        impl_->markDirty("part-geometry-batch-unpatchable");
+    else
+        impl_->finishPartGeometryPatch(
+            std::move(geometryDelta));
     if (!impl_->inUpdate_)
         touch();
 }
@@ -1428,21 +3509,84 @@ SoCADAssembly::upsertSharedParts(
 {
     if (updates.empty()) return;
     std::unordered_set<Obol::PartId, std::hash<Obol::PartId>> changedParts;
+    std::unordered_set<Obol::PartId, std::hash<Obol::PartId>>
+        boundsPreservingParts;
+    bool topologyDirty = false;
     changedParts.reserve(updates.size());
+    boundsPreservingParts.reserve(updates.size());
     for (const auto& update : updates) {
         if (!update.geometry) continue;
+        const auto preceding = impl_->parts_.find(update.part);
+        /*
+         * Shared immutable geometry is its own publication identity.  Large
+         * structural streams may mention one retained fallback part in many
+         * append batches; reinstalling the exact pointer used to increment
+         * its generation, recompute every referencing occurrence's bounds,
+         * and patch every compiled span on each batch.  That turned a cheap
+         * append journal into a growing-scene rescan.
+         */
+        if (preceding != impl_->parts_.end() &&
+                preceding->second == update.geometry)
+            continue;
+        const bool preservesBounds =
+            update.preservesBounds &&
+            preceding != impl_->parts_.end() &&
+            preceding->second &&
+            SoCADAssemblyImpl::partGeometryBoundsEqual(
+                *preceding->second, *update.geometry);
+        const bool firstUpdate =
+            changedParts.insert(update.part).second;
+        if (firstUpdate && preservesBounds)
+            boundsPreservingParts.insert(update.part);
+        else if (!preservesBounds)
+            boundsPreservingParts.erase(update.part);
         impl_->updatePartGeometry(update.part, update.geometry);
-        changedParts.insert(update.part);
     }
     if (changedParts.empty()) return;
-    impl_->recomputeWorldBoundsForParts(changedParts);
-    impl_->markDirty();
+    if (boundsPreservingParts.size() != changedParts.size()) {
+        std::unordered_set<Obol::PartId, std::hash<Obol::PartId>>
+            boundsChangedParts;
+        boundsChangedParts.reserve(
+            changedParts.size() - boundsPreservingParts.size());
+        for (const Obol::PartId part : changedParts)
+            if (boundsPreservingParts.find(part) ==
+                    boundsPreservingParts.end())
+                boundsChangedParts.insert(part);
+        impl_->recomputeWorldBoundsForParts(boundsChangedParts);
+    }
+    Obol::internal::CadPartGeometryDelta geometryDelta;
+    for (const Obol::PartId part : changedParts) {
+        if (!impl_->patchCachedPartGeometry(
+                part, geometryDelta,
+                boundsPreservingParts.find(part) !=
+                    boundsPreservingParts.end())) {
+            topologyDirty = true;
+            break;
+        }
+    }
+    if (topologyDirty)
+        impl_->markDirty("shared-part-geometry-batch-unpatchable");
+    else
+        impl_->finishPartGeometryPatch(
+            std::move(geometryDelta));
     if (!impl_->inUpdate_) touch();
 }
 
 void
 SoCADAssembly::removePart(Obol::PartId pid)
 {
+    const auto referenced = impl_->instanceIdsByPart_.find(pid);
+    const bool affectsPlan =
+        referenced != impl_->instanceIdsByPart_.end() &&
+        referenced->second.size() != 0;
+    /*
+     * A sparse part replacement leaves a hidden compiled tombstone whose
+     * CadPartBinding owns the immutable geometry through a shared pointer.
+     * Removing the retired library entry is therefore not a live topology
+     * change.  Rebuilding the whole plan merely because that tombstone still
+     * has a span defeated append-only streaming; normal late compaction
+     * removes the retained binding.
+     */
     impl_->parts_.erase(pid);
     impl_->subpixelProxyCorners_.erase(pid);
     impl_->partGeneration_.erase(pid);
@@ -1450,7 +3594,8 @@ SoCADAssembly::removePart(Obol::PartId pid)
     impl_->partTriBvhCache_.erase(pid);
     impl_->progressiveParts_.erase(pid);
     impl_->recomputeWorldBoundsForPart(pid);
-    impl_->markDirty();
+    if (affectsPlan)
+        impl_->markDirty("part-remove");
     if (!impl_->inUpdate_) touch();
 }
 
@@ -1459,10 +3604,16 @@ SoCADAssembly::removeParts(const std::vector<Obol::PartId>& pids)
 {
     if (pids.empty()) return;
     std::unordered_set<Obol::PartId, std::hash<Obol::PartId>> changedParts;
+    bool affectsPlan = false;
     changedParts.reserve(pids.size());
     for (const Obol::PartId pid : pids) {
         if (!impl_->parts_.erase(pid))
             continue;
+        const auto referenced =
+            impl_->instanceIdsByPart_.find(pid);
+        affectsPlan = affectsPlan ||
+            (referenced != impl_->instanceIdsByPart_.end() &&
+             referenced->second.size() != 0);
         changedParts.insert(pid);
         impl_->subpixelProxyCorners_.erase(pid);
         impl_->partGeneration_.erase(pid);
@@ -1472,7 +3623,8 @@ SoCADAssembly::removeParts(const std::vector<Obol::PartId>& pids)
     }
     if (changedParts.empty()) return;
     impl_->recomputeWorldBoundsForParts(changedParts);
-    impl_->markDirty();
+    if (affectsPlan)
+        impl_->markDirty("parts-remove");
     if (!impl_->inUpdate_) touch();
 }
 
@@ -1490,8 +3642,26 @@ SoCADAssembly::upsertInstanceAuto(const Obol::InstanceRecord& rec)
 void
 SoCADAssembly::upsertInstance(Obol::InstanceId iid, const Obol::InstanceRecord& rec)
 {
-    impl_->updateInstance(iid, rec);
-    impl_->markDirty();
+    const auto prior = impl_->instances_.find(iid);
+    const bool sparseAppend =
+        !impl_->planDirty_ && !impl_->geometryDirty_ &&
+        prior == impl_->instances_.end();
+    const bool sparseRebind =
+        !impl_->planDirty_ && !impl_->geometryDirty_ &&
+        prior != impl_->instances_.end() &&
+        !(prior->second.partId == rec.part);
+    const Obol::PartId oldPart = prior != impl_->instances_.end() ?
+        prior->second.partId : Obol::PartId();
+    impl_->updateKnownInstance(iid, rec,
+        prior == impl_->instances_.end() ? nullptr : &prior->second);
+    if (sparseAppend &&
+            impl_->appendCachedInstances({iid}))
+        impl_->finishSparseStructuralPatch();
+    else if (sparseRebind &&
+            impl_->patchCachedInstancePartRebind(iid, oldPart))
+        impl_->finishSparseStructuralPatch();
+    else
+        impl_->markDirty("instance-upsert-unpatchable");
     if (!impl_->inUpdate_) touch();
 }
 
@@ -1510,7 +3680,10 @@ SoCADAssembly::upsertInstancesAuto(
         ids.push_back(iid);
         impl_->updateInstance(iid, rec);
     }
-    impl_->markDirty();
+    if (!impl_->appendCachedInstances(ids))
+        impl_->markDirty("instance-auto-batch-unpatchable");
+    else
+        impl_->finishSparseStructuralPatch();
     if (!impl_->inUpdate_)
         touch();
     return ids;
@@ -1523,9 +3696,176 @@ SoCADAssembly::upsertInstances(
     if (updates.empty())
         return;
 
-    for (const auto& update : updates)
-        impl_->updateInstance(update.instance, update.record);
-    impl_->markDirty();
+    const bool planPatchable =
+        !impl_->planDirty_ && !impl_->geometryDirty_;
+    bool allNew = planPatchable;
+    bool allRebind = planPatchable;
+    size_t newCount = 0;
+    size_t samePartCount = 0;
+    size_t rebindCount = 0;
+    size_t noOpCount = 0;
+    size_t lodOnlyCount = 0;
+    size_t metadataOnlyCount = 0;
+    size_t styleChangeCount = 0;
+    size_t transformChangeCount = 0;
+    bool samePartPlanNeutral = planPatchable;
+    std::vector<Obol::InstanceId> changedIds;
+    std::vector<std::pair<Obol::InstanceId, Obol::PartId>>
+        rebinds;
+    std::vector<Obol::InstanceLodUpdate> samePartLodUpdates;
+    changedIds.reserve(updates.size());
+    rebinds.reserve(updates.size());
+    samePartLodUpdates.reserve(updates.size());
+    bool sourceChanged = false;
+    for (const auto& update : updates) {
+        const auto prior = impl_->instances_.find(update.instance);
+        bool lightweightSamePart = false;
+        if (prior == impl_->instances_.end()) {
+            ++newCount;
+            samePartPlanNeutral = false;
+            sourceChanged = true;
+        } else if (prior->second.partId == update.record.part) {
+            ++samePartCount;
+            const bool transformChanged =
+                !(prior->second.localToRoot == update.record.localToRoot);
+            const bool styleChanged =
+                prior->second.style.hasColorOverride !=
+                    update.record.style.hasColorOverride ||
+                !(prior->second.style.color == update.record.style.color) ||
+                prior->second.style.lineWidth !=
+                    update.record.style.lineWidth ||
+                prior->second.style.linePattern !=
+                    update.record.style.linePattern ||
+                prior->second.style.linePatternFactor !=
+                    update.record.style.linePatternFactor;
+            const bool metadataChanged =
+                !(prior->second.parent == update.record.parent) ||
+                prior->second.childName != update.record.childName ||
+                prior->second.occurrenceIndex !=
+                    update.record.occurrenceIndex ||
+                prior->second.boolOp != update.record.boolOp;
+            const bool lodChanged =
+                prior->second.lodLevel != update.record.lodLevel;
+            lightweightSamePart = !transformChanged && !styleChanged;
+            sourceChanged = sourceChanged || transformChanged ||
+                styleChanged || metadataChanged || lodChanged;
+            if (transformChanged)
+                ++transformChangeCount;
+            if (styleChanged)
+                ++styleChangeCount;
+            if (!transformChanged && !styleChanged &&
+                    !metadataChanged && !lodChanged)
+                ++noOpCount;
+            else if (!transformChanged && !styleChanged &&
+                    !metadataChanged && lodChanged)
+                ++lodOnlyCount;
+            else if (!transformChanged && !styleChanged &&
+                    metadataChanged && !lodChanged)
+                ++metadataOnlyCount;
+            if (lodChanged)
+                samePartLodUpdates.push_back(
+                    {update.instance, update.record.lodLevel});
+            samePartPlanNeutral =
+                samePartPlanNeutral &&
+                !transformChanged && !styleChanged;
+        } else {
+            ++rebindCount;
+            rebinds.emplace_back(
+                update.instance, prior->second.partId);
+            samePartPlanNeutral = false;
+            sourceChanged = true;
+        }
+        allNew = allNew && prior == impl_->instances_.end();
+        allRebind = allRebind &&
+            prior != impl_->instances_.end() &&
+            !(prior->second.partId == update.record.part);
+        changedIds.push_back(update.instance);
+        if (lightweightSamePart) {
+            /*
+             * LoD policy waves commonly repeat thousands of otherwise
+             * identical records.  Avoid copying every child-name string and
+             * recomputing unchanged world bounds on the GUI thread.
+             */
+            InstanceData& retained = prior->second;
+            if (!(retained.parent == update.record.parent))
+                retained.parent = update.record.parent;
+            if (retained.childName != update.record.childName)
+                retained.childName = update.record.childName;
+            retained.occurrenceIndex = update.record.occurrenceIndex;
+            retained.boolOp = update.record.boolOp;
+            retained.lodLevel = update.record.lodLevel;
+        } else {
+            impl_->updateKnownInstance(update.instance, update.record,
+                prior == impl_->instances_.end() ?
+                    nullptr : &prior->second);
+        }
+    }
+    if (!sourceChanged)
+        return;
+    bool patched = allNew &&
+        impl_->appendCachedInstances(changedIds);
+    bool structuralPatched = patched;
+    const bool mixedAppend = planPatchable && samePartCount == 0u &&
+        newCount != 0u && rebindCount != 0u;
+    if (!patched && mixedAppend) {
+        patched = impl_->appendCachedInstances(changedIds, true);
+        structuralPatched = patched;
+    }
+    if (!patched && allRebind) {
+        patched = impl_->patchCachedInstancePartRebinds(rebinds);
+        structuralPatched = patched;
+    }
+    if (!patched && allRebind) {
+        patched = impl_->appendCachedInstances(changedIds, true);
+        structuralPatched = patched;
+    }
+    if (!patched && samePartPlanNeutral && newCount == 0u &&
+            rebindCount == 0u) {
+        std::unordered_set<size_t> changedPlanGroups;
+        patched = true;
+        for (const auto& update : samePartLodUpdates) {
+            if (!impl_->patchCachedInstanceLodLevel(
+                    update.instance, update.lodLevel,
+                    changedPlanGroups)) {
+                patched = false;
+                break;
+            }
+        }
+        if (patched && !samePartLodUpdates.empty())
+            impl_->finishProgressiveShadedPlanPatch(
+                changedPlanGroups);
+        if (patched && !samePartLodUpdates.empty())
+            impl_->bvhDirty_ = true;
+    }
+    if (structuralPatched)
+        impl_->finishSparseStructuralPatch();
+    /*
+     * Do not synchronously compact streamed presentation tombstones here.
+     * A full 50k plan rebuild costs well over a frame and this method runs on
+     * the GUI thread.  Hidden fallback records are semantically inert and
+     * bounded to one per source occurrence, while the live geometry atlas and
+     * command population are unchanged by compaction.  A future background
+     * dense-plan publication may reclaim them after a revision-checked swap;
+     * until then, retaining the bounded prefix is preferable to freezing user
+     * input during otherwise incremental realization.
+     */
+    if (!patched) {
+        if (cadPlanDebugEnabled() &&
+                impl_->planDebugPatchMessageCount_++ <
+                    cadPlanDebugMessageLimit())
+            std::fprintf(stderr,
+                "SoCADAssembly instance batch patch rejected "
+                "batch=%zu new=%zu same_part=%zu rebind=%zu "
+                "noop=%zu lod_only=%zu metadata_only=%zu "
+                "style_changed=%zu transform_changed=%zu "
+                "all_new=%d all_rebind=%d plan_patchable=%d\n",
+                updates.size(), newCount, samePartCount, rebindCount,
+                noOpCount, lodOnlyCount, metadataOnlyCount,
+                styleChangeCount, transformChangeCount,
+                allNew ? 1 : 0, allRebind ? 1 : 0,
+                planPatchable ? 1 : 0);
+        impl_->markDirty("instance-batch-unpatchable");
+    }
     if (!impl_->inUpdate_)
         touch();
 }
@@ -1536,7 +3876,7 @@ SoCADAssembly::updateInstanceLodLevels(
 {
     bool changed = false;
     bool sparsePlanPatch = !impl_->planDirty_ && !impl_->geometryDirty_ &&
-        impl_->cachedDM_ == SoCADAssembly::SHADED;
+        impl_->drawModeHasShadedPlan(impl_->cachedDM_);
     std::unordered_set<size_t> changedPlanGroups;
     for (const auto& update : updates) {
         auto found = impl_->instances_.find(update.instance);
@@ -1544,7 +3884,7 @@ SoCADAssembly::updateInstanceLodLevels(
                 found->second.lodLevel == update.lodLevel)
             continue;
         if (sparsePlanPatch &&
-                !impl_->patchProgressiveShadedPlanLod(
+                !impl_->patchCachedInstanceLodLevel(
                     update.instance, update.lodLevel, changedPlanGroups))
             sparsePlanPatch = false;
         found->second.lodLevel = update.lodLevel;
@@ -1554,7 +3894,10 @@ SoCADAssembly::updateInstanceLodLevels(
     if (sparsePlanPatch)
         impl_->finishProgressiveShadedPlanPatch(changedPlanGroups);
     else
+    {
         impl_->planDirty_ = true;
+        impl_->planDirtyReason_ = "lod-unpatchable";
+    }
     /* The instance BVH also carries the active cut used by exact picking.
      * Rebuilding remains lazy and therefore does not add work to rendering. */
     impl_->bvhDirty_ = true;
@@ -1564,13 +3907,18 @@ SoCADAssembly::updateInstanceLodLevels(
 void
 SoCADAssembly::removeInstance(Obol::InstanceId iid)
 {
-    impl_->instances_.erase(iid);
+    const auto instance = impl_->instances_.find(iid);
+    if (instance != impl_->instances_.end()) {
+        impl_->removeInstanceFromPartIndex(iid, instance->second.partId);
+        impl_->instances_.erase(instance);
+    }
     impl_->selected_.erase(iid);
     impl_->hidden_.erase(iid);
     impl_->unpickable_.erase(iid);
     impl_->bvhDirty_  = true;
     impl_->planDirty_ = true;
     impl_->geometryDirty_ = true;
+    impl_->planDirtyReason_ = "instance-remove";
     if (!impl_->inUpdate_) touch();
 }
 
@@ -1587,6 +3935,7 @@ SoCADAssembly::updateInstanceTransform(Obol::InstanceId iid, const SbMatrix& m)
     impl_->bvhDirty_  = true;
     impl_->planDirty_ = true;
     impl_->geometryDirty_ = true;
+    impl_->planDirtyReason_ = "instance-transform";
     if (!impl_->inUpdate_) touch();
 }
 
@@ -1596,7 +3945,13 @@ SoCADAssembly::updateInstanceStyle(Obol::InstanceId iid, const Obol::InstanceSty
     auto it = impl_->instances_.find(iid);
     if (it == impl_->instances_.end()) return;
     it->second.style = style;
-    impl_->planDirty_ = true;
+    if (impl_->patchCachedInstanceStyle(iid))
+        impl_->finishSparsePresentationPatch();
+    else {
+        impl_->planDirty_ = true;
+        impl_->planDirtyReason_ = "instance-style";
+        impl_->pendingInstanceAttributeIndices_.clear();
+    }
     if (!impl_->inUpdate_) touch();
 }
 
@@ -1606,23 +3961,56 @@ SoCADAssembly::updateInstanceStyles(
 {
     if (updates.empty()) return;
     bool changed = false;
+    bool sparsePlanPatch = !impl_->planDirty_ && !impl_->geometryDirty_ &&
+        impl_->cachedDM_ >= SoCADAssembly::SHADED &&
+        impl_->cachedDM_ <= SoCADAssembly::HIDDEN_LINE;
     for (const auto& update : updates) {
         auto it = impl_->instances_.find(update.instance);
         if (it == impl_->instances_.end()) continue;
         it->second.style = update.style;
+        if (sparsePlanPatch &&
+                !impl_->patchCachedInstanceStyle(update.instance))
+            sparsePlanPatch = false;
         changed = true;
     }
     if (!changed) return;
-    impl_->planDirty_ = true;
+    if (sparsePlanPatch)
+        impl_->finishSparsePresentationPatch();
+    else {
+        impl_->planDirty_ = true;
+        impl_->planDirtyReason_ = "instance-styles";
+        impl_->pendingInstanceAttributeIndices_.clear();
+    }
     if (!impl_->inUpdate_) touch();
 }
 
 void
 SoCADAssembly::setSelectedInstances(const std::vector<Obol::InstanceId>& ids)
 {
-    impl_->selected_.clear();
-    impl_->selected_.insert(ids.begin(), ids.end());
-    impl_->planDirty_ = true;
+    std::unordered_set<Obol::InstanceId, std::hash<Obol::InstanceId>> next(
+        ids.begin(), ids.end());
+    if (next == impl_->selected_)
+        return;
+    std::vector<Obol::InstanceId> changed;
+    changed.reserve(next.size() + impl_->selected_.size());
+    for (const Obol::InstanceId& id : impl_->selected_)
+        if (!next.count(id))
+            changed.push_back(id);
+    for (const Obol::InstanceId& id : next)
+        if (!impl_->selected_.count(id))
+            changed.push_back(id);
+    impl_->selected_.swap(next);
+    bool sparsePlanPatch = !impl_->planDirty_ && !impl_->geometryDirty_;
+    for (const Obol::InstanceId& id : changed)
+        if (sparsePlanPatch && !impl_->patchCachedInstanceFlags(id))
+            sparsePlanPatch = false;
+    if (sparsePlanPatch)
+        impl_->finishSparsePresentationPatch();
+    else {
+        impl_->planDirty_ = true;
+        impl_->planDirtyReason_ = "selected-set";
+        impl_->pendingInstanceAttributeIndices_.clear();
+    }
     if (!impl_->inUpdate_) touch();
 }
 
@@ -1630,6 +4018,10 @@ SoCADAssembly::setSelectedInstances(const std::vector<Obol::InstanceId>& ids)
 
 size_t SoCADAssembly::instanceCount() const { return impl_->instances_.size(); }
 size_t SoCADAssembly::partCount()     const { return impl_->parts_.size();     }
+size_t SoCADAssembly::selectedInstanceCount() const
+{
+    return impl_->selected_.size();
+}
 
 std::vector<Obol::InstanceId>
 SoCADAssembly::instanceIds() const
@@ -1694,11 +4086,51 @@ SoCADAssembly::getInstanceRecord(Obol::InstanceId iid) const
 void
 SoCADAssembly::setHiddenInstances(const std::vector<Obol::InstanceId>& ids)
 {
-    impl_->hidden_.clear();
-    impl_->hidden_.insert(ids.begin(), ids.end());
+    std::unordered_set<Obol::InstanceId, std::hash<Obol::InstanceId>> next(
+        ids.begin(), ids.end());
+    if (next == impl_->hidden_)
+        return;
+    std::vector<Obol::InstanceId> changed;
+    changed.reserve(next.size() + impl_->hidden_.size());
+    for (const Obol::InstanceId& id : impl_->hidden_)
+        if (!next.count(id))
+            changed.push_back(id);
+    for (const Obol::InstanceId& id : next)
+        if (!impl_->hidden_.count(id))
+            changed.push_back(id);
+    impl_->hidden_.swap(next);
+    bool sparsePlanPatch = !impl_->planDirty_ && !impl_->geometryDirty_;
+    for (const Obol::InstanceId& id : changed)
+        if (sparsePlanPatch && !impl_->patchCachedInstanceFlags(id))
+            sparsePlanPatch = false;
+    if (sparsePlanPatch) {
+        /*
+         * Screen-size membership is unchanged, but the retained per-part
+         * "has an uncollapsed wire occurrence" summary is visibility
+         * sensitive.  Leaving it untouched keeps hidden structural proxies
+         * in both the render fast-path set and its visible-box diagnostic
+         * until an unrelated camera change forces a full classification.
+         *
+         * Refresh only parts referenced by changed instances.  This makes
+         * final retirement of one cold-start overview O(1), rather than
+         * rescanning every occurrence in a 50k scene.
+         */
+        std::unordered_set<Obol::PartId, std::hash<Obol::PartId>>
+            visibilityParts;
+        visibilityParts.reserve(changed.size());
+        for (const Obol::InstanceId& id : changed) {
+            const auto instance = impl_->instances_.find(id);
+            if (instance != impl_->instances_.end())
+                visibilityParts.insert(instance->second.partId);
+        }
+        impl_->refreshWireProxyParts(visibilityParts);
+        impl_->finishSparsePresentationPatch(true);
+    } else {
+        impl_->planDirty_ = true;
+        impl_->planDirtyReason_ = "hidden-set";
+        impl_->pendingInstanceAttributeIndices_.clear();
+    }
     impl_->bvhDirty_ = true;
-    impl_->planDirty_ = true;
-    impl_->geometryDirty_ = true;
     if (!impl_->inUpdate_) touch();
 }
 
@@ -1768,11 +4200,61 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
     if (impl_->planDirty_ || impl_->cachedDM_ != dm) {
         const bool geometryChanged = impl_->geometryDirty_ ||
                                      impl_->cachedDM_ != dm;
+        ++impl_->framePlanBuildCount_;
+        if (cadPlanDebugEnabled() &&
+                impl_->planDebugBuildMessageCount_++ <
+                    cadPlanDebugMessageLimit())
+            std::fprintf(stderr,
+                "SoCADAssembly frame plan build count=%llu "
+                "plan_dirty=%d geometry_dirty=%d reason=%s "
+                "old_mode=%d new_mode=%d "
+                "instances=%zu parts=%zu\n",
+                static_cast<unsigned long long>(
+                    impl_->framePlanBuildCount_),
+                impl_->planDirty_ ? 1 : 0,
+                impl_->geometryDirty_ ? 1 : 0,
+                impl_->planDirtyReason_ ? impl_->planDirtyReason_ :
+                    "unknown",
+                impl_->cachedDM_, dm, impl_->instances_.size(),
+                impl_->parts_.size());
         impl_->cachedPlan_  = impl_->buildFramePlan(dm, impl_->selected_,
                                                      impl_->hidden_);
         impl_->cachedPlan_.revision = impl_->nextPlanRevision_++;
         if (impl_->nextPlanRevision_ == 0)
             impl_->nextPlanRevision_ = 1;
+        impl_->cachedPlan_.shadedLayoutRevision =
+            impl_->nextShadedLayoutRevision_++;
+        if (impl_->nextShadedLayoutRevision_ == 0)
+            impl_->nextShadedLayoutRevision_ = 1;
+        impl_->cachedPlan_.subpixelProxyInputRevision =
+            impl_->nextSubpixelProxyInputRevision_++;
+        if (impl_->nextSubpixelProxyInputRevision_ == 0)
+            impl_->nextSubpixelProxyInputRevision_ = 1;
+        impl_->cachedPlan_.shadedLodRevision =
+            impl_->nextShadedLodRevision_++;
+        if (impl_->nextShadedLodRevision_ == 0)
+            impl_->nextShadedLodRevision_ = 1;
+        impl_->cachedPlan_.shadedLodDeltaFloorRevision =
+            impl_->cachedPlan_.shadedLodRevision;
+        impl_->cachedPlan_.appendRevision =
+            impl_->nextAppendRevision_++;
+        if (impl_->nextAppendRevision_ == 0)
+            impl_->nextAppendRevision_ = 1;
+        impl_->cachedPlan_.appendDeltaFloorRevision =
+            impl_->cachedPlan_.appendRevision;
+        impl_->cachedPlan_.partGeometryRevision =
+            impl_->nextPartGeometryRevision_++;
+        if (impl_->nextPartGeometryRevision_ == 0)
+            impl_->nextPartGeometryRevision_ = 1;
+        impl_->cachedPlan_.partGeometryDeltaFloorRevision =
+            impl_->cachedPlan_.partGeometryRevision;
+        impl_->cachedPlan_.instanceAttributeRevision =
+            impl_->nextInstanceAttributeRevision_++;
+        if (impl_->nextInstanceAttributeRevision_ == 0)
+            impl_->nextInstanceAttributeRevision_ = 1;
+        impl_->cachedPlan_.instanceAttributeDeltaFloorRevision =
+            impl_->cachedPlan_.instanceAttributeRevision;
+        impl_->pendingInstanceAttributeIndices_.clear();
         if (geometryChanged) {
             impl_->geometryRevision_ = impl_->nextGeometryRevision_++;
             if (impl_->nextGeometryRevision_ == 0)
@@ -1781,6 +4263,7 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
         impl_->cachedPlan_.geometryRevision = impl_->geometryRevision_;
         impl_->planDirty_   = false;
         impl_->geometryDirty_ = false;
+        impl_->cachedPlanTombstoneCount_ = 0;
         impl_->cachedDM_    = dm;
         impl_->rebuildProgressiveShadedPlanIndex();
     }
@@ -1788,7 +4271,9 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
     const SbViewportRegion& viewport = SoViewportRegionElement::get(state);
     const SbViewVolume& viewVolume = SoViewVolumeElement::get(state);
     impl_->updateSubpixelProxyPlan(viewProj,
-        viewport.getViewportSizePixels());
+        viewport.getViewportSizePixels(),
+        pointProxyPixelThreshold.getValue(),
+        cameraMotionFrameReuse.getValue());
 
     const Obol::CadRenderState renderState =
         Obol::resolveCadRenderState(SoCADViewStateElement::get(state));
@@ -2158,6 +4643,48 @@ SoCADAssembly::lastRenderTier() const
     return impl_->renderer_->lastRenderTier();
 }
 
+int
+SoCADAssembly::lastIndirectStatus() const
+{
+    if (!impl_->renderer_) return -1;
+    return impl_->renderer_->lastIndirectStatus();
+}
+
+uint64_t
+SoCADAssembly::lastRenderedTriangleCount() const
+{
+    if (!impl_->renderer_) return 0;
+    return impl_->renderer_->lastRenderedTriangleCount();
+}
+
+uint64_t
+SoCADAssembly::lastGpuRenderNanoseconds() const
+{
+    return impl_->renderer_ ?
+        impl_->renderer_->lastGpuRenderNanoseconds() : 0;
+}
+
+uint64_t
+SoCADAssembly::lastGpuRenderedTriangleCount() const
+{
+    return impl_->renderer_ ?
+        impl_->renderer_->lastGpuRenderedTriangleCount() : 0;
+}
+
+uint64_t
+SoCADAssembly::gpuTimerSampleSerial() const
+{
+    return impl_->renderer_ ?
+        impl_->renderer_->gpuTimerSampleSerial() : 0;
+}
+
+bool
+SoCADAssembly::lastRenderUsedPreparedReplay() const
+{
+    return impl_->renderer_ &&
+        impl_->renderer_->lastRenderUsedPreparedReplay();
+}
+
 bool
 SoCADAssembly::lastRenderUsedDirectSoftwareWire() const
 {
@@ -2167,11 +4694,35 @@ SoCADAssembly::lastRenderUsedDirectSoftwareWire() const
 size_t
 SoCADAssembly::lastSubpixelProxyCount() const
 {
-    return impl_->cachedPlan_.subpixelProxyPoints.size();
+    size_t visible = 0;
+    for (const Obol::internal::CadSubpixelProxyPoint& point :
+            impl_->cachedPlan_.subpixelProxyPoints)
+        if (!(point.flags & Obol::internal::CadInstanceHidden))
+            ++visible;
+    return visible +
+        (impl_->renderer_ ? impl_->renderer_->lastPressureProxyCount() : 0);
+}
+
+size_t
+SoCADAssembly::lastUncollapsedStructuralProxyCount() const
+{
+    return impl_->uncollapsedStructuralProxyCount_;
 }
 
 uint64_t
 SoCADAssembly::lastSubpixelProxyRevision() const
 {
     return impl_->cachedPlan_.subpixelProxyRevision;
+}
+
+uint64_t
+SoCADAssembly::framePlanBuildCount() const
+{
+    return impl_->framePlanBuildCount_;
+}
+
+size_t
+SoCADAssembly::framePlanInstanceRecordCount() const
+{
+    return impl_->cachedPlan_.visibleInstances.size();
 }

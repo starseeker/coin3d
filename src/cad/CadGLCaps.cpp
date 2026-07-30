@@ -85,6 +85,9 @@ CadGLCaps CadGLCaps::detect(const SoGLContext * glue)
                           glue->glDrawArraysInstanced != nullptr);
 
     caps.hasAttribDivisor = (glue->glVertexAttribDivisor != nullptr);
+    caps.hasMultiDrawIndirect =
+        (glue->glMultiDrawElementsIndirect != nullptr);
+    caps.hasCopyBuffer = (glue->glCopyBufferSubData != nullptr);
 
     const char *versionString = reinterpret_cast<const char *>(
         glue->glGetString ? glue->glGetString(GL_VERSION) : nullptr);
@@ -250,7 +253,8 @@ CadGLCaps CadGLCaps::detect(const SoGLContext * glue)
         std::fprintf(stderr,
             "CadGLCaps context=%u vendor=%s renderer=%s version=%s "
             "vbo=%d shaders=%d vao=%d "
-            "fixedArrays=%d instancing=%d divisor=%d stipple=%d glslDraw=%d "
+            "fixedArrays=%d instancing=%d divisor=%d indirect=%d copy=%d "
+            "stipple=%d glslDraw=%d "
             "software=%d\n",
             glue->contextid,
             vendorString ? vendorString : "unknown",
@@ -258,7 +262,8 @@ CadGLCaps CadGLCaps::detect(const SoGLContext * glue)
             versionString ? versionString : "unknown",
             caps.hasVBO, caps.hasShaderObjects, caps.hasVAO,
             caps.hasFixedVertexArrays,
-            caps.hasInstancing, caps.hasAttribDivisor, caps.hasLineStipple,
+            caps.hasInstancing, caps.hasAttribDivisor,
+            caps.hasMultiDrawIndirect, caps.hasCopyBuffer, caps.hasLineStipple,
             caps.hasGLSLDraw, caps.isSoftwareRenderer);
     }
 

@@ -228,6 +228,134 @@ normalFreeTwoSidedGlslMatchesFixed()
     return matched;
 }
 
+bool
+indirectProgressiveAtlasGrows()
+{
+    constexpr int partCount = 128;
+    constexpr int trianglesPerPart = 300;
+
+    SoSeparator *root = new SoSeparator;
+    root->ref();
+    SoOrthographicCamera *camera = new SoOrthographicCamera;
+    camera->position.setValue(0.0f, 0.0f, 10.0f);
+    camera->nearDistance.setValue(0.1f);
+    camera->farDistance.setValue(100.0f);
+    camera->height.setValue(110.0f);
+    root->addChild(camera);
+    root->addChild(new SoDirectionalLight);
+
+    SoCADAssembly *assembly = new SoCADAssembly;
+    assembly->drawMode.setValue(SoCADAssembly::SHADED);
+    root->addChild(assembly);
+
+    Obol::TriMesh mesh;
+    mesh.positions.reserve(trianglesPerPart * 3u);
+    mesh.indices.reserve(trianglesPerPart * 3u);
+    mesh.bounds.makeEmpty();
+    for (int triangle = 0; triangle < trianglesPerPart; ++triangle) {
+        const float x = -0.45f +
+            0.06f * static_cast<float>(triangle % 15);
+        const float y = -0.45f +
+            0.045f * static_cast<float>(triangle / 15);
+        const SbVec3f points[3] = {
+            SbVec3f(x, y, 0.0f),
+            SbVec3f(x + 0.05f, y, 0.0f),
+            SbVec3f(x + 0.025f, y + 0.04f, 0.0f)
+        };
+        for (const SbVec3f& point : points) {
+            mesh.indices.push_back(
+                static_cast<uint32_t>(mesh.positions.size()));
+            mesh.positions.push_back(point);
+            mesh.bounds.extendBy(point);
+        }
+    }
+    mesh.progressiveMinimumLevel = 0;
+    mesh.progressiveResidentLevel = 15;
+    mesh.progressiveIndexCount.fill(3u);
+    mesh.progressivePositionCount.fill(3u);
+    mesh.progressiveIndexCount[15] =
+        static_cast<uint32_t>(mesh.indices.size());
+    mesh.progressivePositionCount[15] =
+        static_cast<uint32_t>(mesh.positions.size());
+    mesh.progressiveQuantizationMinimum = mesh.bounds.getMin();
+    mesh.progressiveQuantizationMaximum = mesh.bounds.getMax();
+
+    std::vector<Obol::InstanceLodUpdate> richCuts;
+    richCuts.reserve(partCount);
+    for (int i = 0; i < partCount; ++i) {
+        char name[64] = {};
+        std::snprintf(name, sizeof(name),
+            "progressive-atlas-growth-%03d", i);
+        Obol::PartGeometry geometry;
+        geometry.shaded = mesh;
+        const Obol::PartId part = Obol::CadIdBuilder::hash128(name);
+        assembly->upsertPart(part, geometry);
+
+        Obol::InstanceRecord instance;
+        instance.part = part;
+        instance.parent = Obol::CadIdBuilder::Root();
+        instance.childName = name;
+        instance.occurrenceIndex = static_cast<uint32_t>(i);
+        instance.localToRoot.setTranslate(SbVec3f(
+            -44.0f + 8.0f * static_cast<float>(i % 12),
+            -44.0f + 8.0f * static_cast<float>(i / 12),
+            0.0f));
+        instance.lodLevel = 0;
+        const Obol::InstanceId id =
+            assembly->upsertInstanceAuto(instance);
+        richCuts.push_back({id, 15});
+    }
+
+    const SbViewportRegion viewport(256, 256);
+    SoOffscreenRenderer renderer(viewport);
+    renderer.setComponents(SoOffscreenRenderer::RGB);
+    renderer.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
+
+    const char *previousIndirect = std::getenv("OBOL_CAD_INDIRECT");
+    const bool hadPreviousIndirect = previousIndirect != nullptr;
+    const std::string previousIndirectValue =
+        previousIndirect ? previousIndirect : "";
+    setenv("OBOL_CAD_INDIRECT", "1", 1);
+    const bool coarseRendered = render(renderer, root);
+    const int coarseTier = assembly->lastRenderTier();
+    const uint64_t coarseTriangles =
+        assembly->lastRenderedTriangleCount();
+
+    /*
+     * A backend without MDI cannot exercise this GPU-residency contract.
+     * Its ordinary progressive path is covered separately.
+     */
+    bool passed = coarseRendered;
+    if (passed && coarseTier == 6) {
+        assembly->updateInstanceLodLevels(richCuts);
+        const bool richRendered = render(renderer, root);
+        const uint64_t richTriangles =
+            assembly->lastRenderedTriangleCount();
+        const uint64_t expectedRich =
+            static_cast<uint64_t>(partCount) * trianglesPerPart;
+        passed = richRendered && assembly->lastRenderTier() == 6 &&
+            coarseTriangles == static_cast<uint64_t>(partCount) &&
+            richTriangles == expectedRich;
+        if (!passed) {
+            std::fprintf(stderr,
+                "indirect progressive atlas did not grow "
+                "(tier=%d coarse=%llu rich=%llu expected=%llu)\n",
+                assembly->lastRenderTier(),
+                static_cast<unsigned long long>(coarseTriangles),
+                static_cast<unsigned long long>(richTriangles),
+                static_cast<unsigned long long>(expectedRich));
+        }
+    }
+
+    if (hadPreviousIndirect)
+        setenv("OBOL_CAD_INDIRECT",
+            previousIndirectValue.c_str(), 1);
+    else
+        unsetenv("OBOL_CAD_INDIRECT");
+    root->unref();
+    return passed;
+}
+
 } // namespace
 
 int
@@ -251,6 +379,7 @@ main()
     Obol::PartGeometry geometry;
     geometry.wire = unitBox();
     geometry.subpixelProxyEligible = true;
+    geometry.structuralProxy = true;
     const Obol::PartId part = Obol::CadIdBuilder::hash128("subpixel-proxy");
     assembly->upsertPart(part, geometry);
 
@@ -261,7 +390,8 @@ main()
     instance.localToRoot.makeIdentity();
     instance.style.hasColorOverride = true;
     instance.style.color = SbColor4f(1.0f, 0.0f, 0.0f, 1.0f);
-    assembly->upsertInstanceAuto(instance);
+    const Obol::InstanceId proxyInstance =
+        assembly->upsertInstanceAuto(instance);
 
     // An incorrectly tagged payload must not collapse.  It still has twelve
     // segments, but one endpoint introduces a ninth unique corner so it is
@@ -290,10 +420,52 @@ main()
     }
     const uint64_t initialPresentation =
         assembly->lastSubpixelProxyRevision();
+    const uint64_t initialPlanBuilds =
+        assembly->framePlanBuildCount();
     if (!initialPresentation || !render(renderer, root) ||
         assembly->lastSubpixelProxyRevision() != initialPresentation) {
         std::fprintf(stderr,
             "unchanged subpixel proxy view rebuilt presentation state\n");
+        root->unref();
+        return 1;
+    }
+
+    /*
+     * Visibility is a retained per-instance presentation delta.  Hiding and
+     * restoring one occurrence must update the aggregate point channel
+     * without recompiling unrelated part/instance topology.
+     */
+    assembly->setHiddenInstances({proxyInstance});
+    if (!render(renderer, root) || !assembly->isInstanceHidden(proxyInstance) ||
+            assembly->lastSubpixelProxyCount() != 0u ||
+            assembly->framePlanBuildCount() != initialPlanBuilds) {
+        std::fprintf(stderr,
+            "sparse hide rebuilt the frame plan or remained visible\n");
+        root->unref();
+        return 1;
+    }
+    assembly->setHiddenInstances({});
+    if (!render(renderer, root) || assembly->isInstanceHidden(proxyInstance) ||
+            assembly->lastSubpixelProxyCount() != 1u ||
+            assembly->framePlanBuildCount() != initialPlanBuilds) {
+        std::fprintf(stderr,
+            "sparse visibility restore rebuilt the frame plan or stayed hidden\n");
+        root->unref();
+        return 1;
+    }
+    assembly->setSelectedInstances({proxyInstance});
+    if (!render(renderer, root) || assembly->selectedInstanceCount() != 1u ||
+            assembly->framePlanBuildCount() != initialPlanBuilds) {
+        std::fprintf(stderr,
+            "sparse selection rebuilt the frame plan or was not retained\n");
+        root->unref();
+        return 1;
+    }
+    assembly->setSelectedInstances({});
+    if (!render(renderer, root) || assembly->selectedInstanceCount() != 0u ||
+            assembly->framePlanBuildCount() != initialPlanBuilds) {
+        std::fprintf(stderr,
+            "sparse selection clear rebuilt the frame plan or remained set\n");
         root->unref();
         return 1;
     }
@@ -330,6 +502,75 @@ main()
         return 1;
     }
 
+    // Under measured interaction pressure the same retained occurrence may
+    // enter the aggregate batch at a larger screen-error threshold.  Returning
+    // to the pixel-exact threshold must restore its ordinary representation
+    // without a geometry update.
+    assembly->pointProxyPixelThreshold.setValue(2.0f);
+    if (!render(renderer, root) || assembly->lastSubpixelProxyCount() != 1u) {
+        std::fprintf(stderr,
+            "interactive point threshold did not aggregate retained proxy\n");
+        root->unref();
+        return 1;
+    }
+    assembly->pointProxyPixelThreshold.setValue(1.0f);
+    if (!render(renderer, root) || assembly->lastSubpixelProxyCount() != 0u) {
+        std::fprintf(stderr,
+            "pixel-exact point threshold did not restore retained proxy\n");
+        root->unref();
+        return 1;
+    }
+
+    /*
+     * Retained shaded LoD uses the same camera-local replacement.  The
+     * triangles and instance identity remain in the assembly; only the draw
+     * channel changes, so a near view promotes the mesh without an update or
+     * reload.
+     */
+    Obol::PartGeometry shadedSubpixel;
+    Obol::TriMesh shadedMesh;
+    shadedMesh.positions = {
+        SbVec3f(-0.5f, -0.5f, 0.0f),
+        SbVec3f( 0.5f, -0.5f, 0.0f),
+        SbVec3f( 0.5f,  0.5f, 0.0f),
+        SbVec3f(-0.5f,  0.5f, 0.0f)
+    };
+    shadedMesh.indices = {0, 1, 2, 0, 2, 3};
+    shadedMesh.bounds.makeEmpty();
+    for (const SbVec3f& point : shadedMesh.positions)
+        shadedMesh.bounds.extendBy(point);
+    shadedSubpixel.shaded = std::move(shadedMesh);
+    shadedSubpixel.subpixelProxyEligible = true;
+    const Obol::PartId shadedSubpixelPart =
+        Obol::CadIdBuilder::hash128("shaded-subpixel");
+    assembly->upsertPart(shadedSubpixelPart, shadedSubpixel);
+    Obol::InstanceRecord shadedInstance;
+    shadedInstance.part = shadedSubpixelPart;
+    shadedInstance.parent = Obol::CadIdBuilder::Root();
+    shadedInstance.childName = "shaded-subpixel";
+    shadedInstance.localToRoot.makeIdentity();
+    const Obol::InstanceId shadedSubpixelInstance =
+        assembly->upsertInstanceAuto(shadedInstance);
+    assembly->drawMode.setValue(SoCADAssembly::SHADED);
+    camera->height.setValue(1000.0f);
+    if (!render(renderer, root) ||
+            assembly->lastSubpixelProxyCount() != 1u) {
+        std::fprintf(stderr,
+            "subpixel shaded LoD did not enter the aggregate point batch\n");
+        root->unref();
+        return 1;
+    }
+    camera->height.setValue(2.0f);
+    if (!render(renderer, root) ||
+            assembly->lastSubpixelProxyCount() != 0u) {
+        std::fprintf(stderr,
+            "near shaded LoD did not promote its retained mesh in place\n");
+        root->unref();
+        return 1;
+    }
+    assembly->removeInstance(shadedSubpixelInstance);
+    assembly->removePart(shadedSubpixelPart);
+
     /*
      * More than 128 independently authored wire parts select the flat batch.
      * Keep one retained progressive shaded part in the same assembly: this is
@@ -342,6 +583,7 @@ main()
         Obol::PartGeometry box;
         box.wire = unitBox();
         box.subpixelProxyEligible = true;
+        box.structuralProxy = true;
         const float sx = 0.65f + 0.07f * static_cast<float>(i % 5);
         const float sy = 0.55f + 0.05f * static_cast<float>((i / 5) % 7);
         const float sz = 0.45f + 0.03f * static_cast<float>((i / 11) % 9);
@@ -442,6 +684,240 @@ main()
         return 1;
     }
 
+    /*
+     * qged selection changes both the retained style color and the selected
+     * flag.  In a mixed shaded-with-edges assembly, a color-only style change
+     * must patch the instance stream just like the flag change; recompiling
+     * the complete frame plan makes selection latency scale with scene size.
+     */
+    const uint64_t mixedPlanBuilds = assembly->framePlanBuildCount();
+    Obol::InstanceStyle selectedStyle;
+    selectedStyle.hasColorOverride = true;
+    selectedStyle.color = SbColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+    Obol::InstanceStyleUpdate selectedStyleUpdate;
+    selectedStyleUpdate.instance = proxyInstance;
+    selectedStyleUpdate.style = selectedStyle;
+    assembly->updateInstanceStyles({selectedStyleUpdate});
+    assembly->setSelectedInstances({proxyInstance});
+    if (!render(renderer, root) ||
+            assembly->selectedInstanceCount() != 1u ||
+            assembly->framePlanBuildCount() != mixedPlanBuilds) {
+        std::fprintf(stderr,
+            "mixed-mode sparse style/selection rebuilt the frame plan\n");
+        root->unref();
+        return 1;
+    }
+    assembly->setSelectedInstances({});
+    if (!render(renderer, root) ||
+            assembly->selectedInstanceCount() != 0u ||
+            assembly->framePlanBuildCount() != mixedPlanBuilds) {
+        std::fprintf(stderr,
+            "mixed-mode sparse selection clear rebuilt the frame plan\n");
+        root->unref();
+        return 1;
+    }
+
+    /*
+     * A streamed leaf normally changes from a unique structural box part to a
+     * newly available progressive mesh part.  That is a presentation-slot
+     * rebind, not arbitrary assembly topology: adding the unreferenced mesh
+     * and rebinding the unique occurrence must retain the compiled plan.
+     */
+    Obol::PartGeometry rebindBox;
+    rebindBox.wire = unitBox();
+    rebindBox.subpixelProxyEligible = true;
+    rebindBox.structuralProxy = true;
+    const Obol::PartId rebindBoxPart =
+        Obol::CadIdBuilder::hash128("stream-rebind-box");
+    assembly->upsertPart(rebindBoxPart, rebindBox);
+    Obol::InstanceRecord rebindRecord;
+    rebindRecord.part = rebindBoxPart;
+    rebindRecord.parent = Obol::CadIdBuilder::Root();
+    rebindRecord.childName = "stream-rebind";
+    rebindRecord.occurrenceIndex = 9001;
+    rebindRecord.localToRoot.setTranslate(SbVec3f(0.0f, 20.0f, 0.0f));
+    const Obol::InstanceId rebindInstance =
+        assembly->upsertInstanceAuto(rebindRecord);
+    if (!render(renderer, root)) {
+        std::fprintf(stderr, "stream rebind setup did not render\n");
+        root->unref();
+        return 1;
+    }
+    const uint64_t rebindPlanBuilds = assembly->framePlanBuildCount();
+    const size_t rebindPlanInstances =
+        assembly->framePlanInstanceRecordCount();
+    const Obol::PartId rebindMeshPart =
+        Obol::CadIdBuilder::hash128("stream-rebind-mesh");
+    assembly->upsertPart(rebindMeshPart, progressiveGeometry);
+    rebindRecord.part = rebindMeshPart;
+    Obol::InstanceUpdate rebindUpdate;
+    rebindUpdate.instance = rebindInstance;
+    rebindUpdate.record = rebindRecord;
+    assembly->upsertInstances({rebindUpdate});
+    if (!render(renderer, root) ||
+            assembly->framePlanBuildCount() != rebindPlanBuilds ||
+            assembly->framePlanInstanceRecordCount() !=
+                rebindPlanInstances) {
+        std::fprintf(stderr,
+            "unique box-to-mesh rebind rebuilt or duplicated the frame plan\n");
+        root->unref();
+        return 1;
+    }
+    /*
+     * The retired box library entry is now referenced only by the hidden
+     * compiled tombstone.  Its plan binding owns the immutable payload until
+     * compaction, so removing the library entry must not invalidate the live
+     * mesh plan.
+     */
+    assembly->removePart(rebindBoxPart);
+    if (!render(renderer, root) ||
+            assembly->framePlanBuildCount() != rebindPlanBuilds) {
+        std::fprintf(stderr,
+            "retired tombstone part removal rebuilt the frame plan\n");
+        root->unref();
+        return 1;
+    }
+    const size_t sharedProxyBaseline =
+        assembly->lastUncollapsedStructuralProxyCount();
+
+    /*
+     * Real cold delivery waves mix newly discovered occurrences with older
+     * occurrences promoted out of one deduplicated structural-box part.  The
+     * shared box range must stay compiled while the promoted occurrence is
+     * internally tombstoned and redirected to its mesh tail record.
+     */
+    const Obol::PartId sharedBoxPart =
+        Obol::CadIdBuilder::hash128("stream-shared-box");
+    assembly->upsertPart(sharedBoxPart, rebindBox);
+    Obol::InstanceRecord sharedBoxA = rebindRecord;
+    sharedBoxA.part = sharedBoxPart;
+    sharedBoxA.childName = "stream-shared-box-a";
+    sharedBoxA.occurrenceIndex = 9002;
+    sharedBoxA.localToRoot.setTranslate(SbVec3f(-4.0f, 24.0f, 0.0f));
+    const Obol::InstanceId sharedBoxAId =
+        assembly->upsertInstanceAuto(sharedBoxA);
+    Obol::InstanceRecord sharedBoxB = sharedBoxA;
+    sharedBoxB.childName = "stream-shared-box-b";
+    sharedBoxB.occurrenceIndex = 9003;
+    sharedBoxB.localToRoot.setTranslate(SbVec3f(4.0f, 24.0f, 0.0f));
+    assembly->upsertInstanceAuto(sharedBoxB);
+    if (!render(renderer, root) ||
+            assembly->lastUncollapsedStructuralProxyCount() !=
+                sharedProxyBaseline + 2u) {
+        std::fprintf(stderr, "shared stream rebind setup did not render\n");
+        root->unref();
+        return 1;
+    }
+    const uint64_t mixedStreamPlanBuilds =
+        assembly->framePlanBuildCount();
+    assembly->setHiddenInstances({sharedBoxAId});
+    if (!render(renderer, root) ||
+            assembly->lastUncollapsedStructuralProxyCount() !=
+                sharedProxyBaseline + 1u ||
+            assembly->framePlanBuildCount() != mixedStreamPlanBuilds) {
+        std::fprintf(stderr,
+            "sparse hide retained an uncollapsed structural proxy or "
+            "rebuilt the complete frame plan\n");
+        root->unref();
+        return 1;
+    }
+    assembly->setHiddenInstances({});
+    if (!render(renderer, root) ||
+            assembly->lastUncollapsedStructuralProxyCount() !=
+                sharedProxyBaseline + 2u ||
+            assembly->framePlanBuildCount() != mixedStreamPlanBuilds) {
+        std::fprintf(stderr,
+            "sparse restore lost an uncollapsed structural proxy or "
+            "rebuilt the complete frame plan\n");
+        root->unref();
+        return 1;
+    }
+
+    Obol::InstanceRecord promotedShared = sharedBoxA;
+    promotedShared.part = rebindMeshPart;
+    Obol::InstanceUpdate promotedUpdate;
+    promotedUpdate.instance = sharedBoxAId;
+    promotedUpdate.record = promotedShared;
+
+    Obol::InstanceRecord newStreamed = promotedShared;
+    newStreamed.childName = "stream-new-mesh";
+    newStreamed.occurrenceIndex = 9004;
+    newStreamed.localToRoot.setTranslate(SbVec3f(0.0f, 28.0f, 0.0f));
+    const Obol::InstanceId newStreamedId =
+        Obol::CadIdBuilder::extendNameOccBool(
+            newStreamed.parent, newStreamed.childName,
+            newStreamed.occurrenceIndex, newStreamed.boolOp);
+    Obol::InstanceUpdate newStreamedUpdate;
+    newStreamedUpdate.instance = newStreamedId;
+    newStreamedUpdate.record = newStreamed;
+    assembly->upsertInstances({promotedUpdate, newStreamedUpdate});
+    if (!render(renderer, root) ||
+            assembly->framePlanBuildCount() != mixedStreamPlanBuilds ||
+            assembly->lastUncollapsedStructuralProxyCount() !=
+                sharedProxyBaseline + 1u) {
+        std::fprintf(stderr,
+            "mixed shared-box promotion rebuilt the complete frame plan "
+            "or retained its stale box presentation\n");
+        root->unref();
+        return 1;
+    }
+
+    /*
+     * Subsequent cold-delivery waves may append more occurrences of the
+     * existing structural-box part after unrelated mesh records.  Extending
+     * the old compiled range across those records is valid sparse storage,
+     * but those intervening records are holes, not box instances.  Every
+     * renderer and proxy-accounting consumer must honor current partIndex
+     * membership rather than treating range containment as ownership.
+     */
+    for (uint32_t wave = 0; wave < 8u; ++wave) {
+        char boxName[64] = {};
+        std::snprintf(
+            boxName, sizeof(boxName), "stream-late-box-%u", wave);
+        Obol::InstanceRecord lateBox = sharedBoxB;
+        lateBox.childName = boxName;
+        lateBox.occurrenceIndex = 9100u + wave;
+        lateBox.localToRoot.setTranslate(SbVec3f(
+            -14.0f + 4.0f * static_cast<float>(wave),
+            30.0f, 0.0f));
+        Obol::InstanceUpdate lateBoxUpdate;
+        lateBoxUpdate.instance =
+            Obol::CadIdBuilder::extendNameOccBool(
+                lateBox.parent, lateBox.childName,
+                lateBox.occurrenceIndex, lateBox.boolOp);
+        lateBoxUpdate.record = lateBox;
+
+        char meshName[64] = {};
+        std::snprintf(
+            meshName, sizeof(meshName), "stream-late-mesh-%u", wave);
+        Obol::InstanceRecord lateMesh = newStreamed;
+        lateMesh.childName = meshName;
+        lateMesh.occurrenceIndex = 9200u + wave;
+        lateMesh.localToRoot.setTranslate(SbVec3f(
+            -14.0f + 4.0f * static_cast<float>(wave),
+            34.0f, 0.0f));
+        Obol::InstanceUpdate lateMeshUpdate;
+        lateMeshUpdate.instance =
+            Obol::CadIdBuilder::extendNameOccBool(
+                lateMesh.parent, lateMesh.childName,
+                lateMesh.occurrenceIndex, lateMesh.boolOp);
+        lateMeshUpdate.record = lateMesh;
+
+        assembly->upsertInstances(
+            {lateMeshUpdate, lateBoxUpdate});
+        if (!render(renderer, root) ||
+                assembly->framePlanBuildCount() !=
+                    mixedStreamPlanBuilds ||
+                assembly->lastUncollapsedStructuralProxyCount() !=
+                    sharedProxyBaseline + 2u + wave) {
+            std::fprintf(stderr,
+                "interleaved sparse delivery wave %u retained stale "
+                "draw-range members\n", wave);
+            root->unref();
+            return 1;
+        }
+    }
+
     // Scene-wide LoD admission may retire thousands of distinct mesh parts
     // in one camera epoch.  The bulk API must remove the complete set without
     // changing unrelated parts or requiring one full instance scan per part.
@@ -467,5 +943,7 @@ main()
             "normal-free two-sided GLSL shading diverged from fixed VBO\n");
         return 1;
     }
+    if (!indirectProgressiveAtlasGrows())
+        return 1;
     return 0;
 }

@@ -68,6 +68,10 @@ struct CadGLCaps {
     bool hasInstancing    = false;
     /** glVertexAttribDivisor available (GL 3.3 / ARB_instanced_arrays). */
     bool hasAttribDivisor = false;
+    /** glMultiDrawElementsIndirect with base-instance commands is available. */
+    bool hasMultiDrawIndirect = false;
+    /** Device-local buffer copying used to grow retained geometry atlases. */
+    bool hasCopyBuffer = false;
     /** Compatibility-profile fixed-function line stippling is available. */
     bool hasLineStipple   = false;
     /** Context is backed by a known CPU software rasterizer. */
@@ -86,6 +90,16 @@ struct CadGLCaps {
     bool canUseInstanced() const {
         return hasVBO && hasShaderObjects && hasGLSLDraw
             && hasVAO && hasInstancing && hasAttribDivisor;
+    }
+
+    /** True when the retained multi-part atlas can be submitted in O(1) calls. */
+    bool canUseIndirect() const {
+        /*
+         * The paged allocator never needs to reallocate live page storage.
+         * Copy-buffer support is an optional compaction accelerator, not a
+         * correctness requirement for indirect submission.
+         */
+        return canUseInstanced() && hasMultiDrawIndirect;
     }
 
     /** True if the minimum requirements for Tier-1 VBO-loop rendering are met. */

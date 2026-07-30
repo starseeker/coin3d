@@ -263,12 +263,25 @@ struct PartGeometry {
     bool shadedCullBackfaces = false;
 
     /**
-     * This wire representation is a conservative LoD proxy rather than
-     * authored geometry.  Renderers may replace it with a single depth-tested
-     * point when its complete projected extent is subpixel.  The original
-     * geometry remains available for bounds queries and picking.
+     * This presentation may be replaced by one depth-tested point when its
+     * complete producer-validated bounds are subpixel.  The immutable
+     * geometry remains available for bounds queries, picking, and immediate
+     * promotion when the view makes it significant again.  Producers should
+     * enable this for conservative LoD boxes and retained view-LoD meshes,
+     * not for arbitrary annotations whose authored strokes must remain
+     * individually visible.
      */
     bool subpixelProxyEligible = false;
+
+    /**
+     * This geometry is a temporary structural AABB/OBB presentation rather
+     * than authored wire geometry or a retained mesh LoD.  Producers must
+     * set this explicitly: channel shape alone is not enough to distinguish
+     * a box from a legitimate wire-only mesh.  The renderer uses the marker
+     * only for presentation accounting and diagnostics; subpixel aggregation
+     * remains controlled independently by @c subpixelProxyEligible.
+     */
+    bool structuralProxy = false;
 };
 
 // ---------------------------------------------------------------------------
@@ -320,6 +333,15 @@ struct PartUpdate {
 struct SharedPartUpdate {
     PartId part;
     std::shared_ptr<const PartGeometry> geometry;
+    /**
+     * Producer hint for immutable-generation replacement.  When both the
+     * preceding and replacement geometry have exactly the same conservative
+     * local bounds, SoCADAssembly may retain occurrence world bounds and the
+     * instance BVH instead of revisiting every instance of this part.  The
+     * assembly validates the invariant and falls back to ordinary bounds
+     * recomputation if it is not satisfied.
+     */
+    bool preservesBounds = false;
 };
 
 /**
@@ -426,6 +448,22 @@ public:
      * in O(1) at interaction start while its precise per-instance allocator
      * catches up. */
     SoSFInt32 progressiveLodCeiling;
+    /** Screen-space size below which eligible occurrences enter one point
+     * batch.  The default 1 px is pixel-exact; an interactive controller may
+     * temporarily raise it to its measured screen-error tolerance.  Geometry
+     * and instance records remain retained and are restored in place when the
+     * threshold returns to 1 px. */
+    SoSFFloat pointProxyPixelThreshold;
+    /** Reuse the last camera-dependent submission during interactive camera
+     * motion.
+     *
+     * This is a presentation hint, not a visibility contract.  The renderer
+     * Callers must clear it for the first quiet frame or when a coverage pass
+     * discovers missing newly visible geometry.  During zoom the retained cut
+     * may temporarily overdraw or omit newly exposed peripheral occurrences,
+     * but it provides an immediate coherent frame while view admission
+     * catches up. */
+    SoSFBool cameraMotionFrameReuse;
 
     // -----------------------------------------------------------------------
     // Class registration
@@ -443,6 +481,17 @@ public:
 
     /** End a batch update and rebuild acceleration structures as needed. */
     void endUpdate();
+
+    /**
+     * Reserve retained and streamed presentation storage for a known
+     * occurrence population.
+     *
+     * This is a capacity hint only: it does not create instances, invalidate
+     * the current plan, or notify scene auditors.  Supplying a manifest count
+     * before the first streamed update prevents unordered-table rehashes and
+     * large vector relocations from landing in later GUI render frames.
+     */
+    void reserveStreamingCapacity(size_t expectedOccurrences);
 
     /** Remove all parts, instances, selection and hidden-state records. */
     void clear();
@@ -549,6 +598,9 @@ public:
     /** Number of parts currently in the part library. */
     size_t partCount() const;
 
+    /** Number of retained instances in the selected presentation set. */
+    size_t selectedInstanceCount() const;
+
     /**
      * Return stable instance IDs in deterministic order.
      *
@@ -584,8 +636,10 @@ public:
     /**
      * Exclude a set of instances from rendering.
      *
-     * Hidden instances are completely skipped during GLRender() and are not
-     * included in the frame plan.  They remain in the instance database and
+     * Hidden instances are skipped during GLRender() but retained in the
+     * compiled frame plan.  Changing this set is therefore a sparse
+     * presentation update: existing part bindings, LoD payloads, atlas
+     * allocations, and unrelated instance records remain intact.  Instances
      * can be shown again by passing an updated (smaller) set.
      *
      * Typical use: after promoting selected/edited instances to explicit
@@ -615,14 +669,48 @@ public:
      */
     int lastRenderTier() const;
 
+    /** Diagnostic status of the last retained indirect-shaded attempt. */
+    int lastIndirectStatus() const;
+
+    /** Triangles actually submitted by the last shaded rendering pass. */
+    uint64_t lastRenderedTriangleCount() const;
+
+    /** Duration and triangle count from the newest completed asynchronous
+     * GPU timer sample.  A zero serial means timer queries are unavailable or
+     * no result has completed yet. */
+    uint64_t lastGpuRenderNanoseconds() const;
+    uint64_t lastGpuRenderedTriangleCount() const;
+    uint64_t gpuTimerSampleSerial() const;
+
+    /** True when the last retained indirect pass replayed an already prepared
+     * camera-dependent frame rather than rebuilding its submission record. */
+    bool lastRenderUsedPreparedReplay() const;
+
     /** True when the last render used the direct software wire rasterizer. */
     bool lastRenderUsedDirectSoftwareWire() const;
 
     /** Number of LoD proxy occurrences rendered as subpixel points last frame. */
     size_t lastSubpixelProxyCount() const;
 
+    /**
+     * Number of structural proxy occurrences which remained visible as
+     * wire boxes after camera-local subpixel collapse last frame.
+     */
+    size_t lastUncollapsedStructuralProxyCount() const;
+
     /** Revision of the last camera-dependent subpixel proxy presentation. */
     uint64_t lastSubpixelProxyRevision() const;
+
+    /** Number of full retained frame-plan compilations performed. */
+    uint64_t framePlanBuildCount() const;
+
+    /**
+     * Number of source occurrence records in the retained frame plan.
+     *
+     * This diagnostic distinguishes logical instances from append-only
+     * presentation records while profiling progressive streams.
+     */
+    size_t framePlanInstanceRecordCount() const;
 
 protected:
     ~SoCADAssembly() override;
