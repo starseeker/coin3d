@@ -321,6 +321,14 @@ struct CadTriangleAtlasPage {
     uint32_t indirectCapacity = 0;
     std::vector<CadAtlasRange> freeVertices;
     std::vector<CadAtlasRange> freeIndices;
+    /*
+     * Exact maxima for the ordered free lists.  Page selection is on the
+     * render/owner thread and may run once per visible PoP part; consulting
+     * these values avoids rescanning every fragmented range on every
+     * admission while allocation itself remains best-fit.
+     */
+    uint32_t largestFreeVertexCapacity = 0;
+    uint32_t largestFreeIndexCapacity = 0;
     size_t partCount = 0;
     bool dedicated = false;
     /*

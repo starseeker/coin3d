@@ -92,11 +92,11 @@ cadAtlasReservedCount(uint32_t required, bool progressive,
     return cadAtlasRoundUp(static_cast<uint32_t>(reserve), granularity);
 }
 
-static void
+static uint32_t
 cadAtlasFreeRange(std::vector<CadAtlasRange>& freeRanges,
                   CadAtlasRange released)
 {
-    if (released.empty()) return;
+    if (released.empty()) return 0;
     /*
      * Allocation and adjacent growth preserve address ordering, and every
      * release comes through this function.  Preserve that invariant with one
@@ -155,23 +155,76 @@ cadAtlasFreeRange(std::vector<CadAtlasRange>& freeRanges,
             freeRanges.begin() +
             static_cast<std::ptrdiff_t>(current + 1));
     }
+    return freeRanges[current].capacity;
 }
 
 static uint32_t
-cadAtlasBestWaste(const std::vector<CadAtlasRange>& freeRanges,
-                  uint32_t capacity)
+cadAtlasLargestFreeCapacity(
+        const std::vector<CadAtlasRange>& freeRanges)
 {
-    if (!capacity) return 0;
-    uint32_t best = std::numeric_limits<uint32_t>::max();
+    uint32_t largest = 0;
     for (const CadAtlasRange& range : freeRanges)
-        if (range.capacity >= capacity)
-            best = std::min(best, range.capacity - capacity);
-    return best;
+        largest = std::max(largest, range.capacity);
+    return largest;
+}
+
+/*
+ * Test whether an allocation would fit after returning one live range
+ * without copying and coalescing the complete free-range vector.  The
+ * ranges are kept ordered and non-overlapping by cadAtlasFreeRange(), so a
+ * single scan can account for both an already-suitable range and the one
+ * contiguous interval which releasing `released` would form.
+ *
+ * This is intentionally a predicate rather than an allocation operation.
+ * Progressive relocation uses it to prove that releasing the old prefix is
+ * safe before doing so.  Copying both free lists for that proof made every
+ * growing part proportional to the page's fragmentation; a large stream of
+ * unique PoP meshes consequently spent most of its owner-thread time copying
+ * vectors which were immediately discarded.
+ */
+static bool
+cadAtlasCanAllocateAfterRelease(
+        const std::vector<CadAtlasRange>& freeRanges,
+        uint32_t largestFreeCapacity, CadAtlasRange released,
+        uint32_t capacity)
+{
+    if (!capacity)
+        return true;
+    if (released.empty())
+        return largestFreeCapacity >= capacity;
+    if (largestFreeCapacity >= capacity)
+        return true;
+
+    uint64_t mergedFirst = released.first;
+    uint64_t mergedEnd =
+        static_cast<uint64_t>(released.first) + released.capacity;
+    auto next = std::lower_bound(
+        freeRanges.begin(), freeRanges.end(), released.first,
+        [](const CadAtlasRange& range, uint32_t first) {
+            return range.first < first;
+        });
+    if (next != freeRanges.begin()) {
+        const CadAtlasRange& previous = *(next - 1);
+        const uint64_t previousEnd =
+            static_cast<uint64_t>(previous.first) + previous.capacity;
+        if (previousEnd >= mergedFirst) {
+            mergedFirst = previous.first;
+            mergedEnd = std::max(mergedEnd, previousEnd);
+        }
+    }
+    if (next != freeRanges.end() &&
+            mergedEnd >= static_cast<uint64_t>(next->first)) {
+        mergedEnd = std::max(
+            mergedEnd,
+            static_cast<uint64_t>(next->first) + next->capacity);
+    }
+    return mergedEnd - mergedFirst >= capacity;
 }
 
 static bool
 cadAtlasAllocateRange(std::vector<CadAtlasRange>& freeRanges,
-                      uint32_t capacity, CadAtlasRange& result)
+                      uint32_t capacity, CadAtlasRange& result,
+                      uint32_t& largestFreeCapacity)
 {
     result = CadAtlasRange();
     if (!capacity) return true;
@@ -186,6 +239,7 @@ cadAtlasAllocateRange(std::vector<CadAtlasRange>& freeRanges,
         }
     }
     if (best == freeRanges.size()) return false;
+    const uint32_t previousCapacity = freeRanges[best].capacity;
     result.first = freeRanges[best].first;
     result.capacity = capacity;
     freeRanges[best].first += capacity;
@@ -193,12 +247,16 @@ cadAtlasAllocateRange(std::vector<CadAtlasRange>& freeRanges,
     if (!freeRanges[best].capacity)
         freeRanges.erase(freeRanges.begin() +
                          static_cast<std::ptrdiff_t>(best));
+    if (previousCapacity == largestFreeCapacity)
+        largestFreeCapacity =
+            cadAtlasLargestFreeCapacity(freeRanges);
     return true;
 }
 
 static bool
 cadAtlasGrowAdjacent(std::vector<CadAtlasRange>& freeRanges,
-                     CadAtlasRange& allocated, uint32_t newCapacity)
+                     CadAtlasRange& allocated, uint32_t newCapacity,
+                     uint32_t& largestFreeCapacity)
 {
     if (newCapacity <= allocated.capacity) return true;
     const uint32_t extra = newCapacity - allocated.capacity;
@@ -209,12 +267,17 @@ cadAtlasGrowAdjacent(std::vector<CadAtlasRange>& freeRanges,
         if (freeRanges[i].first != static_cast<uint32_t>(oldEnd) ||
                 freeRanges[i].capacity < extra)
             continue;
+        const uint32_t previousFreeCapacity =
+            freeRanges[i].capacity;
         freeRanges[i].first += extra;
         freeRanges[i].capacity -= extra;
         allocated.capacity = newCapacity;
         if (!freeRanges[i].capacity)
             freeRanges.erase(freeRanges.begin() +
                              static_cast<std::ptrdiff_t>(i));
+        if (previousFreeCapacity == largestFreeCapacity)
+            largestFreeCapacity =
+                cadAtlasLargestFreeCapacity(freeRanges);
         return true;
     }
     return false;
@@ -965,8 +1028,14 @@ void CadGpuResources::releaseTriangleAtlasPart(
     const uint32_t pageIndex = found->second.page;
     CadTriangleAtlasPage *page = triangleAtlasPage(pageIndex);
     if (page) {
-        cadAtlasFreeRange(page->freeVertices, found->second.vertices);
-        cadAtlasFreeRange(page->freeIndices, found->second.indices);
+        page->largestFreeVertexCapacity = std::max(
+            page->largestFreeVertexCapacity,
+            cadAtlasFreeRange(
+                page->freeVertices, found->second.vertices));
+        page->largestFreeIndexCapacity = std::max(
+            page->largestFreeIndexCapacity,
+            cadAtlasFreeRange(
+                page->freeIndices, found->second.indices));
         if (page->partCount)
             --page->partCount;
     }
@@ -1032,12 +1101,14 @@ const CadTriangleAtlasPart *CadGpuResources::upsertTriangleAtlasPart(
                     wantedVertexCapacity <= part.vertices.capacity ||
                     cadAtlasGrowAdjacent(
                         page->freeVertices, part.vertices,
-                        wantedVertexCapacity);
+                        wantedVertexCapacity,
+                        page->largestFreeVertexCapacity);
                 const bool indicesFit =
                     wantedIndexCapacity <= part.indices.capacity ||
                     cadAtlasGrowAdjacent(
                         page->freeIndices, part.indices,
-                        wantedIndexCapacity);
+                        wantedIndexCapacity,
+                        page->largestFreeIndexCapacity);
                 if (verticesFit && indicesFit) {
                     const uint32_t previousVertexCount = part.vertexCount;
                     const uint32_t previousIndexCount = part.indexCount;
@@ -1205,20 +1276,25 @@ const CadTriangleAtlasPart *CadGpuResources::upsertTriangleAtlasPart(
                 if (pageIndex == previous.page &&
                         candidate->partCount == 1)
                     continue;
-                std::vector<CadAtlasRange> freeVertices =
-                    candidate->freeVertices;
-                std::vector<CadAtlasRange> freeIndices =
-                    candidate->freeIndices;
-                if (pageIndex == previous.page) {
-                    cadAtlasFreeRange(
-                        freeVertices, previous.vertices);
-                    cadAtlasFreeRange(
-                        freeIndices, previous.indices);
-                }
-                if (cadAtlasBestWaste(freeVertices, vertexReserve) !=
-                            std::numeric_limits<uint32_t>::max() &&
-                        cadAtlasBestWaste(freeIndices, indexReserve) !=
-                            std::numeric_limits<uint32_t>::max()) {
+                const bool releasesPrevious =
+                    pageIndex == previous.page;
+                const bool vertexFits = releasesPrevious ?
+                    cadAtlasCanAllocateAfterRelease(
+                        candidate->freeVertices,
+                        candidate->largestFreeVertexCapacity,
+                        previous.vertices,
+                        vertexReserve) :
+                    candidate->largestFreeVertexCapacity >=
+                        vertexReserve;
+                const bool indexFits = releasesPrevious ?
+                    cadAtlasCanAllocateAfterRelease(
+                        candidate->freeIndices,
+                        candidate->largestFreeIndexCapacity,
+                        previous.indices,
+                        indexReserve) :
+                    candidate->largestFreeIndexCapacity >=
+                        indexReserve;
+                if (vertexFits && indexFits) {
                     existingRangeFits = true;
                     break;
                 }
@@ -1341,13 +1417,19 @@ const CadTriangleAtlasPart *CadGpuResources::upsertTriangleAtlasPart(
             if (!page || page->dedicated ||
                     (hasNormals && !page->storesNormals))
                 continue;
-            const uint32_t vertexWaste =
-                cadAtlasBestWaste(page->freeVertices, vertexReserve);
-            const uint32_t indexWaste =
-                cadAtlasBestWaste(page->freeIndices, indexReserve);
-            if (vertexWaste == std::numeric_limits<uint32_t>::max() ||
-                    indexWaste == std::numeric_limits<uint32_t>::max())
+            if (page->largestFreeVertexCapacity < vertexReserve ||
+                    page->largestFreeIndexCapacity < indexReserve)
                 continue;
+            /*
+             * The exact best-fit choice is made within the selected page.
+             * Across pages, use their exact maximum capacities as a constant
+             * time fragmentation proxy.  This preserves bounded allocation
+             * while avoiding two complete free-list scans per page.
+             */
+            const uint32_t vertexWaste =
+                page->largestFreeVertexCapacity - vertexReserve;
+            const uint32_t indexWaste =
+                page->largestFreeIndexCapacity - indexReserve;
             const uint64_t waste =
                 static_cast<uint64_t>(vertexWaste) *
                     (page->storesNormals ? 24u : 12u) +
@@ -1449,6 +1531,8 @@ const CadTriangleAtlasPart *CadGpuResources::upsertTriangleAtlasPart(
         page->storesNormals = hasNormals;
         page->freeVertices.push_back({0u, pageVertices});
         page->freeIndices.push_back({0u, pageIndices});
+        page->largestFreeVertexCapacity = pageVertices;
+        page->largestFreeIndexCapacity = pageIndices;
         const size_t pageBytes = page->allocatedBytes();
 
         /*
@@ -1517,11 +1601,19 @@ const CadTriangleAtlasPart *CadGpuResources::upsertTriangleAtlasPart(
     CadTriangleAtlasPart part;
     part.page = pageIndex;
     if (!cadAtlasAllocateRange(
-            page->freeVertices, vertexReserve, part.vertices) ||
+            page->freeVertices, vertexReserve, part.vertices,
+            page->largestFreeVertexCapacity) ||
             !cadAtlasAllocateRange(
-                page->freeIndices, indexReserve, part.indices)) {
-        cadAtlasFreeRange(page->freeVertices, part.vertices);
-        cadAtlasFreeRange(page->freeIndices, part.indices);
+                page->freeIndices, indexReserve, part.indices,
+                page->largestFreeIndexCapacity)) {
+        page->largestFreeVertexCapacity = std::max(
+            page->largestFreeVertexCapacity,
+            cadAtlasFreeRange(
+                page->freeVertices, part.vertices));
+        page->largestFreeIndexCapacity = std::max(
+            page->largestFreeIndexCapacity,
+            cadAtlasFreeRange(
+                page->freeIndices, part.indices));
         return nullptr;
     }
     part.vertexCount = vertexCount;
@@ -1566,8 +1658,14 @@ const CadTriangleAtlasPart *CadGpuResources::upsertTriangleAtlasPart(
 
     const auto inserted = triangleAtlasParts_.emplace(pid, part);
     if (!inserted.second) {
-        cadAtlasFreeRange(page->freeVertices, part.vertices);
-        cadAtlasFreeRange(page->freeIndices, part.indices);
+        page->largestFreeVertexCapacity = std::max(
+            page->largestFreeVertexCapacity,
+            cadAtlasFreeRange(
+                page->freeVertices, part.vertices));
+        page->largestFreeIndexCapacity = std::max(
+            page->largestFreeIndexCapacity,
+            cadAtlasFreeRange(
+                page->freeIndices, part.indices));
         if (page->partCount) --page->partCount;
         return nullptr;
     }
@@ -1643,7 +1741,9 @@ void CadGpuResources::endTriangleAtlasFrame(const SoGLContext *glue)
                 part.vertices.capacity - vertexTarget
             };
             part.vertices.capacity = vertexTarget;
-            cadAtlasFreeRange(page->freeVertices, tail);
+            page->largestFreeVertexCapacity = std::max(
+                page->largestFreeVertexCapacity,
+                cadAtlasFreeRange(page->freeVertices, tail));
             shrunk = true;
         }
         if (indexTarget < part.indices.capacity &&
@@ -1653,7 +1753,9 @@ void CadGpuResources::endTriangleAtlasFrame(const SoGLContext *glue)
                 part.indices.capacity - indexTarget
             };
             part.indices.capacity = indexTarget;
-            cadAtlasFreeRange(page->freeIndices, tail);
+            page->largestFreeIndexCapacity = std::max(
+                page->largestFreeIndexCapacity,
+                cadAtlasFreeRange(page->freeIndices, tail));
             shrunk = true;
         }
         const uint32_t previousVertexCount = part.vertexCount;
