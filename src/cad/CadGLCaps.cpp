@@ -111,6 +111,7 @@ CadGLCaps CadGLCaps::detect(const SoGLContext * glue)
             (profileMask & GL_CONTEXT_COMPATIBILITY_PROFILE_BIT) != 0;
     }
 #endif
+    caps.compatibilityProfile = compatibilityProfile;
     caps.hasLineStipple = compatibilityProfile &&
         glue->glLineStipple != nullptr;
 

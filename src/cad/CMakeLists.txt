@@ -18,6 +18,9 @@ set(CAD_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/CadGLCaps.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/CadGpuResources.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/CadRendererGL.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/CadRendererGLExecutors.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/CadShaderPrograms.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/CadShaderSources.cpp
 
     # LoD
     ${CMAKE_CURRENT_SOURCE_DIR}/lod/SegmentPopLod.cpp

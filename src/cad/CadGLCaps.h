@@ -74,6 +74,8 @@ struct CadGLCaps {
     bool hasCopyBuffer = false;
     /** Compatibility-profile fixed-function line stippling is available. */
     bool hasLineStipple   = false;
+    /** Context supports the legacy server/client attribute stacks. */
+    bool compatibilityProfile = false;
     /** Context is backed by a known CPU software rasterizer. */
     bool isSoftwareRenderer = false;
     /**

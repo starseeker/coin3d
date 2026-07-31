@@ -77,7 +77,7 @@ static UInt32ToConverterFuncMap * convertfunc_dict = NULL;
 // Because of this, we can't use the SO_ENGINE_ABSTRACT_SOURCE macro.
 
 PRIVATE_ENGINE_TYPESYSTEM_SOURCE(SoConvertAll);
-unsigned int SoConvertAll::classinstances = 0;
+std::atomic<unsigned int> SoConvertAll::classinstances{0};
 const SoFieldData ** SoConvertAll::parentinputdata = NULL;
 const SoEngineOutputData ** SoConvertAll::parentoutputdata = NULL;
 

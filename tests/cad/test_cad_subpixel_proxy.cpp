@@ -112,75 +112,6 @@ foregroundHalfStats(const SoOffscreenRenderer &renderer)
 bool
 normalFreeTwoSidedGlslMatchesFixed()
 {
-    SoSeparator *root = new SoSeparator;
-    root->ref();
-    SoOrthographicCamera *camera = new SoOrthographicCamera;
-    camera->position.setValue(0.0f, 0.0f, 5.0f);
-    camera->nearDistance.setValue(0.1f);
-    camera->farDistance.setValue(100.0f);
-    camera->height.setValue(2.4f);
-    root->addChild(camera);
-
-    SoDirectionalLight *light = new SoDirectionalLight;
-    light->direction.setValue(0.0f, 0.0f, -1.0f);
-    root->addChild(light);
-
-    SoCADAssembly *assembly = new SoCADAssembly;
-    assembly->drawMode.setValue(SoCADAssembly::SHADED);
-    root->addChild(assembly);
-
-    /*
-     * Two disjoint, coplanar triangles deliberately use opposite winding and
-     * have no authored normal stream.  The retained progressive declaration
-     * makes the fixed VBO reference compute flat normals from the geometry,
-     * matching the normal-free PoP payloads used by BRL-CAD meshes such as
-     * Lucy.  With two-sided lighting, both visible triangles must receive the
-     * same headlight contribution.
-     */
-    Obol::TriMesh mesh;
-    mesh.positions = {
-        SbVec3f(-1.05f, -0.8f, 0.0f),
-        SbVec3f(-0.05f, -0.8f, 0.0f),
-        SbVec3f(-0.55f, 0.8f, 0.0f),
-        SbVec3f(0.05f, -0.8f, 0.0f),
-        SbVec3f(1.05f, -0.8f, 0.0f),
-        SbVec3f(0.55f, 0.8f, 0.0f)
-    };
-    mesh.indices = {0, 1, 2, 3, 5, 4};
-    mesh.bounds.makeEmpty();
-    for (const SbVec3f& point : mesh.positions)
-        mesh.bounds.extendBy(point);
-    mesh.progressiveMinimumLevel = 15;
-    mesh.progressiveResidentLevel = 15;
-    mesh.progressiveIndexCount[15] =
-        static_cast<uint32_t>(mesh.indices.size());
-    mesh.progressivePositionCount[15] =
-        static_cast<uint32_t>(mesh.positions.size());
-    mesh.progressiveQuantizationMinimum = mesh.bounds.getMin();
-    mesh.progressiveQuantizationMaximum = mesh.bounds.getMax();
-
-    Obol::PartGeometry geometry;
-    geometry.shaded = std::move(mesh);
-    geometry.shadedCullBackfaces = false;
-    const Obol::PartId part =
-        Obol::CadIdBuilder::hash128("normal-free-two-sided");
-    assembly->upsertPart(part, geometry);
-
-    Obol::InstanceRecord instance;
-    instance.part = part;
-    instance.parent = Obol::CadIdBuilder::Root();
-    instance.childName = "normal-free-two-sided";
-    instance.localToRoot.makeIdentity();
-    instance.lodLevel = 15;
-    instance.style.hasColorOverride = true;
-    instance.style.color = SbColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-    assembly->upsertInstanceAuto(instance);
-
-    const SbViewportRegion viewport(256, 192);
-    SoOffscreenRenderer renderer(viewport);
-    renderer.setComponents(SoOffscreenRenderer::RGB);
-    renderer.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
-
     const char *previousGlsl = std::getenv("OBOL_CAD_SOFTWARE_GLSL");
     const bool hadPreviousGlsl = previousGlsl != nullptr;
     const std::string previousGlslValue =
@@ -193,37 +124,121 @@ normalFreeTwoSidedGlslMatchesFixed()
             unsetenv("OBOL_CAD_SOFTWARE_GLSL");
     };
 
-    unsetenv("OBOL_CAD_SOFTWARE_GLSL");
-    if (!render(renderer, root)) {
-        restoreGlslEnvironment();
+    struct RouteResult {
+        bool rendered = false;
+        HalfImageStats image;
+    };
+    const auto renderRoute = [](bool softwareGlsl) {
+        if (softwareGlsl)
+            setenv("OBOL_CAD_SOFTWARE_GLSL", "1", 1);
+        else
+            unsetenv("OBOL_CAD_SOFTWARE_GLSL");
+
+        /*
+         * Renderer configuration is immutable per assembly.  Construct a
+         * distinct scene after selecting each route; changing the environment
+         * around repeated renders of one node only retests the cached route.
+         */
+        SoSeparator *root = new SoSeparator;
+        root->ref();
+        SoOrthographicCamera *camera = new SoOrthographicCamera;
+        camera->position.setValue(0.0f, 0.0f, 5.0f);
+        camera->nearDistance.setValue(0.1f);
+        camera->farDistance.setValue(100.0f);
+        camera->height.setValue(2.4f);
+        root->addChild(camera);
+
+        SoDirectionalLight *light = new SoDirectionalLight;
+        light->direction.setValue(0.0f, 0.0f, -1.0f);
+        root->addChild(light);
+
+        SoCADAssembly *assembly = new SoCADAssembly;
+        assembly->drawMode.setValue(SoCADAssembly::SHADED);
+        root->addChild(assembly);
+
+        /*
+         * Two disjoint, coplanar triangles deliberately use opposite winding
+         * and have no authored normal stream, matching normal-free PoP
+         * payloads such as Lucy.  Both routes must light both faces equally.
+         */
+        Obol::TriMesh mesh;
+        mesh.positions = {
+            SbVec3f(-1.05f, -0.8f, 0.0f),
+            SbVec3f(-0.05f, -0.8f, 0.0f),
+            SbVec3f(-0.55f, 0.8f, 0.0f),
+            SbVec3f(0.05f, -0.8f, 0.0f),
+            SbVec3f(1.05f, -0.8f, 0.0f),
+            SbVec3f(0.55f, 0.8f, 0.0f)
+        };
+        mesh.indices = {0, 1, 2, 3, 5, 4};
+        mesh.bounds.makeEmpty();
+        for (const SbVec3f& point : mesh.positions)
+            mesh.bounds.extendBy(point);
+        mesh.progressiveMinimumLevel = 15;
+        mesh.progressiveResidentLevel = 15;
+        mesh.progressiveIndexCount[15] =
+            static_cast<uint32_t>(mesh.indices.size());
+        mesh.progressivePositionCount[15] =
+            static_cast<uint32_t>(mesh.positions.size());
+        mesh.progressiveQuantizationMinimum = mesh.bounds.getMin();
+        mesh.progressiveQuantizationMaximum = mesh.bounds.getMax();
+
+        Obol::PartGeometry geometry;
+        geometry.shaded = std::move(mesh);
+        geometry.shadedCullBackfaces = false;
+        const Obol::PartId part =
+            Obol::CadIdBuilder::hash128("normal-free-two-sided");
+        assembly->upsertPart(part, geometry);
+
+        Obol::InstanceRecord instance;
+        instance.part = part;
+        instance.parent = Obol::CadIdBuilder::Root();
+        instance.childName = "normal-free-two-sided";
+        instance.localToRoot.makeIdentity();
+        instance.lodLevel = 15;
+        instance.style.hasColorOverride = true;
+        instance.style.color = SbColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+        assembly->upsertInstanceAuto(instance);
+
+        const SbViewportRegion viewport(256, 192);
+        SoOffscreenRenderer renderer(viewport);
+        renderer.setComponents(SoOffscreenRenderer::RGB);
+        renderer.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
+
+        RouteResult result;
+        result.rendered = render(renderer, root);
+        if (result.rendered)
+            result.image = foregroundHalfStats(renderer);
         root->unref();
-        return false;
-    }
-    const HalfImageStats fixed = foregroundHalfStats(renderer);
+        return result;
+    };
 
-    setenv("OBOL_CAD_SOFTWARE_GLSL", "1", 1);
-    const bool rendered = render(renderer, root);
-    const HalfImageStats glsl = foregroundHalfStats(renderer);
+    const RouteResult fixed = renderRoute(false);
+    const RouteResult glsl = renderRoute(true);
     restoreGlslEnvironment();
-    root->unref();
 
-    if (!rendered || fixed.leftPixels < 100 || fixed.rightPixels < 100 ||
-            glsl.leftPixels < 100 || glsl.rightPixels < 100)
+    if (!fixed.rendered || !glsl.rendered ||
+            fixed.image.leftPixels < 100 ||
+            fixed.image.rightPixels < 100 ||
+            glsl.image.leftPixels < 100 ||
+            glsl.image.rightPixels < 100)
         return false;
     const double minimumLit = 0.75 *
-        (std::min)(fixed.leftMean, fixed.rightMean);
-    const double glslLow = (std::min)(glsl.leftMean, glsl.rightMean);
-    const double glslHigh = (std::max)(glsl.leftMean, glsl.rightMean);
+        (std::min)(fixed.image.leftMean, fixed.image.rightMean);
+    const double glslLow =
+        (std::min)(glsl.image.leftMean, glsl.image.rightMean);
+    const double glslHigh =
+        (std::max)(glsl.image.leftMean, glsl.image.rightMean);
     const bool matched = glslLow >= minimumLit && glslHigh > 0.0 &&
         glslLow / glslHigh >= 0.9;
     if (!matched) {
         std::fprintf(stderr,
             "two-sided stats fixed={left=%.3f/%zu right=%.3f/%zu} "
             "glsl={left=%.3f/%zu right=%.3f/%zu}\n",
-            fixed.leftMean, fixed.leftPixels,
-            fixed.rightMean, fixed.rightPixels,
-            glsl.leftMean, glsl.leftPixels,
-            glsl.rightMean, glsl.rightPixels);
+            fixed.image.leftMean, fixed.image.leftPixels,
+            fixed.image.rightMean, fixed.image.rightPixels,
+            glsl.image.leftMean, glsl.image.leftPixels,
+            glsl.image.rightMean, glsl.image.rightPixels);
     }
     return matched;
 }

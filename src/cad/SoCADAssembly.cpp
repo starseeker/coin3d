@@ -46,6 +46,7 @@
 #include <Obol/cad/SoCADAssembly.h>
 #include <Obol/cad/SoCADDetail.h>
 #include <Obol/cad/SoCADViewState.h>
+#include "CadAssemblyState.h"
 #include "CadFramePlan.h"
 #include "CadRendererGL.h"
 #include "picking/CadPicking.h"
@@ -99,33 +100,46 @@
 static bool
 cadDebugEnabled()
 {
-    const char *env = std::getenv("OBOL_CAD_DEBUG");
-    return env && env[0] && env[0] != '0';
+    static const bool enabled = []() {
+        const char *env = std::getenv("OBOL_CAD_DEBUG");
+        return env && env[0] && env[0] != '0';
+    }();
+    return enabled;
 }
 
 static bool
 cadLightDebugEnabled()
 {
-    const char *env = std::getenv("OBOL_CAD_LIGHT_DEBUG");
-    return env && env[0] && env[0] != '0';
+    static const bool enabled = []() {
+        const char *env = std::getenv("OBOL_CAD_LIGHT_DEBUG");
+        return env && env[0] && env[0] != '0';
+    }();
+    return enabled;
 }
 
 static bool
 cadPlanDebugEnabled()
 {
-    const char *env = std::getenv("OBOL_CAD_PLAN_DEBUG");
-    return env && env[0] && env[0] != '0';
+    static const bool enabled = []() {
+        const char *env = std::getenv("OBOL_CAD_PLAN_DEBUG");
+        return env && env[0] && env[0] != '0';
+    }();
+    return enabled;
 }
 
 static uint64_t
 cadPlanDebugMessageLimit()
 {
-    const char *env = std::getenv("OBOL_CAD_PLAN_DEBUG_LIMIT");
-    if (!env || !env[0])
-        return 64;
-    char *end = nullptr;
-    const unsigned long long value = std::strtoull(env, &end, 10);
-    return end != env && value > 0 ? static_cast<uint64_t>(value) : 64;
+    static const uint64_t limit = []() {
+        const char *env = std::getenv("OBOL_CAD_PLAN_DEBUG_LIMIT");
+        if (!env || !env[0])
+            return uint64_t{64};
+        char *end = nullptr;
+        const unsigned long long value = std::strtoull(env, &end, 10);
+        return end != env && value > 0 ?
+            static_cast<uint64_t>(value) : uint64_t{64};
+    }();
+    return limit;
 }
 
 static bool
@@ -210,6 +224,9 @@ cadSubpixelGeometryCorners(const Obol::PartGeometry& geometry,
      */
     SbBox3f bounds;
     bounds.makeEmpty();
+    if (geometry.conservativeBounds &&
+        !geometry.conservativeBounds->isEmpty())
+        bounds.extendBy(*geometry.conservativeBounds);
     if (geometry.shaded && !geometry.shaded->bounds.isEmpty())
         bounds.extendBy(geometry.shaded->bounds);
     if (geometry.points && !geometry.points->bounds.isEmpty())
@@ -560,195 +577,15 @@ cadRenderSoftwareWire(const Obol::internal::CadFramePlan& plan,
 
 } // namespace
 
-struct InstanceData {
-    Obol::PartId          partId;
-    SbMatrix              localToRoot;
-    Obol::InstanceStyle   style;
-    Obol::InstanceId      parent;
-    std::string           childName;
-    uint32_t              occurrenceIndex = 0;
-    uint8_t               boolOp = 0;
-    uint8_t               lodLevel = 255;
-    SbBox3f               worldBounds;   // cached; recomputed on transform change
-};
+using InstanceData = Obol::internal::CadAssemblyInstanceData;
 
-struct SoCADAssemblyImpl {
-    static constexpr size_t ProgressiveLevelBinCount = 17;
-
-    struct ProgressiveShadedPlanGroup {
-        Obol::PartId part;
-        uint32_t baseInstance = 0;
-        uint32_t instanceCount = 0;
-        std::array<uint32_t, ProgressiveLevelBinCount> levelCounts = {};
-        size_t shadedItemBegin = 0;
-        size_t shadedItemCount = 0;
-    };
-
-    struct CachedPlanPartSpan {
-        uint32_t partIndex = 0;
-        uint32_t baseInstance = 0;
-        uint32_t instanceCount = 0;
-        size_t wireItemBegin = 0;
-        size_t wireItemCount = 0;
-        size_t pointItemBegin = 0;
-        size_t pointItemCount = 0;
-        size_t shadedItemBegin = 0;
-        size_t shadedItemCount = 0;
-    };
-
-    // Part library
-    std::unordered_map<Obol::PartId, std::shared_ptr<const Obol::PartGeometry>,
-                       std::hash<Obol::PartId>> parts_;
-    // Cached, validated corners for parts eligible for camera-local subpixel
-    // aggregation.  These may be conservative structural AABB/OBB proxies or
-    // retained LoD meshes.  This avoids rediscovering eight conservative
-    // bounds corners for every occurrence per view.
-    std::unordered_map<Obol::PartId, std::array<SbVec3f, 8>,
-                       std::hash<Obol::PartId>> subpixelProxyCorners_;
-
-    // Instance database
-    std::unordered_map<Obol::InstanceId, InstanceData,
-                       std::hash<Obol::InstanceId>> instances_;
-    /*
-     * Retain the renderer's primary grouping as assembly state instead of
-     * recovering it by globally sorting every compiled frame plan.  The slot
-     * table makes a part-changing update/removal O(1), while the ordered map
-     * lets plan compilation walk unique parts in deterministic order.
-     */
-    struct InstancePartBucket {
-        Obol::InstanceId first;
-        InstanceData *firstData = nullptr;
-        bool hasFirst = false;
-        std::vector<Obol::InstanceId> additional;
-        std::vector<InstanceData *> additionalData;
-
-        size_t size() const noexcept {
-            return hasFirst ? additional.size() + 1u : 0u;
-        }
-        Obol::InstanceId at(size_t slot) const {
-            return slot ? additional[slot - 1u] : first;
-        }
-        InstanceData *dataAt(size_t slot) const {
-            return slot ? additionalData[slot - 1u] : firstData;
-        }
-    };
-    /*
-     * Keep the common one-instance/part case inline in the map node.  Only a
-     * genuinely shared asset allocates a secondary vector, avoiding one heap
-     * allocation per unique vehicle part.
-     */
-    std::map<Obol::PartId, InstancePartBucket> instanceIdsByPart_;
-    std::unordered_map<Obol::InstanceId, size_t,
-                       std::hash<Obol::InstanceId>>
-        instancePartSlot_;
-
-    // Selection set
-    std::unordered_set<Obol::InstanceId,
-                       std::hash<Obol::InstanceId>> selected_;
-
-    // Hidden-instance set (excluded from rendering and picking, retained in
-    // the compiled plan as a sparse presentation flag).
-    std::unordered_set<Obol::InstanceId,
-                       std::hash<Obol::InstanceId>> hidden_;
-
-    // Unpickable-instance set (visible, but excluded from pick BVH)
-    std::unordered_set<Obol::InstanceId,
-                       std::hash<Obol::InstanceId>> unpickable_;
-
-    // Picking acceleration structures
-    Obol::picking::CadInstanceBVH instanceBvh_;
-    bool bvhDirty_   = true;
-    bool inUpdate_   = false;
-
-    // Per-part edge BVH cache (lazily built during picking)
-    std::unordered_map<Obol::PartId, Obol::picking::CadPartEdgeBVH,
-                       std::hash<Obol::PartId>> partEdgeBvhCache_;
-
-    // Per-part triangle BVH cache (lazily built during picking)
-    std::unordered_map<Obol::PartId, Obol::picking::CadPartTriBVH,
-                       std::hash<Obol::PartId>> partTriBvhCache_;
-
-    // Parts whose producer supplied retained progressive prefixes.
-    std::unordered_set<Obol::PartId,
-                       std::hash<Obol::PartId>> progressiveParts_;
-
-    // Per-part generation counter – incremented when geometry changes so the
-    // renderer knows to re-upload VBOs.
-    std::unordered_map<Obol::PartId, uint64_t,
-                       std::hash<Obol::PartId>> partGeneration_;
-    uint64_t nextGeneration_ = 1;
-
-    // Frame plan cache.  Rebuilt lazily when planDirty_ is true.
-    Obol::internal::CadFramePlan cachedPlan_;
-    // A shaded progressive plan is ordered into at most 17 level buckets
-    // (PoP levels 0..15 plus the producer-default sentinel).  These indices
-    // let a sparse LoD journal move an occurrence between buckets with at
-    // most 16 swaps instead of rebuilding and sorting the entire assembly.
-    std::vector<ProgressiveShadedPlanGroup> progressiveShadedPlanGroups_;
-    std::unordered_map<Obol::InstanceId, size_t,
-                       std::hash<Obol::InstanceId>>
-        progressiveShadedPlanGroupByInstance_;
-    // Direct retained-instance lookup.  Progressive level-bucket swaps keep
-    // this current, and sparse selection/visibility/style updates reuse it.
-    std::unordered_map<Obol::InstanceId, uint32_t,
-                       std::hash<Obol::InstanceId>>
-        progressivePlanIndexByInstance_;
-    std::unordered_map<Obol::PartId, std::vector<CachedPlanPartSpan>,
-                       std::hash<Obol::PartId>>
-        cachedPlanPartSpansByPart_;
-    uint64_t nextPlanRevision_ = 1;
-    uint64_t nextGeometryRevision_ = 1;
-    uint64_t nextShadedLayoutRevision_ = 1;
-    uint64_t nextShadedLodRevision_ = 1;
-    uint64_t nextAppendRevision_ = 1;
-    uint64_t nextPartGeometryRevision_ = 1;
-    uint64_t nextInstanceAttributeRevision_ = 1;
-    uint64_t nextSubpixelProxyRevision_ = 1;
-    uint64_t nextSubpixelProxyInputRevision_ = 1;
-    uint64_t geometryRevision_ = 0;
-    uint64_t subpixelProxyStateInputRevision_ = 0;
-    uint64_t subpixelProxyViewInputRevision_ = 0;
-    SbMatrix subpixelProxyViewProj_;
-    SbVec2s subpixelProxyViewportSize_ = SbVec2s(0, 0);
-    float subpixelProxyPixelThreshold_ = 1.0f;
-    bool subpixelProxyViewValid_ = false;
-    uint32_t subpixelProxyCameraMotionReuseCount_ = 0;
-    // The presentation plan fixes visible-instance order for its lifetime.
-    // Keep hysteresis state by that index rather than hashing every proxy on
-    // camera-only frames.  All three vectors are reset when the plan changes.
-    std::vector<uint8_t> subpixelProxyState_;
-    std::vector<uint8_t> subpixelProxyScratchMask_;
-    std::vector<Obol::internal::CadSubpixelProxyPoint>
-        subpixelProxyScratchPoints_;
-    std::vector<uint32_t> subpixelProxyVisibleByPoint_;
-    std::vector<uint32_t> subpixelProxyScratchVisibleByPoint_;
-    // UINT32_MAX denotes an occurrence which is not represented by a point.
-    // The direct index lets a sparse color update patch a collapsed proxy
-    // without reclassifying every occurrence for the unchanged camera.
-    std::vector<uint32_t> subpixelProxyPointByVisible_;
-    uint64_t subpixelProxyClassifiedAppendRevision_ = 0;
-    std::unordered_map<Obol::PartId, size_t, std::hash<Obol::PartId>>
-        uncollapsedStructuralProxyCountByPart_;
-    size_t uncollapsedStructuralProxyCount_ = 0;
-    bool planDirty_    = true;   ///< Plan must be rebuilt before next render
-    bool geometryDirty_ = true;  ///< Flattened geometry must be rebuilt
-    int  cachedDM_     = -1;     ///< Draw mode used for the cached plan
-    const char *planDirtyReason_ = "initial";
-    uint64_t framePlanBuildCount_ = 0;
-    uint64_t progressivePlanPatchFailureCount_ = 0;
-    uint64_t planDebugBuildMessageCount_ = 0;
-    uint64_t planDebugPatchMessageCount_ = 0;
-    size_t cachedPlanTombstoneCount_ = 0;
-    bool streamTombstoneCompactionPerformed_ = false;
-    std::vector<uint32_t> pendingInstanceAttributeIndices_;
-    // Producer-supplied manifest count.  A cold stream presents one
-    // structural record and can append at most one richer record per
-    // occurrence, so this also bounds the retained presentation tail.
-    size_t streamingOccurrenceCapacityHint_ = 0;
-
-    // VBO + shader renderer (lazy-created on first GLRender call)
-    std::unique_ptr<Obol::internal::CadRendererGL> renderer_;
-    bool lastDirectSoftwareWire_ = false;
+struct SoCADAssemblyImpl :
+    Obol::internal::CadSceneDatabase,
+    Obol::internal::CadPickingIndex,
+    Obol::internal::CadPlanCache,
+    Obol::internal::CadSubpixelClassifier,
+    Obol::internal::CadRendererState
+{
 
     // Rebuild instance BVH if dirty
     void rebuildBvhIfNeeded() {
@@ -773,14 +610,12 @@ struct SoCADAssemblyImpl {
     static SbBox3f partGeometryBounds(
             const Obol::PartGeometry& geom) {
         SbBox3f local;
+        local.makeEmpty();
+        if (geom.conservativeBounds && !geom.conservativeBounds->isEmpty())
+            local.extendBy(*geom.conservativeBounds);
         if (geom.points) { local.extendBy(geom.points->bounds); }
         if (geom.wire)   { local.extendBy(geom.wire->bounds);   }
         if (geom.shaded) { local.extendBy(geom.shaded->bounds); }
-        if (local.isEmpty()) {
-            // Fall back to a unit cube at the origin
-            local.extendBy(SbVec3f(-0.5f,-0.5f,-0.5f));
-            local.extendBy(SbVec3f( 0.5f, 0.5f, 0.5f));
-        }
         return local;
     }
 
@@ -799,8 +634,11 @@ struct SoCADAssemblyImpl {
     SbBox3f computeWorldBounds(const Obol::PartGeometry& geom,
                                const SbMatrix& m) const {
         const SbBox3f local = partGeometryBounds(geom);
+        if (local.isEmpty())
+            return SbBox3f();
         // Transform all 8 corners
         SbBox3f world;
+        world.makeEmpty();
         SbVec3f mn, mx;
         local.getBounds(mn, mx);
         const float xs[2] = {mn[0], mx[0]};

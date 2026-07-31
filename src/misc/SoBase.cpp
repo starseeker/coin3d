@@ -1492,9 +1492,24 @@ SoBase::doNotify(SoNotList * l, const void * auditor, const SoNotRec::Type type)
   \internal
   \since Coin 2.3
 */
+namespace {
+std::recursive_mutex &
+sobase_static_data_mutex(void)
+{
+  // A function-local holder avoids static initialization ordering
+  // dependencies across Obol.
+  static std::recursive_mutex mutex;
+  return mutex;
+}
+}
+
 void
 SoBase::staticDataLock(void)
 {
+  // Node and engine constructor macros use this lock to protect their
+  // per-class field metadata.  This must be recursive: constructing field
+  // metadata may itself construct another SoBase-derived object.
+  sobase_static_data_mutex().lock();
 }
 
 /*!
@@ -1505,6 +1520,7 @@ SoBase::staticDataLock(void)
 void
 SoBase::staticDataUnlock(void)
 {
+  sobase_static_data_mutex().unlock();
 }
 
 /*!

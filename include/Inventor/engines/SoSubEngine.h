@@ -33,6 +33,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**************************************************************************/
 
+#include <atomic>
 #include <cassert>
 #include <Inventor/SbName.h>
 #include <Inventor/SoType.h>
@@ -63,7 +64,7 @@ public: \
   virtual const SoFieldData * getFieldData(void) const; \
   virtual const SoEngineOutputData * getOutputData(void) const; \
 private: \
-  static unsigned int classinstances; \
+  static std::atomic<unsigned int> classinstances; \
   static SoFieldData * inputdata; \
   static const SoFieldData ** parentinputdata; \
   static SoEngineOutputData * outputdata; \
@@ -96,7 +97,7 @@ SoType _class_::classTypeId STATIC_SOTYPE_INIT
 #define SO_ENGINE_ABSTRACT_SOURCE(_class_) \
 PRIVATE_ENGINE_TYPESYSTEM_SOURCE(_class_); \
  \
-unsigned int _class_::classinstances = 0; \
+std::atomic<unsigned int> _class_::classinstances{0}; \
 SoFieldData * _class_::inputdata = NULL; \
 const SoFieldData ** _class_::parentinputdata = NULL; \
 SoEngineOutputData * _class_::outputdata = NULL; \

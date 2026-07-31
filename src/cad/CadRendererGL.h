@@ -90,6 +90,7 @@
 #include <vector>
 
 struct SoGLContext;
+struct CadRendererConfiguration;
 class SoGLRenderAction;
 
 namespace Obol {
@@ -205,6 +206,10 @@ public:
     void setLights(const std::vector<GlLight>& lights) { this->lights_ = lights; }
 
 private:
+    bool softwareGlslRequested() const;
+    bool cadLightDebugRequested() const;
+    const char *cadShaderDebugMode() const;
+
     /// Upload the current light set to @p program's u_light* uniforms.
     void uploadLights(const SoGLContext* glue, GLuint program);
     /// Upload camera-facing data used only when a mesh has no normal stream.
@@ -213,6 +218,7 @@ private:
 
     // Capability flags (populated on first render call)
     bool      capsDetected_ = false;
+    std::unique_ptr<::CadRendererConfiguration> configuration_;
     CadGLCaps caps_;
     int       lastRenderTier_ = -1; ///< -1=none, 0=imm, 1=vbo, 2=inst, 3/4=flat, 5=mixed flat-wire
     int       lastIndirectStatus_ = -1;
@@ -297,10 +303,6 @@ private:
                                    const SoGLContext* glue,
                                    const SbMatrix& viewProj);
 
-    static bool isSubpixelProxyInstance(const CadFramePlan& plan,
-                                        size_t visibleInstanceIndex);
-    static bool isHiddenInstance(const CadFramePlan& plan,
-                                 size_t instanceIndex);
     static bool wireRepHasUncollapsedInstances(const CadFramePlan& plan,
                                                PartId part);
 

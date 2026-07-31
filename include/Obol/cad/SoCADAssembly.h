@@ -250,6 +250,18 @@ struct PartGeometry {
     std::optional<TriMesh> shaded;  ///< Optional triangle mesh for shading
 
     /**
+     * Optional producer-supplied local-space extent for geometry which is not
+     * yet renderable, or whose retained channels are only a partial
+     * presentation of the source.  When present, this bound is combined with
+     * all channel bounds and therefore must conservatively enclose the source
+     * represented by this part.
+     *
+     * An empty part without this value has empty bounds.  SoCADAssembly never
+     * invents placeholder geometry at the origin.
+     */
+    std::optional<SbBox3f> conservativeBounds;
+
+    /**
      * The shaded triangles form a verified closed, manifold, consistently
      * oriented surface whose exterior winding has been normalized to
      * counter-clockwise.  The renderer may cull back faces only when this
