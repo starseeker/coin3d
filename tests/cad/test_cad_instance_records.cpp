@@ -8,8 +8,17 @@
 #include <Obol/cad/SoCADAssembly.h>
 
 #include <Inventor/SoDB.h>
+#include <Inventor/actions/SoGetBoundingBoxAction.h>
+#include <Inventor/sensors/SoNodeSensor.h>
 
 using namespace SimpleTest;
+
+static void
+nodeChanged(void *data, SoSensor *)
+{
+    unsigned int *changeCount = static_cast<unsigned int *>(data);
+    ++(*changeCount);
+}
 
 static bool
 sameMatrix(const SbMatrix &a, const SbMatrix &b)
@@ -135,10 +144,66 @@ main()
     runner.endTest(assembly->hasProgressivePartLod(),
         "only an explicit resident prefix may enable progressive drawing");
 
+    runner.startTest("identical shared geometry publication is a strict no-op");
+    unsigned int changeCount = 0;
+    SoNodeSensor changeSensor(nodeChanged, &changeCount);
+    changeSensor.setPriority(0);
+    changeSensor.attach(assembly);
+    const std::shared_ptr<const Obol::PartGeometry> immutableGeometry =
+        std::make_shared<const Obol::PartGeometry>(shaded);
+    Obol::SharedPartUpdate sharedUpdate;
+    sharedUpdate.part = first.part;
+    sharedUpdate.geometry = immutableGeometry;
+    assembly->upsertSharedParts({sharedUpdate});
+    const unsigned int firstPublicationChanges = changeCount;
+    assembly->upsertSharedParts({sharedUpdate});
+    runner.endTest(firstPublicationChanges > 0 &&
+        changeCount == firstPublicationChanges,
+        "republishing one immutable generation must not notify or rescan");
+    changeSensor.detach();
+
     runner.startTest("replacing shaded geometry clears progressive capability");
     assembly->upsertPart(first.part, Obol::PartGeometry());
     runner.endTest(!assembly->hasProgressivePartLod(),
         "part replacement must discard the previous progressive prefix");
+
+    runner.startTest("empty parts do not invent bounds at the origin");
+    SoCADAssembly *emptyBoundsAssembly = new SoCADAssembly;
+    emptyBoundsAssembly->ref();
+    Obol::InstanceRecord emptyRecord;
+    emptyRecord.part = Obol::CadIdBuilder::hash128("empty-bounds-part");
+    emptyBoundsAssembly->upsertPart(emptyRecord.part, Obol::PartGeometry());
+    emptyBoundsAssembly->upsertInstanceAuto(emptyRecord);
+    SoGetBoundingBoxAction emptyBoundsAction(SbViewportRegion(64, 64));
+    emptyBoundsAction.apply(emptyBoundsAssembly);
+    runner.endTest(emptyBoundsAction.getBoundingBox().isEmpty(),
+        "a part with no channels or explicit extent must remain empty");
+    emptyBoundsAssembly->unref();
+
+    runner.startTest("explicit conservative bounds survive instance transforms");
+    SoCADAssembly *conservativeBoundsAssembly = new SoCADAssembly;
+    conservativeBoundsAssembly->ref();
+    Obol::PartGeometry boundedPlaceholder;
+    SbBox3f conservativeBounds;
+    conservativeBounds.setBounds(SbVec3f(-2.0f, -3.0f, -4.0f),
+                                 SbVec3f( 5.0f,  7.0f, 11.0f));
+    boundedPlaceholder.conservativeBounds = conservativeBounds;
+    Obol::InstanceRecord boundedRecord;
+    boundedRecord.part =
+        Obol::CadIdBuilder::hash128("conservative-bounds-part");
+    boundedRecord.localToRoot.setTranslate(SbVec3f(10.0f, 20.0f, 30.0f));
+    conservativeBoundsAssembly->upsertPart(
+        boundedRecord.part, boundedPlaceholder);
+    conservativeBoundsAssembly->upsertInstanceAuto(boundedRecord);
+    SoGetBoundingBoxAction conservativeBoundsAction(SbViewportRegion(64, 64));
+    conservativeBoundsAction.apply(conservativeBoundsAssembly);
+    const SbBox3f transformedBounds =
+        conservativeBoundsAction.getBoundingBox();
+    runner.endTest(!transformedBounds.isEmpty() &&
+        transformedBounds.getMin() == SbVec3f(8.0f, 17.0f, 26.0f) &&
+        transformedBounds.getMax() == SbVec3f(15.0f, 27.0f, 41.0f),
+        "a producer extent must define bounds without renderable channels");
+    conservativeBoundsAssembly->unref();
 
     assembly->unref();
     return runner.getSummary();

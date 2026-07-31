@@ -44,6 +44,7 @@
    directly accessing these low-level OpenGL wrapper functions. */
 
 #include <string>
+#include <stdint.h>
 
 #ifndef OBOL_INTERNAL
 #error this is a private header file
@@ -963,6 +964,7 @@ typedef void (APIENTRY * OBOL_PFNGLENDQUERYPROC)(GLenum target);
 typedef void (APIENTRY * OBOL_PFNGLGETQUERYIVPROC)(GLenum target, GLenum pname, GLint * params);
 typedef void (APIENTRY * OBOL_PFNGLGETQUERYOBJECTIVPROC)(GLuint id, GLenum pname, GLint * params);
 typedef void (APIENTRY * OBOL_PFNGLGETQUERYOBJECTUIVPROC)(GLuint id, GLenum pname, GLuint * params);
+typedef void (APIENTRY * OBOL_PFNGLGETQUERYOBJECTUI64VPROC)(GLuint id, GLenum pname, uint64_t * params);
 
 /* Typedefs for Framebuffer objects */
 
@@ -999,6 +1001,16 @@ typedef void (APIENTRY * OBOL_PFNGLDRAWARRAYSINSTANCEDPROC)(GLenum mode, GLint f
 
 /* Typedef for instanced array divisor (GL 3.3 / GL_ARB_instanced_arrays) */
 typedef void (APIENTRY * OBOL_PFNGLVERTEXATTRIBDIVISORPROC)(GLuint index, GLuint divisor);
+
+/* Retained CAD command-stream support (GL 4.3 / ARB_multi_draw_indirect).
+ * glCopyBufferSubData is GL 3.1 / ARB_copy_buffer and lets the atlas grow
+ * without reading its existing contents back through the CPU. */
+typedef void (APIENTRY * OBOL_PFNGLMULTIDRAWELEMENTSINDIRECTPROC)(
+    GLenum mode, GLenum type, const void *indirect, GLsizei drawcount,
+    GLsizei stride);
+typedef void (APIENTRY * OBOL_PFNGLCOPYBUFFERSUBDATAPROC)(
+    GLenum readtarget, GLenum writetarget, intptr_t readoffset,
+    intptr_t writeoffset, intptr_t size);
 
 
 /* ********************************************************************** */
@@ -1610,6 +1622,7 @@ struct SoGLContext {
   OBOL_PFNGLGETQUERYIVPROC glGetQueryiv;
   OBOL_PFNGLGETQUERYOBJECTIVPROC glGetQueryObjectiv;
   OBOL_PFNGLGETQUERYOBJECTUIVPROC glGetQueryObjectuiv;
+  OBOL_PFNGLGETQUERYOBJECTUI64VPROC glGetQueryObjectui64v;
 
   /* FBO */
   OBOL_PFNGLISRENDERBUFFERPROC glIsRenderbuffer;
@@ -1644,6 +1657,10 @@ struct SoGLContext {
 
   /* Instanced array divisor (GL 3.3 core or GL_ARB_instanced_arrays) */
   OBOL_PFNGLVERTEXATTRIBDIVISORPROC glVertexAttribDivisor;
+
+  /* Retained indirect CAD batches and device-local atlas growth. */
+  OBOL_PFNGLMULTIDRAWELEMENTSINDIRECTPROC glMultiDrawElementsIndirect;
+  OBOL_PFNGLCOPYBUFFERSUBDATAPROC glCopyBufferSubData;
 
   const char * versionstr;
   const char * vendorstr;

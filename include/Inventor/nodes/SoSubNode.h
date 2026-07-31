@@ -54,6 +54,7 @@
 
 // *************************************************************************
 
+#include <atomic>
 #include <cstring> /* strcmp used in assert() */
 #include <Inventor/SbBasic.h>
 #include <Inventor/SbName.h>
@@ -83,7 +84,7 @@ private: \
   static SoFieldData * fieldData; \
   /* Counts number of instances of subclasses as well as "direct" */ \
   /* instances from non-abstract classes. */ \
-  static unsigned int classinstances
+  static std::atomic<unsigned int> classinstances
 
 
 // FIXME: document. 20000103 mortene.
@@ -115,7 +116,7 @@ SoType _class_::classTypeId STATIC_SOTYPE_INIT
 #define SO_NODE_ABSTRACT_SOURCE(_class_) \
 PRIVATE_NODE_TYPESYSTEM_SOURCE(_class_); \
  \
-unsigned int _class_::classinstances = 0; \
+std::atomic<unsigned int> _class_::classinstances{0}; \
 const SoFieldData ** _class_::parentFieldData = NULL; \
 SoFieldData * _class_::fieldData = NULL; \
  \

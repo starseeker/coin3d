@@ -61,3 +61,53 @@ jobs:
         run: |
           cd build
           xvfb-run -a ctest --output-on-failure -C Release
+
+  thread-sanitizer:
+    name: Linux ThreadSanitizer
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository with submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y \
+            cmake \
+            libpng-dev \
+            libx11-dev libxext-dev libxi-dev libxrandr-dev \
+            libxcursor-dev libxft-dev libxinerama-dev \
+            libgl-dev libglu1-mesa-dev \
+            libfontconfig-dev libfreetype-dev \
+            libfltk1.3-dev
+
+      - name: Configure
+        run: |
+          cmake -S . -B build-tsan \
+            -G "Unix Makefiles" \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+            -DOBOL_BUILD_TESTS=ON \
+            -DOBOL_TSAN=ON \
+            -DOBOL_USE_UNITY_BUILD=OFF \
+            -DOBOL_USE_SYSTEM_GL=ON \
+            -DOBOL_USE_SWRAST=OFF
+
+      - name: Build focused thread tests
+        run: |
+          cmake --build build-tsan --config RelWithDebInfo --parallel 2 \
+            --target test_threads test_thread_safety test_cad_instance_records
+
+      - name: Run focused thread tests
+        env:
+          TSAN_OPTIONS: halt_on_error=1:second_deadlock_stack=1
+        run: |
+          setarch "$(uname -m)" -R ctest --test-dir build-tsan \
+            --output-on-failure \
+            --timeout 180 \
+            -R '^(test_threads|test_thread_safety|test_cad_instance_records)$'

@@ -106,7 +106,7 @@ PRIVATE_SO_INTERPOLATE_EVALUATE(_class_, _type_, _valtype_, _interpexp_)
 
 #define SO_INTERNAL_ENGINE_SOURCE_DYNAMIC_IO(_class_) \
 PRIVATE_ENGINE_TYPESYSTEM_SOURCE(_class_); \
-unsigned int _class_::classinstances = 0; \
+std::atomic<unsigned int> _class_::classinstances{0}; \
 SoFieldData * _class_::inputdata = NULL; \
 const SoFieldData ** _class_::parentinputdata = NULL; \
 SoEngineOutputData * _class_::outputdata = NULL; \

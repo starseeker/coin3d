@@ -2568,6 +2568,7 @@ w->glAreTexturesResident = (OBOL_PFNGLARETEXTURESRESIDENTPROC)PROC(w, glAreTextu
 #endif
 
   w->glGenQueries = NULL; /* so that SoGLContext_has_occlusion_query() works  */
+  w->glGetQueryObjectui64v = NULL;
 #if defined(GL_VERSION_1_5)
   if (SoGLContext_glversion_matches_at_least(w, 1, 5, 0)) {
     w->glGenQueries = (OBOL_PFNGLGENQUERIESPROC)PROC(w, glGenQueries);
@@ -2593,6 +2594,17 @@ w->glAreTexturesResident = (OBOL_PFNGLARETEXTURESRESIDENTPROC)PROC(w, glAreTextu
     w->glGetQueryObjectuiv = (OBOL_PFNGLGETQUERYOBJECTUIVPROC)PROC(w, glGetQueryObjectuivARB);
   }
 #endif /* GL_ARB_occlusion_query */
+
+  /* GL_ARB_timer_query results are nanoseconds and therefore intrinsically
+     64-bit.  Keep this entry point independent of the older occlusion-query
+     capability: a 32-bit read either clamps or wraps after roughly 4.29
+     seconds, precisely where a capacity controller most needs a trustworthy
+     lower bound. */
+  if (SoGLContext_glversion_matches_at_least(w, 3, 3, 0) ||
+      SoGLContext_glext_supported(w, "GL_ARB_timer_query")) {
+    w->glGetQueryObjectui64v =
+      (OBOL_PFNGLGETQUERYOBJECTUI64VPROC)PROC(w, glGetQueryObjectui64v);
+  }
 
   if (w->glGenQueries) {
     if (!w->glDeleteQueries ||
@@ -2794,6 +2806,22 @@ w->glAreTexturesResident = (OBOL_PFNGLARETEXTURESRESIDENTPROC)PROC(w, glAreTextu
       w->glVertexAttribDivisor =
         (OBOL_PFNGLVERTEXATTRIBDIVISORPROC) PROC(w, glVertexAttribDivisorARB);
     }
+  }
+
+  /* GPU-resident CAD command streams.  MDI includes baseInstance in every
+     command, which is what allows one per-frame instance buffer to drive
+     thousands of distinct part ranges in one submission. */
+  if (SoGLContext_glversion_matches_at_least(w, 4, 3, 0) ||
+      SoGLContext_glext_supported(w, "GL_ARB_multi_draw_indirect")) {
+    w->glMultiDrawElementsIndirect =
+      (OBOL_PFNGLMULTIDRAWELEMENTSINDIRECTPROC)
+      PROC(w, glMultiDrawElementsIndirect);
+  }
+
+  if (SoGLContext_glversion_matches_at_least(w, 3, 1, 0) ||
+      SoGLContext_glext_supported(w, "GL_ARB_copy_buffer")) {
+    w->glCopyBufferSubData =
+      (OBOL_PFNGLCOPYBUFFERSUBDATAPROC) PROC(w, glCopyBufferSubData);
   }
 
 }

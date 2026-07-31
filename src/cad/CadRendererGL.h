@@ -85,10 +85,12 @@
 
 #include <memory>
 #include <cstdint>
+#include <limits>
 #include <unordered_map>
 #include <vector>
 
 struct SoGLContext;
+struct CadRendererConfiguration;
 class SoGLRenderAction;
 
 namespace Obol {
@@ -139,9 +141,48 @@ public:
      *   2 = instanced (GL 3.1+)
      *   3 = flattened wire/hidden-line batch
      *   4 = flattened shaded batch
+     *   6 = retained paged triangle atlas + indirect command stream
      *  -1 = render() not yet called
      */
     int lastRenderTier() const { return lastRenderTier_; }
+
+    /**
+     * Status of the most recent retained indirect-shaded attempt.
+     * Zero is success, -1 means no attempt, and a positive value identifies
+     * the preflight invariant that rejected the fast path.
+     */
+    int lastIndirectStatus() const { return lastIndirectStatus_; }
+
+    /** Triangles actually submitted by the last shaded rendering pass. */
+    uint64_t lastRenderedTriangleCount() const {
+        return lastRenderedTriangleCount_;
+    }
+
+    /** Most recently completed, asynchronously measured CAD GPU work. */
+    uint64_t lastGpuRenderNanoseconds() const {
+        return gpuRes_ ? gpuRes_->lastGpuTimeNanoseconds() : 0;
+    }
+    uint64_t lastGpuRenderedTriangleCount() const {
+        return gpuRes_ ? gpuRes_->lastGpuTriangleCount() : 0;
+    }
+    uint64_t gpuTimerSampleSerial() const {
+        return gpuRes_ ? gpuRes_->gpuTimerSampleSerial() : 0;
+    }
+
+    /** True when the last indirect frame reused its prepared visibility,
+     * instance, atlas, and command record instead of rebuilding it. */
+    bool lastRenderUsedPreparedReplay() const {
+        return lastRenderUsedPreparedReplay_;
+    }
+
+    /** Number of visible occurrences proxied because atlas admission failed. */
+    size_t lastPressureProxyCount() const {
+        size_t visible = 0;
+        for (const CadSubpixelProxyPoint& point : pressureProxyPoints())
+            if (!(point.flags & CadInstanceHidden))
+                ++visible;
+        return visible;
+    }
 
     /// Maximum simultaneous lights the shaded GLSL passes evaluate.
     static const int kMaxLights = 8;
@@ -165,6 +206,10 @@ public:
     void setLights(const std::vector<GlLight>& lights) { this->lights_ = lights; }
 
 private:
+    bool softwareGlslRequested() const;
+    bool cadLightDebugRequested() const;
+    const char *cadShaderDebugMode() const;
+
     /// Upload the current light set to @p program's u_light* uniforms.
     void uploadLights(const SoGLContext* glue, GLuint program);
     /// Upload camera-facing data used only when a mesh has no normal stream.
@@ -173,8 +218,39 @@ private:
 
     // Capability flags (populated on first render call)
     bool      capsDetected_ = false;
+    std::unique_ptr<::CadRendererConfiguration> configuration_;
     CadGLCaps caps_;
     int       lastRenderTier_ = -1; ///< -1=none, 0=imm, 1=vbo, 2=inst, 3/4=flat, 5=mixed flat-wire
+    int       lastIndirectStatus_ = -1;
+    uint64_t  lastRenderedTriangleCount_ = 0;
+    bool      lastRenderUsedPreparedReplay_ = false;
+    int       reportedIndirectStatus_ = -1;
+    bool      indirectStatusReported_ = false;
+    /*
+     * Non-indirect paths may construct an owned pressure-proxy stream.
+     * Retained indirect rendering already owns the same immutable stream in
+     * indirectPrepared_; pressureProxyPointsView_ lets the rest of this
+     * synchronous render consume that storage directly instead of copying
+     * O(visible pressure proxies) on every replay.
+     */
+    std::vector<CadSubpixelProxyPoint> pressureProxyPoints_;
+    const std::vector<CadSubpixelProxyPoint> *pressureProxyPointsView_ =
+        nullptr;
+    const std::vector<CadSubpixelProxyPoint>& pressureProxyPoints() const {
+        return pressureProxyPointsView_ ?
+            *pressureProxyPointsView_ : pressureProxyPoints_;
+    }
+    /// Changes only when a newly prepared indirect frame publishes proxies.
+    uint64_t pressureProxyRevision_ = 1;
+    /*
+     * A successful retained append preserves the preceding pressure stream
+     * byte-for-byte and adds a tail.  Record that relationship until the
+     * proxy pass consumes it, allowing a bounded glBufferSubData instead of
+     * repacking and reallocating the complete pressure stream.
+     */
+    uint64_t pressureProxyAppendBaseRevision_ = 0;
+    size_t pressureProxyAppendBegin_ = 0;
+    bool pressureProxyAppendOnly_ = false;
     /// Scene lights for the shaded GLSL passes (set per-frame by SoCADAssembly).
     /// Empty means "use the historical fixed directional light".
     std::vector<GlLight> lights_;
@@ -200,6 +276,7 @@ private:
         GLuint wirePopInst = 0; ///< Wire-pass PoP shader (instanced by level)
         GLuint shadedInst = 0; ///< Shaded-pass shader (instanced Phong)
         GLuint shadedPopInst = 0; ///< Shaded PoP shader (instanced by level)
+        GLuint shadedIndirect = 0; ///< Cross-part retained atlas shader
     };
     ShaderPrograms shaders_;
     uint32_t shadersContextId_ = 0;
@@ -226,8 +303,6 @@ private:
                                    const SoGLContext* glue,
                                    const SbMatrix& viewProj);
 
-    static bool isSubpixelProxyInstance(const CadFramePlan& plan,
-                                        size_t visibleInstanceIndex);
     static bool wireRepHasUncollapsedInstances(const CadFramePlan& plan,
                                                PartId part);
 
@@ -285,7 +360,144 @@ private:
     struct InstVertex {
         float transform[16];  ///< column-major 4×4 (raw OI float[16])
         float color[4];        ///< RGBA [0,1]
+        float popMinLevel[4];  ///< quantization minimum xyz + active level
+        float popMaxFlags[4];  ///< quantization maximum xyz + packed flags
     };
+
+    struct IndirectPreparedPart {
+        PartId part;
+        uint32_t partIndex = 0;
+        uint64_t generation = 0;
+        uint32_t vertexCount = 0;
+        uint32_t indexCount = 0;
+        uint32_t page = 0;
+        uint32_t vertexFirst = 0;
+        uint32_t indexFirst = 0;
+        bool hasNormals = false;
+        /*
+         * A one-occurrence progressive part has one stable command and one
+         * packed instance slot.  Recording their locations lets the common
+         * many-unique-parts LoD wave update O(changed parts), while shared
+         * multi-occurrence groups conservatively fall back to exact rebuild.
+         */
+        uint32_t packedInstance = std::numeric_limits<uint32_t>::max();
+        uint32_t commandIndex = std::numeric_limits<uint32_t>::max();
+        bool commandCulled = false;
+    };
+
+    struct IndirectPageWork {
+        uint32_t page = 0;
+        std::vector<CadDrawElementsIndirectCommand> ordinary;
+        std::vector<CadDrawElementsIndirectCommand> culled;
+    };
+
+    struct IndirectPreparedFrame {
+        bool valid = false;
+        uint32_t contextId = 0;
+        uint64_t planRevision = 0;
+        uint64_t geometryRevision = 0;
+        uint64_t shadedLayoutRevision = 0;
+        uint64_t shadedLodRevision = 0;
+        uint64_t appendRevision = 0;
+        uint64_t partGeometryRevision = 0;
+        uint64_t instanceAttributeRevision = 0;
+        uint64_t subpixelProxyRevision = 0;
+        int progressiveLodCeiling = -1;
+        SbMatrix viewProj;
+        std::vector<IndirectPreparedPart> parts;
+        std::vector<uint32_t> partByPlanPartIndex;
+        std::vector<IndirectPageWork> pages;
+        std::vector<InstVertex> instances;
+        // Source CadFramePlan index for each packed instance.  Presentation
+        // attributes can then be refreshed without rebuilding visibility,
+        // atlas demands, or indirect commands.
+        std::vector<uint32_t> sourceInstanceIndices;
+        // Reverse lookup from a CadFramePlan visible-instance index to its
+        // packed indirect instance, or UINT32_MAX when it is not admitted.
+        std::vector<uint32_t> instanceIndexBySource;
+        std::vector<CadSubpixelProxyPoint> pressureProxyPoints;
+        std::vector<uint32_t> pressureProxySourceInstanceIndices;
+        std::vector<uint32_t> pressureProxyIndexBySource;
+        uint64_t renderedTriangleCount = 0;
+        uint64_t instanceUploadSerial = 0;
+        uint64_t atlasRevision = 0;
+        uint32_t atlasValidationCountdown = 0;
+        uint32_t cameraMotionReplayCount = 0;
+        /*
+         * Packed shaded-occurrence count at the last exact preparation.
+         * Append replay is deliberately bounded to geometric growth from
+         * this anchor.  Crossing the bound requests one exact preparation,
+         * giving streaming an amortized O(N) compaction/revalidation instead
+         * of allowing an indefinitely patched command stream.
+         */
+        size_t appendPatchAnchorInstanceCount = 0;
+    };
+
+    /*
+     * Indirect rendering is a per-frame operation, but its largest CPU
+     * arrays are only scratch.  Retain their capacity with the renderer
+     * instead of allocating and freeing O(instances + parts) storage on the
+     * GUI thread for every paint.
+     */
+    std::vector<uint8_t> indirectVisibleMask_;
+    std::vector<uint8_t> indirectVisibleMaximumLod_;
+    std::vector<uint8_t> indirectVisiblePart_;
+    std::vector<uint32_t> indirectVisiblePartIndices_;
+    std::vector<uint32_t> indirectFirstVisibleOccurrence_;
+    std::vector<uint32_t> indirectNextVisibleOccurrence_;
+    std::vector<uint32_t> indirectRequestedVertexCounts_;
+    std::vector<uint32_t> indirectRequestedIndexCounts_;
+    std::vector<const CadTriangleAtlasPart *> indirectAtlasBindings_;
+    std::vector<CadSubpixelProxyPoint> indirectPressureProxyPoints_;
+    std::vector<uint32_t> indirectPressureProxySourceInstanceIndices_;
+    std::vector<InstVertex> indirectInstances_;
+    std::vector<uint32_t> indirectSourceInstanceIndices_;
+    /*
+     * Exact preparation and replay use alternating page-command stores.
+     * Recycle the preceding prepared vectors instead of allocating and
+     * freeing tens of thousands of commands on every progressive cut.
+     */
+    std::vector<IndirectPageWork> indirectPageWorkScratch_;
+    std::vector<uint32_t> indirectPageWorkSlotByPage_;
+    std::vector<uint32_t> indirectCommandIndexByPart_;
+    std::vector<uint8_t> indirectCommandCullByPart_;
+    std::vector<uint32_t> indirectPackedInstanceByPart_;
+    IndirectPreparedFrame indirectPrepared_;
+
+    bool renderIndirectShaded(
+        const CadFramePlan& plan,
+        const SoCADAssembly& assembly,
+        const SoGLContext *glue,
+        const SbMatrix& viewProj,
+        const SbViewVolume& viewVolume);
+    bool replayIndirectShaded(
+        const CadFramePlan& plan,
+        const SoCADAssembly& assembly,
+        const SoGLContext *glue,
+        const SbMatrix& viewProj,
+        const SbViewVolume& viewVolume);
+    bool patchIndirectPreparedLod(
+        const CadFramePlan& plan,
+        const SoCADAssembly& assembly,
+        const SoGLContext *glue);
+    bool patchIndirectPreparedAppend(
+        const CadFramePlan& plan,
+        const SoCADAssembly& assembly,
+        const SoGLContext *glue,
+        const SbMatrix& viewProj);
+    bool patchIndirectPreparedGeometry(
+        const CadFramePlan& plan,
+        const SoCADAssembly& assembly,
+        const SoGLContext *glue);
+    bool patchIndirectPreparedCeiling(
+        const CadFramePlan& plan,
+        const SoCADAssembly& assembly,
+        const SoGLContext *glue);
+    bool submitIndirectPrepared(
+        const SoGLContext *glue,
+        const SbMatrix& viewProj,
+        const SbViewVolume& viewVolume);
+    bool rejectIndirect(int status, const char *reason);
 
     void renderInstanced(const CadFramePlan& plan,
                          const SoCADAssembly& assembly,
