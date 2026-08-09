@@ -464,19 +464,22 @@ CadPickQuery::pickEdge(
                 wire.progressiveMinimumLevel,
                 wire.progressiveResidentLevel);
             const size_t segmentCount = wire.segmentCountAtLevel(level);
+            const size_t segmentFirst = wire.segmentFirstAtLevel(level);
             std::vector<CadPartEdgeBVH::SegEntry> segs;
             segs.reserve(segmentCount);
             for (size_t i = 0; i < segmentCount; ++i) {
+                const size_t sourceSegment = segmentFirst + i;
                 const uint32_t segId =
-                    (i < wire.segmentIds.size()) ?
-                    wire.segmentIds[i] : static_cast<uint32_t>(i);
+                    (sourceSegment < wire.segmentIds.size()) ?
+                    wire.segmentIds[sourceSegment] :
+                    static_cast<uint32_t>(sourceSegment);
                 segs.push_back({
                     progressiveSnapPoint(
-                        wire.segmentPoints[2 * i],
+                        wire.segmentPoints[2 * sourceSegment],
                         wire.progressiveQuantizationMinimum,
                         wire.progressiveQuantizationMaximum, level),
                     progressiveSnapPoint(
-                        wire.segmentPoints[2 * i + 1],
+                        wire.segmentPoints[2 * sourceSegment + 1],
                         wire.progressiveQuantizationMinimum,
                         wire.progressiveQuantizationMaximum, level),
                     segId, 0 });

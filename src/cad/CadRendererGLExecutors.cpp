@@ -314,6 +314,7 @@ bool CadRendererGL::renderFlatWire(
         const CadVisibleInstance *instance = nullptr;
         CadFlatWireRangeKey rangeKey;
         size_t flatSegments = 0;
+        size_t flatSegmentFirst = 0;
         size_t polylineSegments = 0;
         uint8_t level = 15;
         FlatWireStyleKey style;
@@ -390,6 +391,8 @@ bool CadRendererGL::renderFlatWire(
             occurrence.rangeKey = CadFlatWireRangeKey{
                 instance.instanceId, level, geometryToken};
             occurrence.flatSegments = flatSegments;
+            occurrence.flatSegmentFirst =
+                wire.segmentFirstAtLevel(effectiveLevel);
             occurrence.polylineSegments = polylineSegments;
             occurrence.level = level;
             occurrence.style = flatWireStyleKey(instance);
@@ -501,7 +504,11 @@ bool CadRendererGL::renderFlatWire(
             const GLint first = baseVertex +
                 static_cast<GLint>(positionOffset / 3);
             const size_t flatPointCount = occurrence.flatSegments * 2;
-            for (size_t p = 0; p + 1 < flatPointCount; p += 2) {
+            const size_t flatPointFirst =
+                occurrence.flatSegmentFirst * 2;
+            const size_t flatPointEnd = flatPointFirst + flatPointCount;
+            for (size_t p = flatPointFirst;
+                    p + 1 < flatPointEnd; p += 2) {
                 const SbVec3f a = wire.isProgressive() &&
                         occurrence.level < 15 ?
                     progressiveSnapPoint(wire.segmentPoints[p],
@@ -1310,15 +1317,17 @@ ensureProgressiveWireGpu(
 {
     if (!resources || !glue) return nullptr;
 
+    const size_t pointFirst = wire.segmentFirstAtLevel(level) * 2;
     const size_t pointCount = wire.segmentCountAtLevel(level) * 2;
-    if (pointCount == 0 || pointCount > wire.segmentPoints.size())
+    if (pointCount == 0 || pointFirst > wire.segmentPoints.size() ||
+            pointCount > wire.segmentPoints.size() - pointFirst)
         return nullptr;
     if (const CadProgressiveGpu *cached =
             resources->progressiveFor(part, false, level))
         return cached;
     std::vector<float> positions;
     positions.reserve(pointCount * 3);
-    for (size_t i = 0; i < pointCount; ++i) {
+    for (size_t i = pointFirst; i < pointFirst + pointCount; ++i) {
         const SbVec3f point = progressiveSnapPoint(
             wire.segmentPoints[i],
             wire.progressiveQuantizationMinimum,
@@ -1398,10 +1407,13 @@ ensureProgressiveTriGpu(
 // Bind a wire VBO, set up attribute 0 (position), draw segments.
 // Works with or without VAO.
 static void bindAndDrawWire(const CadWireGpu* w, const SoGLContext* glue,
-                             GLint locPos, GLsizei segmentCount)
+                             GLint locPos, GLsizei segmentFirst,
+                             GLsizei segmentCount)
 {
     if (!w || w->segCount == 0 || segmentCount <= 0) return;
-    segmentCount = std::min(segmentCount, w->segCount);
+    segmentFirst = std::max<GLsizei>(0, segmentFirst);
+    if (segmentFirst >= w->segCount) return;
+    segmentCount = std::min(segmentCount, w->segCount - segmentFirst);
 
     if (w->vao && glue->glBindVertexArray) {
         glue->glBindVertexArray(w->vao);
@@ -1416,12 +1428,14 @@ static void bindAndDrawWire(const CadWireGpu* w, const SoGLContext* glue,
     }
 
     if (w->sequentialSegments) {
-        glue->glDrawArrays(GL_LINES, 0, segmentCount * 2);
+        glue->glDrawArrays(GL_LINES, segmentFirst * 2, segmentCount * 2);
     } else {
         glue->glDrawElements(GL_LINES,
                              segmentCount * 2,
                              GL_UNSIGNED_INT,
-                             nullptr);
+                             reinterpret_cast<const GLvoid *>(
+                                 static_cast<uintptr_t>(segmentFirst) * 2u *
+                                 sizeof(uint32_t)));
     }
     {
         GLenum err = glue->glGetError();
@@ -1591,6 +1605,8 @@ void CadRendererGL::renderVboLoop(
                 }
                 applyWireRasterStyle(glue, inst, caps_.hasLineStipple);
                 bindAndDrawWire(w, glue, locPos,
+                    progressive ? static_cast<GLsizei>(
+                        progressive->segmentFirstAtLevel(level)) : 0,
                     progressiveWireSegmentCount(assembly, item.rep.part,
                                                 inst, w->segCount));
             }
@@ -1969,9 +1985,9 @@ void CadRendererGL::renderFixedVboLoop(
         const CadWireGpu *wire = gpuRes_->wireFor(item.rep.part);
         if (!wire) continue;
         const PartGeometry *geometry = assembly.partGeometry(item.rep.part);
-        const WireRep *progressive =
-            geometry && geometry->wire && geometry->wire->isProgressive() ?
-            &*geometry->wire : nullptr;
+            const WireRep *progressive =
+                geometry && geometry->wire && geometry->wire->isProgressive() ?
+                &*geometry->wire : nullptr;
         if (!wire->sequentialSegments)
             glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, wire->segIdxBuf);
 
@@ -1995,6 +2011,7 @@ void CadRendererGL::renderFixedVboLoop(
             applyWireRasterStyle(glue, inst, caps_.hasLineStipple);
 
             GLuint positionBuffer = wire->posBuf;
+            GLsizei segmentFirst = 0;
             if (progressive) {
                 const uint8_t level = cadResolvedProgressiveLevel(
                     assembly.effectiveProgressiveLodLevel(inst.lodLevel),
@@ -2006,17 +2023,23 @@ void CadRendererGL::renderFixedVboLoop(
                             gpuRes_, item.rep.part, *progressive, level, glue);
                     if (!cut) continue;
                     positionBuffer = cut->posBuf;
-                }
+                } else
+                    segmentFirst = static_cast<GLsizei>(
+                        progressive->segmentFirstAtLevel(level));
             }
             glue->glBindBuffer(GL_ARRAY_BUFFER, positionBuffer);
             glue->glVertexPointer(3, GL_FLOAT, 3 * sizeof(float), nullptr);
             const GLsizei segmentCount = progressiveWireSegmentCount(
                 assembly, item.rep.part, inst, wire->segCount);
             if (wire->sequentialSegments)
-                glue->glDrawArrays(GL_LINES, 0, segmentCount * 2);
+                glue->glDrawArrays(
+                    GL_LINES, segmentFirst * 2, segmentCount * 2);
             else
                 glue->glDrawElements(GL_LINES, segmentCount * 2,
-                                     GL_UNSIGNED_INT, nullptr);
+                    GL_UNSIGNED_INT,
+                    reinterpret_cast<const GLvoid *>(
+                        static_cast<uintptr_t>(segmentFirst) * 2u *
+                        sizeof(uint32_t)));
         }
     }
 
@@ -2186,13 +2209,20 @@ void CadRendererGL::renderImmediateMode(
                 wire.segmentCountAtLevel(
                     assembly.effectiveProgressiveLodLevel(
                         inst.lodLevel)) * 2;
+            const size_t flatPointFirst =
+                wire.segmentFirstAtLevel(
+                    assembly.effectiveProgressiveLodLevel(
+                        inst.lodLevel)) * 2;
             const uint8_t drawLevel = cadResolvedProgressiveLevel(
                 assembly.effectiveProgressiveLodLevel(inst.lodLevel),
                 wire.progressiveMinimumLevel,
                 wire.progressiveResidentLevel);
             if (flatPointCount > 0) {
                 glue->glBegin(GL_LINES);
-                for (size_t i = 0; i + 1 < flatPointCount; i += 2) {
+                const size_t flatPointEnd =
+                    flatPointFirst + flatPointCount;
+                for (size_t i = flatPointFirst;
+                        i + 1 < flatPointEnd; i += 2) {
                     const SbVec3f a = wire.isProgressive() ?
                         progressiveSnapPoint(wire.segmentPoints[i],
                             wire.progressiveQuantizationMinimum,
@@ -5080,46 +5110,12 @@ void CadRendererGL::renderInstanced(
             if (solidWireOnly && item.customWireStyle) continue;
             CadWireGpu* w = gpuRes_->wireFor(item.rep.part);
             if (!w || w->segCount == 0) continue;
-            const size_t levelInstanceIndex =
-                cadFirstDrawableInstance(
-                    plan, item, CadDrawChannel::Wire);
-            if (levelInstanceIndex >= plan.visibleInstances.size())
-                continue;
             const PartGeometry *geometry =
                 assembly.partGeometry(item.rep.part);
             const WireRep *progressive =
                 geometry && geometry->wire &&
                 geometry->wire->isProgressive() ?
                 &*geometry->wire : nullptr;
-            const CadVisibleInstance& levelInstance =
-                plan.visibleInstances[levelInstanceIndex];
-            const uint8_t level = progressive ?
-                cadResolvedProgressiveLevel(
-                    assembly.effectiveProgressiveLodLevel(
-                        levelInstance.lodLevel),
-                    progressive->progressiveMinimumLevel,
-                    progressive->progressiveResidentLevel) : 15;
-            const int variant = progressive && level < 15 ? 1 : 0;
-            const WireLocations& loc = locations[variant];
-            if (!programs[variant])
-                continue;
-            if (activeProgram != programs[variant]) {
-                activeProgram = programs[variant];
-                glue->glUseProgramObjectARB(activeProgram);
-                glue->glUniformMatrix4fvARB(
-                    loc.viewProjection, 1, GL_FALSE, vp);
-            }
-            if (variant) {
-                uploadProgressivePositionUniforms(
-                    glue, loc.encodeScale, loc.decodeScale, loc.minimum,
-                    level,
-                    progressive->progressiveQuantizationMinimum,
-                    progressive->progressiveQuantizationMaximum);
-            }
-            const GLsizei segmentCount = progressiveWireSegmentCount(
-                assembly, item.rep.part, levelInstance, w->segCount);
-            if (segmentCount <= 0)
-                continue;
             uint32_t runStart = 0;
             while (runStart < item.instanceCount) {
                 while (runStart < item.instanceCount &&
@@ -5129,14 +5125,60 @@ void CadRendererGL::renderInstanced(
                     ++runStart;
                 if (runStart == item.instanceCount)
                     break;
+                const uint32_t baseInstance =
+                    item.baseInstance + runStart;
+                const CadVisibleInstance& levelInstance =
+                    plan.visibleInstances[baseInstance];
+                const uint8_t level = progressive ?
+                    cadResolvedProgressiveLevel(
+                        assembly.effectiveProgressiveLodLevel(
+                            levelInstance.lodLevel),
+                        progressive->progressiveMinimumLevel,
+                        progressive->progressiveResidentLevel) : 15;
                 uint32_t runEnd = runStart + 1;
                 while (runEnd < item.instanceCount &&
                     cadInstanceDrawable(
                         plan, item, item.baseInstance + runEnd,
-                        CadDrawChannel::Wire))
+                        CadDrawChannel::Wire) &&
+                    (!progressive ||
+                     cadResolvedProgressiveLevel(
+                        assembly.effectiveProgressiveLodLevel(
+                            plan.visibleInstances[
+                                item.baseInstance + runEnd].lodLevel),
+                        progressive->progressiveMinimumLevel,
+                        progressive->progressiveResidentLevel) == level))
                     ++runEnd;
 
-                const uint32_t baseInstance = item.baseInstance + runStart;
+                const int variant = progressive && level < 15 ? 1 : 0;
+                const WireLocations& loc = locations[variant];
+                if (!programs[variant]) {
+                    runStart = runEnd;
+                    continue;
+                }
+                if (activeProgram != programs[variant]) {
+                    activeProgram = programs[variant];
+                    glue->glUseProgramObjectARB(activeProgram);
+                    glue->glUniformMatrix4fvARB(
+                        loc.viewProjection, 1, GL_FALSE, vp);
+                }
+                if (variant) {
+                    uploadProgressivePositionUniforms(
+                        glue, loc.encodeScale, loc.decodeScale, loc.minimum,
+                        level,
+                        progressive->progressiveQuantizationMinimum,
+                        progressive->progressiveQuantizationMaximum);
+                }
+                const GLsizei segmentFirst = progressive ?
+                    static_cast<GLsizei>(
+                        progressive->segmentFirstAtLevel(level)) : 0;
+                const GLsizei segmentCount = progressive ?
+                    static_cast<GLsizei>(
+                        progressive->segmentCountAtLevel(level)) :
+                    w->segCount;
+                if (segmentCount <= 0) {
+                    runStart = runEnd;
+                    continue;
+                }
                 const auto& styleInst = plan.visibleInstances[baseInstance];
                 applyWireRasterStyle(glue, styleInst, caps_.hasLineStipple);
                 if (w->vao && glue->glBindVertexArray) {
@@ -5163,12 +5205,16 @@ void CadRendererGL::renderInstanced(
                 const GLsizei runCount = static_cast<GLsizei>(runEnd - runStart);
                 if (w->sequentialSegments) {
                     glue->glDrawArraysInstanced(
-                                                GL_LINES, 0, segmentCount * 2,
+                                                GL_LINES, segmentFirst * 2,
+                                                segmentCount * 2,
                                                 runCount);
                 } else {
                     glue->glDrawElementsInstanced(
                                                   GL_LINES, segmentCount * 2,
-                                                  GL_UNSIGNED_INT, nullptr,
+                                                  GL_UNSIGNED_INT,
+                                                  reinterpret_cast<const GLvoid *>(
+                                                      static_cast<uintptr_t>(segmentFirst) * 2u *
+                                                      sizeof(uint32_t)),
                                                   runCount);
                 }
 

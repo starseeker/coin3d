@@ -147,7 +147,13 @@ struct WireRep {
     /** Tight axis-aligned bounding box enclosing all wire geometry. */
     SbBox3f bounds;
 
-    /** Cumulative segment counts for retained PoP levels 0..15. */
+    /**
+     * Segment ranges for retained levels 0..15.  Prefix producers leave
+     * progressiveSegmentFirst zeroed.  Native curve producers may pack an
+     * independent approximation for each level and select it without
+     * rebuilding or copying the part.
+     */
+    std::array<uint32_t, 16> progressiveSegmentFirst = {};
     std::array<uint32_t, 16> progressiveSegmentCount = {};
     uint8_t progressiveMinimumLevel = 255;
     uint8_t progressiveResidentLevel = 255;
@@ -162,8 +168,18 @@ struct WireRep {
         if (!isProgressive()) return segmentCount();
         level = (std::max)(progressiveMinimumLevel,
                          (std::min)(progressiveResidentLevel, level));
-        return std::min<size_t>(progressiveSegmentCount[level],
-                                segmentCount());
+        const size_t first = (std::min<size_t>)(
+            progressiveSegmentFirst[level], segmentCount());
+        return (std::min<size_t>)(progressiveSegmentCount[level],
+                                  segmentCount() - first);
+    }
+
+    size_t segmentFirstAtLevel(uint8_t level) const noexcept {
+        if (!isProgressive()) return 0;
+        level = (std::max)(progressiveMinimumLevel,
+                         (std::min)(progressiveResidentLevel, level));
+        return (std::min<size_t>)(progressiveSegmentFirst[level],
+                                  segmentCount());
     }
 };
 

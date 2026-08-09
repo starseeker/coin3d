@@ -754,12 +754,20 @@ void CadRendererGL::ensurePartUploaded(
     GLsizei               wireSegIdxCount = 0;
     if (geom->wire.has_value()) {
         const auto& wr = *geom->wire;
+        /*
+         * Progressive wire levels are independent immutable ranges, not a
+         * prefix.  Retain the complete range table on the GPU once and let
+         * draw submission select first/count.  Uploading one selected range
+         * and later appending a different range corrupts the payload because
+         * the two simplifications need not share an ordered prefix.
+         */
+        const size_t flatSegmentFirst = 0;
+        const size_t flatPointFirst = flatSegmentFirst * 2;
         const size_t flatPointCount =
-            (wr.isProgressive() ?
-                wr.segmentCountAtLevel(requestedLod) :
-                wr.segmentCount()) * 2;
+            wr.segmentCount() * 2;
         if (flatPointCount > 0 && wr.polylines.empty()) {
-            pWirePos = packedVec3fData(wr.segmentPoints);
+            pWirePos = packedVec3fData(wr.segmentPoints) +
+                flatPointFirst * 3;
             wirePointCount = static_cast<GLsizei>(flatPointCount);
         } else {
             size_t polyPointCount = 0;
@@ -772,7 +780,9 @@ void CadRendererGL::ensurePartUploaded(
             wirePos.reserve((flatPointCount + polyPointCount) * 3);
             wireSegIdx.reserve(flatPointCount + polySegmentCount * 2);
 
-            for (size_t i = 0; i + 1 < flatPointCount; i += 2) {
+            const size_t flatPointEnd = flatPointFirst + flatPointCount;
+            for (size_t i = flatPointFirst;
+                    i + 1 < flatPointEnd; i += 2) {
                 const uint32_t base =
                     static_cast<uint32_t>(wirePos.size() / 3);
                 appendPackedPoint(wirePos, wr.segmentPoints[i]);

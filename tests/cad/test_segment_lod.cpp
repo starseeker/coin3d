@@ -17,6 +17,7 @@
 // Include SegmentPopLod directly (it's not a public API header,
 // but tests are allowed to test internal implementation)
 #include <Obol/cad/CadIds.h>  // ensure headers compile together
+#include <Obol/cad/SoCADAssembly.h>
 
 // For the LoD we include from the source tree directly
 // (tests/cad/ is configured with src/cad/lod in its include path)
@@ -239,6 +240,27 @@ int main()
         auto segs = lod.segmentsAtLevel(5);
         ok = ok && segs.empty();
         runner.endTest(ok, "Empty build should succeed and return empty results");
+    }
+
+    runner.startTest("WireRep: independent progressive ranges are bounded");
+    {
+        Obol::WireRep wire;
+        for (int i = 0; i < 12; ++i)
+            wire.segmentPoints.push_back(SbVec3f(
+                static_cast<float>(i), 0.0f, 0.0f));
+        wire.progressiveMinimumLevel = 2;
+        wire.progressiveResidentLevel = 5;
+        wire.progressiveSegmentFirst[2] = 1;
+        wire.progressiveSegmentCount[2] = 2;
+        wire.progressiveSegmentFirst[5] = 4;
+        wire.progressiveSegmentCount[5] = 9; // deliberately overruns
+        const bool ok =
+            wire.segmentFirstAtLevel(0) == 1 &&
+            wire.segmentCountAtLevel(0) == 2 &&
+            wire.segmentFirstAtLevel(15) == 4 &&
+            wire.segmentCountAtLevel(15) == 2;
+        runner.endTest(ok,
+            "level selection must clamp and address its own segment range");
     }
 
     return runner.getSummary();

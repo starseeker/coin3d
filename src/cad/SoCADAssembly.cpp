@@ -559,7 +559,11 @@ cadRenderSoftwareWire(const Obol::internal::CadFramePlan& plan,
             model.setValue(instance.transform.data());
             SbMatrix transform = model;
             transform.multRight(viewProj);
-            for (size_t p = 0; p + 1 < wire.segmentPoints.size(); p += 2)
+            const uint8_t level = assembly.effectiveProgressiveLodLevel(
+                instance.lodLevel);
+            const size_t first = wire.segmentFirstAtLevel(level) * 2;
+            const size_t count = wire.segmentCountAtLevel(level) * 2;
+            for (size_t p = first; p + 1 < first + count; p += 2)
                 cadSoftwareSegment(pixels, width, height, origin, size,
                     transform, wire.segmentPoints[p], wire.segmentPoints[p + 1],
                     instance);
@@ -1246,8 +1250,6 @@ struct SoCADAssemblyImpl :
              * draw runs and avoids a separately allocated vector and sort for
              * every unique part.
              */
-            const bool progressiveWire =
-                geom.wire.has_value() && geom.wire->isProgressive();
             const bool progressiveShaded =
                 geom.shaded.has_value() && geom.shaded->isProgressive();
             const size_t groupCount = groupEnd - groupBegin;
@@ -1298,10 +1300,7 @@ struct SoCADAssemblyImpl :
                            visAt(runEnd).linePattern ==
                                visAt(runStart).linePattern &&
                            visAt(runEnd).linePatternFactor ==
-                               visAt(runStart).linePatternFactor &&
-                           (!progressiveWire ||
-                            visAt(runEnd).lodLevel ==
-                                visAt(runStart).lodLevel))
+                               visAt(runStart).linePatternFactor)
                         ++runEnd;
                     item.baseInstance =
                         static_cast<uint32_t>(groupBegin) + runStart;
@@ -2367,7 +2366,8 @@ struct SoCADAssemblyImpl :
             return false;
         };
         if (planDirty_ || geometryDirty_ ||
-                !drawModeHasShadedPlan(cachedDM_))
+                cachedDM_ < SoCADAssembly::WIREFRAME ||
+                cachedDM_ > SoCADAssembly::HIDDEN_LINE)
             return fail("plan-state");
         const auto retained = instances_.find(instance);
         if (retained == instances_.end())
@@ -2403,17 +2403,11 @@ struct SoCADAssemblyImpl :
             return patchProgressiveShadedPlanLod(
                 instance, lodLevel, changedGroups);
 
-        const bool wireActive =
-            cachedDM_ == SoCADAssembly::SHADED_WITH_EDGES ||
-            cachedDM_ == SoCADAssembly::HIDDEN_LINE;
-        if (wireActive && binding.geometry->wire &&
-                binding.geometry->wire->isProgressive())
-            return fail("progressive-wire-layout");
-
         /*
-         * Ordinary meshes and structural fallbacks draw the same arrays at
-         * every level.  Preserve the authored bookkeeping value in-place, but
-         * do not manufacture a layout invalidation for it.
+         * Wire ranges are selected per occurrence by every executor.  Their
+         * immutable part payload and style batches therefore do not change
+         * when an occurrence selects another range.  Ordinary meshes and
+         * structural fallbacks likewise draw the same arrays at every level.
          */
         cachedPlan_.visibleInstances[indexed->second].lodLevel =
             lodLevel;
@@ -3714,7 +3708,7 @@ SoCADAssembly::updateInstanceLodLevels(
 {
     bool changed = false;
     bool sparsePlanPatch = !impl_->planDirty_ && !impl_->geometryDirty_ &&
-        impl_->drawModeHasShadedPlan(impl_->cachedDM_);
+        impl_->cachedDM_ >= WIREFRAME && impl_->cachedDM_ <= HIDDEN_LINE;
     std::unordered_set<size_t> changedPlanGroups;
     for (const auto& update : updates) {
         auto found = impl_->instances_.find(update.instance);
