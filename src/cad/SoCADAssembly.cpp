@@ -71,6 +71,7 @@
 #include <Inventor/elements/SoContextManagerElement.h>
 #include <Inventor/elements/SoGLLazyElement.h>
 #include <Inventor/elements/SoLightElement.h>
+#include <Inventor/elements/SoEnvironmentElement.h>
 #include <Inventor/elements/SoShapeHintsElement.h>
 #include <Inventor/nodes/SoLight.h>
 #include <Inventor/nodes/SoDirectionalLight.h>
@@ -1036,12 +1037,22 @@ struct SoCADAssemblyImpl :
             const std::unordered_set<Obol::InstanceId,
                                      std::hash<Obol::InstanceId>>& hidden,
             const std::map<Obol::PartId, InstancePartBucket> *buckets =
-                nullptr) const
+                nullptr,
+            SoGLRenderAction *renderAction = nullptr) const
     {
         using namespace Obol::internal;
 
         CadFramePlan plan;
         if (instances_.empty()) return plan;
+        size_t workSinceAbortCheck = 256u;
+        const auto abortRequested = [&]() {
+            if (!renderAction)
+                return false;
+            if (++workSinceAbortCheck < 256u)
+                return false;
+            workSinceAbortCheck = 0;
+            return renderAction->abortNow();
+        };
 
         /*
          * Write directly into the final flat allocation.  Retaining a second
@@ -1061,8 +1072,11 @@ struct SoCADAssemblyImpl :
         size_t sourceInstanceCount = instances_.size();
         if (buckets) {
             sourceInstanceCount = 0;
-            for (const auto& indexed : sourceBuckets)
+            for (const auto& indexed : sourceBuckets) {
+                if (abortRequested())
+                    return CadFramePlan();
                 sourceInstanceCount += indexed.second.size();
+            }
         }
         /*
          * A full compact source initially presents structural fallback boxes,
@@ -1172,6 +1186,8 @@ struct SoCADAssemblyImpl :
          * publication wave.
          */
         for (const auto& indexed : sourceBuckets) {
+            if (abortRequested())
+                return CadFramePlan();
             /*
              * Do not retain unrenderable occurrences in the compiled plan.
              * Once geometry arrives, the normal structural/geometry
@@ -1182,6 +1198,8 @@ struct SoCADAssemblyImpl :
                 continue;
             const size_t groupBegin = plan.visibleInstances.size();
             for (size_t slot = 0; slot < indexed.second.size(); ++slot) {
+                if (abortRequested())
+                    return CadFramePlan();
                 const Obol::InstanceId iid = indexed.second.at(slot);
                 const InstanceData *idata = indexed.second.dataAt(slot);
                 if (idata)
@@ -1206,6 +1224,8 @@ struct SoCADAssemblyImpl :
                             bv.linePatternFactor;
                     return av.instanceId < bv.instanceId;
                 });
+            if (abortRequested())
+                return CadFramePlan();
             visiblePartSpans.push_back(
                 VisiblePartSpan{indexed.first, groupBegin, groupEnd});
         }
@@ -1218,6 +1238,8 @@ struct SoCADAssemblyImpl :
                                  dm == SoCADAssembly::HIDDEN_LINE);
 
         for (const VisiblePartSpan& visibleSpan : visiblePartSpans) {
+            if (abortRequested())
+                return CadFramePlan();
             const Obol::PartId pid = visibleSpan.part;
             const size_t groupBegin = visibleSpan.begin;
             const size_t groupEnd = visibleSpan.end;
@@ -1263,6 +1285,8 @@ struct SoCADAssemblyImpl :
             const auto cullSafe =
                 [&](size_t begin, size_t end) {
                     for (size_t i = begin; i < end; ++i) {
+                        if (abortRequested())
+                            return false;
                         const CadVisibleInstance& instance = visAt(i);
                         if (instance.rgba[3] != 255 ||
                                 !cadTransformPreservesOrientation(
@@ -1275,15 +1299,21 @@ struct SoCADAssemblyImpl :
                     ((needWire && geom.wire.has_value()) ||
                      (needShaded && geom.shaded.has_value()))) {
                 uint8_t maximumLod = 0;
-                for (size_t i = 0; i < groupCount; ++i)
+                for (size_t i = 0; i < groupCount; ++i) {
+                    if (abortRequested())
+                        return CadFramePlan();
                     maximumLod =
                         std::max(maximumLod, visAt(i).lodLevel);
+                }
                 plan.maximumRequestedLodByPart[pid] = maximumLod;
             }
 
             // Bind each occurrence directly to this plan-owned part payload.
-            for (size_t i = 0; i < groupCount; ++i)
+            for (size_t i = 0; i < groupCount; ++i) {
+                if (abortRequested())
+                    return CadFramePlan();
                 visAt(i).partIndex = partIndex;
+            }
 
             // Wire draw item
             if (needWire && geom.wire.has_value()) {
@@ -1293,6 +1323,8 @@ struct SoCADAssemblyImpl :
                 item.partIndex = partIndex;
                 uint32_t runStart = 0;
                 while (runStart < count) {
+                    if (abortRequested())
+                        return CadFramePlan();
                     uint32_t runEnd = runStart + 1;
                     while (runEnd < count &&
                            visAt(runEnd).lineWidth ==
@@ -1301,7 +1333,11 @@ struct SoCADAssemblyImpl :
                                visAt(runStart).linePattern &&
                            visAt(runEnd).linePatternFactor ==
                                visAt(runStart).linePatternFactor)
+                    {
+                        if (abortRequested())
+                            return CadFramePlan();
                         ++runEnd;
+                    }
                     item.baseInstance =
                         static_cast<uint32_t>(groupBegin) + runStart;
                     item.instanceCount = runEnd - runStart;
@@ -1332,12 +1368,17 @@ struct SoCADAssemblyImpl :
                 const size_t itemBegin = plan.shadedItems.size();
                 uint32_t runStart = 0;
                 while (runStart < count) {
+                    if (abortRequested())
+                        return CadFramePlan();
                     uint32_t runEnd = runStart + 1;
                     while (runEnd < count &&
                            (!progressiveShaded ||
                             visAt(runEnd).lodLevel ==
-                                visAt(runStart).lodLevel))
+                                visAt(runStart).lodLevel)) {
+                        if (abortRequested())
+                            return CadFramePlan();
                         ++runEnd;
+                    }
                     CadDrawItem item;
                     item.rep.part  = pid;
                     item.rep.type  = CadRepType::Triangles;
@@ -1347,6 +1388,8 @@ struct SoCADAssemblyImpl :
                     item.instanceCount = runEnd - runStart;
                     item.cullBackfaces = geom.shadedCullBackfaces &&
                         cullSafe(runStart, runEnd);
+                    if (renderAction && renderAction->hasTerminated())
+                        return CadFramePlan();
                     plan.shadedItems.push_back(item);
                     runStart = runEnd;
                 }
@@ -1370,6 +1413,8 @@ struct SoCADAssemblyImpl :
                         item.instanceCount = 0;
                         item.cullBackfaces = geom.shadedCullBackfaces &&
                             cullSafe(0, groupCount);
+                        if (renderAction && renderAction->hasTerminated())
+                            return CadFramePlan();
                         plan.shadedItems.push_back(item);
                     }
                 }
@@ -1384,19 +1429,32 @@ struct SoCADAssemblyImpl :
         return plan;
     }
 
-    void rebuildProgressiveShadedPlanIndex() {
+    bool rebuildProgressiveShadedPlanIndex(
+            SoGLRenderAction *renderAction = nullptr) {
+        size_t workSinceAbortCheck = 256u;
+        const auto abortRequested = [&]() {
+            if (!renderAction)
+                return false;
+            if (++workSinceAbortCheck < 256u)
+                return false;
+            workSinceAbortCheck = 0;
+            return renderAction->abortNow();
+        };
         progressiveShadedPlanGroups_.clear();
         progressiveShadedPlanGroupByInstance_.clear();
         progressivePlanIndexByInstance_.clear();
         cachedPlanPartSpansByPart_.clear();
         if (cachedPlan_.visibleInstances.empty())
-            return;
+            return true;
         progressivePlanIndexByInstance_.reserve(
             cachedPlan_.visibleInstances.size());
-        for (size_t i = 0; i < cachedPlan_.visibleInstances.size(); ++i)
+        for (size_t i = 0; i < cachedPlan_.visibleInstances.size(); ++i) {
+            if (abortRequested())
+                return false;
             progressivePlanIndexByInstance_[
                 cachedPlan_.visibleInstances[i].instanceId] =
                 static_cast<uint32_t>(i);
+        }
 
         /*
          * Draw items are emitted contiguously per part.  Index those ranges
@@ -1410,6 +1468,8 @@ struct SoCADAssemblyImpl :
         std::vector<size_t> wireItemCount(
             cachedPlan_.partBindings.size(), 0);
         for (size_t i = 0; i < cachedPlan_.wireItems.size(); ++i) {
+            if (abortRequested())
+                return false;
             const size_t partIndex =
                 cachedPlan_.wireItems[i].partIndex;
             if (partIndex >= wireItemBegin.size())
@@ -1423,6 +1483,8 @@ struct SoCADAssemblyImpl :
         std::vector<size_t> pointItemCount(
             cachedPlan_.partBindings.size(), 0);
         for (size_t i = 0; i < cachedPlan_.pointItems.size(); ++i) {
+            if (abortRequested())
+                return false;
             const size_t partIndex =
                 cachedPlan_.pointItems[i].partIndex;
             if (partIndex >= pointItemBegin.size())
@@ -1436,6 +1498,8 @@ struct SoCADAssemblyImpl :
         std::vector<size_t> shadedItemCount(
             cachedPlan_.partBindings.size(), 0);
         for (size_t i = 0; i < cachedPlan_.shadedItems.size(); ++i) {
+            if (abortRequested())
+                return false;
             const size_t partIndex =
                 cachedPlan_.shadedItems[i].partIndex;
             if (partIndex >= shadedItemBegin.size())
@@ -1447,12 +1511,17 @@ struct SoCADAssemblyImpl :
 
         size_t base = 0;
         while (base < cachedPlan_.visibleInstances.size()) {
+            if (abortRequested())
+                return false;
             const uint32_t partIndex =
                 cachedPlan_.visibleInstances[base].partIndex;
             size_t end = base + 1;
             while (end < cachedPlan_.visibleInstances.size() &&
-                    cachedPlan_.visibleInstances[end].partIndex == partIndex)
+                    cachedPlan_.visibleInstances[end].partIndex == partIndex) {
+                if (abortRequested())
+                    return false;
                 ++end;
+            }
 
             if (partIndex >= cachedPlan_.partBindings.size()) {
                 base = end;
@@ -1493,6 +1562,8 @@ struct SoCADAssemblyImpl :
             group.baseInstance = static_cast<uint32_t>(base);
             group.instanceCount = static_cast<uint32_t>(end - base);
             for (size_t i = base; i < end; ++i) {
+                if (abortRequested())
+                    return false;
                 const auto& instance = cachedPlan_.visibleInstances[i];
                 ++group.levelCounts[progressiveLevelBin(instance.lodLevel)];
             }
@@ -1504,13 +1575,17 @@ struct SoCADAssemblyImpl :
             }
             const size_t groupIndex =
                 progressiveShadedPlanGroups_.size();
-            for (size_t i = base; i < end; ++i)
+            for (size_t i = base; i < end; ++i) {
+                if (abortRequested())
+                    return false;
                 progressiveShadedPlanGroupByInstance_[
                     cachedPlan_.visibleInstances[i].instanceId] =
                         groupIndex;
+            }
             progressiveShadedPlanGroups_.push_back(group);
             base = end;
         }
+        return true;
     }
 
     static bool partGeometryPlanCompatible(
@@ -2923,20 +2998,30 @@ struct SoCADAssemblyImpl :
         return true;
     }
 
-    void updateSubpixelProxyPlan(const SbMatrix& viewProj,
+    bool updateSubpixelProxyPlan(const SbMatrix& viewProj,
                                  const SbVec2s& viewportSize,
                                  float pixelThreshold,
-                                 bool cameraMotionReuse)
+                                 bool cameraMotionReuse,
+                                 SoGLRenderAction *renderAction = nullptr)
     {
         using namespace Obol::internal;
         CadFramePlan& plan = cachedPlan_;
+        size_t workSinceAbortCheck = 256u;
+        const auto abortRequested = [&]() {
+            if (!renderAction)
+                return false;
+            if (++workSinceAbortCheck < 256u)
+                return false;
+            workSinceAbortCheck = 0;
+            return renderAction->abortNow();
+        };
         pixelThreshold = std::isfinite(pixelThreshold) ?
             std::max(1.0f, std::min(64.0f, pixelThreshold)) : 1.0f;
         if (plan.subpixelProxyInputRevision !=
                 subpixelProxyViewInputRevision_ &&
                 patchSubpixelProxyAppendPlan(
                     viewProj, viewportSize, pixelThreshold))
-            return;
+            return !renderAction || !renderAction->abortNow();
         /*
          * Reproject the already classified point/mesh cut for the input burst
          * instead of rescanning every occurrence on the GUI thread.
@@ -2955,7 +3040,7 @@ struct SoCADAssemblyImpl :
                 !(subpixelProxyViewProj_ == viewProj)) {
             ++subpixelProxyCameraMotionReuseCount_;
             subpixelProxyViewProj_ = viewProj;
-            return;
+            return true;
         }
         if (subpixelProxyViewValid_ &&
                 subpixelProxyViewInputRevision_ ==
@@ -2964,7 +3049,7 @@ struct SoCADAssemblyImpl :
                 subpixelProxyViewportSize_[1] == viewportSize[1] &&
                 subpixelProxyPixelThreshold_ == pixelThreshold &&
                 subpixelProxyViewProj_ == viewProj)
-            return;
+            return true;
 
         subpixelProxyCameraMotionReuseCount_ = 0;
         if (subpixelProxyStateInputRevision_ !=
@@ -2994,6 +3079,8 @@ struct SoCADAssemblyImpl :
          */
         for (size_t visibleIndex = 0;
                 visibleIndex < plan.visibleInstances.size(); ++visibleIndex) {
+            if (abortRequested())
+                return false;
             CadSubpixelProxyPoint replacement;
             if (!subpixelProxyPointForOccurrence(
                     plan, visibleIndex, viewProj, viewportSize,
@@ -3013,10 +3100,14 @@ struct SoCADAssemblyImpl :
                 static_cast<uint32_t>(visibleIndex));
         }
 
-        plan.wirePartsWithUncollapsedInstances.clear();
-        uncollapsedStructuralProxyCountByPart_.clear();
+        decltype(plan.wirePartsWithUncollapsedInstances)
+            wirePartsWithUncollapsedInstances;
+        decltype(uncollapsedStructuralProxyCountByPart_)
+            structuralProxyCountByPart;
         size_t uncollapsedStructuralProxyCount = 0;
         for (const CadDrawItem& item : plan.wireItems) {
+            if (abortRequested())
+                return false;
             bool hasUncollapsed = false;
             size_t structuralCount = 0;
             const CadPartBinding *binding =
@@ -3025,6 +3116,8 @@ struct SoCADAssemblyImpl :
             const bool structuralProxy =
                 binding && binding->structuralProxy;
             for (uint32_t i = 0; i < item.instanceCount; ++i) {
+                if (abortRequested())
+                    return false;
                 const size_t visibleIndex = item.baseInstance + i;
                 if (visibleIndex >= mask.size())
                     continue;
@@ -3042,12 +3135,16 @@ struct SoCADAssemblyImpl :
                 }
             }
             if (hasUncollapsed)
-                plan.wirePartsWithUncollapsedInstances.insert(
+                wirePartsWithUncollapsedInstances.insert(
                     item.rep.part);
             if (structuralCount)
-                uncollapsedStructuralProxyCountByPart_[
+                structuralProxyCountByPart[
                     item.rep.part] += structuralCount;
         }
+        plan.wirePartsWithUncollapsedInstances.swap(
+            wirePartsWithUncollapsedInstances);
+        uncollapsedStructuralProxyCountByPart_.swap(
+            structuralProxyCountByPart);
         uncollapsedStructuralProxyCount_ =
             uncollapsedStructuralProxyCount;
         if (cadPlanDebugEnabled() && uncollapsedStructuralProxyCount) {
@@ -3059,6 +3156,8 @@ struct SoCADAssemblyImpl :
             size_t structuralStaleReferences = 0;
             size_t structuralPartCount = 0;
             for (const CadDrawItem& item : plan.wireItems) {
+                if (abortRequested())
+                    return false;
                 const CadPartBinding *binding =
                     item.partIndex < plan.partBindings.size() ?
                         &plan.partBindings[item.partIndex] : nullptr;
@@ -3068,6 +3167,8 @@ struct SoCADAssemblyImpl :
                     continue;
                 ++structuralPartCount;
                 for (uint32_t i = 0; i < item.instanceCount; ++i) {
+                    if (abortRequested())
+                        return false;
                     const size_t visibleIndex = item.baseInstance + i;
                     if (visibleIndex >= plan.visibleInstances.size())
                         continue;
@@ -3125,6 +3226,7 @@ struct SoCADAssemblyImpl :
         subpixelProxyClassifiedAppendRevision_ =
             plan.appendRevision;
         subpixelProxyViewValid_ = true;
+        return true;
     }
 };
 
@@ -4049,8 +4151,16 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
                     "unknown",
                 impl_->cachedDM_, dm, impl_->instances_.size(),
                 impl_->parts_.size());
-        impl_->cachedPlan_  = impl_->buildFramePlan(dm, impl_->selected_,
-                                                     impl_->hidden_);
+        Obol::internal::CadFramePlan candidatePlan =
+            impl_->buildFramePlan(dm, impl_->selected_, impl_->hidden_,
+                                  nullptr, action);
+        if (action->hasTerminated()) {
+            SoGLLazyElement::getInstance(state)->reset(
+                state, SoLazyElement::ALL_MASK);
+            state->pop();
+            return;
+        }
+        impl_->cachedPlan_ = std::move(candidatePlan);
         impl_->cachedPlan_.revision = impl_->nextPlanRevision_++;
         if (impl_->nextPlanRevision_ == 0)
             impl_->nextPlanRevision_ = 1;
@@ -4093,19 +4203,43 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
                 impl_->nextGeometryRevision_ = 1;
         }
         impl_->cachedPlan_.geometryRevision = impl_->geometryRevision_;
-        impl_->planDirty_   = false;
-        impl_->geometryDirty_ = false;
         impl_->cachedPlanTombstoneCount_ = 0;
         impl_->cachedDM_    = dm;
-        impl_->rebuildProgressiveShadedPlanIndex();
+        if (!impl_->rebuildProgressiveShadedPlanIndex(action)) {
+            /* Keep the structural dirty bits armed.  The partially built
+             * reverse indexes are never observed because this traversal is
+             * aborted, and the next retry clears and rebuilds them. */
+            SoGLLazyElement::getInstance(state)->reset(
+                state, SoLazyElement::ALL_MASK);
+            state->pop();
+            return;
+        }
+        impl_->planDirty_ = false;
+        impl_->geometryDirty_ = false;
+    }
+
+    /* The graphical host may install a frame deadline.  SoCADAssembly is a
+     * deliberately large retained node, so Coin's ordinary per-node abort
+     * callback cannot observe time spent constructing its plan unless the
+     * assembly supplies explicit safe points. */
+    if (action->abortNow()) {
+        SoGLLazyElement::getInstance(state)->reset(
+            state, SoLazyElement::ALL_MASK);
+        state->pop();
+        return;
     }
 
     const SbViewportRegion& viewport = SoViewportRegionElement::get(state);
     const SbViewVolume& viewVolume = SoViewVolumeElement::get(state);
-    impl_->updateSubpixelProxyPlan(viewProj,
-        viewport.getViewportSizePixels(),
-        pointProxyPixelThreshold.getValue(),
-        cameraMotionFrameReuse.getValue());
+    if (!impl_->updateSubpixelProxyPlan(viewProj,
+            viewport.getViewportSizePixels(),
+            pointProxyPixelThreshold.getValue(),
+            cameraMotionFrameReuse.getValue(), action)) {
+        SoGLLazyElement::getInstance(state)->reset(
+            state, SoLazyElement::ALL_MASK);
+        state->pop();
+        return;
+    }
 
     const Obol::CadRenderState renderState =
         Obol::resolveCadRenderState(SoCADViewStateElement::get(state));
@@ -4196,6 +4330,11 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
         }
         // Empty list => renderer falls back to its default fixed light.
         impl_->renderer_->setLights(glLights);
+        const SbColor& ambientColor =
+            SoEnvironmentElement::getAmbientColor(state);
+        impl_->renderer_->setAmbientLight(
+            ambientColor[0], ambientColor[1], ambientColor[2],
+            SoEnvironmentElement::getAmbientIntensity(state));
         if (cadLightDebugEnabled()) {
             static unsigned int reportCount = 0;
             if (reportCount++ < 32) {
@@ -4221,7 +4360,7 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
 
         // Delegate to the VBO + shader renderer (GL 2.0 minimum; optional GL
         // 3.1+ instanced path selected automatically when available).
-        impl_->renderer_->render(impl_->cachedPlan_, *this, glue, viewProj,
+        impl_->renderer_->render(impl_->cachedPlan_, *this, action, glue, viewProj,
                                  viewMat, projMat, viewVolume,
                                  impl_->partGeneration_);
     }
@@ -4489,6 +4628,13 @@ SoCADAssembly::lastRenderedTriangleCount() const
     return impl_->renderer_->lastRenderedTriangleCount();
 }
 
+Obol::CadRenderedShadedWork
+SoCADAssembly::lastRenderedShadedWork() const
+{
+    return impl_->renderer_ ? impl_->renderer_->lastRenderedShadedWork() :
+        Obol::CadRenderedShadedWork();
+}
+
 uint64_t
 SoCADAssembly::lastGpuRenderNanoseconds() const
 {
@@ -4508,6 +4654,13 @@ SoCADAssembly::gpuTimerSampleSerial() const
 {
     return impl_->renderer_ ?
         impl_->renderer_->gpuTimerSampleSerial() : 0;
+}
+
+Obol::CadGpuResourceSnapshot
+SoCADAssembly::gpuResourceSnapshot() const
+{
+    return impl_->renderer_ ? impl_->renderer_->gpuResourceSnapshot() :
+        Obol::CadGpuResourceSnapshot();
 }
 
 bool

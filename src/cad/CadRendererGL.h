@@ -119,6 +119,7 @@ public:
      */
     void render(const CadFramePlan& plan,
                 const SoCADAssembly& assembly,
+                SoGLRenderAction*    action,
                 const SoGLContext*   glue,
                 const SbMatrix&      viewProj,
                 const SbMatrix&      viewMatrix,
@@ -158,6 +159,10 @@ public:
         return lastRenderedTriangleCount_;
     }
 
+    Obol::CadRenderedShadedWork lastRenderedShadedWork() const {
+        return lastRenderedShadedWork_;
+    }
+
     /** Most recently completed, asynchronously measured CAD GPU work. */
     uint64_t lastGpuRenderNanoseconds() const {
         return gpuRes_ ? gpuRes_->lastGpuTimeNanoseconds() : 0;
@@ -167,6 +172,9 @@ public:
     }
     uint64_t gpuTimerSampleSerial() const {
         return gpuRes_ ? gpuRes_->gpuTimerSampleSerial() : 0;
+    }
+    Obol::CadGpuResourceSnapshot gpuResourceSnapshot() const {
+        return lastGpuResourceSnapshot_;
     }
 
     /** True when the last indirect frame reused its prepared visibility,
@@ -197,21 +205,47 @@ public:
     };
 
     /**
-     * Set the scene lights used by the shaded GLSL passes.  Supplied each frame
-     * by SoCADAssembly from the enabled SoLight nodes (directional headlight and
-     * any in-scene point/spot/directional sources) so the hardware view lights
-     * consistently with the rest of the pipeline.  An empty list falls back to
-     * the historical single fixed directional light.
+     * Set the complete scene-light snapshot used by every shaded renderer.
+     * Supplied each frame by SoCADAssembly from the enabled SoLight nodes
+     * (directional headlight and any in-scene point/spot/directional sources).
+     * Once supplied, an empty list deliberately means ambient-only lighting;
+     * the historical default light is used only by standalone clients which
+     * have never supplied a scene-light snapshot.
      */
-    void setLights(const std::vector<GlLight>& lights) { this->lights_ = lights; }
+    void setLights(const std::vector<GlLight>& lights) {
+        this->lights_ = lights;
+        this->lightsSupplied_ = true;
+    }
+    /** Set environment ambient RGB and intensity for shaded shader passes.
+     * Material ambient remains the BRL-CAD default 0.2 in the shader. */
+    void setAmbientLight(float red, float green, float blue, float intensity);
 
 private:
+    /*
+     * Coin's abort callback is normally sampled only between scene nodes.
+     * One SoCADAssembly can represent tens of thousands of occurrences, so
+     * its retained executors must also expose bounded safe points.  The
+     * active action is thread-local: renderers may be used by independent GL
+     * contexts on different threads, while nested render actions restore the
+     * preceding slot on exit.
+     */
+    static thread_local SoGLRenderAction *activeRenderAction_;
+    bool renderInterrupted() const;
+    bool renderInterruptedAfter(size_t& workCounter,
+                                size_t work = 1u) const;
+
     bool softwareGlslRequested() const;
     bool cadLightDebugRequested() const;
     const char *cadShaderDebugMode() const;
 
     /// Upload the current light set to @p program's u_light* uniforms.
     void uploadLights(const SoGLContext* glue, GLuint program);
+    /// Upload environment ambient RGB x intensity to a shaded program.
+    void uploadAmbientLight(const SoGLContext* glue, GLuint program);
+    /** Program compatibility-profile lighting from the same explicit snapshot
+     * used by GLSL.  The caller must have loaded the world-to-eye model-view
+     * matrix before calling this method. */
+    void uploadFixedLights(const SoGLContext* glue);
     /// Upload camera-facing data used only when a mesh has no normal stream.
     void uploadViewFacing(const SoGLContext* glue, GLuint program,
                           const SbViewVolume& viewVolume);
@@ -223,7 +257,11 @@ private:
     int       lastRenderTier_ = -1; ///< -1=none, 0=imm, 1=vbo, 2=inst, 3/4=flat, 5=mixed flat-wire
     int       lastIndirectStatus_ = -1;
     uint64_t  lastRenderedTriangleCount_ = 0;
+    Obol::CadRenderedShadedWork lastRenderedShadedWork_;
     bool      lastRenderUsedPreparedReplay_ = false;
+    bool      atlasAdmissionPressure_ = false;
+    Obol::CadGpuResourceSnapshot lastGpuResourceSnapshot_;
+    uint64_t completedResourceFrameSerial_ = 0;
     int       reportedIndirectStatus_ = -1;
     bool      indirectStatusReported_ = false;
     /*
@@ -252,8 +290,11 @@ private:
     size_t pressureProxyAppendBegin_ = 0;
     bool pressureProxyAppendOnly_ = false;
     /// Scene lights for the shaded GLSL passes (set per-frame by SoCADAssembly).
-    /// Empty means "use the historical fixed directional light".
+    /// Empty means "use the historical fixed directional light" only until a
+    /// client has supplied its first explicit (possibly empty) snapshot.
+    bool lightsSupplied_ = false;
     std::vector<GlLight> lights_;
+    float ambientLight_[3] = {0.3f, 0.3f, 0.3f};
 
     // GPU objects are namespaced by GL context.  A renderer may be traversed
     // by multiple system-GL or offscreen contexts during its lifetime.
@@ -374,6 +415,7 @@ private:
         uint32_t vertexFirst = 0;
         uint32_t indexFirst = 0;
         bool hasNormals = false;
+        bool admissionPressure = false;
         /*
          * A one-occurrence progressive part has one stable command and one
          * packed instance slot.  Recording their locations lets the common
@@ -423,6 +465,8 @@ private:
         uint64_t atlasRevision = 0;
         uint32_t atlasValidationCountdown = 0;
         uint32_t cameraMotionReplayCount = 0;
+        bool atlasAdmissionPressure = false;
+        size_t atlasPressurePartCount = 0;
         /*
          * Packed shaded-occurrence count at the last exact preparation.
          * Append replay is deliberately bounded to geometric growth from
@@ -443,6 +487,8 @@ private:
     std::vector<uint8_t> indirectVisibleMaximumLod_;
     std::vector<uint8_t> indirectVisiblePart_;
     std::vector<uint32_t> indirectVisiblePartIndices_;
+    std::vector<double> indirectVisibleImportance_;
+    std::vector<uint32_t> indirectAdmissionPartIndices_;
     std::vector<uint32_t> indirectFirstVisibleOccurrence_;
     std::vector<uint32_t> indirectNextVisibleOccurrence_;
     std::vector<uint32_t> indirectRequestedVertexCounts_;

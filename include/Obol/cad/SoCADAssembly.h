@@ -84,6 +84,7 @@
 #include <Inventor/SbVec3f.h>
 
 #include <Obol/cad/CadIds.h>
+#include <Obol/cad/CadGpuResourceSnapshot.h>
 
 #include <vector>
 #include <array>
@@ -97,6 +98,22 @@
 class SoDetail;
 
 namespace Obol {
+
+/**
+ * Logical shaded work submitted by one completed CAD render.
+ *
+ * Counts include every visible occurrence and the active progressive cut,
+ * rather than the richer resident geometry which may remain behind a
+ * renderer-side LoD ceiling.  Consumers can therefore translate this record
+ * into their own calibrated cost model without guessing from triangle ratios.
+ */
+struct CadRenderedShadedWork {
+    uint64_t triangleCount = 0;
+    uint64_t positionCount = 0;
+    uint64_t normalCount = 0;
+    uint64_t occurrenceCount = 0;
+    bool exact = false;
+};
 
 // ---------------------------------------------------------------------------
 // Geometry primitives ingested via the SoCADAssembly API
@@ -208,6 +225,23 @@ struct TriMesh {
     uint8_t progressiveResidentLevel = 255;
     SbVec3f progressiveQuantizationMinimum;
     SbVec3f progressiveQuantizationMaximum;
+
+    /**
+     * Producer-certified identity of one append-only progressive stream.
+     *
+     * A nonzero value promises that every later immutable PartGeometry with
+     * the same token preserves all position, normal, and index values in its
+     * preceding cumulative prefix.  Renderers may therefore retain an
+     * already uploaded prefix across PartGeometry generation changes and
+     * upload only the newly resident suffix.  Zero makes no such promise and
+     * retains the conservative full-replacement behavior.
+     *
+     * Producers must allocate a different token whenever topology, authored
+     * values, vertex splitting, activation order, progressive level tables,
+     * or the quantization domain changes.  The token is process-local
+     * identity, not serialized asset or cache identity.
+     */
+    uint64_t progressiveLineage = 0;
 
     bool isProgressive() const noexcept {
         return progressiveResidentLevel < 16;
@@ -703,12 +737,21 @@ public:
     /** Triangles actually submitted by the last shaded rendering pass. */
     uint64_t lastRenderedTriangleCount() const;
 
+    /** Exact logical shaded work for the last completed rendering pass.
+     * Direct retained and immediate renderers publish this at their draw
+     * sites.  @c exact is false when the selected tier cannot yet provide a
+     * complete record or when rendering was interrupted. */
+    Obol::CadRenderedShadedWork lastRenderedShadedWork() const;
+
     /** Duration and triangle count from the newest completed asynchronous
      * GPU timer sample.  A zero serial means timer queries are unavailable or
      * no result has completed yet. */
     uint64_t lastGpuRenderNanoseconds() const;
     uint64_t lastGpuRenderedTriangleCount() const;
     uint64_t gpuTimerSampleSerial() const;
+
+    /** Last complete-frame snapshot of renderer-owned GPU buffer resources. */
+    Obol::CadGpuResourceSnapshot gpuResourceSnapshot() const;
 
     /** True when the last retained indirect pass replayed an already prepared
      * camera-dependent frame rather than rebuilding its submission record. */

@@ -148,13 +148,14 @@ const char * const kShadedPopFaceVS1 =
     "}\n";
 
 /* Keep the direct GLSL tiers visually consistent with the compatibility
- * renderer and BRL-CAD's established default material: material ambient 0.2
- * under environment ambient 0.3 gives 0.06, diffuse is 0.6, and the default
- * zero-shininess specular term contributes 0.2 whenever the face is lit.
- * Besides avoiding backend-dependent appearance, retaining these exact
- * weights prevents broad headlight-facing surfaces from saturating. */
+ * renderer.  BRL-CAD's default material ambient remains 0.2, while
+ * u_ambient supplies the active SoEnvironment RGB x intensity (0.3 for the
+ * historical MGED profile and 0.18 for studio).  Diffuse is 0.6 and the
+ * default zero-shininess specular term contributes 0.2 whenever a face is
+ * lit. */
 const char * const kShadedFS1 =
     "uniform int   u_numLights;\n"
+    "uniform vec3  u_ambient;\n"
     "uniform int   u_hasNorm;\n"
     "uniform int   u_ltype[8];\n"
     "uniform vec3  u_lvec[8];\n"
@@ -180,7 +181,7 @@ const char * const kShadedFS1 =
     "            normalize(u_eyeWorld - v_worldPos) : u_viewTowardEye;\n"
     "        if (dot(n, toEye) < 0.0) n = -n;\n"
     "    }\n"
-    "    vec3 col = v_color.rgb * 0.06;\n"
+    "    vec3 col = v_color.rgb * u_ambient * 0.2;\n"
     "    for (int i = 0; i < 8; i++) {\n"
     "        if (i >= u_numLights) break;\n"
     "        vec3 L;\n"
@@ -212,6 +213,7 @@ const char * const kShadedFS1 =
 const char * const kShadedDirectionalNormFS1 =
     "uniform vec3  u_lightVec;\n"
     "uniform vec3  u_lightColor;\n"
+    "uniform vec3  u_ambient;\n"
     "varying vec3  v_norm;\n"
     "varying vec4  v_color;\n"
     "void main() {\n"
@@ -220,13 +222,14 @@ const char * const kShadedDirectionalNormFS1 =
     "    float ndl = max(0.0, dot(n, u_lightVec));\n"
     "    float spec = (ndl > 0.0) ? 0.2 : 0.0;\n"
     "    vec3 col = v_color.rgb *\n"
-    "        (vec3(0.06) + u_lightColor * (ndl * 0.6 + spec));\n"
+    "        (u_ambient * 0.2 + u_lightColor * (ndl * 0.6 + spec));\n"
     "    gl_FragColor = vec4(col, v_color.a);\n"
     "}\n";
 
 const char * const kShadedDirectionalFaceFS1 =
     "uniform vec3  u_lightVec;\n"
     "uniform vec3  u_lightColor;\n"
+    "uniform vec3  u_ambient;\n"
     "uniform vec3  u_eyeWorld;\n"
     "uniform vec3  u_viewTowardEye;\n"
     "uniform int   u_perspective;\n"
@@ -241,7 +244,7 @@ const char * const kShadedDirectionalFaceFS1 =
     "    float ndl = max(0.0, dot(n, u_lightVec));\n"
     "    float spec = (ndl > 0.0) ? 0.2 : 0.0;\n"
     "    vec3 col = v_color.rgb *\n"
-    "        (vec3(0.06) + u_lightColor * (ndl * 0.6 + spec));\n"
+    "        (u_ambient * 0.2 + u_lightColor * (ndl * 0.6 + spec));\n"
     "    gl_FragColor = vec4(col, v_color.a);\n"
     "}\n";
 
@@ -367,6 +370,7 @@ const char * const kShadedPopVS2 =
 const char * const kShadedFS2 =
     "#version 140\n"
     "uniform int   u_numLights;\n"
+    "uniform vec3  u_ambient;\n"
     "uniform int   u_hasNorm;\n"
     "uniform int   u_ltype[8];\n"
     "uniform vec3  u_lvec[8];\n"
@@ -393,7 +397,7 @@ const char * const kShadedFS2 =
     "            normalize(u_eyeWorld - v_worldPos) : u_viewTowardEye;\n"
     "        if (dot(n, toEye) < 0.0) n = -n;\n"
     "    }\n"
-    "    vec3 col = v_color.rgb * 0.06;\n"
+    "    vec3 col = v_color.rgb * u_ambient * 0.2;\n"
     "    for (int i = 0; i < 8; i++) {\n"
     "        if (i >= u_numLights) break;\n"
     "        vec3 L;\n"
@@ -472,6 +476,7 @@ const char * const kShadedIndirectVS2 =
 const char * const kShadedIndirectFS2 =
     "#version 140\n"
     "uniform int   u_numLights;\n"
+    "uniform vec3  u_ambient;\n"
     "uniform int   u_ltype[8];\n"
     "uniform vec3  u_lvec[8];\n"
     "uniform vec3  u_laxis[8];\n"
@@ -498,7 +503,7 @@ const char * const kShadedIndirectFS2 =
     "            normalize(u_eyeWorld - v_worldPos) : u_viewTowardEye;\n"
     "        if (dot(n, toEye) < 0.0) n = -n;\n"
     "    }\n"
-    "    vec3 col = v_color.rgb * 0.06;\n"
+    "    vec3 col = v_color.rgb * u_ambient * 0.2;\n"
     "    for (int i = 0; i < 8; i++) {\n"
     "        if (i >= u_numLights) break;\n"
     "        vec3 L;\n"

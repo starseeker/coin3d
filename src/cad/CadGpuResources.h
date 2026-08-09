@@ -54,6 +54,7 @@
  */
 
 #include <Obol/cad/CadIds.h>
+#include <Obol/cad/CadGpuResourceSnapshot.h>
 #include "CadGLCaps.h"
 
 #include <Inventor/system/gl.h>
@@ -299,6 +300,7 @@ struct CadTriangleAtlasPart {
     uint64_t generation = UINT64_MAX;
     uint64_t lastUsedFrame = 0;
     uint64_t lowerDemandSinceFrame = 0;
+    uint64_t progressiveLineage = 0;
     bool hasNormals = false;
     bool progressive = false;
 };
@@ -357,7 +359,7 @@ struct CadTriangleAtlasPage {
  */
 class CadGpuResources {
 public:
-    CadGpuResources() = default;
+    CadGpuResources();
     ~CadGpuResources();
 
     /**
@@ -391,6 +393,7 @@ public:
                 const uint32_t* triIdx,      GLsizei triIdxCount,
                 uint64_t        generation,
                 bool            progressive,
+                uint64_t        progressiveLineage,
                 const SoGLContext * glue,
                 const CadGLCaps& caps);
 
@@ -614,6 +617,7 @@ public:
         PartId pid, uint64_t generation,
         const float *positions, const float *normals, uint32_t vertexCount,
         const uint32_t *indices, uint32_t indexCount, bool progressive,
+        uint64_t progressiveLineage,
         const SoGLContext *glue, const CadGLCaps& caps);
 
     const CadTriangleAtlasPart *triangleAtlasPart(PartId pid) const;
@@ -652,11 +656,17 @@ public:
     size_t triangleAtlasAllocatedBytes() const noexcept {
         return triangleAtlasAllocatedBytes_;
     }
+    size_t triangleAtlasBudgetBytes() const noexcept {
+        return triangleAtlasBudgetBytes_;
+    }
     size_t triangleAtlasLiveBytes() const noexcept;
     size_t triangleAtlasPartCount() const noexcept {
         return triangleAtlasParts_.size();
     }
     size_t triangleAtlasPageCount() const noexcept;
+
+    /** Constant-time snapshot of all renderer-owned buffer allocations. */
+    Obol::CadGpuResourceSnapshot resourceSnapshot() const noexcept;
 
     /**
      * Begin/end one asynchronous GPU frame-duration sample.
@@ -684,6 +694,7 @@ public:
 private:
     struct Entry {
         uint64_t    generation = 0;
+        uint64_t    progressiveLineage = 0;
         CadPointGpu point;
         CadWireGpu  wire;
         CadTriGpu   tri;
@@ -704,6 +715,14 @@ private:
     CadSubpixelProxyGpu pressureProxyPoints_;
     uint64_t progressiveFrame_ = 0;
     size_t progressiveBytes_ = 0;
+    size_t progressiveActiveBytes_ = 0;
+    size_t progressiveReserveBudgetBytes_ = 0;
+    uint64_t progressiveEvictionCount_ = 0;
+    size_t ordinaryPartBufferBytes_ = 0;
+    uint64_t ordinaryPartFullUploadBytes_ = 0;
+    uint64_t ordinaryPartSuffixUploadBytes_ = 0;
+    uint64_t ordinaryPartGpuCopyBytes_ = 0;
+    uint64_t ordinaryPartLineageReuseCount_ = 0;
     std::unordered_map<PartId, CadTriangleAtlasPart, std::hash<PartId>>
         triangleAtlasParts_;
     std::vector<std::unique_ptr<CadTriangleAtlasPage>>
@@ -714,6 +733,13 @@ private:
     bool triangleAtlasMaintenanceDeferred_ = false;
     bool triangleAtlasReclamationDeferred_ = false;
     size_t triangleAtlasAllocatedBytes_ = 0;
+    size_t triangleAtlasLiveBytes_ = 0;
+    size_t triangleAtlasPageCount_ = 0;
+    size_t triangleAtlasBudgetBytes_ = 0;
+    uint64_t triangleAtlasReclamationCount_ = 0;
+    uint64_t triangleAtlasFullUploadBytes_ = 0;
+    uint64_t triangleAtlasSuffixUploadBytes_ = 0;
+    uint64_t triangleAtlasLineageReuseCount_ = 0;
 
     struct GpuTimerSlot {
         GLuint query = 0;
@@ -743,6 +769,13 @@ private:
     void releaseTriangleAtlasPart(
         PartId pid, const SoGLContext *glue);
     void bumpTriangleAtlasRevision() noexcept;
+    static size_t pointAllocatedBytes(const CadPointGpu& point) noexcept;
+    static size_t wireAllocatedBytes(const CadWireGpu& wire) noexcept;
+    static size_t triAllocatedBytes(const CadTriGpu& tri) noexcept;
+    static size_t ordinaryEntryAllocatedBytes(const Entry& entry) noexcept;
+    static size_t triangleAtlasPartLiveBytes(
+        const CadTriangleAtlasPart& part,
+        const CadTriangleAtlasPage *page) noexcept;
 
     // Non-copyable
     CadGpuResources(const CadGpuResources&) = delete;

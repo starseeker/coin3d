@@ -81,6 +81,7 @@ setImmediateMaterialFromRgba(const SoGLContext *glue, const uint8_t rgba[4])
     glue->glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, ambient);
     glue->glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, specular);
     glue->glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, diffuse);
+    glue->glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, 0.0f);
 }
 
 static void
@@ -137,6 +138,59 @@ isBoxOutsideExecutorFrustum(const float minimum[3], const float maximum[3],
             return true;
     }
     return false;
+}
+
+/* Relative projected area is sufficient for admission ordering: viewport
+ * dimensions multiply every candidate by the same constant.  The explicit
+ * homogeneous transform preserves the intended orthographic contract (depth
+ * has no effect) while perspective naturally favors near visible geometry. */
+static double
+executorProjectedBoxImportance(const float minimum[3], const float maximum[3],
+                               const SbMatrix& viewProjection) noexcept
+{
+    double minX = std::numeric_limits<double>::infinity();
+    double minY = std::numeric_limits<double>::infinity();
+    double maxX = -std::numeric_limits<double>::infinity();
+    double maxY = -std::numeric_limits<double>::infinity();
+    bool behindNearPlane = false;
+    size_t projected = 0;
+    for (unsigned int corner = 0; corner < 8u; ++corner) {
+        const double x = (corner & 1u) ? maximum[0] : minimum[0];
+        const double y = (corner & 2u) ? maximum[1] : minimum[1];
+        const double z = (corner & 4u) ? maximum[2] : minimum[2];
+        const double clipX = x * viewProjection[0][0] +
+            y * viewProjection[1][0] + z * viewProjection[2][0] +
+            viewProjection[3][0];
+        const double clipY = x * viewProjection[0][1] +
+            y * viewProjection[1][1] + z * viewProjection[2][1] +
+            viewProjection[3][1];
+        const double clipW = x * viewProjection[0][3] +
+            y * viewProjection[1][3] + z * viewProjection[2][3] +
+            viewProjection[3][3];
+        if (!(clipW > 1.0e-12) || !std::isfinite(clipW)) {
+            behindNearPlane = true;
+            continue;
+        }
+        const double ndcX = std::max(-2.0,
+            std::min(2.0, clipX / clipW));
+        const double ndcY = std::max(-2.0,
+            std::min(2.0, clipY / clipW));
+        if (!std::isfinite(ndcX) || !std::isfinite(ndcY))
+            continue;
+        minX = std::min(minX, ndcX);
+        minY = std::min(minY, ndcY);
+        maxX = std::max(maxX, ndcX);
+        maxY = std::max(maxY, ndcY);
+        ++projected;
+    }
+    /* A box crossing the eye/near plane is necessarily prominent.  Give it
+     * the maximum bounded viewport score rather than letting an unstable
+     * divide dominate ordering. */
+    if (behindNearPlane || !projected)
+        return 16.0;
+    const double width = std::max(0.0, maxX - minX);
+    const double height = std::max(0.0, maxY - minY);
+    return std::max(1.0e-12, std::min(16.0, width * height));
 }
 
 struct CadWireRasterState {
@@ -303,6 +357,9 @@ bool CadRendererGL::renderFlatWire(
 {
     constexpr size_t maxPositionBytes = 256u * 1024u * 1024u;
     constexpr size_t progressiveGrowthReserve = 16u;
+    size_t deadlineWork = 256u;
+    if (renderInterruptedAfter(deadlineWork))
+        return false;
     const size_t maxVertexCount =
         maxPositionBytes / (3 * sizeof(float));
     const uint64_t presentationRevision = plan.subpixelProxyRevision ?
@@ -334,6 +391,8 @@ bool CadRendererGL::renderFlatWire(
     occurrences.reserve(plan.visibleInstances.size());
     size_t visibleVertexCount = 0;
     for (const CadDrawItem& item : plan.wireItems) {
+        if (renderInterruptedAfter(deadlineWork))
+            return false;
         if (item.partIndex >= plan.partBindings.size())
             continue;
         const CadPartBinding& binding =
@@ -346,6 +405,8 @@ bool CadRendererGL::renderFlatWire(
             if (poly.points.size() >= 2)
                 polylineSegments += poly.points.size() - 1;
         for (uint32_t ii = 0; ii < item.instanceCount; ++ii) {
+            if (renderInterruptedAfter(deadlineWork))
+                return false;
             const size_t visibleIndex = item.baseInstance + ii;
             if (!cadInstanceDrawable(
                     plan, item, visibleIndex, CadDrawChannel::Wire))
@@ -431,6 +492,8 @@ bool CadRendererGL::renderFlatWire(
         bucketCounts.reserve(std::min<size_t>(
             occurrences.size(), 4096u));
         for (Occurrence& occurrence : occurrences) {
+            if (renderInterruptedAfter(deadlineWork))
+                return false;
             const uint32_t candidate =
                 static_cast<uint32_t>(bucketStyles.size());
             const auto inserted =
@@ -461,6 +524,8 @@ bool CadRendererGL::renderFlatWire(
         }
         occurrenceOrder.resize(occurrences.size());
         for (size_t i = 0; i < occurrences.size(); ++i) {
+            if (renderInterruptedAfter(deadlineWork))
+                return false;
             const uint32_t bucket = occurrences[i].styleBucket;
             occurrenceOrder[bucketWrite[bucket]++] =
                 static_cast<uint32_t>(i);
@@ -480,6 +545,8 @@ bool CadRendererGL::renderFlatWire(
                                CadFlatWireRangeKeyHash>& ranges) {
         size_t appendVertexCount = 0;
         for (size_t i = 0; i < occurrences.size(); ++i) {
+            if (renderInterruptedAfter(deadlineWork))
+                return false;
             const Occurrence& occurrence = orderedOccurrence(i);
             if (onlyMissing && occurrence.rangeValid)
                 continue;
@@ -496,6 +563,8 @@ bool CadRendererGL::renderFlatWire(
         ranges.clear();
         size_t positionOffset = 0;
         for (size_t i = 0; i < occurrences.size(); ++i) {
+            if (renderInterruptedAfter(deadlineWork))
+                return false;
             Occurrence& occurrence = orderedOccurrence(i);
             if (onlyMissing && occurrence.rangeValid)
                 continue;
@@ -509,6 +578,8 @@ bool CadRendererGL::renderFlatWire(
             const size_t flatPointEnd = flatPointFirst + flatPointCount;
             for (size_t p = flatPointFirst;
                     p + 1 < flatPointEnd; p += 2) {
+                if (renderInterruptedAfter(deadlineWork))
+                    return false;
                 const SbVec3f a = wire.isProgressive() &&
                         occurrence.level < 15 ?
                     progressiveSnapPoint(wire.segmentPoints[p],
@@ -528,6 +599,8 @@ bool CadRendererGL::renderFlatWire(
             }
             for (const Obol::WirePolyline& poly : wire.polylines) {
                 for (size_t p = 0; p + 1 < poly.points.size(); ++p) {
+                    if (renderInterruptedAfter(deadlineWork))
+                        return false;
                     writeTransformedFlatPoint(
                         positions, positionOffset,
                         poly.points[p], inst.transform);
@@ -556,6 +629,8 @@ bool CadRendererGL::renderFlatWire(
         size_t missingVertexCount = 0;
         const CadFlatWireGpu& flat = gpuRes_->flatWire();
         for (const Occurrence& occurrence : occurrences) {
+            if (renderInterruptedAfter(deadlineWork))
+                return false;
             if (occurrence.rangeValid)
                 continue;
             const size_t vertices =
@@ -595,6 +670,8 @@ bool CadRendererGL::renderFlatWire(
             static_cast<GLsizei>(reserve), glue, caps_);
     }
     for (Occurrence& occurrence : occurrences) {
+        if (renderInterruptedAfter(deadlineWork))
+            return false;
         if (!occurrence.rangeCachePending)
             continue;
         if (!gpuRes_->lookupFlatWireRange(
@@ -608,6 +685,8 @@ bool CadRendererGL::renderFlatWire(
     FlatWireStyleKey activeKey;
     bool haveGroup = false;
     for (size_t i = 0; i < occurrences.size(); ++i) {
+        if (renderInterruptedAfter(deadlineWork))
+            return false;
         const Occurrence& occurrence = orderedOccurrence(i);
         if (!occurrence.rangeValid)
             return false;
@@ -777,6 +856,9 @@ bool CadRendererGL::renderFlatShaded(
 {
     constexpr size_t maxVertexBytes = 512u * 1024u * 1024u;
     constexpr size_t floatsPerVertex = 6;
+    size_t deadlineWork = 256u;
+    if (renderInterruptedAfter(deadlineWork))
+        return false;
     const size_t maxVertexCount =
         maxVertexBytes / (floatsPerVertex * sizeof(float));
     const ExecutorFrustumPlanes fp =
@@ -795,6 +877,8 @@ bool CadRendererGL::renderFlatShaded(
     occurrences.reserve(plan.visibleInstances.size());
     size_t currentVertexCount = 0;
     for (const CadDrawItem& item : plan.shadedItems) {
+        if (renderInterruptedAfter(deadlineWork))
+            return false;
         if (item.partIndex >= plan.partBindings.size())
             continue;
         const CadPartBinding& binding =
@@ -803,6 +887,8 @@ bool CadRendererGL::renderFlatShaded(
         if (!geom || !geom->shaded.has_value()) continue;
         const Obol::TriMesh& mesh = *geom->shaded;
         for (uint32_t ii = 0; ii < item.instanceCount; ++ii) {
+            if (renderInterruptedAfter(deadlineWork))
+                return false;
             const size_t visibleIndex = item.baseInstance + ii;
             if (!cadInstanceDrawable(
                     plan, item, visibleIndex, CadDrawChannel::Shaded))
@@ -854,14 +940,28 @@ bool CadRendererGL::renderFlatShaded(
     }
 
     /* Keep equal styles adjacent in both the atlas and the draw-range list.
-     * A uniformly styled 50,000-leaf scene therefore collapses to one GL
-     * call on its first frame rather than 50,000 calls. */
-    std::sort(occurrences.begin(), occurrences.end(),
-        [](const Occurrence& a, const Occurrence& b) {
-            if (a.styleKey != b.styleKey)
-                return a.styleKey < b.styleKey;
-            return a.rangeKey.instance < b.rangeKey.instance;
-        });
+     * The overwhelmingly common vehicle case is uniformly styled.  Detect
+     * that linear case so a 50k-leaf progressive publication does not sort
+     * and move 50k occurrence records on every new cut. */
+    bool uniformStyle = true;
+    for (size_t i = 1; i < occurrences.size(); ++i) {
+        if (renderInterruptedAfter(deadlineWork))
+            return false;
+        if (occurrences[i].styleKey != occurrences.front().styleKey) {
+            uniformStyle = false;
+            break;
+        }
+    }
+    if (!uniformStyle) {
+        std::sort(occurrences.begin(), occurrences.end(),
+            [](const Occurrence& a, const Occurrence& b) {
+                if (a.styleKey != b.styleKey)
+                    return a.styleKey < b.styleKey;
+                return a.rangeKey.instance < b.rangeKey.instance;
+            });
+        if (renderInterrupted())
+            return false;
+    }
 
     auto buildAtlasRanges = [&](
             bool onlyMissing, GLint baseVertex,
@@ -873,6 +973,8 @@ bool CadRendererGL::renderFlatShaded(
         const CadFlatShadedGpu& current = gpuRes_->flatShaded();
         size_t appendVertexCount = 0;
         for (const Occurrence& occurrence : occurrences) {
+            if (renderInterruptedAfter(deadlineWork))
+                return false;
             if (onlyMissing &&
                     current.ranges.find(occurrence.rangeKey) !=
                         current.ranges.end())
@@ -888,6 +990,8 @@ bool CadRendererGL::renderFlatShaded(
         normals.reserve(appendVertexCount * 3);
         ranges.clear();
         for (const Occurrence& occurrence : occurrences) {
+            if (renderInterruptedAfter(deadlineWork))
+                return false;
             if (onlyMissing &&
                     current.ranges.find(occurrence.rangeKey) !=
                         current.ranges.end())
@@ -902,6 +1006,8 @@ bool CadRendererGL::renderFlatShaded(
             const GLint first = baseVertex +
                 static_cast<GLint>(positions.size() / 3);
             for (size_t t = 0; t + 2 < occurrence.indexCount; t += 3) {
+                if (renderInterruptedAfter(deadlineWork))
+                    return false;
                 const uint32_t ia = mesh.indices[t];
                 const uint32_t ib = mesh.indices[t + 1];
                 const uint32_t ic = mesh.indices[t + 2];
@@ -963,6 +1069,8 @@ bool CadRendererGL::renderFlatShaded(
         size_t missingVertexCount = 0;
         const CadFlatShadedGpu& flat = gpuRes_->flatShaded();
         for (const Occurrence& occurrence : occurrences) {
+            if (renderInterruptedAfter(deadlineWork))
+                return false;
             if (flat.ranges.find(occurrence.rangeKey) != flat.ranges.end())
                 continue;
             if (missingVertexCount >
@@ -1021,6 +1129,8 @@ bool CadRendererGL::renderFlatShaded(
     bool haveGroup = false;
     const CadFlatShadedGpu& atlas = gpuRes_->flatShaded();
     for (const Occurrence& occurrence : occurrences) {
+        if (renderInterruptedAfter(deadlineWork))
+            return false;
         const auto rangeIt = atlas.ranges.find(occurrence.rangeKey);
         if (rangeIt == atlas.ranges.end())
             return false;
@@ -1074,9 +1184,24 @@ bool CadRendererGL::renderFlatShaded(
         glue->glMatrixMode(GL_MODELVIEW);
         glue->glPushMatrix();
         glue->glLoadMatrixf(viewMatrix[0]);
+        /* Coin allocates fixed-function light slots monotonically while a
+         * traversal is active.  A persistent scene changing from three lights
+         * to one can otherwise leave the unused slots enabled for this custom
+         * retained node.  Install the complete snapshot used by GLSL so OSMesa
+         * cannot inherit lights from the preceding profile or frame. */
+        this->uploadFixedLights(glue);
         const GLboolean wasLighting = glue->glIsEnabled(GL_LIGHTING);
+        const GLboolean wasColorMaterial =
+            glue->glIsEnabled(GL_COLOR_MATERIAL);
+        GLint wasTwoSidedLighting = GL_FALSE;
+        glue->glGetIntegerv(
+            GL_LIGHT_MODEL_TWO_SIDE, &wasTwoSidedLighting);
         if (depthOnly) glue->glDisable(GL_LIGHTING);
-        else glue->glEnable(GL_LIGHTING);
+        else {
+            glue->glEnable(GL_LIGHTING);
+            glue->glDisable(GL_COLOR_MATERIAL);
+            glue->glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
+        }
         glue->glEnableClientState(GL_VERTEX_ARRAY);
         glue->glBindBuffer(GL_ARRAY_BUFFER, flat.posBuf);
         glue->glVertexPointer(3, GL_FLOAT, 3 * sizeof(float), nullptr);
@@ -1093,6 +1218,10 @@ bool CadRendererGL::renderFlatShaded(
         if (!depthOnly) glue->glDisableClientState(GL_NORMAL_ARRAY);
         glue->glDisableClientState(GL_VERTEX_ARRAY);
         glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
+        if (wasColorMaterial) glue->glEnable(GL_COLOR_MATERIAL);
+        else glue->glDisable(GL_COLOR_MATERIAL);
+        glue->glLightModeli(
+            GL_LIGHT_MODEL_TWO_SIDE, wasTwoSidedLighting);
         if (wasLighting) glue->glEnable(GL_LIGHTING);
         else glue->glDisable(GL_LIGHTING);
         glue->glMatrixMode(GL_MODELVIEW);
@@ -1496,6 +1625,32 @@ static void bindAndDrawTri(const CadTriGpu* t, const SoGLContext* glue,
     }
 }
 
+static uint64_t
+cadSaturatingWorkAdd(uint64_t left, uint64_t right)
+{
+    return right > UINT64_MAX - left ? UINT64_MAX : left + right;
+}
+
+static void
+cadAccumulateRenderedShadedWork(Obol::CadRenderedShadedWork& work,
+                                const Obol::TriMesh& mesh,
+                                uint8_t level, uint64_t triangles)
+{
+    if (!triangles)
+        return;
+    const uint64_t positions = static_cast<uint64_t>(
+        mesh.positionCountAtLevel(level));
+    work.triangleCount = cadSaturatingWorkAdd(
+        work.triangleCount, triangles);
+    work.positionCount = cadSaturatingWorkAdd(
+        work.positionCount, positions);
+    if (!mesh.normals.empty())
+        work.normalCount = cadSaturatingWorkAdd(
+            work.normalCount, positions);
+    work.occurrenceCount = cadSaturatingWorkAdd(
+        work.occurrenceCount, 1);
+}
+
 void CadRendererGL::renderVboLoop(
         const CadFramePlan& plan,
         const SoCADAssembly& assembly,
@@ -1506,6 +1661,12 @@ void CadRendererGL::renderVboLoop(
         bool customWireOnly,
         bool drawShaded)
 {
+    size_t deadlineWork = 256u;
+    uint64_t renderedTriangleCount = 0;
+    bool interrupted = renderInterruptedAfter(deadlineWork);
+    if (interrupted)
+        return;
+
     // OI stores matrices row-major.  GL reads them column-major.  Passing
     // the raw float[16] with GL_FALSE means GL transposes our row-major
     // matrix into the column-major form the shader expects, which is
@@ -1556,6 +1717,10 @@ void CadRendererGL::renderVboLoop(
         GLuint activeProgram = 0;
 
         for (const auto& item : plan.wireItems) {
+            if (renderInterruptedAfter(deadlineWork)) {
+                interrupted = true;
+                break;
+            }
             if (customWireOnly && !item.customWireStyle) continue;
             CadWireGpu* w = gpuRes_->wireFor(item.rep.part);
             if (!w) continue;
@@ -1567,6 +1732,10 @@ void CadRendererGL::renderVboLoop(
                 &*geometry->wire : nullptr;
 
             for (uint32_t i = 0; i < item.instanceCount; ++i) {
+                if (renderInterruptedAfter(deadlineWork)) {
+                    interrupted = true;
+                    break;
+                }
                 const size_t visibleIndex = item.baseInstance + i;
                 if (!cadInstanceDrawable(
                         plan, item, visibleIndex, CadDrawChannel::Wire))
@@ -1610,11 +1779,15 @@ void CadRendererGL::renderVboLoop(
                     progressiveWireSegmentCount(assembly, item.rep.part,
                                                 inst, w->segCount));
             }
+            if (interrupted)
+                break;
         }
 
         glue->glUseProgramObjectARB(0);
         restoreWireRasterState(glue, rasterState, caps_.hasLineStipple);
     }
+    if (interrupted)
+        return;
 
     // --- Shaded pass ---
     if (drawShaded && !plan.shadedItems.empty()) {
@@ -1691,7 +1864,7 @@ void CadRendererGL::renderVboLoop(
             kLightDir[0], kLightDir[1], kLightDir[2]
         };
         float directionalColor[3] = {1.0f, 1.0f, 1.0f};
-        if (this->lights_.empty()) {
+        if (!this->lightsSupplied_) {
             directionalLight = true;
         } else if (this->lights_.size() == 1 &&
                    this->lights_[0].type == 0) {
@@ -1734,6 +1907,10 @@ void CadRendererGL::renderVboLoop(
         }
 
         for (const auto& item : plan.shadedItems) {
+            if (renderInterruptedAfter(deadlineWork)) {
+                interrupted = true;
+                break;
+            }
             const CadTriGpu* t = gpuRes_->triFor(item.rep.part);
             if (!t) continue;
             const PartGeometry *geometry =
@@ -1770,6 +1947,10 @@ void CadRendererGL::renderVboLoop(
             }
 
             for (uint32_t i = 0; i < item.instanceCount; ++i) {
+                if (renderInterruptedAfter(deadlineWork)) {
+                    interrupted = true;
+                    break;
+                }
                 const size_t instanceIndex = item.baseInstance + i;
                 if (!cadInstanceDrawable(
                         plan, item, instanceIndex, CadDrawChannel::Shaded))
@@ -1807,6 +1988,8 @@ void CadRendererGL::renderVboLoop(
                                 loc.lightVector, 1, directionalVector);
                             glue->glUniform3fvARB(
                                 loc.lightColor, 1, directionalColor);
+                            this->uploadAmbientLight(
+                                glue, activeProgram);
                             if (programIndex == DirectionalFaceExact ||
                                     programIndex == DirectionalFacePop) {
                                 this->uploadViewFacing(
@@ -1943,14 +2126,37 @@ void CadRendererGL::renderVboLoop(
                     }
                 }
 
-                bindAndDrawTri(t, glue, locPos, locNorm, hasNorm,
+                const GLsizei indexCount = std::min(
                     progressiveTriangleIndexCount(
-                        assembly, item.rep.part, inst, t->idxCount));
+                        assembly, item.rep.part, inst, t->idxCount),
+                    t->idxCount);
+                bindAndDrawTri(t, glue, locPos, locNorm, hasNorm,
+                               indexCount);
+                const uint64_t submittedTriangles =
+                    static_cast<uint64_t>(indexCount / 3);
+                renderedTriangleCount =
+                    renderedTriangleCount >
+                            UINT64_MAX -
+                                submittedTriangles ?
+                        UINT64_MAX :
+                        renderedTriangleCount +
+                            submittedTriangles;
+                if (geometry && geometry->shaded)
+                    cadAccumulateRenderedShadedWork(
+                        lastRenderedShadedWork_, *geometry->shaded,
+                        level, submittedTriangles);
             }
+            if (interrupted)
+                break;
         }
 
         glue->glUseProgramObjectARB(0);
     }
+    lastRenderedTriangleCount_ =
+        renderedTriangleCount > UINT64_MAX - lastRenderedTriangleCount_ ?
+            UINT64_MAX : lastRenderedTriangleCount_ + renderedTriangleCount;
+    if (drawShaded)
+        lastRenderedShadedWork_.exact = !interrupted;
 }
 
 // ---------------------------------------------------------------------------
@@ -1967,11 +2173,20 @@ void CadRendererGL::renderFixedVboLoop(
         bool drawWire,
         bool drawShaded)
 {
+    size_t deadlineWork = 256u;
+    uint64_t renderedTriangleCount = 0;
+    bool interrupted = renderInterruptedAfter(deadlineWork);
+    if (interrupted)
+        return;
+
     glue->glMatrixMode(GL_PROJECTION);
     glue->glPushMatrix();
     glue->glLoadMatrixf(projectionMatrix[0]);
     glue->glMatrixMode(GL_MODELVIEW);
     glue->glPushMatrix();
+    glue->glLoadMatrixf(viewMatrix[0]);
+    if (caps_.isSoftwareRenderer)
+        this->uploadFixedLights(glue);
 
     const GLboolean wasLighting = glue->glIsEnabled(GL_LIGHTING);
     glue->glDisable(GL_LIGHTING);
@@ -1982,6 +2197,10 @@ void CadRendererGL::renderFixedVboLoop(
         glue, caps_.hasLineStipple);
 
     if (drawWire) for (const auto& item : plan.wireItems) {
+        if (renderInterruptedAfter(deadlineWork)) {
+            interrupted = true;
+            break;
+        }
         const CadWireGpu *wire = gpuRes_->wireFor(item.rep.part);
         if (!wire) continue;
         const PartGeometry *geometry = assembly.partGeometry(item.rep.part);
@@ -1992,6 +2211,10 @@ void CadRendererGL::renderFixedVboLoop(
             glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, wire->segIdxBuf);
 
         for (uint32_t i = 0; i < item.instanceCount; ++i) {
+            if (renderInterruptedAfter(deadlineWork)) {
+                interrupted = true;
+                break;
+            }
             const size_t visibleIndex = item.baseInstance + i;
             if (!cadInstanceDrawable(
                     plan, item, visibleIndex, CadDrawChannel::Wire))
@@ -2041,6 +2264,8 @@ void CadRendererGL::renderFixedVboLoop(
                         static_cast<uintptr_t>(segmentFirst) * 2u *
                         sizeof(uint32_t)));
         }
+        if (interrupted)
+            break;
     }
 
     glue->glDisableClientState(GL_VERTEX_ARRAY);
@@ -2049,14 +2274,18 @@ void CadRendererGL::renderFixedVboLoop(
     const GLboolean wasColorMaterial = glue->glIsEnabled(GL_COLOR_MATERIAL);
     GLint wasTwoSidedLighting = GL_FALSE;
     glue->glGetIntegerv(GL_LIGHT_MODEL_TWO_SIDE, &wasTwoSidedLighting);
-    if (drawShaded && !plan.shadedItems.empty()) {
+    if (!interrupted && drawShaded && !plan.shadedItems.empty()) {
         // CAD shading must not depend on the caller enabling GL_LIGHTING.
         glue->glEnable(GL_LIGHTING);
         glue->glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
     }
     glue->glDisable(GL_COLOR_MATERIAL);
     glue->glEnableClientState(GL_VERTEX_ARRAY);
-    if (drawShaded) for (const auto& item : plan.shadedItems) {
+    if (!interrupted && drawShaded) for (const auto& item : plan.shadedItems) {
+        if (renderInterruptedAfter(deadlineWork)) {
+            interrupted = true;
+            break;
+        }
         const CadTriGpu *tri = gpuRes_->triFor(item.rep.part);
         if (!tri) continue;
         const PartGeometry *geometry = assembly.partGeometry(item.rep.part);
@@ -2069,6 +2298,10 @@ void CadRendererGL::renderFixedVboLoop(
         bool normalArrayEnabled = false;
 
         for (uint32_t i = 0; i < item.instanceCount; ++i) {
+            if (renderInterruptedAfter(deadlineWork)) {
+                interrupted = true;
+                break;
+            }
             const size_t instanceIndex = item.baseInstance + i;
             if (!cadInstanceDrawable(
                     plan, item, instanceIndex, CadDrawChannel::Shaded))
@@ -2085,11 +2318,59 @@ void CadRendererGL::renderFixedVboLoop(
             glue->glLoadMatrixf(modelView[0]);
             setImmediateMaterialFromRgba(glue, inst.rgba.data());
 
+            if (cadLightDebugRequested()) {
+                static unsigned int fixedLightReportCount = 0;
+                if (fixedLightReportCount++ < 16) {
+                    GLfloat modelAmbient[4] = {};
+                    GLfloat materialAmbient[4] = {};
+                    GLfloat materialDiffuse[4] = {};
+                    GLfloat materialSpecular[4] = {};
+                    GLfloat materialShininess = 0.0f;
+                    SoGLContext_glGetFloatv(
+                        glue, GL_LIGHT_MODEL_AMBIENT, modelAmbient);
+                    SoGLContext_glGetMaterialfv(
+                        glue, GL_FRONT, GL_AMBIENT, materialAmbient);
+                    SoGLContext_glGetMaterialfv(
+                        glue, GL_FRONT, GL_DIFFUSE, materialDiffuse);
+                    SoGLContext_glGetMaterialfv(
+                        glue, GL_FRONT, GL_SPECULAR, materialSpecular);
+                    SoGLContext_glGetMaterialfv(
+                        glue, GL_FRONT, GL_SHININESS, &materialShininess);
+                    std::fprintf(stderr,
+                        "CadRendererGL fixed lighting globalAmbient="
+                        "(%.6g,%.6g,%.6g) material={ambient=%.6g "
+                        "diffuse=%.6g specular=%.6g shininess=%.6g} "
+                        "lights=",
+                        modelAmbient[0], modelAmbient[1], modelAmbient[2],
+                        materialAmbient[0], materialDiffuse[0],
+                        materialSpecular[0], materialShininess);
+                    for (int lightIndex = 0; lightIndex < kMaxLights;
+                            ++lightIndex) {
+                        const GLenum light = static_cast<GLenum>(
+                            GL_LIGHT0 + lightIndex);
+                        if (!SoGLContext_glIsEnabled(glue, light))
+                            continue;
+                        GLfloat diffuse[4] = {};
+                        GLfloat position[4] = {};
+                        SoGLContext_glGetLightfv(
+                            glue, light, GL_DIFFUSE, diffuse);
+                        SoGLContext_glGetLightfv(
+                            glue, light, GL_POSITION, position);
+                        std::fprintf(stderr,
+                            "%d:{d=%.6g,p=(%.6g,%.6g,%.6g,%.6g)} ",
+                            lightIndex, diffuse[0], position[0], position[1],
+                            position[2], position[3]);
+                    }
+                    std::fprintf(stderr, "\n");
+                }
+            }
+
             const GLsizei indexCount = progressiveTriangleIndexCount(
                 assembly, item.rep.part, inst, tri->idxCount);
             const CadProgressiveGpu *cut = nullptr;
+            uint8_t level = 15;
             if (progressive) {
-                const uint8_t level = cadResolvedProgressiveLevel(
+                level = cadResolvedProgressiveLevel(
                     assembly.effectiveProgressiveLodLevel(inst.lodLevel),
                     progressive->progressiveMinimumLevel,
                     progressive->progressiveResidentLevel);
@@ -2119,13 +2400,40 @@ void CadRendererGL::renderFixedVboLoop(
 
             if (cut && !cut->indexed) {
                 glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+                const GLsizei vertexCount =
+                    std::min(indexCount, cut->vertexCount);
                 glue->glDrawArrays(
-                    GL_TRIANGLES, 0,
-                    std::min(indexCount, cut->vertexCount));
+                    GL_TRIANGLES, 0, vertexCount);
+                const uint64_t submittedTriangles =
+                    static_cast<uint64_t>(vertexCount / 3);
+                renderedTriangleCount =
+                    renderedTriangleCount >
+                            UINT64_MAX -
+                                submittedTriangles ?
+                        UINT64_MAX :
+                        renderedTriangleCount +
+                            submittedTriangles;
+                if (geometry && geometry->shaded)
+                    cadAccumulateRenderedShadedWork(
+                        lastRenderedShadedWork_, *geometry->shaded,
+                        level, submittedTriangles);
             } else {
                 glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, tri->idxBuf);
-                glue->glDrawElements(
-                    GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, nullptr);
+                const GLsizei submittedIndexCount =
+                    std::min(indexCount, tri->idxCount);
+                glue->glDrawElements(GL_TRIANGLES, submittedIndexCount,
+                                     GL_UNSIGNED_INT, nullptr);
+                const uint64_t submittedTriangles =
+                    static_cast<uint64_t>(submittedIndexCount / 3);
+                renderedTriangleCount =
+                    renderedTriangleCount >
+                            UINT64_MAX - submittedTriangles ?
+                        UINT64_MAX :
+                        renderedTriangleCount + submittedTriangles;
+                if (geometry && geometry->shaded)
+                    cadAccumulateRenderedShadedWork(
+                        lastRenderedShadedWork_, *geometry->shaded,
+                        level, submittedTriangles);
             }
         }
         if (normalArrayEnabled)
@@ -2145,6 +2453,11 @@ void CadRendererGL::renderFixedVboLoop(
     glue->glMatrixMode(GL_PROJECTION);
     glue->glPopMatrix();
     glue->glMatrixMode(GL_MODELVIEW);
+    lastRenderedTriangleCount_ =
+        renderedTriangleCount > UINT64_MAX - lastRenderedTriangleCount_ ?
+            UINT64_MAX : lastRenderedTriangleCount_ + renderedTriangleCount;
+    if (drawShaded)
+        lastRenderedShadedWork_.exact = !interrupted;
 }
 
 // ---------------------------------------------------------------------------
@@ -2161,6 +2474,12 @@ void CadRendererGL::renderImmediateMode(
         bool drawWire,
         bool drawShaded)
 {
+    size_t deadlineWork = 256u;
+    uint64_t renderedTriangleCount = 0;
+    bool interrupted = renderInterruptedAfter(deadlineWork);
+    if (interrupted)
+        return;
+
     // Keep projection out of GL_MODELVIEW so normal transformation uses only
     // the affine local-to-eye transform.
     glue->glMatrixMode(GL_PROJECTION);
@@ -2169,6 +2488,9 @@ void CadRendererGL::renderImmediateMode(
 
     glue->glMatrixMode(GL_MODELVIEW);
     glue->glPushMatrix();
+    glue->glLoadMatrixf(viewMatrix[0]);
+    if (caps_.isSoftwareRenderer)
+        this->uploadFixedLights(glue);
 
     // Disable lighting so glColor4f controls the final colour
     GLboolean wasLighting = glue->glIsEnabled(GL_LIGHTING);
@@ -2182,11 +2504,19 @@ void CadRendererGL::renderImmediateMode(
 
     // --- Wire pass ---
     if (drawWire) for (const auto& item : plan.wireItems) {
+        if (renderInterruptedAfter(deadlineWork)) {
+            interrupted = true;
+            break;
+        }
         const Obol::PartGeometry* geom = assembly.partGeometry(item.rep.part);
         if (!geom || !geom->wire.has_value()) continue;
         const Obol::WireRep& wire = *geom->wire;
 
         for (uint32_t ii = 0; ii < item.instanceCount; ++ii) {
+            if (renderInterruptedAfter(deadlineWork)) {
+                interrupted = true;
+                break;
+            }
             const size_t visibleIndex = item.baseInstance + ii;
             if (!cadInstanceDrawable(
                     plan, item, visibleIndex, CadDrawChannel::Wire))
@@ -2218,36 +2548,67 @@ void CadRendererGL::renderImmediateMode(
                 wire.progressiveMinimumLevel,
                 wire.progressiveResidentLevel);
             if (flatPointCount > 0) {
-                glue->glBegin(GL_LINES);
                 const size_t flatPointEnd =
                     flatPointFirst + flatPointCount;
-                for (size_t i = flatPointFirst;
-                        i + 1 < flatPointEnd; i += 2) {
-                    const SbVec3f a = wire.isProgressive() ?
-                        progressiveSnapPoint(wire.segmentPoints[i],
-                            wire.progressiveQuantizationMinimum,
-                            wire.progressiveQuantizationMaximum,
-                            drawLevel) : wire.segmentPoints[i];
-                    const SbVec3f b = wire.isProgressive() ?
-                        progressiveSnapPoint(wire.segmentPoints[i + 1],
-                            wire.progressiveQuantizationMinimum,
-                            wire.progressiveQuantizationMaximum,
-                            drawLevel) : wire.segmentPoints[i + 1];
-                    glue->glVertex3f(a[0], a[1], a[2]);
-                    glue->glVertex3f(b[0], b[1], b[2]);
+                size_t point = flatPointFirst;
+                while (point + 1 < flatPointEnd) {
+                    const size_t chunkEnd = std::min(
+                        flatPointEnd, point + 512u);
+                    const size_t segmentWork = (chunkEnd - point) / 2u;
+                    if (renderInterruptedAfter(deadlineWork, segmentWork)) {
+                        interrupted = true;
+                        break;
+                    }
+                    glue->glBegin(GL_LINES);
+                    for (; point + 1 < chunkEnd; point += 2) {
+                        const SbVec3f a = wire.isProgressive() ?
+                            progressiveSnapPoint(wire.segmentPoints[point],
+                                wire.progressiveQuantizationMinimum,
+                                wire.progressiveQuantizationMaximum,
+                                drawLevel) : wire.segmentPoints[point];
+                        const SbVec3f b = wire.isProgressive() ?
+                            progressiveSnapPoint(
+                                wire.segmentPoints[point + 1],
+                                wire.progressiveQuantizationMinimum,
+                                wire.progressiveQuantizationMaximum,
+                                drawLevel) : wire.segmentPoints[point + 1];
+                        glue->glVertex3f(a[0], a[1], a[2]);
+                        glue->glVertex3f(b[0], b[1], b[2]);
+                    }
+                    glue->glEnd();
                 }
-                glue->glEnd();
             }
 
+            if (interrupted)
+                break;
             for (const auto& poly : wire.polylines) {
                 if (poly.points.size() < 2) continue;
-                glue->glBegin(GL_LINE_STRIP);
-                for (const auto& pt : poly.points) {
-                    glue->glVertex3f(pt[0], pt[1], pt[2]);
+                size_t point = 0;
+                while (point < poly.points.size()) {
+                    const size_t chunkEnd = std::min(
+                        poly.points.size(), point + 256u);
+                    if (renderInterruptedAfter(
+                            deadlineWork, chunkEnd - point)) {
+                        interrupted = true;
+                        break;
+                    }
+                    glue->glBegin(GL_LINE_STRIP);
+                    if (point) {
+                        const SbVec3f& prior = poly.points[point - 1];
+                        glue->glVertex3f(prior[0], prior[1], prior[2]);
+                    }
+                    for (; point < chunkEnd; ++point) {
+                        const SbVec3f& pt = poly.points[point];
+                        glue->glVertex3f(pt[0], pt[1], pt[2]);
+                    }
+                    glue->glEnd();
                 }
-                glue->glEnd();
+                if (interrupted)
+                    break;
             }
         }
+        if (interrupted)
+            break;
     }
 
     restoreWireRasterState(glue, rasterState, caps_.hasLineStipple);
@@ -2256,14 +2617,18 @@ void CadRendererGL::renderImmediateMode(
     GLboolean wasColorMaterial = glue->glIsEnabled(GL_COLOR_MATERIAL);
     GLint wasTwoSidedLighting = GL_FALSE;
     glue->glGetIntegerv(GL_LIGHT_MODEL_TWO_SIDE, &wasTwoSidedLighting);
-    if (drawShaded && !plan.shadedItems.empty()) {
+    if (!interrupted && drawShaded && !plan.shadedItems.empty()) {
         // Shaded CAD geometry always uses its normals, regardless of the
         // lighting state inherited from the surrounding scene graph.
         glue->glEnable(GL_LIGHTING);
         glue->glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
     }
     glue->glDisable(GL_COLOR_MATERIAL);
-    if (drawShaded) for (const auto& item : plan.shadedItems) {
+    if (!interrupted && drawShaded) for (const auto& item : plan.shadedItems) {
+        if (renderInterruptedAfter(deadlineWork)) {
+            interrupted = true;
+            break;
+        }
         const Obol::PartGeometry* geom = assembly.partGeometry(item.rep.part);
         if (!geom || !geom->shaded.has_value()) continue;
         const Obol::TriMesh& mesh = *geom->shaded;
@@ -2272,6 +2637,10 @@ void CadRendererGL::renderImmediateMode(
         const bool hasNorm = !mesh.normals.empty();
 
         for (uint32_t ii = 0; ii < item.instanceCount; ++ii) {
+            if (renderInterruptedAfter(deadlineWork)) {
+                interrupted = true;
+                break;
+            }
             const size_t instanceIndex = item.baseInstance + ii;
             if (!cadInstanceDrawable(
                     plan, item, instanceIndex, CadDrawChannel::Shaded))
@@ -2299,40 +2668,63 @@ void CadRendererGL::renderImmediateMode(
                 mesh.progressiveMinimumLevel,
                 mesh.progressiveResidentLevel);
 
-            glue->glBegin(GL_TRIANGLES);
-            for (size_t t = 0; t + 2 < drawIndexCount; t += 3) {
-                SbVec3f triangle[3];
-                for (int k = 0; k < 3; ++k) {
-                    uint32_t idx = drawIdx[t + k];
-                    triangle[k] = mesh.isProgressive() ?
-                        progressiveSnapPoint(mesh.positions[idx],
-                            mesh.progressiveQuantizationMinimum,
-                            mesh.progressiveQuantizationMaximum,
-                            drawLevel) : mesh.positions[idx];
+            size_t triangleOffset = 0;
+            while (triangleOffset + 2 < drawIndexCount) {
+                const size_t triangleWork = std::min<size_t>(
+                    256u, (drawIndexCount - triangleOffset) / 3u);
+                if (renderInterruptedAfter(deadlineWork, triangleWork)) {
+                    interrupted = true;
+                    break;
                 }
-                if (!hasNorm) {
-                    SbVec3f faceNormal =
-                        (triangle[1] - triangle[0]).cross(
-                            triangle[2] - triangle[0]);
-                    if (faceNormal.sqrLength() > 0.0f)
-                        faceNormal.normalize();
-                    else
-                        faceNormal.setValue(0.0f, 0.0f, 1.0f);
-                    glue->glNormal3f(faceNormal[0], faceNormal[1],
-                                     faceNormal[2]);
-                }
-                for (int k = 0; k < 3; ++k) {
-                    uint32_t idx = drawIdx[t + k];
-                    if (hasNorm && idx < mesh.normals.size()) {
-                        const auto& n = mesh.normals[idx];
-                        glue->glNormal3f(n[0], n[1], n[2]);
+                const size_t chunkEnd =
+                    triangleOffset + triangleWork * 3u;
+                glue->glBegin(GL_TRIANGLES);
+                for (; triangleOffset < chunkEnd; triangleOffset += 3) {
+                    SbVec3f triangle[3];
+                    for (int k = 0; k < 3; ++k) {
+                        uint32_t idx = drawIdx[triangleOffset + k];
+                        triangle[k] = mesh.isProgressive() ?
+                            progressiveSnapPoint(mesh.positions[idx],
+                                mesh.progressiveQuantizationMinimum,
+                                mesh.progressiveQuantizationMaximum,
+                                drawLevel) : mesh.positions[idx];
                     }
-                    const SbVec3f& p = triangle[k];
-                    glue->glVertex3f(p[0], p[1], p[2]);
+                    if (!hasNorm) {
+                        SbVec3f faceNormal =
+                            (triangle[1] - triangle[0]).cross(
+                                triangle[2] - triangle[0]);
+                        if (faceNormal.sqrLength() > 0.0f)
+                            faceNormal.normalize();
+                        else
+                            faceNormal.setValue(0.0f, 0.0f, 1.0f);
+                        glue->glNormal3f(faceNormal[0], faceNormal[1],
+                                         faceNormal[2]);
+                    }
+                    for (int k = 0; k < 3; ++k) {
+                        uint32_t idx = drawIdx[triangleOffset + k];
+                        if (hasNorm && idx < mesh.normals.size()) {
+                            const auto& n = mesh.normals[idx];
+                            glue->glNormal3f(n[0], n[1], n[2]);
+                        }
+                        const SbVec3f& p = triangle[k];
+                        glue->glVertex3f(p[0], p[1], p[2]);
+                    }
                 }
+                glue->glEnd();
+                renderedTriangleCount =
+                    renderedTriangleCount >
+                            UINT64_MAX -
+                                static_cast<uint64_t>(triangleWork) ?
+                        UINT64_MAX : renderedTriangleCount +
+                            static_cast<uint64_t>(triangleWork);
             }
-            glue->glEnd();
+            if (!interrupted)
+                cadAccumulateRenderedShadedWork(
+                    lastRenderedShadedWork_, mesh, drawLevel,
+                    static_cast<uint64_t>(drawIndexCount / 3));
         }
+        if (interrupted)
+            break;
     }
     if (wasColorMaterial) glue->glEnable(GL_COLOR_MATERIAL);
     else glue->glDisable(GL_COLOR_MATERIAL);
@@ -2346,6 +2738,11 @@ void CadRendererGL::renderImmediateMode(
     glue->glMatrixMode(GL_PROJECTION);
     glue->glPopMatrix();
     glue->glMatrixMode(GL_MODELVIEW);
+    lastRenderedTriangleCount_ =
+        renderedTriangleCount > UINT64_MAX - lastRenderedTriangleCount_ ?
+            UINT64_MAX : lastRenderedTriangleCount_ + renderedTriangleCount;
+    if (drawShaded)
+        lastRenderedShadedWork_.exact = !interrupted;
 }
 
 // ---------------------------------------------------------------------------
@@ -2524,6 +2921,9 @@ bool CadRendererGL::patchIndirectPreparedAppend(
         const SoGLContext *glue,
         const SbMatrix& viewProj)
 {
+    size_t deadlineWork = 256u;
+    if (renderInterruptedAfter(deadlineWork))
+        return false;
     const auto fail = [&](const char *reason) {
         if (configuration_->patchDebug)
             std::fprintf(stderr,
@@ -2550,6 +2950,8 @@ bool CadRendererGL::patchIndirectPreparedAppend(
     std::vector<const CadPlanAppendDelta *> deltas;
     for (const CadPlanAppendDelta& delta :
             plan.appendDeltas) {
+        if (renderInterruptedAfter(deadlineWork))
+            return false;
         if (delta.revision >
                 indirectPrepared_.appendRevision)
             deltas.push_back(&delta);
@@ -2573,6 +2975,8 @@ bool CadRendererGL::patchIndirectPreparedAppend(
     constexpr size_t minimumAppendGrowth = 4096u;
     size_t appendedCandidateCount = 0;
     for (const CadPlanAppendDelta *delta : deltas) {
+        if (renderInterruptedAfter(deadlineWork))
+            return false;
         if (!delta ||
                 delta->shadedItemCount >
                     std::numeric_limits<size_t>::max() -
@@ -2622,6 +3026,8 @@ bool CadRendererGL::patchIndirectPreparedAppend(
     gpuRes_->deferTriangleAtlasReclamation();
 
     for (const CadPlanAppendDelta *delta : deltas) {
+        if (renderInterruptedAfter(deadlineWork))
+            return false;
         if (!delta ||
                 delta->visibleBegin != sourceExtent ||
                 delta->visibleBegin >
@@ -2642,6 +3048,8 @@ bool CadRendererGL::patchIndirectPreparedAppend(
             return fail("delta-shape");
         for (const uint32_t retired :
                 delta->retiredVisibleIndices) {
+            if (renderInterruptedAfter(deadlineWork))
+                return false;
             if (retired >= sourceExtent)
                 return fail("retired-source-range");
             if (retired <
@@ -2676,6 +3084,8 @@ bool CadRendererGL::patchIndirectPreparedAppend(
         for (size_t itemIndex =
                 delta->shadedItemBegin;
                 itemIndex < shadedEnd; ++itemIndex) {
+            if (renderInterruptedAfter(deadlineWork))
+                return false;
             const CadDrawItem& item =
                 plan.shadedItems[itemIndex];
             if (!item.instanceCount)
@@ -2732,15 +3142,43 @@ bool CadRendererGL::patchIndirectPreparedAppend(
                     indexCount >
                         std::numeric_limits<uint32_t>::max())
                 return fail("prefix-count");
+            uint32_t coverageVertexCount =
+                static_cast<uint32_t>(vertexCount);
+            uint32_t coverageIndexCount =
+                static_cast<uint32_t>(indexCount);
+            if (mesh.isProgressive()) {
+                coverageVertexCount = static_cast<uint32_t>(
+                    mesh.positionCountAtLevel(
+                        mesh.progressiveMinimumLevel));
+                coverageIndexCount = static_cast<uint32_t>(
+                    mesh.indexCountAtLevel(
+                        mesh.progressiveMinimumLevel));
+            }
             const CadTriangleAtlasPart *atlas =
                 gpuRes_->upsertTriangleAtlasPart(
                     binding.part, binding.generation,
                     executorPackedVec3fData(mesh.positions),
                     executorPackedVec3fData(mesh.normals),
-                    static_cast<uint32_t>(vertexCount),
-                    mesh.indices.data(),
-                    static_cast<uint32_t>(indexCount),
-                    mesh.isProgressive(), glue, caps_);
+                    coverageVertexCount, mesh.indices.data(),
+                    coverageIndexCount,
+                    mesh.isProgressive(), mesh.progressiveLineage,
+                    glue, caps_);
+            if (atlas &&
+                    (atlas->vertexCount < vertexCount ||
+                     atlas->indexCount < indexCount)) {
+                const CadTriangleAtlasPart *enriched =
+                    gpuRes_->upsertTriangleAtlasPart(
+                        binding.part, binding.generation,
+                        executorPackedVec3fData(mesh.positions),
+                        executorPackedVec3fData(mesh.normals),
+                        static_cast<uint32_t>(vertexCount),
+                        mesh.indices.data(),
+                        static_cast<uint32_t>(indexCount),
+                        mesh.isProgressive(),
+                        mesh.progressiveLineage, glue, caps_);
+                if (enriched)
+                    atlas = enriched;
+            }
             if (!atlas) {
                 /*
                  * Atlas pressure is a normal bounded-memory outcome, not an
@@ -2872,10 +3310,17 @@ bool CadRendererGL::patchIndirectPreparedAppend(
             demand.partIndex = item.partIndex;
             demand.generation =
                 binding.generation;
-            demand.vertexCount =
-                static_cast<uint32_t>(vertexCount);
-            demand.indexCount =
-                static_cast<uint32_t>(indexCount);
+            demand.vertexCount = std::min(
+                static_cast<uint32_t>(vertexCount),
+                atlas->vertexCount);
+            demand.indexCount = std::min(
+                static_cast<uint32_t>(indexCount),
+                atlas->indexCount);
+            demand.admissionPressure =
+                vertexCount > atlas->vertexCount ||
+                indexCount > atlas->indexCount;
+            if (demand.admissionPressure)
+                ++indirectPrepared_.atlasPressurePartCount;
             demand.page = atlas->page;
             demand.vertexFirst =
                 atlas->vertices.first;
@@ -2961,6 +3406,9 @@ bool CadRendererGL::patchIndirectPreparedAppend(
     indirectPrepared_.atlasRevision =
         gpuRes_->triangleAtlasRevision();
     indirectPrepared_.atlasValidationCountdown = 30u;
+    indirectPrepared_.atlasAdmissionPressure =
+        indirectPrepared_.atlasPressurePartCount > 0 ||
+        !indirectPrepared_.pressureProxyPoints.empty();
     return true;
 }
 
@@ -2969,6 +3417,9 @@ bool CadRendererGL::patchIndirectPreparedGeometry(
         const SoCADAssembly& assembly,
         const SoGLContext *glue)
 {
+    size_t deadlineWork = 256u;
+    if (renderInterruptedAfter(deadlineWork))
+        return false;
     const auto fail = [&](const char *reason) {
         if (configuration_->patchDebug)
             std::fprintf(stderr,
@@ -2987,6 +3438,8 @@ bool CadRendererGL::patchIndirectPreparedGeometry(
     std::vector<CadPartGeometryRange> changedRanges;
     for (const CadPartGeometryDelta& delta :
             plan.partGeometryDeltas) {
+        if (renderInterruptedAfter(deadlineWork))
+            return false;
         if (delta.revision <=
                 indirectPrepared_.partGeometryRevision)
             continue;
@@ -3021,6 +3474,8 @@ bool CadRendererGL::patchIndirectPreparedGeometry(
 
     for (const CadPartGeometryRange& range :
             changedRanges) {
+        if (renderInterruptedAfter(deadlineWork))
+            return false;
         /*
          * Wire/point-only part updates are consumed by their own retained
          * paths and do not alter this shaded indirect submission.
@@ -3117,7 +3572,8 @@ bool CadRendererGL::patchIndirectPreparedGeometry(
                 static_cast<uint32_t>(vertexCount),
                 mesh.indices.data(),
                 static_cast<uint32_t>(indexCount),
-                mesh.isProgressive(), glue, caps_);
+                mesh.isProgressive(), mesh.progressiveLineage,
+                glue, caps_);
         if (!atlas)
             return fail("atlas-admission");
         while (mesh.isProgressive() &&
@@ -3250,10 +3706,23 @@ bool CadRendererGL::patchIndirectPreparedGeometry(
 
         demand.generation =
             binding.generation;
-        demand.vertexCount =
-            static_cast<uint32_t>(vertexCount);
-        demand.indexCount =
-            static_cast<uint32_t>(indexCount);
+        const bool admissionPressure =
+            vertexCount > atlas->vertexCount ||
+            indexCount > atlas->indexCount;
+        if (demand.admissionPressure != admissionPressure) {
+            if (admissionPressure) {
+                ++indirectPrepared_.atlasPressurePartCount;
+            } else if (indirectPrepared_.atlasPressurePartCount) {
+                --indirectPrepared_.atlasPressurePartCount;
+            }
+            demand.admissionPressure = admissionPressure;
+        }
+        demand.vertexCount = std::min(
+            static_cast<uint32_t>(vertexCount),
+            atlas->vertexCount);
+        demand.indexCount = std::min(
+            static_cast<uint32_t>(indexCount),
+            atlas->indexCount);
         demand.page = atlas->page;
         demand.vertexFirst =
             atlas->vertices.first;
@@ -3313,6 +3782,8 @@ bool CadRendererGL::patchIndirectPreparedGeometry(
     size_t begin = 0;
     while (sparseUpload &&
             begin < changedPackedInstances.size()) {
+        if (renderInterruptedAfter(deadlineWork))
+            return false;
         size_t end = begin + 1u;
         while (end < changedPackedInstances.size() &&
                 changedPackedInstances[end] ==
@@ -3348,6 +3819,9 @@ bool CadRendererGL::patchIndirectPreparedGeometry(
     indirectPrepared_.atlasRevision =
         gpuRes_->triangleAtlasRevision();
     indirectPrepared_.atlasValidationCountdown = 30u;
+    indirectPrepared_.atlasAdmissionPressure =
+        indirectPrepared_.atlasPressurePartCount > 0 ||
+        !indirectPrepared_.pressureProxyPoints.empty();
     return true;
 }
 
@@ -3356,6 +3830,9 @@ bool CadRendererGL::patchIndirectPreparedCeiling(
         const SoCADAssembly& assembly,
         const SoGLContext *glue)
 {
+    size_t deadlineWork = 256u;
+    if (renderInterruptedAfter(deadlineWork))
+        return false;
     const int ceiling =
         assembly.progressiveLodCeiling.getValue();
     if (indirectPrepared_.progressiveLodCeiling ==
@@ -3371,6 +3848,8 @@ bool CadRendererGL::patchIndirectPreparedCeiling(
         indirectPrepared_.parts.size());
     for (IndirectPreparedPart& demand :
             indirectPrepared_.parts) {
+        if (renderInterruptedAfter(deadlineWork))
+            return false;
         if (demand.partIndex >=
                 plan.partBindings.size())
             return false;
@@ -3413,6 +3892,21 @@ bool CadRendererGL::patchIndirectPreparedCeiling(
                 atlas->indices.first !=
                     demand.indexFirst)
             return false;
+        const uint32_t requestedVertices = static_cast<uint32_t>(
+            mesh.positionCountAtLevel(level));
+        const uint32_t requestedIndices = static_cast<uint32_t>(
+            mesh.indexCountAtLevel(level));
+        const bool admissionPressure =
+            requestedVertices > atlas->vertexCount ||
+            requestedIndices > atlas->indexCount;
+        if (demand.admissionPressure != admissionPressure) {
+            if (admissionPressure) {
+                ++indirectPrepared_.atlasPressurePartCount;
+            } else if (indirectPrepared_.atlasPressurePartCount) {
+                --indirectPrepared_.atlasPressurePartCount;
+            }
+            demand.admissionPressure = admissionPressure;
+        }
         while (level > mesh.progressiveMinimumLevel &&
                 (mesh.positionCountAtLevel(level) >
                      atlas->vertexCount ||
@@ -3487,6 +3981,8 @@ bool CadRendererGL::patchIndirectPreparedCeiling(
     size_t begin = 0;
     while (sparseUpload &&
             begin < changedPackedInstances.size()) {
+        if (renderInterruptedAfter(deadlineWork))
+            return false;
         size_t end = begin + 1u;
         while (end < changedPackedInstances.size() &&
                 changedPackedInstances[end] ==
@@ -3510,6 +4006,9 @@ bool CadRendererGL::patchIndirectPreparedCeiling(
         indirectPrepared_.instanceUploadSerial = 0;
     indirectPrepared_.progressiveLodCeiling =
         ceiling;
+    indirectPrepared_.atlasAdmissionPressure =
+        indirectPrepared_.atlasPressurePartCount > 0 ||
+        !indirectPrepared_.pressureProxyPoints.empty();
     return true;
 }
 
@@ -3518,6 +4017,9 @@ bool CadRendererGL::patchIndirectPreparedLod(
         const SoCADAssembly& assembly,
         const SoGLContext *glue)
 {
+    size_t deadlineWork = 256u;
+    if (renderInterruptedAfter(deadlineWork))
+        return false;
     if (indirectPrepared_.shadedLodRevision ==
             plan.shadedLodRevision)
         return true;
@@ -3528,6 +4030,8 @@ bool CadRendererGL::patchIndirectPreparedLod(
 
     std::vector<CadShadedLodRange> changedRanges;
     for (const CadShadedLodDelta& delta : plan.shadedLodDeltas) {
+        if (renderInterruptedAfter(deadlineWork))
+            return false;
         if (delta.revision <=
                 indirectPrepared_.shadedLodRevision)
             continue;
@@ -3556,6 +4060,8 @@ bool CadRendererGL::patchIndirectPreparedLod(
     std::vector<uint32_t> changedPackedInstances;
     changedPackedInstances.reserve(changedRanges.size());
     for (const CadShadedLodRange& range : changedRanges) {
+        if (renderInterruptedAfter(deadlineWork))
+            return false;
         /*
          * The high-asset-count vehicle case overwhelmingly consists of
          * unique leaves.  Their prepared instance and command slots are
@@ -3644,11 +4150,24 @@ bool CadRendererGL::patchIndirectPreparedLod(
                 executorPackedVec3fData(mesh.positions),
                 executorPackedVec3fData(mesh.normals),
                 requestedVertices, mesh.indices.data(),
-                requestedIndices, true, glue, caps_);
+                requestedIndices, true, mesh.progressiveLineage,
+                glue, caps_);
         if (!atlas || atlas->page != demand.page ||
                 atlas->vertices.first != demand.vertexFirst ||
                 atlas->indices.first != demand.indexFirst)
             return false;
+
+        const bool admissionPressure =
+            requestedVertices > atlas->vertexCount ||
+            requestedIndices > atlas->indexCount;
+        if (demand.admissionPressure != admissionPressure) {
+            if (admissionPressure) {
+                ++indirectPrepared_.atlasPressurePartCount;
+            } else if (indirectPrepared_.atlasPressurePartCount) {
+                --indirectPrepared_.atlasPressurePartCount;
+            }
+            demand.admissionPressure = admissionPressure;
+        }
 
         while (level > mesh.progressiveMinimumLevel &&
                 (mesh.positionCountAtLevel(level) >
@@ -3701,8 +4220,10 @@ bool CadRendererGL::patchIndirectPreparedLod(
                 demand.packedInstance];
         target.popMinLevel[3] =
             static_cast<float>(level);
-        demand.vertexCount = requestedVertices;
-        demand.indexCount = requestedIndices;
+        demand.vertexCount = std::min(
+            requestedVertices, atlas->vertexCount);
+        demand.indexCount = std::min(
+            requestedIndices, atlas->indexCount);
         changedPackedInstances.push_back(
             demand.packedInstance);
     }
@@ -3721,6 +4242,8 @@ bool CadRendererGL::patchIndirectPreparedLod(
     size_t begin = 0;
     while (sparseUpload &&
             begin < changedPackedInstances.size()) {
+        if (renderInterruptedAfter(deadlineWork))
+            return false;
         size_t end = begin + 1u;
         while (end < changedPackedInstances.size() &&
                 changedPackedInstances[end] ==
@@ -3749,6 +4272,9 @@ bool CadRendererGL::patchIndirectPreparedLod(
     indirectPrepared_.atlasRevision =
         gpuRes_->triangleAtlasRevision();
     indirectPrepared_.atlasValidationCountdown = 30u;
+    indirectPrepared_.atlasAdmissionPressure =
+        indirectPrepared_.atlasPressurePartCount > 0 ||
+        !indirectPrepared_.pressureProxyPoints.empty();
     return true;
 }
 
@@ -3759,6 +4285,9 @@ bool CadRendererGL::replayIndirectShaded(
         const SbMatrix& viewProj,
         const SbViewVolume& viewVolume)
 {
+    size_t deadlineWork = 256u;
+    if (renderInterruptedAfter(deadlineWork))
+        return false;
     const bool cameraChanged = !(indirectPrepared_.viewProj == viewProj);
     const bool subpixelProxyChanged =
         indirectPrepared_.subpixelProxyRevision !=
@@ -3771,6 +4300,8 @@ bool CadRendererGL::replayIndirectShaded(
                 plan.instanceAttributeDeltaFloorRevision) {
         for (const CadInstanceAttributeDelta& delta :
                 plan.instanceAttributeDeltas) {
+            if (renderInterruptedAfter(deadlineWork))
+                return false;
             if (delta.revision >
                     indirectPrepared_.instanceAttributeRevision &&
                     delta.visibilityChanged) {
@@ -3870,6 +4401,8 @@ bool CadRendererGL::replayIndirectShaded(
         indirectPrepared_.valid = false;
         return false;
     }
+    if (renderInterrupted())
+        return false;
     const bool geometryPatchEnabled =
         configuration_->geometryPatch;
     if (partGeometryChanged &&
@@ -3882,6 +4415,8 @@ bool CadRendererGL::replayIndirectShaded(
         indirectPrepared_.valid = false;
         return false;
     }
+    if (renderInterrupted())
+        return false;
     if (indirectPrepared_.progressiveLodCeiling !=
             assembly.progressiveLodCeiling.getValue() &&
             !patchIndirectPreparedCeiling(
@@ -3892,6 +4427,8 @@ bool CadRendererGL::replayIndirectShaded(
         indirectPrepared_.valid = false;
         return false;
     }
+    if (renderInterrupted())
+        return false;
     const bool lodPatchEnabled =
         configuration_->lodPatch;
     if (indirectPrepared_.shadedLodRevision !=
@@ -3905,6 +4442,8 @@ bool CadRendererGL::replayIndirectShaded(
         indirectPrepared_.valid = false;
         return false;
     }
+    if (renderInterrupted())
+        return false;
 
     if (indirectPrepared_.instanceAttributeRevision !=
             plan.instanceAttributeRevision) {
@@ -3924,6 +4463,8 @@ bool CadRendererGL::replayIndirectShaded(
         if (sparseAttributes) {
             for (const CadInstanceAttributeDelta& delta :
                     plan.instanceAttributeDeltas) {
+                if (renderInterruptedAfter(deadlineWork))
+                    return false;
                 if (delta.revision <=
                         indirectPrepared_.instanceAttributeRevision)
                     continue;
@@ -3978,6 +4519,8 @@ bool CadRendererGL::replayIndirectShaded(
         if (sparseAttributes) {
             changedPackedIndices.reserve(changedSourceIndices.size());
             for (const uint32_t sourceIndex : changedSourceIndices) {
+                if (renderInterruptedAfter(deadlineWork))
+                    return false;
                 if (sourceIndex >= plan.visibleInstances.size() ||
                         sourceIndex >=
                             indirectPrepared_.instanceIndexBySource.size() ||
@@ -4035,6 +4578,8 @@ bool CadRendererGL::replayIndirectShaded(
         } else {
             for (size_t i = 0;
                     i < indirectPrepared_.instances.size(); ++i) {
+                if (renderInterruptedAfter(deadlineWork))
+                    return false;
                 const uint32_t sourceIndex =
                     indirectPrepared_.sourceInstanceIndices[i];
                 if (!updatePackedColor(
@@ -4045,6 +4590,8 @@ bool CadRendererGL::replayIndirectShaded(
             }
             for (size_t i = 0;
                     i < indirectPrepared_.pressureProxyPoints.size(); ++i) {
+                if (renderInterruptedAfter(deadlineWork))
+                    return false;
                 const uint32_t sourceIndex =
                     indirectPrepared_.
                         pressureProxySourceInstanceIndices[i];
@@ -4080,6 +4627,8 @@ bool CadRendererGL::replayIndirectShaded(
             size_t begin = 0;
             while (sparseUpload &&
                     begin < changedPackedIndices.size()) {
+                if (renderInterruptedAfter(deadlineWork))
+                    return false;
                 size_t end = begin + 1;
                 while (end < changedPackedIndices.size() &&
                         changedPackedIndices[end] ==
@@ -4138,6 +4687,8 @@ bool CadRendererGL::replayIndirectShaded(
         for (size_t demandIndex = 0;
                 demandIndex < indirectPrepared_.parts.size();
                 ++demandIndex) {
+            if (renderInterruptedAfter(deadlineWork))
+                return false;
             const IndirectPreparedPart& demand =
                 indirectPrepared_.parts[demandIndex];
             if (demand.partIndex >= plan.partBindings.size())
@@ -4247,6 +4798,8 @@ bool CadRendererGL::replayIndirectShaded(
         !indirectPrepared_.atlasValidationCountdown;
     if (validateAtlas) {
         for (const IndirectPreparedPart& demand : indirectPrepared_.parts) {
+            if (renderInterruptedAfter(deadlineWork))
+                return false;
             if (demand.partIndex >= plan.partBindings.size()) {
                 indirectPrepared_.valid = false;
                 return false;
@@ -4281,6 +4834,8 @@ bool CadRendererGL::replayIndirectShaded(
 
     pressureProxyPointsView_ =
         &indirectPrepared_.pressureProxyPoints;
+    atlasAdmissionPressure_ =
+        indirectPrepared_.atlasAdmissionPressure;
     lastRenderedTriangleCount_ =
         indirectPrepared_.renderedTriangleCount;
     const bool submitted =
@@ -4301,11 +4856,16 @@ bool CadRendererGL::renderIndirectShaded(
             !shaders_.shadedIndirect || plan.shadedItems.empty() ||
             plan.visibleInstances.empty())
         return rejectIndirect(1, "precondition");
+    size_t deadlineWork = 256u;
+    if (renderInterruptedAfter(deadlineWork))
+        return false;
     const bool replayEnabled = configuration_->replay;
     if (replayEnabled) {
         if (replayIndirectShaded(
                 plan, assembly, glue, viewProj, viewVolume))
             return true;
+        if (renderInterrupted())
+            return false;
     } else {
         /*
          * Diagnostic/reference mode: keep the same atlas, shaders, indirect
@@ -4316,6 +4876,10 @@ bool CadRendererGL::renderIndirectShaded(
          */
         indirectPrepared_.valid = false;
     }
+    /* Exact preparation recycles storage owned by the preceding replay
+     * record.  Invalidate it before the first swap so a deadline exit can
+     * never expose a half-recycled record on the next frame. */
+    indirectPrepared_.valid = false;
     using IndirectClock = std::chrono::steady_clock;
     const auto indirectStarted = IndirectClock::now();
     auto visibilityCompleted = indirectStarted;
@@ -4339,6 +4903,8 @@ bool CadRendererGL::renderIndirectShaded(
     visibleMaximumLod.assign(plan.partBindings.size(), 0u);
     auto& visiblePart = indirectVisiblePart_;
     visiblePart.assign(plan.partBindings.size(), 0u);
+    auto& visibleImportance = indirectVisibleImportance_;
+    visibleImportance.assign(plan.partBindings.size(), 0.0);
     auto& visiblePartIndices = indirectVisiblePartIndices_;
     visiblePartIndices.clear();
     if (visiblePartIndices.capacity() < plan.partBindings.size())
@@ -4350,6 +4916,8 @@ bool CadRendererGL::renderIndirectShaded(
     nextVisibleOccurrence.assign(plan.visibleInstances.size(), noOccurrence);
     size_t visibleOccurrenceCount = 0;
     for (const CadDrawItem& item : plan.shadedItems) {
+        if (renderInterruptedAfter(deadlineWork))
+            return false;
         if (!item.instanceCount ||
                 item.partIndex >= plan.partBindings.size() ||
                 item.baseInstance >= plan.visibleInstances.size() ||
@@ -4364,6 +4932,8 @@ bool CadRendererGL::renderIndirectShaded(
                 2, "visible part has no shaded geometry");
         const TriMesh& mesh = *geometry->shaded;
         for (uint32_t i = 0; i < item.instanceCount; ++i) {
+            if (renderInterruptedAfter(deadlineWork))
+                return false;
             const size_t visibleIndex = item.baseInstance + i;
             const CadVisibleInstance& instance =
                 plan.visibleInstances[visibleIndex];
@@ -4392,6 +4962,13 @@ bool CadRendererGL::renderIndirectShaded(
             }
             visibleMaximumLod[item.partIndex] =
                 std::max(visibleMaximumLod[item.partIndex], requested);
+            double importance = executorProjectedBoxImportance(
+                instance.wbMin, instance.wbMax, viewProj);
+            if (instance.flags & 3u)
+                importance *= 16.0;
+            visibleImportance[item.partIndex] = std::min(
+                1.0e12,
+                visibleImportance[item.partIndex] + importance);
         }
     }
     visibilityCompleted = IndirectClock::now();
@@ -4406,6 +4983,7 @@ bool CadRendererGL::renderIndirectShaded(
     requestedIndexCounts.assign(plan.partBindings.size(), 0u);
     auto& atlasBindings = indirectAtlasBindings_;
     atlasBindings.assign(plan.partBindings.size(), nullptr);
+    uint64_t requestedLiveBytes = 0;
     /*
      * Mark every retained consumer before admitting any new allocation.
      * Without this phase, pressure while processing part N could evict part
@@ -4418,6 +4996,8 @@ bool CadRendererGL::renderIndirectShaded(
      * tens of thousands of unique parts.
      */
     for (const uint32_t partIndex : visiblePartIndices) {
+        if (renderInterruptedAfter(deadlineWork))
+            return false;
         const CadPartBinding& binding =
             plan.partBindings[partIndex];
         const PartGeometry *geometry = binding.geometry.get();
@@ -4438,6 +5018,13 @@ bool CadRendererGL::renderIndirectShaded(
             static_cast<uint32_t>(vertexCount);
         requestedIndexCounts[partIndex] =
             static_cast<uint32_t>(indexCount);
+        const uint64_t vertexStride = mesh.normals.empty() ? 12u : 24u;
+        const uint64_t requestedBytes =
+            static_cast<uint64_t>(vertexCount) * vertexStride +
+            static_cast<uint64_t>(indexCount) * sizeof(uint32_t);
+        requestedLiveBytes = requestedBytes >
+                UINT64_MAX - requestedLiveBytes ?
+            UINT64_MAX : requestedLiveBytes + requestedBytes;
         atlasBindings[partIndex] =
             gpuRes_->touchTriangleAtlasPart(
                 binding.part, binding.generation,
@@ -4446,6 +5033,24 @@ bool CadRendererGL::renderIndirectShaded(
                 requestedIndexCounts[partIndex]);
     }
     protectionCompleted = IndirectClock::now();
+
+    auto& admissionPartIndices = indirectAdmissionPartIndices_;
+    admissionPartIndices.assign(
+        visiblePartIndices.begin(), visiblePartIndices.end());
+    const size_t atlasBudget = gpuRes_->triangleAtlasBudgetBytes();
+    const bool likelyMemoryPressure = atlasBudget > 0 &&
+        (requestedLiveBytes >=
+             static_cast<uint64_t>(atlasBudget / 4u) * 3u ||
+         gpuRes_->triangleAtlasAllocatedBytes() >=
+             atlasBudget / 4u * 3u);
+    if (likelyMemoryPressure) {
+        std::stable_sort(admissionPartIndices.begin(),
+            admissionPartIndices.end(),
+            [&](uint32_t left, uint32_t right) {
+                return visibleImportance[left] >
+                    visibleImportance[right];
+            });
+    }
 
     /*
      * Make each unique visible part's richest requested prefix resident.
@@ -4463,93 +5068,135 @@ bool CadRendererGL::renderIndirectShaded(
             visibleOccurrenceCount)
         pressureProxySourceInstanceIndices.reserve(
             visibleOccurrenceCount);
-    for (const uint32_t partIndex : visiblePartIndices) {
-        if (!visiblePart[partIndex])
+    const auto replacePartWithPressureProxy = [&](uint32_t partIndex) {
+        const CadPartBinding& binding = plan.partBindings[partIndex];
+        if (!binding.subpixelProxyEligible)
+            return false;
+        SbVec3f localCenter(0.0f, 0.0f, 0.0f);
+        for (const SbVec3f& corner : binding.subpixelProxyCorners)
+            localCenter += corner;
+        localCenter /= 8.0f;
+        for (uint32_t visibleIndex = firstVisibleOccurrence[partIndex];
+                visibleIndex != noOccurrence;
+                visibleIndex = nextVisibleOccurrence[visibleIndex]) {
+            if (renderInterruptedAfter(deadlineWork))
+                return false;
+            if (!visibleMask[visibleIndex])
+                continue;
+            const CadVisibleInstance& instance =
+                plan.visibleInstances[visibleIndex];
+            CadSubpixelProxyPoint replacement;
+            replacement.position = transformedFlatPoint(
+                localCenter, instance.transform);
+            replacement.rgba = instance.rgba;
+            replacement.instanceId = instance.instanceId;
+            replacement.flags = instance.flags;
+            pressureProxyPoints.push_back(replacement);
+            pressureProxySourceInstanceIndices.push_back(visibleIndex);
+            visibleMask[visibleIndex] = 0u;
+            --visibleOccurrenceCount;
+        }
+        visiblePart[partIndex] = 0u;
+        return true;
+    };
+
+    /* Coverage pass: give every progressive part its producer-authored
+     * minimum coherent prefix before any part consumes memory on enrichment.
+     * Under pressure, screen-prominent and selected occurrences are visited
+     * first.  This removes plan-order starvation without compromising the
+     * no-holes PoP contract. */
+    for (const uint32_t partIndex : admissionPartIndices) {
+        if (renderInterruptedAfter(deadlineWork))
+            return false;
+        if (!visiblePart[partIndex] || atlasBindings[partIndex])
             continue;
-        const CadPartBinding& binding =
-            plan.partBindings[partIndex];
-        const PartId partId = binding.part;
+        const CadPartBinding& binding = plan.partBindings[partIndex];
         const PartGeometry *geometry = binding.geometry.get();
         if (!geometry || !geometry->shaded)
             return false;
         const TriMesh& mesh = *geometry->shaded;
-        const uint32_t vertexCount =
-            requestedVertexCounts[partIndex];
-        const uint32_t indexCount =
-            requestedIndexCounts[partIndex];
-        if (atlasBindings[partIndex])
-            continue;
+        uint32_t coverageVertexCount = requestedVertexCounts[partIndex];
+        uint32_t coverageIndexCount = requestedIndexCounts[partIndex];
+        if (mesh.isProgressive()) {
+            coverageVertexCount = static_cast<uint32_t>(
+                mesh.positionCountAtLevel(mesh.progressiveMinimumLevel));
+            coverageIndexCount = static_cast<uint32_t>(
+                mesh.indexCountAtLevel(mesh.progressiveMinimumLevel));
+        }
         const CadTriangleAtlasPart *admitted =
             gpuRes_->upsertTriangleAtlasPart(
-                partId, binding.generation,
+                binding.part, binding.generation,
                 executorPackedVec3fData(mesh.positions),
                 executorPackedVec3fData(mesh.normals),
-                vertexCount,
-                mesh.indices.data(),
-                indexCount,
-                mesh.isProgressive(), glue, caps_);
+                coverageVertexCount, mesh.indices.data(),
+                coverageIndexCount, mesh.isProgressive(),
+                mesh.progressiveLineage, glue, caps_);
         if (!admitted) {
+            atlasAdmissionPressure_ = true;
             if (configuration_->indirectDebug)
                 std::fprintf(stderr,
-                    "CadRendererGL indirect atlas admission failed "
+                    "CadRendererGL indirect atlas coverage failed "
                     "part=%016llx:%016llx vertices=%zu indices=%zu "
                     "allocated=%zu live=%zu pages=%zu parts=%zu\n",
-                    static_cast<unsigned long long>(partId.w0),
-                    static_cast<unsigned long long>(partId.w1),
-                    static_cast<size_t>(vertexCount),
-                    static_cast<size_t>(indexCount),
+                    static_cast<unsigned long long>(binding.part.w0),
+                    static_cast<unsigned long long>(binding.part.w1),
+                    static_cast<size_t>(coverageVertexCount),
+                    static_cast<size_t>(coverageIndexCount),
                     gpuRes_->triangleAtlasAllocatedBytes(),
                     gpuRes_->triangleAtlasLiveBytes(),
                     gpuRes_->triangleAtlasPageCount(),
                     gpuRes_->triangleAtlasPartCount());
-            /*
-             * BObol LoD meshes explicitly opt into a bounded, hole-free
-             * pressure representation.  Keep already admitted geometry and
-             * replace only this unadmitted part's visible occurrences with
-             * one colored point each.  Rejecting the entire retained path
-             * here rebuilt every visible mesh on the CPU and could revive
-             * fallback-like visuals for a single failed allocation.
-             *
-             * General CAD geometry has no such contract, so preserve the
-             * correctness fallback for non-eligible parts.
-             */
-            if (!binding.subpixelProxyEligible)
-                return rejectIndirect(4, "triangle atlas admission");
-
-            SbVec3f localCenter(0.0f, 0.0f, 0.0f);
-            for (const SbVec3f& corner : binding.subpixelProxyCorners)
-                localCenter += corner;
-            localCenter /= 8.0f;
-            for (uint32_t visibleIndex =
-                    firstVisibleOccurrence[partIndex];
-                    visibleIndex != noOccurrence;
-                    visibleIndex = nextVisibleOccurrence[visibleIndex]) {
-                if (!visibleMask[visibleIndex])
-                    continue;
-                const CadVisibleInstance& instance =
-                    plan.visibleInstances[visibleIndex];
-                CadSubpixelProxyPoint replacement;
-                replacement.position = transformedFlatPoint(
-                    localCenter, instance.transform);
-                replacement.rgba = instance.rgba;
-                replacement.instanceId = instance.instanceId;
-                replacement.flags = instance.flags;
-                pressureProxyPoints.push_back(replacement);
-                pressureProxySourceInstanceIndices.push_back(
-                    visibleIndex);
-                visibleMask[visibleIndex] = 0u;
-                --visibleOccurrenceCount;
+            if (!replacePartWithPressureProxy(partIndex)) {
+                if (renderInterrupted())
+                    return false;
+                return rejectIndirect(4, "triangle atlas coverage");
             }
-            visiblePart[partIndex] = 0u;
-        } else {
-            /*
-             * unordered_map rehashing invalidates iterators, not pointers or
-             * references to elements.  The admission sweep only erases parts
-             * that were not protected earlier in this frame, so this binding
-             * remains stable through all later admissions.
-             */
-            atlasBindings[partIndex] = admitted;
+            continue;
         }
+        atlasBindings[partIndex] = admitted;
+    }
+
+    /* Enrichment pass: grow retained prefixes toward the view request in the
+     * same value order.  A failed grow preserves and draws the coherent
+     * coverage prefix; it never demotes that part back to a box or point. */
+    for (const uint32_t partIndex : admissionPartIndices) {
+        if (renderInterruptedAfter(deadlineWork))
+            return false;
+        if (!visiblePart[partIndex] || !atlasBindings[partIndex])
+            continue;
+        const uint32_t vertexCount = requestedVertexCounts[partIndex];
+        const uint32_t indexCount = requestedIndexCounts[partIndex];
+        const CadTriangleAtlasPart *current = atlasBindings[partIndex];
+        if (current->vertexCount >= vertexCount &&
+                current->indexCount >= indexCount)
+            continue;
+        const CadPartBinding& binding = plan.partBindings[partIndex];
+        const TriMesh& mesh = *binding.geometry->shaded;
+        const CadTriangleAtlasPart *enriched =
+            gpuRes_->upsertTriangleAtlasPart(
+                binding.part, binding.generation,
+                executorPackedVec3fData(mesh.positions),
+                executorPackedVec3fData(mesh.normals),
+                vertexCount, mesh.indices.data(), indexCount,
+                mesh.isProgressive(), mesh.progressiveLineage,
+                glue, caps_);
+        if (!enriched) {
+            atlasAdmissionPressure_ = true;
+            enriched = gpuRes_->triangleAtlasPart(binding.part);
+        }
+        if (!enriched) {
+            if (!replacePartWithPressureProxy(partIndex)) {
+                if (renderInterrupted())
+                    return false;
+                return rejectIndirect(4, "triangle atlas enrichment");
+            }
+            atlasBindings[partIndex] = nullptr;
+            continue;
+        }
+        atlasBindings[partIndex] = enriched;
+        if (enriched->vertexCount < vertexCount ||
+                enriched->indexCount < indexCount)
+            atlasAdmissionPressure_ = true;
     }
     admissionCompleted = IndirectClock::now();
 
@@ -4563,6 +5210,8 @@ bool CadRendererGL::renderIndirectShaded(
         indirectPageWorkScratch_.swap(indirectPrepared_.pages);
     indirectPrepared_.pages.clear();
     for (IndirectPageWork& work : indirectPageWorkScratch_) {
+        if (renderInterruptedAfter(deadlineWork))
+            return false;
         work.ordinary.clear();
         work.culled.clear();
     }
@@ -4570,6 +5219,8 @@ bool CadRendererGL::renderIndirectShaded(
     indirectPageWorkSlotByPage_.assign(
         atlasPageCount, std::numeric_limits<uint32_t>::max());
     for (size_t i = 0; i < indirectPageWorkScratch_.size(); ++i) {
+        if (renderInterruptedAfter(deadlineWork))
+            return false;
         const uint32_t page = indirectPageWorkScratch_[i].page;
         if (page < indirectPageWorkSlotByPage_.size())
             indirectPageWorkSlotByPage_[page] =
@@ -4622,6 +5273,8 @@ bool CadRendererGL::renderIndirectShaded(
      * lookup for every visible part after an insertion.
      */
     for (const CadDrawItem& item : plan.shadedItems) {
+        if (renderInterruptedAfter(deadlineWork))
+            return false;
         if (!item.instanceCount ||
                 item.partIndex >= plan.partBindings.size() ||
                 item.baseInstance >= plan.visibleInstances.size() ||
@@ -4651,6 +5304,8 @@ bool CadRendererGL::renderIndirectShaded(
         uint8_t commandLevel = 15u;
         size_t commandCount = 0;
         for (uint32_t i = 0; i < item.instanceCount; ++i) {
+            if (renderInterruptedAfter(deadlineWork))
+                return false;
             const size_t instanceIndex = item.baseInstance + i;
             if (!cadInstanceDrawable(
                     plan, item, instanceIndex, CadDrawChannel::Shaded) ||
@@ -4772,6 +5427,8 @@ bool CadRendererGL::renderIndirectShaded(
      */
     for (const IndirectPageWork& work :
             indirectPageWorkScratch_) {
+        if (renderInterruptedAfter(deadlineWork))
+            return false;
         if (work.ordinary.empty() && work.culled.empty())
             continue;
         const CadTriangleAtlasPage *page =
@@ -4813,6 +5470,8 @@ bool CadRendererGL::renderIndirectShaded(
     prepared.atlasRevision = gpuRes_->triangleAtlasRevision();
     prepared.atlasValidationCountdown = 30u;
     prepared.cameraMotionReplayCount = 0;
+    prepared.atlasAdmissionPressure = atlasAdmissionPressure_;
+    prepared.atlasPressurePartCount = 0;
 
     prepared.parts.clear();
     if (prepared.parts.capacity() < visiblePartIndices.size())
@@ -4821,6 +5480,8 @@ bool CadRendererGL::renderIndirectShaded(
         plan.partBindings.size(),
         std::numeric_limits<uint32_t>::max());
     for (const uint32_t partIndex : visiblePartIndices) {
+        if (renderInterruptedAfter(deadlineWork))
+            return false;
         if (!visiblePart[partIndex])
             continue;
         const CadPartBinding& binding = plan.partBindings[partIndex];
@@ -4832,8 +5493,19 @@ bool CadRendererGL::renderIndirectShaded(
         demand.part = binding.part;
         demand.partIndex = partIndex;
         demand.generation = binding.generation;
-        demand.vertexCount = requestedVertexCounts[partIndex];
-        demand.indexCount = requestedIndexCounts[partIndex];
+        /* Replay protects the coherent resident prefix, not an unaffordable
+         * richer request.  The frame-level pressure bit asks scene policy to
+         * revisit quality after memory/view conditions change without making
+         * every stable replay fail validation and rebuild O(scene). */
+        demand.vertexCount = std::min(
+            requestedVertexCounts[partIndex], atlas->vertexCount);
+        demand.indexCount = std::min(
+            requestedIndexCounts[partIndex], atlas->indexCount);
+        demand.admissionPressure =
+            requestedVertexCounts[partIndex] > atlas->vertexCount ||
+            requestedIndexCounts[partIndex] > atlas->indexCount;
+        if (demand.admissionPressure)
+            ++prepared.atlasPressurePartCount;
         demand.page = atlas->page;
         demand.vertexFirst = atlas->vertices.first;
         demand.indexFirst = atlas->indices.first;
@@ -4877,6 +5549,10 @@ bool CadRendererGL::renderIndirectShaded(
         plan.visibleInstances.size(),
         std::numeric_limits<uint32_t>::max());
     for (size_t i = 0; i < prepared.sourceInstanceIndices.size(); ++i) {
+        if (renderInterruptedAfter(deadlineWork)) {
+            prepared.valid = false;
+            return false;
+        }
         const uint32_t sourceIndex =
             prepared.sourceInstanceIndices[i];
         if (sourceIndex >= prepared.instanceIndexBySource.size()) {
@@ -4892,6 +5568,10 @@ bool CadRendererGL::renderIndirectShaded(
         std::numeric_limits<uint32_t>::max());
     for (size_t i = 0;
             i < prepared.pressureProxySourceInstanceIndices.size(); ++i) {
+        if (renderInterruptedAfter(deadlineWork)) {
+            prepared.valid = false;
+            return false;
+        }
         const uint32_t sourceIndex =
             prepared.pressureProxySourceInstanceIndices[i];
         if (sourceIndex >=
@@ -4994,6 +5674,11 @@ void CadRendererGL::renderInstanced(
         bool solidWireOnly,
         bool drawShaded)
 {
+    size_t deadlineWork = 256u;
+    bool interrupted = renderInterruptedAfter(deadlineWork);
+    if (interrupted)
+        return;
+
     // Build per-instance vertex data (transform + colour)
     const size_t nInst = plan.visibleInstances.size();
     if (nInst == 0) return;
@@ -5001,6 +5686,8 @@ void CadRendererGL::renderInstanced(
 
     std::vector<InstVertex> instData(nInst);
     for (size_t i = 0; i < nInst; ++i) {
+        if (renderInterruptedAfter(deadlineWork))
+            return;
         const auto& vi = plan.visibleInstances[i];
         std::memcpy(instData[i].transform, vi.transform.data(), 16 * sizeof(float));
         instData[i].color[0] = vi.rgba[0] / 255.0f;
@@ -5013,6 +5700,8 @@ void CadRendererGL::renderInstanced(
         instData.data(),
         static_cast<GLsizeiptr>(nInst * sizeof(InstVertex)),
         glue);
+    if (renderInterruptedAfter(deadlineWork))
+        return;
 
     const GLuint instVbo = gpuRes_->transientInstanceVbo();
     const float* vp = viewProj[0];
@@ -5107,6 +5796,10 @@ void CadRendererGL::renderInstanced(
         GLuint activeProgram = 0;
 
         for (const auto& item : plan.wireItems) {
+            if (renderInterruptedAfter(deadlineWork)) {
+                interrupted = true;
+                break;
+            }
             if (solidWireOnly && item.customWireStyle) continue;
             CadWireGpu* w = gpuRes_->wireFor(item.rep.part);
             if (!w || w->segCount == 0) continue;
@@ -5118,11 +5811,22 @@ void CadRendererGL::renderInstanced(
                 &*geometry->wire : nullptr;
             uint32_t runStart = 0;
             while (runStart < item.instanceCount) {
+                if (renderInterruptedAfter(deadlineWork)) {
+                    interrupted = true;
+                    break;
+                }
                 while (runStart < item.instanceCount &&
                     !cadInstanceDrawable(
                         plan, item, item.baseInstance + runStart,
-                        CadDrawChannel::Wire))
+                        CadDrawChannel::Wire)) {
+                    if (renderInterruptedAfter(deadlineWork)) {
+                        interrupted = true;
+                        break;
+                    }
                     ++runStart;
+                }
+                if (interrupted)
+                    break;
                 if (runStart == item.instanceCount)
                     break;
                 const uint32_t baseInstance =
@@ -5147,7 +5851,15 @@ void CadRendererGL::renderInstanced(
                                 item.baseInstance + runEnd].lodLevel),
                         progressive->progressiveMinimumLevel,
                         progressive->progressiveResidentLevel) == level))
+                {
+                    if (renderInterruptedAfter(deadlineWork)) {
+                        interrupted = true;
+                        break;
+                    }
                     ++runEnd;
+                }
+                if (interrupted)
+                    break;
 
                 const int variant = progressive && level < 15 ? 1 : 0;
                 const WireLocations& loc = locations[variant];
@@ -5230,11 +5942,15 @@ void CadRendererGL::renderInstanced(
                 }
                 runStart = runEnd;
             }
+            if (interrupted)
+                break;
         }
 
         glue->glUseProgramObjectARB(0);
         restoreWireRasterState(glue, rasterState, caps_.hasLineStipple);
     }
+    if (interrupted)
+        return;
 
     // --- Shaded pass ---
     if (drawShaded && !plan.shadedItems.empty()) {
@@ -5281,11 +5997,29 @@ void CadRendererGL::renderInstanced(
         bool lightsUploaded[2] = {false, false};
 
         for (const auto& item : plan.shadedItems) {
+            if (renderInterruptedAfter(deadlineWork)) {
+                interrupted = true;
+                break;
+            }
             CadTriGpu* t = gpuRes_->triFor(item.rep.part);
             if (!t || t->idxCount == 0) continue;
-            const size_t levelInstanceIndex =
-                cadFirstDrawableInstance(
-                    plan, item, CadDrawChannel::Shaded);
+            size_t levelInstanceIndex = plan.visibleInstances.size();
+            for (uint32_t instanceOffset = 0;
+                    instanceOffset < item.instanceCount; ++instanceOffset) {
+                if (renderInterruptedAfter(deadlineWork)) {
+                    interrupted = true;
+                    break;
+                }
+                const size_t candidate =
+                    item.baseInstance + instanceOffset;
+                if (cadInstanceDrawable(
+                        plan, item, candidate, CadDrawChannel::Shaded)) {
+                    levelInstanceIndex = candidate;
+                    break;
+                }
+            }
+            if (interrupted)
+                break;
             if (levelInstanceIndex >= plan.visibleInstances.size())
                 continue;
             const PartGeometry *geometry =
@@ -5359,19 +6093,37 @@ void CadRendererGL::renderInstanced(
             }
             uint32_t runStart = 0;
             while (runStart < item.instanceCount) {
+                if (renderInterruptedAfter(deadlineWork)) {
+                    interrupted = true;
+                    break;
+                }
                 while (runStart < item.instanceCount &&
                         !cadInstanceDrawable(
                             plan, item, item.baseInstance + runStart,
-                            CadDrawChannel::Shaded))
+                            CadDrawChannel::Shaded)) {
+                    if (renderInterruptedAfter(deadlineWork)) {
+                        interrupted = true;
+                        break;
+                    }
                     ++runStart;
+                }
+                if (interrupted)
+                    break;
                 if (runStart == item.instanceCount)
                     break;
                 uint32_t runEnd = runStart + 1;
                 while (runEnd < item.instanceCount &&
                         cadInstanceDrawable(
                             plan, item, item.baseInstance + runEnd,
-                            CadDrawChannel::Shaded))
+                            CadDrawChannel::Shaded)) {
+                    if (renderInterruptedAfter(deadlineWork)) {
+                        interrupted = true;
+                        break;
+                    }
                     ++runEnd;
+                }
+                if (interrupted)
+                    break;
                 const uint32_t baseInstance =
                     item.baseInstance + runStart;
                 if (!retainedVao ||
@@ -5403,10 +6155,16 @@ void CadRendererGL::renderInstanced(
                 glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
                 glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
             }
+            if (interrupted)
+                break;
         }
 
         glue->glUseProgramObjectARB(0);
-        lastRenderedTriangleCount_ = renderedTriangleCount;
+        lastRenderedTriangleCount_ =
+            renderedTriangleCount >
+                    UINT64_MAX - lastRenderedTriangleCount_ ?
+                UINT64_MAX :
+                lastRenderedTriangleCount_ + renderedTriangleCount;
     }
 }
 

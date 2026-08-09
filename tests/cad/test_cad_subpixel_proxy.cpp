@@ -6,6 +6,7 @@
 #include <Obol/cad/CadIds.h>
 
 #include <Inventor/SbViewportRegion.h>
+#include <Inventor/actions/SoGLRenderAction.h>
 #include <Inventor/nodes/SoDirectionalLight.h>
 #include <Inventor/nodes/SoOrthographicCamera.h>
 #include <Inventor/nodes/SoSeparator.h>
@@ -348,9 +349,19 @@ indirectProgressiveAtlasGrows()
             assembly->lastRenderedTriangleCount();
         const uint64_t expectedRich =
             static_cast<uint64_t>(partCount) * trianglesPerPart;
+        const Obol::CadGpuResourceSnapshot resources =
+            assembly->gpuResourceSnapshot();
         passed = richRendered && assembly->lastRenderTier() == 6 &&
             coarseTriangles == static_cast<uint64_t>(partCount) &&
-            richTriangles == expectedRich;
+            richTriangles == expectedRich && resources.frameSerial > 0 &&
+            resources.triangleAtlasAllocatedBytes > 0 &&
+            resources.triangleAtlasLiveBytes > 0 &&
+            resources.triangleAtlasLiveBytes <=
+                resources.triangleAtlasAllocatedBytes &&
+            resources.triangleAtlasPartCount == partCount &&
+            resources.triangleAtlasPageCount > 0 &&
+            resources.trackedBufferBytes >=
+                resources.triangleAtlasAllocatedBytes;
         if (!passed) {
             std::fprintf(stderr,
                 "indirect progressive atlas did not grow "
@@ -368,6 +379,594 @@ indirectProgressiveAtlasGrows()
     else
         unsetenv("OBOL_CAD_INDIRECT");
     root->unref();
+    return passed;
+}
+
+bool
+indirectProgressiveGenerationAppendsSuffix()
+{
+    const char *previousIndirect = std::getenv("OBOL_CAD_INDIRECT");
+    const bool hadPreviousIndirect = previousIndirect != nullptr;
+    const std::string previousIndirectValue =
+        previousIndirect ? previousIndirect : "";
+    setenv("OBOL_CAD_INDIRECT", "1", 1);
+
+    SoSeparator *root = new SoSeparator;
+    root->ref();
+    SoOrthographicCamera *camera = new SoOrthographicCamera;
+    camera->position.setValue(0.0f, 0.0f, 10.0f);
+    camera->nearDistance.setValue(0.1f);
+    camera->farDistance.setValue(100.0f);
+    camera->height.setValue(4.0f);
+    root->addChild(camera);
+    root->addChild(new SoDirectionalLight);
+    SoCADAssembly *assembly = new SoCADAssembly;
+    assembly->drawMode.setValue(SoCADAssembly::SHADED);
+    root->addChild(assembly);
+
+    constexpr uint32_t triangleCount = 128u;
+    constexpr uint64_t lineage = UINT64_C(0x7155465847454e31);
+    Obol::TriMesh rich;
+    rich.positions.reserve(triangleCount * 3u);
+    rich.indices.reserve(triangleCount * 3u);
+    rich.bounds.makeEmpty();
+    for (uint32_t triangle = 0; triangle < triangleCount; ++triangle) {
+        const float x = -1.6f +
+            0.2f * static_cast<float>(triangle % 16u);
+        const float y = -1.6f +
+            0.2f * static_cast<float>(triangle / 16u);
+        const SbVec3f points[3] = {
+            SbVec3f(x, y, 0.0f),
+            SbVec3f(x + 0.16f, y, 0.0f),
+            SbVec3f(x + 0.08f, y + 0.16f, 0.0f)
+        };
+        for (const SbVec3f& point : points) {
+            rich.indices.push_back(
+                static_cast<uint32_t>(rich.positions.size()));
+            rich.positions.push_back(point);
+            rich.bounds.extendBy(point);
+        }
+    }
+    rich.progressiveMinimumLevel = 0;
+    rich.progressiveResidentLevel = 15;
+    rich.progressiveIndexCount.fill(3u);
+    rich.progressivePositionCount.fill(3u);
+    rich.progressiveIndexCount[15] =
+        static_cast<uint32_t>(rich.indices.size());
+    rich.progressivePositionCount[15] =
+        static_cast<uint32_t>(rich.positions.size());
+    rich.progressiveQuantizationMinimum = rich.bounds.getMin();
+    rich.progressiveQuantizationMaximum = rich.bounds.getMax();
+    rich.progressiveLineage = lineage;
+
+    Obol::TriMesh coarse = rich;
+    coarse.positions.resize(3u);
+    coarse.indices.resize(3u);
+    coarse.progressiveResidentLevel = 0;
+
+    const Obol::PartId part =
+        Obol::CadIdBuilder::hash128("progressive-generation-suffix");
+    std::shared_ptr<Obol::PartGeometry> coarseGeometry(
+        new Obol::PartGeometry);
+    coarseGeometry->shaded = std::move(coarse);
+    coarseGeometry->conservativeBounds = rich.bounds;
+    assembly->upsertSharedParts({{part, coarseGeometry, false}});
+
+    Obol::InstanceRecord instance;
+    instance.part = part;
+    instance.parent = Obol::CadIdBuilder::Root();
+    instance.childName = "progressive-generation-suffix";
+    instance.localToRoot.makeIdentity();
+    instance.lodLevel = 15;
+    assembly->upsertInstanceAuto(instance);
+
+    const SbViewportRegion viewport(192, 192);
+    SoOffscreenRenderer renderer(viewport);
+    renderer.setComponents(SoOffscreenRenderer::RGB);
+    renderer.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
+    bool passed = render(renderer, root);
+    const int initialTier = assembly->lastRenderTier();
+    const Obol::CadGpuResourceSnapshot coarseResources =
+        assembly->gpuResourceSnapshot();
+
+    if (passed && initialTier == 6) {
+        std::shared_ptr<Obol::PartGeometry> richGeometry(
+            new Obol::PartGeometry);
+        richGeometry->shaded = std::move(rich);
+        richGeometry->conservativeBounds =
+            coarseGeometry->conservativeBounds;
+        assembly->upsertSharedParts({{part, richGeometry, true}});
+        passed = render(renderer, root);
+        const Obol::CadGpuResourceSnapshot richResources =
+            assembly->gpuResourceSnapshot();
+        const uint64_t expectedSuffixBytes =
+            static_cast<uint64_t>(triangleCount * 3u - 3u) *
+                (3u * sizeof(float) + sizeof(uint32_t));
+        passed = passed && assembly->lastRenderTier() == 6 &&
+            assembly->lastRenderedTriangleCount() == triangleCount &&
+            richResources.triangleAtlasFullUploadBytes ==
+                coarseResources.triangleAtlasFullUploadBytes &&
+            richResources.triangleAtlasSuffixUploadBytes >=
+                coarseResources.triangleAtlasSuffixUploadBytes +
+                    expectedSuffixBytes &&
+            richResources.triangleAtlasLineageReuseCount >
+                coarseResources.triangleAtlasLineageReuseCount;
+        if (!passed) {
+            std::fprintf(stderr,
+                "progressive immutable generation did not reuse atlas "
+                "prefix (tier=%d triangles=%llu full=%llu/%llu "
+                "suffix=%llu/%llu reuse=%llu/%llu)\n",
+                assembly->lastRenderTier(),
+                static_cast<unsigned long long>(
+                    assembly->lastRenderedTriangleCount()),
+                static_cast<unsigned long long>(
+                    coarseResources.triangleAtlasFullUploadBytes),
+                static_cast<unsigned long long>(
+                    richResources.triangleAtlasFullUploadBytes),
+                static_cast<unsigned long long>(
+                    coarseResources.triangleAtlasSuffixUploadBytes),
+                static_cast<unsigned long long>(
+                    richResources.triangleAtlasSuffixUploadBytes),
+                static_cast<unsigned long long>(
+                    coarseResources.triangleAtlasLineageReuseCount),
+                static_cast<unsigned long long>(
+                    richResources.triangleAtlasLineageReuseCount));
+        }
+    }
+
+    root->unref();
+    if (hadPreviousIndirect)
+        setenv("OBOL_CAD_INDIRECT",
+            previousIndirectValue.c_str(), 1);
+    else
+        unsetenv("OBOL_CAD_INDIRECT");
+    return passed;
+}
+
+bool
+ordinaryProgressiveGenerationAppendsSuffix()
+{
+    const char *previousIndirect = std::getenv("OBOL_CAD_INDIRECT");
+    const bool hadPreviousIndirect = previousIndirect != nullptr;
+    const std::string previousIndirectValue =
+        previousIndirect ? previousIndirect : "";
+    setenv("OBOL_CAD_INDIRECT", "0", 1);
+
+    SoSeparator *root = new SoSeparator;
+    root->ref();
+    SoOrthographicCamera *camera = new SoOrthographicCamera;
+    camera->position.setValue(0.0f, 0.0f, 10.0f);
+    camera->nearDistance.setValue(0.1f);
+    camera->farDistance.setValue(100.0f);
+    camera->height.setValue(4.0f);
+    root->addChild(camera);
+    root->addChild(new SoDirectionalLight);
+    SoCADAssembly *assembly = new SoCADAssembly;
+    assembly->drawMode.setValue(SoCADAssembly::SHADED);
+    root->addChild(assembly);
+
+    constexpr uint32_t triangleCount = 128u;
+    constexpr uint64_t lineage = UINT64_C(0x4f5244494e415259);
+    Obol::TriMesh rich;
+    rich.positions.reserve(triangleCount * 3u);
+    rich.indices.reserve(triangleCount * 3u);
+    rich.bounds.makeEmpty();
+    for (uint32_t triangle = 0; triangle < triangleCount; ++triangle) {
+        const float x = -1.6f +
+            0.2f * static_cast<float>(triangle % 16u);
+        const float y = -1.6f +
+            0.2f * static_cast<float>(triangle / 16u);
+        const SbVec3f points[3] = {
+            SbVec3f(x, y, 0.0f),
+            SbVec3f(x + 0.16f, y, 0.0f),
+            SbVec3f(x + 0.08f, y + 0.16f, 0.0f)
+        };
+        for (const SbVec3f& point : points) {
+            rich.indices.push_back(
+                static_cast<uint32_t>(rich.positions.size()));
+            rich.positions.push_back(point);
+            rich.bounds.extendBy(point);
+        }
+    }
+    rich.progressiveMinimumLevel = 0;
+    rich.progressiveResidentLevel = 15;
+    rich.progressiveIndexCount.fill(3u);
+    rich.progressivePositionCount.fill(3u);
+    rich.progressiveIndexCount[15] =
+        static_cast<uint32_t>(rich.indices.size());
+    rich.progressivePositionCount[15] =
+        static_cast<uint32_t>(rich.positions.size());
+    rich.progressiveQuantizationMinimum = rich.bounds.getMin();
+    rich.progressiveQuantizationMaximum = rich.bounds.getMax();
+    rich.progressiveLineage = lineage;
+
+    Obol::TriMesh coarse = rich;
+    coarse.positions.resize(3u);
+    coarse.indices.resize(3u);
+    coarse.progressiveResidentLevel = 0;
+
+    const Obol::PartId part =
+        Obol::CadIdBuilder::hash128("ordinary-progressive-suffix");
+    std::shared_ptr<Obol::PartGeometry> coarseGeometry(
+        new Obol::PartGeometry);
+    coarseGeometry->shaded = std::move(coarse);
+    coarseGeometry->conservativeBounds = rich.bounds;
+    assembly->upsertSharedParts({{part, coarseGeometry, false}});
+
+    Obol::InstanceRecord instance;
+    instance.part = part;
+    instance.parent = Obol::CadIdBuilder::Root();
+    instance.childName = "ordinary-progressive-suffix";
+    instance.localToRoot.makeIdentity();
+    instance.lodLevel = 15;
+    assembly->upsertInstanceAuto(instance);
+
+    const SbViewportRegion viewport(192, 192);
+    SoOffscreenRenderer renderer(viewport);
+    renderer.setComponents(SoOffscreenRenderer::RGB);
+    renderer.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
+    bool passed = render(renderer, root);
+    const Obol::CadGpuResourceSnapshot coarseResources =
+        assembly->gpuResourceSnapshot();
+
+    if (passed) {
+        std::shared_ptr<Obol::PartGeometry> richGeometry(
+            new Obol::PartGeometry);
+        richGeometry->shaded = std::move(rich);
+        richGeometry->conservativeBounds =
+            coarseGeometry->conservativeBounds;
+        assembly->upsertSharedParts({{part, richGeometry, true}});
+        passed = render(renderer, root);
+        const Obol::CadGpuResourceSnapshot richResources =
+            assembly->gpuResourceSnapshot();
+        const uint64_t expectedSuffixBytes =
+            static_cast<uint64_t>(triangleCount * 3u - 3u) *
+                (3u * sizeof(float) + sizeof(uint32_t));
+        const uint64_t expectedCopiedBytes =
+            3u * (3u * sizeof(float) + sizeof(uint32_t));
+        passed = passed && assembly->lastRenderTier() != 6 &&
+            assembly->lastRenderedTriangleCount() == triangleCount &&
+            richResources.ordinaryPartFullUploadBytes ==
+                coarseResources.ordinaryPartFullUploadBytes &&
+            richResources.ordinaryPartSuffixUploadBytes >=
+                coarseResources.ordinaryPartSuffixUploadBytes +
+                    expectedSuffixBytes &&
+            richResources.ordinaryPartGpuCopyBytes >=
+                coarseResources.ordinaryPartGpuCopyBytes +
+                    expectedCopiedBytes &&
+            richResources.ordinaryPartLineageReuseCount >
+                coarseResources.ordinaryPartLineageReuseCount;
+        if (!passed) {
+            std::fprintf(stderr,
+                "ordinary progressive generation did not copy/reuse prefix "
+                "(tier=%d triangles=%llu full=%llu/%llu suffix=%llu/%llu "
+                "copy=%llu/%llu reuse=%llu/%llu)\n",
+                assembly->lastRenderTier(),
+                static_cast<unsigned long long>(
+                    assembly->lastRenderedTriangleCount()),
+                static_cast<unsigned long long>(
+                    coarseResources.ordinaryPartFullUploadBytes),
+                static_cast<unsigned long long>(
+                    richResources.ordinaryPartFullUploadBytes),
+                static_cast<unsigned long long>(
+                    coarseResources.ordinaryPartSuffixUploadBytes),
+                static_cast<unsigned long long>(
+                    richResources.ordinaryPartSuffixUploadBytes),
+                static_cast<unsigned long long>(
+                    coarseResources.ordinaryPartGpuCopyBytes),
+                static_cast<unsigned long long>(
+                    richResources.ordinaryPartGpuCopyBytes),
+                static_cast<unsigned long long>(
+                    coarseResources.ordinaryPartLineageReuseCount),
+                static_cast<unsigned long long>(
+                    richResources.ordinaryPartLineageReuseCount));
+        }
+    }
+
+    root->unref();
+    if (hadPreviousIndirect)
+        setenv("OBOL_CAD_INDIRECT",
+            previousIndirectValue.c_str(), 1);
+    else
+        unsetenv("OBOL_CAD_INDIRECT");
+    return passed;
+}
+
+struct DeadlineAbortCounter {
+    size_t calls = 0;
+    size_t abortAt = static_cast<size_t>(-1);
+};
+
+SoGLRenderAction::AbortCode
+deadlineAbortCounter(void *userData)
+{
+    DeadlineAbortCounter *counter =
+        static_cast<DeadlineAbortCounter *>(userData);
+    if (!counter)
+        return SoGLRenderAction::CONTINUE;
+    ++counter->calls;
+    return counter->calls >= counter->abortAt ?
+        SoGLRenderAction::ABORT : SoGLRenderAction::CONTINUE;
+}
+
+bool
+ordinaryExecutorHonorsAbortSafePoints()
+{
+    struct EnvironmentSnapshot {
+        const char *name = nullptr;
+        bool present = false;
+        std::string value;
+    };
+    EnvironmentSnapshot settings[] = {
+        {"OBOL_CAD_FLAT_WIRE"},
+        {"OBOL_CAD_FLAT_SHADED"},
+        {"OBOL_CAD_INDIRECT"},
+        {"OBOL_CAD_REPLAY"}
+    };
+    for (EnvironmentSnapshot& setting : settings) {
+        const char *value = std::getenv(setting.name);
+        setting.present = value != nullptr;
+        if (value)
+            setting.value = value;
+        setenv(setting.name, "0", 1);
+    }
+    const auto restoreEnvironment = [&]() {
+        for (const EnvironmentSnapshot& setting : settings) {
+            if (setting.present)
+                setenv(setting.name, setting.value.c_str(), 1);
+            else
+                unsetenv(setting.name);
+        }
+    };
+
+    SoSeparator *root = new SoSeparator;
+    root->ref();
+    SoOrthographicCamera *camera = new SoOrthographicCamera;
+    camera->position.setValue(0.0f, 0.0f, 10.0f);
+    camera->nearDistance.setValue(0.1f);
+    camera->farDistance.setValue(100.0f);
+    camera->height.setValue(72.0f);
+    root->addChild(camera);
+
+    SoCADAssembly *assembly = new SoCADAssembly;
+    assembly->drawMode.setValue(SoCADAssembly::WIREFRAME);
+    root->addChild(assembly);
+
+    Obol::PartGeometry geometry;
+    geometry.wire = unitBox();
+    geometry.subpixelProxyEligible = false;
+    geometry.structuralProxy = false;
+    const Obol::PartId part =
+        Obol::CadIdBuilder::hash128("deadline-shared-wire-part");
+    assembly->upsertPart(part, geometry);
+    constexpr uint32_t instanceCount = 4096u;
+    for (uint32_t index = 0; index < instanceCount; ++index) {
+        Obol::InstanceRecord instance;
+        instance.part = part;
+        instance.parent = Obol::CadIdBuilder::Root();
+        instance.childName = "deadline-shared-wire-instance";
+        instance.occurrenceIndex = index;
+        instance.localToRoot.setTranslate(SbVec3f(
+            -31.5f + static_cast<float>(index % 64u),
+            -31.5f + static_cast<float>(index / 64u), 0.0f));
+        assembly->upsertInstanceAuto(instance);
+    }
+
+    const SbViewportRegion viewport(128, 128);
+    SoOffscreenRenderer renderer(viewport);
+    renderer.setComponents(SoOffscreenRenderer::RGB);
+    renderer.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
+
+    /* First build and then replay the retained plan so callback sampling in
+     * the measurement below belongs to the renderer executor, not plan
+     * construction. */
+    bool passed = render(renderer, root) && render(renderer, root);
+    const uint64_t planBuilds = assembly->framePlanBuildCount();
+    SoGLRenderAction *action = renderer.getGLRenderAction();
+    SoGLRenderAction::SoGLRenderAbortCB *previousCallback = nullptr;
+    void *previousData = nullptr;
+    if (action)
+        action->getAbortCallback(previousCallback, previousData);
+
+    DeadlineAbortCounter observed;
+    if (passed && action) {
+        action->setAbortCallback(deadlineAbortCounter, &observed);
+        passed = render(renderer, root) && !action->hasTerminated() &&
+            assembly->framePlanBuildCount() == planBuilds &&
+            observed.calls >= 10u;
+    } else {
+        passed = false;
+    }
+
+    DeadlineAbortCounter interrupted;
+    interrupted.abortAt = (std::max)(size_t(4), observed.calls / 2u);
+    const Obol::CadGpuResourceSnapshot beforeInterrupted =
+        assembly->gpuResourceSnapshot();
+    passed = passed && beforeInterrupted.frameSerial > 0 &&
+        beforeInterrupted.trackedBufferBytes > 0 &&
+        beforeInterrupted.ordinaryPartBufferBytes > 0;
+    if (passed) {
+        action->setAbortCallback(deadlineAbortCounter, &interrupted);
+        (void)renderer.render(root);
+        passed = action->hasTerminated() &&
+            interrupted.calls == interrupted.abortAt &&
+            assembly->gpuResourceSnapshot().frameSerial ==
+                beforeInterrupted.frameSerial;
+    }
+
+    if (action)
+        action->setAbortCallback(previousCallback, previousData);
+    if (passed) {
+        passed = render(renderer, root) && nonBlackPixels(renderer) != 0u &&
+            assembly->framePlanBuildCount() == planBuilds &&
+            assembly->gpuResourceSnapshot().frameSerial >
+                beforeInterrupted.frameSerial;
+    }
+    if (!passed) {
+        std::fprintf(stderr,
+            "ordinary CAD executor deadline contract failed "
+            "(tier=%d observed=%zu abortAt=%zu abortedCalls=%zu)\n",
+            assembly->lastRenderTier(), observed.calls,
+            interrupted.abortAt, interrupted.calls);
+    }
+
+    root->unref();
+    restoreEnvironment();
+    return passed;
+}
+
+bool
+indirectProgressiveAtlasPreservesCoverageUnderPressure()
+{
+    constexpr int partCount = 192;
+    constexpr int trianglesPerPart = 2000;
+
+    struct EnvironmentSnapshot {
+        const char *name;
+        bool present;
+        std::string value;
+    } settings[] = {
+        {"OBOL_CAD_INDIRECT", false, std::string()},
+        {"OBOL_CAD_ATLAS_MB", false, std::string()}
+    };
+    for (EnvironmentSnapshot& setting : settings) {
+        const char *value = std::getenv(setting.name);
+        setting.present = value != nullptr;
+        if (value)
+            setting.value = value;
+    }
+    setenv("OBOL_CAD_INDIRECT", "1", 1);
+    /* One ordinary atlas page fits, two do not.  Every minimum prefix fits
+     * comfortably, while all requested rich prefixes require the second
+     * page. */
+    setenv("OBOL_CAD_ATLAS_MB", "20", 1);
+
+    SoSeparator *root = new SoSeparator;
+    root->ref();
+    SoOrthographicCamera *camera = new SoOrthographicCamera;
+    camera->position.setValue(0.0f, 0.0f, 10.0f);
+    camera->nearDistance.setValue(0.1f);
+    camera->farDistance.setValue(100.0f);
+    camera->height.setValue(150.0f);
+    root->addChild(camera);
+    root->addChild(new SoDirectionalLight);
+    SoCADAssembly *assembly = new SoCADAssembly;
+    assembly->drawMode.setValue(SoCADAssembly::SHADED);
+    root->addChild(assembly);
+
+    Obol::TriMesh mesh;
+    mesh.positions.reserve(trianglesPerPart * 3u);
+    mesh.indices.reserve(trianglesPerPart * 3u);
+    mesh.bounds.makeEmpty();
+    for (int triangle = 0; triangle < trianglesPerPart; ++triangle) {
+        const float x = -0.48f +
+            0.015f * static_cast<float>(triangle % 64);
+        const float y = -0.48f +
+            0.015f * static_cast<float>(triangle / 64);
+        const SbVec3f points[3] = {
+            SbVec3f(x, y, 0.0f),
+            SbVec3f(x + 0.012f, y, 0.0f),
+            SbVec3f(x + 0.006f, y + 0.010f, 0.0f)
+        };
+        for (const SbVec3f& point : points) {
+            mesh.indices.push_back(
+                static_cast<uint32_t>(mesh.positions.size()));
+            mesh.positions.push_back(point);
+            mesh.bounds.extendBy(point);
+        }
+    }
+    mesh.progressiveMinimumLevel = 0;
+    mesh.progressiveResidentLevel = 15;
+    mesh.progressiveIndexCount.fill(3u);
+    mesh.progressivePositionCount.fill(3u);
+    mesh.progressiveIndexCount[15] =
+        static_cast<uint32_t>(mesh.indices.size());
+    mesh.progressivePositionCount[15] =
+        static_cast<uint32_t>(mesh.positions.size());
+    mesh.progressiveQuantizationMinimum = mesh.bounds.getMin();
+    mesh.progressiveQuantizationMaximum = mesh.bounds.getMax();
+
+    std::vector<Obol::InstanceLodUpdate> richCuts;
+    richCuts.reserve(partCount);
+    for (int index = 0; index < partCount; ++index) {
+        char name[64] = {};
+        std::snprintf(name, sizeof(name),
+            "progressive-pressure-%03d", index);
+        Obol::PartGeometry geometry;
+        geometry.shaded = mesh;
+        geometry.subpixelProxyEligible = true;
+        const Obol::PartId part = Obol::CadIdBuilder::hash128(name);
+        assembly->upsertPart(part, geometry);
+        Obol::InstanceRecord instance;
+        instance.part = part;
+        instance.parent = Obol::CadIdBuilder::Root();
+        instance.childName = name;
+        instance.occurrenceIndex = static_cast<uint32_t>(index);
+        instance.localToRoot.setTranslate(SbVec3f(
+            -60.0f + 7.0f * static_cast<float>(index % 18),
+            -35.0f + 7.0f * static_cast<float>(index / 18), 0.0f));
+        instance.lodLevel = 0;
+        const Obol::InstanceId id =
+            assembly->upsertInstanceAuto(instance);
+        richCuts.push_back({id, 15});
+    }
+
+    const SbViewportRegion viewport(256, 256);
+    SoOffscreenRenderer renderer(viewport);
+    renderer.setComponents(SoOffscreenRenderer::RGB);
+    renderer.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
+    bool passed = render(renderer, root);
+    const int tier = assembly->lastRenderTier();
+    if (passed && tier == 6) {
+        assembly->updateInstanceLodLevels(richCuts);
+        passed = render(renderer, root);
+        const uint64_t pressuredTriangles =
+            assembly->lastRenderedTriangleCount();
+        const uint64_t requestedTriangles =
+            static_cast<uint64_t>(partCount) * trianglesPerPart;
+        const Obol::CadGpuResourceSnapshot pressured =
+            assembly->gpuResourceSnapshot();
+        const uint64_t pressuredSerial = pressured.frameSerial;
+        passed = passed && pressured.atlasAdmissionPressure &&
+            pressured.pressureProxyCount == 0u &&
+            pressured.triangleAtlasPartCount == partCount &&
+            pressuredTriangles >= static_cast<uint64_t>(partCount) &&
+            pressuredTriangles < requestedTriangles &&
+            pressured.triangleAtlasAllocatedBytes <=
+                pressured.triangleAtlasBudgetBytes;
+        if (passed) {
+            passed = render(renderer, root) &&
+                assembly->lastRenderedTriangleCount() ==
+                    pressuredTriangles;
+            const Obol::CadGpuResourceSnapshot replayed =
+                assembly->gpuResourceSnapshot();
+            passed = passed && replayed.frameSerial > pressuredSerial &&
+                replayed.atlasAdmissionPressure &&
+                replayed.pressureProxyCount == 0u;
+        }
+        if (!passed) {
+            std::fprintf(stderr,
+                "coverage-first atlas pressure contract failed "
+                "(tier=%d rendered=%llu requested=%llu parts=%zu "
+                "proxies=%zu pressure=%d allocated=%zu budget=%zu)\n",
+                assembly->lastRenderTier(),
+                static_cast<unsigned long long>(pressuredTriangles),
+                static_cast<unsigned long long>(requestedTriangles),
+                pressured.triangleAtlasPartCount,
+                pressured.pressureProxyCount,
+                pressured.atlasAdmissionPressure ? 1 : 0,
+                pressured.triangleAtlasAllocatedBytes,
+                pressured.triangleAtlasBudgetBytes);
+        }
+    }
+
+    root->unref();
+    for (const EnvironmentSnapshot& setting : settings) {
+        if (setting.present)
+            setenv(setting.name, setting.value.c_str(), 1);
+        else
+            unsetenv(setting.name);
+    }
     return passed;
 }
 
@@ -959,6 +1558,14 @@ main()
         return 1;
     }
     if (!indirectProgressiveAtlasGrows())
+        return 1;
+    if (!indirectProgressiveGenerationAppendsSuffix())
+        return 1;
+    if (!ordinaryProgressiveGenerationAppendsSuffix())
+        return 1;
+    if (!ordinaryExecutorHonorsAbortSafePoints())
+        return 1;
+    if (!indirectProgressiveAtlasPreservesCoverageUnderPressure())
         return 1;
     return 0;
 }
