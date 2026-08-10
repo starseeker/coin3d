@@ -58,8 +58,10 @@
 #include <Inventor/SbVec2s.h>
 #include <Inventor/misc/SoState.h>
 #include <Inventor/actions/SoAction.h>
+#include <Inventor/actions/SoGetBoundingBoxAction.h>
 #include <Inventor/actions/SoGLRenderAction.h>
 #include <Inventor/actions/SoHandleEventAction.h>
+#include <Inventor/actions/SoRayPickAction.h>
 #include <Inventor/nodes/SoCallback.h>
 #include <Inventor/nodes/SoOrthographicCamera.h>
 #include <Inventor/nodes/SoSeparator.h>
@@ -208,6 +210,26 @@ SoHUDKit::removeWidget(SoNode * widget)
   SoGroup * grp = static_cast<SoGroup *>(sep);
   int idx = grp->findChild(widget);
   if (idx >= 0) grp->removeChild(idx);
+}
+
+/*!
+  HUD geometry is expressed in viewport pixels and must not contribute to
+  the model-space bounds used by camera viewAll operations.
+*/
+void
+SoHUDKit::getBoundingBox(SoGetBoundingBoxAction * OBOL_UNUSED_ARG(action))
+{
+}
+
+/*!
+  CAD ray picking traverses the model-space scene.  Traversing the HUD's
+  private camera would recompute that action's ray in pixel space and leave
+  later model nodes using the wrong ray.  Interactive HUD widgets receive
+  pointer input through handleEvent() instead.
+*/
+void
+SoHUDKit::rayPick(SoRayPickAction * OBOL_UNUSED_ARG(action))
+{
 }
 
 /*!
