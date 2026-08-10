@@ -768,6 +768,7 @@ private:
         uint32_t page, const SoGLContext *glue);
     void releaseTriangleAtlasPart(
         PartId pid, const SoGLContext *glue);
+    bool compactTriangleAtlasPages(const SoGLContext *glue);
     void bumpTriangleAtlasRevision() noexcept;
     static size_t pointAllocatedBytes(const CadPointGpu& point) noexcept;
     static size_t wireAllocatedBytes(const CadWireGpu& wire) noexcept;

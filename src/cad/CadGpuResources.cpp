@@ -1320,6 +1320,269 @@ void CadGpuResources::releaseTriangleAtlasPart(
         deleteTriangleAtlasPage(pageIndex, glue);
 }
 
+/*
+ * Consolidate live ranges into the earliest compatible ordinary pages.
+ *
+ * Progressive tails deliberately shrink only after a long hysteresis, but
+ * independent vertex/index best-fit allocation can then leave hundreds of
+ * megabytes free in ranges which no requested pair can use.  Allocating a
+ * second atlas would violate the configured ceiling.  Instead, rebuild one
+ * existing page at a time through a single page-sized GPU scratch target,
+ * pull fitting parts from later pages, and release pages which become empty.
+ * Source meshes are not revisited and the transient overhead is bounded by
+ * one ordinary page rather than the scene size.
+ *
+ * Every moved PartId retains its generation and richest resident prefix.
+ * Bumping the atlas revision invalidates prepared command offsets before the
+ * next frame can use them.
+ */
+bool CadGpuResources::compactTriangleAtlasPages(
+        const SoGLContext *glue)
+{
+    if (!glue || !glue->glCopyBufferSubData ||
+            triangleAtlasPages_.empty() ||
+            triangleAtlasParts_.empty())
+        return false;
+
+    std::vector<std::vector<PartId>> pageParts(
+        triangleAtlasPages_.size());
+    for (const auto& item : triangleAtlasParts_)
+        if (item.second.page < pageParts.size())
+            pageParts[item.second.page].push_back(item.first);
+
+    const auto vertexReserve = [](const CadTriangleAtlasPart& part) {
+        return cadAtlasReservedCount(
+            part.vertexCount, part.progressive, 64u);
+    };
+    const auto indexReserve = [](const CadTriangleAtlasPart& part) {
+        return cadAtlasReservedCount(
+            part.indexCount, part.progressive, 192u);
+    };
+
+    bool movedAny = false;
+    for (uint32_t targetIndex = 0;
+            targetIndex < triangleAtlasPages_.size(); ++targetIndex) {
+        CadTriangleAtlasPage *target =
+            triangleAtlasPage(targetIndex);
+        if (!target || target->dedicated || !target->partCount)
+            continue;
+
+        std::vector<PartId> packed;
+        packed.reserve(target->partCount + 32u);
+        uint64_t packedVertices = 0;
+        uint64_t packedIndices = 0;
+        for (const PartId& pid : pageParts[targetIndex]) {
+            const auto found = triangleAtlasParts_.find(pid);
+            if (found == triangleAtlasParts_.end() ||
+                    found->second.page != targetIndex)
+                continue;
+            packed.push_back(pid);
+            packedVertices += vertexReserve(found->second);
+            packedIndices += indexReserve(found->second);
+        }
+        if (packedVertices > target->vertexCapacity ||
+                packedIndices > target->indexCapacity)
+            continue;
+
+        /* Pull compatible parts only from later, not-yet-compacted pages.
+         * Exact storesNormals matching avoids manufacturing a normal stream
+         * while copying a flat-shaded page. */
+        for (uint32_t sourceIndex = targetIndex + 1u;
+                sourceIndex < triangleAtlasPages_.size(); ++sourceIndex) {
+            CadTriangleAtlasPage *source =
+                triangleAtlasPage(sourceIndex);
+            if (!source || source->dedicated || !source->partCount ||
+                    source->storesNormals != target->storesNormals)
+                continue;
+            for (const PartId& pid : pageParts[sourceIndex]) {
+                const auto found = triangleAtlasParts_.find(pid);
+                if (found == triangleAtlasParts_.end() ||
+                        found->second.page != sourceIndex)
+                    continue;
+                const uint32_t vertices = vertexReserve(found->second);
+                const uint32_t indices = indexReserve(found->second);
+                if (packedVertices + vertices > target->vertexCapacity ||
+                        packedIndices + indices > target->indexCapacity)
+                    continue;
+                packed.push_back(pid);
+                packedVertices += vertices;
+                packedIndices += indices;
+            }
+        }
+
+        /* A tightly packed rebuild is useful even when no cross-page move is
+         * possible: it restores one contiguous growth range after delayed
+         * per-part tail shrinking. */
+        bool layoutChanged = packed.size() != target->partCount;
+        uint32_t nextVertex = 0;
+        uint32_t nextIndex = 0;
+        for (const PartId& pid : packed) {
+            const auto found = triangleAtlasParts_.find(pid);
+            if (found == triangleAtlasParts_.end())
+                continue;
+            const CadTriangleAtlasPart& part = found->second;
+            if (part.page != targetIndex ||
+                    part.vertices.first != nextVertex ||
+                    part.indices.first != nextIndex ||
+                    part.vertices.capacity != vertexReserve(part) ||
+                    part.indices.capacity != indexReserve(part))
+                layoutChanged = true;
+            nextVertex += vertexReserve(part);
+            nextIndex += indexReserve(part);
+        }
+        if (!layoutChanged)
+            continue;
+
+        GLuint newPos = 0;
+        GLuint newNorm = 0;
+        GLuint newIdx = 0;
+        glue->glGenBuffers(1, &newPos);
+        if (target->storesNormals)
+            glue->glGenBuffers(1, &newNorm);
+        glue->glGenBuffers(1, &newIdx);
+        if (!newPos || !newIdx ||
+                (target->storesNormals && !newNorm)) {
+            const GLuint failed[] = {newPos, newNorm, newIdx};
+            for (GLuint buffer : failed)
+                if (buffer)
+                    glue->glDeleteBuffers(1, &buffer);
+            return movedAny;
+        }
+
+        glue->glBindBuffer(GL_COPY_WRITE_BUFFER, newPos);
+        glue->glBufferData(
+            GL_COPY_WRITE_BUFFER,
+            static_cast<GLsizeiptr>(target->vertexCapacity) *
+                3 * sizeof(float),
+            nullptr, GL_DYNAMIC_DRAW);
+        if (newNorm) {
+            glue->glBindBuffer(GL_COPY_WRITE_BUFFER, newNorm);
+            glue->glBufferData(
+                GL_COPY_WRITE_BUFFER,
+                static_cast<GLsizeiptr>(target->vertexCapacity) *
+                    3 * sizeof(float),
+                nullptr, GL_DYNAMIC_DRAW);
+        }
+        glue->glBindBuffer(GL_COPY_WRITE_BUFFER, newIdx);
+        glue->glBufferData(
+            GL_COPY_WRITE_BUFFER,
+            static_cast<GLsizeiptr>(target->indexCapacity) *
+                sizeof(uint32_t),
+            nullptr, GL_DYNAMIC_DRAW);
+
+        nextVertex = 0;
+        nextIndex = 0;
+        for (const PartId& pid : packed) {
+            auto found = triangleAtlasParts_.find(pid);
+            if (found == triangleAtlasParts_.end())
+                continue;
+            CadTriangleAtlasPart& part = found->second;
+            CadTriangleAtlasPage *source =
+                triangleAtlasPage(part.page);
+            if (!source)
+                continue;
+            const uint32_t reservedVertices = vertexReserve(part);
+            const uint32_t reservedIndices = indexReserve(part);
+
+            glue->glBindBuffer(GL_COPY_READ_BUFFER, source->posBuf);
+            glue->glBindBuffer(GL_COPY_WRITE_BUFFER, newPos);
+            glue->glCopyBufferSubData(
+                GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER,
+                static_cast<GLintptr>(part.vertices.first) *
+                    3 * sizeof(float),
+                static_cast<GLintptr>(nextVertex) *
+                    3 * sizeof(float),
+                static_cast<GLsizeiptr>(part.vertexCount) *
+                    3 * sizeof(float));
+            if (newNorm) {
+                glue->glBindBuffer(
+                    GL_COPY_READ_BUFFER, source->normBuf);
+                glue->glBindBuffer(GL_COPY_WRITE_BUFFER, newNorm);
+                glue->glCopyBufferSubData(
+                    GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER,
+                    static_cast<GLintptr>(part.vertices.first) *
+                        3 * sizeof(float),
+                    static_cast<GLintptr>(nextVertex) *
+                        3 * sizeof(float),
+                    static_cast<GLsizeiptr>(part.vertexCount) *
+                        3 * sizeof(float));
+            }
+            glue->glBindBuffer(GL_COPY_READ_BUFFER, source->idxBuf);
+            glue->glBindBuffer(GL_COPY_WRITE_BUFFER, newIdx);
+            glue->glCopyBufferSubData(
+                GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER,
+                static_cast<GLintptr>(part.indices.first) *
+                    sizeof(uint32_t),
+                static_cast<GLintptr>(nextIndex) *
+                    sizeof(uint32_t),
+                static_cast<GLsizeiptr>(part.indexCount) *
+                    sizeof(uint32_t));
+
+            if (part.page != targetIndex) {
+                source->largestFreeVertexCapacity = std::max(
+                    source->largestFreeVertexCapacity,
+                    cadAtlasFreeRange(
+                        source->freeVertices, part.vertices));
+                source->largestFreeIndexCapacity = std::max(
+                    source->largestFreeIndexCapacity,
+                    cadAtlasFreeRange(
+                        source->freeIndices, part.indices));
+                if (source->partCount)
+                    --source->partCount;
+            }
+            part.page = targetIndex;
+            part.vertices = {nextVertex, reservedVertices};
+            part.indices = {nextIndex, reservedIndices};
+            nextVertex += reservedVertices;
+            nextIndex += reservedIndices;
+        }
+        glue->glBindBuffer(GL_COPY_READ_BUFFER, 0);
+        glue->glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
+
+        if (target->vao && glue->glDeleteVertexArrays)
+            glue->glDeleteVertexArrays(1, &target->vao);
+        target->vao = 0;
+        const GLuint oldGeometry[] = {
+            target->posBuf, target->normBuf, target->idxBuf
+        };
+        for (GLuint buffer : oldGeometry)
+            if (buffer)
+                glue->glDeleteBuffers(1, &buffer);
+        target->posBuf = newPos;
+        target->normBuf = newNorm;
+        target->idxBuf = newIdx;
+        target->instanceVbo = 0;
+        target->partCount = packed.size();
+        target->freeVertices.clear();
+        target->freeIndices.clear();
+        if (nextVertex < target->vertexCapacity)
+            target->freeVertices.push_back(
+                {nextVertex, target->vertexCapacity - nextVertex});
+        if (nextIndex < target->indexCapacity)
+            target->freeIndices.push_back(
+                {nextIndex, target->indexCapacity - nextIndex});
+        target->largestFreeVertexCapacity =
+            target->vertexCapacity - nextVertex;
+        target->largestFreeIndexCapacity =
+            target->indexCapacity - nextIndex;
+
+        /* Copies have been enqueued and buffer deletion is deferred by GL;
+         * empty source pages can now return their complete allocation. */
+        for (uint32_t sourceIndex = targetIndex + 1u;
+                sourceIndex < triangleAtlasPages_.size(); ++sourceIndex) {
+            CadTriangleAtlasPage *source =
+                triangleAtlasPage(sourceIndex);
+            if (source && !source->partCount)
+                deleteTriangleAtlasPage(sourceIndex, glue);
+        }
+        movedAny = true;
+    }
+
+    if (movedAny)
+        bumpTriangleAtlasRevision();
+    return movedAny;
+}
+
 static void
 cadAtlasUploadZeroNormals(const SoGLContext *glue, GLintptr byteOffset,
                           uint32_t vertexCount)
@@ -2048,10 +2311,16 @@ void CadGpuResources::endTriangleAtlasFrame(const SoGLContext *glue)
         triangleAtlasMaintenanceDeferred_ = false;
         return;
     }
-    constexpr uint64_t shrinkDelayFrames = 120u;
+    /* CPU resident-prefix compaction already has a 750 ms quiet-view gate.
+     * Keeping a second six-second/120-frame GPU delay retained obsolete
+     * reservations indefinitely in an event-driven stable view.  Eight
+     * completed presentations still absorb transient level oscillation while
+     * allowing normal calibration/handoff frames to return GPU memory. */
+    constexpr uint64_t shrinkDelayFrames = 8u;
     constexpr uint64_t unusedRetentionFrames = 600u;
 
     std::vector<PartId> stale;
+    bool reducedResidentRanges = false;
     for (auto& item : triangleAtlasParts_) {
         CadTriangleAtlasPart& part = item.second;
         if (part.lastUsedFrame != triangleAtlasFrame_) {
@@ -2115,13 +2384,27 @@ void CadGpuResources::endTriangleAtlasFrame(const SoGLContext *glue)
         cadReplaceAccountedBytes(triangleAtlasLiveBytes_,
             previousLiveBytes, triangleAtlasPartLiveBytes(part, page));
         if (shrunk || part.vertexCount != previousVertexCount ||
-                part.indexCount != previousIndexCount)
+                part.indexCount != previousIndexCount) {
+            reducedResidentRanges = true;
             bumpTriangleAtlasRevision();
+        }
     }
     for (PartId pid : stale) {
         ++triangleAtlasReclamationCount_;
         releaseTriangleAtlasPart(pid, glue);
     }
+
+    /* At ordinary occupancy, page slack is useful growth headroom.  Under a
+     * nearly exhausted allocation ceiling, a large live/allocated divergence
+     * is stranded capacity and prevents the next view-important PoP suffix
+     * from being admitted.  Consolidate only after the delayed shrink proof
+     * and only when at least a third of allocated storage is now holes. */
+    if (reducedResidentRanges && triangleAtlasBudgetBytes_ > 0 &&
+            triangleAtlasAllocatedBytes_ >=
+                triangleAtlasBudgetBytes_ / 4u * 3u &&
+            triangleAtlasLiveBytes_ <
+                triangleAtlasAllocatedBytes_ / 3u * 2u)
+        (void)compactTriangleAtlasPages(glue);
 }
 
 // ---------------------------------------------------------------------------
