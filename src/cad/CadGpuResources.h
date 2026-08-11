@@ -410,6 +410,18 @@ public:
         GLsizei requiredTriPoints = 0,
         GLsizei requiredTriIndices = 0) const;
 
+    /**
+     * Return true when an uploaded progressive prefix may be retained for a
+     * newly published immutable generation.
+     *
+     * A non-zero lineage is the producer's certificate that the new CPU
+     * arrays begin with exactly the bytes already resident on the GPU.  A
+     * zero lineage is deliberately conservative and must never be used to
+     * extend CPU array counts to match an older GPU allocation.
+     */
+    bool hasCompatibleProgressivePrefix(
+        PartId pid, uint64_t progressiveLineage) const;
+
     /** Return the point GPU rep for @p pid, or nullptr if not uploaded. */
     const CadPointGpu* pointFor(PartId pid) const;
 
@@ -677,12 +689,16 @@ public:
      */
     bool beginFrameGpuTimer(const SoGLContext *glue);
     void endFrameGpuTimer(uint64_t triangleCount,
+                          float pointProxyPixelThreshold,
                           const SoGLContext *glue);
     uint64_t lastGpuTimeNanoseconds() const noexcept {
         return gpuTimerLastNanoseconds_;
     }
     uint64_t lastGpuTriangleCount() const noexcept {
         return gpuTimerLastTriangleCount_;
+    }
+    float lastGpuPointProxyPixelThreshold() const noexcept {
+        return gpuTimerLastPointProxyPixelThreshold_;
     }
     uint64_t gpuTimerSampleSerial() const noexcept {
         return gpuTimerLastCompletedSubmission_;
@@ -745,6 +761,7 @@ private:
         GLuint query = 0;
         bool pending = false;
         uint64_t triangleCount = 0;
+        float pointProxyPixelThreshold = 1.0f;
         uint64_t submission = 0;
     };
     std::array<GpuTimerSlot, 3> gpuTimerSlots_;
@@ -756,6 +773,7 @@ private:
     uint64_t gpuTimerLastCompletedSubmission_ = 0;
     uint64_t gpuTimerLastNanoseconds_ = 0;
     uint64_t gpuTimerLastTriangleCount_ = 0;
+    float gpuTimerLastPointProxyPixelThreshold_ = 1.0f;
 
     void deletePointGpu(CadPointGpu& p, const SoGLContext * glue);
     void deleteWireGpu(CadWireGpu& w, const SoGLContext * glue);

@@ -672,6 +672,131 @@ ordinaryProgressiveGenerationAppendsSuffix()
     return passed;
 }
 
+bool
+ordinaryProgressiveZeroLineageReplacesWithoutOverread()
+{
+    const char *previousIndirect = std::getenv("OBOL_CAD_INDIRECT");
+    const bool hadPreviousIndirect = previousIndirect != nullptr;
+    const std::string previousIndirectValue =
+        previousIndirect ? previousIndirect : "";
+    setenv("OBOL_CAD_INDIRECT", "0", 1);
+
+    SoSeparator *root = new SoSeparator;
+    root->ref();
+    SoOrthographicCamera *camera = new SoOrthographicCamera;
+    camera->position.setValue(0.0f, 0.0f, 10.0f);
+    camera->nearDistance.setValue(0.1f);
+    camera->farDistance.setValue(100.0f);
+    camera->height.setValue(4.0f);
+    root->addChild(camera);
+    root->addChild(new SoDirectionalLight);
+    SoCADAssembly *assembly = new SoCADAssembly;
+    assembly->drawMode.setValue(SoCADAssembly::SHADED);
+    root->addChild(assembly);
+
+    Obol::TriMesh rich;
+    rich.bounds.makeEmpty();
+    for (uint32_t triangle = 0; triangle < 64u; ++triangle) {
+        const float x = -1.5f + 0.35f * static_cast<float>(triangle % 8u);
+        const float y = -1.5f + 0.35f * static_cast<float>(triangle / 8u);
+        const SbVec3f points[3] = {
+            SbVec3f(x, y, 0.0f),
+            SbVec3f(x + 0.25f, y, 0.0f),
+            SbVec3f(x + 0.12f, y + 0.25f, 0.0f)
+        };
+        for (const SbVec3f& point : points) {
+            rich.indices.push_back(
+                static_cast<uint32_t>(rich.positions.size()));
+            rich.positions.push_back(point);
+            rich.bounds.extendBy(point);
+        }
+    }
+    rich.progressiveMinimumLevel = 0;
+    rich.progressiveResidentLevel = 15;
+    rich.progressiveIndexCount.fill(3u);
+    rich.progressivePositionCount.fill(3u);
+    rich.progressiveIndexCount[15] =
+        static_cast<uint32_t>(rich.indices.size());
+    rich.progressivePositionCount[15] =
+        static_cast<uint32_t>(rich.positions.size());
+    rich.progressiveQuantizationMinimum = rich.bounds.getMin();
+    rich.progressiveQuantizationMaximum = rich.bounds.getMax();
+    /* Zero explicitly means no cross-generation prefix identity. */
+    rich.progressiveLineage = 0;
+
+    Obol::TriMesh coarse = rich;
+    coarse.positions.resize(3u);
+    coarse.indices.resize(3u);
+    coarse.progressiveResidentLevel = 0;
+
+    const Obol::PartId part =
+        Obol::CadIdBuilder::hash128("ordinary-zero-lineage-replacement");
+    std::shared_ptr<Obol::PartGeometry> richGeometry(
+        new Obol::PartGeometry);
+    richGeometry->shaded = std::move(rich);
+    richGeometry->conservativeBounds = richGeometry->shaded->bounds;
+    assembly->upsertSharedParts({{part, richGeometry, false}});
+
+    Obol::InstanceRecord instance;
+    instance.part = part;
+    instance.parent = Obol::CadIdBuilder::Root();
+    instance.childName = "ordinary-zero-lineage-replacement";
+    instance.localToRoot.makeIdentity();
+    instance.lodLevel = 15;
+    assembly->upsertInstanceAuto(instance);
+
+    const SbViewportRegion viewport(192, 192);
+    SoOffscreenRenderer renderer(viewport);
+    renderer.setComponents(SoOffscreenRenderer::RGB);
+    renderer.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
+    bool passed = render(renderer, root) &&
+        assembly->lastRenderedTriangleCount() == 64u;
+    const Obol::CadGpuResourceSnapshot richResources =
+        assembly->gpuResourceSnapshot();
+
+    if (passed) {
+        std::shared_ptr<Obol::PartGeometry> coarseGeometry(
+            new Obol::PartGeometry);
+        coarseGeometry->shaded = std::move(coarse);
+        coarseGeometry->conservativeBounds =
+            richGeometry->conservativeBounds;
+        assembly->upsertSharedParts({{part, coarseGeometry, true}});
+        passed = render(renderer, root);
+        const Obol::CadGpuResourceSnapshot coarseResources =
+            assembly->gpuResourceSnapshot();
+        const uint64_t oneTriangleBytes =
+            3u * (3u * sizeof(float) + sizeof(uint32_t));
+        passed = passed && assembly->lastRenderedTriangleCount() == 1u &&
+            coarseResources.ordinaryPartFullUploadBytes ==
+                richResources.ordinaryPartFullUploadBytes +
+                    oneTriangleBytes &&
+            coarseResources.ordinaryPartLineageReuseCount ==
+                richResources.ordinaryPartLineageReuseCount;
+        if (!passed) {
+            std::fprintf(stderr,
+                "zero-lineage progressive replacement retained stale "
+                "CPU counts (triangles=%llu full=%llu/%llu reuse=%llu/%llu)\n",
+                static_cast<unsigned long long>(
+                    assembly->lastRenderedTriangleCount()),
+                static_cast<unsigned long long>(
+                    richResources.ordinaryPartFullUploadBytes),
+                static_cast<unsigned long long>(
+                    coarseResources.ordinaryPartFullUploadBytes),
+                static_cast<unsigned long long>(
+                    richResources.ordinaryPartLineageReuseCount),
+                static_cast<unsigned long long>(
+                    coarseResources.ordinaryPartLineageReuseCount));
+        }
+    }
+
+    root->unref();
+    if (hadPreviousIndirect)
+        setenv("OBOL_CAD_INDIRECT", previousIndirectValue.c_str(), 1);
+    else
+        unsetenv("OBOL_CAD_INDIRECT");
+    return passed;
+}
+
 struct DeadlineAbortCounter {
     size_t calls = 0;
     size_t abortAt = static_cast<size_t>(-1);
@@ -1551,6 +1676,36 @@ main()
         return 1;
     }
 
+    /* Hosts use this token to distinguish a one-time retained preparation
+     * deadline from steady draw overload.  An unchanged prepared replay must
+     * eventually leave it stable, while a camera-classification input change
+     * must advance it. */
+    bool observedSteadyReplay = false;
+    for (int attempt = 0; attempt < 3 && !observedSteadyReplay; ++attempt) {
+        const uint64_t before = assembly->renderPreparationSerial();
+        if (!render(renderer, root)) {
+            std::fprintf(stderr,
+                "preparation-serial replay did not render\n");
+            root->unref();
+            return 1;
+        }
+        observedSteadyReplay =
+            assembly->renderPreparationSerial() == before;
+    }
+    const uint64_t beforeClassification =
+        assembly->renderPreparationSerial();
+    const float threshold = assembly->pointProxyPixelThreshold.getValue();
+    assembly->pointProxyPixelThreshold.setValue(
+        threshold < 64.0f ? threshold + 1.0f : threshold - 1.0f);
+    if (!observedSteadyReplay || !render(renderer, root) ||
+            assembly->renderPreparationSerial() == beforeClassification) {
+        std::fprintf(stderr,
+            "preparation serial did not separate replay from "
+            "classification work\n");
+        root->unref();
+        return 1;
+    }
+
     root->unref();
     if (!normalFreeTwoSidedGlslMatchesFixed()) {
         std::fprintf(stderr,
@@ -1562,6 +1717,8 @@ main()
     if (!indirectProgressiveGenerationAppendsSuffix())
         return 1;
     if (!ordinaryProgressiveGenerationAppendsSuffix())
+        return 1;
+    if (!ordinaryProgressiveZeroLineageReplacesWithoutOverread())
         return 1;
     if (!ordinaryExecutorHonorsAbortSafePoints())
         return 1;

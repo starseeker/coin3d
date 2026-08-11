@@ -867,8 +867,20 @@ struct SoCADAssemblyImpl :
             return fail("plan-state");
         const auto indexFound =
             progressivePlanIndexByInstance_.find(instance);
-        if (indexFound == progressivePlanIndexByInstance_.end())
-            return fail("instance-not-indexed");
+        if (indexFound == progressivePlanIndexByInstance_.end()) {
+            /*
+             * A retained occurrence with no compiled presentation record has
+             * no attribute stream entry to patch.  Keep its selected/hidden
+             * state in the authoritative instance set; a later append or
+             * rebuild will consume that state.  Rebuilding every visible
+             * record because one currently unrenderable occurrence changed a
+             * flag turns a sparse tree selection into an unbounded operation
+             * in 150k-part scenes.
+             */
+            if (instances_.find(instance) != instances_.end())
+                return true;
+            return fail("instance-not-retained");
+        }
         if (indexFound->second >= cachedPlan_.visibleInstances.size())
             return fail("invalid-visible-index");
         auto& record = cachedPlan_.visibleInstances[indexFound->second];
@@ -968,6 +980,10 @@ struct SoCADAssemblyImpl :
     }
 
     void finishSparsePresentationPatch(bool visibilityChanged = false) {
+        /* A partially classified point-proxy scratch result contains copied
+         * flags.  Discard its cursor when a sparse attribute change lands so
+         * the next bounded scan cannot publish stale selection/visibility. */
+        subpixelProxyBuildActive_ = false;
         cachedPlan_.revision = nextPlanRevision_++;
         if (nextPlanRevision_ == 0)
             nextPlanRevision_ = 1;
@@ -3002,26 +3018,44 @@ struct SoCADAssemblyImpl :
                                  const SbVec2s& viewportSize,
                                  float pixelThreshold,
                                  bool cameraMotionReuse,
-                                 SoGLRenderAction *renderAction = nullptr)
+                                 SoGLRenderAction *renderAction = nullptr,
+                                 bool *preparationPerformed = nullptr)
     {
         using namespace Obol::internal;
         CadFramePlan& plan = cachedPlan_;
-        size_t workSinceAbortCheck = 256u;
+        /*
+         * A large assembly may be reached after an earlier scene node has
+         * already consumed the presentation deadline.  Every retry must
+         * nevertheless advance a bounded amount of retained classifier work
+         * or an expired deadline can starve the same cursor forever.  Four
+         * thousand inexpensive occurrence tests is a small owner-thread
+         * quantum, yet bounds a 300k occurrence+wire scan to tens rather than
+         * thousands of recovery frames.
+         */
+        static constexpr size_t guaranteedWorkPerRetry = 4096u;
+        size_t workSinceAbortCheck = 0u;
         const auto abortRequested = [&]() {
             if (!renderAction)
                 return false;
-            if (++workSinceAbortCheck < 256u)
+            if (++workSinceAbortCheck < guaranteedWorkPerRetry)
                 return false;
             workSinceAbortCheck = 0;
             return renderAction->abortNow();
         };
+        if (preparationPerformed)
+            *preparationPerformed = false;
         pixelThreshold = std::isfinite(pixelThreshold) ?
             std::max(1.0f, std::min(64.0f, pixelThreshold)) : 1.0f;
         if (plan.subpixelProxyInputRevision !=
-                subpixelProxyViewInputRevision_ &&
-                patchSubpixelProxyAppendPlan(
-                    viewProj, viewportSize, pixelThreshold))
-            return !renderAction || !renderAction->abortNow();
+                subpixelProxyViewInputRevision_) {
+            if (preparationPerformed)
+                *preparationPerformed = true;
+            if (patchSubpixelProxyAppendPlan(
+                    viewProj, viewportSize, pixelThreshold)) {
+                subpixelProxyBuildActive_ = false;
+                return !renderAction || !renderAction->abortNow();
+            }
+        }
         /*
          * Reproject the already classified point/mesh cut for the input burst
          * instead of rescanning every occurrence on the GUI thread.
@@ -3040,6 +3074,7 @@ struct SoCADAssemblyImpl :
                 !(subpixelProxyViewProj_ == viewProj)) {
             ++subpixelProxyCameraMotionReuseCount_;
             subpixelProxyViewProj_ = viewProj;
+            subpixelProxyBuildActive_ = false;
             return true;
         }
         if (subpixelProxyViewValid_ &&
@@ -3048,39 +3083,114 @@ struct SoCADAssemblyImpl :
                 subpixelProxyViewportSize_[0] == viewportSize[0] &&
                 subpixelProxyViewportSize_[1] == viewportSize[1] &&
                 subpixelProxyPixelThreshold_ == pixelThreshold &&
-                subpixelProxyViewProj_ == viewProj)
+                subpixelProxyViewProj_ == viewProj) {
+            subpixelProxyBuildActive_ = false;
             return true;
-
-        subpixelProxyCameraMotionReuseCount_ = 0;
-        if (subpixelProxyStateInputRevision_ !=
-                plan.subpixelProxyInputRevision) {
-            subpixelProxyState_.assign(plan.visibleInstances.size(), 0u);
-            subpixelProxyStateInputRevision_ =
-                plan.subpixelProxyInputRevision;
         }
 
+        subpixelProxyCameraMotionReuseCount_ = 0;
         std::vector<uint8_t>& mask = subpixelProxyScratchMask_;
         std::vector<CadSubpixelProxyPoint>& points =
             subpixelProxyScratchPoints_;
         std::vector<uint32_t>& visibleByPoint =
             subpixelProxyScratchVisibleByPoint_;
-        mask.assign(plan.visibleInstances.size(), 0u);
-        subpixelProxyPointByVisible_.assign(
-            plan.visibleInstances.size(),
-            std::numeric_limits<uint32_t>::max());
-        points.clear();
-        visibleByPoint.clear();
+        std::vector<uint32_t>& pointByVisible =
+            subpixelProxyScratchPointByVisible_;
+        const bool matchingBuild = subpixelProxyBuildActive_ &&
+            subpixelProxyBuildInputRevision_ ==
+                plan.subpixelProxyInputRevision &&
+            subpixelProxyBuildViewportSize_[0] == viewportSize[0] &&
+            subpixelProxyBuildViewportSize_[1] == viewportSize[1] &&
+            subpixelProxyBuildPixelThreshold_ == pixelThreshold &&
+            subpixelProxyBuildViewProj_ == viewProj;
+        if (!matchingBuild) {
+            if (preparationPerformed)
+                *preparationPerformed = true;
+            if (cadPlanDebugEnabled()) {
+                static unsigned int resetMessageCount = 0;
+                if (resetMessageCount++ < 256)
+                    std::fprintf(stderr,
+                        "SoCADAssembly subpixel classifier reset "
+                        "active=%d cursor=%zu input=%llu/%llu "
+                        "viewport=%d,%d/%d,%d threshold=%.9g/%.9g "
+                        "view_match=%d visible=%zu wire=%zu\n",
+                        subpixelProxyBuildActive_ ? 1 : 0,
+                        subpixelProxyBuildVisibleCursor_,
+                        static_cast<unsigned long long>(
+                            subpixelProxyBuildInputRevision_),
+                        static_cast<unsigned long long>(
+                            plan.subpixelProxyInputRevision),
+                        subpixelProxyBuildViewportSize_[0],
+                        subpixelProxyBuildViewportSize_[1],
+                        viewportSize[0], viewportSize[1],
+                        subpixelProxyBuildPixelThreshold_, pixelThreshold,
+                        subpixelProxyBuildViewProj_ == viewProj ? 1 : 0,
+                        plan.visibleInstances.size(), plan.wireItems.size());
+            }
+            if (subpixelProxyStateInputRevision_ !=
+                    plan.subpixelProxyInputRevision) {
+                subpixelProxyState_.assign(
+                    plan.visibleInstances.size(), 0u);
+                subpixelProxyStateInputRevision_ =
+                    plan.subpixelProxyInputRevision;
+            }
+            mask.assign(plan.visibleInstances.size(), 0u);
+            pointByVisible.assign(
+                plan.visibleInstances.size(),
+                std::numeric_limits<uint32_t>::max());
+            points.clear();
+            visibleByPoint.clear();
+            subpixelProxyScratchWireParts_.clear();
+            subpixelProxyScratchStructuralCountByPart_.clear();
+            subpixelProxyScratchStructuralCount_ = 0;
+            subpixelProxyBuildVisibleCursor_ = 0;
+            subpixelProxyBuildWireItemCursor_ = 0;
+            subpixelProxyBuildWireOffset_ = 0;
+            subpixelProxyBuildWireHasUncollapsed_ = false;
+            subpixelProxyBuildWireStructuralCount_ = 0;
+            subpixelProxyBuildInputRevision_ =
+                plan.subpixelProxyInputRevision;
+            subpixelProxyBuildViewProj_ = viewProj;
+            subpixelProxyBuildViewportSize_ = viewportSize;
+            subpixelProxyBuildPixelThreshold_ = pixelThreshold;
+            subpixelProxyBuildActive_ = true;
+        }
+        if (subpixelProxyBuildVisibleCursor_ <
+                plan.visibleInstances.size() ||
+                subpixelProxyBuildWireItemCursor_ <
+                plan.wireItems.size()) {
+            if (preparationPerformed)
+                *preparationPerformed = true;
+        }
         /*
          * Classify each occurrence once, independently of its active draw
          * channels.  In particular a shaded-only PoP mesh must be able to
          * enter the same one-call point batch as a wire AABB.  Iterating draw
          * items duplicated work in SHADED_WITH_EDGES and left SHADED with no
-         * subpixel escape path at all.
+         * subpixel escape path at all.  The retained cursor is part of the
+         * same atomic scratch result: an aborted frame keeps presenting the
+         * previous complete classification until every occurrence and wire
+         * summary has been visited.
          */
-        for (size_t visibleIndex = 0;
-                visibleIndex < plan.visibleInstances.size(); ++visibleIndex) {
-            if (abortRequested())
+        for (; subpixelProxyBuildVisibleCursor_ <
+                plan.visibleInstances.size();
+                ++subpixelProxyBuildVisibleCursor_) {
+            if (abortRequested()) {
+                if (cadPlanDebugEnabled()) {
+                    static unsigned int abortMessageCount = 0;
+                    if (abortMessageCount++ < 256)
+                        std::fprintf(stderr,
+                            "SoCADAssembly subpixel classifier defer "
+                            "visible=%zu/%zu wire=%zu/%zu\n",
+                            subpixelProxyBuildVisibleCursor_,
+                            plan.visibleInstances.size(),
+                            subpixelProxyBuildWireItemCursor_,
+                            plan.wireItems.size());
+                }
                 return false;
+            }
+            const size_t visibleIndex =
+                subpixelProxyBuildVisibleCursor_;
             CadSubpixelProxyPoint replacement;
             if (!subpixelProxyPointForOccurrence(
                     plan, visibleIndex, viewProj, viewportSize,
@@ -3093,32 +3203,30 @@ struct SoCADAssemblyImpl :
 
             subpixelProxyState_[visibleIndex] = 1u;
             mask[visibleIndex] = 1u;
-            subpixelProxyPointByVisible_[visibleIndex] =
+            pointByVisible[visibleIndex] =
                 static_cast<uint32_t>(points.size());
             points.push_back(std::move(replacement));
             visibleByPoint.push_back(
                 static_cast<uint32_t>(visibleIndex));
         }
 
-        decltype(plan.wirePartsWithUncollapsedInstances)
-            wirePartsWithUncollapsedInstances;
-        decltype(uncollapsedStructuralProxyCountByPart_)
-            structuralProxyCountByPart;
-        size_t uncollapsedStructuralProxyCount = 0;
-        for (const CadDrawItem& item : plan.wireItems) {
+        for (; subpixelProxyBuildWireItemCursor_ < plan.wireItems.size();
+                ++subpixelProxyBuildWireItemCursor_) {
             if (abortRequested())
                 return false;
-            bool hasUncollapsed = false;
-            size_t structuralCount = 0;
+            const CadDrawItem& item =
+                plan.wireItems[subpixelProxyBuildWireItemCursor_];
             const CadPartBinding *binding =
                 item.partIndex < plan.partBindings.size() ?
                     &plan.partBindings[item.partIndex] : nullptr;
             const bool structuralProxy =
                 binding && binding->structuralProxy;
-            for (uint32_t i = 0; i < item.instanceCount; ++i) {
+            for (; subpixelProxyBuildWireOffset_ < item.instanceCount;
+                    ++subpixelProxyBuildWireOffset_) {
                 if (abortRequested())
                     return false;
-                const size_t visibleIndex = item.baseInstance + i;
+                const size_t visibleIndex = item.baseInstance +
+                    subpixelProxyBuildWireOffset_;
                 if (visibleIndex >= mask.size())
                     continue;
                 const CadVisibleInstance& instance =
@@ -3127,27 +3235,26 @@ struct SoCADAssemblyImpl :
                         (instance.flags & CadInstanceHidden))
                     continue;
                 if (!mask[visibleIndex]) {
-                    hasUncollapsed = true;
+                    subpixelProxyBuildWireHasUncollapsed_ = true;
                     if (structuralProxy) {
-                        ++uncollapsedStructuralProxyCount;
-                        ++structuralCount;
+                        ++subpixelProxyScratchStructuralCount_;
+                        ++subpixelProxyBuildWireStructuralCount_;
                     }
                 }
             }
-            if (hasUncollapsed)
-                wirePartsWithUncollapsedInstances.insert(
+            if (subpixelProxyBuildWireHasUncollapsed_)
+                subpixelProxyScratchWireParts_.insert(
                     item.rep.part);
-            if (structuralCount)
-                structuralProxyCountByPart[
-                    item.rep.part] += structuralCount;
+            if (subpixelProxyBuildWireStructuralCount_)
+                subpixelProxyScratchStructuralCountByPart_[
+                    item.rep.part] +=
+                        subpixelProxyBuildWireStructuralCount_;
+            subpixelProxyBuildWireOffset_ = 0;
+            subpixelProxyBuildWireHasUncollapsed_ = false;
+            subpixelProxyBuildWireStructuralCount_ = 0;
         }
-        plan.wirePartsWithUncollapsedInstances.swap(
-            wirePartsWithUncollapsedInstances);
-        uncollapsedStructuralProxyCountByPart_.swap(
-            structuralProxyCountByPart);
-        uncollapsedStructuralProxyCount_ =
-            uncollapsedStructuralProxyCount;
-        if (cadPlanDebugEnabled() && uncollapsedStructuralProxyCount) {
+        if (cadPlanDebugEnabled() &&
+                subpixelProxyScratchStructuralCount_) {
             std::unordered_set<size_t> structuralVisibleIndices;
             std::unordered_set<Obol::InstanceId,
                 std::hash<Obol::InstanceId>> structuralInstances;
@@ -3156,8 +3263,6 @@ struct SoCADAssemblyImpl :
             size_t structuralStaleReferences = 0;
             size_t structuralPartCount = 0;
             for (const CadDrawItem& item : plan.wireItems) {
-                if (abortRequested())
-                    return false;
                 const CadPartBinding *binding =
                     item.partIndex < plan.partBindings.size() ?
                         &plan.partBindings[item.partIndex] : nullptr;
@@ -3167,8 +3272,6 @@ struct SoCADAssemblyImpl :
                     continue;
                 ++structuralPartCount;
                 for (uint32_t i = 0; i < item.instanceCount; ++i) {
-                    if (abortRequested())
-                        return false;
                     const size_t visibleIndex = item.baseInstance + i;
                     if (visibleIndex >= plan.visibleInstances.size())
                         continue;
@@ -3193,13 +3296,26 @@ struct SoCADAssemblyImpl :
                 "stale_refs=%zu "
                 "distinct_visible=%zu distinct_instances=%zu "
                 "wire_items=%zu structural_items=%zu visible_records=%zu\n",
-                uncollapsedStructuralProxyCount,
+                subpixelProxyScratchStructuralCount_,
                 structuralItemReferences, structuralHiddenReferences,
                 structuralStaleReferences,
                 structuralVisibleIndices.size(), structuralInstances.size(),
                 plan.wireItems.size(), structuralPartCount,
                 plan.visibleInstances.size());
         }
+
+        /*
+         * Publish every classifier product as one transaction.  Diagnostics
+         * above deliberately do not consult the presentation deadline:
+         * debug instrumentation must not make the resumable production
+         * algorithm fail to converge or expose half of a new classification.
+         */
+        plan.wirePartsWithUncollapsedInstances.swap(
+            subpixelProxyScratchWireParts_);
+        uncollapsedStructuralProxyCountByPart_.swap(
+            subpixelProxyScratchStructuralCountByPart_);
+        uncollapsedStructuralProxyCount_ =
+            subpixelProxyScratchStructuralCount_;
 
         const bool changed = plan.subpixelProxySourceInputRevision !=
                 plan.subpixelProxyInputRevision ||
@@ -3212,6 +3328,7 @@ struct SoCADAssemblyImpl :
             plan.subpixelProxyMask.swap(mask);
             plan.subpixelProxyPoints.swap(points);
             subpixelProxyVisibleByPoint_.swap(visibleByPoint);
+            subpixelProxyPointByVisible_.swap(pointByVisible);
             plan.subpixelProxySourceInputRevision =
                 plan.subpixelProxyInputRevision;
             plan.subpixelProxyRevision = nextSubpixelProxyRevision_++;
@@ -3226,6 +3343,16 @@ struct SoCADAssemblyImpl :
         subpixelProxyClassifiedAppendRevision_ =
             plan.appendRevision;
         subpixelProxyViewValid_ = true;
+        subpixelProxyBuildActive_ = false;
+        if (cadPlanDebugEnabled()) {
+            static unsigned int completeMessageCount = 0;
+            if (completeMessageCount++ < 256)
+                std::fprintf(stderr,
+                    "SoCADAssembly subpixel classifier complete "
+                    "visible=%zu wire=%zu points=%zu threshold=%.9g\n",
+                    plan.visibleInstances.size(), plan.wireItems.size(),
+                    plan.subpixelProxyPoints.size(), pixelThreshold);
+        }
         return true;
     }
 };
@@ -3921,8 +4048,11 @@ SoCADAssembly::updateInstanceStyles(
 void
 SoCADAssembly::setSelectedInstances(const std::vector<Obol::InstanceId>& ids)
 {
-    std::unordered_set<Obol::InstanceId, std::hash<Obol::InstanceId>> next(
-        ids.begin(), ids.end());
+    std::unordered_set<Obol::InstanceId, std::hash<Obol::InstanceId>> next;
+    next.reserve(ids.size());
+    for (const Obol::InstanceId& id : ids)
+        if (impl_->instances_.find(id) != impl_->instances_.end())
+            next.insert(id);
     if (next == impl_->selected_)
         return;
     std::vector<Obol::InstanceId> changed;
@@ -4020,8 +4150,11 @@ SoCADAssembly::getInstanceRecord(Obol::InstanceId iid) const
 void
 SoCADAssembly::setHiddenInstances(const std::vector<Obol::InstanceId>& ids)
 {
-    std::unordered_set<Obol::InstanceId, std::hash<Obol::InstanceId>> next(
-        ids.begin(), ids.end());
+    std::unordered_set<Obol::InstanceId, std::hash<Obol::InstanceId>> next;
+    next.reserve(ids.size());
+    for (const Obol::InstanceId& id : ids)
+        if (impl_->instances_.find(id) != impl_->instances_.end())
+            next.insert(id);
     if (next == impl_->hidden_)
         return;
     std::vector<Obol::InstanceId> changed;
@@ -4151,15 +4284,21 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
                     "unknown",
                 impl_->cachedDM_, dm, impl_->instances_.size(),
                 impl_->parts_.size());
+        /*
+         * A full structural rebuild is an atomic retained-state transaction,
+         * not a resumable render operation.  Aborting the local candidate or
+         * reverse indexes discards every byte of progress and can livelock an
+         * all-at-once warm cache forever.  Build them once without consulting
+         * the presentation deadline; the common deadline check below still
+         * prevents a late GL draw, so the next frame reuses the completed
+         * plan.  Normal streaming, LoD, style, visibility, and selection
+         * changes use the append/sparse paths and do not pay this cost.
+         */
         Obol::internal::CadFramePlan candidatePlan =
-            impl_->buildFramePlan(dm, impl_->selected_, impl_->hidden_,
-                                  nullptr, action);
-        if (action->hasTerminated()) {
-            SoGLLazyElement::getInstance(state)->reset(
-                state, SoLazyElement::ALL_MASK);
-            state->pop();
-            return;
-        }
+            impl_->buildFramePlan(dm, impl_->selected_, impl_->hidden_);
+        ++impl_->renderPreparationSerial_;
+        if (impl_->renderPreparationSerial_ == 0)
+            impl_->renderPreparationSerial_ = 1;
         impl_->cachedPlan_ = std::move(candidatePlan);
         impl_->cachedPlan_.revision = impl_->nextPlanRevision_++;
         if (impl_->nextPlanRevision_ == 0)
@@ -4205,10 +4344,11 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
         impl_->cachedPlan_.geometryRevision = impl_->geometryRevision_;
         impl_->cachedPlanTombstoneCount_ = 0;
         impl_->cachedDM_    = dm;
-        if (!impl_->rebuildProgressiveShadedPlanIndex(action)) {
-            /* Keep the structural dirty bits armed.  The partially built
-             * reverse indexes are never observed because this traversal is
-             * aborted, and the next retry clears and rebuilds them. */
+        if (!impl_->rebuildProgressiveShadedPlanIndex()) {
+            /* No deadline callback is supplied, so this is defensive against
+             * any future semantic failure mode rather than a retry path. */
+            impl_->planDirty_ = true;
+            impl_->planDirtyReason_ = "plan-index-build";
             SoGLLazyElement::getInstance(state)->reset(
                 state, SoLazyElement::ALL_MASK);
             state->pop();
@@ -4218,23 +4358,37 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
         impl_->geometryDirty_ = false;
     }
 
-    /* The graphical host may install a frame deadline.  SoCADAssembly is a
-     * deliberately large retained node, so Coin's ordinary per-node abort
-     * callback cannot observe time spent constructing its plan unless the
-     * assembly supplies explicit safe points. */
-    if (action->abortNow()) {
+    const SbViewportRegion& viewport = SoViewportRegionElement::get(state);
+    const SbViewVolume& viewVolume = SoViewVolumeElement::get(state);
+    bool subpixelPreparationPerformed = false;
+    const bool subpixelPreparationComplete =
+        impl_->updateSubpixelProxyPlan(viewProj,
+            viewport.getViewportSizePixels(),
+            pointProxyPixelThreshold.getValue(),
+            cameraMotionFrameReuse.getValue(), action,
+            &subpixelPreparationPerformed);
+    if (subpixelPreparationPerformed) {
+        ++impl_->renderPreparationSerial_;
+        if (impl_->renderPreparationSerial_ == 0)
+            impl_->renderPreparationSerial_ = 1;
+    }
+    if (!subpixelPreparationComplete) {
         SoGLLazyElement::getInstance(state)->reset(
             state, SoLazyElement::ALL_MASK);
         state->pop();
         return;
     }
 
-    const SbViewportRegion& viewport = SoViewportRegionElement::get(state);
-    const SbViewVolume& viewVolume = SoViewVolumeElement::get(state);
-    if (!impl_->updateSubpixelProxyPlan(viewProj,
-            viewport.getViewportSizePixels(),
-            pointProxyPixelThreshold.getValue(),
-            cameraMotionFrameReuse.getValue(), action)) {
+    /*
+     * Do not test the host deadline before resumable presentation
+     * preparation.  If traversal above this node has already exhausted the
+     * frame, doing so prevents its retained cursor from ever advancing.  The
+     * classifier supplies bounded safe points and publishes atomically; once
+     * it completes, honor the deadline before issuing any GL work.  A final
+     * over-budget preparation frame therefore retains its completed result,
+     * and the next frame reuses it in O(1) before drawing.
+     */
+    if (action->abortNow()) {
         SoGLLazyElement::getInstance(state)->reset(
             state, SoLazyElement::ALL_MASK);
         state->pop();
@@ -4261,6 +4415,10 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
         glue->glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         glue->glEnable(GL_BLEND);
     }
+
+    ++impl_->renderExecutionSerial_;
+    if (impl_->renderExecutionSerial_ == 0)
+        impl_->renderExecutionSerial_ = 1;
 
     // Explicit FAST mode allows ordinary software wireframes to bypass Mesa's
     // fixed-function interpreter.  AUTO is deliberately quality-first because
@@ -4628,11 +4786,11 @@ SoCADAssembly::lastRenderedTriangleCount() const
     return impl_->renderer_->lastRenderedTriangleCount();
 }
 
-Obol::CadRenderedShadedWork
-SoCADAssembly::lastRenderedShadedWork() const
+Obol::CadRenderedWork
+SoCADAssembly::lastRenderedWork() const
 {
-    return impl_->renderer_ ? impl_->renderer_->lastRenderedShadedWork() :
-        Obol::CadRenderedShadedWork();
+    return impl_->renderer_ ? impl_->renderer_->lastRenderedWork() :
+        Obol::CadRenderedWork();
 }
 
 uint64_t
@@ -4647,6 +4805,13 @@ SoCADAssembly::lastGpuRenderedTriangleCount() const
 {
     return impl_->renderer_ ?
         impl_->renderer_->lastGpuRenderedTriangleCount() : 0;
+}
+
+float
+SoCADAssembly::lastGpuPointProxyPixelThreshold() const
+{
+    return impl_->renderer_ ?
+        impl_->renderer_->lastGpuPointProxyPixelThreshold() : 1.0f;
 }
 
 uint64_t
@@ -4674,6 +4839,21 @@ bool
 SoCADAssembly::lastRenderUsedDirectSoftwareWire() const
 {
     return impl_->lastDirectSoftwareWire_;
+}
+
+uint64_t
+SoCADAssembly::renderExecutionSerial() const
+{
+    return impl_->renderExecutionSerial_;
+}
+
+uint64_t
+SoCADAssembly::renderPreparationSerial() const
+{
+    const uint64_t rendererSerial = impl_->renderer_ ?
+        impl_->renderer_->renderPreparationSerial() : 0;
+    return rendererSerial > UINT64_MAX - impl_->renderPreparationSerial_ ?
+        UINT64_MAX : rendererSerial + impl_->renderPreparationSerial_;
 }
 
 size_t

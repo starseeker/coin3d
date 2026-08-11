@@ -100,15 +100,16 @@ class SoDetail;
 namespace Obol {
 
 /**
- * Logical shaded work submitted by one completed CAD render.
+ * Logical work submitted by one completed CAD render.
  *
  * Counts include every visible occurrence and the active progressive cut,
  * rather than the richer resident geometry which may remain behind a
  * renderer-side LoD ceiling.  Consumers can therefore translate this record
  * into their own calibrated cost model without guessing from triangle ratios.
  */
-struct CadRenderedShadedWork {
+struct CadRenderedWork {
     uint64_t triangleCount = 0;
+    uint64_t lineCount = 0;
     uint64_t positionCount = 0;
     uint64_t normalCount = 0;
     uint64_t occurrenceCount = 0;
@@ -176,6 +177,17 @@ struct WireRep {
     uint8_t progressiveResidentLevel = 255;
     SbVec3f progressiveQuantizationMinimum;
     SbVec3f progressiveQuantizationMaximum;
+
+    /**
+     * Producer-certified identity of one append-only flat-segment stream.
+     *
+     * A nonzero value promises that later immutable WireRep records carrying
+     * the same token retain every preceding segmentPoints value as an exact
+     * prefix.  Renderers may preserve that GPU prefix and upload only the
+     * newly resident suffix.  Independent per-level curve approximations and
+     * other non-prefix representations must leave this value zero.
+     */
+    uint64_t progressiveLineage = 0;
 
     bool isProgressive() const noexcept {
         return progressiveResidentLevel < 16;
@@ -737,17 +749,21 @@ public:
     /** Triangles actually submitted by the last shaded rendering pass. */
     uint64_t lastRenderedTriangleCount() const;
 
-    /** Exact logical shaded work for the last completed rendering pass.
-     * Direct retained and immediate renderers publish this at their draw
-     * sites.  @c exact is false when the selected tier cannot yet provide a
-     * complete record or when rendering was interrupted. */
-    Obol::CadRenderedShadedWork lastRenderedShadedWork() const;
+    /** Exact logical work for the last completed rendering pass.
+     * Renderers publish this at their actual draw sites, including shaded
+     * triangles and wire segments.  @c exact is false when rendering was
+     * interrupted or the selected tier could not publish a complete record.
+     */
+    Obol::CadRenderedWork lastRenderedWork() const;
 
     /** Duration and triangle count from the newest completed asynchronous
      * GPU timer sample.  A zero serial means timer queries are unavailable or
      * no result has completed yet. */
     uint64_t lastGpuRenderNanoseconds() const;
     uint64_t lastGpuRenderedTriangleCount() const;
+    /** Point-aggregation threshold paired with the newest completed GPU
+     * timer submission. */
+    float lastGpuPointProxyPixelThreshold() const;
     uint64_t gpuTimerSampleSerial() const;
 
     /** Last complete-frame snapshot of renderer-owned GPU buffer resources. */
@@ -759,6 +775,18 @@ public:
 
     /** True when the last render used the direct software wire rasterizer. */
     bool lastRenderUsedDirectSoftwareWire() const;
+
+    /** Monotonic token advanced immediately before CAD drawing begins.
+     * A deadline-bounded host may compare this value around a traversal to
+     * distinguish resumable presentation preparation from rendering load. */
+    uint64_t renderExecutionSerial() const;
+
+    /** Monotonic token advanced by non-steady presentation work: assembly
+     * plan/classifier preparation, retained renderer record construction, or
+     * geometry upload.  Comparing this around a deadline-bounded traversal
+     * prevents one-time preparation cost from being learned as steady draw
+     * capacity. */
+    uint64_t renderPreparationSerial() const;
 
     /** Number of LoD proxy occurrences rendered as subpixel points last frame. */
     size_t lastSubpixelProxyCount() const;

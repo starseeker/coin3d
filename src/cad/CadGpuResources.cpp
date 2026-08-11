@@ -36,6 +36,7 @@
 #include "glue/glp.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdlib>
 #include <limits>
 #include <cstring>
@@ -648,10 +649,11 @@ void CadGpuResources::upload(
     const bool sameProgressiveLineage = generationChanged && progressive &&
         progressiveLineage != 0 &&
         entry.progressiveLineage == progressiveLineage;
-    /* A wire representation has no certified cross-generation lineage yet.
-     * Triangle buffers may retain a prefix either within one immutable
-     * generation or across producer-certified generations. */
-    const bool wirePrefixCompatible = progressive && !generationChanged;
+    /* Prefix-compatible wire and triangle streams retain GPU storage across
+     * immutable generation publication.  The producer token certifies exact
+     * append-only identity; zero remains the conservative replacement path. */
+    const bool wirePrefixCompatible = progressive &&
+        (!generationChanged || sameProgressiveLineage);
     const bool trianglePrefixCompatible = progressive &&
         (!generationChanged || sameProgressiveLineage);
     const bool wireReset =
@@ -725,66 +727,51 @@ void CadGpuResources::upload(
 
         const GLsizei oldWireCount = w.vertCount;
         const GLsizei oldSegIdxCount = w.idxCount;
-        const bool newWireBuffers = !w.posBuf;
-        if (newWireBuffers)
-            glue->glGenBuffers(1, &w.posBuf);
-        glue->glBindBuffer(GL_ARRAY_BUFFER, w.posBuf);
-        if (newWireBuffers || wireCount > w.posCapacity) {
-            const GLsizei capacity = progressiveBufferCapacity(
-                wireCount, w.posCapacity, progressive);
-            allocateAndPopulateBuffer(
-                glue, GL_ARRAY_BUFFER,
-                static_cast<GLsizeiptr>(capacity) * 3 * sizeof(float),
-                static_cast<GLsizeiptr>(wireCount) * 3 * sizeof(float),
-                wireData, progressive ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
-            cadAddUploadCounter(
-                ordinaryPartFullUploadBytes_,
-                static_cast<uint64_t>(wireCount) * 3u * sizeof(float));
-            w.posCapacity = capacity;
-        } else if (wireCount > oldWireCount) {
-            glue->glBufferSubData(
-                GL_ARRAY_BUFFER,
-                static_cast<GLintptr>(oldWireCount) * 3 * sizeof(float),
-                static_cast<GLsizeiptr>(wireCount - oldWireCount) *
-                    3 * sizeof(float),
-                wireData + static_cast<size_t>(oldWireCount) * 3);
-            cadAddUploadCounter(
-                ordinaryPartSuffixUploadBytes_,
-                static_cast<uint64_t>(wireCount - oldWireCount) *
-                    3u * sizeof(float));
-        }
+        const GLsizei oldPosCapacity = w.posCapacity;
+        const GLsizei posCapacity = !w.posBuf ||
+                wireCount > w.posCapacity ?
+            progressiveBufferCapacity(
+                wireCount, w.posCapacity, progressive) :
+            w.posCapacity;
+        bool wireBufferReplaced = cadPopulateRetainedBuffer(
+            w.posBuf, GL_ARRAY_BUFFER,
+            static_cast<GLsizeiptr>(oldPosCapacity) * 3 * sizeof(float),
+            static_cast<GLsizeiptr>(posCapacity) * 3 * sizeof(float),
+            static_cast<GLsizeiptr>(oldWireCount) * 3 * sizeof(float),
+            static_cast<GLsizeiptr>(wireCount) * 3 * sizeof(float),
+            wireData, progressive ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW,
+            appendable, glue, caps,
+            ordinaryPartFullUploadBytes_,
+            ordinaryPartSuffixUploadBytes_,
+            ordinaryPartGpuCopyBytes_);
+        w.posCapacity = posCapacity;
 
         if (!sequential) {
-            const bool newIndexBuffer = !w.segIdxBuf;
-            if (newIndexBuffer)
-                glue->glGenBuffers(1, &w.segIdxBuf);
-            glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, w.segIdxBuf);
-            if (newIndexBuffer || segIdxCount > w.idxCapacity) {
-                const GLsizei capacity = progressiveBufferCapacity(
-                    segIdxCount, w.idxCapacity, progressive);
-                allocateAndPopulateBuffer(
-                    glue, GL_ELEMENT_ARRAY_BUFFER,
-                    static_cast<GLsizeiptr>(capacity) * sizeof(uint32_t),
-                    static_cast<GLsizeiptr>(segIdxCount) * sizeof(uint32_t),
-                    segIdx,
-                    progressive ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
-                cadAddUploadCounter(
-                    ordinaryPartFullUploadBytes_,
-                    static_cast<uint64_t>(segIdxCount) *
-                        sizeof(uint32_t));
-                w.idxCapacity = capacity;
-            } else if (segIdxCount > oldSegIdxCount) {
-                glue->glBufferSubData(
-                    GL_ELEMENT_ARRAY_BUFFER,
-                    static_cast<GLintptr>(oldSegIdxCount) * sizeof(uint32_t),
-                    static_cast<GLsizeiptr>(segIdxCount - oldSegIdxCount) *
-                        sizeof(uint32_t),
-                    segIdx + oldSegIdxCount);
-                cadAddUploadCounter(
-                    ordinaryPartSuffixUploadBytes_,
-                    static_cast<uint64_t>(segIdxCount - oldSegIdxCount) *
-                        sizeof(uint32_t));
-            }
+            const GLsizei oldIdxCapacity = w.idxCapacity;
+            const GLsizei idxCapacity = !w.segIdxBuf ||
+                    segIdxCount > w.idxCapacity ?
+                progressiveBufferCapacity(
+                    segIdxCount, w.idxCapacity, progressive) :
+                w.idxCapacity;
+            wireBufferReplaced = cadPopulateRetainedBuffer(
+                w.segIdxBuf, GL_ELEMENT_ARRAY_BUFFER,
+                static_cast<GLsizeiptr>(oldIdxCapacity) * sizeof(uint32_t),
+                static_cast<GLsizeiptr>(idxCapacity) * sizeof(uint32_t),
+                static_cast<GLsizeiptr>(oldSegIdxCount) * sizeof(uint32_t),
+                static_cast<GLsizeiptr>(segIdxCount) * sizeof(uint32_t),
+                segIdx, progressive ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW,
+                appendable, glue, caps,
+                ordinaryPartFullUploadBytes_,
+                ordinaryPartSuffixUploadBytes_,
+                ordinaryPartGpuCopyBytes_) || wireBufferReplaced;
+            w.idxCapacity = idxCapacity;
+        }
+        if (wireBufferReplaced && w.vao &&
+                glue->glDeleteVertexArrays) {
+            glue->glDeleteVertexArrays(1, &w.vao);
+            w.vao = 0;
+            w.instanceVbo = 0;
+            w.instanceBase = UINT32_MAX;
         }
         w.vertCount = wireCount;
         w.idxCount = sequential ? 0 : segIdxCount;
@@ -954,6 +941,16 @@ bool CadGpuResources::isUpToDate(
             requiredTriIndices > entry.tri.idxCount)
         return false;
     return true;
+}
+
+bool CadGpuResources::hasCompatibleProgressivePrefix(
+        PartId pid, uint64_t progressiveLineage) const
+{
+    if (progressiveLineage == 0)
+        return false;
+    auto it = cache_.find(pid);
+    return it != cache_.end() &&
+        it->second.progressiveLineage == progressiveLineage;
 }
 
 // ---------------------------------------------------------------------------
@@ -3066,6 +3063,8 @@ CadGpuResources::beginFrameGpuTimer(const SoGLContext *glue)
             gpuTimerLastCompletedSubmission_ = slot.submission;
             gpuTimerLastNanoseconds_ = nanoseconds;
             gpuTimerLastTriangleCount_ = slot.triangleCount;
+            gpuTimerLastPointProxyPixelThreshold_ =
+                slot.pointProxyPixelThreshold;
         }
     }
 
@@ -3084,6 +3083,7 @@ CadGpuResources::beginFrameGpuTimer(const SoGLContext *glue)
         if (!gpuTimerNextSubmission_)
             gpuTimerNextSubmission_ = 1;
         slot.triangleCount = 0;
+        slot.pointProxyPixelThreshold = 1.0f;
         glue->glBeginQuery(GL_TIME_ELAPSED, slot.query);
         gpuTimerActiveSlot_ = static_cast<int>(index);
         gpuTimerNextSlot_ = (index + 1) % gpuTimerSlots_.size();
@@ -3095,13 +3095,18 @@ CadGpuResources::beginFrameGpuTimer(const SoGLContext *glue)
 
 void
 CadGpuResources::endFrameGpuTimer(
-        uint64_t triangleCount, const SoGLContext *glue)
+        uint64_t triangleCount, float pointProxyPixelThreshold,
+        const SoGLContext *glue)
 {
     if (!glue || gpuTimerActiveSlot_ < 0)
         return;
     const size_t index = static_cast<size_t>(gpuTimerActiveSlot_);
     glue->glEndQuery(GL_TIME_ELAPSED);
     gpuTimerSlots_[index].triangleCount = triangleCount;
+    gpuTimerSlots_[index].pointProxyPixelThreshold =
+        std::isfinite(pointProxyPixelThreshold) ?
+            std::max(1.0f, std::min(64.0f,
+                pointProxyPixelThreshold)) : 1.0f;
     gpuTimerSlots_[index].pending = true;
     gpuTimerActiveSlot_ = -1;
 }
@@ -3213,6 +3218,7 @@ void CadGpuResources::releaseAll(const SoGLContext * glue)
     gpuTimerLastCompletedSubmission_ = 0;
     gpuTimerLastNanoseconds_ = 0;
     gpuTimerLastTriangleCount_ = 0;
+    gpuTimerLastPointProxyPixelThreshold_ = 1.0f;
 }
 
 } // namespace internal

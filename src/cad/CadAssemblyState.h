@@ -186,6 +186,29 @@ struct CadSubpixelClassifier {
     std::vector<uint32_t> subpixelProxyVisibleByPoint_;
     std::vector<uint32_t> subpixelProxyScratchVisibleByPoint_;
     std::vector<uint32_t> subpixelProxyPointByVisible_;
+    std::vector<uint32_t> subpixelProxyScratchPointByVisible_;
+    /*
+     * A camera-local classification may exceed one presentation deadline in
+     * a scene with hundreds of thousands of occurrences.  Retain the exact
+     * scratch cursor across retries instead of restarting the O(N) scan on
+     * every frame.  These values are valid only while all recorded inputs
+     * still match the cached plan and current view.
+     */
+    bool subpixelProxyBuildActive_ = false;
+    uint64_t subpixelProxyBuildInputRevision_ = 0;
+    SbMatrix subpixelProxyBuildViewProj_;
+    SbVec2s subpixelProxyBuildViewportSize_ = SbVec2s(0, 0);
+    float subpixelProxyBuildPixelThreshold_ = 1.0f;
+    size_t subpixelProxyBuildVisibleCursor_ = 0;
+    size_t subpixelProxyBuildWireItemCursor_ = 0;
+    uint32_t subpixelProxyBuildWireOffset_ = 0;
+    bool subpixelProxyBuildWireHasUncollapsed_ = false;
+    size_t subpixelProxyBuildWireStructuralCount_ = 0;
+    std::unordered_set<Obol::PartId, std::hash<Obol::PartId>>
+        subpixelProxyScratchWireParts_;
+    std::unordered_map<Obol::PartId, size_t, std::hash<Obol::PartId>>
+        subpixelProxyScratchStructuralCountByPart_;
+    size_t subpixelProxyScratchStructuralCount_ = 0;
     uint64_t subpixelProxyClassifiedAppendRevision_ = 0;
     std::unordered_map<Obol::PartId, size_t, std::hash<Obol::PartId>>
         uncollapsedStructuralProxyCountByPart_;
@@ -195,6 +218,15 @@ struct CadSubpixelClassifier {
 struct CadRendererState {
     std::unique_ptr<Obol::internal::CadRendererGL> renderer_;
     bool lastDirectSoftwareWire_ = false;
+    /* Increment immediately before retained/direct CAD drawing begins.  A
+     * host compares this token around a deadline-bounded traversal to
+     * distinguish one-time plan/classifier preparation from an expensive
+     * draw attempt. */
+    uint64_t renderExecutionSerial_ = 0;
+    /* Increment whenever GLRender builds or advances an assembly-owned frame
+     * plan/classification.  SoCADAssembly::renderPreparationSerial() combines
+     * this with renderer-owned record/upload preparation. */
+    uint64_t renderPreparationSerial_ = 0;
 };
 
 } // namespace internal

@@ -345,6 +345,12 @@ static uint32_t flatRgbaKey(const CadVisibleInstance& inst)
 
 } // namespace
 
+static uint64_t
+cadSaturatingWorkAdd(uint64_t left, uint64_t right)
+{
+    return right > UINT64_MAX - left ? UINT64_MAX : left + right;
+}
+
 static SbVec3f progressiveSnapPoint(
     const SbVec3f& point, const SbVec3f& minimum,
     const SbVec3f& maximum, uint8_t level);
@@ -801,6 +807,15 @@ bool CadRendererGL::renderFlatWire(
             }
         }
     }
+    lastRenderedWork_.lineCount = cadSaturatingWorkAdd(
+        lastRenderedWork_.lineCount,
+        static_cast<uint64_t>(visibleVertexCount / 2u));
+    lastRenderedWork_.positionCount = cadSaturatingWorkAdd(
+        lastRenderedWork_.positionCount,
+        static_cast<uint64_t>(visibleVertexCount));
+    lastRenderedWork_.occurrenceCount = cadSaturatingWorkAdd(
+        lastRenderedWork_.occurrenceCount,
+        static_cast<uint64_t>(occurrences.size()));
     if (fixedFunction) {
         glue->glDisableClientState(GL_VERTEX_ARRAY);
         glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -1176,6 +1191,20 @@ bool CadRendererGL::renderFlatShaded(
      */
     lastRenderedTriangleCount_ =
         static_cast<uint64_t>(currentVertexCount / 3u);
+    lastRenderedWork_.triangleCount = cadSaturatingWorkAdd(
+        lastRenderedWork_.triangleCount,
+        static_cast<uint64_t>(currentVertexCount / 3u));
+    lastRenderedWork_.positionCount = cadSaturatingWorkAdd(
+        lastRenderedWork_.positionCount,
+        static_cast<uint64_t>(currentVertexCount));
+    if (!depthOnly) {
+        lastRenderedWork_.normalCount = cadSaturatingWorkAdd(
+            lastRenderedWork_.normalCount,
+            static_cast<uint64_t>(currentVertexCount));
+    }
+    lastRenderedWork_.occurrenceCount = cadSaturatingWorkAdd(
+        lastRenderedWork_.occurrenceCount,
+        static_cast<uint64_t>(occurrences.size()));
 
     if (caps_.isSoftwareRenderer) {
         glue->glMatrixMode(GL_PROJECTION);
@@ -1290,6 +1319,21 @@ bool CadRendererGL::renderFlatTriangleEdges(
             flat.groups.empty())
         return false;
 
+    uint64_t submittedVertices = 0;
+    for (const CadFlatShadedGroup& group : flat.groups) {
+        if (group.firsts.empty()) {
+            submittedVertices = cadSaturatingWorkAdd(
+                submittedVertices,
+                static_cast<uint64_t>((std::max)(0, group.count)));
+            continue;
+        }
+        for (const GLsizei count : group.counts) {
+            submittedVertices = cadSaturatingWorkAdd(
+                submittedVertices,
+                static_cast<uint64_t>((std::max)(0, count)));
+        }
+    }
+
     GLint polygonMode[2] = {GL_FILL, GL_FILL};
     glue->glGetIntegerv(GL_POLYGON_MODE, polygonMode);
     glue->glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -1359,6 +1403,10 @@ bool CadRendererGL::renderFlatTriangleEdges(
 
     glue->glPolygonMode(GL_FRONT, static_cast<GLenum>(polygonMode[0]));
     glue->glPolygonMode(GL_BACK, static_cast<GLenum>(polygonMode[1]));
+    lastRenderedWork_.lineCount = cadSaturatingWorkAdd(
+        lastRenderedWork_.lineCount, submittedVertices);
+    lastRenderedWork_.positionCount = cadSaturatingWorkAdd(
+        lastRenderedWork_.positionCount, submittedVertices);
     return true;
 }
 
@@ -1625,30 +1673,78 @@ static void bindAndDrawTri(const CadTriGpu* t, const SoGLContext* glue,
     }
 }
 
-static uint64_t
-cadSaturatingWorkAdd(uint64_t left, uint64_t right)
-{
-    return right > UINT64_MAX - left ? UINT64_MAX : left + right;
-}
-
 static void
-cadAccumulateRenderedShadedWork(Obol::CadRenderedShadedWork& work,
+cadAccumulateRenderedShadedWork(Obol::CadRenderedWork& work,
                                 const Obol::TriMesh& mesh,
-                                uint8_t level, uint64_t triangles)
+                                uint8_t level, uint64_t triangles,
+                                uint64_t occurrences = 1)
 {
-    if (!triangles)
+    if (!triangles || !occurrences)
         return;
     const uint64_t positions = static_cast<uint64_t>(
         mesh.positionCountAtLevel(level));
+    const uint64_t submittedTriangles =
+        triangles > UINT64_MAX / occurrences ? UINT64_MAX :
+            triangles * occurrences;
+    const uint64_t submittedPositions =
+        positions > UINT64_MAX / occurrences ? UINT64_MAX :
+            positions * occurrences;
     work.triangleCount = cadSaturatingWorkAdd(
-        work.triangleCount, triangles);
+        work.triangleCount, submittedTriangles);
     work.positionCount = cadSaturatingWorkAdd(
-        work.positionCount, positions);
+        work.positionCount, submittedPositions);
     if (!mesh.normals.empty())
         work.normalCount = cadSaturatingWorkAdd(
-            work.normalCount, positions);
+            work.normalCount, submittedPositions);
     work.occurrenceCount = cadSaturatingWorkAdd(
-        work.occurrenceCount, 1);
+        work.occurrenceCount, occurrences);
+}
+
+static void
+cadAccumulateRenderedWireWork(Obol::CadRenderedWork& work,
+                              uint64_t segments,
+                              uint64_t occurrences = 1)
+{
+    if (!segments || !occurrences)
+        return;
+    const uint64_t submitted =
+        segments > UINT64_MAX / occurrences ? UINT64_MAX :
+            segments * occurrences;
+    work.lineCount = cadSaturatingWorkAdd(work.lineCount, submitted);
+    work.positionCount = cadSaturatingWorkAdd(
+        work.positionCount,
+        submitted > UINT64_MAX / 2 ? UINT64_MAX : submitted * 2);
+    work.occurrenceCount = cadSaturatingWorkAdd(
+        work.occurrenceCount, occurrences);
+}
+
+static void
+cadReplaceRenderedWorkCount(uint64_t& total, uint64_t oldCount,
+                            uint64_t newCount)
+{
+    if (total == UINT64_MAX)
+        return;
+    total = oldCount <= total ? total - oldCount : 0;
+    total = cadSaturatingWorkAdd(total, newCount);
+}
+
+static void
+cadReplacePreparedShadedWork(Obol::CadRenderedWork& work,
+                             uint64_t oldTriangles,
+                             uint64_t oldPositions,
+                             bool oldHasNormals,
+                             uint64_t newTriangles,
+                             uint64_t newPositions,
+                             bool newHasNormals)
+{
+    cadReplaceRenderedWorkCount(
+        work.triangleCount, oldTriangles, newTriangles);
+    cadReplaceRenderedWorkCount(
+        work.positionCount, oldPositions, newPositions);
+    cadReplaceRenderedWorkCount(
+        work.normalCount,
+        oldHasNormals ? oldPositions : 0,
+        newHasNormals ? newPositions : 0);
 }
 
 void CadRendererGL::renderVboLoop(
@@ -1773,11 +1869,15 @@ void CadRendererGL::renderVboLoop(
                         progressive->progressiveQuantizationMaximum);
                 }
                 applyWireRasterStyle(glue, inst, caps_.hasLineStipple);
+                const GLsizei segmentCount = progressiveWireSegmentCount(
+                    assembly, item.rep.part, inst, w->segCount);
                 bindAndDrawWire(w, glue, locPos,
                     progressive ? static_cast<GLsizei>(
                         progressive->segmentFirstAtLevel(level)) : 0,
-                    progressiveWireSegmentCount(assembly, item.rep.part,
-                                                inst, w->segCount));
+                    segmentCount);
+                cadAccumulateRenderedWireWork(
+                    lastRenderedWork_,
+                    static_cast<uint64_t>((std::max)(0, segmentCount)));
             }
             if (interrupted)
                 break;
@@ -2143,7 +2243,7 @@ void CadRendererGL::renderVboLoop(
                             submittedTriangles;
                 if (geometry && geometry->shaded)
                     cadAccumulateRenderedShadedWork(
-                        lastRenderedShadedWork_, *geometry->shaded,
+                        lastRenderedWork_, *geometry->shaded,
                         level, submittedTriangles);
             }
             if (interrupted)
@@ -2155,8 +2255,6 @@ void CadRendererGL::renderVboLoop(
     lastRenderedTriangleCount_ =
         renderedTriangleCount > UINT64_MAX - lastRenderedTriangleCount_ ?
             UINT64_MAX : lastRenderedTriangleCount_ + renderedTriangleCount;
-    if (drawShaded)
-        lastRenderedShadedWork_.exact = !interrupted;
 }
 
 // ---------------------------------------------------------------------------
@@ -2235,8 +2333,9 @@ void CadRendererGL::renderFixedVboLoop(
 
             GLuint positionBuffer = wire->posBuf;
             GLsizei segmentFirst = 0;
+            uint8_t level = 15;
             if (progressive) {
-                const uint8_t level = cadResolvedProgressiveLevel(
+                level = cadResolvedProgressiveLevel(
                     assembly.effectiveProgressiveLodLevel(inst.lodLevel),
                     progressive->progressiveMinimumLevel,
                     progressive->progressiveResidentLevel);
@@ -2263,6 +2362,9 @@ void CadRendererGL::renderFixedVboLoop(
                     reinterpret_cast<const GLvoid *>(
                         static_cast<uintptr_t>(segmentFirst) * 2u *
                         sizeof(uint32_t)));
+            cadAccumulateRenderedWireWork(
+                lastRenderedWork_,
+                static_cast<uint64_t>((std::max)(0, segmentCount)));
         }
         if (interrupted)
             break;
@@ -2415,7 +2517,7 @@ void CadRendererGL::renderFixedVboLoop(
                             submittedTriangles;
                 if (geometry && geometry->shaded)
                     cadAccumulateRenderedShadedWork(
-                        lastRenderedShadedWork_, *geometry->shaded,
+                        lastRenderedWork_, *geometry->shaded,
                         level, submittedTriangles);
             } else {
                 glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, tri->idxBuf);
@@ -2432,7 +2534,7 @@ void CadRendererGL::renderFixedVboLoop(
                         renderedTriangleCount + submittedTriangles;
                 if (geometry && geometry->shaded)
                     cadAccumulateRenderedShadedWork(
-                        lastRenderedShadedWork_, *geometry->shaded,
+                        lastRenderedWork_, *geometry->shaded,
                         level, submittedTriangles);
             }
         }
@@ -2456,8 +2558,6 @@ void CadRendererGL::renderFixedVboLoop(
     lastRenderedTriangleCount_ =
         renderedTriangleCount > UINT64_MAX - lastRenderedTriangleCount_ ?
             UINT64_MAX : lastRenderedTriangleCount_ + renderedTriangleCount;
-    if (drawShaded)
-        lastRenderedShadedWork_.exact = !interrupted;
 }
 
 // ---------------------------------------------------------------------------
@@ -2581,8 +2681,12 @@ void CadRendererGL::renderImmediateMode(
 
             if (interrupted)
                 break;
+            uint64_t polylineSegments = 0;
             for (const auto& poly : wire.polylines) {
                 if (poly.points.size() < 2) continue;
+                polylineSegments = cadSaturatingWorkAdd(
+                    polylineSegments,
+                    static_cast<uint64_t>(poly.points.size() - 1));
                 size_t point = 0;
                 while (point < poly.points.size()) {
                     const size_t chunkEnd = std::min(
@@ -2606,6 +2710,11 @@ void CadRendererGL::renderImmediateMode(
                 if (interrupted)
                     break;
             }
+            if (!interrupted)
+                cadAccumulateRenderedWireWork(
+                    lastRenderedWork_,
+                    static_cast<uint64_t>(flatPointCount / 2) +
+                        polylineSegments);
         }
         if (interrupted)
             break;
@@ -2720,7 +2829,7 @@ void CadRendererGL::renderImmediateMode(
             }
             if (!interrupted)
                 cadAccumulateRenderedShadedWork(
-                    lastRenderedShadedWork_, mesh, drawLevel,
+                    lastRenderedWork_, mesh, drawLevel,
                     static_cast<uint64_t>(drawIndexCount / 3));
         }
         if (interrupted)
@@ -2741,8 +2850,6 @@ void CadRendererGL::renderImmediateMode(
     lastRenderedTriangleCount_ =
         renderedTriangleCount > UINT64_MAX - lastRenderedTriangleCount_ ?
             UINT64_MAX : lastRenderedTriangleCount_ + renderedTriangleCount;
-    if (drawShaded)
-        lastRenderedShadedWork_.exact = !interrupted;
 }
 
 // ---------------------------------------------------------------------------
@@ -2772,6 +2879,7 @@ bool CadRendererGL::submitIndirectPrepared(
     if (indirectPrepared_.pages.empty()) {
         if (indirectPrepared_.pressureProxyPoints.empty())
             return false;
+        lastRenderedWork_ = indirectPrepared_.renderedWork;
         lastIndirectStatus_ = 0;
         reportedIndirectStatus_ = 0;
         return true;
@@ -2910,6 +3018,7 @@ bool CadRendererGL::submitIndirectPrepared(
     glue->glUseProgramObjectARB(0);
     gpuRes_->releaseFlatShaded(glue);
     gpuRes_->releaseStandaloneTriangles(glue);
+    lastRenderedWork_ = indirectPrepared_.renderedWork;
     lastIndirectStatus_ = 0;
     reportedIndirectStatus_ = 0;
     return true;
@@ -3342,6 +3451,9 @@ bool CadRendererGL::patchIndirectPreparedAppend(
                 demand);
             indirectPrepared_.renderedTriangleCount +=
                 residentIndexCount / 3u;
+            cadAccumulateRenderedShadedWork(
+                indirectPrepared_.renderedWork, mesh, level,
+                static_cast<uint64_t>(residentIndexCount / 3u));
         }
         sourceExtent = newSourceExtent;
     }
@@ -3619,6 +3731,8 @@ bool CadRendererGL::patchIndirectPreparedGeometry(
             return fail("old-command-shape");
         const uint64_t oldTriangles =
             oldCommand.count / 3u;
+        const uint64_t oldPositions = demand.vertexCount;
+        const bool oldHasNormals = demand.hasNormals;
 
         IndirectPageWork *newPageWork = nullptr;
         for (IndirectPageWork& candidate :
@@ -3744,6 +3858,15 @@ bool CadRendererGL::patchIndirectPreparedGeometry(
                     renderedTriangleCount -
                     oldTriangles + newTriangles :
                 newTriangles;
+        cadReplacePreparedShadedWork(
+            indirectPrepared_.renderedWork,
+            oldTriangles, oldPositions, oldHasNormals,
+            newTriangles,
+            static_cast<uint64_t>(
+                mesh.isProgressive() ?
+                    mesh.positionCountAtLevel(level) :
+                    mesh.positions.size()),
+            !mesh.normals.empty());
     }
 
     indirectPrepared_.pages.erase(
@@ -3944,6 +4067,9 @@ bool CadRendererGL::patchIndirectPreparedCeiling(
             command.count / 3u;
         const uint64_t newTriangles =
             commandCount / 3u;
+        const uint64_t oldPositions = demand.vertexCount;
+        const uint64_t newPositions =
+            static_cast<uint64_t>(mesh.positionCountAtLevel(level));
         indirectPrepared_.renderedTriangleCount =
             oldTriangles <=
                     indirectPrepared_.
@@ -3952,6 +4078,10 @@ bool CadRendererGL::patchIndirectPreparedCeiling(
                     renderedTriangleCount -
                     oldTriangles + newTriangles :
                 newTriangles;
+        cadReplacePreparedShadedWork(
+            indirectPrepared_.renderedWork,
+            oldTriangles, oldPositions, demand.hasNormals,
+            newTriangles, newPositions, demand.hasNormals);
         command.count =
             static_cast<uint32_t>(commandCount);
         indirectPrepared_.instances[
@@ -4207,12 +4337,19 @@ bool CadRendererGL::patchIndirectPreparedLod(
             static_cast<uint64_t>(command.count / 3u);
         const uint64_t newTriangles =
             static_cast<uint64_t>(commandCount / 3u);
+        const uint64_t oldPositions = demand.vertexCount;
+        const uint64_t newPositions =
+            static_cast<uint64_t>(mesh.positionCountAtLevel(level));
         indirectPrepared_.renderedTriangleCount =
             oldTriangles <=
                     indirectPrepared_.renderedTriangleCount ?
                 indirectPrepared_.renderedTriangleCount -
                     oldTriangles + newTriangles :
                 newTriangles;
+        cadReplacePreparedShadedWork(
+            indirectPrepared_.renderedWork,
+            oldTriangles, oldPositions, demand.hasNormals,
+            newTriangles, newPositions, demand.hasNormals);
         command.count =
             static_cast<uint32_t>(commandCount);
         InstVertex& target =
@@ -4391,6 +4528,8 @@ bool CadRendererGL::replayIndirectShaded(
     }
     const bool appendPatchEnabled =
         configuration_->appendPatch;
+    if (appendChanged)
+        noteRenderPreparation();
     if (appendChanged &&
             (!appendPatchEnabled ||
              !patchIndirectPreparedAppend(
@@ -4405,6 +4544,8 @@ bool CadRendererGL::replayIndirectShaded(
         return false;
     const bool geometryPatchEnabled =
         configuration_->geometryPatch;
+    if (partGeometryChanged)
+        noteRenderPreparation();
     if (partGeometryChanged &&
             (!geometryPatchEnabled ||
              !patchIndirectPreparedGeometry(
@@ -4417,8 +4558,12 @@ bool CadRendererGL::replayIndirectShaded(
     }
     if (renderInterrupted())
         return false;
-    if (indirectPrepared_.progressiveLodCeiling !=
-            assembly.progressiveLodCeiling.getValue() &&
+    const bool ceilingChanged =
+        indirectPrepared_.progressiveLodCeiling !=
+            assembly.progressiveLodCeiling.getValue();
+    if (ceilingChanged)
+        noteRenderPreparation();
+    if (ceilingChanged &&
             !patchIndirectPreparedCeiling(
                 plan, assembly, glue)) {
         if (configuration_->patchDebug)
@@ -4431,8 +4576,11 @@ bool CadRendererGL::replayIndirectShaded(
         return false;
     const bool lodPatchEnabled =
         configuration_->lodPatch;
-    if (indirectPrepared_.shadedLodRevision !=
-            plan.shadedLodRevision &&
+    const bool lodChanged = indirectPrepared_.shadedLodRevision !=
+        plan.shadedLodRevision;
+    if (lodChanged)
+        noteRenderPreparation();
+    if (lodChanged &&
             (!lodPatchEnabled ||
              !patchIndirectPreparedLod(
                 plan, assembly, glue))) {
@@ -4447,6 +4595,7 @@ bool CadRendererGL::replayIndirectShaded(
 
     if (indirectPrepared_.instanceAttributeRevision !=
             plan.instanceAttributeRevision) {
+        noteRenderPreparation();
         if (indirectPrepared_.sourceInstanceIndices.size() !=
                 indirectPrepared_.instances.size() ||
                 indirectPrepared_.pressureProxySourceInstanceIndices.size() !=
@@ -4797,6 +4946,7 @@ bool CadRendererGL::replayIndirectShaded(
             gpuRes_->triangleAtlasRevision() ||
         !indirectPrepared_.atlasValidationCountdown;
     if (validateAtlas) {
+        noteRenderPreparation();
         for (const IndirectPreparedPart& demand : indirectPrepared_.parts) {
             if (renderInterruptedAfter(deadlineWork))
                 return false;
@@ -4880,6 +5030,7 @@ bool CadRendererGL::renderIndirectShaded(
      * record.  Invalidate it before the first swap so a deadline exit can
      * never expose a half-recycled record on the next frame. */
     indirectPrepared_.valid = false;
+    noteRenderPreparation();
     using IndirectClock = std::chrono::steady_clock;
     const auto indirectStarted = IndirectClock::now();
     auto visibilityCompleted = indirectStarted;
@@ -5267,6 +5418,7 @@ bool CadRendererGL::renderIndirectShaded(
     if (sourceInstanceIndices.capacity() < visibleOccurrenceCount)
         sourceInstanceIndices.reserve(visibleOccurrenceCount);
     uint64_t renderedTriangleCount = 0;
+    Obol::CadRenderedWork renderedWork;
     /*
      * Protection and admission both return stable element pointers.  Use
      * those direct bindings below instead of performing a second hash-table
@@ -5383,6 +5535,10 @@ bool CadRendererGL::renderIndirectShaded(
         renderedTriangleCount +=
             static_cast<uint64_t>(command.count / 3u) *
             static_cast<uint64_t>(command.instanceCount);
+        cadAccumulateRenderedShadedWork(
+            renderedWork, mesh, commandLevel,
+            static_cast<uint64_t>(command.count / 3u),
+            static_cast<uint64_t>(command.instanceCount));
         IndirectPageWork& work = pageWorkFor(atlas->page);
         auto& commands =
             item.cullBackfaces ? work.culled : work.ordinary;
@@ -5466,6 +5622,7 @@ bool CadRendererGL::renderIndirectShaded(
         assembly.progressiveLodCeiling.getValue();
     prepared.viewProj = viewProj;
     prepared.renderedTriangleCount = renderedTriangleCount;
+    prepared.renderedWork = renderedWork;
     prepared.instanceUploadSerial = 0;
     prepared.atlasRevision = gpuRes_->triangleAtlasRevision();
     prepared.atlasValidationCountdown = 30u;
@@ -5929,6 +6086,10 @@ void CadRendererGL::renderInstanced(
                                                       sizeof(uint32_t)),
                                                   runCount);
                 }
+                cadAccumulateRenderedWireWork(
+                    lastRenderedWork_,
+                    static_cast<uint64_t>(segmentCount),
+                    static_cast<uint64_t>(runCount));
 
                 if (w->vao && glue->glBindVertexArray) {
                     glue->glBindVertexArray(0);
@@ -6136,6 +6297,11 @@ void CadRendererGL::renderInstanced(
                 glue->glDrawElementsInstanced(
                     GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, nullptr,
                     static_cast<GLsizei>(runEnd - runStart));
+                if (geometry && geometry->shaded)
+                    cadAccumulateRenderedShadedWork(
+                        lastRenderedWork_, *geometry->shaded, level,
+                        static_cast<uint64_t>(indexCount / 3),
+                        static_cast<uint64_t>(runEnd - runStart));
                 renderedTriangleCount +=
                     static_cast<uint64_t>(indexCount / 3) *
                     static_cast<uint64_t>(runEnd - runStart);

@@ -378,8 +378,10 @@ class CadGpuTimerGuard {
 public:
     CadGpuTimerGuard(Obol::internal::CadGpuResources *resources,
                      const SoGLContext *context,
-                     const uint64_t *triangles)
-        : resources_(resources), glue_(context), triangles_(triangles)
+                     const uint64_t *triangles,
+                     float pointProxyPixelThreshold)
+        : resources_(resources), glue_(context), triangles_(triangles),
+          pointProxyPixelThreshold_(pointProxyPixelThreshold)
     {
         active_ = resources_ &&
             resources_->beginFrameGpuTimer(glue_);
@@ -389,13 +391,15 @@ public:
     {
         if (active_)
             resources_->endFrameGpuTimer(
-                triangles_ ? *triangles_ : 0, glue_);
+                triangles_ ? *triangles_ : 0,
+                pointProxyPixelThreshold_, glue_);
     }
 
 private:
     Obol::internal::CadGpuResources *resources_ = nullptr;
     const SoGLContext *glue_ = nullptr;
     const uint64_t *triangles_ = nullptr;
+    float pointProxyPixelThreshold_ = 1.0f;
     bool active_ = false;
 };
 
@@ -484,7 +488,13 @@ thread_local SoGLRenderAction *CadRendererGL::activeRenderAction_ = nullptr;
 bool
 CadRendererGL::renderInterrupted() const
 {
-    return activeRenderAction_ && activeRenderAction_->abortNow();
+    if (activeRenderInterrupted_)
+        return true;
+    if (activeRenderAction_ && activeRenderAction_->abortNow()) {
+        activeRenderInterrupted_ = true;
+        return true;
+    }
+    return false;
 }
 
 bool
@@ -849,8 +859,11 @@ void CadRendererGL::ensurePartUploaded(
     const bool progressive =
         (geom->wire.has_value() && geom->wire->isProgressive()) ||
         (geom->shaded.has_value() && geom->shaded->isProgressive());
-    const uint64_t progressiveLineage =
-        geom->shaded.has_value() ? geom->shaded->progressiveLineage : 0;
+    uint64_t progressiveLineage = 0;
+    if (geom->shaded.has_value())
+        progressiveLineage = geom->shaded->progressiveLineage;
+    else if (geom->wire.has_value())
+        progressiveLineage = geom->wire->progressiveLineage;
 
     // Ordinary geometry has no view-dependent upload size, so retain its
     // original constant-time generation fast path.
@@ -956,7 +969,8 @@ void CadRendererGL::ensurePartUploaded(
      * view asks for less.  Never shrink the retained ordinary buffers merely
      * to enter interaction; only defer appending newly resident tails.
      */
-    if (progressive) {
+    if (progressive && gpuRes_->hasCompatibleProgressivePrefix(
+            pid, progressiveLineage)) {
         if (const CadWireGpu *wire = gpuRes_->wireFor(pid)) {
             wirePointCount = std::max(wirePointCount, wire->vertCount);
             wireSegIdxCount = std::max(wireSegIdxCount, wire->idxCount);
@@ -971,6 +985,7 @@ void CadRendererGL::ensurePartUploaded(
             triPosCount, triIdxCount))
         return;
 
+    noteRenderPreparation();
     gpuRes_->upload(pid,
                    pPointPos, pointCount,
                    pWirePos,  wirePointCount,
@@ -1517,6 +1532,7 @@ void CadRendererGL::render(
         const std::unordered_map<PartId, uint64_t,
                                  std::hash<PartId>>& partGenMap)
 {
+    activeRenderInterrupted_ = false;
     SoGLRenderAction *previousAction = activeRenderAction_;
     activeRenderAction_ = action;
     struct RestoreActiveRenderAction {
@@ -1535,9 +1551,12 @@ void CadRendererGL::render(
     pressureProxyPointsView_ = nullptr;
     pressureProxyPoints_.clear();
     lastRenderedTriangleCount_ = 0;
-    lastRenderedShadedWork_ = Obol::CadRenderedShadedWork();
+    lastRenderedWork_ = Obol::CadRenderedWork();
     lastRenderUsedPreparedReplay_ = false;
     atlasAdmissionPressure_ = false;
+    if (!gpuRes_ || gpuContextId_ != glue->contextid ||
+            !capsDetected_ || shadersContextId_ != glue->contextid)
+        noteRenderPreparation();
     if (!ensureReady(glue)) return;
     const auto publishResourceSnapshot = [&]() {
         Obol::CadGpuResourceSnapshot snapshot =
@@ -1552,11 +1571,17 @@ void CadRendererGL::render(
         lastGpuResourceSnapshot_ = snapshot;
     };
     if (plan.visibleInstances.empty()) {
+        /* Empty is a complete presentation, not an interrupted one.  Hosts
+         * use the exact bit to decide whether an offscreen buffer may replace
+         * the preceding completed frame. */
+        lastRenderedWork_.exact = true;
+        lastRenderTier_ = 0;
         publishResourceSnapshot();
         return;
     }
     CadGpuTimerGuard gpuTimer(
-        gpuRes_, glue, &lastRenderedTriangleCount_);
+        gpuRes_, glue, &lastRenderedTriangleCount_,
+        assembly.pointProxyPixelThreshold.getValue());
     CadGLStateValidationGuard validateState(
         glue, configuration.validateGlState,
         caps_.compatibilityProfile, caps_.hasVBO,
@@ -1571,8 +1596,10 @@ void CadRendererGL::render(
         gpuRes_->endTriangleAtlasFrame(glue);
         gpuRes_->endProgressiveFrame(glue);
         frameResourcesOpen = false;
-        if (publish)
+        if (publish) {
+            lastRenderedWork_.exact = true;
             publishResourceSnapshot();
+        }
     };
     const auto finishInterruptedFrame = [&]() {
         if (!renderInterrupted())
@@ -1619,6 +1646,10 @@ void CadRendererGL::render(
 
     if (hiddenLine) {
         if (useFlatShaded) {
+            const uint64_t workTriangleSnapshot =
+                lastRenderedTriangleCount_;
+            const Obol::CadRenderedWork workSnapshot =
+                lastRenderedWork_;
             SoGLContext_glColorMask(glue, GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
             SoGLContext_glEnable(glue, GL_POLYGON_OFFSET_FILL);
             SoGLContext_glPolygonOffset(glue, 1.0f, 1.0f);
@@ -1644,6 +1675,8 @@ void CadRendererGL::render(
                 finishFrameResources(true);
                 return;
             }
+            lastRenderedTriangleCount_ = workTriangleSnapshot;
+            lastRenderedWork_ = workSnapshot;
         }
 
         // The per-part fallback needs retained representations.
@@ -1848,6 +1881,10 @@ void CadRendererGL::render(
     }
 
     bool flatShadedRendered = false;
+    const uint64_t flatTriangleSnapshot =
+        lastRenderedTriangleCount_;
+    const Obol::CadRenderedWork flatWorkSnapshot =
+        lastRenderedWork_;
     if (useFlatShaded) {
         const GLboolean polygonOffsetWasEnabled =
             glue->glIsEnabled(GL_POLYGON_OFFSET_FILL);
@@ -1877,6 +1914,8 @@ void CadRendererGL::render(
             return;
         }
     }
+    lastRenderedTriangleCount_ = flatTriangleSnapshot;
+    lastRenderedWork_ = flatWorkSnapshot;
 
     /*
      * Wire and shaded work are independent presentation channels.  In

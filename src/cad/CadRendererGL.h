@@ -159,8 +159,8 @@ public:
         return lastRenderedTriangleCount_;
     }
 
-    Obol::CadRenderedShadedWork lastRenderedShadedWork() const {
-        return lastRenderedShadedWork_;
+    Obol::CadRenderedWork lastRenderedWork() const {
+        return lastRenderedWork_;
     }
 
     /** Most recently completed, asynchronously measured CAD GPU work. */
@@ -169,6 +169,9 @@ public:
     }
     uint64_t lastGpuRenderedTriangleCount() const {
         return gpuRes_ ? gpuRes_->lastGpuTriangleCount() : 0;
+    }
+    float lastGpuPointProxyPixelThreshold() const {
+        return gpuRes_ ? gpuRes_->lastGpuPointProxyPixelThreshold() : 1.0f;
     }
     uint64_t gpuTimerSampleSerial() const {
         return gpuRes_ ? gpuRes_->gpuTimerSampleSerial() : 0;
@@ -181,6 +184,13 @@ public:
      * instance, atlas, and command record instead of rebuilding it. */
     bool lastRenderUsedPreparedReplay() const {
         return lastRenderUsedPreparedReplay_;
+    }
+
+    /** Monotonic token advanced when a render performs retained-record,
+     * resource-upload, or renderer-initialization work which is not part of
+     * a steady prepared draw. */
+    uint64_t renderPreparationSerial() const {
+        return renderPreparationSerial_;
     }
 
     /** Number of visible occurrences proxied because atlas admission failed. */
@@ -230,9 +240,21 @@ private:
      * preceding slot on exit.
      */
     static thread_local SoGLRenderAction *activeRenderAction_;
+    /* SoGLRenderAction::abortNow() is an edge-triggered query in some Coin
+     * traversal paths: once a retained executor observes ABORT, a later
+     * query made while unwinding the same CAD render is not guaranteed to
+     * report it again.  Keep the observation sticky for the whole assembly
+     * render so fallback executors cannot turn a partially drawn frame into
+     * an apparently exact one. */
+    mutable bool activeRenderInterrupted_ = false;
     bool renderInterrupted() const;
     bool renderInterruptedAfter(size_t& workCounter,
                                 size_t work = 1u) const;
+    void noteRenderPreparation() {
+        ++renderPreparationSerial_;
+        if (!renderPreparationSerial_)
+            renderPreparationSerial_ = 1;
+    }
 
     bool softwareGlslRequested() const;
     bool cadLightDebugRequested() const;
@@ -257,8 +279,9 @@ private:
     int       lastRenderTier_ = -1; ///< -1=none, 0=imm, 1=vbo, 2=inst, 3/4=flat, 5=mixed flat-wire
     int       lastIndirectStatus_ = -1;
     uint64_t  lastRenderedTriangleCount_ = 0;
-    Obol::CadRenderedShadedWork lastRenderedShadedWork_;
+    Obol::CadRenderedWork lastRenderedWork_;
     bool      lastRenderUsedPreparedReplay_ = false;
+    uint64_t  renderPreparationSerial_ = 0;
     bool      atlasAdmissionPressure_ = false;
     Obol::CadGpuResourceSnapshot lastGpuResourceSnapshot_;
     uint64_t completedResourceFrameSerial_ = 0;
@@ -461,6 +484,7 @@ private:
         std::vector<uint32_t> pressureProxySourceInstanceIndices;
         std::vector<uint32_t> pressureProxyIndexBySource;
         uint64_t renderedTriangleCount = 0;
+        Obol::CadRenderedWork renderedWork;
         uint64_t instanceUploadSerial = 0;
         uint64_t atlasRevision = 0;
         uint32_t atlasValidationCountdown = 0;
