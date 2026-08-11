@@ -40,6 +40,7 @@
 #include <Inventor/misc/SoContextHandler.h>
 #include <Inventor/system/gl.h>
 #include <Inventor/SbVec3f.h>
+#include <Inventor/actions/SoGLRenderAction.h>
 #include "glue/glp.h"
 
 #include <cstring>
@@ -377,8 +378,10 @@ class CadGpuTimerGuard {
 public:
     CadGpuTimerGuard(Obol::internal::CadGpuResources *resources,
                      const SoGLContext *context,
-                     const uint64_t *triangles)
-        : resources_(resources), glue_(context), triangles_(triangles)
+                     const uint64_t *triangles,
+                     float pointProxyPixelThreshold)
+        : resources_(resources), glue_(context), triangles_(triangles),
+          pointProxyPixelThreshold_(pointProxyPixelThreshold)
     {
         active_ = resources_ &&
             resources_->beginFrameGpuTimer(glue_);
@@ -388,13 +391,15 @@ public:
     {
         if (active_)
             resources_->endFrameGpuTimer(
-                triangles_ ? *triangles_ : 0, glue_);
+                triangles_ ? *triangles_ : 0,
+                pointProxyPixelThreshold_, glue_);
     }
 
 private:
     Obol::internal::CadGpuResources *resources_ = nullptr;
     const SoGLContext *glue_ = nullptr;
     const uint64_t *triangles_ = nullptr;
+    float pointProxyPixelThreshold_ = 1.0f;
     bool active_ = false;
 };
 
@@ -478,6 +483,35 @@ releaseSharedCadShaders(uint32_t contextId, void *)
 // Constructor / Destructor
 // ---------------------------------------------------------------------------
 
+thread_local SoGLRenderAction *CadRendererGL::activeRenderAction_ = nullptr;
+
+bool
+CadRendererGL::renderInterrupted() const
+{
+    if (activeRenderInterrupted_)
+        return true;
+    if (activeRenderAction_ && activeRenderAction_->abortNow()) {
+        activeRenderInterrupted_ = true;
+        return true;
+    }
+    return false;
+}
+
+bool
+CadRendererGL::renderInterruptedAfter(size_t& workCounter, size_t work) const
+{
+    static constexpr size_t safePointStride = 256u;
+    if (!activeRenderAction_)
+        return false;
+    if (workCounter < safePointStride &&
+            work < safePointStride - workCounter) {
+        workCounter += work;
+        return false;
+    }
+    workCounter = 0;
+    return renderInterrupted();
+}
+
 CadRendererGL::CadRendererGL() :
     configuration_(new CadRendererConfiguration)
 {
@@ -511,6 +545,29 @@ CadRendererGL::cadShaderDebugMode() const
 }
 
 void
+CadRendererGL::setAmbientLight(float red, float green, float blue,
+                               float intensity)
+{
+    const float level = std::isfinite(intensity) ?
+        std::max(0.0f, std::min(1.0f, intensity)) : 0.0f;
+    const float color[3] = {red, green, blue};
+    for (size_t i = 0; i < 3; ++i) {
+        const float component = std::isfinite(color[i]) ?
+            std::max(0.0f, std::min(1.0f, color[i])) : 0.0f;
+        this->ambientLight_[i] = component * level;
+    }
+}
+
+void
+CadRendererGL::uploadAmbientLight(const SoGLContext* glue, GLuint program)
+{
+    const GLint location =
+        glue->glGetUniformLocationARB(program, "u_ambient");
+    if (location >= 0)
+        glue->glUniform3fvARB(location, 1, this->ambientLight_);
+}
+
+void
 CadRendererGL::uploadLights(const SoGLContext* glue, GLuint program)
 {
     // Build parallel arrays for the shaded shader's u_light* uniforms.  Fall
@@ -521,7 +578,7 @@ CadRendererGL::uploadLights(const SoGLContext* glue, GLuint program)
     float color[kMaxLights * 3];
     float cosCut[kMaxLights];
     int n = 0;
-    if (this->lights_.empty()) {
+    if (!this->lightsSupplied_) {
         type[0] = 0;
         vec[0] = kLightDir[0]; vec[1] = kLightDir[1]; vec[2] = kLightDir[2];
         axis[0] = 0.0f; axis[1] = 0.0f; axis[2] = -1.0f;
@@ -544,14 +601,6 @@ CadRendererGL::uploadLights(const SoGLContext* glue, GLuint program)
             cosCut[n] = l.cosCutoff;
             ++n;
         }
-        if (n == 0) { // all filtered out; keep the shader well-defined
-            type[0] = 0;
-            vec[0] = kLightDir[0]; vec[1] = kLightDir[1]; vec[2] = kLightDir[2];
-            axis[0] = 0.0f; axis[1] = 0.0f; axis[2] = -1.0f;
-            color[0] = 1.0f; color[1] = 1.0f; color[2] = 1.0f;
-            cosCut[0] = -2.0f;
-            n = 1;
-        }
     }
     const GLint countLocation =
         glue->glGetUniformLocationARB(program, "u_numLights");
@@ -566,11 +615,14 @@ CadRendererGL::uploadLights(const SoGLContext* glue, GLuint program)
     const GLint cutoffLocation =
         glue->glGetUniformLocationARB(program, "u_lcos");
     glue->glUniform1iARB(countLocation, n);
-    glue->glUniform1ivARB(typeLocation, n, type);
-    glue->glUniform3fvARB(vectorLocation, n, vec);
-    glue->glUniform3fvARB(axisLocation, n, axis);
-    glue->glUniform3fvARB(colorLocation, n, color);
-    glue->glUniform1fvARB(cutoffLocation, n, cosCut);
+    if (n > 0) {
+        glue->glUniform1ivARB(typeLocation, n, type);
+        glue->glUniform3fvARB(vectorLocation, n, vec);
+        glue->glUniform3fvARB(axisLocation, n, axis);
+        glue->glUniform3fvARB(colorLocation, n, color);
+        glue->glUniform1fvARB(cutoffLocation, n, cosCut);
+    }
+    this->uploadAmbientLight(glue, program);
     if (cadLightDebugRequested()) {
         static unsigned int reportCount = 0;
         if (reportCount++ < 32) {
@@ -580,9 +632,85 @@ CadRendererGL::uploadLights(const SoGLContext* glue, GLuint program)
                 "l0={type=%d vec=(%.9g,%.9g,%.9g) "
                 "color=(%.9g,%.9g,%.9g)}\n",
                 program, n, countLocation, typeLocation, vectorLocation,
-                axisLocation, colorLocation, cutoffLocation, type[0],
-                vec[0], vec[1], vec[2], color[0], color[1], color[2]);
+                axisLocation, colorLocation, cutoffLocation,
+                n > 0 ? type[0] : -1,
+                n > 0 ? vec[0] : 0.0f,
+                n > 0 ? vec[1] : 0.0f,
+                n > 0 ? vec[2] : 0.0f,
+                n > 0 ? color[0] : 0.0f,
+                n > 0 ? color[1] : 0.0f,
+                n > 0 ? color[2] : 0.0f);
         }
+    }
+}
+
+void
+CadRendererGL::uploadFixedLights(const SoGLContext* glue)
+{
+    if (!glue)
+        return;
+
+    const GLfloat modelAmbient[4] = {
+        this->ambientLight_[0], this->ambientLight_[1],
+        this->ambientLight_[2], 1.0f
+    };
+    SoGLContext_glLightModelfv(
+        glue, GL_LIGHT_MODEL_AMBIENT, modelAmbient);
+
+    GlLight fallback;
+    fallback.type = 0;
+    fallback.vec[0] = kLightDir[0];
+    fallback.vec[1] = kLightDir[1];
+    fallback.vec[2] = kLightDir[2];
+    const GlLight *active = this->lights_.data();
+    size_t activeCount = this->lights_.size();
+    if (!this->lightsSupplied_) {
+        active = &fallback;
+        activeCount = 1;
+    }
+    activeCount = std::min(activeCount, static_cast<size_t>(kMaxLights));
+
+    const GLfloat black[4] = {0.0f, 0.0f, 0.0f, 1.0f};
+    constexpr float radiansToDegrees =
+        57.295779513082320876798154814105f;
+    for (int i = 0; i < kMaxLights; ++i) {
+        const GLenum slot = static_cast<GLenum>(GL_LIGHT0 + i);
+        if (static_cast<size_t>(i) >= activeCount) {
+            SoGLContext_glDisable(glue, slot);
+            continue;
+        }
+
+        const GlLight& light = active[i];
+        const GLfloat color[4] = {
+            light.color[0], light.color[1], light.color[2], 1.0f
+        };
+        const GLfloat position[4] = {
+            light.vec[0], light.vec[1], light.vec[2],
+            light.type == 0 ? 0.0f : 1.0f
+        };
+        SoGLContext_glLightfv(glue, slot, GL_AMBIENT, black);
+        SoGLContext_glLightfv(glue, slot, GL_DIFFUSE, color);
+        SoGLContext_glLightfv(glue, slot, GL_SPECULAR, color);
+        SoGLContext_glLightfv(glue, slot, GL_POSITION, position);
+        SoGLContext_glLightf(glue, slot, GL_CONSTANT_ATTENUATION, 1.0f);
+        SoGLContext_glLightf(glue, slot, GL_LINEAR_ATTENUATION, 0.0f);
+        SoGLContext_glLightf(glue, slot, GL_QUADRATIC_ATTENUATION, 0.0f);
+        SoGLContext_glLightf(glue, slot, GL_SPOT_EXPONENT, 0.0f);
+        if (light.type == 2) {
+            const GLfloat direction[3] = {
+                light.axis[0], light.axis[1], light.axis[2]
+            };
+            SoGLContext_glLightfv(
+                glue, slot, GL_SPOT_DIRECTION, direction);
+            const float cosine = std::max(-1.0f,
+                std::min(1.0f, light.cosCutoff));
+            SoGLContext_glLightf(
+                glue, slot, GL_SPOT_CUTOFF,
+                std::acos(cosine) * radiansToDegrees);
+        } else {
+            SoGLContext_glLightf(glue, slot, GL_SPOT_CUTOFF, 180.0f);
+        }
+        SoGLContext_glEnable(glue, slot);
     }
 }
 
@@ -731,6 +859,11 @@ void CadRendererGL::ensurePartUploaded(
     const bool progressive =
         (geom->wire.has_value() && geom->wire->isProgressive()) ||
         (geom->shaded.has_value() && geom->shaded->isProgressive());
+    uint64_t progressiveLineage = 0;
+    if (geom->shaded.has_value())
+        progressiveLineage = geom->shaded->progressiveLineage;
+    else if (geom->wire.has_value())
+        progressiveLineage = geom->wire->progressiveLineage;
 
     // Ordinary geometry has no view-dependent upload size, so retain its
     // original constant-time generation fast path.
@@ -754,12 +887,20 @@ void CadRendererGL::ensurePartUploaded(
     GLsizei               wireSegIdxCount = 0;
     if (geom->wire.has_value()) {
         const auto& wr = *geom->wire;
+        /*
+         * Progressive wire levels are independent immutable ranges, not a
+         * prefix.  Retain the complete range table on the GPU once and let
+         * draw submission select first/count.  Uploading one selected range
+         * and later appending a different range corrupts the payload because
+         * the two simplifications need not share an ordered prefix.
+         */
+        const size_t flatSegmentFirst = 0;
+        const size_t flatPointFirst = flatSegmentFirst * 2;
         const size_t flatPointCount =
-            (wr.isProgressive() ?
-                wr.segmentCountAtLevel(requestedLod) :
-                wr.segmentCount()) * 2;
+            wr.segmentCount() * 2;
         if (flatPointCount > 0 && wr.polylines.empty()) {
-            pWirePos = packedVec3fData(wr.segmentPoints);
+            pWirePos = packedVec3fData(wr.segmentPoints) +
+                flatPointFirst * 3;
             wirePointCount = static_cast<GLsizei>(flatPointCount);
         } else {
             size_t polyPointCount = 0;
@@ -772,7 +913,9 @@ void CadRendererGL::ensurePartUploaded(
             wirePos.reserve((flatPointCount + polyPointCount) * 3);
             wireSegIdx.reserve(flatPointCount + polySegmentCount * 2);
 
-            for (size_t i = 0; i + 1 < flatPointCount; i += 2) {
+            const size_t flatPointEnd = flatPointFirst + flatPointCount;
+            for (size_t i = flatPointFirst;
+                    i + 1 < flatPointEnd; i += 2) {
                 const uint32_t base =
                     static_cast<uint32_t>(wirePos.size() / 3);
                 appendPackedPoint(wirePos, wr.segmentPoints[i]);
@@ -826,7 +969,8 @@ void CadRendererGL::ensurePartUploaded(
      * view asks for less.  Never shrink the retained ordinary buffers merely
      * to enter interaction; only defer appending newly resident tails.
      */
-    if (progressive) {
+    if (progressive && gpuRes_->hasCompatibleProgressivePrefix(
+            pid, progressiveLineage)) {
         if (const CadWireGpu *wire = gpuRes_->wireFor(pid)) {
             wirePointCount = std::max(wirePointCount, wire->vertCount);
             wireSegIdxCount = std::max(wireSegIdxCount, wire->idxCount);
@@ -841,6 +985,7 @@ void CadRendererGL::ensurePartUploaded(
             triPosCount, triIdxCount))
         return;
 
+    noteRenderPreparation();
     gpuRes_->upload(pid,
                    pPointPos, pointCount,
                    pWirePos,  wirePointCount,
@@ -850,6 +995,7 @@ void CadRendererGL::ensurePartUploaded(
                    pTriIdx,   triIdxCount,
                    gen,
                    progressive,
+                   progressiveLineage,
                    glue, caps_);
 }
 
@@ -924,8 +1070,11 @@ void CadRendererGL::renderPoints(
                                  std::hash<PartId>>& partGenMap)
 {
     if (plan.pointItems.empty()) return;
+    size_t deadlineWork = 256u;
 
     for (const CadDrawItem& item : plan.pointItems) {
+        if (renderInterruptedAfter(deadlineWork))
+            return;
         auto generation = partGenMap.find(item.rep.part);
         ensurePartUploaded(item.rep.part, assembly,
             generation != partGenMap.end() ? generation->second : 0,
@@ -938,6 +1087,7 @@ void CadRendererGL::renderPoints(
     const bool fixedFunction =
         (caps_.isSoftwareRenderer && !softwareGlslRequested()) ||
         !shaders_.wire;
+    bool interrupted = false;
 
     if (fixedFunction) {
         glue->glMatrixMode(GL_PROJECTION);
@@ -950,6 +1100,10 @@ void CadRendererGL::renderPoints(
         glue->glEnableClientState(GL_VERTEX_ARRAY);
 
         for (const CadDrawItem& item : plan.pointItems) {
+            if (renderInterruptedAfter(deadlineWork)) {
+                interrupted = true;
+                break;
+            }
             const PartGeometry* geometry = assembly.partGeometry(item.rep.part);
             const CadPointGpu* gpu = gpuRes_->pointFor(item.rep.part);
             if (!geometry || !geometry->points) continue;
@@ -965,6 +1119,10 @@ void CadRendererGL::renderPoints(
             }
 
             for (uint32_t i = 0; i < item.instanceCount; ++i) {
+                if (renderInterruptedAfter(deadlineWork)) {
+                    interrupted = true;
+                    break;
+                }
                 const size_t instanceIndex = item.baseInstance + i;
                 if (!cadInstanceDrawable(
                         plan, item, instanceIndex, CadDrawChannel::Points))
@@ -988,6 +1146,10 @@ void CadRendererGL::renderPoints(
                 glue->glPointSize(std::max(1.0f, inst.lineWidth));
                 if (!gpu) glue->glBegin(GL_POINTS);
                 for (GLsizei p = 0; p < pointCount; ++p) {
+                    if (gpu && renderInterruptedAfter(deadlineWork)) {
+                        interrupted = true;
+                        break;
+                    }
                     if (usePointColors && points.colorValid[p]) {
                         const SbColor& color = points.colors[p];
                         glue->glColor4f(color[0], color[1], color[2],
@@ -1004,7 +1166,11 @@ void CadRendererGL::renderPoints(
                     }
                 }
                 if (!gpu) glue->glEnd();
+                if (interrupted)
+                    break;
             }
+            if (interrupted)
+                break;
         }
 
         glue->glDisableClientState(GL_VERTEX_ARRAY);
@@ -1028,6 +1194,10 @@ void CadRendererGL::renderPoints(
         glue->glUniformMatrix4fvARB(locVP, 1, GL_FALSE, viewProj[0]);
 
         for (const CadDrawItem& item : plan.pointItems) {
+            if (renderInterruptedAfter(deadlineWork)) {
+                interrupted = true;
+                break;
+            }
             const PartGeometry* geometry = assembly.partGeometry(item.rep.part);
             const CadPointGpu* gpu = gpuRes_->pointFor(item.rep.part);
             if (!geometry || !geometry->points || !gpu) continue;
@@ -1044,6 +1214,10 @@ void CadRendererGL::renderPoints(
             }
 
             for (uint32_t i = 0; i < item.instanceCount; ++i) {
+                if (renderInterruptedAfter(deadlineWork)) {
+                    interrupted = true;
+                    break;
+                }
                 const size_t instanceIndex = item.baseInstance + i;
                 if (!cadInstanceDrawable(
                         plan, item, instanceIndex, CadDrawChannel::Points))
@@ -1064,6 +1238,10 @@ void CadRendererGL::renderPoints(
                     continue;
                 }
                 for (GLsizei p = 0; p < gpu->count; ++p) {
+                    if (renderInterruptedAfter(deadlineWork)) {
+                        interrupted = true;
+                        break;
+                    }
                     float color[4] = {
                         inst.rgba[0] / 255.0f, inst.rgba[1] / 255.0f,
                         inst.rgba[2] / 255.0f, inst.rgba[3] / 255.0f};
@@ -1076,6 +1254,8 @@ void CadRendererGL::renderPoints(
                     glue->glPointSize(std::max(1.0f, inst.lineWidth));
                     glue->glDrawArrays(GL_POINTS, p, 1);
                 }
+                if (interrupted)
+                    break;
             }
             if (gpu->vao && glue->glBindVertexArray)
                 glue->glBindVertexArray(0);
@@ -1083,6 +1263,8 @@ void CadRendererGL::renderPoints(
                 glue->glDisableVertexAttribArrayARB(static_cast<GLuint>(locPos));
                 glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
             }
+            if (interrupted)
+                break;
         }
         glue->glUseProgramObjectARB(0);
     }
@@ -1341,6 +1523,7 @@ void CadRendererGL::renderSubpixelProxyPoints(
 void CadRendererGL::render(
         const CadFramePlan& plan,
         const SoCADAssembly& assembly,
+        SoGLRenderAction*    action,
         const SoGLContext*   glue,
         const SbMatrix&      viewProj,
         const SbMatrix&      viewMatrix,
@@ -1349,6 +1532,15 @@ void CadRendererGL::render(
         const std::unordered_map<PartId, uint64_t,
                                  std::hash<PartId>>& partGenMap)
 {
+    activeRenderInterrupted_ = false;
+    SoGLRenderAction *previousAction = activeRenderAction_;
+    activeRenderAction_ = action;
+    struct RestoreActiveRenderAction {
+        SoGLRenderAction *&slot;
+        SoGLRenderAction *previous;
+        ~RestoreActiveRenderAction() { slot = previous; }
+    } restoreActiveRenderAction{activeRenderAction_, previousAction};
+
     using RenderClock = std::chrono::steady_clock;
     const CadRendererConfiguration& configuration = *configuration_;
     const bool renderTimingEnabled = configuration.renderTiming;
@@ -1359,11 +1551,37 @@ void CadRendererGL::render(
     pressureProxyPointsView_ = nullptr;
     pressureProxyPoints_.clear();
     lastRenderedTriangleCount_ = 0;
+    lastRenderedWork_ = Obol::CadRenderedWork();
     lastRenderUsedPreparedReplay_ = false;
+    atlasAdmissionPressure_ = false;
+    if (!gpuRes_ || gpuContextId_ != glue->contextid ||
+            !capsDetected_ || shadersContextId_ != glue->contextid)
+        noteRenderPreparation();
     if (!ensureReady(glue)) return;
-    if (plan.visibleInstances.empty()) return;
+    const auto publishResourceSnapshot = [&]() {
+        Obol::CadGpuResourceSnapshot snapshot =
+            gpuRes_->resourceSnapshot();
+        ++completedResourceFrameSerial_;
+        if (!completedResourceFrameSerial_)
+            completedResourceFrameSerial_ = 1;
+        snapshot.frameSerial = completedResourceFrameSerial_;
+        snapshot.pressureProxyCount = lastPressureProxyCount();
+        snapshot.atlasAdmissionPressure = atlasAdmissionPressure_ ||
+            snapshot.pressureProxyCount > 0;
+        lastGpuResourceSnapshot_ = snapshot;
+    };
+    if (plan.visibleInstances.empty()) {
+        /* Empty is a complete presentation, not an interrupted one.  Hosts
+         * use the exact bit to decide whether an offscreen buffer may replace
+         * the preceding completed frame. */
+        lastRenderedWork_.exact = true;
+        lastRenderTier_ = 0;
+        publishResourceSnapshot();
+        return;
+    }
     CadGpuTimerGuard gpuTimer(
-        gpuRes_, glue, &lastRenderedTriangleCount_);
+        gpuRes_, glue, &lastRenderedTriangleCount_,
+        assembly.pointProxyPixelThreshold.getValue());
     CadGLStateValidationGuard validateState(
         glue, configuration.validateGlState,
         caps_.compatibilityProfile, caps_.hasVBO,
@@ -1371,6 +1589,24 @@ void CadRendererGL::render(
         caps_.hasMultiDrawIndirect);
     gpuRes_->beginProgressiveFrame();
     gpuRes_->beginTriangleAtlasFrame();
+    bool frameResourcesOpen = true;
+    const auto finishFrameResources = [&](bool publish) {
+        if (!frameResourcesOpen)
+            return;
+        gpuRes_->endTriangleAtlasFrame(glue);
+        gpuRes_->endProgressiveFrame(glue);
+        frameResourcesOpen = false;
+        if (publish) {
+            lastRenderedWork_.exact = true;
+            publishResourceSnapshot();
+        }
+    };
+    const auto finishInterruptedFrame = [&]() {
+        if (!renderInterrupted())
+            return false;
+        finishFrameResources(false);
+        return true;
+    };
 
     CadDirectGLStateGuard directState(
         glue, caps_.hasVBO,
@@ -1402,11 +1638,18 @@ void CadRendererGL::render(
         (hiddenLine || plan.shadedItems.size() >= 128);
 
     renderPoints(plan, assembly, glue, viewProj, partGenMap);
+    if (finishInterruptedFrame()) {
+        return;
+    }
     const auto pointsCompleted = renderTimingEnabled ?
         RenderClock::now() : RenderClock::time_point();
 
     if (hiddenLine) {
         if (useFlatShaded) {
+            const uint64_t workTriangleSnapshot =
+                lastRenderedTriangleCount_;
+            const Obol::CadRenderedWork workSnapshot =
+                lastRenderedWork_;
             SoGLContext_glColorMask(glue, GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
             SoGLContext_glEnable(glue, GL_POLYGON_OFFSET_FILL);
             SoGLContext_glPolygonOffset(glue, 1.0f, 1.0f);
@@ -1415,22 +1658,32 @@ void CadRendererGL::render(
                 true);
             SoGLContext_glDisable(glue, GL_POLYGON_OFFSET_FILL);
             SoGLContext_glColorMask(glue, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+            if (finishInterruptedFrame())
+                return;
             const bool triangleEdgesRendered = depthRendered &&
                 renderFlatTriangleEdges(plan, glue, viewProj, viewMatrix,
                                         projectionMatrix);
+            if (finishInterruptedFrame())
+                return;
             const bool explicitWireRendered = plan.wireItems.empty() ||
                 renderFlatWire(plan, assembly, glue, viewProj);
+            if (finishInterruptedFrame())
+                return;
             if (triangleEdgesRendered && explicitWireRendered) {
                 lastRenderTier_ = 3;
                 renderSubpixelProxyPoints(plan, glue, viewProj);
-                gpuRes_->endTriangleAtlasFrame(glue);
-                gpuRes_->endProgressiveFrame(glue);
+                finishFrameResources(true);
                 return;
             }
+            lastRenderedTriangleCount_ = workTriangleSnapshot;
+            lastRenderedWork_ = workSnapshot;
         }
 
         // The per-part fallback needs retained representations.
         for (const auto& repKey : plan.requiredReps) {
+            if (finishInterruptedFrame()) {
+                return;
+            }
             if (repKey.type == CadRepType::WireSegments &&
                     !wireRepHasUncollapsedInstances(plan, repKey.part))
                 continue;
@@ -1457,6 +1710,8 @@ void CadRendererGL::render(
         }
         SoGLContext_glDisable(glue, GL_POLYGON_OFFSET_FILL);
         SoGLContext_glColorMask(glue, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+        if (finishInterruptedFrame())
+            return;
 
         if (caps_.canUseInstanced() && shaders_.wireInst &&
                 progressiveWireInstShaderReady) {
@@ -1479,9 +1734,12 @@ void CadRendererGL::render(
             renderImmediateMode(plan, assembly, glue, viewProj, viewMatrix,
                                 projectionMatrix, true, false);
         }
+        if (finishInterruptedFrame())
+            return;
         renderSubpixelProxyPoints(plan, glue, viewProj);
-        gpuRes_->endTriangleAtlasFrame(glue);
-        gpuRes_->endProgressiveFrame(glue);
+        if (finishInterruptedFrame())
+            return;
+        finishFrameResources(true);
         return;
     }
 
@@ -1517,6 +1775,11 @@ void CadRendererGL::render(
         indirectEnabled && plan.shadedItems.size() >= 128 &&
         renderIndirectShaded(
             plan, assembly, glue, viewProj, viewVolume);
+    if (finishInterruptedFrame()) {
+        if (!indirectPolygonOffsetWasEnabled)
+            SoGLContext_glDisable(glue, GL_POLYGON_OFFSET_FILL);
+        return;
+    }
     if (!indirectPolygonOffsetWasEnabled)
         SoGLContext_glDisable(glue, GL_POLYGON_OFFSET_FILL);
     const auto shadedCompleted = renderTimingEnabled ?
@@ -1538,9 +1801,14 @@ void CadRendererGL::render(
             wireRendered = flatWireEnabled && preferFlatWire &&
                 canUseFlatWire &&
                 renderFlatWire(plan, assembly, glue, viewProj);
+            if (finishInterruptedFrame())
+                return;
         }
         if (!wireRendered) {
             for (const CadRepKey& repKey : plan.requiredReps) {
+                if (finishInterruptedFrame()) {
+                    return;
+                }
                 if (repKey.type != CadRepType::WireSegments ||
                         !wireRepHasUncollapsedInstances(
                             plan, repKey.part))
@@ -1573,13 +1841,16 @@ void CadRendererGL::render(
                     plan, assembly, glue, viewProj, viewMatrix,
                     projectionMatrix, true, false);
             }
+            if (finishInterruptedFrame())
+                return;
         }
         const auto wireCompleted = renderTimingEnabled ?
             RenderClock::now() : RenderClock::time_point();
         lastRenderTier_ = 6;
         renderSubpixelProxyPoints(plan, glue, viewProj);
-        gpuRes_->endTriangleAtlasFrame(glue);
-        gpuRes_->endProgressiveFrame(glue);
+        if (finishInterruptedFrame())
+            return;
+        finishFrameResources(true);
         if (renderTimingEnabled) {
             const auto completed = RenderClock::now();
             const auto milliseconds = [](auto begin, auto end) {
@@ -1610,6 +1881,10 @@ void CadRendererGL::render(
     }
 
     bool flatShadedRendered = false;
+    const uint64_t flatTriangleSnapshot =
+        lastRenderedTriangleCount_;
+    const Obol::CadRenderedWork flatWorkSnapshot =
+        lastRenderedWork_;
     if (useFlatShaded) {
         const GLboolean polygonOffsetWasEnabled =
             glue->glIsEnabled(GL_POLYGON_OFFSET_FILL);
@@ -1622,17 +1897,25 @@ void CadRendererGL::render(
             false);
         if (!polygonOffsetWasEnabled)
             SoGLContext_glDisable(glue, GL_POLYGON_OFFSET_FILL);
+        if (finishInterruptedFrame())
+            return;
     }
     if (flatShadedRendered) {
-        if (plan.wireItems.empty() ||
-                renderFlatWire(plan, assembly, glue, viewProj)) {
+        const bool flatWireCompleted = plan.wireItems.empty() ||
+            renderFlatWire(plan, assembly, glue, viewProj);
+        if (finishInterruptedFrame())
+            return;
+        if (flatWireCompleted) {
             lastRenderTier_ = 4;
             renderSubpixelProxyPoints(plan, glue, viewProj);
-            gpuRes_->endTriangleAtlasFrame(glue);
-            gpuRes_->endProgressiveFrame(glue);
+            if (finishInterruptedFrame())
+                return;
+            finishFrameResources(true);
             return;
         }
     }
+    lastRenderedTriangleCount_ = flatTriangleSnapshot;
+    lastRenderedWork_ = flatWorkSnapshot;
 
     /*
      * Wire and shaded work are independent presentation channels.  In
@@ -1660,9 +1943,14 @@ void CadRendererGL::render(
     const bool flatWireRendered = flatWireEnabled &&
         preferFlatWire && canUseFlatWire &&
         renderFlatWire(plan, assembly, glue, viewProj);
+    if (finishInterruptedFrame())
+        return;
 
     // Upload only the representations still needed by the per-part paths.
     for (const auto& repKey : plan.requiredReps) {
+        if (finishInterruptedFrame()) {
+            return;
+        }
         if (repKey.type == CadRepType::WireSegments &&
                 (flatWireRendered ||
                  !wireRepHasUncollapsedInstances(plan, repKey.part)))
@@ -1718,9 +2006,12 @@ void CadRendererGL::render(
 
     if (!plan.shadedItems.empty() && !polygonOffsetWasEnabled)
         SoGLContext_glDisable(glue, GL_POLYGON_OFFSET_FILL);
+    if (finishInterruptedFrame())
+        return;
     renderSubpixelProxyPoints(plan, glue, viewProj);
-    gpuRes_->endTriangleAtlasFrame(glue);
-    gpuRes_->endProgressiveFrame(glue);
+    if (finishInterruptedFrame())
+        return;
+    finishFrameResources(true);
 }
 
 

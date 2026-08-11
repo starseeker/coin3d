@@ -36,6 +36,7 @@
 #include "glue/glp.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdlib>
 #include <limits>
 #include <cstring>
@@ -46,6 +47,14 @@
 
 #ifndef GL_TIME_ELAPSED
 #define GL_TIME_ELAPSED 0x88BF
+#endif
+
+#ifndef GL_COPY_READ_BUFFER
+#define GL_COPY_READ_BUFFER 0x8F36
+#endif
+
+#ifndef GL_COPY_WRITE_BUFFER
+#define GL_COPY_WRITE_BUFFER 0x8F37
 #endif
 
 namespace {
@@ -65,6 +74,35 @@ cadTriangleAtlasBudget()
             budget = static_cast<size_t>(megabytes) * 1024u * 1024u;
     }
     return budget;
+}
+
+static size_t
+cadProgressiveReserveBudget()
+{
+    size_t budget = 64u * 1024u * 1024u;
+    if (const char *value = std::getenv("OBOL_CAD_PROGRESSIVE_CACHE_MB")) {
+        char *end = nullptr;
+        const unsigned long long megabytes = std::strtoull(value, &end, 10);
+        if (end != value && *end == '\0' && megabytes > 0 &&
+                megabytes <= std::numeric_limits<size_t>::max() /
+                    (1024u * 1024u))
+            budget = static_cast<size_t>(megabytes) * 1024u * 1024u;
+    }
+    return budget;
+}
+
+static size_t
+cadSaturatingAdd(size_t left, size_t right) noexcept
+{
+    return right > std::numeric_limits<size_t>::max() - left ?
+        std::numeric_limits<size_t>::max() : left + right;
+}
+
+static void
+cadReplaceAccountedBytes(size_t& total, size_t before, size_t after) noexcept
+{
+    total = before <= total ? total - before : 0;
+    total = cadSaturatingAdd(total, after);
 }
 
 static uint32_t
@@ -319,15 +357,171 @@ allocateAndPopulateBuffer(const SoGLContext *glue, GLenum target,
     }
 }
 
+static void
+cadAddUploadCounter(uint64_t& counter, uint64_t amount) noexcept
+{
+    counter = amount > UINT64_MAX - counter ?
+        UINT64_MAX : counter + amount;
+}
+
+/**
+ * Populate or grow one retained buffer.
+ *
+ * A certified append may preserve its old prefix with glCopyBufferSubData,
+ * then submit only the producer tail from CPU memory.  Returning true tells
+ * the caller that the buffer name changed and any VAO which captured the old
+ * name must be rebuilt.  Contexts without copy-buffer support keep the
+ * conservative complete-upload fallback.
+ */
+static bool
+cadPopulateRetainedBuffer(
+        GLuint& buffer, GLenum target, GLsizeiptr previousCapacityBytes,
+        GLsizeiptr capacityBytes,
+        GLsizeiptr previousLogicalBytes, GLsizeiptr logicalBytes,
+        const void *data, GLenum usage, bool appendCompatible,
+        const SoGLContext *glue, const CadGLCaps& caps,
+        uint64_t& fullUploadBytes, uint64_t& suffixUploadBytes,
+        uint64_t& gpuCopyBytes)
+{
+    if (!glue || logicalBytes <= 0 || capacityBytes < logicalBytes || !data)
+        return false;
+
+    if (!buffer) {
+        glue->glGenBuffers(1, &buffer);
+        glue->glBindBuffer(target, buffer);
+        allocateAndPopulateBuffer(
+            glue, target, capacityBytes, logicalBytes, data, usage);
+        cadAddUploadCounter(
+            fullUploadBytes, static_cast<uint64_t>(logicalBytes));
+        return false;
+    }
+
+    if (capacityBytes > previousCapacityBytes) {
+        /* The caller invokes this helper for a capacity grow only when the
+         * existing capacity is insufficient.  A new name permits one
+         * device-local old->new copy; retaining the old name would require a
+         * temporary copy and a second new->old copy after glBufferData. */
+        if (appendCompatible && caps.hasCopyBuffer &&
+                glue->glCopyBufferSubData && previousLogicalBytes > 0 &&
+                logicalBytes >= previousLogicalBytes) {
+            GLuint replacement = 0;
+            glue->glGenBuffers(1, &replacement);
+            if (replacement) {
+                glue->glBindBuffer(target, replacement);
+                glue->glBufferData(target, capacityBytes, nullptr, usage);
+                glue->glBindBuffer(GL_COPY_READ_BUFFER, buffer);
+                glue->glBindBuffer(GL_COPY_WRITE_BUFFER, replacement);
+                glue->glCopyBufferSubData(
+                    GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER,
+                    0, 0, previousLogicalBytes);
+                const GLsizeiptr suffixBytes =
+                    logicalBytes - previousLogicalBytes;
+                if (suffixBytes > 0) {
+                    glue->glBindBuffer(target, replacement);
+                    glue->glBufferSubData(
+                        target, previousLogicalBytes, suffixBytes,
+                        static_cast<const unsigned char *>(data) +
+                            previousLogicalBytes);
+                    cadAddUploadCounter(
+                        suffixUploadBytes,
+                        static_cast<uint64_t>(suffixBytes));
+                }
+                cadAddUploadCounter(
+                    gpuCopyBytes,
+                    static_cast<uint64_t>(previousLogicalBytes));
+                glue->glBindBuffer(GL_COPY_READ_BUFFER, 0);
+                glue->glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
+                if (glue->glDeleteBuffers)
+                    glue->glDeleteBuffers(1, &buffer);
+                buffer = replacement;
+                glue->glBindBuffer(target, buffer);
+                return true;
+            }
+        }
+
+        glue->glBindBuffer(target, buffer);
+        allocateAndPopulateBuffer(
+            glue, target, capacityBytes, logicalBytes, data, usage);
+        cadAddUploadCounter(
+            fullUploadBytes, static_cast<uint64_t>(logicalBytes));
+        return false;
+    }
+
+    if (logicalBytes > previousLogicalBytes) {
+        const GLsizeiptr suffixBytes = logicalBytes - previousLogicalBytes;
+        glue->glBindBuffer(target, buffer);
+        glue->glBufferSubData(
+            target, previousLogicalBytes, suffixBytes,
+            static_cast<const unsigned char *>(data) +
+                previousLogicalBytes);
+        cadAddUploadCounter(
+            suffixUploadBytes, static_cast<uint64_t>(suffixBytes));
+    }
+    return false;
+}
+
 // ---------------------------------------------------------------------------
 // Destructor
 // ---------------------------------------------------------------------------
+
+CadGpuResources::CadGpuResources() :
+    progressiveReserveBudgetBytes_(cadProgressiveReserveBudget()),
+    triangleAtlasBudgetBytes_(cadTriangleAtlasBudget())
+{
+}
 
 CadGpuResources::~CadGpuResources()
 {
     // GL resources must be released explicitly via releaseAll() while the
     // correct context is current.  The destructor cannot safely delete
     // GPU objects because it may be called without a current GL context.
+}
+
+size_t
+CadGpuResources::pointAllocatedBytes(const CadPointGpu& point) noexcept
+{
+    return point.posCapacity > 0 ?
+        static_cast<size_t>(point.posCapacity) * 3u * sizeof(float) : 0;
+}
+
+size_t
+CadGpuResources::wireAllocatedBytes(const CadWireGpu& wire) noexcept
+{
+    size_t bytes = wire.posCapacity > 0 ?
+        static_cast<size_t>(wire.posCapacity) * 3u * sizeof(float) : 0;
+    const size_t indexBytes = wire.idxCapacity > 0 ?
+        static_cast<size_t>(wire.idxCapacity) * sizeof(uint32_t) : 0;
+    return cadSaturatingAdd(bytes, indexBytes);
+}
+
+size_t
+CadGpuResources::triAllocatedBytes(const CadTriGpu& tri) noexcept
+{
+    size_t bytes = tri.posCapacity > 0 ?
+        static_cast<size_t>(tri.posCapacity) * 3u * sizeof(float) : 0;
+    bytes = cadSaturatingAdd(bytes, tri.normCapacity > 0 ?
+        static_cast<size_t>(tri.normCapacity) * 3u * sizeof(float) : 0);
+    return cadSaturatingAdd(bytes, tri.idxCapacity > 0 ?
+        static_cast<size_t>(tri.idxCapacity) * sizeof(uint32_t) : 0);
+}
+
+size_t
+CadGpuResources::ordinaryEntryAllocatedBytes(const Entry& entry) noexcept
+{
+    return cadSaturatingAdd(pointAllocatedBytes(entry.point),
+        cadSaturatingAdd(wireAllocatedBytes(entry.wire),
+            triAllocatedBytes(entry.tri)));
+}
+
+size_t
+CadGpuResources::triangleAtlasPartLiveBytes(
+        const CadTriangleAtlasPart& part,
+        const CadTriangleAtlasPage *page) noexcept
+{
+    const size_t vertexBytes = static_cast<size_t>(part.vertexCount) *
+        (page && page->storesNormals ? 2u : 1u) * 3u * sizeof(float);
+    return cadSaturatingAdd(vertexBytes,
+        static_cast<size_t>(part.indexCount) * sizeof(uint32_t));
 }
 
 // ---------------------------------------------------------------------------
@@ -434,6 +628,7 @@ void CadGpuResources::upload(
         const uint32_t* triIdx,      GLsizei triIdxCount,
         uint64_t        generation,
         bool            progressive,
+        uint64_t        progressiveLineage,
         const SoGLContext * glue,
         const CadGLCaps& caps)
 {
@@ -447,45 +642,74 @@ void CadGpuResources::upload(
             pid, generation, wireCount, segIdxCount,
             triPosCount, triIdxCount))
         return;
+    const size_t previousOrdinaryBytes =
+        ordinaryEntryAllocatedBytes(entry);
 
-    /* Ordinary geometry replacement is allowed to change every byte and
-     * representation.  Producer-declared progressive geometry is a stricter
-     * cumulative-prefix contract, so preserve its buffer objects below and
-     * append only newly resident tails. */
-    const bool progressiveReset = progressive &&
-        ((entry.wire.vertCount > 0 && wireCount < entry.wire.vertCount) ||
-         (entry.tri.vertCount > 0 && triPosCount < entry.tri.vertCount) ||
-         (entry.tri.idxCount > 0 && triIdxCount < entry.tri.idxCount));
-    if (!progressive || progressiveReset) {
+    const bool generationChanged = entry.generation != generation;
+    const bool sameProgressiveLineage = generationChanged && progressive &&
+        progressiveLineage != 0 &&
+        entry.progressiveLineage == progressiveLineage;
+    /* Prefix-compatible wire and triangle streams retain GPU storage across
+     * immutable generation publication.  The producer token certifies exact
+     * append-only identity; zero remains the conservative replacement path. */
+    const bool wirePrefixCompatible = progressive &&
+        (!generationChanged || sameProgressiveLineage);
+    const bool trianglePrefixCompatible = progressive &&
+        (!generationChanged || sameProgressiveLineage);
+    const bool wireReset =
+        (entry.wire.vertCount > 0 && wireCount < entry.wire.vertCount) ||
+        (entry.wire.idxCount > 0 && segIdxCount < entry.wire.idxCount);
+    const bool triangleReset =
+        (entry.tri.vertCount > 0 && triPosCount < entry.tri.vertCount) ||
+        (entry.tri.idxCount > 0 && triIdxCount < entry.tri.idxCount);
+
+    if (generationChanged)
         deletePointGpu(entry.point, glue);
+    if (!wirePrefixCompatible || wireReset)
         deleteWireGpu(entry.wire, glue);
+    if (!trianglePrefixCompatible || triangleReset) {
         deleteTriGpu(entry.tri, glue);
         deleteProgressiveGpu(entry, glue);
-    } else {
-        /* Point primitives have no retained prefix contract. */
-        deletePointGpu(entry.point, glue);
+    }
+    if (sameProgressiveLineage) {
+        ++ordinaryPartLineageReuseCount_;
+        if (!ordinaryPartLineageReuseCount_)
+            ordinaryPartLineageReuseCount_ = UINT64_MAX;
     }
     entry.generation = generation;
+    entry.progressiveLineage = progressiveLineage;
 
     if (pointData && pointCount > 0) {
         CadPointGpu& p = entry.point;
-        p.count = pointCount;
-        p.posCapacity = pointCount;
-        glue->glGenBuffers(1, &p.posBuf);
-        glue->glBindBuffer(GL_ARRAY_BUFFER, p.posBuf);
-        glue->glBufferData(GL_ARRAY_BUFFER,
-                           static_cast<GLsizeiptr>(pointCount) * 3 * sizeof(float),
-                           pointData, GL_STATIC_DRAW);
-        if (caps.hasVAO && glue->glGenVertexArrays) {
-            glue->glGenVertexArrays(1, &p.vao);
-            glue->glBindVertexArray(p.vao);
+        if (p.posBuf && p.count == pointCount) {
+            /* Same immutable generation; triangle LoD growth does not make
+             * an unchanged point representation stale. */
+        } else {
+            if (p.posBuf)
+                deletePointGpu(p, glue);
+            p.count = pointCount;
+            p.posCapacity = pointCount;
+            glue->glGenBuffers(1, &p.posBuf);
             glue->glBindBuffer(GL_ARRAY_BUFFER, p.posBuf);
-            glue->glVertexAttribPointerARB(0, 3, GL_FLOAT, GL_FALSE,
-                                           3 * sizeof(float), nullptr);
-            glue->glEnableVertexAttribArrayARB(0);
-            glue->glBindVertexArray(0);
+            glue->glBufferData(
+                GL_ARRAY_BUFFER,
+                static_cast<GLsizeiptr>(pointCount) * 3 * sizeof(float),
+                pointData, GL_STATIC_DRAW);
+            cadAddUploadCounter(
+                ordinaryPartFullUploadBytes_,
+                static_cast<uint64_t>(pointCount) * 3u * sizeof(float));
+            if (caps.hasVAO && glue->glGenVertexArrays) {
+                glue->glGenVertexArrays(1, &p.vao);
+                glue->glBindVertexArray(p.vao);
+                glue->glBindBuffer(GL_ARRAY_BUFFER, p.posBuf);
+                glue->glVertexAttribPointerARB(
+                    0, 3, GL_FLOAT, GL_FALSE,
+                    3 * sizeof(float), nullptr);
+                glue->glEnableVertexAttribArrayARB(0);
+                glue->glBindVertexArray(0);
+            }
+            glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
         }
-        glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
     }
 
     // --- Wire geometry ---
@@ -493,7 +717,7 @@ void CadGpuResources::upload(
             ((segIdx && segIdxCount > 0) || (!segIdx && wireCount >= 2))) {
         CadWireGpu& w = entry.wire;
         const bool sequential = (segIdx == nullptr);
-        const bool appendable = progressive && w.posBuf &&
+        const bool appendable = wirePrefixCompatible && w.posBuf &&
             w.sequentialSegments == sequential &&
             wireCount >= w.vertCount &&
             (sequential || (w.segIdxBuf && segIdxCount >= w.idxCount));
@@ -503,51 +727,51 @@ void CadGpuResources::upload(
 
         const GLsizei oldWireCount = w.vertCount;
         const GLsizei oldSegIdxCount = w.idxCount;
-        const bool newWireBuffers = !w.posBuf;
-        if (newWireBuffers)
-            glue->glGenBuffers(1, &w.posBuf);
-        glue->glBindBuffer(GL_ARRAY_BUFFER, w.posBuf);
-        if (newWireBuffers || wireCount > w.posCapacity) {
-            const GLsizei capacity = progressiveBufferCapacity(
-                wireCount, w.posCapacity, progressive);
-            allocateAndPopulateBuffer(
-                glue, GL_ARRAY_BUFFER,
-                static_cast<GLsizeiptr>(capacity) * 3 * sizeof(float),
-                static_cast<GLsizeiptr>(wireCount) * 3 * sizeof(float),
-                wireData, progressive ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
-            w.posCapacity = capacity;
-        } else if (wireCount > oldWireCount) {
-            glue->glBufferSubData(
-                GL_ARRAY_BUFFER,
-                static_cast<GLintptr>(oldWireCount) * 3 * sizeof(float),
-                static_cast<GLsizeiptr>(wireCount - oldWireCount) *
-                    3 * sizeof(float),
-                wireData + static_cast<size_t>(oldWireCount) * 3);
-        }
+        const GLsizei oldPosCapacity = w.posCapacity;
+        const GLsizei posCapacity = !w.posBuf ||
+                wireCount > w.posCapacity ?
+            progressiveBufferCapacity(
+                wireCount, w.posCapacity, progressive) :
+            w.posCapacity;
+        bool wireBufferReplaced = cadPopulateRetainedBuffer(
+            w.posBuf, GL_ARRAY_BUFFER,
+            static_cast<GLsizeiptr>(oldPosCapacity) * 3 * sizeof(float),
+            static_cast<GLsizeiptr>(posCapacity) * 3 * sizeof(float),
+            static_cast<GLsizeiptr>(oldWireCount) * 3 * sizeof(float),
+            static_cast<GLsizeiptr>(wireCount) * 3 * sizeof(float),
+            wireData, progressive ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW,
+            appendable, glue, caps,
+            ordinaryPartFullUploadBytes_,
+            ordinaryPartSuffixUploadBytes_,
+            ordinaryPartGpuCopyBytes_);
+        w.posCapacity = posCapacity;
 
         if (!sequential) {
-            const bool newIndexBuffer = !w.segIdxBuf;
-            if (newIndexBuffer)
-                glue->glGenBuffers(1, &w.segIdxBuf);
-            glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, w.segIdxBuf);
-            if (newIndexBuffer || segIdxCount > w.idxCapacity) {
-                const GLsizei capacity = progressiveBufferCapacity(
-                    segIdxCount, w.idxCapacity, progressive);
-                allocateAndPopulateBuffer(
-                    glue, GL_ELEMENT_ARRAY_BUFFER,
-                    static_cast<GLsizeiptr>(capacity) * sizeof(uint32_t),
-                    static_cast<GLsizeiptr>(segIdxCount) * sizeof(uint32_t),
-                    segIdx,
-                    progressive ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
-                w.idxCapacity = capacity;
-            } else if (segIdxCount > oldSegIdxCount) {
-                glue->glBufferSubData(
-                    GL_ELEMENT_ARRAY_BUFFER,
-                    static_cast<GLintptr>(oldSegIdxCount) * sizeof(uint32_t),
-                    static_cast<GLsizeiptr>(segIdxCount - oldSegIdxCount) *
-                        sizeof(uint32_t),
-                    segIdx + oldSegIdxCount);
-            }
+            const GLsizei oldIdxCapacity = w.idxCapacity;
+            const GLsizei idxCapacity = !w.segIdxBuf ||
+                    segIdxCount > w.idxCapacity ?
+                progressiveBufferCapacity(
+                    segIdxCount, w.idxCapacity, progressive) :
+                w.idxCapacity;
+            wireBufferReplaced = cadPopulateRetainedBuffer(
+                w.segIdxBuf, GL_ELEMENT_ARRAY_BUFFER,
+                static_cast<GLsizeiptr>(oldIdxCapacity) * sizeof(uint32_t),
+                static_cast<GLsizeiptr>(idxCapacity) * sizeof(uint32_t),
+                static_cast<GLsizeiptr>(oldSegIdxCount) * sizeof(uint32_t),
+                static_cast<GLsizeiptr>(segIdxCount) * sizeof(uint32_t),
+                segIdx, progressive ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW,
+                appendable, glue, caps,
+                ordinaryPartFullUploadBytes_,
+                ordinaryPartSuffixUploadBytes_,
+                ordinaryPartGpuCopyBytes_) || wireBufferReplaced;
+            w.idxCapacity = idxCapacity;
+        }
+        if (wireBufferReplaced && w.vao &&
+                glue->glDeleteVertexArrays) {
+            glue->glDeleteVertexArrays(1, &w.vao);
+            w.vao = 0;
+            w.instanceVbo = 0;
+            w.instanceBase = UINT32_MAX;
         }
         w.vertCount = wireCount;
         w.idxCount = sequential ? 0 : segIdxCount;
@@ -582,7 +806,8 @@ void CadGpuResources::upload(
         CadTriGpu& t = entry.tri;
         const bool normalsMatch = static_cast<bool>(triNorm) ==
             static_cast<bool>(t.normBuf);
-        const bool appendable = progressive && t.posBuf && t.idxBuf &&
+        const bool appendable = trianglePrefixCompatible &&
+            t.posBuf && t.idxBuf &&
             normalsMatch && triPosCount >= t.vertCount &&
             triIdxCount >= t.idxCount;
         if (!appendable && t.posBuf)
@@ -590,73 +815,75 @@ void CadGpuResources::upload(
 
         const GLsizei oldVertCount = t.vertCount;
         const GLsizei oldIdxCount = t.idxCount;
-        const bool newPosBuffer = !t.posBuf;
-        if (newPosBuffer)
-            glue->glGenBuffers(1, &t.posBuf);
-        glue->glBindBuffer(GL_ARRAY_BUFFER, t.posBuf);
-        if (newPosBuffer || triPosCount > t.posCapacity) {
-            const GLsizei capacity = progressiveBufferCapacity(
-                triPosCount, t.posCapacity, progressive);
-            allocateAndPopulateBuffer(
-                glue, GL_ARRAY_BUFFER,
-                static_cast<GLsizeiptr>(capacity) * 3 * sizeof(float),
-                static_cast<GLsizeiptr>(triPosCount) * 3 * sizeof(float),
-                triPos, progressive ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
-            t.posCapacity = capacity;
-        } else if (triPosCount > oldVertCount) {
-            glue->glBufferSubData(
-                GL_ARRAY_BUFFER,
-                static_cast<GLintptr>(oldVertCount) * 3 * sizeof(float),
-                static_cast<GLsizeiptr>(triPosCount - oldVertCount) *
-                    3 * sizeof(float),
-                triPos + static_cast<size_t>(oldVertCount) * 3);
-        }
+        const GLsizei oldPosCapacity = t.posCapacity;
+        const GLsizei posCapacity = !t.posBuf ||
+                triPosCount > t.posCapacity ?
+            progressiveBufferCapacity(
+                triPosCount, t.posCapacity, progressive) :
+            t.posCapacity;
+        bool triangleBufferReplaced = cadPopulateRetainedBuffer(
+            t.posBuf, GL_ARRAY_BUFFER,
+            static_cast<GLsizeiptr>(oldPosCapacity) * 3 * sizeof(float),
+            static_cast<GLsizeiptr>(posCapacity) * 3 * sizeof(float),
+            static_cast<GLsizeiptr>(oldVertCount) * 3 * sizeof(float),
+            static_cast<GLsizeiptr>(triPosCount) * 3 * sizeof(float),
+            triPos, progressive ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW,
+            appendable, glue, caps,
+            ordinaryPartFullUploadBytes_,
+            ordinaryPartSuffixUploadBytes_,
+            ordinaryPartGpuCopyBytes_);
+        t.posCapacity = posCapacity;
 
         if (triNorm) {
-            const bool newNormBuffer = !t.normBuf;
-            if (newNormBuffer)
-                glue->glGenBuffers(1, &t.normBuf);
-            glue->glBindBuffer(GL_ARRAY_BUFFER, t.normBuf);
-            if (newNormBuffer || triPosCount > t.normCapacity) {
-                const GLsizei capacity = progressiveBufferCapacity(
-                    triPosCount, t.normCapacity, progressive);
-                allocateAndPopulateBuffer(
-                    glue, GL_ARRAY_BUFFER,
-                    static_cast<GLsizeiptr>(capacity) * 3 * sizeof(float),
-                    static_cast<GLsizeiptr>(triPosCount) * 3 * sizeof(float),
-                    triNorm,
-                    progressive ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
-                t.normCapacity = capacity;
-            } else if (triPosCount > oldVertCount) {
-                glue->glBufferSubData(
-                    GL_ARRAY_BUFFER,
-                    static_cast<GLintptr>(oldVertCount) * 3 * sizeof(float),
-                    static_cast<GLsizeiptr>(triPosCount - oldVertCount) *
-                        3 * sizeof(float),
-                    triNorm + static_cast<size_t>(oldVertCount) * 3);
-            }
+            const GLsizei oldNormCapacity = t.normCapacity;
+            const GLsizei normCapacity = !t.normBuf ||
+                    triPosCount > t.normCapacity ?
+                progressiveBufferCapacity(
+                    triPosCount, t.normCapacity, progressive) :
+                t.normCapacity;
+            triangleBufferReplaced = cadPopulateRetainedBuffer(
+                t.normBuf, GL_ARRAY_BUFFER,
+                static_cast<GLsizeiptr>(oldNormCapacity) *
+                    3 * sizeof(float),
+                static_cast<GLsizeiptr>(normCapacity) *
+                    3 * sizeof(float),
+                static_cast<GLsizeiptr>(oldVertCount) *
+                    3 * sizeof(float),
+                static_cast<GLsizeiptr>(triPosCount) *
+                    3 * sizeof(float),
+                triNorm, progressive ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW,
+                appendable, glue, caps,
+                ordinaryPartFullUploadBytes_,
+                ordinaryPartSuffixUploadBytes_,
+                ordinaryPartGpuCopyBytes_) || triangleBufferReplaced;
+            t.normCapacity = normCapacity;
         }
 
-        const bool newIndexBuffer = !t.idxBuf;
-        if (newIndexBuffer)
-            glue->glGenBuffers(1, &t.idxBuf);
-        glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, t.idxBuf);
-        if (newIndexBuffer || triIdxCount > t.idxCapacity) {
-            const GLsizei capacity = progressiveBufferCapacity(
-                triIdxCount, t.idxCapacity, progressive);
-            allocateAndPopulateBuffer(
-                glue, GL_ELEMENT_ARRAY_BUFFER,
-                static_cast<GLsizeiptr>(capacity) * sizeof(uint32_t),
-                static_cast<GLsizeiptr>(triIdxCount) * sizeof(uint32_t),
-                triIdx, progressive ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
-            t.idxCapacity = capacity;
-        } else if (triIdxCount > oldIdxCount) {
-            glue->glBufferSubData(
-                GL_ELEMENT_ARRAY_BUFFER,
-                static_cast<GLintptr>(oldIdxCount) * sizeof(uint32_t),
-                static_cast<GLsizeiptr>(triIdxCount - oldIdxCount) *
-                    sizeof(uint32_t),
-                triIdx + oldIdxCount);
+        const GLsizei oldIdxCapacity = t.idxCapacity;
+        const GLsizei idxCapacity = !t.idxBuf ||
+                triIdxCount > t.idxCapacity ?
+            progressiveBufferCapacity(
+                triIdxCount, t.idxCapacity, progressive) :
+            t.idxCapacity;
+        triangleBufferReplaced = cadPopulateRetainedBuffer(
+            t.idxBuf, GL_ELEMENT_ARRAY_BUFFER,
+            static_cast<GLsizeiptr>(oldIdxCapacity) * sizeof(uint32_t),
+            static_cast<GLsizeiptr>(idxCapacity) * sizeof(uint32_t),
+            static_cast<GLsizeiptr>(oldIdxCount) * sizeof(uint32_t),
+            static_cast<GLsizeiptr>(triIdxCount) * sizeof(uint32_t),
+            triIdx, progressive ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW,
+            appendable, glue, caps,
+            ordinaryPartFullUploadBytes_,
+            ordinaryPartSuffixUploadBytes_,
+            ordinaryPartGpuCopyBytes_) || triangleBufferReplaced;
+        t.idxCapacity = idxCapacity;
+
+        if (triangleBufferReplaced && t.vao &&
+                glue->glDeleteVertexArrays) {
+            glue->glDeleteVertexArrays(1, &t.vao);
+            t.vao = 0;
+            t.instanceVbo = 0;
+            t.instanceBase = UINT32_MAX;
         }
         t.vertCount = triPosCount;
         t.idxCount = triIdxCount;
@@ -690,6 +917,8 @@ void CadGpuResources::upload(
     } else if (progressive && entry.tri.posBuf) {
         deleteTriGpu(entry.tri, glue);
     }
+    cadReplaceAccountedBytes(ordinaryPartBufferBytes_,
+        previousOrdinaryBytes, ordinaryEntryAllocatedBytes(entry));
 }
 
 // ---------------------------------------------------------------------------
@@ -712,6 +941,16 @@ bool CadGpuResources::isUpToDate(
             requiredTriIndices > entry.tri.idxCount)
         return false;
     return true;
+}
+
+bool CadGpuResources::hasCompatibleProgressivePrefix(
+        PartId pid, uint64_t progressiveLineage) const
+{
+    if (progressiveLineage == 0)
+        return false;
+    auto it = cache_.find(pid);
+    return it != cache_.end() &&
+        it->second.progressiveLineage == progressiveLineage;
 }
 
 // ---------------------------------------------------------------------------
@@ -816,17 +1055,6 @@ void CadGpuResources::endProgressiveFrame(const SoGLContext *glue)
 {
     if (!glue) return;
 
-    size_t reserveBudget = 64u * 1024u * 1024u;
-    if (const char *value = std::getenv("OBOL_CAD_PROGRESSIVE_CACHE_MB")) {
-        char *end = nullptr;
-        const unsigned long long megabytes = std::strtoull(value, &end, 10);
-        if (end != value && *end == '\0' && megabytes > 0 &&
-                megabytes <= std::numeric_limits<size_t>::max() /
-                    (1024u * 1024u))
-            reserveBudget =
-                static_cast<size_t>(megabytes) * 1024u * 1024u;
-    }
-
     /* The current stable cut can be hundreds of megabytes by itself.  Treat
      * the configured amount as a bounded auxiliary LRU reserve above that
      * unavoidable active working set, rather than allowing the active cut to
@@ -845,9 +1073,12 @@ void CadGpuResources::endProgressiveFrame(const SoGLContext *glue)
         for (const CadProgressiveGpu& p : item.second.progressiveTri)
             countActive(p);
     }
+    progressiveActiveBytes_ = activeBytes;
     const size_t budget =
-        activeBytes <= std::numeric_limits<size_t>::max() - reserveBudget ?
-        activeBytes + reserveBudget : std::numeric_limits<size_t>::max();
+        activeBytes <= std::numeric_limits<size_t>::max() -
+            progressiveReserveBudgetBytes_ ?
+        activeBytes + progressiveReserveBudgetBytes_ :
+            std::numeric_limits<size_t>::max();
     while (progressiveBytes_ > budget) {
         CadProgressiveGpu *victim = nullptr;
         bool victimIsAnchor = true;
@@ -883,6 +1114,7 @@ void CadGpuResources::endProgressiveFrame(const SoGLContext *glue)
                 consider(item.second.progressiveTri, level);
         }
         if (!victim) break;
+        ++progressiveEvictionCount_;
         deleteProgressiveGpu(*victim, glue);
     }
 }
@@ -961,35 +1193,69 @@ CadGpuResources::touchTriangleAtlasPart(
 
 size_t CadGpuResources::triangleAtlasPageCount() const noexcept
 {
-    size_t count = 0;
-    for (const auto& page : triangleAtlasPages_)
-        if (page) ++count;
-    return count;
+    return triangleAtlasPageCount_;
 }
 
 size_t CadGpuResources::triangleAtlasLiveBytes() const noexcept
 {
-    size_t bytes = 0;
-    for (const auto& item : triangleAtlasParts_) {
-        const CadTriangleAtlasPart& part = item.second;
-        const CadTriangleAtlasPage *page =
-            triangleAtlasPage(part.page);
-        const size_t vertexBytes =
-            static_cast<size_t>(part.vertexCount) *
-            (page && page->storesNormals ? 2u : 1u) *
-            3u * sizeof(float);
-        const size_t indexBytes =
-            static_cast<size_t>(part.indexCount) * sizeof(uint32_t);
-        if (vertexBytes <= std::numeric_limits<size_t>::max() - bytes)
-            bytes += vertexBytes;
-        else
-            return std::numeric_limits<size_t>::max();
-        if (indexBytes <= std::numeric_limits<size_t>::max() - bytes)
-            bytes += indexBytes;
-        else
-            return std::numeric_limits<size_t>::max();
-    }
-    return bytes;
+    return triangleAtlasLiveBytes_;
+}
+
+Obol::CadGpuResourceSnapshot
+CadGpuResources::resourceSnapshot() const noexcept
+{
+    Obol::CadGpuResourceSnapshot snapshot;
+    snapshot.ordinaryPartBufferBytes = ordinaryPartBufferBytes_;
+    snapshot.progressiveCutBufferBytes = progressiveBytes_;
+    snapshot.progressiveActiveCutBytes = progressiveActiveBytes_;
+
+    size_t batchBytes = instanceVboCapacityBytes_ > 0 ?
+        static_cast<size_t>(instanceVboCapacityBytes_) : 0;
+    batchBytes = cadSaturatingAdd(batchBytes,
+        transientInstanceVboCapacityBytes_ > 0 ?
+            static_cast<size_t>(transientInstanceVboCapacityBytes_) : 0);
+    batchBytes = cadSaturatingAdd(batchBytes,
+        flatWire_.capacityVertexCount > 0 ?
+            static_cast<size_t>(flatWire_.capacityVertexCount) *
+                3u * sizeof(float) : 0);
+    batchBytes = cadSaturatingAdd(batchBytes,
+        flatShaded_.capacityVertexCount > 0 ?
+            static_cast<size_t>(flatShaded_.capacityVertexCount) *
+                6u * sizeof(float) : 0);
+    const auto proxyBytes = [](const CadSubpixelProxyGpu& proxy) {
+        return proxy.capacityCount > 0 ?
+            static_cast<size_t>(proxy.capacityCount) *
+                (3u * sizeof(float) + 4u * sizeof(uint8_t)) : 0;
+    };
+    batchBytes = cadSaturatingAdd(batchBytes,
+        proxyBytes(subpixelProxyPoints_));
+    batchBytes = cadSaturatingAdd(batchBytes,
+        proxyBytes(pressureProxyPoints_));
+    snapshot.batchBufferBytes = batchBytes;
+
+    snapshot.triangleAtlasAllocatedBytes = triangleAtlasAllocatedBytes_;
+    snapshot.triangleAtlasLiveBytes = triangleAtlasLiveBytes_;
+    snapshot.triangleAtlasBudgetBytes = triangleAtlasBudgetBytes_;
+    snapshot.triangleAtlasPartCount = triangleAtlasParts_.size();
+    snapshot.triangleAtlasPageCount = triangleAtlasPageCount_;
+    snapshot.ordinaryPartFullUploadBytes = ordinaryPartFullUploadBytes_;
+    snapshot.ordinaryPartSuffixUploadBytes = ordinaryPartSuffixUploadBytes_;
+    snapshot.ordinaryPartGpuCopyBytes = ordinaryPartGpuCopyBytes_;
+    snapshot.ordinaryPartLineageReuseCount =
+        ordinaryPartLineageReuseCount_;
+    snapshot.triangleAtlasFullUploadBytes =
+        triangleAtlasFullUploadBytes_;
+    snapshot.triangleAtlasSuffixUploadBytes =
+        triangleAtlasSuffixUploadBytes_;
+    snapshot.triangleAtlasLineageReuseCount =
+        triangleAtlasLineageReuseCount_;
+    snapshot.progressiveEvictionCount = progressiveEvictionCount_;
+    snapshot.triangleAtlasReclamationCount =
+        triangleAtlasReclamationCount_;
+    snapshot.trackedBufferBytes = cadSaturatingAdd(
+        ordinaryPartBufferBytes_, cadSaturatingAdd(progressiveBytes_,
+            cadSaturatingAdd(batchBytes, triangleAtlasAllocatedBytes_)));
+    return snapshot;
 }
 
 void CadGpuResources::deleteTriangleAtlasPage(
@@ -1016,6 +1282,8 @@ void CadGpuResources::deleteTriangleAtlasPage(
         bytes <= triangleAtlasAllocatedBytes_ ?
         triangleAtlasAllocatedBytes_ - bytes : 0;
     triangleAtlasPages_[pageIndex].reset();
+    if (triangleAtlasPageCount_)
+        --triangleAtlasPageCount_;
     bumpTriangleAtlasRevision();
 }
 
@@ -1027,6 +1295,10 @@ void CadGpuResources::releaseTriangleAtlasPart(
         return;
     const uint32_t pageIndex = found->second.page;
     CadTriangleAtlasPage *page = triangleAtlasPage(pageIndex);
+    const size_t liveBytes =
+        triangleAtlasPartLiveBytes(found->second, page);
+    triangleAtlasLiveBytes_ = liveBytes <= triangleAtlasLiveBytes_ ?
+        triangleAtlasLiveBytes_ - liveBytes : 0;
     if (page) {
         page->largestFreeVertexCapacity = std::max(
             page->largestFreeVertexCapacity,
@@ -1043,6 +1315,269 @@ void CadGpuResources::releaseTriangleAtlasPart(
     bumpTriangleAtlasRevision();
     if (page && !page->partCount)
         deleteTriangleAtlasPage(pageIndex, glue);
+}
+
+/*
+ * Consolidate live ranges into the earliest compatible ordinary pages.
+ *
+ * Progressive tails deliberately shrink only after a long hysteresis, but
+ * independent vertex/index best-fit allocation can then leave hundreds of
+ * megabytes free in ranges which no requested pair can use.  Allocating a
+ * second atlas would violate the configured ceiling.  Instead, rebuild one
+ * existing page at a time through a single page-sized GPU scratch target,
+ * pull fitting parts from later pages, and release pages which become empty.
+ * Source meshes are not revisited and the transient overhead is bounded by
+ * one ordinary page rather than the scene size.
+ *
+ * Every moved PartId retains its generation and richest resident prefix.
+ * Bumping the atlas revision invalidates prepared command offsets before the
+ * next frame can use them.
+ */
+bool CadGpuResources::compactTriangleAtlasPages(
+        const SoGLContext *glue)
+{
+    if (!glue || !glue->glCopyBufferSubData ||
+            triangleAtlasPages_.empty() ||
+            triangleAtlasParts_.empty())
+        return false;
+
+    std::vector<std::vector<PartId>> pageParts(
+        triangleAtlasPages_.size());
+    for (const auto& item : triangleAtlasParts_)
+        if (item.second.page < pageParts.size())
+            pageParts[item.second.page].push_back(item.first);
+
+    const auto vertexReserve = [](const CadTriangleAtlasPart& part) {
+        return cadAtlasReservedCount(
+            part.vertexCount, part.progressive, 64u);
+    };
+    const auto indexReserve = [](const CadTriangleAtlasPart& part) {
+        return cadAtlasReservedCount(
+            part.indexCount, part.progressive, 192u);
+    };
+
+    bool movedAny = false;
+    for (uint32_t targetIndex = 0;
+            targetIndex < triangleAtlasPages_.size(); ++targetIndex) {
+        CadTriangleAtlasPage *target =
+            triangleAtlasPage(targetIndex);
+        if (!target || target->dedicated || !target->partCount)
+            continue;
+
+        std::vector<PartId> packed;
+        packed.reserve(target->partCount + 32u);
+        uint64_t packedVertices = 0;
+        uint64_t packedIndices = 0;
+        for (const PartId& pid : pageParts[targetIndex]) {
+            const auto found = triangleAtlasParts_.find(pid);
+            if (found == triangleAtlasParts_.end() ||
+                    found->second.page != targetIndex)
+                continue;
+            packed.push_back(pid);
+            packedVertices += vertexReserve(found->second);
+            packedIndices += indexReserve(found->second);
+        }
+        if (packedVertices > target->vertexCapacity ||
+                packedIndices > target->indexCapacity)
+            continue;
+
+        /* Pull compatible parts only from later, not-yet-compacted pages.
+         * Exact storesNormals matching avoids manufacturing a normal stream
+         * while copying a flat-shaded page. */
+        for (uint32_t sourceIndex = targetIndex + 1u;
+                sourceIndex < triangleAtlasPages_.size(); ++sourceIndex) {
+            CadTriangleAtlasPage *source =
+                triangleAtlasPage(sourceIndex);
+            if (!source || source->dedicated || !source->partCount ||
+                    source->storesNormals != target->storesNormals)
+                continue;
+            for (const PartId& pid : pageParts[sourceIndex]) {
+                const auto found = triangleAtlasParts_.find(pid);
+                if (found == triangleAtlasParts_.end() ||
+                        found->second.page != sourceIndex)
+                    continue;
+                const uint32_t vertices = vertexReserve(found->second);
+                const uint32_t indices = indexReserve(found->second);
+                if (packedVertices + vertices > target->vertexCapacity ||
+                        packedIndices + indices > target->indexCapacity)
+                    continue;
+                packed.push_back(pid);
+                packedVertices += vertices;
+                packedIndices += indices;
+            }
+        }
+
+        /* A tightly packed rebuild is useful even when no cross-page move is
+         * possible: it restores one contiguous growth range after delayed
+         * per-part tail shrinking. */
+        bool layoutChanged = packed.size() != target->partCount;
+        uint32_t nextVertex = 0;
+        uint32_t nextIndex = 0;
+        for (const PartId& pid : packed) {
+            const auto found = triangleAtlasParts_.find(pid);
+            if (found == triangleAtlasParts_.end())
+                continue;
+            const CadTriangleAtlasPart& part = found->second;
+            if (part.page != targetIndex ||
+                    part.vertices.first != nextVertex ||
+                    part.indices.first != nextIndex ||
+                    part.vertices.capacity != vertexReserve(part) ||
+                    part.indices.capacity != indexReserve(part))
+                layoutChanged = true;
+            nextVertex += vertexReserve(part);
+            nextIndex += indexReserve(part);
+        }
+        if (!layoutChanged)
+            continue;
+
+        GLuint newPos = 0;
+        GLuint newNorm = 0;
+        GLuint newIdx = 0;
+        glue->glGenBuffers(1, &newPos);
+        if (target->storesNormals)
+            glue->glGenBuffers(1, &newNorm);
+        glue->glGenBuffers(1, &newIdx);
+        if (!newPos || !newIdx ||
+                (target->storesNormals && !newNorm)) {
+            const GLuint failed[] = {newPos, newNorm, newIdx};
+            for (GLuint buffer : failed)
+                if (buffer)
+                    glue->glDeleteBuffers(1, &buffer);
+            return movedAny;
+        }
+
+        glue->glBindBuffer(GL_COPY_WRITE_BUFFER, newPos);
+        glue->glBufferData(
+            GL_COPY_WRITE_BUFFER,
+            static_cast<GLsizeiptr>(target->vertexCapacity) *
+                3 * sizeof(float),
+            nullptr, GL_DYNAMIC_DRAW);
+        if (newNorm) {
+            glue->glBindBuffer(GL_COPY_WRITE_BUFFER, newNorm);
+            glue->glBufferData(
+                GL_COPY_WRITE_BUFFER,
+                static_cast<GLsizeiptr>(target->vertexCapacity) *
+                    3 * sizeof(float),
+                nullptr, GL_DYNAMIC_DRAW);
+        }
+        glue->glBindBuffer(GL_COPY_WRITE_BUFFER, newIdx);
+        glue->glBufferData(
+            GL_COPY_WRITE_BUFFER,
+            static_cast<GLsizeiptr>(target->indexCapacity) *
+                sizeof(uint32_t),
+            nullptr, GL_DYNAMIC_DRAW);
+
+        nextVertex = 0;
+        nextIndex = 0;
+        for (const PartId& pid : packed) {
+            auto found = triangleAtlasParts_.find(pid);
+            if (found == triangleAtlasParts_.end())
+                continue;
+            CadTriangleAtlasPart& part = found->second;
+            CadTriangleAtlasPage *source =
+                triangleAtlasPage(part.page);
+            if (!source)
+                continue;
+            const uint32_t reservedVertices = vertexReserve(part);
+            const uint32_t reservedIndices = indexReserve(part);
+
+            glue->glBindBuffer(GL_COPY_READ_BUFFER, source->posBuf);
+            glue->glBindBuffer(GL_COPY_WRITE_BUFFER, newPos);
+            glue->glCopyBufferSubData(
+                GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER,
+                static_cast<GLintptr>(part.vertices.first) *
+                    3 * sizeof(float),
+                static_cast<GLintptr>(nextVertex) *
+                    3 * sizeof(float),
+                static_cast<GLsizeiptr>(part.vertexCount) *
+                    3 * sizeof(float));
+            if (newNorm) {
+                glue->glBindBuffer(
+                    GL_COPY_READ_BUFFER, source->normBuf);
+                glue->glBindBuffer(GL_COPY_WRITE_BUFFER, newNorm);
+                glue->glCopyBufferSubData(
+                    GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER,
+                    static_cast<GLintptr>(part.vertices.first) *
+                        3 * sizeof(float),
+                    static_cast<GLintptr>(nextVertex) *
+                        3 * sizeof(float),
+                    static_cast<GLsizeiptr>(part.vertexCount) *
+                        3 * sizeof(float));
+            }
+            glue->glBindBuffer(GL_COPY_READ_BUFFER, source->idxBuf);
+            glue->glBindBuffer(GL_COPY_WRITE_BUFFER, newIdx);
+            glue->glCopyBufferSubData(
+                GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER,
+                static_cast<GLintptr>(part.indices.first) *
+                    sizeof(uint32_t),
+                static_cast<GLintptr>(nextIndex) *
+                    sizeof(uint32_t),
+                static_cast<GLsizeiptr>(part.indexCount) *
+                    sizeof(uint32_t));
+
+            if (part.page != targetIndex) {
+                source->largestFreeVertexCapacity = std::max(
+                    source->largestFreeVertexCapacity,
+                    cadAtlasFreeRange(
+                        source->freeVertices, part.vertices));
+                source->largestFreeIndexCapacity = std::max(
+                    source->largestFreeIndexCapacity,
+                    cadAtlasFreeRange(
+                        source->freeIndices, part.indices));
+                if (source->partCount)
+                    --source->partCount;
+            }
+            part.page = targetIndex;
+            part.vertices = {nextVertex, reservedVertices};
+            part.indices = {nextIndex, reservedIndices};
+            nextVertex += reservedVertices;
+            nextIndex += reservedIndices;
+        }
+        glue->glBindBuffer(GL_COPY_READ_BUFFER, 0);
+        glue->glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
+
+        if (target->vao && glue->glDeleteVertexArrays)
+            glue->glDeleteVertexArrays(1, &target->vao);
+        target->vao = 0;
+        const GLuint oldGeometry[] = {
+            target->posBuf, target->normBuf, target->idxBuf
+        };
+        for (GLuint buffer : oldGeometry)
+            if (buffer)
+                glue->glDeleteBuffers(1, &buffer);
+        target->posBuf = newPos;
+        target->normBuf = newNorm;
+        target->idxBuf = newIdx;
+        target->instanceVbo = 0;
+        target->partCount = packed.size();
+        target->freeVertices.clear();
+        target->freeIndices.clear();
+        if (nextVertex < target->vertexCapacity)
+            target->freeVertices.push_back(
+                {nextVertex, target->vertexCapacity - nextVertex});
+        if (nextIndex < target->indexCapacity)
+            target->freeIndices.push_back(
+                {nextIndex, target->indexCapacity - nextIndex});
+        target->largestFreeVertexCapacity =
+            target->vertexCapacity - nextVertex;
+        target->largestFreeIndexCapacity =
+            target->indexCapacity - nextIndex;
+
+        /* Copies have been enqueued and buffer deletion is deferred by GL;
+         * empty source pages can now return their complete allocation. */
+        for (uint32_t sourceIndex = targetIndex + 1u;
+                sourceIndex < triangleAtlasPages_.size(); ++sourceIndex) {
+            CadTriangleAtlasPage *source =
+                triangleAtlasPage(sourceIndex);
+            if (source && !source->partCount)
+                deleteTriangleAtlasPage(sourceIndex, glue);
+        }
+        movedAny = true;
+    }
+
+    if (movedAny)
+        bumpTriangleAtlasRevision();
+    return movedAny;
 }
 
 static void
@@ -1069,6 +1604,7 @@ const CadTriangleAtlasPart *CadGpuResources::upsertTriangleAtlasPart(
         PartId pid, uint64_t generation,
         const float *positions, const float *normals, uint32_t vertexCount,
         const uint32_t *indices, uint32_t indexCount, bool progressive,
+        uint64_t progressiveLineage,
         const SoGLContext *glue, const CadGLCaps& caps)
 {
     if (!glue || !caps.canUseIndirect() || !positions || !indices ||
@@ -1076,6 +1612,20 @@ const CadTriangleAtlasPart *CadGpuResources::upsertTriangleAtlasPart(
         return nullptr;
 
     const bool hasNormals = normals != nullptr;
+    const auto uploadBytes = [hasNormals](
+            uint32_t vertices, uint32_t indexElements) -> uint64_t {
+        const uint64_t vertexStride = hasNormals ? 24u : 12u;
+        const uint64_t vertexBytes =
+            static_cast<uint64_t>(vertices) * vertexStride;
+        const uint64_t indexBytes =
+            static_cast<uint64_t>(indexElements) * sizeof(uint32_t);
+        return vertexBytes > UINT64_MAX - indexBytes ?
+            UINT64_MAX : vertexBytes + indexBytes;
+    };
+    const auto addUploadBytes = [](uint64_t& counter, uint64_t amount) {
+        counter = amount > UINT64_MAX - counter ?
+            UINT64_MAX : counter + amount;
+    };
     const uint32_t vertexReserve =
         cadAtlasReservedCount(vertexCount, progressive, 64u);
     const uint32_t indexReserve =
@@ -1085,6 +1635,9 @@ const CadTriangleAtlasPart *CadGpuResources::upsertTriangleAtlasPart(
     auto found = triangleAtlasParts_.find(pid);
     if (found != triangleAtlasParts_.end()) {
         CadTriangleAtlasPart& part = found->second;
+        const bool sameProgressiveLineage =
+            progressive && part.progressive && progressiveLineage != 0 &&
+            part.progressiveLineage == progressiveLineage;
         part.lastUsedFrame = triangleAtlasFrame_;
         part.requestedVertexCount = vertexCount;
         part.requestedIndexCount = indexCount;
@@ -1110,21 +1663,23 @@ const CadTriangleAtlasPart *CadGpuResources::upsertTriangleAtlasPart(
                         wantedIndexCapacity,
                         page->largestFreeIndexCapacity);
                 if (verticesFit && indicesFit) {
+                    const size_t previousLiveBytes =
+                        triangleAtlasPartLiveBytes(part, page);
                     const uint32_t previousVertexCount = part.vertexCount;
                     const uint32_t previousIndexCount = part.indexCount;
                     const uint32_t previousVertexCapacity =
                         part.vertices.capacity;
                     const uint32_t previousIndexCapacity =
                         part.indices.capacity;
-                    if (generationChanged) {
+                    if (generationChanged &&
+                            !sameProgressiveLineage) {
                         /*
                          * A new producer generation behind the same PartId
                          * may alter any authored value, but it does not need
                          * a second atlas reservation when the replacement
-                         * fits.  Overwrite the fixed ranges in place.  This
-                         * is also the common PoP resident-prefix path and
-                         * avoids release/reallocate churn at the memory
-                         * ceiling.
+                         * fits.  Overwrite the fixed ranges in place.  A
+                         * certified progressive lineage takes the suffix
+                         * branch below instead.
                          */
                         const GLintptr offset =
                             static_cast<GLintptr>(
@@ -1163,54 +1718,86 @@ const CadTriangleAtlasPart *CadGpuResources::upsertTriangleAtlasPart(
                         part.indexCount = indexCount;
                         part.generation = generation;
                         part.progressive = progressive;
-                    } else if (vertexCount > part.vertexCount) {
-                        const uint32_t appended =
-                            vertexCount - part.vertexCount;
-                        const GLintptr offset =
-                            static_cast<GLintptr>(
-                                part.vertices.first + part.vertexCount) *
-                            3 * sizeof(float);
-                        glue->glBindBuffer(
-                            GL_ARRAY_BUFFER, page->posBuf);
-                        glue->glBufferSubData(
-                            GL_ARRAY_BUFFER, offset,
-                            static_cast<GLsizeiptr>(appended) *
-                                3 * sizeof(float),
-                            positions +
-                                static_cast<size_t>(part.vertexCount) * 3);
-                        if (page->normBuf) {
+                        part.progressiveLineage = progressiveLineage;
+                        addUploadBytes(
+                            triangleAtlasFullUploadBytes_,
+                            uploadBytes(vertexCount, indexCount));
+                    } else {
+                        const uint32_t appendedVertices =
+                            vertexCount > part.vertexCount ?
+                                vertexCount - part.vertexCount : 0u;
+                        const uint32_t appendedIndices =
+                            indexCount > part.indexCount ?
+                                indexCount - part.indexCount : 0u;
+                        if (appendedVertices) {
+                            const GLintptr offset =
+                                static_cast<GLintptr>(
+                                    part.vertices.first +
+                                    part.vertexCount) *
+                                3 * sizeof(float);
                             glue->glBindBuffer(
-                                GL_ARRAY_BUFFER, page->normBuf);
-                            if (hasNormals) {
-                                glue->glBufferSubData(
-                                    GL_ARRAY_BUFFER, offset,
-                                    static_cast<GLsizeiptr>(appended) *
-                                        3 * sizeof(float),
-                                    normals +
-                                        static_cast<size_t>(
-                                            part.vertexCount) * 3);
-                            } else {
-                                cadAtlasUploadZeroNormals(
-                                    glue, offset, appended);
+                                GL_ARRAY_BUFFER, page->posBuf);
+                            glue->glBufferSubData(
+                                GL_ARRAY_BUFFER, offset,
+                                static_cast<GLsizeiptr>(
+                                    appendedVertices) *
+                                    3 * sizeof(float),
+                                positions +
+                                    static_cast<size_t>(
+                                        part.vertexCount) * 3);
+                            if (page->normBuf) {
+                                glue->glBindBuffer(
+                                    GL_ARRAY_BUFFER,
+                                    page->normBuf);
+                                if (hasNormals) {
+                                    glue->glBufferSubData(
+                                        GL_ARRAY_BUFFER, offset,
+                                        static_cast<GLsizeiptr>(
+                                            appendedVertices) *
+                                            3 * sizeof(float),
+                                        normals +
+                                            static_cast<size_t>(
+                                                part.vertexCount) * 3);
+                                } else {
+                                    cadAtlasUploadZeroNormals(
+                                        glue, offset,
+                                        appendedVertices);
+                                }
                             }
+                            part.vertexCount = vertexCount;
                         }
-                        part.vertexCount = vertexCount;
-                    }
-                    if (!generationChanged &&
-                            indexCount > part.indexCount) {
-                        const uint32_t appended =
-                            indexCount - part.indexCount;
-                        glue->glBindBuffer(
-                            GL_ELEMENT_ARRAY_BUFFER, page->idxBuf);
-                        glue->glBufferSubData(
-                            GL_ELEMENT_ARRAY_BUFFER,
-                            static_cast<GLintptr>(
-                                part.indices.first + part.indexCount) *
-                                sizeof(uint32_t),
-                            static_cast<GLsizeiptr>(appended) *
-                                sizeof(uint32_t),
-                            indices + part.indexCount);
-                        part.indexCount = indexCount;
+                        if (appendedIndices) {
+                            glue->glBindBuffer(
+                                GL_ELEMENT_ARRAY_BUFFER,
+                                page->idxBuf);
+                            glue->glBufferSubData(
+                                GL_ELEMENT_ARRAY_BUFFER,
+                                static_cast<GLintptr>(
+                                    part.indices.first +
+                                    part.indexCount) *
+                                    sizeof(uint32_t),
+                                static_cast<GLsizeiptr>(
+                                    appendedIndices) *
+                                    sizeof(uint32_t),
+                                indices + part.indexCount);
+                            part.indexCount = indexCount;
+                        }
+                        if (appendedVertices || appendedIndices)
+                            addUploadBytes(
+                                triangleAtlasSuffixUploadBytes_,
+                                uploadBytes(
+                                    appendedVertices,
+                                    appendedIndices));
+                        if (generationChanged) {
+                            part.generation = generation;
+                            part.progressive = progressive;
+                            part.progressiveLineage =
+                                progressiveLineage;
+                            ++triangleAtlasLineageReuseCount_;
+                            if (!triangleAtlasLineageReuseCount_)
+                                triangleAtlasLineageReuseCount_ =
+                                    UINT64_MAX;
+                        }
                     }
                     glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
                     glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
@@ -1230,6 +1817,9 @@ const CadTriangleAtlasPart *CadGpuResources::upsertTriangleAtlasPart(
                             part.indices.capacity !=
                                 previousIndexCapacity)
                         bumpTriangleAtlasRevision();
+                    cadReplaceAccountedBytes(triangleAtlasLiveBytes_,
+                        previousLiveBytes,
+                        triangleAtlasPartLiveBytes(part, page));
                     return &part;
                 }
 
@@ -1258,7 +1848,7 @@ const CadTriangleAtlasPart *CadGpuResources::upsertTriangleAtlasPart(
         if (found != triangleAtlasParts_.end() &&
                 found->second.hasNormals == hasNormals &&
                 (found->second.generation == generation ||
-                 (found->second.progressive && progressive))) {
+                 sameProgressiveLineage)) {
             const CadTriangleAtlasPart previous = found->second;
             bool existingRangeFits = false;
             for (uint32_t pageIndex = 0;
@@ -1368,7 +1958,7 @@ const CadTriangleAtlasPart *CadGpuResources::upsertTriangleAtlasPart(
                     releasedBytes <= allocatedAfterRelease ?
                         allocatedAfterRelease - releasedBytes : 0;
             }
-            const size_t budget = cadTriangleAtlasBudget();
+            const size_t budget = triangleAtlasBudgetBytes_;
             const bool replacementPageFits =
                 replacementPageBytes <= budget &&
                 allocatedAfterRelease <=
@@ -1380,7 +1970,8 @@ const CadTriangleAtlasPart *CadGpuResources::upsertTriangleAtlasPart(
                     upsertTriangleAtlasPart(
                         pid, generation, positions, normals,
                         vertexCount, indices, indexCount,
-                        progressive, glue, caps);
+                        progressive, progressiveLineage,
+                        glue, caps);
                 if (replacement)
                     return replacement;
                 /*
@@ -1392,7 +1983,8 @@ const CadTriangleAtlasPart *CadGpuResources::upsertTriangleAtlasPart(
                 return upsertTriangleAtlasPart(
                     pid, generation, positions, normals,
                     previous.vertexCount, indices,
-                    previous.indexCount, progressive, glue, caps);
+                    previous.indexCount, progressive,
+                    progressiveLineage, glue, caps);
             }
 
             /*
@@ -1402,6 +1994,11 @@ const CadTriangleAtlasPart *CadGpuResources::upsertTriangleAtlasPart(
              */
             if (found->second.generation != generation) {
                 found->second.generation = generation;
+                found->second.progressiveLineage =
+                    progressiveLineage;
+                ++triangleAtlasLineageReuseCount_;
+                if (!triangleAtlasLineageReuseCount_)
+                    triangleAtlasLineageReuseCount_ = UINT64_MAX;
                 bumpTriangleAtlasRevision();
             }
             return &found->second;
@@ -1470,6 +2067,7 @@ const CadTriangleAtlasPart *CadGpuResources::upsertTriangleAtlasPart(
                 return left.first < right.first;
             });
         for (const auto& victim : inactive) {
+            ++triangleAtlasReclamationCount_;
             releaseTriangleAtlasPart(victim.second, glue);
             pageIndex = findPage();
             if (pageIndex != UINT32_MAX)
@@ -1546,7 +2144,7 @@ const CadTriangleAtlasPart *CadGpuResources::upsertTriangleAtlasPart(
             if (old && !old->partCount)
                 deleteTriangleAtlasPage(i, glue);
         }
-        const size_t budget = cadTriangleAtlasBudget();
+        const size_t budget = triangleAtlasBudgetBytes_;
         if (pageBytes > budget ||
                 triangleAtlasAllocatedBytes_ > budget - pageBytes)
             return nullptr;
@@ -1593,6 +2191,7 @@ const CadTriangleAtlasPart *CadGpuResources::upsertTriangleAtlasPart(
         if (pageIndex == triangleAtlasPages_.size())
             triangleAtlasPages_.push_back(std::move(page));
         triangleAtlasAllocatedBytes_ += pageBytes;
+        ++triangleAtlasPageCount_;
         bumpTriangleAtlasRevision();
     }
 
@@ -1621,6 +2220,7 @@ const CadTriangleAtlasPart *CadGpuResources::upsertTriangleAtlasPart(
     part.requestedVertexCount = vertexCount;
     part.requestedIndexCount = indexCount;
     part.generation = generation;
+    part.progressiveLineage = progressiveLineage;
     part.lastUsedFrame = triangleAtlasFrame_;
     part.hasNormals = hasNormals;
     part.progressive = progressive;
@@ -1653,6 +2253,8 @@ const CadTriangleAtlasPart *CadGpuResources::upsertTriangleAtlasPart(
     glue->glBufferSubData(
         GL_ELEMENT_ARRAY_BUFFER,
         indexOffset, indexBytes, indices);
+    addUploadBytes(triangleAtlasFullUploadBytes_,
+        uploadBytes(vertexCount, indexCount));
     glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
     glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
@@ -1669,6 +2271,9 @@ const CadTriangleAtlasPart *CadGpuResources::upsertTriangleAtlasPart(
         if (page->partCount) --page->partCount;
         return nullptr;
     }
+    triangleAtlasLiveBytes_ = cadSaturatingAdd(
+        triangleAtlasLiveBytes_,
+        triangleAtlasPartLiveBytes(inserted.first->second, page));
     bumpTriangleAtlasRevision();
     return &inserted.first->second;
 }
@@ -1703,10 +2308,16 @@ void CadGpuResources::endTriangleAtlasFrame(const SoGLContext *glue)
         triangleAtlasMaintenanceDeferred_ = false;
         return;
     }
-    constexpr uint64_t shrinkDelayFrames = 120u;
+    /* CPU resident-prefix compaction already has a 750 ms quiet-view gate.
+     * Keeping a second six-second/120-frame GPU delay retained obsolete
+     * reservations indefinitely in an event-driven stable view.  Eight
+     * completed presentations still absorb transient level oscillation while
+     * allowing normal calibration/handoff frames to return GPU memory. */
+    constexpr uint64_t shrinkDelayFrames = 8u;
     constexpr uint64_t unusedRetentionFrames = 600u;
 
     std::vector<PartId> stale;
+    bool reducedResidentRanges = false;
     for (auto& item : triangleAtlasParts_) {
         CadTriangleAtlasPart& part = item.second;
         if (part.lastUsedFrame != triangleAtlasFrame_) {
@@ -1760,17 +2371,37 @@ void CadGpuResources::endTriangleAtlasFrame(const SoGLContext *glue)
         }
         const uint32_t previousVertexCount = part.vertexCount;
         const uint32_t previousIndexCount = part.indexCount;
+        const size_t previousLiveBytes =
+            triangleAtlasPartLiveBytes(part, page);
         part.vertexCount =
             std::min(previousVertexCount, part.requestedVertexCount);
         part.indexCount =
             std::min(previousIndexCount, part.requestedIndexCount);
         part.lowerDemandSinceFrame = 0;
+        cadReplaceAccountedBytes(triangleAtlasLiveBytes_,
+            previousLiveBytes, triangleAtlasPartLiveBytes(part, page));
         if (shrunk || part.vertexCount != previousVertexCount ||
-                part.indexCount != previousIndexCount)
+                part.indexCount != previousIndexCount) {
+            reducedResidentRanges = true;
             bumpTriangleAtlasRevision();
+        }
     }
-    for (PartId pid : stale)
+    for (PartId pid : stale) {
+        ++triangleAtlasReclamationCount_;
         releaseTriangleAtlasPart(pid, glue);
+    }
+
+    /* At ordinary occupancy, page slack is useful growth headroom.  Under a
+     * nearly exhausted allocation ceiling, a large live/allocated divergence
+     * is stranded capacity and prevents the next view-important PoP suffix
+     * from being admitted.  Consolidate only after the delayed shrink proof
+     * and only when at least a third of allocated storage is now holes. */
+    if (reducedResidentRanges && triangleAtlasBudgetBytes_ > 0 &&
+            triangleAtlasAllocatedBytes_ >=
+                triangleAtlasBudgetBytes_ / 4u * 3u &&
+            triangleAtlasLiveBytes_ <
+                triangleAtlasAllocatedBytes_ / 3u * 2u)
+        (void)compactTriangleAtlasPages(glue);
 }
 
 // ---------------------------------------------------------------------------
@@ -1782,12 +2413,15 @@ void CadGpuResources::invalidatePart(PartId pid, const SoGLContext * glue)
     releaseTriangleAtlasPart(pid, glue);
     auto it = cache_.find(pid);
     if (it == cache_.end()) return;
+    const size_t ordinaryBytes = ordinaryEntryAllocatedBytes(it->second);
     if (glue) {
         deletePointGpu(it->second.point, glue);
         deleteWireGpu(it->second.wire, glue);
         deleteTriGpu(it->second.tri,  glue);
         deleteProgressiveGpu(it->second, glue);
     }
+    ordinaryPartBufferBytes_ = ordinaryBytes <= ordinaryPartBufferBytes_ ?
+        ordinaryPartBufferBytes_ - ordinaryBytes : 0;
     cache_.erase(it);
 }
 
@@ -2140,9 +2774,12 @@ void CadGpuResources::releaseStandaloneTriangles(const SoGLContext *glue)
 {
     if (!glue) return;
     for (auto& item : cache_) {
+        const size_t before = ordinaryEntryAllocatedBytes(item.second);
         deleteTriGpu(item.second.tri, glue);
         for (CadProgressiveGpu& cut : item.second.progressiveTri)
             deleteProgressiveGpu(cut, glue);
+        cadReplaceAccountedBytes(ordinaryPartBufferBytes_, before,
+            ordinaryEntryAllocatedBytes(item.second));
     }
 }
 
@@ -2426,6 +3063,8 @@ CadGpuResources::beginFrameGpuTimer(const SoGLContext *glue)
             gpuTimerLastCompletedSubmission_ = slot.submission;
             gpuTimerLastNanoseconds_ = nanoseconds;
             gpuTimerLastTriangleCount_ = slot.triangleCount;
+            gpuTimerLastPointProxyPixelThreshold_ =
+                slot.pointProxyPixelThreshold;
         }
     }
 
@@ -2444,6 +3083,7 @@ CadGpuResources::beginFrameGpuTimer(const SoGLContext *glue)
         if (!gpuTimerNextSubmission_)
             gpuTimerNextSubmission_ = 1;
         slot.triangleCount = 0;
+        slot.pointProxyPixelThreshold = 1.0f;
         glue->glBeginQuery(GL_TIME_ELAPSED, slot.query);
         gpuTimerActiveSlot_ = static_cast<int>(index);
         gpuTimerNextSlot_ = (index + 1) % gpuTimerSlots_.size();
@@ -2455,13 +3095,18 @@ CadGpuResources::beginFrameGpuTimer(const SoGLContext *glue)
 
 void
 CadGpuResources::endFrameGpuTimer(
-        uint64_t triangleCount, const SoGLContext *glue)
+        uint64_t triangleCount, float pointProxyPixelThreshold,
+        const SoGLContext *glue)
 {
     if (!glue || gpuTimerActiveSlot_ < 0)
         return;
     const size_t index = static_cast<size_t>(gpuTimerActiveSlot_);
     glue->glEndQuery(GL_TIME_ELAPSED);
     gpuTimerSlots_[index].triangleCount = triangleCount;
+    gpuTimerSlots_[index].pointProxyPixelThreshold =
+        std::isfinite(pointProxyPixelThreshold) ?
+            std::max(1.0f, std::min(64.0f,
+                pointProxyPixelThreshold)) : 1.0f;
     gpuTimerSlots_[index].pending = true;
     gpuTimerActiveSlot_ = -1;
 }
@@ -2541,6 +3186,13 @@ void CadGpuResources::releaseAll(const SoGLContext * glue)
     subpixelProxyPoints_ = CadSubpixelProxyGpu();
     pressureProxyPoints_ = CadSubpixelProxyGpu();
     progressiveBytes_ = 0;
+    progressiveActiveBytes_ = 0;
+    progressiveEvictionCount_ = 0;
+    ordinaryPartBufferBytes_ = 0;
+    ordinaryPartFullUploadBytes_ = 0;
+    ordinaryPartSuffixUploadBytes_ = 0;
+    ordinaryPartGpuCopyBytes_ = 0;
+    ordinaryPartLineageReuseCount_ = 0;
     progressiveFrame_ = 0;
     triangleAtlasParts_.clear();
     triangleAtlasPages_.clear();
@@ -2550,6 +3202,12 @@ void CadGpuResources::releaseAll(const SoGLContext * glue)
     triangleAtlasReclamationDeferred_ = false;
     bumpTriangleAtlasRevision();
     triangleAtlasAllocatedBytes_ = 0;
+    triangleAtlasLiveBytes_ = 0;
+    triangleAtlasPageCount_ = 0;
+    triangleAtlasReclamationCount_ = 0;
+    triangleAtlasFullUploadBytes_ = 0;
+    triangleAtlasSuffixUploadBytes_ = 0;
+    triangleAtlasLineageReuseCount_ = 0;
     for (GpuTimerSlot& slot : gpuTimerSlots_)
         slot = GpuTimerSlot();
     gpuTimerSupportKnown_ = false;
@@ -2560,6 +3218,7 @@ void CadGpuResources::releaseAll(const SoGLContext * glue)
     gpuTimerLastCompletedSubmission_ = 0;
     gpuTimerLastNanoseconds_ = 0;
     gpuTimerLastTriangleCount_ = 0;
+    gpuTimerLastPointProxyPixelThreshold_ = 1.0f;
 }
 
 } // namespace internal

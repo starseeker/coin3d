@@ -130,7 +130,13 @@ cadResolvedProgressiveLevel(uint8_t requested, uint8_t minimum,
 {
     if (resident >= 16)
         return 15;
-    return requested < minimum ? minimum :
+    /* A newly admitted or compacted population can transiently have less
+     * resident data than the producer's preferred minimum.  Residency is a
+     * hard safety ceiling; minimum is only a quality floor inside the
+     * available interval.  Never manufacture an index range which has not
+     * been published. */
+    const uint8_t availableMinimum = minimum > resident ? resident : minimum;
+    return requested < availableMinimum ? availableMinimum :
         (requested > resident ? resident : requested);
 }
 

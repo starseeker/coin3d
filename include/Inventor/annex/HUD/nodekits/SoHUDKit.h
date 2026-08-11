@@ -70,6 +70,9 @@
 #include <Inventor/nodekits/SoSubKit.h>
 #include <Inventor/fields/SoSFVec2f.h>
 
+class SoGetBoundingBoxAction;
+class SoRayPickAction;
+
 class OBOL_DLL_API SoHUDKit : public SoBaseKit {
   typedef SoBaseKit inherited;
   SO_KIT_HEADER(SoHUDKit);
@@ -90,6 +93,8 @@ public:
   void addWidget(SoNode * widget);
   void removeWidget(SoNode * widget);
 
+  virtual void getBoundingBox(SoGetBoundingBoxAction * action) override;
+  virtual void rayPick(SoRayPickAction * action) override;
   virtual void handleEvent(SoHandleEventAction * action) override;
 
 protected:

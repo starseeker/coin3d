@@ -54,6 +54,7 @@
  */
 
 #include <Obol/cad/CadIds.h>
+#include <Obol/cad/CadGpuResourceSnapshot.h>
 #include "CadGLCaps.h"
 
 #include <Inventor/system/gl.h>
@@ -299,6 +300,7 @@ struct CadTriangleAtlasPart {
     uint64_t generation = UINT64_MAX;
     uint64_t lastUsedFrame = 0;
     uint64_t lowerDemandSinceFrame = 0;
+    uint64_t progressiveLineage = 0;
     bool hasNormals = false;
     bool progressive = false;
 };
@@ -357,7 +359,7 @@ struct CadTriangleAtlasPage {
  */
 class CadGpuResources {
 public:
-    CadGpuResources() = default;
+    CadGpuResources();
     ~CadGpuResources();
 
     /**
@@ -391,6 +393,7 @@ public:
                 const uint32_t* triIdx,      GLsizei triIdxCount,
                 uint64_t        generation,
                 bool            progressive,
+                uint64_t        progressiveLineage,
                 const SoGLContext * glue,
                 const CadGLCaps& caps);
 
@@ -406,6 +409,18 @@ public:
         GLsizei requiredWireIndices = 0,
         GLsizei requiredTriPoints = 0,
         GLsizei requiredTriIndices = 0) const;
+
+    /**
+     * Return true when an uploaded progressive prefix may be retained for a
+     * newly published immutable generation.
+     *
+     * A non-zero lineage is the producer's certificate that the new CPU
+     * arrays begin with exactly the bytes already resident on the GPU.  A
+     * zero lineage is deliberately conservative and must never be used to
+     * extend CPU array counts to match an older GPU allocation.
+     */
+    bool hasCompatibleProgressivePrefix(
+        PartId pid, uint64_t progressiveLineage) const;
 
     /** Return the point GPU rep for @p pid, or nullptr if not uploaded. */
     const CadPointGpu* pointFor(PartId pid) const;
@@ -614,6 +629,7 @@ public:
         PartId pid, uint64_t generation,
         const float *positions, const float *normals, uint32_t vertexCount,
         const uint32_t *indices, uint32_t indexCount, bool progressive,
+        uint64_t progressiveLineage,
         const SoGLContext *glue, const CadGLCaps& caps);
 
     const CadTriangleAtlasPart *triangleAtlasPart(PartId pid) const;
@@ -652,11 +668,17 @@ public:
     size_t triangleAtlasAllocatedBytes() const noexcept {
         return triangleAtlasAllocatedBytes_;
     }
+    size_t triangleAtlasBudgetBytes() const noexcept {
+        return triangleAtlasBudgetBytes_;
+    }
     size_t triangleAtlasLiveBytes() const noexcept;
     size_t triangleAtlasPartCount() const noexcept {
         return triangleAtlasParts_.size();
     }
     size_t triangleAtlasPageCount() const noexcept;
+
+    /** Constant-time snapshot of all renderer-owned buffer allocations. */
+    Obol::CadGpuResourceSnapshot resourceSnapshot() const noexcept;
 
     /**
      * Begin/end one asynchronous GPU frame-duration sample.
@@ -667,12 +689,16 @@ public:
      */
     bool beginFrameGpuTimer(const SoGLContext *glue);
     void endFrameGpuTimer(uint64_t triangleCount,
+                          float pointProxyPixelThreshold,
                           const SoGLContext *glue);
     uint64_t lastGpuTimeNanoseconds() const noexcept {
         return gpuTimerLastNanoseconds_;
     }
     uint64_t lastGpuTriangleCount() const noexcept {
         return gpuTimerLastTriangleCount_;
+    }
+    float lastGpuPointProxyPixelThreshold() const noexcept {
+        return gpuTimerLastPointProxyPixelThreshold_;
     }
     uint64_t gpuTimerSampleSerial() const noexcept {
         return gpuTimerLastCompletedSubmission_;
@@ -684,6 +710,7 @@ public:
 private:
     struct Entry {
         uint64_t    generation = 0;
+        uint64_t    progressiveLineage = 0;
         CadPointGpu point;
         CadWireGpu  wire;
         CadTriGpu   tri;
@@ -704,6 +731,14 @@ private:
     CadSubpixelProxyGpu pressureProxyPoints_;
     uint64_t progressiveFrame_ = 0;
     size_t progressiveBytes_ = 0;
+    size_t progressiveActiveBytes_ = 0;
+    size_t progressiveReserveBudgetBytes_ = 0;
+    uint64_t progressiveEvictionCount_ = 0;
+    size_t ordinaryPartBufferBytes_ = 0;
+    uint64_t ordinaryPartFullUploadBytes_ = 0;
+    uint64_t ordinaryPartSuffixUploadBytes_ = 0;
+    uint64_t ordinaryPartGpuCopyBytes_ = 0;
+    uint64_t ordinaryPartLineageReuseCount_ = 0;
     std::unordered_map<PartId, CadTriangleAtlasPart, std::hash<PartId>>
         triangleAtlasParts_;
     std::vector<std::unique_ptr<CadTriangleAtlasPage>>
@@ -714,11 +749,19 @@ private:
     bool triangleAtlasMaintenanceDeferred_ = false;
     bool triangleAtlasReclamationDeferred_ = false;
     size_t triangleAtlasAllocatedBytes_ = 0;
+    size_t triangleAtlasLiveBytes_ = 0;
+    size_t triangleAtlasPageCount_ = 0;
+    size_t triangleAtlasBudgetBytes_ = 0;
+    uint64_t triangleAtlasReclamationCount_ = 0;
+    uint64_t triangleAtlasFullUploadBytes_ = 0;
+    uint64_t triangleAtlasSuffixUploadBytes_ = 0;
+    uint64_t triangleAtlasLineageReuseCount_ = 0;
 
     struct GpuTimerSlot {
         GLuint query = 0;
         bool pending = false;
         uint64_t triangleCount = 0;
+        float pointProxyPixelThreshold = 1.0f;
         uint64_t submission = 0;
     };
     std::array<GpuTimerSlot, 3> gpuTimerSlots_;
@@ -730,6 +773,7 @@ private:
     uint64_t gpuTimerLastCompletedSubmission_ = 0;
     uint64_t gpuTimerLastNanoseconds_ = 0;
     uint64_t gpuTimerLastTriangleCount_ = 0;
+    float gpuTimerLastPointProxyPixelThreshold_ = 1.0f;
 
     void deletePointGpu(CadPointGpu& p, const SoGLContext * glue);
     void deleteWireGpu(CadWireGpu& w, const SoGLContext * glue);
@@ -742,7 +786,15 @@ private:
         uint32_t page, const SoGLContext *glue);
     void releaseTriangleAtlasPart(
         PartId pid, const SoGLContext *glue);
+    bool compactTriangleAtlasPages(const SoGLContext *glue);
     void bumpTriangleAtlasRevision() noexcept;
+    static size_t pointAllocatedBytes(const CadPointGpu& point) noexcept;
+    static size_t wireAllocatedBytes(const CadWireGpu& wire) noexcept;
+    static size_t triAllocatedBytes(const CadTriGpu& tri) noexcept;
+    static size_t ordinaryEntryAllocatedBytes(const Entry& entry) noexcept;
+    static size_t triangleAtlasPartLiveBytes(
+        const CadTriangleAtlasPart& part,
+        const CadTriangleAtlasPage *page) noexcept;
 
     // Non-copyable
     CadGpuResources(const CadGpuResources&) = delete;
