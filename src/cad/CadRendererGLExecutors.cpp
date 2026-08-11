@@ -5004,39 +5004,93 @@ bool CadRendererGL::renderIndirectShaded(
 {
     if (!glue || !gpuRes_ || !caps_.canUseIndirect() ||
             !shaders_.shadedIndirect || plan.shadedItems.empty() ||
-            plan.visibleInstances.empty())
+            plan.visibleInstances.empty()) {
+        if (gpuRes_ && indirectPreparation_.active)
+            gpuRes_->endTriangleAtlasExactPreparation();
+        indirectPreparation_ = IndirectPreparationState();
         return rejectIndirect(1, "precondition");
-    size_t deadlineWork = 256u;
-    if (renderInterruptedAfter(deadlineWork))
-        return false;
-    const bool replayEnabled = configuration_->replay;
-    if (replayEnabled) {
-        if (replayIndirectShaded(
-                plan, assembly, glue, viewProj, viewVolume))
-            return true;
-        if (renderInterrupted())
-            return false;
-    } else {
-        /*
-         * Diagnostic/reference mode: keep the same atlas, shaders, indirect
-         * commands, and GPU submission route, but prepare the CPU submission
-         * exactly for every frame.  This isolates retained-record defects
-         * from atlas/MDI/shader defects without falling back to a materially
-         * different renderer.
-         */
-        indirectPrepared_.valid = false;
     }
-    /* Exact preparation recycles storage owned by the preceding replay
-     * record.  Invalidate it before the first swap so a deadline exit can
-     * never expose a half-recycled record on the next frame. */
-    indirectPrepared_.valid = false;
-    noteRenderPreparation();
+    IndirectPreparationState& build = indirectPreparation_;
+    const int progressiveLodCeiling =
+        assembly.progressiveLodCeiling.getValue();
+    const bool matchingBuild = build.active &&
+        build.contextId == glue->contextid &&
+        build.planRevision == plan.revision &&
+        build.progressiveLodCeiling == progressiveLodCeiling &&
+        build.viewProj == viewProj;
+    if (build.active && !matchingBuild) {
+        gpuRes_->endTriangleAtlasExactPreparation();
+        build = IndirectPreparationState();
+    }
+    const bool replayEnabled = configuration_->replay;
+    if (!build.active) {
+        if (replayEnabled) {
+            if (replayIndirectShaded(
+                    plan, assembly, glue, viewProj, viewVolume))
+                return true;
+            if (renderInterrupted())
+                return false;
+        } else {
+            /* Diagnostic/reference mode: retain the same atlas, shaders,
+             * indirect commands, and GPU submission route while preparing
+             * the CPU submission exactly for every frame. */
+            indirectPrepared_.valid = false;
+        }
+    }
     using IndirectClock = std::chrono::steady_clock;
     const auto indirectStarted = IndirectClock::now();
-    auto visibilityCompleted = indirectStarted;
-    auto protectionCompleted = indirectStarted;
-    auto admissionCompleted = indirectStarted;
-    auto commandsCompleted = indirectStarted;
+    static constexpr size_t guaranteedWorkPerRetry = 4096u;
+    size_t workSinceAbortCheck = 0u;
+    const auto preparationInterrupted = [&](size_t work = 1u) {
+        const size_t remaining = guaranteedWorkPerRetry -
+            std::min(guaranteedWorkPerRetry, workSinceAbortCheck);
+        if (work < remaining) {
+            workSinceAbortCheck += work;
+            return false;
+        }
+        workSinceAbortCheck = 0u;
+        return renderInterrupted();
+    };
+    const auto abandon = [&](int status, const char *reason) {
+        gpuRes_->endTriangleAtlasExactPreparation();
+        build = IndirectPreparationState();
+        indirectPrepared_.valid = false;
+        return rejectIndirect(status, reason);
+    };
+
+    if (!build.active) {
+        indirectPrepared_.valid = false;
+        gpuRes_->beginTriangleAtlasExactPreparation();
+        build.active = true;
+        build.phase = IndirectPreparationPhase::Visibility;
+        build.contextId = glue->contextid;
+        build.planRevision = plan.revision;
+        build.progressiveLodCeiling = progressiveLodCeiling;
+        build.viewProj = viewProj;
+
+        indirectVisibleMask_.assign(plan.visibleInstances.size(), 0u);
+        indirectVisibleMaximumLod_.assign(plan.partBindings.size(), 0u);
+        indirectVisiblePart_.assign(plan.partBindings.size(), 0u);
+        indirectVisibleImportance_.assign(plan.partBindings.size(), 0.0);
+        indirectVisiblePartIndices_.clear();
+        if (indirectVisiblePartIndices_.capacity() <
+                plan.partBindings.size())
+            indirectVisiblePartIndices_.reserve(plan.partBindings.size());
+        indirectFirstVisibleOccurrence_.assign(
+            plan.partBindings.size(),
+            std::numeric_limits<uint32_t>::max());
+        indirectNextVisibleOccurrence_.assign(
+            plan.visibleInstances.size(),
+            std::numeric_limits<uint32_t>::max());
+        indirectRequestedVertexCounts_.assign(
+            plan.partBindings.size(), 0u);
+        indirectRequestedIndexCounts_.assign(
+            plan.partBindings.size(), 0u);
+        indirectAtlasBindings_.assign(
+            plan.partBindings.size(), nullptr);
+    }
+    ++build.sliceCount;
+    noteRenderPreparation();
 
     /*
      * Resolve view visibility before GPU admission.  The assembly plan is a
@@ -5049,43 +5103,37 @@ bool CadRendererGL::renderIndirectShaded(
     const ExecutorFrustumPlanes fp =
         extractExecutorFrustumPlanes(viewProj);
     auto& visibleMask = indirectVisibleMask_;
-    visibleMask.assign(plan.visibleInstances.size(), 0u);
     auto& visibleMaximumLod = indirectVisibleMaximumLod_;
-    visibleMaximumLod.assign(plan.partBindings.size(), 0u);
     auto& visiblePart = indirectVisiblePart_;
-    visiblePart.assign(plan.partBindings.size(), 0u);
     auto& visibleImportance = indirectVisibleImportance_;
-    visibleImportance.assign(plan.partBindings.size(), 0.0);
     auto& visiblePartIndices = indirectVisiblePartIndices_;
-    visiblePartIndices.clear();
-    if (visiblePartIndices.capacity() < plan.partBindings.size())
-        visiblePartIndices.reserve(plan.partBindings.size());
     const uint32_t noOccurrence = std::numeric_limits<uint32_t>::max();
     auto& firstVisibleOccurrence = indirectFirstVisibleOccurrence_;
-    firstVisibleOccurrence.assign(plan.partBindings.size(), noOccurrence);
     auto& nextVisibleOccurrence = indirectNextVisibleOccurrence_;
-    nextVisibleOccurrence.assign(plan.visibleInstances.size(), noOccurrence);
-    size_t visibleOccurrenceCount = 0;
-    for (const CadDrawItem& item : plan.shadedItems) {
-        if (renderInterruptedAfter(deadlineWork))
-            return false;
+    if (build.phase == IndirectPreparationPhase::Visibility) {
+      while (build.itemCursor < plan.shadedItems.size()) {
+        const CadDrawItem& item = plan.shadedItems[build.itemCursor];
         if (!item.instanceCount ||
                 item.partIndex >= plan.partBindings.size() ||
                 item.baseInstance >= plan.visibleInstances.size() ||
-                item.instanceCount >
-                    plan.visibleInstances.size() - item.baseInstance)
+                item.instanceCount > plan.visibleInstances.size() -
+                    item.baseInstance) {
+            ++build.itemCursor;
+            build.occurrenceOffset = 0;
             continue;
+        }
         const CadPartBinding& binding =
             plan.partBindings[item.partIndex];
         const PartGeometry *geometry = binding.geometry.get();
         if (!geometry || !geometry->shaded)
-            return rejectIndirect(
+            return abandon(
                 2, "visible part has no shaded geometry");
         const TriMesh& mesh = *geometry->shaded;
-        for (uint32_t i = 0; i < item.instanceCount; ++i) {
-            if (renderInterruptedAfter(deadlineWork))
+        while (build.occurrenceOffset < item.instanceCount) {
+            if (preparationInterrupted())
                 return false;
-            const size_t visibleIndex = item.baseInstance + i;
+            const size_t visibleIndex = item.baseInstance +
+                build.occurrenceOffset++;
             const CadVisibleInstance& instance =
                 plan.visibleInstances[visibleIndex];
             if (!cadInstanceDrawable(
@@ -5099,7 +5147,7 @@ bool CadRendererGL::renderIndirectShaded(
                     firstVisibleOccurrence[item.partIndex];
                 firstVisibleOccurrence[item.partIndex] =
                     static_cast<uint32_t>(visibleIndex);
-                ++visibleOccurrenceCount;
+                ++build.visibleOccurrenceCount;
             }
             const uint8_t requested = mesh.isProgressive() ?
                 cadResolvedProgressiveLevel(
@@ -5121,20 +5169,22 @@ bool CadRendererGL::renderIndirectShaded(
                 1.0e12,
                 visibleImportance[item.partIndex] + importance);
         }
-    }
-    visibilityCompleted = IndirectClock::now();
-    if (!visibleOccurrenceCount) {
+        ++build.itemCursor;
+        build.occurrenceOffset = 0;
+      }
+      if (!build.visibleOccurrenceCount) {
+        gpuRes_->endTriangleAtlasExactPreparation();
+        build = IndirectPreparationState();
         lastIndirectStatus_ = 0;
         return true;
+      }
+      build.phase = IndirectPreparationPhase::Protection;
+      build.partCursor = 0;
     }
 
     auto& requestedVertexCounts = indirectRequestedVertexCounts_;
-    requestedVertexCounts.assign(plan.partBindings.size(), 0u);
     auto& requestedIndexCounts = indirectRequestedIndexCounts_;
-    requestedIndexCounts.assign(plan.partBindings.size(), 0u);
     auto& atlasBindings = indirectAtlasBindings_;
-    atlasBindings.assign(plan.partBindings.size(), nullptr);
-    uint64_t requestedLiveBytes = 0;
     /*
      * Mark every retained consumer before admitting any new allocation.
      * Without this phase, pressure while processing part N could evict part
@@ -5146,14 +5196,17 @@ bool CadRendererGL::renderIndirectShaded(
      * avoiding a second full-table upsert pass and a third lookup pass over
      * tens of thousands of unique parts.
      */
-    for (const uint32_t partIndex : visiblePartIndices) {
-        if (renderInterruptedAfter(deadlineWork))
+    if (build.phase == IndirectPreparationPhase::Protection) {
+      while (build.partCursor < visiblePartIndices.size()) {
+        if (preparationInterrupted())
             return false;
+        const uint32_t partIndex =
+            visiblePartIndices[build.partCursor++];
         const CadPartBinding& binding =
             plan.partBindings[partIndex];
         const PartGeometry *geometry = binding.geometry.get();
         if (!geometry || !geometry->shaded)
-            return rejectIndirect(
+            return abandon(
                 2, "visible part has no shaded geometry");
         const TriMesh& mesh = *geometry->shaded;
         const uint8_t requested = visibleMaximumLod[partIndex];
@@ -5164,7 +5217,7 @@ bool CadRendererGL::renderIndirectShaded(
         if (!vertexCount || !indexCount ||
                 vertexCount > std::numeric_limits<uint32_t>::max() ||
                 indexCount > std::numeric_limits<uint32_t>::max())
-            return rejectIndirect(3, "invalid retained prefix counts");
+            return abandon(3, "invalid retained prefix counts");
         requestedVertexCounts[partIndex] =
             static_cast<uint32_t>(vertexCount);
         requestedIndexCounts[partIndex] =
@@ -5173,24 +5226,24 @@ bool CadRendererGL::renderIndirectShaded(
         const uint64_t requestedBytes =
             static_cast<uint64_t>(vertexCount) * vertexStride +
             static_cast<uint64_t>(indexCount) * sizeof(uint32_t);
-        requestedLiveBytes = requestedBytes >
-                UINT64_MAX - requestedLiveBytes ?
-            UINT64_MAX : requestedLiveBytes + requestedBytes;
+        build.requestedLiveBytes = requestedBytes >
+                UINT64_MAX - build.requestedLiveBytes ?
+            UINT64_MAX : build.requestedLiveBytes + requestedBytes;
         atlasBindings[partIndex] =
             gpuRes_->touchTriangleAtlasPart(
                 binding.part, binding.generation,
                 !mesh.normals.empty(),
                 requestedVertexCounts[partIndex],
                 requestedIndexCounts[partIndex]);
-    }
-    protectionCompleted = IndirectClock::now();
+        gpuRes_->protectTriangleAtlasExactPart(binding.part);
+      }
 
     auto& admissionPartIndices = indirectAdmissionPartIndices_;
     admissionPartIndices.assign(
         visiblePartIndices.begin(), visiblePartIndices.end());
     const size_t atlasBudget = gpuRes_->triangleAtlasBudgetBytes();
     const bool likelyMemoryPressure = atlasBudget > 0 &&
-        (requestedLiveBytes >=
+        (build.requestedLiveBytes >=
              static_cast<uint64_t>(atlasBudget / 4u) * 3u ||
          gpuRes_->triangleAtlasAllocatedBytes() >=
              atlasBudget / 4u * 3u);
@@ -5216,22 +5269,41 @@ bool CadRendererGL::renderIndirectShaded(
         indirectPressureProxySourceInstanceIndices_;
     pressureProxySourceInstanceIndices.clear();
     if (pressureProxySourceInstanceIndices.capacity() <
-            visibleOccurrenceCount)
+            build.visibleOccurrenceCount)
         pressureProxySourceInstanceIndices.reserve(
-            visibleOccurrenceCount);
-    const auto replacePartWithPressureProxy = [&](uint32_t partIndex) {
+            build.visibleOccurrenceCount);
+    build.phase = IndirectPreparationPhase::Coverage;
+    build.partCursor = 0;
+    }
+
+    auto& admissionPartIndices = indirectAdmissionPartIndices_;
+    auto& pressureProxyPoints = indirectPressureProxyPoints_;
+    auto& pressureProxySourceInstanceIndices =
+        indirectPressureProxySourceInstanceIndices_;
+    const auto beginPressureProxy = [&](uint32_t partIndex) {
         const CadPartBinding& binding = plan.partBindings[partIndex];
         if (!binding.subpixelProxyEligible)
             return false;
+        build.proxyPartActive = true;
+        build.proxyPartIndex = partIndex;
+        build.proxyVisibleIndex = firstVisibleOccurrence[partIndex];
+        return true;
+    };
+    const auto continuePressureProxy = [&]() {
+        if (!build.proxyPartActive)
+            return true;
+        const CadPartBinding& binding =
+            plan.partBindings[build.proxyPartIndex];
         SbVec3f localCenter(0.0f, 0.0f, 0.0f);
         for (const SbVec3f& corner : binding.subpixelProxyCorners)
             localCenter += corner;
         localCenter /= 8.0f;
-        for (uint32_t visibleIndex = firstVisibleOccurrence[partIndex];
-                visibleIndex != noOccurrence;
-                visibleIndex = nextVisibleOccurrence[visibleIndex]) {
-            if (renderInterruptedAfter(deadlineWork))
+        while (build.proxyVisibleIndex != noOccurrence) {
+            if (preparationInterrupted())
                 return false;
+            const uint32_t visibleIndex = build.proxyVisibleIndex;
+            build.proxyVisibleIndex =
+                nextVisibleOccurrence[visibleIndex];
             if (!visibleMask[visibleIndex])
                 continue;
             const CadVisibleInstance& instance =
@@ -5245,9 +5317,10 @@ bool CadRendererGL::renderIndirectShaded(
             pressureProxyPoints.push_back(replacement);
             pressureProxySourceInstanceIndices.push_back(visibleIndex);
             visibleMask[visibleIndex] = 0u;
-            --visibleOccurrenceCount;
+            --build.visibleOccurrenceCount;
         }
-        visiblePart[partIndex] = 0u;
+        visiblePart[build.proxyPartIndex] = 0u;
+        build.proxyPartActive = false;
         return true;
     };
 
@@ -5256,15 +5329,26 @@ bool CadRendererGL::renderIndirectShaded(
      * Under pressure, screen-prominent and selected occurrences are visited
      * first.  This removes plan-order starvation without compromising the
      * no-holes PoP contract. */
-    for (const uint32_t partIndex : admissionPartIndices) {
-        if (renderInterruptedAfter(deadlineWork))
-            return false;
-        if (!visiblePart[partIndex] || atlasBindings[partIndex])
+    if (build.phase == IndirectPreparationPhase::Coverage) {
+      while (build.partCursor < admissionPartIndices.size()) {
+        if (build.proxyPartActive) {
+            if (!continuePressureProxy())
+                return false;
+            ++build.partCursor;
             continue;
+        }
+        if (preparationInterrupted())
+            return false;
+        const uint32_t partIndex =
+            admissionPartIndices[build.partCursor];
+        if (!visiblePart[partIndex] || atlasBindings[partIndex]) {
+            ++build.partCursor;
+            continue;
+        }
         const CadPartBinding& binding = plan.partBindings[partIndex];
         const PartGeometry *geometry = binding.geometry.get();
         if (!geometry || !geometry->shaded)
-            return false;
+            return abandon(2, "visible part has no shaded geometry");
         const TriMesh& mesh = *geometry->shaded;
         uint32_t coverageVertexCount = requestedVertexCounts[partIndex];
         uint32_t coverageIndexCount = requestedIndexCounts[partIndex];
@@ -5283,7 +5367,7 @@ bool CadRendererGL::renderIndirectShaded(
                 coverageIndexCount, mesh.isProgressive(),
                 mesh.progressiveLineage, glue, caps_);
         if (!admitted) {
-            atlasAdmissionPressure_ = true;
+            build.atlasAdmissionPressure = true;
             if (configuration_->indirectDebug)
                 std::fprintf(stderr,
                     "CadRendererGL indirect atlas coverage failed "
@@ -5297,30 +5381,45 @@ bool CadRendererGL::renderIndirectShaded(
                     gpuRes_->triangleAtlasLiveBytes(),
                     gpuRes_->triangleAtlasPageCount(),
                     gpuRes_->triangleAtlasPartCount());
-            if (!replacePartWithPressureProxy(partIndex)) {
-                if (renderInterrupted())
-                    return false;
-                return rejectIndirect(4, "triangle atlas coverage");
-            }
+            if (!beginPressureProxy(partIndex))
+                return abandon(4, "triangle atlas coverage");
             continue;
         }
         atlasBindings[partIndex] = admitted;
+        gpuRes_->protectTriangleAtlasExactPart(binding.part);
+        ++build.partCursor;
+      }
+      build.phase = IndirectPreparationPhase::Enrichment;
+      build.partCursor = 0;
     }
 
     /* Enrichment pass: grow retained prefixes toward the view request in the
      * same value order.  A failed grow preserves and draws the coherent
      * coverage prefix; it never demotes that part back to a box or point. */
-    for (const uint32_t partIndex : admissionPartIndices) {
-        if (renderInterruptedAfter(deadlineWork))
-            return false;
-        if (!visiblePart[partIndex] || !atlasBindings[partIndex])
+    if (build.phase == IndirectPreparationPhase::Enrichment) {
+      while (build.partCursor < admissionPartIndices.size()) {
+        if (build.proxyPartActive) {
+            if (!continuePressureProxy())
+                return false;
+            ++build.partCursor;
             continue;
+        }
+        if (preparationInterrupted())
+            return false;
+        const uint32_t partIndex =
+            admissionPartIndices[build.partCursor];
+        if (!visiblePart[partIndex] || !atlasBindings[partIndex]) {
+            ++build.partCursor;
+            continue;
+        }
         const uint32_t vertexCount = requestedVertexCounts[partIndex];
         const uint32_t indexCount = requestedIndexCounts[partIndex];
         const CadTriangleAtlasPart *current = atlasBindings[partIndex];
         if (current->vertexCount >= vertexCount &&
-                current->indexCount >= indexCount)
+                current->indexCount >= indexCount) {
+            ++build.partCursor;
             continue;
+        }
         const CadPartBinding& binding = plan.partBindings[partIndex];
         const TriMesh& mesh = *binding.geometry->shaded;
         const CadTriangleAtlasPart *enriched =
@@ -5332,24 +5431,24 @@ bool CadRendererGL::renderIndirectShaded(
                 mesh.isProgressive(), mesh.progressiveLineage,
                 glue, caps_);
         if (!enriched) {
-            atlasAdmissionPressure_ = true;
+            build.atlasAdmissionPressure = true;
             enriched = gpuRes_->triangleAtlasPart(binding.part);
         }
         if (!enriched) {
-            if (!replacePartWithPressureProxy(partIndex)) {
-                if (renderInterrupted())
-                    return false;
-                return rejectIndirect(4, "triangle atlas enrichment");
-            }
+            if (!beginPressureProxy(partIndex))
+                return abandon(4, "triangle atlas enrichment");
             atlasBindings[partIndex] = nullptr;
             continue;
         }
         atlasBindings[partIndex] = enriched;
+        gpuRes_->protectTriangleAtlasExactPart(binding.part);
         if (enriched->vertexCount < vertexCount ||
                 enriched->indexCount < indexCount)
-            atlasAdmissionPressure_ = true;
+            build.atlasAdmissionPressure = true;
+        ++build.partCursor;
+      }
+      build.phase = IndirectPreparationPhase::CommandSetup;
     }
-    admissionCompleted = IndirectClock::now();
 
     /*
      * The preceding prepared frame is no longer replayable once exact
@@ -5357,25 +5456,46 @@ bool CadRendererGL::renderIndirectShaded(
      * scratch target for this build.  Page ids are dense atlas slots, so a
      * vector lookup avoids one red-black-tree allocation per page as well.
      */
-    if (!indirectPrepared_.pages.empty())
-        indirectPageWorkScratch_.swap(indirectPrepared_.pages);
-    indirectPrepared_.pages.clear();
-    for (IndirectPageWork& work : indirectPageWorkScratch_) {
-        if (renderInterruptedAfter(deadlineWork))
-            return false;
-        work.ordinary.clear();
-        work.culled.clear();
-    }
-    const size_t atlasPageCount = gpuRes_->triangleAtlasPageCount();
-    indirectPageWorkSlotByPage_.assign(
-        atlasPageCount, std::numeric_limits<uint32_t>::max());
-    for (size_t i = 0; i < indirectPageWorkScratch_.size(); ++i) {
-        if (renderInterruptedAfter(deadlineWork))
-            return false;
-        const uint32_t page = indirectPageWorkScratch_[i].page;
-        if (page < indirectPageWorkSlotByPage_.size())
-            indirectPageWorkSlotByPage_[page] =
-                static_cast<uint32_t>(i);
+    if (build.phase == IndirectPreparationPhase::CommandSetup) {
+      if (!indirectPrepared_.pages.empty())
+          indirectPageWorkScratch_.swap(indirectPrepared_.pages);
+      indirectPrepared_.pages.clear();
+      for (IndirectPageWork& work : indirectPageWorkScratch_) {
+          work.ordinary.clear();
+          work.culled.clear();
+      }
+      const size_t atlasPageCount = gpuRes_->triangleAtlasPageCount();
+      indirectPageWorkSlotByPage_.assign(
+          atlasPageCount, std::numeric_limits<uint32_t>::max());
+      for (size_t i = 0; i < indirectPageWorkScratch_.size(); ++i) {
+          const uint32_t page = indirectPageWorkScratch_[i].page;
+          if (page < indirectPageWorkSlotByPage_.size())
+              indirectPageWorkSlotByPage_[page] =
+                  static_cast<uint32_t>(i);
+      }
+      const uint32_t noPreparedSlot =
+          std::numeric_limits<uint32_t>::max();
+      indirectCommandIndexByPart_.assign(
+          plan.partBindings.size(), noPreparedSlot);
+      indirectCommandCullByPart_.assign(
+          plan.partBindings.size(), 0u);
+      indirectPackedInstanceByPart_.assign(
+          plan.partBindings.size(), noPreparedSlot);
+      indirectPrepared_.instances.swap(indirectInstances_);
+      indirectInstances_.clear();
+      if (indirectInstances_.capacity() < build.visibleOccurrenceCount)
+          indirectInstances_.reserve(build.visibleOccurrenceCount);
+      indirectPrepared_.sourceInstanceIndices.swap(
+          indirectSourceInstanceIndices_);
+      indirectSourceInstanceIndices_.clear();
+      if (indirectSourceInstanceIndices_.capacity() <
+              build.visibleOccurrenceCount)
+          indirectSourceInstanceIndices_.reserve(
+              build.visibleOccurrenceCount);
+      build.itemCursor = 0;
+      build.occurrenceOffset = 0;
+      build.commandItemActive = false;
+      build.phase = IndirectPreparationPhase::Commands;
     }
     const auto pageWorkFor = [&](uint32_t page) ->
             IndirectPageWork& {
@@ -5395,44 +5515,35 @@ bool CadRendererGL::renderIndirectShaded(
     };
     const uint32_t noPreparedSlot =
         std::numeric_limits<uint32_t>::max();
-    indirectCommandIndexByPart_.assign(
-        plan.partBindings.size(), noPreparedSlot);
-    indirectCommandCullByPart_.assign(
-        plan.partBindings.size(), 0u);
-    indirectPackedInstanceByPart_.assign(
-        plan.partBindings.size(), noPreparedSlot);
-    /*
-     * Recycle the preceding prepared frame's instance storage as scratch.
-     * A cache miss therefore does not allocate another scene-sized array,
-     * and publication below is a constant-time swap.
-     */
-    indirectPrepared_.instances.swap(indirectInstances_);
     auto& instances = indirectInstances_;
-    instances.clear();
-    if (instances.capacity() < visibleOccurrenceCount)
-        instances.reserve(visibleOccurrenceCount);
-    indirectPrepared_.sourceInstanceIndices.swap(
-        indirectSourceInstanceIndices_);
     auto& sourceInstanceIndices = indirectSourceInstanceIndices_;
-    sourceInstanceIndices.clear();
-    if (sourceInstanceIndices.capacity() < visibleOccurrenceCount)
-        sourceInstanceIndices.reserve(visibleOccurrenceCount);
-    uint64_t renderedTriangleCount = 0;
-    Obol::CadRenderedWork renderedWork;
     /*
      * Protection and admission both return stable element pointers.  Use
      * those direct bindings below instead of performing a second hash-table
      * lookup for every visible part after an insertion.
      */
-    for (const CadDrawItem& item : plan.shadedItems) {
-        if (renderInterruptedAfter(deadlineWork))
-            return false;
-        if (!item.instanceCount ||
-                item.partIndex >= plan.partBindings.size() ||
-                item.baseInstance >= plan.visibleInstances.size() ||
-                item.instanceCount >
-                    plan.visibleInstances.size() - item.baseInstance)
-            continue;
+    if (build.phase == IndirectPreparationPhase::Commands) {
+      while (build.itemCursor < plan.shadedItems.size()) {
+        const CadDrawItem& item = plan.shadedItems[build.itemCursor];
+        if (!build.commandItemActive) {
+          if (!item.instanceCount ||
+                  item.partIndex >= plan.partBindings.size() ||
+                  item.baseInstance >= plan.visibleInstances.size() ||
+                  item.instanceCount >
+                      plan.visibleInstances.size() - item.baseInstance ||
+                  !visiblePart[item.partIndex]) {
+              ++build.itemCursor;
+              build.occurrenceOffset = 0;
+              continue;
+          }
+          if (instances.size() > std::numeric_limits<uint32_t>::max())
+              return abandon(8, "instance stream overflow");
+          build.commandBaseInstance =
+              static_cast<uint32_t>(instances.size());
+          build.commandLevel = 15u;
+          build.commandCount = 0;
+          build.commandItemActive = true;
+        }
         /*
          * Admission is intentionally view-aware.  A part whose occurrences
          * are all outside the frustum or represented by aggregate proxy
@@ -5441,24 +5552,19 @@ bool CadRendererGL::renderIndirectShaded(
          * it as an error made one culled/subpixel part throw the entire scene
          * into the CPU-flattened fallback.
          */
-        if (!visiblePart[item.partIndex])
-            continue;
         const PartGeometry *geometry =
             plan.partBindings[item.partIndex].geometry.get();
         const CadTriangleAtlasPart *atlas =
             atlasBindings[item.partIndex];
         if (!geometry || !geometry->shaded || !atlas)
-            return rejectIndirect(5, "missing admitted atlas binding");
+            return abandon(5, "missing admitted atlas binding");
         const TriMesh& mesh = *geometry->shaded;
         const bool progressive = mesh.isProgressive();
-        const uint32_t baseInstance =
-            static_cast<uint32_t>(instances.size());
-        uint8_t commandLevel = 15u;
-        size_t commandCount = 0;
-        for (uint32_t i = 0; i < item.instanceCount; ++i) {
-            if (renderInterruptedAfter(deadlineWork))
+        while (build.occurrenceOffset < item.instanceCount) {
+            if (preparationInterrupted())
                 return false;
-            const size_t instanceIndex = item.baseInstance + i;
+            const size_t instanceIndex = item.baseInstance +
+                build.occurrenceOffset++;
             if (!cadInstanceDrawable(
                     plan, item, instanceIndex, CadDrawChannel::Shaded) ||
                     !visibleMask[instanceIndex])
@@ -5485,12 +5591,12 @@ bool CadRendererGL::renderIndirectShaded(
                 mesh.indexCountAtLevel(level) : mesh.indices.size();
             if (!count || count > atlas->indexCount ||
                     count > std::numeric_limits<uint32_t>::max())
-                return rejectIndirect(6, "invalid indirect draw count");
-            if (commandCount && level != commandLevel)
-                return rejectIndirect(
+                return abandon(6, "invalid indirect draw count");
+            if (build.commandCount && level != build.commandLevel)
+                return abandon(
                     7, "mixed levels in one draw run");
-            commandLevel = level;
-            commandCount = count;
+            build.commandLevel = level;
+            build.commandCount = count;
 
             InstVertex target = {};
             std::memcpy(target.transform, source.transform.data(),
@@ -5517,32 +5623,32 @@ bool CadRendererGL::renderIndirectShaded(
                 static_cast<uint32_t>(instanceIndex));
         }
         const uint32_t instanceCount =
-            static_cast<uint32_t>(instances.size()) - baseInstance;
-        if (!instanceCount)
-            continue;
-        if (!commandCount ||
+            static_cast<uint32_t>(instances.size()) -
+                build.commandBaseInstance;
+        if (instanceCount && (!build.commandCount ||
                 atlas->vertices.first >
                     static_cast<uint32_t>(
-                        std::numeric_limits<int32_t>::max()))
-            return rejectIndirect(8, "invalid atlas command base");
+                        std::numeric_limits<int32_t>::max())))
+            return abandon(8, "invalid atlas command base");
 
-        CadDrawElementsIndirectCommand command;
-        command.count = static_cast<uint32_t>(commandCount);
-        command.instanceCount = instanceCount;
-        command.firstIndex = atlas->indices.first;
-        command.baseVertex = static_cast<int32_t>(atlas->vertices.first);
-        command.baseInstance = baseInstance;
-        renderedTriangleCount +=
-            static_cast<uint64_t>(command.count / 3u) *
-            static_cast<uint64_t>(command.instanceCount);
-        cadAccumulateRenderedShadedWork(
-            renderedWork, mesh, commandLevel,
-            static_cast<uint64_t>(command.count / 3u),
-            static_cast<uint64_t>(command.instanceCount));
-        IndirectPageWork& work = pageWorkFor(atlas->page);
-        auto& commands =
-            item.cullBackfaces ? work.culled : work.ordinary;
-        if (item.partIndex < indirectCommandIndexByPart_.size()) {
+        if (instanceCount) {
+          CadDrawElementsIndirectCommand command;
+          command.count = static_cast<uint32_t>(build.commandCount);
+          command.instanceCount = instanceCount;
+          command.firstIndex = atlas->indices.first;
+          command.baseVertex = static_cast<int32_t>(atlas->vertices.first);
+          command.baseInstance = build.commandBaseInstance;
+          build.renderedTriangleCount +=
+              static_cast<uint64_t>(command.count / 3u) *
+              static_cast<uint64_t>(command.instanceCount);
+          cadAccumulateRenderedShadedWork(
+              build.renderedWork, mesh, build.commandLevel,
+              static_cast<uint64_t>(command.count / 3u),
+              static_cast<uint64_t>(command.instanceCount));
+          IndirectPageWork& work = pageWorkFor(atlas->page);
+          auto& commands =
+              item.cullBackfaces ? work.culled : work.ordinary;
+          if (item.partIndex < indirectCommandIndexByPart_.size()) {
             /*
              * A unique progressive part has exactly one active command and
              * one packed occurrence.  Shared parts intentionally retain the
@@ -5556,44 +5662,53 @@ bool CadRendererGL::renderIndirectShaded(
                 indirectCommandCullByPart_[item.partIndex] =
                     item.cullBackfaces ? 1u : 0u;
                 indirectPackedInstanceByPart_[item.partIndex] =
-                    baseInstance;
+                    build.commandBaseInstance;
             } else {
                 indirectCommandIndexByPart_[item.partIndex] =
                     noPreparedSlot;
                 indirectPackedInstanceByPart_[item.partIndex] =
                     noPreparedSlot;
             }
+          }
+          commands.push_back(command);
         }
-        commands.push_back(command);
+        ++build.itemCursor;
+        build.occurrenceOffset = 0;
+        build.commandItemActive = false;
+      }
+      build.phase = IndirectPreparationPhase::Preflight;
+      build.pageCursor = 0;
     }
-    const bool havePageWork = std::any_of(
-        indirectPageWorkScratch_.begin(),
-        indirectPageWorkScratch_.end(),
-        [](const IndirectPageWork& work) {
-            return !work.ordinary.empty() || !work.culled.empty();
-        });
-    if (!havePageWork && pressureProxyPoints.empty())
-        return rejectIndirect(9, "empty visible page work");
-
     /*
      * Preflight every page before issuing any draws.  Command streams larger
      * than a page's fixed scratch buffer are submitted in bounded chunks.
      * No recoverable rejection is permitted after the prepared frame becomes
      * visible to replay.
-     */
-    for (const IndirectPageWork& work :
-            indirectPageWorkScratch_) {
-        if (renderInterruptedAfter(deadlineWork))
+    */
+    if (build.phase == IndirectPreparationPhase::Preflight) {
+      const bool havePageWork = std::any_of(
+          indirectPageWorkScratch_.begin(),
+          indirectPageWorkScratch_.end(),
+          [](const IndirectPageWork& work) {
+              return !work.ordinary.empty() || !work.culled.empty();
+          });
+      if (!havePageWork && pressureProxyPoints.empty())
+          return abandon(9, "empty visible page work");
+      while (build.pageCursor < indirectPageWorkScratch_.size()) {
+        if (preparationInterrupted())
             return false;
+        const IndirectPageWork& work =
+            indirectPageWorkScratch_[build.pageCursor++];
         if (work.ordinary.empty() && work.culled.empty())
             continue;
         const CadTriangleAtlasPage *page =
             gpuRes_->triangleAtlasPage(work.page);
         if (!page || !page->indirectBuf || !page->indirectCapacity ||
                 (work.ordinary.empty() && work.culled.empty()))
-            return rejectIndirect(11, "indirect page preflight");
+            return abandon(11, "indirect page preflight");
+      }
+      build.phase = IndirectPreparationPhase::PublishSetup;
     }
-    commandsCompleted = IndirectClock::now();
 
     /*
      * Publish an immutable CPU submission record.  A replay still touches
@@ -5601,51 +5716,53 @@ bool CadRendererGL::renderIndirectShaded(
      * verifies that generation, prefix capacity, page, and offsets remain
      * valid.  It can then skip visibility resolution, per-occurrence LoD,
      * instance packing, command construction, sorting, and proxy packing.
-     */
+    */
     IndirectPreparedFrame& prepared = indirectPrepared_;
-    prepared.valid = false;
-    prepared.contextId = glue->contextid;
-    prepared.planRevision = plan.revision;
-    prepared.geometryRevision = plan.geometryRevision;
-    prepared.shadedLayoutRevision =
-        plan.shadedLayoutRevision;
-    prepared.shadedLodRevision =
-        plan.shadedLodRevision;
-    prepared.appendRevision =
-        plan.appendRevision;
-    prepared.partGeometryRevision =
-        plan.partGeometryRevision;
-    prepared.instanceAttributeRevision =
-        plan.instanceAttributeRevision;
-    prepared.subpixelProxyRevision = plan.subpixelProxyRevision;
-    prepared.progressiveLodCeiling =
-        assembly.progressiveLodCeiling.getValue();
-    prepared.viewProj = viewProj;
-    prepared.renderedTriangleCount = renderedTriangleCount;
-    prepared.renderedWork = renderedWork;
-    prepared.instanceUploadSerial = 0;
-    prepared.atlasRevision = gpuRes_->triangleAtlasRevision();
-    prepared.atlasValidationCountdown = 30u;
-    prepared.cameraMotionReplayCount = 0;
-    prepared.atlasAdmissionPressure = atlasAdmissionPressure_;
-    prepared.atlasPressurePartCount = 0;
+    if (build.phase == IndirectPreparationPhase::PublishSetup) {
+      prepared.valid = false;
+      prepared.contextId = glue->contextid;
+      prepared.planRevision = plan.revision;
+      prepared.geometryRevision = plan.geometryRevision;
+      prepared.shadedLayoutRevision = plan.shadedLayoutRevision;
+      prepared.shadedLodRevision = plan.shadedLodRevision;
+      prepared.appendRevision = plan.appendRevision;
+      prepared.partGeometryRevision = plan.partGeometryRevision;
+      prepared.instanceAttributeRevision =
+          plan.instanceAttributeRevision;
+      prepared.subpixelProxyRevision = plan.subpixelProxyRevision;
+      prepared.progressiveLodCeiling = progressiveLodCeiling;
+      prepared.viewProj = viewProj;
+      prepared.renderedTriangleCount = build.renderedTriangleCount;
+      prepared.renderedWork = build.renderedWork;
+      prepared.instanceUploadSerial = 0;
+      prepared.atlasRevision = gpuRes_->triangleAtlasRevision();
+      prepared.atlasValidationCountdown = 30u;
+      prepared.cameraMotionReplayCount = 0;
+      prepared.atlasAdmissionPressure = build.atlasAdmissionPressure;
+      prepared.atlasPressurePartCount = 0;
 
-    prepared.parts.clear();
-    if (prepared.parts.capacity() < visiblePartIndices.size())
-        prepared.parts.reserve(visiblePartIndices.size());
-    prepared.partByPlanPartIndex.assign(
-        plan.partBindings.size(),
-        std::numeric_limits<uint32_t>::max());
-    for (const uint32_t partIndex : visiblePartIndices) {
-        if (renderInterruptedAfter(deadlineWork))
+      prepared.parts.clear();
+      if (prepared.parts.capacity() < visiblePartIndices.size())
+          prepared.parts.reserve(visiblePartIndices.size());
+      prepared.partByPlanPartIndex.assign(
+          plan.partBindings.size(),
+          std::numeric_limits<uint32_t>::max());
+      build.partCursor = 0;
+      build.phase = IndirectPreparationPhase::PublishParts;
+    }
+    if (build.phase == IndirectPreparationPhase::PublishParts) {
+      while (build.partCursor < visiblePartIndices.size()) {
+        if (preparationInterrupted())
             return false;
+        const uint32_t partIndex =
+            visiblePartIndices[build.partCursor++];
         if (!visiblePart[partIndex])
             continue;
         const CadPartBinding& binding = plan.partBindings[partIndex];
         const PartGeometry *geometry = binding.geometry.get();
         const CadTriangleAtlasPart *atlas = atlasBindings[partIndex];
         if (!geometry || !geometry->shaded || !atlas)
-            return rejectIndirect(11, "prepared part binding");
+            return abandon(11, "prepared part binding");
         IndirectPreparedPart demand;
         demand.part = binding.part;
         demand.partIndex = partIndex;
@@ -5679,14 +5796,14 @@ bool CadRendererGL::renderIndirectShaded(
         prepared.partByPlanPartIndex[partIndex] =
             static_cast<uint32_t>(prepared.parts.size());
         prepared.parts.push_back(demand);
-    }
+      }
 
     /*
      * Remove atlas holes/stale pages without releasing the vector storage of
      * active pages.  Moving active work into the prepared store transfers
      * capacities wholesale; the next exact build swaps them back.
      */
-    indirectPageWorkScratch_.erase(
+      indirectPageWorkScratch_.erase(
         std::remove_if(
             indirectPageWorkScratch_.begin(),
             indirectPageWorkScratch_.end(),
@@ -5694,70 +5811,83 @@ bool CadRendererGL::renderIndirectShaded(
                 return work.ordinary.empty() && work.culled.empty();
             }),
         indirectPageWorkScratch_.end());
-    prepared.pages.swap(indirectPageWorkScratch_);
-    prepared.instances.swap(instances);
-    prepared.sourceInstanceIndices.swap(sourceInstanceIndices);
-    prepared.pressureProxyPoints.swap(pressureProxyPoints);
-    prepared.pressureProxySourceInstanceIndices.swap(
-        pressureProxySourceInstanceIndices);
-    prepared.appendPatchAnchorInstanceCount =
-        prepared.instances.size();
-    prepared.instanceIndexBySource.assign(
-        plan.visibleInstances.size(),
-        std::numeric_limits<uint32_t>::max());
-    for (size_t i = 0; i < prepared.sourceInstanceIndices.size(); ++i) {
-        if (renderInterruptedAfter(deadlineWork)) {
-            prepared.valid = false;
+      prepared.pages.swap(indirectPageWorkScratch_);
+      prepared.instances.swap(instances);
+      prepared.sourceInstanceIndices.swap(sourceInstanceIndices);
+      prepared.pressureProxyPoints.swap(pressureProxyPoints);
+      prepared.pressureProxySourceInstanceIndices.swap(
+          pressureProxySourceInstanceIndices);
+      prepared.appendPatchAnchorInstanceCount =
+          prepared.instances.size();
+      prepared.instanceIndexBySource.assign(
+          plan.visibleInstances.size(), noPreparedSlot);
+      build.reverseCursor = 0;
+      build.phase = IndirectPreparationPhase::ReverseInstances;
+    }
+    if (build.phase == IndirectPreparationPhase::ReverseInstances) {
+      while (build.reverseCursor <
+              prepared.sourceInstanceIndices.size()) {
+        if (preparationInterrupted())
             return false;
-        }
+        const size_t i = build.reverseCursor++;
         const uint32_t sourceIndex =
             prepared.sourceInstanceIndices[i];
-        if (sourceIndex >= prepared.instanceIndexBySource.size()) {
-            prepared.valid = false;
-            return rejectIndirect(
-                11, "prepared instance reverse index");
-        }
+        if (sourceIndex >= prepared.instanceIndexBySource.size())
+            return abandon(11, "prepared instance reverse index");
         prepared.instanceIndexBySource[sourceIndex] =
             static_cast<uint32_t>(i);
+      }
+      prepared.pressureProxyIndexBySource.assign(
+          plan.visibleInstances.size(), noPreparedSlot);
+      build.reverseCursor = 0;
+      build.phase = IndirectPreparationPhase::ReverseProxies;
     }
-    prepared.pressureProxyIndexBySource.assign(
-        plan.visibleInstances.size(),
-        std::numeric_limits<uint32_t>::max());
-    for (size_t i = 0;
-            i < prepared.pressureProxySourceInstanceIndices.size(); ++i) {
-        if (renderInterruptedAfter(deadlineWork)) {
-            prepared.valid = false;
+    if (build.phase == IndirectPreparationPhase::ReverseProxies) {
+      while (build.reverseCursor <
+              prepared.pressureProxySourceInstanceIndices.size()) {
+        if (preparationInterrupted())
             return false;
-        }
+        const size_t i = build.reverseCursor++;
         const uint32_t sourceIndex =
             prepared.pressureProxySourceInstanceIndices[i];
         if (sourceIndex >=
-                prepared.pressureProxyIndexBySource.size()) {
-            prepared.valid = false;
-            return rejectIndirect(
-                11, "prepared proxy reverse index");
-        }
+                prepared.pressureProxyIndexBySource.size())
+            return abandon(11, "prepared proxy reverse index");
         prepared.pressureProxyIndexBySource[sourceIndex] =
             static_cast<uint32_t>(i);
+      }
+      prepared.valid = true;
+      pressureProxyAppendOnly_ = false;
+      ++pressureProxyRevision_;
+      if (!pressureProxyRevision_)
+          pressureProxyRevision_ = 1;
+      build.phase = IndirectPreparationPhase::Submit;
     }
-    prepared.valid = true;
 
     pressureProxyPointsView_ = &prepared.pressureProxyPoints;
-    pressureProxyAppendOnly_ = false;
-    ++pressureProxyRevision_;
-    if (!pressureProxyRevision_)
-        pressureProxyRevision_ = 1;
-    lastRenderedTriangleCount_ = renderedTriangleCount;
-
-    const bool submitted =
-        submitIndirectPrepared(glue, viewProj, viewVolume);
-    if (!submitted) {
-        prepared.valid = false;
-        pressureProxyPointsView_ = nullptr;
-        return false;
+    atlasAdmissionPressure_ = build.atlasAdmissionPressure ||
+        prepared.atlasAdmissionPressure;
+    lastRenderedTriangleCount_ = prepared.renderedTriangleCount;
+    if (build.phase == IndirectPreparationPhase::Submit) {
+      const bool submitted =
+          submitIndirectPrepared(glue, viewProj, viewVolume);
+      if (!submitted) {
+          pressureProxyPointsView_ = nullptr;
+          if (renderInterrupted())
+              return false;
+          return abandon(12, "indirect submission");
+      }
+      if (lastIndirectStatus_ != 0)
+          return abandon(lastIndirectStatus_, "indirect submission");
     }
-    if (lastIndirectStatus_ != 0)
-        prepared.valid = false;
+
+    const uint32_t completedSlices = build.sliceCount;
+    const size_t completedVisibleOccurrences =
+        build.visibleOccurrenceCount;
+    const size_t completedVisibleParts = visiblePartIndices.size();
+    const uint64_t completedTriangles = build.renderedTriangleCount;
+    gpuRes_->endTriangleAtlasExactPreparation();
+    build = IndirectPreparationState();
 
     /*
      * The atlas is now the only shaded geometry owner for this context.
@@ -5778,26 +5908,17 @@ bool CadRendererGL::renderIndirectShaded(
             milliseconds(indirectStarted, completed);
         if (total >= 10.0)
             std::fprintf(stderr,
-                "CadRendererGL exact indirect total=%.3fms "
-                "visibility=%.3fms protect=%.3fms admit=%.3fms "
-                "commands=%.3fms publish-submit=%.3fms "
+                "CadRendererGL exact indirect final-slice=%.3fms "
+                "slices=%u "
                 "source_instances=%zu visible_instances=%zu "
                 "visible_parts=%zu triangles=%llu\n",
                 total,
-                milliseconds(indirectStarted,
-                    visibilityCompleted),
-                milliseconds(visibilityCompleted,
-                    protectionCompleted),
-                milliseconds(protectionCompleted,
-                    admissionCompleted),
-                milliseconds(admissionCompleted,
-                    commandsCompleted),
-                milliseconds(commandsCompleted, completed),
+                completedSlices,
                 plan.visibleInstances.size(),
-                visibleOccurrenceCount,
-                visiblePartIndices.size(),
+                completedVisibleOccurrences,
+                completedVisibleParts,
                 static_cast<unsigned long long>(
-                    renderedTriangleCount));
+                    completedTriangles));
     }
     if (configuration_->indirectDebug) {
         static uint32_t lastDebugContext = UINT32_MAX;

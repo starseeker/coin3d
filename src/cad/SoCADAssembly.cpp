@@ -883,7 +883,10 @@ struct SoCADAssemblyImpl :
         }
         if (indexFound->second >= cachedPlan_.visibleInstances.size())
             return fail("invalid-visible-index");
-        auto& record = cachedPlan_.visibleInstances[indexFound->second];
+        const uint32_t visibleIndex = indexFound->second;
+        auto& record = cachedPlan_.visibleInstances[visibleIndex];
+        const bool wasSelected =
+            (record.flags & Obol::internal::CadInstanceSelected) != 0;
         uint32_t flags = record.flags &
             ~(Obol::internal::CadInstanceSelected |
               Obol::internal::CadInstanceHidden);
@@ -892,16 +895,21 @@ struct SoCADAssemblyImpl :
         if (hidden_.count(instance))
             flags |= Obol::internal::CadInstanceHidden;
         record.flags = flags;
-        if (indexFound->second < subpixelProxyPointByVisible_.size()) {
+        const bool isSelected =
+            (record.flags & Obol::internal::CadInstanceSelected) != 0;
+        if (wasSelected != isSelected &&
+                updateSelectedSubpixelProxy(visibleIndex, isSelected))
+            pendingSubpixelProxyChange_ = true;
+        if (visibleIndex < subpixelProxyPointByVisible_.size()) {
             const uint32_t pointIndex =
-                subpixelProxyPointByVisible_[indexFound->second];
+                subpixelProxyPointByVisible_[visibleIndex];
             if (pointIndex != std::numeric_limits<uint32_t>::max() &&
                     pointIndex < cachedPlan_.subpixelProxyPoints.size()) {
                 cachedPlan_.subpixelProxyPoints[pointIndex].flags =
                     record.flags;
             }
         }
-        pendingInstanceAttributeIndices_.push_back(indexFound->second);
+        pendingInstanceAttributeIndices_.push_back(visibleIndex);
         return true;
     }
 
@@ -984,6 +992,13 @@ struct SoCADAssemblyImpl :
          * flags.  Discard its cursor when a sparse attribute change lands so
          * the next bounded scan cannot publish stale selection/visibility. */
         subpixelProxyBuildActive_ = false;
+        if (pendingSubpixelProxyChange_) {
+            cachedPlan_.subpixelProxyRevision =
+                nextSubpixelProxyRevision_++;
+            if (nextSubpixelProxyRevision_ == 0)
+                nextSubpixelProxyRevision_ = 1;
+            pendingSubpixelProxyChange_ = false;
+        }
         cachedPlan_.revision = nextPlanRevision_++;
         if (nextPlanRevision_ == 0)
             nextPlanRevision_ = 1;
@@ -2754,7 +2769,8 @@ struct SoCADAssemblyImpl :
             return false;
         const CadVisibleInstance& instance =
             plan.visibleInstances[visibleIndex];
-        if (instance.flags & CadInstanceHidden)
+        if (instance.flags &
+                (CadInstanceHidden | CadInstanceSelected))
             return false;
         if (instance.partIndex >= plan.partBindings.size())
             return false;
@@ -2786,6 +2802,74 @@ struct SoCADAssemblyImpl :
         replacement.rgba = instance.rgba;
         replacement.instanceId = instance.instanceId;
         replacement.flags = instance.flags;
+        return true;
+    }
+
+    /* Keep selected geometry visually inspectable even when its conservative
+     * bounds are below the ordinary small-part threshold.  Selection is a
+     * sparse presentation property, so promote/demote just this occurrence
+     * and preserve the camera-local classification for every other record. */
+    bool updateSelectedSubpixelProxy(size_t visibleIndex, bool selected)
+    {
+        using namespace Obol::internal;
+        CadFramePlan& plan = cachedPlan_;
+        const uint32_t noPoint =
+            std::numeric_limits<uint32_t>::max();
+        if (visibleIndex >= plan.visibleInstances.size() ||
+                visibleIndex >= plan.subpixelProxyMask.size() ||
+                visibleIndex >= subpixelProxyState_.size() ||
+                visibleIndex >= subpixelProxyPointByVisible_.size())
+            return false;
+
+        const uint32_t currentPoint =
+            subpixelProxyPointByVisible_[visibleIndex];
+        if (selected) {
+            if (!plan.subpixelProxyMask[visibleIndex])
+                return false;
+            if (currentPoint == noPoint ||
+                    currentPoint >= plan.subpixelProxyPoints.size() ||
+                    currentPoint >= subpixelProxyVisibleByPoint_.size())
+                return false;
+            const uint32_t last = static_cast<uint32_t>(
+                plan.subpixelProxyPoints.size() - 1u);
+            if (currentPoint != last) {
+                plan.subpixelProxyPoints[currentPoint] =
+                    std::move(plan.subpixelProxyPoints[last]);
+                const uint32_t movedVisible =
+                    subpixelProxyVisibleByPoint_[last];
+                subpixelProxyVisibleByPoint_[currentPoint] =
+                    movedVisible;
+                if (movedVisible <
+                        subpixelProxyPointByVisible_.size())
+                    subpixelProxyPointByVisible_[movedVisible] =
+                        currentPoint;
+            }
+            plan.subpixelProxyPoints.pop_back();
+            subpixelProxyVisibleByPoint_.pop_back();
+            subpixelProxyPointByVisible_[visibleIndex] = noPoint;
+            plan.subpixelProxyMask[visibleIndex] = 0u;
+            subpixelProxyState_[visibleIndex] = 0u;
+            return true;
+        }
+
+        if (plan.subpixelProxyMask[visibleIndex] ||
+                !subpixelProxyViewValid_ ||
+                subpixelProxyViewInputRevision_ !=
+                    plan.subpixelProxyInputRevision)
+            return false;
+        CadSubpixelProxyPoint replacement;
+        if (!subpixelProxyPointForOccurrence(
+                plan, visibleIndex, subpixelProxyViewProj_,
+                subpixelProxyViewportSize_,
+                subpixelProxyPixelThreshold_, false, replacement))
+            return false;
+        subpixelProxyPointByVisible_[visibleIndex] =
+            static_cast<uint32_t>(plan.subpixelProxyPoints.size());
+        plan.subpixelProxyPoints.push_back(std::move(replacement));
+        subpixelProxyVisibleByPoint_.push_back(
+            static_cast<uint32_t>(visibleIndex));
+        plan.subpixelProxyMask[visibleIndex] = 1u;
+        subpixelProxyState_[visibleIndex] = 1u;
         return true;
     }
 
@@ -4068,12 +4152,22 @@ SoCADAssembly::setSelectedInstances(const std::vector<Obol::InstanceId>& ids)
     for (const Obol::InstanceId& id : changed)
         if (sparsePlanPatch && !impl_->patchCachedInstanceFlags(id))
             sparsePlanPatch = false;
-    if (sparsePlanPatch)
+    if (sparsePlanPatch) {
+        std::unordered_set<Obol::PartId, std::hash<Obol::PartId>>
+            selectionParts;
+        selectionParts.reserve(changed.size());
+        for (const Obol::InstanceId& id : changed) {
+            const auto instance = impl_->instances_.find(id);
+            if (instance != impl_->instances_.end())
+                selectionParts.insert(instance->second.partId);
+        }
+        impl_->refreshWireProxyParts(selectionParts);
         impl_->finishSparsePresentationPatch();
-    else {
+    } else {
         impl_->planDirty_ = true;
         impl_->planDirtyReason_ = "selected-set";
         impl_->pendingInstanceAttributeIndices_.clear();
+        impl_->pendingSubpixelProxyChange_ = false;
     }
     if (!impl_->inUpdate_) touch();
 }

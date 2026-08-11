@@ -1138,7 +1138,29 @@ void CadGpuResources::beginTriangleAtlasFrame()
     if (!triangleAtlasFrame_) {
         triangleAtlasFrame_ = 1;
         triangleAtlasInactiveSweepFrame_ = 0;
+        triangleAtlasCompactionFrame_ = 0;
     }
+}
+
+void CadGpuResources::beginTriangleAtlasExactPreparation()
+{
+    triangleAtlasExactPreparationActive_ = true;
+    for (auto& item : triangleAtlasParts_)
+        item.second.exactPreparationProtected = false;
+}
+
+void CadGpuResources::protectTriangleAtlasExactPart(PartId pid)
+{
+    if (!triangleAtlasExactPreparationActive_)
+        return;
+    const auto found = triangleAtlasParts_.find(pid);
+    if (found != triangleAtlasParts_.end())
+        found->second.exactPreparationProtected = true;
+}
+
+void CadGpuResources::endTriangleAtlasExactPreparation() noexcept
+{
+    triangleAtlasExactPreparationActive_ = false;
 }
 
 const CadTriangleAtlasPart *
@@ -2060,7 +2082,9 @@ const CadTriangleAtlasPart *CadGpuResources::upsertTriangleAtlasPart(
         std::vector<std::pair<uint64_t, PartId>> inactive;
         inactive.reserve(triangleAtlasParts_.size());
         for (const auto& item : triangleAtlasParts_)
-            if (item.second.lastUsedFrame != triangleAtlasFrame_)
+            if (item.second.lastUsedFrame != triangleAtlasFrame_ &&
+                    !(triangleAtlasExactPreparationActive_ &&
+                      item.second.exactPreparationProtected))
                 inactive.emplace_back(item.second.lastUsedFrame, item.first);
         std::sort(inactive.begin(), inactive.end(),
             [](const auto& left, const auto& right) {
@@ -2073,6 +2097,28 @@ const CadTriangleAtlasPart *CadGpuResources::upsertTriangleAtlasPart(
             if (pageIndex != UINT32_MAX)
                 break;
         }
+    }
+
+    /*
+     * Reclaiming stale parts can leave independently allocated vertex and
+     * index holes which are individually plentiful but cannot satisfy one
+     * paired request.  At the hard allocation ceiling that is fragmentation,
+     * not genuine memory pressure: falling back to a point proxy would throw
+     * away visible detail despite ample live-data capacity.  Consolidate at
+     * most once per atlas frame, then retry the exact request against the
+     * packed ranges.  The compactor retains PartId records and only changes
+     * their page/range bindings, so preparations which have not yet built
+     * commands remain valid.
+     */
+    if (pageIndex == UINT32_MAX && triangleAtlasBudgetBytes_ > 0 &&
+            triangleAtlasCompactionFrame_ != triangleAtlasFrame_ &&
+            triangleAtlasAllocatedBytes_ >=
+                triangleAtlasBudgetBytes_ / 4u * 3u &&
+            triangleAtlasLiveBytes_ <
+                triangleAtlasAllocatedBytes_ / 3u * 2u) {
+        triangleAtlasCompactionFrame_ = triangleAtlasFrame_;
+        if (compactTriangleAtlasPages(glue))
+            pageIndex = findPage();
     }
 
     if (pageIndex == UINT32_MAX) {
@@ -2321,6 +2367,9 @@ void CadGpuResources::endTriangleAtlasFrame(const SoGLContext *glue)
     for (auto& item : triangleAtlasParts_) {
         CadTriangleAtlasPart& part = item.second;
         if (part.lastUsedFrame != triangleAtlasFrame_) {
+            if (triangleAtlasExactPreparationActive_ &&
+                    part.exactPreparationProtected)
+                continue;
             if (triangleAtlasFrame_ > part.lastUsedFrame &&
                     triangleAtlasFrame_ - part.lastUsedFrame >=
                         unusedRetentionFrames)

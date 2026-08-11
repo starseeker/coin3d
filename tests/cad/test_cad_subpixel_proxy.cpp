@@ -1194,17 +1194,19 @@ main()
     }
     assembly->setSelectedInstances({proxyInstance});
     if (!render(renderer, root) || assembly->selectedInstanceCount() != 1u ||
+            assembly->lastSubpixelProxyCount() != 0u ||
             assembly->framePlanBuildCount() != initialPlanBuilds) {
         std::fprintf(stderr,
-            "sparse selection rebuilt the frame plan or was not retained\n");
+            "sparse selection did not promote the point proxy in place\n");
         root->unref();
         return 1;
     }
     assembly->setSelectedInstances({});
     if (!render(renderer, root) || assembly->selectedInstanceCount() != 0u ||
+            assembly->lastSubpixelProxyCount() != 1u ||
             assembly->framePlanBuildCount() != initialPlanBuilds) {
         std::fprintf(stderr,
-            "sparse selection clear rebuilt the frame plan or remained set\n");
+            "sparse selection clear did not restore the point proxy in place\n");
         root->unref();
         return 1;
     }

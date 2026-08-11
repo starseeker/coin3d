@@ -301,6 +301,7 @@ struct CadTriangleAtlasPart {
     uint64_t lastUsedFrame = 0;
     uint64_t lowerDemandSinceFrame = 0;
     uint64_t progressiveLineage = 0;
+    bool exactPreparationProtected = false;
     bool hasNormals = false;
     bool progressive = false;
 };
@@ -594,6 +595,17 @@ public:
     void endTriangleAtlasFrame(const SoGLContext *glue);
 
     /**
+     * Protect only the resident parts claimed by a resumable exact renderer
+     * transaction.  Protection persists across presentation-frame slices,
+     * while unrelated stale parts remain eligible for synchronous pressure
+     * reclamation.  One CadGpuResources instance has one owner-thread exact
+     * transaction at a time.
+     */
+    void beginTriangleAtlasExactPreparation();
+    void protectTriangleAtlasExactPart(PartId pid);
+    void endTriangleAtlasExactPreparation() noexcept;
+
+    /**
      * Skip the O(resident parts) maintenance scan for an exactly replayed
      * prepared frame.  The renderer periodically leaves maintenance enabled,
      * and any atlas mutation changes triangleAtlasRevision() so cached
@@ -748,6 +760,8 @@ private:
     uint64_t triangleAtlasRevision_ = 1;
     bool triangleAtlasMaintenanceDeferred_ = false;
     bool triangleAtlasReclamationDeferred_ = false;
+    bool triangleAtlasExactPreparationActive_ = false;
+    uint64_t triangleAtlasCompactionFrame_ = 0;
     size_t triangleAtlasAllocatedBytes_ = 0;
     size_t triangleAtlasLiveBytes_ = 0;
     size_t triangleAtlasPageCount_ = 0;

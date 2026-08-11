@@ -187,6 +187,11 @@ struct CadSubpixelClassifier {
     std::vector<uint32_t> subpixelProxyScratchVisibleByPoint_;
     std::vector<uint32_t> subpixelProxyPointByVisible_;
     std::vector<uint32_t> subpixelProxyScratchPointByVisible_;
+    /* A sparse selection change may promote/demote a classified occurrence
+     * without invalidating the camera-local classification for the rest of
+     * the assembly.  Publish those edits with one point-stream revision at
+     * the end of the presentation transaction. */
+    bool pendingSubpixelProxyChange_ = false;
     /*
      * A camera-local classification may exceed one presentation deadline in
      * a scene with hundreds of thousands of occurrences.  Retain the exact

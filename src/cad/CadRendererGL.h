@@ -501,6 +501,66 @@ private:
         size_t appendPatchAnchorInstanceCount = 0;
     };
 
+    enum class IndirectPreparationPhase : uint8_t {
+        Idle = 0,
+        Visibility,
+        Protection,
+        Coverage,
+        Enrichment,
+        CommandSetup,
+        Commands,
+        Preflight,
+        PublishSetup,
+        PublishParts,
+        ReverseInstances,
+        ReverseProxies,
+        Submit
+    };
+
+    /**
+     * Atomic exact-indirect preparation transaction.
+     *
+     * A large CAD assembly can require more than one host presentation
+     * deadline to classify its occurrences, protect/admit atlas prefixes,
+     * and pack its indirect commands.  The completed replay record cannot be
+     * mutated in place while that work is incomplete, and restarting an O(N)
+     * build on every deadline guarantees livelock once N crosses the work
+     * possible in one frame.  Keep only scalar cursors here; the scene-sized
+     * scratch arrays already belong to CadRendererGL and are published by
+     * constant-time swaps after every phase has completed.
+     */
+    struct IndirectPreparationState {
+        bool active = false;
+        IndirectPreparationPhase phase =
+            IndirectPreparationPhase::Idle;
+        uint32_t contextId = 0;
+        uint64_t planRevision = 0;
+        int progressiveLodCeiling = -1;
+        SbMatrix viewProj;
+
+        size_t itemCursor = 0;
+        uint32_t occurrenceOffset = 0;
+        size_t partCursor = 0;
+        size_t pageCursor = 0;
+        size_t reverseCursor = 0;
+        size_t visibleOccurrenceCount = 0;
+        uint64_t requestedLiveBytes = 0;
+
+        bool proxyPartActive = false;
+        uint32_t proxyPartIndex = 0;
+        uint32_t proxyVisibleIndex =
+            std::numeric_limits<uint32_t>::max();
+
+        bool commandItemActive = false;
+        uint32_t commandBaseInstance = 0;
+        uint8_t commandLevel = 15;
+        size_t commandCount = 0;
+        uint64_t renderedTriangleCount = 0;
+        Obol::CadRenderedWork renderedWork;
+        bool atlasAdmissionPressure = false;
+        uint32_t sliceCount = 0;
+    };
+
     /*
      * Indirect rendering is a per-frame operation, but its largest CPU
      * arrays are only scratch.  Retain their capacity with the renderer
@@ -533,6 +593,7 @@ private:
     std::vector<uint8_t> indirectCommandCullByPart_;
     std::vector<uint32_t> indirectPackedInstanceByPart_;
     IndirectPreparedFrame indirectPrepared_;
+    IndirectPreparationState indirectPreparation_;
 
     bool renderIndirectShaded(
         const CadFramePlan& plan,
