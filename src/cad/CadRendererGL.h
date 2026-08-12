@@ -250,11 +250,7 @@ private:
     bool renderInterrupted() const;
     bool renderInterruptedAfter(size_t& workCounter,
                                 size_t work = 1u) const;
-    void noteRenderPreparation() {
-        ++renderPreparationSerial_;
-        if (!renderPreparationSerial_)
-            renderPreparationSerial_ = 1;
-    }
+    void noteRenderPreparation(const char *reason);
 
     bool softwareGlslRequested() const;
     bool cadLightDebugRequested() const;

@@ -993,6 +993,22 @@ CadTriGpu* CadGpuResources::triFor(PartId pid)
 }
 
 const CadProgressiveGpu* CadGpuResources::progressiveFor(
+        PartId pid, bool shaded, uint8_t cut, uint64_t rangeSignature)
+{
+    auto it = cache_.find(pid);
+    if (it == cache_.end()) return nullptr;
+    std::vector<CadProgressiveGpu>& cuts = shaded ?
+        it->second.progressiveTri : it->second.progressiveWire;
+    if (cut >= cuts.size()) return nullptr;
+    CadProgressiveGpu& p = cuts[cut];
+    if (p.rangeSignature != rangeSignature)
+        return nullptr;
+    if (p.posBuf && p.vertexCount > 0)
+        p.lastUsedFrame = progressiveFrame_;
+    return p.posBuf && p.vertexCount > 0 ? &p : nullptr;
+}
+
+const CadProgressiveGpu* CadGpuResources::progressiveForAny(
         PartId pid, bool shaded, uint8_t cut)
 {
     auto it = cache_.find(pid);
@@ -1010,7 +1026,9 @@ void CadGpuResources::uploadProgressive(
         PartId pid, bool shaded, uint8_t cut,
         const std::vector<float>& positions,
         const std::vector<float>& normals,
-        bool indexed, const SoGLContext *glue)
+        bool indexed, uint64_t rangeSignature,
+        const std::vector<CadProgressiveGpu::PackedRange>& packedRanges,
+        const SoGLContext *glue)
 {
     if (!glue || !glue->glGenBuffers ||
             positions.empty() || positions.size() % 3 != 0 ||
@@ -1042,6 +1060,8 @@ void CadGpuResources::uploadProgressive(
     glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
     p.vertexCount = static_cast<GLsizei>(positions.size() / 3);
     p.indexed = indexed;
+    p.rangeSignature = rangeSignature;
+    p.packedRanges = packedRanges;
     p.bytes = (positions.size() + normals.size()) * sizeof(float);
     p.lastUsedFrame = progressiveFrame_;
     progressiveBytes_ += p.bytes;

@@ -118,10 +118,18 @@ struct CadTriGpu {
  * normals, preserving flat lighting without per-frame glBegin/glVertex work.
  */
 struct CadProgressiveGpu {
+    struct PackedRange {
+        uint32_t sourceFirst = 0;
+        uint32_t sourceCount = 0;
+        uint32_t packedFirst = 0;
+    };
+
     GLuint posBuf = 0;
     GLuint normBuf = 0;
     GLsizei vertexCount = 0;
     bool indexed = false;
+    uint64_t rangeSignature = 0;
+    std::vector<PackedRange> packedRanges;
     size_t bytes = 0;
     uint64_t lastUsedFrame = 0;
 };
@@ -441,6 +449,9 @@ public:
 
     /** Return a cached fixed-function PoP cut, or nullptr if not built. */
     const CadProgressiveGpu* progressiveFor(
+        PartId pid, bool shaded, uint8_t cut,
+        uint64_t rangeSignature = 0);
+    const CadProgressiveGpu* progressiveForAny(
         PartId pid, bool shaded, uint8_t cut);
 
     /** Upload one fixed-function PoP cut for reuse across frames/instances. */
@@ -448,7 +459,9 @@ public:
         PartId pid, bool shaded, uint8_t cut,
         const std::vector<float>& positions,
         const std::vector<float>& normals,
-        bool indexed, const SoGLContext *glue);
+        bool indexed, uint64_t rangeSignature,
+        const std::vector<CadProgressiveGpu::PackedRange>& packedRanges,
+        const SoGLContext *glue);
 
     /** Delimit a render so active PoP cuts survive cache-budget pruning. */
     void beginProgressiveFrame();

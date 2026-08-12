@@ -849,6 +849,18 @@ bool CadRendererGL::ensureReady(const SoGLContext* glue)
 // ensurePartUploaded()
 // ---------------------------------------------------------------------------
 
+void CadRendererGL::noteRenderPreparation(const char *reason)
+{
+    ++renderPreparationSerial_;
+    if (!renderPreparationSerial_)
+        renderPreparationSerial_ = 1;
+    if (configuration_ && configuration_->patchDebug)
+        std::fprintf(stderr,
+            "CadRendererGL preparation serial=%llu reason=%s\n",
+            static_cast<unsigned long long>(renderPreparationSerial_),
+            reason ? reason : "unknown");
+}
+
 void CadRendererGL::ensurePartUploaded(
         PartId pid, const SoCADAssembly& assembly, uint64_t gen,
         uint8_t requestedCut, const SoGLContext* glue)
@@ -985,7 +997,7 @@ void CadRendererGL::ensurePartUploaded(
             triPosCount, triIdxCount))
         return;
 
-    noteRenderPreparation();
+    noteRenderPreparation("ordinary-part-upload");
     gpuRes_->upload(pid,
                    pPointPos, pointCount,
                    pWirePos,  wirePointCount,
@@ -1557,7 +1569,7 @@ void CadRendererGL::render(
     atlasAdmissionPressure_ = false;
     if (!gpuRes_ || gpuContextId_ != glue->contextid ||
             !capsDetected_ || shadersContextId_ != glue->contextid)
-        noteRenderPreparation();
+        noteRenderPreparation("renderer-initialization");
     if (!ensureReady(glue)) return;
     const auto publishResourceSnapshot = [&]() {
         Obol::CadGpuResourceSnapshot snapshot =

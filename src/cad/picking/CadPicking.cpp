@@ -111,9 +111,9 @@ progressiveSnapCoordinate(float value, float minimum, float maximum,
     const double scaled =
         (static_cast<double>(value) - minimum) /
         (static_cast<double>(maximum) - minimum) * 65535.0;
-    const double low = std::floor(std::floor(scaled) / mask);
-    const double high = std::ceil(std::ceil(scaled) / mask);
-    const double snapped = (low + high) * 0.5 * mask;
+    const double code = std::floor(std::max(0.0, std::min(65535.0, scaled)));
+    const double cell = std::floor(code / mask);
+    const double snapped = std::min(65535.0, (cell + 0.5) * mask);
     return static_cast<float>(
         (snapped / 65535.0) *
         (static_cast<double>(maximum) - minimum) + minimum);

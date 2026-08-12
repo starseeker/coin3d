@@ -113,6 +113,26 @@ struct ProgressiveTriangleCut {
     ProgressiveQuantization quantization;
 };
 
+/** One contiguous triangle-list range introduced by a progressive cut. */
+struct ProgressiveTriangleClusterRange {
+    uint32_t firstIndex = 0;
+    uint32_t indexCount = 0;
+    uint8_t activationCut = ProgressiveCutUnspecified;
+};
+
+/**
+ * Private spatial subresource of one logical triangle part.
+ *
+ * Clusters do not have CAD identity, transforms, styles, selection, or scene
+ * hierarchy.  They only let a renderer cull and submit bounded portions of a
+ * very large leaf while preserving one PartId and one append-only PoP stream.
+ * Ranges are triangle aligned and refer to @ref TriMesh::indices.
+ */
+struct ProgressiveTriangleCluster {
+    SbBox3f bounds;
+    std::vector<ProgressiveTriangleClusterRange> ranges;
+};
+
 /**
  * Logical work submitted by one completed CAD render.
  *
@@ -255,6 +275,17 @@ struct TriMesh {
     SbVec3f progressiveQuantizationMaximum;
 
     /**
+     * Optional deterministic spatial partition of the progressive index
+     * stream.  The vector contains gridResolution^3 cells in x-major order;
+     * empty cells have no ranges.  Producers sort faces by cell within each
+     * activation cut, retaining cumulative prefix and suffix-upload identity.
+     * Every cluster bound conservatively encloses all of its currently
+     * resident triangles.
+     */
+    std::vector<ProgressiveTriangleCluster> progressiveClusters;
+    uint16_t progressiveClusterGridResolution = 0;
+
+    /**
      * Producer-certified identity of one append-only progressive stream.
      *
      * A nonzero value promises that every later immutable PartGeometry with
@@ -277,6 +308,12 @@ struct TriMesh {
             progressiveMinimumCut < progressiveCuts.size() &&
             progressiveResidentCut >= progressiveMinimumCut &&
             progressiveResidentCut < progressiveCuts.size();
+    }
+
+    bool hasProgressiveClusters() const noexcept {
+        const size_t side = progressiveClusterGridResolution;
+        return isProgressive() && side > 1 &&
+            side <= 64 && side * side * side == progressiveClusters.size();
     }
 
     size_t indexCountAtCut(uint8_t cut) const noexcept {
