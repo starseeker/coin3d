@@ -55,6 +55,7 @@
 
 #include <Obol/cad/CadIds.h>
 #include <Obol/cad/CadGpuResourceSnapshot.h>
+#include <Obol/cad/CadProgressive.h>
 #include "CadGLCaps.h"
 
 #include <Inventor/system/gl.h>
@@ -146,11 +147,11 @@ struct CadFlatWireGroup {
 
 struct CadFlatWireRangeKey {
     InstanceId instance;
-    uint8_t level = 15;
+    uint8_t cut = Obol::ProgressiveCutUnspecified;
     uint64_t geometryToken = 0;
 
     bool operator==(const CadFlatWireRangeKey& other) const noexcept {
-        return instance == other.instance && level == other.level &&
+        return instance == other.instance && cut == other.cut &&
                geometryToken == other.geometryToken;
     }
 };
@@ -158,7 +159,7 @@ struct CadFlatWireRangeKey {
 struct CadFlatWireRangeKeyHash {
     size_t operator()(const CadFlatWireRangeKey& key) const noexcept {
         size_t value = std::hash<InstanceId>()(key.instance);
-        value ^= static_cast<size_t>(key.level) +
+        value ^= static_cast<size_t>(key.cut) +
                  static_cast<size_t>(0x9e3779b9u) +
                  (value << 6) + (value >> 2);
         value ^= static_cast<size_t>(key.geometryToken) +
@@ -209,14 +210,14 @@ struct CadFlatShadedGroup {
 
 struct CadFlatShadedRangeKey {
     InstanceId instance;
-    uint8_t level = 15;
+    uint8_t cut = Obol::ProgressiveCutUnspecified;
     /* Identifies the part generation and occurrence transform used to bake
      * this world-space range.  Presentation/style revisions deliberately do
      * not participate, so selection can reuse the same vertices. */
     uint64_t geometryToken = 0;
 
     bool operator==(const CadFlatShadedRangeKey& other) const noexcept {
-        return instance == other.instance && level == other.level &&
+        return instance == other.instance && cut == other.cut &&
                geometryToken == other.geometryToken;
     }
 };
@@ -224,7 +225,7 @@ struct CadFlatShadedRangeKey {
 struct CadFlatShadedRangeKeyHash {
     size_t operator()(const CadFlatShadedRangeKey& key) const noexcept {
         size_t value = std::hash<InstanceId>()(key.instance);
-        value ^= static_cast<size_t>(key.level) +
+        value ^= static_cast<size_t>(key.cut) +
                  static_cast<size_t>(0x9e3779b9u) +
                  (value << 6) + (value >> 2);
         value ^= static_cast<size_t>(key.geometryToken) +
@@ -440,11 +441,11 @@ public:
 
     /** Return a cached fixed-function PoP cut, or nullptr if not built. */
     const CadProgressiveGpu* progressiveFor(
-        PartId pid, bool shaded, uint8_t level);
+        PartId pid, bool shaded, uint8_t cut);
 
     /** Upload one fixed-function PoP cut for reuse across frames/instances. */
     void uploadProgressive(
-        PartId pid, bool shaded, uint8_t level,
+        PartId pid, bool shaded, uint8_t cut,
         const std::vector<float>& positions,
         const std::vector<float>& normals,
         bool indexed, const SoGLContext *glue);
@@ -726,8 +727,8 @@ private:
         CadPointGpu point;
         CadWireGpu  wire;
         CadTriGpu   tri;
-        std::array<CadProgressiveGpu, 16> progressiveWire;
-        std::array<CadProgressiveGpu, 16> progressiveTri;
+        std::vector<CadProgressiveGpu> progressiveWire;
+        std::vector<CadProgressiveGpu> progressiveTri;
     };
 
     std::unordered_map<PartId, Entry, std::hash<PartId>> cache_;

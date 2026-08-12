@@ -85,9 +85,9 @@
 
 #include <Obol/cad/CadIds.h>
 #include <Obol/cad/CadGpuResourceSnapshot.h>
+#include <Obol/cad/CadProgressive.h>
 
 #include <vector>
-#include <array>
 #include <algorithm>
 #include <optional>
 #include <cstddef>
@@ -98,6 +98,20 @@
 class SoDetail;
 
 namespace Obol {
+
+/** One independently drawable prefix of a progressive wire stream. */
+struct ProgressiveWireCut {
+    uint32_t segmentFirst = 0;
+    uint32_t segmentCount = 0;
+    ProgressiveQuantization quantization;
+};
+
+/** One independently drawable prefix of a progressive triangle stream. */
+struct ProgressiveTriangleCut {
+    uint32_t indexCount = 0;
+    uint32_t positionCount = 0;
+    ProgressiveQuantization quantization;
+};
 
 /**
  * Logical work submitted by one completed CAD render.
@@ -166,15 +180,13 @@ struct WireRep {
     SbBox3f bounds;
 
     /**
-     * Segment ranges for retained levels 0..15.  Prefix producers leave
-     * progressiveSegmentFirst zeroed.  Native curve producers may pack an
-     * independent approximation for each level and select it without
-     * rebuilding or copying the part.
+     * Ordered, independently drawable cuts.  Prefix producers normally
+     * leave segmentFirst zero.  Native curve producers may pack independent
+     * approximations and describe each range without rebuilding the part.
      */
-    std::array<uint32_t, 16> progressiveSegmentFirst = {};
-    std::array<uint32_t, 16> progressiveSegmentCount = {};
-    uint8_t progressiveMinimumLevel = 255;
-    uint8_t progressiveResidentLevel = 255;
+    std::vector<ProgressiveWireCut> progressiveCuts;
+    uint8_t progressiveMinimumCut = ProgressiveCutUnspecified;
+    uint8_t progressiveResidentCut = ProgressiveCutUnspecified;
     SbVec3f progressiveQuantizationMinimum;
     SbVec3f progressiveQuantizationMaximum;
 
@@ -184,31 +196,42 @@ struct WireRep {
      * A nonzero value promises that later immutable WireRep records carrying
      * the same token retain every preceding segmentPoints value as an exact
      * prefix.  Renderers may preserve that GPU prefix and upload only the
-     * newly resident suffix.  Independent per-level curve approximations and
+     * newly resident suffix.  Independent per-cut curve approximations and
      * other non-prefix representations must leave this value zero.
      */
     uint64_t progressiveLineage = 0;
 
     bool isProgressive() const noexcept {
-        return progressiveResidentLevel < 16;
+        return !progressiveCuts.empty() &&
+            progressiveCuts.size() <= ProgressiveCutLimit &&
+            progressiveMinimumCut < progressiveCuts.size() &&
+            progressiveResidentCut >= progressiveMinimumCut &&
+            progressiveResidentCut < progressiveCuts.size();
     }
 
-    size_t segmentCountAtLevel(uint8_t level) const noexcept {
+    size_t segmentCountAtCut(uint8_t cut) const noexcept {
         if (!isProgressive()) return segmentCount();
-        level = (std::max)(progressiveMinimumLevel,
-                         (std::min)(progressiveResidentLevel, level));
+        cut = (std::max)(progressiveMinimumCut,
+                       (std::min)(progressiveResidentCut, cut));
         const size_t first = (std::min<size_t>)(
-            progressiveSegmentFirst[level], segmentCount());
-        return (std::min<size_t>)(progressiveSegmentCount[level],
+            progressiveCuts[cut].segmentFirst, segmentCount());
+        return (std::min<size_t>)(progressiveCuts[cut].segmentCount,
                                   segmentCount() - first);
     }
 
-    size_t segmentFirstAtLevel(uint8_t level) const noexcept {
+    size_t segmentFirstAtCut(uint8_t cut) const noexcept {
         if (!isProgressive()) return 0;
-        level = (std::max)(progressiveMinimumLevel,
-                         (std::min)(progressiveResidentLevel, level));
-        return (std::min<size_t>)(progressiveSegmentFirst[level],
+        cut = (std::max)(progressiveMinimumCut,
+                       (std::min)(progressiveResidentCut, cut));
+        return (std::min<size_t>)(progressiveCuts[cut].segmentFirst,
                                   segmentCount());
+    }
+
+    ProgressiveQuantization quantizationAtCut(uint8_t cut) const noexcept {
+        if (!isProgressive()) return ProgressiveQuantization();
+        cut = (std::max)(progressiveMinimumCut,
+                       (std::min)(progressiveResidentCut, cut));
+        return progressiveCuts[cut].quantization;
     }
 };
 
@@ -224,17 +247,10 @@ struct TriMesh {
     std::vector<SbVec3f>  normals;    ///< optional; empty or positions.size()
     std::vector<uint32_t> indices;    ///< triangle list (3 indices per tri)
     SbBox3f               bounds;
-    /** Cumulative triangle index counts for retained PoP levels 0..15. */
-    std::array<uint32_t, 16> progressiveIndexCount = {};
-    /**
-     * Cumulative position counts addressed by each retained PoP index
-     * prefix.  Producers should compute this once while constructing the
-     * geometry; renderers use it to avoid rescanning the index prefix on
-     * every frame.
-     */
-    std::array<uint32_t, 16> progressivePositionCount = {};
-    uint8_t progressiveMinimumLevel = 255;
-    uint8_t progressiveResidentLevel = 255;
+    /** Ordered, independently drawable cumulative triangle prefixes. */
+    std::vector<ProgressiveTriangleCut> progressiveCuts;
+    uint8_t progressiveMinimumCut = ProgressiveCutUnspecified;
+    uint8_t progressiveResidentCut = ProgressiveCutUnspecified;
     SbVec3f progressiveQuantizationMinimum;
     SbVec3f progressiveQuantizationMaximum;
 
@@ -249,30 +265,41 @@ struct TriMesh {
      * retains the conservative full-replacement behavior.
      *
      * Producers must allocate a different token whenever topology, authored
-     * values, vertex splitting, activation order, progressive level tables,
+     * values, vertex splitting, activation order, progressive cut tables,
      * or the quantization domain changes.  The token is process-local
      * identity, not serialized asset or cache identity.
      */
     uint64_t progressiveLineage = 0;
 
     bool isProgressive() const noexcept {
-        return progressiveResidentLevel < 16;
+        return !progressiveCuts.empty() &&
+            progressiveCuts.size() <= ProgressiveCutLimit &&
+            progressiveMinimumCut < progressiveCuts.size() &&
+            progressiveResidentCut >= progressiveMinimumCut &&
+            progressiveResidentCut < progressiveCuts.size();
     }
 
-    size_t indexCountAtLevel(uint8_t level) const noexcept {
+    size_t indexCountAtCut(uint8_t cut) const noexcept {
         if (!isProgressive()) return indices.size();
-        level = (std::max)(progressiveMinimumLevel,
-                         (std::min)(progressiveResidentLevel, level));
-        return std::min<size_t>(progressiveIndexCount[level],
+        cut = (std::max)(progressiveMinimumCut,
+                       (std::min)(progressiveResidentCut, cut));
+        return std::min<size_t>(progressiveCuts[cut].indexCount,
                                 indices.size());
     }
 
-    size_t positionCountAtLevel(uint8_t level) const noexcept {
+    size_t positionCountAtCut(uint8_t cut) const noexcept {
         if (!isProgressive()) return positions.size();
-        level = (std::max)(progressiveMinimumLevel,
-                         (std::min)(progressiveResidentLevel, level));
-        return std::min<size_t>(progressivePositionCount[level],
+        cut = (std::max)(progressiveMinimumCut,
+                       (std::min)(progressiveResidentCut, cut));
+        return std::min<size_t>(progressiveCuts[cut].positionCount,
                                 positions.size());
+    }
+
+    ProgressiveQuantization quantizationAtCut(uint8_t cut) const noexcept {
+        if (!isProgressive()) return ProgressiveQuantization();
+        cut = (std::max)(progressiveMinimumCut,
+                       (std::min)(progressiveResidentCut, cut));
+        return progressiveCuts[cut].quantization;
     }
 };
 
@@ -389,8 +416,8 @@ struct InstanceRecord {
     std::string   childName;       ///< Name string from the comb tree node
     uint32_t      occurrenceIndex = 0; ///< Sibling disambiguator (0-based)
     uint8_t       boolOp          = 0; ///< Boolean operation (0=union,1=sub,2=inter)
-    /** Per-occurrence retained PoP draw cut.  255 selects full resident data. */
-    uint8_t       lodLevel        = 255;
+    /** Per-occurrence retained PoP draw cut; unspecified selects richest resident. */
+    uint8_t       lodCut        = ProgressiveCutUnspecified;
 
     InstanceStyle style;
 };
@@ -428,7 +455,7 @@ struct InstanceUpdate {
 
 struct InstanceLodUpdate {
     InstanceId instance;
-    uint8_t lodLevel = 255;
+    uint8_t lodCut = ProgressiveCutUnspecified;
 };
 
 /**
@@ -521,7 +548,7 @@ public:
      * frame plan.  It lets a view controller shed already-retained draw work
      * in O(1) at interaction start while its precise per-instance allocator
      * catches up. */
-    SoSFInt32 progressiveLodCeiling;
+    SoSFInt32 progressiveCutCeiling;
     /** Screen-space size below which eligible occurrences enter one point
      * batch.  The default 1 px is pixel-exact; an interactive controller may
      * temporarily raise it to its measured screen-error tolerance.  Geometry
@@ -643,7 +670,7 @@ public:
     void upsertInstances(const std::vector<Obol::InstanceUpdate>& updates);
 
     /** Update only retained progressive draw cuts. */
-    void updateInstanceLodLevels(
+    void updateInstanceCuts(
         const std::vector<Obol::InstanceLodUpdate>& updates);
 
     /** Remove an instance.  No-op if @p iid is not in the database. */
@@ -661,6 +688,14 @@ public:
 
     /** Replace the selection highlight set. */
     void setSelectedInstances(const std::vector<Obol::InstanceId>& ids);
+
+    /**
+     * Exclude screen-important occurrences from adaptive point aggregation.
+     * This is view-local presentation policy: it changes neither retained
+     * geometry nor the scene's semantic selection state.
+     */
+    void setPointProxyProtectedInstances(
+        const std::vector<Obol::InstanceId>& ids);
 
     // -----------------------------------------------------------------------
     // Query
@@ -690,8 +725,8 @@ public:
     /** True when any retained part contains producer-authored PoP prefixes. */
     bool hasProgressivePartLod() const;
 
-    /** Apply the render-only progressive ceiling to one requested level. */
-    uint8_t effectiveProgressiveLodLevel(uint8_t requested) const;
+    /** Apply the render-only progressive ceiling to one requested cut. */
+    uint8_t effectiveProgressiveCut(uint8_t requested) const;
 
     /**
      * Return the geometry for @p pid, or nullptr if not in the part library.

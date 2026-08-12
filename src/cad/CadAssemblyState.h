@@ -49,7 +49,7 @@ struct CadAssemblyInstanceData {
     std::string childName;
     uint32_t occurrenceIndex = 0;
     uint8_t boolOp = 0;
-    uint8_t lodLevel = 255;
+    uint8_t lodCut = Obol::ProgressiveCutUnspecified;
     SbBox3f worldBounds;
 };
 
@@ -90,6 +90,8 @@ struct CadSceneDatabase {
         std::hash<Obol::InstanceId>> hidden_;
     std::unordered_set<Obol::InstanceId,
         std::hash<Obol::InstanceId>> unpickable_;
+    std::unordered_set<Obol::InstanceId,
+        std::hash<Obol::InstanceId>> pointProxyProtected_;
     std::unordered_set<Obol::PartId,
         std::hash<Obol::PartId>> progressiveParts_;
     std::unordered_map<Obol::PartId, uint64_t,
@@ -114,13 +116,14 @@ struct CadPickingIndex {
  * not an abstraction layer in the hot path.
  */
 struct CadPlanCache {
-    static constexpr size_t ProgressiveLevelBinCount = 17;
+    static constexpr size_t ProgressiveCutBinCount =
+        Obol::ProgressiveCutLimit + 1;
 
     struct ProgressiveShadedPlanGroup {
         Obol::PartId part;
         uint32_t baseInstance = 0;
         uint32_t instanceCount = 0;
-        std::array<uint32_t, ProgressiveLevelBinCount> levelCounts = {};
+        std::array<uint32_t, ProgressiveCutBinCount> cutCounts = {};
         size_t shadedItemBegin = 0;
         size_t shadedItemCount = 0;
     };

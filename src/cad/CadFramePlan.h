@@ -43,6 +43,7 @@
  */
 
 #include <Obol/cad/CadIds.h>
+#include <Obol/cad/CadProgressive.h>
 #include <Inventor/SbBox3f.h>
 #include <Inventor/SbMatrix.h>
 #include <Inventor/SbColor4f.h>
@@ -71,7 +72,10 @@ enum CadInstanceFlag : uint32_t {
      * preserve part bindings, level buckets, GPU atlases, and every unrelated
      * instance record.
      */
-    CadInstanceHidden        = 1u << 3
+    CadInstanceHidden        = 1u << 3,
+    /* Screen-important instances remain ordinary geometry even when the
+     * scene-wide small-object threshold rises under render pressure. */
+    CadInstancePointProxyProtected = 1u << 4
 };
 
 // ---------------------------------------------------------------------------
@@ -123,7 +127,7 @@ struct CadVisibleInstance {
     uint16_t linePatternFactor = 1u;
     uint32_t partIndex = 0;
     uint32_t flags     = 0;   ///< CadInstanceFlag bit set
-    uint8_t lodLevel   = 255; ///< producer-authored retained PoP draw cut
+    uint8_t lodCut = Obol::ProgressiveCutUnspecified; ///< producer-authored retained PoP draw cut
     InstanceId instanceId;
     /// World-space bounding box min/max.  Used by the renderer for per-instance
     /// frustum culling (avoids drawing instances completely outside the view).
@@ -383,7 +387,7 @@ struct CadFramePlan {
      * part (quadratic in a scene with many distinct meshes).
      */
     std::unordered_map<PartId, uint8_t, std::hash<PartId>>
-        maximumRequestedLodByPart;
+        maximumRequestedCutByPart;
     std::unordered_set<PartId, std::hash<PartId>>
         wirePartsWithUncollapsedInstances;
 

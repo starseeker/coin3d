@@ -351,9 +351,17 @@ cadSaturatingWorkAdd(uint64_t left, uint64_t right)
     return right > UINT64_MAX - left ? UINT64_MAX : left + right;
 }
 
+static float
+packedProgressiveQuantization(ProgressiveQuantization quantization)
+{
+    return static_cast<float>(quantization.xBits) +
+        17.0f * static_cast<float>(quantization.yBits) +
+        289.0f * static_cast<float>(quantization.zBits);
+}
+
 static SbVec3f progressiveSnapPoint(
     const SbVec3f& point, const SbVec3f& minimum,
-    const SbVec3f& maximum, uint8_t level);
+    const SbVec3f& maximum, ProgressiveQuantization quantization);
 
 bool CadRendererGL::renderFlatWire(
         const CadFramePlan& plan,
@@ -379,7 +387,7 @@ bool CadRendererGL::renderFlatWire(
         size_t flatSegments = 0;
         size_t flatSegmentFirst = 0;
         size_t polylineSegments = 0;
-        uint8_t level = 15;
+        uint8_t cut = Obol::ProgressiveCutUnspecified;
         FlatWireStyleKey style;
         uint32_t styleBucket = 0;
         size_t visibleIndex = 0;
@@ -423,12 +431,12 @@ bool CadRendererGL::renderFlatWire(
                     instance.wbMin, instance.wbMax, fp))
                 continue;
             const uint8_t effectiveLevel =
-                assembly.effectiveProgressiveLodLevel(instance.lodLevel);
-            const uint8_t level = cadResolvedProgressiveLevel(
-                effectiveLevel, wire.progressiveMinimumLevel,
-                wire.progressiveResidentLevel);
+                assembly.effectiveProgressiveCut(instance.lodCut);
+            const uint8_t level = cadResolvedProgressiveCut(
+                effectiveLevel, wire.progressiveMinimumCut,
+                wire.progressiveResidentCut);
             const size_t flatSegments =
-                wire.segmentCountAtLevel(effectiveLevel);
+                wire.segmentCountAtCut(effectiveLevel);
             const size_t segments = flatSegments + polylineSegments;
             if (segments == 0)
                 continue;
@@ -459,9 +467,9 @@ bool CadRendererGL::renderFlatWire(
                 instance.instanceId, level, geometryToken};
             occurrence.flatSegments = flatSegments;
             occurrence.flatSegmentFirst =
-                wire.segmentFirstAtLevel(effectiveLevel);
+                wire.segmentFirstAtCut(effectiveLevel);
             occurrence.polylineSegments = polylineSegments;
-            occurrence.level = level;
+            occurrence.cut = level;
             occurrence.style = flatWireStyleKey(instance);
             occurrence.visibleIndex = visibleIndex;
             occurrence.rangeValid = gpuRes_->lookupFlatWireRange(
@@ -586,18 +594,18 @@ bool CadRendererGL::renderFlatWire(
                     p + 1 < flatPointEnd; p += 2) {
                 if (renderInterruptedAfter(deadlineWork))
                     return false;
-                const SbVec3f a = wire.isProgressive() &&
-                        occurrence.level < 15 ?
+                const SbVec3f a = wire.isProgressive() ?
                     progressiveSnapPoint(wire.segmentPoints[p],
                         wire.progressiveQuantizationMinimum,
                         wire.progressiveQuantizationMaximum,
-                        occurrence.level) : wire.segmentPoints[p];
-                const SbVec3f b = wire.isProgressive() &&
-                        occurrence.level < 15 ?
+                        wire.quantizationAtCut(occurrence.cut)) :
+                    wire.segmentPoints[p];
+                const SbVec3f b = wire.isProgressive() ?
                     progressiveSnapPoint(wire.segmentPoints[p + 1],
                         wire.progressiveQuantizationMinimum,
                         wire.progressiveQuantizationMaximum,
-                        occurrence.level) : wire.segmentPoints[p + 1];
+                        wire.quantizationAtCut(occurrence.cut)) :
+                    wire.segmentPoints[p + 1];
                 writeTransformedFlatPoint(
                     positions, positionOffset, a, inst.transform);
                 writeTransformedFlatPoint(
@@ -884,7 +892,7 @@ bool CadRendererGL::renderFlatShaded(
         const CadVisibleInstance *instance = nullptr;
         CadFlatShadedRangeKey rangeKey;
         size_t indexCount = 0;
-        uint8_t level = 15;
+        uint8_t cut = Obol::ProgressiveCutUnspecified;
         uint64_t styleKey = 0;
         bool cullBackfaces = false;
     };
@@ -914,12 +922,13 @@ bool CadRendererGL::renderFlatShaded(
                     instance.wbMin, instance.wbMax, fp))
                 continue;
             const uint8_t requested =
-                assembly.effectiveProgressiveLodLevel(instance.lodLevel);
+                assembly.effectiveProgressiveCut(instance.lodCut);
             const uint8_t level = mesh.isProgressive() ?
-                cadResolvedProgressiveLevel(requested, mesh.progressiveMinimumLevel,
-                                 mesh.progressiveResidentLevel) : 15;
+                cadResolvedProgressiveCut(requested, mesh.progressiveMinimumCut,
+                                 mesh.progressiveResidentCut) :
+                Obol::ProgressiveCutUnspecified;
             const size_t indexCount = mesh.isProgressive() ?
-                mesh.indexCountAtLevel(level) : mesh.indices.size();
+                mesh.indexCountAtCut(level) : mesh.indices.size();
             if (indexCount < 3)
                 continue;
             if (indexCount > maxVertexCount ||
@@ -945,7 +954,7 @@ bool CadRendererGL::renderFlatShaded(
             occurrence.rangeKey = CadFlatShadedRangeKey{
                 instance.instanceId, level, geometryToken};
             occurrence.indexCount = indexCount;
-            occurrence.level = level;
+            occurrence.cut = level;
             occurrence.styleKey =
                 static_cast<uint64_t>(flatRgbaKey(instance)) |
                 (static_cast<uint64_t>(item.cullBackfaces) << 32);
@@ -1034,11 +1043,11 @@ bool CadRendererGL::renderFlatShaded(
                 SbVec3f triangle[3];
                 for (size_t vertex = 0; vertex < 3; ++vertex) {
                     SbVec3f point = mesh.positions[indices[vertex]];
-                    if (mesh.isProgressive() && occurrence.level < 15) {
+                    if (mesh.isProgressive()) {
                         point = progressiveSnapPoint(
                             point, mesh.progressiveQuantizationMinimum,
                             mesh.progressiveQuantizationMaximum,
-                            occurrence.level);
+                            mesh.quantizationAtCut(occurrence.cut));
                     }
                     triangle[vertex] =
                         transformedFlatPoint(point, instance.transform);
@@ -1421,8 +1430,8 @@ static GLsizei progressiveWireSegmentCount(
     const PartGeometry *geometry = assembly.partGeometry(part);
     if (!geometry || !geometry->wire || !geometry->wire->isProgressive())
         return residentCount;
-    return static_cast<GLsizei>(geometry->wire->segmentCountAtLevel(
-        assembly.effectiveProgressiveLodLevel(instance.lodLevel)));
+    return static_cast<GLsizei>(geometry->wire->segmentCountAtCut(
+        assembly.effectiveProgressiveCut(instance.lodCut)));
 }
 
 static GLsizei progressiveTriangleIndexCount(
@@ -1433,20 +1442,25 @@ static GLsizei progressiveTriangleIndexCount(
     if (!geometry || !geometry->shaded ||
             !geometry->shaded->isProgressive())
         return residentCount;
-    return static_cast<GLsizei>(geometry->shaded->indexCountAtLevel(
-        assembly.effectiveProgressiveLodLevel(instance.lodLevel)));
+    return static_cast<GLsizei>(geometry->shaded->indexCountAtCut(
+        assembly.effectiveProgressiveCut(instance.lodCut)));
 }
 
 static void
 uploadProgressivePositionUniforms(
         const SoGLContext *glue, GLint encodeScaleLocation,
-        GLint decodeScaleLocation, GLint minLocation, uint8_t level,
+        GLint decodeScaleLocation, GLint minLocation,
+        ProgressiveQuantization quantization,
         const SbVec3f& minimum, const SbVec3f& maximum)
 {
-    const GLfloat mask = std::ldexp(1.0f, 15 - static_cast<int>(level));
+    const uint8_t bits[3] = {
+        quantization.xBits, quantization.yBits, quantization.zBits
+    };
     SbVec3f encodeScale;
     SbVec3f decodeScale;
     for (int axis = 0; axis < 3; ++axis) {
+        const GLfloat mask = bits[axis] > 0 ?
+            std::ldexp(1.0f, 16 - std::min<int>(16, bits[axis])) : 1.0f;
         const GLfloat extent = maximum[axis] - minimum[axis];
         const GLfloat safeExtent = std::max(extent, 1.0e-30f);
         encodeScale[axis] = 65535.0f / (safeExtent * mask);
@@ -1477,14 +1491,25 @@ progressiveSnapCoordinate(float value, float minimum, float maximum,
 
 static SbVec3f
 progressiveSnapPoint(const SbVec3f& point, const SbVec3f& minimum,
-                     const SbVec3f& maximum, uint8_t level)
+                     const SbVec3f& maximum,
+                     ProgressiveQuantization quantization)
 {
-    if (level >= 15) return point;
-    const double mask = std::ldexp(1.0, 15 - static_cast<int>(level));
+    if (quantization.isExact()) return point;
+    const uint8_t bits[3] = {
+        quantization.xBits, quantization.yBits, quantization.zBits
+    };
+    double mask[3] = {1.0, 1.0, 1.0};
+    for (int axis = 0; axis < 3; ++axis)
+        if (bits[axis] > 0)
+            mask[axis] = std::ldexp(
+                1.0, 16 - std::min<int>(16, bits[axis]));
     return SbVec3f(
-        progressiveSnapCoordinate(point[0], minimum[0], maximum[0], mask),
-        progressiveSnapCoordinate(point[1], minimum[1], maximum[1], mask),
-        progressiveSnapCoordinate(point[2], minimum[2], maximum[2], mask));
+        bits[0] ? progressiveSnapCoordinate(
+            point[0], minimum[0], maximum[0], mask[0]) : point[0],
+        bits[1] ? progressiveSnapCoordinate(
+            point[1], minimum[1], maximum[1], mask[1]) : point[1],
+        bits[2] ? progressiveSnapCoordinate(
+            point[2], minimum[2], maximum[2], mask[2]) : point[2]);
 }
 
 static const CadProgressiveGpu*
@@ -1494,8 +1519,8 @@ ensureProgressiveWireGpu(
 {
     if (!resources || !glue) return nullptr;
 
-    const size_t pointFirst = wire.segmentFirstAtLevel(level) * 2;
-    const size_t pointCount = wire.segmentCountAtLevel(level) * 2;
+    const size_t pointFirst = wire.segmentFirstAtCut(level) * 2;
+    const size_t pointCount = wire.segmentCountAtCut(level) * 2;
     if (pointCount == 0 || pointFirst > wire.segmentPoints.size() ||
             pointCount > wire.segmentPoints.size() - pointFirst)
         return nullptr;
@@ -1508,7 +1533,8 @@ ensureProgressiveWireGpu(
         const SbVec3f point = progressiveSnapPoint(
             wire.segmentPoints[i],
             wire.progressiveQuantizationMinimum,
-            wire.progressiveQuantizationMaximum, level);
+            wire.progressiveQuantizationMaximum,
+            wire.quantizationAtCut(level));
         executorAppendPackedPoint(positions, point);
     }
     resources->uploadProgressive(
@@ -1523,7 +1549,7 @@ ensureProgressiveTriGpu(
 {
     if (!resources || !glue) return nullptr;
 
-    const size_t indexCount = mesh.indexCountAtLevel(level);
+    const size_t indexCount = mesh.indexCountAtCut(level);
     if (indexCount < 3 || indexCount > mesh.indices.size())
         return nullptr;
     const bool indexed = mesh.normals.size() == mesh.positions.size();
@@ -1547,7 +1573,8 @@ ensureProgressiveTriGpu(
             const SbVec3f point = progressiveSnapPoint(
                 mesh.positions[i],
                 mesh.progressiveQuantizationMinimum,
-                mesh.progressiveQuantizationMaximum, level);
+                mesh.progressiveQuantizationMaximum,
+                mesh.quantizationAtCut(level));
             executorAppendPackedPoint(positions, point);
         }
     } else {
@@ -1562,7 +1589,8 @@ ensureProgressiveTriGpu(
                 triangle[k] = progressiveSnapPoint(
                     mesh.positions[index],
                     mesh.progressiveQuantizationMinimum,
-                    mesh.progressiveQuantizationMaximum, level);
+                    mesh.progressiveQuantizationMaximum,
+                    mesh.quantizationAtCut(level));
             }
             SbVec3f normal =
                 (triangle[1] - triangle[0]).cross(triangle[2] - triangle[0]);
@@ -1682,7 +1710,7 @@ cadAccumulateRenderedShadedWork(Obol::CadRenderedWork& work,
     if (!triangles || !occurrences)
         return;
     const uint64_t positions = static_cast<uint64_t>(
-        mesh.positionCountAtLevel(level));
+        mesh.positionCountAtCut(level));
     const uint64_t submittedTriangles =
         triangles > UINT64_MAX / occurrences ? UINT64_MAX :
             triangles * occurrences;
@@ -1842,11 +1870,13 @@ void CadRendererGL::renderVboLoop(
                     continue;
 
                 const uint8_t level = progressive ?
-                    cadResolvedProgressiveLevel(
-                        assembly.effectiveProgressiveLodLevel(inst.lodLevel),
-                        progressive->progressiveMinimumLevel,
-                        progressive->progressiveResidentLevel) : 15;
-                const int variant = progressive && level < 15 ? 1 : 0;
+                    cadResolvedProgressiveCut(
+                        assembly.effectiveProgressiveCut(inst.lodCut),
+                        progressive->progressiveMinimumCut,
+                        progressive->progressiveResidentCut) :
+                    Obol::ProgressiveCutUnspecified;
+                const int variant = progressive &&
+                    !progressive->quantizationAtCut(level).isExact() ? 1 : 0;
                 const WireLocations& loc = locations[variant];
                 if (activeProgram != programs[variant]) {
                     activeProgram = programs[variant];
@@ -1864,7 +1894,7 @@ void CadRendererGL::renderVboLoop(
                 if (variant) {
                     uploadProgressivePositionUniforms(
                         glue, loc.encodeScale, loc.decodeScale, loc.minimum,
-                        level,
+                        progressive->quantizationAtCut(level),
                         progressive->progressiveQuantizationMinimum,
                         progressive->progressiveQuantizationMaximum);
                 }
@@ -1873,7 +1903,7 @@ void CadRendererGL::renderVboLoop(
                     assembly, item.rep.part, inst, w->segCount);
                 bindAndDrawWire(w, glue, locPos,
                     progressive ? static_cast<GLsizei>(
-                        progressive->segmentFirstAtLevel(level)) : 0,
+                        progressive->segmentFirstAtCut(level)) : 0,
                     segmentCount);
                 cadAccumulateRenderedWireWork(
                     lastRenderedWork_,
@@ -2061,11 +2091,13 @@ void CadRendererGL::renderVboLoop(
                     continue;
 
                 const uint8_t level = progressive ?
-                    cadResolvedProgressiveLevel(
-                        assembly.effectiveProgressiveLodLevel(inst.lodLevel),
-                        progressive->progressiveMinimumLevel,
-                        progressive->progressiveResidentLevel) : 15;
-                const int variant = progressive && level < 15 ? 1 : 0;
+                    cadResolvedProgressiveCut(
+                        assembly.effectiveProgressiveCut(inst.lodCut),
+                        progressive->progressiveMinimumCut,
+                        progressive->progressiveResidentCut) :
+                    Obol::ProgressiveCutUnspecified;
+                const int variant = progressive &&
+                    !progressive->quantizationAtCut(level).isExact() ? 1 : 0;
                 int programIndex = variant ? GenericPop : GenericExact;
                 if (directionalLight) {
                     const int directionalIndex = hasNorm ?
@@ -2199,7 +2231,7 @@ void CadRendererGL::renderVboLoop(
                 if (variant) {
                     uploadProgressivePositionUniforms(
                         glue, loc.encodeScale, loc.decodeScale, loc.minimum,
-                        level,
+                        progressive->quantizationAtCut(level),
                         progressive->progressiveQuantizationMinimum,
                         progressive->progressiveQuantizationMaximum);
                 }
@@ -2333,13 +2365,13 @@ void CadRendererGL::renderFixedVboLoop(
 
             GLuint positionBuffer = wire->posBuf;
             GLsizei segmentFirst = 0;
-            uint8_t level = 15;
+            uint8_t level = Obol::ProgressiveCutUnspecified;
             if (progressive) {
-                level = cadResolvedProgressiveLevel(
-                    assembly.effectiveProgressiveLodLevel(inst.lodLevel),
-                    progressive->progressiveMinimumLevel,
-                    progressive->progressiveResidentLevel);
-                if (level < 15) {
+                level = cadResolvedProgressiveCut(
+                    assembly.effectiveProgressiveCut(inst.lodCut),
+                    progressive->progressiveMinimumCut,
+                    progressive->progressiveResidentCut);
+                if (!progressive->quantizationAtCut(level).isExact()) {
                     const CadProgressiveGpu *cut =
                         ensureProgressiveWireGpu(
                             gpuRes_, item.rep.part, *progressive, level, glue);
@@ -2347,7 +2379,7 @@ void CadRendererGL::renderFixedVboLoop(
                     positionBuffer = cut->posBuf;
                 } else
                     segmentFirst = static_cast<GLsizei>(
-                        progressive->segmentFirstAtLevel(level));
+                        progressive->segmentFirstAtCut(level));
             }
             glue->glBindBuffer(GL_ARRAY_BUFFER, positionBuffer);
             glue->glVertexPointer(3, GL_FLOAT, 3 * sizeof(float), nullptr);
@@ -2470,13 +2502,14 @@ void CadRendererGL::renderFixedVboLoop(
             const GLsizei indexCount = progressiveTriangleIndexCount(
                 assembly, item.rep.part, inst, tri->idxCount);
             const CadProgressiveGpu *cut = nullptr;
-            uint8_t level = 15;
+            uint8_t level = Obol::ProgressiveCutUnspecified;
             if (progressive) {
-                level = cadResolvedProgressiveLevel(
-                    assembly.effectiveProgressiveLodLevel(inst.lodLevel),
-                    progressive->progressiveMinimumLevel,
-                    progressive->progressiveResidentLevel);
-                if (level < 15 || tri->normBuf == 0) {
+                level = cadResolvedProgressiveCut(
+                    assembly.effectiveProgressiveCut(inst.lodCut),
+                    progressive->progressiveMinimumCut,
+                    progressive->progressiveResidentCut);
+                if (!progressive->quantizationAtCut(level).isExact() ||
+                        tri->normBuf == 0) {
                     cut = ensureProgressiveTriGpu(
                         gpuRes_, item.rep.part, *progressive, level, glue);
                     if (!cut) continue;
@@ -2636,17 +2669,17 @@ void CadRendererGL::renderImmediateMode(
             applyWireRasterStyle(glue, inst, caps_.hasLineStipple);
 
             const size_t flatPointCount =
-                wire.segmentCountAtLevel(
-                    assembly.effectiveProgressiveLodLevel(
-                        inst.lodLevel)) * 2;
+                wire.segmentCountAtCut(
+                    assembly.effectiveProgressiveCut(
+                        inst.lodCut)) * 2;
             const size_t flatPointFirst =
-                wire.segmentFirstAtLevel(
-                    assembly.effectiveProgressiveLodLevel(
-                        inst.lodLevel)) * 2;
-            const uint8_t drawLevel = cadResolvedProgressiveLevel(
-                assembly.effectiveProgressiveLodLevel(inst.lodLevel),
-                wire.progressiveMinimumLevel,
-                wire.progressiveResidentLevel);
+                wire.segmentFirstAtCut(
+                    assembly.effectiveProgressiveCut(
+                        inst.lodCut)) * 2;
+            const uint8_t drawLevel = cadResolvedProgressiveCut(
+                assembly.effectiveProgressiveCut(inst.lodCut),
+                wire.progressiveMinimumCut,
+                wire.progressiveResidentCut);
             if (flatPointCount > 0) {
                 const size_t flatPointEnd =
                     flatPointFirst + flatPointCount;
@@ -2665,13 +2698,15 @@ void CadRendererGL::renderImmediateMode(
                             progressiveSnapPoint(wire.segmentPoints[point],
                                 wire.progressiveQuantizationMinimum,
                                 wire.progressiveQuantizationMaximum,
-                                drawLevel) : wire.segmentPoints[point];
+                                wire.quantizationAtCut(drawLevel)) :
+                            wire.segmentPoints[point];
                         const SbVec3f b = wire.isProgressive() ?
                             progressiveSnapPoint(
                                 wire.segmentPoints[point + 1],
                                 wire.progressiveQuantizationMinimum,
                                 wire.progressiveQuantizationMaximum,
-                                drawLevel) : wire.segmentPoints[point + 1];
+                                wire.quantizationAtCut(drawLevel)) :
+                            wire.segmentPoints[point + 1];
                         glue->glVertex3f(a[0], a[1], a[2]);
                         glue->glVertex3f(b[0], b[1], b[2]);
                     }
@@ -2769,13 +2804,13 @@ void CadRendererGL::renderImmediateMode(
 
             const std::vector<uint32_t>& drawIdx = mesh.indices;
             const size_t drawIndexCount =
-                mesh.indexCountAtLevel(
-                    assembly.effectiveProgressiveLodLevel(
-                        inst.lodLevel));
-            const uint8_t drawLevel = cadResolvedProgressiveLevel(
-                assembly.effectiveProgressiveLodLevel(inst.lodLevel),
-                mesh.progressiveMinimumLevel,
-                mesh.progressiveResidentLevel);
+                mesh.indexCountAtCut(
+                    assembly.effectiveProgressiveCut(
+                        inst.lodCut));
+            const uint8_t drawLevel = cadResolvedProgressiveCut(
+                assembly.effectiveProgressiveCut(inst.lodCut),
+                mesh.progressiveMinimumCut,
+                mesh.progressiveResidentCut);
 
             size_t triangleOffset = 0;
             while (triangleOffset + 2 < drawIndexCount) {
@@ -2796,7 +2831,8 @@ void CadRendererGL::renderImmediateMode(
                             progressiveSnapPoint(mesh.positions[idx],
                                 mesh.progressiveQuantizationMinimum,
                                 mesh.progressiveQuantizationMaximum,
-                                drawLevel) : mesh.positions[idx];
+                                mesh.quantizationAtCut(drawLevel)) :
+                            mesh.positions[idx];
                     }
                     if (!hasNorm) {
                         SbVec3f faceNormal =
@@ -3233,17 +3269,17 @@ bool CadRendererGL::patchIndirectPreparedAppend(
             const TriMesh& mesh =
                 *binding.geometry->shaded;
             uint8_t level = mesh.isProgressive() ?
-                cadResolvedProgressiveLevel(
-                    assembly.effectiveProgressiveLodLevel(
-                        source.lodLevel),
-                    mesh.progressiveMinimumLevel,
-                    mesh.progressiveResidentLevel) :
+                cadResolvedProgressiveCut(
+                    assembly.effectiveProgressiveCut(
+                        source.lodCut),
+                    mesh.progressiveMinimumCut,
+                    mesh.progressiveResidentCut) :
                 15u;
             const size_t vertexCount = mesh.isProgressive() ?
-                mesh.positionCountAtLevel(level) :
+                mesh.positionCountAtCut(level) :
                 mesh.positions.size();
             const size_t indexCount = mesh.isProgressive() ?
-                mesh.indexCountAtLevel(level) :
+                mesh.indexCountAtCut(level) :
                 mesh.indices.size();
             if (!vertexCount || !indexCount ||
                     vertexCount >
@@ -3257,11 +3293,11 @@ bool CadRendererGL::patchIndirectPreparedAppend(
                 static_cast<uint32_t>(indexCount);
             if (mesh.isProgressive()) {
                 coverageVertexCount = static_cast<uint32_t>(
-                    mesh.positionCountAtLevel(
-                        mesh.progressiveMinimumLevel));
+                    mesh.positionCountAtCut(
+                        mesh.progressiveMinimumCut));
                 coverageIndexCount = static_cast<uint32_t>(
-                    mesh.indexCountAtLevel(
-                        mesh.progressiveMinimumLevel));
+                    mesh.indexCountAtCut(
+                        mesh.progressiveMinimumCut));
             }
             const CadTriangleAtlasPart *atlas =
                 gpuRes_->upsertTriangleAtlasPart(
@@ -3328,15 +3364,15 @@ bool CadRendererGL::patchIndirectPreparedAppend(
                 continue;
             }
             while (mesh.isProgressive() &&
-                    level > mesh.progressiveMinimumLevel &&
-                    (mesh.positionCountAtLevel(level) >
+                    level > mesh.progressiveMinimumCut &&
+                    (mesh.positionCountAtCut(level) >
                          atlas->vertexCount ||
-                     mesh.indexCountAtLevel(level) >
+                     mesh.indexCountAtCut(level) >
                          atlas->indexCount))
                 --level;
             const size_t residentIndexCount =
                 mesh.isProgressive() ?
-                    mesh.indexCountAtLevel(level) :
+                    mesh.indexCountAtCut(level) :
                     mesh.indices.size();
             if (!residentIndexCount ||
                     residentIndexCount >
@@ -3364,8 +3400,9 @@ bool CadRendererGL::patchIndirectPreparedAppend(
                 target.popMinLevel[axis] = minimum[axis];
                 target.popMaxFlags[axis] = maximum[axis];
             }
-            target.popMinLevel[3] =
-                static_cast<float>(level);
+            target.popMinLevel[3] = packedProgressiveQuantization(
+                mesh.isProgressive() ? mesh.quantizationAtCut(level) :
+                    ProgressiveQuantization());
             target.popMaxFlags[3] =
                 (!mesh.normals.empty() ? 1.0f : 0.0f) +
                 (mesh.isProgressive() ? 2.0f : 0.0f);
@@ -3658,17 +3695,17 @@ bool CadRendererGL::patchIndirectPreparedGeometry(
         const TriMesh& mesh =
             *binding.geometry->shaded;
         uint8_t level = mesh.isProgressive() ?
-            cadResolvedProgressiveLevel(
-                assembly.effectiveProgressiveLodLevel(
-                    source.lodLevel),
-                mesh.progressiveMinimumLevel,
-                mesh.progressiveResidentLevel) :
+            cadResolvedProgressiveCut(
+                assembly.effectiveProgressiveCut(
+                    source.lodCut),
+                mesh.progressiveMinimumCut,
+                mesh.progressiveResidentCut) :
             15u;
         const size_t vertexCount = mesh.isProgressive() ?
-            mesh.positionCountAtLevel(level) :
+            mesh.positionCountAtCut(level) :
             mesh.positions.size();
         const size_t indexCount = mesh.isProgressive() ?
-            mesh.indexCountAtLevel(level) :
+            mesh.indexCountAtCut(level) :
             mesh.indices.size();
         if (!vertexCount || !indexCount ||
                 vertexCount >
@@ -3689,15 +3726,15 @@ bool CadRendererGL::patchIndirectPreparedGeometry(
         if (!atlas)
             return fail("atlas-admission");
         while (mesh.isProgressive() &&
-                level > mesh.progressiveMinimumLevel &&
-                (mesh.positionCountAtLevel(level) >
+                level > mesh.progressiveMinimumCut &&
+                (mesh.positionCountAtCut(level) >
                      atlas->vertexCount ||
-                 mesh.indexCountAtLevel(level) >
+                 mesh.indexCountAtCut(level) >
                      atlas->indexCount))
             --level;
         const size_t residentIndexCount =
             mesh.isProgressive() ?
-                mesh.indexCountAtLevel(level) :
+                mesh.indexCountAtCut(level) :
                 mesh.indices.size();
         if (!residentIndexCount ||
                 residentIndexCount >
@@ -3810,8 +3847,9 @@ bool CadRendererGL::patchIndirectPreparedGeometry(
             target.popMinLevel[axis] = minimum[axis];
             target.popMaxFlags[axis] = maximum[axis];
         }
-        target.popMinLevel[3] =
-            static_cast<float>(level);
+        target.popMinLevel[3] = packedProgressiveQuantization(
+            mesh.isProgressive() ? mesh.quantizationAtCut(level) :
+                ProgressiveQuantization());
         target.popMaxFlags[3] =
             (!mesh.normals.empty() ? 1.0f : 0.0f) +
             (mesh.isProgressive() ? 2.0f : 0.0f);
@@ -3864,7 +3902,7 @@ bool CadRendererGL::patchIndirectPreparedGeometry(
             newTriangles,
             static_cast<uint64_t>(
                 mesh.isProgressive() ?
-                    mesh.positionCountAtLevel(level) :
+                    mesh.positionCountAtCut(level) :
                     mesh.positions.size()),
             !mesh.normals.empty());
     }
@@ -3957,8 +3995,8 @@ bool CadRendererGL::patchIndirectPreparedCeiling(
     if (renderInterruptedAfter(deadlineWork))
         return false;
     const int ceiling =
-        assembly.progressiveLodCeiling.getValue();
-    if (indirectPrepared_.progressiveLodCeiling ==
+        assembly.progressiveCutCeiling.getValue();
+    if (indirectPrepared_.progressiveCutCeiling ==
             ceiling)
         return true;
     if (!glue || !gpuRes_)
@@ -4001,11 +4039,11 @@ bool CadRendererGL::patchIndirectPreparedCeiling(
         if (sourceIndex >=
                 plan.visibleInstances.size())
             return false;
-        uint8_t level = cadResolvedProgressiveLevel(
-            assembly.effectiveProgressiveLodLevel(
-                plan.visibleInstances[sourceIndex].lodLevel),
-            mesh.progressiveMinimumLevel,
-            mesh.progressiveResidentLevel);
+        uint8_t level = cadResolvedProgressiveCut(
+            assembly.effectiveProgressiveCut(
+                plan.visibleInstances[sourceIndex].lodCut),
+            mesh.progressiveMinimumCut,
+            mesh.progressiveResidentCut);
         const CadTriangleAtlasPart *atlas =
             gpuRes_->triangleAtlasPart(
                 binding.part);
@@ -4016,9 +4054,9 @@ bool CadRendererGL::patchIndirectPreparedCeiling(
                     demand.indexFirst)
             return false;
         const uint32_t requestedVertices = static_cast<uint32_t>(
-            mesh.positionCountAtLevel(level));
+            mesh.positionCountAtCut(level));
         const uint32_t requestedIndices = static_cast<uint32_t>(
-            mesh.indexCountAtLevel(level));
+            mesh.indexCountAtCut(level));
         const bool admissionPressure =
             requestedVertices > atlas->vertexCount ||
             requestedIndices > atlas->indexCount;
@@ -4030,14 +4068,14 @@ bool CadRendererGL::patchIndirectPreparedCeiling(
             }
             demand.admissionPressure = admissionPressure;
         }
-        while (level > mesh.progressiveMinimumLevel &&
-                (mesh.positionCountAtLevel(level) >
+        while (level > mesh.progressiveMinimumCut &&
+                (mesh.positionCountAtCut(level) >
                      atlas->vertexCount ||
-                 mesh.indexCountAtLevel(level) >
+                 mesh.indexCountAtCut(level) >
                      atlas->indexCount))
             --level;
         const size_t commandCount =
-            mesh.indexCountAtLevel(level);
+            mesh.indexCountAtCut(level);
         if (!commandCount ||
                 commandCount >
                     std::numeric_limits<uint32_t>::max())
@@ -4069,7 +4107,7 @@ bool CadRendererGL::patchIndirectPreparedCeiling(
             commandCount / 3u;
         const uint64_t oldPositions = demand.vertexCount;
         const uint64_t newPositions =
-            static_cast<uint64_t>(mesh.positionCountAtLevel(level));
+            static_cast<uint64_t>(mesh.positionCountAtCut(level));
         indirectPrepared_.renderedTriangleCount =
             oldTriangles <=
                     indirectPrepared_.
@@ -4087,10 +4125,11 @@ bool CadRendererGL::patchIndirectPreparedCeiling(
         indirectPrepared_.instances[
             demand.packedInstance].
                 popMinLevel[3] =
-                    static_cast<float>(level);
+                    packedProgressiveQuantization(
+                        mesh.quantizationAtCut(level));
         demand.vertexCount =
             static_cast<uint32_t>(
-                mesh.positionCountAtLevel(level));
+                mesh.positionCountAtCut(level));
         demand.indexCount =
             static_cast<uint32_t>(commandCount);
         changedPackedInstances.push_back(
@@ -4134,7 +4173,7 @@ bool CadRendererGL::patchIndirectPreparedCeiling(
             gpuRes_->instanceUploadSerial();
     else
         indirectPrepared_.instanceUploadSerial = 0;
-    indirectPrepared_.progressiveLodCeiling =
+    indirectPrepared_.progressiveCutCeiling =
         ceiling;
     indirectPrepared_.atlasAdmissionPressure =
         indirectPrepared_.atlasPressurePartCount > 0 ||
@@ -4142,7 +4181,7 @@ bool CadRendererGL::patchIndirectPreparedCeiling(
     return true;
 }
 
-bool CadRendererGL::patchIndirectPreparedLod(
+bool CadRendererGL::patchIndirectPreparedCuts(
         const CadFramePlan& plan,
         const SoCADAssembly& assembly,
         const SoGLContext *glue)
@@ -4256,16 +4295,16 @@ bool CadRendererGL::patchIndirectPreparedLod(
                 !binding.geometry->shaded->isProgressive())
             return false;
         const TriMesh& mesh = *binding.geometry->shaded;
-        uint8_t level = cadResolvedProgressiveLevel(
-            assembly.effectiveProgressiveLodLevel(source.lodLevel),
-            mesh.progressiveMinimumLevel,
-            mesh.progressiveResidentLevel);
+        uint8_t level = cadResolvedProgressiveCut(
+            assembly.effectiveProgressiveCut(source.lodCut),
+            mesh.progressiveMinimumCut,
+            mesh.progressiveResidentCut);
         const uint32_t requestedVertices =
             static_cast<uint32_t>(
-                mesh.positionCountAtLevel(level));
+                mesh.positionCountAtCut(level));
         const uint32_t requestedIndices =
             static_cast<uint32_t>(
-                mesh.indexCountAtLevel(level));
+                mesh.indexCountAtCut(level));
         if (!requestedVertices || !requestedIndices)
             return false;
 
@@ -4299,14 +4338,14 @@ bool CadRendererGL::patchIndirectPreparedLod(
             demand.admissionPressure = admissionPressure;
         }
 
-        while (level > mesh.progressiveMinimumLevel &&
-                (mesh.positionCountAtLevel(level) >
+        while (level > mesh.progressiveMinimumCut &&
+                (mesh.positionCountAtCut(level) >
                      atlas->vertexCount ||
-                 mesh.indexCountAtLevel(level) >
+                 mesh.indexCountAtCut(level) >
                      atlas->indexCount))
             --level;
         const size_t commandCount =
-            mesh.indexCountAtLevel(level);
+            mesh.indexCountAtCut(level);
         if (!commandCount ||
                 commandCount >
                     std::numeric_limits<uint32_t>::max())
@@ -4339,7 +4378,7 @@ bool CadRendererGL::patchIndirectPreparedLod(
             static_cast<uint64_t>(commandCount / 3u);
         const uint64_t oldPositions = demand.vertexCount;
         const uint64_t newPositions =
-            static_cast<uint64_t>(mesh.positionCountAtLevel(level));
+            static_cast<uint64_t>(mesh.positionCountAtCut(level));
         indirectPrepared_.renderedTriangleCount =
             oldTriangles <=
                     indirectPrepared_.renderedTriangleCount ?
@@ -4356,7 +4395,8 @@ bool CadRendererGL::patchIndirectPreparedLod(
             indirectPrepared_.instances[
                 demand.packedInstance];
         target.popMinLevel[3] =
-            static_cast<float>(level);
+            packedProgressiveQuantization(
+                mesh.quantizationAtCut(level));
         demand.vertexCount = std::min(
             requestedVertices, atlas->vertexCount);
         demand.indexCount = std::min(
@@ -4559,8 +4599,8 @@ bool CadRendererGL::replayIndirectShaded(
     if (renderInterrupted())
         return false;
     const bool ceilingChanged =
-        indirectPrepared_.progressiveLodCeiling !=
-            assembly.progressiveLodCeiling.getValue();
+        indirectPrepared_.progressiveCutCeiling !=
+            assembly.progressiveCutCeiling.getValue();
     if (ceilingChanged)
         noteRenderPreparation();
     if (ceilingChanged &&
@@ -4582,7 +4622,7 @@ bool CadRendererGL::replayIndirectShaded(
         noteRenderPreparation();
     if (lodChanged &&
             (!lodPatchEnabled ||
-             !patchIndirectPreparedLod(
+             !patchIndirectPreparedCuts(
                 plan, assembly, glue))) {
         if (configuration_->patchDebug)
             std::fprintf(stderr,
@@ -4872,11 +4912,11 @@ bool CadRendererGL::replayIndirectShaded(
 
             const TriMesh& mesh = *binding.geometry->shaded;
             uint8_t level = mesh.isProgressive() ?
-                cadResolvedProgressiveLevel(
-                    assembly.effectiveProgressiveLodLevel(
-                        source.lodLevel),
-                    mesh.progressiveMinimumLevel,
-                    mesh.progressiveResidentLevel) :
+                cadResolvedProgressiveCut(
+                    assembly.effectiveProgressiveCut(
+                        source.lodCut),
+                    mesh.progressiveMinimumCut,
+                    mesh.progressiveResidentCut) :
                 15u;
             const CadTriangleAtlasPart *atlas =
                 gpuRes_->triangleAtlasPart(binding.part);
@@ -4885,19 +4925,22 @@ bool CadRendererGL::replayIndirectShaded(
                     atlas->indices.first != demand.indexFirst)
                 return rejectAudit(demandIndex, "atlas");
             while (mesh.isProgressive() &&
-                    level > mesh.progressiveMinimumLevel &&
-                    (mesh.positionCountAtLevel(level) >
+                    level > mesh.progressiveMinimumCut &&
+                    (mesh.positionCountAtCut(level) >
                          atlas->vertexCount ||
-                     mesh.indexCountAtLevel(level) >
+                     mesh.indexCountAtCut(level) >
                          atlas->indexCount))
                 --level;
             const uint32_t expectedCount =
                 static_cast<uint32_t>(mesh.isProgressive() ?
-                    mesh.indexCountAtLevel(level) :
+                    mesh.indexCountAtCut(level) :
                     mesh.indices.size());
             if (!expectedCount ||
                     instance.popMinLevel[3] !=
-                        static_cast<float>(level))
+                        packedProgressiveQuantization(
+                            mesh.isProgressive() ?
+                                mesh.quantizationAtCut(level) :
+                                ProgressiveQuantization()))
                 return rejectAudit(demandIndex, "lod-level");
             const SbVec3f expectedMinimum = mesh.isProgressive() ?
                 mesh.progressiveQuantizationMinimum :
@@ -5011,12 +5054,12 @@ bool CadRendererGL::renderIndirectShaded(
         return rejectIndirect(1, "precondition");
     }
     IndirectPreparationState& build = indirectPreparation_;
-    const int progressiveLodCeiling =
-        assembly.progressiveLodCeiling.getValue();
+    const int progressiveCutCeiling =
+        assembly.progressiveCutCeiling.getValue();
     const bool matchingBuild = build.active &&
         build.contextId == glue->contextid &&
         build.planRevision == plan.revision &&
-        build.progressiveLodCeiling == progressiveLodCeiling &&
+        build.progressiveCutCeiling == progressiveCutCeiling &&
         build.viewProj == viewProj;
     if (build.active && !matchingBuild) {
         gpuRes_->endTriangleAtlasExactPreparation();
@@ -5065,11 +5108,11 @@ bool CadRendererGL::renderIndirectShaded(
         build.phase = IndirectPreparationPhase::Visibility;
         build.contextId = glue->contextid;
         build.planRevision = plan.revision;
-        build.progressiveLodCeiling = progressiveLodCeiling;
+        build.progressiveCutCeiling = progressiveCutCeiling;
         build.viewProj = viewProj;
 
         indirectVisibleMask_.assign(plan.visibleInstances.size(), 0u);
-        indirectVisibleMaximumLod_.assign(plan.partBindings.size(), 0u);
+        indirectVisibleMaximumCut_.assign(plan.partBindings.size(), 0u);
         indirectVisiblePart_.assign(plan.partBindings.size(), 0u);
         indirectVisibleImportance_.assign(plan.partBindings.size(), 0.0);
         indirectVisiblePartIndices_.clear();
@@ -5103,7 +5146,7 @@ bool CadRendererGL::renderIndirectShaded(
     const ExecutorFrustumPlanes fp =
         extractExecutorFrustumPlanes(viewProj);
     auto& visibleMask = indirectVisibleMask_;
-    auto& visibleMaximumLod = indirectVisibleMaximumLod_;
+    auto& visibleMaximumCut = indirectVisibleMaximumCut_;
     auto& visiblePart = indirectVisiblePart_;
     auto& visibleImportance = indirectVisibleImportance_;
     auto& visiblePartIndices = indirectVisiblePartIndices_;
@@ -5150,17 +5193,18 @@ bool CadRendererGL::renderIndirectShaded(
                 ++build.visibleOccurrenceCount;
             }
             const uint8_t requested = mesh.isProgressive() ?
-                cadResolvedProgressiveLevel(
-                    assembly.effectiveProgressiveLodLevel(
-                        instance.lodLevel),
-                    mesh.progressiveMinimumLevel,
-                    mesh.progressiveResidentLevel) : 15u;
+                cadResolvedProgressiveCut(
+                    assembly.effectiveProgressiveCut(
+                        instance.lodCut),
+                    mesh.progressiveMinimumCut,
+                    mesh.progressiveResidentCut) :
+                Obol::ProgressiveCutUnspecified;
             if (!visiblePart[item.partIndex]) {
                 visiblePart[item.partIndex] = 1u;
                 visiblePartIndices.push_back(item.partIndex);
             }
-            visibleMaximumLod[item.partIndex] =
-                std::max(visibleMaximumLod[item.partIndex], requested);
+            visibleMaximumCut[item.partIndex] =
+                std::max(visibleMaximumCut[item.partIndex], requested);
             double importance = executorProjectedBoxImportance(
                 instance.wbMin, instance.wbMax, viewProj);
             if (instance.flags & 3u)
@@ -5209,11 +5253,11 @@ bool CadRendererGL::renderIndirectShaded(
             return abandon(
                 2, "visible part has no shaded geometry");
         const TriMesh& mesh = *geometry->shaded;
-        const uint8_t requested = visibleMaximumLod[partIndex];
+        const uint8_t requested = visibleMaximumCut[partIndex];
         const size_t vertexCount = mesh.isProgressive() ?
-            mesh.positionCountAtLevel(requested) : mesh.positions.size();
+            mesh.positionCountAtCut(requested) : mesh.positions.size();
         const size_t indexCount = mesh.isProgressive() ?
-            mesh.indexCountAtLevel(requested) : mesh.indices.size();
+            mesh.indexCountAtCut(requested) : mesh.indices.size();
         if (!vertexCount || !indexCount ||
                 vertexCount > std::numeric_limits<uint32_t>::max() ||
                 indexCount > std::numeric_limits<uint32_t>::max())
@@ -5354,9 +5398,9 @@ bool CadRendererGL::renderIndirectShaded(
         uint32_t coverageIndexCount = requestedIndexCounts[partIndex];
         if (mesh.isProgressive()) {
             coverageVertexCount = static_cast<uint32_t>(
-                mesh.positionCountAtLevel(mesh.progressiveMinimumLevel));
+                mesh.positionCountAtCut(mesh.progressiveMinimumCut));
             coverageIndexCount = static_cast<uint32_t>(
-                mesh.indexCountAtLevel(mesh.progressiveMinimumLevel));
+                mesh.indexCountAtCut(mesh.progressiveMinimumCut));
         }
         const CadTriangleAtlasPart *admitted =
             gpuRes_->upsertTriangleAtlasPart(
@@ -5540,7 +5584,7 @@ bool CadRendererGL::renderIndirectShaded(
               return abandon(8, "instance stream overflow");
           build.commandBaseInstance =
               static_cast<uint32_t>(instances.size());
-          build.commandLevel = 15u;
+          build.commandCut = Obol::ProgressiveCutUnspecified;
           build.commandCount = 0;
           build.commandItemActive = true;
         }
@@ -5572,30 +5616,31 @@ bool CadRendererGL::renderIndirectShaded(
             const CadVisibleInstance& source =
                 plan.visibleInstances[instanceIndex];
             uint8_t level = progressive ?
-                cadResolvedProgressiveLevel(
-                    assembly.effectiveProgressiveLodLevel(source.lodLevel),
-                    mesh.progressiveMinimumLevel,
-                    mesh.progressiveResidentLevel) : 15;
+                cadResolvedProgressiveCut(
+                    assembly.effectiveProgressiveCut(source.lodCut),
+                    mesh.progressiveMinimumCut,
+                    mesh.progressiveResidentCut) :
+                Obol::ProgressiveCutUnspecified;
             /*
              * Allocation pressure may deliberately retain a correct coarser
              * cumulative prefix.  Clamp to the richest level wholly resident
              * instead of failing the entire frame into a world-space rebuild.
              */
             while (progressive &&
-                    level > mesh.progressiveMinimumLevel &&
-                    (mesh.positionCountAtLevel(level) >
+                    level > mesh.progressiveMinimumCut &&
+                    (mesh.positionCountAtCut(level) >
                          atlas->vertexCount ||
-                     mesh.indexCountAtLevel(level) > atlas->indexCount))
+                     mesh.indexCountAtCut(level) > atlas->indexCount))
                 --level;
             const size_t count = progressive ?
-                mesh.indexCountAtLevel(level) : mesh.indices.size();
+                mesh.indexCountAtCut(level) : mesh.indices.size();
             if (!count || count > atlas->indexCount ||
                     count > std::numeric_limits<uint32_t>::max())
                 return abandon(6, "invalid indirect draw count");
-            if (build.commandCount && level != build.commandLevel)
+            if (build.commandCount && level != build.commandCut)
                 return abandon(
                     7, "mixed levels in one draw run");
-            build.commandLevel = level;
+            build.commandCut = level;
             build.commandCount = count;
 
             InstVertex target = {};
@@ -5613,7 +5658,9 @@ bool CadRendererGL::renderIndirectShaded(
                 target.popMinLevel[axis] = minimum[axis];
                 target.popMaxFlags[axis] = maximum[axis];
             }
-            target.popMinLevel[3] = static_cast<float>(level);
+            target.popMinLevel[3] = packedProgressiveQuantization(
+                progressive ? mesh.quantizationAtCut(level) :
+                    ProgressiveQuantization());
             target.popMaxFlags[3] =
                 (!mesh.normals.empty() ? 1.0f : 0.0f) +
                 (progressive ? 2.0f : 0.0f) +
@@ -5642,7 +5689,7 @@ bool CadRendererGL::renderIndirectShaded(
               static_cast<uint64_t>(command.count / 3u) *
               static_cast<uint64_t>(command.instanceCount);
           cadAccumulateRenderedShadedWork(
-              build.renderedWork, mesh, build.commandLevel,
+              build.renderedWork, mesh, build.commandCut,
               static_cast<uint64_t>(command.count / 3u),
               static_cast<uint64_t>(command.instanceCount));
           IndirectPageWork& work = pageWorkFor(atlas->page);
@@ -5730,7 +5777,7 @@ bool CadRendererGL::renderIndirectShaded(
       prepared.instanceAttributeRevision =
           plan.instanceAttributeRevision;
       prepared.subpixelProxyRevision = plan.subpixelProxyRevision;
-      prepared.progressiveLodCeiling = progressiveLodCeiling;
+      prepared.progressiveCutCeiling = progressiveCutCeiling;
       prepared.viewProj = viewProj;
       prepared.renderedTriangleCount = build.renderedTriangleCount;
       prepared.renderedWork = build.renderedWork;
@@ -6112,23 +6159,24 @@ void CadRendererGL::renderInstanced(
                 const CadVisibleInstance& levelInstance =
                     plan.visibleInstances[baseInstance];
                 const uint8_t level = progressive ?
-                    cadResolvedProgressiveLevel(
-                        assembly.effectiveProgressiveLodLevel(
-                            levelInstance.lodLevel),
-                        progressive->progressiveMinimumLevel,
-                        progressive->progressiveResidentLevel) : 15;
+                    cadResolvedProgressiveCut(
+                        assembly.effectiveProgressiveCut(
+                            levelInstance.lodCut),
+                        progressive->progressiveMinimumCut,
+                        progressive->progressiveResidentCut) :
+                    Obol::ProgressiveCutUnspecified;
                 uint32_t runEnd = runStart + 1;
                 while (runEnd < item.instanceCount &&
                     cadInstanceDrawable(
                         plan, item, item.baseInstance + runEnd,
                         CadDrawChannel::Wire) &&
                     (!progressive ||
-                     cadResolvedProgressiveLevel(
-                        assembly.effectiveProgressiveLodLevel(
+                     cadResolvedProgressiveCut(
+                        assembly.effectiveProgressiveCut(
                             plan.visibleInstances[
-                                item.baseInstance + runEnd].lodLevel),
-                        progressive->progressiveMinimumLevel,
-                        progressive->progressiveResidentLevel) == level))
+                                item.baseInstance + runEnd].lodCut),
+                        progressive->progressiveMinimumCut,
+                        progressive->progressiveResidentCut) == level))
                 {
                     if (renderInterruptedAfter(deadlineWork)) {
                         interrupted = true;
@@ -6139,7 +6187,8 @@ void CadRendererGL::renderInstanced(
                 if (interrupted)
                     break;
 
-                const int variant = progressive && level < 15 ? 1 : 0;
+                const int variant = progressive &&
+                    !progressive->quantizationAtCut(level).isExact() ? 1 : 0;
                 const WireLocations& loc = locations[variant];
                 if (!programs[variant]) {
                     runStart = runEnd;
@@ -6154,16 +6203,16 @@ void CadRendererGL::renderInstanced(
                 if (variant) {
                     uploadProgressivePositionUniforms(
                         glue, loc.encodeScale, loc.decodeScale, loc.minimum,
-                        level,
+                        progressive->quantizationAtCut(level),
                         progressive->progressiveQuantizationMinimum,
                         progressive->progressiveQuantizationMaximum);
                 }
                 const GLsizei segmentFirst = progressive ?
                     static_cast<GLsizei>(
-                        progressive->segmentFirstAtLevel(level)) : 0;
+                        progressive->segmentFirstAtCut(level)) : 0;
                 const GLsizei segmentCount = progressive ?
                     static_cast<GLsizei>(
-                        progressive->segmentCountAtLevel(level)) :
+                        progressive->segmentCountAtCut(level)) :
                     w->segCount;
                 if (segmentCount <= 0) {
                     runStart = runEnd;
@@ -6313,12 +6362,14 @@ void CadRendererGL::renderInstanced(
             const CadVisibleInstance& levelInstance =
                 plan.visibleInstances[levelInstanceIndex];
             const uint8_t level = progressive ?
-                cadResolvedProgressiveLevel(
-                    assembly.effectiveProgressiveLodLevel(
-                        levelInstance.lodLevel),
-                    progressive->progressiveMinimumLevel,
-                    progressive->progressiveResidentLevel) : 15;
-            const int variant = progressive && level < 15 ? 1 : 0;
+                cadResolvedProgressiveCut(
+                    assembly.effectiveProgressiveCut(
+                        levelInstance.lodCut),
+                    progressive->progressiveMinimumCut,
+                    progressive->progressiveResidentCut) :
+                Obol::ProgressiveCutUnspecified;
+            const int variant = progressive &&
+                !progressive->quantizationAtCut(level).isExact() ? 1 : 0;
             const ShadedLocations& loc = locations[variant];
             if (!programs[variant])
                 continue;
@@ -6337,7 +6388,7 @@ void CadRendererGL::renderInstanced(
             if (variant) {
                 uploadProgressivePositionUniforms(
                     glue, loc.encodeScale, loc.decodeScale, loc.minimum,
-                    level,
+                    progressive->quantizationAtCut(level),
                     progressive->progressiveQuantizationMinimum,
                     progressive->progressiveQuantizationMaximum);
             }

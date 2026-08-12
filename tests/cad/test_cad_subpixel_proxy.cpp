@@ -20,6 +20,17 @@
 
 namespace {
 
+void
+setProgressiveCuts(Obol::TriMesh& mesh, size_t cutCount,
+                   uint32_t indexCount, uint32_t positionCount)
+{
+    mesh.progressiveCuts.resize(cutCount);
+    for (Obol::ProgressiveTriangleCut& cut : mesh.progressiveCuts) {
+        cut.indexCount = indexCount;
+        cut.positionCount = positionCount;
+    }
+}
+
 Obol::WireRep
 unitBox()
 {
@@ -175,11 +186,12 @@ normalFreeTwoSidedGlslMatchesFixed()
         mesh.bounds.makeEmpty();
         for (const SbVec3f& point : mesh.positions)
             mesh.bounds.extendBy(point);
-        mesh.progressiveMinimumLevel = 15;
-        mesh.progressiveResidentLevel = 15;
-        mesh.progressiveIndexCount[15] =
+        mesh.progressiveMinimumCut = 15;
+        mesh.progressiveResidentCut = 15;
+        setProgressiveCuts(mesh, 16, 0, 0);
+        mesh.progressiveCuts[15].indexCount =
             static_cast<uint32_t>(mesh.indices.size());
-        mesh.progressivePositionCount[15] =
+        mesh.progressiveCuts[15].positionCount =
             static_cast<uint32_t>(mesh.positions.size());
         mesh.progressiveQuantizationMinimum = mesh.bounds.getMin();
         mesh.progressiveQuantizationMaximum = mesh.bounds.getMax();
@@ -196,7 +208,7 @@ normalFreeTwoSidedGlslMatchesFixed()
         instance.parent = Obol::CadIdBuilder::Root();
         instance.childName = "normal-free-two-sided";
         instance.localToRoot.makeIdentity();
-        instance.lodLevel = 15;
+        instance.lodCut = 15;
         instance.style.hasColorOverride = true;
         instance.style.color = SbColor4f(1.0f, 1.0f, 1.0f, 1.0f);
         assembly->upsertInstanceAuto(instance);
@@ -285,13 +297,12 @@ indirectProgressiveAtlasGrows()
             mesh.bounds.extendBy(point);
         }
     }
-    mesh.progressiveMinimumLevel = 0;
-    mesh.progressiveResidentLevel = 15;
-    mesh.progressiveIndexCount.fill(3u);
-    mesh.progressivePositionCount.fill(3u);
-    mesh.progressiveIndexCount[15] =
+    mesh.progressiveMinimumCut = 0;
+    mesh.progressiveResidentCut = 15;
+    setProgressiveCuts(mesh, 16, 3u, 3u);
+    mesh.progressiveCuts[15].indexCount =
         static_cast<uint32_t>(mesh.indices.size());
-    mesh.progressivePositionCount[15] =
+    mesh.progressiveCuts[15].positionCount =
         static_cast<uint32_t>(mesh.positions.size());
     mesh.progressiveQuantizationMinimum = mesh.bounds.getMin();
     mesh.progressiveQuantizationMaximum = mesh.bounds.getMax();
@@ -316,7 +327,7 @@ indirectProgressiveAtlasGrows()
             -44.0f + 8.0f * static_cast<float>(i % 12),
             -44.0f + 8.0f * static_cast<float>(i / 12),
             0.0f));
-        instance.lodLevel = 0;
+        instance.lodCut = 0;
         const Obol::InstanceId id =
             assembly->upsertInstanceAuto(instance);
         richCuts.push_back({id, 15});
@@ -343,7 +354,7 @@ indirectProgressiveAtlasGrows()
      */
     bool passed = coarseRendered;
     if (passed && coarseTier == 6) {
-        assembly->updateInstanceLodLevels(richCuts);
+        assembly->updateInstanceCuts(richCuts);
         const bool richRendered = render(renderer, root);
         const uint64_t richTriangles =
             assembly->lastRenderedTriangleCount();
@@ -427,13 +438,12 @@ indirectProgressiveGenerationAppendsSuffix()
             rich.bounds.extendBy(point);
         }
     }
-    rich.progressiveMinimumLevel = 0;
-    rich.progressiveResidentLevel = 15;
-    rich.progressiveIndexCount.fill(3u);
-    rich.progressivePositionCount.fill(3u);
-    rich.progressiveIndexCount[15] =
+    rich.progressiveMinimumCut = 0;
+    rich.progressiveResidentCut = 15;
+    setProgressiveCuts(rich, 16, 3u, 3u);
+    rich.progressiveCuts[15].indexCount =
         static_cast<uint32_t>(rich.indices.size());
-    rich.progressivePositionCount[15] =
+    rich.progressiveCuts[15].positionCount =
         static_cast<uint32_t>(rich.positions.size());
     rich.progressiveQuantizationMinimum = rich.bounds.getMin();
     rich.progressiveQuantizationMaximum = rich.bounds.getMax();
@@ -442,7 +452,7 @@ indirectProgressiveGenerationAppendsSuffix()
     Obol::TriMesh coarse = rich;
     coarse.positions.resize(3u);
     coarse.indices.resize(3u);
-    coarse.progressiveResidentLevel = 0;
+    coarse.progressiveResidentCut = 0;
 
     const Obol::PartId part =
         Obol::CadIdBuilder::hash128("progressive-generation-suffix");
@@ -457,7 +467,7 @@ indirectProgressiveGenerationAppendsSuffix()
     instance.parent = Obol::CadIdBuilder::Root();
     instance.childName = "progressive-generation-suffix";
     instance.localToRoot.makeIdentity();
-    instance.lodLevel = 15;
+    instance.lodCut = 15;
     assembly->upsertInstanceAuto(instance);
 
     const SbViewportRegion viewport(192, 192);
@@ -568,13 +578,12 @@ ordinaryProgressiveGenerationAppendsSuffix()
             rich.bounds.extendBy(point);
         }
     }
-    rich.progressiveMinimumLevel = 0;
-    rich.progressiveResidentLevel = 15;
-    rich.progressiveIndexCount.fill(3u);
-    rich.progressivePositionCount.fill(3u);
-    rich.progressiveIndexCount[15] =
+    rich.progressiveMinimumCut = 0;
+    rich.progressiveResidentCut = 15;
+    setProgressiveCuts(rich, 16, 3u, 3u);
+    rich.progressiveCuts[15].indexCount =
         static_cast<uint32_t>(rich.indices.size());
-    rich.progressivePositionCount[15] =
+    rich.progressiveCuts[15].positionCount =
         static_cast<uint32_t>(rich.positions.size());
     rich.progressiveQuantizationMinimum = rich.bounds.getMin();
     rich.progressiveQuantizationMaximum = rich.bounds.getMax();
@@ -583,7 +592,7 @@ ordinaryProgressiveGenerationAppendsSuffix()
     Obol::TriMesh coarse = rich;
     coarse.positions.resize(3u);
     coarse.indices.resize(3u);
-    coarse.progressiveResidentLevel = 0;
+    coarse.progressiveResidentCut = 0;
 
     const Obol::PartId part =
         Obol::CadIdBuilder::hash128("ordinary-progressive-suffix");
@@ -598,7 +607,7 @@ ordinaryProgressiveGenerationAppendsSuffix()
     instance.parent = Obol::CadIdBuilder::Root();
     instance.childName = "ordinary-progressive-suffix";
     instance.localToRoot.makeIdentity();
-    instance.lodLevel = 15;
+    instance.lodCut = 15;
     assembly->upsertInstanceAuto(instance);
 
     const SbViewportRegion viewport(192, 192);
@@ -624,8 +633,10 @@ ordinaryProgressiveGenerationAppendsSuffix()
                 (3u * sizeof(float) + sizeof(uint32_t));
         const uint64_t expectedCopiedBytes =
             3u * (3u * sizeof(float) + sizeof(uint32_t));
-        passed = passed && assembly->lastRenderTier() != 6 &&
-            assembly->lastRenderedTriangleCount() == triangleCount &&
+        const uint64_t expectedCompleteBytes =
+            static_cast<uint64_t>(triangleCount) * 3u *
+                (3u * sizeof(float) + sizeof(uint32_t));
+        const bool copiedPrefix =
             richResources.ordinaryPartFullUploadBytes ==
                 coarseResources.ordinaryPartFullUploadBytes &&
             richResources.ordinaryPartSuffixUploadBytes >=
@@ -633,7 +644,23 @@ ordinaryProgressiveGenerationAppendsSuffix()
                     expectedSuffixBytes &&
             richResources.ordinaryPartGpuCopyBytes >=
                 coarseResources.ordinaryPartGpuCopyBytes +
-                    expectedCopiedBytes &&
+                    expectedCopiedBytes;
+        /* GL 3.1/ARB_copy_buffer preserves the old device prefix and uploads
+         * only the suffix.  Legacy software contexts do not expose that
+         * operation; their conservative, defined fallback is one complete
+         * upload.  Lineage reuse must still be recognized in both cases so a
+         * capable later generation/context may take the fast path. */
+        const bool completeUploadFallback =
+            richResources.ordinaryPartFullUploadBytes >=
+                coarseResources.ordinaryPartFullUploadBytes +
+                    expectedCompleteBytes &&
+            richResources.ordinaryPartSuffixUploadBytes ==
+                coarseResources.ordinaryPartSuffixUploadBytes &&
+            richResources.ordinaryPartGpuCopyBytes ==
+                coarseResources.ordinaryPartGpuCopyBytes;
+        passed = passed && assembly->lastRenderTier() != 6 &&
+            assembly->lastRenderedTriangleCount() == triangleCount &&
+            (copiedPrefix || completeUploadFallback) &&
             richResources.ordinaryPartLineageReuseCount >
                 coarseResources.ordinaryPartLineageReuseCount;
         if (!passed) {
@@ -711,13 +738,12 @@ ordinaryProgressiveZeroLineageReplacesWithoutOverread()
             rich.bounds.extendBy(point);
         }
     }
-    rich.progressiveMinimumLevel = 0;
-    rich.progressiveResidentLevel = 15;
-    rich.progressiveIndexCount.fill(3u);
-    rich.progressivePositionCount.fill(3u);
-    rich.progressiveIndexCount[15] =
+    rich.progressiveMinimumCut = 0;
+    rich.progressiveResidentCut = 15;
+    setProgressiveCuts(rich, 16, 3u, 3u);
+    rich.progressiveCuts[15].indexCount =
         static_cast<uint32_t>(rich.indices.size());
-    rich.progressivePositionCount[15] =
+    rich.progressiveCuts[15].positionCount =
         static_cast<uint32_t>(rich.positions.size());
     rich.progressiveQuantizationMinimum = rich.bounds.getMin();
     rich.progressiveQuantizationMaximum = rich.bounds.getMax();
@@ -727,7 +753,7 @@ ordinaryProgressiveZeroLineageReplacesWithoutOverread()
     Obol::TriMesh coarse = rich;
     coarse.positions.resize(3u);
     coarse.indices.resize(3u);
-    coarse.progressiveResidentLevel = 0;
+    coarse.progressiveResidentCut = 0;
 
     const Obol::PartId part =
         Obol::CadIdBuilder::hash128("ordinary-zero-lineage-replacement");
@@ -742,7 +768,7 @@ ordinaryProgressiveZeroLineageReplacesWithoutOverread()
     instance.parent = Obol::CadIdBuilder::Root();
     instance.childName = "ordinary-zero-lineage-replacement";
     instance.localToRoot.makeIdentity();
-    instance.lodLevel = 15;
+    instance.lodCut = 15;
     assembly->upsertInstanceAuto(instance);
 
     const SbViewportRegion viewport(192, 192);
@@ -1000,13 +1026,12 @@ indirectProgressiveAtlasPreservesCoverageUnderPressure()
             mesh.bounds.extendBy(point);
         }
     }
-    mesh.progressiveMinimumLevel = 0;
-    mesh.progressiveResidentLevel = 15;
-    mesh.progressiveIndexCount.fill(3u);
-    mesh.progressivePositionCount.fill(3u);
-    mesh.progressiveIndexCount[15] =
+    mesh.progressiveMinimumCut = 0;
+    mesh.progressiveResidentCut = 15;
+    setProgressiveCuts(mesh, 16, 3u, 3u);
+    mesh.progressiveCuts[15].indexCount =
         static_cast<uint32_t>(mesh.indices.size());
-    mesh.progressivePositionCount[15] =
+    mesh.progressiveCuts[15].positionCount =
         static_cast<uint32_t>(mesh.positions.size());
     mesh.progressiveQuantizationMinimum = mesh.bounds.getMin();
     mesh.progressiveQuantizationMaximum = mesh.bounds.getMax();
@@ -1030,7 +1055,7 @@ indirectProgressiveAtlasPreservesCoverageUnderPressure()
         instance.localToRoot.setTranslate(SbVec3f(
             -60.0f + 7.0f * static_cast<float>(index % 18),
             -35.0f + 7.0f * static_cast<float>(index / 18), 0.0f));
-        instance.lodLevel = 0;
+        instance.lodCut = 0;
         const Obol::InstanceId id =
             assembly->upsertInstanceAuto(instance);
         richCuts.push_back({id, 15});
@@ -1043,7 +1068,7 @@ indirectProgressiveAtlasPreservesCoverageUnderPressure()
     bool passed = render(renderer, root);
     const int tier = assembly->lastRenderTier();
     if (passed && tier == 6) {
-        assembly->updateInstanceLodLevels(richCuts);
+        assembly->updateInstanceCuts(richCuts);
         passed = render(renderer, root);
         const uint64_t pressuredTriangles =
             assembly->lastRenderedTriangleCount();
@@ -1211,6 +1236,27 @@ main()
         return 1;
     }
 
+    // View importance is presentation policy, not semantic selection.  It
+    // must promote/demote the same retained occurrence through the sparse
+    // proxy channel without rebuilding the assembly-wide frame plan.
+    assembly->setPointProxyProtectedInstances({proxyInstance});
+    if (!render(renderer, root) || assembly->selectedInstanceCount() != 0u ||
+            assembly->lastSubpixelProxyCount() != 0u ||
+            assembly->framePlanBuildCount() != initialPlanBuilds) {
+        std::fprintf(stderr,
+            "point-proxy protection did not promote the retained instance\n");
+        root->unref();
+        return 1;
+    }
+    assembly->setPointProxyProtectedInstances({});
+    if (!render(renderer, root) || assembly->lastSubpixelProxyCount() != 1u ||
+            assembly->framePlanBuildCount() != initialPlanBuilds) {
+        std::fprintf(stderr,
+            "clearing point-proxy protection did not restore aggregation\n");
+        root->unref();
+        return 1;
+    }
+
     // The box remains subpixel from the opposite side, but its nearest
     // depth-preserving corner changes.  This must advance the presentation
     // revision even though the collapsed-instance mask does not change.
@@ -1367,10 +1413,11 @@ main()
     triangle.bounds = SbBox3f(
         SbVec3f(-1.5f, -1.0f, -0.25f),
         SbVec3f(1.5f, 1.5f, -0.25f));
-    triangle.progressiveMinimumLevel = 15;
-    triangle.progressiveResidentLevel = 15;
-    triangle.progressiveIndexCount[15] = 3;
-    triangle.progressivePositionCount[15] = 3;
+    triangle.progressiveMinimumCut = 15;
+    triangle.progressiveResidentCut = 15;
+    setProgressiveCuts(triangle, 16, 0, 0);
+    triangle.progressiveCuts[15].indexCount = 3;
+    triangle.progressiveCuts[15].positionCount = 3;
     triangle.progressiveQuantizationMinimum = triangle.bounds.getMin();
     triangle.progressiveQuantizationMaximum = triangle.bounds.getMax();
     progressiveGeometry.shaded = std::move(triangle);

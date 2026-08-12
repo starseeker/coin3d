@@ -851,7 +851,7 @@ bool CadRendererGL::ensureReady(const SoGLContext* glue)
 
 void CadRendererGL::ensurePartUploaded(
         PartId pid, const SoCADAssembly& assembly, uint64_t gen,
-        uint8_t requestedLod, const SoGLContext* glue)
+        uint8_t requestedCut, const SoGLContext* glue)
 {
     // Retrieve part geometry from the assembly
     const Obol::PartGeometry* geom = assembly.partGeometry(pid);
@@ -952,9 +952,9 @@ void CadRendererGL::ensurePartUploaded(
     if (geom->shaded.has_value()) {
         const auto& mesh = *geom->shaded;
         size_t requiredIndexCount = mesh.isProgressive() ?
-            mesh.indexCountAtLevel(requestedLod) : mesh.indices.size();
+            mesh.indexCountAtCut(requestedCut) : mesh.indices.size();
         size_t requiredPositionCount = mesh.isProgressive() ?
-            mesh.positionCountAtLevel(requestedLod) : mesh.positions.size();
+            mesh.positionCountAtCut(requestedCut) : mesh.positions.size();
         if (requiredIndexCount > 0 && requiredPositionCount == 0)
             return;
         pTriPos = packedVec3fData(mesh.positions);
@@ -1053,12 +1053,13 @@ static bool isBoxOutsideFrustum(const float wbMin[3], const float wbMax[3],
     return false;
 }
 
-static uint8_t maximumRequestedLod(
+static uint8_t maximumRequestedCut(
         const CadFramePlan& plan, const SoCADAssembly& assembly, PartId part)
 {
-    const auto found = plan.maximumRequestedLodByPart.find(part);
-    return found != plan.maximumRequestedLodByPart.end() ?
-        assembly.effectiveProgressiveLodLevel(found->second) : 15;
+    const auto found = plan.maximumRequestedCutByPart.find(part);
+    return found != plan.maximumRequestedCutByPart.end() ?
+        assembly.effectiveProgressiveCut(found->second) :
+        Obol::ProgressiveCutUnspecified;
 }
 
 void CadRendererGL::renderPoints(
@@ -1691,7 +1692,7 @@ void CadRendererGL::render(
             uint64_t gen = (genIt != partGenMap.end()) ? genIt->second : 0;
             ensurePartUploaded(
                 repKey.part, assembly, gen,
-                maximumRequestedLod(plan, assembly, repKey.part), glue);
+                maximumRequestedCut(plan, assembly, repKey.part), glue);
         }
         SoGLContext_glColorMask(glue, GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
         SoGLContext_glEnable(glue, GL_POLYGON_OFFSET_FILL);
@@ -1818,7 +1819,7 @@ void CadRendererGL::render(
                     repKey.part, assembly,
                     generation == partGenMap.end() ?
                         0 : generation->second,
-                    maximumRequestedLod(
+                    maximumRequestedCut(
                         plan, assembly, repKey.part),
                     glue);
             }
@@ -1959,7 +1960,7 @@ void CadRendererGL::render(
         uint64_t gen = (genIt != partGenMap.end()) ? genIt->second : 0;
         ensurePartUploaded(
             repKey.part, assembly, gen,
-            maximumRequestedLod(plan, assembly, repKey.part), glue);
+            maximumRequestedCut(plan, assembly, repKey.part), glue);
     }
 
     /* Keep shaded polygons fractionally behind wire geometry.  A wire source

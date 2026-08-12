@@ -22,10 +22,6 @@ set(CAD_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/CadShaderPrograms.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/CadShaderSources.cpp
 
-    # LoD
-    ${CMAKE_CURRENT_SOURCE_DIR}/lod/SegmentPopLod.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/lod/TrianglePopLod.cpp
-
     # Picking
     ${CMAKE_CURRENT_SOURCE_DIR}/picking/CadPicking.cpp
 )

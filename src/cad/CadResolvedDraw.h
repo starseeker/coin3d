@@ -123,13 +123,11 @@ cadDrawableInstanceCount(const CadFramePlan& plan, const CadDrawItem& item,
     return count;
 }
 
-/** Resolve one producer request against a progressive resident interval. */
+/** Resolve one producer cut request against a resident cut interval. */
 inline uint8_t
-cadResolvedProgressiveLevel(uint8_t requested, uint8_t minimum,
-                            uint8_t resident) noexcept
+cadResolvedProgressiveCut(uint8_t requested, uint8_t minimum,
+                          uint8_t resident) noexcept
 {
-    if (resident >= 16)
-        return 15;
     /* A newly admitted or compacted population can transiently have less
      * resident data than the producer's preferred minimum.  Residency is a
      * hard safety ceiling; minimum is only a quality floor inside the

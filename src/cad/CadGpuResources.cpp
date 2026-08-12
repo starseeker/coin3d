@@ -993,33 +993,36 @@ CadTriGpu* CadGpuResources::triFor(PartId pid)
 }
 
 const CadProgressiveGpu* CadGpuResources::progressiveFor(
-        PartId pid, bool shaded, uint8_t level)
+        PartId pid, bool shaded, uint8_t cut)
 {
     auto it = cache_.find(pid);
-    if (it == cache_.end() || level >= 16) return nullptr;
-    CadProgressiveGpu& p = shaded ?
-        it->second.progressiveTri[level] :
-        it->second.progressiveWire[level];
+    if (it == cache_.end()) return nullptr;
+    std::vector<CadProgressiveGpu>& cuts = shaded ?
+        it->second.progressiveTri : it->second.progressiveWire;
+    if (cut >= cuts.size()) return nullptr;
+    CadProgressiveGpu& p = cuts[cut];
     if (p.posBuf && p.vertexCount > 0)
         p.lastUsedFrame = progressiveFrame_;
     return p.posBuf && p.vertexCount > 0 ? &p : nullptr;
 }
 
 void CadGpuResources::uploadProgressive(
-        PartId pid, bool shaded, uint8_t level,
+        PartId pid, bool shaded, uint8_t cut,
         const std::vector<float>& positions,
         const std::vector<float>& normals,
         bool indexed, const SoGLContext *glue)
 {
-    if (!glue || !glue->glGenBuffers || level >= 16 ||
+    if (!glue || !glue->glGenBuffers ||
             positions.empty() || positions.size() % 3 != 0 ||
             (!normals.empty() && normals.size() != positions.size()))
         return;
     auto found = cache_.find(pid);
     if (found == cache_.end()) return;
-    CadProgressiveGpu& p = shaded ?
-        found->second.progressiveTri[level] :
-        found->second.progressiveWire[level];
+    std::vector<CadProgressiveGpu>& cuts = shaded ?
+        found->second.progressiveTri : found->second.progressiveWire;
+    if (cut >= cuts.size())
+        cuts.resize(static_cast<size_t>(cut) + 1);
+    CadProgressiveGpu& p = cuts[cut];
     deleteProgressiveGpu(p, glue);
 
     glue->glGenBuffers(1, &p.posBuf);
@@ -1084,12 +1087,12 @@ void CadGpuResources::endProgressiveFrame(const SoGLContext *glue)
         bool victimIsAnchor = true;
         uint8_t victimLevel = 0;
         for (auto& item : cache_) {
-            auto consider = [&](auto& cuts, uint8_t level) {
-                CadProgressiveGpu& p = cuts[level];
+            auto consider = [&](auto& cuts, size_t cut) {
+                CadProgressiveGpu& p = cuts[cut];
                 if (!p.posBuf || p.lastUsedFrame == progressiveFrame_)
                     return;
                 bool isAnchor = true;
-                for (uint8_t lower = 0; lower < level; ++lower) {
+                for (size_t lower = 0; lower < cut; ++lower) {
                     if (cuts[lower].posBuf) {
                         isAnchor = false;
                         break;
@@ -1098,20 +1101,22 @@ void CadGpuResources::endProgressiveFrame(const SoGLContext *glue)
                 if (!victim ||
                         (victimIsAnchor && !isAnchor) ||
                         (victimIsAnchor == isAnchor &&
-                         (level > victimLevel ||
-                          (level == victimLevel &&
+                         (cut > victimLevel ||
+                          (cut == victimLevel &&
                            (p.lastUsedFrame < victim->lastUsedFrame ||
                             (p.lastUsedFrame == victim->lastUsedFrame &&
                              p.bytes > victim->bytes)))))) {
                     victim = &p;
                     victimIsAnchor = isAnchor;
-                    victimLevel = level;
+                    victimLevel = static_cast<uint8_t>(cut);
                 }
             };
-            for (uint8_t level = 0; level < 16; ++level)
-                consider(item.second.progressiveWire, level);
-            for (uint8_t level = 0; level < 16; ++level)
-                consider(item.second.progressiveTri, level);
+            for (size_t cut = 0;
+                    cut < item.second.progressiveWire.size(); ++cut)
+                consider(item.second.progressiveWire, cut);
+            for (size_t cut = 0;
+                    cut < item.second.progressiveTri.size(); ++cut)
+                consider(item.second.progressiveTri, cut);
         }
         if (!victim) break;
         ++progressiveEvictionCount_;

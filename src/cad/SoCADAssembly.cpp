@@ -560,10 +560,10 @@ cadRenderSoftwareWire(const Obol::internal::CadFramePlan& plan,
             model.setValue(instance.transform.data());
             SbMatrix transform = model;
             transform.multRight(viewProj);
-            const uint8_t level = assembly.effectiveProgressiveLodLevel(
-                instance.lodLevel);
-            const size_t first = wire.segmentFirstAtLevel(level) * 2;
-            const size_t count = wire.segmentCountAtLevel(level) * 2;
+            const uint8_t level = assembly.effectiveProgressiveCut(
+                instance.lodCut);
+            const size_t first = wire.segmentFirstAtCut(level) * 2;
+            const size_t count = wire.segmentCountAtCut(level) * 2;
             for (size_t p = first; p + 1 < first + count; p += 2)
                 cadSoftwareSegment(pixels, width, height, origin, size,
                     transform, wire.segmentPoints[p], wire.segmentPoints[p + 1],
@@ -605,7 +605,7 @@ struct SoCADAssemblyImpl :
             e.instanceId   = iid;
             e.partId       = idata.partId;
             e.localToWorld = idata.localToRoot;
-            e.lodLevel     = idata.lodLevel;
+            e.lodCut     = idata.lodCut;
             entries.push_back(e);
         }
         instanceBvh_.build(std::move(entries));
@@ -808,7 +808,7 @@ struct SoCADAssemblyImpl :
         idata->childName      = rec.childName;
         idata->occurrenceIndex = rec.occurrenceIndex;
         idata->boolOp         = rec.boolOp;
-        idata->lodLevel       = rec.lodLevel;
+        idata->lodCut       = rec.lodCut;
 
         auto geomIt = parts_.find(rec.part);
         idata->worldBounds = geomIt != parts_.end() && geomIt->second ?
@@ -834,8 +834,9 @@ struct SoCADAssemblyImpl :
         pendingInstanceAttributeIndices_.clear();
     }
 
-    static size_t progressiveLevelBin(uint8_t level) {
-        return level < 16 ? static_cast<size_t>(level) : 16u;
+    static size_t progressiveCutBin(uint8_t cut) {
+        return cut < ProgressiveCutBinCount - 1 ?
+            static_cast<size_t>(cut) : ProgressiveCutBinCount - 1;
     }
 
     static bool drawModeHasShadedPlan(int drawMode) {
@@ -885,20 +886,38 @@ struct SoCADAssemblyImpl :
             return fail("invalid-visible-index");
         const uint32_t visibleIndex = indexFound->second;
         auto& record = cachedPlan_.visibleInstances[visibleIndex];
-        const bool wasSelected =
-            (record.flags & Obol::internal::CadInstanceSelected) != 0;
+        const bool wasProxyProtected =
+            (record.flags &
+                (Obol::internal::CadInstanceSelected |
+                 Obol::internal::CadInstancePointProxyProtected)) != 0;
         uint32_t flags = record.flags &
             ~(Obol::internal::CadInstanceSelected |
-              Obol::internal::CadInstanceHidden);
+              Obol::internal::CadInstanceHidden |
+              Obol::internal::CadInstancePointProxyProtected);
         if (selected_.count(instance))
             flags |= Obol::internal::CadInstanceSelected;
         if (hidden_.count(instance))
             flags |= Obol::internal::CadInstanceHidden;
+        if (pointProxyProtected_.count(instance))
+            flags |= Obol::internal::CadInstancePointProxyProtected;
         record.flags = flags;
-        const bool isSelected =
-            (record.flags & Obol::internal::CadInstanceSelected) != 0;
-        if (wasSelected != isSelected &&
-                updateSelectedSubpixelProxy(visibleIndex, isSelected))
+        if (cadDebugEnabled()) {
+            std::fprintf(stderr,
+                "SoCADAssembly patch flags instance=%016llx:%016llx "
+                "selected=%d hidden=%d flags=%u\n",
+                static_cast<unsigned long long>(instance.w0),
+                static_cast<unsigned long long>(instance.w1),
+                selected_.count(instance) ? 1 : 0,
+                hidden_.count(instance) ? 1 : 0,
+                static_cast<unsigned>(record.flags));
+        }
+        const bool isProxyProtected =
+            (record.flags &
+                (Obol::internal::CadInstanceSelected |
+                 Obol::internal::CadInstancePointProxyProtected)) != 0;
+        if (wasProxyProtected != isProxyProtected &&
+                updateProtectedSubpixelProxy(
+                    visibleIndex, isProxyProtected))
             pendingSubpixelProxyChange_ = true;
         if (visibleIndex < subpixelProxyPointByVisible_.size()) {
             const uint32_t pointIndex =
@@ -949,6 +968,17 @@ struct SoCADAssemblyImpl :
             static_cast<uint8_t>(std::min(255.0f, b * 255.0f));
         record.rgba[3] =
             static_cast<uint8_t>(std::min(255.0f, a * 255.0f));
+        if (cadDebugEnabled()) {
+            std::fprintf(stderr,
+                "SoCADAssembly patch style instance=%016llx:%016llx "
+                "rgba=(%u %u %u %u)\n",
+                static_cast<unsigned long long>(instance.w0),
+                static_cast<unsigned long long>(instance.w1),
+                static_cast<unsigned>(record.rgba[0]),
+                static_cast<unsigned>(record.rgba[1]),
+                static_cast<unsigned>(record.rgba[2]),
+                static_cast<unsigned>(record.rgba[3]));
+        }
         record.lineWidth = std::max(1.0f, style.lineWidth);
         record.linePattern = style.linePattern;
         record.linePatternFactor =
@@ -1177,8 +1207,10 @@ struct SoCADAssemblyImpl :
                 (isSel ? CadInstanceSelected : 0u) |
                 (idata.style.hasColorOverride ?
                     CadInstanceColorOverride : 0u) |
-                (isHidden ? CadInstanceHidden : 0u);
-            vi.lodLevel = idata.lodLevel;
+                (isHidden ? CadInstanceHidden : 0u) |
+                (pointProxyProtected_.count(iid) ?
+                    CadInstancePointProxyProtected : 0u);
+            vi.lodCut = idata.lodCut;
 
             if (cadDebugEnabled()) {
                 std::fprintf(stderr,
@@ -1244,8 +1276,8 @@ struct SoCADAssemblyImpl :
                 plan.visibleInstances.end(),
                 [](const CadVisibleInstance& av,
                    const CadVisibleInstance& bv) {
-                    if (av.lodLevel != bv.lodLevel)
-                        return av.lodLevel < bv.lodLevel;
+                    if (av.lodCut != bv.lodCut)
+                        return av.lodCut < bv.lodCut;
                     if (av.lineWidth != bv.lineWidth)
                         return av.lineWidth < bv.lineWidth;
                     if (av.linePattern != bv.linePattern)
@@ -1329,14 +1361,14 @@ struct SoCADAssemblyImpl :
             if (count > 0 &&
                     ((needWire && geom.wire.has_value()) ||
                      (needShaded && geom.shaded.has_value()))) {
-                uint8_t maximumLod = 0;
+                uint8_t maximumCut = 0;
                 for (size_t i = 0; i < groupCount; ++i) {
                     if (abortRequested())
                         return CadFramePlan();
-                    maximumLod =
-                        std::max(maximumLod, visAt(i).lodLevel);
+                    maximumCut =
+                        std::max(maximumCut, visAt(i).lodCut);
                 }
-                plan.maximumRequestedLodByPart[pid] = maximumLod;
+                plan.maximumRequestedCutByPart[pid] = maximumCut;
             }
 
             // Bind each occurrence directly to this plan-owned part payload.
@@ -1404,8 +1436,8 @@ struct SoCADAssemblyImpl :
                     uint32_t runEnd = runStart + 1;
                     while (runEnd < count &&
                            (!progressiveShaded ||
-                            visAt(runEnd).lodLevel ==
-                                visAt(runStart).lodLevel)) {
+                            visAt(runEnd).lodCut ==
+                                visAt(runStart).lodCut)) {
                         if (abortRequested())
                             return CadFramePlan();
                         ++runEnd;
@@ -1433,7 +1465,7 @@ struct SoCADAssemblyImpl :
                  */
                 if (progressiveShaded) {
                     const size_t slotCount =
-                        std::min<size_t>(count, ProgressiveLevelBinCount);
+                        std::min<size_t>(count, ProgressiveCutBinCount);
                     while (plan.shadedItems.size() - itemBegin < slotCount) {
                         CadDrawItem item;
                         item.rep.part = pid;
@@ -1596,7 +1628,7 @@ struct SoCADAssemblyImpl :
                 if (abortRequested())
                     return false;
                 const auto& instance = cachedPlan_.visibleInstances[i];
-                ++group.levelCounts[progressiveLevelBin(instance.lodLevel)];
+                ++group.cutCounts[progressiveCutBin(instance.lodCut)];
             }
             group.shadedItemBegin = shadedItemBegin[partIndex];
             group.shadedItemCount = shadedItemCount[partIndex];
@@ -1832,8 +1864,8 @@ struct SoCADAssemblyImpl :
                 group.baseInstance = span.baseInstance;
                 group.instanceCount = span.instanceCount;
                 for (size_t i = localBase; i < localEnd; ++i)
-                    ++group.levelCounts[progressiveLevelBin(
-                        delta.visibleInstances[i].lodLevel)];
+                    ++group.cutCounts[progressiveCutBin(
+                        delta.visibleInstances[i].lodCut)];
                 group.shadedItemBegin = span.shadedItemBegin;
                 group.shadedItemCount = span.shadedItemCount;
                 if (!group.shadedItemCount)
@@ -1872,8 +1904,8 @@ struct SoCADAssemblyImpl :
         appendItems(cachedPlan_.shadedItems, delta.shadedItems);
         for (CadRepKey& rep : delta.requiredReps)
             cachedPlan_.requiredReps.push_back(std::move(rep));
-        for (const auto& item : delta.maximumRequestedLodByPart) {
-            auto inserted = cachedPlan_.maximumRequestedLodByPart.emplace(
+        for (const auto& item : delta.maximumRequestedCutByPart) {
+            auto inserted = cachedPlan_.maximumRequestedCutByPart.emplace(
                 item.first, item.second);
             if (!inserted.second)
                 inserted.first->second =
@@ -2064,8 +2096,10 @@ struct SoCADAssemblyImpl :
             (selected_.count(instance) ? CadInstanceSelected : 0u) |
             (data.style.hasColorOverride ?
                 CadInstanceColorOverride : 0u) |
-            (hidden_.count(instance) ? CadInstanceHidden : 0u);
-        visible.lodLevel = data.lodLevel;
+            (hidden_.count(instance) ? CadInstanceHidden : 0u) |
+            (pointProxyProtected_.count(instance) ?
+                CadInstancePointProxyProtected : 0u);
+        visible.lodCut = data.lodCut;
         if (!data.worldBounds.isEmpty()) {
             SbVec3f minimum, maximum;
             data.worldBounds.getBounds(minimum, maximum);
@@ -2093,7 +2127,7 @@ struct SoCADAssemblyImpl :
         else
             binding.subpixelProxyCorners = {};
 
-        cachedPlan_.maximumRequestedLodByPart.erase(oldPart);
+        cachedPlan_.maximumRequestedCutByPart.erase(oldPart);
         cachedPlan_.wirePartsWithUncollapsedInstances.erase(oldPart);
         progressiveShadedPlanGroupByInstance_.erase(instance);
 
@@ -2112,8 +2146,8 @@ struct SoCADAssemblyImpl :
         if ((needWire && geometry.wire) ||
                 (needShaded && geometry.shaded) ||
                 (geometry.points && !geometry.points->positions.empty()))
-            cachedPlan_.maximumRequestedLodByPart[newPart] =
-                visible.lodLevel;
+            cachedPlan_.maximumRequestedCutByPart[newPart] =
+                visible.lodCut;
 
         if (needWire && geometry.wire) {
             CadDrawItem item;
@@ -2162,8 +2196,8 @@ struct SoCADAssemblyImpl :
                 group.part = newPart;
                 group.baseInstance = oldSpan.baseInstance;
                 group.instanceCount = 1u;
-                group.levelCounts[
-                    progressiveLevelBin(visible.lodLevel)] = 1u;
+                group.cutCounts[
+                    progressiveCutBin(visible.lodCut)] = 1u;
                 group.shadedItemBegin = newSpan.shadedItemBegin;
                 group.shadedItemCount = 1u;
                 progressiveShadedPlanGroupByInstance_[instance] =
@@ -2230,8 +2264,8 @@ struct SoCADAssemblyImpl :
                 rebinds.size());
         cachedPlanPartSpansByPart_.reserve(
             cachedPlanPartSpansByPart_.size() + rebinds.size());
-        cachedPlan_.maximumRequestedLodByPart.reserve(
-            cachedPlan_.maximumRequestedLodByPart.size() +
+        cachedPlan_.maximumRequestedCutByPart.reserve(
+            cachedPlan_.maximumRequestedCutByPart.size() +
                 rebinds.size());
         cachedPlan_.wirePartsWithUncollapsedInstances.reserve(
             cachedPlan_.wirePartsWithUncollapsedInstances.size() +
@@ -2452,8 +2486,8 @@ struct SoCADAssemblyImpl :
             bvhDirty_ = true;
     }
 
-    bool patchCachedInstanceLodLevel(
-            Obol::InstanceId instance, uint8_t lodLevel,
+    bool patchCachedInstanceCut(
+            Obol::InstanceId instance, uint8_t lodCut,
             std::unordered_set<size_t>& changedGroups) {
         const auto fail = [&](const char *reason) {
             if (cadPlanDebugEnabled() &&
@@ -2466,7 +2500,7 @@ struct SoCADAssemblyImpl :
                     reason ? reason : "unknown",
                     static_cast<unsigned long long>(instance.w0),
                     static_cast<unsigned long long>(instance.w1),
-                    static_cast<unsigned>(lodLevel),
+                    static_cast<unsigned>(lodCut),
                     planDirty_ ? 1 : 0, geometryDirty_ ? 1 : 0,
                     cachedDM_);
             return false;
@@ -2506,8 +2540,8 @@ struct SoCADAssemblyImpl :
             binding.geometry->shaded &&
             binding.geometry->shaded->isProgressive();
         if (progressiveShaded)
-            return patchProgressiveShadedPlanLod(
-                instance, lodLevel, changedGroups);
+            return patchProgressiveShadedPlanCut(
+                instance, lodCut, changedGroups);
 
         /*
          * Wire ranges are selected per occurrence by every executor.  Their
@@ -2515,13 +2549,13 @@ struct SoCADAssemblyImpl :
          * when an occurrence selects another range.  Ordinary meshes and
          * structural fallbacks likewise draw the same arrays at every level.
          */
-        cachedPlan_.visibleInstances[indexed->second].lodLevel =
-            lodLevel;
+        cachedPlan_.visibleInstances[indexed->second].lodCut =
+            lodCut;
         return true;
     }
 
-    bool patchProgressiveShadedPlanLod(
-            Obol::InstanceId instance, uint8_t lodLevel,
+    bool patchProgressiveShadedPlanCut(
+            Obol::InstanceId instance, uint8_t lodCut,
             std::unordered_set<size_t>& changedGroups) {
         const auto fail = [&](const char *reason) {
             ++progressivePlanPatchFailureCount_;
@@ -2536,7 +2570,7 @@ struct SoCADAssemblyImpl :
                     reason ? reason : "unknown",
                     static_cast<unsigned long long>(instance.w0),
                     static_cast<unsigned long long>(instance.w1),
-                    static_cast<unsigned>(lodLevel),
+                    static_cast<unsigned>(lodCut),
                     planDirty_ ? 1 : 0, geometryDirty_ ? 1 : 0, cachedDM_,
                     cachedPlan_.visibleInstances.size(), instances_.size(),
                     parts_.size());
@@ -2563,8 +2597,8 @@ struct SoCADAssemblyImpl :
         const size_t groupIndex = groupFound->second;
         ProgressiveShadedPlanGroup& group =
             progressiveShadedPlanGroups_[groupIndex];
-        const size_t oldBin = progressiveLevelBin(visible[index].lodLevel);
-        const size_t newBin = progressiveLevelBin(lodLevel);
+        const size_t oldBin = progressiveCutBin(visible[index].lodCut);
+        const size_t newBin = progressiveCutBin(lodCut);
 
         const auto swapVisible = [&](uint32_t left, uint32_t right) {
             if (left == right)
@@ -2608,33 +2642,33 @@ struct SoCADAssemblyImpl :
         if (oldBin < newBin) {
             uint32_t boundary = group.baseInstance;
             for (size_t bin = 0; bin <= oldBin; ++bin)
-                boundary += group.levelCounts[bin];
+                boundary += group.cutCounts[bin];
             swapVisible(index, boundary - 1);
             index = boundary - 1;
             for (size_t bin = oldBin + 1; bin <= newBin; ++bin) {
-                boundary += group.levelCounts[bin];
+                boundary += group.cutCounts[bin];
                 swapVisible(index, boundary - 1);
                 index = boundary - 1;
             }
         } else if (oldBin > newBin) {
             uint32_t boundary = group.baseInstance;
             for (size_t bin = 0; bin < oldBin; ++bin)
-                boundary += group.levelCounts[bin];
+                boundary += group.cutCounts[bin];
             swapVisible(index, boundary);
             index = boundary;
             for (size_t bin = oldBin; bin-- > newBin; ) {
                 uint32_t previousBoundary = group.baseInstance;
                 for (size_t prior = 0; prior < bin; ++prior)
-                    previousBoundary += group.levelCounts[prior];
+                    previousBoundary += group.cutCounts[prior];
                 swapVisible(index, previousBoundary);
                 index = previousBoundary;
             }
         }
-        visible[index].lodLevel = lodLevel;
+        visible[index].lodCut = lodCut;
         progressivePlanIndexByInstance_[instance] = index;
         if (oldBin != newBin) {
-            --group.levelCounts[oldBin];
-            ++group.levelCounts[newBin];
+            --group.cutCounts[oldBin];
+            ++group.cutCounts[newBin];
         }
         changedGroups.insert(groupIndex);
         return true;
@@ -2656,9 +2690,9 @@ struct SoCADAssemblyImpl :
             size_t slot = 0;
             uint32_t base = group.baseInstance;
             for (size_t bin = 0;
-                    bin < ProgressiveLevelBinCount &&
+                    bin < ProgressiveCutBinCount &&
                     slot < group.shadedItemCount; ++bin) {
-                const uint32_t count = group.levelCounts[bin];
+                const uint32_t count = group.cutCounts[bin];
                 if (!count)
                     continue;
                 auto& item =
@@ -2681,13 +2715,14 @@ struct SoCADAssemblyImpl :
                 item.instanceCount = 0;
                 item.cullBackfaces = cullBackfaces;
             }
-            uint8_t maximumLod = 0;
-            for (size_t bin = 0; bin < ProgressiveLevelBinCount; ++bin) {
-                if (group.levelCounts[bin])
-                    maximumLod = static_cast<uint8_t>(
-                        std::min<size_t>(bin, 15u));
+            uint8_t maximumCut = 0;
+            for (size_t bin = 0; bin < ProgressiveCutBinCount; ++bin) {
+                if (group.cutCounts[bin])
+                    maximumCut = static_cast<uint8_t>(
+                        std::min<size_t>(bin,
+                            Obol::ProgressiveCutLimit - 1));
             }
-            cachedPlan_.maximumRequestedLodByPart[group.part] = maximumLod;
+            cachedPlan_.maximumRequestedCutByPart[group.part] = maximumCut;
             if (group.baseInstance <
                     cachedPlan_.visibleInstances.size() &&
                     group.shadedItemBegin <=
@@ -2770,7 +2805,8 @@ struct SoCADAssemblyImpl :
         const CadVisibleInstance& instance =
             plan.visibleInstances[visibleIndex];
         if (instance.flags &
-                (CadInstanceHidden | CadInstanceSelected))
+                (CadInstanceHidden | CadInstanceSelected |
+                 CadInstancePointProxyProtected))
             return false;
         if (instance.partIndex >= plan.partBindings.size())
             return false;
@@ -2809,7 +2845,8 @@ struct SoCADAssemblyImpl :
      * bounds are below the ordinary small-part threshold.  Selection is a
      * sparse presentation property, so promote/demote just this occurrence
      * and preserve the camera-local classification for every other record. */
-    bool updateSelectedSubpixelProxy(size_t visibleIndex, bool selected)
+    bool updateProtectedSubpixelProxy(
+            size_t visibleIndex, bool protectedInstance)
     {
         using namespace Obol::internal;
         CadFramePlan& plan = cachedPlan_;
@@ -2823,7 +2860,7 @@ struct SoCADAssemblyImpl :
 
         const uint32_t currentPoint =
             subpixelProxyPointByVisible_[visibleIndex];
-        if (selected) {
+        if (protectedInstance) {
             if (!plan.subpixelProxyMask[visibleIndex])
                 return false;
             if (currentPoint == noPoint ||
@@ -3477,7 +3514,7 @@ SoCADAssembly::SoCADAssembly()
 
     SO_NODE_ADD_FIELD(edgePickTolerancePx, (5.0f));
     SO_NODE_ADD_FIELD(wireframeOcclusion,  (FALSE));
-    SO_NODE_ADD_FIELD(progressiveLodCeiling, (-1));
+    SO_NODE_ADD_FIELD(progressiveCutCeiling, (-1));
     SO_NODE_ADD_FIELD(pointProxyPixelThreshold, (1.0f));
     SO_NODE_ADD_FIELD(cameraMotionFrameReuse, (FALSE));
 }
@@ -3589,6 +3626,7 @@ SoCADAssembly::clear()
     impl_->selected_.clear();
     impl_->hidden_.clear();
     impl_->unpickable_.clear();
+    impl_->pointProxyProtected_.clear();
     impl_->partEdgeBvhCache_.clear();
     impl_->partTriBvhCache_.clear();
     impl_->progressiveParts_.clear();
@@ -3890,7 +3928,7 @@ SoCADAssembly::upsertInstances(
                     update.record.occurrenceIndex ||
                 prior->second.boolOp != update.record.boolOp;
             const bool lodChanged =
-                prior->second.lodLevel != update.record.lodLevel;
+                prior->second.lodCut != update.record.lodCut;
             lightweightSamePart = !transformChanged && !styleChanged;
             sourceChanged = sourceChanged || transformChanged ||
                 styleChanged || metadataChanged || lodChanged;
@@ -3909,7 +3947,7 @@ SoCADAssembly::upsertInstances(
                 ++metadataOnlyCount;
             if (lodChanged)
                 samePartLodUpdates.push_back(
-                    {update.instance, update.record.lodLevel});
+                    {update.instance, update.record.lodCut});
             samePartPlanNeutral =
                 samePartPlanNeutral &&
                 !transformChanged && !styleChanged;
@@ -3938,7 +3976,7 @@ SoCADAssembly::upsertInstances(
                 retained.childName = update.record.childName;
             retained.occurrenceIndex = update.record.occurrenceIndex;
             retained.boolOp = update.record.boolOp;
-            retained.lodLevel = update.record.lodLevel;
+            retained.lodCut = update.record.lodCut;
         } else {
             impl_->updateKnownInstance(update.instance, update.record,
                 prior == impl_->instances_.end() ?
@@ -3969,8 +4007,8 @@ SoCADAssembly::upsertInstances(
         std::unordered_set<size_t> changedPlanGroups;
         patched = true;
         for (const auto& update : samePartLodUpdates) {
-            if (!impl_->patchCachedInstanceLodLevel(
-                    update.instance, update.lodLevel,
+            if (!impl_->patchCachedInstanceCut(
+                    update.instance, update.lodCut,
                     changedPlanGroups)) {
                 patched = false;
                 break;
@@ -4016,7 +4054,7 @@ SoCADAssembly::upsertInstances(
 }
 
 void
-SoCADAssembly::updateInstanceLodLevels(
+SoCADAssembly::updateInstanceCuts(
     const std::vector<Obol::InstanceLodUpdate>& updates)
 {
     bool changed = false;
@@ -4026,13 +4064,13 @@ SoCADAssembly::updateInstanceLodLevels(
     for (const auto& update : updates) {
         auto found = impl_->instances_.find(update.instance);
         if (found == impl_->instances_.end() ||
-                found->second.lodLevel == update.lodLevel)
+                found->second.lodCut == update.lodCut)
             continue;
         if (sparsePlanPatch &&
-                !impl_->patchCachedInstanceLodLevel(
-                    update.instance, update.lodLevel, changedPlanGroups))
+                !impl_->patchCachedInstanceCut(
+                    update.instance, update.lodCut, changedPlanGroups))
             sparsePlanPatch = false;
-        found->second.lodLevel = update.lodLevel;
+        found->second.lodCut = update.lodCut;
         changed = true;
     }
     if (!changed) return;
@@ -4060,6 +4098,7 @@ SoCADAssembly::removeInstance(Obol::InstanceId iid)
     impl_->selected_.erase(iid);
     impl_->hidden_.erase(iid);
     impl_->unpickable_.erase(iid);
+    impl_->pointProxyProtected_.erase(iid);
     impl_->bvhDirty_  = true;
     impl_->planDirty_ = true;
     impl_->geometryDirty_ = true;
@@ -4172,6 +4211,49 @@ SoCADAssembly::setSelectedInstances(const std::vector<Obol::InstanceId>& ids)
     if (!impl_->inUpdate_) touch();
 }
 
+void
+SoCADAssembly::setPointProxyProtectedInstances(
+    const std::vector<Obol::InstanceId>& ids)
+{
+    std::unordered_set<Obol::InstanceId, std::hash<Obol::InstanceId>> next;
+    next.reserve(ids.size());
+    for (const Obol::InstanceId& id : ids)
+        if (impl_->instances_.find(id) != impl_->instances_.end())
+            next.insert(id);
+    if (next == impl_->pointProxyProtected_)
+        return;
+    std::vector<Obol::InstanceId> changed;
+    changed.reserve(next.size() + impl_->pointProxyProtected_.size());
+    for (const Obol::InstanceId& id : impl_->pointProxyProtected_)
+        if (!next.count(id))
+            changed.push_back(id);
+    for (const Obol::InstanceId& id : next)
+        if (!impl_->pointProxyProtected_.count(id))
+            changed.push_back(id);
+    impl_->pointProxyProtected_.swap(next);
+    bool sparsePlanPatch = !impl_->planDirty_ && !impl_->geometryDirty_;
+    for (const Obol::InstanceId& id : changed)
+        if (sparsePlanPatch && !impl_->patchCachedInstanceFlags(id))
+            sparsePlanPatch = false;
+    if (sparsePlanPatch) {
+        std::unordered_set<Obol::PartId, std::hash<Obol::PartId>> parts;
+        parts.reserve(changed.size());
+        for (const Obol::InstanceId& id : changed) {
+            const auto instance = impl_->instances_.find(id);
+            if (instance != impl_->instances_.end())
+                parts.insert(instance->second.partId);
+        }
+        impl_->refreshWireProxyParts(parts);
+        impl_->finishSparsePresentationPatch();
+    } else {
+        impl_->planDirty_ = true;
+        impl_->planDirtyReason_ = "point-proxy-protection-set";
+        impl_->pendingInstanceAttributeIndices_.clear();
+        impl_->pendingSubpixelProxyChange_ = false;
+    }
+    if (!impl_->inUpdate_) touch();
+}
+
 // --- Query -----------------------------------------------------------------
 
 size_t SoCADAssembly::instanceCount() const { return impl_->instances_.size(); }
@@ -4206,11 +4288,11 @@ bool SoCADAssembly::hasProgressivePartLod() const
     return !impl_->progressiveParts_.empty();
 }
 
-uint8_t SoCADAssembly::effectiveProgressiveLodLevel(
+uint8_t SoCADAssembly::effectiveProgressiveCut(
     uint8_t requested) const
 {
-    const int ceiling = progressiveLodCeiling.getValue();
-    if (ceiling < 0 || ceiling > 15)
+    const int ceiling = progressiveCutCeiling.getValue();
+    if (ceiling < 0 || ceiling >= Obol::ProgressiveCutUnspecified)
         return requested;
     return std::min(requested, static_cast<uint8_t>(ceiling));
 }
@@ -4237,7 +4319,7 @@ SoCADAssembly::getInstanceRecord(Obol::InstanceId iid) const
     rec.childName  = d.childName;
     rec.occurrenceIndex = d.occurrenceIndex;
     rec.boolOp      = d.boolOp;
-    rec.lodLevel    = d.lodLevel;
+    rec.lodCut    = d.lodCut;
     return rec;
 }
 
@@ -4712,10 +4794,13 @@ SoCADAssembly::rayPick(SoRayPickAction* action)
     }
 
     Obol::picking::CadPickResult result;
-    const int configuredLodCeiling = progressiveLodCeiling.getValue();
-    const uint8_t pickLodCeiling =
-        configuredLodCeiling >= 0 && configuredLodCeiling <= 15 ?
-        static_cast<uint8_t>(configuredLodCeiling) : 255;
+    const int configuredCutCeiling = progressiveCutCeiling.getValue();
+    const uint8_t pickCutCeiling =
+        configuredCutCeiling >= 0 &&
+            configuredCutCeiling <
+                static_cast<int>(Obol::ProgressiveCutLimit) ?
+        static_cast<uint8_t>(configuredCutCeiling) :
+        Obol::ProgressiveCutUnspecified;
 
     if (automaticPick || pm == PICK_EDGE || pm == PICK_HYBRID) {
         result = Obol::picking::CadPickQuery::pickPoint(
@@ -4729,7 +4814,7 @@ SoCADAssembly::rayPick(SoRayPickAction* action)
             impl_->parts_,
             impl_->partEdgeBvhCache_,
             toleranceWS,
-            pickLodCeiling);
+            pickCutCeiling);
     }
 
     if (!result.valid && (pm == PICK_TRIANGLE || pm == PICK_HYBRID)) {
@@ -4739,7 +4824,7 @@ SoCADAssembly::rayPick(SoRayPickAction* action)
             impl_->parts_,
             impl_->partTriBvhCache_,
             toleranceWS,
-            pickLodCeiling);
+            pickCutCeiling);
     }
 
     if (!result.valid && pm == PICK_BOUNDS) {

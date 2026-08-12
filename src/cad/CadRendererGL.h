@@ -353,7 +353,7 @@ private:
 
     // Ensure part geometry has been uploaded to GPU
     void ensurePartUploaded(PartId pid, const SoCADAssembly& assembly,
-                            uint64_t gen, uint8_t requestedLod,
+                            uint64_t gen, uint8_t requestedCut,
                             const SoGLContext * glue);
 
     void renderPoints(const CadFramePlan& plan,
@@ -467,7 +467,7 @@ private:
         uint64_t partGeometryRevision = 0;
         uint64_t instanceAttributeRevision = 0;
         uint64_t subpixelProxyRevision = 0;
-        int progressiveLodCeiling = -1;
+        int progressiveCutCeiling = -1;
         SbMatrix viewProj;
         std::vector<IndirectPreparedPart> parts;
         std::vector<uint32_t> partByPlanPartIndex;
@@ -535,7 +535,7 @@ private:
             IndirectPreparationPhase::Idle;
         uint32_t contextId = 0;
         uint64_t planRevision = 0;
-        int progressiveLodCeiling = -1;
+        int progressiveCutCeiling = -1;
         SbMatrix viewProj;
 
         size_t itemCursor = 0;
@@ -553,7 +553,7 @@ private:
 
         bool commandItemActive = false;
         uint32_t commandBaseInstance = 0;
-        uint8_t commandLevel = 15;
+        uint8_t commandCut = Obol::ProgressiveCutUnspecified;
         size_t commandCount = 0;
         uint64_t renderedTriangleCount = 0;
         Obol::CadRenderedWork renderedWork;
@@ -568,7 +568,7 @@ private:
      * GUI thread for every paint.
      */
     std::vector<uint8_t> indirectVisibleMask_;
-    std::vector<uint8_t> indirectVisibleMaximumLod_;
+    std::vector<uint8_t> indirectVisibleMaximumCut_;
     std::vector<uint8_t> indirectVisiblePart_;
     std::vector<uint32_t> indirectVisiblePartIndices_;
     std::vector<double> indirectVisibleImportance_;
@@ -607,7 +607,7 @@ private:
         const SoGLContext *glue,
         const SbMatrix& viewProj,
         const SbViewVolume& viewVolume);
-    bool patchIndirectPreparedLod(
+    bool patchIndirectPreparedCuts(
         const CadFramePlan& plan,
         const SoCADAssembly& assembly,
         const SoGLContext *glue);

@@ -3,8 +3,6 @@
 #
 # Unit tests for the CAD assembly subsystem:
 #   - test_cad_ids        : ID generation and hashing
-#   - test_segment_lod    : SegmentPopLod POP-quantisation
-#   - test_triangle_lod   : TrianglePopLod POP-quantisation
 #   - test_cad_picking    : CPU BVH ray-picking
 #   - test_cad_benchmark  : Rendering comparison: SG vs. SoCADAssembly (needs GL)
 #
@@ -20,7 +18,6 @@ set(CAD_TEST_INCLUDES
     ${PROJECT_BINARY_DIR}/include
     ${OBOL_TARGET_INCLUDE_DIRECTORIES}
     # Internal CAD headers needed directly by tests
-    ${PROJECT_SOURCE_DIR}/src/cad/lod
     ${PROJECT_SOURCE_DIR}/src/cad/picking
     ${PROJECT_SOURCE_DIR}/src/cad
 )
@@ -60,30 +57,6 @@ target_link_libraries(test_cad_resolved_draw
 )
 target_include_directories(test_cad_resolved_draw PRIVATE ${CAD_TEST_INCLUDES})
 add_test(NAME test_cad_resolved_draw COMMAND test_cad_resolved_draw)
-
-# ---------------------------------------------------------------------------
-# test_segment_lod
-# ---------------------------------------------------------------------------
-add_executable(test_segment_lod test_segment_lod.cpp)
-target_link_libraries(test_segment_lod
-    ${PROJECT_NAME}
-    ${OBOL_TARGET_LINK_LIBRARIES}
-    simple_test_utils
-)
-target_include_directories(test_segment_lod PRIVATE ${CAD_TEST_INCLUDES})
-add_test(NAME test_segment_lod COMMAND test_segment_lod)
-
-# ---------------------------------------------------------------------------
-# test_triangle_lod
-# ---------------------------------------------------------------------------
-add_executable(test_triangle_lod test_triangle_lod.cpp)
-target_link_libraries(test_triangle_lod
-    ${PROJECT_NAME}
-    ${OBOL_TARGET_LINK_LIBRARIES}
-    simple_test_utils
-)
-target_include_directories(test_triangle_lod PRIVATE ${CAD_TEST_INCLUDES})
-add_test(NAME test_triangle_lod COMMAND test_triangle_lod)
 
 # ---------------------------------------------------------------------------
 # test_cad_picking
