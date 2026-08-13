@@ -2,6 +2,7 @@
 
 #include "headless_utils.h"
 
+#include <Obol/cad/CadProjectedProxy.h>
 #include <Obol/cad/SoCADAssembly.h>
 #include <Obol/cad/CadIds.h>
 
@@ -19,6 +20,57 @@
 #include <vector>
 
 namespace {
+
+bool
+sharedProjectedProxyContract()
+{
+    const SbVec3f corners[8] = {
+        SbVec3f(-0.002f, -0.002f, -0.002f),
+        SbVec3f( 0.002f, -0.002f, -0.002f),
+        SbVec3f(-0.002f,  0.002f, -0.002f),
+        SbVec3f( 0.002f,  0.002f, -0.002f),
+        SbVec3f(-0.002f, -0.002f,  0.002f),
+        SbVec3f( 0.002f, -0.002f,  0.002f),
+        SbVec3f(-0.002f,  0.002f,  0.002f),
+        SbVec3f( 0.002f,  0.002f,  0.002f)
+    };
+    SbMatrix identity;
+    identity.makeIdentity();
+    const SbVec2s viewport(256, 256);
+
+    const Obol::CadProjectedProxy centered =
+        Obol::classifyCadProjectedProxy(
+            corners, identity, identity, viewport, 1.0f);
+    if (!centered.visible || !centered.fullyContained ||
+            !centered.pointEligible || centered.pixelWidth <= 0.0f ||
+            centered.pixelHeight <= 0.0f)
+        return false;
+
+    /* A subpixel proxy straddling a clip plane remains visible but must not
+     * collapse to a point.  This is the planner/renderer edge contract which
+     * prevents a point request from leaving the renderer's structural box in
+     * place indefinitely. */
+    SbMatrix edge;
+    edge.setTranslate(SbVec3f(1.0f, 0.0f, 0.0f));
+    const Obol::CadProjectedProxy clipped =
+        Obol::classifyCadProjectedProxy(
+            corners, edge, identity, viewport, 1.0f);
+    if (!clipped.visible || clipped.fullyContained || clipped.pointEligible)
+        return false;
+
+    SbMatrix outside;
+    outside.setTranslate(SbVec3f(1.01f, 0.0f, 0.0f));
+    const Obol::CadProjectedProxy rejected =
+        Obol::classifyCadProjectedProxy(
+            corners, outside, identity, viewport, 1.0f);
+    if (rejected.visible || rejected.pointEligible)
+        return false;
+
+    const Obol::CadProjectedProxy invalidViewport =
+        Obol::classifyCadProjectedProxy(
+            corners, identity, identity, SbVec2s(1, 256), 1.0f);
+    return !invalidViewport.visible && !invalidViewport.pointEligible;
+}
 
 void
 setProgressiveCuts(Obol::TriMesh& mesh, size_t cutCount,
@@ -1127,6 +1179,11 @@ main()
 {
     initCoinHeadless();
     SoCADAssembly::initClass();
+
+    if (!sharedProjectedProxyContract()) {
+        std::fprintf(stderr, "shared projected-proxy contract failed\n");
+        return 1;
+    }
 
     SoSeparator *root = new SoSeparator;
     root->ref();

@@ -10,6 +10,7 @@
 set(CAD_SOURCES
     # Core CAD node
     ${CMAKE_CURRENT_SOURCE_DIR}/CadIds.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/CadProjectedProxy.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/SoCADDetail.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/SoCADViewState.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/SoCADAssembly.cpp

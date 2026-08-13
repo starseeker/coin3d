@@ -461,6 +461,8 @@ bool CadRendererGL::renderFlatWire(
     std::vector<Occurrence> occurrences;
     occurrences.reserve(plan.visibleInstances.size());
     size_t visibleVertexCount = 0;
+    size_t futureRangeVertexCount = 0;
+    bool hasProgressiveOccurrence = false;
     for (const CadDrawItem& item : plan.wireItems) {
         if (renderInterruptedAfter(deadlineWork))
             return false;
@@ -532,6 +534,25 @@ bool CadRendererGL::renderFlatWire(
             occurrence.rangeValid = gpuRes_->lookupFlatWireRange(
                 visibleIndex, occurrence.rangeKey, &occurrence.range);
             occurrences.push_back(occurrence);
+
+            if (wire.isProgressive()) {
+                hasProgressiveOccurrence = true;
+                if (level < wire.progressiveResidentCut) {
+                    const size_t residentSegments =
+                        wire.segmentCountAtCut(
+                            wire.progressiveResidentCut) +
+                        polylineSegments;
+                    const size_t residentVertices =
+                        residentSegments <= maxVertexCount / 2u ?
+                            residentSegments * 2u : maxVertexCount;
+                    futureRangeVertexCount = std::min(
+                        maxVertexCount,
+                        futureRangeVertexCount <=
+                                maxVertexCount - residentVertices ?
+                            futureRangeVertexCount + residentVertices :
+                            maxVertexCount);
+                }
+            }
         }
     }
 
@@ -723,6 +744,17 @@ bool CadRendererGL::renderFlatWire(
                         positions, newRanges, glue)) {
                 return false;
             }
+        } else if (hasProgressiveOccurrence &&
+                futureRangeVertexCount == 0 &&
+                flat.capacityVertexCount > 0 &&
+                visibleVertexCount <=
+                    static_cast<size_t>(flat.capacityVertexCount) / 4u) {
+            /* Once every visible occurrence has reached its resident cut,
+             * discard an oversized publication-wave reserve.  The compact
+             * buffer keeps one additional active-cut-sized slot below, so a
+             * later interactive coarse cut can be appended and the terminal
+             * range remains immediately reusable. */
+            rebuild = true;
         }
     }
     if (rebuild) {
@@ -731,10 +763,20 @@ bool CadRendererGL::renderFlatWire(
         if (!buildAtlasRanges(false, 0, positions, newRanges))
             return false;
         const size_t vertexCount = positions.size() / 3;
+        const size_t growthLimit = vertexCount <=
+                maxVertexCount / progressiveGrowthReserve ?
+            vertexCount * progressiveGrowthReserve : maxVertexCount;
+        const size_t terminalHeadroom = hasProgressiveOccurrence &&
+                vertexCount <= maxVertexCount / 2u ?
+            vertexCount * 2u : vertexCount;
+        const size_t futureReserve = futureRangeVertexCount <=
+                maxVertexCount / 2u ?
+            futureRangeVertexCount * 2u : maxVertexCount;
+        const size_t futureHeadroom = futureReserve <=
+                maxVertexCount - vertexCount ?
+            vertexCount + futureReserve : maxVertexCount;
         const size_t reserve = std::min(
-            maxVertexCount,
-            vertexCount <= maxVertexCount / progressiveGrowthReserve ?
-                vertexCount * progressiveGrowthReserve : maxVertexCount);
+            growthLimit, std::max(terminalHeadroom, futureHeadroom));
         gpuRes_->uploadFlatWire(
             presentationRevision, plan.geometryRevision, positions,
             std::vector<CadFlatWireGroup>(), newRanges,
@@ -956,6 +998,8 @@ bool CadRendererGL::renderFlatShaded(
     std::vector<Occurrence> occurrences;
     occurrences.reserve(plan.visibleInstances.size());
     size_t currentVertexCount = 0;
+    size_t futureRangeVertexCount = 0;
+    bool hasProgressiveOccurrence = false;
     for (const CadDrawItem& item : plan.shadedItems) {
         if (renderInterruptedAfter(deadlineWork))
             return false;
@@ -1018,6 +1062,21 @@ bool CadRendererGL::renderFlatShaded(
                 static_cast<uint64_t>(flatRgbaKey(instance)) |
                 (static_cast<uint64_t>(occurrence.cullBackfaces) << 32);
             occurrences.push_back(occurrence);
+
+            if (mesh.isProgressive()) {
+                hasProgressiveOccurrence = true;
+                if (level < mesh.progressiveResidentCut) {
+                    const size_t residentVertices =
+                        mesh.indexCountAtCut(
+                            mesh.progressiveResidentCut);
+                    futureRangeVertexCount = std::min(
+                        maxVertexCount,
+                        futureRangeVertexCount <=
+                                maxVertexCount - residentVertices ?
+                            futureRangeVertexCount + residentVertices :
+                            maxVertexCount);
+                }
+            }
         }
     }
 
@@ -1181,6 +1240,17 @@ bool CadRendererGL::renderFlatShaded(
                             positions, normals, newRanges, glue))
                     return false;
             }
+        } else if (hasProgressiveOccurrence &&
+                futureRangeVertexCount == 0 &&
+                flat.capacityVertexCount > 0 &&
+                currentVertexCount <=
+                    static_cast<size_t>(flat.capacityVertexCount) / 4u) {
+            /* Convergence should not retain the 16x reserve used to absorb
+             * rapid publication waves.  Rebuild the terminal view with one
+             * spare active-cut-sized slot; that preserves instant return to
+             * this range after an interactive coarse cut without carrying a
+             * large-model high-water allocation indefinitely. */
+            rebuild = true;
         }
     }
 
@@ -1201,10 +1271,20 @@ bool CadRendererGL::renderFlatShaded(
          * ceiling above still bounds the allocation.
          */
         constexpr size_t progressiveGrowthReserve = 16u;
+        const size_t growthLimit = vertexCount <=
+                maxVertexCount / progressiveGrowthReserve ?
+            vertexCount * progressiveGrowthReserve : maxVertexCount;
+        const size_t terminalHeadroom = hasProgressiveOccurrence &&
+                vertexCount <= maxVertexCount / 2u ?
+            vertexCount * 2u : vertexCount;
+        const size_t futureReserve = futureRangeVertexCount <=
+                maxVertexCount / 2u ?
+            futureRangeVertexCount * 2u : maxVertexCount;
+        const size_t futureHeadroom = futureReserve <=
+                maxVertexCount - vertexCount ?
+            vertexCount + futureReserve : maxVertexCount;
         const size_t reserve = std::min(
-            maxVertexCount,
-            vertexCount <= maxVertexCount / progressiveGrowthReserve ?
-                vertexCount * progressiveGrowthReserve : maxVertexCount);
+            growthLimit, std::max(terminalHeadroom, futureHeadroom));
         gpuRes_->uploadFlatShaded(
             plan.revision, plan.geometryRevision,
             positions, normals, std::vector<CadFlatShadedGroup>(),

@@ -44,6 +44,7 @@
  */
 
 #include <Obol/cad/SoCADAssembly.h>
+#include <Obol/cad/CadProjectedProxy.h>
 #include <Obol/cad/SoCADDetail.h>
 #include <Obol/cad/SoCADViewState.h>
 #include "CadAssemblyState.h"
@@ -182,72 +183,10 @@ cadSoftwareTransform(const SbMatrix& matrix, const SbVec3f& point)
 }
 
 static bool
-cadSubpixelProxyCorners(const Obol::WireRep& wire,
-                        std::array<SbVec3f, 8>& corners)
-{
-    // Only the canonical 12-segment proxy representation is eligible.  Do
-    // this validation once when a shared part is published rather than once
-    // per occurrence on every camera update.
-    if (wire.segmentPoints.size() != 24u || !wire.polylines.empty())
-        return false;
-
-    size_t cornerCount = 0;
-    const auto addCorner = [&](const SbVec3f& candidate) -> bool {
-        for (size_t i = 0; i < cornerCount; ++i) {
-            const SbVec3f& existing = corners[i];
-            if (candidate[0] == existing[0] &&
-                    candidate[1] == existing[1] &&
-                    candidate[2] == existing[2])
-                return true;
-        }
-        if (cornerCount == corners.size())
-            return false;
-        corners[cornerCount++] = candidate;
-        return true;
-    };
-
-    for (const SbVec3f& point : wire.segmentPoints)
-        if (!addCorner(point))
-            return false;
-
-    return cornerCount == corners.size();
-}
-
-static bool
 cadSubpixelGeometryCorners(const Obol::PartGeometry& geometry,
                            std::array<SbVec3f, 8>& corners)
 {
-    /*
-     * A shaded LoD payload is producer-authorized and its complete bounds are
-     * the conservative replacement extent.  Wire-only proxy data retains the
-     * stricter canonical-box validation so accidentally tagged authored line
-     * work cannot disappear into a point.
-     */
-    SbBox3f bounds;
-    bounds.makeEmpty();
-    if (geometry.conservativeBounds &&
-        !geometry.conservativeBounds->isEmpty())
-        bounds.extendBy(*geometry.conservativeBounds);
-    if (geometry.shaded && !geometry.shaded->bounds.isEmpty())
-        bounds.extendBy(geometry.shaded->bounds);
-    if (geometry.points && !geometry.points->bounds.isEmpty())
-        bounds.extendBy(geometry.points->bounds);
-    if (!bounds.isEmpty()) {
-        SbVec3f minimum;
-        SbVec3f maximum;
-        bounds.getBounds(minimum, maximum);
-        size_t index = 0;
-        for (int z = 0; z < 2; ++z)
-            for (int y = 0; y < 2; ++y)
-                for (int x = 0; x < 2; ++x)
-                    corners[index++] = SbVec3f(
-                        x ? maximum[0] : minimum[0],
-                        y ? maximum[1] : minimum[1],
-                        z ? maximum[2] : minimum[2]);
-        return true;
-    }
-    return geometry.wire &&
-        cadSubpixelProxyCorners(*geometry.wire, corners);
+    return Obol::cadPartGeometryProxyCorners(geometry, corners.data());
 }
 
 static bool
@@ -262,54 +201,11 @@ cadSubpixelProxyPoint(const std::array<SbVec3f, 8>& corners,
 
     SbMatrix model;
     model.setValue(instance.transform.data());
-    SbMatrix modelViewProj = model;
-    modelViewProj.multRight(viewProj);
-
-    double minX = 0.0, minY = 0.0, maxX = 0.0, maxY = 0.0;
-    double nearestDepth = 0.0;
-    bool havePoint = false;
-    const auto project = [&](const SbVec3f& localPoint) -> bool {
-        const CadSoftwareClipPoint clip =
-            cadSoftwareTransform(modelViewProj, localPoint);
-        if (std::abs(clip.v[3]) < 1.0e-20)
-            return false;
-        for (int plane = 0; plane < 6; ++plane) {
-            if (cadSoftwarePlaneValue(clip, plane) < 0.0)
-                return false;
-        }
-        const double x = clip.v[0] / clip.v[3];
-        const double y = clip.v[1] / clip.v[3];
-        const double z = clip.v[2] / clip.v[3];
-        if (!havePoint) {
-            minX = maxX = x;
-            minY = maxY = y;
-            nearestDepth = z;
-            model.multVecMatrix(localPoint, point);
-            havePoint = true;
-        } else {
-            minX = std::min(minX, x);
-            maxX = std::max(maxX, x);
-            minY = std::min(minY, y);
-            maxY = std::max(maxY, y);
-            // The closest actual proxy vertex preserves the front-most AABB
-            // or OBB depth when the proxy collapses to one raster point.
-            if (z < nearestDepth) {
-                nearestDepth = z;
-                model.multVecMatrix(localPoint, point);
-            }
-        }
-        return true;
-    };
-
-    for (const SbVec3f& corner : corners)
-        if (!project(corner))
-            return false;
-
-    if (!havePoint)
-        return false;
-    const double width = (maxX - minX) * 0.5 * (viewportSize[0] - 1);
-    const double height = (maxY - minY) * 0.5 * (viewportSize[1] - 1);
-    return width <= pixelLimit && height <= pixelLimit;
+    const Obol::CadProjectedProxy projected =
+        Obol::classifyCadProjectedProxy(corners.data(), model, viewProj,
+            viewportSize, pixelLimit);
+    point = projected.point;
+    return projected.pointEligible;
 }
 
 static bool
