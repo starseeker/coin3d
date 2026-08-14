@@ -515,6 +515,76 @@ static int test_pick_triangle()
                        "pickTriangle should hit a flat LoD triangle");
     }
 
+    runner.startTest("CadPickQuery::pickTriangle: adaptive page activation");
+    {
+        PartId pidAdaptive = CadIdBuilder::hash128("adaptive_pages");
+        InstanceId iidAdaptive = CadIdBuilder::extendNameOccBool(
+            CadIdBuilder::Root(), "adaptive_pages", 0, 0);
+        Obol::TriMesh adaptive;
+        adaptive.positions = {
+            {-1.0f, -1.0f, 0.0f}, {1.0f, -1.0f, 0.0f},
+            {0.0f, 1.0f, 0.0f},
+            {9.0f, -1.0f, 0.0f}, {11.0f, -1.0f, 0.0f},
+            {10.0f, 1.0f, 0.0f}
+        };
+        adaptive.indices = {0, 1, 2, 3, 4, 5};
+        adaptive.bounds.setBounds(
+            SbVec3f(-1.0f, -1.0f, 0.0f),
+            SbVec3f(11.0f, 1.0f, 0.0f));
+        adaptive.progressiveCuts.resize(3);
+        for (ProgressiveTriangleCut& cut : adaptive.progressiveCuts) {
+            cut.indexCount = 6;
+            cut.positionCount = 6;
+            cut.quantization = {16, 16, 0};
+        }
+        adaptive.progressiveMinimumCut = 0;
+        adaptive.progressiveResidentCut = 2;
+        adaptive.progressiveQuantizationMinimum.setValue(-1.0f, -1.0f, 0.0f);
+        adaptive.progressiveQuantizationMaximum.setValue(11.0f, 1.0f, 0.0f);
+        ProgressiveTriangleCluster first;
+        first.bounds.setBounds(
+            SbVec3f(-1.0f, -1.0f, 0.0f),
+            SbVec3f(1.0f, 1.0f, 0.0f));
+        first.ranges.push_back({0, 3, 0});
+        ProgressiveTriangleCluster second;
+        second.bounds.setBounds(
+            SbVec3f(9.0f, -1.0f, 0.0f),
+            SbVec3f(11.0f, 1.0f, 0.0f));
+        second.ranges.push_back({3, 3, 2});
+        adaptive.progressiveClusters = {first, second};
+        adaptive.progressiveClusterGridResolution = 0;
+
+        std::unordered_map<PartId,
+            std::shared_ptr<const Obol::PartGeometry>,
+            std::hash<PartId>> adaptiveParts;
+        Obol::PartGeometry geometry;
+        geometry.shaded = adaptive;
+        adaptiveParts[pidAdaptive] =
+            std::make_shared<const Obol::PartGeometry>(geometry);
+        CadInstanceBVH adaptiveBvh;
+        CadInstanceBVH::Entry entry;
+        entry.worldBounds = adaptive.bounds;
+        entry.instanceId = iidAdaptive;
+        entry.partId = pidAdaptive;
+        entry.localToWorld = identityM;
+        entry.lodCut = 2;
+        adaptiveBvh.build({entry});
+        std::unordered_map<PartId, CadPartTriBVH,
+            std::hash<PartId>> adaptiveTriCache;
+        SbLine ray(SbVec3f(10.0f, 0.0f, 5.0f),
+                   SbVec3f(10.0f, 0.0f, 4.0f));
+        const CadPickResult coarse = CadPickQuery::pickTriangle(
+            ray, adaptiveBvh, adaptiveParts, adaptiveTriCache,
+            0.05f, 0);
+        const CadPickResult rich = CadPickQuery::pickTriangle(
+            ray, adaptiveBvh, adaptiveParts, adaptiveTriCache,
+            0.05f, 2);
+        runner.endTest(!coarse.valid && rich.valid &&
+                       rich.instanceId == iidAdaptive &&
+                       rich.primType == CadPickResult::TRIANGLE,
+                       "Picking must ignore ranges above the active cut");
+    }
+
     // -----------------------------------------------------------------------
     // Test: ray misses all triangles returns invalid result
     // -----------------------------------------------------------------------

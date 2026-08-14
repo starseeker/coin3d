@@ -125,12 +125,37 @@ struct ProgressiveTriangleClusterRange {
  *
  * Clusters do not have CAD identity, transforms, styles, selection, or scene
  * hierarchy.  They only let a renderer cull and submit bounded portions of a
- * very large leaf while preserving one PartId and one append-only PoP stream.
- * Ranges are triangle aligned and refer to @ref TriMesh::indices.
+ * very large leaf while preserving one PartId.  A page may be replaced by a
+ * richer range at the append-only stream tail; retired bytes remain
+ * unreferenced until producer compaction.  Ranges are triangle aligned and
+ * refer to @ref TriMesh::indices.
  */
 struct ProgressiveTriangleCluster {
     SbBox3f bounds;
     std::vector<ProgressiveTriangleClusterRange> ranges;
+    /** Richest logical cut drawable from this page's resident arrays. */
+    uint8_t residentCut = ProgressiveCutUnspecified;
+};
+
+/** One activation-ordered segment range within a private wire subresource. */
+struct ProgressiveWireClusterRange {
+    uint32_t firstSegment = 0;
+    uint32_t segmentCount = 0;
+    uint8_t activationCut = ProgressiveCutUnspecified;
+};
+
+/**
+ * Private spatial subresource of one logical wire part.
+ *
+ * Like ProgressiveTriangleCluster, this record has no CAD identity of its
+ * own.  It only describes independently resident/cullable ranges in the
+ * parent part's retained segment stream.
+ */
+struct ProgressiveWireCluster {
+    SbBox3f bounds;
+    std::vector<ProgressiveWireClusterRange> ranges;
+    /** Richest logical cut drawable from this page's resident arrays. */
+    uint8_t residentCut = ProgressiveCutUnspecified;
 };
 
 /**
@@ -221,12 +246,30 @@ struct WireRep {
      */
     uint64_t progressiveLineage = 0;
 
+    /** Optional spatial pages in segmentPoints.  A zero grid resolution
+     * identifies adaptive producer pages with independent active ranges; a
+     * non-zero value identifies a uniform cube layout. */
+    std::vector<ProgressiveWireCluster> progressiveClusters;
+    uint16_t progressiveClusterGridResolution = 0;
+
     bool isProgressive() const noexcept {
         return !progressiveCuts.empty() &&
             progressiveCuts.size() <= ProgressiveCutLimit &&
             progressiveMinimumCut < progressiveCuts.size() &&
             progressiveResidentCut >= progressiveMinimumCut &&
             progressiveResidentCut < progressiveCuts.size();
+    }
+
+    bool hasProgressiveClusters() const noexcept {
+        const size_t side = progressiveClusterGridResolution;
+        return isProgressive() && !progressiveClusters.empty() &&
+            (side == 0 || (side > 1 && side <= 64 &&
+             side * side * side == progressiveClusters.size()));
+    }
+
+    bool hasAdaptiveProgressiveClusters() const noexcept {
+        return hasProgressiveClusters() &&
+            progressiveClusterGridResolution == 0;
     }
 
     size_t segmentCountAtCut(uint8_t cut) const noexcept {
@@ -267,7 +310,8 @@ struct TriMesh {
     std::vector<SbVec3f>  normals;    ///< optional; empty or positions.size()
     std::vector<uint32_t> indices;    ///< triangle list (3 indices per tri)
     SbBox3f               bounds;
-    /** Ordered, independently drawable cumulative triangle prefixes. */
+    /** Producer cut schedule.  Adaptive pages select ranges rather than the
+     * global indexCount prefix. */
     std::vector<ProgressiveTriangleCut> progressiveCuts;
     uint8_t progressiveMinimumCut = ProgressiveCutUnspecified;
     uint8_t progressiveResidentCut = ProgressiveCutUnspecified;
@@ -276,11 +320,10 @@ struct TriMesh {
 
     /**
      * Optional deterministic spatial partition of the progressive index
-     * stream.  The vector contains gridResolution^3 cells in x-major order;
-     * empty cells have no ranges.  Producers sort faces by cell within each
-     * activation cut, retaining cumulative prefix and suffix-upload identity.
-     * Every cluster bound conservatively encloses all of its currently
-     * resident triangles.
+     * stream.  A nonzero grid resolution describes gridResolution^3 cells in
+     * x-major order.  Zero describes an arbitrary producer-defined page list;
+     * each live page selects its independent activation ranges.  Every
+     * cluster bound conservatively encloses its currently resident triangles.
      */
     std::vector<ProgressiveTriangleCluster> progressiveClusters;
     uint16_t progressiveClusterGridResolution = 0;
@@ -312,8 +355,19 @@ struct TriMesh {
 
     bool hasProgressiveClusters() const noexcept {
         const size_t side = progressiveClusterGridResolution;
-        return isProgressive() && side > 1 &&
-            side <= 64 && side * side * side == progressiveClusters.size();
+        /* A zero side marks deterministic adaptive pages.  Uniform-grid
+         * producers retain the older cube-size validation. */
+        return isProgressive() && !progressiveClusters.empty() &&
+            (side == 0 || (side > 1 && side <= 64 &&
+             side * side * side == progressiveClusters.size()));
+    }
+
+
+    /** Adaptive pages use independent active ranges rather than one global
+     * cumulative index prefix. */
+    bool hasAdaptiveProgressiveClusters() const noexcept {
+        return hasProgressiveClusters() &&
+            progressiveClusterGridResolution == 0;
     }
 
     size_t indexCountAtCut(uint8_t cut) const noexcept {
@@ -864,8 +918,9 @@ public:
     size_t lastSubpixelProxyCount() const;
 
     /**
-     * Number of structural proxy occurrences which remained visible as
-     * wire boxes after camera-local subpixel collapse last frame.
+     * Number of in-frustum structural proxy occurrences which remained
+     * visible as wire boxes after camera-local subpixel collapse last frame.
+     * Fully clipped occurrences are not convergence obligations.
      */
     size_t lastUncollapsedStructuralProxyCount() const;
 

@@ -1639,6 +1639,28 @@ void CadRendererGL::render(
     const bool hiddenLine =
         assembly.drawMode.getValue() == SoCADAssembly::HIDDEN_LINE;
     const bool retainedProgressive = assembly.hasProgressivePartLod();
+    bool adaptiveShadedRanges = false;
+    for (const CadDrawItem& item : plan.shadedItems) {
+        if (item.partIndex >= plan.partBindings.size())
+            continue;
+        const CadPartBinding& binding = plan.partBindings[item.partIndex];
+        if (binding.geometry && binding.geometry->shaded &&
+                binding.geometry->shaded->hasAdaptiveProgressiveClusters()) {
+            adaptiveShadedRanges = true;
+            break;
+        }
+    }
+    bool adaptiveWireRanges = false;
+    for (const CadDrawItem& item : plan.wireItems) {
+        if (item.partIndex >= plan.partBindings.size())
+            continue;
+        const CadPartBinding& binding = plan.partBindings[item.partIndex];
+        if (binding.geometry && binding.geometry->wire &&
+                binding.geometry->wire->hasAdaptiveProgressiveClusters()) {
+            adaptiveWireRanges = true;
+            break;
+        }
+    }
     const bool progressiveWireShaderReady =
         !retainedProgressive || shaders_.wirePop;
     const bool progressiveShadedShaderReady =
@@ -1647,7 +1669,8 @@ void CadRendererGL::render(
         !retainedProgressive || shaders_.wirePopInst;
     const bool progressiveShadedInstShaderReady =
         !retainedProgressive || shaders_.shadedPopInst;
-    const bool useFlatShaded = flatShadedEnabled && canUseFlatShaded &&
+    const bool useFlatShaded = !adaptiveShadedRanges &&
+        flatShadedEnabled && canUseFlatShaded &&
         (hiddenLine || plan.shadedItems.size() >= 128);
 
     renderPoints(plan, assembly, glue, viewProj, partGenMap);
@@ -1726,7 +1749,7 @@ void CadRendererGL::render(
         if (finishInterruptedFrame())
             return;
 
-        if (caps_.canUseInstanced() && shaders_.wireInst &&
+        if (!adaptiveWireRanges && caps_.canUseInstanced() && shaders_.wireInst &&
                 progressiveWireInstShaderReady) {
             lastRenderTier_ = 2;
             renderInstanced(plan, assembly, glue, viewProj, viewVolume,
@@ -1785,7 +1808,8 @@ void CadRendererGL::render(
         SoGLContext_glPolygonOffset(glue, 1.0f, 1.0f);
     }
     const bool indirectShadedRendered =
-        indirectEnabled && plan.shadedItems.size() >= 128 &&
+        !adaptiveShadedRanges && indirectEnabled &&
+        plan.shadedItems.size() >= 128 &&
         renderIndirectShaded(
             plan, assembly, glue, viewProj, viewVolume);
     if (finishInterruptedFrame()) {
@@ -1811,7 +1835,8 @@ void CadRendererGL::render(
                         plan, item, CadDrawChannel::Wire);
             const bool preferFlatWire = caps_.isSoftwareRenderer ?
                 wireInstanceCount >= 128 : plan.wireItems.size() >= 128;
-            wireRendered = flatWireEnabled && preferFlatWire &&
+            wireRendered = !adaptiveWireRanges &&
+                flatWireEnabled && preferFlatWire &&
                 canUseFlatWire &&
                 renderFlatWire(plan, assembly, glue, viewProj);
             if (finishInterruptedFrame())
@@ -1835,7 +1860,7 @@ void CadRendererGL::render(
                         plan, assembly, repKey.part),
                     glue);
             }
-            if (caps_.canUseInstanced() && shaders_.wireInst &&
+            if (!adaptiveWireRanges && caps_.canUseInstanced() && shaders_.wireInst &&
                     progressiveWireInstShaderReady) {
                 renderInstanced(
                     plan, assembly, glue, viewProj, viewVolume,
@@ -1953,7 +1978,7 @@ void CadRendererGL::render(
      */
     const bool preferFlatWire = caps_.isSoftwareRenderer ?
         wireInstanceCount >= 128 : plan.wireItems.size() >= 128;
-    const bool flatWireRendered = flatWireEnabled &&
+    const bool flatWireRendered = !adaptiveWireRanges && flatWireEnabled &&
         preferFlatWire && canUseFlatWire &&
         renderFlatWire(plan, assembly, glue, viewProj);
     if (finishInterruptedFrame())
@@ -1993,7 +2018,8 @@ void CadRendererGL::render(
         lastRenderTier_ = 1;
         renderFixedVboLoop(plan, assembly, glue, viewProj, viewMatrix,
                            projectionMatrix, !flatWireRendered, true);
-    } else if (caps_.canUseInstanced() &&
+    } else if (!adaptiveShadedRanges && !adaptiveWireRanges &&
+            caps_.canUseInstanced() &&
             shaders_.wireInst && shaders_.shadedInst &&
             progressiveWireInstShaderReady &&
             progressiveShadedInstShaderReady) {

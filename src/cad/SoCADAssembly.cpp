@@ -190,10 +190,11 @@ cadSubpixelGeometryCorners(const Obol::PartGeometry& geometry,
 }
 
 static bool
-cadSubpixelProxyPoint(const std::array<SbVec3f, 8>& corners,
-                      const Obol::internal::CadVisibleInstance& instance,
-                      const SbMatrix& viewProj, const SbVec2s& viewportSize,
-                      float pixelLimit, SbVec3f& point)
+cadSubpixelProxyProjection(
+        const std::array<SbVec3f, 8>& corners,
+        const Obol::internal::CadVisibleInstance& instance,
+        const SbMatrix& viewProj, const SbVec2s& viewportSize,
+        float pixelLimit, Obol::CadProjectedProxy& projected)
 {
     if (viewportSize[0] <= 1 || viewportSize[1] <= 1 ||
             pixelLimit <= 0.0f)
@@ -201,12 +202,16 @@ cadSubpixelProxyPoint(const std::array<SbVec3f, 8>& corners,
 
     SbMatrix model;
     model.setValue(instance.transform.data());
-    const Obol::CadProjectedProxy projected =
-        Obol::classifyCadProjectedProxy(corners.data(), model, viewProj,
-            viewportSize, pixelLimit);
-    point = projected.point;
-    return projected.pointEligible;
+    projected = Obol::classifyCadProjectedProxy(
+        corners.data(), model, viewProj, viewportSize, pixelLimit);
+    return true;
 }
+
+enum class CadProxyPresentation : uint8_t {
+    Geometry = 0u,
+    Point = 1u,
+    Offscreen = 2u
+};
 
 static bool
 cadSameSubpixelProxyPoints(
@@ -417,6 +422,69 @@ cadSoftwarePoint(unsigned char *pixels, unsigned int width,
     cadSoftwarePutPixel(pixels, width, height, x, y, point.rgba);
 }
 
+static float
+cadSoftwareSnapCoordinate(float value, float minimum, float maximum,
+                          uint8_t bits)
+{
+    if (!bits || !(maximum > minimum)) return value;
+    const double mask = std::ldexp(
+        1.0, 16 - std::min<int>(16, bits));
+    const double scaled =
+        (static_cast<double>(value) - minimum) /
+        (static_cast<double>(maximum) - minimum) * 65535.0;
+    const double code = std::floor(std::max(0.0, std::min(65535.0, scaled)));
+    const double cell = std::floor(code / mask);
+    const double snapped = std::min(65535.0, (cell + 0.5) * mask);
+    return static_cast<float>((snapped / 65535.0) *
+        (static_cast<double>(maximum) - minimum) + minimum);
+}
+
+static SbVec3f
+cadSoftwareSnapPoint(const SbVec3f& point, const Obol::WireRep& wire,
+                     uint8_t level)
+{
+    if (!wire.isProgressive()) return point;
+    const Obol::ProgressiveQuantization quantization =
+        wire.quantizationAtCut(level);
+    if (quantization.isExact()) return point;
+    return SbVec3f(
+        cadSoftwareSnapCoordinate(point[0],
+            wire.progressiveQuantizationMinimum[0],
+            wire.progressiveQuantizationMaximum[0], quantization.xBits),
+        cadSoftwareSnapCoordinate(point[1],
+            wire.progressiveQuantizationMinimum[1],
+            wire.progressiveQuantizationMaximum[1], quantization.yBits),
+        cadSoftwareSnapCoordinate(point[2],
+            wire.progressiveQuantizationMinimum[2],
+            wire.progressiveQuantizationMaximum[2], quantization.zBits));
+}
+
+static bool
+cadSoftwareBoxOutsideClip(const SbBox3f& bounds, const SbMatrix& transform)
+{
+    if (bounds.isEmpty()) return false;
+    const SbVec3f minimum = bounds.getMin();
+    const SbVec3f maximum = bounds.getMax();
+    CadSoftwareClipPoint corners[8];
+    for (unsigned int corner = 0; corner < 8; ++corner) {
+        corners[corner] = cadSoftwareTransform(transform, SbVec3f(
+            (corner & 1u) ? maximum[0] : minimum[0],
+            (corner & 2u) ? maximum[1] : minimum[1],
+            (corner & 4u) ? maximum[2] : minimum[2]));
+    }
+    for (int plane = 0; plane < 6; ++plane) {
+        bool allOutside = true;
+        for (const CadSoftwareClipPoint& corner : corners) {
+            if (cadSoftwarePlaneValue(corner, plane) >= 0.0) {
+                allOutside = false;
+                break;
+            }
+        }
+        if (allOutside) return true;
+    }
+    return false;
+}
+
 static bool
 cadRenderSoftwareWire(const Obol::internal::CadFramePlan& plan,
                       const SoCADAssembly& assembly, SoState *state,
@@ -456,14 +524,63 @@ cadRenderSoftwareWire(const Obol::internal::CadFramePlan& plan,
             model.setValue(instance.transform.data());
             SbMatrix transform = model;
             transform.multRight(viewProj);
-            const uint8_t level = assembly.effectiveProgressiveCut(
+            uint8_t level = assembly.effectiveProgressiveCut(
                 instance.lodCut);
-            const size_t first = wire.segmentFirstAtCut(level) * 2;
-            const size_t count = wire.segmentCountAtCut(level) * 2;
-            for (size_t p = first; p + 1 < first + count; p += 2)
-                cadSoftwareSegment(pixels, width, height, origin, size,
-                    transform, wire.segmentPoints[p], wire.segmentPoints[p + 1],
-                    instance);
+            if (wire.isProgressive()) {
+                if (level == Obol::ProgressiveCutUnspecified)
+                    level = wire.progressiveResidentCut;
+                level = std::max(wire.progressiveMinimumCut,
+                    std::min(wire.progressiveResidentCut, level));
+                /* One logical occurrence must use one coherent cut.  A page
+                 * that has only a coarser resident prefix constrains the
+                 * entire visible mesh, while an offscreen page does not. */
+                if (wire.hasAdaptiveProgressiveClusters()) {
+                    for (const Obol::ProgressiveWireCluster& cluster :
+                            wire.progressiveClusters) {
+                        if (cluster.ranges.empty() ||
+                                cadSoftwareBoxOutsideClip(
+                                    cluster.bounds, transform))
+                            continue;
+                        const uint8_t resident =
+                            cluster.residentCut ==
+                                Obol::ProgressiveCutUnspecified ?
+                                wire.progressiveResidentCut :
+                                cluster.residentCut;
+                        level = std::min(level,
+                            std::max(wire.progressiveMinimumCut, resident));
+                    }
+                }
+            }
+            const auto drawRange = [&](size_t firstSegment,
+                                       size_t segmentCount) {
+                if (firstSegment >= wire.segmentCount()) return;
+                segmentCount = std::min(
+                    segmentCount, wire.segmentCount() - firstSegment);
+                const size_t end = (firstSegment + segmentCount) * 2;
+                for (size_t p = firstSegment * 2; p + 1 < end; p += 2) {
+                    const SbVec3f a = cadSoftwareSnapPoint(
+                        wire.segmentPoints[p], wire, level);
+                    const SbVec3f b = cadSoftwareSnapPoint(
+                        wire.segmentPoints[p + 1], wire, level);
+                    cadSoftwareSegment(pixels, width, height, origin, size,
+                        transform, a, b, instance);
+                }
+            };
+            if (wire.hasAdaptiveProgressiveClusters()) {
+                for (const Obol::ProgressiveWireCluster& cluster :
+                        wire.progressiveClusters) {
+                    if (cadSoftwareBoxOutsideClip(cluster.bounds, transform))
+                        continue;
+                    for (const Obol::ProgressiveWireClusterRange& range :
+                            cluster.ranges) {
+                        if (range.activationCut > level) break;
+                        drawRange(range.firstSegment, range.segmentCount);
+                    }
+                }
+            } else {
+                drawRange(wire.segmentFirstAtCut(level),
+                    wire.segmentCountAtCut(level));
+            }
             for (const auto& polyline : wire.polylines)
                 for (size_t p = 1; p < polyline.points.size(); ++p)
                     cadSoftwareSegment(pixels, width, height, origin, size,
@@ -2686,7 +2803,7 @@ struct SoCADAssemblyImpl :
         }
     }
 
-    bool subpixelProxyPointForOccurrence(
+    CadProxyPresentation subpixelProxyPresentationForOccurrence(
             const Obol::internal::CadFramePlan& plan,
             size_t visibleIndex,
             const SbMatrix& viewProj,
@@ -2697,19 +2814,17 @@ struct SoCADAssemblyImpl :
     {
         using namespace Obol::internal;
         if (visibleIndex >= plan.visibleInstances.size())
-            return false;
+            return CadProxyPresentation::Geometry;
         const CadVisibleInstance& instance =
             plan.visibleInstances[visibleIndex];
-        if (instance.flags &
-                (CadInstanceHidden | CadInstanceSelected |
-                 CadInstancePointProxyProtected))
-            return false;
+        if (instance.flags & CadInstanceHidden)
+            return CadProxyPresentation::Offscreen;
         if (instance.partIndex >= plan.partBindings.size())
-            return false;
+            return CadProxyPresentation::Geometry;
         const CadPartBinding& binding =
             plan.partBindings[instance.partIndex];
         if (!binding.subpixelProxyEligible)
-            return false;
+            return CadProxyPresentation::Geometry;
         const bool wireActive =
             cachedDM_ == SoCADAssembly::WIREFRAME ||
             cachedDM_ == SoCADAssembly::SHADED_WITH_EDGES ||
@@ -2721,20 +2836,35 @@ struct SoCADAssemblyImpl :
         if (!binding.geometry ||
                 !((wireActive && binding.geometry->wire) ||
                   (shadedActive && binding.geometry->shaded)))
-            return false;
+            return CadProxyPresentation::Geometry;
         const float threshold = pixelThreshold *
             (wasCollapsed ? 1.25f : 0.75f);
-        SbVec3f point;
-        if (!cadSubpixelProxyPoint(
+        Obol::CadProjectedProxy projected;
+        if (!cadSubpixelProxyProjection(
                 binding.subpixelProxyCorners, instance, viewProj,
-                viewportSize, threshold, point))
-            return false;
+                viewportSize, threshold, projected))
+            return CadProxyPresentation::Geometry;
+        /* A fully clipped occurrence is neither an uncollapsed structural
+         * fallback nor a convergence obligation.  Mark it in the same
+         * per-occurrence suppression mask used by point replacement, but do
+         * not emit a point.  The previous binary state treated every
+         * off-frustum structural box as visible geometry; the view-aware
+         * loader would correctly retire its mesh and the controller would
+         * then schedule an endless box-repair pass which could never make
+         * progress. */
+        if (!projected.visible)
+            return CadProxyPresentation::Offscreen;
+        if (instance.flags &
+                (CadInstanceSelected | CadInstancePointProxyProtected))
+            return CadProxyPresentation::Geometry;
+        if (!projected.pointEligible)
+            return CadProxyPresentation::Geometry;
 
-        replacement.position = point;
+        replacement.position = projected.point;
         replacement.rgba = instance.rgba;
         replacement.instanceId = instance.instanceId;
         replacement.flags = instance.flags;
-        return true;
+        return CadProxyPresentation::Point;
     }
 
     /* Keep selected geometry visually inspectable even when its conservative
@@ -2791,10 +2921,11 @@ struct SoCADAssemblyImpl :
                     plan.subpixelProxyInputRevision)
             return false;
         CadSubpixelProxyPoint replacement;
-        if (!subpixelProxyPointForOccurrence(
+        if (subpixelProxyPresentationForOccurrence(
                 plan, visibleIndex, subpixelProxyViewProj_,
                 subpixelProxyViewportSize_,
-                subpixelProxyPixelThreshold_, false, replacement))
+                subpixelProxyPixelThreshold_, false, replacement) !=
+                CadProxyPresentation::Point)
             return false;
         subpixelProxyPointByVisible_[visibleIndex] =
             static_cast<uint32_t>(plan.subpixelProxyPoints.size());
@@ -2996,14 +3127,18 @@ struct SoCADAssemblyImpl :
                         plan.partBindings[
                             occurrence.partIndex].part);
                 CadSubpixelProxyPoint replacement;
-                const bool collapsed =
-                    subpixelProxyPointForOccurrence(
+                const CadProxyPresentation presentation =
+                    subpixelProxyPresentationForOccurrence(
                         plan, visibleIndex, viewProj, viewportSize,
                         pixelThreshold, false, replacement);
+                const bool collapsed =
+                    presentation == CadProxyPresentation::Point;
+                const bool suppressed =
+                    presentation != CadProxyPresentation::Geometry;
                 subpixelProxyState_[visibleIndex] =
-                    collapsed ? 1u : 0u;
+                    static_cast<uint8_t>(presentation);
                 plan.subpixelProxyMask[visibleIndex] =
-                    collapsed ? 1u : 0u;
+                    suppressed ? 1u : 0u;
                 if (!collapsed)
                     continue;
                 subpixelProxyPointByVisible_[visibleIndex] =
@@ -3209,17 +3344,21 @@ struct SoCADAssemblyImpl :
             const size_t visibleIndex =
                 subpixelProxyBuildVisibleCursor_;
             CadSubpixelProxyPoint replacement;
-            if (!subpixelProxyPointForOccurrence(
+            const CadProxyPresentation presentation =
+                subpixelProxyPresentationForOccurrence(
                     plan, visibleIndex, viewProj, viewportSize,
                     pixelThreshold,
                     subpixelProxyState_[visibleIndex] != 0u,
-                    replacement)) {
-                subpixelProxyState_[visibleIndex] = 0u;
+                    replacement);
+            subpixelProxyState_[visibleIndex] =
+                static_cast<uint8_t>(presentation);
+            if (presentation == CadProxyPresentation::Geometry) {
                 continue;
             }
 
-            subpixelProxyState_[visibleIndex] = 1u;
             mask[visibleIndex] = 1u;
+            if (presentation == CadProxyPresentation::Offscreen)
+                continue;
             pointByVisible[visibleIndex] =
                 static_cast<uint32_t>(points.size());
             points.push_back(std::move(replacement));

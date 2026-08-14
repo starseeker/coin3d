@@ -1678,6 +1678,25 @@ main()
         return 1;
     }
 
+    /* A structural occurrence wholly outside the camera frustum is not a
+     * visible fallback and must not make a view-convergence client attempt to
+     * realize geometry for it.  It shares the live box part so this also
+     * exercises the batched range accounting used by large CAD assemblies. */
+    Obol::InstanceRecord offscreenBox = sharedBoxB;
+    offscreenBox.childName = "stream-offscreen-box";
+    offscreenBox.occurrenceIndex = 9005;
+    offscreenBox.localToRoot.setTranslate(
+        SbVec3f(100000.0f, 24.0f, 0.0f));
+    const Obol::InstanceId offscreenBoxId =
+        assembly->upsertInstanceAuto(offscreenBox);
+    if (!render(renderer, root) ||
+            assembly->lastUncollapsedStructuralProxyCount() !=
+                sharedProxyBaseline + 2u) {
+        std::fprintf(stderr,
+            "off-frustum box was counted as a visible structural proxy\n");
+        root->unref();
+        return 1;
+    }
     Obol::InstanceRecord promotedShared = sharedBoxA;
     promotedShared.part = rebindMeshPart;
     Obol::InstanceUpdate promotedUpdate;
@@ -1706,6 +1725,7 @@ main()
         root->unref();
         return 1;
     }
+    assembly->setHiddenInstances({offscreenBoxId});
 
     /*
      * Subsequent cold-delivery waves may append more occurrences of the

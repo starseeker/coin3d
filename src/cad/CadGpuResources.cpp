@@ -1106,6 +1106,7 @@ void CadGpuResources::endProgressiveFrame(const SoGLContext *glue)
         CadProgressiveGpu *victim = nullptr;
         bool victimIsAnchor = true;
         uint8_t victimLevel = 0;
+        uint64_t victimLastUsedFrame = 0;
         for (auto& item : cache_) {
             auto consider = [&](auto& cuts, size_t cut) {
                 CadProgressiveGpu& p = cuts[cut];
@@ -1118,17 +1119,25 @@ void CadGpuResources::endProgressiveFrame(const SoGLContext *glue)
                         break;
                     }
                 }
+                /* Keep one cheap coarse anchor, then discard the least
+                 * recently useful non-anchor.  Ordering primarily by cut
+                 * made a newly rendered fine cut the first victim, while
+                 * obsolete intermediate cuts consumed the reserve.  A
+                 * cut-N/cut-(N+1) view transition consequently re-uploaded
+                 * both buffers indefinitely and could leave a restored
+                 * hierarchy waiting on the buffer just evicted. */
                 if (!victim ||
                         (victimIsAnchor && !isAnchor) ||
                         (victimIsAnchor == isAnchor &&
-                         (cut > victimLevel ||
-                          (cut == victimLevel &&
-                           (p.lastUsedFrame < victim->lastUsedFrame ||
-                            (p.lastUsedFrame == victim->lastUsedFrame &&
-                             p.bytes > victim->bytes)))))) {
+                         (p.lastUsedFrame < victimLastUsedFrame ||
+                          (p.lastUsedFrame == victimLastUsedFrame &&
+                           (p.bytes > victim->bytes ||
+                            (p.bytes == victim->bytes &&
+                             cut > victimLevel)))))) {
                     victim = &p;
                     victimIsAnchor = isAnchor;
                     victimLevel = static_cast<uint8_t>(cut);
+                    victimLastUsedFrame = p.lastUsedFrame;
                 }
             };
             for (size_t cut = 0;

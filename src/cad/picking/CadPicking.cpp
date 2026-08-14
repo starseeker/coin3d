@@ -800,7 +800,6 @@ CadPickQuery::pickTriangle(
                 std::min(entry->lodCut, lodCeiling),
                 mesh.progressiveMinimumCut,
                 mesh.progressiveResidentCut);
-            const size_t indexCount = mesh.indexCountAtCut(activeLevel);
             progressivePositions.reserve(mesh.positions.size());
             for (const SbVec3f& point : mesh.positions) {
                 progressivePositions.push_back(progressiveSnapPoint(
@@ -808,8 +807,40 @@ CadPickQuery::pickTriangle(
                     mesh.progressiveQuantizationMaximum,
                     mesh.quantizationAtCut(activeLevel)));
             }
-            progressiveIndices.assign(
-                mesh.indices.begin(), mesh.indices.begin() + indexCount);
+            if (mesh.hasAdaptiveProgressiveClusters()) {
+                bool validRanges = true;
+                for (const ProgressiveTriangleCluster& cluster :
+                        mesh.progressiveClusters) {
+                    for (const ProgressiveTriangleClusterRange& range :
+                            cluster.ranges) {
+                        if (range.activationCut > activeLevel)
+                            break;
+                        const uint64_t end =
+                            static_cast<uint64_t>(range.firstIndex) +
+                            range.indexCount;
+                        if (range.firstIndex % 3u ||
+                                range.indexCount % 3u ||
+                                end > mesh.indices.size()) {
+                            progressiveIndices.clear();
+                            validRanges = false;
+                            break;
+                        }
+                        progressiveIndices.insert(
+                            progressiveIndices.end(),
+                            mesh.indices.begin() + range.firstIndex,
+                            mesh.indices.begin() +
+                                static_cast<size_t>(end));
+                    }
+                    if (!validRanges)
+                        break;
+                }
+            } else {
+                const size_t indexCount =
+                    mesh.indexCountAtCut(activeLevel);
+                progressiveIndices.assign(
+                    mesh.indices.begin(),
+                    mesh.indices.begin() + indexCount);
+            }
             progressiveBvh.build(progressivePositions, progressiveIndices);
             triBvh = &progressiveBvh;
         } else {
