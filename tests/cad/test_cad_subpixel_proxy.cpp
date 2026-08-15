@@ -83,6 +83,41 @@ setProgressiveCuts(Obol::TriMesh& mesh, size_t cutCount,
     }
 }
 
+bool
+sparseUniformClusterContract()
+{
+    Obol::TriMesh mesh;
+    mesh.positions = {
+        SbVec3f(0.0f, 0.0f, 0.0f),
+        SbVec3f(1.0f, 0.0f, 0.0f),
+        SbVec3f(0.0f, 1.0f, 0.0f)};
+    mesh.indices = {0, 1, 2};
+    mesh.progressiveMinimumCut = 0;
+    mesh.progressiveResidentCut = 0;
+    setProgressiveCuts(mesh, 1, 3, 3);
+    mesh.progressiveClusterGridResolution = 8;
+    mesh.progressiveClusters.resize(2);
+    if (!mesh.hasProgressiveClusters() ||
+            mesh.hasAdaptiveProgressiveClusters())
+        return false;
+    mesh.progressiveClusters.resize(513);
+    if (mesh.hasProgressiveClusters())
+        return false;
+
+    Obol::WireRep wire;
+    wire.segmentPoints = {
+        SbVec3f(0.0f, 0.0f, 0.0f),
+        SbVec3f(1.0f, 0.0f, 0.0f)};
+    wire.progressiveCuts.resize(1);
+    wire.progressiveCuts[0].segmentCount = 1;
+    wire.progressiveMinimumCut = 0;
+    wire.progressiveResidentCut = 0;
+    wire.progressiveClusterGridResolution = 8;
+    wire.progressiveClusters.resize(2);
+    return wire.hasProgressiveClusters() &&
+        !wire.hasAdaptiveProgressiveClusters();
+}
+
 Obol::WireRep
 unitBox()
 {
@@ -645,6 +680,7 @@ ordinaryProgressiveGenerationAppendsSuffix()
     coarse.positions.resize(3u);
     coarse.indices.resize(3u);
     coarse.progressiveResidentCut = 0;
+    Obol::TriMesh contracted = coarse;
 
     const Obol::PartId part =
         Obol::CadIdBuilder::hash128("ordinary-progressive-suffix");
@@ -739,6 +775,103 @@ ordinaryProgressiveGenerationAppendsSuffix()
                     coarseResources.ordinaryPartLineageReuseCount),
                 static_cast<unsigned long long>(
                     richResources.ordinaryPartLineageReuseCount));
+        }
+        if (passed) {
+            std::shared_ptr<Obol::PartGeometry> contractedGeometry(
+                new Obol::PartGeometry);
+            contractedGeometry->shaded = std::move(contracted);
+            contractedGeometry->conservativeBounds =
+                coarseGeometry->conservativeBounds;
+            assembly->upsertSharedParts(
+                {{part, contractedGeometry, true}});
+            passed = render(renderer, root);
+            const Obol::CadGpuResourceSnapshot contractedResources =
+                assembly->gpuResourceSnapshot();
+            passed = passed &&
+                assembly->lastRenderedTriangleCount() == 1u &&
+                contractedResources.ordinaryPartBufferBytes ==
+                    richResources.ordinaryPartBufferBytes &&
+                contractedResources.ordinaryPartFullUploadBytes ==
+                    richResources.ordinaryPartFullUploadBytes &&
+                contractedResources.ordinaryPartSuffixUploadBytes ==
+                    richResources.ordinaryPartSuffixUploadBytes &&
+                contractedResources.ordinaryPartGpuCopyBytes ==
+                    richResources.ordinaryPartGpuCopyBytes &&
+                contractedResources.ordinaryPartLineageReuseCount >
+                    richResources.ordinaryPartLineageReuseCount;
+            if (!passed) {
+                std::fprintf(stderr,
+                    "ordinary progressive contraction did not retain its "
+                    "certified GPU superset (triangles=%llu bytes=%zu/%zu "
+                    "full=%llu/%llu suffix=%llu/%llu copy=%llu/%llu "
+                    "reuse=%llu/%llu)\n",
+                    static_cast<unsigned long long>(
+                        assembly->lastRenderedTriangleCount()),
+                    richResources.ordinaryPartBufferBytes,
+                    contractedResources.ordinaryPartBufferBytes,
+                    static_cast<unsigned long long>(
+                        richResources.ordinaryPartFullUploadBytes),
+                    static_cast<unsigned long long>(
+                        contractedResources.ordinaryPartFullUploadBytes),
+                    static_cast<unsigned long long>(
+                        richResources.ordinaryPartSuffixUploadBytes),
+                    static_cast<unsigned long long>(
+                        contractedResources.ordinaryPartSuffixUploadBytes),
+                    static_cast<unsigned long long>(
+                        richResources.ordinaryPartGpuCopyBytes),
+                    static_cast<unsigned long long>(
+                        contractedResources.ordinaryPartGpuCopyBytes),
+                    static_cast<unsigned long long>(
+                        richResources.ordinaryPartLineageReuseCount),
+                    static_cast<unsigned long long>(
+                        contractedResources.ordinaryPartLineageReuseCount));
+            }
+            if (passed) {
+                Obol::TriMesh replacement =
+                    *contractedGeometry->shaded;
+                replacement.progressiveLineage = lineage + 1u;
+                std::shared_ptr<Obol::PartGeometry> replacementGeometry(
+                    new Obol::PartGeometry);
+                replacementGeometry->shaded = std::move(replacement);
+                replacementGeometry->conservativeBounds =
+                    contractedGeometry->conservativeBounds;
+                assembly->upsertSharedParts(
+                    {{part, replacementGeometry, true}});
+                passed = render(renderer, root);
+                const Obol::CadGpuResourceSnapshot replacementResources =
+                    assembly->gpuResourceSnapshot();
+                const uint64_t oneTriangleBytes =
+                    3u * (3u * sizeof(float) + sizeof(uint32_t));
+                passed = passed &&
+                    assembly->lastRenderedTriangleCount() == 1u &&
+                    replacementResources.ordinaryPartFullUploadBytes ==
+                        contractedResources.ordinaryPartFullUploadBytes +
+                            oneTriangleBytes &&
+                    replacementResources.
+                        ordinaryPartLineageReplacementCount >
+                    contractedResources.
+                        ordinaryPartLineageReplacementCount;
+                if (!passed) {
+                    std::fprintf(stderr,
+                        "ordinary progressive lineage replacement was not "
+                        "explicitly accounted (triangles=%llu full=%llu/%llu "
+                        "replacement=%llu/%llu)\n",
+                        static_cast<unsigned long long>(
+                            assembly->lastRenderedTriangleCount()),
+                        static_cast<unsigned long long>(
+                            contractedResources.
+                                ordinaryPartFullUploadBytes),
+                        static_cast<unsigned long long>(
+                            replacementResources.
+                                ordinaryPartFullUploadBytes),
+                        static_cast<unsigned long long>(
+                            contractedResources.
+                                ordinaryPartLineageReplacementCount),
+                        static_cast<unsigned long long>(
+                            replacementResources.
+                                ordinaryPartLineageReplacementCount));
+                }
+            }
         }
     }
 
@@ -1180,6 +1313,10 @@ main()
     initCoinHeadless();
     SoCADAssembly::initClass();
 
+    if (!sparseUniformClusterContract()) {
+        std::fprintf(stderr, "sparse uniform cluster contract failed\n");
+        return 1;
+    }
     if (!sharedProjectedProxyContract()) {
         std::fprintf(stderr, "shared projected-proxy contract failed\n");
         return 1;
@@ -1297,7 +1434,12 @@ main()
     // must promote/demote the same retained occurrence through the sparse
     // proxy channel without rebuilding the assembly-wide frame plan.
     assembly->setPointProxyProtectedInstances({proxyInstance});
-    if (!render(renderer, root) || assembly->selectedInstanceCount() != 0u ||
+    const std::vector<Obol::InstanceId> protectedSnapshot =
+        assembly->pointProxyProtectedInstances();
+    if (protectedSnapshot.size() != 1u ||
+            protectedSnapshot[0] != proxyInstance ||
+            !render(renderer, root) ||
+            assembly->selectedInstanceCount() != 0u ||
             assembly->lastSubpixelProxyCount() != 0u ||
             assembly->framePlanBuildCount() != initialPlanBuilds) {
         std::fprintf(stderr,
@@ -1305,11 +1447,15 @@ main()
         root->unref();
         return 1;
     }
-    assembly->setPointProxyProtectedInstances({});
-    if (!render(renderer, root) || assembly->lastSubpixelProxyCount() != 1u ||
+    std::unordered_set<Obol::InstanceId,
+        std::hash<Obol::InstanceId>> adoptedProtection;
+    assembly->adoptPointProxyProtectedInstances(std::move(adoptedProtection));
+    if (!assembly->pointProxyProtectedInstances().empty() ||
+            !render(renderer, root) ||
+            assembly->lastSubpixelProxyCount() != 1u ||
             assembly->framePlanBuildCount() != initialPlanBuilds) {
         std::fprintf(stderr,
-            "clearing point-proxy protection did not restore aggregation\n");
+            "adopting point-proxy protection did not restore aggregation\n");
         root->unref();
         return 1;
     }

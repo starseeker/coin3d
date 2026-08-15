@@ -2854,8 +2854,13 @@ struct SoCADAssemblyImpl :
          * progress. */
         if (!projected.visible)
             return CadProxyPresentation::Offscreen;
-        if (instance.flags &
-                (CadInstanceSelected | CadInstancePointProxyProtected))
+        /* Point-proxy protection is a view-allocation policy which may be
+         * atomically adopted after the immutable frame plan was built.  Read
+         * its authoritative set here rather than requiring an O(instances)
+         * flag rewrite at transaction commit.  Selection remains an ordinary
+         * sparse instance attribute. */
+        if ((instance.flags & CadInstanceSelected) ||
+                pointProxyProtected_.count(instance.instanceId))
             return CadProxyPresentation::Geometry;
         if (!projected.pointEligible)
             return CadProxyPresentation::Geometry;
@@ -4286,6 +4291,34 @@ SoCADAssembly::setPointProxyProtectedInstances(
         impl_->pendingInstanceAttributeIndices_.clear();
         impl_->pendingSubpixelProxyChange_ = false;
     }
+    if (!impl_->inUpdate_) touch();
+}
+
+std::vector<Obol::InstanceId>
+SoCADAssembly::pointProxyProtectedInstances() const
+{
+    std::vector<Obol::InstanceId> ids;
+    ids.reserve(impl_->pointProxyProtected_.size());
+    for (const Obol::InstanceId& id : impl_->pointProxyProtected_)
+        ids.push_back(id);
+    return ids;
+}
+
+void
+SoCADAssembly::adoptPointProxyProtectedInstances(
+    std::unordered_set<Obol::InstanceId,
+        std::hash<Obol::InstanceId>>&& ids)
+{
+    impl_->pointProxyProtected_.swap(ids);
+    /* Protection affects only view-local point classification.  Keep the
+     * immutable geometry/instance plan and its GPU resources intact.  The
+     * classifier builds the new mask and aggregate point list into scratch
+     * storage over bounded frames, then swaps every product atomically; the
+     * previous complete presentation remains drawable until that publication.
+     * The caller has already proved that the adopted set differs, so this
+     * commit performs no second O(instances) equality pass. */
+    impl_->subpixelProxyBuildActive_ = false;
+    impl_->subpixelProxyViewValid_ = false;
     if (!impl_->inUpdate_) touch();
 }
 

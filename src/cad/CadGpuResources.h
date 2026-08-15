@@ -765,6 +765,7 @@ private:
     uint64_t ordinaryPartSuffixUploadBytes_ = 0;
     uint64_t ordinaryPartGpuCopyBytes_ = 0;
     uint64_t ordinaryPartLineageReuseCount_ = 0;
+    uint64_t ordinaryPartLineageReplacementCount_ = 0;
     std::unordered_map<PartId, CadTriangleAtlasPart, std::hash<PartId>>
         triangleAtlasParts_;
     std::vector<std::unique_ptr<CadTriangleAtlasPage>>

@@ -36,6 +36,7 @@
 #include <limits>
 #include <map>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -1734,34 +1735,135 @@ progressiveSnapPoint(const SbVec3f& point, const SbVec3f& minimum,
 static const CadProgressiveGpu*
 ensureProgressiveWireGpu(
         CadGpuResources *resources, PartId part, const WireRep& wire,
-        uint8_t level, const SoGLContext *glue)
+        uint8_t level,
+        const std::vector<CadProgressiveGpu::PackedRange> *sourceRanges,
+        const SoGLContext *glue)
 {
     if (!resources || !glue) return nullptr;
 
+    const bool packedAdaptive = wire.hasAdaptiveProgressiveClusters() &&
+        sourceRanges;
+    std::vector<CadProgressiveGpu::PackedRange> packedRanges;
+    if (packedAdaptive) {
+        const CadProgressiveGpu *existing =
+            resources->progressiveForAny(part, false, level);
+        if (existing && existing->packedRanges.empty())
+            return existing;
+        std::vector<CadProgressiveGpu::PackedRange> requested =
+            *sourceRanges;
+        if (existing && !existing->packedRanges.empty())
+            requested.insert(requested.end(), existing->packedRanges.begin(),
+                existing->packedRanges.end());
+        std::sort(requested.begin(), requested.end(),
+            [](const CadProgressiveGpu::PackedRange& left,
+               const CadProgressiveGpu::PackedRange& right) {
+                if (left.sourceFirst != right.sourceFirst)
+                    return left.sourceFirst < right.sourceFirst;
+                return left.sourceCount < right.sourceCount;
+            });
+        requested.erase(std::unique(requested.begin(), requested.end(),
+            [](const CadProgressiveGpu::PackedRange& left,
+               const CadProgressiveGpu::PackedRange& right) {
+                return left.sourceFirst == right.sourceFirst &&
+                    left.sourceCount == right.sourceCount;
+            }), requested.end());
+        if (existing && !existing->packedRanges.empty() &&
+                requested.size() == existing->packedRanges.size())
+            return existing;
+
+        uint64_t packedFirst = 0;
+        packedRanges.reserve(requested.size());
+        const uint64_t availableSegments = wire.segmentPoints.size() / 2u;
+        for (const CadProgressiveGpu::PackedRange& source : requested) {
+            const uint64_t sourceEnd =
+                static_cast<uint64_t>(source.sourceFirst) +
+                source.sourceCount;
+            if (!source.sourceCount || sourceEnd > availableSegments ||
+                    packedFirst > UINT32_MAX ||
+                    source.sourceCount > UINT32_MAX - packedFirst)
+                return nullptr;
+            CadProgressiveGpu::PackedRange packed = source;
+            packed.packedFirst = static_cast<uint32_t>(packedFirst);
+            packedRanges.push_back(packed);
+            packedFirst += source.sourceCount;
+        }
+        if (packedRanges.empty()) return nullptr;
+    }
+
     const size_t pointFirst = wire.hasAdaptiveProgressiveClusters() ?
         0 : wire.segmentFirstAtCut(level) * 2;
-    const size_t pointCount = wire.hasAdaptiveProgressiveClusters() ?
-        wire.segmentPoints.size() : wire.segmentCountAtCut(level) * 2;
-    if (pointCount == 0 || pointFirst > wire.segmentPoints.size() ||
-            pointCount > wire.segmentPoints.size() - pointFirst)
+    const size_t pointCount = packedAdaptive ? 0 :
+        (wire.hasAdaptiveProgressiveClusters() ? wire.segmentPoints.size() :
+            wire.segmentCountAtCut(level) * 2);
+    size_t packedPointCount = 0;
+    for (const CadProgressiveGpu::PackedRange& range : packedRanges) {
+        if (range.sourceCount > (SIZE_MAX - packedPointCount) / 2u)
+            return nullptr;
+        packedPointCount += static_cast<size_t>(range.sourceCount) * 2u;
+    }
+    const size_t uploadedPointCount = packedAdaptive ?
+        packedPointCount : pointCount;
+    if (uploadedPointCount == 0 || pointFirst > wire.segmentPoints.size() ||
+            (!packedAdaptive &&
+             pointCount > wire.segmentPoints.size() - pointFirst))
         return nullptr;
+
+    /* This signature is the validity domain of the derived cut buffer.  The
+     * lineage certifies immutable prefix values and quantization bounds;
+     * first/count or the packed source ranges identify exactly which
+     * certified points were snapped.  In particular, an adaptive full stream
+     * grows uploadedPointCount as pages become resident, invalidating a
+     * shorter cached cut without invalidating other cuts or unrelated parts. */
+    uint64_t rangeSignature = 1469598103934665603ULL;
+    const auto mixSignature = [&rangeSignature](uint64_t value) {
+        rangeSignature ^= value;
+        rangeSignature *= 1099511628211ULL;
+    };
+    mixSignature(wire.progressiveLineage);
+    mixSignature(static_cast<uint64_t>(pointFirst));
+    mixSignature(static_cast<uint64_t>(uploadedPointCount));
+    const ProgressiveQuantization quantization =
+        wire.quantizationAtCut(level);
+    mixSignature(static_cast<uint64_t>(quantization.xBits) |
+        (static_cast<uint64_t>(quantization.yBits) << 8u) |
+        (static_cast<uint64_t>(quantization.zBits) << 16u));
+    for (const CadProgressiveGpu::PackedRange& range : packedRanges) {
+        mixSignature(range.sourceFirst);
+        mixSignature(range.sourceCount);
+    }
+    if (!rangeSignature) rangeSignature = 1;
     if (const CadProgressiveGpu *cached =
-            resources->progressiveFor(part, false, level))
+            resources->progressiveFor(
+                part, false, level, rangeSignature))
         return cached;
     std::vector<float> positions;
-    positions.reserve(pointCount * 3);
-    for (size_t i = pointFirst; i < pointFirst + pointCount; ++i) {
-        const SbVec3f point = progressiveSnapPoint(
-            wire.segmentPoints[i],
-            wire.progressiveQuantizationMinimum,
-            wire.progressiveQuantizationMaximum,
-            wire.quantizationAtCut(level));
-        executorAppendPackedPoint(positions, point);
+    positions.reserve(uploadedPointCount * 3);
+    const auto appendPoints = [&](size_t first, size_t count) {
+        for (size_t i = first; i < first + count; ++i) {
+            const SbVec3f point = progressiveSnapPoint(
+                wire.segmentPoints[i],
+                wire.progressiveQuantizationMinimum,
+                wire.progressiveQuantizationMaximum, quantization);
+            executorAppendPackedPoint(positions, point);
+        }
+    };
+    if (packedAdaptive) {
+        for (const CadProgressiveGpu::PackedRange& range : packedRanges)
+            appendPoints(static_cast<size_t>(range.sourceFirst) * 2u,
+                static_cast<size_t>(range.sourceCount) * 2u);
+    } else {
+        appendPoints(pointFirst, pointCount);
     }
     resources->uploadProgressive(
-        part, false, level, positions, std::vector<float>(), false, 0,
-        std::vector<CadProgressiveGpu::PackedRange>(), glue);
-    return resources->progressiveFor(part, false, level);
+        part, false, level, positions, std::vector<float>(), false,
+        rangeSignature, packedRanges, glue);
+    if (const CadProgressiveGpu *uploaded = resources->progressiveFor(
+            part, false, level, rangeSignature))
+        return uploaded;
+    /* Allocation pressure may leave the preceding append-only prefix live.
+     * The fixed executor clamps every range to this record's vertexCount, so
+     * it remains a valid, if temporarily less complete, presentation. */
+    return resources->progressiveForAny(part, false, level);
 }
 
 static const CadProgressiveGpu*
@@ -2807,11 +2909,88 @@ void CadRendererGL::renderFixedVboLoop(
         const CadWireGpu *wire = gpuRes_->wireFor(item.rep.part);
         if (!wire) continue;
         const PartGeometry *geometry = assembly.partGeometry(item.rep.part);
-            const WireRep *progressive =
-                geometry && geometry->wire && geometry->wire->isProgressive() ?
-                &*geometry->wire : nullptr;
+        const WireRep *progressive =
+            geometry && geometry->wire && geometry->wire->isProgressive() ?
+            &*geometry->wire : nullptr;
         if (!wire->sequentialSegments)
             glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, wire->segIdxBuf);
+
+        /* The fixed-function renderer must materialize snapped positions on
+         * the CPU, but an adaptive mesh generally needs only the clusters
+         * intersecting the current view.  Build one deterministic per-cut
+         * union for every occurrence sharing this part.  Uploading the whole
+         * resident Lucy wire prefix for each zoom cut consumed 54 MB per cut,
+         * thrashed the bounded derived-buffer cache, and starved the quiet
+         * handoff despite only a few visible clusters. */
+        std::vector<std::vector<CadProgressiveGpu::PackedRange>>
+            visibleWireRanges(progressive ?
+                progressive->progressiveCuts.size() : 0);
+        std::vector<std::unordered_set<uint64_t>> visibleWireRangeKeys(
+            visibleWireRanges.size());
+        if (progressive && progressive->hasAdaptiveProgressiveClusters()) {
+            for (uint32_t i = 0; i < item.instanceCount; ++i) {
+                if (renderInterruptedAfter(deadlineWork)) {
+                    interrupted = true;
+                    break;
+                }
+                const size_t visibleIndex = item.baseInstance + i;
+                if (!cadInstanceDrawable(
+                        plan, item, visibleIndex, CadDrawChannel::Wire))
+                    continue;
+                const auto& inst = plan.visibleInstances[visibleIndex];
+                if (isBoxOutsideExecutorFrustum(
+                        inst.wbMin, inst.wbMax, fp))
+                    continue;
+                const uint8_t level = executorVisibleProgressiveCut(
+                    *progressive, inst, fp,
+                    assembly.effectiveProgressiveCut(inst.lodCut));
+                if (level >= visibleWireRanges.size())
+                    continue;
+                SbMatrix model;
+                model.setValue(inst.transform.data());
+                for (const ProgressiveWireCluster& cluster :
+                        progressive->progressiveClusters) {
+                    float clusterMinimum[3];
+                    float clusterMaximum[3];
+                    executorTransformedBox(
+                        cluster.bounds, model,
+                        clusterMinimum, clusterMaximum);
+                    if (isBoxOutsideExecutorFrustum(
+                            clusterMinimum, clusterMaximum, fp))
+                        continue;
+                    for (const ProgressiveWireClusterRange& range :
+                            cluster.ranges) {
+                        if (range.activationCut > level)
+                            break;
+                        const uint64_t key =
+                            (static_cast<uint64_t>(range.firstSegment) <<
+                                32u) |
+                            static_cast<uint64_t>(range.segmentCount);
+                        if (visibleWireRangeKeys[level].insert(key).second)
+                            visibleWireRanges[level].push_back({
+                                range.firstSegment, range.segmentCount, 0});
+                    }
+                }
+            }
+            for (std::vector<CadProgressiveGpu::PackedRange>& ranges :
+                    visibleWireRanges) {
+                std::sort(ranges.begin(), ranges.end(),
+                    [](const CadProgressiveGpu::PackedRange& left,
+                       const CadProgressiveGpu::PackedRange& right) {
+                        if (left.sourceFirst != right.sourceFirst)
+                            return left.sourceFirst < right.sourceFirst;
+                        return left.sourceCount < right.sourceCount;
+                    });
+                ranges.erase(std::unique(ranges.begin(), ranges.end(),
+                    [](const CadProgressiveGpu::PackedRange& left,
+                       const CadProgressiveGpu::PackedRange& right) {
+                        return left.sourceFirst == right.sourceFirst &&
+                            left.sourceCount == right.sourceCount;
+                    }), ranges.end());
+            }
+        }
+        if (interrupted)
+            break;
 
         for (uint32_t i = 0; i < item.instanceCount; ++i) {
             if (renderInterruptedAfter(deadlineWork)) {
@@ -2837,18 +3016,27 @@ void CadRendererGL::renderFixedVboLoop(
             applyWireRasterStyle(glue, inst, caps_.hasLineStipple);
 
             GLuint positionBuffer = wire->posBuf;
+            GLsizei availableSegmentCount = wire->segCount;
             GLsizei segmentFirst = 0;
             uint8_t level = Obol::ProgressiveCutUnspecified;
+            const CadProgressiveGpu *progressiveCut = nullptr;
             if (progressive) {
 		level = executorVisibleProgressiveCut(
 		    *progressive, inst, fp,
 		    assembly.effectiveProgressiveCut(inst.lodCut));
                 if (!progressive->quantizationAtCut(level).isExact()) {
-                    const CadProgressiveGpu *cut =
-                        ensureProgressiveWireGpu(
-                            gpuRes_, item.rep.part, *progressive, level, glue);
-                    if (!cut) continue;
-                    positionBuffer = cut->posBuf;
+                    const std::vector<CadProgressiveGpu::PackedRange>
+                        *ranges = progressive->
+                            hasAdaptiveProgressiveClusters() &&
+                            level < visibleWireRanges.size() ?
+                        &visibleWireRanges[level] : nullptr;
+                    progressiveCut = ensureProgressiveWireGpu(
+                        gpuRes_, item.rep.part, *progressive, level,
+                        ranges, glue);
+                    if (!progressiveCut) continue;
+                    positionBuffer = progressiveCut->posBuf;
+                    availableSegmentCount =
+                        progressiveCut->vertexCount / 2;
                 } else
                     segmentFirst = static_cast<GLsizei>(
                         progressive->segmentFirstAtCut(level));
@@ -2859,11 +3047,11 @@ void CadRendererGL::renderFixedVboLoop(
             const auto drawSegmentRange = [&](uint32_t first,
                                                uint32_t count) {
                 if (!count || first >=
-                        static_cast<uint32_t>(wire->segCount))
+                        static_cast<uint32_t>(availableSegmentCount))
                     return;
                 const GLsizei bounded = static_cast<GLsizei>(
                     std::min<uint64_t>(count,
-                        static_cast<uint64_t>(wire->segCount) - first));
+                        static_cast<uint64_t>(availableSegmentCount) - first));
                 if (wire->sequentialSegments)
                     glue->glDrawArrays(GL_LINES,
                         static_cast<GLint>(first * 2u), bounded * 2);
@@ -2888,6 +3076,32 @@ void CadRendererGL::renderFixedVboLoop(
                     if (isBoxOutsideExecutorFrustum(
                             clusterMinimum, clusterMaximum, fp))
                         continue;
+                    if (progressiveCut &&
+                            !progressiveCut->packedRanges.empty()) {
+                        for (const ProgressiveWireClusterRange& range :
+                                cluster.ranges) {
+                            if (range.activationCut > level)
+                                break;
+                            const auto packed = std::lower_bound(
+                                progressiveCut->packedRanges.begin(),
+                                progressiveCut->packedRanges.end(),
+                                range.firstSegment,
+                                [](const CadProgressiveGpu::PackedRange& entry,
+                                   uint32_t first) {
+                                    return entry.sourceFirst < first;
+                                });
+                            if (packed ==
+                                    progressiveCut->packedRanges.end() ||
+                                    packed->sourceFirst !=
+                                        range.firstSegment ||
+                                    packed->sourceCount !=
+                                        range.segmentCount)
+                                continue;
+                            drawSegmentRange(
+                                packed->packedFirst, packed->sourceCount);
+                        }
+                        continue;
+                    }
                     uint32_t first = 0;
                     uint32_t count = 0;
                     for (const ProgressiveWireClusterRange& range :

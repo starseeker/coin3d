@@ -88,6 +88,7 @@
 #include <Obol/cad/CadProgressive.h>
 
 #include <vector>
+#include <unordered_set>
 #include <algorithm>
 #include <optional>
 #include <cstddef>
@@ -264,7 +265,7 @@ struct WireRep {
         const size_t side = progressiveClusterGridResolution;
         return isProgressive() && !progressiveClusters.empty() &&
             (side == 0 || (side > 1 && side <= 64 &&
-             side * side * side == progressiveClusters.size()));
+             progressiveClusters.size() <= side * side * side));
     }
 
     bool hasAdaptiveProgressiveClusters() const noexcept {
@@ -356,10 +357,11 @@ struct TriMesh {
     bool hasProgressiveClusters() const noexcept {
         const size_t side = progressiveClusterGridResolution;
         /* A zero side marks deterministic adaptive pages.  Uniform-grid
-         * producers retain the older cube-size validation. */
+         * producers may omit empty cells; bounds and ranges make occupied
+         * records self-describing without dense placeholder objects. */
         return isProgressive() && !progressiveClusters.empty() &&
             (side == 0 || (side > 1 && side <= 64 &&
-             side * side * side == progressiveClusters.size()));
+             progressiveClusters.size() <= side * side * side));
     }
 
 
@@ -787,6 +789,24 @@ public:
      */
     void setPointProxyProtectedInstances(
         const std::vector<Obol::InstanceId>& ids);
+
+    /**
+     * Return the exact current point-protection set.  Stable-view planners
+     * may compare this snapshot off the presentation commit path.
+     */
+    std::vector<Obol::InstanceId> pointProxyProtectedInstances() const;
+
+    /**
+     * Adopt an already validated protection set without rebuilding or
+     * diffing it.  This is the transaction commit path for large CAD views:
+     * the caller must have compared the complete set against the snapshot
+     * above under its own scene-revision witness.  The existing frame plan and
+     * GPU resources remain live while the bounded point classifier prepares
+     * and atomically publishes the new presentation.
+     */
+    void adoptPointProxyProtectedInstances(
+        std::unordered_set<Obol::InstanceId,
+            std::hash<Obol::InstanceId>>&& ids);
 
     // -----------------------------------------------------------------------
     // Query
