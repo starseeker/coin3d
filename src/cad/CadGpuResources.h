@@ -55,6 +55,7 @@
 
 #include <Obol/cad/CadIds.h>
 #include <Obol/cad/CadGpuResourceSnapshot.h>
+#include <Obol/cad/CadProgressive.h>
 #include "CadGLCaps.h"
 
 #include <Inventor/system/gl.h>
@@ -117,10 +118,18 @@ struct CadTriGpu {
  * normals, preserving flat lighting without per-frame glBegin/glVertex work.
  */
 struct CadProgressiveGpu {
+    struct PackedRange {
+        uint32_t sourceFirst = 0;
+        uint32_t sourceCount = 0;
+        uint32_t packedFirst = 0;
+    };
+
     GLuint posBuf = 0;
     GLuint normBuf = 0;
     GLsizei vertexCount = 0;
     bool indexed = false;
+    uint64_t rangeSignature = 0;
+    std::vector<PackedRange> packedRanges;
     size_t bytes = 0;
     uint64_t lastUsedFrame = 0;
 };
@@ -146,11 +155,11 @@ struct CadFlatWireGroup {
 
 struct CadFlatWireRangeKey {
     InstanceId instance;
-    uint8_t level = 15;
+    uint8_t cut = Obol::ProgressiveCutUnspecified;
     uint64_t geometryToken = 0;
 
     bool operator==(const CadFlatWireRangeKey& other) const noexcept {
-        return instance == other.instance && level == other.level &&
+        return instance == other.instance && cut == other.cut &&
                geometryToken == other.geometryToken;
     }
 };
@@ -158,7 +167,7 @@ struct CadFlatWireRangeKey {
 struct CadFlatWireRangeKeyHash {
     size_t operator()(const CadFlatWireRangeKey& key) const noexcept {
         size_t value = std::hash<InstanceId>()(key.instance);
-        value ^= static_cast<size_t>(key.level) +
+        value ^= static_cast<size_t>(key.cut) +
                  static_cast<size_t>(0x9e3779b9u) +
                  (value << 6) + (value >> 2);
         value ^= static_cast<size_t>(key.geometryToken) +
@@ -209,14 +218,14 @@ struct CadFlatShadedGroup {
 
 struct CadFlatShadedRangeKey {
     InstanceId instance;
-    uint8_t level = 15;
+    uint8_t cut = Obol::ProgressiveCutUnspecified;
     /* Identifies the part generation and occurrence transform used to bake
      * this world-space range.  Presentation/style revisions deliberately do
      * not participate, so selection can reuse the same vertices. */
     uint64_t geometryToken = 0;
 
     bool operator==(const CadFlatShadedRangeKey& other) const noexcept {
-        return instance == other.instance && level == other.level &&
+        return instance == other.instance && cut == other.cut &&
                geometryToken == other.geometryToken;
     }
 };
@@ -224,7 +233,7 @@ struct CadFlatShadedRangeKey {
 struct CadFlatShadedRangeKeyHash {
     size_t operator()(const CadFlatShadedRangeKey& key) const noexcept {
         size_t value = std::hash<InstanceId>()(key.instance);
-        value ^= static_cast<size_t>(key.level) +
+        value ^= static_cast<size_t>(key.cut) +
                  static_cast<size_t>(0x9e3779b9u) +
                  (value << 6) + (value >> 2);
         value ^= static_cast<size_t>(key.geometryToken) +
@@ -301,6 +310,7 @@ struct CadTriangleAtlasPart {
     uint64_t lastUsedFrame = 0;
     uint64_t lowerDemandSinceFrame = 0;
     uint64_t progressiveLineage = 0;
+    bool exactPreparationProtected = false;
     bool hasNormals = false;
     bool progressive = false;
 };
@@ -439,14 +449,19 @@ public:
 
     /** Return a cached fixed-function PoP cut, or nullptr if not built. */
     const CadProgressiveGpu* progressiveFor(
-        PartId pid, bool shaded, uint8_t level);
+        PartId pid, bool shaded, uint8_t cut,
+        uint64_t rangeSignature = 0);
+    const CadProgressiveGpu* progressiveForAny(
+        PartId pid, bool shaded, uint8_t cut);
 
     /** Upload one fixed-function PoP cut for reuse across frames/instances. */
     void uploadProgressive(
-        PartId pid, bool shaded, uint8_t level,
+        PartId pid, bool shaded, uint8_t cut,
         const std::vector<float>& positions,
         const std::vector<float>& normals,
-        bool indexed, const SoGLContext *glue);
+        bool indexed, uint64_t rangeSignature,
+        const std::vector<CadProgressiveGpu::PackedRange>& packedRanges,
+        const SoGLContext *glue);
 
     /** Delimit a render so active PoP cuts survive cache-budget pruning. */
     void beginProgressiveFrame();
@@ -594,6 +609,17 @@ public:
     void endTriangleAtlasFrame(const SoGLContext *glue);
 
     /**
+     * Protect only the resident parts claimed by a resumable exact renderer
+     * transaction.  Protection persists across presentation-frame slices,
+     * while unrelated stale parts remain eligible for synchronous pressure
+     * reclamation.  One CadGpuResources instance has one owner-thread exact
+     * transaction at a time.
+     */
+    void beginTriangleAtlasExactPreparation();
+    void protectTriangleAtlasExactPart(PartId pid);
+    void endTriangleAtlasExactPreparation() noexcept;
+
+    /**
      * Skip the O(resident parts) maintenance scan for an exactly replayed
      * prepared frame.  The renderer periodically leaves maintenance enabled,
      * and any atlas mutation changes triangleAtlasRevision() so cached
@@ -714,8 +740,8 @@ private:
         CadPointGpu point;
         CadWireGpu  wire;
         CadTriGpu   tri;
-        std::array<CadProgressiveGpu, 16> progressiveWire;
-        std::array<CadProgressiveGpu, 16> progressiveTri;
+        std::vector<CadProgressiveGpu> progressiveWire;
+        std::vector<CadProgressiveGpu> progressiveTri;
     };
 
     std::unordered_map<PartId, Entry, std::hash<PartId>> cache_;
@@ -739,6 +765,7 @@ private:
     uint64_t ordinaryPartSuffixUploadBytes_ = 0;
     uint64_t ordinaryPartGpuCopyBytes_ = 0;
     uint64_t ordinaryPartLineageReuseCount_ = 0;
+    uint64_t ordinaryPartLineageReplacementCount_ = 0;
     std::unordered_map<PartId, CadTriangleAtlasPart, std::hash<PartId>>
         triangleAtlasParts_;
     std::vector<std::unique_ptr<CadTriangleAtlasPage>>
@@ -748,6 +775,8 @@ private:
     uint64_t triangleAtlasRevision_ = 1;
     bool triangleAtlasMaintenanceDeferred_ = false;
     bool triangleAtlasReclamationDeferred_ = false;
+    bool triangleAtlasExactPreparationActive_ = false;
+    uint64_t triangleAtlasCompactionFrame_ = 0;
     size_t triangleAtlasAllocatedBytes_ = 0;
     size_t triangleAtlasLiveBytes_ = 0;
     size_t triangleAtlasPageCount_ = 0;

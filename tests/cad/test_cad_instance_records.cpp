@@ -136,10 +136,13 @@ main()
         "the CAD node must not build a camera-driven hierarchy");
 
     runner.startTest("producer-authored progressive metadata is retained");
-    shaded.shaded->progressiveMinimumLevel = 0;
-    shaded.shaded->progressiveResidentLevel = 15;
-    shaded.shaded->progressiveIndexCount.fill(3);
-    shaded.shaded->progressivePositionCount.fill(3);
+    shaded.shaded->progressiveMinimumCut = 0;
+    shaded.shaded->progressiveResidentCut = 15;
+    shaded.shaded->progressiveCuts.resize(16);
+    for (Obol::ProgressiveTriangleCut& cut : shaded.shaded->progressiveCuts) {
+        cut.indexCount = 3;
+        cut.positionCount = 3;
+    }
     assembly->upsertPart(first.part, shaded);
     runner.endTest(assembly->hasProgressivePartLod(),
         "only an explicit resident prefix may enable progressive drawing");
@@ -204,6 +207,25 @@ main()
         transformedBounds.getMax() == SbVec3f(15.0f, 27.0f, 41.0f),
         "a producer extent must define bounds without renderable channels");
     conservativeBoundsAssembly->unref();
+
+    runner.startTest("progressive wire cuts retain independent bounded ranges");
+    Obol::WireRep progressiveWire;
+    for (int i = 0; i < 12; ++i)
+        progressiveWire.segmentPoints.push_back(SbVec3f(
+            static_cast<float>(i), 0.0f, 0.0f));
+    progressiveWire.progressiveMinimumCut = 2;
+    progressiveWire.progressiveResidentCut = 5;
+    progressiveWire.progressiveCuts.resize(6);
+    progressiveWire.progressiveCuts[2].segmentFirst = 1;
+    progressiveWire.progressiveCuts[2].segmentCount = 2;
+    progressiveWire.progressiveCuts[5].segmentFirst = 4;
+    progressiveWire.progressiveCuts[5].segmentCount = 9;
+    runner.endTest(
+        progressiveWire.segmentFirstAtCut(0) == 1 &&
+        progressiveWire.segmentCountAtCut(0) == 2 &&
+        progressiveWire.segmentFirstAtCut(63) == 4 &&
+        progressiveWire.segmentCountAtCut(63) == 2,
+        "cut selection must clamp and bound its own segment range");
 
     assembly->unref();
     return runner.getSummary();

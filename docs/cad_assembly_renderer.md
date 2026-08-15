@@ -104,7 +104,7 @@ assembly->upsertPart(pid, geom);
 
 `SoCADAssembly` stores shared geometry and instances. Non-geometric per-view
 presentation policy is supplied by an `SoCADViewState` node earlier in the
-same traversal branch. Progressive levels are producer-authored per instance;
+same traversal branch. Progressive cuts are producer-authored per instance;
 the CAD node does not derive them from its camera:
 
 ```cpp
@@ -338,15 +338,17 @@ PartId pid2 = CadIdBuilder::hash128(keyBytes, keyLen); // from raw bytes
 
 ### Producer-authored retained prefixes
 
-The geometry producer supplies exact coordinates in activation order,
-cumulative primitive counts for levels 0 through 15, quantization bounds, and
-the minimum/resident levels. Each `InstanceRecord::lodLevel` selects one active
-cut. `updateInstanceLodLevels()` changes only those cuts.
+The geometry producer supplies exact coordinates in activation order, an
+ordered vector of independently drawable cuts, quantization bounds, and the
+minimum/resident cut interval.  Each cut records its cumulative primitive
+count and its own per-axis quantization precision; no precision or population
+rule is inferred from the cut ordinal.  `InstanceRecord::lodCut` selects one
+active cut and `updateInstanceCuts()` changes only those selections.
 
 The CAD node deliberately does not inspect camera distance, projected size, or
-selection to choose a level, and it never builds a second hierarchy. A view
+selection to choose a cut, and it never builds a second hierarchy. A view
 owner may therefore share one resident part between views while assigning a
-different active level to each occurrence. Shaded rendering, wire rendering,
+different active cut to each occurrence. Shaded rendering, wire rendering,
 hidden-line depth, and picking all clamp to the same producer-authored prefix
 and snap retained exact coordinates with the same quantization rule.
 
@@ -354,8 +356,10 @@ Growing a progressive part appends CPU/GPU tails when possible. Changing an
 active cut does not rebuild the part or upload geometry. Replacing a part is
 reserved for actual prefix growth, trimming, or source invalidation.
 
-`SegmentPopLod` and `TrianglePopLod` remain standalone preparation utilities;
-they are not called by `SoCADAssembly` or its renderer.
+Obol deliberately does not contain a second mesh simplifier.  Cache format,
+cut scheduling, projected-error selection, residency, and frame-budget policy
+belong to the geometry producer/view owner; Obol validates and renders the
+explicit retained-cut contract.
 
 ---
 
@@ -363,7 +367,7 @@ they are not called by `SoCADAssembly` or its renderer.
 
 | Tier | Requirements | Method |
 |------|-------------|--------|
-| 2 | GL 3.1 + instanced shaders | One draw call per unique part |
+| 2 | GL 3.1 + instanced/indirect shaders | Batched by part and active cut |
 | 1 | GL 2.0 + GLSL 1.10 + VBOs | Per-instance loop, frustum-culled |
 | 0 | GL 1.1 (Mesa swrast fallback) | `glBegin`/`glEnd`, frustum-culled, progressive-cut aware |
 
@@ -371,10 +375,9 @@ Per-instance frustum culling is active in Tier 0 and Tier 1: each instance's
 world bounding box is tested against the six frustum planes before issuing
 any draw call, skipping fully off-screen instances at no GPU cost.
 
-Producer-authored progressive cuts are active in Tier 0 and Tier 1. When a
-progressive part is present on a GL 3.1-capable context, the renderer currently
-falls back from Tier 2 to Tier 1 so each instance can use its own level. A future Tier-2 improvement
-should bin instances by `(part, lodLevel)` and issue instanced draws per bin.
+Producer-authored progressive cuts are active in every tier.  The retained
+frame plan bins occurrences by part and active cut so a shared part remains
+batchable without forcing all occurrences to use the same detail.
 
 GPU resource uploads are short-circuited in all tiers: `CadGpuResources`
 tracks a per-part generation counter and skips the entire CPU-side
@@ -390,8 +393,6 @@ styles, selection, or draw mode change.
   Thick-line rendering requires geometry shaders or triangle-based lines.
 * **Transparency**: no alpha-sorting is implemented.  Semi-transparent CAD
   parts may render with incorrect blending.
-* **Tier-2 progressive drawing**: progressive parts currently route Tier-2-capable contexts
-  through the Tier-1 VBO loop. This favors correctness over maximum batching.
 * **Wireframe occlusion**: the `wireframeOcclusion` field is exposed but the
   depth-only triangle prepass is not yet implemented.
 * **ID stability across reloads**: without stable per-node GUIDs,
@@ -416,10 +417,6 @@ styles, selection, or draw mode change.
 | `src/cad/SoCADViewState.cpp`       | View-state element and node        |
 | `src/cad/CadFramePlan.h`           | Internal frame plan structs       |
 | `src/cad/CadGpuResources.h/.cpp`   | Per-context VBO cache (isUpToDate fast-path) |
-| `src/cad/lod/SegmentPopLod.h/.cpp` | POP LoD for segments              |
-| `src/cad/lod/TrianglePopLod.h/.cpp`| POP LoD for triangles             |
 | `src/cad/picking/CadPicking.h/.cpp`| CPU BVH picking (edge + triangle) |
 | `tests/cad/test_cad_ids.cpp`       | Unit tests: ID generation         |
-| `tests/cad/test_segment_lod.cpp`   | Unit tests: segment LoD           |
-| `tests/cad/test_triangle_lod.cpp`  | Unit tests: triangle LoD          |
 | `tests/cad/test_cad_picking.cpp`   | Unit tests: edge + triangle picking |

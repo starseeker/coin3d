@@ -43,6 +43,8 @@ struct CadGpuResourceSnapshot {
     uint64_t ordinaryPartGpuCopyBytes = 0;
     /** Ordinary VBO generation swaps which reused a certified prefix. */
     uint64_t ordinaryPartLineageReuseCount = 0;
+    /** Ordinary VBO generation swaps which explicitly changed lineage. */
+    uint64_t ordinaryPartLineageReplacementCount = 0;
     /** Cumulative producer geometry bytes in complete atlas populations. */
     uint64_t triangleAtlasFullUploadBytes = 0;
     /** Cumulative producer geometry bytes in append-only progressive tails. */

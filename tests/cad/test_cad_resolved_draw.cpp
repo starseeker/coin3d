@@ -8,6 +8,8 @@
 
 #include "CadResolvedDraw.h"
 
+#include <Obol/cad/CadProgressive.h>
+
 #include <cstdio>
 #include <cstdint>
 #include <limits>
@@ -131,22 +133,22 @@ testExhaustiveSparseResolution()
         }
     }
 
-    /* Exercise the complete serialized level domain, including malformed or
+    /* Exercise the complete serialized cut domain, including malformed or
      * transitional minimum>resident inputs.  No result may exceed the
      * published resident prefix. */
     for (uint32_t requested = 0; requested <= 255; ++requested) {
         for (uint32_t minimum = 0; minimum <= 255; ++minimum) {
             for (uint32_t resident = 0; resident <= 255; ++resident) {
-                const uint8_t expected = resident >= 16 ? 15 :
-                    static_cast<uint8_t>(requested <
-                            (minimum > resident ? resident : minimum) ?
-                        (minimum > resident ? resident : minimum) :
-                        (requested > resident ? resident : requested));
-                failures += check(cadResolvedProgressiveLevel(
+                const uint8_t availableMinimum = static_cast<uint8_t>(
+                    minimum > resident ? resident : minimum);
+                const uint8_t expected = static_cast<uint8_t>(
+                    requested < availableMinimum ? availableMinimum :
+                    (requested > resident ? resident : requested));
+                failures += check(cadResolvedProgressiveCut(
                         static_cast<uint8_t>(requested),
                         static_cast<uint8_t>(minimum),
                         static_cast<uint8_t>(resident)) == expected,
-                    "progressive level differs from residency-safe oracle");
+                    "progressive cut differs from residency-safe oracle");
                 ++cases;
                 if (failures)
                     return failures;
@@ -164,6 +166,18 @@ int
 main()
 {
     int failures = 0;
+
+    /* A planar or linear source has exact zero-extent axes.  Requiring all
+     * three bit counts to reach 16 misclassified the terminal cut and kept
+     * the renderer/picker on their quantized paths indefinitely. */
+    failures += check(ProgressiveQuantization{0, 0, 0}.isExact(),
+        "unsnapped progressive coordinates should be exact");
+    failures += check(ProgressiveQuantization{16, 16, 0}.isExact(),
+        "a planar terminal progressive cut should be exact");
+    failures += check(ProgressiveQuantization{16, 0, 16}.isExact(),
+        "a zero-extent middle axis should not prevent an exact cut");
+    failures += check(!ProgressiveQuantization{16, 15, 0}.isExact(),
+        "a quantized non-empty progressive axis should not be exact");
 
     CadFramePlan plan;
     plan.visibleInstances = {
@@ -211,15 +225,15 @@ main()
         cadDrawableInstanceCount(plan, empty, CadDrawChannel::Wire) == 0,
         "large sparse range indices must remain bounds safe");
 
-    failures += check(cadResolvedProgressiveLevel(2, 4, 10) == 4,
+    failures += check(cadResolvedProgressiveCut(2, 4, 10) == 4,
         "progressive request must clamp to minimum");
-    failures += check(cadResolvedProgressiveLevel(12, 4, 10) == 10,
-        "progressive request must clamp to resident level");
-    failures += check(cadResolvedProgressiveLevel(7, 4, 10) == 7,
+    failures += check(cadResolvedProgressiveCut(12, 4, 10) == 10,
+        "progressive request must clamp to resident cut");
+    failures += check(cadResolvedProgressiveCut(7, 4, 10) == 7,
         "progressive request inside the resident interval changed");
-    failures += check(cadResolvedProgressiveLevel(0, 0, 16) == 15,
-        "non-progressive/full-resident sentinel must resolve exact");
-    failures += check(cadResolvedProgressiveLevel(5, 9, 3) == 3,
+    failures += check(cadResolvedProgressiveCut(16, 0, 16) == 16,
+        "cut 16 must remain an ordinary valid explicit cut");
+    failures += check(cadResolvedProgressiveCut(5, 9, 3) == 3,
         "quality minimum must never exceed resident data");
 
     failures += testExhaustiveSparseResolution();

@@ -10,6 +10,7 @@
 set(CAD_SOURCES
     # Core CAD node
     ${CMAKE_CURRENT_SOURCE_DIR}/CadIds.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/CadProjectedProxy.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/SoCADDetail.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/SoCADViewState.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/SoCADAssembly.cpp
@@ -21,10 +22,6 @@ set(CAD_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/CadRendererGLExecutors.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/CadShaderPrograms.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/CadShaderSources.cpp
-
-    # LoD
-    ${CMAKE_CURRENT_SOURCE_DIR}/lod/SegmentPopLod.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/lod/TrianglePopLod.cpp
 
     # Picking
     ${CMAKE_CURRENT_SOURCE_DIR}/picking/CadPicking.cpp

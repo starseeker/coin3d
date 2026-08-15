@@ -849,9 +849,21 @@ bool CadRendererGL::ensureReady(const SoGLContext* glue)
 // ensurePartUploaded()
 // ---------------------------------------------------------------------------
 
+void CadRendererGL::noteRenderPreparation(const char *reason)
+{
+    ++renderPreparationSerial_;
+    if (!renderPreparationSerial_)
+        renderPreparationSerial_ = 1;
+    if (configuration_ && configuration_->patchDebug)
+        std::fprintf(stderr,
+            "CadRendererGL preparation serial=%llu reason=%s\n",
+            static_cast<unsigned long long>(renderPreparationSerial_),
+            reason ? reason : "unknown");
+}
+
 void CadRendererGL::ensurePartUploaded(
         PartId pid, const SoCADAssembly& assembly, uint64_t gen,
-        uint8_t requestedLod, const SoGLContext* glue)
+        uint8_t requestedCut, const SoGLContext* glue)
 {
     // Retrieve part geometry from the assembly
     const Obol::PartGeometry* geom = assembly.partGeometry(pid);
@@ -952,9 +964,9 @@ void CadRendererGL::ensurePartUploaded(
     if (geom->shaded.has_value()) {
         const auto& mesh = *geom->shaded;
         size_t requiredIndexCount = mesh.isProgressive() ?
-            mesh.indexCountAtLevel(requestedLod) : mesh.indices.size();
+            mesh.indexCountAtCut(requestedCut) : mesh.indices.size();
         size_t requiredPositionCount = mesh.isProgressive() ?
-            mesh.positionCountAtLevel(requestedLod) : mesh.positions.size();
+            mesh.positionCountAtCut(requestedCut) : mesh.positions.size();
         if (requiredIndexCount > 0 && requiredPositionCount == 0)
             return;
         pTriPos = packedVec3fData(mesh.positions);
@@ -985,7 +997,7 @@ void CadRendererGL::ensurePartUploaded(
             triPosCount, triIdxCount))
         return;
 
-    noteRenderPreparation();
+    noteRenderPreparation("ordinary-part-upload");
     gpuRes_->upload(pid,
                    pPointPos, pointCount,
                    pWirePos,  wirePointCount,
@@ -1053,12 +1065,13 @@ static bool isBoxOutsideFrustum(const float wbMin[3], const float wbMax[3],
     return false;
 }
 
-static uint8_t maximumRequestedLod(
+static uint8_t maximumRequestedCut(
         const CadFramePlan& plan, const SoCADAssembly& assembly, PartId part)
 {
-    const auto found = plan.maximumRequestedLodByPart.find(part);
-    return found != plan.maximumRequestedLodByPart.end() ?
-        assembly.effectiveProgressiveLodLevel(found->second) : 15;
+    const auto found = plan.maximumRequestedCutByPart.find(part);
+    return found != plan.maximumRequestedCutByPart.end() ?
+        assembly.effectiveProgressiveCut(found->second) :
+        Obol::ProgressiveCutUnspecified;
 }
 
 void CadRendererGL::renderPoints(
@@ -1556,7 +1569,7 @@ void CadRendererGL::render(
     atlasAdmissionPressure_ = false;
     if (!gpuRes_ || gpuContextId_ != glue->contextid ||
             !capsDetected_ || shadersContextId_ != glue->contextid)
-        noteRenderPreparation();
+        noteRenderPreparation("renderer-initialization");
     if (!ensureReady(glue)) return;
     const auto publishResourceSnapshot = [&]() {
         Obol::CadGpuResourceSnapshot snapshot =
@@ -1626,6 +1639,28 @@ void CadRendererGL::render(
     const bool hiddenLine =
         assembly.drawMode.getValue() == SoCADAssembly::HIDDEN_LINE;
     const bool retainedProgressive = assembly.hasProgressivePartLod();
+    bool adaptiveShadedRanges = false;
+    for (const CadDrawItem& item : plan.shadedItems) {
+        if (item.partIndex >= plan.partBindings.size())
+            continue;
+        const CadPartBinding& binding = plan.partBindings[item.partIndex];
+        if (binding.geometry && binding.geometry->shaded &&
+                binding.geometry->shaded->hasAdaptiveProgressiveClusters()) {
+            adaptiveShadedRanges = true;
+            break;
+        }
+    }
+    bool adaptiveWireRanges = false;
+    for (const CadDrawItem& item : plan.wireItems) {
+        if (item.partIndex >= plan.partBindings.size())
+            continue;
+        const CadPartBinding& binding = plan.partBindings[item.partIndex];
+        if (binding.geometry && binding.geometry->wire &&
+                binding.geometry->wire->hasAdaptiveProgressiveClusters()) {
+            adaptiveWireRanges = true;
+            break;
+        }
+    }
     const bool progressiveWireShaderReady =
         !retainedProgressive || shaders_.wirePop;
     const bool progressiveShadedShaderReady =
@@ -1634,7 +1669,8 @@ void CadRendererGL::render(
         !retainedProgressive || shaders_.wirePopInst;
     const bool progressiveShadedInstShaderReady =
         !retainedProgressive || shaders_.shadedPopInst;
-    const bool useFlatShaded = flatShadedEnabled && canUseFlatShaded &&
+    const bool useFlatShaded = !adaptiveShadedRanges &&
+        flatShadedEnabled && canUseFlatShaded &&
         (hiddenLine || plan.shadedItems.size() >= 128);
 
     renderPoints(plan, assembly, glue, viewProj, partGenMap);
@@ -1691,7 +1727,7 @@ void CadRendererGL::render(
             uint64_t gen = (genIt != partGenMap.end()) ? genIt->second : 0;
             ensurePartUploaded(
                 repKey.part, assembly, gen,
-                maximumRequestedLod(plan, assembly, repKey.part), glue);
+                maximumRequestedCut(plan, assembly, repKey.part), glue);
         }
         SoGLContext_glColorMask(glue, GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
         SoGLContext_glEnable(glue, GL_POLYGON_OFFSET_FILL);
@@ -1713,7 +1749,7 @@ void CadRendererGL::render(
         if (finishInterruptedFrame())
             return;
 
-        if (caps_.canUseInstanced() && shaders_.wireInst &&
+        if (!adaptiveWireRanges && caps_.canUseInstanced() && shaders_.wireInst &&
                 progressiveWireInstShaderReady) {
             lastRenderTier_ = 2;
             renderInstanced(plan, assembly, glue, viewProj, viewVolume,
@@ -1772,7 +1808,8 @@ void CadRendererGL::render(
         SoGLContext_glPolygonOffset(glue, 1.0f, 1.0f);
     }
     const bool indirectShadedRendered =
-        indirectEnabled && plan.shadedItems.size() >= 128 &&
+        !adaptiveShadedRanges && indirectEnabled &&
+        plan.shadedItems.size() >= 128 &&
         renderIndirectShaded(
             plan, assembly, glue, viewProj, viewVolume);
     if (finishInterruptedFrame()) {
@@ -1798,7 +1835,8 @@ void CadRendererGL::render(
                         plan, item, CadDrawChannel::Wire);
             const bool preferFlatWire = caps_.isSoftwareRenderer ?
                 wireInstanceCount >= 128 : plan.wireItems.size() >= 128;
-            wireRendered = flatWireEnabled && preferFlatWire &&
+            wireRendered = !adaptiveWireRanges &&
+                flatWireEnabled && preferFlatWire &&
                 canUseFlatWire &&
                 renderFlatWire(plan, assembly, glue, viewProj);
             if (finishInterruptedFrame())
@@ -1818,11 +1856,11 @@ void CadRendererGL::render(
                     repKey.part, assembly,
                     generation == partGenMap.end() ?
                         0 : generation->second,
-                    maximumRequestedLod(
+                    maximumRequestedCut(
                         plan, assembly, repKey.part),
                     glue);
             }
-            if (caps_.canUseInstanced() && shaders_.wireInst &&
+            if (!adaptiveWireRanges && caps_.canUseInstanced() && shaders_.wireInst &&
                     progressiveWireInstShaderReady) {
                 renderInstanced(
                     plan, assembly, glue, viewProj, viewVolume,
@@ -1940,7 +1978,7 @@ void CadRendererGL::render(
      */
     const bool preferFlatWire = caps_.isSoftwareRenderer ?
         wireInstanceCount >= 128 : plan.wireItems.size() >= 128;
-    const bool flatWireRendered = flatWireEnabled &&
+    const bool flatWireRendered = !adaptiveWireRanges && flatWireEnabled &&
         preferFlatWire && canUseFlatWire &&
         renderFlatWire(plan, assembly, glue, viewProj);
     if (finishInterruptedFrame())
@@ -1959,7 +1997,7 @@ void CadRendererGL::render(
         uint64_t gen = (genIt != partGenMap.end()) ? genIt->second : 0;
         ensurePartUploaded(
             repKey.part, assembly, gen,
-            maximumRequestedLod(plan, assembly, repKey.part), glue);
+            maximumRequestedCut(plan, assembly, repKey.part), glue);
     }
 
     /* Keep shaded polygons fractionally behind wire geometry.  A wire source
@@ -1980,7 +2018,8 @@ void CadRendererGL::render(
         lastRenderTier_ = 1;
         renderFixedVboLoop(plan, assembly, glue, viewProj, viewMatrix,
                            projectionMatrix, !flatWireRendered, true);
-    } else if (caps_.canUseInstanced() &&
+    } else if (!adaptiveShadedRanges && !adaptiveWireRanges &&
+            caps_.canUseInstanced() &&
             shaders_.wireInst && shaders_.shadedInst &&
             progressiveWireInstShaderReady &&
             progressiveShadedInstShaderReady) {

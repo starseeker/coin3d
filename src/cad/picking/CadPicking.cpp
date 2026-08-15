@@ -94,25 +94,26 @@ rayBoxHit(const SbLine& ray, const SbBox3f& box, float* hitT) noexcept
 }
 
 uint8_t
-progressiveLevel(uint8_t requested, uint8_t minimum, uint8_t resident) noexcept
+progressiveCut(uint8_t requested, uint8_t minimum, uint8_t resident) noexcept
 {
-    if (resident >= 16) return requested;
-    if (requested >= 16) requested = resident;
+    if (resident == 255) return requested;
+    if (requested == 255) requested = resident;
     return std::max(minimum, std::min(resident, requested));
 }
 
 float
 progressiveSnapCoordinate(float value, float minimum, float maximum,
-                          uint8_t level) noexcept
+                          uint8_t bits) noexcept
 {
-    if (level >= 15 || !(maximum > minimum)) return value;
-    const double mask = std::pow(2.0, static_cast<double>(15 - level));
+    if (!bits || !(maximum > minimum)) return value;
+    const double mask = std::ldexp(
+        1.0, 16 - std::min<int>(16, bits));
     const double scaled =
         (static_cast<double>(value) - minimum) /
         (static_cast<double>(maximum) - minimum) * 65535.0;
-    const double low = std::floor(std::floor(scaled) / mask);
-    const double high = std::ceil(std::ceil(scaled) / mask);
-    const double snapped = (low + high) * 0.5 * mask;
+    const double code = std::floor(std::max(0.0, std::min(65535.0, scaled)));
+    const double cell = std::floor(code / mask);
+    const double snapped = std::min(65535.0, (cell + 0.5) * mask);
     return static_cast<float>(
         (snapped / 65535.0) *
         (static_cast<double>(maximum) - minimum) + minimum);
@@ -120,12 +121,17 @@ progressiveSnapCoordinate(float value, float minimum, float maximum,
 
 SbVec3f
 progressiveSnapPoint(const SbVec3f& point, const SbVec3f& minimum,
-                     const SbVec3f& maximum, uint8_t level) noexcept
+                     const SbVec3f& maximum,
+                     Obol::ProgressiveQuantization quantization) noexcept
 {
+    if (quantization.isExact()) return point;
     return SbVec3f(
-        progressiveSnapCoordinate(point[0], minimum[0], maximum[0], level),
-        progressiveSnapCoordinate(point[1], minimum[1], maximum[1], level),
-        progressiveSnapCoordinate(point[2], minimum[2], maximum[2], level));
+        progressiveSnapCoordinate(point[0], minimum[0], maximum[0],
+            quantization.xBits),
+        progressiveSnapCoordinate(point[1], minimum[1], maximum[1],
+            quantization.yBits),
+        progressiveSnapCoordinate(point[2], minimum[2], maximum[2],
+            quantization.zBits));
 }
 
 }  // namespace
@@ -459,12 +465,12 @@ CadPickQuery::pickEdge(
         CadPartEdgeBVH progressiveBvh;
         const CadPartEdgeBVH *edgeBvh = nullptr;
         if (wire.isProgressive()) {
-            const uint8_t level = progressiveLevel(
-                std::min(entry->lodLevel, lodCeiling),
-                wire.progressiveMinimumLevel,
-                wire.progressiveResidentLevel);
-            const size_t segmentCount = wire.segmentCountAtLevel(level);
-            const size_t segmentFirst = wire.segmentFirstAtLevel(level);
+            const uint8_t level = progressiveCut(
+                std::min(entry->lodCut, lodCeiling),
+                wire.progressiveMinimumCut,
+                wire.progressiveResidentCut);
+            const size_t segmentCount = wire.segmentCountAtCut(level);
+            const size_t segmentFirst = wire.segmentFirstAtCut(level);
             std::vector<CadPartEdgeBVH::SegEntry> segs;
             segs.reserve(segmentCount);
             for (size_t i = 0; i < segmentCount; ++i) {
@@ -477,11 +483,13 @@ CadPickQuery::pickEdge(
                     progressiveSnapPoint(
                         wire.segmentPoints[2 * sourceSegment],
                         wire.progressiveQuantizationMinimum,
-                        wire.progressiveQuantizationMaximum, level),
+                        wire.progressiveQuantizationMaximum,
+                        wire.quantizationAtCut(level)),
                     progressiveSnapPoint(
                         wire.segmentPoints[2 * sourceSegment + 1],
                         wire.progressiveQuantizationMinimum,
-                        wire.progressiveQuantizationMaximum, level),
+                        wire.progressiveQuantizationMaximum,
+                        wire.quantizationAtCut(level)),
                     segId, 0 });
             }
             progressiveBvh.build(std::move(segs));
@@ -788,19 +796,51 @@ CadPickQuery::pickTriangle(
         std::vector<SbVec3f> progressivePositions;
         std::vector<uint32_t> progressiveIndices;
         if (mesh.isProgressive()) {
-            activeLevel = progressiveLevel(
-                std::min(entry->lodLevel, lodCeiling),
-                mesh.progressiveMinimumLevel,
-                mesh.progressiveResidentLevel);
-            const size_t indexCount = mesh.indexCountAtLevel(activeLevel);
+            activeLevel = progressiveCut(
+                std::min(entry->lodCut, lodCeiling),
+                mesh.progressiveMinimumCut,
+                mesh.progressiveResidentCut);
             progressivePositions.reserve(mesh.positions.size());
             for (const SbVec3f& point : mesh.positions) {
                 progressivePositions.push_back(progressiveSnapPoint(
                     point, mesh.progressiveQuantizationMinimum,
-                    mesh.progressiveQuantizationMaximum, activeLevel));
+                    mesh.progressiveQuantizationMaximum,
+                    mesh.quantizationAtCut(activeLevel)));
             }
-            progressiveIndices.assign(
-                mesh.indices.begin(), mesh.indices.begin() + indexCount);
+            if (mesh.hasAdaptiveProgressiveClusters()) {
+                bool validRanges = true;
+                for (const ProgressiveTriangleCluster& cluster :
+                        mesh.progressiveClusters) {
+                    for (const ProgressiveTriangleClusterRange& range :
+                            cluster.ranges) {
+                        if (range.activationCut > activeLevel)
+                            break;
+                        const uint64_t end =
+                            static_cast<uint64_t>(range.firstIndex) +
+                            range.indexCount;
+                        if (range.firstIndex % 3u ||
+                                range.indexCount % 3u ||
+                                end > mesh.indices.size()) {
+                            progressiveIndices.clear();
+                            validRanges = false;
+                            break;
+                        }
+                        progressiveIndices.insert(
+                            progressiveIndices.end(),
+                            mesh.indices.begin() + range.firstIndex,
+                            mesh.indices.begin() +
+                                static_cast<size_t>(end));
+                    }
+                    if (!validRanges)
+                        break;
+                }
+            } else {
+                const size_t indexCount =
+                    mesh.indexCountAtCut(activeLevel);
+                progressiveIndices.assign(
+                    mesh.indices.begin(),
+                    mesh.indices.begin() + indexCount);
+            }
             progressiveBvh.build(progressivePositions, progressiveIndices);
             triBvh = &progressiveBvh;
         } else {

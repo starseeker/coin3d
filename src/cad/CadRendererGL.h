@@ -250,11 +250,7 @@ private:
     bool renderInterrupted() const;
     bool renderInterruptedAfter(size_t& workCounter,
                                 size_t work = 1u) const;
-    void noteRenderPreparation() {
-        ++renderPreparationSerial_;
-        if (!renderPreparationSerial_)
-            renderPreparationSerial_ = 1;
-    }
+    void noteRenderPreparation(const char *reason);
 
     bool softwareGlslRequested() const;
     bool cadLightDebugRequested() const;
@@ -353,7 +349,7 @@ private:
 
     // Ensure part geometry has been uploaded to GPU
     void ensurePartUploaded(PartId pid, const SoCADAssembly& assembly,
-                            uint64_t gen, uint8_t requestedLod,
+                            uint64_t gen, uint8_t requestedCut,
                             const SoGLContext * glue);
 
     void renderPoints(const CadFramePlan& plan,
@@ -467,7 +463,7 @@ private:
         uint64_t partGeometryRevision = 0;
         uint64_t instanceAttributeRevision = 0;
         uint64_t subpixelProxyRevision = 0;
-        int progressiveLodCeiling = -1;
+        int progressiveCutCeiling = -1;
         SbMatrix viewProj;
         std::vector<IndirectPreparedPart> parts;
         std::vector<uint32_t> partByPlanPartIndex;
@@ -501,6 +497,66 @@ private:
         size_t appendPatchAnchorInstanceCount = 0;
     };
 
+    enum class IndirectPreparationPhase : uint8_t {
+        Idle = 0,
+        Visibility,
+        Protection,
+        Coverage,
+        Enrichment,
+        CommandSetup,
+        Commands,
+        Preflight,
+        PublishSetup,
+        PublishParts,
+        ReverseInstances,
+        ReverseProxies,
+        Submit
+    };
+
+    /**
+     * Atomic exact-indirect preparation transaction.
+     *
+     * A large CAD assembly can require more than one host presentation
+     * deadline to classify its occurrences, protect/admit atlas prefixes,
+     * and pack its indirect commands.  The completed replay record cannot be
+     * mutated in place while that work is incomplete, and restarting an O(N)
+     * build on every deadline guarantees livelock once N crosses the work
+     * possible in one frame.  Keep only scalar cursors here; the scene-sized
+     * scratch arrays already belong to CadRendererGL and are published by
+     * constant-time swaps after every phase has completed.
+     */
+    struct IndirectPreparationState {
+        bool active = false;
+        IndirectPreparationPhase phase =
+            IndirectPreparationPhase::Idle;
+        uint32_t contextId = 0;
+        uint64_t planRevision = 0;
+        int progressiveCutCeiling = -1;
+        SbMatrix viewProj;
+
+        size_t itemCursor = 0;
+        uint32_t occurrenceOffset = 0;
+        size_t partCursor = 0;
+        size_t pageCursor = 0;
+        size_t reverseCursor = 0;
+        size_t visibleOccurrenceCount = 0;
+        uint64_t requestedLiveBytes = 0;
+
+        bool proxyPartActive = false;
+        uint32_t proxyPartIndex = 0;
+        uint32_t proxyVisibleIndex =
+            std::numeric_limits<uint32_t>::max();
+
+        bool commandItemActive = false;
+        uint32_t commandBaseInstance = 0;
+        uint8_t commandCut = Obol::ProgressiveCutUnspecified;
+        size_t commandCount = 0;
+        uint64_t renderedTriangleCount = 0;
+        Obol::CadRenderedWork renderedWork;
+        bool atlasAdmissionPressure = false;
+        uint32_t sliceCount = 0;
+    };
+
     /*
      * Indirect rendering is a per-frame operation, but its largest CPU
      * arrays are only scratch.  Retain their capacity with the renderer
@@ -508,7 +564,7 @@ private:
      * GUI thread for every paint.
      */
     std::vector<uint8_t> indirectVisibleMask_;
-    std::vector<uint8_t> indirectVisibleMaximumLod_;
+    std::vector<uint8_t> indirectVisibleMaximumCut_;
     std::vector<uint8_t> indirectVisiblePart_;
     std::vector<uint32_t> indirectVisiblePartIndices_;
     std::vector<double> indirectVisibleImportance_;
@@ -533,6 +589,7 @@ private:
     std::vector<uint8_t> indirectCommandCullByPart_;
     std::vector<uint32_t> indirectPackedInstanceByPart_;
     IndirectPreparedFrame indirectPrepared_;
+    IndirectPreparationState indirectPreparation_;
 
     bool renderIndirectShaded(
         const CadFramePlan& plan,
@@ -546,7 +603,7 @@ private:
         const SoGLContext *glue,
         const SbMatrix& viewProj,
         const SbViewVolume& viewVolume);
-    bool patchIndirectPreparedLod(
+    bool patchIndirectPreparedCuts(
         const CadFramePlan& plan,
         const SoCADAssembly& assembly,
         const SoGLContext *glue);

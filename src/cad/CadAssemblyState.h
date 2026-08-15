@@ -49,7 +49,7 @@ struct CadAssemblyInstanceData {
     std::string childName;
     uint32_t occurrenceIndex = 0;
     uint8_t boolOp = 0;
-    uint8_t lodLevel = 255;
+    uint8_t lodCut = Obol::ProgressiveCutUnspecified;
     SbBox3f worldBounds;
 };
 
@@ -90,6 +90,8 @@ struct CadSceneDatabase {
         std::hash<Obol::InstanceId>> hidden_;
     std::unordered_set<Obol::InstanceId,
         std::hash<Obol::InstanceId>> unpickable_;
+    std::unordered_set<Obol::InstanceId,
+        std::hash<Obol::InstanceId>> pointProxyProtected_;
     std::unordered_set<Obol::PartId,
         std::hash<Obol::PartId>> progressiveParts_;
     std::unordered_map<Obol::PartId, uint64_t,
@@ -114,13 +116,14 @@ struct CadPickingIndex {
  * not an abstraction layer in the hot path.
  */
 struct CadPlanCache {
-    static constexpr size_t ProgressiveLevelBinCount = 17;
+    static constexpr size_t ProgressiveCutBinCount =
+        Obol::ProgressiveCutLimit + 1;
 
     struct ProgressiveShadedPlanGroup {
         Obol::PartId part;
         uint32_t baseInstance = 0;
         uint32_t instanceCount = 0;
-        std::array<uint32_t, ProgressiveLevelBinCount> levelCounts = {};
+        std::array<uint32_t, ProgressiveCutBinCount> cutCounts = {};
         size_t shadedItemBegin = 0;
         size_t shadedItemCount = 0;
     };
@@ -187,6 +190,11 @@ struct CadSubpixelClassifier {
     std::vector<uint32_t> subpixelProxyScratchVisibleByPoint_;
     std::vector<uint32_t> subpixelProxyPointByVisible_;
     std::vector<uint32_t> subpixelProxyScratchPointByVisible_;
+    /* A sparse selection change may promote/demote a classified occurrence
+     * without invalidating the camera-local classification for the rest of
+     * the assembly.  Publish those edits with one point-stream revision at
+     * the end of the presentation transaction. */
+    bool pendingSubpixelProxyChange_ = false;
     /*
      * A camera-local classification may exceed one presentation deadline in
      * a scene with hundreds of thousands of occurrences.  Retain the exact
