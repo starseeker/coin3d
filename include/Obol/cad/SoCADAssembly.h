@@ -476,6 +476,15 @@ struct PartGeometry {
      * remains controlled independently by @c subpixelProxyEligible.
      */
     bool structuralProxy = false;
+
+    /**
+     * This structural proxy is the temporary fallback for a leaf whose LoD
+     * mesh presentation has not yet been published.  It is intentionally
+     * narrower than @c structuralProxy: model extents and conservative
+     * primitive boxes remain useful scene visuals, but must never hold a
+     * completed PoP view in a refinement loop.
+     */
+    bool lodStructuralProxy = false;
 };
 
 // ---------------------------------------------------------------------------
@@ -938,9 +947,10 @@ public:
     size_t lastSubpixelProxyCount() const;
 
     /**
-     * Number of in-frustum structural proxy occurrences which remained
-     * visible as wire boxes after camera-local subpixel collapse last frame.
-     * Fully clipped occurrences are not convergence obligations.
+     * Number of in-frustum unresolved LoD-leaf fallback occurrences which
+     * remained visible as wire boxes after camera-local subpixel collapse
+     * last frame.  Fully clipped occurrences are not convergence obligations;
+     * ordinary authored structural scene geometry is intentionally excluded.
      */
     size_t lastUncollapsedStructuralProxyCount() const;
 

@@ -155,6 +155,7 @@ struct CadPartBinding {
     uint64_t generation = 0;
     bool subpixelProxyEligible = false;
     bool structuralProxy = false;
+    bool lodStructuralProxy = false;
     std::array<SbVec3f, 8> subpixelProxyCorners = {};
 };
 

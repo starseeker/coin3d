@@ -1328,6 +1328,7 @@ struct SoCADAssemblyImpl :
             binding.part = pid;
             binding.geometry = partIt->second;
             binding.structuralProxy = geom.structuralProxy;
+            binding.lodStructuralProxy = geom.lodStructuralProxy;
             const auto generationIt = partGeneration_.find(pid);
             if (generationIt != partGeneration_.end())
                 binding.generation = generationIt->second;
@@ -2132,6 +2133,8 @@ struct SoCADAssemblyImpl :
         binding.generation = generation == partGeneration_.end() ?
             0 : generation->second;
         binding.structuralProxy = newGeometryFound->second->structuralProxy;
+        binding.lodStructuralProxy =
+            newGeometryFound->second->lodStructuralProxy;
         const auto proxy = subpixelProxyCorners_.find(newPart);
         binding.subpixelProxyEligible =
             proxy != subpixelProxyCorners_.end();
@@ -2363,13 +2366,17 @@ struct SoCADAssemblyImpl :
                     (newProxyEligible &&
                      binding.subpixelProxyCorners != proxyFound->second) ||
                     binding.structuralProxy !=
-                        geometryFound->second->structuralProxy)
+                        geometryFound->second->structuralProxy ||
+                    binding.lodStructuralProxy !=
+                        geometryFound->second->lodStructuralProxy)
                 geometryDelta.subpixelProxyInputChanged = true;
             binding.geometry = geometryFound->second;
             binding.generation = generation;
             binding.subpixelProxyEligible = newProxyEligible;
             binding.structuralProxy =
                 geometryFound->second->structuralProxy;
+            binding.lodStructuralProxy =
+                geometryFound->second->lodStructuralProxy;
             if (binding.subpixelProxyEligible)
                 binding.subpixelProxyCorners = proxyFound->second;
             else
@@ -2982,7 +2989,7 @@ struct SoCADAssemblyImpl :
                 if (!binding.geometry || !binding.geometry->wire)
                     continue;
                 const bool structuralProxy =
-                    binding.structuralProxy;
+                    binding.lodStructuralProxy;
                 for (uint32_t offset = 0;
                         offset < span.instanceCount; ++offset) {
                     const size_t visibleIndex =
@@ -3381,7 +3388,7 @@ struct SoCADAssemblyImpl :
                 item.partIndex < plan.partBindings.size() ?
                     &plan.partBindings[item.partIndex] : nullptr;
             const bool structuralProxy =
-                binding && binding->structuralProxy;
+                binding && binding->lodStructuralProxy;
             for (; subpixelProxyBuildWireOffset_ < item.instanceCount;
                     ++subpixelProxyBuildWireOffset_) {
                 if (abortRequested())

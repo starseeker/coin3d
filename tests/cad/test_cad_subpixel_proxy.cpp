@@ -1338,6 +1338,7 @@ main()
     geometry.wire = unitBox();
     geometry.subpixelProxyEligible = true;
     geometry.structuralProxy = true;
+    geometry.lodStructuralProxy = true;
     const Obol::PartId part = Obol::CadIdBuilder::hash128("subpixel-proxy");
     assembly->upsertPart(part, geometry);
 
@@ -1574,6 +1575,7 @@ main()
         box.wire = unitBox();
         box.subpixelProxyEligible = true;
         box.structuralProxy = true;
+        box.lodStructuralProxy = true;
         const float sx = 0.65f + 0.07f * static_cast<float>(i % 5);
         const float sy = 0.55f + 0.05f * static_cast<float>((i / 5) % 7);
         const float sz = 0.45f + 0.03f * static_cast<float>((i / 11) % 9);
@@ -1718,6 +1720,7 @@ main()
     rebindBox.wire = unitBox();
     rebindBox.subpixelProxyEligible = true;
     rebindBox.structuralProxy = true;
+    rebindBox.lodStructuralProxy = true;
     const Obol::PartId rebindBoxPart =
         Obol::CadIdBuilder::hash128("stream-rebind-box");
     assembly->upsertPart(rebindBoxPart, rebindBox);
