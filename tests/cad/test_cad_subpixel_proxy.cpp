@@ -21,6 +21,8 @@
 
 namespace {
 
+Obol::WireRep unitBox();
+
 bool
 sharedProjectedProxyContract()
 {
@@ -70,6 +72,29 @@ sharedProjectedProxyContract()
         Obol::classifyCadProjectedProxy(
             corners, identity, identity, SbVec2s(1, 256), 1.0f);
     return !invalidViewport.visible && !invalidViewport.pointEligible;
+}
+
+bool
+degenerateStructuralProxyContract()
+{
+    Obol::PartGeometry geometry;
+    geometry.wire = unitBox();
+    for (SbVec3f& point : geometry.wire->segmentPoints)
+        point[2] = 0.0f;
+    geometry.wire->bounds = SbBox3f(
+        SbVec3f(-0.5f, -0.5f, 0.0f),
+        SbVec3f(0.5f, 0.5f, 0.0f));
+    geometry.subpixelProxyEligible = true;
+    geometry.structuralProxy = true;
+
+    SbVec3f corners[8];
+    if (!Obol::cadPartGeometryProxyCorners(geometry, corners))
+        return false;
+    for (const SbVec3f& corner : corners) {
+        if (corner[2] != 0.0f)
+            return false;
+    }
+    return true;
 }
 
 void
@@ -1483,6 +1508,11 @@ main()
     }
     if (!sharedProjectedProxyContract()) {
         std::fprintf(stderr, "shared projected-proxy contract failed\n");
+        return 1;
+    }
+    if (!degenerateStructuralProxyContract()) {
+        std::fprintf(stderr,
+            "degenerate structural-proxy contract failed\n");
         return 1;
     }
 
