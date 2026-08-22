@@ -215,6 +215,7 @@ struct CadSubpixelClassifier {
      */
     bool subpixelProxyBuildActive_ = false;
     uint64_t subpixelProxyBuildInputRevision_ = 0;
+    uint64_t subpixelProxyBuildAppendRevision_ = 0;
     SbMatrix subpixelProxyBuildViewProj_;
     SbVec2s subpixelProxyBuildViewportSize_ = SbVec2s(0, 0);
     float subpixelProxyBuildPixelThreshold_ = 1.0f;

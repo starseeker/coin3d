@@ -87,6 +87,7 @@
 #include <unordered_set>
 #include <map>
 #include <array>
+#include <chrono>
 #include <vector>
 #include <memory>
 #include <algorithm>
@@ -3591,6 +3592,82 @@ struct SoCADAssemblyImpl :
         return true;
     }
 
+    /*
+     * Preserve an unpublished classifier cursor while a cold source appends
+     * more occurrences.  The ordinary append patch above operates on a
+     * complete, published classification.  Before the first publication,
+     * repeatedly invalidating the scratch scan made a fast producer able to
+     * keep a large assembly at boxes forever: every render revisited the
+     * prefix and the next append discarded it.
+     *
+     * Pure tail growth is safe to fold into the active transaction.  A
+     * replacement may alter a record the cursor has already visited, so it
+     * deliberately takes the conservative reset path instead.
+     */
+    bool extendSubpixelProxyAppendBuild(
+            const SbMatrix& viewProj,
+            const SbVec2s& viewportSize,
+            float pixelThreshold)
+    {
+        using namespace Obol::internal;
+        CadFramePlan& plan = cachedPlan_;
+        if (!subpixelProxyBuildActive_ ||
+                subpixelProxyBuildAppendRevision_ == 0 ||
+                subpixelProxyBuildAppendRevision_ <
+                    plan.appendDeltaFloorRevision ||
+                subpixelProxyBuildViewportSize_[0] != viewportSize[0] ||
+                subpixelProxyBuildViewportSize_[1] != viewportSize[1] ||
+                subpixelProxyBuildPixelThreshold_ != pixelThreshold ||
+                !(subpixelProxyBuildViewProj_ == viewProj))
+            return false;
+
+        size_t expectedVisibleExtent = subpixelProxyScratchMask_.size();
+        uint64_t newestAppendRevision =
+            subpixelProxyBuildAppendRevision_;
+        uint64_t newestInputRevision =
+            subpixelProxyBuildInputRevision_;
+        bool found = false;
+        for (const CadPlanAppendDelta& delta : plan.appendDeltas) {
+            if (delta.revision <=
+                    subpixelProxyBuildAppendRevision_)
+                continue;
+            if (!delta.retiredVisibleIndices.empty() ||
+                    delta.visibleBegin != expectedVisibleExtent ||
+                    delta.visibleBegin >
+                        plan.visibleInstances.size() ||
+                    delta.visibleCount >
+                        plan.visibleInstances.size() -
+                            delta.visibleBegin ||
+                    !delta.subpixelProxyInputRevision)
+                return false;
+            expectedVisibleExtent += delta.visibleCount;
+            newestAppendRevision = delta.revision;
+            newestInputRevision =
+                delta.subpixelProxyInputRevision;
+            found = true;
+        }
+        if (!found ||
+                expectedVisibleExtent !=
+                    plan.visibleInstances.size() ||
+                newestAppendRevision != plan.appendRevision ||
+                newestInputRevision !=
+                    plan.subpixelProxyInputRevision)
+            return false;
+
+        const uint32_t noPoint =
+            std::numeric_limits<uint32_t>::max();
+        subpixelProxyState_.resize(expectedVisibleExtent, 0u);
+        subpixelProxyScratchMask_.resize(expectedVisibleExtent, 0u);
+        subpixelProxyScratchPointByVisible_.resize(
+            expectedVisibleExtent, noPoint);
+        structuralProjectionScratchBucketByVisible_.resize(
+            expectedVisibleExtent, -1);
+        subpixelProxyStateInputRevision_ = newestInputRevision;
+        subpixelProxyBuildInputRevision_ = newestInputRevision;
+        subpixelProxyBuildAppendRevision_ = newestAppendRevision;
+        return true;
+    }
+
     bool updateSubpixelProxyPlan(const SbMatrix& viewProj,
                                  const SbVec2s& viewportSize,
                                  float pixelThreshold,
@@ -3610,13 +3687,24 @@ struct SoCADAssemblyImpl :
          * thousands of recovery frames.
          */
         static constexpr size_t guaranteedWorkPerRetry = 4096u;
+        static constexpr auto guaranteedPreparationTime =
+            std::chrono::milliseconds(4);
+        const auto preparationStarted =
+            std::chrono::steady_clock::now();
         size_t workSinceAbortCheck = 0u;
+        size_t workThisRetry = 0u;
         const auto abortRequested = [&]() {
             if (!renderAction)
                 return false;
-            if (++workSinceAbortCheck < guaranteedWorkPerRetry)
+            ++workThisRetry;
+            if (++workSinceAbortCheck < 256u)
                 return false;
             workSinceAbortCheck = 0;
+            if (workThisRetry < guaranteedWorkPerRetry ||
+                    std::chrono::steady_clock::now() -
+                        preparationStarted <
+                            guaranteedPreparationTime)
+                return false;
             return renderAction->abortNow();
         };
         if (preparationPerformed)
@@ -3681,7 +3769,11 @@ struct SoCADAssemblyImpl :
             subpixelProxyBuildViewportSize_[1] == viewportSize[1] &&
             subpixelProxyBuildPixelThreshold_ == pixelThreshold &&
             subpixelProxyBuildViewProj_ == viewProj;
-        if (!matchingBuild) {
+        const bool extendedBuild = !matchingBuild &&
+            subpixelProxyBuildActive_ &&
+            extendSubpixelProxyAppendBuild(
+                viewProj, viewportSize, pixelThreshold);
+        if (!matchingBuild && !extendedBuild) {
             if (preparationPerformed)
                 *preparationPerformed = true;
             if (cadPlanDebugEnabled()) {
@@ -3733,6 +3825,8 @@ struct SoCADAssemblyImpl :
             subpixelProxyBuildWireStructuralCount_ = 0;
             subpixelProxyBuildInputRevision_ =
                 plan.subpixelProxyInputRevision;
+            subpixelProxyBuildAppendRevision_ =
+                plan.appendRevision;
             subpixelProxyBuildViewProj_ = viewProj;
             subpixelProxyBuildViewportSize_ = viewportSize;
             subpixelProxyBuildPixelThreshold_ = pixelThreshold;
