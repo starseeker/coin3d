@@ -11,6 +11,8 @@
 #define OBOL_CAD_RENDERER_CONFIGURATION_H
 
 #include <cstdlib>
+#include <cstdint>
+#include <limits>
 #include <string>
 
 /**
@@ -52,6 +54,15 @@ struct CadRendererConfiguration {
         validateReplay = present("OBOL_CAD_VALIDATE_REPLAY");
         validateGlState = present("OBOL_CAD_VALIDATE_GL_STATE");
         replay = enabled("OBOL_CAD_REPLAY", true);
+        if (const char *value =
+                std::getenv("OBOL_CAD_ATLAS_VALIDATION_FRAMES")) {
+            char *end = nullptr;
+            const unsigned long parsed = std::strtoul(value, &end, 10);
+            if (end != value && end && *end == '\0' &&
+                    parsed <= std::numeric_limits<uint32_t>::max())
+                atlasValidationIntervalFrames =
+                    static_cast<uint32_t>(parsed);
+        }
     }
 
     bool softwareGlsl = false;
@@ -69,6 +80,9 @@ struct CadRendererConfiguration {
     bool validateReplay = false;
     bool validateGlState = false;
     bool replay = true;
+    /* Primarily a deterministic stress-test control.  Production retains a
+     * periodic O(parts) binding audit, while zero requests one every frame. */
+    uint32_t atlasValidationIntervalFrames = 30u;
 };
 
 #endif // OBOL_CAD_RENDERER_CONFIGURATION_H

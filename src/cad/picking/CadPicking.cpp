@@ -464,7 +464,64 @@ CadPickQuery::pickEdge(
         const Obol::WireRep& wire = *geom.wire;
         CadPartEdgeBVH progressiveBvh;
         const CadPartEdgeBVH *edgeBvh = nullptr;
-        if (wire.isProgressive()) {
+        if (wire.derivesTriangleEdges() && wire.triangleEdges) {
+            const Obol::TriMesh& mesh = *wire.triangleEdges;
+            const uint8_t level = mesh.isProgressive() ? progressiveCut(
+                std::min(entry->lodCut, lodCeiling),
+                mesh.progressiveMinimumCut,
+                mesh.progressiveResidentCut) :
+                Obol::ProgressiveCutUnspecified;
+            std::vector<CadPartEdgeBVH::SegEntry> segs;
+            segs.reserve(mesh.isProgressive() ?
+                wire.segmentCountAtCut(level) : mesh.indices.size());
+            const auto appendRange = [&](size_t first, size_t count) {
+                const size_t end = std::min(
+                    mesh.indices.size(), first + count);
+                for (size_t index = first; index + 2 < end; index += 3) {
+                    const uint32_t source[3] = {
+                        mesh.indices[index], mesh.indices[index + 1],
+                        mesh.indices[index + 2]
+                    };
+                    if (source[0] >= mesh.positions.size() ||
+                            source[1] >= mesh.positions.size() ||
+                            source[2] >= mesh.positions.size())
+                        continue;
+                    SbVec3f point[3];
+                    for (int corner = 0; corner < 3; ++corner) {
+                        point[corner] = mesh.isProgressive() ?
+                            progressiveSnapPoint(
+                                mesh.positions[source[corner]],
+                                mesh.progressiveQuantizationMinimum,
+                                mesh.progressiveQuantizationMaximum,
+                                mesh.quantizationAtCut(level)) :
+                            mesh.positions[source[corner]];
+                    }
+                    for (uint32_t edge = 0; edge < 3; ++edge) {
+                        const size_t edgeIndex = index + edge;
+                        if (edgeIndex > UINT32_MAX)
+                            continue;
+                        segs.push_back({point[edge], point[(edge + 1) % 3],
+                            static_cast<uint32_t>(edgeIndex), 0});
+                    }
+                }
+            };
+            if (mesh.hasAdaptiveProgressiveClusters()) {
+                for (const Obol::ProgressiveTriangleCluster& cluster :
+                        mesh.progressiveClusters) {
+                    for (const Obol::ProgressiveTriangleClusterRange& range :
+                            cluster.ranges) {
+                        if (range.activationCut > level)
+                            break;
+                        appendRange(range.firstIndex, range.indexCount);
+                    }
+                }
+            } else {
+                appendRange(0, mesh.isProgressive() ?
+                    mesh.indexCountAtCut(level) : mesh.indices.size());
+            }
+            progressiveBvh.build(std::move(segs));
+            edgeBvh = &progressiveBvh;
+        } else if (wire.isProgressive()) {
             const uint8_t level = progressiveCut(
                 std::min(entry->lodCut, lodCeiling),
                 wire.progressiveMinimumCut,

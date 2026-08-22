@@ -411,6 +411,12 @@ int main(int argc, char **argv)
         if (!cadAssembly ||
             cadAssembly->lastRenderUsedDirectSoftwareWire() != expectDirect)
             return false;
+        const Obol::CadRenderedWork work = cadAssembly->lastRenderedWork();
+        const Obol::CadGpuResourceSnapshot resources =
+            cadAssembly->gpuResourceSnapshot();
+        if (!work.exact || !work.lineCount || !work.positionCount ||
+                !work.occurrenceCount || !resources.frameSerial)
+            return false;
         auto end = Clock::now();
         averageMs = Ms(end - begin).count() / repeats;
         const unsigned char *buffer = cadRenderer.getBuffer();

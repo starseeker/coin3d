@@ -489,6 +489,14 @@ bool CadRendererGL::renderFlatWire(
     size_t deadlineWork = 256u;
     if (renderInterruptedAfter(deadlineWork))
         return false;
+    /* Indexed triangle-edge aliases retain their source topology and GPU
+     * buffers.  Flattening them here would recreate the endpoint expansion
+     * this representation is specifically intended to avoid; the dedicated
+     * indexed wire executor renders them separately. */
+    for (const CadDrawItem& item : plan.wireItems) {
+        if (item.rep.type == CadRepType::Triangles)
+            return false;
+    }
     const size_t maxVertexCount =
         maxPositionBytes / (3 * sizeof(float));
     const uint64_t presentationRevision = plan.subpixelProxyRevision ?
@@ -2020,6 +2028,57 @@ ensureProgressiveTriGpu(
         part, true, level, rangeSignature);
 }
 
+/* OSMesa's fixed-function line path is materially faster than submitting
+ * triangle polygons in line mode or issuing every edge through immediate
+ * mode.  Retain one snapped copy of the indexed mesh positions for each PoP
+ * cut and reuse the ordinary compact edge-index buffer.  Unlike the legacy
+ * wire representation this is O(vertices), not six copied positions per
+ * triangle, and an unchanged frame is a cache lookup. */
+static const CadProgressiveGpu*
+ensureProgressiveIndexedWireGpu(
+        CadGpuResources *resources, PartId part, const TriMesh& mesh,
+        uint8_t level, bool *prepared, const SoGLContext *glue)
+{
+    if (prepared) *prepared = false;
+    if (!resources || !glue || !mesh.isProgressive()) return nullptr;
+
+    const size_t positionCount = mesh.positionCountAtCut(level);
+    if (!positionCount || positionCount > mesh.positions.size() ||
+            positionCount > static_cast<size_t>(
+                std::numeric_limits<GLsizei>::max()))
+        return nullptr;
+
+    uint64_t signature = 1469598103934665603ULL;
+    const auto mix = [&signature](uint64_t value) {
+        signature ^= value;
+        signature *= 1099511628211ULL;
+    };
+    const ProgressiveQuantization quantization =
+        mesh.quantizationAtCut(level);
+    mix(0x696e646578656477ULL); /* "indexedw" representation tag. */
+    mix(mesh.progressiveLineage);
+    mix(positionCount);
+    mix(static_cast<uint64_t>(quantization.xBits) |
+        (static_cast<uint64_t>(quantization.yBits) << 8u) |
+        (static_cast<uint64_t>(quantization.zBits) << 16u));
+    if (!signature) signature = 1;
+    if (const CadProgressiveGpu *cached = resources->progressiveFor(
+            part, false, level, signature))
+        return cached;
+
+    std::vector<float> positions;
+    positions.reserve(positionCount * 3u);
+    for (size_t index = 0; index < positionCount; ++index)
+        executorAppendPackedPoint(positions, progressiveSnapPoint(
+            mesh.positions[index], mesh.progressiveQuantizationMinimum,
+            mesh.progressiveQuantizationMaximum, quantization));
+    if (prepared) *prepared = true;
+    resources->uploadProgressive(
+        part, false, level, positions, std::vector<float>(), true,
+        signature, std::vector<CadProgressiveGpu::PackedRange>(), glue);
+    return resources->progressiveFor(part, false, level, signature);
+}
+
 struct CadWireDrawRange {
     uint32_t firstSegment = 0;
     uint32_t segmentCount = 0;
@@ -2103,11 +2162,65 @@ static void bindAndDrawWireRanges(
     }
 }
 
+static void bindAndDrawWireRangesFixed(
+        const CadWireGpu* wire, GLuint positionBuffer,
+        const SoGLContext* glue,
+        const std::vector<CadWireDrawRange>& requestedRanges)
+{
+    if (!wire || !positionBuffer || !wire->segIdxBuf ||
+            wire->sequentialSegments || wire->segCount == 0 ||
+            requestedRanges.empty())
+        return;
+
+    std::vector<GLsizei> counts;
+    std::vector<const GLvoid *> offsets;
+    counts.reserve(requestedRanges.size());
+    offsets.reserve(requestedRanges.size());
+    for (const CadWireDrawRange& range : requestedRanges) {
+        if (!range.segmentCount || range.firstSegment >=
+                static_cast<uint32_t>(wire->segCount))
+            continue;
+        const GLsizei bounded = static_cast<GLsizei>(std::min<uint64_t>(
+            range.segmentCount,
+            static_cast<uint64_t>(wire->segCount) - range.firstSegment));
+        counts.push_back(bounded * 2);
+        offsets.push_back(reinterpret_cast<const GLvoid *>(
+            static_cast<uintptr_t>(range.firstSegment) * 2u *
+            sizeof(uint32_t)));
+    }
+    if (counts.empty()) return;
+
+    glue->glBindBuffer(GL_ARRAY_BUFFER, positionBuffer);
+    glue->glVertexPointer(3, GL_FLOAT, 3 * sizeof(float), nullptr);
+    glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, wire->segIdxBuf);
+    if (counts.size() > 1 && glue->glMultiDrawElements)
+        SoGLContext_glMultiDrawElements(glue, GL_LINES, counts.data(),
+            GL_UNSIGNED_INT, offsets.data(),
+            static_cast<GLsizei>(counts.size()));
+    else
+        for (size_t index = 0; index < counts.size(); ++index)
+            glue->glDrawElements(GL_LINES, counts[index], GL_UNSIGNED_INT,
+                offsets[index]);
+}
+
 // Bind a tri VBO, set up attributes 0 (position) and 1 (normal), draw.
 struct CadTriangleDrawRange {
     uint32_t firstIndex = 0;
     uint32_t indexCount = 0;
 };
+
+static void cadAccumulateRenderedWireWork(
+    Obol::CadRenderedWork&, uint64_t, uint64_t);
+
+static uint8_t
+executorMaximumRequestedCut(const CadFramePlan& plan,
+                            const SoCADAssembly& assembly, PartId part)
+{
+    const auto found = plan.maximumRequestedCutByPart.find(part);
+    return found == plan.maximumRequestedCutByPart.end() ?
+        Obol::ProgressiveCutUnspecified :
+        assembly.effectiveProgressiveCut(found->second);
+}
 
 static void bindAndDrawTriRanges(
                             const CadTriGpu* t, const SoGLContext* glue,
@@ -2171,6 +2284,351 @@ static void bindAndDrawTriRanges(
         glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
         glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     }
+}
+
+bool CadRendererGL::renderIndexedTriangleWire(
+        const CadFramePlan& plan,
+        const SoCADAssembly& assembly,
+        const SoGLContext* glue,
+        const SbMatrix& viewProj,
+        const SbMatrix& viewMatrix,
+        const SbMatrix& projectionMatrix)
+{
+    bool haveWork = false;
+    for (const CadDrawItem& item : plan.wireItems) {
+        if (item.rep.type == CadRepType::Triangles) {
+            haveWork = true;
+            break;
+        }
+    }
+    if (!haveWork)
+        return true;
+
+    size_t deadlineWork = 256u;
+    if (renderInterruptedAfter(deadlineWork))
+        return false;
+
+    for (const CadDrawItem& item : plan.wireItems) {
+        if (item.rep.type != CadRepType::Triangles ||
+                item.partIndex >= plan.partBindings.size())
+            continue;
+        const CadPartBinding& binding = plan.partBindings[item.partIndex];
+        ensurePartUploaded(item.rep.part, assembly, binding.generation,
+            executorMaximumRequestedCut(
+                plan, assembly, item.rep.part), glue);
+    }
+
+    const ExecutorFrustumPlanes fp = extractExecutorFrustumPlanes(viewProj);
+    GLint savedPolygonMode[2] = {GL_FILL, GL_FILL};
+    glue->glGetIntegerv(GL_POLYGON_MODE, savedPolygonMode);
+    glue->glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    const CadWireRasterState rasterState = captureWireRasterState(
+        glue, caps_.hasLineStipple);
+    bool interrupted = false;
+
+    const bool shaderPath = caps_.canUseVbo() && shaders_.wire &&
+        (!caps_.isSoftwareRenderer || softwareGlslRequested());
+    GLint viewProjectionLocation[2] = {-1, -1};
+    GLint modelLocation[2] = {-1, -1};
+    GLint colorLocation[2] = {-1, -1};
+    GLint encodeScaleLocation = -1;
+    GLint decodeScaleLocation = -1;
+    GLint minimumLocation = -1;
+    const GLuint programs[2] = {shaders_.wire, shaders_.wirePop};
+    GLboolean savedLighting = GL_FALSE;
+    if (shaderPath) {
+        for (int variant = 0; variant < 2; ++variant) {
+            if (!programs[variant])
+                continue;
+            viewProjectionLocation[variant] =
+                glue->glGetUniformLocationARB(
+                    programs[variant], "u_viewProj");
+            modelLocation[variant] = glue->glGetUniformLocationARB(
+                programs[variant], "u_model");
+            colorLocation[variant] = glue->glGetUniformLocationARB(
+                programs[variant], "u_color");
+        }
+        if (programs[1]) {
+            encodeScaleLocation = glue->glGetUniformLocationARB(
+                programs[1], "u_popEncodeScale");
+            decodeScaleLocation = glue->glGetUniformLocationARB(
+                programs[1], "u_popDecodeScale");
+            minimumLocation = glue->glGetUniformLocationARB(
+                programs[1], "u_popMin");
+        }
+    } else {
+        glue->glMatrixMode(GL_PROJECTION);
+        glue->glPushMatrix();
+        glue->glLoadMatrixf(projectionMatrix[0]);
+        glue->glMatrixMode(GL_MODELVIEW);
+        glue->glPushMatrix();
+        glue->glLoadMatrixf(viewMatrix[0]);
+        savedLighting = glue->glIsEnabled(GL_LIGHTING);
+        glue->glDisable(GL_LIGHTING);
+        if (caps_.canUseFixedVbo())
+            glue->glEnableClientState(GL_VERTEX_ARRAY);
+    }
+
+    GLuint activeProgram = 0;
+    for (const CadDrawItem& item : plan.wireItems) {
+        if (item.rep.type != CadRepType::Triangles ||
+                item.partIndex >= plan.partBindings.size())
+            continue;
+        if (renderInterruptedAfter(deadlineWork)) {
+            interrupted = true;
+            break;
+        }
+        const CadPartBinding& binding = plan.partBindings[item.partIndex];
+        const PartGeometry *geometry = binding.geometry.get();
+        const WireRep *wire = geometry && geometry->wire ?
+            &*geometry->wire : nullptr;
+        const TriMesh *mesh = wire && wire->derivesTriangleEdges() ?
+            wire->triangleEdges.get() : nullptr;
+        const CadTriGpu *tri = gpuRes_->triFor(item.rep.part);
+        const CadWireGpu *derivedWire = caps_.isSoftwareRenderer ?
+            gpuRes_->wireFor(item.rep.part) : nullptr;
+        if (!mesh || (!tri && !derivedWire))
+            continue;
+
+        for (uint32_t occurrence = 0;
+                occurrence < item.instanceCount; ++occurrence) {
+            if (renderInterruptedAfter(deadlineWork)) {
+                interrupted = true;
+                break;
+            }
+            const size_t visibleIndex = item.baseInstance + occurrence;
+            if (!cadInstanceDrawable(
+                    plan, item, visibleIndex, CadDrawChannel::Wire))
+                continue;
+            const CadVisibleInstance& instance =
+                plan.visibleInstances[visibleIndex];
+            if (isBoxOutsideExecutorFrustum(
+                    instance.wbMin, instance.wbMax, fp))
+                continue;
+
+            const uint8_t level = mesh->isProgressive() ?
+                executorVisibleProgressiveCut(
+                    *mesh, instance, fp,
+                    assembly.effectiveProgressiveCut(instance.lodCut)) :
+                Obol::ProgressiveCutUnspecified;
+            std::vector<CadTriangleDrawRange> ranges;
+            if (mesh->hasAdaptiveProgressiveClusters()) {
+                SbMatrix model;
+                model.setValue(instance.transform.data());
+                ranges.reserve(mesh->progressiveClusters.size());
+                for (const ProgressiveTriangleCluster& cluster :
+                        mesh->progressiveClusters) {
+                    float minimum[3];
+                    float maximum[3];
+                    executorTransformedBox(
+                        cluster.bounds, model, minimum, maximum);
+                    if (isBoxOutsideExecutorFrustum(minimum, maximum, fp))
+                        continue;
+                    CadTriangleDrawRange active;
+                    for (const ProgressiveTriangleClusterRange& range :
+                            cluster.ranges) {
+                        if (range.activationCut > level)
+                            break;
+                        if (!active.indexCount) {
+                            active.firstIndex = range.firstIndex;
+                            active.indexCount = range.indexCount;
+                        } else if (static_cast<uint64_t>(active.firstIndex) +
+                                active.indexCount == range.firstIndex) {
+                            active.indexCount = range.indexCount >
+                                    UINT32_MAX - active.indexCount ?
+                                UINT32_MAX :
+                                active.indexCount + range.indexCount;
+                        } else {
+                            ranges.push_back(active);
+                            active.firstIndex = range.firstIndex;
+                            active.indexCount = range.indexCount;
+                        }
+                    }
+                    if (active.indexCount)
+                        ranges.push_back(active);
+                }
+            } else {
+                const size_t count = mesh->isProgressive() ?
+                    mesh->indexCountAtCut(level) : mesh->indices.size();
+                if (count)
+                    ranges.push_back({0u, static_cast<uint32_t>(
+                        std::min<size_t>(count, UINT32_MAX))});
+            }
+
+            applyWireRasterStyle(glue, instance, caps_.hasLineStipple);
+            uint64_t submittedIndices = 0;
+            for (const CadTriangleDrawRange& range : ranges)
+                submittedIndices = cadSaturatingWorkAdd(
+                    submittedIndices, range.indexCount);
+
+            if (shaderPath) {
+                const int variant = mesh->isProgressive() &&
+                        !mesh->quantizationAtCut(level).isExact() &&
+                        programs[1] ? 1 : 0;
+                if (activeProgram != programs[variant]) {
+                    activeProgram = programs[variant];
+                    glue->glUseProgramObjectARB(activeProgram);
+                    glue->glUniformMatrix4fvARB(
+                        viewProjectionLocation[variant], 1, GL_FALSE,
+                        viewProj[0]);
+                }
+                glue->glUniformMatrix4fvARB(
+                    modelLocation[variant], 1, GL_FALSE,
+                    instance.transform.data());
+                const float rgba[4] = {
+                    instance.rgba[0] / 255.0f,
+                    instance.rgba[1] / 255.0f,
+                    instance.rgba[2] / 255.0f,
+                    instance.rgba[3] / 255.0f
+                };
+                glue->glUniform4fvARB(colorLocation[variant], 1, rgba);
+                if (variant) {
+                    uploadProgressivePositionUniforms(
+                        glue, encodeScaleLocation, decodeScaleLocation,
+                        minimumLocation, mesh->quantizationAtCut(level),
+                        mesh->progressiveQuantizationMinimum,
+                        mesh->progressiveQuantizationMaximum);
+                }
+                if (derivedWire) {
+                    std::vector<CadWireDrawRange> wireRanges;
+                    wireRanges.reserve(ranges.size());
+                    for (const CadTriangleDrawRange& range : ranges)
+                        wireRanges.push_back({
+                            range.firstIndex, range.indexCount});
+                    bindAndDrawWireRanges(
+                        derivedWire, glue, 0, wireRanges);
+                } else {
+                    bool hasNormals = false;
+                    bindAndDrawTriRanges(
+                        tri, glue, 0, -1, hasNormals, ranges);
+                }
+            } else {
+                SbMatrix model;
+                model.setValue(instance.transform.data());
+                SbMatrix modelView = model;
+                modelView.multRight(viewMatrix);
+                glue->glLoadMatrixf(modelView[0]);
+                glue->glColor4ub(instance.rgba[0], instance.rgba[1],
+                    instance.rgba[2], instance.rgba[3]);
+                const ProgressiveQuantization quantization =
+                    mesh->isProgressive() ? mesh->quantizationAtCut(level) :
+                        ProgressiveQuantization();
+                bool fixedVboRendered = false;
+                if (derivedWire && caps_.canUseFixedVbo()) {
+                    GLuint positionBuffer = derivedWire->posBuf;
+                    if (mesh->isProgressive() &&
+                            !quantization.isExact()) {
+                        bool prepared = false;
+                        const CadProgressiveGpu *cut =
+                            ensureProgressiveIndexedWireGpu(
+                                gpuRes_, item.rep.part, *mesh, level,
+                                &prepared, glue);
+                        if (prepared)
+                            noteRenderPreparation(
+                                "indexed-wire-progressive-cut");
+                        if (cut)
+                            positionBuffer = cut->posBuf;
+                        else
+                            positionBuffer = 0;
+                    }
+                    if (positionBuffer) {
+                        std::vector<CadWireDrawRange> wireRanges;
+                        wireRanges.reserve(ranges.size());
+                        for (const CadTriangleDrawRange& range : ranges)
+                            wireRanges.push_back({
+                                range.firstIndex, range.indexCount});
+                        bindAndDrawWireRangesFixed(
+                            derivedWire, positionBuffer, glue, wireRanges);
+                        fixedVboRendered = true;
+                    }
+                }
+                if (!fixedVboRendered) {
+                    for (const CadTriangleDrawRange& range : ranges) {
+                        const size_t end = std::min<size_t>(
+                            mesh->indices.size(),
+                            static_cast<size_t>(range.firstIndex) +
+                                range.indexCount);
+                        size_t index = range.firstIndex;
+                        while (index + 2 < end) {
+                            const size_t chunkEnd = std::min(
+                                end, index + 256u * 3u);
+                            if (renderInterruptedAfter(
+                                    deadlineWork,
+                                    (chunkEnd - index) / 3u)) {
+                                interrupted = true;
+                                break;
+                            }
+                            glue->glBegin(GL_LINES);
+                            for (; index + 2 < chunkEnd; index += 3) {
+                                const uint32_t source[3] = {
+                                    mesh->indices[index],
+                                    mesh->indices[index + 1],
+                                    mesh->indices[index + 2]
+                                };
+                                if (source[0] >= mesh->positions.size() ||
+                                        source[1] >=
+                                            mesh->positions.size() ||
+                                        source[2] >=
+                                            mesh->positions.size()) {
+                                    interrupted = true;
+                                    break;
+                                }
+                                SbVec3f point[3];
+                                for (int corner = 0; corner < 3; ++corner)
+                                    point[corner] = mesh->isProgressive() ?
+                                        progressiveSnapPoint(
+                                            mesh->positions[source[corner]],
+                                            mesh->
+                                                progressiveQuantizationMinimum,
+                                            mesh->
+                                                progressiveQuantizationMaximum,
+                                            quantization) :
+                                        mesh->positions[source[corner]];
+                                for (int edge = 0; edge < 3; ++edge) {
+                                    const SbVec3f& first = point[edge];
+                                    const SbVec3f& second =
+                                        point[(edge + 1) % 3];
+                                    glue->glVertex3f(
+                                        first[0], first[1], first[2]);
+                                    glue->glVertex3f(
+                                        second[0], second[1], second[2]);
+                                }
+                            }
+                            glue->glEnd();
+                            if (interrupted)
+                                break;
+                        }
+                        if (interrupted)
+                            break;
+                    }
+                }
+            }
+            cadAccumulateRenderedWireWork(
+                lastRenderedWork_, submittedIndices, 1);
+            if (interrupted)
+                break;
+        }
+        if (interrupted)
+            break;
+    }
+
+    if (shaderPath)
+        glue->glUseProgramObjectARB(0);
+    else {
+        if (caps_.canUseFixedVbo())
+            glue->glDisableClientState(GL_VERTEX_ARRAY);
+        if (savedLighting)
+            glue->glEnable(GL_LIGHTING);
+        glue->glMatrixMode(GL_MODELVIEW);
+        glue->glPopMatrix();
+        glue->glMatrixMode(GL_PROJECTION);
+        glue->glPopMatrix();
+        glue->glMatrixMode(GL_MODELVIEW);
+    }
+    restoreWireRasterState(glue, rasterState, caps_.hasLineStipple);
+    glue->glPolygonMode(GL_FRONT, static_cast<GLenum>(savedPolygonMode[0]));
+    glue->glPolygonMode(GL_BACK, static_cast<GLenum>(savedPolygonMode[1]));
+    return !interrupted;
 }
 
 static void
@@ -4566,7 +5024,11 @@ bool CadRendererGL::patchIndirectPreparedAppend(
         plan.subpixelProxyRevision;
     indirectPrepared_.atlasRevision =
         gpuRes_->triangleAtlasRevision();
-    indirectPrepared_.atlasValidationCountdown = 30u;
+    indirectPrepared_.atlasValidationCountdown =
+        configuration_->atlasValidationIntervalFrames;
+    indirectPrepared_.atlasValidationActive = false;
+    indirectPrepared_.atlasValidationCursor = 0u;
+    indirectPrepared_.atlasValidationRevision = 0u;
     indirectPrepared_.atlasAdmissionPressure =
         indirectPrepared_.atlasPressurePartCount > 0 ||
         !indirectPrepared_.pressureProxyPoints.empty();
@@ -4991,7 +5453,11 @@ bool CadRendererGL::patchIndirectPreparedGeometry(
         plan.subpixelProxyRevision;
     indirectPrepared_.atlasRevision =
         gpuRes_->triangleAtlasRevision();
-    indirectPrepared_.atlasValidationCountdown = 30u;
+    indirectPrepared_.atlasValidationCountdown =
+        configuration_->atlasValidationIntervalFrames;
+    indirectPrepared_.atlasValidationActive = false;
+    indirectPrepared_.atlasValidationCursor = 0u;
+    indirectPrepared_.atlasValidationRevision = 0u;
     indirectPrepared_.atlasAdmissionPressure =
         indirectPrepared_.atlasPressurePartCount > 0 ||
         !indirectPrepared_.pressureProxyPoints.empty();
@@ -5460,7 +5926,11 @@ bool CadRendererGL::patchIndirectPreparedCuts(
     indirectPrepared_.planRevision = plan.revision;
     indirectPrepared_.atlasRevision =
         gpuRes_->triangleAtlasRevision();
-    indirectPrepared_.atlasValidationCountdown = 30u;
+    indirectPrepared_.atlasValidationCountdown =
+        configuration_->atlasValidationIntervalFrames;
+    indirectPrepared_.atlasValidationActive = false;
+    indirectPrepared_.atlasValidationCursor = 0u;
+    indirectPrepared_.atlasValidationRevision = 0u;
     indirectPrepared_.atlasAdmissionPressure =
         indirectPrepared_.atlasPressurePartCount > 0 ||
         !indirectPrepared_.pressureProxyPoints.empty();
@@ -5995,17 +6465,30 @@ bool CadRendererGL::replayIndirectShaded(
         }
     }
 
-    constexpr uint32_t validationIntervalFrames = 30u;
+    const uint32_t validationIntervalFrames =
+        configuration_->atlasValidationIntervalFrames;
     const bool validateAtlas =
+        indirectPrepared_.atlasValidationActive ||
         indirectPrepared_.atlasRevision !=
             gpuRes_->triangleAtlasRevision() ||
         !indirectPrepared_.atlasValidationCountdown;
     if (validateAtlas) {
-        noteRenderPreparation("retained-atlas-validation");
-        for (const IndirectPreparedPart& demand : indirectPrepared_.parts) {
+        if (!indirectPrepared_.atlasValidationActive) {
+            indirectPrepared_.atlasValidationActive = true;
+            indirectPrepared_.atlasValidationCursor = 0u;
+            indirectPrepared_.atlasValidationRevision =
+                gpuRes_->triangleAtlasRevision();
+        }
+        noteRenderPreparation("retained-atlas-validation-slice");
+        while (indirectPrepared_.atlasValidationCursor <
+                indirectPrepared_.parts.size()) {
             if (renderInterruptedAfter(deadlineWork))
                 return false;
+            const IndirectPreparedPart& demand =
+                indirectPrepared_.parts[
+                    indirectPrepared_.atlasValidationCursor++];
             if (demand.partIndex >= plan.partBindings.size()) {
+                indirectPrepared_.atlasValidationActive = false;
                 indirectPrepared_.valid = false;
                 return false;
             }
@@ -6013,6 +6496,7 @@ bool CadRendererGL::replayIndirectShaded(
                 plan.partBindings[demand.partIndex];
             if (!(binding.part == demand.part) ||
                     binding.generation != demand.generation) {
+                indirectPrepared_.atlasValidationActive = false;
                 indirectPrepared_.valid = false;
                 return false;
             }
@@ -6023,14 +6507,30 @@ bool CadRendererGL::replayIndirectShaded(
             if (!atlas || atlas->page != demand.page ||
                     atlas->vertices.first != demand.vertexFirst ||
                     atlas->indices.first != demand.indexFirst) {
+                indirectPrepared_.atlasValidationActive = false;
                 indirectPrepared_.valid = false;
                 return false;
             }
+        }
+        /* No renderer or allocator may mutate this context's atlas while its
+         * synchronous traversal is active.  Still verify the transaction's
+         * revision before publishing its certificate so a future shared-
+         * context implementation cannot accidentally validate a mixed
+         * epoch. */
+        if (indirectPrepared_.atlasValidationRevision !=
+                gpuRes_->triangleAtlasRevision()) {
+            indirectPrepared_.atlasValidationCursor = 0u;
+            indirectPrepared_.atlasValidationRevision =
+                gpuRes_->triangleAtlasRevision();
+            return false;
         }
         indirectPrepared_.atlasRevision =
             gpuRes_->triangleAtlasRevision();
         indirectPrepared_.atlasValidationCountdown =
             validationIntervalFrames;
+        indirectPrepared_.atlasValidationActive = false;
+        indirectPrepared_.atlasValidationCursor = 0u;
+        indirectPrepared_.atlasValidationRevision = 0u;
     } else {
         --indirectPrepared_.atlasValidationCountdown;
         if (!indirectPrepared_.parts.empty())
@@ -6813,7 +7313,11 @@ bool CadRendererGL::renderIndirectShaded(
       prepared.renderedWork = build.renderedWork;
       prepared.instanceUploadSerial = 0;
       prepared.atlasRevision = gpuRes_->triangleAtlasRevision();
-      prepared.atlasValidationCountdown = 30u;
+      prepared.atlasValidationCountdown =
+          configuration_->atlasValidationIntervalFrames;
+      prepared.atlasValidationActive = false;
+      prepared.atlasValidationCursor = 0u;
+      prepared.atlasValidationRevision = 0u;
       prepared.cameraMotionReplayCount = 0;
       prepared.atlasAdmissionPressure = build.atlasAdmissionPressure;
       prepared.atlasPressurePartCount = 0;

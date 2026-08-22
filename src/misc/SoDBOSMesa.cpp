@@ -22,26 +22,36 @@
 #include <OSMesa/osmesa.h>
 #include <OSMesa/gl.h>
 #include <memory>
+#include <vector>
 
 /* -----------------------------------------------------------------------
  * Per-context state
  * --------------------------------------------------------------------- */
 
 struct CoinOSMesaCtxData {
+  struct PreviousContext {
+    OSMesaContext ctx;
+    void *buf;
+    GLsizei w;
+    GLsizei h;
+    GLenum type;
+
+    PreviousContext()
+      : ctx(nullptr), buf(nullptr), w(0), h(0), type(GL_UNSIGNED_BYTE)
+    {
+    }
+  };
+
   OSMesaContext ctx;
   std::unique_ptr<unsigned char[]> buf;
   int w, h;
-  /* State saved by makeContextCurrent so restorePreviousContext can put
-   * the previous OSMesa context back (NULL is a valid "no previous"). */
-  OSMesaContext prev_ctx;
-  void         *prev_buf;
-  GLsizei       prev_w, prev_h, prev_bpr;
-  GLenum        prev_fmt;
+  /* Context activation can nest while Coin releases context-bound caches.
+   * Preserve every activation frame so a nested make/restore pair cannot
+   * overwrite the state needed by its caller. */
+  std::vector<PreviousContext> previous;
 
   CoinOSMesaCtxData(int w_, int h_)
-    : ctx(nullptr), w(w_), h(h_),
-      prev_ctx(nullptr), prev_buf(nullptr),
-      prev_w(0), prev_h(0), prev_bpr(0), prev_fmt(0)
+    : ctx(nullptr), w(w_), h(h_)
   {
     ctx = OSMesaCreateContextExt(OSMESA_RGBA, 24, 0, 0, nullptr);
     if (ctx)
@@ -59,16 +69,21 @@ struct CoinOSMesaCtxData {
 
   bool makeCurrent() {
     if (!ctx) return false;
-    prev_ctx = OSMesaGetCurrentContext();
-    prev_buf = nullptr;
-    prev_w = prev_h = prev_bpr = 0;
-    prev_fmt = 0;
-    if (prev_ctx) {
+    PreviousContext frame;
+    frame.ctx = OSMesaGetCurrentContext();
+    if (frame.ctx) {
       GLint fmt = 0;
-      OSMesaGetColorBuffer(prev_ctx, &prev_w, &prev_h, &fmt, &prev_buf);
-      prev_fmt = (GLenum)fmt;
+      GLint type = GL_UNSIGNED_BYTE;
+      OSMesaGetColorBuffer(frame.ctx, &frame.w, &frame.h, &fmt, &frame.buf);
+      OSMesaGetIntegerv(OSMESA_TYPE, &type);
+      frame.type = static_cast<GLenum>(type);
     }
-    return OSMesaMakeCurrent(ctx, buf.get(), GL_UNSIGNED_BYTE, w, h) != 0;
+    previous.push_back(frame);
+    if (!OSMesaMakeCurrent(ctx, buf.get(), GL_UNSIGNED_BYTE, w, h)) {
+      previous.pop_back();
+      return false;
+    }
+    return true;
   }
 };
 
@@ -106,10 +121,12 @@ public:
 
   void restorePreviousContext(void * context) override {
     auto * d = static_cast<CoinOSMesaCtxData *>(context);
-    if (!d) return;
-    if (d->prev_ctx && d->prev_buf)
-      OSMesaMakeCurrent(d->prev_ctx, d->prev_buf,
-                        GL_UNSIGNED_BYTE, d->prev_w, d->prev_h);
+    if (!d || d->previous.empty()) return;
+    const CoinOSMesaCtxData::PreviousContext frame = d->previous.back();
+    d->previous.pop_back();
+    if (frame.ctx && frame.buf)
+      OSMesaMakeCurrent(frame.ctx, frame.buf,
+                        frame.type, frame.w, frame.h);
     else
       OSMesaMakeCurrent(nullptr, nullptr, 0, 0, 0);
   }

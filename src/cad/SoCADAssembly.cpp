@@ -50,6 +50,7 @@
 #include "CadAssemblyState.h"
 #include "CadFramePlan.h"
 #include "CadRendererGL.h"
+#include "CadSoftwareWire.h"
 #include "picking/CadPicking.h"
 
 #include <Inventor/actions/SoGLRenderAction.h>
@@ -87,6 +88,7 @@
 #include <unordered_set>
 #include <map>
 #include <array>
+#include <chrono>
 #include <vector>
 #include <memory>
 #include <algorithm>
@@ -162,26 +164,6 @@ cadTransformPreservesOrientation(const std::array<float, 16>& transform)
 
 namespace {
 
-struct CadSoftwareClipPoint {
-    double v[4];
-};
-
-static double cadSoftwarePlaneValue(const CadSoftwareClipPoint& point,
-                                    int plane);
-
-static CadSoftwareClipPoint
-cadSoftwareTransform(const SbMatrix& matrix, const SbVec3f& point)
-{
-    const float *m = matrix[0];
-    CadSoftwareClipPoint result;
-    for (int col = 0; col < 4; ++col) {
-        result.v[col] = static_cast<double>(point[0]) * m[col] +
-            static_cast<double>(point[1]) * m[4 + col] +
-            static_cast<double>(point[2]) * m[8 + col] + m[12 + col];
-    }
-    return result;
-}
-
 static bool
 cadSubpixelGeometryCorners(const Obol::PartGeometry& geometry,
                            std::array<SbVec3f, 8>& corners)
@@ -213,6 +195,57 @@ enum class CadProxyPresentation : uint8_t {
     Offscreen = 2u
 };
 
+struct CadStructuralProjectionSample {
+    bool structural = false;
+    bool visible = false;
+    bool collapsible = false;
+    float maximumPixels = 0.0f;
+};
+
+static int8_t
+cadStructuralProjectionBucket(const CadStructuralProjectionSample& sample)
+{
+    if (!sample.structural || !sample.visible)
+        return -1;
+    if (!sample.collapsible || !std::isfinite(sample.maximumPixels))
+        return static_cast<int8_t>(
+            Obol::CadStructuralProxyProjectionHistogram::BucketCount);
+    float limit = 1.0f;
+    for (size_t bucket = 0;
+            bucket < Obol::CadStructuralProxyProjectionHistogram::BucketCount;
+            ++bucket, limit *= 2.0f)
+        if (sample.maximumPixels <= limit)
+            return static_cast<int8_t>(bucket);
+    return static_cast<int8_t>(
+        Obol::CadStructuralProxyProjectionHistogram::BucketCount);
+}
+
+static void
+cadUpdateStructuralProjectionHistogram(
+        Obol::CadStructuralProxyProjectionHistogram& histogram,
+        int8_t bucket, bool add)
+{
+    if (bucket < 0)
+        return;
+    if (add) {
+        if (histogram.visibleCount != UINT64_MAX)
+            ++histogram.visibleCount;
+    } else if (histogram.visibleCount) {
+        --histogram.visibleCount;
+    }
+    const size_t first = static_cast<size_t>(bucket);
+    if (first >= histogram.cumulativeCount.size())
+        return;
+    for (size_t i = first; i < histogram.cumulativeCount.size(); ++i) {
+        if (add) {
+            if (histogram.cumulativeCount[i] != UINT64_MAX)
+                ++histogram.cumulativeCount[i];
+        } else if (histogram.cumulativeCount[i]) {
+            --histogram.cumulativeCount[i];
+        }
+    }
+}
+
 static bool
 cadSameSubpixelProxyPoints(
         const std::vector<Obol::internal::CadSubpixelProxyPoint>& left,
@@ -230,366 +263,6 @@ cadSameSubpixelProxyPoints(
                 a.position[2] != b.position[2])
             return false;
     }
-    return true;
-}
-
-static bool
-cadSoftwareClipScreen(double& x0, double& y0, double& x1, double& y1,
-                      double left, double bottom, double right, double top)
-{
-    auto code = [left, bottom, right, top](double x, double y) {
-        unsigned int result = 0;
-        if (x < left) result |= 1u;
-        else if (x > right) result |= 2u;
-        if (y < bottom) result |= 4u;
-        else if (y > top) result |= 8u;
-        return result;
-    };
-    unsigned int c0 = code(x0, y0);
-    unsigned int c1 = code(x1, y1);
-    for (;;) {
-        if (!(c0 | c1)) return true;
-        if (c0 & c1) return false;
-        const unsigned int c = c0 ? c0 : c1;
-        double x = 0.0, y = 0.0;
-        if (c & 8u) {
-            y = top;
-            x = x0 + (x1 - x0) * (top - y0) / (y1 - y0);
-        } else if (c & 4u) {
-            y = bottom;
-            x = x0 + (x1 - x0) * (bottom - y0) / (y1 - y0);
-        } else if (c & 2u) {
-            x = right;
-            y = y0 + (y1 - y0) * (right - x0) / (x1 - x0);
-        } else {
-            x = left;
-            y = y0 + (y1 - y0) * (left - x0) / (x1 - x0);
-        }
-        if (c == c0) { x0 = x; y0 = y; c0 = code(x0, y0); }
-        else { x1 = x; y1 = y; c1 = code(x1, y1); }
-    }
-}
-
-static double
-cadSoftwarePlaneValue(const CadSoftwareClipPoint& point, int plane)
-{
-    switch (plane) {
-        case 0: return point.v[3] + point.v[0];
-        case 1: return point.v[3] - point.v[0];
-        case 2: return point.v[3] + point.v[1];
-        case 3: return point.v[3] - point.v[1];
-        case 4: return point.v[3] + point.v[2];
-        default: return point.v[3] - point.v[2];
-    }
-}
-
-static bool
-cadSoftwareClip(CadSoftwareClipPoint& a, CadSoftwareClipPoint& b)
-{
-    for (int plane = 0; plane < 6; ++plane) {
-        const double da = cadSoftwarePlaneValue(a, plane);
-        const double db = cadSoftwarePlaneValue(b, plane);
-        if (da < 0.0 && db < 0.0) return false;
-        if (da >= 0.0 && db >= 0.0) continue;
-        const double denominator = da - db;
-        if (std::abs(denominator) < 1.0e-20) return false;
-        const double t = da / denominator;
-        CadSoftwareClipPoint clipped;
-        for (int i = 0; i < 4; ++i)
-            clipped.v[i] = a.v[i] + t * (b.v[i] - a.v[i]);
-        if (da < 0.0) a = clipped;
-        else b = clipped;
-    }
-    return std::abs(a.v[3]) > 1.0e-20 && std::abs(b.v[3]) > 1.0e-20;
-}
-
-static void
-cadSoftwarePutPixel(unsigned char *pixels, unsigned int width,
-                    unsigned int height, int x, int y,
-                    const std::array<uint8_t, 4>& color)
-{
-    if (x < 0 || y < 0 || static_cast<unsigned int>(x) >= width ||
-            static_cast<unsigned int>(y) >= height)
-        return;
-    unsigned char *pixel = pixels +
-        (static_cast<size_t>(y) * width + static_cast<unsigned int>(x)) * 4;
-    if (color[3] == 255) {
-        std::memcpy(pixel, color.data(), 4);
-        return;
-    }
-    const unsigned int alpha = color[3];
-    const unsigned int inverse = 255 - alpha;
-    for (int i = 0; i < 3; ++i)
-        pixel[i] = static_cast<unsigned char>(
-            (color[i] * alpha + pixel[i] * inverse + 127) / 255);
-    pixel[3] = 255;
-}
-
-static void
-cadSoftwareLine(unsigned char *pixels, unsigned int width,
-                unsigned int height, int x0, int y0, int x1, int y1,
-                const Obol::internal::CadVisibleInstance& instance)
-{
-    std::array<uint8_t, 4> color = instance.rgba;
-    const int pixelWidth = std::max(1, static_cast<int>(
-        std::lround(instance.lineWidth)));
-    const int lowOffset = -(pixelWidth - 1) / 2;
-    const int highOffset = pixelWidth / 2;
-    const unsigned int factor = std::max<unsigned int>(
-        1u, instance.linePatternFactor);
-    int dx = std::abs(x1 - x0);
-    int sx = x0 < x1 ? 1 : -1;
-    int dy = -std::abs(y1 - y0);
-    int sy = y0 < y1 ? 1 : -1;
-    int error = dx + dy;
-    unsigned int step = 0;
-    for (;;) {
-        const unsigned int patternBit = (step / factor) & 15u;
-        if (instance.linePattern & (1u << patternBit)) {
-            for (int oy = lowOffset; oy <= highOffset; ++oy)
-                for (int ox = lowOffset; ox <= highOffset; ++ox)
-                    cadSoftwarePutPixel(pixels, width, height,
-                                        x0 + ox, y0 + oy, color);
-        }
-        if (x0 == x1 && y0 == y1) break;
-        const int twiceError = 2 * error;
-        if (twiceError >= dy) { error += dy; x0 += sx; }
-        if (twiceError <= dx) { error += dx; y0 += sy; }
-        ++step;
-    }
-}
-
-static void
-cadSoftwareSegment(unsigned char *pixels, unsigned int width,
-                   unsigned int height, const SbVec2s& origin,
-                   const SbVec2s& size, const SbMatrix& transform,
-                   const SbVec3f& p0, const SbVec3f& p1,
-                   const Obol::internal::CadVisibleInstance& instance)
-{
-    const float *m = transform[0];
-    if (m[3] == 0.0f && m[7] == 0.0f && m[11] == 0.0f && m[15] != 0.0f) {
-        const double inverseW = 1.0 / m[15];
-        double x0 = origin[0] + ((p0[0] * m[0] + p0[1] * m[4] +
-            p0[2] * m[8] + m[12]) * inverseW * 0.5 + 0.5) * (size[0] - 1);
-        double y0 = origin[1] + ((p0[0] * m[1] + p0[1] * m[5] +
-            p0[2] * m[9] + m[13]) * inverseW * 0.5 + 0.5) * (size[1] - 1);
-        double x1 = origin[0] + ((p1[0] * m[0] + p1[1] * m[4] +
-            p1[2] * m[8] + m[12]) * inverseW * 0.5 + 0.5) * (size[0] - 1);
-        double y1 = origin[1] + ((p1[0] * m[1] + p1[1] * m[5] +
-            p1[2] * m[9] + m[13]) * inverseW * 0.5 + 0.5) * (size[1] - 1);
-        if (!cadSoftwareClipScreen(x0, y0, x1, y1, origin[0], origin[1],
-                origin[0] + size[0] - 1, origin[1] + size[1] - 1))
-            return;
-        cadSoftwareLine(pixels, width, height,
-            static_cast<int>(x0 + 0.5), static_cast<int>(y0 + 0.5),
-            static_cast<int>(x1 + 0.5), static_cast<int>(y1 + 0.5), instance);
-        return;
-    }
-
-    CadSoftwareClipPoint a = cadSoftwareTransform(transform, p0);
-    CadSoftwareClipPoint b = cadSoftwareTransform(transform, p1);
-    if (!cadSoftwareClip(a, b)) return;
-    const int x0 = origin[0] + static_cast<int>(std::lround(
-        (a.v[0] / a.v[3] * 0.5 + 0.5) * (size[0] - 1)));
-    const int y0 = origin[1] + static_cast<int>(std::lround(
-        (a.v[1] / a.v[3] * 0.5 + 0.5) * (size[1] - 1)));
-    const int x1 = origin[0] + static_cast<int>(std::lround(
-        (b.v[0] / b.v[3] * 0.5 + 0.5) * (size[0] - 1)));
-    const int y1 = origin[1] + static_cast<int>(std::lround(
-        (b.v[1] / b.v[3] * 0.5 + 0.5) * (size[1] - 1)));
-    cadSoftwareLine(pixels, width, height, x0, y0, x1, y1, instance);
-}
-
-static void
-cadSoftwarePoint(unsigned char *pixels, unsigned int width,
-                 unsigned int height, const SbVec2s& origin,
-                 const SbVec2s& size, const SbMatrix& viewProj,
-                 const Obol::internal::CadSubpixelProxyPoint& point)
-{
-    if (point.flags & Obol::internal::CadInstanceHidden)
-        return;
-    const CadSoftwareClipPoint clip =
-        cadSoftwareTransform(viewProj, point.position);
-    if (std::abs(clip.v[3]) < 1.0e-20)
-        return;
-    for (int plane = 0; plane < 6; ++plane)
-        if (cadSoftwarePlaneValue(clip, plane) < 0.0)
-            return;
-    const int x = origin[0] + static_cast<int>(std::lround(
-        (clip.v[0] / clip.v[3] * 0.5 + 0.5) * (size[0] - 1)));
-    const int y = origin[1] + static_cast<int>(std::lround(
-        (clip.v[1] / clip.v[3] * 0.5 + 0.5) * (size[1] - 1)));
-    cadSoftwarePutPixel(pixels, width, height, x, y, point.rgba);
-}
-
-static float
-cadSoftwareSnapCoordinate(float value, float minimum, float maximum,
-                          uint8_t bits)
-{
-    if (!bits || !(maximum > minimum)) return value;
-    const double mask = std::ldexp(
-        1.0, 16 - std::min<int>(16, bits));
-    const double scaled =
-        (static_cast<double>(value) - minimum) /
-        (static_cast<double>(maximum) - minimum) * 65535.0;
-    const double code = std::floor(std::max(0.0, std::min(65535.0, scaled)));
-    const double cell = std::floor(code / mask);
-    const double snapped = std::min(65535.0, (cell + 0.5) * mask);
-    return static_cast<float>((snapped / 65535.0) *
-        (static_cast<double>(maximum) - minimum) + minimum);
-}
-
-static SbVec3f
-cadSoftwareSnapPoint(const SbVec3f& point, const Obol::WireRep& wire,
-                     uint8_t level)
-{
-    if (!wire.isProgressive()) return point;
-    const Obol::ProgressiveQuantization quantization =
-        wire.quantizationAtCut(level);
-    if (quantization.isExact()) return point;
-    return SbVec3f(
-        cadSoftwareSnapCoordinate(point[0],
-            wire.progressiveQuantizationMinimum[0],
-            wire.progressiveQuantizationMaximum[0], quantization.xBits),
-        cadSoftwareSnapCoordinate(point[1],
-            wire.progressiveQuantizationMinimum[1],
-            wire.progressiveQuantizationMaximum[1], quantization.yBits),
-        cadSoftwareSnapCoordinate(point[2],
-            wire.progressiveQuantizationMinimum[2],
-            wire.progressiveQuantizationMaximum[2], quantization.zBits));
-}
-
-static bool
-cadSoftwareBoxOutsideClip(const SbBox3f& bounds, const SbMatrix& transform)
-{
-    if (bounds.isEmpty()) return false;
-    const SbVec3f minimum = bounds.getMin();
-    const SbVec3f maximum = bounds.getMax();
-    CadSoftwareClipPoint corners[8];
-    for (unsigned int corner = 0; corner < 8; ++corner) {
-        corners[corner] = cadSoftwareTransform(transform, SbVec3f(
-            (corner & 1u) ? maximum[0] : minimum[0],
-            (corner & 2u) ? maximum[1] : minimum[1],
-            (corner & 4u) ? maximum[2] : minimum[2]));
-    }
-    for (int plane = 0; plane < 6; ++plane) {
-        bool allOutside = true;
-        for (const CadSoftwareClipPoint& corner : corners) {
-            if (cadSoftwarePlaneValue(corner, plane) >= 0.0) {
-                allOutside = false;
-                break;
-            }
-        }
-        if (allOutside) return true;
-    }
-    return false;
-}
-
-static bool
-cadRenderSoftwareWire(const Obol::internal::CadFramePlan& plan,
-                      const SoCADAssembly& assembly, SoState *state,
-                      const SbMatrix& viewProj)
-{
-    if (plan.wireItems.empty() || !plan.shadedItems.empty() ||
-            assembly.wireframeOcclusion.getValue())
-        return false;
-    SoDB::ContextManager *manager = SoContextManagerElement::get(state);
-    unsigned char *pixels = nullptr;
-    unsigned int width = 0, height = 0, components = 0;
-    if (!manager || !manager->getCurrentSoftwareFramebuffer(
-            pixels, width, height, components) || components != 4)
-        return false;
-    const SbViewportRegion& viewport = SoViewportRegionElement::get(state);
-    const SbVec2s origin = viewport.getViewportOriginPixels();
-    const SbVec2s size = viewport.getViewportSizePixels();
-    if (size[0] <= 0 || size[1] <= 0) return false;
-
-    for (const auto& item : plan.wireItems) {
-        const Obol::PartGeometry *geometry = assembly.partGeometry(item.rep.part);
-        if (!geometry || !geometry->wire.has_value()) continue;
-        const Obol::WireRep& wire = *geometry->wire;
-        for (uint32_t i = 0; i < item.instanceCount; ++i) {
-            const size_t visibleIndex = item.baseInstance + i;
-            if (visibleIndex >= plan.visibleInstances.size())
-                continue;
-            const auto& instance = plan.visibleInstances[visibleIndex];
-            if (instance.partIndex != item.partIndex ||
-                    (instance.flags &
-                        Obol::internal::CadInstanceHidden))
-                continue;
-            if (visibleIndex < plan.subpixelProxyMask.size() &&
-                    plan.subpixelProxyMask[visibleIndex])
-                continue;
-            SbMatrix model;
-            model.setValue(instance.transform.data());
-            SbMatrix transform = model;
-            transform.multRight(viewProj);
-            uint8_t level = assembly.effectiveProgressiveCut(
-                instance.lodCut);
-            if (wire.isProgressive()) {
-                if (level == Obol::ProgressiveCutUnspecified)
-                    level = wire.progressiveResidentCut;
-                level = std::max(wire.progressiveMinimumCut,
-                    std::min(wire.progressiveResidentCut, level));
-                /* One logical occurrence must use one coherent cut.  A page
-                 * that has only a coarser resident prefix constrains the
-                 * entire visible mesh, while an offscreen page does not. */
-                if (wire.hasAdaptiveProgressiveClusters()) {
-                    for (const Obol::ProgressiveWireCluster& cluster :
-                            wire.progressiveClusters) {
-                        if (cluster.ranges.empty() ||
-                                cadSoftwareBoxOutsideClip(
-                                    cluster.bounds, transform))
-                            continue;
-                        const uint8_t resident =
-                            cluster.residentCut ==
-                                Obol::ProgressiveCutUnspecified ?
-                                wire.progressiveResidentCut :
-                                cluster.residentCut;
-                        level = std::min(level,
-                            std::max(wire.progressiveMinimumCut, resident));
-                    }
-                }
-            }
-            const auto drawRange = [&](size_t firstSegment,
-                                       size_t segmentCount) {
-                if (firstSegment >= wire.segmentCount()) return;
-                segmentCount = std::min(
-                    segmentCount, wire.segmentCount() - firstSegment);
-                const size_t end = (firstSegment + segmentCount) * 2;
-                for (size_t p = firstSegment * 2; p + 1 < end; p += 2) {
-                    const SbVec3f a = cadSoftwareSnapPoint(
-                        wire.segmentPoints[p], wire, level);
-                    const SbVec3f b = cadSoftwareSnapPoint(
-                        wire.segmentPoints[p + 1], wire, level);
-                    cadSoftwareSegment(pixels, width, height, origin, size,
-                        transform, a, b, instance);
-                }
-            };
-            if (wire.hasAdaptiveProgressiveClusters()) {
-                for (const Obol::ProgressiveWireCluster& cluster :
-                        wire.progressiveClusters) {
-                    if (cadSoftwareBoxOutsideClip(cluster.bounds, transform))
-                        continue;
-                    for (const Obol::ProgressiveWireClusterRange& range :
-                            cluster.ranges) {
-                        if (range.activationCut > level) break;
-                        drawRange(range.firstSegment, range.segmentCount);
-                    }
-                }
-            } else {
-                drawRange(wire.segmentFirstAtCut(level),
-                    wire.segmentCountAtCut(level));
-            }
-            for (const auto& polyline : wire.polylines)
-                for (size_t p = 1; p < polyline.points.size(); ++p)
-                    cadSoftwareSegment(pixels, width, height, origin, size,
-                    transform, polyline.points[p - 1], polyline.points[p],
-                        instance);
-        }
-    }
-    for (const auto& point : plan.subpixelProxyPoints)
-        cadSoftwarePoint(pixels, width, height, origin, size, viewProj, point);
     return true;
 }
 
@@ -677,25 +350,28 @@ struct SoCADAssemblyImpl :
             Obol::PartId pid,
             const std::shared_ptr<const Obol::PartGeometry>& geom) {
         if (!geom) return;
+        const bool replacing = parts_.find(pid) != parts_.end();
         parts_[pid] = geom;
         if (geom->subpixelProxyEligible) {
             std::array<SbVec3f, 8> corners;
             if (cadSubpixelGeometryCorners(*geom, corners))
                 subpixelProxyCorners_[pid] = std::move(corners);
-            else
+            else if (replacing)
                 subpixelProxyCorners_.erase(pid);
-        } else {
+        } else if (replacing) {
             subpixelProxyCorners_.erase(pid);
         }
         partGeneration_[pid] = nextGeneration_++;
-        partEdgeBvhCache_.erase(pid);
-        partTriBvhCache_.erase(pid);
+        if (replacing) {
+            partEdgeBvhCache_.erase(pid);
+            partTriBvhCache_.erase(pid);
+        }
         const bool progressive =
             (geom->shaded.has_value() && geom->shaded->isProgressive()) ||
             (geom->wire.has_value() && geom->wire->isProgressive());
         if (progressive)
             progressiveParts_.insert(pid);
-        else
+        else if (replacing)
             progressiveParts_.erase(pid);
     }
 
@@ -822,6 +498,7 @@ struct SoCADAssemblyImpl :
         idata->occurrenceIndex = rec.occurrenceIndex;
         idata->boolOp         = rec.boolOp;
         idata->lodCut       = rec.lodCut;
+        idata->lodStructuralProxy = rec.lodStructuralProxy;
 
         auto geomIt = parts_.find(rec.part);
         idata->worldBounds = geomIt != parts_.end() && geomIt->second ?
@@ -897,23 +574,29 @@ struct SoCADAssemblyImpl :
         }
         if (indexFound->second >= cachedPlan_.visibleInstances.size())
             return fail("invalid-visible-index");
+        const auto instanceFound = instances_.find(instance);
+        if (instanceFound == instances_.end())
+            return fail("instance-not-retained");
         const uint32_t visibleIndex = indexFound->second;
         auto& record = cachedPlan_.visibleInstances[visibleIndex];
         const bool wasProxyProtected =
             (record.flags &
-                (Obol::internal::CadInstanceSelected |
-                 Obol::internal::CadInstancePointProxyProtected)) != 0;
+                Obol::internal::CadInstancePointProxyProtected) != 0;
         uint32_t flags = record.flags &
             ~(Obol::internal::CadInstanceSelected |
               Obol::internal::CadInstanceHidden |
-              Obol::internal::CadInstancePointProxyProtected);
+              Obol::internal::CadInstancePointProxyProtected |
+              Obol::internal::CadInstanceLodStructuralProxy);
         if (selected_.count(instance))
             flags |= Obol::internal::CadInstanceSelected;
         if (hidden_.count(instance))
             flags |= Obol::internal::CadInstanceHidden;
         if (pointProxyProtected_.count(instance))
             flags |= Obol::internal::CadInstancePointProxyProtected;
+        if (instanceFound->second.lodStructuralProxy)
+            flags |= Obol::internal::CadInstanceLodStructuralProxy;
         record.flags = flags;
+        updateStructuralProjectionForVisible(visibleIndex);
         if (cadDebugEnabled()) {
             std::fprintf(stderr,
                 "SoCADAssembly patch flags instance=%016llx:%016llx "
@@ -926,8 +609,7 @@ struct SoCADAssemblyImpl :
         }
         const bool isProxyProtected =
             (record.flags &
-                (Obol::internal::CadInstanceSelected |
-                 Obol::internal::CadInstancePointProxyProtected)) != 0;
+                Obol::internal::CadInstancePointProxyProtected) != 0;
         if (wasProxyProtected != isProxyProtected &&
                 updateProtectedSubpixelProxy(
                     visibleIndex, isProxyProtected))
@@ -1222,7 +904,9 @@ struct SoCADAssemblyImpl :
                     CadInstanceColorOverride : 0u) |
                 (isHidden ? CadInstanceHidden : 0u) |
                 (pointProxyProtected_.count(iid) ?
-                    CadInstancePointProxyProtected : 0u);
+                    CadInstancePointProxyProtected : 0u) |
+                (idata.lodStructuralProxy ?
+                    CadInstanceLodStructuralProxy : 0u);
             vi.lodCut = idata.lodCut;
 
             if (cadDebugEnabled()) {
@@ -1395,7 +1079,8 @@ struct SoCADAssemblyImpl :
             if (needWire && geom.wire.has_value()) {
                 CadDrawItem item;
                 item.rep.part  = pid;
-                item.rep.type  = CadRepType::WireSegments;
+                item.rep.type  = geom.wire->derivesTriangleEdges() ?
+                    CadRepType::Triangles : CadRepType::WireSegments;
                 item.partIndex = partIndex;
                 uint32_t runStart = 0;
                 while (runStart < count) {
@@ -2111,7 +1796,9 @@ struct SoCADAssemblyImpl :
                 CadInstanceColorOverride : 0u) |
             (hidden_.count(instance) ? CadInstanceHidden : 0u) |
             (pointProxyProtected_.count(instance) ?
-                CadInstancePointProxyProtected : 0u);
+                CadInstancePointProxyProtected : 0u) |
+            (data.lodStructuralProxy ?
+                CadInstanceLodStructuralProxy : 0u);
         visible.lodCut = data.lodCut;
         if (!data.worldBounds.isEmpty()) {
             SbVec3f minimum, maximum;
@@ -2165,7 +1852,8 @@ struct SoCADAssemblyImpl :
         if (needWire && geometry.wire) {
             CadDrawItem item;
             item.rep.part = newPart;
-            item.rep.type = CadRepType::WireSegments;
+            item.rep.type = geometry.wire->derivesTriangleEdges() ?
+                CadRepType::Triangles : CadRepType::WireSegments;
             item.partIndex = oldSpan.partIndex;
             item.baseInstance = oldSpan.baseInstance;
             item.instanceCount = 1u;
@@ -2221,12 +1909,36 @@ struct SoCADAssemblyImpl :
 
         cachedPlanPartSpansByPart_.erase(oldSpanFound);
         cachedPlanPartSpansByPart_[newPart].push_back(newSpan);
+        const uint64_t priorSubpixelInputRevision =
+            cachedPlan_.subpixelProxyInputRevision;
         cachedPlan_.subpixelProxyInputRevision =
             nextSubpixelProxyInputRevision_++;
         if (nextSubpixelProxyInputRevision_ == 0)
             nextSubpixelProxyInputRevision_ = 1;
-        subpixelProxyStateInputRevision_ = 0;
-        subpixelProxyViewValid_ = false;
+        const bool patchedSubpixelOccurrence =
+            patchSubpixelProxyGeometryForVisible(
+                oldSpan.baseInstance, priorSubpixelInputRevision);
+        if (patchedSubpixelOccurrence) {
+            subpixelProxyStateInputRevision_ =
+                cachedPlan_.subpixelProxyInputRevision;
+            subpixelProxyViewInputRevision_ =
+                cachedPlan_.subpixelProxyInputRevision;
+            cachedPlan_.subpixelProxySourceInputRevision =
+                cachedPlan_.subpixelProxyInputRevision;
+            std::unordered_set<Obol::PartId,
+                std::hash<Obol::PartId>> affectedParts;
+            /* The old unique part span has already been retired, so the
+             * per-part refresh cannot discover this occurrence through that
+             * span to erase its former structural-frontier identity. */
+            uncollapsedStructuralProxyInstances_.erase(instance);
+            affectedParts.insert(oldPart);
+            affectedParts.insert(newPart);
+            refreshWireProxyParts(affectedParts);
+        } else {
+            subpixelProxyStateInputRevision_ = 0;
+            subpixelProxyViewValid_ = false;
+            structuralProjectionHistogram_.exact = false;
+        }
         bvhDirty_ = true;
         return true;
     }
@@ -2810,9 +2522,12 @@ struct SoCADAssemblyImpl :
             const SbVec2s& viewportSize,
             float pixelThreshold,
             bool wasCollapsed,
-            Obol::internal::CadSubpixelProxyPoint& replacement) const
+            Obol::internal::CadSubpixelProxyPoint& replacement,
+            CadStructuralProjectionSample *structuralSample = nullptr) const
     {
         using namespace Obol::internal;
+        if (structuralSample)
+            *structuralSample = CadStructuralProjectionSample();
         if (visibleIndex >= plan.visibleInstances.size())
             return CadProxyPresentation::Geometry;
         const CadVisibleInstance& instance =
@@ -2823,6 +2538,16 @@ struct SoCADAssemblyImpl :
             return CadProxyPresentation::Geometry;
         const CadPartBinding& binding =
             plan.partBindings[instance.partIndex];
+        /* A malformed structural fallback without validated projection
+         * corners cannot enter the point channel, but it is still submitted
+         * as geometry and therefore remains a conservative visible loader
+         * obligation.  A valid projection below may prove it off-screen. */
+        if (structuralSample &&
+                (instance.flags & CadInstanceLodStructuralProxy) &&
+                binding.geometry) {
+            structuralSample->structural = true;
+            structuralSample->visible = true;
+        }
         if (!binding.subpixelProxyEligible)
             return CadProxyPresentation::Geometry;
         const bool wireActive =
@@ -2833,17 +2558,43 @@ struct SoCADAssemblyImpl :
             cachedDM_ == SoCADAssembly::SHADED ||
             cachedDM_ == SoCADAssembly::SHADED_WITH_EDGES ||
             cachedDM_ == SoCADAssembly::HIDDEN_LINE;
+        /* A structural fallback is intentionally a wire box in every scene
+         * draw mode.  Its replacement eligibility therefore follows that
+         * fallback channel, not the user's eventual mesh mode.  Requiring a
+         * shaded representation here forced shaded large-model views to load
+         * thousands of minimum meshes before the same screen-space extent
+         * could enter the aggregate point batch. */
+        const bool structuralFallbackActive =
+            (instance.flags & CadInstanceLodStructuralProxy) &&
+            binding.geometry && binding.geometry->wire.has_value();
         if (!binding.geometry ||
                 !((wireActive && binding.geometry->wire) ||
-                  (shadedActive && binding.geometry->shaded)))
+                  (shadedActive && binding.geometry->shaded) ||
+                  structuralFallbackActive))
             return CadProxyPresentation::Geometry;
-        const float threshold = pixelThreshold *
-            (wasCollapsed ? 1.25f : 0.75f);
+        /* A structural fallback has no stable geometry presentation worth
+         * protecting with a Schmitt band: it either supplies the exact leaf
+         * extent or is atomically replaced by its mesh.  Classify that box at
+         * the declared pixel boundary so a 0.8-pixel leaf does not trigger a
+         * cache load merely because ordinary retained meshes use a 0.75/1.25
+         * anti-flicker band. */
+        const bool structuralFallback =
+            (instance.flags & CadInstanceLodStructuralProxy) != 0;
+        const float threshold = structuralFallback ? pixelThreshold :
+            pixelThreshold * (wasCollapsed ? 1.25f : 0.75f);
         Obol::CadProjectedProxy projected;
         if (!cadSubpixelProxyProjection(
                 binding.subpixelProxyCorners, instance, viewProj,
                 viewportSize, threshold, projected))
             return CadProxyPresentation::Geometry;
+        if (structuralSample && structuralFallback) {
+            structuralSample->structural = true;
+            structuralSample->visible = projected.visible;
+            structuralSample->collapsible = projected.fullyContained &&
+                !pointProxyProtected_.count(instance.instanceId);
+            structuralSample->maximumPixels = std::max(
+                projected.pixelWidth, projected.pixelHeight);
+        }
         /* A fully clipped occurrence is neither an uncollapsed structural
          * fallback nor a convergence obligation.  Mark it in the same
          * per-occurrence suppression mask used by point replacement, but do
@@ -2858,9 +2609,10 @@ struct SoCADAssemblyImpl :
          * atomically adopted after the immutable frame plan was built.  Read
          * its authoritative set here rather than requiring an O(instances)
          * flag rewrite at transaction commit.  Selection remains an ordinary
-         * sparse instance attribute. */
-        if ((instance.flags & CadInstanceSelected) ||
-                pointProxyProtected_.count(instance.instanceId))
+         * sparse style/identity attribute: applications which need a selected
+         * occurrence promoted for editing put it in the explicit protection
+         * set.  This lets bulk selection retain bounded point presentation. */
+        if (pointProxyProtected_.count(instance.instanceId))
             return CadProxyPresentation::Geometry;
         if (!projected.pointEligible)
             return CadProxyPresentation::Geometry;
@@ -2870,6 +2622,135 @@ struct SoCADAssemblyImpl :
         replacement.instanceId = instance.instanceId;
         replacement.flags = instance.flags;
         return CadProxyPresentation::Point;
+    }
+
+    void updateStructuralProjectionForVisible(size_t visibleIndex)
+    {
+        using namespace Obol::internal;
+        CadFramePlan& plan = cachedPlan_;
+        if (!structuralProjectionHistogram_.exact)
+            return;
+        if (!subpixelProxyViewValid_ ||
+                subpixelProxyViewInputRevision_ !=
+                    plan.subpixelProxyInputRevision ||
+                visibleIndex >= plan.visibleInstances.size() ||
+                visibleIndex >=
+                    structuralProjectionBucketByVisible_.size()) {
+            structuralProjectionHistogram_.exact = false;
+            return;
+        }
+        const int8_t oldBucket =
+            structuralProjectionBucketByVisible_[visibleIndex];
+        CadSubpixelProxyPoint ignored;
+        CadStructuralProjectionSample sample;
+        (void)subpixelProxyPresentationForOccurrence(
+            plan, visibleIndex, subpixelProxyViewProj_,
+            subpixelProxyViewportSize_, subpixelProxyPixelThreshold_,
+            subpixelProxyState_[visibleIndex] != 0u, ignored, &sample);
+        const int8_t newBucket = cadStructuralProjectionBucket(sample);
+        if (oldBucket == newBucket)
+            return;
+        cadUpdateStructuralProjectionHistogram(
+            structuralProjectionHistogram_, oldBucket, false);
+        cadUpdateStructuralProjectionHistogram(
+            structuralProjectionHistogram_, newBucket, true);
+        structuralProjectionBucketByVisible_[visibleIndex] = newBucket;
+        structuralProjectionHistogram_.revision =
+            nextStructuralProjectionRevision_++;
+        if (nextStructuralProjectionRevision_ == 0)
+            nextStructuralProjectionRevision_ = 1;
+    }
+
+    bool patchSubpixelProxyGeometryForVisible(
+            size_t visibleIndex, uint64_t priorInputRevision)
+    {
+        using namespace Obol::internal;
+        CadFramePlan& plan = cachedPlan_;
+        const uint32_t noPoint = std::numeric_limits<uint32_t>::max();
+        if (!subpixelProxyViewValid_ || !priorInputRevision ||
+                subpixelProxyStateInputRevision_ != priorInputRevision ||
+                subpixelProxyViewInputRevision_ != priorInputRevision ||
+                visibleIndex >= plan.visibleInstances.size() ||
+                visibleIndex >= plan.subpixelProxyMask.size() ||
+                visibleIndex >= subpixelProxyState_.size() ||
+                visibleIndex >= subpixelProxyPointByVisible_.size())
+            return false;
+
+        const uint32_t currentPoint =
+            subpixelProxyPointByVisible_[visibleIndex];
+        if (currentPoint != noPoint &&
+                (currentPoint >= plan.subpixelProxyPoints.size() ||
+                 currentPoint >= subpixelProxyVisibleByPoint_.size()))
+            return false;
+        if (currentPoint != noPoint) {
+            const uint32_t last = static_cast<uint32_t>(
+                plan.subpixelProxyPoints.size() - 1u);
+            if (currentPoint != last) {
+                plan.subpixelProxyPoints[currentPoint] =
+                    std::move(plan.subpixelProxyPoints[last]);
+                const uint32_t movedVisible =
+                    subpixelProxyVisibleByPoint_[last];
+                if (movedVisible >=
+                        subpixelProxyPointByVisible_.size())
+                    return false;
+                subpixelProxyVisibleByPoint_[currentPoint] = movedVisible;
+                subpixelProxyPointByVisible_[movedVisible] = currentPoint;
+            }
+            plan.subpixelProxyPoints.pop_back();
+            subpixelProxyVisibleByPoint_.pop_back();
+        }
+        subpixelProxyPointByVisible_[visibleIndex] = noPoint;
+        plan.subpixelProxyMask[visibleIndex] = 0u;
+        subpixelProxyState_[visibleIndex] = 0u;
+
+        if (visibleIndex <
+                structuralProjectionBucketByVisible_.size()) {
+            cadUpdateStructuralProjectionHistogram(
+                structuralProjectionHistogram_,
+                structuralProjectionBucketByVisible_[visibleIndex], false);
+            structuralProjectionBucketByVisible_[visibleIndex] = -1;
+        } else if (structuralProjectionHistogram_.exact) {
+            structuralProjectionHistogram_.exact = false;
+        }
+
+        CadSubpixelProxyPoint replacement;
+        CadStructuralProjectionSample structuralSample;
+        const CadProxyPresentation presentation =
+            subpixelProxyPresentationForOccurrence(
+                plan, visibleIndex, subpixelProxyViewProj_,
+                subpixelProxyViewportSize_, subpixelProxyPixelThreshold_,
+                false, replacement, &structuralSample);
+        const int8_t structuralBucket =
+            cadStructuralProjectionBucket(structuralSample);
+        if (visibleIndex <
+                structuralProjectionBucketByVisible_.size()) {
+            structuralProjectionBucketByVisible_[visibleIndex] =
+                structuralBucket;
+            cadUpdateStructuralProjectionHistogram(
+                structuralProjectionHistogram_, structuralBucket, true);
+        }
+        subpixelProxyState_[visibleIndex] =
+            static_cast<uint8_t>(presentation);
+        if (presentation != CadProxyPresentation::Geometry)
+            plan.subpixelProxyMask[visibleIndex] = 1u;
+        if (presentation == CadProxyPresentation::Point) {
+            subpixelProxyPointByVisible_[visibleIndex] =
+                static_cast<uint32_t>(plan.subpixelProxyPoints.size());
+            plan.subpixelProxyPoints.push_back(std::move(replacement));
+            subpixelProxyVisibleByPoint_.push_back(
+                static_cast<uint32_t>(visibleIndex));
+        }
+
+        plan.subpixelProxyRevision = nextSubpixelProxyRevision_++;
+        if (nextSubpixelProxyRevision_ == 0)
+            nextSubpixelProxyRevision_ = 1;
+        if (structuralProjectionHistogram_.exact) {
+            structuralProjectionHistogram_.revision =
+                nextStructuralProjectionRevision_++;
+            if (nextStructuralProjectionRevision_ == 0)
+                nextStructuralProjectionRevision_ = 1;
+        }
+        return true;
     }
 
     /* Keep selected geometry visually inspectable even when its conservative
@@ -2948,10 +2829,6 @@ struct SoCADAssemblyImpl :
     {
         using namespace Obol::internal;
         CadFramePlan& plan = cachedPlan_;
-        const bool wireActive =
-            cachedDM_ == SoCADAssembly::WIREFRAME ||
-            cachedDM_ == SoCADAssembly::SHADED_WITH_EDGES ||
-            cachedDM_ == SoCADAssembly::HIDDEN_LINE;
         for (const Obol::PartId part : parts) {
             const auto previous =
                 uncollapsedStructuralProxyCountByPart_.find(part);
@@ -2966,8 +2843,6 @@ struct SoCADAssemblyImpl :
                 uncollapsedStructuralProxyCountByPart_.erase(previous);
             }
             plan.wirePartsWithUncollapsedInstances.erase(part);
-            if (!wireActive)
-                continue;
 
             bool hasUncollapsed = false;
             size_t structuralCount = 0;
@@ -2975,14 +2850,17 @@ struct SoCADAssemblyImpl :
             if (spans == cachedPlanPartSpansByPart_.end())
                 continue;
             for (const CachedPlanPartSpan& span : spans->second) {
-                if (span.partIndex >= plan.partBindings.size())
+                /* The compiled plan, not the requested display-mode field,
+                 * is authoritative during a sparse transition.  A mixed
+                 * box-to-mesh plan may still own wire fallback items while a
+                 * pending mode update already says SHADED. */
+                if (!span.wireItemCount ||
+                        span.partIndex >= plan.partBindings.size())
                     continue;
                 const CadPartBinding& binding =
                     plan.partBindings[span.partIndex];
                 if (!binding.geometry || !binding.geometry->wire)
                     continue;
-                const bool structuralProxy =
-                    binding.structuralProxy;
                 for (uint32_t offset = 0;
                         offset < span.instanceCount; ++offset) {
                     const size_t visibleIndex =
@@ -2991,6 +2869,12 @@ struct SoCADAssemblyImpl :
                         continue;
                     const CadVisibleInstance& occurrence =
                         plan.visibleInstances[visibleIndex];
+                    /* The published structural frontier is an occurrence
+                     * set.  Sparse box-to-mesh/selection/visibility changes
+                     * update it beside the per-part count without requiring
+                     * a complete camera reclassification. */
+                    uncollapsedStructuralProxyInstances_.erase(
+                        occurrence.instanceId);
                     if (occurrence.partIndex != span.partIndex ||
                             (occurrence.flags & CadInstanceHidden) ||
                             (visibleIndex <
@@ -2998,8 +2882,12 @@ struct SoCADAssemblyImpl :
                              plan.subpixelProxyMask[visibleIndex]))
                         continue;
                     hasUncollapsed = true;
-                    if (structuralProxy)
+                    if (occurrence.flags &
+                            CadInstanceLodStructuralProxy) {
                         ++structuralCount;
+                        uncollapsedStructuralProxyInstances_.insert(
+                            occurrence.instanceId);
+                    }
                 }
             }
             if (hasUncollapsed)
@@ -3028,7 +2916,10 @@ struct SoCADAssemblyImpl :
                 subpixelProxyPixelThreshold_ != pixelThreshold ||
                 !(subpixelProxyViewProj_ == viewProj) ||
                 subpixelProxyClassifiedAppendRevision_ <
-                    plan.appendDeltaFloorRevision)
+                    plan.appendDeltaFloorRevision ||
+                !structuralProjectionHistogram_.exact ||
+                structuralProjectionBucketByVisible_.size() !=
+                    subpixelProxyState_.size())
             return false;
 
         std::vector<const CadPlanAppendDelta *> deltas;
@@ -3105,6 +2996,13 @@ struct SoCADAssemblyImpl :
                 if (retired >= plan.visibleInstances.size() ||
                         !removePointForVisible(retired))
                     return false;
+                if (retired <
+                        structuralProjectionBucketByVisible_.size()) {
+                    cadUpdateStructuralProjectionHistogram(
+                        structuralProjectionHistogram_,
+                        structuralProjectionBucketByVisible_[retired], false);
+                    structuralProjectionBucketByVisible_[retired] = -1;
+                }
                 const CadVisibleInstance& old =
                     plan.visibleInstances[retired];
                 if (old.partIndex < plan.partBindings.size())
@@ -3123,6 +3021,7 @@ struct SoCADAssemblyImpl :
             plan.subpixelProxyMask.resize(newExtent, 0u);
             subpixelProxyPointByVisible_.resize(
                 newExtent, noPoint);
+            structuralProjectionBucketByVisible_.resize(newExtent, -1);
             for (size_t visibleIndex = delta->visibleBegin;
                     visibleIndex < newExtent; ++visibleIndex) {
                 const CadVisibleInstance& occurrence =
@@ -3132,10 +3031,18 @@ struct SoCADAssemblyImpl :
                         plan.partBindings[
                             occurrence.partIndex].part);
                 CadSubpixelProxyPoint replacement;
+                CadStructuralProjectionSample structuralSample;
                 const CadProxyPresentation presentation =
                     subpixelProxyPresentationForOccurrence(
                         plan, visibleIndex, viewProj, viewportSize,
-                        pixelThreshold, false, replacement);
+                        pixelThreshold, false, replacement,
+                        &structuralSample);
+                const int8_t structuralBucket =
+                    cadStructuralProjectionBucket(structuralSample);
+                structuralProjectionBucketByVisible_[visibleIndex] =
+                    structuralBucket;
+                cadUpdateStructuralProjectionHistogram(
+                    structuralProjectionHistogram_, structuralBucket, true);
                 const bool collapsed =
                     presentation == CadProxyPresentation::Point;
                 const bool suppressed =
@@ -3162,12 +3069,93 @@ struct SoCADAssemblyImpl :
         plan.subpixelProxyRevision = nextSubpixelProxyRevision_++;
         if (nextSubpixelProxyRevision_ == 0)
             nextSubpixelProxyRevision_ = 1;
+        structuralProjectionHistogram_.revision =
+            nextStructuralProjectionRevision_++;
+        if (nextStructuralProjectionRevision_ == 0)
+            nextStructuralProjectionRevision_ = 1;
+        structuralProjectionHistogram_.exact = true;
         subpixelProxyClassifiedAppendRevision_ =
             plan.appendRevision;
         subpixelProxyStateInputRevision_ =
             plan.subpixelProxyInputRevision;
         subpixelProxyViewInputRevision_ =
             plan.subpixelProxyInputRevision;
+        return true;
+    }
+
+    /*
+     * Preserve an unpublished classifier cursor while a cold source appends
+     * more occurrences.  The ordinary append patch above operates on a
+     * complete, published classification.  Before the first publication,
+     * repeatedly invalidating the scratch scan made a fast producer able to
+     * keep a large assembly at boxes forever: every render revisited the
+     * prefix and the next append discarded it.
+     *
+     * Pure tail growth is safe to fold into the active transaction.  A
+     * replacement may alter a record the cursor has already visited, so it
+     * deliberately takes the conservative reset path instead.
+     */
+    bool extendSubpixelProxyAppendBuild(
+            const SbMatrix& viewProj,
+            const SbVec2s& viewportSize,
+            float pixelThreshold)
+    {
+        using namespace Obol::internal;
+        CadFramePlan& plan = cachedPlan_;
+        if (!subpixelProxyBuildActive_ ||
+                subpixelProxyBuildAppendRevision_ == 0 ||
+                subpixelProxyBuildAppendRevision_ <
+                    plan.appendDeltaFloorRevision ||
+                subpixelProxyBuildViewportSize_[0] != viewportSize[0] ||
+                subpixelProxyBuildViewportSize_[1] != viewportSize[1] ||
+                subpixelProxyBuildPixelThreshold_ != pixelThreshold ||
+                !(subpixelProxyBuildViewProj_ == viewProj))
+            return false;
+
+        size_t expectedVisibleExtent = subpixelProxyScratchMask_.size();
+        uint64_t newestAppendRevision =
+            subpixelProxyBuildAppendRevision_;
+        uint64_t newestInputRevision =
+            subpixelProxyBuildInputRevision_;
+        bool found = false;
+        for (const CadPlanAppendDelta& delta : plan.appendDeltas) {
+            if (delta.revision <=
+                    subpixelProxyBuildAppendRevision_)
+                continue;
+            if (!delta.retiredVisibleIndices.empty() ||
+                    delta.visibleBegin != expectedVisibleExtent ||
+                    delta.visibleBegin >
+                        plan.visibleInstances.size() ||
+                    delta.visibleCount >
+                        plan.visibleInstances.size() -
+                            delta.visibleBegin ||
+                    !delta.subpixelProxyInputRevision)
+                return false;
+            expectedVisibleExtent += delta.visibleCount;
+            newestAppendRevision = delta.revision;
+            newestInputRevision =
+                delta.subpixelProxyInputRevision;
+            found = true;
+        }
+        if (!found ||
+                expectedVisibleExtent !=
+                    plan.visibleInstances.size() ||
+                newestAppendRevision != plan.appendRevision ||
+                newestInputRevision !=
+                    plan.subpixelProxyInputRevision)
+            return false;
+
+        const uint32_t noPoint =
+            std::numeric_limits<uint32_t>::max();
+        subpixelProxyState_.resize(expectedVisibleExtent, 0u);
+        subpixelProxyScratchMask_.resize(expectedVisibleExtent, 0u);
+        subpixelProxyScratchPointByVisible_.resize(
+            expectedVisibleExtent, noPoint);
+        structuralProjectionScratchBucketByVisible_.resize(
+            expectedVisibleExtent, -1);
+        subpixelProxyStateInputRevision_ = newestInputRevision;
+        subpixelProxyBuildInputRevision_ = newestInputRevision;
+        subpixelProxyBuildAppendRevision_ = newestAppendRevision;
         return true;
     }
 
@@ -3190,13 +3178,24 @@ struct SoCADAssemblyImpl :
          * thousands of recovery frames.
          */
         static constexpr size_t guaranteedWorkPerRetry = 4096u;
+        static constexpr auto guaranteedPreparationTime =
+            std::chrono::milliseconds(4);
+        const auto preparationStarted =
+            std::chrono::steady_clock::now();
         size_t workSinceAbortCheck = 0u;
+        size_t workThisRetry = 0u;
         const auto abortRequested = [&]() {
             if (!renderAction)
                 return false;
-            if (++workSinceAbortCheck < guaranteedWorkPerRetry)
+            ++workThisRetry;
+            if (++workSinceAbortCheck < 256u)
                 return false;
             workSinceAbortCheck = 0;
+            if (workThisRetry < guaranteedWorkPerRetry ||
+                    std::chrono::steady_clock::now() -
+                        preparationStarted <
+                            guaranteedPreparationTime)
+                return false;
             return renderAction->abortNow();
         };
         if (preparationPerformed)
@@ -3232,6 +3231,7 @@ struct SoCADAssemblyImpl :
             ++subpixelProxyCameraMotionReuseCount_;
             subpixelProxyViewProj_ = viewProj;
             subpixelProxyBuildActive_ = false;
+            structuralProjectionHistogram_.exact = false;
             return true;
         }
         if (subpixelProxyViewValid_ &&
@@ -3260,7 +3260,11 @@ struct SoCADAssemblyImpl :
             subpixelProxyBuildViewportSize_[1] == viewportSize[1] &&
             subpixelProxyBuildPixelThreshold_ == pixelThreshold &&
             subpixelProxyBuildViewProj_ == viewProj;
-        if (!matchingBuild) {
+        const bool extendedBuild = !matchingBuild &&
+            subpixelProxyBuildActive_ &&
+            extendSubpixelProxyAppendBuild(
+                viewProj, viewportSize, pixelThreshold);
+        if (!matchingBuild && !extendedBuild) {
             if (preparationPerformed)
                 *preparationPerformed = true;
             if (cadPlanDebugEnabled()) {
@@ -3295,11 +3299,16 @@ struct SoCADAssemblyImpl :
             pointByVisible.assign(
                 plan.visibleInstances.size(),
                 std::numeric_limits<uint32_t>::max());
+            structuralProjectionScratchBucketByVisible_.assign(
+                plan.visibleInstances.size(), -1);
+            structuralProjectionScratchHistogram_ =
+                Obol::CadStructuralProxyProjectionHistogram();
             points.clear();
             visibleByPoint.clear();
             subpixelProxyScratchWireParts_.clear();
             subpixelProxyScratchStructuralCountByPart_.clear();
             subpixelProxyScratchStructuralCount_ = 0;
+            subpixelProxyScratchStructuralInstances_.clear();
             subpixelProxyBuildVisibleCursor_ = 0;
             subpixelProxyBuildWireItemCursor_ = 0;
             subpixelProxyBuildWireOffset_ = 0;
@@ -3307,6 +3316,8 @@ struct SoCADAssemblyImpl :
             subpixelProxyBuildWireStructuralCount_ = 0;
             subpixelProxyBuildInputRevision_ =
                 plan.subpixelProxyInputRevision;
+            subpixelProxyBuildAppendRevision_ =
+                plan.appendRevision;
             subpixelProxyBuildViewProj_ = viewProj;
             subpixelProxyBuildViewportSize_ = viewportSize;
             subpixelProxyBuildPixelThreshold_ = pixelThreshold;
@@ -3348,16 +3359,30 @@ struct SoCADAssemblyImpl :
             }
             const size_t visibleIndex =
                 subpixelProxyBuildVisibleCursor_;
+            const CadVisibleInstance& instance =
+                plan.visibleInstances[visibleIndex];
             CadSubpixelProxyPoint replacement;
+            CadStructuralProjectionSample structuralSample;
             const CadProxyPresentation presentation =
                 subpixelProxyPresentationForOccurrence(
                     plan, visibleIndex, viewProj, viewportSize,
                     pixelThreshold,
                     subpixelProxyState_[visibleIndex] != 0u,
-                    replacement);
+                    replacement, &structuralSample);
+            const int8_t structuralBucket =
+                cadStructuralProjectionBucket(structuralSample);
+            structuralProjectionScratchBucketByVisible_[visibleIndex] =
+                structuralBucket;
+            cadUpdateStructuralProjectionHistogram(
+                structuralProjectionScratchHistogram_,
+                structuralBucket, true);
             subpixelProxyState_[visibleIndex] =
                 static_cast<uint8_t>(presentation);
             if (presentation == CadProxyPresentation::Geometry) {
+                if (instance.flags &
+                        CadInstanceLodStructuralProxy)
+                    subpixelProxyScratchStructuralInstances_.insert(
+                        instance.instanceId);
                 continue;
             }
 
@@ -3377,11 +3402,6 @@ struct SoCADAssemblyImpl :
                 return false;
             const CadDrawItem& item =
                 plan.wireItems[subpixelProxyBuildWireItemCursor_];
-            const CadPartBinding *binding =
-                item.partIndex < plan.partBindings.size() ?
-                    &plan.partBindings[item.partIndex] : nullptr;
-            const bool structuralProxy =
-                binding && binding->structuralProxy;
             for (; subpixelProxyBuildWireOffset_ < item.instanceCount;
                     ++subpixelProxyBuildWireOffset_) {
                 if (abortRequested())
@@ -3397,7 +3417,8 @@ struct SoCADAssemblyImpl :
                     continue;
                 if (!mask[visibleIndex]) {
                     subpixelProxyBuildWireHasUncollapsed_ = true;
-                    if (structuralProxy) {
+                    if (instance.flags &
+                            CadInstanceLodStructuralProxy) {
                         ++subpixelProxyScratchStructuralCount_;
                         ++subpixelProxyBuildWireStructuralCount_;
                     }
@@ -3477,6 +3498,17 @@ struct SoCADAssemblyImpl :
             subpixelProxyScratchStructuralCountByPart_);
         uncollapsedStructuralProxyCount_ =
             subpixelProxyScratchStructuralCount_;
+        uncollapsedStructuralProxyInstances_.swap(
+            subpixelProxyScratchStructuralInstances_);
+        structuralProjectionBucketByVisible_.swap(
+            structuralProjectionScratchBucketByVisible_);
+        structuralProjectionHistogram_ =
+            structuralProjectionScratchHistogram_;
+        structuralProjectionHistogram_.revision =
+            nextStructuralProjectionRevision_++;
+        if (nextStructuralProjectionRevision_ == 0)
+            nextStructuralProjectionRevision_ = 1;
+        structuralProjectionHistogram_.exact = true;
 
         const bool changed = plan.subpixelProxySourceInputRevision !=
                 plan.subpixelProxyInputRevision ||
@@ -3663,6 +3695,8 @@ SoCADAssembly::clear()
     impl_->subpixelProxyClassifiedAppendRevision_ = 0;
     impl_->uncollapsedStructuralProxyCountByPart_.clear();
     impl_->uncollapsedStructuralProxyCount_ = 0;
+    impl_->subpixelProxyScratchStructuralInstances_.clear();
+    impl_->uncollapsedStructuralProxyInstances_.clear();
     impl_->selected_.clear();
     impl_->hidden_.clear();
     impl_->unpickable_.clear();
@@ -3759,10 +3793,12 @@ SoCADAssembly::upsertSharedParts(
                 *preceding->second, *update.geometry);
         const bool firstUpdate =
             changedParts.insert(update.part).second;
-        if (firstUpdate && preservesBounds)
-            boundsPreservingParts.insert(update.part);
-        else if (!preservesBounds)
+        if (firstUpdate) {
+            if (preservesBounds)
+                boundsPreservingParts.insert(update.part);
+        } else if (!preservesBounds) {
             boundsPreservingParts.erase(update.part);
+        }
         impl_->updatePartGeometry(update.part, update.geometry);
     }
     if (changedParts.empty()) return;
@@ -3929,22 +3965,28 @@ SoCADAssembly::upsertInstances(
     size_t noOpCount = 0;
     size_t lodOnlyCount = 0;
     size_t metadataOnlyCount = 0;
+    size_t lodStructuralRoleChangeCount = 0;
     size_t styleChangeCount = 0;
     size_t transformChangeCount = 0;
     bool samePartPlanNeutral = planPatchable;
     std::vector<Obol::InstanceId> changedIds;
+    std::vector<Obol::InstanceId> structuralIds;
     std::vector<std::pair<Obol::InstanceId, Obol::PartId>>
         rebinds;
     std::vector<Obol::InstanceLodUpdate> samePartLodUpdates;
+    std::vector<Obol::InstanceId> lodStructuralRoleChanges;
     changedIds.reserve(updates.size());
+    structuralIds.reserve(updates.size());
     rebinds.reserve(updates.size());
     samePartLodUpdates.reserve(updates.size());
+    lodStructuralRoleChanges.reserve(updates.size());
     bool sourceChanged = false;
     for (const auto& update : updates) {
         const auto prior = impl_->instances_.find(update.instance);
         bool lightweightSamePart = false;
         if (prior == impl_->instances_.end()) {
             ++newCount;
+            structuralIds.push_back(update.instance);
             samePartPlanNeutral = false;
             sourceChanged = true;
         } else if (prior->second.partId == update.record.part) {
@@ -3969,30 +4011,42 @@ SoCADAssembly::upsertInstances(
                 prior->second.boolOp != update.record.boolOp;
             const bool lodChanged =
                 prior->second.lodCut != update.record.lodCut;
+            const bool lodStructuralRoleChanged =
+                prior->second.lodStructuralProxy !=
+                    update.record.lodStructuralProxy;
             lightweightSamePart = !transformChanged && !styleChanged;
             sourceChanged = sourceChanged || transformChanged ||
-                styleChanged || metadataChanged || lodChanged;
+                styleChanged || metadataChanged || lodChanged ||
+                lodStructuralRoleChanged;
             if (transformChanged)
                 ++transformChangeCount;
             if (styleChanged)
                 ++styleChangeCount;
             if (!transformChanged && !styleChanged &&
-                    !metadataChanged && !lodChanged)
+                    !metadataChanged && !lodChanged &&
+                    !lodStructuralRoleChanged)
                 ++noOpCount;
             else if (!transformChanged && !styleChanged &&
-                    !metadataChanged && lodChanged)
+                    !metadataChanged && lodChanged &&
+                    !lodStructuralRoleChanged)
                 ++lodOnlyCount;
             else if (!transformChanged && !styleChanged &&
-                    metadataChanged && !lodChanged)
+                    metadataChanged && !lodChanged &&
+                    !lodStructuralRoleChanged)
                 ++metadataOnlyCount;
             if (lodChanged)
                 samePartLodUpdates.push_back(
                     {update.instance, update.record.lodCut});
+            if (lodStructuralRoleChanged) {
+                ++lodStructuralRoleChangeCount;
+                lodStructuralRoleChanges.push_back(update.instance);
+            }
             samePartPlanNeutral =
                 samePartPlanNeutral &&
                 !transformChanged && !styleChanged;
         } else {
             ++rebindCount;
+            structuralIds.push_back(update.instance);
             rebinds.emplace_back(
                 update.instance, prior->second.partId);
             samePartPlanNeutral = false;
@@ -4017,6 +4071,8 @@ SoCADAssembly::upsertInstances(
             retained.occurrenceIndex = update.record.occurrenceIndex;
             retained.boolOp = update.record.boolOp;
             retained.lodCut = update.record.lodCut;
+            retained.lodStructuralProxy =
+                update.record.lodStructuralProxy;
         } else {
             impl_->updateKnownInstance(update.instance, update.record,
                 prior == impl_->instances_.end() ?
@@ -4025,6 +4081,43 @@ SoCADAssembly::upsertInstances(
     }
     if (!sourceChanged)
         return;
+    const auto patchPlanNeutralSamePart = [&]() {
+        std::unordered_set<size_t> changedPlanGroups;
+        bool samePartPatched = true;
+        for (const auto& update : samePartLodUpdates) {
+            if (!impl_->patchCachedInstanceCut(
+                    update.instance, update.lodCut,
+                    changedPlanGroups)) {
+                samePartPatched = false;
+                break;
+            }
+        }
+        if (samePartPatched && !samePartLodUpdates.empty())
+            impl_->finishProgressiveShadedPlanPatch(
+                changedPlanGroups);
+        if (samePartPatched && !samePartLodUpdates.empty())
+            impl_->bvhDirty_ = true;
+        if (samePartPatched && !lodStructuralRoleChanges.empty()) {
+            std::unordered_set<Obol::PartId,
+                std::hash<Obol::PartId>> affectedParts;
+            affectedParts.reserve(lodStructuralRoleChanges.size());
+            for (const Obol::InstanceId instance :
+                    lodStructuralRoleChanges) {
+                if (!impl_->patchCachedInstanceFlags(instance)) {
+                    samePartPatched = false;
+                    break;
+                }
+                const auto retained = impl_->instances_.find(instance);
+                if (retained != impl_->instances_.end())
+                    affectedParts.insert(retained->second.partId);
+            }
+            if (samePartPatched) {
+                impl_->refreshWireProxyParts(affectedParts);
+                impl_->finishSparsePresentationPatch();
+            }
+        }
+        return samePartPatched;
+    };
     bool patched = allNew &&
         impl_->appendCachedInstances(changedIds);
     bool structuralPatched = patched;
@@ -4042,23 +4135,38 @@ SoCADAssembly::upsertInstances(
         patched = impl_->appendCachedInstances(changedIds, true);
         structuralPatched = patched;
     }
+    /*
+     * A normal refinement publication can replace hundreds of structural
+     * parts while also changing the cut of a few already-progressive peers.
+     * Both mutations have bounded patch routes, but treating the combined
+     * vector as neither an all-rebind nor an all-cut batch forced a complete
+     * scene-plan rebuild after every wave.  Patch the structural subset first
+     * and then the plan-neutral same-part subset as one owner-thread
+     * transaction.  The source records have already been updated above, so a
+     * rare patch rejection still falls back to the ordinary authoritative
+     * rebuild without exposing partial state to a render traversal.
+     */
+    const bool mixedStructuralAndPlanNeutralSamePart =
+        !patched && planPatchable && !structuralIds.empty() &&
+        samePartCount != 0u && transformChangeCount == 0u &&
+        styleChangeCount == 0u;
+    if (mixedStructuralAndPlanNeutralSamePart) {
+        if (newCount == 0u) {
+            patched = impl_->patchCachedInstancePartRebinds(rebinds);
+            if (!patched)
+                patched = impl_->appendCachedInstances(
+                    structuralIds, true);
+        } else {
+            patched = impl_->appendCachedInstances(
+                structuralIds, rebindCount != 0u);
+        }
+        structuralPatched = patched;
+        if (patched)
+            patched = patchPlanNeutralSamePart();
+    }
     if (!patched && samePartPlanNeutral && newCount == 0u &&
             rebindCount == 0u) {
-        std::unordered_set<size_t> changedPlanGroups;
-        patched = true;
-        for (const auto& update : samePartLodUpdates) {
-            if (!impl_->patchCachedInstanceCut(
-                    update.instance, update.lodCut,
-                    changedPlanGroups)) {
-                patched = false;
-                break;
-            }
-        }
-        if (patched && !samePartLodUpdates.empty())
-            impl_->finishProgressiveShadedPlanPatch(
-                changedPlanGroups);
-        if (patched && !samePartLodUpdates.empty())
-            impl_->bvhDirty_ = true;
+        patched = patchPlanNeutralSamePart();
     }
     if (structuralPatched)
         impl_->finishSparseStructuralPatch();
@@ -4080,10 +4188,12 @@ SoCADAssembly::upsertInstances(
                 "SoCADAssembly instance batch patch rejected "
                 "batch=%zu new=%zu same_part=%zu rebind=%zu "
                 "noop=%zu lod_only=%zu metadata_only=%zu "
-                "style_changed=%zu transform_changed=%zu "
+                "lod_structural_role=%zu style_changed=%zu "
+                "transform_changed=%zu "
                 "all_new=%d all_rebind=%d plan_patchable=%d\n",
                 updates.size(), newCount, samePartCount, rebindCount,
                 noOpCount, lodOnlyCount, metadataOnlyCount,
+                lodStructuralRoleChangeCount,
                 styleChangeCount, transformChangeCount,
                 allNew ? 1 : 0, allRebind ? 1 : 0,
                 planPatchable ? 1 : 0);
@@ -4388,6 +4498,7 @@ SoCADAssembly::getInstanceRecord(Obol::InstanceId iid) const
     rec.occurrenceIndex = d.occurrenceIndex;
     rec.boolOp      = d.boolOp;
     rec.lodCut    = d.lodCut;
+    rec.lodStructuralProxy = d.lodStructuralProxy;
     return rec;
 }
 
@@ -4667,11 +4778,17 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
     // Explicit FAST mode allows ordinary software wireframes to bypass Mesa's
     // fixed-function interpreter.  AUTO is deliberately quality-first because
     // direct CPU rasterization is workload-dependent and can be slower.
-    const bool softwareWire = dm == WIREFRAME &&
-        renderState.softwareWireMode == Obol::CadSoftwareWireMode::FAST &&
-        cadRenderSoftwareWire(impl_->cachedPlan_, *this, state, viewProj);
+    CadSoftwareWireRenderResult softwareWireResult;
+    if (dm == WIREFRAME &&
+            renderState.softwareWireMode == Obol::CadSoftwareWireMode::FAST)
+        softwareWireResult = cadRenderSoftwareWire(
+            impl_->cachedPlan_, *this, state, viewProj);
+    const bool softwareWire = softwareWireResult.rendered;
     impl_->lastDirectSoftwareWire_ = softwareWire;
-    if (!softwareWire) {
+    if (softwareWire) {
+        impl_->renderer_->completeDirectSoftwareWireFrame(
+            softwareWireResult.work, glue->contextid);
+    } else {
         // Feed the shaded GLSL pass ALL enabled scene lights (the camera-tracked
         // headlight plus any in-scene database lights), so the hardware view
         // lights consistently with the fixed-function path instead of using a
@@ -5119,6 +5236,29 @@ size_t
 SoCADAssembly::lastUncollapsedStructuralProxyCount() const
 {
     return impl_->uncollapsedStructuralProxyCount_;
+}
+
+std::vector<Obol::InstanceId>
+SoCADAssembly::lastUncollapsedStructuralProxyInstances() const
+{
+    std::vector<Obol::InstanceId> instances;
+    instances.reserve(impl_->uncollapsedStructuralProxyInstances_.size());
+    for (const Obol::InstanceId instance :
+            impl_->uncollapsedStructuralProxyInstances_)
+        instances.push_back(instance);
+    std::sort(instances.begin(), instances.end(),
+        [](const Obol::InstanceId &left,
+           const Obol::InstanceId &right) {
+            return left.w0 != right.w0 ? left.w0 < right.w0 :
+                left.w1 < right.w1;
+        });
+    return instances;
+}
+
+Obol::CadStructuralProxyProjectionHistogram
+SoCADAssembly::lastStructuralProxyProjectionHistogram() const
+{
+    return impl_->structuralProjectionHistogram_;
 }
 
 uint64_t

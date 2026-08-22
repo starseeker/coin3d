@@ -88,6 +88,7 @@
 #include <Obol/cad/CadProgressive.h>
 
 #include <vector>
+#include <array>
 #include <unordered_set>
 #include <algorithm>
 #include <optional>
@@ -99,6 +100,8 @@
 class SoDetail;
 
 namespace Obol {
+
+struct TriMesh;
 
 /** One independently drawable prefix of a progressive wire stream. */
 struct ProgressiveWireCut {
@@ -162,10 +165,13 @@ struct ProgressiveWireCluster {
 /**
  * Logical work submitted by one completed CAD render.
  *
- * Counts include every visible occurrence and the active progressive cut,
- * rather than the richer resident geometry which may remain behind a
- * renderer-side LoD ceiling.  Consumers can therefore translate this record
- * into their own calibrated cost model without guessing from triangle ratios.
+ * Counts describe the work submitted at the active progressive cut, rather
+ * than richer resident geometry which may remain behind a renderer-side LoD
+ * ceiling.  @c occurrenceCount covers ordinary per-instance submissions;
+ * occurrences replaced by the aggregate subpixel channel contribute one to
+ * @c positionCount but deliberately do not acquire per-instance draw cost.
+ * Consumers can therefore translate this record into their calibrated cost
+ * model without guessing from retained triangle ratios.
  */
 struct CadRenderedWork {
     uint64_t triangleCount = 0;
@@ -173,6 +179,28 @@ struct CadRenderedWork {
     uint64_t positionCount = 0;
     uint64_t normalCount = 0;
     uint64_t occurrenceCount = 0;
+    bool exact = false;
+};
+
+/**
+ * Exact camera-local distribution of unresolved structural LoD proxies.
+ *
+ * The cumulative buckets count otherwise collapsible, fully contained
+ * structural occurrences whose larger projected screen extent is at or below
+ * 1, 2, 4, 8, 16, 32, and 64 pixels respectively.  @c visibleCount also
+ * includes partly clipped, selected/protected, and larger occurrences which
+ * cannot currently use the aggregate point channel.  The renderer computes
+ * this beside its authoritative frustum/subpixel classification, allowing a
+ * loader to choose a useful initial aggregation threshold without repeating
+ * an O(scene-size) projection pass or first loading geometry that the final
+ * presentation will not draw.
+ */
+struct CadStructuralProxyProjectionHistogram {
+    static constexpr size_t BucketCount = 7;
+
+    std::array<uint64_t, BucketCount> cumulativeCount = {};
+    uint64_t visibleCount = 0;
+    uint64_t revision = 0;
     bool exact = false;
 };
 
@@ -211,13 +239,38 @@ struct WireRep {
     std::vector<SbVec3f> segmentPoints;
 
     /**
+     * Optional zero-copy triangle-edge source.
+     *
+     * Tessellated CAD meshes should not duplicate every indexed triangle as
+     * six independent endpoint positions merely to support wireframe draw.
+     * This alias keeps the immutable triangle owner alive and asks the
+     * renderer and picker to treat each triangle boundary as three wire
+     * segments.  It is mutually exclusive with @c segmentPoints and
+     * @c polylines.  Progressive cut and cluster metadata below use segment
+     * units; one triangle index corresponds to one derived edge segment.
+     */
+    std::shared_ptr<const TriMesh> triangleEdges;
+
+    /** Resident derived edge count.  Equal to triangleEdges->indices.size()
+     * when @c triangleEdges is present; stored explicitly so the ordinary
+     * wire cut API remains usable before TriMesh's complete definition. */
+    size_t triangleEdgeSegmentCount = 0;
+
+    /**
      * Optional stable ID per flat segment.  When present, segmentIds[i]
      * identifies the segment defined by segmentPoints[2i..2i+1].
      */
     std::vector<uint32_t> segmentIds;
 
     /** Return the number of complete flat segments. */
-    size_t segmentCount() const noexcept { return segmentPoints.size() / 2; }
+    size_t segmentCount() const noexcept {
+        return triangleEdges ? triangleEdgeSegmentCount :
+            segmentPoints.size() / 2;
+    }
+
+    bool derivesTriangleEdges() const noexcept {
+        return static_cast<bool>(triangleEdges);
+    }
 
     /** Polyline storage for curves or callers that need connected strips. */
     std::vector<WirePolyline> polylines;
@@ -476,6 +529,7 @@ struct PartGeometry {
      * remains controlled independently by @c subpixelProxyEligible.
      */
     bool structuralProxy = false;
+
 };
 
 // ---------------------------------------------------------------------------
@@ -511,6 +565,15 @@ struct InstanceRecord {
     uint8_t       boolOp          = 0; ///< Boolean operation (0=union,1=sub,2=inter)
     /** Per-occurrence retained PoP draw cut; unspecified selects richest resident. */
     uint8_t       lodCut        = ProgressiveCutUnspecified;
+
+    /**
+     * The current part is a temporary structural fallback for this
+     * occurrence's unresolved LoD representation.  This is deliberately an
+     * occurrence property rather than a PartGeometry property: authored
+     * boxes, whole-target extents, and unresolved leaves may share identical
+     * immutable arrays while carrying different convergence obligations.
+     */
+    bool          lodStructuralProxy = false;
 
     InstanceStyle style;
 };
@@ -938,11 +1001,27 @@ public:
     size_t lastSubpixelProxyCount() const;
 
     /**
-     * Number of in-frustum structural proxy occurrences which remained
-     * visible as wire boxes after camera-local subpixel collapse last frame.
-     * Fully clipped occurrences are not convergence obligations.
+     * Number of in-frustum unresolved LoD-leaf fallback occurrences which
+     * remained visible as wire boxes after camera-local subpixel collapse
+     * last frame.  Fully clipped occurrences are not convergence obligations;
+     * ordinary authored structural scene geometry is intentionally excluded.
      */
     size_t lastUncollapsedStructuralProxyCount() const;
+
+    /** Stable instance identities corresponding to
+     * lastUncollapsedStructuralProxyCount().  The list is derived from the
+     * same last complete camera classification, excludes clipped/hidden and
+     * point-collapsed occurrences, and is sorted for deterministic clients.
+     * It lets a streaming owner repair the exact visible structural frontier
+     * without loading every subpixel occurrence in a large assembly. */
+    std::vector<Obol::InstanceId>
+        lastUncollapsedStructuralProxyInstances() const;
+
+    /** Camera-local projected-size census paired with the last complete
+     * structural-proxy classification.  Bucket limits are documented by
+     * CadStructuralProxyProjectionHistogram. */
+    Obol::CadStructuralProxyProjectionHistogram
+        lastStructuralProxyProjectionHistogram() const;
 
     /** Revision of the last camera-dependent subpixel proxy presentation. */
     uint64_t lastSubpixelProxyRevision() const;

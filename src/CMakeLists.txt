@@ -61,6 +61,16 @@ endforeach()
 add_subdirectory(doc)
 add_subdirectory(cad)
 
+# Keep the high-responsibility CAD assembly and its direct software fallback
+# independently compiled.  Source properties are directory scoped, so set
+# this where the Obol target itself is created rather than relying only on
+# the cad subdirectory's declaration.
+set_source_files_properties(
+    ${CMAKE_CURRENT_SOURCE_DIR}/cad/SoCADAssembly.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/cad/CadSoftwareWire.cpp
+    PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON
+)
+
 # As CMake does not support deep header hierarchies for framework generation we tweak the
 # installation paths for the install commands.  To make sure the symbolic links for versioned
 # Binaries, Headers, and Resources are properly created we add at headers and resources to

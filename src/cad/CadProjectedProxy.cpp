@@ -79,22 +79,38 @@ Obol::cadPartGeometryProxyCorners(const Obol::PartGeometry& geometry,
             geometry.wire->segmentPoints.size() != 24u ||
             !geometry.wire->polylines.empty())
         return false;
-    size_t cornerCount = 0;
+    /* A valid AABB wire may be planar, linear, or point-like.  Such boxes
+     * have four, two, or one distinct endpoints rather than eight.  Validate
+     * the stronger invariant that every endpoint is on an extremum in each
+     * axis, then publish the ordinary eight AABB corners (with duplicates in
+     * degenerate axes).  Merely accepting fewer unique endpoints would also
+     * accept arbitrary twelve-segment wire geometry; checking per-axis
+     * extrema preserves the structural-proxy contract. */
+    SbBox3f wireBounds;
+    wireBounds.makeEmpty();
     for (const SbVec3f& candidate : geometry.wire->segmentPoints) {
-        bool found = false;
-        for (size_t i = 0; i < cornerCount; ++i) {
-            if (candidate == corners[i]) {
-                found = true;
-                break;
-            }
-        }
-        if (found)
-            continue;
-        if (cornerCount == 8u)
-            return false;
-        corners[cornerCount++] = candidate;
+        wireBounds.extendBy(candidate);
     }
-    return cornerCount == 8u;
+    if (wireBounds.isEmpty())
+        return false;
+    const SbVec3f minimum = wireBounds.getMin();
+    const SbVec3f maximum = wireBounds.getMax();
+    for (const SbVec3f& candidate : geometry.wire->segmentPoints) {
+        for (int axis = 0; axis < 3; ++axis) {
+            if (candidate[axis] != minimum[axis] &&
+                    candidate[axis] != maximum[axis])
+                return false;
+        }
+    }
+    size_t index = 0;
+    for (int z = 0; z < 2; ++z)
+        for (int y = 0; y < 2; ++y)
+            for (int x = 0; x < 2; ++x)
+                corners[index++] = SbVec3f(
+                    x ? maximum[0] : minimum[0],
+                    y ? maximum[1] : minimum[1],
+                    z ? maximum[2] : minimum[2]);
+    return true;
 }
 
 Obol::CadProjectedProxy

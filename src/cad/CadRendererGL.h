@@ -129,6 +129,17 @@ public:
                                          std::hash<PartId>>& partGenMap);
 
     /**
+     * Publish a complete frame written directly to a software framebuffer.
+     *
+     * The direct rasterizer deliberately bypasses GL execution, but it must
+     * not bypass the renderer's completed-frame contract.  Hosts use this
+     * record to distinguish a completed presentation from an interrupted or
+     * not-yet-visited assembly and to calibrate view-LoD work.
+     */
+    void completeDirectSoftwareWireFrame(
+        const Obol::CadRenderedWork& work, uint32_t contextId);
+
+    /**
      * Release all GPU resources held by this renderer for @p glue.
      * Call while the correct GL context is current (e.g. from SoCADAssembly
      * destructor or context-destruction callback).
@@ -484,6 +495,16 @@ private:
         uint64_t instanceUploadSerial = 0;
         uint64_t atlasRevision = 0;
         uint32_t atlasValidationCountdown = 0;
+        /*
+         * Periodic atlas validation is O(retained parts).  It must obey the
+         * same resumable-preparation contract as an exact frame build: a
+         * large scene may not be able to validate every binding inside one
+         * host presentation deadline.  Retain the cursor rather than
+         * restarting at part zero after every abort.
+         */
+        bool atlasValidationActive = false;
+        size_t atlasValidationCursor = 0;
+        uint64_t atlasValidationRevision = 0;
         uint32_t cameraMotionReplayCount = 0;
         bool atlasAdmissionPressure = false;
         size_t atlasPressurePartCount = 0;
@@ -655,6 +676,16 @@ private:
                                  const SbMatrix& viewProj,
                                  const SbMatrix& viewMatrix,
                                  const SbMatrix& projectionMatrix);
+
+    /** Draw zero-copy WireRep triangle-edge aliases from the retained indexed
+     * triangle buffers.  Returns false only when such work exists but could
+     * not be rendered by the active backend. */
+    bool renderIndexedTriangleWire(const CadFramePlan& plan,
+                                   const SoCADAssembly& assembly,
+                                   const SoGLContext* glue,
+                                   const SbMatrix& viewProj,
+                                   const SbMatrix& viewMatrix,
+                                   const SbMatrix& projectionMatrix);
 
     // -----------------------------------------------------------------------
     // Shader compilation helpers

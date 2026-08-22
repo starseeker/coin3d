@@ -22,6 +22,7 @@ set(CAD_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/CadRendererGLExecutors.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/CadShaderPrograms.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/CadShaderSources.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/CadSoftwareWire.cpp
 
     # Picking
     ${CMAKE_CURRENT_SOURCE_DIR}/picking/CadPicking.cpp

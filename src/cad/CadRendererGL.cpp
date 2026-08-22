@@ -82,6 +82,12 @@ appendPackedPoint(std::vector<float>& packed, const SbVec3f& point)
     packed.push_back(point[2]);
 }
 
+static uint64_t
+cadSaturatingWorkAdd(uint64_t left, uint64_t right)
+{
+    return right > UINT64_MAX - left ? UINT64_MAX : left + right;
+}
+
 class CadCullRasterGuard {
 public:
     explicit CadCullRasterGuard(const SoGLContext *context) : glue_(context)
@@ -871,11 +877,6 @@ void CadRendererGL::ensurePartUploaded(
     const bool progressive =
         (geom->wire.has_value() && geom->wire->isProgressive()) ||
         (geom->shaded.has_value() && geom->shaded->isProgressive());
-    uint64_t progressiveLineage = 0;
-    if (geom->shaded.has_value())
-        progressiveLineage = geom->shaded->progressiveLineage;
-    else if (geom->wire.has_value())
-        progressiveLineage = geom->wire->progressiveLineage;
 
     // Ordinary geometry has no view-dependent upload size, so retain its
     // original constant-time generation fast path.
@@ -889,6 +890,147 @@ void CadRendererGL::ensurePartUploaded(
         pointCount = static_cast<GLsizei>(geom->points->positions.size());
     }
 
+    const Obol::TriMesh *derivedWireMesh =
+        geom->wire.has_value() && geom->wire->derivesTriangleEdges() ?
+            geom->wire->triangleEdges.get() : nullptr;
+    const Obol::TriMesh *shadedMesh = geom->shaded.has_value() ?
+        &*geom->shaded : nullptr;
+    if (geom->wire.has_value()) {
+        const Obol::WireRep& wire = *geom->wire;
+        if ((derivedWireMesh &&
+                (!wire.segmentPoints.empty() || !wire.polylines.empty() ||
+                 !wire.segmentIds.empty())) ||
+            (!derivedWireMesh &&
+                (wire.segmentPoints.size() % 2u != 0u ||
+                 (!wire.segmentIds.empty() && wire.segmentIds.size() !=
+                     wire.segmentCount()))))
+            return;
+    }
+    /*
+     * System GL can draw a wire-only triangle source directly in polygon
+     * line mode.  Software GL instead consumes the compact GL_LINES stream
+     * assembled below; uploading a second, unused triangle copy doubled the
+     * resident memory of large wire-only meshes.
+     */
+    const Obol::TriMesh *triangleUploadMesh = shadedMesh ? shadedMesh :
+        (caps_.isSoftwareRenderer ? nullptr : derivedWireMesh);
+    const bool triangleUploadProgressive =
+        triangleUploadMesh && triangleUploadMesh->isProgressive();
+    const uint64_t triangleProgressiveLineage =
+        triangleUploadProgressive ? triangleUploadMesh->progressiveLineage :
+            0u;
+    const auto requestedCounts = [requestedCut](
+            const Obol::TriMesh *mesh) {
+        std::pair<size_t, size_t> counts(0u, 0u);
+        if (!mesh)
+            return counts;
+        counts.first = mesh->isProgressive() ?
+            mesh->indexCountAtCut(requestedCut) : mesh->indices.size();
+        counts.second = mesh->isProgressive() ?
+            mesh->positionCountAtCut(requestedCut) : mesh->positions.size();
+        return counts;
+    };
+    const std::pair<size_t, size_t> derivedWireCounts =
+        requestedCounts(derivedWireMesh);
+    const size_t requiredDerivedIndexCount = derivedWireCounts.first;
+    const size_t requiredDerivedPositionCount = derivedWireCounts.second;
+    const std::pair<size_t, size_t> triangleUploadCounts =
+        requestedCounts(triangleUploadMesh);
+    const size_t requiredTriangleIndexCount = triangleUploadCounts.first;
+    const size_t requiredTrianglePositionCount = triangleUploadCounts.second;
+
+    size_t requiredExplicitWirePointCount = 0u;
+    size_t requiredExplicitWireIndexCount = 0u;
+    size_t flatWirePointCount = 0u;
+    size_t polylineWirePointCount = 0u;
+    size_t polylineWireSegmentCount = 0u;
+    if (geom->wire.has_value() && !derivedWireMesh) {
+        const Obol::WireRep& wire = *geom->wire;
+        if (wire.segmentCount() > SIZE_MAX / 2u)
+            return;
+        flatWirePointCount = wire.segmentCount() * 2u;
+        for (const Obol::WirePolyline& polyline : wire.polylines) {
+            if (polyline.points.size() >
+                    SIZE_MAX - polylineWirePointCount)
+                return;
+            polylineWirePointCount += polyline.points.size();
+            if (polyline.points.size() >= 2u) {
+                const size_t segments = polyline.points.size() - 1u;
+                if (segments > SIZE_MAX - polylineWireSegmentCount)
+                    return;
+                polylineWireSegmentCount += segments;
+            }
+        }
+        if (flatWirePointCount >
+                SIZE_MAX - polylineWirePointCount)
+            return;
+        requiredExplicitWirePointCount =
+            flatWirePointCount + polylineWirePointCount;
+        if (!wire.polylines.empty()) {
+            if (polylineWireSegmentCount >
+                    (SIZE_MAX - flatWirePointCount) / 2u)
+                return;
+            requiredExplicitWireIndexCount = flatWirePointCount +
+                polylineWireSegmentCount * 2u;
+        }
+    }
+
+    if ((derivedWireMesh &&
+            (geom->wire->triangleEdgeSegmentCount !=
+                 derivedWireMesh->indices.size() ||
+             requiredDerivedIndexCount % 3u != 0u ||
+             (requiredDerivedIndexCount > 0u &&
+                 requiredDerivedPositionCount == 0u))) ||
+        (triangleUploadMesh &&
+            (requiredTriangleIndexCount % 3u != 0u ||
+             (requiredTriangleIndexCount > 0u &&
+                 requiredTrianglePositionCount == 0u) ||
+             (!triangleUploadMesh->normals.empty() &&
+                 triangleUploadMesh->normals.size() !=
+                     triangleUploadMesh->positions.size()))))
+        return;
+    if (derivedWireMesh &&
+            (requiredDerivedIndexCount > SIZE_MAX / 2u ||
+             requiredDerivedPositionCount > static_cast<size_t>(
+                 std::numeric_limits<GLsizei>::max()) ||
+             requiredDerivedIndexCount > static_cast<size_t>(
+                 std::numeric_limits<GLsizei>::max())))
+        return;
+    if (triangleUploadMesh &&
+            (requiredTrianglePositionCount > static_cast<size_t>(
+                 std::numeric_limits<GLsizei>::max()) ||
+             requiredTriangleIndexCount > static_cast<size_t>(
+                 std::numeric_limits<GLsizei>::max())))
+        return;
+    const size_t requiredDerivedWireIndexCount = derivedWireMesh ?
+        requiredDerivedIndexCount * 2u : 0u;
+    const size_t maximumWirePointCount = std::min<size_t>(
+        static_cast<size_t>(std::numeric_limits<GLsizei>::max()),
+        static_cast<size_t>(UINT32_MAX));
+    if (requiredDerivedWireIndexCount > static_cast<size_t>(
+            std::numeric_limits<GLsizei>::max()) ||
+        requiredExplicitWirePointCount > maximumWirePointCount ||
+        requiredExplicitWireIndexCount > static_cast<size_t>(
+            std::numeric_limits<GLsizei>::max()) ||
+        requiredExplicitWirePointCount > SIZE_MAX / 3u)
+        return;
+
+    /* Test exact required counts before validating or materializing an
+     * index prefix.  A stable frame must be O(1) in mesh size. */
+    const size_t requiredWirePointCount =
+        derivedWireMesh && caps_.isSoftwareRenderer ?
+            requiredDerivedPositionCount : requiredExplicitWirePointCount;
+    const size_t requiredWireIndexCount =
+        derivedWireMesh && caps_.isSoftwareRenderer ?
+            requiredDerivedWireIndexCount : requiredExplicitWireIndexCount;
+    if (gpuRes_->isUpToDate(
+            pid, gen,
+            static_cast<GLsizei>(requiredWirePointCount),
+            static_cast<GLsizei>(requiredWireIndexCount),
+            static_cast<GLsizei>(requiredTrianglePositionCount),
+            static_cast<GLsizei>(requiredTriangleIndexCount)))
+        return;
+
     // Build CPU-side flat arrays for indexed wire geometry.  Pure flat
     // segment-pair input can be uploaded directly from WireRep::segmentPoints.
     std::vector<float>    wirePos;
@@ -897,7 +1039,8 @@ void CadRendererGL::ensurePartUploaded(
     const uint32_t*       pWireSeg = nullptr;
     GLsizei               wirePointCount = 0;
     GLsizei               wireSegIdxCount = 0;
-    if (geom->wire.has_value()) {
+    if (geom->wire.has_value() &&
+            !geom->wire->derivesTriangleEdges()) {
         const auto& wr = *geom->wire;
         /*
          * Progressive wire levels are independent immutable ranges, not a
@@ -906,26 +1049,18 @@ void CadRendererGL::ensurePartUploaded(
          * and later appending a different range corrupts the payload because
          * the two simplifications need not share an ordered prefix.
          */
-        const size_t flatSegmentFirst = 0;
-        const size_t flatPointFirst = flatSegmentFirst * 2;
-        const size_t flatPointCount =
-            wr.segmentCount() * 2;
-        if (flatPointCount > 0 && wr.polylines.empty()) {
+        const size_t flatPointFirst = 0u;
+        if (flatWirePointCount > 0 && wr.polylines.empty()) {
             pWirePos = packedVec3fData(wr.segmentPoints) +
                 flatPointFirst * 3;
-            wirePointCount = static_cast<GLsizei>(flatPointCount);
+            wirePointCount =
+                static_cast<GLsizei>(flatWirePointCount);
         } else {
-            size_t polyPointCount = 0;
-            size_t polySegmentCount = 0;
-            for (const auto& poly : wr.polylines) {
-                polyPointCount += poly.points.size();
-                if (poly.points.size() >= 2)
-                    polySegmentCount += poly.points.size() - 1;
-            }
-            wirePos.reserve((flatPointCount + polyPointCount) * 3);
-            wireSegIdx.reserve(flatPointCount + polySegmentCount * 2);
+            wirePos.reserve(requiredExplicitWirePointCount * 3u);
+            wireSegIdx.reserve(requiredExplicitWireIndexCount);
 
-            const size_t flatPointEnd = flatPointFirst + flatPointCount;
+            const size_t flatPointEnd =
+                flatPointFirst + flatWirePointCount;
             for (size_t i = flatPointFirst;
                     i + 1 < flatPointEnd; i += 2) {
                 const uint32_t base =
@@ -953,6 +1088,43 @@ void CadRendererGL::ensurePartUploaded(
             wirePointCount = static_cast<GLsizei>(wirePos.size() / 3);
             wireSegIdxCount = static_cast<GLsizei>(wireSegIdx.size());
         }
+    } else if (geom->wire.has_value() &&
+            geom->wire->derivesTriangleEdges() &&
+            geom->wire->triangleEdges && caps_.isSoftwareRenderer) {
+        /* Mesa's software triangle setup is materially slower than its line
+         * rasterizer.  Reuse the immutable mesh positions and derive only a
+         * compact GL_LINES index stream (two uint32 values per edge).  This
+         * avoids six copied SbVec3f endpoints per triangle while preserving
+         * the software backend's proven line path. */
+        const Obol::TriMesh& mesh = *geom->wire->triangleEdges;
+        wireSegIdx.resize(requiredDerivedWireIndexCount);
+        for (size_t index = 0;
+                index + 2 < requiredDerivedIndexCount; index += 3) {
+            const uint32_t first = mesh.indices[index];
+            const uint32_t second = mesh.indices[index + 1];
+            const uint32_t third = mesh.indices[index + 2];
+            /* The active progressive position prefix, rather than the
+             * richest resident vector, is the valid index domain for this
+             * cut.  Testing the full vector allowed malformed cut metadata
+             * to submit out-of-range VBO reads and transient far-away
+             * vertices on drivers which did not happen to return zeros. */
+            if (first >= requiredDerivedPositionCount ||
+                    second >= requiredDerivedPositionCount ||
+                    third >= requiredDerivedPositionCount)
+                return;
+            const size_t target = index * 2u;
+            wireSegIdx[target] = first;
+            wireSegIdx[target + 1] = second;
+            wireSegIdx[target + 2] = second;
+            wireSegIdx[target + 3] = third;
+            wireSegIdx[target + 4] = third;
+            wireSegIdx[target + 5] = first;
+        }
+        pWirePos = packedVec3fData(mesh.positions);
+        pWireSeg = wireSegIdx.data();
+        wirePointCount =
+            static_cast<GLsizei>(requiredDerivedPositionCount);
+        wireSegIdxCount = static_cast<GLsizei>(wireSegIdx.size());
     }
 
     // Triangle mesh vectors already use packed SbVec3f storage.
@@ -961,32 +1133,41 @@ void CadRendererGL::ensurePartUploaded(
     const uint32_t* pTriIdx = nullptr;
     GLsizei         triPosCount = 0;
     GLsizei         triIdxCount = 0;
-    if (geom->shaded.has_value()) {
-        const auto& mesh = *geom->shaded;
-        size_t requiredIndexCount = mesh.isProgressive() ?
-            mesh.indexCountAtCut(requestedCut) : mesh.indices.size();
-        size_t requiredPositionCount = mesh.isProgressive() ?
-            mesh.positionCountAtCut(requestedCut) : mesh.positions.size();
-        if (requiredIndexCount > 0 && requiredPositionCount == 0)
-            return;
+    if (triangleUploadMesh) {
+        const auto& mesh = *triangleUploadMesh;
+        for (size_t index = 0; index < requiredTriangleIndexCount; ++index) {
+            if (mesh.indices[index] >= requiredTrianglePositionCount)
+                return;
+        }
         pTriPos = packedVec3fData(mesh.positions);
         pTriNorm = packedVec3fData(mesh.normals);
         pTriIdx = mesh.indices.empty() ? nullptr : mesh.indices.data();
-        triPosCount = static_cast<GLsizei>(requiredPositionCount);
-        triIdxCount = static_cast<GLsizei>(requiredIndexCount);
+        triPosCount =
+            static_cast<GLsizei>(requiredTrianglePositionCount);
+        triIdxCount = static_cast<GLsizei>(requiredTriangleIndexCount);
     }
+
+    const bool wireUploadProgressive = wirePointCount > 0 &&
+        geom->wire.has_value() && geom->wire->isProgressive();
+    const uint64_t wireProgressiveLineage = wireUploadProgressive ?
+        geom->wire->progressiveLineage : 0u;
 
     /*
      * A richer cumulative prefix already on the GPU remains valid when the
      * view asks for less.  Never shrink the retained ordinary buffers merely
      * to enter interaction; only defer appending newly resident tails.
      */
-    if (progressive && gpuRes_->hasCompatibleProgressivePrefix(
-            pid, progressiveLineage)) {
+    if (wireUploadProgressive &&
+            gpuRes_->hasCompatibleProgressiveWirePrefix(
+                pid, wireProgressiveLineage)) {
         if (const CadWireGpu *wire = gpuRes_->wireFor(pid)) {
             wirePointCount = std::max(wirePointCount, wire->vertCount);
             wireSegIdxCount = std::max(wireSegIdxCount, wire->idxCount);
         }
+    }
+    if (triangleUploadProgressive &&
+            gpuRes_->hasCompatibleProgressiveTrianglePrefix(
+                pid, triangleProgressiveLineage)) {
         if (const CadTriGpu *tri = gpuRes_->triFor(pid)) {
             triPosCount = std::max(triPosCount, tri->vertCount);
             triIdxCount = std::max(triIdxCount, tri->idxCount);
@@ -1006,8 +1187,10 @@ void CadRendererGL::ensurePartUploaded(
                    pTriNorm,
                    pTriIdx,   triIdxCount,
                    gen,
-                   progressive,
-                   progressiveLineage,
+                   wireUploadProgressive,
+                   wireProgressiveLineage,
+                   triangleUploadProgressive,
+                   triangleProgressiveLineage,
                    glue, caps_);
 }
 
@@ -1326,6 +1509,7 @@ void CadRendererGL::renderSubpixelProxyPoints(
         const GLboolean wasLighting = glue->glIsEnabled(GL_LIGHTING);
         glue->glDisable(GL_LIGHTING);
         glue->glBegin(GL_POINTS);
+        uint64_t submittedPoints = 0;
         for (const CadSubpixelProxyPoint& point : plan.subpixelProxyPoints) {
             if (!pointVisible(point))
                 continue;
@@ -1333,6 +1517,7 @@ void CadRendererGL::renderSubpixelProxyPoints(
                              point.rgba[3]);
             glue->glVertex3f(point.position[0], point.position[1],
                              point.position[2]);
+            submittedPoints = cadSaturatingWorkAdd(submittedPoints, 1);
         }
         for (const CadSubpixelProxyPoint& point : pressurePoints) {
             if (!pointVisible(point))
@@ -1341,8 +1526,14 @@ void CadRendererGL::renderSubpixelProxyPoints(
                              point.rgba[3]);
             glue->glVertex3f(point.position[0], point.position[1],
                              point.position[2]);
+            submittedPoints = cadSaturatingWorkAdd(submittedPoints, 1);
         }
         glue->glEnd();
+        /* Aggregate proxies are one batched point stream, not retained CAD
+         * occurrences with per-instance draw overhead.  Count their vertex
+         * work while deliberately leaving occurrenceCount unchanged. */
+        lastRenderedWork_.positionCount = cadSaturatingWorkAdd(
+            lastRenderedWork_.positionCount, submittedPoints);
         if (wasLighting) glue->glEnable(GL_LIGHTING);
         glue->glMatrixMode(GL_MODELVIEW);
         glue->glPopMatrix();
@@ -1488,6 +1679,9 @@ void CadRendererGL::renderSubpixelProxyPoints(
             glue->glColorPointer(
                 4, GL_UNSIGNED_BYTE, 4 * sizeof(uint8_t), nullptr);
             glue->glDrawArrays(GL_POINTS, 0, gpu.count);
+            lastRenderedWork_.positionCount = cadSaturatingWorkAdd(
+                lastRenderedWork_.positionCount,
+                static_cast<uint64_t>(gpu.count));
         }
         glue->glDisableClientState(GL_COLOR_ARRAY);
         glue->glDisableClientState(GL_VERTEX_ARRAY);
@@ -1520,6 +1714,9 @@ void CadRendererGL::renderSubpixelProxyPoints(
                 glue->glEnableVertexAttribArrayARB(1);
             }
             glue->glDrawArrays(GL_POINTS, 0, gpu.count);
+            lastRenderedWork_.positionCount = cadSaturatingWorkAdd(
+                lastRenderedWork_.positionCount,
+                static_cast<uint64_t>(gpu.count));
             if (gpu.vao && glue->glBindVertexArray) {
                 glue->glBindVertexArray(0);
             } else {
@@ -1531,6 +1728,39 @@ void CadRendererGL::renderSubpixelProxyPoints(
         glue->glUseProgramObjectARB(0);
     }
     glue->glPointSize(savedPointSize);
+}
+
+void CadRendererGL::completeDirectSoftwareWireFrame(
+        const Obol::CadRenderedWork& work, uint32_t contextId)
+{
+    /*
+     * Direct software rasterization is an executor, not a side channel.  In
+     * particular, publish the same exact-work and completed-resource-frame
+     * contract as render().  Leaving the preceding renderer record in place
+     * made the host observe zero/stale work and continuously resubmit an LoD
+     * request even though the software framebuffer had been completed.
+     */
+    pressureProxyPointsView_ = nullptr;
+    pressureProxyPoints_.clear();
+    atlasAdmissionPressure_ = false;
+    lastRenderedTriangleCount_ = 0;
+    lastRenderedWork_ = work;
+    lastRenderedWork_.exact = true;
+    lastRenderTier_ = 0;
+    lastIndirectStatus_ = -1;
+    lastRenderUsedPreparedReplay_ = false;
+
+    Obol::CadGpuResourceSnapshot snapshot;
+    const auto resources = gpuResources_.find(contextId);
+    if (resources != gpuResources_.end() && resources->second)
+        snapshot = resources->second->resourceSnapshot();
+    ++completedResourceFrameSerial_;
+    if (!completedResourceFrameSerial_)
+        completedResourceFrameSerial_ = 1;
+    snapshot.frameSerial = completedResourceFrameSerial_;
+    snapshot.pressureProxyCount = 0;
+    snapshot.atlasAdmissionPressure = false;
+    lastGpuResourceSnapshot_ = snapshot;
 }
 
 void CadRendererGL::render(
@@ -1679,6 +1909,33 @@ void CadRendererGL::render(
     }
     const auto pointsCompleted = renderTimingEnabled ?
         RenderClock::now() : RenderClock::time_point();
+
+    bool indexedTriangleWire = false;
+    bool explicitWire = false;
+    for (const CadDrawItem& item : plan.wireItems) {
+        indexedTriangleWire = indexedTriangleWire ||
+            item.rep.type == CadRepType::Triangles;
+        explicitWire = explicitWire ||
+            item.rep.type == CadRepType::WireSegments;
+    }
+    if (assembly.drawMode.getValue() == SoCADAssembly::WIREFRAME &&
+            indexedTriangleWire) {
+        if (!renderIndexedTriangleWire(plan, assembly, glue, viewProj,
+                viewMatrix, projectionMatrix)) {
+            finishFrameResources(false);
+            return;
+        }
+        if (finishInterruptedFrame())
+            return;
+        if (!explicitWire) {
+            lastRenderTier_ = 1;
+            renderSubpixelProxyPoints(plan, glue, viewProj);
+            if (finishInterruptedFrame())
+                return;
+            finishFrameResources(true);
+            return;
+        }
+    }
 
     if (hiddenLine) {
         if (useFlatShaded) {
