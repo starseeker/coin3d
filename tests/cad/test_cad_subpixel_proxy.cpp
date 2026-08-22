@@ -1025,6 +1025,27 @@ deadlineAbortCounter(void *userData)
         SoGLRenderAction::ABORT : SoGLRenderAction::CONTINUE;
 }
 
+struct DeadlineAssemblyAbort {
+    SoCADAssembly *assembly = nullptr;
+    uint64_t executionSerial = 0;
+    size_t calls = 0;
+    size_t abortAt = 10;
+};
+
+SoGLRenderAction::AbortCode
+deadlineAbortAssemblyWork(void *userData)
+{
+    DeadlineAssemblyAbort *counter =
+        static_cast<DeadlineAssemblyAbort *>(userData);
+    if (!counter || !counter->assembly ||
+            counter->assembly->renderExecutionSerial() ==
+                counter->executionSerial)
+        return SoGLRenderAction::CONTINUE;
+    ++counter->calls;
+    return counter->calls >= counter->abortAt ?
+        SoGLRenderAction::ABORT : SoGLRenderAction::CONTINUE;
+}
+
 bool
 ordinaryExecutorHonorsAbortSafePoints()
 {
@@ -1144,6 +1165,149 @@ ordinaryExecutorHonorsAbortSafePoints()
             "(tier=%d observed=%zu abortAt=%zu abortedCalls=%zu)\n",
             assembly->lastRenderTier(), observed.calls,
             interrupted.abortAt, interrupted.calls);
+    }
+
+    root->unref();
+    restoreEnvironment();
+    return passed;
+}
+
+bool
+indirectAtlasValidationResumesAcrossAborts()
+{
+    struct EnvironmentSnapshot {
+        const char *name = nullptr;
+        bool present = false;
+        std::string value;
+    } settings[] = {
+        {"OBOL_CAD_INDIRECT"},
+        {"OBOL_CAD_FLAT_SHADED"},
+        {"OBOL_CAD_ATLAS_VALIDATION_FRAMES"}
+    };
+    for (EnvironmentSnapshot& setting : settings) {
+        const char *value = std::getenv(setting.name);
+        setting.present = value != nullptr;
+        if (value)
+            setting.value = value;
+    }
+    setenv("OBOL_CAD_INDIRECT", "1", 1);
+    setenv("OBOL_CAD_FLAT_SHADED", "0", 1);
+    setenv("OBOL_CAD_ATLAS_VALIDATION_FRAMES", "1", 1);
+    const auto restoreEnvironment = [&]() {
+        for (const EnvironmentSnapshot& setting : settings) {
+            if (setting.present)
+                setenv(setting.name, setting.value.c_str(), 1);
+            else
+                unsetenv(setting.name);
+        }
+    };
+
+    SoSeparator *root = new SoSeparator;
+    root->ref();
+    SoOrthographicCamera *camera = new SoOrthographicCamera;
+    camera->position.setValue(0.0f, 0.0f, 10.0f);
+    camera->nearDistance.setValue(0.1f);
+    camera->farDistance.setValue(100.0f);
+    camera->height.setValue(40.0f);
+    root->addChild(camera);
+    root->addChild(new SoDirectionalLight);
+
+    SoCADAssembly *assembly = new SoCADAssembly;
+    assembly->drawMode.setValue(SoCADAssembly::SHADED);
+    root->addChild(assembly);
+
+    Obol::TriMesh triangle;
+    triangle.positions = {
+        SbVec3f(-0.4f, -0.4f, 0.0f),
+        SbVec3f( 0.4f, -0.4f, 0.0f),
+        SbVec3f( 0.0f,  0.4f, 0.0f)};
+    triangle.indices = {0u, 1u, 2u};
+    triangle.bounds = SbBox3f(
+        SbVec3f(-0.4f, -0.4f, 0.0f),
+        SbVec3f( 0.4f,  0.4f, 0.0f));
+
+    /* More parts than one executor safe-point span ensures validation needs
+     * several deadline-bounded traversals when the callback below aborts at
+     * its second sample. */
+    constexpr uint32_t partCount = 1024u;
+    for (uint32_t index = 0; index < partCount; ++index) {
+        char name[64] = {};
+        std::snprintf(name, sizeof(name),
+            "validation-resume-%04u", index);
+        Obol::PartGeometry geometry;
+        geometry.shaded = triangle;
+        geometry.subpixelProxyEligible = false;
+        const Obol::PartId part = Obol::CadIdBuilder::hash128(name);
+        assembly->upsertPart(part, geometry);
+
+        Obol::InstanceRecord instance;
+        instance.part = part;
+        instance.parent = Obol::CadIdBuilder::Root();
+        instance.childName = name;
+        instance.occurrenceIndex = index;
+        instance.localToRoot.setTranslate(SbVec3f(
+            -15.5f + static_cast<float>(index % 32u),
+            -15.5f + static_cast<float>(index / 32u), 0.0f));
+        assembly->upsertInstanceAuto(instance);
+    }
+
+    const SbViewportRegion viewport(256, 256);
+    SoOffscreenRenderer renderer(viewport);
+    renderer.setComponents(SoOffscreenRenderer::RGB);
+    renderer.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
+    bool passed = render(renderer, root);
+    if (passed && assembly->lastRenderTier() == 6) {
+        SoGLRenderAction *action = renderer.getGLRenderAction();
+        SoGLRenderAction::SoGLRenderAbortCB *previousCallback = nullptr;
+        void *previousData = nullptr;
+        if (action)
+            action->getAbortCallback(previousCallback, previousData);
+        else
+            passed = false;
+
+        size_t preparationSlices = 0u;
+        size_t interruptedAttempts = 0u;
+        bool reachedSteadyDraw = false;
+        constexpr size_t maximumAttempts = 12u;
+        for (size_t attempt = 0;
+                passed && attempt < maximumAttempts; ++attempt) {
+            DeadlineAssemblyAbort interrupted;
+            interrupted.assembly = assembly;
+            interrupted.executionSerial =
+                assembly->renderExecutionSerial();
+            action->setAbortCallback(
+                deadlineAbortAssemblyWork, &interrupted);
+            const uint64_t preparationBefore =
+                assembly->renderPreparationSerial();
+            (void)renderer.render(root);
+            if (action->hasTerminated())
+                ++interruptedAttempts;
+            if (assembly->renderPreparationSerial() ==
+                    preparationBefore) {
+                if (preparationSlices > 0u) {
+                    reachedSteadyDraw = true;
+                    break;
+                }
+                /* The one-frame audit countdown is itself steady replay.
+                 * Continue once to enter the validation transaction. */
+                continue;
+            }
+            ++preparationSlices;
+        }
+        if (action)
+            action->setAbortCallback(previousCallback, previousData);
+        passed = passed && interruptedAttempts >= 1u &&
+            preparationSlices >= 2u && reachedSteadyDraw &&
+            render(renderer, root) &&
+            assembly->lastRenderTier() == 6 &&
+            assembly->lastRenderedWork().exact;
+        if (!passed)
+            std::fprintf(stderr,
+                "retained atlas validation did not converge across "
+                "deadline slices (tier=%d aborts=%zu slices=%zu "
+                "steady=%d)\n",
+                assembly->lastRenderTier(), interruptedAttempts,
+                preparationSlices, reachedSteadyDraw ? 1 : 0);
     }
 
     root->unref();
@@ -2227,6 +2391,8 @@ main()
     if (!ordinaryProgressiveZeroLineageReplacesWithoutOverread())
         return 1;
     if (!ordinaryExecutorHonorsAbortSafePoints())
+        return 1;
+    if (!indirectAtlasValidationResumesAcrossAborts())
         return 1;
     if (!indirectProgressiveAtlasPreservesCoverageUnderPressure())
         return 1;

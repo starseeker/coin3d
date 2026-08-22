@@ -5024,7 +5024,11 @@ bool CadRendererGL::patchIndirectPreparedAppend(
         plan.subpixelProxyRevision;
     indirectPrepared_.atlasRevision =
         gpuRes_->triangleAtlasRevision();
-    indirectPrepared_.atlasValidationCountdown = 30u;
+    indirectPrepared_.atlasValidationCountdown =
+        configuration_->atlasValidationIntervalFrames;
+    indirectPrepared_.atlasValidationActive = false;
+    indirectPrepared_.atlasValidationCursor = 0u;
+    indirectPrepared_.atlasValidationRevision = 0u;
     indirectPrepared_.atlasAdmissionPressure =
         indirectPrepared_.atlasPressurePartCount > 0 ||
         !indirectPrepared_.pressureProxyPoints.empty();
@@ -5449,7 +5453,11 @@ bool CadRendererGL::patchIndirectPreparedGeometry(
         plan.subpixelProxyRevision;
     indirectPrepared_.atlasRevision =
         gpuRes_->triangleAtlasRevision();
-    indirectPrepared_.atlasValidationCountdown = 30u;
+    indirectPrepared_.atlasValidationCountdown =
+        configuration_->atlasValidationIntervalFrames;
+    indirectPrepared_.atlasValidationActive = false;
+    indirectPrepared_.atlasValidationCursor = 0u;
+    indirectPrepared_.atlasValidationRevision = 0u;
     indirectPrepared_.atlasAdmissionPressure =
         indirectPrepared_.atlasPressurePartCount > 0 ||
         !indirectPrepared_.pressureProxyPoints.empty();
@@ -5918,7 +5926,11 @@ bool CadRendererGL::patchIndirectPreparedCuts(
     indirectPrepared_.planRevision = plan.revision;
     indirectPrepared_.atlasRevision =
         gpuRes_->triangleAtlasRevision();
-    indirectPrepared_.atlasValidationCountdown = 30u;
+    indirectPrepared_.atlasValidationCountdown =
+        configuration_->atlasValidationIntervalFrames;
+    indirectPrepared_.atlasValidationActive = false;
+    indirectPrepared_.atlasValidationCursor = 0u;
+    indirectPrepared_.atlasValidationRevision = 0u;
     indirectPrepared_.atlasAdmissionPressure =
         indirectPrepared_.atlasPressurePartCount > 0 ||
         !indirectPrepared_.pressureProxyPoints.empty();
@@ -6453,17 +6465,30 @@ bool CadRendererGL::replayIndirectShaded(
         }
     }
 
-    constexpr uint32_t validationIntervalFrames = 30u;
+    const uint32_t validationIntervalFrames =
+        configuration_->atlasValidationIntervalFrames;
     const bool validateAtlas =
+        indirectPrepared_.atlasValidationActive ||
         indirectPrepared_.atlasRevision !=
             gpuRes_->triangleAtlasRevision() ||
         !indirectPrepared_.atlasValidationCountdown;
     if (validateAtlas) {
-        noteRenderPreparation("retained-atlas-validation");
-        for (const IndirectPreparedPart& demand : indirectPrepared_.parts) {
+        if (!indirectPrepared_.atlasValidationActive) {
+            indirectPrepared_.atlasValidationActive = true;
+            indirectPrepared_.atlasValidationCursor = 0u;
+            indirectPrepared_.atlasValidationRevision =
+                gpuRes_->triangleAtlasRevision();
+        }
+        noteRenderPreparation("retained-atlas-validation-slice");
+        while (indirectPrepared_.atlasValidationCursor <
+                indirectPrepared_.parts.size()) {
             if (renderInterruptedAfter(deadlineWork))
                 return false;
+            const IndirectPreparedPart& demand =
+                indirectPrepared_.parts[
+                    indirectPrepared_.atlasValidationCursor++];
             if (demand.partIndex >= plan.partBindings.size()) {
+                indirectPrepared_.atlasValidationActive = false;
                 indirectPrepared_.valid = false;
                 return false;
             }
@@ -6471,6 +6496,7 @@ bool CadRendererGL::replayIndirectShaded(
                 plan.partBindings[demand.partIndex];
             if (!(binding.part == demand.part) ||
                     binding.generation != demand.generation) {
+                indirectPrepared_.atlasValidationActive = false;
                 indirectPrepared_.valid = false;
                 return false;
             }
@@ -6481,14 +6507,30 @@ bool CadRendererGL::replayIndirectShaded(
             if (!atlas || atlas->page != demand.page ||
                     atlas->vertices.first != demand.vertexFirst ||
                     atlas->indices.first != demand.indexFirst) {
+                indirectPrepared_.atlasValidationActive = false;
                 indirectPrepared_.valid = false;
                 return false;
             }
+        }
+        /* No renderer or allocator may mutate this context's atlas while its
+         * synchronous traversal is active.  Still verify the transaction's
+         * revision before publishing its certificate so a future shared-
+         * context implementation cannot accidentally validate a mixed
+         * epoch. */
+        if (indirectPrepared_.atlasValidationRevision !=
+                gpuRes_->triangleAtlasRevision()) {
+            indirectPrepared_.atlasValidationCursor = 0u;
+            indirectPrepared_.atlasValidationRevision =
+                gpuRes_->triangleAtlasRevision();
+            return false;
         }
         indirectPrepared_.atlasRevision =
             gpuRes_->triangleAtlasRevision();
         indirectPrepared_.atlasValidationCountdown =
             validationIntervalFrames;
+        indirectPrepared_.atlasValidationActive = false;
+        indirectPrepared_.atlasValidationCursor = 0u;
+        indirectPrepared_.atlasValidationRevision = 0u;
     } else {
         --indirectPrepared_.atlasValidationCountdown;
         if (!indirectPrepared_.parts.empty())
@@ -7271,7 +7313,11 @@ bool CadRendererGL::renderIndirectShaded(
       prepared.renderedWork = build.renderedWork;
       prepared.instanceUploadSerial = 0;
       prepared.atlasRevision = gpuRes_->triangleAtlasRevision();
-      prepared.atlasValidationCountdown = 30u;
+      prepared.atlasValidationCountdown =
+          configuration_->atlasValidationIntervalFrames;
+      prepared.atlasValidationActive = false;
+      prepared.atlasValidationCursor = 0u;
+      prepared.atlasValidationRevision = 0u;
       prepared.cameraMotionReplayCount = 0;
       prepared.atlasAdmissionPressure = build.atlasAdmissionPressure;
       prepared.atlasPressurePartCount = 0;

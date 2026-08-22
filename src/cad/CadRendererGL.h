@@ -495,6 +495,16 @@ private:
         uint64_t instanceUploadSerial = 0;
         uint64_t atlasRevision = 0;
         uint32_t atlasValidationCountdown = 0;
+        /*
+         * Periodic atlas validation is O(retained parts).  It must obey the
+         * same resumable-preparation contract as an exact frame build: a
+         * large scene may not be able to validate every binding inside one
+         * host presentation deadline.  Retain the cursor rather than
+         * restarting at part zero after every abort.
+         */
+        bool atlasValidationActive = false;
+        size_t atlasValidationCursor = 0;
+        uint64_t atlasValidationRevision = 0;
         uint32_t cameraMotionReplayCount = 0;
         bool atlasAdmissionPressure = false;
         size_t atlasPressurePartCount = 0;
