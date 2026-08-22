@@ -1457,10 +1457,15 @@ main()
     }
     assembly->setSelectedInstances({proxyInstance});
     if (!render(renderer, root) || assembly->selectedInstanceCount() != 1u ||
-            assembly->lastSubpixelProxyCount() != 0u ||
+            assembly->lastSubpixelProxyCount() != 1u ||
             assembly->framePlanBuildCount() != initialPlanBuilds) {
         std::fprintf(stderr,
-            "sparse selection did not promote the point proxy in place\n");
+            "sparse selection did not retain the styled point proxy in place "
+            "(selected=%zu proxies=%zu plans=%llu/%llu)\n",
+            assembly->selectedInstanceCount(),
+            assembly->lastSubpixelProxyCount(),
+            static_cast<unsigned long long>(assembly->framePlanBuildCount()),
+            static_cast<unsigned long long>(initialPlanBuilds));
         root->unref();
         return 1;
     }
@@ -1820,6 +1825,76 @@ main()
                 rebindPlanInstances) {
         std::fprintf(stderr,
             "unique box-to-mesh rebind rebuilt or duplicated the frame plan\n");
+        root->unref();
+        return 1;
+    }
+
+    /*
+     * A retained LoD publication is not category-homogeneous: a wave can
+     * promote structural boxes while advancing cuts on meshes published by
+     * an earlier wave.  Each operation is sparsely patchable and their
+     * combination must remain sparsely patchable as well.  This mirrors the
+     * large-scene batch which used to trigger one complete plan rebuild per
+     * 256-512 occurrence publication.
+     */
+    const Obol::PartId mixedRebindBoxPart =
+        Obol::CadIdBuilder::hash128("mixed-wave-rebind-box");
+    assembly->upsertPart(mixedRebindBoxPart, rebindBox);
+    Obol::InstanceRecord mixedRebindRecord = rebindRecord;
+    mixedRebindRecord.part = mixedRebindBoxPart;
+    mixedRebindRecord.childName = "mixed-wave-rebind";
+    mixedRebindRecord.occurrenceIndex = 9006;
+    mixedRebindRecord.lodStructuralProxy = true;
+    mixedRebindRecord.localToRoot.setTranslate(
+        SbVec3f(-8.0f, 20.0f, 0.0f));
+    const Obol::InstanceId mixedRebindInstance =
+        assembly->upsertInstanceAuto(mixedRebindRecord);
+
+    Obol::InstanceRecord mixedCutRecord = progressiveInstance;
+    mixedCutRecord.childName = "mixed-wave-cut";
+    mixedCutRecord.occurrenceIndex = 9007;
+    mixedCutRecord.lodCut = 15;
+    mixedCutRecord.localToRoot.setTranslate(
+        SbVec3f(8.0f, 20.0f, 0.0f));
+    const Obol::InstanceId mixedCutInstance =
+        assembly->upsertInstanceAuto(mixedCutRecord);
+    if (!render(renderer, root)) {
+        std::fprintf(stderr, "mixed rebind/cut setup did not render\n");
+        root->unref();
+        return 1;
+    }
+    const uint64_t mixedRebindPlanBuilds =
+        assembly->framePlanBuildCount();
+    const size_t mixedRebindPlanInstances =
+        assembly->framePlanInstanceRecordCount();
+
+    const Obol::PartId mixedRebindMeshPart =
+        Obol::CadIdBuilder::hash128("mixed-wave-rebind-mesh");
+    assembly->upsertPart(mixedRebindMeshPart, progressiveGeometry);
+    mixedRebindRecord.part = mixedRebindMeshPart;
+    mixedRebindRecord.lodStructuralProxy = false;
+    Obol::InstanceUpdate mixedRebindUpdate;
+    mixedRebindUpdate.instance = mixedRebindInstance;
+    mixedRebindUpdate.record = mixedRebindRecord;
+    mixedCutRecord.lodCut = 14;
+    Obol::InstanceUpdate mixedCutUpdate;
+    mixedCutUpdate.instance = mixedCutInstance;
+    mixedCutUpdate.record = mixedCutRecord;
+    assembly->upsertInstances({mixedRebindUpdate, mixedCutUpdate});
+    const std::optional<Obol::InstanceRecord> retainedMixedRebind =
+        assembly->getInstanceRecord(mixedRebindInstance);
+    const std::optional<Obol::InstanceRecord> retainedMixedCut =
+        assembly->getInstanceRecord(mixedCutInstance);
+    if (!render(renderer, root) ||
+            assembly->framePlanBuildCount() != mixedRebindPlanBuilds ||
+            assembly->framePlanInstanceRecordCount() !=
+                mixedRebindPlanInstances ||
+            !retainedMixedRebind ||
+            !(retainedMixedRebind->part == mixedRebindMeshPart) ||
+            retainedMixedRebind->lodStructuralProxy ||
+            !retainedMixedCut || retainedMixedCut->lodCut != 14) {
+        std::fprintf(stderr,
+            "mixed sparse rebind/cut rebuilt or corrupted the frame plan\n");
         root->unref();
         return 1;
     }

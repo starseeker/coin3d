@@ -1089,8 +1089,7 @@ struct SoCADAssemblyImpl :
         auto& record = cachedPlan_.visibleInstances[visibleIndex];
         const bool wasProxyProtected =
             (record.flags &
-                (Obol::internal::CadInstanceSelected |
-                 Obol::internal::CadInstancePointProxyProtected)) != 0;
+                Obol::internal::CadInstancePointProxyProtected) != 0;
         uint32_t flags = record.flags &
             ~(Obol::internal::CadInstanceSelected |
               Obol::internal::CadInstanceHidden |
@@ -1118,8 +1117,7 @@ struct SoCADAssemblyImpl :
         }
         const bool isProxyProtected =
             (record.flags &
-                (Obol::internal::CadInstanceSelected |
-                 Obol::internal::CadInstancePointProxyProtected)) != 0;
+                Obol::internal::CadInstancePointProxyProtected) != 0;
         if (wasProxyProtected != isProxyProtected &&
                 updateProtectedSubpixelProxy(
                     visibleIndex, isProxyProtected))
@@ -3101,7 +3099,6 @@ struct SoCADAssemblyImpl :
             structuralSample->structural = true;
             structuralSample->visible = projected.visible;
             structuralSample->collapsible = projected.fullyContained &&
-                !(instance.flags & CadInstanceSelected) &&
                 !pointProxyProtected_.count(instance.instanceId);
             structuralSample->maximumPixels = std::max(
                 projected.pixelWidth, projected.pixelHeight);
@@ -3120,9 +3117,10 @@ struct SoCADAssemblyImpl :
          * atomically adopted after the immutable frame plan was built.  Read
          * its authoritative set here rather than requiring an O(instances)
          * flag rewrite at transaction commit.  Selection remains an ordinary
-         * sparse instance attribute. */
-        if ((instance.flags & CadInstanceSelected) ||
-                pointProxyProtected_.count(instance.instanceId))
+         * sparse style/identity attribute: applications which need a selected
+         * occurrence promoted for editing put it in the explicit protection
+         * set.  This lets bulk selection retain bounded point presentation. */
+        if (pointProxyProtected_.count(instance.instanceId))
             return CadProxyPresentation::Geometry;
         if (!projected.pointEligible)
             return CadProxyPresentation::Geometry;
@@ -4387,11 +4385,13 @@ SoCADAssembly::upsertInstances(
     size_t transformChangeCount = 0;
     bool samePartPlanNeutral = planPatchable;
     std::vector<Obol::InstanceId> changedIds;
+    std::vector<Obol::InstanceId> structuralIds;
     std::vector<std::pair<Obol::InstanceId, Obol::PartId>>
         rebinds;
     std::vector<Obol::InstanceLodUpdate> samePartLodUpdates;
     std::vector<Obol::InstanceId> lodStructuralRoleChanges;
     changedIds.reserve(updates.size());
+    structuralIds.reserve(updates.size());
     rebinds.reserve(updates.size());
     samePartLodUpdates.reserve(updates.size());
     lodStructuralRoleChanges.reserve(updates.size());
@@ -4401,6 +4401,7 @@ SoCADAssembly::upsertInstances(
         bool lightweightSamePart = false;
         if (prior == impl_->instances_.end()) {
             ++newCount;
+            structuralIds.push_back(update.instance);
             samePartPlanNeutral = false;
             sourceChanged = true;
         } else if (prior->second.partId == update.record.part) {
@@ -4460,6 +4461,7 @@ SoCADAssembly::upsertInstances(
                 !transformChanged && !styleChanged;
         } else {
             ++rebindCount;
+            structuralIds.push_back(update.instance);
             rebinds.emplace_back(
                 update.instance, prior->second.partId);
             samePartPlanNeutral = false;
@@ -4494,6 +4496,43 @@ SoCADAssembly::upsertInstances(
     }
     if (!sourceChanged)
         return;
+    const auto patchPlanNeutralSamePart = [&]() {
+        std::unordered_set<size_t> changedPlanGroups;
+        bool samePartPatched = true;
+        for (const auto& update : samePartLodUpdates) {
+            if (!impl_->patchCachedInstanceCut(
+                    update.instance, update.lodCut,
+                    changedPlanGroups)) {
+                samePartPatched = false;
+                break;
+            }
+        }
+        if (samePartPatched && !samePartLodUpdates.empty())
+            impl_->finishProgressiveShadedPlanPatch(
+                changedPlanGroups);
+        if (samePartPatched && !samePartLodUpdates.empty())
+            impl_->bvhDirty_ = true;
+        if (samePartPatched && !lodStructuralRoleChanges.empty()) {
+            std::unordered_set<Obol::PartId,
+                std::hash<Obol::PartId>> affectedParts;
+            affectedParts.reserve(lodStructuralRoleChanges.size());
+            for (const Obol::InstanceId instance :
+                    lodStructuralRoleChanges) {
+                if (!impl_->patchCachedInstanceFlags(instance)) {
+                    samePartPatched = false;
+                    break;
+                }
+                const auto retained = impl_->instances_.find(instance);
+                if (retained != impl_->instances_.end())
+                    affectedParts.insert(retained->second.partId);
+            }
+            if (samePartPatched) {
+                impl_->refreshWireProxyParts(affectedParts);
+                impl_->finishSparsePresentationPatch();
+            }
+        }
+        return samePartPatched;
+    };
     bool patched = allNew &&
         impl_->appendCachedInstances(changedIds);
     bool structuralPatched = patched;
@@ -4511,42 +4550,38 @@ SoCADAssembly::upsertInstances(
         patched = impl_->appendCachedInstances(changedIds, true);
         structuralPatched = patched;
     }
+    /*
+     * A normal refinement publication can replace hundreds of structural
+     * parts while also changing the cut of a few already-progressive peers.
+     * Both mutations have bounded patch routes, but treating the combined
+     * vector as neither an all-rebind nor an all-cut batch forced a complete
+     * scene-plan rebuild after every wave.  Patch the structural subset first
+     * and then the plan-neutral same-part subset as one owner-thread
+     * transaction.  The source records have already been updated above, so a
+     * rare patch rejection still falls back to the ordinary authoritative
+     * rebuild without exposing partial state to a render traversal.
+     */
+    const bool mixedStructuralAndPlanNeutralSamePart =
+        !patched && planPatchable && !structuralIds.empty() &&
+        samePartCount != 0u && transformChangeCount == 0u &&
+        styleChangeCount == 0u;
+    if (mixedStructuralAndPlanNeutralSamePart) {
+        if (newCount == 0u) {
+            patched = impl_->patchCachedInstancePartRebinds(rebinds);
+            if (!patched)
+                patched = impl_->appendCachedInstances(
+                    structuralIds, true);
+        } else {
+            patched = impl_->appendCachedInstances(
+                structuralIds, rebindCount != 0u);
+        }
+        structuralPatched = patched;
+        if (patched)
+            patched = patchPlanNeutralSamePart();
+    }
     if (!patched && samePartPlanNeutral && newCount == 0u &&
             rebindCount == 0u) {
-        std::unordered_set<size_t> changedPlanGroups;
-        patched = true;
-        for (const auto& update : samePartLodUpdates) {
-            if (!impl_->patchCachedInstanceCut(
-                    update.instance, update.lodCut,
-                    changedPlanGroups)) {
-                patched = false;
-                break;
-            }
-        }
-        if (patched && !samePartLodUpdates.empty())
-            impl_->finishProgressiveShadedPlanPatch(
-                changedPlanGroups);
-        if (patched && !samePartLodUpdates.empty())
-            impl_->bvhDirty_ = true;
-        if (patched && !lodStructuralRoleChanges.empty()) {
-            std::unordered_set<Obol::PartId,
-                std::hash<Obol::PartId>> affectedParts;
-            affectedParts.reserve(lodStructuralRoleChanges.size());
-            for (const Obol::InstanceId instance :
-                    lodStructuralRoleChanges) {
-                if (!impl_->patchCachedInstanceFlags(instance)) {
-                    patched = false;
-                    break;
-                }
-                const auto retained = impl_->instances_.find(instance);
-                if (retained != impl_->instances_.end())
-                    affectedParts.insert(retained->second.partId);
-            }
-            if (patched) {
-                impl_->refreshWireProxyParts(affectedParts);
-                impl_->finishSparsePresentationPatch();
-            }
-        }
+        patched = patchPlanNeutralSamePart();
     }
     if (structuralPatched)
         impl_->finishSparseStructuralPatch();
