@@ -129,6 +129,17 @@ public:
                                          std::hash<PartId>>& partGenMap);
 
     /**
+     * Publish a complete frame written directly to a software framebuffer.
+     *
+     * The direct rasterizer deliberately bypasses GL execution, but it must
+     * not bypass the renderer's completed-frame contract.  Hosts use this
+     * record to distinguish a completed presentation from an interrupted or
+     * not-yet-visited assembly and to calibrate view-LoD work.
+     */
+    void completeDirectSoftwareWireFrame(
+        const Obol::CadRenderedWork& work, uint32_t contextId);
+
+    /**
      * Release all GPU resources held by this renderer for @p glue.
      * Call while the correct GL context is current (e.g. from SoCADAssembly
      * destructor or context-destruction callback).
@@ -655,6 +666,16 @@ private:
                                  const SbMatrix& viewProj,
                                  const SbMatrix& viewMatrix,
                                  const SbMatrix& projectionMatrix);
+
+    /** Draw zero-copy WireRep triangle-edge aliases from the retained indexed
+     * triangle buffers.  Returns false only when such work exists but could
+     * not be rendered by the active backend. */
+    bool renderIndexedTriangleWire(const CadFramePlan& plan,
+                                   const SoCADAssembly& assembly,
+                                   const SoGLContext* glue,
+                                   const SbMatrix& viewProj,
+                                   const SbMatrix& viewMatrix,
+                                   const SbMatrix& projectionMatrix);
 
     // -----------------------------------------------------------------------
     // Shader compilation helpers

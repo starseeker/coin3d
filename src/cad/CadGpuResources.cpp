@@ -668,10 +668,24 @@ void CadGpuResources::deleteProgressiveGpu(
 void CadGpuResources::deleteProgressiveGpu(
         Entry& entry, const SoGLContext *glue)
 {
+    deleteProgressiveWireGpu(entry, glue);
+    deleteProgressiveTriangleGpu(entry, glue);
+}
+
+void CadGpuResources::deleteProgressiveWireGpu(
+        Entry& entry, const SoGLContext *glue)
+{
     for (CadProgressiveGpu& p : entry.progressiveWire)
         deleteProgressiveGpu(p, glue);
+    entry.progressiveWire.clear();
+}
+
+void CadGpuResources::deleteProgressiveTriangleGpu(
+        Entry& entry, const SoGLContext *glue)
+{
     for (CadProgressiveGpu& p : entry.progressiveTri)
         deleteProgressiveGpu(p, glue);
+    entry.progressiveTri.clear();
 }
 
 // ---------------------------------------------------------------------------
@@ -687,8 +701,10 @@ void CadGpuResources::upload(
         const float*    triNorm,
         const uint32_t* triIdx,      GLsizei triIdxCount,
         uint64_t        generation,
-        bool            progressive,
-        uint64_t        progressiveLineage,
+        bool            wireProgressive,
+        uint64_t        wireProgressiveLineage,
+        bool            triangleProgressive,
+        uint64_t        triangleProgressiveLineage,
         const SoGLContext * glue,
         const CadGLCaps& caps)
 {
@@ -706,20 +722,31 @@ void CadGpuResources::upload(
         ordinaryEntryAllocatedBytes(entry);
 
     const bool generationChanged = entry.generation != generation;
-    const bool sameProgressiveLineage = generationChanged && progressive &&
-        progressiveLineage != 0 &&
-        entry.progressiveLineage == progressiveLineage;
-    const bool replacedProgressiveLineage = generationChanged && progressive &&
-        progressiveLineage != 0 && entry.progressiveLineage != 0 &&
-        entry.progressiveLineage != progressiveLineage &&
-        ordinaryEntryAllocatedBytes(entry) > 0;
+    const bool sameWireProgressiveLineage = generationChanged &&
+        wireProgressive && wireProgressiveLineage != 0 &&
+        entry.wireProgressiveLineage == wireProgressiveLineage;
+    const bool sameTriangleProgressiveLineage = generationChanged &&
+        triangleProgressive && triangleProgressiveLineage != 0 &&
+        entry.triangleProgressiveLineage ==
+            triangleProgressiveLineage;
+    const bool replacedWireProgressiveLineage = generationChanged &&
+        wireProgressive && wireProgressiveLineage != 0 &&
+        entry.wireProgressiveLineage != 0 &&
+        entry.wireProgressiveLineage != wireProgressiveLineage &&
+        wireAllocatedBytes(entry.wire) > 0;
+    const bool replacedTriangleProgressiveLineage = generationChanged &&
+        triangleProgressive && triangleProgressiveLineage != 0 &&
+        entry.triangleProgressiveLineage != 0 &&
+        entry.triangleProgressiveLineage !=
+            triangleProgressiveLineage &&
+        triAllocatedBytes(entry.tri) > 0;
     /* Prefix-compatible wire and triangle streams retain GPU storage across
      * immutable generation publication.  The producer token certifies exact
      * append-only identity; zero remains the conservative replacement path. */
-    const bool wirePrefixCompatible = progressive &&
-        (!generationChanged || sameProgressiveLineage);
-    const bool trianglePrefixCompatible = progressive &&
-        (!generationChanged || sameProgressiveLineage);
+    const bool wirePrefixCompatible = wireProgressive &&
+        (!generationChanged || sameWireProgressiveLineage);
+    const bool trianglePrefixCompatible = triangleProgressive &&
+        (!generationChanged || sameTriangleProgressiveLineage);
     const bool wireReset =
         (entry.wire.vertCount > 0 && wireCount < entry.wire.vertCount) ||
         (entry.wire.idxCount > 0 && segIdxCount < entry.wire.idxCount);
@@ -730,46 +757,59 @@ void CadGpuResources::upload(
     if (std::getenv("OBOL_CAD_UPLOAD_DEBUG")) {
         std::fprintf(stderr,
             "CadGpuResources upload part=%016llx:%016llx "
-            "generation=%llu/%llu lineage=%llu/%llu progressive=%d "
+            "generation=%llu/%llu wire-lineage=%llu/%llu "
+            "tri-lineage=%llu/%llu progressive=%d:%d "
             "wire=%d:%d/%d:%d tri=%d:%d/%d:%d compatible=%d "
             "reset=%d:%d bytes=%zu\n",
             static_cast<unsigned long long>(pid.w0),
             static_cast<unsigned long long>(pid.w1),
             static_cast<unsigned long long>(entry.generation),
             static_cast<unsigned long long>(generation),
-            static_cast<unsigned long long>(entry.progressiveLineage),
-            static_cast<unsigned long long>(progressiveLineage),
-            progressive ? 1 : 0,
+            static_cast<unsigned long long>(
+                entry.wireProgressiveLineage),
+            static_cast<unsigned long long>(wireProgressiveLineage),
+            static_cast<unsigned long long>(
+                entry.triangleProgressiveLineage),
+            static_cast<unsigned long long>(triangleProgressiveLineage),
+            wireProgressive ? 1 : 0,
+            triangleProgressive ? 1 : 0,
             entry.wire.vertCount, entry.wire.idxCount,
             wireCount, segIdxCount,
             entry.tri.vertCount, entry.tri.idxCount,
             triPosCount, triIdxCount,
-            sameProgressiveLineage ? 1 : 0,
+            (sameWireProgressiveLineage ||
+                sameTriangleProgressiveLineage) ? 1 : 0,
             wireReset ? 1 : 0, triangleReset ? 1 : 0,
             ordinaryEntryAllocatedBytes(entry));
     }
 
     if (generationChanged)
         deletePointGpu(entry.point, glue);
-    if (!wirePrefixCompatible || (wireReset && !sameProgressiveLineage))
+    if (!wirePrefixCompatible ||
+            (wireReset && !sameWireProgressiveLineage)) {
         deleteWireGpu(entry.wire, glue);
-    if (!trianglePrefixCompatible ||
-            (triangleReset && !sameProgressiveLineage)) {
-        deleteTriGpu(entry.tri, glue);
-        deleteProgressiveGpu(entry, glue);
+        deleteProgressiveWireGpu(entry, glue);
     }
-    if (sameProgressiveLineage) {
+    if (!trianglePrefixCompatible ||
+            (triangleReset && !sameTriangleProgressiveLineage)) {
+        deleteTriGpu(entry.tri, glue);
+        deleteProgressiveTriangleGpu(entry, glue);
+    }
+    if (sameWireProgressiveLineage ||
+            sameTriangleProgressiveLineage) {
         ++ordinaryPartLineageReuseCount_;
         if (!ordinaryPartLineageReuseCount_)
             ordinaryPartLineageReuseCount_ = UINT64_MAX;
     }
-    if (replacedProgressiveLineage) {
+    if (replacedWireProgressiveLineage ||
+            replacedTriangleProgressiveLineage) {
         ++ordinaryPartLineageReplacementCount_;
         if (!ordinaryPartLineageReplacementCount_)
             ordinaryPartLineageReplacementCount_ = UINT64_MAX;
     }
     entry.generation = generation;
-    entry.progressiveLineage = progressiveLineage;
+    entry.wireProgressiveLineage = wireProgressiveLineage;
+    entry.triangleProgressiveLineage = triangleProgressiveLineage;
 
     if (pointData && pointCount > 0) {
         CadPointGpu& p = entry.point;
@@ -839,7 +879,7 @@ void CadGpuResources::upload(
         const GLsizei posCapacity = !w.posBuf ||
                 wireCount > w.posCapacity ?
             progressiveBufferCapacity(
-                wireCount, w.posCapacity, progressive) :
+                wireCount, w.posCapacity, wireProgressive) :
             w.posCapacity;
         const CadBufferPopulation wirePosition =
             cadPopulateRetainedBuffer(
@@ -848,7 +888,8 @@ void CadGpuResources::upload(
             static_cast<GLsizeiptr>(posCapacity) * 3 * sizeof(float),
             static_cast<GLsizeiptr>(oldWireCount) * 3 * sizeof(float),
             static_cast<GLsizeiptr>(wireCount) * 3 * sizeof(float),
-            wireData, progressive ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW,
+            wireData,
+            wireProgressive ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW,
             appendable, glue, caps,
             ordinaryPartFullUploadBytes_,
             ordinaryPartSuffixUploadBytes_,
@@ -863,7 +904,7 @@ void CadGpuResources::upload(
             const GLsizei idxCapacity = !w.segIdxBuf ||
                     segIdxCount > w.idxCapacity ?
                 progressiveBufferCapacity(
-                    segIdxCount, w.idxCapacity, progressive) :
+                    segIdxCount, w.idxCapacity, wireProgressive) :
                 w.idxCapacity;
             const CadBufferPopulation wireIndices =
                 cadPopulateRetainedBuffer(
@@ -872,7 +913,8 @@ void CadGpuResources::upload(
                 static_cast<GLsizeiptr>(idxCapacity) * sizeof(uint32_t),
                 static_cast<GLsizeiptr>(oldSegIdxCount) * sizeof(uint32_t),
                 static_cast<GLsizeiptr>(segIdxCount) * sizeof(uint32_t),
-                segIdx, progressive ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW,
+                segIdx,
+                wireProgressive ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW,
                 appendable, glue, caps,
                 ordinaryPartFullUploadBytes_,
                 ordinaryPartSuffixUploadBytes_,
@@ -921,7 +963,7 @@ void CadGpuResources::upload(
 
         glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
         glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-    } else if (progressive && entry.wire.posBuf) {
+    } else if (wireProgressive && entry.wire.posBuf) {
         deleteWireGpu(entry.wire, glue);
     }
 
@@ -946,7 +988,7 @@ void CadGpuResources::upload(
         const GLsizei posCapacity = !t.posBuf ||
                 triPosCount > t.posCapacity ?
             progressiveBufferCapacity(
-                triPosCount, t.posCapacity, progressive) :
+                triPosCount, t.posCapacity, triangleProgressive) :
             t.posCapacity;
         const CadBufferPopulation trianglePositions =
             cadPopulateRetainedBuffer(
@@ -955,7 +997,8 @@ void CadGpuResources::upload(
             static_cast<GLsizeiptr>(posCapacity) * 3 * sizeof(float),
             static_cast<GLsizeiptr>(oldVertCount) * 3 * sizeof(float),
             static_cast<GLsizeiptr>(triPosCount) * 3 * sizeof(float),
-            triPos, progressive ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW,
+            triPos,
+            triangleProgressive ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW,
             appendable, glue, caps,
             ordinaryPartFullUploadBytes_,
             ordinaryPartSuffixUploadBytes_,
@@ -970,7 +1013,7 @@ void CadGpuResources::upload(
             const GLsizei normCapacity = !t.normBuf ||
                     triPosCount > t.normCapacity ?
                 progressiveBufferCapacity(
-                    triPosCount, t.normCapacity, progressive) :
+                    triPosCount, t.normCapacity, triangleProgressive) :
                 t.normCapacity;
             const CadBufferPopulation triangleNormals =
                 cadPopulateRetainedBuffer(
@@ -983,7 +1026,8 @@ void CadGpuResources::upload(
                     3 * sizeof(float),
                 static_cast<GLsizeiptr>(triPosCount) *
                     3 * sizeof(float),
-                triNorm, progressive ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW,
+                triNorm,
+                triangleProgressive ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW,
                 appendable, glue, caps,
                 ordinaryPartFullUploadBytes_,
                 ordinaryPartSuffixUploadBytes_,
@@ -1000,7 +1044,7 @@ void CadGpuResources::upload(
         const GLsizei idxCapacity = !t.idxBuf ||
                 triIdxCount > t.idxCapacity ?
             progressiveBufferCapacity(
-                triIdxCount, t.idxCapacity, progressive) :
+                triIdxCount, t.idxCapacity, triangleProgressive) :
             t.idxCapacity;
         const CadBufferPopulation triangleIndices =
             cadPopulateRetainedBuffer(
@@ -1009,7 +1053,8 @@ void CadGpuResources::upload(
             static_cast<GLsizeiptr>(idxCapacity) * sizeof(uint32_t),
             static_cast<GLsizeiptr>(oldIdxCount) * sizeof(uint32_t),
             static_cast<GLsizeiptr>(triIdxCount) * sizeof(uint32_t),
-            triIdx, progressive ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW,
+            triIdx,
+            triangleProgressive ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW,
             appendable, glue, caps,
             ordinaryPartFullUploadBytes_,
             ordinaryPartSuffixUploadBytes_,
@@ -1062,7 +1107,7 @@ void CadGpuResources::upload(
 
         glue->glBindBuffer(GL_ARRAY_BUFFER, 0);
         glue->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-    } else if (progressive && entry.tri.posBuf) {
+    } else if (triangleProgressive && entry.tri.posBuf) {
         deleteTriGpu(entry.tri, glue);
     }
     cadReplaceAccountedBytes(ordinaryPartBufferBytes_,
@@ -1091,14 +1136,24 @@ bool CadGpuResources::isUpToDate(
     return true;
 }
 
-bool CadGpuResources::hasCompatibleProgressivePrefix(
+bool CadGpuResources::hasCompatibleProgressiveWirePrefix(
         PartId pid, uint64_t progressiveLineage) const
 {
     if (progressiveLineage == 0)
         return false;
     auto it = cache_.find(pid);
     return it != cache_.end() &&
-        it->second.progressiveLineage == progressiveLineage;
+        it->second.wireProgressiveLineage == progressiveLineage;
+}
+
+bool CadGpuResources::hasCompatibleProgressiveTrianglePrefix(
+        PartId pid, uint64_t progressiveLineage) const
+{
+    if (progressiveLineage == 0)
+        return false;
+    auto it = cache_.find(pid);
+    return it != cache_.end() &&
+        it->second.triangleProgressiveLineage == progressiveLineage;
 }
 
 // ---------------------------------------------------------------------------

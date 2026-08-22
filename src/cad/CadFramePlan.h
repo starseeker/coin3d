@@ -75,7 +75,11 @@ enum CadInstanceFlag : uint32_t {
     CadInstanceHidden        = 1u << 3,
     /* Screen-important instances remain ordinary geometry even when the
      * scene-wide small-object threshold rises under render pressure. */
-    CadInstancePointProxyProtected = 1u << 4
+    CadInstancePointProxyProtected = 1u << 4,
+    /* This occurrence currently presents an unresolved LoD structural
+     * fallback.  The role cannot live on shared geometry because identical
+     * box arrays may also be authored geometry or a whole-scene extent. */
+    CadInstanceLodStructuralProxy = 1u << 5
 };
 
 // ---------------------------------------------------------------------------
@@ -155,7 +159,6 @@ struct CadPartBinding {
     uint64_t generation = 0;
     bool subpixelProxyEligible = false;
     bool structuralProxy = false;
-    bool lodStructuralProxy = false;
     std::array<SbVec3f, 8> subpixelProxyCorners = {};
 };
 

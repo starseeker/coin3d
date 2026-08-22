@@ -391,6 +391,14 @@ public:
      * @param triIdx     Triangle indices, may be nullptr.
      * @param triIdxCount Number of uint32 elements in triIdx.
      * @param generation Part generation counter (invalidates cached data).
+     * @param wireProgressive Whether wireData is an append-only progressive
+     *                        stream.
+     * @param wireProgressiveLineage Producer certificate for the wire
+     *                               stream, or zero for replacement.
+     * @param triangleProgressive Whether triPos/triIdx are an append-only
+     *                            progressive stream.
+     * @param triangleProgressiveLineage Producer certificate for the
+     *                                   triangle stream, or zero.
      * @param glue       GL dispatch context.
      * @param caps       GL capability flags.
      */
@@ -402,8 +410,10 @@ public:
                 const float*    triNorm,
                 const uint32_t* triIdx,      GLsizei triIdxCount,
                 uint64_t        generation,
-                bool            progressive,
-                uint64_t        progressiveLineage,
+                bool            wireProgressive,
+                uint64_t        wireProgressiveLineage,
+                bool            triangleProgressive,
+                uint64_t        triangleProgressiveLineage,
                 const SoGLContext * glue,
                 const CadGLCaps& caps);
 
@@ -429,7 +439,9 @@ public:
      * zero lineage is deliberately conservative and must never be used to
      * extend CPU array counts to match an older GPU allocation.
      */
-    bool hasCompatibleProgressivePrefix(
+    bool hasCompatibleProgressiveWirePrefix(
+        PartId pid, uint64_t progressiveLineage) const;
+    bool hasCompatibleProgressiveTrianglePrefix(
         PartId pid, uint64_t progressiveLineage) const;
 
     /** Return the point GPU rep for @p pid, or nullptr if not uploaded. */
@@ -736,7 +748,8 @@ public:
 private:
     struct Entry {
         uint64_t    generation = 0;
-        uint64_t    progressiveLineage = 0;
+        uint64_t    wireProgressiveLineage = 0;
+        uint64_t    triangleProgressiveLineage = 0;
         CadPointGpu point;
         CadWireGpu  wire;
         CadTriGpu   tri;
@@ -809,6 +822,10 @@ private:
     void deleteTriGpu(CadTriGpu& t, const SoGLContext * glue);
     void deleteProgressiveGpu(
         CadProgressiveGpu& p, const SoGLContext *glue);
+    void deleteProgressiveWireGpu(
+        Entry& entry, const SoGLContext *glue);
+    void deleteProgressiveTriangleGpu(
+        Entry& entry, const SoGLContext *glue);
     void deleteProgressiveGpu(
         Entry& entry, const SoGLContext *glue);
     void deleteTriangleAtlasPage(

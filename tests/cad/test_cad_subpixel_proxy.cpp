@@ -1338,7 +1338,6 @@ main()
     geometry.wire = unitBox();
     geometry.subpixelProxyEligible = true;
     geometry.structuralProxy = true;
-    geometry.lodStructuralProxy = true;
     const Obol::PartId part = Obol::CadIdBuilder::hash128("subpixel-proxy");
     assembly->upsertPart(part, geometry);
 
@@ -1347,6 +1346,7 @@ main()
     instance.parent = Obol::CadIdBuilder::Root();
     instance.childName = "proxy";
     instance.localToRoot.makeIdentity();
+    instance.lodStructuralProxy = true;
     instance.style.hasColorOverride = true;
     instance.style.color = SbColor4f(1.0f, 0.0f, 0.0f, 1.0f);
     const Obol::InstanceId proxyInstance =
@@ -1374,6 +1374,49 @@ main()
     if (!render(renderer, root) || assembly->lastSubpixelProxyCount() != 1u ||
         nonBlackPixels(renderer) == 0u) {
         std::fprintf(stderr, "subpixel proxy did not collapse to a point\n");
+        root->unref();
+        return 1;
+    }
+    const Obol::CadRenderedWork collapsedWork =
+        assembly->lastRenderedWork();
+    if (!collapsedWork.exact ||
+            collapsedWork.positionCount <= collapsedWork.lineCount * 2u) {
+        std::fprintf(stderr,
+            "aggregate proxy point was omitted from exact rendered work\n");
+        root->unref();
+        return 1;
+    }
+    /* Structural fallbacks are wire boxes regardless of the requested final
+     * mesh mode.  A shaded cold view must aggregate a subpixel box directly,
+     * rather than loading a shaded mesh merely to reach the same point. */
+    assembly->drawMode.setValue(SoCADAssembly::SHADED);
+    if (!render(renderer, root) || assembly->lastSubpixelProxyCount() != 1u ||
+            nonBlackPixels(renderer) == 0u) {
+        std::fprintf(stderr,
+            "shaded structural fallback did not collapse directly\n");
+        root->unref();
+        return 1;
+    }
+    assembly->drawMode.setValue(SoCADAssembly::WIREFRAME);
+    if (!render(renderer, root) || assembly->lastSubpixelProxyCount() != 1u) {
+        std::fprintf(stderr,
+            "wire structural fallback did not survive draw-mode restore\n");
+        root->unref();
+        return 1;
+    }
+    camera->height.setValue(320.0f);
+    assembly->drawMode.setValue(SoCADAssembly::SHADED);
+    if (!render(renderer, root) || assembly->lastSubpixelProxyCount() != 1u) {
+        std::fprintf(stderr,
+            "pixel-sized shaded structural fallback used mesh hysteresis\n");
+        root->unref();
+        return 1;
+    }
+    camera->height.setValue(1000.0f);
+    assembly->drawMode.setValue(SoCADAssembly::WIREFRAME);
+    if (!render(renderer, root) || assembly->lastSubpixelProxyCount() != 1u) {
+        std::fprintf(stderr,
+            "structural fallback did not restore after boundary test\n");
         root->unref();
         return 1;
     }
@@ -1475,11 +1518,13 @@ main()
         return 1;
     }
 
-    // Stay collapsed inside the hysteresis band.  The proxy now projects to
-    // about one pixel, above the entry threshold but below the leave limit.
+    // Structural fallbacks use the exact declared pixel boundary rather than
+    // mesh hysteresis.  The proxy now projects just above one pixel and must
+    // remain a box until its mesh is available.
     camera->height.setValue(250.0f);
-    if (!render(renderer, root) || assembly->lastSubpixelProxyCount() != 1u) {
-        std::fprintf(stderr, "subpixel proxy did not retain hysteresis state\n");
+    if (!render(renderer, root) || assembly->lastSubpixelProxyCount() != 0u) {
+        std::fprintf(stderr,
+            "structural proxy remained collapsed above the pixel boundary\n");
         root->unref();
         return 1;
     }
@@ -1545,9 +1590,29 @@ main()
     assembly->drawMode.setValue(SoCADAssembly::SHADED);
     camera->height.setValue(1000.0f);
     if (!render(renderer, root) ||
-            assembly->lastSubpixelProxyCount() != 1u) {
+            assembly->lastSubpixelProxyCount() != 2u) {
         std::fprintf(stderr,
             "subpixel shaded LoD did not enter the aggregate point batch\n");
+        root->unref();
+        return 1;
+    }
+    /* Ordinary retained meshes keep the 0.75/1.25 Schmitt band.  At this
+     * view the structural fallback expands at the exact one-pixel boundary,
+     * while the shaded occurrence remains collapsed until it crosses the
+     * wider leave threshold. */
+    camera->height.setValue(250.0f);
+    if (!render(renderer, root) ||
+            assembly->lastSubpixelProxyCount() != 1u) {
+        std::fprintf(stderr,
+            "retained mesh did not preserve subpixel hysteresis\n");
+        root->unref();
+        return 1;
+    }
+    camera->height.setValue(200.0f);
+    if (!render(renderer, root) ||
+            assembly->lastSubpixelProxyCount() != 0u) {
+        std::fprintf(stderr,
+            "retained mesh did not leave subpixel hysteresis band\n");
         root->unref();
         return 1;
     }
@@ -1575,7 +1640,6 @@ main()
         box.wire = unitBox();
         box.subpixelProxyEligible = true;
         box.structuralProxy = true;
-        box.lodStructuralProxy = true;
         const float sx = 0.65f + 0.07f * static_cast<float>(i % 5);
         const float sy = 0.55f + 0.05f * static_cast<float>((i / 5) % 7);
         const float sz = 0.45f + 0.03f * static_cast<float>((i / 11) % 9);
@@ -1596,6 +1660,7 @@ main()
         boxInstance.parent = Obol::CadIdBuilder::Root();
         boxInstance.childName = partName;
         boxInstance.occurrenceIndex = static_cast<uint32_t>(i + 2);
+        boxInstance.lodStructuralProxy = true;
         boxInstance.localToRoot.setTranslate(SbVec3f(
             -27.5f + 5.0f * static_cast<float>(i % 12),
             -27.5f + 5.0f * static_cast<float>(i / 12), 0.0f));
@@ -1720,7 +1785,6 @@ main()
     rebindBox.wire = unitBox();
     rebindBox.subpixelProxyEligible = true;
     rebindBox.structuralProxy = true;
-    rebindBox.lodStructuralProxy = true;
     const Obol::PartId rebindBoxPart =
         Obol::CadIdBuilder::hash128("stream-rebind-box");
     assembly->upsertPart(rebindBoxPart, rebindBox);
@@ -1729,6 +1793,7 @@ main()
     rebindRecord.parent = Obol::CadIdBuilder::Root();
     rebindRecord.childName = "stream-rebind";
     rebindRecord.occurrenceIndex = 9001;
+    rebindRecord.lodStructuralProxy = true;
     rebindRecord.localToRoot.setTranslate(SbVec3f(0.0f, 20.0f, 0.0f));
     const Obol::InstanceId rebindInstance =
         assembly->upsertInstanceAuto(rebindRecord);
@@ -1744,6 +1809,7 @@ main()
         Obol::CadIdBuilder::hash128("stream-rebind-mesh");
     assembly->upsertPart(rebindMeshPart, progressiveGeometry);
     rebindRecord.part = rebindMeshPart;
+    rebindRecord.lodStructuralProxy = false;
     Obol::InstanceUpdate rebindUpdate;
     rebindUpdate.instance = rebindInstance;
     rebindUpdate.record = rebindRecord;
@@ -1785,6 +1851,7 @@ main()
     assembly->upsertPart(sharedBoxPart, rebindBox);
     Obol::InstanceRecord sharedBoxA = rebindRecord;
     sharedBoxA.part = sharedBoxPart;
+    sharedBoxA.lodStructuralProxy = true;
     sharedBoxA.childName = "stream-shared-box-a";
     sharedBoxA.occurrenceIndex = 9002;
     sharedBoxA.localToRoot.setTranslate(SbVec3f(-4.0f, 24.0f, 0.0f));
@@ -1794,11 +1861,63 @@ main()
     sharedBoxB.childName = "stream-shared-box-b";
     sharedBoxB.occurrenceIndex = 9003;
     sharedBoxB.localToRoot.setTranslate(SbVec3f(4.0f, 24.0f, 0.0f));
-    assembly->upsertInstanceAuto(sharedBoxB);
+    const Obol::InstanceId sharedBoxBId =
+        assembly->upsertInstanceAuto(sharedBoxB);
     if (!render(renderer, root) ||
             assembly->lastUncollapsedStructuralProxyCount() !=
                 sharedProxyBaseline + 2u) {
         std::fprintf(stderr, "shared stream rebind setup did not render\n");
+        root->unref();
+        return 1;
+    }
+    const auto sharedStructural =
+        assembly->lastUncollapsedStructuralProxyInstances();
+    if (sharedStructural.size() !=
+            assembly->lastUncollapsedStructuralProxyCount() ||
+            std::find(sharedStructural.begin(), sharedStructural.end(),
+                sharedBoxAId) == sharedStructural.end() ||
+            std::find(sharedStructural.begin(), sharedStructural.end(),
+                sharedBoxBId) == sharedStructural.end()) {
+        std::fprintf(stderr,
+            "structural proxy occurrence frontier did not match count\n");
+        root->unref();
+        return 1;
+    }
+    const Obol::CadStructuralProxyProjectionHistogram sharedProjection =
+        assembly->lastStructuralProxyProjectionHistogram();
+    bool cumulativeProjectionValid = sharedProjection.exact &&
+        sharedProjection.revision != 0 &&
+        sharedProjection.visibleCount >= sharedStructural.size();
+    uint64_t previousProjectionCount = 0;
+    for (const uint64_t count : sharedProjection.cumulativeCount) {
+        cumulativeProjectionValid = cumulativeProjectionValid &&
+            count >= previousProjectionCount &&
+            count <= sharedProjection.visibleCount;
+        previousProjectionCount = count;
+    }
+    if (!cumulativeProjectionValid) {
+        std::fprintf(stderr,
+            "structural projected-size histogram was not exact/cumulative "
+            "exact=%d revision=%llu visible=%llu buckets=%llu,%llu,%llu,"
+            "%llu,%llu,%llu,%llu frontier=%zu\n",
+            sharedProjection.exact ? 1 : 0,
+            static_cast<unsigned long long>(sharedProjection.revision),
+            static_cast<unsigned long long>(sharedProjection.visibleCount),
+            static_cast<unsigned long long>(
+                sharedProjection.cumulativeCount[0]),
+            static_cast<unsigned long long>(
+                sharedProjection.cumulativeCount[1]),
+            static_cast<unsigned long long>(
+                sharedProjection.cumulativeCount[2]),
+            static_cast<unsigned long long>(
+                sharedProjection.cumulativeCount[3]),
+            static_cast<unsigned long long>(
+                sharedProjection.cumulativeCount[4]),
+            static_cast<unsigned long long>(
+                sharedProjection.cumulativeCount[5]),
+            static_cast<unsigned long long>(
+                sharedProjection.cumulativeCount[6]),
+            sharedStructural.size());
         root->unref();
         return 1;
     }
@@ -1808,7 +1927,10 @@ main()
     if (!render(renderer, root) ||
             assembly->lastUncollapsedStructuralProxyCount() !=
                 sharedProxyBaseline + 1u ||
-            assembly->framePlanBuildCount() != mixedStreamPlanBuilds) {
+            assembly->framePlanBuildCount() != mixedStreamPlanBuilds ||
+            !assembly->lastStructuralProxyProjectionHistogram().exact ||
+            assembly->lastStructuralProxyProjectionHistogram().visibleCount +
+                1u != sharedProjection.visibleCount) {
         std::fprintf(stderr,
             "sparse hide retained an uncollapsed structural proxy or "
             "rebuilt the complete frame plan\n");
@@ -1819,7 +1941,10 @@ main()
     if (!render(renderer, root) ||
             assembly->lastUncollapsedStructuralProxyCount() !=
                 sharedProxyBaseline + 2u ||
-            assembly->framePlanBuildCount() != mixedStreamPlanBuilds) {
+            assembly->framePlanBuildCount() != mixedStreamPlanBuilds ||
+            !assembly->lastStructuralProxyProjectionHistogram().exact ||
+            assembly->lastStructuralProxyProjectionHistogram().visibleCount !=
+                sharedProjection.visibleCount) {
         std::fprintf(stderr,
             "sparse restore lost an uncollapsed structural proxy or "
             "rebuilt the complete frame plan\n");
@@ -1840,14 +1965,29 @@ main()
         assembly->upsertInstanceAuto(offscreenBox);
     if (!render(renderer, root) ||
             assembly->lastUncollapsedStructuralProxyCount() !=
-                sharedProxyBaseline + 2u) {
+                sharedProxyBaseline + 2u ||
+            !assembly->lastStructuralProxyProjectionHistogram().exact ||
+            assembly->lastStructuralProxyProjectionHistogram().visibleCount !=
+                sharedProjection.visibleCount) {
         std::fprintf(stderr,
             "off-frustum box was counted as a visible structural proxy\n");
         root->unref();
         return 1;
     }
+    const auto offscreenStructural =
+        assembly->lastUncollapsedStructuralProxyInstances();
+    if (offscreenStructural.size() !=
+            assembly->lastUncollapsedStructuralProxyCount() ||
+            std::find(offscreenStructural.begin(), offscreenStructural.end(),
+                offscreenBoxId) != offscreenStructural.end()) {
+        std::fprintf(stderr,
+            "off-frustum occurrence entered structural repair frontier\n");
+        root->unref();
+        return 1;
+    }
     Obol::InstanceRecord promotedShared = sharedBoxA;
     promotedShared.part = rebindMeshPart;
+    promotedShared.lodStructuralProxy = false;
     Obol::InstanceUpdate promotedUpdate;
     promotedUpdate.instance = sharedBoxAId;
     promotedUpdate.record = promotedShared;
@@ -1867,10 +2007,26 @@ main()
     if (!render(renderer, root) ||
             assembly->framePlanBuildCount() != mixedStreamPlanBuilds ||
             assembly->lastUncollapsedStructuralProxyCount() !=
-                sharedProxyBaseline + 1u) {
+                sharedProxyBaseline + 1u ||
+            !assembly->lastStructuralProxyProjectionHistogram().exact ||
+            assembly->lastStructuralProxyProjectionHistogram().visibleCount +
+                1u != sharedProjection.visibleCount) {
         std::fprintf(stderr,
             "mixed shared-box promotion rebuilt the complete frame plan "
             "or retained its stale box presentation\n");
+        root->unref();
+        return 1;
+    }
+    const auto promotedStructural =
+        assembly->lastUncollapsedStructuralProxyInstances();
+    if (promotedStructural.size() !=
+            assembly->lastUncollapsedStructuralProxyCount() ||
+            std::find(promotedStructural.begin(), promotedStructural.end(),
+                sharedBoxAId) != promotedStructural.end() ||
+            std::find(promotedStructural.begin(), promotedStructural.end(),
+                sharedBoxBId) == promotedStructural.end()) {
+        std::fprintf(stderr,
+            "box-to-mesh promotion left stale structural frontier entry\n");
         root->unref();
         return 1;
     }

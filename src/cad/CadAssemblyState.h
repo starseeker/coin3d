@@ -50,6 +50,7 @@ struct CadAssemblyInstanceData {
     uint32_t occurrenceIndex = 0;
     uint8_t boolOp = 0;
     uint8_t lodCut = Obol::ProgressiveCutUnspecified;
+    bool lodStructuralProxy = false;
     SbBox3f worldBounds;
 };
 
@@ -190,6 +191,16 @@ struct CadSubpixelClassifier {
     std::vector<uint32_t> subpixelProxyScratchVisibleByPoint_;
     std::vector<uint32_t> subpixelProxyPointByVisible_;
     std::vector<uint32_t> subpixelProxyScratchPointByVisible_;
+    /* Lowest 1/2/4/8/16/32/64-pixel cumulative bucket for each structural
+     * occurrence.  -1 is not a visible structural fallback; BucketCount is a
+     * visible occurrence which is clipped, protected, or larger than 64 px. */
+    std::vector<int8_t> structuralProjectionBucketByVisible_;
+    std::vector<int8_t> structuralProjectionScratchBucketByVisible_;
+    Obol::CadStructuralProxyProjectionHistogram
+        structuralProjectionHistogram_;
+    Obol::CadStructuralProxyProjectionHistogram
+        structuralProjectionScratchHistogram_;
+    uint64_t nextStructuralProjectionRevision_ = 1;
     /* A sparse selection change may promote/demote a classified occurrence
      * without invalidating the camera-local classification for the rest of
      * the assembly.  Publish those edits with one point-stream revision at
@@ -217,10 +228,14 @@ struct CadSubpixelClassifier {
     std::unordered_map<Obol::PartId, size_t, std::hash<Obol::PartId>>
         subpixelProxyScratchStructuralCountByPart_;
     size_t subpixelProxyScratchStructuralCount_ = 0;
+    std::unordered_set<Obol::InstanceId, std::hash<Obol::InstanceId>>
+        subpixelProxyScratchStructuralInstances_;
     uint64_t subpixelProxyClassifiedAppendRevision_ = 0;
     std::unordered_map<Obol::PartId, size_t, std::hash<Obol::PartId>>
         uncollapsedStructuralProxyCountByPart_;
     size_t uncollapsedStructuralProxyCount_ = 0;
+    std::unordered_set<Obol::InstanceId, std::hash<Obol::InstanceId>>
+        uncollapsedStructuralProxyInstances_;
 };
 
 struct CadRendererState {
