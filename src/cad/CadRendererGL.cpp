@@ -1474,22 +1474,194 @@ bool CadRendererGL::wireRepHasUncollapsedInstances(
         plan.wirePartsWithUncollapsedInstances.end();
 }
 
+const std::vector<CadSubpixelProxyPoint>&
+CadRendererGL::presentationSubpixelProxyPoints(
+        const CadFramePlan& plan, const SoGLContext* glue,
+        const SbMatrix& viewProj)
+{
+    /*
+     * A single GL point stream is already efficient on a hardware driver,
+     * where preserving one representative per visible occurrence gives the
+     * best visual density.  In fixed-function software GL, however, each
+     * point still crosses the software transform/raster path.  Bound that
+     * work by keeping one deterministic representative per small screen bin.
+     *
+     * The source stream is intentionally left unchanged: it remains the
+     * exact per-occurrence presentation record used by coverage accounting,
+     * sparse styling, selection, and picking.  This is strictly a renderer
+     * local optimization of the vertices actually submitted to GL.
+    */
+    static constexpr size_t minimumSourcePoints = 4096u;
+    static constexpr size_t maximumScreenBins = 32768u;
+    static constexpr float minimumClipW = 1.0e-20f;
+    const std::vector<CadSubpixelProxyPoint>& source =
+        plan.subpixelProxyPoints;
+    if (!caps_.isSoftwareRenderer || source.size() < minimumSourcePoints)
+        return source;
+
+    std::array<GLint, 4> viewport = {0, 0, 0, 0};
+    glue->glGetIntegerv(GL_VIEWPORT, viewport.data());
+    if (viewport[2] <= 1 || viewport[3] <= 1)
+        return source;
+
+    if (softwareBinnedSubpixelValid_ &&
+            softwareBinnedSubpixelSourceRevision_ ==
+                plan.subpixelProxyRevision &&
+            softwareBinnedSubpixelAttributeRevision_ ==
+                plan.instanceAttributeRevision &&
+            softwareBinnedSubpixelViewProj_ == viewProj &&
+            softwareBinnedSubpixelViewport_ == viewport &&
+            softwareBinnedSubpixelContextId_ == glue->contextid)
+        return softwareBinnedSubpixelProxyPoints_;
+
+    const size_t viewportWidth = static_cast<size_t>(viewport[2]);
+    const size_t viewportHeight = static_cast<size_t>(viewport[3]);
+    size_t binCountX = viewportWidth;
+    size_t binCountY = viewportHeight;
+    if (viewportWidth > maximumScreenBins / viewportHeight) {
+        const double aspect = static_cast<double>(viewportWidth) /
+            static_cast<double>(viewportHeight);
+        binCountX = std::min(viewportWidth, maximumScreenBins);
+        binCountX = std::max<size_t>(1u, std::min(binCountX,
+            static_cast<size_t>(std::sqrt(
+                static_cast<double>(maximumScreenBins) * aspect))));
+        binCountY = std::max<size_t>(1u, std::min(viewportHeight,
+            maximumScreenBins / binCountX));
+    }
+    /* Ceiling division ensures the actual occupied grid cannot have more
+     * cells than binCountX * binCountY, which is bounded above by the named
+     * presentation cap even for a very wide or very tall viewport. */
+    const GLint binWidth = static_cast<GLint>((viewportWidth + binCountX - 1u) /
+        binCountX);
+    const GLint binHeight = static_cast<GLint>((viewportHeight + binCountY - 1u) /
+        binCountY);
+    const auto pointVisible = [](const CadSubpixelProxyPoint& point) {
+        return !(point.flags & CadInstanceHidden);
+    };
+    const auto binKey = [](GLint x, GLint y) {
+        return (static_cast<uint64_t>(static_cast<uint32_t>(x)) << 32) |
+            static_cast<uint32_t>(y);
+    };
+    const auto visualPriority = [](const CadSubpixelProxyPoint& point) {
+        uint32_t priority = 0u;
+        if (point.flags & CadInstanceColorOverride)
+            priority |= 1u;
+        if (point.flags & CadInstanceHovered)
+            priority |= 2u;
+        if (point.flags & CadInstanceSelected)
+            priority |= 4u;
+        return priority;
+    };
+    const auto stableBefore = [](const InstanceId& left,
+                                 const InstanceId& right) {
+        return left.w0 != right.w0 ? left.w0 < right.w0 :
+            left.w1 < right.w1;
+    };
+    std::unordered_map<uint64_t, size_t> pointByBin;
+    pointByBin.reserve(std::min(source.size(), maximumScreenBins));
+    std::vector<float> depthByBin;
+    depthByBin.reserve(std::min(source.size(), maximumScreenBins));
+    softwareBinnedSubpixelProxyPoints_.clear();
+    softwareBinnedSubpixelProxyPoints_.reserve(
+        std::min(source.size(), maximumScreenBins));
+
+    for (const CadSubpixelProxyPoint& point : source) {
+        if (!pointVisible(point))
+            continue;
+        SbVec4f clip;
+        viewProj.multVecMatrix(SbVec4f(point.position[0], point.position[1],
+            point.position[2], 1.0f), clip);
+        if (!std::isfinite(clip[0]) || !std::isfinite(clip[1]) ||
+                !std::isfinite(clip[2]) || !std::isfinite(clip[3]) ||
+                clip[3] <= minimumClipW) {
+            /* Never let a defensive optimization suppress an otherwise
+             * valid logical proxy if an unusual projection reaches here. */
+            softwareBinnedSubpixelProxyPoints_.push_back(point);
+            depthByBin.push_back(0.0f);
+            continue;
+        }
+        const float inverseW = 1.0f / clip[3];
+        const float normalizedX = clip[0] * inverseW * 0.5f + 0.5f;
+        const float normalizedY = clip[1] * inverseW * 0.5f + 0.5f;
+        if (!std::isfinite(normalizedX) || !std::isfinite(normalizedY)) {
+            softwareBinnedSubpixelProxyPoints_.push_back(point);
+            depthByBin.push_back(0.0f);
+            continue;
+        }
+        const GLint screenX = static_cast<GLint>(std::floor(normalizedX *
+            static_cast<float>(viewport[2] - 1)));
+        const GLint screenY = static_cast<GLint>(std::floor(normalizedY *
+            static_cast<float>(viewport[3] - 1)));
+        const uint64_t key = binKey(screenX / binWidth,
+            screenY / binHeight);
+        const auto found = pointByBin.find(key);
+        const float depth = clip[2] * inverseW;
+        if (found == pointByBin.end()) {
+            pointByBin.emplace(key,
+                softwareBinnedSubpixelProxyPoints_.size());
+            softwareBinnedSubpixelProxyPoints_.push_back(point);
+            depthByBin.push_back(depth);
+            continue;
+        }
+        const size_t index = found->second;
+        const CadSubpixelProxyPoint& current =
+            softwareBinnedSubpixelProxyPoints_[index];
+        const uint32_t candidatePriority = visualPriority(point);
+        const uint32_t currentPriority = visualPriority(current);
+        if (candidatePriority > currentPriority ||
+                (candidatePriority == currentPriority &&
+                 (depth < depthByBin[index] ||
+                  (depth == depthByBin[index] && stableBefore(
+                      point.instanceId, current.instanceId))))) {
+            softwareBinnedSubpixelProxyPoints_[index] = point;
+            depthByBin[index] = depth;
+        }
+    }
+
+    softwareBinnedSubpixelSourceRevision_ = plan.subpixelProxyRevision;
+    softwareBinnedSubpixelAttributeRevision_ =
+        plan.instanceAttributeRevision;
+    softwareBinnedSubpixelViewProj_ = viewProj;
+    softwareBinnedSubpixelViewport_ = viewport;
+    softwareBinnedSubpixelContextId_ = glue->contextid;
+    softwareBinnedSubpixelValid_ = true;
+    ++softwareBinnedSubpixelPresentationRevision_;
+    if (!softwareBinnedSubpixelPresentationRevision_)
+        softwareBinnedSubpixelPresentationRevision_ = 1;
+    return softwareBinnedSubpixelProxyPoints_;
+}
+
+const std::vector<CadSubpixelProxyPoint>&
+CadRendererGL::subpixelProxyPresentationPoints(
+        const CadFramePlan& plan, const SoGLContext* glue,
+        const SbMatrix& viewProj)
+{
+    if (!ensureReady(glue))
+        return plan.subpixelProxyPoints;
+    return presentationSubpixelProxyPoints(plan, glue, viewProj);
+}
+
 void CadRendererGL::renderSubpixelProxyPoints(
         const CadFramePlan& plan, const SoGLContext* glue,
         const SbMatrix& viewProj)
 {
+    const std::vector<CadSubpixelProxyPoint>& planPoints =
+        presentationSubpixelProxyPoints(plan, glue, viewProj);
     const std::vector<CadSubpixelProxyPoint>& pressurePoints =
         pressureProxyPoints();
     const auto pointVisible = [](const CadSubpixelProxyPoint& point) {
         return !(point.flags & CadInstanceHidden);
     };
     const bool includePlan = std::any_of(
-        plan.subpixelProxyPoints.begin(),
-        plan.subpixelProxyPoints.end(), pointVisible);
+        planPoints.begin(), planPoints.end(), pointVisible);
     const bool includePressure = std::any_of(
         pressurePoints.begin(), pressurePoints.end(), pointVisible);
     if (!includePlan && !includePressure)
         return;
+    lastSubpixelProxyDrawPointCount_ = static_cast<size_t>(std::count_if(
+        planPoints.begin(), planPoints.end(), pointVisible)) +
+        static_cast<size_t>(std::count_if(
+            pressurePoints.begin(), pressurePoints.end(), pointVisible));
 
     const bool useVbo = caps_.canUseVbo();
     const bool fixedFunction =
@@ -1510,7 +1682,7 @@ void CadRendererGL::renderSubpixelProxyPoints(
         glue->glDisable(GL_LIGHTING);
         glue->glBegin(GL_POINTS);
         uint64_t submittedPoints = 0;
-        for (const CadSubpixelProxyPoint& point : plan.subpixelProxyPoints) {
+        for (const CadSubpixelProxyPoint& point : planPoints) {
             if (!pointVisible(point))
                 continue;
             glue->glColor4ub(point.rgba[0], point.rgba[1], point.rgba[2],
@@ -1575,6 +1747,10 @@ void CadRendererGL::renderSubpixelProxyPoints(
     planUploadRevision ^= plan.instanceAttributeRevision +
         UINT64_C(0x9e3779b97f4a7c15) +
         (planUploadRevision << 6) + (planUploadRevision >> 2);
+    if (caps_.isSoftwareRenderer && softwareBinnedSubpixelValid_)
+        planUploadRevision ^= softwareBinnedSubpixelPresentationRevision_ +
+            UINT64_C(0x9e3779b97f4a7c15) +
+            (planUploadRevision << 6) + (planUploadRevision >> 2);
     if (!planUploadRevision)
         planUploadRevision = 1;
 
@@ -1585,9 +1761,7 @@ void CadRendererGL::renderSubpixelProxyPoints(
              !cachedPlan.posBuf || !cachedPlan.colorBuf)) {
         std::vector<float> positions;
         std::vector<uint8_t> colors;
-        packPointRange(
-            plan.subpixelProxyPoints, 0,
-            plan.subpixelProxyPoints.size(), positions, colors);
+        packPointRange(planPoints, 0, planPoints.size(), positions, colors);
         if (!positions.empty())
             gpuRes_->uploadSubpixelProxyPoints(
                 planUploadRevision, positions, colors, glue, caps_);
@@ -1731,7 +1905,8 @@ void CadRendererGL::renderSubpixelProxyPoints(
 }
 
 void CadRendererGL::completeDirectSoftwareWireFrame(
-        const Obol::CadRenderedWork& work, uint32_t contextId)
+        const Obol::CadRenderedWork& work, uint32_t contextId,
+        size_t subpixelProxyDrawPointCount)
 {
     /*
      * Direct software rasterization is an executor, not a side channel.  In
@@ -1744,6 +1919,7 @@ void CadRendererGL::completeDirectSoftwareWireFrame(
     pressureProxyPoints_.clear();
     atlasAdmissionPressure_ = false;
     lastRenderedTriangleCount_ = 0;
+    lastSubpixelProxyDrawPointCount_ = subpixelProxyDrawPointCount;
     lastRenderedWork_ = work;
     lastRenderedWork_.exact = true;
     lastRenderTier_ = 0;
@@ -1794,6 +1970,7 @@ void CadRendererGL::render(
     pressureProxyPointsView_ = nullptr;
     pressureProxyPoints_.clear();
     lastRenderedTriangleCount_ = 0;
+    lastSubpixelProxyDrawPointCount_ = 0;
     lastRenderedWork_ = Obol::CadRenderedWork();
     lastRenderUsedPreparedReplay_ = false;
     atlasAdmissionPressure_ = false;

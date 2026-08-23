@@ -13,17 +13,21 @@
 #include <Obol/cad/SoCADAssembly.h>
 #include "CadFramePlan.h"
 
+#include <vector>
+
 class SoState;
 
 struct CadSoftwareWireRenderResult {
     bool rendered = false;
     Obol::CadRenderedWork work;
+    size_t subpixelProxyDrawPointCount = 0;
 };
 
 CadSoftwareWireRenderResult cadRenderSoftwareWire(
     const Obol::internal::CadFramePlan& plan,
     const SoCADAssembly& assembly, SoState *state,
-    const SbMatrix& viewProj);
+    const SbMatrix& viewProj,
+    const std::vector<Obol::internal::CadSubpixelProxyPoint>&
+        subpixelProxyPoints);
 
 #endif // OBOL_CAD_SOFTWARE_WIRE_H
-
