@@ -1,13 +1,10 @@
 # =============================================================================
 # tests/cad/CMakeLists.txt
 #
-# Unit tests for the CAD assembly subsystem:
-#   - test_cad_ids        : ID generation and hashing
-#   - test_cad_picking    : CPU BVH ray-picking
-#   - test_cad_benchmark  : Rendering comparison: SG vs. SoCADAssembly (needs GL)
-#
-# The first four tests are standalone (no GL context, no BRL-CAD dependency).
-# test_cad_benchmark requires a rendering context and uses headless_utils.h.
+# Remaining legacy visual/benchmark checks for the CAD assembly subsystem.
+# Deterministic IDs, instance records, resolved draw planning, and CPU picking
+# are modern GTest coverage in tests/framework/CMakeLists.txt.  This file is
+# retained only for the subpixel visual program and the rendering benchmark.
 # =============================================================================
 
 # Common include paths for CAD tests
@@ -22,53 +19,13 @@ set(CAD_TEST_INCLUDES
     ${PROJECT_SOURCE_DIR}/src/cad
 )
 
-# ---------------------------------------------------------------------------
-# test_cad_ids
-# ---------------------------------------------------------------------------
-add_executable(test_cad_ids test_cad_ids.cpp)
-target_link_libraries(test_cad_ids
-    ${PROJECT_NAME}
-    ${OBOL_TARGET_LINK_LIBRARIES}
-    simple_test_utils
-)
-target_include_directories(test_cad_ids PRIVATE ${CAD_TEST_INCLUDES})
-add_test(NAME test_cad_ids COMMAND test_cad_ids)
+# test_cad_ids.cpp and test_cad_instance_records.cpp have been migrated to
+# tests/framework/CMakeLists.txt.  Keep the remaining domain-specific legacy
+# executables here until each has an explicit modern backend contract.
 
-# ---------------------------------------------------------------------------
-# test_cad_instance_records
-# ---------------------------------------------------------------------------
-add_executable(test_cad_instance_records test_cad_instance_records.cpp)
-target_link_libraries(test_cad_instance_records
-    ${PROJECT_NAME}
-    ${OBOL_TARGET_LINK_LIBRARIES}
-    simple_test_utils
-)
-target_include_directories(test_cad_instance_records PRIVATE ${CAD_TEST_INCLUDES})
-add_test(NAME test_cad_instance_records COMMAND test_cad_instance_records)
+# test_cad_resolved_draw.cpp has been migrated to obol_integration_tests.
 
-# ---------------------------------------------------------------------------
-# test_cad_resolved_draw
-# ---------------------------------------------------------------------------
-add_executable(test_cad_resolved_draw test_cad_resolved_draw.cpp)
-target_link_libraries(test_cad_resolved_draw
-    ${PROJECT_NAME}
-    ${OBOL_TARGET_LINK_LIBRARIES}
-    simple_test_utils
-)
-target_include_directories(test_cad_resolved_draw PRIVATE ${CAD_TEST_INCLUDES})
-add_test(NAME test_cad_resolved_draw COMMAND test_cad_resolved_draw)
-
-# ---------------------------------------------------------------------------
-# test_cad_picking
-# ---------------------------------------------------------------------------
-add_executable(test_cad_picking test_cad_picking.cpp)
-target_link_libraries(test_cad_picking
-    ${PROJECT_NAME}
-    ${OBOL_TARGET_LINK_LIBRARIES}
-    simple_test_utils
-)
-target_include_directories(test_cad_picking PRIVATE ${CAD_TEST_INCLUDES})
-add_test(NAME test_cad_picking COMMAND test_cad_picking)
+# The CPU picking suite is now tests/integration/cad_picking_test.cpp.
 
 # ---------------------------------------------------------------------------
 # test_cad_benchmark  (rendering comparison; requires a GL context)
@@ -138,6 +95,7 @@ if(_bench_has_gl)
         endif()
     endif()
     add_test(NAME test_cad_subpixel_proxy COMMAND test_cad_subpixel_proxy)
+    set_tests_properties(test_cad_subpixel_proxy PROPERTIES LABELS "legacy;visual;cad")
 
     add_executable(test_cad_benchmark test_cad_benchmark.cpp)
 
@@ -179,6 +137,7 @@ if(_bench_has_gl)
     endif()
 
     add_test(NAME test_cad_benchmark COMMAND test_cad_benchmark)
+    set_tests_properties(test_cad_benchmark PROPERTIES LABELS "legacy;benchmark;cad")
     message(STATUS "CAD benchmark test: enabled (swrast=${_bench_use_swrast})")
 
 else()

@@ -14,160 +14,75 @@
  * No BRL-CAD dependency.  No GL context required.
  */
 
-#include "../test_utils.h"
 #include <Obol/cad/CadIds.h>
+
+#include <gtest/gtest.h>
 
 #include <unordered_map>
 #include <string>
-#include <cassert>
+#include <vector>
 
-using namespace SimpleTest;
-using namespace Obol;
+namespace {
 
-int main()
+using Obol::CadId128;
+using Obol::CadIdBuilder;
+
+TEST(CadIds, RootIsTheInvalidZeroSentinel)
 {
-    TestRunner runner;
-
-    // -----------------------------------------------------------------------
-    // 1. Root sentinel is all-zeros
-    // -----------------------------------------------------------------------
-    runner.startTest("CadIdBuilder::Root() returns zero ID");
-    {
-        CadId128 root = CadIdBuilder::Root();
-        runner.endTest(root.w0 == 0 && root.w1 == 0,
-                       "Root ID should be {0,0}");
-    }
-
-    // -----------------------------------------------------------------------
-    // 2. hash128 is deterministic
-    // -----------------------------------------------------------------------
-    runner.startTest("CadIdBuilder::hash128 deterministic for same key");
-    {
-        std::string key = "wheel";
-        CadId128 a = CadIdBuilder::hash128(key);
-        CadId128 b = CadIdBuilder::hash128(key);
-        runner.endTest(a == b, "Same key should produce same ID");
-    }
-
-    // -----------------------------------------------------------------------
-    // 3. hash128 differs for different keys
-    // -----------------------------------------------------------------------
-    runner.startTest("CadIdBuilder::hash128 different for different keys");
-    {
-        CadId128 a = CadIdBuilder::hash128(std::string("wheel"));
-        CadId128 b = CadIdBuilder::hash128(std::string("bolt"));
-        runner.endTest(a != b, "Different keys should produce different IDs");
-    }
-
-    // -----------------------------------------------------------------------
-    // 4. Same traversal path produces identical InstanceId
-    // -----------------------------------------------------------------------
-    runner.startTest("extendNameOccBool: same path gives same ID");
-    {
-        CadId128 root = CadIdBuilder::Root();
-        CadId128 a = CadIdBuilder::extendNameOccBool(root, "arm", 0, 0);
-        CadId128 a2 = CadIdBuilder::extendNameOccBool(root, "arm", 0, 0);
-        runner.endTest(a == a2, "Same inputs should yield same child ID");
-    }
-
-    // -----------------------------------------------------------------------
-    // 5. Different occurrence index gives different ID
-    // -----------------------------------------------------------------------
-    runner.startTest("extendNameOccBool: different occurrence gives different ID");
-    {
-        CadId128 root = CadIdBuilder::Root();
-        CadId128 a = CadIdBuilder::extendNameOccBool(root, "wheel", 0, 0);
-        CadId128 b = CadIdBuilder::extendNameOccBool(root, "wheel", 1, 0);
-        runner.endTest(a != b,
-                       "Different occurrence index should produce different ID");
-    }
-
-    // -----------------------------------------------------------------------
-    // 6. Different boolOp gives different ID
-    // -----------------------------------------------------------------------
-    runner.startTest("extendNameOccBool: different boolOp gives different ID");
-    {
-        CadId128 root = CadIdBuilder::Root();
-        CadId128 a = CadIdBuilder::extendNameOccBool(root, "cutout", 0, 0);  // union
-        CadId128 b = CadIdBuilder::extendNameOccBool(root, "cutout", 0, 1);  // subtract
-        runner.endTest(a != b,
-                       "Different boolOp should produce different ID");
-    }
-
-    // -----------------------------------------------------------------------
-    // 7. Order changes change IDs (documented behaviour)
-    // -----------------------------------------------------------------------
-    runner.startTest("extendNameOccBool: order changes change IDs");
-    {
-        CadId128 root = CadIdBuilder::Root();
-        // Path A → B
-        CadId128 ab_a = CadIdBuilder::extendNameOccBool(root, "A", 0, 0);
-        CadId128 ab   = CadIdBuilder::extendNameOccBool(ab_a, "B", 0, 0);
-        // Path B → A
-        CadId128 ba_b = CadIdBuilder::extendNameOccBool(root, "B", 0, 0);
-        CadId128 ba   = CadIdBuilder::extendNameOccBool(ba_b, "A", 0, 0);
-        runner.endTest(ab != ba,
-                       "Different traversal order should produce different leaf ID");
-    }
-
-    // -----------------------------------------------------------------------
-    // 8. Deep hierarchy is deterministic
-    // -----------------------------------------------------------------------
-    runner.startTest("extendNameOccBool: deep hierarchy deterministic");
-    {
-        auto makePath = [](const std::vector<std::string>& names) -> CadId128 {
-            CadId128 id = CadIdBuilder::Root();
-            for (uint32_t i = 0; i < static_cast<uint32_t>(names.size()); ++i) {
-                id = CadIdBuilder::extendNameOccBool(id, names[i], 0, 0);
-            }
-            return id;
-        };
-        std::vector<std::string> path = {"vehicle", "chassis", "axle", "bolt"};
-        CadId128 a = makePath(path);
-        CadId128 b = makePath(path);
-        runner.endTest(a == b, "Deep path should be reproducible");
-    }
-
-    // -----------------------------------------------------------------------
-    // 9. std::hash<CadId128> is consistent
-    // -----------------------------------------------------------------------
-    runner.startTest("std::hash<CadId128> consistent for same ID");
-    {
-        CadId128 id = CadIdBuilder::hash128(std::string("test_key"));
-        std::hash<CadId128> hasher;
-        size_t h1 = hasher(id);
-        size_t h2 = hasher(id);
-        runner.endTest(h1 == h2, "Hash should be consistent");
-    }
-
-    // -----------------------------------------------------------------------
-    // 10. CadId128 usable as unordered_map key
-    // -----------------------------------------------------------------------
-    runner.startTest("CadId128 usable as unordered_map key");
-    {
-        std::unordered_map<CadId128, int, std::hash<CadId128>> m;
-        CadId128 id1 = CadIdBuilder::hash128(std::string("key1"));
-        CadId128 id2 = CadIdBuilder::hash128(std::string("key2"));
-        m[id1] = 42;
-        m[id2] = 99;
-        bool ok = (m[id1] == 42 && m[id2] == 99);
-        runner.endTest(ok, "Map operations should work with CadId128 keys");
-    }
-
-    // -----------------------------------------------------------------------
-    // 11. isValid() reflects non-zero ID
-    // -----------------------------------------------------------------------
-    runner.startTest("CadId128::isValid returns false for root sentinel");
-    {
-        bool ok = !CadIdBuilder::Root().isValid();
-        runner.endTest(ok, "Root (zero) ID should not be valid");
-    }
-
-    runner.startTest("CadId128::isValid returns true for non-zero ID");
-    {
-        CadId128 id = CadIdBuilder::hash128(std::string("x"));
-        runner.endTest(id.isValid(), "Non-zero ID should be valid");
-    }
-
-    return runner.getSummary();
+    const CadId128 root = CadIdBuilder::Root();
+    EXPECT_EQ(root.w0, 0u);
+    EXPECT_EQ(root.w1, 0u);
+    EXPECT_FALSE(root.isValid());
 }
+
+TEST(CadIds, HashingIsDeterministicAndDistinguishesKeys)
+{
+    const CadId128 wheel = CadIdBuilder::hash128(std::string("wheel"));
+    EXPECT_EQ(wheel, CadIdBuilder::hash128(std::string("wheel")));
+    EXPECT_NE(wheel, CadIdBuilder::hash128(std::string("bolt")));
+    EXPECT_TRUE(wheel.isValid());
+}
+
+TEST(CadIds, ExtendingAPathPreservesOccurrenceAndBooleanIdentity)
+{
+    const CadId128 root = CadIdBuilder::Root();
+    const CadId128 wheel = CadIdBuilder::extendNameOccBool(root, "wheel", 0, 0);
+
+    EXPECT_EQ(wheel, CadIdBuilder::extendNameOccBool(root, "wheel", 0, 0));
+    EXPECT_NE(wheel, CadIdBuilder::extendNameOccBool(root, "wheel", 1, 0));
+    EXPECT_NE(wheel, CadIdBuilder::extendNameOccBool(root, "wheel", 0, 1));
+}
+
+TEST(CadIds, TraversalOrderAndDeepPathsAreDeterministic)
+{
+    const CadId128 root = CadIdBuilder::Root();
+    const CadId128 ab = CadIdBuilder::extendNameOccBool(
+        CadIdBuilder::extendNameOccBool(root, "A", 0, 0), "B", 0, 0);
+    const CadId128 ba = CadIdBuilder::extendNameOccBool(
+        CadIdBuilder::extendNameOccBool(root, "B", 0, 0), "A", 0, 0);
+    EXPECT_NE(ab, ba);
+
+    const std::vector<std::string> path = {"vehicle", "chassis", "axle", "bolt"};
+    const auto make_path = [&path] {
+        CadId128 id = CadIdBuilder::Root();
+        for (const auto & name : path) id = CadIdBuilder::extendNameOccBool(id, name, 0, 0);
+        return id;
+    };
+    EXPECT_EQ(make_path(), make_path());
+}
+
+TEST(CadIds, StandardHashSupportsAssociativeContainers)
+{
+    const CadId128 first = CadIdBuilder::hash128(std::string("key1"));
+    const CadId128 second = CadIdBuilder::hash128(std::string("key2"));
+    std::hash<CadId128> hasher;
+    EXPECT_EQ(hasher(first), hasher(first));
+
+    std::unordered_map<CadId128, int> values;
+    values.emplace(first, 42);
+    values.emplace(second, 99);
+    EXPECT_EQ(values.at(first), 42);
+    EXPECT_EQ(values.at(second), 99);
+}
+
+} // namespace

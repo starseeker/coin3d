@@ -4,12 +4,13 @@
 # Builds the ObolEx (libObolEx) static library — the shared utility library
 # used by both test runners (tests/) and GUI example viewers (examples/).
 # It provides:
-#   - TestRegistry (test_registry.h / test_registry.cpp)
+#   - TestRegistry (test_registry.h / test_registry.cpp), retained for the
+#     standalone rendering CLI's compatibility API
 #   - Scene factories (test_scenes.h / test_scenes.cpp)
-#   - Inline unit-test wrappers + REGISTER_TEST static initialisers
-#     (unit_test_wrappers.cpp)
 #
-# Both test executables and example viewers link against this library.
+# The registry-based unit wrappers were retired in favour of the GTest lanes
+# under tests/framework.  This compatibility library remains only because
+# the opt-in standalone rendering probes still reuse their scene factories.
 # An alias target "obol_testlib" is provided for backward compatibility.
 # =============================================================================
 
@@ -26,7 +27,6 @@ endif()
 add_library(ObolEx STATIC
     test_registry.cpp
     test_scenes.cpp
-    unit_test_wrappers.cpp
 )
 
 # Backward-compatibility alias so existing code referencing obol_testlib keeps

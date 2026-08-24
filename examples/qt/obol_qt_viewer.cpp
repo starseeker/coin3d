@@ -51,8 +51,8 @@
 #include <Inventor/events/SoLocation2Event.h>
 #include <Inventor/events/SoKeyboardEvent.h>
 
-/* ---- Unified test registry (scene factories) ---- */
-#include "testlib/test_registry.h"
+/* ---- Curated feature-demo catalogue ---- */
+#include "demo_scenes.h"
 
 /* ---- Qt context manager ---- */
 #include "qt_context_manager.h"
@@ -87,19 +87,6 @@
 #include <algorithm>
 #include <memory>
 #include <functional>
-
-/* =========================================================================
- * Scene catalogue
- * ======================================================================= */
-
-static std::vector<const ObolTest::TestEntry*> getVisualTests()
-{
-    std::vector<const ObolTest::TestEntry*> out;
-    for (const auto& e : ObolTest::TestRegistry::instance().allTests())
-        if (e.has_visual && e.create_scene)
-            out.push_back(&e);
-    return out;
-}
 
 /* =========================================================================
  * Qt → SoKeyboardEvent::Key translation
@@ -230,9 +217,8 @@ public:
     }
 
     void loadScene(const char* name) {
-        const ObolTest::TestEntry* entry =
-            ObolTest::TestRegistry::instance().findTest(name);
-        if (!entry || !entry->create_scene) {
+        const ObolDemo::DemoScene * entry = ObolDemo::findDemoScene(name);
+        if (!entry || !entry->create) {
             status_text = std::string("Unknown scene: ") + name;
             update(); return;
         }
@@ -240,7 +226,7 @@ public:
         state.reset(new SceneState);
         state->width  = std::max(width(), 1);
         state->height = std::max(height(), 1);
-        state->root   = entry->create_scene(state->width, state->height);
+        state->root   = entry->create(state->width, state->height);
         state->cam    = state->root ? SceneState::findCamera(state->root) : nullptr;
         state->computeCenter();
         state->updateClipping();
@@ -485,10 +471,8 @@ private:
         sceneList_->setTextElideMode(Qt::ElideRight);
         sceneList_->setFont(QFont("Monospace", 10));
         {
-            auto tests = getVisualTests();
-            for (const auto* e : tests) {
-                std::string label =
-                    ObolTest::categoryToString(e->category) + "/" + e->name;
+            for (const auto & entry : ObolDemo::demoScenes()) {
+                std::string label = entry.category + "/" + entry.id;
                 sceneList_->addItem(QString::fromStdString(label));
             }
         }
@@ -595,12 +579,9 @@ int main(int argc, char** argv)
     ObolQtViewerWindow win;
     win.show();
 
-    /* Load the first visual scene automatically */
-    {
-        auto tests = getVisualTests();
-        if (!tests.empty())
-            win.loadScene(tests[0]->name.c_str());
-    }
+    /* Load the first curated feature demo automatically. */
+    const auto & scenes = ObolDemo::demoScenes();
+    if (!scenes.empty()) win.loadScene(scenes.front().id.c_str());
 
     return app.exec();
 }

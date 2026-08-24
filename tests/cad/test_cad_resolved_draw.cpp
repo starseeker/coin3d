@@ -10,6 +10,8 @@
 
 #include <Obol/cad/CadProgressive.h>
 
+#include <gtest/gtest.h>
+
 #include <cstdio>
 #include <cstdint>
 #include <limits>
@@ -162,22 +164,15 @@ testExhaustiveSparseResolution()
 
 } // namespace
 
-int
-main()
+TEST(CadResolvedDraw, PreservesSparseOwnershipAndProgressiveBoundaries)
 {
-    int failures = 0;
-
     /* A planar or linear source has exact zero-extent axes.  Requiring all
      * three bit counts to reach 16 misclassified the terminal cut and kept
      * the renderer/picker on their quantized paths indefinitely. */
-    failures += check(ProgressiveQuantization{0, 0, 0}.isExact(),
-        "unsnapped progressive coordinates should be exact");
-    failures += check(ProgressiveQuantization{16, 16, 0}.isExact(),
-        "a planar terminal progressive cut should be exact");
-    failures += check(ProgressiveQuantization{16, 0, 16}.isExact(),
-        "a zero-extent middle axis should not prevent an exact cut");
-    failures += check(!ProgressiveQuantization{16, 15, 0}.isExact(),
-        "a quantized non-empty progressive axis should not be exact");
+    EXPECT_TRUE((ProgressiveQuantization{0, 0, 0}.isExact()));
+    EXPECT_TRUE((ProgressiveQuantization{16, 16, 0}.isExact()));
+    EXPECT_TRUE((ProgressiveQuantization{16, 0, 16}.isExact()));
+    EXPECT_FALSE((ProgressiveQuantization{16, 15, 0}.isExact()));
 
     CadFramePlan plan;
     plan.visibleInstances = {
@@ -194,51 +189,28 @@ main()
     item.baseInstance = 0;
     item.instanceCount = 7; // last two slots are conservatively out of range
 
-    failures += check(
-        cadDrawableInstanceCount(plan, item, CadDrawChannel::Points) == 3,
-        "point resolution must retain authored points at proxy slots");
-    failures += check(
-        cadDrawableInstanceCount(plan, item, CadDrawChannel::Wire) == 2,
-        "wire resolution must omit hidden, proxy, rebound, and absent slots");
-    failures += check(
-        cadDrawableInstanceCount(plan, item, CadDrawChannel::Shaded) == 2,
-        "shaded resolution must match wire replacement semantics");
-    failures += check(
-        cadFirstDrawableInstance(plan, item, CadDrawChannel::Shaded) == 0,
-        "first resolved shaded occurrence is wrong");
-    failures += check(
-        !cadInstanceDrawable(plan, item, 2, CadDrawChannel::Shaded) &&
-        cadInstanceDrawable(plan, item, 2, CadDrawChannel::Points),
-        "subpixel replacement must be channel specific");
-    failures += check(
-        !cadInstanceDrawable(plan, item, 3, CadDrawChannel::Wire),
-        "a rebound sparse slot must not be owned by its old draw range");
-    failures += check(
-        !cadInstanceDrawable(plan, item, 6, CadDrawChannel::Wire),
-        "an out-of-range sparse slot must resolve safely");
+    EXPECT_EQ(cadDrawableInstanceCount(plan, item, CadDrawChannel::Points), 3u);
+    EXPECT_EQ(cadDrawableInstanceCount(plan, item, CadDrawChannel::Wire), 2u);
+    EXPECT_EQ(cadDrawableInstanceCount(plan, item, CadDrawChannel::Shaded), 2u);
+    EXPECT_EQ(cadFirstDrawableInstance(plan, item, CadDrawChannel::Shaded), 0u);
+    EXPECT_FALSE(cadInstanceDrawable(plan, item, 2, CadDrawChannel::Shaded));
+    EXPECT_TRUE(cadInstanceDrawable(plan, item, 2, CadDrawChannel::Points));
+    EXPECT_FALSE(cadInstanceDrawable(plan, item, 3, CadDrawChannel::Wire));
+    EXPECT_FALSE(cadInstanceDrawable(plan, item, 6, CadDrawChannel::Wire));
 
     CadDrawItem empty;
     empty.partIndex = 7;
     empty.baseInstance = std::numeric_limits<uint32_t>::max();
     empty.instanceCount = 2;
-    failures += check(
-        cadDrawableInstanceCount(plan, empty, CadDrawChannel::Wire) == 0,
-        "large sparse range indices must remain bounds safe");
+    EXPECT_EQ(cadDrawableInstanceCount(plan, empty, CadDrawChannel::Wire), 0u);
+    EXPECT_EQ(cadResolvedProgressiveCut(2, 4, 10), 4u);
+    EXPECT_EQ(cadResolvedProgressiveCut(12, 4, 10), 10u);
+    EXPECT_EQ(cadResolvedProgressiveCut(7, 4, 10), 7u);
+    EXPECT_EQ(cadResolvedProgressiveCut(16, 0, 16), 16u);
+    EXPECT_EQ(cadResolvedProgressiveCut(5, 9, 3), 3u);
+}
 
-    failures += check(cadResolvedProgressiveCut(2, 4, 10) == 4,
-        "progressive request must clamp to minimum");
-    failures += check(cadResolvedProgressiveCut(12, 4, 10) == 10,
-        "progressive request must clamp to resident cut");
-    failures += check(cadResolvedProgressiveCut(7, 4, 10) == 7,
-        "progressive request inside the resident interval changed");
-    failures += check(cadResolvedProgressiveCut(16, 0, 16) == 16,
-        "cut 16 must remain an ordinary valid explicit cut");
-    failures += check(cadResolvedProgressiveCut(5, 9, 3) == 3,
-        "quality minimum must never exceed resident data");
-
-    failures += testExhaustiveSparseResolution();
-
-    if (!failures)
-        std::printf("Cad resolved-draw semantic contract passed\n");
-    return failures ? 1 : 0;
+TEST(CadResolvedDraw, MatchesTheExhaustiveSparseResolutionOracle)
+{
+    EXPECT_EQ(testExhaustiveSparseResolution(), 0);
 }

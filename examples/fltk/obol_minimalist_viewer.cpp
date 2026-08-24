@@ -59,11 +59,11 @@
 #include <Inventor/events/SoLocation2Event.h>
 #include <Inventor/events/SoKeyboardEvent.h>
 
-/* ---- Testlib scene registry ---- */
-#include "testlib/test_registry.h"
+/* ---- Application-facing demo catalogue ---- */
+#include "demo_scenes.h"
 
 /* ---- BasicFLTKContextManager ---- */
-#include "utils/fltk_context_manager.h"
+#include "fltk_context_manager.h"
 
 /* ---- FLTK ---- */
 #include <FL/Fl.H>
@@ -92,15 +92,6 @@ static BasicFLTKContextManager* s_basic_mgr = nullptr;
 /* =========================================================================
  * Scene helpers (identical to obol_viewer)
  * ========================================================================= */
-
-static std::vector<const ObolTest::TestEntry*> getVisualTests()
-{
-    std::vector<const ObolTest::TestEntry*> out;
-    for (const auto& e : ObolTest::TestRegistry::instance().allTests())
-        if (e.has_visual && e.create_scene)
-            out.push_back(&e);
-    return out;
-}
 
 static SoKeyboardEvent::Key fltkKeyToSo(int fltk_key)
 {
@@ -294,16 +285,15 @@ public:
     ~MinimalistPanel() { delete fltk_img_; }
 
     void loadScene(const char* name) {
-        const ObolTest::TestEntry* entry =
-            ObolTest::TestRegistry::instance().findTest(name);
-        if (!entry || !entry->create_scene) {
+        const ObolDemo::DemoScene* entry = ObolDemo::findDemoScene(name);
+        if (!entry || !entry->create) {
             status_ = std::string("Unknown scene: ") + name;
             redraw(); return;
         }
         state.reset(new SceneState);
         state->width  = std::max(w(), 1);
         state->height = std::max(h(), 1);
-        state->root   = entry->create_scene(state->width, state->height);
+        state->root   = entry->create(state->width, state->height);
         state->cam    = state->root ? SceneState::findCamera(state->root) : nullptr;
         state->computeCenter();
         state->updateClipping();
@@ -555,11 +545,10 @@ private:
         browser_->textcolor(fl_rgb_color(210,210,210));
         browser_->textsize(12);
 
-        /* Populate browser with category/name entries. */
-        for (const auto* e : getVisualTests()) {
-            std::string label =
-                "@b" + ObolTest::categoryToString(e->category) + "/@." + e->name;
-            browser_->add(label.c_str(), (void*)e);
+        /* Populate browser with curated demo scenes. */
+        for (const auto& e : ObolDemo::demoScenes()) {
+            std::string label = "@b" + e.category + "/@." + e.id;
+            browser_->add(label.c_str(), const_cast<ObolDemo::DemoScene*>(&e));
         }
 
         /* Rendering panel */
@@ -599,9 +588,9 @@ private:
         auto* self = static_cast<MinimalistViewerWindow*>(data);
         int line = self->browser_->value();
         if (!line) return;
-        const ObolTest::TestEntry* e =
-            static_cast<const ObolTest::TestEntry*>(self->browser_->data(line));
-        if (e) self->loadScene(e->name.c_str());
+        const ObolDemo::DemoScene* e =
+            static_cast<const ObolDemo::DemoScene*>(self->browser_->data(line));
+        if (e) self->loadScene(e->id.c_str());
     }
 
     static void reloadCB(Fl_Widget*, void* data) {
@@ -678,10 +667,10 @@ int main(int argc, char** argv)
     win->show(argc, argv);
     win->wait_for_expose();
 
-    /* Auto-load the first scene. */
-    auto tests = getVisualTests();
-    if (!tests.empty())
-        win->loadScene(tests[0]->name.c_str());
+    /* Auto-load the first curated demo. */
+    const auto& scenes = ObolDemo::demoScenes();
+    if (!scenes.empty())
+        win->loadScene(scenes.front().id.c_str());
 
     return Fl::run();
 }

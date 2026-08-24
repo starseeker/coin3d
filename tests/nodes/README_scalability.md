@@ -1,8 +1,9 @@
 # Obol Scene Graph Scalability Analysis
 
-This document summarises the results of the `unit_scalability` benchmark, which
-characterises the cost of building and traversing large Obol scene graphs
-representative of a BRL-CAD CSG tree.
+This document summarises historical scene-graph scalability results.  The
+registry-based `unit_scalability` entry has been retired; current performance
+characterization is provided by the standalone `obol_scalability_benchmark`
+target when `OBOL_BUILD_BENCHMARKS=ON`.
 
 ## Test structures
 
@@ -147,12 +148,10 @@ that Coin's reference-counting destruction is fast even for large graphs.
 ## Running the benchmark
 
 ```sh
-./bin/obol_test run unit_scalability
+cmake -S . -B .build-bench -DOBOL_BUILD_BENCHMARKS=ON
+cmake --build .build-bench --target obol_scalability_benchmark
+./.build-bench/bin/obol_scalability_benchmark > scalability.csv
 ```
 
 Output is a CSV table printed to stdout.  Redirect to a file and process with
 your favourite spreadsheet or Python/pandas for graphing.
-
-```sh
-./bin/obol_test run unit_scalability | grep -v '^#' > scalability.csv
-```

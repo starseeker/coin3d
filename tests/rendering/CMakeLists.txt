@@ -54,10 +54,7 @@ macro(add_testlib_rendering_test name)
 endmacro()
 
 # ---- Test executables --------------------------------------------------------
-add_testlib_rendering_test(render_primitives)
-add_testlib_rendering_test(render_materials)
 add_testlib_rendering_test(render_lighting)
-add_testlib_rendering_test(render_transforms)
 add_testlib_rendering_test(render_cameras)
 add_testlib_rendering_test(render_drawstyle)
 add_testlib_rendering_test(render_texture)
@@ -203,6 +200,7 @@ macro(add_nanort_rendering_test name)
     )
     set_tests_properties(nrt_${name} PROPERTIES
         TIMEOUT ${IMAGE_COMPARISON_TEST_TIMEOUT}
+        LABELS "legacy;visual;nanort"
     )
 endmacro()
 
@@ -268,6 +266,7 @@ if(embree_FOUND OR TARGET embree4)
         )
         set_tests_properties(emb_${name} PROPERTIES
             TIMEOUT ${IMAGE_COMPARISON_TEST_TIMEOUT}
+            LABELS "legacy;visual;embree"
         )
     endmacro()
 
@@ -286,8 +285,6 @@ if(embree_FOUND OR TARGET embree4)
     add_embree_rendering_test(render_embree)
     add_embree_testlib_rendering_test(render_rt_proxy_shapes)
     add_embree_testlib_rendering_test(render_background_gradient)
-    add_embree_testlib_rendering_test(render_primitives)
-    add_embree_testlib_rendering_test(render_materials)
     add_embree_testlib_rendering_test(render_colored_cube)
     add_embree_testlib_rendering_test(render_scene)
 else()
@@ -303,9 +300,6 @@ endif()
 # SoIndexedLineSet feedback geometry are fully supported.
 # SoText2 screen-space text is rendered via buildPixelBuffer() + framebuffer
 # compositing so letter shapes appear correctly (not bounding-box blocks).
-add_nanort_testlib_rendering_test(render_primitives)
-add_nanort_testlib_rendering_test(render_materials)
-add_nanort_testlib_rendering_test(render_transforms)
 add_nanort_testlib_rendering_test(render_colored_cube)
 add_nanort_testlib_rendering_test(render_scene)
 add_nanort_testlib_rendering_test(render_rt_proxy_shapes)
@@ -356,6 +350,7 @@ if(TARGET obol_testlib)
     )
     set_tests_properties(nrt_render_text_demo PROPERTIES
         TIMEOUT ${IMAGE_COMPARISON_TEST_TIMEOUT}
+        LABELS "legacy;visual;nanort"
     )
 endif()
 
@@ -585,8 +580,9 @@ macro(add_rendering_image_test test_name)
                 -DTEST_TIMEOUT=${IMAGE_COMPARISON_TEST_TIMEOUT}
                 -P ${CMAKE_SOURCE_DIR}/tests/run_image_test.cmake
         )
-        set_tests_properties(${test_name}_image_test PROPERTIES
-            TIMEOUT ${IMAGE_COMPARISON_TEST_TIMEOUT}
+    set_tests_properties(${test_name}_image_test PROPERTIES
+        TIMEOUT ${IMAGE_COMPARISON_TEST_TIMEOUT}
+        LABELS "legacy;visual;image"
         )
     endif()
 endmacro()
@@ -648,8 +644,9 @@ macro(add_nanort_image_test name)
                 -DTEST_TIMEOUT=${IMAGE_COMPARISON_TEST_TIMEOUT}
                 -P ${CMAKE_SOURCE_DIR}/tests/run_image_test.cmake
         )
-        set_tests_properties(nrt_${name}_image_test PROPERTIES
-            TIMEOUT ${IMAGE_COMPARISON_TEST_TIMEOUT}
+    set_tests_properties(nrt_${name}_image_test PROPERTIES
+        TIMEOUT ${IMAGE_COMPARISON_TEST_TIMEOUT}
+        LABELS "legacy;visual;image;nanort"
         )
     endif()
 endmacro()
@@ -662,10 +659,7 @@ file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/test_output")
 # (measured at 0.95-7.67 RMSE).  Thresholds are set at roughly 2× the
 # measured maximum difference to allow backend variation while still catching
 # significant rendering regressions.
-add_rendering_image_test(render_primitives RMSE_THRESHOLD 15.0)
-add_rendering_image_test(render_materials  RMSE_THRESHOLD 15.0)
 add_rendering_image_test(render_lighting)                         # < 2.0 RMSE, default ok
-add_rendering_image_test(render_transforms RMSE_THRESHOLD 10.0)
 add_rendering_image_test(render_cameras    RMSE_THRESHOLD 10.0)
 add_rendering_image_test(render_drawstyle  RMSE_THRESHOLD 15.0)
 add_rendering_image_test(render_texture    RMSE_THRESHOLD 15.0)
@@ -827,9 +821,6 @@ add_rendering_image_test(render_arb8_edit_cycle RMSE_THRESHOLD 25.0)
 # These use the same scenes as the OSMesa tests and should produce substantially
 # similar results despite the different rendering algorithms.
 # render_rt_proxy_shapes has no control image and is omitted here.
-add_nanort_image_test(render_primitives  RMSE_THRESHOLD 60.0)
-add_nanort_image_test(render_materials   RMSE_THRESHOLD 60.0)
-add_nanort_image_test(render_transforms  RMSE_THRESHOLD 60.0)
 add_nanort_image_test(render_colored_cube RMSE_THRESHOLD 60.0)
 add_nanort_image_test(render_scene        RMSE_THRESHOLD 60.0)
 
@@ -901,6 +892,7 @@ foreach(_vtest render_sphere_position render_checker_texture
     )
     set_tests_properties(${_vtest} PROPERTIES
         TIMEOUT ${IMAGE_COMPARISON_TEST_TIMEOUT}
+        LABELS "legacy;visual"
     )
 endforeach()
 
@@ -914,6 +906,7 @@ add_test(
 )
 set_tests_properties(render_nanort PROPERTIES
     TIMEOUT ${IMAGE_COMPARISON_TEST_TIMEOUT}
+    LABELS "legacy;visual;nanort"
 )
 
 # Shadow rendering validation test: only safe to run with OSMesa (SoShadowGroup
@@ -929,6 +922,7 @@ if(RENDERING_USE_SWRAST)
     )
     set_tests_properties(render_shadow PROPERTIES
         TIMEOUT ${IMAGE_COMPARISON_TEST_TIMEOUT}
+        LABELS "legacy;visual;osmesa"
     )
 endif()
 

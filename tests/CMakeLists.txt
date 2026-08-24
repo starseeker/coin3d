@@ -4,7 +4,10 @@
 # Directory structure:
 #   tests/
 #   ├── CMakeLists.txt           this file
-#   ├── test_utils.h/.cpp        SimpleTest framework (lightweight, no deps)
+#   ├── framework/               Modern GTest fixtures and test runners
+#   ├── unit/                    Deterministic API-level tests
+#   ├── integration/             Scene graph and action tests
+#   ├── test_utils.h/.cpp        Legacy SimpleTest support (being retired)
 #   ├── run_image_test.cmake     CTest driver for visual regression tests
 #   ├── generate_control_images.sh
 #   ├── control_images/          reference PNG images for visual tests
@@ -14,29 +17,32 @@
 #   │   ├── headless_utils.h     headless rendering helpers
 #   │   ├── scene_graph_utils.h/.cpp  scene-graph test helpers
 #   │   └── stb_image.h          public-domain PNG loader (fallback)
-#   ├── testlib/                 libObolEx: shared scene catalog + test registry
-#   │                            (used by both tests/ and examples/)
+#   ├── testlib/                 compatibility scene factories for legacy GL probes
 #   ├── rendering/               visual regression tests (OSMesa / GLX)
 #   ├── tools/                   unit tests for utility subsystems
 #   └── obol_test.cpp            unified CLI test runner
 #
-# Adding new tests
-# ----------------
-# Non-visual unit tests:
-#   1. Add a REGISTER_TEST entry in tests/testlib/unit_test_wrappers.cpp
-#      (see test_registry.h for the API).
-#
-# Visual regression tests:
-#   1. Write a test executable in tests/rendering/ that renders a scene and
-#      writes an SGI RGB file to argv[1]+".rgb".
-#   2. Build it and run generate_control_images.sh to create the control PNG.
-#   3. Call add_image_test() in this file to register it with CTest.
+# New tests belong in tests/unit/, tests/integration/, or tests/rendering/.
+# See docs/TESTING.md for the modern GTest + CTest workflow.  The SGI image
+# scripts and generated dispatch below are compatibility support only.
 #
 # =============================================================================
 
 # -----------------------------------------------------------------------
-# Common test utilities shared by all test executables
+# Legacy compatibility lane
 # -----------------------------------------------------------------------
+option(OBOL_BUILD_LEGACY_TESTS
+    "Build the opt-in standalone GL rendering compatibility suite"
+    OFF)
+
+option(OBOL_BUILD_BENCHMARKS
+    "Build opt-in performance characterization executables"
+    OFF)
+
+# Common test utilities shared by legacy test executables.  Keeping this
+# target inside the compatibility lane means a normal build never compiles the
+# old test support merely because testing is enabled.
+if(OBOL_BUILD_LEGACY_TESTS)
 add_library(simple_test_utils STATIC
     test_utils.cpp
     utils/scene_graph_utils.cpp
@@ -54,6 +60,7 @@ if(OBOL_USE_SWRAST AND (NOT OBOL_USE_SYSTEM_GL OR WIN32))
     target_include_directories(simple_test_utils PUBLIC
         "${PROJECT_SOURCE_DIR}/external/osmesa/include")
 endif()
+endif()
 
 # -----------------------------------------------------------------------
 # Image comparison thresholds (defined before subdirectories so that
@@ -64,6 +71,21 @@ set(IMAGE_COMPARISON_RMSE_THRESHOLD "5.0" CACHE STRING "RMSE threshold (0-255)")
 set(IMAGE_COMPARISON_TEST_TIMEOUT   "30"  CACHE STRING "Per-test timeout in seconds")
 
 # -----------------------------------------------------------------------
+# Modern test suite
+#
+# New tests belong in tests/unit/, tests/integration/, or tests/rendering/
+# and use the focused support library in tests/framework/.
+# -----------------------------------------------------------------------
+option(OBOL_BUILD_MODERN_TESTS "Build the GTest-based Obol test suite" ON)
+if(OBOL_BUILD_MODERN_TESTS)
+    add_subdirectory(framework)
+endif()
+
+# The generated dispatch and SGI-image suite are retained only as an explicit
+# compatibility lane for backend bring-up and control-image maintenance.
+if(OBOL_BUILD_LEGACY_TESTS)
+
+# -----------------------------------------------------------------------
 # Test library — libObolEx (shared registry, scene factories, unit-test wrappers)
 # Must come before any target that links ObolEx / obol_testlib, but after
 # simple_test_utils is defined above.
@@ -71,20 +93,10 @@ set(IMAGE_COMPARISON_TEST_TIMEOUT   "30"  CACHE STRING "Per-test timeout in seco
 add_subdirectory(testlib)
 
 # -----------------------------------------------------------------------
-# Unified CLI runner (legacy – kept for backward compatibility)
+# Standalone rendering CLI (legacy compatibility)
 # -----------------------------------------------------------------------
 add_executable(obol_test obol_test.cpp)
-# --whole-archive ensures the static-initialiser REGISTER_TEST blocks in
-# unit_test_wrappers.cpp (and test_scenes.cpp) are not discarded by the
-# linker even though obol_test.cpp has no direct symbol references to them.
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    target_link_libraries(obol_test
-        -Wl,--whole-archive ObolEx -Wl,--no-whole-archive
-        ${PROJECT_NAME} ${OBOL_TARGET_LINK_LIBRARIES}
-    )
-else()
-    target_link_libraries(obol_test ObolEx ${PROJECT_NAME} ${OBOL_TARGET_LINK_LIBRARIES})
-endif()
+target_link_libraries(obol_test ObolEx ${PROJECT_NAME} ${OBOL_TARGET_LINK_LIBRARIES})
 target_include_directories(obol_test PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/testlib
@@ -97,35 +109,22 @@ target_include_directories(obol_test PRIVATE
 if(USE_PTHREAD)
     target_link_libraries(obol_test pthread)
 endif()
-add_test(NAME obol_test_all COMMAND obol_test)
 
-# -----------------------------------------------------------------------
-# Non-graphical unit test runner  (obol_unittest)
-# Runs only tests with a run_unit function; no GL context required.
-# -----------------------------------------------------------------------
-add_executable(obol_unittest obol_unittest.cpp)
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    target_link_libraries(obol_unittest PRIVATE
-        -Wl,--whole-archive ObolEx -Wl,--no-whole-archive
-        ${PROJECT_NAME} ${OBOL_TARGET_LINK_LIBRARIES}
-    )
-else()
-    target_link_libraries(obol_unittest PRIVATE ObolEx ${PROJECT_NAME} ${OBOL_TARGET_LINK_LIBRARIES})
+if(OBOL_BUILD_BENCHMARKS)
+    add_executable(obol_scalability_benchmark
+        benchmarks/scalability_main.cpp
+        benchmarks/scalability_benchmark.cpp)
+    target_link_libraries(obol_scalability_benchmark PRIVATE
+        ${PROJECT_NAME} ${OBOL_TARGET_LINK_LIBRARIES})
+    target_include_directories(obol_scalability_benchmark PRIVATE
+        ${PROJECT_SOURCE_DIR}/include
+        ${PROJECT_SOURCE_DIR}/include/Inventor/annex
+        ${PROJECT_BINARY_DIR}/include
+        ${OBOL_TARGET_INCLUDE_DIRECTORIES})
+    if(USE_PTHREAD)
+        target_link_libraries(obol_scalability_benchmark PRIVATE pthread)
+    endif()
 endif()
-target_include_directories(obol_unittest PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/testlib
-    ${CMAKE_CURRENT_SOURCE_DIR}/utils
-    ${PROJECT_SOURCE_DIR}/include
-    ${PROJECT_SOURCE_DIR}/include/Inventor/annex
-    ${PROJECT_BINARY_DIR}/include
-    ${OBOL_TARGET_INCLUDE_DIRECTORIES}
-)
-if(USE_PTHREAD)
-    target_link_libraries(obol_unittest PRIVATE pthread)
-endif()
-add_test(NAME obol_unittest_all COMMAND obol_unittest)
-
 # -----------------------------------------------------------------------
 # Visual regression tests (rendering/ subdirectory)
 # These require standalone executables as each renders a scene to an image
@@ -306,7 +305,6 @@ if(WIN32 AND OBOL_USE_SYSTEM_GL AND OBOL_USE_SWRAST AND
     endforeach()
 endif()
 install(TARGETS obol_render RUNTIME DESTINATION bin)
-install(TARGETS obol_unittest RUNTIME DESTINATION bin)
 
 # -----------------------------------------------------------------------
 # Image comparison utilities
@@ -413,3 +411,5 @@ if(PNG_FOUND)
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
 endif()
+
+endif() # OBOL_BUILD_LEGACY_TESTS

@@ -5,8 +5,8 @@
 #   obol_viewer            — full-featured multi-panel scene viewer
 #   obol_minimalist_viewer — basic FLTK context scene stress-tester
 #
-# Both viewers use the ObolEx (libObolEx) scene catalogue from tests/testlib/
-# with --whole-archive so that all REGISTER_TEST static initialisers run.
+# The viewers use examples/demo_scenes/, never the test registry.  They can be
+# built independently of OBOL_BUILD_TESTS.
 #
 # FLTK detection, submodule management and viewer options all live here.
 # The top-level CMakeLists.txt does a basic find_package(FLTK QUIET) for
@@ -15,8 +15,9 @@
 # Requires:
 #   FLTK_FOUND    — system FLTK (libfltk1.3-dev or equivalent) or the
 #                   external/fltk submodule (populated below when absent)
-#   OBOL_BUILD_TESTS — ObolEx library is built as part of the test suite
 # =============================================================================
+
+set(OBOL_DEMO_SUPPORT_DIR "${PROJECT_SOURCE_DIR}/examples/demo_support")
 
 # -----------------------------------------------------------------------
 # FLTK GL context manager option
@@ -50,9 +51,9 @@ endif()
 # Viewer build options
 # -----------------------------------------------------------------------
 cmake_dependent_option(OBOL_BUILD_VIEWER
-  "Build the FLTK scene viewer (obol_viewer); requires FLTK and OBOL_BUILD_TESTS"
+  "Build the FLTK scene viewer (obol_viewer); requires FLTK"
   "${FLTK_FOUND}"
-  "OBOL_BUILD_TESTS;FLTK_FOUND"
+  "FLTK_FOUND"
   OFF)
 
 option(OBOL_BUILD_MINIMALIST_VIEWER
@@ -71,9 +72,8 @@ if(OBOL_BUILD_VIEWER)
     add_executable(obol_viewer obol_viewer.cpp)
 
     target_include_directories(obol_viewer PRIVATE
-        ${PROJECT_SOURCE_DIR}/tests           # testlib/test_registry.h, utils/...
-        ${PROJECT_SOURCE_DIR}/tests/utils     # fltk_context_manager.h (no prefix)
-        ${PROJECT_SOURCE_DIR}/tests/testlib   # test_registry.h (direct)
+        ${OBOL_DEMO_SUPPORT_DIR}              # application context adapters
+        ${PROJECT_SOURCE_DIR}/tests/utils     # legacy GLX fallback only
         ${PROJECT_SOURCE_DIR}/include
         ${PROJECT_SOURCE_DIR}/include/Inventor/annex
         ${PROJECT_BINARY_DIR}/include
@@ -128,7 +128,7 @@ if(OBOL_BUILD_VIEWER)
     if(OBOL_VIEWER_USE_EMBREE AND (embree_FOUND OR TARGET embree4))
         target_compile_definitions(obol_viewer PRIVATE OBOL_VIEWER_EMBREE)
         target_include_directories(obol_viewer PRIVATE
-            "${PROJECT_SOURCE_DIR}/tests/utils"   # embree_context_manager.h
+            ${OBOL_DEMO_SUPPORT_DIR}              # embree_context_manager.h
         )
         target_link_libraries(obol_viewer PRIVATE ${_obol_embree_link})
         message(STATUS "obol_viewer: Embree panel enabled")
@@ -137,7 +137,7 @@ if(OBOL_BUILD_VIEWER)
         target_compile_definitions(obol_viewer PRIVATE OBOL_VIEWER_NANORT)
         target_include_directories(obol_viewer PRIVATE
             "${PROJECT_SOURCE_DIR}/external/nanort"
-            "${PROJECT_SOURCE_DIR}/tests/utils"   # nanort_context_manager.h
+            ${OBOL_DEMO_SUPPORT_DIR}              # nanort_context_manager.h
         )
         message(STATUS "obol_viewer: NanoRT panel enabled (external/nanort/nanort.h found)")
     endif()
@@ -156,7 +156,7 @@ if(OBOL_BUILD_VIEWER)
     if(OBOL_VIEWER_USE_VULKAN AND Vulkan_FOUND)
         target_compile_definitions(obol_viewer PRIVATE OBOL_VIEWER_VULKAN)
         target_include_directories(obol_viewer PRIVATE
-            "${PROJECT_SOURCE_DIR}/tests/utils"   # vulkan_context_manager.h
+            ${OBOL_DEMO_SUPPORT_DIR}              # vulkan_context_manager.h
         )
         target_link_libraries(obol_viewer PRIVATE Vulkan::Vulkan)
         message(STATUS "obol_viewer: Vulkan panel enabled")
@@ -166,25 +166,12 @@ if(OBOL_BUILD_VIEWER)
         message(STATUS "obol_viewer: Vulkan panel disabled")
     endif()
 
-    # Link against ObolEx (libObolEx) with --whole-archive so REGISTER_TEST
-    # static initialisers are not discarded, plus the main Obol library.
-    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-        target_link_libraries(obol_viewer
-            PRIVATE
-                -Wl,--whole-archive ObolEx -Wl,--no-whole-archive
-                ${PROJECT_NAME}
-                ${OBOL_TARGET_LINK_LIBRARIES}
-                ${FLTK_LIBRARIES}
-        )
-    else()
-        target_link_libraries(obol_viewer
-            PRIVATE
-                ObolEx
-                ${PROJECT_NAME}
-                ${OBOL_TARGET_LINK_LIBRARIES}
-                ${FLTK_LIBRARIES}
-        )
-    endif()
+    target_link_libraries(obol_viewer PRIVATE
+        obol_demo_scenes
+        ${PROJECT_NAME}
+        ${OBOL_TARGET_LINK_LIBRARIES}
+        ${FLTK_LIBRARIES}
+    )
     if(UNIX AND NOT APPLE)
         if(X11_FOUND)
             target_link_libraries(obol_viewer PRIVATE ${X11_X11_LIB})
@@ -206,13 +193,11 @@ endif() # OBOL_BUILD_VIEWER
 # -----------------------------------------------------------------------
 # obol_minimalist_viewer: basic FLTK context scene stress-tester
 # -----------------------------------------------------------------------
-if(OBOL_BUILD_MINIMALIST_VIEWER AND FLTK_FOUND AND OBOL_BUILD_TESTS)
+if(OBOL_BUILD_MINIMALIST_VIEWER AND FLTK_FOUND)
     add_executable(obol_minimalist_viewer obol_minimalist_viewer.cpp)
 
     target_include_directories(obol_minimalist_viewer PRIVATE
-        ${PROJECT_SOURCE_DIR}/tests           # testlib/test_registry.h, utils/...
-        ${PROJECT_SOURCE_DIR}/tests/utils     # fltk_context_manager.h
-        ${PROJECT_SOURCE_DIR}/tests/testlib
+        ${OBOL_DEMO_SUPPORT_DIR}
         ${PROJECT_SOURCE_DIR}/include
         ${PROJECT_SOURCE_DIR}/include/Inventor/annex
         ${PROJECT_BINARY_DIR}/include
@@ -223,23 +208,12 @@ if(OBOL_BUILD_MINIMALIST_VIEWER AND FLTK_FOUND AND OBOL_BUILD_TESTS)
     # BasicFLTKContextManager always uses the FLTK GL path.
     target_compile_definitions(obol_minimalist_viewer PRIVATE OBOL_VIEWER_FLTK_GL)
 
-    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-        target_link_libraries(obol_minimalist_viewer
-            PRIVATE
-                -Wl,--whole-archive ObolEx -Wl,--no-whole-archive
-                ${PROJECT_NAME}
-                ${OBOL_TARGET_LINK_LIBRARIES}
-                ${FLTK_LIBRARIES}
-        )
-    else()
-        target_link_libraries(obol_minimalist_viewer
-            PRIVATE
-                ObolEx
-                ${PROJECT_NAME}
-                ${OBOL_TARGET_LINK_LIBRARIES}
-                ${FLTK_LIBRARIES}
-        )
-    endif()
+    target_link_libraries(obol_minimalist_viewer PRIVATE
+        obol_demo_scenes
+        ${PROJECT_NAME}
+        ${OBOL_TARGET_LINK_LIBRARIES}
+        ${FLTK_LIBRARIES}
+    )
 
     if(UNIX AND NOT APPLE)
         if(X11_FOUND)
@@ -267,7 +241,7 @@ if(OBOL_BUILD_CAD_SIM_VIEWER AND FLTK_FOUND)
     add_executable(cad_simulation_viewer cad_simulation_viewer.cpp)
 
     target_include_directories(cad_simulation_viewer PRIVATE
-        ${PROJECT_SOURCE_DIR}/tests/utils     # fltk_context_manager.h
+        ${OBOL_DEMO_SUPPORT_DIR}
         ${PROJECT_SOURCE_DIR}/include
         ${PROJECT_SOURCE_DIR}/include/Inventor/annex
         ${PROJECT_BINARY_DIR}/include
@@ -326,7 +300,7 @@ if(OBOL_BUILD_CAD_LARGE_VIEWER AND FLTK_FOUND)
     add_executable(cad_large_assembly_viewer cad_large_assembly_viewer.cpp)
 
     target_include_directories(cad_large_assembly_viewer PRIVATE
-        ${PROJECT_SOURCE_DIR}/tests/utils     # fltk_context_manager.h
+        ${OBOL_DEMO_SUPPORT_DIR}
         ${PROJECT_SOURCE_DIR}/include
         ${PROJECT_SOURCE_DIR}/include/Inventor/annex
         ${PROJECT_SOURCE_DIR}/include/Obol

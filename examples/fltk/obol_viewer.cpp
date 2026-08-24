@@ -39,8 +39,8 @@
  * When OBOL_VIEWER_NANORT is defined (external/nanort/nanort.h found), a
  * NanoRT CPU-raytracing panel is also available.  Both can be compiled in
  * simultaneously; each has its own runtime toggle checkbox.
- * Scenes that require GL-only features are flagged nanort_ok / embree_ok =
- * false in the scene catalogue and show "Not supported".  SoText2 nodes are
+ * Demo metadata declares alternative-backend support so unsupported panels
+ * show "Not supported".  SoText2 nodes are
  * rendered as coloured billboard quads by both backends.
  *
  * Runtime panel control
@@ -110,8 +110,8 @@
 #include <Inventor/events/SoLocation2Event.h>
 #include <Inventor/events/SoKeyboardEvent.h>
 
-/* ---- Unified test registry (scene factories + nanort_ok flags) ---- */
-#include "testlib/test_registry.h"
+/* ---- Application-facing demo catalogue (not a test registry) ---- */
+#include "demo_scenes.h"
 
 /* ---- Context manager selection ---- */
 /* OBOL_VIEWER_FLTK_GL: FLTKContextManager (fltk_context_manager.h) provides  */
@@ -181,20 +181,11 @@ static SoVulkanContextManager s_vulkan_mgr;
 /* =========================================================================
  * Scene catalogue
  *
- * All visual scenes are sourced from the unified test registry (testlib).
- * ObolTest::TestRegistry::instance() provides every scene that has
- * e.has_visual = true, including its nanort_ok flag.
+ * The viewer uses a small, curated catalogue of user-facing demonstration
+ * scenes.  Test fixtures deliberately do not appear here: a test scene
+ * exists to prove an invariant, while a demo scene exists to explain a
+ * feature and compare renderer behavior interactively.
  * ======================================================================= */
-
-/* Helper: return only visual tests from the registry in registration order. */
-static std::vector<const ObolTest::TestEntry*> getVisualTests()
-{
-    std::vector<const ObolTest::TestEntry*> out;
-    for (const auto& e : ObolTest::TestRegistry::instance().allTests())
-        if (e.has_visual && e.create_scene)
-            out.push_back(&e);
-    return out;
-}
 
 /* =========================================================================
  * FLTK → SoKeyboardEvent::Key translation
@@ -349,10 +340,8 @@ public:
     }
 
     void loadScene(const char* name) {
-        /* Look up scene in the unified test registry. */
-        const ObolTest::TestEntry* entry =
-            ObolTest::TestRegistry::instance().findTest(name);
-        if (!entry || !entry->create_scene) {
+        const ObolDemo::DemoScene* entry = ObolDemo::findDemoScene(name);
+        if (!entry || !entry->create) {
             status_text = std::string("Unknown scene: ") + name;
             redraw(); return;
         }
@@ -360,7 +349,7 @@ public:
         state.reset(new SceneState);
         state->width  = std::max(w(), 1);
         state->height = std::max(h(), 1);
-        state->root   = entry->create_scene(state->width, state->height);
+        state->root   = entry->create(state->width, state->height);
         state->cam    = state->root ? SceneState::findCamera(state->root) : nullptr;
         state->computeCenter();
         state->updateClipping();
@@ -2178,11 +2167,10 @@ public:
         coin_panel_->loadScene(name);
         current_scene_ = name;
 
-        /* Look up raytracer compatibility flags from the unified test registry. */
-        const ObolTest::TestEntry* entry =
-            ObolTest::TestRegistry::instance().findTest(name);
-        const bool nanort_ok = entry ? entry->nanort_ok : true;
-        const bool embree_ok = entry ? entry->embree_ok : true;
+        const ObolDemo::DemoScene* entry = ObolDemo::findDemoScene(name);
+        if (!entry) return;
+        const bool nanort_ok = entry->backends.nanort;
+        const bool embree_ok = entry->backends.embree;
 
         /* Load scene into each visible optional panel. */
 #ifdef OBOL_VIEWER_OSMESA_PANEL
@@ -2190,7 +2178,7 @@ public:
                 coin_panel_->state && coin_panel_->state->root) {
             osmesa_panel_->setScene(coin_panel_->state->root,
                                     coin_panel_->state->cam,
-                                    entry ? entry->configure_renderer : nullptr);
+                                    entry->configure_renderer);
         }
 #endif
 #ifdef OBOL_VIEWER_NANORT
@@ -2247,10 +2235,8 @@ private:
         browser_->textsize(12);
         browser_->callback(browserCB, this);
         {
-            auto tests = getVisualTests();
-            for (const auto* e : tests) {
-                std::string label =
-                    ObolTest::categoryToString(e->category) + "/" + e->name;
+            for (const auto& e : ObolDemo::demoScenes()) {
+                std::string label = e.category + "/" + e.id;
                 browser_->add(label.c_str());
             }
         }
@@ -2505,9 +2491,8 @@ private:
             /* Load scene into newly-visible panel. */
             if (!self->current_scene_.empty() &&
                     self->coin_panel_->state && self->coin_panel_->state->root) {
-                const ObolTest::TestEntry* entry =
-                    ObolTest::TestRegistry::instance().findTest(
-                        self->current_scene_.c_str());
+                const ObolDemo::DemoScene* entry = ObolDemo::findDemoScene(
+                    self->current_scene_);
                 self->osmesa_panel_->setScene(
                     self->coin_panel_->state->root,
                     self->coin_panel_->state->cam,
@@ -2530,10 +2515,9 @@ private:
             self->relayoutPanels();
             if (!self->current_scene_.empty() &&
                     self->coin_panel_->state && self->coin_panel_->state->root) {
-                const ObolTest::TestEntry* entry =
-                    ObolTest::TestRegistry::instance().findTest(
-                        self->current_scene_.c_str());
-                const bool nanort_ok = entry ? entry->nanort_ok : true;
+                const ObolDemo::DemoScene* entry = ObolDemo::findDemoScene(
+                    self->current_scene_);
+                const bool nanort_ok = entry ? entry->backends.nanort : true;
                 self->nrt_panel_->setScene(
                     self->coin_panel_->state->root,
                     self->coin_panel_->state->cam, nanort_ok);
@@ -2555,10 +2539,9 @@ private:
             self->relayoutPanels();
             if (!self->current_scene_.empty() &&
                     self->coin_panel_->state && self->coin_panel_->state->root) {
-                const ObolTest::TestEntry* entry =
-                    ObolTest::TestRegistry::instance().findTest(
-                        self->current_scene_.c_str());
-                const bool embree_ok = entry ? entry->embree_ok : true;
+                const ObolDemo::DemoScene* entry = ObolDemo::findDemoScene(
+                    self->current_scene_);
+                const bool embree_ok = entry ? entry->backends.embree : true;
                 self->emb_panel_->setScene(
                     self->coin_panel_->state->root,
                     self->coin_panel_->state->cam, embree_ok);
@@ -2829,11 +2812,11 @@ int main(int argc, char** argv)
      * initialises that hidden window without needing any explicit priming here. */
     win->wait_for_expose();
 
-    /* Load the first visual scene automatically */
+    /* Load the first curated demo automatically. */
     {
-        auto tests = getVisualTests();
-        if (!tests.empty())
-            win->loadScene(tests[0]->name.c_str());
+        const auto& scenes = ObolDemo::demoScenes();
+        if (!scenes.empty())
+            win->loadScene(scenes.front().id.c_str());
     }
 
     return Fl::run();
