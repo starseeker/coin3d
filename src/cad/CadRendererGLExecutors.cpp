@@ -39,6 +39,7 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
+#include <new>
 
 #ifndef GL_DRAW_INDIRECT_BUFFER
 #define GL_DRAW_INDIRECT_BUFFER 0x8F3F
@@ -484,6 +485,12 @@ bool CadRendererGL::renderFlatWire(
         const SoGLContext* glue,
         const SbMatrix& viewProj)
 {
+    /* A flattened software-wire batch is optional acceleration, never a
+     * correctness boundary.  A large visible scene can exhaust a constrained
+     * address space while assembling its transient world-space atlas; fall
+     * back to retained per-part rendering instead of unwinding through Coin's
+     * render callback. */
+    try {
     constexpr size_t maxPositionBytes = 256u * 1024u * 1024u;
     constexpr size_t progressiveGrowthReserve = 16u;
     size_t deadlineWork = 256u;
@@ -1008,6 +1015,9 @@ bool CadRendererGL::renderFlatWire(
         glue->glUseProgramObjectARB(0);
     restoreWireRasterState(glue, rasterState, caps_.hasLineStipple);
     return true;
+    } catch (const std::bad_alloc &) {
+        return false;
+    }
 }
 
 static void

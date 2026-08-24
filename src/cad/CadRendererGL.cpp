@@ -68,6 +68,12 @@
 static_assert(sizeof(SbVec3f) == 3 * sizeof(float),
               "SbVec3f must remain tightly packed for CAD GPU uploads");
 
+/* The world-space flat-wire executor is a useful OSMesa acceleration for
+ * moderate occurrence populations.  Above this threshold, its temporary
+ * atlas competes with the retained scene under the software renderer's
+ * address-space budget; use retained ranges directly. */
+static const size_t maximumSoftwareFlatWireInstances = 16384u;
+
 static const float*
 packedVec3fData(const std::vector<SbVec3f>& values)
 {
@@ -1173,6 +1179,43 @@ void CadRendererGL::ensurePartUploaded(
             triIdxCount = std::max(triIdxCount, tri->idxCount);
         }
     }
+
+    /*
+     * A retained software wire buffer may be richer than the cut which
+     * initially built wireSegIdx above.  The draw buffer deliberately keeps
+     * that richer prefix, but upload must never advertise elements past the
+     * temporary CPU index stream.  Apart from being an out-of-bounds read,
+     * the old ordering produced transient invalid line indices after a view
+     * coarsened and then reused a richer resident prefix.
+     */
+    if (derivedWireMesh && caps_.isSoftwareRenderer &&
+            wireSegIdxCount > static_cast<GLsizei>(wireSegIdx.size())) {
+        if (wireSegIdxCount < 0 || wireSegIdxCount % 6 != 0)
+            return;
+        const size_t retainedIndexCount =
+            static_cast<size_t>(wireSegIdxCount) / 2u;
+        if (retainedIndexCount > derivedWireMesh->indices.size() ||
+                retainedIndexCount % 3u != 0u)
+            return;
+        wireSegIdx.resize(static_cast<size_t>(wireSegIdxCount));
+        for (size_t index = 0; index < retainedIndexCount; index += 3u) {
+            const uint32_t first = derivedWireMesh->indices[index];
+            const uint32_t second = derivedWireMesh->indices[index + 1u];
+            const uint32_t third = derivedWireMesh->indices[index + 2u];
+            if (first >= static_cast<size_t>(wirePointCount) ||
+                    second >= static_cast<size_t>(wirePointCount) ||
+                    third >= static_cast<size_t>(wirePointCount))
+                return;
+            const size_t target = index * 2u;
+            wireSegIdx[target] = first;
+            wireSegIdx[target + 1u] = second;
+            wireSegIdx[target + 2u] = second;
+            wireSegIdx[target + 3u] = third;
+            wireSegIdx[target + 4u] = third;
+            wireSegIdx[target + 5u] = first;
+        }
+        pWireSeg = wireSegIdx.data();
+    }
     if (gpuRes_->isUpToDate(
             pid, gen, wirePointCount, wireSegIdxCount,
             triPosCount, triIdxCount))
@@ -2268,7 +2311,9 @@ void CadRendererGL::render(
                     cadDrawableInstanceCount(
                         plan, item, CadDrawChannel::Wire);
             const bool preferFlatWire = caps_.isSoftwareRenderer ?
-                wireInstanceCount >= 128 : plan.wireItems.size() >= 128;
+                (wireInstanceCount >= 128 &&
+                 wireInstanceCount <= maximumSoftwareFlatWireInstances) :
+                plan.wireItems.size() >= 128;
             wireRendered = !adaptiveWireRanges &&
                 flatWireEnabled && preferFlatWire &&
                 canUseFlatWire &&
@@ -2411,7 +2456,9 @@ void CadRendererGL::render(
      * rather than unique-part count.
      */
     const bool preferFlatWire = caps_.isSoftwareRenderer ?
-        wireInstanceCount >= 128 : plan.wireItems.size() >= 128;
+        (wireInstanceCount >= 128 &&
+         wireInstanceCount <= maximumSoftwareFlatWireInstances) :
+        plan.wireItems.size() >= 128;
     const bool flatWireRendered = !adaptiveWireRanges && flatWireEnabled &&
         preferFlatWire && canUseFlatWire &&
         renderFlatWire(plan, assembly, glue, viewProj);
