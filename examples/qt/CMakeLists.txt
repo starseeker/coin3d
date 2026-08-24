@@ -7,9 +7,8 @@
 #
 # Qt6 detection and viewer options all live here.
 #
-# obol_qt_viewer uses the ObolEx (libObolEx) scene catalogue from
-# tests/testlib/ with --whole-archive to preserve all REGISTER_TEST
-# static initialisers.
+# obol_qt_viewer uses examples/demo_scenes/, so it is independent of the
+# test registry and can be built with OBOL_BUILD_TESTS=OFF.
 #
 # Requires Qt6 Widgets + Gui (+ OpenGL/OpenGLWidgets for qt_obol_example).
 # =============================================================================
@@ -18,19 +17,17 @@
 # Qt6 detection and viewer option
 # -----------------------------------------------------------------------
 find_package(Qt6 QUIET COMPONENTS Widgets Gui)
-if(OBOL_BUILD_TESTS AND Qt6_FOUND)
+if(Qt6_FOUND)
     message(STATUS "Qt6 found (${Qt6_VERSION}): obol_qt_viewer can be built")
     set(_obol_qt_viewer_default ON)
 else()
-    if(OBOL_BUILD_TESTS)
-        message(STATUS "Qt6 not found – obol_qt_viewer disabled")
-    endif()
+    message(STATUS "Qt6 not found – obol_qt_viewer disabled")
     set(_obol_qt_viewer_default OFF)
 endif()
 cmake_dependent_option(OBOL_BUILD_QT_VIEWER
-    "Build the Qt scene viewer (obol_qt_viewer); requires Qt6 and OBOL_BUILD_TESTS"
+    "Build the Qt feature-demo viewer; requires Qt6"
     "${_obol_qt_viewer_default}"
-    "OBOL_BUILD_TESTS;Qt6_FOUND"
+    "Qt6_FOUND"
     OFF)
 unset(_obol_qt_viewer_default)
 
@@ -47,9 +44,8 @@ if(OBOL_BUILD_QT_VIEWER)
     )
 
     target_include_directories(obol_qt_viewer PRIVATE
-        ${PROJECT_SOURCE_DIR}/tests           # testlib/test_registry.h
-        ${PROJECT_SOURCE_DIR}/tests/utils     # qt_context_manager.h (no prefix)
-        ${PROJECT_SOURCE_DIR}/tests/testlib   # test_registry.h (direct)
+        ${PROJECT_SOURCE_DIR}/examples/demo_support
+        ${PROJECT_SOURCE_DIR}/examples/demo_scenes
         ${CMAKE_CURRENT_SOURCE_DIR}           # qt_obol_widget.h (for qt_obol_example)
         ${PROJECT_SOURCE_DIR}/include
         ${PROJECT_SOURCE_DIR}/include/Inventor/annex
@@ -57,27 +53,14 @@ if(OBOL_BUILD_QT_VIEWER)
         ${OBOL_TARGET_INCLUDE_DIRECTORIES}
     )
 
-    # Link against ObolEx (libObolEx) with --whole-archive to preserve static
-    # initialisers, the Obol library, and Qt6 Widgets + Gui.
-    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-        target_link_libraries(obol_qt_viewer
-            PRIVATE
-                -Wl,--whole-archive ObolEx -Wl,--no-whole-archive
-                ${PROJECT_NAME}
-                ${OBOL_TARGET_LINK_LIBRARIES}
-                Qt6::Widgets
-                Qt6::Gui
-        )
-    else()
-        target_link_libraries(obol_qt_viewer
-            PRIVATE
-                ObolEx
-                ${PROJECT_NAME}
-                ${OBOL_TARGET_LINK_LIBRARIES}
-                Qt6::Widgets
-                Qt6::Gui
-        )
-    endif()
+    target_link_libraries(obol_qt_viewer
+        PRIVATE
+            obol_demo_scenes
+            ${PROJECT_NAME}
+            ${OBOL_TARGET_LINK_LIBRARIES}
+            Qt6::Widgets
+            Qt6::Gui
+    )
 
     if(UNIX AND NOT APPLE)
         if(X11_FOUND)

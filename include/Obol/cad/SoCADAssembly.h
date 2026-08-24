@@ -1001,6 +1001,14 @@ public:
     size_t lastSubpixelProxyCount() const;
 
     /**
+     * Number of physical point vertices submitted for the last CAD frame.
+     * Software renderers may coalesce logical subpixel occurrences into a
+     * bounded screen-bin stream; use lastSubpixelProxyCount() for semantic
+     * occurrence coverage.
+     */
+    size_t lastSubpixelProxyDrawPointCount() const;
+
+    /**
      * Number of in-frustum unresolved LoD-leaf fallback occurrences which
      * remained visible as wire boxes after camera-local subpixel collapse
      * last frame.  Fully clipped occurrences are not convergence obligations;

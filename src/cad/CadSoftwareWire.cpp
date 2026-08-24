@@ -24,6 +24,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstring>
+#include <limits>
 
 namespace {
 
@@ -330,7 +331,9 @@ cadSoftwareWorkAdd(uint64_t left, uint64_t right)
 CadSoftwareWireRenderResult
 cadRenderSoftwareWire(const Obol::internal::CadFramePlan& plan,
                       const SoCADAssembly& assembly, SoState *state,
-                      const SbMatrix& viewProj)
+                      const SbMatrix& viewProj,
+                      const std::vector<Obol::internal::CadSubpixelProxyPoint>&
+                          subpixelProxyPoints)
 {
     CadSoftwareWireRenderResult result;
     if (plan.wireItems.empty() || !plan.shadedItems.empty() ||
@@ -521,7 +524,7 @@ cadRenderSoftwareWire(const Obol::internal::CadFramePlan& plan,
         }
     }
     uint64_t submittedProxyPoints = 0;
-    for (const auto& point : plan.subpixelProxyPoints) {
+    for (const auto& point : subpixelProxyPoints) {
         cadSoftwarePoint(pixels, width, height, origin, size, viewProj, point);
         if (!(point.flags & Obol::internal::CadInstanceHidden))
             submittedProxyPoints = cadSoftwareWorkAdd(
@@ -531,6 +534,9 @@ cadRenderSoftwareWire(const Obol::internal::CadFramePlan& plan,
      * their vertex work, but do not manufacture per-occurrence draw cost. */
     result.work.positionCount = cadSoftwareWorkAdd(
         result.work.positionCount, submittedProxyPoints);
+    result.subpixelProxyDrawPointCount = submittedProxyPoints >
+        static_cast<uint64_t>((std::numeric_limits<size_t>::max)()) ?
+        (std::numeric_limits<size_t>::max)() :
+        static_cast<size_t>(submittedProxyPoints);
     return result;
 }
-

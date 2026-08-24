@@ -80,10 +80,12 @@
 
 #include <Inventor/SbMatrix.h>
 #include <Inventor/SbVec3f.h>
+#include <Inventor/SbVec4f.h>
 #include <Inventor/SbViewVolume.h>
 #include <Inventor/system/gl.h>
 
 #include <memory>
+#include <array>
 #include <cstdint>
 #include <limits>
 #include <unordered_map>
@@ -137,7 +139,18 @@ public:
      * not-yet-visited assembly and to calibrate view-LoD work.
      */
     void completeDirectSoftwareWireFrame(
-        const Obol::CadRenderedWork& work, uint32_t contextId);
+        const Obol::CadRenderedWork& work, uint32_t contextId,
+        size_t subpixelProxyDrawPointCount);
+
+    /**
+     * Return the physical subpixel point stream suitable for the active
+     * renderer.  The direct software-wire executor uses the same cached
+     * presentation stream as GL so FAST mode cannot bypass the scale bound.
+     */
+    const std::vector<CadSubpixelProxyPoint>&
+    subpixelProxyPresentationPoints(const CadFramePlan& plan,
+                                    const SoGLContext* glue,
+                                    const SbMatrix& viewProj);
 
     /**
      * Release all GPU resources held by this renderer for @p glue.
@@ -211,6 +224,18 @@ public:
             if (!(point.flags & CadInstanceHidden))
                 ++visible;
         return visible;
+    }
+
+    /**
+     * Number of point vertices submitted for the last complete CAD frame.
+     *
+     * This is intentionally a presentation metric, not an occurrence count:
+     * software renderers may coalesce many subpixel occurrences into one
+     * camera-local screen-bin representative.  SoCADAssembly keeps its
+     * public proxy-occurrence accounting exact for selection and LoD.
+     */
+    size_t lastSubpixelProxyDrawPointCount() const {
+        return lastSubpixelProxyDrawPointCount_;
     }
 
     /// Maximum simultaneous lights the shaded GLSL passes evaluate.
@@ -319,6 +344,22 @@ private:
     uint64_t pressureProxyAppendBaseRevision_ = 0;
     size_t pressureProxyAppendBegin_ = 0;
     bool pressureProxyAppendOnly_ = false;
+    /*
+     * The logical plan stream remains one entry per occurrence.  Fixed
+     * function software GL is dominated by that stream at high occurrence
+     * counts, so cache a bounded camera-local presentation stream here.
+     * Keeping it renderer-owned makes the optimization incapable of changing
+     * classifier, picker, selection, or convergence semantics.
+     */
+    std::vector<CadSubpixelProxyPoint> softwareBinnedSubpixelProxyPoints_;
+    uint64_t softwareBinnedSubpixelSourceRevision_ = 0;
+    uint64_t softwareBinnedSubpixelAttributeRevision_ = 0;
+    uint64_t softwareBinnedSubpixelPresentationRevision_ = 0;
+    SbMatrix softwareBinnedSubpixelViewProj_;
+    std::array<GLint, 4> softwareBinnedSubpixelViewport_ = {0, 0, 0, 0};
+    uint32_t softwareBinnedSubpixelContextId_ = 0;
+    bool softwareBinnedSubpixelValid_ = false;
+    size_t lastSubpixelProxyDrawPointCount_ = 0;
     /// Scene lights for the shaded GLSL passes (set per-frame by SoCADAssembly).
     /// Empty means "use the historical fixed directional light" only until a
     /// client has supplied its first explicit (possibly empty) snapshot.
@@ -373,6 +414,11 @@ private:
     void renderSubpixelProxyPoints(const CadFramePlan& plan,
                                    const SoGLContext* glue,
                                    const SbMatrix& viewProj);
+
+    const std::vector<CadSubpixelProxyPoint>&
+    presentationSubpixelProxyPoints(const CadFramePlan& plan,
+                                    const SoGLContext* glue,
+                                    const SbMatrix& viewProj);
 
     static bool wireRepHasUncollapsedInstances(const CadFramePlan& plan,
                                                PartId part);

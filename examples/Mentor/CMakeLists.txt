@@ -372,7 +372,7 @@ macro(add_image_test example_name)
     endforeach()
 
     # Check if control image exists
-    if(EXISTS ${CONTROL_IMAGE})
+    if(OBOL_BUILD_EXAMPLE_TESTS AND EXISTS ${CONTROL_IMAGE})
         add_test(
             NAME ${example_name}_test
             COMMAND ${CMAKE_COMMAND}
@@ -388,6 +388,7 @@ macro(add_image_test example_name)
         )
         set_tests_properties(${example_name}_test PROPERTIES
             TIMEOUT ${IMAGE_COMPARISON_TEST_TIMEOUT}
+            LABELS "example;mentor;image"
         )
     endif()
 endmacro()

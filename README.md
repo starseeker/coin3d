@@ -40,6 +40,7 @@ so a small, ancient coin seemed like a good fit.
 * ![docs/API_DIFFERENCES.md](docs/API_DIFFERENCES.md) — comprehensive API migration guide (Obol vs. Coin)
 * ![docs/BACKEND_SURVEY.md](docs/BACKEND_SURVEY.md) — Documents which parts of the API can work without OpenGL
 * ![docs/CONTEXT_MANAGEMENT_API.md](docs/CONTEXT_MANAGEMENT_API.md) — `SoDB::ContextManager` API reference with worked examples
+* ![docs/TESTING.md](docs/TESTING.md) — test taxonomy, local commands, and migration guidance
 
 ## License and trademarks
 
@@ -53,4 +54,3 @@ include any code incompatible with the BSD license in core Obol - see ![COPYING]
 for details.  The Mentor example files are LGPL.
 
 OpenGL and Open Inventor are trademarks of SGI Inc.
-

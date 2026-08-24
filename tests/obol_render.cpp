@@ -92,7 +92,7 @@ static void printHelp(const char* argv0)
         "Exit codes: 0 = all passed, non-zero = failures or error.\n"
         "\n"
         "Note: non-graphical unit tests are not run by this executable.\n"
-        "      Use obol_unittest for unit tests.\n",
+        "      Use the modern GTest/CTest lanes for unit tests.\n",
         argv0);
 }
 
@@ -166,7 +166,7 @@ static int cmdRun(const std::string& name, const std::string& outpath,
     }
     if (!entry->has_visual) {
         fprintf(stderr, "obol_render: test '%s' has no visual output "
-                "(use obol_unittest instead)\n", name.c_str());
+                "(use the modern GTest/CTest lanes instead)\n", name.c_str());
         return 1;
     }
 

@@ -62,7 +62,7 @@
  * 16. field_connect_disconnect_concurrent — Concurrent field connect/disconnect + notify
  */
 
-#include "../test_utils.h"
+#include <gtest/gtest.h>
 
 #include <Inventor/SoDB.h>
 #include <Inventor/SoInteraction.h>
@@ -111,17 +111,6 @@ static void init_test_params() {
   if (const char * v = std::getenv("OBOL_TEST_ITERS"))
     kItersPerThread = std::max(1, std::atoi(v));
 }
-
-// ---------------------------------------------------------------------------
-// Null context manager (no GL needed for these tests)
-// ---------------------------------------------------------------------------
-class NullCtxMgr : public SoDB::ContextManager {
-public:
-  void *createOffscreenContext(unsigned int, unsigned int) override { return nullptr; }
-  SbBool makeContextCurrent(void *) override { return FALSE; }
-  void restorePreviousContext(void *) override {}
-  void destroyContext(void *) override {}
-};
 
 // ============================================================================
 // 1 & 2 — SbName concurrent interning
@@ -900,15 +889,11 @@ static bool test_field_connect_disconnect_concurrent()
   return !failure;
 }
 
-// ============================================================================
-// main
-// ============================================================================
-int main(int /*argc*/, char ** /*argv*/) {
-  static NullCtxMgr ctxMgr;
-  SoDB::init(&ctxMgr);
-  SoInteraction::init();
-  init_test_params();
-
+static void prepare_thread_safety_suite()
+{
+  static std::once_flag once;
+  std::call_once(once, [] {
+    init_test_params();
   // Pre-warm every node type that appears in the concurrent tests.
   // SoFieldData::addEnumValue and other per-class lazy initialisation
   // is not thread safe (Phase 2+ fix); we prime it here so that all
@@ -921,46 +906,32 @@ int main(int /*argc*/, char ** /*argv*/) {
     warm(new SoSeparator);
     warm(new SoTranslation);  // Phase 3 tests use SoTranslation
   }
+  });
+}
 
-  SimpleTest::TestRunner runner;
-
-  struct TC { const char * name; bool (*fn)(); };
-  TC tests[] = {
-    { "sbname_concurrent_intern",       test_sbname_concurrent_intern      },
-    { "sbname_unique_addresses",        test_sbname_unique_addresses       },
-    { "sonode_unique_ids",              test_sonode_unique_ids             },
-    { "sonode_no_zero_id",              test_sonode_no_zero_id             },
-    { "sobase_refcount_races",          test_sobase_refcount_races         },
-    { "sobase_refcount_balance",        test_sobase_refcount_balance       },
-    { "sotype_concurrent_lookup",       test_sotype_concurrent_lookup      },
-    { "sotype_lookup_validity",         test_sotype_lookup_validity        },
-    { "notify_counter_balance",         test_notify_counter_balance        },
-    { "notify_counter_never_negative",  test_notify_counter_never_negative },
-    { "mixed_workload",                 test_mixed_workload                },
-    // Phase 2 tests
-    { "sobase_setname_getname",                   test_sobase_setname_getname                   },
-    { "glcache_unique_context_ids",               test_glcache_unique_context_ids               },
-    { "enabled_elements_counter",                 test_enabled_elements_counter                 },
-    // Phase 3 tests
-    { "auditorlist_concurrent_notification",      test_auditorlist_concurrent_notification      },
-    { "field_connect_disconnect_concurrent",      test_field_connect_disconnect_concurrent      },
-  };
-
-  for (auto & tc : tests) {
-    runner.startTest(tc.name);
-    bool passed = false;
-    try {
-      passed = tc.fn();
-    } catch (const std::exception & e) {
-      runner.endTest(false, e.what());
-      continue;
-    } catch (...) {
-      runner.endTest(false, "Unknown exception");
-      continue;
-    }
-    runner.endTest(passed, passed ? "" : "invariant violated");
+#define OBOL_THREAD_STRESS_TEST(name, function) \
+  TEST(ThreadSafetyStress, name) { \
+    prepare_thread_safety_suite(); \
+    EXPECT_TRUE(function()); \
   }
 
-  SoDB::finish();
-  return runner.getSummary();
-}
+OBOL_THREAD_STRESS_TEST(SbNameConcurrentInterning, test_sbname_concurrent_intern)
+OBOL_THREAD_STRESS_TEST(SbNameCanonicalAddresses, test_sbname_unique_addresses)
+OBOL_THREAD_STRESS_TEST(SoNodeUniqueIds, test_sonode_unique_ids)
+OBOL_THREAD_STRESS_TEST(SoNodeNeverUsesZeroId, test_sonode_no_zero_id)
+OBOL_THREAD_STRESS_TEST(SoBaseReferenceCountRaces, test_sobase_refcount_races)
+OBOL_THREAD_STRESS_TEST(SoBaseReferenceCountNeverNegative, test_sobase_refcount_balance)
+OBOL_THREAD_STRESS_TEST(SoTypeConcurrentLookup, test_sotype_concurrent_lookup)
+OBOL_THREAD_STRESS_TEST(SoTypeLookupValidity, test_sotype_lookup_validity)
+OBOL_THREAD_STRESS_TEST(NotificationCounterBalances, test_notify_counter_balance)
+OBOL_THREAD_STRESS_TEST(NotificationCounterNeverNegative, test_notify_counter_never_negative)
+OBOL_THREAD_STRESS_TEST(MixedWorkload, test_mixed_workload)
+OBOL_THREAD_STRESS_TEST(SoBaseSetNameGetName, test_sobase_setname_getname)
+OBOL_THREAD_STRESS_TEST(GlCacheContextIdsAreUnique, test_glcache_unique_context_ids)
+OBOL_THREAD_STRESS_TEST(EnabledElementsCounter, test_enabled_elements_counter)
+OBOL_THREAD_STRESS_TEST(AuditorListConcurrentNotification,
+                        test_auditorlist_concurrent_notification)
+OBOL_THREAD_STRESS_TEST(FieldConnectDisconnect,
+                        test_field_connect_disconnect_concurrent)
+
+#undef OBOL_THREAD_STRESS_TEST

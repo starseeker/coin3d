@@ -122,10 +122,7 @@ gen_control() {
     done
 }
 
-gen_control render_primitives         render_primitives
-gen_control render_materials          render_materials
 gen_control render_lighting           render_lighting
-gen_control render_transforms         render_transforms
 gen_control render_cameras            render_cameras
 gen_control render_drawstyle          render_drawstyle
 gen_control render_texture            render_texture

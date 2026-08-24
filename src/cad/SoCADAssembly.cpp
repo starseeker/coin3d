@@ -4780,14 +4780,20 @@ SoCADAssembly::GLRender(SoGLRenderAction* action)
     // direct CPU rasterization is workload-dependent and can be slower.
     CadSoftwareWireRenderResult softwareWireResult;
     if (dm == WIREFRAME &&
-            renderState.softwareWireMode == Obol::CadSoftwareWireMode::FAST)
+            renderState.softwareWireMode == Obol::CadSoftwareWireMode::FAST) {
+        const std::vector<Obol::internal::CadSubpixelProxyPoint>&
+            presentationPoints =
+                impl_->renderer_->subpixelProxyPresentationPoints(
+                    impl_->cachedPlan_, glue, viewProj);
         softwareWireResult = cadRenderSoftwareWire(
-            impl_->cachedPlan_, *this, state, viewProj);
+            impl_->cachedPlan_, *this, state, viewProj, presentationPoints);
+    }
     const bool softwareWire = softwareWireResult.rendered;
     impl_->lastDirectSoftwareWire_ = softwareWire;
     if (softwareWire) {
         impl_->renderer_->completeDirectSoftwareWireFrame(
-            softwareWireResult.work, glue->contextid);
+            softwareWireResult.work, glue->contextid,
+            softwareWireResult.subpixelProxyDrawPointCount);
     } else {
         // Feed the shaded GLSL pass ALL enabled scene lights (the camera-tracked
         // headlight plus any in-scene database lights), so the hardware view
@@ -5230,6 +5236,13 @@ SoCADAssembly::lastSubpixelProxyCount() const
             ++visible;
     return visible +
         (impl_->renderer_ ? impl_->renderer_->lastPressureProxyCount() : 0);
+}
+
+size_t
+SoCADAssembly::lastSubpixelProxyDrawPointCount() const
+{
+    return impl_->renderer_ ?
+        impl_->renderer_->lastSubpixelProxyDrawPointCount() : 0u;
 }
 
 size_t

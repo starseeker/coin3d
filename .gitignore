@@ -1,4 +1,5 @@
 # Build directories (CMake and autotools)
+*.build*/
 *_build/
 *_install/
 build*/

@@ -41,7 +41,7 @@
  * Migrated from testsuite/threadsTest.cpp.
  */
 
-#include "../test_utils.h"
+#include <gtest/gtest.h>
 
 #include <Inventor/SoDB.h>
 #include <Inventor/SoInteraction.h>
@@ -365,52 +365,47 @@ static bool test_auto_lock() {
     return true;
 }
 
-// ---------------------------------------------------------------------------
-// main
-// ---------------------------------------------------------------------------
-int main(int /*argc*/, char ** /*argv*/) {
-    // Initialise Coin with a null context manager (no rendering needed)
-    class NullCtxMgr : public SoDB::ContextManager {
-    public:
-        void *createOffscreenContext(unsigned int, unsigned int) override { return nullptr; }
-        SbBool makeContextCurrent(void *) override { return FALSE; }
-        void restorePreviousContext(void *) override {}
-        void destroyContext(void *) override {}
-    };
-    static NullCtxMgr ctxMgr;
-    SoDB::init(&ctxMgr);
-    SoInteraction::init();
+TEST(ThreadPrimitives, BasicMutexSerializesMutations)
+{
+    EXPECT_TRUE(test_basic_mutex());
+}
 
-    SimpleTest::TestRunner runner;
+TEST(ThreadPrimitives, RecursiveMutexAllowsNestedLocks)
+{
+    EXPECT_TRUE(test_recursive_mutex());
+}
 
-    struct TestCase { const char *name; bool (*func)(); };
-    TestCase tests[] = {
-        { "basicMutex",            test_basic_mutex           },
-        { "recursiveMutex",        test_recursive_mutex       },
-        { "conditionVariable",     test_condition_variable    },
-        { "readerWriterMutex",     test_rw_mutex              },
-        { "barrierSynchronization",test_barrier               },
-        { "threadSafeFifo",        test_thread_safe_fifo      },
-        { "threadLocalStorage",    test_thread_local_storage  },
-        { "typedThreadLocalStorage", test_typed_thread_local_storage },
-        { "automaticLocking",      test_auto_lock             },
-    };
+TEST(ThreadPrimitives, ConditionVariableWakesTheConsumer)
+{
+    EXPECT_TRUE(test_condition_variable());
+}
 
-    for (auto &tc : tests) {
-        runner.startTest(tc.name);
-        bool passed = false;
-        try {
-            passed = tc.func();
-        } catch (const std::exception &e) {
-            runner.endTest(false, e.what());
-            continue;
-        } catch (...) {
-            runner.endTest(false, "Unknown exception");
-            continue;
-        }
-        runner.endTest(passed, passed ? "" : "unexpected result");
-    }
+TEST(ThreadPrimitives, ReaderWriterMutexProtectsConcurrentAccess)
+{
+    EXPECT_TRUE(test_rw_mutex());
+}
 
-    SoDB::finish();
-    return runner.getSummary();
+TEST(ThreadPrimitives, BarrierReleasesAllParticipants)
+{
+    EXPECT_TRUE(test_barrier());
+}
+
+TEST(ThreadPrimitives, FifoSupportsConcurrentProducersAndConsumer)
+{
+    EXPECT_TRUE(test_thread_safe_fifo());
+}
+
+TEST(ThreadPrimitives, StorageIsThreadLocal)
+{
+    EXPECT_TRUE(test_thread_local_storage());
+}
+
+TEST(ThreadPrimitives, TypedStorageIsThreadLocal)
+{
+    EXPECT_TRUE(test_typed_thread_local_storage());
+}
+
+TEST(ThreadPrimitives, AutoLockReleasesOnScopeExit)
+{
+    EXPECT_TRUE(test_auto_lock());
 }

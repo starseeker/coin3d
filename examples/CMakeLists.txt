@@ -21,9 +21,19 @@
 #   ├── modern_api_example.h
 #   └── osmesa_example.h
 #
-# Both FLTK and Qt viewers link against ObolEx (libObolEx) which provides
-# the shared scene catalogue and test registry (built in tests/testlib/).
+# GUI viewers use the dedicated demo catalogue in demo_scenes/.  It is kept
+# separate from the test suite so that examples remain useful when tests are
+# disabled and so test fixtures cannot become the viewer's implementation.
 # =============================================================================
+
+add_subdirectory(demo_scenes)
+
+# Mentor programs are retained as educational examples.  Their image
+# comparisons are intentionally opt-in so default CTest remains a fast,
+# deterministic library test suite.
+option(OBOL_BUILD_EXAMPLE_TESTS
+    "Register retained examples as CTest image tests"
+    OFF)
 
 # -----------------------------------------------------------------------
 # FLTK viewers (obol_viewer, obol_minimalist_viewer)

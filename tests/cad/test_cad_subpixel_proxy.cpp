@@ -191,6 +191,84 @@ nonBlackPixels(const SoOffscreenRenderer &renderer)
     return count;
 }
 
+bool
+softwareSubpixelProxyAggregationContract()
+{
+    /*
+     * This intentionally uses many independently retained occurrences of
+     * one tiny structural part.  Logical coverage must remain one proxy per
+     * occurrence, while the OSMesa executor is allowed only a bounded
+     * camera-local point stream.  Keep this outside the broader rendering
+     * scenario below so a failure cannot be hidden by its mesh work.
+     */
+    static constexpr uint32_t occurrenceCount = 8192u;
+    static constexpr uint32_t gridWidth = 128u;
+    static constexpr float gridSpacing = 4.0f;
+    SoSeparator *root = new SoSeparator;
+    root->ref();
+    SoOrthographicCamera *camera = new SoOrthographicCamera;
+    camera->position.setValue(0.0f, 0.0f, 5.0f);
+    camera->nearDistance.setValue(0.1f);
+    camera->farDistance.setValue(100.0f);
+    camera->height.setValue(1000.0f);
+    root->addChild(camera);
+
+    SoCADAssembly *assembly = new SoCADAssembly;
+    assembly->drawMode.setValue(SoCADAssembly::WIREFRAME);
+    root->addChild(assembly);
+
+    Obol::PartGeometry geometry;
+    geometry.wire = unitBox();
+    geometry.subpixelProxyEligible = true;
+    geometry.structuralProxy = true;
+    const Obol::PartId part =
+        Obol::CadIdBuilder::hash128("software-subpixel-proxy-part");
+    assembly->upsertPart(part, geometry);
+
+    std::vector<Obol::InstanceUpdate> updates;
+    updates.reserve(occurrenceCount);
+    for (uint32_t index = 0; index < occurrenceCount; ++index) {
+        Obol::InstanceRecord instance;
+        instance.part = part;
+        instance.parent = Obol::CadIdBuilder::Root();
+        instance.childName = "software-subpixel-proxy";
+        instance.occurrenceIndex = index;
+        instance.lodStructuralProxy = true;
+        instance.localToRoot.setTranslate(SbVec3f(
+            (static_cast<float>(index % gridWidth) -
+                static_cast<float>(gridWidth) * 0.5f) * gridSpacing,
+            (static_cast<float>(index / gridWidth) -
+                static_cast<float>(occurrenceCount / gridWidth) * 0.5f) *
+                gridSpacing,
+            0.0f));
+        Obol::InstanceUpdate update;
+        update.instance = Obol::CadIdBuilder::extendNameOccBool(
+            instance.parent, instance.childName, instance.occurrenceIndex,
+            instance.boolOp);
+        update.record = instance;
+        updates.push_back(std::move(update));
+    }
+    assembly->upsertInstances(updates);
+
+    const SbViewportRegion viewport(256, 256);
+    SoOffscreenRenderer renderer(viewport);
+    renderer.setComponents(SoOffscreenRenderer::RGB);
+    renderer.setBackgroundColor(SbColor(0.0f, 0.0f, 0.0f));
+    const bool rendered = render(renderer, root);
+    const size_t logicalCount = assembly->lastSubpixelProxyCount();
+    const size_t drawCount = assembly->lastSubpixelProxyDrawPointCount();
+    root->unref();
+    if (!rendered || logicalCount != occurrenceCount || !drawCount ||
+            drawCount > logicalCount) {
+        std::fprintf(stderr,
+            "software subpixel aggregation did not preserve logical "
+            "coverage or bound point submission (%zu logical, %zu draw)\n",
+            logicalCount, drawCount);
+        return false;
+    }
+    return true;
+}
+
 struct HalfImageStats {
     double leftMean = 0.0;
     double rightMean = 0.0;
@@ -1513,6 +1591,11 @@ main()
     if (!degenerateStructuralProxyContract()) {
         std::fprintf(stderr,
             "degenerate structural-proxy contract failed\n");
+        return 1;
+    }
+    if (!softwareSubpixelProxyAggregationContract()) {
+        std::fprintf(stderr,
+            "software subpixel-proxy aggregation contract failed\n");
         return 1;
     }
 
