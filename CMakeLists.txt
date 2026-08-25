@@ -134,6 +134,8 @@ endif()
 # Core build options
 option(BUILD_SHARED_LIBS "Build shared library when ON, static when OFF" ON)
 option(OBOL_BUILD_TESTS "Build unit tests" ON)
+option(OBOL_BUILD_BENCHMARKS "Build standalone performance benchmarks" OFF)
+option(OBOL_BUILD_TEST_TOOLS "Build standalone image and test utilities" OFF)
 option(OBOL_BUILD_EXAMPLES "Build example programs and viewers" ON)
 option(OBOL_FETCH_SUBMODULES
   "Initialize missing registered git submodules during configure"
@@ -195,7 +197,9 @@ endif()
 # Internal alias used throughout src/ for Windows shared/static detection
 set(OBOL_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
 
-# Documentation: optional Doxygen API reference
+# Documentation: optional Doxygen API reference.  OBOL_BUILD_DOCS is the
+# single documentation switch; the old OBOL_BUILD_DOCUMENTATION* family was
+# never wired into the current build and has been retired.
 option(OBOL_BUILD_DOCS "Build Doxygen API documentation" OFF)
 if(OBOL_BUILD_DOCS)
   find_package(Doxygen QUIET)
@@ -204,7 +208,13 @@ if(OBOL_BUILD_DOCS)
       "${PROJECT_SOURCE_DIR}/docs/Doxyfile.in"
       "${CMAKE_BINARY_DIR}/docs/Doxyfile"
       @ONLY)
+    install(DIRECTORY "${CMAKE_BINARY_DIR}/docs/doxygen/html"
+      DESTINATION "${CMAKE_INSTALL_DOCDIR}/html"
+      COMPONENT documentation
+      OPTIONAL)
     add_custom_target(obol_docs
+      COMMAND ${CMAKE_COMMAND} -E make_directory
+              "${CMAKE_BINARY_DIR}/docs/doxygen"
       COMMAND ${DOXYGEN_EXECUTABLE} "${CMAKE_BINARY_DIR}/docs/Doxyfile"
       WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
       COMMENT "Generating Obol API documentation with Doxygen"
@@ -222,12 +232,29 @@ endif()
 #   SYSTEM_GL only                        → system OpenGL only, no software fallback
 #   Both OFF                              → no OpenGL at all (custom context drivers only)
 #
-# Probe availability to set sensible defaults.
+# Probe availability to set sensible defaults.  Initialize a registered OSMesa
+# submodule before checking its presence, otherwise OBOL_FETCH_SUBMODULES would
+# not affect the default value on a clean checkout.
 find_package(OpenGL QUIET)
 if(OpenGL_FOUND)
   set(_obol_sysgl_default ON)
 else()
   set(_obol_sysgl_default OFF)
+endif()
+option(OBOL_BUILD_BUNDLED_OSMESA
+    "Build Obol's OSMesa submodule instead of using a compatible installed OSMesa"
+    ON)
+# If the caller explicitly disabled software rasterization, do not initialize
+# a missing submodule merely because the bundle option defaults to ON.  When
+# the backend option is unspecified, populate the submodule before deriving
+# its default so a clean checkout with fetching enabled behaves correctly.
+set(_obol_swrast_explicitly_set OFF)
+if(DEFINED OBOL_USE_SWRAST)
+  set(_obol_swrast_explicitly_set ON)
+endif()
+if(OBOL_BUILD_BUNDLED_OSMESA AND
+   (NOT _obol_swrast_explicitly_set OR OBOL_USE_SWRAST))
+  obol_init_submodule("external/osmesa")
 endif()
 if(EXISTS "${PROJECT_SOURCE_DIR}/external/osmesa/CMakeLists.txt")
   set(_obol_swrast_default ON)
@@ -240,17 +267,9 @@ option(OBOL_USE_SYSTEM_GL
 option(OBOL_USE_SWRAST
     "Enable software rasterizer (OSMesa) backend for headless/offscreen rendering"
     ${_obol_swrast_default})
-option(OBOL_BUILD_BUNDLED_OSMESA
-    "Build Obol's OSMesa submodule instead of using a compatible installed OSMesa"
-    ON)
-if(OBOL_USE_SWRAST AND OBOL_BUILD_BUNDLED_OSMESA)
-  # Missing submodules are never fetched implicitly.  With the opt-in fetch
-  # switch enabled, this is the only point at which the OSMesa checkout may be
-  # initialized.
-  obol_init_submodule("external/osmesa")
-endif()
 unset(_obol_sysgl_default)
 unset(_obol_swrast_default)
+unset(_obol_swrast_explicitly_set)
 # Thread safety is now unconditional (all #ifdef OBOL_THREADSAFE guards were
 # removed in Phase 3).  OBOL_THREADSAFE is kept as a no-op option for backward
 # compatibility only; it has no effect on the build.
@@ -789,17 +808,28 @@ endif()
 add_subdirectory(include)
 add_subdirectory(src)
 
-if(OBOL_BUILD_TESTS)
+if(OBOL_BUILD_TESTS OR OBOL_BUILD_TEST_TOOLS)
   # Build lodepng from the bundled source for the modern image assertion
-  # helpers; this keeps golden-image tests independent of system PNG packages.
+  # helpers and standalone image tools; this keeps PNG handling independent of
+  # system packages.
   add_library(lodepng STATIC "${PROJECT_SOURCE_DIR}/external/lodepng.cpp")
   target_include_directories(lodepng PUBLIC "${PROJECT_SOURCE_DIR}/external")
   message(STATUS "Using bundled lodepng from external/lodepng.cpp")
+endif()
 
+if(OBOL_BUILD_TESTS)
   enable_testing()
   # The GTest suite is the only supported test entry point.  The old
   # registry-based test graph is intentionally not part of the build.
   add_subdirectory(tests/framework)
+endif()
+
+if(OBOL_BUILD_BENCHMARKS)
+  add_subdirectory(tests/benchmarks)
+endif()
+
+if(OBOL_BUILD_TEST_TOOLS)
+  add_subdirectory(tests/tools)
 endif()
 
 # Examples are useful for standalone Obol development, but package builds do

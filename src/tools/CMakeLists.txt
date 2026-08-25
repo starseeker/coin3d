@@ -3,10 +3,8 @@ set(OBOL_TOOLS_FILES
 	SbModernUtils.cpp
 )
 
-# build library
-foreach(SRCFILE ${OBOL_TOOLS_FILES})
-	set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES tools/${SRCFILE})
-endforeach(SRCFILE)
+# build module object library
+obol_add_source_module(tools ${OBOL_TOOLS_FILES})
 
 # define documentation
 foreach(SRCFILE ${OBOL_TOOLS_FILES})

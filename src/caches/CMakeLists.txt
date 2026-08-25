@@ -23,10 +23,8 @@ set(OBOL_CACHES_INTERNAL_FILES
 	SoVBOCache.cpp
 )
 
-# build library
-foreach(SRCFILE ${OBOL_CACHES_FILES})
-	set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES caches/${SRCFILE})
-endforeach(SRCFILE)
+# build module object library
+obol_add_source_module(caches ${OBOL_CACHES_FILES})
 
 # define documentation
 foreach(SRCFILE ${OBOL_CACHES_FILES})

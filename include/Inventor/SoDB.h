@@ -63,7 +63,10 @@ typedef void SoDBHeaderCB(void * data, SoInput * input);
 
   All methods are static.  SoDB::init() \b must be called before any
   other Obol API, and SoDB::finish() should be called on shutdown to
-  release resources cleanly.
+  release resources cleanly.  The context-manager argument may be NULL for
+  applications that do not use Obol's global OpenGL/offscreen services;
+  initialization then succeeds with limited functionality.  A manager may be
+  installed later with setContextManager(), or supplied per renderer.
 
   \section thread_safety Thread Safety
 
@@ -115,6 +118,14 @@ public:
   // Forward declaration of ContextManager for init function
   class ContextManager;
 
+  /**
+   * Initialize the Obol database and class registry.
+   *
+   * Passing NULL is supported for non-rendering and custom-backend use.  In
+   * that mode initialization completes, getContextManager() returns NULL, and
+   * operations requiring the global GL context manager remain unavailable
+   * until a manager is installed.
+   */
   static void init(ContextManager * context_manager);
   static void finish(void);
   static void cleanup(void);

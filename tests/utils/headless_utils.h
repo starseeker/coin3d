@@ -41,8 +41,8 @@
  *   OBOL_SWRAST_BUILD: use OSMesa for truly headless operation
  *   default:             use system OpenGL (GLX on Linux) with Xvfb
  *
- * Both paths require a SoDB::ContextManager since this Coin fork's
- * SoDB::init() always requires one.
+ * Rendering paths use a SoDB::ContextManager.  Non-rendering/no-OpenGL paths
+ * may call SoDB::init(nullptr) and continue with limited functionality.
  */
 
 #ifndef HEADLESS_UTILS_H
@@ -463,8 +463,8 @@ inline bool renderToFile(
 #include <cstdlib>
 
 inline void initCoinHeadless() {
-    // In a no-OpenGL build there is no GL context manager to install.
-    // SoDB::init() expects a ContextManager; we provide a no-op one.
+    // In a no-OpenGL build there is no global GL context manager to install;
+    // SoDB::init(nullptr) initializes the non-rendering parts of Obol.
     SoDB::init(nullptr);
     SoNodeKit::init();
     SoInteraction::init();

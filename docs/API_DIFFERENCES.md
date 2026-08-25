@@ -66,16 +66,21 @@ navigation, or GUI-toolkit integration require the most work.
 
 ### What changed
 
-`SoDB::init()` now **requires** a `ContextManager*` argument.  The upstream
-Coin signature takes no arguments:
+`SoDB::init()` now takes a `ContextManager*` argument.  The pointer may be
+`nullptr` for non-rendering or custom-backend applications; initialization
+still completes, but global OpenGL/offscreen services remain unavailable until
+a manager is installed.  The upstream Coin signature takes no arguments:
 
 ```cpp
 // Coin (upstream)
 SoDB::init();
 
-// Obol — a ContextManager MUST be provided
+// Obol — pass a manager for global GL/offscreen rendering
 SoDB::setContextManager(&myManager);  // deprecated path
 SoDB::init(&myManager);               // preferred path
+
+// Obol — limited non-rendering/custom-backend initialization
+SoDB::init(nullptr);
 ```
 
 `SoDB::ContextManager` is an abstract base class declared inside `SoDB`.
@@ -117,16 +122,18 @@ Windows, GLX on Linux, CGL/AGL on macOS).  This tightly couples the library to
 each windowing system.  Moving context creation into an application-supplied
 callback object eliminates all platform-specific context code from the library
 and allows OSMesa, EGL, or any other backend to be substituted without patching
-Obol itself.  The change also makes initialization ordering explicit: the
-context manager is always in place before `SoDB::init()` attempts any
-OpenGL-related setup.
+Obol itself.  The change also makes initialization ordering explicit when a
+manager is supplied: it is in place before `SoDB::init()` attempts any
+OpenGL-related setup.  Applications that do not use global OpenGL/offscreen
+services may initialize with `nullptr` and install a manager later if needed.
 
 ### User implications
 
-Every application that calls `SoDB::init()` must now supply a `ContextManager`.
-For headless or testing scenarios the `NullContextManager` (no-op) shipped with
-the test suite is sufficient.  For real rendering provide an implementation
-backed by your context API of choice:
+Applications that use global OpenGL or offscreen rendering must supply a
+`ContextManager`.  Non-rendering and custom-backend applications may pass
+`nullptr`; the `NullContextManager` (no-op) shipped with the test suite is also
+useful when code needs an explicit manager object.  For real rendering provide
+an implementation backed by your context API of choice:
 
 ```cpp
 // Minimal NullContextManager (no offscreen rendering)
@@ -826,7 +833,7 @@ Upstream Coin's Autoconf/Automake build system is not present in Obol; only CMak
 
 | Category | Change | Migration action |
 |----------|--------|-----------------|
-| **Initialization** | `SoDB::init(ContextManager*)` — argument required | Implement and pass a `ContextManager`; NullContextManager for non-rendering use |
+| **Initialization** | `SoDB::init(ContextManager*)` — pointer may be null for limited non-rendering use | Pass a real `ContextManager` for global GL/offscreen rendering; install one later if needed |
 | **VRML / VRML97** | All 70+ `SoVRML*` nodes and headers removed | Handle VRML externally; use `.iv` or in-memory scene construction |
 | **VRML actions** | `SoToVRMLAction`, `SoToVRML2Action` removed | No Obol replacement |
 | **ScXML / Navigation** | 42 ScXML + 11 navigation headers removed | Implement navigation directly using events and draggers |

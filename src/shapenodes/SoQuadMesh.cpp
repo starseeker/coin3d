@@ -370,6 +370,16 @@ namespace { namespace SoGL { namespace QuadMesh {
     const SbVec3f * coords3d = is3d ? coords->getArrayPtr3() : NULL;
     const SbVec4f * coords4d = is3d ? NULL : coords->getArrayPtr4();
 
+    // Precise lighting only has a complete implementation for 3D
+    // coordinates, non-per-vertex materials, and ordinary texture
+    // coordinates.  Fall back to the regular quad-strip path for all other
+    // combinations instead of entering the incomplete interpolation code.
+    if (preciseLighting &&
+        (!is3d || (AttributeBinding)MaterialBinding == PER_VERTEX ||
+         (TexturingEnabled && tb && tb->isFunction()))) {
+      preciseLighting = FALSE;
+    }
+
     if (preciseLighting == FALSE) {
 
       // This is the same code as in SoGLCoordinateElement::send().
@@ -517,7 +527,8 @@ namespace { namespace SoGL { namespace QuadMesh {
             c2d4 = c4d4;
             c3d4 = &coords4d[start+curridx1];
             c4d4 = &coords4d[start+curridx2];
-            assert(!"4d coordinates handling unimplemented yet");
+            // 4D precise-lighting input is excluded above and uses the
+            // regular quad-strip path instead.
           }
 
           if ((AttributeBinding)NormalBinding == PER_VERTEX ||
@@ -579,18 +590,12 @@ namespace { namespace SoGL { namespace QuadMesh {
             }
           }
 
-          if ((AttributeBinding)MaterialBinding == PER_VERTEX) {
-            assert(FALSE && "yet unimplemented");
-          }
-
           if (TexturingEnabled == TRUE) {
             t1 = t3;
             t2 = t4;
             if (!tb->isFunction()) {
               t3 = &const_cast<SoTextureCoordinateBundle*>(tb)->get(curridx1);
               t4 = &const_cast<SoTextureCoordinateBundle*>(tb)->get(curridx2);
-            } else {
-              assert(FALSE && "unimplemented");
             }
             tc = ((*t1)*w1 + (*t2)*w2 + (*t3)*w3 + (*t4)*w4);
           }
@@ -609,9 +614,6 @@ namespace { namespace SoGL { namespace QuadMesh {
           if ((AttributeBinding)NormalBinding == PER_VERTEX) {
             SoGLContext_glNormal3fv(glue, nc.getValue());
           }
-          if ((AttributeBinding)MaterialBinding == PER_VERTEX) {
-            assert(FALSE && "unimplemented");
-          }
           if (TexturingEnabled == TRUE) {
             // tb->send(?curridx?, cc, nc) was replaced by
             // glTexCoord for center vertex
@@ -626,9 +628,6 @@ namespace { namespace SoGL { namespace QuadMesh {
           // FIRST vertex
           if ((AttributeBinding)NormalBinding == PER_VERTEX) {
             SoGLContext_glNormal3fv(glue, n1->getValue());
-          }
-          if ((AttributeBinding)MaterialBinding == PER_VERTEX) {
-            assert(FALSE && "unimplemented");
           }
           if (TexturingEnabled == TRUE) {
             if (is3d) {
@@ -655,9 +654,6 @@ namespace { namespace SoGL { namespace QuadMesh {
           if ((AttributeBinding)NormalBinding == PER_VERTEX) {
             SoGLContext_glNormal3fv(glue, n2->getValue());
           }
-          if ((AttributeBinding)MaterialBinding == PER_VERTEX) {
-            assert(!"unimplemented");
-          }
           if (TexturingEnabled == TRUE) {
             if (is3d) {
               if ((AttributeBinding)NormalBinding == PER_VERTEX) {
@@ -682,9 +678,6 @@ namespace { namespace SoGL { namespace QuadMesh {
           // FOURTH vertex
           if ((AttributeBinding)NormalBinding == PER_VERTEX) {
             SoGLContext_glNormal3fv(glue, n4->getValue());
-          }
-          if ((AttributeBinding)MaterialBinding == PER_VERTEX) {
-            assert(FALSE && "unimplemented");
           }
           if (TexturingEnabled == TRUE) {
             if (is3d) {
@@ -711,9 +704,6 @@ namespace { namespace SoGL { namespace QuadMesh {
           if ((AttributeBinding)NormalBinding == PER_VERTEX) {
             SoGLContext_glNormal3fv(glue, n3->getValue());
           }
-          if ((AttributeBinding)MaterialBinding == PER_VERTEX) {
-            assert(!"unimplemented");
-          }
           if (TexturingEnabled == TRUE) {
             if (is3d) {
               if ((AttributeBinding)NormalBinding == PER_VERTEX) {
@@ -738,9 +728,6 @@ namespace { namespace SoGL { namespace QuadMesh {
           // again FIRST vertex
           if ((AttributeBinding)NormalBinding == PER_VERTEX) {
             SoGLContext_glNormal3fv(glue, n1->getValue());
-          }
-          if ((AttributeBinding)MaterialBinding == PER_VERTEX) {
-            assert(!"unimplemented");
           }
           if (TexturingEnabled == TRUE) {
             if (is3d) {
@@ -902,11 +889,10 @@ SoQuadMesh::GLRender(SoGLRenderAction * action)
   }
 
   // Check if precise lighting rendering is requested.
-  static int preciselighting = -1;
-  if (preciselighting == -1) {
+  static const int preciselighting = []() {
     const char * env = CoinInternal::getEnvironmentVariableRaw("OBOL_QUADMESH_PRECISE_LIGHTING");
-    preciselighting = env && (atoi(env) > 0);
-  }
+    return env && (atoi(env) > 0) ? 1 : 0;
+  }();
 
   // Even if precise lighting rendering is requested, we need to check
   // that the rendering path is supported.

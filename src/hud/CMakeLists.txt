@@ -6,10 +6,8 @@ set(OBOL_HUD_FILES
     SoHUDButton.cpp
 )
 
-# build library
-foreach(SRCFILE ${OBOL_HUD_FILES})
-	set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES hud/${SRCFILE})
-endforeach(SRCFILE)
+# build module object library
+obol_add_source_module(hud ${OBOL_HUD_FILES})
 
 # define documentation
 foreach(SRCFILE ${OBOL_HUD_FILES})

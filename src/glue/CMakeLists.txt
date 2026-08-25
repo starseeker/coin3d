@@ -20,13 +20,11 @@ set(OBOL_GLUE_INTERNAL_FILES
 	toojpeg.cpp
 )
 
-# build library
-foreach(SRCFILE ${OBOL_GLUE_FILES})
-	set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES glue/${SRCFILE})
-endforeach(SRCFILE)
+set(_obol_glue_sources ${OBOL_GLUE_FILES})
 if(OBOL_USE_SWRAST AND OBOL_USE_SYSTEM_GL)
-	set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES glue/gl_osmesa.cpp)
+	list(APPEND _obol_glue_sources gl_osmesa.cpp)
 endif()
+obol_add_source_module(glue ${_obol_glue_sources})
 
 # define documentation
 foreach(SRCFILE ${OBOL_GLUE_FILES})

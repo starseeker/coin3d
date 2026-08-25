@@ -14,10 +14,67 @@ file(GENERATE
     INPUT "${CMAKE_CURRENT_BINARY_DIR}/config.h_at_configured"
 )
 
-# Child module directories register sources through a global property.  This
-# keeps the source manifest out of the CMake cache and avoids relying on cache
-# variables leaking between directory scopes.
-set_property(GLOBAL PROPERTY OBOL_SOURCE_FILES misc/CoinTidbits.cpp)
+# Each source directory owns an object-library target.  The old build appended
+# every file to one global source property, which made module ownership and
+# dependency boundaries invisible to CMake.  Object libraries preserve the
+# single installed Obol library while keeping each module's source list local.
+add_library(obol_internal_config INTERFACE)
+target_compile_definitions(obol_internal_config INTERFACE
+    HAVE_CONFIG_H
+    OBOL_INTERNAL
+    OBOL_DEBUG=$<CONFIG:Debug>
+    UTF8_NO_AUTOLINK
+    UNICODE
+    _UNICODE
+)
+if(OBOL_PROFILING)
+  target_compile_definitions(obol_internal_config INTERFACE OBOL_PROFILING)
+endif()
+if(OBOL_USE_SWRAST AND NOT OBOL_USE_SYSTEM_GL)
+  target_compile_definitions(obol_internal_config INTERFACE USE_MGL_NAMESPACE)
+endif()
+if(OBOL_WARNING_FLAGS)
+  target_compile_options(obol_internal_config INTERFACE ${OBOL_WARNING_FLAGS})
+endif()
+if(MSVC)
+  target_compile_options(obol_internal_config INTERFACE /utf-8)
+endif()
+target_include_directories(obol_internal_config INTERFACE
+    "${PROJECT_BINARY_DIR}/include"
+    "${PROJECT_SOURCE_DIR}/include"
+    "${CMAKE_CURRENT_BINARY_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/misc"
+    "${PROJECT_SOURCE_DIR}/include/Inventor/annex"
+    "${PROJECT_BINARY_DIR}/src/shadows"
+    "${PROJECT_BINARY_DIR}/src/draggers"
+    "${PROJECT_SOURCE_DIR}/src/base/utf8/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/cad"
+    "${CMAKE_CURRENT_SOURCE_DIR}/cad/lod"
+    "${CMAKE_CURRENT_SOURCE_DIR}/cad/picking"
+    ${OBOL_TARGET_INCLUDE_DIRECTORIES}
+)
+
+function(obol_add_source_module module)
+  if(NOT ARGN)
+    message(FATAL_ERROR "Obol source module '${module}' has no sources")
+  endif()
+  set(_target "obol_${module}_objects")
+  if(TARGET ${_target})
+    message(FATAL_ERROR "Obol source module target '${_target}' was declared twice")
+  endif()
+  add_library(${_target} OBJECT ${ARGN})
+  target_link_libraries(${_target} PRIVATE obol_internal_config)
+  set_target_properties(${_target} PROPERTIES
+      CXX_STANDARD 17
+      CXX_STANDARD_REQUIRED ON
+      CXX_EXTENSIONS OFF
+      POSITION_INDEPENDENT_CODE ON
+  )
+  if(OBOL_USE_UNITY_BUILD)
+    set_target_properties(${_target} PROPERTIES UNITY_BUILD ON)
+  endif()
+endfunction()
 
 foreach(_subdir actions base bundles caches details draggers elements
                 engines errors events fields fonts glue io manips misc rendering lists
@@ -25,10 +82,23 @@ foreach(_subdir actions base bundles caches details draggers elements
                 hardcopy nodekits profiler hud)
   add_subdirectory(${_subdir})
 endforeach()
-add_subdirectory(doc)
 add_subdirectory(cad)
 
-get_property(OBOL_SOURCE GLOBAL PROPERTY OBOL_SOURCE_FILES)
+set(OBOL_SOURCE_MODULE_TARGETS)
+foreach(_subdir actions base bundles caches details draggers elements
+                engines errors events fields fonts glue io manips misc rendering lists
+                nodes shapenodes projectors sensors shadows threads shaders tools
+                hardcopy nodekits profiler hud cad)
+  if(TARGET obol_${_subdir}_objects)
+    list(APPEND OBOL_SOURCE_MODULE_TARGETS obol_${_subdir}_objects)
+  endif()
+endforeach()
+if(TARGET obol_elements_gl_objects)
+  list(APPEND OBOL_SOURCE_MODULE_TARGETS obol_elements_gl_objects)
+endif()
+if(NOT OBOL_SOURCE_MODULE_TARGETS)
+  message(FATAL_ERROR "No Obol source modules were registered")
+endif()
 
 # Keep the high-responsibility CAD assembly and its direct software fallback
 # independently compiled.  Source properties are directory scoped, so set
@@ -66,15 +136,11 @@ if(OBOL_USE_SWRAST AND OBOL_USE_SYSTEM_GL AND OBOL_OSMESA_INCLUDE_DIRS)
     endforeach()
 endif()
 
-add_library(${PROJECT_NAME} ${OBOL_SOURCE} ${OBOL_ADDITIONAL_HDRS})
-target_compile_definitions(${PROJECT_NAME} PRIVATE
-    HAVE_CONFIG_H
-    OBOL_INTERNAL
-    OBOL_DEBUG=$<CONFIG:Debug>
-    UTF8_NO_AUTOLINK
-    UNICODE
-    _UNICODE
-)
+set(_obol_object_sources)
+foreach(_module_target ${OBOL_SOURCE_MODULE_TARGETS})
+    list(APPEND _obol_object_sources "$<TARGET_OBJECTS:${_module_target}>")
+endforeach()
+add_library(${PROJECT_NAME} ${_obol_object_sources} ${OBOL_ADDITIONAL_HDRS})
 if(TARGET obol_parser_gen)
   add_dependencies(${PROJECT_NAME} obol_parser_gen)
 endif()
@@ -274,22 +340,6 @@ if(OBOL_BUILD_MAC_FRAMEWORK)
 # ############################################################################
 # Add framework documentation files
 # ############################################################################
-
-  if(OBOL_BUILD_DOCUMENTATION)
-    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD 
-      COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${PROJECT_NAME}>/Documentation
-      COMMAND ${CMAKE_COMMAND} -E create_symlink ./Versions/Current/Documentation $<TARGET_FILE_DIR:${PROJECT_NAME}>/../../Documentation
-      COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/html $<TARGET_FILE_DIR:${PROJECT_NAME}>/Documentation/html)
-    if(OBOL_BUILD_DOCUMENTATION_QTHELP)
-      add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD 
-      COMMAND ${CMAKE_COMMAND} -E remove $<TARGET_FILE_DIR:${PROJECT_NAME}>/Documentation/html/${PROJECT_NAME}-${PROJECT_VERSION_MAJOR}.qch
-        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/html/${PROJECT_NAME}-${PROJECT_VERSION_MAJOR}.qch $<TARGET_FILE_DIR:${PROJECT_NAME}>/Documentation)
-    endif()
-    if(OBOL_BUILD_DOCUMENTATION_MAN)
-      add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD 
-        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/man/man3 $<TARGET_FILE_DIR:${PROJECT_NAME}>/Documentation/man)
-    endif()
-  endif()
 
 # ############################################################################
 # Add framework links

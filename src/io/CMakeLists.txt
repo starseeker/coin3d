@@ -23,10 +23,8 @@ set(OBOL_IO_INTERNAL_FILES
 	SoWriterefCounter.cpp
 )
 
-# build library
-foreach(SRCFILE ${OBOL_IO_FILES})
-	set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES io/${SRCFILE})
-endforeach(SRCFILE)
+# build module object library
+obol_add_source_module(io ${OBOL_IO_FILES})
 
 # define documentation
 foreach(SRCFILE ${OBOL_IO_FILES})

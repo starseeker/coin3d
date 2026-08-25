@@ -116,10 +116,8 @@ set(OBOL_NODES_INTERNAL_FILES
 	SoUnknownNode.cpp
 )
 
-# build library
-foreach(SRCFILE ${OBOL_NODES_FILES})
-	set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES nodes/${SRCFILE})
-endforeach(SRCFILE)
+# build module object library
+obol_add_source_module(nodes ${OBOL_NODES_FILES})
 
 # define documentation
 foreach(SRCFILE ${OBOL_NODES_FILES})

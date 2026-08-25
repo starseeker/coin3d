@@ -31,10 +31,8 @@ set(OBOL_GLELEMENTS_FILES
 	SoResetMatrixElement.cpp
 )
 
-# build library
-foreach(SRCFILE ${OBOL_GLELEMENTS_FILES})
-	set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES elements/GL/${SRCFILE})
-endforeach(SRCFILE)
+# build module object library
+obol_add_source_module(elements_gl ${OBOL_GLELEMENTS_FILES})
 
 # define documentation
 foreach(SRCFILE ${OBOL_GLELEMENTS_FILES})

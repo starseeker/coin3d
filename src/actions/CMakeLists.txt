@@ -26,10 +26,8 @@ set(OBOL_ACTIONS_INTERNAL_FILES
 	SoSubActionP.h
 )
 
-# build library
-foreach(SRCFILE ${OBOL_ACTIONS_FILES})
-	set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES actions/${SRCFILE})
-endforeach(SRCFILE)
+# build module object library
+obol_add_source_module(actions ${OBOL_ACTIONS_FILES})
 
 # define documentation
 foreach(SRCFILE ${OBOL_ACTIONS_FILES})

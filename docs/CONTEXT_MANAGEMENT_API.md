@@ -2,11 +2,12 @@
 
 ## Overview
 
-Obol requires applications to supply an OpenGL context manager before library
-initialization.  This cleanly separates all platform-specific context logic
-from the library itself and allows any context back end — OSMesa, EGL, WGL,
-GLX, or a no-op stub for non-rendering scenarios — to be substituted without
-touching Obol code.
+Obol keeps platform-specific context logic outside the library and allows any
+context back end — OSMesa, EGL, WGL, GLX, or a no-op stub — to be substituted
+without touching Obol code.  Applications using global OpenGL/offscreen
+services should pass a context manager to `SoDB::init()`.  Non-rendering or
+custom-backend applications may pass `nullptr` and continue with limited
+functionality, installing a manager later if needed.
 
 ## The ContextManager Interface
 
@@ -123,8 +124,9 @@ Per-renderer managers (see below) take precedence over the global singleton.
 
 ## NullContextManager — Non-rendering / Testing
 
-For unit tests or applications that never call `SoOffscreenRenderer`, a no-op
-implementation is sufficient.  Only the four pure-virtual methods need to be
+For unit tests or applications that never call `SoOffscreenRenderer`, either
+pass `nullptr` to `SoDB::init()` or use an explicit no-op implementation.  If
+an object is supplied, only the four pure-virtual methods need to be
 implemented:
 
 ```cpp

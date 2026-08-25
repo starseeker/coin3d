@@ -25,10 +25,8 @@ set(OBOL_THREADS_INTERNAL_FILES
 	threadp.h
 )
 
-# build library
-foreach(SRCFILE ${OBOL_THREADS_FILES})
-	set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES threads/${SRCFILE})
-endforeach(SRCFILE)
+# build module object library
+obol_add_source_module(threads ${OBOL_THREADS_FILES})
 
 # define documentation
 foreach(SRCFILE ${OBOL_THREADS_FILES})

@@ -9,10 +9,8 @@ set(OBOL_EVENTS_FILES
 	SoSpaceballButtonEvent.cpp
 )
 
-# build library
-foreach(SRCFILE ${OBOL_EVENTS_FILES})
-	set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES events/${SRCFILE})
-endforeach(SRCFILE)
+# build module object library
+obol_add_source_module(events ${OBOL_EVENTS_FILES})
 
 # define documentation
 foreach(SRCFILE ${OBOL_EVENTS_FILES})

@@ -105,10 +105,8 @@ set(OBOL_FIELDS_INTERNAL_FILES
 	SoSubFieldP.h
 )
 
-# build library
-foreach(SRCFILE ${OBOL_FIELDS_FILES})
-	set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES fields/${SRCFILE})
-endforeach(SRCFILE)
+# build module object library
+obol_add_source_module(fields ${OBOL_FIELDS_FILES})
 
 # define documentation
 foreach(SRCFILE ${OBOL_FIELDS_FILES})

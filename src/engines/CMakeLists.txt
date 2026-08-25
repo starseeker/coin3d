@@ -39,7 +39,7 @@ set(OBOL_ENGINES_FILES
 	SoTexture2Convert.cpp
 	SoHeightMapToNormalMap.cpp
 	evaluator.cpp
-	# Note: evaluator_tab.cpp is added to OBOL_SOURCE separately below
+	# Note: evaluator_tab.cpp is added to the engines object module below
 	#       (it may come from the build directory when bison/flex regenerate it).
 )
 
@@ -175,13 +175,13 @@ else()
   set(EVALUATOR_TAB_SRC "${CMAKE_CURRENT_SOURCE_DIR}/evaluator_tab.cpp")
 endif()
 
-# build library
-foreach(SRCFILE ${OBOL_ENGINES_FILES})
-	set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES engines/${SRCFILE})
-endforeach(SRCFILE)
 # evaluator_tab.cpp is kept out of OBOL_ENGINES_FILES so we can supply either
 # the source-tree copy or the freshly generated build-dir copy as appropriate.
-set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES "${EVALUATOR_TAB_SRC}")
+set(_obol_engine_sources ${OBOL_ENGINES_FILES} "${EVALUATOR_TAB_SRC}")
+obol_add_source_module(engines ${_obol_engine_sources})
+if(TARGET obol_parser_gen)
+  add_dependencies(obol_engines_objects obol_parser_gen)
+endif()
 
 # define documentation
 foreach(SRCFILE ${OBOL_ENGINES_FILES})

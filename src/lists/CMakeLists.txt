@@ -20,10 +20,8 @@ set(OBOL_LISTS_FILES
 	SoTypeList.cpp
 )
 
-# build library
-foreach(SRCFILE ${OBOL_LISTS_FILES})
-	set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES lists/${SRCFILE})
-endforeach(SRCFILE)
+# build module object library
+obol_add_source_module(lists ${OBOL_LISTS_FILES})
 
 # define documentation
 foreach(SRCFILE ${OBOL_LISTS_FILES})

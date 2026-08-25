@@ -15,10 +15,8 @@ set(OBOL_HARDCOPY_INTERNAL_FILES
 	VectorizeItems.h
 )
 
-# build library
-foreach(SRCFILE ${OBOL_HARDCOPY_FILES})
-	set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES hardcopy/${SRCFILE})
-endforeach(SRCFILE)
+# build module object library
+obol_add_source_module(hardcopy ${OBOL_HARDCOPY_FILES})
 
 # define documentation
 foreach(SRCFILE ${OBOL_HARDCOPY_FILES})

@@ -57,13 +57,12 @@ set(OBOL_MISC_INTERNAL_FILES
 	SoShaderGenerator.cpp
 )
 
-# build library
-foreach(SRCFILE ${OBOL_MISC_FILES})
-	set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES misc/${SRCFILE})
-endforeach(SRCFILE)
+set(_obol_misc_sources ${OBOL_MISC_FILES})
 if(OBOL_USE_SWRAST)
-	set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES misc/SoDBOSMesa.cpp)
+	list(APPEND _obol_misc_sources SoDBOSMesa.cpp)
 endif()
+list(APPEND _obol_misc_sources CoinTidbits.cpp)
+obol_add_source_module(misc ${_obol_misc_sources})
 
 # define documentation
 foreach(SRCFILE ${OBOL_MISC_FILES})

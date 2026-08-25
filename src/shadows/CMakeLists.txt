@@ -18,7 +18,8 @@ macro(glsl2c _input _postfix)
 endmacro()
 
 # process shader files in src/shadows
-file(GLOB_RECURSE OBOL_SHADOWS_SHADER_GLSL RELATIVE ${PROJECT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/*.glsl)
+file(GLOB_RECURSE OBOL_SHADOWS_SHADER_GLSL CONFIGURE_DEPENDS
+     RELATIVE ${PROJECT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/*.glsl)
 foreach(_input_file ${OBOL_SHADOWS_SHADER_GLSL})
   glsl2c(${_input_file} "_shadersource")
 endforeach()
@@ -34,10 +35,8 @@ set(OBOL_SHADOWS_FILES
 	SoGLShadowCullingElement.cpp
 )
 
-# build library
-foreach(SRCFILE ${OBOL_SHADOWS_FILES})
-	set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES shadows/${SRCFILE})
-endforeach(SRCFILE)
+# build module object library
+obol_add_source_module(shadows ${OBOL_SHADOWS_FILES})
 
 # define documentation
 foreach(SRCFILE ${OBOL_SHADOWS_FILES})

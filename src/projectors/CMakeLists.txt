@@ -13,10 +13,8 @@ set(OBOL_PROJECTORS_FILES
 	SbSphereSheetProjector.cpp
 )
 
-# build library
-foreach(SRCFILE ${OBOL_PROJECTORS_FILES})
-	set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES projectors/${SRCFILE})
-endforeach(SRCFILE)
+# build module object library
+obol_add_source_module(projectors ${OBOL_PROJECTORS_FILES})
 
 # define documentation
 foreach(SRCFILE ${OBOL_PROJECTORS_FILES})

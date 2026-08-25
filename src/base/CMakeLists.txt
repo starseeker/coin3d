@@ -92,10 +92,8 @@ set(OBOL_BASE_INTERNAL_FILES
 	namemap.cpp
 )
 
-# build library
-foreach(SRCFILE ${OBOL_BASE_FILES})
-	set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES base/${SRCFILE})
-endforeach(SRCFILE)
+# build module object library
+obol_add_source_module(base ${OBOL_BASE_FILES})
 
 # define documentation
 foreach(SRCFILE ${OBOL_BASE_FILES})

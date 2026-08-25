@@ -42,10 +42,8 @@ set(OBOL_SHADERS_INTERNAL_FILES
 	SoGLShaderProgramElement.cpp
 )
 
-# build library
-foreach(SRCFILE ${OBOL_SHADERS_FILES})
-	set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES shaders/${SRCFILE})
-endforeach(SRCFILE)
+# build module object library
+obol_add_source_module(shaders ${OBOL_SHADERS_FILES})
 
 # define documentation
 foreach(SRCFILE ${OBOL_SHADERS_FILES})

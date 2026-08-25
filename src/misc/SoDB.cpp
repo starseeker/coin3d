@@ -189,11 +189,12 @@ static uint32_t a_static_variable = 0xdeadbeef;
 // *************************************************************************
 
 /*!
-  Initialize the Coin library with the provided OpenGL context manager.
+  Initialize the Obol library with an optional OpenGL context manager.
 
-  This function sets up the Coin library with the specified context manager
-  for OpenGL operations. The context manager must be provided and will be
-  used for all offscreen rendering operations throughout the library's lifetime.
+  This function sets up the library with the specified context manager for
+  OpenGL operations.  Passing NULL is supported for non-rendering and custom
+  backend applications; initialization completes with limited functionality
+  and global context-manager lookups return NULL until a manager is installed.
 
   Note that this function should be called before using any other Coin
   class or function. If the Coin library is built as a DLL under Microsoft
@@ -208,12 +209,13 @@ static uint32_t a_static_variable = 0xdeadbeef;
   Make sure you call SoDB::cleanup() before application termination, for
   the Coin library to be able to clean up internal static data structures.
 
-  \param context_manager The OpenGL context manager to use for rendering operations.
-                        Must not be NULL.
+  \param context_manager The OpenGL context manager to use for rendering
+                         operations, or NULL when global context management is
+                         not needed.
 
   \sa cleanup(), finish()
 
-  \since Coin 4.0 (breaking change - context manager is now required)
+  \since Coin 4.0
  */
 void
 SoDB::init(ContextManager * context_manager)
@@ -221,15 +223,12 @@ SoDB::init(ContextManager * context_manager)
   std::lock_guard<std::recursive_mutex> lifecycle_lock(lifecycle_mutex);
   OBOL_INIT_CHECK_THREAD();
 
-  // Require a valid context manager
   if (!context_manager) {
     // Use fprintf here because SoError::initClasses() has not been called yet;
     // calling SoDebugError::post() before that would trigger an assert.
-    fprintf(stderr, "SoDB::init: Context manager is NULL. "
-                    "Applications must provide a valid ContextManager implementation. "
+    fprintf(stderr, "SoDB::init: Context manager is NULL; "
+                    "global OpenGL/offscreen services are unavailable. "
                     "Proceeding with limited functionality.\n");
-    // For internal library calls, we proceed but with limited context support
-    // Applications should always provide a proper context manager
   } else {
     // Set the global context manager
     global_context_manager.store(context_manager, std::memory_order_release);

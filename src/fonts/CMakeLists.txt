@@ -12,10 +12,8 @@ set(OBOL_FONTS_INTERNAL_FILES
 	fontspec.cpp
 )
 
-# build library
-foreach(SRCFILE ${OBOL_FONTS_FILES})
-	set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES fonts/${SRCFILE})
-endforeach(SRCFILE)
+# build module object library
+obol_add_source_module(fonts ${OBOL_FONTS_FILES})
 
 # define documentation
 foreach(SRCFILE ${OBOL_FONTS_FILES})

@@ -54,25 +54,12 @@
 #include <Inventor/elements/SoMultiTextureMatrixElement.h>
 #include <Inventor/details/SoDetail.h>
 
-#include "CoinTidbits.h"
+#include <memory>
 
-
-//
-// this is not thread-safe, but creating a new matrix action for
-// each picked point is not very efficient.
-//
-static SoGetMatrixAction *matrixAction = NULL;
-
-//
-//  Will be called at the end of program to free static memory
-//  used by this class.
-//
-static
-void clean_class()
-{
-  delete matrixAction;
-  matrixAction = NULL;
-}
+// Matrix actions carry a mutable viewport and are therefore owned per thread.
+// A thread-local action retains the old allocation-saving behavior without
+// sharing mutable action state between concurrent pick operations.
+static thread_local std::unique_ptr<SoGetMatrixAction> matrixAction;
 
 /*!
   Copy constructor.
@@ -386,12 +373,11 @@ SoPickedPoint::applyMatrixAction(const SoNode * const node) const
 SoGetMatrixAction *
 SoPickedPoint::getMatrixAction() const
 {
-  if (matrixAction == NULL) {
-    matrixAction = new SoGetMatrixAction(this->viewport);
-    coin_atexit((coin_atexit_f *)clean_class, CC_ATEXIT_NORMAL);
+  if (!matrixAction) {
+    matrixAction = std::make_unique<SoGetMatrixAction>(this->viewport);
   }
   else {
     matrixAction->setViewportRegion(this->viewport);
   }
-  return matrixAction;
+  return matrixAction.get();
 }

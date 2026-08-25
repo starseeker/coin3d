@@ -27,10 +27,8 @@ set(OBOL_RENDERING_INTERNAL_FILES
 	CoinOffscreenGLCanvas.cpp
 )
 
-# build library
-foreach(SRCFILE ${OBOL_RENDERING_FILES})
-	set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES rendering/${SRCFILE})
-endforeach(SRCFILE)
+# build module object library
+obol_add_source_module(rendering ${OBOL_RENDERING_FILES})
 
 # define documentation
 foreach(SRCFILE ${OBOL_RENDERING_FILES})

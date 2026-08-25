@@ -18,10 +18,8 @@ set(OBOL_PROFILER_INTERNAL_FILES
 	SoNodeProfiling.h
 )
 
-# build library
-foreach(SRCFILE ${OBOL_PROFILER_FILES})
-	set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES profiler/${SRCFILE})
-endforeach(SRCFILE)
+# build module object library
+obol_add_source_module(profiler ${OBOL_PROFILER_FILES})
 
 # define documentation
 foreach(SRCFILE ${OBOL_PROFILER_FILES})

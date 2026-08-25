@@ -50,10 +50,11 @@
 #include <Inventor/events/SoKeyboardEvent.h>
 
 #include "SbBasicP.h"
-#include "CoinTidbits.h"
 #include "misc/SbHash.h"
 
 #include <cassert>
+#include <memory>
+#include <mutex>
 
 #include <Inventor/SbName.h>
 
@@ -88,34 +89,21 @@
   given \c KEY.
 */
 
-static SbHash<int, char> * converttoprintable = NULL;
-static SbHash<int, char> * converttoprintable_shift = NULL;
-
-extern "C" {
-
-static void
-sokeyboardevent_cleanup(void)
-{
-  delete converttoprintable;
-  converttoprintable = NULL;
-  delete converttoprintable_shift;
-  converttoprintable_shift = NULL;
-}
-
-} // extern "C"
+static std::unique_ptr<SbHash<int, char>> converttoprintable;
+static std::unique_ptr<SbHash<int, char>> converttoprintable_shift;
+static std::once_flag convert_dicts_once;
 
 static void
 build_convert_dicts(void)
 {
   int i;
-  converttoprintable = new SbHash<int, char>();
-  converttoprintable_shift = new SbHash<int, char>();
-  coin_atexit(sokeyboardevent_cleanup, CC_ATEXIT_NORMAL);
+  converttoprintable = std::make_unique<SbHash<int, char>>();
+  converttoprintable_shift = std::make_unique<SbHash<int, char>>();
 
 #define ADD_KEY(x,y) d->put(SoKeyboardEvent::x, y)
 
   // shift not down
-  SbHash<int, char> * d = converttoprintable;
+  SbHash<int, char> * d = converttoprintable.get();
   ADD_KEY(NUMBER_0, '0');
   ADD_KEY(NUMBER_1, '1');
   ADD_KEY(NUMBER_2, '2');
@@ -167,7 +155,7 @@ build_convert_dicts(void)
     }
 
   // shift down
-  d = converttoprintable_shift;
+  d = converttoprintable_shift.get();
   ADD_KEY(NUMBER_0, ')');
   ADD_KEY(NUMBER_1, '!');
   ADD_KEY(NUMBER_2, '@');
@@ -354,12 +342,10 @@ SoKeyboardEvent::getPrintableCharacter(void) const
 {
   if (this->isprintableset) return this->printable;
 
-  if (converttoprintable == NULL) {
-    build_convert_dicts();
-  }
+  std::call_once(convert_dicts_once, build_convert_dicts);
 
-  SbHash<int, char> * dict =
-    this->wasShiftDown() ? converttoprintable_shift : converttoprintable;
+  const SbHash<int, char> * dict =
+    this->wasShiftDown() ? converttoprintable_shift.get() : converttoprintable.get();
   char value;
   if (dict->get(this->getKey(), value)) { return value; }
   return '.';

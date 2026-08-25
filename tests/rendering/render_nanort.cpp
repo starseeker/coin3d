@@ -86,9 +86,8 @@
 // =============================================================================
 // No-op context manager
 // =============================================================================
-// We never call any GL render action, so a no-op context manager suffices.
-// SoDB::init() always requires a ContextManager; this satisfies that contract
-// while keeping the binary GL-independent at runtime.
+// A no-op manager keeps this test's setup explicit while the render path uses
+// no OpenGL.  SoDB::init(nullptr) is also supported for this use case.
 class NullContextManager : public SoDB::ContextManager {
 public:
     void* createOffscreenContext(unsigned int, unsigned int) override { return nullptr; }
@@ -466,9 +465,9 @@ static int obol_run_render_render_nanort(int argc, char** argv)
     const int W = 512, H = 512;
     const char* outpath = (argc > 1) ? argv[1] : "render_nanort_out.png";
 
-    // --- 1. Initialize Coin with a no-op GL context manager ------------------
-    // SoDB::init() requires a ContextManager but we never issue any GL calls,
-    // so a no-op implementation is sufficient.
+    // --- 1. Initialize Obol with a no-op GL context manager ------------------
+    // SoDB::init(nullptr) is supported for non-rendering use, but this explicit
+    // no-op manager keeps the backend choice visible to this renderer test.
     static NullContextManager nullCtx;
     SoDB::init(&nullCtx);
     SoNodeKit::init();

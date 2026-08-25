@@ -90,10 +90,8 @@ set(OBOL_ELEMENTS_INTERNAL_FILES
 	SoVertexAttributeData.h
 )
 
-# build library
-foreach(SRCFILE ${OBOL_ELEMENTS_FILES})
-	set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES elements/${SRCFILE})
-endforeach(SRCFILE)
+# build module object library
+obol_add_source_module(elements ${OBOL_ELEMENTS_FILES})
 
 # define documentation
 foreach(SRCFILE ${OBOL_ELEMENTS_FILES})

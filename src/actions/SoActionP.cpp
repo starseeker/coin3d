@@ -35,6 +35,8 @@
 
 #include "actions/SoActionP.h"
 
+#include <mutex>
+
 #include <Inventor/annex/Profiler/SoProfiler.h>
 #ifdef HAVE_NODEKITS
 #include <Inventor/annex/Profiler/nodekits/SoProfilerVisualizeKit.h>
@@ -46,12 +48,16 @@
 SoProfilerStats *
 SoActionP::getProfilerStatsNode(void)
 {
-  static SoProfilerStats * pstats = NULL;
-  if (!pstats) {
-    pstats = new SoProfilerStats;
-    pstats->ref();
-  }
-  return pstats;
+  struct StatsState {
+    std::once_flag once;
+    SoProfilerStats * node = NULL;
+  };
+  static StatsState state;
+  std::call_once(state.once, []() {
+    state.node = new SoProfilerStats;
+    state.node->ref();
+  });
+  return state.node;
 }
 
 SoNode *
@@ -60,21 +66,25 @@ SoActionP::getProfilerOverlay(void)
   if (!SoProfiler::isEnabled() || !SoProfiler::isOverlayActive())
     return NULL;
 
-  static SoNode * nodekit = NULL;
+  struct OverlayState {
+    std::once_flag once;
+    SoNode * nodekit = NULL;
+  };
+  static OverlayState state;
 #ifdef HAVE_NODEKITS
-  if (nodekit == NULL) {
-    SoProfilerTopKit * kit = new SoProfilerTopKit;
-    kit->ref();
-    kit->setPart("profilingStats",
-                 SoActionP::getProfilerStatsNode());
-    nodekit = kit;
+  std::call_once(state.once, []() {
+      SoProfilerTopKit * kit = new SoProfilerTopKit;
+      kit->ref();
+      kit->setPart("profilingStats",
+                   SoActionP::getProfilerStatsNode());
+      state.nodekit = kit;
 
-    SoProfilerVisualizeKit * viskit = new SoProfilerVisualizeKit;
-    viskit->stats.setValue(SoActionP::getProfilerStatsNode());
-    kit->addOverlayGeometry(viskit);
-  }
+      SoProfilerVisualizeKit * viskit = new SoProfilerVisualizeKit;
+      viskit->stats.setValue(SoActionP::getProfilerStatsNode());
+      kit->addOverlayGeometry(viskit);
+    });
 #endif // HAVE_NODEKITS
-  return nodekit;
+  return state.nodekit;
 }
 
 // *************************************************************************

@@ -15,10 +15,8 @@ if(HAVE_NODEKITS)
 	list(APPEND OBOL_DETAILS_FILES SoNodeKitDetail.cpp)
 endif()
 
-# build library
-foreach(SRCFILE ${OBOL_DETAILS_FILES})
-	set_property(GLOBAL APPEND PROPERTY OBOL_SOURCE_FILES details/${SRCFILE})
-endforeach(SRCFILE)
+# build module object library
+obol_add_source_module(details ${OBOL_DETAILS_FILES})
 
 # define documentation
 foreach(SRCFILE ${OBOL_DETAILS_FILES})
