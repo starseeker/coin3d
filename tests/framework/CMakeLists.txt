@@ -88,6 +88,8 @@ obol_add_gtest(obol_unit_tests "unit"
     ${PROJECT_SOURCE_DIR}/tests/unit/events_test.cpp
     ${PROJECT_SOURCE_DIR}/tests/unit/fields_test.cpp
     ${PROJECT_SOURCE_DIR}/tests/unit/image_assertions_test.cpp
+    ${PROJECT_SOURCE_DIR}/tests/unit/image_fields_test.cpp
+    ${PROJECT_SOURCE_DIR}/tests/unit/interaction_kit_test.cpp
     ${PROJECT_SOURCE_DIR}/tests/unit/nodes_test.cpp
     ${PROJECT_SOURCE_DIR}/tests/unit/projectors_test.cpp
     ${PROJECT_SOURCE_DIR}/tests/unit/sensors_test.cpp
@@ -276,12 +278,71 @@ target_include_directories(obol_unit_tests PRIVATE
 # upstream-style cases to the same executable and discovery stream.  There are
 # no per-source executables or generated main() adapters left in this lane.
 if(OBOL_USE_SWRAST)
-    file(GLOB _obol_upstream_render_sources CONFIGURE_DEPENDS
-        ${PROJECT_SOURCE_DIR}/tests/rendering/*.cpp)
-    get_target_property(_obol_render_sources obol_render_tests SOURCES)
-    list(REMOVE_ITEM _obol_upstream_render_sources ${_obol_render_sources})
+    # Keep converted rendering cases in a reviewable manifest.  A new test is
+    # intentionally a CMake change, so a source file cannot silently enter a
+    # build just because it appeared in the directory.
+    set(OBOL_UPSTREAM_RENDER_SOURCES
+        ${PROJECT_SOURCE_DIR}/tests/rendering/nogl_scenegraph_test.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_arb8_draggers.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_arb8_edit_cycle.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_basic_context.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_bbox_action.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_callback_action.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_callback_action_deep.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_callback_node.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_camera_interaction.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_draggers.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_embree.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_engine_converter.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_engine_interaction.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_event_callback_interaction.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_event_propagation.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_ext_selection.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_ext_selection_events.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_field_connections.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_glrender_action_modes.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_glrender_deep.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_hud_interaction.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_hud_nanort.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_image_deep.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_light_manips.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_lod_picking.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_manip_sequences.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_material_binding.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_nanort.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_nanort_shadow.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_nodekit_interaction.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_offscreen.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_offscreen_advanced.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_path_operations.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_pick_filter.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_pick_interaction.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_procedural_shape.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_quad_mesh_deep.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_quad_viewport.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_quad_viewport_lod.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_raypick_shapes.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_render_manager_full.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_rt_proxy_shapes.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_scene_interaction.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_search_action.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_selection_interaction.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_sensor_interaction.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_sensors_rendering.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_shader_program.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_shadow_advanced.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_simple_draggers.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_sogl_bindings.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_text3_parts.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_view_volume_ops.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_viewport.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/render_write_read_action.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/stt_iosevka.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/stt_reference.cpp
+        ${PROJECT_SOURCE_DIR}/tests/rendering/test_shadow_direct.cpp
+    )
     target_sources(obol_render_tests PRIVATE
-        ${_obol_upstream_render_sources})
+        ${OBOL_UPSTREAM_RENDER_SOURCES})
     target_include_directories(obol_render_tests PRIVATE
         ${PROJECT_SOURCE_DIR}/tests/utils
         ${PROJECT_SOURCE_DIR}/tests/testlib

@@ -52,7 +52,8 @@ endif()
 #   3. If git is unavailable or the command fails → emit a WARNING and
 #      continue; callers are expected to gracefully degrade.
 macro(obol_init_submodule submodule_path)
-  if(NOT EXISTS "${PROJECT_SOURCE_DIR}/${submodule_path}/CMakeLists.txt")
+  if(OBOL_FETCH_SUBMODULES AND
+     NOT EXISTS "${PROJECT_SOURCE_DIR}/${submodule_path}/CMakeLists.txt")
     find_program(_obol_git git)
     if(_obol_git)
       # Check whether this path is actually registered as a git submodule
@@ -95,11 +96,6 @@ macro(obol_init_submodule submodule_path)
   endif()
 endmacro()
 
-# Ensure the OSMesa submodule is present (needed for osmesa and dual-GL builds).
-# This is a no-op when osmesa files are already on disk (bundled or previously
-# initialised).
-obol_init_submodule("external/osmesa")
-
 # Set C++ standard requirements
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -139,6 +135,9 @@ endif()
 option(BUILD_SHARED_LIBS "Build shared library when ON, static when OFF" ON)
 option(OBOL_BUILD_TESTS "Build unit tests" ON)
 option(OBOL_BUILD_EXAMPLES "Build example programs and viewers" ON)
+option(OBOL_FETCH_SUBMODULES
+  "Initialize missing registered git submodules during configure"
+  OFF)
 
 # ---------------------------------------------------------------------------
 # FLTK detection and submodule fallback
@@ -151,43 +150,46 @@ option(OBOL_BUILD_EXAMPLES "Build example programs and viewers" ON)
 # FLTK viewer options (OBOL_BUILD_VIEWER, OBOL_VIEWER_USE_FLTK_GL, etc.)
 # are declared in examples/fltk/CMakeLists.txt where the viewers live.
 # Detection and the submodule build live here so that tests/ (which processes
-# before examples/) can also use FLTK (e.g. render_basic_context).
+# before examples/) can also use FLTK.
 # ---------------------------------------------------------------------------
-find_package(FLTK QUIET)
-if(FLTK_FOUND)
-  message(STATUS "FLTK: using system installation (${FLTK_INCLUDE_DIRS})")
-else()
-  # System FLTK not found.  Try to populate the submodule fallback.
-  set(FLTK_LIBRARIES)
-  set(FLTK_INCLUDE_DIRS)
-  obol_init_submodule("external/fltk")
-  if(EXISTS "${PROJECT_SOURCE_DIR}/external/fltk/CMakeLists.txt")
-    message(STATUS "FLTK: using external/fltk submodule")
-    set(FLTK_BUILD_FLUID        OFF CACHE BOOL "Build FLTK fluid tool"         FORCE)
-    set(FLTK_BUILD_FLTK_OPTIONS OFF CACHE BOOL "Build FLTK fltk-options tool"  FORCE)
-    set(FLTK_BUILD_TEST         OFF CACHE BOOL "Build FLTK test/demo programs"  FORCE)
-    set(FLTK_BUILD_EXAMPLES     OFF CACHE BOOL "Build FLTK example programs"    FORCE)
-    set(FLTK_BUILD_FORMS        OFF CACHE BOOL "Build FLTK forms library"       FORCE)
-    # FLTK_BUILD_GL is set by examples/fltk/CMakeLists.txt based on
-    # OBOL_VIEWER_USE_FLTK_GL; default ON here so the submodule is usable.
-    if(NOT DEFINED FLTK_BUILD_GL)
-      set(FLTK_BUILD_GL         ON  CACHE BOOL "Build FLTK OpenGL library"      FORCE)
-    endif()
-    set(FLTK_BUILD_SHARED_LIBS  OFF CACHE BOOL "Build FLTK shared libraries"    FORCE)
-    add_subdirectory("${PROJECT_SOURCE_DIR}/external/fltk" fltk_build EXCLUDE_FROM_ALL)
-    set(FLTK_FOUND TRUE)
-    set(FLTK_LIBRARIES fltk)
-    if(TARGET fltk_gl)
-      list(APPEND FLTK_LIBRARIES fltk_gl)
-    endif()
-    set(FLTK_INCLUDE_DIRS
-        "${PROJECT_SOURCE_DIR}/external/fltk"
-        "${CMAKE_BINARY_DIR}/fltk_build")
+if(OBOL_BUILD_EXAMPLES)
+  find_package(FLTK QUIET)
+  if(FLTK_FOUND)
+    message(STATUS "FLTK: using system installation (${FLTK_INCLUDE_DIRS})")
   else()
-    if(OBOL_BUILD_TESTS)
+    # System FLTK not found.  Try the explicitly opted-in submodule fallback.
+    set(FLTK_LIBRARIES)
+    set(FLTK_INCLUDE_DIRS)
+    obol_init_submodule("external/fltk")
+    if(EXISTS "${PROJECT_SOURCE_DIR}/external/fltk/CMakeLists.txt")
+      message(STATUS "FLTK: using external/fltk submodule")
+      set(FLTK_BUILD_FLUID        OFF CACHE BOOL "Build FLTK fluid tool"         FORCE)
+      set(FLTK_BUILD_FLTK_OPTIONS OFF CACHE BOOL "Build FLTK fltk-options tool"  FORCE)
+      set(FLTK_BUILD_TEST         OFF CACHE BOOL "Build FLTK test/demo programs"  FORCE)
+      set(FLTK_BUILD_EXAMPLES     OFF CACHE BOOL "Build FLTK example programs"    FORCE)
+      set(FLTK_BUILD_FORMS        OFF CACHE BOOL "Build FLTK forms library"       FORCE)
+      # FLTK_BUILD_GL is set by examples/fltk/CMakeLists.txt based on
+      # OBOL_VIEWER_USE_FLTK_GL; default ON here so the submodule is usable.
+      if(NOT DEFINED FLTK_BUILD_GL)
+        set(FLTK_BUILD_GL         ON  CACHE BOOL "Build FLTK OpenGL library"      FORCE)
+      endif()
+      set(FLTK_BUILD_SHARED_LIBS  OFF CACHE BOOL "Build FLTK shared libraries"    FORCE)
+      add_subdirectory("${PROJECT_SOURCE_DIR}/external/fltk" fltk_build EXCLUDE_FROM_ALL)
+      set(FLTK_FOUND TRUE)
+      set(FLTK_LIBRARIES fltk)
+      if(TARGET fltk_gl)
+        list(APPEND FLTK_LIBRARIES fltk_gl)
+      endif()
+      set(FLTK_INCLUDE_DIRS
+          "${PROJECT_SOURCE_DIR}/external/fltk"
+          "${CMAKE_BINARY_DIR}/fltk_build")
+    else()
       message(STATUS "FLTK: not found (no system package, no external/fltk submodule) – FLTK viewers disabled")
     endif()
   endif()
+else()
+  set(FLTK_FOUND FALSE)
+  message(STATUS "FLTK: skipped because OBOL_BUILD_EXAMPLES=OFF")
 endif()
 
 # Internal alias used throughout src/ for Windows shared/static detection
@@ -241,6 +243,12 @@ option(OBOL_USE_SWRAST
 option(OBOL_BUILD_BUNDLED_OSMESA
     "Build Obol's OSMesa submodule instead of using a compatible installed OSMesa"
     ON)
+if(OBOL_USE_SWRAST AND OBOL_BUILD_BUNDLED_OSMESA)
+  # Missing submodules are never fetched implicitly.  With the opt-in fetch
+  # switch enabled, this is the only point at which the OSMesa checkout may be
+  # initialized.
+  obol_init_submodule("external/osmesa")
+endif()
 unset(_obol_sysgl_default)
 unset(_obol_swrast_default)
 # Thread safety is now unconditional (all #ifdef OBOL_THREADSAFE guards were

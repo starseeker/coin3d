@@ -68,10 +68,8 @@
 #include "misc/SoEnvironment.h"
 
 // C++17 includes for modern threading
-#ifdef USE_CXX17_THREADS
 #include <mutex>
 #include <memory>
-#endif
 
 // C++17 threading is the only supported implementation
 #include "mutex_cxx17.icc"
@@ -241,6 +239,7 @@ cc_mutex_unlock(cc_mutex * mutex)
 }
 
 static cc_mutex * cc_global_mutex = NULL;
+static std::once_flag cc_global_mutex_once;
 
 static void
 cc_mutex_cleanup(void)
@@ -254,16 +253,13 @@ cc_mutex_init(void)
 {
   const char * env = CoinInternal::getEnvironmentVariableRaw("OBOL_DEBUG_MUTEXLOCK_MAXTIME");
 
-  if (cc_global_mutex == NULL) {
+  std::call_once(cc_global_mutex_once, [] {
     cc_global_mutex = cc_mutex_construct();
     /* atexit priority makes this callback trigger after other cleanup
        functions. */
-    /* FIXME: not sure if this really needs the "- 1", but I added it
-       to keep the same order wrt the other thread-related cleanup
-       functions, since before I changed hard-coded numbers for
-       enumerated values for coin_atexit() invocations. 20060301 mortene. */
-    coin_atexit((coin_atexit_f*) cc_mutex_cleanup, CC_ATEXIT_THREADING_SUBSYSTEM_LOWPRIORITY);
-  }
+    coin_atexit((coin_atexit_f*) cc_mutex_cleanup,
+                CC_ATEXIT_THREADING_SUBSYSTEM_LOWPRIORITY);
+  });
 
   if (env) { maxmutexlocktime = atof(env); }
 
@@ -288,4 +284,3 @@ cc_mutex_global_unlock(void)
 {
   (void) cc_mutex_unlock(cc_global_mutex);
 }
-

@@ -62,10 +62,14 @@
 
 #include "CoinTidbits.h"
 
+#include <mutex>
+
 static SbBool nodekit_isinitialized = FALSE;
+static std::mutex nodekit_init_mutex;
 
 static void nodekit_cleanup(void)
 {
+  std::lock_guard<std::mutex> lock(nodekit_init_mutex);
   nodekit_isinitialized = FALSE;
 }
 
@@ -83,6 +87,7 @@ static void nodekit_cleanup(void)
 void
 SoNodeKit::init(void)
 {
+  std::lock_guard<std::mutex> lock(nodekit_init_mutex);
   if (nodekit_isinitialized) return;
 
   if (!SoDB::isInitialized()) {

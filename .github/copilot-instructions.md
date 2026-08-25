@@ -49,8 +49,9 @@ sudo apt-get install -y libfltk1.3-dev
 sudo dnf install -y fltk-devel
 ```
 
-If no system FLTK is found, CMake automatically initialises the `external/fltk`
-git submodule at configure time and builds FLTK from source (see Submodules).
+If no system FLTK is found, a populated `external/fltk` checkout is used as a
+fallback.  Missing submodules are initialized only when
+`-DOBOL_FETCH_SUBMODULES=ON` is explicitly supplied.
 
 ### Package Groups
 
@@ -72,8 +73,7 @@ Two external libraries are managed as git submodules in `external/`:
 | `external/fltk` | https://github.com/fltk/fltk (branch-1.3) | FLTK GUI toolkit (fallback when system FLTK absent) |
 | `external/osmesa` | https://github.com/starseeker/osmesa | Name-mangled OSMesa for dual-GL / headless builds |
 
-CMake initialises each submodule automatically at configure time when it is
-needed and the directory is empty.  To initialise them manually:
+CMake does not initialize submodules by default.  To initialize them manually:
 
 ```bash
 # Initialise all submodules at once
@@ -128,7 +128,7 @@ obol/
 │   ├── qt/       Qt6-based viewer + widget example
 │   └── Mentor/   Open Inventor Mentor book examples
 └── external/     Third-party dependencies
-    ├── fltk/     FLTK submodule (populated on demand when system FLTK absent)
+    ├── fltk/     FLTK submodule (optional fallback when system FLTK is absent)
     ├── osmesa/   OSMesa submodule (name-mangled; for dual-GL/headless)
     ├── nanort/   NanoRT header-only raytracer (optional panel in obol_viewer)
     └── lodepng.{cpp,h}  Bundled PNG codec (used by test image comparison)

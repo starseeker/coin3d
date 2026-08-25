@@ -49,9 +49,6 @@ set_source_files_properties(
 # Library target creation
 # ============================================================================
 
-# Determine library type
-set(OBOL_LIBRARY_TYPE $<IF:$<BOOL:${BUILD_SHARED_LIBS}>,SHARED,STATIC>)
-
 # Additional headers to include in target
 set(OBOL_ADDITIONAL_HDRS 
     ${PROJECT_BINARY_DIR}/src/config.h
@@ -113,12 +110,10 @@ endif()
 # Unity Build Support
 # ============================================================================
 
-# Enable unity build if requested and supported (CMake 3.16+)
-if(OBOL_USE_UNITY_BUILD AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.16")
+# Enable unity build when requested.  CMake 3.16 is the project minimum.
+if(OBOL_USE_UNITY_BUILD)
     message(STATUS "Enabling unity build for faster compilation")
     set_target_properties(${PROJECT_NAME} PROPERTIES UNITY_BUILD ON)
-elseif(OBOL_USE_UNITY_BUILD)
-    message(WARNING "Unity build requested but requires CMake 3.16+. Current version: ${CMAKE_VERSION}")
 endif()
 
 # ============================================================================
@@ -361,31 +356,14 @@ else()
 # Install target
 # ############################################################################
 
-  if(NOT CMAKE_VERSION VERSION_LESS 3.12)
-    install(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME}
-      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT runtime
-      LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT runtime NAMELINK_COMPONENT development
-      ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT development
-      RESOURCE DESTINATION ${CMAKE_INSTALL_DATADIR} COMPONENT development
-    )
-    if(OBOL_BUILD_SHARED_LIBS)
-      if(MSVC)
-        install(FILES $<TARGET_PDB_FILE:${PROJECT_NAME}> DESTINATION ${CMAKE_INSTALL_BINDIR} CONFIGURATIONS Debug RelWithDebInfo COMPONENT debug)
-      endif()
-    endif()
-  else()
-    install(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME}
-      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT runtime
-      LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT runtime NAMELINK_SKIP
-      ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT development
-      RESOURCE DESTINATION ${CMAKE_INSTALL_DATADIR} COMPONENT development
-    )
-    if(OBOL_BUILD_SHARED_LIBS)
-      install(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME} LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT development NAMELINK_ONLY)
-      if(MSVC)
-        install(FILES $<TARGET_PDB_FILE:${PROJECT_NAME}> DESTINATION ${CMAKE_INSTALL_BINDIR} CONFIGURATIONS Debug RelWithDebInfo COMPONENT debug)
-      endif()
-    endif()
+  install(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT runtime
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT runtime NAMELINK_COMPONENT development
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT development
+    RESOURCE DESTINATION ${CMAKE_INSTALL_DATADIR} COMPONENT development
+  )
+  if(OBOL_BUILD_SHARED_LIBS AND MSVC)
+    install(FILES $<TARGET_PDB_FILE:${PROJECT_NAME}> DESTINATION ${CMAKE_INSTALL_BINDIR} CONFIGURATIONS Debug RelWithDebInfo COMPONENT debug)
   endif()
 
   # When using the bundled OSMesa submodule (DUAL_GL or osmesa-only builds),

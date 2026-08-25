@@ -123,7 +123,7 @@ public:
   const char* getLastError() const;
 
 private:
-  SbImageFormatRegistry() = default;
+  SbImageFormatRegistry();
   ~SbImageFormatRegistry() = default;
   SbImageFormatRegistry(const SbImageFormatRegistry&) = delete;
   SbImageFormatRegistry& operator=(const SbImageFormatRegistry&) = delete;

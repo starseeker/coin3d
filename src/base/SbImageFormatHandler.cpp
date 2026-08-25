@@ -32,6 +32,7 @@
 
 #include "SbImageFormatHandler.h"
 #include "SbImageResize.h"
+#include "SbJpegImageHandler.h"
 #include <algorithm>
 #include <cstring>
 #include <cstdlib>
@@ -98,6 +99,14 @@ SbImageFormatRegistry& SbImageFormatRegistry::getInstance()
 {
   static SbImageFormatRegistry instance;
   return instance;
+}
+
+SbImageFormatRegistry::SbImageFormatRegistry()
+{
+  // The function-local singleton initialization is synchronized by C++11 and
+  // later.  Register built-in handlers here so all callers share one
+  // initialization path instead of racing through per-call lazy flags.
+  this->registerHandler(std::unique_ptr<SbImageFormatHandler>(new SbJpegImageHandler));
 }
 
 void SbImageFormatRegistry::registerHandler(std::unique_ptr<SbImageFormatHandler> handler)

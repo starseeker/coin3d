@@ -900,20 +900,39 @@ SoInput::readHex(uint32_t & l)
 {
   assert(!this->isBinary());
 
-  // FIXME: this is a tremendously stupid function. Should obsolete it.
-
-  // FIXME: no checking for array overwriting. Dangerous. 19990625 mortene.
-  char buffer[1024];
-  char * bufptr = buffer;
-
-  if (this->readChar(bufptr, '0')) {
-    if (this->readChar(bufptr + 1, 'x')) {
-      bufptr += 2 + this->readHexDigits(bufptr + 2);
-    }
+  char buffer[11];
+  if (!this->readChar(buffer, '0') || !this->readChar(buffer + 1, 'x')) {
+    return FALSE;
   }
 
-  *bufptr = '\0';
-  sscanf(buffer, "%x", &l);
+  int digits = 0;
+  char c;
+  while (digits < 8 && this->get(c)) {
+    if (!isxdigit(static_cast<unsigned char>(c))) {
+      this->putBack(c);
+      break;
+    }
+    buffer[2 + digits++] = c;
+  }
+  if (digits == 8 && this->get(c)) {
+    if (isxdigit(static_cast<unsigned char>(c))) {
+      return FALSE;
+    }
+    this->putBack(c);
+  }
+  if (digits == 0) {
+    return FALSE;
+  }
+  buffer[2 + digits] = '\0';
+
+  char * end = NULL;
+  errno = 0;
+  const unsigned long value = strtoul(buffer, &end, 16);
+  if (errno == ERANGE || end != buffer + 2 + digits ||
+      value > static_cast<unsigned long>(UINT32_MAX)) {
+    return FALSE;
+  }
+  l = static_cast<uint32_t>(value);
   return TRUE;
 }
 

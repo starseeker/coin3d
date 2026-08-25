@@ -521,20 +521,37 @@ SoInteractionKit::readDefaultParts(const char * fileName,
 SbBool
 SoInteractionKit::setAnyPartAsDefault(const SbName & partname,
                                       SoNode * node,
-                                      SbBool OBOL_UNUSED_ARG(anypart),
+                                      SbBool anypart,
                                       SbBool onlyifdefault)
 {
   SoBaseKit * kit = this;
   int partNum;
   SbBool isList;
   int listIdx;
-  if (SoBaseKit::findPart(SbString(partname.getString()), kit, partNum,
-                          isList, listIdx, TRUE)) {
+  SbBool found = SoBaseKit::findPart(SbString(partname.getString()), kit,
+                                     partNum, isList, listIdx, FALSE);
+  if (!found) {
+    // If an intermediate kit is not instantiated yet, make the hierarchy so
+    // the requested part can be located.  For an existing leaf, the first
+    // lookup avoids materializing it before the default-state check: making a
+    // part marks its field non-default and would defeat onlyifdefault.
+    kit = this;
+    found = SoBaseKit::findPart(SbString(partname.getString()), kit, partNum,
+                                isList, listIdx, TRUE);
+  }
+  if (found) {
+    if (!anypart && !kit->getNodekitCatalog()->isPublic(partNum)) {
+      if (OBOL_DEBUG) {
+        SoDebugError::postInfo("SoInteractionKit::setAnyPartAsDefault",
+                               "part %s is private", partname.getString());
+      }
+      return FALSE;
+    }
     SoSFNode * field = kit->getCatalogInstances()[partNum];
-    // FIXME: default check not working properly. pederb, 2000-01-21
-    if (1 || (!onlyifdefault || field->isDefault())) {
-      kit->setPart(partNum, node);
+    if (!onlyifdefault || field->isDefault()) {
+      if (!kit->setPart(partNum, node)) return FALSE;
       field->setDefault(TRUE);
+      return TRUE;
     }
     else {
       if (OBOL_DEBUG) {
@@ -548,8 +565,6 @@ SoInteractionKit::setAnyPartAsDefault(const SbName & partname,
                            "part %s not found", partname.getString());
   }
 
-  // FIXME: this method is _always_ returning FALSE, which seems
-  // completely bogus. 20020322 mortene.
   return FALSE;
 }
 

@@ -57,6 +57,8 @@
 
 #include <Inventor/nodes/SoTextureUnit.h>
 
+#include <mutex>
+
 #include <Inventor/actions/SoGLRenderAction.h>
 #include <Inventor/actions/SoPickAction.h>
 #include <Inventor/actions/SoCallbackAction.h>
@@ -159,8 +161,8 @@ SoTextureUnit::GLRender(SoGLRenderAction * action)
   int maxunits = SoGLContext_max_texture_units(glue);
 
   if (this->unit.getValue() >= maxunits) {
-    static SbBool first = TRUE;
-    if (first) {
+    static std::once_flag first_warning;
+    std::call_once(first_warning, [this, maxunits] {
       SoDebugError::postWarning("SoTextureUnit::GLRender",
                                 "Texture unit %d (counting from 0) requested. "
                                 "Your system only supports %d texture unit%s. "
@@ -169,8 +171,7 @@ SoTextureUnit::GLRender(SoGLRenderAction * action)
                                 "scene graph.)",
                                 this->unit.getValue(), maxunits,
                                 maxunits == 1 ? "" : "s");
-      first = FALSE;
-    }
+    });
   }
 }
 
@@ -208,4 +209,3 @@ SoTextureUnit::getMatrix(SoGetMatrixAction * action)
 {
   SoTextureUnit::doAction(action);
 }
-

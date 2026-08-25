@@ -341,21 +341,10 @@
 #include <Inventor/SbTime.h>
 
 #include "base/SbImageFormatHandler.h"
-#include "base/SbJpegImageHandler.h"
 
 #include "misc/SoEnvironment.h"
 
 // boost/current_function.hpp replaced with C++11 __func__
-
-// Initialize format handlers for offscreen renderer
-static void init_format_handlers(void) {
-  static bool initialized = false;
-  if (!initialized) {
-    auto& registry = SbImageFormatRegistry::getInstance();
-    registry.registerHandler(std::make_unique<SbJpegImageHandler>());
-    initialized = true;
-  }
-}
 
 // *************************************************************************
 
@@ -1726,7 +1715,6 @@ SoOffscreenRenderer::writeToPostScript(const char * filename,
 SbBool
 SoOffscreenRenderer::isWriteSupported(const SbName & filetypeextension) const
 {
-  init_format_handlers();
   auto& registry = SbImageFormatRegistry::getInstance();
   
   // Check if the extension is supported by our format handlers
@@ -1760,7 +1748,6 @@ SoOffscreenRenderer::isWriteSupported(const SbName & filetypeextension) const
 int
 SoOffscreenRenderer::getNumWriteFiletypes(void) const
 {
-  init_format_handlers();
   auto& registry = SbImageFormatRegistry::getInstance();
   return registry.getNumHandlers();
 }
@@ -1830,7 +1817,6 @@ SoOffscreenRenderer::getWriteFiletypeInfo(const int idx,
                                           SbString & fullname,
                                           SbString & description)
 {
-  init_format_handlers();
   auto& registry = SbImageFormatRegistry::getInstance();
   
   extlist.truncate(0);
@@ -1872,7 +1858,6 @@ SoOffscreenRenderer::getWriteFiletypeInfo(const int idx,
 SbBool
 SoOffscreenRenderer::writeToFile(const SbString & filename, const SbName & filetypeextension) const
 {
-  init_format_handlers();
   auto& registry = SbImageFormatRegistry::getInstance();
   
   if (SoOffscreenRendererP::offscreenContextsNotSupported()) {

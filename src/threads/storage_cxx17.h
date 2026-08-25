@@ -58,6 +58,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <shared_mutex>
+#include <condition_variable>
 #include <thread>
 #include <functional>
 
@@ -158,7 +159,9 @@ private:
     StorageRegistry& operator=(const StorageRegistry&) = delete;
 
     mutable std::shared_mutex registry_mutex;
+    std::condition_variable_any registry_cv;
     std::unordered_set<cc_storage*> registered_storages;
+    std::unordered_map<cc_storage*, unsigned int> active_cleanups;
 };
 
 /*!

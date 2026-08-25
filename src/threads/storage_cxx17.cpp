@@ -77,66 +77,96 @@ void StorageRegistry::unregisterStorage(cc_storage* storage) {
     
     std::unique_lock<std::shared_mutex> lock(registry_mutex);
     registered_storages.erase(storage);
+    registry_cv.wait(lock, [this, storage] {
+        return active_cleanups.find(storage) == active_cleanups.end();
+    });
 }
 
 void StorageRegistry::cleanupThread(unsigned long threadid) {
-    // Snapshot the set of registered storages under the shared lock, then
-    // release the lock before touching any individual storage.  This avoids
-    // a potential deadlock where a storage destructor calls unregisterStorage()
-    // (exclusive lock) while we are still iterating under the shared lock.
+    // Snapshot the set of registered storages and acquire a temporary lease
+    // on each one.  The lease closes the lifetime gap between taking the
+    // snapshot and locking the individual storage: unregisterStorage() waits
+    // for all leases before the storage can be freed.
     std::vector<cc_storage*> snapshot;
     {
-        std::shared_lock<std::shared_mutex> lock(registry_mutex);
-        snapshot.assign(registered_storages.begin(), registered_storages.end());
-    } // shared lock released before iterating
-
-    for (cc_storage* storage : snapshot) {
-        if (!storage || !storage->dict) continue;
-        
-        void* data = nullptr;
-        
-        // Lock the storage mutex to safely access the dictionary
-#ifdef HAVE_THREADS
-        if (storage->mutex) {
-            cc_mutex_lock(storage->mutex);
+        std::unique_lock<std::shared_mutex> lock(registry_mutex);
+        snapshot.reserve(registered_storages.size());
+        for (cc_storage* storage : registered_storages) {
+            snapshot.push_back(storage);
+            ++active_cleanups[storage];
         }
+    }
+
+    const auto release_leases = [this, &snapshot] {
+        std::unique_lock<std::shared_mutex> lock(registry_mutex);
+        for (cc_storage* storage : snapshot) {
+            const auto it = active_cleanups.find(storage);
+            if (it != active_cleanups.end()) {
+                if (it->second > 1) {
+                    --it->second;
+                }
+                else {
+                    active_cleanups.erase(it);
+                }
+            }
+        }
+        registry_cv.notify_all();
+    };
+
+    try {
+        for (cc_storage* storage : snapshot) {
+            if (!storage || !storage->dict) continue;
+        
+            void* data = nullptr;
+        
+            // Lock the storage mutex to safely access the dictionary.
+#ifdef HAVE_THREADS
+            if (storage->mutex) {
+                cc_mutex_lock(storage->mutex);
+            }
 #endif /* HAVE_THREADS */
         
-        try {
-            // Check if this thread has data in this storage
-            if (cc_dict_get(storage->dict, threadid, &data) && data) {
-                // Call destructor if provided
-                if (storage->destructor) {
-                    try {
-                        storage->destructor(data);
-                    } catch (...) {
-                        // Swallow exceptions in destructors to prevent terminate()
-                        // This preserves the behavior expected in C code
+            try {
+                // Check if this thread has data in this storage.
+                if (cc_dict_get(storage->dict, threadid, &data) && data) {
+                    // Call destructor if provided.
+                    if (storage->destructor) {
+                        try {
+                            storage->destructor(data);
+                        } catch (...) {
+                            // Swallow exceptions in destructors to prevent
+                            // terminate(). This preserves the C API behavior.
+                        }
                     }
+
+                    free(data);
+
+                    cc_dict_remove(storage->dict, threadid);
                 }
-                
-                // Free the memory
-                free(data);
-                
-                // Remove entry from dictionary
-                cc_dict_remove(storage->dict, threadid);
             }
-        } catch (...) {
-            // Ensure we always unlock the mutex even if an exception occurs
+            catch (...) {
+                // Ensure we always unlock the mutex even if an exception
+                // escapes from the dictionary implementation.
+#ifdef HAVE_THREADS
+                if (storage->mutex) {
+                    cc_mutex_unlock(storage->mutex);
+                }
+#endif /* HAVE_THREADS */
+                throw;
+            }
+
 #ifdef HAVE_THREADS
             if (storage->mutex) {
                 cc_mutex_unlock(storage->mutex);
             }
 #endif /* HAVE_THREADS */
-            throw;
         }
-        
-#ifdef HAVE_THREADS
-        if (storage->mutex) {
-            cc_mutex_unlock(storage->mutex);
-        }
-#endif /* HAVE_THREADS */
     }
+    catch (...) {
+        release_leases();
+        throw;
+    }
+    release_leases();
 }
 
 unsigned long StorageRegistry::getCurrentThreadId() {

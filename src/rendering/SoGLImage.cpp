@@ -181,7 +181,6 @@
 #include "elements/SoTextureScaleQualityElement.h"
 #include "glue/glp.h"
 #include "base/SbImageFormatHandler.h"
-#include "base/SbJpegImageHandler.h"
 #include "misc/SoEnvironment.h"
 
 /* Legacy MSVC6 workaround removed - not needed for C++17 */
@@ -1432,14 +1431,6 @@ SoGLImageP::resizeImage(SoState * state, unsigned char *& imageptr,
         // Use high-quality resize when texture quality is important
         bool highQuality = (SoTextureScaleQualityElement::get(state) >= 0.5f);
         
-        // Initialize format handlers to ensure resize capability is available
-        static bool handlersInitialized = false;
-        if (!handlersInitialized) {
-          auto& registry = SbImageFormatRegistry::getInstance();
-          registry.registerHandler(std::make_unique<SbJpegImageHandler>());
-          handlersInitialized = true;
-        }
-        
         auto& registry = SbImageFormatRegistry::getInstance();
         unsigned char* result = registry.resizeImage((unsigned char*)bytes,
                                                     xsize, ysize, numcomponents,
@@ -1456,14 +1447,6 @@ SoGLImageP::resizeImage(SoState * state, unsigned char *& imageptr,
       }
       else { // (zsize > 0) => 3D image
         bool highQuality = (SoTextureScaleQualityElement::get(state) >= 0.5f);
-        
-        // Initialize format handlers
-        static bool handlersInitialized = false;
-        if (!handlersInitialized) {
-          auto& registry = SbImageFormatRegistry::getInstance();
-          registry.registerHandler(std::make_unique<SbJpegImageHandler>());
-          handlersInitialized = true;
-        }
         
         auto& registry = SbImageFormatRegistry::getInstance();
         unsigned char* result = registry.resize3DImage((unsigned char*)bytes,

@@ -80,8 +80,6 @@ public:
   SbHash<const char*, glglue_feature_test_f *> featuremap;
 };
 
-static SoGLDriverDatabaseP * sogldriverdatabase_instance = NULL;
-
 // Feature test wrapper functions
 SbBool 
 multidraw_elements_wrapper(const SoGLContext * glue)
@@ -210,10 +208,10 @@ SoGLDriverDatabaseP::isDisabled(const SoGLContext * /*context*/, const SbName & 
 static SoGLDriverDatabaseP *
 pimpl(void)
 {
-  if (sogldriverdatabase_instance == NULL) {
-    sogldriverdatabase_instance = new SoGLDriverDatabaseP;
-  }
-  return sogldriverdatabase_instance;
+  // C++17 guarantees one-time, thread-safe initialization for function-local
+  // statics, which is exactly what the database singleton needs here.
+  static SoGLDriverDatabaseP instance;
+  return &instance;
 }
 
 // Public API implementation

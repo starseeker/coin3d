@@ -120,6 +120,9 @@
 #include "config.h"
 
 #include <cstdlib> // free()
+#include <limits>
+#include <memory>
+#include <vector>
 
 #include <Inventor/SoInput.h>
 #include <Inventor/SoOutput.h>
@@ -133,10 +136,17 @@
 
 class SoSFImageP {
 public:
+  struct SubTexture {
+    SbVec2s dims;
+    SbVec2s offset;
+    std::vector<unsigned char> pixels;
+  };
+
   SoSFImageP(void) {
     this->image = new SbImage;
     this->freeimage = NULL;
     this->deleteimage = NULL;
+    this->neverwrite = FALSE;
   }
   ~SoSFImageP() {
     delete this->image;
@@ -146,9 +156,31 @@ public:
   SbImage * image;
   unsigned char * deleteimage; // free this data using delete[]
   unsigned char * freeimage; // free this data using free()
+  SbBool neverwrite;
+  std::vector<std::unique_ptr<SubTexture> > subtextures;
 };
 
 #define PRIVATE(p) ((p)->pimpl)
+
+static SbBool
+checked_image_size(const SbVec2s & size, int nc,
+                   size_t & pixelcount, size_t & buffersize)
+{
+  if (size[0] < 0 || size[1] < 0 || nc < 0 || nc > 4) return FALSE;
+
+  const size_t width = static_cast<size_t>(size[0]);
+  const size_t height = static_cast<size_t>(size[1]);
+  const size_t maxsize = std::numeric_limits<size_t>::max();
+  if (width != 0 && height > maxsize / width) return FALSE;
+  pixelcount = width * height;
+  if (nc != 0 && pixelcount > maxsize / static_cast<size_t>(nc)) return FALSE;
+  buffersize = pixelcount * static_cast<size_t>(nc);
+
+  // SoInput/SoOutput use int lengths for binary arrays. Reject values that
+  // cannot be represented there instead of allowing signed overflow.
+  return buffersize <= static_cast<size_t>(std::numeric_limits<int>::max()) &&
+         pixelcount <= static_cast<size_t>(std::numeric_limits<int>::max());
+}
 
 // *************************************************************************
 
@@ -182,6 +214,12 @@ SoSFImage::operator=(const SoSFImage & field)
   unsigned char * bytes = PRIVATE(&field)->image->getValue(size, nc);
 
   this->setValue(size, nc, bytes);
+  PRIVATE(this)->neverwrite = PRIVATE(&field)->neverwrite;
+  PRIVATE(this)->subtextures.clear();
+  for (const auto & source : PRIVATE(&field)->subtextures) {
+    std::unique_ptr<SoSFImageP::SubTexture> copy(new SoSFImageP::SubTexture(*source));
+    PRIVATE(this)->subtextures.push_back(std::move(copy));
+  }
   return *this;
 }
 
@@ -210,13 +248,16 @@ SoSFImage::readValue(SoInput * in)
 
   // Note: empty images (dimensions 0x0x0) are allowed.
 
-  if (size[0] < 0 || size[1] < 0 || nc < 0 || nc > 4) {
+  size_t pixelcount = 0;
+  size_t buffersize_value = 0;
+  if (!checked_image_size(size, nc, pixelcount, buffersize_value)) {
     SoReadError::post(in, "Invalid image specification %dx%dx%d",
                       size[0], size[1], nc);
     return FALSE;
   }
 
-  int buffersize = int(size[0]) * int(size[1]) * nc;
+  const int buffersize = static_cast<int>(buffersize_value);
+  const int numpixels = static_cast<int>(pixelcount);
 
   if (buffersize == 0 &&
       (size[0] != 0 || size[1] != 0 || nc != 0)) {
@@ -247,7 +288,7 @@ SoSFImage::readValue(SoInput * in)
       return FALSE;
     }
     // images are padded to a 4-byte alignment
-    int padsize = ((buffersize + 3) / 4) * 4 - buffersize;
+    int padsize = (4 - (buffersize % 4)) % 4;
     if (padsize) {
       unsigned char pads[3]; // pad is at most 3 bytes
       if (!in->readBinaryArray(pads, padsize)) {
@@ -258,7 +299,6 @@ SoSFImage::readValue(SoInput * in)
   }
   else {
     int byte = 0;
-    int numpixels = int(size[0]) * int(size[1]);
     for (int i = 0; i < numpixels; i++) {
       unsigned int l;
       if (!in->read(l)) {
@@ -281,17 +321,31 @@ SoSFImage::writeValue(SoOutput * out) const
   SbVec2s size;
   unsigned char * pixblock = PRIVATE(this)->image->getValue(size, nc);
 
+  if (PRIVATE(this)->neverwrite) {
+    size.setValue(0, 0);
+    nc = 0;
+    pixblock = NULL;
+  }
+
   out->write(size[0]);
   if (!out->isBinary()) out->write(' ');
   out->write(size[1]);
   if (!out->isBinary()) out->write(' ');
   out->write(nc);
 
+  size_t pixelcount = 0;
+  size_t buffersize_value = 0;
+  if (!checked_image_size(size, nc, pixelcount, buffersize_value)) {
+    SoDebugError::postWarning("SoSFImage::writeValue",
+                              "Image dimensions exceed the supported binary size");
+    return;
+  }
+
   if (out->isBinary()) {
-    int buffersize = int(size[0]) * int(size[1]) * nc;
+    const int buffersize = static_cast<int>(buffersize_value);
     if (buffersize) { // in case of an empty image
       out->writeBinaryArray(pixblock, buffersize);
-      int padsize = ((buffersize + 3) / 4) * 4 - buffersize;
+      int padsize = (4 - (buffersize % 4)) % 4;
       if (padsize) {
         unsigned char pads[3] = {'\0','\0','\0'};
         out->writeBinaryArray(pads, padsize);
@@ -302,7 +356,7 @@ SoSFImage::writeValue(SoOutput * out) const
     out->write('\n');
     out->indent();
 
-    int numpixels = int(size[0]) * int(size[1]);
+    const int numpixels = static_cast<int>(pixelcount);
     for (int i = 0; i < numpixels; i++) {
       unsigned int data = 0;
       for (int j = 0; j < nc; j++) {
@@ -398,6 +452,16 @@ SoSFImage::setValue(const SbVec2s & size, const int nc,
                     const unsigned char * pixels,
                     SoSFImage::CopyPolicy copypolicy)
 {
+  size_t pixelcount = 0;
+  size_t buffersize = 0;
+  if (!checked_image_size(size, nc, pixelcount, buffersize)) {
+    SoDebugError::postWarning("SoSFImage::setValue",
+                              "Image dimensions or component count are invalid");
+    return;
+  }
+  (void)pixelcount;
+  (void)buffersize;
+
   // free old data
   free(PRIVATE(this)->freeimage);
   PRIVATE(this)->freeimage = NULL;
@@ -434,6 +498,7 @@ SoSFImage::setValue(const SbVec2s & size, const int nc,
     PRIVATE(this)->freeimage = const_cast<unsigned char *>(pixels);
     break;
   }
+  PRIVATE(this)->subtextures.clear();
   this->valueChanged();
 }
 
@@ -464,62 +529,125 @@ SoSFImage::finishEditing(void)
 }
 
 /*!
-  Not yet implemented for Coin. Get in touch if you need this method.
+  Stores a copy of a sub-image and its location for applications that need
+  to retain texture updates alongside the main image.
 
   \since Coin 2.0
   \since TGS Inventor 3.0
  */
 void
 SoSFImage::setSubValue(
-                     const SbVec2s & OBOL_UNUSED_ARG(dims),
-                     const SbVec2s & OBOL_UNUSED_ARG(offset),
-                     unsigned char * OBOL_UNUSED_ARG(pixels)
+                     const SbVec2s & dims,
+                     const SbVec2s & offset,
+                     unsigned char * pixels
                      )
 {
-  // FIXME: unimplemented yet. 20030226 mortene.
-  SoDebugError::postWarning("SoSFImage::setSubValue",
-                            "Not yet implemented for Coin. "
-                            "Get in touch if you need this functionality.");
+  SbVec2s image_size;
+  int nc = 0;
+  (void)this->getValue(image_size, nc);
+  if (!pixels || dims[0] <= 0 || dims[1] <= 0 || offset[0] < 0 ||
+      offset[1] < 0 || offset[0] > image_size[0] - dims[0] ||
+      offset[1] > image_size[1] - dims[1] || nc <= 0) {
+    SoDebugError::postWarning("SoSFImage::setSubValue",
+                              "Sub-image dimensions or offset are invalid");
+    return;
+  }
+
+  const size_t pixelcount = static_cast<size_t>(dims[0]) *
+                             static_cast<size_t>(dims[1]);
+  if (pixelcount > std::numeric_limits<size_t>::max() /
+                       static_cast<size_t>(nc)) {
+    SoDebugError::postWarning("SoSFImage::setSubValue",
+                              "Sub-image is too large");
+    return;
+  }
+
+  std::unique_ptr<SoSFImageP::SubTexture> sub(new SoSFImageP::SubTexture);
+  sub->dims = dims;
+  sub->offset = offset;
+  sub->pixels.assign(pixels, pixels + pixelcount * static_cast<size_t>(nc));
+  PRIVATE(this)->subtextures.push_back(std::move(sub));
+  this->valueChanged();
 }
 
 /*!
-  Not yet implemented for Coin. Get in touch if you need this method.
+  Replaces the retained sub-images with copies of the supplied sub-image
+  blocks.
 
   \since Coin 2.0
   \since TGS Inventor 3.0
  */
 void
 SoSFImage::setSubValues(
-                     const SbVec2s * OBOL_UNUSED_ARG(dims),
-                     const SbVec2s * OBOL_UNUSED_ARG(offsets),
-                     int OBOL_UNUSED_ARG(num),
-                     unsigned char ** OBOL_UNUSED_ARG(pixelblocks)
+                     const SbVec2s * dims,
+                     const SbVec2s * offsets,
+                     int num,
+                     unsigned char ** pixelblocks
                      )
 {
-  // FIXME: unimplemented yet. 20030226 mortene.
-  SoDebugError::postWarning("SoSFImage::setSubValues",
-                            "Not yet implemented for Coin. "
-                            "Get in touch if you need this functionality.");
+  if (num < 0 || (num > 0 && (!dims || !offsets || !pixelblocks))) {
+    SoDebugError::postWarning("SoSFImage::setSubValues",
+                              "Invalid sub-image array arguments");
+    return;
+  }
+  SbVec2s image_size;
+  int nc = 0;
+  (void)this->getValue(image_size, nc);
+  std::vector<std::unique_ptr<SoSFImageP::SubTexture> > pending;
+  pending.reserve(static_cast<size_t>(num));
+  for (int i = 0; i < num; ++i) {
+    if (!pixelblocks[i] || dims[i][0] <= 0 || dims[i][1] <= 0 ||
+        offsets[i][0] < 0 || offsets[i][1] < 0 || nc <= 0 ||
+        dims[i][0] > image_size[0] || dims[i][1] > image_size[1] ||
+        offsets[i][0] > image_size[0] - dims[i][0] ||
+        offsets[i][1] > image_size[1] - dims[i][1]) {
+      SoDebugError::postWarning("SoSFImage::setSubValues",
+                                "Sub-image dimensions or offset are invalid");
+      return;
+    }
+
+    const size_t pixelcount = static_cast<size_t>(dims[i][0]) *
+                              static_cast<size_t>(dims[i][1]);
+    if (pixelcount > std::numeric_limits<size_t>::max() /
+                         static_cast<size_t>(nc)) {
+      SoDebugError::postWarning("SoSFImage::setSubValues",
+                                "Sub-image is too large");
+      return;
+    }
+
+    std::unique_ptr<SoSFImageP::SubTexture> sub(new SoSFImageP::SubTexture);
+    sub->dims = dims[i];
+    sub->offset = offsets[i];
+    sub->pixels.assign(pixelblocks[i],
+                       pixelblocks[i] + pixelcount * static_cast<size_t>(nc));
+    pending.push_back(std::move(sub));
+  }
+  PRIVATE(this)->subtextures.swap(pending);
+  this->valueChanged();
 }
 
 /*!
-  Not yet implemented for Coin. Get in touch if you need this method.
+  Returns a retained sub-image block, or c NULL when a idx is invalid.
 
   \since Coin 2.0
   \since TGS Inventor 3.0
  */
 unsigned char *
 SoSFImage::getSubTexture(
-                      int OBOL_UNUSED_ARG(idx),
-                      SbVec2s & OBOL_UNUSED_ARG(dims),
-                      SbVec2s & OBOL_UNUSED_ARG(offset)
+                      int idx,
+                      SbVec2s & dims,
+                      SbVec2s & offset
                       ) const
 {
-  // FIXME: unimplemented yet. 20030226 mortene.
-  SoDebugError::postWarning("SoSFImage::getSubTexture",
-                            "Not yet implemented for Coin. "
-                            "Get in touch if you need this functionality.");
-  return NULL;
+  if (idx < 0 || static_cast<size_t>(idx) >= PRIVATE(this)->subtextures.size()) {
+    dims.setValue(0, 0);
+    offset.setValue(0, 0);
+    return NULL;
+  }
+  const SoSFImageP::SubTexture & sub = *PRIVATE(this)->subtextures[idx];
+  dims = sub.dims;
+  offset = sub.offset;
+  return const_cast<unsigned char *>(sub.pixels.data());
 }
 
 /*!
@@ -536,9 +664,8 @@ SoSFImage::getSubTexture(
 SbBool
 SoSFImage::hasSubTextures(int & numsubtextures)
 {
-  // FIXME: unimplemented yet. 20030226 mortene.
-  numsubtextures = 0;
-  return FALSE;
+  numsubtextures = static_cast<int>(PRIVATE(this)->subtextures.size());
+  return numsubtextures > 0 ? TRUE : FALSE;
 }
 
 /*!
@@ -547,18 +674,13 @@ SoSFImage::hasSubTextures(int & numsubtextures)
 
   Default value is \c FALSE (i.e. write texture data to file.)
 
-  (Note: yet unimplemented for Coin.)
-
   \since Coin 2.0
   \since TGS Inventor ?.?
  */
 void
-SoSFImage::setNeverWrite(SbBool OBOL_UNUSED_ARG(flag))
+SoSFImage::setNeverWrite(SbBool flag)
 {
-  // FIXME: unimplemented yet. 20030226 mortene.
-  SoDebugError::postWarning("SoSFImage::setNeverWrite",
-                            "Not yet implemented for Coin. "
-                            "Get in touch if you need this functionality.");
+  PRIVATE(this)->neverwrite = flag;
 }
 
 /*!
@@ -572,8 +694,7 @@ SoSFImage::setNeverWrite(SbBool OBOL_UNUSED_ARG(flag))
 SbBool
 SoSFImage::isNeverWrite(void) const
 {
-  // FIXME: unimplemented yet. 20030226 mortene.
-  return FALSE;
+  return PRIVATE(this)->neverwrite;
 }
 
 /*!
@@ -586,12 +707,18 @@ SoSFImage::isNeverWrite(void) const
 SbBool
 SoSFImage::hasTransparency(void) const
 {
-  // FIXME: unimplemented yet. 20030226 mortene.
-  SoDebugError::postWarning("SoSFImage::hasTransparency",
-                            "Not yet implemented for Coin. "
-                            "Get in touch if you need this functionality.");
-  return TRUE;
+  SbVec2s size;
+  int nc = 0;
+  const unsigned char * pixels = this->getValue(size, nc);
+  if (!pixels || (nc != 2 && nc != 4)) return FALSE;
+
+  const size_t pixelcount = static_cast<size_t>(size[0]) *
+                            static_cast<size_t>(size[1]);
+  const int alpha_index = nc - 1;
+  for (size_t i = 0; i < pixelcount; ++i) {
+    if (pixels[i * static_cast<size_t>(nc) + alpha_index] != 255) return TRUE;
+  }
+  return FALSE;
 }
 
 #undef PRIVATE
-

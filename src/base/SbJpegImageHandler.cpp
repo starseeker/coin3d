@@ -39,7 +39,8 @@
 #include "../glue/toojpeg.h"
 
 // Global context pointer for write context
-SbJpegImageHandler::JpegWriteContext* SbJpegImageHandler::currentContext = nullptr;
+thread_local SbJpegImageHandler::JpegWriteContext *
+SbJpegImageHandler::currentContext = nullptr;
 
 SbJpegImageHandler::SbJpegImageHandler()
 {

@@ -173,7 +173,6 @@
 #include "glue/glp.h"
 #include "nodes/SoSubNodeP.h"
 #include "base/SbImageFormatHandler.h"
-#include "base/SbJpegImageHandler.h"
 
 
 /*!
@@ -881,15 +880,7 @@ SoImage::getImage(SbVec2s & size, int & nc)
       const unsigned char * orgdata = this->image.getValue(orgsize, nc);
       SbVec2s newsize = this->getSize();
 
-      // Use high-quality resize from format handler system (restored simage capability)
-      // Initialize format handlers to ensure resize capability is available
-      static bool handlersInitialized = false;
-      if (!handlersInitialized) {
-        auto& registry = SbImageFormatRegistry::getInstance();
-        registry.registerHandler(std::make_unique<SbJpegImageHandler>());
-        handlersInitialized = true;
-      }
-      
+      // Use high-quality resize from the format-handler system.
       auto& registry = SbImageFormatRegistry::getInstance();
       unsigned char* result = registry.resizeImage(const_cast<unsigned char*>(orgdata),
                                                   int(orgsize[0]), int(orgsize[1]), nc,

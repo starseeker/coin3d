@@ -78,15 +78,20 @@
 #include <Inventor/errors/SoDebugError.h>
 #endif // OBOL_DEBUG
 
-#include "CoinTidbits.h"
 #include "nodes/SoSubNodeP.h"
 
-static SoTypeList * sonodekitlistpart_deflist = NULL;
-
-static void sonodekitlistpart_atexit_cleanup(void)
+static const SoTypeList &
+sonodekitlistpart_default_types(void)
 {
-  delete sonodekitlistpart_deflist;
-  sonodekitlistpart_deflist = NULL;
+  // Function-local static initialization is synchronized by C++17.  The old
+  // nullable pointer plus atexit callback allowed two first callers to race
+  // while constructing the shared default list.
+  static const SoTypeList default_types = [] {
+    SoTypeList types;
+    types.append(SoNode::getClassTypeId());
+    return types;
+  }();
+  return default_types;
 }
 
 /*!
@@ -199,14 +204,7 @@ SoNodeKitListPart::getChildTypes(void) const
 {
   if (this->allowedtypes.getLength()) return this->allowedtypes;
 
-  // Dynamically allocated to avoid problems on systems which doesn't
-  // handle static constructors.
-  if (!sonodekitlistpart_deflist) {
-    sonodekitlistpart_deflist = new SoTypeList;
-    sonodekitlistpart_deflist->append(SoNode::getClassTypeId());
-    coin_atexit((coin_atexit_f*)sonodekitlistpart_atexit_cleanup, CC_ATEXIT_NORMAL);
-  }
-  return *sonodekitlistpart_deflist;
+  return sonodekitlistpart_default_types();
 }
 
 /*!

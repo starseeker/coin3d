@@ -117,9 +117,35 @@
 #include <Inventor/SoInput.h>
 #include <Inventor/SoOutput.h>
 #include <Inventor/errors/SoReadError.h>
+#include <Inventor/errors/SoDebugError.h>
 #include <Inventor/SbImage.h>
 
+#include <limits>
+
 #include "fields/SoSubFieldP.h"
+
+static SbBool
+checked_image_size(const SbVec3s & size, int nc,
+                   size_t & pixelcount, size_t & buffersize)
+{
+  if (size[0] < 0 || size[1] < 0 || size[2] < 0 || nc < 0 || nc > 4) {
+    return FALSE;
+  }
+
+  const size_t width = static_cast<size_t>(size[0]);
+  const size_t height = static_cast<size_t>(size[1]);
+  const size_t depth = static_cast<size_t>(size[2]);
+  const size_t maxsize = std::numeric_limits<size_t>::max();
+  if (width != 0 && height > maxsize / width) return FALSE;
+  pixelcount = width * height;
+  if (depth != 0 && pixelcount > maxsize / depth) return FALSE;
+  pixelcount *= depth;
+  if (nc != 0 && pixelcount > maxsize / static_cast<size_t>(nc)) return FALSE;
+  buffersize = pixelcount * static_cast<size_t>(nc);
+
+  return buffersize <= static_cast<size_t>(std::numeric_limits<int>::max()) &&
+         pixelcount <= static_cast<size_t>(std::numeric_limits<int>::max());
+}
 
 // *************************************************************************
 
@@ -181,13 +207,16 @@ SoSFImage3::readValue(SoInput * in)
 
   // Note: empty images (dimensions 0x0x0) are allowed.
 
-  if (size[0] < 0 || size[1] < 0 || size[2] < 0 || nc < 0 || nc > 4) {
+  size_t pixelcount = 0;
+  size_t buffersize_value = 0;
+  if (!checked_image_size(size, nc, pixelcount, buffersize_value)) {
     SoReadError::post(in, "Invalid image specification %dx%dx%dx%d",
                       size[0], size[1], size[2], nc);
     return FALSE;
   }
 
-  int buffersize = int(size[0]) * int(size[1]) * int(size[2]) * nc;
+  const int buffersize = static_cast<int>(buffersize_value);
+  const int numpixels = static_cast<int>(pixelcount);
 
   if (buffersize == 0 &&
       (size[0] != 0 || size[1] != 0 || size[2] != 0 || nc != 0)) {
@@ -221,7 +250,6 @@ SoSFImage3::readValue(SoInput * in)
   }
   else {
     int byte = 0;
-    int numpixels = int(size[0]) * int(size[1]) * int(size[2]);
     for (int i = 0; i < numpixels; i++) {
       unsigned int l;
       if (!in->read(l)) {
@@ -252,11 +280,19 @@ SoSFImage3::writeValue(SoOutput * out) const
   if (!out->isBinary()) out->write(' ');
   out->write(nc);
 
+  size_t pixelcount = 0;
+  size_t buffersize_value = 0;
+  if (!checked_image_size(size, nc, pixelcount, buffersize_value)) {
+    SoDebugError::postWarning("SoSFImage3::writeValue",
+                              "Image dimensions exceed the supported binary size");
+    return;
+  }
+
   if (out->isBinary()) {
-    int buffersize = int(size[0]) * int(size[1]) * int(size[2]) * nc;
+    const int buffersize = static_cast<int>(buffersize_value);
     if (buffersize) { // in case of an empty image
       out->writeBinaryArray(pixblock, buffersize);
-      int padsize = ((buffersize + 3) / 4) * 4 - buffersize;
+      int padsize = (4 - (buffersize % 4)) % 4;
       if (padsize) {
         unsigned char pads[3] = {'\0','\0','\0'};
         out->writeBinaryArray(pads, padsize);
@@ -267,7 +303,7 @@ SoSFImage3::writeValue(SoOutput * out) const
     out->write('\n');
     out->indent();
 
-    int numpixels = int(size[0]) * int(size[1]) * int(size[2]);
+    const int numpixels = static_cast<int>(pixelcount);
     for (int i = 0; i < numpixels; i++) {
       unsigned int data = 0;
       for (int j = 0; j < nc; j++) {
@@ -326,6 +362,15 @@ void
 SoSFImage3::setValue(const SbVec3s & size, const int nc,
                      const unsigned char * bytes)
 {
+  size_t pixelcount = 0;
+  size_t buffersize = 0;
+  if (!checked_image_size(size, nc, pixelcount, buffersize)) {
+    SoDebugError::postWarning("SoSFImage3::setValue",
+                              "Image dimensions or component count are invalid");
+    return;
+  }
+  (void)pixelcount;
+  (void)buffersize;
   this->image->setValue(size, nc, bytes);
   this->valueChanged();
 }
@@ -352,4 +397,3 @@ SoSFImage3::finishEditing(void)
 {
   this->valueChanged();
 }
-

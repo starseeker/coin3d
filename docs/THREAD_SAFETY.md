@@ -167,7 +167,7 @@ Because `SbName` is used to look up types, field names, and node names, any
 corruption here can silently produce wrong type matches or crashes anywhere in
 the library.
 
-**Fix required:** Add a `std::mutex` (or a `std::shared_mutex` for read-heavy
+**Historical fix applied:** Add a `std::mutex` (or a `std::shared_mutex` for read-heavy
 loads) protecting `namemap_find_or_add_string()`.  Because `cc_namemap_peek_string()`
 is read-only, it qualifies for a shared (reader) lock.
 
@@ -199,7 +199,7 @@ Two threads registering different types simultaneously can corrupt both
 Dynamic loading in `internal_fromName()` compounds this: it touches `module_dict`
 and falls through into `createType()` with no lock held.
 
-**Fix required:** A single `std::mutex` protecting all of `createType()`,
+**Historical fix applied:** A single `std::mutex` protecting all of `createType()`,
 `deregisterType()`, `internal_fromName()`, and any `typedatalist` access.
 Type lookups (`fromName()`, `getAllDerivedFrom()`) need at least a shared lock.
 
@@ -241,7 +241,7 @@ both threads can read a count of 1, both decrement to 0, and both call
 The C++ standard does not guarantee atomic access to bit-fields, even on
 architectures with native word-size operations.
 
-**Fix required:** The bit-packing cannot be preserved — C++ provides no atomic
+**Historical fix applied:** The bit-packing cannot be preserved — C++ provides no atomic
 operations on bit-fields.  The replacement trades 4 bytes per `SoBase` instance
 for correctness: replace `referencecount:28` with a standalone
 `std::atomic<int32_t>` (4 bytes), and promote `alive:4` to a separate
@@ -278,7 +278,7 @@ caches (VBO validation, bounding-box caches, etc.) used throughout rendering.
 when `OBOL_UNIQUE_ID_UINT32` is set (see `include/Inventor/basic.h.cmake.in`).
 Both widths are natively lock-free atomics on all platforms Obol targets.
 
-**Fix required:** Change `nextUniqueId` to `std::atomic<SbUniqueId>` and use
+**Historical fix applied:** Change `nextUniqueId` to `std::atomic<SbUniqueId>` and use
 `fetch_add(1, std::memory_order_relaxed)` (ordering is not required for ID
 uniqueness — only for the zero-skip check, which can use a local compare).
 The fix is identical for both the 32-bit and 64-bit variants because

@@ -753,9 +753,9 @@ The combination of these two flags determines the build mode:
 | CMake option | Default | Description |
 |---|---|---|
 | `BUILD_SHARED_LIBS` | `ON` | Shared vs. static library |
-| `OBOL_BUILD_TESTS` | `ON` | Build the Catch2-based test suite |
+| `OBOL_BUILD_TESTS` | `ON` | Build the GTest/CTest test suite |
 | `OBOL_BUILD_DOCS` | `OFF` | Build Doxygen API documentation (requires Doxygen) |
-| `OBOL_THREADSAFE` | `ON` | Thread-safe render traversals |
+| `OBOL_THREADSAFE` | `ON` | Deprecated compatibility option; thread safety is always enabled |
 | `HAVE_NODEKITS` | `ON` | NodeKit support |
 | `HAVE_DRAGGERS` | `ON` | Dragger support |
 | `HAVE_MANIPULATORS` | `ON` | Manipulator support |
@@ -769,6 +769,7 @@ The combination of these two flags determines the build mode:
 | `OBOL_USE_UNITY_BUILD` | `ON` | Unity (jumbo) build for faster compilation (CMake ≥ 3.16) |
 | `OBOL_WARNINGS` | `ON` | Enable extra warning flags (`-Wall -Wextra -Wundef -Wshadow` etc.) on the Obol target |
 | `OBOL_COVERAGE` | `OFF` | Code-coverage instrumentation (GCC/Clang; adds `coverage` CTest target) |
+| `OBOL_FETCH_SUBMODULES` | `OFF` | Permit configure to initialize missing registered git submodules |
 
 ### Viewer options
 
@@ -803,9 +804,10 @@ system GL and OSMesa are compiled into the same shared library, selectable per
 **Software rasterizer submodule:** The `external/osmesa` submodule provides the
 name-mangled OSMesa build required for `OBOL_USE_SWRAST=ON`.
 
-**FLTK detection:** CMake first looks for a system FLTK installation
-(`libfltk1.3-dev`); if none is found it automatically initialises the
-`external/fltk` submodule and builds FLTK from source.
+**FLTK detection:** When examples are enabled, CMake first looks for a system
+FLTK installation (`libfltk1.3-dev`).  A populated `external/fltk` submodule is
+used as a fallback only when present; missing submodules are initialized only
+when `OBOL_FETCH_SUBMODULES=ON`.
 
 **Minimum compiler standard:** C++17.
 

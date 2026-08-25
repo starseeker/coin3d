@@ -73,8 +73,8 @@ private:
   // TooJPEG callback function
   static void writeCallback(unsigned char byte);
   
-  // Global context pointer for write context (not thread-safe but compatible with existing code)
-  static JpegWriteContext* currentContext;
+  // TooJPEG invokes the callback synchronously on the calling thread.
+  static thread_local JpegWriteContext* currentContext;
 };
 
 #endif // OBOL_SBJPEGIMAGEHANDLER_H
